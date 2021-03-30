@@ -73,7 +73,7 @@ class HloMetadataSetter {
 };
 
 xla::ShapeIndex XlaShapeIndex(const lazy_tensors::ShapeIndex& shape_index) {
-  XLA_CHECK_EQ(shape_index.size(), 1);
+  LTC_CHECK_EQ(shape_index.size(), 1);
   return {shape_index[0]};
 }
 
@@ -164,7 +164,7 @@ xla::XlaOp XlaLoweringContext::GetOutputOp(const ir::Output& output) {
     // At this point the outpout better be present, otherwise there is an issue
     // with the lowering code.
     it = emitted_outputs_.find(output);
-    XLA_CHECK(it != emitted_outputs_.end())
+    LTC_CHECK(it != emitted_outputs_.end())
         << "No XLA operation emitted for output: " << output;
   }
   return it->second;

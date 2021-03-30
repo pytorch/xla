@@ -90,7 +90,7 @@ std::vector<Stmt*> GetComputationSlices(Tensor* tensor,
       slices.push_back(simplified_tail);
       break;
     }
-    XLA_CHECK(tail);
+    LTC_CHECK(tail);
     // TODO(asuhan): In certain corner cases the last tail doesn't constant fold
     // properly its start and end indices, investigate / fix why that is.
     if (!ImmediateLoopBounds(tail)) {
@@ -109,7 +109,7 @@ XlaComputation::XlaComputation(const XlaOp& root, XlaBuilder* builder)
   for (const auto& output : root.outputs()) {
     const auto tensor = output.expr;
     if (!tensor) {
-      XLA_CHECK(output.arg && output.arg_idx);
+      LTC_CHECK(output.arg && output.arg_idx);
       codegen_.emplace_back(CodeGen{{}, *output.arg_idx});
       continue;
     }
@@ -127,9 +127,9 @@ XlaComputation::XlaComputation(const XlaOp& root, XlaBuilder* builder)
     std::vector<torch::jit::tensorexpr::CodeGen::BufferArg> formal_parameters;
     for (const auto& parameter : builder->GetParameters()) {
       const auto& outputs = parameter.outputs();
-      XLA_CHECK_EQ(outputs.size(), size_t(1));
+      LTC_CHECK_EQ(outputs.size(), size_t(1));
       const auto formal_parameter = outputs.front().arg;
-      XLA_CHECK(formal_parameter);
+      LTC_CHECK(formal_parameter);
       formal_parameters.emplace_back(*formal_parameter);
     }
     formal_parameters.emplace_back(Placeholder(BufHandle(tensor->buf())));
@@ -149,7 +149,7 @@ XlaComputation::XlaComputation(const XlaOp& root, XlaBuilder* builder)
           break;
         }
         case at::kCUDA: {
-          XLA_CHECK_EQ(stmt_slices.size(), size_t(1));
+          LTC_CHECK_EQ(stmt_slices.size(), size_t(1));
           codegen_shards.push_back(CreateCodeGen("cuda_codegen", stmt_slices[0],
                                                  formal_parameters,
                                                  {at::kCUDA, 0}));
@@ -158,7 +158,7 @@ XlaComputation::XlaComputation(const XlaOp& root, XlaBuilder* builder)
         default: { TF_LOG(FATAL) << "Device not supported: " << device_type; }
       }
     } catch (const std::runtime_error& error) {
-      XLA_CHECK_EQ(device_type, at::kCPU);
+      LTC_CHECK_EQ(device_type, at::kCPU);
       LOG(ERROR) << error.what();
       for (const auto stmt : stmt_slices) {
         codegen_shards.push_back(

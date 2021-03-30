@@ -22,7 +22,7 @@ class Literal {
 
   template <typename NativeT>
   absl::Span<const NativeT> data(const ShapeIndex& shape_index = {}) const {
-    XLA_CHECK(shape_index.empty()) << "Sub-literals not supported yet";
+    LTC_CHECK(shape_index.empty()) << "Sub-literals not supported yet";
     return absl::MakeConstSpan(static_cast<const NativeT*>(value_.data_ptr()),
                                value_.numel());
   }

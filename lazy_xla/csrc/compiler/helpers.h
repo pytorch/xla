@@ -42,7 +42,7 @@ class XlaHelpers {
     lazy_tensors::Literal literal =
         torch_lazy_tensors::XlaHelpers::ScalarLiteral(
             scalar_value, LazyTensorPrimitiveType(type));
-    XLA_CHECK_EQ(literal.shape().rank(), 0);
+    LTC_CHECK_EQ(literal.shape().rank(), 0);
     xla::Literal xla_literal(XlaShape(literal.shape()));
     xla_literal.Set({}, literal.data<T>()[0]);
     return xla::ConstantLiteral(builder, xla_literal);
@@ -54,7 +54,7 @@ class XlaHelpers {
     if (scalar_value.isFloatingPoint()) {
       return ScalarValue(scalar_value.toDouble(), type, builder);
     }
-    XLA_CHECK(scalar_value.isIntegral()) << "Scalar type not supported";
+    LTC_CHECK(scalar_value.isIntegral()) << "Scalar type not supported";
     return ScalarValue(static_cast<xla::int64>(scalar_value.toLong()), type,
                        builder);
   }

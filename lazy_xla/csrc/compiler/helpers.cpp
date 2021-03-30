@@ -44,7 +44,7 @@ xla::XlaComputation CreateComputation(
 xla::XlaOp XlaHelpers::BroadcastDimensions(
     xla::XlaOp input, absl::Span<const xla::int64> dimensions,
     absl::Span<const xla::int64> sizes) {
-  XLA_CHECK_EQ(dimensions.size(), sizes.size());
+  LTC_CHECK_EQ(dimensions.size(), sizes.size());
   std::vector<xla::int64> bcast_sizes = SizesOfXlaOp(input);
   for (size_t i = 0; i < dimensions.size(); ++i) {
     bcast_sizes.at(dimensions[i]) = sizes[i];
@@ -68,7 +68,7 @@ xla::XlaOp XlaHelpers::CreateReturnValue(
 XlaHelpers::DynamicSize XlaHelpers::GetDimensionsSize(
     absl::Span<const xla::XlaOp> inputs,
     absl::Span<const xla::int64> dimensions) {
-  XLA_CHECK(!inputs.empty());
+  LTC_CHECK(!inputs.empty());
   xla::PrimitiveType size_type =
       XlaPrimitiveType(GetShapeDimensionType(/*device=*/nullptr));
   xla::XlaOp size;
@@ -160,7 +160,7 @@ xla::PrimitiveType XlaHelpers::TypeOfXlaOp(xla::XlaOp op) {
 xla::XlaOp XlaHelpers::ReshapeToRank(xla::XlaOp input, xla::int64 expected_rank,
                                      xla::int64 offset) {
   const xla::Shape& shape = ShapeOfXlaOp(input);
-  XLA_CHECK_LE(offset + shape.rank(), expected_rank);
+  LTC_CHECK_LE(offset + shape.rank(), expected_rank);
   if (shape.rank() == expected_rank) {
     return input;
   }
@@ -302,7 +302,7 @@ std::pair<xla::XlaOp, xla::XlaOp> XlaHelpers::PromoteShapes(xla::XlaOp op1,
     // Fast path shortcut if the shapes already matches in dimensions.
     return std::pair<xla::XlaOp, xla::XlaOp>(op1, op2);
   }
-  XLA_CHECK(xla::ShapeUtil::SameElementType(shape1, shape2))
+  LTC_CHECK(xla::ShapeUtil::SameElementType(shape1, shape2))
       << shape1 << " and " << shape2;
 
   xla::Shape shape = XlaShape(torch_lazy_tensors::XlaHelpers::GetPromotedShape(
@@ -329,7 +329,7 @@ xla::XlaOp XlaHelpers::ImplicitBroadcast(xla::XlaOp op,
                                          const xla::Shape& shape) {
   const auto& op_shape_dims = op_shape.dimensions();
   const auto& shape_dims = shape.dimensions();
-  XLA_CHECK_GE(shape_dims.size(), op_shape_dims.size())
+  LTC_CHECK_GE(shape_dims.size(), op_shape_dims.size())
       << shape << " vs " << op_shape;
   xla::int64 size_delta = shape_dims.size() - op_shape_dims.size();
   xla::XlaOp new_op = op;
@@ -374,9 +374,9 @@ xla::XlaOp XlaHelpers::PromotedBinaryOp(
 
 xla::PaddingConfig XlaHelpers::MakeXlaPaddingConfigFromNdPadding(
     absl::Span<const xla::int64> padding) {
-  XLA_CHECK_EQ(padding.size() % 2, 0)
+  LTC_CHECK_EQ(padding.size() % 2, 0)
       << "Padding specification must have even length";
-  XLA_CHECK(!padding.empty()) << "Padding specification cannot be empty";
+  LTC_CHECK(!padding.empty()) << "Padding specification cannot be empty";
   xla::PaddingConfig padding_config;
   for (int i = 0; i < padding.size(); i += 2) {
     xla::PaddingConfig::PaddingConfigDimension* dims =

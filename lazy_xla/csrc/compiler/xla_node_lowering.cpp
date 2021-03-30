@@ -65,7 +65,7 @@ xla::XlaOp LowerAsStridedViewUpdate(xla::XlaOp target, xla::XlaOp input,
   const xla::Shape& input_shape = XlaHelpers::ShapeOfXlaOp(input);
   xla::int64 input_element_count = xla::ShapeUtil::ElementsIn(input_shape);
   xla::int64 slice_size = lazy_tensors::util::Multiply<xla::int64>(size);
-  XLA_CHECK_LE(storage_offset + input_element_count, slice_size);
+  LTC_CHECK_LE(storage_offset + input_element_count, slice_size);
 
   std::vector<xla::int64> permutation =
       ir::ops::AsStrided::GetArrayStridePermutation(stride,
@@ -89,7 +89,7 @@ xla::XlaOp LowerAsStrided(xla::XlaOp input, absl::Span<const xla::int64> size,
   const xla::Shape& input_shape = XlaHelpers::ShapeOfXlaOp(input);
   xla::int64 input_element_count = xla::ShapeUtil::ElementsIn(input_shape);
   xla::int64 slice_size = lazy_tensors::util::Multiply<xla::int64>(size);
-  XLA_CHECK_LE(storage_offset + slice_size, input_element_count);
+  LTC_CHECK_LE(storage_offset + slice_size, input_element_count);
 
   xla::XlaOp off_input = input;
   if (storage_offset > 0 || slice_size < input_element_count) {
@@ -121,7 +121,7 @@ xla::XlaOp LowerSqueeze(xla::XlaOp input, int dim) {
   if (dim == -1) {
     return SqueezeAllTrivialDimensions(input);
   }
-  XLA_CHECK_GE(dim, 0);
+  LTC_CHECK_GE(dim, 0);
   return SqueezeTrivialDimension(input, dim);
 }
 
@@ -184,7 +184,7 @@ lazy_tensors::Shape InferExpand(const ir::ops::Expand* node) {
 
 lazy_tensors::Shape InferPermute(const ir::ops::Permute* node) {
   auto shape_fn = [node](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
-    XLA_CHECK_EQ(operands.size(), 1);
+    LTC_CHECK_EQ(operands.size(), 1);
     return xla::Transpose(operands[0], node->dims());
   };
   const ir::Output& input = node->operand(0);
@@ -203,7 +203,7 @@ lazy_tensors::Shape InferSplit(const ir::ops::Split* node) {
 
 lazy_tensors::Shape InferSqueeze(const ir::ops::Squeeze* node) {
   auto shape_fn = [node](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
-    XLA_CHECK_EQ(operands.size(), 1);
+    LTC_CHECK_EQ(operands.size(), 1);
     return LowerSqueeze(operands[0], node->dim());
   };
   const ir::Output& input = node->operand(0);
@@ -252,7 +252,7 @@ lazy_tensors::Shape InferUpdateSlice(const ir::ops::UpdateSlice* node) {
 
 lazy_tensors::Shape InferRelu(const ir::Node* node) {
   auto shape_fn = [](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
-    XLA_CHECK_EQ(operands.size(), 1) << "Unexpected number of operands";
+    LTC_CHECK_EQ(operands.size(), 1) << "Unexpected number of operands";
     return BuildRelu(operands[0]);
   };
   const ir::Output& input = node->operand(0);
@@ -409,7 +409,7 @@ bool XlaNodeLowering::Lower(const ir::Node* node) {
   if (ops.empty()) {
     return false;
   }
-  XLA_CHECK_EQ(node->num_outputs(), ops.size());
+  LTC_CHECK_EQ(node->num_outputs(), ops.size());
   for (size_t i = 0; i < ops.size(); ++i) {
     loctx()->AssignOutputOp(ir::Output(node, i), ops[i]);
   }
@@ -515,7 +515,7 @@ XlaOpVector XlaNodeLowering::LowerToXla(const ir::Node* node) {
         return LowerScalar(scalar_node);
       }
       auto constant_node = dynamic_cast<const ir::ops::Constant*>(node);
-      XLA_CHECK(constant_node);
+      LTC_CHECK(constant_node);
       return LowerConstant(constant_node);
     }
     default: {
@@ -575,35 +575,35 @@ XlaOpVector XlaNodeLowering::LowerToXla(const ir::Node* node) {
 #undef HANDLE_GENERIC_OP
 
 XlaOpVector XlaNodeLowering::LowerAdd(const ir::Node* node) {
-  XLA_CHECK_EQ(node->num_outputs(), 1);
+  LTC_CHECK_EQ(node->num_outputs(), 1);
   xla::XlaOp op0 = loctx()->GetOutputOp(node->operand(0));
   xla::XlaOp op1 = loctx()->GetOutputOp(node->operand(1));
   return {XlaHelpers::PromotedAdd(op0, op1)};
 }
 
 XlaOpVector XlaNodeLowering::LowerDiv(const ir::Node* node) {
-  XLA_CHECK_EQ(node->num_outputs(), 1);
+  LTC_CHECK_EQ(node->num_outputs(), 1);
   xla::XlaOp op0 = loctx()->GetOutputOp(node->operand(0));
   xla::XlaOp op1 = loctx()->GetOutputOp(node->operand(1));
   return {XlaHelpers::PromotedDiv(op0, op1)};
 }
 
 XlaOpVector XlaNodeLowering::LowerMul(const ir::Node* node) {
-  XLA_CHECK_EQ(node->num_outputs(), 1);
+  LTC_CHECK_EQ(node->num_outputs(), 1);
   xla::XlaOp op0 = loctx()->GetOutputOp(node->operand(0));
   xla::XlaOp op1 = loctx()->GetOutputOp(node->operand(1));
   return {XlaHelpers::PromotedMul(op0, op1)};
 }
 
 XlaOpVector XlaNodeLowering::LowerSub(const ir::Node* node) {
-  XLA_CHECK_EQ(node->num_outputs(), 1);
+  LTC_CHECK_EQ(node->num_outputs(), 1);
   xla::XlaOp op0 = loctx()->GetOutputOp(node->operand(0));
   xla::XlaOp op1 = loctx()->GetOutputOp(node->operand(1));
   return {XlaHelpers::PromotedSub(op0, op1)};
 }
 
 XlaOpVector XlaNodeLowering::LowerBitwise(const ir::Node* node) {
-  XLA_CHECK_EQ(node->num_outputs(), 1);
+  LTC_CHECK_EQ(node->num_outputs(), 1);
   xla::XlaOp op0 = loctx()->GetOutputOp(node->operand(0));
   xla::XlaOp op1 = loctx()->GetOutputOp(node->operand(1));
   std::tie(op0, op1) = XlaHelpers::PromoteValues(op0, op1);
@@ -622,13 +622,13 @@ XlaOpVector XlaNodeLowering::LowerBitwise(const ir::Node* node) {
 }
 
 XlaOpVector XlaNodeLowering::LowerAbs(const ir::Node* node) {
-  XLA_CHECK_EQ(node->num_outputs(), 1);
+  LTC_CHECK_EQ(node->num_outputs(), 1);
   xla::XlaOp xla_input = loctx()->GetOutputOp(node->operand(0));
   return {torch_lazy_tensors::BuildAbs(xla_input)};
 }
 
 XlaOpVector XlaNodeLowering::LowerCast(const ir::ops::Cast* node) {
-  XLA_CHECK_EQ(node->num_outputs(), 1);
+  LTC_CHECK_EQ(node->num_outputs(), 1);
   xla::XlaOp input = loctx()->GetOutputOp(node->operand(0));
   const xla::Shape& input_shape = XlaHelpers::ShapeOfXlaOp(input);
   xla::PrimitiveType raw_from =
@@ -646,7 +646,7 @@ XlaOpVector XlaNodeLowering::LowerCast(const ir::ops::Cast* node) {
 }
 
 XlaOpVector XlaNodeLowering::LowerDiagonal(const ir::ops::Diagonal* node) {
-  XLA_CHECK_EQ(node->num_outputs(), 1);
+  LTC_CHECK_EQ(node->num_outputs(), 1);
   xla::XlaOp input = loctx()->GetOutputOp(node->operand(0));
   return {torch_lazy_tensors::BuildDiagonal(input, node->offset(), node->dim1(),
                                             node->dim2())};
@@ -654,7 +654,7 @@ XlaOpVector XlaNodeLowering::LowerDiagonal(const ir::ops::Diagonal* node) {
 
 XlaOpVector XlaNodeLowering::LowerDiagonalViewUpdate(
     const ir::ops::DiagonalViewUpdate* node) {
-  XLA_CHECK_EQ(node->num_outputs(), 1);
+  LTC_CHECK_EQ(node->num_outputs(), 1);
   xla::XlaOp target = loctx()->GetOutputOp(node->operand(0));
   xla::XlaOp input = loctx()->GetOutputOp(node->operand(1));
   return {BuildDiagonalViewUpdate(target, input, node->offset(), node->dim1(),
@@ -662,12 +662,12 @@ XlaOpVector XlaNodeLowering::LowerDiagonalViewUpdate(
 }
 
 XlaOpVector XlaNodeLowering::LowerDeviceData(const ir::ops::DeviceData* node) {
-  XLA_CHECK_EQ(node->num_outputs(), 1);
+  LTC_CHECK_EQ(node->num_outputs(), 1);
   return {loctx()->GetParameter(node->data())};
 }
 
 XlaOpVector XlaNodeLowering::LowerSelect(const ir::ops::Select* node) {
-  XLA_CHECK_EQ(node->num_outputs(), 1);
+  LTC_CHECK_EQ(node->num_outputs(), 1);
   xla::XlaOp input = loctx()->GetOutputOp(node->operand(0));
   return {xla::SliceInDim(
       input, node->start(), node->end(),
@@ -676,7 +676,7 @@ XlaOpVector XlaNodeLowering::LowerSelect(const ir::ops::Select* node) {
 }
 
 XlaOpVector XlaNodeLowering::LowerUnselect(const ir::ops::Unselect* node) {
-  XLA_CHECK_EQ(node->num_outputs(), 1);
+  LTC_CHECK_EQ(node->num_outputs(), 1);
   xla::XlaOp target = loctx()->GetOutputOp(node->operand(0));
   xla::XlaOp source = loctx()->GetOutputOp(node->operand(1));
   return {BuildUnselect(
@@ -686,14 +686,14 @@ XlaOpVector XlaNodeLowering::LowerUnselect(const ir::ops::Unselect* node) {
 
 XlaOpVector XlaNodeLowering::LowerGenericSlice(
     const ir::ops::GenericSlice* node) {
-  XLA_CHECK_EQ(node->num_outputs(), 1);
+  LTC_CHECK_EQ(node->num_outputs(), 1);
   xla::XlaOp input = loctx()->GetOutputOp(node->operand(0));
   return {BuildSlice(input, node->base_indices(), node->sizes())};
 }
 
 XlaOpVector XlaNodeLowering::LowerUpdateSlice(
     const ir::ops::UpdateSlice* node) {
-  XLA_CHECK_EQ(node->num_outputs(), 1);
+  LTC_CHECK_EQ(node->num_outputs(), 1);
   xla::XlaOp input = loctx()->GetOutputOp(node->operand(0));
   xla::XlaOp source = loctx()->GetOutputOp(node->operand(1));
   return {BuildUpdateSlice(input, source, node->base_indices())};
@@ -701,7 +701,7 @@ XlaOpVector XlaNodeLowering::LowerUpdateSlice(
 
 XlaOpVector XlaNodeLowering::LowerAsStridedViewUpdate(
     const ir::ops::AsStridedViewUpdate* node) {
-  XLA_CHECK_EQ(node->num_outputs(), 1);
+  LTC_CHECK_EQ(node->num_outputs(), 1);
   xla::XlaOp target = loctx()->GetOutputOp(node->operand(0));
   xla::XlaOp input = loctx()->GetOutputOp(node->operand(1));
   return {compiler::LowerAsStridedViewUpdate(
@@ -709,7 +709,7 @@ XlaOpVector XlaNodeLowering::LowerAsStridedViewUpdate(
 }
 
 XlaOpVector XlaNodeLowering::LowerAsStrided(const ir::ops::AsStrided* node) {
-  XLA_CHECK_EQ(node->num_outputs(), 1);
+  LTC_CHECK_EQ(node->num_outputs(), 1);
   xla::XlaOp input = loctx()->GetOutputOp(node->operand(0));
   return {compiler::LowerAsStrided(input, node->size(), node->stride(),
                                    node->storage_offset())};
@@ -717,19 +717,19 @@ XlaOpVector XlaNodeLowering::LowerAsStrided(const ir::ops::AsStrided* node) {
 
 XlaOpVector XlaNodeLowering::LowerGetDimensionsSize(
     const ir::ops::GetDimensionsSize* node) {
-  XLA_CHECK_EQ(node->num_outputs(), 1);
+  LTC_CHECK_EQ(node->num_outputs(), 1);
   xla::XlaOp input = loctx()->GetOutputOp(node->operand(0));
   return {XlaHelpers::GetDimensionsSize({input}, node->dimensions()).size};
 }
 
 XlaOpVector XlaNodeLowering::LowerExpand(const ir::ops::Expand* node) {
-  XLA_CHECK_EQ(node->num_outputs(), 1);
+  LTC_CHECK_EQ(node->num_outputs(), 1);
   xla::XlaOp input = loctx()->GetOutputOp(node->operand(0));
   return {BuildExpand(input, node->size())};
 }
 
 XlaOpVector XlaNodeLowering::LowerScalar(const ir::ops::Scalar* node) {
-  XLA_CHECK_EQ(node->num_outputs(), 1);
+  LTC_CHECK_EQ(node->num_outputs(), 1);
   using ir::ops::operator<<;
   xla::Literal literal(xla::ShapeUtil::MakeShape(
       compiler::XlaHelpers::XlaPrimitiveType(node->shape().element_type()),
@@ -793,7 +793,7 @@ XlaOpVector XlaNodeLowering::LowerScalar(const ir::ops::Scalar* node) {
           {}, xla::complex128(node->value().toComplexDouble()));
       break;
     default:
-      XLA_ERROR() << "Unable to lower scalar " << node->value() << " of shape "
+      LTC_ERROR() << "Unable to lower scalar " << node->value() << " of shape "
                   << node->shape();
   }
 
@@ -806,7 +806,7 @@ XlaOpVector XlaNodeLowering::LowerScalar(const ir::ops::Scalar* node) {
 
 XlaOpVector XlaNodeLowering::LowerLinearInterpolation(
     const ir::ops::LinearInterpolation* node) {
-  XLA_CHECK_EQ(node->num_outputs(), 1);
+  LTC_CHECK_EQ(node->num_outputs(), 1);
   xla::XlaOp value = loctx()->GetOutputOp(node->operand(0));
   xla::XlaOp new_value = loctx()->GetOutputOp(node->operand(1));
   return {XlaHelpers::LinearInterpolation(value, new_value, node->alpha())};
@@ -814,7 +814,7 @@ XlaOpVector XlaNodeLowering::LowerLinearInterpolation(
 
 XlaOpVector XlaNodeLowering::LowerNotSupported(
     const ir::ops::NotSupported* node) {
-  XLA_ERROR() << "Node not supported: " << node->ToString();
+  LTC_ERROR() << "Node not supported: " << node->ToString();
 }
 
 XlaOpVector XlaNodeLowering::LowerWhere(const ir::Node* node) {
@@ -830,7 +830,7 @@ XlaOpVector XlaNodeLowering::LowerWhere(const ir::Node* node) {
 }
 
 XlaOpVector XlaNodeLowering::LowerClamp(const ir::Node* node) {
-  XLA_CHECK_EQ(node->num_outputs(), 1);
+  LTC_CHECK_EQ(node->num_outputs(), 1);
   xla::XlaOp xla_input = loctx()->GetOutputOp(node->operand(0));
   xla::XlaOp xla_min = loctx()->GetOutputOp(node->operand(1));
   xla::XlaOp xla_max = loctx()->GetOutputOp(node->operand(2));
@@ -843,21 +843,21 @@ XlaOpVector XlaNodeLowering::LowerClamp(const ir::Node* node) {
 }
 
 XlaOpVector XlaNodeLowering::LowerLeakyRelu(const ir::ops::LeakyRelu* node) {
-  XLA_CHECK_EQ(node->num_outputs(), 1);
+  LTC_CHECK_EQ(node->num_outputs(), 1);
   xla::XlaOp input = loctx()->GetOutputOp(node->operand(0));
   return {BuildLeakyRelu(input, node->negative_slope())};
 }
 
 XlaOpVector XlaNodeLowering::LowerLeakyReluBackward(
     const ir::ops::LeakyReluBackward* node) {
-  XLA_CHECK_EQ(node->num_outputs(), 1);
+  LTC_CHECK_EQ(node->num_outputs(), 1);
   xla::XlaOp grad_output = loctx()->GetOutputOp(node->operand(0));
   xla::XlaOp input = loctx()->GetOutputOp(node->operand(1));
   return {BuildLeakyReluBackward(grad_output, input, node->negative_slope())};
 }
 
 XlaOpVector XlaNodeLowering::LowerLogBase(const ir::ops::LogBase* node) {
-  XLA_CHECK_EQ(node->num_outputs(), 1);
+  LTC_CHECK_EQ(node->num_outputs(), 1);
   xla::XlaOp xla_input = loctx()->GetOutputOp(node->operand(0));
   xla::XlaOp result = xla::Log(xla_input);
   xla::XlaOp ln_base = XlaHelpers::ScalarValue<float>(
@@ -885,20 +885,20 @@ XlaOpVector XlaNodeLowering::LowerMaskedFill(const ir::ops::MaskedFill* node) {
 }
 
 XlaOpVector XlaNodeLowering::LowerPermute(const ir::ops::Permute* node) {
-  XLA_CHECK_EQ(node->num_outputs(), 1);
+  LTC_CHECK_EQ(node->num_outputs(), 1);
   xla::XlaOp input = loctx()->GetOutputOp(node->operand(0));
   return {xla::Transpose(input, node->dims())};
 }
 
 XlaOpVector XlaNodeLowering::LowerResize(const ir::ops::Resize* node) {
-  XLA_CHECK_EQ(node->num_outputs(), 1);
+  LTC_CHECK_EQ(node->num_outputs(), 1);
   xla::XlaOp input = loctx()->GetOutputOp(node->operand(0));
   return {BuildResize(input, node->size())};
 }
 
 XlaOpVector XlaNodeLowering::LowerRreluWithNoise(
     const ir::ops::RreluWithNoise* node) {
-  XLA_CHECK_EQ(node->num_outputs(), 2);
+  LTC_CHECK_EQ(node->num_outputs(), 2);
   xla::XlaOp input = loctx()->GetOutputOp(node->operand(0));
   xla::XlaOp rng_seed = loctx()->GetOutputOp(node->operand(1));
   return {BuildRrelu(input, node->lower(), node->upper(), node->training(),
@@ -907,7 +907,7 @@ XlaOpVector XlaNodeLowering::LowerRreluWithNoise(
 
 XlaOpVector XlaNodeLowering::LowerRreluWithNoiseBackward(
     const ir::ops::RreluWithNoiseBackward* node) {
-  XLA_CHECK_EQ(node->num_outputs(), 1);
+  LTC_CHECK_EQ(node->num_outputs(), 1);
   xla::XlaOp grad_output = loctx()->GetOutputOp(node->operand(0));
   xla::XlaOp input = loctx()->GetOutputOp(node->operand(1));
   xla::XlaOp noise = loctx()->GetOutputOp(node->operand(2));
@@ -916,59 +916,59 @@ XlaOpVector XlaNodeLowering::LowerRreluWithNoiseBackward(
 }
 
 XlaOpVector XlaNodeLowering::LowerSiLU(const ir::Node* node) {
-  XLA_CHECK_EQ(node->num_outputs(), 1);
+  LTC_CHECK_EQ(node->num_outputs(), 1);
   xla::XlaOp xla_input = loctx()->GetOutputOp(node->operand(0));
   return {xla_input * BuildSigmoid(xla_input)};
 }
 
 XlaOpVector XlaNodeLowering::LowerSoftshrink(const ir::ops::Softshrink* node) {
-  XLA_CHECK_EQ(node->num_outputs(), 1);
+  LTC_CHECK_EQ(node->num_outputs(), 1);
   xla::XlaOp input = loctx()->GetOutputOp(node->operand(0));
   return {BuildSoftshrink(input, node->lambda())};
 }
 
 XlaOpVector XlaNodeLowering::LowerSplit(const ir::ops::Split* node) {
-  XLA_CHECK_EQ(node->num_outputs(), node->split_sizes().size());
+  LTC_CHECK_EQ(node->num_outputs(), node->split_sizes().size());
   xla::XlaOp input = loctx()->GetOutputOp(node->operand(0));
   return {BuildSplit(input, node->split_sizes(), node->dim())};
 }
 
 XlaOpVector XlaNodeLowering::LowerSqueeze(const ir::ops::Squeeze* node) {
-  XLA_CHECK_EQ(node->num_outputs(), 1);
+  LTC_CHECK_EQ(node->num_outputs(), 1);
   xla::XlaOp input = loctx()->GetOutputOp(node->operand(0));
   return {compiler::LowerSqueeze(input, node->dim())};
 }
 
 XlaOpVector XlaNodeLowering::LowerShrinkBackward(
     const ir::ops::ShrinkBackward* node) {
-  XLA_CHECK_EQ(node->num_outputs(), 1);
+  LTC_CHECK_EQ(node->num_outputs(), 1);
   xla::XlaOp grad_output = loctx()->GetOutputOp(node->operand(0));
   xla::XlaOp input = loctx()->GetOutputOp(node->operand(1));
   return {BuildShrinkBackward(grad_output, input, node->lambda())};
 }
 
 XlaOpVector XlaNodeLowering::LowerThreshold(const ir::ops::Threshold* node) {
-  XLA_CHECK_EQ(node->num_outputs(), 1);
+  LTC_CHECK_EQ(node->num_outputs(), 1);
   xla::XlaOp input = loctx()->GetOutputOp(node->operand(0));
   return {BuildThreshold(input, input, node->threshold(), node->value())};
 }
 
 XlaOpVector XlaNodeLowering::LowerThresholdBackward(
     const ir::ops::ThresholdBackward* node) {
-  XLA_CHECK_EQ(node->num_outputs(), 1);
+  LTC_CHECK_EQ(node->num_outputs(), 1);
   xla::XlaOp grad_output = loctx()->GetOutputOp(node->operand(0));
   xla::XlaOp input = loctx()->GetOutputOp(node->operand(1));
   return {BuildThreshold(input, grad_output, node->threshold(), 0)};
 }
 
 XlaOpVector XlaNodeLowering::LowerUnsqueeze(const ir::ops::Unsqueeze* node) {
-  XLA_CHECK_EQ(node->num_outputs(), 1);
+  LTC_CHECK_EQ(node->num_outputs(), 1);
   xla::XlaOp input = loctx()->GetOutputOp(node->operand(0));
   return {BuildUnsqueeze(input, node->dim())};
 }
 
 XlaOpVector XlaNodeLowering::LowerView(const ir::ops::View* node) {
-  XLA_CHECK_EQ(node->num_outputs(), 1);
+  LTC_CHECK_EQ(node->num_outputs(), 1);
   xla::XlaOp input = loctx()->GetOutputOp(node->operand(0));
   return {BuildView(input, node->output_size())};
 }
@@ -981,7 +981,7 @@ XlaOpVector XlaNodeLowering::LowerView(const ir::ops::View* node) {
 
 xla::Literal XlaLiteral(const lazy_tensors::Literal& literal) {
   const lazy_tensors::Shape& shape = literal.shape();
-  XLA_CHECK_EQ(shape.rank(), 0);
+  LTC_CHECK_EQ(shape.rank(), 0);
   xla::Literal xla_literal;
   switch (shape.element_type()) {
     HANDLE_CASE(PRED, bool);
@@ -1002,26 +1002,26 @@ xla::Literal XlaLiteral(const lazy_tensors::Literal& literal) {
 #undef HANDLE_CASE
 
 XlaOpVector XlaNodeLowering::LowerConstant(const ir::ops::Constant* node) {
-  XLA_CHECK_EQ(node->num_outputs(), 1);
+  LTC_CHECK_EQ(node->num_outputs(), 1);
   return {xla::ConstantLiteral(loctx()->builder(), XlaLiteral(node->value()))};
 }
 
 XlaOpVector XlaNodeLowering::LowerConstantPadNd(
     const ir::ops::ConstantPadNd* node) {
-  XLA_CHECK_EQ(node->num_outputs(), 1);
+  LTC_CHECK_EQ(node->num_outputs(), 1);
   xla::XlaOp input = loctx()->GetOutputOp(node->operand(0));
   return {LowerPad(input, node->value(), node->pad())};
 }
 
 XlaOpVector XlaNodeLowering::LowerHardshrink(const ir::ops::Hardshrink* node) {
-  XLA_CHECK_EQ(node->num_outputs(), 1);
+  LTC_CHECK_EQ(node->num_outputs(), 1);
   xla::XlaOp input = loctx()->GetOutputOp(node->operand(0));
   return {BuildHardshrink(input, node->lambda())};
 }
 
 XlaOpVector XlaNodeLowering::LowerHardtanhBackward(
     const ir::ops::HardtanhBackward* node) {
-  XLA_CHECK_EQ(node->num_outputs(), 1);
+  LTC_CHECK_EQ(node->num_outputs(), 1);
   xla::XlaOp grad_output = loctx()->GetOutputOp(node->operand(0));
   xla::XlaOp input = loctx()->GetOutputOp(node->operand(1));
   return {BuildHardtanhBackward(grad_output, input, node->min_val(),
@@ -1029,7 +1029,7 @@ XlaOpVector XlaNodeLowering::LowerHardtanhBackward(
 }
 
 XlaOpVector XlaNodeLowering::LowerHardSigmoidBackward(const ir::Node* node) {
-  XLA_CHECK_EQ(node->num_outputs(), 1);
+  LTC_CHECK_EQ(node->num_outputs(), 1);
   xla::XlaOp xla_grad_output = loctx()->GetOutputOp(node->operand(0));
   xla::XlaOp xla_input = loctx()->GetOutputOp(node->operand(1));
   return {BuildHardSigmoidBackward(xla_grad_output, xla_input)};
@@ -1037,14 +1037,14 @@ XlaOpVector XlaNodeLowering::LowerHardSigmoidBackward(const ir::Node* node) {
 
 #define DEFINE_UNARY_OP(name, xla_fn)                              \
   XlaOpVector XlaNodeLowering::Lower##name(const ir::Node* node) { \
-    XLA_CHECK_EQ(node->num_outputs(), 1);                          \
+    LTC_CHECK_EQ(node->num_outputs(), 1);                          \
     xla::XlaOp xla_input = loctx()->GetOutputOp(node->operand(0)); \
     return {xla_fn(xla_input)};                                    \
   }
 
 #define DEFINE_BINARY_OP(name, xla_fn)                              \
   XlaOpVector XlaNodeLowering::Lower##name(const ir::Node* node) {  \
-    XLA_CHECK_EQ(node->num_outputs(), 1);                           \
+    LTC_CHECK_EQ(node->num_outputs(), 1);                           \
     xla::XlaOp xla_input0 = loctx()->GetOutputOp(node->operand(0)); \
     xla::XlaOp xla_input1 = loctx()->GetOutputOp(node->operand(1)); \
     auto promoted = XlaHelpers::Promote(xla_input0, xla_input1);    \
@@ -1053,7 +1053,7 @@ XlaOpVector XlaNodeLowering::LowerHardSigmoidBackward(const ir::Node* node) {
 
 #define DEFINE_COMPARISON_OP(name, kind)                           \
   XlaOpVector XlaNodeLowering::Lower##name(const ir::Node* node) { \
-    XLA_CHECK_EQ(node->num_outputs(), 1);                          \
+    LTC_CHECK_EQ(node->num_outputs(), 1);                          \
     xla::XlaOp xla_input = loctx()->GetOutputOp(node->operand(0)); \
     xla::XlaOp xla_other = loctx()->GetOutputOp(node->operand(1)); \
     return {BuildComparisonOp(kind, xla_input, xla_other)};        \

@@ -60,7 +60,7 @@ lazy_tensors::ComputationClient::DataPtr ExecuteComputationImpl(
           ->computation();
   const auto& codegen = xla_computation.codegen(output_idx);
   if (codegen.parameter_number) {
-    XLA_CHECK_LT(*codegen.parameter_number, arguments.size());
+    LTC_CHECK_LT(*codegen.parameter_number, arguments.size());
     return arguments[*codegen.parameter_number];
   }
   std::vector<int> result_sizes(result_shape.dimensions().begin(),
@@ -68,7 +68,7 @@ lazy_tensors::ComputationClient::DataPtr ExecuteComputationImpl(
   at::Tensor result_tensor;
   const auto it = codegen.output_to_input_aliases_.find(output_idx);
   if (it != codegen.output_to_input_aliases_.end()) {
-    XLA_CHECK_LT(it->second, arguments.size());
+    LTC_CHECK_LT(it->second, arguments.size());
     const auto nnc_data =
         std::static_pointer_cast<compiler::NNCComputationClient::NNCData>(
             arguments[it->second]);
@@ -117,7 +117,7 @@ bool ArgumentsOverlap(
   std::sort(
       extents.begin(), extents.end(),
       [](const Extent& e1, const Extent& e2) { return e1.first < e2.first; });
-  XLA_CHECK(!extents.empty());
+  LTC_CHECK(!extents.empty());
   const char* current_end = extents.front().first;
   for (const Extent& extent : extents) {
     if (extent.first < current_end) {
@@ -307,7 +307,7 @@ std::vector<std::string> NNCComputationClient::GetAllDevices() const {
 
 void NNCComputationClient::SetReplicationDevices(
     std::shared_ptr<std::vector<std::string>> devices) {
-  XLA_CHECK_EQ(devices->size(), size_t(1)) << "Replication not supported yet";
+  LTC_CHECK_EQ(devices->size(), size_t(1)) << "Replication not supported yet";
 }
 
 std::shared_ptr<std::vector<std::string>>

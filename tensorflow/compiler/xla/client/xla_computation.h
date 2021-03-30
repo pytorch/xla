@@ -36,7 +36,7 @@ class XlaComputation {
   };
 
   const CodeGen& codegen(size_t idx) const {
-    XLA_CHECK_LT(idx, codegen_.size());
+    LTC_CHECK_LT(idx, codegen_.size());
     return codegen_[idx];
   }
 

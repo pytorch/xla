@@ -47,7 +47,7 @@ xla::XlaOp BuildView(xla::XlaOp input,
 
 xla::XlaOp SqueezeTrivialDimension(xla::XlaOp input, xla::int64 dim) {
   const xla::Shape& input_shape = compiler::XlaHelpers::ShapeOfXlaOp(input);
-  XLA_CHECK_LT(dim, input_shape.rank());
+  LTC_CHECK_LT(dim, input_shape.rank());
   if (input_shape.dimensions(dim) != 1) {
     return input;
   }
@@ -66,7 +66,7 @@ xla::XlaOp BuildExpand(xla::XlaOp input,
                        absl::Span<const xla::int64> output_sizes) {
   auto input_sizes = compiler::XlaHelpers::SizesOfXlaOp(input);
   // Adjust the rank of the input to match the rank of the output.
-  XLA_CHECK_LE(input_sizes.size(), output_sizes.size());
+  LTC_CHECK_LE(input_sizes.size(), output_sizes.size());
   input_sizes.insert(input_sizes.begin(),
                      output_sizes.size() - input_sizes.size(), 1);
   xla::XlaOp implicit_reshape =
@@ -83,7 +83,7 @@ xla::XlaOp BuildUnsqueeze(xla::XlaOp input, xla::int64 dim) {
 }
 
 xla::XlaOp BuildCat(absl::Span<const xla::XlaOp> inputs, xla::int64 dim) {
-  XLA_CHECK_GT(inputs.size(), 0);
+  LTC_CHECK_GT(inputs.size(), 0);
   return xla::ConcatInDim(inputs[0].builder(), inputs, dim);
 }
 
@@ -126,7 +126,7 @@ xla::XlaOp BuildUpdateSlice(xla::XlaOp input, xla::XlaOp source,
 xla::XlaOp BuildSlice(xla::XlaOp input,
                       absl::Span<const xla::int64> base_indices,
                       absl::Span<const xla::int64> sizes) {
-  XLA_CHECK_EQ(base_indices.size(), sizes.size());
+  LTC_CHECK_EQ(base_indices.size(), sizes.size());
   std::vector<xla::int64> limit_indices(base_indices.begin(),
                                         base_indices.end());
   std::transform(limit_indices.begin(), limit_indices.end(), sizes.begin(),
@@ -168,9 +168,9 @@ xla::XlaOp BuildUnselect(xla::XlaOp target, xla::XlaOp source, xla::int64 dim,
   const xla::Shape& source_shape = compiler::XlaHelpers::ShapeOfXlaOp(source);
   if (target_shape.dimensions(dim) == source_shape.dimensions(dim)) {
     // Shortcut for unselects which are fully covering selects.
-    XLA_CHECK_EQ(start, 0);
-    XLA_CHECK_EQ(stride, 1);
-    XLA_CHECK_EQ(end, target_shape.dimensions(dim));
+    LTC_CHECK_EQ(start, 0);
+    LTC_CHECK_EQ(stride, 1);
+    LTC_CHECK_EQ(end, target_shape.dimensions(dim));
     return source;
   }
 
@@ -192,7 +192,7 @@ xla::XlaOp BuildUnselect(xla::XlaOp target, xla::XlaOp source, xla::int64 dim,
                         (source_shape.dimensions(i) - 1) * (stride - 1);
       dims->set_edge_padding_high(target_shape.dimensions(i) - size);
     } else {
-      XLA_CHECK_EQ(target_shape.dimensions(i), source_shape.dimensions(i))
+      LTC_CHECK_EQ(target_shape.dimensions(i), source_shape.dimensions(i))
           << target_shape << " vs. " << source_shape;
       dims->set_edge_padding_low(0);
       dims->set_interior_padding(0);

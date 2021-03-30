@@ -9,7 +9,7 @@ namespace xla {
 XlaOp GetMatrixDiagonal(XlaOp x, int k) {
   const auto& shape = torch_lazy_tensors::compiler::XlaHelpers::ShapeOfXlaOp(x);
   int64 rank = shape.rank();
-  XLA_CHECK_GE(rank, 2);
+  LTC_CHECK_GE(rank, 2);
   std::vector<int64> output_sizes;
   output_sizes.reserve(shape.rank() - 1);
   for (size_t i = 0; i < static_cast<size_t>(rank - 2); ++i) {
@@ -21,7 +21,7 @@ XlaOp GetMatrixDiagonal(XlaOp x, int k) {
   return XlaOp(
       Compute("get_matrix_diagonal", x, output_sizes,
               [&](const std::vector<ExprHandle>& indices) {
-                XLA_CHECK_GE(indices.size(), size_t(1));
+                LTC_CHECK_GE(indices.size(), size_t(1));
                 auto diag_it = indices.end() - 1;
                 std::vector<ExprHandle> expr_indices(indices.begin(), diag_it);
                 if (k >= 0) {

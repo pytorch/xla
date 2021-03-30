@@ -41,7 +41,7 @@ xla::XlaOp ConvertData(xla::XlaOp op, xla::PrimitiveType type,
   }
   xla::int64 size = xla::ShapeUtil::ByteSizeOfPrimitiveType(type);
   xla::int64 narrow_size = xla::ShapeUtil::ByteSizeOfPrimitiveType(narrow_type);
-  XLA_CHECK_GE(size, narrow_size);
+  LTC_CHECK_GE(size, narrow_size);
   if (size == narrow_size) {
     return op;
   }
@@ -81,7 +81,7 @@ xla::XlaOp ConvertTo(xla::XlaOp op, xla::PrimitiveType from,
       break;
     }
     default:
-      XLA_ERROR() << "Unsupported XLA type " << from;
+      LTC_ERROR() << "Unsupported XLA type " << from;
   }
 }
 

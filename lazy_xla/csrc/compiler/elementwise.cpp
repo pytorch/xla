@@ -41,7 +41,7 @@ xla::XlaOp BuildComparisonOp(c10::Symbol kind, xla::XlaOp lhs, xla::XlaOp rhs) {
     case at::aten::lt:
       return xla::Lt(lhs, rhs);
     default:
-      XLA_ERROR() << "Invalid comparison operator kind: "
+      LTC_ERROR() << "Invalid comparison operator kind: "
                   << kind.toQualString();
   }
 }

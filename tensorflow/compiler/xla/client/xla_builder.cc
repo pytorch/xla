@@ -92,7 +92,7 @@ XlaOp UnaryOp(XlaOp input,
 std::tuple<XlaOp, XlaOp, PrimitiveType> PromoteToInteger(XlaOp x, XlaOp y) {
   const auto element_type =
       torch_lazy_tensors::compiler::XlaHelpers::ShapeOfXlaOp(x).element_type();
-  XLA_CHECK(element_type == PrimitiveType::S32 ||
+  LTC_CHECK(element_type == PrimitiveType::S32 ||
             element_type == PrimitiveType::PRED)
       << "Element type not supported for bitwise " << element_type;
   if (element_type == PrimitiveType::PRED) {
@@ -180,7 +180,7 @@ XlaOp::XlaOp(absl::Span<const XlaOp> ops, XlaBuilder* builder)
   outputs_.reserve(ops.size());
   for (auto op : ops) {
     const auto& outputs = op.outputs();
-    XLA_CHECK_EQ(outputs.size(), size_t(1));
+    LTC_CHECK_EQ(outputs.size(), size_t(1));
     outputs_.push_back(outputs.front());
   }
   id_ = builder_->AddTuple(*this, ops);
@@ -190,12 +190,12 @@ XlaBuilder* XlaOp::builder() const { return builder_; }
 
 std::string XlaOp::ToString() const {
   std::ostringstream oss;
-  XLA_CHECK(!outputs_.empty());
+  LTC_CHECK(!outputs_.empty());
   const auto& output = outputs_[0];
   if (output.arg) {
     oss << *output.arg->data();
   } else {
-    XLA_CHECK(output.expr);
+    LTC_CHECK(output.expr);
     oss << *output.expr;
   }
   return oss.str();
@@ -253,22 +253,22 @@ XlaOp XlaOp::Reshape(XlaOp operand, absl::Span<const int64> new_sizes) {
 }
 
 ExprHandle XlaOp::call(const std::vector<ExprHandle>& indices) const {
-  XLA_CHECK_EQ(outputs_.size(), size_t(1));
+  LTC_CHECK_EQ(outputs_.size(), size_t(1));
   const auto& output = outputs_.front();
   if (output.arg) {
     return ::xla::call(output.arg.get(), indices);
   }
-  XLA_CHECK(output.expr);
+  LTC_CHECK(output.expr);
   return ::xla::call(output.expr, indices);
 }
 
 std::vector<DimArg> XlaOp::dims() const {
-  XLA_CHECK_EQ(outputs_.size(), size_t(1));
+  LTC_CHECK_EQ(outputs_.size(), size_t(1));
   const auto& output = outputs_.front();
   if (output.arg) {
     return ::xla::dims(output.arg.get());
   }
-  XLA_CHECK(output.expr);
+  LTC_CHECK(output.expr);
   return ::xla::dims(output.expr);
 }
 
@@ -286,17 +286,17 @@ StatusOr<XlaComputation> XlaBuilder::Build(XlaOp root,
 Status XlaBuilder::first_error() const { return Status::OK(); }
 
 StatusOr<const Shape*> XlaBuilder::GetShapePtr(XlaOp op) const {
-  XLA_CHECK_GE(op.id(), 0);
-  XLA_CHECK_LT(static_cast<size_t>(op.id()), shapes_.size());
+  LTC_CHECK_GE(op.id(), 0);
+  LTC_CHECK_LT(static_cast<size_t>(op.id()), shapes_.size());
   return shapes_[op.id()].get();
 }
 
 void XlaBuilder::SetUpAlias(const ShapeIndex& output_index, int64 param_number,
                             const ShapeIndex& param_index) {
-  XLA_CHECK_EQ(output_index.size(), 1);
+  LTC_CHECK_EQ(output_index.size(), 1);
   const auto it_ok =
       output_to_input_aliases_.emplace(output_index[0], param_number);
-  XLA_CHECK(it_ok.second);
+  LTC_CHECK(it_ok.second);
 }
 
 const std::unordered_map<size_t, size_t>& XlaBuilder::GetOutputToInputAliases()
@@ -360,7 +360,7 @@ XlaOp Parameter(XlaBuilder* builder, int64 parameter_number, const Shape& shape,
 
 XlaOp ConstantLiteral(XlaBuilder* builder, const LiteralSlice& literal) {
   const auto& shape = literal.literal()->shape();
-  XLA_CHECK(shape.dimensions().empty()) << "Only scalar literals supported";
+  LTC_CHECK(shape.dimensions().empty()) << "Only scalar literals supported";
   std::vector<DimArg> dimensions;
   dimensions.emplace_back(ExprHandle(1));
   ExprHandle handle;
@@ -435,8 +435,8 @@ XlaOp BroadcastInDim(XlaOp operand, const absl::Span<const int64> out_dim_size,
                      const absl::Span<const int64> broadcast_dimensions) {
   const auto& input_shape =
       torch_lazy_tensors::compiler::XlaHelpers::ShapeOfXlaOp(operand);
-  XLA_CHECK_EQ(broadcast_dimensions.size(), input_shape.rank());
-  XLA_CHECK_EQ(input_shape.rank(), out_dim_size.size());
+  LTC_CHECK_EQ(broadcast_dimensions.size(), input_shape.rank());
+  LTC_CHECK_EQ(input_shape.rank(), out_dim_size.size());
   return XlaOp(
       Compute("broadcast_in_dim", operand, out_dim_size,
               [&](const std::vector<ExprHandle>& indices) {
@@ -460,7 +460,7 @@ XlaOp Pad(XlaOp operand, XlaOp padding_value,
   const auto& shape =
       torch_lazy_tensors::compiler::XlaHelpers::ShapeOfXlaOp(operand);
   const auto& padding_dimensions = padding_config.dimensions();
-  XLA_CHECK_EQ(padding_dimensions.size(), shape.rank());
+  LTC_CHECK_EQ(padding_dimensions.size(), shape.rank());
   std::vector<int64> output_sizes;
   output_sizes.reserve(shape.rank());
   for (size_t dim_idx = 0; dim_idx < shape.rank(); ++dim_idx) {
@@ -471,7 +471,7 @@ XlaOp Pad(XlaOp operand, XlaOp padding_value,
         (shape.dimensions(dim_idx) - 1) * (interior_padding + 1) + 1 +
         padding_dimensions[dim_idx]->edge_padding_high());
   }
-  XLA_CHECK_EQ(
+  LTC_CHECK_EQ(
       torch_lazy_tensors::compiler::XlaHelpers::ShapeOfXlaOp(padding_value)
           .rank(),
       0);
@@ -480,7 +480,7 @@ XlaOp Pad(XlaOp operand, XlaOp padding_value,
               [&](const VarHandle& index) {
                 const auto indices = LinearToMultiDimIndex(
                     /*index=*/index, /*sizes=*/output_sizes);
-                XLA_CHECK_EQ(padding_dimensions.size(), indices.size());
+                LTC_CHECK_EQ(padding_dimensions.size(), indices.size());
                 std::vector<ExprHandle> expr_indices;
                 ExprHandle is_padding(0);
                 for (size_t i = 0; i < indices.size(); ++i) {
@@ -513,7 +513,7 @@ XlaOp Reshape(XlaOp operand, absl::Span<const int64> new_sizes) {
 
 XlaOp SliceInDim(XlaOp operand, int64 start_index, int64 limit_index,
                  int64 stride, int64 dimno) {
-  XLA_CHECK_EQ(stride, 1) << "Only stride 1 supported for now";
+  LTC_CHECK_EQ(stride, 1) << "Only stride 1 supported for now";
   const auto& shape =
       torch_lazy_tensors::compiler::XlaHelpers::ShapeOfXlaOp(operand);
   std::vector<int64> output_sizes;
@@ -560,7 +560,7 @@ XlaOp DynamicUpdateSlice(XlaOp operand, XlaOp update,
                 std::vector<ExprHandle> update_indices;
                 update_indices.reserve(update_shape.rank());
                 for (size_t i = 0; i < indices.size(); ++i) {
-                  XLA_CHECK_EQ(
+                  LTC_CHECK_EQ(
                       torch_lazy_tensors::compiler::XlaHelpers::ShapeOfXlaOp(
                           start_indices[i])
                           .rank(),
@@ -673,7 +673,7 @@ XlaOp Div(XlaOp lhs, XlaOp rhs, absl::Span<const int64> broadcast_dimensions) {
 XlaOp Rem(XlaOp lhs, XlaOp rhs, absl::Span<const int64> broadcast_dimensions) {
   return BinaryOp(lhs, rhs,
                   [&](const ExprHandle& lhs, const ExprHandle& rhs) {
-                    XLA_CHECK_EQ(lhs.dtype(), rhs.dtype());
+                    LTC_CHECK_EQ(lhs.dtype(), rhs.dtype());
                     if (lhs.dtype().is_integral()) {
                       return lhs % rhs;
                     }

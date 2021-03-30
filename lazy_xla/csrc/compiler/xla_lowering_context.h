@@ -25,7 +25,7 @@ class XlaLoweringContext : public ir::LoweringContext {
     auto lowering = NodeLowering::Create(this);
     for (auto node : post_order) {
       bool ok = lowering->Lower(node);
-      XLA_CHECK(ok) << "Failed to lower: " << *node;
+      LTC_CHECK(ok) << "Failed to lower: " << *node;
     }
   }
 

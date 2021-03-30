@@ -34,12 +34,12 @@ class XlaOp {
   bool valid() const { return id_.has_value(); }
 
   int id() const {
-    XLA_CHECK(id_);
+    LTC_CHECK(id_);
     return *id_;
   }
 
   void set_id(int id) {
-    XLA_CHECK(!id_);
+    LTC_CHECK(!id_);
     id_ = id;
   }
 

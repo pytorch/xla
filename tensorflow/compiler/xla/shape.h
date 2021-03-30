@@ -55,12 +55,12 @@ class Shape {
   void set_element_type(PrimitiveType value) { element_type_ = value; }
 
   int64 dimensions(int index) const {
-    XLA_CHECK_LT(index, dimensions_.size());
+    LTC_CHECK_LT(index, dimensions_.size());
     return dimensions_[index];
   }
 
   void set_dimensions(int index, int64 value) {
-    XLA_CHECK_LT(index, dimensions_.size());
+    LTC_CHECK_LT(index, dimensions_.size());
     dimensions_[index] = value;
   }
   void add_dimensions(int64 value) { TF_LOG(FATAL) << "Not implemented yet."; }
@@ -75,8 +75,8 @@ class Shape {
   int tuple_shapes_size() const { return element_shapes_.size(); }
 
   const Shape& tuple_shapes(int index) const {
-    XLA_CHECK_GE(index, 0);
-    XLA_CHECK_LT(index, element_shapes_.size());
+    LTC_CHECK_GE(index, 0);
+    LTC_CHECK_LT(index, element_shapes_.size());
     return element_shapes_[index];
   }
   const std::vector<Shape>& tuple_shapes() const { return element_shapes_; }

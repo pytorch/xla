@@ -29,7 +29,7 @@ double ResizeFactor(const xla::Shape& input_shape,
 lazy_tensors::Shape GetForwardOutputShape2d(
     const lazy_tensors::Shape& input_shape,
     absl::Span<const xla::int64> output_size) {
-  XLA_CHECK_EQ(output_size.size(), 2);
+  LTC_CHECK_EQ(output_size.size(), 2);
   return ShapeBuilder(input_shape.element_type())
       .Add(input_shape, 0)
       .Add(input_shape, 1)

@@ -45,10 +45,10 @@ at::ScalarType GetScalarTypeOrFloat(c10::optional<at::ScalarType> scalar_type) {
 }
 
 void CheckSubOperandTypes(at::ScalarType type1, at::ScalarType type2) {
-  XLA_CHECK(type1 != at::kBool || type2 != at::kBool)
+  LTC_CHECK(type1 != at::kBool || type2 != at::kBool)
       << "Subtraction, the `-` operator, with two bool tensors is not "
          "supported. Use the `^` or `logical_xor()` operator instead.";
-  XLA_CHECK(type1 != at::kBool && type2 != at::kBool)
+  LTC_CHECK(type1 != at::kBool && type2 != at::kBool)
       << "Subtraction, the `-` operator, with a bool tensor is not "
          "supported. If you are trying to invert a mask, use the `~` or "
          "`logical_not()` operator instead.";
@@ -91,13 +91,13 @@ at::Tensor DoBinaryOp(const at::Tensor& self, const at::Scalar& other,
 void CheckBinaryOpTypePromotion(const at::Tensor& out, const at::Tensor& self,
                                 const at::Tensor& other) {
   at::ScalarType resultType = at::result_type(self, other);
-  XLA_CHECK(at::canCast(/*from=*/resultType, /*to=*/out.scalar_type()));
+  LTC_CHECK(at::canCast(/*from=*/resultType, /*to=*/out.scalar_type()));
 }
 
 void CheckBinaryOpTypePromotion(const at::Tensor& out, const at::Tensor& self,
                                 const at::Scalar& other) {
   at::ScalarType resultType = at::result_type(self, other);
-  XLA_CHECK(at::canCast(/*from=*/resultType, /*to=*/out.scalar_type()));
+  LTC_CHECK(at::canCast(/*from=*/resultType, /*to=*/out.scalar_type()));
 }
 
 void AtenInitialize() {
@@ -137,7 +137,7 @@ ExecutionKind InPlaceMustUseNNC(const at::Tensor& self) {
   const LazyTensor self_tensor = bridge::GetXlaTensor(self);
   const bool must_use_interop = bridge::IsInteropView(self);
   const bool must_use_nnc = self_tensor.GetViewAliasId();
-  XLA_CHECK(!must_use_nnc || !must_use_interop);
+  LTC_CHECK(!must_use_nnc || !must_use_interop);
   return must_use_nnc ? ExecutionKind::NNC : ExecutionKind::Interop;
 }
 
@@ -169,7 +169,7 @@ at::Tensor AtenXlaType::_copy_from(const at::Tensor& self,
   if (!self_tensor) {
     static bool sync_update =
         lazy_tensors::sys_util::GetEnvBool("XLA_TENSOR_UPDATE_SYNC", true);
-    XLA_CHECK(dst_tensor);
+    LTC_CHECK(dst_tensor);
     dst_tensor->UpdateFromTensor(self, /*sync=*/sync_update);
   } else if (!dst_tensor) {
     at::Tensor tensor = self_tensor->ToTensor(/*detached=*/true);
@@ -179,7 +179,7 @@ at::Tensor AtenXlaType::_copy_from(const at::Tensor& self,
   } else {
     if (!dst_tensor->CurrentIrValue()) {
       auto dst_tensor_data = dst_tensor->CurrentTensorData();
-      XLA_CHECK(dst_tensor_data);
+      LTC_CHECK(dst_tensor_data);
       auto src_tensor_data = self_tensor->CurrentTensorData();
       if (src_tensor_data) {
         dst_tensor_data->copy_(*src_tensor_data);
@@ -673,7 +673,7 @@ AtenXlaType::convolution_backward_overrideable(
              << " input=" << input.toString()
              << " weight=" << weight.toString();
   const auto kernel_size = weight.sizes().slice(2);
-  XLA_CHECK(kernel_size.size() == 2 || kernel_size.size() == 3);
+  LTC_CHECK(kernel_size.size() == 2 || kernel_size.size() == 3);
   const auto device_type =
       lazy_tensors::NNCComputationClient::HardwareDeviceType();
   if (transposed) {
@@ -752,7 +752,7 @@ at::Tensor AtenXlaType::convolution_overrideable(
   std::vector<c10::optional<at::Tensor>> xlatens_opt_tensors = {bias};
   auto xlatens_opt = bridge::XlaCreateOptTensorList(xlatens_opt_tensors);
   const auto kernel_size = weight.sizes().slice(2);
-  XLA_CHECK(kernel_size.size() == 2 || kernel_size.size() == 3);
+  LTC_CHECK(kernel_size.size() == 2 || kernel_size.size() == 3);
   const auto device_type =
       lazy_tensors::NNCComputationClient::HardwareDeviceType();
   if (transposed) {
@@ -900,7 +900,7 @@ at::Tensor AtenXlaType::elu_backward(const at::Tensor& grad_output,
                                      const at::Scalar& input_scale, bool self,
                                      const at::Tensor& self_or_result) {
   XLA_FN_COUNTER("xla::");
-  XLA_CHECK(!self || alpha.to<double>() >= 0.0)
+  LTC_CHECK(!self || alpha.to<double>() >= 0.0)
       << "In-place elu backward calculation is triggered with a negative slope "
          "which is not supported.";
   return bridge::AtenFromXlaTensor(LazyTensor::elu_backward(
@@ -1071,7 +1071,7 @@ at::Tensor& AtenXlaType::fill_(at::Tensor& self, const at::Scalar& value) {
 at::Tensor& AtenXlaType::fill_(at::Tensor& self, const at::Tensor& value) {
   if (InPlaceUseNNC(self) == ExecutionKind::NNC) {
     XLA_FN_COUNTER("xla::");
-    XLA_CHECK_EQ(value.dim(), 0) << "fill_ only supports a 0-dimensional "
+    LTC_CHECK_EQ(value.dim(), 0) << "fill_ only supports a 0-dimensional "
                                  << "value tensor, but got tensor "
                                  << "with " << value.dim() << " dimension(s).";
     return fill_(self, value.item());
@@ -1335,7 +1335,7 @@ at::Tensor AtenXlaType::leaky_relu_backward(const at::Tensor& grad_output,
                                             bool self_is_result) {
   if (UseNNC(grad_output)) {
     XLA_FN_COUNTER("xla::");
-    XLA_CHECK(!self_is_result || negative_slope.to<double>() > 0.0);
+    LTC_CHECK(!self_is_result || negative_slope.to<double>() > 0.0);
     return bridge::AtenFromXlaTensor(LazyTensor::leaky_relu_backward(
         bridge::GetXlaTensor(grad_output), bridge::GetXlaTensor(self),
         negative_slope.to<double>()));
@@ -1583,7 +1583,7 @@ at::Tensor& AtenXlaType::ne_(at::Tensor& self, const at::Tensor& other) {
 at::Tensor AtenXlaType::neg(const at::Tensor& self) {
   if (UseNNC(self)) {
     XLA_FN_COUNTER("xla::");
-    XLA_CHECK(self.scalar_type() != at::kBool)
+    LTC_CHECK(self.scalar_type() != at::kBool)
         << "Negation, the `-` operator, on a bool tensor is not supported. If "
            "you are trying to invert a mask, use the `~` or `logical_not()` "
            "operator instead.";
@@ -1807,7 +1807,7 @@ at::Tensor AtenXlaType::rrelu_with_noise(
   XLA_FN_COUNTER("xla::");
   if (generator.has_value() && generator->defined()) {
     // The fallback path for rrelu_with_noise when training=true is wrong
-    XLA_CHECK_EQ(training, false);
+    LTC_CHECK_EQ(training, false);
     return AtenXlaTypeDefault::rrelu_with_noise(self, noise, lower, upper,
                                                 training, generator);
   }
@@ -1822,7 +1822,7 @@ at::Tensor AtenXlaType::rrelu_with_noise_backward(
     bool training, bool self_is_result) {
   XLA_FN_COUNTER("xla::");
   double negative_slope = (lower.to<double>() + upper.to<double>()) / 2;
-  XLA_CHECK(!self_is_result || negative_slope > 0.0);
+  LTC_CHECK(!self_is_result || negative_slope > 0.0);
   LazyTensor noise_tensor = bridge::GetXlaTensor(noise);
   return bridge::AtenFromXlaTensor(LazyTensor::rrelu_with_noise_backward(
       bridge::GetXlaTensor(grad_output), bridge::GetXlaTensor(self),

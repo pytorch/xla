@@ -767,7 +767,7 @@ def create_call(fname, param_vars):
 def generate_shape_checks(param_vars, shape_check_indices, fname):
   code = ''
   for i, j in shape_check_indices:
-    code += ('  XLA_CHECK({}.sizes() == {}.sizes()) << "Operand shapes must be '
+    code += ('  LTC_CHECK({}.sizes() == {}.sizes()) << "Operand shapes must be '
              'identical for {}, mismatch for arguments {} and {}";\n').format(
                  param_vars[i], param_vars[j], fname, i + 1, j + 1)
   return code
