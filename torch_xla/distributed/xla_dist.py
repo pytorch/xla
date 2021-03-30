@@ -362,7 +362,7 @@ class DistributedExecutor(object):
       if self.tpuvm_mode:
         # Start the local tf server if it is not already running.
         script.append([
-            'python', '-m', self.XRT_RUN_SERVER_CMD,
+            'python', '-m', self.XRT_RUN_SERVER_CMD, '--port',
             str(self.tpuvm_server_port)
         ])
       if self.docker_image:
