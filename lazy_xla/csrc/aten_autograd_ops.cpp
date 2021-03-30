@@ -32,7 +32,7 @@ torch::Tensor MaxPool2dAutogradFunction::forward(
     return std::get<0>(results);
   }
   ctx->save_for_backward({self});
-  auto outputs = XLATensor::max_pool_nd(
+  auto outputs = LazyTensor::max_pool_nd(
       bridge::GetXlaTensor(self), /*spatial_dim_count=*/2,
       XlaHelpers::I64List(kernel_size), XlaHelpers::I64List(stride),
       XlaHelpers::I64List(padding), ceil_mode);
@@ -57,7 +57,7 @@ torch::autograd::variable_list MaxPool2dAutogradFunction::backward(
         grad_output[0], self, kernel_size, stride, padding, dilation, ceil_mode,
         indices);
   }
-  grad = bridge::AtenFromXlaTensor(XLATensor::max_pool_nd_backward(
+  grad = bridge::AtenFromXlaTensor(LazyTensor::max_pool_nd_backward(
       bridge::GetXlaTensor(grad_output[0]), bridge::GetXlaTensor(self),
       /*spatial_dim_count=*/2, XlaHelpers::I64List(kernel_size),
       XlaHelpers::I64List(stride), XlaHelpers::I64List(padding), ceil_mode));
@@ -85,7 +85,7 @@ torch::Tensor MaxPool3dAutogradFunction::forward(
     return std::get<0>(results);
   }
   ctx->save_for_backward({self});
-  auto outputs = XLATensor::max_pool_nd(
+  auto outputs = LazyTensor::max_pool_nd(
       bridge::GetXlaTensor(self), /*spatial_dim_count=*/3,
       XlaHelpers::I64List(kernel_size), XlaHelpers::I64List(stride),
       XlaHelpers::I64List(padding), ceil_mode);
@@ -110,7 +110,7 @@ torch::autograd::variable_list MaxPool3dAutogradFunction::backward(
         grad_output[0], self, kernel_size, stride, padding, dilation, ceil_mode,
         indices);
   }
-  grad = bridge::AtenFromXlaTensor(XLATensor::max_pool_nd_backward(
+  grad = bridge::AtenFromXlaTensor(LazyTensor::max_pool_nd_backward(
       bridge::GetXlaTensor(grad_output[0]), bridge::GetXlaTensor(self),
       /*spatial_dim_count=*/3, XlaHelpers::I64List(kernel_size),
       XlaHelpers::I64List(stride), XlaHelpers::I64List(padding), ceil_mode));
