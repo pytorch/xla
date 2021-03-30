@@ -1,7 +1,7 @@
 #pragma once
 
 #include "absl/types/span.h"
-#include "lazy_tensors/compiler/xla/shape.h"
+#include "lazy_tensors/shape.h"
 #include "tensorflow/compiler/xla/client/xla_builder.h"
 
 namespace torch_lazy_tensors {

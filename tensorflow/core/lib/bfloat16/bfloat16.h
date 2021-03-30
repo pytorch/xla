@@ -2,7 +2,7 @@
 
 #include <cstdint>
 
-#include "lazy_tensors/compiler/xla/xla_client/tf_logging.h"
+#include "lazy_tensors/xla_client/tf_logging.h"
 
 namespace tensorflow {
 

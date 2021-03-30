@@ -1,6 +1,6 @@
 #pragma once
 
-#include "lazy_tensors/compiler/xla/xla_client/debug_macros.h"
+#include "lazy_tensors/xla_client/debug_macros.h"
 #include "tensorflow/compiler/xla/statusor.h"
 
 template <typename T>

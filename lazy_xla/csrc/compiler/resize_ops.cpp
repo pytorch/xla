@@ -1,8 +1,8 @@
 #include "lazy_xla/csrc/compiler/resize_ops.h"
 
 #include "absl/strings/str_cat.h"
-#include "lazy_tensors/compiler/xla/xla_client/sys_util.h"
-#include "lazy_tensors/compiler/xla/xla_client/util.h"
+#include "lazy_tensors/xla_client/sys_util.h"
+#include "lazy_tensors/xla_client/util.h"
 #include "lazy_xla/csrc/compiler/debug_macros.h"
 #include "tensorflow/compiler/xla/client/lib/constants.h"
 #include "tensorflow/compiler/xla/shape_util.h"

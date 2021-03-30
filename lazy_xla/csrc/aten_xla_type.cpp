@@ -5,10 +5,10 @@
 
 #include <mutex>
 
-#include "lazy_tensors/compiler/xla/xla_client/debug_macros.h"
-#include "lazy_tensors/compiler/xla/xla_client/metrics.h"
-#include "lazy_tensors/compiler/xla/xla_client/sys_util.h"
-#include "lazy_tensors/compiler/xla/xla_client/util.h"
+#include "lazy_tensors/xla_client/debug_macros.h"
+#include "lazy_tensors/xla_client/metrics.h"
+#include "lazy_tensors/xla_client/sys_util.h"
+#include "lazy_tensors/xla_client/util.h"
 #include "lazy_xla/csrc/aten_autograd_ops.h"
 #include "lazy_xla/csrc/aten_autograd_ops_nnc.h"
 #include "lazy_xla/csrc/aten_xla_type_default.h"

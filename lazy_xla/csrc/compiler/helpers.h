@@ -9,7 +9,7 @@
 
 #include "absl/types/optional.h"
 #include "absl/types/span.h"
-#include "lazy_tensors/compiler/xla/xla_client/util.h"
+#include "lazy_tensors/xla_client/util.h"
 #include "lazy_xla/csrc/compiler/debug_macros.h"
 #include "tensorflow/compiler/xla/client/xla_builder.h"
 #include "tensorflow/compiler/xla/literal_util.h"

@@ -1,7 +1,7 @@
 #include "tensorflow/compiler/xla/client/xla_computation.h"
 
-#include "lazy_tensors/compiler/xla/xla_client/nnc_computation_client.h"
-#include "lazy_tensors/compiler/xla/xla_client/sys_util.h"
+#include "lazy_tensors/xla_client/nnc_computation_client.h"
+#include "lazy_tensors/xla_client/sys_util.h"
 #include "lazy_xla/csrc/compiler/helpers.h"
 #include "tensorflow/compiler/xla/client/xla_builder.h"
 #include "torch/csrc/jit/tensorexpr/ir_simplifier.h"
