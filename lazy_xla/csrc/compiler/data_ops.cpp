@@ -1,4 +1,4 @@
-#include "torch_xla/csrc/data_ops.h"
+#include "lazy_tensor_core/csrc/data_ops.h"
 
 #include <algorithm>
 #include <functional>
@@ -14,8 +14,8 @@
 #include "tensorflow/compiler/xla/client/lib/slicing.h"
 #include "tensorflow/compiler/xla/shape_util.h"
 #include "tensorflow/compiler/xla/util.h"
-#include "torch_xla/csrc/reduction.h"
-#include "torch_xla/csrc/tensor_util.h"
+#include "lazy_tensor_core/csrc/reduction.h"
+#include "lazy_tensor_core/csrc/tensor_util.h"
 
 namespace torch_lazy_tensors {
 namespace {

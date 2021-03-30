@@ -4,7 +4,7 @@
 #include "lazy_xla/csrc/compiler/debug_macros.h"
 #include "lazy_xla/csrc/compiler/helpers.h"
 #include "tensorflow/compiler/xla/client/lib/constants.h"
-#include "torch_xla/csrc/tensor_util.h"
+#include "lazy_tensor_core/csrc/tensor_util.h"
 
 namespace torch_lazy_tensors {
 namespace {

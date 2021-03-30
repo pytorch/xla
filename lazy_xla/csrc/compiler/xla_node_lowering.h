@@ -1,6 +1,6 @@
 #pragma once
 
-#include "torch_xla/csrc/compiler/node_lowering.h"
+#include "lazy_tensor_core/csrc/compiler/node_lowering.h"
 
 namespace torch_lazy_tensors {
 namespace compiler {

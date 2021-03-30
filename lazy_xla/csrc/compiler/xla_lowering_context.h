@@ -2,8 +2,8 @@
 
 #include "tensorflow/compiler/xla/client/xla_builder.h"
 #include "tensorflow/core/lib/gtl/inlined_vector.h"
-#include "torch_xla/csrc/compiler/node_lowering.h"
-#include "torch_xla/csrc/lowering_context.h"
+#include "lazy_tensor_core/csrc/compiler/node_lowering.h"
+#include "lazy_tensor_core/csrc/lowering_context.h"
 
 namespace torch_lazy_tensors {
 namespace compiler {

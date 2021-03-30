@@ -1,3 +1,2 @@
 import _LAZYXLAC
-import torch_xla
-
+import lazy_tensor_core

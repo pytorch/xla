@@ -1,6 +1,6 @@
 import torch
 import lazy_xla
-import torch_xla.debug.metrics as metrics
+import lazy_tensor_core.debug.metrics as metrics
 
 torch.manual_seed(42)
 

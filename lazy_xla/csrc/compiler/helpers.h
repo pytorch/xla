@@ -16,7 +16,7 @@
 #include "tensorflow/compiler/xla/permutation_util.h"
 #include "tensorflow/compiler/xla/types.h"
 #include "tensorflow/core/lib/bfloat16/bfloat16.h"
-#include "torch_xla/csrc/helpers.h"
+#include "lazy_tensor_core/csrc/helpers.h"
 
 namespace torch_lazy_tensors {
 namespace compiler {

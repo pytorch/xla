@@ -5,7 +5,7 @@
 
 #include "tensorflow/compiler/xla/client/xla_builder.h"
 #include "tensorflow/compiler/xla/types.h"
-#include "torch_xla/csrc/device.h"
+#include "lazy_tensor_core/csrc/device.h"
 
 namespace torch_lazy_tensors {
 

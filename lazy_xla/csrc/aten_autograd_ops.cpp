@@ -1,9 +1,9 @@
 #include "lazy_xla/csrc/aten_autograd_ops.h"
 
 #include "lazy_xla/csrc/aten_xla_type_default.h"  // move to cpp
-#include "torch_xla/csrc/aten_xla_bridge.h"
-#include "torch_xla/csrc/helpers.h"
-#include "torch_xla/csrc/torch_util.h"
+#include "lazy_tensor_core/csrc/aten_xla_bridge.h"
+#include "lazy_tensor_core/csrc/helpers.h"
+#include "lazy_tensor_core/csrc/torch_util.h"
 
 namespace torch_lazy_tensors {
 

@@ -7,8 +7,8 @@
 #include "tensorflow/compiler/xla/client/lib/constants.h"
 #include "tensorflow/compiler/xla/shape_util.h"
 #include "tensorflow/compiler/xla/util.h"
-#include "torch_xla/csrc/helpers.h"
-#include "torch_xla/csrc/shape_builder.h"
+#include "lazy_tensor_core/csrc/helpers.h"
+#include "lazy_tensor_core/csrc/shape_builder.h"
 
 namespace torch_lazy_tensors {
 namespace resize {
