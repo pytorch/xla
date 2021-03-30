@@ -27,7 +27,7 @@ echo "Running Python Tests"
 echo "Running C++ Tests"
 pushd test/cpp
 ./run_tests.sh
-if [ -x "$(command -v nvidia-smi)"  ]
+if ! [ -x "$(command -v nvidia-smi)"  ]
 then
   ./run_tests.sh -X early_sync -F AtenXlaTensorTest.TestEarlySyncLiveTensors -L""
 fi
