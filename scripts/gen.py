@@ -301,13 +301,13 @@ class TensorFetcher(object):
     code = ''
     code += '  std::vector<at::Tensor> {} = {{{}}};\n'.format(
         self.tvar_name, ', '.join(self.tensors))
-    code += ('  auto {} = bridge::XlaCreateTensorList({});\n').format(
+    code += ('  auto {} = bridge::LtcCreateTensorList({});\n').format(
         self.var_name, self.tvar_name)
     # Handles conversion of c10::optional<at::Tensor> if exists
     if self.opt_tensors:
       code += '  std::vector<c10::optional<at::Tensor>> {} = {{{}}};\n'.format(
           self.toptvar_name, ', '.join(self.opt_tensors))
-      code += ('  auto {} = bridge::XlaCreateOptTensorList({});\n').format(
+      code += ('  auto {} = bridge::LtcCreateOptTensorList({});\n').format(
           self.optvar_name, self.toptvar_name)
     return code
 
@@ -319,7 +319,7 @@ class TensorFetcher(object):
       ivar_name = '{}_update_indices'.format(self.var_name)
       code += '    std::vector<size_t> {} = {{{}}};\n'.format(
           ivar_name, ', '.join(str(x) for x in self.writeable))
-      code += '    bridge::XlaUpdateTensors({}, {}, {});\n'.format(
+      code += '    bridge::LtcUpdateTensors({}, {}, {});\n'.format(
           self.tvar_name, self.var_name, ivar_name)
       code += '  }\n'
     return code
@@ -594,7 +594,7 @@ def get_return_value(rtype, rname, param, var, ref_param, fnopts):
     # If instead the return type is a value Tensor, we create a new one by
     # wrapping the proper local variable which has been created by calling
     # into the CPU tensor implementation.
-    return 'bridge::CreateXlaTensor({}, bridge::GetXlaDevice({}))'.format(
+    return 'bridge::CreateLtcTensor({}, bridge::GetLtcDevice({}))'.format(
         rname, get_optional(fnopts, 'device_param', param_name(ref_param)))
 
 
@@ -703,7 +703,7 @@ def generate_return_stmt(t, rtype_str, fname, rname, params, param_vars,
         fnopts,
         out_fn=out_fn)
   elif ctype == 'std::vector':
-    retstr = 'bridge::CreateXlaTensors({}, bridge::GetXlaDevice({}))'.format(
+    retstr = 'bridge::CreateLtcTensors({}, bridge::GetLtcDevice({}))'.format(
         rname, get_optional(fnopts, 'device_param', param_name(ref_param)))
   elif ctype == 'Tensor':
     ti = -1 if out_fn else 0
@@ -791,7 +791,7 @@ def generate_aten_remap(ctx, fname, sig, params, fnopts):
 
 
 def generate_outfn_result_copy(dest, src):
-  return '  bridge::XlaUpdateTensors({{{}}}, {{{}}}, {{0}});\n'.format(
+  return '  bridge::LtcUpdateTensors({{{}}}, {{{}}}, {{0}});\n'.format(
       dest, src)
 
 
@@ -853,7 +853,7 @@ def generate_aten_to_xla(ctx, tree, rwxtree, fname, sig, rwsig, params, fnopts):
     pname = param_name(p)
     if cptype == 'TensorList':
       xname = 'l_{}'.format(pname)
-      code += ('  auto {} = bridge::XlaCreateTensorList({});\n').format(
+      code += ('  auto {} = bridge::LtcCreateTensorList({});\n').format(
           xname, pname)
       param_vars.append(xname)
     elif cptype == 'TensorOptions':

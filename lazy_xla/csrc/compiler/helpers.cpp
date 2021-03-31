@@ -51,7 +51,7 @@ xla::XlaOp XlaHelpers::BroadcastDimensions(
   }
   return xla::BroadcastInDim(
       input, bcast_sizes,
-      torch_lazy_tensors::XlaHelpers::GetAllDimensions(bcast_sizes.size()));
+      torch_lazy_tensors::Helpers::GetAllDimensions(bcast_sizes.size()));
 }
 
 xla::XlaOp XlaHelpers::CreateReturnValue(
@@ -177,7 +177,7 @@ xla::XlaOp XlaHelpers::DynamicReshape(
   if (output_sizes == input_shape.dimensions()) {
     return input;
   }
-  auto info = torch_lazy_tensors::XlaHelpers::GetDynamicReshapeInfo(
+  auto info = torch_lazy_tensors::Helpers::GetDynamicReshapeInfo(
       LazyTensorsShape(input_shape), output_sizes);
   if (info) {
     return xla::ReshapeWithInferredDimension(input, output_sizes,
@@ -190,8 +190,7 @@ xla::XlaOp XlaHelpers::DynamicReshapeAs(xla::XlaOp input,
                                         const xla::Shape& shape) {
   const xla::Shape& input_shape = ShapeOfXlaOp(input);
   xla::int64 dynamic_dimension =
-      torch_lazy_tensors::XlaHelpers::GetDynamicDimension(
-          LazyTensorsShape(shape));
+      torch_lazy_tensors::Helpers::GetDynamicDimension(LazyTensorsShape(shape));
   if (dynamic_dimension >= 0) {
     return xla::ReshapeWithInferredDimension(input, shape.dimensions(),
                                              dynamic_dimension);
@@ -251,7 +250,7 @@ std::pair<xla::XlaOp, xla::XlaOp> XlaHelpers::PromoteValues(xla::XlaOp op1,
   xla::PrimitiveType type1 = TypeOfXlaOp(op1);
   xla::PrimitiveType type2 = TypeOfXlaOp(op2);
   xla::PrimitiveType result_type =
-      XlaPrimitiveType(torch_lazy_tensors::XlaHelpers::PromoteType(
+      XlaPrimitiveType(torch_lazy_tensors::Helpers::PromoteType(
           LazyTensorPrimitiveType(type1), LazyTensorPrimitiveType(type2)));
   if (type1 != result_type) {
     op1 = ConvertTo(op1, type1, result_type, /*device=*/nullptr);
@@ -268,8 +267,8 @@ std::tuple<xla::XlaOp, xla::XlaOp, xla::XlaOp> XlaHelpers::PromoteValues(
   xla::PrimitiveType type2 = TypeOfXlaOp(op2);
   xla::PrimitiveType type3 = TypeOfXlaOp(op3);
   xla::PrimitiveType result_type =
-      XlaPrimitiveType(torch_lazy_tensors::XlaHelpers::PromoteType(
-          torch_lazy_tensors::XlaHelpers::PromoteType(
+      XlaPrimitiveType(torch_lazy_tensors::Helpers::PromoteType(
+          torch_lazy_tensors::Helpers::PromoteType(
               LazyTensorPrimitiveType(type1), LazyTensorPrimitiveType(type2)),
           LazyTensorPrimitiveType(type3)));
   if (type1 != result_type) {
@@ -305,7 +304,7 @@ std::pair<xla::XlaOp, xla::XlaOp> XlaHelpers::PromoteShapes(xla::XlaOp op1,
   LTC_CHECK(xla::ShapeUtil::SameElementType(shape1, shape2))
       << shape1 << " and " << shape2;
 
-  xla::Shape shape = XlaShape(torch_lazy_tensors::XlaHelpers::GetPromotedShape(
+  xla::Shape shape = XlaShape(torch_lazy_tensors::Helpers::GetPromotedShape(
       LazyTensorsShape(shape1), LazyTensorsShape(shape2)));
   return std::pair<xla::XlaOp, xla::XlaOp>(
       ImplicitBroadcast(op1, shape1, shape),

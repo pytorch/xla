@@ -1,13 +1,3 @@
-#include "lazy_xla/csrc/compiler/convert_ops.h"
-#include "lazy_xla/csrc/compiler/data_ops.h"
-#include "lazy_xla/csrc/compiler/elementwise.h"
-#include "lazy_xla/csrc/compiler/helpers.h"
-#include "lazy_xla/csrc/compiler/infer_output_shape.h"
-#include "lazy_xla/csrc/compiler/matrix.h"
-#include "lazy_xla/csrc/compiler/resize_ops.h"
-#include "lazy_xla/csrc/compiler/xla_lowering_context.h"
-#include "tensorflow/compiler/xla/client/lib/constants.h"
-#include "tensorflow/compiler/xla/client/lib/math.h"
 #include "lazy_tensor_core/csrc/compiler/node_lowering.h"
 #include "lazy_tensor_core/csrc/data_ops.h"
 #include "lazy_tensor_core/csrc/ops/as_strided.h"
@@ -53,6 +43,16 @@
 #include "lazy_tensor_core/csrc/ops/view.h"
 #include "lazy_tensor_core/csrc/ops/xla_ops.h"
 #include "lazy_tensor_core/csrc/tensor_util.h"
+#include "lazy_xla/csrc/compiler/convert_ops.h"
+#include "lazy_xla/csrc/compiler/data_ops.h"
+#include "lazy_xla/csrc/compiler/elementwise.h"
+#include "lazy_xla/csrc/compiler/helpers.h"
+#include "lazy_xla/csrc/compiler/infer_output_shape.h"
+#include "lazy_xla/csrc/compiler/matrix.h"
+#include "lazy_xla/csrc/compiler/resize_ops.h"
+#include "lazy_xla/csrc/compiler/xla_lowering_context.h"
+#include "tensorflow/compiler/xla/client/lib/constants.h"
+#include "tensorflow/compiler/xla/client/lib/math.h"
 
 namespace torch_lazy_tensors {
 namespace compiler {
@@ -634,10 +634,10 @@ XlaOpVector XlaNodeLowering::LowerCast(const ir::ops::Cast* node) {
   xla::PrimitiveType raw_from =
       node->stype()
           ? compiler::XlaHelpers::XlaPrimitiveType(
-                torch_lazy_tensors::TensorTypeToRawXlaType(*node->stype()))
+                torch_lazy_tensors::TensorTypeToLtcType(*node->stype()))
           : input_shape.element_type();
   xla::PrimitiveType raw_to = compiler::XlaHelpers::XlaPrimitiveType(
-      node->dtype() ? torch_lazy_tensors::TensorTypeToRawXlaType(*node->dtype())
+      node->dtype() ? torch_lazy_tensors::TensorTypeToLtcType(*node->dtype())
                     : node->type());
   return {torch_lazy_tensors::ConvertToRaw(
       input, input_shape.element_type(), raw_from,

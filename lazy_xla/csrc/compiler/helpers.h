@@ -39,9 +39,8 @@ class XlaHelpers {
   template <class T>
   static xla::XlaOp ScalarValue(T scalar_value, xla::PrimitiveType type,
                                 xla::XlaBuilder* builder) {
-    lazy_tensors::Literal literal =
-        torch_lazy_tensors::XlaHelpers::ScalarLiteral(
-            scalar_value, LazyTensorPrimitiveType(type));
+    lazy_tensors::Literal literal = torch_lazy_tensors::Helpers::ScalarLiteral(
+        scalar_value, LazyTensorPrimitiveType(type));
     LTC_CHECK_EQ(literal.shape().rank(), 0);
     xla::Literal xla_literal(XlaShape(literal.shape()));
     xla_literal.Set({}, literal.data<T>()[0]);
