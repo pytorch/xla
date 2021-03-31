@@ -5,8 +5,10 @@
 #include <numeric>
 
 #include "absl/strings/str_join.h"
-#include "lazy_tensors/xla_client/sys_util.h"
-#include "lazy_tensors/xla_client/util.h"
+#include "lazy_tensor_core/csrc/reduction.h"
+#include "lazy_tensor_core/csrc/tensor_util.h"
+#include "lazy_tensors/computation_client/sys_util.h"
+#include "lazy_tensors/computation_client/util.h"
 #include "lazy_xla/csrc/compiler/convert_ops.h"
 #include "lazy_xla/csrc/compiler/debug_macros.h"
 #include "lazy_xla/csrc/compiler/helpers.h"
@@ -14,8 +16,6 @@
 #include "tensorflow/compiler/xla/client/lib/slicing.h"
 #include "tensorflow/compiler/xla/shape_util.h"
 #include "tensorflow/compiler/xla/util.h"
-#include "lazy_tensor_core/csrc/reduction.h"
-#include "lazy_tensor_core/csrc/tensor_util.h"
 
 namespace torch_lazy_tensors {
 namespace {

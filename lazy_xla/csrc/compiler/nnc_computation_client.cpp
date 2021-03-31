@@ -4,9 +4,9 @@
 #include <future>
 
 #include "absl/types/span.h"
-#include "lazy_tensors/xla_client/multi_wait.h"
-#include "lazy_tensors/xla_client/thread_pool.h"
-#include "lazy_tensors/xla_client/unique.h"
+#include "lazy_tensors/computation_client/multi_wait.h"
+#include "lazy_tensors/computation_client/thread_pool.h"
+#include "lazy_tensors/computation_client/unique.h"
 #include "lazy_xla/csrc/compiler/debug_macros.h"
 #include "lazy_xla/csrc/compiler/helpers.h"
 #include "tensorflow/compiler/xla/client/xla_builder.h"

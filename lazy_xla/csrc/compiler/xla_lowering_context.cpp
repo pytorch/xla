@@ -4,11 +4,11 @@
 #include "absl/strings/str_join.h"
 #include "absl/strings/str_replace.h"
 #include "absl/strings/string_view.h"
-#include "lazy_tensors/xla_client/computation_client.h"
-#include "lazy_xla/csrc/compiler/helpers.h"
-#include "lazy_xla/csrc/compiler/nnc_computation_client.h"
 #include "lazy_tensor_core/csrc/compiler/node_lowering.h"
 #include "lazy_tensor_core/csrc/lowering_context.h"
+#include "lazy_tensors/computation_client/computation_client.h"
+#include "lazy_xla/csrc/compiler/helpers.h"
+#include "lazy_xla/csrc/compiler/nnc_computation_client.h"
 
 namespace torch_lazy_tensors {
 namespace compiler {

@@ -5,15 +5,6 @@
 
 #include <mutex>
 
-#include "lazy_tensors/xla_client/debug_macros.h"
-#include "lazy_tensors/xla_client/metrics.h"
-#include "lazy_tensors/xla_client/sys_util.h"
-#include "lazy_tensors/xla_client/util.h"
-#include "lazy_xla/csrc/aten_autograd_ops.h"
-#include "lazy_xla/csrc/aten_autograd_ops_nnc.h"
-#include "lazy_xla/csrc/aten_xla_type_default.h"
-#include "lazy_xla/csrc/compiler/nnc_computation_client.h"
-#include "lazy_xla/csrc/version.h"
 #include "lazy_tensor_core/csrc/aten_xla_bridge.h"
 #include "lazy_tensor_core/csrc/debug_util.h"
 #include "lazy_tensor_core/csrc/device.h"
@@ -25,6 +16,15 @@
 #include "lazy_tensor_core/csrc/tensor_impl.h"
 #include "lazy_tensor_core/csrc/tensor_util.h"
 #include "lazy_tensor_core/csrc/torch_util.h"
+#include "lazy_tensors/computation_client/debug_macros.h"
+#include "lazy_tensors/computation_client/metrics.h"
+#include "lazy_tensors/computation_client/sys_util.h"
+#include "lazy_tensors/computation_client/util.h"
+#include "lazy_xla/csrc/aten_autograd_ops.h"
+#include "lazy_xla/csrc/aten_autograd_ops_nnc.h"
+#include "lazy_xla/csrc/aten_xla_type_default.h"
+#include "lazy_xla/csrc/compiler/nnc_computation_client.h"
+#include "lazy_xla/csrc/version.h"
 
 // [Implementation Guidelines]
 // - If you want to call a at::func which doesn't exist in AtenXlaType,

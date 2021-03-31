@@ -1,7 +1,7 @@
 #pragma once
 
 #include "absl/types/optional.h"
-#include "lazy_tensors/xla_client/tf_logging.h"
+#include "lazy_tensors/computation_client/tf_logging.h"
 #include "tensorflow/compiler/xla/service/hlo.pb.h"
 #include "tensorflow/compiler/xla/shape.h"
 #include "tensorflow/compiler/xla/statusor.h"

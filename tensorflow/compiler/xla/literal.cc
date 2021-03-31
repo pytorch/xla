@@ -1,6 +1,6 @@
 #include "tensorflow/compiler/xla/literal.h"
 
-#include "lazy_tensors/xla_client/util.h"
+#include "lazy_tensors/computation_client/util.h"
 #include "tensorflow/compiler/xla/shape_util.h"
 
 namespace xla {

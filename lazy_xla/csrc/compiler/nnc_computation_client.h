@@ -2,8 +2,8 @@
 
 #include <ATen/core/Tensor.h>
 
-#include "lazy_tensors/xla_client/computation_client.h"
-#include "lazy_tensors/xla_client/nnc_computation_client.h"
+#include "lazy_tensors/computation_client/computation_client.h"
+#include "lazy_tensors/computation_client/nnc_computation_client.h"
 #include "lazy_xla/csrc/compiler/helpers.h"
 #include "tensorflow/compiler/xla/client/xla_computation.h"
 

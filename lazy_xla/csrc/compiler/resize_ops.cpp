@@ -1,14 +1,14 @@
 #include "lazy_xla/csrc/compiler/resize_ops.h"
 
 #include "absl/strings/str_cat.h"
-#include "lazy_tensors/xla_client/sys_util.h"
-#include "lazy_tensors/xla_client/util.h"
+#include "lazy_tensor_core/csrc/helpers.h"
+#include "lazy_tensor_core/csrc/shape_builder.h"
+#include "lazy_tensors/computation_client/sys_util.h"
+#include "lazy_tensors/computation_client/util.h"
 #include "lazy_xla/csrc/compiler/debug_macros.h"
 #include "tensorflow/compiler/xla/client/lib/constants.h"
 #include "tensorflow/compiler/xla/shape_util.h"
 #include "tensorflow/compiler/xla/util.h"
-#include "lazy_tensor_core/csrc/helpers.h"
-#include "lazy_tensor_core/csrc/shape_builder.h"
 
 namespace torch_lazy_tensors {
 namespace resize {
