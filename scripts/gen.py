@@ -664,7 +664,7 @@ def _check_env_flag(name, default=''):
 def generate_entry_debug_code(t, fname, params, fname_ns=None):
   # Emits debug code for a given intercepted ATEN type function. For now we use
   # a counter which will show up in the metrics reports.
-  code = '  XLA_FN_TRACK(3);\n'
+  code = '  LTC_FN_TRACK(3);\n'
   if fname_ns is not None:
     code += '  LTC_COUNTER("{}::{}", 1);\n'.format(fname_ns, fname)
   if _check_env_flag('DEBUG'):
