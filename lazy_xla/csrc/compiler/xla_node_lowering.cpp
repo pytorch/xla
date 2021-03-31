@@ -18,6 +18,7 @@
 #include "lazy_tensor_core/csrc/ops/leaky_relu_backward.h"
 #include "lazy_tensor_core/csrc/ops/linear_interpolation.h"
 #include "lazy_tensor_core/csrc/ops/log_base.h"
+#include "lazy_tensor_core/csrc/ops/ltc_ops.h"
 #include "lazy_tensor_core/csrc/ops/masked_fill.h"
 #include "lazy_tensor_core/csrc/ops/not_supported.h"
 #include "lazy_tensor_core/csrc/ops/ops.h"
@@ -41,7 +42,6 @@
 #include "lazy_tensor_core/csrc/ops/upsample_nearest2d.h"
 #include "lazy_tensor_core/csrc/ops/upsample_nearest2d_backward.h"
 #include "lazy_tensor_core/csrc/ops/view.h"
-#include "lazy_tensor_core/csrc/ops/xla_ops.h"
 #include "lazy_tensor_core/csrc/tensor_util.h"
 #include "lazy_xla/csrc/compiler/convert_ops.h"
 #include "lazy_xla/csrc/compiler/data_ops.h"
@@ -519,51 +519,51 @@ XlaOpVector XlaNodeLowering::LowerToXla(const ir::Node* node) {
       return LowerConstant(constant_node);
     }
     default: {
-      if (node->op() == *ir::ops::xla_cast) {
-        return LowerCast(ir::NodeCast<ir::ops::Cast>(node, *ir::ops::xla_cast));
+      if (node->op() == *ir::ops::ltc_cast) {
+        return LowerCast(ir::NodeCast<ir::ops::Cast>(node, *ir::ops::ltc_cast));
       }
-      if (node->op() == *ir::ops::xla_device_data) {
+      if (node->op() == *ir::ops::ltc_device_data) {
         return LowerDeviceData(
-            ir::NodeCast<ir::ops::DeviceData>(node, *ir::ops::xla_device_data));
+            ir::NodeCast<ir::ops::DeviceData>(node, *ir::ops::ltc_device_data));
       }
-      if (node->op() == *ir::ops::xla_select) {
+      if (node->op() == *ir::ops::ltc_select) {
         return LowerSelect(
-            ir::NodeCast<ir::ops::Select>(node, *ir::ops::xla_select));
+            ir::NodeCast<ir::ops::Select>(node, *ir::ops::ltc_select));
       }
-      if (node->op() == *ir::ops::xla_unselect) {
+      if (node->op() == *ir::ops::ltc_unselect) {
         return LowerUnselect(
-            ir::NodeCast<ir::ops::Unselect>(node, *ir::ops::xla_unselect));
+            ir::NodeCast<ir::ops::Unselect>(node, *ir::ops::ltc_unselect));
       }
-      if (node->op() == *ir::ops::xla_generic_slice) {
+      if (node->op() == *ir::ops::ltc_generic_slice) {
         return LowerGenericSlice(ir::NodeCast<ir::ops::GenericSlice>(
-            node, *ir::ops::xla_generic_slice));
+            node, *ir::ops::ltc_generic_slice));
       }
-      if (node->op() == *ir::ops::xla_update_slice) {
+      if (node->op() == *ir::ops::ltc_update_slice) {
         return LowerUpdateSlice(ir::NodeCast<ir::ops::UpdateSlice>(
-            node, *ir::ops::xla_update_slice));
+            node, *ir::ops::ltc_update_slice));
       }
-      if (node->op() == *ir::ops::xla_as_strided_view_update) {
+      if (node->op() == *ir::ops::ltc_as_strided_view_update) {
         return LowerAsStridedViewUpdate(
             ir::NodeCast<ir::ops::AsStridedViewUpdate>(
-                node, *ir::ops::xla_as_strided_view_update));
+                node, *ir::ops::ltc_as_strided_view_update));
       }
-      if (node->op() == *ir::ops::xla_diagonal_view_update) {
+      if (node->op() == *ir::ops::ltc_diagonal_view_update) {
         return LowerDiagonalViewUpdate(
             ir::NodeCast<ir::ops::DiagonalViewUpdate>(
-                node, *ir::ops::xla_diagonal_view_update));
+                node, *ir::ops::ltc_diagonal_view_update));
       }
-      if (node->op() == *ir::ops::xla_get_dimensions_size) {
+      if (node->op() == *ir::ops::ltc_get_dimensions_size) {
         return LowerGetDimensionsSize(ir::NodeCast<ir::ops::GetDimensionsSize>(
-            node, *ir::ops::xla_get_dimensions_size));
+            node, *ir::ops::ltc_get_dimensions_size));
       }
-      if (node->op() == *ir::ops::xla_moving_average) {
+      if (node->op() == *ir::ops::ltc_moving_average) {
         return LowerLinearInterpolation(
             ir::NodeCast<ir::ops::LinearInterpolation>(
-                node, *ir::ops::xla_moving_average));
+                node, *ir::ops::ltc_moving_average));
       }
-      if (node->op() == *ir::ops::xla_not_supported) {
+      if (node->op() == *ir::ops::ltc_not_supported) {
         return LowerNotSupported(ir::NodeCast<ir::ops::NotSupported>(
-            node, *ir::ops::xla_not_supported));
+            node, *ir::ops::ltc_not_supported));
       }
       break;
     }
@@ -1179,13 +1179,13 @@ lazy_tensors::Shape XlaNodeLowering::Infer(const ir::Node* node) {
               node, ir::OpKind(at::aten::upsample_nearest2d_backward)));
     }
     default: {
-      if (kind == *ir::ops::xla_generic_slice) {
+      if (kind == *ir::ops::ltc_generic_slice) {
         return InferGenericSlice(ir::NodeCast<ir::ops::GenericSlice>(
-            node, *ir::ops::xla_generic_slice));
+            node, *ir::ops::ltc_generic_slice));
       }
-      if (kind == *ir::ops::xla_update_slice) {
+      if (kind == *ir::ops::ltc_update_slice) {
         return InferUpdateSlice(ir::NodeCast<ir::ops::UpdateSlice>(
-            node, *ir::ops::xla_update_slice));
+            node, *ir::ops::ltc_update_slice));
       }
       TF_LOG(FATAL) << "Shape inference not supported for operator: " << kind;
     }
