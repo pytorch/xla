@@ -7,15 +7,33 @@ import sys
 from pathlib import Path
 
 if __name__ == '__main__':
+  XRT_RUN_SERVER_PROCESS = 'torch_xla.core._xrt_run_server'
+
   parser = argparse.ArgumentParser()
   parser.add_argument(
-      '--port', type=str, help='Port that XRT local service will be using.')
+      '--port', type=int, help='Port that XRT local service will be using.')
   parser.add_argument(
       '--env',
       action='append',
       type=str,
       help='List of environment variables to distribute.')
+  parser.add_argument(
+      '--restart',
+      action='store_true',
+      help='Restart the long running XRT local server.')
   FLAGS = parser.parse_args()
+
+  if FLAGS.restart:
+    xrt_server_regex = '^python -m {} [0-9]+$'.format(XRT_RUN_SERVER_PROCESS)
+    subprocess.call(['pkill', '-f', xrt_server_regex])
+    # Wait unitl existing server process get killed.
+    while len(
+        subprocess.Popen(['pgrep', '-f', xrt_server_regex],
+                         stdout=subprocess.PIPE).stdout.readline()) != 0:
+      time.sleep(1)
+    # Server process might still holding the lock to tpu device after turing into a zombie
+    # processes with name <defunct>. Sleep a bit longer to make sure it exit fully.
+    time.sleep(5)
 
   my_env = os.environ.copy()
   # Enable the basic logging by defualt
@@ -37,9 +55,9 @@ if __name__ == '__main__':
                      "w")
   stdout_file = open("/tmp/xrt_server_log/server_out_{}.log".format(time_str),
                      "w")
-  subprocess.Popen(
-      ["python", "-m", "torch_xla.core._xrt_run_server", FLAGS.port],
-      stdout=stdout_file,
-      stderr=stderr_file,
-      env=my_env,
-      start_new_session=True)
+  subprocess.Popen(["python", "-m", XRT_RUN_SERVER_PROCESS,
+                    str(FLAGS.port)],
+                   stdout=stdout_file,
+                   stderr=stderr_file,
+                   env=my_env,
+                   start_new_session=True)
