@@ -3557,6 +3557,17 @@ at::Tensor& AtenXlaType::zero_(at::Tensor& self) {
   return self;
 }
 
+at::Scalar AtenXlaType::_local_scalar_dense(const at::Tensor& self) {
+  if (DebugUtil::ExperimentEnabled("early_sync")) {
+    // sync tensors in order to save computation when step is marked later.
+    XLATensor self_tensor = bridge::GetXlaTensor(self);
+    XLATensor::SyncLiveTensorsGraph(&self_tensor.GetDevice(), /*devices=*/{},
+                                    /*wait=*/true);
+    XLA_COUNTER("EarlySyncLiveTensorsCount", 1);
+  }
+  return AtenXlaTypeDefault::_local_scalar_dense(self);
+}
+
 void AtenXlaType::InitializeAtenBindings() {
   static std::once_flag once;
   std::call_once(once, []() { AtenInitialize(); });
