@@ -411,7 +411,7 @@ at::Tensor& AtenXlaType::as_strided_(at::Tensor& self, at::IntArrayRef size,
     return self;
   }
   XLA_FN_TRACK(3);
-  XLA_COUNTER("aten::as_strided_", 1);
+  LTC_COUNTER("aten::as_strided_", 1);
   TF_VLOG(3) << "XLA as_strided_ :"
              << " self=" << self.toString();
   auto xlatens = bridge::XlaCreateTensorList({self});
@@ -667,7 +667,7 @@ AtenXlaType::convolution_backward_overrideable(
             grad_bias[0].defined() ? at::cat(grad_bias, 0) : grad_bias[0]};
   }
   XLA_FN_TRACK(3);
-  XLA_COUNTER("aten::convolution_backward_overrideable", 1);
+  LTC_COUNTER("aten::convolution_backward_overrideable", 1);
   TF_VLOG(3) << "XLA convolution_backward_overrideable :"
              << " grad_output=" << grad_output.toString()
              << " input=" << input.toString()
@@ -743,7 +743,7 @@ at::Tensor AtenXlaType::convolution_overrideable(
     return at::cat(outputs, 1);
   }
   XLA_FN_TRACK(3);
-  XLA_COUNTER("aten::convolution_overrideable", 1);
+  LTC_COUNTER("aten::convolution_overrideable", 1);
   TF_VLOG(3) << "XLA convolution_overrideable :"
              << " input=" << input.toString()
              << " weight=" << weight.toString();
@@ -1976,7 +1976,7 @@ at::Tensor AtenXlaType::slice(const at::Tensor& self, int64_t dim,
         bridge::GetXlaTensor(self), dim, start_val, end_val, step));
   }
   XLA_FN_TRACK(3);
-  XLA_COUNTER("aten::slice", 1);
+  LTC_COUNTER("aten::slice", 1);
   TF_VLOG(3) << "XLA slice :"
              << " self=" << self.toString();
   std::vector<at::Tensor> xlatens_tensors = {self};
@@ -2041,7 +2041,7 @@ at::Tensor& AtenXlaType::sqrt_(at::Tensor& self) {
 
 at::Tensor& AtenXlaType::squeeze_(at::Tensor& self) {
   XLA_FN_TRACK(3);
-  XLA_COUNTER("aten::squeeze_", 1);
+  LTC_COUNTER("aten::squeeze_", 1);
   TF_VLOG(3) << "XLA squeeze_ :"
              << " self=" << self.toString();
   std::vector<at::Tensor> xlatens_tensors = {self};
@@ -2059,7 +2059,7 @@ at::Tensor& AtenXlaType::squeeze_(at::Tensor& self) {
 
 at::Tensor& AtenXlaType::squeeze_(at::Tensor& self, int64_t dim) {
   XLA_FN_TRACK(3);
-  XLA_COUNTER("aten::squeeze_", 1);
+  LTC_COUNTER("aten::squeeze_", 1);
   TF_VLOG(3) << "XLA squeeze_ :"
              << " self=" << self.toString();
   std::vector<at::Tensor> xlatens_tensors = {self};

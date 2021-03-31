@@ -666,7 +666,7 @@ def generate_entry_debug_code(t, fname, params, fname_ns=None):
   # a counter which will show up in the metrics reports.
   code = '  XLA_FN_TRACK(3);\n'
   if fname_ns is not None:
-    code += '  XLA_COUNTER("{}::{}", 1);\n'.format(fname_ns, fname)
+    code += '  LTC_COUNTER("{}::{}", 1);\n'.format(fname_ns, fname)
   if _check_env_flag('DEBUG'):
     # VLOG info. Use the following to see debug output:
     #  export TF_CPP_VMODULE=aten_xla_type_default=3

@@ -2,13 +2,13 @@
 
 #include <climits>
 
+#include "lazy_tensor_core/csrc/tensor_util.h"
 #include "lazy_xla/csrc/compiler/debug_macros.h"
 #include "lazy_xla/csrc/compiler/helpers.h"
 #include "tensorflow/compiler/xla/client/lib/constants.h"
 #include "tensorflow/compiler/xla/literal_util.h"
 #include "tensorflow/compiler/xla/primitive_util.h"
 #include "tensorflow/compiler/xla/shape_util.h"
-#include "lazy_tensor_core/csrc/tensor_util.h"
 
 namespace torch_lazy_tensors {
 namespace {
@@ -117,7 +117,7 @@ xla::XlaOp CastToScalarType(xla::XlaOp input,
     Device xla_device = GetCurrentDevice();
     return ConvertTo(input, compiler::XlaHelpers::TypeOfXlaOp(input),
                      compiler::XlaHelpers::XlaPrimitiveType(
-                         MakeXlaPrimitiveType(*dtype, &xla_device)),
+                         MakeLtcPrimitiveType(*dtype, &xla_device)),
                      &xla_device);
   }
   return ConvertToNumeric(input, compiler::XlaHelpers::TypeOfXlaOp(input));
