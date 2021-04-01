@@ -7,7 +7,7 @@ import sys
 from pathlib import Path
 
 XRT_RUN_SERVER_PROCESS = 'torch_xla.core._xrt_run_server'
-XRT_SERVER_REGEX = '^python -m {} [0-9]+$'.format(XRT_RUN_SERVER_PROCESS)
+XRT_SERVER_REGEX = '^python3 -m {} [0-9]+$'.format(XRT_RUN_SERVER_PROCESS)
 
 
 def server_is_alive():
@@ -18,7 +18,7 @@ def server_is_alive():
 
 def kill_service():
   subprocess.call(['pkill', '-f', XRT_SERVER_REGEX])
-  # Wait unitl existing server process get killed.
+  # Wait unitl existing server process gets killed.
   found_server_process = False
   while server_is_alive():
     found_server_process = True
@@ -51,7 +51,7 @@ def run_service(port, flag_env):
   Path("/tmp/xrt_server_log").mkdir(parents=True, exist_ok=True)
   time_str = time.strftime("%Y%m%d-%H%M%S")
   log_file = open("/tmp/xrt_server_log/server_{}.log".format(time_str), "w")
-  subprocess.Popen(["python", "-m", XRT_RUN_SERVER_PROCESS,
+  subprocess.Popen(["python3", "-m", XRT_RUN_SERVER_PROCESS,
                     str(port)],
                    stdout=log_file,
                    stderr=subprocess.STDOUT,
