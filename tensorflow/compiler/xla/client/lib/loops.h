@@ -20,7 +20,7 @@ inline StatusOr<std::vector<XlaOp>> WhileLoopHelper(
     const WhileLoopHelperBodyFunction& body_function,
     absl::Span<const XlaOp> initial_values, absl::string_view name,
     XlaBuilder* builder) {
-  TF_LOG(FATAL) << "Not implemented yet.";
+  LTC_LOG(FATAL) << "Not implemented yet.";
 }
 
 }  // namespace xla

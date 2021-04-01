@@ -39,9 +39,7 @@ XlaOp Zero(XlaBuilder* builder, PrimitiveType type) {
       zero.Set<double>({}, 0);
       break;
     }
-    default: {
-      TF_LOG(FATAL) << "Not implemented yet: " << type;
-    }
+    default: { LTC_LOG(FATAL) << "Not implemented yet: " << type; }
   }
   return ConstantLiteral(builder, zero);
 }
@@ -81,9 +79,7 @@ XlaOp One(XlaBuilder* builder, PrimitiveType type) {
       one.Set<double>({}, 1);
       break;
     }
-    default: {
-      TF_LOG(FATAL) << "Not implemented yet: " << type;
-    }
+    default: { LTC_LOG(FATAL) << "Not implemented yet: " << type; }
   }
   return ConstantLiteral(builder, one);
 }

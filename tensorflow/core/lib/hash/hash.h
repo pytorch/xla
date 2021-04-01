@@ -6,7 +6,7 @@
 namespace tensorflow {
 
 inline uint64_t Hash64(const char* data, size_t n, uint64_t seed) {
-  TF_LOG(FATAL) << "Not implemented yet.";
+  LTC_LOG(FATAL) << "Not implemented yet.";
 }
 
 }  // namespace tensorflow

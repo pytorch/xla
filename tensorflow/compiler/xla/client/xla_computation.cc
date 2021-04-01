@@ -155,7 +155,7 @@ XlaComputation::XlaComputation(const XlaOp& root, XlaBuilder* builder)
                                                  {at::kCUDA, 0}));
           break;
         }
-        default: { TF_LOG(FATAL) << "Device not supported: " << device_type; }
+        default: { LTC_LOG(FATAL) << "Device not supported: " << device_type; }
       }
     } catch (const std::runtime_error& error) {
       LTC_CHECK_EQ(device_type, at::kCPU);
@@ -203,7 +203,7 @@ PrimitiveType ScalarToPrimitiveType(ScalarType scalar_type) {
     case ScalarType::Bool: {
       return PrimitiveType::PRED;
     }
-    default: { TF_LOG(FATAL) << "Not implemented yet."; }
+    default: { LTC_LOG(FATAL) << "Not implemented yet."; }
   }
 }
 

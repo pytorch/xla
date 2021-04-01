@@ -1,7 +1,7 @@
 #pragma once
 
 #include "absl/types/optional.h"
-#include "lazy_tensors/computation_client/tf_logging.h"
+#include "lazy_tensors/computation_client/ltc_logging.h"
 #include "tensorflow/compiler/xla/service/hlo.pb.h"
 #include "tensorflow/compiler/xla/shape.h"
 #include "tensorflow/compiler/xla/statusor.h"
@@ -23,7 +23,7 @@ class XlaComputation {
   StatusOr<ProgramShape> GetProgramShape() const;
 
   const HloModuleProto& proto() const {
-    TF_LOG(FATAL) << "Not implemented yet.";
+    LTC_LOG(FATAL) << "Not implemented yet.";
   }
 
   struct CodeGen {

@@ -101,8 +101,8 @@ void CheckBinaryOpTypePromotion(const at::Tensor& out, const at::Tensor& self,
 }
 
 void AtenInitialize() {
-  TF_VLOG(1) << "PyTorch GIT revision: " << lazy_xla::TORCH_GITREV;
-  TF_VLOG(1) << "XLA GIT revision: " << lazy_xla::XLA_GITREV;
+  LTC_VLOG(1) << "PyTorch GIT revision: " << lazy_xla::TORCH_GITREV;
+  LTC_VLOG(1) << "XLA GIT revision: " << lazy_xla::XLA_GITREV;
 
   LTCTensorImpl::AtenInitialize();
 }
@@ -412,8 +412,8 @@ at::Tensor& AtenXlaType::as_strided_(at::Tensor& self, at::IntArrayRef size,
   }
   LTC_FN_TRACK(3);
   LTC_COUNTER("aten::as_strided_", 1);
-  TF_VLOG(3) << "XLA as_strided_ :"
-             << " self=" << self.toString();
+  LTC_VLOG(3) << "XLA as_strided_ :"
+              << " self=" << self.toString();
   auto xlatens = bridge::LtcCreateTensorList({self});
   at::as_strided_(xlatens[0], size, stride, storage_offset);
   bridge::LtcUpdateTensors({self}, xlatens, {0});
@@ -668,10 +668,10 @@ AtenXlaType::convolution_backward_overrideable(
   }
   LTC_FN_TRACK(3);
   LTC_COUNTER("aten::convolution_backward_overrideable", 1);
-  TF_VLOG(3) << "XLA convolution_backward_overrideable :"
-             << " grad_output=" << grad_output.toString()
-             << " input=" << input.toString()
-             << " weight=" << weight.toString();
+  LTC_VLOG(3) << "XLA convolution_backward_overrideable :"
+              << " grad_output=" << grad_output.toString()
+              << " input=" << input.toString()
+              << " weight=" << weight.toString();
   const auto kernel_size = weight.sizes().slice(2);
   LTC_CHECK(kernel_size.size() == 2 || kernel_size.size() == 3);
   const auto device_type =
@@ -744,9 +744,9 @@ at::Tensor AtenXlaType::convolution_overrideable(
   }
   LTC_FN_TRACK(3);
   LTC_COUNTER("aten::convolution_overrideable", 1);
-  TF_VLOG(3) << "XLA convolution_overrideable :"
-             << " input=" << input.toString()
-             << " weight=" << weight.toString();
+  LTC_VLOG(3) << "XLA convolution_overrideable :"
+              << " input=" << input.toString()
+              << " weight=" << weight.toString();
   std::vector<at::Tensor> xlatens_tensors = {input, weight};
   auto xlatens = bridge::LtcCreateTensorList(xlatens_tensors);
   std::vector<c10::optional<at::Tensor>> xlatens_opt_tensors = {bias};
@@ -1977,8 +1977,8 @@ at::Tensor AtenXlaType::slice(const at::Tensor& self, int64_t dim,
   }
   LTC_FN_TRACK(3);
   LTC_COUNTER("aten::slice", 1);
-  TF_VLOG(3) << "XLA slice :"
-             << " self=" << self.toString();
+  LTC_VLOG(3) << "XLA slice :"
+              << " self=" << self.toString();
   std::vector<at::Tensor> xlatens_tensors = {self};
   auto xlatens = bridge::LtcCreateTensorList(xlatens_tensors);
   auto x_result = at::slice(xlatens[0], dim, start, end, step);
@@ -2042,8 +2042,8 @@ at::Tensor& AtenXlaType::sqrt_(at::Tensor& self) {
 at::Tensor& AtenXlaType::squeeze_(at::Tensor& self) {
   LTC_FN_TRACK(3);
   LTC_COUNTER("aten::squeeze_", 1);
-  TF_VLOG(3) << "XLA squeeze_ :"
-             << " self=" << self.toString();
+  LTC_VLOG(3) << "XLA squeeze_ :"
+              << " self=" << self.toString();
   std::vector<at::Tensor> xlatens_tensors = {self};
   auto xlatens = bridge::LtcCreateTensorList(xlatens_tensors);
   xlatens[0].squeeze_();
@@ -2060,8 +2060,8 @@ at::Tensor& AtenXlaType::squeeze_(at::Tensor& self) {
 at::Tensor& AtenXlaType::squeeze_(at::Tensor& self, int64_t dim) {
   LTC_FN_TRACK(3);
   LTC_COUNTER("aten::squeeze_", 1);
-  TF_VLOG(3) << "XLA squeeze_ :"
-             << " self=" << self.toString();
+  LTC_VLOG(3) << "XLA squeeze_ :"
+              << " self=" << self.toString();
   std::vector<at::Tensor> xlatens_tensors = {self};
   auto xlatens = bridge::LtcCreateTensorList(xlatens_tensors);
   xlatens[0].squeeze_(dim);

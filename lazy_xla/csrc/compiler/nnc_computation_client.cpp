@@ -293,7 +293,7 @@ std::string NNCComputationClient::GetDefaultDevice() const {
     case at::kCUDA: {
       return "GPU:0";
     }
-    default: { TF_LOG(FATAL) << "Invalid device type"; }
+    default: { LTC_LOG(FATAL) << "Invalid device type"; }
   }
 }
 

@@ -1,7 +1,7 @@
+#include "lazy_tensor_core/csrc/compiler/backend_impl_interface.h"
 #include "lazy_xla/csrc/compiler/nnc_computation_client.h"
 #include "lazy_xla/csrc/compiler/xla_lowering_context.h"
 #include "lazy_xla/csrc/compiler/xla_node_lowering.h"
-#include "lazy_tensor_core/csrc/compiler/backend_impl_interface.h"
 
 namespace torch_lazy_tensors {
 namespace compiler {
@@ -68,7 +68,7 @@ class XlaBackendImpl : public BackendImplInterface {
 
   lazy_tensors::StatusOr<std::string> GetComputationBackendText(
       const lazy_tensors::GenericComputation* computation) const {
-    TF_LOG(FATAL) << "Not implemented.";
+    LTC_LOG(FATAL) << "Not implemented.";
   }
 };
 

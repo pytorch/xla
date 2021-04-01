@@ -4,8 +4,8 @@
 
 #include "absl/strings/str_join.h"
 #include "lazy_tensor_core/csrc/tensor_util.h"
+#include "lazy_tensors/computation_client/ltc_logging.h"
 #include "lazy_tensors/computation_client/sys_util.h"
-#include "lazy_tensors/computation_client/tf_logging.h"
 #include "lazy_tensors/computation_client/util.h"
 #include "lazy_xla/csrc/compiler/convert_ops.h"
 #include "lazy_xla/csrc/compiler/debug_macros.h"

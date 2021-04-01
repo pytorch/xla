@@ -1,10 +1,10 @@
 #include "lazy_xla/csrc/compiler/elementwise.h"
 
+#include "lazy_tensor_core/csrc/tensor_util.h"
 #include "lazy_xla/csrc/compiler/convert_ops.h"
 #include "lazy_xla/csrc/compiler/debug_macros.h"
 #include "lazy_xla/csrc/compiler/helpers.h"
 #include "tensorflow/compiler/xla/client/lib/constants.h"
-#include "lazy_tensor_core/csrc/tensor_util.h"
 
 namespace torch_lazy_tensors {
 namespace {
@@ -129,7 +129,7 @@ std::vector<xla::XlaOp> BuildRrelu(xla::XlaOp input, const at::Scalar& lower,
   xla::XlaOp noise;
   xla::XlaOp output;
   if (training) {
-    TF_LOG(FATAL) << "Lazy Tensor Core";
+    LTC_LOG(FATAL) << "Lazy Tensor Core";
     return {};
   } else {
     double negative_slope = (lower.to<double>() + upper.to<double>()) / 2;

@@ -5,7 +5,7 @@
 namespace xla {
 
 inline void QrExplicit(XlaOp a, bool full_matrices, XlaOp& q, XlaOp& r) {
-  TF_LOG(FATAL) << "Not implemented yet.";
+  LTC_LOG(FATAL) << "Not implemented yet.";
 }
 
 }  // namespace xla

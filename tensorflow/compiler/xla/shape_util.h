@@ -64,12 +64,12 @@ class ShapeUtil {
       case PrimitiveType::C128:
         return sizeof(complex128);
       default:
-        TF_LOG(FATAL) << "Unhandled primitive type " << primitive_type;
+        LTC_LOG(FATAL) << "Unhandled primitive type " << primitive_type;
     }
   }
 
   static bool SameDimensions(const Shape& lhs, const Shape& rhs) {
-    TF_LOG(FATAL) << "Not implemented yet.";
+    LTC_LOG(FATAL) << "Not implemented yet.";
   }
 
   static bool SameElementType(const Shape& lhs, const Shape& rhs) {
@@ -81,7 +81,7 @@ class ShapeUtil {
   }
 
   static Shape ChangeElementType(const Shape& original, PrimitiveType type) {
-    TF_LOG(FATAL) << "Not implemented yet.";
+    LTC_LOG(FATAL) << "Not implemented yet.";
   }
 
   static Shape MakeTupleShape(absl::Span<const Shape> shapes) {
@@ -89,7 +89,7 @@ class ShapeUtil {
   }
 
   static void AppendMajorDimension(int bound, Shape* shape) {
-    TF_LOG(FATAL) << "Not implemented yet.";
+    LTC_LOG(FATAL) << "Not implemented yet.";
   }
 
   static Shape MakeShape(PrimitiveType element_type,
@@ -103,7 +103,7 @@ class ShapeUtil {
                                    absl::Span<const Tile> tiles = {},
                                    int64 element_size_in_bits = 0,
                                    int64 memory_space = 0) {
-    TF_LOG(FATAL) << "Not implemented yet.";
+    LTC_LOG(FATAL) << "Not implemented yet.";
   }
 
   static Shape MakeShapeWithDescendingLayout(
@@ -112,7 +112,7 @@ class ShapeUtil {
   }
 
   static const Shape& GetTupleElementShape(const Shape& shape, int64 index) {
-    TF_LOG(FATAL) << "Not implemented yet.";
+    LTC_LOG(FATAL) << "Not implemented yet.";
   }
 
   using MutatingVisitorFunction =
@@ -133,7 +133,7 @@ class ShapeUtil {
 
   static Shape PermuteDimensions(absl::Span<const int64> permutation,
                                  const Shape& shape) {
-    TF_LOG(FATAL) << "Not implemented yet.";
+    LTC_LOG(FATAL) << "Not implemented yet.";
   }
 };
 
@@ -164,7 +164,7 @@ inline torch::jit::tensorexpr::ScalarType PrimitiveToScalarType(
     case xla::PrimitiveType::PRED: {
       return torch::jit::tensorexpr::ScalarType::Bool;
     }
-    default: { TF_LOG(FATAL) << "Not implemented yet."; }
+    default: { LTC_LOG(FATAL) << "Not implemented yet."; }
   }
 }
 

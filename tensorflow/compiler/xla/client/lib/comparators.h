@@ -8,12 +8,12 @@ namespace xla {
 
 inline XlaComputation CreateScalarLtComputation(
     const std::vector<PrimitiveType>& operand_types, XlaBuilder* builder) {
-  TF_LOG(FATAL) << "Not implemented yet.";
+  LTC_LOG(FATAL) << "Not implemented yet.";
 }
 
 inline XlaComputation CreateScalarGtComputation(
     const std::vector<PrimitiveType>& operand_types, XlaBuilder* builder) {
-  TF_LOG(FATAL) << "Not implemented yet.";
+  LTC_LOG(FATAL) << "Not implemented yet.";
 }
 
 }  // namespace xla

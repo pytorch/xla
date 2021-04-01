@@ -5,7 +5,7 @@
 namespace tensorflow {
 
 inline std::string CurrentStackTrace() {
-  TF_LOG(FATAL) << "Not implemented yet.";
+  LTC_LOG(FATAL) << "Not implemented yet.";
 }
 
 }  // namespace tensorflow

@@ -13,13 +13,13 @@ XlaOp ConstantR0WithType(XlaBuilder* builder, PrimitiveType type, T value) {
   if (std::is_floating_point<T>::value &&
       !(primitive_util::IsFloatingPointType(type) ||
         primitive_util::IsComplexType(type))) {
-    TF_LOG(FATAL) << "Invalid cast from floating point type to "
-                  << PrimitiveTypeName(type) << " in ConstantR0WithType.";
+    LTC_LOG(FATAL) << "Invalid cast from floating point type to "
+                   << PrimitiveTypeName(type) << " in ConstantR0WithType.";
   }
   if (std::is_same<T, complex64>::value &&
       !primitive_util::IsComplexType(type)) {
-    TF_LOG(FATAL) << "Invalid cast from complex type to "
-                  << PrimitiveTypeName(type) << " in ConstantR0WithType.";
+    LTC_LOG(FATAL) << "Invalid cast from complex type to "
+                   << PrimitiveTypeName(type) << " in ConstantR0WithType.";
   }
   switch (type) {
     case PrimitiveType::PRED:
@@ -53,8 +53,8 @@ XlaOp ConstantR0WithType(XlaBuilder* builder, PrimitiveType type, T value) {
     case PrimitiveType::S64:
       return ConstantR0<int64>(builder, static_cast<int64>(value));
     default:
-      TF_LOG(FATAL) << "Invalid type for ConstantR0WithType ("
-                    << PrimitiveTypeName(type) << ").";
+      LTC_LOG(FATAL) << "Invalid type for ConstantR0WithType ("
+                     << PrimitiveTypeName(type) << ").";
   }
 }
 
@@ -73,25 +73,25 @@ XlaOp ScalarLike(XlaOp prototype, T value) {
 XlaOp Zero(XlaBuilder* builder, PrimitiveType type);
 
 inline XlaOp Zeros(XlaBuilder* builder, const Shape& shape) {
-  TF_LOG(FATAL) << "Not implemented yet.";
+  LTC_LOG(FATAL) << "Not implemented yet.";
 }
 
 inline XlaOp ZerosLike(XlaOp prototype) {
-  TF_LOG(FATAL) << "Not implemented yet.";
+  LTC_LOG(FATAL) << "Not implemented yet.";
 }
 
 XlaOp One(XlaBuilder* builder, PrimitiveType type);
 
 inline XlaOp MinValue(XlaBuilder* builder, PrimitiveType type) {
-  TF_LOG(FATAL) << "Not implemented yet.";
+  LTC_LOG(FATAL) << "Not implemented yet.";
 }
 
 inline XlaOp MaxValue(XlaBuilder* builder, PrimitiveType type) {
-  TF_LOG(FATAL) << "Not implemented yet.";
+  LTC_LOG(FATAL) << "Not implemented yet.";
 }
 
 inline XlaOp NanValue(XlaBuilder* builder, PrimitiveType type) {
-  TF_LOG(FATAL) << "Not implemented yet.";
+  LTC_LOG(FATAL) << "Not implemented yet.";
 }
 
 }  // namespace xla

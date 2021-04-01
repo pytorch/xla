@@ -127,15 +127,15 @@ inline bool IsIntegralType(PrimitiveType type) {
 }
 
 inline int BitWidth(PrimitiveType type) {
-  TF_LOG(FATAL) << "Not implemented yet.";
+  LTC_LOG(FATAL) << "Not implemented yet.";
 }
 
 inline PrimitiveType UnsignedIntegralTypeForBitWidth(int64 src_bitwidth) {
-  TF_LOG(FATAL) << "Not implemented yet.";
+  LTC_LOG(FATAL) << "Not implemented yet.";
 }
 
 inline PrimitiveType ComplexComponentType(PrimitiveType complex_type) {
-  TF_LOG(FATAL) << "Not implemented yet.";
+  LTC_LOG(FATAL) << "Not implemented yet.";
 }
 
 inline const std::string LowercasePrimitiveTypeName(PrimitiveType s) {

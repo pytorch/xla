@@ -35,20 +35,20 @@ class Shape {
 
   bool IsTuple() const { return element_type_ == PrimitiveType::TUPLE; }
 
-  bool is_static() const { TF_LOG(FATAL) << "Not implemented yet."; }
+  bool is_static() const { LTC_LOG(FATAL) << "Not implemented yet."; }
 
   bool is_dynamic_dimension(int dimension) const { return false; }
 
   void set_dynamic_dimension(int dimension, bool is_dynamic) {
-    TF_LOG(FATAL) << "Not implemented yet.";
+    LTC_LOG(FATAL) << "Not implemented yet.";
   }
 
   absl::Span<const bool> dynamic_dimensions() const {
-    TF_LOG(FATAL) << "Not implemented yet.";
+    LTC_LOG(FATAL) << "Not implemented yet.";
   }
 
   void DeleteDimension(int64 dim_to_delete) {
-    TF_LOG(FATAL) << "Not implemented yet.";
+    LTC_LOG(FATAL) << "Not implemented yet.";
   }
 
   PrimitiveType element_type() const { return element_type_; }
@@ -63,13 +63,13 @@ class Shape {
     LTC_CHECK_LT(index, dimensions_.size());
     dimensions_[index] = value;
   }
-  void add_dimensions(int64 value) { TF_LOG(FATAL) << "Not implemented yet."; }
+  void add_dimensions(int64 value) { LTC_LOG(FATAL) << "Not implemented yet."; }
 
   absl::Span<const int64> dimensions() const {
     return absl::MakeSpan(dimensions_);
   }
   absl::Span<int64> mutable_dimensions() {
-    TF_LOG(FATAL) << "Not implemented yet.";
+    LTC_LOG(FATAL) << "Not implemented yet.";
   }
 
   int tuple_shapes_size() const { return element_shapes_.size(); }
@@ -81,7 +81,7 @@ class Shape {
   }
   const std::vector<Shape>& tuple_shapes() const { return element_shapes_; }
 
-  const Layout& layout() const { TF_LOG(FATAL) << "Not implemented yet."; }
+  const Layout& layout() const { LTC_LOG(FATAL) << "Not implemented yet."; }
 
   bool operator==(const Shape& other) const {
     return element_type_ == other.element_type_ &&

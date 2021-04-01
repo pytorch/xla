@@ -81,7 +81,7 @@ class XlaHelpers {
       HANDLE_TYPE(C128)
       HANDLE_TYPE(TUPLE)
       HANDLE_TYPE(INVALID)
-      default: { TF_LOG(FATAL) << "Invalid primitive type."; }
+      default: { LTC_LOG(FATAL) << "Invalid primitive type."; }
     }
   }
 
@@ -111,7 +111,7 @@ class XlaHelpers {
       HANDLE_TYPE(C128)
       HANDLE_TYPE(TUPLE)
       HANDLE_TYPE(INVALID)
-      default: { TF_LOG(FATAL) << "Invalid primitive type."; }
+      default: { LTC_LOG(FATAL) << "Invalid primitive type."; }
     }
   }
 

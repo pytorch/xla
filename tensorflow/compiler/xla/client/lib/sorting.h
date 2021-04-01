@@ -4,6 +4,6 @@
 
 namespace xla {
 
-XlaOp TopK(XlaOp input, int64 k) { TF_LOG(FATAL) << "Not implemented yet."; }
+XlaOp TopK(XlaOp input, int64 k) { LTC_LOG(FATAL) << "Not implemented yet."; }
 
 }  // namespace xla

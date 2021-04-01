@@ -24,7 +24,7 @@ inline xla::StatusOr<xla::XlaOp> MakeXlaBackpropInputConvOp(
     std::string type_string, const xla::Shape& input_shape, xla::XlaOp filter,
     xla::XlaOp out_backprop, const ConvOpAttrs& attrs,
     const xla::PrecisionConfig* precision_config = nullptr) {
-  TF_LOG(FATAL) << "Not implemented yet.";
+  LTC_LOG(FATAL) << "Not implemented yet.";
 }
 
 inline xla::StatusOr<xla::XlaOp> MakeXlaBackpropFilterConvOp(
@@ -32,7 +32,7 @@ inline xla::StatusOr<xla::XlaOp> MakeXlaBackpropFilterConvOp(
     const xla::Shape& filter_shape, xla::XlaOp gradients,
     const ConvOpAttrs& attrs,
     const xla::PrecisionConfig* precision_config = nullptr) {
-  TF_LOG(FATAL) << "Not implemented yet.";
+  LTC_LOG(FATAL) << "Not implemented yet.";
 }
 
 }  // namespace tensorflow

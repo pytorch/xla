@@ -12,7 +12,7 @@ struct SVDResult {
 
 SVDResult SVD(XlaOp a, int64 max_iter = 100, float epsilon = 1e-6,
               PrecisionConfig::Precision precision = PrecisionConfig::HIGHEST) {
-  TF_LOG(FATAL) << "Not implemented yet.";
+  LTC_LOG(FATAL) << "Not implemented yet.";
 }
 
 }  // namespace xla

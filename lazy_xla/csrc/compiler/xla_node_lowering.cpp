@@ -162,7 +162,7 @@ lazy_tensors::Shape InferBitwise(const ir::Node* node) {
       return ir::ops::InferOutputShape({input0.shape(), input1.shape()},
                                        shape_fn);
     }
-    default: { TF_LOG(FATAL) << "Invalid bitwise operator: " << node->op(); }
+    default: { LTC_LOG(FATAL) << "Invalid bitwise operator: " << node->op(); }
   }
 }
 
@@ -617,7 +617,7 @@ XlaOpVector XlaNodeLowering::LowerBitwise(const ir::Node* node) {
     case at::aten::__xor__: {
       return {op0 ^ op1};
     }
-    default: { TF_LOG(FATAL) << "Invalid bitwise operator: " << node->op(); }
+    default: { LTC_LOG(FATAL) << "Invalid bitwise operator: " << node->op(); }
   }
 }
 
@@ -993,7 +993,7 @@ xla::Literal XlaLiteral(const lazy_tensors::Literal& literal) {
     HANDLE_CASE(F32, float);
     HANDLE_CASE(F64, double);
     default: {
-      TF_LOG(FATAL) << "Not implemented yet: " << shape.element_type();
+      LTC_LOG(FATAL) << "Not implemented yet: " << shape.element_type();
     }
   }
   return xla_literal;
@@ -1187,7 +1187,7 @@ lazy_tensors::Shape XlaNodeLowering::Infer(const ir::Node* node) {
         return InferUpdateSlice(ir::NodeCast<ir::ops::UpdateSlice>(
             node, *ir::ops::ltc_update_slice));
       }
-      TF_LOG(FATAL) << "Shape inference not supported for operator: " << kind;
+      LTC_LOG(FATAL) << "Shape inference not supported for operator: " << kind;
     }
   }
 }

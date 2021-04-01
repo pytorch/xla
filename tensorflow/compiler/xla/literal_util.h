@@ -18,19 +18,19 @@ class LiteralUtil {
 
   template <typename NativeT>
   static Literal CreateR1(absl::Span<const NativeT> values) {
-    TF_LOG(FATAL) << "Not implemented yet.";
+    LTC_LOG(FATAL) << "Not implemented yet.";
   }
 
   static Literal Zero(PrimitiveType primitive_type) {
-    TF_LOG(FATAL) << "Not implemented yet.";
+    LTC_LOG(FATAL) << "Not implemented yet.";
   }
 
   static Literal One(PrimitiveType primitive_type) {
-    TF_LOG(FATAL) << "Not implemented yet.";
+    LTC_LOG(FATAL) << "Not implemented yet.";
   }
 
   static Literal MinValue(PrimitiveType primitive_type) {
-    TF_LOG(FATAL) << "Not implemented yet.";
+    LTC_LOG(FATAL) << "Not implemented yet.";
   }
 };
 

@@ -12,7 +12,7 @@ struct SelfAdjointEigResult {
 SelfAdjointEigResult SelfAdjointEig(XlaOp a, bool lower = true,
                                     int64 max_iter = 100,
                                     float epsilon = 1e-6) {
-  TF_LOG(FATAL) << "Not implemented yet.";
+  LTC_LOG(FATAL) << "Not implemented yet.";
 }
 
 }  // namespace xla

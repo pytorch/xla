@@ -67,12 +67,12 @@ class NNCComputationClient : public lazy_tensors::ComputationClient {
 
   std::vector<DataPtr> TransferToServer(
       absl::Span<const TensorSource> tensors) override {
-    TF_LOG(FATAL) << "Not implemented yet.";
+    LTC_LOG(FATAL) << "Not implemented yet.";
   }
 
   std::vector<lazy_tensors::Literal> TransferFromServer(
       absl::Span<const DataPtr> handles) override {
-    TF_LOG(FATAL) << "Not implemented yet.";
+    LTC_LOG(FATAL) << "Not implemented yet.";
   }
 
   std::vector<ComputationPtr> Compile(
@@ -88,7 +88,7 @@ class NNCComputationClient : public lazy_tensors::ComputationClient {
       const std::vector<std::vector<DataPtr>>& arguments,
       absl::Span<const std::string> devices,
       const ExecuteReplicatedOptions& options) override {
-    TF_LOG(FATAL) << "Not implemented yet.";
+    LTC_LOG(FATAL) << "Not implemented yet.";
   }
 
   std::vector<std::vector<DataPtr>> ExecuteParallel(
@@ -96,17 +96,17 @@ class NNCComputationClient : public lazy_tensors::ComputationClient {
       const std::vector<std::vector<DataPtr>>& arguments,
       absl::Span<const std::string> devices,
       const ExecuteParallelOptions& options) override {
-    TF_LOG(FATAL) << "Not implemented yet.";
+    LTC_LOG(FATAL) << "Not implemented yet.";
   }
 
   std::vector<DataPtr> ExecuteChained(absl::Span<const ExecuteChainedOp> ops,
                                       const std::string& device) override {
-    TF_LOG(FATAL) << "Not implemented yet.";
+    LTC_LOG(FATAL) << "Not implemented yet.";
   }
 
   std::vector<std::vector<DataPtr>> DeconstructTuple(
       absl::Span<const DataPtr> tuples) override {
-    TF_LOG(FATAL) << "Not implemented yet.";
+    LTC_LOG(FATAL) << "Not implemented yet.";
   }
 
   std::string GetResourceDomain(const std::string& device) const override;
@@ -125,7 +125,7 @@ class NNCComputationClient : public lazy_tensors::ComputationClient {
   std::shared_ptr<std::vector<std::string>> GetReplicationDevices() override;
 
   void SetRngSeed(size_t seed) override {
-    TF_LOG(FATAL) << "Not implemented yet.";
+    LTC_LOG(FATAL) << "Not implemented yet.";
   }
 
   std::map<std::string, lazy_tensors::Metric> GetMetrics() const override {
@@ -133,7 +133,7 @@ class NNCComputationClient : public lazy_tensors::ComputationClient {
   }
 
   MemoryInfo GetMemoryInfo(const std::string& device) override {
-    TF_LOG(FATAL) << "Not implemented yet.";
+    LTC_LOG(FATAL) << "Not implemented yet.";
   }
 
   void PrepareToExit() override;

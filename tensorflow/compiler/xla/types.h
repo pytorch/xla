@@ -21,11 +21,11 @@ using complex128 = std::complex<double>;
 using bfloat16 = tensorflow::bfloat16;
 
 struct half {
-  half() { TF_LOG(FATAL) << "Not implemented yet."; }
+  half() { LTC_LOG(FATAL) << "Not implemented yet."; }
 
-  explicit half(const float v) { TF_LOG(FATAL) << "Not implemented yet."; }
+  explicit half(const float v) { LTC_LOG(FATAL) << "Not implemented yet."; }
 
-  explicit operator float() const { TF_LOG(FATAL) << "Not implemented yet."; }
+  explicit operator float() const { LTC_LOG(FATAL) << "Not implemented yet."; }
 };
 
 }  // namespace xla

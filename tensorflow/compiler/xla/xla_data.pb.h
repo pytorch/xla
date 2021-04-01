@@ -4,7 +4,7 @@
 #include <ostream>
 #include <string>
 
-#include "lazy_tensors/computation_client/tf_logging.h"
+#include "lazy_tensors/computation_client/ltc_logging.h"
 
 namespace xla {
 
@@ -122,27 +122,27 @@ class PrecisionConfig {
 
   struct RepeatedFieldPrecision {
     void Resize(int num, Precision val) {
-      TF_LOG(FATAL) << "Not implemented yet.";
+      LTC_LOG(FATAL) << "Not implemented yet.";
     }
   };
 
   RepeatedFieldPrecision* mutable_operand_precision() {
-    TF_LOG(FATAL) << "Not implemented yet.";
+    LTC_LOG(FATAL) << "Not implemented yet.";
   }
 };
 
 class OpMetadata {
  public:
   void set_op_type(const std::string& value) {
-    TF_LOG(FATAL) << "Not implemented yet.";
+    LTC_LOG(FATAL) << "Not implemented yet.";
   }
   void set_op_name(const std::string& value) {
-    TF_LOG(FATAL) << "Not implemented yet.";
+    LTC_LOG(FATAL) << "Not implemented yet.";
   }
   void set_source_file(const std::string& value) {
-    TF_LOG(FATAL) << "Not implemented yet.";
+    LTC_LOG(FATAL) << "Not implemented yet.";
   }
-  void set_source_line(int value) { TF_LOG(FATAL) << "Not implemented yet."; }
+  void set_source_line(int value) { LTC_LOG(FATAL) << "Not implemented yet."; }
 };
 
 inline std::ostream& operator<<(std::ostream& os,
@@ -154,69 +154,69 @@ inline std::ostream& operator<<(std::ostream& os,
 class ScatterDimensionNumbers {
  public:
   void set_index_vector_dim(int64_t value) {
-    TF_LOG(FATAL) << "Not implemented yet.";
+    LTC_LOG(FATAL) << "Not implemented yet.";
   }
   void add_update_window_dims(int64_t value) {
-    TF_LOG(FATAL) << "Not implemented yet.";
+    LTC_LOG(FATAL) << "Not implemented yet.";
   }
   void add_inserted_window_dims(int64_t value) {
-    TF_LOG(FATAL) << "Not implemented yet.";
+    LTC_LOG(FATAL) << "Not implemented yet.";
   }
   void add_scatter_dims_to_operand_dims(int64_t value) {
-    TF_LOG(FATAL) << "Not implemented yet.";
+    LTC_LOG(FATAL) << "Not implemented yet.";
   }
   void add_lhs_batch_dimensions(int64_t value) {
-    TF_LOG(FATAL) << "Not implemented yet.";
+    LTC_LOG(FATAL) << "Not implemented yet.";
   }
   void add_rhs_batch_dimensions(int64_t value) {
-    TF_LOG(FATAL) << "Not implemented yet.";
+    LTC_LOG(FATAL) << "Not implemented yet.";
   }
   void add_lhs_contracting_dimensions(int64_t value) {
-    TF_LOG(FATAL) << "Not implemented yet.";
+    LTC_LOG(FATAL) << "Not implemented yet.";
   }
   void add_rhs_contracting_dimensions(int64_t value) {
-    TF_LOG(FATAL) << "Not implemented yet.";
+    LTC_LOG(FATAL) << "Not implemented yet.";
   }
   void add_collapsed_slice_dims(int64_t value) {
-    TF_LOG(FATAL) << "Not implemented yet.";
+    LTC_LOG(FATAL) << "Not implemented yet.";
   }
   void add_offset_dims(int64_t value) {
-    TF_LOG(FATAL) << "Not implemented yet.";
+    LTC_LOG(FATAL) << "Not implemented yet.";
   }
   void add_start_index_map(int64_t value) {
-    TF_LOG(FATAL) << "Not implemented yet.";
+    LTC_LOG(FATAL) << "Not implemented yet.";
   }
 };
 
 class DotDimensionNumbers {
  public:
   void add_lhs_batch_dimensions(int64_t value) {
-    TF_LOG(FATAL) << "Not implemented yet.";
+    LTC_LOG(FATAL) << "Not implemented yet.";
   }
   void add_rhs_batch_dimensions(int64_t value) {
-    TF_LOG(FATAL) << "Not implemented yet.";
+    LTC_LOG(FATAL) << "Not implemented yet.";
   }
   void add_lhs_contracting_dimensions(int64_t value) {
-    TF_LOG(FATAL) << "Not implemented yet.";
+    LTC_LOG(FATAL) << "Not implemented yet.";
   }
   void add_rhs_contracting_dimensions(int64_t value) {
-    TF_LOG(FATAL) << "Not implemented yet.";
+    LTC_LOG(FATAL) << "Not implemented yet.";
   }
 };
 
 class GatherDimensionNumbers {
  public:
   void add_collapsed_slice_dims(int64_t value) {
-    TF_LOG(FATAL) << "Not implemented yet.";
+    LTC_LOG(FATAL) << "Not implemented yet.";
   }
   void add_offset_dims(int64_t value) {
-    TF_LOG(FATAL) << "Not implemented yet.";
+    LTC_LOG(FATAL) << "Not implemented yet.";
   }
   void set_index_vector_dim(int64_t value) {
-    TF_LOG(FATAL) << "Not implemented yet.";
+    LTC_LOG(FATAL) << "Not implemented yet.";
   }
   void add_start_index_map(int64_t value) {
-    TF_LOG(FATAL) << "Not implemented yet.";
+    LTC_LOG(FATAL) << "Not implemented yet.";
   }
 };
 
@@ -237,7 +237,7 @@ enum class RandomAlgorithm {
 class ReplicaGroup {
  public:
   void add_replica_ids(int64_t value) {
-    TF_LOG(FATAL) << "Not implemented yet.";
+    LTC_LOG(FATAL) << "Not implemented yet.";
   }
 };
 

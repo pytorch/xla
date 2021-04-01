@@ -10,7 +10,7 @@ class Tile {};
 class Layout {
  public:
   absl::Span<const int64> minor_to_major() const {
-    TF_LOG(FATAL) << "Not implemented yet.";
+    LTC_LOG(FATAL) << "Not implemented yet.";
   }
 };
 

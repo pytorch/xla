@@ -49,7 +49,7 @@ XlaOp BinaryOp(XlaOp lhs, XlaOp rhs,
                absl::Span<const int64> broadcast_dimensions,
                PrimitiveType output_element_type) {
   if (!broadcast_dimensions.empty()) {
-    TF_LOG(FATAL) << "Not implemented yet.";
+    LTC_LOG(FATAL) << "Not implemented yet.";
   }
   std::tie(lhs, rhs) =
       torch_lazy_tensors::compiler::XlaHelpers::PromoteShapes(lhs, rhs);
@@ -398,7 +398,7 @@ XlaOp ConstantLiteral(XlaBuilder* builder, const LiteralSlice& literal) {
       break;
     }
     default: {
-      TF_LOG(FATAL) << "Not implemented yet: " << shape.element_type();
+      LTC_LOG(FATAL) << "Not implemented yet: " << shape.element_type();
     }
   }
   return XlaOp(
