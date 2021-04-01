@@ -365,6 +365,8 @@ class DistributedExecutor(object):
             'python', '-m', self.XRT_RUN_SERVER_CMD, '--port',
             str(self.tpuvm_server_port)
         ])
+        if self.restart_server:
+          script[-1].append('--restart')
       if self.docker_image:
         script.append(self._docker_run_cmd(cmd))
       else:
@@ -457,10 +459,6 @@ class DistributedExecutor(object):
 
     def _run_script(script_paths, client_worker):
       script_path = script_paths['remote_path']
-      if self.restart_server and self.tpuvm_mode:
-        kill_server = ('pkill -f "^python -m {} [0-9]+$"').format(
-            self.XRT_RUN_SERVER_PROCESS)
-        self._build_and_run_ssh(kill_server, client_worker, log=False)
       exit_code = self._build_and_run_ssh([script_path], client_worker)
       if exit_code != 0:
         raise RuntimeError(
