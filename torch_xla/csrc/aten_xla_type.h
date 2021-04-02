@@ -322,14 +322,14 @@ class AtenXlaType {
   static at::Tensor div(const at::Tensor& self, const at::Tensor& other);
 
   static at::Tensor div(const at::Tensor& self, const at::Tensor& other,
-                        std::string rounding_mode);
+                        c10::optional<std::string> rounding_mode);
 
   static at::Tensor div(const at::Tensor& self, const at::Scalar& other);
 
   static at::Tensor& div_(at::Tensor& self, const at::Tensor& other);
 
   static at::Tensor& div_(at::Tensor& self, const at::Tensor& other,
-                          std::string rounding_mode);
+                          c10::optional<std::string> rounding_mode);
 
   static at::Tensor& div_(at::Tensor& self, const at::Scalar& other);
 
