@@ -1095,20 +1095,20 @@ XLATensor XLATensor::div(const XLATensor& input, const XLATensor& other,
 
   if (rounding_mode.has_value()) {
     if (*rounding_mode == "trunc") {
-        res = ir::ops::Trunc(res);
+      res = ir::ops::Trunc(res);
     } else if (*rounding_mode == "floor") {
-        res = ir::ops::Floor(res);
+      res = ir::ops::Floor(res);
     } else {
-        XLA_CHECK(false)
-            << "rounding_mode must be one of None, 'trunc', or 'floor'";
+      XLA_CHECK(false)
+          << "rounding_mode must be one of None, 'trunc', or 'floor'";
     }
   }
 
   // Promote the result to the logical_element_type if one of the
   // input and the other is float. If that is not the case logical_element_type
   // will be non-floating-point type, we should only promote the result to that
-  // when rounding_mode is not "true"
-  if (input_is_float || other_is_float || rounding_mode != "true") {
+  // when rounding_mode is not nullopt
+  if (input_is_float || other_is_float || rounding_mode.has_value()) {
     return input.CreateFrom(res, logical_element_type);
   } else {
     return input.CreateFrom(res, scalar_type);
@@ -1132,13 +1132,13 @@ void XLATensor::div_(XLATensor& input, const XLATensor& other,
   ir::Value other_value = GetFloatingIrValue(other, scalar_type);
   ir::Value res = input_value / other_value;
   if (rounding_mode.has_value()) {
-    if (rounding_mode == "trunc") {
-        res = ir::ops::Trunc(res);
-    } else if (rounding_mode == "floor") {
-        res = ir::ops::Floor(res);
+    if (*rounding_mode == "trunc") {
+      res = ir::ops::Trunc(res);
+    } else if (*rounding_mode == "floor") {
+      res = ir::ops::Floor(res);
     } else {
-        XLA_CHECK(false)
-            << "rounding_mode must be one of None, 'trunc', or 'floor'";
+      XLA_CHECK(false)
+          << "rounding_mode must be one of None, 'trunc', or 'floor'";
     }
   }
   input.SetInPlaceIrValue(res);
