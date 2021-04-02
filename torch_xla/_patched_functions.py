@@ -21,7 +21,7 @@ def _patch(fn, newfn):
 def clip_grad_norm_(parameters: _tensor_or_tensors,
                     max_norm: float,
                     norm_type: float = 2.0,
-                    error_if_nonfinite: bool = True) -> torch.Tensor:
+                    error_if_nonfinite: bool = False) -> torch.Tensor:
   if isinstance(parameters, torch.Tensor):
     parameters = [parameters]
   parameters = list(filter(lambda p: p.grad is not None, parameters))
