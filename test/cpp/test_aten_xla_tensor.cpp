@@ -355,7 +355,9 @@ TEST_F(AtenXlaTensorTest, TestDiv) {
 }
 
 TEST_F(AtenXlaTensorTest, TestDivWithRoundingMode) {
-  for (std::string rounding_mode : {"trunc", "floor", "true"}) {
+  c10::optional<std::string> rounding_modes[] = {"trunc", "floor",
+                                                 c10::nullopt};
+  for (const auto& rounding_mode : rounding_modes) {
     for (torch::ScalarType scalar_type1 :
          {torch::kFloat, torch::kByte, torch::kChar, torch::kShort, torch::kInt,
           torch::kLong}) {
@@ -415,7 +417,9 @@ TEST_F(AtenXlaTensorTest, TestDivInPlace) {
 }
 
 TEST_F(AtenXlaTensorTest, TestDivInPlaceWithRoundingMode) {
-  for (std::string rounding_mode : {"trunc", "floor", "true"}) {
+  c10::optional<std::string> rounding_modes[] = {"trunc", "floor",
+                                                 c10::nullopt};
+  for (const auto& rounding_mode : rounding_modes) {
     for (torch::ScalarType scalar_type1 : {torch::kFloat}) {
       torch::Tensor a =
           isFloatingType(scalar_type1)
