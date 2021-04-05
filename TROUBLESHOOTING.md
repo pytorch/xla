@@ -59,6 +59,14 @@ Counter: aten::nonzero
 If you see `aten::` ops other than `nonzero` and `_local_scalar_dense`, that usually means a missing
 lowering in PyTorch/XLA. Feel free to open a feature request for it on [GitHub issues](https://github.com/pytorch/xla/issues).
 
+## Performance Profiling and Auto-Metrics Analysis
+In addition, to manually inspecting the above metrics we provide ways to automatically analyze the above metrics report and provide a summary. Simply run your workload with `PT_XLA_DEBUG=1`.
+
+To profile your workload in depth to undertand bottlenecks please check the following resources:
+* [Official tutorial](https://cloud.google.com/tpu/docs/pytorch-xla-performance-profiling) 
+* [Colab notebook](https://colab.research.google.com/github/pytorch/xla/blob/master/contrib/colab/pytorch-xla-profiling-colab.ipynb)
+* [Sample MNIST training script with profiling](https://github.com/pytorch/xla/blob/master/test/test_profile_mp_mnist.py)
+
 ## Known Performance Caveats
 
 PyTorch/XLA behaves semantically like regular PyTorch and XLA tensors share the full tensor interface with CPU & GPU tensors.

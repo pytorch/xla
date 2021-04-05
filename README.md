@@ -27,6 +27,7 @@ The rest of this README covers:
 * [Running PyTorch on Cloud TPUs in production on Google Cloud.](#Cloud)
 Google Cloud also runs networks faster than Google Colab.
 * [API & Best Practices](#API)
+* [Performance Profiling and Auto-Metrics Analysis](#PerfMetrics)
 * [Troubleshooting](#Troubleshooting)
 * [Providing Feedback](#Feedback)
 * [Building and Contributing to PyTorch/XLA](#Contributing)
@@ -292,6 +293,13 @@ In general PyTorch/XLA follows PyTorch APIs, some additional torch_xla specific 
 
 See the [API Guide](API_GUIDE.md) for best practices when writing networks that
 run on Cloud TPUs and Cloud TPU Pods.
+
+## <a name="PerfMetrics"></a> Performance Profiling and Auto-Metrics Analysis
+
+With PyTorch/XLA we provide a set of performance profiling tooling and auto-metrics analysis which you can check the following resources:
+* [Official tutorial](https://cloud.google.com/tpu/docs/pytorch-xla-performance-profiling) 
+* [Colab notebook](https://colab.research.google.com/github/pytorch/xla/blob/master/contrib/colab/pytorch-xla-profiling-colab.ipynb)
+* [Sample MNIST training script with profiling](https://github.com/pytorch/xla/blob/master/test/test_profile_mp_mnist.py)
 
 ## <a name="Troubleshooting"></a> Troubleshooting
 
