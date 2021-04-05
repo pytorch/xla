@@ -1076,7 +1076,7 @@ XLATensor XLATensor::diagonal(const XLATensor& input, xla::int64 offset,
 }
 
 XLATensor XLATensor::div(const XLATensor& input, const XLATensor& other,
-                         std::string rounding_mode,
+                         const c10::optional<std::string>& rounding_mode,
                          c10::optional<at::ScalarType> logical_element_type) {
   at::ScalarType scalar_type =
       at::typeMetaToScalarType(c10::get_default_dtype());
@@ -1093,20 +1093,22 @@ XLATensor XLATensor::div(const XLATensor& input, const XLATensor& other,
   ir::Value other_value = GetFloatingIrValue(other, scalar_type);
   ir::Value res = input_value / other_value;
 
-  if (rounding_mode == "trunc") {
-    res = ir::ops::Trunc(res);
-  } else if (rounding_mode == "floor") {
-    res = ir::ops::Floor(res);
-  } else if (rounding_mode != "true") {
-    XLA_CHECK(false)
-        << "rounding_mode must be one of 'true', 'trunc', or 'floor'";
+  if (rounding_mode.has_value()) {
+    if (*rounding_mode == "trunc") {
+      res = ir::ops::Trunc(res);
+    } else if (*rounding_mode == "floor") {
+      res = ir::ops::Floor(res);
+    } else {
+      XLA_CHECK(false)
+          << "rounding_mode must be one of None, 'trunc', or 'floor'";
+    }
   }
 
   // Promote the result to the logical_element_type if one of the
   // input and the other is float. If that is not the case logical_element_type
   // will be non-floating-point type, we should only promote the result to that
-  // when rounding_mode is not "true"
-  if (input_is_float || other_is_float || rounding_mode != "true") {
+  // when rounding_mode is not nullopt
+  if (input_is_float || other_is_float || rounding_mode.has_value()) {
     return input.CreateFrom(res, logical_element_type);
   } else {
     return input.CreateFrom(res, scalar_type);
@@ -1123,19 +1125,21 @@ XLATensor XLATensor::div(const XLATensor& input, const at::Scalar& other) {
 }
 
 void XLATensor::div_(XLATensor& input, const XLATensor& other,
-                     std::string rounding_mode) {
+                     const c10::optional<std::string>& rounding_mode) {
   at::ScalarType scalar_type =
       at::typeMetaToScalarType(c10::get_default_dtype());
   ir::Value input_value = GetFloatingIrValue(input, scalar_type);
   ir::Value other_value = GetFloatingIrValue(other, scalar_type);
   ir::Value res = input_value / other_value;
-  if (rounding_mode == "trunc") {
-    res = ir::ops::Trunc(res);
-  } else if (rounding_mode == "floor") {
-    res = ir::ops::Floor(res);
-  } else if (rounding_mode != "true") {
-    XLA_CHECK(false)
-        << "rounding_mode must be one of 'true', 'trunc', or 'floor'";
+  if (rounding_mode.has_value()) {
+    if (*rounding_mode == "trunc") {
+      res = ir::ops::Trunc(res);
+    } else if (*rounding_mode == "floor") {
+      res = ir::ops::Floor(res);
+    } else {
+      XLA_CHECK(false)
+          << "rounding_mode must be one of None, 'trunc', or 'floor'";
+    }
   }
   input.SetInPlaceIrValue(res);
 }

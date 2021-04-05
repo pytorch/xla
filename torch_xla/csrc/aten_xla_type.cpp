@@ -1181,11 +1181,11 @@ at::Tensor AtenXlaType::diagonal(const at::Tensor& self, int64_t offset,
 }
 
 at::Tensor AtenXlaType::div(const at::Tensor& self, const at::Tensor& other) {
-  return div(self, other, "true");
+  return div(self, other, /*rounding_mode=*/c10::nullopt);
 }
 
 at::Tensor AtenXlaType::div(const at::Tensor& self, const at::Tensor& other,
-                            std::string rounding_mode) {
+                            c10::optional<std::string> rounding_mode) {
   XLA_FN_COUNTER("xla::");
   at::ScalarType dtype = at::result_type(self, other);
   auto operands = GetBinaryOperands(self, other);
@@ -1200,11 +1200,11 @@ at::Tensor AtenXlaType::div(const at::Tensor& self, const at::Scalar& other) {
 }
 
 at::Tensor& AtenXlaType::div_(at::Tensor& self, const at::Tensor& other) {
-  return div_(self, other, "true");
+  return div_(self, other, /*rounding_mode=*/c10::nullopt);
 }
 
 at::Tensor& AtenXlaType::div_(at::Tensor& self, const at::Tensor& other,
-                              std::string rounding_mode) {
+                              c10::optional<std::string> rounding_mode) {
   XLA_FN_COUNTER("xla::");
   CheckBinaryOpTypePromotion(self, self, other);
   XLATensor self_tensor = bridge::GetXlaTensor(self);
