@@ -89,8 +89,8 @@ run_build: &run_build
     image: ubuntu-1604:201903-01
   steps:
   - checkout
-  - gcp-cli/install_and_initialize_cli:
-      executor: gcp-cli/default
+  - gcp-cli/install
+  - gcp-cli/initialize
   - run:
       <<: *update_submodule
   - run:
@@ -250,7 +250,7 @@ jobs:
     <<: *run_test_and_push_doc
 
 workflows:
-  version: 2
+  version: 2.1
   build:
     jobs:
       - linter_check:
