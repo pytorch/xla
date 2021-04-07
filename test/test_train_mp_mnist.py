@@ -184,4 +184,5 @@ def _mp_fn(index, flags):
 
 
 if __name__ == '__main__':
+  # comment to trigger CI.
   xmp.spawn(_mp_fn, args=(FLAGS,), nprocs=FLAGS.num_cores)
