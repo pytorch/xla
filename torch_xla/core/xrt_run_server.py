@@ -4,16 +4,9 @@ import time
 import os
 import subprocess
 import sys
+
 from pathlib import Path
-
-XRT_RUN_SERVER_PROCESS = 'torch_xla.core._xrt_run_server'
-XRT_SERVER_REGEX = '^python3 -m {} [0-9]+$'.format(XRT_RUN_SERVER_PROCESS)
-
-
-def server_is_alive():
-  return len(
-      subprocess.Popen(['pgrep', '-f', XRT_SERVER_REGEX],
-                       stdout=subprocess.PIPE).stdout.readline()) != 0
+from torch_xla.__init__ import server_is_alive, XRT_RUN_SERVER_PROCESS, XRT_SERVER_REGEX
 
 
 def kill_service():
