@@ -61,12 +61,20 @@ if __name__ == '__main__':
       action='append',
       type=str,
       help='List of environment variables to distribute.')
-  parser.add_argument(
+
+  server_state_group = parser.add_mutually_exclusive_group()
+  server_state_group.add_argument(
       '--restart',
       action='store_true',
       help='Restart the long running XRT local server.')
-  FLAGS = parser.parse_args()
+  server_state_group.add_argument(
+      '--stop',
+      action='store_true',
+      help='Stop the long running XRT local server.')
 
-  if FLAGS.restart:
+  FLAGS = parser.parse_args()
+  if FLAGS.restart or FLAGS.stop:
     kill_service()
-  run_service(FLAGS.port, FLAGS.env)
+
+  if not FLAGS.stop:
+    run_service(FLAGS.port, FLAGS.env)
