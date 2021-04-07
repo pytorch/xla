@@ -4,16 +4,9 @@ import time
 import os
 import subprocess
 import sys
+
 from pathlib import Path
-
-XRT_RUN_SERVER_PROCESS = 'torch_xla.core._xrt_run_server'
-XRT_SERVER_REGEX = '^python3 -m {} [0-9]+$'.format(XRT_RUN_SERVER_PROCESS)
-
-
-def server_is_alive():
-  return len(
-      subprocess.Popen(['pgrep', '-f', XRT_SERVER_REGEX],
-                       stdout=subprocess.PIPE).stdout.readline()) != 0
+from torch_xla.__init__ import server_is_alive, XRT_RUN_SERVER_PROCESS, XRT_SERVER_REGEX
 
 
 def kill_service():
@@ -68,12 +61,20 @@ if __name__ == '__main__':
       action='append',
       type=str,
       help='List of environment variables to distribute.')
-  parser.add_argument(
+
+  server_state_group = parser.add_mutually_exclusive_group()
+  server_state_group.add_argument(
       '--restart',
       action='store_true',
       help='Restart the long running XRT local server.')
-  FLAGS = parser.parse_args()
+  server_state_group.add_argument(
+      '--stop',
+      action='store_true',
+      help='Stop the long running XRT local server.')
 
-  if FLAGS.restart:
+  FLAGS = parser.parse_args()
+  if FLAGS.restart or FLAGS.stop:
     kill_service()
-  run_service(FLAGS.port, FLAGS.env)
+
+  if not FLAGS.stop:
+    run_service(FLAGS.port, FLAGS.env)

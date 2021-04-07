@@ -354,7 +354,7 @@ class DistributedExecutor(object):
     for i in range(len(self._cluster.get_client_workers())):
       script_path = self.SCRIPT_PATH_TMPL.format(pid=os.getpid(), worker=i)
 
-      # ex. script = [['conda', 'activate', 'pytorch'], ['python', 'train.py']]
+      # ex. script = [['conda', 'activate', 'pytorch'], ['python3', 'train.py']]
       script = []
       script.extend(self._env_vars_cmd(i))
       # Setup environment for non-interactive non-login shell over ssh
@@ -362,7 +362,7 @@ class DistributedExecutor(object):
       if self.tpuvm_mode:
         # Start the local tf server if it is not already running.
         script.append([
-            'python', '-m', self.XRT_RUN_SERVER_CMD, '--port',
+            'python3', '-m', self.XRT_RUN_SERVER_CMD, '--port',
             str(self.tpuvm_server_port)
         ])
         if self.restart_server:
@@ -374,7 +374,7 @@ class DistributedExecutor(object):
           script.append(['conda', 'activate', self.conda_env])
         script.append(cmd)
 
-      # ex. script_body = 'conda activate pytorch; python train.py'
+      # ex. script_body = 'conda activate pytorch; python3 train.py'
       script_cmd_list = [concat_cmd_list(command) for command in script]
       script_body = concat_cmd_list(script_cmd_list, delimiter='; ')
       os.makedirs(os.path.dirname(script_path), exist_ok=True)
@@ -555,9 +555,9 @@ class DistributedExecutor(object):
 if __name__ == '__main__':
   parser = argparse.ArgumentParser(
       description='PyTorch on TPU distrubuted training launcher.',
-      epilog=('Usage example: python -m'
+      epilog=('Usage example: python3 -m'
               ' torch_xla.distributed.xla_dist --tpu=[TPU_NAME]'
-              ' --conda-env torch-xla-nightly -- python train.py'))
+              ' --conda-env torch-xla-nightly -- python3 train.py'))
 
   cluster_group = parser.add_argument_group('Cluster Setup')
   cluster_group.add_argument(
@@ -604,7 +604,7 @@ if __name__ == '__main__':
       help='Restart the long running XRT local service for this training.')
   parser.add_argument(
       '--tpuvm-server-port',
-      default=51001,
+      default=51011,
       type=int,
       help='Port that XRT local service will be start on.')
   parser.add_argument(
