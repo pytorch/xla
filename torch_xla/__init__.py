@@ -1,6 +1,16 @@
 import os
 import re
 import tempfile
+import subprocess
+
+XRT_RUN_SERVER_PROCESS = 'torch_xla.core._xrt_run_server'
+XRT_SERVER_REGEX = '^python3 -m {} [0-9]+$'.format(XRT_RUN_SERVER_PROCESS)
+
+
+def server_is_alive():
+  return len(
+      subprocess.Popen(['pgrep', '-f', XRT_SERVER_REGEX],
+                       stdout=subprocess.PIPE).stdout.readline()) != 0
 
 
 def _setup_grpc():
@@ -42,6 +52,8 @@ def _setup_default_env():
   _set_missing_env('TF_CPP_MIN_LOG_LEVEL', '1')
   _set_missing_env('TPU_HOST_BOUNDS', '1,1,1')
   _set_missing_env('GRPC_VERBOSITY', 'ERROR')
+  if server_is_alive():
+    _set_missing_env('XRT_START_LOCAL_SERVER', '0')
 
 
 _fd, _tmp_fname = -1, ''
