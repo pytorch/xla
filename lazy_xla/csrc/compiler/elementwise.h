@@ -3,6 +3,7 @@
 #include <ATen/core/interned_strings.h>
 #include <c10/core/Scalar.h>
 
+#include "lazy_xla/csrc/compiler/xla_lowering_context.h"
 #include "tensorflow/compiler/xla/client/xla_builder.h"
 
 namespace torch_lazy_tensors {
@@ -18,9 +19,9 @@ xla::XlaOp BuildThreshold(xla::XlaOp input, xla::XlaOp output,
 // Computes the rectified linear unit (replace negative elements with 0).
 xla::XlaOp BuildRelu(xla::XlaOp input);
 
-std::vector<xla::XlaOp> BuildRrelu(xla::XlaOp input, const at::Scalar& lower,
-                                   const at::Scalar& upper, bool training,
-                                   xla::XlaOp rng_seed);
+compiler::XlaOpVector BuildRrelu(xla::XlaOp input, const at::Scalar& lower,
+                                 const at::Scalar& upper, bool training,
+                                 xla::XlaOp rng_seed);
 
 xla::XlaOp BuildRreluBackward(xla::XlaOp grad_output, xla::XlaOp input,
                               xla::XlaOp noise, const at::Scalar& lower,

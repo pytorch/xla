@@ -2,8 +2,8 @@
 
 #include "lazy_tensor_core/csrc/tensor_util.h"
 #include "lazy_xla/csrc/compiler/convert_ops.h"
-#include "lazy_xla/csrc/compiler/debug_macros.h"
 #include "lazy_xla/csrc/compiler/helpers.h"
+#include "lazy_xla/csrc/compiler/random.h"
 #include "tensorflow/compiler/xla/client/lib/constants.h"
 
 namespace torch_lazy_tensors {
@@ -120,17 +120,24 @@ xla::XlaOp BuildLeakyRelu(xla::XlaOp input, double negative_slope_value) {
   return BuildLeakyReluBackward(input, input, negative_slope_value);
 }
 
-std::vector<xla::XlaOp> BuildRrelu(xla::XlaOp input, const at::Scalar& lower,
-                                   const at::Scalar& upper, bool training,
-                                   xla::XlaOp rng_seed) {
+compiler::XlaOpVector BuildRrelu(xla::XlaOp input, const at::Scalar& lower,
+                                 const at::Scalar& upper, bool training,
+                                 xla::XlaOp rng_seed) {
   const xla::Shape& shape = compiler::XlaHelpers::ShapeOfXlaOp(input);
   xla::XlaOp zero = xla::Zero(input.builder(), shape.element_type());
   xla::XlaOp one = xla::One(input.builder(), shape.element_type());
   xla::XlaOp noise;
   xla::XlaOp output;
   if (training) {
-    LTC_LOG(FATAL) << "Lazy Tensor Core";
-    return {};
+    xla::XlaOp low = compiler::XlaHelpers::ScalarValue(
+        lower, shape.element_type(), input.builder());
+    xla::XlaOp high = compiler::XlaHelpers::ScalarValue(
+        upper, shape.element_type(), input.builder());
+    xla::XlaOp slope = RngUniform(
+        rng_seed, xla::ShapeUtil::MakeShape(shape.element_type(), {}), low,
+        high);
+    noise = xla::Select(xla::Gt(input, zero), one, slope);
+    output = input * noise;
   } else {
     double negative_slope = (lower.to<double>() + upper.to<double>()) / 2;
     noise = xla::Broadcast(zero, shape.dimensions());

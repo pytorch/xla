@@ -49,10 +49,11 @@ import re
 import shutil
 import subprocess
 import sys
+import torch
 
 base_dir = os.path.dirname(os.path.abspath(__file__))
 lazy_core_dir = os.path.join(base_dir, '..', 'nnc_eager')
-third_party_path = os.path.join(lazy_core_dir, 'third_party')
+third_party_path = os.path.join(base_dir, 'third_party')
 
 
 def _get_build_mode():
@@ -116,6 +117,41 @@ def generate_xla_aten_code(base_dir):
         'Failed to generate ATEN bindings: {}'.format(generate_code_cmd),
         file=sys.stderr)
     sys.exit(1)
+
+
+def build_extra_libraries(base_dir, build_mode=None):
+  build_libs_cmd = [os.path.join(base_dir, 'build_torch_xla_libs.sh')]
+  cxx_abi = getattr(torch._C, '_GLIBCXX_USE_CXX11_ABI', None)
+  if cxx_abi is not None:
+    build_libs_cmd += ['-O', '-D_GLIBCXX_USE_CXX11_ABI={}'.format(int(cxx_abi))]
+  if build_mode is not None:
+    build_libs_cmd += [build_mode]
+  if subprocess.call(build_libs_cmd) != 0:
+    print(
+        'Failed to build external libraries: {}'.format(build_libs_cmd),
+        file=sys.stderr)
+    sys.exit(1)
+
+
+def generate_protos(base_dir, third_party_path):
+  # Application proto files should be in torch_xla/pb/src/ and the generated
+  # files will go in torch_xla/pb/cpp/.
+  proto_files = glob.glob(os.path.join(base_dir, 'torch_xla/pb/src/*.proto'))
+  if proto_files:
+    protoc = os.path.join(
+        third_party_path,
+        'tensorflow/bazel-out/host/bin/external/com_google_protobuf/protoc')
+    protoc_cmd = [
+        protoc, '-I',
+        os.path.join(third_party_path, 'tensorflow'), '-I',
+        os.path.join(base_dir, 'torch_xla/pb/src'), '--cpp_out',
+        os.path.join(base_dir, 'torch_xla/pb/cpp')
+    ] + proto_files
+    if subprocess.call(protoc_cmd) != 0:
+      print(
+          'Failed to generate protobuf files: {}'.format(protoc_cmd),
+          file=sys.stderr)
+      sys.exit(1)
 
 
 def _compile_parallel(self,
@@ -206,14 +242,16 @@ if build_mode not in ['clean']:
   # Generate the code before globbing!
   generate_xla_aten_code(base_dir)
 
+  # Build the support libraries (ie, TF).
+  build_extra_libraries(base_dir, build_mode=build_mode)
+
+  # Generate the proto C++/python files only after third_party has built.
+  generate_protos(base_dir, third_party_path)
+
 # Fetch the sources to be built.
 lazy_xla_sources = (
     glob.glob('lazy_xla/csrc/*.cpp') + glob.glob('lazy_xla/csrc/ops/*.cpp') +
-    glob.glob('lazy_xla/csrc/compiler/*.cpp') +
-    glob.glob('tensorflow/compiler/xla/client/*.cc') + glob.glob('tensorflow/compiler/xla/*.cc') +
-    glob.glob('tensorflow/compiler/xla/client/lib/*.cc'))
-
-lazy_xla_sources = list(set(lazy_xla_sources) - set(['lazy_xla/csrc/xla_op_builder.cpp']))
+    glob.glob('lazy_xla/csrc/compiler/*.cpp') + glob.glob('lazy_xla/pb/cpp/*.cc'))
 
 # Constant known variables used throughout this file.
 lib_path = os.path.join(base_dir, 'lazy_xla/lib')
@@ -232,7 +270,6 @@ for ipath in [
     'tensorflow/bazel-tensorflow/external/com_google_protobuf/src',
     'tensorflow/bazel-tensorflow/external/eigen_archive',
     'tensorflow/bazel-tensorflow/external/com_google_absl',
-    'abseil-cpp',
 ]:
   include_dirs.append(os.path.join(third_party_path, ipath))
 include_dirs += [
@@ -278,6 +315,7 @@ if DEBUG:
 else:
   extra_compile_args += ['-DNDEBUG']
 
+extra_link_args += ['-lxla_computation_client']
 extra_link_args += glob.glob(os.path.join(lazy_core_dir, '*.so'))
 
 setup(

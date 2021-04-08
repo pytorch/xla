@@ -5,7 +5,7 @@
 #include "lazy_tensor_core/csrc/shape_builder.h"
 #include "lazy_tensors/computation_client/sys_util.h"
 #include "lazy_tensors/computation_client/util.h"
-#include "lazy_xla/csrc/compiler/debug_macros.h"
+#include "lazy_xla/csrc/compiler/helpers.h"
 #include "tensorflow/compiler/xla/client/lib/constants.h"
 #include "tensorflow/compiler/xla/shape_util.h"
 #include "tensorflow/compiler/xla/util.h"
@@ -59,7 +59,8 @@ xla::XlaOp LowerForward2d(const std::string& target, xla::XlaOp input,
   // XLA wants NHWC while PyTorch comes in as NCHW, so we need to transpose,
   // call the kernel, and transpose back.
   std::vector<xla::int64> transpose_permute({0, 3, 2, 1});
-  auto inv_transpose_permute = xla::InversePermutation(transpose_permute);
+  auto inv_transpose_permute =
+      xla::InversePermutation(absl::MakeSpan(transpose_permute));
   xla::Shape resized_shape =
       xla::ShapeUtil::PermuteDimensions(transpose_permute, output_shape);
   xla::XlaOp tinput = xla::Transpose(input, transpose_permute);
@@ -82,7 +83,8 @@ xla::XlaOp LowerBackward2d(const std::string& target, xla::XlaOp input,
   // XLA wants NHWC while PyTorch comes in as NCHW, so we need to transpose,
   // call the kernel, and transpose back.
   std::vector<xla::int64> transpose_permute({0, 3, 2, 1});
-  auto inv_transpose_permute = xla::InversePermutation(transpose_permute);
+  auto inv_transpose_permute =
+      xla::InversePermutation(absl::MakeSpan(transpose_permute));
   xla::Shape resized_shape =
       xla::ShapeUtil::PermuteDimensions(transpose_permute, output_shape);
   xla::XlaOp tinput = xla::Transpose(input, transpose_permute);

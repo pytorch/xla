@@ -10,7 +10,7 @@
 #include "lazy_tensors/computation_client/sys_util.h"
 #include "lazy_tensors/computation_client/util.h"
 #include "lazy_xla/csrc/compiler/convert_ops.h"
-#include "lazy_xla/csrc/compiler/debug_macros.h"
+#include "lazy_xla/csrc/compiler/data_ops.h"
 #include "lazy_xla/csrc/compiler/helpers.h"
 #include "tensorflow/compiler/xla/client/lib/constants.h"
 #include "tensorflow/compiler/xla/client/lib/slicing.h"
@@ -87,13 +87,13 @@ xla::XlaOp BuildCat(absl::Span<const xla::XlaOp> inputs, xla::int64 dim) {
   return xla::ConcatInDim(inputs[0].builder(), inputs, dim);
 }
 
-std::vector<xla::XlaOp> BuildSplit(xla::XlaOp input,
-                                   absl::Span<const xla::int64> split_sizes,
-                                   xla::int64 dim) {
+compiler::XlaOpVector BuildSplit(xla::XlaOp input,
+                                 absl::Span<const xla::int64> split_sizes,
+                                 xla::int64 dim) {
   const auto input_sizes = compiler::XlaHelpers::SizesOfXlaOp(input);
   xla::int64 dim_size = input_sizes.at(dim);
   xla::int64 index = 0;
-  std::vector<xla::XlaOp> splits;
+  compiler::XlaOpVector splits;
   for (auto size : split_sizes) {
     if (index + size > dim_size) {
       break;

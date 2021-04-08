@@ -7,11 +7,11 @@
 #include <tuple>
 #include <vector>
 
+#include "absl/container/inlined_vector.h"
 #include "absl/types/optional.h"
 #include "absl/types/span.h"
 #include "lazy_tensor_core/csrc/helpers.h"
 #include "lazy_tensors/computation_client/util.h"
-#include "lazy_xla/csrc/compiler/debug_macros.h"
 #include "tensorflow/compiler/xla/client/xla_builder.h"
 #include "tensorflow/compiler/xla/literal_util.h"
 #include "tensorflow/compiler/xla/permutation_util.h"
@@ -80,7 +80,9 @@ class XlaHelpers {
       HANDLE_TYPE(C64)
       HANDLE_TYPE(C128)
       HANDLE_TYPE(TUPLE)
-      HANDLE_TYPE(INVALID)
+      case lazy_tensors::PrimitiveType::INVALID: {
+        return xla::PrimitiveType::PRIMITIVE_TYPE_INVALID;
+      }
       default: { LTC_LOG(FATAL) << "Invalid primitive type."; }
     }
   }
@@ -110,7 +112,9 @@ class XlaHelpers {
       HANDLE_TYPE(C64)
       HANDLE_TYPE(C128)
       HANDLE_TYPE(TUPLE)
-      HANDLE_TYPE(INVALID)
+      case xla::PrimitiveType::PRIMITIVE_TYPE_INVALID: {
+        return lazy_tensors::PrimitiveType::INVALID;
+      }
       default: { LTC_LOG(FATAL) << "Invalid primitive type."; }
     }
   }
@@ -118,8 +122,9 @@ class XlaHelpers {
 #undef HANDLE_TYPE
 
   static xla::Shape XlaShape(const lazy_tensors::Shape& shape) {
+    absl::InlinedVector<bool, 6> dynamic_dimensions(shape.rank());
     return xla::Shape(XlaPrimitiveType(shape.element_type()),
-                      shape.dimensions());
+                      shape.dimensions(), dynamic_dimensions, {});
   }
 
   static lazy_tensors::Shape LazyTensorsShape(const xla::Shape& shape) {

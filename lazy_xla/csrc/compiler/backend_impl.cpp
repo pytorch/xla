@@ -19,7 +19,7 @@ class XlaBackendImpl : public BackendImplInterface {
 
   std::unique_ptr<ir::LoweringContext> CreateLoweringContext(
       const std::string& name, Device device,
-      absl::Span<const ir::Node* const> post_order,
+      lazy_tensors::Span<const ir::Node* const> post_order,
       ir::Util::EmissionMap emit_status) const override {
     return std::make_unique<xla_backend::XlaLoweringContext>(
         name, device, post_order, emit_status);
@@ -41,33 +41,24 @@ class XlaBackendImpl : public BackendImplInterface {
 
   std::vector<std::string> GetCompilationDevices(
       const std::string& device,
-      absl::Span<const std::string> devices) const override {
+      lazy_tensors::Span<const std::string> devices) const override {
     return std::vector<std::string>(devices.begin(), devices.end());
   }
 
   at::Tensor MakeTensorFromComputationData(
       const lazy_tensors::ComputationClient::DataPtr data,
       c10::optional<at::ScalarType> logical_scalar_type) const override {
-    const auto nnc_data =
-        std::dynamic_pointer_cast<xla::compiler::NNCComputationClient::NNCData>(
-            data);
-    auto nnc_result = nnc_data->data_;
-    if (logical_scalar_type &&
-        nnc_result.scalar_type() != *logical_scalar_type) {
-      nnc_result = nnc_result.to(*logical_scalar_type);
-    }
-    return nnc_result;
+    LTC_LOG(FATAL) << "Not implemented.";
   }
 
   lazy_tensors::ComputationClient::DataPtr MakeComputationDataFromTensor(
       const at::Tensor& tensor, const lazy_tensors::Shape& shape,
       const std::string& device) const override {
-    return std::make_shared<xla::compiler::NNCComputationClient::NNCData>(
-        tensor, XlaHelpers::XlaShape(shape), device);
+    LTC_LOG(FATAL) << "Not implemented.";
   }
 
   lazy_tensors::StatusOr<std::string> GetComputationBackendText(
-      const lazy_tensors::GenericComputation* computation) const {
+      const lazy_tensors::GenericComputation* computation) const override {
     LTC_LOG(FATAL) << "Not implemented.";
   }
 };

@@ -77,6 +77,27 @@ xla::ShapeIndex XlaShapeIndex(const lazy_tensors::ShapeIndex& shape_index) {
   return {shape_index[0]};
 }
 
+class GenericComputationXla : public lazy_tensors::GenericComputation {
+ public:
+  GenericComputationXla(xla::XlaComputation computation)
+      : computation_(std::move(computation)) {}
+
+  lazy_tensors::StatusOr<lazy_tensors::ProgramShape> GetProgramShape()
+      const override {
+    xla::ProgramShape program_shape =
+        ConsumeValue(computation_.GetProgramShape());
+    return lazy_tensors::ProgramShape(
+        torch_lazy_tensors::compiler::XlaHelpers::LazyTensorsShape(
+            program_shape.result()),
+        program_shape.parameters_size());
+  }
+
+  const xla::XlaComputation& computation() const { return computation_; }
+
+ private:
+  xla::XlaComputation computation_;
+};
+
 }  // namespace
 
 lazy_tensors::Shape XlaLoweringContext::GetResultShape(size_t index) const {
@@ -108,10 +129,10 @@ XlaLoweringContext::Build() {
   if (!root_tuple_.empty()) {
     xla::XlaOp root = xla::Tuple(builder(), root_tuple_);
     return std::shared_ptr<lazy_tensors::GenericComputation>(
-        new xla::GenericComputationXla(ConsumeValue(builder()->Build(root))));
+        new GenericComputationXla(ConsumeValue(builder()->Build(root))));
   }
   return std::shared_ptr<lazy_tensors::GenericComputation>(
-      new xla::GenericComputationXla(ConsumeValue(builder()->Build())));
+      new GenericComputationXla(ConsumeValue(builder()->Build())));
 }
 
 void XlaLoweringContext::SetUpAlias(
@@ -210,7 +231,8 @@ namespace ir {
 
 std::unique_ptr<LoweringContext> LoweringContext::Create(
     const std::string& name, Device device,
-    absl::Span<const Node* const> post_order, Util::EmissionMap emit_status) {
+    lazy_tensors::Span<const Node* const> post_order,
+    Util::EmissionMap emit_status) {
   return std::make_unique<compiler::xla_backend::XlaLoweringContext>(
       name, device, post_order, emit_status);
 }

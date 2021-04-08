@@ -4,6 +4,7 @@
 
 #include "absl/types/optional.h"
 #include "absl/types/span.h"
+#include "lazy_xla/csrc/compiler/xla_lowering_context.h"
 #include "tensorflow/compiler/xla/client/xla_builder.h"
 
 // Collection of XLA lowerings for operations which only involve some form of
@@ -38,9 +39,9 @@ xla::XlaOp BuildCat(absl::Span<const xla::XlaOp> inputs, xla::int64 dim);
 
 // Splits a tensor into parts whose size is passed in split_sizes, along the dim
 // dimension.
-std::vector<xla::XlaOp> BuildSplit(xla::XlaOp input,
-                                   absl::Span<const xla::int64> split_sizes,
-                                   xla::int64 dim);
+compiler::XlaOpVector BuildSplit(xla::XlaOp input,
+                                 absl::Span<const xla::int64> split_sizes,
+                                 xla::int64 dim);
 
 // Creates an updated version of input, where, starting at base_indices, source
 // if overlapped with input.

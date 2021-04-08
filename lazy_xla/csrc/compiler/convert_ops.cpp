@@ -3,7 +3,6 @@
 #include <climits>
 
 #include "lazy_tensor_core/csrc/tensor_util.h"
-#include "lazy_xla/csrc/compiler/debug_macros.h"
 #include "lazy_xla/csrc/compiler/helpers.h"
 #include "tensorflow/compiler/xla/client/lib/constants.h"
 #include "tensorflow/compiler/xla/literal_util.h"
