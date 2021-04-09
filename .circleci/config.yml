@@ -18,7 +18,7 @@ launch_docker_and_build: &launch_docker_and_build
   command: |
     set -e
     pip install google_compute_engine
-    gsutil -m cp gs://pytorch-datasets/mnist-data .
+    gsutil -m cp -R gs://pytorch-datasets/mnist-data .
     ls
     ls mnist-data
     eval $(aws ecr get-login --region us-east-1 --no-include-email)
