@@ -31,11 +31,11 @@ class AtenXlaType {
 
   static at::Tensor __rshift__(const at::Tensor& self, const at::Tensor& other);
 
-  static at::Tensor adaptive_avg_pool3d(const at::Tensor& self,
-                                        at::IntArrayRef output_size);
+  static at::Tensor _adaptive_avg_pool3d(const at::Tensor& self,
+                                         at::IntArrayRef output_size);
 
-  static at::Tensor adaptive_avg_pool3d_backward(const at::Tensor& grad_output,
-                                                 const at::Tensor& self);
+  static at::Tensor _adaptive_avg_pool3d_backward(const at::Tensor& grad_output,
+                                                  const at::Tensor& self);
 
   static at::Tensor _adaptive_avg_pool2d(const at::Tensor& self,
                                          at::IntArrayRef output_size);

@@ -7158,7 +7158,7 @@ TEST_F(AtenXlaTensorTest, TestAdaptiveAvgPool3D) {
     });
   }
   ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
-  ExpectCounterChanged("xla::adaptive_avg_pool3d",
+  ExpectCounterChanged("xla::_adaptive_avg_pool3d",
                        cpp_test::GetIgnoredCounters());
 }
 
@@ -7176,7 +7176,7 @@ TEST_F(AtenXlaTensorTest, TestAdaptiveAvgPool3DNoBatch) {
     });
   }
   ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
-  ExpectCounterChanged("xla::adaptive_avg_pool3d",
+  ExpectCounterChanged("xla::_adaptive_avg_pool3d",
                        cpp_test::GetIgnoredCounters());
 }
 
@@ -9019,7 +9019,7 @@ TEST_F(AtenXlaTensorTest, TestAdaptiveAvgPool3DNoBatchBackward) {
     });
   }
   ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
-  ExpectCounterChanged("xla::adaptive_avg_pool3d",
+  ExpectCounterChanged("xla::_adaptive_avg_pool3d",
                        cpp_test::GetIgnoredCounters());
 }
 
@@ -9039,7 +9039,7 @@ TEST_F(AtenXlaTensorTest, TestAdaptiveAvgPool3DBackward) {
     });
   }
   ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
-  ExpectCounterChanged("xla::adaptive_avg_pool3d",
+  ExpectCounterChanged("xla::_adaptive_avg_pool3d",
                        cpp_test::GetIgnoredCounters());
 }
 
