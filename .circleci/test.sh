@@ -12,6 +12,7 @@ else
 fi
 
 export CMAKE_PREFIX_PATH=${CONDA_PREFIX:-"$(dirname $(which conda))/../"}
+export PYTORCH_TESTING_DEVICE_ONLY_FOR="xla"
 
 cd /tmp/pytorch/xla
 
