@@ -677,6 +677,7 @@ class ClusterResolverTest(unittest.TestCase):
         }
     }
     self.mock_ctc.side_effect = build_mock_cloud_tpu_client_library(tpu_map)
+    import pdb; pdb.set_trace()
 
     tpus = list(tpu_map.keys())
     cr = ClusterResolver(tpus)

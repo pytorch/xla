@@ -1,6 +1,7 @@
 import cloud_tpu_client
 import logging
 import multiprocessing
+import re
 import requests
 import time
 
@@ -221,7 +222,7 @@ class ClusterResolver(object):
     idx = parts.index(name)
     return parts[idx + 1]
 
-  def __init__(self, tpu, vms=None, zone=None, project=None, tpuvm_mode=None):
+  def __init__(self, tpu, vms=None, zone=None, project=None):
     """Creates a new ClusterResolver object."""
 
     if not tpu:
@@ -234,7 +235,9 @@ class ClusterResolver(object):
     self._vms = vms
     self._zone = zone
     self._project = project
-    self._tpuvm_mode = tpuvm_mode
+    self._tpuvm_mode = None
+    self._tpuvm_mode_with_remote_coordinator = None
+    self._set_tpuvm_mode()
 
     self._compute_service = discovery.build(
         'compute',
@@ -249,6 +252,25 @@ class ClusterResolver(object):
       zone_path = ClusterResolver.get_instance_metadata('instance/zone')
       self._zone = ClusterResolver._parse_resource_url(zone_path, 'zones')
     self._vm_master = ClusterResolver.get_instance_metadata('instance/name')
+
+  def _set_tpuvm_mode(self):
+    self._tpuvm_mode = False
+    self._tpuvm_mode_with_remote_coordinator = False
+    accel_type = ClusterResolver.get_instance_metadata(
+      'instance/attributes/accelerator-type')
+    if re.match(r'v[0-9]+-[0-9]+', accel_type):
+      # Only VM with TPU attched will carry the accelerator-type metadata
+      self._tpuvm_mode = True
+      return
+
+    runtime_version = cloud_tpu_client.Client(tpu=self._tpus[0]).runtime_version()
+    if re.match(r'v2-*', runtime_version):
+      # Only TPUVM runtime version should start with v2-
+      self._tpuvm_mode = True
+      # Current vm does not carry the accelerator-type metadata but tpu specified
+      # is a TPUVM, assume it is a remote coordinator.
+      self._tpuvm_mode_with_remote_coordinator = True
+
 
   def _get_instance_group(self):
     """Gets the instance group that the current VM belongs to."""
@@ -388,6 +410,7 @@ class ClusterResolver(object):
               tpu=tpu_name)
         workers.append(worker)
 
+    add_tpu_worker(self._tpus[0])
     xu.parallel_work(len(self._tpus), add_tpu_worker, self._tpus)
 
     return workers
@@ -409,6 +432,14 @@ class ClusterResolver(object):
     client_workers = self.get_tpu_workers(
         as_client_worker=True) if self._tpuvm_mode else self.get_client_workers(
         )
-    cluster = Cluster(client_workers, service_workers)
+    client_master_ip = None
+    if self._tpuvm_mode_with_remote_coordinator:
+      # If the script is being run from a remote coordinator with a TPUVM, client_master_ip
+      # should be TPUVM IP instead of the remote coordinator IP.
+      client_master_ip = client_workers[0].get_internal_ip()
+    cluster = Cluster(client_workers, service_workers, client_master_ip=client_master_ip)
     cluster.validate()
     return cluster
+
+  def get_tpuvm_mode(self):
+    return self._tpuvm_mode
