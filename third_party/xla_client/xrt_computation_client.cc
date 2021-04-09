@@ -12,6 +12,7 @@
 #include "absl/strings/str_cat.h"
 #include "absl/strings/str_join.h"
 #include "absl/strings/str_split.h"
+#include "absl/types/optional.h"
 #include "tensorflow/cc/ops/const_op.h"
 #include "tensorflow/compiler/xla/shape_util.h"
 #include "tensorflow/compiler/xla/util.h"
@@ -233,6 +234,14 @@ int64 GetMaxTensorsPartitionSize() {
   return max_partition_size;
 }
 
+Shape ToXlaShape(const lazy_tensors::client::ShapeData& shape_data) {
+  absl::InlinedVector<int64, 6> shape_dimensions(
+      shape_data.dimensions().begin(), shape_data.dimensions().end());
+  return ShapeUtil::MakeShape(
+      ComputationClient::XlaPrimitiveType(shape_data.element_type()),
+      shape_dimensions);
+}
+
 }  // namespace
 
 XrtComputationClient::Device::Device(const std::string& device_str) {
@@ -291,8 +300,9 @@ XrtComputationClient::XrtComputationClient(
 }
 
 ComputationClient::DataPtr XrtComputationClient::CreateDataPlaceholder(
-    std::string device, Shape shape) {
-  return std::make_shared<XrtData>(std::move(device), std::move(shape));
+    std::string device, lazy_tensors::client::ShapeData shape) {
+  return std::make_shared<XrtData>(std::move(device),
+                                   ToXlaShape(std::move(shape)));
 }
 
 std::vector<size_t> XrtComputationClient::PartitionTransferToServer(
@@ -301,7 +311,8 @@ std::vector<size_t> XrtComputationClient::PartitionTransferToServer(
   uint64 current_size = 0;
   std::vector<size_t> partitions;
   for (size_t i = 0; i < tensors.size(); ++i) {
-    int64 tensor_size = ShapeUtil::ByteSizeOfElements(tensors[i].shape);
+    int64 tensor_size =
+        ShapeUtil::ByteSizeOfElements(ToXlaShape(tensors[i].shape));
     if (current_size + tensor_size > max_partition_size) {
       if (partitions.empty() && i > 0) {
         partitions.push_back(0);
@@ -369,10 +380,10 @@ XrtComputationClient::TransferToServerInternal(
       auto converter = [&, i]() {
         const std::string& xrt_device =
             TorchDeviceToXrtDevice(tensors[i].device);
-        tensorflow::Tensor tensor(
-            TensorAllocator::Get(),
-            XlaTypeToDataType(tensors[i].shape.element_type()),
-            MakeEquivalentTensorShape(tensors[i].shape));
+        Shape xla_shape = ToXlaShape(tensors[i].shape);
+        tensorflow::Tensor tensor(TensorAllocator::Get(),
+                                  XlaTypeToDataType(xla_shape.element_type()),
+                                  MakeEquivalentTensorShape(xla_shape));
         auto tdata = tensor.tensor_data();
         tensors[i].populate_fn(tensors[i], const_cast<char*>(tdata.data()),
                                tdata.size());
@@ -385,7 +396,7 @@ XrtComputationClient::TransferToServerInternal(
           tensorflow::Scope device_scope =
               session->root()->WithDevice(xrt_device);
           const XrtSession::CachedNode& cached_node = GetAllocateNode(
-              session, device_scope, tensors[i].device, tensors[i].shape);
+              session, device_scope, tensors[i].device, xla_shape);
           session_work->feed_inputs.insert({cached_node.holders[0], tensor});
           session_work->outputs_handles.push_back(cached_node.outputs[0]);
           session_work->index_mapping.push_back(i);
@@ -424,7 +435,7 @@ XrtComputationClient::TransferToServerInternal(
         for (size_t i = 0; i < outputs.size(); ++i) {
           size_t li = session_work->index_mapping[i];
           results[li] = std::make_shared<XrtData>(this, tensors[li].device,
-                                                  tensors[li].shape,
+                                                  ToXlaShape(tensors[li].shape),
                                                   outputs[i].scalar<int64>()());
         }
         CreateDataHandlesCounter()->AddValue(outputs.size());
@@ -450,8 +461,9 @@ std::vector<Literal> XrtComputationClient::TransferFromServer(
   std::map<XrtSession*, SessionWork> session_work_map;
   for (size_t i = 0; i < handles.size(); ++i) {
     const XrtData& xrt_data = dynamic_cast<const XrtData&>(*handles[i]);
+    Shape xla_shape = ToXlaShape(xrt_data.shape());
 
-    int64 shape_size = ShapeUtil::ByteSizeOfElements(xrt_data.shape());
+    int64 shape_size = ShapeUtil::ByteSizeOfElements(xla_shape);
     if (current_size + shape_size >= max_partition_size) {
       session_maps.emplace_back();
       current_size = 0;
@@ -791,15 +803,15 @@ std::vector<ComputationClient::DataPtr> XrtComputationClient::ExecuteChainedXrt(
   for (size_t i = 0; i < ops.size(); ++i) {
     const ExecuteChainedOp& op = ops[i];
     xrt::XRTChainedExecuteOp* plan_op = plan.add_ops();
-    const xla::Shape* op_shape = nullptr;
+    absl::optional<xla::Shape> op_shape;
     if (op.device_data != nullptr) {
       const XrtData& xrt_data = dynamic_cast<const XrtData&>(*op.device_data);
-      op_shape = &xrt_data.shape();
+      op_shape = ToXlaShape(xrt_data.shape());
       plan_op->set_data_handle(xrt_data.get_handle());
     } else {
       const XrtComputation& xrt_computation =
           dynamic_cast<const XrtComputation&>(*op.computation);
-      op_shape = &xrt_computation.program_shape().result();
+      op_shape = xrt_computation.program_shape().result();
       plan_op->set_computation_handle(xrt_computation.get_handle());
       for (auto& input : op.inputs) {
         XLA_CHECK_LT(input.op_index, i);
@@ -812,7 +824,7 @@ std::vector<ComputationClient::DataPtr> XrtComputationClient::ExecuteChainedXrt(
       }
     }
     for (auto& output : op.outputs) {
-      XLA_CHECK(op_shape != nullptr);
+      XLA_CHECK(op_shape);
 
       xrt::XRTChainedExecuteOp::Output* plan_output = plan_op->add_outputs();
       plan_output->set_result_index(output.result_index);
@@ -937,7 +949,8 @@ XrtComputationClient::DeconstructTuple(absl::Span<const DataPtr> tuples) {
 
     tensorflow::Scope device_scope =
         session->root()->WithDevice(TorchDeviceToXrtDevice(xrt_data.device()));
-    int64 count = ShapeUtil::TupleElementCount(xrt_data.shape());
+    Shape xla_shape = ToXlaShape(xrt_data.shape());
+    int64 count = ShapeUtil::TupleElementCount(xla_shape);
     tuple_elements_count[i] = count;
     for (int64 j = 0; j < count; ++j) {
       const XrtSession::CachedNode& cached_node =
@@ -963,11 +976,12 @@ XrtComputationClient::DeconstructTuple(absl::Span<const DataPtr> tuples) {
     size_t output_index = 0;
     for (auto li : session_work.second.index_mapping) {
       const XrtData& xrt_data = dynamic_cast<const XrtData&>(*tuples[li]);
+      Shape xla_shape = ToXlaShape(xrt_data.shape());
       std::vector<DataPtr> tuple_results;
       for (size_t i = 0; i < tuple_elements_count[li]; ++i, ++output_index) {
         tuple_results.push_back(std::make_shared<XrtData>(
             this, xrt_data.device(),
-            ShapeUtil::GetTupleElementShape(xrt_data.shape(), i),
+            ShapeUtil::GetTupleElementShape(xla_shape, i),
             outputs[output_index].scalar<int64>()()));
       }
       results[li] = std::move(tuple_results);

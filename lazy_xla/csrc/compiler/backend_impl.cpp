@@ -1,6 +1,7 @@
 #include "lazy_tensor_core/csrc/compiler/backend_impl_interface.h"
 #include "lazy_tensor_core/csrc/tensor_util.h"
 #include "lazy_xla/csrc/compiler/nnc_computation_client.h"
+#include "lazy_xla/csrc/compiler/tensor_util.h"
 #include "lazy_xla/csrc/compiler/xla_lowering_context.h"
 #include "lazy_xla/csrc/compiler/xla_node_lowering.h"
 #include "tensorflow/compiler/xla/xla_client/computation_client.h"
@@ -50,7 +51,12 @@ class XlaBackendImpl : public BackendImplInterface {
   at::Tensor MakeTensorFromComputationData(
       const lazy_tensors::ComputationClient::DataPtr data,
       c10::optional<at::ScalarType> logical_scalar_type) const override {
-    LTC_LOG(FATAL) << "Not implemented.";
+    auto xla_literals =
+        xla::ComputationClient::Get()->TransferFromServer({data});
+    XLA_CHECK_EQ(xla_literals.size(), 1);
+    XLA_CHECK(logical_scalar_type);
+    return torch_lazy_tensors::xla_backend::MakeTensorFromXlaLiteral(
+        xla_literals.front(), *logical_scalar_type);
   }
 
   lazy_tensors::ComputationClient::DataPtr MakeComputationDataFromTensor(
@@ -65,7 +71,8 @@ class XlaBackendImpl : public BackendImplInterface {
           PopulateTensorBuffer(tensor, source_tensor.shape, dest_buffer,
                                dest_buffer_size, physical_device);
         };
-    source_tensors.emplace_back(shape, device, std::move(populate_fn));
+    source_tensors.emplace_back(lazy_tensors::ToShapeData(shape), device,
+                                std::move(populate_fn));
     auto handles = lazy_tensors::ComputationClient::Get()->TransferToServer(
         source_tensors);
     LTC_CHECK_EQ(handles.size(), 1);

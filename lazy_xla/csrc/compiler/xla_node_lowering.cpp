@@ -53,6 +53,7 @@
 #include "lazy_xla/csrc/compiler/xla_lowering_context.h"
 #include "tensorflow/compiler/xla/client/lib/constants.h"
 #include "tensorflow/compiler/xla/client/lib/math.h"
+#include "tensorflow/compiler/xla/xla_client/computation_client.h"
 
 namespace torch_lazy_tensors {
 namespace compiler {
@@ -633,15 +634,15 @@ XlaOpVector XlaNodeLowering::LowerCast(const ir::ops::Cast* node) {
   const xla::Shape& input_shape = XlaHelpers::ShapeOfXlaOp(input);
   xla::PrimitiveType raw_from =
       node->stype()
-          ? compiler::XlaHelpers::XlaPrimitiveType(
+          ? xla::ComputationClient::XlaPrimitiveType(
                 torch_lazy_tensors::TensorTypeToLtcType(*node->stype()))
           : input_shape.element_type();
-  xla::PrimitiveType raw_to = compiler::XlaHelpers::XlaPrimitiveType(
+  xla::PrimitiveType raw_to = xla::ComputationClient::XlaPrimitiveType(
       node->dtype() ? torch_lazy_tensors::TensorTypeToLtcType(*node->dtype())
                     : node->type());
   return {torch_lazy_tensors::ConvertToRaw(
       input, input_shape.element_type(), raw_from,
-      compiler::XlaHelpers::XlaPrimitiveType(node->type()), raw_to,
+      xla::ComputationClient::XlaPrimitiveType(node->type()), raw_to,
       /*device=*/nullptr)};
 }
 
@@ -732,7 +733,7 @@ XlaOpVector XlaNodeLowering::LowerScalar(const ir::ops::Scalar* node) {
   LTC_CHECK_EQ(node->num_outputs(), 1);
   using ir::ops::operator<<;
   xla::Literal literal(xla::ShapeUtil::MakeShape(
-      compiler::XlaHelpers::XlaPrimitiveType(node->shape().element_type()),
+      xla::ComputationClient::XlaPrimitiveType(node->shape().element_type()),
       {}));
   switch (node->shape().element_type()) {
     case lazy_tensors::PrimitiveType::PRED:
@@ -862,7 +863,7 @@ XlaOpVector XlaNodeLowering::LowerLogBase(const ir::ops::LogBase* node) {
   xla::XlaOp result = xla::Log(xla_input);
   xla::XlaOp ln_base = XlaHelpers::ScalarValue<float>(
       1.0 / std::log(node->base()),
-      compiler::XlaHelpers::XlaPrimitiveType(node->shape().element_type()),
+      xla::ComputationClient::XlaPrimitiveType(node->shape().element_type()),
       xla_input.builder());
   return {result * ln_base};
 }
@@ -878,7 +879,7 @@ XlaOpVector XlaNodeLowering::LowerMaskedFill(const ir::ops::MaskedFill* node) {
   xla::XlaOp value = xla::Broadcast(
       XlaHelpers::ScalarValue(
           node->value(),
-          compiler::XlaHelpers::XlaPrimitiveType(input_shape.element_type()),
+          xla::ComputationClient::XlaPrimitiveType(input_shape.element_type()),
           input.builder()),
       input_shape.dimensions());
   return {xla::Select(mask_pred, value, input)};

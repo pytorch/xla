@@ -13,6 +13,23 @@
 namespace torch_lazy_tensors {
 namespace compiler {
 namespace xla_backend {
+
+lazy_tensors::StatusOr<lazy_tensors::ProgramShape>
+GenericComputationXla::GetProgramShape() const {
+  xla::ProgramShape program_shape =
+      ConsumeValue(computation_.GetProgramShape());
+  std::vector<lazy_tensors::Shape> parameter_shapes;
+  parameter_shapes.reserve(program_shape.parameters_size());
+  for (const xla::Shape& xla_parameter_shape : program_shape.parameters()) {
+    parameter_shapes.push_back(
+        compiler::XlaHelpers::LazyTensorsShape(xla_parameter_shape));
+  }
+  lazy_tensors::Shape result_shape =
+      compiler::XlaHelpers::LazyTensorsShape(program_shape.result());
+  return lazy_tensors::ProgramShape(
+      parameter_shapes, program_shape.parameter_names(), result_shape);
+}
+
 namespace {
 
 class HloMetadataSetter {
@@ -77,27 +94,6 @@ xla::ShapeIndex XlaShapeIndex(const lazy_tensors::ShapeIndex& shape_index) {
   return {shape_index[0]};
 }
 
-class GenericComputationXla : public lazy_tensors::GenericComputation {
- public:
-  GenericComputationXla(xla::XlaComputation computation)
-      : computation_(std::move(computation)) {}
-
-  lazy_tensors::StatusOr<lazy_tensors::ProgramShape> GetProgramShape()
-      const override {
-    xla::ProgramShape program_shape =
-        ConsumeValue(computation_.GetProgramShape());
-    return lazy_tensors::ProgramShape(
-        torch_lazy_tensors::compiler::XlaHelpers::LazyTensorsShape(
-            program_shape.result()),
-        program_shape.parameters_size());
-  }
-
-  const xla::XlaComputation& computation() const { return computation_; }
-
- private:
-  xla::XlaComputation computation_;
-};
-
 }  // namespace
 
 lazy_tensors::Shape XlaLoweringContext::GetResultShape(size_t index) const {
@@ -144,9 +140,8 @@ void XlaLoweringContext::SetUpAlias(
 }
 
 xla::XlaOp XlaLoweringContext::GetParameter(
-    const std::shared_ptr<lazy_tensors::ComputationClient::Data>& data) {
-  lazy_tensors::ComputationClient::Data::OpaqueHandle handle =
-      data->GetOpaqueHandle();
+    const std::shared_ptr<lazy_tensors::client::Data>& data) {
+  lazy_tensors::client::Data::OpaqueHandle handle = data->GetOpaqueHandle();
   auto it = parameters_map_.find(handle);
   if (it == parameters_map_.end()) {
     xla::XlaOp param =

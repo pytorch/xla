@@ -8,7 +8,11 @@
 #include "lazy_tensors/computation_client/thread_pool.h"
 #include "lazy_tensors/computation_client/unique.h"
 #include "lazy_xla/csrc/compiler/helpers.h"
+#include "lazy_xla/csrc/compiler/xla_lowering_context.h"
 #include "tensorflow/compiler/xla/client/xla_builder.h"
+#include "tensorflow/compiler/xla/xla_client/computation_client.h"
+#include "tensorflow/compiler/xla/xla_client/xla_util.h"
+#include "tensorflow/compiler/xla/xla_client/xrt_computation_client.h"
 #include "test/cpp/tensorexpr/padded_buffer.h"
 #include "torch/csrc/jit/tensorexpr/ir_simplifier.h"
 
@@ -24,6 +28,20 @@ lazy_tensors::ComputationClient* CreateClient() {
   return new compiler::NNCComputationClient();
 }
 
+struct XrtComputation : lazy_tensors::ComputationClient::Computation {
+ public:
+  XrtComputation(
+      std::shared_ptr<lazy_tensors::GenericComputation> computation,
+      lazy_tensors::ProgramShape program_shape,
+      std::vector<std::string> devices,
+      std::shared_ptr<xla::XrtComputationClient::XrtComputation> original)
+      : lazy_tensors::ComputationClient::Computation(computation, program_shape,
+                                                     devices),
+        original(original) {}
+
+  std::shared_ptr<xla::XrtComputationClient::XrtComputation> original;
+};
+
 }  // namespace
 
 namespace compiler {
@@ -31,13 +49,72 @@ namespace compiler {
 lazy_tensors::ComputationClient::DataPtr
 NNCComputationClient::CreateDataPlaceholder(std::string device,
                                             lazy_tensors::Shape shape) {
-  LTC_LOG(FATAL) << "Not supported.";
+  return xla::ComputationClient::Get()->CreateDataPlaceholder(
+      device, lazy_tensors::ToShapeData(shape));
+}
+
+std::vector<lazy_tensors::ComputationClient::DataPtr>
+NNCComputationClient::TransferToServer(
+    lazy_tensors::Span<const TensorSource> tensors) {
+  return xla::ComputationClient::Get()->TransferToServer(tensors);
 }
 
 std::vector<lazy_tensors::ComputationClient::ComputationPtr>
 NNCComputationClient::Compile(
     std::vector<ComputationClient::CompileInstance> instances) {
-  LTC_LOG(FATAL) << "Not supported.";
+  std::list<Shape> xla_shapes;
+  std::vector<xla::ComputationClient::CompileInstance> xla_instances;
+  for (auto& instance : instances) {
+    xla::XlaComputation xla_computation =
+        std::static_pointer_cast<
+            torch_lazy_tensors::compiler::xla_backend::GenericComputationXla>(
+            instance.computation)
+            ->move_computation();
+    Shape* xla_shape = nullptr;
+    if (instance.output_shape) {
+      xla_shapes.push_back(torch_lazy_tensors::compiler::XlaHelpers::XlaShape(
+          *instance.output_shape));
+      xla_shape = &xla_shapes.back();
+    }
+    xla_instances.emplace_back(std::move(xla_computation),
+                               instance.compilation_device, instance.devices,
+                               xla_shape);
+  }
+  std::vector<lazy_tensors::ComputationClient::ComputationPtr> result;
+  std::vector<std::string> compilation_devices;
+  for (auto& instance : instances) {
+    compilation_devices.push_back(instance.compilation_device);
+  }
+  auto xla_result =
+      xla::ComputationClient::Get()->Compile(std::move(xla_instances));
+  XLA_CHECK_EQ(xla_result.size(), compilation_devices.size());
+  for (size_t i = 0; i < xla_result.size(); ++i) {
+    auto xrt_computation =
+        std::static_pointer_cast<xla::XrtComputationClient::XrtComputation>(
+            xla_result[i]);
+    auto generic_computation = std::make_shared<
+        torch_lazy_tensors::compiler::xla_backend::GenericComputationXla>(
+        xrt_computation->move_computation());
+    const xla::ProgramShape& xla_program_shape =
+        xrt_computation->program_shape();
+    std::vector<lazy_tensors::Shape> parameter_shapes;
+    parameter_shapes.reserve(xla_program_shape.parameters_size());
+    for (const xla::Shape& xla_parameter_shape :
+         xla_program_shape.parameters()) {
+      parameter_shapes.push_back(
+          torch_lazy_tensors::compiler::XlaHelpers::LazyTensorsShape(
+              xla_parameter_shape));
+    }
+    lazy_tensors::Shape result_shape =
+        torch_lazy_tensors::compiler::XlaHelpers::LazyTensorsShape(
+            xla_program_shape.result());
+    lazy_tensors::ProgramShape program_shape(
+        parameter_shapes, xla_program_shape.parameter_names(), result_shape);
+    result.push_back(std::make_shared<XrtComputation>(
+        generic_computation, program_shape, xrt_computation->devices(),
+        xrt_computation));
+  }
+  return result;
 }
 
 std::vector<lazy_tensors::ComputationClient::DataPtr>
@@ -47,7 +124,26 @@ NNCComputationClient::ExecuteComputation(
         arguments,
     const std::string& device,
     const lazy_tensors::ComputationClient::ExecuteComputationOptions& options) {
-  LTC_LOG(FATAL) << "Not supported.";
+  const XrtComputation& xrt_computation =
+      dynamic_cast<const XrtComputation&>(computation);
+  xla::XlaComputation xla_computation =
+      static_cast<
+          torch_lazy_tensors::compiler::xla_backend::GenericComputationXla*>(
+          computation.computation())
+          ->move_computation();
+  xla::ProgramShape program_shape;
+  for (const lazy_tensors::Shape& parameter_shape :
+       computation.program_shape().parameters()) {
+    *program_shape.add_parameters() =
+        torch_lazy_tensors::compiler::XlaHelpers::XlaShape(parameter_shape);
+  }
+  *program_shape.mutable_result() =
+      torch_lazy_tensors::compiler::XlaHelpers::XlaShape(
+          computation.program_shape().result());
+  xla::ComputationClient::ExecuteComputationOptions xla_options;
+  xla_options.explode_tuple = options.explode_tuple;
+  return xla::ComputationClient::Get()->ExecuteComputation(
+      *xrt_computation.original, arguments, device, xla_options);
 }
 
 std::string NNCComputationClient::GetResourceDomain(

@@ -8,6 +8,7 @@
 #include "tensorflow/compiler/xla/literal_util.h"
 #include "tensorflow/compiler/xla/primitive_util.h"
 #include "tensorflow/compiler/xla/shape_util.h"
+#include "tensorflow/compiler/xla/xla_client/computation_client.h"
 
 namespace torch_lazy_tensors {
 namespace {
@@ -97,11 +98,11 @@ xla::XlaOp ConvertToRaw(xla::XlaOp op, xla::PrimitiveType from,
 xla::XlaOp ConvertToNumeric(xla::XlaOp op, xla::PrimitiveType from) {
   if (from == xla::PrimitiveType::PRED) {
     Device xla_device = GetCurrentDevice();
-    op =
-        ConvertTo(op, from,
-                  compiler::XlaHelpers::XlaPrimitiveType(GetDevicePrimitiveType(
-                      lazy_tensors::PrimitiveType::U8, &xla_device)),
-                  &xla_device);
+    op = ConvertTo(
+        op, from,
+        xla::ComputationClient::XlaPrimitiveType(GetDevicePrimitiveType(
+            lazy_tensors::PrimitiveType::U8, &xla_device)),
+        &xla_device);
   }
   return op;
 }
@@ -115,7 +116,7 @@ xla::XlaOp CastToScalarType(xla::XlaOp input,
   if (dtype) {
     Device xla_device = GetCurrentDevice();
     return ConvertTo(input, compiler::XlaHelpers::TypeOfXlaOp(input),
-                     compiler::XlaHelpers::XlaPrimitiveType(
+                     xla::ComputationClient::XlaPrimitiveType(
                          MakeLtcPrimitiveType(*dtype, &xla_device)),
                      &xla_device);
   }

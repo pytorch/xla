@@ -16,6 +16,7 @@
 #include "tensorflow/compiler/xla/client/lib/slicing.h"
 #include "tensorflow/compiler/xla/shape_util.h"
 #include "tensorflow/compiler/xla/util.h"
+#include "tensorflow/compiler/xla/xla_client/computation_client.h"
 
 namespace torch_lazy_tensors {
 namespace {
@@ -175,7 +176,7 @@ xla::XlaOp BuildUnselect(xla::XlaOp target, xla::XlaOp source, xla::int64 dim,
   }
 
   xla::PrimitiveType pred_type =
-      compiler::XlaHelpers::XlaPrimitiveType(GetDevicePrimitiveType(
+      xla::ComputationClient::XlaPrimitiveType(GetDevicePrimitiveType(
           lazy_tensors::PrimitiveType::PRED, /*device=*/nullptr));
   xla::XlaOp source_true = compiler::XlaHelpers::ScalarBroadcast(
       1, pred_type, source_shape.dimensions(), source.builder());

@@ -234,6 +234,14 @@ class Build(BuildExtension):
 xla_git_sha, torch_git_sha = get_git_head_sha(base_dir)
 version = get_build_version(xla_git_sha)
 
+def _symlink_client_data_header():
+  client_data_hdr = os.path.join(lazy_core_dir, 'third_party', 'computation_client', 'client_data.h')
+  dest_client_data_hdr = os.path.join(third_party_path, 'xla_client', 'client_data.h')
+  cmd = ['ln', '-sf', client_data_hdr, dest_client_data_hdr]
+  if subprocess.call(cmd) != 0:
+    print('Failed to copy header: {}'.format(cmd), file=sys.stderr)
+    sys.exit(1)
+
 build_mode = _get_build_mode()
 if build_mode not in ['clean']:
   # Generate version info (lazy_xla.__version__).
@@ -241,6 +249,8 @@ if build_mode not in ['clean']:
 
   # Generate the code before globbing!
   generate_xla_aten_code(base_dir)
+
+  _symlink_client_data_header()
 
   # Build the support libraries (ie, TF).
   build_extra_libraries(base_dir, build_mode=build_mode)

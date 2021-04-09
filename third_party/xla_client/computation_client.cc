@@ -455,4 +455,68 @@ metrics::Metric* ComputationClient::OutboundDataMetric() {
   return metric;
 }
 
+#define HANDLE_TYPE(type)                 \
+  case lazy_tensors::PrimitiveType::type: \
+    return xla::PrimitiveType::type;
+
+xla::PrimitiveType ComputationClient::XlaPrimitiveType(
+    lazy_tensors::PrimitiveType type) {
+  switch (type) {
+    HANDLE_TYPE(PRED)
+    HANDLE_TYPE(S8)
+    HANDLE_TYPE(S16)
+    HANDLE_TYPE(S32)
+    HANDLE_TYPE(S64)
+    HANDLE_TYPE(U8)
+    HANDLE_TYPE(U16)
+    HANDLE_TYPE(U32)
+    HANDLE_TYPE(U64)
+    HANDLE_TYPE(F16)
+    HANDLE_TYPE(F32)
+    HANDLE_TYPE(BF16)
+    HANDLE_TYPE(F64)
+    HANDLE_TYPE(C64)
+    HANDLE_TYPE(C128)
+    HANDLE_TYPE(TUPLE)
+    case lazy_tensors::PrimitiveType::INVALID: {
+      return xla::PrimitiveType::PRIMITIVE_TYPE_INVALID;
+    }
+    default: { TF_LOG(FATAL) << "Invalid primitive type."; }
+  }
+}
+
+#undef HANDLE_TYPE
+
+#define HANDLE_TYPE(type)        \
+  case xla::PrimitiveType::type: \
+    return lazy_tensors::PrimitiveType::type;
+
+lazy_tensors::PrimitiveType ComputationClient::LazyTensorPrimitiveType(
+    xla::PrimitiveType type) {
+  switch (type) {
+    HANDLE_TYPE(PRED)
+    HANDLE_TYPE(S8)
+    HANDLE_TYPE(S16)
+    HANDLE_TYPE(S32)
+    HANDLE_TYPE(S64)
+    HANDLE_TYPE(U8)
+    HANDLE_TYPE(U16)
+    HANDLE_TYPE(U32)
+    HANDLE_TYPE(U64)
+    HANDLE_TYPE(F16)
+    HANDLE_TYPE(F32)
+    HANDLE_TYPE(BF16)
+    HANDLE_TYPE(F64)
+    HANDLE_TYPE(C64)
+    HANDLE_TYPE(C128)
+    HANDLE_TYPE(TUPLE)
+    case xla::PrimitiveType::PRIMITIVE_TYPE_INVALID: {
+      return lazy_tensors::PrimitiveType::INVALID;
+    }
+    default: { TF_LOG(FATAL) << "Invalid primitive type."; }
+  }
+}
+
+#undef HANDLE_TYPE
+
 }  // namespace xla

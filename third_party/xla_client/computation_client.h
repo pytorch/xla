@@ -10,6 +10,7 @@
 
 #include "absl/types/optional.h"
 #include "absl/types/span.h"
+#include "client_data.h"
 #include "tensorflow/compiler/xla/client/xla_computation.h"
 #include "tensorflow/compiler/xla/literal_util.h"
 #include "tensorflow/compiler/xla/types.h"
@@ -20,44 +21,6 @@ namespace xla {
 
 class ComputationClient {
  public:
-  class Data {
-   public:
-    struct Info {
-      virtual ~Info() {}
-    };
-
-    using OpaqueHandle = int64;
-
-    Data(std::string device, Shape shape)
-        : device_(std::move(device)), shape_(std::move(shape)) {}
-
-    virtual ~Data() {}
-
-    const std::string& device() const { return device_; }
-
-    const Shape& shape() const { return shape_; }
-
-    Info* info() const { return info_.get(); }
-
-    std::shared_ptr<Info> SetInfo(std::shared_ptr<Info> info) {
-      std::swap(info, info_);
-      return info;
-    }
-
-    virtual OpaqueHandle GetOpaqueHandle() = 0;
-
-    virtual void Assign(const Data& data) = 0;
-
-    virtual bool HasValue() const = 0;
-
-   private:
-    std::string device_;
-    Shape shape_;
-    std::shared_ptr<Info> info_;
-  };
-
-  using DataPtr = std::shared_ptr<Data>;
-
   class Computation {
    public:
     Computation(XlaComputation computation, ProgramShape program_shape,
@@ -70,6 +33,8 @@ class ComputationClient {
 
     const XlaComputation& computation() const { return computation_; }
 
+    xla::XlaComputation move_computation() { return std::move(computation_); }
+
     const ProgramShape& program_shape() const { return program_shape_; }
 
     const std::vector<std::string>& devices() const { return devices_; }
@@ -81,25 +46,6 @@ class ComputationClient {
   };
 
   using ComputationPtr = std::shared_ptr<Computation>;
-
-  // The TensorSource provides a way for a client to populate a buffer allocated
-  // by the core computation client code.
-  struct TensorSource {
-    // The PopulateFn accepts a dense buffer is standard array layout
-    // (dim0-major) and deposits the source tensor data directly over the
-    // provided buffer.
-    using PopulateFn = std::function<void(const TensorSource&, void*, size_t)>;
-
-    TensorSource() = default;
-    TensorSource(Shape shape, std::string device, PopulateFn populate_fn)
-        : shape(std::move(shape)),
-          device(std::move(device)),
-          populate_fn(std::move(populate_fn)) {}
-
-    Shape shape;
-    std::string device;
-    PopulateFn populate_fn;
-  };
 
   struct CompileInstance {
     CompileInstance() = default;
@@ -125,6 +71,9 @@ class ComputationClient {
   struct ExecuteReplicatedOptions : public ExecuteOptions {};
 
   struct ExecuteParallelOptions : public ExecuteOptions {};
+
+  using DataPtr = lazy_tensors::client::DataPtr;
+  using TensorSource = lazy_tensors::client::TensorSource;
 
   // Describes an operation to be fed to the ExecuteChained() API.
   // If the device_data member is not nullptr, this operation is a device data
@@ -164,7 +113,8 @@ class ComputationClient {
 
   // Creates a Data object with no actual device handle in it. The device handle
   // will be populated in an asynchrounous fashion.
-  virtual DataPtr CreateDataPlaceholder(std::string device, Shape shape) = 0;
+  virtual DataPtr CreateDataPlaceholder(
+      std::string device, lazy_tensors::client::ShapeData shape) = 0;
 
   // Transfers local tensor values to the TPU servers and fetches the handles.
   virtual std::vector<DataPtr> TransferToServer(
@@ -281,6 +231,11 @@ class ComputationClient {
   static ComputationClient* Get();
 
   static ComputationClient* GetIfInitialized();
+
+  static xla::PrimitiveType XlaPrimitiveType(lazy_tensors::PrimitiveType type);
+
+  static lazy_tensors::PrimitiveType LazyTensorPrimitiveType(
+      xla::PrimitiveType type);
 
  protected:
   // Metrics common to all client interfaces.

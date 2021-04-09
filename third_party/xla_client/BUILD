@@ -94,6 +94,7 @@ cc_library(
     ],
     hdrs = [
         "cache.h",
+        "client_data.h",
         "computation_client.h",
         "debug_macros.h",
         "env_vars.h",

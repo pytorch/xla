@@ -1,9 +1,9 @@
 #pragma once
 
-#include "tensorflow/compiler/xla/client/xla_builder.h"
-#include "tensorflow/core/lib/gtl/inlined_vector.h"
 #include "lazy_tensor_core/csrc/compiler/node_lowering.h"
 #include "lazy_tensor_core/csrc/lowering_context.h"
+#include "tensorflow/compiler/xla/client/xla_builder.h"
+#include "tensorflow/core/lib/gtl/inlined_vector.h"
 
 namespace torch_lazy_tensors {
 namespace compiler {
@@ -11,6 +11,22 @@ namespace compiler {
 using XlaOpVector = tensorflow::gtl::InlinedVector<xla::XlaOp, 1>;
 
 namespace xla_backend {
+
+class GenericComputationXla : public lazy_tensors::GenericComputation {
+ public:
+  GenericComputationXla(xla::XlaComputation computation)
+      : computation_(std::move(computation)) {}
+
+  lazy_tensors::StatusOr<lazy_tensors::ProgramShape> GetProgramShape()
+      const override;
+
+  const xla::XlaComputation& computation() const { return computation_; }
+
+  xla::XlaComputation move_computation() { return std::move(computation_); }
+
+ private:
+  xla::XlaComputation computation_;
+};
 
 class XlaLoweringContext : public ir::LoweringContext {
  public:
@@ -62,7 +78,7 @@ class XlaLoweringContext : public ir::LoweringContext {
   // returned. Otherwise a new one will be created, associated with the tensor
   // held in data.
   xla::XlaOp GetParameter(
-      const std::shared_ptr<lazy_tensors::ComputationClient::Data>& data);
+      const std::shared_ptr<lazy_tensors::client::Data>& data);
 
   // Reports a builder error for the given node.
   TF_ATTRIBUTE_NORETURN void ReportBuilderError(const ir::Node* node,
@@ -85,8 +101,7 @@ class XlaLoweringContext : public ir::LoweringContext {
   XlaOpVector LowerNode(const ir::Node* node);
 
   xla::XlaBuilder builder_;
-  std::unordered_map<lazy_tensors::ComputationClient::Data::OpaqueHandle,
-                     Parameter>
+  std::unordered_map<lazy_tensors::client::Data::OpaqueHandle, Parameter>
       parameters_map_;
   std::vector<xla::XlaOp> root_tuple_;
   ir::OutputMap<xla::XlaOp> emitted_outputs_;

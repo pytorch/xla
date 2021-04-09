@@ -11,6 +11,7 @@
 #include "tensorflow/compiler/xla/client/lib/constants.h"
 #include "tensorflow/compiler/xla/primitive_util.h"
 #include "tensorflow/compiler/xla/shape_util.h"
+#include "tensorflow/compiler/xla/xla_client/computation_client.h"
 #include "tensorflow/compiler/xla/xla_client/debug_macros.h"
 
 namespace torch_lazy_tensors {
@@ -41,6 +42,32 @@ xla::XlaComputation CreateComputation(
 
 }  // namespace
 
+xla::Shape XlaHelpers::XlaShape(const lazy_tensors::Shape& shape) {
+  if (shape.element_type() == lazy_tensors::PrimitiveType::TUPLE) {
+    std::vector<xla::Shape> shapes;
+    for (const lazy_tensors::Shape& element_shape : shape.tuple_shapes()) {
+      shapes.push_back(XlaShape(element_shape));
+    }
+    return xla::ShapeUtil::MakeTupleShape(shapes);
+  }
+  return xla::ShapeUtil::MakeShape(
+      xla::ComputationClient::XlaPrimitiveType(shape.element_type()),
+      shape.dimensions());
+}
+
+lazy_tensors::Shape XlaHelpers::LazyTensorsShape(const xla::Shape& shape) {
+  if (shape.element_type() == xla::PrimitiveType::TUPLE) {
+    std::vector<lazy_tensors::Shape> shapes;
+    for (const xla::Shape& element_shape : shape.tuple_shapes()) {
+      shapes.push_back(LazyTensorsShape(element_shape));
+    }
+    return lazy_tensors::ShapeUtil::MakeTupleShape(shapes);
+  }
+  return lazy_tensors::Shape(
+      xla::ComputationClient::LazyTensorPrimitiveType(shape.element_type()),
+      shape.dimensions());
+}
+
 xla::XlaOp XlaHelpers::BroadcastDimensions(
     xla::XlaOp input, absl::Span<const xla::int64> dimensions,
     absl::Span<const xla::int64> sizes) {
@@ -69,8 +96,8 @@ XlaHelpers::DynamicSize XlaHelpers::GetDimensionsSize(
     absl::Span<const xla::XlaOp> inputs,
     absl::Span<const xla::int64> dimensions) {
   LTC_CHECK(!inputs.empty());
-  xla::PrimitiveType size_type =
-      XlaPrimitiveType(GetShapeDimensionType(/*device=*/nullptr));
+  xla::PrimitiveType size_type = xla::ComputationClient::XlaPrimitiveType(
+      GetShapeDimensionType(/*device=*/nullptr));
   xla::XlaOp size;
   xla::int64 size_scalar = 1;
   for (auto& input : inputs) {
@@ -249,9 +276,10 @@ std::pair<xla::XlaOp, xla::XlaOp> XlaHelpers::PromoteValues(xla::XlaOp op1,
                                                             xla::XlaOp op2) {
   xla::PrimitiveType type1 = TypeOfXlaOp(op1);
   xla::PrimitiveType type2 = TypeOfXlaOp(op2);
-  xla::PrimitiveType result_type =
-      XlaPrimitiveType(torch_lazy_tensors::Helpers::PromoteType(
-          LazyTensorPrimitiveType(type1), LazyTensorPrimitiveType(type2)));
+  xla::PrimitiveType result_type = xla::ComputationClient::XlaPrimitiveType(
+      torch_lazy_tensors::Helpers::PromoteType(
+          xla::ComputationClient::LazyTensorPrimitiveType(type1),
+          xla::ComputationClient::LazyTensorPrimitiveType(type2)));
   if (type1 != result_type) {
     op1 = ConvertTo(op1, type1, result_type, /*device=*/nullptr);
   }
@@ -266,11 +294,12 @@ std::tuple<xla::XlaOp, xla::XlaOp, xla::XlaOp> XlaHelpers::PromoteValues(
   xla::PrimitiveType type1 = TypeOfXlaOp(op1);
   xla::PrimitiveType type2 = TypeOfXlaOp(op2);
   xla::PrimitiveType type3 = TypeOfXlaOp(op3);
-  xla::PrimitiveType result_type =
-      XlaPrimitiveType(torch_lazy_tensors::Helpers::PromoteType(
+  xla::PrimitiveType result_type = xla::ComputationClient::XlaPrimitiveType(
+      torch_lazy_tensors::Helpers::PromoteType(
           torch_lazy_tensors::Helpers::PromoteType(
-              LazyTensorPrimitiveType(type1), LazyTensorPrimitiveType(type2)),
-          LazyTensorPrimitiveType(type3)));
+              xla::ComputationClient::LazyTensorPrimitiveType(type1),
+              xla::ComputationClient::LazyTensorPrimitiveType(type2)),
+          xla::ComputationClient::LazyTensorPrimitiveType(type3)));
   if (type1 != result_type) {
     op1 = ConvertTo(op1, type1, result_type, /*device=*/nullptr);
   }
@@ -384,6 +413,11 @@ xla::PaddingConfig XlaHelpers::MakeXlaPaddingConfigFromNdPadding(
     dims->set_edge_padding_high(padding[padding.size() - i - 1]);
   }
   return padding_config;
+}
+
+lazy_tensors::PrimitiveType XlaHelpers::LazyTensorPrimitiveType(
+    xla::PrimitiveType type) {
+  return xla::ComputationClient::LazyTensorPrimitiveType(type);
 }
 
 }  // namespace compiler

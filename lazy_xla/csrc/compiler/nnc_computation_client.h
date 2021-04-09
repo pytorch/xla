@@ -17,9 +17,7 @@ class NNCComputationClient : public lazy_tensors::ComputationClient {
                                 lazy_tensors::Shape shape) override;
 
   std::vector<DataPtr> TransferToServer(
-      lazy_tensors::Span<const TensorSource> tensors) override {
-    LTC_LOG(FATAL) << "Not implemented yet.";
-  }
+      lazy_tensors::Span<const TensorSource> tensors) override;
 
   std::vector<lazy_tensors::Literal> TransferFromServer(
       lazy_tensors::Span<const DataPtr> handles) override {
