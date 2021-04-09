@@ -257,20 +257,20 @@ class ClusterResolver(object):
     self._tpuvm_mode = False
     self._tpuvm_mode_with_remote_coordinator = False
     accel_type = ClusterResolver.get_instance_metadata(
-      'instance/attributes/accelerator-type')
+        'instance/attributes/accelerator-type')
     if re.match(r'v[0-9]+-[0-9]+', accel_type):
       # Only VM with TPU attched will carry the accelerator-type metadata
       self._tpuvm_mode = True
       return
 
-    runtime_version = cloud_tpu_client.Client(tpu=self._tpus[0]).runtime_version()
+    runtime_version = cloud_tpu_client.Client(
+        tpu=self._tpus[0]).runtime_version()
     if re.match(r'v2-*', runtime_version):
       # Only TPUVM runtime version should start with v2-
       self._tpuvm_mode = True
       # Current vm does not carry the accelerator-type metadata but tpu specified
       # is a TPUVM, assume it is a remote coordinator.
       self._tpuvm_mode_with_remote_coordinator = True
-
 
   def _get_instance_group(self):
     """Gets the instance group that the current VM belongs to."""
@@ -410,7 +410,6 @@ class ClusterResolver(object):
               tpu=tpu_name)
         workers.append(worker)
 
-    add_tpu_worker(self._tpus[0])
     xu.parallel_work(len(self._tpus), add_tpu_worker, self._tpus)
 
     return workers
@@ -437,7 +436,8 @@ class ClusterResolver(object):
       # If the script is being run from a remote coordinator with a TPUVM, client_master_ip
       # should be TPUVM IP instead of the remote coordinator IP.
       client_master_ip = client_workers[0].get_internal_ip()
-    cluster = Cluster(client_workers, service_workers, client_master_ip=client_master_ip)
+    cluster = Cluster(
+        client_workers, service_workers, client_master_ip=client_master_ip)
     cluster.validate()
     return cluster
 

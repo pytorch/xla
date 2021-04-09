@@ -623,7 +623,6 @@ if __name__ == '__main__':
   #   # Only TPUVM will carry the accelerator-type metadata
   #   tpuvm_mode = True
   # else:
-    
 
   if (FLAGS.docker_container or FLAGS.docker_image or
       FLAGS.docker_run_flag) and FLAGS.conda_env:
@@ -631,8 +630,7 @@ if __name__ == '__main__':
                      ' arguments are mutually exclusive.')
 
   # Resolve VM and TPU clusters.
-  cluster_resolver = ClusterResolver(
-      FLAGS.tpu, vms=FLAGS.vm)
+  cluster_resolver = ClusterResolver(FLAGS.tpu, vms=FLAGS.vm)
   cluster = cluster_resolver.get_cluster()
   tpuvm_mode = cluster_resolver.get_tpuvm_mode()
   executor = DistributedExecutor(
