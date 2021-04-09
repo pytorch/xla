@@ -17,16 +17,26 @@ Stmt* OptimizeComputation(LoopNest* l, absl::Span<Tensor*> temporaries) {
       continue;
     }
     auto temporary_statement = l->getLoopBodyFor(temporary);
-    l->computeInline(temporary_statement);
+    if (dynamic_cast<Store*>(temporary_statement)) {
+      l->computeInline(temporary_statement);
+    }
   }
   l->prepareForCodegen();
   return IRSimplifier::simplify(l->root_stmt());
 }
 
+LoopNest MakeLoopNest(Tensor* tensor, absl::Span<Tensor*> temporaries) {
+  std::vector<Tensor*> output_tensors{tensor};
+  std::vector<Tensor*> tensors_to_compute(temporaries.begin(),
+                                          temporaries.end());
+  tensors_to_compute.push_back(tensor);
+  return LoopNest(output_tensors, tensors_to_compute);
+}
+
 // Get the optimized, ready for code generation statement for the given tensor
 // and temporaries.
 Stmt* GetComputation(Tensor* tensor, absl::Span<Tensor*> temporaries) {
-  LoopNest l({tensor});
+  LoopNest l = MakeLoopNest(tensor, temporaries);
   return OptimizeComputation(&l, temporaries);
 }
 
@@ -54,7 +64,7 @@ std::vector<Stmt*> GetComputationSlices(Tensor* tensor,
     // For single core computation, bypass all the splitting work.
     return {GetComputation(tensor, temporaries)};
   }
-  LoopNest l({tensor});
+  LoopNest l = MakeLoopNest(tensor, temporaries);
   OptimizeComputation(&l, temporaries);
   const auto for_loops = l.getLoopStmtsFor(tensor);
   // Only parallelize single, fully fused loops for now.
