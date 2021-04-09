@@ -1,7 +1,9 @@
 #include "lazy_tensor_core/csrc/compiler/backend_impl_interface.h"
+#include "lazy_tensor_core/csrc/tensor_util.h"
 #include "lazy_xla/csrc/compiler/nnc_computation_client.h"
 #include "lazy_xla/csrc/compiler/xla_lowering_context.h"
 #include "lazy_xla/csrc/compiler/xla_node_lowering.h"
+#include "tensorflow/compiler/xla/xla_client/computation_client.h"
 
 namespace torch_lazy_tensors {
 namespace compiler {
@@ -54,7 +56,20 @@ class XlaBackendImpl : public BackendImplInterface {
   lazy_tensors::ComputationClient::DataPtr MakeComputationDataFromTensor(
       const at::Tensor& tensor, const lazy_tensors::Shape& shape,
       const std::string& device) const override {
-    LTC_LOG(FATAL) << "Not implemented.";
+    std::vector<lazy_tensors::ComputationClient::TensorSource> source_tensors;
+    Device physical_device(device);
+    auto populate_fn =
+        [&, device](
+            const lazy_tensors::ComputationClient::TensorSource& source_tensor,
+            void* dest_buffer, size_t dest_buffer_size) {
+          PopulateTensorBuffer(tensor, source_tensor.shape, dest_buffer,
+                               dest_buffer_size, physical_device);
+        };
+    source_tensors.emplace_back(shape, device, std::move(populate_fn));
+    auto handles = lazy_tensors::ComputationClient::Get()->TransferToServer(
+        source_tensors);
+    LTC_CHECK_EQ(handles.size(), 1);
+    return handles.front();
   }
 
   lazy_tensors::StatusOr<std::string> GetComputationBackendText(
