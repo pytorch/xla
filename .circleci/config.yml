@@ -19,8 +19,6 @@ launch_docker_and_build: &launch_docker_and_build
     set -e
     pip install google_compute_engine
     gsutil -m cp -R gs://pytorch-datasets/mnist-data .
-    ls
-    ls mnist-data
     eval $(aws ecr get-login --region us-east-1 --no-include-email)
     time docker pull ${DOCKER_IMAGE} >/dev/null
     sudo pkill -SIGHUP dockerd
@@ -41,8 +39,6 @@ launch_docker_and_build: &launch_docker_and_build
 
     pid=$(docker run -t -d -w $WORKDIR ${DOCKER_IMAGE})
     docker cp /home/circleci/project/. "$pid:$WORKDIR"
-    echo "zcain-ls"
-    ls
     docker cp mnist-data "$pid:$WORKDIR"
     docker exec -u jenkins ${pid} sudo chown -R jenkins ${WORKDIR}
     echo ${pid} > .docker_pid

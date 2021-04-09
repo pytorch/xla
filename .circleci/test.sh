@@ -13,13 +13,15 @@ fi
 
 export CMAKE_PREFIX_PATH=${CONDA_PREFIX:-"$(dirname $(which conda))/../"}
 
+ls
+pwd
 cd /tmp/pytorch/xla
 
 echo "Running Python Tests"
 ./test/run_tests.sh
 
 # echo "Running MNIST Test"
-# python test/test_train_mp_mnist.py --tidy
+python test/test_train_mp_mnist.py --datadir=mnist-data
 # if [ -x "$(command -v nvidia-smi)" ]; then
 #   python test/test_train_mp_mnist_amp.py --fake_data
 # fi
