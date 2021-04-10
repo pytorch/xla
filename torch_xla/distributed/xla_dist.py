@@ -616,13 +616,6 @@ if __name__ == '__main__':
       help='The python command to launch training including model parameters.')
 
   FLAGS = parser.parse_args()
-  # tpuvm_mode = False
-  # accel_type = ClusterResolver.get_instance_metadata(
-  #     'instance/attributes/accelerator-type')
-  # if re.match(r'v[0-9]+-[0-9]+', accel_type):
-  #   # Only TPUVM will carry the accelerator-type metadata
-  #   tpuvm_mode = True
-  # else:
 
   if (FLAGS.docker_container or FLAGS.docker_image or
       FLAGS.docker_run_flag) and FLAGS.conda_env:

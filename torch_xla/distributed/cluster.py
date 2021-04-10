@@ -263,10 +263,10 @@ class ClusterResolver(object):
       self._tpuvm_mode = True
       return
 
-    runtime_version = cloud_tpu_client.Client(
-        tpu=self._tpus[0]).runtime_version()
-    if re.match(r'v2-*', runtime_version):
-      # Only TPUVM runtime version should start with v2-
+    api_version = cloud_tpu_client.Client(
+        tpu=self._tpus[0])._get_tpu_property('apiVersion')
+    if api_version == 'V2_ALPHA1':
+      # Only TPUVM api version should be V2_ALPHA1
       self._tpuvm_mode = True
       # Current vm does not carry the accelerator-type metadata but tpu specified
       # is a TPUVM, assume it is a remote coordinator.
