@@ -15,8 +15,7 @@ import sys
 import time
 import threading
 import torch_xla.core.xla_env_vars as xenv
-#from torch_xla.distributed.cluster import ClusterResolver
-from .cluster import ClusterResolver
+from torch_xla.distributed.cluster import ClusterResolver
 import torch_xla.utils.utils as xu
 
 

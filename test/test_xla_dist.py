@@ -736,7 +736,6 @@ class ClusterResolverTest(unittest.TestCase):
                 'v2-nightly',
             'accelerator_type':
                 'v3-32',
-            # TODO: add a api to get the tpu api version directly
             'api_version':
                 'V2_ALPHA1',
             'network_endpoints': [{
@@ -795,7 +794,6 @@ class ClusterResolverTest(unittest.TestCase):
                 'v2-nightly',
             'accelerator_type':
                 'v3-32',
-            # TODO: add a api to get the tpu api version directly
             'api_version':
                 'V2_ALPHA1',
             'network_endpoints': [{
