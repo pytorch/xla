@@ -396,7 +396,7 @@
     <span class="k">return</span> <span class="n">PerDeviceLoader</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">torch</span><span class="o">.</span><span class="n">device</span><span class="p">(</span><span class="n">device</span><span class="p">))</span></div>
 
   <span class="k">def</span> <span class="nf">per_device_samples</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-    <span class="k">return</span> <span class="nb">len</span><span class="p">(</span><span class="n">loader</span><span class="p">)</span> <span class="o">//</span> <span class="nb">len</span><span class="p">(</span><span class="n">devices</span><span class="p">)</span>
+    <span class="k">return</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_loader</span><span class="p">)</span> <span class="o">//</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_devices</span><span class="p">)</span>
 
   <span class="k">def</span> <span class="nf">next_item</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">device</span><span class="p">):</span>
     <span class="n">dqueue</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_queues</span><span class="p">[</span><span class="n">device</span><span class="p">]</span>
