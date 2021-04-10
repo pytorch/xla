@@ -315,17 +315,20 @@ void AtenXlaType::_amp_foreach_non_finite_check_and_unscale_(
       bridge::GetXlaTensor(inv_scale));
 }
 
-at::Tensor AtenXlaType::_amp_update_scale(at::Tensor& growth_tracker,
-                                          const at::Tensor& current_scale,
-                                          const at::Tensor& found_inf,
-                                          double scale_growth_factor,
-                                          double scale_backoff_factor,
-                                          int64_t growth_interval) {
+at::Tensor& AtenXlaType::_amp_update_scale_(at::Tensor& current_scale,
+                                            at::Tensor& growth_tracker,
+                                            const at::Tensor& found_inf,
+                                            double scale_growth_factor,
+                                            double scale_backoff_factor,
+                                            int64_t growth_interval) {
   XLA_FN_COUNTER("xla::");
-  return bridge::AtenFromXlaTensor(XLATensor::_amp_update_scale(
-      bridge::GetXlaTensor(growth_tracker), bridge::GetXlaTensor(current_scale),
-      bridge::GetXlaTensor(found_inf), scale_growth_factor,
-      scale_backoff_factor, growth_interval));
+  XLATensor growth_tracker_tensor = bridge::GetXlaTensor(growth_tracker);
+  XLATensor current_scale_tensor = bridge::GetXlaTensor(current_scale);
+  XLATensor::_amp_update_scale_(growth_tracker_tensor, current_scale_tensor,
+                                bridge::GetXlaTensor(found_inf),
+                                scale_growth_factor, scale_backoff_factor,
+                                growth_interval);
+  return current_scale;
 }
 
 at::Tensor AtenXlaType::_copy_from(const at::Tensor& self,
