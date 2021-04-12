@@ -1,5 +1,8 @@
 backend: XLA
+<<<<<<< HEAD
 cpp_namespace: torch_xla
+=======
+>>>>>>> a11eb37f (use in-tree public codegen API.)
 supported:
   - abs
   - abs_
