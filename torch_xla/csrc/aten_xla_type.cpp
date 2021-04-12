@@ -3573,4 +3573,9 @@ void AtenXlaType::InitializeAtenBindings() {
   std::call_once(once, []() { AtenInitialize(); });
 }
 
+std::vector<at::Tensor> AtenXlaType::to_cpu(at::TensorList tensors) {
+  XLA_FN_COUNTER("xla::");
+  return bridge::XlaCreateTensorList(tensors);
+}
+
 }  // namespace torch_xla
