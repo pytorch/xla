@@ -368,7 +368,7 @@ supported:
   - sigmoid_backward
   - tanh_backward
   - ger
-  - to_cpu
+  - _to_cpu
 autograd:
   - max_pool2d
   - max_pool3d
