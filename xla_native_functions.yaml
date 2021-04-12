@@ -1,8 +1,5 @@
 backend: XLA
-<<<<<<< HEAD
 cpp_namespace: torch_xla
-=======
->>>>>>> a11eb37f (use in-tree public codegen API.)
 supported:
   - abs
   - abs_
@@ -372,6 +369,7 @@ supported:
   - sigmoid_backward
   - tanh_backward
   - ger
+  - to_cpu
 autograd:
   - max_pool2d
   - max_pool3d
