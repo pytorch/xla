@@ -209,6 +209,7 @@ class DistributedExecutor(object):
             'tpus',
             'tpu-vm',
             'ssh',
+            '--internal-ip',
             '{}'.format(self.tpu_name),
             '--zone {}'.format(client_worker.get_zone()),
             '--worker {}'.format(client_worker.get_hostname().split('-')[-1]),
