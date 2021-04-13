@@ -52,7 +52,7 @@ import sys
 import torch
 
 base_dir = os.path.dirname(os.path.abspath(__file__))
-lazy_core_dir = os.path.join(base_dir, '..', 'nnc_eager')
+lazy_core_dir = os.path.join(base_dir, '..', 'lazy_tensor_core')
 third_party_path = os.path.join(base_dir, 'third_party')
 
 
