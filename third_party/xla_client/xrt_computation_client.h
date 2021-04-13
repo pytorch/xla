@@ -45,8 +45,10 @@ lazy_tensors::client::ShapeData FromXlaShape(const Shape& shape) {
   for (const Shape& element_shape : shape.tuple_shapes()) {
     element_shapes.push_back(FromXlaShape(element_shape));
   }
-  return lazy_tensors::client::ShapeData(element_type, dimensions,
-                                         element_shapes);
+  auto minor_to_major = shape.layout().minor_to_major();
+  return lazy_tensors::client::ShapeData(
+      element_type, dimensions, element_shapes,
+      std::vector<int64_t>(minor_to_major.begin(), minor_to_major.end()));
 }
 
 }  // namespace client

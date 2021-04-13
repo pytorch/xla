@@ -50,9 +50,9 @@ xla::Shape XlaHelpers::XlaShape(const lazy_tensors::Shape& shape) {
     }
     return xla::ShapeUtil::MakeTupleShape(shapes);
   }
-  return xla::ShapeUtil::MakeShape(
+  return xla::ShapeUtil::MakeShapeWithLayout(
       xla::ComputationClient::XlaPrimitiveType(shape.element_type()),
-      shape.dimensions());
+      shape.dimensions(), shape.layout().minor_to_major());
 }
 
 lazy_tensors::Shape XlaHelpers::LazyTensorsShape(const xla::Shape& shape) {
@@ -63,9 +63,15 @@ lazy_tensors::Shape XlaHelpers::LazyTensorsShape(const xla::Shape& shape) {
     }
     return lazy_tensors::ShapeUtil::MakeTupleShape(shapes);
   }
-  return lazy_tensors::Shape(
+  lazy_tensors::Shape lazy_shape(
       xla::ComputationClient::LazyTensorPrimitiveType(shape.element_type()),
       shape.dimensions());
+  lazy_tensors::Layout layout;
+  for (const int64_t dim_index : shape.layout().minor_to_major()) {
+    layout.add_minor_to_major(dim_index);
+  }
+  *lazy_shape.mutable_layout() = layout;
+  return lazy_shape;
 }
 
 xla::XlaOp XlaHelpers::BroadcastDimensions(
