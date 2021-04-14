@@ -615,12 +615,6 @@ if __name__ == '__main__':
       help='The python command to launch training including model parameters.')
 
   FLAGS = parser.parse_args()
-  tpuvm_mode = False
-  accel_type = ClusterResolver.get_instance_metadata(
-      'instance/attributes/accelerator-type')
-  if re.match(r'v[0-9]+-[0-9]+', accel_type):
-    # Only TPUVM will carry the accelerator-type metadata
-    tpuvm_mode = True
 
   if (FLAGS.docker_container or FLAGS.docker_image or
       FLAGS.docker_run_flag) and FLAGS.conda_env:
@@ -628,9 +622,9 @@ if __name__ == '__main__':
                      ' arguments are mutually exclusive.')
 
   # Resolve VM and TPU clusters.
-  cluster_resolver = ClusterResolver(
-      FLAGS.tpu, vms=FLAGS.vm, tpuvm_mode=tpuvm_mode)
+  cluster_resolver = ClusterResolver(FLAGS.tpu, vms=FLAGS.vm)
   cluster = cluster_resolver.get_cluster()
+  tpuvm_mode = cluster_resolver.get_tpuvm_mode()
   executor = DistributedExecutor(
       cluster,
       docker_container=FLAGS.docker_container,
