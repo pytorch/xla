@@ -1,7 +1,9 @@
 import cloud_tpu_client
 import logging
 import multiprocessing
+import re
 import requests
+import subprocess
 import time
 
 from torch_xla.distributed.worker import ClientWorker
@@ -221,7 +223,34 @@ class ClusterResolver(object):
     idx = parts.index(name)
     return parts[idx + 1]
 
-  def __init__(self, tpu, vms=None, zone=None, project=None, tpuvm_mode=None):
+  @staticmethod
+  def _get_internal_ip_to_hostname_mapping(tpu_name, zone, num_vm):
+    """Gets TPU VM internal IP to hostname mapping.
+
+    Currently TPU CLH does not expose any TPU host machine name. SSH to each worker and
+    get that instead.
+
+    Returns:
+      A map of TPU VM internal IP to TPU VM hostname.
+    """
+    ip_to_host_name = {}
+
+    def add_tpuvm_ip_to_hostname_mapping(worker_index):
+      proc = subprocess.Popen([
+          'gcloud', 'alpha', 'compute', 'tpus', 'tpu-vm', 'ssh',
+          '--internal-ip', tpu_name, '--zone', zone, '--worker',
+          str(worker_index), '--command', 'hostname; hostname -i'
+      ],
+                              stdout=subprocess.PIPE)
+      hostname = proc.stdout.readline().decode('utf-8').rstrip('\n')
+      ip = proc.stdout.readline().decode('utf-8').rstrip('\n')
+      ip_to_host_name[ip] = hostname
+
+    xu.parallel_work(num_vm, add_tpuvm_ip_to_hostname_mapping,
+                     list(range(num_vm)))
+    return ip_to_host_name
+
+  def __init__(self, tpu, vms=None, zone=None, project=None):
     """Creates a new ClusterResolver object."""
 
     if not tpu:
@@ -234,7 +263,9 @@ class ClusterResolver(object):
     self._vms = vms
     self._zone = zone
     self._project = project
-    self._tpuvm_mode = tpuvm_mode
+    self._tpuvm_mode = None
+    self._tpuvm_mode_with_remote_coordinator = None
+    self._set_tpuvm_mode()
 
     self._compute_service = discovery.build(
         'compute',
@@ -249,6 +280,25 @@ class ClusterResolver(object):
       zone_path = ClusterResolver.get_instance_metadata('instance/zone')
       self._zone = ClusterResolver._parse_resource_url(zone_path, 'zones')
     self._vm_master = ClusterResolver.get_instance_metadata('instance/name')
+
+  def _set_tpuvm_mode(self):
+    self._tpuvm_mode = False
+    self._tpuvm_mode_with_remote_coordinator = False
+    accel_type = ClusterResolver.get_instance_metadata(
+        'instance/attributes/accelerator-type')
+    if re.match(r'v[0-9]+-[0-9]+', accel_type):
+      # Only VM with TPU attched will carry the accelerator-type metadata
+      self._tpuvm_mode = True
+      return
+
+    api_version = cloud_tpu_client.Client(
+        tpu=self._tpus[0])._get_tpu_property('apiVersion')
+    if api_version == 'V2_ALPHA1':
+      # Only TPUVM api version should be V2_ALPHA1
+      self._tpuvm_mode = True
+      # Current vm does not carry the accelerator-type metadata but tpu specified
+      # is a TPUVM, assume it is a remote coordinator.
+      self._tpuvm_mode_with_remote_coordinator = True
 
   def _get_instance_group(self):
     """Gets the instance group that the current VM belongs to."""
@@ -369,12 +419,16 @@ class ClusterResolver(object):
       zone = ClusterResolver._parse_resource_url(ctc._full_name(), 'locations')
       network_endpoints = ctc.network_endpoints()
 
+      if as_client_worker:
+        ip_to_host_name = ClusterResolver._get_internal_ip_to_hostname_mapping(
+            tpu_name, zone, len(network_endpoints))
+
       for endpoint in network_endpoints:
         if as_client_worker:
-          hostname = ClusterResolver._parse_resource_url(
-              endpoint['greenVmSelflink'], 'instances')
+          internal_ip = endpoint['ipAddress']
+          hostname = ip_to_host_name[internal_ip]
           worker = ClientWorker(
-              internal_ip=endpoint['ipAddress'],
+              internal_ip=internal_ip,
               machine_type=machine_type,
               zone=zone,
               hostname=hostname)
@@ -409,6 +463,15 @@ class ClusterResolver(object):
     client_workers = self.get_tpu_workers(
         as_client_worker=True) if self._tpuvm_mode else self.get_client_workers(
         )
-    cluster = Cluster(client_workers, service_workers)
+    client_master_ip = None
+    if self._tpuvm_mode_with_remote_coordinator:
+      # If the script is being run from a remote coordinator with a TPUVM, client_master_ip
+      # should be TPUVM IP instead of the remote coordinator IP.
+      client_master_ip = client_workers[0].get_internal_ip()
+    cluster = Cluster(
+        client_workers, service_workers, client_master_ip=client_master_ip)
     cluster.validate()
     return cluster
+
+  def get_tpuvm_mode(self):
+    return self._tpuvm_mode
