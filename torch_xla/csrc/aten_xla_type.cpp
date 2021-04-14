@@ -350,6 +350,26 @@ at::Tensor AtenXlaType::_copy_from(const at::Tensor& self,
   return dst;
 }
 
+at::Tensor AtenXlaType::_copy_from_temp(const at::Tensor& self,
+                                   const at::Tensor& dst) {
+  XLA_FN_COUNTER("xla::");
+  auto dst_tensor = bridge::TryGetXlaTensor(dst);
+  auto self_tensor = bridge::TryGetXlaTensor(self);
+  if (!self_tensor) {
+    XLA_CHECK(dst_tensor);
+    dst_tensor->UpdateFromTensorOut(self);
+  } else if (!dst_tensor) {
+    at::Tensor tensor = self_tensor->ToTensor(/*detached=*/true);
+    at::Tensor typed_tensor =
+        CopyTensor(tensor, dst.scalar_type(), /*copy=*/false);
+    dst.resize_as_(typed_tensor).copy_(typed_tensor);
+  } else {
+    XLATensor::copy_(*dst_tensor, *self_tensor);
+    bridge::ReplaceXlaTensor(dst, *dst_tensor);
+  }
+  return dst;
+}
+
 at::Tensor& AtenXlaType::_index_put_impl_(
     at::Tensor& self, const c10::List<c10::optional<at::Tensor>>& indices,
     const at::Tensor& values, bool accumulate, bool /* unsafe */) {

@@ -369,6 +369,7 @@ supported:
   - tanh_backward
   - ger
   - _to_cpu
+  - _copy_from_temp
 autograd:
   - max_pool2d
   - max_pool3d
