@@ -222,6 +222,13 @@ def mock_request_tpuvm_metadata(metadata):
   return fake_metadata[metadata]
 
 
+def mock_ip_to_hostname_mapping(tpu_name, zone, num_vm):
+  ip_to_hostname_map = {}
+  for index in range(num_vm):
+    ip_to_hostname_map[f'10.1.0.{index}'] = f'{TPUVM_HOSTNAME_PREFIX}{index}'
+  return ip_to_hostname_map
+
+
 def build_mock_cloud_tpu_client_library(tpu_map):
 
   def mock_cloud_tpu_client_constructor(*args, **kwargs):
@@ -352,6 +359,8 @@ class ClusterResolverTest(unittest.TestCase):
     self.addCleanup(mock.patch.stopall)
     mock.patch.object(ClusterResolver, 'get_instance_metadata',
                       mock_request_metadata).start()
+    mock.patch.object(ClusterResolver, '_get_internal_ip_to_hostname_mapping',
+                      mock_ip_to_hostname_mapping).start()
     mock.patch.object(GoogleCredentials, 'get_application_default',
                       lambda *args, **kwargs: None).start()
     self.mock_discovery = mock.patch.object(
@@ -739,12 +748,8 @@ class ClusterResolverTest(unittest.TestCase):
             'api_version':
                 'V2_ALPHA1',
             'network_endpoints': [{
-                'ipAddress':
-                    f'10.1.0.{index}',
-                'port':
-                    '8470',
-                'greenVmSelflink':
-                    f'{PROJECT_ZONE_PREFIX}/instances/{TPUVM_HOSTNAME_PREFIX}{index}',
+                'ipAddress': f'10.1.0.{index}',
+                'port': '8470',
             } for index in range(4)],
         }
     }
@@ -797,12 +802,8 @@ class ClusterResolverTest(unittest.TestCase):
             'api_version':
                 'V2_ALPHA1',
             'network_endpoints': [{
-                'ipAddress':
-                    f'10.1.0.{index}',
-                'port':
-                    '8470',
-                'greenVmSelflink':
-                    f'{PROJECT_ZONE_PREFIX}/instances/{TPUVM_HOSTNAME_PREFIX}{index}',
+                'ipAddress': f'10.1.0.{index}',
+                'port': '8470',
             } for index in range(4)],
         }
     }

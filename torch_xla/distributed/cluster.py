@@ -3,6 +3,7 @@ import logging
 import multiprocessing
 import re
 import requests
+import subprocess
 import time
 
 from torch_xla.distributed.worker import ClientWorker
@@ -222,6 +223,33 @@ class ClusterResolver(object):
     idx = parts.index(name)
     return parts[idx + 1]
 
+  @staticmethod
+  def _get_internal_ip_to_hostname_mapping(tpu_name, zone, num_vm):
+    """Gets TPU VM internal IP to hostname mapping.
+
+    Currently TPU CLH does not expose any TPU host machine name. SSH to each worker and
+    get that instead.
+
+    Returns:
+      A map of TPU VM internal IP to TPU VM hostname.
+    """
+    ip_to_host_name = {}
+
+    def add_tpuvm_ip_to_hostname_mapping(worker_index):
+      proc = subprocess.Popen([
+          'gcloud', 'alpha', 'compute', 'tpus', 'tpu-vm', 'ssh',
+          '--internal-ip', tpu_name, '--zone', zone, '--worker',
+          str(worker_index), '--command', 'hostname; hostname -i'
+      ],
+                              stdout=subprocess.PIPE)
+      hostname = proc.stdout.readline().decode('utf-8').rstrip('\n')
+      ip = proc.stdout.readline().decode('utf-8').rstrip('\n')
+      ip_to_host_name[ip] = hostname
+
+    xu.parallel_work(num_vm, add_tpuvm_ip_to_hostname_mapping,
+                     list(range(num_vm)))
+    return ip_to_host_name
+
   def __init__(self, tpu, vms=None, zone=None, project=None):
     """Creates a new ClusterResolver object."""
 
@@ -391,12 +419,16 @@ class ClusterResolver(object):
       zone = ClusterResolver._parse_resource_url(ctc._full_name(), 'locations')
       network_endpoints = ctc.network_endpoints()
 
+      if as_client_worker:
+        ip_to_host_name = ClusterResolver._get_internal_ip_to_hostname_mapping(
+            tpu_name, zone, len(network_endpoints))
+
       for endpoint in network_endpoints:
         if as_client_worker:
-          hostname = ClusterResolver._parse_resource_url(
-              endpoint['greenVmSelflink'], 'instances')
+          internal_ip = endpoint['ipAddress']
+          hostname = ip_to_host_name[internal_ip]
           worker = ClientWorker(
-              internal_ip=endpoint['ipAddress'],
+              internal_ip=internal_ip,
               machine_type=machine_type,
               zone=zone,
               hostname=hostname)
