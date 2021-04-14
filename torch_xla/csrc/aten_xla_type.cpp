@@ -337,7 +337,7 @@ at::Tensor AtenXlaType::_copy_from(const at::Tensor& self,
     static bool sync_update =
         xla::sys_util::GetEnvBool("XLA_TENSOR_UPDATE_SYNC", true);
     XLA_CHECK(dst_tensor);
-    dst_tensor->UpdateFromTensor(self, /*sync=*/sync_update);
+    dst_tensor->UpdateFromTensorOut(self, /*sync=*/sync_update);
   } else if (!dst_tensor) {
     at::Tensor tensor = self_tensor->ToTensor(/*detached=*/true);
     at::Tensor typed_tensor =

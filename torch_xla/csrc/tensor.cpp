@@ -876,6 +876,14 @@ void XLATensor::UpdateFromTensor(at::Tensor tensor, bool sync) {
   }
 }
 
+void XLATensor::UpdateFromTensorOut(at::Tensor tensor, bool sync) {
+  if (data()->view != nullptr &&
+      xla::ShapeUtil::ElementsIn(shape()) != tensor.numel()) {
+    data()->view = nullptr;
+  }
+  UpdateFromTensor(std::move(tensor), /*sync=*/sync);
+}
+
 void XLATensor::UpdateFromTensorOut(at::Tensor tensor) {
   if (data()->view != nullptr &&
       xla::ShapeUtil::ElementsIn(shape()) != tensor.numel()) {
