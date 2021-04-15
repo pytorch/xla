@@ -85,7 +85,12 @@ class XlaBackendImpl : public BackendImplInterface {
   }
 };
 
-BackendRegistrar g_registrar(new XlaBackendImpl());
+BackendImplInterface* GetXlaBackendImpl() {
+  static XlaBackendImpl* xla_backend_impl = new XlaBackendImpl();
+  return xla_backend_impl;
+}
+
+BackendRegistrar g_registrar(GetXlaBackendImpl());
 
 }  // namespace compiler
 }  // namespace torch_lazy_tensors
