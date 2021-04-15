@@ -16,6 +16,7 @@ from torch_xla.distributed.worker import ServiceWorker
 
 PROJECT_ZONE_PREFIX = ('https://www.googleapis.com/compute/v1/'
                        'projects/fake-project/zones/fake-zone')
+TPUVM_HOSTNAME_PREFIX = 't1v-n-5d9c8fb2-w-'
 
 
 class ClusterTest(unittest.TestCase):
@@ -203,8 +204,29 @@ def mock_request_metadata(metadata):
       'instance/zone': 'project/fake-project/zones/fake-zone',
       'instance/name': 'fake-ig-a',
       'instance/network-interfaces/0/ip': '10.0.0.0',
+      # Adding this field to prevent crashing when ClusterResolver querying this
+      # metadata to identify the TPUVM case.
+      'instance/attributes/accelerator-type': '',
   }
   return fake_metadata[metadata]
+
+
+def mock_request_tpuvm_metadata(metadata):
+  fake_metadata = {
+      'project/project-id': 'fake-project',
+      'instance/zone': 'project/fake-project/zones/fake-zone',
+      'instance/name': TPUVM_HOSTNAME_PREFIX + '0',
+      'instance/network-interfaces/0/ip': '10.1.0.0',
+      'instance/attributes/accelerator-type': 'v3-32',
+  }
+  return fake_metadata[metadata]
+
+
+def mock_ip_to_hostname_mapping(tpu_name, zone, num_vm):
+  ip_to_hostname_map = {}
+  for index in range(num_vm):
+    ip_to_hostname_map[f'10.1.0.{index}'] = f'{TPUVM_HOSTNAME_PREFIX}{index}'
+  return ip_to_hostname_map
 
 
 def build_mock_cloud_tpu_client_library(tpu_map):
@@ -220,6 +242,8 @@ def build_mock_cloud_tpu_client_library(tpu_map):
     ctc.runtime_version.return_value = tpu_dict.get('runtime_version')
     ctc.accelerator_type.return_value = tpu_dict.get('accelerator_type')
     ctc.network_endpoints.return_value = tpu_dict.get('network_endpoints')
+    # TODO: add a api to get the tpu api version directly
+    ctc._get_tpu_property.return_value = tpu_dict.get('api_version')
     ctc._full_name.return_value = \
       f'projects/fake-project/locations/fake-zone/nodes/{tpu_name}'
     return ctc
@@ -335,6 +359,8 @@ class ClusterResolverTest(unittest.TestCase):
     self.addCleanup(mock.patch.stopall)
     mock.patch.object(ClusterResolver, 'get_instance_metadata',
                       mock_request_metadata).start()
+    mock.patch.object(ClusterResolver, '_get_internal_ip_to_hostname_mapping',
+                      mock_ip_to_hostname_mapping).start()
     mock.patch.object(GoogleCredentials, 'get_application_default',
                       lambda *args, **kwargs: None).start()
     self.mock_discovery = mock.patch.object(
@@ -703,6 +729,113 @@ class ClusterResolverTest(unittest.TestCase):
         expected_service_workers,
         client_master_ip='10.0.0.0')
     self.assertEqual(expected, cluster)
+
+  def test_healthy_remote_coordinator(self):
+    noop_compute_service = build_mock_compute_service({}, {})
+    self.mock_discovery.side_effect = build_mock_services_fn(
+        noop_compute_service)
+
+    tpu_map = {
+        'fake-pod': {
+            'state':
+                'READY',
+            'health':
+                'HEALTHY',
+            'runtime_version':
+                'v2-nightly',
+            'accelerator_type':
+                'v3-32',
+            'api_version':
+                'V2_ALPHA1',
+            'network_endpoints': [{
+                'ipAddress': f'10.1.0.{index}',
+                'port': '8470',
+            } for index in range(4)],
+        }
+    }
+    self.mock_ctc.side_effect = build_mock_cloud_tpu_client_library(tpu_map)
+
+    tpus = list(tpu_map.keys())
+    cr = ClusterResolver(tpus)
+    cluster = cr.get_cluster()
+
+    expected_client_workers = [
+        ClientWorker(
+            internal_ip=f'10.1.0.{index}',
+            machine_type='v3-32',
+            zone='fake-zone',
+            hostname=f'{TPUVM_HOSTNAME_PREFIX}{index}') for index in range(4)
+    ]
+    expected_service_workers = [
+        ServiceWorker(
+            internal_ip=f'10.1.0.{ip}',
+            port='8470',
+            machine_type='v3-32',
+            zone='fake-zone',
+            runtime_version='v2-nightly',
+            tpu='fake-pod') for ip in range(4)
+    ]
+    expected = Cluster(
+        expected_client_workers,
+        expected_service_workers,
+        client_master_ip='10.1.0.0')
+    self.assertEqual(expected, cluster)
+
+  def test_healthy_tpuvm_cluster(self):
+    # Using TPUVM flavor of metadata.
+    mock.patch.object(ClusterResolver, 'get_instance_metadata',
+                      mock_request_tpuvm_metadata).start()
+    noop_compute_service = build_mock_compute_service({}, {})
+    self.mock_discovery.side_effect = build_mock_services_fn(
+        noop_compute_service)
+
+    tpu_map = {
+        'fake-pod': {
+            'state':
+                'READY',
+            'health':
+                'HEALTHY',
+            'runtime_version':
+                'v2-nightly',
+            'accelerator_type':
+                'v3-32',
+            'api_version':
+                'V2_ALPHA1',
+            'network_endpoints': [{
+                'ipAddress': f'10.1.0.{index}',
+                'port': '8470',
+            } for index in range(4)],
+        }
+    }
+    self.mock_ctc.side_effect = build_mock_cloud_tpu_client_library(tpu_map)
+
+    tpus = list(tpu_map.keys())
+    cr = ClusterResolver(tpus)
+    cluster = cr.get_cluster()
+
+    expected_client_workers = [
+        ClientWorker(
+            internal_ip=f'10.1.0.{index}',
+            machine_type='v3-32',
+            zone='fake-zone',
+            hostname=f'{TPUVM_HOSTNAME_PREFIX}{index}') for index in range(4)
+    ]
+    expected_service_workers = [
+        ServiceWorker(
+            internal_ip=f'10.1.0.{ip}',
+            port='8470',
+            machine_type='v3-32',
+            zone='fake-zone',
+            runtime_version='v2-nightly',
+            tpu='fake-pod') for ip in range(4)
+    ]
+    expected = Cluster(
+        expected_client_workers,
+        expected_service_workers,
+        client_master_ip='10.1.0.0')
+    self.assertEqual(expected, cluster)
+    mock.patch.object(ClusterResolver, 'get_instance_metadata',
+                      mock_request_metadata).start()
 
   def test_bad_cluster(self):
     list_instances_map = {
