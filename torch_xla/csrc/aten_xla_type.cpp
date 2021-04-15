@@ -351,7 +351,7 @@ at::Tensor AtenXlaType::_copy_from(const at::Tensor& self,
 }
 
 at::Tensor AtenXlaType::_copy_from_temp(const at::Tensor& self,
-                                   const at::Tensor& dst) {
+                                        const at::Tensor& dst) {
   XLA_FN_COUNTER("xla::");
   auto dst_tensor = bridge::TryGetXlaTensor(dst);
   auto self_tensor = bridge::TryGetXlaTensor(self);
