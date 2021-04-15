@@ -129,7 +129,7 @@ function install_llvm_clang() {
 }
 
 function install_req_packages() {
-  sudo apt-get -y install python-pip git curl libopenblas-dev vim apt-transport-https ca-certificates wget
+  sudo apt-get -y install python-pip git curl libopenblas-dev vim apt-transport-https ca-certificates wget procps
   maybe_install_cuda
   install_bazel
 }
@@ -172,7 +172,6 @@ function install_and_setup_conda() {
   /usr/bin/yes | pip install lark-parser
   /usr/bin/yes | pip install cloud-tpu-client
   /usr/bin/yes | pip install tensorboardX
-  /usr/bin/yes | pip install pgrep
 }
 
 function build_and_install_torch() {
