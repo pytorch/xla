@@ -858,8 +858,9 @@ class AtenXlaType {
                                                const at::Tensor& self,
                                                at::IntArrayRef padding);
 
-  static at::Tensor& resize_(at::Tensor& self, at::IntArrayRef size,
-                             c10::optional<at::MemoryFormat> memory_format);
+  static const at::Tensor& resize_(
+      const at::Tensor& self, at::IntArrayRef size,
+      c10::optional<at::MemoryFormat> memory_format);
 
   static at::Tensor round(const at::Tensor& self);
 
