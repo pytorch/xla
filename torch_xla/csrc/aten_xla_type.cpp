@@ -918,13 +918,16 @@ at::Tensor& AtenXlaType::bitwise_and_out(const at::Tensor& self,
   return out;
 }
 
-at::Tensor& AtenXlaType::bitwise_not_out(const at::Tensor& self,
-                                         at::Tensor& out) {
+at::Tensor AtenXlaType::bitwise_not(const at::Tensor& self) {
   XLA_FN_COUNTER("xla::");
-  XLATensor out_tensor = bridge::GetXlaTensor(out);
+  return bridge::AtenFromXlaTensor(XLATensor::bitwise_not(bridge::GetXlaTensor(self)));
+}
+
+at::Tensor& AtenXlaType::bitwise_not_(at::Tensor& self) {
+  XLA_FN_COUNTER("xla::");
   XLATensor self_tensor = bridge::GetXlaTensor(self);
-  XLATensor::bitwise_not_out(out_tensor, self_tensor);
-  return out;
+  XLATensor::bitwise_not_(self_tensor);
+  return self;
 }
 
 at::Tensor& AtenXlaType::bitwise_or_out(const at::Tensor& self,

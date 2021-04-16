@@ -841,8 +841,12 @@ void XLATensor::bitwise_and_out(XLATensor& out, const XLATensor& input,
   out.SetIrValue(ir::ops::BitwiseAnd(input.GetIrValue(), other.GetIrValue()));
 }
 
-void XLATensor::bitwise_not_out(XLATensor& out, const XLATensor& input) {
-  out.SetIrValue(ir::ops::Not(input.GetIrValue()));
+XLATensor XLATensor::bitwise_not(const XLATensor& input) {
+  return input.CreateFrom(ir::ops::Not(input.GetIrValue()));
+}
+
+void XLATensor::bitwise_not_(XLATensor& input) {
+  input.SetInPlaceIrValue(ir::ops::Not(input.GetIrValue()));
 }
 
 void XLATensor::bitwise_or_out(XLATensor& out, const XLATensor& input,

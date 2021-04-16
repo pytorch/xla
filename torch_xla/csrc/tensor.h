@@ -382,7 +382,8 @@ class XLATensor {
   static void bitwise_and_out(XLATensor& out, const XLATensor& input,
                               const XLATensor& other);
 
-  static void bitwise_not_out(XLATensor& out, const XLATensor& input);
+  static XLATensor bitwise_not(const XLATensor& input);
+  static void bitwise_not_(XLATensor& input);
 
   static void bitwise_or_out(XLATensor& out, const XLATensor& input,
                              const at::Scalar& other);

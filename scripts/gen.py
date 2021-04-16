@@ -116,6 +116,7 @@ _FN_OUT = {
     'bernoulli_out': FuncOpts(),
     'binary_cross_entropy_out': FuncOpts(),
     'binary_cross_entropy_backward_out': FuncOpts(),
+    'bitwise_not': FuncOpts(),
     'clamp_out': FuncOpts(),
     'div_out': FuncOpts(),
     'gather_out': FuncOpts(),

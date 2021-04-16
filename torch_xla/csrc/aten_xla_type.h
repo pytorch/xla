@@ -238,7 +238,9 @@ class AtenXlaType {
   static at::Tensor& bitwise_and_out(const at::Tensor& self,
                                      const at::Scalar& other, at::Tensor& out);
 
-  static at::Tensor& bitwise_not_out(const at::Tensor& self, at::Tensor& out);
+  static at::Tensor bitwise_not(const at::Tensor& self);
+
+  static at::Tensor& bitwise_not_(at::Tensor& self);
 
   static at::Tensor& bitwise_or_out(const at::Tensor& self,
                                     const at::Tensor& other, at::Tensor& out);
