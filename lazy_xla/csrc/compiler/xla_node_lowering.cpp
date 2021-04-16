@@ -1,5 +1,7 @@
 #include "lazy_tensor_core/csrc/compiler/node_lowering.h"
 #include "lazy_tensor_core/csrc/data_ops.h"
+#include "lazy_tensor_core/csrc/ops/adaptive_avg_pool2d.h"
+#include "lazy_tensor_core/csrc/ops/adaptive_avg_pool3d.h"
 #include "lazy_tensor_core/csrc/ops/amp_foreach_non_finite_check_and_unscale.h"
 #include "lazy_tensor_core/csrc/ops/amp_update_scale.h"
 #include "lazy_tensor_core/csrc/ops/as_strided.h"
@@ -51,6 +53,7 @@
 #include "lazy_xla/csrc/compiler/helpers.h"
 #include "lazy_xla/csrc/compiler/infer_output_shape.h"
 #include "lazy_xla/csrc/compiler/matrix.h"
+#include "lazy_xla/csrc/compiler/pooling.h"
 #include "lazy_xla/csrc/compiler/resize_ops.h"
 #include "lazy_xla/csrc/compiler/xla_lower_util.h"
 #include "lazy_xla/csrc/compiler/xla_lowering_context.h"
@@ -294,6 +297,54 @@ DEFINE_INFER_BINARY_OP(Atan2, xla::Atan2)
 
 #undef DEFINE_INFER_BINARY_OP
 
+lazy_tensors::Shape InferAdaptiveAvgPool2d(
+    const ir::ops::AdaptiveAvgPool2d* node) {
+  auto lower_for_shape_fn =
+      [node](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
+    LTC_CHECK_EQ(operands.size(), 1);
+    return BuildAdaptiveAvgPool2d(operands[0], node->output_size());
+  };
+  const ir::Output& input = node->operand(0);
+  return ir::ops::InferOutputShape({input.shape()}, lower_for_shape_fn);
+}
+
+lazy_tensors::Shape InferAdaptiveAvgPool3d(
+    const ir::ops::AdaptiveAvgPool3d* node) {
+  auto lower_for_shape_fn =
+      [node](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
+    LTC_CHECK_EQ(operands.size(), 1);
+    return BuildAdaptiveAvgPool3d(operands[0], node->output_size());
+  };
+  const ir::Output& input = node->operand(0);
+  return ir::ops::InferOutputShape({input.shape()}, lower_for_shape_fn);
+}
+
+lazy_tensors::Shape InferAdaptiveAvgPool2dBackward(const ir::Node* node) {
+  auto lower_for_shape_fn =
+      [](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
+    LTC_CHECK_EQ(operands.size(), 2);
+    return BuildAdaptiveAvgPool2dBackward(/*out_backprop=*/operands[0],
+                                          /*input=*/operands[1]);
+  };
+  const ir::Output& grad_output = node->operand(0);
+  const ir::Output& input = node->operand(1);
+  return ir::ops::InferOutputShape({grad_output.shape(), input.shape()},
+                                   lower_for_shape_fn);
+}
+
+lazy_tensors::Shape InferAdaptiveAvgPool3dBackward(const ir::Node* node) {
+  auto lower_for_shape_fn =
+      [](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
+    LTC_CHECK_EQ(operands.size(), 2);
+    return BuildAdaptiveAvgPool3dBackward(/*out_backprop=*/operands[0],
+                                          /*input=*/operands[1]);
+  };
+  const ir::Output& grad_output = node->operand(0);
+  const ir::Output& input = node->operand(1);
+  return ir::ops::InferOutputShape({grad_output.shape(), input.shape()},
+                                   lower_for_shape_fn);
+}
+
 #define DECLARE_UNARY_OP(name) XlaOpVector Lower##name(const ir::Node* node)
 #define DECLARE_UNARY_OP2(name) \
   XlaOpVector Lower##name(const ir::ops::name* node)
@@ -384,6 +435,10 @@ class XlaNodeLowering : public NodeLowering {
   DECLARE_BINARY_OP(Lt);
   DECLARE_BINARY_OP(Ne);
   DECLARE_UNARY_OP(Clamp);
+  DECLARE_UNARY_OP2(AdaptiveAvgPool2d);
+  DECLARE_UNARY_OP2(AdaptiveAvgPool3d);
+  DECLARE_UNARY_OP(AdaptiveAvgPool2dBackward);
+  DECLARE_UNARY_OP(AdaptiveAvgPool3dBackward);
   DECLARE_UNARY_OP2(AmpForachNonFiniteCheckAndUnscale);
   DECLARE_UNARY_OP2(AmpUpdateScale);
   DECLARE_UNARY_OP2(Constant);
@@ -489,6 +544,12 @@ XlaOpVector XlaNodeLowering::LowerToXla(const ir::Node* node) {
     HANDLE_GENERIC_OP(Lt, at::aten::lt)
     HANDLE_GENERIC_OP(Ne, at::aten::ne)
     HANDLE_GENERIC_OP(Clamp, at::aten::clamp)
+    HANDLE_GENERIC_OP2(AdaptiveAvgPool2d, at::aten::adaptive_avg_pool2d)
+    HANDLE_GENERIC_OP2(AdaptiveAvgPool3d, at::aten::adaptive_avg_pool3d)
+    HANDLE_GENERIC_OP(AdaptiveAvgPool2dBackward,
+                      at::aten::adaptive_avg_pool2d_backward)
+    HANDLE_GENERIC_OP(AdaptiveAvgPool3dBackward,
+                      at::aten::adaptive_avg_pool3d_backward)
     HANDLE_GENERIC_OP2(AsStrided, at::aten::as_strided)
     HANDLE_GENERIC_OP2(Diagonal, at::aten::diagonal)
     HANDLE_GENERIC_OP2(Expand, at::aten::expand)
@@ -829,6 +890,34 @@ XlaOpVector XlaNodeLowering::LowerLinearInterpolation(
   xla::XlaOp value = loctx()->GetOutputOp(node->operand(0));
   xla::XlaOp new_value = loctx()->GetOutputOp(node->operand(1));
   return {XlaHelpers::LinearInterpolation(value, new_value, node->alpha())};
+}
+
+XlaOpVector XlaNodeLowering::LowerAdaptiveAvgPool2d(
+    const ir::ops::AdaptiveAvgPool2d* node) {
+  xla::XlaOp input = loctx()->GetOutputOp(node->operand(0));
+  return {BuildAdaptiveAvgPool2d(input, node->output_size())};
+}
+
+XlaOpVector XlaNodeLowering::LowerAdaptiveAvgPool3d(
+    const ir::ops::AdaptiveAvgPool3d* node) {
+  xla::XlaOp input = loctx()->GetOutputOp(node->operand(0));
+  return {BuildAdaptiveAvgPool3d(input, node->output_size())};
+}
+
+XlaOpVector XlaNodeLowering::LowerAdaptiveAvgPool2dBackward(
+    const ir::Node* node) {
+  xla::XlaOp grad_output = loctx()->GetOutputOp(node->operand(0));
+  xla::XlaOp input = loctx()->GetOutputOp(node->operand(1));
+  return {BuildAdaptiveAvgPool2dBackward(
+      /*out_backprop=*/grad_output, /*input=*/input)};
+}
+
+XlaOpVector XlaNodeLowering::LowerAdaptiveAvgPool3dBackward(
+    const ir::Node* node) {
+  xla::XlaOp grad_output = loctx()->GetOutputOp(node->operand(0));
+  xla::XlaOp input = loctx()->GetOutputOp(node->operand(1));
+  return {BuildAdaptiveAvgPool3dBackward(
+      /*out_backprop=*/grad_output, /*input=*/input)};
 }
 
 XlaOpVector XlaNodeLowering::LowerAmpForachNonFiniteCheckAndUnscale(
@@ -1233,6 +1322,20 @@ lazy_tensors::Shape XlaNodeLowering::Infer(const ir::Node* node) {
       return InferUpsampleNearestBackward(
           ir::NodeCast<ir::ops::UpsampleNearestBackward>(
               node, ir::OpKind(at::aten::upsample_nearest2d_backward)));
+    }
+    case at::aten::adaptive_avg_pool2d: {
+      return InferAdaptiveAvgPool2d(ir::NodeCast<ir::ops::AdaptiveAvgPool2d>(
+          node, ir::OpKind(at::aten::adaptive_avg_pool2d)));
+    }
+    case at::aten::adaptive_avg_pool3d: {
+      return InferAdaptiveAvgPool3d(ir::NodeCast<ir::ops::AdaptiveAvgPool3d>(
+          node, ir::OpKind(at::aten::adaptive_avg_pool3d)));
+    }
+    case at::aten::adaptive_avg_pool2d_backward: {
+      return InferAdaptiveAvgPool2dBackward(node);
+    }
+    case at::aten::adaptive_avg_pool3d_backward: {
+      return InferAdaptiveAvgPool3dBackward(node);
     }
     default: {
       if (kind == *ir::ops::ltc_generic_slice) {

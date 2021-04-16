@@ -42,6 +42,12 @@ xla::XlaComputation CreateComputation(
 
 }  // namespace
 
+bool XlaHelpers::SameStaticDimensions(const xla::Shape& shape1,
+                                      const xla::Shape& shape2) {
+  return shape1.is_static() && shape2.is_static() &&
+         shape1.dimensions() == shape2.dimensions();
+}
+
 xla::Shape XlaHelpers::XlaShape(const lazy_tensors::Shape& shape) {
   if (shape.element_type() == lazy_tensors::PrimitiveType::TUPLE) {
     std::vector<xla::Shape> shapes;

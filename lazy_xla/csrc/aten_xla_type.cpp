@@ -24,6 +24,7 @@
 #include "lazy_xla/csrc/aten_autograd_ops_nnc.h"
 #include "lazy_xla/csrc/aten_xla_type_default.h"
 #include "lazy_xla/csrc/compiler/nnc_computation_client.h"
+#include "lazy_xla/csrc/compiler/pooling.h"
 #include "lazy_xla/csrc/version.h"
 
 // [Implementation Guidelines]
@@ -160,6 +161,134 @@ bool UseNNCViews(const LazyTensor& self_tensor) {
   return !device_data || force_nnc_views;
 }
 }  // namespace
+
+at::Tensor& AtenXlaType::__ilshift__(at::Tensor& self,
+                                     const at::Scalar& other) {
+  LTC_FN_COUNTER("xla::");
+  LazyTensor self_tensor = bridge::GetLtcTensor(self);
+  LazyTensor::__ilshift__(self_tensor, other);
+  return self;
+}
+
+at::Tensor& AtenXlaType::__ilshift__(at::Tensor& self,
+                                     const at::Tensor& other) {
+  LTC_FN_COUNTER("xla::");
+  CheckBinaryOpTypePromotion(self, self, other);
+  LazyTensor self_tensor = bridge::GetLtcTensor(self);
+  LazyTensor::__ilshift__(self_tensor, bridge::GetLtcTensor(other));
+  return self;
+}
+
+at::Tensor& AtenXlaType::__irshift__(at::Tensor& self,
+                                     const at::Scalar& other) {
+  LTC_FN_COUNTER("xla::");
+  CheckBinaryOpTypePromotion(self, self, other);
+  LazyTensor self_tensor = bridge::GetLtcTensor(self);
+  LazyTensor::__irshift__(self_tensor, other);
+  return self;
+}
+
+at::Tensor& AtenXlaType::__irshift__(at::Tensor& self,
+                                     const at::Tensor& other) {
+  LTC_FN_COUNTER("xla::");
+  CheckBinaryOpTypePromotion(self, self, other);
+  LazyTensor self_tensor = bridge::GetLtcTensor(self);
+  LazyTensor::__irshift__(self_tensor, bridge::GetLtcTensor(other));
+  return self;
+}
+
+at::Tensor AtenXlaType::__lshift__(const at::Tensor& self,
+                                   const at::Scalar& other) {
+  LTC_FN_COUNTER("xla::");
+  return DoBinaryOp(self, other,
+                    [&](const LazyTensor& xself, const at::Scalar& other,
+                        at::ScalarType dtype) {
+                      return LazyTensor::__lshift__(xself, other, dtype);
+                    });
+}
+
+at::Tensor AtenXlaType::__lshift__(const at::Tensor& self,
+                                   const at::Tensor& other) {
+  LTC_FN_COUNTER("xla::");
+  return DoBinaryOp(self, other,
+                    [&](const LazyTensor& xself, const LazyTensor& xother,
+                        at::ScalarType dtype) {
+                      return LazyTensor::__lshift__(xself, xother, dtype);
+                    });
+}
+
+at::Tensor AtenXlaType::__rshift__(const at::Tensor& self,
+                                   const at::Scalar& other) {
+  LTC_FN_COUNTER("xla::");
+  return DoBinaryOp(self, other,
+                    [&](const LazyTensor& xself, const at::Scalar& other,
+                        at::ScalarType dtype) {
+                      return LazyTensor::__rshift__(xself, other, dtype);
+                    });
+}
+
+at::Tensor AtenXlaType::__rshift__(const at::Tensor& self,
+                                   const at::Tensor& other) {
+  LTC_FN_COUNTER("xla::");
+  return DoBinaryOp(self, other,
+                    [&](const LazyTensor& xself, const LazyTensor& xother,
+                        at::ScalarType dtype) {
+                      return LazyTensor::__rshift__(xself, xother, dtype);
+                    });
+}
+
+at::Tensor AtenXlaType::_adaptive_avg_pool3d(const at::Tensor& self,
+                                             at::IntArrayRef output_size) {
+  LTC_FN_COUNTER("xla::");
+  auto output_size_list = Helpers::I64List(output_size);
+  if (!IsSupportedAdaptiveAvgPool(Helpers::I64List(self.sizes()),
+                                  output_size_list, /*pool_dim=*/3)) {
+    return AtenXlaTypeDefault::_adaptive_avg_pool3d(self, output_size);
+  }
+  return bridge::AtenFromLtcTensor(LazyTensor::adaptive_avg_pool3d(
+      bridge::GetLtcTensor(self), output_size_list));
+}
+
+at::Tensor AtenXlaType::_adaptive_avg_pool3d_backward(
+    const at::Tensor& grad_output, const at::Tensor& self) {
+  LTC_FN_COUNTER("xla::");
+  int64_t rank = grad_output.dim();
+  std::vector<xla::int64> output_size{grad_output.size(rank - 3),
+                                      grad_output.size(rank - 2),
+                                      grad_output.size(rank - 1)};
+  if (!IsSupportedAdaptiveAvgPool(Helpers::I64List(self.sizes()), output_size,
+                                  /*pool_dim=*/3)) {
+    return AtenXlaTypeDefault::_adaptive_avg_pool3d_backward(grad_output, self);
+  }
+  return bridge::AtenFromLtcTensor(LazyTensor::adaptive_avg_pool3d_backward(
+      bridge::GetLtcTensor(grad_output), bridge::GetLtcTensor(self)));
+}
+
+at::Tensor AtenXlaType::_adaptive_avg_pool2d(const at::Tensor& self,
+                                             at::IntArrayRef output_size) {
+  LTC_FN_COUNTER("xla::");
+  auto output_size_list = Helpers::I64List(output_size);
+  if (!IsSupportedAdaptiveAvgPool(Helpers::I64List(self.sizes()),
+                                  output_size_list, /*pool_dim=*/2)) {
+    return AtenXlaTypeDefault::_adaptive_avg_pool2d(self, output_size);
+  }
+  return bridge::AtenFromLtcTensor(LazyTensor::_adaptive_avg_pool2d(
+      bridge::GetLtcTensor(self), output_size_list));
+}
+
+at::Tensor AtenXlaType::_adaptive_avg_pool2d_backward(
+    const at::Tensor& grad_output, const at::Tensor& self) {
+  LTC_FN_COUNTER("xla::");
+  int64_t rank = grad_output.dim();
+  std::vector<xla::int64> output_size{grad_output.size(rank - 2),
+                                      grad_output.size(rank - 1)};
+  if (!IsSupportedAdaptiveAvgPool(Helpers::I64List(self.sizes()), output_size,
+                                  /*pool_dim=*/2)) {
+    return AtenXlaTypeDefault::_adaptive_avg_pool2d_backward(grad_output, self);
+  }
+  return bridge::AtenFromLtcTensor(LazyTensor::_adaptive_avg_pool2d_backward(
+      bridge::GetLtcTensor(grad_output), bridge::GetLtcTensor(self)));
+}
 
 void AtenXlaType::_amp_foreach_non_finite_check_and_unscale_(
     at::TensorList self, at::Tensor& found_inf, const at::Tensor& inv_scale) {

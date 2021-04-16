@@ -58,6 +58,9 @@ class XlaHelpers {
                        builder);
   }
 
+  static bool SameStaticDimensions(const xla::Shape& shape1,
+                                   const xla::Shape& shape2);
+
   static xla::Shape XlaShape(const lazy_tensors::Shape& shape);
 
   static lazy_tensors::Shape LazyTensorsShape(const xla::Shape& shape);

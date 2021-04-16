@@ -15,6 +15,34 @@ class AtenXlaType {
   // pytorch folder file:
   //   torch/csrc/autograd/generated/RegistrationDeclarations.h
   /////////////////////////////////////////////////////////////////////////////
+  static at::Tensor& __ilshift__(at::Tensor& self, const at::Scalar& other);
+
+  static at::Tensor& __ilshift__(at::Tensor& self, const at::Tensor& other);
+
+  static at::Tensor& __irshift__(at::Tensor& self, const at::Scalar& other);
+
+  static at::Tensor& __irshift__(at::Tensor& self, const at::Tensor& other);
+
+  static at::Tensor __lshift__(const at::Tensor& self, const at::Scalar& other);
+
+  static at::Tensor __lshift__(const at::Tensor& self, const at::Tensor& other);
+
+  static at::Tensor __rshift__(const at::Tensor& self, const at::Scalar& other);
+
+  static at::Tensor __rshift__(const at::Tensor& self, const at::Tensor& other);
+
+  static at::Tensor _adaptive_avg_pool3d(const at::Tensor& self,
+                                         at::IntArrayRef output_size);
+
+  static at::Tensor _adaptive_avg_pool3d_backward(const at::Tensor& grad_output,
+                                                  const at::Tensor& self);
+
+  static at::Tensor _adaptive_avg_pool2d(const at::Tensor& self,
+                                         at::IntArrayRef output_size);
+
+  static at::Tensor _adaptive_avg_pool2d_backward(const at::Tensor& grad_output,
+                                                  const at::Tensor& self);
+
   static void _amp_foreach_non_finite_check_and_unscale_(
       at::TensorList self, at::Tensor& found_inf, const at::Tensor& inv_scale);
 
