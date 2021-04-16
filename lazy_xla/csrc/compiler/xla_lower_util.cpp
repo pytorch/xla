@@ -30,5 +30,50 @@ XlaOpVector BuildAmpForeachNonFiniteCheckAndUnscale(
   return results;
 }
 
+XlaOpVector BuildAmpUpdateScale(const xla::XlaOp& growth_tracker,
+                                const xla::XlaOp& current_scale,
+                                const xla::XlaOp& found_inf_float,
+                                double scale_growth_factor,
+                                double scale_backoff_factor,
+                                int scale_growth_interval) {
+  xla::XlaOp one = xla::One(growth_tracker.builder(), xla::PrimitiveType::S32);
+  xla::XlaOp one_float =
+      xla::One(growth_tracker.builder(), xla::PrimitiveType::F32);
+  xla::XlaOp found_inf =
+      xla::ConvertElementType(found_inf_float, xla::PrimitiveType::PRED);
+  const auto& growth_factor = XlaHelpers::ScalarValue<float>(
+      scale_growth_factor,
+      XlaHelpers::ShapeOfXlaOp(current_scale).element_type(),
+      growth_tracker.builder());
+  const auto& backoff_factor = XlaHelpers::ScalarValue<float>(
+      scale_backoff_factor,
+      XlaHelpers::ShapeOfXlaOp(current_scale).element_type(),
+      growth_tracker.builder());
+  const auto& growth_interval = XlaHelpers::ScalarValue<int>(
+      scale_growth_interval,
+      XlaHelpers::ShapeOfXlaOp(growth_tracker).element_type(),
+      growth_tracker.builder());
+
+  xla::XlaOp all_finite = xla::Not(found_inf);
+  xla::XlaOp not_achieve_interval = xla::ConvertElementType(
+      growth_interval - one - growth_tracker, xla::PrimitiveType::PRED);
+  xla::XlaOp new_growth_tracker =
+      (growth_tracker + one) *
+      ConvertElementType(xla::And(all_finite, not_achieve_interval),
+                         xla::PrimitiveType::S32);
+  xla::XlaOp growth_factor_or_one = xla::Max(
+      growth_factor * xla::ConvertElementType(
+                          xla::And(all_finite, xla::Not(not_achieve_interval)),
+                          xla::PrimitiveType::F32),
+      one_float);
+  xla::XlaOp backoff_factor_or_one =
+      backoff_factor *
+          xla::ConvertElementType(found_inf, xla::PrimitiveType::F32) +
+      xla::ConvertElementType(all_finite, xla::PrimitiveType::F32);
+  xla::XlaOp new_scale =
+      current_scale * growth_factor_or_one * backoff_factor_or_one;
+  return {new_growth_tracker, new_scale};
+}
+
 }  // namespace compiler
 }  // namespace torch_lazy_tensors

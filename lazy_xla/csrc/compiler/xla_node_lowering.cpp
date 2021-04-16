@@ -1,6 +1,7 @@
 #include "lazy_tensor_core/csrc/compiler/node_lowering.h"
 #include "lazy_tensor_core/csrc/data_ops.h"
 #include "lazy_tensor_core/csrc/ops/amp_foreach_non_finite_check_and_unscale.h"
+#include "lazy_tensor_core/csrc/ops/amp_update_scale.h"
 #include "lazy_tensor_core/csrc/ops/as_strided.h"
 #include "lazy_tensor_core/csrc/ops/as_strided_view_update.h"
 #include "lazy_tensor_core/csrc/ops/bitwise_ir_ops.h"
@@ -335,8 +336,6 @@ class XlaNodeLowering : public NodeLowering {
   XlaOpVector LowerScalar(const ir::ops::Scalar* node);
   XlaOpVector LowerLinearInterpolation(
       const ir::ops::LinearInterpolation* node);
-  XlaOpVector LowerAmpForachNonFiniteCheckAndUnscale(
-      const ir::ops::AmpForachNonFiniteCheckAndUnscale* node);
   XlaOpVector LowerMaxUnary(const ir::Node* node);
   XlaOpVector LowerNotSupported(const ir::ops::NotSupported* node);
   DECLARE_UNARY_OP(Acos);
@@ -385,6 +384,8 @@ class XlaNodeLowering : public NodeLowering {
   DECLARE_BINARY_OP(Lt);
   DECLARE_BINARY_OP(Ne);
   DECLARE_UNARY_OP(Clamp);
+  DECLARE_UNARY_OP2(AmpForachNonFiniteCheckAndUnscale);
+  DECLARE_UNARY_OP2(AmpUpdateScale);
   DECLARE_UNARY_OP2(Constant);
   DECLARE_UNARY_OP2(ConstantPadNd);
   DECLARE_UNARY_OP2(Hardshrink);
@@ -515,6 +516,7 @@ XlaOpVector XlaNodeLowering::LowerToXla(const ir::Node* node) {
     HANDLE_GENERIC_OP2(View, at::aten::view)
     HANDLE_GENERIC_OP2(AmpForachNonFiniteCheckAndUnscale,
                        at::aten::_amp_foreach_non_finite_check_and_unscale_)
+    HANDLE_GENERIC_OP2(AmpUpdateScale, at::aten::_amp_update_scale)
     case at::aten::max: {
       size_t arity = node->operands().size();
       if (arity == 2) {
@@ -839,6 +841,15 @@ XlaOpVector XlaNodeLowering::LowerAmpForachNonFiniteCheckAndUnscale(
   return BuildAmpForeachNonFiniteCheckAndUnscale(
       inputs, loctx()->GetOutputOp(node->operand(node->operands().size() - 2)),
       loctx()->GetOutputOp(node->operand(node->operands().size() - 1)));
+}
+
+XlaOpVector XlaNodeLowering::LowerAmpUpdateScale(
+    const ir::ops::AmpUpdateScale* node) {
+  return BuildAmpUpdateScale(
+      loctx()->GetOutputOp(node->operand(0)),
+      loctx()->GetOutputOp(node->operand(1)),
+      loctx()->GetOutputOp(node->operand(2)), node->scale_growth_factor(),
+      node->scale_backoff_factor(), node->growth_interval());
 }
 
 XlaOpVector XlaNodeLowering::LowerMaxUnary(const ir::Node* node) {

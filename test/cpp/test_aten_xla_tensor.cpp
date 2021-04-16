@@ -9251,7 +9251,7 @@ TEST_F(AtenXlaTensorTest, TestAmpForeachNonFiniteCheckAndUnscale) {
   });
 }
 
-TEST_F(AtenXlaTensorTest, DISABLED_TestAmpUpdateScale) {
+TEST_F(AtenXlaTensorTest, TestAmpUpdateScale) {
   torch::Tensor growth_tracker =
       torch::scalar_tensor(0, torch::TensorOptions(torch::kInt32));
   torch::Tensor current_scale =
