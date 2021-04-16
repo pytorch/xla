@@ -203,7 +203,6 @@ class XlaHelpers {
   static xla::PaddingConfig MakeXlaPaddingConfigFromNdPadding(
       absl::Span<const xla::int64> padding);
 
- private:
   static lazy_tensors::PrimitiveType LazyTensorPrimitiveType(
       xla::PrimitiveType type);
 };

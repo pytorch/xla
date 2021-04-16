@@ -1,5 +1,6 @@
 #include "lazy_tensor_core/csrc/compiler/node_lowering.h"
 #include "lazy_tensor_core/csrc/data_ops.h"
+#include "lazy_tensor_core/csrc/ops/amp_foreach_non_finite_check_and_unscale.h"
 #include "lazy_tensor_core/csrc/ops/as_strided.h"
 #include "lazy_tensor_core/csrc/ops/as_strided_view_update.h"
 #include "lazy_tensor_core/csrc/ops/bitwise_ir_ops.h"
@@ -50,10 +51,12 @@
 #include "lazy_xla/csrc/compiler/infer_output_shape.h"
 #include "lazy_xla/csrc/compiler/matrix.h"
 #include "lazy_xla/csrc/compiler/resize_ops.h"
+#include "lazy_xla/csrc/compiler/xla_lower_util.h"
 #include "lazy_xla/csrc/compiler/xla_lowering_context.h"
 #include "tensorflow/compiler/xla/client/lib/constants.h"
 #include "tensorflow/compiler/xla/client/lib/math.h"
 #include "tensorflow/compiler/xla/xla_client/computation_client.h"
+#include "tensorflow/compiler/xla/xla_client/util.h"
 
 namespace torch_lazy_tensors {
 namespace compiler {
@@ -332,6 +335,9 @@ class XlaNodeLowering : public NodeLowering {
   XlaOpVector LowerScalar(const ir::ops::Scalar* node);
   XlaOpVector LowerLinearInterpolation(
       const ir::ops::LinearInterpolation* node);
+  XlaOpVector LowerAmpForachNonFiniteCheckAndUnscale(
+      const ir::ops::AmpForachNonFiniteCheckAndUnscale* node);
+  XlaOpVector LowerMaxUnary(const ir::Node* node);
   XlaOpVector LowerNotSupported(const ir::ops::NotSupported* node);
   DECLARE_UNARY_OP(Acos);
   DECLARE_UNARY_OP(Acosh);
@@ -472,7 +478,6 @@ XlaOpVector XlaNodeLowering::LowerToXla(const ir::Node* node) {
     HANDLE_GENERIC_OP(Not, at::aten::bitwise_not)
     HANDLE_GENERIC_OP(Where, at::aten::where)
     HANDLE_GENERIC_OP(Min, at::aten::min)
-    HANDLE_GENERIC_OP(Max, at::aten::max)
     HANDLE_GENERIC_OP(Pow, at::aten::pow)
     HANDLE_GENERIC_OP(Fmod, at::aten::fmod)
     HANDLE_GENERIC_OP(Atan2, at::aten::atan2)
@@ -508,6 +513,17 @@ XlaOpVector XlaNodeLowering::LowerToXla(const ir::Node* node) {
     HANDLE_GENERIC_OP2(ThresholdBackward, at::aten::threshold_backward)
     HANDLE_GENERIC_OP2(Unsqueeze, at::aten::unsqueeze)
     HANDLE_GENERIC_OP2(View, at::aten::view)
+    HANDLE_GENERIC_OP2(AmpForachNonFiniteCheckAndUnscale,
+                       at::aten::_amp_foreach_non_finite_check_and_unscale_)
+    case at::aten::max: {
+      size_t arity = node->operands().size();
+      if (arity == 2) {
+        return LowerMax(node);
+      }
+      LTC_CHECK_EQ(arity, 1);
+      LTC_CHECK(dynamic_cast<const ir::ops::Generic*>(node));
+      return LowerMaxUnary(node);
+    }
     case at::prim::Constant: {
       // TODO(asuhan): rework to remove ambiguity between Scalar and Constant
       // nodes to make dynamic_cast unnecessary.
@@ -811,6 +827,33 @@ XlaOpVector XlaNodeLowering::LowerLinearInterpolation(
   xla::XlaOp value = loctx()->GetOutputOp(node->operand(0));
   xla::XlaOp new_value = loctx()->GetOutputOp(node->operand(1));
   return {XlaHelpers::LinearInterpolation(value, new_value, node->alpha())};
+}
+
+XlaOpVector XlaNodeLowering::LowerAmpForachNonFiniteCheckAndUnscale(
+    const ir::ops::AmpForachNonFiniteCheckAndUnscale* node) {
+  LTC_CHECK_GE(node->operands().size(), 3);
+  XlaOpVector inputs;
+  for (size_t i = 0; i < node->operands().size() - 2; ++i) {
+    inputs.push_back(loctx()->GetOutputOp(node->operand(i)));
+  }
+  return BuildAmpForeachNonFiniteCheckAndUnscale(
+      inputs, loctx()->GetOutputOp(node->operand(node->operands().size() - 2)),
+      loctx()->GetOutputOp(node->operand(node->operands().size() - 1)));
+}
+
+XlaOpVector XlaNodeLowering::LowerMaxUnary(const ir::Node* node) {
+  xla::XlaOp xla_input = loctx()->GetOutputOp(node->operand(0));
+  const xla::Shape& input_shape = XlaHelpers::ShapeOfXlaOp(xla_input);
+  xla::PrimitiveType element_type = input_shape.element_type();
+  torch_lazy_tensors::Helpers::MinMax min_max =
+      torch_lazy_tensors::Helpers::MinMaxValues(
+          XlaHelpers::LazyTensorPrimitiveType(element_type));
+  xla::XlaOp init_value =
+      XlaHelpers::ScalarValue(min_max.min, element_type, loctx()->builder());
+  xla::XlaOp result = xla::Reduce(
+      xla_input, init_value, XlaHelpers::CreateMaxComputation(element_type),
+      xla::util::Iota<xla::int64>(input_shape.rank()));
+  return {result};
 }
 
 XlaOpVector XlaNodeLowering::LowerNotSupported(
@@ -1119,6 +1162,7 @@ lazy_tensors::Shape XlaNodeLowering::Infer(const ir::Node* node) {
       return InferMin(node);
     }
     case at::aten::max: {
+      LTC_CHECK_EQ(node->operands().size(), 2);
       return InferMax(node);
     }
     case at::aten::pow: {

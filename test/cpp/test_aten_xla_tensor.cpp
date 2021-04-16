@@ -9221,7 +9221,7 @@ TEST_F(AtenXlaTensorTest, TestEmbeddingBackward) {
   }
 }
 
-TEST_F(AtenXlaTensorTest, DISABLED_TestAmpForeachNonFiniteCheckAndUnscale) {
+TEST_F(AtenXlaTensorTest, TestAmpForeachNonFiniteCheckAndUnscale) {
   torch::Tensor grads0 =
       torch::tensor({1, 2, 3, 4}, torch::TensorOptions(torch::kFloat));
   torch::Tensor grads1 = torch::tensor({1.0, 2.0, std::nan("1"), 4.0},

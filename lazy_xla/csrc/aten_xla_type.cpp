@@ -161,6 +161,28 @@ bool UseNNCViews(const LazyTensor& self_tensor) {
 }
 }  // namespace
 
+void AtenXlaType::_amp_foreach_non_finite_check_and_unscale_(
+    at::TensorList self, at::Tensor& found_inf, const at::Tensor& inv_scale) {
+  LTC_FN_COUNTER("xla::");
+  LazyTensor found_inf_tensor = bridge::GetLtcTensor(found_inf);
+  LazyTensor::_amp_foreach_non_finite_check_and_unscale_(
+      bridge::GetLtcTensors(self), found_inf_tensor,
+      bridge::GetLtcTensor(inv_scale));
+}
+
+at::Tensor AtenXlaType::_amp_update_scale(at::Tensor& growth_tracker,
+                                          const at::Tensor& current_scale,
+                                          const at::Tensor& found_inf,
+                                          double scale_growth_factor,
+                                          double scale_backoff_factor,
+                                          int64_t growth_interval) {
+  LTC_FN_COUNTER("xla::");
+  return bridge::AtenFromLtcTensor(LazyTensor::_amp_update_scale(
+      bridge::GetLtcTensor(growth_tracker), bridge::GetLtcTensor(current_scale),
+      bridge::GetLtcTensor(found_inf), scale_growth_factor,
+      scale_backoff_factor, growth_interval));
+}
+
 at::Tensor AtenXlaType::_copy_from(const at::Tensor& self,
                                    const at::Tensor& dst, bool non_blocking) {
   LTC_FN_COUNTER("xla::");
