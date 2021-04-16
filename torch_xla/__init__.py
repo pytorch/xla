@@ -13,9 +13,11 @@ XRT_SERVER_REGEX = '^python3 -m {} [0-9]+$'.format(XRT_RUN_SERVER_PROCESS)
 
 
 def server_is_alive():
-  return len(
-      subprocess.Popen(['pgrep', '-f', XRT_SERVER_REGEX],
-                       stdout=subprocess.PIPE).stdout.readline()) != 0
+  # pgrep returns 0 when at least one running process matches the requested name.
+  # Otherwise, the exit code is 1. If pgrep is not availiable in the system, it
+  # will return an exit code 127.
+  return subprocess.getstatusoutput(
+      'pgrep -f "{}"'.format(XRT_SERVER_REGEX))[0] == 0
 
 
 def _maybe_select_tpu_version():
