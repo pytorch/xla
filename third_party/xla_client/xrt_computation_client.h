@@ -34,25 +34,6 @@
 
 namespace xla {
 
-namespace client {
-
-lazy_tensors::client::ShapeData FromXlaShape(const Shape& shape) {
-  std::vector<int64_t> dimensions(shape.dimensions().begin(),
-                                  shape.dimensions().end());
-  lazy_tensors::PrimitiveType element_type =
-      ComputationClient::LazyTensorPrimitiveType(shape.element_type());
-  std::vector<lazy_tensors::client::ShapeData> element_shapes;
-  for (const Shape& element_shape : shape.tuple_shapes()) {
-    element_shapes.push_back(FromXlaShape(element_shape));
-  }
-  auto minor_to_major = shape.layout().minor_to_major();
-  return lazy_tensors::client::ShapeData(
-      element_type, dimensions, element_shapes,
-      std::vector<int64_t>(minor_to_major.begin(), minor_to_major.end()));
-}
-
-}  // namespace client
-
 class XrtComputationClient : public ComputationClient {
   struct DeviceHandle {
     std::string device;
@@ -74,12 +55,10 @@ class XrtComputationClient : public ComputationClient {
 
   struct XrtData : public Data {
     XrtData(std::string device, Shape device_shape)
-        : Data(std::move(device),
-               client::FromXlaShape(std::move(device_shape))) {}
+        : Data(std::move(device), GetShapeData(std::move(device_shape))) {}
     XrtData(XrtComputationClient* self, std::string device, Shape device_shape,
             int64 handle)
-        : Data(std::move(device),
-               client::FromXlaShape(std::move(device_shape))),
+        : Data(std::move(device), GetShapeData(std::move(device_shape))),
           handle_ptr(std::make_shared<XrtHandle>(
               handle, [self, device = this->device(), handle]() {
                 self->ReleaseXrtData(device, handle);
@@ -516,6 +495,8 @@ class XrtComputationClient : public ComputationClient {
 
   // Checks whether a local GRPC service is required, and starts it if need it.
   void MaybeCreateLocalService(const Options& options);
+
+  static lazy_tensors::client::ShapeData GetShapeData(const Shape& shape);
 
   Options options_;
   std::mutex lock_;
