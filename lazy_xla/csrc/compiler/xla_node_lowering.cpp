@@ -22,6 +22,8 @@
 #include "lazy_tensor_core/csrc/ops/leaky_relu_backward.h"
 #include "lazy_tensor_core/csrc/ops/linear_interpolation.h"
 #include "lazy_tensor_core/csrc/ops/log_base.h"
+#include "lazy_tensor_core/csrc/ops/log_softmax.h"
+#include "lazy_tensor_core/csrc/ops/log_softmax_backward.h"
 #include "lazy_tensor_core/csrc/ops/ltc_ops.h"
 #include "lazy_tensor_core/csrc/ops/masked_fill.h"
 #include "lazy_tensor_core/csrc/ops/not_supported.h"
@@ -33,6 +35,8 @@
 #include "lazy_tensor_core/csrc/ops/scalar.h"
 #include "lazy_tensor_core/csrc/ops/select.h"
 #include "lazy_tensor_core/csrc/ops/shrink_backward.h"
+#include "lazy_tensor_core/csrc/ops/softmax.h"
+#include "lazy_tensor_core/csrc/ops/softmax_backward.h"
 #include "lazy_tensor_core/csrc/ops/softshrink.h"
 #include "lazy_tensor_core/csrc/ops/split.h"
 #include "lazy_tensor_core/csrc/ops/squeeze.h"
@@ -55,6 +59,7 @@
 #include "lazy_xla/csrc/compiler/matrix.h"
 #include "lazy_xla/csrc/compiler/pooling.h"
 #include "lazy_xla/csrc/compiler/resize_ops.h"
+#include "lazy_xla/csrc/compiler/softmax_builder.h"
 #include "lazy_xla/csrc/compiler/xla_lower_util.h"
 #include "lazy_xla/csrc/compiler/xla_lowering_context.h"
 #include "tensorflow/compiler/xla/client/lib/constants.h"
@@ -448,11 +453,15 @@ class XlaNodeLowering : public NodeLowering {
   DECLARE_UNARY_OP2(LeakyRelu);
   DECLARE_UNARY_OP2(LeakyReluBackward);
   DECLARE_UNARY_OP2(LogBase);
+  DECLARE_UNARY_OP2(LogSoftmax);
+  DECLARE_UNARY_OP2(LogSoftmaxBackward);
   DECLARE_UNARY_OP2(MaskedFill);
   DECLARE_UNARY_OP2(Permute);
   DECLARE_UNARY_OP2(Resize);
   DECLARE_UNARY_OP2(RreluWithNoise);
   DECLARE_UNARY_OP2(RreluWithNoiseBackward);
+  DECLARE_UNARY_OP2(Softmax);
+  DECLARE_UNARY_OP2(SoftmaxBackward);
   DECLARE_UNARY_OP2(Softshrink);
   DECLARE_UNARY_OP2(Split);
   DECLARE_UNARY_OP2(Squeeze);
@@ -560,6 +569,8 @@ XlaOpVector XlaNodeLowering::LowerToXla(const ir::Node* node) {
     HANDLE_GENERIC_OP2(LeakyReluBackward, at::aten::leaky_relu_backward)
     HANDLE_GENERIC_OP2(LogBase, at::aten::log2)
     HANDLE_GENERIC_OP2(LogBase, at::aten::log10)
+    HANDLE_GENERIC_OP2(LogSoftmax, at::aten::log_softmax)
+    HANDLE_GENERIC_OP2(LogSoftmaxBackward, at::aten::_log_softmax_backward_data)
     HANDLE_GENERIC_OP2(MaskedFill, at::aten::masked_fill)
     HANDLE_GENERIC_OP2(Permute, at::aten::permute)
     HANDLE_GENERIC_OP2(Resize, at::aten::resize)
@@ -568,6 +579,8 @@ XlaOpVector XlaNodeLowering::LowerToXla(const ir::Node* node) {
                        at::aten::rrelu_with_noise_backward)
     HANDLE_GENERIC_OP2(ShrinkBackward, at::aten::hardshrink_backward)
     HANDLE_GENERIC_OP2(ShrinkBackward, at::aten::softshrink_backward)
+    HANDLE_GENERIC_OP2(Softmax, at::aten::softmax)
+    HANDLE_GENERIC_OP2(SoftmaxBackward, at::aten::_softmax_backward_data)
     HANDLE_GENERIC_OP2(Softshrink, at::aten::softshrink)
     HANDLE_GENERIC_OP2(Split, at::aten::split)
     HANDLE_GENERIC_OP2(Squeeze, at::aten::squeeze)
@@ -1011,6 +1024,20 @@ XlaOpVector XlaNodeLowering::LowerLogBase(const ir::ops::LogBase* node) {
   return {result * ln_base};
 }
 
+XlaOpVector XlaNodeLowering::LowerLogSoftmax(const ir::ops::LogSoftmax* node) {
+  xla::XlaOp input = loctx()->GetOutputOp(node->operand(0));
+  xla::XlaOp result = BuildLogSoftmax(input, node->dim());
+  return {CastToScalarType(result, node->dtype())};
+}
+
+XlaOpVector XlaNodeLowering::LowerLogSoftmaxBackward(
+    const ir::ops::LogSoftmaxBackward* node) {
+  xla::XlaOp grad_output = loctx()->GetOutputOp(node->operand(0));
+  xla::XlaOp output = loctx()->GetOutputOp(node->operand(1));
+  return {BuildLogSoftmaxGrad(/*grad_output=*/grad_output, /*output=*/output,
+                              node->dim())};
+}
+
 XlaOpVector XlaNodeLowering::LowerMaskedFill(const ir::ops::MaskedFill* node) {
   xla::XlaOp input = loctx()->GetOutputOp(node->operand(0));
   xla::XlaOp mask = loctx()->GetOutputOp(node->operand(1));
@@ -1063,6 +1090,20 @@ XlaOpVector XlaNodeLowering::LowerSiLU(const ir::Node* node) {
   LTC_CHECK_EQ(node->num_outputs(), 1);
   xla::XlaOp xla_input = loctx()->GetOutputOp(node->operand(0));
   return {xla_input * BuildSigmoid(xla_input)};
+}
+
+XlaOpVector XlaNodeLowering::LowerSoftmax(const ir::ops::Softmax* node) {
+  xla::XlaOp input = loctx()->GetOutputOp(node->operand(0));
+  xla::XlaOp result = BuildSoftmax(input, node->dim());
+  return {CastToScalarType(result, node->dtype())};
+}
+
+XlaOpVector XlaNodeLowering::LowerSoftmaxBackward(
+    const ir::ops::SoftmaxBackward* node) {
+  xla::XlaOp grad_output = loctx()->GetOutputOp(node->operand(0));
+  xla::XlaOp output = loctx()->GetOutputOp(node->operand(1));
+  return {BuildSoftmaxGrad(/*grad_output=*/grad_output, /*output=*/output,
+                           node->dim())};
 }
 
 XlaOpVector XlaNodeLowering::LowerSoftshrink(const ir::ops::Softshrink* node) {

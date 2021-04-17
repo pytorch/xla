@@ -56,8 +56,26 @@ class AtenXlaType {
   static at::Tensor _copy_from(const at::Tensor& self, const at::Tensor& dst,
                                bool non_blocking);
 
+  static at::Tensor _log_softmax(const at::Tensor& self, int64_t dim,
+                                 bool half_to_float);
+
+  static at::Tensor _log_softmax_backward_data(const at::Tensor& grad_output,
+                                               const at::Tensor& output,
+                                               int64_t dim,
+                                               const at::Tensor& self);
+
+  static std::tuple<at::Tensor, at::Tensor> _pack_padded_sequence(
+      const at::Tensor& input, const at::Tensor& lengths, bool batch_first);
+
   static at::Tensor _s_where(const at::Tensor& condition,
                              const at::Tensor& self, const at::Tensor& other);
+
+  static at::Tensor _softmax(const at::Tensor& self, int64_t dim,
+                             bool half_to_float);
+
+  static at::Tensor _softmax_backward_data(const at::Tensor& grad_output,
+                                           const at::Tensor& output,
+                                           int64_t dim, const at::Tensor& self);
 
   static at::Tensor _trilinear(const at::Tensor& i1, const at::Tensor& i2,
                                const at::Tensor& i3, at::IntArrayRef expand1,

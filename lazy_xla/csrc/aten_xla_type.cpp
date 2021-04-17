@@ -345,6 +345,29 @@ at::Tensor AtenXlaType::_copy_from(const at::Tensor& self,
   return dst;
 }
 
+at::Tensor AtenXlaType::_log_softmax(const at::Tensor& self, int64_t dim,
+                                     bool /* half_to_float */) {
+  LTC_FN_COUNTER("xla::");
+  return bridge::AtenFromLtcTensor(
+      LazyTensor::log_softmax(bridge::GetLtcTensor(self), dim, c10::nullopt));
+}
+
+at::Tensor AtenXlaType::_log_softmax_backward_data(
+    const at::Tensor& grad_output, const at::Tensor& output, int64_t dim,
+    const at::Tensor& /* self */) {
+  LTC_FN_COUNTER("xla::");
+  return bridge::AtenFromLtcTensor(LazyTensor::log_softmax_backward(
+      bridge::GetLtcTensor(grad_output), bridge::GetLtcTensor(output), dim));
+}
+
+std::tuple<at::Tensor, at::Tensor> AtenXlaType::_pack_padded_sequence(
+    const at::Tensor& input, const at::Tensor& lengths, bool batch_first) {
+  LTC_FN_COUNTER("xla::");
+  std::vector<at::Tensor> xla_tensors = {lengths};
+  auto cpu_tensors = bridge::LtcCreateTensorList(xla_tensors);
+  return at::native::_pack_padded_sequence(input, cpu_tensors[0], batch_first);
+}
+
 at::Tensor AtenXlaType::_s_where(const at::Tensor& condition,
                                  const at::Tensor& self,
                                  const at::Tensor& other) {
@@ -355,6 +378,22 @@ at::Tensor AtenXlaType::_s_where(const at::Tensor& condition,
         bridge::GetLtcTensor(other)));
   }
   return AtenXlaTypeDefault::_s_where(condition, self, other);
+}
+
+at::Tensor AtenXlaType::_softmax(const at::Tensor& self, int64_t dim,
+                                 bool /* half_to_float */) {
+  LTC_FN_COUNTER("xla::");
+  return bridge::AtenFromLtcTensor(
+      LazyTensor::softmax(bridge::GetLtcTensor(self), dim, c10::nullopt));
+}
+
+at::Tensor AtenXlaType::_softmax_backward_data(const at::Tensor& grad_output,
+                                               const at::Tensor& output,
+                                               int64_t dim,
+                                               const at::Tensor& self) {
+  LTC_FN_COUNTER("xla::");
+  return bridge::AtenFromLtcTensor(LazyTensor::softmax_backward(
+      bridge::GetLtcTensor(grad_output), bridge::GetLtcTensor(output), dim));
 }
 
 at::Tensor AtenXlaType::_trilinear(const at::Tensor& i1, const at::Tensor& i2,
