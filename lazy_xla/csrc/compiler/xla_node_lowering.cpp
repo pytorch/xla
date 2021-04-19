@@ -10,6 +10,8 @@
 #include "lazy_tensor_core/csrc/ops/arg_min.h"
 #include "lazy_tensor_core/csrc/ops/as_strided.h"
 #include "lazy_tensor_core/csrc/ops/as_strided_view_update.h"
+#include "lazy_tensor_core/csrc/ops/avg_pool_nd.h"
+#include "lazy_tensor_core/csrc/ops/avg_pool_nd_backward.h"
 #include "lazy_tensor_core/csrc/ops/bitwise_ir_ops.h"
 #include "lazy_tensor_core/csrc/ops/cast.h"
 #include "lazy_tensor_core/csrc/ops/constant.h"
@@ -352,6 +354,35 @@ lazy_tensors::Shape InferAdaptiveAvgPool2d(
   return ir::ops::InferOutputShape({input.shape()}, lower_for_shape_fn);
 }
 
+lazy_tensors::Shape InferAvgPoolNd(const ir::ops::AvgPoolNd* node) {
+  auto shape_fn = [node](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
+    LTC_CHECK_EQ(operands.size(), 1)
+        << "Unexpected number of operands: " << operands.size();
+    return BuildAvgPoolNd(operands[0], node->spatial_dim_count(),
+                          node->kernel_size(), node->stride(), node->padding(),
+                          node->ceil_mode(), node->count_include_pad());
+  };
+  const ir::Output& input = node->operand(0);
+  return ir::ops::InferOutputShape({input.shape()}, shape_fn);
+}
+
+lazy_tensors::Shape InferAvgPoolNdBackward(
+    const ir::ops::AvgPoolNdBackward* node) {
+  auto shape_fn = [node](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
+    LTC_CHECK_EQ(operands.size(), 2)
+        << "Unexpected number of operands: " << operands.size();
+    return BuildAvgPoolNdBackward(
+        /*out_backprop=*/operands[0],
+        /*input=*/operands[1], node->spatial_dim_count(), node->kernel_size(),
+        node->stride(), node->padding(), node->ceil_mode(),
+        node->count_include_pad());
+  };
+  const ir::Output& grad_output = node->operand(0);
+  const ir::Output& input = node->operand(1);
+  return ir::ops::InferOutputShape({grad_output.shape(), input.shape()},
+                                   shape_fn);
+}
+
 lazy_tensors::Shape InferAdaptiveAvgPool3d(
     const ir::ops::AdaptiveAvgPool3d* node) {
   auto lower_for_shape_fn =
@@ -481,6 +512,8 @@ class XlaNodeLowering : public NodeLowering {
   DECLARE_UNARY_OP(Clamp);
   DECLARE_UNARY_OP2(AdaptiveAvgPool2d);
   DECLARE_UNARY_OP2(AdaptiveAvgPool3d);
+  DECLARE_UNARY_OP2(AvgPoolNd);
+  DECLARE_UNARY_OP2(AvgPoolNdBackward);
   DECLARE_UNARY_OP(AdaptiveAvgPool2dBackward);
   DECLARE_UNARY_OP(AdaptiveAvgPool3dBackward);
   DECLARE_UNARY_OP2(All);
@@ -602,6 +635,10 @@ XlaOpVector XlaNodeLowering::LowerToXla(const ir::Node* node) {
                       at::aten::adaptive_avg_pool2d_backward)
     HANDLE_GENERIC_OP(AdaptiveAvgPool3dBackward,
                       at::aten::adaptive_avg_pool3d_backward)
+    HANDLE_GENERIC_OP2(AvgPoolNd, at::aten::avg_pool2d)
+    HANDLE_GENERIC_OP2(AvgPoolNd, at::aten::avg_pool3d)
+    HANDLE_GENERIC_OP2(AvgPoolNdBackward, at::aten::avg_pool2d_backward)
+    HANDLE_GENERIC_OP2(AvgPoolNdBackward, at::aten::avg_pool3d_backward)
     HANDLE_GENERIC_OP2(AsStrided, at::aten::as_strided)
     HANDLE_GENERIC_OP2(Diagonal, at::aten::diagonal)
     HANDLE_GENERIC_OP2(Expand, at::aten::expand)
@@ -978,6 +1015,23 @@ XlaOpVector XlaNodeLowering::LowerAdaptiveAvgPool3dBackward(
   xla::XlaOp input = loctx()->GetOutputOp(node->operand(1));
   return {BuildAdaptiveAvgPool3dBackward(
       /*out_backprop=*/grad_output, /*input=*/input)};
+}
+
+XlaOpVector XlaNodeLowering::LowerAvgPoolNd(const ir::ops::AvgPoolNd* node) {
+  xla::XlaOp input = loctx()->GetOutputOp(node->operand(0));
+  return {BuildAvgPoolNd(input, node->spatial_dim_count(), node->kernel_size(),
+                         node->stride(), node->padding(), node->ceil_mode(),
+                         node->count_include_pad())};
+}
+
+XlaOpVector XlaNodeLowering::LowerAvgPoolNdBackward(
+    const ir::ops::AvgPoolNdBackward* node) {
+  xla::XlaOp grad_output = loctx()->GetOutputOp(node->operand(0));
+  xla::XlaOp input = loctx()->GetOutputOp(node->operand(1));
+  return {BuildAvgPoolNdBackward(
+      /*out_backprop=*/grad_output, /*input=*/input, node->spatial_dim_count(),
+      node->kernel_size(), node->stride(), node->padding(), node->ceil_mode(),
+      node->count_include_pad())};
 }
 
 XlaOpVector XlaNodeLowering::LowerAll(const ir::ops::All* node) {
@@ -1446,6 +1500,22 @@ lazy_tensors::Shape XlaNodeLowering::Infer(const ir::Node* node) {
       return InferUpsampleNearestBackward(
           ir::NodeCast<ir::ops::UpsampleNearestBackward>(
               node, ir::OpKind(at::aten::upsample_nearest2d_backward)));
+    }
+    case at::aten::avg_pool2d: {
+      return InferAvgPoolNd(ir::NodeCast<ir::ops::AvgPoolNd>(
+          node, ir::OpKind(at::aten::avg_pool2d)));
+    }
+    case at::aten::avg_pool3d: {
+      return InferAvgPoolNd(ir::NodeCast<ir::ops::AvgPoolNd>(
+          node, ir::OpKind(at::aten::avg_pool3d)));
+    }
+    case at::aten::avg_pool2d_backward: {
+      return InferAvgPoolNdBackward(ir::NodeCast<ir::ops::AvgPoolNdBackward>(
+          node, ir::OpKind(at::aten::avg_pool2d_backward)));
+    }
+    case at::aten::avg_pool3d_backward: {
+      return InferAvgPoolNdBackward(ir::NodeCast<ir::ops::AvgPoolNdBackward>(
+          node, ir::OpKind(at::aten::avg_pool3d_backward)));
     }
     case at::aten::adaptive_avg_pool2d: {
       return InferAdaptiveAvgPool2d(ir::NodeCast<ir::ops::AdaptiveAvgPool2d>(

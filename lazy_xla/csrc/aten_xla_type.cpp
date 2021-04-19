@@ -689,6 +689,85 @@ at::Tensor AtenXlaType::atanh(const at::Tensor& self) {
   return AtenXlaTypeDefault::atanh(self);
 }
 
+at::Tensor& AtenXlaType::atanh_(at::Tensor& self) {
+  LTC_FN_COUNTER("xla::");
+  LazyTensor self_tensor = bridge::GetLtcTensor(self);
+  LazyTensor::atanh_(self_tensor);
+  return self;
+}
+
+at::Tensor AtenXlaType::avg_pool2d(const at::Tensor& self,
+                                   at::IntArrayRef kernel_size,
+                                   at::IntArrayRef stride,
+                                   at::IntArrayRef padding, bool ceil_mode,
+                                   bool count_include_pad,
+                                   c10::optional<int64_t> divisor_override) {
+  LTC_FN_COUNTER("xla::");
+  if ((ceil_mode && count_include_pad) || divisor_override) {
+    return AtenXlaTypeDefault::avg_pool2d(self, kernel_size, stride, padding,
+                                          ceil_mode, count_include_pad,
+                                          divisor_override);
+  }
+  return bridge::AtenFromLtcTensor(LazyTensor::avg_pool_nd(
+      bridge::GetLtcTensor(self), /*spatial_dim_count=*/2,
+      Helpers::I64List(kernel_size), Helpers::I64List(stride),
+      Helpers::I64List(padding), ceil_mode, count_include_pad));
+}
+
+at::Tensor AtenXlaType::avg_pool2d_backward(
+    const at::Tensor& grad_output, const at::Tensor& self,
+    at::IntArrayRef kernel_size, at::IntArrayRef stride,
+    at::IntArrayRef padding, bool ceil_mode, bool count_include_pad,
+    c10::optional<int64_t> divisor_override) {
+  LTC_FN_COUNTER("xla::");
+  if ((ceil_mode && count_include_pad) || divisor_override) {
+    return AtenXlaTypeDefault::avg_pool2d_backward(
+        grad_output, self, kernel_size, stride, padding, ceil_mode,
+        count_include_pad, divisor_override);
+  }
+  return bridge::AtenFromLtcTensor(LazyTensor::avg_pool_nd_backward(
+      bridge::GetLtcTensor(grad_output), bridge::GetLtcTensor(self),
+      /*spatial_dim_count=*/2, Helpers::I64List(kernel_size),
+      Helpers::I64List(stride), Helpers::I64List(padding), ceil_mode,
+      count_include_pad));
+}
+
+at::Tensor AtenXlaType::avg_pool3d(const at::Tensor& self,
+                                   at::IntArrayRef kernel_size,
+                                   at::IntArrayRef stride,
+                                   at::IntArrayRef padding, bool ceil_mode,
+                                   bool count_include_pad,
+                                   c10::optional<int64_t> divisor_override) {
+  LTC_FN_COUNTER("xla::");
+  if ((ceil_mode && count_include_pad) || divisor_override) {
+    return AtenXlaTypeDefault::avg_pool3d(self, kernel_size, stride, padding,
+                                          ceil_mode, count_include_pad,
+                                          divisor_override);
+  }
+  return bridge::AtenFromLtcTensor(LazyTensor::avg_pool_nd(
+      bridge::GetLtcTensor(self), /*spatial_dim_count=*/3,
+      Helpers::I64List(kernel_size), Helpers::I64List(stride),
+      Helpers::I64List(padding), ceil_mode, count_include_pad));
+}
+
+at::Tensor AtenXlaType::avg_pool3d_backward(
+    const at::Tensor& grad_output, const at::Tensor& self,
+    at::IntArrayRef kernel_size, at::IntArrayRef stride,
+    at::IntArrayRef padding, bool ceil_mode, bool count_include_pad,
+    c10::optional<int64_t> divisor_override) {
+  LTC_FN_COUNTER("xla::");
+  if ((ceil_mode && count_include_pad) || divisor_override) {
+    return AtenXlaTypeDefault::avg_pool3d_backward(
+        grad_output, self, kernel_size, stride, padding, ceil_mode,
+        count_include_pad, divisor_override);
+  }
+  return bridge::AtenFromLtcTensor(LazyTensor::avg_pool_nd_backward(
+      bridge::GetLtcTensor(grad_output), bridge::GetLtcTensor(self),
+      /*spatial_dim_count=*/3, Helpers::I64List(kernel_size),
+      Helpers::I64List(stride), Helpers::I64List(padding), ceil_mode,
+      count_include_pad));
+}
+
 at::Tensor AtenXlaType::atan2(const at::Tensor& self, const at::Tensor& other) {
   LTC_FN_COUNTER("xla::");
   // xla::Atan2 doesn't support integer types.
