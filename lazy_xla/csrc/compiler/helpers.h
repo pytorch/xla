@@ -62,6 +62,9 @@ class XlaHelpers {
   static bool SameStaticDimensions(const xla::Shape& shape1,
                                    const xla::Shape& shape2);
 
+  static xla::PrecisionConfig BuildPrecisionConfig(
+      xla::PrecisionConfig::Precision conv_precision, int num_arguments = 2);
+
   static xla::Shape XlaShape(const lazy_tensors::Shape& shape);
 
   static lazy_tensors::Shape LazyTensorsShape(const xla::Shape& shape);
@@ -213,6 +216,17 @@ class XlaHelpers {
 
   static lazy_tensors::PrimitiveType LazyTensorPrimitiveType(
       xla::PrimitiveType type);
+
+  static xla::PrecisionConfig::Precision mat_mul_precision() {
+    return s_mat_mul_precision;
+  }
+
+  static void set_mat_mul_precision(xla::PrecisionConfig::Precision precision) {
+    s_mat_mul_precision = precision;
+  }
+
+ private:
+  static xla::PrecisionConfig::Precision s_mat_mul_precision;
 };
 
 }  // namespace compiler

@@ -8,6 +8,10 @@ namespace compiler {
 xla::XlaOp PadToSize(xla::XlaOp input, absl::Span<const xla::int64> size,
                      absl::optional<xla::XlaOp> pad_value = absl::nullopt);
 
+xla::XlaOp BuildMatMul(xla::XlaOp lhs, xla::XlaOp rhs, xla::XlaOp bias);
+
+xla::XlaOp BuildDot(xla::XlaOp lhs, xla::XlaOp rhs);
+
 using XlaOpCombiner = std::function<xla::XlaOp(xla::XlaOp, xla::XlaOp)>;
 
 struct ScatterOptions {

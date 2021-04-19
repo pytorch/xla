@@ -139,6 +139,22 @@ xla::XlaOp PadToSize(xla::XlaOp input, absl::Span<const xla::int64> size,
   return has_padding ? xla::Pad(input, *pad_value, padding_config) : input;
 }
 
+xla::XlaOp BuildMatMul(xla::XlaOp lhs, xla::XlaOp rhs, xla::XlaOp bias) {
+  xla::XlaOp dot = BuildDot(lhs, rhs);
+  const xla::Shape& dot_shape = XlaHelpers::ShapeOfXlaOp(dot);
+  const xla::Shape& bias_shape = XlaHelpers::ShapeOfXlaOp(bias);
+  if (bias_shape.dimensions() != dot_shape.dimensions()) {
+    bias = BuildExpand(bias, dot_shape.dimensions());
+  }
+  return dot + bias;
+}
+
+xla::XlaOp BuildDot(xla::XlaOp lhs, xla::XlaOp rhs) {
+  xla::PrecisionConfig precision_config =
+      XlaHelpers::BuildPrecisionConfig(XlaHelpers::mat_mul_precision());
+  return xla::Dot(lhs, rhs, &precision_config);
+}
+
 xla::XlaOp CreateScatter(const Device& device, xla::XlaOp input,
                          xla::XlaOp index, xla::XlaOp source, xla::int64 dim,
                          const ScatterOptions& options) {

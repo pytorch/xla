@@ -120,6 +120,10 @@ class AtenXlaType {
                               const at::Tensor& tensor2,
                               const at::Scalar& value);
 
+  static at::Tensor addmm(const at::Tensor& self, const at::Tensor& mat1,
+                          const at::Tensor& mat2, const at::Scalar& beta,
+                          const at::Scalar& alpha);
+
   static at::Tensor alias(const at::Tensor& self);
 
   static at::Tensor all(const at::Tensor& self);

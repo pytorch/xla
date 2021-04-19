@@ -42,6 +42,17 @@ xla::XlaComputation CreateComputation(
 
 }  // namespace
 
+xla::PrecisionConfig::Precision XlaHelpers::s_mat_mul_precision =
+    xla::PrecisionConfig::DEFAULT;
+
+xla::PrecisionConfig XlaHelpers::BuildPrecisionConfig(
+    xla::PrecisionConfig::Precision conv_precision, int num_arguments) {
+  xla::PrecisionConfig precision_config;
+  precision_config.mutable_operand_precision()->Resize(num_arguments,
+                                                       conv_precision);
+  return precision_config;
+}
+
 bool XlaHelpers::SameStaticDimensions(const xla::Shape& shape1,
                                       const xla::Shape& shape2) {
   return shape1.is_static() && shape2.is_static() &&

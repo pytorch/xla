@@ -151,6 +151,17 @@ xla::XlaOp LowerBitwise(xla::XlaOp lhs, xla::XlaOp rhs, const F& bit_op) {
   return bit_op(lhs, rhs);
 }
 
+lazy_tensors::Shape InferAddMatMul(const ir::Node* node) {
+  auto shape_fn = [](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
+    return BuildMatMul(operands[0], operands[1], operands[2]);
+  };
+  const ir::Output& input = node->operand(0);
+  const ir::Output& weight = node->operand(1);
+  const ir::Output& bias = node->operand(2);
+  return ir::ops::InferOutputShape(
+      {input.shape(), weight.shape(), bias.shape()}, shape_fn);
+}
+
 lazy_tensors::Shape InferAll(const ir::ops::All* node) {
   auto shape_fn = [node](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
     return BuildAll(operands[0], node->dimensions(),
@@ -509,6 +520,7 @@ class XlaNodeLowering : public NodeLowering {
   DECLARE_BINARY_OP(Le);
   DECLARE_BINARY_OP(Lt);
   DECLARE_BINARY_OP(Ne);
+  DECLARE_UNARY_OP(AddMatMul);
   DECLARE_UNARY_OP(Clamp);
   DECLARE_UNARY_OP2(AdaptiveAvgPool2d);
   DECLARE_UNARY_OP2(AdaptiveAvgPool3d);
@@ -628,6 +640,7 @@ XlaOpVector XlaNodeLowering::LowerToXla(const ir::Node* node) {
     HANDLE_GENERIC_OP(Le, at::aten::le)
     HANDLE_GENERIC_OP(Lt, at::aten::lt)
     HANDLE_GENERIC_OP(Ne, at::aten::ne)
+    HANDLE_GENERIC_OP(AddMatMul, at::aten::addmm)
     HANDLE_GENERIC_OP(Clamp, at::aten::clamp)
     HANDLE_GENERIC_OP2(AdaptiveAvgPool2d, at::aten::adaptive_avg_pool2d)
     HANDLE_GENERIC_OP2(AdaptiveAvgPool3d, at::aten::adaptive_avg_pool3d)
@@ -1107,6 +1120,14 @@ XlaOpVector XlaNodeLowering::LowerWhere(const ir::Node* node) {
                       promoted_branches.second)};
 }
 
+XlaOpVector XlaNodeLowering::LowerAddMatMul(const ir::Node* node) {
+  LTC_CHECK_EQ(node->operands().size(), 3) << "Unexpected number of operands";
+  xla::XlaOp input = loctx()->GetOutputOp(node->operand(0));
+  xla::XlaOp weight = loctx()->GetOutputOp(node->operand(1));
+  xla::XlaOp bias = loctx()->GetOutputOp(node->operand(2));
+  return {BuildMatMul(input, weight, bias)};
+}
+
 XlaOpVector XlaNodeLowering::LowerClamp(const ir::Node* node) {
   LTC_CHECK_EQ(node->num_outputs(), 1);
   xla::XlaOp xla_input = loctx()->GetOutputOp(node->operand(0));
@@ -1415,6 +1436,9 @@ DEFINE_COMPARISON_OP(Ne, at::aten::ne)
 lazy_tensors::Shape XlaNodeLowering::Infer(const ir::Node* node) {
   const ir::OpKind& kind = node->op();
   switch (kind.op) {
+    case at::aten::addmm: {
+      return InferAddMatMul(node);
+    }
     case at::aten::all: {
       return InferAll(
           ir::NodeCast<ir::ops::All>(node, ir::OpKind(at::aten::all)));
