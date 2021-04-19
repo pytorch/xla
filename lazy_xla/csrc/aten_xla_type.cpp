@@ -26,6 +26,7 @@
 #include "lazy_xla/csrc/compiler/nnc_computation_client.h"
 #include "lazy_xla/csrc/compiler/pooling.h"
 #include "lazy_xla/csrc/version.h"
+#include "tensorflow/compiler/xla/xla_client/util.h"
 
 // [Implementation Guidelines]
 // - If you want to call a at::func which doesn't exist in AtenXlaType,
@@ -560,6 +561,54 @@ at::Tensor& AtenXlaType::addcmul_(at::Tensor& self, const at::Tensor& tensor1,
 at::Tensor AtenXlaType::alias(const at::Tensor& self) {
   LTC_FN_COUNTER("xla::");
   return self;
+}
+
+at::Tensor AtenXlaType::all(const at::Tensor& self) {
+  LTC_FN_COUNTER("xla::");
+  LazyTensor self_tensor = bridge::GetLtcTensor(self);
+  return bridge::AtenFromLtcTensor(LazyTensor::all(
+      self_tensor,
+      xla::util::Iota<xla::int64>(self_tensor.shape().get().rank()),
+      /*keep_reduced_dimensions=*/false));
+}
+
+at::Tensor AtenXlaType::all(const at::Tensor& self, int64_t dim, bool keepdim) {
+  LTC_FN_COUNTER("xla::");
+  return bridge::AtenFromLtcTensor(
+      LazyTensor::all(bridge::GetLtcTensor(self), {dim}, keepdim));
+}
+
+at::Tensor AtenXlaType::any(const at::Tensor& self) {
+  LTC_FN_COUNTER("xla::");
+  LazyTensor self_tensor = bridge::GetLtcTensor(self);
+  return bridge::AtenFromLtcTensor(LazyTensor::any(
+      self_tensor,
+      xla::util::Iota<xla::int64>(self_tensor.shape().get().rank()),
+      /*keep_reduced_dimensions=*/false));
+}
+
+at::Tensor AtenXlaType::any(const at::Tensor& self, int64_t dim, bool keepdim) {
+  LTC_FN_COUNTER("xla::");
+  return bridge::AtenFromLtcTensor(
+      LazyTensor::any(bridge::GetLtcTensor(self), {dim}, keepdim));
+}
+
+at::Tensor AtenXlaType::argmax(const at::Tensor& self,
+                               c10::optional<int64_t> dim, bool keepdim) {
+  LTC_FN_COUNTER("xla::");
+  return dim ? bridge::AtenFromLtcTensor(LazyTensor::argmax(
+                   bridge::GetLtcTensor(self), *dim, keepdim))
+             : bridge::AtenFromLtcTensor(
+                   LazyTensor::argmax(bridge::GetLtcTensor(self)));
+}
+
+at::Tensor AtenXlaType::argmin(const at::Tensor& self,
+                               c10::optional<int64_t> dim, bool keepdim) {
+  LTC_FN_COUNTER("xla::");
+  return dim ? bridge::AtenFromLtcTensor(LazyTensor::argmin(
+                   bridge::GetLtcTensor(self), *dim, keepdim))
+             : bridge::AtenFromLtcTensor(
+                   LazyTensor::argmin(bridge::GetLtcTensor(self)));
 }
 
 at::Tensor AtenXlaType::as_strided(const at::Tensor& self, at::IntArrayRef size,

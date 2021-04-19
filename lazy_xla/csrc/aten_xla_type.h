@@ -122,6 +122,20 @@ class AtenXlaType {
 
   static at::Tensor alias(const at::Tensor& self);
 
+  static at::Tensor all(const at::Tensor& self);
+
+  static at::Tensor all(const at::Tensor& self, int64_t dim, bool keepdim);
+
+  static at::Tensor any(const at::Tensor& self);
+
+  static at::Tensor any(const at::Tensor& self, int64_t dim, bool keepdim);
+
+  static at::Tensor argmax(const at::Tensor& self, c10::optional<int64_t> dim,
+                           bool keepdim);
+
+  static at::Tensor argmin(const at::Tensor& self, c10::optional<int64_t> dim,
+                           bool keepdim);
+
   static at::Tensor as_strided(const at::Tensor& self, at::IntArrayRef size,
                                at::IntArrayRef stride,
                                c10::optional<int64_t> storage_offset);

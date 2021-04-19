@@ -16,6 +16,7 @@
 #include "tensorflow/compiler/xla/literal_util.h"
 #include "tensorflow/compiler/xla/permutation_util.h"
 #include "tensorflow/compiler/xla/types.h"
+#include "tensorflow/compiler/xla/xla_client/util.h"
 #include "tensorflow/core/lib/bfloat16/bfloat16.h"
 
 namespace torch_lazy_tensors {
@@ -78,6 +79,10 @@ class XlaHelpers {
 
   // Returns the value type of given XLA operation.
   static xla::PrimitiveType TypeOfXlaOp(xla::XlaOp op);
+
+  static std::vector<xla::int64> GetAllDimensions(const xla::Shape& shape) {
+    return xla::util::Iota<xla::int64>(shape.rank());
+  }
 
   static xla::XlaOp BroadcastDimensions(xla::XlaOp input,
                                         absl::Span<const xla::int64> dimensions,
