@@ -190,6 +190,13 @@ class AtenXlaType {
 
   static at::Tensor& atan_(at::Tensor& self);
 
+  static at::Tensor baddbmm(const at::Tensor& self, const at::Tensor& batch1,
+                            const at::Tensor& batch2, const at::Scalar& beta,
+                            const at::Scalar& alpha);
+  static at::Tensor& baddbmm_(at::Tensor& self, const at::Tensor& batch1,
+                              const at::Tensor& batch2, const at::Scalar& beta,
+                              const at::Scalar& alpha);
+
   static at::Tensor& bitwise_and_out(const at::Tensor& self,
                                      const at::Tensor& other, at::Tensor& out);
 

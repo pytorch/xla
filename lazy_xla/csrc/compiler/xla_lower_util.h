@@ -8,7 +8,14 @@ namespace compiler {
 xla::XlaOp PadToSize(xla::XlaOp input, absl::Span<const xla::int64> size,
                      absl::optional<xla::XlaOp> pad_value = absl::nullopt);
 
+xla::XlaOp CreateMatMul(xla::XlaOp lhs, xla::XlaOp rhs);
+
 xla::XlaOp BuildMatMul(xla::XlaOp lhs, xla::XlaOp rhs, xla::XlaOp bias);
+
+xla::XlaOp BuildMatMulWithMultiplier(xla::XlaOp lhs, xla::XlaOp rhs,
+                                     xla::XlaOp bias,
+                                     xla::XlaOp product_multiplier,
+                                     xla::XlaOp bias_multiplier);
 
 xla::XlaOp BuildDot(xla::XlaOp lhs, xla::XlaOp rhs);
 

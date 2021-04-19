@@ -196,6 +196,22 @@ lazy_tensors::Shape InferArgMin(const ir::ops::ArgMin* node) {
   return ir::ops::InferOutputShape({input.shape()}, shape_fn);
 }
 
+lazy_tensors::Shape InferBaddBmm(const ir::Node* node) {
+  auto shape_fn = [](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
+    return BuildMatMulWithMultiplier(operands[0], operands[1], operands[2],
+                                     operands[3], operands[4]);
+  };
+  const ir::Output& lhs = node->operand(0);
+  const ir::Output& rhs = node->operand(1);
+  const ir::Output& bias = node->operand(2);
+  const ir::Output& product_multiplier = node->operand(3);
+  const ir::Output& bias_multiplier = node->operand(4);
+  return ir::ops::InferOutputShape(
+      {lhs.shape(), rhs.shape(), bias.shape(), product_multiplier.shape(),
+       bias_multiplier.shape()},
+      shape_fn);
+}
+
 lazy_tensors::Shape InferBitwise(const ir::Node* node) {
   const ir::Output& input0 = node->operand(0);
   const ir::Output& input1 = node->operand(1);
@@ -521,6 +537,7 @@ class XlaNodeLowering : public NodeLowering {
   DECLARE_BINARY_OP(Lt);
   DECLARE_BINARY_OP(Ne);
   DECLARE_UNARY_OP(AddMatMul);
+  DECLARE_UNARY_OP(BaddBmm);
   DECLARE_UNARY_OP(Clamp);
   DECLARE_UNARY_OP2(AdaptiveAvgPool2d);
   DECLARE_UNARY_OP2(AdaptiveAvgPool3d);
@@ -641,6 +658,7 @@ XlaOpVector XlaNodeLowering::LowerToXla(const ir::Node* node) {
     HANDLE_GENERIC_OP(Lt, at::aten::lt)
     HANDLE_GENERIC_OP(Ne, at::aten::ne)
     HANDLE_GENERIC_OP(AddMatMul, at::aten::addmm)
+    HANDLE_GENERIC_OP(BaddBmm, at::aten::baddbmm)
     HANDLE_GENERIC_OP(Clamp, at::aten::clamp)
     HANDLE_GENERIC_OP2(AdaptiveAvgPool2d, at::aten::adaptive_avg_pool2d)
     HANDLE_GENERIC_OP2(AdaptiveAvgPool3d, at::aten::adaptive_avg_pool3d)
@@ -1128,6 +1146,17 @@ XlaOpVector XlaNodeLowering::LowerAddMatMul(const ir::Node* node) {
   return {BuildMatMul(input, weight, bias)};
 }
 
+XlaOpVector XlaNodeLowering::LowerBaddBmm(const ir::Node* node) {
+  xla::XlaOp lhs = loctx()->GetOutputOp(node->operand(0));
+  xla::XlaOp rhs = loctx()->GetOutputOp(node->operand(1));
+  xla::XlaOp bias = loctx()->GetOutputOp(node->operand(2));
+  xla::XlaOp product_multiplier = loctx()->GetOutputOp(node->operand(3));
+  xla::XlaOp bias_multiplier = loctx()->GetOutputOp(node->operand(4));
+  std::tie(lhs, rhs) = XlaHelpers::PromoteValues(lhs, rhs);
+  return {BuildMatMulWithMultiplier(lhs, rhs, bias, product_multiplier,
+                                    bias_multiplier)};
+}
+
 XlaOpVector XlaNodeLowering::LowerClamp(const ir::Node* node) {
   LTC_CHECK_EQ(node->num_outputs(), 1);
   xla::XlaOp xla_input = loctx()->GetOutputOp(node->operand(0));
@@ -1454,6 +1483,9 @@ lazy_tensors::Shape XlaNodeLowering::Infer(const ir::Node* node) {
     case at::aten::argmin: {
       return InferArgMin(
           ir::NodeCast<ir::ops::ArgMin>(node, ir::OpKind(at::aten::argmin)));
+    }
+    case at::aten::baddbmm: {
+      return InferBaddBmm(node);
     }
     case at::aten::__and__:
     case at::aten::__or__:

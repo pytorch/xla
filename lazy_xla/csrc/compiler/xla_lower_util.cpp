@@ -23,6 +23,62 @@ bool ShouldUseDenseScatter(const Device& device, const xla::Shape& input_shape,
   return false;
 }
 
+xla::XlaOp DotExpand(xla::XlaOp op, const xla::Shape& op_shape,
+                     const xla::Shape& to_shape) {
+  xla::int64 rank_delta = to_shape.rank() - op_shape.rank();
+  XLA_CHECK_GT(rank_delta, 0) << op_shape << " vs. " << to_shape;
+
+  std::vector<xla::int64> reshape_sizes(to_shape.rank(), 1);
+  std::copy(op_shape.dimensions().begin(), op_shape.dimensions().end(),
+            reshape_sizes.begin() + rank_delta);
+  xla::XlaOp result = XlaHelpers::DynamicReshape(op, reshape_sizes);
+
+  std::vector<xla::int64> broadcasted_sizes(
+      to_shape.dimensions().begin(),
+      to_shape.dimensions().begin() + rank_delta);
+  broadcasted_sizes.insert(broadcasted_sizes.end(),
+                           op_shape.dimensions().begin(),
+                           op_shape.dimensions().end());
+  return xla::BroadcastInDim(result, broadcasted_sizes,
+                             xla::util::Iota<xla::int64>(to_shape.rank()));
+}
+
+std::pair<xla::XlaOp, xla::XlaOp> DotBroadcast(xla::XlaOp lhs,
+                                               const xla::Shape& lhs_shape,
+                                               xla::XlaOp rhs,
+                                               const xla::Shape& rhs_shape) {
+  auto lhs_dimensions = xla::util::ToVector<xla::int64>(lhs_shape.dimensions());
+  auto rhs_dimensions = xla::util::ToVector<xla::int64>(rhs_shape.dimensions());
+  XLA_CHECK_EQ(lhs_dimensions.size(), rhs_dimensions.size());
+  for (xla::int64 i = 0; i < lhs_dimensions.size() - 2; ++i) {
+    if (lhs_dimensions[i] == rhs_dimensions[i]) {
+      continue;
+    }
+    if (lhs_dimensions[i] == 1) {
+      lhs_dimensions[i] = rhs_dimensions[i];
+    } else if (rhs_dimensions[i] == 1) {
+      rhs_dimensions[i] = lhs_dimensions[i];
+    } else {
+      XLA_ERROR() << "Unsupported DotBroadcast: " << lhs_shape << " vs. "
+                  << rhs_shape;
+    }
+  }
+
+  xla::XlaOp broadcasted_lhs = lhs;
+  xla::XlaOp broadcasted_rhs = rhs;
+  if (lhs_dimensions != lhs_shape.dimensions()) {
+    broadcasted_lhs =
+        xla::BroadcastInDim(lhs, lhs_dimensions,
+                            xla::util::Iota<xla::int64>(lhs_dimensions.size()));
+  }
+  if (rhs_dimensions != rhs_shape.dimensions()) {
+    broadcasted_rhs =
+        xla::BroadcastInDim(rhs, rhs_dimensions,
+                            xla::util::Iota<xla::int64>(rhs_dimensions.size()));
+  }
+  return std::make_pair(broadcasted_lhs, broadcasted_rhs);
+}
+
 xla::XlaComputation MakeScatterComputation(
     const std::function<xla::XlaOp(xla::XlaOp, xla::XlaOp)>& combiner,
     xla::PrimitiveType element_type) {
@@ -139,6 +195,53 @@ xla::XlaOp PadToSize(xla::XlaOp input, absl::Span<const xla::int64> size,
   return has_padding ? xla::Pad(input, *pad_value, padding_config) : input;
 }
 
+xla::XlaOp CreateMatMul(xla::XlaOp lhs, xla::XlaOp rhs) {
+  // Expand cases in https://pytorch.org/docs/stable/torch.html#torch.matmul
+  xla::Shape lhs_shape = XlaHelpers::ShapeOfXlaOp(lhs);
+  xla::Shape rhs_shape = XlaHelpers::ShapeOfXlaOp(rhs);
+  if ((lhs_shape.rank() == 1 && rhs_shape.rank() == 1) ||
+      (lhs_shape.rank() == 2 && rhs_shape.rank() == 2) ||
+      (lhs_shape.rank() == 2 && rhs_shape.rank() == 1)) {
+    return BuildDot(lhs, rhs);
+  }
+  if (lhs_shape.rank() == 1 && rhs_shape.rank() == 2) {
+    xla::XlaOp reshaped_lhs =
+        XlaHelpers::DynamicReshape(lhs, {1, lhs_shape.dimensions(0)});
+    return XlaHelpers::DynamicReshape(BuildDot(reshaped_lhs, rhs),
+                                      {rhs_shape.dimensions(1)});
+  }
+  if (lhs_shape.rank() >= 1 && rhs_shape.rank() >= 1 &&
+      (lhs_shape.rank() >= 3 || rhs_shape.rank() >= 3)) {
+    xla::XlaOp reshaped_lhs = lhs;
+    xla::XlaOp reshaped_rhs = rhs;
+    if (lhs_shape.rank() > rhs_shape.rank()) {
+      reshaped_rhs = DotExpand(reshaped_rhs, rhs_shape, lhs_shape);
+      rhs_shape = XlaHelpers::ShapeOfXlaOp(reshaped_rhs);
+    } else if (rhs_shape.rank() > lhs_shape.rank()) {
+      reshaped_lhs = DotExpand(reshaped_lhs, lhs_shape, rhs_shape);
+      lhs_shape = XlaHelpers::ShapeOfXlaOp(reshaped_lhs);
+    }
+    std::tie(reshaped_lhs, reshaped_rhs) =
+        DotBroadcast(reshaped_lhs, lhs_shape, reshaped_rhs, rhs_shape);
+
+    // At this point lhs and rhs ranks are the same, use left rank in code
+    // below.
+    xla::DotDimensionNumbers dims;
+    for (xla::int64 i = 0; i < lhs_shape.rank() - 2; ++i) {
+      dims.add_lhs_batch_dimensions(i);
+      dims.add_rhs_batch_dimensions(i);
+    }
+    dims.add_lhs_contracting_dimensions(lhs_shape.rank() - 1);
+    dims.add_rhs_contracting_dimensions(lhs_shape.rank() - 2);
+
+    xla::PrecisionConfig precision_config =
+        XlaHelpers::BuildPrecisionConfig(XlaHelpers::mat_mul_precision());
+    return xla::DotGeneral(reshaped_lhs, reshaped_rhs, dims, &precision_config);
+  }
+  XLA_ERROR() << "Unsupported matmul operation: matmul(" << lhs_shape << ", "
+              << rhs_shape << ")";
+}
+
 xla::XlaOp BuildMatMul(xla::XlaOp lhs, xla::XlaOp rhs, xla::XlaOp bias) {
   xla::XlaOp dot = BuildDot(lhs, rhs);
   const xla::Shape& dot_shape = XlaHelpers::ShapeOfXlaOp(dot);
@@ -147,6 +250,19 @@ xla::XlaOp BuildMatMul(xla::XlaOp lhs, xla::XlaOp rhs, xla::XlaOp bias) {
     bias = BuildExpand(bias, dot_shape.dimensions());
   }
   return dot + bias;
+}
+
+xla::XlaOp BuildMatMulWithMultiplier(xla::XlaOp lhs, xla::XlaOp rhs,
+                                     xla::XlaOp bias,
+                                     xla::XlaOp product_multiplier,
+                                     xla::XlaOp bias_multiplier) {
+  xla::XlaOp product = CreateMatMul(lhs, rhs);
+  const xla::Shape& product_shape = XlaHelpers::ShapeOfXlaOp(product);
+  const xla::Shape& bias_shape = XlaHelpers::ShapeOfXlaOp(bias);
+  if (bias_shape.dimensions() != product_shape.dimensions()) {
+    bias = BuildExpand(bias, product_shape.dimensions());
+  }
+  return product_multiplier * product + bias_multiplier * bias;
 }
 
 xla::XlaOp BuildDot(xla::XlaOp lhs, xla::XlaOp rhs) {

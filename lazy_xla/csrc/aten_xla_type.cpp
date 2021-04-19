@@ -785,6 +785,38 @@ at::Tensor AtenXlaType::avg_pool3d_backward(
       count_include_pad));
 }
 
+at::Tensor AtenXlaType::baddbmm(const at::Tensor& self,
+                                const at::Tensor& batch1,
+                                const at::Tensor& batch2,
+                                const at::Scalar& beta,
+                                const at::Scalar& alpha) {
+  LTC_FN_COUNTER("xla::");
+  // xla::dot doesn't support integer types.
+  if (!at::native::is_floating_point(batch1) ||
+      !at::native::is_floating_point(batch2)) {
+    return AtenXlaTypeDefault::baddbmm(self, batch1, batch2, beta, alpha);
+  }
+  return bridge::AtenFromLtcTensor(LazyTensor::baddbmm(
+      bridge::GetLtcTensor(self), bridge::GetLtcTensor(batch1),
+      bridge::GetLtcTensor(batch2), beta, alpha));
+}
+
+at::Tensor& AtenXlaType::baddbmm_(at::Tensor& self, const at::Tensor& batch1,
+                                  const at::Tensor& batch2,
+                                  const at::Scalar& beta,
+                                  const at::Scalar& alpha) {
+  LTC_FN_COUNTER("xla::");
+  // xla::dot doesn't support integer types.
+  if (!at::native::is_floating_point(batch1) ||
+      !at::native::is_floating_point(batch2)) {
+    return AtenXlaTypeDefault::baddbmm_(self, batch1, batch2, beta, alpha);
+  }
+  LazyTensor self_tensor = bridge::GetLtcTensor(self);
+  LazyTensor::baddbmm_(self_tensor, bridge::GetLtcTensor(batch1),
+                       bridge::GetLtcTensor(batch2), beta, alpha);
+  return self;
+}
+
 at::Tensor AtenXlaType::atan2(const at::Tensor& self, const at::Tensor& other) {
   LTC_FN_COUNTER("xla::");
   // xla::Atan2 doesn't support integer types.
