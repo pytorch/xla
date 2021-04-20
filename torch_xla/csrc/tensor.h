@@ -415,8 +415,14 @@ class XLATensor {
   static XLATensor clamp(const XLATensor& input,
                          const c10::optional<at::Scalar>& min,
                          const c10::optional<at::Scalar>& max);
+  static XLATensor clamp(const XLATensor& input,
+                         const c10::optional<at::Tensor>& min,
+                         const c10::optional<at::Tensor>& max);
   static void clamp_(XLATensor& input, const c10::optional<at::Scalar>& min,
                      const c10::optional<at::Scalar>& max);
+  static void clamp_out(XLATensor& out, const XLATensor& input,
+                        const c10::optional<at::Tensor>& min,
+                        const c10::optional<at::Tensor>& max);
 
   static XLATensor clone(const XLATensor& input);
 

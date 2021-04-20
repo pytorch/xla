@@ -2595,6 +2595,25 @@ TEST_F(AtenXlaTensorTest, TestClampMinMax) {
     torch::Tensor xla_b = torch::clamp(xla_a, min_val, max_val);
     AllClose(b, xla_b);
   });
+  ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::clamp", cpp_test::GetIgnoredCounters());
+}
+
+TEST_F(AtenXlaTensorTest, TestClampMinMaxTensor) {
+  torch::Tensor a = torch::rand({2, 2}, torch::TensorOptions(torch::kFloat));
+  torch::Tensor min_tensor =
+      torch::rand({2, 2}, torch::TensorOptions(torch::kFloat));
+  torch::Tensor max_tensor = min_tensor + 0.1;
+  torch::Tensor b = torch::clamp(a, min_tensor, max_tensor);
+  ForEachDevice([&](const torch::Device& device) {
+    torch::Tensor xla_a = CopyToDevice(a, device);
+    torch::Tensor xla_min_tensor = CopyToDevice(min_tensor, device);
+    torch::Tensor xla_max_tensor = CopyToDevice(max_tensor, device);
+    torch::Tensor xla_b = torch::clamp(xla_a, xla_min_tensor, xla_max_tensor);
+    AllClose(b, xla_b);
+  });
+  ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::clamp", cpp_test::GetIgnoredCounters());
 }
 
 TEST_F(AtenXlaTensorTest, TestClampMin) {
@@ -2606,6 +2625,23 @@ TEST_F(AtenXlaTensorTest, TestClampMin) {
     torch::Tensor xla_b = torch::clamp(xla_a, min_val, c10::nullopt);
     AllClose(b, xla_b);
   });
+  ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::clamp", cpp_test::GetIgnoredCounters());
+}
+
+TEST_F(AtenXlaTensorTest, TestClampMinTensor) {
+  torch::Tensor a = torch::rand({2, 2}, torch::TensorOptions(torch::kFloat));
+  torch::Tensor min_tensor =
+      torch::rand({1, 2}, torch::TensorOptions(torch::kFloat));
+  torch::Tensor b = torch::clamp(a, min_tensor, c10::nullopt);
+  ForEachDevice([&](const torch::Device& device) {
+    torch::Tensor xla_a = CopyToDevice(a, device);
+    torch::Tensor xla_min_tensor = CopyToDevice(min_tensor, device);
+    torch::Tensor xla_b = torch::clamp(xla_a, xla_min_tensor, c10::nullopt);
+    AllClose(b, xla_b);
+  });
+  ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::clamp", cpp_test::GetIgnoredCounters());
 }
 
 TEST_F(AtenXlaTensorTest, TestClampMax) {
@@ -2617,6 +2653,23 @@ TEST_F(AtenXlaTensorTest, TestClampMax) {
     torch::Tensor xla_b = torch::clamp(xla_a, c10::nullopt, max_val);
     AllClose(b, xla_b);
   });
+  ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::clamp", cpp_test::GetIgnoredCounters());
+}
+
+TEST_F(AtenXlaTensorTest, TestClampMaxTensor) {
+  torch::Tensor a = torch::rand({2, 2}, torch::TensorOptions(torch::kFloat));
+  torch::Tensor max_tensor =
+      torch::rand({2, 1}, torch::TensorOptions(torch::kFloat));
+  torch::Tensor b = torch::clamp(a, c10::nullopt, max_tensor);
+  ForEachDevice([&](const torch::Device& device) {
+    torch::Tensor xla_a = CopyToDevice(a, device);
+    torch::Tensor xla_max_tensor = CopyToDevice(max_tensor, device);
+    torch::Tensor xla_b = torch::clamp(xla_a, c10::nullopt, xla_max_tensor);
+    AllClose(b, xla_b);
+  });
+  ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::clamp", cpp_test::GetIgnoredCounters());
 }
 
 TEST_F(AtenXlaTensorTest, TestClampMinExplicit) {
@@ -2628,6 +2681,23 @@ TEST_F(AtenXlaTensorTest, TestClampMinExplicit) {
     torch::Tensor xla_b = torch::clamp_min(xla_a, min_val);
     AllClose(b, xla_b);
   });
+  ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::clamp_min", cpp_test::GetIgnoredCounters());
+}
+
+TEST_F(AtenXlaTensorTest, TestClampMinTensorExplicit) {
+  torch::Tensor a = torch::rand({2, 2}, torch::TensorOptions(torch::kFloat));
+  torch::Tensor min_tensor =
+      torch::rand({1, 2}, torch::TensorOptions(torch::kFloat));
+  torch::Tensor b = torch::clamp_min(a, min_tensor);
+  ForEachDevice([&](const torch::Device& device) {
+    torch::Tensor xla_a = CopyToDevice(a, device);
+    torch::Tensor xla_min_tensor = CopyToDevice(min_tensor, device);
+    torch::Tensor xla_b = torch::clamp_min(xla_a, xla_min_tensor);
+    AllClose(b, xla_b);
+  });
+  ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::clamp_min_out", cpp_test::GetIgnoredCounters());
 }
 
 TEST_F(AtenXlaTensorTest, TestClampMaxExplicit) {
@@ -2639,6 +2709,23 @@ TEST_F(AtenXlaTensorTest, TestClampMaxExplicit) {
     torch::Tensor xla_b = torch::clamp_max(xla_a, max_val);
     AllClose(b, xla_b);
   });
+  ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::clamp_max", cpp_test::GetIgnoredCounters());
+}
+
+TEST_F(AtenXlaTensorTest, TestClampMaxTensorExplicit) {
+  torch::Tensor a = torch::rand({2, 2}, torch::TensorOptions(torch::kFloat));
+  torch::Tensor max_tensor =
+      torch::rand({1, 2}, torch::TensorOptions(torch::kFloat));
+  torch::Tensor b = torch::clamp_max(a, max_tensor);
+  ForEachDevice([&](const torch::Device& device) {
+    torch::Tensor xla_a = CopyToDevice(a, device);
+    torch::Tensor xla_max_tensor = CopyToDevice(max_tensor, device);
+    torch::Tensor xla_b = torch::clamp_max(xla_a, xla_max_tensor);
+    AllClose(b, xla_b);
+  });
+  ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::clamp_max_out", cpp_test::GetIgnoredCounters());
 }
 
 TEST_F(AtenXlaTensorTest, TestClampMinExplicitInPlace) {
@@ -2651,6 +2738,8 @@ TEST_F(AtenXlaTensorTest, TestClampMinExplicitInPlace) {
     AllClose(a, xla_a);
     AllClose(b, xla_b);
   });
+  ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::clamp_min_", cpp_test::GetIgnoredCounters());
 }
 
 TEST_F(AtenXlaTensorTest, TestClampMaxExplicitInPlace) {
@@ -2663,6 +2752,8 @@ TEST_F(AtenXlaTensorTest, TestClampMaxExplicitInPlace) {
     AllClose(a, xla_a);
     AllClose(b, xla_b);
   });
+  ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::clamp_max_", cpp_test::GetIgnoredCounters());
 }
 
 TEST_F(AtenXlaTensorTest, TestCeil) {

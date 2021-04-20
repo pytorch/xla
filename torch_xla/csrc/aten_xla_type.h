@@ -266,6 +266,10 @@ class AtenXlaType {
                           const c10::optional<at::Scalar>& min,
                           const c10::optional<at::Scalar>& max);
 
+  static at::Tensor clamp(const at::Tensor& self,
+                          const c10::optional<at::Tensor>& min,
+                          const c10::optional<at::Tensor>& max);
+
   static at::Tensor& clamp_(at::Tensor& self,
                             const c10::optional<at::Scalar>& min,
                             const c10::optional<at::Scalar>& max);
@@ -274,9 +278,15 @@ class AtenXlaType {
 
   static at::Tensor& clamp_max_(at::Tensor& self, const at::Scalar& max);
 
+  static at::Tensor& clamp_max_out(const at::Tensor& self,
+                                   const at::Tensor& max, at::Tensor& out);
+
   static at::Tensor clamp_min(const at::Tensor& self, const at::Scalar& min);
 
   static at::Tensor& clamp_min_(at::Tensor& self, const at::Scalar& min);
+
+  static at::Tensor& clamp_min_out(const at::Tensor& self,
+                                   const at::Tensor& min, at::Tensor& out);
 
   static at::Tensor clone(const at::Tensor& self,
                           c10::optional<at::MemoryFormat> memory_format);
