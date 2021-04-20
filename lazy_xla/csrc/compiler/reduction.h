@@ -1,15 +1,10 @@
 #pragma once
 
 #include "absl/types/span.h"
+#include "lazy_tensor_core/csrc/reduction.h"
 #include "tensorflow/compiler/xla/client/xla_builder.h"
 
 namespace torch_lazy_tensors {
-
-enum class ReductionMode {
-  kNone,
-  kMean,
-  kSum,
-};
 
 xla::XlaOp BuildBinaryCrossEntropy(xla::XlaOp input, xla::XlaOp target,
                                    const absl::optional<xla::XlaOp>& weight,

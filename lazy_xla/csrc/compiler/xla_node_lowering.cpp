@@ -12,6 +12,8 @@
 #include "lazy_tensor_core/csrc/ops/as_strided_view_update.h"
 #include "lazy_tensor_core/csrc/ops/avg_pool_nd.h"
 #include "lazy_tensor_core/csrc/ops/avg_pool_nd_backward.h"
+#include "lazy_tensor_core/csrc/ops/binary_cross_entropy.h"
+#include "lazy_tensor_core/csrc/ops/binary_cross_entropy_backward.h"
 #include "lazy_tensor_core/csrc/ops/bitwise_ir_ops.h"
 #include "lazy_tensor_core/csrc/ops/cast.h"
 #include "lazy_tensor_core/csrc/ops/constant.h"
@@ -194,6 +196,55 @@ lazy_tensors::Shape InferArgMin(const ir::ops::ArgMin* node) {
   };
   const ir::Output& input = node->operand(0);
   return ir::ops::InferOutputShape({input.shape()}, shape_fn);
+}
+
+lazy_tensors::Shape InferBinaryCrossEntropy(
+    const ir::ops::BinaryCrossEntropy* node) {
+  auto shape_fn = [node](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
+    absl::optional<xla::XlaOp> weight;
+    if (operands.size() > 2) {
+      weight = operands[2];
+    }
+    return BuildBinaryCrossEntropy(operands[0], operands[1], weight,
+                                   node->reduction());
+  };
+  const ir::Output& logits = node->operand(0);
+  const ir::Output& labels = node->operand(1);
+  absl::optional<ir::Output> weight;
+  if (node->operands().size() > 2) {
+    weight = node->operand(2);
+  }
+  std::vector<lazy_tensors::Shape> shapes;
+  for (auto& input :
+       xla::util::GetValuesVector<ir::Output>({logits, labels}, {&weight})) {
+    shapes.push_back(input.shape());
+  }
+  return ir::ops::InferOutputShape(shapes, shape_fn);
+}
+
+lazy_tensors::Shape InferBinaryCrossEntropyBackward(
+    const ir::ops::BinaryCrossEntropyBackward* node) {
+  auto shape_fn = [node](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
+    absl::optional<xla::XlaOp> weight;
+    if (operands.size() > 3) {
+      weight = operands[3];
+    }
+    return BuildBinaryCrossEntropyBackward(
+        operands[0], operands[1], operands[2], weight, node->reduction());
+  };
+  const ir::Output& grad_output = node->operand(0);
+  const ir::Output& logits = node->operand(1);
+  const ir::Output& labels = node->operand(2);
+  absl::optional<ir::Output> weight;
+  if (node->operands().size() > 3) {
+    weight = node->operand(3);
+  }
+  std::vector<lazy_tensors::Shape> shapes;
+  for (auto& input : xla::util::GetValuesVector<ir::Output>(
+           {grad_output, logits, labels}, {&weight})) {
+    shapes.push_back(input.shape());
+  }
+  return ir::ops::InferOutputShape(shapes, shape_fn);
 }
 
 lazy_tensors::Shape InferBaddBmm(const ir::Node* node) {
@@ -552,6 +603,8 @@ class XlaNodeLowering : public NodeLowering {
   DECLARE_UNARY_OP2(AmpUpdateScale);
   DECLARE_UNARY_OP2(ArgMax);
   DECLARE_UNARY_OP2(ArgMin);
+  DECLARE_UNARY_OP2(BinaryCrossEntropy);
+  DECLARE_UNARY_OP2(BinaryCrossEntropyBackward);
   DECLARE_UNARY_OP2(Constant);
   DECLARE_UNARY_OP2(ConstantPadNd);
   DECLARE_UNARY_OP2(Hardshrink);
@@ -708,6 +761,9 @@ XlaOpVector XlaNodeLowering::LowerToXla(const ir::Node* node) {
     HANDLE_GENERIC_OP2(AmpUpdateScale, at::aten::_amp_update_scale)
     HANDLE_GENERIC_OP2(ArgMax, at::aten::argmax)
     HANDLE_GENERIC_OP2(ArgMin, at::aten::argmin)
+    HANDLE_GENERIC_OP2(BinaryCrossEntropy, at::aten::binary_cross_entropy)
+    HANDLE_GENERIC_OP2(BinaryCrossEntropyBackward,
+                       at::aten::binary_cross_entropy_backward)
     case at::aten::max: {
       size_t arity = node->operands().size();
       if (arity == 2) {
@@ -1122,6 +1178,30 @@ XlaOpVector XlaNodeLowering::LowerArgMin(const ir::ops::ArgMin* node) {
                       node->keepdim())};
 }
 
+XlaOpVector XlaNodeLowering::LowerBinaryCrossEntropy(
+    const ir::ops::BinaryCrossEntropy* node) {
+  xla::XlaOp logits = loctx()->GetOutputOp(node->operand(0));
+  xla::XlaOp labels = loctx()->GetOutputOp(node->operand(1));
+  absl::optional<xla::XlaOp> weight;
+  if (node->operands().size() > 2) {
+    weight = loctx()->GetOutputOp(node->operand(2));
+  }
+  return {BuildBinaryCrossEntropy(logits, labels, weight, node->reduction())};
+}
+
+XlaOpVector XlaNodeLowering::LowerBinaryCrossEntropyBackward(
+    const ir::ops::BinaryCrossEntropyBackward* node) {
+  xla::XlaOp grad_output = loctx()->GetOutputOp(node->operand(0));
+  xla::XlaOp logits = loctx()->GetOutputOp(node->operand(1));
+  xla::XlaOp labels = loctx()->GetOutputOp(node->operand(2));
+  absl::optional<xla::XlaOp> weight;
+  if (node->operands().size() > 3) {
+    weight = loctx()->GetOutputOp(node->operand(3));
+  }
+  return {BuildBinaryCrossEntropyBackward(grad_output, logits, labels, weight,
+                                          node->reduction())};
+}
+
 XlaOpVector XlaNodeLowering::LowerMaxUnary(const ir::Node* node) {
   xla::XlaOp xla_input = loctx()->GetOutputOp(node->operand(0));
   const xla::Shape& input_shape = XlaHelpers::ShapeOfXlaOp(xla_input);
@@ -1502,6 +1582,15 @@ lazy_tensors::Shape XlaNodeLowering::Infer(const ir::Node* node) {
     }
     case at::aten::baddbmm: {
       return InferBaddBmm(node);
+    }
+    case at::aten::binary_cross_entropy: {
+      return InferBinaryCrossEntropy(ir::NodeCast<ir::ops::BinaryCrossEntropy>(
+          node, ir::OpKind(at::aten::binary_cross_entropy)));
+    }
+    case at::aten::binary_cross_entropy_backward: {
+      return InferBinaryCrossEntropyBackward(
+          ir::NodeCast<ir::ops::BinaryCrossEntropyBackward>(
+              node, ir::OpKind(at::aten::binary_cross_entropy_backward)));
     }
     case at::aten::__and__:
     case at::aten::__or__:

@@ -849,6 +849,40 @@ at::Tensor& AtenXlaType::bernoulli_(at::Tensor& self, const at::Tensor& p,
   return self;
 }
 
+at::Tensor AtenXlaType::binary_cross_entropy(
+    const at::Tensor& self, const at::Tensor& target,
+    const c10::optional<at::Tensor>& weight, int64_t reduction) {
+  LTC_FN_COUNTER("xla::");
+  LazyTensor self_tensor = bridge::GetLtcTensor(self);
+  LazyTensor weight_tensor =
+      bridge::GetOrCreateLtcTensor(weight, self_tensor.GetDevice());
+  return bridge::AtenFromLtcTensor(LazyTensor::binary_cross_entropy(
+      self_tensor, bridge::GetLtcTensor(target), weight_tensor, reduction));
+}
+
+at::Tensor AtenXlaType::binary_cross_entropy_backward(
+    const at::Tensor& grad_output, const at::Tensor& self,
+    const at::Tensor& target, const c10::optional<at::Tensor>& weight,
+    int64_t reduction) {
+  LTC_FN_COUNTER("xla::");
+  LazyTensor self_tensor = bridge::GetLtcTensor(self);
+  LazyTensor weight_tensor =
+      bridge::GetOrCreateLtcTensor(weight, self_tensor.GetDevice());
+  return bridge::AtenFromLtcTensor(LazyTensor::binary_cross_entropy_backward(
+      bridge::GetLtcTensor(grad_output), self_tensor,
+      bridge::GetLtcTensor(target), weight_tensor, reduction));
+}
+
+at::Tensor AtenXlaType::binary_cross_entropy_with_logits(
+    const at::Tensor& self, const at::Tensor& target,
+    const c10::optional<at::Tensor>& weight,
+    const c10::optional<at::Tensor>& pos_weight, int64_t reduction) {
+  LTC_FN_COUNTER("xla::");
+  return at::native::binary_cross_entropy_with_logits(
+      self, target, IsDefined(weight) ? *weight : at::Tensor(),
+      IsDefined(pos_weight) ? *pos_weight : at::Tensor(), reduction);
+}
+
 at::Tensor AtenXlaType::atan2(const at::Tensor& self, const at::Tensor& other) {
   LTC_FN_COUNTER("xla::");
   // xla::Atan2 doesn't support integer types.
