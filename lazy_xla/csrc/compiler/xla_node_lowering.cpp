@@ -493,6 +493,7 @@ class XlaNodeLowering : public NodeLowering {
   XlaOpVector LowerNotSupported(const ir::ops::NotSupported* node);
   DECLARE_UNARY_OP(Acos);
   DECLARE_UNARY_OP(Acosh);
+  DECLARE_UNARY_OP(Bernoulli);
   DECLARE_UNARY_OP(Cos);
   DECLARE_UNARY_OP(Cosh);
   DECLARE_UNARY_OP(Asin);
@@ -615,6 +616,7 @@ XlaOpVector XlaNodeLowering::LowerToXla(const ir::Node* node) {
     HANDLE_GENERIC_OP(Abs, at::aten::abs)
     HANDLE_GENERIC_OP(Acos, at::aten::acos)
     HANDLE_GENERIC_OP(Acosh, at::aten::acosh)
+    HANDLE_GENERIC_OP(Bernoulli, at::aten::bernoulli)
     HANDLE_GENERIC_OP(Cos, at::aten::cos)
     HANDLE_GENERIC_OP(Cosh, at::aten::cosh)
     HANDLE_GENERIC_OP(Asin, at::aten::asin)
@@ -781,6 +783,20 @@ XlaOpVector XlaNodeLowering::LowerToXla(const ir::Node* node) {
 
 #undef HANDLE_GENERIC_OP2
 #undef HANDLE_GENERIC_OP
+
+XlaOpVector XlaNodeLowering::LowerBernoulli(const ir::Node* node) {
+  xla::XlaOp probability = loctx()->GetOutputOp(node->operand(0));
+  xla::XlaOp rng_seed = loctx()->GetOutputOp(node->operand(1));
+  const xla::Shape& probability_shape =
+      compiler::XlaHelpers::ShapeOfXlaOp(probability);
+  xla::Shape bcast_shape = compiler::XlaHelpers::XlaShape(node->shape());
+  bcast_shape.set_element_type(probability_shape.element_type());
+  xla::XlaOp bcast_probability = XlaHelpers::ImplicitBroadcast(
+      probability, probability_shape, bcast_shape);
+  return {BuildBernoulli(
+      bcast_probability, rng_seed,
+      xla::ComputationClient::XlaPrimitiveType(node->shape().element_type()))};
+}
 
 XlaOpVector XlaNodeLowering::LowerAdd(const ir::Node* node) {
   LTC_CHECK_EQ(node->num_outputs(), 1);

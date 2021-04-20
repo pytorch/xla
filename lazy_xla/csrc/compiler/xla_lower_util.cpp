@@ -2,6 +2,7 @@
 
 #include "lazy_xla/csrc/compiler/data_ops.h"
 #include "lazy_xla/csrc/compiler/helpers.h"
+#include "lazy_xla/csrc/compiler/random.h"
 #include "tensorflow/compiler/xla/client/lib/arithmetic.h"
 #include "tensorflow/compiler/xla/client/lib/constants.h"
 #include "tensorflow/compiler/xla/xla_client/debug_macros.h"
@@ -269,6 +270,17 @@ xla::XlaOp BuildDot(xla::XlaOp lhs, xla::XlaOp rhs) {
   xla::PrecisionConfig precision_config =
       XlaHelpers::BuildPrecisionConfig(XlaHelpers::mat_mul_precision());
   return xla::Dot(lhs, rhs, &precision_config);
+}
+
+xla::XlaOp BuildBernoulli(xla::XlaOp probability, xla::XlaOp seed,
+                          xla::PrimitiveType type) {
+  const xla::Shape& probability_shape = XlaHelpers::ShapeOfXlaOp(probability);
+  xla::XlaOp zero =
+      xla::Zero(probability.builder(), probability_shape.element_type());
+  xla::XlaOp one =
+      xla::One(probability.builder(), probability_shape.element_type());
+  xla::XlaOp noise = RngUniform(seed, probability_shape, zero, one);
+  return xla::ConvertElementType(xla::Lt(noise, probability), type);
 }
 
 xla::XlaOp CreateScatter(const Device& device, xla::XlaOp input,

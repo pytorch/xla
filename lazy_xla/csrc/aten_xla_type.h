@@ -197,6 +197,13 @@ class AtenXlaType {
                               const at::Tensor& batch2, const at::Scalar& beta,
                               const at::Scalar& alpha);
 
+  static at::Tensor bernoulli(const at::Tensor& self,
+                              c10::optional<at::Generator> generator);
+  static at::Tensor& bernoulli_(at::Tensor& self, double p,
+                                c10::optional<at::Generator> generator);
+  static at::Tensor& bernoulli_(at::Tensor& self, const at::Tensor& p,
+                                c10::optional<at::Generator> generator);
+
   static at::Tensor& bitwise_and_out(const at::Tensor& self,
                                      const at::Tensor& other, at::Tensor& out);
 

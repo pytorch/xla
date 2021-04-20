@@ -19,6 +19,9 @@ xla::XlaOp BuildMatMulWithMultiplier(xla::XlaOp lhs, xla::XlaOp rhs,
 
 xla::XlaOp BuildDot(xla::XlaOp lhs, xla::XlaOp rhs);
 
+xla::XlaOp BuildBernoulli(xla::XlaOp probability, xla::XlaOp seed,
+                          xla::PrimitiveType type);
+
 using XlaOpCombiner = std::function<xla::XlaOp(xla::XlaOp, xla::XlaOp)>;
 
 struct ScatterOptions {
