@@ -2806,8 +2806,8 @@ at::Tensor AtenXlaType::replication_pad2d_backward(
       XlaHelpers::I64List(padding)));
 }
 
-at::Tensor& AtenXlaType::resize_(
-    at::Tensor& self, at::IntArrayRef size,
+const at::Tensor& AtenXlaType::resize_(
+    const at::Tensor& self, at::IntArrayRef size,
     c10::optional<at::MemoryFormat> /* memory_format */) {
   XLA_FN_COUNTER("xla::");
   XLATensor self_tensor = bridge::GetXlaTensor(self);
