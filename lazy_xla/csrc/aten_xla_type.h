@@ -154,6 +154,8 @@ class AtenXlaType {
 
   static at::Tensor asinh(const at::Tensor& self);
 
+  static at::Tensor& asinh_(at::Tensor& self);
+
   static at::Tensor atan(const at::Tensor& self);
 
   static at::Tensor atanh(const at::Tensor& self);
@@ -227,6 +229,8 @@ class AtenXlaType {
   static at::Tensor& bitwise_and_out(const at::Tensor& self,
                                      const at::Scalar& other, at::Tensor& out);
 
+  static at::Tensor& bitwise_not_out(const at::Tensor& self, at::Tensor& out);
+
   static at::Tensor& bitwise_or_out(const at::Tensor& self,
                                     const at::Tensor& other, at::Tensor& out);
 
@@ -239,9 +243,15 @@ class AtenXlaType {
   static at::Tensor& bitwise_xor_out(const at::Tensor& self,
                                      const at::Tensor& other, at::Tensor& out);
 
+  static at::Tensor bmm(const at::Tensor& self, const at::Tensor& mat2);
+
+  static at::Tensor cat(at::TensorList tensors, int64_t dim);
+
   static at::Tensor ceil(const at::Tensor& self);
 
   static at::Tensor& ceil_(at::Tensor& self);
+
+  static at::Tensor cholesky(const at::Tensor& self, bool upper);
 
   static at::Tensor clamp(const at::Tensor& self,
                           const c10::optional<at::Scalar>& min,

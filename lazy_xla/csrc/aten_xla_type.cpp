@@ -696,6 +696,13 @@ at::Tensor AtenXlaType::asinh(const at::Tensor& self) {
   return AtenXlaTypeDefault::asinh(self);
 }
 
+at::Tensor& AtenXlaType::asinh_(at::Tensor& self) {
+  LTC_FN_COUNTER("xla::");
+  LazyTensor self_tensor = bridge::GetLtcTensor(self);
+  LazyTensor::asinh_(self_tensor);
+  return self;
+}
+
 at::Tensor AtenXlaType::atan(const at::Tensor& self) {
   LTC_FN_COUNTER("xla::");
   return bridge::AtenFromLtcTensor(
@@ -946,6 +953,15 @@ at::Tensor& AtenXlaType::bitwise_and_out(const at::Tensor& self,
   return AtenXlaTypeDefault::bitwise_and_out(self, other, out);
 }
 
+at::Tensor& AtenXlaType::bitwise_not_out(const at::Tensor& self,
+                                         at::Tensor& out) {
+  LTC_FN_COUNTER("xla::");
+  LazyTensor out_tensor = bridge::GetLtcTensor(out);
+  LazyTensor self_tensor = bridge::GetLtcTensor(self);
+  LazyTensor::bitwise_not_out(out_tensor, self_tensor);
+  return out;
+}
+
 at::Tensor& AtenXlaType::bitwise_or_out(const at::Tensor& self,
                                         const at::Scalar& other,
                                         at::Tensor& out) {
@@ -988,6 +1004,23 @@ at::Tensor& AtenXlaType::bitwise_xor_out(const at::Tensor& self,
   return out;
 }
 
+at::Tensor AtenXlaType::bmm(const at::Tensor& self, const at::Tensor& mat2) {
+  LTC_FN_COUNTER("xla::");
+  // xla::dot doesn't support integer types.
+  if (!at::native::is_floating_point(self) ||
+      !at::native::is_floating_point(mat2)) {
+    return AtenXlaTypeDefault::bmm(self, mat2);
+  }
+  return bridge::AtenFromLtcTensor(
+      LazyTensor::bmm(bridge::GetLtcTensor(self), bridge::GetLtcTensor(mat2)));
+}
+
+at::Tensor AtenXlaType::cat(at::TensorList tensors, int64_t dim) {
+  LTC_FN_COUNTER("xla::");
+  return bridge::AtenFromLtcTensor(
+      LazyTensor::cat(bridge::GetLtcTensors(tensors), dim));
+}
+
 at::Tensor AtenXlaType::ceil(const at::Tensor& self) {
   LTC_FN_COUNTER("xla::");
   return bridge::AtenFromLtcTensor(
@@ -1002,6 +1035,12 @@ at::Tensor& AtenXlaType::ceil_(at::Tensor& self) {
     return self;
   }
   return AtenXlaTypeDefault::ceil_(self);
+}
+
+at::Tensor AtenXlaType::cholesky(const at::Tensor& self, bool upper) {
+  LTC_FN_COUNTER("xla::");
+  return bridge::AtenFromLtcTensor(
+      LazyTensor::cholesky(bridge::GetLtcTensor(self), upper));
 }
 
 at::Tensor AtenXlaType::clamp(const at::Tensor& self,

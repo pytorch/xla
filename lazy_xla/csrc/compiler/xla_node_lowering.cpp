@@ -16,6 +16,8 @@
 #include "lazy_tensor_core/csrc/ops/binary_cross_entropy_backward.h"
 #include "lazy_tensor_core/csrc/ops/bitwise_ir_ops.h"
 #include "lazy_tensor_core/csrc/ops/cast.h"
+#include "lazy_tensor_core/csrc/ops/cat.h"
+#include "lazy_tensor_core/csrc/ops/cholesky.h"
 #include "lazy_tensor_core/csrc/ops/constant.h"
 #include "lazy_tensor_core/csrc/ops/constant_pad_nd.h"
 #include "lazy_tensor_core/csrc/ops/device_data.h"
@@ -73,6 +75,7 @@
 #include "lazy_xla/csrc/compiler/xla_lowering_context.h"
 #include "tensorflow/compiler/xla/client/lib/constants.h"
 #include "tensorflow/compiler/xla/client/lib/math.h"
+#include "tensorflow/compiler/xla/client/lib/matrix.h"
 #include "tensorflow/compiler/xla/xla_client/computation_client.h"
 #include "tensorflow/compiler/xla/xla_client/util.h"
 
@@ -261,6 +264,27 @@ lazy_tensors::Shape InferBaddBmm(const ir::Node* node) {
       {lhs.shape(), rhs.shape(), bias.shape(), product_multiplier.shape(),
        bias_multiplier.shape()},
       shape_fn);
+}
+
+lazy_tensors::Shape InferCat(const ir::ops::Cat* node) {
+  auto shape_fn = [node](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
+    return BuildCat(operands, node->dim());
+  };
+  std::vector<lazy_tensors::Shape> shapes;
+  shapes.reserve(node->operands().size());
+  for (auto& value : node->operands()) {
+    shapes.push_back(value.shape());
+  }
+  return ir::ops::InferOutputShape(shapes, shape_fn);
+}
+
+lazy_tensors::Shape InferMatMul(const ir::Node* node) {
+  auto shape_fn = [](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
+    return CreateMatMul(operands[0], operands[1]);
+  };
+  const ir::Output& lhs = node->operand(0);
+  const ir::Output& rhs = node->operand(1);
+  return ir::ops::InferOutputShape({lhs.shape(), rhs.shape()}, shape_fn);
 }
 
 lazy_tensors::Shape InferBitwise(const ir::Node* node) {
@@ -590,6 +614,7 @@ class XlaNodeLowering : public NodeLowering {
   DECLARE_BINARY_OP(Ne);
   DECLARE_UNARY_OP(AddMatMul);
   DECLARE_UNARY_OP(BaddBmm);
+  DECLARE_UNARY_OP(MatMul);
   DECLARE_UNARY_OP(Clamp);
   DECLARE_UNARY_OP2(AdaptiveAvgPool2d);
   DECLARE_UNARY_OP2(AdaptiveAvgPool3d);
@@ -605,6 +630,8 @@ class XlaNodeLowering : public NodeLowering {
   DECLARE_UNARY_OP2(ArgMin);
   DECLARE_UNARY_OP2(BinaryCrossEntropy);
   DECLARE_UNARY_OP2(BinaryCrossEntropyBackward);
+  DECLARE_UNARY_OP2(Cat);
+  DECLARE_UNARY_OP2(Cholesky);
   DECLARE_UNARY_OP2(Constant);
   DECLARE_UNARY_OP2(ConstantPadNd);
   DECLARE_UNARY_OP2(Hardshrink);
@@ -714,6 +741,7 @@ XlaOpVector XlaNodeLowering::LowerToXla(const ir::Node* node) {
     HANDLE_GENERIC_OP(Ne, at::aten::ne)
     HANDLE_GENERIC_OP(AddMatMul, at::aten::addmm)
     HANDLE_GENERIC_OP(BaddBmm, at::aten::baddbmm)
+    HANDLE_GENERIC_OP(MatMul, at::aten::matmul)
     HANDLE_GENERIC_OP(Clamp, at::aten::clamp)
     HANDLE_GENERIC_OP2(AdaptiveAvgPool2d, at::aten::adaptive_avg_pool2d)
     HANDLE_GENERIC_OP2(AdaptiveAvgPool3d, at::aten::adaptive_avg_pool3d)
@@ -764,6 +792,8 @@ XlaOpVector XlaNodeLowering::LowerToXla(const ir::Node* node) {
     HANDLE_GENERIC_OP2(BinaryCrossEntropy, at::aten::binary_cross_entropy)
     HANDLE_GENERIC_OP2(BinaryCrossEntropyBackward,
                        at::aten::binary_cross_entropy_backward)
+    HANDLE_GENERIC_OP2(Cat, at::aten::cat)
+    HANDLE_GENERIC_OP2(Cholesky, at::aten::cholesky)
     case at::aten::max: {
       size_t arity = node->operands().size();
       if (arity == 2) {
@@ -1202,6 +1232,20 @@ XlaOpVector XlaNodeLowering::LowerBinaryCrossEntropyBackward(
                                           node->reduction())};
 }
 
+XlaOpVector XlaNodeLowering::LowerCat(const ir::ops::Cat* node) {
+  std::vector<xla::XlaOp> inputs;
+  for (auto& operand : node->operands()) {
+    inputs.push_back(loctx()->GetOutputOp(operand));
+  }
+  return {BuildCat(inputs, node->dim())};
+}
+
+XlaOpVector XlaNodeLowering::LowerCholesky(const ir::ops::Cholesky* node) {
+  xla::XlaOp input = loctx()->GetOutputOp(node->operand(0));
+  return {xla::Triangle(xla::Cholesky(input, /*lower=*/node->lower()),
+                        /*lower=*/node->lower())};
+}
+
 XlaOpVector XlaNodeLowering::LowerMaxUnary(const ir::Node* node) {
   xla::XlaOp xla_input = loctx()->GetOutputOp(node->operand(0));
   const xla::Shape& input_shape = XlaHelpers::ShapeOfXlaOp(xla_input);
@@ -1251,6 +1295,13 @@ XlaOpVector XlaNodeLowering::LowerBaddBmm(const ir::Node* node) {
   std::tie(lhs, rhs) = XlaHelpers::PromoteValues(lhs, rhs);
   return {BuildMatMulWithMultiplier(lhs, rhs, bias, product_multiplier,
                                     bias_multiplier)};
+}
+
+XlaOpVector XlaNodeLowering::LowerMatMul(const ir::Node* node) {
+  xla::XlaOp lhs = loctx()->GetOutputOp(node->operand(0));
+  xla::XlaOp rhs = loctx()->GetOutputOp(node->operand(1));
+  std::tie(lhs, rhs) = XlaHelpers::PromoteValues(lhs, rhs);
+  return {CreateMatMul(lhs, rhs)};
 }
 
 XlaOpVector XlaNodeLowering::LowerClamp(const ir::Node* node) {
@@ -1583,6 +1634,9 @@ lazy_tensors::Shape XlaNodeLowering::Infer(const ir::Node* node) {
     case at::aten::baddbmm: {
       return InferBaddBmm(node);
     }
+    case at::aten::matmul: {
+      return InferMatMul(node);
+    }
     case at::aten::binary_cross_entropy: {
       return InferBinaryCrossEntropy(ir::NodeCast<ir::ops::BinaryCrossEntropy>(
           node, ir::OpKind(at::aten::binary_cross_entropy)));
@@ -1591,6 +1645,10 @@ lazy_tensors::Shape XlaNodeLowering::Infer(const ir::Node* node) {
       return InferBinaryCrossEntropyBackward(
           ir::NodeCast<ir::ops::BinaryCrossEntropyBackward>(
               node, ir::OpKind(at::aten::binary_cross_entropy_backward)));
+    }
+    case at::aten::cat: {
+      return InferCat(
+          ir::NodeCast<ir::ops::Cat>(node, ir::OpKind(at::aten::cat)));
     }
     case at::aten::__and__:
     case at::aten::__or__:
