@@ -272,6 +272,9 @@ class AtenXlaType {
   static at::Tensor clone(const at::Tensor& self,
                           c10::optional<at::MemoryFormat> memory_format);
 
+  static at::Tensor constant_pad_nd(const at::Tensor& self, at::IntArrayRef pad,
+                                    const at::Scalar& value);
+
   static std::tuple<at::Tensor, at::Tensor, at::Tensor>
   convolution_backward_overrideable(
       const at::Tensor& grad_output, const at::Tensor& input,
@@ -292,6 +295,15 @@ class AtenXlaType {
   static at::Tensor cosh(const at::Tensor& self);
 
   static at::Tensor& cosh_(at::Tensor& self);
+
+  static at::Tensor cross(const at::Tensor& self, const at::Tensor& other,
+                          c10::optional<int64_t> dim);
+
+  static at::Tensor cumprod(const at::Tensor& self, int64_t dim,
+                            c10::optional<at::ScalarType> dtype);
+
+  static at::Tensor cumsum(const at::Tensor& self, int64_t dim,
+                           c10::optional<at::ScalarType> dtype);
 
   static at::Tensor diagonal(const at::Tensor& self, int64_t offset,
                              int64_t dim1, int64_t dim2);
@@ -635,6 +647,8 @@ class AtenXlaType {
   static at::Tensor& squeeze_(at::Tensor& self);
 
   static at::Tensor& squeeze_(at::Tensor& self, int64_t dim);
+
+  static at::Tensor stack(at::TensorList tensors, int64_t dim);
 
   static at::Tensor sub(const at::Tensor& self, const at::Tensor& other,
                         const at::Scalar& alpha);

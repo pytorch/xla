@@ -33,6 +33,9 @@ xla::XlaOp BuildExpand(xla::XlaOp input,
 // Insert a dimension of size one at the specified position.
 xla::XlaOp BuildUnsqueeze(xla::XlaOp input, xla::int64 dim);
 
+// Concatenates a list of tensors along a new dimension dim.
+xla::XlaOp BuildStack(absl::Span<const xla::XlaOp> inputs, xla::int64 dim);
+
 // Concatenates a list of tensors along an existing dimension specified by the
 // dim argument.
 xla::XlaOp BuildCat(absl::Span<const xla::XlaOp> inputs, xla::int64 dim);

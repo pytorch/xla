@@ -20,6 +20,8 @@
 #include "lazy_tensor_core/csrc/ops/cholesky.h"
 #include "lazy_tensor_core/csrc/ops/constant.h"
 #include "lazy_tensor_core/csrc/ops/constant_pad_nd.h"
+#include "lazy_tensor_core/csrc/ops/cumprod.h"
+#include "lazy_tensor_core/csrc/ops/cumsum.h"
 #include "lazy_tensor_core/csrc/ops/device_data.h"
 #include "lazy_tensor_core/csrc/ops/diagonal.h"
 #include "lazy_tensor_core/csrc/ops/diagonal_view_update.h"
@@ -50,6 +52,7 @@
 #include "lazy_tensor_core/csrc/ops/softshrink.h"
 #include "lazy_tensor_core/csrc/ops/split.h"
 #include "lazy_tensor_core/csrc/ops/squeeze.h"
+#include "lazy_tensor_core/csrc/ops/stack.h"
 #include "lazy_tensor_core/csrc/ops/threshold.h"
 #include "lazy_tensor_core/csrc/ops/threshold_backward.h"
 #include "lazy_tensor_core/csrc/ops/unselect.h"
@@ -61,6 +64,7 @@
 #include "lazy_tensor_core/csrc/ops/upsample_nearest2d_backward.h"
 #include "lazy_tensor_core/csrc/ops/view.h"
 #include "lazy_tensor_core/csrc/tensor_util.h"
+#include "lazy_tensors/shape_util.h"
 #include "lazy_xla/csrc/compiler/convert_ops.h"
 #include "lazy_xla/csrc/compiler/data_ops.h"
 #include "lazy_xla/csrc/compiler/elementwise.h"
@@ -330,6 +334,26 @@ lazy_tensors::Shape InferConstantPadNd(const ir::ops::ConstantPadNd* node) {
   return ir::ops::InferOutputShape({input.shape()}, shape_fn);
 }
 
+lazy_tensors::Shape InferCumProd(const ir::ops::CumProd* node) {
+  const ir::Output& input = node->operand(0);
+  auto dtype = node->dtype();
+  if (dtype) {
+    return lazy_tensors::ShapeUtil::ChangeElementType(
+        input.shape(), MakeLtcPrimitiveType(*dtype, /*device=*/nullptr));
+  }
+  return input.shape();
+}
+
+lazy_tensors::Shape InferCumSum(const ir::ops::CumSum* node) {
+  const ir::Output& input = node->operand(0);
+  auto dtype = node->dtype();
+  if (dtype) {
+    return lazy_tensors::ShapeUtil::ChangeElementType(
+        input.shape(), MakeLtcPrimitiveType(*dtype, /*device=*/nullptr));
+  }
+  return input.shape();
+}
+
 lazy_tensors::Shape InferExpand(const ir::ops::Expand* node) {
   auto shape_fn = [node](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
     return BuildExpand(operands[0], node->size());
@@ -364,6 +388,18 @@ lazy_tensors::Shape InferSqueeze(const ir::ops::Squeeze* node) {
   };
   const ir::Output& input = node->operand(0);
   return ir::ops::InferOutputShape({input.shape()}, shape_fn);
+}
+
+lazy_tensors::Shape InferStack(const ir::ops::Stack* node) {
+  auto shape_fn = [node](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
+    return BuildStack(operands, node->dim());
+  };
+  std::vector<lazy_tensors::Shape> shapes;
+  shapes.reserve(node->operands().size());
+  for (auto& value : node->operands()) {
+    shapes.push_back(value.shape());
+  }
+  return ir::ops::InferOutputShape(shapes, shape_fn);
 }
 
 lazy_tensors::Shape InferUpsampleBilinear(
@@ -634,6 +670,8 @@ class XlaNodeLowering : public NodeLowering {
   DECLARE_UNARY_OP2(Cholesky);
   DECLARE_UNARY_OP2(Constant);
   DECLARE_UNARY_OP2(ConstantPadNd);
+  DECLARE_UNARY_OP2(CumProd);
+  DECLARE_UNARY_OP2(CumSum);
   DECLARE_UNARY_OP2(Hardshrink);
   DECLARE_UNARY_OP2(HardtanhBackward);
   DECLARE_UNARY_OP2(LeakyRelu);
@@ -652,6 +690,7 @@ class XlaNodeLowering : public NodeLowering {
   DECLARE_UNARY_OP2(Split);
   DECLARE_UNARY_OP2(Squeeze);
   DECLARE_UNARY_OP2(ShrinkBackward);
+  DECLARE_UNARY_OP2(Stack);
   DECLARE_UNARY_OP2(Threshold);
   DECLARE_UNARY_OP2(ThresholdBackward);
   DECLARE_UNARY_OP2(Unsqueeze);
@@ -759,6 +798,8 @@ XlaOpVector XlaNodeLowering::LowerToXla(const ir::Node* node) {
     HANDLE_GENERIC_OP2(Hardshrink, at::aten::hardshrink)
     HANDLE_GENERIC_OP2(HardtanhBackward, at::aten::hardtanh_backward)
     HANDLE_GENERIC_OP2(ConstantPadNd, at::aten::constant_pad_nd)
+    HANDLE_GENERIC_OP2(CumProd, at::aten::cumprod)
+    HANDLE_GENERIC_OP2(CumSum, at::aten::cumsum)
     HANDLE_GENERIC_OP2(LeakyRelu, at::aten::leaky_relu)
     HANDLE_GENERIC_OP2(LeakyReluBackward, at::aten::leaky_relu_backward)
     HANDLE_GENERIC_OP2(LogBase, at::aten::log2)
@@ -773,6 +814,7 @@ XlaOpVector XlaNodeLowering::LowerToXla(const ir::Node* node) {
                        at::aten::rrelu_with_noise_backward)
     HANDLE_GENERIC_OP2(ShrinkBackward, at::aten::hardshrink_backward)
     HANDLE_GENERIC_OP2(ShrinkBackward, at::aten::softshrink_backward)
+    HANDLE_GENERIC_OP2(Stack, at::aten::stack)
     HANDLE_GENERIC_OP2(Softmax, at::aten::softmax)
     HANDLE_GENERIC_OP2(SoftmaxBackward, at::aten::_softmax_backward_data)
     HANDLE_GENERIC_OP2(Softshrink, at::aten::softshrink)
@@ -1450,6 +1492,14 @@ XlaOpVector XlaNodeLowering::LowerShrinkBackward(
   return {BuildShrinkBackward(grad_output, input, node->lambda())};
 }
 
+XlaOpVector XlaNodeLowering::LowerStack(const ir::ops::Stack* node) {
+  std::vector<xla::XlaOp> inputs;
+  for (auto& operand : node->operands()) {
+    inputs.push_back(loctx()->GetOutputOp(operand));
+  }
+  return {BuildStack(inputs, node->dim())};
+}
+
 XlaOpVector XlaNodeLowering::LowerThreshold(const ir::ops::Threshold* node) {
   LTC_CHECK_EQ(node->num_outputs(), 1);
   xla::XlaOp input = loctx()->GetOutputOp(node->operand(0));
@@ -1514,6 +1564,30 @@ XlaOpVector XlaNodeLowering::LowerConstantPadNd(
   LTC_CHECK_EQ(node->num_outputs(), 1);
   xla::XlaOp input = loctx()->GetOutputOp(node->operand(0));
   return {LowerPad(input, node->value(), node->pad())};
+}
+
+XlaOpVector XlaNodeLowering::LowerCumProd(const ir::ops::CumProd* node) {
+  xla::XlaOp input = loctx()->GetOutputOp(node->operand(0));
+  xla::XlaOp casted_input = CastToScalarType(input, node->dtype());
+  const xla::Shape& input_shape =
+      compiler::XlaHelpers::ShapeOfXlaOp(casted_input);
+  xla::XlaOp init =
+      xla::One(casted_input.builder(), input_shape.element_type());
+  xla::XlaComputation reducer =
+      compiler::XlaHelpers::CreateMulComputation(input_shape.element_type());
+  return {BuildCumulativeComputation(casted_input, node->dim(), reducer, init)};
+}
+
+XlaOpVector XlaNodeLowering::LowerCumSum(const ir::ops::CumSum* node) {
+  xla::XlaOp input = loctx()->GetOutputOp(node->operand(0));
+  xla::XlaOp casted_input = CastToScalarType(input, node->dtype());
+  const xla::Shape& input_shape =
+      compiler::XlaHelpers::ShapeOfXlaOp(casted_input);
+  xla::XlaOp init = compiler::XlaHelpers::ScalarValue<float>(
+      0, input_shape.element_type(), casted_input.builder());
+  xla::XlaComputation reducer =
+      compiler::XlaHelpers::CreateAddComputation(input_shape.element_type());
+  return {BuildCumulativeComputation(casted_input, node->dim(), reducer, init)};
 }
 
 XlaOpVector XlaNodeLowering::LowerHardshrink(const ir::ops::Hardshrink* node) {
@@ -1686,6 +1760,14 @@ lazy_tensors::Shape XlaNodeLowering::Infer(const ir::Node* node) {
       return InferConstantPadNd(ir::NodeCast<ir::ops::ConstantPadNd>(
           node, ir::OpKind(at::aten::constant_pad_nd)));
     }
+    case at::aten::cumprod: {
+      return InferCumProd(
+          ir::NodeCast<ir::ops::CumProd>(node, ir::OpKind(at::aten::cumprod)));
+    }
+    case at::aten::cumsum: {
+      return InferCumSum(
+          ir::NodeCast<ir::ops::CumSum>(node, ir::OpKind(at::aten::cumsum)));
+    }
     case at::aten::expand: {
       return InferExpand(
           ir::NodeCast<ir::ops::Expand>(node, ir::OpKind(at::aten::expand)));
@@ -1701,6 +1783,10 @@ lazy_tensors::Shape XlaNodeLowering::Infer(const ir::Node* node) {
     case at::aten::squeeze: {
       return InferSqueeze(
           ir::NodeCast<ir::ops::Squeeze>(node, ir::OpKind(at::aten::squeeze)));
+    }
+    case at::aten::stack: {
+      return InferStack(
+          ir::NodeCast<ir::ops::Stack>(node, ir::OpKind(at::aten::stack)));
     }
     case at::aten::upsample_bilinear2d: {
       return InferUpsampleBilinear(ir::NodeCast<ir::ops::UpsampleBilinear>(

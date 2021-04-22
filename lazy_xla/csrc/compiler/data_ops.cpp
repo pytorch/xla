@@ -83,6 +83,19 @@ xla::XlaOp BuildUnsqueeze(xla::XlaOp input, xla::int64 dim) {
   return compiler::XlaHelpers::DynamicReshape(input, dimensions);
 }
 
+xla::XlaOp BuildStack(absl::Span<const xla::XlaOp> inputs, xla::int64 dim) {
+  // Reshape inputs along the dim axis.
+  LTC_CHECK_GT(inputs.size(), 0);
+  std::vector<xla::XlaOp> reshaped_inputs;
+  for (size_t i = 0; i < inputs.size(); ++i) {
+    auto input_size = compiler::XlaHelpers::SizesOfXlaOp(inputs[i]);
+    input_size.insert(input_size.begin() + dim, 1);
+    reshaped_inputs.push_back(
+        compiler::XlaHelpers::DynamicReshape(inputs[i], input_size));
+  }
+  return xla::ConcatInDim(inputs[0].builder(), reshaped_inputs, dim);
+}
+
 xla::XlaOp BuildCat(absl::Span<const xla::XlaOp> inputs, xla::int64 dim) {
   LTC_CHECK_GT(inputs.size(), 0);
   return xla::ConcatInDim(inputs[0].builder(), inputs, dim);

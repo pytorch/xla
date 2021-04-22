@@ -46,6 +46,14 @@ at::ScalarType GetScalarTypeOrFloat(c10::optional<at::ScalarType> scalar_type) {
   return scalar_type ? *scalar_type : at::ScalarType::Float;
 }
 
+bool IsOperationOnType(const c10::optional<at::ScalarType>& opt_dtype,
+                       at::ScalarType tensor_type, at::ScalarType type) {
+  if (opt_dtype && *opt_dtype == type) {
+    return true;
+  }
+  return tensor_type == type;
+}
+
 void CheckSubOperandTypes(at::ScalarType type1, at::ScalarType type2) {
   LTC_CHECK(type1 != at::kBool || type2 != at::kBool)
       << "Subtraction, the `-` operator, with two bool tensors is not "
@@ -54,6 +62,14 @@ void CheckSubOperandTypes(at::ScalarType type1, at::ScalarType type2) {
       << "Subtraction, the `-` operator, with a bool tensor is not "
          "supported. If you are trying to invert a mask, use the `~` or "
          "`logical_not()` operator instead.";
+}
+
+c10::optional<at::ScalarType> PromoteIntegralType(
+    at::ScalarType src_dtype, const c10::optional<at::ScalarType>& opt_dtype) {
+  return opt_dtype.has_value()
+             ? opt_dtype.value()
+             : at::isIntegralType(src_dtype, /*includeBool=*/true) ? at::kLong
+                                                                   : opt_dtype;
 }
 
 std::pair<LazyTensor, LazyTensor> GetBinaryOperands(const at::Tensor& self,
@@ -1114,6 +1130,14 @@ at::Tensor AtenXlaType::clone(const at::Tensor& self,
       bridge::GetLtcDevice(self));
 }
 
+at::Tensor AtenXlaType::constant_pad_nd(const at::Tensor& self,
+                                        at::IntArrayRef pad,
+                                        const at::Scalar& value) {
+  LTC_FN_COUNTER("xla::");
+  return bridge::AtenFromLtcTensor(LazyTensor::constant_pad_nd(
+      bridge::GetLtcTensor(self), Helpers::I64List(pad), value));
+}
+
 std::tuple<at::Tensor, at::Tensor, at::Tensor>
 AtenXlaType::convolution_backward_overrideable(
     const at::Tensor& grad_output, const at::Tensor& input,
@@ -1282,6 +1306,40 @@ at::Tensor& AtenXlaType::cosh_(at::Tensor& self) {
     return self;
   }
   return AtenXlaTypeDefault::cosh_(self);
+}
+
+at::Tensor AtenXlaType::cross(const at::Tensor& self, const at::Tensor& other,
+                              c10::optional<int64_t> dim) {
+  LTC_FN_COUNTER("xla::");
+  return bridge::AtenFromLtcTensor(
+      LazyTensor::cross(bridge::GetLtcTensor(self), bridge::GetLtcTensor(other),
+                        Helpers::I64Optional(dim)));
+}
+
+at::Tensor AtenXlaType::cumprod(const at::Tensor& self, int64_t dim,
+                                c10::optional<at::ScalarType> dtype) {
+  LTC_FN_COUNTER("xla::");
+  LazyTensor self_tensor = bridge::GetLtcTensor(self);
+  c10::optional<at::ScalarType> promoted_dtype =
+      PromoteIntegralType(self_tensor.dtype(), dtype);
+  if (IsOperationOnType(promoted_dtype, self_tensor.dtype(),
+                        at::ScalarType::Long)) {
+    // XLA reduce-window does not support S64 mode.
+    return AtenXlaTypeDefault::cumprod(self, dim, dtype);
+  }
+  return bridge::AtenFromLtcTensor(
+      LazyTensor::cumprod(self_tensor, dim, promoted_dtype));
+}
+
+at::Tensor AtenXlaType::cumsum(const at::Tensor& self, int64_t dim,
+                               c10::optional<at::ScalarType> dtype) {
+  LTC_FN_COUNTER("xla::");
+  LazyTensor self_tensor = bridge::GetLtcTensor(self);
+  if (IsOperationOnType(dtype, self_tensor.dtype(), at::ScalarType::Long)) {
+    // XLA reduce-window does not support S64 mode.
+    return AtenXlaTypeDefault::cumsum(self, dim, dtype);
+  }
+  return bridge::AtenFromLtcTensor(LazyTensor::cumsum(self_tensor, dim, dtype));
 }
 
 at::Tensor AtenXlaType::diagonal(const at::Tensor& self, int64_t offset,
@@ -2545,6 +2603,12 @@ at::Tensor& AtenXlaType::squeeze_(at::Tensor& self, int64_t dim) {
     bridge::LtcUpdateTensors(xlatens_tensors, xlatens, xlatens_update_indices);
   }
   return self;
+}
+
+at::Tensor AtenXlaType::stack(at::TensorList tensors, int64_t dim) {
+  LTC_FN_COUNTER("xla::");
+  return bridge::AtenFromLtcTensor(
+      LazyTensor::stack(bridge::GetLtcTensors(tensors), dim));
 }
 
 at::Tensor AtenXlaType::sub(const at::Tensor& self, const at::Tensor& other,
