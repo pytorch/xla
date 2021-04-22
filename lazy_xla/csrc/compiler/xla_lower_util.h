@@ -10,6 +10,8 @@ xla::XlaOp PadToSize(xla::XlaOp input, absl::Span<const xla::int64> size,
 
 xla::XlaOp CreateMatMul(xla::XlaOp lhs, xla::XlaOp rhs);
 
+xla::XlaOp BuildGer(xla::XlaOp lhs, xla::XlaOp rhs);
+
 xla::XlaOp BuildMatMul(xla::XlaOp lhs, xla::XlaOp rhs, xla::XlaOp bias);
 
 xla::XlaOp BuildMatMulWithMultiplier(xla::XlaOp lhs, xla::XlaOp rhs,

@@ -372,6 +372,10 @@ class AtenXlaType {
 
   static at::Tensor& erfc_(at::Tensor& self);
 
+  static at::Tensor erfinv(const at::Tensor& self);
+
+  static at::Tensor& erfinv_(at::Tensor& self);
+
   static at::Tensor exp(const at::Tensor& self);
 
   static at::Tensor& exp_(at::Tensor& self);
@@ -383,6 +387,9 @@ class AtenXlaType {
 
   static at::Tensor& expm1_(at::Tensor& self);
 
+  static at::Tensor& exponential_(at::Tensor& self, double lambd,
+                                  c10::optional<at::Generator> generator);
+
   static at::Tensor& eye_out(int64_t n, at::Tensor& out);
 
   static at::Tensor& eye_out(int64_t n, int64_t m, at::Tensor& out);
@@ -390,6 +397,8 @@ class AtenXlaType {
   static at::Tensor& fill_(at::Tensor& self, const at::Scalar& value);
 
   static at::Tensor& fill_(at::Tensor& self, const at::Tensor& value);
+
+  static at::Tensor flip(const at::Tensor& self, at::IntArrayRef dims);
 
   static at::Tensor floor(const at::Tensor& self);
 
@@ -407,6 +416,9 @@ class AtenXlaType {
 
   static at::Tensor& frac_(at::Tensor& self);
 
+  static at::Tensor gather(const at::Tensor& self, int64_t dim,
+                           const at::Tensor& index, bool sparse_grad);
+
   static at::Tensor ge(const at::Tensor& self, const at::Scalar& other);
 
   static at::Tensor ge(const at::Tensor& self, const at::Tensor& other);
@@ -419,6 +431,8 @@ class AtenXlaType {
 
   static at::Tensor gelu_backward(const at::Tensor& grad,
                                   const at::Tensor& self);
+
+  static at::Tensor ger(const at::Tensor& self, const at::Tensor& vec2);
 
   static at::Tensor gt(const at::Tensor& self, const at::Scalar& other);
 
@@ -484,11 +498,15 @@ class AtenXlaType {
 
   static at::Tensor log10(const at::Tensor& self);
 
+  static at::Tensor& log10_(at::Tensor& self);
+
   static at::Tensor log1p(const at::Tensor& self);
 
   static at::Tensor& log1p_(at::Tensor& self);
 
   static at::Tensor log2(const at::Tensor& self);
+
+  static at::Tensor& log2_(at::Tensor& self);
 
   static at::Tensor& log_(at::Tensor& self);
 
@@ -669,6 +687,10 @@ class AtenXlaType {
   static at::Tensor sqrt(const at::Tensor& self);
 
   static at::Tensor& sqrt_(at::Tensor& self);
+
+  static at::Tensor squeeze(const at::Tensor& self);
+
+  static at::Tensor squeeze(const at::Tensor& self, int64_t dim);
 
   static at::Tensor& squeeze_(at::Tensor& self);
 

@@ -26,6 +26,8 @@
 #include "lazy_tensor_core/csrc/ops/diagonal.h"
 #include "lazy_tensor_core/csrc/ops/diagonal_view_update.h"
 #include "lazy_tensor_core/csrc/ops/expand.h"
+#include "lazy_tensor_core/csrc/ops/flip.h"
+#include "lazy_tensor_core/csrc/ops/gather.h"
 #include "lazy_tensor_core/csrc/ops/generic_slice.h"
 #include "lazy_tensor_core/csrc/ops/get_dimensions_size.h"
 #include "lazy_tensor_core/csrc/ops/hardshrink.h"
@@ -80,6 +82,7 @@
 #include "tensorflow/compiler/xla/client/lib/constants.h"
 #include "tensorflow/compiler/xla/client/lib/math.h"
 #include "tensorflow/compiler/xla/client/lib/matrix.h"
+#include "tensorflow/compiler/xla/client/lib/slicing.h"
 #include "tensorflow/compiler/xla/xla_client/computation_client.h"
 #include "tensorflow/compiler/xla/xla_client/util.h"
 
@@ -352,6 +355,26 @@ lazy_tensors::Shape InferCumSum(const ir::ops::CumSum* node) {
         input.shape(), MakeLtcPrimitiveType(*dtype, /*device=*/nullptr));
   }
   return input.shape();
+}
+
+lazy_tensors::Shape InferGather(const ir::ops::Gather* node) {
+  const ir::Output& input = node->operand(0);
+  const ir::Output& index = node->operand(1);
+  auto shape_fn = [node](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
+    return xla::TorchGather(
+        operands[0], operands[1], node->dim(),
+        IsSparseGather(operands[0], operands[1], node->dim()));
+  };
+  return ir::ops::InferOutputShape({input.shape(), index.shape()}, shape_fn);
+}
+
+lazy_tensors::Shape InferGer(const ir::Node* node) {
+  const ir::Output& input = node->operand(0);
+  const ir::Output& other = node->operand(1);
+  auto shape_fn = [](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
+    return BuildGer(operands[0], operands[1]);
+  };
+  return ir::ops::InferOutputShape({input.shape(), other.shape()}, shape_fn);
 }
 
 lazy_tensors::Shape InferExpand(const ir::ops::Expand* node) {
@@ -648,6 +671,7 @@ class XlaNodeLowering : public NodeLowering {
   DECLARE_BINARY_OP(Le);
   DECLARE_BINARY_OP(Lt);
   DECLARE_BINARY_OP(Ne);
+  DECLARE_BINARY_OP(Ger);
   DECLARE_UNARY_OP(AddMatMul);
   DECLARE_UNARY_OP(BaddBmm);
   DECLARE_UNARY_OP(MatMul);
@@ -673,6 +697,8 @@ class XlaNodeLowering : public NodeLowering {
   DECLARE_UNARY_OP2(ConstantPadNd);
   DECLARE_UNARY_OP2(CumProd);
   DECLARE_UNARY_OP2(CumSum);
+  DECLARE_UNARY_OP2(Flip);
+  DECLARE_UNARY_OP2(Gather);
   DECLARE_UNARY_OP2(Hardshrink);
   DECLARE_UNARY_OP2(HardtanhBackward);
   DECLARE_UNARY_OP2(LeakyRelu);
@@ -784,6 +810,7 @@ XlaOpVector XlaNodeLowering::LowerToXla(const ir::Node* node) {
     HANDLE_GENERIC_OP(MatMul, at::aten::matmul)
     HANDLE_GENERIC_OP(Clamp, at::aten::clamp)
     HANDLE_GENERIC_OP(Eye, at::aten::eye)
+    HANDLE_GENERIC_OP(Ger, at::aten::ger)
     HANDLE_GENERIC_OP2(AdaptiveAvgPool2d, at::aten::adaptive_avg_pool2d)
     HANDLE_GENERIC_OP2(AdaptiveAvgPool3d, at::aten::adaptive_avg_pool3d)
     HANDLE_GENERIC_OP(AdaptiveAvgPool2dBackward,
@@ -802,6 +829,8 @@ XlaOpVector XlaNodeLowering::LowerToXla(const ir::Node* node) {
     HANDLE_GENERIC_OP2(ConstantPadNd, at::aten::constant_pad_nd)
     HANDLE_GENERIC_OP2(CumProd, at::aten::cumprod)
     HANDLE_GENERIC_OP2(CumSum, at::aten::cumsum)
+    HANDLE_GENERIC_OP2(Flip, at::aten::flip)
+    HANDLE_GENERIC_OP2(Gather, at::aten::gather)
     HANDLE_GENERIC_OP2(LeakyRelu, at::aten::leaky_relu)
     HANDLE_GENERIC_OP2(LeakyReluBackward, at::aten::leaky_relu_backward)
     HANDLE_GENERIC_OP2(LogBase, at::aten::log2)
@@ -1372,6 +1401,12 @@ XlaOpVector XlaNodeLowering::LowerEye(const ir::Node* node) {
       lines, cols)};
 }
 
+XlaOpVector XlaNodeLowering::LowerGer(const ir::Node* node) {
+  xla::XlaOp input = loctx()->GetOutputOp(node->operand(0));
+  xla::XlaOp other = loctx()->GetOutputOp(node->operand(1));
+  return {BuildGer(input, other)};
+}
+
 XlaOpVector XlaNodeLowering::LowerLeakyRelu(const ir::ops::LeakyRelu* node) {
   LTC_CHECK_EQ(node->num_outputs(), 1);
   xla::XlaOp input = loctx()->GetOutputOp(node->operand(0));
@@ -1603,6 +1638,18 @@ XlaOpVector XlaNodeLowering::LowerCumSum(const ir::ops::CumSum* node) {
   return {BuildCumulativeComputation(casted_input, node->dim(), reducer, init)};
 }
 
+XlaOpVector XlaNodeLowering::LowerFlip(const ir::ops::Flip* node) {
+  xla::XlaOp input = loctx()->GetOutputOp(node->operand(0));
+  return {xla::Rev(input, node->dims())};
+}
+
+XlaOpVector XlaNodeLowering::LowerGather(const ir::ops::Gather* node) {
+  xla::XlaOp input = loctx()->GetOutputOp(node->operand(0));
+  xla::XlaOp index = loctx()->GetOutputOp(node->operand(1));
+  return {xla::TorchGather(input, index, node->dim(),
+                           IsSparseGather(input, index, node->dim()))};
+}
+
 XlaOpVector XlaNodeLowering::LowerHardshrink(const ir::ops::Hardshrink* node) {
   LTC_CHECK_EQ(node->num_outputs(), 1);
   xla::XlaOp input = loctx()->GetOutputOp(node->operand(0));
@@ -1780,6 +1827,13 @@ lazy_tensors::Shape XlaNodeLowering::Infer(const ir::Node* node) {
     case at::aten::cumsum: {
       return InferCumSum(
           ir::NodeCast<ir::ops::CumSum>(node, ir::OpKind(at::aten::cumsum)));
+    }
+    case at::aten::gather: {
+      return InferGather(
+          ir::NodeCast<ir::ops::Gather>(node, ir::OpKind(at::aten::gather)));
+    }
+    case at::aten::ger: {
+      return InferGer(node);
     }
     case at::aten::expand: {
       return InferExpand(
