@@ -729,6 +729,42 @@ at::Tensor AtenXlaType::atanh(const at::Tensor& self) {
   return AtenXlaTypeDefault::atanh(self);
 }
 
+at::Tensor AtenXlaType::atan2(const at::Tensor& self, const at::Tensor& other) {
+  LTC_FN_COUNTER("xla::");
+  // xla::Atan2 doesn't support integer types.
+  if (!self.is_floating_point() || !other.is_floating_point()) {
+    return AtenXlaTypeDefault::atan2(self, other);
+  }
+  return DoBinaryOp(self, other,
+                    [&](const LazyTensor& xself, const LazyTensor& xother,
+                        at::ScalarType dtype) {
+                      return LazyTensor::atan2(xself, xother, dtype);
+                    });
+}
+
+at::Tensor& AtenXlaType::atan2_(at::Tensor& self, const at::Tensor& other) {
+  LTC_FN_COUNTER("xla::");
+  // xla::Atan2 doesn't support integer types.
+  if (InPlaceMustUseNNC(self) == ExecutionKind::NNC &&
+      self.is_floating_point() && other.is_floating_point()) {
+    CheckBinaryOpTypePromotion(self, self, other);
+    LazyTensor self_tensor = bridge::GetLtcTensor(self);
+    LazyTensor::atan2_(self_tensor, bridge::GetLtcTensor(other));
+    return self;
+  }
+  return AtenXlaTypeDefault::atan2_(self, other);
+}
+
+at::Tensor& AtenXlaType::atan_(at::Tensor& self) {
+  if (InPlaceMustUseNNC(self) == ExecutionKind::NNC) {
+    LTC_FN_COUNTER("xla::");
+    LazyTensor self_tensor = bridge::GetLtcTensor(self);
+    LazyTensor::atan_(self_tensor);
+    return self;
+  }
+  return AtenXlaTypeDefault::atan_(self);
+}
+
 at::Tensor& AtenXlaType::atanh_(at::Tensor& self) {
   LTC_FN_COUNTER("xla::");
   LazyTensor self_tensor = bridge::GetLtcTensor(self);
@@ -904,42 +940,6 @@ at::Tensor AtenXlaType::binary_cross_entropy_with_logits(
   return at::native::binary_cross_entropy_with_logits(
       self, target, IsDefined(weight) ? *weight : at::Tensor(),
       IsDefined(pos_weight) ? *pos_weight : at::Tensor(), reduction);
-}
-
-at::Tensor AtenXlaType::atan2(const at::Tensor& self, const at::Tensor& other) {
-  LTC_FN_COUNTER("xla::");
-  // xla::Atan2 doesn't support integer types.
-  if (!self.is_floating_point() || !other.is_floating_point()) {
-    return AtenXlaTypeDefault::atan2(self, other);
-  }
-  return DoBinaryOp(self, other,
-                    [&](const LazyTensor& xself, const LazyTensor& xother,
-                        at::ScalarType dtype) {
-                      return LazyTensor::atan2(xself, xother, dtype);
-                    });
-}
-
-at::Tensor& AtenXlaType::atan2_(at::Tensor& self, const at::Tensor& other) {
-  LTC_FN_COUNTER("xla::");
-  // xla::Atan2 doesn't support integer types.
-  if (InPlaceMustUseNNC(self) == ExecutionKind::NNC &&
-      self.is_floating_point() && other.is_floating_point()) {
-    CheckBinaryOpTypePromotion(self, self, other);
-    LazyTensor self_tensor = bridge::GetLtcTensor(self);
-    LazyTensor::atan2_(self_tensor, bridge::GetLtcTensor(other));
-    return self;
-  }
-  return AtenXlaTypeDefault::atan2_(self, other);
-}
-
-at::Tensor& AtenXlaType::atan_(at::Tensor& self) {
-  if (InPlaceMustUseNNC(self) == ExecutionKind::NNC) {
-    LTC_FN_COUNTER("xla::");
-    LazyTensor self_tensor = bridge::GetLtcTensor(self);
-    LazyTensor::atan_(self_tensor);
-    return self;
-  }
-  return AtenXlaTypeDefault::atan_(self);
 }
 
 at::Tensor& AtenXlaType::bitwise_and_out(const at::Tensor& self,

@@ -160,6 +160,12 @@ class AtenXlaType {
 
   static at::Tensor atanh(const at::Tensor& self);
 
+  static at::Tensor atan2(const at::Tensor& self, const at::Tensor& other);
+
+  static at::Tensor& atan2_(at::Tensor& self, const at::Tensor& other);
+
+  static at::Tensor& atan_(at::Tensor& self);
+
   static at::Tensor& atanh_(at::Tensor& self);
 
   static at::Tensor avg_pool2d(const at::Tensor& self,
@@ -185,12 +191,6 @@ class AtenXlaType {
       at::IntArrayRef kernel_size, at::IntArrayRef stride,
       at::IntArrayRef padding, bool ceil_mode, bool count_include_pad,
       c10::optional<int64_t> divisor_override);
-
-  static at::Tensor atan2(const at::Tensor& self, const at::Tensor& other);
-
-  static at::Tensor& atan2_(at::Tensor& self, const at::Tensor& other);
-
-  static at::Tensor& atan_(at::Tensor& self);
 
   static at::Tensor baddbmm(const at::Tensor& self, const at::Tensor& batch1,
                             const at::Tensor& batch2, const at::Scalar& beta,
