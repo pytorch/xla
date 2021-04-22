@@ -117,7 +117,7 @@ Follow these steps to train a PyTorch model with a VM Image on a Cloud TPU:
     * Click **Create Instance**.
     * Make sure the compute VM is within the **same** zone as the TPU node you created or else performance will suffer, also ideally create a VM that has at least 16 cores (`n1-standard-16`) to not be VM compute/network bound.
     * In the **Boot disk** section, click **Change** to choose our PyTorch/XLA image.
-    * At the bottom of the **OS Images** tab select the **Debian GNU/Linux 9 Stretch + PyTorch/XLA** image.
+    * Select **Deep Learning on Linux** for the Operating System tab and select the **Debian GNU/Linux 9 Stretch + PyTorch/XLA** version.
     * Chose an appropriate dist size based on your dataset and click **Select**.
     * Click **Create** to create the instance.
 
