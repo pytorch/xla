@@ -305,6 +305,8 @@ class AtenXlaType {
   static at::Tensor cumsum(const at::Tensor& self, int64_t dim,
                            c10::optional<at::ScalarType> dtype);
 
+  static at::Tensor diag(const at::Tensor& self, int64_t diagonal);
+
   static at::Tensor diagonal(const at::Tensor& self, int64_t offset,
                              int64_t dim1, int64_t dim2);
 
@@ -322,6 +324,8 @@ class AtenXlaType {
 
   static at::Tensor& div_(at::Tensor& self, const at::Scalar& other);
 
+  static at::Tensor dot(const at::Tensor& self, const at::Tensor& tensor);
+
   static at::Tensor elu(const at::Tensor& self, const at::Scalar& alpha,
                         const at::Scalar& scale, const at::Scalar& input_scale);
 
@@ -334,6 +338,10 @@ class AtenXlaType {
                                  const at::Scalar& scale,
                                  const at::Scalar& input_scale, bool self,
                                  const at::Tensor& self_or_result);
+
+  static at::Tensor embedding(const at::Tensor& weight,
+                              const at::Tensor& indices, int64_t padding_idx,
+                              bool scale_grad_by_freq, bool sparse);
 
   static at::Tensor empty(at::IntArrayRef size,
                           c10::optional<at::ScalarType> dtype,
@@ -375,6 +383,10 @@ class AtenXlaType {
 
   static at::Tensor& expm1_(at::Tensor& self);
 
+  static at::Tensor& eye_out(int64_t n, at::Tensor& out);
+
+  static at::Tensor& eye_out(int64_t n, int64_t m, at::Tensor& out);
+
   static at::Tensor& fill_(at::Tensor& self, const at::Scalar& value);
 
   static at::Tensor& fill_(at::Tensor& self, const at::Tensor& value);
@@ -415,6 +427,20 @@ class AtenXlaType {
   static at::Tensor& gt_(at::Tensor& self, const at::Scalar& other);
 
   static at::Tensor& gt_(at::Tensor& self, const at::Tensor& other);
+
+  static at::Tensor hardshrink(const at::Tensor& self,
+                               const at::Scalar& lambda);
+
+  static at::Tensor hardshrink_backward(const at::Tensor& grad_out,
+                                        const at::Tensor& self,
+                                        const at::Scalar& lambda);
+
+  static at::Tensor hardsigmoid(const at::Tensor& self);
+
+  static at::Tensor& hardsigmoid_(at::Tensor& self);
+
+  static at::Tensor hardsigmoid_backward(const at::Tensor& grad_output,
+                                         const at::Tensor& self);
 
   static at::Tensor hardtanh(const at::Tensor& self, const at::Scalar& min_val,
                              const at::Scalar& max_val);

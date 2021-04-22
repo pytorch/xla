@@ -652,6 +652,7 @@ class XlaNodeLowering : public NodeLowering {
   DECLARE_UNARY_OP(BaddBmm);
   DECLARE_UNARY_OP(MatMul);
   DECLARE_UNARY_OP(Clamp);
+  DECLARE_UNARY_OP(Eye);
   DECLARE_UNARY_OP2(AdaptiveAvgPool2d);
   DECLARE_UNARY_OP2(AdaptiveAvgPool3d);
   DECLARE_UNARY_OP2(AvgPoolNd);
@@ -782,6 +783,7 @@ XlaOpVector XlaNodeLowering::LowerToXla(const ir::Node* node) {
     HANDLE_GENERIC_OP(BaddBmm, at::aten::baddbmm)
     HANDLE_GENERIC_OP(MatMul, at::aten::matmul)
     HANDLE_GENERIC_OP(Clamp, at::aten::clamp)
+    HANDLE_GENERIC_OP(Eye, at::aten::eye)
     HANDLE_GENERIC_OP2(AdaptiveAvgPool2d, at::aten::adaptive_avg_pool2d)
     HANDLE_GENERIC_OP2(AdaptiveAvgPool3d, at::aten::adaptive_avg_pool3d)
     HANDLE_GENERIC_OP(AdaptiveAvgPool2dBackward,
@@ -1357,6 +1359,17 @@ XlaOpVector XlaNodeLowering::LowerClamp(const ir::Node* node) {
   xla_max = ConvertTo(xla_max, XlaHelpers::TypeOfXlaOp(xla_max), input_type,
                       /*device=*/nullptr);
   return {xla::Clamp(xla_min, xla_input, xla_max)};
+}
+
+XlaOpVector XlaNodeLowering::LowerEye(const ir::Node* node) {
+  const lazy_tensors::Shape& output_shape = node->shape();
+  LTC_CHECK_EQ(output_shape.rank(), 2);
+  xla::int64 lines = output_shape.dimensions(0);
+  xla::int64 cols = output_shape.dimensions(1);
+  return {xla::IdentityMatrix(
+      loctx()->builder(),
+      xla::ComputationClient::XlaPrimitiveType(output_shape.element_type()),
+      lines, cols)};
 }
 
 XlaOpVector XlaNodeLowering::LowerLeakyRelu(const ir::ops::LeakyRelu* node) {

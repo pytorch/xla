@@ -1342,6 +1342,12 @@ at::Tensor AtenXlaType::cumsum(const at::Tensor& self, int64_t dim,
   return bridge::AtenFromLtcTensor(LazyTensor::cumsum(self_tensor, dim, dtype));
 }
 
+at::Tensor AtenXlaType::diag(const at::Tensor& self, int64_t diagonal) {
+  LTC_FN_COUNTER("xla::");
+  return bridge::AtenFromLtcTensor(
+      LazyTensor::diag(bridge::GetLtcTensor(self), diagonal));
+}
+
 at::Tensor AtenXlaType::diagonal(const at::Tensor& self, int64_t offset,
                                  int64_t dim1, int64_t dim2) {
   LTC_FN_COUNTER("xla::");
@@ -1404,6 +1410,21 @@ at::Tensor& AtenXlaType::div_(at::Tensor& self, const at::Scalar& other) {
   return AtenXlaTypeDefault::div_(self, other);
 }
 
+at::Tensor AtenXlaType::dot(const at::Tensor& self, const at::Tensor& tensor) {
+  LTC_FN_COUNTER("xla::");
+  LTC_CHECK_EQ(self.dim(), 1)
+      << "dot: Expected 1-D argument self, but got " << self.dim() << "-D";
+  LTC_CHECK_EQ(tensor.dim(), 1)
+      << "dot: Expected 1-D argument tensor, but got " << tensor.dim() << "-D";
+  // xla::dot doesn't support integer types.
+  if (!at::native::is_floating_point(self) ||
+      !at::native::is_floating_point(tensor)) {
+    return AtenXlaTypeDefault::dot(self, tensor);
+  }
+  return bridge::AtenFromLtcTensor(LazyTensor::matmul(
+      bridge::GetLtcTensor(self), bridge::GetLtcTensor(tensor)));
+}
+
 at::Tensor AtenXlaType::elu(const at::Tensor& self, const at::Scalar& alpha,
                             const at::Scalar& scale,
                             const at::Scalar& input_scale) {
@@ -1436,6 +1457,17 @@ at::Tensor AtenXlaType::elu_backward(const at::Tensor& grad_output,
   return bridge::AtenFromLtcTensor(LazyTensor::elu_backward(
       bridge::GetLtcTensor(grad_output), alpha, scale, input_scale,
       bridge::GetLtcTensor(self_or_result)));
+}
+
+at::Tensor AtenXlaType::embedding(const at::Tensor& weight,
+                                  const at::Tensor& indices,
+                                  int64_t padding_idx, bool scale_grad_by_freq,
+                                  bool sparse) {
+  LTC_FN_COUNTER("xla::");
+  // TODO: for now route to native, which dispatches supported XLA operations.
+  // We need to make use of the TPU embedding core here eventually.
+  return at::native::embedding(weight, indices, padding_idx, scale_grad_by_freq,
+                               sparse);
 }
 
 at::Tensor AtenXlaType::empty(at::IntArrayRef size,
@@ -1586,6 +1618,20 @@ at::Tensor& AtenXlaType::expm1_(at::Tensor& self) {
     return self;
   }
   return AtenXlaTypeDefault::expm1_(self);
+}
+
+at::Tensor& AtenXlaType::eye_out(int64_t n, at::Tensor& out) {
+  LTC_FN_COUNTER("xla::");
+  LazyTensor out_tensor = bridge::GetLtcTensor(out);
+  LazyTensor::eye_out(out_tensor, n, n);
+  return out;
+}
+
+at::Tensor& AtenXlaType::eye_out(int64_t n, int64_t m, at::Tensor& out) {
+  LTC_FN_COUNTER("xla::");
+  LazyTensor out_tensor = bridge::GetLtcTensor(out);
+  LazyTensor::eye_out(out_tensor, n, m);
+  return out;
 }
 
 at::Tensor& AtenXlaType::fill_(at::Tensor& self, const at::Scalar& value) {
@@ -1762,6 +1808,41 @@ at::Tensor& AtenXlaType::gt_(at::Tensor& self, const at::Tensor& other) {
     return self;
   }
   return AtenXlaTypeDefault::gt_(self, other);
+}
+
+at::Tensor AtenXlaType::hardshrink(const at::Tensor& self,
+                                   const at::Scalar& lambda) {
+  LTC_FN_COUNTER("xla::");
+  return bridge::AtenFromLtcTensor(
+      LazyTensor::hardshrink(bridge::GetLtcTensor(self), lambda));
+}
+
+at::Tensor AtenXlaType::hardsigmoid(const at::Tensor& self) {
+  LTC_FN_COUNTER("xla::");
+  return bridge::AtenFromLtcTensor(
+      LazyTensor::hardsigmoid(bridge::GetLtcTensor(self)));
+}
+
+at::Tensor& AtenXlaType::hardsigmoid_(at::Tensor& self) {
+  LTC_FN_COUNTER("xla::");
+  LazyTensor self_tensor = bridge::GetLtcTensor(self);
+  LazyTensor::hardsigmoid_(self_tensor);
+  return self;
+}
+
+at::Tensor AtenXlaType::hardsigmoid_backward(const at::Tensor& grad_output,
+                                             const at::Tensor& self) {
+  LTC_FN_COUNTER("xla::");
+  return bridge::AtenFromLtcTensor(LazyTensor::hardsigmoid_backward(
+      bridge::GetLtcTensor(grad_output), bridge::GetLtcTensor(self)));
+}
+
+at::Tensor AtenXlaType::hardshrink_backward(const at::Tensor& grad_out,
+                                            const at::Tensor& self,
+                                            const at::Scalar& lambda) {
+  LTC_FN_COUNTER("xla::");
+  return bridge::AtenFromLtcTensor(LazyTensor::hardshrink_backward(
+      bridge::GetLtcTensor(grad_out), bridge::GetLtcTensor(self), lambda));
 }
 
 at::Tensor AtenXlaType::hardtanh(const at::Tensor& self,
