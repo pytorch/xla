@@ -4,7 +4,8 @@ SUPPORTED_MODELS = [
     'alexnet', 'densenet121', 'densenet161', 'densenet169', 'densenet201',
     'inception_v3', 'resnet101', 'resnet152', 'resnet18', 'resnet34',
     'resnet50', 'squeezenet1_0', 'squeezenet1_1', 'vgg11', 'vgg11_bn', 'vgg13',
-    'vgg13_bn', 'vgg16', 'vgg16_bn', 'vgg19', 'vgg19_bn'
+    'vgg13_bn', 'vgg16', 'vgg16_bn', 'vgg19', 'vgg19_bn', 'resnext50_32x4d',
+    'resnext101_32x8d',
 ]
 
 MODEL_OPTS = {
