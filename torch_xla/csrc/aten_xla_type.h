@@ -153,9 +153,10 @@ class AtenXlaType {
                                at::IntArrayRef stride,
                                c10::optional<int64_t> storage_offset);
 
-  static at::Tensor& as_strided_(at::Tensor& self, at::IntArrayRef size,
-                                 at::IntArrayRef stride,
-                                 c10::optional<int64_t> storage_offset);
+  static const at::Tensor& as_strided_(const at::Tensor& self,
+                                       at::IntArrayRef size,
+                                       at::IntArrayRef stride,
+                                       c10::optional<int64_t> storage_offset);
 
   static at::Tensor asin(const at::Tensor& self);
 
