@@ -2368,6 +2368,25 @@ at::Tensor& AtenXlaType::pow_(at::Tensor& self, const at::Tensor& exponent) {
   return AtenXlaTypeDefault::pow_(self, exponent);
 }
 
+at::Tensor AtenXlaType::prod(const at::Tensor& self,
+                             c10::optional<at::ScalarType> dtype) {
+  LTC_FN_COUNTER("xla::");
+  LazyTensor self_tensor = bridge::GetLtcTensor(self);
+  return bridge::AtenFromLtcTensor(LazyTensor::prod(
+      self_tensor,
+      xla::util::Iota<xla::int64>(self_tensor.shape().get().rank()),
+      /*keep_reduced_dimensions=*/false,
+      PromoteIntegralType(self.scalar_type(), dtype)));
+}
+
+at::Tensor AtenXlaType::prod(const at::Tensor& self, int64_t dim, bool keepdim,
+                             c10::optional<at::ScalarType> dtype) {
+  LTC_FN_COUNTER("xla::");
+  return bridge::AtenFromLtcTensor(
+      LazyTensor::prod(bridge::GetLtcTensor(self), {dim}, keepdim,
+                       PromoteIntegralType(self.scalar_type(), dtype)));
+}
+
 at::Tensor AtenXlaType::reciprocal(const at::Tensor& self) {
   LTC_FN_COUNTER("xla::");
   return bridge::AtenFromLtcTensor(
@@ -2382,6 +2401,22 @@ at::Tensor& AtenXlaType::reciprocal_(at::Tensor& self) {
     return self;
   }
   return AtenXlaTypeDefault::reciprocal_(self);
+}
+
+at::Tensor AtenXlaType::reflection_pad2d(const at::Tensor& self,
+                                         at::IntArrayRef padding) {
+  LTC_FN_COUNTER("xla::");
+  return bridge::AtenFromLtcTensor(LazyTensor::reflection_pad2d(
+      bridge::GetLtcTensor(self), xla::util::ToVector<xla::int64>(padding)));
+}
+
+at::Tensor AtenXlaType::reflection_pad2d_backward(const at::Tensor& grad_output,
+                                                  const at::Tensor& self,
+                                                  at::IntArrayRef padding) {
+  LTC_FN_COUNTER("xla::");
+  return bridge::AtenFromLtcTensor(LazyTensor::reflection_pad2d_backward(
+      bridge::GetLtcTensor(grad_output), bridge::GetLtcTensor(self),
+      xla::util::ToVector<xla::int64>(padding)));
 }
 
 at::Tensor AtenXlaType::relu(const at::Tensor& self) {
@@ -2440,6 +2475,38 @@ at::Tensor& AtenXlaType::remainder_(at::Tensor& self, const at::Scalar& other) {
 at::Tensor AtenXlaType::repeat(const at::Tensor& self,
                                at::IntArrayRef repeats) {
   return AtenXlaTypeDefault::repeat(self, repeats);
+}
+
+at::Tensor AtenXlaType::replication_pad1d(const at::Tensor& self,
+                                          at::IntArrayRef padding) {
+  LTC_FN_COUNTER("xla::");
+  return bridge::AtenFromLtcTensor(LazyTensor::replication_pad1d(
+      bridge::GetLtcTensor(self), Helpers::I64List(padding)));
+}
+
+at::Tensor AtenXlaType::replication_pad1d_backward(
+    const at::Tensor& grad_output, const at::Tensor& self,
+    at::IntArrayRef padding) {
+  LTC_FN_COUNTER("xla::");
+  return bridge::AtenFromLtcTensor(LazyTensor::replication_pad1d_backward(
+      bridge::GetLtcTensor(grad_output), bridge::GetLtcTensor(self),
+      Helpers::I64List(padding)));
+}
+
+at::Tensor AtenXlaType::replication_pad2d(const at::Tensor& self,
+                                          at::IntArrayRef padding) {
+  LTC_FN_COUNTER("xla::");
+  return bridge::AtenFromLtcTensor(LazyTensor::replication_pad2d(
+      bridge::GetLtcTensor(self), Helpers::I64List(padding)));
+}
+
+at::Tensor AtenXlaType::replication_pad2d_backward(
+    const at::Tensor& grad_output, const at::Tensor& self,
+    at::IntArrayRef padding) {
+  LTC_FN_COUNTER("xla::");
+  return bridge::AtenFromLtcTensor(LazyTensor::replication_pad2d_backward(
+      bridge::GetLtcTensor(grad_output), bridge::GetLtcTensor(self),
+      Helpers::I64List(padding)));
 }
 
 at::Tensor& AtenXlaType::resize_(
@@ -2955,6 +3022,19 @@ at::Tensor& AtenXlaType::trunc_(at::Tensor& self) {
     return self;
   }
   return AtenXlaTypeDefault::trunc_(self);
+}
+
+at::Tensor AtenXlaType::unsqueeze(const at::Tensor& self, int64_t dim) {
+  LTC_FN_COUNTER("xla::");
+  return bridge::AtenFromLtcTensor(
+      LazyTensor::unsqueeze(bridge::GetLtcTensor(self), dim));
+}
+
+at::Tensor& AtenXlaType::unsqueeze_(at::Tensor& self, int64_t dim) {
+  LTC_FN_COUNTER("xla::");
+  LazyTensor self_tensor = bridge::GetLtcTensor(self);
+  LazyTensor::unsqueeze_(self_tensor, dim);
+  return self;
 }
 
 at::Tensor AtenXlaType::view(const at::Tensor& self, at::IntArrayRef size) {

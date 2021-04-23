@@ -595,9 +595,22 @@ class AtenXlaType {
 
   static at::Tensor& pow_(at::Tensor& self, const at::Tensor& exponent);
 
+  static at::Tensor prod(const at::Tensor& self,
+                         c10::optional<at::ScalarType> dtype);
+
+  static at::Tensor prod(const at::Tensor& self, int64_t dim, bool keepdim,
+                         c10::optional<at::ScalarType> dtype);
+
   static at::Tensor reciprocal(const at::Tensor& self);
 
   static at::Tensor& reciprocal_(at::Tensor& self);
+
+  static at::Tensor reflection_pad2d(const at::Tensor& self,
+                                     at::IntArrayRef padding);
+
+  static at::Tensor reflection_pad2d_backward(const at::Tensor& grad_output,
+                                              const at::Tensor& self,
+                                              at::IntArrayRef padding);
 
   static at::Tensor relu(const at::Tensor& self);
 
@@ -612,6 +625,18 @@ class AtenXlaType {
   static at::Tensor& remainder_(at::Tensor& self, const at::Scalar& other);
 
   static at::Tensor repeat(const at::Tensor& self, at::IntArrayRef repeats);
+
+  static at::Tensor replication_pad1d(const at::Tensor& self,
+                                      at::IntArrayRef padding);
+  static at::Tensor replication_pad1d_backward(const at::Tensor& grad_output,
+                                               const at::Tensor& self,
+                                               at::IntArrayRef padding);
+
+  static at::Tensor replication_pad2d(const at::Tensor& self,
+                                      at::IntArrayRef padding);
+  static at::Tensor replication_pad2d_backward(const at::Tensor& grad_output,
+                                               const at::Tensor& self,
+                                               at::IntArrayRef padding);
 
   static at::Tensor& resize_(at::Tensor& self, at::IntArrayRef size,
                              c10::optional<at::MemoryFormat> memory_format);
@@ -744,6 +769,10 @@ class AtenXlaType {
   static at::Tensor trunc(const at::Tensor& self);
 
   static at::Tensor& trunc_(at::Tensor& self);
+
+  static at::Tensor unsqueeze(const at::Tensor& self, int64_t dim);
+
+  static at::Tensor& unsqueeze_(at::Tensor& self, int64_t dim);
 
   static at::Tensor view(const at::Tensor& self, at::IntArrayRef size);
 

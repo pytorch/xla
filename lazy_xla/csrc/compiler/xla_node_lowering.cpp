@@ -43,6 +43,11 @@
 #include "lazy_tensor_core/csrc/ops/not_supported.h"
 #include "lazy_tensor_core/csrc/ops/ops.h"
 #include "lazy_tensor_core/csrc/ops/permute.h"
+#include "lazy_tensor_core/csrc/ops/prod.h"
+#include "lazy_tensor_core/csrc/ops/reflection_pad2d.h"
+#include "lazy_tensor_core/csrc/ops/reflection_pad2d_backward.h"
+#include "lazy_tensor_core/csrc/ops/replication_pad.h"
+#include "lazy_tensor_core/csrc/ops/replication_pad_backward.h"
 #include "lazy_tensor_core/csrc/ops/resize.h"
 #include "lazy_tensor_core/csrc/ops/rrelu_with_noise.h"
 #include "lazy_tensor_core/csrc/ops/rrelu_with_noise_backward.h"
@@ -77,6 +82,7 @@
 #include "lazy_xla/csrc/compiler/reduction.h"
 #include "lazy_xla/csrc/compiler/resize_ops.h"
 #include "lazy_xla/csrc/compiler/softmax_builder.h"
+#include "lazy_xla/csrc/compiler/tensor_util.h"
 #include "lazy_xla/csrc/compiler/xla_lower_util.h"
 #include "lazy_xla/csrc/compiler/xla_lowering_context.h"
 #include "tensorflow/compiler/xla/client/lib/constants.h"
@@ -147,6 +153,24 @@ xla::XlaOp LowerPad(xla::XlaOp input, const at::Scalar& value,
                                           input.builder()),
                   torch_lazy_tensors::compiler::XlaHelpers::
                       MakeXlaPaddingConfigFromNdPadding(pad));
+}
+
+xla::XlaOp LowerProd(xla::XlaOp input,
+                     const std::vector<xla::int64>& dimensions,
+                     bool keep_reduced_dimensions,
+                     c10::optional<at::ScalarType> dtype) {
+  xla::XlaOp casted_input;
+  if (dtype) {
+    casted_input =
+        ConvertTo(input, compiler::XlaHelpers::TypeOfXlaOp(input),
+                  torch_lazy_tensors::xla_backend::MakeXlaPrimitiveType(
+                      *dtype, /*device=*/nullptr),
+                  /*device=*/nullptr);
+  } else {
+    casted_input =
+        ConvertToNumeric(input, compiler::XlaHelpers::TypeOfXlaOp(input));
+  }
+  return BuildProd(casted_input, dimensions, keep_reduced_dimensions);
 }
 
 xla::XlaOp LowerSqueeze(xla::XlaOp input, int dim) {
@@ -392,6 +416,55 @@ lazy_tensors::Shape InferPermute(const ir::ops::Permute* node) {
   };
   const ir::Output& input = node->operand(0);
   return ir::ops::InferOutputShape({input.shape()}, shape_fn);
+}
+
+lazy_tensors::Shape InferProd(const ir::ops::Prod* node) {
+  auto shape_fn = [node](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
+    return LowerProd(operands[0], node->dimensions(),
+                     node->keep_reduced_dimensions(), node->dtype());
+  };
+  const ir::Output& input = node->operand(0);
+  return ir::ops::InferOutputShape({input.shape()}, shape_fn);
+}
+
+lazy_tensors::Shape InferReflectionPad2d(const ir::ops::ReflectionPad2d* node) {
+  auto shape_fn = [node](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
+    return BuildReflectionPad2d(operands[0], node->padding());
+  };
+  const ir::Output& input = node->operand(0);
+  return ir::ops::InferOutputShape({input.shape()}, shape_fn);
+}
+
+lazy_tensors::Shape InferReflectionPad2dBackward(
+    const ir::ops::ReflectionPad2dBackward* node) {
+  auto shape_fn = [node](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
+    return BuildReflectionPadBackward(operands[0], operands[1],
+                                      node->padding());
+  };
+  const ir::Output& grad_output = node->operand(0);
+  const ir::Output& input = node->operand(1);
+  return ir::ops::InferOutputShape({grad_output.shape(), input.shape()},
+                                   shape_fn);
+}
+
+lazy_tensors::Shape InferReplicationPad(const ir::ops::ReplicationPad* node) {
+  auto shape_fn = [node](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
+    return BuildReplicationPad(operands[0], node->padding());
+  };
+  const ir::Output& input = node->operand(0);
+  return ir::ops::InferOutputShape({input.shape()}, shape_fn);
+}
+
+lazy_tensors::Shape InferReplicationPadBackward(
+    const ir::ops::ReplicationPadBackward* node) {
+  auto shape_fn = [node](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
+    return BuildReplicationPadBackward(operands[0], operands[1],
+                                       node->padding());
+  };
+  const ir::Output& grad_output = node->operand(0);
+  const ir::Output& input = node->operand(1);
+  return ir::ops::InferOutputShape({grad_output.shape(), input.shape()},
+                                   shape_fn);
 }
 
 lazy_tensors::Shape InferSplit(const ir::ops::Split* node) {
@@ -708,6 +781,11 @@ class XlaNodeLowering : public NodeLowering {
   DECLARE_UNARY_OP2(LogSoftmaxBackward);
   DECLARE_UNARY_OP2(MaskedFill);
   DECLARE_UNARY_OP2(Permute);
+  DECLARE_UNARY_OP2(Prod);
+  DECLARE_UNARY_OP2(ReflectionPad2d);
+  DECLARE_UNARY_OP2(ReflectionPad2dBackward);
+  DECLARE_UNARY_OP2(ReplicationPad);
+  DECLARE_UNARY_OP2(ReplicationPadBackward);
   DECLARE_UNARY_OP2(Resize);
   DECLARE_UNARY_OP2(RreluWithNoise);
   DECLARE_UNARY_OP2(RreluWithNoiseBackward);
@@ -839,6 +917,10 @@ XlaOpVector XlaNodeLowering::LowerToXla(const ir::Node* node) {
     HANDLE_GENERIC_OP2(LogSoftmaxBackward, at::aten::_log_softmax_backward_data)
     HANDLE_GENERIC_OP2(MaskedFill, at::aten::masked_fill)
     HANDLE_GENERIC_OP2(Permute, at::aten::permute)
+    HANDLE_GENERIC_OP2(Prod, at::aten::prod)
+    HANDLE_GENERIC_OP2(ReflectionPad2d, at::aten::reflection_pad2d)
+    HANDLE_GENERIC_OP2(ReflectionPad2dBackward,
+                       at::aten::reflection_pad2d_backward)
     HANDLE_GENERIC_OP2(Resize, at::aten::resize)
     HANDLE_GENERIC_OP2(RreluWithNoise, at::aten::rrelu_with_noise)
     HANDLE_GENERIC_OP2(RreluWithNoiseBackward,
@@ -929,6 +1011,15 @@ XlaOpVector XlaNodeLowering::LowerToXla(const ir::Node* node) {
         return LowerLinearInterpolation(
             ir::NodeCast<ir::ops::LinearInterpolation>(
                 node, *ir::ops::ltc_moving_average));
+      }
+      if (node->op() == *ir::ops::ltc_replication_pad) {
+        return LowerReplicationPad(ir::NodeCast<ir::ops::ReplicationPad>(
+            node, *ir::ops::ltc_replication_pad));
+      }
+      if (node->op() == *ir::ops::ltc_replication_pad_backward) {
+        return LowerReplicationPadBackward(
+            ir::NodeCast<ir::ops::ReplicationPadBackward>(
+                node, *ir::ops::ltc_replication_pad_backward));
       }
       if (node->op() == *ir::ops::ltc_not_supported) {
         return LowerNotSupported(ir::NodeCast<ir::ops::NotSupported>(
@@ -1469,6 +1560,38 @@ XlaOpVector XlaNodeLowering::LowerPermute(const ir::ops::Permute* node) {
   return {xla::Transpose(input, node->dims())};
 }
 
+XlaOpVector XlaNodeLowering::LowerProd(const ir::ops::Prod* node) {
+  xla::XlaOp input = loctx()->GetOutputOp(node->operand(0));
+  return {compiler::LowerProd(input, node->dimensions(),
+                              node->keep_reduced_dimensions(), node->dtype())};
+}
+
+XlaOpVector XlaNodeLowering::LowerReflectionPad2d(
+    const ir::ops::ReflectionPad2d* node) {
+  xla::XlaOp input = loctx()->GetOutputOp(node->operand(0));
+  return {BuildReflectionPad2d(input, node->padding())};
+}
+
+XlaOpVector XlaNodeLowering::LowerReflectionPad2dBackward(
+    const ir::ops::ReflectionPad2dBackward* node) {
+  xla::XlaOp grad_output = loctx()->GetOutputOp(node->operand(0));
+  xla::XlaOp input = loctx()->GetOutputOp(node->operand(1));
+  return {BuildReflectionPadBackward(grad_output, input, node->padding())};
+}
+
+XlaOpVector XlaNodeLowering::LowerReplicationPad(
+    const ir::ops::ReplicationPad* node) {
+  xla::XlaOp input = loctx()->GetOutputOp(node->operand(0));
+  return {BuildReplicationPad(input, node->padding())};
+}
+
+XlaOpVector XlaNodeLowering::LowerReplicationPadBackward(
+    const ir::ops::ReplicationPadBackward* node) {
+  xla::XlaOp grad_output = loctx()->GetOutputOp(node->operand(0));
+  xla::XlaOp input = loctx()->GetOutputOp(node->operand(1));
+  return {BuildReplicationPadBackward(grad_output, input, node->padding())};
+}
+
 XlaOpVector XlaNodeLowering::LowerResize(const ir::ops::Resize* node) {
   LTC_CHECK_EQ(node->num_outputs(), 1);
   xla::XlaOp input = loctx()->GetOutputOp(node->operand(0));
@@ -1843,6 +1966,19 @@ lazy_tensors::Shape XlaNodeLowering::Infer(const ir::Node* node) {
       return InferPermute(
           ir::NodeCast<ir::ops::Permute>(node, ir::OpKind(at::aten::permute)));
     }
+    case at::aten::prod: {
+      return InferProd(
+          ir::NodeCast<ir::ops::Prod>(node, ir::OpKind(at::aten::prod)));
+    }
+    case at::aten::reflection_pad2d: {
+      return InferReflectionPad2d(ir::NodeCast<ir::ops::ReflectionPad2d>(
+          node, ir::OpKind(at::aten::reflection_pad2d)));
+    }
+    case at::aten::reflection_pad2d_backward: {
+      return InferReflectionPad2dBackward(
+          ir::NodeCast<ir::ops::ReflectionPad2dBackward>(
+              node, ir::OpKind(at::aten::reflection_pad2d_backward)));
+    }
     case at::aten::split: {
       return InferSplit(
           ir::NodeCast<ir::ops::Split>(node, ir::OpKind(at::aten::split)));
@@ -1911,6 +2047,15 @@ lazy_tensors::Shape XlaNodeLowering::Infer(const ir::Node* node) {
       if (kind == *ir::ops::ltc_update_slice) {
         return InferUpdateSlice(ir::NodeCast<ir::ops::UpdateSlice>(
             node, *ir::ops::ltc_update_slice));
+      }
+      if (kind == *ir::ops::ltc_replication_pad) {
+        return InferReplicationPad(ir::NodeCast<ir::ops::ReplicationPad>(
+            node, *ir::ops::ltc_replication_pad));
+      }
+      if (kind == *ir::ops::ltc_replication_pad_backward) {
+        return InferReplicationPadBackward(
+            ir::NodeCast<ir::ops::ReplicationPadBackward>(
+                node, *ir::ops::ltc_replication_pad_backward));
       }
       LTC_LOG(FATAL) << "Shape inference not supported for operator: " << kind;
     }

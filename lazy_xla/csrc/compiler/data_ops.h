@@ -62,6 +62,18 @@ xla::XlaOp BuildResize(xla::XlaOp input, absl::Span<const xla::int64> size);
 xla::XlaOp BuildUnselect(xla::XlaOp target, xla::XlaOp source, xla::int64 dim,
                          xla::int64 start, xla::int64 end, xla::int64 stride);
 
+xla::XlaOp BuildReflectionPad2d(xla::XlaOp input,
+                                absl::Span<const xla::int64> padding);
+
+xla::XlaOp BuildReflectionPadBackward(xla::XlaOp grad_output, xla::XlaOp input,
+                                      absl::Span<const xla::int64> padding);
+
+xla::XlaOp BuildReplicationPad(xla::XlaOp input,
+                               absl::Span<const xla::int64> padding);
+
+xla::XlaOp BuildReplicationPadBackward(xla::XlaOp grad_output, xla::XlaOp input,
+                                       absl::Span<const xla::int64> padding);
+
 xla::XlaOp PadInDim(xla::XlaOp input, xla::int64 dim, xla::int64 pad_lo,
                     xla::int64 pad_hi, const xla::XlaOp* pad_value = nullptr);
 
