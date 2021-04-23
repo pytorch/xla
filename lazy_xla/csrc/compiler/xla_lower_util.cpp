@@ -1,5 +1,6 @@
 #include "lazy_xla/csrc/compiler/xla_lower_util.h"
 
+#include "lazy_xla/csrc/compiler/convert_ops.h"
 #include "lazy_xla/csrc/compiler/data_ops.h"
 #include "lazy_xla/csrc/compiler/helpers.h"
 #include "lazy_xla/csrc/compiler/random.h"
@@ -91,6 +92,44 @@ xla::XlaComputation MakeScatterComputation(
     result = combiner(p0, result);
   }
   return ConsumeValue(cb.Build(result));
+}
+
+xla::XlaOp CreateIndexAlongDim(
+    xla::XlaOp buffer, xla::int64 dim, xla::XlaOp index, xla::XlaOp value,
+    bool broadcast_value_to_index,
+    const std::function<xla::XlaOp(xla::XlaOp, xla::XlaOp)>& combiner) {
+  const xla::Shape& buffer_shape = XlaHelpers::ShapeOfXlaOp(buffer);
+  xla::ScatterDimensionNumbers dim_numbers;
+  dim_numbers.set_index_vector_dim(1);
+  for (xla::int64 window_dim = 0; window_dim < buffer_shape.rank();
+       ++window_dim) {
+    if (window_dim != dim) {
+      dim_numbers.add_update_window_dims(window_dim);
+    } else {
+      dim_numbers.add_inserted_window_dims(window_dim);
+      dim_numbers.add_scatter_dims_to_operand_dims(window_dim);
+    }
+  }
+
+  // Broadcast the value to the right shape required by scatter.
+  const xla::Shape& value_shape = XlaHelpers::ShapeOfXlaOp(value);
+  xla::XlaOp updates = value;
+  if (buffer_shape.element_type() != value_shape.element_type()) {
+    updates = ConvertTo(updates, value_shape.element_type(),
+                        buffer_shape.element_type(), /*device=*/nullptr);
+  }
+  if (broadcast_value_to_index) {
+    const xla::Shape& index_shape = XlaHelpers::ShapeOfXlaOp(index);
+    std::vector<xla::int64> update_dimensions =
+        xla::util::ToVector<xla::int64>(buffer_shape.dimensions());
+    update_dimensions[dim] = index_shape.dimensions(0);
+    updates = xla::Broadcast(updates, update_dimensions);
+  }
+  // Create a combiner computation for the scatter.
+  xla::XlaComputation combiner_computation =
+      MakeScatterComputation(combiner, buffer_shape.element_type());
+  return xla::Scatter(buffer, index, updates, combiner_computation,
+                      dim_numbers);
 }
 
 bool ScatterRequiresPadding(const xla::Shape& input_shape,
@@ -287,6 +326,116 @@ xla::XlaOp BuildBernoulli(xla::XlaOp probability, xla::XlaOp seed,
       xla::One(probability.builder(), probability_shape.element_type());
   xla::XlaOp noise = RngUniform(seed, probability_shape, zero, one);
   return xla::ConvertElementType(xla::Lt(noise, probability), type);
+}
+
+xla::XlaOp CreateIndex(xla::XlaOp input, xla::XlaOp indices,
+                       xla::int64 start_dim) {
+  const xla::Shape& input_shape = XlaHelpers::ShapeOfXlaOp(input);
+  const xla::Shape& indices_shape = XlaHelpers::ShapeOfXlaOp(indices);
+  XLA_CHECK_GE(indices_shape.rank(), 1);
+  xla::int64 num_index_dims =
+      indices_shape.dimensions(indices_shape.rank() - 1);
+  xla::GatherDimensionNumbers dim_numbers;
+  std::vector<xla::int64> slice_sizes;
+  slice_sizes.reserve(input_shape.rank());
+  for (xla::int64 i = 0; i < input_shape.rank(); ++i) {
+    if (i >= start_dim && i < num_index_dims + start_dim) {
+      dim_numbers.add_collapsed_slice_dims(i);
+      slice_sizes.push_back(1);
+    } else {
+      slice_sizes.push_back(input_shape.dimensions(i));
+      xla::int64 indices_rank = indices_shape.rank() - 1;
+      if (i < start_dim) {
+        dim_numbers.add_offset_dims(i);
+      } else {
+        dim_numbers.add_offset_dims(i - num_index_dims + indices_rank);
+      }
+    }
+  }
+  dim_numbers.set_index_vector_dim(indices_shape.rank() - 1);
+  for (xla::int64 i = 0; i < num_index_dims; i++) {
+    dim_numbers.add_start_index_map(i + start_dim);
+  }
+  return xla::Gather(input, indices, dim_numbers, slice_sizes);
+}
+
+xla::XlaOp CreateIndexUpdate(
+    xla::XlaOp buffer, xla::XlaOp indices, xla::int64 start_dim,
+    xla::XlaOp values,
+    const std::function<xla::XlaOp(xla::XlaOp, xla::XlaOp)>& combiner) {
+  const xla::Shape& buffer_shape = XlaHelpers::ShapeOfXlaOp(buffer);
+  const xla::Shape& indices_shape = XlaHelpers::ShapeOfXlaOp(indices);
+  const xla::Shape& values_shape = XlaHelpers::ShapeOfXlaOp(values);
+
+  absl::Span<const xla::int64> indices_dims =
+      xla::AsInt64Slice(indices_shape.dimensions());
+  XLA_CHECK(!indices_dims.empty());
+  // The minor dimension of indices contains the indices to update.
+  xla::int64 num_index_dims = indices_dims.back();
+  indices_dims.remove_suffix(1);
+  xla::ScatterDimensionNumbers dim_numbers;
+  dim_numbers.set_index_vector_dim(indices_shape.rank() - 1);
+
+  xla::int64 values_rank = values_shape.rank();
+  xla::int64 buffer_rank = buffer_shape.rank();
+  xla::int64 num_window_dims_in_values = buffer_rank - num_index_dims;
+
+  // Make the values match the rank expected by scatter.
+  std::vector<xla::int64> expected_values_dims;
+  for (xla::int64 dim = 0; dim < start_dim; ++dim) {
+    expected_values_dims.push_back(buffer_shape.dimensions(dim));
+  }
+  expected_values_dims.insert(expected_values_dims.end(), indices_dims.begin(),
+                              indices_dims.end());
+  for (xla::int64 dim = num_index_dims + start_dim; dim < buffer_rank; ++dim) {
+    expected_values_dims.push_back(buffer_shape.dimensions(dim));
+  }
+  xla::XlaOp new_values = values;
+  if (buffer_shape.element_type() != values_shape.element_type()) {
+    new_values = ConvertTo(new_values, values_shape.element_type(),
+                           buffer_shape.element_type(), /*device=*/nullptr);
+  }
+  new_values = BuildExpand(new_values, expected_values_dims);
+  const xla::Shape& new_values_shape = XlaHelpers::ShapeOfXlaOp(new_values);
+  values_rank = new_values_shape.rank();
+
+  for (xla::int64 dim = 0; dim < start_dim; ++dim) {
+    dim_numbers.add_update_window_dims(dim);
+  }
+  for (xla::int64 i = values_rank - num_window_dims_in_values + start_dim;
+       i < values_rank; ++i) {
+    dim_numbers.add_update_window_dims(i);
+  }
+  for (xla::int64 i = 0; i < num_index_dims; ++i) {
+    dim_numbers.add_inserted_window_dims(i + start_dim);
+    dim_numbers.add_scatter_dims_to_operand_dims(i + start_dim);
+  }
+  xla::XlaComputation combiner_computation =
+      MakeScatterComputation(combiner, buffer_shape.element_type());
+  return xla::Scatter(buffer, indices, new_values, combiner_computation,
+                      dim_numbers);
+}
+
+xla::XlaOp CreateIndexAdd(xla::XlaOp buffer, xla::int64 dim, xla::XlaOp index,
+                          xla::XlaOp value) {
+  auto add_scatter_combiner = [](xla::XlaOp x, xla::XlaOp y) -> xla::XlaOp {
+    return x + y;
+  };
+  return CreateIndexAlongDim(buffer, dim, index, value,
+                             /*broadcast_value_to_index=*/false,
+                             add_scatter_combiner);
+}
+
+xla::XlaOp CreateIndexCopy(xla::XlaOp buffer, xla::int64 dim, xla::XlaOp index,
+                           xla::XlaOp value) {
+  return CreateIndexAlongDim(buffer, dim, index, value,
+                             /*broadcast_value_to_index=*/false, nullptr);
+}
+
+xla::XlaOp CreateIndexFill(xla::XlaOp buffer, xla::int64 dim, xla::XlaOp index,
+                           xla::XlaOp value) {
+  return CreateIndexAlongDim(buffer, dim, index, value,
+                             /*broadcast_value_to_index=*/true, nullptr);
 }
 
 xla::XlaOp CreateScatter(const Device& device, xla::XlaOp input,

@@ -32,6 +32,10 @@
 #include "lazy_tensor_core/csrc/ops/get_dimensions_size.h"
 #include "lazy_tensor_core/csrc/ops/hardshrink.h"
 #include "lazy_tensor_core/csrc/ops/hardtanh_backward.h"
+#include "lazy_tensor_core/csrc/ops/index_along_dim.h"
+#include "lazy_tensor_core/csrc/ops/index_get.h"
+#include "lazy_tensor_core/csrc/ops/index_put.h"
+#include "lazy_tensor_core/csrc/ops/index_select.h"
 #include "lazy_tensor_core/csrc/ops/leaky_relu.h"
 #include "lazy_tensor_core/csrc/ops/leaky_relu_backward.h"
 #include "lazy_tensor_core/csrc/ops/linear_interpolation.h"
@@ -307,6 +311,61 @@ lazy_tensors::Shape InferCat(const ir::ops::Cat* node) {
     shapes.push_back(value.shape());
   }
   return ir::ops::InferOutputShape(shapes, shape_fn);
+}
+
+lazy_tensors::Shape InferIndexAdd(const ir::ops::IndexAlongDim* node) {
+  auto shape_fn = [node](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
+    return CreateIndexAdd(operands[0], node->dim(), operands[1], operands[2]);
+  };
+  const ir::Output& buffer = node->operand(0);
+  const ir::Output& index = node->operand(1);
+  const ir::Output& source = node->operand(2);
+  LTC_CHECK_EQ(index.shape().rank(), 1);
+  return ir::ops::InferOutputShape(
+      {buffer.shape(), index.shape(), source.shape()}, shape_fn);
+}
+
+lazy_tensors::Shape InferIndexCopy(const ir::ops::IndexAlongDim* node) {
+  auto shape_fn = [node](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
+    return CreateIndexCopy(operands[0], node->dim(), operands[1], operands[2]);
+  };
+  const ir::Output& buffer = node->operand(0);
+  const ir::Output& index = node->operand(1);
+  const ir::Output& source = node->operand(2);
+  LTC_CHECK_EQ(index.shape().rank(), 1);
+  return ir::ops::InferOutputShape(
+      {buffer.shape(), index.shape(), source.shape()}, shape_fn);
+}
+
+lazy_tensors::Shape InferIndexFill(const ir::ops::IndexAlongDim* node) {
+  auto shape_fn = [node](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
+    return CreateIndexFill(operands[0], node->dim(), operands[1], operands[2]);
+  };
+  const ir::Output& buffer = node->operand(0);
+  const ir::Output& index = node->operand(1);
+  const ir::Output& source = node->operand(2);
+  LTC_CHECK_EQ(index.shape().rank(), 1);
+  return ir::ops::InferOutputShape(
+      {buffer.shape(), index.shape(), source.shape()}, shape_fn);
+}
+
+lazy_tensors::Shape InferIndexGet(const ir::ops::IndexGet* node) {
+  auto shape_fn = [node](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
+    LTC_CHECK_EQ(operands.size(), 2);
+    return CreateIndex(operands[0], operands[1], node->start_dim());
+  };
+  const ir::Output& base = node->operand(0);
+  const ir::Output& indices = node->operand(1);
+  return ir::ops::InferOutputShape({base.shape(), indices.shape()}, shape_fn);
+}
+
+lazy_tensors::Shape InferIndexSelect(const ir::ops::IndexSelect* node) {
+  auto shape_fn = [node](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
+    return xla::TorchIndexSelect(operands[0], operands[1], node->dim());
+  };
+  const ir::Output& input = node->operand(0);
+  const ir::Output& index = node->operand(1);
+  return ir::ops::InferOutputShape({input.shape(), index.shape()}, shape_fn);
 }
 
 lazy_tensors::Shape InferMatMul(const ir::Node* node) {
@@ -772,6 +831,12 @@ class XlaNodeLowering : public NodeLowering {
   DECLARE_UNARY_OP2(CumSum);
   DECLARE_UNARY_OP2(Flip);
   DECLARE_UNARY_OP2(Gather);
+  XlaOpVector LowerIndexAdd(const ir::ops::IndexAlongDim* node);
+  XlaOpVector LowerIndexCopy(const ir::ops::IndexAlongDim* node);
+  XlaOpVector LowerIndexFill(const ir::ops::IndexAlongDim* node);
+  DECLARE_UNARY_OP2(IndexGet);
+  DECLARE_UNARY_OP2(IndexPut);
+  DECLARE_UNARY_OP2(IndexSelect);
   DECLARE_UNARY_OP2(Hardshrink);
   DECLARE_UNARY_OP2(HardtanhBackward);
   DECLARE_UNARY_OP2(LeakyRelu);
@@ -949,6 +1014,21 @@ XlaOpVector XlaNodeLowering::LowerToXla(const ir::Node* node) {
                        at::aten::binary_cross_entropy_backward)
     HANDLE_GENERIC_OP2(Cat, at::aten::cat)
     HANDLE_GENERIC_OP2(Cholesky, at::aten::cholesky)
+    HANDLE_GENERIC_OP2(IndexGet, at::aten::index)
+    HANDLE_GENERIC_OP2(IndexPut, at::aten::index_put)
+    HANDLE_GENERIC_OP2(IndexSelect, at::aten::index_select)
+    case at::aten::index_add: {
+      return LowerIndexAdd(ir::NodeCast<ir::ops::IndexAlongDim>(
+          node, ir::OpKind(at::aten::index_add)));
+    }
+    case at::aten::index_copy: {
+      return LowerIndexCopy(ir::NodeCast<ir::ops::IndexAlongDim>(
+          node, ir::OpKind(at::aten::index_copy)));
+    }
+    case at::aten::index_fill: {
+      return LowerIndexFill(ir::NodeCast<ir::ops::IndexAlongDim>(
+          node, ir::OpKind(at::aten::index_fill)));
+    }
     case at::aten::max: {
       size_t arity = node->operands().size();
       if (arity == 2) {
@@ -1773,6 +1853,54 @@ XlaOpVector XlaNodeLowering::LowerGather(const ir::ops::Gather* node) {
                            IsSparseGather(input, index, node->dim()))};
 }
 
+XlaOpVector XlaNodeLowering::LowerIndexAdd(const ir::ops::IndexAlongDim* node) {
+  xla::XlaOp base = loctx()->GetOutputOp(node->operand(0));
+  xla::XlaOp index = loctx()->GetOutputOp(node->operand(1));
+  xla::XlaOp source = loctx()->GetOutputOp(node->operand(2));
+  return {CreateIndexAdd(base, node->dim(), index, source)};
+}
+
+XlaOpVector XlaNodeLowering::LowerIndexCopy(
+    const ir::ops::IndexAlongDim* node) {
+  xla::XlaOp base = loctx()->GetOutputOp(node->operand(0));
+  xla::XlaOp index = loctx()->GetOutputOp(node->operand(1));
+  xla::XlaOp source = loctx()->GetOutputOp(node->operand(2));
+  return {CreateIndexCopy(base, node->dim(), index, source)};
+}
+
+XlaOpVector XlaNodeLowering::LowerIndexFill(
+    const ir::ops::IndexAlongDim* node) {
+  xla::XlaOp base = loctx()->GetOutputOp(node->operand(0));
+  xla::XlaOp index = loctx()->GetOutputOp(node->operand(1));
+  xla::XlaOp source = loctx()->GetOutputOp(node->operand(2));
+  return {CreateIndexFill(base, node->dim(), index, source)};
+}
+
+XlaOpVector XlaNodeLowering::LowerIndexGet(const ir::ops::IndexGet* node) {
+  xla::XlaOp base = loctx()->GetOutputOp(node->operand(0));
+  xla::XlaOp indices = loctx()->GetOutputOp(node->operand(1));
+  return {CreateIndex(base, indices, node->start_dim())};
+}
+
+XlaOpVector XlaNodeLowering::LowerIndexPut(const ir::ops::IndexPut* node) {
+  std::function<xla::XlaOp(xla::XlaOp, xla::XlaOp)> add_scatter_combiner =
+      [](xla::XlaOp x, xla::XlaOp y) -> xla::XlaOp { return x + y; };
+
+  xla::XlaOp base = loctx()->GetOutputOp(node->operand(0));
+  xla::XlaOp indices = loctx()->GetOutputOp(node->operand(1));
+  xla::XlaOp values = loctx()->GetOutputOp(node->operand(2));
+  return {
+      CreateIndexUpdate(base, indices, node->start_dim(), values,
+                        node->accumulate() ? add_scatter_combiner : nullptr)};
+}
+
+XlaOpVector XlaNodeLowering::LowerIndexSelect(
+    const ir::ops::IndexSelect* node) {
+  xla::XlaOp input = loctx()->GetOutputOp(node->operand(0));
+  xla::XlaOp index = loctx()->GetOutputOp(node->operand(1));
+  return {xla::TorchIndexSelect(input, index, node->dim())};
+}
+
 XlaOpVector XlaNodeLowering::LowerHardshrink(const ir::ops::Hardshrink* node) {
   LTC_CHECK_EQ(node->num_outputs(), 1);
   xla::XlaOp input = loctx()->GetOutputOp(node->operand(0));
@@ -1954,6 +2082,26 @@ lazy_tensors::Shape XlaNodeLowering::Infer(const ir::Node* node) {
     case at::aten::gather: {
       return InferGather(
           ir::NodeCast<ir::ops::Gather>(node, ir::OpKind(at::aten::gather)));
+    }
+    case at::aten::index_add: {
+      return InferIndexAdd(ir::NodeCast<ir::ops::IndexAlongDim>(
+          node, ir::OpKind(at::aten::index_add)));
+    }
+    case at::aten::index_copy: {
+      return InferIndexCopy(ir::NodeCast<ir::ops::IndexAlongDim>(
+          node, ir::OpKind(at::aten::index_copy)));
+    }
+    case at::aten::index_fill: {
+      return InferIndexFill(ir::NodeCast<ir::ops::IndexAlongDim>(
+          node, ir::OpKind(at::aten::index_fill)));
+    }
+    case at::aten::index_select: {
+      return InferIndexSelect(ir::NodeCast<ir::ops::IndexSelect>(
+          node, ir::OpKind(at::aten::index_select)));
+    }
+    case at::aten::index: {
+      return InferIndexGet(
+          ir::NodeCast<ir::ops::IndexGet>(node, ir::OpKind(at::aten::index)));
     }
     case at::aten::ger: {
       return InferGer(node);

@@ -362,6 +362,13 @@ at::Tensor AtenXlaType::_copy_from(const at::Tensor& self,
   return dst;
 }
 
+at::Tensor& AtenXlaType::_index_put_impl_(
+    at::Tensor& self, const c10::List<c10::optional<at::Tensor>>& indices,
+    const at::Tensor& values, bool accumulate, bool /* unsafe */) {
+  LTC_FN_COUNTER("xla::");
+  return index_put_(self, indices, values, accumulate);
+}
+
 at::Tensor AtenXlaType::_log_softmax(const at::Tensor& self, int64_t dim,
                                      bool /* half_to_float */) {
   LTC_FN_COUNTER("xla::");
@@ -1470,6 +1477,17 @@ at::Tensor AtenXlaType::embedding(const at::Tensor& weight,
                                sparse);
 }
 
+at::Tensor AtenXlaType::embedding_dense_backward(const at::Tensor& grad_output,
+                                                 const at::Tensor& indices,
+                                                 int64_t num_weights,
+                                                 int64_t padding_idx,
+                                                 bool scale_grad_by_freq) {
+  LTC_FN_COUNTER("xla::");
+  return bridge::AtenFromLtcTensor(LazyTensor::embedding_dense_backward(
+      bridge::GetLtcTensor(grad_output), bridge::GetLtcTensor(indices),
+      num_weights, padding_idx, scale_grad_by_freq));
+}
+
 at::Tensor AtenXlaType::empty(at::IntArrayRef size,
                               c10::optional<at::ScalarType> dtype,
                               c10::optional<at::Layout> layout,
@@ -1917,6 +1935,80 @@ at::Tensor AtenXlaType::hardtanh_backward(const at::Tensor& grad_output,
   return bridge::AtenFromLtcTensor(LazyTensor::hardtanh_backward(
       bridge::GetLtcTensor(grad_output), bridge::GetLtcTensor(self), min_val,
       max_val));
+}
+
+at::Tensor AtenXlaType::index(
+    const at::Tensor& self,
+    const c10::List<c10::optional<at::Tensor>>& indices) {
+  LTC_FN_COUNTER("xla::");
+  CanonicalIndexInfo canonical_index_info =
+      GetCanonicalIndexInfo(self, indices);
+  return bridge::AtenFromLtcTensor(
+      LazyTensor::index(bridge::GetLtcTensor(canonical_index_info.base),
+                        bridge::GetLtcTensors(canonical_index_info.indices),
+                        canonical_index_info.start_dim));
+}
+
+at::Tensor& AtenXlaType::index_add_(at::Tensor& self, int64_t dim,
+                                    const at::Tensor& index,
+                                    const at::Tensor& source) {
+  LTC_FN_COUNTER("xla::");
+  LazyTensor self_tensor = bridge::GetLtcTensor(self);
+  LazyTensor::index_add_(self_tensor, dim, bridge::GetLtcTensor(index),
+                         bridge::GetLtcTensor(source));
+  return self;
+}
+
+at::Tensor& AtenXlaType::index_copy_(at::Tensor& self, int64_t dim,
+                                     const at::Tensor& index,
+                                     const at::Tensor& source) {
+  LTC_FN_COUNTER("xla::");
+  LazyTensor self_tensor = bridge::GetLtcTensor(self);
+  LazyTensor::index_copy_(self_tensor, dim, bridge::GetLtcTensor(index),
+                          bridge::GetLtcTensor(source));
+  return self;
+}
+
+at::Tensor& AtenXlaType::index_fill_(at::Tensor& self, int64_t dim,
+                                     const at::Tensor& index,
+                                     const at::Scalar& value) {
+  LTC_FN_COUNTER("xla::");
+  LazyTensor self_tensor = bridge::GetLtcTensor(self);
+  LazyTensor::index_fill_(self_tensor, dim, bridge::GetLtcTensor(index), value);
+  return self;
+}
+
+at::Tensor& AtenXlaType::index_fill_(at::Tensor& self, int64_t dim,
+                                     const at::Tensor& index,
+                                     const at::Tensor& value) {
+  LTC_FN_COUNTER("xla::");
+  LazyTensor self_tensor = bridge::GetLtcTensor(self);
+  LazyTensor::index_fill_(self_tensor, dim, bridge::GetLtcTensor(index),
+                          bridge::GetLtcTensor(value));
+  return self;
+}
+
+at::Tensor& AtenXlaType::index_put_(
+    at::Tensor& self, const c10::List<c10::optional<at::Tensor>>& indices,
+    const at::Tensor& values, bool accumulate) {
+  LTC_FN_COUNTER("xla::");
+  LTC_CHECK(self.scalar_type() == values.scalar_type());
+  CanonicalIndexInfo canonical_index_info =
+      GetCanonicalIndexInfo(self, indices);
+  LazyTensor self_tensor = bridge::GetLtcTensor(self);
+  LazyTensor::index_put_(
+      self_tensor, bridge::GetLtcTensor(canonical_index_info.base),
+      bridge::GetLtcTensors(canonical_index_info.indices),
+      canonical_index_info.start_dim, bridge::GetLtcTensor(values), accumulate,
+      canonical_index_info.result_permutation);
+  return self;
+}
+
+at::Tensor AtenXlaType::index_select(const at::Tensor& self, int64_t dim,
+                                     const at::Tensor& index) {
+  LTC_FN_COUNTER("xla::");
+  return bridge::AtenFromLtcTensor(LazyTensor::index_select(
+      bridge::GetLtcTensor(self), dim, bridge::GetLtcTensor(index)));
 }
 
 at::Tensor AtenXlaType::kl_div(const at::Tensor& self, const at::Tensor& target,

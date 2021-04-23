@@ -56,6 +56,10 @@ class AtenXlaType {
   static at::Tensor _copy_from(const at::Tensor& self, const at::Tensor& dst,
                                bool non_blocking);
 
+  static at::Tensor& _index_put_impl_(
+      at::Tensor& self, const c10::List<c10::optional<at::Tensor>>& indices,
+      const at::Tensor& values, bool accumulate, bool unsafe);
+
   static at::Tensor _log_softmax(const at::Tensor& self, int64_t dim,
                                  bool half_to_float);
 
@@ -343,6 +347,12 @@ class AtenXlaType {
                               const at::Tensor& indices, int64_t padding_idx,
                               bool scale_grad_by_freq, bool sparse);
 
+  static at::Tensor embedding_dense_backward(const at::Tensor& grad_output,
+                                             const at::Tensor& indices,
+                                             int64_t num_weights,
+                                             int64_t padding_idx,
+                                             bool scale_grad_by_freq);
+
   static at::Tensor empty(at::IntArrayRef size,
                           c10::optional<at::ScalarType> dtype,
                           c10::optional<at::Layout> layout,
@@ -466,6 +476,32 @@ class AtenXlaType {
                                       const at::Tensor& self,
                                       const at::Scalar& min_val,
                                       const at::Scalar& max_val);
+
+  static at::Tensor index(const at::Tensor& self,
+                          const c10::List<c10::optional<at::Tensor>>& indices);
+
+  static at::Tensor& index_add_(at::Tensor& self, int64_t dim,
+                                const at::Tensor& index,
+                                const at::Tensor& source);
+
+  static at::Tensor& index_copy_(at::Tensor& self, int64_t dim,
+                                 const at::Tensor& index,
+                                 const at::Tensor& source);
+
+  static at::Tensor& index_fill_(at::Tensor& self, int64_t dim,
+                                 const at::Tensor& index,
+                                 const at::Scalar& value);
+
+  static at::Tensor& index_fill_(at::Tensor& self, int64_t dim,
+                                 const at::Tensor& index,
+                                 const at::Tensor& value);
+
+  static at::Tensor& index_put_(
+      at::Tensor& self, const c10::List<c10::optional<at::Tensor>>& indices,
+      const at::Tensor& values, bool accumulate);
+
+  static at::Tensor index_select(const at::Tensor& self, int64_t dim,
+                                 const at::Tensor& index);
 
   static at::Tensor kl_div(const at::Tensor& self, const at::Tensor& target,
                            int64_t reduction, bool log_target);
