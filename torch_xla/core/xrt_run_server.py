@@ -24,7 +24,8 @@ def kill_service():
 
 def run_service(port, flag_env):
   if server_is_alive():
-    print('Server is already running, use --restart to restart the server.')
+    print('Server is already running, use --restart(--restart-tpuvm-pod-server '
+          'if running with xla_dist) to restart the server.')
     return
 
   local_env = os.environ.copy()
@@ -41,10 +42,10 @@ def run_service(port, flag_env):
     (env, var) = env_var.split('=', 1)
     local_env[env] = var
 
-  Path("/tmp/xrt_server_log").mkdir(parents=True, exist_ok=True)
-  time_str = time.strftime("%Y%m%d-%H%M%S")
-  log_file = open("/tmp/xrt_server_log/server_{}.log".format(time_str), "w")
-  subprocess.Popen(["python3", "-m", XRT_RUN_SERVER_PROCESS,
+  Path('/tmp/xrt_server_log').mkdir(parents=True, exist_ok=True)
+  time_str = time.strftime('%Y%m%d-%H%M%S')
+  log_file = open('/tmp/xrt_server_log/server_{}.log'.format(time_str), 'w')
+  subprocess.Popen(['python3', '-m', XRT_RUN_SERVER_PROCESS,
                     str(port)],
                    stdout=log_file,
                    stderr=subprocess.STDOUT,
