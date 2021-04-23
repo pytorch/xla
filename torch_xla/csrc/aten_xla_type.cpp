@@ -359,6 +359,31 @@ at::Tensor AtenXlaType::_copy_from(const at::Tensor& self,
   return dst;
 }
 
+at::Tensor AtenXlaType::_copy_from_and_resize(const at::Tensor& self,
+                                              const at::Tensor& dst) {
+  XLA_FN_COUNTER("xla::");
+  auto dst_tensor = bridge::TryGetXlaTensor(dst);
+  auto self_tensor = bridge::TryGetXlaTensor(self);
+  if (!self_tensor) {
+    XLA_CHECK(dst_tensor);
+    dst_tensor->UpdateFromTensorOut(self);
+  } else if (!dst_tensor) {
+    at::Tensor tensor = self_tensor->ToTensor(/*detached=*/true);
+    at::Tensor typed_tensor =
+        CopyTensor(tensor, dst.scalar_type(), /*copy=*/false);
+    dst.resize_as_(typed_tensor).copy_(typed_tensor);
+  } else {
+    XLATensor::copy_(*dst_tensor, *self_tensor);
+    bridge::ReplaceXlaTensor(dst, *dst_tensor);
+  }
+  return dst;
+}
+
+std::vector<at::Tensor> AtenXlaType::_to_cpu(at::TensorList tensors) {
+   XLA_FN_COUNTER("xla::");
+   return bridge::XlaCreateTensorList(tensors);
+ }
+
 at::Tensor& AtenXlaType::_index_put_impl_(
     at::Tensor& self, const c10::List<c10::optional<at::Tensor>>& indices,
     const at::Tensor& values, bool accumulate, bool /* unsafe */) {
@@ -487,18 +512,6 @@ at::Tensor AtenXlaType::add(const at::Tensor& self, const at::Scalar& other,
                         at::ScalarType dtype) {
                       return XLATensor::add(xself, other, alpha, dtype);
                     });
-}
-
-at::Tensor& AtenXlaType::add_(at::Tensor& self, const at::Tensor& other,
-                              const at::Scalar& alpha) {
-  XLA_FN_COUNTER("xla::");
-  at::native::alpha_check(at::result_type(self, other), alpha);
-  CheckBinaryOpTypePromotion(self, self, other);
-  XLATensor self_tensor = bridge::GetXlaTensor(self);
-  XLATensor::add_(self_tensor,
-                  bridge::GetOrCreateXlaTensor(other, self_tensor.GetDevice()),
-                  alpha);
-  return self;
 }
 
 at::Tensor& AtenXlaType::add_(at::Tensor& self, const at::Scalar& other,
