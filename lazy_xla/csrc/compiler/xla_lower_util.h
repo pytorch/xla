@@ -8,6 +8,9 @@ namespace compiler {
 xla::XlaOp PadToSize(xla::XlaOp input, absl::Span<const xla::int64> size,
                      absl::optional<xla::XlaOp> pad_value = absl::nullopt);
 
+std::vector<xla::XlaOp> CreateKthValue(xla::XlaOp input, xla::int64 k,
+                                       xla::int64 dim, bool keepdim);
+
 xla::XlaOp CreateMatMul(xla::XlaOp lhs, xla::XlaOp rhs);
 
 xla::XlaOp BuildGer(xla::XlaOp lhs, xla::XlaOp rhs);

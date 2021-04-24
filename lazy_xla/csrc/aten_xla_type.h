@@ -503,6 +503,8 @@ class AtenXlaType {
   static at::Tensor index_select(const at::Tensor& self, int64_t dim,
                                  const at::Tensor& index);
 
+  static at::Tensor inverse(const at::Tensor& self);
+
   static at::Tensor kl_div(const at::Tensor& self, const at::Tensor& target,
                            int64_t reduction, bool log_target);
 
@@ -510,6 +512,18 @@ class AtenXlaType {
                                     const at::Tensor& self,
                                     const at::Tensor& target, int64_t reduction,
                                     bool log_target);
+
+  static std::tuple<at::Tensor, at::Tensor> kthvalue(const at::Tensor& self,
+                                                     int64_t k, int64_t dim,
+                                                     bool keepdim);
+
+  static at::Tensor l1_loss(const at::Tensor& self, const at::Tensor& target,
+                            int64_t reduction);
+
+  static at::Tensor l1_loss_backward(const at::Tensor& grad_output,
+                                     const at::Tensor& self,
+                                     const at::Tensor& target,
+                                     int64_t reduction);
 
   static at::Tensor le(const at::Tensor& self, const at::Scalar& other);
 
@@ -801,6 +815,14 @@ class AtenXlaType {
                               int64_t dim1);
 
   static at::Tensor& transpose_(at::Tensor& self, int64_t dim0, int64_t dim1);
+
+  static at::Tensor tril(const at::Tensor& self, int64_t diagonal);
+
+  static at::Tensor& tril_(at::Tensor& self, int64_t diagonal);
+
+  static at::Tensor triu(const at::Tensor& self, int64_t diagonal);
+
+  static at::Tensor& triu_(at::Tensor& self, int64_t diagonal);
 
   static at::Tensor trunc(const at::Tensor& self);
 

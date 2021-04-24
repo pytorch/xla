@@ -81,6 +81,16 @@ std::vector<xla::int64> GetDiagonalPermutation(xla::int64 rank, xla::int64 dim1,
 
 }  // namespace
 
+xla::XlaOp BuildTriu(xla::XlaOp input, xla::int64 diagonal) {
+  return xla::Select(xla::TriangleMask(input, diagonal - 1),
+                     xla::ZerosLike(input), input);
+}
+
+xla::XlaOp BuildTril(xla::XlaOp input, xla::int64 diagonal) {
+  return xla::Select(xla::TriangleMask(input, diagonal), input,
+                     xla::ZerosLike(input));
+}
+
 xla::XlaOp BuildDiagonal(xla::XlaOp input, xla::int64 offset, xla::int64 dim1,
                          xla::int64 dim2) {
   xla::XlaOp diag_input = input;
@@ -115,6 +125,17 @@ xla::XlaOp BuildDiagonalViewUpdate(xla::XlaOp target, xla::XlaOp input,
     result = xla::Transpose(result, xla::InversePermutation(permutation));
   }
   return result;
+}
+
+xla::XlaOp BuildInverse(xla::XlaOp input) {
+  xla::XlaOp q, r;
+  xla::QrExplicit(input, /*full_matrices=*/false, q, r);
+
+  return xla::TriangularSolve(r, xla::TransposeInMinorDims(q),
+                              /*left_side=*/true,
+                              /*lower=*/false, /*unit_diagonal=*/false,
+                              /*transpose_a=*/
+                              xla::TriangularSolveOptions::NO_TRANSPOSE);
 }
 
 }  // namespace torch_lazy_tensors

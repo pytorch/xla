@@ -36,6 +36,9 @@
 #include "lazy_tensor_core/csrc/ops/index_get.h"
 #include "lazy_tensor_core/csrc/ops/index_put.h"
 #include "lazy_tensor_core/csrc/ops/index_select.h"
+#include "lazy_tensor_core/csrc/ops/kth_value.h"
+#include "lazy_tensor_core/csrc/ops/l1_loss.h"
+#include "lazy_tensor_core/csrc/ops/l1_loss_backward.h"
 #include "lazy_tensor_core/csrc/ops/leaky_relu.h"
 #include "lazy_tensor_core/csrc/ops/leaky_relu_backward.h"
 #include "lazy_tensor_core/csrc/ops/linear_interpolation.h"
@@ -66,6 +69,8 @@
 #include "lazy_tensor_core/csrc/ops/stack.h"
 #include "lazy_tensor_core/csrc/ops/threshold.h"
 #include "lazy_tensor_core/csrc/ops/threshold_backward.h"
+#include "lazy_tensor_core/csrc/ops/tril.h"
+#include "lazy_tensor_core/csrc/ops/triu.h"
 #include "lazy_tensor_core/csrc/ops/unselect.h"
 #include "lazy_tensor_core/csrc/ops/unsqueeze.h"
 #include "lazy_tensor_core/csrc/ops/update_slice.h"
@@ -366,6 +371,37 @@ lazy_tensors::Shape InferIndexSelect(const ir::ops::IndexSelect* node) {
   const ir::Output& input = node->operand(0);
   const ir::Output& index = node->operand(1);
   return ir::ops::InferOutputShape({input.shape(), index.shape()}, shape_fn);
+}
+
+lazy_tensors::Shape InferKthValue(const ir::ops::KthValue* node) {
+  auto shape_fn = [node](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
+    return xla::Tuple(
+        operands[0].builder(),
+        CreateKthValue(operands[0], node->k(), node->dim(), node->keepdim()));
+  };
+  const ir::Output& input = node->operand(0);
+  return ir::ops::InferOutputShape({input.shape()}, shape_fn);
+}
+
+lazy_tensors::Shape InferL1Loss(const ir::ops::L1Loss* node) {
+  auto shape_fn = [node](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
+    return BuildL1Loss(operands[0], operands[1], node->reduction());
+  };
+  const ir::Output& input = node->operand(0);
+  const ir::Output& target = node->operand(1);
+  return ir::ops::InferOutputShape({input.shape(), target.shape()}, shape_fn);
+}
+
+lazy_tensors::Shape InferL1LossBackward(const ir::ops::L1LossBackward* node) {
+  auto shape_fn = [node](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
+    return BuildL1LossBackward(operands[0], operands[1], operands[2],
+                               node->reduction());
+  };
+  const ir::Output& grad_output = node->operand(0);
+  const ir::Output& input = node->operand(1);
+  const ir::Output& target = node->operand(2);
+  return ir::ops::InferOutputShape(
+      {grad_output.shape(), input.shape(), target.shape()}, shape_fn);
 }
 
 lazy_tensors::Shape InferMatMul(const ir::Node* node) {
@@ -806,6 +842,7 @@ class XlaNodeLowering : public NodeLowering {
   DECLARE_BINARY_OP(Ger);
   DECLARE_UNARY_OP(AddMatMul);
   DECLARE_UNARY_OP(BaddBmm);
+  DECLARE_UNARY_OP(Inverse);
   DECLARE_UNARY_OP(MatMul);
   DECLARE_UNARY_OP(Clamp);
   DECLARE_UNARY_OP(Eye);
@@ -837,6 +874,9 @@ class XlaNodeLowering : public NodeLowering {
   DECLARE_UNARY_OP2(IndexGet);
   DECLARE_UNARY_OP2(IndexPut);
   DECLARE_UNARY_OP2(IndexSelect);
+  DECLARE_UNARY_OP2(KthValue);
+  DECLARE_UNARY_OP2(L1Loss);
+  DECLARE_UNARY_OP2(L1LossBackward);
   DECLARE_UNARY_OP2(Hardshrink);
   DECLARE_UNARY_OP2(HardtanhBackward);
   DECLARE_UNARY_OP2(LeakyRelu);
@@ -863,6 +903,8 @@ class XlaNodeLowering : public NodeLowering {
   DECLARE_UNARY_OP2(Stack);
   DECLARE_UNARY_OP2(Threshold);
   DECLARE_UNARY_OP2(ThresholdBackward);
+  DECLARE_UNARY_OP2(Tril);
+  DECLARE_UNARY_OP2(Triu);
   DECLARE_UNARY_OP2(Unsqueeze);
   DECLARE_UNARY_OP2(View);
 };
@@ -950,6 +992,7 @@ XlaOpVector XlaNodeLowering::LowerToXla(const ir::Node* node) {
     HANDLE_GENERIC_OP(Ne, at::aten::ne)
     HANDLE_GENERIC_OP(AddMatMul, at::aten::addmm)
     HANDLE_GENERIC_OP(BaddBmm, at::aten::baddbmm)
+    HANDLE_GENERIC_OP(Inverse, at::aten::inverse)
     HANDLE_GENERIC_OP(MatMul, at::aten::matmul)
     HANDLE_GENERIC_OP(Clamp, at::aten::clamp)
     HANDLE_GENERIC_OP(Eye, at::aten::eye)
@@ -1000,6 +1043,8 @@ XlaOpVector XlaNodeLowering::LowerToXla(const ir::Node* node) {
     HANDLE_GENERIC_OP2(Squeeze, at::aten::squeeze)
     HANDLE_GENERIC_OP2(Threshold, at::aten::threshold)
     HANDLE_GENERIC_OP2(ThresholdBackward, at::aten::threshold_backward)
+    HANDLE_GENERIC_OP2(Tril, at::aten::tril)
+    HANDLE_GENERIC_OP2(Triu, at::aten::triu)
     HANDLE_GENERIC_OP2(Unsqueeze, at::aten::unsqueeze)
     HANDLE_GENERIC_OP2(View, at::aten::view)
     HANDLE_GENERIC_OP2(All, at::aten::all)
@@ -1017,6 +1062,9 @@ XlaOpVector XlaNodeLowering::LowerToXla(const ir::Node* node) {
     HANDLE_GENERIC_OP2(IndexGet, at::aten::index)
     HANDLE_GENERIC_OP2(IndexPut, at::aten::index_put)
     HANDLE_GENERIC_OP2(IndexSelect, at::aten::index_select)
+    HANDLE_GENERIC_OP2(KthValue, at::aten::kthvalue)
+    HANDLE_GENERIC_OP2(L1Loss, at::aten::l1_loss)
+    HANDLE_GENERIC_OP2(L1LossBackward, at::aten::l1_loss_backward)
     case at::aten::index_add: {
       return LowerIndexAdd(ir::NodeCast<ir::ops::IndexAlongDim>(
           node, ir::OpKind(at::aten::index_add)));
@@ -1541,6 +1589,11 @@ XlaOpVector XlaNodeLowering::LowerBaddBmm(const ir::Node* node) {
                                     bias_multiplier)};
 }
 
+XlaOpVector XlaNodeLowering::LowerInverse(const ir::Node* node) {
+  xla::XlaOp input = loctx()->GetOutputOp(node->operand(0));
+  return {BuildInverse(input)};
+}
+
 XlaOpVector XlaNodeLowering::LowerMatMul(const ir::Node* node) {
   xla::XlaOp lhs = loctx()->GetOutputOp(node->operand(0));
   xla::XlaOp rhs = loctx()->GetOutputOp(node->operand(1));
@@ -1765,6 +1818,16 @@ XlaOpVector XlaNodeLowering::LowerThresholdBackward(
   return {BuildThreshold(input, grad_output, node->threshold(), 0)};
 }
 
+XlaOpVector XlaNodeLowering::LowerTril(const ir::ops::Tril* node) {
+  xla::XlaOp input = loctx()->GetOutputOp(node->operand(0));
+  return {BuildTril(input, node->diagonal())};
+}
+
+XlaOpVector XlaNodeLowering::LowerTriu(const ir::ops::Triu* node) {
+  xla::XlaOp input = loctx()->GetOutputOp(node->operand(0));
+  return {BuildTriu(input, node->diagonal())};
+}
+
 XlaOpVector XlaNodeLowering::LowerUnsqueeze(const ir::ops::Unsqueeze* node) {
   LTC_CHECK_EQ(node->num_outputs(), 1);
   xla::XlaOp input = loctx()->GetOutputOp(node->operand(0));
@@ -1899,6 +1962,27 @@ XlaOpVector XlaNodeLowering::LowerIndexSelect(
   xla::XlaOp input = loctx()->GetOutputOp(node->operand(0));
   xla::XlaOp index = loctx()->GetOutputOp(node->operand(1));
   return {xla::TorchIndexSelect(input, index, node->dim())};
+}
+
+XlaOpVector XlaNodeLowering::LowerKthValue(const ir::ops::KthValue* node) {
+  xla::XlaOp input = loctx()->GetOutputOp(node->operand(0));
+  auto kth_value =
+      CreateKthValue(input, node->k(), node->dim(), node->keepdim());
+  return XlaOpVector(kth_value.begin(), kth_value.end());
+}
+
+XlaOpVector XlaNodeLowering::LowerL1Loss(const ir::ops::L1Loss* node) {
+  xla::XlaOp input = loctx()->GetOutputOp(node->operand(0));
+  xla::XlaOp target = loctx()->GetOutputOp(node->operand(1));
+  return {BuildL1Loss(input, target, node->reduction())};
+}
+
+XlaOpVector XlaNodeLowering::LowerL1LossBackward(
+    const ir::ops::L1LossBackward* node) {
+  xla::XlaOp grad_output = loctx()->GetOutputOp(node->operand(0));
+  xla::XlaOp input = loctx()->GetOutputOp(node->operand(1));
+  xla::XlaOp target = loctx()->GetOutputOp(node->operand(2));
+  return {BuildL1LossBackward(grad_output, input, target, node->reduction())};
 }
 
 XlaOpVector XlaNodeLowering::LowerHardshrink(const ir::ops::Hardshrink* node) {
@@ -2098,6 +2182,18 @@ lazy_tensors::Shape XlaNodeLowering::Infer(const ir::Node* node) {
     case at::aten::index_select: {
       return InferIndexSelect(ir::NodeCast<ir::ops::IndexSelect>(
           node, ir::OpKind(at::aten::index_select)));
+    }
+    case at::aten::kthvalue: {
+      return InferKthValue(ir::NodeCast<ir::ops::KthValue>(
+          node, ir::OpKind(at::aten::kthvalue)));
+    }
+    case at::aten::l1_loss: {
+      return InferL1Loss(
+          ir::NodeCast<ir::ops::L1Loss>(node, ir::OpKind(at::aten::l1_loss)));
+    }
+    case at::aten::l1_loss_backward: {
+      return InferL1LossBackward(ir::NodeCast<ir::ops::L1LossBackward>(
+          node, ir::OpKind(at::aten::l1_loss_backward)));
     }
     case at::aten::index: {
       return InferIndexGet(

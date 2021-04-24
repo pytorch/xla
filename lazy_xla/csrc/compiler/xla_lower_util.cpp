@@ -1,11 +1,14 @@
 #include "lazy_xla/csrc/compiler/xla_lower_util.h"
 
+#include "lazy_tensor_core/csrc/tensor_util.h"
 #include "lazy_xla/csrc/compiler/convert_ops.h"
 #include "lazy_xla/csrc/compiler/data_ops.h"
 #include "lazy_xla/csrc/compiler/helpers.h"
 #include "lazy_xla/csrc/compiler/random.h"
 #include "tensorflow/compiler/xla/client/lib/arithmetic.h"
+#include "tensorflow/compiler/xla/client/lib/comparators.h"
 #include "tensorflow/compiler/xla/client/lib/constants.h"
+#include "tensorflow/compiler/xla/xla_client/computation_client.h"
 #include "tensorflow/compiler/xla/xla_client/debug_macros.h"
 #include "tensorflow/compiler/xla/xla_client/sys_util.h"
 
@@ -233,6 +236,44 @@ xla::XlaOp PadToSize(xla::XlaOp input, absl::Span<const xla::int64> size,
     has_padding = has_padding || dims->edge_padding_high() != 0;
   }
   return has_padding ? xla::Pad(input, *pad_value, padding_config) : input;
+}
+
+std::vector<xla::XlaOp> CreateKthValue(xla::XlaOp input, xla::int64 k,
+                                       xla::int64 dim, bool keepdim) {
+  // Here 'k' is 1 based (1...).
+  const xla::Shape& shape = XlaHelpers::ShapeOfXlaOp(input);
+  XLA_CHECK_LE(k, shape.dimensions(dim));
+  xla::Shape iota_shape =
+      xla::ShapeUtil::MakeShape(xla::PrimitiveType::S32, shape.dimensions());
+  xla::XlaOp iota = xla::Iota(input.builder(), iota_shape, dim);
+  xla::XlaOp sort_result = xla::Sort(
+      {input, iota},
+      xla::CreateScalarLtComputation(
+          {shape.element_type(), xla::PrimitiveType::S32}, input.builder()),
+      dim);
+
+  std::vector<xla::int64> start_indices(shape.rank(), 0);
+  start_indices[dim] = k - 1;
+  std::vector<xla::int64> limit_indices(shape.dimensions().begin(),
+                                        shape.dimensions().end());
+  limit_indices[dim] = k;
+  std::vector<xla::int64> strides(shape.rank(), 1);
+
+  xla::XlaOp values = xla::Slice(xla::GetTupleElement(sort_result, 0),
+                                 start_indices, limit_indices, strides);
+  xla::XlaOp indices = xla::Slice(xla::GetTupleElement(sort_result, 1),
+                                  start_indices, limit_indices, strides);
+  if (!keepdim) {
+    auto reshape_sizes = Helpers::DropDimensions(shape.dimensions(), {dim});
+    values = XlaHelpers::DynamicReshape(values, reshape_sizes);
+    indices = XlaHelpers::DynamicReshape(indices, reshape_sizes);
+  }
+  // aten::kthvalue() wants Long tensors as indices.
+  xla::PrimitiveType s64 = xla::ComputationClient::XlaPrimitiveType(
+      torch_lazy_tensors::GetDevicePrimitiveType(
+          lazy_tensors::PrimitiveType::S64,
+          /*device=*/nullptr));
+  return {values, xla::ConvertElementType(indices, s64)};
 }
 
 xla::XlaOp CreateMatMul(xla::XlaOp lhs, xla::XlaOp rhs) {
