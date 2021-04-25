@@ -61,6 +61,11 @@ xla::XlaOp CreateScatter(const Device& device, xla::XlaOp input,
                          xla::XlaOp index, xla::XlaOp source, xla::int64 dim,
                          const ScatterOptions& options);
 
+std::vector<xla::XlaOp> BuildMaskedSelect(xla::XlaOp input, xla::XlaOp mask);
+
+xla::XlaOp BuildMaskedScatter(xla::XlaOp input, xla::XlaOp mask,
+                              xla::XlaOp source);
+
 XlaOpVector BuildAmpForeachNonFiniteCheckAndUnscale(
     const XlaOpVector& inputs, const xla::XlaOp& found_inf_float,
     const xla::XlaOp& inv_scale);

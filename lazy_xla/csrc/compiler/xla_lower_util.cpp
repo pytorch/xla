@@ -5,6 +5,7 @@
 #include "lazy_xla/csrc/compiler/data_ops.h"
 #include "lazy_xla/csrc/compiler/helpers.h"
 #include "lazy_xla/csrc/compiler/random.h"
+#include "lazy_xla/csrc/compiler/tensor_util.h"
 #include "tensorflow/compiler/xla/client/lib/arithmetic.h"
 #include "tensorflow/compiler/xla/client/lib/comparators.h"
 #include "tensorflow/compiler/xla/client/lib/constants.h"
@@ -15,6 +16,49 @@
 namespace torch_lazy_tensors {
 namespace compiler {
 namespace {
+
+struct ConditionMaskData {
+  xla::Shape iota_shape;
+  xla::int64 flattened_size;
+  xla::XlaOp r1_condition_int;
+  xla::PrimitiveType condition_int_type;
+  xla::XlaOp length;
+};
+
+ConditionMaskData CreateConditionMaskData(xla::XlaOp condition) {
+  static const xla::PrimitiveType kConditionType = xla::PrimitiveType::S32;
+  xla::Shape iota_shape = XlaHelpers::ShapeOfXlaOp(condition);
+  iota_shape.set_element_type(
+      torch_lazy_tensors::xla_backend::GetShapeDimensionType(
+          /*device=*/nullptr));
+
+  xla::int64 flattened_size = xla::ShapeUtil::ElementsIn(iota_shape);
+  xla::XlaOp r1_condition =
+      XlaHelpers::DynamicReshape(condition, {flattened_size});
+  xla::XlaOp r1_condition_int =
+      xla::ConvertElementType(r1_condition, kConditionType);
+  xla::XlaOp zeros = xla::ZerosLike(r1_condition_int);
+  xla::XlaOp compared =
+      xla::ConvertElementType(xla::Gt(r1_condition_int, zeros), kConditionType);
+  xla::XlaOp length = xla::ReduceAll(
+      compared, xla::Zero(condition.builder(), kConditionType),
+      xla::CreateScalarAddComputation(kConditionType, condition.builder()));
+  return {std::move(iota_shape), flattened_size, r1_condition_int,
+          kConditionType, length};
+}
+
+xla::XlaOp GetPromotedMask(xla::XlaOp mask, const xla::Shape& input_shape) {
+  const xla::Shape& mask_shape = XlaHelpers::ShapeOfXlaOp(mask);
+  lazy_tensors::Shape promoted_mask_shape =
+      Helpers::GetPromotedShape(XlaHelpers::LazyTensorsShape(mask_shape),
+                                XlaHelpers::LazyTensorsShape(input_shape));
+  return XlaHelpers::ImplicitBroadcast(
+      mask, mask_shape, XlaHelpers::XlaShape(promoted_mask_shape));
+}
+
+xla::XlaOp GetPromotedR1Mask(xla::XlaOp mask, const xla::Shape& input_shape) {
+  return XlaHelpers::Flatten(GetPromotedMask(mask, input_shape));
+}
 
 bool ShouldUseDenseScatter(const Device& device, const xla::Shape& input_shape,
                            const xla::Shape& index_shape) {
@@ -215,6 +259,34 @@ xla::XlaOp XlaDenseScatter(xla::XlaOp input, xla::XlaOp index, xla::XlaOp src,
     }
     return result;
   });
+}
+
+std::vector<xla::XlaOp> BuildConditionIndices(xla::XlaOp condition) {
+  ConditionMaskData cmd = CreateConditionMaskData(condition);
+  std::vector<xla::XlaOp> to_sort = {cmd.r1_condition_int};
+  std::vector<xla::PrimitiveType> types_to_sort = {cmd.condition_int_type};
+  for (xla::int64 axis = 0; axis < cmd.iota_shape.rank(); ++axis) {
+    xla::XlaOp iota = xla::Iota(condition.builder(), cmd.iota_shape, axis);
+    xla::XlaOp reshaped = xla::Reshape(iota, {cmd.flattened_size});
+    to_sort.push_back(reshaped);
+    types_to_sort.push_back(cmd.iota_shape.element_type());
+  }
+
+  xla::XlaOp sorted = xla::Sort(
+      to_sort,
+      xla::CreateScalarGtComputation(types_to_sort, condition.builder()),
+      /*dimension=*/0,
+      /*is_stable=*/true);
+  std::vector<xla::XlaOp> to_concat;
+  for (xla::int64 i = 0; i < cmd.iota_shape.rank(); ++i) {
+    xla::XlaOp index_single_dim = xla::GetTupleElement(sorted, i + 1);
+    to_concat.push_back(
+        xla::Reshape(index_single_dim, {cmd.flattened_size, 1}));
+  }
+
+  xla::XlaOp result = xla::ConcatInDim(condition.builder(), to_concat, 1);
+  xla::XlaOp result_padded = xla::SetDimensionSize(result, cmd.length, 0);
+  return {result_padded, cmd.length};
 }
 
 }  // namespace
@@ -517,6 +589,53 @@ xla::XlaOp CreateScatter(const Device& device, xla::XlaOp input,
   return xla::Scatter(
       input, scatter_indices, source_op,
       MakeScatterComputation(options.combiner, input_shape.element_type()),
+      scatter_dnums);
+}
+
+std::vector<xla::XlaOp> BuildMaskedSelect(xla::XlaOp input, xla::XlaOp mask) {
+  xla::Shape input_shape;
+  xla::XlaOp r1_input = XlaHelpers::Flatten(input, &input_shape);
+  xla::XlaOp r1_bcast_mask = GetPromotedR1Mask(mask, input_shape);
+  ConditionMaskData cmd = CreateConditionMaskData(r1_bcast_mask);
+  std::vector<xla::XlaOp> to_sort = {cmd.r1_condition_int, r1_input};
+  std::vector<xla::PrimitiveType> types_to_sort = {cmd.condition_int_type,
+                                                   input_shape.element_type()};
+  xla::XlaOp sorted = xla::Sort(
+      to_sort, xla::CreateScalarGtComputation(types_to_sort, input.builder()),
+      /*dimension=*/0,
+      /*is_stable=*/true);
+  xla::XlaOp sorted_input = xla::GetTupleElement(sorted, 1);
+  xla::XlaOp sorted_input_padded =
+      xla::SetDimensionSize(sorted_input, cmd.length, 0);
+  return {sorted_input_padded, cmd.length};
+}
+
+xla::XlaOp BuildMaskedScatter(xla::XlaOp input, xla::XlaOp mask,
+                              xla::XlaOp source) {
+  const xla::Shape& input_shape = XlaHelpers::ShapeOfXlaOp(input);
+  xla::XlaOp bcast_mask = GetPromotedMask(mask, input_shape);
+  xla::Shape source_shape;
+  xla::XlaOp r1_source = XlaHelpers::Flatten(source, &source_shape);
+
+  auto indices = BuildConditionIndices(bcast_mask);
+  xla::XlaOp mask_indices = indices[0];
+  xla::XlaOp num_indices = indices[1];
+
+  xla::int64 input_size = xla::ShapeUtil::ElementsIn(input_shape);
+  if (input_size > xla::ShapeUtil::ElementsIn(source_shape)) {
+    r1_source = PadToSize(r1_source, {input_size});
+  }
+  r1_source = xla::SetDimensionSize(r1_source, num_indices, 0);
+
+  xla::ScatterDimensionNumbers scatter_dnums;
+  scatter_dnums.set_index_vector_dim(1);
+  for (xla::int64 i = 0; i < input_shape.rank(); ++i) {
+    scatter_dnums.add_inserted_window_dims(i);
+    scatter_dnums.add_scatter_dims_to_operand_dims(i);
+  }
+  return xla::Scatter(
+      input, mask_indices, r1_source,
+      MakeScatterComputation(nullptr, input_shape.element_type()),
       scatter_dnums);
 }
 

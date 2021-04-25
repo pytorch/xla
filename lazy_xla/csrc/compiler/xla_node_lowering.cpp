@@ -47,6 +47,7 @@
 #include "lazy_tensor_core/csrc/ops/log_softmax_backward.h"
 #include "lazy_tensor_core/csrc/ops/ltc_ops.h"
 #include "lazy_tensor_core/csrc/ops/masked_fill.h"
+#include "lazy_tensor_core/csrc/ops/masked_scatter.h"
 #include "lazy_tensor_core/csrc/ops/not_supported.h"
 #include "lazy_tensor_core/csrc/ops/ops.h"
 #include "lazy_tensor_core/csrc/ops/permute.h"
@@ -95,6 +96,7 @@
 #include "lazy_xla/csrc/compiler/xla_lower_util.h"
 #include "lazy_xla/csrc/compiler/xla_lowering_context.h"
 #include "tensorflow/compiler/xla/client/lib/constants.h"
+#include "tensorflow/compiler/xla/client/lib/logdet.h"
 #include "tensorflow/compiler/xla/client/lib/math.h"
 #include "tensorflow/compiler/xla/client/lib/matrix.h"
 #include "tensorflow/compiler/xla/client/lib/slicing.h"
@@ -792,6 +794,7 @@ class XlaNodeLowering : public NodeLowering {
   XlaOpVector LowerLinearInterpolation(
       const ir::ops::LinearInterpolation* node);
   XlaOpVector LowerMaxUnary(const ir::Node* node);
+  XlaOpVector LowerMinUnary(const ir::Node* node);
   XlaOpVector LowerNotSupported(const ir::ops::NotSupported* node);
   DECLARE_UNARY_OP(Acos);
   DECLARE_UNARY_OP(Acosh);
@@ -813,6 +816,7 @@ class XlaNodeLowering : public NodeLowering {
   DECLARE_UNARY_OP(HardSigmoidBackward);
   DECLARE_UNARY_OP(Log);
   DECLARE_UNARY_OP(Log1p);
+  DECLARE_UNARY_OP(LogDet);
   DECLARE_UNARY_OP(Erf);
   DECLARE_UNARY_OP(Erfc);
   DECLARE_UNARY_OP(Erfinv);
@@ -885,6 +889,7 @@ class XlaNodeLowering : public NodeLowering {
   DECLARE_UNARY_OP2(LogSoftmax);
   DECLARE_UNARY_OP2(LogSoftmaxBackward);
   DECLARE_UNARY_OP2(MaskedFill);
+  DECLARE_UNARY_OP2(MaskedScatter);
   DECLARE_UNARY_OP2(Permute);
   DECLARE_UNARY_OP2(Prod);
   DECLARE_UNARY_OP2(ReflectionPad2d);
@@ -965,6 +970,7 @@ XlaOpVector XlaNodeLowering::LowerToXla(const ir::Node* node) {
     HANDLE_GENERIC_OP(HardSigmoidBackward, at::aten::hardsigmoid_backward)
     HANDLE_GENERIC_OP(Log, at::aten::log)
     HANDLE_GENERIC_OP(Log1p, at::aten::log1p)
+    HANDLE_GENERIC_OP(LogDet, at::aten::logdet)
     HANDLE_GENERIC_OP(Erf, at::aten::erf)
     HANDLE_GENERIC_OP(Erfc, at::aten::erfc)
     HANDLE_GENERIC_OP(Erfinv, at::aten::erfinv)
@@ -980,7 +986,6 @@ XlaOpVector XlaNodeLowering::LowerToXla(const ir::Node* node) {
     HANDLE_GENERIC_OP(Round, at::aten::round)
     HANDLE_GENERIC_OP(Not, at::aten::bitwise_not)
     HANDLE_GENERIC_OP(Where, at::aten::where)
-    HANDLE_GENERIC_OP(Min, at::aten::min)
     HANDLE_GENERIC_OP(Pow, at::aten::pow)
     HANDLE_GENERIC_OP(Fmod, at::aten::fmod)
     HANDLE_GENERIC_OP(Atan2, at::aten::atan2)
@@ -1024,6 +1029,7 @@ XlaOpVector XlaNodeLowering::LowerToXla(const ir::Node* node) {
     HANDLE_GENERIC_OP2(LogSoftmax, at::aten::log_softmax)
     HANDLE_GENERIC_OP2(LogSoftmaxBackward, at::aten::_log_softmax_backward_data)
     HANDLE_GENERIC_OP2(MaskedFill, at::aten::masked_fill)
+    HANDLE_GENERIC_OP2(MaskedScatter, at::aten::masked_scatter)
     HANDLE_GENERIC_OP2(Permute, at::aten::permute)
     HANDLE_GENERIC_OP2(Prod, at::aten::prod)
     HANDLE_GENERIC_OP2(ReflectionPad2d, at::aten::reflection_pad2d)
@@ -1085,6 +1091,15 @@ XlaOpVector XlaNodeLowering::LowerToXla(const ir::Node* node) {
       LTC_CHECK_EQ(arity, 1);
       LTC_CHECK(dynamic_cast<const ir::ops::Generic*>(node));
       return LowerMaxUnary(node);
+    }
+    case at::aten::min: {
+      size_t arity = node->operands().size();
+      if (arity == 2) {
+        return LowerMin(node);
+      }
+      LTC_CHECK_EQ(arity, 1);
+      LTC_CHECK(dynamic_cast<const ir::ops::Generic*>(node));
+      return LowerMinUnary(node);
     }
     case at::prim::Constant: {
       // TODO(asuhan): rework to remove ambiguity between Scalar and Constant
@@ -1553,6 +1568,21 @@ XlaOpVector XlaNodeLowering::LowerMaxUnary(const ir::Node* node) {
   return {result};
 }
 
+XlaOpVector XlaNodeLowering::LowerMinUnary(const ir::Node* node) {
+  xla::XlaOp xla_input = loctx()->GetOutputOp(node->operand(0));
+  const xla::Shape& input_shape = XlaHelpers::ShapeOfXlaOp(xla_input);
+  xla::PrimitiveType element_type = input_shape.element_type();
+  torch_lazy_tensors::Helpers::MinMax min_max =
+      torch_lazy_tensors::Helpers::MinMaxValues(
+          XlaHelpers::LazyTensorPrimitiveType(element_type));
+  xla::XlaOp init_value =
+      XlaHelpers::ScalarValue(min_max.max, element_type, loctx()->builder());
+  xla::XlaOp result = xla::Reduce(
+      xla_input, init_value, XlaHelpers::CreateMinComputation(element_type),
+      xla::util::Iota<xla::int64>(input_shape.rank()));
+  return {result};
+}
+
 XlaOpVector XlaNodeLowering::LowerNotSupported(
     const ir::ops::NotSupported* node) {
   LTC_ERROR() << "Node not supported: " << node->ToString();
@@ -1685,6 +1715,14 @@ XlaOpVector XlaNodeLowering::LowerMaskedFill(const ir::ops::MaskedFill* node) {
           input.builder()),
       input_shape.dimensions());
   return {xla::Select(mask_pred, value, input)};
+}
+
+XlaOpVector XlaNodeLowering::LowerMaskedScatter(
+    const ir::ops::MaskedScatter* node) {
+  xla::XlaOp input = loctx()->GetOutputOp(node->operand(0));
+  xla::XlaOp mask = loctx()->GetOutputOp(node->operand(1));
+  xla::XlaOp source = loctx()->GetOutputOp(node->operand(2));
+  return {BuildMaskedScatter(input, mask, source)};
 }
 
 XlaOpVector XlaNodeLowering::LowerPermute(const ir::ops::Permute* node) {
@@ -1985,6 +2023,11 @@ XlaOpVector XlaNodeLowering::LowerL1LossBackward(
   return {BuildL1LossBackward(grad_output, input, target, node->reduction())};
 }
 
+XlaOpVector XlaNodeLowering::LowerLogDet(const ir::Node* node) {
+  xla::XlaOp input = loctx()->GetOutputOp(node->operand(0));
+  return {xla::LogDet(input)};
+}
+
 XlaOpVector XlaNodeLowering::LowerHardshrink(const ir::ops::Hardshrink* node) {
   LTC_CHECK_EQ(node->num_outputs(), 1);
   xla::XlaOp input = loctx()->GetOutputOp(node->operand(0));
@@ -2062,8 +2105,8 @@ DEFINE_UNARY_OP(Ceil, xla::Ceil)
 DEFINE_UNARY_OP(Floor, xla::Floor)
 DEFINE_UNARY_OP(Round, xla::RoundToEven)
 DEFINE_UNARY_OP(Not, xla::Not)
-DEFINE_BINARY_OP(Min, xla::Min)
 DEFINE_BINARY_OP(Max, xla::Max)
+DEFINE_BINARY_OP(Min, xla::Min)
 DEFINE_BINARY_OP(Pow, xla::Pow)
 DEFINE_BINARY_OP(Fmod, xla::Rem)
 DEFINE_BINARY_OP(Atan2, xla::Atan2)
@@ -2124,12 +2167,13 @@ lazy_tensors::Shape XlaNodeLowering::Infer(const ir::Node* node) {
     case at::aten::__xor__: {
       return InferBitwise(node);
     }
-    case at::aten::min: {
-      return InferMin(node);
-    }
     case at::aten::max: {
       LTC_CHECK_EQ(node->operands().size(), 2);
       return InferMax(node);
+    }
+    case at::aten::min: {
+      LTC_CHECK_EQ(node->operands().size(), 2);
+      return InferMin(node);
     }
     case at::aten::pow: {
       return InferPow(node);

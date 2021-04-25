@@ -2205,6 +2205,12 @@ at::Tensor AtenXlaType::logsumexp(const at::Tensor& self, at::IntArrayRef dim,
   return AtenXlaTypeDefault::logsumexp(self, dim, keepdim);
 }
 
+at::Tensor AtenXlaType::logdet(const at::Tensor& self) {
+  LTC_FN_COUNTER("xla::");
+  return bridge::AtenFromLtcTensor(
+      LazyTensor::logdet(bridge::GetLtcTensor(self)));
+}
+
 at::Tensor AtenXlaType::lt(const at::Tensor& self, const at::Scalar& other) {
   if (UseNNC(self)) {
     LTC_FN_COUNTER("xla::");
@@ -2221,6 +2227,51 @@ at::Tensor AtenXlaType::lt(const at::Tensor& self, const at::Tensor& other) {
         bridge::GetLtcTensor(self), bridge::GetLtcTensor(other)));
   }
   return AtenXlaTypeDefault::lt(self, other);
+}
+
+at::Tensor& AtenXlaType::masked_fill_(at::Tensor& self, const at::Tensor& mask,
+                                      const at::Scalar& value) {
+  LTC_FN_COUNTER("xla::");
+  LazyTensor self_tensor = bridge::GetLtcTensor(self);
+  LazyTensor::masked_fill_(self_tensor, bridge::GetLtcTensor(mask), value);
+  return self;
+}
+
+at::Tensor& AtenXlaType::masked_fill_(at::Tensor& self, const at::Tensor& mask,
+                                      const at::Tensor& value) {
+  LTC_FN_COUNTER("xla::");
+  LTC_CHECK_EQ(value.dim(), 0) << "masked_fill_ only supports a 0-dimensional "
+                               << "value tensor, but got tensor "
+                               << "with " << value.dim() << " dimension(s).";
+  return masked_fill_(self, mask, value.item());
+}
+
+at::Tensor& AtenXlaType::masked_scatter_(at::Tensor& self,
+                                         const at::Tensor& mask,
+                                         const at::Tensor& source) {
+  LTC_FN_COUNTER("xla::");
+  LazyTensor self_tensor = bridge::GetLtcTensor(self);
+  LazyTensor::masked_scatter_(self_tensor, bridge::GetLtcTensor(mask),
+                              bridge::GetLtcTensor(source));
+  return self;
+}
+
+at::Tensor AtenXlaType::masked_select(const at::Tensor& self,
+                                      const at::Tensor& mask) {
+  LTC_FN_COUNTER("xla::");
+  LazyTensor self_tensor = bridge::GetLtcTensor(self);
+  // Initially make XLA handled masked_select() handling experimental, and
+  // opt-in.
+  if (!DebugUtil::ExperimentEnabled("masked_select")) {
+    return AtenXlaTypeDefault::masked_select(self, mask);
+  }
+  return bridge::AtenFromLtcTensor(
+      LazyTensor::masked_select(self_tensor, bridge::GetLtcTensor(mask)));
+}
+
+at::Tensor AtenXlaType::max(const at::Tensor& self) {
+  LTC_FN_COUNTER("xla::");
+  return bridge::AtenFromLtcTensor(LazyTensor::max(bridge::GetLtcTensor(self)));
 }
 
 at::Tensor& AtenXlaType::lt_(at::Tensor& self, const at::Scalar& other) {
@@ -2258,6 +2309,17 @@ at::Tensor AtenXlaType::maximum(const at::Tensor& self,
                     });
 }
 
+std::tuple<at::Tensor&, at::Tensor&> AtenXlaType::max_out(
+    const at::Tensor& self, int64_t dim, bool keepdim, at::Tensor& max,
+    at::Tensor& max_values) {
+  LTC_FN_COUNTER("xla::");
+  LazyTensor max_tensor = bridge::GetLtcTensor(max);
+  LazyTensor max_values_tensor = bridge::GetLtcTensor(max_values);
+  LazyTensor::max_out(max_tensor, max_values_tensor, bridge::GetLtcTensor(self),
+                      dim, keepdim);
+  return std::forward_as_tuple(max, max_values);
+}
+
 at::Tensor AtenXlaType::max_pool2d(const at::Tensor& self,
                                    at::IntArrayRef kernel_size,
                                    at::IntArrayRef stride,
@@ -2278,6 +2340,11 @@ at::Tensor AtenXlaType::max_pool3d(const at::Tensor& self,
       self, kernel_size, stride, padding, dilation, ceil_mode);
 }
 
+at::Tensor AtenXlaType::min(const at::Tensor& self) {
+  LTC_FN_COUNTER("xla::");
+  return bridge::AtenFromLtcTensor(LazyTensor::min(bridge::GetLtcTensor(self)));
+}
+
 std::tuple<at::Tensor, at::Tensor> AtenXlaType::min(const at::Tensor& self,
                                                     int64_t dim, bool keepdim) {
   return AtenXlaTypeDefault::min(self, dim, keepdim);
@@ -2291,6 +2358,17 @@ at::Tensor AtenXlaType::minimum(const at::Tensor& self,
                         at::ScalarType dtype) {
                       return LazyTensor::min(xself, xother, dtype);
                     });
+}
+
+std::tuple<at::Tensor&, at::Tensor&> AtenXlaType::min_out(
+    const at::Tensor& self, int64_t dim, bool keepdim, at::Tensor& min,
+    at::Tensor& min_indices) {
+  LTC_FN_COUNTER("xla::");
+  LazyTensor min_tensor = bridge::GetLtcTensor(min);
+  LazyTensor min_indices_tensor = bridge::GetLtcTensor(min_indices);
+  LazyTensor::min_out(min_tensor, min_indices_tensor,
+                      bridge::GetLtcTensor(self), dim, keepdim);
+  return std::forward_as_tuple(min, min_indices);
 }
 
 at::Tensor AtenXlaType::mul(const at::Tensor& self, const at::Tensor& other) {

@@ -567,6 +567,8 @@ class AtenXlaType {
   static std::tuple<at::Tensor, at::Tensor> log_sigmoid_forward(
       const at::Tensor& self);
 
+  static at::Tensor logdet(const at::Tensor& self);
+
   static at::Tensor logsumexp(const at::Tensor& self, at::IntArrayRef dim,
                               bool keepdim);
 
@@ -578,10 +580,29 @@ class AtenXlaType {
 
   static at::Tensor& lt_(at::Tensor& self, const at::Tensor& other);
 
+  static at::Tensor& masked_fill_(at::Tensor& self, const at::Tensor& mask,
+                                  const at::Scalar& value);
+
+  static at::Tensor& masked_fill_(at::Tensor& self, const at::Tensor& mask,
+                                  const at::Tensor& value);
+
+  static at::Tensor& masked_scatter_(at::Tensor& self, const at::Tensor& mask,
+                                     const at::Tensor& source);
+
+  static at::Tensor masked_select(const at::Tensor& self,
+                                  const at::Tensor& mask);
+
+  static at::Tensor max(const at::Tensor& self);
+
   static std::tuple<at::Tensor, at::Tensor> max(const at::Tensor& self,
                                                 int64_t dim, bool keepdim);
 
   static at::Tensor maximum(const at::Tensor& self, const at::Tensor& other);
+
+  static std::tuple<at::Tensor&, at::Tensor&> max_out(const at::Tensor& self,
+                                                      int64_t dim, bool keepdim,
+                                                      at::Tensor& max,
+                                                      at::Tensor& max_values);
 
   static at::Tensor max_pool2d(const at::Tensor& self,
                                at::IntArrayRef kernel_size,
@@ -593,10 +614,17 @@ class AtenXlaType {
                                at::IntArrayRef stride, at::IntArrayRef padding,
                                at::IntArrayRef dilation, bool ceil_mode);
 
+  static at::Tensor min(const at::Tensor& self);
+
   static std::tuple<at::Tensor, at::Tensor> min(const at::Tensor& self,
                                                 int64_t dim, bool keepdim);
 
   static at::Tensor minimum(const at::Tensor& self, const at::Tensor& other);
+
+  static std::tuple<at::Tensor&, at::Tensor&> min_out(const at::Tensor& self,
+                                                      int64_t dim, bool keepdim,
+                                                      at::Tensor& min,
+                                                      at::Tensor& min_indices);
 
   static at::Tensor mul(const at::Tensor& self, const at::Tensor& other);
 
