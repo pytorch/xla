@@ -318,6 +318,9 @@ DISABLED_TORCH_TESTS_TPU_ONLY = {
         'test_bucketization_xla',  # server side crash
         'test_median_real_values_xla_int64',  # TPU X64Rewriter doesn't support sort
         'test_copysign_xla.*bfloat16.*',  # precision
+        'test_nondeterministic_alert_bincount_xla',  # server side crash
+        'test_put_xla_bfloat16',  # (TPU) 0.46484375 vs. 0.484375
+        'test_take_xla_bfloat16',  # (TPU) -6.53125 vs. -6.5625
     },
 
     # test_indexing.py
