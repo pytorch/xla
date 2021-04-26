@@ -373,8 +373,10 @@ at::Tensor AtenXlaType::_copy_from_and_resize(const at::Tensor& self,
         CopyTensor(tensor, dst.scalar_type(), /*copy=*/false);
     dst.resize_as_(typed_tensor).copy_(typed_tensor);
   } else {
-    XLATensor::copy_(*dst_tensor, *self_tensor);
-    bridge::ReplaceXlaTensor(dst, *dst_tensor);
+    // at this point we know dst is an XLA tensor
+    XLATensorImpl* dest_impl = dynamic_cast<XLATensorImpl*>(dst.unsafeGetTensorImpl());
+    dest_impl->tensor().UpdateFromTensorOut(*self_tensor);
+    dest_impl->force_refresh_sizes();
   }
   return dst;
 }
