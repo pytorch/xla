@@ -636,6 +636,28 @@ class AtenXlaType {
       at::IntArrayRef padding, at::IntArrayRef dilation, bool ceil_mode,
       const at::Tensor& indices);
 
+  static at::Tensor max_unpool2d(const at::Tensor& self,
+                                 const at::Tensor& indices,
+                                 at::IntArrayRef output_size);
+
+  static at::Tensor max_unpool2d_backward(const at::Tensor& grad_output,
+                                          const at::Tensor& self,
+                                          const at::Tensor& indices,
+                                          at::IntArrayRef output_size);
+
+  static at::Tensor max_unpool3d(const at::Tensor& self,
+                                 const at::Tensor& indices,
+                                 at::IntArrayRef output_size,
+                                 at::IntArrayRef stride,
+                                 at::IntArrayRef padding);
+
+  static at::Tensor max_unpool3d_backward(const at::Tensor& grad_output,
+                                          const at::Tensor& self,
+                                          const at::Tensor& indices,
+                                          at::IntArrayRef output_size,
+                                          at::IntArrayRef stride,
+                                          at::IntArrayRef padding);
+
   static at::Tensor mean(const at::Tensor& self,
                          c10::optional<at::ScalarType> dtype);
 
@@ -654,6 +676,16 @@ class AtenXlaType {
                                                       at::Tensor& min,
                                                       at::Tensor& min_indices);
 
+  static at::Tensor mm(const at::Tensor& self, const at::Tensor& mat2);
+
+  static at::Tensor mse_loss(const at::Tensor& self, const at::Tensor& target,
+                             int64_t reduction);
+
+  static at::Tensor mse_loss_backward(const at::Tensor& grad_output,
+                                      const at::Tensor& self,
+                                      const at::Tensor& target,
+                                      int64_t reduction);
+
   static at::Tensor mul(const at::Tensor& self, const at::Tensor& other);
 
   static at::Tensor mul(const at::Tensor& self, const at::Scalar& other);
@@ -661,6 +693,11 @@ class AtenXlaType {
   static at::Tensor& mul_(at::Tensor& self, const at::Tensor& other);
 
   static at::Tensor& mul_(at::Tensor& self, const at::Scalar& other);
+
+  static at::Tensor mv(const at::Tensor& self, const at::Tensor& vec);
+
+  static at::Tensor& mv_out(const at::Tensor& self, const at::Tensor& vec,
+                            at::Tensor& out);
 
   static at::Tensor ne(const at::Tensor& self, const at::Scalar& other);
 
@@ -846,6 +883,10 @@ class AtenXlaType {
 
   static at::Tensor sum(const at::Tensor& self, at::IntArrayRef dim,
                         bool keepdim, c10::optional<at::ScalarType> dtype);
+
+  static std::tuple<at::Tensor, at::Tensor> symeig(const at::Tensor& self,
+                                                   bool eigenvectors,
+                                                   bool upper);
 
   static at::Tensor t(const at::Tensor& self);
 

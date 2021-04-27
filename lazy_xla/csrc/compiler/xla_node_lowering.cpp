@@ -50,7 +50,11 @@
 #include "lazy_tensor_core/csrc/ops/masked_scatter.h"
 #include "lazy_tensor_core/csrc/ops/max_pool_nd.h"
 #include "lazy_tensor_core/csrc/ops/max_pool_nd_backward.h"
+#include "lazy_tensor_core/csrc/ops/max_unpool_nd.h"
+#include "lazy_tensor_core/csrc/ops/max_unpool_nd_backward.h"
 #include "lazy_tensor_core/csrc/ops/mean.h"
+#include "lazy_tensor_core/csrc/ops/mse_loss.h"
+#include "lazy_tensor_core/csrc/ops/mse_loss_backward.h"
 #include "lazy_tensor_core/csrc/ops/not_supported.h"
 #include "lazy_tensor_core/csrc/ops/ops.h"
 #include "lazy_tensor_core/csrc/ops/permute.h"
@@ -72,6 +76,7 @@
 #include "lazy_tensor_core/csrc/ops/squeeze.h"
 #include "lazy_tensor_core/csrc/ops/stack.h"
 #include "lazy_tensor_core/csrc/ops/sum.h"
+#include "lazy_tensor_core/csrc/ops/symeig.h"
 #include "lazy_tensor_core/csrc/ops/threshold.h"
 #include "lazy_tensor_core/csrc/ops/threshold_backward.h"
 #include "lazy_tensor_core/csrc/ops/tril.h"
@@ -103,6 +108,7 @@
 #include "tensorflow/compiler/xla/client/lib/logdet.h"
 #include "tensorflow/compiler/xla/client/lib/math.h"
 #include "tensorflow/compiler/xla/client/lib/matrix.h"
+#include "tensorflow/compiler/xla/client/lib/self_adjoint_eig.h"
 #include "tensorflow/compiler/xla/client/lib/slicing.h"
 #include "tensorflow/compiler/xla/xla_client/computation_client.h"
 #include "tensorflow/compiler/xla/xla_client/util.h"
@@ -419,6 +425,36 @@ lazy_tensors::Shape InferMatMul(const ir::Node* node) {
   return ir::ops::InferOutputShape({lhs.shape(), rhs.shape()}, shape_fn);
 }
 
+lazy_tensors::Shape InferMm(const ir::Node* node) {
+  auto shape_fn = [](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
+    return BuildDot(operands[0], operands[1]);
+  };
+  const ir::Output& input = node->operand(0);
+  const ir::Output& weight = node->operand(1);
+  return ir::ops::InferOutputShape({input.shape(), weight.shape()}, shape_fn);
+}
+
+lazy_tensors::Shape InferMseLoss(const ir::ops::MseLoss* node) {
+  auto shape_fn = [node](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
+    return BuildMseLoss(operands[0], operands[1], node->reduction());
+  };
+  const ir::Output& input = node->operand(0);
+  const ir::Output& target = node->operand(1);
+  return ir::ops::InferOutputShape({input.shape(), target.shape()}, shape_fn);
+}
+
+lazy_tensors::Shape InferMseLossBackward(const ir::ops::MseLossBackward* node) {
+  auto shape_fn = [node](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
+    return BuildMseLossBackward(operands[0], operands[1], operands[2],
+                                node->reduction());
+  };
+  const ir::Output& grad_output = node->operand(0);
+  const ir::Output& input = node->operand(1);
+  const ir::Output& target = node->operand(2);
+  return ir::ops::InferOutputShape(
+      {grad_output.shape(), input.shape(), target.shape()}, shape_fn);
+}
+
 lazy_tensors::Shape InferBitwise(const ir::Node* node) {
   const ir::Output& input0 = node->operand(0);
   const ir::Output& input1 = node->operand(1);
@@ -624,6 +660,25 @@ lazy_tensors::Shape InferSum(const ir::ops::Sum* node) {
   return ir::ops::InferOutputShape({input.shape()}, shape_fn);
 }
 
+lazy_tensors::Shape InferSymEig(const ir::ops::SymEig* node) {
+  const ir::Output& input = node->operand(0);
+  const lazy_tensors::Shape& input_shape = input.shape();
+  LTC_CHECK_GE(input_shape.rank(), 2) << input_shape;
+  // W is ..., M
+  lazy_tensors::Shape wshape(input_shape);
+  wshape.DeleteDimension(input_shape.rank() - 1);
+  lazy_tensors::Shape vshape;
+  if (node->eigenvectors()) {
+    // V is ..., M, M
+    vshape = input_shape;
+  } else {
+    // V is 0
+    vshape =
+        lazy_tensors::ShapeUtil::MakeShape(input_shape.element_type(), {0});
+  }
+  return lazy_tensors::ShapeUtil::MakeTupleShape({wshape, vshape});
+}
+
 lazy_tensors::Shape InferUpsampleBilinear(
     const ir::ops::UpsampleBilinear* node) {
   const ir::Output& input = node->operand(0);
@@ -806,6 +861,29 @@ lazy_tensors::Shape InferMaxPoolNdBackward(
                                    shape_fn);
 }
 
+lazy_tensors::Shape InferMaxUnpoolNd(const ir::ops::MaxUnpoolNd* node) {
+  auto shape_fn = [node](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
+    return BuildMaxUnpoolNd(GetCurrentDevice(), operands[0], operands[1],
+                            node->output_size());
+  };
+  const ir::Output& input = node->operand(0);
+  const ir::Output& indices = node->operand(1);
+  return ir::ops::InferOutputShape({input.shape(), indices.shape()}, shape_fn);
+}
+
+lazy_tensors::Shape InferMaxUnpoolNdBackward(
+    const ir::ops::MaxUnpoolNdBackward* node) {
+  auto shape_fn = [node](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
+    return BuildMaxUnpoolNdBackward(operands[0], operands[1], operands[2],
+                                    node->output_size());
+  };
+  const ir::Output& grad_output = node->operand(0);
+  const ir::Output& input = node->operand(1);
+  const ir::Output& indices = node->operand(2);
+  return ir::ops::InferOutputShape(
+      {grad_output.shape(), input.shape(), indices.shape()}, shape_fn);
+}
+
 #define DECLARE_UNARY_OP(name) XlaOpVector Lower##name(const ir::Node* node)
 #define DECLARE_UNARY_OP2(name) \
   XlaOpVector Lower##name(const ir::ops::name* node)
@@ -903,6 +981,7 @@ class XlaNodeLowering : public NodeLowering {
   DECLARE_UNARY_OP(BaddBmm);
   DECLARE_UNARY_OP(Inverse);
   DECLARE_UNARY_OP(MatMul);
+  DECLARE_UNARY_OP(Mm);
   DECLARE_UNARY_OP(Clamp);
   DECLARE_UNARY_OP(Eye);
   DECLARE_UNARY_OP2(AdaptiveAvgPool2d);
@@ -936,6 +1015,8 @@ class XlaNodeLowering : public NodeLowering {
   DECLARE_UNARY_OP2(KthValue);
   DECLARE_UNARY_OP2(L1Loss);
   DECLARE_UNARY_OP2(L1LossBackward);
+  DECLARE_UNARY_OP2(MseLoss);
+  DECLARE_UNARY_OP2(MseLossBackward);
   DECLARE_UNARY_OP2(Hardshrink);
   DECLARE_UNARY_OP2(HardtanhBackward);
   DECLARE_UNARY_OP2(LeakyRelu);
@@ -947,6 +1028,8 @@ class XlaNodeLowering : public NodeLowering {
   DECLARE_UNARY_OP2(MaskedScatter);
   DECLARE_UNARY_OP2(MaxPoolNd);
   DECLARE_UNARY_OP2(MaxPoolNdBackward);
+  DECLARE_UNARY_OP2(MaxUnpoolNd);
+  DECLARE_UNARY_OP2(MaxUnpoolNdBackward);
   DECLARE_UNARY_OP2(Mean);
   DECLARE_UNARY_OP2(Permute);
   DECLARE_UNARY_OP2(Prod);
@@ -965,6 +1048,7 @@ class XlaNodeLowering : public NodeLowering {
   DECLARE_UNARY_OP2(ShrinkBackward);
   DECLARE_UNARY_OP2(Stack);
   DECLARE_UNARY_OP2(Sum);
+  DECLARE_UNARY_OP2(SymEig);
   DECLARE_UNARY_OP2(Threshold);
   DECLARE_UNARY_OP2(ThresholdBackward);
   DECLARE_UNARY_OP2(Tril);
@@ -1058,6 +1142,7 @@ XlaOpVector XlaNodeLowering::LowerToXla(const ir::Node* node) {
     HANDLE_GENERIC_OP(BaddBmm, at::aten::baddbmm)
     HANDLE_GENERIC_OP(Inverse, at::aten::inverse)
     HANDLE_GENERIC_OP(MatMul, at::aten::matmul)
+    HANDLE_GENERIC_OP(Mm, at::aten::mm)
     HANDLE_GENERIC_OP(Clamp, at::aten::clamp)
     HANDLE_GENERIC_OP(Eye, at::aten::eye)
     HANDLE_GENERIC_OP(Ger, at::aten::ger)
@@ -1095,6 +1180,10 @@ XlaOpVector XlaNodeLowering::LowerToXla(const ir::Node* node) {
     HANDLE_GENERIC_OP2(MaxPoolNd, at::aten::max_pool3d)
     HANDLE_GENERIC_OP2(MaxPoolNdBackward,
                        at::aten::max_pool3d_with_indices_backward)
+    HANDLE_GENERIC_OP2(MaxUnpoolNd, at::aten::max_unpool2d)
+    HANDLE_GENERIC_OP2(MaxUnpoolNdBackward, at::aten::max_unpool2d_backward)
+    HANDLE_GENERIC_OP2(MaxUnpoolNd, at::aten::max_unpool3d)
+    HANDLE_GENERIC_OP2(MaxUnpoolNdBackward, at::aten::max_unpool3d_backward)
     HANDLE_GENERIC_OP2(Mean, at::aten::mean)
     HANDLE_GENERIC_OP2(Permute, at::aten::permute)
     HANDLE_GENERIC_OP2(Prod, at::aten::prod)
@@ -1109,6 +1198,7 @@ XlaOpVector XlaNodeLowering::LowerToXla(const ir::Node* node) {
     HANDLE_GENERIC_OP2(ShrinkBackward, at::aten::softshrink_backward)
     HANDLE_GENERIC_OP2(Stack, at::aten::stack)
     HANDLE_GENERIC_OP2(Sum, at::aten::sum)
+    HANDLE_GENERIC_OP2(SymEig, at::aten::symeig)
     HANDLE_GENERIC_OP2(Softmax, at::aten::softmax)
     HANDLE_GENERIC_OP2(SoftmaxBackward, at::aten::_softmax_backward_data)
     HANDLE_GENERIC_OP2(Softshrink, at::aten::softshrink)
@@ -1138,6 +1228,8 @@ XlaOpVector XlaNodeLowering::LowerToXla(const ir::Node* node) {
     HANDLE_GENERIC_OP2(KthValue, at::aten::kthvalue)
     HANDLE_GENERIC_OP2(L1Loss, at::aten::l1_loss)
     HANDLE_GENERIC_OP2(L1LossBackward, at::aten::l1_loss_backward)
+    HANDLE_GENERIC_OP2(MseLoss, at::aten::mse_loss)
+    HANDLE_GENERIC_OP2(MseLossBackward, at::aten::mse_loss_backward)
     case at::aten::index_add: {
       return LowerIndexAdd(ir::NodeCast<ir::ops::IndexAlongDim>(
           node, ir::OpKind(at::aten::index_add)));
@@ -1698,6 +1790,12 @@ XlaOpVector XlaNodeLowering::LowerMatMul(const ir::Node* node) {
   return {CreateMatMul(lhs, rhs)};
 }
 
+XlaOpVector XlaNodeLowering::LowerMm(const ir::Node* node) {
+  xla::XlaOp input = loctx()->GetOutputOp(node->operand(0));
+  xla::XlaOp weight = loctx()->GetOutputOp(node->operand(1));
+  return {BuildDot(input, weight)};
+}
+
 XlaOpVector XlaNodeLowering::LowerClamp(const ir::Node* node) {
   LTC_CHECK_EQ(node->num_outputs(), 1);
   xla::XlaOp xla_input = loctx()->GetOutputOp(node->operand(0));
@@ -1807,6 +1905,23 @@ XlaOpVector XlaNodeLowering::LowerMaxPoolNdBackward(
   return {BuildMaxPoolNdBackward(
       /*out_backprop=*/grad_output, /*input=*/input, node->spatial_dim_count(),
       node->kernel_size(), node->stride(), node->padding(), node->ceil_mode())};
+}
+
+XlaOpVector XlaNodeLowering::LowerMaxUnpoolNd(
+    const ir::ops::MaxUnpoolNd* node) {
+  xla::XlaOp input = loctx()->GetOutputOp(node->operand(0));
+  xla::XlaOp indices = loctx()->GetOutputOp(node->operand(1));
+  return {
+      BuildMaxUnpoolNd(loctx()->device(), input, indices, node->output_size())};
+}
+
+XlaOpVector XlaNodeLowering::LowerMaxUnpoolNdBackward(
+    const ir::ops::MaxUnpoolNdBackward* node) {
+  xla::XlaOp grad_output = loctx()->GetOutputOp(node->operand(0));
+  xla::XlaOp input = loctx()->GetOutputOp(node->operand(1));
+  xla::XlaOp indices = loctx()->GetOutputOp(node->operand(2));
+  return {BuildMaxUnpoolNdBackward(grad_output, input, indices,
+                                   node->output_size())};
 }
 
 XlaOpVector XlaNodeLowering::LowerMean(const ir::ops::Mean* node) {
@@ -1943,6 +2058,21 @@ XlaOpVector XlaNodeLowering::LowerSum(const ir::ops::Sum* node) {
   xla::XlaOp input = loctx()->GetOutputOp(node->operand(0));
   return {BuildSum(CastToScalarType(input, node->dtype()), node->dimensions(),
                    node->keep_reduced_dimensions())};
+}
+
+XlaOpVector XlaNodeLowering::LowerSymEig(const ir::ops::SymEig* node) {
+  xla::XlaOp input = loctx()->GetOutputOp(node->operand(0));
+  xla::SelfAdjointEigResult self_adj_eig_result =
+      xla::SelfAdjointEig(input, /*lower=*/node->lower(), /*max_iter=*/100,
+                          /*epsilon=*/1e-6);
+  xla::XlaOp v = self_adj_eig_result.v;
+  xla::XlaOp w = self_adj_eig_result.w;
+  if (!node->eigenvectors()) {
+    v = xla::Zeros(input.builder(),
+                   xla::ShapeUtil::MakeShape(
+                       XlaHelpers::ShapeOfXlaOp(input).element_type(), {0}));
+  }
+  return {w, v};
 }
 
 XlaOpVector XlaNodeLowering::LowerThreshold(const ir::ops::Threshold* node) {
@@ -2126,6 +2256,20 @@ XlaOpVector XlaNodeLowering::LowerL1LossBackward(
   return {BuildL1LossBackward(grad_output, input, target, node->reduction())};
 }
 
+XlaOpVector XlaNodeLowering::LowerMseLoss(const ir::ops::MseLoss* node) {
+  xla::XlaOp input = loctx()->GetOutputOp(node->operand(0));
+  xla::XlaOp target = loctx()->GetOutputOp(node->operand(1));
+  return {BuildMseLoss(input, target, node->reduction())};
+}
+
+XlaOpVector XlaNodeLowering::LowerMseLossBackward(
+    const ir::ops::MseLossBackward* node) {
+  xla::XlaOp grad_output = loctx()->GetOutputOp(node->operand(0));
+  xla::XlaOp input = loctx()->GetOutputOp(node->operand(1));
+  xla::XlaOp target = loctx()->GetOutputOp(node->operand(2));
+  return {BuildMseLossBackward(grad_output, input, target, node->reduction())};
+}
+
 XlaOpVector XlaNodeLowering::LowerLogDet(const ir::Node* node) {
   xla::XlaOp input = loctx()->GetOutputOp(node->operand(0));
   return {xla::LogDet(input)};
@@ -2252,6 +2396,9 @@ lazy_tensors::Shape XlaNodeLowering::Infer(const ir::Node* node) {
     case at::aten::matmul: {
       return InferMatMul(node);
     }
+    case at::aten::mm: {
+      return InferMm(node);
+    }
     case at::aten::binary_cross_entropy: {
       return InferBinaryCrossEntropy(ir::NodeCast<ir::ops::BinaryCrossEntropy>(
           node, ir::OpKind(at::aten::binary_cross_entropy)));
@@ -2342,6 +2489,14 @@ lazy_tensors::Shape XlaNodeLowering::Infer(const ir::Node* node) {
       return InferL1LossBackward(ir::NodeCast<ir::ops::L1LossBackward>(
           node, ir::OpKind(at::aten::l1_loss_backward)));
     }
+    case at::aten::mse_loss: {
+      return InferMseLoss(
+          ir::NodeCast<ir::ops::MseLoss>(node, ir::OpKind(at::aten::mse_loss)));
+    }
+    case at::aten::mse_loss_backward: {
+      return InferMseLossBackward(ir::NodeCast<ir::ops::MseLossBackward>(
+          node, ir::OpKind(at::aten::mse_loss_backward)));
+    }
     case at::aten::index: {
       return InferIndexGet(
           ir::NodeCast<ir::ops::IndexGet>(node, ir::OpKind(at::aten::index)));
@@ -2389,6 +2544,10 @@ lazy_tensors::Shape XlaNodeLowering::Infer(const ir::Node* node) {
     case at::aten::sum: {
       return InferSum(
           ir::NodeCast<ir::ops::Sum>(node, ir::OpKind(at::aten::sum)));
+    }
+    case at::aten::symeig: {
+      return InferSymEig(
+          ir::NodeCast<ir::ops::SymEig>(node, ir::OpKind(at::aten::symeig)));
     }
     case at::aten::upsample_bilinear2d: {
       return InferUpsampleBilinear(ir::NodeCast<ir::ops::UpsampleBilinear>(
@@ -2453,6 +2612,24 @@ lazy_tensors::Shape XlaNodeLowering::Infer(const ir::Node* node) {
     case at::aten::max_pool3d_with_indices_backward: {
       return InferMaxPoolNdBackward(ir::NodeCast<ir::ops::MaxPoolNdBackward>(
           node, ir::OpKind(at::aten::max_pool3d_with_indices_backward)));
+    }
+    case at::aten::max_unpool2d: {
+      return InferMaxUnpoolNd(ir::NodeCast<ir::ops::MaxUnpoolNd>(
+          node, ir::OpKind(at::aten::max_unpool2d)));
+    }
+    case at::aten::max_unpool2d_backward: {
+      return InferMaxUnpoolNdBackward(
+          ir::NodeCast<ir::ops::MaxUnpoolNdBackward>(
+              node, ir::OpKind(at::aten::max_unpool2d_backward)));
+    }
+    case at::aten::max_unpool3d: {
+      return InferMaxUnpoolNd(ir::NodeCast<ir::ops::MaxUnpoolNd>(
+          node, ir::OpKind(at::aten::max_unpool3d)));
+    }
+    case at::aten::max_unpool3d_backward: {
+      return InferMaxUnpoolNdBackward(
+          ir::NodeCast<ir::ops::MaxUnpoolNdBackward>(
+              node, ir::OpKind(at::aten::max_unpool3d_backward)));
     }
     default: {
       if (kind == *ir::ops::ltc_generic_slice) {
