@@ -609,10 +609,38 @@ class AtenXlaType {
                                at::IntArrayRef stride, at::IntArrayRef padding,
                                at::IntArrayRef dilation, bool ceil_mode);
 
+  static std::tuple<at::Tensor, at::Tensor> max_pool2d_with_indices(
+      const at::Tensor& self, at::IntArrayRef kernel_size,
+      at::IntArrayRef stride, at::IntArrayRef padding, at::IntArrayRef dilation,
+      bool ceil_mode);
+
+  static at::Tensor max_pool2d_with_indices_backward(
+      const at::Tensor& grad_output, const at::Tensor& self,
+      at::IntArrayRef kernel_size, at::IntArrayRef stride,
+      at::IntArrayRef padding, at::IntArrayRef dilation, bool ceil_mode,
+      const at::Tensor& indices);
+
   static at::Tensor max_pool3d(const at::Tensor& self,
                                at::IntArrayRef kernel_size,
                                at::IntArrayRef stride, at::IntArrayRef padding,
                                at::IntArrayRef dilation, bool ceil_mode);
+
+  static std::tuple<at::Tensor, at::Tensor> max_pool3d_with_indices(
+      const at::Tensor& self, at::IntArrayRef kernel_size,
+      at::IntArrayRef stride, at::IntArrayRef padding, at::IntArrayRef dilation,
+      bool ceil_mode);
+
+  static at::Tensor max_pool3d_with_indices_backward(
+      const at::Tensor& grad_output, const at::Tensor& self,
+      at::IntArrayRef kernel_size, at::IntArrayRef stride,
+      at::IntArrayRef padding, at::IntArrayRef dilation, bool ceil_mode,
+      const at::Tensor& indices);
+
+  static at::Tensor mean(const at::Tensor& self,
+                         c10::optional<at::ScalarType> dtype);
+
+  static at::Tensor mean(const at::Tensor& self, at::IntArrayRef dim,
+                         bool keepdim, c10::optional<at::ScalarType> dtype);
 
   static at::Tensor min(const at::Tensor& self);
 
@@ -812,6 +840,12 @@ class AtenXlaType {
 
   static at::Tensor& sub_(at::Tensor& self, const at::Scalar& other,
                           const at::Scalar& alpha);
+
+  static at::Tensor sum(const at::Tensor& self,
+                        c10::optional<at::ScalarType> dtype);
+
+  static at::Tensor sum(const at::Tensor& self, at::IntArrayRef dim,
+                        bool keepdim, c10::optional<at::ScalarType> dtype);
 
   static at::Tensor t(const at::Tensor& self);
 

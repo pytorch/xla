@@ -2326,8 +2326,43 @@ at::Tensor AtenXlaType::max_pool2d(const at::Tensor& self,
                                    at::IntArrayRef padding,
                                    at::IntArrayRef dilation, bool ceil_mode) {
   LTC_FN_COUNTER("xla::");
-  return aten_autograd_ops_nnc::MaxPool2dAutogradFunctionNNC::apply(
+  return aten_autograd_ops::MaxPool2dAutogradFunction::apply(
       self, kernel_size, stride, padding, dilation, ceil_mode);
+}
+
+std::tuple<at::Tensor, at::Tensor> AtenXlaType::max_pool2d_with_indices(
+    const at::Tensor& self, at::IntArrayRef kernel_size, at::IntArrayRef stride,
+    at::IntArrayRef padding, at::IntArrayRef dilation, bool ceil_mode) {
+  LTC_FN_COUNTER("xla::");
+  // Lowering when ceil_mode or dilation is set not supported yet.
+  if (IsNonTrivialDilation(dilation)) {
+    return AtenXlaTypeDefault::max_pool2d_with_indices(
+        self, kernel_size, stride, padding, dilation, ceil_mode);
+  }
+  auto outputs = LazyTensor::max_pool_nd(
+      bridge::GetLtcTensor(self), /*spatial_dim_count=*/2,
+      Helpers::I64List(kernel_size), Helpers::I64List(stride),
+      Helpers::I64List(padding), ceil_mode);
+  return std::make_tuple(bridge::AtenFromLtcTensor(std::get<0>(outputs)),
+                         bridge::AtenFromLtcTensor(std::get<1>(outputs)));
+}
+
+at::Tensor AtenXlaType::max_pool2d_with_indices_backward(
+    const at::Tensor& grad_output, const at::Tensor& self,
+    at::IntArrayRef kernel_size, at::IntArrayRef stride,
+    at::IntArrayRef padding, at::IntArrayRef dilation, bool ceil_mode,
+    const at::Tensor& indices) {
+  LTC_FN_COUNTER("xla::");
+  // Lowering when ceil_mode or dilation is set not supported yet.
+  if (IsNonTrivialDilation(dilation)) {
+    return AtenXlaTypeDefault::max_pool2d_with_indices_backward(
+        grad_output, self, kernel_size, stride, padding, dilation, ceil_mode,
+        indices);
+  }
+  return bridge::AtenFromLtcTensor(LazyTensor::max_pool_nd_backward(
+      bridge::GetLtcTensor(grad_output), bridge::GetLtcTensor(self),
+      /*spatial_dim_count=*/2, Helpers::I64List(kernel_size),
+      Helpers::I64List(stride), Helpers::I64List(padding), ceil_mode));
 }
 
 at::Tensor AtenXlaType::max_pool3d(const at::Tensor& self,
@@ -2336,8 +2371,62 @@ at::Tensor AtenXlaType::max_pool3d(const at::Tensor& self,
                                    at::IntArrayRef padding,
                                    at::IntArrayRef dilation, bool ceil_mode) {
   LTC_FN_COUNTER("xla::");
-  return aten_autograd_ops_nnc::MaxPool3dAutogradFunctionNNC::apply(
+  return aten_autograd_ops::MaxPool3dAutogradFunction::apply(
       self, kernel_size, stride, padding, dilation, ceil_mode);
+}
+
+at::Tensor AtenXlaType::max_pool3d_with_indices_backward(
+    const at::Tensor& grad_output, const at::Tensor& self,
+    at::IntArrayRef kernel_size, at::IntArrayRef stride,
+    at::IntArrayRef padding, at::IntArrayRef dilation, bool ceil_mode,
+    const at::Tensor& indices) {
+  LTC_FN_COUNTER("xla::");
+  // Lowering when ceil_mode or dilation is set not supported yet.
+  if (IsNonTrivialDilation(dilation)) {
+    return AtenXlaTypeDefault::max_pool3d_with_indices_backward(
+        grad_output, self, kernel_size, stride, padding, dilation, ceil_mode,
+        indices);
+  }
+  return bridge::AtenFromLtcTensor(LazyTensor::max_pool_nd_backward(
+      bridge::GetLtcTensor(grad_output), bridge::GetLtcTensor(self),
+      /*spatial_dim_count=*/3, Helpers::I64List(kernel_size),
+      Helpers::I64List(stride), Helpers::I64List(padding), ceil_mode));
+}
+
+std::tuple<at::Tensor, at::Tensor> AtenXlaType::max_pool3d_with_indices(
+    const at::Tensor& self, at::IntArrayRef kernel_size, at::IntArrayRef stride,
+    at::IntArrayRef padding, at::IntArrayRef dilation, bool ceil_mode) {
+  LTC_FN_COUNTER("xla::");
+  // Lowering when ceil_mode or dilation is set not supported yet.
+  if (IsNonTrivialDilation(dilation)) {
+    return AtenXlaTypeDefault::max_pool3d_with_indices(
+        self, kernel_size, stride, padding, dilation, ceil_mode);
+  }
+  auto outputs = LazyTensor::max_pool_nd(
+      bridge::GetLtcTensor(self), /*spatial_dim_count=*/3,
+      Helpers::I64List(kernel_size), Helpers::I64List(stride),
+      Helpers::I64List(padding), ceil_mode);
+  return std::make_tuple(bridge::AtenFromLtcTensor(std::get<0>(outputs)),
+                         bridge::AtenFromLtcTensor(std::get<1>(outputs)));
+}
+
+at::Tensor AtenXlaType::mean(const at::Tensor& self,
+                             c10::optional<at::ScalarType> dtype) {
+  LTC_FN_COUNTER("xla::");
+  LazyTensor self_tensor = bridge::GetLtcTensor(self);
+  return bridge::AtenFromLtcTensor(LazyTensor::mean(
+      self_tensor,
+      xla::util::Iota<xla::int64>(self_tensor.shape().get().rank()),
+      /*keep_reduced_dimensions=*/false, dtype));
+}
+
+at::Tensor AtenXlaType::mean(const at::Tensor& self, at::IntArrayRef dim,
+                             bool keepdim,
+                             c10::optional<at::ScalarType> dtype) {
+  LTC_FN_COUNTER("xla::");
+  return bridge::AtenFromLtcTensor(LazyTensor::mean(
+      bridge::GetLtcTensor(self), xla::util::ToVector<xla::int64>(dim),
+      /*keep_reduced_dimensions=*/keepdim, dtype));
 }
 
 at::Tensor AtenXlaType::min(const at::Tensor& self) {
@@ -3089,6 +3178,24 @@ at::Tensor& AtenXlaType::sub_(at::Tensor& self, const at::Scalar& other,
     return self;
   }
   return AtenXlaTypeDefault::sub_(self, other, alpha);
+}
+
+at::Tensor AtenXlaType::sum(const at::Tensor& self,
+                            c10::optional<at::ScalarType> dtype) {
+  LTC_FN_COUNTER("xla::");
+  LazyTensor self_tensor = bridge::GetLtcTensor(self);
+  return bridge::AtenFromLtcTensor(LazyTensor::sum(
+      self_tensor,
+      xla::util::Iota<xla::int64>(self_tensor.shape().get().rank()),
+      /*keep_reduced_dimensions=*/false, dtype));
+}
+
+at::Tensor AtenXlaType::sum(const at::Tensor& self, at::IntArrayRef dim,
+                            bool keepdim, c10::optional<at::ScalarType> dtype) {
+  LTC_FN_COUNTER("xla::");
+  return bridge::AtenFromLtcTensor(
+      LazyTensor::sum(bridge::GetLtcTensor(self),
+                      xla::util::ToVector<xla::int64>(dim), keepdim, dtype));
 }
 
 at::Tensor AtenXlaType::t(const at::Tensor& self) {

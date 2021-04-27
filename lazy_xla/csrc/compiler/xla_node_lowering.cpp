@@ -48,6 +48,9 @@
 #include "lazy_tensor_core/csrc/ops/ltc_ops.h"
 #include "lazy_tensor_core/csrc/ops/masked_fill.h"
 #include "lazy_tensor_core/csrc/ops/masked_scatter.h"
+#include "lazy_tensor_core/csrc/ops/max_pool_nd.h"
+#include "lazy_tensor_core/csrc/ops/max_pool_nd_backward.h"
+#include "lazy_tensor_core/csrc/ops/mean.h"
 #include "lazy_tensor_core/csrc/ops/not_supported.h"
 #include "lazy_tensor_core/csrc/ops/ops.h"
 #include "lazy_tensor_core/csrc/ops/permute.h"
@@ -68,6 +71,7 @@
 #include "lazy_tensor_core/csrc/ops/split.h"
 #include "lazy_tensor_core/csrc/ops/squeeze.h"
 #include "lazy_tensor_core/csrc/ops/stack.h"
+#include "lazy_tensor_core/csrc/ops/sum.h"
 #include "lazy_tensor_core/csrc/ops/threshold.h"
 #include "lazy_tensor_core/csrc/ops/threshold_backward.h"
 #include "lazy_tensor_core/csrc/ops/tril.h"
@@ -506,6 +510,22 @@ lazy_tensors::Shape InferExpand(const ir::ops::Expand* node) {
   return ir::ops::InferOutputShape({input.shape()}, shape_fn);
 }
 
+lazy_tensors::Shape InferMean(const ir::ops::Mean* node) {
+  auto shape_fn = [node](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
+    xla::XlaOp result = BuildMean(operands[0], node->dimensions(),
+                                  node->keep_reduced_dimensions());
+    return node->dtype()
+               ? xla::ConvertElementType(
+                     result,
+                     torch_lazy_tensors::xla_backend::MakeXlaPrimitiveType(
+                         *node->dtype(),
+                         /*device=*/nullptr))
+               : result;
+  };
+  const ir::Output& input = node->operand(0);
+  return ir::ops::InferOutputShape({input.shape()}, shape_fn);
+}
+
 lazy_tensors::Shape InferPermute(const ir::ops::Permute* node) {
   auto shape_fn = [node](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
     LTC_CHECK_EQ(operands.size(), 1);
@@ -593,6 +613,15 @@ lazy_tensors::Shape InferStack(const ir::ops::Stack* node) {
     shapes.push_back(value.shape());
   }
   return ir::ops::InferOutputShape(shapes, shape_fn);
+}
+
+lazy_tensors::Shape InferSum(const ir::ops::Sum* node) {
+  auto shape_fn = [node](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
+    return BuildSum(CastToScalarType(operands[0], node->dtype()),
+                    node->dimensions(), node->keep_reduced_dimensions());
+  };
+  const ir::Output& input = node->operand(0);
+  return ir::ops::InferOutputShape({input.shape()}, shape_fn);
 }
 
 lazy_tensors::Shape InferUpsampleBilinear(
@@ -751,6 +780,32 @@ lazy_tensors::Shape InferAdaptiveAvgPool3dBackward(const ir::Node* node) {
                                    lower_for_shape_fn);
 }
 
+lazy_tensors::Shape InferMaxPoolNd(const ir::ops::MaxPoolNd* node) {
+  auto shape_fn = [node](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
+    MaxPoolResult result = BuildMaxPoolNd(
+        operands[0], node->spatial_dim_count(), node->kernel_size(),
+        node->stride(), node->padding(), node->ceil_mode());
+    return xla::Tuple(operands[0].builder(), {result.result, result.indices});
+  };
+  const ir::Output& input = node->operand(0);
+  return ir::ops::InferOutputShape({input.shape()}, shape_fn);
+}
+
+lazy_tensors::Shape InferMaxPoolNdBackward(
+    const ir::ops::MaxPoolNdBackward* node) {
+  auto shape_fn = [node](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
+    LTC_CHECK_EQ(operands.size(), 2);
+    return BuildMaxPoolNdBackward(
+        /*out_backprop=*/operands[0],
+        /*input=*/operands[1], node->spatial_dim_count(), node->kernel_size(),
+        node->stride(), node->padding(), node->ceil_mode());
+  };
+  const ir::Output& grad_output = node->operand(0);
+  const ir::Output& input = node->operand(1);
+  return ir::ops::InferOutputShape({grad_output.shape(), input.shape()},
+                                   shape_fn);
+}
+
 #define DECLARE_UNARY_OP(name) XlaOpVector Lower##name(const ir::Node* node)
 #define DECLARE_UNARY_OP2(name) \
   XlaOpVector Lower##name(const ir::ops::name* node)
@@ -890,6 +945,9 @@ class XlaNodeLowering : public NodeLowering {
   DECLARE_UNARY_OP2(LogSoftmaxBackward);
   DECLARE_UNARY_OP2(MaskedFill);
   DECLARE_UNARY_OP2(MaskedScatter);
+  DECLARE_UNARY_OP2(MaxPoolNd);
+  DECLARE_UNARY_OP2(MaxPoolNdBackward);
+  DECLARE_UNARY_OP2(Mean);
   DECLARE_UNARY_OP2(Permute);
   DECLARE_UNARY_OP2(Prod);
   DECLARE_UNARY_OP2(ReflectionPad2d);
@@ -906,6 +964,7 @@ class XlaNodeLowering : public NodeLowering {
   DECLARE_UNARY_OP2(Squeeze);
   DECLARE_UNARY_OP2(ShrinkBackward);
   DECLARE_UNARY_OP2(Stack);
+  DECLARE_UNARY_OP2(Sum);
   DECLARE_UNARY_OP2(Threshold);
   DECLARE_UNARY_OP2(ThresholdBackward);
   DECLARE_UNARY_OP2(Tril);
@@ -1030,6 +1089,13 @@ XlaOpVector XlaNodeLowering::LowerToXla(const ir::Node* node) {
     HANDLE_GENERIC_OP2(LogSoftmaxBackward, at::aten::_log_softmax_backward_data)
     HANDLE_GENERIC_OP2(MaskedFill, at::aten::masked_fill)
     HANDLE_GENERIC_OP2(MaskedScatter, at::aten::masked_scatter)
+    HANDLE_GENERIC_OP2(MaxPoolNd, at::aten::max_pool2d)
+    HANDLE_GENERIC_OP2(MaxPoolNdBackward,
+                       at::aten::max_pool2d_with_indices_backward)
+    HANDLE_GENERIC_OP2(MaxPoolNd, at::aten::max_pool3d)
+    HANDLE_GENERIC_OP2(MaxPoolNdBackward,
+                       at::aten::max_pool3d_with_indices_backward)
+    HANDLE_GENERIC_OP2(Mean, at::aten::mean)
     HANDLE_GENERIC_OP2(Permute, at::aten::permute)
     HANDLE_GENERIC_OP2(Prod, at::aten::prod)
     HANDLE_GENERIC_OP2(ReflectionPad2d, at::aten::reflection_pad2d)
@@ -1042,6 +1108,7 @@ XlaOpVector XlaNodeLowering::LowerToXla(const ir::Node* node) {
     HANDLE_GENERIC_OP2(ShrinkBackward, at::aten::hardshrink_backward)
     HANDLE_GENERIC_OP2(ShrinkBackward, at::aten::softshrink_backward)
     HANDLE_GENERIC_OP2(Stack, at::aten::stack)
+    HANDLE_GENERIC_OP2(Sum, at::aten::sum)
     HANDLE_GENERIC_OP2(Softmax, at::aten::softmax)
     HANDLE_GENERIC_OP2(SoftmaxBackward, at::aten::_softmax_backward_data)
     HANDLE_GENERIC_OP2(Softshrink, at::aten::softshrink)
@@ -1725,6 +1792,36 @@ XlaOpVector XlaNodeLowering::LowerMaskedScatter(
   return {BuildMaskedScatter(input, mask, source)};
 }
 
+XlaOpVector XlaNodeLowering::LowerMaxPoolNd(const ir::ops::MaxPoolNd* node) {
+  xla::XlaOp input = loctx()->GetOutputOp(node->operand(0));
+  MaxPoolResult result =
+      BuildMaxPoolNd(input, node->spatial_dim_count(), node->kernel_size(),
+                     node->stride(), node->padding(), node->ceil_mode());
+  return {result.result, result.indices};
+}
+
+XlaOpVector XlaNodeLowering::LowerMaxPoolNdBackward(
+    const ir::ops::MaxPoolNdBackward* node) {
+  xla::XlaOp grad_output = loctx()->GetOutputOp(node->operand(0));
+  xla::XlaOp input = loctx()->GetOutputOp(node->operand(1));
+  return {BuildMaxPoolNdBackward(
+      /*out_backprop=*/grad_output, /*input=*/input, node->spatial_dim_count(),
+      node->kernel_size(), node->stride(), node->padding(), node->ceil_mode())};
+}
+
+XlaOpVector XlaNodeLowering::LowerMean(const ir::ops::Mean* node) {
+  xla::XlaOp input = loctx()->GetOutputOp(node->operand(0));
+  xla::XlaOp result =
+      BuildMean(input, node->dimensions(), node->keep_reduced_dimensions());
+  return {
+      node->dtype()
+          ? xla::ConvertElementType(
+                result, torch_lazy_tensors::xla_backend::MakeXlaPrimitiveType(
+                            *node->dtype(),
+                            /*device=*/nullptr))
+          : result};
+}
+
 XlaOpVector XlaNodeLowering::LowerPermute(const ir::ops::Permute* node) {
   LTC_CHECK_EQ(node->num_outputs(), 1);
   xla::XlaOp input = loctx()->GetOutputOp(node->operand(0));
@@ -1840,6 +1937,12 @@ XlaOpVector XlaNodeLowering::LowerStack(const ir::ops::Stack* node) {
     inputs.push_back(loctx()->GetOutputOp(operand));
   }
   return {BuildStack(inputs, node->dim())};
+}
+
+XlaOpVector XlaNodeLowering::LowerSum(const ir::ops::Sum* node) {
+  xla::XlaOp input = loctx()->GetOutputOp(node->operand(0));
+  return {BuildSum(CastToScalarType(input, node->dtype()), node->dimensions(),
+                   node->keep_reduced_dimensions())};
 }
 
 XlaOpVector XlaNodeLowering::LowerThreshold(const ir::ops::Threshold* node) {
@@ -2250,6 +2353,10 @@ lazy_tensors::Shape XlaNodeLowering::Infer(const ir::Node* node) {
       return InferExpand(
           ir::NodeCast<ir::ops::Expand>(node, ir::OpKind(at::aten::expand)));
     }
+    case at::aten::mean: {
+      return InferMean(
+          ir::NodeCast<ir::ops::Mean>(node, ir::OpKind(at::aten::mean)));
+    }
     case at::aten::permute: {
       return InferPermute(
           ir::NodeCast<ir::ops::Permute>(node, ir::OpKind(at::aten::permute)));
@@ -2278,6 +2385,10 @@ lazy_tensors::Shape XlaNodeLowering::Infer(const ir::Node* node) {
     case at::aten::stack: {
       return InferStack(
           ir::NodeCast<ir::ops::Stack>(node, ir::OpKind(at::aten::stack)));
+    }
+    case at::aten::sum: {
+      return InferSum(
+          ir::NodeCast<ir::ops::Sum>(node, ir::OpKind(at::aten::sum)));
     }
     case at::aten::upsample_bilinear2d: {
       return InferUpsampleBilinear(ir::NodeCast<ir::ops::UpsampleBilinear>(
@@ -2326,6 +2437,22 @@ lazy_tensors::Shape XlaNodeLowering::Infer(const ir::Node* node) {
     }
     case at::aten::adaptive_avg_pool3d_backward: {
       return InferAdaptiveAvgPool3dBackward(node);
+    }
+    case at::aten::max_pool2d: {
+      return InferMaxPoolNd(ir::NodeCast<ir::ops::MaxPoolNd>(
+          node, ir::OpKind(at::aten::max_pool2d)));
+    }
+    case at::aten::max_pool2d_with_indices_backward: {
+      return InferMaxPoolNdBackward(ir::NodeCast<ir::ops::MaxPoolNdBackward>(
+          node, ir::OpKind(at::aten::max_pool2d_with_indices_backward)));
+    }
+    case at::aten::max_pool3d: {
+      return InferMaxPoolNd(ir::NodeCast<ir::ops::MaxPoolNd>(
+          node, ir::OpKind(at::aten::max_pool3d)));
+    }
+    case at::aten::max_pool3d_with_indices_backward: {
+      return InferMaxPoolNdBackward(ir::NodeCast<ir::ops::MaxPoolNdBackward>(
+          node, ir::OpKind(at::aten::max_pool3d_with_indices_backward)));
     }
     default: {
       if (kind == *ir::ops::ltc_generic_slice) {
