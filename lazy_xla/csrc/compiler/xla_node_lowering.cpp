@@ -1254,6 +1254,8 @@ class XlaNodeLowering : public NodeLowering {
   DECLARE_UNARY_OP(Clamp);
   DECLARE_UNARY_OP(Eye);
   DECLARE_UNARY_OP(Normal);
+  DECLARE_UNARY_OP(Random);
+  DECLARE_UNARY_OP(Uniform);
   DECLARE_UNARY_OP2(AdaptiveAvgPool2d);
   DECLARE_UNARY_OP2(AdaptiveAvgPool3d);
   DECLARE_UNARY_OP2(AvgPoolNd);
@@ -1434,6 +1436,8 @@ XlaOpVector XlaNodeLowering::LowerToXla(const ir::Node* node) {
     HANDLE_GENERIC_OP(Eye, at::aten::eye)
     HANDLE_GENERIC_OP(Ger, at::aten::ger)
     HANDLE_GENERIC_OP(Normal, at::aten::normal)
+    HANDLE_GENERIC_OP(Random, at::aten::random)
+    HANDLE_GENERIC_OP(Uniform, at::aten::uniform)
     HANDLE_GENERIC_OP2(AdaptiveAvgPool2d, at::aten::adaptive_avg_pool2d)
     HANDLE_GENERIC_OP2(AdaptiveAvgPool3d, at::aten::adaptive_avg_pool3d)
     HANDLE_GENERIC_OP(AdaptiveAvgPool2dBackward,
@@ -2261,6 +2265,21 @@ XlaOpVector XlaNodeLowering::LowerNormal(const ir::Node* node) {
   xla::XlaOp std = loctx()->GetOutputOp(node->operand(1));
   xla::XlaOp rng_seed = loctx()->GetOutputOp(node->operand(2));
   return {RngNormal(rng_seed, XlaHelpers::ShapeOfXlaOp(mean), mean, std)};
+}
+
+XlaOpVector XlaNodeLowering::LowerRandom(const ir::Node* node) {
+  xla::XlaOp from = loctx()->GetOutputOp(node->operand(0));
+  xla::XlaOp to = loctx()->GetOutputOp(node->operand(1));
+  xla::XlaOp rng_seed = loctx()->GetOutputOp(node->operand(2));
+  return {RngDiscreteUniform(rng_seed, XlaHelpers::XlaShape(node->shape()),
+                             from, to)};
+}
+
+XlaOpVector XlaNodeLowering::LowerUniform(const ir::Node* node) {
+  xla::XlaOp from = loctx()->GetOutputOp(node->operand(0));
+  xla::XlaOp to = loctx()->GetOutputOp(node->operand(1));
+  xla::XlaOp rng_seed = loctx()->GetOutputOp(node->operand(2));
+  return {RngUniform(rng_seed, XlaHelpers::XlaShape(node->shape()), from, to)};
 }
 
 XlaOpVector XlaNodeLowering::LowerPermute(const ir::ops::Permute* node) {

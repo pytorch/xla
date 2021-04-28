@@ -25,6 +25,7 @@
 #include "lazy_xla/csrc/aten_xla_type_default.h"
 #include "lazy_xla/csrc/compiler/nnc_computation_client.h"
 #include "lazy_xla/csrc/compiler/pooling.h"
+#include "lazy_xla/csrc/compiler/tensor_util.h"
 #include "lazy_xla/csrc/version.h"
 #include "tensorflow/compiler/xla/xla_client/util.h"
 
@@ -70,6 +71,44 @@ c10::optional<at::ScalarType> PromoteIntegralType(
              ? opt_dtype.value()
              : at::isIntegralType(src_dtype, /*includeBool=*/true) ? at::kLong
                                                                    : opt_dtype;
+}
+
+bool IsTypeWithLargerRangeThanLong(torch::ScalarType dtype) {
+  return dtype == at::ScalarType::BFloat16 || dtype == at::ScalarType::Float ||
+         dtype == at::ScalarType::Double;
+}
+
+// Return the upper limit for a given type. For floating point typesreturn
+// 2^mantissa to ensure that every value is representable.
+int64_t GetIntegerUpperLimitForType(torch::ScalarType dtype) {
+  lazy_tensors::PrimitiveType ltc_type = TensorTypeToLtcType(dtype);
+  switch (ltc_type) {
+    case lazy_tensors::PrimitiveType::F16:
+      return static_cast<int64_t>(1) << std::numeric_limits<xla::half>::digits;
+    case lazy_tensors::PrimitiveType::BF16:
+      return static_cast<int64_t>(1)
+             << std::numeric_limits<xla::bfloat16>::digits;
+    case lazy_tensors::PrimitiveType::F32:
+      return static_cast<int64_t>(1) << std::numeric_limits<float>::digits;
+    case lazy_tensors::PrimitiveType::F64:
+      return static_cast<int64_t>(1) << std::numeric_limits<double>::digits;
+    default:
+      return Helpers::MinMaxValues(ltc_type).max.toLong();
+  }
+}
+
+void CheckRangeValues(torch::ScalarType dtype, int64_t from, int64_t to) {
+  Helpers::MinMax min_max;
+  // Bound the min_max by int64 since types of "from" and "to" are int64.
+  if (IsTypeWithLargerRangeThanLong(dtype)) {
+    min_max = Helpers::MinMaxValues(lazy_tensors::PrimitiveType::S64);
+  } else {
+    min_max = Helpers::MinMaxValues(TensorTypeToLtcType(dtype));
+  }
+  LTC_CHECK_GE(from, min_max.min.toLong());
+  LTC_CHECK_LE(from, min_max.max.toLong());
+  LTC_CHECK_GE(to, min_max.min.toLong());
+  LTC_CHECK_LE(to, min_max.max.toLong());
 }
 
 std::pair<LazyTensor, LazyTensor> GetBinaryOperands(const at::Tensor& self,
@@ -2971,6 +3010,54 @@ std::tuple<at::Tensor, at::Tensor> AtenXlaType::qr(const at::Tensor& self,
                          bridge::AtenFromLtcTensor(std::get<1>(results)));
 }
 
+// The value generated should be within (from, to].
+at::Tensor& AtenXlaType::random_(at::Tensor& self, int64_t from,
+                                 c10::optional<int64_t> to,
+                                 c10::optional<at::Generator> generator) {
+  LTC_FN_COUNTER("xla::");
+  if (generator.has_value() && generator->defined()) {
+    return AtenXlaTypeDefault::random_(self, from, to, generator);
+  }
+  LazyTensor self_tensor = bridge::GetLtcTensor(self);
+  at::ScalarType dtype = self_tensor.dtype();
+  // Prevent "to_val" from overflowing with at::ScalarType::Long.
+  int64_t inc = (dtype == at::ScalarType::Long) ? 0 : 1;
+  int64_t to_val = (to) ? *to : GetIntegerUpperLimitForType(dtype) + inc;
+  LTC_CHECK_LE(from, to_val);
+  CheckRangeValues(self_tensor.dtype(), from, to_val - 1);
+  LazyTensor::random_(self_tensor, from, to_val);
+  return self;
+}
+
+// The value generated should be in (0, to].
+at::Tensor& AtenXlaType::random_(at::Tensor& self, int64_t to,
+                                 c10::optional<at::Generator> generator) {
+  LTC_FN_COUNTER("xla::");
+  if (generator.has_value() && generator->defined()) {
+    return AtenXlaTypeDefault::random_(self, to, generator);
+  }
+  LazyTensor self_tensor = bridge::GetLtcTensor(self);
+  LTC_CHECK_GT(to, 0);
+  CheckRangeValues(self_tensor.dtype(), 0, to - 1);
+  LazyTensor::random_(self_tensor, 0, to);
+  return self;
+}
+
+// The value generated should be in (self_type_min, self_type_max).
+at::Tensor& AtenXlaType::random_(at::Tensor& self,
+                                 c10::optional<at::Generator> generator) {
+  LTC_FN_COUNTER("xla::");
+  if (generator.has_value() && generator->defined()) {
+    return AtenXlaTypeDefault::random_(self, generator);
+  }
+  LazyTensor self_tensor = bridge::GetLtcTensor(self);
+  at::ScalarType dtype = self_tensor.dtype();
+  // Prevent "to_val" from overflowing with at::ScalarType::Long.
+  int64_t inc = (dtype == at::ScalarType::Long) ? 0 : 1;
+  LazyTensor::random_(self_tensor, 0, GetIntegerUpperLimitForType(dtype) + inc);
+  return self;
+}
+
 at::Tensor AtenXlaType::reciprocal(const at::Tensor& self) {
   LTC_FN_COUNTER("xla::");
   return bridge::AtenFromLtcTensor(
@@ -3788,6 +3875,17 @@ std::vector<at::Tensor> AtenXlaType::unbind(const at::Tensor& self,
   LTC_FN_COUNTER("xla::");
   return bridge::AtenFromLtcTensors(
       LazyTensor::unbind(bridge::GetLtcTensor(self), dim));
+}
+
+at::Tensor& AtenXlaType::uniform_(at::Tensor& self, double from, double to,
+                                  c10::optional<at::Generator> generator) {
+  LTC_FN_COUNTER("xla::");
+  if (generator.has_value() && generator->defined()) {
+    return AtenXlaTypeDefault::uniform_(self, from, to, generator);
+  }
+  LazyTensor self_tensor = bridge::GetLtcTensor(self);
+  LazyTensor::uniform_(self_tensor, from, to);
+  return self;
 }
 
 at::Tensor AtenXlaType::unsqueeze(const at::Tensor& self, int64_t dim) {
