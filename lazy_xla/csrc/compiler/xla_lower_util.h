@@ -11,6 +11,9 @@ xla::XlaOp PadToSize(xla::XlaOp input, absl::Span<const xla::int64> size,
 std::vector<xla::XlaOp> CreateKthValue(xla::XlaOp input, xla::int64 k,
                                        xla::int64 dim, bool keepdim);
 
+std::vector<xla::XlaOp> CreateTopK(xla::XlaOp input, xla::int64 k,
+                                   xla::int64 dim, bool largest, bool sorted);
+
 xla::XlaOp CreateMatMul(xla::XlaOp lhs, xla::XlaOp rhs);
 
 xla::XlaOp BuildGer(xla::XlaOp lhs, xla::XlaOp rhs);
@@ -47,6 +50,8 @@ xla::XlaOp CreateIndexFill(xla::XlaOp buffer, xla::int64 dim, xla::XlaOp index,
                            xla::XlaOp values);
 
 using XlaOpCombiner = std::function<xla::XlaOp(xla::XlaOp, xla::XlaOp)>;
+
+XlaOpCombiner NumericAddCombiner();
 
 struct ScatterOptions {
   explicit ScatterOptions(XlaOpCombiner combiner)

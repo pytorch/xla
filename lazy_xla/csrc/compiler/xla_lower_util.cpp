@@ -348,6 +348,42 @@ std::vector<xla::XlaOp> CreateKthValue(xla::XlaOp input, xla::int64 k,
   return {values, xla::ConvertElementType(indices, s64)};
 }
 
+std::vector<xla::XlaOp> CreateTopK(xla::XlaOp input, xla::int64 k,
+                                   xla::int64 dim, bool largest,
+                                   bool /* sorted */) {
+  // Here 'k' is 1 based (1...).
+  const xla::Shape& shape = XlaHelpers::ShapeOfXlaOp(input);
+  XLA_CHECK_LE(k, shape.dimensions(dim));
+  xla::Shape iota_shape =
+      xla::ShapeUtil::MakeShape(xla::PrimitiveType::S32, shape.dimensions());
+  xla::XlaOp iota = xla::Iota(input.builder(), iota_shape, dim);
+  xla::XlaComputation comparator =
+      largest ? xla::CreateScalarGtComputation(
+                    {shape.element_type(), xla::PrimitiveType::S32},
+                    input.builder())
+              : xla::CreateScalarLtComputation(
+                    {shape.element_type(), xla::PrimitiveType::S32},
+                    input.builder());
+  xla::XlaOp sort_result = xla::Sort({input, iota}, comparator, dim);
+
+  std::vector<xla::int64> start_indices(shape.rank(), 0);
+  std::vector<xla::int64> limit_indices(shape.dimensions().begin(),
+                                        shape.dimensions().end());
+  limit_indices[dim] = k;
+  std::vector<xla::int64> strides(shape.rank(), 1);
+
+  xla::XlaOp values = xla::Slice(xla::GetTupleElement(sort_result, 0),
+                                 start_indices, limit_indices, strides);
+  xla::XlaOp indices = xla::Slice(xla::GetTupleElement(sort_result, 1),
+                                  start_indices, limit_indices, strides);
+  // aten::topk() wants Long tensors as indices.
+  xla::PrimitiveType s64 = xla::ComputationClient::XlaPrimitiveType(
+      torch_lazy_tensors::GetDevicePrimitiveType(
+          lazy_tensors::PrimitiveType::S64,
+          /*device=*/nullptr));
+  return {values, xla::ConvertElementType(indices, s64)};
+}
+
 xla::XlaOp CreateMatMul(xla::XlaOp lhs, xla::XlaOp rhs) {
   // Expand cases in https://pytorch.org/docs/stable/torch.html#torch.matmul
   xla::Shape lhs_shape = XlaHelpers::ShapeOfXlaOp(lhs);
@@ -549,6 +585,18 @@ xla::XlaOp CreateIndexFill(xla::XlaOp buffer, xla::int64 dim, xla::XlaOp index,
                            xla::XlaOp value) {
   return CreateIndexAlongDim(buffer, dim, index, value,
                              /*broadcast_value_to_index=*/true, nullptr);
+}
+
+XlaOpCombiner NumericAddCombiner() {
+  return [](xla::XlaOp x, xla::XlaOp y) -> xla::XlaOp {
+    xla::XlaOp numeric_x = ConvertToNumeric(x);
+    xla::XlaOp numeric_y = ConvertToNumeric(y);
+    xla::XlaOp numeric_sum = numeric_x + numeric_y;
+    return ConvertTo(numeric_sum,
+                     compiler::XlaHelpers::TypeOfXlaOp(numeric_sum),
+                     compiler::XlaHelpers::TypeOfXlaOp(x),
+                     /*device=*/nullptr);
+  };
 }
 
 xla::XlaOp CreateScatter(const Device& device, xla::XlaOp input,

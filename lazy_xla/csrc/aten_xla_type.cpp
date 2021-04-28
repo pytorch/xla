@@ -87,6 +87,24 @@ std::pair<LazyTensor, LazyTensor> GetBinaryOperands(const at::Tensor& self,
   return std::pair<LazyTensor, LazyTensor>(self_tensor, other_tensor);
 }
 
+// The input is in format of {N, C, H, W} and the output will be {H, W}.
+std::vector<xla::int64> GetOutputSizeWithScale(
+    absl::Span<const xla::int64> input_size,
+    const c10::optional<at::ArrayRef<double>>& scale_factors,
+    const c10::optional<at::IntArrayRef>& output_size) {
+  if (!output_size) {
+    LTC_CHECK(scale_factors);
+    LTC_CHECK_EQ(scale_factors->size(), 2);
+    // Calculate the output size from input_shape and scale_factors
+    LTC_CHECK_EQ(input_size.size(), 4);
+    xla::int64 output_h = input_size[2] * (*scale_factors)[0];
+    xla::int64 output_w = input_size[3] * (*scale_factors)[1];
+    return {output_h, output_w};
+  }
+  LTC_CHECK(!scale_factors);
+  return xla::util::ToVector<xla::int64>(*output_size);
+}
+
 template <typename B>
 at::Tensor DoBinaryOp(const at::Tensor& self, const at::Tensor& other,
                       const B& bin_op) {
@@ -2805,6 +2823,47 @@ at::Tensor AtenXlaType::norm(const at::Tensor& self,
   return AtenXlaTypeDefault::norm(self, p, dim, keepdim);
 }
 
+at::Tensor AtenXlaType::normal(const at::Tensor& mean, double std,
+                               c10::optional<at::Generator> generator) {
+  LTC_FN_COUNTER("xla::");
+  if (generator.has_value() && generator->defined()) {
+    return AtenXlaTypeDefault::normal(mean, std, generator);
+  }
+  return bridge::AtenFromLtcTensor(
+      LazyTensor::normal(bridge::GetLtcTensor(mean), std));
+}
+
+at::Tensor AtenXlaType::normal(double mean, const at::Tensor& std,
+                               c10::optional<at::Generator> generator) {
+  LTC_FN_COUNTER("xla::");
+  if (generator.has_value() && generator->defined()) {
+    return AtenXlaTypeDefault::normal(mean, std, generator);
+  }
+  return bridge::AtenFromLtcTensor(
+      LazyTensor::normal(mean, bridge::GetLtcTensor(std)));
+}
+
+at::Tensor AtenXlaType::normal(const at::Tensor& mean, const at::Tensor& std,
+                               c10::optional<at::Generator> generator) {
+  LTC_FN_COUNTER("xla::");
+  if (generator.has_value() && generator->defined()) {
+    return AtenXlaTypeDefault::normal(mean, std, generator);
+  }
+  return bridge::AtenFromLtcTensor(LazyTensor::normal(
+      bridge::GetLtcTensor(mean), bridge::GetLtcTensor(std)));
+}
+
+at::Tensor& AtenXlaType::normal_(at::Tensor& self, double mean, double std,
+                                 c10::optional<at::Generator> generator) {
+  LTC_FN_COUNTER("xla::");
+  if (generator.has_value() && generator->defined()) {
+    return AtenXlaTypeDefault::normal_(self, mean, std, generator);
+  }
+  LazyTensor self_tensor = bridge::GetLtcTensor(self);
+  LazyTensor::normal_(self_tensor, mean, std);
+  return self;
+}
+
 at::Tensor AtenXlaType::permute(const at::Tensor& self, at::IntArrayRef dims) {
   LazyTensor self_tensor = bridge::GetLtcTensor(self);
   if (UseNNCViews(self_tensor)) {
@@ -3116,6 +3175,35 @@ at::Tensor AtenXlaType::rsub(const at::Tensor& self, const at::Scalar& other,
   return AtenXlaTypeDefault::rsub(self, other, alpha);
 }
 
+at::Tensor& AtenXlaType::scatter_(at::Tensor& self, int64_t dim,
+                                  const at::Tensor& index,
+                                  const at::Tensor& src) {
+  LTC_FN_COUNTER("xla::");
+  LazyTensor self_tensor = bridge::GetLtcTensor(self);
+  LazyTensor::scatter_(self_tensor, dim, bridge::GetLtcTensor(index),
+                       bridge::GetLtcTensor(src));
+  return self;
+}
+
+at::Tensor& AtenXlaType::scatter_(at::Tensor& self, int64_t dim,
+                                  const at::Tensor& index,
+                                  const at::Scalar& value) {
+  LTC_FN_COUNTER("xla::");
+  LazyTensor self_tensor = bridge::GetLtcTensor(self);
+  LazyTensor::scatter_(self_tensor, dim, bridge::GetLtcTensor(index), value);
+  return self;
+}
+
+at::Tensor& AtenXlaType::scatter_add_(at::Tensor& self, int64_t dim,
+                                      const at::Tensor& index,
+                                      const at::Tensor& src) {
+  LTC_FN_COUNTER("xla::");
+  LazyTensor self_tensor = bridge::GetLtcTensor(self);
+  LazyTensor::scatter_add_(self_tensor, dim, bridge::GetLtcTensor(index),
+                           bridge::GetLtcTensor(src));
+  return self;
+}
+
 at::Tensor AtenXlaType::select(const at::Tensor& self, int64_t dim,
                                int64_t index) {
   if (ForceNNC()) {
@@ -3339,6 +3427,23 @@ at::Tensor AtenXlaType::stack(at::TensorList tensors, int64_t dim) {
       LazyTensor::stack(bridge::GetLtcTensors(tensors), dim));
 }
 
+at::Tensor AtenXlaType::std(const at::Tensor& self, bool unbiased) {
+  LTC_FN_COUNTER("xla::");
+  LazyTensor self_tensor = bridge::GetLtcTensor(self);
+  return bridge::AtenFromLtcTensor(LazyTensor::std(
+      self_tensor,
+      xla::util::Iota<xla::int64>(self_tensor.shape().get().rank()),
+      /*keep_reduced_dimensions=*/false, unbiased));
+}
+
+at::Tensor AtenXlaType::std(const at::Tensor& self, at::IntArrayRef dim,
+                            bool unbiased, bool keepdim) {
+  LTC_FN_COUNTER("xla::");
+  return bridge::AtenFromLtcTensor(LazyTensor::std(
+      bridge::GetLtcTensor(self), xla::util::ToVector<xla::int64>(dim),
+      /*keep_reduced_dimensions=*/keepdim, unbiased));
+}
+
 at::Tensor AtenXlaType::sub(const at::Tensor& self, const at::Tensor& other,
                             const at::Scalar& alpha) {
   if (UseNNC(self)) {
@@ -3524,6 +3629,23 @@ at::Tensor AtenXlaType::threshold_backward(const at::Tensor& grad_output,
   return AtenXlaTypeDefault::threshold_backward(grad_output, self, threshold);
 }
 
+std::tuple<at::Tensor, at::Tensor> AtenXlaType::topk(const at::Tensor& self,
+                                                     int64_t k, int64_t dim,
+                                                     bool largest,
+                                                     bool sorted) {
+  LTC_FN_COUNTER("xla::");
+  auto results =
+      LazyTensor::topk(bridge::GetLtcTensor(self), k, dim, largest, sorted);
+  return std::make_tuple(bridge::AtenFromLtcTensor(std::get<0>(results)),
+                         bridge::AtenFromLtcTensor(std::get<1>(results)));
+}
+
+at::Tensor AtenXlaType::trace(const at::Tensor& self) {
+  LTC_FN_COUNTER("xla::");
+  return bridge::AtenFromLtcTensor(
+      LazyTensor::trace(bridge::GetLtcTensor(self)));
+}
+
 at::Tensor AtenXlaType::transpose(const at::Tensor& self, int64_t dim0,
                                   int64_t dim1) {
   LazyTensor self_tensor = bridge::GetLtcTensor(self);
@@ -3543,6 +3665,19 @@ at::Tensor& AtenXlaType::transpose_(at::Tensor& self, int64_t dim0,
   LazyTensor self_tensor = bridge::GetLtcTensor(self);
   LazyTensor::transpose_(self_tensor, dim0, dim1);
   return self;
+}
+
+std::tuple<at::Tensor, at::Tensor> AtenXlaType::triangular_solve(
+    const at::Tensor& b, const at::Tensor& A, bool upper, bool transpose,
+    bool unitriangular) {
+  LTC_FN_COUNTER("xla::");
+  // Currently, ATen doesn't have a left_side option. Once this
+  // is added, this API will have to be changed.
+  auto results = LazyTensor::triangular_solve(
+      bridge::GetLtcTensor(b), bridge::GetLtcTensor(A), /*left_side=*/true,
+      upper, transpose, unitriangular);
+  return std::make_tuple(bridge::AtenFromLtcTensor(std::get<0>(results)),
+                         bridge::AtenFromLtcTensor(std::get<1>(results)));
 }
 
 at::Tensor AtenXlaType::tril(const at::Tensor& self, int64_t diagonal) {
@@ -3598,6 +3733,136 @@ at::Tensor& AtenXlaType::unsqueeze_(at::Tensor& self, int64_t dim) {
   LazyTensor self_tensor = bridge::GetLtcTensor(self);
   LazyTensor::unsqueeze_(self_tensor, dim);
   return self;
+}
+
+at::Tensor AtenXlaType::upsample_bilinear2d(const at::Tensor& self,
+                                            at::IntArrayRef output_size,
+                                            bool align_corners,
+                                            c10::optional<double> scales_h,
+                                            c10::optional<double> scales_w) {
+  LTC_FN_COUNTER("xla::");
+  LazyTensor self_tensor = bridge::GetLtcTensor(self);
+  // Only the XLA TPU backend for now implements the CustomCall required by
+  // our XLA lowering.
+  if (self_tensor.GetDevice().hw_type != DeviceType::TPU ||
+      (scales_h && *scales_h != 1.0) || (scales_w && *scales_w != 1.0)) {
+    return AtenXlaTypeDefault::upsample_bilinear2d(
+        self, output_size, align_corners, scales_h, scales_w);
+  }
+  return bridge::AtenFromLtcTensor(LazyTensor::upsample_bilinear2d(
+      self_tensor, xla::util::ToVector<xla::int64>(output_size),
+      align_corners));
+}
+
+at::Tensor AtenXlaType::upsample_bilinear2d_backward(
+    const at::Tensor& grad_output, at::IntArrayRef output_size,
+    at::IntArrayRef input_size, bool align_corners,
+    c10::optional<double> scales_h, c10::optional<double> scales_w) {
+  LTC_FN_COUNTER("xla::");
+  LazyTensor grad_output_tensor = bridge::GetLtcTensor(grad_output);
+  // Only the XLA TPU backend for now implements the CustomCall required by
+  // our XLA lowering.
+  if (grad_output_tensor.GetDevice().hw_type != DeviceType::TPU ||
+      (scales_h && *scales_h != 1.0) || (scales_w && *scales_w != 1.0)) {
+    return AtenXlaTypeDefault::upsample_bilinear2d_backward(
+        grad_output, output_size, input_size, align_corners, scales_h,
+        scales_w);
+  }
+  return bridge::AtenFromLtcTensor(LazyTensor::upsample_bilinear2d_backward(
+      grad_output_tensor, xla::util::ToVector<xla::int64>(output_size),
+      xla::util::ToVector<xla::int64>(input_size), align_corners));
+}
+
+at::Tensor AtenXlaType::upsample_nearest2d(
+    const at::Tensor& input, c10::optional<at::IntArrayRef> output_size,
+    c10::optional<at::ArrayRef<double>> scale_factors) {
+  LTC_FN_COUNTER("xla::");
+  LazyTensor input_tensor = bridge::GetLtcTensor(input);
+  // Only the XLA TPU backend for now implements the CustomCall required by our
+  // XLA lowering.
+  if (input_tensor.GetDevice().hw_type != DeviceType::TPU) {
+    return AtenXlaTypeDefault::upsample_nearest2d(input, output_size,
+                                                  scale_factors);
+  }
+  absl::Span<const xla::int64> input_dims =
+      input_tensor.shape().get().dimensions();
+  return bridge::AtenFromLtcTensor(LazyTensor::upsample_nearest2d(
+      input_tensor,
+      GetOutputSizeWithScale(input_dims, scale_factors, output_size)));
+}
+
+at::Tensor AtenXlaType::upsample_nearest2d_backward(
+    const at::Tensor& grad_output, c10::optional<at::IntArrayRef> output_size,
+    at::IntArrayRef input_size,
+    c10::optional<at::ArrayRef<double>> scale_factors) {
+  LTC_FN_COUNTER("xla::");
+  LazyTensor grad_output_tensor = bridge::GetLtcTensor(grad_output);
+  // Only the XLA TPU backend for now implements the CustomCall required by our
+  // XLA lowering.
+  if (grad_output_tensor.GetDevice().hw_type != DeviceType::TPU) {
+    return AtenXlaTypeDefault::upsample_nearest2d_backward(
+        grad_output, output_size, input_size, scale_factors);
+  }
+  std::vector<xla::int64> input_dim =
+      xla::util::ToVector<xla::int64>(input_size);
+  return bridge::AtenFromLtcTensor(LazyTensor::upsample_nearest2d_backward(
+      grad_output_tensor,
+      GetOutputSizeWithScale(input_dim, scale_factors, output_size),
+      input_dim));
+}
+
+at::Tensor AtenXlaType::upsample_nearest2d(const at::Tensor& self,
+                                           at::IntArrayRef output_size,
+                                           c10::optional<double> scales_h,
+                                           c10::optional<double> scales_w) {
+  LTC_FN_COUNTER("xla::");
+  LazyTensor self_tensor = bridge::GetLtcTensor(self);
+  // Only the XLA TPU backend for now implements the CustomCall required by
+  // our XLA lowering.
+  if (self_tensor.GetDevice().hw_type != DeviceType::TPU ||
+      (scales_h && *scales_h != 1.0) || (scales_w && *scales_w != 1.0)) {
+    return AtenXlaTypeDefault::upsample_nearest2d(self, output_size, scales_h,
+                                                  scales_w);
+  }
+  return bridge::AtenFromLtcTensor(LazyTensor::upsample_nearest2d(
+      self_tensor, xla::util::ToVector<xla::int64>(output_size)));
+}
+
+at::Tensor AtenXlaType::upsample_nearest2d_backward(
+    const at::Tensor& grad_output, at::IntArrayRef output_size,
+    at::IntArrayRef input_size, c10::optional<double> scales_h,
+    c10::optional<double> scales_w) {
+  LTC_FN_COUNTER("xla::");
+  LazyTensor grad_output_tensor = bridge::GetLtcTensor(grad_output);
+  // Only the XLA TPU backend for now implements the CustomCall required by
+  // our XLA lowering.
+  if (grad_output_tensor.GetDevice().hw_type != DeviceType::TPU ||
+      (scales_h && *scales_h != 1.0) || (scales_w && *scales_w != 1.0)) {
+    return AtenXlaTypeDefault::upsample_nearest2d_backward(
+        grad_output, output_size, input_size, scales_h, scales_w);
+  }
+  return bridge::AtenFromLtcTensor(LazyTensor::upsample_nearest2d_backward(
+      grad_output_tensor, xla::util::ToVector<xla::int64>(output_size),
+      xla::util::ToVector<xla::int64>(input_size)));
+}
+
+at::Tensor AtenXlaType::var(const at::Tensor& self, bool unbiased) {
+  LTC_FN_COUNTER("xla::");
+  LazyTensor self_tensor = bridge::GetLtcTensor(self);
+  return bridge::AtenFromLtcTensor(
+      LazyTensor::var(bridge::GetLtcTensor(self),
+                      xla::util::Iota<xla::int64>(
+                          bridge::GetLtcTensor(self).shape().get().rank()),
+                      unbiased,
+                      /*keep_reduced_dimensions=*/false));
+}
+
+at::Tensor AtenXlaType::var(const at::Tensor& self, at::IntArrayRef dim,
+                            bool unbiased, bool keepdim) {
+  LTC_FN_COUNTER("xla::");
+  LazyTensor self_tensor = bridge::GetLtcTensor(self);
+  return bridge::AtenFromLtcTensor(
+      LazyTensor::var(self_tensor, Helpers::I64List(dim), unbiased, keepdim));
 }
 
 at::Tensor AtenXlaType::view(const at::Tensor& self, at::IntArrayRef size) {

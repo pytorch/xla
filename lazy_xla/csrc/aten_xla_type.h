@@ -768,6 +768,18 @@ class AtenXlaType {
                          const c10::optional<at::Scalar>& p,
                          at::IntArrayRef dim, bool keepdim);
 
+  static at::Tensor normal(const at::Tensor& mean, double std,
+                           c10::optional<at::Generator> generator);
+
+  static at::Tensor normal(double mean, const at::Tensor& std,
+                           c10::optional<at::Generator> generator);
+
+  static at::Tensor normal(const at::Tensor& mean, const at::Tensor& std,
+                           c10::optional<at::Generator> generator);
+
+  static at::Tensor& normal_(at::Tensor& self, double mean, double std,
+                             c10::optional<at::Generator> generator);
+
   static at::Tensor permute(const at::Tensor& self, at::IntArrayRef dims);
 
   static at::Tensor pow(const at::Tensor& self, const at::Scalar& exponent);
@@ -851,6 +863,16 @@ class AtenXlaType {
   static at::Tensor rsub(const at::Tensor& self, const at::Scalar& other,
                          const at::Scalar& alpha);
 
+  static at::Tensor& scatter_(at::Tensor& self, int64_t dim,
+                              const at::Tensor& index, const at::Tensor& src);
+
+  static at::Tensor& scatter_(at::Tensor& self, int64_t dim,
+                              const at::Tensor& index, const at::Scalar& value);
+
+  static at::Tensor& scatter_add_(at::Tensor& self, int64_t dim,
+                                  const at::Tensor& index,
+                                  const at::Tensor& src);
+
   static at::Tensor select(const at::Tensor& self, int64_t dim, int64_t index);
 
   static at::Tensor& silu_out(const at::Tensor& self, at::Tensor& out);
@@ -908,6 +930,11 @@ class AtenXlaType {
 
   static at::Tensor stack(at::TensorList tensors, int64_t dim);
 
+  static at::Tensor std(const at::Tensor& self, bool unbiased);
+
+  static at::Tensor std(const at::Tensor& self, at::IntArrayRef dim,
+                        bool unbiased, bool keepdim);
+
   static at::Tensor sub(const at::Tensor& self, const at::Tensor& other,
                         const at::Scalar& alpha);
 
@@ -956,6 +983,16 @@ class AtenXlaType {
                                        const at::Tensor& self,
                                        const at::Scalar& threshold);
 
+  static std::tuple<at::Tensor, at::Tensor> topk(const at::Tensor& self,
+                                                 int64_t k, int64_t dim,
+                                                 bool largest, bool sorted);
+
+  static at::Tensor trace(const at::Tensor& self);
+
+  static std::tuple<at::Tensor, at::Tensor> triangular_solve(
+      const at::Tensor& b, const at::Tensor& A, bool upper, bool transpose,
+      bool unitriangular);
+
   static at::Tensor transpose(const at::Tensor& self, int64_t dim0,
                               int64_t dim1);
 
@@ -976,6 +1013,42 @@ class AtenXlaType {
   static at::Tensor unsqueeze(const at::Tensor& self, int64_t dim);
 
   static at::Tensor& unsqueeze_(at::Tensor& self, int64_t dim);
+
+  static at::Tensor upsample_bilinear2d(const at::Tensor& self,
+                                        at::IntArrayRef output_size,
+                                        bool align_corners,
+                                        c10::optional<double> scales_h,
+                                        c10::optional<double> scales_w);
+
+  static at::Tensor upsample_bilinear2d_backward(
+      const at::Tensor& grad_output, at::IntArrayRef output_size,
+      at::IntArrayRef input_size, bool align_corners,
+      c10::optional<double> scales_h, c10::optional<double> scales_w);
+
+  static at::Tensor upsample_nearest2d(
+      const at::Tensor& input, c10::optional<at::IntArrayRef> output_size,
+      c10::optional<at::ArrayRef<double>> scale_factors);
+
+  static at::Tensor upsample_nearest2d_backward(
+      const at::Tensor& grad_output, c10::optional<at::IntArrayRef> output_size,
+      at::IntArrayRef input_size,
+      c10::optional<at::ArrayRef<double>> scale_factors);
+
+  static at::Tensor upsample_nearest2d(const at::Tensor& self,
+                                       at::IntArrayRef output_size,
+                                       c10::optional<double> scales_h,
+                                       c10::optional<double> scales_w);
+
+  static at::Tensor upsample_nearest2d_backward(const at::Tensor& grad_output,
+                                                at::IntArrayRef output_size,
+                                                at::IntArrayRef input_size,
+                                                c10::optional<double> scales_h,
+                                                c10::optional<double> scales_w);
+
+  static at::Tensor var(const at::Tensor& self, bool unbiased);
+
+  static at::Tensor var(const at::Tensor& self, at::IntArrayRef dim,
+                        bool unbiased, bool keepdim);
 
   static at::Tensor view(const at::Tensor& self, at::IntArrayRef size);
 

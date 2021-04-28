@@ -61,6 +61,7 @@
 #include "lazy_tensor_core/csrc/ops/nll_loss2d.h"
 #include "lazy_tensor_core/csrc/ops/nll_loss2d_backward.h"
 #include "lazy_tensor_core/csrc/ops/nll_loss_backward.h"
+#include "lazy_tensor_core/csrc/ops/normal.h"
 #include "lazy_tensor_core/csrc/ops/not_supported.h"
 #include "lazy_tensor_core/csrc/ops/ops.h"
 #include "lazy_tensor_core/csrc/ops/permute.h"
@@ -73,6 +74,8 @@
 #include "lazy_tensor_core/csrc/ops/rrelu_with_noise.h"
 #include "lazy_tensor_core/csrc/ops/rrelu_with_noise_backward.h"
 #include "lazy_tensor_core/csrc/ops/scalar.h"
+#include "lazy_tensor_core/csrc/ops/scatter.h"
+#include "lazy_tensor_core/csrc/ops/scatter_add.h"
 #include "lazy_tensor_core/csrc/ops/select.h"
 #include "lazy_tensor_core/csrc/ops/shrink_backward.h"
 #include "lazy_tensor_core/csrc/ops/softmax.h"
@@ -81,10 +84,13 @@
 #include "lazy_tensor_core/csrc/ops/split.h"
 #include "lazy_tensor_core/csrc/ops/squeeze.h"
 #include "lazy_tensor_core/csrc/ops/stack.h"
+#include "lazy_tensor_core/csrc/ops/std.h"
 #include "lazy_tensor_core/csrc/ops/sum.h"
 #include "lazy_tensor_core/csrc/ops/symeig.h"
 #include "lazy_tensor_core/csrc/ops/threshold.h"
 #include "lazy_tensor_core/csrc/ops/threshold_backward.h"
+#include "lazy_tensor_core/csrc/ops/topk.h"
+#include "lazy_tensor_core/csrc/ops/triangular_solve.h"
 #include "lazy_tensor_core/csrc/ops/tril.h"
 #include "lazy_tensor_core/csrc/ops/triu.h"
 #include "lazy_tensor_core/csrc/ops/unselect.h"
@@ -94,6 +100,7 @@
 #include "lazy_tensor_core/csrc/ops/upsample_bilinear2d_backward.h"
 #include "lazy_tensor_core/csrc/ops/upsample_nearest2d.h"
 #include "lazy_tensor_core/csrc/ops/upsample_nearest2d_backward.h"
+#include "lazy_tensor_core/csrc/ops/var.h"
 #include "lazy_tensor_core/csrc/ops/view.h"
 #include "lazy_tensor_core/csrc/tensor_util.h"
 #include "lazy_tensors/shape_util.h"
@@ -106,6 +113,7 @@
 #include "lazy_xla/csrc/compiler/matrix.h"
 #include "lazy_xla/csrc/compiler/nll_loss.h"
 #include "lazy_xla/csrc/compiler/pooling.h"
+#include "lazy_xla/csrc/compiler/random.h"
 #include "lazy_xla/csrc/compiler/reduction.h"
 #include "lazy_xla/csrc/compiler/resize_ops.h"
 #include "lazy_xla/csrc/compiler/softmax_builder.h"
@@ -1010,6 +1018,79 @@ lazy_tensors::Shape InferMaxUnpoolNdBackward(
       {grad_output.shape(), input.shape(), indices.shape()}, shape_fn);
 }
 
+lazy_tensors::Shape InferStd(const ir::ops::Std* node) {
+  auto shape_fn = [node](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
+    return BuildStdDeviation(operands[0], node->dimensions(),
+                             node->keep_reduced_dimensions(), node->unbiased());
+  };
+  const ir::Output& input = node->operand(0);
+  return ir::ops::InferOutputShape({input.shape()}, shape_fn);
+}
+
+lazy_tensors::Shape InferVar(const ir::ops::Var* node) {
+  auto shape_fn = [node](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
+    return BuildVar(operands[0], node->dimensions(), node->unbiased(),
+                    node->keep_reduced_dimensions());
+  };
+  const ir::Output& input = node->operand(0);
+  return ir::ops::InferOutputShape({input.shape()}, shape_fn);
+}
+
+lazy_tensors::Shape InferTopK(const ir::ops::TopK* node) {
+  auto shape_fn = [node](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
+    return xla::Tuple(operands[0].builder(),
+                      CreateTopK(operands[0], node->k(), node->dim(),
+                                 node->largest(), node->sorted()));
+  };
+  const ir::Output& input = node->operand(0);
+  return ir::ops::InferOutputShape({input.shape()}, shape_fn);
+}
+
+// This function plays two roles:
+// - Computes the output shape.
+// - Computes the broadcasted shape for the operands.
+// NB: This currently infers the shape when left_side is true, as done in ATen.
+std::pair<xla::Shape, xla::Shape> InferTriangularSolve(
+    const xla::Shape& rhs_shape, const xla::Shape& lhs_shape) {
+  // Obtain the number of right-hand sides, and dimension of the square matrix.
+  xla::int64 nrhs = rhs_shape.dimensions(rhs_shape.rank() - 1);
+  xla::int64 n = lhs_shape.dimensions(lhs_shape.rank() - 1);
+  xla::Shape rhs_batch_shape(rhs_shape);
+  xla::Shape lhs_batch_shape(lhs_shape);
+  rhs_batch_shape.DeleteDimension(rhs_batch_shape.rank() - 1);
+  lhs_batch_shape.DeleteDimension(lhs_batch_shape.rank() - 1);
+  // If the shapes match in the batch dimensions, then we don't need to get
+  // the promoted shape, and can directly add the trailing dimension.
+  if (xla::ShapeUtil::Compatible(lhs_batch_shape, rhs_batch_shape)) {
+    rhs_batch_shape.add_dimensions(nrhs);
+    lhs_batch_shape.add_dimensions(n);
+    xla::LayoutUtil::SetToDefaultLayout(&rhs_batch_shape);
+    xla::LayoutUtil::SetToDefaultLayout(&lhs_batch_shape);
+    return std::pair<xla::Shape, xla::Shape>(rhs_batch_shape, lhs_batch_shape);
+  }
+  // Obtain the promoted shapes and add back the trailing dimension.
+  xla::Shape rhs_batch_promoted_shape =
+      XlaHelpers::XlaShape(torch_lazy_tensors::Helpers::GetPromotedShape(
+          XlaHelpers::LazyTensorsShape(rhs_batch_shape),
+          XlaHelpers::LazyTensorsShape(lhs_batch_shape)));
+  xla::Shape lhs_batch_promoted_shape(rhs_batch_promoted_shape);
+  rhs_batch_promoted_shape.add_dimensions(nrhs);
+  lhs_batch_promoted_shape.add_dimensions(n);
+  xla::LayoutUtil::SetToDefaultLayout(&rhs_batch_promoted_shape);
+  xla::LayoutUtil::SetToDefaultLayout(&lhs_batch_promoted_shape);
+  return std::pair<xla::Shape, xla::Shape>(rhs_batch_promoted_shape,
+                                           lhs_batch_promoted_shape);
+}
+
+lazy_tensors::Shape InferTriangularSolve(const ir::ops::TriangularSolve* node) {
+  const ir::Output& rhs = node->operand(0);
+  const ir::Output& lhs = node->operand(1);
+  std::pair<xla::Shape, xla::Shape> broadcasted_shapes = InferTriangularSolve(
+      XlaHelpers::XlaShape(rhs.shape()), XlaHelpers::XlaShape(lhs.shape()));
+  return XlaHelpers::LazyTensorsShape(xla::ShapeUtil::MakeTupleShape(
+      {broadcasted_shapes.first, broadcasted_shapes.second}));
+}
+
 #define DECLARE_UNARY_OP(name) XlaOpVector Lower##name(const ir::Node* node)
 #define DECLARE_UNARY_OP2(name) \
   XlaOpVector Lower##name(const ir::ops::name* node)
@@ -1110,6 +1191,7 @@ class XlaNodeLowering : public NodeLowering {
   DECLARE_UNARY_OP(Mm);
   DECLARE_UNARY_OP(Clamp);
   DECLARE_UNARY_OP(Eye);
+  DECLARE_UNARY_OP(Normal);
   DECLARE_UNARY_OP2(AdaptiveAvgPool2d);
   DECLARE_UNARY_OP2(AdaptiveAvgPool3d);
   DECLARE_UNARY_OP2(AvgPoolNd);
@@ -1172,6 +1254,8 @@ class XlaNodeLowering : public NodeLowering {
   DECLARE_UNARY_OP2(Resize);
   DECLARE_UNARY_OP2(RreluWithNoise);
   DECLARE_UNARY_OP2(RreluWithNoiseBackward);
+  DECLARE_UNARY_OP2(Scatter);
+  DECLARE_UNARY_OP2(ScatterAdd);
   DECLARE_UNARY_OP2(Softmax);
   DECLARE_UNARY_OP2(SoftmaxBackward);
   DECLARE_UNARY_OP2(Softshrink);
@@ -1183,9 +1267,13 @@ class XlaNodeLowering : public NodeLowering {
   DECLARE_UNARY_OP2(SymEig);
   DECLARE_UNARY_OP2(Threshold);
   DECLARE_UNARY_OP2(ThresholdBackward);
+  DECLARE_UNARY_OP2(TriangularSolve);
   DECLARE_UNARY_OP2(Tril);
   DECLARE_UNARY_OP2(Triu);
   DECLARE_UNARY_OP2(Unsqueeze);
+  DECLARE_UNARY_OP2(Std);
+  DECLARE_UNARY_OP2(Var);
+  DECLARE_UNARY_OP2(TopK);
   DECLARE_UNARY_OP2(View);
 };
 
@@ -1278,6 +1366,7 @@ XlaOpVector XlaNodeLowering::LowerToXla(const ir::Node* node) {
     HANDLE_GENERIC_OP(Clamp, at::aten::clamp)
     HANDLE_GENERIC_OP(Eye, at::aten::eye)
     HANDLE_GENERIC_OP(Ger, at::aten::ger)
+    HANDLE_GENERIC_OP(Normal, at::aten::normal)
     HANDLE_GENERIC_OP2(AdaptiveAvgPool2d, at::aten::adaptive_avg_pool2d)
     HANDLE_GENERIC_OP2(AdaptiveAvgPool3d, at::aten::adaptive_avg_pool3d)
     HANDLE_GENERIC_OP(AdaptiveAvgPool2dBackward,
@@ -1338,9 +1427,13 @@ XlaOpVector XlaNodeLowering::LowerToXla(const ir::Node* node) {
     HANDLE_GENERIC_OP2(Squeeze, at::aten::squeeze)
     HANDLE_GENERIC_OP2(Threshold, at::aten::threshold)
     HANDLE_GENERIC_OP2(ThresholdBackward, at::aten::threshold_backward)
+    HANDLE_GENERIC_OP2(TriangularSolve, at::aten::triangular_solve)
     HANDLE_GENERIC_OP2(Tril, at::aten::tril)
     HANDLE_GENERIC_OP2(Triu, at::aten::triu)
     HANDLE_GENERIC_OP2(Unsqueeze, at::aten::unsqueeze)
+    HANDLE_GENERIC_OP2(Std, at::aten::std)
+    HANDLE_GENERIC_OP2(Var, at::aten::var)
+    HANDLE_GENERIC_OP2(TopK, at::aten::topk)
     HANDLE_GENERIC_OP2(View, at::aten::view)
     HANDLE_GENERIC_OP2(All, at::aten::all)
     HANDLE_GENERIC_OP2(Any, at::aten::any)
@@ -1367,6 +1460,8 @@ XlaOpVector XlaNodeLowering::LowerToXla(const ir::Node* node) {
     HANDLE_GENERIC_OP2(NativeBatchNormForward, at::aten::native_batch_norm)
     HANDLE_GENERIC_OP2(NllLoss, at::aten::nll_loss)
     HANDLE_GENERIC_OP2(NllLossBackward, at::aten::nll_loss_backward)
+    HANDLE_GENERIC_OP2(Scatter, at::aten::scatter)
+    HANDLE_GENERIC_OP2(ScatterAdd, at::aten::scatter_add)
     case at::aten::nll_loss2d: {
       return LowerNllLoss(ir::NodeCast<ir::ops::NllLoss2d>(
           node, ir::OpKind(at::aten::nll_loss2d)));
@@ -2082,6 +2177,14 @@ XlaOpVector XlaNodeLowering::LowerMean(const ir::ops::Mean* node) {
           : result};
 }
 
+XlaOpVector XlaNodeLowering::LowerNormal(const ir::Node* node) {
+  xla::XlaOp mean = loctx()->GetOutputOp(node->operand(0));
+  xla::XlaOp std = loctx()->GetOutputOp(node->operand(1));
+  xla::XlaOp rng_seed = loctx()->GetOutputOp(node->operand(2));
+  return {
+      RngNormal(rng_seed, compiler::XlaHelpers::ShapeOfXlaOp(mean), mean, std)};
+}
+
 XlaOpVector XlaNodeLowering::LowerPermute(const ir::ops::Permute* node) {
   LTC_CHECK_EQ(node->num_outputs(), 1);
   xla::XlaOp input = loctx()->GetOutputOp(node->operand(0));
@@ -2149,6 +2252,28 @@ XlaOpVector XlaNodeLowering::LowerSiLU(const ir::Node* node) {
   LTC_CHECK_EQ(node->num_outputs(), 1);
   xla::XlaOp xla_input = loctx()->GetOutputOp(node->operand(0));
   return {xla_input * BuildSigmoid(xla_input)};
+}
+
+XlaOpVector XlaNodeLowering::LowerScatter(const ir::ops::Scatter* node) {
+  xla::XlaOp input = loctx()->GetOutputOp(node->operand(0));
+  xla::XlaOp index = loctx()->GetOutputOp(node->operand(1));
+  xla::XlaOp src = loctx()->GetOutputOp(node->operand(2));
+
+  ScatterOptions options(/*combiner=*/nullptr);
+
+  return {CreateScatter(loctx()->device(), input, index, src, node->dim(),
+                        options)};
+}
+
+XlaOpVector XlaNodeLowering::LowerScatterAdd(const ir::ops::ScatterAdd* node) {
+  xla::XlaOp input = loctx()->GetOutputOp(node->operand(0));
+  xla::XlaOp index = loctx()->GetOutputOp(node->operand(1));
+  xla::XlaOp src = loctx()->GetOutputOp(node->operand(2));
+
+  ScatterOptions options(NumericAddCombiner());
+
+  return {CreateScatter(loctx()->device(), input, index, src, node->dim(),
+                        options)};
 }
 
 XlaOpVector XlaNodeLowering::LowerSoftmax(const ir::ops::Softmax* node) {
@@ -2234,6 +2359,27 @@ XlaOpVector XlaNodeLowering::LowerThresholdBackward(
   return {BuildThreshold(input, grad_output, node->threshold(), 0)};
 }
 
+XlaOpVector XlaNodeLowering::LowerTriangularSolve(
+    const ir::ops::TriangularSolve* node) {
+  xla::XlaOp rhs = loctx()->GetOutputOp(node->operand(0));
+  xla::XlaOp lhs = loctx()->GetOutputOp(node->operand(1));
+  const xla::Shape& rhs_shape = XlaHelpers::ShapeOfXlaOp(rhs);
+  const xla::Shape& lhs_shape = XlaHelpers::ShapeOfXlaOp(lhs);
+  std::pair<xla::Shape, xla::Shape> broadcasted_shapes =
+      InferTriangularSolve(rhs_shape, lhs_shape);
+  xla::XlaOp rhs_broadcasted =
+      XlaHelpers::ImplicitBroadcast(rhs, rhs_shape, broadcasted_shapes.first);
+  xla::XlaOp lhs_broadcasted =
+      XlaHelpers::ImplicitBroadcast(lhs, lhs_shape, broadcasted_shapes.second);
+
+  xla::XlaOp solution = xla::TriangularSolve(
+      lhs_broadcasted, rhs_broadcasted, node->left_side(), node->lower(),
+      node->unit_diagonal(),
+      node->transpose() ? xla::TriangularSolveOptions::TRANSPOSE
+                        : xla::TriangularSolveOptions::NO_TRANSPOSE);
+  return {solution, lhs_broadcasted};
+}
+
 XlaOpVector XlaNodeLowering::LowerTril(const ir::ops::Tril* node) {
   xla::XlaOp input = loctx()->GetOutputOp(node->operand(0));
   return {BuildTril(input, node->diagonal())};
@@ -2248,6 +2394,25 @@ XlaOpVector XlaNodeLowering::LowerUnsqueeze(const ir::ops::Unsqueeze* node) {
   LTC_CHECK_EQ(node->num_outputs(), 1);
   xla::XlaOp input = loctx()->GetOutputOp(node->operand(0));
   return {BuildUnsqueeze(input, node->dim())};
+}
+
+XlaOpVector XlaNodeLowering::LowerStd(const ir::ops::Std* node) {
+  xla::XlaOp input = loctx()->GetOutputOp(node->operand(0));
+  return {BuildStdDeviation(input, node->dimensions(),
+                            node->keep_reduced_dimensions(), node->unbiased())};
+}
+
+XlaOpVector XlaNodeLowering::LowerVar(const ir::ops::Var* node) {
+  xla::XlaOp input = loctx()->GetOutputOp(node->operand(0));
+  return {BuildVar(input, node->dimensions(), node->unbiased(),
+                   node->keep_reduced_dimensions())};
+}
+
+XlaOpVector XlaNodeLowering::LowerTopK(const ir::ops::TopK* node) {
+  xla::XlaOp input = loctx()->GetOutputOp(node->operand(0));
+  auto topk = CreateTopK(input, node->k(), node->dim(), node->largest(),
+                         node->sorted());
+  return XlaOpVector(topk.begin(), topk.end());
 }
 
 XlaOpVector XlaNodeLowering::LowerView(const ir::ops::View* node) {
@@ -2857,6 +3022,22 @@ lazy_tensors::Shape XlaNodeLowering::Infer(const ir::Node* node) {
       return InferMaxUnpoolNdBackward(
           ir::NodeCast<ir::ops::MaxUnpoolNdBackward>(
               node, ir::OpKind(at::aten::max_unpool3d_backward)));
+    }
+    case at::aten::std: {
+      return InferStd(
+          ir::NodeCast<ir::ops::Std>(node, ir::OpKind(at::aten::std)));
+    }
+    case at::aten::var: {
+      return InferVar(
+          ir::NodeCast<ir::ops::Var>(node, ir::OpKind(at::aten::var)));
+    }
+    case at::aten::triangular_solve: {
+      return InferTriangularSolve(ir::NodeCast<ir::ops::TriangularSolve>(
+          node, ir::OpKind(at::aten::triangular_solve)));
+    }
+    case at::aten::topk: {
+      return InferTopK(
+          ir::NodeCast<ir::ops::TopK>(node, ir::OpKind(at::aten::topk)));
     }
     default: {
       if (kind == *ir::ops::ltc_generic_slice) {
