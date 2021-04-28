@@ -2605,6 +2605,55 @@ at::Tensor& AtenXlaType::mv_out(const at::Tensor& self, const at::Tensor& vec,
   return out;
 }
 
+std::tuple<at::Tensor, at::Tensor, at::Tensor> AtenXlaType::native_batch_norm(
+    const at::Tensor& input, const c10::optional<at::Tensor>& weight,
+    const c10::optional<at::Tensor>& bias,
+    const c10::optional<at::Tensor>& running_mean,
+    const c10::optional<at::Tensor>& running_var, bool training,
+    double momentum, double eps) {
+  LTC_FN_COUNTER("xla::");
+  LazyTensor input_tensor = bridge::GetLtcTensor(input);
+  const Device& device = input_tensor.GetDevice();
+  LazyTensor running_mean_tensor =
+      bridge::GetOrCreateLtcTensor(running_mean, device);
+  LazyTensor running_var_tensor =
+      bridge::GetOrCreateLtcTensor(running_var, device);
+  auto outputs = LazyTensor::native_batch_norm(
+      bridge::GetLtcTensor(input), bridge::GetOrCreateLtcTensor(weight, device),
+      bridge::GetOrCreateLtcTensor(bias, device), running_mean_tensor,
+      running_var_tensor, training, momentum, eps);
+  return std::make_tuple(bridge::AtenFromLtcTensor(std::get<0>(outputs)),
+                         bridge::AtenFromLtcTensor(std::get<1>(outputs)),
+                         bridge::AtenFromLtcTensor(std::get<2>(outputs)));
+}
+
+std::tuple<at::Tensor, at::Tensor, at::Tensor>
+AtenXlaType::native_batch_norm_backward(
+    const at::Tensor& grad_out, const at::Tensor& input,
+    const c10::optional<at::Tensor>& weight,
+    const c10::optional<at::Tensor>& running_mean,
+    const c10::optional<at::Tensor>& running_var,
+    const c10::optional<at::Tensor>& save_mean,
+    const c10::optional<at::Tensor>& save_invstd, bool train, double eps,
+    std::array<bool, 3> output_mask) {
+  LTC_FN_COUNTER("xla::");
+  LazyTensor grad_out_tensor = bridge::GetLtcTensor(grad_out);
+  const Device& device = grad_out_tensor.GetDevice();
+  auto gradients = LazyTensor::native_batch_norm_backward(
+      bridge::GetLtcTensor(grad_out), bridge::GetLtcTensor(input),
+      bridge::GetOrCreateLtcTensor(weight, device),
+      bridge::GetOrCreateLtcTensor(save_mean, device),
+      bridge::GetOrCreateLtcTensor(save_invstd, device), train, eps);
+  at::Tensor undefined;
+  return std::make_tuple(
+      output_mask[0] ? bridge::AtenFromLtcTensor(std::get<0>(gradients))
+                     : undefined,
+      output_mask[1] ? bridge::AtenFromLtcTensor(std::get<1>(gradients))
+                     : undefined,
+      output_mask[2] ? bridge::AtenFromLtcTensor(std::get<2>(gradients))
+                     : undefined);
+}
+
 at::Tensor AtenXlaType::ne(const at::Tensor& self, const at::Scalar& other) {
   if (UseNNC(self)) {
     LTC_FN_COUNTER("xla::");

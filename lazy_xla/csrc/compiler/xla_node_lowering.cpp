@@ -55,6 +55,8 @@
 #include "lazy_tensor_core/csrc/ops/mean.h"
 #include "lazy_tensor_core/csrc/ops/mse_loss.h"
 #include "lazy_tensor_core/csrc/ops/mse_loss_backward.h"
+#include "lazy_tensor_core/csrc/ops/native_batch_norm_backward.h"
+#include "lazy_tensor_core/csrc/ops/native_batch_norm_forward.h"
 #include "lazy_tensor_core/csrc/ops/not_supported.h"
 #include "lazy_tensor_core/csrc/ops/ops.h"
 #include "lazy_tensor_core/csrc/ops/permute.h"
@@ -91,6 +93,7 @@
 #include "lazy_tensor_core/csrc/ops/view.h"
 #include "lazy_tensor_core/csrc/tensor_util.h"
 #include "lazy_tensors/shape_util.h"
+#include "lazy_xla/csrc/compiler/batch_norm.h"
 #include "lazy_xla/csrc/compiler/convert_ops.h"
 #include "lazy_xla/csrc/compiler/data_ops.h"
 #include "lazy_xla/csrc/compiler/elementwise.h"
@@ -453,6 +456,68 @@ lazy_tensors::Shape InferMseLossBackward(const ir::ops::MseLossBackward* node) {
   const ir::Output& target = node->operand(2);
   return ir::ops::InferOutputShape(
       {grad_output.shape(), input.shape(), target.shape()}, shape_fn);
+}
+
+std::vector<xla::XlaOp> LowerBatchNorm(xla::XlaOp input, xla::XlaOp weight,
+                                       xla::XlaOp bias, xla::XlaOp running_mean,
+                                       xla::XlaOp running_var, bool training,
+                                       double eps) {
+  std::vector<xla::XlaOp> values;
+  if (training) {
+    BatchNormOutput batch_norm_output =
+        BuildBatchNormTraining(input, weight, bias, eps);
+    values.push_back(std::move(batch_norm_output.output));
+    values.push_back(std::move(batch_norm_output.batch_mean));
+    values.push_back(batch_norm_output.batch_variance);
+    values.push_back(
+        BatchNormVarianceInvert(batch_norm_output.batch_variance, eps));
+  } else {
+    values.push_back(BuildBatchNormInference(input, weight, bias, running_mean,
+                                             running_var, eps));
+    values.push_back(running_mean);
+    values.push_back(running_var);
+    values.push_back(BatchNormVarianceInvert(running_var, eps));
+  }
+  return values;
+}
+
+lazy_tensors::Shape InferNativeBatchNormForward(
+    const ir::ops::NativeBatchNormForward* node) {
+  auto shape_fn = [node](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
+    std::vector<xla::XlaOp> values =
+        LowerBatchNorm(operands[0], operands[1], operands[2], operands[3],
+                       operands[4], node->training(), 0.5);
+    return xla::Tuple(operands[0].builder(), values);
+  };
+  const ir::Output& input = node->operand(0);
+  const ir::Output& weight = node->operand(1);
+  const ir::Output& bias = node->operand(2);
+  const ir::Output& running_mean = node->operand(3);
+  const ir::Output& running_var = node->operand(4);
+  return ir::ops::InferOutputShape({input.shape(), weight.shape(), bias.shape(),
+                                    running_mean.shape(), running_var.shape()},
+                                   shape_fn);
+}
+
+lazy_tensors::Shape InferNativeBatchNormBackward(
+    const ir::ops::NativeBatchNormBackward* node) {
+  auto shape_fn = [node](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
+    BatchNormGrads xla_outputs =
+        BuildBatchNormBackward(operands[0], operands[1], operands[2],
+                               operands[3], operands[4], node->training(), 0.5);
+    return xla::Tuple(operands[0].builder(),
+                      {xla_outputs.grad_input, xla_outputs.grad_weight,
+                       xla_outputs.grad_bias});
+  };
+  const ir::Output& grad_out = node->operand(0);
+  const ir::Output& input = node->operand(1);
+  const ir::Output& weight = node->operand(2);
+  const ir::Output& save_mean = node->operand(3);
+  const ir::Output& save_invstd = node->operand(4);
+  return ir::ops::InferOutputShape(
+      {grad_out.shape(), input.shape(), weight.shape(), save_mean.shape(),
+       save_invstd.shape()},
+      shape_fn);
 }
 
 lazy_tensors::Shape InferBitwise(const ir::Node* node) {
@@ -1017,6 +1082,8 @@ class XlaNodeLowering : public NodeLowering {
   DECLARE_UNARY_OP2(L1LossBackward);
   DECLARE_UNARY_OP2(MseLoss);
   DECLARE_UNARY_OP2(MseLossBackward);
+  DECLARE_UNARY_OP2(NativeBatchNormBackward);
+  DECLARE_UNARY_OP2(NativeBatchNormForward);
   DECLARE_UNARY_OP2(Hardshrink);
   DECLARE_UNARY_OP2(HardtanhBackward);
   DECLARE_UNARY_OP2(LeakyRelu);
@@ -1230,6 +1297,9 @@ XlaOpVector XlaNodeLowering::LowerToXla(const ir::Node* node) {
     HANDLE_GENERIC_OP2(L1LossBackward, at::aten::l1_loss_backward)
     HANDLE_GENERIC_OP2(MseLoss, at::aten::mse_loss)
     HANDLE_GENERIC_OP2(MseLossBackward, at::aten::mse_loss_backward)
+    HANDLE_GENERIC_OP2(NativeBatchNormBackward,
+                       at::aten::native_batch_norm_backward)
+    HANDLE_GENERIC_OP2(NativeBatchNormForward, at::aten::native_batch_norm)
     case at::aten::index_add: {
       return LowerIndexAdd(ir::NodeCast<ir::ops::IndexAlongDim>(
           node, ir::OpKind(at::aten::index_add)));
@@ -2270,6 +2340,33 @@ XlaOpVector XlaNodeLowering::LowerMseLossBackward(
   return {BuildMseLossBackward(grad_output, input, target, node->reduction())};
 }
 
+XlaOpVector XlaNodeLowering::LowerNativeBatchNormForward(
+    const ir::ops::NativeBatchNormForward* node) {
+  xla::XlaOp input = loctx()->GetOutputOp(node->operand(0));
+  xla::XlaOp weight = loctx()->GetOutputOp(node->operand(1));
+  xla::XlaOp bias = loctx()->GetOutputOp(node->operand(2));
+  xla::XlaOp running_mean = loctx()->GetOutputOp(node->operand(3));
+  xla::XlaOp running_var = loctx()->GetOutputOp(node->operand(4));
+
+  auto batch_norm = LowerBatchNorm(input, weight, bias, running_mean,
+                                   running_var, node->training(), node->eps());
+  return XlaOpVector(batch_norm.begin(), batch_norm.end());
+}
+
+XlaOpVector XlaNodeLowering::LowerNativeBatchNormBackward(
+    const ir::ops::NativeBatchNormBackward* node) {
+  xla::XlaOp grad_out = loctx()->GetOutputOp(node->operand(0));
+  xla::XlaOp input = loctx()->GetOutputOp(node->operand(1));
+  xla::XlaOp weight = loctx()->GetOutputOp(node->operand(2));
+  xla::XlaOp save_mean = loctx()->GetOutputOp(node->operand(3));
+  xla::XlaOp save_invstd = loctx()->GetOutputOp(node->operand(4));
+  BatchNormGrads grads =
+      BuildBatchNormBackward(grad_out, input, weight, save_mean, save_invstd,
+                             node->training(), node->eps());
+  return {std::move(grads.grad_input), std::move(grads.grad_weight),
+          std::move(grads.grad_bias)};
+}
+
 XlaOpVector XlaNodeLowering::LowerLogDet(const ir::Node* node) {
   xla::XlaOp input = loctx()->GetOutputOp(node->operand(0));
   return {xla::LogDet(input)};
@@ -2496,6 +2593,16 @@ lazy_tensors::Shape XlaNodeLowering::Infer(const ir::Node* node) {
     case at::aten::mse_loss_backward: {
       return InferMseLossBackward(ir::NodeCast<ir::ops::MseLossBackward>(
           node, ir::OpKind(at::aten::mse_loss_backward)));
+    }
+    case at::aten::native_batch_norm_backward: {
+      return InferNativeBatchNormBackward(
+          ir::NodeCast<ir::ops::NativeBatchNormBackward>(
+              node, ir::OpKind(at::aten::native_batch_norm_backward)));
+    }
+    case at::aten::native_batch_norm: {
+      return InferNativeBatchNormForward(
+          ir::NodeCast<ir::ops::NativeBatchNormForward>(
+              node, ir::OpKind(at::aten::native_batch_norm)));
     }
     case at::aten::index: {
       return InferIndexGet(

@@ -699,6 +699,24 @@ class AtenXlaType {
   static at::Tensor& mv_out(const at::Tensor& self, const at::Tensor& vec,
                             at::Tensor& out);
 
+  static std::tuple<at::Tensor, at::Tensor, at::Tensor> native_batch_norm(
+      const at::Tensor& input, const c10::optional<at::Tensor>& weight,
+      const c10::optional<at::Tensor>& bias,
+      const c10::optional<at::Tensor>& running_mean,
+      const c10::optional<at::Tensor>& running_var, bool training,
+      double momentum, double eps);
+
+  static std::tuple<at::Tensor, at::Tensor, at::Tensor>
+  native_batch_norm_backward(const at::Tensor& grad_out,
+                             const at::Tensor& input,
+                             const c10::optional<at::Tensor>& weight,
+                             const c10::optional<at::Tensor>& running_mean,
+                             const c10::optional<at::Tensor>& running_var,
+                             const c10::optional<at::Tensor>& save_mean,
+                             const c10::optional<at::Tensor>& save_invstd,
+                             bool train, double eps,
+                             std::array<bool, 3> output_mask);
+
   static at::Tensor ne(const at::Tensor& self, const at::Scalar& other);
 
   static at::Tensor ne(const at::Tensor& self, const at::Tensor& other);
