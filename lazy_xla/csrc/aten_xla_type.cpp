@@ -2712,6 +2712,76 @@ at::Tensor& AtenXlaType::neg_(at::Tensor& self) {
   return AtenXlaTypeDefault::neg_(self);
 }
 
+at::Tensor AtenXlaType::nll_loss2d_backward(
+    const at::Tensor& grad_output, const at::Tensor& self,
+    const at::Tensor& target, const c10::optional<at::Tensor>& weight,
+    int64_t reduction, int64_t ignore_index, const at::Tensor& total_weight) {
+  LTC_FN_COUNTER("xla::");
+  LazyTensor self_tensor = bridge::GetLtcTensor(self);
+  LazyTensor weight_tensor =
+      bridge::GetOrCreateLtcTensor(weight, self_tensor.GetDevice());
+  LazyTensor total_weight_tensor;
+  if (IsDefined(weight)) {
+    total_weight_tensor =
+        bridge::GetOrCreateLtcTensor(total_weight, self_tensor.GetDevice());
+  }
+  return bridge::AtenFromLtcTensor(LazyTensor::nll_loss2d_backward(
+      bridge::GetLtcTensor(grad_output), self_tensor,
+      bridge::GetLtcTensor(target), weight_tensor, reduction, ignore_index,
+      total_weight_tensor));
+}
+
+std::tuple<at::Tensor, at::Tensor> AtenXlaType::nll_loss2d_forward(
+    const at::Tensor& self, const at::Tensor& target,
+    const c10::optional<at::Tensor>& weight, int64_t reduction,
+    int64_t ignore_index) {
+  LTC_FN_COUNTER("xla::");
+  LazyTensor self_tensor = bridge::GetLtcTensor(self);
+  LazyTensor total_weight =
+      LazyTensor::full({}, 1, self_tensor.GetDevice(), self_tensor.dtype());
+  return std::make_tuple(
+      bridge::AtenFromLtcTensor(LazyTensor::nll_loss2d(
+          self_tensor, bridge::GetLtcTensor(target),
+          bridge::GetOrCreateLtcTensor(weight, self_tensor.GetDevice()),
+          reduction, ignore_index)),
+      bridge::AtenFromLtcTensor(total_weight));
+}
+
+at::Tensor AtenXlaType::nll_loss_backward(
+    const at::Tensor& grad_output, const at::Tensor& self,
+    const at::Tensor& target, const c10::optional<at::Tensor>& weight,
+    int64_t reduction, int64_t ignore_index, const at::Tensor& total_weight) {
+  LTC_FN_COUNTER("xla::");
+  LazyTensor self_tensor = bridge::GetLtcTensor(self);
+  LazyTensor weight_tensor =
+      bridge::GetOrCreateLtcTensor(weight, self_tensor.GetDevice());
+  LazyTensor total_weight_tensor;
+  if (IsDefined(weight)) {
+    total_weight_tensor =
+        bridge::GetOrCreateLtcTensor(total_weight, self_tensor.GetDevice());
+  }
+  return bridge::AtenFromLtcTensor(LazyTensor::nll_loss_backward(
+      bridge::GetLtcTensor(grad_output), self_tensor,
+      bridge::GetLtcTensor(target), weight_tensor, reduction, ignore_index,
+      total_weight_tensor));
+}
+
+std::tuple<at::Tensor, at::Tensor> AtenXlaType::nll_loss_forward(
+    const at::Tensor& self, const at::Tensor& target,
+    const c10::optional<at::Tensor>& weight, int64_t reduction,
+    int64_t ignore_index) {
+  LTC_FN_COUNTER("xla::");
+  LazyTensor self_tensor = bridge::GetLtcTensor(self);
+  LazyTensor total_weight =
+      LazyTensor::full({}, 1, self_tensor.GetDevice(), self_tensor.dtype());
+  return std::make_tuple(
+      bridge::AtenFromLtcTensor(LazyTensor::nll_loss(
+          self_tensor, bridge::GetLtcTensor(target),
+          bridge::GetOrCreateLtcTensor(weight, self_tensor.GetDevice()),
+          reduction, ignore_index)),
+      bridge::AtenFromLtcTensor(total_weight));
+}
+
 at::Tensor AtenXlaType::norm(const at::Tensor& self,
                              const c10::optional<at::Scalar>& p,
                              at::ScalarType dtype) {

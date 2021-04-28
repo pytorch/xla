@@ -57,6 +57,10 @@
 #include "lazy_tensor_core/csrc/ops/mse_loss_backward.h"
 #include "lazy_tensor_core/csrc/ops/native_batch_norm_backward.h"
 #include "lazy_tensor_core/csrc/ops/native_batch_norm_forward.h"
+#include "lazy_tensor_core/csrc/ops/nll_loss.h"
+#include "lazy_tensor_core/csrc/ops/nll_loss2d.h"
+#include "lazy_tensor_core/csrc/ops/nll_loss2d_backward.h"
+#include "lazy_tensor_core/csrc/ops/nll_loss_backward.h"
 #include "lazy_tensor_core/csrc/ops/not_supported.h"
 #include "lazy_tensor_core/csrc/ops/ops.h"
 #include "lazy_tensor_core/csrc/ops/permute.h"
@@ -100,6 +104,7 @@
 #include "lazy_xla/csrc/compiler/helpers.h"
 #include "lazy_xla/csrc/compiler/infer_output_shape.h"
 #include "lazy_xla/csrc/compiler/matrix.h"
+#include "lazy_xla/csrc/compiler/nll_loss.h"
 #include "lazy_xla/csrc/compiler/pooling.h"
 #include "lazy_xla/csrc/compiler/reduction.h"
 #include "lazy_xla/csrc/compiler/resize_ops.h"
@@ -518,6 +523,62 @@ lazy_tensors::Shape InferNativeBatchNormBackward(
       {grad_out.shape(), input.shape(), weight.shape(), save_mean.shape(),
        save_invstd.shape()},
       shape_fn);
+}
+
+template <class NllLossType>
+lazy_tensors::Shape InferNllLoss(const NllLossType* node) {
+  auto shape_fn = [node](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
+    xla::XlaOp weight;
+    if (operands.size() > 2) {
+      weight = operands[2];
+    }
+    return BuildNllLoss(operands[0], operands[1], weight, node->ignore_index(),
+                        node->reduction());
+  };
+  const ir::Output& logits = node->operand(0);
+  const ir::Output& labels = node->operand(1);
+  absl::optional<ir::Output> weight;
+  if (node->operands().size() > 2) {
+    weight = node->operand(2);
+  }
+  std::vector<lazy_tensors::Shape> shapes;
+  for (auto& input :
+       xla::util::GetValuesVector<ir::Output>({logits, labels}, {&weight})) {
+    shapes.push_back(input.shape());
+  }
+  return ir::ops::InferOutputShape(shapes, shape_fn);
+}
+
+template <class NllLossType>
+lazy_tensors::Shape InferNllLossBackward(const NllLossType* node) {
+  auto shape_fn = [node](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
+    xla::XlaOp weight;
+    xla::XlaOp total_weight;
+    if (operands.size() > 3) {
+      LTC_CHECK_EQ(operands.size(), 5)
+          << "If weight is specified, so must be total_weight";
+      weight = operands[3];
+      total_weight = operands[4];
+    }
+    return BuildNllLossBackward(operands[0], operands[1], operands[2], weight,
+                                total_weight, node->ignore_index(),
+                                node->reduction());
+  };
+  const ir::Output& grad_output = node->operand(0);
+  const ir::Output& logits = node->operand(1);
+  const ir::Output& labels = node->operand(2);
+  absl::optional<ir::Output> weight;
+  absl::optional<ir::Output> total_weight;
+  if (node->operands().size() > 3) {
+    weight = node->operand(3);
+    total_weight = node->operand(4);
+  }
+  std::vector<lazy_tensors::Shape> shapes;
+  for (auto& input : xla::util::GetValuesVector<ir::Output>(
+           {grad_output, logits, labels}, {&weight, &total_weight})) {
+    shapes.push_back(input.shape());
+  }
+  return ir::ops::InferOutputShape(shapes, shape_fn);
 }
 
 lazy_tensors::Shape InferBitwise(const ir::Node* node) {
@@ -1084,6 +1145,10 @@ class XlaNodeLowering : public NodeLowering {
   DECLARE_UNARY_OP2(MseLossBackward);
   DECLARE_UNARY_OP2(NativeBatchNormBackward);
   DECLARE_UNARY_OP2(NativeBatchNormForward);
+  template <class NllLossType>
+  XlaOpVector LowerNllLoss(const NllLossType* node);
+  template <class NllLossBackwardType>
+  XlaOpVector LowerNllLossBackward(const NllLossBackwardType* node);
   DECLARE_UNARY_OP2(Hardshrink);
   DECLARE_UNARY_OP2(HardtanhBackward);
   DECLARE_UNARY_OP2(LeakyRelu);
@@ -1300,6 +1365,16 @@ XlaOpVector XlaNodeLowering::LowerToXla(const ir::Node* node) {
     HANDLE_GENERIC_OP2(NativeBatchNormBackward,
                        at::aten::native_batch_norm_backward)
     HANDLE_GENERIC_OP2(NativeBatchNormForward, at::aten::native_batch_norm)
+    HANDLE_GENERIC_OP2(NllLoss, at::aten::nll_loss)
+    HANDLE_GENERIC_OP2(NllLossBackward, at::aten::nll_loss_backward)
+    case at::aten::nll_loss2d: {
+      return LowerNllLoss(ir::NodeCast<ir::ops::NllLoss2d>(
+          node, ir::OpKind(at::aten::nll_loss2d)));
+    }
+    case at::aten::nll_loss2d_backward: {
+      return LowerNllLossBackward(ir::NodeCast<ir::ops::NllLoss2dBackward>(
+          node, ir::OpKind(at::aten::nll_loss2d_backward)));
+    }
     case at::aten::index_add: {
       return LowerIndexAdd(ir::NodeCast<ir::ops::IndexAlongDim>(
           node, ir::OpKind(at::aten::index_add)));
@@ -2367,6 +2442,35 @@ XlaOpVector XlaNodeLowering::LowerNativeBatchNormBackward(
           std::move(grads.grad_bias)};
 }
 
+template <class NllLossType>
+XlaOpVector XlaNodeLowering::LowerNllLoss(const NllLossType* node) {
+  xla::XlaOp logits = loctx()->GetOutputOp(node->operand(0));
+  xla::XlaOp labels = loctx()->GetOutputOp(node->operand(1));
+  xla::XlaOp weight;
+  if (node->operands().size() > 2) {
+    weight = loctx()->GetOutputOp(node->operand(2));
+  }
+  return {BuildNllLoss(logits, labels, weight, node->ignore_index(),
+                       node->reduction())};
+}
+
+template <class NllLossBackwardType>
+XlaOpVector XlaNodeLowering::LowerNllLossBackward(
+    const NllLossBackwardType* node) {
+  xla::XlaOp grad_output = loctx()->GetOutputOp(node->operand(0));
+  xla::XlaOp logits = loctx()->GetOutputOp(node->operand(1));
+  xla::XlaOp labels = loctx()->GetOutputOp(node->operand(2));
+  xla::XlaOp weight;
+  xla::XlaOp total_weight;
+  if (node->operands().size() > 3) {
+    weight = loctx()->GetOutputOp(node->operand(3));
+    total_weight = loctx()->GetOutputOp(node->operand(4));
+  }
+  return {BuildNllLossBackward(grad_output, logits, labels, weight,
+                               total_weight, node->ignore_index(),
+                               node->reduction())};
+}
+
 XlaOpVector XlaNodeLowering::LowerLogDet(const ir::Node* node) {
   xla::XlaOp input = loctx()->GetOutputOp(node->operand(0));
   return {xla::LogDet(input)};
@@ -2598,6 +2702,22 @@ lazy_tensors::Shape XlaNodeLowering::Infer(const ir::Node* node) {
       return InferNativeBatchNormBackward(
           ir::NodeCast<ir::ops::NativeBatchNormBackward>(
               node, ir::OpKind(at::aten::native_batch_norm_backward)));
+    }
+    case at::aten::nll_loss: {
+      return InferNllLoss(
+          ir::NodeCast<ir::ops::NllLoss>(node, ir::OpKind(at::aten::nll_loss)));
+    }
+    case at::aten::nll_loss2d: {
+      return InferNllLoss(ir::NodeCast<ir::ops::NllLoss2d>(
+          node, ir::OpKind(at::aten::nll_loss2d)));
+    }
+    case at::aten::nll_loss_backward: {
+      return InferNllLossBackward(ir::NodeCast<ir::ops::NllLossBackward>(
+          node, ir::OpKind(at::aten::nll_loss_backward)));
+    }
+    case at::aten::nll_loss2d_backward: {
+      return InferNllLossBackward(ir::NodeCast<ir::ops::NllLoss2dBackward>(
+          node, ir::OpKind(at::aten::nll_loss2d_backward)));
     }
     case at::aten::native_batch_norm: {
       return InferNativeBatchNormForward(
