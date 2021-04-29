@@ -113,6 +113,9 @@ def train_mnist(flags, **kwargs):
   lr = flags.lr * xm.xrt_world_size()
 
   device = xm.xla_device()
+  if xm.xla_device_hw(device) == 'TPU':
+    print('AMP is currently not supported on TPU')
+    sys.exit(1)
   model = MNIST().to(device)
   writer = None
   if xm.is_master_ordinal():
