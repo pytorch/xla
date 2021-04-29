@@ -157,6 +157,23 @@ xla::XlaOp BoundIndices(xla::XlaOp index, xla::XlaOp max_index) {
       index, index + max_index);
 }
 
+xla::XlaOp BuildTake(xla::XlaOp input, xla::XlaOp index) {
+  static const int take_dim = 0;
+  xla::Shape input_shape;
+  xla::XlaOp r1_input = compiler::XlaHelpers::Flatten(input, &input_shape);
+  xla::Shape index_shape;
+  xla::XlaOp r1_index = compiler::XlaHelpers::Flatten(index, &index_shape);
+  xla::XlaOp max_index = compiler::XlaHelpers::ScalarValue(
+      xla::ShapeUtil::ElementsIn(input_shape), index_shape.element_type(),
+      index.builder());
+  xla::XlaOp bound_index = BoundIndices(r1_index, max_index);
+  xla::XlaOp r1_result =
+      xla::TorchGather(r1_input, bound_index, take_dim,
+                       IsSparseGather(input_shape, index_shape, take_dim));
+  return compiler::XlaHelpers::DynamicReshape(r1_result,
+                                              index_shape.dimensions());
+}
+
 xla::XlaOp BuildResize(xla::XlaOp input, absl::Span<const xla::int64> size) {
   xla::Shape input_shape;
   xla::XlaOp r1_input = compiler::XlaHelpers::Flatten(input, &input_shape);

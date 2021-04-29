@@ -57,6 +57,8 @@ xla::XlaOp BuildSlice(xla::XlaOp input,
 
 xla::XlaOp BoundIndices(xla::XlaOp index, xla::XlaOp max_index);
 
+xla::XlaOp BuildTake(xla::XlaOp input, xla::XlaOp index);
+
 xla::XlaOp BuildResize(xla::XlaOp input, absl::Span<const xla::int64> size);
 
 xla::XlaOp BuildUnselect(xla::XlaOp target, xla::XlaOp source, xla::int64 dim,

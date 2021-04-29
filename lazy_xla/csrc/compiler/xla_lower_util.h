@@ -30,6 +30,9 @@ xla::XlaOp BuildDot(xla::XlaOp lhs, xla::XlaOp rhs);
 xla::XlaOp BuildBernoulli(xla::XlaOp probability, xla::XlaOp seed,
                           xla::PrimitiveType type);
 
+std::vector<xla::XlaOp> CreateBroadcastTensors(
+    absl::Span<const xla::XlaOp> operands);
+
 // Similar to tf.gather_nd, used to implement advanced indexing.
 xla::XlaOp CreateIndex(xla::XlaOp input, xla::XlaOp indices,
                        xla::int64 start_dim);
@@ -65,6 +68,9 @@ struct ScatterOptions {
 xla::XlaOp CreateScatter(const Device& device, xla::XlaOp input,
                          xla::XlaOp index, xla::XlaOp source, xla::int64 dim,
                          const ScatterOptions& options);
+
+xla::XlaOp CreatePut(const Device& device, xla::XlaOp input, xla::XlaOp index,
+                     xla::XlaOp source, bool accumulate);
 
 std::vector<xla::XlaOp> BuildMaskedSelect(xla::XlaOp input, xla::XlaOp mask);
 

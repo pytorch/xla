@@ -798,6 +798,12 @@ class AtenXlaType {
   static at::Tensor prod(const at::Tensor& self, int64_t dim, bool keepdim,
                          c10::optional<at::ScalarType> dtype);
 
+  static at::Tensor& put_(at::Tensor& self, const at::Tensor& index,
+                          const at::Tensor& source, bool accumulate);
+
+  static std::tuple<at::Tensor, at::Tensor> qr(const at::Tensor& self,
+                                               bool some);
+
   static at::Tensor reciprocal(const at::Tensor& self);
 
   static at::Tensor& reciprocal_(at::Tensor& self);
@@ -900,6 +906,15 @@ class AtenXlaType {
                           c10::optional<int64_t> start,
                           c10::optional<int64_t> end, int64_t step);
 
+  static at::Tensor smooth_l1_loss(const at::Tensor& self,
+                                   const at::Tensor& target, int64_t reduction,
+                                   double beta);
+
+  static at::Tensor smooth_l1_loss_backward(const at::Tensor& grad_output,
+                                            const at::Tensor& self,
+                                            const at::Tensor& target,
+                                            int64_t reduction, double beta);
+
   static at::Tensor softplus(const at::Tensor& self, const at::Scalar& beta,
                              const at::Scalar& threshold);
 
@@ -915,6 +930,9 @@ class AtenXlaType {
   static at::Tensor softshrink_backward(const at::Tensor& grad_output,
                                         const at::Tensor& self,
                                         const at::Scalar& lambda);
+
+  static std::tuple<at::Tensor, at::Tensor> sort(const at::Tensor& self,
+                                                 int64_t dim, bool descending);
 
   static at::Tensor sqrt(const at::Tensor& self);
 
@@ -953,6 +971,9 @@ class AtenXlaType {
   static at::Tensor sum(const at::Tensor& self, at::IntArrayRef dim,
                         bool keepdim, c10::optional<at::ScalarType> dtype);
 
+  static std::tuple<at::Tensor, at::Tensor, at::Tensor> svd(
+      const at::Tensor& self, bool some, bool compute_uv);
+
   static std::tuple<at::Tensor, at::Tensor> symeig(const at::Tensor& self,
                                                    bool eigenvectors,
                                                    bool upper);
@@ -960,6 +981,8 @@ class AtenXlaType {
   static at::Tensor t(const at::Tensor& self);
 
   static at::Tensor& t_(at::Tensor& self);
+
+  static at::Tensor take(const at::Tensor& self, const at::Tensor& index);
 
   static at::Tensor tan(const at::Tensor& self);
 
@@ -1009,6 +1032,8 @@ class AtenXlaType {
   static at::Tensor trunc(const at::Tensor& self);
 
   static at::Tensor& trunc_(at::Tensor& self);
+
+  static std::vector<at::Tensor> unbind(const at::Tensor& self, int64_t dim);
 
   static at::Tensor unsqueeze(const at::Tensor& self, int64_t dim);
 

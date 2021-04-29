@@ -477,6 +477,26 @@ xla::XlaOp BuildBernoulli(xla::XlaOp probability, xla::XlaOp seed,
   return xla::ConvertElementType(xla::Lt(noise, probability), type);
 }
 
+std::vector<xla::XlaOp> CreateBroadcastTensors(
+    absl::Span<const xla::XlaOp> operands) {
+  lazy_tensors::Shape result_shape =
+      XlaHelpers::LazyTensorsShape(XlaHelpers::ShapeOfXlaOp(operands.front()));
+  std::vector<lazy_tensors::Shape> operand_shapes;
+  for (const xla::XlaOp operand : operands) {
+    lazy_tensors::Shape operand_shape =
+        XlaHelpers::LazyTensorsShape(XlaHelpers::ShapeOfXlaOp(operand));
+    operand_shapes.push_back(operand_shape);
+    result_shape = Helpers::GetPromotedShape(result_shape, operand_shape);
+  }
+  std::vector<xla::XlaOp> result;
+  for (size_t i = 0; i < operands.size(); ++i) {
+    result.push_back(XlaHelpers::ImplicitBroadcast(
+        operands[i], XlaHelpers::XlaShape(operand_shapes[i]),
+        XlaHelpers::XlaShape(result_shape)));
+  }
+  return result;
+}
+
 xla::XlaOp CreateIndex(xla::XlaOp input, xla::XlaOp indices,
                        xla::int64 start_dim) {
   const xla::Shape& input_shape = XlaHelpers::ShapeOfXlaOp(input);
@@ -638,6 +658,27 @@ xla::XlaOp CreateScatter(const Device& device, xla::XlaOp input,
       input, scatter_indices, source_op,
       MakeScatterComputation(options.combiner, input_shape.element_type()),
       scatter_dnums);
+}
+
+xla::XlaOp CreatePut(const Device& device, xla::XlaOp input, xla::XlaOp index,
+                     xla::XlaOp source, bool accumulate) {
+  xla::Shape input_shape;
+  xla::XlaOp r1_input = XlaHelpers::Flatten(input, &input_shape);
+  xla::Shape index_shape;
+  xla::XlaOp r1_index = XlaHelpers::Flatten(index, &index_shape);
+  xla::XlaOp max_index =
+      XlaHelpers::ScalarValue(xla::ShapeUtil::ElementsIn(input_shape),
+                              index_shape.element_type(), index.builder());
+  xla::XlaOp bound_index = BoundIndices(r1_index, max_index);
+  xla::XlaOp r1_source = XlaHelpers::Flatten(source);
+  XlaOpCombiner combiner;
+  if (accumulate) {
+    combiner = NumericAddCombiner();
+  }
+  ScatterOptions options(std::move(combiner));
+  xla::XlaOp r1_scatter = CreateScatter(device, r1_input, bound_index,
+                                        r1_source, /*dim=*/0, options);
+  return XlaHelpers::DynamicReshapeAs(r1_scatter, input_shape);
 }
 
 std::vector<xla::XlaOp> BuildMaskedSelect(xla::XlaOp input, xla::XlaOp mask) {

@@ -66,6 +66,8 @@
 #include "lazy_tensor_core/csrc/ops/ops.h"
 #include "lazy_tensor_core/csrc/ops/permute.h"
 #include "lazy_tensor_core/csrc/ops/prod.h"
+#include "lazy_tensor_core/csrc/ops/put.h"
+#include "lazy_tensor_core/csrc/ops/qr.h"
 #include "lazy_tensor_core/csrc/ops/reflection_pad2d.h"
 #include "lazy_tensor_core/csrc/ops/reflection_pad2d_backward.h"
 #include "lazy_tensor_core/csrc/ops/replication_pad.h"
@@ -86,6 +88,7 @@
 #include "lazy_tensor_core/csrc/ops/stack.h"
 #include "lazy_tensor_core/csrc/ops/std.h"
 #include "lazy_tensor_core/csrc/ops/sum.h"
+#include "lazy_tensor_core/csrc/ops/svd.h"
 #include "lazy_tensor_core/csrc/ops/symeig.h"
 #include "lazy_tensor_core/csrc/ops/threshold.h"
 #include "lazy_tensor_core/csrc/ops/threshold_backward.h"
@@ -124,8 +127,10 @@
 #include "tensorflow/compiler/xla/client/lib/logdet.h"
 #include "tensorflow/compiler/xla/client/lib/math.h"
 #include "tensorflow/compiler/xla/client/lib/matrix.h"
+#include "tensorflow/compiler/xla/client/lib/qr.h"
 #include "tensorflow/compiler/xla/client/lib/self_adjoint_eig.h"
 #include "tensorflow/compiler/xla/client/lib/slicing.h"
+#include "tensorflow/compiler/xla/client/lib/svd.h"
 #include "tensorflow/compiler/xla/xla_client/computation_client.h"
 #include "tensorflow/compiler/xla/xla_client/util.h"
 
@@ -332,6 +337,17 @@ lazy_tensors::Shape InferBaddBmm(const ir::Node* node) {
       {lhs.shape(), rhs.shape(), bias.shape(), product_multiplier.shape(),
        bias_multiplier.shape()},
       shape_fn);
+}
+
+lazy_tensors::Shape InferBroadcastTensors(const ir::Node* node) {
+  auto shape_fn = [](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
+    return xla::Tuple(operands[0].builder(), CreateBroadcastTensors(operands));
+  };
+  std::vector<lazy_tensors::Shape> operand_shapes;
+  for (const ir::Output& operand : node->operands()) {
+    operand_shapes.push_back(operand.shape());
+  }
+  return ir::ops::InferOutputShape(operand_shapes, shape_fn);
 }
 
 lazy_tensors::Shape InferCat(const ir::ops::Cat* node) {
@@ -714,6 +730,28 @@ lazy_tensors::Shape InferProd(const ir::ops::Prod* node) {
   return ir::ops::InferOutputShape({input.shape()}, shape_fn);
 }
 
+lazy_tensors::Shape InferQR(const ir::ops::QR* node) {
+  const ir::Output& input = node->operand(0);
+  const lazy_tensors::Shape& input_shape = input.shape();
+  LTC_CHECK_GE(input_shape.rank(), 2) << input_shape;
+  // The input tensor is ..., M, N
+  xla::int64 m_dim = input_shape.dimensions(input_shape.rank() - 2);
+  xla::int64 n_dim = input_shape.dimensions(input_shape.rank() - 1);
+  lazy_tensors::Shape qshape(input_shape);
+  lazy_tensors::Shape rshape(input_shape);
+  if (!node->some()) {
+    // Q is M x M
+    qshape.set_dimensions(input_shape.rank() - 1, m_dim);
+    // R is M x N, so left unchanged
+  } else {
+    // Q is M x min(M, N)
+    qshape.set_dimensions(input_shape.rank() - 1, std::min(m_dim, n_dim));
+    // R is min(M, N) x N
+    rshape.set_dimensions(input_shape.rank() - 2, std::min(m_dim, n_dim));
+  }
+  return lazy_tensors::ShapeUtil::MakeTupleShape({qshape, rshape});
+}
+
 lazy_tensors::Shape InferReflectionPad2d(const ir::ops::ReflectionPad2d* node) {
   auto shape_fn = [node](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
     return BuildReflectionPad2d(operands[0], node->padding());
@@ -1018,6 +1056,31 @@ lazy_tensors::Shape InferMaxUnpoolNdBackward(
       {grad_output.shape(), input.shape(), indices.shape()}, shape_fn);
 }
 
+lazy_tensors::Shape InferSVD(const ir::ops::SVD* node) {
+  const ir::Output& input = node->operand(0);
+  const lazy_tensors::Shape& input_shape = input.shape();
+  LTC_CHECK_GE(input_shape.rank(), 2) << input_shape;
+  // The input tensor is ...,M,N
+  xla::int64 m_dim = input_shape.dimensions(input_shape.rank() - 2);
+  xla::int64 n_dim = input_shape.dimensions(input_shape.rank() - 1);
+  lazy_tensors::Shape ushape(input_shape);
+  if (!node->compute_uv() || !node->some()) {
+    ushape.set_dimensions(input_shape.rank() - 1, m_dim);
+  } else {
+    ushape.set_dimensions(input_shape.rank() - 1, std::min(m_dim, n_dim));
+  }
+  // D is min(M, N).
+  lazy_tensors::Shape dshape = lazy_tensors::ShapeUtil::MakeShape(
+      input_shape.element_type(), {std::min(m_dim, n_dim)});
+  // V is NxN
+  lazy_tensors::Shape vshape(input_shape);
+  vshape.set_dimensions(input_shape.rank() - 2, n_dim);
+  if (node->some()) {
+    vshape.set_dimensions(input_shape.rank() - 1, std::min(m_dim, n_dim));
+  }
+  return lazy_tensors::ShapeUtil::MakeTupleShape({ushape, dshape, vshape});
+}
+
 lazy_tensors::Shape InferStd(const ir::ops::Std* node) {
   auto shape_fn = [node](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
     return BuildStdDeviation(operands[0], node->dimensions(),
@@ -1186,6 +1249,7 @@ class XlaNodeLowering : public NodeLowering {
   DECLARE_BINARY_OP(Ger);
   DECLARE_UNARY_OP(AddMatMul);
   DECLARE_UNARY_OP(BaddBmm);
+  DECLARE_UNARY_OP(BroadcastTensors);
   DECLARE_UNARY_OP(Inverse);
   DECLARE_UNARY_OP(MatMul);
   DECLARE_UNARY_OP(Mm);
@@ -1247,6 +1311,8 @@ class XlaNodeLowering : public NodeLowering {
   DECLARE_UNARY_OP2(Mean);
   DECLARE_UNARY_OP2(Permute);
   DECLARE_UNARY_OP2(Prod);
+  DECLARE_UNARY_OP2(Put);
+  DECLARE_UNARY_OP2(QR);
   DECLARE_UNARY_OP2(ReflectionPad2d);
   DECLARE_UNARY_OP2(ReflectionPad2dBackward);
   DECLARE_UNARY_OP2(ReplicationPad);
@@ -1265,12 +1331,14 @@ class XlaNodeLowering : public NodeLowering {
   DECLARE_UNARY_OP2(Stack);
   DECLARE_UNARY_OP2(Sum);
   DECLARE_UNARY_OP2(SymEig);
+  DECLARE_UNARY_OP(Take);
   DECLARE_UNARY_OP2(Threshold);
   DECLARE_UNARY_OP2(ThresholdBackward);
   DECLARE_UNARY_OP2(TriangularSolve);
   DECLARE_UNARY_OP2(Tril);
   DECLARE_UNARY_OP2(Triu);
   DECLARE_UNARY_OP2(Unsqueeze);
+  DECLARE_UNARY_OP2(SVD);
   DECLARE_UNARY_OP2(Std);
   DECLARE_UNARY_OP2(Var);
   DECLARE_UNARY_OP2(TopK);
@@ -1360,6 +1428,7 @@ XlaOpVector XlaNodeLowering::LowerToXla(const ir::Node* node) {
     HANDLE_GENERIC_OP(Ne, at::aten::ne)
     HANDLE_GENERIC_OP(AddMatMul, at::aten::addmm)
     HANDLE_GENERIC_OP(BaddBmm, at::aten::baddbmm)
+    HANDLE_GENERIC_OP(BroadcastTensors, at::aten::broadcast_tensors)
     HANDLE_GENERIC_OP(Inverse, at::aten::inverse)
     HANDLE_GENERIC_OP(MatMul, at::aten::matmul)
     HANDLE_GENERIC_OP(Mm, at::aten::mm)
@@ -1408,6 +1477,8 @@ XlaOpVector XlaNodeLowering::LowerToXla(const ir::Node* node) {
     HANDLE_GENERIC_OP2(Mean, at::aten::mean)
     HANDLE_GENERIC_OP2(Permute, at::aten::permute)
     HANDLE_GENERIC_OP2(Prod, at::aten::prod)
+    HANDLE_GENERIC_OP2(Put, at::aten::put)
+    HANDLE_GENERIC_OP2(QR, at::aten::qr)
     HANDLE_GENERIC_OP2(ReflectionPad2d, at::aten::reflection_pad2d)
     HANDLE_GENERIC_OP2(ReflectionPad2dBackward,
                        at::aten::reflection_pad2d_backward)
@@ -1425,12 +1496,14 @@ XlaOpVector XlaNodeLowering::LowerToXla(const ir::Node* node) {
     HANDLE_GENERIC_OP2(Softshrink, at::aten::softshrink)
     HANDLE_GENERIC_OP2(Split, at::aten::split)
     HANDLE_GENERIC_OP2(Squeeze, at::aten::squeeze)
+    HANDLE_GENERIC_OP(Take, at::aten::take)
     HANDLE_GENERIC_OP2(Threshold, at::aten::threshold)
     HANDLE_GENERIC_OP2(ThresholdBackward, at::aten::threshold_backward)
     HANDLE_GENERIC_OP2(TriangularSolve, at::aten::triangular_solve)
     HANDLE_GENERIC_OP2(Tril, at::aten::tril)
     HANDLE_GENERIC_OP2(Triu, at::aten::triu)
     HANDLE_GENERIC_OP2(Unsqueeze, at::aten::unsqueeze)
+    HANDLE_GENERIC_OP2(SVD, at::aten::svd)
     HANDLE_GENERIC_OP2(Std, at::aten::std)
     HANDLE_GENERIC_OP2(Var, at::aten::var)
     HANDLE_GENERIC_OP2(TopK, at::aten::topk)
@@ -2018,6 +2091,15 @@ XlaOpVector XlaNodeLowering::LowerBaddBmm(const ir::Node* node) {
                                     bias_multiplier)};
 }
 
+XlaOpVector XlaNodeLowering::LowerBroadcastTensors(const ir::Node* node) {
+  std::vector<xla::XlaOp> operands;
+  for (const ir::Output& operand : node->operands()) {
+    operands.push_back(loctx()->GetOutputOp(operand));
+  }
+  auto results = CreateBroadcastTensors(operands);
+  return XlaOpVector(results.begin(), results.end());
+}
+
 XlaOpVector XlaNodeLowering::LowerInverse(const ir::Node* node) {
   xla::XlaOp input = loctx()->GetOutputOp(node->operand(0));
   return {BuildInverse(input)};
@@ -2197,6 +2279,21 @@ XlaOpVector XlaNodeLowering::LowerProd(const ir::ops::Prod* node) {
                               node->keep_reduced_dimensions(), node->dtype())};
 }
 
+XlaOpVector XlaNodeLowering::LowerPut(const ir::ops::Put* node) {
+  xla::XlaOp input = loctx()->GetOutputOp(node->operand(0));
+  xla::XlaOp index = loctx()->GetOutputOp(node->operand(1));
+  xla::XlaOp source = loctx()->GetOutputOp(node->operand(2));
+  return {
+      CreatePut(loctx()->device(), input, index, source, node->accumulate())};
+}
+
+XlaOpVector XlaNodeLowering::LowerQR(const ir::ops::QR* node) {
+  xla::XlaOp input = loctx()->GetOutputOp(node->operand(0));
+  xla::XlaOp q, r;
+  xla::QrExplicit(input, /*full_matrices=*/!node->some(), q, r);
+  return {q, r};
+}
+
 XlaOpVector XlaNodeLowering::LowerReflectionPad2d(
     const ir::ops::ReflectionPad2d* node) {
   xla::XlaOp input = loctx()->GetOutputOp(node->operand(0));
@@ -2345,6 +2442,12 @@ XlaOpVector XlaNodeLowering::LowerSymEig(const ir::ops::SymEig* node) {
   return {w, v};
 }
 
+XlaOpVector XlaNodeLowering::LowerTake(const ir::Node* node) {
+  xla::XlaOp input = loctx()->GetOutputOp(node->operand(0));
+  xla::XlaOp index = loctx()->GetOutputOp(node->operand(1));
+  return {BuildTake(input, index)};
+}
+
 XlaOpVector XlaNodeLowering::LowerThreshold(const ir::ops::Threshold* node) {
   LTC_CHECK_EQ(node->num_outputs(), 1);
   xla::XlaOp input = loctx()->GetOutputOp(node->operand(0));
@@ -2394,6 +2497,34 @@ XlaOpVector XlaNodeLowering::LowerUnsqueeze(const ir::ops::Unsqueeze* node) {
   LTC_CHECK_EQ(node->num_outputs(), 1);
   xla::XlaOp input = loctx()->GetOutputOp(node->operand(0));
   return {BuildUnsqueeze(input, node->dim())};
+}
+
+XlaOpVector XlaNodeLowering::LowerSVD(const ir::ops::SVD* node) {
+  xla::XlaOp input = loctx()->GetOutputOp(node->operand(0));
+  xla::SVDResult svd_result =
+      xla::SVD(input, /*max_iter=*/100, /*epsilon=*/1e-6,
+               XlaHelpers::mat_mul_precision());
+  const xla::Shape& input_shape = XlaHelpers::ShapeOfXlaOp(input);
+  xla::XlaOp u = svd_result.u;
+  xla::XlaOp v = svd_result.v;
+  if (!node->compute_uv()) {
+    u = xla::Zeros(input.builder(), XlaHelpers::ShapeOfXlaOp(u));
+    v = xla::Zeros(input.builder(), XlaHelpers::ShapeOfXlaOp(v));
+  } else if (node->some()) {
+    xla::int64 m_dim = input_shape.dimensions(input_shape.rank() - 2);
+    xla::int64 n_dim = input_shape.dimensions(input_shape.rank() - 1);
+    std::vector<xla::int64> base_indices(input_shape.rank(), 0);
+
+    auto u_sizes = xla::util::ToVector<xla::int64>(input_shape.dimensions());
+    u_sizes[input_shape.rank() - 1] = std::min(m_dim, n_dim);
+    u = BuildSlice(u, base_indices, u_sizes);
+
+    auto v_sizes = xla::util::ToVector<xla::int64>(input_shape.dimensions());
+    v_sizes[input_shape.rank() - 2] = n_dim;
+    v_sizes[input_shape.rank() - 1] = std::min(m_dim, n_dim);
+    v = BuildSlice(v, base_indices, v_sizes);
+  }
+  return {u, svd_result.d, v};
 }
 
 XlaOpVector XlaNodeLowering::LowerStd(const ir::ops::Std* node) {
@@ -2774,6 +2905,9 @@ lazy_tensors::Shape XlaNodeLowering::Infer(const ir::Node* node) {
           ir::NodeCast<ir::ops::BinaryCrossEntropyBackward>(
               node, ir::OpKind(at::aten::binary_cross_entropy_backward)));
     }
+    case at::aten::broadcast_tensors: {
+      return InferBroadcastTensors(node);
+    }
     case at::aten::cat: {
       return InferCat(
           ir::NodeCast<ir::ops::Cat>(node, ir::OpKind(at::aten::cat)));
@@ -2912,6 +3046,9 @@ lazy_tensors::Shape XlaNodeLowering::Infer(const ir::Node* node) {
       return InferProd(
           ir::NodeCast<ir::ops::Prod>(node, ir::OpKind(at::aten::prod)));
     }
+    case at::aten::qr: {
+      return InferQR(ir::NodeCast<ir::ops::QR>(node, ir::OpKind(at::aten::qr)));
+    }
     case at::aten::reflection_pad2d: {
       return InferReflectionPad2d(ir::NodeCast<ir::ops::ReflectionPad2d>(
           node, ir::OpKind(at::aten::reflection_pad2d)));
@@ -3026,6 +3163,10 @@ lazy_tensors::Shape XlaNodeLowering::Infer(const ir::Node* node) {
     case at::aten::std: {
       return InferStd(
           ir::NodeCast<ir::ops::Std>(node, ir::OpKind(at::aten::std)));
+    }
+    case at::aten::svd: {
+      return InferSVD(
+          ir::NodeCast<ir::ops::SVD>(node, ir::OpKind(at::aten::svd)));
     }
     case at::aten::var: {
       return InferVar(

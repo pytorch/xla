@@ -2955,6 +2955,22 @@ at::Tensor AtenXlaType::prod(const at::Tensor& self, int64_t dim, bool keepdim,
                        PromoteIntegralType(self.scalar_type(), dtype)));
 }
 
+at::Tensor& AtenXlaType::put_(at::Tensor& self, const at::Tensor& index,
+                              const at::Tensor& source, bool accumulate) {
+  LazyTensor self_tensor = bridge::GetLtcTensor(self);
+  LazyTensor::put_(self_tensor, bridge::GetLtcTensor(index),
+                   bridge::GetLtcTensor(source), accumulate);
+  return self;
+}
+
+std::tuple<at::Tensor, at::Tensor> AtenXlaType::qr(const at::Tensor& self,
+                                                   bool some) {
+  LTC_FN_COUNTER("xla::");
+  auto results = LazyTensor::qr(bridge::GetLtcTensor(self), some);
+  return std::make_tuple(bridge::AtenFromLtcTensor(std::get<0>(results)),
+                         bridge::AtenFromLtcTensor(std::get<1>(results)));
+}
+
 at::Tensor AtenXlaType::reciprocal(const at::Tensor& self) {
   LTC_FN_COUNTER("xla::");
   return bridge::AtenFromLtcTensor(
@@ -3321,6 +3337,26 @@ at::Tensor AtenXlaType::slice(const at::Tensor& self, int64_t dim,
   return result;
 }
 
+at::Tensor AtenXlaType::smooth_l1_loss(const at::Tensor& self,
+                                       const at::Tensor& target,
+                                       int64_t reduction, double beta) {
+  LTC_FN_COUNTER("xla::");
+  return bridge::AtenFromLtcTensor(LazyTensor::smooth_l1_loss(
+      bridge::GetLtcTensor(self), bridge::GetLtcTensor(target), reduction,
+      beta));
+}
+
+at::Tensor AtenXlaType::smooth_l1_loss_backward(const at::Tensor& grad_output,
+                                                const at::Tensor& self,
+                                                const at::Tensor& target,
+                                                int64_t reduction,
+                                                double beta) {
+  LTC_FN_COUNTER("xla::");
+  return bridge::AtenFromLtcTensor(LazyTensor::smooth_l1_loss_backward(
+      bridge::GetLtcTensor(grad_output), bridge::GetLtcTensor(self),
+      bridge::GetLtcTensor(target), reduction, beta));
+}
+
 at::Tensor AtenXlaType::softplus(const at::Tensor& self, const at::Scalar& beta,
                                  const at::Scalar& threshold) {
   LTC_FN_COUNTER("xla::");
@@ -3352,6 +3388,16 @@ at::Tensor AtenXlaType::softshrink_backward(const at::Tensor& grad_out,
   LTC_FN_COUNTER("xla::");
   return bridge::AtenFromLtcTensor(LazyTensor::softshrink_backward(
       bridge::GetLtcTensor(grad_out), bridge::GetLtcTensor(self), lambda));
+}
+
+std::tuple<at::Tensor, at::Tensor> AtenXlaType::sort(const at::Tensor& self,
+                                                     int64_t dim,
+                                                     bool descending) {
+  LTC_FN_COUNTER("xla::");
+  auto results = LazyTensor::topk(bridge::GetLtcTensor(self), self.size(dim),
+                                  dim, descending, true);
+  return std::make_tuple(bridge::AtenFromLtcTensor(std::get<0>(results)),
+                         bridge::AtenFromLtcTensor(std::get<1>(results)));
 }
 
 at::Tensor AtenXlaType::sqrt(const at::Tensor& self) {
@@ -3520,6 +3566,15 @@ at::Tensor AtenXlaType::sum(const at::Tensor& self, at::IntArrayRef dim,
                       xla::util::ToVector<xla::int64>(dim), keepdim, dtype));
 }
 
+std::tuple<at::Tensor, at::Tensor, at::Tensor> AtenXlaType::svd(
+    const at::Tensor& self, bool some, bool compute_uv) {
+  LTC_FN_COUNTER("xla::");
+  auto results = LazyTensor::svd(bridge::GetLtcTensor(self), some, compute_uv);
+  return std::make_tuple(bridge::AtenFromLtcTensor(std::get<0>(results)),
+                         bridge::AtenFromLtcTensor(std::get<1>(results)),
+                         bridge::AtenFromLtcTensor(std::get<2>(results)));
+}
+
 std::tuple<at::Tensor, at::Tensor> AtenXlaType::symeig(const at::Tensor& self,
                                                        bool eigenvectors,
                                                        bool upper) {
@@ -3550,6 +3605,12 @@ at::Tensor& AtenXlaType::t_(at::Tensor& self) {
     return self;
   }
   return AtenXlaTypeDefault::t_(self);
+}
+
+at::Tensor AtenXlaType::take(const at::Tensor& self, const at::Tensor& index) {
+  LTC_FN_COUNTER("xla::");
+  return bridge::AtenFromLtcTensor(LazyTensor::take(
+      bridge::GetLtcTensor(self), bridge::GetLtcTensor(index)));
 }
 
 at::Tensor AtenXlaType::tan(const at::Tensor& self) {
@@ -3720,6 +3781,13 @@ at::Tensor& AtenXlaType::trunc_(at::Tensor& self) {
     return self;
   }
   return AtenXlaTypeDefault::trunc_(self);
+}
+
+std::vector<at::Tensor> AtenXlaType::unbind(const at::Tensor& self,
+                                            int64_t dim) {
+  LTC_FN_COUNTER("xla::");
+  return bridge::AtenFromLtcTensors(
+      LazyTensor::unbind(bridge::GetLtcTensor(self), dim));
 }
 
 at::Tensor AtenXlaType::unsqueeze(const at::Tensor& self, int64_t dim) {
