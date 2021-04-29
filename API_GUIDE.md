@@ -169,7 +169,8 @@ operation, for example.
 Lazy execution is generally invisible to the caller. PyTorch/XLA automatically
 constructs the graphs, sends them to XLA devices, and synchronizes when
 copying data between an XLA device and the CPU. Inserting a barrier when
-taking an optimizer step explicitly synchronizes the CPU and the XLA device.
+taking an optimizer step explicitly synchronizes the CPU and the XLA device. For
+more information about our lazy tensor design, you can read [this paper](https://arxiv.org/pdf/2102.13267.pdf).
 
 ### XLA Tensors and bFloat16
 
