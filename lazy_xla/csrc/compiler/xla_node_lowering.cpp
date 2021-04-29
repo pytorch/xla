@@ -193,8 +193,7 @@ xla::XlaOp LowerPad(xla::XlaOp input, const at::Scalar& value,
   return xla::Pad(input,
                   XlaHelpers::ScalarValue(value, input_shape.element_type(),
                                           input.builder()),
-                  torch_lazy_tensors::compiler::XlaHelpers::
-                      MakeXlaPaddingConfigFromNdPadding(pad));
+                  XlaHelpers::MakeXlaPaddingConfigFromNdPadding(pad));
 }
 
 xla::XlaOp LowerProd(xla::XlaOp input,
@@ -204,13 +203,12 @@ xla::XlaOp LowerProd(xla::XlaOp input,
   xla::XlaOp casted_input;
   if (dtype) {
     casted_input =
-        ConvertTo(input, compiler::XlaHelpers::TypeOfXlaOp(input),
+        ConvertTo(input, XlaHelpers::TypeOfXlaOp(input),
                   torch_lazy_tensors::xla_backend::MakeXlaPrimitiveType(
                       *dtype, /*device=*/nullptr),
                   /*device=*/nullptr);
   } else {
-    casted_input =
-        ConvertToNumeric(input, compiler::XlaHelpers::TypeOfXlaOp(input));
+    casted_input = ConvertToNumeric(input, XlaHelpers::TypeOfXlaOp(input));
   }
   return BuildProd(casted_input, dimensions, keep_reduced_dimensions);
 }
@@ -1652,9 +1650,8 @@ XlaOpVector XlaNodeLowering::LowerToXla(const ir::Node* node) {
 XlaOpVector XlaNodeLowering::LowerBernoulli(const ir::Node* node) {
   xla::XlaOp probability = loctx()->GetOutputOp(node->operand(0));
   xla::XlaOp rng_seed = loctx()->GetOutputOp(node->operand(1));
-  const xla::Shape& probability_shape =
-      compiler::XlaHelpers::ShapeOfXlaOp(probability);
-  xla::Shape bcast_shape = compiler::XlaHelpers::XlaShape(node->shape());
+  const xla::Shape& probability_shape = XlaHelpers::ShapeOfXlaOp(probability);
+  xla::Shape bcast_shape = XlaHelpers::XlaShape(node->shape());
   bcast_shape.set_element_type(probability_shape.element_type());
   xla::XlaOp bcast_probability = XlaHelpers::ImplicitBroadcast(
       probability, probability_shape, bcast_shape);
@@ -2263,8 +2260,7 @@ XlaOpVector XlaNodeLowering::LowerNormal(const ir::Node* node) {
   xla::XlaOp mean = loctx()->GetOutputOp(node->operand(0));
   xla::XlaOp std = loctx()->GetOutputOp(node->operand(1));
   xla::XlaOp rng_seed = loctx()->GetOutputOp(node->operand(2));
-  return {
-      RngNormal(rng_seed, compiler::XlaHelpers::ShapeOfXlaOp(mean), mean, std)};
+  return {RngNormal(rng_seed, XlaHelpers::ShapeOfXlaOp(mean), mean, std)};
 }
 
 XlaOpVector XlaNodeLowering::LowerPermute(const ir::ops::Permute* node) {
@@ -2595,24 +2591,22 @@ XlaOpVector XlaNodeLowering::LowerConstantPadNd(
 XlaOpVector XlaNodeLowering::LowerCumProd(const ir::ops::CumProd* node) {
   xla::XlaOp input = loctx()->GetOutputOp(node->operand(0));
   xla::XlaOp casted_input = CastToScalarType(input, node->dtype());
-  const xla::Shape& input_shape =
-      compiler::XlaHelpers::ShapeOfXlaOp(casted_input);
+  const xla::Shape& input_shape = XlaHelpers::ShapeOfXlaOp(casted_input);
   xla::XlaOp init =
       xla::One(casted_input.builder(), input_shape.element_type());
   xla::XlaComputation reducer =
-      compiler::XlaHelpers::CreateMulComputation(input_shape.element_type());
+      XlaHelpers::CreateMulComputation(input_shape.element_type());
   return {BuildCumulativeComputation(casted_input, node->dim(), reducer, init)};
 }
 
 XlaOpVector XlaNodeLowering::LowerCumSum(const ir::ops::CumSum* node) {
   xla::XlaOp input = loctx()->GetOutputOp(node->operand(0));
   xla::XlaOp casted_input = CastToScalarType(input, node->dtype());
-  const xla::Shape& input_shape =
-      compiler::XlaHelpers::ShapeOfXlaOp(casted_input);
-  xla::XlaOp init = compiler::XlaHelpers::ScalarValue<float>(
+  const xla::Shape& input_shape = XlaHelpers::ShapeOfXlaOp(casted_input);
+  xla::XlaOp init = XlaHelpers::ScalarValue<float>(
       0, input_shape.element_type(), casted_input.builder());
   xla::XlaComputation reducer =
-      compiler::XlaHelpers::CreateAddComputation(input_shape.element_type());
+      XlaHelpers::CreateAddComputation(input_shape.element_type());
   return {BuildCumulativeComputation(casted_input, node->dim(), reducer, init)};
 }
 
