@@ -29,10 +29,11 @@ if [[ "$XLA_DEBUG" == "1" ]]; then
   MODE="dbg"
 fi
 
-VERBOSE=
-if [[ "$XLA_BAZEL_VERBOSE" == "1" ]]; then
-  VERBOSE="-s"
-fi
+# VERBOSE=
+# if [[ "$XLA_BAZEL_VERBOSE" == "1" ]]; then
+#   VERBOSE="-s"
+# fi
+VERBOSE="-s"
 
 TPUVM_FLAG=
 if [[ "$TPUVM_MODE" == "1" ]]; then
