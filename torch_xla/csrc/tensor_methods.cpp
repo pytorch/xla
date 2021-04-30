@@ -483,18 +483,18 @@ void XLATensor::_amp_foreach_non_finite_check_and_unscale_(
   found_inf.SetInPlaceIrValue(ir::Value(node, self.size()));
 }
 
-XLATensor XLATensor::_amp_update_scale(XLATensor growth_tracker,
-                                       const XLATensor& current_scale,
-                                       const XLATensor& found_inf,
-                                       double scale_growth_factor,
-                                       double scale_backoff_factor,
-                                       int growth_interval) {
+void XLATensor::_amp_update_scale_(XLATensor& current_scale,
+                                   XLATensor& growth_tracker,
+                                   const XLATensor& found_inf,
+                                   double scale_growth_factor,
+                                   double scale_backoff_factor,
+                                   int growth_interval) {
   ir::NodePtr node = ir::MakeNode<ir::ops::AmpUpdateScale>(
       growth_tracker.GetIrValue(), current_scale.GetIrValue(),
       found_inf.GetIrValue(), scale_growth_factor, scale_backoff_factor,
       growth_interval);
-  growth_tracker.SetInPlaceIrValue(ir::Value(node, 0));
-  return current_scale.CreateFrom(ir::Value(node, 1));
+  growth_tracker.SetInPlaceIrValue(ir::Value(node, 1));
+  current_scale.SetInPlaceIrValue(ir::Value(node, 0));
 }
 
 XLATensor XLATensor::abs(const XLATensor& input) {
