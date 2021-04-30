@@ -772,8 +772,8 @@ std::vector<xla::XlaOp> BuildAmpForeachNonFiniteCheckAndUnscale(
   return results;
 }
 
-std::vector<xla::XlaOp> BuildAmpUpdateScale(const xla::XlaOp& growth_tracker,
-                                            const xla::XlaOp& current_scale,
+std::vector<xla::XlaOp> BuildAmpUpdateScale(const xla::XlaOp& current_scale,
+                                            const xla::XlaOp& growth_tracker,
                                             const xla::XlaOp& found_inf_float,
                                             double scale_growth_factor,
                                             double scale_backoff_factor,

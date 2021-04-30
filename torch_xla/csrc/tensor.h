@@ -251,12 +251,12 @@ class XLATensor {
       std::vector<XLATensor> self, XLATensor& found_inf,
       const XLATensor& inv_scale);
 
-  static XLATensor _amp_update_scale(XLATensor growth_tracker,
-                                     const XLATensor& current_scale,
-                                     const XLATensor& found_inf,
-                                     double scale_growth_factor,
-                                     double scale_backoff_factor,
-                                     int growth_interval);
+  static void _amp_update_scale_(XLATensor& current_scale,
+                                 XLATensor& growth_tracker,
+                                 const XLATensor& found_inf,
+                                 double scale_growth_factor,
+                                 double scale_backoff_factor,
+                                 int growth_interval);
 
   static XLATensor abs(const XLATensor& input);
   static void abs_(XLATensor& input);

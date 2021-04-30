@@ -10081,36 +10081,37 @@ TEST_F(AtenXlaTensorTest, TestAmpUpdateScale) {
     torch::Tensor xla_found_inf = CopyToDevice(found_inf, device);
     torch::Tensor xla_not_found_inf = CopyToDevice(not_found_inf, device);
 
-    xla_current_scale = torch::_amp_update_scale(
-        xla_growth_tracker, xla_current_scale, xla_not_found_inf,
-        scale_growth_factor, scale_backoff_factor, growth_interval);
+    torch::_amp_update_scale_(xla_current_scale, xla_growth_tracker,
+                              xla_not_found_inf, scale_growth_factor,
+                              scale_backoff_factor, growth_interval);
     AllClose(current_scale_result0, xla_current_scale, /*rtol=*/1e-2,
              /*atol=*/1e-4);
     AllEqual(growth_tracker_result0, xla_growth_tracker);
 
-    xla_current_scale = torch::_amp_update_scale(
-        xla_growth_tracker, xla_current_scale, xla_not_found_inf,
-        scale_growth_factor, scale_backoff_factor, growth_interval);
+    torch::_amp_update_scale_(xla_current_scale, xla_growth_tracker,
+                              xla_not_found_inf, scale_growth_factor,
+                              scale_backoff_factor, growth_interval);
     AllClose(current_scale_result1, xla_current_scale, /*rtol=*/1e-2,
              /*atol=*/1e-4);
     AllEqual(growth_tracker_result1, xla_growth_tracker);
 
-    xla_current_scale = torch::_amp_update_scale(
-        xla_growth_tracker, xla_current_scale, xla_not_found_inf,
+    // torch::_amp_update_scale_ returns the reference of current_scale
+    xla_current_scale = torch::_amp_update_scale_(
+        xla_current_scale, xla_growth_tracker, xla_not_found_inf,
         scale_growth_factor, scale_backoff_factor, growth_interval);
     AllClose(current_scale_result2, xla_current_scale, /*rtol=*/1e-2,
              /*atol=*/1e-4);
     AllEqual(growth_tracker_result2, xla_growth_tracker);
 
-    xla_current_scale = torch::_amp_update_scale(
-        xla_growth_tracker, xla_current_scale, xla_found_inf,
+    xla_current_scale = torch::_amp_update_scale_(
+        xla_current_scale, xla_growth_tracker, xla_found_inf,
         scale_growth_factor, scale_backoff_factor, growth_interval);
     AllClose(current_scale_result3, xla_current_scale, /*rtol=*/1e-2,
              /*atol=*/1e-4);
     AllEqual(growth_tracker_result3, xla_growth_tracker);
   });
   ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
-  ExpectCounterChanged("xla::_amp_update_scale",
+  ExpectCounterChanged("xla::_amp_update_scale_",
                        cpp_test::GetIgnoredCounters());
 }
 

@@ -46,12 +46,12 @@ class AtenXlaType {
   static void _amp_foreach_non_finite_check_and_unscale_(
       at::TensorList self, at::Tensor& found_inf, const at::Tensor& inv_scale);
 
-  static at::Tensor _amp_update_scale(at::Tensor& growth_tracker,
-                                      const at::Tensor& current_scale,
-                                      const at::Tensor& found_inf,
-                                      double scale_growth_factor,
-                                      double scale_backoff_factor,
-                                      int64_t growth_interval);
+  static at::Tensor& _amp_update_scale_(at::Tensor& current_scale,
+                                        at::Tensor& growth_tracker,
+                                        const at::Tensor& found_inf,
+                                        double scale_growth_factor,
+                                        double scale_backoff_factor,
+                                        int64_t growth_interval);
 
   static at::Tensor _copy_from(const at::Tensor& self, const at::Tensor& dst,
                                bool non_blocking);
