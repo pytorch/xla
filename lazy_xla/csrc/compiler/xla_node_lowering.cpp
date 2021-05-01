@@ -2573,10 +2573,34 @@ XlaOpVector XlaNodeLowering::LowerView(const ir::ops::View* node) {
     break;                                         \
   }
 
+#define HANDLE_CASE_R1(type1, type2)                       \
+  case lazy_tensors::PrimitiveType::type1: {               \
+    for (xla::int64 i = 0; i < shape.dimensions(0); ++i) { \
+      xla_literal.Set({i}, literal.data<type2>()[i]);      \
+    }                                                      \
+    break;                                                 \
+  }
+
 xla::Literal XlaLiteral(const lazy_tensors::Literal& literal) {
   const lazy_tensors::Shape& shape = literal.shape();
-  LTC_CHECK_EQ(shape.rank(), 0);
-  xla::Literal xla_literal;
+  LTC_CHECK_LE(shape.rank(), 1);
+  xla::Literal xla_literal(XlaHelpers::XlaShape(shape));
+  if (shape.rank() == 1) {
+    switch (shape.element_type()) {
+      HANDLE_CASE_R1(PRED, bool);
+      HANDLE_CASE_R1(S8, int8_t);
+      HANDLE_CASE_R1(S16, int16_t);
+      HANDLE_CASE_R1(S32, int32_t);
+      HANDLE_CASE_R1(S64, int64_t);
+      HANDLE_CASE_R1(U8, uint8_t);
+      HANDLE_CASE_R1(F32, float);
+      HANDLE_CASE_R1(F64, double);
+      default: {
+        LTC_LOG(FATAL) << "Not implemented yet: " << shape.element_type();
+      }
+    }
+    return xla_literal;
+  }
   switch (shape.element_type()) {
     HANDLE_CASE(PRED, bool);
     HANDLE_CASE(S8, int8_t);
@@ -2593,6 +2617,7 @@ xla::Literal XlaLiteral(const lazy_tensors::Literal& literal) {
   return xla_literal;
 }
 
+#undef HANDLE_CASE_R1
 #undef HANDLE_CASE
 
 XlaOpVector XlaNodeLowering::LowerConstant(const ir::ops::Constant* node) {

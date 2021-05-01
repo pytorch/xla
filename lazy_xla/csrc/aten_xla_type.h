@@ -138,6 +138,9 @@ class AtenXlaType {
 
   static at::Tensor any(const at::Tensor& self, int64_t dim, bool keepdim);
 
+  static at::Tensor& arange_out(const at::Scalar& start, const at::Scalar& end,
+                                const at::Scalar& step, at::Tensor& out);
+
   static at::Tensor argmax(const at::Tensor& self, c10::optional<int64_t> dim,
                            bool keepdim);
 
@@ -943,6 +946,13 @@ class AtenXlaType {
 
   static std::tuple<at::Tensor, at::Tensor> sort(const at::Tensor& self,
                                                  int64_t dim, bool descending);
+
+  static std::vector<at::Tensor> split(const at::Tensor& self,
+                                       int64_t split_size, int64_t dim);
+
+  static std::vector<at::Tensor> split_with_sizes(const at::Tensor& self,
+                                                  at::IntArrayRef split_sizes,
+                                                  int64_t dim);
 
   static at::Tensor sqrt(const at::Tensor& self);
 

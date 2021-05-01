@@ -690,6 +690,15 @@ at::Tensor AtenXlaType::any(const at::Tensor& self, int64_t dim, bool keepdim) {
       LazyTensor::any(bridge::GetLtcTensor(self), {dim}, keepdim));
 }
 
+at::Tensor& AtenXlaType::arange_out(const at::Scalar& start,
+                                    const at::Scalar& end,
+                                    const at::Scalar& step, at::Tensor& out) {
+  LTC_FN_COUNTER("xla::");
+  LazyTensor out_tensor = bridge::GetLtcTensor(out);
+  LazyTensor::arange_out(out_tensor, start, end, step, out.scalar_type());
+  return out;
+}
+
 at::Tensor AtenXlaType::argmax(const at::Tensor& self,
                                c10::optional<int64_t> dim, bool keepdim) {
   LTC_FN_COUNTER("xla::");
@@ -3485,6 +3494,22 @@ std::tuple<at::Tensor, at::Tensor> AtenXlaType::sort(const at::Tensor& self,
                                   dim, descending, true);
   return std::make_tuple(bridge::AtenFromLtcTensor(std::get<0>(results)),
                          bridge::AtenFromLtcTensor(std::get<1>(results)));
+}
+
+std::vector<at::Tensor> AtenXlaType::split(const at::Tensor& self,
+                                           int64_t split_size, int64_t dim) {
+  LTC_FN_COUNTER("xla::");
+  auto xla_tensors =
+      LazyTensor::split(bridge::GetLtcTensor(self), split_size, dim);
+  return bridge::AtenFromLtcTensors(xla_tensors);
+}
+
+std::vector<at::Tensor> AtenXlaType::split_with_sizes(
+    const at::Tensor& self, at::IntArrayRef split_sizes, int64_t dim) {
+  LTC_FN_COUNTER("xla::");
+  auto xla_tensors = LazyTensor::split_with_sizes(
+      bridge::GetLtcTensor(self), Helpers::I64List(split_sizes), dim);
+  return bridge::AtenFromLtcTensors(xla_tensors);
 }
 
 at::Tensor AtenXlaType::sqrt(const at::Tensor& self) {
