@@ -11,6 +11,7 @@
 #include "tensorflow/compiler/xla/xla_client/util.h"
 #include "tensorflow/compiler/xla/xla_client/xla_util.h"
 #include "torch/csrc/autograd/variable.h"
+#include "torch_xla/csrc/aten_xla_bridge.h"
 #include "torch_xla/csrc/data_ops.h"
 #include "torch_xla/csrc/helpers.h"
 #include "torch_xla/csrc/ir_util.h"
@@ -142,6 +143,14 @@ struct MinMaxValues {
   ir::Value max;
 };
 
+ir::Value MaybeExpand(const ir::Value& input, const xla::Shape& target_shape) {
+  if (input.shape().dimensions() == target_shape.dimensions()) {
+    return input;
+  }
+  return ir::MakeNode<ir::ops::Expand>(
+      input, xla::util::ToVector<xla::int64>(target_shape.dimensions()));
+}
+
 MinMaxValues GetMinMaxValues(const XLATensor& tensor,
                              const c10::optional<at::Scalar>& min,
                              const c10::optional<at::Scalar>& max) {
@@ -156,6 +165,22 @@ MinMaxValues GetMinMaxValues(const XLATensor& tensor,
           XLATensor::GetIrValueForScalar(max ? *max : min_max.max,
                                          shape.get().element_type(),
                                          tensor.GetDevice())};
+}
+
+MinMaxValues GetMinMaxValues(const XLATensor& tensor,
+                             const c10::optional<at::Tensor>& min,
+                             const c10::optional<at::Tensor>& max) {
+  XLA_CHECK(min || max)
+      << "At least one of \'min\' or \'max\' must not be None";
+  xla::PrimitiveType raw_element_type = TensorTypeToRawXlaType(tensor.dtype());
+  XlaHelpers::MinMax min_max = XlaHelpers::MinMaxValues(raw_element_type);
+  auto shape = tensor.shape();
+  return {min ? MaybeExpand(bridge::GetXlaTensor(*min).GetIrValue(), shape)
+              : XLATensor::GetIrValueForScalar(min_max.min, shape,
+                                               tensor.GetDevice()),
+          max ? MaybeExpand(bridge::GetXlaTensor(*max).GetIrValue(), shape)
+              : XLATensor::GetIrValueForScalar(min_max.max, shape,
+                                               tensor.GetDevice())};
 }
 
 void CheckRank(const XLATensor& t, xla::int64 expected_rank,
@@ -280,14 +305,6 @@ absl::optional<ir::Value> GetOptionalIrValue(const XLATensor& tensor) {
     value = tensor.GetIrValue();
   }
   return value;
-}
-
-ir::Value MaybeExpand(const ir::Value& input, const xla::Shape& target_shape) {
-  if (input.shape().dimensions() == target_shape.dimensions()) {
-    return input;
-  }
-  return ir::MakeNode<ir::ops::Expand>(
-      input, xla::util::ToVector<xla::int64>(target_shape.dimensions()));
 }
 
 void CheckIsIntegralOrPred(const xla::Shape& shape,
@@ -942,10 +959,26 @@ XLATensor XLATensor::clamp(const XLATensor& input,
       ir::ops::Clamp(input.GetIrValue(), min_max.min, min_max.max));
 }
 
+XLATensor XLATensor::clamp(const XLATensor& input,
+                           const c10::optional<at::Tensor>& min,
+                           const c10::optional<at::Tensor>& max) {
+  MinMaxValues min_max = GetMinMaxValues(input, min, max);
+  return input.CreateFrom(
+      ir::ops::Clamp(input.GetIrValue(), min_max.min, min_max.max));
+}
+
 void XLATensor::clamp_(XLATensor& input, const c10::optional<at::Scalar>& min,
                        const c10::optional<at::Scalar>& max) {
   MinMaxValues min_max = GetMinMaxValues(input, min, max);
   input.SetInPlaceIrValue(
+      ir::ops::Clamp(input.GetIrValue(), min_max.min, min_max.max));
+}
+
+void XLATensor::clamp_out(XLATensor& out, const XLATensor& input,
+                          const c10::optional<at::Tensor>& min,
+                          const c10::optional<at::Tensor>& max) {
+  MinMaxValues min_max = GetMinMaxValues(input, min, max);
+  out.SetInPlaceIrValue(
       ir::ops::Clamp(input.GetIrValue(), min_max.min, min_max.max));
 }
 

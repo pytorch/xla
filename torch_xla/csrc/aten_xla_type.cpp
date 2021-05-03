@@ -1015,6 +1015,14 @@ at::Tensor AtenXlaType::clamp(const at::Tensor& self,
       XLATensor::clamp(bridge::GetXlaTensor(self), min, max));
 }
 
+at::Tensor AtenXlaType::clamp(const at::Tensor& self,
+                              const c10::optional<at::Tensor>& min,
+                              const c10::optional<at::Tensor>& max) {
+  XLA_FN_COUNTER("xla::");
+  return bridge::AtenFromXlaTensor(
+      XLATensor::clamp(bridge::GetXlaTensor(self), min, max));
+}
+
 at::Tensor& AtenXlaType::clamp_(at::Tensor& self,
                                 const c10::optional<at::Scalar>& min,
                                 const c10::optional<at::Scalar>& max) {
@@ -1038,6 +1046,15 @@ at::Tensor& AtenXlaType::clamp_max_(at::Tensor& self, const at::Scalar& max) {
   return self;
 }
 
+at::Tensor& AtenXlaType::clamp_max_out(const at::Tensor& self,
+                                       const at::Tensor& max, at::Tensor& out) {
+  XLA_FN_COUNTER("xla::");
+  XLATensor out_tensor = bridge::GetXlaTensor(out);
+  XLATensor::clamp_out(out_tensor, bridge::GetXlaTensor(self), c10::nullopt,
+                       max);
+  return out;
+}
+
 at::Tensor AtenXlaType::clamp_min(const at::Tensor& self,
                                   const at::Scalar& min) {
   XLA_FN_COUNTER("xla::");
@@ -1050,6 +1067,15 @@ at::Tensor& AtenXlaType::clamp_min_(at::Tensor& self, const at::Scalar& min) {
   XLATensor self_tensor = bridge::GetXlaTensor(self);
   XLATensor::clamp_(self_tensor, min, c10::nullopt);
   return self;
+}
+
+at::Tensor& AtenXlaType::clamp_min_out(const at::Tensor& self,
+                                       const at::Tensor& min, at::Tensor& out) {
+  XLA_FN_COUNTER("xla::");
+  XLATensor out_tensor = bridge::GetXlaTensor(out);
+  XLATensor::clamp_out(out_tensor, bridge::GetXlaTensor(self), min,
+                       c10::nullopt);
+  return out;
 }
 
 at::Tensor AtenXlaType::clone(
