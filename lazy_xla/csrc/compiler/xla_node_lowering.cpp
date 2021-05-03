@@ -20,6 +20,8 @@
 #include "lazy_tensor_core/csrc/ops/cholesky.h"
 #include "lazy_tensor_core/csrc/ops/constant.h"
 #include "lazy_tensor_core/csrc/ops/constant_pad_nd.h"
+#include "lazy_tensor_core/csrc/ops/convolution_backward_overrideable.h"
+#include "lazy_tensor_core/csrc/ops/convolution_overrideable.h"
 #include "lazy_tensor_core/csrc/ops/cumprod.h"
 #include "lazy_tensor_core/csrc/ops/cumsum.h"
 #include "lazy_tensor_core/csrc/ops/device_data.h"
@@ -109,6 +111,7 @@
 #include "lazy_tensors/shape_util.h"
 #include "lazy_xla/csrc/compiler/batch_norm.h"
 #include "lazy_xla/csrc/compiler/convert_ops.h"
+#include "lazy_xla/csrc/compiler/convolution.h"
 #include "lazy_xla/csrc/compiler/data_ops.h"
 #include "lazy_xla/csrc/compiler/elementwise.h"
 #include "lazy_xla/csrc/compiler/helpers.h"
@@ -644,6 +647,39 @@ lazy_tensors::Shape InferConstantPadNd(const ir::ops::ConstantPadNd* node) {
   };
   const ir::Output& input = node->operand(0);
   return ir::ops::InferOutputShape({input.shape()}, shape_fn);
+}
+
+lazy_tensors::Shape InferConvolutionBackwardOverrideable(
+    const ir::ops::ConvolutionBackwardOverrideable* node) {
+  auto shape_fn = [node](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
+    LTC_CHECK_EQ(operands.size(), 3);
+    // The precision doesn't matter for shape inference.
+    ConvGrads grads = BuildConvolutionBackwardOverrideable(
+        operands[0], operands[1], operands[2], node->stride(), node->padding(),
+        node->dilation(), node->transposed(), node->output_padding(),
+        node->groups());
+    return xla::Tuple(operands[0].builder(),
+                      {grads.grad_input, grads.grad_weight, grads.grad_bias});
+  };
+  const ir::Output& grad_output = node->operand(0);
+  const ir::Output& input = node->operand(1);
+  const ir::Output& weight = node->operand(2);
+  return ir::ops::InferOutputShape(
+      {grad_output.shape(), input.shape(), weight.shape()}, shape_fn);
+}
+
+lazy_tensors::Shape InferConvolutionOverrideable(
+    const ir::ops::ConvolutionOverrideable* node) {
+  auto shape_fn = [node](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
+    LTC_CHECK(operands.size() == 2 || operands.size() == 3);
+    return BuildConvolutionOverrideable(operands[0], operands[1],
+                                        node->stride(), node->padding(),
+                                        node->dilation(), node->transposed(),
+                                        node->output_padding(), node->groups());
+  };
+  const ir::Output& input = node->operand(0);
+  const ir::Output& weight = node->operand(1);
+  return ir::ops::InferOutputShape({input.shape(), weight.shape()}, shape_fn);
 }
 
 lazy_tensors::Shape InferCumProd(const ir::ops::CumProd* node) {
@@ -1274,6 +1310,8 @@ class XlaNodeLowering : public NodeLowering {
   DECLARE_UNARY_OP2(Cholesky);
   DECLARE_UNARY_OP2(Constant);
   DECLARE_UNARY_OP2(ConstantPadNd);
+  DECLARE_UNARY_OP2(ConvolutionBackwardOverrideable);
+  DECLARE_UNARY_OP2(ConvolutionOverrideable);
   DECLARE_UNARY_OP2(CumProd);
   DECLARE_UNARY_OP2(CumSum);
   DECLARE_UNARY_OP2(Flip);
@@ -1454,6 +1492,10 @@ XlaOpVector XlaNodeLowering::LowerToXla(const ir::Node* node) {
     HANDLE_GENERIC_OP2(Hardshrink, at::aten::hardshrink)
     HANDLE_GENERIC_OP2(HardtanhBackward, at::aten::hardtanh_backward)
     HANDLE_GENERIC_OP2(ConstantPadNd, at::aten::constant_pad_nd)
+    HANDLE_GENERIC_OP2(ConvolutionBackwardOverrideable,
+                       at::aten::convolution_backward_overrideable)
+    HANDLE_GENERIC_OP2(ConvolutionOverrideable,
+                       at::aten::convolution_overrideable)
     HANDLE_GENERIC_OP2(CumProd, at::aten::cumprod)
     HANDLE_GENERIC_OP2(CumSum, at::aten::cumsum)
     HANDLE_GENERIC_OP2(Flip, at::aten::flip)
@@ -2632,6 +2674,36 @@ XlaOpVector XlaNodeLowering::LowerConstantPadNd(
   return {LowerPad(input, node->value(), node->pad())};
 }
 
+XlaOpVector XlaNodeLowering::LowerConvolutionBackwardOverrideable(
+    const ir::ops::ConvolutionBackwardOverrideable* node) {
+  xla::XlaOp grad_output = loctx()->GetOutputOp(node->operand(0));
+  xla::XlaOp input = loctx()->GetOutputOp(node->operand(1));
+  xla::XlaOp weight = loctx()->GetOutputOp(node->operand(2));
+  auto grads = BuildConvolutionBackwardOverrideable(
+      grad_output, input, weight, node->stride(), node->padding(),
+      node->dilation(), node->transposed(), node->output_padding(),
+      node->groups());
+  return {std::move(grads.grad_input), std::move(grads.grad_weight),
+          std::move(grads.grad_bias)};
+}
+
+XlaOpVector XlaNodeLowering::LowerConvolutionOverrideable(
+    const ir::ops::ConvolutionOverrideable* node) {
+  xla::XlaOp input = loctx()->GetOutputOp(node->operand(0));
+  xla::XlaOp kernel = loctx()->GetOutputOp(node->operand(1));
+  xla::XlaOp output;
+  if (node->operands().size() == 3) {
+    xla::XlaOp bias = loctx()->GetOutputOp(node->operand(2));
+    return {BuildConvolutionOverrideableBias(
+        input, kernel, bias, node->stride(), node->padding(), node->dilation(),
+        node->transposed(), node->output_padding(), node->groups())};
+  }
+  LTC_CHECK_EQ(node->operands().size(), 2);
+  return {BuildConvolutionOverrideable(
+      input, kernel, node->stride(), node->padding(), node->dilation(),
+      node->transposed(), node->output_padding(), node->groups())};
+}
+
 XlaOpVector XlaNodeLowering::LowerCumProd(const ir::ops::CumProd* node) {
   xla::XlaOp input = loctx()->GetOutputOp(node->operand(0));
   xla::XlaOp casted_input = CastToScalarType(input, node->dtype());
@@ -2986,6 +3058,16 @@ lazy_tensors::Shape XlaNodeLowering::Infer(const ir::Node* node) {
     case at::aten::constant_pad_nd: {
       return InferConstantPadNd(ir::NodeCast<ir::ops::ConstantPadNd>(
           node, ir::OpKind(at::aten::constant_pad_nd)));
+    }
+    case at::aten::convolution_backward_overrideable: {
+      return InferConvolutionBackwardOverrideable(
+          ir::NodeCast<ir::ops::ConvolutionBackwardOverrideable>(
+              node, ir::OpKind(at::aten::convolution_backward_overrideable)));
+    }
+    case at::aten::convolution_overrideable: {
+      return InferConvolutionOverrideable(
+          ir::NodeCast<ir::ops::ConvolutionOverrideable>(
+              node, ir::OpKind(at::aten::convolution_overrideable)));
     }
     case at::aten::cumprod: {
       return InferCumProd(
