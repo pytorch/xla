@@ -309,7 +309,7 @@ supported:
   - normal.Tensor_Tensor
   - alias
   - _amp_foreach_non_finite_check_and_unscale_
-  - _amp_update_scale
+  - _amp_update_scale_
   - mse_loss
   - mse_loss_backward
   - l1_loss
