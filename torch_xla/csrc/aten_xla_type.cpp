@@ -310,6 +310,8 @@ void AtenXlaType::_amp_foreach_non_finite_check_and_unscale_(
     at::TensorList self, at::Tensor& found_inf, const at::Tensor& inv_scale) {
   XLA_FN_COUNTER("xla::");
   XLATensor found_inf_tensor = bridge::GetXlaTensor(found_inf);
+  XLA_CHECK(found_inf_tensor.GetDevice().hw_type == DeviceType::GPU)
+      << "AMP is currently only supported in XLA:GPU.";
   XLATensor::_amp_foreach_non_finite_check_and_unscale_(
       bridge::GetXlaTensors(self), found_inf_tensor,
       bridge::GetXlaTensor(inv_scale));
@@ -324,6 +326,8 @@ at::Tensor& AtenXlaType::_amp_update_scale_(at::Tensor& current_scale,
   XLA_FN_COUNTER("xla::");
   XLATensor growth_tracker_tensor = bridge::GetXlaTensor(growth_tracker);
   XLATensor current_scale_tensor = bridge::GetXlaTensor(current_scale);
+  XLA_CHECK(growth_tracker_tensor.GetDevice().hw_type == DeviceType::GPU)
+      << "AMP is currently only supported in XLA:GPU.";
   XLATensor::_amp_update_scale_(growth_tracker_tensor, current_scale_tensor,
                                 bridge::GetXlaTensor(found_inf),
                                 scale_growth_factor, scale_backoff_factor,
