@@ -40,10 +40,13 @@ supported:
   - ceil
   - ceil_
   - clamp
+  - clamp.Tensor
   - clamp_
   - clamp_max
+  - clamp_max.Tensor_out
   - clamp_max_
   - clamp_min
+  - clamp_min.Tensor_out
   - clamp_min_
   - constant_pad_nd
   - convolution_overrideable
