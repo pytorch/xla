@@ -111,6 +111,7 @@ DISABLED_TORCH_TESTS_ANY = {
         'test_norm',
         'test_multinomial',
         'test_multinomial_alias',
+        'test_multinomial_constraints',  # server side crash
         'test_masked_select',  # uses half
         'test_masked_fill_bool_tensor',  # lowering
         'test_lu',
