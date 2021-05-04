@@ -111,7 +111,6 @@ DISABLED_TORCH_TESTS_ANY = {
         'test_norm',
         'test_multinomial',
         'test_multinomial_alias',
-        'test_multinomial_constraints',  # server side crash
         'test_masked_select',  # uses half
         'test_masked_fill_bool_tensor',  # lowering
         'test_lu',
@@ -326,6 +325,7 @@ DISABLED_TORCH_TESTS_TPU_ONLY = {
         'test_nondeterministic_alert_index_add_xla',  # server side crash
         'test_put_xla_bfloat16',  # (TPU) 0.46484375 vs. 0.484375
         'test_take_xla_bfloat16',  # (TPU) -6.53125 vs. -6.5625
+        'test_multinomial_constraints',  # server side crash
     },
 
     # test_indexing.py
