@@ -81,8 +81,8 @@ XlaOpVector BuildAmpForeachNonFiniteCheckAndUnscale(
     const XlaOpVector& inputs, const xla::XlaOp& found_inf_float,
     const xla::XlaOp& inv_scale);
 
-XlaOpVector BuildAmpUpdateScale(const xla::XlaOp& growth_tracker,
-                                const xla::XlaOp& current_scale,
+XlaOpVector BuildAmpUpdateScale(const xla::XlaOp& current_scale,
+                                const xla::XlaOp& growth_tracker,
                                 const xla::XlaOp& found_inf_float,
                                 double scale_growth_factor,
                                 double scale_backoff_factor,

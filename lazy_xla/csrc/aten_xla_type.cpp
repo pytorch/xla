@@ -365,17 +365,20 @@ void AtenXlaType::_amp_foreach_non_finite_check_and_unscale_(
       bridge::GetLtcTensor(inv_scale));
 }
 
-at::Tensor AtenXlaType::_amp_update_scale(at::Tensor& growth_tracker,
-                                          const at::Tensor& current_scale,
-                                          const at::Tensor& found_inf,
-                                          double scale_growth_factor,
-                                          double scale_backoff_factor,
-                                          int64_t growth_interval) {
+at::Tensor& AtenXlaType::_amp_update_scale_(at::Tensor& current_scale,
+                                            at::Tensor& growth_tracker,
+                                            const at::Tensor& found_inf,
+                                            double scale_growth_factor,
+                                            double scale_backoff_factor,
+                                            int64_t growth_interval) {
   LTC_FN_COUNTER("xla::");
-  return bridge::AtenFromLtcTensor(LazyTensor::_amp_update_scale(
-      bridge::GetLtcTensor(growth_tracker), bridge::GetLtcTensor(current_scale),
-      bridge::GetLtcTensor(found_inf), scale_growth_factor,
-      scale_backoff_factor, growth_interval));
+  LazyTensor growth_tracker_tensor = bridge::GetLtcTensor(growth_tracker);
+  LazyTensor current_scale_tensor = bridge::GetLtcTensor(current_scale);
+  LazyTensor::_amp_update_scale_(growth_tracker_tensor, current_scale_tensor,
+                                 bridge::GetLtcTensor(found_inf),
+                                 scale_growth_factor, scale_backoff_factor,
+                                 growth_interval);
+  return current_scale;
 }
 
 at::Tensor AtenXlaType::_copy_from(const at::Tensor& self,
@@ -733,9 +736,9 @@ at::Tensor AtenXlaType::as_strided(const at::Tensor& self, at::IntArrayRef size,
                              Helpers::I64Optional(storage_offset)));
 }
 
-at::Tensor& AtenXlaType::as_strided_(at::Tensor& self, at::IntArrayRef size,
-                                     at::IntArrayRef stride,
-                                     c10::optional<int64_t> storage_offset) {
+const at::Tensor& AtenXlaType::as_strided_(
+    const at::Tensor& self, at::IntArrayRef size, at::IntArrayRef stride,
+    c10::optional<int64_t> storage_offset) {
   LazyTensor self_tensor = bridge::GetLtcTensor(self);
   auto xsize = Helpers::I64List(size);
   auto xstride = Helpers::I64List(stride);
@@ -1132,6 +1135,14 @@ at::Tensor AtenXlaType::clamp(const at::Tensor& self,
       LazyTensor::clamp(bridge::GetLtcTensor(self), min, max));
 }
 
+at::Tensor AtenXlaType::clamp(const at::Tensor& self,
+                              const c10::optional<at::Tensor>& min,
+                              const c10::optional<at::Tensor>& max) {
+  LTC_FN_COUNTER("xla::");
+  return bridge::AtenFromLtcTensor(
+      LazyTensor::clamp(bridge::GetLtcTensor(self), min, max));
+}
+
 at::Tensor& AtenXlaType::clamp_(at::Tensor& self,
                                 const c10::optional<at::Scalar>& min,
                                 const c10::optional<at::Scalar>& max) {
@@ -1161,6 +1172,15 @@ at::Tensor& AtenXlaType::clamp_max_(at::Tensor& self, const at::Scalar& max) {
   return AtenXlaTypeDefault::clamp_max_(self, max);
 }
 
+at::Tensor& AtenXlaType::clamp_max_out(const at::Tensor& self,
+                                       const at::Tensor& max, at::Tensor& out) {
+  LTC_FN_COUNTER("xla::");
+  LazyTensor out_tensor = bridge::GetLtcTensor(out);
+  LazyTensor::clamp_out(out_tensor, bridge::GetLtcTensor(self), c10::nullopt,
+                        max);
+  return out;
+}
+
 at::Tensor AtenXlaType::clamp_min(const at::Tensor& self,
                                   const at::Scalar& min) {
   LTC_FN_COUNTER("xla::");
@@ -1176,6 +1196,15 @@ at::Tensor& AtenXlaType::clamp_min_(at::Tensor& self, const at::Scalar& min) {
     return self;
   }
   return AtenXlaTypeDefault::clamp_min_(self, min);
+}
+
+at::Tensor& AtenXlaType::clamp_min_out(const at::Tensor& self,
+                                       const at::Tensor& min, at::Tensor& out) {
+  LTC_FN_COUNTER("xla::");
+  LazyTensor out_tensor = bridge::GetLtcTensor(out);
+  LazyTensor::clamp_out(out_tensor, bridge::GetLtcTensor(self), min,
+                        c10::nullopt);
+  return out;
 }
 
 at::Tensor AtenXlaType::clone(const at::Tensor& self,
@@ -3086,8 +3115,8 @@ at::Tensor AtenXlaType::replication_pad2d_backward(
       Helpers::I64List(padding)));
 }
 
-at::Tensor& AtenXlaType::resize_(
-    at::Tensor& self, at::IntArrayRef size,
+const at::Tensor& AtenXlaType::resize_(
+    const at::Tensor& self, at::IntArrayRef size,
     c10::optional<at::MemoryFormat> memory_format) {
   if (InPlaceMustUseNNC(self) == ExecutionKind::NNC) {
     LTC_FN_COUNTER("xla::");

@@ -1556,7 +1556,7 @@ XlaOpVector XlaNodeLowering::LowerToXla(const ir::Node* node) {
     HANDLE_GENERIC_OP2(Any, at::aten::any)
     HANDLE_GENERIC_OP2(AmpForachNonFiniteCheckAndUnscale,
                        at::aten::_amp_foreach_non_finite_check_and_unscale_)
-    HANDLE_GENERIC_OP2(AmpUpdateScale, at::aten::_amp_update_scale)
+    HANDLE_GENERIC_OP2(AmpUpdateScale, at::aten::_amp_update_scale_)
     HANDLE_GENERIC_OP2(ArgMax, at::aten::argmax)
     HANDLE_GENERIC_OP2(ArgMin, at::aten::argmin)
     HANDLE_GENERIC_OP2(BinaryCrossEntropy, at::aten::binary_cross_entropy)

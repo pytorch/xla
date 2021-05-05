@@ -46,12 +46,12 @@ class AtenXlaType {
   static void _amp_foreach_non_finite_check_and_unscale_(
       at::TensorList self, at::Tensor& found_inf, const at::Tensor& inv_scale);
 
-  static at::Tensor _amp_update_scale(at::Tensor& growth_tracker,
-                                      const at::Tensor& current_scale,
-                                      const at::Tensor& found_inf,
-                                      double scale_growth_factor,
-                                      double scale_backoff_factor,
-                                      int64_t growth_interval);
+  static at::Tensor& _amp_update_scale_(at::Tensor& current_scale,
+                                        at::Tensor& growth_tracker,
+                                        const at::Tensor& found_inf,
+                                        double scale_growth_factor,
+                                        double scale_backoff_factor,
+                                        int64_t growth_interval);
 
   static at::Tensor _copy_from(const at::Tensor& self, const at::Tensor& dst,
                                bool non_blocking);
@@ -151,9 +151,10 @@ class AtenXlaType {
                                at::IntArrayRef stride,
                                c10::optional<int64_t> storage_offset);
 
-  static at::Tensor& as_strided_(at::Tensor& self, at::IntArrayRef size,
-                                 at::IntArrayRef stride,
-                                 c10::optional<int64_t> storage_offset);
+  static const at::Tensor& as_strided_(const at::Tensor& self,
+                                       at::IntArrayRef size,
+                                       at::IntArrayRef stride,
+                                       c10::optional<int64_t> storage_offset);
 
   static at::Tensor asin(const at::Tensor& self);
 
@@ -264,6 +265,10 @@ class AtenXlaType {
                           const c10::optional<at::Scalar>& min,
                           const c10::optional<at::Scalar>& max);
 
+  static at::Tensor clamp(const at::Tensor& self,
+                          const c10::optional<at::Tensor>& min,
+                          const c10::optional<at::Tensor>& max);
+
   static at::Tensor& clamp_(at::Tensor& self,
                             const c10::optional<at::Scalar>& min,
                             const c10::optional<at::Scalar>& max);
@@ -272,9 +277,15 @@ class AtenXlaType {
 
   static at::Tensor& clamp_max_(at::Tensor& self, const at::Scalar& max);
 
+  static at::Tensor& clamp_max_out(const at::Tensor& self,
+                                   const at::Tensor& max, at::Tensor& out);
+
   static at::Tensor clamp_min(const at::Tensor& self, const at::Scalar& min);
 
   static at::Tensor& clamp_min_(at::Tensor& self, const at::Scalar& min);
+
+  static at::Tensor& clamp_min_out(const at::Tensor& self,
+                                   const at::Tensor& min, at::Tensor& out);
 
   static at::Tensor clone(const at::Tensor& self,
                           c10::optional<at::MemoryFormat> memory_format);
@@ -854,8 +865,9 @@ class AtenXlaType {
                                                const at::Tensor& self,
                                                at::IntArrayRef padding);
 
-  static at::Tensor& resize_(at::Tensor& self, at::IntArrayRef size,
-                             c10::optional<at::MemoryFormat> memory_format);
+  static const at::Tensor& resize_(
+      const at::Tensor& self, at::IntArrayRef size,
+      c10::optional<at::MemoryFormat> memory_format);
 
   static at::Tensor round(const at::Tensor& self);
 
