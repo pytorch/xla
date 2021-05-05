@@ -50,6 +50,9 @@ fi
 rm -rf "$BUILDDIR"
 mkdir "$BUILDDIR" 2>/dev/null
 pushd "$BUILDDIR"
+echo "@@@@@@"
+echo "$LD_LIBRARY_PATH"
+echo "@@@@@@"
 cmake "$RUNDIR" \
   -DCMAKE_BUILD_TYPE=$BUILDTYPE \
   -DPYTHON_INCLUDE_DIR=$(python -c "from distutils.sysconfig import get_python_inc; print(get_python_inc())") \
