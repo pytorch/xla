@@ -708,8 +708,6 @@ void BuildProfilerSubmodule(py::module* m) {
 }
 
 void InitXlaModuleBindings(py::module m) {
-  m.def("_initialize_aten_bindings",
-        []() { AtenXlaType::InitializeAtenBindings(); });
   m.def("_prepare_to_exit", []() { PrepareToExit(); });
   m.def("_get_git_revs", []() { return GetRevisions(); });
   m.def("_get_xla_tensor_dimension_size",

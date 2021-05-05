@@ -78,7 +78,6 @@ void TorchXlaTest::SetUpTestCase() { CommonSetup(); }
 
 void AtenXlaTensorTestBase::SetUpTestCase() {
   CommonSetup();
-  AtenXlaType::InitializeAtenBindings();
 }
 
 }  // namespace cpp_test
