@@ -326,6 +326,7 @@ DISABLED_TORCH_TESTS_TPU_ONLY = {
         'test_put_xla_bfloat16',  # (TPU) 0.46484375 vs. 0.484375
         'test_take_xla_bfloat16',  # (TPU) -6.53125 vs. -6.5625
         'test_multinomial_constraints',  # server side crash
+        'test_multinomial_invalid_distribution',  # server side crash
     },
 
     # test_indexing.py
