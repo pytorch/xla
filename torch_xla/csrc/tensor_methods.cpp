@@ -167,22 +167,6 @@ MinMaxValues GetMinMaxValues(const XLATensor& tensor,
                                          tensor.GetDevice())};
 }
 
-MinMaxValues GetMinMaxValues(const XLATensor& tensor,
-                             const c10::optional<at::Tensor>& min,
-                             const c10::optional<at::Tensor>& max) {
-  XLA_CHECK(min || max)
-      << "At least one of \'min\' or \'max\' must not be None";
-  xla::PrimitiveType raw_element_type = TensorTypeToRawXlaType(tensor.dtype());
-  XlaHelpers::MinMax min_max = XlaHelpers::MinMaxValues(raw_element_type);
-  auto shape = tensor.shape();
-  return {min ? MaybeExpand(bridge::GetXlaTensor(*min).GetIrValue(), shape)
-              : XLATensor::GetIrValueForScalar(min_max.min, shape,
-                                               tensor.GetDevice()),
-          max ? MaybeExpand(bridge::GetXlaTensor(*max).GetIrValue(), shape)
-              : XLATensor::GetIrValueForScalar(min_max.max, shape,
-                                               tensor.GetDevice())};
-}
-
 void CheckRank(const XLATensor& t, xla::int64 expected_rank,
                const std::string& tag, const std::string& arg_name,
                int arg_number) {
@@ -962,9 +946,16 @@ XLATensor XLATensor::clamp(const XLATensor& input,
 XLATensor XLATensor::clamp(const XLATensor& input,
                            const c10::optional<at::Tensor>& min,
                            const c10::optional<at::Tensor>& max) {
-  MinMaxValues min_max = GetMinMaxValues(input, min, max);
-  return input.CreateFrom(
-      ir::ops::Clamp(input.GetIrValue(), min_max.min, min_max.max));
+  XLA_CHECK(min || max)
+      << "At least one of \'min\' or \'max\' must not be None";
+  ir::Value res = input.GetIrValue();
+  if (min) {
+    res = ir::ops::Max(res, bridge::GetXlaTensor(*min).GetIrValue());
+  }
+  if (max) {
+    res = ir::ops::Min(res, bridge::GetXlaTensor(*max).GetIrValue());
+  }
+  return input.CreateFrom(res);
 }
 
 void XLATensor::clamp_(XLATensor& input, const c10::optional<at::Scalar>& min,
@@ -977,9 +968,16 @@ void XLATensor::clamp_(XLATensor& input, const c10::optional<at::Scalar>& min,
 void XLATensor::clamp_out(XLATensor& out, const XLATensor& input,
                           const c10::optional<at::Tensor>& min,
                           const c10::optional<at::Tensor>& max) {
-  MinMaxValues min_max = GetMinMaxValues(input, min, max);
-  out.SetInPlaceIrValue(
-      ir::ops::Clamp(input.GetIrValue(), min_max.min, min_max.max));
+  XLA_CHECK(min || max)
+      << "At least one of \'min\' or \'max\' must not be None";
+  ir::Value res = input.GetIrValue();
+  if (min) {
+    res = ir::ops::Max(res, bridge::GetXlaTensor(*min).GetIrValue());
+  }
+  if (max) {
+    res = ir::ops::Min(res, bridge::GetXlaTensor(*max).GetIrValue());
+  }
+  out.SetInPlaceIrValue(res);
 }
 
 XLATensor XLATensor::clone(const XLATensor& input) {
