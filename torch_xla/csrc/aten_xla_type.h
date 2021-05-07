@@ -989,6 +989,10 @@ class AtenXlaType {
   static at::Tensor std(const at::Tensor& self, at::IntArrayRef dim,
                         bool unbiased, bool keepdim);
 
+  static at::Tensor std(const at::Tensor& self,
+                        c10::optional<at::IntArrayRef> dim,
+                        c10::optional<int64_t> correction, bool keepdim);
+
   static at::Tensor sub(const at::Tensor& self, const at::Tensor& other,
                         const at::Scalar& alpha);
 
@@ -1113,6 +1117,10 @@ class AtenXlaType {
 
   static at::Tensor var(const at::Tensor& self, at::IntArrayRef dim,
                         bool unbiased, bool keepdim);
+
+  static at::Tensor var(const at::Tensor& self,
+                        c10::optional<at::IntArrayRef> dim,
+                        c10::optional<int64_t> correction, bool keepdim);
 
   static at::Tensor view(const at::Tensor& self, at::IntArrayRef size);
 

@@ -11,8 +11,8 @@ namespace ops {
 
 class Var : public Node {
  public:
-  Var(const Value& input, std::vector<xla::int64> dimensions, bool unbiased,
-      bool keep_reduced_dimensions);
+  Var(const Value& input, std::vector<xla::int64> dimensions,
+      xla::int64 correction, bool keep_reduced_dimensions);
 
   std::string ToString() const override;
 
@@ -24,11 +24,11 @@ class Var : public Node {
 
   bool keep_reduced_dimensions() const { return keep_reduced_dimensions_; }
 
-  bool unbiased() const { return unbiased_; }
+  xla::int64 correction() const { return correction_; }
 
  private:
   std::vector<xla::int64> dimensions_;
-  bool unbiased_;
+  xla::int64 correction_;
   bool keep_reduced_dimensions_;
 };
 

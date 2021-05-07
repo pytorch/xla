@@ -1275,6 +1275,25 @@ TEST_F(AtenXlaTensorTest, TestStdInDim) {
   }
 }
 
+TEST_F(AtenXlaTensorTest, TestStdWithCorrection) {
+  torch::Tensor a = torch::rand({4, 3, 4}, torch::TensorOptions(torch::kFloat));
+  int rank = a.dim();
+  c10::optional<int64_t> corrections[] = {1, 2, c10::nullopt};
+  for (const auto& correction : corrections) {
+    for (auto keepdim : {true, false}) {
+      for (const auto& dim :
+           std::vector<std::vector<int64_t>>{{0, 1}, {-3, -2}}) {
+        torch::Tensor b = torch::std(a, dim, correction, keepdim);
+        ForEachDevice([&](const torch::Device& device) {
+          torch::Tensor xla_a = CopyToDevice(a, device);
+          torch::Tensor xla_b = torch::std(xla_a, dim, correction, keepdim);
+          AllClose(b, xla_b);
+        });
+      }
+    }
+  }
+}
+
 TEST_F(AtenXlaTensorTest, TestSum) {
   torch::Tensor a = torch::rand({4, 3, 4}, torch::TensorOptions(torch::kFloat));
   torch::Tensor b = torch::sum(a);
@@ -1378,6 +1397,25 @@ TEST_F(AtenXlaTensorTest, TestVarWithDim) {
         ForEachDevice([&](const torch::Device& device) {
           torch::Tensor xla_a = CopyToDevice(a, device);
           torch::Tensor xla_b = torch::var(xla_a, dims, unbiased, keepDim);
+          AllClose(b, xla_b);
+        });
+      }
+    }
+  }
+  ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::var", cpp_test::GetIgnoredCounters());
+}
+
+TEST_F(AtenXlaTensorTest, TestVarWithCorrection) {
+  torch::Tensor a = torch::rand({4, 3, 4}, torch::TensorOptions(torch::kFloat));
+  c10::optional<int64_t> corrections[] = {1, 2, c10::nullopt};
+  for (const auto& dim : std::vector<std::vector<int64_t>>{{0, 1}, {-3, -2}}) {
+    for (bool keepDim : {true, false}) {
+      for (const auto& correction : corrections) {
+        torch::Tensor b = torch::var(a, dim, correction, keepDim);
+        ForEachDevice([&](const torch::Device& device) {
+          torch::Tensor xla_a = CopyToDevice(a, device);
+          torch::Tensor xla_b = torch::var(xla_a, dim, correction, keepDim);
           AllClose(b, xla_b);
         });
       }
