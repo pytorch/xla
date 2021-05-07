@@ -2650,12 +2650,12 @@ XLATensor XLATensor::stack(absl::Span<const XLATensor> tensors,
 
 XLATensor XLATensor::std(const XLATensor& input,
                          std::vector<xla::int64> dimensions,
-                         bool keep_reduced_dimensions, bool unbiased) {
+                         bool keep_reduced_dimensions, xla::int64 correction) {
   return input.CreateFrom(
       ir::MakeNode<ir::ops::Std>(input.GetIrValue(),
                                  XlaHelpers::GetCanonicalDimensionIndices(
                                      dimensions, input.shape().get().rank()),
-                                 keep_reduced_dimensions, unbiased));
+                                 keep_reduced_dimensions, correction));
 }
 
 XLATensor XLATensor::sub(const XLATensor& input, const XLATensor& other,
@@ -2947,13 +2947,13 @@ XLATensor XLATensor::view(const XLATensor& input,
 }
 
 XLATensor XLATensor::var(const XLATensor& input,
-                         std::vector<xla::int64> dimensions, bool unbiased,
-                         bool keep_reduced_dimensions) {
+                         std::vector<xla::int64> dimensions,
+                         xla::int64 correction, bool keep_reduced_dimensions) {
   return input.CreateFrom(
       ir::MakeNode<ir::ops::Var>(input.GetIrValue(),
                                  XlaHelpers::GetCanonicalDimensionIndices(
                                      dimensions, input.shape().get().rank()),
-                                 unbiased, keep_reduced_dimensions));
+                                 correction, keep_reduced_dimensions));
 }
 
 void XLATensor::zero_(XLATensor& input) {
