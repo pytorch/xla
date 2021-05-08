@@ -6205,7 +6205,7 @@ TEST_F(AtenXlaTensorTest, TestOneHot) {
   // TODO: PT one_hot impl employs item() which could be eliminated.
   ExpectCounterNotChanged("aten::(?!_local_scalar_dense).*",
                           cpp_test::GetIgnoredCounters());
-  ExpectCounterChanged("xla::scatter_", cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::scatter_out", cpp_test::GetIgnoredCounters());
 }
 
 TEST_F(AtenXlaTensorTest, TestTranspose) {
