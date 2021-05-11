@@ -24,10 +24,11 @@
 #include "torch_xla/csrc/version.h"
 
 // [Implementation Guidelines]
-// - If you want to call a at::func which doesn't exist in AtenXlaType,
-//   call at::native::func instead.
-//   E.g. don't call tensor.is_floating_point() or
-//   at::is_floating_point(tensor), use at::native::is_floating_point(tensor).
+// - If you want to call a at::func which doesn't have a kernel registered according to xla_native_functions.yaml,
+//   you can call a boxed CPU fallback kernel instead.
+//   E.g. don't call tensor.op() or at::op(tensor).
+//   use at::native::call_fallback_fn<&xla_cpu_fallback, return_type, arg_types>("aten::op", "overload_name", args...);
+//   (you can find some examples below).
 
 namespace torch_xla {
 namespace {
