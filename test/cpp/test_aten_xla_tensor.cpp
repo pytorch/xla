@@ -844,6 +844,9 @@ TEST_F(AtenXlaTensorTest, TestSVD) {
       });
     }
   }
+
+  ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::svd", cpp_test::GetIgnoredCounters());
 }
 
 TEST_F(AtenXlaTensorTest, TestQR) {
@@ -3547,7 +3550,7 @@ TEST_F(AtenXlaTensorTest, TestPinverse) {
   });
 
   ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
-  ExpectCounterChanged("xla::svd", cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::_svd_helper", cpp_test::GetIgnoredCounters());
 }
 
 TEST_F(AtenXlaTensorTest, TestEinsumOuter) {

@@ -3259,6 +3259,15 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor> AtenXlaType::svd(
                          bridge::AtenFromXlaTensor(std::get<2>(results)));
 }
 
+std::tuple<at::Tensor, at::Tensor, at::Tensor> AtenXlaType::_svd_helper(
+    const at::Tensor& self, bool some, bool compute_uv) {
+  XLA_FN_COUNTER("xla::");
+  auto results = XLATensor::svd(bridge::GetXlaTensor(self), some, compute_uv);
+  return std::make_tuple(bridge::AtenFromXlaTensor(std::get<0>(results)),
+                         bridge::AtenFromXlaTensor(std::get<1>(results)),
+                         bridge::AtenFromXlaTensor(std::get<2>(results)));
+}
+
 std::tuple<at::Tensor, at::Tensor> AtenXlaType::symeig(const at::Tensor& self,
                                                        bool eigenvectors,
                                                        bool upper) {
