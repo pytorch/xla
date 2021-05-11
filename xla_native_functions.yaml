@@ -127,6 +127,7 @@ supported:
   - sqrt
   - std
   - std.dim
+  - std.correction
   - prod
   - prod.dim_int
   - t
@@ -145,6 +146,7 @@ supported:
   - unsqueeze_
   - var
   - var.dim
+  - var.correction
   - _s_where
   - norm.ScalarOpt_dtype
   - norm.Scalar
