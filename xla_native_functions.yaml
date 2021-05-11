@@ -282,6 +282,7 @@ supported:
   - triangular_solve
   - symeig
   - svd
+  - _svd_helper
   - cholesky
   - qr
   - erfinv
