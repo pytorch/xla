@@ -76,9 +76,7 @@ void XlaTest::CommonSetup() {
 
 void TorchXlaTest::SetUpTestCase() { CommonSetup(); }
 
-void AtenXlaTensorTestBase::SetUpTestCase() {
-  CommonSetup();
-}
+void AtenXlaTensorTestBase::SetUpTestCase() { CommonSetup(); }
 
 }  // namespace cpp_test
 }  // namespace torch_xla
