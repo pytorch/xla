@@ -374,7 +374,8 @@ at::Tensor AtenXlaType::_copy_from_and_resize(const at::Tensor& self,
     dst.resize_as_(typed_tensor).copy_(typed_tensor);
   } else {
     // at this point we know dst is an XLA tensor
-    XLATensorImpl* dest_impl = dynamic_cast<XLATensorImpl*>(dst.unsafeGetTensorImpl());
+    XLATensorImpl* dest_impl =
+        dynamic_cast<XLATensorImpl*>(dst.unsafeGetTensorImpl());
     dest_impl->tensor().UpdateFromTensorOut(*self_tensor);
     dest_impl->force_refresh_sizes();
   }
@@ -382,9 +383,9 @@ at::Tensor AtenXlaType::_copy_from_and_resize(const at::Tensor& self,
 }
 
 std::vector<at::Tensor> AtenXlaType::_to_cpu(at::TensorList tensors) {
-   XLA_FN_COUNTER("xla::");
-   return bridge::XlaCreateTensorList(tensors);
- }
+  XLA_FN_COUNTER("xla::");
+  return bridge::XlaCreateTensorList(tensors);
+}
 
 at::Tensor& AtenXlaType::_index_put_impl_(
     at::Tensor& self, const c10::List<c10::optional<at::Tensor>>& indices,
