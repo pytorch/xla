@@ -3183,7 +3183,7 @@ at::Tensor std(const at::Tensor& self, at::IntArrayRef dim,
       /*correction=*/unbiased ? 1 : 0));
 }
 
-at::Tensor AtenXlaType::std(const at::Tensor& self,
+at::Tensor std(const at::Tensor& self,
                             c10::optional<at::IntArrayRef> dim,
                             c10::optional<int64_t> correction, bool keepdim) {
   XLA_FN_COUNTER("xla::");
@@ -3601,7 +3601,7 @@ at::Tensor var(const at::Tensor& self, at::IntArrayRef dim,
                      /*correction=*/unbiased ? 1 : 0, keepdim));
 }
 
-at::Tensor AtenXlaType::var(const at::Tensor& self,
+at::Tensor var(const at::Tensor& self,
                             c10::optional<at::IntArrayRef> dim,
                             c10::optional<int64_t> correction, bool keepdim) {
   XLA_FN_COUNTER("xla::");
