@@ -62,7 +62,7 @@ pip install cloud-tpu-client
 
 # Install Pytorch without MKLDNN
 xla/scripts/apply_patches.sh
-python setup.py build develop
+python setup.py build install
 sccache --show-stats
 
 # Bazel doesn't work with sccache gcc. https://github.com/bazelbuild/bazel/issues/3642
