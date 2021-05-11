@@ -170,9 +170,7 @@ supported:
   - index_add_
   - index_fill_.int_Scalar
   - index_fill_.int_Tensor
-  - scatter_.src
   - scatter.src_out
-  - scatter_.value
   - scatter.value_out
   - scatter_add_
   - bitwise_and.Tensor_out
