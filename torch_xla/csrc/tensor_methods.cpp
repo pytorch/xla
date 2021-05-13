@@ -1120,6 +1120,8 @@ XLATensor XLATensor::div(const XLATensor& input, const XLATensor& other,
   } else if (!input_is_float && other_is_float) {
     scalar_type = TensorTypeFromXlaType(other_type);
   }
+  // We need to cast both input and other to float to perform true divide, floor
+  // divide and trunc divide.
   ir::Value input_value = GetFloatingIrValue(input, scalar_type);
   ir::Value other_value = GetFloatingIrValue(other, scalar_type);
   ir::Value res = input_value / other_value;
@@ -1138,10 +1140,19 @@ XLATensor XLATensor::div(const XLATensor& input, const XLATensor& other,
   // Promote the result to the logical_element_type if one of the
   // input and the other is float. If that is not the case logical_element_type
   // will be non-floating-point type, we should only promote the result to that
-  // when rounding_mode is not nullopt
+  // when rounding_mode is not nullopt.
   if (input_is_float || other_is_float || rounding_mode.has_value()) {
+    if (logical_element_type.has_value()) {
+      xla::PrimitiveType res_intended_type =
+          MakeXlaPrimitiveType(*logical_element_type, &input.GetDevice());
+      if (res.shape().element_type() != res_intended_type) {
+        res = ir::MakeNode<ir::ops::Cast>(res, res_intended_type);
+      }
+    }
     return input.CreateFrom(res, logical_element_type);
   } else {
+    // We don't need to typecheck the res IR here since we cast both input and
+    // output to the scalar_type. Res type must also be scalar_type here.
     return input.CreateFrom(res, scalar_type);
   }
 }
