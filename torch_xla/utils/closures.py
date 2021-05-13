@@ -2,6 +2,7 @@ import abc
 import queue
 import threading
 
+
 class ClosureHandler(abc.ABC):
 
   def __init__(self):
@@ -19,6 +20,7 @@ class ClosureHandler(abc.ABC):
   def run_all(self, closures):
     for closure in closures:
       self.run(closure)
+
 
 class AsyncClosureHandler(ClosureHandler):
   """Handler for Asynchronous Step Closures
@@ -38,6 +40,7 @@ class AsyncClosureHandler(ClosureHandler):
   def start_event_loop(self):
     """Start closure event loop if not started"""
     if self._closure_event_loop is None:
+
       def event_loop():
         # Run loop until closure event is set and closure queue is empty
         while not self._closure_queue.empty():
@@ -55,14 +58,12 @@ class AsyncClosureHandler(ClosureHandler):
       self._closure_event_loop.start()
 
   def run(self, closure):
-    if (
-      self._closure_event_loop is None
-      or not self._closure_event_loop.is_alive()
-    ):
+    if (self._closure_event_loop is None or
+        not self._closure_event_loop.is_alive()):
       try:
         e = self._closure_exception.get(block=False)
         raise RuntimeError(
-          "Cannot run asynchronous closure due to previously raised exception"
+            "Cannot run asynchronous closure due to previously raised exception"
         ) from e
       except queue.Empty:
         self._closure_event_loop = None

@@ -10,6 +10,7 @@ from unittest import mock
 import torch
 import torch_xla.core.xla_model as xm
 
+
 class AsyncClosuresTest(unittest.TestCase):
 
   def test_synchronous(self):
@@ -47,6 +48,7 @@ class AsyncClosuresTest(unittest.TestCase):
     assert not flag.is_set()
 
     try:
+
       def closure():
         flag.set()
         raise RuntimeError("Simulating exception in closure")
@@ -57,7 +59,7 @@ class AsyncClosuresTest(unittest.TestCase):
       assert False  # Should not reach here
     except RuntimeError as e:
       assert flag.is_set(), "Should have caught exception from closure"
-   
+
   def test_asynchronous_exception(self):
     flag = Event()
     assert not flag.is_set()
@@ -71,6 +73,7 @@ class AsyncClosuresTest(unittest.TestCase):
     sleep(1)
 
     try:
+
       def closure2():  # Should never execute
         flag.set()
 
@@ -83,7 +86,6 @@ class AsyncClosuresTest(unittest.TestCase):
       pass
 
     assert not flag.is_set()
-    
 
 
 if __name__ == '__main__':
