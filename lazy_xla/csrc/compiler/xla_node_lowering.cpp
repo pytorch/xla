@@ -1118,7 +1118,8 @@ lazy_tensors::Shape InferSVD(const ir::ops::SVD* node) {
 lazy_tensors::Shape InferStd(const ir::ops::Std* node) {
   auto shape_fn = [node](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
     return BuildStdDeviation(operands[0], node->dimensions(),
-                             node->keep_reduced_dimensions(), node->unbiased());
+                             node->keep_reduced_dimensions(),
+                             node->correction());
   };
   const ir::Output& input = node->operand(0);
   return ir::ops::InferOutputShape({input.shape()}, shape_fn);
@@ -1126,7 +1127,7 @@ lazy_tensors::Shape InferStd(const ir::ops::Std* node) {
 
 lazy_tensors::Shape InferVar(const ir::ops::Var* node) {
   auto shape_fn = [node](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
-    return BuildVar(operands[0], node->dimensions(), node->unbiased(),
+    return BuildVar(operands[0], node->dimensions(), node->correction(),
                     node->keep_reduced_dimensions());
   };
   const ir::Output& input = node->operand(0);
@@ -2587,12 +2588,13 @@ XlaOpVector XlaNodeLowering::LowerSVD(const ir::ops::SVD* node) {
 XlaOpVector XlaNodeLowering::LowerStd(const ir::ops::Std* node) {
   xla::XlaOp input = loctx()->GetOutputOp(node->operand(0));
   return {BuildStdDeviation(input, node->dimensions(),
-                            node->keep_reduced_dimensions(), node->unbiased())};
+                            node->keep_reduced_dimensions(),
+                            node->correction())};
 }
 
 XlaOpVector XlaNodeLowering::LowerVar(const ir::ops::Var* node) {
   xla::XlaOp input = loctx()->GetOutputOp(node->operand(0));
-  return {BuildVar(input, node->dimensions(), node->unbiased(),
+  return {BuildVar(input, node->dimensions(), node->correction(),
                    node->keep_reduced_dimensions())};
 }
 

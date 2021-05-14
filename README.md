@@ -8,15 +8,16 @@
 pip install glob2 lark-parser
 ```
 
-1. Run `python setup.py develop`.
-2. Set the environment variables which control the XLA backend, for example:
+1. Run `scripts/apply_patches.sh`
+2. Run `python setup.py develop`.
+3. Set the environment variables which control the XLA backend, for example:
 
 ```bash
 export XLA_USE_XRT=1 XRT_DEVICE_MAP="CPU:0;/job:localservice/replica:0/task:0/device:XLA_CPU:0"
 export XRT_WORKERS="localservice:0;grpc://localhost:40935"
 ```
 
-3. Run `example.py`.
+4. Run `example.py`.
 
 Suggested build environment:
 

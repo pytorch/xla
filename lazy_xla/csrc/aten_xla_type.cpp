@@ -360,6 +360,9 @@ void AtenXlaType::_amp_foreach_non_finite_check_and_unscale_(
     at::TensorList self, at::Tensor& found_inf, const at::Tensor& inv_scale) {
   LTC_FN_COUNTER("xla::");
   LazyTensor found_inf_tensor = bridge::GetLtcTensor(found_inf);
+  DeviceType hw_type = found_inf_tensor.GetDevice().hw_type;
+  LTC_CHECK(hw_type == DeviceType::GPU || hw_type == DeviceType::CPU)
+      << "AMP should be used with XLA:GPU";
   LazyTensor::_amp_foreach_non_finite_check_and_unscale_(
       bridge::GetLtcTensors(self), found_inf_tensor,
       bridge::GetLtcTensor(inv_scale));
@@ -374,6 +377,9 @@ at::Tensor& AtenXlaType::_amp_update_scale_(at::Tensor& current_scale,
   LTC_FN_COUNTER("xla::");
   LazyTensor growth_tracker_tensor = bridge::GetLtcTensor(growth_tracker);
   LazyTensor current_scale_tensor = bridge::GetLtcTensor(current_scale);
+  DeviceType hw_type = growth_tracker_tensor.GetDevice().hw_type;
+  LTC_CHECK(hw_type == DeviceType::GPU || hw_type == DeviceType::CPU)
+      << "AMP should be used with XLA:GPU";
   LazyTensor::_amp_update_scale_(growth_tracker_tensor, current_scale_tensor,
                                  bridge::GetLtcTensor(found_inf),
                                  scale_growth_factor, scale_backoff_factor,
@@ -2774,6 +2780,10 @@ std::tuple<at::Tensor, at::Tensor> AtenXlaType::nll_loss_forward(
       bridge::AtenFromLtcTensor(total_weight));
 }
 
+at::Tensor AtenXlaType::nonzero(const at::Tensor& self) {
+  return AtenXlaTypeDefault::nonzero(self);
+}
+
 at::Tensor AtenXlaType::norm(const at::Tensor& self,
                              const c10::optional<at::Scalar>& p,
                              at::ScalarType dtype) {
@@ -3517,15 +3527,27 @@ at::Tensor AtenXlaType::std(const at::Tensor& self, bool unbiased) {
   return bridge::AtenFromLtcTensor(LazyTensor::std(
       self_tensor,
       xla::util::Iota<xla::int64>(self_tensor.shape().get().rank()),
-      /*keep_reduced_dimensions=*/false, unbiased));
+      /*keep_reduced_dimensions=*/false, /*correction=*/unbiased ? 1 : 0));
 }
 
 at::Tensor AtenXlaType::std(const at::Tensor& self, at::IntArrayRef dim,
                             bool unbiased, bool keepdim) {
   LTC_FN_COUNTER("xla::");
   return bridge::AtenFromLtcTensor(LazyTensor::std(
-      bridge::GetLtcTensor(self), xla::util::ToVector<xla::int64>(dim),
-      /*keep_reduced_dimensions=*/keepdim, unbiased));
+      bridge::GetLtcTensor(self), xla::util::ToVector<xla::int64>(dim), keepdim,
+      /*correction=*/unbiased ? 1 : 0));
+}
+
+at::Tensor AtenXlaType::std(const at::Tensor& self,
+                            c10::optional<at::IntArrayRef> dim,
+                            c10::optional<int64_t> correction, bool keepdim) {
+  LTC_FN_COUNTER("xla::");
+  LazyTensor self_tensor = bridge::GetLtcTensor(self);
+  return bridge::AtenFromLtcTensor(LazyTensor::std(
+      self_tensor,
+      dim ? xla::util::ToVector<xla::int64>(*dim)
+          : xla::util::Iota<xla::int64>(self_tensor.shape().get().rank()),
+      keepdim, correction ? *correction : 1));
 }
 
 at::Tensor AtenXlaType::sub(const at::Tensor& self, const at::Tensor& other,
@@ -3970,7 +3992,7 @@ at::Tensor AtenXlaType::var(const at::Tensor& self, bool unbiased) {
       LazyTensor::var(bridge::GetLtcTensor(self),
                       xla::util::Iota<xla::int64>(
                           bridge::GetLtcTensor(self).shape().get().rank()),
-                      unbiased,
+                      /*correction=*/unbiased ? 1 : 0,
                       /*keep_reduced_dimensions=*/false));
 }
 
@@ -3979,7 +4001,21 @@ at::Tensor AtenXlaType::var(const at::Tensor& self, at::IntArrayRef dim,
   LTC_FN_COUNTER("xla::");
   LazyTensor self_tensor = bridge::GetLtcTensor(self);
   return bridge::AtenFromLtcTensor(
-      LazyTensor::var(self_tensor, Helpers::I64List(dim), unbiased, keepdim));
+      LazyTensor::var(self_tensor, Helpers::I64List(dim),
+                      /*correction=*/unbiased ? 1 : 0, keepdim));
+}
+
+at::Tensor AtenXlaType::var(const at::Tensor& self,
+                            c10::optional<at::IntArrayRef> dim,
+                            c10::optional<int64_t> correction, bool keepdim) {
+  LTC_FN_COUNTER("xla::");
+  LazyTensor self_tensor = bridge::GetLtcTensor(self);
+  return bridge::AtenFromLtcTensor(LazyTensor::var(
+      self_tensor,
+      dim ? Helpers::I64List(*dim)
+          : xla::util::Iota<xla::int64>(
+                bridge::GetLtcTensor(self).shape().get().rank()),
+      correction ? *correction : 1, keepdim));
 }
 
 at::Tensor AtenXlaType::view(const at::Tensor& self, at::IntArrayRef size) {
