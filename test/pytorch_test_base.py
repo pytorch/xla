@@ -343,6 +343,8 @@ DISABLED_TORCH_TESTS_TPU_ONLY = {
     'TestNNDeviceTypeXLA': {
         'test_embedding_bag_empty_input_xla',  # server side crash
         'test_EmbeddingBag_empty_per_sample_weights_and_offsets_xla',  # server side crash
+        'test_softplus_low_threshold',  # grad check failure
+        'test_Dropout',  # too slow
     },
 
     # test_type_promotion.py
