@@ -28,7 +28,7 @@ void xla_cpu_fallback(const c10::OperatorHandle& op, torch::jit::Stack* stack) {
 }
 
 TORCH_LIBRARY_IMPL(_, XLA, m) {
-   m.fallback(torch::CppFunction::makeFromBoxedFunction<&xla_cpu_fallback>());
+  m.fallback(torch::CppFunction::makeFromBoxedFunction<&xla_cpu_fallback>());
 }
 
-} // namespace torch_xla
+}  // namespace torch_xla
