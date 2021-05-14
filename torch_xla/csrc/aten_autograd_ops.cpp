@@ -4,7 +4,7 @@
 #include "torch_xla/csrc/aten_xla_bridge.h"
 #include "torch_xla/csrc/helpers.h"
 #include "torch_xla/csrc/torch_util.h"
-#include <ATen/native/cpu_fallback.h>
+#include <ATen/native/CPUFallback.h>
 
 namespace torch_xla {
 

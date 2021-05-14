@@ -1,7 +1,5 @@
 #include "torch_xla/csrc/aten_cpu_fallback.h"
 
-#include <ATen/native/cpu_fallback.h>
-
 #include <tensorflow/compiler/xla/xla_client/debug_macros.h>
 #include <tensorflow/compiler/xla/xla_client/metrics.h>
 #include <tensorflow/compiler/xla/xla_client/tf_logging.h>
@@ -11,7 +9,8 @@ namespace torch_xla {
 
 void xla_cpu_fallback(const c10::OperatorHandle& op, torch::jit::Stack* stack) {
   XLA_FN_TRACK(3);
-  XLA_COUNTER(op.schema().name(), 1);
+  const auto name = c10::toString(op.operator_name());
+  XLA_COUNTER(name, 1);
 
   auto& args = op.schema().arguments();
   auto arguments = torch::jit::last(stack, args.size());

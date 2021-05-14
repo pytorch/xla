@@ -1,6 +1,6 @@
 #pragma once
 
-#include <ATen/native/cpu_fallback.h>
+#include <ATen/native/CPUFallback.h>
 
 namespace torch_xla {
 

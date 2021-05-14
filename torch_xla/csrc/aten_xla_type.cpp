@@ -1,6 +1,6 @@
 #include <ATen/Context.h>
-#include <ATen/native/cpu_fallback.h>
 #include <ATen/native/BinaryOps.h>
+#include <ATen/native/CPUFallback.h>
 
 #include <mutex>
 
@@ -690,7 +690,7 @@ at::Tensor avg_pool3d(const at::Tensor& self, at::IntArrayRef kernel_size,
                       c10::optional<int64_t> divisor_override) {
   XLA_FN_COUNTER("xla::");
   if ((ceil_mode && count_include_pad) || divisor_override) {
-    return at::native::call_fallback_fn<&xla_cpu_fallback, at::Tensor, const at::Tensor&, at::IntArrayRef, at::IntArrayRef, at::IntArrayRef, bool, bool, c10::optional<int64_t>>("aten::avg_pool2d_backward", "", self, kernel_size, stride, padding,
+    return at::native::call_fallback_fn<&xla_cpu_fallback, at::Tensor, const at::Tensor&, at::IntArrayRef, at::IntArrayRef, at::IntArrayRef, bool, bool, c10::optional<int64_t>>("aten::avg_pool3d", "", self, kernel_size, stride, padding,
                                           ceil_mode, count_include_pad,
                                           divisor_override);
   }
@@ -708,7 +708,7 @@ at::Tensor avg_pool3d_backward(const at::Tensor& grad_output,
                                c10::optional<int64_t> divisor_override) {
   XLA_FN_COUNTER("xla::");
   if ((ceil_mode && count_include_pad) || divisor_override) {
-    return at::native::call_fallback_fn<&xla_cpu_fallback, at::Tensor, const at::Tensor&, const at::Tensor&, at::IntArrayRef, at::IntArrayRef, at::IntArrayRef, bool, bool, c10::optional<int64_t>>("aten::avg_pool2d_backward", "",
+    return at::native::call_fallback_fn<&xla_cpu_fallback, at::Tensor, const at::Tensor&, const at::Tensor&, at::IntArrayRef, at::IntArrayRef, at::IntArrayRef, bool, bool, c10::optional<int64_t>>("aten::avg_pool3d_backward", "",
         grad_output, self, kernel_size, stride, padding, ceil_mode,
         count_include_pad, divisor_override);
   }
