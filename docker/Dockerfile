@@ -5,7 +5,7 @@ ARG cloud_build="false"
 ARG release_version="nightly"
 
 RUN apt-get update
-RUN apt-get install -y git sudo python-pip python3-pip
+RUN apt-get install -y git sudo python-pip python3-pip curl
 RUN git clone https://github.com/pytorch/pytorch
 
 # To get around issue of Cloud Build with recursive submodule update
