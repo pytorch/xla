@@ -14,6 +14,8 @@ torch_xla/csrc/version.cpp
 torch_xla/csrc/aten_xla_type.h
 torch_xla/csrc/aten_xla_type_default.h
 torch_xla/csrc/aten_xla_type_default.cpp
+torch_xla/csrc/RegisterXLA.cpp
+torch_xla/csrc/RegisterAutogradXLA.cpp
 
 # BEGIN NOT-CLEAN-FILES (setup.py handles this marker. Do not change.)
 #
