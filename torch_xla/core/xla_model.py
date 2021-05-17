@@ -13,8 +13,8 @@ import torch_xla
 import torch_xla.core.xla_env_vars as xenv
 import torch_xla.debug.metrics_saver as ms
 import torch_xla.utils.utils as xu
+import torch_xla.utils.closures as xc
 import torch_xla.utils.keyd_queue as kq
-from torch_xla.utils.closures import AsyncClosureHandler
 
 _DEVICES = xu.LazyProperty(lambda: torch_xla._XLAC._xla_get_devices())
 
@@ -695,18 +695,12 @@ def add_step_closure(closure, args=(), run_async=False):
     run_async: If True, run the closure asynchronously
   """
   devctx = _get_device_context()
-  if not run_async:
-    step_closures = getattr(devctx, 'step_closures', None)
-    if step_closures is None:
-      step_closures = []
-      devctx.step_closures = step_closures
-    step_closures.append(lambda a=args: closure(*a))
-  else:
-    async_step_closures = getattr(devctx, 'async_step_closures', None)
-    if async_step_closures is None:
-      async_step_closures = []
-      devctx.async_step_closures = async_step_closures
-    async_step_closures.append(lambda a=args: closure(*a))
+  closures_type = 'async_step_closures' if run_async else 'step_closures'
+  step_closures = getattr(devctx, closures_type, None)
+  if step_closures is None:
+    step_closures = []
+    setattr(devctx, closures_type, step_closures)
+  step_closures.append(lambda a=args: closure(*a))
 
 
 def _run_step_closures():
@@ -716,7 +710,7 @@ def _run_step_closures():
     devctx.async_step_closures = []
     async_closure_handler = getattr(devctx, 'async_closure_handler', None)
     if async_closure_handler is None:
-      async_closure_handler = AsyncClosureHandler()
+      async_closure_handler = xc.AsyncClosureHandler()
       devctx.async_closure_handler = async_closure_handler
     async_closure_handler.run_all(async_step_closures)
 

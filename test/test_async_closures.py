@@ -1,13 +1,9 @@
-"""Tests for xla_dist."""
-from __future__ import division
-from __future__ import print_function
+"""Tests for asynchronous closures."""
 from threading import Event
 from time import sleep
 
 import unittest
-from unittest import mock
 
-import torch
 import torch_xla.core.xla_model as xm
 
 
