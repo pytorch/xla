@@ -172,7 +172,10 @@ supported:
   - index_fill_.int_Tensor
   - scatter.src_out
   - scatter.value_out
+  - scatter.reduce_out
+  - scatter.value_reduce_out
   - scatter_add_
+  - scatter_add.out
   - bitwise_and.Tensor_out
   - bitwise_and.Scalar_out
   - bitwise_or.Tensor_out

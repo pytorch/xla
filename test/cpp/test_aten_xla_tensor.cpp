@@ -4280,7 +4280,7 @@ TEST_F(AtenXlaTensorTest, TestScatterAdd) {
   }
 
   ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
-  ExpectCounterChanged("xla::scatter_add_", cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::scatter_add_out", cpp_test::GetIgnoredCounters());
 }
 
 TEST_F(AtenXlaTensorTest, TestScatterAddInPlace) {
