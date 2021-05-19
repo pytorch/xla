@@ -1,4 +1,4 @@
-#include "torch_xla/csrc/aten_xla_type.h"
+#include "torch_xla/csrc/XLANativeFunctions.h"
 
 #include <ATen/Context.h>
 #include <ATen/native/BinaryOps.h>
