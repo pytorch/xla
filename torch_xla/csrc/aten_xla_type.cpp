@@ -1,5 +1,3 @@
-#include "torch_xla/csrc/XLANativeFunctions.h"
-
 #include <ATen/Context.h>
 #include <ATen/native/BinaryOps.h>
 
@@ -9,6 +7,7 @@
 #include "tensorflow/compiler/xla/xla_client/metrics.h"
 #include "tensorflow/compiler/xla/xla_client/sys_util.h"
 #include "tensorflow/compiler/xla/xla_client/util.h"
+#include "torch_xla/csrc/XLANativeFunctions.h"
 #include "torch_xla/csrc/aten_autograd_ops.h"
 #include "torch_xla/csrc/aten_xla_bridge.h"
 #include "torch_xla/csrc/aten_xla_type_default.h"
