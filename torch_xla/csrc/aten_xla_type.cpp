@@ -2199,7 +2199,7 @@ at::Tensor norm(const at::Tensor& self, const c10::optional<at::Scalar>& p,
                                         const at::Tensor&,
                                         const c10::optional<at::Scalar>&,
                                         at::IntArrayRef, bool, at::ScalarType>(
-        "aten::norm", "", self, p, dim, keepdim, dtype);
+        "aten::norm", "ScalarOpt_dim_dtype", self, p, dim, keepdim, dtype);
   }
   return bridge::AtenFromXlaTensor(
       XLATensor::norm(bridge::GetXlaTensor(self), p, dtype, dim, keepdim));
@@ -2214,7 +2214,7 @@ at::Tensor norm(const at::Tensor& self, const c10::optional<at::Scalar>& p,
     return at::native::call_fallback_fn<
         &xla_cpu_fallback, at::Tensor, const at::Tensor&,
         const c10::optional<at::Scalar>&, at::IntArrayRef, bool>(
-        "aten::norm", "", self, p, dim, keepdim);
+        "aten::norm", "ScalarOpt_dim", self, p, dim, keepdim);
   }
   return bridge::AtenFromXlaTensor(XLATensor::norm(
       bridge::GetXlaTensor(self), p, c10::nullopt, dim, keepdim));
@@ -2227,7 +2227,7 @@ at::Tensor normal(const at::Tensor& mean, double std,
     return at::native::call_fallback_fn<&xla_cpu_fallback, at::Tensor,
                                         const at::Tensor&, double,
                                         c10::optional<at::Generator>>(
-        "aten::normal", "", mean, std, generator);
+        "aten::normal", "Tensor_float", mean, std, generator);
   }
   return bridge::AtenFromXlaTensor(
       XLATensor::normal(bridge::GetXlaTensor(mean), std));
@@ -2240,7 +2240,7 @@ at::Tensor normal(double mean, const at::Tensor& std,
     return at::native::call_fallback_fn<&xla_cpu_fallback, at::Tensor, double,
                                         const at::Tensor&,
                                         c10::optional<at::Generator>>(
-        "aten::normal", "", mean, std, generator);
+        "aten::normal", "float_Tensor", mean, std, generator);
   }
   return bridge::AtenFromXlaTensor(
       XLATensor::normal(mean, bridge::GetXlaTensor(std)));
@@ -2253,7 +2253,7 @@ at::Tensor normal(const at::Tensor& mean, const at::Tensor& std,
     return at::native::call_fallback_fn<&xla_cpu_fallback, at::Tensor,
                                         const at::Tensor&, const at::Tensor&,
                                         c10::optional<at::Generator>>(
-        "aten::normal", "", mean, std, generator);
+        "aten::normal", "Tensor_Tensor", mean, std, generator);
   }
   return bridge::AtenFromXlaTensor(
       XLATensor::normal(bridge::GetXlaTensor(mean), bridge::GetXlaTensor(std)));
