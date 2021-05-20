@@ -10142,6 +10142,10 @@ TEST_F(AtenXlaTensorTest, TestEmbeddingBackward) {
 }
 
 TEST_F(AtenXlaTensorTest, TestAmpForeachNonFiniteCheckAndUnscale) {
+  DeviceType hw_type = GetDefaultDevice()->hw_type;
+  if (hw_type != DeviceType::GPU && hw_type != DeviceType::CPU) {
+    return;
+  }
   torch::Tensor grads0 =
       torch::tensor({1, 2, 3, 4}, torch::TensorOptions(torch::kFloat));
   torch::Tensor grads1 = torch::tensor({1.0, 2.0, std::nan("1"), 4.0},
@@ -10175,6 +10179,10 @@ TEST_F(AtenXlaTensorTest, TestAmpForeachNonFiniteCheckAndUnscale) {
 }
 
 TEST_F(AtenXlaTensorTest, TestAmpUpdateScale) {
+  DeviceType hw_type = GetDefaultDevice()->hw_type;
+  if (hw_type != DeviceType::GPU && hw_type != DeviceType::CPU) {
+    return;
+  }
   torch::Tensor growth_tracker =
       torch::scalar_tensor(0, torch::TensorOptions(torch::kInt32));
   torch::Tensor current_scale =

@@ -326,6 +326,7 @@ DISABLED_TORCH_TESTS_TPU_ONLY = {
         'test_take_xla_bfloat16',  # (TPU) -6.53125 vs. -6.5625
         'test_multinomial_constraints',  # server side crash
         'test_multinomial_invalid_distribution',  # server side crash
+        'test_multinomial_invalid_xla',  # TODO: only fail on xlml
         'test_softplus_low_threshold_xla',  # server side crash
         'test_put_xla_float64',  # slow on TPU (~16 min)
         'test_put_xla_int16',  # slow on TPU (~13 min)
