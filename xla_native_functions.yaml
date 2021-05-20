@@ -6,7 +6,6 @@ supported:
   - acos
   - acos_
   - add.Tensor
-  - add_.Tensor
   - add.Scalar
   - add_.Scalar
   - all.dim
@@ -52,6 +51,8 @@ supported:
   - convolution_overrideable
   - convolution_backward_overrideable
   - _copy_from
+  - _copy_from_and_resize
+  - _to_cpu
   - cos
   - cos_
   - cosh
