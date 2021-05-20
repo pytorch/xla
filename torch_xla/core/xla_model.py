@@ -692,7 +692,7 @@ def add_step_closure(closure, args=(), run_async=False):
   Args:
     closure (callable): The function to be called.
     args (tuple): The arguments to be passed to the closure.
-    run_async: If True, run the closure asynchronously
+    run_async: If True, run the closure asynchronously.
   """
   devctx = _get_device_context()
   closures_type = 'async_step_closures' if run_async else 'step_closures'
