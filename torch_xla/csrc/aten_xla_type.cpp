@@ -501,7 +501,8 @@ at::Tensor addcdiv(const at::Tensor& self, const at::Tensor& tensor1,
 }
 
 at::Tensor& addcdiv_(at::Tensor& self, const at::Tensor& tensor1,
-                     const at::Tensor& tensor2, const at::Scalar& value) {
+                                  const at::Tensor& tensor2,
+                                  const at::Scalar& value) {
   XLA_FN_COUNTER("xla::");
   XLATensor self_tensor = bridge::GetXlaTensor(self);
   XLATensor::addcdiv_(self_tensor, value, bridge::GetXlaTensor(tensor1),
