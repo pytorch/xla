@@ -1107,7 +1107,7 @@ XLATensor XLATensor::diagonal(const XLATensor& input, xla::int64 offset,
 }
 
 XLATensor XLATensor::div(const XLATensor& input, const XLATensor& other,
-                         const c10::optional<std::string>& rounding_mode,
+                         const c10::optional<c10::string_view>& rounding_mode,
                          c10::optional<at::ScalarType> logical_element_type) {
   at::ScalarType scalar_type =
       at::typeMetaToScalarType(c10::get_default_dtype());
@@ -1167,7 +1167,7 @@ XLATensor XLATensor::div(const XLATensor& input, const at::Scalar& other) {
 }
 
 void XLATensor::div_(XLATensor& input, const XLATensor& other,
-                     const c10::optional<std::string>& rounding_mode) {
+                     const c10::optional<c10::string_view>& rounding_mode) {
   at::ScalarType scalar_type =
       at::typeMetaToScalarType(c10::get_default_dtype());
   ir::Value input_value = GetFloatingIrValue(input, scalar_type);
