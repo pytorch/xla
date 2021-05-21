@@ -413,7 +413,7 @@ TEST_F(AtenXlaTensorTest, TestDivInPlace) {
     }
   }
   ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
-  ExpectCounterChanged("xla::div_", cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::div", cpp_test::GetIgnoredCounters());
 }
 
 TEST_F(AtenXlaTensorTest, TestDivInPlaceWithRoundingMode) {
@@ -443,7 +443,7 @@ TEST_F(AtenXlaTensorTest, TestDivInPlaceWithRoundingMode) {
     }
   }
   ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
-  ExpectCounterChanged("xla::div_", cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::div", cpp_test::GetIgnoredCounters());
 }
 
 TEST_F(AtenXlaTensorTest, TestDivScalar) {
@@ -485,7 +485,7 @@ TEST_F(AtenXlaTensorTest, TestDivScalarInPlace) {
     }
   }
   ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
-  ExpectCounterChanged("xla::div_", cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::div", cpp_test::GetIgnoredCounters());
 }
 
 TEST_F(AtenXlaTensorTest, TestDivOut) {
@@ -1920,7 +1920,7 @@ TEST_F(AtenXlaTensorTest, TestCosineSimilarity) {
 
     ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
     ExpectCounterChanged("xla::sum", cpp_test::GetIgnoredCounters());
-    ExpectCounterChanged("xla::clamp_min_", cpp_test::GetIgnoredCounters());
+    ExpectCounterChanged("xla::clamp_min", cpp_test::GetIgnoredCounters());
   }
 }
 
@@ -1944,7 +1944,7 @@ TEST_F(AtenXlaTensorTest, TestCosineEmbeddingLoss) {
         AllClose(output, xla_output);
       });
       ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
-      ExpectCounterChanged("xla::clamp_min_", cpp_test::GetIgnoredCounters());
+      ExpectCounterChanged("xla::clamp_min", cpp_test::GetIgnoredCounters());
     }
   }
 }
@@ -1968,7 +1968,7 @@ TEST_F(AtenXlaTensorTest, TestHingeEmbeddingLoss) {
       });
 
       ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
-      ExpectCounterChanged("xla::clamp_min_", cpp_test::GetIgnoredCounters());
+      ExpectCounterChanged("xla::clamp_min", cpp_test::GetIgnoredCounters());
     }
   }
 }
@@ -2063,7 +2063,7 @@ TEST_F(AtenXlaTensorTest, TestMarginRankingLoss) {
       });
 
       ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
-      ExpectCounterChanged("xla::clamp_min_", cpp_test::GetIgnoredCounters());
+      ExpectCounterChanged("xla::clamp_min", cpp_test::GetIgnoredCounters());
     }
   }
 }
@@ -2476,7 +2476,7 @@ TEST_F(AtenXlaTensorTest, TestAsinhInPlace) {
     AllClose(b, xla_b, /*rtol=*/1e-3, /*atol=*/1e-5);
   });
   ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
-  ExpectCounterChanged("xla::asinh_", cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::asinh", cpp_test::GetIgnoredCounters());
 }
 
 TEST_F(AtenXlaTensorTest, TestSin) {
@@ -2533,7 +2533,7 @@ TEST_F(AtenXlaTensorTest, TestAcoshInPlace) {
     AllClose(b, xla_b, /*rtol=*/1e-3, /*atol=*/1e-5);
   });
   ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
-  ExpectCounterChanged("xla::acosh_", cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::acosh", cpp_test::GetIgnoredCounters());
 }
 
 TEST_F(AtenXlaTensorTest, TestCos) {
@@ -2588,7 +2588,7 @@ TEST_F(AtenXlaTensorTest, TestAtanhInPlace) {
     AllClose(b, xla_b, /*rtol=*/1e-3, /*atol=*/1e-5);
   });
   ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
-  ExpectCounterChanged("xla::atanh_", cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::atanh", cpp_test::GetIgnoredCounters());
 }
 
 TEST_F(AtenXlaTensorTest, TestAtan2) {
@@ -2777,7 +2777,7 @@ TEST_F(AtenXlaTensorTest, TestClampMinExplicitInPlace) {
     AllClose(b, xla_b);
   });
   ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
-  ExpectCounterChanged("xla::clamp_min_", cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::clamp_min", cpp_test::GetIgnoredCounters());
 }
 
 TEST_F(AtenXlaTensorTest, TestClampMaxExplicitInPlace) {
@@ -2791,7 +2791,7 @@ TEST_F(AtenXlaTensorTest, TestClampMaxExplicitInPlace) {
     AllClose(b, xla_b);
   });
   ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
-  ExpectCounterChanged("xla::clamp_max_", cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::clamp_max", cpp_test::GetIgnoredCounters());
 }
 
 TEST_F(AtenXlaTensorTest, TestCeil) {
@@ -3192,7 +3192,7 @@ TEST_F(AtenXlaTensorTest, TestBlackmanWindow) {
 
     ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
     ExpectCounterChanged("xla::arange_out", cpp_test::GetIgnoredCounters());
-    ExpectCounterChanged("xla::cos_", cpp_test::GetIgnoredCounters());
+    ExpectCounterChanged("xla::cos", cpp_test::GetIgnoredCounters());
   }
 }
 
@@ -3213,7 +3213,7 @@ TEST_F(AtenXlaTensorTest, TestHammingWindow) {
 
     ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
     ExpectCounterChanged("xla::arange_out", cpp_test::GetIgnoredCounters());
-    ExpectCounterChanged("xla::cos_", cpp_test::GetIgnoredCounters());
+    ExpectCounterChanged("xla::cos", cpp_test::GetIgnoredCounters());
   }
 }
 
@@ -3231,7 +3231,7 @@ TEST_F(AtenXlaTensorTest, TestHannWindow) {
 
     ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
     ExpectCounterChanged("xla::arange_out", cpp_test::GetIgnoredCounters());
-    ExpectCounterChanged("xla::cos_", cpp_test::GetIgnoredCounters());
+    ExpectCounterChanged("xla::cos", cpp_test::GetIgnoredCounters());
   }
 }
 
@@ -3475,7 +3475,7 @@ TEST_F(AtenXlaTensorTest, TestBatchAddBatchMatMulInPlace) {
   });
 
   ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
-  ExpectCounterChanged("xla::baddbmm_", cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::baddbmm", cpp_test::GetIgnoredCounters());
 }
 
 TEST_F(AtenXlaTensorTest, TestBatchMatMul) {
@@ -5513,7 +5513,7 @@ TEST_F(AtenXlaTensorTest, TestHardSigmoidInPlace) {
     AllClose(output, xla_output);
   });
   ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
-  ExpectCounterChanged("xla::hardsigmoid_", cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::hardsigmoid", cpp_test::GetIgnoredCounters());
 }
 
 TEST_F(AtenXlaTensorTest, TestHardSigmoidBackward) {

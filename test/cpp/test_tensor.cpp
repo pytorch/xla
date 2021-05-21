@@ -6,6 +6,7 @@
 
 #include "cpp_test_util.h"
 #include "torch/csrc/autograd/variable.h"
+#include "torch_xla/csrc/aten_xla_bridge.h"
 #include "torch_xla/csrc/tensor.h"
 #include "torch_xla/csrc/tensor_util.h"
 #include "torch_xla_test.h"
@@ -201,17 +202,15 @@ TEST_F(TensorTest, TestView) {
 TEST_F(TensorTest, TestViewMod) {
   at::Tensor input = at::zeros({32, 20, 4, 4}, at::TensorOptions(at::kFloat));
   at::Tensor one = at::tensor(1.0, at::TensorOptions(at::kFloat));
-  at::Tensor output = input.view({-1, 320});
+  at::Tensor output = input.view({-1, 8});
   output.add_(one, 1.0);
   input.add_(one, 1.0);
   ForEachDevice([&](const Device& device) {
-    at::Tensor xinput =
-        at::zeros({32, 20, 4, 4}, at::TensorOptions(at::kFloat));
-    XLATensor dev_input = XLATensor::Create(xinput, device);
-    XLATensor dev_one = XLATensor::Create(one, device);
-    XLATensor dev_output = XLATensor::view(dev_input, {-1, 320});
-    XLATensor::add_(dev_output, dev_one, 1.0);
-    XLATensor::add_(dev_input, dev_one, 1.0);
+    at::Tensor dev_input = at::zeros({32, 20, 4, 4}, at::TensorOptions(bridge::XlaDeviceToAtenDevice(device)));
+    at::Tensor dev_one = at::tensor(1.0, at::TensorOptions(bridge::XlaDeviceToAtenDevice(device)));
+    at::Tensor dev_output = dev_input.view({-1, 8});
+    dev_output.add_(dev_one, 1.0);
+    dev_input.add_(dev_one, 1.0);
     AllClose(output, dev_output);
     AllClose(input, dev_input);
   });
@@ -225,14 +224,12 @@ TEST_F(TensorTest, TestViewModComplex) {
   at::Tensor output2 = input.view({-1, 160});
   output2.add_(one, 1.0);
   ForEachDevice([&](const Device& device) {
-    at::Tensor xinput =
-        at::zeros({32, 20, 4, 4}, at::TensorOptions(at::kFloat));
-    XLATensor dev_input = XLATensor::Create(xinput, device);
-    XLATensor dev_one = XLATensor::Create(one, device);
-    XLATensor dev_output1 = XLATensor::view(dev_input, {-1, 320});
-    XLATensor::add_(dev_output1, dev_one, 1.0);
-    XLATensor dev_output2 = XLATensor::view(dev_input, {-1, 160});
-    XLATensor::add_(dev_output2, dev_one, 1.0);
+    at::Tensor dev_input = at::zeros({32, 20, 4, 4}, at::TensorOptions(bridge::XlaDeviceToAtenDevice(device)));
+    at::Tensor dev_one = at::tensor(1.0, at::TensorOptions(bridge::XlaDeviceToAtenDevice(device)));
+    at::Tensor dev_output1 = dev_input.view({-1, 320});
+    dev_output1.add_(dev_one, 1.0);
+    at::Tensor dev_output2 = dev_input.view({-1, 160});
+    dev_output2.add_(dev_one, 1.0);
     AllClose(output1, dev_output1);
     AllClose(output2, dev_output2);
   });
@@ -246,14 +243,12 @@ TEST_F(TensorTest, TestViewOfViewMod) {
   at::Tensor output2 = output1.view({-1, 160});
   output2.add_(one, 1.0);
   ForEachDevice([&](const Device& device) {
-    at::Tensor xinput =
-        at::zeros({32, 20, 4, 4}, at::TensorOptions(at::kFloat));
-    XLATensor dev_input = XLATensor::Create(xinput, device);
-    XLATensor dev_one = XLATensor::Create(one, device);
-    XLATensor dev_output1 = XLATensor::view(dev_input, {-1, 320});
-    XLATensor::add_(dev_output1, dev_one, 1.0);
-    XLATensor dev_output2 = XLATensor::view(dev_output1, {-1, 160});
-    XLATensor::add_(dev_output2, dev_one, 1.0);
+    at::Tensor dev_input = at::zeros({32, 20, 4, 4}, at::TensorOptions(bridge::XlaDeviceToAtenDevice(device)));
+    at::Tensor dev_one = at::tensor(1.0, at::TensorOptions(bridge::XlaDeviceToAtenDevice(device)));
+    at::Tensor dev_output1 = dev_input.view({-1, 320});
+    dev_output1.add_(dev_one, 1.0);
+    at::Tensor dev_output2 = dev_input.view({-1, 160});
+    dev_output2.add_(dev_one, 1.0);
     AllClose(output1, dev_output1);
     AllClose(output2, dev_output2);
   });
