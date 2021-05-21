@@ -2359,9 +2359,12 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor> AtenXlaType::native_batch_norm(
       bridge::GetXlaTensor(input), bridge::GetOrCreateXlaTensor(weight, device),
       bridge::GetOrCreateXlaTensor(bias, device), running_mean_tensor,
       running_var_tensor, training, momentum, eps);
-  return std::make_tuple(bridge::AtenFromXlaTensor(std::get<0>(outputs)),
-                         bridge::AtenFromXlaTensor(std::get<1>(outputs)),
-                         bridge::AtenFromXlaTensor(std::get<2>(outputs)));
+  return std::make_tuple(
+      bridge::AtenFromXlaTensor(std::get<0>(outputs)),
+      training ? bridge::AtenFromXlaTensor(std::get<1>(outputs))
+               : at::empty({0}, input.options()),
+      training ? bridge::AtenFromXlaTensor(std::get<2>(outputs))
+               : at::empty({0}, input.options()));
 }
 
 std::tuple<at::Tensor, at::Tensor, at::Tensor>
