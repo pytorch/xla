@@ -206,8 +206,11 @@ TEST_F(TensorTest, TestViewMod) {
   output.add_(one, 1.0);
   input.add_(one, 1.0);
   ForEachDevice([&](const Device& device) {
-    at::Tensor dev_input = at::zeros({32, 20, 4, 4}, at::TensorOptions(bridge::XlaDeviceToAtenDevice(device)));
-    at::Tensor dev_one = at::tensor(1.0, at::TensorOptions(bridge::XlaDeviceToAtenDevice(device)));
+    at::Tensor dev_input =
+        at::zeros({32, 20, 4, 4},
+                  at::TensorOptions(bridge::XlaDeviceToAtenDevice(device)));
+    at::Tensor dev_one = at::tensor(
+        1.0, at::TensorOptions(bridge::XlaDeviceToAtenDevice(device)));
     at::Tensor dev_output = dev_input.view({-1, 320});
     dev_output.add_(dev_one, 1.0);
     dev_input.add_(dev_one, 1.0);
@@ -224,8 +227,11 @@ TEST_F(TensorTest, TestViewModComplex) {
   at::Tensor output2 = input.view({-1, 160});
   output2.add_(one, 1.0);
   ForEachDevice([&](const Device& device) {
-    at::Tensor dev_input = at::zeros({32, 20, 4, 4}, at::TensorOptions(bridge::XlaDeviceToAtenDevice(device)));
-    at::Tensor dev_one = at::tensor(1.0, at::TensorOptions(bridge::XlaDeviceToAtenDevice(device)));
+    at::Tensor dev_input =
+        at::zeros({32, 20, 4, 4},
+                  at::TensorOptions(bridge::XlaDeviceToAtenDevice(device)));
+    at::Tensor dev_one = at::tensor(
+        1.0, at::TensorOptions(bridge::XlaDeviceToAtenDevice(device)));
     at::Tensor dev_output1 = dev_input.view({-1, 320});
     dev_output1.add_(dev_one, 1.0);
     at::Tensor dev_output2 = dev_input.view({-1, 160});
@@ -243,8 +249,11 @@ TEST_F(TensorTest, TestViewOfViewMod) {
   at::Tensor output2 = output1.view({-1, 160});
   output2.add_(one, 1.0);
   ForEachDevice([&](const Device& device) {
-    at::Tensor dev_input = at::zeros({32, 20, 4, 4}, at::TensorOptions(bridge::XlaDeviceToAtenDevice(device)));
-    at::Tensor dev_one = at::tensor(1.0, at::TensorOptions(bridge::XlaDeviceToAtenDevice(device)));
+    at::Tensor dev_input =
+        at::zeros({32, 20, 4, 4},
+                  at::TensorOptions(bridge::XlaDeviceToAtenDevice(device)));
+    at::Tensor dev_one = at::tensor(
+        1.0, at::TensorOptions(bridge::XlaDeviceToAtenDevice(device)));
     at::Tensor dev_output1 = dev_input.view({-1, 320});
     dev_output1.add_(dev_one, 1.0);
     at::Tensor dev_output2 = dev_input.view({-1, 160});
