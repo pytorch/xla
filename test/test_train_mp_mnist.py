@@ -131,7 +131,9 @@ def train_mnist(flags, **kwargs):
       tracker.add(flags.batch_size)
       if step % flags.log_steps == 0:
         xm.add_step_closure(
-            _train_update, args=(device, step, loss, tracker, writer))
+            _train_update,
+            args=(device, step, loss, tracker, writer),
+            run_async=FLAGS.async_closures)
 
   def test_loop_fn(loader):
     total_samples = 0
