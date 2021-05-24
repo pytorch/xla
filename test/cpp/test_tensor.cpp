@@ -202,7 +202,7 @@ TEST_F(TensorTest, TestView) {
 TEST_F(TensorTest, TestViewMod) {
   at::Tensor input = at::zeros({32, 20, 4, 4}, at::TensorOptions(at::kFloat));
   at::Tensor one = at::tensor(1.0, at::TensorOptions(at::kFloat));
-  at::Tensor output = input.view({-1, 8});
+  at::Tensor output = input.view({-1, 320});
   output.add_(one, 1.0);
   input.add_(one, 1.0);
   ForEachDevice([&](const Device& device) {
