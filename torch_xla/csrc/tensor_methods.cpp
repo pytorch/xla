@@ -2019,6 +2019,10 @@ std::tuple<XLATensor, XLATensor, XLATensor> XLATensor::native_batch_norm(
       running_var.SetIrValue(ir::MakeNode<ir::ops::LinearInterpolation>(
           ir::Value(node, 2), running_var.GetIrValue(), momentum));
     }
+  } else {
+    at::Tensor at_input = bridge::AtenFromXlaTensor(input);
+    mean = bridge::GetXlaTensor(at::empty({0}, at_input.options()));
+    variance_inverse = bridge::GetXlaTensor(at::empty({0}, at_input.options()));
   }
   return std::make_tuple(std::move(output), std::move(mean),
                          std::move(variance_inverse));
