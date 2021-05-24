@@ -299,6 +299,7 @@
 <span class="kn">import</span> <span class="nn">torch_xla.core.xla_env_vars</span> <span class="k">as</span> <span class="nn">xenv</span>
 <span class="kn">import</span> <span class="nn">torch_xla.debug.metrics_saver</span> <span class="k">as</span> <span class="nn">ms</span>
 <span class="kn">import</span> <span class="nn">torch_xla.utils.utils</span> <span class="k">as</span> <span class="nn">xu</span>
+<span class="kn">import</span> <span class="nn">torch_xla.utils.closures</span> <span class="k">as</span> <span class="nn">xc</span>
 <span class="kn">import</span> <span class="nn">torch_xla.utils.keyd_queue</span> <span class="k">as</span> <span class="nn">kq</span>
 
 <span class="n">_DEVICES</span> <span class="o">=</span> <span class="n">xu</span><span class="o">.</span><span class="n">LazyProperty</span><span class="p">(</span><span class="k">lambda</span><span class="p">:</span> <span class="n">torch_xla</span><span class="o">.</span><span class="n">_XLAC</span><span class="o">.</span><span class="n">_xla_get_devices</span><span class="p">())</span>
@@ -956,7 +957,7 @@
   <span class="k">return</span> <span class="n">result</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
 
 
-<div class="viewcode-block" id="add_step_closure"><a class="viewcode-back" href="../../../index.html#torch_xla.core.xla_model.add_step_closure">[docs]</a><span class="k">def</span> <span class="nf">add_step_closure</span><span class="p">(</span><span class="n">closure</span><span class="p">,</span> <span class="n">args</span><span class="o">=</span><span class="p">()):</span>
+<div class="viewcode-block" id="add_step_closure"><a class="viewcode-back" href="../../../index.html#torch_xla.core.xla_model.add_step_closure">[docs]</a><span class="k">def</span> <span class="nf">add_step_closure</span><span class="p">(</span><span class="n">closure</span><span class="p">,</span> <span class="n">args</span><span class="o">=</span><span class="p">(),</span> <span class="n">run_async</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
   <span class="sd">&quot;&quot;&quot;Adds a closure to the list of the ones to be run at the end of the step.</span>
 
 <span class="sd">  Many times during model training there is the need to print/report (print to</span>
@@ -977,17 +978,28 @@
 <span class="sd">  Args:</span>
 <span class="sd">    closure (callable): The function to be called.</span>
 <span class="sd">    args (tuple): The arguments to be passed to the closure.</span>
+<span class="sd">    run_async: If True, run the closure asynchronously.</span>
 <span class="sd">  &quot;&quot;&quot;</span>
   <span class="n">devctx</span> <span class="o">=</span> <span class="n">_get_device_context</span><span class="p">()</span>
-  <span class="n">step_closures</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">devctx</span><span class="p">,</span> <span class="s1">&#39;step_closures&#39;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+  <span class="n">closures_type</span> <span class="o">=</span> <span class="s1">&#39;async_step_closures&#39;</span> <span class="k">if</span> <span class="n">run_async</span> <span class="k">else</span> <span class="s1">&#39;step_closures&#39;</span>
+  <span class="n">step_closures</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">devctx</span><span class="p">,</span> <span class="n">closures_type</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
   <span class="k">if</span> <span class="n">step_closures</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
     <span class="n">step_closures</span> <span class="o">=</span> <span class="p">[]</span>
-    <span class="n">devctx</span><span class="o">.</span><span class="n">step_closures</span> <span class="o">=</span> <span class="n">step_closures</span>
+    <span class="nb">setattr</span><span class="p">(</span><span class="n">devctx</span><span class="p">,</span> <span class="n">closures_type</span><span class="p">,</span> <span class="n">step_closures</span><span class="p">)</span>
   <span class="n">step_closures</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="k">lambda</span> <span class="n">a</span><span class="o">=</span><span class="n">args</span><span class="p">:</span> <span class="n">closure</span><span class="p">(</span><span class="o">*</span><span class="n">a</span><span class="p">))</span></div>
 
 
 <span class="k">def</span> <span class="nf">_run_step_closures</span><span class="p">():</span>
   <span class="n">devctx</span> <span class="o">=</span> <span class="n">_get_device_context</span><span class="p">()</span>
+  <span class="n">async_step_closures</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">devctx</span><span class="p">,</span> <span class="s1">&#39;async_step_closures&#39;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+  <span class="k">if</span> <span class="n">async_step_closures</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+    <span class="n">devctx</span><span class="o">.</span><span class="n">async_step_closures</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="n">async_closure_handler</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">devctx</span><span class="p">,</span> <span class="s1">&#39;async_closure_handler&#39;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">async_closure_handler</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+      <span class="n">async_closure_handler</span> <span class="o">=</span> <span class="n">xc</span><span class="o">.</span><span class="n">AsyncClosureHandler</span><span class="p">()</span>
+      <span class="n">devctx</span><span class="o">.</span><span class="n">async_closure_handler</span> <span class="o">=</span> <span class="n">async_closure_handler</span>
+    <span class="n">async_closure_handler</span><span class="o">.</span><span class="n">run_all</span><span class="p">(</span><span class="n">async_step_closures</span><span class="p">)</span>
+
   <span class="n">step_closures</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">devctx</span><span class="p">,</span> <span class="s1">&#39;step_closures&#39;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
   <span class="k">if</span> <span class="n">step_closures</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
     <span class="n">devctx</span><span class="o">.</span><span class="n">step_closures</span> <span class="o">=</span> <span class="p">[]</span>

@@ -796,7 +796,7 @@ all the replicas in it.</p>
 
 <dl class="function">
 <dt id="torch_xla.core.xla_model.add_step_closure">
-<code class="sig-prename descclassname">torch_xla.core.xla_model.</code><code class="sig-name descname">add_step_closure</code><span class="sig-paren">(</span><em class="sig-param">closure</em>, <em class="sig-param">args=()</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/torch_xla/core/xla_model.html#add_step_closure"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#torch_xla.core.xla_model.add_step_closure" title="Permalink to this definition">¶</a></dt>
+<code class="sig-prename descclassname">torch_xla.core.xla_model.</code><code class="sig-name descname">add_step_closure</code><span class="sig-paren">(</span><em class="sig-param">closure</em>, <em class="sig-param">args=()</em>, <em class="sig-param">run_async=False</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/torch_xla/core/xla_model.html#add_step_closure"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#torch_xla.core.xla_model.add_step_closure" title="Permalink to this definition">¶</a></dt>
 <dd><p>Adds a closure to the list of the ones to be run at the end of the step.</p>
 <p>Many times during model training there is the need to print/report (print to
 console, post to tensorboard, etc…) information which require the content of
@@ -817,6 +817,7 @@ advised to throttle the printing/reporting events once every N steps.</p>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>closure</strong> (<em>callable</em>) – The function to be called.</p></li>
 <li><p><strong>args</strong> (<em>tuple</em>) – The arguments to be passed to the closure.</p></li>
+<li><p><strong>run_async</strong> – If True, run the closure asynchronously.</p></li>
 </ul>
 </dd>
 </dl>
