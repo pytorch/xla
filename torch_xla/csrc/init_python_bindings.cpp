@@ -33,8 +33,8 @@
 #include "torch/csrc/autograd/utils/wrap_outputs.h"
 #include "torch/csrc/autograd/variable.h"
 #include "torch/csrc/jit/python/pybind.h"
+#include "torch_xla/csrc/XLANativeFunctions.h"
 #include "torch_xla/csrc/aten_xla_bridge.h"
-#include "torch_xla/csrc/aten_xla_type.h"
 #include "torch_xla/csrc/computation.h"
 #include "torch_xla/csrc/device.h"
 #include "torch_xla/csrc/helpers.h"
@@ -708,8 +708,6 @@ void BuildProfilerSubmodule(py::module* m) {
 }
 
 void InitXlaModuleBindings(py::module m) {
-  m.def("_initialize_aten_bindings",
-        []() { AtenXlaType::InitializeAtenBindings(); });
   m.def("_prepare_to_exit", []() { PrepareToExit(); });
   m.def("_get_git_revs", []() { return GetRevisions(); });
   m.def("_get_xla_tensor_dimension_size",

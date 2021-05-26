@@ -96,6 +96,5 @@ def _prepare_to_exit():
     _summarize_fn_tracker()
 
 
-_XLAC._initialize_aten_bindings()
 atexit.register(_prepare_to_exit)
 _apply_patches()
