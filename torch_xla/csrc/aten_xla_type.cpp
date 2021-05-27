@@ -248,8 +248,8 @@ at::Tensor _adaptive_avg_pool3d(const at::Tensor& self,
   if (!IsSupportedAdaptiveAvgPool(XlaHelpers::I64List(self.sizes()),
                                   output_size_list, /*pool_dim=*/3)) {
     return at::native::call_fallback_fn<
-        &xla_cpu_fallback, ATEN_OP(_adaptive_avg_pool3d)>::call(
-                                                  self, output_size);
+        &xla_cpu_fallback, ATEN_OP(_adaptive_avg_pool3d)>::call(self,
+                                                                output_size);
   }
   return bridge::AtenFromXlaTensor(XLATensor::adaptive_avg_pool3d(
       bridge::GetXlaTensor(self), output_size_list));
@@ -265,8 +265,8 @@ at::Tensor _adaptive_avg_pool3d_backward(const at::Tensor& grad_output,
   if (!IsSupportedAdaptiveAvgPool(XlaHelpers::I64List(self.sizes()),
                                   output_size, /*pool_dim=*/3)) {
     return at::native::call_fallback_fn<
-        &xla_cpu_fallback, ATEN_OP(_adaptive_avg_pool3d_backward)>::call(
-        grad_output, self);
+        &xla_cpu_fallback,
+        ATEN_OP(_adaptive_avg_pool3d_backward)>::call(grad_output, self);
   }
   return bridge::AtenFromXlaTensor(XLATensor::adaptive_avg_pool3d_backward(
       bridge::GetXlaTensor(grad_output), bridge::GetXlaTensor(self)));
@@ -279,8 +279,8 @@ at::Tensor _adaptive_avg_pool2d(const at::Tensor& self,
   if (!IsSupportedAdaptiveAvgPool(XlaHelpers::I64List(self.sizes()),
                                   output_size_list, /*pool_dim=*/2)) {
     return at::native::call_fallback_fn<
-        &xla_cpu_fallback, ATEN_OP(_adaptive_avg_pool2d)>::call(
-                                                  self, output_size);
+        &xla_cpu_fallback, ATEN_OP(_adaptive_avg_pool2d)>::call(self,
+                                                                output_size);
   }
   return bridge::AtenFromXlaTensor(XLATensor::_adaptive_avg_pool2d(
       bridge::GetXlaTensor(self), output_size_list));
@@ -295,8 +295,8 @@ at::Tensor _adaptive_avg_pool2d_backward(const at::Tensor& grad_output,
   if (!IsSupportedAdaptiveAvgPool(XlaHelpers::I64List(self.sizes()),
                                   output_size, /*pool_dim=*/2)) {
     return at::native::call_fallback_fn<
-        &xla_cpu_fallback, ATEN_OP(_adaptive_avg_pool2d_backward)>::call(
-        grad_output, self);
+        &xla_cpu_fallback,
+        ATEN_OP(_adaptive_avg_pool2d_backward)>::call(grad_output, self);
   }
   return bridge::AtenFromXlaTensor(XLATensor::_adaptive_avg_pool2d_backward(
       bridge::GetXlaTensor(grad_output), bridge::GetXlaTensor(self)));
@@ -497,8 +497,7 @@ at::Tensor addcdiv(const at::Tensor& self, const at::Tensor& tensor1,
 }
 
 at::Tensor& addcdiv_(at::Tensor& self, const at::Tensor& tensor1,
-                                  const at::Tensor& tensor2,
-                                  const at::Scalar& value) {
+                     const at::Tensor& tensor2, const at::Scalar& value) {
   XLA_FN_COUNTER("xla::");
   XLATensor self_tensor = bridge::GetXlaTensor(self);
   XLATensor::addcdiv_(self_tensor, value, bridge::GetXlaTensor(tensor1),
@@ -523,10 +522,9 @@ at::Tensor addmm(const at::Tensor& self, const at::Tensor& mat1,
       !at::native::is_floating_point(self) ||
       !at::native::is_floating_point(mat1) ||
       !at::native::is_floating_point(mat2)) {
-    return at::native::call_fallback_fn<
-        &xla_cpu_fallback, ATEN_OP(addmm)>::call(
-            self, mat1,
-                                                      mat2, beta, alpha);
+    return at::native::call_fallback_fn<&xla_cpu_fallback,
+                                        ATEN_OP(addmm)>::call(self, mat1, mat2,
+                                                              beta, alpha);
   }
   return bridge::AtenFromXlaTensor(
       XLATensor::addmm(bridge::GetXlaTensor(mat1),
@@ -605,9 +603,8 @@ at::Tensor as_strided(const at::Tensor& self, at::IntArrayRef size,
   if (!ir::ops::AsStrided::StrideIsSupported(
           self_tensor.shape(), xsize, xstride, storage_offset.value_or(0))) {
     return at::native::call_fallback_fn<
-        &xla_cpu_fallback, ATEN_OP(as_strided)>::call(
-                                                           self, size, stride,
-                                                           storage_offset);
+        &xla_cpu_fallback, ATEN_OP(as_strided)>::call(self, size, stride,
+                                                      storage_offset);
   }
   return bridge::AtenFromXlaTensor(
       XLATensor::as_strided(self_tensor, std::move(xsize), std::move(xstride),
@@ -623,8 +620,9 @@ const at::Tensor& as_strided_(const at::Tensor& self, at::IntArrayRef size,
   auto xstride = XlaHelpers::I64List(stride);
   if (!ir::ops::AsStrided::StrideIsSupported(
           self_tensor.shape(), xsize, xstride, storage_offset.value_or(0))) {
-    return at::native::call_fallback_fn<&xla_cpu_fallback, ATEN_OP(as_strided_)>::call(
-        self, size, stride, storage_offset);
+    return at::native::call_fallback_fn<
+        &xla_cpu_fallback, ATEN_OP(as_strided_)>::call(self, size, stride,
+                                                       storage_offset);
   }
   XLATensor::as_strided_(self_tensor, std::move(xsize), std::move(xstride),
                          XlaHelpers::I64Optional(storage_offset));
@@ -657,8 +655,8 @@ at::Tensor atan2(const at::Tensor& self, const at::Tensor& other) {
   XLA_FN_COUNTER("xla::");
   // xla::Atan2 doesn't support integer types.
   if (!self.is_floating_point() || !other.is_floating_point()) {
-    return at::native::call_fallback_fn<&xla_cpu_fallback, ATEN_OP(atan2)>::call(
-        self, other);
+    return at::native::call_fallback_fn<&xla_cpu_fallback,
+                                        ATEN_OP(atan2)>::call(self, other);
   }
   return DoBinaryOp(self, other,
                     [&](const XLATensor& xself, const XLATensor& xother,
@@ -674,9 +672,10 @@ at::Tensor avg_pool2d(const at::Tensor& self, at::IntArrayRef kernel_size,
   XLA_FN_COUNTER("xla::");
   if ((ceil_mode && count_include_pad) || divisor_override) {
     return at::native::call_fallback_fn<
-        &xla_cpu_fallback, ATEN_OP(avg_pool2d)>::call(
-        self, kernel_size, stride, padding, ceil_mode,
-        count_include_pad, divisor_override);
+        &xla_cpu_fallback, ATEN_OP(avg_pool2d)>::call(self, kernel_size, stride,
+                                                      padding, ceil_mode,
+                                                      count_include_pad,
+                                                      divisor_override);
   }
   return bridge::AtenFromXlaTensor(XLATensor::avg_pool_nd(
       bridge::GetXlaTensor(self), /*spatial_dim_count=*/2,
@@ -692,11 +691,10 @@ at::Tensor avg_pool2d_backward(const at::Tensor& grad_output,
                                c10::optional<int64_t> divisor_override) {
   XLA_FN_COUNTER("xla::");
   if ((ceil_mode && count_include_pad) || divisor_override) {
-    return at::native::call_fallback_fn<
-        &xla_cpu_fallback, ATEN_OP(avg_pool2d_backward)>::call(
-        grad_output,
-                                self, kernel_size, stride, padding, ceil_mode,
-                                count_include_pad, divisor_override);
+    return at::native::
+        call_fallback_fn<&xla_cpu_fallback, ATEN_OP(avg_pool2d_backward)>::call(
+            grad_output, self, kernel_size, stride, padding, ceil_mode,
+            count_include_pad, divisor_override);
   }
   return bridge::AtenFromXlaTensor(XLATensor::avg_pool_nd_backward(
       bridge::GetXlaTensor(grad_output), bridge::GetXlaTensor(self),
@@ -712,9 +710,10 @@ at::Tensor avg_pool3d(const at::Tensor& self, at::IntArrayRef kernel_size,
   XLA_FN_COUNTER("xla::");
   if ((ceil_mode && count_include_pad) || divisor_override) {
     return at::native::call_fallback_fn<
-        &xla_cpu_fallback, ATEN_OP(avg_pool3d)>::call(
-        self, kernel_size, stride, padding, ceil_mode,
-        count_include_pad, divisor_override);
+        &xla_cpu_fallback, ATEN_OP(avg_pool3d)>::call(self, kernel_size, stride,
+                                                      padding, ceil_mode,
+                                                      count_include_pad,
+                                                      divisor_override);
   }
   return bridge::AtenFromXlaTensor(XLATensor::avg_pool_nd(
       bridge::GetXlaTensor(self), /*spatial_dim_count=*/3,
@@ -730,11 +729,10 @@ at::Tensor avg_pool3d_backward(const at::Tensor& grad_output,
                                c10::optional<int64_t> divisor_override) {
   XLA_FN_COUNTER("xla::");
   if ((ceil_mode && count_include_pad) || divisor_override) {
-    return at::native::call_fallback_fn<
-        &xla_cpu_fallback, ATEN_OP(avg_pool3d_backward)>::call(
-        grad_output,
-                                self, kernel_size, stride, padding, ceil_mode,
-                                count_include_pad, divisor_override);
+    return at::native::
+        call_fallback_fn<&xla_cpu_fallback, ATEN_OP(avg_pool3d_backward)>::call(
+            grad_output, self, kernel_size, stride, padding, ceil_mode,
+            count_include_pad, divisor_override);
   }
   return bridge::AtenFromXlaTensor(XLATensor::avg_pool_nd_backward(
       bridge::GetXlaTensor(grad_output), bridge::GetXlaTensor(self),
@@ -750,9 +748,10 @@ at::Tensor baddbmm(const at::Tensor& self, const at::Tensor& batch1,
   // xla::dot doesn't support integer types.
   if (!at::native::is_floating_point(batch1) ||
       !at::native::is_floating_point(batch2)) {
-    return at::native::call_fallback_fn<
-        &xla_cpu_fallback, ATEN_OP(baddbmm)>::call(
-        self, batch1, batch2, beta, alpha);
+    return at::native::call_fallback_fn<&xla_cpu_fallback,
+                                        ATEN_OP(baddbmm)>::call(self, batch1,
+                                                                batch2, beta,
+                                                                alpha);
   }
   return bridge::AtenFromXlaTensor(XLATensor::baddbmm(
       bridge::GetXlaTensor(self), bridge::GetXlaTensor(batch1),
@@ -763,8 +762,9 @@ at::Tensor bernoulli(const at::Tensor& self,
                      c10::optional<at::Generator> generator) {
   XLA_FN_COUNTER("xla::");
   if (generator.has_value() && generator->defined()) {
-    return at::native::call_fallback_fn<&xla_cpu_fallback, ATEN_OP(bernoulli)>::call(
-        self, generator);
+    return at::native::call_fallback_fn<&xla_cpu_fallback,
+                                        ATEN_OP(bernoulli)>::call(self,
+                                                                  generator);
   }
   XLATensor self_tensor = bridge::GetXlaTensor(self);
   return bridge::AtenFromXlaTensor(XLATensor::bernoulli(self_tensor));
@@ -774,8 +774,9 @@ at::Tensor& bernoulli_(at::Tensor& self, double p,
                        c10::optional<at::Generator> generator) {
   XLA_FN_COUNTER("xla::");
   if (generator.has_value() && generator->defined()) {
-    return at::native::call_fallback_fn<&xla_cpu_fallback, ATEN_OP2(bernoulli_, float)>::call(
-        self, p, generator);
+    return at::native::call_fallback_fn<
+        &xla_cpu_fallback, ATEN_OP2(bernoulli_, float)>::call(self, p,
+                                                              generator);
   }
   XLATensor self_tensor = bridge::GetXlaTensor(self);
   XLATensor::bernoulli_(self_tensor, p);
@@ -786,8 +787,9 @@ at::Tensor& bernoulli_(at::Tensor& self, const at::Tensor& p,
                        c10::optional<at::Generator> generator) {
   XLA_FN_COUNTER("xla::");
   if (generator.has_value() && generator->defined()) {
-    return at::native::call_fallback_fn<&xla_cpu_fallback, ATEN_OP2(bernoulli_, Tensor)>::call(
-        self, p, generator);
+    return at::native::call_fallback_fn<
+        &xla_cpu_fallback, ATEN_OP2(bernoulli_, Tensor)>::call(self, p,
+                                                               generator);
   }
   XLATensor self_tensor = bridge::GetXlaTensor(self);
   XLATensor::bernoulli_(self_tensor, bridge::GetXlaTensor(p));
@@ -1047,8 +1049,9 @@ at::Tensor cumprod(const at::Tensor& self, int64_t dim,
   if (IsOperationOnType(promoted_dtype, self_tensor.dtype(),
                         at::ScalarType::Long)) {
     // XLA reduce-window does not support S64 mode.
-    return at::native::call_fallback_fn<&xla_cpu_fallback, ATEN_OP(cumprod)>::call(
-        self, dim, dtype);
+    return at::native::call_fallback_fn<&xla_cpu_fallback,
+                                        ATEN_OP(cumprod)>::call(self, dim,
+                                                                dtype);
   }
   return bridge::AtenFromXlaTensor(
       XLATensor::cumprod(self_tensor, dim, promoted_dtype));
@@ -1060,8 +1063,9 @@ at::Tensor cumsum(const at::Tensor& self, int64_t dim,
   XLATensor self_tensor = bridge::GetXlaTensor(self);
   if (IsOperationOnType(dtype, self_tensor.dtype(), at::ScalarType::Long)) {
     // XLA reduce-window does not support S64 mode.
-    return at::native::call_fallback_fn<&xla_cpu_fallback, ATEN_OP(cumsum)>::call(
-        self, dim, dtype);
+    return at::native::call_fallback_fn<&xla_cpu_fallback,
+                                        ATEN_OP(cumsum)>::call(self, dim,
+                                                               dtype);
   }
   return bridge::AtenFromXlaTensor(XLATensor::cumsum(self_tensor, dim, dtype));
 }
@@ -1236,8 +1240,10 @@ at::Tensor& exponential_(at::Tensor& self, double lambd,
                          c10::optional<at::Generator> generator) {
   XLA_FN_COUNTER("xla::");
   if (generator.has_value() && generator->defined()) {
-    return at::native::call_fallback_fn<&xla_cpu_fallback, ATEN_OP(exponential_)>::call(
-        self, lambd, generator);
+    return at::native::call_fallback_fn<&xla_cpu_fallback,
+                                        ATEN_OP(exponential_)>::call(self,
+                                                                     lambd,
+                                                                     generator);
   }
   XLA_CHECK_GE(lambd, 0.0);
   XLATensor self_tensor = bridge::GetXlaTensor(self);
@@ -1673,8 +1679,9 @@ at::Tensor masked_select(const at::Tensor& self, const at::Tensor& mask) {
   // Initially make XLA handled masked_select() handling experimental, and
   // opt-in.
   if (!DebugUtil::ExperimentEnabled("masked_select")) {
-    return at::native::call_fallback_fn<&xla_cpu_fallback, ATEN_OP(masked_select)>::call(
-        self, mask);
+    return at::native::call_fallback_fn<&xla_cpu_fallback,
+                                        ATEN_OP(masked_select)>::call(self,
+                                                                      mask);
   }
   return bridge::AtenFromXlaTensor(
       XLATensor::masked_select(self_tensor, bridge::GetXlaTensor(mask)));
@@ -1728,10 +1735,13 @@ std::tuple<at::Tensor, at::Tensor> max_pool2d_with_indices(
   XLA_FN_COUNTER("xla::");
   // Lowering when ceil_mode or dilation is set not supported yet.
   if (IsNonTrivialDilation(dilation)) {
-    return at::native::call_fallback_fn<&xla_cpu_fallback, ATEN_OP(max_pool2d_with_indices)>::call(
-        self,
-                               kernel_size, stride, padding, dilation,
-                               ceil_mode);
+    return at::native::call_fallback_fn<
+        &xla_cpu_fallback, ATEN_OP(max_pool2d_with_indices)>::call(self,
+                                                                   kernel_size,
+                                                                   stride,
+                                                                   padding,
+                                                                   dilation,
+                                                                   ceil_mode);
   }
   auto outputs = XLATensor::max_pool_nd(
       bridge::GetXlaTensor(self), /*spatial_dim_count=*/2,
@@ -1749,9 +1759,12 @@ at::Tensor max_pool2d_with_indices_backward(
   XLA_FN_COUNTER("xla::");
   // Lowering when ceil_mode or dilation is set not supported yet.
   if (IsNonTrivialDilation(dilation)) {
-    return at::native::call_fallback_fn<&xla_cpu_fallback, ATEN_OP(max_pool2d_with_indices_backward)>::call(
-                                 grad_output, self, kernel_size, stride,
-                                 padding, dilation, ceil_mode, indices);
+    return at::native::call_fallback_fn<
+        &xla_cpu_fallback,
+        ATEN_OP(max_pool2d_with_indices_backward)>::call(grad_output, self,
+                                                         kernel_size, stride,
+                                                         padding, dilation,
+                                                         ceil_mode, indices);
   }
   return bridge::AtenFromXlaTensor(XLATensor::max_pool_nd_backward(
       bridge::GetXlaTensor(grad_output), bridge::GetXlaTensor(self),
@@ -1776,9 +1789,11 @@ at::Tensor max_pool3d_with_indices_backward(
   // Lowering when ceil_mode or dilation is set not supported yet.
   if (IsNonTrivialDilation(dilation)) {
     return at::native::call_fallback_fn<
-        &xla_cpu_fallback, ATEN_OP(max_pool3d_with_indices_backward)>::call(
-                                 grad_output, self, kernel_size, stride,
-                                 padding, dilation, ceil_mode, indices);
+        &xla_cpu_fallback,
+        ATEN_OP(max_pool3d_with_indices_backward)>::call(grad_output, self,
+                                                         kernel_size, stride,
+                                                         padding, dilation,
+                                                         ceil_mode, indices);
   }
   return bridge::AtenFromXlaTensor(XLATensor::max_pool_nd_backward(
       bridge::GetXlaTensor(grad_output), bridge::GetXlaTensor(self),
@@ -1793,10 +1808,12 @@ std::tuple<at::Tensor, at::Tensor> max_pool3d_with_indices(
   // Lowering when ceil_mode or dilation is set not supported yet.
   if (IsNonTrivialDilation(dilation)) {
     return at::native::call_fallback_fn<
-        &xla_cpu_fallback, ATEN_OP(max_pool3d_with_indices)>::call(
-        self,
-                               kernel_size, stride, padding, dilation,
-                               ceil_mode);
+        &xla_cpu_fallback, ATEN_OP(max_pool3d_with_indices)>::call(self,
+                                                                   kernel_size,
+                                                                   stride,
+                                                                   padding,
+                                                                   dilation,
+                                                                   ceil_mode);
   }
   auto outputs = XLATensor::max_pool_nd(
       bridge::GetXlaTensor(self), /*spatial_dim_count=*/3,
@@ -1963,9 +1980,8 @@ at::Tensor& mv_out(const at::Tensor& self, const at::Tensor& vec,
   // xla::dot doesn't support integer types.
   if (!at::native::is_floating_point(self) ||
       !at::native::is_floating_point(vec)) {
-    return at::native::call_fallback_fn<&xla_cpu_fallback, ATEN_OP(mv_out)>::call(
-                                        self,
-                                                     vec, out);
+    return at::native::call_fallback_fn<&xla_cpu_fallback,
+                                        ATEN_OP(mv_out)>::call(self, vec, out);
   }
   XLATensor out_tensor = bridge::GetXlaTensor(out);
   XLATensor::mv_out(out_tensor, bridge::GetXlaTensor(self),
@@ -2119,8 +2135,8 @@ at::Tensor nonzero(const at::Tensor& self) {
   XLATensor self_tensor = bridge::GetXlaTensor(self);
   // Initially make XLA handled nonzero() handling experimental, and opt-in.
   if (!DebugUtil::ExperimentEnabled("nonzero")) {
-    return at::native::call_fallback_fn<&xla_cpu_fallback, ATEN_OP(nonzero)>::call(
-                                                           self);
+    return at::native::call_fallback_fn<&xla_cpu_fallback,
+                                        ATEN_OP(nonzero)>::call(self);
   }
   return bridge::AtenFromXlaTensor(XLATensor::nonzero(self_tensor));
 }
@@ -2132,8 +2148,8 @@ at::Tensor norm(const at::Tensor& self, const c10::optional<at::Scalar>& p,
   // shapes issue.
   if (p.has_value() && p->toDouble() == 0) {
     return at::native::call_fallback_fn<
-        &xla_cpu_fallback, ATEN_OP2(norm, ScalarOpt_dtype)>::call(
-        self, p, dtype);
+        &xla_cpu_fallback, ATEN_OP2(norm, ScalarOpt_dtype)>::call(self, p,
+                                                                  dtype);
   }
   return bridge::AtenFromXlaTensor(XLATensor::norm(
       bridge::GetXlaTensor(self), p, dtype, {}, /*keepdim=*/false));
@@ -2144,8 +2160,8 @@ at::Tensor norm(const at::Tensor& self, const at::Scalar& p) {
   // If p==0 it is a torch.nonzero(), which is not lowered to XLA due to dynamic
   // shapes issue.
   if (p.toDouble() == 0) {
-    return at::native::call_fallback_fn<&xla_cpu_fallback, ATEN_OP2(norm, Scalar)>::call(
-        self, p);
+    return at::native::call_fallback_fn<&xla_cpu_fallback,
+                                        ATEN_OP2(norm, Scalar)>::call(self, p);
   }
   return bridge::AtenFromXlaTensor(XLATensor::norm(
       bridge::GetXlaTensor(self), p, c10::nullopt, {}, /*keepdim=*/false));
@@ -2157,8 +2173,11 @@ at::Tensor norm(const at::Tensor& self, const c10::optional<at::Scalar>& p,
   // If p==0 it is a torch.nonzero(), which is not lowered to XLA due to dynamic
   // shapes issue.
   if (p.has_value() && p->toDouble() == 0) {
-    return at::native::call_fallback_fn<&xla_cpu_fallback, ATEN_OP2(norm, ScalarOpt_dim_dtype)>::call(
-        self, p, dim, keepdim, dtype);
+    return at::native::call_fallback_fn<
+        &xla_cpu_fallback, ATEN_OP2(norm, ScalarOpt_dim_dtype)>::call(self, p,
+                                                                      dim,
+                                                                      keepdim,
+                                                                      dtype);
   }
   return bridge::AtenFromXlaTensor(
       XLATensor::norm(bridge::GetXlaTensor(self), p, dtype, dim, keepdim));
@@ -2171,8 +2190,8 @@ at::Tensor norm(const at::Tensor& self, const c10::optional<at::Scalar>& p,
   // shapes issue.
   if (p.has_value() && p->toDouble() == 0) {
     return at::native::call_fallback_fn<
-        &xla_cpu_fallback, ATEN_OP2(norm, ScalarOpt_dim)>::call(
-        self, p, dim, keepdim);
+        &xla_cpu_fallback, ATEN_OP2(norm, ScalarOpt_dim)>::call(self, p, dim,
+                                                                keepdim);
   }
   return bridge::AtenFromXlaTensor(XLATensor::norm(
       bridge::GetXlaTensor(self), p, c10::nullopt, dim, keepdim));
@@ -2182,8 +2201,9 @@ at::Tensor normal(const at::Tensor& mean, double std,
                   c10::optional<at::Generator> generator) {
   XLA_FN_COUNTER("xla::");
   if (generator.has_value() && generator->defined()) {
-    return at::native::call_fallback_fn<&xla_cpu_fallback, ATEN_OP2(normal, Tensor_float)>::call(
-        mean, std, generator);
+    return at::native::call_fallback_fn<
+        &xla_cpu_fallback, ATEN_OP2(normal, Tensor_float)>::call(mean, std,
+                                                                 generator);
   }
   return bridge::AtenFromXlaTensor(
       XLATensor::normal(bridge::GetXlaTensor(mean), std));
@@ -2193,8 +2213,9 @@ at::Tensor normal(double mean, const at::Tensor& std,
                   c10::optional<at::Generator> generator) {
   XLA_FN_COUNTER("xla::");
   if (generator.has_value() && generator->defined()) {
-    return at::native::call_fallback_fn<&xla_cpu_fallback, ATEN_OP2(normal, float_Tensor)>::call(
-        mean, std, generator);
+    return at::native::call_fallback_fn<
+        &xla_cpu_fallback, ATEN_OP2(normal, float_Tensor)>::call(mean, std,
+                                                                 generator);
   }
   return bridge::AtenFromXlaTensor(
       XLATensor::normal(mean, bridge::GetXlaTensor(std)));
@@ -2204,8 +2225,9 @@ at::Tensor normal(const at::Tensor& mean, const at::Tensor& std,
                   c10::optional<at::Generator> generator) {
   XLA_FN_COUNTER("xla::");
   if (generator.has_value() && generator->defined()) {
-    return at::native::call_fallback_fn<&xla_cpu_fallback, ATEN_OP2(normal, Tensor_Tensor)>::call(
-        mean, std, generator);
+    return at::native::call_fallback_fn<
+        &xla_cpu_fallback, ATEN_OP2(normal, Tensor_Tensor)>::call(mean, std,
+                                                                  generator);
   }
   return bridge::AtenFromXlaTensor(
       XLATensor::normal(bridge::GetXlaTensor(mean), bridge::GetXlaTensor(std)));
@@ -2215,8 +2237,9 @@ at::Tensor& normal_(at::Tensor& self, double mean, double std,
                     c10::optional<at::Generator> generator) {
   XLA_FN_COUNTER("xla::");
   if (generator.has_value() && generator->defined()) {
-    return at::native::call_fallback_fn<&xla_cpu_fallback, ATEN_OP(normal_)>::call(
-        self, mean, std, generator);
+    return at::native::call_fallback_fn<&xla_cpu_fallback,
+                                        ATEN_OP(normal_)>::call(self, mean, std,
+                                                                generator);
   }
   XLATensor self_tensor = bridge::GetXlaTensor(self);
   XLATensor::normal_(self_tensor, mean, std);
@@ -2233,8 +2256,8 @@ at::Tensor pow(const at::Tensor& self, const at::Scalar& exponent) {
   XLA_FN_COUNTER("xla::");
   // xla::Pow() doesn't support integer types.
   if (!at::native::is_floating_point(self)) {
-    return at::native::call_fallback_fn<&xla_cpu_fallback, ATEN_OP2(pow, Tensor_Scalar)>::call(
-        self, exponent);
+    return at::native::call_fallback_fn<
+        &xla_cpu_fallback, ATEN_OP2(pow, Tensor_Scalar)>::call(self, exponent);
   }
   return bridge::AtenFromXlaTensor(
       XLATensor::pow(bridge::GetXlaTensor(self), exponent));
@@ -2244,8 +2267,8 @@ at::Tensor pow(const at::Tensor& self, const at::Tensor& exponent) {
   XLA_FN_COUNTER("xla::");
   // xla::Pow() doesn't support integer types.
   if (!at::native::is_floating_point(self)) {
-    return at::native::call_fallback_fn<&xla_cpu_fallback, ATEN_OP2(pow, Tensor_Tensor)>::call(
-        self, exponent);
+    return at::native::call_fallback_fn<
+        &xla_cpu_fallback, ATEN_OP2(pow, Tensor_Tensor)>::call(self, exponent);
   }
   return bridge::AtenFromXlaTensor(XLATensor::pow(
       bridge::GetXlaTensor(self), bridge::GetXlaTensor(exponent)));
@@ -2255,8 +2278,9 @@ at::Tensor pow(const at::Scalar& self, const at::Tensor& exponent) {
   XLA_FN_COUNTER("xla::");
   // xla::Pow() doesn't support integer types.
   if (!self.isFloatingPoint()) {
-    return at::native::call_fallback_fn<&xla_cpu_fallback, ATEN_OP2(pow, Scalar)>::call(
-        self, exponent);
+    return at::native::call_fallback_fn<&xla_cpu_fallback,
+                                        ATEN_OP2(pow, Scalar)>::call(self,
+                                                                     exponent);
   }
   return bridge::AtenFromXlaTensor(
       XLATensor::pow(self, bridge::GetXlaTensor(exponent)));
@@ -2301,8 +2325,8 @@ at::Tensor& random_(at::Tensor& self, int64_t from, c10::optional<int64_t> to,
   XLA_FN_COUNTER("xla::");
   if (generator.has_value() && generator->defined()) {
     return at::native::call_fallback_fn<
-        &xla_cpu_fallback, ATEN_OP2(random_, from)>::call(
-        self, from, to, generator);
+        &xla_cpu_fallback, ATEN_OP2(random_, from)>::call(self, from, to,
+                                                          generator);
   }
   XLATensor self_tensor = bridge::GetXlaTensor(self);
   at::ScalarType dtype = self_tensor.dtype();
@@ -2320,8 +2344,9 @@ at::Tensor& random_(at::Tensor& self, int64_t to,
                     c10::optional<at::Generator> generator) {
   XLA_FN_COUNTER("xla::");
   if (generator.has_value() && generator->defined()) {
-    return at::native::call_fallback_fn<&xla_cpu_fallback, ATEN_OP2(random_, to)>::call(
-        self, to, generator);
+    return at::native::call_fallback_fn<&xla_cpu_fallback,
+                                        ATEN_OP2(random_, to)>::call(self, to,
+                                                                     generator);
   }
   XLATensor self_tensor = bridge::GetXlaTensor(self);
   XLA_CHECK_GT(to, 0);
@@ -2334,8 +2359,9 @@ at::Tensor& random_(at::Tensor& self, int64_t to,
 at::Tensor& random_(at::Tensor& self, c10::optional<at::Generator> generator) {
   XLA_FN_COUNTER("xla::");
   if (generator.has_value() && generator->defined()) {
-    return at::native::call_fallback_fn<&xla_cpu_fallback, ATEN_OP(random_)>::call(
-        self, generator);
+    return at::native::call_fallback_fn<&xla_cpu_fallback,
+                                        ATEN_OP(random_)>::call(self,
+                                                                generator);
   }
   XLATensor self_tensor = bridge::GetXlaTensor(self);
   at::ScalarType dtype = self_tensor.dtype();
@@ -2448,9 +2474,10 @@ at::Tensor rrelu_with_noise(const at::Tensor& self, const at::Tensor& noise,
   if (generator.has_value() && generator->defined()) {
     // The fallback path for rrelu_with_noise when training=true is wrong
     XLA_CHECK_EQ(training, false);
-    return at::native::call_fallback_fn<&xla_cpu_fallback, ATEN_OP(rrelu_with_noise)>::call(
-        self, noise, lower, upper, training,
-        generator);
+    return at::native::call_fallback_fn<
+        &xla_cpu_fallback, ATEN_OP(rrelu_with_noise)>::call(self, noise, lower,
+                                                            upper, training,
+                                                            generator);
   }
   XLATensor noise_tensor = bridge::GetXlaTensor(noise);
   return bridge::AtenFromXlaTensor(XLATensor::rrelu_with_noise(
@@ -2974,8 +3001,9 @@ at::Tensor& uniform_(at::Tensor& self, double from, double to,
                      c10::optional<at::Generator> generator) {
   XLA_FN_COUNTER("xla::");
   if (generator.has_value() && generator->defined()) {
-    return at::native::call_fallback_fn<&xla_cpu_fallback, ATEN_OP(uniform_)>::call(
-        self, from, to, generator);
+    return at::native::call_fallback_fn<&xla_cpu_fallback,
+                                        ATEN_OP(uniform_)>::call(self, from, to,
+                                                                 generator);
   }
   XLATensor self_tensor = bridge::GetXlaTensor(self);
   XLATensor::uniform_(self_tensor, from, to);
@@ -3006,9 +3034,11 @@ at::Tensor upsample_bilinear2d(const at::Tensor& self,
   if (self_tensor.GetDevice().hw_type != DeviceType::TPU ||
       (scales_h && *scales_h != 1.0) || (scales_w && *scales_w != 1.0)) {
     return at::native::call_fallback_fn<
-        &xla_cpu_fallback, ATEN_OP(upsample_bilinear2d)>::call(
-        self, output_size, align_corners,
-        scales_h, scales_w);
+        &xla_cpu_fallback, ATEN_OP(upsample_bilinear2d)>::call(self,
+                                                               output_size,
+                                                               align_corners,
+                                                               scales_h,
+                                                               scales_w);
   }
   return bridge::AtenFromXlaTensor(XLATensor::upsample_bilinear2d(
       self_tensor, xla::util::ToVector<xla::int64>(output_size),
@@ -3028,9 +3058,10 @@ at::Tensor upsample_bilinear2d_backward(const at::Tensor& grad_output,
   if (grad_output_tensor.GetDevice().hw_type != DeviceType::TPU ||
       (scales_h && *scales_h != 1.0) || (scales_w && *scales_w != 1.0)) {
     return at::native::call_fallback_fn<
-        &xla_cpu_fallback, ATEN_OP(upsample_bilinear2d_backward)>::call(
-        grad_output, output_size,
-        input_size, align_corners, scales_h, scales_w);
+        &xla_cpu_fallback,
+        ATEN_OP(upsample_bilinear2d_backward)>::call(grad_output, output_size,
+                                                     input_size, align_corners,
+                                                     scales_h, scales_w);
   }
   return bridge::AtenFromXlaTensor(XLATensor::upsample_bilinear2d_backward(
       grad_output_tensor, xla::util::ToVector<xla::int64>(output_size),
@@ -3045,9 +3076,10 @@ at::Tensor upsample_nearest2d(
   // Only the XLA TPU backend for now implements the CustomCall required by our
   // XLA lowering.
   if (input_tensor.GetDevice().hw_type != DeviceType::TPU) {
-    return at::native::call_fallback_fn<
-        &xla_cpu_fallback, ATEN_OP2(upsample_nearest2d, vec)>::call(
-        input, output_size, scale_factors);
+    return at::native::call_fallback_fn<&xla_cpu_fallback,
+                                        ATEN_OP2(upsample_nearest2d,
+                                                 vec)>::call(input, output_size,
+                                                             scale_factors);
   }
   absl::Span<const xla::int64> input_dims =
       input_tensor.shape().get().dimensions();
@@ -3065,10 +3097,12 @@ at::Tensor upsample_nearest2d_backward(
   // Only the XLA TPU backend for now implements the CustomCall required by our
   // XLA lowering.
   if (grad_output_tensor.GetDevice().hw_type != DeviceType::TPU) {
-    return at::native::call_fallback_fn<
-        &xla_cpu_fallback, ATEN_OP2(upsample_nearest2d_backward, vec)>::call(
-        grad_output, output_size,
-        input_size, scale_factors);
+    return at::native::call_fallback_fn<&xla_cpu_fallback,
+                                        ATEN_OP2(upsample_nearest2d_backward,
+                                                 vec)>::call(grad_output,
+                                                             output_size,
+                                                             input_size,
+                                                             scale_factors);
   }
   std::vector<xla::int64> input_dim =
       xla::util::ToVector<xla::int64>(input_size);
@@ -3089,8 +3123,9 @@ at::Tensor upsample_nearest2d(const at::Tensor& self,
   if (self_tensor.GetDevice().hw_type != DeviceType::TPU ||
       (scales_h && *scales_h != 1.0) || (scales_w && *scales_w != 1.0)) {
     return at::native::call_fallback_fn<
-        &xla_cpu_fallback, ATEN_OP(upsample_nearest2d)>::call(
-        self, output_size, scales_h, scales_w);
+        &xla_cpu_fallback, ATEN_OP(upsample_nearest2d)>::call(self, output_size,
+                                                              scales_h,
+                                                              scales_w);
   }
   return bridge::AtenFromXlaTensor(XLATensor::upsample_nearest2d(
       self_tensor, xla::util::ToVector<xla::int64>(output_size)));
@@ -3108,9 +3143,10 @@ at::Tensor upsample_nearest2d_backward(const at::Tensor& grad_output,
   if (grad_output_tensor.GetDevice().hw_type != DeviceType::TPU ||
       (scales_h && *scales_h != 1.0) || (scales_w && *scales_w != 1.0)) {
     return at::native::call_fallback_fn<
-        &xla_cpu_fallback, ATEN_OP(upsample_nearest2d_backward)>::call(
-        grad_output, output_size,
-        input_size, scales_h, scales_w);
+        &xla_cpu_fallback,
+        ATEN_OP(upsample_nearest2d_backward)>::call(grad_output, output_size,
+                                                    input_size, scales_h,
+                                                    scales_w);
   }
   return bridge::AtenFromXlaTensor(XLATensor::upsample_nearest2d_backward(
       grad_output_tensor, xla::util::ToVector<xla::int64>(output_size),
@@ -3170,8 +3206,8 @@ at::Scalar _local_scalar_dense(const at::Tensor& self) {
                                     /*wait=*/true);
     XLA_COUNTER("EarlySyncLiveTensorsCount", 1);
   }
-  return at::native::call_fallback_fn<&xla_cpu_fallback, ATEN_OP(_local_scalar_dense)>::call(
-      self);
+  return at::native::call_fallback_fn<&xla_cpu_fallback,
+                                      ATEN_OP(_local_scalar_dense)>::call(self);
 }
 
 }  // namespace torch_xla
