@@ -9,7 +9,8 @@
 
 namespace torch_xla {
 
-std::unordered_map<std::string, ::xla::metrics::Counter*> _cpu_fallback_counters;
+std::unordered_map<std::string, ::xla::metrics::Counter*>
+    _cpu_fallback_counters;
 
 void xla_cpu_fallback(const c10::OperatorHandle& op, torch::jit::Stack* stack) {
   XLA_FN_TRACK(3);
