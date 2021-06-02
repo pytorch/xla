@@ -28,9 +28,9 @@
 // according to xla_native_functions.yaml,
 //   you can call a boxed CPU fallback kernel instead.
 //   E.g. don't call tensor.op() or at::op(tensor).
-//   use at::native::call_fallback_fn<&xla_cpu_fallback, return_type,
-//   arg_types>("aten::op", "overload_name", args...); (you can find some
-//   examples below).
+//   use at::native::call_fallback_fn<&xla_cpu_fallback,
+//         ATEN_OP2(op_name, overload_name)>::call(args...)
+//   (You can find some examples below)
 
 namespace torch_xla {
 namespace {
