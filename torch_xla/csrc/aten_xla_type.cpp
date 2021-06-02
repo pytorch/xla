@@ -1519,6 +1519,56 @@ at::Tensor leaky_relu_backward(const at::Tensor& grad_output,
       negative_slope.to<double>()));
 }
 
+at::Tensor lerp(const at::Tensor& self, const at::Tensor& end,
+                const at::Tensor& weight) {
+  XLA_FN_COUNTER("xla::");
+  return bridge::AtenFromXlaTensor(
+      XLATensor::lerp(bridge::GetXlaTensor(self), bridge::GetXlaTensor(end),
+                      bridge::GetXlaTensor(weight)));
+}
+
+at::Tensor lerp(const at::Tensor& self, const at::Tensor& end,
+                const at::Scalar& weight) {
+  XLA_FN_COUNTER("xla::");
+  return bridge::AtenFromXlaTensor(XLATensor::lerp(
+      bridge::GetXlaTensor(self), bridge::GetXlaTensor(end), weight));
+}
+
+at::Tensor& lerp_(at::Tensor& self, const at::Tensor& end,
+                  const at::Tensor& weight) {
+  XLA_FN_COUNTER("xla::");
+  XLATensor self_tensor = bridge::GetXlaTensor(self);
+  XLATensor::lerp_(self_tensor, bridge::GetXlaTensor(end),
+                   bridge::GetXlaTensor(weight));
+  return self;
+}
+
+at::Tensor& lerp_(at::Tensor& self, const at::Tensor& end,
+                  const at::Scalar& weight) {
+  XLA_FN_COUNTER("xla::");
+  XLATensor self_tensor = bridge::GetXlaTensor(self);
+  XLATensor::lerp_(self_tensor, bridge::GetXlaTensor(end), weight);
+  return self;
+}
+
+at::Tensor& lerp_out(const at::Tensor& self, const at::Tensor& end,
+                     const at::Tensor& weight, at::Tensor& out) {
+  XLA_FN_COUNTER("xla::");
+  XLATensor out_tensor = bridge::GetXlaTensor(out);
+  XLATensor::lerp_out(out_tensor, bridge::GetXlaTensor(self),
+                      bridge::GetXlaTensor(end), bridge::GetXlaTensor(weight));
+  return out;
+}
+
+at::Tensor& lerp_out(const at::Tensor& self, const at::Tensor& end,
+                     const at::Scalar& weight, at::Tensor& out) {
+  XLA_FN_COUNTER("xla::");
+  XLATensor out_tensor = bridge::GetXlaTensor(out);
+  XLATensor::lerp_out(out_tensor, bridge::GetXlaTensor(self),
+                      bridge::GetXlaTensor(end), weight);
+  return out;
+}
+
 at::Tensor log(const at::Tensor& self) {
   XLA_FN_COUNTER("xla::");
   return bridge::AtenFromXlaTensor(XLATensor::log(bridge::GetXlaTensor(self)));

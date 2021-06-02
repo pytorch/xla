@@ -651,6 +651,19 @@ class XLATensor {
                                        const XLATensor& input,
                                        double negative_slope);
 
+  static XLATensor lerp(const XLATensor& input, const XLATensor& end,
+                        const XLATensor& weight);
+  static XLATensor lerp(const XLATensor& input, const XLATensor& end,
+                        const at::Scalar& weight);
+  static void lerp_(XLATensor& input, const XLATensor& end,
+                    const XLATensor& weight);
+  static void lerp_(XLATensor& input, const XLATensor& end,
+                    const at::Scalar& weight);
+  static void lerp_out(XLATensor& out, const XLATensor& input,
+                       const XLATensor& end, const XLATensor& weight);
+  static void lerp_out(XLATensor& out, const XLATensor& input,
+                       const XLATensor& end, const at::Scalar& weight);
+
   static XLATensor log(const XLATensor& input);
 
   static XLATensor log_base(const XLATensor& input, ir::OpKind op, double base);
