@@ -4350,6 +4350,19 @@ TEST_F(AtenXlaTensorTest, TestInverse) {
   ExpectCounterChanged("xla::inverse", cpp_test::GetIgnoredCounters());
 }
 
+TEST_F(AtenXlaTensorTest, TestIsnan) {
+  torch::Tensor a = torch::tensor({1.0, 2.0, std::nan("1"), 4.0},
+                                  torch::TensorOptions(torch::kFloat));
+  torch::Tensor b = torch::isnan(a);
+  ForEachDevice([&](const torch::Device& device) {
+    torch::Tensor xla_a = CopyToDevice(a, device);
+    torch::Tensor xla_b = torch::isnan(xla_a);
+    AllEqual(b, xla_b);
+  });
+  ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::isnan", cpp_test::GetIgnoredCounters());
+}
+
 TEST_F(AtenXlaTensorTest, TestExpand) {
   torch::Tensor a = torch::rand({3, 4}, torch::TensorOptions(torch::kFloat));
   torch::Tensor b = a.expand({2, 3, 4}, /*implicit=*/false);
