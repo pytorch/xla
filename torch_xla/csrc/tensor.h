@@ -608,6 +608,8 @@ class XLATensor {
 
   static XLATensor inverse(const XLATensor& input);
 
+  static XLATensor isnan(const XLATensor& input);
+
   static XLATensor kl_div_backward(const XLATensor& grad_output,
                                    const XLATensor& input,
                                    const XLATensor& target,

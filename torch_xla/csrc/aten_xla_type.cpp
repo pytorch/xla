@@ -1443,6 +1443,12 @@ at::Tensor inverse(const at::Tensor& self) {
       XLATensor::inverse(bridge::GetXlaTensor(self)));
 }
 
+at::Tensor isnan(const at::Tensor& self) {
+  XLA_FN_COUNTER("xla::");
+  return bridge::AtenFromXlaTensor(
+      XLATensor::isnan(bridge::GetXlaTensor(self)));
+}
+
 at::Tensor kl_div(const at::Tensor& self, const at::Tensor& target,
                   int64_t reduction, bool log_target) {
   XLA_FN_COUNTER("xla::");

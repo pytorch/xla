@@ -1365,6 +1365,11 @@ XLATensor XLATensor::inverse(const XLATensor& input) {
   return input.CreateFrom(ir::ops::Inverse(input.GetIrValue()));
 }
 
+XLATensor XLATensor::isnan(const XLATensor& input) {
+  return input.CreateFrom(ir::ops::IsNan(input.GetIrValue()),
+                          at::ScalarType::Bool);
+}
+
 XLATensor XLATensor::kl_div_backward(const XLATensor& grad_output,
                                      const XLATensor& input,
                                      const XLATensor& target,
