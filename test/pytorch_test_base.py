@@ -346,6 +346,7 @@ DISABLED_TORCH_TESTS_TPU_ONLY = {
         'test_EmbeddingBag_empty_per_sample_weights_and_offsets_xla',  # server side crash
         'test_softplus_low_threshold',  # grad check failure
         'test_Dropout',  # too slow
+        'test_EmbeddingBag_per_sample_weights_and_new_offsets_xla',  # server side crash
     },
 
     # test_type_promotion.py
