@@ -10335,7 +10335,7 @@ TEST_F(AtenXlaTensorTest, TestLerpInplace) {
     AllClose(xla_input, input);
   });
   ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
-  ExpectCounterChanged("xla::lerp_", cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::lerp", cpp_test::GetIgnoredCounters());
 }
 
 TEST_F(AtenXlaTensorTest, TestLerpScalarInplace) {
@@ -10352,7 +10352,7 @@ TEST_F(AtenXlaTensorTest, TestLerpScalarInplace) {
     AllClose(xla_input, input);
   });
   ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
-  ExpectCounterChanged("xla::lerp_", cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::lerp", cpp_test::GetIgnoredCounters());
 }
 
 TEST_F(AtenXlaTensorTest, TestLerpOut) {
@@ -10373,7 +10373,7 @@ TEST_F(AtenXlaTensorTest, TestLerpOut) {
     AllClose(res, xla_res);
   });
   ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
-  ExpectCounterChanged("xla::lerp_out", cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::lerp", cpp_test::GetIgnoredCounters());
 }
 
 TEST_F(AtenXlaTensorTest, TestLerpScalarOut) {
@@ -10391,7 +10391,7 @@ TEST_F(AtenXlaTensorTest, TestLerpScalarOut) {
     AllClose(res, xla_res);
   });
   ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
-  ExpectCounterChanged("xla::lerp_out", cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::lerp", cpp_test::GetIgnoredCounters());
 }
 
 }  // namespace cpp_test

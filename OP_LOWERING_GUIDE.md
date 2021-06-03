@@ -4,7 +4,11 @@
 PyTorch wraps the C++ ATen tensor library that offers a wide range of operations implemented on GPU and CPU. Pytorch/XLA is a PyTorch extension; one of its purposes is to convert PyTorch operations to XLA operations. Lowering defines a process of converting a higher-level representation to a lower-level representation. In this document, I will refer to the process of converting PyTorch operation to XLA operation as the lowering. XLA Compiler will also lower XlaOp to HLO, but that’s beyond the scope of this documentation. We will forward operations that we haven’t provided an XLA lowering yet to CPU and call ATen implementations. Operations that are forwarded to the CPU will cause a significant slowdown. We must lower all operations used in the model to achieve the best performance.
 
 ## Before you start
-You should follow the instructions in [here](https://github.com/pytorch/xla/blob/master/CONTRIBUTING.md) to install required dependencies and build pytorch and pytorch/XLA from the source. You do not need access to TPU to implement the lowering. It is recommended to experiment on a workstation and configure it to use XLA:CPU.
+You should follow the instructions in [here](https://github.com/pytorch/xla/blob/master/CONTRIBUTING.md) to install required dependencies and build pytorch and pytorch/XLA from the source. You do not need access to TPU to implement the lowering. It is recommended to experiment on a workstation and configure it to use XLA:CPU. You can configure Pytorch/XLA to use XLA:CPU by running
+
+```
+export XRT_DEVICE_MAP="CPU:0;/job:localservice/replica:0/task:0/device:XLA_CPU:0" XRT_WORKERS="localservice:0;grpc://localhost:51011"
+```
 
 ## Understanding the operation
 You can find the definition of the C++ ATen operations in [native_functions.yaml](https://github.com/pytorch/pytorch/blob/master/aten/src/ATen/native/native_functions.yaml). After you build Pytorch/XLA from source, you will also find our default implementation (forward to PyTorch native CPU) in `xla/torch_xla/csrc/aten_xla_type_default.h/cpp`. Pytorch operations can usually be mapped to [PyTorch tensor api](https://pytorch.org/docs/stable/index.html) easily. If that is not the case searching the PyTorch native implementation under [PyTorch repo](https://github.com/pytorch/pytorch) is recommended. The goal is to lower the PyTorch operations into a sequence of XLA operations defined in [here](https://www.tensorflow.org/xla/operation_semantics).
@@ -25,3 +29,54 @@ Our CircleCI runs PyTorch native python tests for every change and every day. Th
 
 ## Tips
 The process of lowering is breaking down the PyTorch operations into a sequence of XlaOp. To provide a good lowering of the PyTorch operation, one needs to have a good grasp of what XLA is capable of. Reading the XlaOp document and looking into how similar ops is lowered is the best way to achieve that. You can find a minimal Op lowering example in [this pr](https://github.com/pytorch/xla/pull/2969). You can also find a slightly more complicated example with backward lowering in [this pr](https://github.com/pytorch/xla/pull/2972).
+
+We have auto-generated wrapper implementations of `out=` and `inplace` operators for some operators in `RegisterXLA.cpp`. We only need to lower the vanilla op in this case. An example would be `lerp` operator which has 6 variants in `native_functions.yaml`, they are
+
+```
+  - lerp_.Scalar
+  - lerp_.Tensor
+  - lerp.Scalar_out
+  - lerp.Tensor_out
+  - lerp.Scalar
+  - lerp.Tensor
+```
+
+and will generate function prototypes
+
+```
+at::Tensor lerp(const at::Tensor & self, const at::Tensor & end, const at::Scalar & weight);
+at::Tensor & lerp_(at::Tensor & self, const at::Tensor & end, const at::Scalar & weight);
+at::Tensor lerp(const at::Tensor & self, const at::Tensor & end, const at::Tensor & weight);
+at::Tensor & lerp_out(const at::Tensor & self, const at::Tensor & end, const at::Tensor & weight, at::Tensor & out);
+at::Tensor & lerp_(at::Tensor & self, const at::Tensor & end, const at::Tensor & weight);
+at::Tensor & lerp_out(const at::Tensor & self, const at::Tensor & end, const at::Scalar & weight, at::Tensor & out);
+```
+
+in `XLANativeFunctions.h` if we add all of them to the `xla_native_functions.yaml`. However if we only lower `lerp.Scalar` and `lerp.Tensor` and check `RegisterXLA.cpp`, we will see
+
+```
+namespace {
+
+at::Tensor wrapper_Scalar_lerp(const at::Tensor & self, const at::Tensor & end, const at::Scalar & weight) {
+    // No device check
+
+
+  // DeviceGuard omitted
+  return torch_xla::lerp(self, end, weight);
+}
+
+} // anonymous namespace
+
+at::Tensor & wrapper_Scalar_lerp_(at::Tensor & self, const at::Tensor & end, const at::Scalar & weight) {
+  auto wrapper_Scalar_lerp__tmp = wrapper_Scalar_lerp(self, end, weight);
+  at::_copy_from(wrapper_Scalar_lerp__tmp, self);
+  return self;
+}
+
+...
+  m.impl("lerp_.Scalar",
+  TORCH_FN(wrapper_Scalar_lerp_));
+
+```
+
+`lerp_.Scalar` will use our `lerp.Scalar` implementation without us providing explictly lowering.

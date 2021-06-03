@@ -307,10 +307,6 @@ supported:
   - sigmoid_backward
   - tanh_backward
   - ger
-  - lerp_.Scalar
-  - lerp_.Tensor
-  - lerp.Scalar_out
-  - lerp.Tensor_out
   - lerp.Scalar
   - lerp.Tensor
 autograd:
