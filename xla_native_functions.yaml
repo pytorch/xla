@@ -307,6 +307,8 @@ supported:
   - sigmoid_backward
   - tanh_backward
   - ger
+  - lerp.Scalar
+  - lerp.Tensor
 autograd:
   - max_pool2d
   - max_pool3d
