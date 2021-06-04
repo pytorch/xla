@@ -1458,6 +1458,20 @@ XLATensor XLATensor::leaky_relu_backward(const XLATensor& grad_output,
       grad_output.GetIrValue(), input.GetIrValue(), negative_slope));
 }
 
+XLATensor XLATensor::lerp(const XLATensor& input, const XLATensor& end,
+                          const XLATensor& weight) {
+  return input.CreateFrom(
+      ir::ops::Lerp(input.GetIrValue(), end.GetIrValue(), weight.GetIrValue()));
+}
+
+XLATensor XLATensor::lerp(const XLATensor& input, const XLATensor& end,
+                          const at::Scalar& weight) {
+  ir::Value weight_val = GetIrValueForScalar(
+      weight, input.shape().get().element_type(), input.GetDevice());
+  return input.CreateFrom(
+      ir::ops::Lerp(input.GetIrValue(), end.GetIrValue(), weight_val));
+}
+
 XLATensor XLATensor::log(const XLATensor& input) {
   return input.CreateFrom(ir::ops::Log(input.GetIrValue()));
 }

@@ -738,6 +738,11 @@ NodePtr BaddBmm(const Value& lhs, const Value& rhs, const Value& bias,
                    std::move(lower_fn));
 }
 
+NodePtr Lerp(const Value& start, const Value& end, const Value& weight) {
+  ScopePusher ir_scope(at::aten::lerp.toQualString());
+  return start + weight * (end - start);
+}
+
 }  // namespace ops
 }  // namespace ir
 }  // namespace torch_xla
