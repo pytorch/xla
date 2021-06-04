@@ -1590,7 +1590,10 @@ Default: True</p></li>
 </div>
 <div class="section" id="before-you-start">
 <h2>Before you start<a class="headerlink" href="#before-you-start" title="Permalink to this headline">¶</a></h2>
-<p>You should follow the instructions in <a class="reference external" href="https://github.com/pytorch/xla/blob/master/CONTRIBUTING.md">here</a> to install required dependencies and build pytorch and pytorch/XLA from the source. You do not need access to TPU to implement the lowering. It is recommended to experiment on a workstation and configure it to use XLA:CPU.</p>
+<p>You should follow the instructions in <a class="reference external" href="https://github.com/pytorch/xla/blob/master/CONTRIBUTING.md">here</a> to install required dependencies and build pytorch and pytorch/XLA from the source. You do not need access to TPU to implement the lowering. It is recommended to experiment on a workstation and configure it to use XLA:CPU. You can configure Pytorch/XLA to use XLA:CPU by running</p>
+<div class="highlight-guess notranslate"><div class="highlight"><pre><span></span>export XRT_DEVICE_MAP=&quot;CPU:0;/job:localservice/replica:0/task:0/device:XLA_CPU:0&quot; XRT_WORKERS=&quot;localservice:0;grpc://localhost:51011&quot;
+</pre></div>
+</div>
 </div>
 <div class="section" id="understanding-the-operation">
 <h2>Understanding the operation<a class="headerlink" href="#understanding-the-operation" title="Permalink to this headline">¶</a></h2>
@@ -1615,7 +1618,50 @@ Default: True</p></li>
 </div>
 <div class="section" id="tips">
 <h2>Tips<a class="headerlink" href="#tips" title="Permalink to this headline">¶</a></h2>
-<p>The process of lowering is breaking down the PyTorch operations into a sequence of XlaOp. To provide a good lowering of the PyTorch operation, one needs to have a good grasp of what XLA is capable of. Reading the XlaOp document and looking into how similar ops is lowered is the best way to achieve that. You can find a minimal Op lowering example in <a class="reference external" href="https://github.com/pytorch/xla/pull/2969">this pr</a>. You can also find a slightly more complicated example with backward lowering in <a class="reference external" href="https://github.com/pytorch/xla/pull/1940">this pr</a>.</p>
+<p>The process of lowering is breaking down the PyTorch operations into a sequence of XlaOp. To provide a good lowering of the PyTorch operation, one needs to have a good grasp of what XLA is capable of. Reading the XlaOp document and looking into how similar ops is lowered is the best way to achieve that. You can find a minimal Op lowering example in <a class="reference external" href="https://github.com/pytorch/xla/pull/2969">this pr</a>. You can also find a slightly more complicated example with backward lowering in <a class="reference external" href="https://github.com/pytorch/xla/pull/2972">this pr</a>.</p>
+<p>We have auto-generated wrapper implementations of <code class="docutils literal notranslate"><span class="pre">out=</span></code> and <code class="docutils literal notranslate"><span class="pre">inplace</span></code> operators for some operators in <code class="docutils literal notranslate"><span class="pre">RegisterXLA.cpp</span></code>. We only need to lower the vanilla op in this case. An example would be <code class="docutils literal notranslate"><span class="pre">lerp</span></code> operator which has 6 variants in <code class="docutils literal notranslate"><span class="pre">native_functions.yaml</span></code>, they are</p>
+<div class="highlight-guess notranslate"><div class="highlight"><pre><span></span>- lerp_.Scalar
+- lerp_.Tensor
+- lerp.Scalar_out
+- lerp.Tensor_out
+- lerp.Scalar
+- lerp.Tensor
+</pre></div>
+</div>
+<p>and will generate function prototypes</p>
+<div class="highlight-guess notranslate"><div class="highlight"><pre><span></span>at::Tensor lerp(const at::Tensor &amp; self, const at::Tensor &amp; end, const at::Scalar &amp; weight);
+at::Tensor &amp; lerp_(at::Tensor &amp; self, const at::Tensor &amp; end, const at::Scalar &amp; weight);
+at::Tensor lerp(const at::Tensor &amp; self, const at::Tensor &amp; end, const at::Tensor &amp; weight);
+at::Tensor &amp; lerp_out(const at::Tensor &amp; self, const at::Tensor &amp; end, const at::Tensor &amp; weight, at::Tensor &amp; out);
+at::Tensor &amp; lerp_(at::Tensor &amp; self, const at::Tensor &amp; end, const at::Tensor &amp; weight);
+at::Tensor &amp; lerp_out(const at::Tensor &amp; self, const at::Tensor &amp; end, const at::Scalar &amp; weight, at::Tensor &amp; out);
+</pre></div>
+</div>
+<p>in <code class="docutils literal notranslate"><span class="pre">XLANativeFunctions.h</span></code> if we add all of them to the <code class="docutils literal notranslate"><span class="pre">xla_native_functions.yaml</span></code>. However if we only lower <code class="docutils literal notranslate"><span class="pre">lerp.Scalar</span></code> and <code class="docutils literal notranslate"><span class="pre">lerp.Tensor</span></code> and check <code class="docutils literal notranslate"><span class="pre">RegisterXLA.cpp</span></code>, we will see</p>
+<div class="highlight-guess notranslate"><div class="highlight"><pre><span></span>namespace {
+
+at::Tensor wrapper_Scalar_lerp(const at::Tensor &amp; self, const at::Tensor &amp; end, const at::Scalar &amp; weight) {
+    // No device check
+
+
+  // DeviceGuard omitted
+  return torch_xla::lerp(self, end, weight);
+}
+
+} // anonymous namespace
+
+at::Tensor &amp; wrapper_Scalar_lerp_(at::Tensor &amp; self, const at::Tensor &amp; end, const at::Scalar &amp; weight) {
+  auto wrapper_Scalar_lerp__tmp = wrapper_Scalar_lerp(self, end, weight);
+  at::_copy_from(wrapper_Scalar_lerp__tmp, self);
+  return self;
+}
+
+...
+  m.impl(&quot;lerp_.Scalar&quot;,
+  TORCH_FN(wrapper_Scalar_lerp_));
+</pre></div>
+</div>
+<p><code class="docutils literal notranslate"><span class="pre">lerp_.Scalar</span></code> will use our <code class="docutils literal notranslate"><span class="pre">lerp.Scalar</span></code> implementation without us providing explictly lowering.</p>
 </div>
 </div>
 
