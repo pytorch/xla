@@ -1522,6 +1522,12 @@ at::Tensor leaky_relu_backward(const at::Tensor& grad_output,
 at::Tensor lerp(const at::Tensor& self, const at::Tensor& end,
                 const at::Tensor& weight) {
   XLA_FN_COUNTER("xla::");
+  XLA_CHECK_EQ(self.dtype(), end.dtype())
+      << "expected dtype " << self.dtype() << " for `end` but got dtype "
+      << end.dtype();
+  XLA_CHECK_EQ(self.dtype(), weight.dtype())
+      << "expected dtype " << self.dtype() << " for `weight` but got dtype "
+      << weight.dtype();
   return bridge::AtenFromXlaTensor(
       XLATensor::lerp(bridge::GetXlaTensor(self), bridge::GetXlaTensor(end),
                       bridge::GetXlaTensor(weight)));
@@ -1530,6 +1536,9 @@ at::Tensor lerp(const at::Tensor& self, const at::Tensor& end,
 at::Tensor lerp(const at::Tensor& self, const at::Tensor& end,
                 const at::Scalar& weight) {
   XLA_FN_COUNTER("xla::");
+  XLA_CHECK_EQ(self.dtype(), end.dtype())
+      << "expected dtype " << self.dtype() << " for `end` but got dtype "
+      << end.dtype();
   return bridge::AtenFromXlaTensor(XLATensor::lerp(
       bridge::GetXlaTensor(self), bridge::GetXlaTensor(end), weight));
 }
