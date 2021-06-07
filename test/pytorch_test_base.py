@@ -326,6 +326,7 @@ DISABLED_TORCH_TESTS_TPU_ONLY = {
         'test_take_xla_bfloat16',  # (TPU) -6.53125 vs. -6.5625
         'test_multinomial_constraints',  # server side crash
         'test_multinomial_invalid_distribution',  # server side crash
+        'test_multinomial_invalid_xla',  # TODO: only fail on xlml
         'test_softplus_low_threshold_xla',  # server side crash
         'test_put_xla_float64',  # slow on TPU (~16 min)
         'test_put_xla_int16',  # slow on TPU (~13 min)
@@ -345,6 +346,8 @@ DISABLED_TORCH_TESTS_TPU_ONLY = {
         'test_EmbeddingBag_empty_per_sample_weights_and_offsets_xla',  # server side crash
         'test_softplus_low_threshold',  # grad check failure
         'test_Dropout',  # too slow
+        'test_EmbeddingBag_per_sample_weights_and_new_offsets_xla',  # server side crash
+        'test_EmbeddingBag_per_sample_weights_and_offsets_xla',  # server side crash
     },
 
     # test_type_promotion.py
