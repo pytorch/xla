@@ -418,9 +418,8 @@ def union_of_disabled_tests(sets):
 
 
 def on_tpuvm():
-  return bool(
-      re.match('^localservice;[0-9]+;localhost:[0-9]+',
-               os.getenv('XRT_TPU_CONFIG')))
+  config = os.getenv('XRT_TPU_CONFIG')
+  return config and re.match('^localservice;[0-9]+;localhost:[0-9]+', config)
 
 
 DISABLED_TORCH_TESTS_CPU = DISABLED_TORCH_TESTS_ANY
