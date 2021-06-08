@@ -173,8 +173,8 @@ supported:
   - scatter_.src
   - scatter_.value
   - scatter_add_
-  - bitwise_and.Tensor_out
-  - bitwise_and.Scalar_out
+  - bitwise_and.Tensor
+  - bitwise_and.Scalar
   - bitwise_or.Tensor_out
   - bitwise_or.Scalar_out
   - bitwise_xor.Tensor_out
