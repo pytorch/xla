@@ -797,23 +797,18 @@ at::Tensor binary_cross_entropy_with_logits(
       IsDefined(pos_weight) ? *pos_weight : at::Tensor(), reduction);
 }
 
-at::Tensor& bitwise_and_out(const at::Tensor& self, const at::Scalar& other,
-                            at::Tensor& out) {
+at::Tensor bitwise_and(const at::Tensor& self, const at::Scalar& other) {
   XLA_FN_COUNTER("xla::");
-  CheckBinaryOpTypePromotion(out, self, other);
-  XLATensor out_tensor = bridge::GetXlaTensor(out);
-  XLATensor::bitwise_and_out(out_tensor, bridge::GetXlaTensor(self), other);
-  return out;
+  CheckBinaryOpTypePromotion(self, self, other);
+  return bridge::AtenFromXlaTensor(
+      XLATensor::bitwise_and(bridge::GetXlaTensor(self), other));
 }
 
-at::Tensor& bitwise_and_out(const at::Tensor& self, const at::Tensor& other,
-                            at::Tensor& out) {
+at::Tensor bitwise_and(const at::Tensor& self, const at::Tensor& other) {
   XLA_FN_COUNTER("xla::");
-  CheckBinaryOpTypePromotion(out, self, other);
-  XLATensor out_tensor = bridge::GetXlaTensor(out);
-  XLATensor::bitwise_and_out(out_tensor, bridge::GetXlaTensor(self),
-                             bridge::GetXlaTensor(other));
-  return out;
+  CheckBinaryOpTypePromotion(self, self, other);
+  return bridge::AtenFromXlaTensor(XLATensor::bitwise_and(
+      bridge::GetXlaTensor(self), bridge::GetXlaTensor(other)));
 }
 
 at::Tensor& bitwise_not_out(const at::Tensor& self, at::Tensor& out) {
@@ -1517,6 +1512,30 @@ at::Tensor leaky_relu_backward(const at::Tensor& grad_output,
   return bridge::AtenFromXlaTensor(XLATensor::leaky_relu_backward(
       bridge::GetXlaTensor(grad_output), bridge::GetXlaTensor(self),
       negative_slope.to<double>()));
+}
+
+at::Tensor lerp(const at::Tensor& self, const at::Tensor& end,
+                const at::Tensor& weight) {
+  XLA_FN_COUNTER("xla::");
+  XLA_CHECK_EQ(self.dtype(), end.dtype())
+      << "expected dtype " << self.dtype() << " for `end` but got dtype "
+      << end.dtype();
+  XLA_CHECK_EQ(self.dtype(), weight.dtype())
+      << "expected dtype " << self.dtype() << " for `weight` but got dtype "
+      << weight.dtype();
+  return bridge::AtenFromXlaTensor(
+      XLATensor::lerp(bridge::GetXlaTensor(self), bridge::GetXlaTensor(end),
+                      bridge::GetXlaTensor(weight)));
+}
+
+at::Tensor lerp(const at::Tensor& self, const at::Tensor& end,
+                const at::Scalar& weight) {
+  XLA_FN_COUNTER("xla::");
+  XLA_CHECK_EQ(self.dtype(), end.dtype())
+      << "expected dtype " << self.dtype() << " for `end` but got dtype "
+      << end.dtype();
+  return bridge::AtenFromXlaTensor(XLATensor::lerp(
+      bridge::GetXlaTensor(self), bridge::GetXlaTensor(end), weight));
 }
 
 at::Tensor log(const at::Tensor& self) {

@@ -212,6 +212,8 @@ NodePtr IsNan(const Value& input);
 NodePtr BaddBmm(const Value& lhs, const Value& rhs, const Value& bias,
                 const Value& product_multiplier, const Value& bias_multiplier);
 
+NodePtr Lerp(const Value& start, const Value& end, const Value& weight);
+
 }  // namespace ops
 }  // namespace ir
 }  // namespace torch_xla

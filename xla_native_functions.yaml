@@ -176,8 +176,8 @@ supported:
   - scatter.value_reduce_out
   - scatter_add_
   - scatter_add.out
-  - bitwise_and.Tensor_out
-  - bitwise_and.Scalar_out
+  - bitwise_and.Tensor
+  - bitwise_and.Scalar
   - bitwise_or.Tensor_out
   - bitwise_or.Scalar_out
   - bitwise_xor.Tensor_out
@@ -310,6 +310,8 @@ supported:
   - sigmoid_backward
   - tanh_backward
   - ger
+  - lerp.Scalar
+  - lerp.Tensor
 autograd:
   - max_pool2d
   - max_pool3d
