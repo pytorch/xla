@@ -122,9 +122,9 @@ xla::XlaOp BuildNllLoss(xla::XlaOp logits, xla::XlaOp labels, xla::XlaOp weight,
       /*off_value=*/zero,
       /*ignore_index=*/ignore_index);
   xla::XlaOp labeled_logits = xla::Neg(one_hot_labels) * logits;
-  // Handle NaNs in non-labeled indexs of labeled_logits(either by (inf/-inf) *
-  // 0 or logits has Nan in that index). Without replacing them to 0, reduction
-  // will return Nan regardless of labelded logits value.
+  // Handle NaNs in non-labeled indexes of labeled_logits(either by (inf/-inf) *
+  // 0 or logits has NaN in that index). Without replacing them to 0, reduction
+  // will return NaN regardless of labelded logit values.
   xla::XlaOp non_labeled_mask = xla::Ne(one_hot_labels, one);
   labeled_logits = xla::Select(non_labeled_mask,
 			       xla::Broadcast(zero, logits_shape.dimensions()), labeled_logits);
