@@ -127,7 +127,8 @@ xla::XlaOp BuildNllLoss(xla::XlaOp logits, xla::XlaOp labels, xla::XlaOp weight,
   // will return NaN regardless of labelded logit values.
   xla::XlaOp non_labeled_mask = xla::Ne(one_hot_labels, one);
   labeled_logits = xla::Select(non_labeled_mask,
-			       xla::Broadcast(zero, logits_shape.dimensions()), labeled_logits);
+                               xla::Broadcast(zero, logits_shape.dimensions()),
+                               labeled_logits);
   WeightScale weight_scale = GetMaskedWeight(
       weight, logits_shape, labels, one_hot_labels, classes_axis, ignore_index);
   labeled_logits = labeled_logits * weight_scale.weight;
