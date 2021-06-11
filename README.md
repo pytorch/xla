@@ -40,8 +40,12 @@ semantics and functions, is available at [PyTorch.org](http://pytorch.org/xla/).
 Google Cloud Platform lets you deploy PyTorch networks running on Cloud TPUs.
 This guide is split into two parts:
 
+* [Running on a Cloud TPU VM](#TPUVM)
 * [Running on a single Cloud TPU](#CloudSingle)
 * [Running on a Cloud TPU Pod](#Pod)
+
+## <a name="TPUVM"></a> Running on a Cloud TPU VM
+Please check out our [Cloud TPU VM User Guide](https://cloud.google.com/tpu/docs/pytorch-xla-ug-tpu-vm). Cloud TPU VM is currently on public preview and provides direct access to the TPU host. To learn more about the Cloud TPU System Architecture, please check out [this doc](https://cloud.google.com/tpu/docs/system-architecture-tpu-vm#tpu_vms).
 
 ## <a name="CloudSingle"></a> Running on a Single Cloud TPU
 
