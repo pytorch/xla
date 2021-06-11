@@ -39,7 +39,7 @@ function run_torch_xla_tests() {
 
     if ! [ -x "$(command -v nvidia-smi)"  ]
     then
-      ./run_tests.sh -X early_sync -F AtenXlaTensorTest.TestEarlySyncLiveTensors -L""
+      CC=clang-9 CXX=clang++-9 ./run_tests.sh -X early_sync -F AtenXlaTensorTest.TestEarlySyncLiveTensors -L""
     fi
     popd
   popd
