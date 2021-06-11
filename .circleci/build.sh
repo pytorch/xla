@@ -4,11 +4,10 @@ set -ex
 
 source ./env
 source .circleci/common.sh
-clone_pytorch
+PYTORCH_DIR=/tmp/pytorch
+XLA_DIR=$PYTORCH_DIR/xla
+clone_pytorch $PYTORCH_DIR $XLA_DIR
 source "$PYTORCH_DIR/.jenkins/pytorch/common_utils.sh"
-
-# System default cmake 3.10 cannot find mkl, so point it to the right place.
-export CMAKE_PREFIX_PATH=${CONDA_PREFIX:-"$(dirname $(which conda))/../"}
 
 SCCACHE="$(which sccache)"
 if [ -z "${SCCACHE}" ]; then
