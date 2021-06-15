@@ -484,12 +484,13 @@ more information about our lazy tensor design, you can read <a class="reference 
 <a class="reference external" href="https://en.wikipedia.org/wiki/Bfloat16_floating-point_format">bfloat16</a>
 datatype when running on TPUs. In fact, PyTorch/XLA handles float types
 (<code class="docutils literal notranslate"><span class="pre">torch.float</span></code> and <code class="docutils literal notranslate"><span class="pre">torch.double</span></code>) differently on TPUs. This behavior is
-controlled by the <code class="docutils literal notranslate"><span class="pre">XLA_USE_BF16</span></code> environment variable:</p>
+controlled by the <code class="docutils literal notranslate"><span class="pre">XLA_USE_BF16</span></code> and <code class="docutils literal notranslate"><span class="pre">XLA_DOWNCAST_BF16</span></code> environment variable:</p>
 <ul class="simple">
 <li><p>By default both <code class="docutils literal notranslate"><span class="pre">torch.float</span></code> and <code class="docutils literal notranslate"><span class="pre">torch.double</span></code> are
 <code class="docutils literal notranslate"><span class="pre">torch.float</span></code> on TPUs.</p></li>
 <li><p>If <code class="docutils literal notranslate"><span class="pre">XLA_USE_BF16</span></code> is set, then <code class="docutils literal notranslate"><span class="pre">torch.float</span></code> and <code class="docutils literal notranslate"><span class="pre">torch.double</span></code> are both
 <code class="docutils literal notranslate"><span class="pre">bfloat16</span></code> on TPUs.</p></li>
+<li><p>If <code class="docutils literal notranslate"><span class="pre">XLA_DOWNCAST_BF16</span></code> is set, then <code class="docutils literal notranslate"><span class="pre">torch.float</span></code> is <code class="docutils literal notranslate"><span class="pre">bfloat16</span></code> on TPUs and <code class="docutils literal notranslate"><span class="pre">torch.double</span></code> is <code class="docutils literal notranslate"><span class="pre">float32</span></code> on TPUs.</p></li>
 <li><p>If a PyTorch tensor has <code class="docutils literal notranslate"><span class="pre">torch.bfloat16</span></code> data type, this will be directly
 mapped to the TPU <code class="docutils literal notranslate"><span class="pre">bfloat16</span></code> (XLA <code class="docutils literal notranslate"><span class="pre">BF16</span></code> primitive type).</p></li>
 </ul>
