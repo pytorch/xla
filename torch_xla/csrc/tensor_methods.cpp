@@ -2389,6 +2389,22 @@ XLATensor XLATensor::std(const XLATensor& input,
                                  keep_reduced_dimensions, correction));
 }
 
+std::tuple<XLATensor, XLATensor> std_mean(const XLATensor& input,
+                                          std::vector<xla::int64> dimensions,
+                                          xla::int64 correction,
+                                          bool keep_reduced_dimensions) {
+  // dtype is not an input parameter for std_mean(), though it is for mean()
+  c10::optional<at::ScalarType> dtype = input.dtype_optional();
+  ir::NodePtr node = ir::MakeNode<ir::ops::StdMean>(input.GetIrValue(),
+                                                    XlaHelpers::GetCanonicalDimensionIndices(
+                                                        dimensions, input.shape().get().rank()),
+                                                    correction,
+                                                    keep_reduced_dimensions,
+                                                    dtype);
+  return std::make_tuple(input.CreateFrom(ir::Value(node, 0)),
+                         input.CreateFrom(ir::Value(node, 1)));
+}
+
 XLATensor XLATensor::sub(const XLATensor& input, const XLATensor& other,
                          const at::Scalar& alpha,
                          c10::optional<at::ScalarType> logical_element_type) {
