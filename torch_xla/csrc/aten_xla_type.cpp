@@ -2713,7 +2713,7 @@ at::Tensor std(const at::Tensor& self, c10::optional<at::IntArrayRef> dim,
 }
 
 std::tuple<at::Tensor, at::Tensor> std_mean(const at::Tensor& self,
-                                            c10:optional<at::IntArrayRef> dim,
+                                            c10::optional<at::IntArrayRef> dim,
                                             c10::optional<int64_t> correction,
                                             bool keepdim) {
   XLA_FN_COUNTER("xla::");

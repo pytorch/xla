@@ -112,6 +112,7 @@
 #include "torch_xla/csrc/ops/squeeze.h"
 #include "torch_xla/csrc/ops/stack.h"
 #include "torch_xla/csrc/ops/std.h"
+#include "torch_xla/csrc/ops/std_mean.h"
 #include "torch_xla/csrc/ops/sum.h"
 #include "torch_xla/csrc/ops/svd.h"
 #include "torch_xla/csrc/ops/symeig.h"
@@ -2393,14 +2394,11 @@ std::tuple<XLATensor, XLATensor> std_mean(const XLATensor& input,
                                           std::vector<xla::int64> dimensions,
                                           xla::int64 correction,
                                           bool keep_reduced_dimensions) {
-  // dtype is not an input parameter for std_mean(), though it is for mean()
-  c10::optional<at::ScalarType> dtype = input.dtype_optional();
   ir::NodePtr node = ir::MakeNode<ir::ops::StdMean>(input.GetIrValue(),
                                                     XlaHelpers::GetCanonicalDimensionIndices(
                                                         dimensions, input.shape().get().rank()),
                                                     correction,
-                                                    keep_reduced_dimensions,
-                                                    dtype);
+                                                    keep_reduced_dimensions);
   return std::make_tuple(input.CreateFrom(ir::Value(node, 0)),
                          input.CreateFrom(ir::Value(node, 1)));
 }

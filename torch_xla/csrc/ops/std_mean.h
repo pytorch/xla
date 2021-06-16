@@ -3,8 +3,6 @@
 #include <vector>
 
 #include "tensorflow/compiler/xla/types.h"
-#include "torch_xla/csrc/ops/mean.h"
-#include "torch_xla/csrc/ops/std.h"
 #include "torch_xla/csrc/ir.h"
 
 namespace torch_xla {
@@ -16,8 +14,7 @@ class StdMean : public Node {
   StdMean(const Value& input,
           std::vector<xla::int64> dimensions,
           xla::int64 correction,
-          bool keep_reduced_dimensions,
-          c10::optional<at::ScalarType> dtype);
+          bool keep_reduced_dimensions);
 
   std::string ToString() const override;
 

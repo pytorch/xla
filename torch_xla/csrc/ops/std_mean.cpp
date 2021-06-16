@@ -15,41 +15,28 @@ xla::XlaOp LowerStd(xla::XlaOp input,
                     const std::vector<xla::int64>& dimensions,
                     bool keep_reduced_dimensions,
                     xla::int64 correction) {
-  return BuildStdDeviation(operands[0], dimensions, keep_reduced_dimensions, correction);
+  return BuildStdDeviation(input, dimensions, keep_reduced_dimensions, correction);
 }
 
-xla::XlaOp LowerMean(xla::XlaOp input,
+xla::XlaOp LowerMean2(xla::XlaOp input,
                      const std::vector<xla::int64>& dimensions,
-                     bool keep_reduced_dimensions,
-                     const c10::optional<at::ScalarType>& dtype) {
-  xla::XlaOp result = BuildMean(input, dimensions, keep_reduced_dimensions);
-  return dtype ? xla::ConvertElementType(result, MakeXlaPrimitiveType(*dtype, /*device=*/nullptr))
-               : result;
+                     bool keep_reduced_dimensions) {
+  return BuildMean(input, dimensions, keep_reduced_dimensions);
 }
 
-xla::Shape NodeOutputShape(const Value& input,
-                           std::vector<xla::int64>& dimensions,
-                           bool keep_reduced_dimensions,
-                           xla::int64 correction,
-                           c10::optional<at::ScalarType> dtype) {
+std::pair<xla::Shape, xla::Shape> NodeOutputShape(const Value& input,
+                                                  std::vector<xla::int64>& dimensions,
+                                                  bool keep_reduced_dimensions,
+                                                  xla::int64 correction) {
   auto lower_for_shape_fn_std = [&](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
     return LowerStd(operands[0], dimensions, keep_reduced_dimensions, correction);
   };
   auto lower_for_shape_fn_mean = [&](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
-    return LowerMean(operands[0], dimensions, keep_reduced_dimensions, dtype);
+    return LowerMean2(operands[0], dimensions, keep_reduced_dimensions);
   };
   result_std = InferOutputShape({input.shape()}, lower_for_shape_fn_std);
   result_mean = InferOutputShape({input.shape()}, lower_for_shape_fn_mean);
-}
-
-xla::Shape NodeOutputShape(const Value& input,
-                           std::vector<xla::int64>& dimensions,
-                           bool keep_reduced_dimensions,
-                           xla::int64 correction) {
-  auto lower_for_shape_fn = [&](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
-    return 
-  };
-  return InferOutputShape({input.shape()}, lower_for_shape_fn);
+  return std::pair<xla::Shape, xla::Shape>(result_std, result_mean);
 }
 
 }  // namespace
@@ -63,8 +50,8 @@ StdMean::StdMean(const Value& input, std::vector<xla::int64> dimensions,
            /*num_outputs=*/1,
            xla::util::MHash(dimensions, correction, keep_reduced_dimensions)),
       dimensions_(std::move(dimensions)),
-      keep_reduced_dimensions_(keep_reduced_dimensions),
-      correction_(correction) {}
+      correction_(correction),
+      keep_reduced_dimensions_(keep_reduced_dimensions) {}
 
 NodePtr StdMean::Clone(OpList operands) const {
   return MakeNode<StdMean>(operands.at(0), dimensions_, correction_,
@@ -73,9 +60,9 @@ NodePtr StdMean::Clone(OpList operands) const {
 
 XlaOpVector StdMean::Lower(LoweringContext* loctx) const {
   xla::XlaOp input = loctx->GetOutputOp(operand(0));
-  return ReturnOp(BuildStdDeviation(input, dimensions_,
-                                    keep_reduced_dimensions_, correction_),
-                  loctx);
+  xla::XlaOp op_std = LowerStd(input, dimensions_, keep_reduced_dimensions_, correction_);
+  xla::XlaOp op_mean = LowerMean2(input, dimensions_, keep_reduced_dimensions_);
+  return ReturnOps({op_std, op_mean}, loctx);
 }
 
 std::string StdMean::ToString() const {
