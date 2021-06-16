@@ -2546,7 +2546,10 @@ at::Tensor& scatter_reduce_out_helper(const at::Tensor& self, int64_t dim,
                                bridge::GetXlaTensor(src));
   } else {
     // TODO: implement scatter_mul
-    return AtenXlaTypeDefault::scatter_out(self, dim, index, src, *reduce, out);
+    return at::native::call_fallback_fn<
+        &xla_cpu_fallback, ATEN_OP2(scatter, reduce_out)>::call(self, dim,
+                                                                index, src,
+                                                                *reduce, out);
   }
   return out;
 }
@@ -2568,8 +2571,12 @@ at::Tensor& scatter_reduce_out_helper(const at::Tensor& self, int64_t dim,
                                bridge::GetXlaTensor(index), value);
   } else {
     // TODO: implement scatter_mul
-    return AtenXlaTypeDefault::scatter_out(self, dim, index, value, *reduce,
-                                           out);
+    return at::native::call_fallback_fn<
+        &xla_cpu_fallback, ATEN_OP2(scatter, value_reduce_out)>::call(self, dim,
+                                                                      index,
+                                                                      value,
+                                                                      *reduce,
+                                                                      out);
   }
   return out;
 }
