@@ -553,8 +553,8 @@ at::Tensor any(const at::Tensor& self, int64_t dim, bool keepdim) {
       XLATensor::any(bridge::GetXlaTensor(self), {dim}, keepdim));
 }
 
-at::Tensor& arange_out(const at::Scalar& start, const at::Scalar& end,
-                       const at::Scalar& step, at::Tensor& out) {
+const at::Tensor& arange_out(const at::Scalar& start, const at::Scalar& end,
+                       const at::Scalar& step, const at::Tensor& out) {
   XLA_FN_COUNTER("xla::");
   XLATensor out_tensor = bridge::GetXlaTensor(out);
   XLATensor::arange_out(out_tensor, start, end, step, out.scalar_type());
@@ -1911,8 +1911,8 @@ at::Tensor mv(const at::Tensor& self, const at::Tensor& vec) {
       XLATensor::mv(bridge::GetXlaTensor(self), bridge::GetXlaTensor(vec)));
 }
 
-at::Tensor& mv_out(const at::Tensor& self, const at::Tensor& vec,
-                   at::Tensor& out) {
+const at::Tensor& mv_out(const at::Tensor& self, const at::Tensor& vec,
+                   const at::Tensor& out) {
   XLA_FN_COUNTER("xla::");
   // xla::dot doesn't support integer types.
   if (!at::native::is_floating_point(self) ||
