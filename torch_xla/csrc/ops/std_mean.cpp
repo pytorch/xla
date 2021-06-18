@@ -24,19 +24,23 @@ xla::XlaOp LowerMean2(xla::XlaOp input,
   return BuildMean(input, dimensions, keep_reduced_dimensions);
 }
 
-std::pair<xla::Shape, xla::Shape> NodeOutputShape(const Value& input,
+xla::Shape NodeOutputShape(const Value& input,
                                                   std::vector<xla::int64>& dimensions,
                                                   bool keep_reduced_dimensions,
                                                   xla::int64 correction) {
-  auto lower_for_shape_fn_std = [&](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
-    return LowerStd(operands[0], dimensions, keep_reduced_dimensions, correction);
+  auto lower_for_shape_fn_std_mean = [&](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
+    xla::XlaOp std = LowerStd(operands[0], dimensions, keep_reduced_dimensions, correction);
+    xla::XlaOp mean = LowerMean2(operands[0], dimensions, keep_reduced_dimensions);
+    return xla::Tuple(std.builder(), {std, mean});
   };
-  auto lower_for_shape_fn_mean = [&](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
-    return LowerMean2(operands[0], dimensions, keep_reduced_dimensions);
-  };
-  result_std = InferOutputShape({input.shape()}, lower_for_shape_fn_std);
-  result_mean = InferOutputShape({input.shape()}, lower_for_shape_fn_mean);
-  return std::pair<xla::Shape, xla::Shape>(result_std, result_mean);
+  //auto lower_for_shape_fn_mean = [&](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
+  //  return LowerMean2(operands[0], dimensions, keep_reduced_dimensions);
+  //};
+  //auto result_std_mean = xla::Tuple(lower_for_shape_fn_std, lower_for_shape_fn_mean);
+  //xla::Shape result_std = InferOutputShape({input.shape()}, lower_for_shape_fn_std);
+  //xla::Shape result_mean = InferOutputShape({input.shape()}, lower_for_shape_fn_mean);
+  return InferOutputShape({input.shape()}, lower_for_shape_fn_std_mean);
+  //return std::pair<xla::Shape, xla::Shape>(result_std, result_mean);
 }
 
 }  // namespace

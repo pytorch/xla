@@ -2390,7 +2390,7 @@ XLATensor XLATensor::std(const XLATensor& input,
                                  keep_reduced_dimensions, correction));
 }
 
-std::tuple<XLATensor, XLATensor> std_mean(const XLATensor& input,
+std::tuple<XLATensor, XLATensor> XLATensor::std_mean(const XLATensor& input,
                                           std::vector<xla::int64> dimensions,
                                           xla::int64 correction,
                                           bool keep_reduced_dimensions) {
