@@ -301,7 +301,7 @@ run on Cloud TPUs and Cloud TPU Pods.
 ## <a name="PerfMetrics"></a> Performance Profiling and Auto-Metrics Analysis
 
 With PyTorch/XLA we provide a set of performance profiling tooling and auto-metrics analysis which you can check the following resources:
-* [Official tutorial](https://cloud.google.com/tpu/docs/pytorch-xla-performance-profiling) 
+* [Official tutorial](https://cloud.google.com/tpu/docs/pytorch-xla-performance-profiling-tpu-vm)
 * [Colab notebook](https://colab.research.google.com/github/pytorch/xla/blob/master/contrib/colab/pytorch-xla-profiling-colab.ipynb)
 * [Sample MNIST training script with profiling](https://github.com/pytorch/xla/blob/master/test/test_profile_mp_mnist.py)
 
