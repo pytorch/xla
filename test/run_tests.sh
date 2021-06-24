@@ -82,8 +82,8 @@ function run_all_tests {
   run_test python3 "$CDIR/test_async_closures.py"
   run_test python3 "$CDIR/test_xla_dist.py"
   run_test python3 "$CDIR/test_profiler.py"
-  run_use_bf16 python3 "$CDIR/test_data_type.py"
   run_downcast_bf16 python3 "$CDIR/test_data_type.py"
+  run_use_bf16 python3 "$CDIR/test_data_type.py"
 }
 
 if [ "$LOGFILE" != "" ]; then
