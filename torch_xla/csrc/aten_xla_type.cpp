@@ -2722,8 +2722,8 @@ std::tuple<at::Tensor, at::Tensor> std_mean(const at::Tensor& self,
       self_tensor,
       dim ? xla::util::ToVector<xla::int64>(*dim)
           : xla::util::Iota<xla::int64>(self_tensor.shape().get().rank()),
-      keepdim,
-      correction ? *correction : 1);
+      correction ? *correction : 1,
+      keepdim);
   return std::make_tuple(bridge::AtenFromXlaTensor(std::get<0>(results)),
                          bridge::AtenFromXlaTensor(std::get<1>(results)));
 }

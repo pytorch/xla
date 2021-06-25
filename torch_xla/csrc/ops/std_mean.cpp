@@ -29,9 +29,14 @@ xla::Shape NodeOutputShape(const Value& input,
                            bool keep_reduced_dimensions,
                            xla::int64 correction) {
   auto lower_for_shape_fn_std_mean = [&](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
-    xla::XlaOp std = LowerStd(operands[0], dimensions, keep_reduced_dimensions, correction);
-    xla::XlaOp mean = LowerMean2(operands[0], dimensions, keep_reduced_dimensions);
-    return xla::Tuple(std.builder(), {std, mean});
+    auto std = LowerStd(operands[0], dimensions, keep_reduced_dimensions, correction);
+    auto mean = LowerMean2(operands[0], dimensions, keep_reduced_dimensions);
+    //return BuildStdDeviation(operands[0], dimensions, keep_reduced_dimensions, correction);
+    //return xla::Tuple(operands[0].builder(), {std, mean});
+    std::vector<xla::XlaOp> results;
+    results.push_back(std);
+    results.push_back(mean);
+    return xla::Tuple(operands[0].builder(), results);
   };
   return InferOutputShape({input.shape()}, lower_for_shape_fn_std_mean);
 }
@@ -44,7 +49,7 @@ StdMean::StdMean(const Value& input, std::vector<xla::int64> dimensions,
            [&]() {
              return NodeOutputShape(input, dimensions, keep_reduced_dimensions, correction);
            },
-           /*num_outputs=*/1,
+           /*num_outputs=*/2,
            xla::util::MHash(dimensions, correction, keep_reduced_dimensions)),
       dimensions_(std::move(dimensions)),
       correction_(correction),
@@ -57,9 +62,13 @@ NodePtr StdMean::Clone(OpList operands) const {
 
 XlaOpVector StdMean::Lower(LoweringContext* loctx) const {
   xla::XlaOp input = loctx->GetOutputOp(operand(0));
-  xla::XlaOp op_std = LowerStd(input, dimensions_, keep_reduced_dimensions_, correction_);
-  xla::XlaOp op_mean = LowerMean2(input, dimensions_, keep_reduced_dimensions_);
-  return ReturnOps({op_std, op_mean}, loctx);
+  auto op_std = LowerStd(input, dimensions_, keep_reduced_dimensions_, correction_);
+  auto op_mean = LowerMean2(input, dimensions_, keep_reduced_dimensions_);
+  std::vector<xla::XlaOp> results;
+  results.push_back(op_std);
+  results.push_back(op_mean);
+  return ReturnOps(results, loctx);
+  //return ReturnOps({op_std, op_mean}, loctx);
 }
 
 std::string StdMean::ToString() const {
