@@ -41,6 +41,16 @@ function run_opbyop {
   XLA_GET_TENSORS_OPBYOP=1 XLA_SYNC_TENSORS_OPBYOP=1 run_test "$@"
 }
 
+function run_use_bf16 {
+  echo "Running with XLA_USE_BF16: $@"
+  XLA_USE_BF16=1 run_test "$@"
+}
+
+function run_downcast_bf16 {
+  echo "Running with XLA_DOWNCAST_BF16: $@"
+  XLA_DOWNCAST_BF16=1 run_test "$@"
+}
+
 function run_dynamic {
   if [[ "$TPUVM_MODE" == "1" ]]; then
     run_test "$@"
@@ -72,6 +82,8 @@ function run_all_tests {
   run_test python3 "$CDIR/test_async_closures.py"
   run_test python3 "$CDIR/test_xla_dist.py"
   run_test python3 "$CDIR/test_profiler.py"
+  run_use_bf16 python3 "$CDIR/test_data_type.py"
+  run_downcast_bf16 python3 "$CDIR/test_data_type.py"
 }
 
 if [ "$LOGFILE" != "" ]; then

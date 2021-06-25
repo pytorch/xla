@@ -197,6 +197,8 @@ DISABLED_TORCH_TESTS_ANY = {
         'test_expand_as_view',
         'test_expand_view',
         'test_reshape_nonview',
+        'test_t_inplace_view',  # FIXME
+        'test_transpose_inplace_view',  # FIXME
         'test_unfold_view',
     },
 
@@ -246,6 +248,8 @@ DISABLED_TORCH_TESTS_ANY = {
         'test_EmbeddingBag_per_sample_weights_and_no_offsets',  # FIXME! Unsupported device type for sparse layout: xla
         'test_softshrink_negative',  # runtime error
         'test_nll_loss_empty_tensor_reduction_mean',  # floating point division 0 by 0, expecting nan but get 0
+        'test_nll_loss_invalid_target_dim',  # expecting a specific error message.
+        'test_nll_loss_invalid_weights',  # expecting a specific error message.
         'test_fold',  # The gradient check code errors out on type() call, and code is slow on XLA
         'test_unfold',  # The gradient check code errors out on type() call, and code is slow on XLA
         'test_hardsigmoid_grad_xla',  # gradient check is slow

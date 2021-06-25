@@ -175,17 +175,34 @@ class DistributedExecutor(object):
     return self.trials >= 1
 
   def _build_scp_cmd(self, local_path, remote_path, client_worker):
-    if not self._is_retry() and not self.tpuvm_mode:
-      return [
-          'gcloud',
-          '-q',
-          'compute',
-          'scp',
-          '--internal-ip',
-          '--zone={}'.format(client_worker.get_zone()),
-          local_path,
-          '{}:{}'.format(client_worker.get_hostname(), remote_path),
-      ]
+    if not self._is_retry():
+      if self.tpuvm_mode:
+        return [
+            'gcloud',
+            'alpha',
+            '-q',
+            'compute',
+            'tpus',
+            'tpu-vm',
+            'scp',
+            '--internal-ip',
+            '--zone={}'.format(client_worker.get_zone()),
+            '--worker={}'.format(client_worker.get_hostname().split('-')[-1]),
+            local_path,
+            '{}:{}'.format(self.tpu_name, remote_path),
+        ]
+      else:
+        return [
+            'gcloud',
+            '-q',
+            'compute',
+            'scp',
+            '--internal-ip',
+            '--zone={}'.format(client_worker.get_zone()),
+            local_path,
+            '{}:{}'.format(client_worker.get_hostname(), remote_path),
+        ]
+
     return [
         'scp',
         '-oStrictHostKeyChecking=no',
