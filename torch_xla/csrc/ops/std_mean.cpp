@@ -18,7 +18,7 @@ xla::XlaOp LowerStd(xla::XlaOp input,
   return BuildStdDeviation(input, dimensions, keep_reduced_dimensions, correction);
 }
 
-xla::XlaOp LowerMean2(xla::XlaOp input,
+xla::XlaOp LowerMean(xla::XlaOp input,
                      const std::vector<xla::int64>& dimensions,
                      bool keep_reduced_dimensions) {
   return BuildMean(input, dimensions, keep_reduced_dimensions);
@@ -30,13 +30,8 @@ xla::Shape NodeOutputShape(const Value& input,
                            xla::int64 correction) {
   auto lower_for_shape_fn_std_mean = [&](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
     auto std = LowerStd(operands[0], dimensions, keep_reduced_dimensions, correction);
-    auto mean = LowerMean2(operands[0], dimensions, keep_reduced_dimensions);
-    //return BuildStdDeviation(operands[0], dimensions, keep_reduced_dimensions, correction);
-    //return xla::Tuple(operands[0].builder(), {std, mean});
-    std::vector<xla::XlaOp> results;
-    results.push_back(std);
-    results.push_back(mean);
-    return xla::Tuple(operands[0].builder(), results);
+    auto mean = LowerMean(operands[0], dimensions, keep_reduced_dimensions);
+    return xla::Tuple(operands[0].builder(), {std, mean});
   };
   return InferOutputShape({input.shape()}, lower_for_shape_fn_std_mean);
 }
@@ -62,13 +57,9 @@ NodePtr StdMean::Clone(OpList operands) const {
 
 XlaOpVector StdMean::Lower(LoweringContext* loctx) const {
   xla::XlaOp input = loctx->GetOutputOp(operand(0));
-  auto op_std = LowerStd(input, dimensions_, keep_reduced_dimensions_, correction_);
-  auto op_mean = LowerMean2(input, dimensions_, keep_reduced_dimensions_);
-  std::vector<xla::XlaOp> results;
-  results.push_back(op_std);
-  results.push_back(op_mean);
-  return ReturnOps(results, loctx);
-  //return ReturnOps({op_std, op_mean}, loctx);
+  xla::XlaOp op_std = LowerStd(input, dimensions_, keep_reduced_dimensions_, correction_);
+  xla::XlaOp op_mean = LowerMean(input, dimensions_, keep_reduced_dimensions_);
+  return ReturnOps({op_std, op_mean}, loctx);
 }
 
 std::string StdMean::ToString() const {
