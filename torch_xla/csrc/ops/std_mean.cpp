@@ -11,26 +11,13 @@ namespace ir {
 namespace ops {
 namespace {
 
-xla::XlaOp LowerStd(xla::XlaOp input,
-                    const std::vector<xla::int64>& dimensions,
-                    bool keep_reduced_dimensions,
-                    xla::int64 correction) {
-  return BuildStdDeviation(input, dimensions, keep_reduced_dimensions, correction);
-}
-
-xla::XlaOp LowerMean(xla::XlaOp input,
-                     const std::vector<xla::int64>& dimensions,
-                     bool keep_reduced_dimensions) {
-  return BuildMean(input, dimensions, keep_reduced_dimensions);
-}
-
 xla::Shape NodeOutputShape(const Value& input,
                            std::vector<xla::int64>& dimensions,
                            bool keep_reduced_dimensions,
                            xla::int64 correction) {
   auto lower_for_shape_fn_std_mean = [&](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
-    auto std = LowerStd(operands[0], dimensions, keep_reduced_dimensions, correction);
-    auto mean = LowerMean(operands[0], dimensions, keep_reduced_dimensions);
+    xla::XlaOp std = BuildStdDeviation(operands[0], dimensions, keep_reduced_dimensions, correction);
+    xla::XlaOp mean = BuildMean(operands[0], dimensions, keep_reduced_dimensions);
     return xla::Tuple(operands[0].builder(), {std, mean});
   };
   return InferOutputShape({input.shape()}, lower_for_shape_fn_std_mean);
@@ -57,8 +44,8 @@ NodePtr StdMean::Clone(OpList operands) const {
 
 XlaOpVector StdMean::Lower(LoweringContext* loctx) const {
   xla::XlaOp input = loctx->GetOutputOp(operand(0));
-  xla::XlaOp op_std = LowerStd(input, dimensions_, keep_reduced_dimensions_, correction_);
-  xla::XlaOp op_mean = LowerMean(input, dimensions_, keep_reduced_dimensions_);
+  xla::XlaOp op_std = BuildStdDeviation(input, dimensions_, keep_reduced_dimensions_, correction_);
+  xla::XlaOp op_mean = BuildMean(input, dimensions_, keep_reduced_dimensions_);
   return ReturnOps({op_std, op_mean}, loctx);
 }
 
