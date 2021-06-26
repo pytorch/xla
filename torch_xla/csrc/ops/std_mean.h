@@ -11,10 +11,8 @@ namespace ops {
 
 class StdMean : public Node {
  public:
-  StdMean(const Value& input,
-          std::vector<xla::int64> dimensions,
-          xla::int64 correction,
-          bool keep_reduced_dimensions);
+  StdMean(const Value& input, std::vector<xla::int64> dimensions,
+          xla::int64 correction, bool keep_reduced_dimensions);
 
   std::string ToString() const override;
 

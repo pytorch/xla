@@ -1007,10 +1007,9 @@ class XLATensor {
                        std::vector<xla::int64> dimensions,
                        bool keep_reduced_dimensions, xla::int64 correction);
 
-  static std::tuple<XLATensor, XLATensor> std_mean(const XLATensor& input,
-                                                   std::vector<xla::int64> dimensions,
-                                                   xla::int64 correction,
-                                                   bool keep_reduced_dimensions);
+  static std::tuple<XLATensor, XLATensor> std_mean(
+      const XLATensor& input, std::vector<xla::int64> dimensions,
+      xla::int64 correction, bool keep_reduced_dimensions);
 
   static XLATensor sub(
       const XLATensor& input, const XLATensor& other, const at::Scalar& alpha,
