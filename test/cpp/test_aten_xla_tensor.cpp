@@ -1294,6 +1294,29 @@ TEST_F(AtenXlaTensorTest, TestStdWithCorrection) {
   }
 }
 
+TEST_F(AtenXlaTensorTest, TestStdMeanWithCorrection) {
+  torch::Tensor a = torch::rand({4, 3, 4}, torch::TensorOptions(torch::kFloat));
+  int rank = a.dim();
+  c10::optional<int64_t> corrections[] = {1, 2, c10::nullopt};
+  for (const auto& correction : corrections) {
+    for (auto keepdim : {true, false}) {
+      for (const auto& dim :
+           std::vector<std::vector<int64_t>>{{0, 1}, {-3, -2}}) {
+        auto b = torch::std_mean(a, dim, correction, keepdim);
+        ForEachDevice([&](const torch::Device& device) {
+          torch::Tensor xla_a = CopyToDevice(a, device);
+          auto xla_b = torch::std_mean(xla_a, dim, correction, keepdim);
+          AllClose(std::get<0>(b), std::get<0>(xla_b));
+          AllClose(std::get<1>(b), std::get<1>(xla_b));
+        });
+
+        ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+        ExpectCounterChanged("xla::std_mean", cpp_test::GetIgnoredCounters());
+      }
+    }
+  }
+}
+
 TEST_F(AtenXlaTensorTest, TestSum) {
   torch::Tensor a = torch::rand({4, 3, 4}, torch::TensorOptions(torch::kFloat));
   torch::Tensor b = torch::sum(a);

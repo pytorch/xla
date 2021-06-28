@@ -112,6 +112,7 @@
 #include "torch_xla/csrc/ops/squeeze.h"
 #include "torch_xla/csrc/ops/stack.h"
 #include "torch_xla/csrc/ops/std.h"
+#include "torch_xla/csrc/ops/std_mean.h"
 #include "torch_xla/csrc/ops/sum.h"
 #include "torch_xla/csrc/ops/svd.h"
 #include "torch_xla/csrc/ops/symeig.h"
@@ -2387,6 +2388,18 @@ XLATensor XLATensor::std(const XLATensor& input,
                                  XlaHelpers::GetCanonicalDimensionIndices(
                                      dimensions, input.shape().get().rank()),
                                  keep_reduced_dimensions, correction));
+}
+
+std::tuple<XLATensor, XLATensor> XLATensor::std_mean(
+    const XLATensor& input, std::vector<xla::int64> dimensions,
+    xla::int64 correction, bool keep_reduced_dimensions) {
+  ir::NodePtr node = ir::MakeNode<ir::ops::StdMean>(
+      input.GetIrValue(),
+      XlaHelpers::GetCanonicalDimensionIndices(dimensions,
+                                               input.shape().get().rank()),
+      correction, keep_reduced_dimensions);
+  return std::make_tuple(input.CreateFrom(ir::Value(node, 0)),
+                         input.CreateFrom(ir::Value(node, 1)));
 }
 
 XLATensor XLATensor::sub(const XLATensor& input, const XLATensor& other,
