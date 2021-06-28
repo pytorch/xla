@@ -3167,6 +3167,7 @@ at::Tensor upsample_nearest2d_backward(const at::Tensor& grad_output,
 at::Tensor var(const at::Tensor& self, bool unbiased) {
   XLA_FN_COUNTER("xla::");
   XLATensor self_tensor = bridge::GetXlaTensor(self);
+  std::cout << "TEST - var1() before" << std::endl;
   return bridge::AtenFromXlaTensor(
       XLATensor::var(bridge::GetXlaTensor(self),
                      xla::util::Iota<xla::int64>(
@@ -3179,6 +3180,7 @@ at::Tensor var(const at::Tensor& self, at::IntArrayRef dim, bool unbiased,
                bool keepdim) {
   XLA_FN_COUNTER("xla::");
   XLATensor self_tensor = bridge::GetXlaTensor(self);
+  std::cout << "TEST - var2() before" << std::endl;
   return bridge::AtenFromXlaTensor(
       XLATensor::var(self_tensor, XlaHelpers::I64List(dim),
                      /*correction=*/unbiased ? 1 : 0, keepdim));
@@ -3188,12 +3190,27 @@ at::Tensor var(const at::Tensor& self, c10::optional<at::IntArrayRef> dim,
                c10::optional<int64_t> correction, bool keepdim) {
   XLA_FN_COUNTER("xla::");
   XLATensor self_tensor = bridge::GetXlaTensor(self);
+  std::cout << "TEST - var3() before" << std::endl;
   return bridge::AtenFromXlaTensor(
       XLATensor::var(self_tensor,
                      dim ? XlaHelpers::I64List(*dim)
                          : xla::util::Iota<xla::int64>(
                                bridge::GetXlaTensor(self).shape().get().rank()),
                      correction ? *correction : 1, keepdim));
+}
+
+std::tuple<at::Tensor, at::Tensor> var_mean(const at::Tensor& self, c10::optional<at::IntArrayRef> dim,
+                    c10::optional<int64_t> correction, bool keepdim) {
+  XLA_FN_COUNTER("xla::");
+  XLATensor self_tensor = bridge::GetXlaTensor(self);
+  std::cout << "TEST - var_mean() before" << std::endl;
+  auto results = XLATensor::var_mean(self_tensor,
+                                     dim ? xla::util::ToVector<xla::int64>(*dim)
+                                         : xla::util::Iota<xla::int64>(self_tensor.shape().get().rank()),
+                                     correction ? *correction : 1, keepdim);
+  std::cout << "TEST - var_mean() after" << std::endl;
+  return std::make_tuple(bridge::AtenFromXlaTensor(std::get<0>(results)),
+                         bridge::AtenFromXlaTensor(std::get<1>(results)));
 }
 
 at::Tensor view(const at::Tensor& self, at::IntArrayRef size) {

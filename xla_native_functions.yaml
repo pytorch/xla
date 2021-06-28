@@ -147,6 +147,7 @@ supported:
   - var
   - var.dim
   - var.correction
+  - var_mean.correction
   - _s_where
   - norm.ScalarOpt_dtype
   - norm.Scalar
