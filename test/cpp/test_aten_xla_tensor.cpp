@@ -1309,12 +1309,12 @@ TEST_F(AtenXlaTensorTest, TestStdMeanWithCorrection) {
           AllClose(std::get<0>(b), std::get<0>(xla_b));
           AllClose(std::get<1>(b), std::get<1>(xla_b));
         });
-
-        ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
-        ExpectCounterChanged("xla::std_mean", cpp_test::GetIgnoredCounters());
       }
     }
   }
+
+  ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::std_mean", cpp_test::GetIgnoredCounters());
 }
 
 TEST_F(AtenXlaTensorTest, TestSum) {
