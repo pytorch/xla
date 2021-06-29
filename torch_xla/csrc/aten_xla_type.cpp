@@ -3214,11 +3214,13 @@ at::Tensor var(const at::Tensor& self, c10::optional<at::IntArrayRef> dim,
                      correction ? *correction : 1, keepdim));
 }
 
-std::tuple<at::Tensor, at::Tensor> var_mean(const at::Tensor& self, c10::optional<at::IntArrayRef> dim,
-                    c10::optional<int64_t> correction, bool keepdim) {
+std::tuple<at::Tensor, at::Tensor> var_mean(const at::Tensor& self,
+                                            c10::optional<at::IntArrayRef> dim,
+                                            c10::optional<int64_t> correction,
+                                            bool keepdim) {
   XLA_FN_COUNTER("xla::");
-  XLATensor self_tensor = bridge::GetXlaTensor(self);
   std::cout << "TEST - var_mean() before" << std::endl;
+  XLATensor self_tensor = bridge::GetXlaTensor(self);
   auto results = XLATensor::var_mean(self_tensor,
                                      dim ? xla::util::ToVector<xla::int64>(*dim)
                                          : xla::util::Iota<xla::int64>(self_tensor.shape().get().rank()),
