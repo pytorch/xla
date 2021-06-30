@@ -2543,7 +2543,11 @@ XLATensor XLATensor::transpose(const XLATensor& input, xla::int64 dim0,
 }
 
 void XLATensor::transpose_(XLATensor& input, xla::int64 dim0, xla::int64 dim1) {
-  input.SetIrValue(ir::ops::TransposeOp(input.GetIrValue(), dim0, dim1));
+  auto input_shape = input.shape();
+  auto permute_dims = XlaHelpers::MakeTransposePermutation(
+      /*dim0=*/dim0, /*dim1=*/dim1, /*rank=*/input_shape.get().rank());
+  ViewInfo view_info(ViewInfo::Type::kPermute, input_shape, permute_dims);
+  return input.ModifyCurrentView(std::move(view_info));
 }
 
 std::tuple<XLATensor, XLATensor> XLATensor::triangular_solve(
