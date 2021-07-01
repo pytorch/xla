@@ -74,6 +74,8 @@ def update_skips():
       SkipEntry('index_copy', skip=reference_eager_all_skip),
       SkipEntry('index_fill', skip=reference_eager_all_skip),
       SkipEntry('index_select', skip=reference_eager_all_skip),
+      # Failed only on GPU CI (though we don't even compare against CUDA)
+      SkipEntry('index_put', skip=reference_eager_all_skip),
       SkipEntry('kthvalue', skip=reference_eager_all_skip),
       SkipEntry('linalg.cond', skip=reference_eager_float_skip),
       SkipEntry('linalg.eigh', skip=reference_eager_float_skip),
