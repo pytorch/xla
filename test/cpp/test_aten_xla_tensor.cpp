@@ -1465,7 +1465,7 @@ TEST_F(AtenXlaTensorTest, TestVarMeanWithCorrection) {
     }
   }
 
-  //ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+  ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
   ExpectCounterChanged("xla::var_mean", cpp_test::GetIgnoredCounters());
 }
 
