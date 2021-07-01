@@ -26,8 +26,12 @@ reference_eager_float_skip = SkipInfo(
     device_type='xla',
     dtypes=(torch.float,))
 
-SkipEntry = collections.namedtuple(
-    "SkipEntry", ["op_name", "variant_name", "skip"], defaults=["", "", ()])
+
+class SkipEntry(
+    collections.namedtuple("SkipEntry", ["op_name", "variant_name", "skip"])):
+
+  def __new__(cls, op_name="", variant_name="", skip=()):
+    return super(SkipEntry, cls).__new__(cls, op_name, variant_name, skip)
 
 
 def update_skips():
