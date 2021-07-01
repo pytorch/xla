@@ -24,7 +24,6 @@ xla::Shape NodeOutputShape(const Value& input,
         xla::XlaOp mean = BuildMean(operands[0], dimensions, keep_reduced_dimensions);
         return xla::Tuple(operands[0].builder(), {var, mean});
   };
-  std::cout << "TEST - NodeOutputShape()" << std::endl;
   return InferOutputShape({input.shape()}, lower_for_shape_fn);
 }
 
@@ -52,7 +51,6 @@ XlaOpVector VarMean::Lower(LoweringContext* loctx) const {
   xla::XlaOp input = loctx->GetOutputOp(operand(0));
   xla::XlaOp op_var = BuildVar(input, dimensions_, correction_, keep_reduced_dimensions_);
   xla::XlaOp op_mean = BuildMean(input, dimensions_, keep_reduced_dimensions_);
-  std::cout << "TEST - Lower()" << std::endl;
   return ReturnOps({op_var, op_mean}, loctx);
 }
 
