@@ -801,8 +801,8 @@ void XLATensor::ModifyCurrentView(ViewInfo view_info) const {
   // in place, we need to turn this existing tensor into a view.
   ir::Value ir_value = GetIrValue();
   std::shared_ptr<Alias> alias = std::make_shared<Alias>(ir_value);
-  data()->view = std::make_shared<View>(ir_value.shape(), alias,
-                                        std::move(view_info));
+  data()->view =
+      std::make_shared<View>(ir_value.shape(), alias, std::move(view_info));
   AssignIrValue(ir::Value());
 }
 
