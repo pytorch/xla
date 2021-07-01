@@ -12,7 +12,7 @@ namespace ops {
 class VarMean : public Node {
  public:
   VarMean(const Value& input, std::vector<xla::int64> dimensions,
-      xla::int64 correction, bool keep_reduced_dimensions);
+          xla::int64 correction, bool keep_reduced_dimensions);
 
   std::string ToString() const override;
 

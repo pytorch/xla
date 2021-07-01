@@ -2668,13 +2668,14 @@ XLATensor XLATensor::var(const XLATensor& input,
                                  correction, keep_reduced_dimensions));
 }
 
-std::tuple<XLATensor, XLATensor> XLATensor::var_mean(const XLATensor& input,
-                         std::vector<xla::int64> dimensions,
-                         xla::int64 correction, bool keep_reduced_dimensions) {
-  ir::NodePtr node = ir::MakeNode<ir::ops::VarMean>(input.GetIrValue(),
-                                 XlaHelpers::GetCanonicalDimensionIndices(
-                                     dimensions, input.shape().get().rank()),
-                                 correction, keep_reduced_dimensions);
+std::tuple<XLATensor, XLATensor> XLATensor::var_mean(
+    const XLATensor& input, std::vector<xla::int64> dimensions,
+    xla::int64 correction, bool keep_reduced_dimensions) {
+  ir::NodePtr node = ir::MakeNode<ir::ops::VarMean>(
+      input.GetIrValue(),
+      XlaHelpers::GetCanonicalDimensionIndices(dimensions,
+                                               input.shape().get().rank()),
+      correction, keep_reduced_dimensions);
   return std::make_tuple(input.CreateFrom(ir::Value(node, 0)),
                          input.CreateFrom(ir::Value(node, 1)));
 }

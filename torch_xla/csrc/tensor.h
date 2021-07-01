@@ -1112,9 +1112,9 @@ class XLATensor {
                        std::vector<xla::int64> dimensions,
                        xla::int64 correction, bool keep_reduced_dimensions);
 
-  static std::tuple<XLATensor, XLATensor> var_mean(const XLATensor& input,
-                       std::vector<xla::int64> dimensions,
-                       xla::int64 correction, bool keep_reduced_dimensions);
+  static std::tuple<XLATensor, XLATensor> var_mean(
+      const XLATensor& input, std::vector<xla::int64> dimensions,
+      xla::int64 correction, bool keep_reduced_dimensions);
 
   // Like reshape, but it returns a view into the original tensor.
   static XLATensor view(const XLATensor& input,
