@@ -3211,6 +3211,21 @@ at::Tensor var(const at::Tensor& self, c10::optional<at::IntArrayRef> dim,
                      correction ? *correction : 1, keepdim));
 }
 
+std::tuple<at::Tensor, at::Tensor> var_mean(const at::Tensor& self,
+                                            c10::optional<at::IntArrayRef> dim,
+                                            c10::optional<int64_t> correction,
+                                            bool keepdim) {
+  XLA_FN_COUNTER("xla::");
+  XLATensor self_tensor = bridge::GetXlaTensor(self);
+  auto results = XLATensor::var_mean(
+      self_tensor,
+      dim ? xla::util::ToVector<xla::int64>(*dim)
+          : xla::util::Iota<xla::int64>(self_tensor.shape().get().rank()),
+      correction ? *correction : 1, keepdim);
+  return std::make_tuple(bridge::AtenFromXlaTensor(std::get<0>(results)),
+                         bridge::AtenFromXlaTensor(std::get<1>(results)));
+}
+
 at::Tensor view(const at::Tensor& self, at::IntArrayRef size) {
   XLA_FN_COUNTER("xla::");
   return bridge::AtenFromXlaTensor(
