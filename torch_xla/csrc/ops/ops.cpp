@@ -440,10 +440,10 @@ NodePtr ARange(const at::Scalar& start, const at::Scalar& end,
           static_cast<tensorflow::bfloat16>(step.toFloat()));
       break;
     case xla::PrimitiveType::F16:
-      values = XlaHelpers::Range<xla::half>(
-          static_cast<xla::half>(start.toHalf()),
-          static_cast<xla::half>(end.toHalf()),
-          static_cast<xla::half>(step.toHalf()));
+      values =
+          XlaHelpers::Range<xla::half>(static_cast<xla::half>(start.toHalf()),
+                                       static_cast<xla::half>(end.toHalf()),
+                                       static_cast<xla::half>(step.toHalf()));
       break;
     case xla::PrimitiveType::F32:
       values = XlaHelpers::Range<float>(start.toFloat(), end.toFloat(),
