@@ -171,6 +171,7 @@ function install_and_setup_conda() {
   /usr/bin/yes | pip install --upgrade google-cloud-storage
   /usr/bin/yes | pip install lark-parser
   /usr/bin/yes | pip install cloud-tpu-client
+  /usr/bin/yes | pip install expecttest==0.1.3
   /usr/bin/yes | pip install tensorboardX
 }
 
