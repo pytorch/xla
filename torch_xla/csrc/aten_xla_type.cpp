@@ -3359,10 +3359,9 @@ at::Tensor XLANativeFunctions::var(const at::Tensor& self,
                      correction ? *correction : 1, keepdim));
 }
 
-std::tuple<at::Tensor, at::Tensor> XANativeFunctions::var_mean(const at::Tensor& self,
-                                            c10::optional<at::IntArrayRef> dim,
-                                            c10::optional<int64_t> correction,
-                                            bool keepdim) {
+std::tuple<at::Tensor, at::Tensor> XLANativeFunctions::var_mean(
+    const at::Tensor& self, c10::optional<at::IntArrayRef> dim,
+    c10::optional<int64_t> correction, bool keepdim) {
   XLA_FN_COUNTER("xla::");
   XLATensor self_tensor = bridge::GetXlaTensor(self);
   auto results = XLATensor::var_mean(
