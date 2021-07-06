@@ -3359,7 +3359,7 @@ at::Tensor XLANativeFunctions::var(const at::Tensor& self,
                      correction ? *correction : 1, keepdim));
 }
 
-std::tuple<at::Tensor, at::Tensor> var_mean(const at::Tensor& self,
+std::tuple<at::Tensor, at::Tensor> XANativeFunctions::var_mean(const at::Tensor& self,
                                             c10::optional<at::IntArrayRef> dim,
                                             c10::optional<int64_t> correction,
                                             bool keepdim) {
