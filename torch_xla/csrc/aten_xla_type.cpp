@@ -180,7 +180,6 @@ template <typename B>
 at::Tensor DoBinaryOpWithoutPromo(const at::Tensor& self,
                                   const at::Tensor& other, const B& bin_op) {
   at::ScalarType dtype = at::result_type(self, other);
-  XLA_CHECK(at::canCast(/*from=*/dtype, /*to=*/self.scalar_type()));
   std::pair<XLATensor, XLATensor> operands =
       GetBinaryOperands(self, UnwrapNumber(other, dtype));
   XLATensor result = bin_op(operands.first, operands.second);
