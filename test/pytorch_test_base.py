@@ -197,8 +197,6 @@ DISABLED_TORCH_TESTS_ANY = {
         'test_expand_as_view',
         'test_expand_view',
         'test_reshape_nonview',
-        'test_t_inplace_view',  # FIXME
-        'test_transpose_inplace_view',  # FIXME
         'test_unfold_view',
     },
 
