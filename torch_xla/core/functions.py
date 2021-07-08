@@ -150,3 +150,69 @@ def distributed_mm(w, x, split=1):
     wx = torch.narrow(rwxg, 1, ordinal * xs.size(1), xs.size(1))
     results.append(wx)
   return torch.cat(results, dim=1) if len(results) > 1 else results[0]
+
+
+class SyncBatchNorm(torch.nn.Module):
+
+  def __init__(
+      self,
+      num_features: int,
+      eps: float = 1e-5,
+      momentum: float = 0.1,
+  ):
+    super().__init__()
+    self.num_features = num_features
+    self.eps = eps
+    self.momentum = momentum
+    self.weight = torch.nn.Parameter(torch.ones(num_features))
+    self.bias = torch.nn.Parameter(torch.zeros(num_features))
+    self.register_buffer('running_mean', torch.zeros(num_features))
+    self.register_buffer('running_var', torch.ones(num_features))
+
+  def forward(self, batch: torch.Tensor) -> torch.Tensor:
+    assert 2 <= batch.ndim <= 5 and batch.shape[1] == self.num_features
+    reduce_dims = list(range(batch.ndim))
+    reduce_dims.pop(1)  # channel dim
+
+    if self.training:
+      local_mean = torch.mean(batch, dim=reduce_dims)
+      local_sqr_mean = torch.mean(batch * batch, dim=reduce_dims)
+
+      scale = 1.0 / xm.xrt_world_size()
+      mean = AllReduceSumLayer.apply(local_mean) * scale
+      sqr_mean = AllReduceSumLayer.apply(local_sqr_mean) * scale
+      var = sqr_mean - mean.pow(2)
+
+      self.running_mean = (
+          1 - self.momentum) * self.running_mean + self.momentum * mean
+      self.running_var = (
+          1 - self.momentum) * self.running_var + self.momentum * var
+    else:
+      mean = self.running_mean
+      var = self.running_var
+
+    res = torch.empty_like(batch)
+    for c in range(self.num_features):
+      if batch.ndim == 2:
+        res = ((batch - mean) /
+               torch.sqrt(var + self.eps)) * self.weight + self.bias
+      else:
+        res[:, c, ...] = (
+            (batch[:, c, ...] - mean[c]) /
+            torch.sqrt(var[c] + self.eps)) * self.weight[c] + self.bias[c]
+
+    return res
+
+  def extra_repr(self) -> str:
+    return f'{self.num_features}, eps={self.eps}'
+
+
+class AllReduceSumLayer(torch.autograd.Function):
+
+  @staticmethod
+  def forward(ctx, x):
+    return xm.all_reduce(xm.REDUCE_SUM, x)
+
+  @staticmethod
+  def backward(ctx, grad_output):
+    return xm.all_reduce(xm.REDUCE_SUM, grad_output)
