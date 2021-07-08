@@ -355,7 +355,7 @@ xla::XlaOp BuildMaxInDims(xla::XlaOp input,
 
 xla::XlaOp BuildMinInDim(xla::XlaOp input, xla::int64 dim,
                          bool keep_reduced_dimensions) {
-  return BuildMaxInDims(input, {dim}, keep_reduced_dimensions);
+  return BuildMinInDims(input, {dim}, keep_reduced_dimensions);
 }
 
 xla::XlaOp BuildMinInDims(xla::XlaOp input,

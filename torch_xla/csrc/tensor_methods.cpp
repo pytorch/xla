@@ -583,7 +583,7 @@ XLATensor XLATensor::amin(const XLATensor& input,
                           std::vector<xla::int64> dimensions,
                           bool keep_reduced_dimensions) {
   return input.CreateFrom(
-      ir::MakeNode<ir::ops::AMin>(input.GetIrValue(),
+      ir::MakeNode<ir::ops::Amin>(input.GetIrValue(),
                                   XlaHelpers::GetCanonicalDimensionIndices(
                                       dimensions, input.shape().get().rank()),
                                   keep_reduced_dimensions));
