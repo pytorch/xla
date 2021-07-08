@@ -1142,6 +1142,37 @@ TEST_F(AtenXlaTensorTest, TestAllDimKeep) {
   }
 }
 
+TEST_F(AtenXlaTensorTest, TestAMin) {
+  torch::Tensor input =
+      torch::rand({4, 3, 4}, torch::TensorOptions(torch::kFloat));
+  int rank = input.dim();
+  for (bool keepdim : {false, true}) {
+    for (int dim = -rank; dim < rank; ++dim) {
+      auto values_indices = torch::amin(input, {dim}, /*keepdim=*/keepdim);
+      ForEachDevice([&](const torch::Device& device) {
+        torch::Tensor xla_input = CopyToDevice(input, device);
+        auto xla_values_indices =
+            torch::amin(xla_input, {dim}, /*keepdim=*/keepdim);
+        AllClose(values_indices, xla_values_indices);
+      });
+    }
+    for (int dim1 = -rank; dim1 < rank; ++dim1) {
+      for (int dim2 = -rank; dim2 < rank; ++dim2) {
+        if ((dim1 == dim2) || (dim1 == rank + dim2) || (dim2 == rank + dim1))
+          continue;
+        auto values_indices =
+            torch::amin(input, {dim1, dim2}, /*keepdim=*/keepdim);
+        ForEachDevice([&](const torch::Device& device) {
+          torch::Tensor xla_input = CopyToDevice(input, device);
+          auto xla_values_indices =
+              torch::amin(xla_input, {dim1, dim2}, /*keepdim=*/keepdim);
+          AllClose(values_indices, xla_values_indices);
+        });
+      }
+    }
+  }
+}
+
 TEST_F(AtenXlaTensorTest, TestAny) {
   for (torch::ScalarType scalar_type :
        {torch::kFloat, torch::kByte, torch::kChar, torch::kShort, torch::kInt,

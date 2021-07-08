@@ -22,6 +22,7 @@
 #include "torch_xla/csrc/ops/all.h"
 #include "torch_xla/csrc/ops/all_reduce.h"
 #include "torch_xla/csrc/ops/all_to_all.h"
+#include "torch_xla/csrc/ops/amin.h"
 #include "torch_xla/csrc/ops/amp_foreach_non_finite_check_and_unscale.h"
 #include "torch_xla/csrc/ops/amp_update_scale.h"
 #include "torch_xla/csrc/ops/any.h"
@@ -576,6 +577,16 @@ XLATensor XLATensor::all(const XLATensor& input,
                                      dimensions, input.shape().get().rank()),
                                  keep_reduced_dimensions),
       result_type);
+}
+
+XLATensor XLATensor::amin(const XLATensor& input,
+                          std::vector<xla::int64> dimensions,
+                          bool keep_reduced_dimensions) {
+  return input.CreateFrom(
+      ir::MakeNode<ir::ops::AMin>(input.GetIrValue(),
+                                  XlaHelpers::GetCanonicalDimensionIndices(
+                                      dimensions, input.shape().get().rank()),
+                                  keep_reduced_dimensions));
 }
 
 XLATensor XLATensor::any(const XLATensor& input,

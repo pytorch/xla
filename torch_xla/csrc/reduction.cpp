@@ -355,19 +355,25 @@ xla::XlaOp BuildMaxInDims(xla::XlaOp input,
 
 xla::XlaOp BuildMinInDim(xla::XlaOp input, xla::int64 dim,
                          bool keep_reduced_dimensions) {
+  return BuildMaxInDims(input, {dim}, keep_reduced_dimensions);
+}
+
+xla::XlaOp BuildMinInDims(xla::XlaOp input,
+                          absl::Span<const xla::int64> dimensions,
+                          bool keep_reduced_dimensions) {
   const xla::Shape& shape = XlaHelpers::ShapeOfXlaOp(input);
   XlaHelpers::MinMax min_max = XlaHelpers::MinMaxValues(shape.element_type());
   xla::XlaOp init_value = XlaHelpers::ScalarValue(
       min_max.max, shape.element_type(), input.builder());
   ReductionInfo rinfo =
-      GetReductionInfo(input, shape, {dim}, keep_reduced_dimensions);
+      GetReductionInfo(input, shape, dimensions, keep_reduced_dimensions);
   if (rinfo.element_count.scalar_size) {
     // When can only assert this if dimensions are not dynamic.
     XLA_CHECK_GT(*rinfo.element_count.scalar_size, 0);
   }
   xla::XlaOp result = xla::Reduce(
       input, init_value, XlaHelpers::CreateMinComputation(shape.element_type()),
-      {dim});
+      dimensions);
   if (keep_reduced_dimensions) {
     result = XlaHelpers::DynamicReshape(result, rinfo.new_dimensions);
   }
