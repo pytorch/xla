@@ -335,6 +335,7 @@ DISABLED_TORCH_TESTS_TPU_ONLY = {
         'test_put_xla_int32',  # slow on TPU (~22 min)
         'test_put_xla_int64',  # slow on TPU (~15 min)
         'test_put_xla_int8',  # slow on TPU (~15 min)
+        'test_cov_xla',  # precision (9.53674e-07 vs 0)
     },
 
     # test_indexing.py
