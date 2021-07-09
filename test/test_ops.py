@@ -135,7 +135,6 @@ allowed_opinfo = set(
             AllowedOpInfoEntry('max', 'reduction_no_dim '),
             AllowedOpInfoEntry('median'),
             AllowedOpInfoEntry('nanmedian'),
-            AllowedOpInfoEntry('var_mean'),
             AllowedOpInfoEntry('min', 'binary '),
             AllowedOpInfoEntry('min', 'reduction_with_dim '),
             AllowedOpInfoEntry('min', 'reduction_no_dim '),
@@ -263,6 +262,7 @@ allowed_opinfo = set(
             # AllowedOpInfoEntry('polygamma', 'polygamma_n_4 '),
 
             # Failing Ops
+            # Refer for more info : https://github.com/pytorch/xla/pull/3019#issuecomment-877132385
             # AllowedOpInfoEntry('acos'),
             # AllowedOpInfoEntry('acosh'),
             # AllowedOpInfoEntry('argmax')
@@ -342,6 +342,10 @@ allowed_opinfo = set(
             # Failed on CUDA CI only (investigate)
             # app.circleci.com/pipelines/github/pytorch/xla/9088/workflows/2d59c649-db2b-4384-921e-5e43eba1b51a/jobs/17875
             # AllowedOpInfoEntry('index_put'),
+
+            # Worked locally (but failing on CI both CPU and CUDA)
+            # app.circleci.com/pipelines/github/pytorch/xla/9130/workflows/71c74f3d-1735-4328-81b5-784d6e6744da/jobs/17998
+            # AllowedOpInfoEntry('var_mean'),
         }))
 
 
