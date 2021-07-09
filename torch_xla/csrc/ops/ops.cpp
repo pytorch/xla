@@ -159,12 +159,6 @@ NodePtr ReluOp(const Value& input) {
       std::move(lower_fn));
 }
 
-NodePtr TransposeOp(const Value& input, xla::int64 dim0, xla::int64 dim1) {
-  return MakeNode<Permute>(input, XlaHelpers::MakeTransposePermutation(
-                                      /*dim0=*/dim0, /*dim1=*/dim1,
-                                      /*rank=*/input.shape().rank()));
-}
-
 NodePtr HardSigmoid(const Value& input) {
   auto lower_fn = [](const Node& node, LoweringContext* loctx) -> XlaOpVector {
     xla::XlaOp xla_input = loctx->GetOutputOp(node.operand(0));
@@ -438,6 +432,12 @@ NodePtr ARange(const at::Scalar& start, const at::Scalar& end,
           static_cast<tensorflow::bfloat16>(start.toFloat()),
           static_cast<tensorflow::bfloat16>(end.toFloat()),
           static_cast<tensorflow::bfloat16>(step.toFloat()));
+      break;
+    case xla::PrimitiveType::F16:
+      values =
+          XlaHelpers::Range<xla::half>(static_cast<xla::half>(start.toHalf()),
+                                       static_cast<xla::half>(end.toHalf()),
+                                       static_cast<xla::half>(step.toHalf()));
       break;
     case xla::PrimitiveType::F32:
       values = XlaHelpers::Range<float>(start.toFloat(), end.toFloat(),

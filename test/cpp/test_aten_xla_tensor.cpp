@@ -1309,12 +1309,12 @@ TEST_F(AtenXlaTensorTest, TestStdMeanWithCorrection) {
           AllClose(std::get<0>(b), std::get<0>(xla_b));
           AllClose(std::get<1>(b), std::get<1>(xla_b));
         });
-
-        ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
-        ExpectCounterChanged("xla::std_mean", cpp_test::GetIgnoredCounters());
       }
     }
   }
+
+  ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::std_mean", cpp_test::GetIgnoredCounters());
 }
 
 TEST_F(AtenXlaTensorTest, TestSum) {
@@ -1446,6 +1446,27 @@ TEST_F(AtenXlaTensorTest, TestVarWithCorrection) {
   }
   ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
   ExpectCounterChanged("xla::var", cpp_test::GetIgnoredCounters());
+}
+
+TEST_F(AtenXlaTensorTest, TestVarMeanWithCorrection) {
+  torch::Tensor a = torch::rand({4, 3, 4}, torch::TensorOptions(torch::kFloat));
+  c10::optional<int64_t> corrections[] = {1, 2, c10::nullopt};
+  for (const auto& dim : std::vector<std::vector<int64_t>>{{0, 1}, {-3, -2}}) {
+    for (const auto& correction : corrections) {
+      for (auto keepdim : {true, false}) {
+        auto b = torch::var_mean(a, dim, correction, keepdim);
+        ForEachDevice([&](const torch::Device& device) {
+          torch::Tensor xla_a = CopyToDevice(a, device);
+          auto xla_b = torch::var_mean(xla_a, dim, correction, keepdim);
+          AllClose(std::get<0>(b), std::get<0>(xla_b));
+          AllClose(std::get<1>(b), std::get<1>(xla_b));
+        });
+      }
+    }
+  }
+
+  ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::var_mean", cpp_test::GetIgnoredCounters());
 }
 
 TEST_F(AtenXlaTensorTest, TestMaxInDim) {
