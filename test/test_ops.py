@@ -18,6 +18,7 @@ class AllowedOpInfoEntry(
   def __new__(cls, name, variant_test_name=""):
     return super(AllowedOpInfoEntry, cls).__new__(cls, name, variant_test_name)
 
+
 # Ops (subset of `op_db`) which are known to pass the reference tests on XLA.
 allowed_opinfo = set(
     map(
