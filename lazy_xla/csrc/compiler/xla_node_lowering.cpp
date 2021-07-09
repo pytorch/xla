@@ -89,6 +89,7 @@
 #include "lazy_tensor_core/csrc/ops/squeeze.h"
 #include "lazy_tensor_core/csrc/ops/stack.h"
 #include "lazy_tensor_core/csrc/ops/std.h"
+#include "lazy_tensor_core/csrc/ops/std_mean.h"
 #include "lazy_tensor_core/csrc/ops/sum.h"
 #include "lazy_tensor_core/csrc/ops/svd.h"
 #include "lazy_tensor_core/csrc/ops/symeig.h"
@@ -106,6 +107,7 @@
 #include "lazy_tensor_core/csrc/ops/upsample_nearest2d.h"
 #include "lazy_tensor_core/csrc/ops/upsample_nearest2d_backward.h"
 #include "lazy_tensor_core/csrc/ops/var.h"
+#include "lazy_tensor_core/csrc/ops/var_mean.h"
 #include "lazy_tensor_core/csrc/ops/view.h"
 #include "lazy_tensor_core/csrc/tensor_util.h"
 #include "lazy_tensors/shape_util.h"
@@ -1125,10 +1127,36 @@ lazy_tensors::Shape InferStd(const ir::ops::Std* node) {
   return ir::ops::InferOutputShape({input.shape()}, shape_fn);
 }
 
+lazy_tensors::Shape InferStdMean(const ir::ops::StdMean* node) {
+  auto shape_fn = [node](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
+    xla::XlaOp std =
+        BuildStdDeviation(operands[0], node->dimensions(),
+                          node->keep_reduced_dimensions(), node->correction());
+    xla::XlaOp mean = BuildMean(operands[0], node->dimensions(),
+                                node->keep_reduced_dimensions());
+    return xla::Tuple(operands[0].builder(), {std, mean});
+  };
+  const ir::Output& input = node->operand(0);
+  return ir::ops::InferOutputShape({input.shape()}, shape_fn);
+}
+
 lazy_tensors::Shape InferVar(const ir::ops::Var* node) {
   auto shape_fn = [node](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
     return BuildVar(operands[0], node->dimensions(), node->correction(),
                     node->keep_reduced_dimensions());
+  };
+  const ir::Output& input = node->operand(0);
+  return ir::ops::InferOutputShape({input.shape()}, shape_fn);
+}
+
+lazy_tensors::Shape InferVarMean(const ir::ops::VarMean* node) {
+  auto shape_fn = [node](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
+    xla::XlaOp var =
+        BuildVar(operands[0], node->dimensions(), node->correction(),
+                 node->keep_reduced_dimensions());
+    xla::XlaOp mean = BuildMean(operands[0], node->dimensions(),
+                                node->keep_reduced_dimensions());
+    return xla::Tuple(operands[0].builder(), {var, mean});
   };
   const ir::Output& input = node->operand(0);
   return ir::ops::InferOutputShape({input.shape()}, shape_fn);
@@ -1267,6 +1295,7 @@ class XlaNodeLowering : public NodeLowering {
   DECLARE_UNARY_OP(Rsqrt);
   DECLARE_UNARY_OP(Ceil);
   DECLARE_UNARY_OP(Floor);
+  DECLARE_UNARY_OP(IsNan);
   DECLARE_UNARY_OP(Round);
   DECLARE_UNARY_OP(Not);
   DECLARE_UNARY_OP(Where);
@@ -1379,7 +1408,9 @@ class XlaNodeLowering : public NodeLowering {
   DECLARE_UNARY_OP2(Unsqueeze);
   DECLARE_UNARY_OP2(SVD);
   DECLARE_UNARY_OP2(Std);
+  DECLARE_UNARY_OP2(StdMean);
   DECLARE_UNARY_OP2(Var);
+  DECLARE_UNARY_OP2(VarMean);
   DECLARE_UNARY_OP2(TopK);
   DECLARE_UNARY_OP2(View);
 };
@@ -1393,7 +1424,9 @@ bool XlaNodeLowering::Lower(const ir::Node* node) {
   if (ops.empty()) {
     return false;
   }
-  LTC_CHECK_EQ(node->num_outputs(), ops.size());
+  if (node->num_outputs() != ops.size()) {
+    LTC_LOG(FATAL) << *node;
+  }
   for (size_t i = 0; i < ops.size(); ++i) {
     loctx()->AssignOutputOp(ir::Output(node, i), ops[i]);
   }
@@ -1453,6 +1486,7 @@ XlaOpVector XlaNodeLowering::LowerToXla(const ir::Node* node) {
     HANDLE_GENERIC_OP(Rsqrt, at::aten::rsqrt)
     HANDLE_GENERIC_OP(Ceil, at::aten::ceil)
     HANDLE_GENERIC_OP(Floor, at::aten::floor)
+    HANDLE_GENERIC_OP(IsNan, at::aten::isnan)
     HANDLE_GENERIC_OP(Round, at::aten::round)
     HANDLE_GENERIC_OP(Not, at::aten::bitwise_not)
     HANDLE_GENERIC_OP(Where, at::aten::where)
@@ -1550,7 +1584,9 @@ XlaOpVector XlaNodeLowering::LowerToXla(const ir::Node* node) {
     HANDLE_GENERIC_OP2(Unsqueeze, at::aten::unsqueeze)
     HANDLE_GENERIC_OP2(SVD, at::aten::svd)
     HANDLE_GENERIC_OP2(Std, at::aten::std)
+    HANDLE_GENERIC_OP2(StdMean, at::aten::std_mean)
     HANDLE_GENERIC_OP2(Var, at::aten::var)
+    HANDLE_GENERIC_OP2(VarMean, at::aten::var_mean)
     HANDLE_GENERIC_OP2(TopK, at::aten::topk)
     HANDLE_GENERIC_OP2(View, at::aten::view)
     HANDLE_GENERIC_OP2(All, at::aten::all)
@@ -2592,10 +2628,29 @@ XlaOpVector XlaNodeLowering::LowerStd(const ir::ops::Std* node) {
                             node->correction())};
 }
 
+XlaOpVector XlaNodeLowering::LowerStdMean(const ir::ops::StdMean* node) {
+  xla::XlaOp input = loctx()->GetOutputOp(node->operand(0));
+  xla::XlaOp op_std =
+      BuildStdDeviation(input, node->dimensions(),
+                        node->keep_reduced_dimensions(), node->correction());
+  xla::XlaOp op_mean =
+      BuildMean(input, node->dimensions(), node->keep_reduced_dimensions());
+  return {op_std, op_mean};
+}
+
 XlaOpVector XlaNodeLowering::LowerVar(const ir::ops::Var* node) {
   xla::XlaOp input = loctx()->GetOutputOp(node->operand(0));
   return {BuildVar(input, node->dimensions(), node->correction(),
                    node->keep_reduced_dimensions())};
+}
+
+XlaOpVector XlaNodeLowering::LowerVarMean(const ir::ops::VarMean* node) {
+  xla::XlaOp input = loctx()->GetOutputOp(node->operand(0));
+  xla::XlaOp op_var = BuildVar(input, node->dimensions(), node->correction(),
+                               node->keep_reduced_dimensions());
+  xla::XlaOp op_mean =
+      BuildMean(input, node->dimensions(), node->keep_reduced_dimensions());
+  return {op_var, op_mean};
 }
 
 XlaOpVector XlaNodeLowering::LowerTopK(const ir::ops::TopK* node) {
@@ -2959,6 +3014,7 @@ DEFINE_UNARY_OP(Sqrt, xla::Sqrt)
 DEFINE_UNARY_OP(Rsqrt, xla::Rsqrt)
 DEFINE_UNARY_OP(Ceil, xla::Ceil)
 DEFINE_UNARY_OP(Floor, xla::Floor)
+DEFINE_UNARY_OP(IsNan, xla::IsNan)
 DEFINE_UNARY_OP(Round, xla::RoundToEven)
 DEFINE_UNARY_OP(Not, xla::Not)
 DEFINE_BINARY_OP(Max, xla::Max)
@@ -3286,6 +3342,10 @@ lazy_tensors::Shape XlaNodeLowering::Infer(const ir::Node* node) {
       return InferStd(
           ir::NodeCast<ir::ops::Std>(node, ir::OpKind(at::aten::std)));
     }
+    case at::aten::std_mean: {
+      return InferStdMean(
+          ir::NodeCast<ir::ops::StdMean>(node, ir::OpKind(at::aten::std_mean)));
+    }
     case at::aten::svd: {
       return InferSVD(
           ir::NodeCast<ir::ops::SVD>(node, ir::OpKind(at::aten::svd)));
@@ -3293,6 +3353,10 @@ lazy_tensors::Shape XlaNodeLowering::Infer(const ir::Node* node) {
     case at::aten::var: {
       return InferVar(
           ir::NodeCast<ir::ops::Var>(node, ir::OpKind(at::aten::var)));
+    }
+    case at::aten::var_mean: {
+      return InferVarMean(
+          ir::NodeCast<ir::ops::VarMean>(node, ir::OpKind(at::aten::var_mean)));
     }
     case at::aten::triangular_solve: {
       return InferTriangularSolve(ir::NodeCast<ir::ops::TriangularSolve>(

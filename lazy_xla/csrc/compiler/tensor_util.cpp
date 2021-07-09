@@ -40,6 +40,22 @@ bool ShouldUseF16() {
   return use_fp16;
 }
 
+bool ShouldDowncastToBF16() {
+  bool downcast_bf16 = xla::sys_util::GetEnvBool("XLA_DOWNCAST_BF16", false);
+  if (downcast_bf16) {
+    TF_LOG(INFO) << "Downcasting floating point values, F64->F32, F32->BF16";
+  }
+  return downcast_bf16;
+}
+
+bool ShouldDowncastToF16() {
+  bool downcast_fp16 = xla::sys_util::GetEnvBool("XLA_DOWNCAST_FP16", false);
+  if (downcast_fp16) {
+    TF_LOG(INFO) << "Downcasting floating point values, F64->F32, F32->FP16";
+  }
+  return downcast_fp16;
+}
+
 bool ShouldUse32BitLong() {
   bool use_32bit_long = xla::sys_util::GetEnvBool("XLA_USE_32BIT_LONG", false);
   if (use_32bit_long) {
@@ -56,6 +72,16 @@ bool UseBF16() {
 bool UseF16() {
   static bool use_fp16 = ShouldUseF16();
   return use_fp16;
+}
+
+bool DowncastBF16() {
+  static bool downcast_bf16 = ShouldDowncastToBF16();
+  return downcast_bf16;
+}
+
+bool DowncastF16() {
+  static bool downcast_fp16 = ShouldDowncastToF16();
+  return downcast_fp16;
 }
 
 bool Use32BitLong() {
@@ -875,11 +901,14 @@ xla::Shape CreateComputationShapeFromTensor(const at::Tensor& tensor,
 at::ScalarType TensorTypeFromXlaType(xla::PrimitiveType xla_type) {
   switch (xla_type) {
     case xla::PrimitiveType::BF16:
-      return UseBF16() ? at::ScalarType::Float : at::ScalarType::BFloat16;
+      return UseBF16() || DowncastBF16() ? at::ScalarType::Float
+                                         : at::ScalarType::BFloat16;
     case xla::PrimitiveType::F16:
-      return UseF16() ? at::ScalarType::Float : at::ScalarType::Half;
+      return UseF16() || DowncastF16() ? at::ScalarType::Float
+                                       : at::ScalarType::Half;
     case xla::PrimitiveType::F32:
-      return at::ScalarType::Float;
+      return DowncastBF16() || DowncastF16() ? at::ScalarType::Double
+                                             : at::ScalarType::Float;
     case xla::PrimitiveType::F64:
       return at::ScalarType::Double;
     case xla::PrimitiveType::PRED:
@@ -948,13 +977,17 @@ xla::PrimitiveType GetDevicePrimitiveType(xla::PrimitiveType type,
       if (UseBF16()) {
         return xla::PrimitiveType::BF16;
       }
+      if (DowncastBF16() || DowncastF16()) {
+        return xla::PrimitiveType::F32;
+      }
       return xla_device.hw_type != DeviceType::TPU ? xla::PrimitiveType::F64
                                                    : xla::PrimitiveType::F32;
     case xla::PrimitiveType::F32:
-      if (UseF16()) {
+      if (UseF16() || DowncastF16()) {
         return xla::PrimitiveType::F16;
       }
-      return UseBF16() ? xla::PrimitiveType::BF16 : xla::PrimitiveType::F32;
+      return UseBF16() || DowncastBF16() ? xla::PrimitiveType::BF16
+                                         : xla::PrimitiveType::F32;
     case xla::PrimitiveType::U16:
       return xla_device.hw_type != DeviceType::TPU ? xla::PrimitiveType::U16
                                                    : xla::PrimitiveType::U32;
