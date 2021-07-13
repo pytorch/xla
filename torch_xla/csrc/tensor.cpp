@@ -964,6 +964,8 @@ std::vector<at::Tensor> XLATensor::GetTensorsOpByOp(
 }
 
 std::vector<at::Tensor> XLATensor::GetTensors(std::vector<XLATensor>* tensors) {
+  TF_VLOG(4) << "Trying to get the value of " << tensors->size()
+             << " tensor(s)";
   static const bool op_by_op =
       xla::sys_util::GetEnvBool("XLA_GET_TENSORS_OPBYOP", false);
   return op_by_op ? GetTensorsOpByOp(tensors) : GetTensorsFused(tensors);
@@ -1359,6 +1361,8 @@ std::shared_ptr<XLATensor::Async> XLATensor::ScheduleSyncTensorsGraph(
 void XLATensor::SyncTensorsGraph(std::vector<XLATensor>* tensors,
                                  absl::Span<const std::string> devices,
                                  bool wait, bool sync_xla_data) {
+  TF_VLOG(4) << "Trying to sync the value of " << tensors->size()
+             << " tensor(s)";
   tensorflow::profiler::TraceMe activity(
       "SyncTensorsGraph", tensorflow::profiler::TraceMeLevel::kInfo);
   static const bool op_by_op =
