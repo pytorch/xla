@@ -190,9 +190,9 @@ NodePtr EluBackward(const Value& grad_output, const Value& output,
                     const at::Scalar& alpha, const at::Scalar& scale,
                     const at::Scalar& input_scale);
 
-NodePtr Gelu(const Value& input);
+NodePtr Gelu(const Value& input, bool approximate);
 
-NodePtr GeluBackward(const Value& grad, const Value& input);
+NodePtr GeluBackward(const Value& grad, const Value& input, bool approximate);
 
 NodePtr Lshift(const Value& input, const at::Scalar& other);
 

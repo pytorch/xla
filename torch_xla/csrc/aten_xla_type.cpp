@@ -1507,16 +1507,18 @@ at::Tensor XLANativeFunctions::ge(const at::Tensor& self,
       XLATensor::ge(bridge::GetXlaTensor(self), bridge::GetXlaTensor(other)));
 }
 
-at::Tensor XLANativeFunctions::gelu(const at::Tensor& self) {
+at::Tensor XLANativeFunctions::gelu(const at::Tensor& self, bool approximate) {
   XLA_FN_COUNTER("xla::");
-  return bridge::AtenFromXlaTensor(XLATensor::gelu(bridge::GetXlaTensor(self)));
+  return bridge::AtenFromXlaTensor(
+      XLATensor::gelu(bridge::GetXlaTensor(self), approximate));
 }
 
 at::Tensor XLANativeFunctions::gelu_backward(const at::Tensor& grad,
-                                             const at::Tensor& self) {
+                                             const at::Tensor& self,
+                                             bool approximate) {
   XLA_FN_COUNTER("xla::");
   return bridge::AtenFromXlaTensor(XLATensor::gelu_backward(
-      bridge::GetXlaTensor(grad), bridge::GetXlaTensor(self)));
+      bridge::GetXlaTensor(grad), bridge::GetXlaTensor(self), approximate));
 }
 
 at::Tensor XLANativeFunctions::ger(const at::Tensor& self,
