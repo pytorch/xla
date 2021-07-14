@@ -678,7 +678,7 @@ NodePtr GeluBackward(const Value& grad, const Value& input, bool approximate) {
     NodePtr left_derivative = half * right;
 
     NodePtr tanh_derivative = one - tanh_inner * tanh_inner;
-    NodePtr inner_derivative = beta * (one + three * kappa * x * x);
+    NodePtr inner_derivative = beta * (one + three * kappa * input * input);
     NodePtr right_derivative = left * tanh_derivative * inner_derivative;
 
     return grad * (left_derivative + right_derivative);
