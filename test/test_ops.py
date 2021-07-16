@@ -22,14 +22,15 @@ class AllowedOpInfoEntry(
 # Ops (subset of `op_db`) which are known to pass the reference tests on XLA.
 allowed_opinfo = set(
     map(
-        lambda op: op.name + "_" + op.variant_test_name,
+        lambda op: op.name + "_" + op.variant_test_name
+        if op.variant_test_name != '' else op.name,
         {
             AllowedOpInfoEntry('abs'),
             AllowedOpInfoEntry('add'),
             AllowedOpInfoEntry('mul'),
             AllowedOpInfoEntry('sub'),
             AllowedOpInfoEntry('addmm'),
-            AllowedOpInfoEntry('addmm', 'decomposed '),
+            AllowedOpInfoEntry('addmm', 'decomposed'),
             AllowedOpInfoEntry('addmv'),
             AllowedOpInfoEntry('addbmm'),
             AllowedOpInfoEntry('baddbmm'),
@@ -55,7 +56,6 @@ allowed_opinfo = set(
             AllowedOpInfoEntry('clone'),
             AllowedOpInfoEntry('contiguous'),
             AllowedOpInfoEntry('clamp'),
-            AllowedOpInfoEntry('clamp', 'scalar '),
             AllowedOpInfoEntry('positive'),
             AllowedOpInfoEntry('conj'),
             AllowedOpInfoEntry('conj_physical'),
@@ -68,9 +68,9 @@ allowed_opinfo = set(
             AllowedOpInfoEntry('cummax'),
             AllowedOpInfoEntry('cummin'),
             AllowedOpInfoEntry('deg2rad'),
-            AllowedOpInfoEntry('div', 'no_rounding_mode '),
-            AllowedOpInfoEntry('div', 'trunc_rounding '),
-            AllowedOpInfoEntry('div', 'floor_rounding '),
+            AllowedOpInfoEntry('div', 'no_rounding_mode'),
+            AllowedOpInfoEntry('div', 'trunc_rounding'),
+            AllowedOpInfoEntry('div', 'floor_rounding'),
             AllowedOpInfoEntry('true_divide'),
             AllowedOpInfoEntry('expand'),
             AllowedOpInfoEntry('expand_as'),
@@ -79,9 +79,9 @@ allowed_opinfo = set(
             AllowedOpInfoEntry('fmax'),
             AllowedOpInfoEntry('fmin'),
             AllowedOpInfoEntry('fmod'),
-            AllowedOpInfoEntry('fmod', 'autodiffed '),
+            AllowedOpInfoEntry('fmod', 'autodiffed'),
             AllowedOpInfoEntry('remainder'),
-            AllowedOpInfoEntry('remainder', 'autodiffed '),
+            AllowedOpInfoEntry('remainder', 'autodiffed'),
             AllowedOpInfoEntry('frac'),
             AllowedOpInfoEntry('fft.fft'),
             AllowedOpInfoEntry('fft.fftn'),
@@ -130,14 +130,12 @@ allowed_opinfo = set(
             AllowedOpInfoEntry('masked_select'),
             AllowedOpInfoEntry('matrix_exp'),
             AllowedOpInfoEntry('matmul'),
-            AllowedOpInfoEntry('max', 'binary '),
-            AllowedOpInfoEntry('max', 'reduction_with_dim '),
-            AllowedOpInfoEntry('max', 'reduction_no_dim '),
+            AllowedOpInfoEntry('max', 'binary'),
+            AllowedOpInfoEntry('max', 'reduction_no_dim'),
             AllowedOpInfoEntry('median'),
             AllowedOpInfoEntry('nanmedian'),
             AllowedOpInfoEntry('min', 'binary '),
-            AllowedOpInfoEntry('min', 'reduction_with_dim '),
-            AllowedOpInfoEntry('min', 'reduction_no_dim '),
+            AllowedOpInfoEntry('min', 'reduction_no_dim'),
             AllowedOpInfoEntry('nansum'),
             AllowedOpInfoEntry('quantile'),
             AllowedOpInfoEntry('nanquantile'),
@@ -151,9 +149,8 @@ allowed_opinfo = set(
             AllowedOpInfoEntry('nn.functional.relu6'),
             AllowedOpInfoEntry('mm'),
             AllowedOpInfoEntry('mode'),
-            AllowedOpInfoEntry('mvlgamma', 'mvlgamma_p_1 '),
-            AllowedOpInfoEntry('mvlgamma', 'mvlgamma_p_3 '),
-            AllowedOpInfoEntry('mvlgamma', 'mvlgamma_p_5 '),
+            AllowedOpInfoEntry('polygamma', 'polygamma_n_0'),
+            AllowedOpInfoEntry('mvlgamma', 'mvlgamma_p_1'),
             AllowedOpInfoEntry('ne'),
             AllowedOpInfoEntry('narrow'),
             AllowedOpInfoEntry('neg'),
@@ -173,15 +170,14 @@ allowed_opinfo = set(
             AllowedOpInfoEntry('sign'),
             AllowedOpInfoEntry('sgn'),
             AllowedOpInfoEntry('split'),
-            AllowedOpInfoEntry('split', 'list_args '),
+            AllowedOpInfoEntry('split', 'list_args'),
             AllowedOpInfoEntry('split_with_sizes'),
             AllowedOpInfoEntry('__radd__'),
             AllowedOpInfoEntry('__rmul__'),
             AllowedOpInfoEntry('__rmatmul__'),
             AllowedOpInfoEntry('__rpow__'),
             AllowedOpInfoEntry('__rsub__'),
-            AllowedOpInfoEntry('rsub', 'rsub_tensor '),
-            AllowedOpInfoEntry('rsub', 'rsub_scalar '),
+            AllowedOpInfoEntry('rsub', 'rsub_tensor'),
             AllowedOpInfoEntry('select'),
             AllowedOpInfoEntry('signbit'),
             AllowedOpInfoEntry('solve'),
@@ -200,8 +196,6 @@ allowed_opinfo = set(
             AllowedOpInfoEntry('angle'),
             AllowedOpInfoEntry('linalg.solve'),
             AllowedOpInfoEntry('linalg.matrix_rank'),
-            AllowedOpInfoEntry('linalg.matrix_rank', 'hermitian '),
-            AllowedOpInfoEntry('linalg.pinv', 'hermitian '),
             AllowedOpInfoEntry('einsum'),
             AllowedOpInfoEntry('linalg.svd'),
             AllowedOpInfoEntry('linalg.svdvals'),
@@ -232,7 +226,7 @@ allowed_opinfo = set(
             AllowedOpInfoEntry('zero_'),
             AllowedOpInfoEntry('special.xlog1py'),
             AllowedOpInfoEntry('special.zeta'),
-            AllowedOpInfoEntry('special.zeta', 'grad '),
+            AllowedOpInfoEntry('special.zeta', 'grad'),
             AllowedOpInfoEntry('trace'),
             AllowedOpInfoEntry('tril'),
             AllowedOpInfoEntry('triu'),
@@ -246,23 +240,30 @@ allowed_opinfo = set(
             AllowedOpInfoEntry('lgamma'),
             AllowedOpInfoEntry('logdet'),
             AllowedOpInfoEntry('log_softmax'),
-            AllowedOpInfoEntry('log_softmax', 'dtype '),
             AllowedOpInfoEntry('logit'),
             AllowedOpInfoEntry('where'),
-            AllowedOpInfoEntry('norm', 'nuc '),
-            AllowedOpInfoEntry('norm', 'fro '),
-            AllowedOpInfoEntry('norm', 'inf '),
+            AllowedOpInfoEntry('norm', 'fro'),
             AllowedOpInfoEntry('special.erfcx'),
 
             # Duplicate Redundant entries for this test.
-            # AllowedOpInfoEntry('polygamma', 'polygamma_n_0 '),
-            # AllowedOpInfoEntry('polygamma', 'polygamma_n_1 '),
-            # AllowedOpInfoEntry('polygamma', 'polygamma_n_2 '),
-            # AllowedOpInfoEntry('polygamma', 'polygamma_n_3 '),
-            # AllowedOpInfoEntry('polygamma', 'polygamma_n_4 '),
+            # AllowedOpInfoEntry('polygamma', 'polygamma_n_1'),
+            # AllowedOpInfoEntry('polygamma', 'polygamma_n_2'),
+            # AllowedOpInfoEntry('polygamma', 'polygamma_n_3'),
+            # AllowedOpInfoEntry('polygamma', 'polygamma_n_4'),
+            # AllowedOpInfoEntry('mvlgamma', 'mvlgamma_p_3'),
+            # AllowedOpInfoEntry('mvlgamma', 'mvlgamma_p_5'),
 
             # Failing Ops
             # Refer for more info : https://github.com/pytorch/xla/pull/3019#issuecomment-877132385
+            # AllowedOpInfoEntry('norm', 'nuc'),
+            # AllowedOpInfoEntry('norm', 'nuc'),
+            # AllowedOpInfoEntry('norm', 'inf'),
+            # AllowedOpInfoEntry('max', 'reduction_with_dim'),
+            # AllowedOpInfoEntry('min', 'reduction_with_dim'),
+            # AllowedOpInfoEntry('log_softmax', 'dtype'),
+            # AllowedOpInfoEntry('linalg.matrix_rank', 'hermitian'),
+            # AllowedOpInfoEntry('linalg.pinv', 'hermitian'),
+            # AllowedOpInfoEntry('clamp', 'scalar'),
             # AllowedOpInfoEntry('acos'),
             # AllowedOpInfoEntry('acosh'),
             # AllowedOpInfoEntry('argmax')
@@ -350,7 +351,10 @@ allowed_opinfo = set(
 
 
 def is_in_allowed(op):
-  name = op.name + "_" + op.variant_test_name
+  name = op.name
+  if op.variant_test_name != '':
+    name = op.name + "_" + op.variant_test_name
+
   return name in allowed_opinfo
 
 
