@@ -231,6 +231,7 @@ supported:
   - cholesky
   - qr
   - erfinv
+  - sgn
   - sign
   - atan2
   - fmod.Scalar

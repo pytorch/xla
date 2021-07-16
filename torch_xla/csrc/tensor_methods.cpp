@@ -2245,6 +2245,10 @@ XLATensor XLATensor::sigmoid_backward(const XLATensor& grad_output,
       ir::ops::SigmoidBackward(grad_output.GetIrValue(), output.GetIrValue()));
 }
 
+XLATensor XLATensor::sgn(const XLATensor& input) {
+  return input.CreateFrom(ir::ops::SgnOp(input.GetIrValue()));
+}
+
 XLATensor XLATensor::sign(const XLATensor& input) {
   return input.CreateFrom(ir::ops::SignOp(input.GetIrValue()));
 }

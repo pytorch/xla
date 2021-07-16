@@ -188,6 +188,11 @@ xla::XlaOp BuildReciprocal(xla::XlaOp input) {
   return xla::Div(one, input);
 }
 
+xla::XlaOp BuildSgn(xla::XlaOp input) {
+  xla::XlaOp num_input = ConvertToNumeric(input);
+  return xla::Sign(num_input);
+}
+
 xla::XlaOp BuildSign(xla::XlaOp input) {
   xla::XlaOp num_input = ConvertToNumeric(input);
   const xla::Shape& shape = XlaHelpers::ShapeOfXlaOp(num_input);

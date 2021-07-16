@@ -298,7 +298,9 @@ class XlaTestCase(unittest.TestCase):
             if diff.is_signed() and diff.dtype != torch.int8:
               diff = diff.abs()
             max_err = diff.max()
-            self.assertLessEqual(max_err, prec, message)
+            if not (a.isnan().any() and b.isnan().any() and
+                    torch.isnan(max_err)):
+              self.assertLessEqual(max_err, prec, message)
 
       super(XlaTestCase, self).assertEqual(x.is_sparse, y.is_sparse, message)
       super(XlaTestCase, self).assertEqual(x.is_quantized, y.is_quantized,
@@ -990,6 +992,19 @@ class TestAtenXlaTensor(XlaTestCase):
     xla_b = b.to(xla_device)
     xla_c = torch.max(xla_a, xla_b)
     self.assertEqual(c.data, xla_c.data.cpu())
+
+  def test_sgn(self):
+    xla_device = xm.xla_device()
+    t = torch.randn(2, 2, dtype=torch.cfloat)
+    t[0][0].real.div_(0)
+    t[0][0].imag.div_(0)
+    t[0][1] = 0
+    t[0][1].real.div_(0)
+    t[0][1].imag.div_(0)
+    t[1][0] = 0
+    a = t.sgn()
+    xla_a = t.to(xla_device).sgn()
+    self.assertEqual(a.data, xla_a.data.cpu())
 
   def test_index_put(self):
     xla_device = xm.xla_device()

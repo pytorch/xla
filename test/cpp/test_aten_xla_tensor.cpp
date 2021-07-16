@@ -3012,6 +3012,19 @@ TEST_F(AtenXlaTensorTest, TestBitwiseNotInPlace) {
   ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
 }
 
+TEST_F(AtenXlaTensorTest, TestSgn) {
+  torch::Tensor a =
+      torch::randn({2, 2}, torch::TensorOptions(torch::kComplexFloat)) * 100.0;
+  torch::Tensor b = torch::sgn(a);
+  ForEachDevice([&](const torch::Device& device) {
+    torch::Tensor xla_a = CopyToDevice(a, device);
+    torch::Tensor xla_b = torch::sgn(xla_a);
+    AllClose(b, xla_b);
+  });
+  ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::sgn", cpp_test::GetIgnoredCounters());
+}
+
 TEST_F(AtenXlaTensorTest, TestSign) {
   torch::Tensor a =
       torch::randn({2, 2}, torch::TensorOptions(torch::kFloat)) * 100.0;
