@@ -286,6 +286,10 @@ class XLATensor {
                        std::vector<xla::int64> dimensions,
                        bool keep_reduced_dimensions);
 
+  static XLATensor amin(const XLATensor& input,
+                        std::vector<xla::int64> dimensions,
+                        bool keep_reduced_dimensions);
+
   static XLATensor any(const XLATensor& input,
                        std::vector<xla::int64> dimensions,
                        bool keep_reduced_dimensions);
