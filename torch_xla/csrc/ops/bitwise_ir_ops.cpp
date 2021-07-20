@@ -8,26 +8,17 @@
 namespace torch_xla {
 namespace ir {
 namespace ops {
-namespace {
-
-template <typename F>
-xla::XlaOp LowerBitwise(xla::XlaOp lhs, xla::XlaOp rhs, const F& bit_op) {
-  std::tie(lhs, rhs) = XlaHelpers::PromoteValues(lhs, rhs);
-  return bit_op(lhs, rhs);
-}
-
-}  // namespace
 
 Value BitwiseAnd(const Value& node1, const Value& node2) {
   auto lower_fn = [](const Node& node, LoweringContext* loctx) -> XlaOpVector {
     xla::XlaOp op0 = loctx->GetOutputOp(node.operand(0));
     xla::XlaOp op1 = loctx->GetOutputOp(node.operand(1));
-    xla::XlaOp result = LowerBitwise(
+    xla::XlaOp result = XlaHelpers::PromotedBinaryOp(
         op0, op1, [](xla::XlaOp lhs, xla::XlaOp rhs) { return lhs & rhs; });
     return node.ReturnOp(result, loctx);
   };
   auto shape_fn = [&](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
-    return LowerBitwise(
+    return XlaHelpers::PromotedBinaryOp(
         operands[0], operands[1],
         [](xla::XlaOp lhs, xla::XlaOp rhs) { return lhs & rhs; });
   };
@@ -43,12 +34,12 @@ Value BitwiseOr(const Value& node1, const Value& node2) {
   auto lower_fn = [](const Node& node, LoweringContext* loctx) -> XlaOpVector {
     xla::XlaOp op0 = loctx->GetOutputOp(node.operand(0));
     xla::XlaOp op1 = loctx->GetOutputOp(node.operand(1));
-    xla::XlaOp result = LowerBitwise(
+    xla::XlaOp result = XlaHelpers::PromotedBinaryOp(
         op0, op1, [](xla::XlaOp lhs, xla::XlaOp rhs) { return lhs | rhs; });
     return node.ReturnOp(result, loctx);
   };
   auto shape_fn = [&](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
-    return LowerBitwise(
+    return XlaHelpers::PromotedBinaryOp(
         operands[0], operands[1],
         [](xla::XlaOp lhs, xla::XlaOp rhs) { return lhs | rhs; });
   };
@@ -64,12 +55,12 @@ Value BitwiseXor(const Value& node1, const Value& node2) {
   auto lower_fn = [](const Node& node, LoweringContext* loctx) -> XlaOpVector {
     xla::XlaOp op0 = loctx->GetOutputOp(node.operand(0));
     xla::XlaOp op1 = loctx->GetOutputOp(node.operand(1));
-    xla::XlaOp result = LowerBitwise(
+    xla::XlaOp result = XlaHelpers::PromotedBinaryOp(
         op0, op1, [](xla::XlaOp lhs, xla::XlaOp rhs) { return lhs ^ rhs; });
     return node.ReturnOp(result, loctx);
   };
   auto shape_fn = [&](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
-    return LowerBitwise(
+    return XlaHelpers::PromotedBinaryOp(
         operands[0], operands[1],
         [](xla::XlaOp lhs, xla::XlaOp rhs) { return lhs ^ rhs; });
   };

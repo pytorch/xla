@@ -1200,13 +1200,11 @@ class TestAtenXlaTensor(XlaTestCase):
     xla_f = xla_e.sum().item()
     self.assertEqual(f, xla_f)
 
-    # PRED can be automatically promoted in arithmetic ops.
+    # PRED can be automatically promoted in arithmetic and bitwise ops.
     self.runAtenTest(c, lambda x: x + x.byte())
-    # PRED cannot be automatically promoted to other dtypes in bitwise ops.
-    # This is not aligned with numpy behavior which means it might change
-    # in the future.
-    self.assertRaises(RuntimeError, lambda: c & c.byte())
-    self.assertRaises(RuntimeError, lambda: xla_c & xla_c.byte())
+    self.runAtenTest(c, lambda x: x & x.byte())
+    self.runAtenTest(c, lambda x: x | x.byte())
+    self.runAtenTest(c, lambda x: x ^ x.byte())
 
   def test_bitwise_and_not(self):
     xla_device = xm.xla_device()
