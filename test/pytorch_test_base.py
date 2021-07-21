@@ -459,7 +459,7 @@ class XLATestBase(DeviceTypeTestBase):
   # Overrides to instantiate tests that are known to run quickly
   # and correctly on XLA.
   @classmethod
-  def instantiate_test(cls, name, test):
+  def instantiate_test(cls, name, test, *, generic_cls):
     test_name = name + '_' + cls.device_type
     class_name = cls.__name__
     real_device_type = xm.xla_device_hw(str(xm.xla_device()))
@@ -480,7 +480,7 @@ class XLATestBase(DeviceTypeTestBase):
     else:  # Test is allowed
       dtype_combinations = cls._get_dtypes(test)
       if dtype_combinations is None:  # Tests without dtype variants are instantiated as usual
-        super().instantiate_test(name, test)
+        super().instantiate_test(name, test, generic_cls=generic_cls)
       else:  # Tests with dtype variants have unsupported dtypes skipped
         # Sets default precision for floating types to bfloat16 precision
         if not hasattr(test, 'precision_overrides'):
@@ -526,7 +526,7 @@ class XLATestBase(DeviceTypeTestBase):
                 if len(dtype_combination) > 1 else dtype_combination[0])
         if len(xla_dtypes) != 0:
           test.dtypes[cls.device_type] = xla_dtypes
-          super().instantiate_test(name, test)
+          super().instantiate_test(name, test, generic_cls=generic_cls)
 
   @classmethod
   def get_primary_device(cls):
