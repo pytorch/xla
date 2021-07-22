@@ -782,6 +782,11 @@ XLATensor XLATensor::binary_cross_entropy_backward(const XLATensor& grad_output,
       GetOptionalIrValue(weight), GetXlaReductionMode(reduction)));
 }
 
+void XLATensor::logical_and_out(XLATensor& out, const XLATensor& input,
+                                const XLATensor& other) {
+  out.SetIrValue(ir::ops::LogicalAnd(input.GetIrValue(), other.GetIrValue()));
+}
+
 XLATensor XLATensor::bitwise_and(const XLATensor& input,
                                  const at::Scalar& other) {
   CheckIsIntegralOrPred(input.shape(), "__and__");

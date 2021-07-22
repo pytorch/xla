@@ -743,6 +743,29 @@ NodePtr Lerp(const Value& start, const Value& end, const Value& weight) {
   return start + weight * (end - start);
 }
 
+NodePtr LogicalAnd(const Value& input, const Value& other) {
+  auto lower_fn = [](const Node& node, LoweringContext* loctx) -> XlaOpVector {
+    xla::XlaOp op1 = loctx->GetOutputOp(node.operand(0));
+    xla::XlaOp op2 = loctx->GetOutputOp(node.operand(1));
+    return node.ReturnOp(
+        XlaHelpers::PromotedLogicalBinaryOp(
+            op1, op2,
+            [](xla::XlaOp lhs, xla::XlaOp rhs) { return xla::And(lhs, rhs); }),
+        loctx);
+  };
+  auto shape_fn = [](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
+    return XlaHelpers::PromotedLogicalBinaryOp(
+        operands[0], operands[1],
+        [](xla::XlaOp lhs, xla::XlaOp rhs) { return xla::And(lhs, rhs); });
+  };
+  return GenericOp(
+      OpKind(at::aten::bitwise_and), {input, other},
+      [&]() {
+        return InferOutputShape({input.shape(), other.shape()}, shape_fn);
+      },
+      std::move(lower_fn));
+}
+
 }  // namespace ops
 }  // namespace ir
 }  // namespace torch_xla

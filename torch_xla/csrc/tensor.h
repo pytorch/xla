@@ -367,6 +367,9 @@ class XLATensor {
                                                  const XLATensor& weight,
                                                  xla::int64 reduction);
 
+  static void logical_and_out(XLATensor& out, const XLATensor& input,
+                              const XLATensor& other);
+
   static XLATensor bitwise_and(const XLATensor& input, const at::Scalar& other);
 
   static XLATensor bitwise_and(const XLATensor& input, const XLATensor& other);
