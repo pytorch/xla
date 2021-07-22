@@ -6,6 +6,8 @@ supported:
   - add.Tensor
   - add.Scalar
   - all.dim
+  - amax
+  - amin
   - any.dim
   - arange.start_out
   - argmax

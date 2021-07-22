@@ -145,6 +145,18 @@ std::vector<xla::int64> GetOutputSizeWithScale(
   return xla::util::ToVector<xla::int64>(*output_size);
 }
 
+void CheckBinaryOpTypePromotion(const at::Tensor& out, const at::Tensor& self,
+                                const at::Tensor& other) {
+  at::ScalarType resultType = at::result_type(self, other);
+  XLA_CHECK(at::canCast(/*from=*/resultType, /*to=*/out.scalar_type()));
+}
+
+void CheckBinaryOpTypePromotion(const at::Tensor& out, const at::Tensor& self,
+                                const at::Scalar& other) {
+  at::ScalarType resultType = at::result_type(self, other);
+  XLA_CHECK(at::canCast(/*from=*/resultType, /*to=*/out.scalar_type()));
+}
+
 template <typename B>
 at::Tensor DoBinaryOp(const at::Tensor& self, const at::Tensor& other,
                       const B& bin_op) {
@@ -164,16 +176,25 @@ at::Tensor DoBinaryOp(const at::Tensor& self, const at::Scalar& other,
   return bridge::AtenFromXlaTensor(result);
 }
 
-void CheckBinaryOpTypePromotion(const at::Tensor& out, const at::Tensor& self,
-                                const at::Tensor& other) {
-  at::ScalarType resultType = at::result_type(self, other);
-  XLA_CHECK(at::canCast(/*from=*/resultType, /*to=*/out.scalar_type()));
+template <typename B>
+at::Tensor DoBinaryOpWithoutPromo(const at::Tensor& self,
+                                  const at::Tensor& other, const B& bin_op) {
+  at::ScalarType dtype = at::result_type(self, other);
+  std::pair<XLATensor, XLATensor> operands =
+      GetBinaryOperands(self, UnwrapNumber(other, dtype));
+  XLATensor result = bin_op(operands.first, operands.second);
+  return bridge::AtenFromXlaTensor(result);
 }
 
-void CheckBinaryOpTypePromotion(const at::Tensor& out, const at::Tensor& self,
-                                const at::Scalar& other) {
-  at::ScalarType resultType = at::result_type(self, other);
-  XLA_CHECK(at::canCast(/*from=*/resultType, /*to=*/out.scalar_type()));
+template <typename B>
+void DoBinaryOpOut(const at::Tensor& self, const at::Tensor& other,
+                   at::Tensor& out, const B& bin_op_out) {
+  at::ScalarType dtype = at::result_type(self, other);
+  XLA_CHECK(at::canCast(/*from=*/dtype, /*to=*/out.scalar_type()));
+  std::pair<XLATensor, XLATensor> operands =
+      GetBinaryOperands(self, UnwrapNumber(other, dtype));
+  XLATensor out_tensor = bridge::GetXlaTensor(out);
+  bin_op_out(operands.first, operands.second, out_tensor);
 }
 
 }  // namespace
@@ -578,6 +599,22 @@ at::Tensor XLANativeFunctions::all(const at::Tensor& self, int64_t dim,
       XLATensor::all(bridge::GetXlaTensor(self), {dim}, keepdim));
 }
 
+at::Tensor XLANativeFunctions::amax(const at::Tensor& self, at::IntArrayRef dim,
+                                    bool keepdim) {
+  XLA_FN_COUNTER("xla::");
+  auto xdim = XlaHelpers::I64List(dim);
+  return bridge::AtenFromXlaTensor(
+      XLATensor::amax(bridge::GetXlaTensor(self), std::move(xdim), keepdim));
+}
+
+at::Tensor XLANativeFunctions::amin(const at::Tensor& self, at::IntArrayRef dim,
+                                    bool keepdim) {
+  XLA_FN_COUNTER("xla::");
+  auto xdim = XlaHelpers::I64List(dim);
+  return bridge::AtenFromXlaTensor(
+      XLATensor::amin(bridge::GetXlaTensor(self), std::move(xdim), keepdim));
+}
+
 at::Tensor XLANativeFunctions::any(const at::Tensor& self) {
   XLA_FN_COUNTER("xla::");
   XLATensor self_tensor = bridge::GetXlaTensor(self);
@@ -874,9 +911,10 @@ at::Tensor XLANativeFunctions::bitwise_and(const at::Tensor& self,
 at::Tensor XLANativeFunctions::bitwise_and(const at::Tensor& self,
                                            const at::Tensor& other) {
   XLA_FN_COUNTER("xla::");
-  CheckBinaryOpTypePromotion(self, self, other);
-  return bridge::AtenFromXlaTensor(XLATensor::bitwise_and(
-      bridge::GetXlaTensor(self), bridge::GetXlaTensor(other)));
+  return DoBinaryOpWithoutPromo(
+      self, other, [&](const XLATensor& xself, const XLATensor& other) {
+        return XLATensor::bitwise_and(xself, other);
+      });
 }
 
 at::Tensor& XLANativeFunctions::bitwise_not_out(const at::Tensor& self,
@@ -902,10 +940,11 @@ at::Tensor& XLANativeFunctions::bitwise_or_out(const at::Tensor& self,
                                                const at::Tensor& other,
                                                at::Tensor& out) {
   XLA_FN_COUNTER("xla::");
-  CheckBinaryOpTypePromotion(out, self, other);
-  XLATensor out_tensor = bridge::GetXlaTensor(out);
-  XLATensor::bitwise_or_out(out_tensor, bridge::GetXlaTensor(self),
-                            bridge::GetXlaTensor(other));
+  DoBinaryOpOut(
+      self, other, out,
+      [&](const XLATensor& xself, const XLATensor& xother, XLATensor& xout) {
+        XLATensor::bitwise_or_out(xout, xself, xother);
+      });
   return out;
 }
 
@@ -923,10 +962,11 @@ at::Tensor& XLANativeFunctions::bitwise_xor_out(const at::Tensor& self,
                                                 const at::Tensor& other,
                                                 at::Tensor& out) {
   XLA_FN_COUNTER("xla::");
-  CheckBinaryOpTypePromotion(out, self, other);
-  XLATensor out_tensor = bridge::GetXlaTensor(out);
-  XLATensor::bitwise_xor_out(out_tensor, bridge::GetXlaTensor(self),
-                             bridge::GetXlaTensor(other));
+  DoBinaryOpOut(
+      self, other, out,
+      [&](const XLATensor& xself, const XLATensor& xother, XLATensor& xout) {
+        XLATensor::bitwise_xor_out(xout, xself, xother);
+      });
   return out;
 }
 
