@@ -41,8 +41,6 @@ allowed_opinfo = set(
             AllowedOpInfoEntry('addr'),
             AllowedOpInfoEntry('addcmul'),
             AllowedOpInfoEntry('addcdiv'),
-            AllowedOpInfoEntry('amax'),
-            AllowedOpInfoEntry('amin'),
             AllowedOpInfoEntry('atan2'),
             AllowedOpInfoEntry('broadcast_to'),
             AllowedOpInfoEntry('bitwise_not'),
@@ -255,6 +253,8 @@ allowed_opinfo = set(
 
             # Failing Ops
             # Refer for more info : https://github.com/pytorch/xla/pull/3019#issuecomment-877132385
+            # AllowedOpInfoEntry('amax'),
+            # AllowedOpInfoEntry('amin'),
             # AllowedOpInfoEntry('norm', 'nuc'),
             # AllowedOpInfoEntry('norm', 'nuc'),
             # AllowedOpInfoEntry('norm', 'inf'),
