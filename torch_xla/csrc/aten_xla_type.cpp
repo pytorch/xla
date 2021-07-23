@@ -900,6 +900,16 @@ at::Tensor XLANativeFunctions::binary_cross_entropy_with_logits(
       IsDefined(pos_weight) ? *pos_weight : at::Tensor(), reduction);
 }
 
+at::Tensor& XLANativeFunctions::logical_and_out(const at::Tensor& self,
+                                                const at::Tensor& other,
+                                                at::Tensor& out) {
+  XLA_FN_COUNTER("xla::");
+  XLATensor out_tensor = bridge::GetXlaTensor(out);
+  XLATensor::logical_and_out(out_tensor, bridge::GetXlaTensor(self),
+                             bridge::GetXlaTensor(other));
+  return out;
+}
+
 at::Tensor XLANativeFunctions::bitwise_and(const at::Tensor& self,
                                            const at::Scalar& other) {
   XLA_FN_COUNTER("xla::");

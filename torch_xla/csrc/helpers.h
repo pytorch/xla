@@ -340,6 +340,10 @@ class XlaHelpers {
         op1, op2, [](xla::XlaOp op1, xla::XlaOp op2) { return op1 / op2; });
   }
 
+  static xla::XlaOp PromotedLogicalBinaryOp(
+      xla::XlaOp op1, xla::XlaOp op2,
+      const std::function<xla::XlaOp(xla::XlaOp, xla::XlaOp)>& bin_op);
+
   template <typename T>
   static xla::Literal Range(T start, T end, T step) {
     return xla::LiteralUtil::CreateR1<T>(xla::util::Range<T>(start, end, step));
