@@ -104,6 +104,7 @@ function run_torch_xla_tests() {
     # fi
 
     pushd test/cpp
+    echo "Running C++ Tests"
     CC=clang-9 CXX=clang++-9 ./run_tests.sh
 
     if ! [ -x "$(command -v nvidia-smi)"  ]
