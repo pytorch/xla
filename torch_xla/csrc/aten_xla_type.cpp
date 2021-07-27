@@ -2849,7 +2849,7 @@ at::Tensor XLANativeFunctions::sigmoid_backward(const at::Tensor& grad_output,
 
 at::Tensor XLANativeFunctions::sgn(const at::Tensor& self) {
   XLA_FN_COUNTER("xla::");
-  return bridge::AtenFromXlaTensor(XLATensor::sign(bridge::GetXlaTensor(self)));
+  return bridge::AtenFromXlaTensor(XLATensor::sgn(bridge::GetXlaTensor(self)));
 }
 
 at::Tensor XLANativeFunctions::sign(const at::Tensor& self) {
