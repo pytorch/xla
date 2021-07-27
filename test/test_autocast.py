@@ -342,8 +342,8 @@ class TestAutocastBase(unittest.TestCase):
         if isinstance(output_method, torch.Tensor):
           self.assertTrue(
               out_type == output_method.dtype,
-              "autocast for torch.{} produced {}, should produce torch.{}"
-              .format(op, output_method.dtype, out_type))
+              "autocast for torch.{} produced {}, should produce torch.{}".
+              format(op, output_method.dtype, out_type))
 
       self.assertTrue((output is not None) or (
           output_method is not None
