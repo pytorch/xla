@@ -99,9 +99,10 @@ function run_torch_xla_tests() {
 
     # echo "Running MNIST Test"
     # python test/test_train_mp_mnist.py --tidy
-    # if [ -x "$(command -v nvidia-smi)" ]; then
-    #   python test/test_train_mp_mnist_amp.py --fake_data
-    # fi
+    if [ -x "$(command -v nvidia-smi)" ]; then
+      python test/test_autocast.py
+      # python test/test_train_mp_mnist_amp.py --fake_data
+    fi
 
     pushd test/cpp
     CC=clang-9 CXX=clang++-9 ./run_tests.sh
