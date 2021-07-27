@@ -1006,7 +1006,7 @@ class TestAtenXlaTensor(XlaTestCase):
     t[0][1].imag.div_(0)
     t[1][0] = 0
     t[1][1].real.div_(0)
-    t[1][1] = t[1][1].real.abs()*-1
+    t[1][1] = t[1][1].real.abs() * -1
     a = t.sgn()
     xla_a = t.to(xla_device).sgn()
     self.assertEqual(a.data, xla_a.data.cpu())
