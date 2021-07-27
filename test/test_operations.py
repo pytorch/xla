@@ -297,9 +297,11 @@ class XlaTestCase(unittest.TestCase):
             # TODO: implement abs on CharTensor (int8)
             if diff.is_signed() and diff.dtype != torch.int8:
               diff = diff.abs()
-            max_err = diff.max()
-            if not (a.isnan().any() and b.isnan().any() and
-                    torch.isnan(max_err)):
+            if a.isnan().any() or b.isnan().any():
+              c = a.isnan() == b.isnan()
+              self.assertTrue(c.all(), message)
+            else:
+              max_err = diff.max()
               self.assertLessEqual(max_err, prec, message)
 
       super(XlaTestCase, self).assertEqual(x.is_sparse, y.is_sparse, message)
@@ -997,11 +999,14 @@ class TestAtenXlaTensor(XlaTestCase):
     xla_device = xm.xla_device()
     t = torch.randn(2, 2, dtype=torch.cfloat)
     t[0][0].real.div_(0)
+    t[0][0] = t[0][0].real.abs()
     t[0][0].imag.div_(0)
     t[0][1] = 0
     t[0][1].real.div_(0)
     t[0][1].imag.div_(0)
     t[1][0] = 0
+    t[1][1].real.div_(0)
+    t[1][1] = t[1][1].real.abs()*-1
     a = t.sgn()
     xla_a = t.to(xla_device).sgn()
     self.assertEqual(a.data, xla_a.data.cpu())
