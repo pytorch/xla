@@ -152,6 +152,7 @@ xla::XlaOp RngNormal(xla::XlaOp seed, const xla::Shape& shape, xla::XlaOp mean,
   xla::XlaOp initial_state =
       xla::Zero(rng_seed.builder(), xla::PrimitiveType::U64);
   switch (shape.element_type()) {
+    case xla::PrimitiveType::F16:
     case xla::PrimitiveType::BF16: {
       xla::XlaOp f32_mean = MaybeConvertTo(mean, xla::PrimitiveType::F32);
       xla::XlaOp f32_std = MaybeConvertTo(std, xla::PrimitiveType::F32);
@@ -160,7 +161,7 @@ xla::XlaOp RngNormal(xla::XlaOp seed, const xla::Shape& shape, xla::XlaOp mean,
                                                GetBitGenerator(), rng_shape)
               .value;
       return xla::ConvertElementType(f32_mean + rng * f32_std,
-                                     xla::PrimitiveType::BF16);
+                                     shape.element_type());
     }
     case xla::PrimitiveType::F32:
     case xla::PrimitiveType::F64: {
