@@ -331,11 +331,7 @@ DISABLED_TORCH_TESTS_TPU_ONLY = {
         'test_multinomial_invalid_distribution',  # server side crash
         'test_multinomial_invalid_xla',  # TODO: only fail on xlml
         'test_softplus_low_threshold_xla',  # server side crash
-        'test_put_xla_float64',  # slow on TPU (~16 min)
-        'test_put_xla_int16',  # slow on TPU (~13 min)
-        'test_put_xla_int32',  # slow on TPU (~22 min)
-        'test_put_xla_int64',  # slow on TPU (~15 min)
-        'test_put_xla_int8',  # slow on TPU (~15 min)
+        'test_put_xla',  # slow on TPU (~20 min each)
         'test_cov_xla',  # precision (9.53674e-07 vs 0)
     },
 
@@ -352,6 +348,8 @@ DISABLED_TORCH_TESTS_TPU_ONLY = {
         'test_Dropout',  # too slow
         'test_EmbeddingBag_per_sample_weights_and_new_offsets_xla',  # server side crash
         'test_EmbeddingBag_per_sample_weights_and_offsets_xla',  # server side crash
+        'test_upsamplingBilinear2d_xla',  # precision
+        'test_upsamplingNearest2d_xla',  # precision
     },
 
     # test_type_promotion.py

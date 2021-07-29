@@ -46,7 +46,6 @@ allowed_opinfo = set(
             AllowedOpInfoEntry('bitwise_not'),
             AllowedOpInfoEntry('bitwise_left_shift'),
             AllowedOpInfoEntry('bitwise_right_shift'),
-            AllowedOpInfoEntry('cdist'),
             AllowedOpInfoEntry('ceil'),
             AllowedOpInfoEntry('cholesky'),
             AllowedOpInfoEntry('cholesky_inverse'),
@@ -111,7 +110,6 @@ allowed_opinfo = set(
             AllowedOpInfoEntry('linalg.cholesky'),
             AllowedOpInfoEntry('linalg.cholesky_ex'),
             AllowedOpInfoEntry('linalg.eig'),
-            AllowedOpInfoEntry('linalg.eigvals'),
             AllowedOpInfoEntry('linalg.householder_product'),
             AllowedOpInfoEntry('linalg.matrix_power'),
             AllowedOpInfoEntry('linalg.multi_dot'),
@@ -253,6 +251,8 @@ allowed_opinfo = set(
 
             # Failing Ops
             # Refer for more info : https://github.com/pytorch/xla/pull/3019#issuecomment-877132385
+            # AllowedOpInfoEntry('cdist'),  // precision issue on TPU
+            # AllowedOpInfoEntry('linalg.eigvals'),  // failing on TPU
             # AllowedOpInfoEntry('amax'),
             # AllowedOpInfoEntry('amin'),
             # AllowedOpInfoEntry('norm', 'nuc'),
