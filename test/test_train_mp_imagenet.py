@@ -212,6 +212,7 @@ def train_imagenet():
     tracker = xm.RateTracker()
     model.train()
     for step, (data, target) in enumerate(loader):
+      optimizer.zero_grad()
       if FLAGS.amp:
         with autocast():
           output = model(data)
