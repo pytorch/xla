@@ -235,7 +235,6 @@ allowed_opinfo = set(
             AllowedOpInfoEntry('special.ndtri'),
             AllowedOpInfoEntry('lgamma'),
             AllowedOpInfoEntry('logdet'),
-            AllowedOpInfoEntry('log_softmax'),
             AllowedOpInfoEntry('logit'),
             AllowedOpInfoEntry('where'),
             AllowedOpInfoEntry('norm', 'fro'),
@@ -260,6 +259,7 @@ allowed_opinfo = set(
             # AllowedOpInfoEntry('norm', 'inf'),
             # AllowedOpInfoEntry('max', 'reduction_with_dim'),
             # AllowedOpInfoEntry('min', 'reduction_with_dim'),
+            # AllowedOpInfoEntry('log_softmax'),  // scalar tensor dim 0
             # AllowedOpInfoEntry('log_softmax', 'dtype'),
             # AllowedOpInfoEntry('linalg.matrix_rank', 'hermitian'),
             # AllowedOpInfoEntry('linalg.pinv', 'hermitian'),
