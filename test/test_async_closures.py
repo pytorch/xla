@@ -66,7 +66,7 @@ class AsyncClosuresTest(unittest.TestCase):
     xm.add_step_closure(closure1, run_async=True)
     xm.mark_step()
 
-    sleep(1)
+    sleep(3)
 
     try:
 
