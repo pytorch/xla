@@ -759,7 +759,7 @@ NodePtr LogicalAnd(const Value& input, const Value& other) {
         [](xla::XlaOp lhs, xla::XlaOp rhs) { return xla::And(lhs, rhs); });
   };
   return GenericOp(
-      OpKind(at::aten::bitwise_and), {input, other},
+      OpKind(at::aten::logical_and), {input, other},
       [&]() {
         return InferOutputShape({input.shape(), other.shape()}, shape_fn);
       },
