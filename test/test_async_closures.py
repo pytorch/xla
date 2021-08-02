@@ -61,17 +61,18 @@ class AsyncClosuresTest(unittest.TestCase):
     assert not flag.is_set()
 
     def closure1():
+      flag.set()
       raise RuntimeError("Simulating exception in closure1")
 
     xm.add_step_closure(closure1, run_async=True)
     xm.mark_step()
 
-    sleep(3)
+    flag.wait(timeout=5)
 
     try:
 
       def closure2():  # Should never execute
-        flag.set()
+        flag.clear()
 
       xm.add_step_closure(closure2, run_async=True)
       xm.mark_step()
@@ -81,7 +82,7 @@ class AsyncClosuresTest(unittest.TestCase):
       # Should have caught exception from closure1
       pass
 
-    assert not flag.is_set()
+    assert flag.is_set()
 
 
 if __name__ == '__main__':
