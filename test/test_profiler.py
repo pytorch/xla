@@ -5,8 +5,6 @@ import multiprocessing
 import os
 import sys
 import tempfile
-import threading
-import time
 import unittest
 
 import args_parse

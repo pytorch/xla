@@ -1,8 +1,5 @@
-from concurrent import futures
 import torch_xla
-import torch_xla.core.xla_env_vars as xenv
 import torch_xla.core.xla_model as xm
-from typing import Optional
 
 _TRACER_MARKED_STEP: bool = False
 
@@ -16,7 +13,7 @@ def get_tracer_marked_step() -> bool:
   return _TRACER_MARKED_STEP
 
 
-def start_server(port: int, only_on_master: Optional[bool] = True) -> object:
+def start_server(port: int, only_on_master: bool = True) -> object:
   """Start a profiler server on the client side on provided port.
 
   Users can then use the tensorboard profiler plugin
@@ -27,7 +24,7 @@ def start_server(port: int, only_on_master: Optional[bool] = True) -> object:
   Args:
     port (int): the port to start the profiler server on. An exception is
       raised if the provided port is invalid or busy.
-    only_on_master (optional(bool)): whether to only startup server from
+    only_on_master (bool): whether to only startup server from
       local master ordinal.
   Returns:
     A `ProfilerServer` instance that dictates the lifecycle of the profiler
@@ -42,11 +39,13 @@ def start_server(port: int, only_on_master: Optional[bool] = True) -> object:
 
 def trace(service_addr: str,
           logdir: str,
-          duration_ms: Optional[int] = 1000,
-          num_tracing_attempts: Optional[int] = 3,
-          host_tracer_level: Optional[int] = 2,
-          device_tracer_level: Optional[int] = 1,
-          delay_ms: Optional[int] = 0):
+          duration_ms: int = 1000,
+          num_tracing_attempts: int = 3,
+          host_tracer_level: int = 2,
+          device_tracer_level: int = 1,
+          delay_ms: int = 0,
+          timeout_s: int = 120,
+          interval_s: int = 5):
   """Performs an on-demand profiling session on provided profiler servers.
 
   This method will block until it's done with profiling. Both single and
@@ -71,6 +70,8 @@ def trace(service_addr: str,
       enabled, 0 - disabled.
     delay_ms (int): Specifies the services to start profiling delay_ms
       milliseconds after the current time.
+    timeout_s (int): duration to continue retrying sending trace requests.
+    interval_s (int): interval for trace request retries.
   """
   options = {
       'host_tracer_level': host_tracer_level,
@@ -82,6 +83,8 @@ def trace(service_addr: str,
       logdir,
       duration_ms=duration_ms,
       num_tracing_attempts=num_tracing_attempts,
+      timeout_s=timeout_s,
+      interval_s=interval_s,
       options=options)
 
 
