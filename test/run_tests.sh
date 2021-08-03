@@ -75,6 +75,7 @@ function run_all_tests {
   run_test python3 "$CDIR/test_mp_all_to_all.py"
   run_test python3 "$CDIR/test_mp_collective_permute.py"
   run_test python3 "$CDIR/test_mp_all_gather.py"
+  run_test python3 "$CDIR/test_mp_reduce_scatter.py"
   run_test python3 "$CDIR/test_mp_distributed_mm.py"
   run_test python3 "$CDIR/test_mp_rendezvous.py"
   run_test python3 "$CDIR/test_mp_save.py"
