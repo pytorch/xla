@@ -4,7 +4,7 @@ import lazy_tensor_core.debug.metrics as metrics
 
 torch.manual_seed(42)
 
-device = 'xla'
+device = 'lazy'
 dtype = torch.float32
 
 x = torch.randn(2, 3, 4, device=device, dtype=dtype)

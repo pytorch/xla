@@ -3,6 +3,8 @@
 #include "lazy_tensor_core/csrc/ops/adaptive_avg_pool2d.h"
 #include "lazy_tensor_core/csrc/ops/adaptive_avg_pool3d.h"
 #include "lazy_tensor_core/csrc/ops/all.h"
+#include "lazy_tensor_core/csrc/ops/amax.h"
+#include "lazy_tensor_core/csrc/ops/amin.h"
 #include "lazy_tensor_core/csrc/ops/amp_foreach_non_finite_check_and_unscale.h"
 #include "lazy_tensor_core/csrc/ops/amp_update_scale.h"
 #include "lazy_tensor_core/csrc/ops/any.h"
@@ -226,12 +228,6 @@ xla::XlaOp LowerSqueeze(xla::XlaOp input, int dim) {
   return SqueezeTrivialDimension(input, dim);
 }
 
-template <typename F>
-xla::XlaOp LowerBitwise(xla::XlaOp lhs, xla::XlaOp rhs, const F& bit_op) {
-  std::tie(lhs, rhs) = XlaHelpers::PromoteValues(lhs, rhs);
-  return bit_op(lhs, rhs);
-}
-
 lazy_tensors::Shape InferAddMatMul(const ir::Node* node) {
   auto shape_fn = [](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
     return BuildMatMul(operands[0], operands[1], operands[2]);
@@ -247,6 +243,22 @@ lazy_tensors::Shape InferAll(const ir::ops::All* node) {
   auto shape_fn = [node](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
     return BuildAll(operands[0], node->dimensions(),
                     node->keep_reduced_dimensions());
+  };
+  const ir::Output& input = node->operand(0);
+  return ir::ops::InferOutputShape({input.shape()}, shape_fn);
+}
+
+lazy_tensors::Shape InferAmax(const ir::ops::Amax* node) {
+  auto shape_fn = [node](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
+    return BuildMaxInDims(operands[0], node->dimensions(), node->keepdim());
+  };
+  const ir::Output& input = node->operand(0);
+  return ir::ops::InferOutputShape({input.shape()}, shape_fn);
+}
+
+lazy_tensors::Shape InferAmin(const ir::ops::Amin* node) {
+  auto shape_fn = [node](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
+    return BuildMinInDims(operands[0], node->dimensions(), node->keepdim());
   };
   const ir::Output& input = node->operand(0);
   return ir::ops::InferOutputShape({input.shape()}, shape_fn);
@@ -608,13 +620,24 @@ lazy_tensors::Shape InferNllLossBackward(const NllLossType* node) {
   return ir::ops::InferOutputShape(shapes, shape_fn);
 }
 
+lazy_tensors::Shape InferLogicalAnd(const ir::Node* node) {
+  auto shape_fn = [](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
+    return XlaHelpers::PromotedLogicalBinaryOp(
+        operands[0], operands[1],
+        [](xla::XlaOp lhs, xla::XlaOp rhs) { return xla::And(lhs, rhs); });
+  };
+  const ir::Output& input0 = node->operand(0);
+  const ir::Output& input1 = node->operand(1);
+  return ir::ops::InferOutputShape({input0.shape(), input1.shape()}, shape_fn);
+}
+
 lazy_tensors::Shape InferBitwise(const ir::Node* node) {
   const ir::Output& input0 = node->operand(0);
   const ir::Output& input1 = node->operand(1);
   switch (node->op().op) {
     case at::aten::__and__: {
       auto shape_fn = [](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
-        return compiler::LowerBitwise(
+        return XlaHelpers::PromotedBinaryOp(
             operands[0], operands[1],
             [](xla::XlaOp lhs, xla::XlaOp rhs) { return lhs & rhs; });
       };
@@ -623,7 +646,7 @@ lazy_tensors::Shape InferBitwise(const ir::Node* node) {
     }
     case at::aten::__or__: {
       auto shape_fn = [](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
-        return compiler::LowerBitwise(
+        return XlaHelpers::PromotedBinaryOp(
             operands[0], operands[1],
             [](xla::XlaOp lhs, xla::XlaOp rhs) { return lhs | rhs; });
       };
@@ -632,7 +655,7 @@ lazy_tensors::Shape InferBitwise(const ir::Node* node) {
     }
     case at::aten::__xor__: {
       auto shape_fn = [](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
-        return compiler::LowerBitwise(
+        return XlaHelpers::PromotedBinaryOp(
             operands[0], operands[1],
             [](xla::XlaOp lhs, xla::XlaOp rhs) { return lhs ^ rhs; });
       };
@@ -1238,6 +1261,7 @@ class XlaNodeLowering : public NodeLowering {
 
  private:
   XlaOpVector LowerBitwise(const ir::Node* node);
+  XlaOpVector LowerLogicalAnd(const ir::Node* node);
   XlaOpVector LowerAdd(const ir::Node* node);
   XlaOpVector LowerDiv(const ir::Node* node);
   XlaOpVector LowerMul(const ir::Node* node);
@@ -1329,6 +1353,8 @@ class XlaNodeLowering : public NodeLowering {
   DECLARE_UNARY_OP(AdaptiveAvgPool2dBackward);
   DECLARE_UNARY_OP(AdaptiveAvgPool3dBackward);
   DECLARE_UNARY_OP2(All);
+  DECLARE_UNARY_OP2(Amax);
+  DECLARE_UNARY_OP2(Amin);
   DECLARE_UNARY_OP2(Any);
   DECLARE_UNARY_OP2(AmpForachNonFiniteCheckAndUnscale);
   DECLARE_UNARY_OP2(AmpUpdateScale);
@@ -1449,6 +1475,7 @@ XlaOpVector XlaNodeLowering::LowerToXla(const ir::Node* node) {
     HANDLE_GENERIC_OP(Div, at::aten::div)
     HANDLE_GENERIC_OP(Mul, at::aten::mul)
     HANDLE_GENERIC_OP(Sub, at::aten::sub)
+    HANDLE_GENERIC_OP(LogicalAnd, at::aten::logical_and)
     HANDLE_GENERIC_OP(Bitwise, at::aten::__and__)
     HANDLE_GENERIC_OP(Bitwise, at::aten::__or__)
     HANDLE_GENERIC_OP(Bitwise, at::aten::__xor__)
@@ -1590,6 +1617,8 @@ XlaOpVector XlaNodeLowering::LowerToXla(const ir::Node* node) {
     HANDLE_GENERIC_OP2(TopK, at::aten::topk)
     HANDLE_GENERIC_OP2(View, at::aten::view)
     HANDLE_GENERIC_OP2(All, at::aten::all)
+    HANDLE_GENERIC_OP2(Amax, at::aten::amax)
+    HANDLE_GENERIC_OP2(Amin, at::aten::amin)
     HANDLE_GENERIC_OP2(Any, at::aten::any)
     HANDLE_GENERIC_OP2(AmpForachNonFiniteCheckAndUnscale,
                        at::aten::_amp_foreach_non_finite_check_and_unscale_)
@@ -1775,19 +1804,30 @@ XlaOpVector XlaNodeLowering::LowerBitwise(const ir::Node* node) {
   LTC_CHECK_EQ(node->num_outputs(), 1);
   xla::XlaOp op0 = loctx()->GetOutputOp(node->operand(0));
   xla::XlaOp op1 = loctx()->GetOutputOp(node->operand(1));
-  std::tie(op0, op1) = XlaHelpers::PromoteValues(op0, op1);
   switch (node->op().op) {
     case at::aten::__and__: {
-      return {op0 & op1};
+      return {XlaHelpers::PromotedBinaryOp(
+          op0, op1, [](xla::XlaOp lhs, xla::XlaOp rhs) { return lhs & rhs; })};
     }
     case at::aten::__or__: {
-      return {op0 | op1};
+      return {XlaHelpers::PromotedBinaryOp(
+          op0, op1, [](xla::XlaOp lhs, xla::XlaOp rhs) { return lhs | rhs; })};
     }
     case at::aten::__xor__: {
-      return {op0 ^ op1};
+      return {XlaHelpers::PromotedBinaryOp(
+          op0, op1, [](xla::XlaOp lhs, xla::XlaOp rhs) { return lhs ^ rhs; })};
     }
     default: { LTC_LOG(FATAL) << "Invalid bitwise operator: " << node->op(); }
   }
+}
+
+XlaOpVector XlaNodeLowering::LowerLogicalAnd(const ir::Node* node) {
+  LTC_CHECK_EQ(node->num_outputs(), 1);
+  xla::XlaOp op0 = loctx()->GetOutputOp(node->operand(0));
+  xla::XlaOp op1 = loctx()->GetOutputOp(node->operand(1));
+  return {XlaHelpers::PromotedLogicalBinaryOp(
+      op0, op1,
+      [](xla::XlaOp lhs, xla::XlaOp rhs) { return xla::And(lhs, rhs); })};
 }
 
 XlaOpVector XlaNodeLowering::LowerAbs(const ir::Node* node) {
@@ -2029,6 +2069,16 @@ XlaOpVector XlaNodeLowering::LowerAvgPoolNdBackward(
 XlaOpVector XlaNodeLowering::LowerAll(const ir::ops::All* node) {
   xla::XlaOp input = loctx()->GetOutputOp(node->operand(0));
   return {BuildAll(input, node->dimensions(), node->keep_reduced_dimensions())};
+}
+
+XlaOpVector XlaNodeLowering::LowerAmax(const ir::ops::Amax* node) {
+  xla::XlaOp input = loctx()->GetOutputOp(node->operand(0));
+  return {BuildMaxInDims(input, node->dimensions(), node->keepdim())};
+}
+
+XlaOpVector XlaNodeLowering::LowerAmin(const ir::ops::Amin* node) {
+  xla::XlaOp input = loctx()->GetOutputOp(node->operand(0));
+  return {BuildMinInDims(input, node->dimensions(), node->keepdim())};
 }
 
 XlaOpVector XlaNodeLowering::LowerAny(const ir::ops::Any* node) {
@@ -3043,6 +3093,14 @@ lazy_tensors::Shape XlaNodeLowering::Infer(const ir::Node* node) {
       return InferAll(
           ir::NodeCast<ir::ops::All>(node, ir::OpKind(at::aten::all)));
     }
+    case at::aten::amax: {
+      return InferAmax(
+          ir::NodeCast<ir::ops::Amax>(node, ir::OpKind(at::aten::amax)));
+    }
+    case at::aten::amin: {
+      return InferAmin(
+          ir::NodeCast<ir::ops::Amin>(node, ir::OpKind(at::aten::amin)));
+    }
     case at::aten::any: {
       return InferAny(
           ir::NodeCast<ir::ops::Any>(node, ir::OpKind(at::aten::any)));
@@ -3079,6 +3137,9 @@ lazy_tensors::Shape XlaNodeLowering::Infer(const ir::Node* node) {
     case at::aten::cat: {
       return InferCat(
           ir::NodeCast<ir::ops::Cat>(node, ir::OpKind(at::aten::cat)));
+    }
+    case at::aten::logical_and: {
+      return InferLogicalAnd(node);
     }
     case at::aten::__and__:
     case at::aten::__or__:
