@@ -1,4 +1,4 @@
-backend: XLA
+backend: Lazy
 cpp_namespace: torch_lazy_tensors
 supported:
   - abs
@@ -6,6 +6,8 @@ supported:
   - add.Tensor
   - add.Scalar
   - all.dim
+  - amax
+  - amin
   - any.dim
   - arange.start_out
   - argmax
@@ -162,6 +164,7 @@ supported:
   - rsub.Scalar
   - addmm
   - unbind.int
+  - _local_scalar_dense
   - _pack_padded_sequence
   - masked_fill_.Scalar
   - masked_fill_.Tensor
@@ -177,6 +180,8 @@ supported:
   - scatter.value_reduce_out
   - scatter_add_
   - scatter_add.out
+  - bitwise_and.Tensor
+  - bitwise_and.Scalar
   - bitwise_or.Tensor_out
   - bitwise_or.Scalar_out
   - bitwise_xor.Tensor_out
@@ -311,6 +316,8 @@ supported:
   - ger
   - lerp.Scalar
   - lerp.Tensor
+  - logical_and.out
+  - randperm.generator_out
 autograd:
   - max_pool2d
   - max_pool3d

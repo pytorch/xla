@@ -210,6 +210,10 @@ class XlaHelpers {
         op1, op2, [](xla::XlaOp op1, xla::XlaOp op2) { return op1 / op2; });
   }
 
+  static xla::XlaOp PromotedLogicalBinaryOp(
+      xla::XlaOp op1, xla::XlaOp op2,
+      const std::function<xla::XlaOp(xla::XlaOp, xla::XlaOp)>& bin_op);
+
   // Creates an XLA padding configuration from a n-dimensional padding list.
   static xla::PaddingConfig MakeXlaPaddingConfigFromNdPadding(
       absl::Span<const xla::int64> padding);
