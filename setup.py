@@ -53,6 +53,9 @@ import torch
 base_dir = os.path.dirname(os.path.abspath(__file__))
 third_party_path = os.path.join(base_dir, 'third_party')
 
+_libtpu_version = '0.1.dev20210615'
+_litbpu_storage_path = f'https://storage.googleapis.com/cloud-tpu-tpuvm-artifacts-dev/wheels/libtpu-nightly/libtpu_nightly-{_libtpu_version}-py3-none-any.whl'
+
 
 def _get_build_mode():
   for i in range(1, len(sys.argv)):
@@ -333,6 +336,11 @@ setup(
                 [make_relative_rpath('torch_xla/lib')],
         ),
     ],
+    extras_require={
+        # On Cloud TPU VM install with:
+        # $ pip install "torch_xla[tpuvm] @ https://storage.googleapis.com/tpu-pytorch/wheels/tpuvm/torch_xla-1.9-cp37-cp37m-linux_x86_64.whl
+        'tpuvm': [f'libtpu-nightly @ {_litbpu_storage_path}'],
+    },
     package_data={
         'torch_xla': [
             'lib/*.so*',
