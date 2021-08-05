@@ -76,12 +76,23 @@ def _summarize_fn_tracker():
   os.remove(_tmp_fname)
 
 
+def _tpu_vm_init():
+  try:
+    import libtpu
+    libtpu.configure_library_path()
+  except ImportError:
+    return
+
+
 # These needs to be called before the _XLAC module is loaded.
 _setup_default_env()
 _setup_grpc()
 _setup_xla_flags()
 if int(os.environ.get('PT_XLA_DEBUG', '0')):
   _fd, _tmp_fname = _setup_debug_env()
+
+# Setup libtpu library for TPU VM.
+_tpu_vm_init()
 
 import atexit
 import torch
