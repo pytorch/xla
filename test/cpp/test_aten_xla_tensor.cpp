@@ -7401,6 +7401,31 @@ TEST_F(AtenXlaTensorTest, TestAvgPool3DNoBatch) {
   }
 }
 
+TEST_F(AtenXlaTensorTest, TestAdaptiveMaxPool2D) {
+  std::vector<torch::Tensor> inputs = {
+      torch::rand({2, 10, 10}, torch::TensorOptions(torch::kFloat)),
+      torch::rand({2, 2, 10, 10}, torch::TensorOptions(torch::kFloat)),
+  };
+  std::vector<std::vector<int64_t>> dim_sizes = {{2, 2}, {5, 2}, {5, 5}};
+
+  for (torch::Tensor input : inputs) {
+    for (auto output_size : dim_sizes) {
+      std::tuple<at::Tensor, at::Tensor> output =
+          torch::adaptive_max_pool2d(input, output_size);
+      ForEachDevice([&](const torch::Device& device) {
+        torch::Tensor xla_input = CopyToDevice(input, device);
+        std::tuple<at::Tensor, at::Tensor> xla_output =
+            torch::adaptive_max_pool2d(xla_input, output_size);
+        AllClose(std::get<0>(output), std::get<0>(xla_output));
+        AllClose(std::get<1>(output), std::get<1>(xla_output));
+      });
+    }
+  }
+  ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::adaptive_max_pool2d_out",
+                       cpp_test::GetIgnoredCounters());
+}
+
 TEST_F(AtenXlaTensorTest, TestAdaptiveAvgPool2D) {
   torch::Tensor input =
       torch::rand({4, 1, 28, 28}, torch::TensorOptions(torch::kFloat));

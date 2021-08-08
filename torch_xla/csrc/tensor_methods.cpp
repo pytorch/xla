@@ -19,6 +19,7 @@
 #include "torch_xla/csrc/lowering_context.h"
 #include "torch_xla/csrc/ops/adaptive_avg_pool2d.h"
 #include "torch_xla/csrc/ops/adaptive_avg_pool3d.h"
+#include "torch_xla/csrc/ops/adaptive_max_pool2d.h"
 #include "torch_xla/csrc/ops/all.h"
 #include "torch_xla/csrc/ops/all_reduce.h"
 #include "torch_xla/csrc/ops/all_to_all.h"
@@ -446,6 +447,17 @@ XLATensor XLATensor::__rshift__(
   return input.CreateFrom(
       ir::ops::Rshift(input.GetIrValue(), other.GetIrValue()),
       logical_element_type);
+}
+
+void XLATensor::adaptive_max_pool2d_out(XLATensor& out, XLATensor& indices,
+                                        const XLATensor& input,
+                                        std::vector<xla::int64> output_size) {
+  ir::NodePtr node =
+      ir::MakeNode<ir::ops::AdaptiveMaxPool2d>(input.GetIrValue(), output_size);
+  out.SetIrValue(ir::Value(node, 0));
+  indices.SetIrValue(
+      indices.MaybeCastIrValue(ir::Value(node, 1), indices.GetDevice(),
+                               /*logical_element_type=*/at::ScalarType::Long));
 }
 
 XLATensor XLATensor::adaptive_avg_pool3d(const XLATensor& input,

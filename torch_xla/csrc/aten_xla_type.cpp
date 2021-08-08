@@ -278,8 +278,8 @@ at::Tensor XLANativeFunctions::_adaptive_avg_pool3d(
     const at::Tensor& self, at::IntArrayRef output_size) {
   XLA_FN_COUNTER("xla::");
   auto output_size_list = XlaHelpers::I64List(output_size);
-  if (!IsSupportedAdaptiveAvgPool(XlaHelpers::I64List(self.sizes()),
-                                  output_size_list, /*pool_dim=*/3)) {
+  if (!IsSupportedAdaptivePool(XlaHelpers::I64List(self.sizes()),
+                               output_size_list, /*pool_dim=*/3)) {
     return at::native::call_fallback_fn<
         &xla_cpu_fallback, ATEN_OP(_adaptive_avg_pool3d)>::call(self,
                                                                 output_size);
@@ -295,8 +295,8 @@ at::Tensor XLANativeFunctions::_adaptive_avg_pool3d_backward(
   std::vector<xla::int64> output_size{grad_output.size(rank - 3),
                                       grad_output.size(rank - 2),
                                       grad_output.size(rank - 1)};
-  if (!IsSupportedAdaptiveAvgPool(XlaHelpers::I64List(self.sizes()),
-                                  output_size, /*pool_dim=*/3)) {
+  if (!IsSupportedAdaptivePool(XlaHelpers::I64List(self.sizes()), output_size,
+                               /*pool_dim=*/3)) {
     return at::native::call_fallback_fn<
         &xla_cpu_fallback,
         ATEN_OP(_adaptive_avg_pool3d_backward)>::call(grad_output, self);
@@ -309,8 +309,8 @@ at::Tensor XLANativeFunctions::_adaptive_avg_pool2d(
     const at::Tensor& self, at::IntArrayRef output_size) {
   XLA_FN_COUNTER("xla::");
   auto output_size_list = XlaHelpers::I64List(output_size);
-  if (!IsSupportedAdaptiveAvgPool(XlaHelpers::I64List(self.sizes()),
-                                  output_size_list, /*pool_dim=*/2)) {
+  if (!IsSupportedAdaptivePool(XlaHelpers::I64List(self.sizes()),
+                               output_size_list, /*pool_dim=*/2)) {
     return at::native::call_fallback_fn<
         &xla_cpu_fallback, ATEN_OP(_adaptive_avg_pool2d)>::call(self,
                                                                 output_size);
@@ -325,14 +325,36 @@ at::Tensor XLANativeFunctions::_adaptive_avg_pool2d_backward(
   int64_t rank = grad_output.dim();
   std::vector<xla::int64> output_size{grad_output.size(rank - 2),
                                       grad_output.size(rank - 1)};
-  if (!IsSupportedAdaptiveAvgPool(XlaHelpers::I64List(self.sizes()),
-                                  output_size, /*pool_dim=*/2)) {
+  if (!IsSupportedAdaptivePool(XlaHelpers::I64List(self.sizes()), output_size,
+                               /*pool_dim=*/2)) {
     return at::native::call_fallback_fn<
         &xla_cpu_fallback,
         ATEN_OP(_adaptive_avg_pool2d_backward)>::call(grad_output, self);
   }
   return bridge::AtenFromXlaTensor(XLATensor::_adaptive_avg_pool2d_backward(
       bridge::GetXlaTensor(grad_output), bridge::GetXlaTensor(self)));
+}
+
+std::tuple<at::Tensor&, at::Tensor&>
+XLANativeFunctions::adaptive_max_pool2d_out(const at::Tensor& self,
+                                            at::IntArrayRef output_size,
+                                            at::Tensor& out,
+                                            at::Tensor& indices) {
+  XLA_FN_COUNTER("xla::");
+  auto output_size_list = XlaHelpers::I64List(output_size);
+  if (!IsSupportedAdaptivePool(XlaHelpers::I64List(self.sizes()),
+                               output_size_list, /*pool_dim=*/2)) {
+    return at::native::call_fallback_fn<
+        &xla_cpu_fallback, ATEN_OP(adaptive_max_pool2d_out)>::call(self,
+                                                                   output_size,
+                                                                   out,
+                                                                   indices);
+  }
+  XLATensor out_tensor = bridge::GetXlaTensor(out);
+  XLATensor indices_tensor = bridge::GetXlaTensor(indices);
+  XLATensor::adaptive_max_pool2d_out(
+      out_tensor, indices_tensor, bridge::GetXlaTensor(self), output_size_list);
+  return {out, indices};
 }
 
 void XLANativeFunctions::_amp_foreach_non_finite_check_and_unscale_(
