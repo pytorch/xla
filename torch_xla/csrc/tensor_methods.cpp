@@ -96,6 +96,7 @@
 #include "torch_xla/csrc/ops/prod.h"
 #include "torch_xla/csrc/ops/put.h"
 #include "torch_xla/csrc/ops/qr.h"
+#include "torch_xla/csrc/ops/reduce_scatter.h"
 #include "torch_xla/csrc/ops/reflection_pad2d.h"
 #include "torch_xla/csrc/ops/reflection_pad2d_backward.h"
 #include "torch_xla/csrc/ops/repeat.h"
@@ -357,6 +358,16 @@ ir::Value XLATensor::all_reduce(std::vector<XLATensor>* inputs,
     (*inputs)[i].SetInPlaceIrValue(ir::Value(node, i));
   }
   return ir::Value(node, inputs->size());
+}
+
+std::pair<XLATensor, ir::Value> XLATensor::reduce_scatter(
+    const XLATensor& input, const ir::Value& token, AllReduceType reduce_type,
+    double scale, xla::int64 scatter_dim, xla::int64 shard_count,
+    std::vector<std::vector<xla::int64>> groups) {
+  ir::NodePtr node = ir::MakeNode<ir::ops::ReduceScatter>(
+      reduce_type, input.GetIrValue(), token, scale, scatter_dim, shard_count,
+      std::move(groups));
+  return {input.CreateFrom(ir::Value(node, 0)), ir::Value(node, 1)};
 }
 
 std::pair<XLATensor, ir::Value> XLATensor::all_to_all(
