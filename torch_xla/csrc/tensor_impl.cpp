@@ -51,7 +51,7 @@ C10_REGISTER_GUARD_IMPL(XLA, XLAGuardImpl);
 }  // namespace
 
 XLATensorImpl::XLATensorImpl(XLATensor tensor)
-    : c10::TensorImpl(c10::DispatchKeySet{c10::DispatchKey::XLA,
+    : at::FunctionalTensorImplBase(c10::DispatchKeySet{c10::DispatchKey::XLA,
                                           c10::DispatchKey::AutogradXLA},
                       GetTypeMeta(tensor),
                       bridge::XlaDeviceToAtenDevice(tensor.GetDevice())),
@@ -160,5 +160,16 @@ const at::Storage& XLATensorImpl::storage() const {
 }
 
 bool XLATensorImpl::has_storage() const { return false; }
+
+void XLATensorImpl::replace_(const at::Tensor& other) {
+  auto xla_impl = dynamic_cast<const XLATensorImpl*>(other.unsafeGetTensorImpl());
+  TORCH_INTERNAL_ASSERT_DEBUG_ONLY(xla_impl != nullptr);
+
+  auto self_t = tensor();
+  auto other_t = xla_impl->tensor();
+  XLATensor::copy_(self_t, other_t);
+  // TODO: make this a std::move?
+  set_tensor(self_t);
+}
 
 }  // namespace torch_xla

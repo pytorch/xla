@@ -3,6 +3,7 @@
 #include <ATen/Tensor.h>
 #include <c10/core/Storage.h>
 #include <c10/core/TensorImpl.h>
+#include <ATen/FunctionalTensorImplBase.h>
 
 #include "torch_xla/csrc/tensor.h"
 
@@ -10,9 +11,11 @@ namespace torch_xla {
 
 // Tensor implementation class used to be fed to the at::Tensor.
 // Its scope is just to handle an XLATensor.
-class XLATensorImpl : public c10::TensorImpl {
+class XLATensorImpl : public at::FunctionalTensorImplBase {
  public:
   explicit XLATensorImpl(XLATensor tensor);
+
+  const XLATensor& tensor() const { return tensor_; }
 
   XLATensor& tensor() { return tensor_; }
 
@@ -43,6 +46,9 @@ class XLATensorImpl : public c10::TensorImpl {
   const at::Storage& storage() const override;
 
   bool has_storage() const override;
+
+  // Override the FunctionalTensorImplBase method describing how to re-use a tensor in the functionalization pass.
+  void replace_(const at::Tensor& other) override;
 
   static void AtenInitialize();
 
