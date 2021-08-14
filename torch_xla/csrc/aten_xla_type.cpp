@@ -357,6 +357,28 @@ XLANativeFunctions::adaptive_max_pool2d_out(const at::Tensor& self,
   return {out, indices};
 }
 
+at::Tensor& XLANativeFunctions::adaptive_max_pool2d_backward_out(
+    const at::Tensor& grad_output, const at::Tensor& self,
+    const at::Tensor& indices, at::Tensor& grad_input) {
+  XLA_FN_COUNTER("xla::");
+  int64_t rank = grad_output.dim();
+  std::vector<xla::int64> output_size{grad_output.size(rank - 2),
+                                      grad_output.size(rank - 1)};
+  // if (!IsSupportedAdaptivePool(XlaHelpers::I64List(self.sizes()),
+  //                              output_size, /*pool_dim=*/2)) {
+  //   return at::native::call_fallback_fn<
+  //       &xla_cpu_fallback,
+  //       ATEN_OP(adaptive_max_pool2d_backward_out)>::call(grad_output, self,
+  //                                                        indices,
+  //                                                        grad_input);
+  // }
+  XLATensor grad_input_tensor = bridge::GetXlaTensor(grad_input);
+  XLATensor::adaptive_max_pool2d_backward_out(grad_input_tensor,
+                                              bridge::GetXlaTensor(grad_output),
+                                              bridge::GetXlaTensor(self));
+  return grad_input;
+}
+
 void XLANativeFunctions::_amp_foreach_non_finite_check_and_unscale_(
     at::TensorList self, at::Tensor& found_inf, const at::Tensor& inv_scale) {
   XLA_FN_COUNTER("xla::");

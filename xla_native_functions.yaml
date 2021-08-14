@@ -318,6 +318,7 @@ supported:
   - lerp.Tensor
   - logical_and.out
   - adaptive_max_pool2d.out
+  - adaptive_max_pool2d_backward.grad_input
 autograd:
   - max_pool2d
   - max_pool3d

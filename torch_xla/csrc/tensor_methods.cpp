@@ -460,6 +460,13 @@ void XLATensor::adaptive_max_pool2d_out(XLATensor& out, XLATensor& indices,
                                /*logical_element_type=*/at::ScalarType::Long));
 }
 
+void XLATensor::adaptive_max_pool2d_backward_out(XLATensor& grad_input,
+                                                 const XLATensor& grad_output,
+                                                 const XLATensor& input) {
+  grad_input.SetIrValue(ir::ops::AdaptiveMaxPool2dBackward(
+      grad_output.GetIrValue(), input.GetIrValue()));
+}
+
 XLATensor XLATensor::adaptive_avg_pool3d(const XLATensor& input,
                                          std::vector<xla::int64> output_size) {
   return input.CreateFrom(ir::MakeNode<ir::ops::AdaptiveAvgPool3d>(

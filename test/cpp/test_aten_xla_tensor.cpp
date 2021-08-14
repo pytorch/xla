@@ -7426,6 +7426,26 @@ TEST_F(AtenXlaTensorTest, TestAdaptiveMaxPool2D) {
                        cpp_test::GetIgnoredCounters());
 }
 
+TEST_F(AtenXlaTensorTest, TestAdaptiveMaxPool2DBackward) {
+  for (int64_t output_size : {2, 5}) {
+    auto testfn =
+        [&](const std::vector<torch::Tensor>& inputs) -> torch::Tensor {
+      return std::get<0>(
+          torch::adaptive_max_pool2d(inputs[0], {output_size, output_size}));
+    };
+    ForEachDevice([&](const torch::Device& device) {
+      TestBackward(
+          {torch::rand(
+              {4, 1, 10, 10},
+              torch::TensorOptions(torch::kFloat).requires_grad(true))},
+          device, testfn);
+    });
+  }
+  ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::adaptive_max_pool2d_out",
+                       cpp_test::GetIgnoredCounters());
+}
+
 TEST_F(AtenXlaTensorTest, TestAdaptiveAvgPool2D) {
   torch::Tensor input =
       torch::rand({4, 1, 28, 28}, torch::TensorOptions(torch::kFloat));

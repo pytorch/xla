@@ -54,6 +54,10 @@ MaxPoolResult BuildAdaptiveMaxPoolNd(xla::XlaOp input,
                                      absl::Span<const xla::int64> output_size,
                                      int pool_dim);
 
+// Computes the gradient for adaptive max pooling.
+xla::XlaOp BuildAdaptiveMaxPoolNdBackward(xla::XlaOp out_backprop,
+                                          xla::XlaOp input, int pool_dim);
+
 // Computes adaptive average pooling for the given input and output size.
 xla::XlaOp BuildAdaptiveAvgPool3d(xla::XlaOp input,
                                   absl::Span<const xla::int64> output_size);

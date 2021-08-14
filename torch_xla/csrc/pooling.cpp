@@ -94,25 +94,6 @@ std::vector<xla::int64> AdaptivePoolKernelSize(
   return kernel_size;
 }
 
-// // Compute the adaptive pool kernel size and stride size required for the
-// // specified output_size from the given input_size.
-// PoolingOpAttributes AdaptivePoolKernelAndStrideSize(
-//     absl::Span<const xla::int64> input_sizes,
-//     absl::Span<const xla::int64> output_sizes, int pool_dim) {
-//   // Create a NCHW kernel size with 1 for batch size and feature.
-//   std::vector<xla::int64> kernel_sizes(2, 1);
-//   std::vector<xla::int64> stride_sizes(2, 1);
-//   xla::int64 spatial_dim_off = input_sizes.size() - pool_dim;
-//   for (int spatial_dim = 0; spatial_dim < pool_dim; ++spatial_dim) {
-//     xla::int64 input_size = input_sizes[spatial_dim_off + spatial_dim];
-//     xla::int64 output_size = output_sizes[spatial_dim];
-//     stride_sizes.push_back(input_size / output_size);
-//     kernel_sizes.push_back(input_size -
-//                            (output_size - 1) * stride_sizes.back());
-//   }
-//   return {std::move(kernel_sizes), std::move(stride_sizes)};
-// }
-
 struct BatchInput {
   xla::XlaOp batch_input;
   xla::int64 original_rank;
@@ -409,6 +390,44 @@ MaxPoolResult BuildAdaptiveMaxPoolNd(xla::XlaOp input,
                              pool_dim),
           RemoveTrivialBatch(batch_indices, batch_input_info.original_rank,
                              pool_dim)};
+}
+
+xla::XlaOp BuildAdaptiveMaxPoolNdBackward(xla::XlaOp out_backprop,
+                                          xla::XlaOp input, int pool_dim) {
+  BatchInput batch_out_backprop_info =
+      CreateBatchInput(/*input=*/out_backprop, /*spatial_dim_count=*/pool_dim);
+  const xla::Shape& out_backprop_shape =
+      XlaHelpers::ShapeOfXlaOp(batch_out_backprop_info.batch_input);
+  XLA_CHECK_EQ(out_backprop_shape.rank(), pool_dim + 2)
+      << "Invalid rank of gradient output";
+  std::vector<xla::int64> output_size(
+      out_backprop_shape.dimensions().begin() + 2,
+      out_backprop_shape.dimensions().end());
+  xla::XlaBuilder* builder = out_backprop.builder();
+  BatchInput batch_input_info = CreateBatchInput(input, pool_dim);
+  const xla::Shape& input_shape =
+      XlaHelpers::ShapeOfXlaOp(batch_input_info.batch_input);
+  xla::XlaOp init_value = xla::Zero(builder, input_shape.element_type());
+  xla::XlaComputation select = CreateGeComputation(input_shape.element_type());
+  xla::XlaComputation scatter =
+      XlaHelpers::CreateAddComputation(input_shape.element_type());
+  const auto kernel_size =
+      AdaptivePoolKernelSize(input_shape.dimensions(), output_size, pool_dim);
+  // AdaptiveMaxPool won't have padding.
+  std::vector<std::pair<xla::int64, xla::int64>> window_padding(2 + pool_dim,
+                                                                {0, 0});
+  xla::XlaOp batch_result = xla::SelectAndScatterWithGeneralPadding(
+      /*operand=*/batch_input_info.batch_input,
+      /*select=*/select,
+      /*window_dimensions=*/kernel_size,
+      /*window_strides=*/kernel_size,
+      /*padding=*/window_padding,
+      /*source=*/batch_out_backprop_info.batch_input,
+      /*init_value=*/init_value,
+      /*scatter=*/scatter);
+  return RemoveTrivialBatch(/*batch=*/batch_result,
+                            /*original_rank=*/batch_input_info.original_rank,
+                            /*spatial_dim_count=*/pool_dim);
 }
 
 MaxPoolResult BuildMaxPoolNd(xla::XlaOp input, xla::int64 spatial_dim_count,

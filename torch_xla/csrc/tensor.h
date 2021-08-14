@@ -239,6 +239,10 @@ class XLATensor {
                                       const XLATensor& input,
                                       std::vector<xla::int64> output_size);
 
+  static void adaptive_max_pool2d_backward_out(XLATensor& grad_input,
+                                               const XLATensor& grad_output,
+                                               const XLATensor& input);
+
   static XLATensor adaptive_avg_pool3d(const XLATensor& input,
                                        std::vector<xla::int64> output_size);
 
