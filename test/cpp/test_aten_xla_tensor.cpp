@@ -7427,18 +7427,26 @@ TEST_F(AtenXlaTensorTest, TestAdaptiveMaxPool2D) {
 }
 
 TEST_F(AtenXlaTensorTest, TestAdaptiveMaxPool2DBackward) {
-  for (int64_t output_size : {2, 5}) {
+  std::vector<torch::Tensor> inputs = {
+      torch::rand({2, 10, 10},
+                  torch::TensorOptions(torch::kFloat).requires_grad(true)),
+      torch::rand({2, 2, 10, 10},
+                  torch::TensorOptions(torch::kFloat).requires_grad(true)),
+  };
+  std::vector<std::vector<int64_t>> dim_sizes = {{2, 2}, {5, 2}, {5, 5}};
+  for (auto output_size : dim_sizes) {
     auto testfn =
         [&](const std::vector<torch::Tensor>& inputs) -> torch::Tensor {
-      return std::get<0>(
-          torch::adaptive_max_pool2d(inputs[0], {output_size, output_size}));
+      return std::get<0>(torch::adaptive_max_pool2d(inputs[0], output_size));
     };
     ForEachDevice([&](const torch::Device& device) {
-      TestBackward(
-          {torch::rand(
-              {4, 1, 10, 10},
-              torch::TensorOptions(torch::kFloat).requires_grad(true))},
-          device, testfn);
+      for (torch::Tensor input : inputs) {
+        TestBackward(
+            {torch::rand(
+                {4, 1, 10, 10},
+                torch::TensorOptions(torch::kFloat).requires_grad(true))},
+            device, testfn);
+      }
     });
   }
   ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
