@@ -755,6 +755,26 @@ xla::ComputationClient::DataPtr TensorToXlaData(const at::Tensor& tensor,
       tensor, CreateComputationShapeFromTensor(tensor, &device), device);
 }
 
+xla::Literal TensorToLiteral(const at::Tensor& tensor, const Device& device) {
+  const xla::Shape& xla_shape =
+      CreateComputationShapeFromTensor(tensor, &device);
+  auto populate_fn =
+      [&](const xla::ComputationClient::TensorSource& source_tensor,
+          void* dest_buffer, size_t dest_buffer_size) {
+        PopulateTensorBuffer(tensor, source_tensor.shape, dest_buffer,
+                             dest_buffer_size, device);
+      };
+  xla::ComputationClient::TensorSource tensor_source(
+      xla_shape, device.ToString(), std::move(populate_fn));
+  std::vector<char> tdata(tensor.numel() * sizeof(xla_shape.element_type()));
+  tensor_source.populate_fn(tensor_source, const_cast<char*>(tdata.data()),
+                            tdata.size());
+  xla::BorrowingLiteral borrow_literal =
+      xla::BorrowingLiteral(const_cast<char*>(tdata.data()), xla_shape);
+  xla::Literal literal = borrow_literal.Clone();
+  return literal;
+}
+
 std::vector<xla::ComputationClient::DataPtr> CreateTensorsData(
     const std::vector<at::Tensor>& tensors,
     const std::vector<std::string>& devices) {

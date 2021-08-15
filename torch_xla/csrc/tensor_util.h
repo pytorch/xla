@@ -32,6 +32,8 @@ bool TensorCompare(const at::Tensor& t1, const at::Tensor& t2);
 xla::ComputationClient::DataPtr TensorToXlaData(const at::Tensor& tensor,
                                                 const Device& device);
 
+xla::Literal TensorToLiteral(const at::Tensor& tensor, const Device& device);
+
 xla::hash_t TensorHash(const at::Tensor& tensor);
 
 // Retrieves the device data handles by parallel uploading data onto the

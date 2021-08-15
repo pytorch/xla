@@ -693,17 +693,21 @@ c10::optional<at::Tensor> XLATensor::CurrentTensorData() const {
 
 ir::Value XLATensor::GetIrValueForTensor(const at::Tensor& tensor,
                                          const Device& device) const {
+  static const bool kDeviceDataAsConst =
+      xla::sys_util::GetEnvInt("DEVICE_DATA_AS_CONST", false);
   xla::ComputationClient::DataPtr data;
   bool read_only = false;
   if (tensor.dim() == 0 && tensor.numel() == 1) {
     at::Scalar value = tensor.item();
-    if (IsSpecialScalar(value)) {
+    if (kDeviceDataAsConst || IsSpecialScalar(value)) {
       return ir::ops::ScalarOp(
           std::move(value),
           MakeXlaPrimitiveType(tensor.scalar_type(), &device));
     }
     data = GetDeviceData(tensor, device);
     read_only = true;
+  } else if (kDeviceDataAsConst) {
+    return ir::ops::ConstantOp(TensorToLiteral(tensor, device));
   } else {
     XLA_TIMED("IrValueTensorToXlaData");
     data = TensorToXlaData(tensor, device);
