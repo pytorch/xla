@@ -317,8 +317,8 @@ supported:
   - lerp.Scalar
   - lerp.Tensor
   - logical_and.out
-  - adaptive_max_pool2d.out
-  - adaptive_max_pool2d_backward.grad_input
+  - adaptive_max_pool2d
+  - adaptive_max_pool2d_backward
 autograd:
   - max_pool2d
   - max_pool3d

@@ -235,13 +235,11 @@ class XLATensor {
       const XLATensor& input, const XLATensor& other,
       c10::optional<at::ScalarType> logical_element_type = c10::nullopt);
 
-  static void adaptive_max_pool2d_out(XLATensor& out, XLATensor& indices,
-                                      const XLATensor& input,
-                                      std::vector<xla::int64> output_size);
+  static std::tuple<XLATensor, XLATensor> adaptive_max_pool2d(
+      const XLATensor& input, std::vector<xla::int64> output_size);
 
-  static void adaptive_max_pool2d_backward_out(XLATensor& grad_input,
-                                               const XLATensor& grad_output,
-                                               const XLATensor& input);
+  static XLATensor adaptive_max_pool2d_backward(const XLATensor& grad_output,
+                                                const XLATensor& input);
 
   static XLATensor adaptive_avg_pool3d(const XLATensor& input,
                                        std::vector<xla::int64> output_size);

@@ -449,21 +449,19 @@ XLATensor XLATensor::__rshift__(
       logical_element_type);
 }
 
-void XLATensor::adaptive_max_pool2d_out(XLATensor& out, XLATensor& indices,
-                                        const XLATensor& input,
-                                        std::vector<xla::int64> output_size) {
+std::tuple<XLATensor, XLATensor> XLATensor::adaptive_max_pool2d(
+    const XLATensor& input, std::vector<xla::int64> output_size) {
   ir::NodePtr node =
       ir::MakeNode<ir::ops::AdaptiveMaxPool2d>(input.GetIrValue(), output_size);
-  out.SetIrValue(ir::Value(node, 0));
-  indices.SetIrValue(
-      indices.MaybeCastIrValue(ir::Value(node, 1), indices.GetDevice(),
-                               /*logical_element_type=*/at::ScalarType::Long));
+  XLATensor out = input.CreateFrom(ir::Value(node, 0));
+  XLATensor indices =
+      input.CreateFrom(ir::Value(node, 1), at::ScalarType::Long);
+  return std::make_tuple(std::move(out), std::move(indices));
 }
 
-void XLATensor::adaptive_max_pool2d_backward_out(XLATensor& grad_input,
-                                                 const XLATensor& grad_output,
-                                                 const XLATensor& input) {
-  grad_input.SetIrValue(ir::ops::AdaptiveMaxPool2dBackward(
+XLATensor XLATensor::adaptive_max_pool2d_backward(const XLATensor& grad_output,
+                                                  const XLATensor& input) {
+  return input.CreateFrom(ir::ops::AdaptiveMaxPool2dBackward(
       grad_output.GetIrValue(), input.GetIrValue()));
 }
 

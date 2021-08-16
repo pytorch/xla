@@ -7422,7 +7422,7 @@ TEST_F(AtenXlaTensorTest, TestAdaptiveMaxPool2D) {
     }
   }
   ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
-  ExpectCounterChanged("xla::adaptive_max_pool2d_out",
+  ExpectCounterChanged("xla::adaptive_max_pool2d",
                        cpp_test::GetIgnoredCounters());
 }
 
@@ -7450,7 +7450,7 @@ TEST_F(AtenXlaTensorTest, TestAdaptiveMaxPool2DBackward) {
     });
   }
   ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
-  ExpectCounterChanged("xla::adaptive_max_pool2d_out",
+  ExpectCounterChanged("xla::adaptive_max_pool2d",
                        cpp_test::GetIgnoredCounters());
 }
 
