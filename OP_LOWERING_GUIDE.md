@@ -79,6 +79,8 @@ at::Tensor & wrapper_Scalar_lerp_(at::Tensor & self, const at::Tensor & end, con
 
 ```
 
-`lerp_.Scalar` will use our `lerp.Scalar` implementation without us providing explictly lowering.
+The codegen will automatically generate lowerings for`lerp_.Scalar` and `lerp.Scalar_out` that use our `lerp.Scalar` implementation, without us having to provide an explictly lowering.
+
+In general, if there is an operator in pytorch core that has both an out-of-place and an out= variant, it's better to write a lowering for the out-of-place variant, since you'll get a code-generated out= lowering for free.
 
 For each node we need to pass an `ir::OpKind`. Here is an ([example](https://github.com/pytorch/xla/blob/5ce99bff336325feb41a982dc80299fb53166b29/torch_xla/csrc/ops/var_mean.cpp#L36)). You can find the `OpKind` definition in [aten_interned_strings.h](https://github.com/pytorch/pytorch/blob/master/aten/src/ATen/core/aten_interned_strings.h) or [interned_strings.h](https://github.com/pytorch/pytorch/blob/master/aten/src/ATen/core/interned_strings.h). If the aten symbol is missing, you can submit a PR like [this](https://github.com/pytorch/pytorch/pull/36851).
