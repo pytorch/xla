@@ -161,8 +161,8 @@ const at::Storage& XLATensorImpl::storage() const {
 
 bool XLATensorImpl::has_storage() const { return false; }
 
-void XLATensorImpl::replace_(const at::Tensor& other) {
-  auto xla_impl = dynamic_cast<const XLATensorImpl*>(other.unsafeGetTensorImpl());
+void XLATensorImpl::replace_(const c10::TensorImpl* other_impl) {
+  auto xla_impl = dynamic_cast<const XLATensorImpl*>(other_impl);
   TORCH_INTERNAL_ASSERT_DEBUG_ONLY(xla_impl != nullptr);
 
   auto self_t = tensor();

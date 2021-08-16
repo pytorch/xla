@@ -47,8 +47,8 @@ class XLATensorImpl : public at::FunctionalTensorImplBase {
 
   bool has_storage() const override;
 
-  // Override the FunctionalTensorImplBase method describing how to re-use a tensor in the functionalization pass.
-  void replace_(const at::Tensor& other) override;
+  // Override the TensorImpl method describing how to re-use a tensor in the functionalization pass.
+  void replace_(const c10::TensorImpl* other_impl) override;
 
   static void AtenInitialize();
 
