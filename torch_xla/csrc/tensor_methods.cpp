@@ -2187,17 +2187,15 @@ void XLATensor::copy_(XLATensor& input, XLATensor& src) {
   }
 }
 
-XLATensor XLATensor::scatter(const XLATensor& input,
-                            xla::int64 dim, const XLATensor& index,
-                            const XLATensor& src) {
+XLATensor XLATensor::scatter(const XLATensor& input, xla::int64 dim,
+                             const XLATensor& index, const XLATensor& src) {
   return input.CreateFrom(ir::MakeNode<ir::ops::Scatter>(
       input.GetIrValue(), index.GetIrValue(), src.GetIrValue(),
       XlaHelpers::GetCanonicalDimensionIndex(dim, input.shape().get().rank())));
 }
 
-XLATensor XLATensor::scatter(const XLATensor& input,
-                            xla::int64 dim, const XLATensor& index,
-                            const at::Scalar& value) {
+XLATensor XLATensor::scatter(const XLATensor& input, xla::int64 dim,
+                             const XLATensor& index, const at::Scalar& value) {
   ir::Value constant =
       GetIrValueForScalar(value, input.shape(), input.GetDevice());
   return input.CreateFrom(ir::MakeNode<ir::ops::Scatter>(
@@ -2205,17 +2203,16 @@ XLATensor XLATensor::scatter(const XLATensor& input,
       XlaHelpers::GetCanonicalDimensionIndex(dim, input.shape().get().rank())));
 }
 
-XLATensor XLATensor::scatter_add(const XLATensor& input,
-                                xla::int64 dim, const XLATensor& index,
-                                const XLATensor& src) {
+XLATensor XLATensor::scatter_add(const XLATensor& input, xla::int64 dim,
+                                 const XLATensor& index, const XLATensor& src) {
   return input.CreateFrom(ir::MakeNode<ir::ops::ScatterAdd>(
       input.GetIrValue(), index.GetIrValue(), src.GetIrValue(),
       XlaHelpers::GetCanonicalDimensionIndex(dim, input.shape().get().rank())));
 }
 
-XLATensor XLATensor::scatter_add(const XLATensor& input,
-                                xla::int64 dim, const XLATensor& index,
-                                const at::Scalar& value) {
+XLATensor XLATensor::scatter_add(const XLATensor& input, xla::int64 dim,
+                                 const XLATensor& index,
+                                 const at::Scalar& value) {
   ir::Value constant =
       GetIrValueForScalar(value, input.shape(), input.GetDevice());
   return input.CreateFrom(ir::MakeNode<ir::ops::ScatterAdd>(

@@ -2707,83 +2707,79 @@ at::Tensor XLANativeFunctions::rsub(const at::Tensor& self,
 }
 
 at::Tensor scatter_reduce_helper(const at::Tensor& self, int64_t dim,
-                                      const at::Tensor& index,
-                                      const at::Tensor& src,
-                                      c10::optional<c10::string_view> reduce) {
+                                 const at::Tensor& index, const at::Tensor& src,
+                                 c10::optional<c10::string_view> reduce) {
   XLATensor self_tensor = bridge::GetXlaTensor(self);
   if (!reduce.has_value()) {
-    return bridge::AtenFromXlaTensor(XLATensor::scatter(self_tensor, dim,
-                           bridge::GetXlaTensor(index),
+    return bridge::AtenFromXlaTensor(
+        XLATensor::scatter(self_tensor, dim, bridge::GetXlaTensor(index),
                            bridge::GetXlaTensor(src)));
   } else if (*reduce == "add") {
-    return bridge::AtenFromXlaTensor(XLATensor::scatter_add(self_tensor, dim,
-                               bridge::GetXlaTensor(index),
+    return bridge::AtenFromXlaTensor(
+        XLATensor::scatter_add(self_tensor, dim, bridge::GetXlaTensor(index),
                                bridge::GetXlaTensor(src)));
   } else {
     // TODO: implement scatter_mul
     return at::native::call_fallback_fn<
-        &xla_cpu_fallback, ATEN_OP2(scatter, reduce)>::call(self, dim,
-                                                                index, src,
-                                                                *reduce);
+        &xla_cpu_fallback, ATEN_OP2(scatter, reduce)>::call(self, dim, index,
+                                                            src, *reduce);
   }
 }
 
 at::Tensor scatter_reduce_helper(const at::Tensor& self, int64_t dim,
-                                      const at::Tensor& index,
-                                      const at::Scalar& value,
-                                      c10::optional<c10::string_view> reduce) {
+                                 const at::Tensor& index,
+                                 const at::Scalar& value,
+                                 c10::optional<c10::string_view> reduce) {
   XLA_FN_COUNTER("xla::");
   XLATensor self_tensor = bridge::GetXlaTensor(self);
   if (!reduce.has_value()) {
-    return bridge::AtenFromXlaTensor(XLATensor::scatter(self_tensor, dim,
-                           bridge::GetXlaTensor(index), value));
+    return bridge::AtenFromXlaTensor(XLATensor::scatter(
+        self_tensor, dim, bridge::GetXlaTensor(index), value));
   } else if (*reduce == "add") {
-    return bridge::AtenFromXlaTensor(XLATensor::scatter_add(self_tensor, dim,
-                               bridge::GetXlaTensor(index), value));
+    return bridge::AtenFromXlaTensor(XLATensor::scatter_add(
+        self_tensor, dim, bridge::GetXlaTensor(index), value));
   } else {
     // TODO: implement scatter_mul
     return at::native::call_fallback_fn<
         &xla_cpu_fallback, ATEN_OP2(scatter, value_reduce)>::call(self, dim,
-                                                                      index,
-                                                                      value,
-                                                                      *reduce);
+                                                                  index, value,
+                                                                  *reduce);
   }
 }
 
 at::Tensor XLANativeFunctions::scatter(const at::Tensor& self, int64_t dim,
-                                            const at::Tensor& index,
-                                            const at::Tensor& src) {
+                                       const at::Tensor& index,
+                                       const at::Tensor& src) {
   XLA_FN_COUNTER("xla::");
   return scatter_reduce_helper(self, dim, index, src, c10::nullopt);
 }
 
 at::Tensor XLANativeFunctions::scatter(const at::Tensor& self, int64_t dim,
-                                            const at::Tensor& index,
-                                            const at::Scalar& value) {
+                                       const at::Tensor& index,
+                                       const at::Scalar& value) {
   XLA_FN_COUNTER("xla::");
   return scatter_reduce_helper(self, dim, index, value, c10::nullopt);
 }
 
 at::Tensor XLANativeFunctions::scatter(const at::Tensor& self, int64_t dim,
-                                            const at::Tensor& index,
-                                            const at::Tensor& src,
-                                            c10::string_view reduce) {
+                                       const at::Tensor& index,
+                                       const at::Tensor& src,
+                                       c10::string_view reduce) {
   XLA_FN_COUNTER("xla::");
   return scatter_reduce_helper(self, dim, index, src, reduce);
 }
 
 at::Tensor XLANativeFunctions::scatter(const at::Tensor& self, int64_t dim,
-                                            const at::Tensor& index,
-                                            const at::Scalar& value,
-                                            c10::string_view reduce) {
+                                       const at::Tensor& index,
+                                       const at::Scalar& value,
+                                       c10::string_view reduce) {
   XLA_FN_COUNTER("xla::");
   return scatter_reduce_helper(self, dim, index, value, reduce);
 }
 
-at::Tensor XLANativeFunctions::scatter_add(const at::Tensor& self,
-                                                int64_t dim,
-                                                const at::Tensor& index,
-                                                const at::Tensor& src) {
+at::Tensor XLANativeFunctions::scatter_add(const at::Tensor& self, int64_t dim,
+                                           const at::Tensor& index,
+                                           const at::Tensor& src) {
   XLA_FN_COUNTER("xla::");
   return scatter_reduce_helper(self, dim, index, src, "add");
 }
