@@ -40,7 +40,6 @@ extern const OpKindWrapper xla_get_dimensions_size;
 extern const OpKindWrapper xla_moving_average;
 extern const OpKindWrapper xla_nms;
 extern const OpKindWrapper xla_not_supported;
-extern const OpKindWrapper xla_reduce_scatter;
 extern const OpKindWrapper xla_replication_pad;
 extern const OpKindWrapper xla_replication_pad_backward;
 extern const OpKindWrapper xla_select;

@@ -671,41 +671,6 @@ def collective_permute(value, pairs):
   return result[0]
 
 
-def reduce_scatter(reduce_type,
-                   input,
-                   scale,
-                   scatter_dim,
-                   shard_count,
-                   groups=None):
-  """Performs a XLA `ReduceScatter()` operation on the input tensor.
-
-  See: https://www.tensorflow.org/xla/operation_semantics#reducescatter
-
-  Args:
-    reduce_type (string): One of ``xm.REDUCE_SUM``, ``xm.REDUCE_MUL``,
-      ``xm.REDUCE_AND``, ``xm.REDUCE_OR``, ``xm.REDUCE_MIN`` and ``xm.REDUCE_MAX``.
-    input: A single `torch.Tensor` all reduce + scatter op to.
-    scale (float): A default scaling value to be applied after the reduce.
-    scatter_dim (int): Dimension number to which apply scatter operation.
-    shard_count (int): The number of ways to split up the scatter_dim in.
-    groups (list): A list of list, representing the replica groups for
-      the `all_reduce()` operation. Example: `[[0, 1, 2, 3], [4, 5, 6, 7]]`
-        defines two groups, one with the `[0, 1, 2, 3]` replicas and one with
-        the `[4, 5, 6, 7]` replicas. If `None` there will be only one group with
-        all the replicas in it.
-  Returns:
-    A `torch.Tensor` with all the values reduced accross replicas. Each process
-    gets a shard split along the `scatter_dim`. All other dimensions are
-    the same as the input.
-  """
-  token, devctx = _get_all_reduce_token()
-  result = torch_xla._XLAC._xla_reduce_scatter(reduce_type, input, token, scale,
-                                               scatter_dim, shard_count,
-                                               groups or [])
-  devctx.all_reduce_token = result[1]
-  return result[0]
-
-
 def add_step_closure(closure, args=(), run_async=False):
   """Adds a closure to the list of the ones to be run at the end of the step.
 
