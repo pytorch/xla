@@ -26,11 +26,6 @@ struct CollectivePermuteResult {
   xla::XlaOp token;
 };
 
-struct ReduceScatterResult {
-  xla::XlaOp result;
-  xla::XlaOp token;
-};
-
 std::vector<xla::XlaOp> BuildAllReduce(
     AllReduceType reduce_type, absl::Span<const xla::XlaOp> operands,
     xla::XlaOp token, double scale,
@@ -44,10 +39,5 @@ AllToAllResult BuildAllToAll(
 CollectivePermuteResult BuildCollectivePermute(
     xla::XlaOp input, xla::XlaOp token,
     const std::vector<std::pair<xla::int64, xla::int64>>& source_target_pairs);
-
-ReduceScatterResult BuildReduceScatter(
-    AllReduceType reduce_type, xla::XlaOp input, xla::XlaOp token, double scale,
-    xla::int64 scatter_dim, xla::int64 shard_count,
-    const std::vector<std::vector<xla::int64>>& groups);
 
 }  // namespace torch_xla
