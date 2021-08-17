@@ -190,14 +190,13 @@ xla::XlaOp BuildReciprocal(xla::XlaOp input) {
 
 xla::XlaOp BuildSgn(xla::XlaOp input) {
   xla::XlaOp num_input = ConvertToNumeric(input);
-  const xla::Shape& shape = XlaHelpers::ShapeOfXlaOp(num_input);
   const xla::Shape& shape_real = XlaHelpers::ShapeOfXlaOp(xla::Real(num_input));
-  xla::XlaOp nan_real = xla::NanValue(num_input.builder(), shape_real.element_type());
+  xla::XlaOp nan_real =
+      xla::NanValue(num_input.builder(), shape_real.element_type());
   xla::XlaOp nan = xla::Complex(nan_real, nan_real);
   xla::XlaOp sign = xla::Sign(num_input);
-  xla::XlaOp is_finite_real = xla::IsFinite(xla::Real(sign));
-  xla::XlaOp is_finite_imag = xla::IsFinite(xla::Imag(sign));
-  xla::XlaOp is_finite = xla::And(is_finite_real, is_finite_imag);
+  xla::XlaOp is_finite =
+      xla::And(xla::IsFinite(xla::Real(sign)), xla::IsFinite(xla::Imag(sign)));
   return xla::Select(is_finite, sign, nan);
 }
 
