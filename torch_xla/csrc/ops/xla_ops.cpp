@@ -16,7 +16,6 @@ const OpKindWrapper xla_get_dimensions_size("xla::xla_get_dimensions_size");
 const OpKindWrapper xla_moving_average("xla::moving_average");
 const OpKindWrapper xla_nms("xla::nms");
 const OpKindWrapper xla_not_supported("xla::not_supported");
-const OpKindWrapper xla_reduce_scatter("xla::reduce_scatter");
 const OpKindWrapper xla_replication_pad("xla::replication_pad");
 const OpKindWrapper xla_replication_pad_backward(
     "xla::replication_pad_backward");

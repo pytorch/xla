@@ -198,21 +198,6 @@ std::pair<at::Tensor, std::shared_ptr<ir::Value>> AllReduce(
       std::make_shared<ir::Value>(new_token));
 }
 
-std::pair<at::Tensor, std::shared_ptr<ir::Value>> ReduceScatter(
-    const std::string& reduce_type, const at::Tensor& input,
-    const std::shared_ptr<ir::Value>& token, double scale,
-    xla::int64 scatter_dim, xla::int64 shard_count,
-    const std::vector<std::vector<xla::int64>>& replica_groups) {
-  XLATensor result;
-  ir::Value new_token;
-  std::tie(result, new_token) = XLATensor::reduce_scatter(
-      bridge::GetXlaTensor(input), *token, GetReduceType(reduce_type), scale,
-      scatter_dim, shard_count, replica_groups);
-  return std::pair<at::Tensor, std::shared_ptr<ir::Value>>(
-      bridge::AtenFromXlaTensor(std::move(result)),
-      std::make_shared<ir::Value>(new_token));
-}
-
 std::pair<at::Tensor, std::shared_ptr<ir::Value>> AllToAll(
     const at::Tensor& input, const std::shared_ptr<ir::Value>& token,
     xla::int64 split_dimension, xla::int64 concat_dimension,
@@ -908,27 +893,6 @@ void InitXlaModuleBindings(py::module m) {
             NoGilSection nogil;
             std::tie(result, new_token) =
                 CollectivePermute(input, token, source_target_pairs);
-          }
-          auto result_tuple = py::tuple(2);
-          result_tuple[0] = torch::autograd::make_variable(
-              result, /*requires_grad=*/input.requires_grad());
-          result_tuple[1] = new_token;
-          return result_tuple;
-        });
-  m.def("_xla_reduce_scatter",
-        [](const std::string& reduce_type, const at::Tensor& input,
-           const std::shared_ptr<ir::Value>& token, double scale,
-           xla::int64 scatter_dim, xla::int64 shard_count,
-           const py::list& groups) {
-          std::vector<std::vector<xla::int64>> replica_groups =
-              CreateReduceGroups(groups);
-          at::Tensor result;
-          std::shared_ptr<ir::Value> new_token;
-          {
-            NoGilSection nogil;
-            std::tie(result, new_token) =
-                ReduceScatter(reduce_type, input, token, scale, scatter_dim,
-                              shard_count, replica_groups);
           }
           auto result_tuple = py::tuple(2);
           result_tuple[0] = torch::autograd::make_variable(
