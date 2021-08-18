@@ -51,8 +51,7 @@ class TestAutocastBase(unittest.TestCase):
 
   def setUp(self):
     super(TestAutocastBase, self).setUp()
-    self.autocast_lists = AutocastTestLists(
-        torch.device(xm.xla_device()))
+    self.autocast_lists = AutocastTestLists(torch.device(xm.xla_device()))
     self.autocast_unsupported_lists = AutocastTestUnsupportedLists()
     self.skip_list = []
 
