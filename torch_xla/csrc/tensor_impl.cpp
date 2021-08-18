@@ -51,10 +51,11 @@ C10_REGISTER_GUARD_IMPL(XLA, XLAGuardImpl);
 }  // namespace
 
 XLATensorImpl::XLATensorImpl(XLATensor tensor)
-    : at::FunctionalTensorImplBase(c10::DispatchKeySet{c10::DispatchKey::XLA,
-                                          c10::DispatchKey::AutogradXLA},
-                      GetTypeMeta(tensor),
-                      bridge::XlaDeviceToAtenDevice(tensor.GetDevice())),
+    : at::FunctionalTensorImplBase(
+          c10::DispatchKeySet{c10::DispatchKey::XLA,
+                              c10::DispatchKey::AutogradXLA},
+          GetTypeMeta(tensor),
+          bridge::XlaDeviceToAtenDevice(tensor.GetDevice())),
       tensor_(std::move(tensor)) {
   is_non_overlapping_and_dense_ = false;
 }
@@ -161,9 +162,15 @@ const at::Storage& XLATensorImpl::storage() const {
 
 bool XLATensorImpl::has_storage() const { return false; }
 
-void XLATensorImpl::replace_(const c10::TensorImpl* other_impl) {
-  auto xla_impl = dynamic_cast<const XLATensorImpl*>(other_impl);
-  TORCH_INTERNAL_ASSERT_DEBUG_ONLY(xla_impl != nullptr);
+void XLATensorImpl::replace_(const at::FunctionalTensorImplBase* other_impl) {
+  // INVARIANT: inputs to replace_() are always temporaries.
+  // They should never have an alias, or be exposed to python.
+  // This is important because we want to retain all of the
+  // aliasing + python metadata from the original tensor
+  TORCH_INTERNAL_ASSERT(!other_impl->is_view());
+  TORCH_INTERNAL_ASSERT(other_impl->key_set().has(c10::DispatchKey::XLA));
+  auto xla_impl = static_cast<const XLATensorImpl*>(other_impl);
+  TORCH_INTERNAL_ASSERT(xla_impl != nullptr);
 
   auto self_t = tensor();
   auto other_t = xla_impl->tensor();

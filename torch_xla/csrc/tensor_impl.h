@@ -1,9 +1,9 @@
 #pragma once
 
+#include <ATen/FunctionalTensorImplBase.h>
 #include <ATen/Tensor.h>
 #include <c10/core/Storage.h>
 #include <c10/core/TensorImpl.h>
-#include <ATen/FunctionalTensorImplBase.h>
 
 #include "torch_xla/csrc/tensor.h"
 
@@ -47,8 +47,9 @@ class XLATensorImpl : public at::FunctionalTensorImplBase {
 
   bool has_storage() const override;
 
-  // Override the TensorImpl method describing how to re-use a tensor in the functionalization pass.
-  void replace_(const c10::TensorImpl* other_impl) override;
+  // Override the TensorImpl method describing how to re-use a tensor in the
+  // functionalization pass.
+  void replace_(const at::FunctionalTensorImplBase* other_impl) override;
 
   static void AtenInitialize();
 

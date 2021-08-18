@@ -3437,6 +3437,11 @@ at::Tensor& XLANativeFunctions::zero_(at::Tensor& self) {
   return self;
 }
 
+at::Tensor XLANativeFunctions::view_copy(const at::Tensor& self,
+                                         at::IntArrayRef size) {
+  return view(self, size);
+}
+
 at::Scalar XLANativeFunctions::_local_scalar_dense(const at::Tensor& self) {
   if (DebugUtil::ExperimentEnabled("early_sync")) {
     // sync tensors in order to save computation when step is marked later.

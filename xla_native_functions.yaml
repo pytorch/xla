@@ -170,6 +170,7 @@ supported:
   - masked_fill_.Tensor
   - masked_scatter_
   - view
+  - view_copy
   - put_
   - index_add_
   - index_fill_.int_Scalar
