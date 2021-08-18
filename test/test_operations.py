@@ -1016,6 +1016,17 @@ class TestAtenXlaTensor(XlaTestCase):
     print(xla_a.data.cpu())
     self.assertEqual(a.data, xla_a.data.cpu())
 
+    t = torch.randn(2, 3, dtype=torch.float)
+    t[0][0].div_(0)
+    t[0][1] = 0
+    t[0][1].div_(0)
+    t[1][0] = 0
+    t[1][2].div_(0)
+    t[1][2] = t[1][1].abs() * -1
+    a = t.sgn()
+    xla_a = t.to(xla_device).sgn()
+    self.assertEqual(a.data, xla_a.data.cpu())
+
   def test_index_put(self):
     xla_device = xm.xla_device()
     a = torch.tensor([1, 1, 1, 1]).to(xla_device).to(dtype=torch.float32)
