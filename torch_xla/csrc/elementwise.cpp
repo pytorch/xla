@@ -198,7 +198,7 @@ xla::XlaOp BuildSgn(xla::XlaOp input) {
   xla::XlaOp is_finite =
       xla::And(xla::IsFinite(xla::Real(sign)), xla::IsFinite(xla::Imag(sign)));
   return xla::Select(is_finite, sign,
-                     MaybeConvertTo(nan, XlaHelpers::TypeOfXlaOp(nan)));
+                     MaybeConvertTo(nan, XlaHelpers::TypeOfXlaOp(sign)));
 }
 
 xla::XlaOp BuildSign(xla::XlaOp input) {
