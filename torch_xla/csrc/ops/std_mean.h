@@ -22,14 +22,14 @@ class StdMean : public Node {
 
   const std::vector<xla::int64>& dimensions() const { return dimensions_; }
 
-  bool keep_reduced_dimensions() const { return keep_reduced_dimensions_; }
-
   xla::int64 correction() const { return correction_; }
+
+  bool keep_reduced_dimensions() const { return keep_reduced_dimensions_; }
 
  private:
   std::vector<xla::int64> dimensions_;
-  bool keep_reduced_dimensions_;
   xla::int64 correction_;
+  bool keep_reduced_dimensions_;
 };
 
 }  // namespace ops
