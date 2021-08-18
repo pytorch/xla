@@ -190,6 +190,11 @@ xla::XlaOp BuildReciprocal(xla::XlaOp input) {
 
 xla::XlaOp BuildSgn(xla::XlaOp input) {
   xla::XlaOp num_input = ConvertToNumeric(input);
+  const xla::Shape& shape = XlaHelpers::ShapeOfXlaOp(num_input);
+  if (!(shape.element_type() == xla::PrimitiveType::C64 ||
+        shape.element_type() == xla::PrimitiveType::C128)) {
+    return BuildSign(input);
+  }
   const xla::Shape& shape_real = XlaHelpers::ShapeOfXlaOp(xla::Real(num_input));
   xla::XlaOp nan_real =
       xla::NanValue(num_input.builder(), shape_real.element_type());

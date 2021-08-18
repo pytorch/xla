@@ -1016,7 +1016,7 @@ class TestAtenXlaTensor(XlaTestCase):
     print(xla_a.data.cpu())
     self.assertEqual(a.data, xla_a.data.cpu())
 
-    t = torch.randn(2, 3, dtype=torch.float)
+    t = torch.randn(2, 3, dtype=torch.float32)
     t[0][0].div_(0)
     t[0][1] = 0
     t[0][1].div_(0)
@@ -1025,6 +1025,10 @@ class TestAtenXlaTensor(XlaTestCase):
     t[1][2] = t[1][1].abs() * -1
     a = t.sgn()
     xla_a = t.to(xla_device).sgn()
+    print("milad")
+    print(t)
+    print(a.data)
+    print(xla_a.data.cpu())
     self.assertEqual(a.data, xla_a.data.cpu())
 
   def test_index_put(self):
