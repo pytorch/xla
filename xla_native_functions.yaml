@@ -321,7 +321,6 @@ supported:
   - logical_xor
   - logical_or
   - logical_and
->>>>>>> 41b01cda (Lower logical not/or/xor)
 autograd:
   - max_pool2d
   - max_pool3d
