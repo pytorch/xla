@@ -935,21 +935,15 @@ class XLATensor {
 
   static void copy_(XLATensor& input, XLATensor& src);
 
-  static void scatter_out(XLATensor& out, const XLATensor& input,
-                          xla::int64 dim, const XLATensor& index,
-                          const XLATensor& src);
-  static void scatter_out(XLATensor& out, const XLATensor& input,
-                          xla::int64 dim, const XLATensor& index,
-                          const at::Scalar& value);
-
-  static void scatter_add_(XLATensor& input, xla::int64 dim,
+  static XLATensor scatter(const XLATensor& input, xla::int64 dim,
                            const XLATensor& index, const XLATensor& src);
-  static void scatter_add_out(XLATensor& out, const XLATensor& input,
-                              xla::int64 dim, const XLATensor& index,
-                              const XLATensor& src);
-  static void scatter_add_out(XLATensor& out, const XLATensor& input,
-                              xla::int64 dim, const XLATensor& index,
-                              const at::Scalar& value);
+  static XLATensor scatter(const XLATensor& input, xla::int64 dim,
+                           const XLATensor& index, const at::Scalar& value);
+
+  static XLATensor scatter_add(const XLATensor& input, xla::int64 dim,
+                               const XLATensor& index, const XLATensor& src);
+  static XLATensor scatter_add(const XLATensor& input, xla::int64 dim,
+                               const XLATensor& index, const at::Scalar& value);
 
   static XLATensor select(const XLATensor& input, xla::int64 dim,
                           xla::int64 index);
