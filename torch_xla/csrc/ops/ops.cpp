@@ -331,6 +331,31 @@ NodePtr MatMul(const Value& lhs, const Value& rhs) {
       std::move(lower_fn));
 }
 
+NodePtr AdaptiveMaxPool2dBackward(const Value& grad_output,
+                                  const Value& input) {
+  auto lower_fn = [](const Node& node, LoweringContext* loctx) -> XlaOpVector {
+    xla::XlaOp grad_output = loctx->GetOutputOp(node.operand(0));
+    xla::XlaOp input = loctx->GetOutputOp(node.operand(1));
+    xla::XlaOp xla_output = BuildAdaptiveMaxPoolNdBackward(
+        /*out_backprop=*/grad_output, /*input=*/input, /*pool_dim=*/2);
+    return node.ReturnOp(xla_output, loctx);
+  };
+  auto lower_for_shape_fn =
+      [](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
+    XLA_CHECK_EQ(operands.size(), 2);
+    return BuildAdaptiveMaxPoolNdBackward(/*out_backprop=*/operands[0],
+                                          /*input=*/operands[1],
+                                          /*pool_dim=*/2);
+  };
+  return GenericOp(
+      OpKind(at::aten::adaptive_max_pool2d_backward), {grad_output, input},
+      [&]() {
+        return InferOutputShape({grad_output.shape(), input.shape()},
+                                lower_for_shape_fn);
+      },
+      std::move(lower_fn));
+}
+
 NodePtr AdaptiveAvgPool3dBackward(const Value& grad_output,
                                   const Value& input) {
   auto lower_fn = [](const Node& node, LoweringContext* loctx) -> XlaOpVector {

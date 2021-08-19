@@ -19,6 +19,7 @@
 #include "torch_xla/csrc/lowering_context.h"
 #include "torch_xla/csrc/ops/adaptive_avg_pool2d.h"
 #include "torch_xla/csrc/ops/adaptive_avg_pool3d.h"
+#include "torch_xla/csrc/ops/adaptive_max_pool2d.h"
 #include "torch_xla/csrc/ops/all.h"
 #include "torch_xla/csrc/ops/all_reduce.h"
 #include "torch_xla/csrc/ops/all_to_all.h"
@@ -446,6 +447,22 @@ XLATensor XLATensor::__rshift__(
   return input.CreateFrom(
       ir::ops::Rshift(input.GetIrValue(), other.GetIrValue()),
       logical_element_type);
+}
+
+std::tuple<XLATensor, XLATensor> XLATensor::adaptive_max_pool2d(
+    const XLATensor& input, std::vector<xla::int64> output_size) {
+  ir::NodePtr node =
+      ir::MakeNode<ir::ops::AdaptiveMaxPool2d>(input.GetIrValue(), output_size);
+  XLATensor out = input.CreateFrom(ir::Value(node, 0));
+  XLATensor indices =
+      input.CreateFrom(ir::Value(node, 1), at::ScalarType::Long);
+  return std::make_tuple(std::move(out), std::move(indices));
+}
+
+XLATensor XLATensor::adaptive_max_pool2d_backward(const XLATensor& grad_output,
+                                                  const XLATensor& input) {
+  return input.CreateFrom(ir::ops::AdaptiveMaxPool2dBackward(
+      grad_output.GetIrValue(), input.GetIrValue()));
 }
 
 XLATensor XLATensor::adaptive_avg_pool3d(const XLATensor& input,
