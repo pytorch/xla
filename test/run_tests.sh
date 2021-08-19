@@ -85,11 +85,6 @@ function run_all_tests {
   run_test python3 "$CDIR/test_profiler.py"
   run_test python3 "$CDIR/test_ops.py"
   run_downcast_bf16 python3 "$CDIR/test_data_type.py"
-  # `run_use_bf16` should be run after the `run_downcast_bf16` version.
-  # In XLML test there seems to be an env var leakage where `XLA_USE_BF16=1`
-  # will be picked up by `test_data_type.py` (but not the C++ code) when we
-  # run the `run_use_bf16` version and causing test to expect `bf16` for `f64`
-  # data.
   run_use_bf16 python3 "$CDIR/test_data_type.py"
 }
 
