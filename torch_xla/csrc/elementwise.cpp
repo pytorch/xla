@@ -198,12 +198,13 @@ xla::XlaOp BuildSgn(xla::XlaOp input) {
   const xla::Shape& shape_real = XlaHelpers::ShapeOfXlaOp(xla::Real(num_input));
   xla::XlaOp nan_real =
       xla::NanValue(num_input.builder(), shape_real.element_type());
-  xla::XlaOp nan = xla::Complex(nan_real, nan_real);
+  xla::XlaOp nan_complex = xla::Complex(nan_real, nan_real);
   xla::XlaOp sign = xla::Sign(num_input);
   xla::XlaOp is_finite =
       xla::And(xla::IsFinite(xla::Real(sign)), xla::IsFinite(xla::Imag(sign)));
+  // Replace non-finite tensor values (e.g. Inf, NaN) with NaN
   return xla::Select(is_finite, sign,
-                     MaybeConvertTo(nan, XlaHelpers::TypeOfXlaOp(sign)));
+                     MaybeConvertTo(nan_complex, XlaHelpers::TypeOfXlaOp(sign)));
 }
 
 xla::XlaOp BuildSign(xla::XlaOp input) {
