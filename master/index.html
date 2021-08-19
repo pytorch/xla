@@ -1662,7 +1662,8 @@ at::Tensor &amp; wrapper_Scalar_lerp_(at::Tensor &amp; self, const at::Tensor &a
   TORCH_FN(wrapper_Scalar_lerp_));
 </pre></div>
 </div>
-<p><code class="docutils literal notranslate"><span class="pre">lerp_.Scalar</span></code> will use our <code class="docutils literal notranslate"><span class="pre">lerp.Scalar</span></code> implementation without us providing explictly lowering.</p>
+<p>The codegen will automatically generate lowerings for <code class="docutils literal notranslate"><span class="pre">lerp_.Scalar</span></code> and <code class="docutils literal notranslate"><span class="pre">lerp.Scalar_out</span></code> that use our <code class="docutils literal notranslate"><span class="pre">lerp.Scalar</span></code> implementation, without us having to provide an explicit lowering.</p>
+<p>In general, if there is an operator in pytorch core that has both an out-of-place and an out= variant, it’s better to write a lowering for the out-of-place variant, since you’ll get a code-generated out= lowering for free.</p>
 <p>For each node we need to pass an <code class="docutils literal notranslate"><span class="pre">ir::OpKind</span></code>. Here is an (<a class="reference external" href="https://github.com/pytorch/xla/blob/5ce99bff336325feb41a982dc80299fb53166b29/torch_xla/csrc/ops/var_mean.cpp#L36">example</a>). You can find the <code class="docutils literal notranslate"><span class="pre">OpKind</span></code> definition in <a class="reference external" href="https://github.com/pytorch/pytorch/blob/master/aten/src/ATen/core/aten_interned_strings.h">aten_interned_strings.h</a> or <a class="reference external" href="https://github.com/pytorch/pytorch/blob/master/aten/src/ATen/core/interned_strings.h">interned_strings.h</a>. If the aten symbol is missing, you can submit a PR like <a class="reference external" href="https://github.com/pytorch/pytorch/pull/36851">this</a>.</p>
 </div>
 </div>
