@@ -4252,7 +4252,7 @@ TEST_F(AtenXlaTensorTest, TestScatter) {
     });
   }
   ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
-  ExpectCounterChanged("xla::scatter_out", cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::scatter", cpp_test::GetIgnoredCounters());
 }
 
 TEST_F(AtenXlaTensorTest, TestScatterR1) {
@@ -4271,7 +4271,7 @@ TEST_F(AtenXlaTensorTest, TestScatterR1) {
   });
 
   ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
-  ExpectCounterChanged("xla::scatter_out", cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::scatter", cpp_test::GetIgnoredCounters());
 }
 
 TEST_F(AtenXlaTensorTest, TestScatterR3) {
@@ -4295,7 +4295,7 @@ TEST_F(AtenXlaTensorTest, TestScatterR3) {
   });
 
   ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
-  ExpectCounterChanged("xla::scatter_out", cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::scatter", cpp_test::GetIgnoredCounters());
 }
 
 TEST_F(AtenXlaTensorTest, TestScatterBiggerSource) {
@@ -4319,7 +4319,7 @@ TEST_F(AtenXlaTensorTest, TestScatterBiggerSource) {
   }
 
   ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
-  ExpectCounterChanged("xla::scatter_out", cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::scatter", cpp_test::GetIgnoredCounters());
 }
 
 TEST_F(AtenXlaTensorTest, TestScatterScalar) {
@@ -4342,7 +4342,7 @@ TEST_F(AtenXlaTensorTest, TestScatterScalar) {
   }
 
   ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
-  ExpectCounterChanged("xla::scatter_out", cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::scatter", cpp_test::GetIgnoredCounters());
 }
 
 TEST_F(AtenXlaTensorTest, TestScatterReduceAdd) {
@@ -4366,7 +4366,7 @@ TEST_F(AtenXlaTensorTest, TestScatterReduceAdd) {
   }
 
   ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
-  ExpectCounterChanged("xla::scatter_out", cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::scatter", cpp_test::GetIgnoredCounters());
 }
 
 TEST_F(AtenXlaTensorTest, TestScatterAdd) {
@@ -4390,7 +4390,7 @@ TEST_F(AtenXlaTensorTest, TestScatterAdd) {
   }
 
   ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
-  ExpectCounterChanged("xla::scatter_add_out", cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::scatter_add", cpp_test::GetIgnoredCounters());
 }
 
 TEST_F(AtenXlaTensorTest, TestScatterAddInPlace) {
@@ -4415,7 +4415,7 @@ TEST_F(AtenXlaTensorTest, TestScatterAddInPlace) {
     });
 
     ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
-    ExpectCounterChanged("xla::scatter_add_", cpp_test::GetIgnoredCounters());
+    ExpectCounterChanged("xla::scatter_add", cpp_test::GetIgnoredCounters());
   }
 }
 
@@ -6315,7 +6315,7 @@ TEST_F(AtenXlaTensorTest, TestOneHot) {
   // TODO: PT one_hot impl employs item() which could be eliminated.
   ExpectCounterNotChanged("aten::(?!_local_scalar_dense).*",
                           cpp_test::GetIgnoredCounters());
-  ExpectCounterChanged("xla::scatter_out", cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::scatter", cpp_test::GetIgnoredCounters());
 }
 
 TEST_F(AtenXlaTensorTest, TestTranspose) {
