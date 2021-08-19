@@ -96,13 +96,14 @@ function run_torch_xla_tests() {
   pushd $XLA_DIR
     echo "Running Python Tests"
     ./test/run_tests.sh
+    # only run test_autocast for cpu and gpu on circleCI.
+    python test/test_autocast.py
 
     # echo "Running MNIST Test"
     # python test/test_train_mp_mnist.py --tidy
-    if [ -x "$(command -v nvidia-smi)" ]; then
-      python test/test_autocast.py
+    # if [ -x "$(command -v nvidia-smi)" ]; then
       # python test/test_train_mp_mnist_amp.py --fake_data
-    fi
+    # fi
 
     pushd test/cpp
     echo "Running C++ Tests"
