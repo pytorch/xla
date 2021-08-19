@@ -203,8 +203,9 @@ xla::XlaOp BuildSgn(xla::XlaOp input) {
   xla::XlaOp is_finite =
       xla::And(xla::IsFinite(xla::Real(sign)), xla::IsFinite(xla::Imag(sign)));
   // Replace non-finite tensor values (e.g. Inf, NaN) with NaN
-  return xla::Select(is_finite, sign,
-                     MaybeConvertTo(nan_complex, XlaHelpers::TypeOfXlaOp(sign)));
+  return xla::Select(
+      is_finite, sign,
+      MaybeConvertTo(nan_complex, XlaHelpers::TypeOfXlaOp(sign)));
 }
 
 xla::XlaOp BuildSign(xla::XlaOp input) {
