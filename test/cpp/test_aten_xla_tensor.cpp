@@ -3026,8 +3026,8 @@ TEST_F(AtenXlaTensorTest, TestSgn) {
 }
 
 TEST_F(AtenXlaTensorTest, TestSign) {
-  torch::Tensor a =
-      torch::randn({200, 200}, torch::TensorOptions(torch::kFloat).requires_grad(true));
+  torch::Tensor a = torch::randn(
+      {200, 200}, torch::TensorOptions(torch::kFloat).requires_grad(true));
   torch::Tensor b = torch::sign(a);
   ForEachDevice([&](const torch::Device& device) {
     torch::Tensor xla_a = CopyToDevice(a, device, /*requires_grad=*/true);
@@ -3050,7 +3050,8 @@ TEST_F(AtenXlaTensorTest, TestSignByte) {
 }
 
 TEST_F(AtenXlaTensorTest, TestAbs) {
-  torch::Tensor a = torch::randn({2, 2}, torch::TensorOptions(torch::kFloat).requires_grad(true));
+  torch::Tensor a = torch::randn(
+      {2, 2}, torch::TensorOptions(torch::kFloat).requires_grad(true));
   torch::Tensor b = torch::abs(a);
   ForEachDevice([&](const torch::Device& device) {
     torch::Tensor xla_a = CopyToDevice(a, device, /*requires_grad=*/true);
