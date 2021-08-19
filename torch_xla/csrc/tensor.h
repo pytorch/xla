@@ -1143,6 +1143,10 @@ class XLATensor {
   static XLATensor where(const XLATensor& condition, const XLATensor& input,
                          const XLATensor& other);
 
+  static XLATensor nan_to_num(const XLATensor& input, c10::optional<double> nan,
+                              c10::optional<double> posinf,
+                              c10::optional<double> neginf);
+
  private:
   struct SyncTensorsConfig {
     // Whether we want to force XLA data on the target tensors (hence trimming

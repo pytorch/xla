@@ -2775,4 +2775,12 @@ XLATensor XLATensor::DispatchComparisonOp(c10::Symbol kind,
   return Create(node, input.GetDevice(), at::ScalarType::Bool);
 }
 
+XLATensor XLATensor::nan_to_num(const XLATensor& input,
+                                c10::optional<double> nan,
+                                c10::optional<double> posinf,
+                                c10::optional<double> neginf) {
+  return input.CreateFrom(
+      ir::ops::NanToNum(input.GetIrValue(), nan, posinf, neginf));
+}
+
 }  // namespace torch_xla

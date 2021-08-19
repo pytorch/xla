@@ -2,6 +2,7 @@
 
 #include <cmath>
 
+#include "tensorflow/compiler/xla/client/lib/constants.h"
 #include "tensorflow/compiler/xla/client/lib/logdet.h"
 #include "tensorflow/compiler/xla/client/lib/math.h"
 #include "tensorflow/compiler/xla/client/lib/matrix.h"
@@ -861,6 +862,39 @@ NodePtr LogicalOr(const Value& input, const Value& other) {
         return InferOutputShape({input.shape(), other.shape()}, shape_fn);
       },
       std::move(lower_fn));
+}
+
+NodePtr NanToNum(const Value& input, c10::optional<double> nan,
+                 c10::optional<double> posinf, c10::optional<double> neginf) {
+  auto lower_fn = [nan, posinf, neginf](const Node& node,
+                                        LoweringContext* loctx) -> XlaOpVector {
+    xla::XlaOp xla_input = loctx->GetOutputOp(node.operand(0));
+    const xla::Shape& input_shape = XlaHelpers::ShapeOfXlaOp(xla_input);
+    auto element_type = input_shape.element_type();
+    xla::XlaOp nan_replacement =
+        nan.has_value()
+            ? XlaHelpers::ScalarValue(*nan, element_type, xla_input.builder())
+            : xla::Zero(xla_input.builder(), element_type);
+    xla::XlaOp pos_inf_replacement =
+        posinf.has_value()
+            ? XlaHelpers::ScalarValue(*posinf, element_type,
+                                      xla_input.builder())
+            : xla::MaxFiniteValue(xla_input.builder(), element_type);
+    xla::XlaOp neg_inf_replacement =
+        posinf.has_value()
+            ? XlaHelpers::ScalarValue(*neginf, element_type,
+                                      xla_input.builder())
+            : xla::MinFiniteValue(xla_input.builder(), element_type);
+
+    xla::XlaOp result =
+        xla::Select(xla::IsNan(xla_input), nan_replacement,
+                    xla::Select(xla::IsPosInf(xla_input), pos_inf_replacement,
+                                xla::Select(xla::IsNegInf(xla_input),
+                                            neg_inf_replacement, xla_input)));
+    return node.ReturnOp(result, loctx);
+  };
+  return GenericOp(OpKind(at::aten::nan_to_num), {input}, input.shape(),
+                   std::move(lower_fn));
 }
 
 }  // namespace ops

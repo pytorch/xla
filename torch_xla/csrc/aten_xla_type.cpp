@@ -3477,4 +3477,12 @@ at::Scalar XLANativeFunctions::_local_scalar_dense(const at::Tensor& self) {
                                       ATEN_OP(_local_scalar_dense)>::call(self);
 }
 
+at::Tensor XLANativeFunctions::nan_to_num(const at::Tensor& self,
+                                          c10::optional<double> nan,
+                                          c10::optional<double> posinf,
+                                          c10::optional<double> neginf) {
+  return bridge::AtenFromXlaTensor(
+      XLATensor::nan_to_num(bridge::GetXlaTensor(self), nan, posinf, neginf));
+}
+
 }  // namespace torch_xla
