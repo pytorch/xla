@@ -78,8 +78,15 @@ at::Tensor ToCpuTensor(const at::Tensor& tensor) {
 }
 
 torch::Tensor CopyToDevice(const torch::Tensor& tensor,
-                           const torch::Device& device) {
-  return tensor.to(device, /*non_blocking=*/false, /*copy=*/true);
+                           const torch::Device& device,
+                           bool requires_grad) {
+  auto output = tensor.to(device, /*non_blocking=*/false, /*copy=*/true);
+  if (requires_grad) {
+    // The .detach().requires_grad_(true) is to make sure that the new tensor is a leaf in the autograd graph.
+    return output.detach().set_requires_grad(true);
+  } else {
+    return output;
+  }
 }
 
 bool EqualValues(at::Tensor tensor1, at::Tensor tensor2) {
@@ -278,6 +285,12 @@ std::vector<at::Tensor> ExecuteAndFetch(absl::Span<const ir::Value> roots,
   return Fetch(results);
 }
 
+void AssertBackward(const torch::Tensor& xla_output, const torch::Tensor& xla_input, const torch::Tensor& reference_output, const torch::Tensor& reference_input) {
+    torch::autograd::backward({reference_output.sum()}, {});
+    torch::autograd::backward({xla_output.sum()}, {});
+    AllClose(xla_input.grad(), reference_input.grad());
+}
+
 void TestBackward(
     const std::vector<torch::Tensor>& inputs, const torch::Device& device,
     const std::function<torch::Tensor(const std::vector<torch::Tensor>&)>&
@@ -294,9 +307,7 @@ void TestBackward(
           input.clone().detach().set_requires_grad(input.requires_grad());
       input_vars.push_back(oinput);
 
-      torch::Tensor xinput = CopyToDevice(input, device)
-                                 .detach()
-                                 .set_requires_grad(input.requires_grad());
+      torch::Tensor xinput = CopyToDevice(input, device, /*requires_grad=*/input.requires_grad());
       xinput_vars.push_back(xinput);
       if (input.requires_grad()) {
         inputs_w_grad.push_back(oinput);
