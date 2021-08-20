@@ -94,9 +94,9 @@ std::vector<at::Tensor> ExecuteAndFetch(absl::Span<const ir::Value> roots,
                                         const Device& device);
 
 void AssertBackward(const torch::Tensor& xla_output,
-                    const torch::Tensor& xla_input,
+                    const std::vector<torch::Tensor>& xla_inputs,
                     const torch::Tensor& reference_output,
-                    const torch::Tensor& reference_input);
+                    const std::vector<torch::Tensor>& reference_inputs);
 
 void TestBackward(
     const std::vector<torch::Tensor>& inputs, const torch::Device& device,

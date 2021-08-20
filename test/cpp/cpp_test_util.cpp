@@ -286,12 +286,15 @@ std::vector<at::Tensor> ExecuteAndFetch(absl::Span<const ir::Value> roots,
 }
 
 void AssertBackward(const torch::Tensor& xla_output,
-                    const torch::Tensor& xla_input,
+                    const std::vector<torch::Tensor>& xla_inputs,
                     const torch::Tensor& reference_output,
-                    const torch::Tensor& reference_input) {
+                    const std::vector<torch::Tensor>& reference_inputs) {
   torch::autograd::backward({reference_output.sum()}, {});
   torch::autograd::backward({xla_output.sum()}, {});
-  AllClose(xla_input.grad(), reference_input.grad());
+  ASSERT_EQ(xla_inputs.size(), reference_inputs.size());
+  for (size_t i = 0; i < reference_inputs.size(); ++i) {
+    AllClose(xla_inputs[i].grad(), reference_inputs[i].grad());
+  }
 }
 
 void TestBackward(

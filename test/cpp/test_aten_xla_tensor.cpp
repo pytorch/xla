@@ -3034,7 +3034,7 @@ TEST_F(AtenXlaTensorTest, TestSign) {
     torch::Tensor xla_a = CopyToDevice(a, device, /*requires_grad=*/true);
     torch::Tensor xla_b = torch::sign(xla_a);
     AllClose(b, xla_b);
-    AssertBackward(xla_b, xla_a, b, a);
+    AssertBackward(xla_b, {xla_a}, b, {a});
   });
   ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
 }
@@ -3058,7 +3058,7 @@ TEST_F(AtenXlaTensorTest, TestAbs) {
     torch::Tensor xla_a = CopyToDevice(a, device, /*requires_grad=*/true);
     torch::Tensor xla_b = torch::abs(xla_a);
     AllClose(b, xla_b);
-    AssertBackward(xla_b, xla_a, b, a);
+    AssertBackward(xla_b, {xla_a}, b, {a});
   });
   ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
 }
