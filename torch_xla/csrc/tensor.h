@@ -373,9 +373,6 @@ class XLATensor {
                                                  const XLATensor& weight,
                                                  xla::int64 reduction);
 
-  static void logical_and_out(XLATensor& out, const XLATensor& input,
-                              const XLATensor& other);
-
   static XLATensor bitwise_and(const XLATensor& input, const at::Scalar& other);
 
   static XLATensor bitwise_and(const XLATensor& input, const XLATensor& other);
@@ -693,6 +690,14 @@ class XLATensor {
   static void log1p_(XLATensor& input);
 
   static XLATensor logdet(const XLATensor& input);
+
+  static XLATensor logical_not(const XLATensor& input);
+
+  static XLATensor logical_xor(const XLATensor& input, const XLATensor& other);
+
+  static XLATensor logical_and(const XLATensor& input, const XLATensor& other);
+
+  static XLATensor logical_or(const XLATensor& input, const XLATensor& other);
 
   static XLATensor logsumexp(const XLATensor& input,
                              std::vector<xla::int64> dimensions,

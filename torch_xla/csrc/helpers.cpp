@@ -660,4 +660,12 @@ xla::XlaOp XlaHelpers::PromotedLogicalBinaryOp(
   return bin_op(op1, op2);
 }
 
+xla::XlaOp XlaHelpers::PromotedLogicalUnaryOp(
+    xla::XlaOp op, const std::function<xla::XlaOp(xla::XlaOp)>& unary_op) {
+  // XLA only supports bitwise_not so we need to cast inputs to
+  // PRED first.
+  op = xla::ConvertElementType(op, xla::PrimitiveType::PRED);
+  return unary_op(op);
+}
+
 }  // namespace torch_xla
