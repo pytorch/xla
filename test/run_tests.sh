@@ -41,6 +41,16 @@ function run_opbyop {
   XLA_GET_TENSORS_OPBYOP=1 XLA_SYNC_TENSORS_OPBYOP=1 run_test "$@"
 }
 
+function run_use_bf16 {
+  echo "Running with XLA_USE_BF16: $@"
+  XLA_USE_BF16=1 run_test "$@"
+}
+
+function run_downcast_bf16 {
+  echo "Running with XLA_DOWNCAST_BF16: $@"
+  XLA_DOWNCAST_BF16=1 run_test "$@"
+}
+
 function run_dynamic {
   if [[ "$TPUVM_MODE" == "1" ]]; then
     run_test "$@"
@@ -69,9 +79,18 @@ function run_all_tests {
   run_test python3 "$CDIR/test_mp_rendezvous.py"
   run_test python3 "$CDIR/test_mp_save.py"
   run_test python3 "$CDIR/test_mp_mesh_reduce.py"
+  run_test python3 "$CDIR/test_mp_sync_batch_norm.py"
   run_test python3 "$CDIR/test_async_closures.py"
   run_test python3 "$CDIR/test_xla_dist.py"
   run_test python3 "$CDIR/test_profiler.py"
+  run_test python3 "$CDIR/test_ops.py"
+  run_downcast_bf16 python3 "$CDIR/test_data_type.py"
+  # `run_use_bf16` should be run after the `run_downcast_bf16` version.
+  # In XLML test there seems to be an env var leakage where `XLA_USE_BF16=1`
+  # will be picked up by `test_data_type.py` (but not the C++ code) when we
+  # run the `run_use_bf16` version and causing test to expect `bf16` for `f64`
+  # data.
+  run_use_bf16 python3 "$CDIR/test_data_type.py"
 }
 
 if [ "$LOGFILE" != "" ]; then

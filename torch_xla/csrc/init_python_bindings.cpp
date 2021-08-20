@@ -33,8 +33,8 @@
 #include "torch/csrc/autograd/utils/wrap_outputs.h"
 #include "torch/csrc/autograd/variable.h"
 #include "torch/csrc/jit/python/pybind.h"
+#include "torch_xla/csrc/XLANativeFunctions.h"
 #include "torch_xla/csrc/aten_xla_bridge.h"
-#include "torch_xla/csrc/aten_xla_type.h"
 #include "torch_xla/csrc/computation.h"
 #include "torch_xla/csrc/device.h"
 #include "torch_xla/csrc/helpers.h"
@@ -664,16 +664,24 @@ void BuildProfilerSubmodule(py::module* m) {
 
   profiler.def("trace",
                [](const char* service_addr, const char* logdir, int duration_ms,
-                  int num_tracing_attempts, py::dict options) {
+                  int num_tracing_attempts, int timeout_s, int interval_s,
+                  py::dict options) {
                  absl::flat_hash_map<std::string, absl::variant<int>> opts =
                      ConvertDictToMap(options);
+                 std::chrono::seconds sleep_s(interval_s);
                  tensorflow::Status status;
                  {
                    NoGilSection nogil;
-                   status = tensorflow::profiler::pywrap::Trace(
-                       service_addr, logdir, /*worker_list=*/"",
-                       /*include_dataset_ops=*/false, duration_ms,
-                       num_tracing_attempts, opts);
+                   for (int i = 0; i <= timeout_s / interval_s; i++) {
+                     status = tensorflow::profiler::pywrap::Trace(
+                         service_addr, logdir, /*worker_list=*/"",
+                         /*include_dataset_ops=*/false, duration_ms,
+                         num_tracing_attempts, opts);
+                     if (status.ok()) {
+                       return;
+                     }
+                     std::this_thread::sleep_for(sleep_s);
+                   }
                  }
                  if (!status.ok()) {
                    PyErr_SetString(PyExc_RuntimeError, status.error_message());
@@ -682,7 +690,8 @@ void BuildProfilerSubmodule(py::module* m) {
                },
                py::arg("service_addr"), py::arg("logdir"),
                py::arg("duration_ms") = 1000,
-               py::arg("num_tracing_attempts") = 3, py::arg("options"));
+               py::arg("num_tracing_attempts") = 3, py::arg("timeout_s") = 120,
+               py::arg("interval_s") = 5, py::arg("options"));
 
   py::class_<tensorflow::profiler::TraceMeWrapper> traceme_class(
       profiler, "TraceMe", py::module_local());
@@ -708,8 +717,6 @@ void BuildProfilerSubmodule(py::module* m) {
 }
 
 void InitXlaModuleBindings(py::module m) {
-  m.def("_initialize_aten_bindings",
-        []() { AtenXlaType::InitializeAtenBindings(); });
   m.def("_prepare_to_exit", []() { PrepareToExit(); });
   m.def("_get_git_revs", []() { return GetRevisions(); });
   m.def("_get_xla_tensor_dimension_size",

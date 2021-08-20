@@ -5,7 +5,7 @@
 #include "absl/memory/memory.h"
 #include "tensorflow/compiler/xla/xla_client/sys_util.h"
 #include "tensorflow/compiler/xla/xla_client/tf_logging.h"
-#include "torch_xla/csrc/aten_xla_type.h"
+#include "torch_xla/csrc/XLANativeFunctions.h"
 #include "torch_xla/csrc/device.h"
 #include "torch_xla/csrc/helpers.h"
 #include "torch_xla/csrc/tensor.h"
@@ -76,10 +76,7 @@ void XlaTest::CommonSetup() {
 
 void TorchXlaTest::SetUpTestCase() { CommonSetup(); }
 
-void AtenXlaTensorTestBase::SetUpTestCase() {
-  CommonSetup();
-  AtenXlaType::InitializeAtenBindings();
-}
+void AtenXlaTensorTestBase::SetUpTestCase() { CommonSetup(); }
 
 }  // namespace cpp_test
 }  // namespace torch_xla

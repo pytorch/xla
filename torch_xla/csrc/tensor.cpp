@@ -792,6 +792,20 @@ void XLATensor::SetSubView(ViewInfo view_info) const {
   data()->generation += 1;
 }
 
+void XLATensor::ModifyCurrentView(ViewInfo view_info) const {
+  if (data()->view != nullptr) {
+    data()->view = data()->view->CreateSubView(view_info.shape, view_info);
+    return;
+  }
+  // This node is not a view. Since this function is meant to modify a view
+  // in place, we need to turn this existing tensor into a view.
+  ir::Value ir_value = GetIrValue();
+  std::shared_ptr<Alias> alias = std::make_shared<Alias>(ir_value);
+  data()->view =
+      std::make_shared<View>(ir_value.shape(), alias, std::move(view_info));
+  AssignIrValue(ir::Value());
+}
+
 std::shared_ptr<View> XLATensor::CreateView(ViewInfo view_info) const {
   if (data()->view != nullptr) {
     return data()->view->CreateSubView(view_info.shape, view_info);
@@ -950,6 +964,8 @@ std::vector<at::Tensor> XLATensor::GetTensorsOpByOp(
 }
 
 std::vector<at::Tensor> XLATensor::GetTensors(std::vector<XLATensor>* tensors) {
+  TF_VLOG(4) << "Trying to get the value of " << tensors->size()
+             << " tensor(s)";
   static const bool op_by_op =
       xla::sys_util::GetEnvBool("XLA_GET_TENSORS_OPBYOP", false);
   return op_by_op ? GetTensorsOpByOp(tensors) : GetTensorsFused(tensors);
@@ -1345,6 +1361,8 @@ std::shared_ptr<XLATensor::Async> XLATensor::ScheduleSyncTensorsGraph(
 void XLATensor::SyncTensorsGraph(std::vector<XLATensor>* tensors,
                                  absl::Span<const std::string> devices,
                                  bool wait, bool sync_xla_data) {
+  TF_VLOG(4) << "Trying to sync the value of " << tensors->size()
+             << " tensor(s)";
   tensorflow::profiler::TraceMe activity(
       "SyncTensorsGraph", tensorflow::profiler::TraceMeLevel::kInfo);
   static const bool op_by_op =

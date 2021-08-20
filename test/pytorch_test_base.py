@@ -246,6 +246,8 @@ DISABLED_TORCH_TESTS_ANY = {
         'test_EmbeddingBag_per_sample_weights_and_no_offsets',  # FIXME! Unsupported device type for sparse layout: xla
         'test_softshrink_negative',  # runtime error
         'test_nll_loss_empty_tensor_reduction_mean',  # floating point division 0 by 0, expecting nan but get 0
+        'test_nll_loss_invalid_target_dim',  # expecting a specific error message.
+        'test_nll_loss_invalid_weights',  # expecting a specific error message.
         'test_fold',  # The gradient check code errors out on type() call, and code is slow on XLA
         'test_unfold',  # The gradient check code errors out on type() call, and code is slow on XLA
         'test_hardsigmoid_grad_xla',  # gradient check is slow
@@ -256,6 +258,7 @@ DISABLED_TORCH_TESTS_ANY = {
         'test_silu_inplace_overlap_xla',  # doesn't raise
         'test_softplus_inplace_overlap_xla',  # doesn't raise
         'test_softshrink_inplace_overlap_xla',  # doesn't raise
+        'test_Conv2d_backward_depthwise_xla_float64',  # slow compilation
     },
 
     # test_type_promotion.py
@@ -328,11 +331,8 @@ DISABLED_TORCH_TESTS_TPU_ONLY = {
         'test_multinomial_invalid_distribution',  # server side crash
         'test_multinomial_invalid_xla',  # TODO: only fail on xlml
         'test_softplus_low_threshold_xla',  # server side crash
-        'test_put_xla_float64',  # slow on TPU (~16 min)
-        'test_put_xla_int16',  # slow on TPU (~13 min)
-        'test_put_xla_int32',  # slow on TPU (~22 min)
-        'test_put_xla_int64',  # slow on TPU (~15 min)
-        'test_put_xla_int8',  # slow on TPU (~15 min)
+        'test_put_xla',  # slow on TPU (~20 min each)
+        'test_cov_xla',  # precision (9.53674e-07 vs 0)
     },
 
     # test_indexing.py
@@ -346,12 +346,27 @@ DISABLED_TORCH_TESTS_TPU_ONLY = {
         'test_EmbeddingBag_empty_per_sample_weights_and_offsets_xla',  # server side crash
         'test_softplus_low_threshold',  # grad check failure
         'test_Dropout',  # too slow
+        'test_EmbeddingBag_per_sample_weights_and_new_offsets_xla',  # server side crash
+        'test_EmbeddingBag_per_sample_weights_and_offsets_xla',  # server side crash
+        'test_upsamplingBilinear2d_xla',  # precision
+        'test_upsamplingNearest2d_xla',  # precision
     },
 
     # test_type_promotion.py
     'TestTypePromotionXLA': {
         'test_bfloat16_xla',  # half support
     }
+}
+
+DISABLED_TORCH_TESTS_TPUVM_ONLY = {
+    # test_nn.py
+    'TestNNDeviceTypeXLA': {
+        'test_AdaptiveMaxPool1d_indices_xla',  #  TODO: segfualt on TPUVM
+        'test_AdaptiveMaxPool2d_indices_xla',  #  TODO: segfualt on TPUVM
+        'test_AdaptiveMaxPool3d_indices_xla',  #  TODO: segfualt on TPUVM
+        'test_MaxPool3d_indices_xla',  #  TODO: segfualt on TPUVM
+        'test_multi_margin_loss_errors_xla',  #  TODO: segfualt on TPUVM
+    },
 }
 
 DISABLED_TORCH_TESTS_GPU_ONLY = {
@@ -404,10 +419,18 @@ def union_of_disabled_tests(sets):
   return union
 
 
+def on_tpuvm():
+  config = os.getenv('XRT_TPU_CONFIG')
+  return config and re.match('^localservice;[0-9]+;localhost:[0-9]+', config)
+
+
 DISABLED_TORCH_TESTS_CPU = DISABLED_TORCH_TESTS_ANY
 DISABLED_TORCH_TESTS_GPU = union_of_disabled_tests(
     [DISABLED_TORCH_TESTS_ANY, DISABLED_TORCH_TESTS_GPU_ONLY])
-DISABLED_TORCH_TESTS_TPU = union_of_disabled_tests(
+DISABLED_TORCH_TESTS_TPU = union_of_disabled_tests([
+    DISABLED_TORCH_TESTS_ANY, DISABLED_TORCH_TESTS_TPU_ONLY,
+    DISABLED_TORCH_TESTS_TPUVM_ONLY
+]) if on_tpuvm() else union_of_disabled_tests(
     [DISABLED_TORCH_TESTS_ANY, DISABLED_TORCH_TESTS_TPU_ONLY])
 
 DISABLED_TORCH_TESTS = {
@@ -435,7 +458,7 @@ class XLATestBase(DeviceTypeTestBase):
   # Overrides to instantiate tests that are known to run quickly
   # and correctly on XLA.
   @classmethod
-  def instantiate_test(cls, name, test):
+  def instantiate_test(cls, name, test, *, generic_cls):
     test_name = name + '_' + cls.device_type
     class_name = cls.__name__
     real_device_type = xm.xla_device_hw(str(xm.xla_device()))
@@ -456,7 +479,7 @@ class XLATestBase(DeviceTypeTestBase):
     else:  # Test is allowed
       dtype_combinations = cls._get_dtypes(test)
       if dtype_combinations is None:  # Tests without dtype variants are instantiated as usual
-        super().instantiate_test(name, test)
+        super().instantiate_test(name, test, generic_cls=generic_cls)
       else:  # Tests with dtype variants have unsupported dtypes skipped
         # Sets default precision for floating types to bfloat16 precision
         if not hasattr(test, 'precision_overrides'):
@@ -502,7 +525,7 @@ class XLATestBase(DeviceTypeTestBase):
                 if len(dtype_combination) > 1 else dtype_combination[0])
         if len(xla_dtypes) != 0:
           test.dtypes[cls.device_type] = xla_dtypes
-          super().instantiate_test(name, test)
+          super().instantiate_test(name, test, generic_cls=generic_cls)
 
   @classmethod
   def get_primary_device(cls):

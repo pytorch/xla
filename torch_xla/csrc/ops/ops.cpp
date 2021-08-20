@@ -90,6 +90,7 @@ PTXLA_UNARY_OP(Ceil, at::aten::ceil, xla::Ceil);
 PTXLA_UNARY_OP(Floor, at::aten::floor, xla::Floor);
 PTXLA_UNARY_OP(Round, at::aten::round, xla::RoundToEven);
 PTXLA_UNARY_OP(Not, at::aten::bitwise_not, xla::Not);
+PTXLA_UNARY_OP(IsNan, at::aten::isnan, xla::IsNan);
 
 PTXLA_BINARY_OP(Min, at::aten::min, xla::Min);
 PTXLA_BINARY_OP(Max, at::aten::max, xla::Max);
@@ -156,12 +157,6 @@ NodePtr ReluOp(const Value& input) {
       OpKind(at::aten::relu), {input},
       [&]() { return InferOutputShape({input.shape()}, lower_for_shape_fn); },
       std::move(lower_fn));
-}
-
-NodePtr TransposeOp(const Value& input, xla::int64 dim0, xla::int64 dim1) {
-  return MakeNode<Permute>(input, XlaHelpers::MakeTransposePermutation(
-                                      /*dim0=*/dim0, /*dim1=*/dim1,
-                                      /*rank=*/input.shape().rank()));
 }
 
 NodePtr HardSigmoid(const Value& input) {
@@ -336,6 +331,31 @@ NodePtr MatMul(const Value& lhs, const Value& rhs) {
       std::move(lower_fn));
 }
 
+NodePtr AdaptiveMaxPool2dBackward(const Value& grad_output,
+                                  const Value& input) {
+  auto lower_fn = [](const Node& node, LoweringContext* loctx) -> XlaOpVector {
+    xla::XlaOp grad_output = loctx->GetOutputOp(node.operand(0));
+    xla::XlaOp input = loctx->GetOutputOp(node.operand(1));
+    xla::XlaOp xla_output = BuildAdaptiveMaxPoolNdBackward(
+        /*out_backprop=*/grad_output, /*input=*/input, /*pool_dim=*/2);
+    return node.ReturnOp(xla_output, loctx);
+  };
+  auto lower_for_shape_fn =
+      [](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
+    XLA_CHECK_EQ(operands.size(), 2);
+    return BuildAdaptiveMaxPoolNdBackward(/*out_backprop=*/operands[0],
+                                          /*input=*/operands[1],
+                                          /*pool_dim=*/2);
+  };
+  return GenericOp(
+      OpKind(at::aten::adaptive_max_pool2d_backward), {grad_output, input},
+      [&]() {
+        return InferOutputShape({grad_output.shape(), input.shape()},
+                                lower_for_shape_fn);
+      },
+      std::move(lower_fn));
+}
+
 NodePtr AdaptiveAvgPool3dBackward(const Value& grad_output,
                                   const Value& input) {
   auto lower_fn = [](const Node& node, LoweringContext* loctx) -> XlaOpVector {
@@ -437,6 +457,12 @@ NodePtr ARange(const at::Scalar& start, const at::Scalar& end,
           static_cast<tensorflow::bfloat16>(start.toFloat()),
           static_cast<tensorflow::bfloat16>(end.toFloat()),
           static_cast<tensorflow::bfloat16>(step.toFloat()));
+      break;
+    case xla::PrimitiveType::F16:
+      values =
+          XlaHelpers::Range<xla::half>(static_cast<xla::half>(start.toHalf()),
+                                       static_cast<xla::half>(end.toHalf()),
+                                       static_cast<xla::half>(step.toHalf()));
       break;
     case xla::PrimitiveType::F32:
       values = XlaHelpers::Range<float>(start.toFloat(), end.toFloat(),
@@ -735,6 +761,34 @@ NodePtr BaddBmm(const Value& lhs, const Value& rhs, const Value& bias,
                          lower_for_shape_fn);
                    },
                    std::move(lower_fn));
+}
+
+NodePtr Lerp(const Value& start, const Value& end, const Value& weight) {
+  ScopePusher ir_scope(at::aten::lerp.toQualString());
+  return start + weight * (end - start);
+}
+
+NodePtr LogicalAnd(const Value& input, const Value& other) {
+  auto lower_fn = [](const Node& node, LoweringContext* loctx) -> XlaOpVector {
+    xla::XlaOp op1 = loctx->GetOutputOp(node.operand(0));
+    xla::XlaOp op2 = loctx->GetOutputOp(node.operand(1));
+    return node.ReturnOp(
+        XlaHelpers::PromotedLogicalBinaryOp(
+            op1, op2,
+            [](xla::XlaOp lhs, xla::XlaOp rhs) { return xla::And(lhs, rhs); }),
+        loctx);
+  };
+  auto shape_fn = [](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
+    return XlaHelpers::PromotedLogicalBinaryOp(
+        operands[0], operands[1],
+        [](xla::XlaOp lhs, xla::XlaOp rhs) { return xla::And(lhs, rhs); });
+  };
+  return GenericOp(
+      OpKind(at::aten::logical_and), {input, other},
+      [&]() {
+        return InferOutputShape({input.shape(), other.shape()}, shape_fn);
+      },
+      std::move(lower_fn));
 }
 
 }  // namespace ops

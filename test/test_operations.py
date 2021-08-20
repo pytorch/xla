@@ -406,6 +406,10 @@ class XlaTestCase(unittest.TestCase):
       self.assertTrue(torch.equal(nan_mask, torch.isnan(out)))
       out[nan_mask] = 0
       expected[nan_mask] = 0
+      inf_mask = torch.isinf(expected)
+      self.assertTrue(torch.equal(inf_mask, torch.isinf(out)))
+      out[inf_mask] = 0
+      expected[inf_mask] = 0
       diff_tensor = (out - expected).abs().float()
       max_rel_err = torch.max(out.abs(), expected.abs()).float() * rel_err
       # Allow higher relative differences as long as we're still below the
@@ -691,15 +695,28 @@ class TestBinaryCrossEntropyLimitValue(XlaTestCase):
 
 class TestNllLossLimitValue(XlaTestCase):
 
-  def test_nll_loss(self):
+  def test_nll_loss_inf(self):
 
     def test_fn(logits, target):
       return nn.functional.nll_loss(logits, target)
 
     inf = float('inf')
     logits = torch.tensor([[1., inf], [-inf, 2.]])
-    target = torch.tensor([0, 1])
-    self.runAtenTest([logits, target], test_fn)
+    for target in [[0, 0], [0, 1], [1, 0], [1, 1]]:
+      target_tensor = torch.tensor(target)
+      self.runAtenTest([logits, target_tensor], test_fn)
+
+  def test_nll_loss_nan(self):
+
+    def test_fn(logits, target):
+      return nn.functional.nll_loss(logits, target)
+
+    nan = float('nan')
+    logits = torch.tensor([[1, nan], [nan, 2]])
+    # Need to include both nan being labeled and nan not being labeled case
+    for target in [[0, 0], [0, 1], [1, 0], [1, 1]]:
+      target_tensor = torch.tensor(target)
+      self.runAtenTest([logits, target_tensor], test_fn)
 
 
 class TestInterOpSyncTensors(XlaTestCase):
@@ -1183,13 +1200,11 @@ class TestAtenXlaTensor(XlaTestCase):
     xla_f = xla_e.sum().item()
     self.assertEqual(f, xla_f)
 
-    # PRED can be automatically promoted in arithmetic ops.
+    # PRED can be automatically promoted in arithmetic and bitwise ops.
     self.runAtenTest(c, lambda x: x + x.byte())
-    # PRED cannot be automatically promoted to other dtypes in bitwise ops.
-    # This is not aligned with numpy behavior which means it might change
-    # in the future.
-    self.assertRaises(RuntimeError, lambda: c & c.byte())
-    self.assertRaises(RuntimeError, lambda: xla_c & xla_c.byte())
+    self.runAtenTest(c, lambda x: x & x.byte())
+    self.runAtenTest(c, lambda x: x | x.byte())
+    self.runAtenTest(c, lambda x: x ^ x.byte())
 
   def test_bitwise_and_not(self):
     xla_device = xm.xla_device()

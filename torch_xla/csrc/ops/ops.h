@@ -113,8 +113,6 @@ NodePtr Fmod(const Value& dividend, const Value& divisor);
 
 NodePtr Not(const Value& input);
 
-NodePtr TransposeOp(const Value& input, xla::int64 dim0, xla::int64 dim1);
-
 NodePtr HardSigmoid(const Value& input);
 
 NodePtr HardSigmoidBackward(const Value& grad_output, const Value& input);
@@ -155,6 +153,8 @@ NodePtr AddMatMulOp(const Value& input, const Value& weight, const Value& bias);
 NodePtr Dot(const Value& input, const Value& weight);
 
 NodePtr MatMul(const Value& lhs, const Value& rhs);
+
+NodePtr AdaptiveMaxPool2dBackward(const Value& grad_output, const Value& input);
 
 NodePtr AdaptiveAvgPool2dBackward(const Value& grad_output, const Value& input);
 
@@ -207,8 +207,14 @@ NodePtr LogDet(const Value& input);
 
 NodePtr Inverse(const Value& input);
 
+NodePtr IsNan(const Value& input);
+
 NodePtr BaddBmm(const Value& lhs, const Value& rhs, const Value& bias,
                 const Value& product_multiplier, const Value& bias_multiplier);
+
+NodePtr Lerp(const Value& start, const Value& end, const Value& weight);
+
+NodePtr LogicalAnd(const Value& input, const Value& other);
 
 }  // namespace ops
 }  // namespace ir
