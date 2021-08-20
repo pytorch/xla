@@ -958,6 +958,8 @@ class XLATensor {
   static XLATensor sigmoid_backward(const XLATensor& grad_output,
                                     const XLATensor& output);
 
+  static XLATensor sgn(const XLATensor& input);
+
   static XLATensor sign(const XLATensor& input);
 
   static XLATensor sin(const XLATensor& input);

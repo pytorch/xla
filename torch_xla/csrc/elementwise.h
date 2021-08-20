@@ -52,6 +52,10 @@ xla::XlaOp BuildSigmoid(xla::XlaOp input);
 // Reciprocal(x) = 1 / x
 xla::XlaOp BuildReciprocal(xla::XlaOp input);
 
+// Computes the sgn of the complex input.
+// If input magnitude is 0 then 0, else input / input magnitude
+xla::XlaOp BuildSgn(xla::XlaOp input);
+
 // Computes the sign of the input.
 // If x is NaN then 0, otherwise the actual sign
 xla::XlaOp BuildSign(xla::XlaOp input);
