@@ -768,6 +768,46 @@ NodePtr Lerp(const Value& start, const Value& end, const Value& weight) {
   return start + weight * (end - start);
 }
 
+NodePtr LogicalNot(const Value& input) {
+  auto lower_fn = [](const Node& node, LoweringContext* loctx) -> XlaOpVector {
+    xla::XlaOp op = loctx->GetOutputOp(node.operand(0));
+    return node.ReturnOp(XlaHelpers::PromotedLogicalUnaryOp(
+                             op, [](xla::XlaOp lhs) { return xla::Not(lhs); }),
+                         loctx);
+  };
+  auto shape_fn = [](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
+    return XlaHelpers::PromotedLogicalUnaryOp(
+        operands[0], [](xla::XlaOp lhs) { return xla::Not(lhs); });
+  };
+  return GenericOp(
+      OpKind(at::aten::logical_not), {input},
+      [&]() { return InferOutputShape({input.shape()}, shape_fn); },
+      std::move(lower_fn));
+}
+
+NodePtr LogicalXor(const Value& input, const Value& other) {
+  auto lower_fn = [](const Node& node, LoweringContext* loctx) -> XlaOpVector {
+    xla::XlaOp op1 = loctx->GetOutputOp(node.operand(0));
+    xla::XlaOp op2 = loctx->GetOutputOp(node.operand(1));
+    return node.ReturnOp(
+        XlaHelpers::PromotedLogicalBinaryOp(
+            op1, op2,
+            [](xla::XlaOp lhs, xla::XlaOp rhs) { return xla::Xor(lhs, rhs); }),
+        loctx);
+  };
+  auto shape_fn = [](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
+    return XlaHelpers::PromotedLogicalBinaryOp(
+        operands[0], operands[1],
+        [](xla::XlaOp lhs, xla::XlaOp rhs) { return xla::Xor(lhs, rhs); });
+  };
+  return GenericOp(
+      OpKind(at::aten::logical_xor), {input, other},
+      [&]() {
+        return InferOutputShape({input.shape(), other.shape()}, shape_fn);
+      },
+      std::move(lower_fn));
+}
+
 NodePtr LogicalAnd(const Value& input, const Value& other) {
   auto lower_fn = [](const Node& node, LoweringContext* loctx) -> XlaOpVector {
     xla::XlaOp op1 = loctx->GetOutputOp(node.operand(0));
@@ -785,6 +825,29 @@ NodePtr LogicalAnd(const Value& input, const Value& other) {
   };
   return GenericOp(
       OpKind(at::aten::logical_and), {input, other},
+      [&]() {
+        return InferOutputShape({input.shape(), other.shape()}, shape_fn);
+      },
+      std::move(lower_fn));
+}
+
+NodePtr LogicalOr(const Value& input, const Value& other) {
+  auto lower_fn = [](const Node& node, LoweringContext* loctx) -> XlaOpVector {
+    xla::XlaOp op1 = loctx->GetOutputOp(node.operand(0));
+    xla::XlaOp op2 = loctx->GetOutputOp(node.operand(1));
+    return node.ReturnOp(
+        XlaHelpers::PromotedLogicalBinaryOp(
+            op1, op2,
+            [](xla::XlaOp lhs, xla::XlaOp rhs) { return xla::Or(lhs, rhs); }),
+        loctx);
+  };
+  auto shape_fn = [](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
+    return XlaHelpers::PromotedLogicalBinaryOp(
+        operands[0], operands[1],
+        [](xla::XlaOp lhs, xla::XlaOp rhs) { return xla::Or(lhs, rhs); });
+  };
+  return GenericOp(
+      OpKind(at::aten::logical_or), {input, other},
       [&]() {
         return InferOutputShape({input.shape(), other.shape()}, shape_fn);
       },

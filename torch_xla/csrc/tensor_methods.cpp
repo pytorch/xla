@@ -799,11 +799,6 @@ XLATensor XLATensor::binary_cross_entropy_backward(const XLATensor& grad_output,
       GetOptionalIrValue(weight), GetXlaReductionMode(reduction)));
 }
 
-void XLATensor::logical_and_out(XLATensor& out, const XLATensor& input,
-                                const XLATensor& other) {
-  out.SetIrValue(ir::ops::LogicalAnd(input.GetIrValue(), other.GetIrValue()));
-}
-
 XLATensor XLATensor::bitwise_and(const XLATensor& input,
                                  const at::Scalar& other) {
   CheckIsIntegralOrPred(input.shape(), "__and__");
@@ -1576,6 +1571,32 @@ void XLATensor::log1p_(XLATensor& input) {
 
 XLATensor XLATensor::logdet(const XLATensor& input) {
   return input.CreateFrom(ir::ops::LogDet(input.GetIrValue()));
+}
+
+XLATensor XLATensor::logical_not(const XLATensor& input) {
+  return input.CreateFrom(ir::ops::LogicalNot(input.GetIrValue()),
+                          at::ScalarType::Bool);
+}
+
+XLATensor XLATensor::logical_xor(const XLATensor& input,
+                                 const XLATensor& other) {
+  return input.CreateFrom(
+      ir::ops::LogicalXor(input.GetIrValue(), other.GetIrValue()),
+      at::ScalarType::Bool);
+}
+
+XLATensor XLATensor::logical_and(const XLATensor& input,
+                                 const XLATensor& other) {
+  return input.CreateFrom(
+      ir::ops::LogicalAnd(input.GetIrValue(), other.GetIrValue()),
+      at::ScalarType::Bool);
+}
+
+XLATensor XLATensor::logical_or(const XLATensor& input,
+                                const XLATensor& other) {
+  return input.CreateFrom(
+      ir::ops::LogicalOr(input.GetIrValue(), other.GetIrValue()),
+      at::ScalarType::Bool);
 }
 
 XLATensor XLATensor::logsumexp(const XLATensor& input,
