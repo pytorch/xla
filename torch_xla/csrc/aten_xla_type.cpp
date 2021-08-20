@@ -2196,6 +2196,15 @@ at::Tensor& XLANativeFunctions::mv_out(const at::Tensor& self,
   return out;
 }
 
+at::Tensor XLANativeFunctions::nan_to_num(const at::Tensor& self,
+                                          c10::optional<double> nan,
+                                          c10::optional<double> posinf,
+                                          c10::optional<double> neginf) {
+  XLA_FN_COUNTER("xla::");
+  return bridge::AtenFromXlaTensor(
+      XLATensor::nan_to_num(bridge::GetXlaTensor(self), nan, posinf, neginf));
+}
+
 std::tuple<at::Tensor, at::Tensor, at::Tensor>
 XLANativeFunctions::native_batch_norm(
     const at::Tensor& input, const c10::optional<at::Tensor>& weight,
@@ -3475,14 +3484,6 @@ at::Scalar XLANativeFunctions::_local_scalar_dense(const at::Tensor& self) {
   }
   return at::native::call_fallback_fn<&xla_cpu_fallback,
                                       ATEN_OP(_local_scalar_dense)>::call(self);
-}
-
-at::Tensor XLANativeFunctions::nan_to_num(const at::Tensor& self,
-                                          c10::optional<double> nan,
-                                          c10::optional<double> posinf,
-                                          c10::optional<double> neginf) {
-  return bridge::AtenFromXlaTensor(
-      XLATensor::nan_to_num(bridge::GetXlaTensor(self), nan, posinf, neginf));
 }
 
 }  // namespace torch_xla

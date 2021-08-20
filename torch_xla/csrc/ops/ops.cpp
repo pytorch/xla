@@ -871,6 +871,11 @@ NodePtr NanToNum(const Value& input, c10::optional<double> nan,
     xla::XlaOp xla_input = loctx->GetOutputOp(node.operand(0));
     const xla::Shape& input_shape = XlaHelpers::ShapeOfXlaOp(xla_input);
     auto element_type = input_shape.element_type();
+
+    if (!xla::primitive_util::IsFloatingPointType(element_type)) {
+      return node.ReturnOp(xla_input, loctx);
+    }
+
     xla::XlaOp nan_replacement =
         nan.has_value()
             ? XlaHelpers::ScalarValue(*nan, element_type, xla_input.builder())
@@ -893,8 +898,11 @@ NodePtr NanToNum(const Value& input, c10::optional<double> nan,
                                             neg_inf_replacement, xla_input)));
     return node.ReturnOp(result, loctx);
   };
+  using hash_func = std::hash<c10::optional<double>>;
+  auto hash_value = xla::util::MHash(hash_func{}(nan), hash_func{}(posinf),
+                                     hash_func{}(neginf));
   return GenericOp(OpKind(at::aten::nan_to_num), {input}, input.shape(),
-                   std::move(lower_fn));
+                   std::move(lower_fn), /*num_outputs=*/1, hash_value);
 }
 
 }  // namespace ops

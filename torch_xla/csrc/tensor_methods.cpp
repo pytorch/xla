@@ -1810,6 +1810,14 @@ void XLATensor::mv_out(XLATensor& out, const XLATensor& input,
   out.SetIrValue(ir::ops::Dot(input.GetIrValue(), vec.GetIrValue()));
 }
 
+XLATensor XLATensor::nan_to_num(const XLATensor& input,
+                                c10::optional<double> nan,
+                                c10::optional<double> posinf,
+                                c10::optional<double> neginf) {
+  return input.CreateFrom(
+      ir::ops::NanToNum(input.GetIrValue(), nan, posinf, neginf));
+}
+
 XLATensor XLATensor::narrow(const XLATensor& input, xla::int64 dim,
                             xla::int64 start, xla::int64 length) {
   auto input_shape = input.shape();
@@ -2773,14 +2781,6 @@ XLATensor XLATensor::DispatchComparisonOp(c10::Symbol kind,
   ir::NodePtr node =
       ir::ops::ComparisonOp(kind, input.GetIrValue(), other.GetIrValue());
   return Create(node, input.GetDevice(), at::ScalarType::Bool);
-}
-
-XLATensor XLATensor::nan_to_num(const XLATensor& input,
-                                c10::optional<double> nan,
-                                c10::optional<double> posinf,
-                                c10::optional<double> neginf) {
-  return input.CreateFrom(
-      ir::ops::NanToNum(input.GetIrValue(), nan, posinf, neginf));
 }
 
 }  // namespace torch_xla

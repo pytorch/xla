@@ -789,6 +789,10 @@ class XLATensor {
   static void mv_out(XLATensor& out, const XLATensor& input,
                      const XLATensor& vec);
 
+  static XLATensor nan_to_num(const XLATensor& input, c10::optional<double> nan,
+                              c10::optional<double> posinf,
+                              c10::optional<double> neginf);
+
   // Returns a new tensor that is a narrowed view of the input in the given
   // dimension.
   static XLATensor narrow(const XLATensor& input, xla::int64 dim,
@@ -1142,10 +1146,6 @@ class XLATensor {
 
   static XLATensor where(const XLATensor& condition, const XLATensor& input,
                          const XLATensor& other);
-
-  static XLATensor nan_to_num(const XLATensor& input, c10::optional<double> nan,
-                              c10::optional<double> posinf,
-                              c10::optional<double> neginf);
 
  private:
   struct SyncTensorsConfig {
