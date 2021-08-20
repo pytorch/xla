@@ -124,6 +124,15 @@ NodePtr ReciprocalOp(const Value& input) {
                    std::move(lower_fn));
 }
 
+NodePtr SgnOp(const Value& input) {
+  auto lower_fn = [](const Node& node, LoweringContext* loctx) -> XlaOpVector {
+    xla::XlaOp xla_input = loctx->GetOutputOp(node.operand(0));
+    return node.ReturnOp(BuildSgn(xla_input), loctx);
+  };
+  return GenericOp(OpKind(at::aten::sgn), {input}, input.shape(),
+                   std::move(lower_fn));
+}
+
 NodePtr SignOp(const Value& input) {
   auto lower_fn = [](const Node& node, LoweringContext* loctx) -> XlaOpVector {
     xla::XlaOp xla_input = loctx->GetOutputOp(node.operand(0));

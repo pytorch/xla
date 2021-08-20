@@ -281,19 +281,18 @@ class XlaTestCase(unittest.TestCase):
               b = b.to(torch.int)
 
             diff = a - b
-            if a.is_floating_point():
-              # check that NaNs are in the same locations
-              nan_mask = torch.isnan(a)
-              self.assertTrue(torch.equal(nan_mask, torch.isnan(b)), message)
-              diff[nan_mask] = 0
-              # inf check if allow_inf=True
-              if allow_inf:
-                inf_mask = torch.isinf(a)
-                inf_sign = inf_mask.sign()
-                self.assertTrue(
-                    torch.equal(inf_sign,
-                                torch.isinf(b).sign()), message)
-                diff[inf_mask] = 0
+            # check that NaNs are in the same locations
+            nan_mask = torch.isnan(a)
+            self.assertTrue(torch.equal(nan_mask, torch.isnan(b)), message)
+            diff[nan_mask] = 0
+            # inf check if allow_inf=True
+            if allow_inf:
+              inf_mask = torch.isinf(a)
+              inf_sign = inf_mask.sign()
+              self.assertTrue(
+                  torch.equal(inf_sign,
+                              torch.isinf(b).sign()), message)
+              diff[inf_mask] = 0
             # TODO: implement abs on CharTensor (int8)
             if diff.is_signed() and diff.dtype != torch.int8:
               diff = diff.abs()
@@ -990,6 +989,39 @@ class TestAtenXlaTensor(XlaTestCase):
     xla_b = b.to(xla_device)
     xla_c = torch.max(xla_a, xla_b)
     self.assertEqual(c.data, xla_c.data.cpu())
+
+  def test_sgn(self):
+    xla_device = xm.xla_device()
+    t = torch.randn(2, 3, dtype=torch.cfloat)
+    # Generate inf+infj
+    t[0][0].real.div_(0)
+    t[0][0].imag.div_(0)
+    # Generate nan+nanj
+    t[0][1] = 0
+    t[0][1].real.div_(0)
+    t[0][1].imag.div_(0)
+    # Generate 0+0j
+    t[1][0] = 0
+    # Generate inf+0j
+    t[1][1].real.div_(0)
+    t[1][1] = t[1][1].real.abs()
+    # Generate -inf+0j
+    t[1][2].real.div_(0)
+    t[1][2] = t[1][1].real.abs() * -1
+    a = t.sgn()
+    xla_a = t.to(xla_device).sgn()
+    self.assertEqual(a.data, xla_a.data.cpu())
+
+    t = torch.randn(2, 3, dtype=torch.float32)
+    t[0][0].div_(0)
+    t[0][1] = 0
+    t[0][1].div_(0)
+    t[1][0] = 0
+    t[1][2].div_(0)
+    t[1][2] = t[1][1].abs() * -1
+    a = t.sgn()
+    xla_a = t.to(xla_device).sgn()
+    self.assertEqual(a.data, xla_a.data.cpu())
 
   def test_index_put(self):
     xla_device = xm.xla_device()
