@@ -789,9 +789,9 @@ class XLATensor {
   static void mv_out(XLATensor& out, const XLATensor& input,
                      const XLATensor& vec);
 
-  static XLATensor nan_to_num(const XLATensor& input, c10::optional<double> nan,
-                              c10::optional<double> posinf,
-                              c10::optional<double> neginf);
+  static XLATensor nan_to_num(const XLATensor& input, const at::Scalar& nan,
+                              const at::Scalar& posinf,
+                              const at::Scalar& neginf);
 
   // Returns a new tensor that is a narrowed view of the input in the given
   // dimension.

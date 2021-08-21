@@ -2201,8 +2201,14 @@ at::Tensor XLANativeFunctions::nan_to_num(const at::Tensor& self,
                                           c10::optional<double> posinf,
                                           c10::optional<double> neginf) {
   XLA_FN_COUNTER("xla::");
+  auto element_type = TensorTypeToRawXlaType(self.scalar_type());
+  XlaHelpers::MinMax min_max = XlaHelpers::MinMaxValues(element_type);
+  at::Scalar nan_replacement = nan.has_value() ? *nan : 0.0;
+  at::Scalar posinf_replacement = posinf.has_value() ? *posinf : min_max.max;
+  at::Scalar neginf_replacement = neginf.has_value() ? *neginf : min_max.min;
   return bridge::AtenFromXlaTensor(
-      XLATensor::nan_to_num(bridge::GetXlaTensor(self), nan, posinf, neginf));
+      XLATensor::nan_to_num(bridge::GetXlaTensor(self), nan_replacement,
+                            posinf_replacement, neginf_replacement));
 }
 
 std::tuple<at::Tensor, at::Tensor, at::Tensor>

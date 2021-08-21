@@ -864,8 +864,8 @@ NodePtr LogicalOr(const Value& input, const Value& other) {
       std::move(lower_fn));
 }
 
-NodePtr NanToNum(const Value& input, c10::optional<double> nan,
-                 c10::optional<double> posinf, c10::optional<double> neginf) {
+NodePtr NanToNum(const Value& input, const at::Scalar& nan,
+                 const at::Scalar& posinf, const at::Scalar& neginf) {
   auto lower_fn = [nan, posinf, neginf](const Node& node,
                                         LoweringContext* loctx) -> XlaOpVector {
     xla::XlaOp xla_input = loctx->GetOutputOp(node.operand(0));
@@ -877,19 +877,11 @@ NodePtr NanToNum(const Value& input, c10::optional<double> nan,
     }
 
     xla::XlaOp nan_replacement =
-        nan.has_value()
-            ? XlaHelpers::ScalarValue(*nan, element_type, xla_input.builder())
-            : xla::Zero(xla_input.builder(), element_type);
+        XlaHelpers::ScalarValue(nan, element_type, xla_input.builder());
     xla::XlaOp pos_inf_replacement =
-        posinf.has_value()
-            ? XlaHelpers::ScalarValue(*posinf, element_type,
-                                      xla_input.builder())
-            : xla::MaxFiniteValue(xla_input.builder(), element_type);
+        XlaHelpers::ScalarValue(posinf, element_type, xla_input.builder());
     xla::XlaOp neg_inf_replacement =
-        posinf.has_value()
-            ? XlaHelpers::ScalarValue(*neginf, element_type,
-                                      xla_input.builder())
-            : xla::MinFiniteValue(xla_input.builder(), element_type);
+        XlaHelpers::ScalarValue(neginf, element_type, xla_input.builder());
 
     xla::XlaOp result =
         xla::Select(xla::IsNan(xla_input), nan_replacement,
@@ -898,11 +890,10 @@ NodePtr NanToNum(const Value& input, c10::optional<double> nan,
                                             neg_inf_replacement, xla_input)));
     return node.ReturnOp(result, loctx);
   };
-  using hash_func = std::hash<c10::optional<double>>;
-  auto hash_value = xla::util::MHash(hash_func{}(nan), hash_func{}(posinf),
-                                     hash_func{}(neginf));
-  return GenericOp(OpKind(at::aten::nan_to_num), {input}, input.shape(),
-                   std::move(lower_fn), /*num_outputs=*/1, hash_value);
+  return GenericOp(
+      OpKind(at::aten::nan_to_num), {input}, input.shape(), std::move(lower_fn),
+      /*num_outputs=*/1,
+      xla::util::MHash(nan.toDouble(), posinf.toDouble(), neginf.toDouble()));
 }
 
 }  // namespace ops

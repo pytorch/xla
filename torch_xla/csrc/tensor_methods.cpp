@@ -1810,10 +1810,9 @@ void XLATensor::mv_out(XLATensor& out, const XLATensor& input,
   out.SetIrValue(ir::ops::Dot(input.GetIrValue(), vec.GetIrValue()));
 }
 
-XLATensor XLATensor::nan_to_num(const XLATensor& input,
-                                c10::optional<double> nan,
-                                c10::optional<double> posinf,
-                                c10::optional<double> neginf) {
+XLATensor XLATensor::nan_to_num(const XLATensor& input, const at::Scalar& nan,
+                                const at::Scalar& posinf,
+                                const at::Scalar& neginf) {
   return input.CreateFrom(
       ir::ops::NanToNum(input.GetIrValue(), nan, posinf, neginf));
 }

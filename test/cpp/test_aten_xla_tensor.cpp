@@ -10723,11 +10723,12 @@ TEST_F(AtenXlaTensorTest, TestNanToNum) {
       torch::Tensor xla_output = torch::nan_to_num(xla_input);
       AllClose(output, xla_output);
     });
-
-    output = torch::nan_to_num(input, 1.0, 2.0, 3.0);
+    output =
+        torch::nan_to_num(input, /*nan=*/1.0, /*posinf=*/2.0, /*neginf=*/3.0);
     ForEachDevice([&](const torch::Device& device) {
       torch::Tensor xla_input = CopyToDevice(input, device);
-      torch::Tensor xla_output = torch::nan_to_num(xla_input, 1.0, 2.0, 3.0);
+      torch::Tensor xla_output = torch::nan_to_num(
+          xla_input, /*nan=*/1.0, /*posinf=*/2.0, /*neginf=*/3.0);
       AllClose(output, xla_output);
     });
   }
@@ -10753,12 +10754,11 @@ TEST_F(AtenXlaTensorTest, TestNanToNumInplace) {
       xla_input.nan_to_num_();
       AllClose(input, xla_input);
     });
-
     input = input_copy.clone();
-    input.nan_to_num_(1.0, 2.0, 3.0);
+    input.nan_to_num_(/*nan=*/1.0, /*posinf=*/2.0, /*neginf=*/3.0);
     ForEachDevice([&](const torch::Device& device) {
       torch::Tensor xla_input = CopyToDevice(input_copy, device);
-      xla_input.nan_to_num_(1.0, 2.0, 3.0);
+      xla_input.nan_to_num_(/*nan=*/1.0, /*posinf=*/2.0, /*neginf=*/3.0);
       AllClose(input, xla_input);
     });
   }
@@ -10785,11 +10785,13 @@ TEST_F(AtenXlaTensorTest, TestNanToNumOut) {
       torch::nan_to_num_out(xla_output, xla_input);
       AllClose(output, xla_output);
     });
-    torch::nan_to_num_out(output, input, 1.0, 2.0, 3.0);
+    torch::nan_to_num_out(output, input, /*nan=*/1.0, /*posinf=*/2.0,
+                          /*neginf=*/3.0);
     ForEachDevice([&](const torch::Device& device) {
       torch::Tensor xla_input = CopyToDevice(input, device);
       torch::Tensor xla_output = torch::zeros_like(input);
-      torch::nan_to_num_out(xla_output, xla_input, 1.0, 2.0, 3.0);
+      torch::nan_to_num_out(xla_output, xla_input, /*nan=*/1.0, /*posinf=*/2.0,
+                            /*neginf=*/3.0);
       AllClose(output, xla_output);
     });
   }
