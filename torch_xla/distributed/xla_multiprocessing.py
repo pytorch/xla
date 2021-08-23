@@ -413,7 +413,7 @@ class MpModelWrapper(object):
 
     xmp.spawn(_mp_fn, ..., start_method='fork')
 
-  This method has two advantages. First if uses only one copy of the memory
+  This method has two advantages. First it uses only one copy of the memory
   pages to host the original model weights, and second it serializes the move
   of the wrapped model into each device, by lowering the load onto the system
   memory during the process.
