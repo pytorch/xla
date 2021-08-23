@@ -2,7 +2,6 @@
 
 #include <cmath>
 
-#include "tensorflow/compiler/xla/client/lib/constants.h"
 #include "tensorflow/compiler/xla/client/lib/logdet.h"
 #include "tensorflow/compiler/xla/client/lib/math.h"
 #include "tensorflow/compiler/xla/client/lib/matrix.h"
@@ -864,36 +863,27 @@ NodePtr LogicalOr(const Value& input, const Value& other) {
       std::move(lower_fn));
 }
 
-NodePtr NanToNum(const Value& input, const at::Scalar& nan,
-                 const at::Scalar& posinf, const at::Scalar& neginf) {
-  auto lower_fn = [nan, posinf, neginf](const Node& node,
-                                        LoweringContext* loctx) -> XlaOpVector {
+NodePtr NanToNum(const Value& input, const Value& nan, const Value& posinf,
+                 const Value& neginf) {
+  auto lower_fn = [](const Node& node, LoweringContext* loctx) -> XlaOpVector {
     xla::XlaOp xla_input = loctx->GetOutputOp(node.operand(0));
+    xla::XlaOp nan_replacement = loctx->GetOutputOp(node.operand(1));
+    xla::XlaOp posinf_replacement = loctx->GetOutputOp(node.operand(2));
+    xla::XlaOp neginf_replacement = loctx->GetOutputOp(node.operand(3));
     const xla::Shape& input_shape = XlaHelpers::ShapeOfXlaOp(xla_input);
     auto element_type = input_shape.element_type();
-
     if (!xla::primitive_util::IsFloatingPointType(element_type)) {
       return node.ReturnOp(xla_input, loctx);
     }
-
-    xla::XlaOp nan_replacement =
-        XlaHelpers::ScalarValue(nan, element_type, xla_input.builder());
-    xla::XlaOp pos_inf_replacement =
-        XlaHelpers::ScalarValue(posinf, element_type, xla_input.builder());
-    xla::XlaOp neg_inf_replacement =
-        XlaHelpers::ScalarValue(neginf, element_type, xla_input.builder());
-
     xla::XlaOp result =
         xla::Select(xla::IsNan(xla_input), nan_replacement,
-                    xla::Select(xla::IsPosInf(xla_input), pos_inf_replacement,
+                    xla::Select(xla::IsPosInf(xla_input), posinf_replacement,
                                 xla::Select(xla::IsNegInf(xla_input),
-                                            neg_inf_replacement, xla_input)));
+                                            neginf_replacement, xla_input)));
     return node.ReturnOp(result, loctx);
   };
-  return GenericOp(
-      OpKind(at::aten::nan_to_num), {input}, input.shape(), std::move(lower_fn),
-      /*num_outputs=*/1,
-      xla::util::MHash(nan.toDouble(), posinf.toDouble(), neginf.toDouble()));
+  return GenericOp(OpKind(at::aten::nan_to_num), {input, nan, posinf, neginf},
+                   input.shape(), std::move(lower_fn));
 }
 
 }  // namespace ops

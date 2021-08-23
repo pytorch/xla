@@ -2206,6 +2206,14 @@ at::Tensor XLANativeFunctions::nan_to_num(const at::Tensor& self,
   at::Scalar nan_replacement = nan.has_value() ? *nan : 0.0;
   at::Scalar posinf_replacement = posinf.has_value() ? *posinf : min_max.max;
   at::Scalar neginf_replacement = neginf.has_value() ? *neginf : min_max.min;
+  for (const auto& replacement :
+       {nan_replacement, posinf_replacement, neginf_replacement}) {
+    XLA_CHECK(min_max.min.toDouble() <= replacement.toDouble() &&
+              replacement.toDouble() <= min_max.max.toDouble())
+        << "Type " << self.scalar_type() << " replacement value "
+        << replacement.toDouble() << " must be in the range ["
+        << min_max.min.toDouble() << ", " << min_max.max.toDouble() << "].";
+  }
   return bridge::AtenFromXlaTensor(
       XLATensor::nan_to_num(bridge::GetXlaTensor(self), nan_replacement,
                             posinf_replacement, neginf_replacement));

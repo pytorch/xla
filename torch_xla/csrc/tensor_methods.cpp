@@ -1813,8 +1813,14 @@ void XLATensor::mv_out(XLATensor& out, const XLATensor& input,
 XLATensor XLATensor::nan_to_num(const XLATensor& input, const at::Scalar& nan,
                                 const at::Scalar& posinf,
                                 const at::Scalar& neginf) {
-  return input.CreateFrom(
-      ir::ops::NanToNum(input.GetIrValue(), nan, posinf, neginf));
+  ir::Value nan_value =
+      GetIrValueForScalar(nan, input.shape(), input.GetDevice());
+  ir::Value posinf_value =
+      GetIrValueForScalar(posinf, input.shape(), input.GetDevice());
+  ir::Value neginf_value =
+      GetIrValueForScalar(neginf, input.shape(), input.GetDevice());
+  return input.CreateFrom(ir::ops::NanToNum(input.GetIrValue(), nan_value,
+                                            posinf_value, neginf_value));
 }
 
 XLATensor XLATensor::narrow(const XLATensor& input, xla::int64 dim,
