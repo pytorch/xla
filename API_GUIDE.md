@@ -155,7 +155,7 @@ for more on training a network on multiple XLA devices with multi-processing.
 ## XLA Tensor Deep Dive
 
 Using XLA tensors and devices requires changing only a few lines of code. But
-even though XLA tensors act a lot like CPU and CUDA tensors their internals are
+even though XLA tensors act a lot like CPU and CUDA tensors, their internals are
 different. This section describes what makes XLA tensors unique.
 
 ### XLA Tensors are Lazy
