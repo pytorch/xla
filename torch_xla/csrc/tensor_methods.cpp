@@ -1212,24 +1212,6 @@ void XLATensor::eye_out(XLATensor& out, xla::int64 lines, xla::int64 cols) {
                                                &out.GetDevice())));
 }
 void XLATensor::fill_(XLATensor& input, const at::Scalar& value) {
-  /*xla::Shape tensor_shape = input.shape();
-  std::cout << "ranks: " << tensor_shape.rank() << std::endl;
-  for (int i = 0; i < tensor_shape.rank(); ++i) {
-    if (tensor_shape.is_dynamic_dimension(i)) {
-      std::cout << "Dynamic Dimension: " << i << std::endl;
-      auto size = xla::GetDimensionSize(absl::Span<const xla::XlaOp>(input)[0], i);
-
-      ir::Value constant =
-          GetIrValueForScalar(value, input.shape(), input.GetDevice());
-      input.SetInPlaceIrValue(std::move(constant));
-
-      input = xla::SetDimensionSize(input, size, i);
-      return;
-    } else {
-      std::cout << "Static Dimension: " << i << std::endl;
-    }
-  }*/
-
   /*
   ir::Value constant =
       GetIrValueForScalar(value, input.shape(), input.GetDevice());
