@@ -24,6 +24,22 @@
 
 namespace torch_xla {
 
+namespace milad {
+xla::ComputationClient::DataPtr GetDeviceData(const at::Scalar& value,
+                                              at::ScalarType scalar_type,
+                                              const Device& device);
+xla::ComputationClient::DataPtr GetDeviceData(const at::Tensor& tensor,
+                                              const Device& device);
+struct DeviceDataInfo : public xla::ComputationClient::Data::Info {
+  DeviceDataInfo(xla::int64 tensor_id, bool read_only)
+      : tensor_id(tensor_id), read_only(read_only) {}
+
+  xla::int64 tensor_id = 0;
+  bool read_only = false;
+};
+
+}
+
 class XLATensor {
   class DeviceContextArena;
   struct Data;

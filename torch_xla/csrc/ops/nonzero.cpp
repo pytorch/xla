@@ -34,6 +34,20 @@ NodePtr NonZero::Clone(OpList operands) const {
 
 XlaOpVector NonZero::Lower(LoweringContext* loctx) const {
   xla::XlaOp input = loctx->GetOutputOp(operand(0));
+
+  std::cout << "milad in nonzero::func " << shape()  << std::endl;
+  xla::Shape tensor_shape = shape();
+  std::cout << "ranks: " << tensor_shape.rank() << std::endl;
+  for (int i = 0; i < tensor_shape.rank(); ++i) {
+    if (tensor_shape.is_dynamic_dimension(i)) {
+      std::cout << "Dynamic Dimension: " << i << std::endl;
+      //auto size = xla::GetDimensionSize(input, i);
+      //input = xla::SetDimensionSize(input, size, i);
+    } else {
+      std::cout << "Static Dimension: " << i << std::endl;
+    }
+  }
+
   return ReturnOps(BuildNonZero(input), loctx);
 }
 

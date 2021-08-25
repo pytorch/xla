@@ -53,6 +53,7 @@
 #include "torch_xla/csrc/ops/discrete_uniform.h"
 #include "torch_xla/csrc/ops/expand.h"
 #include "torch_xla/csrc/ops/exponential.h"
+#include "torch_xla/csrc/ops/fill.h"
 #include "torch_xla/csrc/ops/flip.h"
 #include "torch_xla/csrc/ops/gather.h"
 #include "torch_xla/csrc/ops/generic.h"
@@ -140,6 +141,7 @@
 #include "torch_xla/csrc/tensor_ops.h"
 #include "torch_xla/csrc/tensor_util.h"
 
+using namespace torch_xla::milad;
 namespace torch_xla {
 namespace {
 
@@ -1209,11 +1211,40 @@ void XLATensor::eye_out(XLATensor& out, xla::int64 lines, xla::int64 cols) {
                         GetDevicePrimitiveType(out.shape().get().element_type(),
                                                &out.GetDevice())));
 }
-
 void XLATensor::fill_(XLATensor& input, const at::Scalar& value) {
+  /*xla::Shape tensor_shape = input.shape();
+  std::cout << "ranks: " << tensor_shape.rank() << std::endl;
+  for (int i = 0; i < tensor_shape.rank(); ++i) {
+    if (tensor_shape.is_dynamic_dimension(i)) {
+      std::cout << "Dynamic Dimension: " << i << std::endl;
+      auto size = xla::GetDimensionSize(absl::Span<const xla::XlaOp>(input)[0], i);
+
+      ir::Value constant =
+          GetIrValueForScalar(value, input.shape(), input.GetDevice());
+      input.SetInPlaceIrValue(std::move(constant));
+
+      input = xla::SetDimensionSize(input, size, i);
+      return;
+    } else {
+      std::cout << "Static Dimension: " << i << std::endl;
+    }
+  }*/
+
+  /*
   ir::Value constant =
       GetIrValueForScalar(value, input.shape(), input.GetDevice());
   input.SetInPlaceIrValue(std::move(constant));
+  */
+  xla::ComputationClient::DataPtr data = milad::GetDeviceData(value, TensorTypeFromXlaType(input.shape().get().element_type()), input.GetDevice());
+  data->SetInfo(std::make_shared<milad::DeviceDataInfo>(/*tensor_id=*/-1, /*read_only=*/true));
+  input.SetIrValue(
+      ir::MakeNode<ir::ops::Fill>(input.GetIrValue(),
+                                 xla::util::ToVector<xla::int64>(input.shape().get().dimensions()),
+                                 value,
+                                 input.GetDevice(),
+                                 data,
+                                 input.shape().get().element_type(),
+                                 input.shape()));
 }
 
 XLATensor XLATensor::flip(const XLATensor& input,
