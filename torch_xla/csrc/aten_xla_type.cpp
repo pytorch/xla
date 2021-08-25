@@ -2201,6 +2201,10 @@ at::Tensor XLANativeFunctions::nan_to_num(const at::Tensor& self,
                                           c10::optional<double> posinf,
                                           c10::optional<double> neginf) {
   XLA_FN_COUNTER("xla::");
+  // nan_to_num doesn't apply to integer types.
+  if (!at::native::is_floating_point(self)) {
+    return CopyTensor(self);
+  }
   auto element_type = TensorTypeToRawXlaType(self.scalar_type());
   XlaHelpers::MinMax min_max = XlaHelpers::MinMaxValues(element_type);
   at::Scalar nan_replacement = nan.has_value() ? *nan : 0.0;
