@@ -10706,5 +10706,98 @@ TEST_F(AtenXlaTensorTest, TestLerpScalarOut) {
   ExpectCounterChanged("xla::lerp", cpp_test::GetIgnoredCounters());
 }
 
+TEST_F(AtenXlaTensorTest, TestNanToNum) {
+  for (torch::ScalarType scalar_type :
+       {torch::kHalf, torch::kFloat, torch::kDouble, torch::kShort, torch::kInt,
+        torch::kLong}) {
+    torch::Tensor input =
+        isFloatingType(scalar_type)
+            ? torch::tensor(
+                  {1.0, std::nan("1"), std::numeric_limits<double>::infinity(),
+                   -std::numeric_limits<double>::infinity()},
+                  torch::TensorOptions(scalar_type))
+            : torch::randint(0, 100, {3, 4}, torch::TensorOptions(scalar_type));
+    torch::Tensor output = torch::nan_to_num(input);
+    ForEachDevice([&](const torch::Device& device) {
+      torch::Tensor xla_input = CopyToDevice(input, device);
+      torch::Tensor xla_output = torch::nan_to_num(xla_input);
+      AllClose(output, xla_output);
+    });
+    output =
+        torch::nan_to_num(input, /*nan=*/1.0, /*posinf=*/2.0, /*neginf=*/3.0);
+    ForEachDevice([&](const torch::Device& device) {
+      torch::Tensor xla_input = CopyToDevice(input, device);
+      torch::Tensor xla_output = torch::nan_to_num(
+          xla_input, /*nan=*/1.0, /*posinf=*/2.0, /*neginf=*/3.0);
+      AllClose(output, xla_output);
+    });
+  }
+  ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::nan_to_num", cpp_test::GetIgnoredCounters());
+}
+
+TEST_F(AtenXlaTensorTest, TestNanToNumInplace) {
+  for (torch::ScalarType scalar_type :
+       {torch::kHalf, torch::kFloat, torch::kDouble, torch::kShort, torch::kInt,
+        torch::kLong}) {
+    torch::Tensor input =
+        isFloatingType(scalar_type)
+            ? torch::tensor(
+                  {1.0, std::nan("1"), std::numeric_limits<double>::infinity(),
+                   -std::numeric_limits<double>::infinity()},
+                  torch::TensorOptions(scalar_type))
+            : torch::randint(0, 100, {3, 4}, torch::TensorOptions(scalar_type));
+    torch::Tensor input_copy = input.clone();
+    input.nan_to_num_();
+    ForEachDevice([&](const torch::Device& device) {
+      torch::Tensor xla_input = CopyToDevice(input_copy, device);
+      xla_input.nan_to_num_();
+      AllClose(input, xla_input);
+    });
+    input = input_copy.clone();
+    input.nan_to_num_(/*nan=*/1.0, /*posinf=*/2.0, /*neginf=*/3.0);
+    ForEachDevice([&](const torch::Device& device) {
+      torch::Tensor xla_input = CopyToDevice(input_copy, device);
+      xla_input.nan_to_num_(/*nan=*/1.0, /*posinf=*/2.0, /*neginf=*/3.0);
+      AllClose(input, xla_input);
+    });
+  }
+  ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::nan_to_num", cpp_test::GetIgnoredCounters());
+}
+
+TEST_F(AtenXlaTensorTest, TestNanToNumOut) {
+  for (torch::ScalarType scalar_type :
+       {torch::kHalf, torch::kFloat, torch::kDouble, torch::kShort, torch::kInt,
+        torch::kLong}) {
+    torch::Tensor input =
+        isFloatingType(scalar_type)
+            ? torch::tensor(
+                  {1.0, std::nan("1"), std::numeric_limits<double>::infinity(),
+                   -std::numeric_limits<double>::infinity()},
+                  torch::TensorOptions(scalar_type))
+            : torch::randint(0, 100, {3, 4}, torch::TensorOptions(scalar_type));
+    torch::Tensor output = torch::zeros_like(input);
+    torch::nan_to_num_out(output, input);
+    ForEachDevice([&](const torch::Device& device) {
+      torch::Tensor xla_input = CopyToDevice(input, device);
+      torch::Tensor xla_output = torch::zeros_like(input);
+      torch::nan_to_num_out(xla_output, xla_input);
+      AllClose(output, xla_output);
+    });
+    torch::nan_to_num_out(output, input, /*nan=*/1.0, /*posinf=*/2.0,
+                          /*neginf=*/3.0);
+    ForEachDevice([&](const torch::Device& device) {
+      torch::Tensor xla_input = CopyToDevice(input, device);
+      torch::Tensor xla_output = torch::zeros_like(input);
+      torch::nan_to_num_out(xla_output, xla_input, /*nan=*/1.0, /*posinf=*/2.0,
+                            /*neginf=*/3.0);
+      AllClose(output, xla_output);
+    });
+  }
+  ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::nan_to_num", cpp_test::GetIgnoredCounters());
+}
+
 }  // namespace cpp_test
 }  // namespace torch_xla

@@ -863,6 +863,25 @@ NodePtr LogicalOr(const Value& input, const Value& other) {
       std::move(lower_fn));
 }
 
+NodePtr NanToNum(const Value& input, const Value& nan, const Value& posinf,
+                 const Value& neginf) {
+  auto lower_fn = [](const Node& node, LoweringContext* loctx) -> XlaOpVector {
+    xla::XlaOp xla_input = loctx->GetOutputOp(node.operand(0));
+    xla::XlaOp nan_replacement = loctx->GetOutputOp(node.operand(1));
+    xla::XlaOp posinf_replacement = loctx->GetOutputOp(node.operand(2));
+    xla::XlaOp neginf_replacement = loctx->GetOutputOp(node.operand(3));
+    const xla::Shape& input_shape = XlaHelpers::ShapeOfXlaOp(xla_input);
+    xla::XlaOp result =
+        xla::Select(xla::IsNan(xla_input), nan_replacement,
+                    xla::Select(xla::IsPosInf(xla_input), posinf_replacement,
+                                xla::Select(xla::IsNegInf(xla_input),
+                                            neginf_replacement, xla_input)));
+    return node.ReturnOp(result, loctx);
+  };
+  return GenericOp(OpKind(at::aten::nan_to_num), {input, nan, posinf, neginf},
+                   input.shape(), std::move(lower_fn));
+}
+
 }  // namespace ops
 }  // namespace ir
 }  // namespace torch_xla
