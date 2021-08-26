@@ -14,21 +14,21 @@ class TestDynamicShapes(object):
     t2 = torch.nonzero(t1)
     t2_dim0_shape = torch_xla._XLAC._get_xla_tensor_dimension_size(t2, 0)
     print(t2_dim0_shape)
-    print(torch_xla._XLAC._get_xla_tensors_text([t2]))
-    print(torch_xla._XLAC._get_xla_tensors_hlo([t2]))
-    self.assertEqual(t2_dim0_shape.item(), 4)
+    print("[RUNING] _get_xla_tensors_text([t2])\n", torch_xla._XLAC._get_xla_tensors_text([t2]))
+    print("[RUNING] _get_xla_tensors_text([t3])\n", torch_xla._XLAC._get_xla_tensors_hlo([t2]))
+    assert t2_dim0_shape.item() == 4
     
     t3 = torch.fill_(t2, 10)
     t2_dim0_shape = torch_xla._XLAC._get_xla_tensor_dimension_size(t2, 0)
     t3_dim0_shape = torch_xla._XLAC._get_xla_tensor_dimension_size(t3, 0)
-    print(torch_xla._XLAC._get_xla_tensor_dimension_size(t2, 0))
-    print(torch_xla._XLAC._get_xla_tensor_dimension_size(t3), 0)
-    print(torch_xla._XLAC._get_xla_tensors_hlo([t2]))
-    print(torch_xla._XLAC._get_xla_tensors_hlo([t3]))
-    print(torch_xla._XLAC._get_xla_tensors_text([t2]))
-    print(torch_xla._XLAC._get_xla_tensors_text([t3]))
-    self.assertEqual(t2_dim0_shape.item(), 4)
-    self.assertEqual(t3_dim0_shape.item(), 4)
+    print("[RUNING] _get_xla_tensor_dimension_size(t2, 0)\n", torch_xla._XLAC._get_xla_tensor_dimension_size(t2, 0))
+    print("[RUNING] _get_xla_tensor_dimension_size(t3, 0)\n", torch_xla._XLAC._get_xla_tensor_dimension_size(t3, 0))
+    print("[RUNING] _get_xla_tensors_hlo([t2])\n", torch_xla._XLAC._get_xla_tensors_hlo([t2]))
+    print("[RUNING] _get_xla_tensors_hlo([t3])\n", torch_xla._XLAC._get_xla_tensors_hlo([t3]))
+    print("[RUNING] _get_xla_tensors_text([t2])\n", torch_xla._XLAC._get_xla_tensors_text([t2]))
+    print("[RUNING] _get_xla_tensors_text([t3])\n", torch_xla._XLAC._get_xla_tensors_text([t3]))
+    assert t2_dim0_shape.item() == 4
+    assert t3_dim0_shape.item() == 4
     
 if __name__ == "__main__":
   test = TestDynamicShapes()
