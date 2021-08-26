@@ -36,7 +36,8 @@ at::Tensor ToCpuTensor(const at::Tensor& tensor);
 
 // Helper function to copy a tensor to device.
 torch::Tensor CopyToDevice(const torch::Tensor& tensor,
-                           const torch::Device& device);
+                           const torch::Device& device,
+                           bool requires_grad = false);
 
 bool EqualValues(at::Tensor tensor1, at::Tensor tensor2);
 
@@ -91,6 +92,11 @@ std::vector<at::Tensor> Fetch(
 
 std::vector<at::Tensor> ExecuteAndFetch(absl::Span<const ir::Value> roots,
                                         const Device& device);
+
+void AssertBackward(const torch::Tensor& xla_output,
+                    const std::vector<torch::Tensor>& xla_inputs,
+                    const torch::Tensor& reference_output,
+                    const std::vector<torch::Tensor>& reference_inputs);
 
 void TestBackward(
     const std::vector<torch::Tensor>& inputs, const torch::Device& device,

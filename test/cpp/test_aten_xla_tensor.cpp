@@ -3026,14 +3026,17 @@ TEST_F(AtenXlaTensorTest, TestSgn) {
 }
 
 TEST_F(AtenXlaTensorTest, TestSign) {
-  torch::Tensor a =
-      torch::randn({2, 2}, torch::TensorOptions(torch::kFloat)) * 100.0;
+  torch::Tensor a = torch::randn({2, 2}, torch::TensorOptions(torch::kFloat))
+                        .mul_(100.0)
+                        .set_requires_grad(true);
   torch::Tensor b = torch::sign(a);
   ForEachDevice([&](const torch::Device& device) {
-    torch::Tensor xla_a = CopyToDevice(a, device);
+    torch::Tensor xla_a = CopyToDevice(a, device, /*requires_grad=*/true);
     torch::Tensor xla_b = torch::sign(xla_a);
     AllClose(b, xla_b);
+    AssertBackward(xla_b, {xla_a}, b, {a});
   });
+  ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
 }
 
 TEST_F(AtenXlaTensorTest, TestSignByte) {
@@ -3048,13 +3051,16 @@ TEST_F(AtenXlaTensorTest, TestSignByte) {
 }
 
 TEST_F(AtenXlaTensorTest, TestAbs) {
-  torch::Tensor a = torch::randn({2, 2}, torch::TensorOptions(torch::kFloat));
+  torch::Tensor a = torch::randn(
+      {2, 2}, torch::TensorOptions(torch::kFloat).requires_grad(true));
   torch::Tensor b = torch::abs(a);
   ForEachDevice([&](const torch::Device& device) {
-    torch::Tensor xla_a = CopyToDevice(a, device);
+    torch::Tensor xla_a = CopyToDevice(a, device, /*requires_grad=*/true);
     torch::Tensor xla_b = torch::abs(xla_a);
     AllClose(b, xla_b);
+    AssertBackward(xla_b, {xla_a}, b, {a});
   });
+  ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
 }
 
 TEST_F(AtenXlaTensorTest, TestAbsByte) {
