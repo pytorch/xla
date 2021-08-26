@@ -232,7 +232,7 @@ bool ShouldSyncIrValue(const ir::Value& ir_value) {
 
 }  // namespace
 
-xla::ComputationClient::DataPtr milad::GetDeviceData(const at::Tensor& tensor,
+xla::ComputationClient::DataPtr dynamic_shapes_temp::GetDeviceData(const at::Tensor& tensor,
                                               const Device& device) {
   XlaDataCacheArena::XlaDataCache* cache = GetXlaDataCache(device);
   xla::ComputationClient::DataPtr device_data = cache->Get(tensor);
@@ -246,7 +246,7 @@ xla::ComputationClient::DataPtr milad::GetDeviceData(const at::Tensor& tensor,
   return device_data;
 }
 
-xla::ComputationClient::DataPtr milad::GetDeviceData(const at::Scalar& value,
+xla::ComputationClient::DataPtr dynamic_shapes_temp::GetDeviceData(const at::Scalar& value,
                                               at::ScalarType scalar_type,
                                               const Device& device) {
   // Workaround since at::scalar_tensor doesn't support bfloat16 yet.
@@ -255,7 +255,7 @@ xla::ComputationClient::DataPtr milad::GetDeviceData(const at::Scalar& value,
                                    ? at::ScalarType::Float
                                    : scalar_type));
   if (scalar_type == at::ScalarType::BFloat16) t = t.to(scalar_type);
-  return milad::GetDeviceData(t, device);
+  return dynamic_shapes_temp::GetDeviceData(t, device);
 }
 
 // The DeviceContextArena holds per device live information and statistics,
@@ -707,7 +707,7 @@ ir::Value XLATensor::GetIrValueForTensor(const at::Tensor& tensor,
           std::move(value),
           MakeXlaPrimitiveType(tensor.scalar_type(), &device));
     }
-    data = milad::GetDeviceData(tensor, device);
+    data = dynamic_shapes_temp::GetDeviceData(tensor, device);
     read_only = true;
   } else {
     XLA_TIMED("IrValueTensorToXlaData");
@@ -720,7 +720,7 @@ ir::Value XLATensor::GetDeviceDataIrValue(const at::Scalar& value,
                                           xla::PrimitiveType type,
                                           const Device& device) {
   xla::ComputationClient::DataPtr data =
-      milad::GetDeviceData(value, TensorTypeFromXlaType(type), device);
+      dynamic_shapes_temp::GetDeviceData(value, TensorTypeFromXlaType(type), device);
   data->SetInfo(
       std::make_shared<DeviceDataInfo>(/*tensor_id=*/-1, /*read_only=*/true));
   return ir::MakeNode<ir::ops::DeviceData>(std::move(data));

@@ -55,7 +55,7 @@ Fill::Fill(const Value& input,
       type_(std::move(type)){}
 
 NodePtr Fill::Clone(OpList operands) const {
-  return MakeNode<Fill>(operands.at(0), size_, value_, device_, data_, type_, shape()); //TODO Milad: fix the shape() call
+  return MakeNode<Fill>(operands.at(0), size_, value_, device_, data_, type_, shape());
 }
 
 XlaOpVector Fill::Lower(LoweringContext* loctx) const {
@@ -71,7 +71,6 @@ XlaOpVector Fill::Lower(LoweringContext* loctx) const {
     if (tensor_shape.is_dynamic_dimension(i)) {
       std::cout << "[fill::Lower] Dynamic Dimension Indx: " << i << std::endl;
       auto size = xla::GetDimensionSize(input, i);
-      //std::cout << "size.shape().rank() " << size.builder()->GetShape(size)->rank() << std::endl;
       input = xla::SetDimensionSize(input, size, i);
     } else {
       std::cout << "[fill::Lower] Static Dimension Indx: " << i << std::endl;

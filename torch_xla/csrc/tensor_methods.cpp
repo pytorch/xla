@@ -141,7 +141,7 @@
 #include "torch_xla/csrc/tensor_ops.h"
 #include "torch_xla/csrc/tensor_util.h"
 
-using namespace torch_xla::milad;
+using namespace torch_xla::dynamic_shapes_temp;
 namespace torch_xla {
 namespace {
 
@@ -1218,8 +1218,8 @@ void XLATensor::fill_(XLATensor& input, const at::Scalar& value) {
       GetIrValueForScalar(value, input.shape(), input.GetDevice());
   input.SetInPlaceIrValue(std::move(constant));
   */
-  xla::ComputationClient::DataPtr data = milad::GetDeviceData(value, TensorTypeFromXlaType(input.shape().get().element_type()), input.GetDevice());
-  data->SetInfo(std::make_shared<milad::DeviceDataInfo>(/*tensor_id=*/-1, /*read_only=*/true));
+  xla::ComputationClient::DataPtr data = dynamic_shapes_temp::GetDeviceData(value, TensorTypeFromXlaType(input.shape().get().element_type()), input.GetDevice());
+  data->SetInfo(std::make_shared<dynamic_shapes_temp::DeviceDataInfo>(/*tensor_id=*/-1, /*read_only=*/true));
   input.SetIrValue(
       ir::MakeNode<ir::ops::Fill>(input.GetIrValue(),
                                  xla::util::ToVector<xla::int64>(input.shape().get().dimensions()),

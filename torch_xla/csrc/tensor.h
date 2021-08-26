@@ -24,7 +24,7 @@
 
 namespace torch_xla {
 
-namespace milad {
+namespace dynamic_shapes_temp {
 xla::ComputationClient::DataPtr GetDeviceData(const at::Scalar& value,
                                               at::ScalarType scalar_type,
                                               const Device& device);
