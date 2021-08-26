@@ -20,7 +20,7 @@ xla::Shape NodeOutputShape(const Value& input,
     std::cout << "[fill::NodeOutputShape] ElementsIn: " << xla::ShapeUtil::ElementsIn(input.shape()) << std::endl;
 
     xla::Shape tensor_shape = input.shape();
-    xla::XlaOp op = operands[0];
+    xla::XlaOp op = BuildExpand(operands[0], size);
     for (int i = 0; i < tensor_shape.rank(); ++i) {
       if (tensor_shape.is_dynamic_dimension(i)) {
         std::cout << "[fill::NodeOutputShape] Dynamic Dimension Indx: " << i << std::endl;
@@ -30,7 +30,6 @@ xla::Shape NodeOutputShape(const Value& input,
         std::cout << "[fill::NodeOutputShape] Static Dimension Indx: " << i << std::endl;
       }
     }
-    op = BuildExpand(op, size);
     return op;
   };
   return InferOutputShape({input.shape()}, lower_for_shape_fn);
