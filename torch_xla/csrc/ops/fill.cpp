@@ -19,22 +19,22 @@ xla::Shape NodeOutputShape(const Value& input,
     std::cout << "[fill::NodeOutputShape] shape, dimension-size, rank: " << input.shape() << ", " << size.size() << input.shape().rank() << std::endl;
     std::cout << "[fill::NodeOutputShape] ElementsIn: " << xla::ShapeUtil::ElementsIn(input.shape()) << std::endl;
 
-    xla::Shape tensor_shape = input.shape();
+    xla::Shape tensor_shape = _shape;
     xla::XlaOp op = BuildExpand(operands[0], size);
     for (int i = 0; i < tensor_shape.rank(); ++i) {
       if (tensor_shape.is_dynamic_dimension(i)) {
         std::cout << "[fill::NodeOutputShape] Dynamic Dimension Indx: " << i << std::endl;
-        auto _size = xla::GetDimensionSize(operands[0], i);
-        op = xla::SetDimensionSize(operands[0], _size, i);
+        auto _size = xla::GetDimensionSize(op, i);
+        op = xla::SetDimensionSize(op, _size, i);
       } else {
         std::cout << "[fill::NodeOutputShape] Static Dimension Indx: " << i << std::endl;
       }
     }
     return op;
   };
-  return InferOutputShape({input.shape()}, lower_for_shape_fn);
-}
 
+  return InferOutputShape({_shape}, lower_for_shape_fn);
+}
 }  // namespace
 
 Fill::Fill(const Value& input,
@@ -66,16 +66,17 @@ XlaOpVector Fill::Lower(LoweringContext* loctx) const {
   }
   xla::Shape tensor_shape = shape();
   std::cout << "[fill::Lower] shape, rank: " << shape() << tensor_shape.rank() << std::endl;
+  xla::XlaOp op = BuildExpand(input, shape().dimensions());
   for (int i = 0; i < tensor_shape.rank(); ++i) {
     if (tensor_shape.is_dynamic_dimension(i)) {
       std::cout << "[fill::Lower] Dynamic Dimension Indx: " << i << std::endl;
-      auto size = xla::GetDimensionSize(input, i);
-      input = xla::SetDimensionSize(input, size, i);
+      auto size = xla::GetDimensionSize(op, i);
+      op = xla::SetDimensionSize(op, size, i);
     } else {
       std::cout << "[fill::Lower] Static Dimension Indx: " << i << std::endl;
     }
   }
-  return ReturnOp(BuildExpand(input, size_), loctx);
+  return ReturnOp(op, loctx);
 }
 
 std::string Fill::ToString() const {
