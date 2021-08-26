@@ -224,6 +224,9 @@ NodePtr LogicalAnd(const Value& input, const Value& other);
 
 NodePtr LogicalOr(const Value& input, const Value& other);
 
+NodePtr NanToNum(const Value& input, const Value& nan, const Value& posinf,
+                 const Value& neginf);
+
 }  // namespace ops
 }  // namespace ir
 }  // namespace torch_xla

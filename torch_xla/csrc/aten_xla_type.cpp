@@ -2196,6 +2196,33 @@ at::Tensor& XLANativeFunctions::mv_out(const at::Tensor& self,
   return out;
 }
 
+at::Tensor XLANativeFunctions::nan_to_num(const at::Tensor& self,
+                                          c10::optional<double> nan,
+                                          c10::optional<double> posinf,
+                                          c10::optional<double> neginf) {
+  XLA_FN_COUNTER("xla::");
+  // nan_to_num doesn't apply to integer types.
+  if (!at::native::is_floating_point(self)) {
+    return CopyTensor(self);
+  }
+  auto element_type = TensorTypeToRawXlaType(self.scalar_type());
+  XlaHelpers::MinMax min_max = XlaHelpers::MinMaxValues(element_type);
+  at::Scalar nan_replacement = nan.has_value() ? *nan : 0.0;
+  at::Scalar posinf_replacement = posinf.has_value() ? *posinf : min_max.max;
+  at::Scalar neginf_replacement = neginf.has_value() ? *neginf : min_max.min;
+  for (const auto& replacement :
+       {nan_replacement, posinf_replacement, neginf_replacement}) {
+    XLA_CHECK(min_max.min.toDouble() <= replacement.toDouble() &&
+              replacement.toDouble() <= min_max.max.toDouble())
+        << "Type " << self.scalar_type() << " replacement value "
+        << replacement.toDouble() << " must be in the range ["
+        << min_max.min.toDouble() << ", " << min_max.max.toDouble() << "].";
+  }
+  return bridge::AtenFromXlaTensor(
+      XLATensor::nan_to_num(bridge::GetXlaTensor(self), nan_replacement,
+                            posinf_replacement, neginf_replacement));
+}
+
 std::tuple<at::Tensor, at::Tensor, at::Tensor>
 XLANativeFunctions::native_batch_norm(
     const at::Tensor& input, const c10::optional<at::Tensor>& weight,
