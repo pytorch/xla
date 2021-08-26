@@ -26,7 +26,10 @@ NodePtr GetDimensionsSize::Clone(OpList operands) const {
 
 XlaOpVector GetDimensionsSize::Lower(LoweringContext* loctx) const {
   xla::XlaOp input = loctx->GetOutputOp(operand(0));
+  std::cout << "GetDimensionsSize::Lower " << dimensions_.size() << std::endl;
   xla::XlaOp output = XlaHelpers::GetDimensionsSize({input}, dimensions_).size;
+  std::cout << "GetDimensionsSize::Lower " << input << std::endl;
+  std::cout << "GetDimensionsSize::Lower " << output << std::endl;
   return ReturnOp(output, loctx);
 }
 

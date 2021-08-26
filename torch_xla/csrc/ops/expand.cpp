@@ -4,7 +4,6 @@
 #include "tensorflow/compiler/xla/xla_client/util.h"
 #include "torch_xla/csrc/data_ops.h"
 #include "torch_xla/csrc/lowering_context.h"
-#include "torch_xla/csrc/tensor_util.h"
 #include "torch_xla/csrc/ops/infer_output_shape.h"
 
 namespace torch_xla {
@@ -18,7 +17,6 @@ xla::Shape NodeOutputShape(const Value& input,
       [&](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
     return BuildExpand(operands[0], size);
   };
-  std::cout << "NodeOutputShape " << input.shape() << std::endl;
   return InferOutputShape({input.shape()}, lower_for_shape_fn);
 }
 

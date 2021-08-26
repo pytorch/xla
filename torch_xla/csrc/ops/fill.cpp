@@ -13,38 +13,26 @@ namespace ops {
 namespace {
 
 xla::Shape NodeOutputShape(const Value& input,
-                           const std::vector<xla::int64>& size) {
+                           const xla::Shape& _shape, const std::vector<xla::int64>& size) {
   auto lower_for_shape_fn =
       [&](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
-    
+    std::cout << "[fill::NodeOutputShape] shape, dimension-size, rank: " << input.shape() << ", " << size.size() << input.shape().rank() << std::endl;
+    std::cout << "[fill::NodeOutputShape] ElementsIn: " << xla::ShapeUtil::ElementsIn(input.shape()) << std::endl;
 
-    for (int i = 0; i < size.size(); i++) {
-        std::cout << size[i] << std::endl;
-    }
-    std::cout << "milad in fill::func " << input.shape() << std::endl;
-    std::cout << xla::ShapeUtil::ElementsIn(input.shape()) << " " << input.shape().rank() << " " << GetShapeDimensionType(/*device=*/nullptr) << std::endl;
     xla::Shape tensor_shape = input.shape();
-    std::cout << "ranks: " << tensor_shape.rank() << std::endl;
-    xla::XlaOp op;
+    xla::XlaOp op = operands[0];
     for (int i = 0; i < tensor_shape.rank(); ++i) {
       if (tensor_shape.is_dynamic_dimension(i)) {
-        std::cout << "Dynamic Dimension indx: " << i << std::endl;
+        std::cout << "[fill::NodeOutputShape] Dynamic Dimension Indx: " << i << std::endl;
         auto _size = xla::GetDimensionSize(operands[0], i);
         op = xla::SetDimensionSize(operands[0], _size, i);
       } else {
-        std::cout << "Static Dimension: " << i << std::endl;
-        op = operands[0];
+        std::cout << "[fill::NodeOutputShape] Static Dimension Indx: " << i << std::endl;
       }
     }
-    if (tensor_shape.rank() == 0) {
-      std::cout << "zero rank" << std::endl;
-      op = operands[0];
-    }
     op = BuildExpand(op, size);
-
     return op;
   };
-  std::cout << "NodeOutputShape " << input.shape() << std::endl;
   return InferOutputShape({input.shape()}, lower_for_shape_fn);
 }
 
@@ -58,7 +46,7 @@ Fill::Fill(const Value& input,
            const xla::PrimitiveType type,
            const xla::Shape& shape)
     : Node(ir::OpKind(at::aten::fill), {input},
-           [&]() { return NodeOutputShape(input, size); },
+           [&]() { return NodeOutputShape(input, shape, size); },
            /*num_outputs=*/1, xla::util::MHash(size)),
       size_(std::move(size)),
       value_(std::move(value)),
@@ -77,23 +65,19 @@ XlaOpVector Fill::Lower(LoweringContext* loctx) const {
   if (shape().rank() > 0) {
     input = xla::Broadcast(input, shape().dimensions());
   }
-  //xla::XlaOp op = loctx->GetOutputOp(operand(0));
-  //return ReturnOp(op, loctx);
-  std::cout << "milad in fill::lower " << shape()  << std::endl;
   xla::Shape tensor_shape = shape();
-  std::cout << "ranks: " << tensor_shape.rank() << std::endl;
+  std::cout << "[fill::Lower] shape, rank: " << shape() << tensor_shape.rank() << std::endl;
   for (int i = 0; i < tensor_shape.rank(); ++i) {
     if (tensor_shape.is_dynamic_dimension(i)) {
-      std::cout << "Dynamic Dimension indx: " << i << std::endl;
+      std::cout << "[fill::Lower] Dynamic Dimension Indx: " << i << std::endl;
       auto size = xla::GetDimensionSize(input, i);
+      //std::cout << "size.shape().rank() " << size.builder()->GetShape(size)->rank() << std::endl;
       input = xla::SetDimensionSize(input, size, i);
     } else {
-      std::cout << "Static Dimension indx: " << i << std::endl;
+      std::cout << "[fill::Lower] Static Dimension Indx: " << i << std::endl;
     }
   }
-
   return ReturnOp(BuildExpand(input, size_), loctx);
-
 }
 
 std::string Fill::ToString() const {

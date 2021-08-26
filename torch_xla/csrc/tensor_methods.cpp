@@ -1211,6 +1211,7 @@ void XLATensor::eye_out(XLATensor& out, xla::int64 lines, xla::int64 cols) {
                         GetDevicePrimitiveType(out.shape().get().element_type(),
                                                &out.GetDevice())));
 }
+
 void XLATensor::fill_(XLATensor& input, const at::Scalar& value) {
   /*
   ir::Value constant =
