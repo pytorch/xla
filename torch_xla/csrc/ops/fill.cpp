@@ -60,17 +60,21 @@ NodePtr Fill::Clone(OpList operands) const {
 XlaOpVector Fill::Lower(LoweringContext* loctx) const {
   xla::Literal literal(xla::ShapeUtil::MakeShape(shape().element_type(), {}));
   literal.Set<xla::int32>({}, static_cast<xla::int32>(value_.toInt()));
-  xla::XlaOp input = xla::ConstantLiteral(loctx->builder(), literal);
-  if (shape().rank() > 0) {
-    input = xla::Broadcast(input, shape().dimensions());
-  }
+  xla::XlaOp op = xla::ConstantLiteral(loctx->builder(), literal);
+  
   xla::Shape tensor_shape = shape();
+  if (shape().rank() > 0) {
+    op = xla::Broadcast(op, shape().dimensions());
+  }
   std::cout << "[fill::Lower] shape, rank: " << shape() << tensor_shape.rank() << std::endl;
-  xla::XlaOp op = BuildExpand(input, shape().dimensions());
+  if (!shape().dimensions().empty()) {
+    op = BuildExpand(op, shape().dimensions());
+  }
+  
   for (int i = 0; i < tensor_shape.rank(); ++i) {
     if (tensor_shape.is_dynamic_dimension(i)) {
       std::cout << "[fill::Lower] Dynamic Dimension Indx: " << i << std::endl;
-      auto size = xla::GetDimensionSize(op, i);
+      auto size = xla::GetDimensionSize(loctx->GetOutputOp(operand(0)), i);
       op = xla::SetDimensionSize(op, size, i);
     } else {
       std::cout << "[fill::Lower] Static Dimension Indx: " << i << std::endl;

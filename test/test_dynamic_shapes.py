@@ -29,6 +29,10 @@ class TestDynamicShapes(object):
     print("[RUNNING] _get_xla_tensors_hlo([t3])\n", torch_xla._XLAC._get_xla_tensors_hlo([t3]))
     assert t2_dim0_shape.item() == 4
     assert t3_dim0_shape.item() == 4
+
+    print('t1: ', t1)
+    print('t2: ', t2)
+    print('t3: ', t3)
     
 if __name__ == "__main__":
   test = TestDynamicShapes()
