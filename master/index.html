@@ -1188,7 +1188,7 @@ Example:</p>
 <span class="n">xmp</span><span class="o">.</span><span class="n">spawn</span><span class="p">(</span><span class="n">_mp_fn</span><span class="p">,</span> <span class="o">...</span><span class="p">,</span> <span class="n">start_method</span><span class="o">=</span><span class="s1">&#39;fork&#39;</span><span class="p">)</span>
 </pre></div>
 </div>
-<p>This method has two advantages. First if uses only one copy of the memory
+<p>This method has two advantages. First it uses only one copy of the memory
 pages to host the original model weights, and second it serializes the move
 of the wrapped model into each device, by lowering the load onto the system
 memory during the process.</p>
