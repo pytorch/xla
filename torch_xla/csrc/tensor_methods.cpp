@@ -53,7 +53,6 @@
 #include "torch_xla/csrc/ops/discrete_uniform.h"
 #include "torch_xla/csrc/ops/expand.h"
 #include "torch_xla/csrc/ops/exponential.h"
-#include "torch_xla/csrc/ops/fill.h"
 #include "torch_xla/csrc/ops/flip.h"
 #include "torch_xla/csrc/ops/gather.h"
 #include "torch_xla/csrc/ops/generic.h"
@@ -1213,21 +1212,10 @@ void XLATensor::eye_out(XLATensor& out, xla::int64 lines, xla::int64 cols) {
 }
 
 void XLATensor::fill_(XLATensor& input, const at::Scalar& value) {
-  /*
   ir::Value constant =
       GetIrValueForScalar(value, input.shape(), input.GetDevice());
+  constant = ir::ops::ExpandAsDynamicShapes(constant, input.GetIrValue());
   input.SetInPlaceIrValue(std::move(constant));
-  */
-  xla::ComputationClient::DataPtr data = dynamic_shapes_temp::GetDeviceData(value, TensorTypeFromXlaType(input.shape().get().element_type()), input.GetDevice());
-  data->SetInfo(std::make_shared<dynamic_shapes_temp::DeviceDataInfo>(/*tensor_id=*/-1, /*read_only=*/true));
-  input.SetIrValue(
-      ir::MakeNode<ir::ops::Fill>(input.GetIrValue(),
-                                 xla::util::ToVector<xla::int64>(input.shape().get().dimensions()),
-                                 value,
-                                 input.GetDevice(),
-                                 data,
-                                 input.shape().get().element_type(),
-                                 input.shape()));
 }
 
 XLATensor XLATensor::flip(const XLATensor& input,
