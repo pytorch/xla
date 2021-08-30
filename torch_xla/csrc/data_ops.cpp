@@ -112,11 +112,12 @@ xla::XlaOp BuildExpand(xla::XlaOp input,
                              xla::util::Iota<xla::int64>(output_sizes.size()));
 }
 
-xla::XlaOp BuildExpandAsDynamicShapes(xla::XlaOp static_input, xla::XlaOp dynamic_target) {
+xla::XlaOp BuildExpandAsDynamicShapes(xla::XlaOp static_input,
+                                      xla::XlaOp dynamic_target) {
   xla::Shape target_shape = XlaHelpers::ShapeOfXlaOp(dynamic_target);
   xla::XlaOp output = BuildExpand(static_input, target_shape.dimensions());
 
-  bool seen_dynamic = false; // Limit support to one dynamic dimension
+  bool seen_dynamic = false;  // Limit support to one dynamic dimension
   for (int i = 0; i < target_shape.rank(); ++i) {
     if (target_shape.is_dynamic_dimension(i)) {
       XLA_CHECK(seen_dynamic == false);

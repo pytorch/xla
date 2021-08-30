@@ -226,7 +226,8 @@ NodePtr LogicalOr(const Value& input, const Value& other);
 
 NodePtr NanToNum(const Value& input, const Value& nan, const Value& posinf,
                  const Value& neginf);
-NodePtr ExpandAsDynamicShapes(const Value& static_input, const Value& dynamic_target);
+NodePtr ExpandAsDynamicShapes(const Value& static_input,
+                              const Value& dynamic_target);
 
 }  // namespace ops
 }  // namespace ir
