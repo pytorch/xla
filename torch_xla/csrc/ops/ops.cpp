@@ -863,24 +863,6 @@ NodePtr LogicalOr(const Value& input, const Value& other) {
       std::move(lower_fn));
 }
 
-NodePtr ExpandAsDynamicShapes(const Value& static_input, const Value& dynamic_target) {
-  auto lower_fn = [](const Node& node, LoweringContext* loctx) -> XlaOpVector {
-    xla::XlaOp static_input = loctx->GetOutputOp(node.operand(0));
-    xla::XlaOp dynamic_target = loctx->GetOutputOp(node.operand(1));
-    xla::XlaOp dynamic_output = BuildExpandAsDynamicShapes(static_input, dynamic_target);
-    return node.ReturnOp(dynamic_output, loctx);
-  };
-  auto shape_fn = [](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
-    return BuildExpandAsDynamicShapes(operands[0], operands[1]);
-  };
-  return GenericOp(
-    OpKind(at::aten::expand), {static_input, dynamic_target},
-      [&]() {
-        return InferOutputShape({static_input.shape(), dynamic_target.shape()}, shape_fn);
-      },
-      std::move(lower_fn));
-}
-
 NodePtr NanToNum(const Value& input, const Value& nan, const Value& posinf,
                  const Value& neginf) {
   auto lower_fn = [](const Node& node, LoweringContext* loctx) -> XlaOpVector {
@@ -898,6 +880,24 @@ NodePtr NanToNum(const Value& input, const Value& nan, const Value& posinf,
   };
   return GenericOp(OpKind(at::aten::nan_to_num), {input, nan, posinf, neginf},
                    input.shape(), std::move(lower_fn));
+}
+
+NodePtr ExpandAsDynamicShapes(const Value& static_input, const Value& dynamic_target) {
+  auto lower_fn = [](const Node& node, LoweringContext* loctx) -> XlaOpVector {
+    xla::XlaOp static_input = loctx->GetOutputOp(node.operand(0));
+    xla::XlaOp dynamic_target = loctx->GetOutputOp(node.operand(1));
+    xla::XlaOp dynamic_output = BuildExpandAsDynamicShapes(static_input, dynamic_target);
+    return node.ReturnOp(dynamic_output, loctx);
+  };
+  auto shape_fn = [](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
+    return BuildExpandAsDynamicShapes(operands[0], operands[1]);
+  };
+  return GenericOp(
+    OpKind(at::aten::expand), {static_input, dynamic_target},
+      [&]() {
+        return InferOutputShape({static_input.shape(), dynamic_target.shape()}, shape_fn);
+      },
+      std::move(lower_fn));
 }
 
 }  // namespace ops
