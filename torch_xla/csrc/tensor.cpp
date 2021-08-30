@@ -212,6 +212,31 @@ ir::Value IrValueFromScalar(const at::Scalar& value, at::ScalarType scalar_type,
   return ir::MakeNode<ir::ops::DeviceData>(std::move(device_data));
 }
 
+xla::ComputationClient::DataPtr GetDeviceData(const at::Tensor& tensor,
+                                              const Device& device) {
+  XlaDataCacheArena::XlaDataCache* cache = GetXlaDataCache(device);
+  xla::ComputationClient::DataPtr device_data = cache->Get(tensor);
+  if (device_data == nullptr) {
+    at::Tensor tensor_copy = CopyTensor(tensor);
+    device_data = TensorToXlaData(tensor_copy, device);
+    cache->Add(std::move(tensor_copy), device_data);
+    XLA_COUNTER("DeviceDataCacheMiss", 1);
+  }
+  return device_data;
+}
+
+xla::ComputationClient::DataPtr GetDeviceData(const at::Scalar& value,
+                                              at::ScalarType scalar_type,
+                                              const Device& device) {
+  // Workaround since at::scalar_tensor doesn't support bfloat16 yet.
+  at::Tensor t = at::scalar_tensor(
+      value, at::TensorOptions(scalar_type == at::ScalarType::BFloat16
+                                   ? at::ScalarType::Float
+                                   : scalar_type));
+  if (scalar_type == at::ScalarType::BFloat16) t = t.to(scalar_type);
+  return GetDeviceData(t, device);
+}
+
 // Routing values to device data maximizes the changes for compilation cache
 // hits, but it can prevent the compiler to perform optimizations. So tensor
 // values which are within a given set, are routed to constant scalars if this
@@ -231,32 +256,6 @@ bool ShouldSyncIrValue(const ir::Value& ir_value) {
 }
 
 }  // namespace
-
-xla::ComputationClient::DataPtr dynamic_shapes_temp::GetDeviceData(const at::Tensor& tensor,
-                                              const Device& device) {
-  XlaDataCacheArena::XlaDataCache* cache = GetXlaDataCache(device);
-  xla::ComputationClient::DataPtr device_data = cache->Get(tensor);
-  if (device_data == nullptr) {
-    std::cout << "[GetDeviceData] nonzero.cpp == nullptr" << std::endl;
-    at::Tensor tensor_copy = CopyTensor(tensor);
-    device_data = TensorToXlaData(tensor_copy, device);
-    cache->Add(std::move(tensor_copy), device_data);
-    XLA_COUNTER("DeviceDataCacheMiss", 1);
-  }
-  return device_data;
-}
-
-xla::ComputationClient::DataPtr dynamic_shapes_temp::GetDeviceData(const at::Scalar& value,
-                                              at::ScalarType scalar_type,
-                                              const Device& device) {
-  // Workaround since at::scalar_tensor doesn't support bfloat16 yet.
-  at::Tensor t = at::scalar_tensor(
-      value, at::TensorOptions(scalar_type == at::ScalarType::BFloat16
-                                   ? at::ScalarType::Float
-                                   : scalar_type));
-  if (scalar_type == at::ScalarType::BFloat16) t = t.to(scalar_type);
-  return dynamic_shapes_temp::GetDeviceData(t, device);
-}
 
 // The DeviceContextArena holds per device live information and statistics,
 // among which the XLA tensors which are currently alive in the system. This is
@@ -613,15 +612,12 @@ void XLATensor::SetIrValue(ir::Value ir_value) {
   data()->xla_data = nullptr;
   data()->tensor_data = c10::nullopt;
   if (data()->view != nullptr) {
-    std::cout << "[SetIrValue] data()->view != nullptr" << std::endl;
     // If we have an active view, and a SetIrValue() happens, it means we are
     // within an in-place execution context, and we need to update the view's
     // alias as well.
     data()->view = UpdateView(data()->view, std::move(ir_value));
     data()->generation += 1;
   } else {
-    std::cout << "[SetIrValue] data()->view == nullptr" << std::endl;
-    // If we have an active view, and a SetIrValue() happens, it means we are
     AssignIrValue(std::move(ir_value));
     TryLimitGraphSize();
   }
@@ -630,7 +626,6 @@ void XLATensor::SetIrValue(ir::Value ir_value) {
 void XLATensor::SetInPlaceIrValue(ir::Value ir_value) {
   auto xla_shape = shape();
   if (xla_shape.get().element_type() != ir_value.shape().element_type()) {
-    std::cout << "[SetInPlaceIrValue] ir::ops::Cast" << std::endl;
     ir_value =
         ir::MakeNode<ir::ops::Cast>(ir_value, xla_shape.get().element_type());
   }
@@ -707,7 +702,7 @@ ir::Value XLATensor::GetIrValueForTensor(const at::Tensor& tensor,
           std::move(value),
           MakeXlaPrimitiveType(tensor.scalar_type(), &device));
     }
-    data = dynamic_shapes_temp::GetDeviceData(tensor, device);
+    data = GetDeviceData(tensor, device);
     read_only = true;
   } else {
     XLA_TIMED("IrValueTensorToXlaData");
@@ -720,7 +715,7 @@ ir::Value XLATensor::GetDeviceDataIrValue(const at::Scalar& value,
                                           xla::PrimitiveType type,
                                           const Device& device) {
   xla::ComputationClient::DataPtr data =
-      dynamic_shapes_temp::GetDeviceData(value, TensorTypeFromXlaType(type), device);
+      GetDeviceData(value, TensorTypeFromXlaType(type), device);
   data->SetInfo(
       std::make_shared<DeviceDataInfo>(/*tensor_id=*/-1, /*read_only=*/true));
   return ir::MakeNode<ir::ops::DeviceData>(std::move(data));

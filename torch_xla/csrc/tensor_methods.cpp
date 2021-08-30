@@ -140,7 +140,6 @@
 #include "torch_xla/csrc/tensor_ops.h"
 #include "torch_xla/csrc/tensor_util.h"
 
-using namespace torch_xla::dynamic_shapes_temp;
 namespace torch_xla {
 namespace {
 
