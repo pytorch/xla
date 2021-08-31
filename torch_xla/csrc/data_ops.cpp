@@ -112,7 +112,8 @@ xla::XlaOp BuildExpand(xla::XlaOp input,
                              xla::util::Iota<xla::int64>(output_sizes.size()));
 }
 
-xla::XlaOp BuildDynamicExpand(xla::XlaOp static_input, xla::XlaOp dynamic_target) {
+xla::XlaOp BuildDynamicExpand(xla::XlaOp static_input,
+                              xla::XlaOp dynamic_target) {
   xla::Shape target_shape = XlaHelpers::ShapeOfXlaOp(dynamic_target);
   xla::XlaOp output = BuildExpand(static_input, target_shape.dimensions());
 

@@ -886,7 +886,8 @@ NodePtr DynamicExpand(const Value& static_input, const Value& dynamic_target) {
   auto lower_fn = [](const Node& node, LoweringContext* loctx) -> XlaOpVector {
     xla::XlaOp static_input = loctx->GetOutputOp(node.operand(0));
     xla::XlaOp dynamic_target = loctx->GetOutputOp(node.operand(1));
-    xla::XlaOp dynamic_output = BuildDynamicExpand(static_input, dynamic_target);
+    xla::XlaOp dynamic_output =
+        BuildDynamicExpand(static_input, dynamic_target);
     return node.ReturnOp(dynamic_output, loctx);
   };
   auto shape_fn = [](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
