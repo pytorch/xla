@@ -1211,9 +1211,8 @@ void XLATensor::eye_out(XLATensor& out, xla::int64 lines, xla::int64 cols) {
 }
 
 void XLATensor::fill_(XLATensor& input, const at::Scalar& value) {
-  ir::Value constant =
-      GetIrValueForScalar(value, input.shape(), input.GetDevice());
-  constant = ir::ops::ExpandAsDynamicShapes(constant, input.GetIrValue());
+  ir::Value constant = GetIrValueForScalar(value, input.GetDevice());
+  constant = ir::ops::DynamicExpand(constant, input.GetIrValue());
   input.SetInPlaceIrValue(std::move(constant));
 }
 
