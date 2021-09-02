@@ -870,7 +870,6 @@ NodePtr NanToNum(const Value& input, const Value& nan, const Value& posinf,
     xla::XlaOp nan_replacement = loctx->GetOutputOp(node.operand(1));
     xla::XlaOp posinf_replacement = loctx->GetOutputOp(node.operand(2));
     xla::XlaOp neginf_replacement = loctx->GetOutputOp(node.operand(3));
-    const xla::Shape& input_shape = XlaHelpers::ShapeOfXlaOp(xla_input);
     xla::XlaOp result =
         xla::Select(xla::IsNan(xla_input), nan_replacement,
                     xla::Select(xla::IsPosInf(xla_input), posinf_replacement,
