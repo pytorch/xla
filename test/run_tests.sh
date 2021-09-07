@@ -56,7 +56,7 @@ function run_dynamic {
     run_test "$@"
   else
     echo "Running in DynamicShape mode: $@"
-    XLA_EXPERIMENTAL="nonzero:masked_select" run_test "$@"
+    XLA_EXPERIMENTAL="nonzero:masked_select:masked_scatter" run_test "$@"
   fi
 }
 
