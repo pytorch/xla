@@ -10764,7 +10764,7 @@ TEST_F(AtenXlaTensorTest, TestNanToNumInplace) {
       torch::Tensor xla_input = CopyToDevice(input_copy, device);
       xla_input.nan_to_num_();
       if (scalar_type != torch::kDouble) {
-        AllClose(output, xla_output);
+        AllClose(input, xla_input);
       } else {  // inf entries differ since we convert double to float on TPU
         AllEqual(input[0], xla_input[0]);
         AllEqual(input[1], xla_input[1]);
