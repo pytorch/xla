@@ -4663,7 +4663,8 @@ TEST_F(AtenXlaTensorTest, TestNonzero) {
     torch::Tensor xla_b = torch::nonzero(xla_a);
     AllClose(b, xla_b);
 
-    if (DebugUtil::ExperimentEnabled("nonzero")) {
+    if (DebugUtil::ExperimentEnabled("nonzero") &&
+        bridge::AtenDeviceToXlaDevice(device).hw_type == DeviceType::TPU) {
       // If the nonzero support is enabled, we must not see any aten:: calls.
       ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
     }
@@ -4683,7 +4684,8 @@ TEST_F(AtenXlaTensorTest, TestMaskedSelect) {
     torch::Tensor xla_c = torch::masked_select(xla_a, xla_b);
     AllClose(c, xla_c);
 
-    if (DebugUtil::ExperimentEnabled("masked_select")) {
+    if (DebugUtil::ExperimentEnabled("masked_select") &&
+        bridge::AtenDeviceToXlaDevice(device).hw_type == DeviceType::TPU) {
       // If the masked_select support is enabled, we must not see any aten::
       // calls.
       ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
@@ -4706,7 +4708,8 @@ TEST_F(AtenXlaTensorTest, TestMaskedScatter) {
     torch::Tensor xla_d = torch::masked_scatter(xla_a, xla_b, xla_c);
     AllClose(d, xla_d);
 
-    if (DebugUtil::ExperimentEnabled("masked_scatter")) {
+    if (DebugUtil::ExperimentEnabled("masked_scatter") &&
+        bridge::AtenDeviceToXlaDevice(device).hw_type == DeviceType::TPU) {
       // If the masked_select support is enabled, we must not see any aten::
       // calls.
       ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
@@ -10724,7 +10727,12 @@ TEST_F(AtenXlaTensorTest, TestNanToNum) {
     ForEachDevice([&](const torch::Device& device) {
       torch::Tensor xla_input = CopyToDevice(input, device);
       torch::Tensor xla_output = torch::nan_to_num(xla_input);
-      AllClose(output, xla_output);
+      if (scalar_type != torch::kDouble) {
+        AllClose(output, xla_output);
+      } else {  // inf entries differ since we convert double to float on TPU
+        AllEqual(output[0], xla_output[0]);
+        AllEqual(output[1], xla_output[1]);
+      }
     });
     output =
         torch::nan_to_num(input, /*nan=*/1.0, /*posinf=*/2.0, /*neginf=*/3.0);
@@ -10755,7 +10763,12 @@ TEST_F(AtenXlaTensorTest, TestNanToNumInplace) {
     ForEachDevice([&](const torch::Device& device) {
       torch::Tensor xla_input = CopyToDevice(input_copy, device);
       xla_input.nan_to_num_();
-      AllClose(input, xla_input);
+      if (scalar_type != torch::kDouble) {
+        AllClose(output, xla_output);
+      } else {  // inf entries differ since we convert double to float on TPU
+        AllEqual(input[0], xla_input[0]);
+        AllEqual(input[1], xla_input[1]);
+      }
     });
     input = input_copy.clone();
     input.nan_to_num_(/*nan=*/1.0, /*posinf=*/2.0, /*neginf=*/3.0);
@@ -10786,7 +10799,12 @@ TEST_F(AtenXlaTensorTest, TestNanToNumOut) {
       torch::Tensor xla_input = CopyToDevice(input, device);
       torch::Tensor xla_output = torch::zeros_like(input);
       torch::nan_to_num_out(xla_output, xla_input);
-      AllClose(output, xla_output);
+      if (scalar_type != torch::kDouble) {
+        AllClose(output, xla_output);
+      } else {  // inf entries differ since we convert double to float on TPU
+        AllEqual(output[0], xla_output[0]);
+        AllEqual(output[1], xla_output[1]);
+      }
     });
     torch::nan_to_num_out(output, input, /*nan=*/1.0, /*posinf=*/2.0,
                           /*neginf=*/3.0);

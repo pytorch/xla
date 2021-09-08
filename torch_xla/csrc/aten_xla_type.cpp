@@ -2205,7 +2205,10 @@ at::Tensor XLANativeFunctions::nan_to_num(const at::Tensor& self,
   if (!at::native::is_floating_point(self)) {
     return CopyTensor(self);
   }
-  auto element_type = TensorTypeToRawXlaType(self.scalar_type());
+  XLATensor input_tensor = bridge::GetXlaTensor(self);
+  const Device& device = input_tensor.GetDevice();
+  auto element_type = GetDevicePrimitiveType(
+      TensorTypeToRawXlaType(self.scalar_type()), &device);
   XlaHelpers::MinMax min_max = XlaHelpers::MinMaxValues(element_type);
   at::Scalar nan_replacement = nan.has_value() ? *nan : 0.0;
   at::Scalar posinf_replacement = posinf.has_value() ? *posinf : min_max.max;
