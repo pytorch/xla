@@ -31,6 +31,10 @@ MODEL_OPTS = {
     '--amp': {
         'action': 'store_true',
     },
+    # Using zero gradients optimization for AMP
+    '--use_zero_grad': {
+        'action': 'store_true',
+    },
 }
 
 FLAGS = args_parse.parse_common_options(
@@ -206,7 +210,8 @@ def train_imagenet():
       summary_writer=writer)
   loss_fn = nn.CrossEntropyLoss()
   if FLAGS.amp:
-    scaler = GradScaler()
+    scaler = GradScaler() if not FLAGS.use_zero_grad else GradScaler(
+        use_zero_grad=True)
 
   def train_loop_fn(loader, epoch):
     tracker = xm.RateTracker()
@@ -223,7 +228,6 @@ def train_imagenet():
         xm.all_reduce('sum', gradients, scale=1.0 / xm.xrt_world_size())
         scaler.step(optimizer)
         scaler.update()
-        xm.mark_step()
       else:
         output = model(data)
         loss = loss_fn(output, target)

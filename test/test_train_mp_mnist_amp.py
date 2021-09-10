@@ -1,12 +1,21 @@
 import args_parse
 
+MODEL_OPTS = {
+    # Using zero gradients optimization for AMP
+    '--use_zero_grad': {
+        'action': 'store_true',
+    },
+}
+
 FLAGS = args_parse.parse_common_options(
     datadir='/tmp/mnist-data',
     batch_size=128,
     momentum=0.5,
     lr=0.01,
     target_accuracy=98.0,
-    num_epochs=18)
+    num_epochs=18,
+    opts=MODEL_OPTS.items(),
+)
 
 import os
 import shutil
@@ -119,7 +128,8 @@ def train_mnist(flags, **kwargs):
     writer = test_utils.get_summary_writer(flags.logdir)
   optimizer = optim.SGD(model.parameters(), lr=lr, momentum=flags.momentum)
   loss_fn = nn.NLLLoss()
-  scaler = GradScaler()
+  scaler = GradScaler() if not FLAGS.use_zero_grad else GradScaler(
+      use_zero_grad=True)
 
   def train_loop_fn(loader):
     tracker = xm.RateTracker()
@@ -134,7 +144,6 @@ def train_mnist(flags, **kwargs):
       xm.all_reduce('sum', gradients, scale=1.0 / xm.xrt_world_size())
       scaler.step(optimizer)
       scaler.update()
-      xm.mark_step()
       tracker.add(flags.batch_size)
       if step % flags.log_steps == 0:
         xm.add_step_closure(
