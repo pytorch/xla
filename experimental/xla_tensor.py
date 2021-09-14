@@ -69,7 +69,7 @@ print ('Expand output:\n', tt)
 if debug: print ('[main] add')
 print("Add output:\n", torch.add(tt, o))
 
-#############SCRAP
+#############SCRAP CODE - IGNORE#############
 #import pdb; pdb.set_trace()
 #t = torch.tensor([[1], [2], [3]], device=xm.xla_device())
 #b = torch.tensor([[1,1,1,1],[1,1,1,1],[1,1,1,1]], device=xm.xla_device())
