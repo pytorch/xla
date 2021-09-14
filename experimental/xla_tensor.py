@@ -68,30 +68,3 @@ print ('Expand output:\n', tt)
 
 if debug: print ('[main] add')
 print("Add output:\n", torch.add(tt, o))
-
-#############SCRAP CODE - IGNORE#############
-#import pdb; pdb.set_trace()
-#t = torch.tensor([[1], [2], [3]], device=xm.xla_device())
-#b = torch.tensor([[1,1,1,1],[1,1,1,1],[1,1,1,1]], device=xm.xla_device())
-#print (tt.t_)
-#print(tt.dtype, o.dtype)
-
-#print ('result: ', result.t_, self.t_, self)
-#print (size.static_size)
-#print (super(XLATensor, self).storage())
-#return self.t_.expand(size.static_size) #TODO: how to call this thru the parent class?
-#return torch_xla.dynamic_expand(size)
-
-#args = [a.t_ if hasattr(a, 't_') else a for a in args]
-#print (func.__name__)
-#ret = func(*args, **kwargs)
-#return HANDLED_FUNCTIONS[func](*args, **kwargs)
-#return XLATensor(ret, metadata=self._metadata)
-
-#return XLATensor(ret)
-#else:
-#    return super().__torch_function__(func, types, args, kwargs)
-
-#if func_name == 'size' or func_name == 'expand': # or func_name == 'add':
-#else:
-#    return super(XLATensor, self).__repr__() #Q: this replacement us needed to get add() to work. This breaks size()
