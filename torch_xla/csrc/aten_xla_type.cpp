@@ -1252,8 +1252,9 @@ at::Tensor XLANativeFunctions::div(
 at::Tensor XLANativeFunctions::div(const at::Tensor& self,
                                    const at::Scalar& other) {
   XLA_FN_COUNTER("xla::");
+  at::ScalarType dtype = at::result_type(self, other);
   return bridge::AtenFromXlaTensor(
-      XLATensor::div(bridge::GetXlaTensor(self), other));
+      XLATensor::div(bridge::GetXlaTensor(self), other, dtype));
 }
 
 at::Tensor XLANativeFunctions::dot(const at::Tensor& self,

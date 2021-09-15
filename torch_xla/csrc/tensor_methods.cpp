@@ -1110,13 +1110,33 @@ XLATensor XLATensor::div(const XLATensor& input, const XLATensor& other,
   }
 }
 
-XLATensor XLATensor::div(const XLATensor& input, const at::Scalar& other) {
+XLATensor XLATensor::div(const XLATensor& input, const at::Scalar& other,
+                         c10::optional<at::ScalarType> logical_element_type) {
   at::ScalarType scalar_type =
       at::typeMetaToScalarType(c10::get_default_dtype());
+  xla::PrimitiveType input_type = input.shape().get().element_type();
+  bool input_is_float = xla::primitive_util::IsFloatingPointType(input_type);
+
   ir::Value input_value = GetFloatingIrValue(input, scalar_type);
   ir::Value other_value = GetIrValueForScalar(
       other, input_value.shape().element_type(), input.GetDevice());
-  return input.CreateFrom(input_value / other_value, scalar_type);
+  ir::Value res = input_value / other_value;
+
+  // Promote the result to the logical_element_type if the input is a float.
+  if (input_is_float) {
+    if (logical_element_type.has_value()) {
+      xla::PrimitiveType res_intended_type =
+          MakeXlaPrimitiveType(*logical_element_type, &input.GetDevice());
+      if (res.shape().element_type() != res_intended_type) {
+        res = ir::MakeNode<ir::ops::Cast>(res, res_intended_type);
+      }
+    }
+    return input.CreateFrom(res, logical_element_type);
+  } else {
+    // We don't need to typecheck the res IR here since we cast both input and
+    // output to the scalar_type. Res type must also be scalar_type here.
+    return input.CreateFrom(res, scalar_type);
+  }
 }
 
 XLATensor XLATensor::eq(const XLATensor& input, const at::Scalar& other) {
