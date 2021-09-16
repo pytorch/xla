@@ -12,6 +12,9 @@ class DynamicTensorXLASize(object):
         self.dynamic_size_tensor = t
 
 class XLATensor(torch.Tensor):
+    def __new__(cls, data, **kwargs):
+        return torch.Tensor._make_subclass(cls, torch.as_tensor(data, dtype=torch.float32, **kwargs))
+
     def __init__(self, data, **kwargs):
         super().__init__()
         if debug: print('[__init__]')
@@ -51,11 +54,11 @@ class XLATensor(torch.Tensor):
         return func(*args, **kwargs)
 
 if debug: print ('[main] make b')
-t = XLATensor([[1], [2], [3]])
+t = XLATensor([[1], [2], [3]], device=xm.xla_device())
 print('Tensor t:\n', t)
 
 if debug: print ('[main] make o')
-o = XLATensor([[1,1,1,1],[1,1,1,1],[1,1,1,1]])
+o = XLATensor([[1,1,1,1],[1,1,1,1],[1,1,1,1]], device=xm.xla_device())
 print('Tensor o:\n', o)
 
 if debug: print ('[main] size o')
