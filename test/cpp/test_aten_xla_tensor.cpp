@@ -10724,7 +10724,15 @@ TEST_F(AtenXlaTensorTest, TestNanToNum) {
     ForEachDevice([&](const torch::Device& device) {
       torch::Tensor xla_input = CopyToDevice(input, device);
       torch::Tensor xla_output = torch::nan_to_num(xla_input);
-      AllClose(output, xla_output);
+      if (bridge::AtenDeviceToXlaDevice(device).hw_type == DeviceType::TPU &&
+          scalar_type == torch::kDouble) {
+        // Since TPU converts double to float (unlike CPU), the Inf entries are
+        // expected to be different. Skipping checks for Inf entries.
+        AllEqual(output[0], xla_output[0]);
+        AllEqual(output[1], xla_output[1]);
+      } else {
+        AllClose(output, xla_output);
+      }
     });
     output =
         torch::nan_to_num(input, /*nan=*/1.0, /*posinf=*/2.0, /*neginf=*/3.0);
@@ -10755,7 +10763,15 @@ TEST_F(AtenXlaTensorTest, TestNanToNumInplace) {
     ForEachDevice([&](const torch::Device& device) {
       torch::Tensor xla_input = CopyToDevice(input_copy, device);
       xla_input.nan_to_num_();
-      AllClose(input, xla_input);
+      if (bridge::AtenDeviceToXlaDevice(device).hw_type == DeviceType::TPU &&
+          scalar_type == torch::kDouble) {
+        // Since TPU converts double to float (unlike CPU), the Inf entries are
+        // expected to be different. Skipping checks for Inf entries.
+        AllEqual(input[0], xla_input[0]);
+        AllEqual(input[1], xla_input[1]);
+      } else {
+        AllClose(input, xla_input);
+      }
     });
     input = input_copy.clone();
     input.nan_to_num_(/*nan=*/1.0, /*posinf=*/2.0, /*neginf=*/3.0);
@@ -10786,7 +10802,15 @@ TEST_F(AtenXlaTensorTest, TestNanToNumOut) {
       torch::Tensor xla_input = CopyToDevice(input, device);
       torch::Tensor xla_output = torch::zeros_like(input);
       torch::nan_to_num_out(xla_output, xla_input);
-      AllClose(output, xla_output);
+      if (bridge::AtenDeviceToXlaDevice(device).hw_type == DeviceType::TPU &&
+          scalar_type == torch::kDouble) {
+        // Since TPU converts double to float (unlike CPU), the Inf entries are
+        // expected to be different. Skipping checks for Inf entries.
+        AllEqual(output[0], xla_output[0]);
+        AllEqual(output[1], xla_output[1]);
+      } else {
+        AllClose(output, xla_output);
+      }
     });
     torch::nan_to_num_out(output, input, /*nan=*/1.0, /*posinf=*/2.0,
                           /*neginf=*/3.0);
