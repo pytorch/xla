@@ -210,8 +210,7 @@ def train_imagenet():
       summary_writer=writer)
   loss_fn = nn.CrossEntropyLoss()
   if FLAGS.amp:
-    scaler = GradScaler() if not FLAGS.use_zero_grad else GradScaler(
-        use_zero_grad=True)
+    scaler = GradScaler(use_zero_grad=FLAGS.use_zero_grad)
 
   def train_loop_fn(loader, epoch):
     tracker = xm.RateTracker()

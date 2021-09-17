@@ -43,14 +43,14 @@ class GradScaler(torch.cuda.amp.GradScaler):
 
     def get_scaling_factor(a):
 
-      def btrue(a):
+      def if_true(a):
         return xb.Op.zero(a.builder())
 
-      def bfalse(a):
+      def if_false(a):
         return xb.Op.one(a.builder())
 
       cond = a > xb.Op.zero(a.builder())
-      return cond.mkconditional((a,), btrue, bfalse)
+      return cond.mkconditional((a,), if_true, if_false)
 
     self.get_scaling_factor = xor.register("get_scaling_factor",
                                            get_scaling_factor)

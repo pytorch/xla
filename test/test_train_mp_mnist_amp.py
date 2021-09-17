@@ -128,8 +128,7 @@ def train_mnist(flags, **kwargs):
     writer = test_utils.get_summary_writer(flags.logdir)
   optimizer = optim.SGD(model.parameters(), lr=lr, momentum=flags.momentum)
   loss_fn = nn.NLLLoss()
-  scaler = GradScaler() if not FLAGS.use_zero_grad else GradScaler(
-      use_zero_grad=True)
+  scaler = GradScaler(use_zero_grad=FLAGS.use_zero_grad)
 
   def train_loop_fn(loader):
     tracker = xm.RateTracker()
