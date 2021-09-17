@@ -35,6 +35,10 @@ MODEL_OPTS = {
     '--use_zero_grad': {
         'action': 'store_true',
     },
+    # Using sync_free optimizer for AMP
+    '--use_syncfree_optim': {
+        'action': 'store_true',
+    }
 }
 
 FLAGS = args_parse.parse_common_options(
@@ -64,7 +68,7 @@ import torch_xla.utils.utils as xu
 import torch_xla.core.xla_model as xm
 import torch_xla.distributed.xla_multiprocessing as xmp
 import torch_xla.test.test_utils as test_utils
-from torch_xla.amp import autocast, GradScaler
+from torch_xla.amp import autocast, GradScaler, syncfree
 
 DEFAULT_KWARGS = dict(
     batch_size=128,
@@ -193,7 +197,8 @@ def train_imagenet():
   writer = None
   if xm.is_master_ordinal():
     writer = test_utils.get_summary_writer(FLAGS.logdir)
-  optimizer = optim.SGD(
+  optim_cls = syncfree.SGD if FLAGS.amp and FLAGS.use_syncfree_optim else optim.SGD
+  optimizer = optim_cls(
       model.parameters(),
       lr=FLAGS.lr,
       momentum=FLAGS.momentum,
@@ -210,7 +215,8 @@ def train_imagenet():
       summary_writer=writer)
   loss_fn = nn.CrossEntropyLoss()
   if FLAGS.amp:
-    scaler = GradScaler(use_zero_grad=FLAGS.use_zero_grad)
+    scaler = syncfree.GradScaler() if FLAGS.use_syncfree_optim else GradScaler(
+        use_zero_grad=FLAGS.use_zero_grad)
 
   def train_loop_fn(loader, epoch):
     tracker = xm.RateTracker()
