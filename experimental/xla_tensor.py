@@ -26,7 +26,6 @@ class XLATensor(torch.Tensor):
         if self.device == xm.xla_device():
             dynamic_size = torch_xla._XLAC._get_xla_tensor_dimension_size(self.t_, 0)
             return DynamicTensorXLASize(static_size, dynamic_size)
-            #return torch_xla.dynamic_static_sizee(self.tensor) #TBD
         else:
             return DynamicTensorXLASize(static_size)
 
