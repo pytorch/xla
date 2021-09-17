@@ -16,7 +16,7 @@ function collect_wheels() {
   release_version=$1
   wheel_version="${release_version}"
   if [ "${release_version}" != "nightly" ]; then
-    wheel_version=$( echo "${release_version}" | grep -oP '\d+.\d+' )
+    wheel_version=$( echo "${release_version}" | grep -oP '\d+.\d+(.\d+)?' )
   fi
 
   mkdir /tmp/staging-wheels
