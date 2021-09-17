@@ -9,7 +9,7 @@ debug = False
 class DynamicTensorXLASize(object):
     def __init__(self, s, t=None):
         self.static_size = s
-        self.dynamic_size_tensor = t
+        self.dynamic_size = t
 
 class XLATensor(torch.Tensor):
     def __new__(cls, data, **kwargs):
@@ -18,22 +18,22 @@ class XLATensor(torch.Tensor):
     def __init__(self, data, **kwargs):
         super().__init__()
         if debug: print('[__init__]')
-        self.dev_ = 'TPU' #Q: how to replace this with xm.xla_device()?
-        self.t_ = torch.as_tensor(data, dtype=torch.float32, **kwargs)# Q: replace with parent class tenor obj?
+        self.t_ = torch.as_tensor(data, dtype=torch.float32, **kwargs)
 
     def size(self):
         if debug: print('[size] ')
-        siz = super(XLATensor, self).size()
-        if self.dev_ == 'TPU':
-            return DynamicTensorXLASize(siz, self)
-            #return torch_xla.dynamic_size(self.tensor) #TBD
+        static_size = super(XLATensor, self).size()
+        if self.device == xm.xla_device():
+            dynamic_size = torch_xla._XLAC._get_xla_tensor_dimension_size(self.t_, 0)
+            return DynamicTensorXLASize(static_size, dynamic_size)
+            #return torch_xla.dynamic_static_sizee(self.tensor) #TBD
         else:
-            return DynamicTensorXLASize(siz)
+            return DynamicTensorXLASize(static_size)
 
     def expand(self, size):
         if debug: print('[expand]')
-        if self.dev_ == 'TPU':
-            if size.dynamic_size_tensor != None:
+        if self.device == xm.xla_device():
+            if size.dynamic_size != None:
                 result = self.t_.expand(size.static_size) 
                 #result = torch_xla.dynamic_expand(size) #TBD
                 return XLATensor(result.tolist()) #Q: return XLATensor or torch.Tensor?
@@ -63,7 +63,7 @@ print('Tensor o:\n', o)
 
 if debug: print ('[main] size o')
 b = o.size()
-print('Size output:\n\tstatic_size = %s\n\tdynamic_size_tensor =\n\t%s' % (b.static_size, b.dynamic_size_tensor))
+print('Size output:\n\tstatic_size = %s\n\tdynamic_size = %s\n' % (b.static_size, b.dynamic_size))
 
 if debug: print ('[main] expand t')
 tt = t.expand(b)
