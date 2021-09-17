@@ -2221,7 +2221,7 @@ at::Tensor XLANativeFunctions::nan_to_num(const at::Tensor& self,
         << min_max.min.toDouble() << ", " << min_max.max.toDouble() << "].";
   }
   return bridge::AtenFromXlaTensor(
-      XLATensor::nan_to_num(bridge::GetXlaTensor(self), nan_replacement,
+      XLATensor::nan_to_num(input_tensor, nan_replacement,
                             posinf_replacement, neginf_replacement));
 }
 

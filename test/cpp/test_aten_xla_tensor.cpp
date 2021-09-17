@@ -4663,8 +4663,7 @@ TEST_F(AtenXlaTensorTest, TestNonzero) {
     torch::Tensor xla_b = torch::nonzero(xla_a);
     AllClose(b, xla_b);
 
-    if (DebugUtil::ExperimentEnabled("nonzero") &&
-        bridge::AtenDeviceToXlaDevice(device).hw_type == DeviceType::TPU) {
+    if (DebugUtil::ExperimentEnabled("nonzero")) {
       // If the nonzero support is enabled, we must not see any aten:: calls.
       ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
     }
@@ -4684,8 +4683,7 @@ TEST_F(AtenXlaTensorTest, TestMaskedSelect) {
     torch::Tensor xla_c = torch::masked_select(xla_a, xla_b);
     AllClose(c, xla_c);
 
-    if (DebugUtil::ExperimentEnabled("masked_select") &&
-        bridge::AtenDeviceToXlaDevice(device).hw_type == DeviceType::TPU) {
+    if (DebugUtil::ExperimentEnabled("masked_select")) {
       // If the masked_select support is enabled, we must not see any aten::
       // calls.
       ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
@@ -4708,8 +4706,7 @@ TEST_F(AtenXlaTensorTest, TestMaskedScatter) {
     torch::Tensor xla_d = torch::masked_scatter(xla_a, xla_b, xla_c);
     AllClose(d, xla_d);
 
-    if (DebugUtil::ExperimentEnabled("masked_scatter") &&
-        bridge::AtenDeviceToXlaDevice(device).hw_type == DeviceType::TPU) {
+    if (DebugUtil::ExperimentEnabled("masked_scatter")) {
       // If the masked_select support is enabled, we must not see any aten::
       // calls.
       ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
