@@ -513,6 +513,8 @@ class XLATensor {
 
   static XLATensor expand(const XLATensor& input, std::vector<xla::int64> size);
 
+  static XLATensor dynamic_expand(const XLATensor& input, const XLATensor& dynamic_size_tensor, std::vector<xla::int64> size);
+
   static XLATensor expm1(const XLATensor& input);
 
   static void exponential_(XLATensor& input, double lambd);

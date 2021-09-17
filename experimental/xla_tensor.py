@@ -5,6 +5,7 @@ import logging
 import functools
 
 debug = False
+BYPASS_XLA = False  #Performance profiling experimentation
 
 class DynamicTensorXLASize(object):
     def __init__(self, s, t=None):
@@ -25,7 +26,7 @@ class XLATensor(torch.Tensor):
         static_size = super(XLATensor, self).size()
         if self.device == xm.xla_device():
             dynamic_size = torch_xla._XLAC._get_xla_tensor_dimension_size(self.t_, 0)
-            return DynamicTensorXLASize(static_size, dynamic_size)
+            return DynamicTensorXLASize(static_size, self.t_) #TODO: replace self.t_ with dynamic_size
         else:
             return DynamicTensorXLASize(static_size)
 
@@ -33,8 +34,10 @@ class XLATensor(torch.Tensor):
         if debug: print('[expand]')
         if self.device == xm.xla_device():
             if size.dynamic_size != None:
-                result = self.t_.expand(size.static_size) 
-                #result = torch_xla.dynamic_expand(size) #TBD
+                if BYPASS_XLA == True:
+                    result = self.t_.expand(size.static_size) 
+                else:
+                    result = torch_xla._XLAC._xla_dynamic_expand(self.t_, size.dynamic_size, size.static_size)
                 return XLATensor(result.tolist()) #Q: return XLATensor or torch.Tensor?
         return self.t_.expand(size.static_size)
 

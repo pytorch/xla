@@ -1183,6 +1183,15 @@ XLATensor XLATensor::expand(const XLATensor& input,
       GetExpandDimensions(input_shape.get(), std::move(size))));
 }
 
+XLATensor XLATensor::dynamic_expand(const XLATensor& input,
+                            const XLATensor& dynamic_size_tensor,
+                            std::vector<xla::int64> size) {
+  auto input_shape = input.shape();
+  return input.CreateFrom(ir::ops::DynamicExpand(
+      input.GetIrValue(),
+      dynamic_size_tensor.GetIrValue()));
+}
+
 XLATensor XLATensor::expm1(const XLATensor& input) {
   return input.CreateFrom(ir::ops::Expm1(input.GetIrValue()));
 }

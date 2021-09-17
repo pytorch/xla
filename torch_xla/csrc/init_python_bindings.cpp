@@ -648,6 +648,16 @@ absl::flat_hash_map<std::string, absl::variant<int>> ConvertDictToMap(
   return map;
 }
 
+at::Tensor GetXlaDynamicExpand(const at::Tensor& tensor, 
+                               const at::Tensor& dynamic_size_tensor, 
+                               std::vector<xla::int64> static_size) {
+  XLATensor xtensor = bridge::GetXlaTensor(tensor);
+  XLATensor xdynamicsizetensor = bridge::GetXlaTensor(dynamic_size_tensor);
+  at::Tensor dynamic_expand_tensor = bridge::AtenFromXlaTensor(
+      XLATensor::dynamic_expand(xtensor, xdynamicsizetensor, static_size));
+  return dynamic_expand_tensor;
+}
+
 void BuildProfilerSubmodule(py::module* m) {
   py::module profiler = m->def_submodule("profiler", "Profiler integration");
   py::class_<xla::profiler::ProfilerServer,
@@ -1093,6 +1103,10 @@ void InitXlaModuleBindings(py::module m) {
         });
   m.def("_run_xrt_local_service", [](xla::uint64 service_port) {
     xla::ComputationClient::RunLocalService(service_port);
+  });
+  m.def("_xla_dynamic_expand", 
+        [](const at::Tensor& tensor, const at::Tensor& dynamic_size_tensor, std::vector<xla::int64> static_size) {
+          return GetXlaDynamicExpand(tensor, dynamic_size_tensor, static_size);
   });
 
   BuildProfilerSubmodule(&m);
