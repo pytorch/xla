@@ -26,7 +26,7 @@ To build from source:
 ### Building Docker Image
 
 * We provide a Dockerfile in `docker/` that you can use to build images as the
-  following command:
+  following:
 
   ```Shell
   cd xla/
