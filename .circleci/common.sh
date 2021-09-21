@@ -3,7 +3,11 @@
 set -ex
 
 # System default cmake 3.10 cannot find mkl, so point it to the right place.
-export CMAKE_PREFIX_PATH=${CONDA_PREFIX:-"$(dirname $(which conda))/../"}
+# CMAKE_PREFIX_PATH will default to (in this order):
+# 1. CMAKE_PREFIX_PATH (if it exists)
+# 2. CONDA_PREFIX (if it exists)
+# 3. The conda install directory (if it exists)
+export CMAKE_PREFIX_PATH=${CMAKE_PREFIX_PATH:-${CONDA_PREFIX:-"$(dirname $(which conda))/../"}}
 
 function clone_pytorch() {
   PYTORCH_DIR=$1
