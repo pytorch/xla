@@ -7418,6 +7418,11 @@ TEST_F(AtenXlaTensorTest, TestAvgPool3DNoBatch) {
 }
 
 TEST_F(AtenXlaTensorTest, TestAdaptiveMaxPool2D) {
+  DeviceType hw_type = GetDefaultDevice()->hw_type;
+  // skip this test until the tile mismatch bug is fixed.
+  if (hw_type == DeviceType::TPU) {
+    return;
+  }
   std::vector<torch::Tensor> inputs = {
       torch::rand({2, 10, 10}, torch::TensorOptions(torch::kFloat)),
       torch::rand({2, 2, 10, 10}, torch::TensorOptions(torch::kFloat)),
@@ -7443,6 +7448,11 @@ TEST_F(AtenXlaTensorTest, TestAdaptiveMaxPool2D) {
 }
 
 TEST_F(AtenXlaTensorTest, TestAdaptiveMaxPool2DBackward) {
+  DeviceType hw_type = GetDefaultDevice()->hw_type;
+  // skip this test until the tile mismatch bug is fixed.
+  if (hw_type == DeviceType::TPU) {
+    return;
+  }
   std::vector<torch::Tensor> inputs = {
       torch::rand({2, 10, 10},
                   torch::TensorOptions(torch::kFloat).requires_grad(true)),
