@@ -468,7 +468,7 @@ at::Tensor XLANativeFunctions::_log_softmax(const at::Tensor& self, int64_t dim,
 
 at::Tensor XLANativeFunctions::_log_softmax_backward_data(
     const at::Tensor& grad_output, const at::Tensor& output, int64_t dim,
-    const at::Tensor& /* self */) {
+    at::ScalarType /* input_dtype */) {
   XLA_FN_COUNTER("xla::");
   return bridge::AtenFromXlaTensor(XLATensor::log_softmax_backward(
       bridge::GetXlaTensor(grad_output), bridge::GetXlaTensor(output), dim));
@@ -500,7 +500,7 @@ at::Tensor XLANativeFunctions::_softmax(const at::Tensor& self, int64_t dim,
 
 at::Tensor XLANativeFunctions::_softmax_backward_data(
     const at::Tensor& grad_output, const at::Tensor& output, int64_t dim,
-    const at::Tensor& self) {
+    at::ScalarType input_dtype) {
   XLA_FN_COUNTER("xla::");
   return bridge::AtenFromXlaTensor(XLATensor::softmax_backward(
       bridge::GetXlaTensor(grad_output), bridge::GetXlaTensor(output), dim));
