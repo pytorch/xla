@@ -56,7 +56,8 @@ ConvolutionOverrideable::ConvolutionOverrideable(
 ConvolutionOverrideable::ConvolutionOverrideable(
     const Value& input, const Value& weight, std::vector<xla::int64_t> stride,
     std::vector<xla::int64_t> padding, std::vector<xla::int64_t> dilation,
-    bool transposed, std::vector<xla::int64_t> output_padding, xla::int64_t groups)
+    bool transposed, std::vector<xla::int64_t> output_padding,
+    xla::int64_t groups)
     : Node(ir::OpKind(at::aten::convolution_overrideable), {input, weight},
            [&]() {
              return NodeOutputShape(input, weight, stride, padding, dilation,

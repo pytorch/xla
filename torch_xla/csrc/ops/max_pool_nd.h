@@ -9,8 +9,9 @@ namespace ops {
 class MaxPoolNd : public Node {
  public:
   MaxPoolNd(const Value& input, xla::int64_t spatial_dim_count,
-            std::vector<xla::int64_t> kernel_size, std::vector<xla::int64_t> stride,
-            std::vector<xla::int64_t> padding, bool ceil_mode);
+            std::vector<xla::int64_t> kernel_size,
+            std::vector<xla::int64_t> stride, std::vector<xla::int64_t> padding,
+            bool ceil_mode);
 
   NodePtr Clone(OpList operands) const override;
 

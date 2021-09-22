@@ -41,10 +41,13 @@ c10::Symbol MaxPoolNdBackwardSymbol(xla::int64_t spatial_dim_count) {
 
 }  // namespace
 
-MaxPoolNdBackward::MaxPoolNdBackward(
-    const Value& grad_output, const Value& input, xla::int64_t spatial_dim_count,
-    std::vector<xla::int64_t> kernel_size, std::vector<xla::int64_t> stride,
-    std::vector<xla::int64_t> padding, bool ceil_mode)
+MaxPoolNdBackward::MaxPoolNdBackward(const Value& grad_output,
+                                     const Value& input,
+                                     xla::int64_t spatial_dim_count,
+                                     std::vector<xla::int64_t> kernel_size,
+                                     std::vector<xla::int64_t> stride,
+                                     std::vector<xla::int64_t> padding,
+                                     bool ceil_mode)
     : Node(ir::OpKind(MaxPoolNdBackwardSymbol(spatial_dim_count)),
            {grad_output, input},
            [&]() {

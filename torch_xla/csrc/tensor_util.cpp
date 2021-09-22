@@ -239,7 +239,7 @@ void StridedCopy(D* dest, xla::int64_t dest_stride, const S* source,
 // tensor data representation.
 template <typename S>
 xla::int64_t GetFlatTensorOffset(const S& strides,
-                               const std::vector<xla::int64_t>& indices) {
+                                 const std::vector<xla::int64_t>& indices) {
   xla::int64_t base = 0;
   for (size_t i = 0; i < indices.size(); ++i) {
     base += indices[i] * strides[i];
@@ -382,9 +382,9 @@ std::vector<CopyPartition> CreateCopyPartitions(
   xla::int64_t num_elements = xla::util::Multiply<xla::int64_t>(dimensions);
   xla::int64_t max_dim_unit_elements = num_elements / dimensions[max_dim];
   xla::int64_t max_dim_size = dimensions[max_dim];
-  xla::int64_t part_size =
-      std::max<xla::int64_t>(std::max<xla::int64_t>(max_dim_size / max_parts, 1),
-                           kMinThreadElements / max_dim_unit_elements);
+  xla::int64_t part_size = std::max<xla::int64_t>(
+      std::max<xla::int64_t>(max_dim_size / max_parts, 1),
+      kMinThreadElements / max_dim_unit_elements);
   std::vector<CopyPartition> parts;
   xla::int64_t csize = 0;
   while (csize < max_dim_size) {
@@ -399,7 +399,8 @@ std::vector<CopyPartition> CreateCopyPartitions(
 }
 
 template <typename SType, typename DType>
-void SlicedCopy(absl::Span<const xla::int64_t> dimensions, const SType* src_data,
+void SlicedCopy(absl::Span<const xla::int64_t> dimensions,
+                const SType* src_data,
                 absl::Span<const xla::int64_t> src_strides, DType* dest_data,
                 absl::Span<const xla::int64_t> dest_strides,
                 absl::Span<const xla::int64_t> iter_dims,
@@ -526,7 +527,7 @@ void TensorToBufferSType(const at::Tensor& tensor, const xla::Shape& dest_shape,
       break;
     case xla::PrimitiveType::S64:
       TensorToBuffer<SType, xla::int64_t>(tensor, dest_shape, dest_buffer,
-                                        dest_buffer_size, device);
+                                          dest_buffer_size, device);
       break;
     case xla::PrimitiveType::U64:
       TensorToBuffer<SType, xla::uint64>(tensor, dest_shape, dest_buffer,

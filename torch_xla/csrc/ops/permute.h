@@ -19,8 +19,9 @@ class Permute : public Node {
 
   const std::vector<xla::int64_t>& dims() const { return dims_; }
 
-  static xla::Shape MakePermuteShape(const xla::Shape& source_shape,
-                                     absl::Span<const xla::int64_t> permutation);
+  static xla::Shape MakePermuteShape(
+      const xla::Shape& source_shape,
+      absl::Span<const xla::int64_t> permutation);
 
  private:
   // The permutation of dimensions.

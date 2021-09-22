@@ -25,7 +25,9 @@ class AllToAll : public Node {
 
   xla::int64_t split_count() const { return split_count_; }
 
-  const std::vector<std::vector<xla::int64_t>>& groups() const { return groups_; }
+  const std::vector<std::vector<xla::int64_t>>& groups() const {
+    return groups_;
+  }
 
  private:
   xla::int64_t split_dimension_;

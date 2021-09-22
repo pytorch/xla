@@ -85,7 +85,8 @@ struct SuppressBodyFn {
   xla::int64_t num_boxes;
 };
 
-xla::XlaOp NmsGather(xla::XlaOp input, absl::Span<const xla::int64_t> input_sizes,
+xla::XlaOp NmsGather(xla::XlaOp input,
+                     absl::Span<const xla::int64_t> input_sizes,
                      xla::XlaOp indices,
                      absl::Span<const xla::int64_t> indices_sizes,
                      xla::int64_t axis) {

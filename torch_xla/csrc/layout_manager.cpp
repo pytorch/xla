@@ -88,7 +88,7 @@ class LayoutManager {
   }
 
   static std::vector<xla::int64_t> ParseLayout(const std::string& list_str,
-                                             xla::int64_t rank) {
+                                               xla::int64_t rank) {
     std::vector<xla::int64_t> ints = ParseIntList(list_str);
     XLA_CHECK_EQ(ints.size(), rank) << list_str;
     std::set<xla::int64_t> unique_ints;
@@ -114,8 +114,8 @@ double PaddingFactor(xla::int64_t size, int padding) {
 xla::Shape MakeShapeWithSortedLayout(absl::Span<const xla::int64_t> dimensions,
                                      xla::PrimitiveType type) {
   // Place bigger dimensions on most minor layout locations.
-  std::vector<xla::int64_t> layout =
-      xla::util::Iota<xla::int64_t>(dimensions.size(), dimensions.size() - 1, -1);
+  std::vector<xla::int64_t> layout = xla::util::Iota<xla::int64_t>(
+      dimensions.size(), dimensions.size() - 1, -1);
   std::sort(layout.begin(), layout.end(), [&](xla::int64_t a, xla::int64_t b) {
     return dimensions[a] > dimensions[b];
   });

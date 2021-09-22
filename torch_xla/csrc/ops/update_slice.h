@@ -18,7 +18,9 @@ class UpdateSlice : public Node {
 
   std::string ToString() const override;
 
-  const std::vector<xla::int64_t>& base_indices() const { return base_indices_; }
+  const std::vector<xla::int64_t>& base_indices() const {
+    return base_indices_;
+  }
 
  private:
   std::vector<xla::int64_t> base_indices_;

@@ -84,7 +84,8 @@ XLATensor KlDivBackward(const XLATensor& grad_output, const XLATensor& input,
   return grad_input;
 }
 
-XLATensor MakeMatrixWithDiagonal(const XLATensor& input, xla::int64_t diagonal) {
+XLATensor MakeMatrixWithDiagonal(const XLATensor& input,
+                                 xla::int64_t diagonal) {
   xla::int64_t size = input.shape().get().dimensions(0);
   XLATensor identity =
       XLATensor::eye(size, size, input.GetDevice(), input.dtype());
@@ -199,7 +200,8 @@ XLATensor Select(const XLATensor& input, xla::int64_t dim, xla::int64_t index) {
 
 XLATensor EmbeddingDenseBackward(const XLATensor& grad_output,
                                  const XLATensor& indices,
-                                 xla::int64_t num_weights, xla::int64_t padding_idx,
+                                 xla::int64_t num_weights,
+                                 xla::int64_t padding_idx,
                                  bool scale_grad_by_freq) {
   XLA_CHECK_EQ(indices.dtype(), at::ScalarType::Long)
       << "Embedding indices are expected to be of scalar type Long";

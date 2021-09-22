@@ -19,8 +19,8 @@ class CollectivePermute : public Node {
 
   XlaOpVector Lower(LoweringContext* loctx) const override;
 
-  const std::vector<std::pair<xla::int64_t, xla::int64_t>>& source_target_pairs()
-      const {
+  const std::vector<std::pair<xla::int64_t, xla::int64_t>>&
+  source_target_pairs() const {
     return source_target_pairs_;
   }
 

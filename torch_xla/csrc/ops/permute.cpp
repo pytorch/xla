@@ -44,8 +44,9 @@ std::string Permute::ToString() const {
   return ss.str();
 }
 
-xla::Shape Permute::MakePermuteShape(const xla::Shape& source_shape,
-                                     absl::Span<const xla::int64_t> permutation) {
+xla::Shape Permute::MakePermuteShape(
+    const xla::Shape& source_shape,
+    absl::Span<const xla::int64_t> permutation) {
   return XlaHelpers::GetDynamicReshape(
       source_shape,
       XlaHelpers::Permute(permutation, source_shape.dimensions()));

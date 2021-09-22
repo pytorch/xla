@@ -53,7 +53,8 @@ std::vector<xla::int64_t> GetCompleteShape(
       incomplete_element_count *= dim_size;
     }
   }
-  xla::int64_t total_element_count = xla::util::Multiply<xla::int64_t>(input_sizes);
+  xla::int64_t total_element_count =
+      xla::util::Multiply<xla::int64_t>(input_sizes);
   if (!incomplete_dim) {
     XLA_CHECK_EQ(total_element_count,
                  xla::util::Multiply<xla::int64_t>(output_sizes))
@@ -108,8 +109,9 @@ xla::XlaOp BuildExpand(xla::XlaOp input,
   input_sizes.insert(input_sizes.begin(),
                      output_sizes.size() - input_sizes.size(), 1);
   xla::XlaOp implicit_reshape = XlaHelpers::DynamicReshape(input, input_sizes);
-  return xla::BroadcastInDim(implicit_reshape, output_sizes,
-                             xla::util::Iota<xla::int64_t>(output_sizes.size()));
+  return xla::BroadcastInDim(
+      implicit_reshape, output_sizes,
+      xla::util::Iota<xla::int64_t>(output_sizes.size()));
 }
 
 std::vector<xla::int64_t> BuildSqueezedDimensions(
@@ -156,7 +158,8 @@ xla::XlaOp BuildCat(absl::Span<const xla::XlaOp> inputs, xla::int64_t dim) {
   return xla::ConcatInDim(inputs[0].builder(), inputs, dim);
 }
 
-xla::XlaOp BuildRepeat(xla::XlaOp input, absl::Span<const xla::int64_t> repeats) {
+xla::XlaOp BuildRepeat(xla::XlaOp input,
+                       absl::Span<const xla::int64_t> repeats) {
   const auto input_sizes = XlaHelpers::SizesOfXlaOp(input);
   XLA_CHECK_GE(repeats.size(), input_sizes.size())
       << "Number of dimensions of repeat dims can not be smaller than number "
@@ -169,8 +172,8 @@ xla::XlaOp BuildRepeat(xla::XlaOp input, absl::Span<const xla::int64_t> repeats)
     repeated = xla::ConcatInDim(input.builder(), repeated_inputs, dim);
   }
   if (repeats.size() > input_sizes.size()) {
-    std::vector<xla::int64_t> remaining_repeats(repeats.begin(),
-                                              repeats.begin() + broadcast_dims);
+    std::vector<xla::int64_t> remaining_repeats(
+        repeats.begin(), repeats.begin() + broadcast_dims);
     repeated = xla::Broadcast(repeated, remaining_repeats);
   }
   return repeated;
@@ -230,7 +233,7 @@ xla::XlaOp BuildSlice(xla::XlaOp input,
                       absl::Span<const xla::int64_t> sizes) {
   XLA_CHECK_EQ(base_indices.size(), sizes.size());
   std::vector<xla::int64_t> limit_indices(base_indices.begin(),
-                                        base_indices.end());
+                                          base_indices.end());
   std::transform(limit_indices.begin(), limit_indices.end(), sizes.begin(),
                  limit_indices.begin(), std::plus<xla::int64_t>());
   std::vector<xla::int64_t> strides(base_indices.size(), 1);
@@ -281,7 +284,8 @@ xla::XlaOp BuildResize(xla::XlaOp input, absl::Span<const xla::int64_t> size) {
 }
 
 xla::XlaOp BuildUnselect(xla::XlaOp target, xla::XlaOp source, xla::int64_t dim,
-                         xla::int64_t start, xla::int64_t end, xla::int64_t stride) {
+                         xla::int64_t start, xla::int64_t end,
+                         xla::int64_t stride) {
   const xla::Shape& target_shape = XlaHelpers::ShapeOfXlaOp(target);
   const xla::Shape& source_shape = XlaHelpers::ShapeOfXlaOp(source);
   if (target_shape.dimensions(dim) == source_shape.dimensions(dim)) {
@@ -306,7 +310,7 @@ xla::XlaOp BuildUnselect(xla::XlaOp target, xla::XlaOp source, xla::int64_t dim,
       dims->set_interior_padding(stride - 1);
 
       xla::int64_t size = start + source_shape.dimensions(i) +
-                        (source_shape.dimensions(i) - 1) * (stride - 1);
+                          (source_shape.dimensions(i) - 1) * (stride - 1);
       dims->set_edge_padding_high(target_shape.dimensions(i) - size);
     } else {
       XLA_CHECK_EQ(target_shape.dimensions(i), source_shape.dimensions(i))

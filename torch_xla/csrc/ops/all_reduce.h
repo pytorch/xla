@@ -23,7 +23,9 @@ class AllReduce : public Node {
 
   double scale() const { return scale_; }
 
-  const std::vector<std::vector<xla::int64_t>>& groups() const { return groups_; }
+  const std::vector<std::vector<xla::int64_t>>& groups() const {
+    return groups_;
+  }
 
  private:
   AllReduceType reduce_type_;

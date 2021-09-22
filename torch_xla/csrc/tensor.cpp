@@ -777,8 +777,9 @@ View::IrNode XLATensor::GetViewUpdate(const std::shared_ptr<View>& view) const {
 std::shared_ptr<View> XLATensor::UpdateView(std::shared_ptr<View> view,
                                             ir::Value ir_value) const {
   if (ir_value.shape().dimensions() != view->shape().dimensions()) {
-    XLA_CHECK_EQ(xla::util::Multiply<xla::int64_t>(ir_value.shape().dimensions()),
-                 xla::util::Multiply<xla::int64_t>(view->shape().dimensions()));
+    XLA_CHECK_EQ(
+        xla::util::Multiply<xla::int64_t>(ir_value.shape().dimensions()),
+        xla::util::Multiply<xla::int64_t>(view->shape().dimensions()));
 
     ViewInfo view_info(ViewInfo::Type::kReshape, ir_value.shape(),
                        view->shape());
@@ -1634,7 +1635,8 @@ std::shared_ptr<XLATensor::Async> XLATensor::SyncTensorsGraphInternal(
 }
 
 xla::int64_t XLATensor::GetNextTensorId() {
-  static std::atomic<xla::int64_t>* id_generator = new std::atomic<xla::int64_t>(1);
+  static std::atomic<xla::int64_t>* id_generator =
+      new std::atomic<xla::int64_t>(1);
   return id_generator->fetch_add(1);
 }
 

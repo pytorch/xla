@@ -108,10 +108,9 @@ class XLATensor {
                                        const Device& device);
   static ir::Value GetIrValueForScalar(const at::Scalar& value,
                                        const Device& device);
-  static ir::Value GetIrValueForScalar(const at::Scalar& value,
-                                       xla::PrimitiveType type,
-                                       absl::Span<const xla::int64_t> dimensions,
-                                       const Device& device);
+  static ir::Value GetIrValueForScalar(
+      const at::Scalar& value, xla::PrimitiveType type,
+      absl::Span<const xla::int64_t> dimensions, const Device& device);
   static ir::Value GetIrValueForScalar(const at::Scalar& value,
                                        const xla::Shape& shape,
                                        const Device& device);
@@ -319,10 +318,12 @@ class XLATensor {
                          const at::Scalar& end, const at::Scalar& step,
                          at::ScalarType scalar_type);
 
-  static XLATensor argmax(const XLATensor& input, xla::int64_t dim, bool keepdim);
+  static XLATensor argmax(const XLATensor& input, xla::int64_t dim,
+                          bool keepdim);
   static XLATensor argmax(const XLATensor& input);
 
-  static XLATensor argmin(const XLATensor& input, xla::int64_t dim, bool keepdim);
+  static XLATensor argmin(const XLATensor& input, xla::int64_t dim,
+                          bool keepdim);
   static XLATensor argmin(const XLATensor& input);
 
   // Takes a slice from the input as R1 at the specified offset and reshapes it
@@ -353,8 +354,8 @@ class XLATensor {
                                xla::int64_t spatial_dim_count,
                                std::vector<xla::int64_t> kernel_size,
                                std::vector<xla::int64_t> stride,
-                               std::vector<xla::int64_t> padding, bool ceil_mode,
-                               bool count_include_pad);
+                               std::vector<xla::int64_t> padding,
+                               bool ceil_mode, bool count_include_pad);
 
   static XLATensor avg_pool_nd_backward(const XLATensor& out_backprop,
                                         const XLATensor& input,
@@ -522,15 +523,16 @@ class XLATensor {
 
   static XLATensor exp(const XLATensor& input);
 
-  static XLATensor expand(const XLATensor& input, std::vector<xla::int64_t> size);
+  static XLATensor expand(const XLATensor& input,
+                          std::vector<xla::int64_t> size);
 
   static XLATensor expm1(const XLATensor& input);
 
   static void exponential_(XLATensor& input, double lambd);
 
   // Returns a 2-D tensor with ones on the diagonal and zeros elsewhere.
-  static XLATensor eye(xla::int64_t lines, xla::int64_t cols, const Device& device,
-                       at::ScalarType element_type);
+  static XLATensor eye(xla::int64_t lines, xla::int64_t cols,
+                       const Device& device, at::ScalarType element_type);
 
   static void eye_out(XLATensor& out, xla::int64_t lines, xla::int64_t cols);
 
@@ -639,7 +641,8 @@ class XLATensor {
                                    xla::int64_t reduction, bool log_target);
 
   static std::tuple<XLATensor, XLATensor> kthvalue(const XLATensor& input,
-                                                   xla::int64_t k, xla::int64_t dim,
+                                                   xla::int64_t k,
+                                                   xla::int64_t dim,
                                                    bool keepdim);
 
   static XLATensor l1_loss(const XLATensor& input, const XLATensor& target,
@@ -919,15 +922,15 @@ class XLATensor {
 
   static XLATensor replication_pad1d(const XLATensor& input,
                                      std::vector<xla::int64_t> padding);
-  static XLATensor replication_pad1d_backward(const XLATensor& grad_output,
-                                              const XLATensor& input,
-                                              std::vector<xla::int64_t> padding);
+  static XLATensor replication_pad1d_backward(
+      const XLATensor& grad_output, const XLATensor& input,
+      std::vector<xla::int64_t> padding);
 
   static XLATensor replication_pad2d(const XLATensor& input,
                                      std::vector<xla::int64_t> padding);
-  static XLATensor replication_pad2d_backward(const XLATensor& grad_output,
-                                              const XLATensor& input,
-                                              std::vector<xla::int64_t> padding);
+  static XLATensor replication_pad2d_backward(
+      const XLATensor& grad_output, const XLATensor& input,
+      std::vector<xla::int64_t> padding);
 
   static void resize_(XLATensor& input, std::vector<xla::int64_t> size);
 
@@ -982,13 +985,14 @@ class XLATensor {
   static XLATensor sinh(const XLATensor& input);
 
   static XLATensor slice(const XLATensor& input, xla::int64_t dim,
-                         xla::int64_t start, xla::int64_t end, xla::int64_t step);
+                         xla::int64_t start, xla::int64_t end,
+                         xla::int64_t step);
 
   // Computes a loss that uses a squared term if the absolute element-wise error
   // falls below 1 and an L1 term otherwise.
   static XLATensor smooth_l1_loss(const XLATensor& input,
-                                  const XLATensor& target, xla::int64_t reduction,
-                                  double beta);
+                                  const XLATensor& target,
+                                  xla::int64_t reduction, double beta);
 
   // Returns the gradient of the input of a smooth_l1_loss operation.
   static XLATensor smooth_l1_loss_backward(const XLATensor& grad_output,
@@ -1015,7 +1019,8 @@ class XLATensor {
                                        const at::Scalar& lambda);
 
   static std::vector<XLATensor> split(const XLATensor& input,
-                                      xla::int64_t split_size, xla::int64_t dim);
+                                      xla::int64_t split_size,
+                                      xla::int64_t dim);
 
   static std::vector<XLATensor> split_with_sizes(
       const XLATensor& input, std::vector<xla::int64_t> split_size,
@@ -1092,7 +1097,8 @@ class XLATensor {
                              xla::int64_t dim1);
 
   // In-place version of the method above.
-  static void transpose_(XLATensor& input, xla::int64_t dim0, xla::int64_t dim1);
+  static void transpose_(XLATensor& input, xla::int64_t dim0,
+                         xla::int64_t dim1);
 
   static std::tuple<XLATensor, XLATensor> triangular_solve(
       const XLATensor& rhs, const XLATensor& lhs, bool left_side, bool upper,
@@ -1116,7 +1122,8 @@ class XLATensor {
 
   // Returns a tuple of all slices along a given dimension with that dimension
   // removed.
-  static std::vector<XLATensor> unbind(const XLATensor& input, xla::int64_t dim);
+  static std::vector<XLATensor> unbind(const XLATensor& input,
+                                       xla::int64_t dim);
 
   static void uniform_(XLATensor& input, double from, double to);
 

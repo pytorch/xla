@@ -277,9 +277,12 @@ xla::ConvolutionDimensionNumbers ParseConvolutionDimensionNumbers(
             args);
   XLA_PBSET(dimension_numbers, output_batch_dimension, xla::int64_t, args);
   XLA_PBSET(dimension_numbers, output_feature_dimension, xla::int64_t, args);
-  XLA_PBSET_REP(dimension_numbers, input_spatial_dimensions, xla::int64_t, args);
-  XLA_PBSET_REP(dimension_numbers, kernel_spatial_dimensions, xla::int64_t, args);
-  XLA_PBSET_REP(dimension_numbers, output_spatial_dimensions, xla::int64_t, args);
+  XLA_PBSET_REP(dimension_numbers, input_spatial_dimensions, xla::int64_t,
+                args);
+  XLA_PBSET_REP(dimension_numbers, kernel_spatial_dimensions, xla::int64_t,
+                args);
+  XLA_PBSET_REP(dimension_numbers, output_spatial_dimensions, xla::int64_t,
+                args);
   return dimension_numbers;
 }
 
@@ -380,7 +383,8 @@ xla::XlaOp Slice(const BuilderPtr& builder, const std::vector<OpPtr>& operands,
       GetTupleVector<xla::int64_t>(args["start_indices"]);
   std::vector<xla::int64_t> limit_indices =
       GetTupleVector<xla::int64_t>(args["limit_indices"]);
-  std::vector<xla::int64_t> strides = GetTupleVector<xla::int64_t>(args["strides"]);
+  std::vector<xla::int64_t> strides =
+      GetTupleVector<xla::int64_t>(args["strides"]);
   return xla::Slice(operands.at(0)->op, start_indices, limit_indices, strides);
 }
 
@@ -622,7 +626,8 @@ xla::XlaOp SelectAndScatterWithGeneralPadding(
 
 xla::TensorFormat ParseTensorFormat(py::dict args) {
   xla::int64_t batch_dimension = args["batch_dimension"].cast<xla::int64_t>();
-  xla::int64_t feature_dimension = args["feature_dimension"].cast<xla::int64_t>();
+  xla::int64_t feature_dimension =
+      args["feature_dimension"].cast<xla::int64_t>();
   std::vector<xla::int64_t> spatial_dimensions =
       GetTupleVector<xla::int64_t>(args["spatial_dimensions"]);
   return xla::TensorFormat(batch_dimension, feature_dimension,
@@ -633,7 +638,8 @@ xla::XlaOp MaxPool(const BuilderPtr& builder,
                    const std::vector<OpPtr>& operands, py::dict args) {
   std::vector<xla::int64_t> kernel_size =
       GetTupleVector<xla::int64_t>(args["kernel_size"]);
-  std::vector<xla::int64_t> stride = GetTupleVector<xla::int64_t>(args["stride"]);
+  std::vector<xla::int64_t> stride =
+      GetTupleVector<xla::int64_t>(args["stride"]);
   xla::Padding padding = ParsePadding(args["padding"].cast<std::string>());
   xla::TensorFormat data_format = ParseTensorFormat(args);
   return xla::MaxPool(operands.at(0)->op, kernel_size, stride, padding,
