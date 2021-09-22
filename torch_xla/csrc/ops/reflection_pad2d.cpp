@@ -12,7 +12,7 @@ namespace ops {
 namespace {
 
 xla::Shape NodeOutputShape(const Value& input,
-                           absl::Span<const xla::int64> padding) {
+                           absl::Span<const xla::int64_t> padding) {
   auto lower_for_shape_fn =
       [&](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
     return BuildReflectionPad2d(operands[0], padding);
@@ -23,7 +23,7 @@ xla::Shape NodeOutputShape(const Value& input,
 }  // namespace
 
 ReflectionPad2d::ReflectionPad2d(const Value& input,
-                                 std::vector<xla::int64> padding)
+                                 std::vector<xla::int64_t> padding)
     : Node(OpKind(at::aten::reflection_pad2d), {input},
            [&]() { return NodeOutputShape(input, padding); },
            /*num_outputs=*/1, xla::util::MHash(padding)),

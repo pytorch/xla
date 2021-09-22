@@ -15,7 +15,7 @@ namespace ops {
 namespace {
 
 xla::Shape NodeOutputShape(const Value& input,
-                           std::vector<xla::int64>& dimensions,
+                           std::vector<xla::int64_t>& dimensions,
                            bool keep_reduced_dimensions) {
   auto lower_for_shape_fn =
       [&](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
@@ -26,7 +26,7 @@ xla::Shape NodeOutputShape(const Value& input,
 
 }  // namespace
 
-Any::Any(const Value& input, std::vector<xla::int64> dimensions,
+Any::Any(const Value& input, std::vector<xla::int64_t> dimensions,
          bool keep_reduced_dimensions)
     : Node(ir::OpKind(at::aten::any), {input},
            NodeOutputShape(input, dimensions, keep_reduced_dimensions),

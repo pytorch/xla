@@ -29,15 +29,15 @@ struct CollectivePermuteResult {
 std::vector<xla::XlaOp> BuildAllReduce(
     AllReduceType reduce_type, absl::Span<const xla::XlaOp> operands,
     xla::XlaOp token, double scale,
-    const std::vector<std::vector<xla::int64>>& groups);
+    const std::vector<std::vector<xla::int64_t>>& groups);
 
 AllToAllResult BuildAllToAll(
-    xla::XlaOp input, xla::XlaOp token, xla::int64 split_dimension,
-    xla::int64 concat_dimension, xla::int64 split_count,
-    const std::vector<std::vector<xla::int64>>& groups);
+    xla::XlaOp input, xla::XlaOp token, xla::int64_t split_dimension,
+    xla::int64_t concat_dimension, xla::int64_t split_count,
+    const std::vector<std::vector<xla::int64_t>>& groups);
 
 CollectivePermuteResult BuildCollectivePermute(
     xla::XlaOp input, xla::XlaOp token,
-    const std::vector<std::pair<xla::int64, xla::int64>>& source_target_pairs);
+    const std::vector<std::pair<xla::int64_t, xla::int64_t>>& source_target_pairs);
 
 }  // namespace torch_xla

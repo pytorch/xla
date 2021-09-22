@@ -265,7 +265,7 @@ bool ShouldSyncIrValue(const ir::Value& ir_value) {
 class XLATensor::DeviceContextArena {
   struct DeviceContext {
     std::mutex lock;
-    std::map<xla::int64, std::weak_ptr<Data>> tensors_data;
+    std::map<xla::int64_t, std::weak_ptr<Data>> tensors_data;
     xla::uint64 seed = 101;
     xla::uint64 running_seed = 101;
     ir::Value seed_ir_value;
@@ -387,10 +387,10 @@ class XLATensor::DeviceContextArena {
 };
 
 struct DeviceDataInfo : public xla::ComputationClient::Data::Info {
-  DeviceDataInfo(xla::int64 tensor_id, bool read_only)
+  DeviceDataInfo(xla::int64_t tensor_id, bool read_only)
       : tensor_id(tensor_id), read_only(read_only) {}
 
-  xla::int64 tensor_id = 0;
+  xla::int64_t tensor_id = 0;
   bool read_only = false;
 };
 
@@ -489,7 +489,7 @@ XLATensor::Data* XLATensor::data() const {
   return data_.get();
 }
 
-xla::int64 XLATensor::size(xla::int64 dim) const {
+xla::int64_t XLATensor::size(xla::int64_t dim) const {
   auto xla_shape = shape();
   int rank = xla_shape.get().rank();
   int dim_index = XlaHelpers::GetCanonicalDimensionIndex(dim, rank);
@@ -532,7 +532,7 @@ xla::Shape XLATensor::shape_with_layout() const {
 
 const Device& XLATensor::GetDevice() const { return data()->device; }
 
-xla::int64 XLATensor::GetUniqueId() const { return data()->unique_id; }
+xla::int64_t XLATensor::GetUniqueId() const { return data()->unique_id; }
 
 std::ptrdiff_t XLATensor::GetViewAliasId() const {
   return data()->view != nullptr
@@ -738,11 +738,11 @@ ir::Value XLATensor::GetIrValueForScalar(const at::Scalar& value,
 
 ir::Value XLATensor::GetIrValueForScalar(
     const at::Scalar& value, xla::PrimitiveType type,
-    absl::Span<const xla::int64> dimensions, const Device& device) {
+    absl::Span<const xla::int64_t> dimensions, const Device& device) {
   ir::Value ir_value = GetIrValueForScalar(value, type, device);
   if (!dimensions.empty()) {
     ir_value = ir::MakeNode<ir::ops::Expand>(
-        ir_value, xla::util::ToVector<xla::int64>(dimensions));
+        ir_value, xla::util::ToVector<xla::int64_t>(dimensions));
   }
   return ir_value;
 }
@@ -776,8 +776,8 @@ View::IrNode XLATensor::GetViewUpdate(const std::shared_ptr<View>& view) const {
 std::shared_ptr<View> XLATensor::UpdateView(std::shared_ptr<View> view,
                                             ir::Value ir_value) const {
   if (ir_value.shape().dimensions() != view->shape().dimensions()) {
-    XLA_CHECK_EQ(xla::util::Multiply<xla::int64>(ir_value.shape().dimensions()),
-                 xla::util::Multiply<xla::int64>(view->shape().dimensions()));
+    XLA_CHECK_EQ(xla::util::Multiply<xla::int64_t>(ir_value.shape().dimensions()),
+                 xla::util::Multiply<xla::int64_t>(view->shape().dimensions()));
 
     ViewInfo view_info(ViewInfo::Type::kReshape, ir_value.shape(),
                        view->shape());
@@ -915,10 +915,10 @@ std::vector<xla::ComputationClient::DataPtr> XLATensor::GatherTensorsXlaData(
     const std::vector<XLATensor>& tensors, absl::Span<const size_t> indices,
     absl::Span<const xla::ComputationClient::DataPtr> tensors_data) {
   std::vector<xla::ComputationClient::DataPtr> result_tensors_data;
-  std::unordered_map<xla::int64, size_t> uid_index_map;
+  std::unordered_map<xla::int64_t, size_t> uid_index_map;
   size_t indices_index = 0;
   for (size_t i = 0; i < tensors.size(); ++i) {
-    xla::int64 tensor_id = tensors[i].GetUniqueId();
+    xla::int64_t tensor_id = tensors[i].GetUniqueId();
     auto it = uid_index_map.find(tensor_id);
     if (it != uid_index_map.end()) {
       // Current tensor is a duplicate of a previously processed tensor that had
@@ -1128,7 +1128,7 @@ XLATensor::SyncTensorCollection XLATensor::CollectSyncTensors(
   std::vector<at::Tensor> at_tensors;
   std::vector<std::string> devices;
   std::vector<size_t> at_tensor_index;
-  std::unordered_set<xla::int64> tensor_ids;
+  std::unordered_set<xla::int64_t> tensor_ids;
   // The force_xla_data controls aliasing compilation, so effectively the same
   // graph with on/off force_xla_data should not match, hash wise.
   coll.hash = xla::util::MHash(config.force_xla_data);
@@ -1478,10 +1478,10 @@ XLATensor::OpByOpAsync XLATensor::SyncTensorsGraphOpByOp(
 void XLATensor::BuildInputOutputAliases(const std::vector<XLATensor>& tensors,
                                         absl::Span<const size_t> indices,
                                         ir::LoweringContext* lowering_ctx) {
-  std::unordered_map<xla::int64, size_t> output_tensor_id_map;
+  std::unordered_map<xla::int64_t, size_t> output_tensor_id_map;
   for (size_t i = 0; i < indices.size(); ++i) {
     size_t tensor_index = indices[i];
-    xla::int64 tensor_id = tensors[tensor_index].GetUniqueId();
+    xla::int64_t tensor_id = tensors[tensor_index].GetUniqueId();
     output_tensor_id_map[tensor_id] = i;
   }
   const std::vector<xla::ComputationClient::DataPtr>& parameters_data =
@@ -1499,7 +1499,7 @@ void XLATensor::BuildInputOutputAliases(const std::vector<XLATensor>& tensors,
         if (parameters_data[i]->shape() == root_shape &&
             alias_map[output_index] < 0) {
           lowering_ctx->builder()->SetUpAlias(
-              {static_cast<xla::int64>(output_index)}, i, {});
+              {static_cast<xla::int64_t>(output_index)}, i, {});
           alias_map[output_index] = i;
 
           TF_VLOG(6) << "Aliased paramter " << i << " with output "
@@ -1628,8 +1628,8 @@ std::shared_ptr<XLATensor::Async> XLATensor::SyncTensorsGraphInternal(
       compile_result.device.ToString(), std::move(cached_computation));
 }
 
-xla::int64 XLATensor::GetNextTensorId() {
-  static std::atomic<xla::int64>* id_generator = new std::atomic<xla::int64>(1);
+xla::int64_t XLATensor::GetNextTensorId() {
+  static std::atomic<xla::int64_t>* id_generator = new std::atomic<xla::int64_t>(1);
   return id_generator->fetch_add(1);
 }
 

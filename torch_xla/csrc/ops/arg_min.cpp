@@ -10,7 +10,7 @@ namespace ir {
 namespace ops {
 namespace {
 
-xla::Shape NodeOutputShape(const Value& input, xla::int64 dim, bool keepdim) {
+xla::Shape NodeOutputShape(const Value& input, xla::int64_t dim, bool keepdim) {
   auto lower_for_shape_fn =
       [&](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
     return BuildArgMin(operands[0], dim, keepdim);
@@ -20,7 +20,7 @@ xla::Shape NodeOutputShape(const Value& input, xla::int64 dim, bool keepdim) {
 
 }  // namespace
 
-ArgMin::ArgMin(const Value& input, xla::int64 dim, bool keepdim)
+ArgMin::ArgMin(const Value& input, xla::int64_t dim, bool keepdim)
     : Node(ir::OpKind(at::aten::argmin), {input},
            [&]() { return NodeOutputShape(input, dim, keepdim); },
            /*num_outputs=*/1, xla::util::MHash(dim, keepdim)),

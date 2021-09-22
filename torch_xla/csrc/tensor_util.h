@@ -13,9 +13,9 @@
 
 namespace torch_xla {
 
-std::vector<xla::int64> ComputeShapeStrides(const xla::Shape& shape);
+std::vector<xla::int64_t> ComputeShapeStrides(const xla::Shape& shape);
 
-std::vector<xla::int64> ComputeArrayStrides(absl::Span<const xla::int64> sizes);
+std::vector<xla::int64_t> ComputeArrayStrides(absl::Span<const xla::int64_t> sizes);
 
 // Converts an XLA literal to an at::Tensor of the given element type.
 at::Tensor MakeTensorFromXlaLiteral(const xla::Literal& literal,
