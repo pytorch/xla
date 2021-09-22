@@ -142,7 +142,8 @@ AllToAllResult BuildAllToAll(
 
 CollectivePermuteResult BuildCollectivePermute(
     xla::XlaOp input, xla::XlaOp token,
-    const std::vector<std::pair<xla::int64_t, xla::int64_t>>& source_target_pairs) {
+    const std::vector<std::pair<xla::int64_t, xla::int64_t>>&
+        source_target_pairs) {
   const xla::Shape& input_shape = XlaHelpers::ShapeOfXlaOp(input);
   TokenHandler token_handler(token);
   // TODO: This is missing layout pinning ATM. If XLA scheduling is not exactly

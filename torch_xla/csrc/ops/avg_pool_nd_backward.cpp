@@ -15,8 +15,8 @@ xla::Shape NodeOutputShape(const Value& grad_output, const Value& input,
                            xla::int64_t spatial_dim_count,
                            absl::Span<const xla::int64_t> kernel_size,
                            absl::Span<const xla::int64_t> stride,
-                           absl::Span<const xla::int64_t> padding, bool ceil_mode,
-                           bool count_include_pad) {
+                           absl::Span<const xla::int64_t> padding,
+                           bool ceil_mode, bool count_include_pad) {
   auto lower_for_shape_fn =
       [&](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
     XLA_CHECK_EQ(operands.size(), 2)
@@ -44,10 +44,13 @@ c10::Symbol AvgNdBackwardSymbol(xla::int64_t spatial_dim_count) {
 
 }  // namespace
 
-AvgPoolNdBackward::AvgPoolNdBackward(
-    const Value& grad_output, const Value& input, xla::int64_t spatial_dim_count,
-    std::vector<xla::int64_t> kernel_size, std::vector<xla::int64_t> stride,
-    std::vector<xla::int64_t> padding, bool ceil_mode, bool count_include_pad)
+AvgPoolNdBackward::AvgPoolNdBackward(const Value& grad_output,
+                                     const Value& input,
+                                     xla::int64_t spatial_dim_count,
+                                     std::vector<xla::int64_t> kernel_size,
+                                     std::vector<xla::int64_t> stride,
+                                     std::vector<xla::int64_t> padding,
+                                     bool ceil_mode, bool count_include_pad)
     : Node(OpKind(AvgNdBackwardSymbol(spatial_dim_count)), {grad_output, input},
            [&]() {
              return NodeOutputShape(grad_output, input, spatial_dim_count,

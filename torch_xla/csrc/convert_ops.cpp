@@ -39,7 +39,8 @@ xla::XlaOp ConvertData(xla::XlaOp op, xla::PrimitiveType type,
     return op;
   }
   xla::int64_t size = xla::ShapeUtil::ByteSizeOfPrimitiveType(type);
-  xla::int64_t narrow_size = xla::ShapeUtil::ByteSizeOfPrimitiveType(narrow_type);
+  xla::int64_t narrow_size =
+      xla::ShapeUtil::ByteSizeOfPrimitiveType(narrow_type);
   XLA_CHECK_GE(size, narrow_size);
   if (size == narrow_size) {
     return op;

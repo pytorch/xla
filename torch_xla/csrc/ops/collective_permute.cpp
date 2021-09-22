@@ -14,7 +14,8 @@ namespace {
 
 xla::Shape NodeOutputShape(
     const Value& input, const Value& token,
-    const std::vector<std::pair<xla::int64_t, xla::int64_t>>& source_target_pairs) {
+    const std::vector<std::pair<xla::int64_t, xla::int64_t>>&
+        source_target_pairs) {
   auto shape_fn = [&](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
     CollectivePermuteResult result =
         BuildCollectivePermute(operands[0], operands[1], source_target_pairs);

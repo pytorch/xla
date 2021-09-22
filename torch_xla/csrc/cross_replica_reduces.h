@@ -38,6 +38,7 @@ AllToAllResult BuildAllToAll(
 
 CollectivePermuteResult BuildCollectivePermute(
     xla::XlaOp input, xla::XlaOp token,
-    const std::vector<std::pair<xla::int64_t, xla::int64_t>>& source_target_pairs);
+    const std::vector<std::pair<xla::int64_t, xla::int64_t>>&
+        source_target_pairs);
 
 }  // namespace torch_xla

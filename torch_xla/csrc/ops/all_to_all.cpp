@@ -12,10 +12,10 @@ namespace ir {
 namespace ops {
 namespace {
 
-xla::Shape NodeOutputShape(const Value& input, const Value& token,
-                           xla::int64_t split_dimension,
-                           xla::int64_t concat_dimension, xla::int64_t split_count,
-                           const std::vector<std::vector<xla::int64_t>>& groups) {
+xla::Shape NodeOutputShape(
+    const Value& input, const Value& token, xla::int64_t split_dimension,
+    xla::int64_t concat_dimension, xla::int64_t split_count,
+    const std::vector<std::vector<xla::int64_t>>& groups) {
   auto shape_fn = [&](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
     AllToAllResult result =
         BuildAllToAll(operands[0], operands[1], split_dimension,

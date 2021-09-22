@@ -54,7 +54,8 @@ xla::XlaOp BuildStack(absl::Span<const xla::XlaOp> inputs, xla::int64_t dim);
 xla::XlaOp BuildCat(absl::Span<const xla::XlaOp> inputs, xla::int64_t dim);
 
 // Repeats the input tensor along each dimension by the given number of repeats.
-xla::XlaOp BuildRepeat(xla::XlaOp input, absl::Span<const xla::int64_t> repeats);
+xla::XlaOp BuildRepeat(xla::XlaOp input,
+                       absl::Span<const xla::int64_t> repeats);
 
 // Computes the number of splits with a dimension size and the split sizes.
 size_t ComputeSplitCount(xla::int64_t dim_size,
@@ -82,7 +83,8 @@ xla::XlaOp BuildTake(xla::XlaOp input, xla::XlaOp index);
 xla::XlaOp BuildResize(xla::XlaOp input, absl::Span<const xla::int64_t> size);
 
 xla::XlaOp BuildUnselect(xla::XlaOp target, xla::XlaOp source, xla::int64_t dim,
-                         xla::int64_t start, xla::int64_t end, xla::int64_t stride);
+                         xla::int64_t start, xla::int64_t end,
+                         xla::int64_t stride);
 
 xla::XlaOp BuildReflectionPad2d(xla::XlaOp input,
                                 absl::Span<const xla::int64_t> padding);

@@ -293,8 +293,8 @@ at::Tensor XLANativeFunctions::_adaptive_avg_pool3d_backward(
   XLA_FN_COUNTER("xla::");
   int64_t rank = grad_output.dim();
   std::vector<xla::int64_t> output_size{grad_output.size(rank - 3),
-                                      grad_output.size(rank - 2),
-                                      grad_output.size(rank - 1)};
+                                        grad_output.size(rank - 2),
+                                        grad_output.size(rank - 1)};
   if (!IsSupportedAdaptivePool(XlaHelpers::I64List(self.sizes()), output_size,
                                /*pool_dim=*/3)) {
     return at::native::call_fallback_fn<
@@ -324,7 +324,7 @@ at::Tensor XLANativeFunctions::_adaptive_avg_pool2d_backward(
   XLA_FN_COUNTER("xla::");
   int64_t rank = grad_output.dim();
   std::vector<xla::int64_t> output_size{grad_output.size(rank - 2),
-                                      grad_output.size(rank - 1)};
+                                        grad_output.size(rank - 1)};
   if (!IsSupportedAdaptivePool(XlaHelpers::I64List(self.sizes()), output_size,
                                /*pool_dim=*/2)) {
     return at::native::call_fallback_fn<
@@ -357,7 +357,7 @@ at::Tensor XLANativeFunctions::adaptive_max_pool2d_backward(
   XLA_FN_COUNTER("xla::");
   int64_t rank = grad_output.dim();
   std::vector<xla::int64_t> output_size{grad_output.size(rank - 2),
-                                      grad_output.size(rank - 1)};
+                                        grad_output.size(rank - 1)};
   if (!IsSupportedAdaptivePool(XlaHelpers::I64List(self.sizes()), output_size,
                                /*pool_dim=*/2)) {
     return at::native::call_fallback_fn<
@@ -3049,9 +3049,10 @@ at::Tensor XLANativeFunctions::std(const at::Tensor& self, bool unbiased) {
 at::Tensor XLANativeFunctions::std(const at::Tensor& self, at::IntArrayRef dim,
                                    bool unbiased, bool keepdim) {
   XLA_FN_COUNTER("xla::");
-  return bridge::AtenFromXlaTensor(XLATensor::std(
-      bridge::GetXlaTensor(self), xla::util::ToVector<xla::int64_t>(dim), keepdim,
-      /*correction=*/unbiased ? 1 : 0));
+  return bridge::AtenFromXlaTensor(
+      XLATensor::std(bridge::GetXlaTensor(self),
+                     xla::util::ToVector<xla::int64_t>(dim), keepdim,
+                     /*correction=*/unbiased ? 1 : 0));
 }
 
 at::Tensor XLANativeFunctions::std(const at::Tensor& self,

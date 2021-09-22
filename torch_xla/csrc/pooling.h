@@ -30,8 +30,8 @@ xla::XlaOp BuildMaxPoolNdBackward(xla::XlaOp out_backprop, xla::XlaOp input,
 xla::XlaOp BuildAvgPoolNd(xla::XlaOp input, xla::int64_t spatial_dim_count,
                           absl::Span<const xla::int64_t> kernel_size,
                           absl::Span<const xla::int64_t> stride,
-                          absl::Span<const xla::int64_t> padding, bool ceil_mode,
-                          bool count_include_pad);
+                          absl::Span<const xla::int64_t> padding,
+                          bool ceil_mode, bool count_include_pad);
 
 // Computes the gradient for average pooling.
 xla::XlaOp BuildAvgPoolNdBackward(xla::XlaOp out_backprop, xla::XlaOp input,

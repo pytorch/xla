@@ -37,7 +37,8 @@ XLATensor Select(const XLATensor& input, xla::int64_t dim, xla::int64_t index);
 
 XLATensor EmbeddingDenseBackward(const XLATensor& grad_output,
                                  const XLATensor& indices,
-                                 xla::int64_t num_weights, xla::int64_t padding_idx,
+                                 xla::int64_t num_weights,
+                                 xla::int64_t padding_idx,
                                  bool scale_grad_by_freq);
 
 }  // namespace tensor_ops

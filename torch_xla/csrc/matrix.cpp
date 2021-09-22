@@ -66,8 +66,9 @@ DiagonalMask CreateDiagonalMask(xla::XlaOp input,
   return {source, mask};
 }
 
-std::vector<xla::int64_t> GetDiagonalPermutation(xla::int64_t rank, xla::int64_t dim1,
-                                               xla::int64_t dim2) {
+std::vector<xla::int64_t> GetDiagonalPermutation(xla::int64_t rank,
+                                                 xla::int64_t dim1,
+                                                 xla::int64_t dim2) {
   std::vector<xla::int64_t> permutation;
   for (xla::int64_t dim = 0; dim < rank; ++dim) {
     if (dim != dim1 && dim != dim2) {
@@ -91,8 +92,8 @@ xla::XlaOp BuildTril(xla::XlaOp input, xla::int64_t diagonal) {
                      xla::ZerosLike(input));
 }
 
-xla::XlaOp BuildDiagonal(xla::XlaOp input, xla::int64_t offset, xla::int64_t dim1,
-                         xla::int64_t dim2) {
+xla::XlaOp BuildDiagonal(xla::XlaOp input, xla::int64_t offset,
+                         xla::int64_t dim1, xla::int64_t dim2) {
   xla::XlaOp diag_input = input;
   if (dim1 != 0 || dim2 != 1) {
     const xla::Shape& input_shape = XlaHelpers::ShapeOfXlaOp(input);

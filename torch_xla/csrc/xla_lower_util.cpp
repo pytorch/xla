@@ -96,8 +96,10 @@ std::pair<xla::XlaOp, xla::XlaOp> DotBroadcast(xla::XlaOp lhs,
                                                const xla::Shape& lhs_shape,
                                                xla::XlaOp rhs,
                                                const xla::Shape& rhs_shape) {
-  auto lhs_dimensions = xla::util::ToVector<xla::int64_t>(lhs_shape.dimensions());
-  auto rhs_dimensions = xla::util::ToVector<xla::int64_t>(rhs_shape.dimensions());
+  auto lhs_dimensions =
+      xla::util::ToVector<xla::int64_t>(lhs_shape.dimensions());
+  auto rhs_dimensions =
+      xla::util::ToVector<xla::int64_t>(rhs_shape.dimensions());
   XLA_CHECK_EQ(lhs_dimensions.size(), rhs_dimensions.size());
   for (xla::int64_t i = 0; i < lhs_dimensions.size() - 2; ++i) {
     if (lhs_dimensions[i] == rhs_dimensions[i]) {
@@ -116,14 +118,14 @@ std::pair<xla::XlaOp, xla::XlaOp> DotBroadcast(xla::XlaOp lhs,
   xla::XlaOp broadcasted_lhs = lhs;
   xla::XlaOp broadcasted_rhs = rhs;
   if (lhs_dimensions != lhs_shape.dimensions()) {
-    broadcasted_lhs =
-        xla::BroadcastInDim(lhs, lhs_dimensions,
-                            xla::util::Iota<xla::int64_t>(lhs_dimensions.size()));
+    broadcasted_lhs = xla::BroadcastInDim(
+        lhs, lhs_dimensions,
+        xla::util::Iota<xla::int64_t>(lhs_dimensions.size()));
   }
   if (rhs_dimensions != rhs_shape.dimensions()) {
-    broadcasted_rhs =
-        xla::BroadcastInDim(rhs, rhs_dimensions,
-                            xla::util::Iota<xla::int64_t>(rhs_dimensions.size()));
+    broadcasted_rhs = xla::BroadcastInDim(
+        rhs, rhs_dimensions,
+        xla::util::Iota<xla::int64_t>(rhs_dimensions.size()));
   }
   return std::make_pair(broadcasted_lhs, broadcasted_rhs);
 }
@@ -327,7 +329,7 @@ std::vector<xla::XlaOp> CreateKthValue(xla::XlaOp input, xla::int64_t k,
   std::vector<xla::int64_t> start_indices(shape.rank(), 0);
   start_indices[dim] = k - 1;
   std::vector<xla::int64_t> limit_indices(shape.dimensions().begin(),
-                                        shape.dimensions().end());
+                                          shape.dimensions().end());
   limit_indices[dim] = k;
   std::vector<xla::int64_t> strides(shape.rank(), 1);
 
@@ -366,7 +368,7 @@ std::vector<xla::XlaOp> CreateTopK(xla::XlaOp input, xla::int64_t k,
 
   std::vector<xla::int64_t> start_indices(shape.rank(), 0);
   std::vector<xla::int64_t> limit_indices(shape.dimensions().begin(),
-                                        shape.dimensions().end());
+                                          shape.dimensions().end());
   limit_indices[dim] = k;
   std::vector<xla::int64_t> strides(shape.rank(), 1);
 
@@ -572,7 +574,8 @@ xla::XlaOp CreateIndexUpdate(
   }
   expected_values_dims.insert(expected_values_dims.end(), indices_dims.begin(),
                               indices_dims.end());
-  for (xla::int64_t dim = num_index_dims + start_dim; dim < buffer_rank; ++dim) {
+  for (xla::int64_t dim = num_index_dims + start_dim; dim < buffer_rank;
+       ++dim) {
     expected_values_dims.push_back(buffer_shape.dimensions(dim));
   }
   xla::XlaOp new_values = values;
@@ -611,14 +614,14 @@ xla::XlaOp CreateIndexAdd(xla::XlaOp buffer, xla::int64_t dim, xla::XlaOp index,
                              add_scatter_combiner);
 }
 
-xla::XlaOp CreateIndexCopy(xla::XlaOp buffer, xla::int64_t dim, xla::XlaOp index,
-                           xla::XlaOp value) {
+xla::XlaOp CreateIndexCopy(xla::XlaOp buffer, xla::int64_t dim,
+                           xla::XlaOp index, xla::XlaOp value) {
   return CreateIndexAlongDim(buffer, dim, index, value,
                              /*broadcast_value_to_index=*/false, nullptr);
 }
 
-xla::XlaOp CreateIndexFill(xla::XlaOp buffer, xla::int64_t dim, xla::XlaOp index,
-                           xla::XlaOp value) {
+xla::XlaOp CreateIndexFill(xla::XlaOp buffer, xla::int64_t dim,
+                           xla::XlaOp index, xla::XlaOp value) {
   return CreateIndexAlongDim(buffer, dim, index, value,
                              /*broadcast_value_to_index=*/true, nullptr);
 }

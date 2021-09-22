@@ -22,7 +22,8 @@ xla::Shape NodeOutputShape(const Value& input, const Value& index,
 
 }  // namespace
 
-IndexSelect::IndexSelect(const Value& input, xla::int64_t dim, const Value& index)
+IndexSelect::IndexSelect(const Value& input, xla::int64_t dim,
+                         const Value& index)
     : Node(ir::OpKind(at::aten::index_select), {input, index},
            [&]() { return NodeOutputShape(input, index, dim); },
            /*num_outputs=*/1, xla::util::MHash(dim)),

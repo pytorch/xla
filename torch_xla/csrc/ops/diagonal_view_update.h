@@ -8,8 +8,8 @@ namespace ops {
 
 class DiagonalViewUpdate : public Node {
  public:
-  DiagonalViewUpdate(const Value& target, const Value& input, xla::int64_t offset,
-                     xla::int64_t dim1, xla::int64_t dim2);
+  DiagonalViewUpdate(const Value& target, const Value& input,
+                     xla::int64_t offset, xla::int64_t dim1, xla::int64_t dim2);
 
   NodePtr Clone(OpList operands) const override;
 

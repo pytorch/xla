@@ -55,11 +55,11 @@ xla::XlaOp CreateIndexUpdate(
 xla::XlaOp CreateIndexAdd(xla::XlaOp buffer, xla::int64_t dim, xla::XlaOp index,
                           xla::XlaOp value);
 
-xla::XlaOp CreateIndexCopy(xla::XlaOp buffer, xla::int64_t dim, xla::XlaOp index,
-                           xla::XlaOp value);
+xla::XlaOp CreateIndexCopy(xla::XlaOp buffer, xla::int64_t dim,
+                           xla::XlaOp index, xla::XlaOp value);
 
-xla::XlaOp CreateIndexFill(xla::XlaOp buffer, xla::int64_t dim, xla::XlaOp index,
-                           xla::XlaOp values);
+xla::XlaOp CreateIndexFill(xla::XlaOp buffer, xla::int64_t dim,
+                           xla::XlaOp index, xla::XlaOp values);
 
 using XlaOpCombiner = std::function<xla::XlaOp(xla::XlaOp, xla::XlaOp)>;
 

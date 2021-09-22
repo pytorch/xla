@@ -8,8 +8,8 @@ namespace ops {
 
 class Select : public Node {
  public:
-  Select(const Value& input, xla::int64_t dim, xla::int64_t start, xla::int64_t end,
-         xla::int64_t stride);
+  Select(const Value& input, xla::int64_t dim, xla::int64_t start,
+         xla::int64_t end, xla::int64_t stride);
 
   NodePtr Clone(OpList operands) const override;
 
@@ -30,7 +30,7 @@ class Select : public Node {
                                     xla::int64_t stride);
 
   static xla::int64_t GetStride(xla::int64_t start, xla::int64_t end,
-                              xla::int64_t stride);
+                                xla::int64_t stride);
 
  private:
   xla::int64_t dim_;

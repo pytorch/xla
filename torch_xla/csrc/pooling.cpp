@@ -47,10 +47,10 @@ xla::XlaComputation CreateGeComputation(xla::PrimitiveType type) {
 }
 
 xla::TensorFormat MakeNCHWFormat(xla::int64_t spatial_dim_count) {
-  return {
-      /*batch_dimension=*/0,
-      /*feature_dimension=*/1,
-      /*spatial_dimensions=*/xla::util::Iota<xla::int64_t>(spatial_dim_count, 2)};
+  return {/*batch_dimension=*/0,
+          /*feature_dimension=*/1,
+          /*spatial_dimensions=*/
+          xla::util::Iota<xla::int64_t>(spatial_dim_count, 2)};
 }
 
 // Construct the pooling attributes for the given kernel size, stride and
@@ -414,8 +414,8 @@ xla::XlaOp BuildAdaptiveMaxPoolNdBackward(xla::XlaOp out_backprop,
   const auto kernel_size =
       AdaptivePoolKernelSize(input_shape.dimensions(), output_size, pool_dim);
   // AdaptiveMaxPool won't have padding.
-  std::vector<std::pair<xla::int64_t, xla::int64_t>> window_padding(2 + pool_dim,
-                                                                {0, 0});
+  std::vector<std::pair<xla::int64_t, xla::int64_t>> window_padding(
+      2 + pool_dim, {0, 0});
   xla::XlaOp batch_result = xla::SelectAndScatterWithGeneralPadding(
       /*operand=*/batch_input_info.batch_input,
       /*select=*/select,
@@ -540,9 +540,9 @@ xla::XlaOp BuildMaxUnpoolNd(const Device& device, xla::XlaOp input,
   return XlaHelpers::DynamicReshape(result, result_sizes);
 }
 
-xla::XlaOp BuildMaxUnpoolNdBackward(xla::XlaOp grad_output, xla::XlaOp input,
-                                    xla::XlaOp indices,
-                                    absl::Span<const xla::int64_t> output_size) {
+xla::XlaOp BuildMaxUnpoolNdBackward(
+    xla::XlaOp grad_output, xla::XlaOp input, xla::XlaOp indices,
+    absl::Span<const xla::int64_t> output_size) {
   const xla::Shape& input_shape = XlaHelpers::ShapeOfXlaOp(input);
   xla::XlaOp flat_grad_output =
       XlaHelpers::FlattenDimRange(grad_output, 2, output_size.size());
@@ -558,8 +558,8 @@ xla::XlaOp BuildMaxUnpoolNdBackward(xla::XlaOp grad_output, xla::XlaOp input,
 xla::XlaOp BuildAvgPoolNd(xla::XlaOp input, xla::int64_t spatial_dim_count,
                           absl::Span<const xla::int64_t> kernel_size,
                           absl::Span<const xla::int64_t> stride,
-                          absl::Span<const xla::int64_t> padding, bool ceil_mode,
-                          bool count_include_pad) {
+                          absl::Span<const xla::int64_t> padding,
+                          bool ceil_mode, bool count_include_pad) {
   PoolingOpAttributes pooling_op_attributes =
       MakePoolingOpAttributes(/*kernel_size_attr=*/kernel_size,
                               /*stride_attr=*/stride);

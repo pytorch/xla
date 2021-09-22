@@ -50,7 +50,7 @@ xla::Shape Select::MakeSelectShape(const xla::Shape& shape, xla::int64_t dim,
 }
 
 xla::int64_t Select::GetStride(xla::int64_t start, xla::int64_t end,
-                             xla::int64_t stride) {
+                               xla::int64_t stride) {
   if (stride == 0) {
     XLA_CHECK_EQ(start, end);
     stride = 1;

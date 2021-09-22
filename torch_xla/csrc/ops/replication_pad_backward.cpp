@@ -24,9 +24,9 @@ xla::Shape NodeOutputShape(const Value& grad_output, const Value& input,
 
 }  // namespace
 
-ReplicationPadBackward::ReplicationPadBackward(const Value& grad_output,
-                                               const Value& input,
-                                               std::vector<xla::int64_t> padding)
+ReplicationPadBackward::ReplicationPadBackward(
+    const Value& grad_output, const Value& input,
+    std::vector<xla::int64_t> padding)
     : Node(xla_replication_pad_backward, {grad_output, input},
            [&]() { return NodeOutputShape(grad_output, input, padding); },
            /*num_outputs=*/1, xla::util::MHash(padding)),

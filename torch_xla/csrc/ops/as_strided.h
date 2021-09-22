@@ -32,7 +32,8 @@ class AsStrided : public Node {
                                 xla::int64_t storage_offset);
 
   static std::vector<xla::int64_t> GetArrayStridePermutation(
-      absl::Span<const xla::int64_t> stride, absl::Span<const xla::int64_t> size);
+      absl::Span<const xla::int64_t> stride,
+      absl::Span<const xla::int64_t> size);
 
  private:
   std::vector<xla::int64_t> size_;

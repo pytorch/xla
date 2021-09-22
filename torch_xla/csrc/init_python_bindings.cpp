@@ -169,8 +169,8 @@ std::vector<std::pair<xla::int64_t, xla::int64_t>> CreateSourceTargetPairs(
   for (auto& pair : pairs) {
     const auto& pylist_pair = pair.cast<py::list>();
     XLA_CHECK_EQ(len(pylist_pair), 2);
-    source_target_pairs.push_back(
-        {pylist_pair[0].cast<xla::int64_t>(), pylist_pair[1].cast<xla::int64_t>()});
+    source_target_pairs.push_back({pylist_pair[0].cast<xla::int64_t>(),
+                                   pylist_pair[1].cast<xla::int64_t>()});
   }
   return source_target_pairs;
 }
@@ -215,7 +215,8 @@ std::pair<at::Tensor, std::shared_ptr<ir::Value>> AllToAll(
 
 std::pair<at::Tensor, std::shared_ptr<ir::Value>> CollectivePermute(
     const at::Tensor& input, const std::shared_ptr<ir::Value>& token,
-    const std::vector<std::pair<xla::int64_t, xla::int64_t>>& source_target_pairs) {
+    const std::vector<std::pair<xla::int64_t, xla::int64_t>>&
+        source_target_pairs) {
   XLATensor result;
   ir::Value new_token;
   std::tie(result, new_token) = XLATensor::collective_permute(
@@ -342,7 +343,8 @@ std::shared_ptr<ir::Value> CreateToken(const std::string& device_str) {
   return std::make_shared<ir::Value>(std::move(ir_value));
 }
 
-at::Tensor GetXlaTensorDimensionSize(const at::Tensor& tensor, xla::int64_t dim) {
+at::Tensor GetXlaTensorDimensionSize(const at::Tensor& tensor,
+                                     xla::int64_t dim) {
   XLATensor xtensor = bridge::GetXlaTensor(tensor);
   return bridge::AtenFromXlaTensor(
       XLATensor::get_dimensions_size(xtensor, {dim}));
@@ -397,7 +399,8 @@ std::vector<py::bytes> Rendezvous(int ordinal, const std::string& tag,
 }
 
 std::shared_ptr<xla::util::RecordReader> CreateRecordReader(
-    std::string path, const std::string& compression, xla::int64_t buffer_size) {
+    std::string path, const std::string& compression,
+    xla::int64_t buffer_size) {
   return std::make_shared<xla::util::RecordReader>(std::move(path), compression,
                                                    buffer_size);
 }
@@ -882,24 +885,24 @@ void InitXlaModuleBindings(py::module m) {
           result_tuple[1] = new_token;
           return result_tuple;
         });
-  m.def("_xla_collective_permute",
-        [](const at::Tensor& input, const std::shared_ptr<ir::Value>& token,
-           const py::list& pairs) {
-          std::vector<std::pair<xla::int64_t, xla::int64_t>> source_target_pairs =
-              CreateSourceTargetPairs(pairs);
-          at::Tensor result;
-          std::shared_ptr<ir::Value> new_token;
-          {
-            NoGilSection nogil;
-            std::tie(result, new_token) =
-                CollectivePermute(input, token, source_target_pairs);
-          }
-          auto result_tuple = py::tuple(2);
-          result_tuple[0] = torch::autograd::make_variable(
-              result, /*requires_grad=*/input.requires_grad());
-          result_tuple[1] = new_token;
-          return result_tuple;
-        });
+  m.def("_xla_collective_permute", [](const at::Tensor& input,
+                                      const std::shared_ptr<ir::Value>& token,
+                                      const py::list& pairs) {
+    std::vector<std::pair<xla::int64_t, xla::int64_t>> source_target_pairs =
+        CreateSourceTargetPairs(pairs);
+    at::Tensor result;
+    std::shared_ptr<ir::Value> new_token;
+    {
+      NoGilSection nogil;
+      std::tie(result, new_token) =
+          CollectivePermute(input, token, source_target_pairs);
+    }
+    auto result_tuple = py::tuple(2);
+    result_tuple[0] = torch::autograd::make_variable(
+        result, /*requires_grad=*/input.requires_grad());
+    result_tuple[1] = new_token;
+    return result_tuple;
+  });
   m.def("_xla_set_default_device", [](const std::string& device) {
     return SetCurrentThreadDevice(device);
   });
@@ -1047,8 +1050,8 @@ void InitXlaModuleBindings(py::module m) {
           xla::Shape tensor_shape = GetTensorShape(tensor, device);
           return op_builder::ShapeToPyShape(tensor_shape);
         });
-  m.def("_xla_op_param", [](op_builder::BuilderPtr builder, xla::int64_t param_no,
-                            py::object py_shape) {
+  m.def("_xla_op_param", [](op_builder::BuilderPtr builder,
+                            xla::int64_t param_no, py::object py_shape) {
     xla::Shape shape = op_builder::PyShapeToShape(py_shape);
     xla::XlaOp param = xla::Parameter(builder.get(), param_no, shape,
                                       absl::StrCat("p", param_no));
