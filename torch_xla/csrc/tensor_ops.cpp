@@ -12,8 +12,8 @@ namespace {
 // Returns the sub-tensor at the given index in the given dimension. Its rank
 // is one less than the input, in other words the singleton dimension is
 // squeezed out.
-XLATensor IndexAcrossDims(const XLATensor& input, xla::int64 dim,
-                          xla::int64 index) {
+XLATensor IndexAcrossDims(const XLATensor& input, xla::int64_t dim,
+                          xla::int64_t index) {
   return XLATensor::squeeze(XLATensor::slice(input, dim, index, index + 1, 1),
                             dim);
 }
@@ -21,8 +21,8 @@ XLATensor IndexAcrossDims(const XLATensor& input, xla::int64 dim,
 }  // namespace
 
 XLATensor Cross(const XLATensor& input, const XLATensor& other,
-                c10::optional<xla::int64> dim) {
-  xla::int64 canonical_dim;
+                c10::optional<xla::int64_t> dim) {
+  xla::int64_t canonical_dim;
   if (dim) {
     canonical_dim = XlaHelpers::GetCanonicalDimensionIndex(
         *dim, input.shape().get().rank());
@@ -65,7 +65,7 @@ XLATensor KlDivBackward(const XLATensor& grad_output, const XLATensor& input,
   auto input_shape_ref = input.shape();
   XLATensor expanded_grad_output = XLATensor::expand(
       grad_output,
-      xla::util::ToVector<xla::int64>(input_shape_ref.get().dimensions()));
+      xla::util::ToVector<xla::int64_t>(input_shape_ref.get().dimensions()));
   XLATensor grad_input;
   if (!log_target) {
     grad_input = XLATensor::where(
@@ -84,13 +84,13 @@ XLATensor KlDivBackward(const XLATensor& grad_output, const XLATensor& input,
   return grad_input;
 }
 
-XLATensor MakeMatrixWithDiagonal(const XLATensor& input, xla::int64 diagonal) {
-  xla::int64 size = input.shape().get().dimensions(0);
+XLATensor MakeMatrixWithDiagonal(const XLATensor& input, xla::int64_t diagonal) {
+  xla::int64_t size = input.shape().get().dimensions(0);
   XLATensor identity =
       XLATensor::eye(size, size, input.GetDevice(), input.dtype());
   auto padding = diagonal >= 0
-                     ? std::vector<xla::int64>{diagonal, 0, 0, diagonal}
-                     : std::vector<xla::int64>{0, -diagonal, -diagonal, 0};
+                     ? std::vector<xla::int64_t>{diagonal, 0, 0, diagonal}
+                     : std::vector<xla::int64_t>{0, -diagonal, -diagonal, 0};
   return XLATensor::constant_pad_nd(XLATensor::mul(identity, input), padding,
                                     0);
 }
@@ -114,7 +114,7 @@ XLATensor SmoothL1Loss(const XLATensor& input, const XLATensor& target,
   XLATensor elementwise_loss = XLATensor::where(
       XLATensor::lt(abs_diff, beta_scalar), squared_loss, l1_loss);
   auto all_dimensions =
-      xla::util::Iota<xla::int64>((*broadcasted_input.shape()).rank());
+      xla::util::Iota<xla::int64_t>((*broadcasted_input.shape()).rank());
   switch (reduction) {
     case ReductionMode::kNone:
       return elementwise_loss;
@@ -189,7 +189,7 @@ XLATensor SoftplusBackward(const XLATensor& grad_output, const XLATensor& input,
       XLATensor::mul(grad_output, XLATensor::div(XLATensor::sub(z, 1, 1), z)));
 }
 
-XLATensor Select(const XLATensor& input, xla::int64 dim, xla::int64 index) {
+XLATensor Select(const XLATensor& input, xla::int64_t dim, xla::int64_t index) {
   auto shape = input.shape();
   dim = XlaHelpers::GetCanonicalDimensionIndex(dim, shape.get().rank());
   XLATensor result = XLATensor::narrow(input, dim, index, 1);
@@ -199,7 +199,7 @@ XLATensor Select(const XLATensor& input, xla::int64 dim, xla::int64 index) {
 
 XLATensor EmbeddingDenseBackward(const XLATensor& grad_output,
                                  const XLATensor& indices,
-                                 xla::int64 num_weights, xla::int64 padding_idx,
+                                 xla::int64_t num_weights, xla::int64_t padding_idx,
                                  bool scale_grad_by_freq) {
   XLA_CHECK_EQ(indices.dtype(), at::ScalarType::Long)
       << "Embedding indices are expected to be of scalar type Long";
@@ -208,7 +208,7 @@ XLATensor EmbeddingDenseBackward(const XLATensor& grad_output,
   // more than the indices.
   XLA_CHECK_EQ(grad_output.shape().get().rank(),
                indices_shape_ref.get().rank() + 1);
-  xla::int64 numel = xla::ShapeUtil::ElementsIn(indices_shape_ref.get());
+  xla::int64_t numel = xla::ShapeUtil::ElementsIn(indices_shape_ref.get());
   XLATensor grad = XLATensor::view(grad_output, {numel, grad_output.size(-1)});
   XLATensor grad_weight =
       XLATensor::full({num_weights, grad_output.size(-1)}, 0,
@@ -233,7 +233,7 @@ XLATensor EmbeddingDenseBackward(const XLATensor& grad_output,
       XLATensor::ne(indices_rank1, static_cast<double>(padding_idx)), 1);
   skip_padding = XLATensor::expand(
       skip_padding,
-      xla::util::ToVector<xla::int64>(grad.shape().get().dimensions()));
+      xla::util::ToVector<xla::int64_t>(grad.shape().get().dimensions()));
   XLATensor zero_grad =
       XLATensor::full_like(grad, 0, grad.GetDevice(), grad.dtype());
   return XLATensor::index_put(

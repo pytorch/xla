@@ -40,9 +40,9 @@ class MeshClient {
 
   std::vector<std::string> Rendezvous(int ordinal, const std::string& tag,
                                       const std::string& payload,
-                                      absl::Span<const int64> replicas) const;
+                                      absl::Span<const int64_t> replicas) const;
 
-  std::string GetNcclUniqueUid(absl::Span<const int64> replicas) const;
+  std::string GetNcclUniqueUid(absl::Span<const int64_t> replicas) const;
 
  private:
   MeshClient(const std::string& address);

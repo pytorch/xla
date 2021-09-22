@@ -226,8 +226,8 @@ struct Caster<std::complex<double>> {
 // Copies n bytes from source to dest, with different stride values for source
 // and destination.
 template <typename S, typename D>
-void StridedCopy(D* dest, xla::int64 dest_stride, const S* source,
-                 xla::int64 source_stride, xla::int64 n) {
+void StridedCopy(D* dest, xla::int64_t dest_stride, const S* source,
+                 xla::int64_t source_stride, xla::int64_t n) {
   Caster<S> caster;
   const S* source_top = source + n * source_stride;
   for (; source < source_top; dest += dest_stride, source += source_stride) {
@@ -238,9 +238,9 @@ void StridedCopy(D* dest, xla::int64 dest_stride, const S* source,
 // Computes the offset of the value at a given index, assuming a contiguous/flat
 // tensor data representation.
 template <typename S>
-xla::int64 GetFlatTensorOffset(const S& strides,
-                               const std::vector<xla::int64>& indices) {
-  xla::int64 base = 0;
+xla::int64_t GetFlatTensorOffset(const S& strides,
+                               const std::vector<xla::int64_t>& indices) {
+  xla::int64_t base = 0;
   for (size_t i = 0; i < indices.size(); ++i) {
     base += indices[i] * strides[i];
   }
@@ -299,18 +299,18 @@ struct CopyType<true> {
 };
 
 template <typename D, typename S>
-void CheckedMemcpy(D* dest, const S* source, xla::int64 n) {
+void CheckedMemcpy(D* dest, const S* source, xla::int64_t n) {
   static_assert(sizeof(S) == sizeof(D), "Types size mismatch");
   std::memcpy(dest, source, n * sizeof(S));
 }
 
 template <typename D, typename S>
-void CopyData(D* dest, const S* source, xla::int64 n, const CopyDirect&) {
+void CopyData(D* dest, const S* source, xla::int64_t n, const CopyDirect&) {
   std::copy(source, source + n, dest);
 }
 
 template <typename D, typename S>
-void CopyData(D* dest, const S* source, xla::int64 n, const CopyCasted&) {
+void CopyData(D* dest, const S* source, xla::int64_t n, const CopyCasted&) {
   // Use strided copy with step 1 since it has the static_cast<> required to
   // convert from/to bfloat16.
   StridedCopy(dest, 1, source, 1, n);
@@ -318,33 +318,33 @@ void CopyData(D* dest, const S* source, xla::int64 n, const CopyCasted&) {
 
 template <>
 void CopyData<at::BFloat16, tensorflow::bfloat16>(
-    at::BFloat16* dest, const tensorflow::bfloat16* source, xla::int64 n,
+    at::BFloat16* dest, const tensorflow::bfloat16* source, xla::int64_t n,
     const CopyCasted&) {
   CheckedMemcpy<at::BFloat16, tensorflow::bfloat16>(dest, source, n);
 }
 template <>
 void CopyData<tensorflow::bfloat16, at::BFloat16>(tensorflow::bfloat16* dest,
                                                   const at::BFloat16* source,
-                                                  xla::int64 n,
+                                                  xla::int64_t n,
                                                   const CopyCasted&) {
   CheckedMemcpy<tensorflow::bfloat16, at::BFloat16>(dest, source, n);
 }
 
-std::vector<xla::int64> GetIterationDimensions(const xla::Shape& shape) {
+std::vector<xla::int64_t> GetIterationDimensions(const xla::Shape& shape) {
   // We want to favor the most minor dimension as core iteration dimension, as
   // this walks one of the two tensors buffers in a cache friendly fashion.
   // Though, if the most minor dimension is too small, we will end up doing more
   // StridedCopy() iterations in CopyTensors().
   // So we select the most minor dimension, unless one of the other dimensions
   // is more than kMinorDimScale times the most minor one.
-  static const xla::int64 kMinorDimScale = 8;
-  std::vector<xla::int64> iter_dims =
-      xla::util::ToVector<xla::int64>(shape.layout().minor_to_major());
+  static const xla::int64_t kMinorDimScale = 8;
+  std::vector<xla::int64_t> iter_dims =
+      xla::util::ToVector<xla::int64_t>(shape.layout().minor_to_major());
   size_t index = 0;
-  xla::int64 scaled_dim_size =
+  xla::int64_t scaled_dim_size =
       kMinorDimScale * shape.dimensions(iter_dims[index]);
   for (size_t i = 1; i < iter_dims.size(); ++i) {
-    xla::int64 dim = iter_dims[i];
+    xla::int64_t dim = iter_dims[i];
     if (shape.dimensions(dim) > scaled_dim_size) {
       index = i;
       scaled_dim_size = shape.dimensions(dim);
@@ -355,40 +355,40 @@ std::vector<xla::int64> GetIterationDimensions(const xla::Shape& shape) {
 }
 
 struct CopyPartition {
-  explicit CopyPartition(absl::Span<const xla::int64> dimensions)
+  explicit CopyPartition(absl::Span<const xla::int64_t> dimensions)
       : base(dimensions.size()), limit(dimensions.begin(), dimensions.end()) {}
 
-  std::vector<xla::int64> base;
-  std::vector<xla::int64> limit;
+  std::vector<xla::int64_t> base;
+  std::vector<xla::int64_t> limit;
 };
 
 std::vector<CopyPartition> CreateCopyPartitions(
-    absl::Span<const xla::int64> dimensions,
-    xla::int64 strided_copy_dimension) {
+    absl::Span<const xla::int64_t> dimensions,
+    xla::int64_t strided_copy_dimension) {
   // The minimum number of elements copy that can be assigned to a thread.
-  static const xla::int64 kMinThreadElements = 100000;
+  static const xla::int64_t kMinThreadElements = 100000;
   // Use at most 50% of the available cores.
-  xla::int64 max_parts =
-      std::max<xla::int64>(std::thread::hardware_concurrency() / 2, 1);
+  xla::int64_t max_parts =
+      std::max<xla::int64_t>(std::thread::hardware_concurrency() / 2, 1);
   // Find the maximum dimension which is not the strided copy dimension.
-  xla::int64 max_dim = -1;
-  for (xla::int64 i = 0; i < dimensions.size(); ++i) {
+  xla::int64_t max_dim = -1;
+  for (xla::int64_t i = 0; i < dimensions.size(); ++i) {
     if (i != strided_copy_dimension &&
         (max_dim < 0 || dimensions[i] > dimensions[max_dim])) {
       max_dim = i;
     }
   }
 
-  xla::int64 num_elements = xla::util::Multiply<xla::int64>(dimensions);
-  xla::int64 max_dim_unit_elements = num_elements / dimensions[max_dim];
-  xla::int64 max_dim_size = dimensions[max_dim];
-  xla::int64 part_size =
-      std::max<xla::int64>(std::max<xla::int64>(max_dim_size / max_parts, 1),
+  xla::int64_t num_elements = xla::util::Multiply<xla::int64_t>(dimensions);
+  xla::int64_t max_dim_unit_elements = num_elements / dimensions[max_dim];
+  xla::int64_t max_dim_size = dimensions[max_dim];
+  xla::int64_t part_size =
+      std::max<xla::int64_t>(std::max<xla::int64_t>(max_dim_size / max_parts, 1),
                            kMinThreadElements / max_dim_unit_elements);
   std::vector<CopyPartition> parts;
-  xla::int64 csize = 0;
+  xla::int64_t csize = 0;
   while (csize < max_dim_size) {
-    xla::int64 n = std::min<xla::int64>(part_size, max_dim_size - csize);
+    xla::int64_t n = std::min<xla::int64_t>(part_size, max_dim_size - csize);
     CopyPartition p(dimensions);
     p.base[max_dim] = csize;
     p.limit[max_dim] = csize + n;
@@ -399,22 +399,22 @@ std::vector<CopyPartition> CreateCopyPartitions(
 }
 
 template <typename SType, typename DType>
-void SlicedCopy(absl::Span<const xla::int64> dimensions, const SType* src_data,
-                absl::Span<const xla::int64> src_strides, DType* dest_data,
-                absl::Span<const xla::int64> dest_strides,
-                absl::Span<const xla::int64> iter_dims,
+void SlicedCopy(absl::Span<const xla::int64_t> dimensions, const SType* src_data,
+                absl::Span<const xla::int64_t> src_strides, DType* dest_data,
+                absl::Span<const xla::int64_t> dest_strides,
+                absl::Span<const xla::int64_t> iter_dims,
                 const CopyPartition& part) {
-  std::vector<xla::int64> indices(part.base);
-  xla::int64 inner_src_stride = src_strides[iter_dims.front()];
-  xla::int64 inner_dest_stride = dest_strides[iter_dims.front()];
-  xla::int64 n = 0;
+  std::vector<xla::int64_t> indices(part.base);
+  xla::int64_t inner_src_stride = src_strides[iter_dims.front()];
+  xla::int64_t inner_dest_stride = dest_strides[iter_dims.front()];
+  xla::int64_t n = 0;
   while (n < indices.size()) {
     StridedCopy(dest_data + GetFlatTensorOffset(dest_strides, indices),
                 inner_dest_stride,
                 src_data + GetFlatTensorOffset(src_strides, indices),
                 inner_src_stride, dimensions[iter_dims.front()]);
     for (n = 1; n < indices.size(); ++n) {
-      xla::int64 dim = iter_dims[n];
+      xla::int64_t dim = iter_dims[n];
       indices[dim] += 1;
       if (indices[dim] < part.limit[dim]) {
         break;
@@ -431,7 +431,7 @@ void CopyTensors(const void* src_buffer, const xla::Shape& src_shape,
   XLA_CHECK(xla::ShapeUtil::SameDimensions(src_shape, dest_shape))
       << src_shape << " vs. " << dest_shape;
 
-  xla::int64 total_elements = xla::ShapeUtil::ElementsIn(src_shape);
+  xla::int64_t total_elements = xla::ShapeUtil::ElementsIn(src_shape);
   XLA_CHECK_EQ(dest_buffer_size, total_elements * sizeof(DType));
 
   const SType* src_data = reinterpret_cast<const SType*>(src_buffer);
@@ -445,9 +445,9 @@ void CopyTensors(const void* src_buffer, const xla::Shape& src_shape,
     // We issue a multi-threaded copy by slicing the bigger dimension and
     // assigning its copy to different threads. This code is only valid for
     // ranks >= 2, but the layout check above covers the case.
-    std::vector<xla::int64> src_strides = ComputeShapeStrides(src_shape);
-    std::vector<xla::int64> dest_strides = ComputeShapeStrides(dest_shape);
-    std::vector<xla::int64> iter_dims = GetIterationDimensions(dest_shape);
+    std::vector<xla::int64_t> src_strides = ComputeShapeStrides(src_shape);
+    std::vector<xla::int64_t> dest_strides = ComputeShapeStrides(dest_shape);
+    std::vector<xla::int64_t> iter_dims = GetIterationDimensions(dest_shape);
     std::vector<CopyPartition> parts =
         CreateCopyPartitions(dest_shape.dimensions(), iter_dims.front());
     auto mwait = std::make_shared<xla::util::MultiWait>(parts.size());
@@ -525,7 +525,7 @@ void TensorToBufferSType(const at::Tensor& tensor, const xla::Shape& dest_shape,
                                          dest_buffer_size, device);
       break;
     case xla::PrimitiveType::S64:
-      TensorToBuffer<SType, xla::int64>(tensor, dest_shape, dest_buffer,
+      TensorToBuffer<SType, xla::int64_t>(tensor, dest_shape, dest_buffer,
                                         dest_buffer_size, device);
       break;
     case xla::PrimitiveType::U64:
@@ -629,7 +629,7 @@ at::Tensor XlaLiteralToTensor(const xla::Literal& literal,
   xla::Shape torch_shape = MakeTorchTensorLayout(
       literal.shape().dimensions(), /*dynamic_dimensions=*/{},
       literal.shape().element_type());
-  xla::int64 total_elements = xla::ShapeUtil::ElementsIn(torch_shape);
+  xla::int64_t total_elements = xla::ShapeUtil::ElementsIn(torch_shape);
 
   const auto literal_data = literal.data<SType>();
   at::Tensor tensor = at::empty(dimensions, at::TensorOptions(atype));
@@ -677,9 +677,9 @@ at::Tensor XlaLiteralToTensorHelper(const xla::Literal& literal,
 
 }  // namespace
 
-std::vector<xla::int64> ComputeShapeStrides(const xla::Shape& shape) {
-  std::vector<xla::int64> strides(shape.rank());
-  xla::int64 stride = 1;
+std::vector<xla::int64_t> ComputeShapeStrides(const xla::Shape& shape) {
+  std::vector<xla::int64_t> strides(shape.rank());
+  xla::int64_t stride = 1;
   for (auto dim : shape.layout().minor_to_major()) {
     strides[dim] = stride;
     stride *= shape.dimensions(dim);
@@ -687,10 +687,10 @@ std::vector<xla::int64> ComputeShapeStrides(const xla::Shape& shape) {
   return strides;
 }
 
-std::vector<xla::int64> ComputeArrayStrides(
-    absl::Span<const xla::int64> sizes) {
-  std::vector<xla::int64> strides(sizes.size(), 1);
-  for (xla::int64 i = sizes.size(); i > 1; --i) {
+std::vector<xla::int64_t> ComputeArrayStrides(
+    absl::Span<const xla::int64_t> sizes) {
+  std::vector<xla::int64_t> strides(sizes.size(), 1);
+  for (xla::int64_t i = sizes.size(); i > 1; --i) {
     strides[i - 2] = strides[i - 1] * sizes[i - 1];
   }
   return strides;
@@ -723,7 +723,7 @@ at::Tensor MakeTensorFromXlaLiteral(const xla::Literal& literal,
     case xla::PrimitiveType::U32:
       return XlaLiteralToTensorHelper<xla::uint32>(literal, dest_element_type);
     case xla::PrimitiveType::S64:
-      return XlaLiteralToTensorHelper<xla::int64>(literal, dest_element_type);
+      return XlaLiteralToTensorHelper<xla::int64_t>(literal, dest_element_type);
     case xla::PrimitiveType::U64:
       return XlaLiteralToTensorHelper<xla::uint64>(literal, dest_element_type);
     case xla::PrimitiveType::C64:

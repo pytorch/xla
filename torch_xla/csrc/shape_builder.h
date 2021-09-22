@@ -12,19 +12,19 @@ class ShapeBuilder {
  public:
   explicit ShapeBuilder(xla::PrimitiveType type) : type_(type) {}
 
-  ShapeBuilder& Add(const xla::Shape& shape, xla::int64 dim);
+  ShapeBuilder& Add(const xla::Shape& shape, xla::int64_t dim);
 
   ShapeBuilder& Add(const xla::Shape& shape,
-                    absl::Span<const xla::int64> dimensions);
+                    absl::Span<const xla::int64_t> dimensions);
 
-  ShapeBuilder& Add(xla::int64 size);
+  ShapeBuilder& Add(xla::int64_t size);
 
   xla::Shape Build() const;
 
  private:
   struct ShapeDim {
     const xla::Shape* shape = nullptr;
-    xla::int64 dim_or_size = -1;
+    xla::int64_t dim_or_size = -1;
   };
 
   xla::PrimitiveType type_;
