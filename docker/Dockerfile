@@ -1,7 +1,7 @@
 # Use nvidia/cuda:10.1-cudnn7-devel-ubuntu18.04 or later for CUDA.
 # Warning: All ARGs placed before FROM will only be scoped up unitl FROM statement.
 # https://github.com/docker/cli/blob/3c7ede6a68941f64c3a154c9a753eb7a9b1c2c3e/docs/reference/builder.md#understand-how-arg-and-from-interact
-ARG base_image="debian:stretch"
+ARG base_image="debian:bullseye"
 FROM "${base_image}"
 
 ARG python_version="3.6"
@@ -41,9 +41,10 @@ RUN if [ "${cloud_build}" = true ]; then github_branch="${release_version}" && \
   if [ "${release_version}" = "nightly" ]; then github_branch="master"; fi && \
   cd /pytorch && \
   rm -rf xla && \
-  git clone -b "${github_branch}" --recursive https://github.com/pytorch/xla && \
+  git clone -b new_tf_092121 --recursive https://github.com/pytorch/xla && \
   cd / && \
   git clone -b "${github_branch}" --recursive https://github.com/pytorch-tpu/examples tpu-examples; fi
+  #git clone -b gcb-tf-build-break --recursive https://github.com/pytorch/xla && \
 
 RUN cd /pytorch && bash xla/scripts/build_torch_wheels.sh ${python_version} ${release_version}
 
