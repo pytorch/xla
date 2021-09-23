@@ -98,9 +98,7 @@ WeightScale GetMaskedWeight(xla::XlaOp weight, const xla::Shape& logits_shape,
   xla::XlaComputation add_func =
       XlaHelpers::CreateAddComputation(logits_shape.element_type());
   xla::XlaOp zero = xla::Zero(labels.builder(), logits_shape.element_type());
-  xla::XlaOp one = xla::One(labels.builder(), logits_shape.element_type());
   xla::XlaOp scale = xla::ReduceAll(result_weight, zero, add_func);
-  scale = xla::Select(xla::Ne(scale, zero), scale, one);
   return {result_weight, scale};
 }
 
