@@ -298,7 +298,7 @@ ComputationClient::DataPtr XrtComputationClient::CreateDataPlaceholder(
 std::vector<size_t> XrtComputationClient::PartitionTransferToServer(
     absl::Span<const TensorSource> tensors) {
   int64_t max_partition_size = GetMaxTensorsPartitionSize();
-  uint64_t current_size = 0;
+  uint64 current_size = 0;
   std::vector<size_t> partitions;
   for (size_t i = 0; i < tensors.size(); ++i) {
     int64_t tensor_size = ShapeUtil::ByteSizeOfElements(tensors[i].shape);
