@@ -31,14 +31,13 @@ steps:
 substitutions:
     _DOCKER_BASE_IMAGE: 'debian:stretch'
     _CUDA: '0'
-    _PYTHON_VERSION: '3.6'
+    _PYTHON_VERSION: '3.7'
     _RELEASE_VERSION: 'nightly'  # or rX.Y
-    _IMAGE_NAME: '${_RELEASE_VERSION}_${_PYTHON_VERSION}'
+    _IMAGE_NAME: 'nightly_3.7'
     _UPLOAD_SUBDIR: ''
     _TPU_VM: ''
 options:
     machineType: 'N1_HIGHCPU_32'
-    dynamic_substitutions: true
     substitution_option: 'ALLOW_LOOSE'
 timeout: 18000s
 artifacts:
