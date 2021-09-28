@@ -226,6 +226,12 @@ class XLATensor {
                                   double momentum, double lr, double dampening,
                                   bool nesterov);
 
+  static void adam_optimizer_step(const XLATensor& found_inf, XLATensor& step, 
+                                 XLATensor& param, XLATensor& grad, 
+                                 XLATensor& exp_avg, XLATensor& exp_avg_sq, XLATensor& max_exp_avg_sq,
+                                 bool amsgrad, double beta1, double beta2, 
+                                 double lr, double weight_decay, double eps);
+
   static std::vector<XLATensor> user_computation(
       const std::string& opname, absl::Span<const XLATensor> inputs,
       ComputationPtr computation);

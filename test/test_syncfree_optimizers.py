@@ -1,6 +1,6 @@
 import argparse
 import sys
-
+ 
 parser = argparse.ArgumentParser(add_help=False)
 parser.add_argument('--verbosity', type=int, default=2)
 FLAGS, leftovers = parser.parse_known_args()
@@ -37,7 +37,6 @@ class MNIST(nn.Module):
     x = F.relu(self.fc1(x))
     x = self.fc2(x)
     return F.log_softmax(x, dim=1)
-
 
 class TestSyncFreeOptimizerBase(unittest.TestCase):
 
@@ -97,7 +96,6 @@ class TestSyncFreeOptimizerBase(unittest.TestCase):
     for p, p_ref in zip(syncfree_model.parameters(), ref_model.parameters()):
       assert p.allclose(p_ref, rtol=1e-2, atol=1e-2)
 
-
 class TestSyncFreeSGD(TestSyncFreeOptimizerBase):
 
   def test_optimizer(self):
@@ -122,6 +120,41 @@ class TestSyncFreeSGD(TestSyncFreeOptimizerBase):
         "nesterov": True,
     })
 
+
+class TestSyncFreeAdam(TestSyncFreeOptimizerBase):
+
+  def test_optimizer(self):
+    self._test_optimizer(syncfree.Adam, torch.optim.Adam, {
+        "lr": 1e-3,
+        "betas":(0.9,0.99),
+    })
+    self._test_optimizer(syncfree.Adam, torch.optim.Adam, {
+        "lr": 1e-2,
+        "betas":(0.7,0.77),
+        "weight_decay":1e-4,
+    })
+    self._test_optimizer(syncfree.Adam, torch.optim.Adam, {
+        "lr": 5e-3,
+        "betas": (0.9, 0.999),
+        "weight_decay": 1e-4,
+    })
+    self._test_optimizer(syncfree.Adam, torch.optim.Adam, {
+        "lr": 1e-3,
+        "betas": (0.9, 0.999),
+        "weight_decay": 0.1,
+    })
+    self._test_optimizer(syncfree.Adam, torch.optim.Adam, {
+        "lr": 1e-3,
+        "betas": (0.9, 0.999),
+        "weight_decay": 0.1,
+        "amsgrad":True
+    })
+    self._test_optimizer(syncfree.Adam, torch.optim.Adam, {
+        "lr": 1e-3,
+        "betas": (0.7, 0.799),
+        "weight_decay": 0.01,
+        "amsgrad":True
+    })
 
 if __name__ == "__main__":
   test = unittest.main(verbosity=FLAGS.verbosity, exit=False)
