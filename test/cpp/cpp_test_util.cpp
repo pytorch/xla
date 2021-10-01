@@ -92,13 +92,13 @@ torch::Tensor CopyToDevice(const torch::Tensor& tensor,
 bool EqualValues(at::Tensor tensor1, at::Tensor tensor2) {
   MaybeDumpGraph(tensor1);
   MaybeDumpGraph(tensor2);
+  tensor1 = ToCpuTensor(tensor1);
+  tensor2 = ToCpuTensor(tensor2);
   if (torch::isnan(tensor1).any().item<bool>()) {
     EXPECT_TRUE(EqualValues(torch::isnan(tensor1), torch::isnan(tensor2)));
     tensor1.nan_to_num_();
     tensor2.nan_to_num_();
   }
-  tensor1 = ToCpuTensor(tensor1);
-  tensor2 = ToCpuTensor(tensor2);
   if (tensor1.sizes() != tensor2.sizes() ||
       tensor1.dtype() != tensor2.dtype()) {
     std::cerr << "Different shape:\n"
@@ -180,13 +180,13 @@ bool CloseValues(at::Tensor tensor1, at::Tensor tensor2, double rtol,
                  double atol) {
   MaybeDumpGraph(tensor1);
   MaybeDumpGraph(tensor2);
+  tensor1 = ToCpuTensor(tensor1);
+  tensor2 = ToCpuTensor(tensor2);
   if (torch::isnan(tensor1).any().item<bool>()) {
     EXPECT_TRUE(EqualValues(torch::isnan(tensor1), torch::isnan(tensor2)));
     tensor1.nan_to_num_();
     tensor2.nan_to_num_();
   }
-  tensor1 = ToCpuTensor(tensor1);
-  tensor2 = ToCpuTensor(tensor2);
   if (tensor1.sizes() != tensor2.sizes() ||
       tensor1.dtype() != tensor2.dtype()) {
     std::cerr << "Different shape:\n"
