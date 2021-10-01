@@ -29,7 +29,7 @@ xla::Shape NodeOutputShape(absl::Span<const ir::Value> values, xla::int64 dim) {
 Cat::Cat(absl::Span<const ir::Value> values, xla::int64 dim)
     : Node(ir::OpKind(at::aten::cat), values,
            [&]() { return NodeOutputShape(values, dim); },
-           /*num_outputs=*/1, xla::util::MHash(dim)),
+           /*num_outputs=*/1, torch::lazy::MHash(dim)),
       dim_(dim) {}
 
 NodePtr Cat::Clone(OpList operands) const {

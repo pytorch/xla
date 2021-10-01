@@ -26,7 +26,7 @@ KthValue::KthValue(const Value& input, xla::int64 k, xla::int64 dim,
                    bool keepdim)
     : Node(ir::OpKind(at::aten::kthvalue), {input},
            [&]() { return NodeOutputShape(input, k, dim, keepdim); },
-           /*num_outputs=*/2, xla::util::MHash(k, dim, keepdim)),
+           /*num_outputs=*/2, torch::lazy::MHash(k, dim, keepdim)),
       k_(k),
       dim_(dim),
       keepdim_(keepdim) {}

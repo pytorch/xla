@@ -28,7 +28,7 @@ MseLoss::MseLoss(const Value& input, const Value& target,
     : Node(ir::OpKind(at::aten::mse_loss), {input, target},
            [&]() { return NodeOutputShape(input, target, reduction); },
            /*num_outputs=*/1,
-           xla::util::MHash(xla::util::GetEnumValue(reduction))),
+           torch::lazy::MHash(xla::util::GetEnumValue(reduction))),
       reduction_(reduction) {}
 
 NodePtr MseLoss::Clone(OpList operands) const {

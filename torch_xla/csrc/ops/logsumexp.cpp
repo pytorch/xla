@@ -33,7 +33,7 @@ Logsumexp::Logsumexp(const Value& input, std::vector<xla::int64> dimensions,
              return NodeOutputShape(input, dimensions, keep_reduced_dimensions);
            },
            /*num_outputs=*/1,
-           xla::util::MHash(dimensions, keep_reduced_dimensions)),
+           torch::lazy::MHash(dimensions, keep_reduced_dimensions)),
       dimensions_(std::move(dimensions)),
       keep_reduced_dimensions_(keep_reduced_dimensions) {}
 

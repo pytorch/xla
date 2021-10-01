@@ -6,6 +6,7 @@
 #include "torch_xla/csrc/lowering_context.h"
 #include "torch_xla/csrc/ops/infer_output_shape.h"
 #include "torch_xla/csrc/ops/xla_ops.h"
+#include "torch_xla/csrc/torch_util.h"
 
 namespace torch_xla {
 namespace ir {
@@ -27,7 +28,7 @@ UpdateSlice::UpdateSlice(const Value& input, const Value& source,
                          absl::Span<const xla::int64> base_indices)
     : Node(xla_update_slice, {input, source},
            [&]() { return NodeOutputShape(input, source, base_indices); },
-           /*num_outputs=*/1, xla::util::MHash(base_indices)),
+           /*num_outputs=*/1, torch::lazy::Hash(base_indices)),
       base_indices_(base_indices.begin(), base_indices.end()) {}
 
 NodePtr UpdateSlice::Clone(OpList operands) const {

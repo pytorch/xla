@@ -18,6 +18,7 @@
 #include "tensorflow/core/lib/bfloat16/bfloat16.h"
 #include "torch_xla/csrc/helpers.h"
 #include "torch_xla/csrc/layout_manager.h"
+#include "torch/csrc/lazy/core/hash.h"
 
 namespace torch_xla {
 namespace {
@@ -806,34 +807,34 @@ std::vector<at::Tensor> XlaDataToTensors(
   return tensors;
 }
 
-xla::hash_t TensorHash(const at::Tensor& tensor) {
+torch::lazy::hash_t TensorHash(const at::Tensor& tensor) {
   at::Tensor ctensor = tensor.contiguous();
   int64_t size = ctensor.numel() * ctensor.element_size();
   switch (ctensor.scalar_type()) {
     case at::ScalarType::Bool:
-      return xla::util::DataHash(ctensor.data_ptr<bool>(), size);
+      return torch::lazy::DataHash(ctensor.data_ptr<bool>(), size);
     case at::ScalarType::Byte:
-      return xla::util::DataHash(ctensor.data_ptr<uint8_t>(), size);
+      return torch::lazy::DataHash(ctensor.data_ptr<uint8_t>(), size);
     case at::ScalarType::Char:
-      return xla::util::DataHash(ctensor.data_ptr<int8_t>(), size);
+      return torch::lazy::DataHash(ctensor.data_ptr<int8_t>(), size);
     case at::ScalarType::Short:
-      return xla::util::DataHash(ctensor.data_ptr<int16_t>(), size);
+      return torch::lazy::DataHash(ctensor.data_ptr<int16_t>(), size);
     case at::ScalarType::Int:
-      return xla::util::DataHash(ctensor.data_ptr<int32_t>(), size);
+      return torch::lazy::DataHash(ctensor.data_ptr<int32_t>(), size);
     case at::ScalarType::Long:
-      return xla::util::DataHash(ctensor.data_ptr<int64_t>(), size);
+      return torch::lazy::DataHash(ctensor.data_ptr<int64_t>(), size);
     case at::ScalarType::Float:
-      return xla::util::DataHash(ctensor.data_ptr<float>(), size);
+      return torch::lazy::DataHash(ctensor.data_ptr<float>(), size);
     case at::ScalarType::Double:
-      return xla::util::DataHash(ctensor.data_ptr<double>(), size);
+      return torch::lazy::DataHash(ctensor.data_ptr<double>(), size);
     case at::ScalarType::BFloat16:
-      return xla::util::DataHash(ctensor.data_ptr<at::BFloat16>(), size);
+      return torch::lazy::DataHash(ctensor.data_ptr<at::BFloat16>(), size);
     case at::ScalarType::Half:
-      return xla::util::DataHash(ctensor.data_ptr<at::Half>(), size);
+      return torch::lazy::DataHash(ctensor.data_ptr<at::Half>(), size);
     case at::ScalarType::ComplexFloat:
-      return xla::util::DataHash(ctensor.data_ptr<c10::complex<float>>(), size);
+      return torch::lazy::DataHash(ctensor.data_ptr<c10::complex<float>>(), size);
     case at::ScalarType::ComplexDouble:
-      return xla::util::DataHash(ctensor.data_ptr<c10::complex<double>>(),
+      return torch::lazy::DataHash(ctensor.data_ptr<c10::complex<double>>(),
                                  size);
     default:
       XLA_ERROR() << "Unsupported scalar type: " << ctensor.scalar_type();

@@ -26,7 +26,7 @@ ReplicationPad::ReplicationPad(const Value& input,
                                std::vector<xla::int64> padding)
     : Node(xla_replication_pad, {input},
            [&]() { return NodeOutputShape(input, padding); },
-           /*num_outputs=*/1, xla::util::MHash(padding)),
+           /*num_outputs=*/1, torch::lazy::MHash(padding)),
       padding_(std::move(padding)) {}
 
 NodePtr ReplicationPad::Clone(OpList operands) const {

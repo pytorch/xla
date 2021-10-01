@@ -51,7 +51,7 @@ Prod::Prod(const Value& input, std::vector<xla::int64> dimensions,
                                     dtype);
            },
            /*num_outputs=*/1,
-           xla::util::MHash(dimensions, keep_reduced_dimensions,
+           torch::lazy::MHash(dimensions, keep_reduced_dimensions,
                             OptionalOr<int>(dtype, -1))),
       dimensions_(std::move(dimensions)),
       keep_reduced_dimensions_(keep_reduced_dimensions),

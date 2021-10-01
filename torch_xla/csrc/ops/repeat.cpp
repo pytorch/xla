@@ -26,7 +26,7 @@ xla::Shape NodeOutputShape(const Value& input,
 Repeat::Repeat(const Value& input, std::vector<xla::int64> repeats)
     : Node(ir::OpKind(at::aten::repeat), {input},
            [&]() { return NodeOutputShape(input, repeats); },
-           /*num_outputs=*/1, xla::util::MHash(repeats)),
+           /*num_outputs=*/1, torch::lazy::MHash(repeats)),
       repeats_(std::move(repeats)) {}
 
 NodePtr Repeat::Clone(OpList operands) const {

@@ -9,13 +9,14 @@
 #include "tensorflow/compiler/xla/xla_client/sys_util.h"
 #include "tensorflow/compiler/xla/xla_client/util.h"
 #include "torch_xla/csrc/lowering_context.h"
+#include "torch/csrc/lazy/core/hash.h"
 
 namespace torch_xla {
 namespace ir {
 namespace {
 
 using ShapeCache =
-    xla::util::Cache<xla::hash_t, xla::Shape, xla::util::HashReducer>;
+    xla::util::Cache<torch::lazy::hash_t, xla::Shape, torch::lazy::HashReducer>;
 
 struct ScopeEntry {
   std::string name;
@@ -101,7 +102,7 @@ std::string Use::ToString() const {
 }
 
 size_t Output::Hasher::operator()(const Output& output) const {
-  return xla::util::StdHashCombine(
+  return torch::lazy::StdHashCombine(
       reinterpret_cast<std::ptrdiff_t>(output.node), output.index);
 }
 
@@ -109,8 +110,8 @@ const xla::Shape& Output::shape() const { return node->shape(index); }
 
 const xla::Shape& Output::node_shape() const { return node->shape(); }
 
-xla::hash_t Output::hash() const {
-  return xla::util::HashCombine(node->hash(), index);
+torch::lazy::hash_t Output::hash() const {
+  return torch::lazy::HashCombine(node->hash(), index);
 }
 
 std::string Output::ToString() const {
@@ -123,36 +124,36 @@ const xla::Shape& Value::shape() const { return node->shape(index); }
 
 const xla::Shape& Value::node_shape() const { return node->shape(); }
 
-xla::hash_t Value::hash() const {
-  return xla::util::HashCombine(node->hash(), index);
+torch::lazy::hash_t Value::hash() const {
+  return torch::lazy::HashCombine(node->hash(), index);
 }
 
 OpKind OpKind::Get(const std::string& name) {
   return OpKind(c10::Symbol::fromQualString(name));
 }
 
-xla::hash_t OpKind::hash() const {
-  return xla::util::StringHash(op.toQualString());
+torch::lazy::hash_t OpKind::hash() const {
+  return torch::lazy::StringHash(op.toQualString());
 }
 
 Node::Node(OpKind op, OpList operands, xla::Shape shape, size_t num_outputs,
-           xla::hash_t hash_seed)
+           torch::lazy::hash_t hash_seed)
     : op_(std::move(op)),
       num_outputs_(num_outputs),
       shape_(std::move(shape)),
-      node_hash_(xla::util::HashCombine(op_.hash(), hash_seed)),
+      node_hash_(torch::lazy::HashCombine(op_.hash(), hash_seed)),
       hash_(node_hash_) {
   metadata_.scope = GetCurrentScope();
   metadata_.frame_info = GetFrameInfo();
   for (auto& operand : operands) {
     AddOperand(operand.node, operand.index);
-    hash_ = xla::util::HashCombine(hash_, operand.hash());
+    hash_ = torch::lazy::HashCombine(hash_, operand.hash());
   }
 }
 
 Node::Node(OpKind op, OpList operands,
            const std::function<xla::Shape()>& shape_fn, size_t num_outputs,
-           xla::hash_t hash_seed)
+           torch::lazy::hash_t hash_seed)
     : Node(std::move(op), operands, xla::Shape(), num_outputs, hash_seed) {
   // Forward the constructor to the one above (with empty shape), so we have the
   // full hash information, then fetch/compute the real shape.
@@ -160,7 +161,7 @@ Node::Node(OpKind op, OpList operands,
 }
 
 Node::Node(OpKind op, xla::Shape shape, size_t num_outputs,
-           xla::hash_t hash_seed)
+           torch::lazy::hash_t hash_seed)
     : op_(std::move(op)),
       num_outputs_(num_outputs),
       shape_(std::move(shape)),
@@ -247,11 +248,11 @@ XlaOpVector Node::Lower(LoweringContext* loctx) const {
   XLA_ERROR() << "Lowering not implemented for node: " << *this;
 }
 
-xla::hash_t Node::GetOpHash(OpKind op, const xla::Shape& shape,
-                            xla::hash_t hash_seed) {
-  xla::hash_t h =
-      xla::util::HashCombine(op.hash(), xla::util::Hash(shape.ToString()));
-  return xla::util::HashCombine(h, hash_seed);
+torch::lazy::hash_t Node::GetOpHash(OpKind op, const xla::Shape& shape,
+                            torch::lazy::hash_t hash_seed) {
+  torch::lazy::hash_t h =
+      torch::lazy::HashCombine(op.hash(), torch::lazy::Hash(shape.ToString()));
+  return torch::lazy::HashCombine(h, hash_seed);
 }
 
 xla::Shape Node::GetOpShape(const std::function<xla::Shape()>& shape_fn) const {

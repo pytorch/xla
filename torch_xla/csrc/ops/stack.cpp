@@ -29,7 +29,7 @@ xla::Shape NodeOutputShape(absl::Span<const ir::Value> values, xla::int64 dim) {
 Stack::Stack(absl::Span<const ir::Value> values, xla::int64 dim)
     : Node(ir::OpKind(at::aten::stack), values,
            [&]() { return NodeOutputShape(values, dim); },
-           /*num_outputs=*/1, xla::util::MHash(dim)),
+           /*num_outputs=*/1, torch::lazy::MHash(dim)),
       dim_(dim) {}
 
 NodePtr Stack::Clone(OpList operands) const {

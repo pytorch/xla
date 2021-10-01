@@ -10,7 +10,7 @@ namespace ops {
 
 LeakyRelu::LeakyRelu(const Value& input, double negative_slope)
     : Node(ir::OpKind(at::aten::leaky_relu), {input}, input.shape(),
-           /*num_outputs=*/1, xla::util::MHash(negative_slope)),
+           /*num_outputs=*/1, torch::lazy::MHash(negative_slope)),
       negative_slope_(negative_slope) {}
 
 NodePtr LeakyRelu::Clone(OpList operands) const {

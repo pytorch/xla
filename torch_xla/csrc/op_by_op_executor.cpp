@@ -10,11 +10,13 @@
 #include "tensorflow/compiler/xla/xla_client/sys_util.h"
 #include "tensorflow/compiler/xla/xla_client/util.h"
 #include "tensorflow/compiler/xla/xla_client/xla_util.h"
+#include "torch/csrc/lazy/core/hash.h"
 #include "torch_xla/csrc/device.h"
 #include "torch_xla/csrc/ir_util.h"
 #include "torch_xla/csrc/lowering_context.h"
 #include "torch_xla/csrc/ops/device_data.h"
 #include "torch_xla/csrc/tensor_util.h"
+#include "torch_xla/csrc/torch_util.h"
 
 namespace torch_xla {
 namespace {
@@ -41,17 +43,17 @@ const xla::Shape& GetParameterShape(const ir::Output& operand,
              : xla::ShapeUtil::GetTupleElementShape(input_shape, operand.index);
 }
 
-xla::hash_t ComputeNodeKey(const ir::Node* node,
-                           absl::Span<const xla::Shape* const> input_shapes,
-                           const xla::hash_t& seed) {
-  xla::hash_t key = seed;
+torch::lazy::hash_t ComputeNodeKey(
+    const ir::Node* node, absl::Span<const xla::Shape* const> input_shapes,
+    const torch::lazy::hash_t& seed) {
+  torch::lazy::hash_t key = seed;
   const auto& operands = node->operands();
   for (size_t i = 0; i < operands.size(); ++i) {
-    key = xla::util::HashCombine(key, xla::util::ShapeHash(GetParameterShape(
+    key = torch::lazy::HashCombine(key, torch::lazy::Hash(GetParameterShape(
                                           operands[i], *input_shapes[i])));
   }
-  key = xla::util::HashCombine(key, xla::util::ShapeHash(node->shape()));
-  return xla::util::HashCombine(key, node->node_hash());
+  key = torch::lazy::HashCombine(key, torch::lazy::Hash(node->shape()));
+  return torch::lazy::HashCombine(key, node->node_hash());
 }
 
 xla::XlaComputation BuildNodeComputation(
@@ -71,9 +73,9 @@ xla::XlaComputation BuildNodeComputation(
   return ConsumeValue(loctx.Build());
 }
 
-xla::hash_t GetNodesKeySeed(const std::string& device,
-                            absl::Span<const std::string> devices) {
-  return xla::util::MHash(device, devices);
+torch::lazy::hash_t GetNodesKeySeed(const std::string& device,
+                                    absl::Span<const std::string> devices) {
+  return torch::lazy::MHash(device, torch::lazy::Hash(devices));
 }
 
 }  // namespace
@@ -102,12 +104,14 @@ std::vector<xla::ComputationClient::ExecuteChainedOp> OpByOpExecutor::BuildOps(
 
   auto compilation_devices =
       xla::ComputationClient::Get()->GetCompilationDevices(device, devices);
-  xla::hash_t nodes_key_seed = GetNodesKeySeed(device, compilation_devices);
+  torch::lazy::hash_t nodes_key_seed =
+      GetNodesKeySeed(device, compilation_devices);
   Device exec_device(device);
-  std::vector<xla::hash_t> cache_keys;
-  std::unordered_map<xla::hash_t, std::vector<size_t>, xla::util::HashReducer>
+  std::vector<torch::lazy::hash_t> cache_keys;
+  std::unordered_map<torch::lazy::hash_t, std::vector<size_t>,
+                     torch::lazy::HashReducer>
       compile_indices;
-  std::unordered_map<xla::hash_t, size_t, xla::util::HashReducer>
+  std::unordered_map<torch::lazy::hash_t, size_t, torch::lazy::HashReducer>
       cache_keys_instance;
   std::list<xla::Shape> compile_shapes;
   std::vector<bool> device_data_ops(post_order.size());
@@ -133,7 +137,7 @@ std::vector<xla::ComputationClient::ExecuteChainedOp> OpByOpExecutor::BuildOps(
         op_input_shapes.push_back(ops_shapes[op_index]);
       }
 
-      xla::hash_t cache_key =
+      torch::lazy::hash_t cache_key =
           ComputeNodeKey(node, op_input_shapes, nodes_key_seed);
       cxop.computation = compile_cache_.Get(cache_key);
       if (cxop.computation == nullptr) {

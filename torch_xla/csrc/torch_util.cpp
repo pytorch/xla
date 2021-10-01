@@ -1,6 +1,7 @@
 #include "torch_xla/csrc/torch_util.h"
 
 #include "tensorflow/compiler/xla/xla_client/debug_macros.h"
+#include "tensorflow/compiler/xla/xla_client/xla_util.h"
 
 namespace torch_xla {
 
@@ -33,3 +34,13 @@ at::Tensor UnwrapNumber(const at::Tensor& tensor, at::ScalarType dtype) {
 }
 
 }  // namespace torch_xla
+
+namespace torch {
+namespace lazy {
+torch::lazy::hash_t Hash(const xla::Shape& shape) {
+  auto shape_hash = xla::util::ShapeHash(shape);
+  return c10::uint128(absl::Uint128High64(shape_hash),
+                      absl::Uint128Low64(shape_hash));
+}
+}  // namespace lazy
+}  // namespace torch

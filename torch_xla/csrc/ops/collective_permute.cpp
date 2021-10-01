@@ -30,7 +30,7 @@ CollectivePermute::CollectivePermute(
     std::vector<std::pair<xla::int64, xla::int64>> source_target_pairs)
     : Node(xla_collective_permute, {input, token},
            [&]() { return NodeOutputShape(input, token, source_target_pairs); },
-           /*num_outputs=*/2, xla::util::MHash(source_target_pairs)),
+           /*num_outputs=*/2, torch::lazy::MHash(source_target_pairs)),
       source_target_pairs_(std::move(source_target_pairs)) {}
 
 NodePtr CollectivePermute::Clone(OpList operands) const {

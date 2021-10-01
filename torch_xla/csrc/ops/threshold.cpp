@@ -10,7 +10,7 @@ namespace ops {
 
 Threshold::Threshold(const Value& input, float threshold, float value)
     : Node(ir::OpKind(at::aten::threshold), {input}, input.shape(),
-           /*num_outputs=*/1, xla::util::MHash(threshold, value)),
+           /*num_outputs=*/1, torch::lazy::MHash(threshold, value)),
       threshold_(threshold),
       value_(value) {}
 

@@ -1162,7 +1162,7 @@ class XLATensor {
 
     SyncTensorsConfig config;
     std::vector<size_t> indices;
-    xla::hash_t hash;
+    torch::lazy::hash_t hash;
     std::vector<xla::util::ExceptionCleanup> unlocker;
     Device device;
   };
@@ -1190,7 +1190,7 @@ class XLATensor {
   };
 
   using ComputationCache =
-      xla::util::Cache<xla::hash_t, CachedComputation, xla::util::HashReducer>;
+      xla::util::Cache<torch::lazy::hash_t, CachedComputation, torch::lazy::HashReducer>;
 
   struct Async {
     Async(SyncTensorCollection* coll,
@@ -1371,7 +1371,7 @@ class XLATensor {
                                     absl::Span<const size_t> indices);
 
   static ComputationCache::TypePtr LookupCachedCompile(
-      const std::vector<XLATensor>& tensors, const xla::hash_t& hash);
+      const std::vector<XLATensor>& tensors, const torch::lazy::hash_t& hash);
 
   static std::shared_ptr<Async> TryRunCachedSync(
       std::vector<XLATensor>* tensors, SyncTensorCollection* coll,

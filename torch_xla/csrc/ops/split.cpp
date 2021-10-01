@@ -30,7 +30,7 @@ Split::Split(const Value& input, std::vector<xla::int64> split_sizes,
     : Node(ir::OpKind(at::aten::split), {input},
            [&]() { return NodeOutputShape(input, split_sizes, dim); },
            ComputeSplitCount(input.shape().dimensions(dim), split_sizes),
-           xla::util::MHash(split_sizes, dim)),
+           torch::lazy::MHash(split_sizes, dim)),
       split_sizes_(std::move(split_sizes)),
       dim_(dim) {}
 

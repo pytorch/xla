@@ -52,7 +52,7 @@ NllLoss2dBackward::NllLoss2dBackward(const Value& grad_output,
                                     total_weight, reduction, ignore_index);
            },
            /*num_outputs=*/1,
-           xla::util::MHash(xla::util::GetEnumValue(reduction), ignore_index)),
+           torch::lazy::MHash(xla::util::GetEnumValue(reduction), ignore_index)),
       reduction_(reduction),
       ignore_index_(ignore_index) {}
 

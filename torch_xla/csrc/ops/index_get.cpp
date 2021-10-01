@@ -27,7 +27,7 @@ IndexGet::IndexGet(const ir::Value& base, const ir::Value& indices,
                    xla::int64 start_dim)
     : Node(OpKind(at::aten::index), {base, indices},
            [&]() { return NodeOutputShape(base, indices, start_dim); },
-           /*num_outputs=*/1, xla::util::MHash(start_dim)),
+           /*num_outputs=*/1, torch::lazy::MHash(start_dim)),
       start_dim_(start_dim) {}
 
 std::string IndexGet::ToString() const {

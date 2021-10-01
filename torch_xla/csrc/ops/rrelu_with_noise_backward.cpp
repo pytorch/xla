@@ -15,7 +15,7 @@ RreluWithNoiseBackward::RreluWithNoiseBackward(
     : Node(ir::OpKind(at::aten::rrelu_with_noise_backward),
            {grad_output, input, noise}, input.shape(),
            /*num_outputs=*/1,
-           xla::util::MHash(ScalarHash(lower), ScalarHash(upper), training)),
+           torch::lazy::MHash(ScalarHash(lower), ScalarHash(upper), training)),
       lower_(std::move(lower)),
       upper_(std::move(upper)),
       training_(training) {}

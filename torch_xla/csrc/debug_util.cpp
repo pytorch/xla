@@ -15,6 +15,7 @@
 #include "torch_xla/csrc/ir_dump_util.h"
 #include "torch_xla/csrc/ir_util.h"
 #include "torch_xla/csrc/python_util.h"
+#include "torch/csrc/lazy/core/hash.h"
 
 namespace torch_xla {
 namespace {
@@ -55,7 +56,7 @@ std::string DebugUtil::GetTensorsGraphInfo(absl::Span<const XLATensor> tensors,
                                            GraphFormat format) {
   std::vector<const ir::Node*> root_nodes;
   std::vector<ir::Value> root_values;
-  std::vector<xla::hash_t> root_hashes;
+  std::vector<torch::lazy::hash_t> root_hashes;
   xla::util::Unique<Device> unique_device;
   if (indices != nullptr) {
     for (auto index : *indices) {
@@ -91,7 +92,7 @@ std::string DebugUtil::GetTensorsGraphInfo(absl::Span<const XLATensor> tensors,
     if (i > 0) {
       ss << ", ";
     }
-    ss << xla::util::HexHash(root_hashes[i]);
+    ss << torch::lazy::HashToString(root_hashes[i]);
   }
   ss << ")\n";
 

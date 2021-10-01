@@ -69,7 +69,7 @@ xla::Shape NodeOutputShape(const Value& input, bool some, bool compute_uv) {
 SVD::SVD(const Value& input, bool some, bool compute_uv)
     : Node(ir::OpKind(at::aten::svd), {input},
            [&]() { return NodeOutputShape(input, some, compute_uv); },
-           /*num_outputs=*/3, xla::util::MHash(some, compute_uv)),
+           /*num_outputs=*/3, torch::lazy::MHash(some, compute_uv)),
       some_(some),
       compute_uv_(compute_uv) {}
 

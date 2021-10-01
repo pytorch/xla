@@ -15,7 +15,7 @@ Select::Select(const Value& input, xla::int64 dim, xla::int64 start,
            [&]() {
              return MakeSelectShape(input.shape(), dim, start, end, stride);
            },
-           /*num_outputs=*/1, xla::util::MHash(dim, start, end, stride)),
+           /*num_outputs=*/1, torch::lazy::MHash(dim, start, end, stride)),
       dim_(dim),
       start_(start),
       end_(end),

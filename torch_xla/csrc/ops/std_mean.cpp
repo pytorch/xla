@@ -36,7 +36,7 @@ StdMean::StdMean(const Value& input, std::vector<xla::int64> dimensions,
                                     correction);
            },
            /*num_outputs=*/2,
-           xla::util::MHash(dimensions, correction, keep_reduced_dimensions)),
+           torch::lazy::MHash(dimensions, correction, keep_reduced_dimensions)),
       dimensions_(std::move(dimensions)),
       correction_(correction),
       keep_reduced_dimensions_(keep_reduced_dimensions) {}

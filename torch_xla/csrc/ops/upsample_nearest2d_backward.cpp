@@ -17,7 +17,7 @@ UpsampleNearestBackward::UpsampleNearestBackward(
            [&]() {
              return resize::GetBackwardOutputShape2d(input.shape(), input_size);
            },
-           /*num_outputs=*/1, xla::util::MHash(output_size, input_size)),
+           /*num_outputs=*/1, torch::lazy::MHash(output_size, input_size)),
       output_size_(std::move(output_size)),
       input_size_(std::move(input_size)) {}
 

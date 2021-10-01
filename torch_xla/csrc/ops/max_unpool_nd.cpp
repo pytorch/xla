@@ -38,7 +38,7 @@ MaxUnpoolNd::MaxUnpoolNd(const Value& input, const Value& indices,
                          std::vector<xla::int64> output_size)
     : Node(ir::OpKind(MaxUnpoolNdSymbol(output_size.size())), {input, indices},
            [&]() { return NodeOutputShape(input, indices, output_size); },
-           /*num_outputs=*/1, xla::util::MHash(output_size)),
+           /*num_outputs=*/1, torch::lazy::MHash(output_size)),
       output_size_(std::move(output_size)) {}
 
 NodePtr MaxUnpoolNd::Clone(OpList operands) const {

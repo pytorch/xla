@@ -34,7 +34,7 @@ Var::Var(const Value& input, std::vector<xla::int64> dimensions,
            NodeOutputShape(input, dimensions, correction,
                            keep_reduced_dimensions),
            /*num_outputs=*/1,
-           xla::util::MHash(dimensions, correction, keep_reduced_dimensions)),
+           torch::lazy::MHash(dimensions, correction, keep_reduced_dimensions)),
       dimensions_(std::move(dimensions)),
       correction_(correction),
       keep_reduced_dimensions_(keep_reduced_dimensions) {}

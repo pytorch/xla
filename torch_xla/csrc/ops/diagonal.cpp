@@ -18,7 +18,7 @@ Diagonal::Diagonal(const Value& input, xla::int64 offset, xla::int64 dim1,
            [&]() {
              return MakeDiagonalShape(input.shape(), offset, dim1, dim2);
            },
-           /*num_outputs=*/1, xla::util::MHash(offset, dim1, dim2)),
+           /*num_outputs=*/1, torch::lazy::MHash(offset, dim1, dim2)),
       offset_(offset),
       dim1_(dim1),
       dim2_(dim2) {}

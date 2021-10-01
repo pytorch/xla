@@ -45,7 +45,7 @@ ConvolutionOverrideable::ConvolutionOverrideable(
                                     transposed, output_padding, groups);
            },
            /*num_outputs=*/1,
-           xla::util::MHash(stride, padding, dilation, transposed,
+           torch::lazy::MHash(stride, padding, dilation, transposed,
                             output_padding, groups)),
       stride_(std::move(stride)),
       padding_(std::move(padding)),
@@ -64,7 +64,7 @@ ConvolutionOverrideable::ConvolutionOverrideable(
                                     transposed, output_padding, groups);
            },
            /*num_outputs=*/1,
-           xla::util::MHash(stride, padding, dilation, transposed,
+           torch::lazy::MHash(stride, padding, dilation, transposed,
                             output_padding, groups)),
       stride_(std::move(stride)),
       padding_(std::move(padding)),

@@ -63,7 +63,7 @@ NativeBatchNormForward::NativeBatchNormForward(const Value& input,
              return NodeOutputShape(input, weight, bias, running_mean,
                                     running_var, training);
            },
-           /*num_outputs=*/4, xla::util::MHash(training, eps)),
+           /*num_outputs=*/4, torch::lazy::MHash(training, eps)),
       training_(training),
       eps_(eps) {}
 

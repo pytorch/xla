@@ -26,7 +26,7 @@ xla::Shape NodeOutputShape(const Value& input, xla::PrimitiveType type) {
 
 Cast::Cast(const Value& input, xla::PrimitiveType type)
     : Node(xla_cast, {input}, NodeOutputShape(input, type),
-           /*num_outputs=*/1, xla::util::MHash(static_cast<int>(type))),
+           /*num_outputs=*/1, torch::lazy::MHash(static_cast<int>(type))),
       type_(type) {}
 
 Cast::Cast(const Value& input, at::ScalarType dtype,
@@ -35,7 +35,7 @@ Cast::Cast(const Value& input, at::ScalarType dtype,
            NodeOutputShape(input,
                            MakeXlaPrimitiveType(dtype, /*device=*/nullptr)),
            /*num_outputs=*/1,
-           xla::util::MHash(101, static_cast<int>(dtype),
+           torch::lazy::MHash(101, static_cast<int>(dtype),
                             OptionalOr<int>(stype, -1))),
       type_(MakeXlaPrimitiveType(dtype, /*device=*/nullptr)),
       dtype_(dtype),

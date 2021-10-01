@@ -26,7 +26,7 @@ ReflectionPad2d::ReflectionPad2d(const Value& input,
                                  std::vector<xla::int64> padding)
     : Node(OpKind(at::aten::reflection_pad2d), {input},
            [&]() { return NodeOutputShape(input, padding); },
-           /*num_outputs=*/1, xla::util::MHash(padding)),
+           /*num_outputs=*/1, torch::lazy::MHash(padding)),
       padding_(std::move(padding)) {}
 
 NodePtr ReflectionPad2d::Clone(OpList operands) const {

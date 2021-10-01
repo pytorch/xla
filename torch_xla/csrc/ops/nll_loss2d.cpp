@@ -43,7 +43,7 @@ NllLoss2d::NllLoss2d(const Value& logits, const Value& labels,
                                     ignore_index);
            },
            /*num_outputs=*/1,
-           xla::util::MHash(xla::util::GetEnumValue(reduction), ignore_index)),
+           torch::lazy::MHash(xla::util::GetEnumValue(reduction), ignore_index)),
       reduction_(reduction),
       ignore_index_(ignore_index) {}
 

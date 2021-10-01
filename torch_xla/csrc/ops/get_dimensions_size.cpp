@@ -17,7 +17,7 @@ GetDimensionsSize::GetDimensionsSize(const Value& input,
     : Node(xla_get_dimensions_size, {input},
            xla::ShapeUtil::MakeShape(GetShapeDimensionType(/*device=*/nullptr),
                                      {}),
-           /*num_outputs=*/1, xla::util::MHash(dimensions)),
+           /*num_outputs=*/1, torch::lazy::MHash(dimensions)),
       dimensions_(std::move(dimensions)) {}
 
 NodePtr GetDimensionsSize::Clone(OpList operands) const {

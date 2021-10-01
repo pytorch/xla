@@ -24,7 +24,7 @@ xla::Shape NodeOutputShape(const Value& input,
 Amin::Amin(const Value& input, std::vector<xla::int64> dimensions, bool keepdim)
     : Node(ir::OpKind(at::aten::amin), {input},
            [&]() { return NodeOutputShape(input, dimensions, keepdim); },
-           /*num_outputs=*/1, xla::util::MHash(dimensions, keepdim)),
+           /*num_outputs=*/1, torch::lazy::MHash(dimensions, keepdim)),
       dimensions_(std::move(dimensions)),
       keepdim_(keepdim) {}
 

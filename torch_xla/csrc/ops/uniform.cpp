@@ -5,6 +5,7 @@
 #include "torch_xla/csrc/helpers.h"
 #include "torch_xla/csrc/lowering_context.h"
 #include "torch_xla/csrc/random.h"
+#include "torch_xla/csrc/torch_util.h"
 
 namespace torch_xla {
 namespace ir {
@@ -13,7 +14,7 @@ namespace ops {
 Uniform::Uniform(const Value& from, const Value& to, const Value& seed,
                  const xla::Shape& rng_shape)
     : Node(ir::OpKind(at::aten::uniform), {from, to, seed}, rng_shape,
-           /*num_outputs=*/1, xla::util::ShapeHash(rng_shape)) {}
+           /*num_outputs=*/1, torch::lazy::Hash(rng_shape)) {}
 
 NodePtr Uniform::Clone(OpList operands) const {
   return MakeNode<Uniform>(operands.at(0), operands.at(1), operands.at(2),

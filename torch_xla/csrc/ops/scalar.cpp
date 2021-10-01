@@ -95,9 +95,9 @@ XlaOpVector Scalar::Lower(LoweringContext* loctx) const {
   return ReturnOp(op, loctx);
 }
 
-xla::hash_t ScalarHash(const at::Scalar& s) {
-  return s.isFloatingPoint() ? xla::util::Hash(s.toDouble())
-                             : xla::util::Hash(s.toLong());
+torch::lazy::hash_t ScalarHash(const at::Scalar& s) {
+  return s.isFloatingPoint() ? torch::lazy::Hash(s.toDouble())
+                             : torch::lazy::Hash(s.toLong());
 }
 
 std::ostream& operator<<(std::ostream& ostrm, at::Scalar s) {

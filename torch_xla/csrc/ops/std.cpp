@@ -33,7 +33,7 @@ Std::Std(const Value& input, std::vector<xla::int64> dimensions,
                                     correction);
            },
            /*num_outputs=*/1,
-           xla::util::MHash(dimensions, keep_reduced_dimensions, correction)),
+           torch::lazy::MHash(dimensions, keep_reduced_dimensions, correction)),
       dimensions_(std::move(dimensions)),
       keep_reduced_dimensions_(keep_reduced_dimensions),
       correction_(correction) {}

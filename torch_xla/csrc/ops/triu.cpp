@@ -10,7 +10,7 @@ namespace ops {
 
 Triu::Triu(const Value& input, xla::int64 diagonal)
     : Node(ir::OpKind(at::aten::triu), {input}, input.shape(),
-           /*num_outputs=*/1, xla::util::MHash(diagonal)),
+           /*num_outputs=*/1, torch::lazy::MHash(diagonal)),
       diagonal_(diagonal) {}
 
 NodePtr Triu::Clone(OpList operands) const {

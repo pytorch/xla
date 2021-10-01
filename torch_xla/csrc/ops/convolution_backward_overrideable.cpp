@@ -47,7 +47,7 @@ ConvolutionBackwardOverrideable::ConvolutionBackwardOverrideable(
                                     groups);
            },
            /*num_outputs=*/3,
-           xla::util::MHash(stride, padding, dilation, transposed,
+           torch::lazy::MHash(stride, padding, dilation, transposed,
                             output_padding, groups)),
       stride_(std::move(stride)),
       padding_(std::move(padding)),

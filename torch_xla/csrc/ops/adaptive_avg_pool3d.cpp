@@ -27,7 +27,7 @@ AdaptiveAvgPool3d::AdaptiveAvgPool3d(const Value& input,
                                      std::vector<xla::int64> output_size)
     : Node(ir::OpKind(at::aten::adaptive_avg_pool3d), {input},
            [&]() { return NodeOutputShape(input, output_size); },
-           /*num_outputs=*/1, xla::util::MHash(output_size)),
+           /*num_outputs=*/1, torch::lazy::MHash(output_size)),
       output_size_(std::move(output_size)) {}
 
 NodePtr AdaptiveAvgPool3d::Clone(OpList operands) const {

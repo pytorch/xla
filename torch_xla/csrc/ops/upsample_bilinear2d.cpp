@@ -17,7 +17,7 @@ UpsampleBilinear::UpsampleBilinear(const Value& input,
            [&]() {
              return resize::GetForwardOutputShape2d(input.shape(), output_size);
            },
-           /*num_outputs=*/1, xla::util::MHash(output_size, align_corners)),
+           /*num_outputs=*/1, torch::lazy::MHash(output_size, align_corners)),
       output_size_(std::move(output_size)),
       align_corners_(align_corners) {}
 

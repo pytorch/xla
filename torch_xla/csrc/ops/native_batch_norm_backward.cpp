@@ -39,7 +39,7 @@ NativeBatchNormBackward::NativeBatchNormBackward(
              return NodeOutputShape(grad_out, input, weight, save_mean,
                                     save_invstd, training);
            },
-           /*num_outputs=*/3, xla::util::MHash(training, eps)),
+           /*num_outputs=*/3, torch::lazy::MHash(training, eps)),
       training_(training),
       eps_(eps) {}
 

@@ -37,7 +37,7 @@ AllToAll::AllToAll(const Value& input, const Value& token,
                                     concat_dimension, split_count, groups);
            },
            /*num_outputs=*/2,
-           xla::util::MHash(split_dimension, concat_dimension, split_count,
+           torch::lazy::MHash(split_dimension, concat_dimension, split_count,
                             groups)),
       split_dimension_(split_dimension),
       concat_dimension_(concat_dimension),

@@ -38,8 +38,8 @@ class OpByOpExecutor {
 
  private:
   using CompileCache =
-      xla::util::Cache<xla::hash_t, xla::ComputationClient::Computation,
-                       xla::util::HashReducer>;
+      xla::util::Cache<torch::lazy::hash_t, xla::ComputationClient::Computation,
+                       torch::lazy::HashReducer>;
 
   explicit OpByOpExecutor(size_t compile_cache_size);
 

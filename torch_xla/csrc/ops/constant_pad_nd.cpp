@@ -38,7 +38,7 @@ ConstantPadNd::ConstantPadNd(const Value& input, std::vector<xla::int64> pad,
                              const at::Scalar& value)
     : Node(ir::OpKind(at::aten::constant_pad_nd), {input},
            [&]() { return NodeOutputShape(input, value, pad); },
-           /*num_outputs=*/1, xla::util::MHash(pad, ScalarHash(value))),
+           /*num_outputs=*/1, torch::lazy::MHash(pad, ScalarHash(value))),
       pad_(std::move(pad)),
       value_(value) {}
 

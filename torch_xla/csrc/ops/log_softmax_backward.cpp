@@ -14,7 +14,7 @@ LogSoftmaxBackward::LogSoftmaxBackward(const Value& grad_output,
                                        const Value& output, xla::int64 dim)
     : Node(ir::OpKind(at::aten::_log_softmax_backward_data),
            {grad_output, output}, grad_output.shape(),
-           /*num_outputs=*/1, xla::util::MHash(dim)),
+           /*num_outputs=*/1, torch::lazy::MHash(dim)),
       dim_(dim) {}
 
 NodePtr LogSoftmaxBackward::Clone(OpList operands) const {
