@@ -9,6 +9,20 @@ The **first thing** to check when model is slow is to generate a metrics report.
 Metrics report is extremely helpful in diagnosing issues. Please try to include it in your bug
 report sent to us if you have it.
 
+## Perform A Auto-Metrics Analysis
+
+We provide ways to automatically analyze the metrics report and provide a summary. Simply run your workload with `PT_XLA_DEBUG=1`. Some example output would be
+
+```
+pt-xla-profiler: CompileTime too frequent: 21 counts during 11 steps
+pt-xla-profiler: TransferFromServerTime too frequent: 11 counts during 11 steps
+pt-xla-profiler: Op(s) not lowered: aten::_ctc_loss, aten::_ctc_loss_backward,  Please open a GitHub issue with the above op lowering requests.
+pt-xla-profiler: CompileTime too frequent: 23 counts during 12 steps
+pt-xla-profiler: TransferFromServerTime too frequent: 12 counts during 12 steps
+```
+
+Following section will explain how to get and understand a more detial metrics report.
+
 ## Get A Metrics Report
 
 Put the following line in your program to generate a report:
@@ -59,9 +73,7 @@ Counter: aten::nonzero
 If you see `aten::` ops other than `nonzero` and `_local_scalar_dense`, that usually means a missing
 lowering in PyTorch/XLA. Feel free to open a feature request for it on [GitHub issues](https://github.com/pytorch/xla/issues).
 
-## Performance Profiling and Auto-Metrics Analysis
-In addition, to manually inspecting the above metrics we provide ways to automatically analyze the above metrics report and provide a summary. Simply run your workload with `PT_XLA_DEBUG=1`.
-
+## Performance Profiling
 To profile your workload in depth to undertand bottlenecks please check the following resources:
 * [Official tutorial](https://cloud.google.com/tpu/docs/pytorch-xla-performance-profiling) 
 * [Colab notebook](https://colab.research.google.com/github/pytorch/xla/blob/master/contrib/colab/pytorch-xla-profiling-colab.ipynb)
