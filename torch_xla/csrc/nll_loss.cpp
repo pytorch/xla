@@ -73,7 +73,7 @@ xla::XlaOp LabelsToOneHot(xla::XlaBuilder* builder, xla::int64 depth, int axis,
 
 WeightScale GetMaskedWeight(xla::XlaOp weight, const xla::Shape& logits_shape,
                             xla::XlaOp labels, xla::XlaOp one_hot_labels,
-                            int axis, int ignore_index) {
+                            int axis, int ignore_index, bool non_zero_scale) {
   const xla::Shape& labels_shape = XlaHelpers::ShapeOfXlaOp(labels);
   xla::XlaOp valid_bitmap = xla::Ne(
       labels, XlaHelpers::ScalarValue<xla::int64>(
@@ -98,9 +98,11 @@ WeightScale GetMaskedWeight(xla::XlaOp weight, const xla::Shape& logits_shape,
   xla::XlaComputation add_func =
       XlaHelpers::CreateAddComputation(logits_shape.element_type());
   xla::XlaOp zero = xla::Zero(labels.builder(), logits_shape.element_type());
-  xla::XlaOp one = xla::One(labels.builder(), logits_shape.element_type());
   xla::XlaOp scale = xla::ReduceAll(result_weight, zero, add_func);
-  scale = xla::Select(xla::Ne(scale, zero), scale, one);
+  if (non_zero_scale) {
+    xla::XlaOp one = xla::One(labels.builder(), logits_shape.element_type());
+    scale = xla::Select(xla::Ne(scale, zero), scale, one);
+  }
   return {result_weight, scale};
 }
 
@@ -129,8 +131,11 @@ xla::XlaOp BuildNllLoss(xla::XlaOp logits, xla::XlaOp labels, xla::XlaOp weight,
   labeled_logits = xla::Select(non_labeled_mask,
                                xla::Broadcast(zero, logits_shape.dimensions()),
                                labeled_logits);
+  // When the whole target is equal to the ignore_index in the nll_loss forward,
+  // pytorch will return nan hence scale should be 0.
   WeightScale weight_scale = GetMaskedWeight(
-      weight, logits_shape, labels, one_hot_labels, classes_axis, ignore_index);
+      weight, logits_shape, labels, one_hot_labels, classes_axis, ignore_index,
+      /*non_zero_scale=*/false);
   labeled_logits = labeled_logits * weight_scale.weight;
   xla::XlaComputation add_func =
       XlaHelpers::CreateAddComputation(logits_shape.element_type());
@@ -172,8 +177,11 @@ xla::XlaOp BuildNllLossBackward(xla::XlaOp grad_output, xla::XlaOp logits,
     grad = xla::BroadcastInDim(grad, logits_shape.dimensions(), {0, 2, 3});
   }
   xla::XlaOp result = xla::Neg(one_hot_labels) * grad;
-  WeightScale weight_scale = GetMaskedWeight(
-      weight, logits_shape, labels, one_hot_labels, classes_axis, ignore_index);
+  // When the whole target is equal to the ignore_index in the nll_loss
+  // backward, pytorch will return 0 hence scale should not be 0.
+  WeightScale weight_scale =
+      GetMaskedWeight(weight, logits_shape, labels, one_hot_labels,
+                      classes_axis, ignore_index, /*non_zero_scale=*/true);
   result = result * weight_scale.weight;
   if (reduction_mode != ReductionMode::kMean) {
     return result;
