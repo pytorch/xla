@@ -44,7 +44,7 @@ Sum::Sum(const Value& input, std::vector<xla::int64> dimensions,
            },
            /*num_outputs=*/1,
            torch::lazy::MHash(dimensions, keep_reduced_dimensions,
-                            OptionalOr<int>(dtype, -1))),
+                              OptionalOr<int>(dtype, -1))),
       dimensions_(std::move(dimensions)),
       keep_reduced_dimensions_(keep_reduced_dimensions),
       dtype_(dtype) {}

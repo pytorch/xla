@@ -16,9 +16,9 @@
 #include "tensorflow/compiler/xla/xla_client/thread_pool.h"
 #include "tensorflow/compiler/xla/xla_client/util.h"
 #include "tensorflow/core/lib/bfloat16/bfloat16.h"
+#include "torch/csrc/lazy/core/hash.h"
 #include "torch_xla/csrc/helpers.h"
 #include "torch_xla/csrc/layout_manager.h"
-#include "torch/csrc/lazy/core/hash.h"
 
 namespace torch_xla {
 namespace {
@@ -832,10 +832,11 @@ torch::lazy::hash_t TensorHash(const at::Tensor& tensor) {
     case at::ScalarType::Half:
       return torch::lazy::DataHash(ctensor.data_ptr<at::Half>(), size);
     case at::ScalarType::ComplexFloat:
-      return torch::lazy::DataHash(ctensor.data_ptr<c10::complex<float>>(), size);
+      return torch::lazy::DataHash(ctensor.data_ptr<c10::complex<float>>(),
+                                   size);
     case at::ScalarType::ComplexDouble:
       return torch::lazy::DataHash(ctensor.data_ptr<c10::complex<double>>(),
-                                 size);
+                                   size);
     default:
       XLA_ERROR() << "Unsupported scalar type: " << ctensor.scalar_type();
   }

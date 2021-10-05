@@ -1190,7 +1190,8 @@ class XLATensor {
   };
 
   using ComputationCache =
-      xla::util::Cache<torch::lazy::hash_t, CachedComputation, torch::lazy::HashReducer>;
+      xla::util::Cache<torch::lazy::hash_t, CachedComputation,
+                       torch::lazy::HashReducer>;
 
   struct Async {
     Async(SyncTensorCollection* coll,

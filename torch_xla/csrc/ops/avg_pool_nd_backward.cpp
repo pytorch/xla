@@ -56,7 +56,7 @@ AvgPoolNdBackward::AvgPoolNdBackward(
            },
            /*num_outputs=*/1,
            torch::lazy::MHash(spatial_dim_count, kernel_size, stride, padding,
-                            ceil_mode, count_include_pad)),
+                              ceil_mode, count_include_pad)),
       spatial_dim_count_(spatial_dim_count),
       kernel_size_(std::move(kernel_size)),
       stride_(std::move(stride)),

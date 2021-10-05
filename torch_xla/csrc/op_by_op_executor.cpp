@@ -50,7 +50,7 @@ torch::lazy::hash_t ComputeNodeKey(
   const auto& operands = node->operands();
   for (size_t i = 0; i < operands.size(); ++i) {
     key = torch::lazy::HashCombine(key, torch::lazy::Hash(GetParameterShape(
-                                          operands[i], *input_shapes[i])));
+                                            operands[i], *input_shapes[i])));
   }
   key = torch::lazy::HashCombine(key, torch::lazy::Hash(node->shape()));
   return torch::lazy::HashCombine(key, node->node_hash());

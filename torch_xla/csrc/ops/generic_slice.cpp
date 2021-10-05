@@ -30,7 +30,9 @@ GenericSlice::GenericSlice(const Value& input,
                            absl::Span<const xla::int64> sizes)
     : Node(xla_generic_slice, {input},
            [&]() { return NodeOutputShape(input, base_indices, sizes); },
-           /*num_outputs=*/1, torch::lazy::MHash(torch::lazy::Hash(base_indices), torch::lazy::Hash(sizes))),
+           /*num_outputs=*/1,
+           torch::lazy::MHash(torch::lazy::Hash(base_indices),
+                              torch::lazy::Hash(sizes))),
       base_indices_(base_indices.begin(), base_indices.end()),
       sizes_(sizes.begin(), sizes.end()) {}
 

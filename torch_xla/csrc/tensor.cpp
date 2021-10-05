@@ -25,6 +25,7 @@
 #include "tensorflow/core/lib/core/errors.h"
 #include "tensorflow/core/profiler/lib/traceme.h"
 #include "torch/csrc/autograd/variable.h"
+#include "torch/csrc/lazy/core/hash.h"
 #include "torch_xla/csrc/debug_util.h"
 #include "torch_xla/csrc/helpers.h"
 #include "torch_xla/csrc/ir_dump_util.h"
@@ -39,7 +40,6 @@
 #include "torch_xla/csrc/ops/xla_ops.h"
 #include "torch_xla/csrc/tensor_util.h"
 #include "torch_xla/csrc/torch_util.h"
-#include "torch/csrc/lazy/core/hash.h"
 
 namespace torch_xla {
 namespace {
@@ -1312,13 +1312,15 @@ std::shared_ptr<XLATensor::Async> XLATensor::ScheduleSyncTensorsGraph(
   auto syncfn = [async, hash = coll->hash]() {
     xla::ComputationClient::ExecuteComputationOptions options;
     try {
-      TF_VLOG(3) << "Executing IR graph hash " << torch::lazy::HashToString(hash)
-                 << " on device " << async->device << " ...";
+      TF_VLOG(3) << "Executing IR graph hash "
+                 << torch::lazy::HashToString(hash) << " on device "
+                 << async->device << " ...";
       auto results = xla::ComputationClient::Get()->ExecuteComputation(
           *async->cached_computation->computation, async->parameters_data,
           async->device, options);
-      TF_VLOG(3) << "Executing IR graph hash " << torch::lazy::HashToString(hash)
-                 << " on device " << async->device << " done!";
+      TF_VLOG(3) << "Executing IR graph hash "
+                 << torch::lazy::HashToString(hash) << " on device "
+                 << async->device << " done!";
 
       for (size_t i = 0; i < results.size(); ++i) {
         if (async->tensors_data[i] != nullptr) {
@@ -1572,13 +1574,15 @@ XLATensor::CompilationResult XLATensor::Compile(
                            coll.device.ToString(), devices),
                        &shape});
 
-  TF_VLOG(3) << "Compiling IR graph hash " << torch::lazy::HashToString(coll.hash)
-             << " on device " << coll.device << " ...";
+  TF_VLOG(3) << "Compiling IR graph hash "
+             << torch::lazy::HashToString(coll.hash) << " on device "
+             << coll.device << " ...";
   std::vector<std::shared_ptr<xla::ComputationClient::Computation>>
       computations =
           xla::ComputationClient::Get()->Compile(std::move(instances));
-  TF_VLOG(3) << "Compiling IR graph hash " << torch::lazy::HashToString(coll.hash)
-             << " on device " << coll.device << " done!";
+  TF_VLOG(3) << "Compiling IR graph hash "
+             << torch::lazy::HashToString(coll.hash) << " on device "
+             << coll.device << " done!";
   TF_VLOG(5)
       << "Graph hash " << torch::lazy::HashToString(coll.hash)
       << " is computation hash "

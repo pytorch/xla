@@ -38,7 +38,7 @@ AllReduce::AllReduce(AllReduceType reduce_type,
            [&]() { return NodeOutputShape(operands, token); },
            /*num_outputs=*/operands.size() + 1,
            torch::lazy::MHash(xla::util::GetEnumValue(reduce_type), scale,
-                            groups)),
+                              groups)),
       reduce_type_(reduce_type),
       scale_(scale),
       groups_(std::move(groups)) {}

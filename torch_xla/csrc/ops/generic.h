@@ -21,7 +21,8 @@ class Generic : public Node {
 
   Generic(OpKind op, absl::Span<const Value> operands,
           const std::function<xla::Shape()>& shape_fn, LowerFn lower_fn,
-          size_t num_outputs = 1, torch::lazy::hash_t hash_seed = (uint32_t)0x5a2d296e9);
+          size_t num_outputs = 1,
+          torch::lazy::hash_t hash_seed = (uint32_t)0x5a2d296e9);
 
   Generic(OpKind op, xla::Shape shape, LowerFn lower_fn, size_t num_outputs,
           torch::lazy::hash_t hash_seed);

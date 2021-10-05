@@ -36,7 +36,7 @@ Cast::Cast(const Value& input, at::ScalarType dtype,
                            MakeXlaPrimitiveType(dtype, /*device=*/nullptr)),
            /*num_outputs=*/1,
            torch::lazy::MHash(101, static_cast<int>(dtype),
-                            OptionalOr<int>(stype, -1))),
+                              OptionalOr<int>(stype, -1))),
       type_(MakeXlaPrimitiveType(dtype, /*device=*/nullptr)),
       dtype_(dtype),
       stype_(stype) {}

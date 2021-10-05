@@ -9,8 +9,8 @@
 #include "tensorflow/compiler/xla/types.h"
 #include "tensorflow/compiler/xla/xla_client/computation_client.h"
 #include "torch/csrc/autograd/variable.h"
-#include "torch_xla/csrc/device.h"
 #include "torch/csrc/lazy/core/hash.h"
+#include "torch_xla/csrc/device.h"
 
 namespace torch_xla {
 

@@ -54,7 +54,7 @@ MaxPoolNdBackward::MaxPoolNdBackward(
            },
            /*num_outputs=*/1,
            torch::lazy::MHash(spatial_dim_count, kernel_size, stride, padding,
-                            ceil_mode)),
+                              ceil_mode)),
       spatial_dim_count_(spatial_dim_count),
       kernel_size_(std::move(kernel_size)),
       stride_(std::move(stride)),

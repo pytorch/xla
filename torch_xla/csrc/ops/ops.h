@@ -25,18 +25,19 @@ inline NodePtr ConstantOp(xla::Literal value) {
   return MakeNode<Constant>(std::move(value));
 }
 
-inline NodePtr GenericOp(OpKind op, absl::Span<const Value> operands,
-                         xla::Shape shape, Generic::LowerFn lower_fn,
-                         size_t num_outputs = 1,
-                         torch::lazy::hash_t hash_seed = (uint32_t)0x5a2d296e9) {
+inline NodePtr GenericOp(
+    OpKind op, absl::Span<const Value> operands, xla::Shape shape,
+    Generic::LowerFn lower_fn, size_t num_outputs = 1,
+    torch::lazy::hash_t hash_seed = (uint32_t)0x5a2d296e9) {
   return MakeNode<Generic>(std::move(op), operands, std::move(shape),
                            std::move(lower_fn), num_outputs, hash_seed);
 }
 
-inline NodePtr GenericOp(OpKind op, absl::Span<const Value> operands,
-                         const std::function<xla::Shape()>& shape_fn,
-                         Generic::LowerFn lower_fn, size_t num_outputs = 1,
-                         torch::lazy::hash_t hash_seed = (uint32_t)0x5a2d296e9) {
+inline NodePtr GenericOp(
+    OpKind op, absl::Span<const Value> operands,
+    const std::function<xla::Shape()>& shape_fn, Generic::LowerFn lower_fn,
+    size_t num_outputs = 1,
+    torch::lazy::hash_t hash_seed = (uint32_t)0x5a2d296e9) {
   return MakeNode<Generic>(std::move(op), operands, shape_fn,
                            std::move(lower_fn), num_outputs, hash_seed);
 }
