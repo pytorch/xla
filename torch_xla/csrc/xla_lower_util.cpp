@@ -820,4 +820,45 @@ std::vector<xla::XlaOp> BuildAmpUpdateScale(const xla::XlaOp& current_scale,
   return results;
 }
 
+std::vector<xla::XlaOp> BuildSgdOptimizerStep(
+    const xla::XlaOp& found_inf, const xla::XlaOp& step,
+    const xla::XlaOp& param, const xla::XlaOp& d_p, const xla::XlaOp& buf,
+    const xla::XlaOp& weight_decay, const xla::XlaOp& momentum,
+    const xla::XlaOp& lr, const xla::XlaOp& dampening, bool use_weight_decay,
+    bool use_momentum, bool use_nesterov) {
+  /* XLA version of the SGD algorithm
+   * https://github.com/pytorch/pytorch/blob/master/torch/optim/_functional.py#L162-L180
+   */
+  auto dtype = XlaHelpers::ShapeOfXlaOp(param).element_type();
+  xla::XlaOp one = xla::One(param.builder(), dtype);
+  xla::XlaOp zero = xla::Zero(param.builder(), dtype);
+
+  xla::XlaOp found_inf_cond = xla::Ne(found_inf, zero);
+  xla::XlaOp is_initialized_cond = xla::Ne(step, zero);
+
+  // weight decay
+  xla::XlaOp d_p_compute = use_weight_decay ? d_p + param * weight_decay : d_p;
+  // update momentum buf
+  xla::XlaOp new_buf = buf;
+  if (use_momentum) {
+    xla::XlaOp buf_compute = xla::Select(
+        is_initialized_cond, buf * momentum + d_p_compute * (one - dampening),
+        d_p_compute);
+    d_p_compute =
+        use_nesterov ? d_p_compute + buf_compute * momentum : buf_compute;
+    new_buf = xla::Select(found_inf_cond, buf, buf_compute);
+  }
+  // update param
+  xla::XlaOp new_param =
+      xla::Select(found_inf_cond, param, param - d_p_compute * lr);
+  // update step counter
+  xla::XlaOp new_step = xla::Select(found_inf_cond, step, step + one);
+
+  std::vector<xla::XlaOp> results;
+  results.push_back(new_step);
+  results.push_back(new_param);
+  results.push_back(new_buf);
+  return results;
+}
+
 }  // namespace torch_xla

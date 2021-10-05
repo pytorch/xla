@@ -79,6 +79,7 @@ class TestSyncFreeOptimizerBase(unittest.TestCase):
       ref_output = ref_model(data)
       ref_loss = loss_fn(ref_output, target)
       ref_loss.backward()
+      # mimick the effect of found_inf tensor
       if i % 2 != 0:
         xm.optimizer_step(ref_optimizer)
       xm.mark_step()

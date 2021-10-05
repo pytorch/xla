@@ -20,6 +20,7 @@ const OpKindWrapper xla_replication_pad("xla::replication_pad");
 const OpKindWrapper xla_replication_pad_backward(
     "xla::replication_pad_backward");
 const OpKindWrapper xla_select("xla::select");
+const OpKindWrapper xla_sgd_optimizer_step("xla::sgd_optimizer_step");
 const OpKindWrapper xla_tensor_data("xla::tensor_data");
 const OpKindWrapper xla_unselect("xla::unselect");
 const OpKindWrapper xla_update_slice("xla::update_slice");
