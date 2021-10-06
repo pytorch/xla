@@ -1,7 +1,7 @@
 #include "torch_xla/csrc/ops/nms.h"
 
 #include "tensorflow/compiler/xla/xla_client/debug_macros.h"
-#include "tensorflow/compiler/xla/xla_client/util.h"
+
 #include "torch_xla/csrc/lowering_context.h"
 #include "torch_xla/csrc/nms_op.h"
 #include "torch_xla/csrc/ops/infer_output_shape.h"

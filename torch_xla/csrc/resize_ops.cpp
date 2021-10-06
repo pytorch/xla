@@ -6,7 +6,7 @@
 #include "tensorflow/compiler/xla/util.h"
 #include "tensorflow/compiler/xla/xla_client/debug_macros.h"
 #include "tensorflow/compiler/xla/xla_client/sys_util.h"
-#include "tensorflow/compiler/xla/xla_client/util.h"
+
 #include "torch_xla/csrc/helpers.h"
 #include "torch_xla/csrc/shape_builder.h"
 

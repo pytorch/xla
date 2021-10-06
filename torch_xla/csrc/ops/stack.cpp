@@ -1,6 +1,6 @@
 #include "torch_xla/csrc/ops/stack.h"
 
-#include "tensorflow/compiler/xla/xla_client/util.h"
+
 #include "torch_xla/csrc/data_ops.h"
 #include "torch_xla/csrc/helpers.h"
 #include "torch_xla/csrc/lowering_context.h"

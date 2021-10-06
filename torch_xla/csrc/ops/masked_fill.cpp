@@ -1,7 +1,7 @@
 #include "torch_xla/csrc/ops/masked_fill.h"
 
 #include "tensorflow/compiler/xla/client/lib/constants.h"
-#include "tensorflow/compiler/xla/xla_client/util.h"
+
 #include "torch_xla/csrc/helpers.h"
 #include "torch_xla/csrc/lowering_context.h"
 #include "torch_xla/csrc/ops/scalar.h"

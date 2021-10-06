@@ -1,6 +1,6 @@
 #include "torch_xla/csrc/ops/hardtanh_backward.h"
 
-#include "tensorflow/compiler/xla/xla_client/util.h"
+
 #include "torch_xla/csrc/elementwise.h"
 #include "torch_xla/csrc/lowering_context.h"
 #include "torch_xla/csrc/ops/scalar.h"

@@ -4,7 +4,7 @@
 
 #include "tensorflow/compiler/xla/shape_util.h"
 #include "tensorflow/compiler/xla/xla_client/debug_macros.h"
-#include "tensorflow/compiler/xla/xla_client/util.h"
+
 #include "torch_xla/csrc/lowering_context.h"
 #include "torch_xla/csrc/matrix.h"
 

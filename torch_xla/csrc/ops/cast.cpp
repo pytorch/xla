@@ -1,7 +1,7 @@
 #include "torch_xla/csrc/ops/cast.h"
 
 #include "tensorflow/compiler/xla/primitive_util.h"
-#include "tensorflow/compiler/xla/xla_client/util.h"
+
 #include "torch_xla/csrc/convert_ops.h"
 #include "torch_xla/csrc/helpers.h"
 #include "torch_xla/csrc/lowering_context.h"

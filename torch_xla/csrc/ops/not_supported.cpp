@@ -1,7 +1,7 @@
 #include "torch_xla/csrc/ops/not_supported.h"
 
 #include "tensorflow/compiler/xla/xla_client/debug_macros.h"
-#include "tensorflow/compiler/xla/xla_client/util.h"
+
 #include "torch_xla/csrc/lowering_context.h"
 #include "torch_xla/csrc/ops/xla_ops.h"
 

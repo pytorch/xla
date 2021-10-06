@@ -1,7 +1,7 @@
 #include "torch_xla/csrc/ops/flip.h"
 
 #include "tensorflow/compiler/xla/client/xla_builder.h"
-#include "tensorflow/compiler/xla/xla_client/util.h"
+
 #include "torch_xla/csrc/lowering_context.h"
 
 namespace torch_xla {
