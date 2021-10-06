@@ -402,8 +402,8 @@ void XLATensor::sgd_optimizer_step(const XLATensor& found_inf, XLATensor& step,
   ir::NodePtr node = ir::MakeNode<ir::ops::SgdOptimizerStep>(
       found_inf.GetIrValue(), step.GetIrValue(), param.GetIrValue(),
       d_p.GetIrValue(), buf.GetIrValue(), weight_decay_value, momentum_value,
-      lr_value, dampening_value, /*use_weight_decay*/ weight_decay != 0,
-      /*use_momentum*/ momentum != 0, /*use_nesterov*/ nesterov);
+      lr_value, dampening_value, /*use_weight_decay=*/weight_decay != 0,
+      /*use_momentum=*/momentum != 0, /*use_nesterov=*/nesterov);
   step.SetInPlaceIrValue(ir::Value(node, 0));
   param.SetInPlaceIrValue(ir::Value(node, 1));
   buf.SetInPlaceIrValue(ir::Value(node, 2));

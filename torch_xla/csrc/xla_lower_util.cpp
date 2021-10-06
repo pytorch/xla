@@ -826,12 +826,12 @@ std::vector<xla::XlaOp> BuildSgdOptimizerStep(
     const xla::XlaOp& weight_decay, const xla::XlaOp& momentum,
     const xla::XlaOp& lr, const xla::XlaOp& dampening, bool use_weight_decay,
     bool use_momentum, bool use_nesterov) {
-  /* XLA version of the SGD algorithm
-   * https://github.com/pytorch/pytorch/blob/master/torch/optim/_functional.py#L162-L180
-   */
-  auto dtype = XlaHelpers::ShapeOfXlaOp(param).element_type();
-  xla::XlaOp one = xla::One(param.builder(), dtype);
-  xla::XlaOp zero = xla::Zero(param.builder(), dtype);
+  // XLA version of the SGD algorithm
+  // https://github.com/pytorch/pytorch/blob/master/torch/optim/_functional.py#L162-L180
+
+  xla::PrimitiveType type = XlaHelpers::ShapeOfXlaOp(param).element_type();
+  xla::XlaOp one = xla::One(param.builder(), type);
+  xla::XlaOp zero = xla::Zero(param.builder(), type);
 
   xla::XlaOp found_inf_cond = xla::Ne(found_inf, zero);
   xla::XlaOp is_initialized_cond = xla::Ne(step, zero);
@@ -849,10 +849,11 @@ std::vector<xla::XlaOp> BuildSgdOptimizerStep(
     new_buf = xla::Select(found_inf_cond, buf, buf_compute);
   }
   // update param
-  xla::XlaOp new_param =
-      xla::Select(found_inf_cond, param, param - d_p_compute * lr);
+  xla::XlaOp not_found_inf =
+      xla::ConvertElementType(xla::Not(found_inf_cond), type);
+  xla::XlaOp new_param = param - d_p_compute * lr * not_found_inf;
   // update step counter
-  xla::XlaOp new_step = xla::Select(found_inf_cond, step, step + one);
+  xla::XlaOp new_step = step + not_found_inf;
 
   std::vector<xla::XlaOp> results;
   results.push_back(new_step);

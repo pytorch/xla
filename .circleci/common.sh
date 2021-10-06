@@ -109,6 +109,11 @@ function run_torch_xla_tests() {
       # python test/test_train_mp_mnist_amp.py --fake_data
     # fi
 
+    echo "Running Syncfree Optimizer Test"
+    if [ -x "$(command -v nvidia-smi)" ]; then
+      python test/test_syncfree_optimizers.py
+    fi
+
     pushd test/cpp
     echo "Running C++ Tests"
     CC=clang-9 CXX=clang++-9 ./run_tests.sh
