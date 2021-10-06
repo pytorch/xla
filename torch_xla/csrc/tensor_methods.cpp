@@ -1319,17 +1319,18 @@ XLATensor XLATensor::index(const XLATensor& input,
 
 XLATensor XLATensor::index_add(const XLATensor& input, xla::int64 dim,
                                const XLATensor& index,
-                               const XLATensor& source) {
+                               const XLATensor& source,
+                               const at::Scalar& alpha) {
   xla::int64 canonical_dim =
       XlaHelpers::GetCanonicalDimensionIndex(dim, input.shape().get().rank());
-  return input.CreateFrom(IndexAdd(input, canonical_dim, index, source));
+  return input.CreateFrom(IndexAdd(input, canonical_dim, index, source, alpha));
 }
 
 void XLATensor::index_add_(XLATensor& input, xla::int64 dim,
-                           const XLATensor& index, const XLATensor& source) {
+                           const XLATensor& index, const XLATensor& source, const at::Scalar& alpha) {
   xla::int64 canonical_dim =
       XlaHelpers::GetCanonicalDimensionIndex(dim, input.shape().get().rank());
-  input.SetIrValue(IndexAdd(input, canonical_dim, index, source));
+  input.SetIrValue(IndexAdd(input, canonical_dim, index, source, alpha));
 }
 
 XLATensor XLATensor::index_copy(const XLATensor& input, xla::int64 dim,

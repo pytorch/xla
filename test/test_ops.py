@@ -240,6 +240,7 @@ allowed_opinfo = set(
             AllowedOpInfoEntry('where'),
             AllowedOpInfoEntry('norm', 'fro'),
             AllowedOpInfoEntry('special.erfcx'),
+            AllowedOpInfoEntry('index_add'),
 
             # Duplicate Redundant entries for this test.
             # AllowedOpInfoEntry('polygamma', 'polygamma_n_1'),
@@ -321,7 +322,6 @@ allowed_opinfo = set(
             # AllowedOpInfoEntry('index_fill'),
             # AllowedOpInfoEntry('index_copy'),
             # AllowedOpInfoEntry('index_select'),
-            # AllowedOpInfoEntry('index_add'),
             # AllowedOpInfoEntry('__getitem__'),
             # AllowedOpInfoEntry('sort'),
             # AllowedOpInfoEntry('scatter'),

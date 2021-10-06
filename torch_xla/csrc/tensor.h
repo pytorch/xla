@@ -574,10 +574,10 @@ class XLATensor {
                          xla::int64 start_dim);
 
   static XLATensor index_add(const XLATensor& input, xla::int64 dim,
-                             const XLATensor& index, const XLATensor& source);
+                             const XLATensor& index, const XLATensor& source, const at::Scalar& alpha);
 
   static void index_add_(XLATensor& input, xla::int64 dim,
-                         const XLATensor& index, const XLATensor& source);
+                         const XLATensor& index, const XLATensor& source, const at::Scalar& alpha);
 
   static XLATensor index_copy(const XLATensor& input, xla::int64 dim,
                               const XLATensor& index, const XLATensor& source);
