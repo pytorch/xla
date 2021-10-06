@@ -1,6 +1,5 @@
 #include "torch_xla/csrc/ops/kth_value.h"
 
-
 #include "torch_xla/csrc/lowering_context.h"
 #include "torch_xla/csrc/ops/infer_output_shape.h"
 #include "torch_xla/csrc/xla_lower_util.h"

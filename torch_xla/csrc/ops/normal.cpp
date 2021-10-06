@@ -1,6 +1,5 @@
 #include "torch_xla/csrc/ops/normal.h"
 
-
 #include "torch_xla/csrc/helpers.h"
 #include "torch_xla/csrc/lowering_context.h"
 #include "torch_xla/csrc/random.h"

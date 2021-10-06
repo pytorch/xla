@@ -1,6 +1,5 @@
 #include "torch_xla/csrc/ops/diagonal_view_update.h"
 
-
 #include "torch_xla/csrc/lowering_context.h"
 #include "torch_xla/csrc/matrix.h"
 #include "torch_xla/csrc/ops/xla_ops.h"

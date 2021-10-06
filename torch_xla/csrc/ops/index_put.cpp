@@ -1,6 +1,5 @@
 #include "torch_xla/csrc/ops/index_put.h"
 
-
 #include "torch_xla/csrc/lowering_context.h"
 #include "torch_xla/csrc/xla_lower_util.h"
 

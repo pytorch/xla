@@ -1,6 +1,5 @@
 #include "torch_xla/csrc/ops/min_in_dim.h"
 
-
 #include "torch_xla/csrc/lowering_context.h"
 #include "torch_xla/csrc/ops/infer_output_shape.h"
 #include "torch_xla/csrc/reduction.h"

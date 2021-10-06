@@ -1,6 +1,5 @@
 #include "torch_xla/csrc/ops/linear_interpolation.h"
 
-
 #include "torch_xla/csrc/helpers.h"
 #include "torch_xla/csrc/lowering_context.h"
 #include "torch_xla/csrc/ops/xla_ops.h"

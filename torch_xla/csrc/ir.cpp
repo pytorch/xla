@@ -7,7 +7,6 @@
 #include "tensorflow/compiler/xla/xla_client/cache.h"
 #include "tensorflow/compiler/xla/xla_client/debug_macros.h"
 #include "tensorflow/compiler/xla/xla_client/sys_util.h"
-
 #include "torch/csrc/lazy/core/hash.h"
 #include "torch_xla/csrc/lowering_context.h"
 
