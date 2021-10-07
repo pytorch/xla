@@ -5413,13 +5413,13 @@ TEST_F(AtenXlaTensorTest, TestIndexAdd) {
                 ? torch::rand(value_sizes, torch::TensorOptions(scalar_type))
                 : torch::randint(100, value_sizes,
                                  torch::TensorOptions(scalar_type));
-        torch::Tensor result = torch::index_add(base, dim, index, value);
+        torch::Tensor result = torch::index_add(base, dim, index, value, 1);
         ForEachDevice([&](const torch::Device& device) {
           torch::Tensor xla_base = CopyToDevice(base, device);
           torch::Tensor xla_index = CopyToDevice(index, device);
           torch::Tensor xla_value = CopyToDevice(value, device);
           torch::Tensor xla_result =
-              torch::index_add(xla_base, dim, xla_index, xla_value);
+              torch::index_add(xla_base, dim, xla_index, xla_value, 1);
           AllClose(result, xla_result);
         });
       }
@@ -5455,11 +5455,11 @@ TEST_F(AtenXlaTensorTest, TestIndexAddInPlace) {
                 : torch::randint(100, value_sizes,
                                  torch::TensorOptions(scalar_type));
         torch::Tensor xla_base = CopyToDevice(base.clone(), device);
-        torch::Tensor result = base.index_add_(dim, index, value);
+        torch::Tensor result = base.index_add_(dim, index, value, 1);
         torch::Tensor xla_index = CopyToDevice(index, device);
         torch::Tensor xla_value = CopyToDevice(value, device);
         torch::Tensor xla_result =
-            xla_base.index_add_(dim, xla_index, xla_value);
+            xla_base.index_add_(dim, xla_index, xla_value, 1);
         AllClose(result, xla_result);
         AllClose(base, xla_base);
       });
@@ -5490,13 +5490,13 @@ TEST_F(AtenXlaTensorTest, TestIndexAddRank0) {
               ? torch::rand(value_sizes, torch::TensorOptions(scalar_type))
               : torch::randint(100, value_sizes,
                                torch::TensorOptions(scalar_type));
-      torch::Tensor result = torch::index_add(base, dim, index, value);
+      torch::Tensor result = torch::index_add(base, dim, index, value, 1);
       ForEachDevice([&](const torch::Device& device) {
         torch::Tensor xla_base = CopyToDevice(base, device);
         torch::Tensor xla_index = CopyToDevice(index, device);
         torch::Tensor xla_value = CopyToDevice(value, device);
         torch::Tensor xla_result =
-            torch::index_add(xla_base, dim, xla_index, xla_value);
+            torch::index_add(xla_base, dim, xla_index, xla_value, 1);
         AllEqual(result, xla_result);
       });
 

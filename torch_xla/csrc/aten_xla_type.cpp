@@ -1601,6 +1601,12 @@ at::Tensor& XLANativeFunctions::index_add_(at::Tensor& self, int64_t dim,
                                            const at::Tensor& index,
                                            const at::Tensor& source) {
   XLA_FN_COUNTER("xla::");
+  if (alpha.to<double>() != 1)
+      return at::native::call_fallback_fn<&xla_cpu_fallback,
+                                          ATEN_OP(index_add_)>::call(self,
+                                                                     dim,
+                                                                     source,
+                                                                     alpha);
   XLATensor self_tensor = bridge::GetXlaTensor(self);
   XLATensor::index_add_(self_tensor, dim, bridge::GetXlaTensor(index),
                         bridge::GetXlaTensor(source));
