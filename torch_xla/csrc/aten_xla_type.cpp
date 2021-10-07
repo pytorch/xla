@@ -1599,7 +1599,8 @@ at::Tensor XLANativeFunctions::index(
 
 at::Tensor& XLANativeFunctions::index_add_(at::Tensor& self, int64_t dim,
                                            const at::Tensor& index,
-                                           const at::Tensor& source) {
+                                           const at::Tensor& source,
+                                           const at::Scalar& alpha) {
   XLA_FN_COUNTER("xla::");
   if (alpha.to<double>() != 1)
       return at::native::call_fallback_fn<&xla_cpu_fallback,
