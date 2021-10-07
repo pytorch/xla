@@ -666,8 +666,9 @@ NodePtr GeluBackward(const Value& grad, const Value& input, bool approximate) {
     const float kBeta = M_SQRT2 * M_2_SQRTPI * 0.5;
     auto beta = ScalarOp(kBeta, shape);
     auto kappa = ScalarOp(0.044715, shape);
-    auto three = ScalarOp(3, shape);
     auto one = ScalarOp(1, shape);
+    auto two = ScalarOp(2, shape);
+    auto three = ScalarOp(3, shape);
     auto half = ScalarOp(0.5, shape);
     NodePtr inner = beta * (input + kappa * Pow(input, three));
     NodePtr tanh_inner = Tanh(inner);
@@ -678,7 +679,7 @@ NodePtr GeluBackward(const Value& grad, const Value& input, bool approximate) {
     NodePtr left_derivative = half * right;
 
     NodePtr tanh_derivative = one - tanh_inner * tanh_inner;
-    NodePtr inner_derivative = beta * (one + three * kappa * input * input);
+    NodePtr inner_derivative = beta * (one + three * kappa * Pow(input, two));
     NodePtr right_derivative = left * tanh_derivative * inner_derivative;
 
     return grad * (left_derivative + right_derivative);
