@@ -849,10 +849,11 @@ std::vector<xla::XlaOp> BuildSgdOptimizerStep(
     new_buf = xla::Select(found_inf_cond, buf, buf_compute);
   }
   // update param
+  xla::XlaOp new_param =
+      xla::Select(found_inf_cond, param, param - d_p_compute * lr);
+  // update step counter
   xla::XlaOp not_found_inf =
       xla::ConvertElementType(xla::Not(found_inf_cond), type);
-  xla::XlaOp new_param = param - d_p_compute * lr * not_found_inf;
-  // update step counter
   xla::XlaOp new_step = step + not_found_inf;
 
   std::vector<xla::XlaOp> results;

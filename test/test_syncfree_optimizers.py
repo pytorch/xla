@@ -69,8 +69,12 @@ class TestSyncFreeOptimizerBase(unittest.TestCase):
       syncfree_output = syncfree_model(data)
       syncfree_loss = loss_fn(syncfree_output, target)
       syncfree_loss.backward()
-      found_inf = torch.tensor(1.0).to(device) if i % 2 == 0 else torch.tensor(
-          0.0).to(device)
+      # mimick nan in the gradients
+      if i % 2 == 0:
+        xm._fetch_gradients(syncfree_optimizer)[0].mul_(torch.nan)
+        found_inf = torch.tensor(1.0).to(device)
+      else:
+        found_inf = torch.tensor(0.0).to(device)
       xm.optimizer_step(
           syncfree_optimizer, optimizer_args={"found_inf": found_inf})
       xm.mark_step()

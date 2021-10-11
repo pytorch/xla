@@ -28,7 +28,7 @@ SgdOptimizerStep::SgdOptimizerStep(const Value& found_inf, const Value& step,
             dampening},
            NodeOutputShape(step, param),
            /*num_outputs=*/3,
-           xla::util::MHash(use_weight_decay, use_momentum, use_nesterov)),
+           torch::lazy::MHash(use_weight_decay, use_momentum, use_nesterov)),
       use_weight_decay_(use_weight_decay),
       use_momentum_(use_momentum),
       use_nesterov_(use_nesterov) {}
