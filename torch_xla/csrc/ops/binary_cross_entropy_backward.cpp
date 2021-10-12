@@ -44,7 +44,7 @@ BinaryCrossEntropyBackward::BinaryCrossEntropyBackward(
                                     reduction);
            },
            /*num_outputs=*/1,
-           xla::util::MHash(xla::util::GetEnumValue(reduction))),
+           torch::lazy::MHash(xla::util::GetEnumValue(reduction))),
       reduction_(reduction) {}
 
 NodePtr BinaryCrossEntropyBackward::Clone(OpList operands) const {

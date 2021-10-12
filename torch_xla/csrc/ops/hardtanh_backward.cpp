@@ -1,6 +1,5 @@
 #include "torch_xla/csrc/ops/hardtanh_backward.h"
 
-#include "tensorflow/compiler/xla/xla_client/util.h"
 #include "torch_xla/csrc/elementwise.h"
 #include "torch_xla/csrc/lowering_context.h"
 #include "torch_xla/csrc/ops/scalar.h"
@@ -14,7 +13,7 @@ HardtanhBackward::HardtanhBackward(const Value& grad_output, const Value& input,
                                    const at::Scalar& max_val)
     : Node(OpKind(at::aten::hardtanh_backward), {grad_output, input},
            grad_output.shape(), /*num_outputs=*/1,
-           xla::util::MHash(ScalarHash(min_val), ScalarHash(max_val))),
+           torch::lazy::MHash(ScalarHash(min_val), ScalarHash(max_val))),
       min_val_(min_val),
       max_val_(max_val) {}
 

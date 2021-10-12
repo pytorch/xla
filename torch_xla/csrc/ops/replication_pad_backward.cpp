@@ -1,7 +1,6 @@
 #include "torch_xla/csrc/ops/replication_pad_backward.h"
 
 #include "absl/strings/str_join.h"
-#include "tensorflow/compiler/xla/xla_client/util.h"
 #include "torch_xla/csrc/data_ops.h"
 #include "torch_xla/csrc/lowering_context.h"
 #include "torch_xla/csrc/ops/infer_output_shape.h"
@@ -29,7 +28,7 @@ ReplicationPadBackward::ReplicationPadBackward(const Value& grad_output,
                                                std::vector<xla::int64> padding)
     : Node(xla_replication_pad_backward, {grad_output, input},
            [&]() { return NodeOutputShape(grad_output, input, padding); },
-           /*num_outputs=*/1, xla::util::MHash(padding)),
+           /*num_outputs=*/1, torch::lazy::MHash(padding)),
       padding_(std::move(padding)) {}
 
 NodePtr ReplicationPadBackward::Clone(OpList operands) const {

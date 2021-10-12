@@ -1,6 +1,5 @@
 #include "torch_xla/csrc/ops/softmax.h"
 
-#include "tensorflow/compiler/xla/xla_client/util.h"
 #include "torch_xla/csrc/convert_ops.h"
 #include "torch_xla/csrc/lowering_context.h"
 #include "torch_xla/csrc/softmax_builder.h"
@@ -34,7 +33,7 @@ Softmax::Softmax(const Value& input, xla::int64 dim,
     : Node(ir::OpKind(at::aten::softmax), {input},
            [&]() { return NodeOutputShape(input, dtype); },
            /*num_outputs=*/1,
-           xla::util::MHash(dim, OptionalOr<int>(dtype, -1))),
+           torch::lazy::MHash(dim, OptionalOr<int>(dtype, -1))),
       dim_(dim),
       dtype_(dtype) {}
 

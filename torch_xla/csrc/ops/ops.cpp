@@ -112,7 +112,7 @@ NodePtr LogBase(const Value& input, OpKind op, double base) {
     return node.ReturnOp(result * ln_base, loctx);
   };
   return GenericOp(op, {input}, input.shape(), std::move(lower_fn),
-                   /*num_outputs=*/1, xla::util::MHash(base));
+                   /*num_outputs=*/1, torch::lazy::MHash(base));
 }
 
 NodePtr ReciprocalOp(const Value& input) {
@@ -589,7 +589,7 @@ NodePtr Identity(xla::int64 lines, xla::int64 cols,
   return GenericOp(OpKind(at::aten::eye),
                    xla::ShapeUtil::MakeShape(element_type, {lines, cols}),
                    std::move(lower_fn), /*num_outputs=*/1,
-                   xla::util::MHash(lines, cols));
+                   torch::lazy::MHash(lines, cols));
 }
 
 NodePtr Elu(const Value& input, const at::Scalar& alpha,

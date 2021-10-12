@@ -1,7 +1,6 @@
 #include "torch_xla/csrc/ops/max_pool_nd.h"
 
 #include "tensorflow/compiler/xla/xla_client/debug_macros.h"
-#include "tensorflow/compiler/xla/xla_client/util.h"
 #include "torch_xla/csrc/lowering_context.h"
 #include "torch_xla/csrc/ops/infer_output_shape.h"
 #include "torch_xla/csrc/pooling.h"
@@ -51,8 +50,8 @@ MaxPoolNd::MaxPoolNd(const Value& input, xla::int64 spatial_dim_count,
                                     stride, padding, ceil_mode);
            },
            /*num_outputs=*/2,
-           xla::util::MHash(spatial_dim_count, kernel_size, stride, padding,
-                            ceil_mode)),
+           torch::lazy::MHash(spatial_dim_count, kernel_size, stride, padding,
+                              ceil_mode)),
       spatial_dim_count_(spatial_dim_count),
       kernel_size_(std::move(kernel_size)),
       stride_(std::move(stride)),

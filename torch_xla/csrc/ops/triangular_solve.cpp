@@ -2,7 +2,6 @@
 
 #include "tensorflow/compiler/xla/client/xla_builder.h"
 #include "tensorflow/compiler/xla/layout_util.h"
-#include "tensorflow/compiler/xla/xla_client/util.h"
 #include "torch_xla/csrc/helpers.h"
 #include "torch_xla/csrc/lowering_context.h"
 
@@ -80,7 +79,7 @@ TriangularSolve::TriangularSolve(const Value& rhs, const Value& lhs,
     : Node(ir::OpKind(at::aten::triangular_solve), {rhs, lhs},
            [&]() { return NodeOutputShape(rhs, lhs); },
            /*num_outputs=*/2,
-           xla::util::MHash(left_side, lower, transpose, unit_diagonal)),
+           torch::lazy::MHash(left_side, lower, transpose, unit_diagonal)),
       left_side_(left_side),
       lower_(lower),
       transpose_(transpose),

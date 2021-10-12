@@ -29,7 +29,7 @@ L1LossBackward::L1LossBackward(const Value& grad_output, const Value& input,
              return NodeOutputShape(grad_output, input, target, reduction);
            },
            /*num_outputs=*/1,
-           xla::util::MHash(xla::util::GetEnumValue(reduction))),
+           torch::lazy::MHash(xla::util::GetEnumValue(reduction))),
       reduction_(reduction) {}
 
 NodePtr L1LossBackward::Clone(OpList operands) const {

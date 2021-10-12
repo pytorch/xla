@@ -40,7 +40,7 @@ CumSum::CumSum(const Value& input, xla::int64 dim,
     : Node(ir::OpKind(at::aten::cumsum), {input},
            [&]() { return NodeOutputShape(input, dtype); },
            /*num_outputs=*/1,
-           xla::util::MHash(dim, OptionalOr<int>(dtype, -1))),
+           torch::lazy::MHash(dim, OptionalOr<int>(dtype, -1))),
       dim_(dim),
       dtype_(dtype) {}
 

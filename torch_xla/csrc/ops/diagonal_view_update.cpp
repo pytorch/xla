@@ -1,6 +1,5 @@
 #include "torch_xla/csrc/ops/diagonal_view_update.h"
 
-#include "tensorflow/compiler/xla/xla_client/util.h"
 #include "torch_xla/csrc/lowering_context.h"
 #include "torch_xla/csrc/matrix.h"
 #include "torch_xla/csrc/ops/xla_ops.h"
@@ -13,7 +12,7 @@ DiagonalViewUpdate::DiagonalViewUpdate(const Value& target, const Value& input,
                                        xla::int64 offset, xla::int64 dim1,
                                        xla::int64 dim2)
     : Node(xla_diagonal_view_update, {target, input}, target.shape(),
-           /*num_outputs=*/1, xla::util::MHash(offset, dim1, dim2)),
+           /*num_outputs=*/1, torch::lazy::MHash(offset, dim1, dim2)),
       offset_(offset),
       dim1_(dim1),
       dim2_(dim2) {}

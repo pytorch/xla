@@ -1,7 +1,6 @@
 #include "torch_xla/csrc/ops/max_unpool_nd_backward.h"
 
 #include "tensorflow/compiler/xla/xla_client/debug_macros.h"
-#include "tensorflow/compiler/xla/xla_client/util.h"
 #include "torch_xla/csrc/lowering_context.h"
 #include "torch_xla/csrc/ops/infer_output_shape.h"
 #include "torch_xla/csrc/pooling.h"
@@ -45,7 +44,7 @@ MaxUnpoolNdBackward::MaxUnpoolNdBackward(const Value& grad_output,
            [&]() {
              return NodeOutputShape(grad_output, input, indices, output_size);
            },
-           /*num_outputs=*/1, xla::util::MHash(output_size)),
+           /*num_outputs=*/1, torch::lazy::MHash(output_size)),
       output_size_(std::move(output_size)) {}
 
 NodePtr MaxUnpoolNdBackward::Clone(OpList operands) const {

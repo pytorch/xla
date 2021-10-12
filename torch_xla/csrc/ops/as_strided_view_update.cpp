@@ -51,7 +51,7 @@ AsStridedViewUpdate::AsStridedViewUpdate(const Value& target,
              return xla::ShapeUtil::MakeShape(target.shape().element_type(),
                                               size);
            },
-           /*num_outputs=*/1, xla::util::MHash(size, stride, storage_offset)),
+           /*num_outputs=*/1, torch::lazy::MHash(size, stride, storage_offset)),
       size_(std::move(size)),
       stride_(std::move(stride)),
       storage_offset_(storage_offset) {}

@@ -2,7 +2,6 @@
 
 #include "absl/strings/str_join.h"
 #include "tensorflow/compiler/xla/xla_client/debug_macros.h"
-#include "tensorflow/compiler/xla/xla_client/util.h"
 #include "torch_xla/csrc/lowering_context.h"
 #include "torch_xla/csrc/resize_ops.h"
 
@@ -18,7 +17,7 @@ UpsampleBilinearBackward::UpsampleBilinearBackward(
              return resize::GetBackwardOutputShape2d(input.shape(), input_size);
            },
            /*num_outputs=*/1,
-           xla::util::MHash(output_size, input_size, align_corners)),
+           torch::lazy::MHash(output_size, input_size, align_corners)),
       output_size_(std::move(output_size)),
       input_size_(std::move(input_size)),
       align_corners_(align_corners) {}

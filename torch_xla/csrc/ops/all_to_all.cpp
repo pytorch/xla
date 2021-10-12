@@ -2,7 +2,6 @@
 
 #include "absl/strings/str_join.h"
 #include "tensorflow/compiler/xla/shape_util.h"
-#include "tensorflow/compiler/xla/xla_client/util.h"
 #include "torch_xla/csrc/lowering_context.h"
 #include "torch_xla/csrc/ops/infer_output_shape.h"
 #include "torch_xla/csrc/ops/xla_ops.h"
@@ -37,8 +36,8 @@ AllToAll::AllToAll(const Value& input, const Value& token,
                                     concat_dimension, split_count, groups);
            },
            /*num_outputs=*/2,
-           xla::util::MHash(split_dimension, concat_dimension, split_count,
-                            groups)),
+           torch::lazy::MHash(split_dimension, concat_dimension, split_count,
+                              groups)),
       split_dimension_(split_dimension),
       concat_dimension_(concat_dimension),
       split_count_(split_count),

@@ -2,7 +2,6 @@
 
 #include "tensorflow/compiler/xla/client/lib/matrix.h"
 #include "tensorflow/compiler/xla/client/xla_builder.h"
-#include "tensorflow/compiler/xla/xla_client/util.h"
 #include "torch_xla/csrc/lowering_context.h"
 
 namespace torch_xla {
@@ -11,7 +10,7 @@ namespace ops {
 
 Cholesky::Cholesky(const Value& input, bool lower)
     : Node(ir::OpKind(at::aten::cholesky), {input}, input.shape(),
-           /*num_outputs=*/1, xla::util::MHash(lower)),
+           /*num_outputs=*/1, torch::lazy::MHash(lower)),
       lower_(lower) {}
 
 NodePtr Cholesky::Clone(OpList operands) const {

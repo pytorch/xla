@@ -38,7 +38,7 @@ BinaryCrossEntropy::BinaryCrossEntropy(const Value& logits, const Value& labels,
            xla::util::GetValuesVector<Value>({logits, labels}, {&weight}),
            [&]() { return NodeOutputShape(logits, labels, weight, reduction); },
            /*num_outputs=*/1,
-           xla::util::MHash(xla::util::GetEnumValue(reduction))),
+           torch::lazy::MHash(xla::util::GetEnumValue(reduction))),
       reduction_(reduction) {}
 
 NodePtr BinaryCrossEntropy::Clone(OpList operands) const {

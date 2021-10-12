@@ -1,11 +1,11 @@
 #include "torch_xla/csrc/ops/generic_slice.h"
 
 #include "absl/strings/str_join.h"
-#include "tensorflow/compiler/xla/xla_client/util.h"
 #include "torch_xla/csrc/data_ops.h"
 #include "torch_xla/csrc/lowering_context.h"
 #include "torch_xla/csrc/ops/infer_output_shape.h"
 #include "torch_xla/csrc/ops/xla_ops.h"
+#include "torch_xla/csrc/torch_util.h"
 
 namespace torch_xla {
 namespace ir {
@@ -29,7 +29,7 @@ GenericSlice::GenericSlice(const Value& input,
                            absl::Span<const xla::int64> sizes)
     : Node(xla_generic_slice, {input},
            [&]() { return NodeOutputShape(input, base_indices, sizes); },
-           /*num_outputs=*/1, xla::util::MHash(base_indices, sizes)),
+           /*num_outputs=*/1, torch::lazy::MHash(base_indices, sizes)),
       base_indices_(base_indices.begin(), base_indices.end()),
       sizes_(sizes.begin(), sizes.end()) {}
 

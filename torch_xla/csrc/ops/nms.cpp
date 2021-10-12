@@ -1,7 +1,6 @@
 #include "torch_xla/csrc/ops/nms.h"
 
 #include "tensorflow/compiler/xla/xla_client/debug_macros.h"
-#include "tensorflow/compiler/xla/xla_client/util.h"
 #include "torch_xla/csrc/lowering_context.h"
 #include "torch_xla/csrc/nms_op.h"
 #include "torch_xla/csrc/ops/infer_output_shape.h"
@@ -35,7 +34,7 @@ Nms::Nms(const Value& boxes, const Value& scores, const Value& score_threshold,
              return NodeOutputShape(boxes, scores, score_threshold,
                                     iou_threshold, output_size);
            },
-           /*num_outputs=*/2, xla::util::MHash(output_size)),
+           /*num_outputs=*/2, torch::lazy::MHash(output_size)),
       output_size_(output_size) {}
 
 NodePtr Nms::Clone(OpList operands) const {

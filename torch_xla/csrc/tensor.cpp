@@ -25,6 +25,7 @@
 #include "tensorflow/core/lib/core/errors.h"
 #include "tensorflow/core/profiler/lib/traceme.h"
 #include "torch/csrc/autograd/variable.h"
+#include "torch/csrc/lazy/core/hash.h"
 #include "torch_xla/csrc/debug_util.h"
 #include "torch_xla/csrc/helpers.h"
 #include "torch_xla/csrc/ir_dump_util.h"
@@ -164,7 +165,7 @@ class XlaDataCacheArena {
  public:
   struct TensorHasher {
     size_t operator()(const at::Tensor& tensor) const {
-      return xla::util::HashReduce(xla::util::HashCombine(
+      return torch::lazy::HashReduce(torch::lazy::HashCombine(
           xla::util::GetEnumValue(tensor.scalar_type()), TensorHash(tensor)));
     };
   };
@@ -1131,7 +1132,7 @@ XLATensor::SyncTensorCollection XLATensor::CollectSyncTensors(
   std::unordered_set<xla::int64> tensor_ids;
   // The force_xla_data controls aliasing compilation, so effectively the same
   // graph with on/off force_xla_data should not match, hash wise.
-  coll.hash = xla::util::MHash(config.force_xla_data);
+  coll.hash = torch::lazy::MHash(config.force_xla_data);
   coll.config = config;
   coll.device = *unique_device;
   coll.indices.reserve(tensors.size());
@@ -1150,7 +1151,7 @@ XLATensor::SyncTensorCollection XLATensor::CollectSyncTensors(
       if (ir_value) {
         if (ShouldSyncIrValue(ir_value)) {
           // Add only tensors which need to be synced.
-          coll.hash = xla::util::HashCombine(coll.hash, ir_value.hash());
+          coll.hash = torch::lazy::HashCombine(coll.hash, ir_value.hash());
           coll.indices.push_back(i);
         }
       } else if (config.force_xla_data) {
@@ -1166,7 +1167,7 @@ XLATensor::SyncTensorCollection XLATensor::CollectSyncTensors(
   }
   // Mix the hash with the resource domain hashes as compile handles are only
   // valid within a domain (usually a single host).
-  coll.hash = xla::util::MHash(
+  coll.hash = torch::lazy::MHash(
       coll.hash,
       xla::ComputationClient::Get()->GetResourceDomain(coll.device.ToString()));
   if (!at_tensors.empty()) {
@@ -1181,22 +1182,22 @@ XLATensor::SyncTensorCollection XLATensor::CollectSyncTensors(
       tensors[at_tensor_index[i]].data()->xla_data = std::move(handles[i]);
     }
   }
-  TF_VLOG(4) << "Tensors graph hash " << xla::util::HexHash(coll.hash)
+  TF_VLOG(4) << "Tensors graph hash " << torch::lazy::HashToString(coll.hash)
              << " on device " << coll.device;
   return coll;
 }
 
 XLATensor::ComputationCache::TypePtr XLATensor::LookupCachedCompile(
-    const std::vector<XLATensor>& tensors, const xla::hash_t& hash) {
+    const std::vector<XLATensor>& tensors, const torch::lazy::hash_t& hash) {
   ComputationCache::TypePtr cached_computation =
       GetComputationCache()->Get(hash);
   if (cached_computation == nullptr) {
     XLA_COUNTER("UncachedCompile", 1);
     return nullptr;
   }
-  TF_VLOG(5) << "Graph hash " << xla::util::HexHash(hash)
+  TF_VLOG(5) << "Graph hash " << torch::lazy::HashToString(hash)
              << " is computation hash "
-             << xla::util::HexHash(xla::util::Hash(
+             << torch::lazy::HashToString(torch::lazy::Hash(
                     cached_computation->computation->computation()
                         .proto()
                         .SerializeAsString()));
@@ -1311,13 +1312,15 @@ std::shared_ptr<XLATensor::Async> XLATensor::ScheduleSyncTensorsGraph(
   auto syncfn = [async, hash = coll->hash]() {
     xla::ComputationClient::ExecuteComputationOptions options;
     try {
-      TF_VLOG(3) << "Executing IR graph hash " << xla::util::HexHash(hash)
-                 << " on device " << async->device << " ...";
+      TF_VLOG(3) << "Executing IR graph hash "
+                 << torch::lazy::HashToString(hash) << " on device "
+                 << async->device << " ...";
       auto results = xla::ComputationClient::Get()->ExecuteComputation(
           *async->cached_computation->computation, async->parameters_data,
           async->device, options);
-      TF_VLOG(3) << "Executing IR graph hash " << xla::util::HexHash(hash)
-                 << " on device " << async->device << " done!";
+      TF_VLOG(3) << "Executing IR graph hash "
+                 << torch::lazy::HashToString(hash) << " on device "
+                 << async->device << " done!";
 
       for (size_t i = 0; i < results.size(); ++i) {
         if (async->tensors_data[i] != nullptr) {
@@ -1448,13 +1451,13 @@ XLATensor::OpByOpAsync XLATensor::SyncTensorsGraphOpByOp(
   auto syncfn = [async]() -> int {
     try {
       TF_VLOG(3) << "Executing (OpByOp) IR graph hash "
-                 << xla::util::HexHash(async->coll.hash) << " on device "
+                 << torch::lazy::HashToString(async->coll.hash) << " on device "
                  << async->coll.device << " ...";
       std::vector<xla::ComputationClient::DataPtr> results =
           OpByOpExecutor::Get()->Execute(
               async->roots, async->coll.device.ToString(), async->devices);
       TF_VLOG(3) << "Executing (OpByOp) IR graph hash "
-                 << xla::util::HexHash(async->coll.hash) << " on device "
+                 << torch::lazy::HashToString(async->coll.hash) << " on device "
                  << async->coll.device << " done!";
 
       for (size_t i = 0; i < results.size(); ++i) {
@@ -1519,7 +1522,7 @@ XLATensor::CompilationResult XLATensor::Compile(
       [&] {
         return tensorflow::profiler::TraceMeEncode(
             "XLATensor::Compile",
-            {{"graph_hash", xla::util::HexHash(coll.hash)}});
+            {{"graph_hash", torch::lazy::HashToString(coll.hash)}});
       },
       tensorflow::profiler::TraceMeLevel::kInfo);
   static const bool enable_aliasing =
@@ -1571,17 +1574,19 @@ XLATensor::CompilationResult XLATensor::Compile(
                            coll.device.ToString(), devices),
                        &shape});
 
-  TF_VLOG(3) << "Compiling IR graph hash " << xla::util::HexHash(coll.hash)
-             << " on device " << coll.device << " ...";
+  TF_VLOG(3) << "Compiling IR graph hash "
+             << torch::lazy::HashToString(coll.hash) << " on device "
+             << coll.device << " ...";
   std::vector<std::shared_ptr<xla::ComputationClient::Computation>>
       computations =
           xla::ComputationClient::Get()->Compile(std::move(instances));
-  TF_VLOG(3) << "Compiling IR graph hash " << xla::util::HexHash(coll.hash)
-             << " on device " << coll.device << " done!";
+  TF_VLOG(3) << "Compiling IR graph hash "
+             << torch::lazy::HashToString(coll.hash) << " on device "
+             << coll.device << " done!";
   TF_VLOG(5)
-      << "Graph hash " << xla::util::HexHash(coll.hash)
+      << "Graph hash " << torch::lazy::HashToString(coll.hash)
       << " is computation hash "
-      << xla::util::HexHash(xla::util::Hash(
+      << torch::lazy::HashToString(torch::lazy::Hash(
              computations.front()->computation().proto().SerializeAsString()));
   XLA_CHECK_EQ(program_shape.parameters_size(),
                po_data->parameters_data.size());
@@ -1605,10 +1610,10 @@ std::shared_ptr<XLATensor::Async> XLATensor::SyncTensorsGraphInternal(
                                   &coll.indices);
 
   PostOrderData po_data = RunPostOrder(*tensors, coll.indices);
-  coll.hash = xla::util::HashCombine(
-      coll.hash, xla::util::Hash(po_data.parameter_sequence));
+  coll.hash = torch::lazy::HashCombine(
+      coll.hash, torch::lazy::Hash(po_data.parameter_sequence));
   TF_VLOG(4) << "Parameter sequence graph hash "
-             << xla::util::HexHash(coll.hash);
+             << torch::lazy::HashToString(coll.hash);
   std::shared_ptr<Async> async = TryRunCachedSync(tensors, &coll, &po_data);
   if (async != nullptr) {
     return async;

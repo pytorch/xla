@@ -2,7 +2,6 @@
 
 #include "absl/strings/str_join.h"
 #include "tensorflow/compiler/xla/shape_util.h"
-#include "tensorflow/compiler/xla/xla_client/util.h"
 #include "torch_xla/csrc/lowering_context.h"
 #include "torch_xla/csrc/ops/infer_output_shape.h"
 #include "torch_xla/csrc/ops/xla_ops.h"
@@ -30,7 +29,7 @@ CollectivePermute::CollectivePermute(
     std::vector<std::pair<xla::int64, xla::int64>> source_target_pairs)
     : Node(xla_collective_permute, {input, token},
            [&]() { return NodeOutputShape(input, token, source_target_pairs); },
-           /*num_outputs=*/2, xla::util::MHash(source_target_pairs)),
+           /*num_outputs=*/2, torch::lazy::MHash(source_target_pairs)),
       source_target_pairs_(std::move(source_target_pairs)) {}
 
 NodePtr CollectivePermute::Clone(OpList operands) const {

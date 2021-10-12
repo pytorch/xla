@@ -9,6 +9,7 @@
 #include "tensorflow/compiler/xla/types.h"
 #include "tensorflow/compiler/xla/xla_client/computation_client.h"
 #include "torch/csrc/autograd/variable.h"
+#include "torch/csrc/lazy/core/hash.h"
 #include "torch_xla/csrc/device.h"
 
 namespace torch_xla {
@@ -32,7 +33,7 @@ bool TensorCompare(const at::Tensor& t1, const at::Tensor& t2);
 xla::ComputationClient::DataPtr TensorToXlaData(const at::Tensor& tensor,
                                                 const Device& device);
 
-xla::hash_t TensorHash(const at::Tensor& tensor);
+torch::lazy::hash_t TensorHash(const at::Tensor& tensor);
 
 // Retrieves the device data handles by parallel uploading data onto the
 // corresponding devices.

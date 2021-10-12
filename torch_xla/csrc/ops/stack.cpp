@@ -1,6 +1,5 @@
 #include "torch_xla/csrc/ops/stack.h"
 
-#include "tensorflow/compiler/xla/xla_client/util.h"
 #include "torch_xla/csrc/data_ops.h"
 #include "torch_xla/csrc/helpers.h"
 #include "torch_xla/csrc/lowering_context.h"
@@ -29,7 +28,7 @@ xla::Shape NodeOutputShape(absl::Span<const ir::Value> values, xla::int64 dim) {
 Stack::Stack(absl::Span<const ir::Value> values, xla::int64 dim)
     : Node(ir::OpKind(at::aten::stack), values,
            [&]() { return NodeOutputShape(values, dim); },
-           /*num_outputs=*/1, xla::util::MHash(dim)),
+           /*num_outputs=*/1, torch::lazy::MHash(dim)),
       dim_(dim) {}
 
 NodePtr Stack::Clone(OpList operands) const {

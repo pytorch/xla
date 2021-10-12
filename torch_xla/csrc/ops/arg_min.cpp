@@ -1,6 +1,5 @@
 #include "torch_xla/csrc/ops/arg_min.h"
 
-#include "tensorflow/compiler/xla/xla_client/util.h"
 #include "torch_xla/csrc/lowering_context.h"
 #include "torch_xla/csrc/ops/infer_output_shape.h"
 #include "torch_xla/csrc/reduction.h"
@@ -23,7 +22,7 @@ xla::Shape NodeOutputShape(const Value& input, xla::int64 dim, bool keepdim) {
 ArgMin::ArgMin(const Value& input, xla::int64 dim, bool keepdim)
     : Node(ir::OpKind(at::aten::argmin), {input},
            [&]() { return NodeOutputShape(input, dim, keepdim); },
-           /*num_outputs=*/1, xla::util::MHash(dim, keepdim)),
+           /*num_outputs=*/1, torch::lazy::MHash(dim, keepdim)),
       dim_(dim),
       keepdim_(keepdim) {}
 

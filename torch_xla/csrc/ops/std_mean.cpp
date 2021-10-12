@@ -1,7 +1,6 @@
 #include "torch_xla/csrc/ops/std_mean.h"
 
 #include "absl/strings/str_join.h"
-#include "tensorflow/compiler/xla/xla_client/util.h"
 #include "torch_xla/csrc/lowering_context.h"
 #include "torch_xla/csrc/ops/infer_output_shape.h"
 #include "torch_xla/csrc/reduction.h"
@@ -36,7 +35,7 @@ StdMean::StdMean(const Value& input, std::vector<xla::int64> dimensions,
                                     correction);
            },
            /*num_outputs=*/2,
-           xla::util::MHash(dimensions, correction, keep_reduced_dimensions)),
+           torch::lazy::MHash(dimensions, correction, keep_reduced_dimensions)),
       dimensions_(std::move(dimensions)),
       correction_(correction),
       keep_reduced_dimensions_(keep_reduced_dimensions) {}

@@ -2,7 +2,6 @@
 
 #include "tensorflow/compiler/xla/shape_util.h"
 #include "tensorflow/compiler/xla/xla_client/debug_macros.h"
-#include "tensorflow/compiler/xla/xla_client/util.h"
 #include "torch_xla/csrc/data_ops.h"
 #include "torch_xla/csrc/lowering_context.h"
 
@@ -21,7 +20,7 @@ xla::Shape NodeOutputShape(const Value& input,
 Resize::Resize(const Value& input, std::vector<xla::int64> size)
     : Node(ir::OpKind(at::aten::resize), {input},
            [&]() { return NodeOutputShape(input, size); },
-           /*num_outputs=*/1, xla::util::MHash(size)),
+           /*num_outputs=*/1, torch::lazy::MHash(size)),
       size_(std::move(size)) {}
 
 NodePtr Resize::Clone(OpList operands) const {

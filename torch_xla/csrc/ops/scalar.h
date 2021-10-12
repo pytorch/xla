@@ -32,7 +32,7 @@ class Scalar : public Node {
   at::Scalar value_;
 };
 
-xla::hash_t ScalarHash(const at::Scalar& s);
+torch::lazy::hash_t ScalarHash(const at::Scalar& s);
 
 std::ostream& operator<<(std::ostream& ostrm, at::Scalar s);
 
