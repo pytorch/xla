@@ -7,7 +7,8 @@ import time
 from collections import namedtuple
 
 debug = False
-SIMPLE_TEST = False
+SIMPLE_TEST = True
+time_torch_function = 0
 
 class XLATensor(torch.Tensor):
     def __new__(cls, data, **kwargs):
@@ -21,19 +22,18 @@ class XLATensor(torch.Tensor):
 
     def size(self):
         # if debug: print('[size] ')
-        static_size = super(XLATensor, self).size()
-        dynamic_size = torch_xla._XLAC._get_xla_tensor_dimension_size(self.t_, 0)
-        xla_tensor_sizes = self.xla_tensor_sizes_(static_size, self.t_) #TODO: replace self.t_ with dynamic_size
-        return xla_tensor_sizes 
-        #DynamicTensorXLASize(static_size) #TODO: done when no dynamic shame
+        static_size = self.t_.size()
+        dynamic_size = []
+        for i,_ in enumerate(self.t_.shape):
+            dynamic_size.append(torch_xla._XLAC._get_xla_tensor_dimension_size(self.t_, i))
+        return self.xla_tensor_sizes_(static_size, dynamic_size[0])
 
     def expand(self, size):
         # if debug: print('[expand]')
-        # if size.dynamic_size != None:
-        # result = self.t_.expand(size.static_size) 
-        result = torch_xla._XLAC._xla_dynamic_expand(self.t_, size.dynamic_size, size.static_size)
-        return XLATensor(result.tolist()) #Q: return XLATensor or torch.Tensor?
-        # return self.t_.expand(size.static_size)
+        return torch_xla._XLAC._xla_dynamic_expand(self.t_, size.dynamic_size, size.dynamic_size.int(), size.static_size)
+
+    def nonzero(self):
+        return torch.nonzero(self.t_)
 
     def __repr__(self):
         # if debug: print ('[__repr__]')
@@ -41,35 +41,29 @@ class XLATensor(torch.Tensor):
 
     @classmethod
     def __torch_function__(cls, func, types, args=(), kwargs=None):
-        # if debug: print ('[__torch_function__] ', func.__name__)
-        # if func is not torch.Tensor.__repr__:
-            # logging.info(f"func: {func.__name__}, args: {args!r}, kwargs: {kwargs!r}")
         if kwargs is None:
             kwargs = {}
         args = [a.t_ if hasattr(a, 't_') else a for a in args]
-        return func(*args, **kwargs)
+        result = func(*args, **kwargs)
+        return result
 
 if SIMPLE_TEST == True:
-    if debug: print ('[main] make b')
-    t = XLATensor([[1], [2], [3]], device=xm.xla_device())
-    print('Tensor t:\n', t)
+    a = XLATensor([[0, 0, 0], [1, 1, 0]], device=xm.xla_device())
+    b = XLATensor([[1], [2]], device=xm.xla_device())
 
-    if debug: print ('[main] make o')
-    o = XLATensor([[1,1,1,1],[1,1,1,1],[1,1,1,1]], device=xm.xla_device())
-    print('Tensor o:\n', o)
+    idxs = a.nonzero()
+    idxs_t = XLATensor([[1]], device=xm.xla_device())
+    idxs_t.t_ = idxs
+    print('a.nonzero(): ', idxs)
 
-    if debug: print ('[main] size o')
-    b = o.size()
-    print('Size output:\n\tstatic_size = %s\n\tdynamic_size = %s\n' % (b.static_size, b.dynamic_size))
-
-    if debug: print ('[main] expand t')
-    tt = t.expand(b)
-    print ('Expand output:\n', tt)
-
-    if debug: print ('[main] add')
-    print("Add output:\n", torch.add(tt, o))
+    y = b.expand(idxs_t.size())
+    print (f"b.expand(): {y}")
+    y_dim0_shape = torch_xla._XLAC._get_xla_tensor_dimension_size(y, 0)
+    print("[RUNNING] _get_xla_tensor_dimension_size(y, 0)\n", y_dim0_shape)
+    print("[RUNNING] _get_xla_tensors_hlo([y])\n", torch_xla._XLAC._get_xla_tensors_hlo([y]))
+    print("[RUNNING] _get_xla_tensors_text([y])\n", torch_xla._XLAC._get_xla_tensors_text([y]))
 else:
-    NUM = 50
+    NUM = 500
 
     time_size = 0
     time_expand = 0
@@ -106,3 +100,4 @@ else:
         time_expand += toc-tic
     print(f"size() time {time_size:0.4f} seconds")
     print(f"expand() time {time_expand:0.4f} seconds")
+    print(f"torch_function() time {time_torch_function:0.4f} seconds")

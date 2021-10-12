@@ -39,7 +39,8 @@ xla::XlaOp BuildExpand(xla::XlaOp input,
 
 // Dynamic Shape version of BuildExpand()
 xla::XlaOp BuildDynamicExpand(xla::XlaOp static_input,
-                              xla::XlaOp dynamic_target);
+                              xla::XlaOp dynamic_target,
+                              xla::Shape dynamic_shapes);
 
 std::vector<xla::int64> BuildSqueezedDimensions(
     absl::Span<const xla::int64> dimensions, xla::int64 squeeze_dim);

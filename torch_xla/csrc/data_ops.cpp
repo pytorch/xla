@@ -12,10 +12,15 @@
 #include "tensorflow/compiler/xla/xla_client/debug_macros.h"
 #include "tensorflow/compiler/xla/xla_client/sys_util.h"
 #include "tensorflow/compiler/xla/xla_client/util.h"
+#include "tensorflow/compiler/xla/xla_client/xla_util.h"
+#include "tensorflow/compiler/xla/client/value_inference.h"
 #include "torch_xla/csrc/convert_ops.h"
 #include "torch_xla/csrc/helpers.h"
 #include "torch_xla/csrc/reduction.h"
 #include "torch_xla/csrc/tensor_util.h"
+
+#include <chrono>
+using namespace std::chrono;
 
 namespace torch_xla {
 namespace {
@@ -113,19 +118,23 @@ xla::XlaOp BuildExpand(xla::XlaOp input,
 }
 
 xla::XlaOp BuildDynamicExpand(xla::XlaOp static_input,
-                              xla::XlaOp dynamic_target) {
-  xla::Shape target_shape = XlaHelpers::ShapeOfXlaOp(dynamic_target);
-  xla::XlaOp output = BuildExpand(static_input, target_shape.dimensions());
-
+                              xla::XlaOp dynamic_target,
+                              xla::Shape dynamic_shapes) {
+  // auto start = high_resolution_clock::now();
+  xla::XlaOp output = BuildExpand(static_input, dynamic_shapes.dimensions());
   bool seen_dynamic = false;  // Limit support to one dynamic dimension
-  for (int i = 0; i < target_shape.rank(); ++i) {
-    if (target_shape.is_dynamic_dimension(i)) {
+  for (int i = 0; i < dynamic_shapes.rank(); ++i) {
+    if (dynamic_shapes.is_dynamic_dimension(i)) {
       XLA_CHECK(seen_dynamic == false);
       seen_dynamic = true;
-      auto size = xla::GetDimensionSize(dynamic_target, i);
-      output = xla::SetDimensionSize(output, size, i);
+      output = xla::SetDimensionSize(output, MaybeConvertTo(dynamic_target, 
+                                                       xla::PrimitiveType::S32) , i);
     }
   }
+  // auto stop = high_resolution_clock::now();
+  // auto duration = duration_cast<microseconds>(stop - start);
+  // std::cout << "Time taken dynamic shape (BuildDynamicShape): "
+  //     << duration.count() << " microseconds" << std::endl;
   return output;
 }
 

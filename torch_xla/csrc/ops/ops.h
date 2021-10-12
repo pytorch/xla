@@ -226,7 +226,10 @@ NodePtr LogicalOr(const Value& input, const Value& other);
 
 NodePtr NanToNum(const Value& input, const Value& nan, const Value& posinf,
                  const Value& neginf);
-NodePtr DynamicExpand(const Value& static_input, const Value& dynamic_target);
+NodePtr DynamicExpand(const Value& static_input, 
+                      const std::vector<xla::int64> static_size_values, 
+                      const xla::int64 dynamic_size_values, 
+                      const Value& dynamic_target);
 
 }  // namespace ops
 }  // namespace ir

@@ -24,6 +24,7 @@ class TestDynamicShapes(object):
     assert t2_dim0_shape.item() == 4
 
     t3 = torch.fill_(t2, 10)
+    print(f"size of {t3.size()}, size of t2 {t2.size()}")
     t2_dim0_shape = torch_xla._XLAC._get_xla_tensor_dimension_size(t2, 0)
     t3_dim0_shape = torch_xla._XLAC._get_xla_tensor_dimension_size(t3, 0)
     print("[RUNNING] _get_xla_tensor_dimension_size(t2, 0)\n", t2_dim0_shape)

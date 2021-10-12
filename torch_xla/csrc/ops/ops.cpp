@@ -5,6 +5,7 @@
 #include "tensorflow/compiler/xla/client/lib/logdet.h"
 #include "tensorflow/compiler/xla/client/lib/math.h"
 #include "tensorflow/compiler/xla/client/lib/matrix.h"
+#include "tensorflow/compiler/xla/client/value_inference.h"
 #include "tensorflow/compiler/xla/shape_util.h"
 #include "tensorflow/compiler/xla/xla_client/debug_macros.h"
 #include "tensorflow/compiler/xla/xla_client/util.h"
@@ -882,21 +883,45 @@ NodePtr NanToNum(const Value& input, const Value& nan, const Value& posinf,
                    input.shape(), std::move(lower_fn));
 }
 
-NodePtr DynamicExpand(const Value& static_input, const Value& dynamic_target) {
-  auto lower_fn = [](const Node& node, LoweringContext* loctx) -> XlaOpVector {
+NodePtr DynamicExpand(const Value& input, const std::vector<xla::int64> static_size, const xla::int64 dynamic_size, const Value& dynamic_target) {
+  xla::Shape input_shape = input.shape();
+  auto lower_fn = [input_shape, static_size, dynamic_size](const Node& node, LoweringContext* loctx) -> XlaOpVector {
     xla::XlaOp static_input = loctx->GetOutputOp(node.operand(0));
     xla::XlaOp dynamic_target = loctx->GetOutputOp(node.operand(1));
-    xla::XlaOp dynamic_output =
-        BuildDynamicExpand(static_input, dynamic_target);
+    std::vector<bool> dynamic_dims;
+    std::vector<xla::int64> dims;
+    for (int i = 0; i < static_size.size(); i++) {
+      if (i == 0) {
+        dims.push_back(dynamic_size);
+        dynamic_dims.push_back(dynamic_size < static_size[i] ? true : false);
+      } else {
+        dims.push_back(static_size[i]);
+        dynamic_dims.push_back(false);
+      }
+    }
+    xla::Shape target_shape = xla::ShapeUtil::MakeShape(xla::S32, dims, dynamic_dims);
+    xla::XlaOp dynamic_output = BuildDynamicExpand(static_input, dynamic_target, target_shape);
     return node.ReturnOp(dynamic_output, loctx);
   };
-  auto shape_fn = [](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
-    return BuildDynamicExpand(operands[0], operands[1]);
+  auto shape_fn = [input_shape, static_size, dynamic_size](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
+    std::vector<bool> dynamic_dims;
+    std::vector<xla::int64> dims;
+    for (int i = 0; i < static_size.size(); i++) {
+      if (i == 0) {
+        dims.push_back(dynamic_size);
+        dynamic_dims.push_back(dynamic_size < static_size[i] ? true : false);
+      } else {
+        dims.push_back(static_size[i]);
+        dynamic_dims.push_back(false);
+      }
+    }
+    xla::Shape target_shape = xla::ShapeUtil::MakeShape(xla::S32, dims, dynamic_dims);
+    return BuildDynamicExpand(operands[0], operands[1], target_shape);
   };
-  return GenericOp(OpKind(at::aten::expand), {static_input, dynamic_target},
+  return GenericOp(OpKind(at::aten::expand), {input, dynamic_target},
                    [&]() {
                      return InferOutputShape(
-                         {static_input.shape(), dynamic_target.shape()},
+                         {input.shape(), dynamic_target.shape()},
                          shape_fn);
                    },
                    std::move(lower_fn));

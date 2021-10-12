@@ -1184,12 +1184,14 @@ XLATensor XLATensor::expand(const XLATensor& input,
 }
 
 XLATensor XLATensor::dynamic_expand(const XLATensor& input,
-                            const XLATensor& dynamic_size_tensor,
-                            std::vector<xla::int64> size) {
-  auto input_shape = input.shape();
+                            const XLATensor& dynamic_size_tensors,
+                            const xla::int64 dynamic_size,
+                            std::vector<xla::int64> static_size) {
   return input.CreateFrom(ir::ops::DynamicExpand(
       input.GetIrValue(),
-      dynamic_size_tensor.GetIrValue()));
+      std::move(static_size),
+      std::move(dynamic_size),
+      dynamic_size_tensors.GetIrValue()));
 }
 
 XLATensor XLATensor::expm1(const XLATensor& input) {
@@ -1221,7 +1223,11 @@ void XLATensor::eye_out(XLATensor& out, xla::int64 lines, xla::int64 cols) {
 
 void XLATensor::fill_(XLATensor& input, const at::Scalar& value) {
   ir::Value constant = GetIrValueForScalar(value, input.GetDevice());
-  constant = ir::ops::DynamicExpand(constant, input.GetIrValue());
+  constant = ir::ops::DynamicExpand(
+    constant, 
+    {-1}, //TODO: fix this line
+    std::move(-1), //TODO: fix this line
+    input.GetIrValue());
   input.SetInPlaceIrValue(std::move(constant));
 }
 

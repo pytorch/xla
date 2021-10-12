@@ -649,12 +649,13 @@ absl::flat_hash_map<std::string, absl::variant<int>> ConvertDictToMap(
 }
 
 at::Tensor GetXlaDynamicExpand(const at::Tensor& tensor, 
-                               const at::Tensor& dynamic_size_tensor, 
+                               const at::Tensor& dynamic_size_tensors, 
+                               xla::int64 dynamic_size_values,
                                std::vector<xla::int64> static_size) {
   XLATensor xtensor = bridge::GetXlaTensor(tensor);
-  XLATensor xdynamicsizetensor = bridge::GetXlaTensor(dynamic_size_tensor);
+  XLATensor xdynamicsizetensors = bridge::GetXlaTensor(dynamic_size_tensors);
   at::Tensor dynamic_expand_tensor = bridge::AtenFromXlaTensor(
-      XLATensor::dynamic_expand(xtensor, xdynamicsizetensor, static_size));
+      XLATensor::dynamic_expand(xtensor, xdynamicsizetensors, dynamic_size_values, static_size));
   return dynamic_expand_tensor;
 }
 
@@ -1105,8 +1106,8 @@ void InitXlaModuleBindings(py::module m) {
     xla::ComputationClient::RunLocalService(service_port);
   });
   m.def("_xla_dynamic_expand", 
-        [](const at::Tensor& tensor, const at::Tensor& dynamic_size_tensor, std::vector<xla::int64> static_size) {
-          return GetXlaDynamicExpand(tensor, dynamic_size_tensor, static_size);
+        [](const at::Tensor& tensor, const at::Tensor& dynamic_size_tensors, xla::int64 dynamic_size_values, std::vector<xla::int64> static_size) {
+          return GetXlaDynamicExpand(tensor, dynamic_size_tensors, dynamic_size_values, static_size);
   });
 
   BuildProfilerSubmodule(&m);
