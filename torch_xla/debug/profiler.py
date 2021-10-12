@@ -87,6 +87,7 @@ def trace(service_addr: str,
       interval_s=interval_s,
       options=options)
 
+
 def monitor(service_addr: str,
             duration_ms: int,
             monitoring_level: int = 1) -> str:
