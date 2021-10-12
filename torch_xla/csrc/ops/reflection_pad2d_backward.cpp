@@ -1,7 +1,6 @@
 #include "torch_xla/csrc/ops/reflection_pad2d_backward.h"
 
 #include "absl/strings/str_join.h"
-#include "tensorflow/compiler/xla/xla_client/util.h"
 #include "torch_xla/csrc/data_ops.h"
 #include "torch_xla/csrc/lowering_context.h"
 #include "torch_xla/csrc/ops/infer_output_shape.h"
@@ -28,7 +27,7 @@ ReflectionPad2dBackward::ReflectionPad2dBackward(
     std::vector<xla::int64> padding)
     : Node(OpKind(at::aten::reflection_pad2d_backward), {grad_output, input},
            [&]() { return NodeOutputShape(grad_output, input, padding); },
-           /*num_outputs=*/1, xla::util::MHash(padding)),
+           /*num_outputs=*/1, torch::lazy::MHash(padding)),
       padding_(std::move(padding)) {}
 
 NodePtr ReflectionPad2dBackward::Clone(OpList operands) const {

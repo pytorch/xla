@@ -1,7 +1,6 @@
 #include "torch_xla/csrc/ops/select.h"
 
 #include "tensorflow/compiler/xla/xla_client/debug_macros.h"
-#include "tensorflow/compiler/xla/xla_client/util.h"
 #include "torch_xla/csrc/lowering_context.h"
 #include "torch_xla/csrc/ops/xla_ops.h"
 
@@ -15,7 +14,7 @@ Select::Select(const Value& input, xla::int64 dim, xla::int64 start,
            [&]() {
              return MakeSelectShape(input.shape(), dim, start, end, stride);
            },
-           /*num_outputs=*/1, xla::util::MHash(dim, start, end, stride)),
+           /*num_outputs=*/1, torch::lazy::MHash(dim, start, end, stride)),
       dim_(dim),
       start_(start),
       end_(end),

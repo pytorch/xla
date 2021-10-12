@@ -1,6 +1,5 @@
 #include "torch_xla/csrc/ops/masked_scatter.h"
 
-#include "tensorflow/compiler/xla/xla_client/util.h"
 #include "torch_xla/csrc/lowering_context.h"
 #include "torch_xla/csrc/xla_lower_util.h"
 

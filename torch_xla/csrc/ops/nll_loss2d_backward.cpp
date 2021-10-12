@@ -44,15 +44,16 @@ NllLoss2dBackward::NllLoss2dBackward(const Value& grad_output,
                                      const absl::optional<Value>& weight,
                                      const absl::optional<Value>& total_weight,
                                      ReductionMode reduction, int ignore_index)
-    : Node(ir::OpKind(at::aten::nll_loss2d_backward),
-           xla::util::GetValuesVector<Value>({grad_output, logits, labels},
-                                             {&weight, &total_weight}),
-           [&]() {
-             return NodeOutputShape(grad_output, logits, labels, weight,
-                                    total_weight, reduction, ignore_index);
-           },
-           /*num_outputs=*/1,
-           xla::util::MHash(xla::util::GetEnumValue(reduction), ignore_index)),
+    : Node(
+          ir::OpKind(at::aten::nll_loss2d_backward),
+          xla::util::GetValuesVector<Value>({grad_output, logits, labels},
+                                            {&weight, &total_weight}),
+          [&]() {
+            return NodeOutputShape(grad_output, logits, labels, weight,
+                                   total_weight, reduction, ignore_index);
+          },
+          /*num_outputs=*/1,
+          torch::lazy::MHash(xla::util::GetEnumValue(reduction), ignore_index)),
       reduction_(reduction),
       ignore_index_(ignore_index) {}
 

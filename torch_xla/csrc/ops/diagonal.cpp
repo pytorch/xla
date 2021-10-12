@@ -4,7 +4,6 @@
 
 #include "tensorflow/compiler/xla/shape_util.h"
 #include "tensorflow/compiler/xla/xla_client/debug_macros.h"
-#include "tensorflow/compiler/xla/xla_client/util.h"
 #include "torch_xla/csrc/lowering_context.h"
 #include "torch_xla/csrc/matrix.h"
 
@@ -18,7 +17,7 @@ Diagonal::Diagonal(const Value& input, xla::int64 offset, xla::int64 dim1,
            [&]() {
              return MakeDiagonalShape(input.shape(), offset, dim1, dim2);
            },
-           /*num_outputs=*/1, xla::util::MHash(offset, dim1, dim2)),
+           /*num_outputs=*/1, torch::lazy::MHash(offset, dim1, dim2)),
       offset_(offset),
       dim1_(dim1),
       dim2_(dim2) {}

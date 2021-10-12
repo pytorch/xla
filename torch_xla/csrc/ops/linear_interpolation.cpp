@@ -1,6 +1,5 @@
 #include "torch_xla/csrc/ops/linear_interpolation.h"
 
-#include "tensorflow/compiler/xla/xla_client/util.h"
 #include "torch_xla/csrc/helpers.h"
 #include "torch_xla/csrc/lowering_context.h"
 #include "torch_xla/csrc/ops/xla_ops.h"
@@ -12,7 +11,7 @@ namespace ops {
 LinearInterpolation::LinearInterpolation(const Value& value,
                                          const Value& new_value, double alpha)
     : Node(xla_moving_average, {value, new_value}, value.shape(),
-           /*num_outputs=*/1, xla::util::MHash(alpha)),
+           /*num_outputs=*/1, torch::lazy::MHash(alpha)),
       alpha_(alpha) {}
 
 NodePtr LinearInterpolation::Clone(OpList operands) const {

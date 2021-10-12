@@ -49,7 +49,7 @@ AsStrided::AsStrided(const Value& input, std::vector<xla::int64> size,
              return xla::ShapeUtil::MakeShape(input.shape().element_type(),
                                               size);
            },
-           /*num_outputs=*/1, xla::util::MHash(size, stride, storage_offset)),
+           /*num_outputs=*/1, torch::lazy::MHash(size, stride, storage_offset)),
       size_(std::move(size)),
       stride_(std::move(stride)),
       storage_offset_(storage_offset) {}

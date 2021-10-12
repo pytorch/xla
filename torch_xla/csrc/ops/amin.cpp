@@ -1,6 +1,5 @@
 #include "torch_xla/csrc/ops/amin.h"
 
-#include "tensorflow/compiler/xla/xla_client/util.h"
 #include "torch_xla/csrc/lowering_context.h"
 #include "torch_xla/csrc/ops/infer_output_shape.h"
 #include "torch_xla/csrc/reduction.h"
@@ -24,7 +23,7 @@ xla::Shape NodeOutputShape(const Value& input,
 Amin::Amin(const Value& input, std::vector<xla::int64> dimensions, bool keepdim)
     : Node(ir::OpKind(at::aten::amin), {input},
            [&]() { return NodeOutputShape(input, dimensions, keepdim); },
-           /*num_outputs=*/1, xla::util::MHash(dimensions, keepdim)),
+           /*num_outputs=*/1, torch::lazy::MHash(dimensions, keepdim)),
       dimensions_(std::move(dimensions)),
       keepdim_(keepdim) {}
 

@@ -2,7 +2,6 @@
 
 #include "absl/strings/str_join.h"
 #include "tensorflow/compiler/xla/xla_client/debug_macros.h"
-#include "tensorflow/compiler/xla/xla_client/util.h"
 #include "torch_xla/csrc/convolution.h"
 #include "torch_xla/csrc/lowering_context.h"
 #include "torch_xla/csrc/ops/infer_output_shape.h"
@@ -45,8 +44,8 @@ ConvolutionOverrideable::ConvolutionOverrideable(
                                     transposed, output_padding, groups);
            },
            /*num_outputs=*/1,
-           xla::util::MHash(stride, padding, dilation, transposed,
-                            output_padding, groups)),
+           torch::lazy::MHash(stride, padding, dilation, transposed,
+                              output_padding, groups)),
       stride_(std::move(stride)),
       padding_(std::move(padding)),
       dilation_(std::move(dilation)),
@@ -64,8 +63,8 @@ ConvolutionOverrideable::ConvolutionOverrideable(
                                     transposed, output_padding, groups);
            },
            /*num_outputs=*/1,
-           xla::util::MHash(stride, padding, dilation, transposed,
-                            output_padding, groups)),
+           torch::lazy::MHash(stride, padding, dilation, transposed,
+                              output_padding, groups)),
       stride_(std::move(stride)),
       padding_(std::move(padding)),
       dilation_(std::move(dilation)),

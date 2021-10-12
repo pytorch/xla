@@ -1,6 +1,5 @@
 #include "torch_xla/csrc/ops/scatter_add.h"
 
-#include "tensorflow/compiler/xla/xla_client/util.h"
 #include "torch_xla/csrc/convert_ops.h"
 #include "torch_xla/csrc/helpers.h"
 #include "torch_xla/csrc/lowering_context.h"
@@ -14,7 +13,7 @@ ScatterAdd::ScatterAdd(const Value& input, const Value& index, const Value& src,
                        xla::int64 dim)
     : Node(ir::OpKind(at::aten::scatter_add), {input, index, src},
            input.shape(),
-           /*num_outputs=*/1, xla::util::MHash(dim)),
+           /*num_outputs=*/1, torch::lazy::MHash(dim)),
       dim_(dim) {}
 
 NodePtr ScatterAdd::Clone(OpList operands) const {

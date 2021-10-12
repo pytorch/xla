@@ -1,7 +1,6 @@
 #include "torch_xla/csrc/ops/softmax_backward.h"
 
 #include "tensorflow/compiler/xla/xla_client/debug_macros.h"
-#include "tensorflow/compiler/xla/xla_client/util.h"
 #include "torch_xla/csrc/lowering_context.h"
 #include "torch_xla/csrc/ops/infer_output_shape.h"
 #include "torch_xla/csrc/softmax_builder.h"
@@ -14,7 +13,7 @@ SoftmaxBackward::SoftmaxBackward(const Value& grad_output, const Value& output,
                                  xla::int64 dim)
     : Node(ir::OpKind(at::aten::_softmax_backward_data), {grad_output, output},
            grad_output.shape(),
-           /*num_outputs=*/1, xla::util::MHash(dim)),
+           /*num_outputs=*/1, torch::lazy::MHash(dim)),
       dim_(dim) {}
 
 NodePtr SoftmaxBackward::Clone(OpList operands) const {

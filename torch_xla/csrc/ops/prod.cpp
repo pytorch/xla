@@ -1,7 +1,6 @@
 #include "torch_xla/csrc/ops/prod.h"
 
 #include "absl/strings/str_join.h"
-#include "tensorflow/compiler/xla/xla_client/util.h"
 #include "torch_xla/csrc/convert_ops.h"
 #include "torch_xla/csrc/helpers.h"
 #include "torch_xla/csrc/lowering_context.h"
@@ -51,8 +50,8 @@ Prod::Prod(const Value& input, std::vector<xla::int64> dimensions,
                                     dtype);
            },
            /*num_outputs=*/1,
-           xla::util::MHash(dimensions, keep_reduced_dimensions,
-                            OptionalOr<int>(dtype, -1))),
+           torch::lazy::MHash(dimensions, keep_reduced_dimensions,
+                              OptionalOr<int>(dtype, -1))),
       dimensions_(std::move(dimensions)),
       keep_reduced_dimensions_(keep_reduced_dimensions),
       dtype_(dtype) {}

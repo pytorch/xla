@@ -1,7 +1,6 @@
 #include "torch_xla/csrc/ops/permute.h"
 
 #include "tensorflow/compiler/xla/xla_client/debug_macros.h"
-#include "tensorflow/compiler/xla/xla_client/util.h"
 #include "torch_xla/csrc/helpers.h"
 #include "torch_xla/csrc/lowering_context.h"
 #include "torch_xla/csrc/ops/infer_output_shape.h"
@@ -26,7 +25,7 @@ xla::Shape NodeOutputShape(const Value& input,
 Permute::Permute(const Value& input, std::vector<xla::int64> dims)
     : Node(ir::OpKind(at::aten::permute), {input},
            [&]() { return NodeOutputShape(input, dims); },
-           /*num_outputs=*/1, xla::util::MHash(dims)),
+           /*num_outputs=*/1, torch::lazy::MHash(dims)),
       dims_(std::move(dims)) {}
 
 NodePtr Permute::Clone(OpList operands) const {

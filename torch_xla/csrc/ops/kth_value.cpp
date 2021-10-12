@@ -1,6 +1,5 @@
 #include "torch_xla/csrc/ops/kth_value.h"
 
-#include "tensorflow/compiler/xla/xla_client/util.h"
 #include "torch_xla/csrc/lowering_context.h"
 #include "torch_xla/csrc/ops/infer_output_shape.h"
 #include "torch_xla/csrc/xla_lower_util.h"
@@ -26,7 +25,7 @@ KthValue::KthValue(const Value& input, xla::int64 k, xla::int64 dim,
                    bool keepdim)
     : Node(ir::OpKind(at::aten::kthvalue), {input},
            [&]() { return NodeOutputShape(input, k, dim, keepdim); },
-           /*num_outputs=*/2, xla::util::MHash(k, dim, keepdim)),
+           /*num_outputs=*/2, torch::lazy::MHash(k, dim, keepdim)),
       k_(k),
       dim_(dim),
       keepdim_(keepdim) {}

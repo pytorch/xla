@@ -1,7 +1,6 @@
 #include "torch_xla/csrc/ops/flip.h"
 
 #include "tensorflow/compiler/xla/client/xla_builder.h"
-#include "tensorflow/compiler/xla/xla_client/util.h"
 #include "torch_xla/csrc/lowering_context.h"
 
 namespace torch_xla {
@@ -10,7 +9,7 @@ namespace ops {
 
 Flip::Flip(const Value& input, std::vector<xla::int64> dims)
     : Node(ir::OpKind(at::aten::flip), {input}, input.shape(),
-           /*num_outputs=*/1, xla::util::MHash(dims)),
+           /*num_outputs=*/1, torch::lazy::MHash(dims)),
       dims_(std::move(dims)) {}
 
 NodePtr Flip::Clone(OpList operands) const {

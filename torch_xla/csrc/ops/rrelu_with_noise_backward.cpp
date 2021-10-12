@@ -1,6 +1,5 @@
 #include "torch_xla/csrc/ops/rrelu_with_noise_backward.h"
 
-#include "tensorflow/compiler/xla/xla_client/util.h"
 #include "torch_xla/csrc/elementwise.h"
 #include "torch_xla/csrc/lowering_context.h"
 #include "torch_xla/csrc/ops/scalar.h"
@@ -15,7 +14,7 @@ RreluWithNoiseBackward::RreluWithNoiseBackward(
     : Node(ir::OpKind(at::aten::rrelu_with_noise_backward),
            {grad_output, input, noise}, input.shape(),
            /*num_outputs=*/1,
-           xla::util::MHash(ScalarHash(lower), ScalarHash(upper), training)),
+           torch::lazy::MHash(ScalarHash(lower), ScalarHash(upper), training)),
       lower_(std::move(lower)),
       upper_(std::move(upper)),
       training_(training) {}

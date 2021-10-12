@@ -2,7 +2,6 @@
 
 #include "absl/strings/str_join.h"
 #include "tensorflow/compiler/xla/xla_client/debug_macros.h"
-#include "tensorflow/compiler/xla/xla_client/util.h"
 #include "torch_xla/csrc/data_ops.h"
 #include "torch_xla/csrc/lowering_context.h"
 #include "torch_xla/csrc/ops/infer_output_shape.h"
@@ -30,7 +29,7 @@ Split::Split(const Value& input, std::vector<xla::int64> split_sizes,
     : Node(ir::OpKind(at::aten::split), {input},
            [&]() { return NodeOutputShape(input, split_sizes, dim); },
            ComputeSplitCount(input.shape().dimensions(dim), split_sizes),
-           xla::util::MHash(split_sizes, dim)),
+           torch::lazy::MHash(split_sizes, dim)),
       split_sizes_(std::move(split_sizes)),
       dim_(dim) {}
 

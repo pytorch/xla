@@ -2,7 +2,6 @@
 
 #include "absl/strings/str_join.h"
 #include "tensorflow/compiler/xla/xla_client/debug_macros.h"
-#include "tensorflow/compiler/xla/xla_client/util.h"
 #include "torch_xla/csrc/lowering_context.h"
 #include "torch_xla/csrc/ops/infer_output_shape.h"
 #include "torch_xla/csrc/pooling.h"
@@ -56,8 +55,8 @@ AvgPoolNd::AvgPoolNd(const Value& input, xla::int64 spatial_dim_count,
                                     count_include_pad);
            },
            /*num_outputs=*/1,
-           xla::util::MHash(spatial_dim_count, kernel_size, stride, padding,
-                            ceil_mode, count_include_pad)),
+           torch::lazy::MHash(spatial_dim_count, kernel_size, stride, padding,
+                              ceil_mode, count_include_pad)),
       spatial_dim_count_(spatial_dim_count),
       kernel_size_(std::move(kernel_size)),
       stride_(std::move(stride)),

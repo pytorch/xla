@@ -1,6 +1,5 @@
 #include "torch_xla/csrc/ops/topk.h"
 
-#include "tensorflow/compiler/xla/xla_client/util.h"
 #include "torch_xla/csrc/lowering_context.h"
 #include "torch_xla/csrc/ops/infer_output_shape.h"
 #include "torch_xla/csrc/xla_lower_util.h"
@@ -26,7 +25,7 @@ TopK::TopK(const Value& input, xla::int64 k, xla::int64 dim, bool largest,
            bool sorted)
     : Node(ir::OpKind(at::aten::topk), {input},
            [&]() { return NodeOutputShape(input, k, dim, largest, sorted); },
-           /*num_outputs=*/2, xla::util::MHash(k, dim, largest, sorted)),
+           /*num_outputs=*/2, torch::lazy::MHash(k, dim, largest, sorted)),
       k_(k),
       dim_(dim),
       largest_(largest),

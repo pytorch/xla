@@ -1,6 +1,5 @@
 #include "torch_xla/csrc/ops/put.h"
 
-#include "tensorflow/compiler/xla/xla_client/util.h"
 #include "torch_xla/csrc/lowering_context.h"
 #include "torch_xla/csrc/xla_lower_util.h"
 
@@ -11,7 +10,7 @@ namespace ops {
 Put::Put(const Value& input, const Value& index, const Value& source,
          bool accumulate)
     : Node(ir::OpKind(at::aten::put), {input, index, source}, input.shape(),
-           /*num_outputs=*/1, xla::util::MHash(accumulate)),
+           /*num_outputs=*/1, torch::lazy::MHash(accumulate)),
       accumulate_(accumulate) {}
 
 NodePtr Put::Clone(OpList operands) const {

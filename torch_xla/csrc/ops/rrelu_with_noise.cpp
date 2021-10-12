@@ -1,6 +1,5 @@
 #include "torch_xla/csrc/ops/rrelu_with_noise.h"
 
-#include "tensorflow/compiler/xla/xla_client/util.h"
 #include "torch_xla/csrc/elementwise.h"
 #include "torch_xla/csrc/helpers.h"
 #include "torch_xla/csrc/lowering_context.h"
@@ -16,7 +15,7 @@ RreluWithNoise::RreluWithNoise(const Value& input, const Value& seed,
     : Node(ir::OpKind(at::aten::rrelu_with_noise), {input, seed},
            xla::ShapeUtil::MakeTupleShape({input.shape(), input.shape()}),
            /*num_outputs=*/2,
-           xla::util::MHash(ScalarHash(lower), ScalarHash(upper), training)),
+           torch::lazy::MHash(ScalarHash(lower), ScalarHash(upper), training)),
       lower_(std::move(lower)),
       upper_(std::move(upper)),
       training_(training) {}

@@ -1,6 +1,5 @@
 #include "torch_xla/csrc/ops/index_put.h"
 
-#include "tensorflow/compiler/xla/xla_client/util.h"
 #include "torch_xla/csrc/lowering_context.h"
 #include "torch_xla/csrc/xla_lower_util.h"
 
@@ -12,7 +11,7 @@ IndexPut::IndexPut(const ir::Value& base, const ir::Value& indices,
                    xla::int64 start_dim, const ir::Value& values,
                    bool accumulate)
     : Node(OpKind(at::aten::index_put), {base, indices, values}, base.shape(),
-           /*num_outputs=*/1, xla::util::MHash(start_dim, accumulate)),
+           /*num_outputs=*/1, torch::lazy::MHash(start_dim, accumulate)),
       start_dim_(start_dim),
       accumulate_(accumulate) {}
 
