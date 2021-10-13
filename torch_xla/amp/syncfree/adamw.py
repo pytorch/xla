@@ -3,33 +3,32 @@ from torch import Tensor
 from . import _functional as F
 
 
-class Adam(torch.optim.Adam):
-  r"""Implements Adam algorithm.
+class AdamW(torch.optim.AdamW):
+  r"""Implements AdamW algorithm.
 
-    It has been proposed in `Adam: A Method for Stochastic Optimization`_.
-    The implementation of the L2 penalty follows changes proposed in
-    `Decoupled Weight Decay Regularization`_.
+  The original Adam algorithm was proposed in `Adam: A Method for Stochastic Optimization`_.
+  The AdamW variant was proposed in `Decoupled Weight Decay Regularization`_.
 
-    Args:
-        params (iterable): iterable of parameters to optimize or dicts defining
-            parameter groups
-        lr (float, optional): learning rate (default: 1e-3)
-        betas (Tuple[float, float], optional): coefficients used for computing
-            running averages of gradient and its square (default: (0.9, 0.999))
-        eps (float, optional): term added to the denominator to improve
-            numerical stability (default: 1e-8)
-        weight_decay (float, optional): weight decay (L2 penalty) (default: 0)
-        amsgrad (boolean, optional): whether to use the AMSGrad variant of this
-            algorithm from the paper `On the Convergence of Adam and Beyond`_
-            (default: False)
+  Args:
+      params (iterable): iterable of parameters to optimize or dicts defining
+          parameter groups
+      lr (float, optional): learning rate (default: 1e-3)
+      betas (Tuple[float, float], optional): coefficients used for computing
+          running averages of gradient and its square (default: (0.9, 0.999))
+      eps (float, optional): term added to the denominator to improve
+          numerical stability (default: 1e-8)
+      weight_decay (float, optional): weight decay coefficient (default: 1e-2)
+      amsgrad (boolean, optional): whether to use the AMSGrad variant of this
+          algorithm from the paper `On the Convergence of Adam and Beyond`_
+          (default: False)
 
-    .. _Adam\: A Method for Stochastic Optimization:
-        https://arxiv.org/abs/1412.6980
-    .. _Decoupled Weight Decay Regularization:
-        https://arxiv.org/abs/1711.05101
-    .. _On the Convergence of Adam and Beyond:
-        https://openreview.net/forum?id=ryQu7f-RZ
-    """
+  .. _Adam\: A Method for Stochastic Optimization:
+      https://arxiv.org/abs/1412.6980
+  .. _Decoupled Weight Decay Regularization:
+      https://arxiv.org/abs/1711.05101
+  .. _On the Convergence of Adam and Beyond:
+      https://openreview.net/forum?id=ryQu7f-RZ
+  """
 
   @torch.no_grad()
   def step(self, closure=None, found_inf: Tensor = None):
@@ -43,7 +42,7 @@ class Adam(torch.optim.Adam):
                 skipped (found_inf == 1).
         """
     if found_inf is None:
-      return super(Adam, self).step(closure=closure)
+      return super(AdamW, self).step(closure=closure)
 
     if found_inf.shape:
       raise ValueError("The found_inf tensor has to be scalar type")
@@ -65,9 +64,7 @@ class Adam(torch.optim.Adam):
         if p.grad is not None:
           params_with_grad.append(p)
           if p.grad.is_sparse:
-            raise RuntimeError(
-                'Adam does not support sparse gradients, please consider SparseAdam instead'
-            )
+            raise RuntimeError('AdamW does not support sparse gradients')
           grads.append(p.grad)
 
           state = self.state[p]
@@ -105,6 +102,6 @@ class Adam(torch.optim.Adam):
           weight_decay=group['weight_decay'],
           eps=group['eps'],
           found_inf=found_inf,
-          use_adamw=False)
+          use_adamw=True)
 
     return loss

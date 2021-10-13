@@ -3,6 +3,7 @@ import torch
 import torch.nn as nn
 from torch._six import inf
 from typing import Iterable, Union
+from torch_xla.amp import syncfree
 
 _tensor_or_tensors = Union[torch.Tensor, Iterable[torch.Tensor]]
 
@@ -52,3 +53,6 @@ def clip_grad_norm_(parameters: _tensor_or_tensors,
 
 def _apply_patches():
   nn.utils.clip_grad_norm_ = _patch(nn.utils.clip_grad_norm_, clip_grad_norm_)
+  torch.optim.SGD = _patch(torch.optim.SGD, syncfree.SGD)
+  torch.optim.Adam = _patch(torch.optim.Adam, syncfree.Adam)
+  torch.optim.AdamW = _patch(torch.optim.AdamW, syncfree.AdamW)

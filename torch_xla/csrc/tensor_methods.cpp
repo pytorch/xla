@@ -413,90 +413,139 @@ XLATensor XLATensor::get_dimensions_size(const XLATensor& input,
                           at::ScalarType::Int);
 }
 
-void XLATensor::sgd_optimizer_step_(XLATensor& step, XLATensor& param,
-                                    XLATensor& buf, const XLATensor& found_inf,
-                                    const XLATensor& d_p, double weight_decay,
-                                    double momentum, double lr,
-                                    double dampening, bool nesterov) {
-  ir::Value weight_decay_value =
-      GetIrValueForScalar(weight_decay, param.shape(), param.GetDevice());
-  ir::Value momentum_value =
-      GetIrValueForScalar(momentum, param.shape(), param.GetDevice());
-  ir::Value lr_value =
-      GetIrValueForScalar(lr, param.shape(), param.GetDevice());
-  ir::Value dampening_value =
-      GetIrValueForScalar(dampening, param.shape(), param.GetDevice());
-  ir::NodePtr node = ir::MakeNode<ir::ops::SgdOptimizerStep>(
-      step.GetIrValue(), param.GetIrValue(), buf.GetIrValue(),
-      found_inf.GetIrValue(), d_p.GetIrValue(), weight_decay_value,
-      momentum_value, lr_value, dampening_value,
-      /*use_weight_decay=*/weight_decay != 0,
-      /*use_momentum=*/momentum != 0, /*use_nesterov=*/nesterov);
-  step.SetInPlaceIrValue(ir::Value(node, 0));
-  param.SetInPlaceIrValue(ir::Value(node, 1));
-  buf.SetInPlaceIrValue(ir::Value(node, 2));
-}
-
-void XLATensor::adam_optimizer_step(const XLATensor& found_inf, XLATensor& step,
-                                 XLATensor& param, XLATensor& grad, 
-                                 XLATensor& exp_avg, XLATensor& exp_avg_sq, XLATensor& max_exp_avg_sq,
-                                 bool amsgrad, double beta1, double beta2, 
-                                 double lr, double weight_decay, double eps) {
-  /* 
-    XLA Version of Adam Algorithm. This is a C++ adaption of PyTorch source linked below. 
-    Pytorch Source Code: https://github.com/pytorch/pytorch/blob/master/torch/optim/_functional.py#L54-L98
-    In addition to the original Adam algorithm we take a step and update parameters and other tensors when 
-    found_inf is 0 and vice-versa.
+void XLATensor::sgd_optimizer_step(const XLATensor& found_inf, XLATensor& step,
+                                   XLATensor& param, const XLATensor& d_p,
+                                   XLATensor& buf, double weight_decay,
+                                   double momentum, double lr, double dampening,
+                                   bool nesterov) {
+  /* XLA version of sgd algorithm
+   * https://github.com/pytorch/pytorch/blob/master/torch/optim/_functional.py#L162-L180
    */
-
-  ir::Value one_value = GetIrValueForScalar(1.0, found_inf.shape(), found_inf.GetDevice());
-  // Step Update 
-  step.SetInPlaceIrValue(ir::ops::Where(found_inf.GetIrValue(), step.GetIrValue(), step.GetIrValue() + one_value));
-  ir::Value step_value = step.GetIrValue();
-  ir::Value beta1_value = GetIrValueForScalar(beta1, found_inf.shape(), found_inf.GetDevice());
-  ir::Value beta2_value = GetIrValueForScalar(beta2, found_inf.shape(), found_inf.GetDevice());
-
-  
-  auto bias_correction1 = one_value - ir::ops::Pow(beta1_value, step_value);
-  auto bias_correction2 = one_value - ir::ops::Pow(beta2_value, step_value);
-  
+  auto d_p_value = d_p.GetIrValue();
   // weight_decay
   if (weight_decay != 0) {
     ir::Value weight_decay_value =
-        GetIrValueForScalar(weight_decay, grad.shape(), grad.GetDevice());
-    grad.SetInPlaceIrValue(ir::ops::Where(
-        found_inf.GetIrValue(), grad.GetIrValue(),
-        grad.GetIrValue() + param.GetIrValue() * weight_decay_value));
+        GetIrValueForScalar(weight_decay, param.shape(), param.GetDevice());
+    d_p_value = d_p_value + param.GetIrValue() * weight_decay_value;
   }
+  // momentum
+  if (momentum != 0) {
+    auto buf_value = buf.GetIrValue();
+    ir::Value momentum_value =
+        GetIrValueForScalar(momentum, param.shape(), param.GetDevice());
+    ir::Value dampening_factor =
+        GetIrValueForScalar(1.0 - dampening, param.shape(), param.GetDevice());
+    buf_value = ir::ops::Where(
+        step.GetIrValue(),
+        buf_value * momentum_value + d_p_value * dampening_factor, d_p_value);
+    d_p_value = nesterov ? d_p_value + buf_value * momentum_value : buf_value;
+    buf.SetInPlaceIrValue(
+        ir::ops::Where(found_inf.GetIrValue(), buf.GetIrValue(), buf_value));
+  }
+  // update param
+  ir::Value lr_value =
+      GetIrValueForScalar(lr, param.shape(), param.GetDevice());
+  param.SetInPlaceIrValue(
+      ir::ops::Where(found_inf.GetIrValue(), param.GetIrValue(),
+                     param.GetIrValue() - d_p_value * lr_value));
+  // update step counter
+  ir::Value one_value =
+      GetIrValueForScalar(1.0, step.shape(), step.GetDevice());
+  step.SetInPlaceIrValue(ir::ops::Where(found_inf.GetIrValue(),
+                                        step.GetIrValue(),
+                                        step.GetIrValue() + one_value));
+}
+
+void XLATensor::adam_optimizer_step(const XLATensor& found_inf, XLATensor& step,
+                                    XLATensor& param, XLATensor& grad,
+                                    XLATensor& exp_avg, XLATensor& exp_avg_sq,
+                                    XLATensor& max_exp_avg_sq, bool amsgrad,
+                                    double beta1, double beta2, double lr,
+                                    double weight_decay, double eps,
+                                    bool use_adamw) {
+  /*
+    XLA Version of Adam/AdamW Algorithm. This is a C++ adaption of PyTorch
+    source linked below. Pytorch Source Code:
+    https://github.com/pytorch/pytorch/blob/master/torch/optim/_functional.py#L54-L98
+    https://github.com/pytorch/pytorch/blob/master/torch/optim/_functional.py#L101-L143
+    In addition to the original Adam/AdamW algorithm we take a step and update
+    parameters and other tensors when found_inf is 0 and vice-versa.
+   */
+
+  ir::Value one_value =
+      GetIrValueForScalar(1.0, found_inf.shape(), found_inf.GetDevice());
+  // Step Update
+  step.SetInPlaceIrValue(ir::ops::Where(found_inf.GetIrValue(),
+                                        step.GetIrValue(),
+                                        step.GetIrValue() + one_value));
+  ir::Value step_value = step.GetIrValue();
+  ir::Value beta1_value =
+      GetIrValueForScalar(beta1, found_inf.shape(), found_inf.GetDevice());
+  ir::Value beta2_value =
+      GetIrValueForScalar(beta2, found_inf.shape(), found_inf.GetDevice());
+  ir::Value lr_value =
+      GetIrValueForScalar(lr, found_inf.shape(), found_inf.GetDevice());
+
+  auto bias_correction1 = one_value - ir::ops::Pow(beta1_value, step_value);
+  auto bias_correction2 = one_value - ir::ops::Pow(beta2_value, step_value);
+
+  ir::Value grad_value = grad.GetIrValue();
+
+  // weight_decay
+  if (weight_decay != 0) {
+    ir::Value weight_decay_value = GetIrValueForScalar(
+        weight_decay, found_inf.shape(), found_inf.GetDevice());
+    if (use_adamw) {
+      // AdamW
+      param.SetInPlaceIrValue(ir::ops::Where(
+          found_inf.GetIrValue(), param.GetIrValue(),
+          param.GetIrValue() * (one_value - lr_value * weight_decay_value)));
+    } else {
+      // Adam
+      grad_value = ir::ops::Where(
+          found_inf.GetIrValue(), grad.GetIrValue(),
+          grad.GetIrValue() + param.GetIrValue() * weight_decay_value);
+    }
+  }
+
   // First Running Coefficient
-  auto exp_avg_value = exp_avg.GetIrValue() * beta1_value + grad.GetIrValue() * (one_value - beta1_value);
-  exp_avg.SetInPlaceIrValue(ir::ops::Where(found_inf.GetIrValue(), exp_avg.GetIrValue(), exp_avg_value));
-   
+  auto exp_avg_value = exp_avg.GetIrValue() * beta1_value +
+                       grad_value * (one_value - beta1_value);
+  exp_avg.SetInPlaceIrValue(ir::ops::Where(
+      found_inf.GetIrValue(), exp_avg.GetIrValue(), exp_avg_value));
+
   // Second Running Coefficient
-  auto exp_avg_sq_value = exp_avg_sq.GetIrValue() * beta2_value + grad.GetIrValue() * grad.GetIrValue() * (one_value - beta2_value);
-  exp_avg_sq.SetInPlaceIrValue(ir::ops::Where(found_inf.GetIrValue(), exp_avg_sq.GetIrValue(), exp_avg_sq_value));
-  
+  auto exp_avg_sq_value = exp_avg_sq.GetIrValue() * beta2_value +
+                          grad_value * grad_value * (one_value - beta2_value);
+  exp_avg_sq.SetInPlaceIrValue(ir::ops::Where(
+      found_inf.GetIrValue(), exp_avg_sq.GetIrValue(), exp_avg_sq_value));
 
   // amsgrad
-  max_exp_avg_sq.SetInPlaceIrValue(ir::ops::Where(found_inf.GetIrValue(), 
-                                  max_exp_avg_sq.GetIrValue(),
-                                  ir::ops::Max(max_exp_avg_sq.GetIrValue(), exp_avg_sq.GetIrValue())));
-  
-  ir::Value eps_value = GetIrValueForScalar(eps, grad.shape(), grad.GetDevice());
+  max_exp_avg_sq.SetInPlaceIrValue(ir::ops::Where(
+      found_inf.GetIrValue(), max_exp_avg_sq.GetIrValue(),
+      ir::ops::Max(max_exp_avg_sq.GetIrValue(), exp_avg_sq.GetIrValue())));
+
+  ir::Value eps_value =
+      GetIrValueForScalar(eps, grad.shape(), grad.GetDevice());
   auto exp_avg_sq_sqrt = ir::ops::Sqrt(exp_avg_sq.GetIrValue());
   auto max_exp_avg_sq_sqrt = ir::ops::Sqrt(max_exp_avg_sq.GetIrValue());
   auto bias_sqrt = ir::ops::Sqrt(bias_correction2);
-  ir::Value denom_compute_without_amsgrad = (exp_avg_sq_sqrt / bias_sqrt) + eps_value;
-  ir::Value denom_compute_with_amsgrad = (max_exp_avg_sq_sqrt / bias_sqrt) + eps_value;
-  ir::Value denom_compute = amsgrad ? denom_compute_with_amsgrad : denom_compute_without_amsgrad;
-  ir::Value denom_init = GetIrValueForScalar(1.0, grad.shape(), grad.GetDevice());
+  ir::Value denom_compute_without_amsgrad =
+      (exp_avg_sq_sqrt / bias_sqrt) + eps_value;
+  ir::Value denom_compute_with_amsgrad =
+      (max_exp_avg_sq_sqrt / bias_sqrt) + eps_value;
+  ir::Value denom_compute =
+      amsgrad ? denom_compute_with_amsgrad : denom_compute_without_amsgrad;
+  ir::Value denom_init =
+      GetIrValueForScalar(1.0, grad.shape(), grad.GetDevice());
   ir::Value denom = ir::ops::Where(step_value, denom_compute, denom_init);
 
   // Update Param
-  ir::Value step_size_value = GetIrValueForScalar(lr, grad.shape(), grad.GetDevice()) / bias_correction1;
-  auto param_value = param.GetIrValue() - step_size_value * (exp_avg.GetIrValue() / denom);
-  param.SetInPlaceIrValue(ir::ops::Where(found_inf.GetIrValue(), param.GetIrValue(), param_value));
-
+  ir::Value step_size_value = lr_value / bias_correction1;
+  auto param_value =
+      param.GetIrValue() - step_size_value * (exp_avg.GetIrValue() / denom);
+  param.SetInPlaceIrValue(
+      ir::ops::Where(found_inf.GetIrValue(), param.GetIrValue(), param_value));
 }
 
 std::vector<XLATensor> XLATensor::user_computation(
