@@ -8,8 +8,8 @@ namespace ops {
 
 class SgdOptimizerStep : public Node {
  public:
-  SgdOptimizerStep(const Value& found_inf, const Value& step,
-                   const Value& param, const Value& d_p, const Value& buf,
+  SgdOptimizerStep(const Value& step, const Value& param, const Value& buf,
+                   const Value& found_inf, const Value& d_p,
                    const Value& weight_decay, const Value& momentum,
                    const Value& lr, const Value& dampening,
                    bool use_weight_decay, bool use_momentum, bool use_nesterov);

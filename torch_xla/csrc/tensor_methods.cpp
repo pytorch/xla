@@ -386,11 +386,11 @@ XLATensor XLATensor::get_dimensions_size(const XLATensor& input,
                           at::ScalarType::Int);
 }
 
-void XLATensor::sgd_optimizer_step(const XLATensor& found_inf, XLATensor& step,
-                                   XLATensor& param, const XLATensor& d_p,
-                                   XLATensor& buf, double weight_decay,
-                                   double momentum, double lr, double dampening,
-                                   bool nesterov) {
+void XLATensor::sgd_optimizer_step_(XLATensor& step, XLATensor& param,
+                                    XLATensor& buf, const XLATensor& found_inf,
+                                    const XLATensor& d_p, double weight_decay,
+                                    double momentum, double lr,
+                                    double dampening, bool nesterov) {
   ir::Value weight_decay_value =
       GetIrValueForScalar(weight_decay, param.shape(), param.GetDevice());
   ir::Value momentum_value =
@@ -400,9 +400,10 @@ void XLATensor::sgd_optimizer_step(const XLATensor& found_inf, XLATensor& step,
   ir::Value dampening_value =
       GetIrValueForScalar(dampening, param.shape(), param.GetDevice());
   ir::NodePtr node = ir::MakeNode<ir::ops::SgdOptimizerStep>(
-      found_inf.GetIrValue(), step.GetIrValue(), param.GetIrValue(),
-      d_p.GetIrValue(), buf.GetIrValue(), weight_decay_value, momentum_value,
-      lr_value, dampening_value, /*use_weight_decay=*/weight_decay != 0,
+      step.GetIrValue(), param.GetIrValue(), buf.GetIrValue(),
+      found_inf.GetIrValue(), d_p.GetIrValue(), weight_decay_value,
+      momentum_value, lr_value, dampening_value,
+      /*use_weight_decay=*/weight_decay != 0,
       /*use_momentum=*/momentum != 0, /*use_nesterov=*/nesterov);
   step.SetInPlaceIrValue(ir::Value(node, 0));
   param.SetInPlaceIrValue(ir::Value(node, 1));

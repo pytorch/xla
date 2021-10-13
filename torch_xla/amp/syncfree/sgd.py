@@ -10,8 +10,10 @@ class SGD(torch.optim.SGD):
     this optimizer.step should be performed (found_inf is 0 or None) or
     skipped (found_inf != 0).
 
-    Implements stochastic gradient descent (optionally with momentum).
     See torch.optim.SGD for more details.
+    https://github.com/pytorch/pytorch/blob/master/torch/optim/sgd.py
+
+    Implements stochastic gradient descent (optionally with momentum).
 
     Args:
         params (iterable): iterable of parameters to optimize or dicts defining
@@ -113,6 +115,6 @@ class SGD(torch.optim.SGD):
       if buf is None:
         buf = torch.clone(d_p).detach()
         momentum_buffer_list[i] = buf
-      torch_xla._XLAC._xla_sgd_optimizer_step(found_inf, step, param, d_p, buf,
-                                              weight_decay, momentum, lr,
-                                              dampening, nesterov)
+      torch_xla._XLAC._xla_sgd_optimizer_step_(step, param, buf, found_inf, d_p,
+                                               weight_decay, momentum, lr,
+                                               dampening, nesterov)

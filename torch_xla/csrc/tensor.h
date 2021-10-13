@@ -208,11 +208,11 @@ class XLATensor {
   static XLATensor get_dimensions_size(const XLATensor& input,
                                        std::vector<xla::int64> dimensions);
 
-  static void sgd_optimizer_step(const XLATensor& found_inf, XLATensor& step,
-                                 XLATensor& param, const XLATensor& d_p,
-                                 XLATensor& buf, double weight_decay,
-                                 double momentum, double lr, double dampening,
-                                 bool nesterov);
+  static void sgd_optimizer_step_(XLATensor& step, XLATensor& param,
+                                  XLATensor& buf, const XLATensor& found_inf,
+                                  const XLATensor& d_p, double weight_decay,
+                                  double momentum, double lr, double dampening,
+                                  bool nesterov);
 
   static std::vector<XLATensor> user_computation(
       const std::string& opname, absl::Span<const XLATensor> inputs,
