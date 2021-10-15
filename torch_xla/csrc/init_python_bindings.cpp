@@ -198,6 +198,21 @@ std::pair<at::Tensor, std::shared_ptr<ir::Value>> AllReduce(
       std::make_shared<ir::Value>(new_token));
 }
 
+std::pair<at::Tensor, std::shared_ptr<ir::Value>> ReduceScatter(
+    const std::string& reduce_type, const at::Tensor& input,
+    const std::shared_ptr<ir::Value>& token, double scale,
+    xla::int64 scatter_dim, xla::int64 shard_count,
+    const std::vector<std::vector<xla::int64>>& replica_groups) {
+  XLATensor result;
+  ir::Value new_token;
+  std::tie(result, new_token) = XLATensor::reduce_scatter(
+      bridge::GetXlaTensor(input), *token, GetReduceType(reduce_type), scale,
+      scatter_dim, shard_count, replica_groups);
+  return std::pair<at::Tensor, std::shared_ptr<ir::Value>>(
+      bridge::AtenFromXlaTensor(std::move(result)),
+      std::make_shared<ir::Value>(new_token));
+}
+
 std::pair<at::Tensor, std::shared_ptr<ir::Value>> AllToAll(
     const at::Tensor& input, const std::shared_ptr<ir::Value>& token,
     xla::int64 split_dimension, xla::int64 concat_dimension,
@@ -923,6 +938,27 @@ void InitXlaModuleBindings(py::module m) {
           result_tuple[1] = new_token;
           return result_tuple;
         });
+  m.def("_xla_reduce_scatter",
+        [](const std::string& reduce_type, const at::Tensor& input,
+           const std::shared_ptr<ir::Value>& token, double scale,
+           xla::int64 scatter_dim, xla::int64 shard_count,
+           const py::list& groups) {
+          std::vector<std::vector<xla::int64>> replica_groups =
+              CreateReduceGroups(groups);
+          at::Tensor result;
+          std::shared_ptr<ir::Value> new_token;
+          {
+            NoGilSection nogil;
+            std::tie(result, new_token) =
+                ReduceScatter(reduce_type, input, token, scale, scatter_dim,
+                              shard_count, replica_groups);
+          }
+          auto result_tuple = py::tuple(2);
+          result_tuple[0] = torch::autograd::make_variable(
+              result, /*requires_grad=*/input.requires_grad());
+          result_tuple[1] = new_token;
+          return result_tuple;
+        });
   m.def("_xla_set_default_device", [](const std::string& device) {
     return SetCurrentThreadDevice(device);
   });
@@ -1117,6 +1153,23 @@ void InitXlaModuleBindings(py::module m) {
   m.def("_run_xrt_local_service", [](xla::uint64 service_port) {
     xla::ComputationClient::RunLocalService(service_port);
   });
+  m.def("_xla_sgd_optimizer_step_",
+        [](at::Tensor& step, at::Tensor& param, at::Tensor& buf,
+           const at::Tensor& found_inf, const at::Tensor& d_p,
+           double weight_decay, double momentum, double lr, double dampening,
+           bool nesterov) {
+          {
+            NoGilSection nogil;
+            XLATensor found_inf_xla = bridge::GetXlaTensor(found_inf);
+            XLATensor step_xla = bridge::GetXlaTensor(step);
+            XLATensor param_xla = bridge::GetXlaTensor(param);
+            XLATensor d_p_xla = bridge::GetXlaTensor(d_p);
+            XLATensor buf_xla = bridge::GetXlaTensor(buf);
+            XLATensor::sgd_optimizer_step_(step_xla, param_xla, buf_xla,
+                                           found_inf_xla, d_p_xla, weight_decay,
+                                           momentum, lr, dampening, nesterov);
+          }
+        });
 
   BuildProfilerSubmodule(&m);
 }

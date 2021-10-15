@@ -196,6 +196,11 @@ class XLATensor {
                               double scale,
                               std::vector<std::vector<xla::int64>> groups);
 
+  static std::pair<XLATensor, ir::Value> reduce_scatter(
+      const XLATensor& input, const ir::Value& token, AllReduceType reduce_type,
+      double scale, xla::int64 scatter_dim, xla::int64 shard_count,
+      std::vector<std::vector<xla::int64>> groups);
+
   static std::pair<XLATensor, ir::Value> all_to_all(
       const XLATensor& input, const ir::Value& token,
       xla::int64 split_dimension, xla::int64 concat_dimension,
@@ -207,6 +212,12 @@ class XLATensor {
 
   static XLATensor get_dimensions_size(const XLATensor& input,
                                        std::vector<xla::int64> dimensions);
+
+  static void sgd_optimizer_step_(XLATensor& step, XLATensor& param,
+                                  XLATensor& buf, const XLATensor& found_inf,
+                                  const XLATensor& d_p, double weight_decay,
+                                  double momentum, double lr, double dampening,
+                                  bool nesterov);
 
   static std::vector<XLATensor> user_computation(
       const std::string& opname, absl::Span<const XLATensor> inputs,
