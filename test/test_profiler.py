@@ -108,10 +108,7 @@ class ProfilerTest(unittest.TestCase):
     p = multiprocessing.Process(target=train_worker, daemon=True)
     p.start()
     training_started.wait(60)
-    xp.monitor(
-        f'localhost:{port}',
-        duration_ms=2000,
-        monitoring_level=2)
+    xp.monitor(f'localhost:{port}', duration_ms=2000, monitoring_level=2)
     p.terminate()
 
 
