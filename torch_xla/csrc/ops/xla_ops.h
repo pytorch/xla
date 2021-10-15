@@ -43,6 +43,7 @@ extern const OpKindWrapper xla_not_supported;
 extern const OpKindWrapper xla_replication_pad;
 extern const OpKindWrapper xla_replication_pad_backward;
 extern const OpKindWrapper xla_select;
+extern const OpKindWrapper xla_sgd_optimizer_step;
 extern const OpKindWrapper xla_tensor_data;
 extern const OpKindWrapper xla_unselect;
 extern const OpKindWrapper xla_update_slice;

@@ -1117,6 +1117,23 @@ void InitXlaModuleBindings(py::module m) {
   m.def("_run_xrt_local_service", [](xla::uint64 service_port) {
     xla::ComputationClient::RunLocalService(service_port);
   });
+  m.def("_xla_sgd_optimizer_step_",
+        [](at::Tensor& step, at::Tensor& param, at::Tensor& buf,
+           const at::Tensor& found_inf, const at::Tensor& d_p,
+           double weight_decay, double momentum, double lr, double dampening,
+           bool nesterov) {
+          {
+            NoGilSection nogil;
+            XLATensor found_inf_xla = bridge::GetXlaTensor(found_inf);
+            XLATensor step_xla = bridge::GetXlaTensor(step);
+            XLATensor param_xla = bridge::GetXlaTensor(param);
+            XLATensor d_p_xla = bridge::GetXlaTensor(d_p);
+            XLATensor buf_xla = bridge::GetXlaTensor(buf);
+            XLATensor::sgd_optimizer_step_(step_xla, param_xla, buf_xla,
+                                           found_inf_xla, d_p_xla, weight_decay,
+                                           momentum, lr, dampening, nesterov);
+          }
+        });
 
   BuildProfilerSubmodule(&m);
 }

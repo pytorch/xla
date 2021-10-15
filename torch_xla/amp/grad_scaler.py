@@ -1,8 +1,8 @@
 import torch
-import torch_xla
 import torch_xla.core.xla_model as xm
 import torch_xla.core.xla_builder as xb
 import torch_xla.core.xla_op_registry as xor
+import inspect
 
 
 class GradScaler(torch.cuda.amp.GradScaler):
@@ -58,7 +58,14 @@ class GradScaler(torch.cuda.amp.GradScaler):
 
   def _maybe_opt_step(self, optimizer, optimizer_state, *args, **kwargs):
     retval = None
-    if self.use_zero_grad:
+    is_syncfree_optim = "found_inf" in inspect.signature(
+        optimizer.step).parameters
+    if is_syncfree_optim:
+      found_inf = torch.stack(
+          tuple(optimizer_state["found_inf_per_device"].values())).sum()
+      kwargs['found_inf'] = found_inf
+      retval = optimizer.step(*args, **kwargs)
+    elif self.use_zero_grad:
       found_inf = torch.stack(
           tuple(optimizer_state["found_inf_per_device"].values())).sum()
       scaling_factor = self.get_scaling_factor(found_inf)
