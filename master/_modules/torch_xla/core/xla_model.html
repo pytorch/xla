@@ -957,6 +957,41 @@
   <span class="k">return</span> <span class="n">result</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
 
 
+<span class="k">def</span> <span class="nf">reduce_scatter</span><span class="p">(</span><span class="n">reduce_type</span><span class="p">,</span>
+                   <span class="nb">input</span><span class="p">,</span>
+                   <span class="n">scale</span><span class="p">,</span>
+                   <span class="n">scatter_dim</span><span class="p">,</span>
+                   <span class="n">shard_count</span><span class="p">,</span>
+                   <span class="n">groups</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+  <span class="sd">&quot;&quot;&quot;Performs a XLA `ReduceScatter()` operation on the input tensor.</span>
+
+<span class="sd">  See: https://www.tensorflow.org/xla/operation_semantics#reducescatter</span>
+
+<span class="sd">  Args:</span>
+<span class="sd">    reduce_type (string): One of ``xm.REDUCE_SUM``, ``xm.REDUCE_MUL``,</span>
+<span class="sd">      ``xm.REDUCE_AND``, ``xm.REDUCE_OR``, ``xm.REDUCE_MIN`` and ``xm.REDUCE_MAX``.</span>
+<span class="sd">    input: A single `torch.Tensor` all reduce + scatter op to.</span>
+<span class="sd">    scale (float): A default scaling value to be applied after the reduce.</span>
+<span class="sd">    scatter_dim (int): Dimension number to which apply scatter operation.</span>
+<span class="sd">    shard_count (int): The number of ways to split up the scatter_dim in.</span>
+<span class="sd">    groups (list): A list of list, representing the replica groups for</span>
+<span class="sd">      the `all_reduce()` operation. Example: `[[0, 1, 2, 3], [4, 5, 6, 7]]`</span>
+<span class="sd">        defines two groups, one with the `[0, 1, 2, 3]` replicas and one with</span>
+<span class="sd">        the `[4, 5, 6, 7]` replicas. If `None` there will be only one group with</span>
+<span class="sd">        all the replicas in it.</span>
+<span class="sd">  Returns:</span>
+<span class="sd">    A `torch.Tensor` with all the values reduced accross replicas. Each process</span>
+<span class="sd">    gets a shard split along the `scatter_dim`. All other dimensions are</span>
+<span class="sd">    the same as the input.</span>
+<span class="sd">  &quot;&quot;&quot;</span>
+  <span class="n">token</span><span class="p">,</span> <span class="n">devctx</span> <span class="o">=</span> <span class="n">_get_all_reduce_token</span><span class="p">()</span>
+  <span class="n">result</span> <span class="o">=</span> <span class="n">torch_xla</span><span class="o">.</span><span class="n">_XLAC</span><span class="o">.</span><span class="n">_xla_reduce_scatter</span><span class="p">(</span><span class="n">reduce_type</span><span class="p">,</span> <span class="nb">input</span><span class="p">,</span> <span class="n">token</span><span class="p">,</span> <span class="n">scale</span><span class="p">,</span>
+                                               <span class="n">scatter_dim</span><span class="p">,</span> <span class="n">shard_count</span><span class="p">,</span>
+                                               <span class="n">groups</span> <span class="ow">or</span> <span class="p">[])</span>
+  <span class="n">devctx</span><span class="o">.</span><span class="n">all_reduce_token</span> <span class="o">=</span> <span class="n">result</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+  <span class="k">return</span> <span class="n">result</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+
+
 <div class="viewcode-block" id="add_step_closure"><a class="viewcode-back" href="../../../index.html#torch_xla.core.xla_model.add_step_closure">[docs]</a><span class="k">def</span> <span class="nf">add_step_closure</span><span class="p">(</span><span class="n">closure</span><span class="p">,</span> <span class="n">args</span><span class="o">=</span><span class="p">(),</span> <span class="n">run_async</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
   <span class="sd">&quot;&quot;&quot;Adds a closure to the list of the ones to be run at the end of the step.</span>
 
