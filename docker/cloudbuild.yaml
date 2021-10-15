@@ -29,7 +29,7 @@ steps:
   args: ['-c', 'source /pytorch/xla/docker/common.sh && collect_wheels ${_RELEASE_VERSION}']
 
 substitutions:
-    _DOCKER_BASE_IMAGE: 'debian:stretch'
+    _DOCKER_BASE_IMAGE: 'debian:buster'
     _CUDA: '0'
     _PYTHON_VERSION: '3.6'
     _RELEASE_VERSION: 'nightly'  # or rX.Y
