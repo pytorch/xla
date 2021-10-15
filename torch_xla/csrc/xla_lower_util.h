@@ -99,4 +99,11 @@ std::vector<xla::XlaOp> BuildAmpUpdateScale(const xla::XlaOp& current_scale,
                                             double scale_backoff_factor,
                                             int scale_growth_interval);
 
+std::vector<xla::XlaOp> BuildSgdOptimizerStep(
+    const xla::XlaOp& step, const xla::XlaOp& param, const xla::XlaOp& buf,
+    const xla::XlaOp& found_inf, const xla::XlaOp& d_p,
+    const xla::XlaOp& weight_decay, const xla::XlaOp& momentum,
+    const xla::XlaOp& lr, const xla::XlaOp& dampening, bool use_weight_decay,
+    bool use_momentum, bool use_nesterov);
+
 }  // namespace torch_xla

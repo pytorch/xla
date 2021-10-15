@@ -103,11 +103,13 @@ function run_torch_xla_tests() {
     # only run test_autocast for cpu and gpu on circleCI.
     python test/test_autocast.py
 
-    # echo "Running MNIST Test"
-    # python test/test_train_mp_mnist.py --tidy
-    # if [ -x "$(command -v nvidia-smi)" ]; then
+    # GPU tests
+    if [ -x "$(command -v nvidia-smi)" ]; then
+      echo "Running Syncfree Optimizer Test"
+      python test/test_syncfree_optimizers.py
+      # echo "Running MNIST Test"
       # python test/test_train_mp_mnist_amp.py --fake_data
-    # fi
+    fi
 
     pushd test/cpp
     echo "Running C++ Tests"
