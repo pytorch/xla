@@ -153,4 +153,30 @@ CollectivePermuteResult BuildCollectivePermute(
   return {result, token_handler.GetNewToken(result)};
 }
 
+ReduceScatterResult BuildReduceScatter(
+    AllReduceType reduce_type, xla::XlaOp input, xla::XlaOp token, double scale,
+    xla::int64 scatter_dim, xla::int64 shard_count,
+    const std::vector<std::vector<xla::int64>>& groups) {
+  std::vector<xla::ReplicaGroup> reduce_groups = CreateReduceGroups(groups);
+  TokenHandler token_handler(token);
+  const xla::Shape& input_shape = XlaHelpers::ShapeOfXlaOp(input);
+  xla::Shape reduce_shape = MakeArrayShapeFromDimensions(
+      input_shape.dimensions(), input_shape.dynamic_dimensions(),
+      input_shape.element_type(), GetCurrentDevice().hw_type);
+
+  xla::XlaOp reduce_result = xla::ReduceScatter(
+      token_handler.GetInput(input, &input_shape),
+      GetReduceComutation(reduce_type, input_shape.element_type()), scatter_dim,
+      shard_count, reduce_groups, /*channel_id=*/absl::nullopt,
+      reduce_shape.layout());
+
+  if (scale != 1.0) {
+    xla::XlaOp scaling_value = XlaHelpers::ScalarValue<float>(
+        scale, input_shape.element_type(), input.builder());
+    reduce_result = reduce_result * scaling_value;
+  }
+
+  return {reduce_result, token_handler.GetNewToken(reduce_result)};
+}
+
 }  // namespace torch_xla
