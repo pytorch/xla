@@ -364,8 +364,8 @@ ir::Value XLATensor::all_reduce(std::vector<XLATensor>* inputs,
 
 std::pair<XLATensor, ir::Value> XLATensor::reduce_scatter(
     const XLATensor& input, const ir::Value& token, AllReduceType reduce_type,
-    double scale, xla::int64 scatter_dim, xla::int64 shard_count,
-    std::vector<std::vector<xla::int64>> groups) {
+    double scale, xla::int64_t scatter_dim, xla::int64_t shard_count,
+    std::vector<std::vector<xla::int64_t>> groups) {
   ir::NodePtr node = ir::MakeNode<ir::ops::ReduceScatter>(
       reduce_type, input.GetIrValue(), token, scale, scatter_dim, shard_count,
       std::move(groups));

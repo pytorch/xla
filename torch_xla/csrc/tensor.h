@@ -197,8 +197,8 @@ class XLATensor {
 
   static std::pair<XLATensor, ir::Value> reduce_scatter(
       const XLATensor& input, const ir::Value& token, AllReduceType reduce_type,
-      double scale, xla::int64 scatter_dim, xla::int64 shard_count,
-      std::vector<std::vector<xla::int64>> groups);
+      double scale, xla::int64_t scatter_dim, xla::int64_t shard_count,
+      std::vector<std::vector<xla::int64_t>> groups);
 
   static std::pair<XLATensor, ir::Value> all_to_all(
       const XLATensor& input, const ir::Value& token,

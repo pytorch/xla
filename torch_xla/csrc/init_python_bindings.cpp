@@ -201,8 +201,8 @@ std::pair<at::Tensor, std::shared_ptr<ir::Value>> AllReduce(
 std::pair<at::Tensor, std::shared_ptr<ir::Value>> ReduceScatter(
     const std::string& reduce_type, const at::Tensor& input,
     const std::shared_ptr<ir::Value>& token, double scale,
-    xla::int64 scatter_dim, xla::int64 shard_count,
-    const std::vector<std::vector<xla::int64>>& replica_groups) {
+    xla::int64_t scatter_dim, xla::int64_t shard_count,
+    const std::vector<std::vector<xla::int64_t>>& replica_groups) {
   XLATensor result;
   ir::Value new_token;
   std::tie(result, new_token) = XLATensor::reduce_scatter(

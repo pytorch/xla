@@ -156,8 +156,8 @@ CollectivePermuteResult BuildCollectivePermute(
 
 ReduceScatterResult BuildReduceScatter(
     AllReduceType reduce_type, xla::XlaOp input, xla::XlaOp token, double scale,
-    xla::int64 scatter_dim, xla::int64 shard_count,
-    const std::vector<std::vector<xla::int64>>& groups) {
+    xla::int64_t scatter_dim, xla::int64_t shard_count,
+    const std::vector<std::vector<xla::int64_t>>& groups) {
   std::vector<xla::ReplicaGroup> reduce_groups = CreateReduceGroups(groups);
   TokenHandler token_handler(token);
   const xla::Shape& input_shape = XlaHelpers::ShapeOfXlaOp(input);
