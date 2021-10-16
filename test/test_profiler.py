@@ -88,28 +88,9 @@ class ProfilerTest(unittest.TestCase):
   def test_monitor(self):
 
     port = xu.get_free_tcp_ports()[0]
-    training_started = multiprocessing.Event()
-
-    def train_worker():
-      flags = args_parse.parse_common_options(
-          datadir='/tmp/mnist-data',
-          batch_size=16,
-          momentum=0.5,
-          lr=0.01,
-          num_epochs=10)
-      flags.fake_data = True
-      flags.profiler_port = port
-      test_profile_mp_mnist.train_mnist(
-          flags,
-          training_started=training_started,
-          dynamic_graph=True,
-          fetch_often=True)
-
-    p = multiprocessing.Process(target=train_worker, daemon=True)
-    p.start()
-    training_started.wait(60)
-    xp.monitor(f'localhost:{port}', duration_ms=2000, monitoring_level=2)
-    p.terminate()
+    server = xp.start_server(flags.profiler_port)
+    with self.assertRaisesRegex(RuntimeError, "unimplemented"):
+      xp.monitor(f'localhost:{port}', duration_ms=2000, monitoring_level=2)
 
 
 if __name__ == '__main__':
