@@ -87,6 +87,7 @@ class ProfilerTest(unittest.TestCase):
 
   def test_monitor(self):
 
+    port = 4000
     with self.assertRaisesRegex(RuntimeError, "unimplemented"):
       xp.monitor(f'localhost:{port}', duration_ms=2000, monitoring_level=2)
 
