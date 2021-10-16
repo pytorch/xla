@@ -89,9 +89,13 @@ class ProfilerTest(unittest.TestCase):
     with self.assertRaisesRegex(RuntimeError, "Connection reset by peer"):
       xp.monitor(f'localhost:{port}', duration_ms=2000, monitoring_level=2)
 
+<<<<<<< HEAD
     with self.assertRaisesRegex(RuntimeError,
                                 "failed to connect to all addresses"):
       port = xu.get_free_tcp_ports()[0]
+=======
+    with self.assertRaisesRegex(RuntimeError, "unimplemented"):
+>>>>>>> Try real simple version
       xp.monitor(f'localhost:{port}', duration_ms=2000, monitoring_level=2)
 
     path = self._check_xspace_pb_exist(logdir)
