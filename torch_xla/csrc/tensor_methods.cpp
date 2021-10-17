@@ -97,6 +97,7 @@
 #include "torch_xla/csrc/ops/prod.h"
 #include "torch_xla/csrc/ops/put.h"
 #include "torch_xla/csrc/ops/qr.h"
+#include "torch_xla/csrc/ops/reduce_scatter.h"
 #include "torch_xla/csrc/ops/reflection_pad2d.h"
 #include "torch_xla/csrc/ops/reflection_pad2d_backward.h"
 #include "torch_xla/csrc/ops/repeat.h"
@@ -108,6 +109,7 @@
 #include "torch_xla/csrc/ops/scalar.h"
 #include "torch_xla/csrc/ops/scatter.h"
 #include "torch_xla/csrc/ops/scatter_add.h"
+#include "torch_xla/csrc/ops/sgd_optimizer_step.h"
 #include "torch_xla/csrc/ops/shrink_backward.h"
 #include "torch_xla/csrc/ops/softmax.h"
 #include "torch_xla/csrc/ops/softshrink.h"
@@ -360,6 +362,16 @@ ir::Value XLATensor::all_reduce(std::vector<XLATensor>* inputs,
   return ir::Value(node, inputs->size());
 }
 
+std::pair<XLATensor, ir::Value> XLATensor::reduce_scatter(
+    const XLATensor& input, const ir::Value& token, AllReduceType reduce_type,
+    double scale, xla::int64 scatter_dim, xla::int64 shard_count,
+    std::vector<std::vector<xla::int64>> groups) {
+  ir::NodePtr node = ir::MakeNode<ir::ops::ReduceScatter>(
+      reduce_type, input.GetIrValue(), token, scale, scatter_dim, shard_count,
+      std::move(groups));
+  return {input.CreateFrom(ir::Value(node, 0)), ir::Value(node, 1)};
+}
+
 std::pair<XLATensor, ir::Value> XLATensor::all_to_all(
     const XLATensor& input, const ir::Value& token, xla::int64 split_dimension,
     xla::int64 concat_dimension, xla::int64 split_count,
@@ -383,6 +395,30 @@ XLATensor XLATensor::get_dimensions_size(const XLATensor& input,
   return input.CreateFrom(ir::MakeNode<ir::ops::GetDimensionsSize>(
                               input.GetIrValue(), std::move(dimensions)),
                           at::ScalarType::Int);
+}
+
+void XLATensor::sgd_optimizer_step_(XLATensor& step, XLATensor& param,
+                                    XLATensor& buf, const XLATensor& found_inf,
+                                    const XLATensor& d_p, double weight_decay,
+                                    double momentum, double lr,
+                                    double dampening, bool nesterov) {
+  ir::Value weight_decay_value =
+      GetIrValueForScalar(weight_decay, param.shape(), param.GetDevice());
+  ir::Value momentum_value =
+      GetIrValueForScalar(momentum, param.shape(), param.GetDevice());
+  ir::Value lr_value =
+      GetIrValueForScalar(lr, param.shape(), param.GetDevice());
+  ir::Value dampening_value =
+      GetIrValueForScalar(dampening, param.shape(), param.GetDevice());
+  ir::NodePtr node = ir::MakeNode<ir::ops::SgdOptimizerStep>(
+      step.GetIrValue(), param.GetIrValue(), buf.GetIrValue(),
+      found_inf.GetIrValue(), d_p.GetIrValue(), weight_decay_value,
+      momentum_value, lr_value, dampening_value,
+      /*use_weight_decay=*/weight_decay != 0,
+      /*use_momentum=*/momentum != 0, /*use_nesterov=*/nesterov);
+  step.SetInPlaceIrValue(ir::Value(node, 0));
+  param.SetInPlaceIrValue(ir::Value(node, 1));
+  buf.SetInPlaceIrValue(ir::Value(node, 2));
 }
 
 std::vector<XLATensor> XLATensor::user_computation(
