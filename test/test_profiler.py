@@ -80,17 +80,23 @@ class ProfilerTest(unittest.TestCase):
         duration_ms=5000,
         num_tracing_attempts=5,
         delay_ms=1000)
+
+    with self.assertRaisesRegex(RuntimeError, "unimplemented"):
+      xp.monitor(f'localhost:{port}', duration_ms=2000, monitoring_level=2)
+
     p.terminate()
+
+    with self.assertRaisesRegex(RuntimeError, "Connection reset by peer"):
+      xp.monitor(f'localhost:{port}', duration_ms=2000, monitoring_level=2)
+
+    with self.assertRaisesRegex(RuntimeError,
+                                "failed to connect to all addresses"):
+      port = xu.get_free_tcp_ports()[0]
+      xp.monitor(f'localhost:{port}', duration_ms=2000, monitoring_level=2)
+
     path = self._check_xspace_pb_exist(logdir)
     self._check_trace_namespace_exists(path)
     self._check_metrics_warnings_exist(self.fname)
-
-  def test_monitor(self):
-
-    port = xu.get_free_tcp_ports()[0]
-    server = xp.start_server(port)
-    with self.assertRaisesRegex(RuntimeError, "unimplemented"):
-      xp.monitor(f'localhost:{port}', duration_ms=2000, monitoring_level=2)
 
 
 if __name__ == '__main__':
