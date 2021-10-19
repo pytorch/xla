@@ -8,8 +8,8 @@ namespace ops {
 
 class DiagonalViewUpdate : public Node {
  public:
-  DiagonalViewUpdate(const Value& target, const Value& input,
-                     xla::int64_t offset, xla::int64_t dim1, xla::int64_t dim2);
+  DiagonalViewUpdate(const Value& target, const Value& input, xla::int64 offset,
+                     xla::int64 dim1, xla::int64 dim2);
 
   NodePtr Clone(OpList operands) const override;
 
@@ -17,16 +17,16 @@ class DiagonalViewUpdate : public Node {
 
   std::string ToString() const override;
 
-  xla::int64_t offset() const { return offset_; }
+  xla::int64 offset() const { return offset_; }
 
-  xla::int64_t dim1() const { return dim1_; }
+  xla::int64 dim1() const { return dim1_; }
 
-  xla::int64_t dim2() const { return dim2_; }
+  xla::int64 dim2() const { return dim2_; }
 
  private:
-  xla::int64_t offset_;
-  xla::int64_t dim1_;
-  xla::int64_t dim2_;
+  xla::int64 offset_;
+  xla::int64 dim1_;
+  xla::int64 dim2_;
 };
 
 }  // namespace ops

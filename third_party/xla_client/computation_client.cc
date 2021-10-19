@@ -322,7 +322,7 @@ void ComputationClient::RunLocalService(xla::uint64 service_port) {
   }
 }
 
-int64_t ComputationClient::GetDeviceOrdinal(const std::string& device) {
+int64 ComputationClient::GetDeviceOrdinal(const std::string& device) {
   auto pos = device.rfind(':');
   XLA_CHECK_NE(pos, std::string::npos) << device;
   return std::stoi(device.substr(pos + 1));

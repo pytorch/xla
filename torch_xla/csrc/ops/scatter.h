@@ -9,7 +9,7 @@ namespace ops {
 class Scatter : public Node {
  public:
   Scatter(const Value& input, const Value& index, const Value& src,
-          xla::int64_t dim);
+          xla::int64 dim);
 
   std::string ToString() const override;
 
@@ -17,10 +17,10 @@ class Scatter : public Node {
 
   XlaOpVector Lower(LoweringContext* loctx) const override;
 
-  xla::int64_t dim() const { return dim_; };
+  xla::int64 dim() const { return dim_; };
 
  private:
-  xla::int64_t dim_;
+  xla::int64 dim_;
 };
 
 }  // namespace ops

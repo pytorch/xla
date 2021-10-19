@@ -83,7 +83,7 @@ class MeshServiceImpl : public grpc::MeshService::Service {
  private:
   class RendezvousData {
    public:
-    explicit RendezvousData(size_t count, const std::set<int64_t>& replicas)
+    explicit RendezvousData(size_t count, const std::set<int64>& replicas)
         : count_(count),
           replicas_(replicas),
           mwait_(count),
@@ -93,23 +93,23 @@ class MeshServiceImpl : public grpc::MeshService::Service {
 
     ::grpc::Status Wait();
 
-    void Complete(int64_t ordinal, std::string payload,
-                  const std::set<int64_t>& replicas);
+    void Complete(int64 ordinal, std::string payload,
+                  const std::set<int64>& replicas);
 
-    const std::map<int64_t, std::string>& Payloads() const { return payloads_; };
+    const std::map<int64, std::string>& Payloads() const { return payloads_; };
 
    private:
     size_t count_;
-    std::set<int64_t> replicas_;
+    std::set<int64> replicas_;
     std::mutex lock_;
     util::MultiWait mwait_;
     std::atomic<size_t> release_count_;
-    std::map<int64_t, std::string> payloads_;
+    std::map<int64, std::string> payloads_;
     ::grpc::Status status_;
   };
 
   std::shared_ptr<RendezvousData> GetRendezvous(
-      const std::string& tag, const std::set<int64_t>& replicas);
+      const std::string& tag, const std::set<int64>& replicas);
 
   void ReleaseRendezvous(const std::string& tag,
                          const std::shared_ptr<RendezvousData>& rendezvous);
@@ -134,7 +134,7 @@ class MeshServiceImpl : public grpc::MeshService::Service {
 }
 
 void MeshServiceImpl::RendezvousData::Complete(
-    int64_t ordinal, std::string payload, const std::set<int64_t>& replicas) {
+    int64 ordinal, std::string payload, const std::set<int64>& replicas) {
   std::lock_guard<std::mutex> lock(lock_);
   if ((!replicas_.empty() && replicas_.count(ordinal) == 0) ||
       (replicas_.empty() && ordinal >= count_)) {
@@ -188,7 +188,7 @@ MeshServiceImpl::MeshServiceImpl(grpc::Config config) {
 ::grpc::Status MeshServiceImpl::Rendezvous(
     ::grpc::ServerContext* context, const grpc::RendezvousRequest* request,
     grpc::RendezvousResponse* response) {
-  std::set<int64_t> replicas(request->replicas().begin(),
+  std::set<int64> replicas(request->replicas().begin(),
                            request->replicas().end());
   auto rendezvous = GetRendezvous(request->tag(), replicas);
   rendezvous->Complete(request->ordinal(), request->payload(), replicas);
@@ -211,7 +211,7 @@ MeshServiceImpl::MeshServiceImpl(grpc::Config config) {
     ::grpc::ServerContext* context,
     const grpc::GetNcclUniqueUidRequest* request,
     grpc::GetNcclUniqueUidResponse* response) {
-  std::vector<int64_t> replicas;
+  std::vector<int64> replicas;
   for (auto& replica : request->replicas()) {
     replicas.push_back(replica);
   }
@@ -222,7 +222,7 @@ MeshServiceImpl::MeshServiceImpl(grpc::Config config) {
 }
 
 std::shared_ptr<MeshServiceImpl::RendezvousData> MeshServiceImpl::GetRendezvous(
-    const std::string& tag, const std::set<int64_t>& replicas) {
+    const std::string& tag, const std::set<int64>& replicas) {
   std::lock_guard<std::mutex> lock(lock_);
   auto it = rendezvous_map_.find(tag);
   if (it == rendezvous_map_.end()) {
@@ -260,7 +260,7 @@ struct MeshService::Impl {
   Impl(const std::string& address, grpc::Config config)
       : impl(std::move(config)) {
     ::grpc::ServerBuilder builder;
-    int64_t max_msg_size =
+    int64 max_msg_size =
         sys_util::GetEnvInt("XRT_MESH_MAX_MSGSIZE", 1024 * 1024 * 1024);
     builder.SetMaxReceiveMessageSize(max_msg_size);
     builder.SetMaxSendMessageSize(max_msg_size);
@@ -307,7 +307,7 @@ MeshClient* MeshClient::Get() {
 }
 
 MeshClient::MeshClient(const std::string& address) : impl_(new Impl(address)) {
-  int64_t connect_wait_seconds =
+  int64 connect_wait_seconds =
       sys_util::GetEnvInt("XRT_MESH_CONNECT_WAIT", 300);
   TF_LOG(INFO) << "Waiting to connect to client mesh master ("
                << connect_wait_seconds << " seconds) " << address;
@@ -347,7 +347,7 @@ void MeshClient::SetConfig(int ordinal, const grpc::Config& config) const {
 
 std::vector<std::string> MeshClient::Rendezvous(
     int ordinal, const std::string& tag, const std::string& payload,
-    absl::Span<const int64_t> replicas) const {
+    absl::Span<const int64> replicas) const {
   ::grpc::ClientContext context;
   grpc::RendezvousRequest request;
   grpc::RendezvousResponse response;
@@ -371,7 +371,7 @@ std::vector<std::string> MeshClient::Rendezvous(
 }
 
 std::string MeshClient::GetNcclUniqueUid(
-    absl::Span<const int64_t> replicas) const {
+    absl::Span<const int64> replicas) const {
   ::grpc::ClientContext context;
   grpc::GetNcclUniqueUidRequest request;
   grpc::GetNcclUniqueUidResponse response;

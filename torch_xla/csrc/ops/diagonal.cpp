@@ -11,8 +11,8 @@ namespace torch_xla {
 namespace ir {
 namespace ops {
 
-Diagonal::Diagonal(const Value& input, xla::int64_t offset, xla::int64_t dim1,
-                   xla::int64_t dim2)
+Diagonal::Diagonal(const Value& input, xla::int64 offset, xla::int64 dim1,
+                   xla::int64 dim2)
     : Node(ir::OpKind(at::aten::diagonal), {input},
            [&]() {
              return MakeDiagonalShape(input.shape(), offset, dim1, dim2);
@@ -40,20 +40,20 @@ std::string Diagonal::ToString() const {
 }
 
 xla::Shape Diagonal::MakeDiagonalShape(const xla::Shape& shape,
-                                       xla::int64_t offset, xla::int64_t dim1,
-                                       xla::int64_t dim2) {
-  std::vector<xla::int64_t> dimensions;
-  for (xla::int64_t dim = 0; dim < shape.rank(); ++dim) {
+                                       xla::int64 offset, xla::int64 dim1,
+                                       xla::int64 dim2) {
+  std::vector<xla::int64> dimensions;
+  for (xla::int64 dim = 0; dim < shape.rank(); ++dim) {
     if (dim != dim1 && dim != dim2) {
       dimensions.push_back(shape.dimensions(dim));
     }
   }
-  xla::int64_t dsize;
+  xla::int64 dsize;
   if (offset >= 0) {
-    dsize = std::max<xla::int64_t>(
+    dsize = std::max<xla::int64>(
         std::min(shape.dimensions(dim1), shape.dimensions(dim2) - offset), 0);
   } else {
-    dsize = std::max<xla::int64_t>(
+    dsize = std::max<xla::int64>(
         std::min(shape.dimensions(dim1) + offset, shape.dimensions(dim2)), 0);
   }
   dimensions.push_back(dsize);
