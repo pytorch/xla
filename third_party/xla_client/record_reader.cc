@@ -9,7 +9,7 @@ namespace xla {
 namespace util {
 
 RecordReader::RecordReader(std::string path, const string& compression,
-                           int64_t buffer_size)
+                           int64 buffer_size)
     : path_(std::move(path)) {
   tensorflow::Env* env = tensorflow::Env::Default();
   XLA_CHECK_OK(env->NewRandomAccessFile(path_, &file_));
