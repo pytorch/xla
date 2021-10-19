@@ -8,8 +8,8 @@ namespace ops {
 
 class Unselect : public Node {
  public:
-  Unselect(const Value& target, const Value& source, xla::int64 dim,
-           xla::int64 start, xla::int64 end, xla::int64 stride);
+  Unselect(const Value& target, const Value& source, xla::int64_t dim,
+           xla::int64_t start, xla::int64_t end, xla::int64_t stride);
 
   NodePtr Clone(OpList operands) const override;
 
@@ -17,19 +17,19 @@ class Unselect : public Node {
 
   std::string ToString() const override;
 
-  xla::int64 dim() const { return dim_; }
+  xla::int64_t dim() const { return dim_; }
 
-  xla::int64 start() const { return start_; }
+  xla::int64_t start() const { return start_; }
 
-  xla::int64 end() const { return end_; }
+  xla::int64_t end() const { return end_; }
 
-  xla::int64 stride() const { return stride_; }
+  xla::int64_t stride() const { return stride_; }
 
  private:
-  xla::int64 dim_;
-  xla::int64 start_;
-  xla::int64 end_;
-  xla::int64 stride_;
+  xla::int64_t dim_;
+  xla::int64_t start_;
+  xla::int64_t end_;
+  xla::int64_t stride_;
 };
 
 }  // namespace ops

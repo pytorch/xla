@@ -16,10 +16,10 @@ struct SelectInfo {
            stride == ref.stride;
   }
 
-  xla::int64 dim = 0;
-  xla::int64 start = 0;
-  xla::int64 end = 0;
-  xla::int64 stride = 0;
+  xla::int64_t dim = 0;
+  xla::int64_t start = 0;
+  xla::int64_t end = 0;
+  xla::int64_t stride = 0;
 };
 
 struct AsStridedInfo {
@@ -27,8 +27,8 @@ struct AsStridedInfo {
     return offset == ref.offset && stride == ref.stride;
   }
 
-  std::vector<xla::int64> stride;
-  xla::int64 offset = 0;
+  std::vector<xla::int64_t> stride;
+  xla::int64_t offset = 0;
 };
 
 struct DiagonalInfo {
@@ -36,9 +36,9 @@ struct DiagonalInfo {
     return offset == ref.offset && dim1 == ref.dim1 && dim2 == ref.dim2;
   }
 
-  xla::int64 offset = 0;
-  xla::int64 dim1 = 0;
-  xla::int64 dim2 = 1;
+  xla::int64_t offset = 0;
+  xla::int64_t dim1 = 0;
+  xla::int64_t dim2 = 1;
 };
 
 struct ViewInfo {
@@ -57,7 +57,7 @@ struct ViewInfo {
   ViewInfo() = default;
   ViewInfo(Type view_type, xla::Shape shape, xla::Shape source_shape);
   ViewInfo(Type view_type, xla::Shape source_shape,
-           std::vector<xla::int64> permutation);
+           std::vector<xla::int64_t> permutation);
   ViewInfo(Type view_type, const xla::Shape& source_shape, SelectInfo select);
   ViewInfo(Type view_type, xla::Shape shape, xla::Shape source_shape,
            AsStridedInfo as_strided);
@@ -77,11 +77,11 @@ struct ViewInfo {
   xla::Shape shape;
   // In case of narrowing, the starting indices from where the narrow slice is
   // cut.
-  std::vector<xla::int64> indices;
+  std::vector<xla::int64_t> indices;
   // The shape of the source of this view.
   xla::Shape source_shape;
   // The permutation to be used. If empty, this is not a permute operation.
-  std::vector<xla::int64> permutation;
+  std::vector<xla::int64_t> permutation;
   // Information used for sliced views.
   absl::optional<SelectInfo> select;
   // Information used for as_strided views.
