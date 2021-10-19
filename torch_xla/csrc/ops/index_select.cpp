@@ -12,7 +12,7 @@ namespace ops {
 namespace {
 
 xla::Shape NodeOutputShape(const Value& input, const Value& index,
-                           xla::int64 dim) {
+                           xla::int64_t dim) {
   auto lower_for_shape_fn =
       [&](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
     return xla::TorchIndexSelect(operands[0], operands[1], dim);
@@ -22,7 +22,8 @@ xla::Shape NodeOutputShape(const Value& input, const Value& index,
 
 }  // namespace
 
-IndexSelect::IndexSelect(const Value& input, xla::int64 dim, const Value& index)
+IndexSelect::IndexSelect(const Value& input, xla::int64_t dim,
+                         const Value& index)
     : Node(ir::OpKind(at::aten::index_select), {input, index},
            [&]() { return NodeOutputShape(input, index, dim); },
            /*num_outputs=*/1, xla::util::MHash(dim)),

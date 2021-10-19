@@ -12,7 +12,7 @@ namespace ops {
 namespace {
 
 xla::Shape NodeOutputShape(const Value& input, const Value& indices,
-                           absl::Span<const xla::int64> output_size) {
+                           absl::Span<const xla::int64_t> output_size) {
   auto shape_fn = [&](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
     return BuildMaxUnpoolNd(GetCurrentDevice(), operands[0], operands[1],
                             output_size);
@@ -20,7 +20,7 @@ xla::Shape NodeOutputShape(const Value& input, const Value& indices,
   return InferOutputShape({input.shape(), indices.shape()}, shape_fn);
 }
 
-c10::Symbol MaxUnpoolNdSymbol(xla::int64 spatial_dim_count) {
+c10::Symbol MaxUnpoolNdSymbol(xla::int64_t spatial_dim_count) {
   switch (spatial_dim_count) {
     case 2:
       return at::aten::max_unpool2d;
@@ -35,7 +35,7 @@ c10::Symbol MaxUnpoolNdSymbol(xla::int64 spatial_dim_count) {
 }  // namespace
 
 MaxUnpoolNd::MaxUnpoolNd(const Value& input, const Value& indices,
-                         std::vector<xla::int64> output_size)
+                         std::vector<xla::int64_t> output_size)
     : Node(ir::OpKind(MaxUnpoolNdSymbol(output_size.size())), {input, indices},
            [&]() { return NodeOutputShape(input, indices, output_size); },
            /*num_outputs=*/1, xla::util::MHash(output_size)),
