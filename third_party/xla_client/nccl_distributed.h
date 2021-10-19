@@ -9,7 +9,7 @@
 namespace xla {
 namespace nccl_detail {
 
-std::string GetNcclUniqueUid(absl::Span<const int64_t> replicas);
+std::string GetNcclUniqueUid(absl::Span<const int64> replicas);
 
 }  // namespace nccl_detail
 }  // namespace xla

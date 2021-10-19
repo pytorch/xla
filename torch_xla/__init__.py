@@ -54,7 +54,6 @@ def _setup_default_env():
   _set_missing_env('TF_CPP_MIN_LOG_LEVEL', '1')
   _set_missing_env('TPU_HOST_BOUNDS', '1,1,1')
   _set_missing_env('GRPC_VERBOSITY', 'ERROR')
-  _set_missing_env('ALLOW_MULTIPLE_LIBTPU_LOAD', '1')
   if server_is_alive():
     _set_missing_env('XRT_START_LOCAL_SERVER', '0')
 

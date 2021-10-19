@@ -14,14 +14,14 @@ std::string GetEnvOrdinalPath(
     const char* name, const std::string& defval,
     const char* ordinal_env = "XRT_SHARD_LOCAL_ORDINAL");
 
-int64_t GetEnvInt(const char* name, int64_t defval);
+int64 GetEnvInt(const char* name, int64 defval);
 
 double GetEnvDouble(const char* name, double defval);
 
 bool GetEnvBool(const char* name, bool defval);
 
 // Retrieves the current EPOCH time in nanoseconds.
-int64_t NowNs();
+int64 NowNs();
 
 }  // namespace sys_util
 }  // namespace xla

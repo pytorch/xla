@@ -11,8 +11,8 @@ namespace ops {
 
 class StdMean : public Node {
  public:
-  StdMean(const Value& input, std::vector<xla::int64_t> dimensions,
-          xla::int64_t correction, bool keep_reduced_dimensions);
+  StdMean(const Value& input, std::vector<xla::int64> dimensions,
+          xla::int64 correction, bool keep_reduced_dimensions);
 
   std::string ToString() const override;
 
@@ -20,15 +20,15 @@ class StdMean : public Node {
 
   XlaOpVector Lower(LoweringContext* loctx) const override;
 
-  const std::vector<xla::int64_t>& dimensions() const { return dimensions_; }
+  const std::vector<xla::int64>& dimensions() const { return dimensions_; }
 
-  xla::int64_t correction() const { return correction_; }
+  xla::int64 correction() const { return correction_; }
 
   bool keep_reduced_dimensions() const { return keep_reduced_dimensions_; }
 
  private:
-  std::vector<xla::int64_t> dimensions_;
-  xla::int64_t correction_;
+  std::vector<xla::int64> dimensions_;
+  xla::int64 correction_;
   bool keep_reduced_dimensions_;
 };
 

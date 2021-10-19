@@ -69,7 +69,7 @@ xla::XlaComputation GetReduceComutation(AllReduceType reduce_type,
 }
 
 std::vector<xla::ReplicaGroup> CreateReduceGroups(
-    const std::vector<std::vector<xla::int64_t>>& groups) {
+    const std::vector<std::vector<xla::int64>>& groups) {
   std::vector<xla::ReplicaGroup> reduce_groups;
   for (auto& group : groups) {
     xla::ReplicaGroup rgroup;
@@ -86,7 +86,7 @@ std::vector<xla::ReplicaGroup> CreateReduceGroups(
 std::vector<xla::XlaOp> BuildAllReduce(
     AllReduceType reduce_type, absl::Span<const xla::XlaOp> operands,
     xla::XlaOp token, double scale,
-    const std::vector<std::vector<xla::int64_t>>& groups) {
+    const std::vector<std::vector<xla::int64>>& groups) {
   std::vector<xla::ReplicaGroup> reduce_groups = CreateReduceGroups(groups);
   // TODO: We use pseudo-tokens ATM, which are real values. This need to be
   // switched to use the real XLA Token once support has been added to XLA
@@ -125,9 +125,9 @@ std::vector<xla::XlaOp> BuildAllReduce(
 }
 
 AllToAllResult BuildAllToAll(
-    xla::XlaOp input, xla::XlaOp token, xla::int64_t split_dimension,
-    xla::int64_t concat_dimension, xla::int64_t split_count,
-    const std::vector<std::vector<xla::int64_t>>& groups) {
+    xla::XlaOp input, xla::XlaOp token, xla::int64 split_dimension,
+    xla::int64 concat_dimension, xla::int64 split_count,
+    const std::vector<std::vector<xla::int64>>& groups) {
   std::vector<xla::ReplicaGroup> reduce_groups = CreateReduceGroups(groups);
   const xla::Shape& input_shape = XlaHelpers::ShapeOfXlaOp(input);
   xla::Shape reduce_shape = MakeArrayShapeFromDimensions(
@@ -142,8 +142,7 @@ AllToAllResult BuildAllToAll(
 
 CollectivePermuteResult BuildCollectivePermute(
     xla::XlaOp input, xla::XlaOp token,
-    const std::vector<std::pair<xla::int64_t, xla::int64_t>>&
-        source_target_pairs) {
+    const std::vector<std::pair<xla::int64, xla::int64>>& source_target_pairs) {
   const xla::Shape& input_shape = XlaHelpers::ShapeOfXlaOp(input);
   TokenHandler token_handler(token);
   // TODO: This is missing layout pinning ATM. If XLA scheduling is not exactly
@@ -156,8 +155,8 @@ CollectivePermuteResult BuildCollectivePermute(
 
 ReduceScatterResult BuildReduceScatter(
     AllReduceType reduce_type, xla::XlaOp input, xla::XlaOp token, double scale,
-    xla::int64_t scatter_dim, xla::int64_t shard_count,
-    const std::vector<std::vector<xla::int64_t>>& groups) {
+    xla::int64 scatter_dim, xla::int64 shard_count,
+    const std::vector<std::vector<xla::int64>>& groups) {
   std::vector<xla::ReplicaGroup> reduce_groups = CreateReduceGroups(groups);
   TokenHandler token_handler(token);
   const xla::Shape& input_shape = XlaHelpers::ShapeOfXlaOp(input);

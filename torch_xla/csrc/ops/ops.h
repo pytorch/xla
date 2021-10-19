@@ -134,10 +134,10 @@ NodePtr SiLU(const Value& input);
 NodePtr SigmoidBackward(const Value& grad_output, const Value& output);
 
 NodePtr LogSoftmaxBackwardOp(const Value& grad_output, const Value& output,
-                             xla::int64_t dim);
+                             xla::int64 dim);
 
 NodePtr SoftmaxBackwardOp(const Value& grad_output, const Value& output,
-                          xla::int64_t dim);
+                          xla::int64 dim);
 
 NodePtr Clamp(const Value& input, const Value& min, const Value& max);
 
@@ -176,9 +176,9 @@ NodePtr BroadcastTensors(absl::Span<const Value> tensors);
 
 NodePtr Norm(const Value& input, const c10::optional<at::Scalar>& p,
              c10::optional<at::ScalarType> dtype,
-             absl::Span<const xla::int64_t> dims, bool keepdim);
+             absl::Span<const xla::int64> dims, bool keepdim);
 
-NodePtr Identity(xla::int64_t lines, xla::int64_t cols,
+NodePtr Identity(xla::int64 lines, xla::int64 cols,
                  xla::PrimitiveType element_type);
 
 NodePtr Elu(const Value& input, const at::Scalar& alpha,

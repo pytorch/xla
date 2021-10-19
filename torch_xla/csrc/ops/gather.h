@@ -8,7 +8,7 @@ namespace ops {
 
 class Gather : public Node {
  public:
-  Gather(const Value& input, xla::int64_t dim, const Value& index);
+  Gather(const Value& input, xla::int64 dim, const Value& index);
 
   std::string ToString() const override;
 
@@ -16,10 +16,10 @@ class Gather : public Node {
 
   XlaOpVector Lower(LoweringContext* loctx) const override;
 
-  xla::int64_t dim() const { return dim_; };
+  xla::int64 dim() const { return dim_; };
 
  private:
-  xla::int64_t dim_;
+  xla::int64 dim_;
 };
 
 }  // namespace ops

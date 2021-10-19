@@ -9,7 +9,7 @@ namespace ops {
 
 class Stack : public Node {
  public:
-  Stack(absl::Span<const ir::Value> values, xla::int64_t dim);
+  Stack(absl::Span<const ir::Value> values, xla::int64 dim);
 
   std::string ToString() const override;
 
@@ -17,10 +17,10 @@ class Stack : public Node {
 
   XlaOpVector Lower(LoweringContext* loctx) const override;
 
-  xla::int64_t dim() const { return dim_; };
+  xla::int64 dim() const { return dim_; };
 
  private:
-  xla::int64_t dim_;
+  xla::int64 dim_;
 };
 
 }  // namespace ops
