@@ -5,6 +5,7 @@ set -ex
 CDIR="$(cd "$(dirname "$0")" ; pwd -P)"
 XDIR=$CDIR/..
 PTDIR=$XDIR/..
+TFDIR=$XDIR/third_party/tensorflow
 
 TORCH_PIN="$XDIR/torch_patches/.torch_pin"
 if [ -f "$TORCH_PIN" ]; then
@@ -36,3 +37,8 @@ fi
 python $CDIR/cond_patch.py \
   $XDIR/torch_patches \
   $PTDIR
+
+python $CDIR/cond_patch.py \
+  $XDIR/tf_patches \
+  $TFDIR
+

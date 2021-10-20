@@ -38,7 +38,7 @@ struct Percentile {
 
 struct Metric {
   absl::optional<Percentile> percentile;
-  absl::optional<int64> int64_value;
+  absl::optional<int64_t> int64_value;
 };
 
 }  // namespace xla

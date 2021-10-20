@@ -10,7 +10,8 @@ namespace ops {
 namespace {
 
 xla::Shape NodeOutputShape(const Value& input,
-                           std::vector<xla::int64>& dimensions, bool keepdim) {
+                           std::vector<xla::int64_t>& dimensions,
+                           bool keepdim) {
   auto lower_for_shape_fn =
       [&](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
     return BuildMaxInDims(operands[0], dimensions, keepdim);
@@ -20,7 +21,8 @@ xla::Shape NodeOutputShape(const Value& input,
 
 }  // namespace
 
-Amax::Amax(const Value& input, std::vector<xla::int64> dimensions, bool keepdim)
+Amax::Amax(const Value& input, std::vector<xla::int64_t> dimensions,
+           bool keepdim)
     : Node(ir::OpKind(at::aten::amax), {input},
            [&]() { return NodeOutputShape(input, dimensions, keepdim); },
            /*num_outputs=*/1, torch::lazy::MHash(dimensions, keepdim)),
