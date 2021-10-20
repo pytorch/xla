@@ -13,11 +13,11 @@ namespace ops {
 namespace {
 
 // Infers the output shape of the max pooling operation.
-xla::Shape NodeOutputShape(const Value& input, xla::int64 spatial_dim_count,
-                           absl::Span<const xla::int64> kernel_size,
-                           absl::Span<const xla::int64> stride,
-                           absl::Span<const xla::int64> padding, bool ceil_mode,
-                           bool count_include_pad) {
+xla::Shape NodeOutputShape(const Value& input, xla::int64_t spatial_dim_count,
+                           absl::Span<const xla::int64_t> kernel_size,
+                           absl::Span<const xla::int64_t> stride,
+                           absl::Span<const xla::int64_t> padding,
+                           bool ceil_mode, bool count_include_pad) {
   auto lower_for_shape_fn =
       [&](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
     XLA_CHECK_EQ(operands.size(), 1)
@@ -28,7 +28,7 @@ xla::Shape NodeOutputShape(const Value& input, xla::int64 spatial_dim_count,
   return InferOutputShape({input.shape()}, lower_for_shape_fn);
 }
 
-c10::Symbol AvgPoolNdSymbol(xla::int64 spatial_dim_count) {
+c10::Symbol AvgPoolNdSymbol(xla::int64_t spatial_dim_count) {
   switch (spatial_dim_count) {
     case 1:
       return at::aten::avg_pool1d;
@@ -44,10 +44,10 @@ c10::Symbol AvgPoolNdSymbol(xla::int64 spatial_dim_count) {
 
 }  // namespace
 
-AvgPoolNd::AvgPoolNd(const Value& input, xla::int64 spatial_dim_count,
-                     std::vector<xla::int64> kernel_size,
-                     std::vector<xla::int64> stride,
-                     std::vector<xla::int64> padding, bool ceil_mode,
+AvgPoolNd::AvgPoolNd(const Value& input, xla::int64_t spatial_dim_count,
+                     std::vector<xla::int64_t> kernel_size,
+                     std::vector<xla::int64_t> stride,
+                     std::vector<xla::int64_t> padding, bool ceil_mode,
                      bool count_include_pad)
     : Node(ir::OpKind(AvgPoolNdSymbol(spatial_dim_count)), {input},
            [&]() {

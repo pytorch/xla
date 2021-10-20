@@ -12,7 +12,7 @@ namespace ops {
 namespace {
 
 xla::Shape NodeOutputShape(const Value& input,
-                           absl::Span<const xla::int64> output_size) {
+                           absl::Span<const xla::int64_t> output_size) {
   auto lower_for_shape_fn =
       [output_size](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
     XLA_CHECK_EQ(operands.size(), 1);
@@ -25,7 +25,7 @@ xla::Shape NodeOutputShape(const Value& input,
 }  // namespace
 
 AdaptiveMaxPool2d::AdaptiveMaxPool2d(const Value& input,
-                                     std::vector<xla::int64> output_size)
+                                     std::vector<xla::int64_t> output_size)
     : Node(ir::OpKind(at::aten::adaptive_max_pool2d), {input},
            [&]() { return NodeOutputShape(input, output_size); },
            /*num_outputs=*/2, xla::util::MHash(output_size)),

@@ -12,10 +12,10 @@ namespace ir {
 namespace ops {
 namespace {
 
-xla::Shape NodeOutputShape(AllReduceType reduce_type, const Value input,
-                           const Value& token, double scale,
-                           xla::int64 scatter_dim, xla::int64 shard_count,
-                           const std::vector<std::vector<xla::int64>>& groups) {
+xla::Shape NodeOutputShape(
+    AllReduceType reduce_type, const Value input, const Value& token,
+    double scale, xla::int64_t scatter_dim, xla::int64_t shard_count,
+    const std::vector<std::vector<xla::int64_t>>& groups) {
   auto shape_fn = [&](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
     xla::XlaOp inputOp = operands[0];
     xla::XlaOp tokenOp = operands[1];
@@ -30,8 +30,8 @@ xla::Shape NodeOutputShape(AllReduceType reduce_type, const Value input,
 
 ReduceScatter::ReduceScatter(AllReduceType reduce_type, const Value& input,
                              const Value& token, double scale,
-                             xla::int64 scatter_dim, xla::int64 shard_count,
-                             std::vector<std::vector<xla::int64>> groups)
+                             xla::int64_t scatter_dim, xla::int64_t shard_count,
+                             std::vector<std::vector<xla::int64_t>> groups)
     : Node(xla_reduce_scatter, {input, token},
            [&]() {
              return NodeOutputShape(reduce_type, input, token, scale,

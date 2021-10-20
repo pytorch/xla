@@ -10,7 +10,7 @@ namespace ir {
 namespace ops {
 namespace {
 
-xla::Shape NodeOutputShape(const Value& input, xla::int64 dim, bool keepdim) {
+xla::Shape NodeOutputShape(const Value& input, xla::int64_t dim, bool keepdim) {
   auto lower_for_shape_fn =
       [&](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
     xla::XlaOp values = BuildMaxInDim(operands[0], dim, keepdim);
@@ -22,7 +22,7 @@ xla::Shape NodeOutputShape(const Value& input, xla::int64 dim, bool keepdim) {
 
 }  // namespace
 
-MaxInDim::MaxInDim(const Value& input, xla::int64 dim, bool keepdim)
+MaxInDim::MaxInDim(const Value& input, xla::int64_t dim, bool keepdim)
     : Node(ir::OpKind(at::aten::max), {input},
            [&]() { return NodeOutputShape(input, dim, keepdim); },
            /*num_outputs=*/2, xla::util::MHash(dim, keepdim)),

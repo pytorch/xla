@@ -8,7 +8,7 @@ namespace torch_xla {
 namespace ir {
 namespace ops {
 
-Triu::Triu(const Value& input, xla::int64 diagonal)
+Triu::Triu(const Value& input, xla::int64_t diagonal)
     : Node(ir::OpKind(at::aten::triu), {input}, input.shape(),
            /*num_outputs=*/1, xla::util::MHash(diagonal)),
       diagonal_(diagonal) {}

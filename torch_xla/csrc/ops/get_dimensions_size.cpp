@@ -13,7 +13,7 @@ namespace ir {
 namespace ops {
 
 GetDimensionsSize::GetDimensionsSize(const Value& input,
-                                     std::vector<xla::int64> dimensions)
+                                     std::vector<xla::int64_t> dimensions)
     : Node(xla_get_dimensions_size, {input},
            xla::ShapeUtil::MakeShape(GetShapeDimensionType(/*device=*/nullptr),
                                      {}),

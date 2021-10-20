@@ -8,7 +8,7 @@ namespace torch_xla {
 namespace ir {
 namespace ops {
 
-Flip::Flip(const Value& input, std::vector<xla::int64> dims)
+Flip::Flip(const Value& input, std::vector<xla::int64_t> dims)
     : Node(ir::OpKind(at::aten::flip), {input}, input.shape(),
            /*num_outputs=*/1, xla::util::MHash(dims)),
       dims_(std::move(dims)) {}

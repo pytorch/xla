@@ -11,7 +11,8 @@ namespace ir {
 namespace ops {
 namespace {
 
-xla::Shape NodeOutputShape(absl::Span<const ir::Value> values, xla::int64 dim) {
+xla::Shape NodeOutputShape(absl::Span<const ir::Value> values,
+                           xla::int64_t dim) {
   auto lower_for_shape_fn =
       [&](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
     return BuildStack(operands, dim);
@@ -26,7 +27,7 @@ xla::Shape NodeOutputShape(absl::Span<const ir::Value> values, xla::int64 dim) {
 
 }  // namespace
 
-Stack::Stack(absl::Span<const ir::Value> values, xla::int64 dim)
+Stack::Stack(absl::Span<const ir::Value> values, xla::int64_t dim)
     : Node(ir::OpKind(at::aten::stack), values,
            [&]() { return NodeOutputShape(values, dim); },
            /*num_outputs=*/1, xla::util::MHash(dim)),

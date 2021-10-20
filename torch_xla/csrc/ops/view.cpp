@@ -13,7 +13,7 @@ namespace ops {
 namespace {
 
 xla::Shape NodeOutputShape(const Value& input,
-                           absl::Span<const xla::int64> output_sizes) {
+                           absl::Span<const xla::int64_t> output_sizes) {
   const xla::Shape& input_shape = input.shape();
   auto info = XlaHelpers::GetDynamicReshapeInfo(input_shape, output_sizes);
   if (info) {
@@ -27,7 +27,7 @@ xla::Shape NodeOutputShape(const Value& input,
 
 }  // namespace
 
-View::View(const Value& input, std::vector<xla::int64> output_size)
+View::View(const Value& input, std::vector<xla::int64_t> output_size)
     : Node(ir::OpKind(at::aten::view), {input},
            NodeOutputShape(input, output_size),
            /*num_outputs=*/1, xla::util::MHash(output_size)),
