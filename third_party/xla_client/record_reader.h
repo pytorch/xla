@@ -16,7 +16,7 @@ class RecordReader {
   using Data = tensorflow::tstring;
 
   RecordReader(std::string path, const std::string& compression,
-               int64 buffer_size);
+               int64_t buffer_size);
 
   const std::string& path() const { return path_; }
 

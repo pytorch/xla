@@ -32,7 +32,7 @@ class MetricFrequency : public Analyzer {
       return {Analysis::Symptom::kNormal};
     }
     size_t metric_count = metric->TotalSamples();
-    xla::int64 step_count = step->Value();
+    xla::int64_t step_count = step->Value();
     if (step_count <= warmup_steps_) {
       return {Analysis::Symptom::kNormal};
     }
@@ -107,7 +107,7 @@ class XrtMetricFrequency : public Analyzer {
     }
 
     std::stringstream ss;
-    xla::int64 step_count = step->Value();
+    xla::int64_t step_count = step->Value();
     auto xrt_metrics = ComputationClient::Get()->GetMetrics();
     for (auto const& kv : metric_name_thresholds_) {
       auto it = xrt_metrics.find(kv.first);
@@ -117,7 +117,7 @@ class XrtMetricFrequency : public Analyzer {
       xla::Metric xrt_metric = it->second;
       std::ldiv_t res;
       if (xrt_metric.int64_value) {
-        int64 metric_count = *xrt_metric.int64_value;
+        int64_t metric_count = *xrt_metric.int64_value;
         res = std::div(metric_count, step_count);
       } else if (xrt_metric.percentile) {
         size_t metric_count = (*xrt_metric.percentile).total_samples;

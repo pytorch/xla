@@ -8,8 +8,8 @@ namespace ops {
 
 class Diagonal : public Node {
  public:
-  Diagonal(const Value& input, xla::int64 offset, xla::int64 dim1,
-           xla::int64 dim2);
+  Diagonal(const Value& input, xla::int64_t offset, xla::int64_t dim1,
+           xla::int64_t dim2);
 
   NodePtr Clone(OpList operands) const override;
 
@@ -17,20 +17,20 @@ class Diagonal : public Node {
 
   std::string ToString() const override;
 
-  xla::int64 offset() const { return offset_; }
+  xla::int64_t offset() const { return offset_; }
 
-  xla::int64 dim1() const { return dim1_; }
+  xla::int64_t dim1() const { return dim1_; }
 
-  xla::int64 dim2() const { return dim2_; }
+  xla::int64_t dim2() const { return dim2_; }
 
   static xla::Shape MakeDiagonalShape(const xla::Shape& shape,
-                                      xla::int64 offset, xla::int64 dim1,
-                                      xla::int64 dim2);
+                                      xla::int64_t offset, xla::int64_t dim1,
+                                      xla::int64_t dim2);
 
  private:
-  xla::int64 offset_;
-  xla::int64 dim1_;
-  xla::int64 dim2_;
+  xla::int64_t offset_;
+  xla::int64_t dim1_;
+  xla::int64_t dim2_;
 };
 
 }  // namespace ops
