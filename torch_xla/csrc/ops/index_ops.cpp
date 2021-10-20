@@ -69,7 +69,7 @@ std::vector<at::Tensor> ExpandByteTensors(
 
 struct IndexAdjacencyInfo {
   bool contiguous_non_null = false;
-  xla::int64 start_dim = 0;
+  xla::int64_t start_dim = 0;
 };
 
 // Checks whether all the non-null tensors are adjacent, in which case we must
@@ -82,7 +82,7 @@ IndexAdjacencyInfo GetIndexAdjacencyInfo(at::TensorList indices) {
   auto start = std::find_if(indices.begin(), indices.end(), is_defined);
   auto stop = std::find_if(indices.rbegin(), indices.rend(), is_defined);
   auto it = std::find_if(start, stop.base(), is_null);
-  xla::int64 start_dim = std::distance(indices.begin(), start);
+  xla::int64_t start_dim = std::distance(indices.begin(), start);
   return {it == stop.base(), start_dim};
 }
 
@@ -118,7 +118,7 @@ CanonicalIndexInfo TransposeToFront(at::Tensor base, at::TensorList indices) {
   IndexAdjacencyInfo adjacency_info = GetIndexAdjacencyInfo(indices);
   if (adjacency_info.contiguous_non_null) {
     return {base, std::move(transposed_indices),
-            xla::util::Iota<xla::int64>(base_rank), adjacency_info.start_dim};
+            xla::util::Iota<xla::int64_t>(base_rank), adjacency_info.start_dim};
   }
   return {base.permute(dims), std::move(transposed_indices),
           xla::InversePermutation(XlaHelpers::I64List(dims)), 0};
@@ -148,7 +148,7 @@ std::vector<XLATensor> WrapIndicesOnce(const XLATensor& base,
   return canonical_indices;
 }
 
-ir::NodePtr IndexFillOp(const ir::Value& buffer, xla::int64 dim,
+ir::NodePtr IndexFillOp(const ir::Value& buffer, xla::int64_t dim,
                         const ir::Value& index, const ir::Value& value) {
   auto lower_fn = [dim](const ir::Node& node,
                         ir::LoweringContext* loctx) -> ir::XlaOpVector {
@@ -173,7 +173,7 @@ ir::NodePtr IndexFillOp(const ir::Value& buffer, xla::int64 dim,
       std::move(lower_fn), /*num_outputs=*/1, torch::lazy::MHash(dim));
 }
 
-ir::NodePtr IndexAddOp(const ir::Value& buffer, xla::int64 dim,
+ir::NodePtr IndexAddOp(const ir::Value& buffer, xla::int64_t dim,
                        const ir::Value& index, const ir::Value& source) {
   auto lower_fn = [dim](const ir::Node& node,
                         ir::LoweringContext* loctx) -> ir::XlaOpVector {
@@ -198,7 +198,7 @@ ir::NodePtr IndexAddOp(const ir::Value& buffer, xla::int64 dim,
       std::move(lower_fn));
 }
 
-ir::NodePtr IndexCopyOp(const ir::Value& buffer, xla::int64 dim,
+ir::NodePtr IndexCopyOp(const ir::Value& buffer, xla::int64_t dim,
                         const ir::Value& index, const ir::Value& source) {
   auto lower_fn = [dim](const ir::Node& node,
                         ir::LoweringContext* loctx) -> ir::XlaOpVector {
@@ -247,19 +247,19 @@ CanonicalIndexInfo GetCanonicalIndexInfo(
 
 ir::Value EnsureRank1(const ir::Value& index) {
   XLA_CHECK_LE(index->shape().rank(), 1);
-  return index->shape().rank() == 0
-             ? ir::MakeNode<ir::ops::Expand>(index, std::vector<xla::int64>{1})
-             : index;
+  return index->shape().rank() == 0 ? ir::MakeNode<ir::ops::Expand>(
+                                          index, std::vector<xla::int64_t>{1})
+                                    : index;
 }
 
 XLATensor IndexByTensors(const XLATensor& base,
                          absl::Span<const XLATensor> indices,
-                         xla::int64 start_dim) {
+                         xla::int64_t start_dim) {
   if (indices.empty()) {
     return base;
   }
   auto canonical_indices = WrapIndicesOnce(base, indices, start_dim);
-  xla::int64 indices_rank = canonical_indices.front().shape().get().rank();
+  xla::int64_t indices_rank = canonical_indices.front().shape().get().rank();
   // Stack the indices to allow the whole multi-indexing to be dispatched with a
   // single gather.
   XLATensor indices_nd = XLATensor::stack(canonical_indices, indices_rank);
@@ -271,14 +271,14 @@ XLATensor IndexByTensors(const XLATensor& base,
 
 ir::Value IndexPutByTensors(const XLATensor& base,
                             absl::Span<const XLATensor> indices,
-                            xla::int64 start_dim, const XLATensor& values,
+                            xla::int64_t start_dim, const XLATensor& values,
                             bool accumulate,
-                            absl::Span<const xla::int64> result_permutation) {
+                            absl::Span<const xla::int64_t> result_permutation) {
   if (indices.empty()) {
     return base.GetIrValue();
   }
   auto canonical_indices = WrapIndicesOnce(base, indices, start_dim);
-  xla::int64 indices_rank = canonical_indices.front().shape().get().rank();
+  xla::int64_t indices_rank = canonical_indices.front().shape().get().rank();
   // Stack the indices to allow the whole multi-indexing to be dispatched with a
   // single scatter.
   XLATensor indices_nd = XLATensor::stack(canonical_indices, indices_rank);
@@ -286,10 +286,10 @@ ir::Value IndexPutByTensors(const XLATensor& base,
       ir::MakeNode<ir::ops::IndexPut>(base.GetIrValue(),
                                       indices_nd.GetIrValue(), start_dim,
                                       values.GetIrValue(), accumulate),
-      xla::util::ToVector<xla::int64>(result_permutation));
+      xla::util::ToVector<xla::int64_t>(result_permutation));
 }
 
-ir::NodePtr IndexFill(const XLATensor& base, xla::int64 dim,
+ir::NodePtr IndexFill(const XLATensor& base, xla::int64_t dim,
                       const XLATensor& index, const at::Scalar& value) {
   XLA_CHECK_EQ(index.dtype(), at::ScalarType::Long)
       << "Fill index is expected to be of scalar type Long, but it is "
@@ -302,7 +302,7 @@ ir::NodePtr IndexFill(const XLATensor& base, xla::int64 dim,
                                      base.GetDevice()));
 }
 
-ir::NodePtr IndexFill(const XLATensor& base, xla::int64 dim,
+ir::NodePtr IndexFill(const XLATensor& base, xla::int64_t dim,
                       const XLATensor& index, const XLATensor& value) {
   XLA_CHECK_EQ(index.dtype(), at::ScalarType::Long)
       << "Fill index is expected to be of scalar type Long, but it is "
@@ -315,7 +315,7 @@ ir::NodePtr IndexFill(const XLATensor& base, xla::int64 dim,
                      value.GetIrValue());
 }
 
-ir::Value IndexAdd(const XLATensor& base, xla::int64 dim,
+ir::Value IndexAdd(const XLATensor& base, xla::int64_t dim,
                    const XLATensor& index, const XLATensor& source) {
   XLA_CHECK(index.dtype() == at::ScalarType::Long ||
             index.dtype() == at::ScalarType::Int)
@@ -328,7 +328,7 @@ ir::Value IndexAdd(const XLATensor& base, xla::int64 dim,
                     source.GetIrValue());
 }
 
-ir::Value IndexCopy(const XLATensor& base, xla::int64 dim,
+ir::Value IndexCopy(const XLATensor& base, xla::int64_t dim,
                     const XLATensor& index, const XLATensor& source) {
   XLA_CHECK_EQ(index.dtype(), at::ScalarType::Long)
       << "Copy index is expected to be of scalar type Long, but it is "

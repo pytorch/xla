@@ -20,7 +20,7 @@ class NcclUidManager {
  public:
   static NcclUidManager* Get();
 
-  std::string GetNcclUniqueUid(absl::Span<const int64> replicas);
+  std::string GetNcclUniqueUid(absl::Span<const int64_t> replicas);
 
  private:
   std::mutex mutex_;
@@ -32,7 +32,7 @@ NcclUidManager* NcclUidManager::Get() {
   return nccl_mgr;
 }
 
-std::string NcclUidManager::GetNcclUniqueUid(absl::Span<const int64> replicas) {
+std::string NcclUidManager::GetNcclUniqueUid(absl::Span<const int64_t> replicas) {
   std::string replicas_str = absl::StrJoin(replicas, ",");
   std::lock_guard<std::mutex> lock(mutex_);
   auto it = replicas_uid_map_.find(replicas_str);
@@ -52,13 +52,13 @@ std::string NcclUidManager::GetNcclUniqueUid(absl::Span<const int64> replicas) {
 
 }  // namespace
 
-std::string GetNcclUniqueUid(absl::Span<const int64> replicas) {
+std::string GetNcclUniqueUid(absl::Span<const int64_t> replicas) {
   return NcclUidManager::Get()->GetNcclUniqueUid(replicas);
 }
 
 #else  // XLA_CUDA
 
-std::string GetNcclUniqueUid(absl::Span<const int64> replicas) {
+std::string GetNcclUniqueUid(absl::Span<const int64_t> replicas) {
   XLA_ERROR() << "Calling GetNcclUniqueUid() without NCCL configuration";
 }
 

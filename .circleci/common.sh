@@ -66,6 +66,9 @@ function install_deps_pytorch_xla() {
   sudo npm install -g @bazel/bazelisk
   sudo ln -s "$(command -v bazelisk)" /usr/bin/bazel
 
+  # Symnlink the missing cuda headers
+  sudo ln -s /usr/include/cublas* /usr/local/cuda/include
+
   # Install bazels3cache for cloud cache
   sudo npm install -g bazels3cache
   BAZELS3CACHE="$(which bazels3cache)"
