@@ -323,6 +323,7 @@ supported:
   - logical_or
   - logical_and
   - nan_to_num
+  - linalg_slogdet
 autograd:
   - max_pool2d
   - max_pool3d

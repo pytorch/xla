@@ -984,6 +984,8 @@ class XLATensor {
   static XLATensor slice(const XLATensor& input, xla::int64 dim,
                          xla::int64 start, xla::int64 end, xla::int64 step);
 
+  static std::tuple<XLATensor, XLATensor> slogdet(const XLATensor& input);
+
   // Computes a loss that uses a squared term if the absolute element-wise error
   // falls below 1 and an L1 term otherwise.
   static XLATensor smooth_l1_loss(const XLATensor& input,

@@ -230,6 +230,8 @@ NodePtr LogicalOr(const Value& input, const Value& other);
 NodePtr NanToNum(const Value& input, const Value& nan, const Value& posinf,
                  const Value& neginf);
 
+NodePtr SLogDet(const Value& input);                 
+
 }  // namespace ops
 }  // namespace ir
 }  // namespace torch_xla

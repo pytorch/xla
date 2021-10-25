@@ -881,6 +881,30 @@ NodePtr NanToNum(const Value& input, const Value& nan, const Value& posinf,
                    input.shape(), std::move(lower_fn));
 }
 
+NodePtr SLogDet(const Value& input) {
+  auto lower_fn = [](const Node& node, LoweringContext* loctx) -> XlaOpVector {
+    xla::XlaOp xla_input = loctx->GetOutputOp(node.operand(0));
+    xla::SignAndLogDet result = xla::SLogDet(xla_input);
+    return node.ReturnOps({result.sign, result.logdet}, loctx);
+  };
+
+  /*
+  TODO @wonjoo figure out why delete dimension is needed
+  const xla::Shape& input_shape = input.shape();
+  XLA_CHECK_GE(input_shape.rank(), 2) << input_shape;
+  // The input tensor is ...,N,N
+  xla::Shape logdet_shape(input_shape);
+  logdet_shape.DeleteDimension(input_shape.rank() - 1);
+  logdet_shape.DeleteDimension(input_shape.rank() - 2);
+  return GenericOp(OpKind(at::aten::logdet), {input}, logdet_shape,
+                   std::move(lower_fn));
+  */
+
+  const xla::Shape& input_shape = input.shape();
+  xla::Shape slogdet_shape(input_shape);
+  return GenericOp(OpKind(at::aten::slogdet), {input}, slogdet_shape, std::move(lower_fn));
+}
+
 }  // namespace ops
 }  // namespace ir
 }  // namespace torch_xla
