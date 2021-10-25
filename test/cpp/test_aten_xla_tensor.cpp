@@ -933,11 +933,12 @@ TEST_F(AtenXlaTensorTest, TestLinalgSLogDet) {
         torch::rand({3, m, m}, torch::TensorOptions(torch::kFloat));
     torch::Tensor pd_a = torch::matmul(a, torch::transpose(a, 1, 2)) +
                          torch::eye(m, torch::TensorOptions(torch::kFloat));
-    torch::Tensor b = torch::linalg_slogdet(pd_a);
+    auto b = torch::linalg_slogdet(pd_a);
     ForEachDevice([&](const torch::Device& device) {
       torch::Tensor xla_a = CopyToDevice(pd_a, device);
-      torch::Tensor xla_b = torch::linalg_slogdet(xla_a);
-      AllClose(b, xla_b, /*rtol=*/1e-3, /*atol=*/1e-4);
+      auto xla_b = torch::linalg_slogdet(xla_a);
+      AllClose(std::get<0>(b), std::get<0>(xla_b), /*rtol=*/1e-3, /*atol=*/1e-4);
+      AllClose(std::get<1>(b), std::get<1>(xla_b), /*rtol=*/1e-3, /*atol=*/1e-4);
     });
   }
 
