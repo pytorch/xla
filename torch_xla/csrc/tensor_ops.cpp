@@ -59,31 +59,6 @@ XLATensor Cross(const XLATensor& input, const XLATensor& other,
   return XLATensor::stack({s1, s2, s3}, canonical_dim);
 }
 
-XLATensor KlDivBackward(const XLATensor& grad_output, const XLATensor& input,
-                        const XLATensor& target, ReductionMode reduction,
-                        bool log_target) {
-  auto input_shape_ref = input.shape();
-  XLATensor expanded_grad_output = XLATensor::expand(
-      grad_output,
-      xla::util::ToVector<xla::int64_t>(input_shape_ref.get().dimensions()));
-  XLATensor grad_input;
-  if (!log_target) {
-    grad_input = XLATensor::where(
-        XLATensor::gt(target, 0),
-        XLATensor::neg(XLATensor::mul(target, expanded_grad_output)),
-        XLATensor::full_like(input, 0, input.GetDevice(), c10::nullopt));
-  } else {
-    grad_input = XLATensor::neg(
-        XLATensor::mul(XLATensor::exp(target), expanded_grad_output));
-  }
-  if (reduction == ReductionMode::kMean) {
-    XLATensor dims_size = XLATensor::get_dimensions_size(
-        input, XlaHelpers::GetAllDimensions(input_shape_ref));
-    grad_input = XLATensor::div(grad_input, dims_size);
-  }
-  return grad_input;
-}
-
 XLATensor MakeMatrixWithDiagonal(const XLATensor& input,
                                  xla::int64_t diagonal) {
   xla::int64_t size = input.shape().get().dimensions(0);

@@ -106,4 +106,6 @@ std::vector<xla::XlaOp> BuildSgdOptimizerStep(
     const xla::XlaOp& lr, const xla::XlaOp& dampening, bool use_weight_decay,
     bool use_momentum, bool use_nesterov);
 
+xla::XlaOp BuildXLogY(xla::XlaOp input, xla::XlaOp other);
+
 }  // namespace torch_xla

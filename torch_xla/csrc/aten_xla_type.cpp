@@ -1693,17 +1693,6 @@ at::Tensor XLANativeFunctions::kl_div(const at::Tensor& self,
   return at::native::kl_div(self, target, reduction, log_target);
 }
 
-at::Tensor XLANativeFunctions::kl_div_backward(const at::Tensor& grad_output,
-                                               const at::Tensor& self,
-                                               const at::Tensor& target,
-                                               int64_t reduction,
-                                               bool log_target) {
-  XLA_FN_COUNTER("xla::");
-  return bridge::AtenFromXlaTensor(XLATensor::kl_div_backward(
-      bridge::GetXlaTensor(grad_output), bridge::GetXlaTensor(self),
-      bridge::GetXlaTensor(target), reduction, log_target));
-}
-
 std::tuple<at::Tensor, at::Tensor> XLANativeFunctions::kthvalue(
     const at::Tensor& self, int64_t k, int64_t dim, bool keepdim) {
   XLA_FN_COUNTER("xla::");
@@ -1841,6 +1830,13 @@ at::Tensor XLANativeFunctions::logdet(const at::Tensor& self) {
   XLA_FN_COUNTER("xla::");
   return bridge::AtenFromXlaTensor(
       XLATensor::logdet(bridge::GetXlaTensor(self)));
+}
+
+at::Tensor XLANativeFunctions::xlogy(const at::Tensor& self,
+                                     const at::Tensor& other) {
+  XLA_FN_COUNTER("xla::");
+  return bridge::AtenFromXlaTensor(XLATensor::xlogy(
+      bridge::GetXlaTensor(self), bridge::GetXlaTensor(other)));
 }
 
 at::Tensor XLANativeFunctions::lt(const at::Tensor& self,
