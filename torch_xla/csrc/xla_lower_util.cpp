@@ -863,10 +863,4 @@ std::vector<xla::XlaOp> BuildSgdOptimizerStep(
   return results;
 }
 
-// std::vector<xla::XlaOp> BuildSLogDet(xla::XlaOp input) {
-//   xla::XlaOp xla_input = loctx->GetOutputOp(node.operand(0));
-//   xla::SignAndLogDet result = xla::SLogDet(xla_input);
-//   return {result.sign, result.logdet};
-// }
-
 }  // namespace torch_xla
