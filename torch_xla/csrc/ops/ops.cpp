@@ -888,21 +888,16 @@ NodePtr SLogDet(const Value& input) {
     return node.ReturnOps({result.sign, result.logdet}, loctx);
   };
 
-  /*
-  TODO @wonjoo figure out why delete dimension is needed
-  const xla::Shape& input_shape = input.shape();
-  XLA_CHECK_GE(input_shape.rank(), 2) << input_shape;
-  // The input tensor is ...,N,N
-  xla::Shape logdet_shape(input_shape);
-  logdet_shape.DeleteDimension(input_shape.rank() - 1);
-  logdet_shape.DeleteDimension(input_shape.rank() - 2);
-  return GenericOp(OpKind(at::aten::logdet), {input}, logdet_shape,
-                   std::move(lower_fn));
-  */
+  auto lower_for_shape_fn = [](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
+    xla::SignAndLogDet result = xla::SLogDet(operands[0]);
+    return xla::Tuple(operands[0].builder(), {result.sign, result.logdet});
+  };
 
-  const xla::Shape& input_shape = input.shape();
-  xla::Shape slogdet_shape(input_shape);
-  return GenericOp(OpKind(at::aten::slogdet), {input}, slogdet_shape, std::move(lower_fn));
+  return GenericOp(OpKind(at::aten::slogdet), {input}, 
+                   [&]() {
+                     return InferOutputShape({input.shape()}, lower_for_shape_fn); 
+                    }, 
+                    std::move(lower_fn), /*num_outputs=*/2);
 }
 
 }  // namespace ops
