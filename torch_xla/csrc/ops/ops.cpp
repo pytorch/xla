@@ -888,16 +888,16 @@ NodePtr SLogDet(const Value& input) {
     return node.ReturnOps({result.sign, result.logdet}, loctx);
   };
 
-  auto lower_for_shape_fn = [](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
+  auto lower_for_shape_fn =
+      [](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
     xla::SignAndLogDet result = xla::SLogDet(operands[0]);
     return xla::Tuple(operands[0].builder(), {result.sign, result.logdet});
   };
 
-  return GenericOp(OpKind(at::aten::slogdet), {input}, 
-                   [&]() {
-                     return InferOutputShape({input.shape()}, lower_for_shape_fn); 
-                    }, 
-                    std::move(lower_fn), /*num_outputs=*/2);
+  return GenericOp(
+      OpKind(at::aten::slogdet), {input},
+      [&]() { return InferOutputShape({input.shape()}, lower_for_shape_fn); },
+      std::move(lower_fn), /*num_outputs=*/2);
 }
 
 }  // namespace ops

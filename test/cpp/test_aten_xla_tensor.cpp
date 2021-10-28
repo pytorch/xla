@@ -937,8 +937,10 @@ TEST_F(AtenXlaTensorTest, SLogDet) {
     ForEachDevice([&](const torch::Device& device) {
       torch::Tensor xla_a = CopyToDevice(pd_a, device);
       auto xla_b = torch::slogdet(xla_a);
-      AllClose(std::get<0>(b), std::get<0>(xla_b), /*rtol=*/1e-3, /*atol=*/1e-4);
-      AllClose(std::get<1>(b), std::get<1>(xla_b), /*rtol=*/1e-3, /*atol=*/1e-4);
+      AllClose(std::get<0>(b), std::get<0>(xla_b), /*rtol=*/1e-3,
+               /*atol=*/1e-4);
+      AllClose(std::get<1>(b), std::get<1>(xla_b), /*rtol=*/1e-3,
+               /*atol=*/1e-4);
     });
   }
 

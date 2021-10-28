@@ -2356,7 +2356,7 @@ XLATensor XLATensor::slice(const XLATensor& input, xla::int64 dim,
 
 std::tuple<XLATensor, XLATensor> XLATensor::slogdet(const XLATensor& input) {
   ir::NodePtr node = ir::ops::SLogDet(input.GetIrValue());
-  return std::make_tuple(input.CreateFrom(ir::Value(node, 0)), 
+  return std::make_tuple(input.CreateFrom(ir::Value(node, 0)),
                          input.CreateFrom(ir::Value(node, 1)));
 }
 

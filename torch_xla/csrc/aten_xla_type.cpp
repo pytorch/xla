@@ -2922,11 +2922,12 @@ at::Tensor XLANativeFunctions::slice(const at::Tensor& self, int64_t dim,
       bridge::GetXlaTensor(self), dim, start_val, end_val, step));
 }
 
-std::tuple<at::Tensor, at::Tensor> XLANativeFunctions::slogdet(const at::Tensor& self) {
+std::tuple<at::Tensor, at::Tensor> XLANativeFunctions::slogdet(
+    const at::Tensor& self) {
   XLA_FN_COUNTER("xla::");
   XLATensor self_tensor = bridge::GetXlaTensor(self);
   auto outputs = XLATensor::slogdet(self_tensor);
-  return std::make_tuple(bridge::AtenFromXlaTensor(std::get<0>(outputs)), 
+  return std::make_tuple(bridge::AtenFromXlaTensor(std::get<0>(outputs)),
                          bridge::AtenFromXlaTensor(std::get<1>(outputs)));
 }
 
