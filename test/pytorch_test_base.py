@@ -254,6 +254,7 @@ DISABLED_TORCH_TESTS_ANY = {
         'test_leaky_relu_inplace_overlap_xla',  # doesn't raise
         # zero slope not supported; see https://github.com/pytorch/xla/commit/9cda83d383d8a8dae98c00c566012020c93d8ab1
         'test_leaky_relu_inplace_with_zero_slope_xla',
+        'test_leaky_relu_inplace_with_neg_slope_xla',
         'test_threshold_inplace_overlap_xla',  # doesn't raise
         'test_elu_inplace_overlap_xla',  # doesn't raise
         'test_hardswish_inplace_overlap_xla',  # doesn't raise
