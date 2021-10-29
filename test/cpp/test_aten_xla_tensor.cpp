@@ -926,7 +926,7 @@ TEST_F(AtenXlaTensorTest, TestLogDet) {
   }
 }
 
-TEST_F(AtenXlaTensorTest, SLogDet) {
+TEST_F(AtenXlaTensorTest, TestSLogDet) {
   static const int dims[] = {4, 7};
   for (auto m : dims) {
     torch::Tensor a =

@@ -1,296 +1,184 @@
 backend: XLA
 cpp_namespace: torch_xla
 supported:
+  - __ilshift__.Scalar
+  - __ilshift__.Tensor
+  - __irshift__.Scalar
+  - __irshift__.Tensor
+  - __lshift__.Scalar
+  - __lshift__.Tensor
+  - __rshift__.Scalar
+  - __rshift__.Tensor
+  - _adaptive_avg_pool2d
+  - _adaptive_avg_pool2d_backward
+  - _adaptive_avg_pool3d
+  - _adaptive_avg_pool3d_backward
+  - _amp_foreach_non_finite_check_and_unscale_
+  - _amp_update_scale_
+  - _copy_from
+  - _copy_from_and_resize
+  - _index_put_impl_
+  - _local_scalar_dense
+  - _log_softmax
+  - _log_softmax_backward_data
+  - _pack_padded_sequence
+  - _s_where
+  - _softmax
+  - _softmax_backward_data
+  - _to_cpu
+  - _trilinear
+  - _unsafe_view
   - abs
   - acos
-  - add.Tensor
+  - acosh
+  - adaptive_max_pool2d
+  - adaptive_max_pool2d_backward
   - add.Scalar
+  - add.Tensor
+  - addcdiv
+  - addcdiv_
+  - addcmul
+  - addmm
+  - alias
+  - all
   - all.dim
   - amax
   - amin
+  - any
   - any.dim
   - arange.start_out
   - argmax
   - argmin
-  - acosh
-  - asinh
-  - atanh
   - as_strided
   - as_strided_
   - asin
+  - asinh
   - atan
+  - atan2
+  - atanh
+  - avg_pool2d
+  - avg_pool2d_backward
+  - avg_pool3d
+  - avg_pool3d_backward
   - baddbmm
   - bernoulli
-  - bernoulli_.Tensor
   - bernoulli_.float
+  - bernoulli_.Tensor
   - binary_cross_entropy
   - binary_cross_entropy_backward
   - binary_cross_entropy_with_logits
+  - bitwise_and.Scalar
+  - bitwise_and.Tensor
   - bitwise_not.out
+  - bitwise_or.Scalar_out
+  - bitwise_or.Tensor_out
+  - bitwise_xor.Scalar_out
+  - bitwise_xor.Tensor_out
   - bmm
   - cat
   - ceil
+  - cholesky
   - clamp
   - clamp.Tensor
   - clamp_max
   - clamp_max.Tensor_out
   - clamp_min
   - clamp_min.Tensor_out
+  - clone
   - constant_pad_nd
-  - convolution_overrideable
   - convolution_backward_overrideable
-  - _copy_from
-  - _copy_from_and_resize
-  - _to_cpu
+  - convolution_overrideable
   - cos
   - cosh
+  - cross
   - cumprod
   - cumsum
+  - diag
   - diagonal
+  - div.Scalar
   - div.Tensor
   - div.Tensor_mode
-  - div.Scalar
   - dot
+  - elu
+  - elu_
+  - elu_backward
   - embedding
   - embedding_dense_backward
   - empty.memory_format
-  - resize_
   - empty_strided
+  - eq.Scalar
+  - eq.Tensor
   - erf
   - erfc
+  - erfinv
   - exp
-  - expm1
   - expand
-  - eye.out
+  - expm1
+  - exponential_
   - eye.m_out
+  - eye.out
   - fill_.Scalar
   - fill_.Tensor
+  - flip
   - floor
+  - fmod.Scalar
+  - fmod.Tensor
   - frac
+  - gather
+  - ge.Scalar
+  - ge.Tensor
+  - gelu
+  - gelu_backward
+  - ger
+  - gt.Scalar
+  - gt.Tensor
+  - hardshrink
+  - hardshrink_backward
+  - hardsigmoid
+  - hardsigmoid_backward
+  - hardtanh
+  - hardtanh_backward
   - index.Tensor
+  - index_add_
   - index_copy_
+  - index_fill_.int_Scalar
+  - index_fill_.int_Tensor
   - index_put_
-  - _index_put_impl_
+  - index_select
   - inverse
   - isnan
   - kl_div
   - kl_div_backward
   - kthvalue
+  - l1_loss
+  - l1_loss_backward
+  - le.Scalar
+  - le.Tensor
+  - leaky_relu
+  - leaky_relu_backward
+  - lerp.Scalar
+  - lerp.Tensor
   - log
-  - log10
   - log1p
   - log2
+  - log10
+  - log_sigmoid_backward
+  - log_sigmoid_forward
   - logdet
-  - _log_softmax
-  - _log_softmax_backward_data
+  - logical_and
+  - logical_not
+  - logical_or
+  - logical_xor
   - logsumexp
-  - max.dim
-  - max.dim_max
-  - mean
-  - mean.dim
-  - min.dim
-  - min.dim_min
-  - mm
-  - mul.Tensor
-  - mul.Scalar
-  - mv
-  - mv.out
-  - native_batch_norm
-  - native_batch_norm_backward
-  - permute
-  - reciprocal
-  - neg
-  - repeat
-  - round
-  - relu
-  - relu_
-  - gelu
-  - gelu_backward
-  - hardshrink
-  - hardshrink_backward
-  - rsqrt
-  - select.int
-  - silu.out
-  - sigmoid
-  - sin
-  - sinh
-  - slice.Tensor
-  - _softmax
-  - _softmax_backward_data
-  - split.Tensor
-  - split_with_sizes
-  - squeeze
-  - squeeze.dim
-  - squeeze_
-  - squeeze_.dim
-  - stack
-  - sum
-  - sum.dim_IntList
-  - sqrt
-  - std
-  - std.dim
-  - std.correction
-  - std_mean.correction
-  - prod
-  - prod.dim_int
-  - t
-  - t_
-  - tan
-  - tanh
-  - threshold
-  - threshold_backward
-  - transpose.int
-  - transpose_
-  - flip
-  - _trilinear
-  - trunc
-  - _unsafe_view
-  - unsqueeze
-  - unsqueeze_
-  - var
-  - var.dim
-  - var.correction
-  - var_mean.correction
-  - _s_where
-  - norm.ScalarOpt_dtype
-  - norm.Scalar
-  - norm.ScalarOpt_dim_dtype
-  - norm.ScalarOpt_dim
-  - clone
-  - zero_
-  - sub.Tensor
-  - sub.Scalar
-  - rsub.Tensor
-  - rsub.Scalar
-  - addmm
-  - unbind.int
-  - _local_scalar_dense
-  - _pack_padded_sequence
+  - lt.Scalar
+  - lt.Tensor
   - masked_fill_.Scalar
   - masked_fill_.Tensor
   - masked_scatter_
-  - view
-  - put_
-  - index_add_
-  - index_fill_.int_Scalar
-  - index_fill_.int_Tensor
-  - scatter.src
-  - scatter.value
-  - scatter.reduce
-  - scatter.value_reduce
-  - scatter_add
-  - bitwise_and.Tensor
-  - bitwise_and.Scalar
-  - bitwise_or.Tensor_out
-  - bitwise_or.Scalar_out
-  - bitwise_xor.Tensor_out
-  - bitwise_xor.Scalar_out
-  - __lshift__.Scalar
-  - __lshift__.Tensor
-  - __ilshift__.Scalar
-  - __ilshift__.Tensor
-  - __rshift__.Scalar
-  - __rshift__.Tensor
-  - __irshift__.Scalar
-  - __irshift__.Tensor
-  - tril_
-  - triu_
-  - addcdiv_
-  - random_.from
-  - random_.to
-  - random_
-  - uniform_
-  - exponential_
-  - diag
-  - cross
-  - triu
-  - tril
-  - trace
-  - ne.Scalar
-  - ne.Tensor
-  - eq.Scalar
-  - eq.Tensor
-  - ge.Scalar
-  - ge.Tensor
-  - le.Scalar
-  - le.Tensor
-  - gt.Scalar
-  - gt.Tensor
-  - lt.Scalar
-  - lt.Tensor
-  - take
-  - index_select
   - masked_select
-  - nonzero
-  - gather
-  - addcmul
-  - addcdiv
-  - triangular_solve
-  - symeig
-  - svd
-  - cholesky
-  - qr
-  - erfinv
-  - sgn
-  - sign
-  - atan2
-  - fmod.Scalar
-  - fmod.Tensor
-  - remainder.Scalar
-  - remainder.Tensor
-  - min
   - max
-  - maximum
-  - minimum
-  - sort
-  - topk
-  - all
-  - any
-  - pow.Tensor_Tensor
-  - pow.Scalar
-  - pow.Tensor_Scalar
-  - normal_
-  - normal.Tensor_float
-  - normal.float_Tensor
-  - normal.Tensor_Tensor
-  - alias
-  - _amp_foreach_non_finite_check_and_unscale_
-  - _amp_update_scale_
-  - mse_loss
-  - mse_loss_backward
-  - l1_loss
-  - l1_loss_backward
-  - nll_loss_forward
-  - nll_loss_backward
-  - nll_loss2d_forward
-  - nll_loss2d_backward
-  - smooth_l1_loss
-  - smooth_l1_loss_backward
-  - elu
-  - elu_backward
-  - elu_
-  - hardsigmoid
-  - hardsigmoid_backward
-  - hardtanh
-  - hardtanh_backward
-  - leaky_relu
-  - leaky_relu_backward
-  - log_sigmoid_forward
-  - log_sigmoid_backward
-  - rrelu_with_noise
-  - rrelu_with_noise_backward
-  - softplus
-  - softplus_backward
-  - softshrink
-  - softshrink_backward
-  - _adaptive_avg_pool2d
-  - _adaptive_avg_pool2d_backward
-  - _adaptive_avg_pool3d
-  - _adaptive_avg_pool3d_backward
-  - avg_pool2d
-  - avg_pool2d_backward
-  - avg_pool3d
-  - avg_pool3d_backward
+  - max.dim
+  - max.dim_max
   - max_pool2d_with_indices
   - max_pool2d_with_indices_backward
   - max_pool3d_with_indices
@@ -299,31 +187,143 @@ supported:
   - max_unpool2d_backward
   - max_unpool3d
   - max_unpool3d_backward
+  - maximum
+  - mean
+  - mean.dim
+  - min
+  - min.dim
+  - min.dim_min
+  - minimum
+  - mm
+  - mse_loss
+  - mse_loss_backward
+  - mul.Scalar
+  - mul.Tensor
+  - mv
+  - mv.out
+  - nan_to_num
+  - native_batch_norm
+  - native_batch_norm_backward
+  - ne.Scalar
+  - ne.Tensor
+  - neg
+  - nll_loss2d_backward
+  - nll_loss2d_forward
+  - nll_loss_backward
+  - nll_loss_forward
+  - nonzero
+  - norm.Scalar
+  - norm.ScalarOpt_dim
+  - norm.ScalarOpt_dim_dtype
+  - norm.ScalarOpt_dtype
+  - normal.float_Tensor
+  - normal.Tensor_float
+  - normal.Tensor_Tensor
+  - normal_
+  - permute
+  - pow.Scalar
+  - pow.Tensor_Scalar
+  - pow.Tensor_Tensor
+  - prod
+  - prod.dim_int
+  - put_
+  - qr
+  - random_
+  - random_.from
+  - random_.to
+  - reciprocal
   - reflection_pad2d
   - reflection_pad2d_backward
+  - relu
+  - relu_
+  - remainder.Scalar
+  - remainder.Tensor
+  - repeat
   - replication_pad1d
   - replication_pad1d_backward
   - replication_pad2d
   - replication_pad2d_backward
-  - upsample_nearest2d.vec
-  - upsample_nearest2d_backward.vec
+  - resize_
+  - round
+  - rrelu_with_noise
+  - rrelu_with_noise_backward
+  - rsqrt
+  - rsub.Scalar
+  - rsub.Tensor
+  - scatter.reduce
+  - scatter.src
+  - scatter.value
+  - scatter.value_reduce
+  - scatter_add
+  - select.int
+  - sgn
+  - sigmoid
+  - sigmoid_backward
+  - sign
+  - silu.out
+  - sin
+  - sinh
+  - slice.Tensor
+  - slogdet
+  - smooth_l1_loss
+  - smooth_l1_loss_backward
+  - softplus
+  - softplus_backward
+  - softshrink
+  - softshrink_backward
+  - sort
+  - split.Tensor
+  - split_with_sizes
+  - sqrt
+  - squeeze
+  - squeeze.dim
+  - squeeze_
+  - squeeze_.dim
+  - stack
+  - std
+  - std.correction
+  - std.dim
+  - std_mean.correction
+  - sub.Scalar
+  - sub.Tensor
+  - sum
+  - sum.dim_IntList
+  - svd
+  - symeig
+  - t
+  - t_
+  - take
+  - tan
+  - tanh
+  - tanh_backward
+  - threshold
+  - threshold_backward
+  - topk
+  - trace
+  - transpose.int
+  - transpose_
+  - triangular_solve
+  - tril
+  - tril_
+  - triu
+  - triu_
+  - trunc
+  - unbind.int
+  - uniform_
+  - unsqueeze
+  - unsqueeze_
   - upsample_bilinear2d
   - upsample_bilinear2d_backward
   - upsample_nearest2d
+  - upsample_nearest2d.vec
   - upsample_nearest2d_backward
-  - sigmoid_backward
-  - tanh_backward
-  - ger
-  - lerp.Scalar
-  - lerp.Tensor
-  - adaptive_max_pool2d
-  - adaptive_max_pool2d_backward
-  - logical_not
-  - logical_xor
-  - logical_or
-  - logical_and
-  - nan_to_num
-  - slogdet
+  - upsample_nearest2d_backward.vec
+  - var
+  - var.correction
+  - var.dim
+  - var_mean.correction
+  - view
+  - zero_
 autograd:
   - max_pool2d
   - max_pool3d
