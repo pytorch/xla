@@ -926,6 +926,28 @@ TEST_F(AtenXlaTensorTest, TestLogDet) {
   }
 }
 
+TEST_F(AtenXlaTensorTest, TestSLogDet) {
+  static const int dims[] = {4, 7};
+  for (auto m : dims) {
+    torch::Tensor a =
+        torch::rand({3, m, m}, torch::TensorOptions(torch::kFloat));
+    torch::Tensor pd_a = torch::matmul(a, torch::transpose(a, 1, 2)) +
+                         torch::eye(m, torch::TensorOptions(torch::kFloat));
+    auto b = torch::slogdet(pd_a);
+    ForEachDevice([&](const torch::Device& device) {
+      torch::Tensor xla_a = CopyToDevice(pd_a, device);
+      auto xla_b = torch::slogdet(xla_a);
+      AllClose(std::get<0>(b), std::get<0>(xla_b), /*rtol=*/1e-3,
+               /*atol=*/1e-4);
+      AllClose(std::get<1>(b), std::get<1>(xla_b), /*rtol=*/1e-3,
+               /*atol=*/1e-4);
+    });
+  }
+
+  ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::slogdet", cpp_test::GetIgnoredCounters());
+}
+
 TEST_F(AtenXlaTensorTest, TestTriangularSolve) {
   static const int dims[] = {4, 7};
   for (bool batched_a : {true, false}) {

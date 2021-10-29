@@ -881,6 +881,25 @@ NodePtr NanToNum(const Value& input, const Value& nan, const Value& posinf,
                    input.shape(), std::move(lower_fn));
 }
 
+NodePtr SLogDet(const Value& input) {
+  auto lower_fn = [](const Node& node, LoweringContext* loctx) -> XlaOpVector {
+    xla::XlaOp xla_input = loctx->GetOutputOp(node.operand(0));
+    xla::SignAndLogDet result = xla::SLogDet(xla_input);
+    return node.ReturnOps({result.sign, result.logdet}, loctx);
+  };
+
+  auto lower_for_shape_fn =
+      [](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
+    xla::SignAndLogDet result = xla::SLogDet(operands[0]);
+    return xla::Tuple(operands[0].builder(), {result.sign, result.logdet});
+  };
+
+  return GenericOp(
+      OpKind(at::aten::slogdet), {input},
+      [&]() { return InferOutputShape({input.shape()}, lower_for_shape_fn); },
+      std::move(lower_fn), /*num_outputs=*/2);
+}
+
 }  // namespace ops
 }  // namespace ir
 }  // namespace torch_xla
