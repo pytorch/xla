@@ -35,7 +35,8 @@ XLATensor GetOrCreateXlaTensor(const at::Tensor& tensor, const Device& device);
 XLATensor GetOrCreateXlaTensor(const c10::optional<at::Tensor>& tensor,
                                const Device& device);
 
-std::vector<XLATensor> GetOrCreateXlaTensors(absl::Span<const at::Tensor> tensors, const Device& device);
+std::vector<XLATensor> GetOrCreateXlaTensors(
+    absl::Span<const at::Tensor> tensors, const Device& device);
 
 // Creates a vector of at::Tensor objects extracted from a list of XLA tensors.
 std::vector<at::Tensor> XlaCreateTensorList(const at::TensorList& tensors);

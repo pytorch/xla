@@ -105,8 +105,8 @@ XLATensor GetOrCreateXlaTensor(const c10::optional<at::Tensor>& tensor,
   return xtensor ? *xtensor : XLATensor::Create(*tensor, device);
 }
 
-std::vector<XLATensor> GetOrCreateXlaTensors(absl::Span<const at::Tensor> tensors,
-                                             const Device& device) {
+std::vector<XLATensor> GetOrCreateXlaTensors(
+    absl::Span<const at::Tensor> tensors, const Device& device) {
   std::vector<XLATensor> xla_tensors;
   for (const at::Tensor& tensor : tensors) {
     xla_tensors.push_back(bridge::GetOrCreateXlaTensor(tensor, device));
