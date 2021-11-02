@@ -2893,6 +2893,15 @@ at::Tensor& XLANativeFunctions::silu_out(const at::Tensor& self,
   return out;
 }
 
+at::Tensor XLANativeFunctions::silu_backward(const at::Tensor& grad_output,
+                                             const at::Tensor& self) {
+  XLA_FN_COUNTER("xla::");
+  XLATensor grad_output_tensor = bridge::GetXlaTensor(grad_output);
+  XLATensor self_tensor = bridge::GetXlaTensor(self);
+  return bridge::AtenFromXlaTensor(
+      XLATensor::silu_backward(grad_output_tensor, self_tensor));
+}
+
 at::Tensor XLANativeFunctions::sigmoid(const at::Tensor& self) {
   XLA_FN_COUNTER("xla::");
   return bridge::AtenFromXlaTensor(

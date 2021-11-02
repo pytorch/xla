@@ -2311,6 +2311,11 @@ void XLATensor::silu_out(XLATensor& input, XLATensor& out) {
   out.SetInPlaceIrValue(ir::ops::SiLU(input.GetIrValue()));
 }
 
+XLATensor XLATensor::silu_backward(XLATensor& grad_output, XLATensor& input) {
+  return input.CreateFrom(
+      ir::ops::SiLUBackward(grad_output.GetIrValue(), input.GetIrValue()));
+}
+
 XLATensor XLATensor::sigmoid(const XLATensor& input) {
   return input.CreateFrom(ir::ops::Sigmoid(input.GetIrValue()));
 }

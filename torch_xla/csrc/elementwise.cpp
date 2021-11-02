@@ -182,6 +182,13 @@ xla::XlaOp BuildSigmoid(xla::XlaOp input) {
   return half + half * xla::Tanh(half * input);
 }
 
+xla::XlaOp BuildSiLUBackward(xla::XlaOp grad_output, xla::XlaOp input) {
+  const xla::Shape& shape = XlaHelpers::ShapeOfXlaOp(input);
+  xla::XlaOp one = xla::One(input.builder(), shape.element_type());
+  xla::XlaOp input_sigmoid = BuildSigmoid(input);
+  return grad_output * (input_sigmoid * (one + input * (one - input_sigmoid)));
+}
+
 xla::XlaOp BuildReciprocal(xla::XlaOp input) {
   const xla::Shape& shape = XlaHelpers::ShapeOfXlaOp(input);
   xla::XlaOp one = xla::One(input.builder(), shape.element_type());

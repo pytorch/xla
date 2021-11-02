@@ -48,6 +48,10 @@ xla::XlaOp BuildLeakyReluBackward(xla::XlaOp grad_output, xla::XlaOp input,
 // Sigmoid(x) = (tanh(x ∗ 0.5) + 1) ∗ 0.5
 xla::XlaOp BuildSigmoid(xla::XlaOp input);
 
+// Computes the backward of Silu
+// grad_output * (sigmoid(input) * (1 + input * (1 - sigmoid(input))))
+xla::XlaOp BuildSiLUBackward(xla::XlaOp grad_output, xla::XlaOp input);
+
 // Computes the reciprocal function.
 // Reciprocal(x) = 1 / x
 xla::XlaOp BuildReciprocal(xla::XlaOp input);
