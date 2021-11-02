@@ -111,6 +111,7 @@ supported:
   - rsqrt
   - select.int
   - silu.out
+  - silu_backward
   - sigmoid
   - sin
   - sinh
