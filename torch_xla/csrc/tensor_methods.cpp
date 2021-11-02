@@ -283,7 +283,7 @@ ir::Value GetIrValueOrDefault(const XLATensor& input,
 ir::Value GetFloatingIrValue(const XLATensor& input,
                              at::ScalarType float_type) {
   ir::Value input_value = input.GetIrValue();
-  if (!xla::primitive_util::IsFloatingPointType(
+  if (xla::primitive_util::IsIntegralType(
           input_value.shape().element_type())) {
     input_value = ir::MakeNode<ir::ops::Cast>(input_value, float_type);
   }
