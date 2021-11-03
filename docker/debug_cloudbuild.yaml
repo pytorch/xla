@@ -28,7 +28,7 @@ options:
     dynamic_substitutions: true
     substitution_option: 'ALLOW_LOOSE'
 substitutions:
-    _DOCKER_BASE_IMAGE: 'debian:stretch'
+    _DOCKER_BASE_IMAGE: 'debian:buster'
     _CUDA: '0'
     _PYTHON_VERSION: '3.6'
     _RELEASE_VERSION: 'nightly'  # or rX.Y
