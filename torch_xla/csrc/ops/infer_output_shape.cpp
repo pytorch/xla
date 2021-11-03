@@ -8,6 +8,7 @@ namespace ops {
 
 xla::Shape InferOutputShape(absl::Span<const xla::Shape> input_shapes,
                             const LowerForShapeFn& core_lowering_fn) {
+  std::cout << "[PReLU, infer_output_shape.cpp] Starting" << std::endl;
   xla::XlaBuilder b("InferOutputShape");
   std::vector<xla::XlaOp> parameters;
   for (size_t parameter_number = 0; parameter_number < input_shapes.size();
@@ -16,7 +17,9 @@ xla::Shape InferOutputShape(absl::Span<const xla::Shape> input_shapes,
                                         input_shapes[parameter_number],
                                         absl::StrCat("p", parameter_number)));
   }
+  std::cout << "[PReLU, infer_output_shape.cpp] Middle 1" << std::endl;
   xla::XlaOp result = core_lowering_fn(parameters);
+  std::cout << "[PReLU, infer_output_shape.cpp] Finished" << std::endl;
   return XlaHelpers::ShapeOfXlaOp(result);
 }
 

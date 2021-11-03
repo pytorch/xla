@@ -885,6 +885,8 @@ class XLATensor {
   static XLATensor pow(const XLATensor& input, const XLATensor& exponent);
   static XLATensor pow(const at::Scalar& input, const XLATensor& exponent);
 
+  static XLATensor prelu(const XLATensor& input, const XLATensor& weight);
+
   static XLATensor prod(const XLATensor& input,
                         std::vector<xla::int64_t> dimensions,
                         bool keep_reduced_dimensions,
