@@ -175,6 +175,18 @@ xla::XlaOp BuildLeakyReluBackward(xla::XlaOp grad_output, xla::XlaOp input,
                      negative_slope * grad_output);
 }
 
+xla::XlaOp BuildPrelu(xla::XlaOp input, xla::XlaOp weight) {
+  std::cout << "[PReLU, elementwise.cpp] Starting" << std::endl;
+  const xla::Shape& input_shape = XlaHelpers::ShapeOfXlaOp(input);
+  xla::XlaOp zero = xla::Zero(input.builder(), input_shape.element_type());
+  std::cout << "[PReLU, elementwise.cpp] Middle 1" << std::endl;
+  xla::XlaOp weighted = input * weight;
+  std::cout << "[PReLU, elementwise.cpp] Middle 2" << std::endl;
+  xla::XlaOp ret = xla::Select(xla::Gt(input, zero), input, weighted);
+  std::cout << "[PReLU, elementwise.cpp] Finished" << std::endl;
+  return ret;
+} 
+
 xla::XlaOp BuildSigmoid(xla::XlaOp input) {
   const xla::Shape& shape = XlaHelpers::ShapeOfXlaOp(input);
   xla::XlaOp half = XlaHelpers::ScalarValue<float>(0.5, shape.element_type(),

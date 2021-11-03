@@ -2079,6 +2079,13 @@ XLATensor XLATensor::pow(const at::Scalar& input, const XLATensor& exponent) {
   return exponent.CreateFrom(ir::ops::Pow(input_node, exponent.GetIrValue()));
 }
 
+XLATensor XLATensor::prelu(const XLATensor& input, const XLATensor& weight) {
+  std::cout << "[PReLU, tensor_methods.cpp] Starting" << std::endl;
+  XLATensor ret = input.CreateFrom(ir::ops::Prelu(input.GetIrValue(), weight.GetIrValue()));
+  std::cout << "[PReLU, tensor_methods.cpp] Finished" << std::endl;
+  return ret;
+}
+
 XLATensor XLATensor::prod(const XLATensor& input,
                           std::vector<xla::int64_t> dimensions,
                           bool keep_reduced_dimensions,

@@ -2534,6 +2534,23 @@ at::Tensor XLANativeFunctions::pow(const at::Scalar& self,
       XLATensor::pow(self, bridge::GetXlaTensor(exponent)));
 }
 
+at::Tensor XLANativeFunctions::prelu(const at::Tensor& self, const at::Tensor& weight) {
+  std::cout << "[PReLU, aten_xla_type.cpp] Starting" << std::endl;
+  std::cout << "[PReLU, aten_xla_type.cpp] Self tensor:" << std::endl;
+  std::cout << self << std::endl;;
+  std::cout << "[PReLU, aten_xla_type.cpp] Weight tensor:" << std::endl;
+  std::cout << weight << std::endl;
+
+  XLA_FN_COUNTER("xla::");
+  XLATensor self_tensor = bridge::GetXlaTensor(self);
+  XLATensor weight_tensor = bridge::GetXlaTensor(weight);
+
+  at::Tensor ret = bridge::AtenFromXlaTensor(XLATensor::prelu(self_tensor, weight_tensor));
+
+  std::cout << "[PReLU, aten_xla_type.cpp] Finished" << std::endl;
+  return ret;
+}
+
 at::Tensor XLANativeFunctions::prod(const at::Tensor& self,
                                     c10::optional<at::ScalarType> dtype) {
   XLA_FN_COUNTER("xla::");

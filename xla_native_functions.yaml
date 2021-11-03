@@ -224,6 +224,7 @@ supported:
   - pow.Scalar
   - pow.Tensor_Scalar
   - pow.Tensor_Tensor
+  - prelu
   - prod
   - prod.dim_int
   - put_
