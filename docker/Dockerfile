@@ -32,6 +32,19 @@ ENV CXX_ABI "${cxx_abi}"
 # Whether to build for TPUVM mode
 ENV TPUVM_MODE "${tpuvm}"
 
+# HACK: To create Debian 9 image build by explicit installation of gcc-8.3 which
+# resolves build error on debian 9.
+RUN sudo apt-get install -y unzip
+RUN wget http://ftp.mirrorservice.org/sites/sourceware.org/pub/gcc/releases/gcc-8.3.0/gcc-8.3.0.tar.gz && \
+    tar zxf gcc-8.3.0.tar.gz && \
+    cd gcc-8.3.0
+
+RUN sudo ./contrib/download_prerequisites
+RUN sudo apt -y install build-essential
+RUN sudo ./configure --disable-multilib
+RUN sudo make -j 4
+RUN sudo make install
+
 # To get around issue of Cloud Build with recursive submodule update
 # clone recursively from pytorch/xla if building docker image with
 # cloud build. Otherwise, just use local.
