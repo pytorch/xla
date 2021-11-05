@@ -36,9 +36,9 @@ ENV TPUVM_MODE "${tpuvm}"
 # resolves build error on debian 9.
 RUN sudo apt-get install -y unzip
 RUN sudo apt-get install -y wget
-RUN wget http://ftp.mirrorservice.org/sites/sourceware.org/pub/gcc/releases/gcc-8.3.0/gcc-8.3.0.tar.gz && \
-    tar zxf gcc-8.3.0.tar.gz && \
-    cd gcc-8.3.0
+RUN wget http://ftp.mirrorservice.org/sites/sourceware.org/pub/gcc/releases/gcc-8.3.0/gcc-8.3.0.tar.gz
+RUN tar zxf gcc-8.3.0.tar.gz
+RUN cd gcc-8.3.0
 
 RUN sudo ./contrib/download_prerequisites
 RUN sudo apt -y install build-essential
