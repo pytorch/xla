@@ -5678,6 +5678,21 @@ TEST_F(AtenXlaTensorTest, TestReluInPlace) {
   });
 }
 
+TEST_F(AtenXlaTensorTest, TestPrelu) {
+  torch::Tensor input =
+      torch::rand(6, torch::TensorOptions(torch::kFloat));
+  torch::Tensor weight =
+    torch::rand(1, torch::TensorOptions(torch::kFloat));  
+  ForEachDevice([&](const torch::Device& device) {
+    torch::Tensor xla_input = CopyToDevice(input, device);
+    torch::Tensor xla_weight = CopyToDevice(weight, device);
+    torch::Tensor output = torch::prelu(input, weight);
+    torch::Tensor xla_output = torch::prelu(xla_input, xla_weight);
+    AllClose(output, xla_output);
+    AllClose(input, xla_input);
+  });
+}
+
 TEST_F(AtenXlaTensorTest, TestHardshrink) {
   torch::Tensor input = torch::randn({10}, torch::TensorOptions(torch::kFloat));
   torch::Tensor output = torch::hardshrink(input);

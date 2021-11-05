@@ -175,23 +175,29 @@ NodePtr Prelu(const Value& input, const Value& weight) {
     xla::XlaOp xla_input = loctx->GetOutputOp(node.operand(0));
     xla::XlaOp xla_weight = loctx->GetOutputOp(node.operand(1));
     xla::XlaOp xla_output = BuildPrelu(xla_input, xla_weight);
+    std::cout << "[PReLU, ops.cpp] Lowering_fn shape of result: "
+              << XlaHelpers::ShapeOfXlaOp(xla_output) << std::endl;
     std::cout << "[PReLU, ops.cpp] Lowering_fn finished" << std::endl;
     return node.ReturnOp(xla_output, loctx);
   };
 
   auto lower_for_shape_fn =
       [](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
-    // TODO @wonjoo shape check
+    XLA_CHECK_EQ(operands.size(), 2) << "Unexpected number of operands";
     std::cout << "[PReLU, ops.cpp] Lowering_shape_fn starting" << std::endl;
     xla::XlaOp xla_output = BuildPrelu(operands[0], operands[1]);
+    std::cout << "[PReLU, ops.cpp] Lowering_shape_fn shape of result: "
+              << XlaHelpers::ShapeOfXlaOp(xla_output) << std::endl;
     std::cout << "[PReLU, ops.cpp] Lowering_shape_fn finished" << std::endl;
     return xla_output;
   };
 
-  return GenericOp(
-      OpKind(at::aten::prelu), {input, weight},
-      [&]() { return InferOutputShape({input.shape(), weight.shape()}, lower_for_shape_fn); },
-      std::move(lower_fn));
+  return GenericOp(OpKind(at::aten::prelu), {input, weight},
+                   [&]() {
+                     return InferOutputShape({input.shape(), weight.shape()},
+                                             lower_for_shape_fn);
+                   },
+                   std::move(lower_fn));
 }
 
 NodePtr HardSigmoid(const Value& input) {

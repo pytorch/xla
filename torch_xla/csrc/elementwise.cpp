@@ -3,9 +3,11 @@
 #include "tensorflow/compiler/xla/client/lib/constants.h"
 #include "tensorflow/compiler/xla/xla_client/debug_macros.h"
 #include "torch_xla/csrc/convert_ops.h"
+#include "torch_xla/csrc/data_ops.h"
 #include "torch_xla/csrc/helpers.h"
 #include "torch_xla/csrc/random.h"
 #include "torch_xla/csrc/tensor_util.h"
+#include "torch_xla/csrc/xla_lower_util.h"
 
 namespace torch_xla {
 namespace {
@@ -178,14 +180,31 @@ xla::XlaOp BuildLeakyReluBackward(xla::XlaOp grad_output, xla::XlaOp input,
 xla::XlaOp BuildPrelu(xla::XlaOp input, xla::XlaOp weight) {
   std::cout << "[PReLU, elementwise.cpp] Starting" << std::endl;
   const xla::Shape& input_shape = XlaHelpers::ShapeOfXlaOp(input);
-  xla::XlaOp zero = xla::Zero(input.builder(), input_shape.element_type());
-  std::cout << "[PReLU, elementwise.cpp] Middle 1" << std::endl;
-  xla::XlaOp weighted = input * weight;
-  std::cout << "[PReLU, elementwise.cpp] Middle 2" << std::endl;
-  xla::XlaOp ret = xla::Select(xla::Gt(input, zero), input, weighted);
+  const xla::Shape& weight_shape = XlaHelpers::ShapeOfXlaOp(weight);
+  std::cout << "[PReLU, elementwise.cpp] input shape: " << input_shape
+            << std::endl;
+  std::cout << "[PReLU, elementwise.cpp] weight shape: " << weight_shape
+            << std::endl;
+
+  xla::XlaOp result;
+  if (weight_shape.rank() == 1) {
+    xla::XlaOp zero = xla::Zero(input.builder(), input_shape.element_type());
+    xla::XlaOp weighted = input * weight;
+    std::cout << "[PReLU, elementwise.cpp] Shape of weighted: "
+              << XlaHelpers::ShapeOfXlaOp(weighted) << std::endl;
+    result = xla::Select(xla::Gt(input, zero), input, weighted);
+    std::cout << "[PReLU, elementwise.cpp] Shape of result: "
+              << XlaHelpers::ShapeOfXlaOp(result) << std::endl;
+  } else {
+    std::cout << "[PReLU, elementwise.cpp] Shape conversion starting"
+              << std::endl;
+    std::cout << "[PReLU, elementwise.cpp] Shape conversion completed"
+              << std::endl;
+  }
+
   std::cout << "[PReLU, elementwise.cpp] Finished" << std::endl;
-  return ret;
-} 
+  return result;
+}
 
 xla::XlaOp BuildSigmoid(xla::XlaOp input) {
   const xla::Shape& shape = XlaHelpers::ShapeOfXlaOp(input);
