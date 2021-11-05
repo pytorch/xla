@@ -2534,18 +2534,33 @@ at::Tensor XLANativeFunctions::pow(const at::Scalar& self,
       XLATensor::pow(self, bridge::GetXlaTensor(exponent)));
 }
 
-at::Tensor XLANativeFunctions::prelu(const at::Tensor& self, const at::Tensor& weight) {
+at::Tensor XLANativeFunctions::prelu(const at::Tensor& self,
+                                     const at::Tensor& weight) {
   std::cout << "[PReLU, aten_xla_type.cpp] Starting" << std::endl;
   std::cout << "[PReLU, aten_xla_type.cpp] Self tensor:" << std::endl;
-  std::cout << self << std::endl;;
+  std::cout << self << std::endl;
   std::cout << "[PReLU, aten_xla_type.cpp] Weight tensor:" << std::endl;
   std::cout << weight << std::endl;
+
+  // If multiple weights, check if channel size == number of weights.
+  int64_t weight_num = weight.numel();
+  if (weight_num != 1) {
+    int64_t input_dim = self.dim();
+    XLA_CHECK_GT(input_dim, 0) << "Input tensor dimension cannot be 0";
+
+    int64_t channel_size = input_dim > 1 ? self.size(1) : 1;
+    XLA_CHECK_EQ(channel_size, weight_num)
+        << "Mismatch of parameter numbers and input channel size. Found "
+           "parameter numbers = "
+        << weight_num << " and channel size = " << channel_size;
+  }
 
   XLA_FN_COUNTER("xla::");
   XLATensor self_tensor = bridge::GetXlaTensor(self);
   XLATensor weight_tensor = bridge::GetXlaTensor(weight);
 
-  at::Tensor ret = bridge::AtenFromXlaTensor(XLATensor::prelu(self_tensor, weight_tensor));
+  at::Tensor ret =
+      bridge::AtenFromXlaTensor(XLATensor::prelu(self_tensor, weight_tensor));
 
   std::cout << "[PReLU, aten_xla_type.cpp] Finished" << std::endl;
   return ret;
