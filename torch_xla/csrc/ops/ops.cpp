@@ -229,7 +229,7 @@ NodePtr SiLUBackward(const Value& grad_output, const Value& input) {
       [](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
     return BuildSiLUBackward(operands[0], operands[1]);
   };
-  return GenericOp(OpKind(at::aten::silu_backward), {grad_output, input},
+  return GenericOp(OpKind(at::aten::silu), {grad_output, input},
                    [&]() {
                      return InferOutputShape(
                          {grad_output.shape(), input.shape()},
