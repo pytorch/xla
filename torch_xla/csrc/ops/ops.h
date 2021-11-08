@@ -128,6 +128,8 @@ NodePtr Sigmoid(const Value& input);
 
 NodePtr SiLU(const Value& input);
 
+NodePtr SiLUBackward(const Value& grad_output, const Value& input);
+
 NodePtr SigmoidBackward(const Value& grad_output, const Value& output);
 
 NodePtr LogSoftmaxBackwardOp(const Value& grad_output, const Value& output,
