@@ -35,10 +35,6 @@ xla::XlaOp BuildSoftshrink(xla::XlaOp input, const at::Scalar& lambda);
 xla::XlaOp BuildShrinkBackward(xla::XlaOp grad_output, xla::XlaOp input,
                                const at::Scalar& lambda);
 
-xla::XlaOp BuildHardtanhBackward(xla::XlaOp grad_output, xla::XlaOp input,
-                                 const at::Scalar& min_val,
-                                 const at::Scalar& max_val);
-
 // Computes the leaky rectified linear unit:
 // LeakyReLU(x) = max(0, input) + negative_slope ∗ min(0, input).
 xla::XlaOp BuildLeakyRelu(xla::XlaOp input, double negative_slope);
