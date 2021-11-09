@@ -667,11 +667,6 @@ class XLATensor {
   static XLATensor hardsigmoid_backward(const XLATensor& grad_output,
                                         const XLATensor& input);
 
-  static XLATensor hardtanh_backward(const XLATensor& grad_output,
-                                     const XLATensor& input,
-                                     const at::Scalar& min_val,
-                                     const at::Scalar& max_val);
-
   static XLATensor leaky_relu(const XLATensor& input, double negative_slope);
   static XLATensor leaky_relu_backward(const XLATensor& grad_output,
                                        const XLATensor& input,

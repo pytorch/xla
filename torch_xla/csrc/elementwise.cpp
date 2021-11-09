@@ -109,14 +109,6 @@ xla::XlaOp BuildShrinkBackward(xla::XlaOp grad_output, xla::XlaOp input,
   return xla::Select(Between(input, -lambda, lambda), zero, grad_output);
 }
 
-xla::XlaOp BuildHardtanhBackward(xla::XlaOp grad_output, xla::XlaOp input,
-                                 const at::Scalar& min_val,
-                                 const at::Scalar& max_val) {
-  const xla::Shape& shape = XlaHelpers::ShapeOfXlaOp(grad_output);
-  xla::XlaOp zero = xla::Zero(input.builder(), shape.element_type());
-  return xla::Select(Between(input, min_val, max_val), grad_output, zero);
-}
-
 xla::XlaOp BuildLeakyRelu(xla::XlaOp input, double negative_slope_value) {
   return BuildLeakyReluBackward(input, input, negative_slope_value);
 }

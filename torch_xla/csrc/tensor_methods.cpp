@@ -58,7 +58,6 @@
 #include "torch_xla/csrc/ops/generic.h"
 #include "torch_xla/csrc/ops/get_dimensions_size.h"
 #include "torch_xla/csrc/ops/hardshrink.h"
-#include "torch_xla/csrc/ops/hardtanh_backward.h"
 #include "torch_xla/csrc/ops/index_ops.h"
 #include "torch_xla/csrc/ops/index_select.h"
 #include "torch_xla/csrc/ops/infer_output_shape.h"
@@ -1515,14 +1514,6 @@ XLATensor XLATensor::hardsigmoid_backward(const XLATensor& grad_output,
                                           const XLATensor& input) {
   return input.CreateFrom(ir::ops::HardSigmoidBackward(grad_output.GetIrValue(),
                                                        input.GetIrValue()));
-}
-
-XLATensor XLATensor::hardtanh_backward(const XLATensor& grad_output,
-                                       const XLATensor& input,
-                                       const at::Scalar& min_val,
-                                       const at::Scalar& max_val) {
-  return grad_output.CreateFrom(ir::MakeNode<ir::ops::HardtanhBackward>(
-      grad_output.GetIrValue(), input.GetIrValue(), min_val, max_val));
 }
 
 XLATensor XLATensor::leaky_relu(const XLATensor& input, double negative_slope) {

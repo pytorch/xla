@@ -136,8 +136,6 @@ supported:
   - hardshrink_backward
   - hardsigmoid
   - hardsigmoid_backward
-  - hardtanh
-  - hardtanh_backward
   - index.Tensor
   - index_add_
   - index_copy_
