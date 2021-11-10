@@ -1326,12 +1326,13 @@ XLATensor XLATensor::ge(const XLATensor& input, const XLATensor& other) {
   return DispatchComparisonOp(at::aten::ge, input, other);
 }
 
-XLATensor XLATensor::gelu(const XLATensor& input, bool approximate) {
+XLATensor XLATensor::gelu(const XLATensor& input, xla::int64_t approximate) {
   return input.CreateFrom(ir::ops::Gelu(input.GetIrValue(), approximate));
 }
 
 XLATensor XLATensor::gelu_backward(const XLATensor& grad,
-                                   const XLATensor& input, bool approximate) {
+                                   const XLATensor& input,
+                                   xla::int64_t approximate) {
   return input.CreateFrom(ir::ops::GeluBackward(
       grad.GetIrValue(), input.GetIrValue(), approximate));
 }

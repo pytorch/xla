@@ -568,9 +568,9 @@ class XLATensor {
 
   static XLATensor ge(const XLATensor& input, const XLATensor& other);
 
-  static XLATensor gelu(const XLATensor& input, bool approximate);
+  static XLATensor gelu(const XLATensor& input, xla::int64_t approximate);
   static XLATensor gelu_backward(const XLATensor& grad, const XLATensor& input,
-                                 bool approximate);
+                                 xla::int64_t approximate);
 
   static XLATensor ger(const XLATensor& input, const XLATensor& vec2);
 

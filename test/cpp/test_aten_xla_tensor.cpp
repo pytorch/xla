@@ -6300,7 +6300,9 @@ TEST_F(AtenXlaTensorTest, TestCeluInPlace) {
 TEST_F(AtenXlaTensorTest, TestGelu) {
   torch::Tensor input =
       torch::rand({2, 3}, torch::TensorOptions(torch::kFloat));
-  for (bool approximate : {false, true}) {
+  const int64_t kNone = 0;
+  const int64_t kTanh = 1;
+  for (auto approximate : {kNone, kTanh}) {
     torch::Tensor output = torch::gelu(input, approximate);
     ForEachDevice([&](const torch::Device& device) {
       torch::Tensor xla_input = CopyToDevice(input, device);

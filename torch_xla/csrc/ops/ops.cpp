@@ -638,10 +638,11 @@ NodePtr EluBackward(const Value& grad_output, const Value& output,
                positive_output_branch, negative_output_branch);
 }
 
-NodePtr Gelu(const Value& input, bool approximate) {
+NodePtr Gelu(const Value& input, xla::int64_t approximate) {
   ScopePusher ir_scope("aten::gelu");
   const xla::Shape& shape = input.shape();
-  if (approximate) {
+  const auto kTanh = 1;
+  if (approximate == kTanh) {
     // inner = math.sqrt(2 / math.pi) * (x + 0.044715 * torch.pow(input, 3))
     // input * 0.5 * (1.0 + torch.tanh(inner))
     const float kBeta = M_SQRT2 * M_2_SQRTPI * 0.5;
@@ -659,10 +660,13 @@ NodePtr Gelu(const Value& input, bool approximate) {
   }
 }
 
-NodePtr GeluBackward(const Value& grad, const Value& input, bool approximate) {
+NodePtr GeluBackward(const Value& grad, const Value& input,
+                     xla::int64_t approximate) {
   ScopePusher ir_scope("aten::gelu_backward");
   const xla::Shape& shape = input.shape();
-  if (approximate) {
+  const int64_t kNone = 0;
+  const int64_t kTanh = 1;
+  if (approximate == kTanh) {
     const float kBeta = M_SQRT2 * M_2_SQRTPI * 0.5;
     auto beta = ScalarOp(kBeta, shape);
     auto kappa = ScalarOp(0.044715, shape);
