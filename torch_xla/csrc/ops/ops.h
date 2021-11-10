@@ -174,7 +174,8 @@ NodePtr AdaptiveAvgPool3dBackward(const Value& grad_output, const Value& input);
 
 NodePtr ComparisonOp(c10::Symbol kind, const Value& input, const Value& other);
 
-NodePtr Where(const Value& condition, const Value& input, const Value& other);
+NodePtr Where(const Value& condition, const Value& input, const Value& other,
+              c10::optional<xla::PrimitiveType> element_type = c10::nullopt);
 
 NodePtr ARange(const at::Scalar& start, const at::Scalar& end,
                const at::Scalar& step, at::ScalarType scalar_type);

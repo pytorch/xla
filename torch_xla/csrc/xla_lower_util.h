@@ -114,5 +114,7 @@ std::vector<xla::XlaOp> BuildAdamOptimizerStep(
     bool use_weight_decay, bool use_amsgrad, bool use_adamw);
 
 xla::XlaOp BuildXLogY(xla::XlaOp input, xla::XlaOp other);
+xla::XlaOp BuildWhere(xla::XlaOp condition, xla::XlaOp input, xla::XlaOp other,
+                      c10::optional<xla::PrimitiveType> element_type);
 
 }  // namespace torch_xla

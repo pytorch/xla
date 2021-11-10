@@ -2916,9 +2916,19 @@ void XLATensor::zero_(XLATensor& input) {
 }
 
 XLATensor XLATensor::where(const XLATensor& condition, const XLATensor& input,
-                           const XLATensor& other) {
-  return input.CreateFrom(ir::ops::Where(
-      condition.GetIrValue(), input.GetIrValue(), other.GetIrValue()));
+                           const XLATensor& other,
+                           c10::optional<at::ScalarType> logical_element_type) {
+  if (logical_element_type.has_value()) {
+    return input.CreateFrom(
+        ir::ops::Where(
+            condition.GetIrValue(), input.GetIrValue(), other.GetIrValue(),
+            MakeXlaPrimitiveType(*logical_element_type, &input.GetDevice())),
+        logical_element_type);
+  } else {
+    return input.CreateFrom(ir::ops::Where(condition.GetIrValue(),
+                                           input.GetIrValue(),
+                                           other.GetIrValue(), c10::nullopt));
+  }
 }
 
 XLATensor XLATensor::DispatchComparisonOp(c10::Symbol kind,

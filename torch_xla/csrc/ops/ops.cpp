@@ -465,21 +465,28 @@ NodePtr ComparisonOp(c10::Symbol kind, const Value& input, const Value& other) {
                    std::move(lower_fn));
 }
 
-NodePtr Where(const Value& condition, const Value& input, const Value& other) {
-  auto lower_fn = [](const Node& node, LoweringContext* loctx) -> XlaOpVector {
+NodePtr Where(const Value& condition, const Value& input, const Value& other,
+              c10::optional<xla::PrimitiveType> element_type) {
+  auto lower_fn = [=](const Node& node, LoweringContext* loctx) -> XlaOpVector {
     xla::XlaOp xla_condition = loctx->GetOutputOp(node.operand(0));
     xla::XlaOp xla_input = loctx->GetOutputOp(node.operand(1));
     xla::XlaOp xla_other = loctx->GetOutputOp(node.operand(2));
-    xla::XlaOp pred_condition =
-        ConvertTo(xla_condition, XlaHelpers::TypeOfXlaOp(xla_condition),
-                  xla::PrimitiveType::PRED, /*device=*/nullptr);
-    auto promoted_branches = XlaHelpers::PromoteShapes(xla_input, xla_other);
-    return node.ReturnOp(xla::Select(pred_condition, promoted_branches.first,
-                                     promoted_branches.second),
-                         loctx);
+    return node.ReturnOp(
+        BuildWhere(xla_condition, xla_input, xla_other, element_type), loctx);
   };
+
+  auto lower_for_shape_fn =
+      [=](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
+    return BuildWhere(operands[0], operands[1], operands[2], element_type);
+  };
+
   return GenericOp(OpKind(at::aten::where), {condition, input, other},
-                   input.shape(), std::move(lower_fn));
+                   [&]() {
+                     return InferOutputShape(
+                         {condition.shape(), input.shape(), other.shape()},
+                         lower_for_shape_fn);
+                   },
+                   std::move(lower_fn));
 }
 
 NodePtr ARange(const at::Scalar& start, const at::Scalar& end,

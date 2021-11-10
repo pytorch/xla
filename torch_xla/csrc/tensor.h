@@ -1181,8 +1181,10 @@ class XLATensor {
 
   static void zero_(XLATensor& input);
 
-  static XLATensor where(const XLATensor& condition, const XLATensor& input,
-                         const XLATensor& other);
+  static XLATensor where(
+      const XLATensor& condition, const XLATensor& input,
+      const XLATensor& other,
+      c10::optional<at::ScalarType> logical_element_type = c10::nullopt);
 
  private:
   struct SyncTensorsConfig {

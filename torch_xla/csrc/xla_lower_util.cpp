@@ -948,4 +948,18 @@ xla::XlaOp BuildXLogY(xla::XlaOp input, xla::XlaOp other) {
   return res;
 }
 
+xla::XlaOp BuildWhere(xla::XlaOp condition, xla::XlaOp input, xla::XlaOp other,
+                      c10::optional<xla::PrimitiveType> element_type) {
+  xla::XlaOp pred_condition =
+      ConvertTo(condition, XlaHelpers::TypeOfXlaOp(condition),
+                xla::PrimitiveType::PRED, /*device=*/nullptr);
+  input =
+      element_type.has_value() ? MaybeConvertTo(input, *element_type) : input;
+  other =
+      element_type.has_value() ? MaybeConvertTo(other, *element_type) : other;
+  auto promoted_branches = XlaHelpers::PromoteShapes(input, other);
+  return xla::Select(pred_condition, promoted_branches.first,
+                     promoted_branches.second);
+}
+
 }  // namespace torch_xla

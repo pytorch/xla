@@ -488,9 +488,10 @@ at::Tensor XLANativeFunctions::_s_where(const at::Tensor& condition,
                                         const at::Tensor& self,
                                         const at::Tensor& other) {
   XLA_FN_COUNTER("xla::");
+  at::ScalarType common_dtype = at::result_type(self, other);
   return bridge::AtenFromXlaTensor(XLATensor::where(
       bridge::GetXlaTensor(condition), bridge::GetXlaTensor(self),
-      bridge::GetXlaTensor(other)));
+      bridge::GetXlaTensor(other), common_dtype));
 }
 
 at::Tensor XLANativeFunctions::_softmax(const at::Tensor& self, int64_t dim,
