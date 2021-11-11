@@ -5502,6 +5502,7 @@ TEST_F(AtenXlaTensorTest, TestIndexAdd) {
 TEST_F(AtenXlaTensorTest, TestIndexAddInPlace) {
   int index_size = 10;
   int rank = 3;
+<<<<<<< HEAD
   std::vector<double> alphas{-1.0, 0.0, 1.0, 2.0};
   for (double alpha : alphas) {
     for (torch::ScalarType scalar_type :
@@ -5536,6 +5537,40 @@ TEST_F(AtenXlaTensorTest, TestIndexAddInPlace) {
           AllClose(base, xla_base);
         });
       }
+=======
+  double alpha = 1.0;
+  for (torch::ScalarType scalar_type :
+       {torch::kFloat, torch::kByte, torch::kChar, torch::kShort, torch::kInt,
+        torch::kLong}) {
+    for (int dim = -rank; dim < rank; ++dim) {
+      ForEachDevice([&](const torch::Device& device) {
+        torch::Tensor base =
+            isFloatingType(scalar_type)
+                ? torch::rand({5, 3, 7}, torch::TensorOptions(scalar_type))
+                : torch::randint(100, {5, 3, 7},
+                                 torch::TensorOptions(scalar_type));
+        torch::Tensor index =
+            torch::randint(0, base.size(dim), {index_size},
+                           torch::TensorOptions(torch::kLong));
+        std::vector<int64_t> value_sizes(base.sizes().begin(),
+                                         base.sizes().end());
+        int canonical_dim = dim < 0 ? dim + rank : dim;
+        value_sizes[canonical_dim] = index_size;
+        torch::Tensor value =
+            isFloatingType(scalar_type)
+                ? torch::rand(value_sizes, torch::TensorOptions(scalar_type))
+                : torch::randint(100, value_sizes,
+                                 torch::TensorOptions(scalar_type));
+        torch::Tensor xla_base = CopyToDevice(base.clone(), device);
+        torch::Tensor result = base.index_add_(dim, index, value, alpha);
+        torch::Tensor xla_index = CopyToDevice(index, device);
+        torch::Tensor xla_value = CopyToDevice(value, device);
+        torch::Tensor xla_result =
+            xla_base.index_add_(dim, xla_index, xla_value, alpha);
+        AllClose(result, xla_result);
+        AllClose(base, xla_base);
+      });
+>>>>>>> dd1db7a9 (Index add with alpha place holder)
     }
   }
   ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
