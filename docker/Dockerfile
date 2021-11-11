@@ -40,11 +40,11 @@ RUN wget http://ftp.mirrorservice.org/sites/sourceware.org/pub/gcc/releases/gcc-
 RUN tar zxf gcc-8.3.0.tar.gz
 RUN cd gcc-8.3.0
 
-RUN sudo ./contrib/download_prerequisites
+RUN sudo ./gcc-8.3.0/contrib/download_prerequisites
 RUN sudo apt -y install build-essential
-RUN sudo ./configure --disable-multilib
-RUN sudo make -j 4
-RUN sudo make install
+RUN sudo ./gcc-8.3.0/configure --disable-multilib
+RUN cd gcc-8.3.0 && sudo make -j 4
+RUN cd gcc-8.3.0 && sudo make install
 
 # To get around issue of Cloud Build with recursive submodule update
 # clone recursively from pytorch/xla if building docker image with
