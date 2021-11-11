@@ -1600,9 +1600,10 @@ at::Tensor XLANativeFunctions::index(
 at::Tensor& XLANativeFunctions::index_add_(at::Tensor& self, int64_t dim,
                                            const at::Tensor& index,
                                            const at::Tensor& source,
-                                           const at::Scalar & alpha) {
+                                           const at::Scalar& alpha) {
   XLA_FN_COUNTER("xla::");
-  XLA_CHECK_EQ(alpha.toDouble(), 1.0) << "currently does not support alpha parameter";
+  XLA_CHECK_EQ(alpha.toDouble(), 1.0)
+      << "currently does not support alpha parameter";
   XLATensor self_tensor = bridge::GetXlaTensor(self);
   XLATensor::index_add_(self_tensor, dim, bridge::GetXlaTensor(index),
                         bridge::GetXlaTensor(source));
