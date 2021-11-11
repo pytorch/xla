@@ -1605,8 +1605,12 @@ at::Tensor XLANativeFunctions::index(
 }
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
 =======
 >>>>>>> 56759b91 (Lower index_add instead)
+=======
+
+>>>>>>> b53f3c0d (format)
 at::Tensor XLANativeFunctions::index_add(const at::Tensor& self, int64_t dim,
                                          const at::Tensor& index,
                                          const at::Tensor& source,
