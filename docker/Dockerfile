@@ -40,9 +40,9 @@ RUN wget http://ftp.mirrorservice.org/sites/sourceware.org/pub/gcc/releases/gcc-
 RUN tar zxf gcc-8.3.0.tar.gz
 RUN cd gcc-8.3.0
 
-RUN sudo ./gcc-8.3.0/contrib/download_prerequisites
+RUN cd gcc-8.3.0 && sudo ./contrib/download_prerequisites
 RUN sudo apt -y install build-essential
-RUN sudo ./gcc-8.3.0/configure --disable-multilib
+RUN cd gcc-8.3.0 && sudo ./configure --disable-multilib
 RUN cd gcc-8.3.0 && sudo make -j 4
 RUN cd gcc-8.3.0 && sudo make install
 
