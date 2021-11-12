@@ -44,7 +44,7 @@ if [[ "$XLA_CUDA" == "1" ]] && [[ "$CLOUD_BUILD" == "true" ]]; then
   MAX_JOBS="--jobs=16"
 fi
 
-OPTS+=(--cxxopt="-std=c++14")
+OPTS+=(--cxxopt="-std=c++17")
 if [[ $(basename -- $CC) =~ ^clang ]]; then
   OPTS+=(--cxxopt="-Wno-c++11-narrowing")
 fi
