@@ -45,6 +45,7 @@ RUN sudo apt -y install build-essential
 RUN cd gcc-8.3.0 && sudo ./configure --disable-multilib
 RUN cd gcc-8.3.0 && sudo make -j 4
 RUN cd gcc-8.3.0 && sudo make install
+ENV LD_LIBRARY_PATH /usr/local/lib64/:$LD_LIBRARY_PATH
 
 # To get around issue of Cloud Build with recursive submodule update
 # clone recursively from pytorch/xla if building docker image with
