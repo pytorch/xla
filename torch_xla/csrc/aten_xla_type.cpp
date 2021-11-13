@@ -1604,10 +1604,14 @@ at::Tensor XLANativeFunctions::index(
       canonical_index_info.start_dim));
 }
 <<<<<<< HEAD
+<<<<<<< HEAD
+=======
+>>>>>>> 56759b91 (Lower index_add instead)
 at::Tensor XLANativeFunctions::index_add(const at::Tensor& self, int64_t dim,
                                          const at::Tensor& index,
                                          const at::Tensor& source,
                                          const at::Scalar& alpha) {
+<<<<<<< HEAD
   XLA_FN_COUNTER("xla::");
   XLA_CHECK_EQ(alpha.toDouble(), 1.0)
       << "currently does not support alpha parameter";
@@ -1628,6 +1632,14 @@ at::Tensor& XLANativeFunctions::index_add_(at::Tensor& self, int64_t dim,
                         bridge::GetXlaTensor(source));
   return self;
 >>>>>>> dd1db7a9 (Index add with alpha place holder)
+=======
+  XLA_FN_COUNTER("xla::");
+  XLA_CHECK_EQ(alpha.toDouble(), 1.0)
+      << "currently does not support alpha parameter";
+  return bridge::AtenFromXlaTensor(XLATensor::index_add(
+      bridge::GetXlaTensor(self), dim, bridge::GetXlaTensor(index),
+      bridge::GetXlaTensor(source)));
+>>>>>>> 56759b91 (Lower index_add instead)
 }
 
 at::Tensor& XLANativeFunctions::index_copy_(at::Tensor& self, int64_t dim,
