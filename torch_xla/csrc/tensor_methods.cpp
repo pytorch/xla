@@ -1371,7 +1371,11 @@ XLATensor XLATensor::index_add(const XLATensor& input, xla::int64_t dim,
   auto scaled_source = input.CreateFrom(source.GetIrValue() * constant);
   xla::int64_t canonical_dim =
       XlaHelpers::GetCanonicalDimensionIndex(dim, input.shape().get().rank());
+<<<<<<< HEAD
   return input.CreateFrom(IndexAdd(input, canonical_dim, index, scaled_source));
+=======
+  return input.CreateFrom(IndexAdd(input, canonical_dim, index, source));
+>>>>>>> 56759b91 (Lower index_add instead)
 }
 
 XLATensor XLATensor::index_copy(const XLATensor& input, xla::int64_t dim,
