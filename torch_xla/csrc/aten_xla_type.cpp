@@ -1591,10 +1591,16 @@ at::Tensor XLANativeFunctions::index(
   XLA_FN_COUNTER("xla::");
   CanonicalIndexInfo canonical_index_info =
       GetCanonicalIndexInfo(self, indices);
-  return bridge::AtenFromXlaTensor(
-      XLATensor::index(bridge::GetXlaTensor(canonical_index_info.base),
-                       bridge::GetXlaTensors(canonical_index_info.indices),
-                       canonical_index_info.start_dim));
+  c10::optional<Device> device =
+      bridge::GetXlaDevice(canonical_index_info.base);
+  if (!device.has_value()) {
+    device = bridge::GetXlaDevice(canonical_index_info.indices);
+  }
+  XLA_CHECK(device.has_value());
+  return bridge::AtenFromXlaTensor(XLATensor::index(
+      bridge::GetOrCreateXlaTensor(canonical_index_info.base, *device),
+      bridge::GetOrCreateXlaTensors(canonical_index_info.indices, *device),
+      canonical_index_info.start_dim));
 }
 
 at::Tensor& XLANativeFunctions::index_add_(at::Tensor& self, int64_t dim,
@@ -1643,11 +1649,19 @@ at::Tensor& XLANativeFunctions::index_put_(
   XLA_CHECK(self.scalar_type() == values.scalar_type());
   CanonicalIndexInfo canonical_index_info =
       GetCanonicalIndexInfo(self, indices);
-  XLATensor self_tensor = bridge::GetXlaTensor(self);
+  c10::optional<Device> device =
+      bridge::GetXlaDevice(canonical_index_info.base);
+  if (!device.has_value()) {
+    device = bridge::GetXlaDevice(canonical_index_info.indices);
+  }
+  XLA_CHECK(device.has_value());
+  XLATensor self_tensor = bridge::GetOrCreateXlaTensor(self, *device);
   XLATensor::index_put_(
-      self_tensor, bridge::GetXlaTensor(canonical_index_info.base),
-      bridge::GetXlaTensors(canonical_index_info.indices),
-      canonical_index_info.start_dim, bridge::GetXlaTensor(values), accumulate,
+      self_tensor,
+      bridge::GetOrCreateXlaTensor(canonical_index_info.base, *device),
+      bridge::GetOrCreateXlaTensors(canonical_index_info.indices, *device),
+      canonical_index_info.start_dim,
+      bridge::GetOrCreateXlaTensor(values, *device), accumulate,
       canonical_index_info.result_permutation);
   return self;
 }

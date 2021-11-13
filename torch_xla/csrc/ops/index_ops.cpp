@@ -235,13 +235,6 @@ CanonicalIndexInfo GetCanonicalIndexInfo(
   // If the non-null indices are not all adjacent, transpose base and indices
   // together so that they're adjacent at the front.
   CanonicalIndexInfo canonical_index_info = TransposeToFront(base, indices);
-  // Ensure indices are on the same device as the base.
-  for (size_t i = 0; i < canonical_index_info.indices.size(); i++) {
-    if (canonical_index_info.indices[i].device() != base.device()) {
-      canonical_index_info.indices[i] =
-          canonical_index_info.indices[i].to(base.device());
-    }
-  }
   return canonical_index_info;
 }
 
