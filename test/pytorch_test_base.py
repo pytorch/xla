@@ -27,7 +27,6 @@ DISABLED_TORCH_TESTS_ANY = {
         'test_min_max_nan',  # XLA min/max ignores Nans.
         'test_min_max_binary_op_nan',  # XLA min/max ignores Nans.
         'test_copy_broadcast',
-        'test_advancedindex_mixed_cpu_devices_xla',  #FIXME
     },
     'TestTensorDeviceOpsXLA': {
         'test_block_diag_scipy',  #FIXME: RuntimeError: Error while lowering: f32[1,6]{1,0} xla::unselect, dim=1, start=2, end=2, stride=0
