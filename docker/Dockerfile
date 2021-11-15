@@ -11,10 +11,13 @@ ARG cuda="0"
 ARG cuda_compute="7.0,7.5"
 ARG cxx_abi="0"
 ARG tpuvm=""
+ARG debian9="debian9"
 
 RUN apt-get update
 RUN apt-get install -y git sudo python-pip python3-pip
-RUN git clone https://github.com/pytorch/pytorch
+
+RUN mkdir debian9
+RUN cd debian9 && git clone https://github.com/pytorch/pytorch
 
 # Disable CUDA for PyTorch
 ENV USE_CUDA "0"
@@ -51,16 +54,16 @@ ENV LD_LIBRARY_PATH /usr/local/lib64/:$LD_LIBRARY_PATH
 # clone recursively from pytorch/xla if building docker image with
 # cloud build. Otherwise, just use local.
 # https://github.com/GoogleCloudPlatform/cloud-builders/issues/435
-COPY . /pytorch/xla
+COPY . /debian9/pytorch/xla
 RUN if [ "${cloud_build}" = true ]; then github_branch="${release_version}" && \
   if [ "${release_version}" = "nightly" ]; then github_branch="master"; fi && \
-  cd /pytorch && \
+  cd /debian9/pytorch && \
   rm -rf xla && \
   git clone -b amangu_build --recursive https://github.com/pytorch/xla && \
   cd / && \
   git clone -b "${github_branch}" --recursive https://github.com/pytorch-tpu/examples tpu-examples; fi
 
-RUN cd /pytorch && bash xla/scripts/build_torch_wheels.sh ${python_version} ${release_version}
+RUN cd /debian9/pytorch && bash xla/scripts/build_torch_wheels.sh ${python_version} ${release_version}
 
 # Use conda environment on startup or when running scripts.
 RUN echo "conda activate pytorch" >> ~/.bashrc
