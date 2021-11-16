@@ -38,6 +38,8 @@ _WORLD_SIZE = None
 _ORDINAL = None
 
 XLA_LIB = Library("xla", "DEF")
+# Default bucket size for all-reduce
+_ALLREDUCE_BUCKET_CAP_MB = 50
 
 
 def _init_world_size_ordinal():
@@ -1146,7 +1148,6 @@ def reduce_gradients(optimizer, groups=None, pin_layout=True):
         scale=1.0 / count,
         groups=groups,
         pin_layout=pin_layout)
-
 
 def optimizer_step(optimizer,
                    barrier=False,
