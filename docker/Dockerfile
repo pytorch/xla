@@ -60,6 +60,7 @@ RUN if [ "${cloud_build}" = true ]; then github_branch="${release_version}" && \
   cd /debian9/pytorch && \
   rm -rf xla && \
   git clone -b amangu_build --recursive https://github.com/pytorch/xla && \
+  sed -i 's/c++14/c++17/g' ./xla/third_party/tensorflow/.bazelrc && \
   cd / && \
   git clone -b "${github_branch}" --recursive https://github.com/pytorch-tpu/examples tpu-examples; fi
 
