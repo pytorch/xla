@@ -38,6 +38,8 @@ _WORLD_SIZE = None
 _ORDINAL = None
 
 XLA_LIB = Library("xla", "DEF")
+# Default bucket size for all-reduce
+_ALLREDUCE_BUCKET_CAP_MB = 50
 
 
 def _init_world_size_ordinal():
@@ -1139,13 +1141,59 @@ def reduce_gradients(optimizer, groups=None, pin_layout=True):
   """
   count = xrt_world_size()
   if count > 1:
-    gradients = _fetch_gradients(optimizer)
-    all_reduce(
-        REDUCE_SUM,
-        gradients,
-        scale=1.0 / count,
-        groups=groups,
-        pin_layout=pin_layout)
+    bucket_cap = int(os.getenv('BUCKET_CAP_MB',
+                               _ALLREDUCE_BUCKET_CAP_MB)) * 1024 * 1024
+    # Reverse the gradients list so that we start allreduce from the last layer
+    # onwards. This allows allreduce to trigger as soon as the bucket fills up and
+    # overlap with backward pass.
+    gradients = reversed(_fetch_gradients(optimizer))
+    total = 0
+    tensor_bucket = []
+
+    for grad in gradients:
+      grad_bytes = grad.numel() * grad.element_size()
+
+      # Gradient is larger than bucket_cap, don't bucketize
+      if grad_bytes > bucket_cap:
+        # Flush out previous buckets even if they don't fill up
+        # This maintains the strict reverse ordering
+        if len(tensor_bucket):
+          all_reduce(
+              REDUCE_SUM,
+              tensor_bucket,
+              scale=1.0 / count,
+              groups=groups,
+              pin_layout=pin_layout)
+          total = 0
+          tensor_bucket = []
+        all_reduce(
+            REDUCE_SUM, [grad],
+            scale=1.0 / count,
+            groups=groups,
+            pin_layout=pin_layout)
+        continue
+
+      # Bucketize till the total spills over
+      total += grad_bytes
+      if total > bucket_cap:
+        all_reduce(
+            REDUCE_SUM,
+            tensor_bucket,
+            scale=1.0 / count,
+            groups=groups,
+            pin_layout=pin_layout)
+        total = grad_bytes
+        tensor_bucket = []
+      tensor_bucket.append(grad)
+
+    # Flush the last remaining bucket
+    if len(tensor_bucket):
+      all_reduce(
+          REDUCE_SUM,
+          tensor_bucket,
+          scale=1.0 / count,
+          groups=groups,
+          pin_layout=pin_layout)
 
 
 def optimizer_step(optimizer,
