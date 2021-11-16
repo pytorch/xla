@@ -37,7 +37,7 @@ substitutions:
     _UPLOAD_SUBDIR: ''
     _TPU_VM: ''
 options:
-    machineType: 'N1_HIGHCPU_32'
+    machineType: 'N1_HIGHCPU_96'
     dynamic_substitutions: true
     substitution_option: 'ALLOW_LOOSE'
 timeout: 18000s
