@@ -215,7 +215,7 @@ function main() {
   setup_system
   maybe_install_sources
   install_req_packages
-  install_llvm_clang
+#  install_llvm_clang
   install_and_setup_conda
   build_and_install_torch
   pushd xla
