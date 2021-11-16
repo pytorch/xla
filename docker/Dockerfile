@@ -50,6 +50,12 @@ RUN cd gcc-8.3.0 && sudo make -j 4
 RUN cd gcc-8.3.0 && sudo make install
 ENV LD_LIBRARY_PATH /usr/local/lib64/:$LD_LIBRARY_PATH
 
+RUN cd /usr/bin && sudo rm gcc gcc-ar gcc-nm gcc-ranlib
+RUN sudo ln -s /usr/local/bin/gcc /usr/bin/gcc
+RUN sudo ln -s /usr/local/bin/gcc-ar /usr/bin/gcc-ar
+RUN sudo ln -s /usr/local/bin/gcc-nm /usr/bin/gcc-nm
+RUN sudo ln -s /usr/local/bin/gcc-ranlib /usr/bin/gcc-ranlib
+
 # To get around issue of Cloud Build with recursive submodule update
 # clone recursively from pytorch/xla if building docker image with
 # cloud build. Otherwise, just use local.
