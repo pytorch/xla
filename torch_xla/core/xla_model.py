@@ -42,6 +42,8 @@ XLA_LIB = Library("xla", "DEF")
 _ALLREDUCE_BUCKET_CAP_MB = 50
 
 XLA_LIB = Library("xla", "DEF")
+# Default bucket size for all-reduce
+_ALLREDUCE_BUCKET_CAP_MB = 50
 
 
 def _init_world_size_ordinal():
@@ -1200,7 +1202,6 @@ def reduce_gradients(optimizer, groups=None, pin_layout=True):
     # overlap with backward pass.
     gradients = reversed(_fetch_gradients(optimizer))
     bucketed_allreduce(gradients)
-
 
 def optimizer_step(optimizer,
                    barrier=False,
