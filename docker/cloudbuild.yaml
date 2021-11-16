@@ -38,7 +38,7 @@ substitutions:
     _TPU_VM: ''
 options:
     diskSizeGb: 600
-    machineType: 'n1-standard-32'
+    machineType: 'E2_HIGHCPU_32'
     dynamic_substitutions: true
     substitution_option: 'ALLOW_LOOSE'
 timeout: 18000s
