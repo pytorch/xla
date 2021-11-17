@@ -261,6 +261,7 @@ supported:
   - sigmoid_backward
   - sign
   - silu.out
+  - silu_backward
   - sin
   - sinh
   - slice.Tensor

@@ -219,6 +219,25 @@ NodePtr SiLU(const Value& input) {
                    std::move(lower_fn));
 }
 
+NodePtr SiLUBackward(const Value& grad_output, const Value& input) {
+  auto lower_fn = [](const Node& node, LoweringContext* loctx) -> XlaOpVector {
+    xla::XlaOp xla_grad_output = loctx->GetOutputOp(node.operand(0));
+    xla::XlaOp xla_input = loctx->GetOutputOp(node.operand(1));
+    return node.ReturnOp(BuildSiLUBackward(xla_grad_output, xla_input), loctx);
+  };
+  auto lower_for_shape_fn =
+      [](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
+    return BuildSiLUBackward(operands[0], operands[1]);
+  };
+  return GenericOp(OpKind(at::aten::silu_backward), {grad_output, input},
+                   [&]() {
+                     return InferOutputShape(
+                         {grad_output.shape(), input.shape()},
+                         lower_for_shape_fn);
+                   },
+                   std::move(lower_fn));
+}
+
 NodePtr Sigmoid(const Value& input) {
   auto lower_fn = [](const Node& node, LoweringContext* loctx) -> XlaOpVector {
     xla::XlaOp xla_input = loctx->GetOutputOp(node.operand(0));
