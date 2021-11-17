@@ -1,4 +1,5 @@
 #include <ATen/Context.h>
+#include <ATen/Operators.h>
 #include <ATen/native/BinaryOps.h>
 #include <ATen/native/CPUFallback.h>
 
