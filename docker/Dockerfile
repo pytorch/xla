@@ -37,17 +37,17 @@ ENV TPUVM_MODE "${tpuvm}"
 
 # HACK: To create Debian 9 image build by explicit installation of gcc-8.3 which
 # resolves build error on debian 9.
-RUN sudo apt-get install -y unzip
-RUN sudo apt-get install -y wget
+RUN apt-get install -y unzip
+RUN apt-get install -y wget
 RUN wget http://ftp.mirrorservice.org/sites/sourceware.org/pub/gcc/releases/gcc-8.3.0/gcc-8.3.0.tar.gz
 RUN tar zxf gcc-8.3.0.tar.gz
 RUN cd gcc-8.3.0
 
 RUN cd gcc-8.3.0 && sudo ./contrib/download_prerequisites
-RUN sudo apt -y install build-essential
-RUN cd gcc-8.3.0 && sudo ./configure --disable-multilib
-RUN cd gcc-8.3.0 && sudo make -j 4
-RUN cd gcc-8.3.0 && sudo make install
+RUN apt -y install build-essential
+RUN cd gcc-8.3.0 && ./configure --disable-multilib
+RUN cd gcc-8.3.0 && make -j 4
+RUN cd gcc-8.3.0 && make install
 ENV LD_LIBRARY_PATH /usr/local/lib64/:$LD_LIBRARY_PATH
 
 RUN cd /usr/bin && sudo rm gcc gcc-ar gcc-nm gcc-ranlib
