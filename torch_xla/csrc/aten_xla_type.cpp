@@ -2551,15 +2551,11 @@ at::Tensor XLANativeFunctions::pow(const at::Scalar& self,
 
 at::Tensor XLANativeFunctions::prelu(const at::Tensor& self,
                                      const at::Tensor& weight) {
-  std::cout << "[PReLU, aten_xla_type.cpp] Starting" << std::endl;
-  std::cout << "[PReLU, aten_xla_type.cpp] Self tensor:" << std::endl;
-  std::cout << self << std::endl;
-  std::cout << "[PReLU, aten_xla_type.cpp] Weight tensor:" << std::endl;
-  std::cout << weight << std::endl;
-
-  // If multiple weights, check if channel size == number of weights.
+  XLA_FN_COUNTER("xla::");
+  
+  // If multiple weights, check channel size == number of weights.
   int64_t weight_num = weight.numel();
-  if (weight_num != 1) {
+  if (weight.numel() > 1) {
     int64_t input_dim = self.dim();
     XLA_CHECK_GT(input_dim, 0) << "Input tensor dimension cannot be 0";
 
@@ -2569,16 +2565,11 @@ at::Tensor XLANativeFunctions::prelu(const at::Tensor& self,
            "parameter numbers = "
         << weight_num << " and channel size = " << channel_size;
   }
-
-  XLA_FN_COUNTER("xla::");
+  
   XLATensor self_tensor = bridge::GetXlaTensor(self);
   XLATensor weight_tensor = bridge::GetXlaTensor(weight);
 
-  at::Tensor ret =
-      bridge::AtenFromXlaTensor(XLATensor::prelu(self_tensor, weight_tensor));
-
-  std::cout << "[PReLU, aten_xla_type.cpp] Finished" << std::endl;
-  return ret;
+  return bridge::AtenFromXlaTensor(XLATensor::prelu(self_tensor, weight_tensor));
 }
 
 at::Tensor XLANativeFunctions::prod(const at::Tensor& self,
