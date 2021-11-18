@@ -178,32 +178,18 @@ xla::XlaOp BuildLeakyReluBackward(xla::XlaOp grad_output, xla::XlaOp input,
 }
 
 xla::XlaOp BuildPrelu(xla::XlaOp input, xla::XlaOp weight) {
-  std::cout << "[PReLU, elementwise.cpp] Starting" << std::endl;
   const xla::Shape& input_shape = XlaHelpers::ShapeOfXlaOp(input);
   const xla::Shape& weight_shape = XlaHelpers::ShapeOfXlaOp(weight);
-  std::cout << "[PReLU, elementwise.cpp] input shape: " << input_shape
-            << std::endl;
-  std::cout << "[PReLU, elementwise.cpp] weight shape: " << weight_shape
-            << std::endl;
 
-  xla::XlaOp result;
-  if (weight_shape.rank() == 1) {
-    xla::XlaOp zero = xla::Zero(input.builder(), input_shape.element_type());
-    xla::XlaOp weighted = input * weight;
-    std::cout << "[PReLU, elementwise.cpp] Shape of weighted: "
-              << XlaHelpers::ShapeOfXlaOp(weighted) << std::endl;
-    result = xla::Select(xla::Gt(input, zero), input, weighted);
-    std::cout << "[PReLU, elementwise.cpp] Shape of result: "
-              << XlaHelpers::ShapeOfXlaOp(result) << std::endl;
-  } else {
-    std::cout << "[PReLU, elementwise.cpp] Shape conversion starting"
-              << std::endl;
-    std::cout << "[PReLU, elementwise.cpp] Shape conversion completed"
-              << std::endl;
-  }
+  xla::int64_t weight_num = xla::ShapeUtil::ElementsIn(weight_shape);
+  xla::int64_t broadcast_dim = weight_num == 1 ? 0 : 1;
 
-  std::cout << "[PReLU, elementwise.cpp] Finished" << std::endl;
-  return result;
+  xla::XlaOp zero = xla::Zero(input.builder(), input_shape.element_type());
+  xla::XlaOp broadcasted_weight = xla::BroadcastInDim(weight, 
+        input_shape.dimensions(), {broadcast_dim});
+  xla::XlaOp product = xla::Mul(input, broadcasted_weight);
+
+  return xla::Select(xla::Gt(input, zero), input, product);
 }
 
 xla::XlaOp BuildSigmoid(xla::XlaOp input) {

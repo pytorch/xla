@@ -5665,10 +5665,11 @@ TEST_F(AtenXlaTensorTest, TestReluInPlace) {
 }
 
 TEST_F(AtenXlaTensorTest, TestPrelu) {
+  int channel_size = 3;
   torch::Tensor input =
-      torch::rand(6, torch::TensorOptions(torch::kFloat));
+      torch::rand({2, channel_size, 4}, torch::TensorOptions(torch::kFloat));
   torch::Tensor weight =
-    torch::rand(1, torch::TensorOptions(torch::kFloat));  
+    torch::rand(channel_size, torch::TensorOptions(torch::kFloat));  
   ForEachDevice([&](const torch::Device& device) {
     torch::Tensor xla_input = CopyToDevice(input, device);
     torch::Tensor xla_weight = CopyToDevice(weight, device);
@@ -5677,6 +5678,9 @@ TEST_F(AtenXlaTensorTest, TestPrelu) {
     AllClose(output, xla_output);
     AllClose(input, xla_input);
   });
+
+  ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::prelu", cpp_test::GetIgnoredCounters());
 }
 
 TEST_F(AtenXlaTensorTest, TestHardshrink) {
