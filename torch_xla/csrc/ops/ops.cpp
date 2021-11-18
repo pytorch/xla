@@ -176,8 +176,7 @@ NodePtr Prelu(const Value& input, const Value& weight) {
     return node.ReturnOp(xla_output, loctx);
   };
 
-  return GenericOp(OpKind(at::aten::prelu), {input, weight},
-                   input.shape(),
+  return GenericOp(OpKind(at::aten::prelu), {input, weight}, input.shape(),
                    std::move(lower_fn));
 }
 
