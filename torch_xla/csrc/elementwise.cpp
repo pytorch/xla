@@ -185,8 +185,8 @@ xla::XlaOp BuildPrelu(xla::XlaOp input, xla::XlaOp weight) {
   xla::int64_t broadcast_dim = weight_num == 1 ? 0 : 1;
 
   xla::XlaOp zero = xla::Zero(input.builder(), input_shape.element_type());
-  xla::XlaOp broadcasted_weight = xla::BroadcastInDim(weight, 
-        input_shape.dimensions(), {broadcast_dim});
+  xla::XlaOp broadcasted_weight =
+      xla::BroadcastInDim(weight, input_shape.dimensions(), {broadcast_dim});
   xla::XlaOp product = xla::Mul(input, broadcasted_weight);
 
   return xla::Select(xla::Gt(input, zero), input, product);
