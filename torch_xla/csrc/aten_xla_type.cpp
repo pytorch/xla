@@ -2537,7 +2537,7 @@ at::Tensor XLANativeFunctions::pow(const at::Scalar& self,
 at::Tensor XLANativeFunctions::prelu(const at::Tensor& self,
                                      const at::Tensor& weight) {
   XLA_FN_COUNTER("xla::");
-  
+
   // If multiple weights, check channel size == number of weights.
   int64_t weight_num = weight.numel();
   if (weight.numel() > 1) {
@@ -2550,11 +2550,12 @@ at::Tensor XLANativeFunctions::prelu(const at::Tensor& self,
            "parameter numbers = "
         << weight_num << " and channel size = " << channel_size;
   }
-  
+
   XLATensor self_tensor = bridge::GetXlaTensor(self);
   XLATensor weight_tensor = bridge::GetXlaTensor(weight);
 
-  return bridge::AtenFromXlaTensor(XLATensor::prelu(self_tensor, weight_tensor));
+  return bridge::AtenFromXlaTensor(
+      XLATensor::prelu(self_tensor, weight_tensor));
 }
 
 at::Tensor XLANativeFunctions::prod(const at::Tensor& self,

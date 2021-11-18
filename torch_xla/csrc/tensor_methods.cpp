@@ -2080,7 +2080,8 @@ XLATensor XLATensor::pow(const at::Scalar& input, const XLATensor& exponent) {
 }
 
 XLATensor XLATensor::prelu(const XLATensor& input, const XLATensor& weight) {
-  return input.CreateFrom(ir::ops::Prelu(input.GetIrValue(), weight.GetIrValue()));
+  return input.CreateFrom(
+      ir::ops::Prelu(input.GetIrValue(), weight.GetIrValue()));
 }
 
 XLATensor XLATensor::prod(const XLATensor& input,

@@ -5669,7 +5669,7 @@ TEST_F(AtenXlaTensorTest, TestPrelu) {
   torch::Tensor input =
       torch::rand({2, channel_size, 4}, torch::TensorOptions(torch::kFloat));
   torch::Tensor weight =
-    torch::rand(channel_size, torch::TensorOptions(torch::kFloat));  
+      torch::rand(channel_size, torch::TensorOptions(torch::kFloat));
   ForEachDevice([&](const torch::Device& device) {
     torch::Tensor xla_input = CopyToDevice(input, device);
     torch::Tensor xla_weight = CopyToDevice(weight, device);
