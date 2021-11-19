@@ -1741,7 +1741,8 @@ at::Tensor XLANativeFunctions::leaky_relu_backward(
     const at::Tensor& grad_output, const at::Tensor& self,
     const at::Scalar& negative_slope, bool self_is_result) {
   XLA_FN_COUNTER("xla::");
-  XLA_CHECK(!self_is_result || negative_slope.to<double>() > 0.0);
+  XLA_CHECK(!self_is_result) << "call out-of-place version";
+  XLA_CHECK(negative_slope.to<double>() > 0.0);
   return bridge::AtenFromXlaTensor(XLATensor::leaky_relu_backward(
       bridge::GetXlaTensor(grad_output), bridge::GetXlaTensor(self),
       negative_slope.to<double>()));
@@ -2775,7 +2776,8 @@ at::Tensor XLANativeFunctions::rrelu_with_noise_backward(
     bool training, bool self_is_result) {
   XLA_FN_COUNTER("xla::");
   double negative_slope = (lower.to<double>() + upper.to<double>()) / 2;
-  XLA_CHECK(!self_is_result || negative_slope > 0.0);
+  XLA_CHECK(!self_is_result) << "call out-of-place version";
+  XLA_CHECK(negative_slope > 0.0);
   XLATensor noise_tensor = bridge::GetXlaTensor(noise);
   return bridge::AtenFromXlaTensor(XLATensor::rrelu_with_noise_backward(
       bridge::GetXlaTensor(grad_output), bridge::GetXlaTensor(self),
