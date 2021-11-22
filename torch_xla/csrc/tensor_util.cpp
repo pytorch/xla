@@ -20,6 +20,9 @@
 #include "torch_xla/csrc/helpers.h"
 #include "torch_xla/csrc/layout_manager.h"
 
+#include <ATen/Formatting.h>
+#include <ATen/Functions.h>
+
 namespace torch_xla {
 namespace {
 
