@@ -23,6 +23,7 @@
 
 #pragma once
 
+#include <ATen/core/List.h>
 #include <ATen/core/Tensor.h>
 
 #include "torch_xla/csrc/ir.h"

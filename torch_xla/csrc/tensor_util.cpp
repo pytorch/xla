@@ -1,5 +1,8 @@
 #include "torch_xla/csrc/tensor_util.h"
 
+#include <ATen/Formatting.h>
+#include <ATen/Functions.h>
+
 #include <algorithm>
 #include <cstring>
 #include <functional>
