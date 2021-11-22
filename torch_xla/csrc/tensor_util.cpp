@@ -1,5 +1,8 @@
 #include "torch_xla/csrc/tensor_util.h"
 
+#include <ATen/Formatting.h>
+#include <ATen/Functions.h>
+
 #include <algorithm>
 #include <cstring>
 #include <functional>
@@ -19,9 +22,6 @@
 #include "torch/csrc/lazy/core/hash.h"
 #include "torch_xla/csrc/helpers.h"
 #include "torch_xla/csrc/layout_manager.h"
-
-#include <ATen/Formatting.h>
-#include <ATen/Functions.h>
 
 namespace torch_xla {
 namespace {
