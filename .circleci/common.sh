@@ -111,10 +111,12 @@ function run_torch_xla_tests() {
 
     # GPU tests
     if [ -x "$(command -v nvidia-smi)" ]; then
-      echo "Running Syncfree Optimizer Test"
-      python test/test_syncfree_optimizers.py
-      # echo "Running MNIST Test"
-      # python test/test_train_mp_mnist_amp.py --fake_data
+      # Syncfree SGD optimizer tests
+      if [ -d ./amp/torch_xla/amp/syncfree]
+        echo "Running Syncfree Optimizer Test"
+        python test/test_syncfree_optimizers.py
+        # echo "Running MNIST Test"
+        # python test/test_train_mp_mnist_amp.py --fake_data
     fi
 
     pushd test/cpp
