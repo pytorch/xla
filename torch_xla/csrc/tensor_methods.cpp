@@ -1367,11 +1367,7 @@ XLATensor XLATensor::index_add(const XLATensor& input, xla::int64_t dim,
                                const XLATensor& index, const XLATensor& source,
                                const at::Scalar& alpha) {
   ir::Value constant = GetIrValueForScalar(
-<<<<<<< HEAD
-      alpha, source.shape().get().element_type(), input.GetDevice());
-=======
       alpha, sourcee.shape().get().element_type(), input.GetDevice());
->>>>>>> 6c4f78da (Lower index_add op with alpha input (scalar) param)
   auto scaled_source = input.CreateFrom(source.GetIrValue() * constant);
   xla::int64_t canonical_dim =
       XlaHelpers::GetCanonicalDimensionIndex(dim, input.shape().get().rank());
