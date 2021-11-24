@@ -185,7 +185,8 @@ ir::NodePtr IndexAddOp(const ir::Value& buffer, xla::int64_t dim,
   };
   auto lower_for_shape_fn =
       [dim](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
-    return CreateIndexAdd(operands[0], dim, operands[1], operands[2]);
+    return CreateIndexAdd(operands[0], dim, operands[1], operands[2],
+                          operands[3]);
   };
   ir::Value index_rank1 = EnsureRank1(index);
   return ir::ops::GenericOp(
@@ -317,8 +318,9 @@ ir::Value IndexAdd(const XLATensor& base, xla::int64_t dim,
       << index.dtype();
   XLA_CHECK_LE(index.shape().get().rank(), 1)
       << "Add index is supposed to be a vector";
+  )
   return IndexAddOp(base.GetIrValue(), dim, index.GetIrValue(),
-                    source.GetIrValue());
+                    source.GetIrValue(), base.GetDevice());
 }
 
 ir::Value IndexCopy(const XLATensor& base, xla::int64_t dim,
