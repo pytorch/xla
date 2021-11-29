@@ -56,6 +56,9 @@ function install_deps_pytorch_xla() {
   pip install hypothesis
   pip install cloud-tpu-client
 
+  # Using the Ninja generator requires CMake version 3.13 or greater
+  pip install cmake>=3.13 --upgrade
+
   # Bazel doesn't work with sccache gcc. https://github.com/bazelbuild/bazel/issues/3642
   sudo apt-get -qq update
 
