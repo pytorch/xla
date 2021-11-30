@@ -5684,13 +5684,12 @@ TEST_F(AtenXlaTensorTest, TestPrelu) {
       torch::rand({2, channel_size, 4}, torch::TensorOptions(torch::kFloat));
   torch::Tensor weight =
       torch::rand(channel_size, torch::TensorOptions(torch::kFloat));
+  torch::Tensor output = torch::prelu(input, weight);
   ForEachDevice([&](const torch::Device& device) {
     torch::Tensor xla_input = CopyToDevice(input, device);
     torch::Tensor xla_weight = CopyToDevice(weight, device);
-    torch::Tensor output = torch::prelu(input, weight);
     torch::Tensor xla_output = torch::prelu(xla_input, xla_weight);
     AllClose(output, xla_output);
-    AllClose(input, xla_input);
   });
 
   ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
