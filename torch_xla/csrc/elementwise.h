@@ -18,6 +18,8 @@ xla::XlaOp BuildThreshold(xla::XlaOp input, xla::XlaOp output,
 // Computes the rectified linear unit (replace negative elements with 0).
 xla::XlaOp BuildRelu(xla::XlaOp input);
 
+xla::XlaOp BuildPrelu(xla::XlaOp input, xla::XlaOp weight);
+
 std::vector<xla::XlaOp> BuildRrelu(xla::XlaOp input, const at::Scalar& lower,
                                    const at::Scalar& upper, bool training,
                                    xla::XlaOp rng_seed);

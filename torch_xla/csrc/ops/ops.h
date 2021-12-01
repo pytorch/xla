@@ -112,6 +112,8 @@ NodePtr Rsqrt(const Value& input);
 
 NodePtr ReciprocalOp(const Value& input);
 
+NodePtr Prelu(const Value& input, const Value& weight);
+
 NodePtr Pow(const Value& input, const Value& exponent);
 
 NodePtr Fmod(const Value& dividend, const Value& divisor);
