@@ -11,7 +11,10 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torch_xla.core.xla_model as xm
 import unittest
-from torch_xla.amp import syncfree
+try:
+  from torch_xla.amp import syncfree
+except ImportError:
+  assert False, "Missing package syncfree; the package is available in torch-xla>=1.11"
 
 
 class MNIST(nn.Module):

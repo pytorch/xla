@@ -56,6 +56,9 @@ function install_deps_pytorch_xla() {
   pip install hypothesis
   pip install cloud-tpu-client
 
+  # Using the Ninja generator requires CMake version 3.13 or greater
+  pip install cmake>=3.13 --upgrade
+
   # Bazel doesn't work with sccache gcc. https://github.com/bazelbuild/bazel/issues/3642
   sudo apt-get -qq update
 
@@ -111,10 +114,19 @@ function run_torch_xla_tests() {
 
     # GPU tests
     if [ -x "$(command -v nvidia-smi)" ]; then
-      echo "Running Syncfree Optimizer Test"
-      python test/test_syncfree_optimizers.py
-      # echo "Running MNIST Test"
-      # python test/test_train_mp_mnist_amp.py --fake_data
+      # Syncfree SGD optimizer tests
+      if [ -d ./amp/torch_xla/amp/syncfree]; then
+        echo "Running Syncfree Optimizer Test"
+        python test/test_syncfree_optimizers.py
+
+        # Following test scripts are mainly useful for
+        # performance evaluation & comparison among different
+        # amp optimizers.
+        # echo "Running MNIST Test"
+        # python test/test_train_mp_mnist_amp.py --fake_data
+        # echo "Running ImageNet Test"
+        # python etst/test_train_mp_imagenet_amp.py --fake_data
+      fi
     fi
 
     pushd test/cpp
