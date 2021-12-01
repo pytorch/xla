@@ -27,6 +27,18 @@ MODEL_OPTS = {
     '--test_only_at_end': {
         'action': 'store_true',
     },
+    # AMP only works with XLA:GPU
+    '--amp': {
+        'action': 'store_true',
+    },
+    # Using zero gradients optimization for AMP
+    '--use_zero_grad': {
+        'action': 'store_true',
+    },
+    # Using sync_free optimizer for AMP
+    '--use_syncfree_optim': {
+        'action': 'store_true',
+    }
 }
 
 FLAGS = args_parse.parse_common_options(
@@ -56,6 +68,11 @@ import torch_xla.utils.utils as xu
 import torch_xla.core.xla_model as xm
 import torch_xla.distributed.xla_multiprocessing as xmp
 import torch_xla.test.test_utils as test_utils
+from torch_xla.amp import autocast, GradScaler
+try:
+  from torch_xla.amp import syncfree
+except ImportError:
+  assert False, "Missing package syncfree; the package is available in torch-xla>=1.11"
 
 DEFAULT_KWARGS = dict(
     batch_size=128,
@@ -184,7 +201,8 @@ def train_imagenet():
   writer = None
   if xm.is_master_ordinal():
     writer = test_utils.get_summary_writer(FLAGS.logdir)
-  optimizer = optim.SGD(
+  optim_cls = syncfree.SGD if FLAGS.amp and FLAGS.use_syncfree_optim else optim.SGD
+  optimizer = optim_cls(
       model.parameters(),
       lr=FLAGS.lr,
       momentum=FLAGS.momentum,
@@ -200,16 +218,30 @@ def train_imagenet():
       num_steps_per_epoch=num_training_steps_per_epoch,
       summary_writer=writer)
   loss_fn = nn.CrossEntropyLoss()
+  if FLAGS.amp:
+    scaler = GradScaler(use_zero_grad=FLAGS.use_zero_grad)
 
   def train_loop_fn(loader, epoch):
     tracker = xm.RateTracker()
     model.train()
     for step, (data, target) in enumerate(loader):
       optimizer.zero_grad()
-      output = model(data)
-      loss = loss_fn(output, target)
-      loss.backward()
-      xm.optimizer_step(optimizer)
+      if FLAGS.amp:
+        with autocast():
+          output = model(data)
+          loss = loss_fn(output, target)
+
+        scaler.scale(loss).backward()
+        gradients = xm._fetch_gradients(optimizer)
+        xm.all_reduce('sum', gradients, scale=1.0 / xm.xrt_world_size())
+        scaler.step(optimizer)
+        scaler.update()
+      else:
+        output = model(data)
+        loss = loss_fn(output, target)
+        loss.backward()
+        xm.optimizer_step(optimizer)
+
       tracker.add(FLAGS.batch_size)
       if lr_scheduler:
         lr_scheduler.step()
