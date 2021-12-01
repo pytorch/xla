@@ -168,6 +168,18 @@ NodePtr ReluOp(const Value& input) {
       std::move(lower_fn));
 }
 
+NodePtr Prelu(const Value& input, const Value& weight) {
+  auto lower_fn = [](const Node& node, LoweringContext* loctx) -> XlaOpVector {
+    xla::XlaOp xla_input = loctx->GetOutputOp(node.operand(0));
+    xla::XlaOp xla_weight = loctx->GetOutputOp(node.operand(1));
+    xla::XlaOp xla_output = BuildPrelu(xla_input, xla_weight);
+    return node.ReturnOp(xla_output, loctx);
+  };
+
+  return GenericOp(OpKind(at::aten::prelu), {input, weight}, input.shape(),
+                   std::move(lower_fn));
+}
+
 NodePtr HardSigmoid(const Value& input) {
   auto lower_fn = [](const Node& node, LoweringContext* loctx) -> XlaOpVector {
     xla::XlaOp xla_input = loctx->GetOutputOp(node.operand(0));

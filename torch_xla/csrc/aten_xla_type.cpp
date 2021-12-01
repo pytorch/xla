@@ -1756,7 +1756,7 @@ at::Tensor XLANativeFunctions::leaky_relu_backward(
     const at::Tensor& grad_output, const at::Tensor& self,
     const at::Scalar& negative_slope, bool self_is_result) {
   XLA_FN_COUNTER("xla::");
-  XLA_CHECK(!self_is_result || negative_slope.to<double>() > 0.0);
+  XLA_CHECK(!self_is_result || negative_slope.to<double>() >= 0.0);
   return bridge::AtenFromXlaTensor(XLATensor::leaky_relu_backward(
       bridge::GetXlaTensor(grad_output), bridge::GetXlaTensor(self),
       negative_slope.to<double>()));
@@ -2547,6 +2547,30 @@ at::Tensor XLANativeFunctions::pow(const at::Scalar& self,
   }
   return bridge::AtenFromXlaTensor(
       XLATensor::pow(self, bridge::GetXlaTensor(exponent)));
+}
+
+at::Tensor XLANativeFunctions::prelu(const at::Tensor& self,
+                                     const at::Tensor& weight) {
+  XLA_FN_COUNTER("xla::");
+
+  // If multiple weights, check channel size == number of weights.
+  int64_t weight_num = weight.numel();
+  if (weight.numel() > 1) {
+    int64_t input_dim = self.dim();
+    XLA_CHECK_GT(input_dim, 0) << "Input tensor dimension cannot be 0";
+
+    int64_t channel_size = input_dim > 1 ? self.size(1) : 1;
+    XLA_CHECK_EQ(channel_size, weight_num)
+        << "Mismatch of parameter numbers and input channel size. Found "
+           "parameter numbers = "
+        << weight_num << " and channel size = " << channel_size;
+  }
+
+  XLATensor self_tensor = bridge::GetXlaTensor(self);
+  XLATensor weight_tensor = bridge::GetXlaTensor(weight);
+
+  return bridge::AtenFromXlaTensor(
+      XLATensor::prelu(self_tensor, weight_tensor));
 }
 
 at::Tensor XLANativeFunctions::prod(const at::Tensor& self,
