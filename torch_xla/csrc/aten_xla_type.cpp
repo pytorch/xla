@@ -1245,7 +1245,7 @@ at::Tensor XLANativeFunctions::div(
     c10::optional<c10::string_view> rounding_mode) {
   XLA_FN_COUNTER("xla::");
   at::ScalarType dtype = at::result_type(self, other);
-  auto operands = GetBinaryOperands(self, other);
+  auto operands = GetBinaryOperands(self, UnwrapNumber(other, dtype));
   return bridge::AtenFromXlaTensor(
       XLATensor::div(operands.first, operands.second, rounding_mode, dtype));
 }

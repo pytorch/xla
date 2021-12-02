@@ -48,6 +48,13 @@ class XlaDataTypeTest(unittest.TestCase):
     else:
       assert 'f64' in device_data_hlo, device_data_hlo
 
+  def test_datatype_f32_div_f64(self):
+    t1 = torch.rand(2, 2, dtype=torch.float, device=xm.xla_device())
+    t2 = t1 / 2.0
+    hlo_text = torch_xla._XLAC._get_xla_tensors_text([t2])
+    assert t2.dtype == torch.float
+    assert 'f64' not in hlo_text
+
 
 if __name__ == '__main__':
   print(f'XLA_USE_BF16: {os.getenv("XLA_USE_BF16")}')
