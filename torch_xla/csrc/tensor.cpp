@@ -796,7 +796,7 @@ void XLATensor::SetSubView(ViewInfo view_info) const {
 
 void XLATensor::ModifyCurrentView(ViewInfo view_info) const {
   if (data()->view != nullptr) {
-    data()->view = data()->view->CreateSubView(view_info.shape, view_info);
+    SetSubView(view_info);
     return;
   }
   // This node is not a view. Since this function is meant to modify a view
@@ -804,7 +804,7 @@ void XLATensor::ModifyCurrentView(ViewInfo view_info) const {
   ir::Value ir_value = GetIrValue();
   std::shared_ptr<Alias> alias = std::make_shared<Alias>(ir_value);
   data()->view =
-      std::make_shared<View>(ir_value.shape(), alias, std::move(view_info));
+      std::make_shared<View>(view_info.shape, alias, std::move(view_info));
   AssignIrValue(ir::Value());
 }
 
