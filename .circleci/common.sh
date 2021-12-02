@@ -125,7 +125,7 @@ function run_torch_xla_tests() {
         echo "Running ImageNet Test"
         python test/test_train_mp_imagenet_amp.py --fake_data --num_epochs=1
 
-        # disabled per https://github.com/pytorch/xla/pull/2810
+        # disabled per https://github.com/pytorch/xla/pull/2809
         # echo "Running MNIST Test"
         # python test/test_train_mp_mnist_amp.py --fake_data --num_epochs=1
       fi
