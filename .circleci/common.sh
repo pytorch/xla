@@ -122,10 +122,12 @@ function run_torch_xla_tests() {
         # Following test scripts are mainly useful for
         # performance evaluation & comparison among different
         # amp optimizers.
+        echo "Running ImageNet Test"
+        python test/test_train_mp_imagenet_amp.py --fake_data --num_epochs=1
+
+        # disabled per https://github.com/pytorch/xla/pull/2809
         # echo "Running MNIST Test"
-        # python test/test_train_mp_mnist_amp.py --fake_data
-        # echo "Running ImageNet Test"
-        # python etst/test_train_mp_imagenet_amp.py --fake_data
+        # python test/test_train_mp_mnist_amp.py --fake_data --num_epochs=1
       fi
     fi
 
