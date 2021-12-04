@@ -88,6 +88,8 @@ NodePtr ReluOp(const Value& input);
 
 NodePtr Min(const Value& input, const Value& other);
 
+NodePtr Mish(const Value& input);
+
 NodePtr Max(const Value& input, const Value& other);
 
 NodePtr Exp(const Value& input);

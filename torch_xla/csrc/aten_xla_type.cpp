@@ -2120,6 +2120,11 @@ at::Tensor XLANativeFunctions::minimum(const at::Tensor& self,
                     });
 }
 
+at::Tensor XLANativeFunctions::mish(const at::Tensor& self) {
+  XLA_FN_COUNTER("xla::");
+  return bridge::AtenFromXlaTensor(XLATensor::mish(bridge::GetXlaTensor(self)));
+}
+
 std::tuple<at::Tensor&, at::Tensor&> XLANativeFunctions::min_out(
     const at::Tensor& self, int64_t dim, bool keepdim, at::Tensor& min,
     at::Tensor& min_indices) {

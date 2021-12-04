@@ -733,6 +733,10 @@ NodePtr MinUnary(const Value& input) {
                    std::move(lower_fn));
 }
 
+NodePtr Mish(const Value& input) {
+  // TODO
+}
+
 NodePtr Take(const Value& input, const Value& index) {
   auto lower_fn = [](const Node& node, LoweringContext* loctx) -> XlaOpVector {
     xla::XlaOp xla_input = loctx->GetOutputOp(node.operand(0));
