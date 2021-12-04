@@ -1810,7 +1810,9 @@ void XLATensor::min_out(XLATensor& min, XLATensor& min_indices,
 }
 
 XLATensor XLATensor::mish(const XLATensor& input) {
-  return input.CreateFrom(ir::ops::Mish(input.GetIrValue()));
+  return input.CreateFrom(
+      input.GetIrValue() *
+      ir::ops::Tanh(tensor_ops::Softplus(input, 1, 20).GetIrValue()));
 }
 
 XLATensor XLATensor::mm(const XLATensor& input, const XLATensor& weight) {
