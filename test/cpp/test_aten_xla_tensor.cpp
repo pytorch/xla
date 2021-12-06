@@ -1083,6 +1083,20 @@ TEST_F(AtenXlaTensorTest, TestMin) {
   });
 }
 
+TEST_F(AtenXlaTensorTest, TestMish) {
+  torch::Tensor input =
+      torch::rand({2, 1, 4, 6}, torch::TensorOptions(torch::kFloat));
+  torch::Tensor output = torch::mish(input);
+  ForEachDevice([&](const torch::Device& device) {
+    torch::Tensor xla_input = CopyToDevice(input, device);
+    torch::Tensor xla_output = torch::mish(xla_input);
+    AllClose(output, xla_output, /*rtol=*/1e-4);
+  });
+
+  ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::mish", cpp_test::GetIgnoredCounters());
+}
+
 TEST_F(AtenXlaTensorTest, TestMax) {
   torch::Tensor a = torch::rand({2, 2}, torch::TensorOptions(torch::kFloat));
   torch::Tensor b = torch::rand({2, 2}, torch::TensorOptions(torch::kFloat));
