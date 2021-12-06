@@ -1337,7 +1337,8 @@ class XLATensor {
   //     a = a + b
   void TryLimitGraphSize();
 
-  std::vector<XLATensor> MakeOutputTensors(ir::NodePtr node) const;
+  std::vector<XLATensor> MakeOutputTensors(
+      ir::NodePtr node, bool inherit_logical_type = true) const;
 
   ir::Value GetIrValueForTensor(const at::Tensor& tensor,
                                 const Device& device) const;

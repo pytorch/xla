@@ -748,6 +748,21 @@ class TestDynamicShape(XlaTestCase):
     self.assertEqual(x_dim0_shape.item(), 3)
 
 
+class TestDataType(XlaTestCase):
+
+  def test_mixed_dtype_tuple(self):
+
+    def op_fn(a):
+      return xb.Op.tuple((a, a.cast(xb.Type.BF16)))
+
+    op = xor.register('test_mixed_dtype_tuple', op_fn)
+    xla_device = xm.xla_device()
+    a_tensor = torch.randn([2, 3]).to(xla_device)
+    a_result, a_cast = op(a_tensor)
+    self.assertEqual(a_result.dtype, torch.float)
+    self.assertEqual(a_cast.dtype, torch.bfloat16)
+
+
 class TestAtenXlaTensor(XlaTestCase):
 
   def test_get_real_xla_devices(self):
