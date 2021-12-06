@@ -194,6 +194,7 @@ supported:
   - min.dim
   - min.dim_min
   - minimum
+  - mish
   - mm
   - mse_loss
   - mse_loss_backward

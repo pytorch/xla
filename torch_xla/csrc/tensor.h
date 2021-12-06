@@ -782,6 +782,8 @@ class XLATensor {
   static void min_out(XLATensor& min, XLATensor& min_indices,
                       const XLATensor& input, xla::int64_t dim, bool keepdim);
 
+  static XLATensor mish(const XLATensor& input);
+
   static XLATensor mm(const XLATensor& input, const XLATensor& weight);
 
   static XLATensor mse_loss(const XLATensor& input, const XLATensor& target,
