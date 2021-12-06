@@ -431,7 +431,9 @@ std::vector<XLATensor> XLATensor::user_computation(
   }
   ir::NodePtr node = ir::MakeNode<ir::ops::UserComputation>(
       ir::OpKind::Get(opname), input_values, std::move(computation));
-  return inputs.front().MakeOutputTensors(node);
+  // Cast can be one of the user computation and we don't want to inherit the
+  // logical_element_type in this case
+  return inputs.front().MakeOutputTensors(node, /*inherit_logical_type=*/false);
 }
 
 //////////////////////////////////////////////////////////////////////////////

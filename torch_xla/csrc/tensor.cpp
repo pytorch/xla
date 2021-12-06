@@ -1042,11 +1042,17 @@ ir::Value XLATensor::CreateTensorNode(xla::ComputationClient::DataPtr data,
   return ir::MakeNode<ir::ops::DeviceData>(std::move(data));
 }
 
-std::vector<XLATensor> XLATensor::MakeOutputTensors(ir::NodePtr node) const {
+std::vector<XLATensor> XLATensor::MakeOutputTensors(
+    ir::NodePtr node, bool inherit_logical_type) const {
   std::vector<XLATensor> tensors;
   tensors.reserve(node->num_outputs());
   for (size_t i = 0; i < node->num_outputs(); ++i) {
-    tensors.push_back(CreateFrom(ir::Value(node, i)));
+    if (inherit_logical_type) {
+      tensors.push_back(CreateFrom(ir::Value(node, i)));
+    } else {
+      tensors.push_back(CreateFrom(ir::Value(node, i),
+                                   /*logical_element_type=*/c10::nullopt));
+    }
   }
   return tensors;
 }
