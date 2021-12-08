@@ -10533,7 +10533,8 @@ TEST_F(AtenXlaTensorTest, TestBCEWithLogitsBackward) {
 //        {torch::Reduction::Mean, torch::Reduction::Sum}) {
 //     auto testfn =
 //         [&](const std::vector<torch::Tensor>& inputs) -> torch::Tensor {
-//       return torch::kl_div(/*self=*/inputs[0], /*target=*/inputs[1], reduction);
+//       return torch::kl_div(/*self=*/inputs[0], /*target=*/inputs[1],
+//       reduction);
 //     };
 //     ForEachDevice([&](const torch::Device& device) {
 //       TestBackward({input, target}, device, testfn, /*rtol=*/1e-4,
