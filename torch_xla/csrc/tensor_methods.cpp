@@ -283,8 +283,7 @@ ir::Value GetIrValueOrDefault(const XLATensor& input,
 ir::Value GetFloatingIrValue(const XLATensor& input,
                              at::ScalarType float_type) {
   ir::Value input_value = input.GetIrValue();
-  if (!xla::primitive_util::IsFloatingPointType(
-          input_value.shape().element_type())) {
+  if (xla::primitive_util::IsIntegralType(input_value.shape().element_type())) {
     input_value = ir::MakeNode<ir::ops::Cast>(input_value, float_type);
   }
   return input_value;
@@ -1451,14 +1450,6 @@ XLATensor XLATensor::isnan(const XLATensor& input) {
                           at::ScalarType::Bool);
 }
 
-XLATensor XLATensor::kl_div_backward(const XLATensor& grad_output,
-                                     const XLATensor& input,
-                                     const XLATensor& target,
-                                     xla::int64_t reduction, bool log_target) {
-  return tensor_ops::KlDivBackward(grad_output, input, target,
-                                   GetXlaReductionMode(reduction), log_target);
-}
-
 std::tuple<XLATensor, XLATensor> XLATensor::kthvalue(const XLATensor& input,
                                                      xla::int64_t k,
                                                      xla::int64_t dim,
@@ -1554,12 +1545,25 @@ XLATensor XLATensor::lerp(const XLATensor& input, const XLATensor& end,
 }
 
 XLATensor XLATensor::log(const XLATensor& input) {
-  return input.CreateFrom(ir::ops::Log(input.GetIrValue()));
+  // Here we explictly pass c10::nullopt as logical_element_type because
+  // otherwise result will inherit the input's logical_element_type. In the
+  // case of log(int) -> float, we want to derive the dtype from IR value
+  // instead of input's logical_element_type.
+  return input.CreateFrom(
+      ir::ops::Log(GetFloatingIrValue(input, at::ScalarType::Float)),
+      c10::nullopt);
 }
 
 XLATensor XLATensor::log_base(const XLATensor& input, ir::OpKind op,
                               double base) {
-  return input.CreateFrom(ir::ops::LogBase(input.GetIrValue(), op, base));
+  // Here we explictly pass c10::nullopt as logical_element_type because
+  // otherwise result will inherit the input's logical_element_type. In the
+  // case of logbase(int) -> float, we want to derive the dtype from IR value
+  // instead of input's logical_element_type.
+  return input.CreateFrom(
+      ir::ops::LogBase(GetFloatingIrValue(input, at::ScalarType::Float), op,
+                       base),
+      c10::nullopt);
 }
 
 XLATensor XLATensor::log_sigmoid(const XLATensor& input) {
@@ -1601,7 +1605,13 @@ XLATensor XLATensor::log_softmax_backward(const XLATensor& grad_output,
 }
 
 XLATensor XLATensor::log1p(const XLATensor& input) {
-  return input.CreateFrom(ir::ops::Log1p(input.GetIrValue()));
+  // Here we explictly pass c10::nullopt as logical_element_type because
+  // otherwise result will inherit the input's logical_element_type. In the
+  // case of log1p(int) -> float, we want to derive the dtype from IR value
+  // instead of input's logical_element_type.
+  return input.CreateFrom(
+      ir::ops::Log1p(GetFloatingIrValue(input, at::ScalarType::Float)),
+      c10::nullopt);
 }
 
 void XLATensor::log1p_(XLATensor& input) {
@@ -1646,6 +1656,17 @@ XLATensor XLATensor::logsumexp(const XLATensor& input,
       XlaHelpers::GetCanonicalDimensionIndices(dimensions,
                                                input.shape().get().rank()),
       keep_reduced_dimensions));
+}
+
+XLATensor XLATensor::xlogy(const XLATensor& input, const XLATensor& other) {
+  // Here we explictly pass c10::nullopt as logical_element_type because
+  // otherwise result will inherit the input's logical_element_type. In the
+  // case of xlogy(int,int) -> float, we want to derive the dtype from IR value
+  // instead of input's logical_element_type.
+  return input.CreateFrom(
+      ir::ops::XLogY(input.GetIrValue(),
+                     GetFloatingIrValue(other, at::ScalarType::Float)),
+      c10::nullopt);
 }
 
 XLATensor XLATensor::lt(const XLATensor& input, const at::Scalar& other) {

@@ -717,6 +717,8 @@ class XLATensor {
                              std::vector<xla::int64_t> dimensions,
                              bool keep_reduced_dimensions);
 
+  static XLATensor xlogy(const XLATensor& input, const XLATensor& other);
+
   static XLATensor lt(const XLATensor& input, const at::Scalar& other);
 
   static XLATensor lt(const XLATensor& input, const XLATensor& other);
