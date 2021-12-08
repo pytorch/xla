@@ -10524,24 +10524,25 @@ TEST_F(AtenXlaTensorTest, TestBCEWithLogitsBackward) {
   }
 }
 
-TEST_F(AtenXlaTensorTest, TestKlDivBackward) {
-  torch::Tensor input = torch::rand(
-      {4, 3}, torch::TensorOptions(torch::kFloat).requires_grad(true));
-  torch::Tensor target = torch::rand(
-      {4, 3}, torch::TensorOptions(torch::kFloat).requires_grad(true));
-  for (torch::Reduction::Reduction reduction :
-       {torch::Reduction::Mean, torch::Reduction::Sum}) {
-    auto testfn =
-        [&](const std::vector<torch::Tensor>& inputs) -> torch::Tensor {
-      return torch::kl_div(/*self=*/inputs[0], /*target=*/inputs[1], reduction);
-    };
-    ForEachDevice([&](const torch::Device& device) {
-      TestBackward({input, target}, device, testfn, /*rtol=*/1e-4,
-                   /*atol=*/1e-5);
-    });
-  }
-  ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
-}
+// TEST_F(AtenXlaTensorTest, TestKlDivBackward) {
+//   torch::Tensor input = torch::rand(
+//       {4, 3}, torch::TensorOptions(torch::kFloat).requires_grad(true));
+//   torch::Tensor target = torch::rand(
+//       {4, 3}, torch::TensorOptions(torch::kFloat).requires_grad(true));
+//   for (torch::Reduction::Reduction reduction :
+//        {torch::Reduction::Mean, torch::Reduction::Sum}) {
+//     auto testfn =
+//         [&](const std::vector<torch::Tensor>& inputs) -> torch::Tensor {
+//       return torch::kl_div(/*self=*/inputs[0], /*target=*/inputs[1],
+//       reduction);
+//     };
+//     ForEachDevice([&](const torch::Device& device) {
+//       TestBackward({input, target}, device, testfn, /*rtol=*/1e-4,
+//                    /*atol=*/1e-5);
+//     });
+//   }
+//   ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+// }
 
 TEST_F(AtenXlaTensorTest, TestEmbeddingBackward) {
   int num_weights = 32;
