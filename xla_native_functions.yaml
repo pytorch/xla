@@ -148,7 +148,6 @@ supported:
   - inverse
   - isnan
   - kl_div
-  - kl_div_backward
   - kthvalue
   - l1_loss
   - l1_loss_backward
@@ -326,6 +325,7 @@ supported:
   - var.dim
   - var_mean.correction
   - view
+  - xlogy.Tensor
   - zero_
 autograd:
   - max_pool2d

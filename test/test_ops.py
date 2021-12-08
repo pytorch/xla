@@ -114,6 +114,10 @@ allowed_opinfo = set(
             AllowedOpInfoEntry('linalg.matrix_power'),
             AllowedOpInfoEntry('linalg.qr'),
             AllowedOpInfoEntry('linalg.slogdet'),
+            AllowedOpInfoEntry('log'),
+            AllowedOpInfoEntry('log10'),
+            AllowedOpInfoEntry('log1p'),
+            AllowedOpInfoEntry('log2'),
             AllowedOpInfoEntry('logaddexp'),
             AllowedOpInfoEntry('logaddexp2'),
             AllowedOpInfoEntry('logical_not'),
@@ -132,7 +136,6 @@ allowed_opinfo = set(
             AllowedOpInfoEntry('min', 'reduction_no_dim'),
             AllowedOpInfoEntry('nansum'),
             AllowedOpInfoEntry('quantile'),
-            AllowedOpInfoEntry('nanquantile'),
             AllowedOpInfoEntry('maximum'),
             AllowedOpInfoEntry('minimum'),
             AllowedOpInfoEntry('nn.functional.hardswish'),
@@ -253,6 +256,7 @@ allowed_opinfo = set(
             # AllowedOpInfoEntry('matmul'),            // failing on CPU
             # AllowedOpInfoEntry('__rmatmul__'),       // failing on CPU
             # AllowedOpInfoEntry('linalg.eigvals'),  // failing on TPU
+            # AllowedOpInfoEntry('nanquantile'), // TODO: retried at head once xlogy pr merged
             # AllowedOpInfoEntry('amax'),
             # AllowedOpInfoEntry('amin'),
             # AllowedOpInfoEntry('norm', 'nuc'),
@@ -293,10 +297,6 @@ allowed_opinfo = set(
             # AllowedOpInfoEntry('linalg.norm'),
             # AllowedOpInfoEntry('linalg.matrix_norm'),
             # AllowedOpInfoEntry('linalg.vector_norm'),
-            # AllowedOpInfoEntry('log'),
-            # AllowedOpInfoEntry('log10'),
-            # AllowedOpInfoEntry('log1p'),
-            # AllowedOpInfoEntry('log2'),
             # AllowedOpInfoEntry('std_mean'),
             # AllowedOpInfoEntry('sum'),
             # AllowedOpInfoEntry('mean'),

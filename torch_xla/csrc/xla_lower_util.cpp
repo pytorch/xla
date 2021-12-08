@@ -866,4 +866,21 @@ std::vector<xla::XlaOp> BuildSgdOptimizerStep(
   return results;
 }
 
+xla::XlaOp BuildXLogY(xla::XlaOp input, xla::XlaOp other) {
+  // input and xla::Log(other) can have different types, need to promote
+  // the multiply.
+  xla::XlaOp res = XlaHelpers::PromotedMul(input, xla::Log(other));
+  const xla::Shape& input_shape = XlaHelpers::ShapeOfXlaOp(input);
+  const xla::Shape& res_shape = XlaHelpers::ShapeOfXlaOp(res);
+  xla::XlaOp zero = xla::Zero(input.builder(), input_shape.element_type());
+  xla::XlaOp zeros = xla::ZerosLike(res);
+  // expand the input and other to the result shape to filter the result.
+  input = BuildExpand(input, res_shape.dimensions());
+  other = BuildExpand(other, res_shape.dimensions());
+  res = xla::Select(xla::Eq(input, zero), zeros, res);
+  // nan replacement must happen after zero replacement
+  res = xla::Select(xla::IsNan(other), other, res);
+  return res;
+}
+
 }  // namespace torch_xla

@@ -894,6 +894,26 @@ NodePtr LogicalOr(const Value& input, const Value& other) {
       std::move(lower_fn));
 }
 
+NodePtr XLogY(const Value& input, const Value& other) {
+  auto lower_fn = [](const Node& node, LoweringContext* loctx) -> XlaOpVector {
+    xla::XlaOp xla_input = loctx->GetOutputOp(node.operand(0));
+    xla::XlaOp xla_other = loctx->GetOutputOp(node.operand(1));
+    xla::XlaOp xla_output = BuildXLogY(xla_input, xla_other);
+    return node.ReturnOp(xla_output, loctx);
+  };
+  auto lower_for_shape_fn =
+      [](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
+    XLA_CHECK_EQ(operands.size(), 2) << "Unexpected number of operands";
+    return BuildXLogY(operands[0], operands[1]);
+  };
+  return GenericOp(OpKind(at::aten::xlogy), {input, other},
+                   [&]() {
+                     return InferOutputShape({input.shape(), other.shape()},
+                                             lower_for_shape_fn);
+                   },
+                   std::move(lower_fn));
+}
+
 NodePtr NanToNum(const Value& input, const Value& nan, const Value& posinf,
                  const Value& neginf) {
   auto lower_fn = [](const Node& node, LoweringContext* loctx) -> XlaOpVector {
