@@ -3036,8 +3036,21 @@ at::Tensor XLANativeFunctions::softshrink_backward(const at::Tensor& grad_out,
 std::tuple<at::Tensor, at::Tensor> XLANativeFunctions::sort(
     const at::Tensor& self, int64_t dim, bool descending) {
   XLA_FN_COUNTER("xla::");
-  auto results = XLATensor::topk(bridge::GetXlaTensor(self), self.size(dim),
-                                 dim, descending, true);
+  auto results =
+      XLATensor::topk(bridge::GetXlaTensor(self), self.size(dim), dim,
+                      descending, /*sorted=*/true, /*stable=*/false);
+  return std::make_tuple(bridge::AtenFromXlaTensor(std::get<0>(results)),
+                         bridge::AtenFromXlaTensor(std::get<1>(results)));
+}
+
+std::tuple<at::Tensor, at::Tensor> XLANativeFunctions::sort(
+    const at::Tensor& self, c10::optional<bool> stable, int64_t dim,
+    bool descending) {
+  XLA_FN_COUNTER("xla::");
+  auto results =
+      XLATensor::topk(bridge::GetXlaTensor(self), self.size(dim), dim,
+                      descending, /*sorted=*/false,
+                      /*stable=*/stable.has_value() ? stable.value() : false);
   return std::make_tuple(bridge::AtenFromXlaTensor(std::get<0>(results)),
                          bridge::AtenFromXlaTensor(std::get<1>(results)));
 }
@@ -3260,8 +3273,8 @@ at::Tensor XLANativeFunctions::threshold_backward(const at::Tensor& grad_output,
 std::tuple<at::Tensor, at::Tensor> XLANativeFunctions::topk(
     const at::Tensor& self, int64_t k, int64_t dim, bool largest, bool sorted) {
   XLA_FN_COUNTER("xla::");
-  auto results =
-      XLATensor::topk(bridge::GetXlaTensor(self), k, dim, largest, sorted);
+  auto results = XLATensor::topk(bridge::GetXlaTensor(self), k, dim, largest,
+                                 sorted, /*stable=*/false);
   return std::make_tuple(bridge::AtenFromXlaTensor(std::get<0>(results)),
                          bridge::AtenFromXlaTensor(std::get<1>(results)));
 }
