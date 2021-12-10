@@ -49,8 +49,7 @@ namespace {
                               status.error_message());
 }
 
-std::basic_ostringstream<char>& operator<<(std::basic_ostringstream<char> ostrm,
-                                           const ::grpc::Status& status) {
+std::ostream& operator<<(std::ostream& ostrm, const ::grpc::Status& status) {
   if (status.ok()) {
     ostrm << "OK";
   } else {
@@ -60,8 +59,8 @@ std::basic_ostringstream<char>& operator<<(std::basic_ostringstream<char> ostrm,
   return ostrm;
 }
 
-std::basic_ostringstream<char>& operator<<(
-    std::basic_ostringstream<char>& ostrm, const ::grpc::Status& status) {
+std::basic_ostringstream<char>& operator<<(std::basic_ostringstream<char> ostrm,
+                                           const ::grpc::Status& status) {
   if (status.ok()) {
     ostrm << "OK";
   } else {
