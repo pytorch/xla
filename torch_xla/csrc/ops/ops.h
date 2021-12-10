@@ -238,6 +238,8 @@ NodePtr NanToNum(const Value& input, const Value& nan, const Value& posinf,
 
 NodePtr SLogDet(const Value& input);
 
+NodePtr Softplus(const Value& input, const Value& beta, const Value& threshold);
+
 }  // namespace ops
 }  // namespace ir
 }  // namespace torch_xla
