@@ -2093,8 +2093,9 @@ XLATensor XLATensor::permute(const XLATensor& input,
 }
 
 XLATensor XLATensor::pow(const XLATensor& input, const at::Scalar& exponent) {
-  ir::Value exponent_node =
-      GetIrValueForScalar(exponent, input.shape(), input.GetDevice());
+  // We want to pass exponent_node as a constant to give XLA more room to
+  // optimize
+  ir::Value exponent_node = GetIrValueForConstant(exponent, input.shape());
   return input.CreateFrom(ir::ops::Pow(input.GetIrValue(), exponent_node));
 }
 
