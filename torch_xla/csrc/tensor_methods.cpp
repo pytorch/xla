@@ -289,6 +289,14 @@ ir::Value GetFloatingIrValue(const XLATensor& input,
   return input_value;
 }
 
+ir::Value GetBooleanIrValue(ir::Value input_value) {
+  if (input_value.shape().element_type() != xla::PrimitiveType::PRED) {
+    input_value =
+        ir::MakeNode<ir::ops::Cast>(input_value, xla::PrimitiveType::PRED);
+  }
+  return input_value;
+}
+
 absl::optional<ir::Value> GetOptionalIrValue(const XLATensor& tensor) {
   absl::optional<ir::Value> value;
   if (!tensor.is_null()) {
@@ -1446,8 +1454,9 @@ XLATensor XLATensor::inverse(const XLATensor& input) {
 }
 
 XLATensor XLATensor::isnan(const XLATensor& input) {
-  return input.CreateFrom(ir::ops::IsNan(input.GetIrValue()),
-                          at::ScalarType::Bool);
+  ir::Value result = ir::ops::IsNan(input.GetIrValue());
+  ir::Value casted = GetBooleanIrValue(result);
+  return input.CreateFrom(casted, at::ScalarType::Bool);
 }
 
 std::tuple<XLATensor, XLATensor> XLATensor::kthvalue(const XLATensor& input,
