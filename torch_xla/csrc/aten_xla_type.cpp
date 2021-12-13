@@ -3257,6 +3257,16 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor> XLANativeFunctions::svd(
                          bridge::AtenFromXlaTensor(std::get<2>(results)));
 }
 
+std::tuple<at::Tensor, at::Tensor, at::Tensor> XLANativeFunctions::linalg_svd(
+    const at::Tensor& self, bool full_matrices) {
+  XLA_FN_COUNTER("xla::");
+  auto results =
+      XLATensor::linalg_svd(bridge::GetXlaTensor(self), full_matrices);
+  return std::make_tuple(bridge::AtenFromXlaTensor(std::get<0>(results)),
+                         bridge::AtenFromXlaTensor(std::get<1>(results)),
+                         bridge::AtenFromXlaTensor(std::get<2>(results)));
+}
+
 std::tuple<at::Tensor, at::Tensor> XLANativeFunctions::symeig(
     const at::Tensor& self, bool eigenvectors, bool upper) {
   XLA_FN_COUNTER("xla::");

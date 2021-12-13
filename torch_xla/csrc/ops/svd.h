@@ -23,4 +23,20 @@ class SVD : public XlaNode {
   bool compute_uv_;
 };
 
+class LinalgSVD : public Node {
+ public:
+  LinalgSVD(const Value& input, bool full_matrices);
+
+  std::string ToString() const override;
+
+  NodePtr Clone(OpList operands) const override;
+
+  XlaOpVector Lower(LoweringContext* loctx) const override;
+
+  bool full_matrices() const { return full_matrices_; }
+
+ private:
+  bool full_matrices_;
+};
+
 }  // namespace torch_xla
