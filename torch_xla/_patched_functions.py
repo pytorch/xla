@@ -50,5 +50,19 @@ def clip_grad_norm_(parameters: _tensor_or_tensors,
   return total_norm
 
 
+# Overriding the torch's _str method since it performs tensor operations like
+# slice, indexing, etc to make the tensor presentable. These operations
+# on xla tensor results in compilations. Hence, to avoid compilations,
+# copying the tensor to cpu before printing
+def _str(self):
+  if self.device.type == 'xla':
+    tensor = self.to('cpu')
+  else:
+    tensor = self
+  with torch.no_grad():
+    return torch._tensor_str._str_intern(tensor)
+
+
 def _apply_patches():
   nn.utils.clip_grad_norm_ = _patch(nn.utils.clip_grad_norm_, clip_grad_norm_)
+  torch._tensor_str._str = _patch(torch._tensor_str._str, _str)
