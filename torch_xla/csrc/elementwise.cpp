@@ -253,11 +253,11 @@ xla::XlaOp BuildAbs(xla::XlaOp input) {
   return xla::Abs(input);
 }
 
-xla::XlaOp BuildSoftplus(xla::XlaOp input, xla::XlaOp beta, xla::XlaOp threshold) {
+xla::XlaOp BuildSoftplus(xla::XlaOp input, xla::XlaOp beta,
+                         xla::XlaOp threshold) {
   return xla::Select(
-    xla::Gt(xla::Mul(input, beta), threshold), input,
-    xla::Div(
-        xla::Log1p(xla::Exp(xla::Mul(input, beta))), beta));
+      xla::Gt(xla::Mul(input, beta), threshold), input,
+      xla::Div(xla::Log1p(xla::Exp(xla::Mul(input, beta))), beta));
 }
 
 }  // namespace torch_xla
