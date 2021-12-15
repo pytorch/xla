@@ -162,6 +162,7 @@ supported:
   - lerp.Scalar
   - lerp.Tensor
   - linspace
+  - linalg_svd
   - log
   - log1p
   - log2
