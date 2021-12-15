@@ -5494,12 +5494,13 @@ TEST_F(AtenXlaTensorTest, TestIndexAdd) {
     }
   }
   ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
-  ExpectCounterChanged("xla::index_add_", cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::index_add", cpp_test::GetIgnoredCounters());
 }
 
 TEST_F(AtenXlaTensorTest, TestIndexAddInPlace) {
   int index_size = 10;
   int rank = 3;
+  double alpha = 1.0;
   for (torch::ScalarType scalar_type :
        {torch::kFloat, torch::kByte, torch::kChar, torch::kShort, torch::kInt,
         torch::kLong}) {
@@ -5523,18 +5524,18 @@ TEST_F(AtenXlaTensorTest, TestIndexAddInPlace) {
                 : torch::randint(100, value_sizes,
                                  torch::TensorOptions(scalar_type));
         torch::Tensor xla_base = CopyToDevice(base.clone(), device);
-        torch::Tensor result = base.index_add_(dim, index, value);
+        torch::Tensor result = base.index_add_(dim, index, value, alpha);
         torch::Tensor xla_index = CopyToDevice(index, device);
         torch::Tensor xla_value = CopyToDevice(value, device);
         torch::Tensor xla_result =
-            xla_base.index_add_(dim, xla_index, xla_value);
+            xla_base.index_add_(dim, xla_index, xla_value, alpha);
         AllClose(result, xla_result);
         AllClose(base, xla_base);
       });
     }
   }
   ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
-  ExpectCounterChanged("xla::index_add_", cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::index_add", cpp_test::GetIgnoredCounters());
 }
 
 TEST_F(AtenXlaTensorTest, TestIndexAddRank0) {
@@ -5569,7 +5570,7 @@ TEST_F(AtenXlaTensorTest, TestIndexAddRank0) {
       });
 
       ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
-      ExpectCounterChanged("xla::index_add_", cpp_test::GetIgnoredCounters());
+      ExpectCounterChanged("xla::index_add", cpp_test::GetIgnoredCounters());
     }
   }
 }
