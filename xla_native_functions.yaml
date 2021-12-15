@@ -139,7 +139,7 @@ supported:
   - hardtanh
   - hardtanh_backward
   - index.Tensor
-  - index_add_
+  - index_add
   - index_copy_
   - index_fill_.int_Scalar
   - index_fill_.int_Tensor
