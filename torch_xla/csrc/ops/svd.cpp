@@ -138,10 +138,9 @@ std::string SVD::ToString() const {
 }
 
 LinalgSVD::LinalgSVD(const Value& input, bool full_matrices)
-    : Node(
-          ir::OpKind(at::aten::linalg_svd), {input},
-          [&]() { return NodeOutputShape(input, full_matrices); },
-          /*num_outputs=*/3, xla::util::MHash(full_matrices)),
+    : Node(ir::OpKind(at::aten::linalg_svd), {input},
+           [&]() { return NodeOutputShape(input, full_matrices); },
+           /*num_outputs=*/3, xla::util::MHash(full_matrices)),
       full_matrices_(full_matrices) {}
 
 NodePtr LinalgSVD::Clone(OpList operands) const {
