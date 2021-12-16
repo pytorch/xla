@@ -62,9 +62,10 @@ function install_deps_pytorch_xla() {
   # Bazel doesn't work with sccache gcc. https://github.com/bazelbuild/bazel/issues/3642
   sudo apt-get -qq update
 
-  # Use aptitude to fix possible conflits while installing npm and nodejs
-  sudo apt install aptitude
-  sudo aptitude -qq install npm nodejs
+  # Install npm, nodejs, and necessary dependencies
+  sudo apt-get -qq install -y aptitude
+  sudo aptitude -y install npm
+  sudo aptitude -y install nodejs
 
   # XLA build requires Bazel
   # We use bazelisk to avoid updating Bazel version manually.
