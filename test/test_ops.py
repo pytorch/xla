@@ -193,8 +193,6 @@ allowed_opinfo = set(
             AllowedOpInfoEntry('linalg.solve'),
             AllowedOpInfoEntry('linalg.matrix_rank'),
             AllowedOpInfoEntry('einsum'),
-            AllowedOpInfoEntry('linalg.svd'),
-            AllowedOpInfoEntry('linalg.svdvals'),
             AllowedOpInfoEntry('polar'),
             AllowedOpInfoEntry('ravel'),
             AllowedOpInfoEntry('reshape'),
@@ -339,6 +337,8 @@ allowed_opinfo = set(
             # AllowedOpInfoEntry('erfinv'),
             # AllowedOpInfoEntry('norm'),
             # AllowedOpInfoEntry('t'),
+            # AllowedOpInfoEntry('linalg.svd'),
+            # AllowedOpInfoEntry('linalg.svdvals'),
 
             # Failed on CUDA CI only (investigate)
             # app.circleci.com/pipelines/github/pytorch/xla/9088/workflows/2d59c649-db2b-4384-921e-5e43eba1b51a/jobs/17875
