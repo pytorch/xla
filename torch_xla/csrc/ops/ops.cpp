@@ -951,6 +951,20 @@ NodePtr SLogDet(const Value& input) {
       std::move(lower_fn), /*num_outputs=*/2);
 }
 
+NodePtr Softplus(const Value& input, const Value& beta,
+                 const Value& threshold) {
+  auto lower_fn = [](const Node& node, LoweringContext* loctx) -> XlaOpVector {
+    xla::XlaOp xla_input = loctx->GetOutputOp(node.operand(0));
+    xla::XlaOp xla_beta = loctx->GetOutputOp(node.operand(1));
+    xla::XlaOp xla_threshold = loctx->GetOutputOp(node.operand(2));
+    xla::XlaOp xla_output = BuildSoftplus(xla_input, xla_beta, xla_threshold);
+    return node.ReturnOp(xla_output, loctx);
+  };
+
+  return GenericOp(OpKind(at::aten::softplus), {input, beta, threshold},
+                   input.shape(), std::move(lower_fn));
+}
+
 }  // namespace ops
 }  // namespace ir
 }  // namespace torch_xla
