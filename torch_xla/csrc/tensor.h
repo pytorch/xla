@@ -103,6 +103,10 @@ class XLATensor {
   static ir::Value GetDeviceDataIrValue(const at::Scalar& value,
                                         xla::PrimitiveType type,
                                         const Device& device);
+  // Use with caution, constant will cause more frequent recompilation
+  // compared to the device_data.
+  static ir::Value GetIrValueForConstant(const at::Scalar& value,
+                                         const xla::Shape& shape);
   static ir::Value GetIrValueForScalar(const at::Scalar& value,
                                        xla::PrimitiveType type,
                                        const Device& device);

@@ -722,6 +722,17 @@ ir::Value XLATensor::GetDeviceDataIrValue(const at::Scalar& value,
   return ir::MakeNode<ir::ops::DeviceData>(std::move(data));
 }
 
+ir::Value XLATensor::GetIrValueForConstant(const at::Scalar& value,
+                                           const xla::Shape& shape) {
+  ir::Value ir_value =
+      ir::ops::ScalarOp(std::move(value), shape.element_type());
+  if (!shape.dimensions().empty()) {
+    ir_value = ir::MakeNode<ir::ops::Expand>(
+        ir_value, xla::util::ToVector<xla::int64_t>(shape.dimensions()));
+  }
+  return ir_value;
+}
+
 ir::Value XLATensor::GetIrValueForScalar(const at::Scalar& value,
                                          xla::PrimitiveType type,
                                          const Device& device) {
