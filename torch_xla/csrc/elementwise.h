@@ -69,4 +69,7 @@ xla::XlaOp BuildSign(xla::XlaOp input);
 // Computes the absolute value of the input.
 xla::XlaOp BuildAbs(xla::XlaOp input);
 
+xla::XlaOp BuildSoftplus(xla::XlaOp input, xla::XlaOp beta,
+                         xla::XlaOp threshold);
+
 }  // namespace torch_xla
