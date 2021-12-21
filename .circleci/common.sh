@@ -8,7 +8,6 @@ set -ex
 # 2. CONDA_PREFIX (if it exists)
 # 3. The conda install directory (if it exists)
 export CMAKE_PREFIX_PATH=${CMAKE_PREFIX_PATH:-${CONDA_PREFIX:-"$(dirname $(which conda))/../"}}
-export CC="/usr/bin/gcc"
 
 function clone_pytorch() {
   PYTORCH_DIR=$1
@@ -95,7 +94,7 @@ function install_deps_pytorch_xla() {
 function build_torch_xla() {
   XLA_DIR=$1
   pushd "$XLA_DIR"
-  CC=clang-9 CXX=clang++-9 python setup.py install
+  CC=gcc-7 CXX=gcc-7 python setup.py install
   popd
 }
 
