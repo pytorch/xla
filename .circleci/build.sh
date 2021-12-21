@@ -35,6 +35,8 @@ install_deps_pytorch_xla $XLA_DIR
 
 apply_patches
 
+python -c "import fcntl; fcntl.fcntl(1, fcntl.F_SETFL, 0)"
+
 python setup.py install
 
 sccache --show-stats
