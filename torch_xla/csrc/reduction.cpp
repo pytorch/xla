@@ -471,24 +471,35 @@ xla::XlaOp BuildAny(xla::XlaOp input, absl::Span<const xla::int64_t> dimensions,
 
 xla::XlaOp BuildVar(xla::XlaOp input, absl::Span<const xla::int64_t> dimensions,
                     xla::int64_t correction, bool keep_reduced_dimensions) {
+  const auto& input_builder = input.builder();
   const xla::Shape& input_shape = XlaHelpers::ShapeOfXlaOp(input);
+  const xla::PrimitiveType input_type = input_shape.element_type();
+
+  // var = (input^2).sum(dim)/size(dim) - (input.sum(dim)/size(dim))^2
   SummationResult mean_result =
-      CreateSummation(input, dimensions, /*keep_reduced_dimensions=*/true,
+      CreateSummation(input, dimensions, keep_reduced_dimensions,
                       /*scale=*/true);
-  // var = ((input - mean)^2).sum(dim) / reduced_element_count
-  xla::XlaOp diff = input - mean_result.result;
-  xla::XlaOp unscaled_result =
-      CreateSummation(diff * diff, dimensions, keep_reduced_dimensions,
-                      /*scale=*/false)
-          .result;
-  xla::XlaOp count = mean_result.rinfo.element_count.size;
+  SummationResult squared_mean_result =
+      CreateSummation(input * input, dimensions, keep_reduced_dimensions, true);
+
+  // Clips to zero if the result is negative, which can happen due to
+  // roundoff errors.
+  xla::XlaOp var = xla::Max(
+      squared_mean_result.result - (mean_result.result * mean_result.result),
+      XlaHelpers::ScalarValue<float>(0, input_type, input_builder));
+
+  ReductionInfo rinfo = mean_result.rinfo;
   if (correction != 0) {
-    count =
+    xla::XlaOp count = xla::ConvertElementType(rinfo.element_count.size,
+                                               xla::PrimitiveType::F32);
+    xla::XlaOp residual_count =
         count - XlaHelpers::ScalarValue(
                     correction, XlaHelpers::ShapeOfXlaOp(count).element_type(),
-                    input.builder());
+                    input_builder);
+    xla::XlaOp scaler = residual_count / count;
+    var = GetScaleValue(var, scaler, input_type);
   }
-  return GetScaleValue(unscaled_result, count, input_shape.element_type());
+  return var;
 }
 
 xla::XlaOp BuildLogsumexp(xla::XlaOp input,
