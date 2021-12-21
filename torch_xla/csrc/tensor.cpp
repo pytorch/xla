@@ -26,6 +26,7 @@
 #include "tensorflow/core/profiler/lib/traceme.h"
 #include "torch/csrc/autograd/variable.h"
 #include "torch/csrc/lazy/core/hash.h"
+#include "torch/csrc/lazy/core/ir_metadata.h"
 #include "torch_xla/csrc/debug_util.h"
 #include "torch_xla/csrc/helpers.h"
 #include "torch_xla/csrc/ir_dump_util.h"
@@ -1417,7 +1418,7 @@ void XLATensor::SyncLiveTensorsGraph(const Device* device,
 void XLATensor::MarkStep(const Device& device) {
   XLA_COUNTER("MarkStep", 1);
   DeviceContextArena::Get()->MarkStep(device);
-  ir::ScopePusher::ResetScopes();
+  torch::lazy::ScopePusher::ResetScopes();
   g_tls_data.Reset();
 }
 

@@ -33,6 +33,7 @@
 #include "torch/csrc/autograd/utils/wrap_outputs.h"
 #include "torch/csrc/autograd/variable.h"
 #include "torch/csrc/jit/python/pybind.h"
+#include "torch/csrc/lazy/core/ir_metadata.h"
 #include "torch_xla/csrc/XLANativeFunctions.h"
 #include "torch_xla/csrc/aten_xla_bridge.h"
 #include "torch_xla/csrc/computation.h"
@@ -726,12 +727,14 @@ void BuildProfilerSubmodule(py::module* m) {
       .def_static("is_enabled",
                   &tensorflow::profiler::TraceMeWrapper::IsEnabled);
 
-  py::class_<ir::ScopePusher, std::unique_ptr<ir::ScopePusher>>
+  py::class_<torch::lazy::ScopePusher,
+             std::unique_ptr<torch::lazy::ScopePusher>>
       scope_pusher_class(profiler, "ScopePusher");
-  profiler.def("scope_pusher",
-               [](const std::string& name) -> std::unique_ptr<ir::ScopePusher> {
-                 return absl::make_unique<ir::ScopePusher>(name);
-               });
+  profiler.def(
+      "scope_pusher",
+      [](const std::string& name) -> std::unique_ptr<torch::lazy::ScopePusher> {
+        return absl::make_unique<torch::lazy::ScopePusher>(name);
+      });
 }
 
 void InitXlaModuleBindings(py::module m) {

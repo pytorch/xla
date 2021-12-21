@@ -2,6 +2,7 @@
 
 #include "tensorflow/compiler/xla/xla_client/debug_macros.h"
 #include "tensorflow/compiler/xla/xla_client/util.h"
+#include "torch/csrc/lazy/core/ir_metadata.h"
 #include "torch_xla/csrc/helpers.h"
 #include "torch_xla/csrc/ir.h"
 
@@ -73,7 +74,7 @@ XLATensor MakeMatrixWithDiagonal(const XLATensor& input,
 
 XLATensor SmoothL1Loss(const XLATensor& input, const XLATensor& target,
                        ReductionMode reduction, double beta) {
-  torch_xla::ir::ScopePusher ir_scope(at::aten::smooth_l1_loss.toQualString());
+  torch::lazy::ScopePusher ir_scope(at::aten::smooth_l1_loss.toQualString());
   auto broadcasted_inputs = XLATensor::broadcast_tensors({input, target});
   XLA_CHECK_EQ(broadcasted_inputs.size(), 2);
   const XLATensor& broadcasted_input = broadcasted_inputs[0];
@@ -109,7 +110,7 @@ XLATensor SmoothL1Loss(const XLATensor& input, const XLATensor& target,
 XLATensor SmoothL1LossBackward(const XLATensor& grad_output,
                                const XLATensor& input, const XLATensor& target,
                                ReductionMode reduction, double beta) {
-  torch_xla::ir::ScopePusher ir_scope(
+  torch::lazy::ScopePusher ir_scope(
       at::aten::smooth_l1_loss_backward.toQualString());
   auto broadcasted_inputs = XLATensor::broadcast_tensors({input, target});
   XLA_CHECK_EQ(broadcasted_inputs.size(), 2);

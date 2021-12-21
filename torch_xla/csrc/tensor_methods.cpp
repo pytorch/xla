@@ -11,6 +11,7 @@
 #include "tensorflow/compiler/xla/xla_client/util.h"
 #include "tensorflow/compiler/xla/xla_client/xla_util.h"
 #include "torch/csrc/autograd/variable.h"
+#include "torch/csrc/lazy/core/ir_metadata.h"
 #include "torch_xla/csrc/aten_xla_bridge.h"
 #include "torch_xla/csrc/data_ops.h"
 #include "torch_xla/csrc/helpers.h"
@@ -1681,7 +1682,7 @@ XLATensor XLATensor::lt(const XLATensor& input, const XLATensor& other) {
 
 void XLATensor::masked_fill_(XLATensor& input, const XLATensor& mask,
                              const at::Scalar& value) {
-  ir::ScopePusher ir_scope(at::aten::masked_fill.toQualString());
+  torch::lazy::ScopePusher ir_scope(at::aten::masked_fill.toQualString());
   input.SetIrValue(ir::MakeNode<ir::ops::MaskedFill>(
       input.GetIrValue(), MaybeExpand(mask.GetIrValue(), input.shape()),
       value));
@@ -1689,7 +1690,7 @@ void XLATensor::masked_fill_(XLATensor& input, const XLATensor& mask,
 
 void XLATensor::masked_scatter_(XLATensor& input, const XLATensor& mask,
                                 const XLATensor& source) {
-  ir::ScopePusher ir_scope(at::aten::masked_scatter.toQualString());
+  torch::lazy::ScopePusher ir_scope(at::aten::masked_scatter.toQualString());
   input.SetIrValue(ir::MakeNode<ir::ops::MaskedScatter>(
       input.GetIrValue(), MaybeExpand(mask.GetIrValue(), input.shape()),
       source.GetIrValue()));
