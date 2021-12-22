@@ -1097,7 +1097,8 @@ class XLATensor {
 
   static std::tuple<XLATensor, XLATensor> topk(const XLATensor& input,
                                                xla::int64_t k, xla::int64_t dim,
-                                               bool largest, bool sorted);
+                                               bool largest, bool sorted,
+                                               bool stable);
 
   // Returns the sum of the elements of the diagonal of the input 2-D matrix.
   static XLATensor trace(const XLATensor& input);

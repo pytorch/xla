@@ -274,6 +274,7 @@ supported:
   - softshrink
   - softshrink_backward
   - sort
+  - sort.stable
   - split.Tensor
   - split_with_sizes
   - sqrt

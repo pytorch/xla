@@ -16,7 +16,7 @@ std::vector<xla::XlaOp> CreateKthValue(xla::XlaOp input, xla::int64_t k,
                                        xla::int64_t dim, bool keepdim);
 
 std::vector<xla::XlaOp> CreateTopK(xla::XlaOp input, xla::int64_t k,
-                                   xla::int64_t dim, bool largest, bool sorted);
+                                   xla::int64_t dim, bool largest, bool stable);
 
 xla::XlaOp CreateMatMul(xla::XlaOp lhs, xla::XlaOp rhs);
 
