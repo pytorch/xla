@@ -2686,11 +2686,11 @@ XLATensor XLATensor::to(XLATensor& input, c10::optional<Device> device,
 std::tuple<XLATensor, XLATensor> XLATensor::topk(const XLATensor& input,
                                                  xla::int64_t k,
                                                  xla::int64_t dim, bool largest,
-                                                 bool sorted) {
+                                                 bool sorted, bool stable) {
   ir::NodePtr node = ir::MakeNode<ir::ops::TopK>(
       input.GetIrValue(), k,
       XlaHelpers::GetCanonicalDimensionIndex(dim, input.shape().get().rank()),
-      largest, sorted);
+      largest, sorted, stable);
   return std::make_tuple(
       input.CreateFrom(ir::Value(node, 0)),
       input.CreateFrom(ir::Value(node, 1), at::ScalarType::Long));

@@ -83,9 +83,7 @@ XlaOpVector Scalar::Lower(LoweringContext* loctx) const {
                                    xla::complex128(value_.toComplexDouble()));
       break;
     default:
-      std::stringstream ss;
-      ss << value_;
-      XLA_ERROR() << "Unable to lower scalar " << ss.str() << " of shape "
+      XLA_ERROR() << "Unable to lower scalar " << &value_ << " of shape "
                   << shape();
   }
 
