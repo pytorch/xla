@@ -2461,8 +2461,8 @@ XLATensor XLATensor::softplus_backward(const XLATensor& grad_output,
       beta, input.shape().get().element_type(), input.GetDevice());
   ir::Value threshold_value = XLATensor::GetIrValueForScalar(
       threshold, input.shape().get().element_type(), input.GetDevice());
-  return input.CreateFrom(
-      ir::ops::SoftplusBackward(grad_output.GetIrValue(), input.GetIrValue(), beta_value, threshold_value,
+  return input.CreateFrom(ir::ops::SoftplusBackward(
+      grad_output.GetIrValue(), input.GetIrValue(), beta_value, threshold_value,
       output.GetIrValue()));
 }
 
