@@ -2457,8 +2457,13 @@ XLATensor XLATensor::softplus_backward(const XLATensor& grad_output,
                                        const at::Scalar& beta,
                                        const at::Scalar& threshold,
                                        const XLATensor& output) {
-  return tensor_ops::SoftplusBackward(grad_output, input, beta, threshold,
-                                      output);
+  ir::Value beta_value = XLATensor::GetIrValueForScalar(
+      beta, input.shape().get().element_type(), input.GetDevice());
+  ir::Value threshold_value = XLATensor::GetIrValueForScalar(
+      threshold, input.shape().get().element_type(), input.GetDevice());
+  return input.CreateFrom(
+      ir::ops::SoftplusBackward(grad_output.GetIrValue(), input.GetIrValue(), beta_value, threshold_value,
+      output.GetIrValue()));
 }
 
 XLATensor XLATensor::softshrink(const XLATensor& input,
