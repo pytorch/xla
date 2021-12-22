@@ -265,9 +265,10 @@ xla::XlaOp BuildSoftplusBackward(xla::XlaOp grad_output, xla::XlaOp input,
                                  xla::XlaOp output) {
   xla::XlaOp scaled_input = xla::Mul(input, beta);
   xla::XlaOp z = xla::Exp(xla::Mul(output, beta));
-  return xla::XlaOp::Select(
+  xla::XlaOp one = xla::One(z.builder(), XlaHelpers::ShapeOfXlaOp(z).element_type());
+  return xla::Select(
     xla::Gt(scaled_input, threshold), grad_output,
-    xla::Mul(grad_output, xla::Div(xla::Sub(z, 1), z))); 
+    xla::Mul(grad_output, xla::Div(xla::Sub(z, one), z))); 
 }
 
 }  // namespace torch_xla
