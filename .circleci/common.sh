@@ -99,8 +99,6 @@ function build_torch_xla() {
 }
 
 function run_torch_xla_tests() {
-  CC=clang-9 
-  CXX=clang++-9
   PYTORCH_DIR=$1
   XLA_DIR=$2
   if [ -x "$(command -v nvidia-smi)" ]; then
