@@ -62,11 +62,15 @@ function install_deps_pytorch_xla() {
   # Bazel doesn't work with sccache gcc. https://github.com/bazelbuild/bazel/issues/3642
   sudo apt-get -qq update
 
-  sudo apt-get -qq install npm nodejs
+  # Install npm, nodejs, and necessary dependencies
+  sudo apt-get -qq install -y aptitude
+  sudo aptitude -y install npm
+  sudo aptitude -y install nodejs
 
   # XLA build requires Bazel
   # We use bazelisk to avoid updating Bazel version manually.
   sudo npm install -g @bazel/bazelisk
+  sudo unlink /usr/bin/bazel
   sudo ln -s "$(command -v bazelisk)" /usr/bin/bazel
 
   # Symnlink the missing cuda headers if exists
@@ -90,7 +94,7 @@ function install_deps_pytorch_xla() {
 function build_torch_xla() {
   XLA_DIR=$1
   pushd "$XLA_DIR"
-  CC=clang-9 CXX=clang++-9 python setup.py install
+  CC=gcc-7 CXX=gcc-7 python setup.py install
   popd
 }
 
