@@ -70,7 +70,10 @@ function install_deps_pytorch_xla() {
   # XLA build requires Bazel
   # We use bazelisk to avoid updating Bazel version manually.
   sudo npm install -g @bazel/bazelisk
-  sudo unlink /usr/bin/bazel
+  # Only unlink if file exists
+  if [[ -e /usr/bin/bazel ]]; then
+    sudo unlink /usr/bin/bazel
+  fi
   sudo ln -s "$(command -v bazelisk)" /usr/bin/bazel
 
   # Symnlink the missing cuda headers if exists
