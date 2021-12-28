@@ -240,6 +240,10 @@ NodePtr SLogDet(const Value& input);
 
 NodePtr Softplus(const Value& input, const Value& beta, const Value& threshold);
 
+NodePtr SoftplusBackward(const Value& grad_output, const Value& input,
+                         const Value& beta, const Value& threshold,
+                         const Value& output);
+
 }  // namespace ops
 }  // namespace ir
 }  // namespace torch_xla

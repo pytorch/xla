@@ -72,4 +72,8 @@ xla::XlaOp BuildAbs(xla::XlaOp input);
 xla::XlaOp BuildSoftplus(xla::XlaOp input, xla::XlaOp beta,
                          xla::XlaOp threshold);
 
+xla::XlaOp BuildSoftplusBackward(xla::XlaOp grad_output, xla::XlaOp input,
+                                 xla::XlaOp beta, xla::XlaOp threshold,
+                                 xla::XlaOp output);
+
 }  // namespace torch_xla
