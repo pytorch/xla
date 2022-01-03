@@ -852,10 +852,10 @@ TEST_F(AtenXlaTensorTest, TestQR) {
     for (auto n : dims) {
       torch::Tensor a =
           torch::rand({m, n}, torch::TensorOptions(torch::kFloat));
-      auto b = torch::qr(a);
+      auto b = torch::linalg_qr(a);
       ForEachDevice([&](const torch::Device& device) {
         torch::Tensor xla_a = CopyToDevice(a, device);
-        auto xla_b = torch::qr(xla_a);
+        auto xla_b = torch::linalg_qr(xla_a);
         AllClose(std::get<0>(b).abs(), std::get<0>(xla_b).abs(), /*rtol=*/1e-3,
                  /*atol=*/1e-4);
         AllClose(std::get<1>(b).abs(), std::get<1>(xla_b).abs(), /*rtol=*/1e-3,

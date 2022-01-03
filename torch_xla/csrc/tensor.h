@@ -901,7 +901,7 @@ class XLATensor {
   static void put_(XLATensor& input, const XLATensor& index,
                    const XLATensor& source, bool accumulate);
 
-  static std::tuple<XLATensor, XLATensor> qr(const XLATensor& input, bool some);
+  static std::tuple<XLATensor, XLATensor> linalg_qr(const XLATensor& input, c10::string_view mode);
 
   static void random_(XLATensor& input, int64_t from, int64_t to);
 

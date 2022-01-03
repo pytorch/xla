@@ -157,6 +157,7 @@ supported:
   - leaky_relu_backward
   - lerp.Scalar
   - lerp.Tensor
+  - linalg_qr
   - log
   - log1p
   - log2
@@ -228,7 +229,6 @@ supported:
   - prod
   - prod.dim_int
   - put_
-  - qr
   - random_
   - random_.from
   - random_.to

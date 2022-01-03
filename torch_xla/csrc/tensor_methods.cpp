@@ -2141,8 +2141,17 @@ void XLATensor::put_(XLATensor& input, const XLATensor& index,
       input.GetIrValue(), index.GetIrValue(), source.GetIrValue(), accumulate));
 }
 
-std::tuple<XLATensor, XLATensor> XLATensor::qr(const XLATensor& input,
-                                               bool some) {
+std::tuple<XLATensor, XLATensor> XLATensor::linalg_qr(const XLATensor& input,
+                                                      c10::string_view mode) {
+  bool some = true;
+  if (mode == "reduced") {
+    some = true;
+  } else if (mode == "complete") {
+    some = false;
+  } else {
+    XLA_CHECK(false)
+        << "only 'reduced' (default) or 'complete' modes are supported.";
+  }
   ir::NodePtr node = ir::MakeNode<ir::ops::QR>(input.GetIrValue(), some);
   return std::make_tuple(input.CreateFrom(ir::Value(node, 0)),
                          input.CreateFrom(ir::Value(node, 1)));
