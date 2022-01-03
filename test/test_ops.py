@@ -47,7 +47,6 @@ allowed_opinfo = set(
             AllowedOpInfoEntry('bitwise_left_shift'),
             AllowedOpInfoEntry('bitwise_right_shift'),
             AllowedOpInfoEntry('ceil'),
-            AllowedOpInfoEntry('cholesky'),
             AllowedOpInfoEntry('chunk'),
             AllowedOpInfoEntry('clone'),
             AllowedOpInfoEntry('contiguous'),
