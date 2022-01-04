@@ -26,10 +26,10 @@ struct WhileCondFn {
                                        xla::XlaBuilder* builder) const {
     xla::XlaOp row_idx = values[0];
     xla::XlaOp row_in_bounds =
-        xla::Lt(row_idx, xla::ConstantR0<xla::int32>(builder, num_boxes));
+        xla::Lt(row_idx, xla::ConstantR0<int32_t>(builder, num_boxes));
     xla::XlaOp num_outputs_so_far = values[1];
     xla::XlaOp results_not_full = xla::Lt(
-        num_outputs_so_far, xla::ConstantR0<xla::int32>(builder, output_size));
+        num_outputs_so_far, xla::ConstantR0<int32_t>(builder, output_size));
     return xla::And(row_in_bounds, results_not_full);
   }
 
@@ -158,9 +158,9 @@ NmsResult BuildNms(xla::XlaOp boxes, xla::XlaOp scores,
   XLA_CHECK_EQ(boxes_shape.dimensions(1), 4);
   XLA_CHECK_EQ(scores_shape.rank(), 1);
   XLA_CHECK_EQ(scores_shape.dimensions(0), num_boxes);
-  XLA_CHECK_LT(num_boxes, std::numeric_limits<xla::int32>::max());
+  XLA_CHECK_LT(num_boxes, std::numeric_limits<int32_t>::max());
   XLA_CHECK_GE(output_size, 0);
-  XLA_CHECK_LT(output_size, std::numeric_limits<xla::int32>::max());
+  XLA_CHECK_LT(output_size, std::numeric_limits<int32_t>::max());
 
   xla::XlaBuilder* builder = boxes.builder();
   // Choose a more convenient layout.
@@ -284,7 +284,7 @@ NmsResult BuildNms(xla::XlaOp boxes, xla::XlaOp scores,
       xla::CreateScalarAddComputation(xla::PrimitiveType::S32, builder),
       /*dimensions_to_reduce=*/{0});
   xla::XlaOp num_valid = xla::Min(
-      num_valid_total, xla::ConstantR0<xla::int32>(builder, output_size));
+      num_valid_total, xla::ConstantR0<int32_t>(builder, output_size));
 
   // Re-index into the original scores input tensor, using a Gather.
   // Boxes were suppressed in the sorted domain.

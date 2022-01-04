@@ -25,7 +25,7 @@ xla::XlaOp CreateRawMask(xla::XlaOp op, xla::PrimitiveType type,
   xla::XlaOp mask = XlaHelpers::ScalarValue(mask_value, type, op.builder());
   if (xla::primitive_util::IsSignedIntegralType(type)) {
     // Sign extend the truncation mask.
-    xla::XlaOp shift = XlaHelpers::ScalarValue<xla::int32>(
+    xla::XlaOp shift = XlaHelpers::ScalarValue<int32_t>(
         (size - narrow_size) * CHAR_BIT, op.builder());
     mask = (mask << shift) >> shift;
   }
