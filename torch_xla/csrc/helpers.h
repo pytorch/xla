@@ -60,7 +60,7 @@ class XlaHelpers {
       case xla::PrimitiveType::U32:
         return xla::LiteralUtil::CreateR0<xla::uint32>(scalar_value);
       case xla::PrimitiveType::S16:
-        return xla::LiteralUtil::CreateR0<xla::int16>(scalar_value);
+        return xla::LiteralUtil::CreateR0<int16_t>(scalar_value);
       case xla::PrimitiveType::U16:
         return xla::LiteralUtil::CreateR0<xla::uint16>(scalar_value);
       case xla::PrimitiveType::S8:
