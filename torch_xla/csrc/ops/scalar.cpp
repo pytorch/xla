@@ -39,7 +39,7 @@ XlaOpVector Scalar::Lower(LoweringContext* loctx) const {
       literal.Set<bool>({}, static_cast<bool>(value_.toInt()));
       break;
     case xla::PrimitiveType::S8:
-      literal.Set<xla::int8>({}, static_cast<xla::int8>(value_.toChar()));
+      literal.Set<int8_t>({}, static_cast<int8_t>(value_.toChar()));
       break;
     case xla::PrimitiveType::U8:
       literal.Set<uint8_t>({}, static_cast<uint8_t>(value_.toByte()));
