@@ -199,8 +199,8 @@ XlaHelpers::MinMax XlaHelpers::MinMaxValues(xla::PrimitiveType type) {
       return {static_cast<int64_t>(std::numeric_limits<int64_t>::lowest()),
               static_cast<int64_t>(std::numeric_limits<int64_t>::max())};
     case xla::PrimitiveType::U64:
-      return {static_cast<int64_t>(std::numeric_limits<xla::uint64>::lowest()),
-              static_cast<int64_t>(std::numeric_limits<xla::uint64>::max())};
+      return {static_cast<int64_t>(std::numeric_limits<uint64_t>::lowest()),
+              static_cast<int64_t>(std::numeric_limits<uint64_t>::max())};
     case xla::PrimitiveType::F16:
       return {static_cast<float>(std::numeric_limits<xla::half>::lowest()),
               static_cast<float>(std::numeric_limits<xla::half>::max())};

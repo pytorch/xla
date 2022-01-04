@@ -124,9 +124,9 @@ class XLATensor {
 
   static ir::Value GetRngSeed(const Device& device);
 
-  static void SetRngSeed(const Device& device, xla::uint64 seed);
+  static void SetRngSeed(const Device& device, uint64_t seed);
 
-  static xla::uint64 GetRunningSeed(const Device& device);
+  static uint64_t GetRunningSeed(const Device& device);
 
   // Dispatches a comparison operator, setting the logical type of the result
   // appropriately.
