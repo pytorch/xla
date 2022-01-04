@@ -316,6 +316,8 @@ class DistributedExecutor(object):
         'v3-512': '8,8,1',
         'v3-1024': '8,16,1',
         'v3-2048': '16,16,1',
+        # v4
+        'v4-32': '1,1,4',
     }
 
     env_vars[xenv.TPU_HOST_BOUNDS] = accelerator_type_to_host_bounds[
@@ -339,11 +341,12 @@ class DistributedExecutor(object):
         xenv.ORDINAL:
             worker_idx,
         xenv.TPU_NUM_DEVICES:
-            8,
+            4,
         'XLA_EMIT_STEPLOG':
             1,
     }
     if self.tpuvm_mode:
+      print('Update num device to 4')
       env_vars.update(self._tpuvm_env_vars_cmd(worker_idx))
 
     # Only for master
