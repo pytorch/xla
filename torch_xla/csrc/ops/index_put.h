@@ -9,7 +9,7 @@ namespace ops {
 class IndexPut : public Node {
  public:
   IndexPut(const ir::Value& base, const ir::Value& indices,
-           xla::int64_t start_dim, const ir::Value& values, bool accumulate);
+           int64_t start_dim, const ir::Value& values, bool accumulate);
 
   std::string ToString() const override;
 
@@ -17,13 +17,13 @@ class IndexPut : public Node {
 
   XlaOpVector Lower(LoweringContext* loctx) const override;
 
-  xla::int64_t start_dim() const { return start_dim_; }
+  int64_t start_dim() const { return start_dim_; }
 
   bool accumulate() const { return accumulate_; }
 
  private:
   // The dimension number at which indexing starts.
-  xla::int64_t start_dim_;
+  int64_t start_dim_;
   // Whether to accumulate instead of set.
   bool accumulate_;
 };

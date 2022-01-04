@@ -9,7 +9,7 @@ namespace ir {
 namespace ops {
 namespace {
 
-xla::Shape NodeOutputShape(const Value& input, xla::int64_t k, xla::int64_t dim,
+xla::Shape NodeOutputShape(const Value& input, int64_t k, int64_t dim,
                            bool keepdim) {
   auto lower_for_shape_fn =
       [&](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
@@ -21,7 +21,7 @@ xla::Shape NodeOutputShape(const Value& input, xla::int64_t k, xla::int64_t dim,
 
 }  // namespace
 
-KthValue::KthValue(const Value& input, xla::int64_t k, xla::int64_t dim,
+KthValue::KthValue(const Value& input, int64_t k, int64_t dim,
                    bool keepdim)
     : Node(ir::OpKind(at::aten::kthvalue), {input},
            [&]() { return NodeOutputShape(input, k, dim, keepdim); },

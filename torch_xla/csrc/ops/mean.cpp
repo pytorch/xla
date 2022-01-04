@@ -14,7 +14,7 @@ namespace ops {
 namespace {
 
 xla::XlaOp LowerMean(xla::XlaOp input,
-                     const std::vector<xla::int64_t>& dimensions,
+                     const std::vector<int64_t>& dimensions,
                      bool keep_reduced_dimensions,
                      const c10::optional<at::ScalarType>& dtype) {
   xla::XlaOp result = BuildMean(input, dimensions, keep_reduced_dimensions);
@@ -24,7 +24,7 @@ xla::XlaOp LowerMean(xla::XlaOp input,
 }
 
 xla::Shape NodeOutputShape(const Value& input,
-                           const std::vector<xla::int64_t>& dimensions,
+                           const std::vector<int64_t>& dimensions,
                            bool keep_reduced_dimensions,
                            const c10::optional<at::ScalarType>& dtype) {
   auto lower_for_shape_fn =
@@ -36,7 +36,7 @@ xla::Shape NodeOutputShape(const Value& input,
 
 }  // namespace
 
-Mean::Mean(const Value& input, std::vector<xla::int64_t> dimensions,
+Mean::Mean(const Value& input, std::vector<int64_t> dimensions,
            bool keep_reduced_dimensions, c10::optional<at::ScalarType> dtype)
     : Node(ir::OpKind(at::aten::mean), {input},
            [&]() {

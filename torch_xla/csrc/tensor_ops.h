@@ -11,9 +11,9 @@ namespace torch_xla {
 namespace tensor_ops {
 
 XLATensor Cross(const XLATensor& input, const XLATensor& other,
-                c10::optional<xla::int64_t> dim);
+                c10::optional<int64_t> dim);
 
-XLATensor MakeMatrixWithDiagonal(const XLATensor& input, xla::int64_t diagonal);
+XLATensor MakeMatrixWithDiagonal(const XLATensor& input, int64_t diagonal);
 
 XLATensor SmoothL1Loss(const XLATensor& input, const XLATensor& target,
                        ReductionMode reduction, double beta);
@@ -29,12 +29,12 @@ XLATensor SoftplusBackward(const XLATensor& grad_output, const XLATensor& input,
                            const at::Scalar& beta, const at::Scalar& threshold,
                            const XLATensor& output);
 
-XLATensor Select(const XLATensor& input, xla::int64_t dim, xla::int64_t index);
+XLATensor Select(const XLATensor& input, int64_t dim, int64_t index);
 
 XLATensor EmbeddingDenseBackward(const XLATensor& grad_output,
                                  const XLATensor& indices,
-                                 xla::int64_t num_weights,
-                                 xla::int64_t padding_idx,
+                                 int64_t num_weights,
+                                 int64_t padding_idx,
                                  bool scale_grad_by_freq);
 
 }  // namespace tensor_ops

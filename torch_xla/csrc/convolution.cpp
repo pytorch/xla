@@ -101,20 +101,20 @@ namespace {
 
 // Input needs to be NCHW format.
 xla::XlaOp PadInputFromOutputSize(xla::XlaOp input,
-                                  absl::Span<const xla::int64_t> stride,
-                                  absl::Span<const xla::int64_t> output_padding,
+                                  absl::Span<const int64_t> stride,
+                                  absl::Span<const int64_t> output_padding,
                                   bool unpad = false) {
   const xla::Shape& input_shape = XlaHelpers::ShapeOfXlaOp(input);
-  xla::int64_t num_spatial = input_shape.rank() - 2;
+  int64_t num_spatial = input_shape.rank() - 2;
   // No padding for batch dimension and features dimension.
-  std::vector<xla::int64_t> expected_input_sizes{input_shape.dimensions(0),
+  std::vector<int64_t> expected_input_sizes{input_shape.dimensions(0),
                                                  input_shape.dimensions(1)};
-  for (xla::int64_t spatial_dim = 0; spatial_dim < num_spatial; ++spatial_dim) {
-    xla::int64_t input_size = input_shape.dimensions(2 + spatial_dim);
+  for (int64_t spatial_dim = 0; spatial_dim < num_spatial; ++spatial_dim) {
+    int64_t input_size = input_shape.dimensions(2 + spatial_dim);
     // Input_size needs to increase by pad_to_input to generate the output
     // that includes output_padding. The formula is derived from the output size
     // calculation in the BuildTransposedConvolution.
-    xla::int64_t pad_to_input =
+    int64_t pad_to_input =
         ((input_size - 1) * stride[spatial_dim] + output_padding[spatial_dim]) /
             stride[spatial_dim] +
         1 - input_size;
@@ -127,9 +127,9 @@ xla::XlaOp PadInputFromOutputSize(xla::XlaOp input,
 // Create a TF convolution metadata structure out of PyTorch convolution
 // attributes.
 tensorflow::ConvOpAttrs MakeConvOpAttrs(
-    absl::Span<const xla::int64_t> spatial_stride,
-    absl::Span<const xla::int64_t> spatial_padding,
-    absl::Span<const xla::int64_t> spatial_dilation, bool depthwise) {
+    absl::Span<const int64_t> spatial_stride,
+    absl::Span<const int64_t> spatial_padding,
+    absl::Span<const int64_t> spatial_dilation, bool depthwise) {
   int num_spatial_dims = spatial_stride.size();
   XLA_CHECK_EQ(spatial_padding.size(), num_spatial_dims);
   XLA_CHECK_EQ(spatial_dilation.size(), num_spatial_dims);
@@ -159,15 +159,15 @@ tensorflow::ConvOpAttrs MakeConvOpAttrs(
 
 // Transpose filter shape to have [channel, batch] as last two dimensions.
 // 4D case: (N, C, H, W) -> (H, W, C, N)
-const std::vector<xla::int64_t>& FilterTransposePermutation(
-    const xla::int64_t k) {
+const std::vector<int64_t>& FilterTransposePermutation(
+    const int64_t k) {
   if (k == 4) {
-    static std::vector<xla::int64_t>* permutation =
-        new std::vector<xla::int64_t>({2, 3, 1, 0});
+    static std::vector<int64_t>* permutation =
+        new std::vector<int64_t>({2, 3, 1, 0});
     return *permutation;
   } else if (k == 5) {
-    static std::vector<xla::int64_t>* permutation =
-        new std::vector<xla::int64_t>({2, 3, 4, 1, 0});
+    static std::vector<int64_t>* permutation =
+        new std::vector<int64_t>({2, 3, 4, 1, 0});
     return *permutation;
   } else {
     XLA_ERROR() << "Invalid rank: " << k;
@@ -177,15 +177,15 @@ const std::vector<xla::int64_t>& FilterTransposePermutation(
 // Bias broadcast based on output shape produces:
 // (N, H, W) + (C,) = (N, H, W, C)
 // This permutation does (N, H, W, C) -> (N, C, H, W)
-const std::vector<xla::int64_t>& BiasTransposePermutation(
-    const xla::int64_t k) {
+const std::vector<int64_t>& BiasTransposePermutation(
+    const int64_t k) {
   if (k == 4) {
-    static std::vector<xla::int64_t>* permutation =
-        new std::vector<xla::int64_t>({0, 3, 1, 2});
+    static std::vector<int64_t>* permutation =
+        new std::vector<int64_t>({0, 3, 1, 2});
     return *permutation;
   } else if (k == 5) {
-    static std::vector<xla::int64_t>* permutation =
-        new std::vector<xla::int64_t>({0, 4, 1, 2, 3});
+    static std::vector<int64_t>* permutation =
+        new std::vector<int64_t>({0, 4, 1, 2, 3});
     return *permutation;
   } else {
     XLA_ERROR() << "Invalid rank: " << k;
@@ -193,23 +193,23 @@ const std::vector<xla::int64_t>& BiasTransposePermutation(
 }
 
 // Reduce bias from (N, C, H, W) to (C,)
-const std::vector<xla::int64_t>& BiasReduceDimensions(const xla::int64_t k) {
+const std::vector<int64_t>& BiasReduceDimensions(const int64_t k) {
   if (k == 4) {
-    static std::vector<xla::int64_t>* reduce_dim =
-        new std::vector<xla::int64_t>({0, 2, 3});
+    static std::vector<int64_t>* reduce_dim =
+        new std::vector<int64_t>({0, 2, 3});
     return *reduce_dim;
   } else if (k == 5) {
-    static std::vector<xla::int64_t>* reduce_dim =
-        new std::vector<xla::int64_t>({0, 2, 3, 4});
+    static std::vector<int64_t>* reduce_dim =
+        new std::vector<int64_t>({0, 2, 3, 4});
     return *reduce_dim;
   } else {
     XLA_ERROR() << "Invalid rank: " << k;
   }
 }
 
-std::vector<std::pair<xla::int64_t, xla::int64_t>> MakePadding(
-    absl::Span<const xla::int64_t> padding) {
-  std::vector<std::pair<xla::int64_t, xla::int64_t>> dims_padding;
+std::vector<std::pair<int64_t, int64_t>> MakePadding(
+    absl::Span<const int64_t> padding) {
+  std::vector<std::pair<int64_t, int64_t>> dims_padding;
   for (const auto dim_padding : padding) {
     dims_padding.emplace_back(dim_padding, dim_padding);
   }
@@ -219,9 +219,9 @@ std::vector<std::pair<xla::int64_t, xla::int64_t>> MakePadding(
 // Computes the input gradient for a convolution.
 xla::XlaOp BuildConvBackwardInput(
     xla::XlaOp grad_output, xla::XlaOp kernel, const xla::Shape& input_shape,
-    absl::Span<const xla::int64_t> spatial_stride,
-    absl::Span<const xla::int64_t> spatial_padding,
-    absl::Span<const xla::int64_t> spatial_dilation, xla::int64_t groups) {
+    absl::Span<const int64_t> spatial_stride,
+    absl::Span<const int64_t> spatial_padding,
+    absl::Span<const int64_t> spatial_dilation, int64_t groups) {
   tensorflow::ConvOpAttrs conv_op_attrs =
       MakeConvOpAttrs(spatial_stride, spatial_padding, spatial_dilation, false);
   xla::XlaOp kernel_transposed =
@@ -236,9 +236,9 @@ xla::XlaOp BuildConvBackwardInput(
 // Computes the kernel gradient for a convolution.
 xla::XlaOp BuildConvBackwardWeight(
     xla::XlaOp grad_output, xla::XlaOp input, const xla::Shape& kernel_shape,
-    absl::Span<const xla::int64_t> spatial_stride,
-    absl::Span<const xla::int64_t> spatial_padding,
-    absl::Span<const xla::int64_t> spatial_dilation, xla::int64_t groups) {
+    absl::Span<const int64_t> spatial_stride,
+    absl::Span<const int64_t> spatial_padding,
+    absl::Span<const int64_t> spatial_dilation, int64_t groups) {
   tensorflow::ConvOpAttrs conv_op_attrs =
       MakeConvOpAttrs(spatial_stride, spatial_padding, spatial_dilation, false);
   auto transpose_permutation = FilterTransposePermutation(kernel_shape.rank());
@@ -271,18 +271,18 @@ xla::XlaOp BuildGradBias(xla::XlaOp grad_output) {
 }
 
 xla::XlaOp BuildTransposedConvolution(
-    xla::XlaOp input, xla::XlaOp kernel, absl::Span<const xla::int64_t> stride,
-    absl::Span<const xla::int64_t> padding,
-    absl::Span<const xla::int64_t> dilation,
-    absl::Span<const xla::int64_t> output_padding, xla::int64_t groups) {
+    xla::XlaOp input, xla::XlaOp kernel, absl::Span<const int64_t> stride,
+    absl::Span<const int64_t> padding,
+    absl::Span<const int64_t> dilation,
+    absl::Span<const int64_t> output_padding, int64_t groups) {
   const xla::Shape& input_shape = XlaHelpers::ShapeOfXlaOp(input);
   const xla::Shape& kernel_shape = XlaHelpers::ShapeOfXlaOp(kernel);
-  xla::int64_t num_spatial = input_shape.rank() - 2;
+  int64_t num_spatial = input_shape.rank() - 2;
   // We only support 2D or 3D convolution.
   XLA_CHECK(num_spatial == 2 || num_spatial == 3) << num_spatial;
   // Fold group into output_size feature dimension
-  xla::int64_t features_size = kernel_shape.dimensions(1) * groups;
-  std::vector<xla::int64_t> output_size{input_shape.dimensions(0),
+  int64_t features_size = kernel_shape.dimensions(1) * groups;
+  std::vector<int64_t> output_size{input_shape.dimensions(0),
                                         features_size};
   for (int spatial_dim = 0; spatial_dim < num_spatial; ++spatial_dim) {
     output_size.push_back(
@@ -302,10 +302,10 @@ xla::XlaOp BuildTransposedConvolution(
 
 ConvGrads BuildTransposedConvolutionBackward(
     xla::XlaOp grad_output, xla::XlaOp input, xla::XlaOp kernel,
-    absl::Span<const xla::int64_t> stride,
-    absl::Span<const xla::int64_t> padding,
-    absl::Span<const xla::int64_t> dilation,
-    absl::Span<const xla::int64_t> output_padding, xla::int64_t groups) {
+    absl::Span<const int64_t> stride,
+    absl::Span<const int64_t> padding,
+    absl::Span<const int64_t> dilation,
+    absl::Span<const int64_t> output_padding, int64_t groups) {
   // grad_output includes output_padding, hence we need to pad the input and
   // unpad the grad_input.
   xla::XlaOp grad_input =
@@ -325,10 +325,10 @@ ConvGrads BuildTransposedConvolutionBackward(
 }  // namespace
 
 xla::XlaOp BuildConvolutionOverrideable(
-    xla::XlaOp input, xla::XlaOp kernel, absl::Span<const xla::int64_t> stride,
-    absl::Span<const xla::int64_t> padding,
-    absl::Span<const xla::int64_t> dilation, bool transposed,
-    absl::Span<const xla::int64_t> output_padding, xla::int64_t groups) {
+    xla::XlaOp input, xla::XlaOp kernel, absl::Span<const int64_t> stride,
+    absl::Span<const int64_t> padding,
+    absl::Span<const int64_t> dilation, bool transposed,
+    absl::Span<const int64_t> output_padding, int64_t groups) {
   if (transposed) {
     return BuildTransposedConvolution(input, kernel, stride, padding, dilation,
                                       output_padding, groups);
@@ -349,10 +349,10 @@ xla::XlaOp BuildConvolutionOverrideable(
 
 xla::XlaOp BuildConvolutionOverrideableBias(
     xla::XlaOp input, xla::XlaOp kernel, xla::XlaOp bias,
-    absl::Span<const xla::int64_t> stride,
-    absl::Span<const xla::int64_t> padding,
-    absl::Span<const xla::int64_t> dilation, bool transposed,
-    absl::Span<const xla::int64_t> output_padding, xla::int64_t groups) {
+    absl::Span<const int64_t> stride,
+    absl::Span<const int64_t> padding,
+    absl::Span<const int64_t> dilation, bool transposed,
+    absl::Span<const int64_t> output_padding, int64_t groups) {
   xla::XlaOp conv =
       BuildConvolutionOverrideable(input, kernel, stride, padding, dilation,
                                    transposed, output_padding, groups);
@@ -368,10 +368,10 @@ xla::XlaOp BuildConvolutionOverrideableBias(
 
 ConvGrads BuildConvolutionBackwardOverrideable(
     xla::XlaOp grad_output, xla::XlaOp input, xla::XlaOp kernel,
-    absl::Span<const xla::int64_t> stride,
-    absl::Span<const xla::int64_t> padding,
-    absl::Span<const xla::int64_t> dilation, bool transposed,
-    absl::Span<const xla::int64_t> output_padding, xla::int64_t groups) {
+    absl::Span<const int64_t> stride,
+    absl::Span<const int64_t> padding,
+    absl::Span<const int64_t> dilation, bool transposed,
+    absl::Span<const int64_t> output_padding, int64_t groups) {
   if (transposed) {
     return BuildTransposedConvolutionBackward(grad_output, input, kernel,
                                               stride, padding, dilation,

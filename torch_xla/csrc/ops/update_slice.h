@@ -10,7 +10,7 @@ namespace ops {
 class UpdateSlice : public Node {
  public:
   UpdateSlice(const Value& input, const Value& source,
-              absl::Span<const xla::int64_t> base_indices);
+              absl::Span<const int64_t> base_indices);
 
   NodePtr Clone(OpList operands) const override;
 
@@ -18,12 +18,12 @@ class UpdateSlice : public Node {
 
   std::string ToString() const override;
 
-  const std::vector<xla::int64_t>& base_indices() const {
+  const std::vector<int64_t>& base_indices() const {
     return base_indices_;
   }
 
  private:
-  std::vector<xla::int64_t> base_indices_;
+  std::vector<int64_t> base_indices_;
 };
 
 }  // namespace ops

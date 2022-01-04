@@ -15,7 +15,7 @@ namespace ops {
 namespace {
 
 xla::XlaOp LowerProd(xla::XlaOp input,
-                     const std::vector<xla::int64_t>& dimensions,
+                     const std::vector<int64_t>& dimensions,
                      bool keep_reduced_dimensions,
                      c10::optional<at::ScalarType> dtype) {
   xla::XlaOp casted_input;
@@ -30,7 +30,7 @@ xla::XlaOp LowerProd(xla::XlaOp input,
 }
 
 xla::Shape NodeOutputShape(const Value& input,
-                           std::vector<xla::int64_t>& dimensions,
+                           std::vector<int64_t>& dimensions,
                            bool keep_reduced_dimensions,
                            c10::optional<at::ScalarType> dtype) {
   auto lower_for_shape_fn =
@@ -42,7 +42,7 @@ xla::Shape NodeOutputShape(const Value& input,
 
 }  // namespace
 
-Prod::Prod(const Value& input, std::vector<xla::int64_t> dimensions,
+Prod::Prod(const Value& input, std::vector<int64_t> dimensions,
            bool keep_reduced_dimensions, c10::optional<at::ScalarType> dtype)
     : Node(ir::OpKind(at::aten::prod), {input},
            [&]() {

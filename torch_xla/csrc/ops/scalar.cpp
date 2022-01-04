@@ -57,7 +57,7 @@ XlaOpVector Scalar::Lower(LoweringContext* loctx) const {
       literal.Set<xla::uint32>({}, static_cast<xla::uint32>(value_.toInt()));
       break;
     case xla::PrimitiveType::S64:
-      literal.Set<xla::int64_t>({}, static_cast<xla::int64_t>(value_.toLong()));
+      literal.Set<int64_t>({}, static_cast<int64_t>(value_.toLong()));
       break;
     case xla::PrimitiveType::U64:
       literal.Set<xla::uint64>({}, static_cast<xla::uint64>(value_.toLong()));

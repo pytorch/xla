@@ -18,8 +18,8 @@ namespace {
 const xla::PrimitiveType kIndicesType = xla::PrimitiveType::U32;
 
 struct PoolingOpAttributes {
-  std::vector<xla::int64_t> kernel_size;
-  std::vector<xla::int64_t> stride;
+  std::vector<int64_t> kernel_size;
+  std::vector<int64_t> stride;
 };
 
 struct PoolSliceIndices {
@@ -46,25 +46,25 @@ xla::XlaComputation CreateGeComputation(xla::PrimitiveType type) {
   return ConsumeValue(reduction_builder.Build());
 }
 
-xla::TensorFormat MakeNCHWFormat(xla::int64_t spatial_dim_count) {
+xla::TensorFormat MakeNCHWFormat(int64_t spatial_dim_count) {
   return {/*batch_dimension=*/0,
           /*feature_dimension=*/1,
           /*spatial_dimensions=*/
-          xla::util::Iota<xla::int64_t>(spatial_dim_count, 2)};
+          xla::util::Iota<int64_t>(spatial_dim_count, 2)};
 }
 
 // Construct the pooling attributes for the given kernel size, stride and
 // padding.
 PoolingOpAttributes MakePoolingOpAttributes(
-    absl::Span<const xla::int64_t> kernel_size_attr,
-    absl::Span<const xla::int64_t> stride_attr) {
+    absl::Span<const int64_t> kernel_size_attr,
+    absl::Span<const int64_t> stride_attr) {
   // Create a NCHW kernel size with 1 for batch size and feature.
-  std::vector<xla::int64_t> kernel_size(2, 1);
+  std::vector<int64_t> kernel_size(2, 1);
   kernel_size.insert(kernel_size.end(), kernel_size_attr.begin(),
                      kernel_size_attr.end());
   // Create a NCHW stride size with 1 for batch size and feature. Same as kernel
   // size if not specified.
-  std::vector<xla::int64_t> stride;
+  std::vector<int64_t> stride;
   if (stride_attr.empty()) {
     stride = kernel_size;
   } else {
@@ -76,12 +76,12 @@ PoolingOpAttributes MakePoolingOpAttributes(
 
 // Compute the  pool kernel size required for the specified output_size
 // from the given input_size, when the stride is the same as the kernel size.
-std::vector<xla::int64_t> AdaptivePoolKernelSize(
-    absl::Span<const xla::int64_t> input_size,
-    absl::Span<const xla::int64_t> output_size, int pool_dim) {
+std::vector<int64_t> AdaptivePoolKernelSize(
+    absl::Span<const int64_t> input_size,
+    absl::Span<const int64_t> output_size, int pool_dim) {
   // Create a NCHW kernel size with 1 for batch size and feature.
-  std::vector<xla::int64_t> kernel_size(2, 1);
-  xla::int64_t spatial_dim_off = input_size.size() - pool_dim;
+  std::vector<int64_t> kernel_size(2, 1);
+  int64_t spatial_dim_off = input_size.size() - pool_dim;
   for (int spatial_dim = 0; spatial_dim < pool_dim; ++spatial_dim) {
     XLA_CHECK_EQ(
         input_size[spatial_dim_off + spatial_dim] % output_size[spatial_dim], 0)
@@ -96,14 +96,14 @@ std::vector<xla::int64_t> AdaptivePoolKernelSize(
 
 struct BatchInput {
   xla::XlaOp batch_input;
-  xla::int64_t original_rank;
+  int64_t original_rank;
 };
 
 // Adds a batch dimension of size 1 if the input tensor doesn't have a batch
 // dimension.
-BatchInput CreateBatchInput(xla::XlaOp input, xla::int64_t spatial_dim_count) {
+BatchInput CreateBatchInput(xla::XlaOp input, int64_t spatial_dim_count) {
   const xla::Shape& input_shape = XlaHelpers::ShapeOfXlaOp(input);
-  xla::int64_t rank = input_shape.rank();
+  int64_t rank = input_shape.rank();
   XLA_CHECK(rank == spatial_dim_count + 1 || rank == spatial_dim_count + 2)
       << "Input must be a " << spatial_dim_count + 1 << "-D or "
       << spatial_dim_count + 2 << "-D tensor";
@@ -113,8 +113,8 @@ BatchInput CreateBatchInput(xla::XlaOp input, xla::int64_t spatial_dim_count) {
   return {input, rank};
 }
 
-xla::XlaOp RemoveTrivialBatch(xla::XlaOp batch, xla::int64_t original_rank,
-                              xla::int64_t spatial_dim_count) {
+xla::XlaOp RemoveTrivialBatch(xla::XlaOp batch, int64_t original_rank,
+                              int64_t spatial_dim_count) {
   if (original_rank == spatial_dim_count + 1) {
     return SqueezeTrivialDimension(batch, 0);
   }
@@ -124,20 +124,20 @@ xla::XlaOp RemoveTrivialBatch(xla::XlaOp batch, xla::int64_t original_rank,
 // Creates low and high padding specification for the given padding (which is
 // symmetric) and ceil mode. Additional high padding could be required when ceil
 // mode is set.
-std::vector<std::pair<xla::int64_t, xla::int64_t>> CeilModePadding(
-    absl::Span<const xla::int64_t> padding, const xla::Shape& input_shape,
-    absl::Span<const xla::int64_t> kernel_size,
-    absl::Span<const xla::int64_t> stride, bool ceil_mode) {
-  std::vector<std::pair<xla::int64_t, xla::int64_t>> ceil_mode_padding;
+std::vector<std::pair<int64_t, int64_t>> CeilModePadding(
+    absl::Span<const int64_t> padding, const xla::Shape& input_shape,
+    absl::Span<const int64_t> kernel_size,
+    absl::Span<const int64_t> stride, bool ceil_mode) {
+  std::vector<std::pair<int64_t, int64_t>> ceil_mode_padding;
   for (int i = 0; i < padding.size(); ++i) {
-    xla::int64_t left_padding = padding[i];
-    xla::int64_t input_size = input_shape.dimensions(2 + i);
-    xla::int64_t output_size_rem =
+    int64_t left_padding = padding[i];
+    int64_t input_size = input_shape.dimensions(2 + i);
+    int64_t output_size_rem =
         (input_size + 2 * left_padding - kernel_size[i]) % stride[i];
-    xla::int64_t right_padding = left_padding;
+    int64_t right_padding = left_padding;
     if (ceil_mode && output_size_rem != 0) {
-      xla::int64_t extra_padding = stride[i] - output_size_rem;
-      xla::int64_t new_output_size =
+      int64_t extra_padding = stride[i] - output_size_rem;
+      int64_t new_output_size =
           (input_size + left_padding + right_padding + extra_padding -
            kernel_size[i] + stride[i] - 1) /
               stride[i] +
@@ -154,9 +154,9 @@ std::vector<std::pair<xla::int64_t, xla::int64_t>> CeilModePadding(
 
 // Creates an XLA padding configuration from a padding attribute value.
 xla::PaddingConfig MakeXlaPaddingConfig(
-    absl::Span<const xla::int64_t> padding, const xla::Shape& input_shape,
-    absl::Span<const xla::int64_t> kernel_size,
-    absl::Span<const xla::int64_t> stride, bool ceil_mode) {
+    absl::Span<const int64_t> padding, const xla::Shape& input_shape,
+    absl::Span<const int64_t> kernel_size,
+    absl::Span<const int64_t> stride, bool ceil_mode) {
   xla::PaddingConfig padding_config;
   for (int i = 0; i < 2; ++i) {
     padding_config.add_dimensions();
@@ -175,8 +175,8 @@ xla::PaddingConfig MakeXlaPaddingConfig(
 
 xla::XlaOp CreatePoolIndicesIota(const xla::Shape& input_shape,
                                  xla::XlaBuilder* builder) {
-  xla::int64_t spatial_input_elements = 1;
-  for (xla::int64_t i = 2; i < input_shape.rank(); ++i) {
+  int64_t spatial_input_elements = 1;
+  for (int64_t i = 2; i < input_shape.rank(); ++i) {
     spatial_input_elements *= input_shape.dimensions(i);
   }
   xla::XlaOp iota = xla::Iota(
@@ -219,10 +219,10 @@ xla::XlaOp ComputeNoOverlapMaxPoolIndices(
 }
 
 PoolSliceIndices ComputeSliceIndices(
-    xla::XlaOp linear_index, absl::Span<const xla::int64_t> dimensions,
-    absl::Span<const xla::int64_t> window_strides) {
+    xla::XlaOp linear_index, absl::Span<const int64_t> dimensions,
+    absl::Span<const int64_t> window_strides) {
   xla::PrimitiveType scalar_type = XlaHelpers::TypeOfXlaOp(linear_index);
-  std::vector<xla::int64_t> strides = ComputeArrayStrides(dimensions);
+  std::vector<int64_t> strides = ComputeArrayStrides(dimensions);
   PoolSliceIndices indices;
   xla::XlaOp current_index = linear_index;
   for (size_t i = 0; i < dimensions.size(); ++i) {
@@ -273,7 +273,7 @@ xla::XlaOp ComputeMaxPoolIndices(
                padding_config);
 
   const xla::Shape& pool_result_shape = XlaHelpers::ShapeOfXlaOp(pool_result);
-  xla::int64_t pool_elements = xla::ShapeUtil::ElementsIn(pool_result_shape);
+  int64_t pool_elements = xla::ShapeUtil::ElementsIn(pool_result_shape);
 
   InitValues initial_values;
   size_t counter_id =
@@ -304,7 +304,7 @@ xla::XlaOp ComputeMaxPoolIndices(
     xla::XlaOp iota_slice =
         xla::DynamicSlice(init[iota_id], slice_indices.input_indices,
                           pooling_op_attributes.kernel_size);
-    std::vector<xla::int64_t> result_slice_sizes(
+    std::vector<int64_t> result_slice_sizes(
         pooling_op_attributes.kernel_size.size(), 1);
     xla::XlaOp pool_result_slice = xla::DynamicSlice(
         init[pool_result_id], slice_indices.result_indices, result_slice_sizes);
@@ -348,10 +348,10 @@ xla::XlaOp ComputeMaxPoolIndices(
 
 }  // namespace
 
-bool IsSupportedAdaptivePool(absl::Span<const xla::int64_t> input_size,
-                             absl::Span<const xla::int64_t> output_size,
+bool IsSupportedAdaptivePool(absl::Span<const int64_t> input_size,
+                             absl::Span<const int64_t> output_size,
                              int pool_dim) {
-  xla::int64_t rank = input_size.size();
+  int64_t rank = input_size.size();
   XLA_CHECK_EQ(output_size.size(), pool_dim);
   for (int spatial_dim = 0; spatial_dim < pool_dim; ++spatial_dim) {
     if (input_size[rank - pool_dim + spatial_dim] % output_size[spatial_dim] !=
@@ -363,7 +363,7 @@ bool IsSupportedAdaptivePool(absl::Span<const xla::int64_t> input_size,
 }
 
 MaxPoolResult BuildAdaptiveMaxPoolNd(xla::XlaOp input,
-                                     absl::Span<const xla::int64_t> output_size,
+                                     absl::Span<const int64_t> output_size,
                                      int pool_dim) {
   BatchInput batch_input_info =
       CreateBatchInput(input, /*spatial_dim_count=*/pool_dim);
@@ -400,7 +400,7 @@ xla::XlaOp BuildAdaptiveMaxPoolNdBackward(xla::XlaOp out_backprop,
       XlaHelpers::ShapeOfXlaOp(batch_out_backprop_info.batch_input);
   XLA_CHECK_EQ(out_backprop_shape.rank(), pool_dim + 2)
       << "Invalid rank of gradient output";
-  std::vector<xla::int64_t> output_size(
+  std::vector<int64_t> output_size(
       out_backprop_shape.dimensions().begin() + 2,
       out_backprop_shape.dimensions().end());
   xla::XlaBuilder* builder = out_backprop.builder();
@@ -414,7 +414,7 @@ xla::XlaOp BuildAdaptiveMaxPoolNdBackward(xla::XlaOp out_backprop,
   const auto kernel_size =
       AdaptivePoolKernelSize(input_shape.dimensions(), output_size, pool_dim);
   // AdaptiveMaxPool won't have padding.
-  std::vector<std::pair<xla::int64_t, xla::int64_t>> window_padding(
+  std::vector<std::pair<int64_t, int64_t>> window_padding(
       2 + pool_dim, {0, 0});
   xla::XlaOp batch_result = xla::SelectAndScatterWithGeneralPadding(
       /*operand=*/batch_input_info.batch_input,
@@ -430,10 +430,10 @@ xla::XlaOp BuildAdaptiveMaxPoolNdBackward(xla::XlaOp out_backprop,
                             /*spatial_dim_count=*/pool_dim);
 }
 
-MaxPoolResult BuildMaxPoolNd(xla::XlaOp input, xla::int64_t spatial_dim_count,
-                             absl::Span<const xla::int64_t> kernel_size,
-                             absl::Span<const xla::int64_t> stride,
-                             absl::Span<const xla::int64_t> padding,
+MaxPoolResult BuildMaxPoolNd(xla::XlaOp input, int64_t spatial_dim_count,
+                             absl::Span<const int64_t> kernel_size,
+                             absl::Span<const int64_t> stride,
+                             absl::Span<const int64_t> padding,
                              bool ceil_mode) {
   xla::XlaBuilder* builder = input.builder();
   BatchInput batch_input_info = CreateBatchInput(input, spatial_dim_count);
@@ -463,10 +463,10 @@ MaxPoolResult BuildMaxPoolNd(xla::XlaOp input, xla::int64_t spatial_dim_count,
 }
 
 xla::XlaOp BuildMaxPoolNdBackward(xla::XlaOp out_backprop, xla::XlaOp input,
-                                  xla::int64_t spatial_dim_count,
-                                  absl::Span<const xla::int64_t> kernel_size,
-                                  absl::Span<const xla::int64_t> stride,
-                                  absl::Span<const xla::int64_t> padding,
+                                  int64_t spatial_dim_count,
+                                  absl::Span<const int64_t> kernel_size,
+                                  absl::Span<const int64_t> stride,
+                                  absl::Span<const int64_t> padding,
                                   bool ceil_mode) {
   xla::XlaBuilder* builder = out_backprop.builder();
   BatchInput batch_input_info = CreateBatchInput(input, spatial_dim_count);
@@ -479,7 +479,7 @@ xla::XlaOp BuildMaxPoolNdBackward(xla::XlaOp out_backprop, xla::XlaOp input,
   PoolingOpAttributes pooling_op_attributes =
       MakePoolingOpAttributes(/*kernel_size_attr=*/kernel_size,
                               /*stride_attr=*/stride);
-  std::vector<std::pair<xla::int64_t, xla::int64_t>> window_padding;
+  std::vector<std::pair<int64_t, int64_t>> window_padding;
   const auto ceil_mode_padding =
       CeilModePadding(padding, input_shape, kernel_size, stride, ceil_mode);
   window_padding.resize(2);
@@ -503,14 +503,14 @@ xla::XlaOp BuildMaxPoolNdBackward(xla::XlaOp out_backprop, xla::XlaOp input,
 
 xla::XlaOp BuildMaxUnpoolNd(const Device& device, xla::XlaOp input,
                             xla::XlaOp indices,
-                            absl::Span<const xla::int64_t> output_size) {
+                            absl::Span<const int64_t> output_size) {
   const xla::Shape& input_shape = XlaHelpers::ShapeOfXlaOp(input);
   XLA_CHECK_EQ(input_shape.rank(), 2 + output_size.size());
 
   xla::Shape zeros_shape = xla::ShapeUtil::MakeShape(
       input_shape.element_type(),
       {input_shape.dimensions(0), input_shape.dimensions(1),
-       xla::util::Multiply<xla::int64_t>(output_size)});
+       xla::util::Multiply<int64_t>(output_size)});
   xla::XlaOp zeros = xla::Zeros(input.builder(), zeros_shape);
   xla::XlaOp init_value =
       xla::Broadcast(xla::MinValue(input.builder(), input_shape.element_type()),
@@ -533,7 +533,7 @@ xla::XlaOp BuildMaxUnpoolNd(const Device& device, xla::XlaOp input,
   xla::XlaOp result =
       xla::Select(xla::Ne(scatter_result, init_value), scatter_result, zeros);
 
-  std::vector<xla::int64_t> result_sizes(
+  std::vector<int64_t> result_sizes(
       {input_shape.dimensions(0), input_shape.dimensions(1)});
   result_sizes.insert(result_sizes.end(), output_size.begin(),
                       output_size.end());
@@ -542,7 +542,7 @@ xla::XlaOp BuildMaxUnpoolNd(const Device& device, xla::XlaOp input,
 
 xla::XlaOp BuildMaxUnpoolNdBackward(
     xla::XlaOp grad_output, xla::XlaOp input, xla::XlaOp indices,
-    absl::Span<const xla::int64_t> output_size) {
+    absl::Span<const int64_t> output_size) {
   const xla::Shape& input_shape = XlaHelpers::ShapeOfXlaOp(input);
   xla::XlaOp flat_grad_output =
       XlaHelpers::FlattenDimRange(grad_output, 2, output_size.size());
@@ -555,10 +555,10 @@ xla::XlaOp BuildMaxUnpoolNdBackward(
   return XlaHelpers::DynamicReshapeAs(gather_result, input_shape);
 }
 
-xla::XlaOp BuildAvgPoolNd(xla::XlaOp input, xla::int64_t spatial_dim_count,
-                          absl::Span<const xla::int64_t> kernel_size,
-                          absl::Span<const xla::int64_t> stride,
-                          absl::Span<const xla::int64_t> padding,
+xla::XlaOp BuildAvgPoolNd(xla::XlaOp input, int64_t spatial_dim_count,
+                          absl::Span<const int64_t> kernel_size,
+                          absl::Span<const int64_t> stride,
+                          absl::Span<const int64_t> padding,
                           bool ceil_mode, bool count_include_pad) {
   PoolingOpAttributes pooling_op_attributes =
       MakePoolingOpAttributes(/*kernel_size_attr=*/kernel_size,
@@ -581,10 +581,10 @@ xla::XlaOp BuildAvgPoolNd(xla::XlaOp input, xla::int64_t spatial_dim_count,
 }
 
 xla::XlaOp BuildAvgPoolNdBackward(xla::XlaOp out_backprop, xla::XlaOp input,
-                                  xla::int64_t spatial_dim_count,
-                                  absl::Span<const xla::int64_t> kernel_size,
-                                  absl::Span<const xla::int64_t> stride,
-                                  absl::Span<const xla::int64_t> padding,
+                                  int64_t spatial_dim_count,
+                                  absl::Span<const int64_t> kernel_size,
+                                  absl::Span<const int64_t> stride,
+                                  absl::Span<const int64_t> padding,
                                   bool ceil_mode, bool count_include_pad) {
   PoolingOpAttributes pooling_op_attributes =
       MakePoolingOpAttributes(/*kernel_size_attr=*/kernel_size,
@@ -610,12 +610,12 @@ xla::XlaOp BuildAvgPoolNdBackward(xla::XlaOp out_backprop, xla::XlaOp input,
 }
 
 xla::XlaOp BuildAdaptiveAvgPool(xla::XlaOp input,
-                                absl::Span<const xla::int64_t> output_size,
+                                absl::Span<const int64_t> output_size,
                                 int pool_dim) {
   const xla::Shape& input_shape = XlaHelpers::ShapeOfXlaOp(input);
   const auto kernel_size =
       AdaptivePoolKernelSize(input_shape.dimensions(), output_size, pool_dim);
-  std::vector<std::pair<xla::int64_t, xla::int64_t>> no_padding(pool_dim);
+  std::vector<std::pair<int64_t, int64_t>> no_padding(pool_dim);
   BatchInput batch_input_info =
       CreateBatchInput(input, /*spatial_dim_count=*/pool_dim);
   xla::XlaOp batch_result = xla::AvgPool(
@@ -631,7 +631,7 @@ xla::XlaOp BuildAdaptiveAvgPool(xla::XlaOp input,
 }
 
 xla::XlaOp BuildAdaptiveAvgPool3d(xla::XlaOp input,
-                                  absl::Span<const xla::int64_t> output_size) {
+                                  absl::Span<const int64_t> output_size) {
   XLA_CHECK_EQ(output_size.size(), 3) << "Invalid output size rank";
   const xla::Shape& input_shape = XlaHelpers::ShapeOfXlaOp(input);
   XLA_CHECK(input_shape.rank() == 4 || input_shape.rank() == 5)
@@ -640,7 +640,7 @@ xla::XlaOp BuildAdaptiveAvgPool3d(xla::XlaOp input,
 }
 
 xla::XlaOp BuildAdaptiveAvgPool2d(xla::XlaOp input,
-                                  absl::Span<const xla::int64_t> output_size) {
+                                  absl::Span<const int64_t> output_size) {
   XLA_CHECK_EQ(output_size.size(), 2) << "Invalid output size rank";
   const xla::Shape& input_shape = XlaHelpers::ShapeOfXlaOp(input);
   XLA_CHECK(input_shape.rank() == 4 || input_shape.rank() == 3)
@@ -656,7 +656,7 @@ xla::XlaOp BuildAdaptiveAvgPoolBackward(xla::XlaOp out_backprop,
       XlaHelpers::ShapeOfXlaOp(batch_out_backprop_info.batch_input);
   XLA_CHECK_EQ(out_backprop_shape.rank(), pool_dim + 2)
       << "Invalid rank of gradient output";
-  std::vector<xla::int64_t> output_size(
+  std::vector<int64_t> output_size(
       out_backprop_shape.dimensions().begin() + 2,
       out_backprop_shape.dimensions().end());
   auto gradients_size = XlaHelpers::SizesOfXlaOp(input);
@@ -665,7 +665,7 @@ xla::XlaOp BuildAdaptiveAvgPoolBackward(xla::XlaOp out_backprop,
   }
   const auto kernel_size =
       AdaptivePoolKernelSize(gradients_size, output_size, pool_dim);
-  std::vector<std::pair<xla::int64_t, xla::int64_t>> no_padding(pool_dim);
+  std::vector<std::pair<int64_t, int64_t>> no_padding(pool_dim);
   xla::XlaOp batch_result = xla::AvgPoolGrad(
       /*out_backprop=*/batch_out_backprop_info.batch_input,
       /*gradients_size=*/gradients_size,

@@ -19,7 +19,7 @@ namespace torch_xla {
 namespace {
 
 struct WhileCondFn {
-  WhileCondFn(xla::int64_t num_boxes, xla::int64_t output_size)
+  WhileCondFn(int64_t num_boxes, int64_t output_size)
       : num_boxes(num_boxes), output_size(output_size) {}
 
   xla::StatusOr<xla::XlaOp> operator()(absl::Span<const xla::XlaOp> values,
@@ -33,8 +33,8 @@ struct WhileCondFn {
     return xla::And(row_in_bounds, results_not_full);
   }
 
-  xla::int64_t num_boxes;
-  xla::int64_t output_size;
+  int64_t num_boxes;
+  int64_t output_size;
 };
 
 // Process the boxes one-by-one using the iou matrix mask.
@@ -42,7 +42,7 @@ struct WhileCondFn {
 // to ensure that suppressed boxes cannot themselves suppress other
 // boxes.
 struct SuppressBodyFn {
-  explicit SuppressBodyFn(xla::int64_t num_boxes) : num_boxes(num_boxes) {}
+  explicit SuppressBodyFn(int64_t num_boxes) : num_boxes(num_boxes) {}
 
   xla::StatusOr<std::vector<xla::XlaOp>> operator()(
       absl::Span<const xla::XlaOp> values, xla::XlaBuilder* builder) const {
@@ -82,19 +82,19 @@ struct SuppressBodyFn {
                                    included_iou};
   }
 
-  xla::int64_t num_boxes;
+  int64_t num_boxes;
 };
 
 xla::XlaOp NmsGather(xla::XlaOp input,
-                     absl::Span<const xla::int64_t> input_sizes,
+                     absl::Span<const int64_t> input_sizes,
                      xla::XlaOp indices,
-                     absl::Span<const xla::int64_t> indices_sizes,
-                     xla::int64_t axis) {
+                     absl::Span<const int64_t> indices_sizes,
+                     int64_t axis) {
   const xla::Shape& input_shape = XlaHelpers::ShapeOfXlaOp(input);
-  xla::int64_t num_indices = xla::util::Multiply<xla::int64_t>(indices_sizes);
+  int64_t num_indices = xla::util::Multiply<int64_t>(indices_sizes);
   if (num_indices == 0) {
-    std::vector<xla::int64_t> output_sizes =
-        xla::util::ToVector<xla::int64_t>(input_sizes);
+    std::vector<int64_t> output_sizes =
+        xla::util::ToVector<int64_t>(input_sizes);
     output_sizes.erase(std::next(output_sizes.begin(), axis));
     return xla::Broadcast(
         xla::Zero(input.builder(), input_shape.element_type()), output_sizes);
@@ -125,9 +125,9 @@ xla::XlaOp NmsGather(xla::XlaOp input,
   //       index_vector_dim=0,
   //       slice_sizes={1,1,2}
   xla::GatherDimensionNumbers dim_numbers;
-  std::vector<xla::int64_t> slice_sizes;
-  for (xla::int64_t i = 0; i < input_sizes.size(); ++i) {
-    xla::int64_t window_bound;
+  std::vector<int64_t> slice_sizes;
+  for (int64_t i = 0; i < input_sizes.size(); ++i) {
+    int64_t window_bound;
     if (i == axis) {
       dim_numbers.add_collapsed_slice_dims(i);
       window_bound = 1;
@@ -150,9 +150,9 @@ xla::XlaOp NmsGather(xla::XlaOp input,
 
 NmsResult BuildNms(xla::XlaOp boxes, xla::XlaOp scores,
                    xla::XlaOp score_threshold, xla::XlaOp iou_threshold,
-                   xla::int64_t output_size) {
+                   int64_t output_size) {
   const xla::Shape& boxes_shape = XlaHelpers::ShapeOfXlaOp(boxes);
-  xla::int64_t num_boxes = boxes_shape.dimensions(0);
+  int64_t num_boxes = boxes_shape.dimensions(0);
   const xla::Shape& scores_shape = XlaHelpers::ShapeOfXlaOp(scores);
   XLA_CHECK_EQ(boxes_shape.rank(), 2);
   XLA_CHECK_EQ(boxes_shape.dimensions(1), 4);

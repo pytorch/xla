@@ -13,7 +13,7 @@ namespace {
 
 xla::Shape NodeOutputShape(
     const Value& input, const Value& token,
-    const std::vector<std::pair<xla::int64_t, xla::int64_t>>&
+    const std::vector<std::pair<int64_t, int64_t>>&
         source_target_pairs) {
   auto shape_fn = [&](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
     CollectivePermuteResult result =
@@ -27,7 +27,7 @@ xla::Shape NodeOutputShape(
 
 CollectivePermute::CollectivePermute(
     const Value& input, const Value& token,
-    std::vector<std::pair<xla::int64_t, xla::int64_t>> source_target_pairs)
+    std::vector<std::pair<int64_t, int64_t>> source_target_pairs)
     : Node(xla_collective_permute, {input, token},
            [&]() { return NodeOutputShape(input, token, source_target_pairs); },
            /*num_outputs=*/2, torch::lazy::MHash(source_target_pairs)),
