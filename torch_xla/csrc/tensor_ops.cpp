@@ -164,7 +164,8 @@ XLATensor SoftplusBackward(const XLATensor& grad_output, const XLATensor& input,
 
   return XLATensor::where(
       XLATensor::gt(scaled_input, threshold), grad_output,
-      XLATensor::mul(grad_output, XLATensor::div(z, XLATensor::add(z, one_vec, 1))));
+      XLATensor::mul(grad_output,
+                     XLATensor::div(z, XLATensor::add(z, one_vec, 1))));
 }
 
 XLATensor Select(const XLATensor& input, xla::int64_t dim, xla::int64_t index) {
