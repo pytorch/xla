@@ -26,8 +26,7 @@ XLATensor Softplus(const XLATensor& input, const at::Scalar& beta,
                    const at::Scalar& threshold);
 
 XLATensor SoftplusBackward(const XLATensor& grad_output, const XLATensor& input,
-                           const at::Scalar& beta, const at::Scalar& threshold,
-                           const XLATensor& output);
+                           const at::Scalar& beta, const at::Scalar& threshold);
 
 XLATensor Select(const XLATensor& input, xla::int64_t dim, xla::int64_t index);
 
