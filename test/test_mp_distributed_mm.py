@@ -9,8 +9,8 @@ import torch_xla.distributed.xla_multiprocessing as xmp
 def _mp_fn(index):
   device = xm.xla_device()
 
-  world_size = xm.xrt_world_size()
-  if world_size > 1:
+  if xm.xla_device_hw(device) == 'TPU':
+    world_size = xm.xrt_world_size()
     torch_xla._XLAC._xla_set_use_full_mat_mul_precision(
         use_full_mat_mul_precision=True)
     torch.manual_seed(11)
@@ -35,8 +35,7 @@ def _mp_fn(index):
       sys.exit(1)
   else:
     print(
-        'Default device {} does not support replication'.format(device),
-        file=sys.stderr)
+        'Default device {} is not a TPU device'.format(device), file=sys.stderr)
 
 
 if __name__ == '__main__':
