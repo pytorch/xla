@@ -3009,12 +3009,11 @@ at::Tensor XLANativeFunctions::softplus(const at::Tensor& self,
 at::Tensor XLANativeFunctions::softplus_backward(const at::Tensor& grad_output,
                                                  const at::Tensor& self,
                                                  const at::Scalar& beta,
-                                                 const at::Scalar& threshold,
-                                                 const at::Tensor& output) {
+                                                 const at::Scalar& threshold) {
   XLA_FN_COUNTER("xla::");
   return bridge::AtenFromXlaTensor(XLATensor::softplus_backward(
       bridge::GetXlaTensor(grad_output), bridge::GetXlaTensor(self), beta,
-      threshold, bridge::GetXlaTensor(output)));
+      threshold));
 }
 
 at::Tensor XLANativeFunctions::softshrink(const at::Tensor& self,
