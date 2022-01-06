@@ -1018,11 +1018,11 @@ class XLATensor {
 
   static XLATensor softplus(const XLATensor& input, const at::Scalar& beta,
                             const at::Scalar& threshold);
+
   static XLATensor softplus_backward(const XLATensor& grad_output,
                                      const XLATensor& input,
                                      const at::Scalar& beta,
-                                     const at::Scalar& threshold,
-                                     const XLATensor& output);
+                                     const at::Scalar& threshold);
 
   static XLATensor softshrink(const XLATensor& input, const at::Scalar& lambda);
   static XLATensor softshrink_backward(const XLATensor& grad_out,
