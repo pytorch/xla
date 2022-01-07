@@ -2467,10 +2467,8 @@ XLATensor XLATensor::softplus(const XLATensor& input, const at::Scalar& beta,
 XLATensor XLATensor::softplus_backward(const XLATensor& grad_output,
                                        const XLATensor& input,
                                        const at::Scalar& beta,
-                                       const at::Scalar& threshold,
-                                       const XLATensor& output) {
-  return tensor_ops::SoftplusBackward(grad_output, input, beta, threshold,
-                                      output);
+                                       const at::Scalar& threshold) {
+  return tensor_ops::SoftplusBackward(grad_output, input, beta, threshold);
 }
 
 XLATensor XLATensor::softshrink(const XLATensor& input,

@@ -156,13 +156,16 @@ XLATensor Softplus(const XLATensor& input, const at::Scalar& beta,
 }
 
 XLATensor SoftplusBackward(const XLATensor& grad_output, const XLATensor& input,
-                           const at::Scalar& beta, const at::Scalar& threshold,
-                           const XLATensor& output) {
+                           const at::Scalar& beta,
+                           const at::Scalar& threshold) {
   XLATensor scaled_input = XLATensor::mul(input, beta);
-  XLATensor z = XLATensor::exp(XLATensor::mul(output, beta));
+  XLATensor z = XLATensor::exp(scaled_input);
+  XLATensor one_vec = XLATensor::full_like(z, 1, z.GetDevice(), z.dtype());
+
   return XLATensor::where(
       XLATensor::gt(scaled_input, threshold), grad_output,
-      XLATensor::mul(grad_output, XLATensor::div(XLATensor::sub(z, 1, 1), z)));
+      XLATensor::mul(grad_output,
+                     XLATensor::div(z, XLATensor::add(z, one_vec, 1))));
 }
 
 XLATensor Select(const XLATensor& input, xla::int64_t dim, xla::int64_t index) {

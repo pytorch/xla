@@ -263,6 +263,8 @@ DISABLED_TORCH_TESTS_ANY = {
         'test_softshrink_inplace_overlap_xla',  # doesn't raise
         'test_Conv2d_backward_depthwise_xla_float64',  # slow compilation
         'test_leaky_relu_inplace_with_neg_slope_xla',  # expecting a specific error message
+        'test_upsamplingBicubic2d_correctness_xla',  # FIXME! Got dtypes torch.float32 and torch.float64
+        'test_conv3d_same_padding_backward_xla',  # XLA tensors do not have storage
     },
 
     # test_type_promotion.py
