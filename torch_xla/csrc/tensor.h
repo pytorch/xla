@@ -220,19 +220,19 @@ class XLATensor {
   static XLATensor get_dimensions_size(const XLATensor& input,
                                        std::vector<xla::int64_t> dimensions);
 
-  static void sgd_optimizer_step_(XLATensor& step, XLATensor& param,
-                                  XLATensor& buf, const XLATensor& found_inf,
+  static void sgd_optimizer_step_(const XLATensor& found_inf, XLATensor& step,
+                                  XLATensor& param, XLATensor& buf,
                                   const XLATensor& d_p, double weight_decay,
                                   double momentum, double lr, double dampening,
-                                  bool nesterov);
+                                  bool nesterov, bool maximize);
 
-  static void adam_optimizer_step(const XLATensor& found_inf, XLATensor& step,
-                                  XLATensor& param, XLATensor& grad,
-                                  XLATensor& exp_avg, XLATensor& exp_avg_sq,
-                                  XLATensor& max_exp_avg_sq, bool amsgrad,
-                                  double beta1, double beta2, double lr,
-                                  double weight_decay, double eps,
-                                  bool use_adamw);
+  static void adam_optimizer_step_(const XLATensor& found_inf, XLATensor& step,
+                                   XLATensor& param, const XLATensor& grad,
+                                   XLATensor& exp_avg, XLATensor& exp_avg_sq,
+                                   XLATensor& max_exp_avg_sq, double beta1,
+                                   double beta2, double lr, double weight_decay,
+                                   double eps, bool amsgrad, bool maximize,
+                                   bool use_adamw);
 
   static std::vector<XLATensor> user_computation(
       const std::string& opname, absl::Span<const XLATensor> inputs,

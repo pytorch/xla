@@ -4,7 +4,10 @@ from . import _functional as F
 
 
 class Adam(torch.optim.Adam):
-  r"""Implements Adam algorithm.
+  r"""PT-XLA variant of Adam optimizer with syncfree support for AMP mode.
+    It takes an optional `found_inf` tensor in optimizer.step to indicate whether
+    this optimizer.step should be performed (found_inf is 0 or None) or
+    skipped (found_inf != 0).
 
     It has been proposed in `Adam: A Method for Stochastic Optimization`_.
     The implementation of the L2 penalty follows changes proposed in
@@ -22,6 +25,8 @@ class Adam(torch.optim.Adam):
         amsgrad (boolean, optional): whether to use the AMSGrad variant of this
             algorithm from the paper `On the Convergence of Adam and Beyond`_
             (default: False)
+        maximize (bool, optional): maximize the params based on the objective, instead of
+            minimizing (default: False)
 
     .. _Adam\: A Method for Stochastic Optimization:
         https://arxiv.org/abs/1412.6980
@@ -91,20 +96,21 @@ class Adam(torch.optim.Adam):
 
           state_steps.append(state['step'])
 
-      F.adam_step_cpp(
+      F.adam_step(
+          found_inf,
+          state_steps,
           params_with_grad,
           grads,
           exp_avgs,
           exp_avg_sqs,
           max_exp_avg_sqs,
-          state_steps,
           amsgrad=group['amsgrad'],
           beta1=beta1,
           beta2=beta2,
           lr=group['lr'],
           weight_decay=group['weight_decay'],
           eps=group['eps'],
-          found_inf=found_inf,
+          maximize=group['maximize'],
           use_adamw=False)
 
     return loss

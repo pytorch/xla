@@ -1,7 +1,6 @@
 import torch
-import torch_xla
 from torch import Tensor
-from typing import List, Optional
+from . import _functional as F
 
 
 class SGD(torch.optim.SGD):
@@ -23,6 +22,8 @@ class SGD(torch.optim.SGD):
         weight_decay (float, optional): weight decay (L2 penalty) (default: 0)
         dampening (float, optional): dampening for momentum (default: 0)
         nesterov (bool, optional): enables Nesterov momentum (default: False)
+        maximize (bool, optional): maximize the params based on the objective, instead of
+            minimizing (default: False)
 
     Example:
         >>> optimizer = torch.optim.SGD(model.parameters(), lr=0.1, momentum=0.9)
@@ -63,6 +64,7 @@ class SGD(torch.optim.SGD):
       momentum = group['momentum']
       dampening = group['dampening']
       nesterov = group['nesterov']
+      maximize = group['maximize']
       lr = group['lr']
 
       for p in group['params']:
@@ -80,7 +82,7 @@ class SGD(torch.optim.SGD):
           else:
             momentum_buffer_list.append(state['momentum_buffer'])
 
-      self.sgd_step(
+      F.sgd_step(
           found_inf,
           state_steps,
           params_with_grad,
@@ -91,6 +93,7 @@ class SGD(torch.optim.SGD):
           lr=lr,
           dampening=dampening,
           nesterov=nesterov,
+          maximize=maximize,
       )
 
       # update momentum_buffers in state
@@ -99,22 +102,3 @@ class SGD(torch.optim.SGD):
         state['momentum_buffer'] = momentum_buffer
 
     return loss
-
-  def sgd_step(self, found_inf: Tensor, state_steps: List[Tensor],
-               params: List[Tensor], d_p_list: List[Tensor],
-               momentum_buffer_list: List[Optional[Tensor]], *,
-               weight_decay: float, momentum: float, lr: float,
-               dampening: float, nesterov: bool):
-    r"""Functional API that performs PT-XLA sync-free SGD algorithm computation.
-        """
-
-    for i, param in enumerate(params):
-      d_p = d_p_list[i]
-      buf = momentum_buffer_list[i]
-      step = state_steps[i]
-      if buf is None:
-        buf = torch.clone(d_p).detach()
-        momentum_buffer_list[i] = buf
-      torch_xla._XLAC._xla_sgd_optimizer_step_(step, param, buf, found_inf, d_p,
-                                               weight_decay, momentum, lr,
-                                               dampening, nesterov)

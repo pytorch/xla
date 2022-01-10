@@ -95,9 +95,7 @@ class TestSyncFreeOptimizerBase(unittest.TestCase):
 
     # check weight
     for p, p_ref in zip(syncfree_model.parameters(), ref_model.parameters()):
-      # SGD works with rtol/atol=1e-2
-      # Adam/AdamW works with rtol/atol=1e-1
-      assert p.allclose(p_ref, rtol=1e-1, atol=1e-1)
+      assert p.allclose(p_ref, rtol=1e-2, atol=1e-2)
 
 
 class TestSyncFreeSGD(TestSyncFreeOptimizerBase):
@@ -123,22 +121,30 @@ class TestSyncFreeSGD(TestSyncFreeOptimizerBase):
         "weight_decay": 0.1,
         "nesterov": True,
     })
+    self._test_optimizer(
+        syncfree.SGD, torch.optim.SGD, {
+            "lr": 1e-2,
+            "momentum": 0.5,
+            "weight_decay": 0.1,
+            "nesterov": True,
+            "maximize": True,
+        })
 
 
-class TestSyncFreeAdam_AdamW(TestSyncFreeOptimizerBase):
+class TestSyncFreeAdam(TestSyncFreeOptimizerBase):
 
-  def _test_optimizer_helper(self, optim, optim_ref):
+  def _test_adam_optimizer_helper(self, optim, optim_ref):
     self._test_optimizer(optim, optim_ref, {
         "lr": 1e-3,
         "betas": (0.9, 0.99),
     })
     self._test_optimizer(optim, optim_ref, {
-        "lr": 1e-2,
+        "lr": 1e-3,
         "betas": (0.7, 0.77),
         "weight_decay": 1e-4,
     })
     self._test_optimizer(optim, optim_ref, {
-        "lr": 5e-3,
+        "lr": 1e-4,
         "betas": (0.9, 0.999),
         "weight_decay": 1e-4,
     })
@@ -151,18 +157,26 @@ class TestSyncFreeAdam_AdamW(TestSyncFreeOptimizerBase):
         "lr": 1e-3,
         "betas": (0.9, 0.999),
         "weight_decay": 0.1,
-        "amsgrad": True
+        "amsgrad": True,
     })
     self._test_optimizer(optim, optim_ref, {
-        "lr": 1e-3,
+        "lr": 1e-4,
         "betas": (0.7, 0.799),
         "weight_decay": 0.01,
-        "amsgrad": True
+        "amsgrad": True,
     })
+    self._test_optimizer(
+        optim, optim_ref, {
+            "lr": 1e-4,
+            "betas": (0.7, 0.799),
+            "weight_decay": 0.01,
+            "amsgrad": True,
+            "maximize": True,
+        })
 
-  def test_optimizer(self):
-    self._test_optimizer_helper(syncfree.Adam, torch.optim.Adam)
-    self._test_optimizer_helper(syncfree.AdamW, torch.optim.AdamW)
+  def test_adam_optimizer(self):
+    self._test_adam_optimizer_helper(syncfree.Adam, torch.optim.Adam)
+    self._test_adam_optimizer_helper(syncfree.AdamW, torch.optim.AdamW)
 
 
 if __name__ == "__main__":

@@ -28,6 +28,7 @@ class OpKindWrapper {
   mutable std::once_flag once_;
 };
 
+extern const OpKindWrapper xla_adam_optimizer_step;
 extern const OpKindWrapper xla_all_gather;
 extern const OpKindWrapper xla_all_to_all;
 extern const OpKindWrapper xla_as_strided_view_update;

@@ -1164,10 +1164,10 @@ void InitXlaModuleBindings(py::module m) {
     xla::ComputationClient::RunLocalService(service_port);
   });
   m.def("_xla_sgd_optimizer_step_",
-        [](at::Tensor& step, at::Tensor& param, at::Tensor& buf,
-           const at::Tensor& found_inf, const at::Tensor& d_p,
-           double weight_decay, double momentum, double lr, double dampening,
-           bool nesterov) {
+        [](const at::Tensor& found_inf, at::Tensor& step, at::Tensor& param,
+           at::Tensor& buf, const at::Tensor& d_p, double weight_decay,
+           double momentum, double lr, double dampening, bool nesterov,
+           bool maximize) {
           {
             NoGilSection nogil;
             XLATensor found_inf_xla = bridge::GetXlaTensor(found_inf);
@@ -1175,16 +1175,17 @@ void InitXlaModuleBindings(py::module m) {
             XLATensor param_xla = bridge::GetXlaTensor(param);
             XLATensor d_p_xla = bridge::GetXlaTensor(d_p);
             XLATensor buf_xla = bridge::GetXlaTensor(buf);
-            XLATensor::sgd_optimizer_step_(step_xla, param_xla, buf_xla,
-                                           found_inf_xla, d_p_xla, weight_decay,
-                                           momentum, lr, dampening, nesterov);
+            XLATensor::sgd_optimizer_step_(
+                found_inf_xla, step_xla, param_xla, buf_xla, d_p_xla,
+                weight_decay, momentum, lr, dampening, nesterov, maximize);
           }
         });
-  m.def("_xla_adam_optimizer_step",
+  m.def("_xla_adam_optimizer_step_",
         [](const at::Tensor& found_inf, at::Tensor& step, at::Tensor& param,
            at::Tensor& grad, at::Tensor& exp_avg, at::Tensor& exp_avg_sq,
-           at::Tensor& max_exp_avg_sq, bool amsgrad, double beta1, double beta2,
-           double lr, double weight_decay, double eps, bool use_adamw) {
+           at::Tensor& max_exp_avg_sq, double beta1, double beta2, double lr,
+           double weight_decay, double eps, bool amsgrad, bool maximize,
+           bool use_adamw) {
           {
             NoGilSection nogil;
             XLATensor found_inf_xla = bridge::GetXlaTensor(found_inf);
@@ -1194,10 +1195,10 @@ void InitXlaModuleBindings(py::module m) {
             XLATensor exp_avg_xla = bridge::GetXlaTensor(exp_avg);
             XLATensor exp_avg_sq_xla = bridge::GetXlaTensor(exp_avg_sq);
             XLATensor max_exp_avg_sq_xla = bridge::GetXlaTensor(max_exp_avg_sq);
-            XLATensor::adam_optimizer_step(
+            XLATensor::adam_optimizer_step_(
                 found_inf_xla, step_xla, param_xla, grad_xla, exp_avg_xla,
-                exp_avg_sq_xla, max_exp_avg_sq_xla, amsgrad, beta1, beta2, lr,
-                weight_decay, eps, use_adamw);
+                exp_avg_sq_xla, max_exp_avg_sq_xla, beta1, beta2, lr,
+                weight_decay, eps, amsgrad, maximize, use_adamw);
           }
         });
 

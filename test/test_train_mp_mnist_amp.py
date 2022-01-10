@@ -134,7 +134,7 @@ def train_mnist(flags, **kwargs):
   writer = None
   if xm.is_master_ordinal():
     writer = test_utils.get_summary_writer(flags.logdir)
-  optim_cls = syncfree.SGD if FLAGS.use_syncfree_optim else optim.SGD._orig
+  optim_cls = syncfree.SGD if FLAGS.use_syncfree_optim else optim.SGD
   optimizer = optim_cls(model.parameters(), lr=lr, momentum=flags.momentum)
   loss_fn = nn.NLLLoss()
   scaler = GradScaler(use_zero_grad=FLAGS.use_zero_grad)

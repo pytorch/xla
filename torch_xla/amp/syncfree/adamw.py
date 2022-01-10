@@ -4,30 +4,35 @@ from . import _functional as F
 
 
 class AdamW(torch.optim.AdamW):
-  r"""Implements AdamW algorithm.
+  r"""PT-XLA variant of AdamW optimizer with syncfree support for AMP mode.
+    It takes an optional `found_inf` tensor in optimizer.step to indicate whether
+    this optimizer.step should be performed (found_inf is 0 or None) or
+    skipped (found_inf != 0).
 
-  The original Adam algorithm was proposed in `Adam: A Method for Stochastic Optimization`_.
-  The AdamW variant was proposed in `Decoupled Weight Decay Regularization`_.
+    See torch.optim.AdamW for more details.
+    https://github.com/pytorch/pytorch/blob/master/torch/optim/adamw.py
 
-  Args:
-      params (iterable): iterable of parameters to optimize or dicts defining
-          parameter groups
-      lr (float, optional): learning rate (default: 1e-3)
-      betas (Tuple[float, float], optional): coefficients used for computing
-          running averages of gradient and its square (default: (0.9, 0.999))
-      eps (float, optional): term added to the denominator to improve
-          numerical stability (default: 1e-8)
-      weight_decay (float, optional): weight decay coefficient (default: 1e-2)
-      amsgrad (boolean, optional): whether to use the AMSGrad variant of this
-          algorithm from the paper `On the Convergence of Adam and Beyond`_
-          (default: False)
+    For further details regarding the algorithm we refer to `Decoupled Weight Decay Regularization`_.
 
-  .. _Adam\: A Method for Stochastic Optimization:
-      https://arxiv.org/abs/1412.6980
-  .. _Decoupled Weight Decay Regularization:
-      https://arxiv.org/abs/1711.05101
-  .. _On the Convergence of Adam and Beyond:
-      https://openreview.net/forum?id=ryQu7f-RZ
+    Args:
+        params (iterable): iterable of parameters to optimize or dicts defining
+            parameter groups
+        lr (float, optional): learning rate (default: 1e-3)
+        betas (Tuple[float, float], optional): coefficients used for computing
+            running averages of gradient and its square (default: (0.9, 0.999))
+        eps (float, optional): term added to the denominator to improve
+            numerical stability (default: 1e-8)
+        weight_decay (float, optional): weight decay coefficient (default: 1e-2)
+        amsgrad (boolean, optional): whether to use the AMSGrad variant of this
+            algorithm from the paper `On the Convergence of Adam and Beyond`_
+            (default: False)
+        maximize (bool, optional): maximize the params based on the objective, instead of
+            minimizing (default: False)
+
+    .. _Decoupled Weight Decay Regularization:
+        https://arxiv.org/abs/1711.05101
+    .. _On the Convergence of Adam and Beyond:
+        https://openreview.net/forum?id=ryQu7f-RZ
   """
 
   @torch.no_grad()
@@ -51,6 +56,7 @@ class AdamW(torch.optim.AdamW):
     if closure is not None:
       with torch.enable_grad():
         loss = closure()
+
     for group in self.param_groups:
       params_with_grad = []
       grads = []
@@ -88,20 +94,21 @@ class AdamW(torch.optim.AdamW):
 
           state_steps.append(state['step'])
 
-      F.adam_step_cpp(
+      F.adam_step(
+          found_inf,
+          state_steps,
           params_with_grad,
           grads,
           exp_avgs,
           exp_avg_sqs,
           max_exp_avg_sqs,
-          state_steps,
           amsgrad=group['amsgrad'],
           beta1=beta1,
           beta2=beta2,
           lr=group['lr'],
           weight_decay=group['weight_decay'],
           eps=group['eps'],
-          found_inf=found_inf,
+          maximize=group['maximize'],
           use_adamw=True)
 
     return loss
