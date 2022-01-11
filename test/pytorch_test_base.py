@@ -265,10 +265,7 @@ DISABLED_TORCH_TESTS_ANY = {
         'test_leaky_relu_inplace_with_neg_slope_xla',  # expecting a specific error message
         'test_upsamplingBicubic2d_correctness_xla',  # FIXME! Got dtypes torch.float32 and torch.float64
         'test_conv3d_same_padding_backward_xla',  # XLA tensors do not have storage,
-        'test_CTCLoss_no_batch_dim_reduction_mean_use_module_form_True_xla',  # Value out of range 
-        'test_CTCLoss_no_batch_dim_reduction_mean_use_module_form_False_xla',  # Value out of range 
-        'test_CTCLoss_no_batch_dim_reduction_sum_use_module_form_True_xla',  # Value out of range
-        'test_CTCLoss_no_batch_dim_reduction_sum_use_module_form_False_xla',  # Value out of range
+        'test_CTCLoss_no_batch_dim_xla',  # Value out of range
     },
 
     # test_type_promotion.py
@@ -480,12 +477,21 @@ class XLATestBase(DeviceTypeTestBase):
       raise unittest.SkipTest('skipped on XLA')
       return test(self, cls.device_type)
 
+    print("WONJOO-DEBUG")
+    print(class_name)
+    print(disabled_torch_tests)
+    print(test_name)
+    print(name)
+    print(cls)
+    print(disabled_torch_tests[class_name].exact)
+    print(disabled_torch_tests[class_name].regex)
     if class_name in disabled_torch_tests and (
         match_name(test_name, disabled_torch_tests[class_name]) or
         match_name(name, disabled_torch_tests[class_name])):
       assert not hasattr(
           cls, test_name), 'Redefinition of test {0}'.format(test_name)
       setattr(cls, test_name, disallowed_test)
+      print('disabled test ' + test_name)
     else:  # Test is allowed
       dtype_combinations = cls._get_dtypes(test)
       if dtype_combinations is None:  # Tests without dtype variants are instantiated as usual
