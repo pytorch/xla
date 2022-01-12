@@ -289,12 +289,12 @@ void StepMarker(const std::string& device_str,
   }
 }
 
-void SetRngSeed(xla::uint64 seed, const std::string& device_str) {
+void SetRngSeed(uint64_t seed, const std::string& device_str) {
   Device device = GetDeviceOrCurrent(device_str);
   XLATensor::SetRngSeed(device, seed);
 }
 
-xla::uint64 GetRngSeed(const std::string& device_str) {
+uint64_t GetRngSeed(const std::string& device_str) {
   return XLATensor::GetRunningSeed(GetDeviceOrCurrent(device_str));
 }
 
@@ -974,7 +974,7 @@ void InitXlaModuleBindings(py::module m) {
   });
   m.def("_xla_get_default_device", []() { return GetCurrentThreadDevice(); });
   m.def("_xla_set_rng_seed",
-        [](xla::uint64 seed, const std::string& device) {
+        [](uint64_t seed, const std::string& device) {
           SetRngSeed(seed, device);
         },
         py::arg("seed") = 101, py::arg("device") = "");
@@ -1160,7 +1160,7 @@ void InitXlaModuleBindings(py::module m) {
            const std::vector<op_builder::OpPtr>& operands, py::dict args) {
           return op_builder::CreateOp(builder, opname, operands, args);
         });
-  m.def("_run_xrt_local_service", [](xla::uint64 service_port) {
+  m.def("_run_xrt_local_service", [](uint64_t service_port) {
     xla::ComputationClient::RunLocalService(service_port);
   });
   m.def("_xla_sgd_optimizer_step_",

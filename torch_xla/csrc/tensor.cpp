@@ -267,8 +267,8 @@ class XLATensor::DeviceContextArena {
   struct DeviceContext {
     std::mutex lock;
     std::map<int64_t, std::weak_ptr<Data>> tensors_data;
-    xla::uint64 seed = 101;
-    xla::uint64 running_seed = 101;
+    uint64_t seed = 101;
+    uint64_t running_seed = 101;
     ir::Value seed_ir_value;
   };
 
@@ -309,8 +309,8 @@ class XLATensor::DeviceContextArena {
 
   ir::Value GetRngSeed(const Device& device) {
     static const at::ScalarType kSeedType = at::ScalarType::Long;
-    static const xla::uint64 kSeedMul = 214013;
-    static const xla::uint64 kSeedAdd = 2531011;
+    static const uint64_t kSeedMul = 214013;
+    static const uint64_t kSeedAdd = 2531011;
     DeviceContext* devctx = GetDeviceContext(device);
     std::lock_guard<std::mutex> lock(devctx->lock);
     if (!devctx->seed_ir_value) {
@@ -330,13 +330,13 @@ class XLATensor::DeviceContextArena {
     return devctx->seed_ir_value;
   }
 
-  xla::uint64 GetRunningSeed(const Device& device) {
+  uint64_t GetRunningSeed(const Device& device) {
     DeviceContext* devctx = GetDeviceContext(device);
     std::lock_guard<std::mutex> lock(devctx->lock);
     return devctx->running_seed;
   }
 
-  void SetRngSeed(const Device& device, xla::uint64 seed) {
+  void SetRngSeed(const Device& device, uint64_t seed) {
     DeviceContext* devctx = GetDeviceContext(device);
     std::lock_guard<std::mutex> lock(devctx->lock);
     devctx->seed = seed;
@@ -1661,11 +1661,11 @@ ir::Value XLATensor::GetRngSeed(const Device& device) {
   return DeviceContextArena::Get()->GetRngSeed(device);
 }
 
-void XLATensor::SetRngSeed(const Device& device, xla::uint64 seed) {
+void XLATensor::SetRngSeed(const Device& device, uint64_t seed) {
   DeviceContextArena::Get()->SetRngSeed(device, seed);
 }
 
-xla::uint64 XLATensor::GetRunningSeed(const Device& device) {
+uint64_t XLATensor::GetRunningSeed(const Device& device) {
   return DeviceContextArena::Get()->GetRunningSeed(device);
 }
 

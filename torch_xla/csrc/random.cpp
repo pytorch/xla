@@ -117,7 +117,7 @@ xla::XlaOp RngUniform(xla::XlaOp seed, const xla::Shape& shape,
           .value;
     case xla::PrimitiveType::C64:
     case xla::PrimitiveType::C128: {
-      xla::XlaOp k_seed = XlaHelpers::ScalarValue<xla::uint64>(
+      xla::XlaOp k_seed = XlaHelpers::ScalarValue<uint64_t>(
           17, XlaHelpers::TypeOfXlaOp(rng_seed), rng_seed.builder());
       xla::XlaOp rng_real = xla::UniformFloatingPointDistribution(
                                 rng_seed, initial_state, GetBitGenerator(),
@@ -173,7 +173,7 @@ xla::XlaOp RngNormal(xla::XlaOp seed, const xla::Shape& shape, xla::XlaOp mean,
     }
     case xla::PrimitiveType::C64:
     case xla::PrimitiveType::C128: {
-      xla::XlaOp k_seed = XlaHelpers::ScalarValue<xla::uint64>(
+      xla::XlaOp k_seed = XlaHelpers::ScalarValue<uint64_t>(
           17, XlaHelpers::TypeOfXlaOp(rng_seed), rng_seed.builder());
       xla::XlaOp rng_real =
           xla::NormalFloatingPointDistribution(rng_seed, initial_state,

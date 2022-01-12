@@ -541,7 +541,7 @@ NodePtr ARange(const at::Scalar& start, const at::Scalar& end,
                                                step.toLong());
       break;
     case xla::PrimitiveType::U64:
-      values = XlaHelpers::Range<xla::uint64>(start.toLong(), end.toLong(),
+      values = XlaHelpers::Range<uint64_t>(start.toLong(), end.toLong(),
                                               step.toLong());
       break;
     default:
