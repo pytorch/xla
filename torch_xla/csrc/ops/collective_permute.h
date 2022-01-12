@@ -11,7 +11,7 @@ class CollectivePermute : public Node {
  public:
   CollectivePermute(
       const Value& input, const Value& token,
-      std::vector<std::pair<xla::int64_t, xla::int64_t>> source_target_pairs);
+      std::vector<std::pair<int64_t, int64_t>> source_target_pairs);
 
   std::string ToString() const override;
 
@@ -19,13 +19,13 @@ class CollectivePermute : public Node {
 
   XlaOpVector Lower(LoweringContext* loctx) const override;
 
-  const std::vector<std::pair<xla::int64_t, xla::int64_t>>&
+  const std::vector<std::pair<int64_t, int64_t>>&
   source_target_pairs() const {
     return source_target_pairs_;
   }
 
  private:
-  std::vector<std::pair<xla::int64_t, xla::int64_t>> source_target_pairs_;
+  std::vector<std::pair<int64_t, int64_t>> source_target_pairs_;
 };
 
 }  // namespace ops

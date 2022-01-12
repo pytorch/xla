@@ -16,12 +16,12 @@ namespace ir {
 namespace ops {
 namespace {
 
-xla::XlaOp LowerAsStrided(xla::XlaOp input, absl::Span<const xla::int64_t> size,
-                          absl::Span<const xla::int64_t> stride,
-                          xla::int64_t storage_offset) {
+xla::XlaOp LowerAsStrided(xla::XlaOp input, absl::Span<const int64_t> size,
+                          absl::Span<const int64_t> stride,
+                          int64_t storage_offset) {
   const xla::Shape& input_shape = XlaHelpers::ShapeOfXlaOp(input);
-  xla::int64_t input_element_count = xla::ShapeUtil::ElementsIn(input_shape);
-  xla::int64_t slice_size = xla::util::Multiply<xla::int64_t>(size);
+  int64_t input_element_count = xla::ShapeUtil::ElementsIn(input_shape);
+  int64_t slice_size = xla::util::Multiply<int64_t>(size);
   XLA_CHECK_LE(storage_offset + slice_size, input_element_count);
 
   xla::XlaOp off_input = input;
@@ -31,9 +31,9 @@ xla::XlaOp LowerAsStrided(xla::XlaOp input, absl::Span<const xla::int64_t> size,
                                 storage_offset + slice_size, 1, 0);
   }
 
-  std::vector<xla::int64_t> permutation = xla::InversePermutation(
+  std::vector<int64_t> permutation = xla::InversePermutation(
       AsStrided::GetArrayStridePermutation(stride, size));
-  std::vector<xla::int64_t> new_sizes = xla::PermuteInverse(size, permutation);
+  std::vector<int64_t> new_sizes = xla::PermuteInverse(size, permutation);
   xla::XlaOp reshaped_input = XlaHelpers::DynamicReshape(off_input, new_sizes);
   return xla::IsIdentityPermutation(permutation)
              ? reshaped_input
@@ -42,9 +42,9 @@ xla::XlaOp LowerAsStrided(xla::XlaOp input, absl::Span<const xla::int64_t> size,
 
 }  // namespace
 
-AsStrided::AsStrided(const Value& input, std::vector<xla::int64_t> size,
-                     std::vector<xla::int64_t> stride,
-                     xla::int64_t storage_offset)
+AsStrided::AsStrided(const Value& input, std::vector<int64_t> size,
+                     std::vector<int64_t> stride,
+                     int64_t storage_offset)
     : Node(ir::OpKind(at::aten::as_strided), {input},
            [&]() {
              return xla::ShapeUtil::MakeShape(input.shape().element_type(),
@@ -74,22 +74,22 @@ XlaOpVector AsStrided::Lower(LoweringContext* loctx) const {
 }
 
 bool AsStrided::StrideIsSupported(const xla::Shape& input_shape,
-                                  absl::Span<const xla::int64_t> size,
-                                  absl::Span<const xla::int64_t> stride,
-                                  xla::int64_t storage_offset) {
-  std::vector<xla::int64_t> sorted_stride(stride.begin(), stride.end());
+                                  absl::Span<const int64_t> size,
+                                  absl::Span<const int64_t> stride,
+                                  int64_t storage_offset) {
+  std::vector<int64_t> sorted_stride(stride.begin(), stride.end());
   std::sort(sorted_stride.begin(), sorted_stride.end());
   return stride.empty() || sorted_stride.front() == 1;
 }
 
-std::vector<xla::int64_t> AsStrided::GetArrayStridePermutation(
-    absl::Span<const xla::int64_t> stride,
-    absl::Span<const xla::int64_t> size) {
-  std::vector<xla::int64_t> permutation =
-      xla::util::Iota<xla::int64_t>(stride.size());
+std::vector<int64_t> AsStrided::GetArrayStridePermutation(
+    absl::Span<const int64_t> stride,
+    absl::Span<const int64_t> size) {
+  std::vector<int64_t> permutation =
+      xla::util::Iota<int64_t>(stride.size());
   std::sort(
       permutation.begin(), permutation.end(),
-      [&](xla::int64_t a, xla::int64_t b) { return stride[a] > stride[b]; });
+      [&](int64_t a, int64_t b) { return stride[a] > stride[b]; });
   return permutation;
 }
 

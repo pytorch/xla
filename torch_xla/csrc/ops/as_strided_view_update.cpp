@@ -16,15 +16,15 @@ namespace ops {
 namespace {
 
 xla::XlaOp LowerAsStridedViewUpdate(xla::XlaOp target, xla::XlaOp input,
-                                    absl::Span<const xla::int64_t> size,
-                                    absl::Span<const xla::int64_t> stride,
-                                    xla::int64_t storage_offset) {
+                                    absl::Span<const int64_t> size,
+                                    absl::Span<const int64_t> stride,
+                                    int64_t storage_offset) {
   const xla::Shape& input_shape = XlaHelpers::ShapeOfXlaOp(input);
-  xla::int64_t input_element_count = xla::ShapeUtil::ElementsIn(input_shape);
-  xla::int64_t slice_size = xla::util::Multiply<xla::int64_t>(size);
+  int64_t input_element_count = xla::ShapeUtil::ElementsIn(input_shape);
+  int64_t slice_size = xla::util::Multiply<int64_t>(size);
   XLA_CHECK_LE(storage_offset + input_element_count, slice_size);
 
-  std::vector<xla::int64_t> permutation =
+  std::vector<int64_t> permutation =
       AsStrided::GetArrayStridePermutation(stride, input_shape.dimensions());
   xla::XlaOp transposed_input = xla::IsIdentityPermutation(permutation)
                                     ? input
@@ -34,7 +34,7 @@ xla::XlaOp LowerAsStridedViewUpdate(xla::XlaOp target, xla::XlaOp input,
     xla::XlaOp r1_target = XlaHelpers::Flatten(target);
     transposed_input =
         xla::DynamicUpdateSlice(r1_target, r1_input,
-                                {XlaHelpers::ScalarValue<xla::int64_t>(
+                                {XlaHelpers::ScalarValue<int64_t>(
                                     storage_offset, input.builder())});
   }
   return XlaHelpers::DynamicReshape(transposed_input, size);
@@ -44,9 +44,9 @@ xla::XlaOp LowerAsStridedViewUpdate(xla::XlaOp target, xla::XlaOp input,
 
 AsStridedViewUpdate::AsStridedViewUpdate(const Value& target,
                                          const Value& input,
-                                         std::vector<xla::int64_t> size,
-                                         std::vector<xla::int64_t> stride,
-                                         xla::int64_t storage_offset)
+                                         std::vector<int64_t> size,
+                                         std::vector<int64_t> stride,
+                                         int64_t storage_offset)
     : Node(xla_as_strided_view_update, {target, input},
            [&]() {
              return xla::ShapeUtil::MakeShape(target.shape().element_type(),

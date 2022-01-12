@@ -11,7 +11,7 @@ namespace ops {
 
 class CumSum : public Node {
  public:
-  CumSum(const Value& input, xla::int64_t dim,
+  CumSum(const Value& input, int64_t dim,
          c10::optional<at::ScalarType> dtype);
 
   std::string ToString() const override;
@@ -20,12 +20,12 @@ class CumSum : public Node {
 
   XlaOpVector Lower(LoweringContext* loctx) const override;
 
-  xla::int64_t dim() const { return dim_; }
+  int64_t dim() const { return dim_; }
 
   const c10::optional<at::ScalarType>& dtype() const { return dtype_; }
 
  private:
-  xla::int64_t dim_;
+  int64_t dim_;
   c10::optional<at::ScalarType> dtype_;
 };
 

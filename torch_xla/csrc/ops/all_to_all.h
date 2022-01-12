@@ -9,9 +9,9 @@ namespace ops {
 
 class AllToAll : public Node {
  public:
-  AllToAll(const Value& input, const Value& token, xla::int64_t split_dimension,
-           xla::int64_t concat_dimension, xla::int64_t split_count,
-           std::vector<std::vector<xla::int64_t>> groups);
+  AllToAll(const Value& input, const Value& token, int64_t split_dimension,
+           int64_t concat_dimension, int64_t split_count,
+           std::vector<std::vector<int64_t>> groups);
 
   std::string ToString() const override;
 
@@ -19,21 +19,21 @@ class AllToAll : public Node {
 
   XlaOpVector Lower(LoweringContext* loctx) const override;
 
-  xla::int64_t split_dimension() const { return split_dimension_; }
+  int64_t split_dimension() const { return split_dimension_; }
 
-  xla::int64_t concat_dimension() const { return concat_dimension_; }
+  int64_t concat_dimension() const { return concat_dimension_; }
 
-  xla::int64_t split_count() const { return split_count_; }
+  int64_t split_count() const { return split_count_; }
 
-  const std::vector<std::vector<xla::int64_t>>& groups() const {
+  const std::vector<std::vector<int64_t>>& groups() const {
     return groups_;
   }
 
  private:
-  xla::int64_t split_dimension_;
-  xla::int64_t concat_dimension_;
-  xla::int64_t split_count_;
-  std::vector<std::vector<xla::int64_t>> groups_;
+  int64_t split_dimension_;
+  int64_t concat_dimension_;
+  int64_t split_count_;
+  std::vector<std::vector<int64_t>> groups_;
 };
 
 }  // namespace ops

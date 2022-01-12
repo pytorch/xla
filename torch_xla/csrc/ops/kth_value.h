@@ -8,7 +8,7 @@ namespace ops {
 
 class KthValue : public Node {
  public:
-  KthValue(const Value& input, xla::int64_t k, xla::int64_t dim, bool keepdim);
+  KthValue(const Value& input, int64_t k, int64_t dim, bool keepdim);
 
   std::string ToString() const override;
 
@@ -16,15 +16,15 @@ class KthValue : public Node {
 
   XlaOpVector Lower(LoweringContext* loctx) const override;
 
-  xla::int64_t k() const { return k_; };
+  int64_t k() const { return k_; };
 
-  xla::int64_t dim() const { return dim_; };
+  int64_t dim() const { return dim_; };
 
   bool keepdim() const { return keepdim_; }
 
  private:
-  xla::int64_t k_;
-  xla::int64_t dim_;
+  int64_t k_;
+  int64_t dim_;
   bool keepdim_;
 };
 

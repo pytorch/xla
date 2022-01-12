@@ -11,7 +11,7 @@ namespace ir {
 namespace ops {
 namespace {
 
-xla::XlaOp LowerLogSoftmax(xla::XlaOp input, xla::int64_t dim,
+xla::XlaOp LowerLogSoftmax(xla::XlaOp input, int64_t dim,
                            const c10::optional<at::ScalarType>& dtype) {
   xla::XlaOp result = BuildLogSoftmax(input, dim);
   return CastToScalarType(result, dtype);
@@ -28,7 +28,7 @@ xla::Shape NodeOutputShape(const Value& input,
 
 }  // namespace
 
-LogSoftmax::LogSoftmax(const Value& input, xla::int64_t dim,
+LogSoftmax::LogSoftmax(const Value& input, int64_t dim,
                        c10::optional<at::ScalarType> dtype)
     : Node(ir::OpKind(at::aten::log_softmax), {input},
            [&]() { return NodeOutputShape(input, dtype); },

@@ -9,7 +9,7 @@ namespace ops {
 class IndexGet : public Node {
  public:
   IndexGet(const ir::Value& base, const ir::Value& indices,
-           xla::int64_t start_dim);
+           int64_t start_dim);
 
   std::string ToString() const override;
 
@@ -17,11 +17,11 @@ class IndexGet : public Node {
 
   XlaOpVector Lower(LoweringContext* loctx) const override;
 
-  xla::int64_t start_dim() const { return start_dim_; }
+  int64_t start_dim() const { return start_dim_; }
 
  private:
   // The dimension number at which indexing starts.
-  xla::int64_t start_dim_;
+  int64_t start_dim_;
 };
 
 }  // namespace ops

@@ -12,9 +12,9 @@ namespace ops {
 namespace {
 
 xla::Shape NodeOutputShape(
-    const Value& input, const Value& token, xla::int64_t split_dimension,
-    xla::int64_t concat_dimension, xla::int64_t split_count,
-    const std::vector<std::vector<xla::int64_t>>& groups) {
+    const Value& input, const Value& token, int64_t split_dimension,
+    int64_t concat_dimension, int64_t split_count,
+    const std::vector<std::vector<int64_t>>& groups) {
   auto shape_fn = [&](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
     AllToAllResult result =
         BuildAllToAll(operands[0], operands[1], split_dimension,
@@ -27,9 +27,9 @@ xla::Shape NodeOutputShape(
 }  // namespace
 
 AllToAll::AllToAll(const Value& input, const Value& token,
-                   xla::int64_t split_dimension, xla::int64_t concat_dimension,
-                   xla::int64_t split_count,
-                   std::vector<std::vector<xla::int64_t>> groups)
+                   int64_t split_dimension, int64_t concat_dimension,
+                   int64_t split_count,
+                   std::vector<std::vector<int64_t>> groups)
     : Node(xla_all_to_all, {input, token},
            [&]() {
              return NodeOutputShape(input, token, split_dimension,

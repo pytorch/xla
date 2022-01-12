@@ -25,26 +25,26 @@ class LayoutManager {
     return mgr;
   }
 
-  const std::vector<xla::int64_t>* GetLayout(
-      absl::Span<const xla::int64_t> dimensions) const {
+  const std::vector<int64_t>* GetLayout(
+      absl::Span<const int64_t> dimensions) const {
     auto it = layouts_.find(dimensions);
     return it != layouts_.end() ? &it->second->layout : nullptr;
   }
 
  private:
   struct LayoutEntry {
-    std::vector<xla::int64_t> dimensions;
-    std::vector<xla::int64_t> layout;
+    std::vector<int64_t> dimensions;
+    std::vector<int64_t> layout;
   };
 
   struct DimensionsHasher {
-    size_t operator()(const absl::Span<const xla::int64_t>& dimensions) const {
+    size_t operator()(const absl::Span<const int64_t>& dimensions) const {
       return xla::util::HashReduce(xla::util::MHash(dimensions));
     }
   };
 
   using LayoutMap =
-      std::unordered_map<absl::Span<const xla::int64_t>,
+      std::unordered_map<absl::Span<const int64_t>,
                          std::shared_ptr<LayoutEntry>, DimensionsHasher>;
 
   LayoutManager() {
@@ -78,20 +78,20 @@ class LayoutManager {
     }
   }
 
-  static std::vector<xla::int64_t> ParseIntList(const std::string& list_str) {
+  static std::vector<int64_t> ParseIntList(const std::string& list_str) {
     std::vector<std::string> parts = absl::StrSplit(list_str, ',');
-    std::vector<xla::int64_t> ints;
+    std::vector<int64_t> ints;
     for (const auto& int_str : parts) {
       ints.push_back(std::stol(int_str));
     }
     return ints;
   }
 
-  static std::vector<xla::int64_t> ParseLayout(const std::string& list_str,
-                                               xla::int64_t rank) {
-    std::vector<xla::int64_t> ints = ParseIntList(list_str);
+  static std::vector<int64_t> ParseLayout(const std::string& list_str,
+                                               int64_t rank) {
+    std::vector<int64_t> ints = ParseIntList(list_str);
     XLA_CHECK_EQ(ints.size(), rank) << list_str;
-    std::set<xla::int64_t> unique_ints;
+    std::set<int64_t> unique_ints;
     for (auto dim : ints) {
       XLA_CHECK_GE(dim, 0) << list_str;
       XLA_CHECK_LT(dim, rank) << list_str;
@@ -104,19 +104,19 @@ class LayoutManager {
   LayoutMap layouts_;
 };
 
-double PaddingFactor(xla::int64_t size, int padding) {
+double PaddingFactor(int64_t size, int padding) {
   int rem = static_cast<int>(size % padding);
   return 1.0 + (rem > 0 ? static_cast<double>(padding - rem) /
                               static_cast<double>(size)
                         : 0.0);
 }
 
-xla::Shape MakeShapeWithSortedLayout(absl::Span<const xla::int64_t> dimensions,
+xla::Shape MakeShapeWithSortedLayout(absl::Span<const int64_t> dimensions,
                                      xla::PrimitiveType type) {
   // Place bigger dimensions on most minor layout locations.
-  std::vector<xla::int64_t> layout = xla::util::Iota<xla::int64_t>(
+  std::vector<int64_t> layout = xla::util::Iota<int64_t>(
       dimensions.size(), dimensions.size() - 1, -1);
-  std::sort(layout.begin(), layout.end(), [&](xla::int64_t a, xla::int64_t b) {
+  std::sort(layout.begin(), layout.end(), [&](int64_t a, int64_t b) {
     return dimensions[a] > dimensions[b];
   });
   return xla::ShapeUtil::MakeShapeWithLayout(type, dimensions, layout);
@@ -133,7 +133,7 @@ xla::Shape* SetDynamicDimensions(xla::Shape* shape,
   return shape;
 }
 
-xla::Shape MakeTpuShape(absl::Span<const xla::int64_t> dimensions,
+xla::Shape MakeTpuShape(absl::Span<const int64_t> dimensions,
                         absl::Span<const bool> dynamic_dimensions,
                         xla::PrimitiveType type) {
   static double max_padding_factor =
@@ -151,9 +151,9 @@ xla::Shape MakeTpuShape(absl::Span<const xla::int64_t> dimensions,
 }
 
 xla::Shape MakeShapeWithLayout(xla::PrimitiveType type,
-                               absl::Span<const xla::int64_t> dimensions,
+                               absl::Span<const int64_t> dimensions,
                                absl::Span<const bool> dynamic_dimensions,
-                               absl::Span<const xla::int64_t> layout) {
+                               absl::Span<const int64_t> layout) {
   xla::Shape shape =
       xla::ShapeUtil::MakeShapeWithLayout(type, dimensions, layout);
   SetDynamicDimensions(&shape, dynamic_dimensions);
@@ -162,7 +162,7 @@ xla::Shape MakeShapeWithLayout(xla::PrimitiveType type,
 
 }  // namespace
 
-xla::Shape MakeTorchTensorLayout(absl::Span<const xla::int64_t> dimensions,
+xla::Shape MakeTorchTensorLayout(absl::Span<const int64_t> dimensions,
                                  absl::Span<const bool> dynamic_dimensions,
                                  xla::PrimitiveType type) {
   xla::Shape shape =
@@ -172,7 +172,7 @@ xla::Shape MakeTorchTensorLayout(absl::Span<const xla::int64_t> dimensions,
 }
 
 xla::Shape MakeArrayShapeFromDimensions(
-    absl::Span<const xla::int64_t> dimensions,
+    absl::Span<const int64_t> dimensions,
     absl::Span<const bool> dynamic_dimensions, xla::PrimitiveType type,
     DeviceType device_type) {
   auto layout_ptr = LayoutManager::Get()->GetLayout(dimensions);

@@ -10,7 +10,7 @@ class MaxUnpoolNdBackward : public Node {
  public:
   MaxUnpoolNdBackward(const Value& grad_output, const Value& input,
                       const Value& indices,
-                      std::vector<xla::int64_t> output_size);
+                      std::vector<int64_t> output_size);
 
   NodePtr Clone(OpList operands) const override;
 
@@ -18,10 +18,10 @@ class MaxUnpoolNdBackward : public Node {
 
   std::string ToString() const override;
 
-  const std::vector<xla::int64_t>& output_size() const { return output_size_; }
+  const std::vector<int64_t>& output_size() const { return output_size_; }
 
  private:
-  std::vector<xla::int64_t> output_size_;
+  std::vector<int64_t> output_size_;
 };
 
 }  // namespace ops

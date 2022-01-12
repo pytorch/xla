@@ -37,9 +37,9 @@ struct CanonicalIndexInfo {
   // The permutation to be applied to the result. This is needed for indexed
   // updates, since a permutation is applied to the base to bring non-null
   // indices to front. This is the inverse of that permutation.
-  std::vector<xla::int64_t> result_permutation;
+  std::vector<int64_t> result_permutation;
   // The dimension number at which indexing starts.
-  xla::int64_t start_dim = 0;
+  int64_t start_dim = 0;
 };
 
 // Transform the given base and indices to a form supported by the XLATensor
@@ -57,24 +57,24 @@ ir::Value EnsureRank1(const ir::Value& index);
 // description.
 XLATensor IndexByTensors(const XLATensor& base,
                          absl::Span<const XLATensor> indices,
-                         xla::int64_t start_dim);
+                         int64_t start_dim);
 
 ir::Value IndexPutByTensors(const XLATensor& base,
                             absl::Span<const XLATensor> indices,
-                            xla::int64_t start_dim, const XLATensor& updates,
+                            int64_t start_dim, const XLATensor& updates,
                             bool accumulate,
-                            absl::Span<const xla::int64_t> result_permutation);
+                            absl::Span<const int64_t> result_permutation);
 
-ir::NodePtr IndexFill(const XLATensor& base, xla::int64_t dim,
+ir::NodePtr IndexFill(const XLATensor& base, int64_t dim,
                       const XLATensor& index, const at::Scalar& value);
 
-ir::NodePtr IndexFill(const XLATensor& base, xla::int64_t dim,
+ir::NodePtr IndexFill(const XLATensor& base, int64_t dim,
                       const XLATensor& index, const XLATensor& value);
 
-ir::Value IndexAdd(const XLATensor& base, xla::int64_t dim,
+ir::Value IndexAdd(const XLATensor& base, int64_t dim,
                    const XLATensor& index, const XLATensor& source);
 
-ir::Value IndexCopy(const XLATensor& base, xla::int64_t dim,
+ir::Value IndexCopy(const XLATensor& base, int64_t dim,
                     const XLATensor& index, const XLATensor& source);
 
 }  // namespace torch_xla

@@ -11,13 +11,13 @@ namespace ops {
 namespace {
 
 xla::Shape NodeOutputShape(const Value& input,
-                           absl::Span<const xla::int64_t> size) {
+                           absl::Span<const int64_t> size) {
   return xla::ShapeUtil::MakeShape(input.shape().element_type(), size);
 }
 
 }  // namespace
 
-Resize::Resize(const Value& input, std::vector<xla::int64_t> size)
+Resize::Resize(const Value& input, std::vector<int64_t> size)
     : Node(ir::OpKind(at::aten::resize), {input},
            [&]() { return NodeOutputShape(input, size); },
            /*num_outputs=*/1, torch::lazy::MHash(size)),

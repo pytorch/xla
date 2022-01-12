@@ -13,12 +13,12 @@ namespace {
 
 xla::Shape NodeOutputShape(const Value& grad_output, const Value& input,
                            const Value& weight,
-                           absl::Span<const xla::int64_t> stride,
-                           absl::Span<const xla::int64_t> padding,
-                           absl::Span<const xla::int64_t> dilation,
+                           absl::Span<const int64_t> stride,
+                           absl::Span<const int64_t> padding,
+                           absl::Span<const int64_t> dilation,
                            bool transposed,
-                           absl::Span<const xla::int64_t> output_padding,
-                           xla::int64_t groups) {
+                           absl::Span<const int64_t> output_padding,
+                           int64_t groups) {
   auto lower_for_shape_fn =
       [stride, padding, dilation, transposed, output_padding,
        groups](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
@@ -38,9 +38,9 @@ xla::Shape NodeOutputShape(const Value& grad_output, const Value& input,
 
 ConvolutionBackwardOverrideable::ConvolutionBackwardOverrideable(
     const Value& grad_output, const Value& input, const Value& weight,
-    std::vector<xla::int64_t> stride, std::vector<xla::int64_t> padding,
-    std::vector<xla::int64_t> dilation, bool transposed,
-    std::vector<xla::int64_t> output_padding, xla::int64_t groups)
+    std::vector<int64_t> stride, std::vector<int64_t> padding,
+    std::vector<int64_t> dilation, bool transposed,
+    std::vector<int64_t> output_padding, int64_t groups)
     : Node(ir::OpKind(at::aten::convolution_backward_overrideable),
            {grad_output, input, weight},
            [&]() {

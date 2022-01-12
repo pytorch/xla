@@ -1375,7 +1375,7 @@ void XrtComputationClient::InitializeDevices(
 
 void XrtComputationClient::SetupGpuRuntime() {
   struct NcclUniqueIdFactory : public tensorflow::NcclUniqueIdFactory {
-    std::string GetUniqueId(absl::Span<const xla::int64_t> replicas) override {
+    std::string GetUniqueId(absl::Span<const int64_t> replicas) override {
       return service::MeshClient::Get()->GetNcclUniqueUid(replicas);
     }
   };

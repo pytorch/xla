@@ -14,8 +14,8 @@ namespace ops {
 namespace {
 
 xla::Shape NodeOutputShape(const Value& input,
-                           std::vector<xla::int64_t>& dimensions,
-                           xla::int64_t correction,
+                           std::vector<int64_t>& dimensions,
+                           int64_t correction,
                            bool keep_reduced_dimensions) {
   auto lower_for_shape_fn =
       [&](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
@@ -30,8 +30,8 @@ xla::Shape NodeOutputShape(const Value& input,
 
 }  // namespace
 
-VarMean::VarMean(const Value& input, std::vector<xla::int64_t> dimensions,
-                 xla::int64_t correction, bool keep_reduced_dimensions)
+VarMean::VarMean(const Value& input, std::vector<int64_t> dimensions,
+                 int64_t correction, bool keep_reduced_dimensions)
     : Node(ir::OpKind(at::aten::var_mean), {input},
            [&]() {
              return NodeOutputShape(input, dimensions, correction,

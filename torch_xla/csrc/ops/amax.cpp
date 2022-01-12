@@ -10,7 +10,7 @@ namespace ops {
 namespace {
 
 xla::Shape NodeOutputShape(const Value& input,
-                           std::vector<xla::int64_t>& dimensions,
+                           std::vector<int64_t>& dimensions,
                            bool keepdim) {
   auto lower_for_shape_fn =
       [&](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
@@ -21,7 +21,7 @@ xla::Shape NodeOutputShape(const Value& input,
 
 }  // namespace
 
-Amax::Amax(const Value& input, std::vector<xla::int64_t> dimensions,
+Amax::Amax(const Value& input, std::vector<int64_t> dimensions,
            bool keepdim)
     : Node(ir::OpKind(at::aten::amax), {input},
            [&]() { return NodeOutputShape(input, dimensions, keepdim); },
