@@ -505,7 +505,7 @@ void TensorToBufferSType(const at::Tensor& tensor, const xla::Shape& dest_shape,
                                   dest_buffer_size, device);
       break;
     case xla::PrimitiveType::U8:
-      TensorToBuffer<SType, xla::uint8>(tensor, dest_shape, dest_buffer,
+      TensorToBuffer<SType, uint8_t>(tensor, dest_shape, dest_buffer,
                                         dest_buffer_size, device);
       break;
     case xla::PrimitiveType::S8:
@@ -715,7 +715,7 @@ at::Tensor MakeTensorFromXlaLiteral(const xla::Literal& literal,
     case xla::PrimitiveType::F64:
       return XlaLiteralToTensorHelper<double>(literal, dest_element_type);
     case xla::PrimitiveType::U8:
-      return XlaLiteralToTensorHelper<xla::uint8>(literal, dest_element_type);
+      return XlaLiteralToTensorHelper<uint8_t>(literal, dest_element_type);
     case xla::PrimitiveType::S8:
       return XlaLiteralToTensorHelper<xla::int8>(literal, dest_element_type);
     case xla::PrimitiveType::S16:

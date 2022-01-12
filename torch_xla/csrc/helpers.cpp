@@ -181,8 +181,8 @@ XlaHelpers::MinMax XlaHelpers::MinMaxValues(xla::PrimitiveType type) {
       return {std::numeric_limits<xla::int8>::lowest(),
               std::numeric_limits<xla::int8>::max()};
     case xla::PrimitiveType::U8:
-      return {std::numeric_limits<xla::uint8>::lowest(),
-              std::numeric_limits<xla::uint8>::max()};
+      return {std::numeric_limits<uint8_t>::lowest(),
+              std::numeric_limits<uint8_t>::max()};
     case xla::PrimitiveType::S16:
       return {std::numeric_limits<int16_t>::lowest(),
               std::numeric_limits<int16_t>::max()};
