@@ -12,8 +12,8 @@ namespace ops {
 namespace {
 
 xla::Shape NodeOutputShape(const Value& input,
-                           const std::vector<xla::int64_t>& split_sizes,
-                           xla::int64_t dim) {
+                           const std::vector<int64_t>& split_sizes,
+                           int64_t dim) {
   auto lower_for_shape_fn =
       [&](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
     return xla::Tuple(operands[0].builder(),
@@ -24,8 +24,8 @@ xla::Shape NodeOutputShape(const Value& input,
 
 }  // namespace
 
-Split::Split(const Value& input, std::vector<xla::int64_t> split_sizes,
-             xla::int64_t dim)
+Split::Split(const Value& input, std::vector<int64_t> split_sizes,
+             int64_t dim)
     : Node(ir::OpKind(at::aten::split), {input},
            [&]() { return NodeOutputShape(input, split_sizes, dim); },
            ComputeSplitCount(input.shape().dimensions(dim), split_sizes),

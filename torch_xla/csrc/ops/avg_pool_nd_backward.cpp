@@ -11,10 +11,10 @@ namespace ops {
 namespace {
 
 xla::Shape NodeOutputShape(const Value& grad_output, const Value& input,
-                           xla::int64_t spatial_dim_count,
-                           absl::Span<const xla::int64_t> kernel_size,
-                           absl::Span<const xla::int64_t> stride,
-                           absl::Span<const xla::int64_t> padding,
+                           int64_t spatial_dim_count,
+                           absl::Span<const int64_t> kernel_size,
+                           absl::Span<const int64_t> stride,
+                           absl::Span<const int64_t> padding,
                            bool ceil_mode, bool count_include_pad) {
   auto lower_for_shape_fn =
       [&](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
@@ -29,7 +29,7 @@ xla::Shape NodeOutputShape(const Value& grad_output, const Value& input,
                           lower_for_shape_fn);
 }
 
-c10::Symbol AvgNdBackwardSymbol(xla::int64_t spatial_dim_count) {
+c10::Symbol AvgNdBackwardSymbol(int64_t spatial_dim_count) {
   switch (spatial_dim_count) {
     case 2:
       return at::aten::avg_pool2d_backward;
@@ -45,10 +45,10 @@ c10::Symbol AvgNdBackwardSymbol(xla::int64_t spatial_dim_count) {
 
 AvgPoolNdBackward::AvgPoolNdBackward(const Value& grad_output,
                                      const Value& input,
-                                     xla::int64_t spatial_dim_count,
-                                     std::vector<xla::int64_t> kernel_size,
-                                     std::vector<xla::int64_t> stride,
-                                     std::vector<xla::int64_t> padding,
+                                     int64_t spatial_dim_count,
+                                     std::vector<int64_t> kernel_size,
+                                     std::vector<int64_t> stride,
+                                     std::vector<int64_t> padding,
                                      bool ceil_mode, bool count_include_pad)
     : Node(OpKind(AvgNdBackwardSymbol(spatial_dim_count)), {grad_output, input},
            [&]() {

@@ -8,7 +8,7 @@ namespace ops {
 
 class TopK : public Node {
  public:
-  TopK(const Value& input, xla::int64_t k, xla::int64_t dim, bool largest,
+  TopK(const Value& input, int64_t k, int64_t dim, bool largest,
        bool sorted, bool stable);
 
   std::string ToString() const override;
@@ -17,9 +17,9 @@ class TopK : public Node {
 
   XlaOpVector Lower(LoweringContext* loctx) const override;
 
-  xla::int64_t k() const { return k_; };
+  int64_t k() const { return k_; };
 
-  xla::int64_t dim() const { return dim_; };
+  int64_t dim() const { return dim_; };
 
   bool largest() const { return largest_; }
 
@@ -28,8 +28,8 @@ class TopK : public Node {
   bool stable() const { return stable_; }
 
  private:
-  xla::int64_t k_;
-  xla::int64_t dim_;
+  int64_t k_;
+  int64_t dim_;
   bool largest_;
   bool sorted_;
   bool stable_;

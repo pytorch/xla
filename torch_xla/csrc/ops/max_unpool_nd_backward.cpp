@@ -12,7 +12,7 @@ namespace {
 
 xla::Shape NodeOutputShape(const Value& grad_output, const Value& input,
                            const Value& indices,
-                           absl::Span<const xla::int64_t> output_size) {
+                           absl::Span<const int64_t> output_size) {
   auto shape_fn = [&](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
     return BuildMaxUnpoolNdBackward(operands[0], operands[1], operands[2],
                                     output_size);
@@ -21,7 +21,7 @@ xla::Shape NodeOutputShape(const Value& grad_output, const Value& input,
                           shape_fn);
 }
 
-c10::Symbol MaxUnpoolNdBackwardSymbol(xla::int64_t spatial_dim_count) {
+c10::Symbol MaxUnpoolNdBackwardSymbol(int64_t spatial_dim_count) {
   switch (spatial_dim_count) {
     case 2:
       return at::aten::max_unpool2d_backward;
@@ -38,7 +38,7 @@ c10::Symbol MaxUnpoolNdBackwardSymbol(xla::int64_t spatial_dim_count) {
 MaxUnpoolNdBackward::MaxUnpoolNdBackward(const Value& grad_output,
                                          const Value& input,
                                          const Value& indices,
-                                         std::vector<xla::int64_t> output_size)
+                                         std::vector<int64_t> output_size)
     : Node(ir::OpKind(MaxUnpoolNdBackwardSymbol(output_size.size())),
            {grad_output, input, indices},
            [&]() {

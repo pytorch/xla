@@ -16,8 +16,8 @@ class MetricsSnapshot {
  public:
   struct ChangedCounter {
     std::string name;
-    xla::int64_t before = 0;
-    xla::int64_t after = 0;
+    int64_t before = 0;
+    int64_t after = 0;
   };
 
   MetricsSnapshot();
@@ -43,7 +43,7 @@ class MetricsSnapshot {
                                    std::stringstream* ss);
 
   std::unordered_map<std::string, MetricSamples> metrics_map_;
-  std::unordered_map<std::string, xla::int64_t> counters_map_;
+  std::unordered_map<std::string, int64_t> counters_map_;
 };
 
 }  // namespace cpp_test

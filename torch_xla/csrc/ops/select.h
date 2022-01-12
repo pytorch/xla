@@ -8,8 +8,8 @@ namespace ops {
 
 class Select : public Node {
  public:
-  Select(const Value& input, xla::int64_t dim, xla::int64_t start,
-         xla::int64_t end, xla::int64_t stride);
+  Select(const Value& input, int64_t dim, int64_t start,
+         int64_t end, int64_t stride);
 
   NodePtr Clone(OpList operands) const override;
 
@@ -17,26 +17,26 @@ class Select : public Node {
 
   std::string ToString() const override;
 
-  xla::int64_t dim() const { return dim_; }
+  int64_t dim() const { return dim_; }
 
-  xla::int64_t start() const { return start_; }
+  int64_t start() const { return start_; }
 
-  xla::int64_t end() const { return end_; }
+  int64_t end() const { return end_; }
 
-  xla::int64_t stride() const { return stride_; }
+  int64_t stride() const { return stride_; }
 
-  static xla::Shape MakeSelectShape(const xla::Shape& shape, xla::int64_t dim,
-                                    xla::int64_t start, xla::int64_t end,
-                                    xla::int64_t stride);
+  static xla::Shape MakeSelectShape(const xla::Shape& shape, int64_t dim,
+                                    int64_t start, int64_t end,
+                                    int64_t stride);
 
-  static xla::int64_t GetStride(xla::int64_t start, xla::int64_t end,
-                                xla::int64_t stride);
+  static int64_t GetStride(int64_t start, int64_t end,
+                                int64_t stride);
 
  private:
-  xla::int64_t dim_;
-  xla::int64_t start_;
-  xla::int64_t end_;
-  xla::int64_t stride_;
+  int64_t dim_;
+  int64_t start_;
+  int64_t end_;
+  int64_t stride_;
 };
 
 }  // namespace ops

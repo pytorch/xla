@@ -11,8 +11,8 @@ namespace ops {
 // Split the tensor into chunks along a given dimension.
 class Split : public Node {
  public:
-  Split(const Value& input, std::vector<xla::int64_t> split_sizes,
-        xla::int64_t dim);
+  Split(const Value& input, std::vector<int64_t> split_sizes,
+        int64_t dim);
 
   NodePtr Clone(OpList operands) const override;
 
@@ -20,13 +20,13 @@ class Split : public Node {
 
   std::string ToString() const override;
 
-  const std::vector<xla::int64_t>& split_sizes() const { return split_sizes_; }
+  const std::vector<int64_t>& split_sizes() const { return split_sizes_; }
 
-  xla::int64_t dim() const { return dim_; }
+  int64_t dim() const { return dim_; }
 
  private:
-  std::vector<xla::int64_t> split_sizes_;
-  xla::int64_t dim_;
+  std::vector<int64_t> split_sizes_;
+  int64_t dim_;
 };
 
 }  // namespace ops

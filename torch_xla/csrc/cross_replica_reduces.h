@@ -39,12 +39,12 @@ struct ReduceScatterResult {
 std::vector<xla::XlaOp> BuildAllReduce(
     AllReduceType reduce_type, absl::Span<const xla::XlaOp> operands,
     xla::XlaOp token, double scale,
-    const std::vector<std::vector<xla::int64_t>>& groups);
+    const std::vector<std::vector<int64_t>>& groups);
 
 AllToAllResult BuildAllToAll(
-    xla::XlaOp input, xla::XlaOp token, xla::int64_t split_dimension,
-    xla::int64_t concat_dimension, xla::int64_t split_count,
-    const std::vector<std::vector<xla::int64_t>>& groups);
+    xla::XlaOp input, xla::XlaOp token, int64_t split_dimension,
+    int64_t concat_dimension, int64_t split_count,
+    const std::vector<std::vector<int64_t>>& groups);
 
 AllGatherResult BuildAllGather(
     xla::XlaOp input, xla::XlaOp token, xla::int64_t dim,
@@ -53,12 +53,12 @@ AllGatherResult BuildAllGather(
 
 CollectivePermuteResult BuildCollectivePermute(
     xla::XlaOp input, xla::XlaOp token,
-    const std::vector<std::pair<xla::int64_t, xla::int64_t>>&
+    const std::vector<std::pair<int64_t, int64_t>>&
         source_target_pairs);
 
 ReduceScatterResult BuildReduceScatter(
     AllReduceType reduce_type, xla::XlaOp input, xla::XlaOp token, double scale,
-    xla::int64_t scatter_dim, xla::int64_t shard_count,
-    const std::vector<std::vector<xla::int64_t>>& groups);
+    int64_t scatter_dim, int64_t shard_count,
+    const std::vector<std::vector<int64_t>>& groups);
 
 }  // namespace torch_xla

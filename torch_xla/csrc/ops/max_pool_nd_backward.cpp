@@ -11,10 +11,10 @@ namespace ops {
 namespace {
 
 xla::Shape NodeOutputShape(const Value& grad_output, const Value& input,
-                           xla::int64_t spatial_dim_count,
-                           absl::Span<const xla::int64_t> kernel_size,
-                           absl::Span<const xla::int64_t> stride,
-                           absl::Span<const xla::int64_t> padding,
+                           int64_t spatial_dim_count,
+                           absl::Span<const int64_t> kernel_size,
+                           absl::Span<const int64_t> stride,
+                           absl::Span<const int64_t> padding,
                            bool ceil_mode) {
   auto lower_for_shape_fn =
       [&](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
@@ -27,7 +27,7 @@ xla::Shape NodeOutputShape(const Value& grad_output, const Value& input,
                           lower_for_shape_fn);
 }
 
-c10::Symbol MaxPoolNdBackwardSymbol(xla::int64_t spatial_dim_count) {
+c10::Symbol MaxPoolNdBackwardSymbol(int64_t spatial_dim_count) {
   switch (spatial_dim_count) {
     case 2:
       return at::aten::max_pool2d_with_indices_backward;
@@ -43,10 +43,10 @@ c10::Symbol MaxPoolNdBackwardSymbol(xla::int64_t spatial_dim_count) {
 
 MaxPoolNdBackward::MaxPoolNdBackward(const Value& grad_output,
                                      const Value& input,
-                                     xla::int64_t spatial_dim_count,
-                                     std::vector<xla::int64_t> kernel_size,
-                                     std::vector<xla::int64_t> stride,
-                                     std::vector<xla::int64_t> padding,
+                                     int64_t spatial_dim_count,
+                                     std::vector<int64_t> kernel_size,
+                                     std::vector<int64_t> stride,
+                                     std::vector<int64_t> padding,
                                      bool ceil_mode)
     : Node(ir::OpKind(MaxPoolNdBackwardSymbol(spatial_dim_count)),
            {grad_output, input},

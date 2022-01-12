@@ -10,7 +10,7 @@ namespace ops {
 
 class Expand : public Node {
  public:
-  Expand(const Value& input, std::vector<xla::int64_t> size);
+  Expand(const Value& input, std::vector<int64_t> size);
 
   std::string ToString() const override;
 
@@ -18,10 +18,10 @@ class Expand : public Node {
 
   XlaOpVector Lower(LoweringContext* loctx) const override;
 
-  const std::vector<xla::int64_t>& size() const { return size_; };
+  const std::vector<int64_t>& size() const { return size_; };
 
  private:
-  std::vector<xla::int64_t> size_;
+  std::vector<int64_t> size_;
 };
 
 }  // namespace ops

@@ -11,7 +11,7 @@ class AllReduce : public Node {
  public:
   AllReduce(AllReduceType reduce_type, absl::Span<const Value> operands,
             const Value& token, double scale,
-            std::vector<std::vector<xla::int64_t>> groups);
+            std::vector<std::vector<int64_t>> groups);
 
   std::string ToString() const override;
 
@@ -23,14 +23,14 @@ class AllReduce : public Node {
 
   double scale() const { return scale_; }
 
-  const std::vector<std::vector<xla::int64_t>>& groups() const {
+  const std::vector<std::vector<int64_t>>& groups() const {
     return groups_;
   }
 
  private:
   AllReduceType reduce_type_;
   double scale_;
-  std::vector<std::vector<xla::int64_t>> groups_;
+  std::vector<std::vector<int64_t>> groups_;
 };
 
 }  // namespace ops

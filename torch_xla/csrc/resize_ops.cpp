@@ -26,7 +26,7 @@ double ResizeFactor(const xla::Shape& input_shape,
 }  // namespace
 
 xla::Shape GetForwardOutputShape2d(const xla::Shape& input_shape,
-                                   absl::Span<const xla::int64_t> output_size) {
+                                   absl::Span<const int64_t> output_size) {
   XLA_CHECK_EQ(output_size.size(), 2);
   return ShapeBuilder(input_shape.element_type())
       .Add(input_shape, 0)
@@ -37,7 +37,7 @@ xla::Shape GetForwardOutputShape2d(const xla::Shape& input_shape,
 }
 
 xla::Shape GetBackwardOutputShape2d(const xla::Shape& input_shape,
-                                    absl::Span<const xla::int64_t> input_size) {
+                                    absl::Span<const int64_t> input_size) {
   return xla::ShapeUtil::MakeShape(input_shape.element_type(), input_size);
 }
 
@@ -54,7 +54,7 @@ xla::XlaOp LowerForward2d(const std::string& target, xla::XlaOp input,
   }
   // XLA wants NHWC while PyTorch comes in as NCHW, so we need to transpose,
   // call the kernel, and transpose back.
-  std::vector<xla::int64_t> transpose_permute({0, 3, 2, 1});
+  std::vector<int64_t> transpose_permute({0, 3, 2, 1});
   auto inv_transpose_permute = xla::InversePermutation(transpose_permute);
   xla::Shape resized_shape =
       xla::ShapeUtil::PermuteDimensions(transpose_permute, output_shape);
@@ -77,7 +77,7 @@ xla::XlaOp LowerBackward2d(const std::string& target, xla::XlaOp input,
   }
   // XLA wants NHWC while PyTorch comes in as NCHW, so we need to transpose,
   // call the kernel, and transpose back.
-  std::vector<xla::int64_t> transpose_permute({0, 3, 2, 1});
+  std::vector<int64_t> transpose_permute({0, 3, 2, 1});
   auto inv_transpose_permute = xla::InversePermutation(transpose_permute);
   xla::Shape resized_shape =
       xla::ShapeUtil::PermuteDimensions(transpose_permute, output_shape);

@@ -11,7 +11,7 @@ namespace ops {
 namespace {
 
 xla::Shape NodeOutputShape(const Value& input,
-                           absl::Span<const xla::int64_t> repeats) {
+                           absl::Span<const int64_t> repeats) {
   auto lower_for_shape_fn =
       [repeats](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
     XLA_CHECK_EQ(operands.size(), 1);
@@ -22,7 +22,7 @@ xla::Shape NodeOutputShape(const Value& input,
 
 }  // namespace
 
-Repeat::Repeat(const Value& input, std::vector<xla::int64_t> repeats)
+Repeat::Repeat(const Value& input, std::vector<int64_t> repeats)
     : Node(ir::OpKind(at::aten::repeat), {input},
            [&]() { return NodeOutputShape(input, repeats); },
            /*num_outputs=*/1, torch::lazy::MHash(repeats)),

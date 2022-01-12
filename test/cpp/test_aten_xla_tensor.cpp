@@ -4187,7 +4187,7 @@ TEST_F(AtenXlaTensorTest, TestRandperm) {
   torch::Tensor shuffle = torch::randperm(
       n, torch::TensorOptions(torch::kLong).device(torch::kXLA));
   torch::Tensor shuffle_cpu = CopyToDevice(shuffle, torch::kCPU);
-  std::vector<xla::int64_t> shuffle_data(shuffle_cpu.data_ptr<int64_t>(),
+  std::vector<int64_t> shuffle_data(shuffle_cpu.data_ptr<int64_t>(),
                                          shuffle_cpu.data_ptr<int64_t>() + n);
   EXPECT_TRUE(shuffle_data.size() == n && xla::IsPermutation(shuffle_data));
   ExpectCounterNotChanged("aten::(?!randperm.generator_out).*",
@@ -6602,8 +6602,8 @@ TEST_F(AtenXlaTensorTest, TestUnsafeView) {
 TEST_F(AtenXlaTensorTest, TestNarrow) {
   torch::Tensor a =
       torch::rand({8, 10, 4, 4}, torch::TensorOptions(torch::kFloat));
-  for (xla::int64_t dim : {1, -3}) {
-    for (xla::int64_t start : {2, -8}) {
+  for (int64_t dim : {1, -3}) {
+    for (int64_t start : {2, -8}) {
       torch::Tensor b = a.narrow(dim, start, 6);
       ForEachDevice([&](const torch::Device& device) {
         torch::Tensor xla_a = CopyToDevice(a, device);
@@ -6618,8 +6618,8 @@ TEST_F(AtenXlaTensorTest, TestNarrow) {
 }
 
 TEST_F(AtenXlaTensorTest, TestNarrowUpdate) {
-  for (xla::int64_t dim : {1, -2}) {
-    for (xla::int64_t start : {2, -6}) {
+  for (int64_t dim : {1, -2}) {
+    for (int64_t start : {2, -6}) {
       torch::Tensor a =
           torch::rand({3, 8, 3}, torch::TensorOptions(torch::kFloat));
       torch::Tensor a_copy = a.clone();
@@ -6642,8 +6642,8 @@ TEST_F(AtenXlaTensorTest, TestNarrowUpdate) {
 }
 
 TEST_F(AtenXlaTensorTest, TestNarrowUpdateBaseCheck) {
-  for (xla::int64_t dim : {0, -2}) {
-    for (xla::int64_t start : {2, -6}) {
+  for (int64_t dim : {0, -2}) {
+    for (int64_t start : {2, -6}) {
       torch::Tensor a =
           torch::zeros({8, 3}, torch::TensorOptions(torch::kFloat));
       torch::Tensor a_copy = a.clone();
@@ -6666,9 +6666,9 @@ TEST_F(AtenXlaTensorTest, TestNarrowUpdateBaseCheck) {
 }
 
 TEST_F(AtenXlaTensorTest, TestNarrowUpdateTwoSlices) {
-  for (xla::int64_t dim : {0, -2}) {
-    for (xla::int64_t start0 : {2, -6}) {
-      for (xla::int64_t start1 : {6, -2}) {
+  for (int64_t dim : {0, -2}) {
+    for (int64_t start0 : {2, -6}) {
+      for (int64_t start1 : {6, -2}) {
         torch::Tensor a =
             torch::zeros({8, 3}, torch::TensorOptions(torch::kFloat));
         torch::Tensor a_copy = a.clone();
@@ -6700,8 +6700,8 @@ TEST_F(AtenXlaTensorTest, TestNarrowUpdateTwoSlices) {
 }
 
 TEST_F(AtenXlaTensorTest, TestNarrowUpdateView) {
-  for (xla::int64_t dim : {0, -3}) {
-    for (xla::int64_t start : {2, -6}) {
+  for (int64_t dim : {0, -3}) {
+    for (int64_t start : {2, -6}) {
       torch::Tensor a =
           torch::rand({8, 2, 3}, torch::TensorOptions(torch::kFloat));
       torch::Tensor a_copy = a.clone();
@@ -6726,9 +6726,9 @@ TEST_F(AtenXlaTensorTest, TestNarrowUpdateView) {
 }
 
 TEST_F(AtenXlaTensorTest, TestNarrowInNarrowUpdate) {
-  for (xla::int64_t dim : {1, -2}) {
-    for (xla::int64_t start0 : {1, -7}) {
-      for (xla::int64_t start1 : {1, -5}) {
+  for (int64_t dim : {1, -2}) {
+    for (int64_t start0 : {1, -7}) {
+      for (int64_t start1 : {1, -5}) {
         torch::Tensor a =
             torch::rand({3, 8, 3}, torch::TensorOptions(torch::kFloat));
         torch::Tensor a_copy = a.clone();
@@ -6754,8 +6754,8 @@ TEST_F(AtenXlaTensorTest, TestNarrowInNarrowUpdate) {
 }
 
 TEST_F(AtenXlaTensorTest, TestNarrowCopy) {
-  for (xla::int64_t dim : {1, -3}) {
-    for (xla::int64_t start : {2, -8}) {
+  for (int64_t dim : {1, -3}) {
+    for (int64_t start : {2, -8}) {
       ForEachDevice([&](const torch::Device& device) {
         torch::Tensor input =
             torch::rand({8, 10, 4, 4}, torch::TensorOptions(torch::kFloat));
