@@ -178,8 +178,8 @@ XlaHelpers::DynamicSize XlaHelpers::GetDimensionsSize(
 XlaHelpers::MinMax XlaHelpers::MinMaxValues(xla::PrimitiveType type) {
   switch (type) {
     case xla::PrimitiveType::S8:
-      return {std::numeric_limits<xla::int8>::lowest(),
-              std::numeric_limits<xla::int8>::max()};
+      return {std::numeric_limits<int8_t>::lowest(),
+              std::numeric_limits<int8_t>::max()};
     case xla::PrimitiveType::U8:
       return {std::numeric_limits<uint8_t>::lowest(),
               std::numeric_limits<uint8_t>::max()};
