@@ -517,7 +517,7 @@ NodePtr ARange(const at::Scalar& start, const at::Scalar& end,
                                              step.toByte());
       break;
     case xla::PrimitiveType::S8:
-      values = XlaHelpers::Range<xla::int8>(start.toChar(), end.toChar(),
+      values = XlaHelpers::Range<int8_t>(start.toChar(), end.toChar(),
                                             step.toChar());
       break;
     case xla::PrimitiveType::S16:
