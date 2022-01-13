@@ -97,6 +97,7 @@ class DistributedExecutor(object):
     self.restart_server = restart_server
     self.tpuvm_server_port = tpuvm_server_port
     self.tpu_name = self._cluster.get_service_workers()[0]._tpu
+    print("executor __init__ 0, thread id is {}".format(threading.get_ident()))
 
     for env_var in self.env_vars:
       if re.match(r'\w*=\w*', env_var) is None:
@@ -109,6 +110,7 @@ class DistributedExecutor(object):
               ('{} should not be in the training command provided as they'
                ' will interfere with the values set for distributed'
                ' training'.format(dist_var)))
+    print("executor __init__ 1, thread id is {}".format(threading.get_ident()))
 
   def _check_client_mesh_health(self, uneven_health_timeout,
                                 even_health_timeout):
@@ -514,6 +516,7 @@ class DistributedExecutor(object):
 
   def run(self, cmd):
     self.trials = 0
+    print("xla_dist, run 0, thread id is {}".format(threading.get_ident()))
     while self.trials <= self.MAX_TPU_RETRY:
       try:
         self.logger.info(
@@ -532,6 +535,7 @@ class DistributedExecutor(object):
         script_map = self._prepare_scripts(cmd)
         proc = multiprocessing.Process(target=self._run_cmd, args=(script_map,))
         proc.start()
+        print("xla_dist, run 1, thread id is {}".format(threading.get_ident()))
         while True:
           if not proc.is_alive():
             sys.exit(proc.exitcode)
@@ -549,6 +553,7 @@ class DistributedExecutor(object):
             break
 
           proc.join(10)
+        print("xla_dist, run 2, thread id is {}".format(threading.get_ident()))
 
         # First wait for VMs to come back then cleanup all others
         self._cluster.wait_for_healthy_client(self)
@@ -565,7 +570,7 @@ class DistributedExecutor(object):
             })
         self._cleanup(script_map)
         sys.exit(128 + signal.SIGINT)
-
+    print("xla_dist, run 3, thread id is {}".format(threading.get_ident()))
     self.logger.info(
         'Max number of retries reached.', extra={
             'clientip': '',
@@ -645,6 +650,7 @@ if __name__ == '__main__':
   cluster_resolver = ClusterResolver(FLAGS.tpu, vms=FLAGS.vm)
   cluster = cluster_resolver.get_cluster()
   tpuvm_mode = cluster_resolver.get_tpuvm_mode()
+  print("xla_dist 0, thread id is {}".format(threading.get_ident()))
   executor = DistributedExecutor(
       cluster,
       docker_container=FLAGS.docker_container,

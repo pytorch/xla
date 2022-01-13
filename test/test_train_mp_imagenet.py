@@ -65,6 +65,7 @@ import torch_xla.core.xla_model as xm
 import torch_xla.distributed.xla_multiprocessing as xmp
 import torch_xla.test.test_utils as test_utils
 from torch_xla.amp import autocast, GradScaler
+import threading
 
 DEFAULT_KWARGS = dict(
     batch_size=128,
@@ -121,20 +122,24 @@ def _train_update(device, step, loss, tracker, epoch, writer):
 
 
 def train_imagenet():
+  print("train_imagenet 0, thread id is {}".format(threading.get_ident()))
   print('==> Preparing data..')
   img_dim = get_model_property('img_dim')
   if FLAGS.fake_data:
+    print("train_imagenet 1, thread id is {}".format(threading.get_ident()))
     train_dataset_len = 1200000  # Roughly the size of Imagenet dataset.
     train_loader = xu.SampleGenerator(
         data=(torch.zeros(FLAGS.batch_size, 3, img_dim, img_dim),
               torch.zeros(FLAGS.batch_size, dtype=torch.int64)),
         sample_count=train_dataset_len // FLAGS.batch_size //
         xm.xrt_world_size())
+    print("train_imagenet 1-1, thread id is {}".format(threading.get_ident()))
     test_loader = xu.SampleGenerator(
         data=(torch.zeros(FLAGS.test_set_batch_size, 3, img_dim, img_dim),
               torch.zeros(FLAGS.test_set_batch_size, dtype=torch.int64)),
         sample_count=50000 // FLAGS.batch_size // xm.xrt_world_size())
   else:
+    print("train_imagenet 2, thread id is {}".format(threading.get_ident()))
     normalize = transforms.Normalize(
         mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
     train_dataset = torchvision.datasets.ImageFolder(
@@ -158,7 +163,7 @@ def train_imagenet():
             transforms.ToTensor(),
             normalize,
         ]))
-
+    print("train_imagenet 3, thread id is {}".format(threading.get_ident()))
     train_sampler, test_sampler = None, None
     if xm.xrt_world_size() > 1:
       train_sampler = torch.utils.data.distributed.DistributedSampler(
@@ -185,13 +190,15 @@ def train_imagenet():
         drop_last=FLAGS.drop_last,
         shuffle=False,
         num_workers=FLAGS.num_workers)
-
+  print("train_imagenet 4, thread id is {}".format(threading.get_ident()))
   torch.manual_seed(42)
 
   device = xm.xla_device()
   model = get_model_property('model_fn')().to(device)
   writer = None
+  print("train_imagenet 5, thread id is {}".format(threading.get_ident()))
   if xm.is_master_ordinal():
+    print("train_imagenet 6, thread id is {}".format(threading.get_ident()))
     writer = test_utils.get_summary_writer(FLAGS.logdir)
   optimizer = optim.SGD(
       model.parameters(),
@@ -209,6 +216,7 @@ def train_imagenet():
       num_steps_per_epoch=num_training_steps_per_epoch,
       summary_writer=writer)
   loss_fn = nn.CrossEntropyLoss()
+  print("train_imagenet 7, thread id is {}".format(threading.get_ident()))
   if FLAGS.amp:
     scaler = GradScaler(use_zero_grad=FLAGS.use_zero_grad)
 
@@ -283,7 +291,9 @@ def train_imagenet():
 def _mp_fn(index, flags):
   global FLAGS
   FLAGS = flags
+  print("_mp_fn 0, thread id is {}".format(threading.get_ident()))
   torch.set_default_tensor_type('torch.FloatTensor')
+  print("_mp_fn 1, thread id is {}".format(threading.get_ident()))
   accuracy = train_imagenet()
   if accuracy < FLAGS.target_accuracy:
     print('Accuracy {} is below target {}'.format(accuracy,
