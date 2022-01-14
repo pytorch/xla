@@ -1462,8 +1462,8 @@ XLATensor XLATensor::isnan(const XLATensor& input) {
 
 XLATensor XLATensor::kl_div_backward(const XLATensor& grad_output,
                                      const XLATensor& input,
-                                     const XLATensor& target,
-                                     int64_t reduction, bool log_target) {
+                                     const XLATensor& target, int64_t reduction,
+                                     bool log_target) {
   return tensor_ops::KlDivBackward(grad_output, input, target,
                                    GetXlaReductionMode(reduction), log_target);
 }
