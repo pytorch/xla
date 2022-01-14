@@ -51,9 +51,9 @@ xla::PrecisionConfig XlaHelpers::BuildPrecisionConfig(
   return precision_config;
 }
 
-xla::XlaOp XlaHelpers::BroadcastDimensions(
-    xla::XlaOp input, absl::Span<const int64_t> dimensions,
-    absl::Span<const int64_t> sizes) {
+xla::XlaOp XlaHelpers::BroadcastDimensions(xla::XlaOp input,
+                                           absl::Span<const int64_t> dimensions,
+                                           absl::Span<const int64_t> sizes) {
   XLA_CHECK_EQ(dimensions.size(), sizes.size());
   std::vector<int64_t> bcast_sizes = SizesOfXlaOp(input);
   for (size_t i = 0; i < dimensions.size(); ++i) {
@@ -75,8 +75,7 @@ xla::XlaOp XlaHelpers::CreateReturnValue(
 }
 
 std::vector<int64_t> XlaHelpers::DropDimensions(
-    absl::Span<const int64_t> sizes,
-    absl::Span<const int64_t> drop_dims) {
+    absl::Span<const int64_t> sizes, absl::Span<const int64_t> drop_dims) {
   std::vector<int64_t> new_dims;
   size_t drop_index = 0;
   for (size_t i = 0; i < sizes.size(); ++i) {
@@ -90,8 +89,7 @@ std::vector<int64_t> XlaHelpers::DropDimensions(
   return new_dims;
 }
 
-int64_t XlaHelpers::GetCanonicalDimensionIndex(int64_t dim,
-                                                    int64_t rank) {
+int64_t XlaHelpers::GetCanonicalDimensionIndex(int64_t dim, int64_t rank) {
   int64_t min_shape_dim = -rank;
   int64_t max_shape_dim = rank - 1;
   XLA_CHECK(min_shape_dim <= dim && dim <= max_shape_dim)
@@ -112,9 +110,8 @@ std::vector<int64_t> XlaHelpers::GetCanonicalDimensionIndices(
   return canonical_dim_indices;
 }
 
-int64_t XlaHelpers::GetCanonicalPosition(
-    absl::Span<const int64_t> dimensions, int64_t dim,
-    int64_t pos) {
+int64_t XlaHelpers::GetCanonicalPosition(absl::Span<const int64_t> dimensions,
+                                         int64_t dim, int64_t pos) {
   dim = GetCanonicalDimensionIndex(dim, dimensions.size());
   if (pos < 0) {
     pos = GetCanonicalDimensionIndex(pos, dimensions[dim]);
@@ -138,8 +135,7 @@ int64_t XlaHelpers::GetDynamicDimension(const xla::Shape& shape) {
 }
 
 XlaHelpers::DynamicSize XlaHelpers::GetDimensionsSize(
-    absl::Span<const xla::XlaOp> inputs,
-    absl::Span<const int64_t> dimensions) {
+    absl::Span<const xla::XlaOp> inputs, absl::Span<const int64_t> dimensions) {
   XLA_CHECK(!inputs.empty());
   xla::PrimitiveType size_type = GetShapeDimensionType(/*device=*/nullptr);
   xla::XlaOp size;
@@ -279,23 +275,21 @@ const xla::Shape& XlaHelpers::ShapeOfXlaOp(xla::XlaOp op) {
 std::vector<int64_t> XlaHelpers::SizesOfXlaOp(xla::XlaOp op) {
   const xla::Shape& op_shape = ShapeOfXlaOp(op);
   return std::vector<int64_t>(op_shape.dimensions().begin(),
-                                   op_shape.dimensions().end());
+                              op_shape.dimensions().end());
 }
 
 xla::PrimitiveType XlaHelpers::TypeOfXlaOp(xla::XlaOp op) {
   return ShapeOfXlaOp(op).element_type();
 }
 
-xla::XlaOp XlaHelpers::ReshapeToRank(xla::XlaOp input,
-                                     int64_t expected_rank,
+xla::XlaOp XlaHelpers::ReshapeToRank(xla::XlaOp input, int64_t expected_rank,
                                      int64_t offset) {
   const xla::Shape& shape = ShapeOfXlaOp(input);
   XLA_CHECK_LE(offset + shape.rank(), expected_rank);
   if (shape.rank() == expected_rank) {
     return input;
   }
-  std::vector<int64_t> dimensions(expected_rank - offset - shape.rank(),
-                                       1);
+  std::vector<int64_t> dimensions(expected_rank - offset - shape.rank(), 1);
   dimensions.insert(dimensions.end(), shape.dimensions().begin(),
                     shape.dimensions().end());
   dimensions.insert(dimensions.end(), offset, 1);
@@ -340,8 +334,7 @@ XlaHelpers::GetDynamicReshapeInfo(const xla::Shape& input_shape,
 }
 
 xla::Shape XlaHelpers::GetDynamicReshape(
-    const xla::Shape& input_shape,
-    absl::Span<const int64_t> output_sizes) {
+    const xla::Shape& input_shape, absl::Span<const int64_t> output_sizes) {
   auto info = GetDynamicReshapeInfo(input_shape, output_sizes);
   if (info) {
     return info->output_shape;
@@ -349,8 +342,8 @@ xla::Shape XlaHelpers::GetDynamicReshape(
   return xla::ShapeUtil::MakeShape(input_shape.element_type(), output_sizes);
 }
 
-xla::XlaOp XlaHelpers::DynamicReshape(
-    xla::XlaOp input, absl::Span<const int64_t> output_sizes) {
+xla::XlaOp XlaHelpers::DynamicReshape(xla::XlaOp input,
+                                      absl::Span<const int64_t> output_sizes) {
   const xla::Shape& input_shape = ShapeOfXlaOp(input);
   if (output_sizes == input_shape.dimensions()) {
     return input;
@@ -393,8 +386,7 @@ xla::XlaOp XlaHelpers::Flatten(xla::XlaOp input, xla::Shape* input_shape) {
 }
 
 xla::XlaOp XlaHelpers::FlattenDimRange(xla::XlaOp input, int64_t start,
-                                       int64_t range,
-                                       xla::Shape* input_shape) {
+                                       int64_t range, xla::Shape* input_shape) {
   xla::util::MaybePtr<xla::Shape> input_shape_tmp(input_shape);
   *input_shape_tmp = ShapeOfXlaOp(input);
 
@@ -418,8 +410,9 @@ xla::XlaOp XlaHelpers::FlattenDimRange(xla::XlaOp input, int64_t start,
   return DynamicReshape(input, sizes);
 }
 
-std::vector<int64_t> XlaHelpers::MakeTransposePermutation(
-    int64_t dim0, int64_t dim1, int64_t rank) {
+std::vector<int64_t> XlaHelpers::MakeTransposePermutation(int64_t dim0,
+                                                          int64_t dim1,
+                                                          int64_t rank) {
   int64_t canonical_dim0 = GetCanonicalDimensionIndex(dim0, rank);
   int64_t canonical_dim1 = GetCanonicalDimensionIndex(dim1, rank);
   auto permute_dims = xla::util::Iota<int64_t>(rank);
@@ -623,7 +616,7 @@ xla::XlaOp XlaHelpers::ImplicitBroadcast(xla::XlaOp op,
     // After this operation we will have:
     //   op_shape =       [3, 4, 5]
     std::vector<int64_t> common_shape_dims(shape_dims.begin() + size_delta,
-                                                shape_dims.end());
+                                           shape_dims.end());
     std::vector<int64_t> broadcast_dimensions(op_shape_dims.size());
     std::iota(broadcast_dimensions.begin(), broadcast_dimensions.end(), 0);
     new_op =
@@ -637,7 +630,7 @@ xla::XlaOp XlaHelpers::ImplicitBroadcast(xla::XlaOp op,
     // After this operation we will have (added [6, 8]):
     //   op_shape = [6, 8, 3, 4, 5]
     std::vector<int64_t> broadcast_sizes(shape_dims.begin(),
-                                              shape_dims.begin() + size_delta);
+                                         shape_dims.begin() + size_delta);
     new_op = xla::Broadcast(new_op, broadcast_sizes);
   }
   return new_op;

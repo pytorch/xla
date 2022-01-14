@@ -15,15 +15,13 @@ class ConvolutionOverrideable : public Node {
                           const Value& bias, std::vector<int64_t> stride,
                           std::vector<int64_t> padding,
                           std::vector<int64_t> dilation, bool transposed,
-                          std::vector<int64_t> output_padding,
-                          int64_t groups);
+                          std::vector<int64_t> output_padding, int64_t groups);
 
   ConvolutionOverrideable(const Value& input, const Value& weight,
                           std::vector<int64_t> stride,
                           std::vector<int64_t> padding,
                           std::vector<int64_t> dilation, bool transposed,
-                          std::vector<int64_t> output_padding,
-                          int64_t groups);
+                          std::vector<int64_t> output_padding, int64_t groups);
 
   NodePtr Clone(OpList operands) const override;
 
@@ -39,9 +37,7 @@ class ConvolutionOverrideable : public Node {
 
   bool transposed() const { return transposed_; }
 
-  const std::vector<int64_t>& output_padding() const {
-    return output_padding_;
-  }
+  const std::vector<int64_t>& output_padding() const { return output_padding_; }
 
   int64_t groups() const { return groups_; }
 

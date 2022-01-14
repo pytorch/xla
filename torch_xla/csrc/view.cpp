@@ -40,16 +40,13 @@ ir::Value ApplyViewInfo(ir::Value ir_value, const ViewInfo& view_info) {
       return ir::MakeNode<ir::ops::Permute>(ir_value, view_info.permutation);
     case ViewInfo::Type::kReshape:
       return ir::MakeNode<ir::ops::View>(
-          ir_value,
-          xla::util::ToVector<int64_t>(view_info.shape.dimensions()));
+          ir_value, xla::util::ToVector<int64_t>(view_info.shape.dimensions()));
     case ViewInfo::Type::kResize:
       return ir::MakeNode<ir::ops::Resize>(
-          ir_value,
-          xla::util::ToVector<int64_t>(view_info.shape.dimensions()));
+          ir_value, xla::util::ToVector<int64_t>(view_info.shape.dimensions()));
     case ViewInfo::Type::kAsStrided:
       return ir::MakeNode<ir::ops::AsStrided>(
-          ir_value,
-          xla::util::ToVector<int64_t>(view_info.shape.dimensions()),
+          ir_value, xla::util::ToVector<int64_t>(view_info.shape.dimensions()),
           view_info.as_strided->stride, view_info.as_strided->offset);
     case ViewInfo::Type::kDiagonal:
       return ir::MakeNode<ir::ops::Diagonal>(
@@ -93,19 +90,18 @@ ir::Value ApplyUpdate(ir::Value ir_value,
         break;
       case ViewInfo::Type::kReshape:
         result = ir::MakeNode<ir::ops::View>(
-            result, xla::util::ToVector<int64_t>(
-                        view_info.source_shape.dimensions()));
+            result,
+            xla::util::ToVector<int64_t>(view_info.source_shape.dimensions()));
         break;
       case ViewInfo::Type::kResize:
         result = ir::MakeNode<ir::ops::Resize>(
-            result, xla::util::ToVector<int64_t>(
-                        view_info.source_shape.dimensions()));
+            result,
+            xla::util::ToVector<int64_t>(view_info.source_shape.dimensions()));
         break;
       case ViewInfo::Type::kAsStrided:
         result = ir::MakeNode<ir::ops::AsStridedViewUpdate>(
             tmp_values[i - 1], result,
-            xla::util::ToVector<int64_t>(
-                view_info.source_shape.dimensions()),
+            xla::util::ToVector<int64_t>(view_info.source_shape.dimensions()),
             view_info.as_strided->stride, view_info.as_strided->offset);
         break;
       case ViewInfo::Type::kDiagonal:

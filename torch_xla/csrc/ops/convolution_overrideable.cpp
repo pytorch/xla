@@ -15,8 +15,7 @@ namespace {
 xla::Shape NodeOutputShape(const Value& input, const Value& weight,
                            absl::Span<const int64_t> stride,
                            absl::Span<const int64_t> padding,
-                           absl::Span<const int64_t> dilation,
-                           bool transposed,
+                           absl::Span<const int64_t> dilation, bool transposed,
                            absl::Span<const int64_t> output_padding,
                            int64_t groups) {
   auto lower_for_shape_fn =
@@ -56,8 +55,7 @@ ConvolutionOverrideable::ConvolutionOverrideable(
 ConvolutionOverrideable::ConvolutionOverrideable(
     const Value& input, const Value& weight, std::vector<int64_t> stride,
     std::vector<int64_t> padding, std::vector<int64_t> dilation,
-    bool transposed, std::vector<int64_t> output_padding,
-    int64_t groups)
+    bool transposed, std::vector<int64_t> output_padding, int64_t groups)
     : Node(ir::OpKind(at::aten::convolution_overrideable), {input, weight},
            [&]() {
              return NodeOutputShape(input, weight, stride, padding, dilation,

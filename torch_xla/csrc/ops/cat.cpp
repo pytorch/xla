@@ -10,8 +10,7 @@ namespace ir {
 namespace ops {
 namespace {
 
-xla::Shape NodeOutputShape(absl::Span<const ir::Value> values,
-                           int64_t dim) {
+xla::Shape NodeOutputShape(absl::Span<const ir::Value> values, int64_t dim) {
   auto lower_for_shape_fn =
       [&](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
     return BuildCat(operands, dim);

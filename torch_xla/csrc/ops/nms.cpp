@@ -13,8 +13,7 @@ namespace {
 
 xla::Shape NodeOutputShape(const Value& boxes, const Value& scores,
                            const Value& score_threshold,
-                           const Value& iou_threshold,
-                           int64_t output_size) {
+                           const Value& iou_threshold, int64_t output_size) {
   auto shape_fn = [&](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
     NmsResult result = BuildNms(operands[0], operands[1], operands[2],
                                 operands[3], output_size);

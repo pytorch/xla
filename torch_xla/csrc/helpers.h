@@ -124,9 +124,9 @@ class XlaHelpers {
     return xla::util::Iota<int64_t>(shape.rank());
   }
 
-  static xla::XlaOp BroadcastDimensions(
-      xla::XlaOp input, absl::Span<const int64_t> dimensions,
-      absl::Span<const int64_t> sizes);
+  static xla::XlaOp BroadcastDimensions(xla::XlaOp input,
+                                        absl::Span<const int64_t> dimensions,
+                                        absl::Span<const int64_t> sizes);
 
   static xla::XlaOp CreateReturnValue(xla::XlaBuilder* builder,
                                       const std::vector<xla::XlaOp>& outputs);
@@ -148,12 +148,10 @@ class XlaHelpers {
   }
 
   static absl::optional<DynamicReshapeInfo> GetDynamicReshapeInfo(
-      const xla::Shape& input_shape,
-      absl::Span<const int64_t> output_sizes);
+      const xla::Shape& input_shape, absl::Span<const int64_t> output_sizes);
 
-  static xla::Shape GetDynamicReshape(
-      const xla::Shape& input_shape,
-      absl::Span<const int64_t> output_sizes);
+  static xla::Shape GetDynamicReshape(const xla::Shape& input_shape,
+                                      absl::Span<const int64_t> output_sizes);
 
   static xla::XlaOp DynamicReshape(xla::XlaOp input,
                                    absl::Span<const int64_t> output_sizes);
@@ -182,13 +180,11 @@ class XlaHelpers {
 
   // Creates a set of dimension by dropping the drop_dims ones.
   static std::vector<int64_t> DropDimensions(
-      absl::Span<const int64_t> sizes,
-      absl::Span<const int64_t> drop_dims);
+      absl::Span<const int64_t> sizes, absl::Span<const int64_t> drop_dims);
 
   // Get the canonical dimension index in the [0, rank) interval. Negative
   // indices are interpreted as follows: -1 is rank-1, -2 is rank-2 etc.
-  static int64_t GetCanonicalDimensionIndex(int64_t dim,
-                                                 int64_t rank);
+  static int64_t GetCanonicalDimensionIndex(int64_t dim, int64_t rank);
 
   // Same as above, for multiple dimensions.
   static std::vector<int64_t> GetCanonicalDimensionIndices(
@@ -196,16 +192,14 @@ class XlaHelpers {
 
   // Returns the canonical position in the dim dimension, handling negative
   // values for the position.
-  static int64_t GetCanonicalPosition(
-      absl::Span<const int64_t> dimensions, int64_t dim,
-      int64_t pos);
+  static int64_t GetCanonicalPosition(absl::Span<const int64_t> dimensions,
+                                      int64_t dim, int64_t pos);
 
   // Retrieves the dynamic dimension of an input shape, or returns -1 if none.
   static int64_t GetDynamicDimension(const xla::Shape& shape);
 
-  static DynamicSize GetDimensionsSize(
-      absl::Span<const xla::XlaOp> inputs,
-      absl::Span<const int64_t> dimensions);
+  static DynamicSize GetDimensionsSize(absl::Span<const xla::XlaOp> inputs,
+                                       absl::Span<const int64_t> dimensions);
 
   // Retrieves type's minimum and maximum values.
   static MinMax MinMaxValues(xla::PrimitiveType type);
@@ -257,8 +251,8 @@ class XlaHelpers {
 
   // Creates a transposition from the given input and dimensions.
   static std::vector<int64_t> MakeTransposePermutation(int64_t dim0,
-                                                            int64_t dim1,
-                                                            int64_t rank);
+                                                       int64_t dim1,
+                                                       int64_t rank);
 
   static xla::PrimitiveType PromoteType(xla::PrimitiveType type1,
                                         xla::PrimitiveType type2);

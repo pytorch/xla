@@ -10,10 +10,8 @@ namespace ops {
 
 class UpsampleBilinearBackward : public Node {
  public:
-  UpsampleBilinearBackward(const Value& input,
-                           std::vector<int64_t> output_size,
-                           std::vector<int64_t> input_size,
-                           bool align_corners);
+  UpsampleBilinearBackward(const Value& input, std::vector<int64_t> output_size,
+                           std::vector<int64_t> input_size, bool align_corners);
 
   NodePtr Clone(OpList operands) const override;
 

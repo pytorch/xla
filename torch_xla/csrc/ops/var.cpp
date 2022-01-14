@@ -13,10 +13,8 @@ namespace ir {
 namespace ops {
 namespace {
 
-xla::Shape NodeOutputShape(const Value& input,
-                           std::vector<int64_t>& dimensions,
-                           int64_t correction,
-                           bool keep_reduced_dimensions) {
+xla::Shape NodeOutputShape(const Value& input, std::vector<int64_t>& dimensions,
+                           int64_t correction, bool keep_reduced_dimensions) {
   auto lower_for_shape_fn =
       [&](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
     return BuildVar(operands[0], dimensions, correction,

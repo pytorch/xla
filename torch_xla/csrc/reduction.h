@@ -34,14 +34,12 @@ xla::XlaOp BuildMseLossBackward(xla::XlaOp grad_output, xla::XlaOp input,
 // Builds a mean by reducing all the dimensions listed in dimensions. If
 // keep_reduced_dimensions is true, the reduced dimensions will be retained,
 // with value 1.
-xla::XlaOp BuildMean(xla::XlaOp input,
-                     absl::Span<const int64_t> dimensions,
+xla::XlaOp BuildMean(xla::XlaOp input, absl::Span<const int64_t> dimensions,
                      bool keep_reduced_dimensions);
 
 xla::XlaOp BuildStdDeviation(xla::XlaOp input,
                              absl::Span<const int64_t> dimensions,
-                             bool keep_reduced_dimensions,
-                             int64_t correction);
+                             bool keep_reduced_dimensions, int64_t correction);
 
 // Builds the sum of all values by reducing all the dimensions listed in
 // dimensions. If keep_reduced_dimensions is true, the reduced dimensions will
@@ -84,8 +82,7 @@ xla::XlaOp BuildArgMin(xla::XlaOp input, int64_t dim, bool keepdim);
 // Builds the product of all values by reducing all the dimensions listed in
 // dimensions. If keep_reduced_dimensions is true, the reduced dimensions will
 // be retained, with value 1.
-xla::XlaOp BuildProd(xla::XlaOp input,
-                     absl::Span<const int64_t> dimensions,
+xla::XlaOp BuildProd(xla::XlaOp input, absl::Span<const int64_t> dimensions,
                      bool keep_reduced_dimensions);
 
 // Compute the cumulative computation specified by "reducer" and "init" in the

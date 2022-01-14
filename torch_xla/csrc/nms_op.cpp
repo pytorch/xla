@@ -85,11 +85,9 @@ struct SuppressBodyFn {
   int64_t num_boxes;
 };
 
-xla::XlaOp NmsGather(xla::XlaOp input,
-                     absl::Span<const int64_t> input_sizes,
+xla::XlaOp NmsGather(xla::XlaOp input, absl::Span<const int64_t> input_sizes,
                      xla::XlaOp indices,
-                     absl::Span<const int64_t> indices_sizes,
-                     int64_t axis) {
+                     absl::Span<const int64_t> indices_sizes, int64_t axis) {
   const xla::Shape& input_shape = XlaHelpers::ShapeOfXlaOp(input);
   int64_t num_indices = xla::util::Multiply<int64_t>(indices_sizes);
   if (num_indices == 0) {
@@ -283,8 +281,8 @@ NmsResult BuildNms(xla::XlaOp boxes, xla::XlaOp scores,
       /*computation=*/
       xla::CreateScalarAddComputation(xla::PrimitiveType::S32, builder),
       /*dimensions_to_reduce=*/{0});
-  xla::XlaOp num_valid = xla::Min(
-      num_valid_total, xla::ConstantR0<int32_t>(builder, output_size));
+  xla::XlaOp num_valid =
+      xla::Min(num_valid_total, xla::ConstantR0<int32_t>(builder, output_size));
 
   // Re-index into the original scores input tensor, using a Gather.
   // Boxes were suppressed in the sorted domain.

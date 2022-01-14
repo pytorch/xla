@@ -13,8 +13,7 @@ namespace ir {
 namespace ops {
 namespace {
 
-xla::XlaOp LowerMean(xla::XlaOp input,
-                     const std::vector<int64_t>& dimensions,
+xla::XlaOp LowerMean(xla::XlaOp input, const std::vector<int64_t>& dimensions,
                      bool keep_reduced_dimensions,
                      const c10::optional<at::ScalarType>& dtype) {
   xla::XlaOp result = BuildMean(input, dimensions, keep_reduced_dimensions);

@@ -151,8 +151,7 @@ AllReduceType GetReduceType(const std::string& reduce_type) {
   XLA_ERROR() << "Unknown AllReduce type: " << reduce_type;
 }
 
-std::vector<std::vector<int64_t>> CreateReduceGroups(
-    const py::list& groups) {
+std::vector<std::vector<int64_t>> CreateReduceGroups(const py::list& groups) {
   std::vector<std::vector<int64_t>> replica_groups;
   for (auto& group : groups) {
     replica_groups.emplace_back();
@@ -169,8 +168,8 @@ std::vector<std::pair<int64_t, int64_t>> CreateSourceTargetPairs(
   for (auto& pair : pairs) {
     const auto& pylist_pair = pair.cast<py::list>();
     XLA_CHECK_EQ(len(pylist_pair), 2);
-    source_target_pairs.push_back({pylist_pair[0].cast<int64_t>(),
-                                   pylist_pair[1].cast<int64_t>()});
+    source_target_pairs.push_back(
+        {pylist_pair[0].cast<int64_t>(), pylist_pair[1].cast<int64_t>()});
   }
   return source_target_pairs;
 }
@@ -200,8 +199,8 @@ std::pair<at::Tensor, std::shared_ptr<ir::Value>> AllReduce(
 
 std::pair<at::Tensor, std::shared_ptr<ir::Value>> ReduceScatter(
     const std::string& reduce_type, const at::Tensor& input,
-    const std::shared_ptr<ir::Value>& token, double scale,
-    int64_t scatter_dim, int64_t shard_count,
+    const std::shared_ptr<ir::Value>& token, double scale, int64_t scatter_dim,
+    int64_t shard_count,
     const std::vector<std::vector<int64_t>>& replica_groups) {
   XLATensor result;
   ir::Value new_token;
@@ -227,8 +226,7 @@ std::pair<at::Tensor, std::shared_ptr<ir::Value>> AllGather(
 
 std::pair<at::Tensor, std::shared_ptr<ir::Value>> AllToAll(
     const at::Tensor& input, const std::shared_ptr<ir::Value>& token,
-    int64_t split_dimension, int64_t concat_dimension,
-    int64_t split_count,
+    int64_t split_dimension, int64_t concat_dimension, int64_t split_count,
     const std::vector<std::vector<int64_t>>& replica_groups) {
   XLATensor result;
   ir::Value new_token;
@@ -242,8 +240,7 @@ std::pair<at::Tensor, std::shared_ptr<ir::Value>> AllToAll(
 
 std::pair<at::Tensor, std::shared_ptr<ir::Value>> CollectivePermute(
     const at::Tensor& input, const std::shared_ptr<ir::Value>& token,
-    const std::vector<std::pair<int64_t, int64_t>>&
-        source_target_pairs) {
+    const std::vector<std::pair<int64_t, int64_t>>& source_target_pairs) {
   XLATensor result;
   ir::Value new_token;
   std::tie(result, new_token) = XLATensor::collective_permute(
@@ -370,8 +367,7 @@ std::shared_ptr<ir::Value> CreateToken(const std::string& device_str) {
   return std::make_shared<ir::Value>(std::move(ir_value));
 }
 
-at::Tensor GetXlaTensorDimensionSize(const at::Tensor& tensor,
-                                     int64_t dim) {
+at::Tensor GetXlaTensorDimensionSize(const at::Tensor& tensor, int64_t dim) {
   XLATensor xtensor = bridge::GetXlaTensor(tensor);
   return bridge::AtenFromXlaTensor(
       XLATensor::get_dimensions_size(xtensor, {dim}));
@@ -426,8 +422,7 @@ std::vector<py::bytes> Rendezvous(int ordinal, const std::string& tag,
 }
 
 std::shared_ptr<xla::util::RecordReader> CreateRecordReader(
-    std::string path, const std::string& compression,
-    int64_t buffer_size) {
+    std::string path, const std::string& compression, int64_t buffer_size) {
   return std::make_shared<xla::util::RecordReader>(std::move(path), compression,
                                                    buffer_size);
 }
@@ -755,8 +750,7 @@ void InitXlaModuleBindings(py::module m) {
         });
   m.def("_xla_nms", [](const at::Tensor& boxes, const at::Tensor& scores,
                        const at::Tensor& score_threshold,
-                       const at::Tensor& iou_threshold,
-                       int64_t output_size) {
+                       const at::Tensor& iou_threshold, int64_t output_size) {
     return XlaNms(boxes, scores, score_threshold, iou_threshold, output_size);
   });
   m.def("_xla_user_computation",
@@ -914,8 +908,8 @@ void InitXlaModuleBindings(py::module m) {
         });
   m.def("_xla_all_gather",
         [](const at::Tensor& input, const std::shared_ptr<ir::Value>& token,
-           xla::int64_t dim, xla::int64_t shard_count, const py::list& groups) {
-          std::vector<std::vector<xla::int64_t>> replica_groups =
+           int64_t dim, int64_t shard_count, const py::list& groups) {
+          std::vector<std::vector<int64_t>> replica_groups =
               CreateReduceGroups(groups);
           at::Tensor result;
           std::shared_ptr<ir::Value> new_token;
@@ -951,8 +945,7 @@ void InitXlaModuleBindings(py::module m) {
   m.def("_xla_reduce_scatter",
         [](const std::string& reduce_type, const at::Tensor& input,
            const std::shared_ptr<ir::Value>& token, double scale,
-           int64_t scatter_dim, int64_t shard_count,
-           const py::list& groups) {
+           int64_t scatter_dim, int64_t shard_count, const py::list& groups) {
           std::vector<std::vector<int64_t>> replica_groups =
               CreateReduceGroups(groups);
           at::Tensor result;
@@ -1116,8 +1109,8 @@ void InitXlaModuleBindings(py::module m) {
           xla::Shape tensor_shape = GetTensorShape(tensor, device);
           return op_builder::ShapeToPyShape(tensor_shape);
         });
-  m.def("_xla_op_param", [](op_builder::BuilderPtr builder,
-                            int64_t param_no, py::object py_shape) {
+  m.def("_xla_op_param", [](op_builder::BuilderPtr builder, int64_t param_no,
+                            py::object py_shape) {
     xla::Shape shape = op_builder::PyShapeToShape(py_shape);
     xla::XlaOp param = xla::Parameter(builder.get(), param_no, shape,
                                       absl::StrCat("p", param_no));

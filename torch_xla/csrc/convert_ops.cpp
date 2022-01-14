@@ -18,8 +18,8 @@ xla::XlaOp ExplicitBooleanConvert(xla::XlaOp op, xla::PrimitiveType from) {
   return xla::Ne(op, zero);
 }
 
-xla::XlaOp CreateRawMask(xla::XlaOp op, xla::PrimitiveType type,
-                         int64_t size, int64_t narrow_size) {
+xla::XlaOp CreateRawMask(xla::XlaOp op, xla::PrimitiveType type, int64_t size,
+                         int64_t narrow_size) {
   uint64_t mask_value =
       (static_cast<uint64_t>(1) << narrow_size * CHAR_BIT) - 1;
   xla::XlaOp mask = XlaHelpers::ScalarValue(mask_value, type, op.builder());
@@ -39,8 +39,7 @@ xla::XlaOp ConvertData(xla::XlaOp op, xla::PrimitiveType type,
     return op;
   }
   int64_t size = xla::ShapeUtil::ByteSizeOfPrimitiveType(type);
-  int64_t narrow_size =
-      xla::ShapeUtil::ByteSizeOfPrimitiveType(narrow_type);
+  int64_t narrow_size = xla::ShapeUtil::ByteSizeOfPrimitiveType(narrow_type);
   XLA_CHECK_GE(size, narrow_size);
   if (size == narrow_size) {
     return op;

@@ -160,8 +160,7 @@ xla::XlaOp Reshape(const BuilderPtr& builder,
   absl::optional<py::tuple> arg_dimensions =
       ArgOptional<py::tuple>(args, "dimensions");
   if (arg_dimensions) {
-    std::vector<int64_t> dimensions =
-        GetTupleVector<int64_t>(*arg_dimensions);
+    std::vector<int64_t> dimensions = GetTupleVector<int64_t>(*arg_dimensions);
     return xla::Reshape(operands.at(0)->op, dimensions, sizes);
   }
   int64_t inferred_dimension =
@@ -188,8 +187,7 @@ xla::XlaOp Broadcast(const BuilderPtr& builder,
 xla::XlaOp BroadcastInDim(const BuilderPtr& builder,
                           const std::vector<OpPtr>& operands, py::dict args) {
   std::vector<int64_t> sizes = GetTupleVector<int64_t>(args["sizes"]);
-  std::vector<int64_t> dimensions =
-      GetTupleVector<int64_t>(args["dimensions"]);
+  std::vector<int64_t> dimensions = GetTupleVector<int64_t>(args["dimensions"]);
   return xla::BroadcastInDim(operands.at(0)->op, sizes, dimensions);
 }
 
@@ -271,18 +269,13 @@ xla::ConvolutionDimensionNumbers ParseConvolutionDimensionNumbers(
   xla::ConvolutionDimensionNumbers dimension_numbers;
   XLA_PBSET(dimension_numbers, input_batch_dimension, int64_t, args);
   XLA_PBSET(dimension_numbers, input_feature_dimension, int64_t, args);
-  XLA_PBSET(dimension_numbers, kernel_input_feature_dimension, int64_t,
-            args);
-  XLA_PBSET(dimension_numbers, kernel_output_feature_dimension, int64_t,
-            args);
+  XLA_PBSET(dimension_numbers, kernel_input_feature_dimension, int64_t, args);
+  XLA_PBSET(dimension_numbers, kernel_output_feature_dimension, int64_t, args);
   XLA_PBSET(dimension_numbers, output_batch_dimension, int64_t, args);
   XLA_PBSET(dimension_numbers, output_feature_dimension, int64_t, args);
-  XLA_PBSET_REP(dimension_numbers, input_spatial_dimensions, int64_t,
-                args);
-  XLA_PBSET_REP(dimension_numbers, kernel_spatial_dimensions, int64_t,
-                args);
-  XLA_PBSET_REP(dimension_numbers, output_spatial_dimensions, int64_t,
-                args);
+  XLA_PBSET_REP(dimension_numbers, input_spatial_dimensions, int64_t, args);
+  XLA_PBSET_REP(dimension_numbers, kernel_spatial_dimensions, int64_t, args);
+  XLA_PBSET_REP(dimension_numbers, output_spatial_dimensions, int64_t, args);
   return dimension_numbers;
 }
 
@@ -383,8 +376,7 @@ xla::XlaOp Slice(const BuilderPtr& builder, const std::vector<OpPtr>& operands,
       GetTupleVector<int64_t>(args["start_indices"]);
   std::vector<int64_t> limit_indices =
       GetTupleVector<int64_t>(args["limit_indices"]);
-  std::vector<int64_t> strides =
-      GetTupleVector<int64_t>(args["strides"]);
+  std::vector<int64_t> strides = GetTupleVector<int64_t>(args["strides"]);
   return xla::Slice(operands.at(0)->op, start_indices, limit_indices, strides);
 }
 
@@ -418,8 +410,7 @@ xla::XlaOp DynamicUpdateSlice(const BuilderPtr& builder,
 
 xla::XlaOp Reduce(const BuilderPtr& builder, const std::vector<OpPtr>& operands,
                   py::dict args) {
-  std::vector<int64_t> dimensions =
-      GetTupleVector<int64_t>(args["dimensions"]);
+  std::vector<int64_t> dimensions = GetTupleVector<int64_t>(args["dimensions"]);
   ComputationPtr computation = args["computation"].cast<ComputationPtr>();
   return xla::Reduce(operands.at(0)->op, operands.at(1)->op,
                      computation->computation(), dimensions);
@@ -447,8 +438,7 @@ xla::XlaOp ReduceWindow(const BuilderPtr& builder,
 
 xla::XlaOp Map(const BuilderPtr& builder, const std::vector<OpPtr>& operands,
                py::dict args) {
-  std::vector<int64_t> dimensions =
-      GetTupleVector<int64_t>(args["dimensions"]);
+  std::vector<int64_t> dimensions = GetTupleVector<int64_t>(args["dimensions"]);
   ComputationPtr computation = args["computation"].cast<ComputationPtr>();
   std::vector<xla::XlaOp> static_operands =
       GetOpVector(args["static_operands"].cast<py::tuple>());
@@ -564,8 +554,7 @@ xla::ScatterDimensionNumbers ParseScatterDimensionNumbers(py::dict args) {
       ArgOptional<py::tuple>(args, "scatter_dims_to_operand_dims");
   if (arg_scatter_dims_to_operand_dims) {
     for (auto& dim : *arg_scatter_dims_to_operand_dims) {
-      dimension_numbers.add_scatter_dims_to_operand_dims(
-          dim.cast<int64_t>());
+      dimension_numbers.add_scatter_dims_to_operand_dims(dim.cast<int64_t>());
     }
   }
   absl::optional<int64_t> arg_index_vector_dim =
@@ -626,8 +615,7 @@ xla::XlaOp SelectAndScatterWithGeneralPadding(
 
 xla::TensorFormat ParseTensorFormat(py::dict args) {
   int64_t batch_dimension = args["batch_dimension"].cast<int64_t>();
-  int64_t feature_dimension =
-      args["feature_dimension"].cast<int64_t>();
+  int64_t feature_dimension = args["feature_dimension"].cast<int64_t>();
   std::vector<int64_t> spatial_dimensions =
       GetTupleVector<int64_t>(args["spatial_dimensions"]);
   return xla::TensorFormat(batch_dimension, feature_dimension,
@@ -638,8 +626,7 @@ xla::XlaOp MaxPool(const BuilderPtr& builder,
                    const std::vector<OpPtr>& operands, py::dict args) {
   std::vector<int64_t> kernel_size =
       GetTupleVector<int64_t>(args["kernel_size"]);
-  std::vector<int64_t> stride =
-      GetTupleVector<int64_t>(args["stride"]);
+  std::vector<int64_t> stride = GetTupleVector<int64_t>(args["stride"]);
   xla::Padding padding = ParsePadding(args["padding"].cast<std::string>());
   xla::TensorFormat data_format = ParseTensorFormat(args);
   return xla::MaxPool(operands.at(0)->op, kernel_size, stride, padding,
@@ -669,8 +656,7 @@ xla::XlaOp Clamp(const BuilderPtr& builder, const std::vector<OpPtr>& operands,
 
 xla::XlaOp Rev(const BuilderPtr& builder, const std::vector<OpPtr>& operands,
                py::dict args) {
-  std::vector<int64_t> dimensions =
-      GetTupleVector<int64_t>(args["dimensions"]);
+  std::vector<int64_t> dimensions = GetTupleVector<int64_t>(args["dimensions"]);
   return xla::Rev(operands.at(0)->op, dimensions);
 }
 

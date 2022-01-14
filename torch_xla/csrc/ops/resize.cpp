@@ -10,8 +10,7 @@ namespace ir {
 namespace ops {
 namespace {
 
-xla::Shape NodeOutputShape(const Value& input,
-                           absl::Span<const int64_t> size) {
+xla::Shape NodeOutputShape(const Value& input, absl::Span<const int64_t> size) {
   return xla::ShapeUtil::MakeShape(input.shape().element_type(), size);
 }
 

@@ -514,35 +514,35 @@ NodePtr ARange(const at::Scalar& start, const at::Scalar& end,
       break;
     case xla::PrimitiveType::U8:
       values = XlaHelpers::Range<uint8_t>(start.toByte(), end.toByte(),
-                                             step.toByte());
+                                          step.toByte());
       break;
     case xla::PrimitiveType::S8:
       values = XlaHelpers::Range<int8_t>(start.toChar(), end.toChar(),
-                                            step.toChar());
+                                         step.toChar());
       break;
     case xla::PrimitiveType::S16:
       values = XlaHelpers::Range<int16_t>(start.toShort(), end.toShort(),
-                                             step.toShort());
+                                          step.toShort());
       break;
     case xla::PrimitiveType::U16:
-      values = XlaHelpers::Range<uint16_t>(start.toInt(), end.toInt(),
-                                              step.toInt());
+      values =
+          XlaHelpers::Range<uint16_t>(start.toInt(), end.toInt(), step.toInt());
       break;
     case xla::PrimitiveType::S32:
-      values = XlaHelpers::Range<int32_t>(start.toInt(), end.toInt(),
-                                             step.toInt());
+      values =
+          XlaHelpers::Range<int32_t>(start.toInt(), end.toInt(), step.toInt());
       break;
     case xla::PrimitiveType::U32:
       values = XlaHelpers::Range<uint32_t>(start.toLong(), end.toLong(),
-                                              step.toLong());
+                                           step.toLong());
       break;
     case xla::PrimitiveType::S64:
       values = XlaHelpers::Range<int64_t>(start.toLong(), end.toLong(),
-                                               step.toLong());
+                                          step.toLong());
       break;
     case xla::PrimitiveType::U64:
       values = XlaHelpers::Range<uint64_t>(start.toLong(), end.toLong(),
-                                              step.toLong());
+                                           step.toLong());
       break;
     default:
       XLA_ERROR() << "XLA type not supported: " << type;
@@ -610,8 +610,7 @@ NodePtr Norm(const Value& input, const c10::optional<at::Scalar>& p,
   return Pow(result, norm_exp_inv);
 }
 
-NodePtr Identity(int64_t lines, int64_t cols,
-                 xla::PrimitiveType element_type) {
+NodePtr Identity(int64_t lines, int64_t cols, xla::PrimitiveType element_type) {
   auto lower_fn = [=](const Node& node, LoweringContext* loctx) -> XlaOpVector {
     return node.ReturnOp(
         xla::IdentityMatrix(loctx->builder(), element_type, lines, cols),

@@ -14,8 +14,7 @@ xla::Shape NodeOutputShape(const Value& grad_output, const Value& input,
                            int64_t spatial_dim_count,
                            absl::Span<const int64_t> kernel_size,
                            absl::Span<const int64_t> stride,
-                           absl::Span<const int64_t> padding,
-                           bool ceil_mode) {
+                           absl::Span<const int64_t> padding, bool ceil_mode) {
   auto lower_for_shape_fn =
       [&](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
     XLA_CHECK_EQ(operands.size(), 2);
@@ -41,13 +40,10 @@ c10::Symbol MaxPoolNdBackwardSymbol(int64_t spatial_dim_count) {
 
 }  // namespace
 
-MaxPoolNdBackward::MaxPoolNdBackward(const Value& grad_output,
-                                     const Value& input,
-                                     int64_t spatial_dim_count,
-                                     std::vector<int64_t> kernel_size,
-                                     std::vector<int64_t> stride,
-                                     std::vector<int64_t> padding,
-                                     bool ceil_mode)
+MaxPoolNdBackward::MaxPoolNdBackward(
+    const Value& grad_output, const Value& input, int64_t spatial_dim_count,
+    std::vector<int64_t> kernel_size, std::vector<int64_t> stride,
+    std::vector<int64_t> padding, bool ceil_mode)
     : Node(ir::OpKind(MaxPoolNdBackwardSymbol(spatial_dim_count)),
            {grad_output, input},
            [&]() {

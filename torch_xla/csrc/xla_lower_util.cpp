@@ -97,10 +97,8 @@ std::pair<xla::XlaOp, xla::XlaOp> DotBroadcast(xla::XlaOp lhs,
                                                const xla::Shape& lhs_shape,
                                                xla::XlaOp rhs,
                                                const xla::Shape& rhs_shape) {
-  auto lhs_dimensions =
-      xla::util::ToVector<int64_t>(lhs_shape.dimensions());
-  auto rhs_dimensions =
-      xla::util::ToVector<int64_t>(rhs_shape.dimensions());
+  auto lhs_dimensions = xla::util::ToVector<int64_t>(lhs_shape.dimensions());
+  auto rhs_dimensions = xla::util::ToVector<int64_t>(rhs_shape.dimensions());
   XLA_CHECK_EQ(lhs_dimensions.size(), rhs_dimensions.size());
   for (int64_t i = 0; i < lhs_dimensions.size() - 2; ++i) {
     if (lhs_dimensions[i] == rhs_dimensions[i]) {
@@ -120,13 +118,11 @@ std::pair<xla::XlaOp, xla::XlaOp> DotBroadcast(xla::XlaOp lhs,
   xla::XlaOp broadcasted_rhs = rhs;
   if (lhs_dimensions != lhs_shape.dimensions()) {
     broadcasted_lhs = xla::BroadcastInDim(
-        lhs, lhs_dimensions,
-        xla::util::Iota<int64_t>(lhs_dimensions.size()));
+        lhs, lhs_dimensions, xla::util::Iota<int64_t>(lhs_dimensions.size()));
   }
   if (rhs_dimensions != rhs_shape.dimensions()) {
     broadcasted_rhs = xla::BroadcastInDim(
-        rhs, rhs_dimensions,
-        xla::util::Iota<int64_t>(rhs_dimensions.size()));
+        rhs, rhs_dimensions, xla::util::Iota<int64_t>(rhs_dimensions.size()));
   }
   return std::make_pair(broadcasted_lhs, broadcasted_rhs);
 }
@@ -151,8 +147,7 @@ xla::XlaOp CreateIndexAlongDim(
   const xla::Shape& buffer_shape = XlaHelpers::ShapeOfXlaOp(buffer);
   xla::ScatterDimensionNumbers dim_numbers;
   dim_numbers.set_index_vector_dim(1);
-  for (int64_t window_dim = 0; window_dim < buffer_shape.rank();
-       ++window_dim) {
+  for (int64_t window_dim = 0; window_dim < buffer_shape.rank(); ++window_dim) {
     if (window_dim != dim) {
       dim_numbers.add_update_window_dims(window_dim);
     } else {
@@ -313,8 +308,8 @@ xla::XlaOp PadToSize(xla::XlaOp input, absl::Span<const int64_t> size,
   return has_padding ? xla::Pad(input, *pad_value, padding_config) : input;
 }
 
-std::vector<xla::XlaOp> CreateKthValue(xla::XlaOp input, int64_t k,
-                                       int64_t dim, bool keepdim) {
+std::vector<xla::XlaOp> CreateKthValue(xla::XlaOp input, int64_t k, int64_t dim,
+                                       bool keepdim) {
   // Here 'k' is 1 based (1...).
   const xla::Shape& shape = XlaHelpers::ShapeOfXlaOp(input);
   XLA_CHECK_LE(k, shape.dimensions(dim));
@@ -330,7 +325,7 @@ std::vector<xla::XlaOp> CreateKthValue(xla::XlaOp input, int64_t k,
   std::vector<int64_t> start_indices(shape.rank(), 0);
   start_indices[dim] = k - 1;
   std::vector<int64_t> limit_indices(shape.dimensions().begin(),
-                                          shape.dimensions().end());
+                                     shape.dimensions().end());
   limit_indices[dim] = k;
   std::vector<int64_t> strides(shape.rank(), 1);
 
@@ -349,9 +344,8 @@ std::vector<xla::XlaOp> CreateKthValue(xla::XlaOp input, int64_t k,
                                                       /*device=*/nullptr))};
 }
 
-std::vector<xla::XlaOp> CreateTopK(xla::XlaOp input, int64_t k,
-                                   int64_t dim, bool largest,
-                                   bool stable) {
+std::vector<xla::XlaOp> CreateTopK(xla::XlaOp input, int64_t k, int64_t dim,
+                                   bool largest, bool stable) {
   // Here 'k' is 1 based (1...).
   const xla::Shape& shape = XlaHelpers::ShapeOfXlaOp(input);
   XLA_CHECK_LE(k, shape.dimensions(dim));
@@ -369,7 +363,7 @@ std::vector<xla::XlaOp> CreateTopK(xla::XlaOp input, int64_t k,
 
   std::vector<int64_t> start_indices(shape.rank(), 0);
   std::vector<int64_t> limit_indices(shape.dimensions().begin(),
-                                          shape.dimensions().end());
+                                     shape.dimensions().end());
   limit_indices[dim] = k;
   std::vector<int64_t> strides(shape.rank(), 1);
 
@@ -521,8 +515,7 @@ xla::XlaOp CreateIndex(xla::XlaOp input, xla::XlaOp indices,
   const xla::Shape& input_shape = XlaHelpers::ShapeOfXlaOp(input);
   const xla::Shape& indices_shape = XlaHelpers::ShapeOfXlaOp(indices);
   XLA_CHECK_GE(indices_shape.rank(), 1);
-  int64_t num_index_dims =
-      indices_shape.dimensions(indices_shape.rank() - 1);
+  int64_t num_index_dims = indices_shape.dimensions(indices_shape.rank() - 1);
   xla::GatherDimensionNumbers dim_numbers;
   std::vector<int64_t> slice_sizes;
   slice_sizes.reserve(input_shape.rank());
@@ -548,8 +541,7 @@ xla::XlaOp CreateIndex(xla::XlaOp input, xla::XlaOp indices,
 }
 
 xla::XlaOp CreateIndexUpdate(
-    xla::XlaOp buffer, xla::XlaOp indices, int64_t start_dim,
-    xla::XlaOp values,
+    xla::XlaOp buffer, xla::XlaOp indices, int64_t start_dim, xla::XlaOp values,
     const std::function<xla::XlaOp(xla::XlaOp, xla::XlaOp)>& combiner) {
   const xla::Shape& buffer_shape = XlaHelpers::ShapeOfXlaOp(buffer);
   const xla::Shape& indices_shape = XlaHelpers::ShapeOfXlaOp(indices);
@@ -575,8 +567,7 @@ xla::XlaOp CreateIndexUpdate(
   }
   expected_values_dims.insert(expected_values_dims.end(), indices_dims.begin(),
                               indices_dims.end());
-  for (int64_t dim = num_index_dims + start_dim; dim < buffer_rank;
-       ++dim) {
+  for (int64_t dim = num_index_dims + start_dim; dim < buffer_rank; ++dim) {
     expected_values_dims.push_back(buffer_shape.dimensions(dim));
   }
   xla::XlaOp new_values = values;
@@ -615,14 +606,14 @@ xla::XlaOp CreateIndexAdd(xla::XlaOp buffer, int64_t dim, xla::XlaOp index,
                              add_scatter_combiner);
 }
 
-xla::XlaOp CreateIndexCopy(xla::XlaOp buffer, int64_t dim,
-                           xla::XlaOp index, xla::XlaOp value) {
+xla::XlaOp CreateIndexCopy(xla::XlaOp buffer, int64_t dim, xla::XlaOp index,
+                           xla::XlaOp value) {
   return CreateIndexAlongDim(buffer, dim, index, value,
                              /*broadcast_value_to_index=*/false, nullptr);
 }
 
-xla::XlaOp CreateIndexFill(xla::XlaOp buffer, int64_t dim,
-                           xla::XlaOp index, xla::XlaOp value) {
+xla::XlaOp CreateIndexFill(xla::XlaOp buffer, int64_t dim, xla::XlaOp index,
+                           xla::XlaOp value) {
   return CreateIndexAlongDim(buffer, dim, index, value,
                              /*broadcast_value_to_index=*/true, nullptr);
 }

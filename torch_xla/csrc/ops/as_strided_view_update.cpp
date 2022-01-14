@@ -32,10 +32,9 @@ xla::XlaOp LowerAsStridedViewUpdate(xla::XlaOp target, xla::XlaOp input,
   if (storage_offset > 0 || input_element_count < slice_size) {
     xla::XlaOp r1_input = XlaHelpers::Flatten(transposed_input);
     xla::XlaOp r1_target = XlaHelpers::Flatten(target);
-    transposed_input =
-        xla::DynamicUpdateSlice(r1_target, r1_input,
-                                {XlaHelpers::ScalarValue<int64_t>(
-                                    storage_offset, input.builder())});
+    transposed_input = xla::DynamicUpdateSlice(
+        r1_target, r1_input,
+        {XlaHelpers::ScalarValue<int64_t>(storage_offset, input.builder())});
   }
   return XlaHelpers::DynamicReshape(transposed_input, size);
 }

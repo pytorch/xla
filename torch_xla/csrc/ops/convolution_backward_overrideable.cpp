@@ -15,8 +15,7 @@ xla::Shape NodeOutputShape(const Value& grad_output, const Value& input,
                            const Value& weight,
                            absl::Span<const int64_t> stride,
                            absl::Span<const int64_t> padding,
-                           absl::Span<const int64_t> dilation,
-                           bool transposed,
+                           absl::Span<const int64_t> dilation, bool transposed,
                            absl::Span<const int64_t> output_padding,
                            int64_t groups) {
   auto lower_for_shape_fn =

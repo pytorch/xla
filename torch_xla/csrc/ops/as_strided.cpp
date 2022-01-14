@@ -43,8 +43,7 @@ xla::XlaOp LowerAsStrided(xla::XlaOp input, absl::Span<const int64_t> size,
 }  // namespace
 
 AsStrided::AsStrided(const Value& input, std::vector<int64_t> size,
-                     std::vector<int64_t> stride,
-                     int64_t storage_offset)
+                     std::vector<int64_t> stride, int64_t storage_offset)
     : Node(ir::OpKind(at::aten::as_strided), {input},
            [&]() {
              return xla::ShapeUtil::MakeShape(input.shape().element_type(),
@@ -83,13 +82,10 @@ bool AsStrided::StrideIsSupported(const xla::Shape& input_shape,
 }
 
 std::vector<int64_t> AsStrided::GetArrayStridePermutation(
-    absl::Span<const int64_t> stride,
-    absl::Span<const int64_t> size) {
-  std::vector<int64_t> permutation =
-      xla::util::Iota<int64_t>(stride.size());
-  std::sort(
-      permutation.begin(), permutation.end(),
-      [&](int64_t a, int64_t b) { return stride[a] > stride[b]; });
+    absl::Span<const int64_t> stride, absl::Span<const int64_t> size) {
+  std::vector<int64_t> permutation = xla::util::Iota<int64_t>(stride.size());
+  std::sort(permutation.begin(), permutation.end(),
+            [&](int64_t a, int64_t b) { return stride[a] > stride[b]; });
   return permutation;
 }
 

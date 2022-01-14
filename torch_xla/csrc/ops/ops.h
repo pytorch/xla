@@ -182,8 +182,7 @@ NodePtr Norm(const Value& input, const c10::optional<at::Scalar>& p,
              c10::optional<at::ScalarType> dtype,
              absl::Span<const int64_t> dims, bool keepdim);
 
-NodePtr Identity(int64_t lines, int64_t cols,
-                 xla::PrimitiveType element_type);
+NodePtr Identity(int64_t lines, int64_t cols, xla::PrimitiveType element_type);
 
 NodePtr Elu(const Value& input, const at::Scalar& alpha,
             const at::Scalar& scale, const at::Scalar& input_scale);

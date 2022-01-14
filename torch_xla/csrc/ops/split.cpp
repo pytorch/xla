@@ -24,8 +24,7 @@ xla::Shape NodeOutputShape(const Value& input,
 
 }  // namespace
 
-Split::Split(const Value& input, std::vector<int64_t> split_sizes,
-             int64_t dim)
+Split::Split(const Value& input, std::vector<int64_t> split_sizes, int64_t dim)
     : Node(ir::OpKind(at::aten::split), {input},
            [&]() { return NodeOutputShape(input, split_sizes, dim); },
            ComputeSplitCount(input.shape().dimensions(dim), split_sizes),

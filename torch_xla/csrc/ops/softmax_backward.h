@@ -8,8 +8,7 @@ namespace ops {
 
 class SoftmaxBackward : public Node {
  public:
-  SoftmaxBackward(const Value& grad_output, const Value& output,
-                  int64_t dim);
+  SoftmaxBackward(const Value& grad_output, const Value& output, int64_t dim);
 
   NodePtr Clone(OpList operands) const override;
 

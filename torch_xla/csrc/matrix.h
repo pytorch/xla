@@ -8,12 +8,11 @@ xla::XlaOp BuildTriu(xla::XlaOp input, int64_t diagonal);
 
 xla::XlaOp BuildTril(xla::XlaOp input, int64_t diagonal);
 
-xla::XlaOp BuildDiagonal(xla::XlaOp input, int64_t offset,
-                         int64_t dim1, int64_t dim2);
+xla::XlaOp BuildDiagonal(xla::XlaOp input, int64_t offset, int64_t dim1,
+                         int64_t dim2);
 
 xla::XlaOp BuildDiagonalViewUpdate(xla::XlaOp target, xla::XlaOp input,
-                                   int64_t offset, int64_t dim1,
-                                   int64_t dim2);
+                                   int64_t offset, int64_t dim1, int64_t dim2);
 
 xla::XlaOp BuildInverse(xla::XlaOp input);
 

@@ -30,9 +30,7 @@ class ConvolutionBackwardOverrideable : public Node {
 
   bool transposed() const { return transposed_; }
 
-  const std::vector<int64_t>& output_padding() const {
-    return output_padding_;
-  }
+  const std::vector<int64_t>& output_padding() const { return output_padding_; }
 
   int64_t groups() const { return groups_; }
 

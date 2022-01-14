@@ -45,14 +45,14 @@ xla::XlaOp OneHotIota(xla::XlaBuilder* builder, int64_t depth, int axis,
 // "on_value" and "off_value" represent the values to use for the on and off
 // positions, respectively. If "ignore_index" is a valid class, it'll be
 // considered off.
-xla::XlaOp LabelsToOneHot(xla::XlaBuilder* builder, int64_t depth,
-                          int axis, xla::XlaOp indices, xla::XlaOp on_value,
+xla::XlaOp LabelsToOneHot(xla::XlaBuilder* builder, int64_t depth, int axis,
+                          xla::XlaOp indices, xla::XlaOp on_value,
                           xla::XlaOp off_value, int ignore_index) {
   const xla::Shape& indices_shape = XlaHelpers::ShapeOfXlaOp(indices);
 
   // Expand the labels with a depth dimension for the classes.
-  std::vector<int64_t> output_dimensions(
-      indices_shape.dimensions().begin(), indices_shape.dimensions().end());
+  std::vector<int64_t> output_dimensions(indices_shape.dimensions().begin(),
+                                         indices_shape.dimensions().end());
   output_dimensions.insert(output_dimensions.begin() + axis, depth);
 
   xla::XlaOp iota = OneHotIota(/*builder=*/builder, /*depth=*/depth,

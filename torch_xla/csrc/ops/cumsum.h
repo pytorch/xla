@@ -11,8 +11,7 @@ namespace ops {
 
 class CumSum : public Node {
  public:
-  CumSum(const Value& input, int64_t dim,
-         c10::optional<at::ScalarType> dtype);
+  CumSum(const Value& input, int64_t dim, c10::optional<at::ScalarType> dtype);
 
   std::string ToString() const override;
 

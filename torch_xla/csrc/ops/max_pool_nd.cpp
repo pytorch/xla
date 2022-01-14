@@ -13,8 +13,7 @@ namespace {
 xla::Shape NodeOutputShape(const Value& input, int64_t spatial_dim_count,
                            absl::Span<const int64_t> kernel_size,
                            absl::Span<const int64_t> stride,
-                           absl::Span<const int64_t> padding,
-                           bool ceil_mode) {
+                           absl::Span<const int64_t> padding, bool ceil_mode) {
   auto shape_fn = [&](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
     MaxPoolResult result =
         BuildMaxPoolNd(operands[0], spatial_dim_count, kernel_size, stride,
@@ -42,8 +41,8 @@ c10::Symbol MaxPoolNdSymbol(int64_t spatial_dim_count) {
 
 MaxPoolNd::MaxPoolNd(const Value& input, int64_t spatial_dim_count,
                      std::vector<int64_t> kernel_size,
-                     std::vector<int64_t> stride,
-                     std::vector<int64_t> padding, bool ceil_mode)
+                     std::vector<int64_t> stride, std::vector<int64_t> padding,
+                     bool ceil_mode)
     : Node(ir::OpKind(MaxPoolNdSymbol(spatial_dim_count)), {input},
            [&]() {
              return NodeOutputShape(input, spatial_dim_count, kernel_size,

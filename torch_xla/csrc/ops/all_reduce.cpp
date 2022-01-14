@@ -33,8 +33,7 @@ std::vector<Value> GetOperandList(absl::Span<const Value> operands,
 
 AllReduce::AllReduce(AllReduceType reduce_type,
                      absl::Span<const Value> operands, const Value& token,
-                     double scale,
-                     std::vector<std::vector<int64_t>> groups)
+                     double scale, std::vector<std::vector<int64_t>> groups)
     : Node(xla_cross_replica_sum, GetOperandList(operands, token),
            [&]() { return NodeOutputShape(operands, token); },
            /*num_outputs=*/operands.size() + 1,
