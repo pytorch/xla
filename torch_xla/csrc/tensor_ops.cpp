@@ -64,7 +64,7 @@ XLATensor KlDivBackward(const XLATensor& grad_output, const XLATensor& input,
   auto input_shape_ref = input.shape();
   XLATensor expanded_grad_output = XLATensor::expand(
       grad_output,
-      xla::util::ToVector<xla::int64_t>(input_shape_ref.get().dimensions()));
+      xla::util::ToVector<int64_t>(input_shape_ref.get().dimensions()));
   XLATensor grad_input;
   if (!log_target) {
     grad_input = XLATensor::where(
