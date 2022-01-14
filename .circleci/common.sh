@@ -21,6 +21,10 @@ function apply_patches() {
   ./xla/scripts/apply_patches.sh
 }
 
+function install_numpy() {
+  pip install numpy==1.16.3
+}
+
 function rebase_pull_request_on_target_branch() {
   # TODO: directly use ENV_VAR when CircleCi exposes base branch.
   # Try rebasing on top of base (dest) branch first.
@@ -55,9 +59,6 @@ function install_deps_pytorch_xla() {
   # Install libraries required for running some PyTorch test suites
   pip install hypothesis
   pip install cloud-tpu-client
-
-  # Update numpy version
-  pip install numpy==1.16.3
 
   # Using the Ninja generator requires CMake version 3.13 or greater
   pip install cmake>=3.13 --upgrade
