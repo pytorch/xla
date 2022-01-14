@@ -22,7 +22,7 @@ function apply_patches() {
 }
 
 function install_numpy() {
-  pip install numpy==1.18.5
+  pip install numpy>=1.18.5
 }
 
 function rebase_pull_request_on_target_branch() {
