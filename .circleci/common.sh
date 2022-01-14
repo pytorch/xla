@@ -57,7 +57,7 @@ function install_deps_pytorch_xla() {
   pip install cloud-tpu-client
 
   # Update numpy version
-  pip install numpy --upgrade
+  pip install numpy==1.16.3
 
   # Using the Ninja generator requires CMake version 3.13 or greater
   pip install cmake>=3.13 --upgrade
