@@ -1455,6 +1455,14 @@ XLATensor XLATensor::isnan(const XLATensor& input) {
   return input.CreateFrom(casted, at::ScalarType::Bool);
 }
 
+XLATensor XLATensor::kl_div_backward(const XLATensor& grad_output,
+                                     const XLATensor& input,
+                                     const XLATensor& target,
+                                     xla::int64_t reduction, bool log_target) {
+  return tensor_ops::KlDivBackward(grad_output, input, target,
+                                   GetXlaReductionMode(reduction), log_target);
+}
+
 std::tuple<XLATensor, XLATensor> XLATensor::kthvalue(const XLATensor& input,
                                                      xla::int64_t k,
                                                      xla::int64_t dim,
