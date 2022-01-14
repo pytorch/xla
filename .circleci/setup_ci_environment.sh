@@ -73,8 +73,8 @@ sudo pkill -SIGHUP dockerd
 retry sudo pip -q install awscli==1.16.35
 
 if [ -n "${USE_CUDA_DOCKER_RUNTIME:-}" ]; then
-  DRIVER_FN="NVIDIA-Linux-x86_64-440.82.run"
-  wget "https://s3.amazonaws.com/ossci-linux/nvidia_driver/$DRIVER_FN"
+  DRIVER_FN="NVIDIA-Linux-x86_64-450.80.02.run"
+  wget "https://download.nvidia.com/XFree86/Linux-x86_64/450.80.02/$DRIVER_FN"
   sudo /bin/bash "$DRIVER_FN" -s --no-drm || (sudo cat /var/log/nvidia-installer.log && false)
   nvidia-smi
 fi

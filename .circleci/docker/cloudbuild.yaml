@@ -25,5 +25,5 @@ substitutions:
     _CUDA: '1'
     _CUDA_TAG: '11.2.0-cudnn8-devel-ubuntu18.04'
     _PYTHON_VERSION: '3.7'
-    _TAG_NAME: '${_PYTHON_VERSION}-${_CUDA_TAG}'
+    _TAG_NAME: '${_PYTHON_VERSION}-${_CUDA_TAG}-mini'
 timeout: 3000s

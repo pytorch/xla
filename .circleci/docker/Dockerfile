@@ -19,6 +19,17 @@ ENV XLA_CUDA "${cuda}"
 ENV TF_CUDA_COMPUTE_CAPABILITIES "${cuda_compute}"
 ENV TF_CUDA_PATHS "/usr/local/cuda,/usr/include,/usr"
 
+# CUDA build guidance
+ENV NVIDIA_VISIBLE_DEVICES all
+ENV NVIDIA_DRIVER_CAPABILITIES compute,utility
+ENV PATH /usr/local/cuda:$PATH
+ENV LD_LIBRARY_PATH /usr/local/cuda/lib64:$LD_LIBRARY_PATH
+
+# AWS specific CUDA build guidance
+ENV TORCH_CUDA_ARCH_LIST Maxwell
+ENV TORCH_NVCC_FLAGS "-Xfatbin -compress-all"
+ENV CUDA_PATH /usr/local/cuda
+
 # Whether to build torch and torch_xla libraries with CXX ABI
 ENV CC "${cc}"
 ENV CXX "${cxx}"
@@ -28,11 +39,6 @@ ENV CXXFLAGS="${CXXFLAGS} -D_GLIBCXX_USE_CXX11_ABI=${CXX_ABI}"
 
 # Whether to build for TPUVM mode
 ENV TPUVM_MODE "${tpuvm}"
-
-# AWS specific CUDA build guidance
-ENV TORCH_CUDA_ARCH_LIST Maxwell
-ENV TORCH_NVCC_FLAGS "-Xfatbin -compress-all"
-ENV CUDA_PATH /usr/local/cuda
 
 
 # Install base system packages

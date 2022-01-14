@@ -16,10 +16,14 @@ launch_docker_and_build: &launch_docker_and_build
   no_output_timeout: "1h"
   command: |
     set -e
+    eval $(aws ecr get-login --region us-east-1 --no-include-email)
     time docker pull ${GCR_DOCKER_IMAGE} >/dev/null
+    time docker tag ${GCR_DOCKER_IMAGE} ${ECR_DOCKER_IMAGE} >/dev/null
+    time docker push ${ECR_DOCKER_IMAGE} >/dev/null
     sudo pkill -SIGHUP dockerd
+    # To enable remote caching, use SCCACHE_BUCKET=${SCCACHE_BUCKET}
     echo "declare -x SCCACHE_BUCKET=${LOCAL_BUCKET}" >> /home/circleci/project/env
-    echo "declare -x SCCACHE_CACHE_SIZE=20G" >> /home/circleci/project/env
+    echo "declare -x SCCACHE_CACHE_SIZE=${SCCACHE_CACHE_SIZE}" >> /home/circleci/project/env
     echo "declare -x AWS_ACCESS_KEY_ID=${CIRCLECI_AWS_ACCESS_KEY_FOR_SCCACHE_AND_XLA_BAZEL_S3_BUCKET_V1}" >> /home/circleci/project/env
     echo "declare -x AWS_SECRET_ACCESS_KEY=${CIRCLECI_AWS_SECRET_KEY_FOR_SCCACHE_AND_XLA_BAZEL_S3_BUCKET_V1}" >> /home/circleci/project/env
     echo "declare -x XLA_CLANG_CACHE_S3_BUCKET_NAME=${XLA_CLANG_CACHE_S3_BUCKET_NAME}" >> /home/circleci/project/env
@@ -70,10 +74,11 @@ calculate_docker_image: &calculate_docker_image
   name: Calculate docker image
   command: |
     # Just a quick smoke test to see if we can actually extract the tag
-    git clone --quiet https://github.com/pytorch/xla.git "/tmp/pytorch/xla"
-    DOCKER_TAG=$(git -C /tmp/pytorch/xla rev-parse HEAD:.circleci/docker)
-    # Use ${DOCKER_TAG} if the build image gets updated more frequently
-    BASE_IMAGE_TAG="3.7-11.2.0-cudnn8-devel-ubuntu18.04"
+    git clone --quiet https://github.com/pytorch/pytorch.git "/tmp/pytorch"
+    git -C /tmp/pytorch rev-parse HEAD:.circleci/docker
+    DOCKER_TAG=$(git -C /tmp/pytorch rev-parse HEAD:.circleci/docker)
+    echo "declare -x ECR_DOCKER_IMAGE=308535385114.dkr.ecr.us-east-1.amazonaws.com/pytorch/xla_base:${DOCKER_TAG}" >> "${BASH_ENV}"
+    BASE_IMAGE_TAG="3.7-11.2.0-cudnn8-devel-ubuntu18.04-mini"
     echo "declare -x GCR_DOCKER_IMAGE=gcr.io/tpu-pytorch/xla_base:${BASE_IMAGE_TAG}" >> "${BASH_ENV}"
 
 run_build: &run_build

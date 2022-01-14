@@ -61,6 +61,8 @@ function install_deps_pytorch_xla() {
   pip install hypothesis
   pip install cloud-tpu-client
   pip install absl-py
+  pip install --upgrade numpy>=1.18.5
+  pip install --upgrade numba
 
   # Using the Ninja generator requires CMake version 3.13 or greater
   pip install cmake>=3.13 --upgrade
