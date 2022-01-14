@@ -68,14 +68,14 @@ class TensorAllocator : public tensorflow::Allocator {
     return allocator;
   }
 
-  string Name() override { return "XLA_TensorAllocator"; }
+  std::string Name() override { return "XLA_TensorAllocator"; }
 
   void* AllocateRaw(size_t alignment, size_t num_bytes) override {
     // We use an alignment-sized area before the memory returned to the caller,
     // to store a pointer to its AllocBlocks.
     alignment = std::max<size_t>(alignment, sizeof(void*));
     // To call aligned_alloc(), num_bytes must be multiple of alignment.
-    num_bytes = RoundUpToNearest(num_bytes, alignment);
+    num_bytes = tensorflow::MathUtil::CeilOfRatio(num_bytes, alignment) * alignment;
 
     AllocKey alloc_key = {alignment, num_bytes};
     void* block = nullptr;
@@ -298,7 +298,7 @@ ComputationClient::DataPtr XrtComputationClient::CreateDataPlaceholder(
 std::vector<size_t> XrtComputationClient::PartitionTransferToServer(
     absl::Span<const TensorSource> tensors) {
   int64_t max_partition_size = GetMaxTensorsPartitionSize();
-  uint64 current_size = 0;
+  uint64_t current_size = 0;
   std::vector<size_t> partitions;
   for (size_t i = 0; i < tensors.size(); ++i) {
     int64_t tensor_size = ShapeUtil::ByteSizeOfElements(tensors[i].shape);

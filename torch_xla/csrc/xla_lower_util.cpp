@@ -12,6 +12,7 @@
 #include "tensorflow/compiler/xla/util.h"
 #include "tensorflow/compiler/xla/xla_client/debug_macros.h"
 #include "tensorflow/compiler/xla/xla_client/util.h"
+#include "tensorflow/stream_executor/dnn.h"
 #include "torch_xla/csrc/convert_ops.h"
 #include "torch_xla/csrc/data_ops.h"
 #include "torch_xla/csrc/helpers.h"
@@ -555,7 +556,7 @@ xla::XlaOp CreateIndexUpdate(
   const xla::Shape& values_shape = XlaHelpers::ShapeOfXlaOp(values);
 
   absl::Span<const int64_t> indices_dims =
-      xla::AsInt64Slice(indices_shape.dimensions());
+      stream_executor::dnn::AsInt64Slice(indices_shape.dimensions());
   XLA_CHECK(!indices_dims.empty());
   // The minor dimension of indices contains the indices to update.
   int64_t num_index_dims = indices_dims.back();
