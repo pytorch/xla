@@ -11,8 +11,7 @@ namespace ops {
 
 class Softmax : public Node {
  public:
-  Softmax(const Value& input, int64_t dim,
-          c10::optional<at::ScalarType> dtype);
+  Softmax(const Value& input, int64_t dim, c10::optional<at::ScalarType> dtype);
 
   NodePtr Clone(OpList operands) const override;
 

@@ -29,7 +29,7 @@ ReductionInfo GetReductionInfo(xla::XlaOp input, const xla::Shape& shape,
                                bool keep_reduced_dimensions) {
   ReductionInfo rinfo;
   std::unordered_set<int64_t> reduced_dimensions(dimensions.begin(),
-                                                      dimensions.end());
+                                                 dimensions.end());
   for (int64_t i = 0; i < shape.rank(); ++i) {
     if (reduced_dimensions.count(i) > 0) {
       if (keep_reduced_dimensions) {
@@ -108,8 +108,7 @@ SummationResult CreateSummation(xla::XlaOp input,
   return result;
 }
 
-xla::XlaOp CreateProduct(xla::XlaOp input,
-                         absl::Span<const int64_t> dimensions,
+xla::XlaOp CreateProduct(xla::XlaOp input, absl::Span<const int64_t> dimensions,
                          bool keep_reduced_dimensions) {
   const xla::Shape& shape = XlaHelpers::ShapeOfXlaOp(input);
   xla::XlaOp init_value = xla::One(input.builder(), shape.element_type());
@@ -268,16 +267,14 @@ xla::XlaOp BuildCumulativeComputation(xla::XlaOp input, int64_t dim,
   std::vector<int64_t> window_strides(input_shape.rank(), 1);
   std::vector<int64_t> window_dims(input_shape.rank(), 1);
   window_dims[dim] = input_shape.dimensions(dim);
-  std::vector<std::pair<int64_t, int64_t>> padding(
-      input_shape.rank());
+  std::vector<std::pair<int64_t, int64_t>> padding(input_shape.rank());
   padding[dim].first = input_shape.dimensions(dim) - 1;
   return xla::ReduceWindowWithGeneralPadding(
       input, init, reducer, window_dims, window_strides,
       /*base_dilations=*/{}, /*window_dilations=*/{}, padding);
 }
 
-xla::XlaOp BuildMean(xla::XlaOp input,
-                     absl::Span<const int64_t> dimensions,
+xla::XlaOp BuildMean(xla::XlaOp input, absl::Span<const int64_t> dimensions,
                      bool keep_reduced_dimensions) {
   return CreateSummation(input, dimensions, keep_reduced_dimensions,
                          /*scale=*/true)
@@ -286,8 +283,7 @@ xla::XlaOp BuildMean(xla::XlaOp input,
 
 xla::XlaOp BuildStdDeviation(xla::XlaOp input,
                              absl::Span<const int64_t> dimensions,
-                             bool keep_reduced_dimensions,
-                             int64_t correction) {
+                             bool keep_reduced_dimensions, int64_t correction) {
   const xla::Shape& input_shape = XlaHelpers::ShapeOfXlaOp(input);
   xla::XlaOp mean =
       BuildMean(input, dimensions, /*keep_reduced_dimensions*/ true);
@@ -323,8 +319,7 @@ xla::XlaOp BuildSum(xla::XlaOp input, absl::Span<const int64_t> dimensions,
       .result;
 }
 
-xla::XlaOp BuildProd(xla::XlaOp input,
-                     absl::Span<const int64_t> dimensions,
+xla::XlaOp BuildProd(xla::XlaOp input, absl::Span<const int64_t> dimensions,
                      bool keep_reduced_dimensions) {
   return CreateProduct(input, dimensions, keep_reduced_dimensions);
 }

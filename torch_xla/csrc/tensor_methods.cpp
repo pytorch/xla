@@ -193,9 +193,9 @@ void CheckShapeDimensions(const T& size) {
   })) << "Dimensions cannot be negative numbers";
 }
 
-void CheckDimensionSize(const XLATensor& t, int64_t dim,
-                        int64_t expected_size, const std::string& tag,
-                        const std::string& arg_name, int arg_number) {
+void CheckDimensionSize(const XLATensor& t, int64_t dim, int64_t expected_size,
+                        const std::string& tag, const std::string& arg_name,
+                        int arg_number) {
   int64_t dim_size = t.size(dim);
   XLA_CHECK_EQ(t.size(dim), expected_size)
       << "Expected tensor to have size " << expected_size << " at dimension "
@@ -215,8 +215,8 @@ void CheckBmmDimension(const std::string& tag, const XLATensor& batch1,
                      "batch2", 2);
 }
 
-std::vector<int64_t> GetExpandDimensions(
-    const xla::Shape& shape, std::vector<int64_t> dimensions) {
+std::vector<int64_t> GetExpandDimensions(const xla::Shape& shape,
+                                         std::vector<int64_t> dimensions) {
   XLA_CHECK_GE(dimensions.size(), shape.rank()) << shape;
   int64_t base = dimensions.size() - shape.rank();
   for (size_t i = 0; i < shape.rank(); ++i) {
@@ -242,9 +242,9 @@ ReductionMode GetXlaReductionMode(int64_t reduction) {
 // Resizes and / or checks whether a list is of the given size. The list is only
 // resized if its size is 1. If it's empty, it's replaced with the provided
 // default first.
-std::vector<int64_t> CheckIntList(absl::Span<const int64_t> list,
-                                       size_t length, const std::string& name,
-                                       std::vector<int64_t> def = {}) {
+std::vector<int64_t> CheckIntList(absl::Span<const int64_t> list, size_t length,
+                                  const std::string& name,
+                                  std::vector<int64_t> def = {}) {
   std::vector<int64_t> result;
   if (list.empty()) {
     result = std::move(def);
@@ -343,9 +343,9 @@ std::pair<XLATensor, ir::Value> XLATensor::all_reduce(
   return {input.CreateFrom(ir::Value(node, 0)), ir::Value(node, 1)};
 }
 
-ir::Value XLATensor::all_reduce_(
-    XLATensor& input, const ir::Value& token, AllReduceType reduce_type,
-    double scale, std::vector<std::vector<int64_t>> groups) {
+ir::Value XLATensor::all_reduce_(XLATensor& input, const ir::Value& token,
+                                 AllReduceType reduce_type, double scale,
+                                 std::vector<std::vector<int64_t>> groups) {
   std::vector<ir::Value> input_values({input.GetIrValue()});
   ir::NodePtr node = ir::MakeNode<ir::ops::AllReduce>(
       reduce_type, input_values, token, scale, std::move(groups));
@@ -381,9 +381,9 @@ std::pair<XLATensor, ir::Value> XLATensor::reduce_scatter(
 }
 
 std::pair<XLATensor, ir::Value> XLATensor::all_to_all(
-    const XLATensor& input, const ir::Value& token,
-    int64_t split_dimension, int64_t concat_dimension,
-    int64_t split_count, std::vector<std::vector<int64_t>> groups) {
+    const XLATensor& input, const ir::Value& token, int64_t split_dimension,
+    int64_t concat_dimension, int64_t split_count,
+    std::vector<std::vector<int64_t>> groups) {
   ir::NodePtr node = ir::MakeNode<ir::ops::AllToAll>(
       input.GetIrValue(), token, split_dimension, concat_dimension, split_count,
       std::move(groups));
@@ -519,8 +519,8 @@ XLATensor XLATensor::adaptive_max_pool2d_backward(const XLATensor& grad_output,
       grad_output.GetIrValue(), input.GetIrValue()));
 }
 
-XLATensor XLATensor::adaptive_avg_pool3d(
-    const XLATensor& input, std::vector<int64_t> output_size) {
+XLATensor XLATensor::adaptive_avg_pool3d(const XLATensor& input,
+                                         std::vector<int64_t> output_size) {
   return input.CreateFrom(ir::MakeNode<ir::ops::AdaptiveAvgPool3d>(
       input.GetIrValue(), std::move(output_size)));
 }
@@ -531,8 +531,8 @@ XLATensor XLATensor::adaptive_avg_pool3d_backward(const XLATensor& grad_output,
       grad_output.GetIrValue(), input.GetIrValue()));
 }
 
-XLATensor XLATensor::_adaptive_avg_pool2d(
-    const XLATensor& input, std::vector<int64_t> output_size) {
+XLATensor XLATensor::_adaptive_avg_pool2d(const XLATensor& input,
+                                          std::vector<int64_t> output_size) {
   return input.CreateFrom(ir::MakeNode<ir::ops::AdaptiveAvgPool2d>(
       input.GetIrValue(), std::move(output_size)));
 }
@@ -692,8 +692,7 @@ void XLATensor::arange_out(XLATensor& out, const at::Scalar& start,
   out.SetScalarType(scalar_type);
 }
 
-XLATensor XLATensor::argmax(const XLATensor& input, int64_t dim,
-                            bool keepdim) {
+XLATensor XLATensor::argmax(const XLATensor& input, int64_t dim, bool keepdim) {
   int64_t canonical_dim =
       XlaHelpers::GetCanonicalDimensionIndex(dim, input.shape().get().rank());
   return input.CreateFrom(
@@ -707,8 +706,7 @@ XLATensor XLATensor::argmax(const XLATensor& input) {
       at::ScalarType::Long);
 }
 
-XLATensor XLATensor::argmin(const XLATensor& input, int64_t dim,
-                            bool keepdim) {
+XLATensor XLATensor::argmin(const XLATensor& input, int64_t dim, bool keepdim) {
   int64_t canonical_dim =
       XlaHelpers::GetCanonicalDimensionIndex(dim, input.shape().get().rank());
   return input.CreateFrom(
@@ -772,8 +770,8 @@ XLATensor XLATensor::avg_pool_nd(const XLATensor& input,
                                  int64_t spatial_dim_count,
                                  std::vector<int64_t> kernel_size,
                                  std::vector<int64_t> stride,
-                                 std::vector<int64_t> padding,
-                                 bool ceil_mode, bool count_include_pad) {
+                                 std::vector<int64_t> padding, bool ceil_mode,
+                                 bool count_include_pad) {
   kernel_size = CheckIntList(kernel_size, spatial_dim_count, "kernel_size");
   stride = CheckIntList(stride, spatial_dim_count, "stride", kernel_size);
   padding = CheckIntList(padding, spatial_dim_count, "padding");
@@ -785,8 +783,8 @@ XLATensor XLATensor::avg_pool_nd(const XLATensor& input,
 XLATensor XLATensor::avg_pool_nd_backward(
     const XLATensor& out_backprop, const XLATensor& input,
     int64_t spatial_dim_count, std::vector<int64_t> kernel_size,
-    std::vector<int64_t> stride, std::vector<int64_t> padding,
-    bool ceil_mode, bool count_include_pad) {
+    std::vector<int64_t> stride, std::vector<int64_t> padding, bool ceil_mode,
+    bool count_include_pad) {
   kernel_size = CheckIntList(kernel_size, spatial_dim_count, "kernel_size");
   stride = CheckIntList(stride, spatial_dim_count, "stride", kernel_size);
   padding = CheckIntList(padding, spatial_dim_count, "padding");
@@ -916,8 +914,7 @@ std::vector<XLATensor> XLATensor::broadcast_tensors(
   return tensors.front().MakeOutputTensors(node);
 }
 
-XLATensor XLATensor::cat(absl::Span<const XLATensor> tensors,
-                         int64_t dim) {
+XLATensor XLATensor::cat(absl::Span<const XLATensor> tensors, int64_t dim) {
   // Shape checks for cat:
   // - If not empty, every tensor shape must be the same.
   // - Empty tensor passes but is simply ignore in implementation,
@@ -1038,8 +1035,7 @@ XLATensor::convolution_backward_overrideable(
     const XLATensor& out_backprop, const XLATensor& input,
     const XLATensor& weight, std::vector<int64_t> stride,
     std::vector<int64_t> padding, std::vector<int64_t> dilation,
-    bool transposed, std::vector<int64_t> output_padding,
-    int64_t groups) {
+    bool transposed, std::vector<int64_t> output_padding, int64_t groups) {
   ir::NodePtr node = ir::MakeNode<ir::ops::ConvolutionBackwardOverrideable>(
       out_backprop.GetIrValue(), input.GetIrValue(), weight.GetIrValue(),
       std::move(stride), std::move(padding), std::move(dilation), transposed,
@@ -1230,8 +1226,7 @@ XLATensor XLATensor::exp(const XLATensor& input) {
   return input.CreateFrom(ir::ops::Exp(input.GetIrValue()));
 }
 
-XLATensor XLATensor::expand(const XLATensor& input,
-                            std::vector<int64_t> size) {
+XLATensor XLATensor::expand(const XLATensor& input, std::vector<int64_t> size) {
   auto input_shape = input.shape();
   return input.CreateFrom(ir::MakeNode<ir::ops::Expand>(
       input.GetIrValue(),
@@ -1250,8 +1245,8 @@ void XLATensor::exponential_(XLATensor& input, double lambd) {
       GetRngSeed(input.GetDevice()), input_shape.get()));
 }
 
-XLATensor XLATensor::eye(int64_t lines, int64_t cols,
-                         const Device& device, at::ScalarType element_type) {
+XLATensor XLATensor::eye(int64_t lines, int64_t cols, const Device& device,
+                         at::ScalarType element_type) {
   return XLATensor::Create(
       ir::ops::Identity(lines, cols,
                         MakeXlaPrimitiveType(element_type, &device)),
@@ -1428,10 +1423,11 @@ void XLATensor::index_fill_(XLATensor& input, int64_t dim,
   input.SetIrValue(IndexFill(input, canonical_dim, index, value));
 }
 
-XLATensor XLATensor::index_put(
-    const XLATensor& input, absl::Span<const XLATensor> indices,
-    int64_t start_dim, const XLATensor& values, bool accumulate,
-    absl::Span<const int64_t> result_permutation) {
+XLATensor XLATensor::index_put(const XLATensor& input,
+                               absl::Span<const XLATensor> indices,
+                               int64_t start_dim, const XLATensor& values,
+                               bool accumulate,
+                               absl::Span<const int64_t> result_permutation) {
   return input.CreateFrom(IndexPutByTensors(input, indices, start_dim, values,
                                             accumulate, result_permutation));
 }
@@ -1473,8 +1469,7 @@ XLATensor XLATensor::kl_div_backward(const XLATensor& grad_output,
 }
 
 std::tuple<XLATensor, XLATensor> XLATensor::kthvalue(const XLATensor& input,
-                                                     int64_t k,
-                                                     int64_t dim,
+                                                     int64_t k, int64_t dim,
                                                      bool keepdim) {
   ir::NodePtr node = ir::MakeNode<ir::ops::KthValue>(
       input.GetIrValue(), k,
@@ -1738,8 +1733,7 @@ XLATensor XLATensor::max(const XLATensor& input) {
 }
 
 std::tuple<XLATensor, XLATensor> XLATensor::max(const XLATensor& input,
-                                                int64_t dim,
-                                                bool keepdim) {
+                                                int64_t dim, bool keepdim) {
   int64_t canonical_dim =
       XlaHelpers::GetCanonicalDimensionIndex(dim, input.shape().get().rank());
   ir::NodePtr node = ir::MakeNode<ir::ops::MaxInDim>(input.GetIrValue(),
@@ -1750,8 +1744,7 @@ std::tuple<XLATensor, XLATensor> XLATensor::max(const XLATensor& input,
 }
 
 void XLATensor::max_out(XLATensor& max, XLATensor& max_values,
-                        const XLATensor& input, int64_t dim,
-                        bool keepdim) {
+                        const XLATensor& input, int64_t dim, bool keepdim) {
   int64_t canonical_dim =
       XlaHelpers::GetCanonicalDimensionIndex(dim, input.shape().get().rank());
   ir::NodePtr node = ir::MakeNode<ir::ops::MaxInDim>(input.GetIrValue(),
@@ -1775,13 +1768,10 @@ std::tuple<XLATensor, XLATensor> XLATensor::max_pool_nd(
       input.CreateFrom(ir::Value(node, 1), at::ScalarType::Long));
 }
 
-XLATensor XLATensor::max_pool_nd_backward(const XLATensor& out_backprop,
-                                          const XLATensor& input,
-                                          int64_t spatial_dim_count,
-                                          std::vector<int64_t> kernel_size,
-                                          std::vector<int64_t> stride,
-                                          std::vector<int64_t> padding,
-                                          bool ceil_mode) {
+XLATensor XLATensor::max_pool_nd_backward(
+    const XLATensor& out_backprop, const XLATensor& input,
+    int64_t spatial_dim_count, std::vector<int64_t> kernel_size,
+    std::vector<int64_t> stride, std::vector<int64_t> padding, bool ceil_mode) {
   kernel_size = CheckIntList(kernel_size, spatial_dim_count, "kernel_size");
   stride = CheckIntList(stride, spatial_dim_count, "stride", kernel_size);
   padding = CheckIntList(padding, spatial_dim_count, "padding");
@@ -1798,9 +1788,10 @@ XLATensor XLATensor::max_unpool(const XLATensor& input,
       input.GetIrValue(), indices.GetIrValue(), std::move(output_size)));
 }
 
-XLATensor XLATensor::max_unpool_backward(
-    const XLATensor& grad_output, const XLATensor& input,
-    const XLATensor& indices, std::vector<int64_t> output_size) {
+XLATensor XLATensor::max_unpool_backward(const XLATensor& grad_output,
+                                         const XLATensor& input,
+                                         const XLATensor& indices,
+                                         std::vector<int64_t> output_size) {
   return grad_output.CreateFrom(ir::MakeNode<ir::ops::MaxUnpoolNdBackward>(
       grad_output.GetIrValue(), input.GetIrValue(), indices.GetIrValue(),
       std::move(output_size)));
@@ -1832,8 +1823,7 @@ XLATensor XLATensor::min(const XLATensor& input) {
 }
 
 std::tuple<XLATensor, XLATensor> XLATensor::min(const XLATensor& input,
-                                                int64_t dim,
-                                                bool keepdim) {
+                                                int64_t dim, bool keepdim) {
   int64_t canonical_dim =
       XlaHelpers::GetCanonicalDimensionIndex(dim, input.shape().get().rank());
   ir::NodePtr node = ir::MakeNode<ir::ops::MinInDim>(input.GetIrValue(),
@@ -1844,8 +1834,7 @@ std::tuple<XLATensor, XLATensor> XLATensor::min(const XLATensor& input,
 }
 
 void XLATensor::min_out(XLATensor& min, XLATensor& min_indices,
-                        const XLATensor& input, int64_t dim,
-                        bool keepdim) {
+                        const XLATensor& input, int64_t dim, bool keepdim) {
   int64_t canonical_dim =
       XlaHelpers::GetCanonicalDimensionIndex(dim, input.shape().get().rank());
   ir::NodePtr node = ir::MakeNode<ir::ops::MinInDim>(input.GetIrValue(),
@@ -1915,8 +1904,8 @@ XLATensor XLATensor::nan_to_num(const XLATensor& input, const at::Scalar& nan,
                                             posinf_value, neginf_value));
 }
 
-XLATensor XLATensor::narrow(const XLATensor& input, int64_t dim,
-                            int64_t start, int64_t length) {
+XLATensor XLATensor::narrow(const XLATensor& input, int64_t dim, int64_t start,
+                            int64_t length) {
   auto input_shape = input.shape();
   dim = XlaHelpers::GetCanonicalDimensionIndex(dim, input_shape.get().rank());
   xla::Shape narrow_shape = input_shape;
@@ -2019,10 +2008,12 @@ XLATensor XLATensor::nll_loss2d(const XLATensor& input, const XLATensor& target,
       GetXlaReductionMode(reduction), ignore_index));
 }
 
-XLATensor XLATensor::nll_loss2d_backward(
-    const XLATensor& grad_output, const XLATensor& input,
-    const XLATensor& target, const XLATensor& weight, int64_t reduction,
-    int ignore_index, const XLATensor& total_weight) {
+XLATensor XLATensor::nll_loss2d_backward(const XLATensor& grad_output,
+                                         const XLATensor& input,
+                                         const XLATensor& target,
+                                         const XLATensor& weight,
+                                         int64_t reduction, int ignore_index,
+                                         const XLATensor& total_weight) {
   return input.CreateFrom(ir::MakeNode<ir::ops::NllLoss2dBackward>(
       grad_output.GetIrValue(), input.GetIrValue(), target.GetIrValue(),
       GetOptionalIrValue(weight), GetOptionalIrValue(total_weight),
@@ -2184,9 +2175,9 @@ XLATensor XLATensor::reflection_pad2d(const XLATensor& input,
       input.GetIrValue(), std::move(padding)));
 }
 
-XLATensor XLATensor::reflection_pad2d_backward(
-    const XLATensor& grad_output, const XLATensor& input,
-    std::vector<int64_t> padding) {
+XLATensor XLATensor::reflection_pad2d_backward(const XLATensor& grad_output,
+                                               const XLATensor& input,
+                                               std::vector<int64_t> padding) {
   return input.CreateFrom(ir::MakeNode<ir::ops::ReflectionPad2dBackward>(
       grad_output.GetIrValue(), input.GetIrValue(), std::move(padding)));
 }
@@ -2223,9 +2214,9 @@ XLATensor XLATensor::replication_pad1d(const XLATensor& input,
       input.GetIrValue(), std::move(padding)));
 }
 
-XLATensor XLATensor::replication_pad1d_backward(
-    const XLATensor& grad_output, const XLATensor& input,
-    std::vector<int64_t> padding) {
+XLATensor XLATensor::replication_pad1d_backward(const XLATensor& grad_output,
+                                                const XLATensor& input,
+                                                std::vector<int64_t> padding) {
   return input.CreateFrom(ir::MakeNode<ir::ops::ReplicationPadBackward>(
       grad_output.GetIrValue(), input.GetIrValue(), std::move(padding)));
 }
@@ -2236,9 +2227,9 @@ XLATensor XLATensor::replication_pad2d(const XLATensor& input,
       input.GetIrValue(), std::move(padding)));
 }
 
-XLATensor XLATensor::replication_pad2d_backward(
-    const XLATensor& grad_output, const XLATensor& input,
-    std::vector<int64_t> padding) {
+XLATensor XLATensor::replication_pad2d_backward(const XLATensor& grad_output,
+                                                const XLATensor& input,
+                                                std::vector<int64_t> padding) {
   return input.CreateFrom(ir::MakeNode<ir::ops::ReplicationPadBackward>(
       grad_output.GetIrValue(), input.GetIrValue(), std::move(padding)));
 }
@@ -2400,9 +2391,8 @@ XLATensor XLATensor::sinh(const XLATensor& input) {
   return input.CreateFrom(ir::ops::Sinh(input.GetIrValue()));
 }
 
-XLATensor XLATensor::slice(const XLATensor& input, int64_t dim,
-                           int64_t start, int64_t end,
-                           int64_t step) {
+XLATensor XLATensor::slice(const XLATensor& input, int64_t dim, int64_t start,
+                           int64_t end, int64_t step) {
   auto input_shape = input.shape();
   dim = XlaHelpers::GetCanonicalDimensionIndex(dim, input_shape.get().rank());
   start = XlaHelpers::GetCanonicalPosition(input_shape.get().dimensions(), dim,
@@ -2427,8 +2417,8 @@ std::tuple<XLATensor, XLATensor> XLATensor::slogdet(const XLATensor& input) {
 }
 
 XLATensor XLATensor::smooth_l1_loss(const XLATensor& input,
-                                    const XLATensor& target,
-                                    int64_t reduction, double beta) {
+                                    const XLATensor& target, int64_t reduction,
+                                    double beta) {
   return tensor_ops::SmoothL1Loss(input, target, GetXlaReductionMode(reduction),
                                   beta);
 }
@@ -2436,8 +2426,7 @@ XLATensor XLATensor::smooth_l1_loss(const XLATensor& input,
 XLATensor XLATensor::smooth_l1_loss_backward(const XLATensor& grad_output,
                                              const XLATensor& input,
                                              const XLATensor& target,
-                                             int64_t reduction,
-                                             double beta) {
+                                             int64_t reduction, double beta) {
   return tensor_ops::SmoothL1LossBackward(grad_output, input, target,
                                           GetXlaReductionMode(reduction), beta);
 }
@@ -2456,8 +2445,7 @@ XLATensor XLATensor::softmax(const XLATensor& input, int64_t dim,
 }
 
 XLATensor XLATensor::softmax_backward(const XLATensor& grad_output,
-                                      const XLATensor& output,
-                                      int64_t dim) {
+                                      const XLATensor& output, int64_t dim) {
   return grad_output.CreateFrom(ir::ops::SoftmaxBackwardOp(
       grad_output.GetIrValue(), output.GetIrValue(), dim));
 }
@@ -2494,8 +2482,7 @@ XLATensor XLATensor::softshrink_backward(const XLATensor& grad_out,
 }
 
 std::vector<XLATensor> XLATensor::split(const XLATensor& input,
-                                        int64_t split_size,
-                                        int64_t dim) {
+                                        int64_t split_size, int64_t dim) {
   auto input_shape = input.shape();
   int split_dim =
       XlaHelpers::GetCanonicalDimensionIndex(dim, input_shape.get().rank());
@@ -2517,8 +2504,7 @@ std::vector<XLATensor> XLATensor::split(const XLATensor& input,
 }
 
 std::vector<XLATensor> XLATensor::split_with_sizes(
-    const XLATensor& input, std::vector<int64_t> split_size,
-    int64_t dim) {
+    const XLATensor& input, std::vector<int64_t> split_size, int64_t dim) {
   auto input_shape = input.shape();
   int split_dim =
       XlaHelpers::GetCanonicalDimensionIndex(dim, input_shape.get().rank());
@@ -2557,8 +2543,7 @@ void XLATensor::squeeze_(XLATensor& input, int64_t dim) {
       XlaHelpers::GetCanonicalDimensionIndex(dim, input.shape().get().rank())));
 }
 
-XLATensor XLATensor::stack(absl::Span<const XLATensor> tensors,
-                           int64_t dim) {
+XLATensor XLATensor::stack(absl::Span<const XLATensor> tensors, int64_t dim) {
   XLA_CHECK_GT(tensors.size(), 0);
   std::vector<ir::Value> values;
   for (auto& tensor : tensors) {
@@ -2572,8 +2557,7 @@ XLATensor XLATensor::stack(absl::Span<const XLATensor> tensors,
 
 XLATensor XLATensor::std(const XLATensor& input,
                          std::vector<int64_t> dimensions,
-                         bool keep_reduced_dimensions,
-                         int64_t correction) {
+                         bool keep_reduced_dimensions, int64_t correction) {
   return input.CreateFrom(
       ir::MakeNode<ir::ops::Std>(input.GetIrValue(),
                                  XlaHelpers::GetCanonicalDimensionIndices(
@@ -2582,8 +2566,8 @@ XLATensor XLATensor::std(const XLATensor& input,
 }
 
 std::tuple<XLATensor, XLATensor> XLATensor::std_mean(
-    const XLATensor& input, std::vector<int64_t> dimensions,
-    int64_t correction, bool keep_reduced_dimensions) {
+    const XLATensor& input, std::vector<int64_t> dimensions, int64_t correction,
+    bool keep_reduced_dimensions) {
   ir::NodePtr node = ir::MakeNode<ir::ops::StdMean>(
       input.GetIrValue(),
       XlaHelpers::GetCanonicalDimensionIndices(dimensions,
@@ -2702,9 +2686,9 @@ XLATensor XLATensor::to(XLATensor& input, c10::optional<Device> device,
 }
 
 std::tuple<XLATensor, XLATensor> XLATensor::topk(const XLATensor& input,
-                                                 int64_t k,
-                                                 int64_t dim, bool largest,
-                                                 bool sorted, bool stable) {
+                                                 int64_t k, int64_t dim,
+                                                 bool largest, bool sorted,
+                                                 bool stable) {
   ir::NodePtr node = ir::MakeNode<ir::ops::TopK>(
       input.GetIrValue(), k,
       XlaHelpers::GetCanonicalDimensionIndex(dim, input.shape().get().rank()),
@@ -2734,8 +2718,7 @@ XLATensor XLATensor::transpose(const XLATensor& input, int64_t dim0,
   return input.CreateViewTensor(std::move(view_info));
 }
 
-void XLATensor::transpose_(XLATensor& input, int64_t dim0,
-                           int64_t dim1) {
+void XLATensor::transpose_(XLATensor& input, int64_t dim0, int64_t dim1) {
   auto input_shape = input.shape();
   auto permute_dims = XlaHelpers::MakeTransposePermutation(
       /*dim0=*/dim0, /*dim1=*/dim1, /*rank=*/input_shape.get().rank());
@@ -2776,8 +2759,7 @@ XLATensor XLATensor::trunc(const XLATensor& input) {
   return input.CreateFrom(ir::ops::Trunc(input.GetIrValue()));
 }
 
-std::vector<XLATensor> XLATensor::unbind(const XLATensor& input,
-                                         int64_t dim) {
+std::vector<XLATensor> XLATensor::unbind(const XLATensor& input, int64_t dim) {
   dim = XlaHelpers::GetCanonicalDimensionIndex(dim, input.shape().get().rank());
   int64_t dim_size = input.size(dim);
   std::vector<XLATensor> slices;
@@ -2855,8 +2837,7 @@ XLATensor XLATensor::view(const XLATensor& input,
 }
 
 XLATensor XLATensor::var(const XLATensor& input,
-                         std::vector<int64_t> dimensions,
-                         int64_t correction,
+                         std::vector<int64_t> dimensions, int64_t correction,
                          bool keep_reduced_dimensions) {
   return input.CreateFrom(
       ir::MakeNode<ir::ops::Var>(input.GetIrValue(),
@@ -2866,8 +2847,8 @@ XLATensor XLATensor::var(const XLATensor& input,
 }
 
 std::tuple<XLATensor, XLATensor> XLATensor::var_mean(
-    const XLATensor& input, std::vector<int64_t> dimensions,
-    int64_t correction, bool keep_reduced_dimensions) {
+    const XLATensor& input, std::vector<int64_t> dimensions, int64_t correction,
+    bool keep_reduced_dimensions) {
   ir::NodePtr node = ir::MakeNode<ir::ops::VarMean>(
       input.GetIrValue(),
       XlaHelpers::GetCanonicalDimensionIndices(dimensions,

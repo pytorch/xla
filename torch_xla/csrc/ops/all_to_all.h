@@ -25,9 +25,7 @@ class AllToAll : public Node {
 
   int64_t split_count() const { return split_count_; }
 
-  const std::vector<std::vector<int64_t>>& groups() const {
-    return groups_;
-  }
+  const std::vector<std::vector<int64_t>>& groups() const { return groups_; }
 
  private:
   int64_t split_dimension_;

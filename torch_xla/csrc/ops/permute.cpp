@@ -10,8 +10,7 @@ namespace ir {
 namespace ops {
 namespace {
 
-xla::Shape NodeOutputShape(const Value& input,
-                           absl::Span<const int64_t> dims) {
+xla::Shape NodeOutputShape(const Value& input, absl::Span<const int64_t> dims) {
   auto lower_for_shape_fn =
       [dims](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
     XLA_CHECK_EQ(operands.size(), 1);
@@ -44,9 +43,8 @@ std::string Permute::ToString() const {
   return ss.str();
 }
 
-xla::Shape Permute::MakePermuteShape(
-    const xla::Shape& source_shape,
-    absl::Span<const int64_t> permutation) {
+xla::Shape Permute::MakePermuteShape(const xla::Shape& source_shape,
+                                     absl::Span<const int64_t> permutation) {
   return XlaHelpers::GetDynamicReshape(
       source_shape,
       XlaHelpers::Permute(permutation, source_shape.dimensions()));

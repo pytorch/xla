@@ -9,8 +9,7 @@ namespace ops {
 class MaxUnpoolNdBackward : public Node {
  public:
   MaxUnpoolNdBackward(const Value& grad_output, const Value& input,
-                      const Value& indices,
-                      std::vector<int64_t> output_size);
+                      const Value& indices, std::vector<int64_t> output_size);
 
   NodePtr Clone(OpList operands) const override;
 

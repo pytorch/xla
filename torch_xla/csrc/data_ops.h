@@ -16,14 +16,12 @@ bool IsSparseGather(xla::XlaOp input, xla::XlaOp index, int64_t dim);
 // output shape. The complete output shape has same total number of elements as
 // input_sizes and matches output_sizes in all dimensions except for at most
 // one, which can be inferred and stored as -1 in output_sizes.
-std::vector<int64_t> GetCompleteShape(
-    absl::Span<const int64_t> output_sizes,
-    absl::Span<const int64_t> input_sizes);
+std::vector<int64_t> GetCompleteShape(absl::Span<const int64_t> output_sizes,
+                                      absl::Span<const int64_t> input_sizes);
 
 // Creates a new tensor with the same data as the input tensor and the specified
 // output size.
-xla::XlaOp BuildView(xla::XlaOp input,
-                     absl::Span<const int64_t> output_sizes);
+xla::XlaOp BuildView(xla::XlaOp input, absl::Span<const int64_t> output_sizes);
 
 // Squeezes the given dimension if trivial (size 1), returns the unchanged input
 // otherwise.
@@ -54,8 +52,7 @@ xla::XlaOp BuildStack(absl::Span<const xla::XlaOp> inputs, int64_t dim);
 xla::XlaOp BuildCat(absl::Span<const xla::XlaOp> inputs, int64_t dim);
 
 // Repeats the input tensor along each dimension by the given number of repeats.
-xla::XlaOp BuildRepeat(xla::XlaOp input,
-                       absl::Span<const int64_t> repeats);
+xla::XlaOp BuildRepeat(xla::XlaOp input, absl::Span<const int64_t> repeats);
 
 // Computes the number of splits with a dimension size and the split sizes.
 size_t ComputeSplitCount(int64_t dim_size,
@@ -72,8 +69,7 @@ std::vector<xla::XlaOp> BuildSplit(xla::XlaOp input,
 xla::XlaOp BuildUpdateSlice(xla::XlaOp input, xla::XlaOp source,
                             absl::Span<const int64_t> base_indices);
 
-xla::XlaOp BuildSlice(xla::XlaOp input,
-                      absl::Span<const int64_t> base_indices,
+xla::XlaOp BuildSlice(xla::XlaOp input, absl::Span<const int64_t> base_indices,
                       absl::Span<const int64_t> sizes);
 
 xla::XlaOp BoundIndices(xla::XlaOp index, xla::XlaOp max_index);
@@ -83,8 +79,7 @@ xla::XlaOp BuildTake(xla::XlaOp input, xla::XlaOp index);
 xla::XlaOp BuildResize(xla::XlaOp input, absl::Span<const int64_t> size);
 
 xla::XlaOp BuildUnselect(xla::XlaOp target, xla::XlaOp source, int64_t dim,
-                         int64_t start, int64_t end,
-                         int64_t stride);
+                         int64_t start, int64_t end, int64_t stride);
 
 xla::XlaOp BuildReflectionPad2d(xla::XlaOp input,
                                 absl::Span<const int64_t> padding);

@@ -10,8 +10,7 @@ namespace ops {
 
 class UpsampleNearestBackward : public Node {
  public:
-  UpsampleNearestBackward(const Value& input,
-                          std::vector<int64_t> output_size,
+  UpsampleNearestBackward(const Value& input, std::vector<int64_t> output_size,
                           std::vector<int64_t> input_size);
 
   NodePtr Clone(OpList operands) const override;

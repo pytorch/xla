@@ -11,10 +11,10 @@ namespace ir {
 namespace ops {
 namespace {
 
-xla::Shape NodeOutputShape(
-    AllReduceType reduce_type, const Value input, const Value& token,
-    double scale, int64_t scatter_dim, int64_t shard_count,
-    const std::vector<std::vector<int64_t>>& groups) {
+xla::Shape NodeOutputShape(AllReduceType reduce_type, const Value input,
+                           const Value& token, double scale,
+                           int64_t scatter_dim, int64_t shard_count,
+                           const std::vector<std::vector<int64_t>>& groups) {
   auto shape_fn = [&](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
     xla::XlaOp inputOp = operands[0];
     xla::XlaOp tokenOp = operands[1];

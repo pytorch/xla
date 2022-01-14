@@ -35,10 +35,8 @@ XLATensor SoftplusBackward(const XLATensor& grad_output, const XLATensor& input,
 XLATensor Select(const XLATensor& input, int64_t dim, int64_t index);
 
 XLATensor EmbeddingDenseBackward(const XLATensor& grad_output,
-                                 const XLATensor& indices,
-                                 int64_t num_weights,
-                                 int64_t padding_idx,
-                                 bool scale_grad_by_freq);
+                                 const XLATensor& indices, int64_t num_weights,
+                                 int64_t padding_idx, bool scale_grad_by_freq);
 
 }  // namespace tensor_ops
 }  // namespace torch_xla

@@ -12,8 +12,7 @@ namespace {
 // Returns the sub-tensor at the given index in the given dimension. Its rank
 // is one less than the input, in other words the singleton dimension is
 // squeezed out.
-XLATensor IndexAcrossDims(const XLATensor& input, int64_t dim,
-                          int64_t index) {
+XLATensor IndexAcrossDims(const XLATensor& input, int64_t dim, int64_t index) {
   return XLATensor::squeeze(XLATensor::slice(input, dim, index, index + 1, 1),
                             dim);
 }
@@ -84,8 +83,7 @@ XLATensor KlDivBackward(const XLATensor& grad_output, const XLATensor& input,
   return grad_input;
 }
 
-XLATensor MakeMatrixWithDiagonal(const XLATensor& input,
-                                 int64_t diagonal) {
+XLATensor MakeMatrixWithDiagonal(const XLATensor& input, int64_t diagonal) {
   int64_t size = input.shape().get().dimensions(0);
   XLATensor identity =
       XLATensor::eye(size, size, input.GetDevice(), input.dtype());
@@ -202,10 +200,8 @@ XLATensor Select(const XLATensor& input, int64_t dim, int64_t index) {
 }
 
 XLATensor EmbeddingDenseBackward(const XLATensor& grad_output,
-                                 const XLATensor& indices,
-                                 int64_t num_weights,
-                                 int64_t padding_idx,
-                                 bool scale_grad_by_freq) {
+                                 const XLATensor& indices, int64_t num_weights,
+                                 int64_t padding_idx, bool scale_grad_by_freq) {
   XLA_CHECK_EQ(indices.dtype(), at::ScalarType::Long)
       << "Embedding indices are expected to be of scalar type Long";
   auto indices_shape_ref = indices.shape();

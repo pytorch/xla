@@ -14,8 +14,7 @@ struct SoftMaxPartials {
   xla::XlaOp reduce;
 };
 
-std::vector<int64_t> BroadcastDimensions(int64_t dims,
-                                              int64_t reduce_dim) {
+std::vector<int64_t> BroadcastDimensions(int64_t dims, int64_t reduce_dim) {
   std::vector<int64_t> result_dims;
   result_dims.reserve(dims);
   for (int64_t i = 0; i < dims; ++i) {

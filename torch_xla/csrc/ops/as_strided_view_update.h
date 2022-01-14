@@ -12,8 +12,7 @@ namespace ops {
 class AsStridedViewUpdate : public Node {
  public:
   AsStridedViewUpdate(const Value& target, const Value& input,
-                      std::vector<int64_t> size,
-                      std::vector<int64_t> stride,
+                      std::vector<int64_t> size, std::vector<int64_t> stride,
                       int64_t storage_offset);
 
   std::string ToString() const override;

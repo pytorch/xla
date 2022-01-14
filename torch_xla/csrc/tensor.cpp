@@ -748,9 +748,10 @@ ir::Value XLATensor::GetIrValueForScalar(const at::Scalar& value,
       value, MakeXlaPrimitiveType(GetScalarType(value), &device), device);
 }
 
-ir::Value XLATensor::GetIrValueForScalar(
-    const at::Scalar& value, xla::PrimitiveType type,
-    absl::Span<const int64_t> dimensions, const Device& device) {
+ir::Value XLATensor::GetIrValueForScalar(const at::Scalar& value,
+                                         xla::PrimitiveType type,
+                                         absl::Span<const int64_t> dimensions,
+                                         const Device& device) {
   ir::Value ir_value = GetIrValueForScalar(value, type, device);
   if (!dimensions.empty()) {
     ir_value = ir::MakeNode<ir::ops::Expand>(
@@ -788,9 +789,8 @@ View::IrNode XLATensor::GetViewUpdate(const std::shared_ptr<View>& view) const {
 std::shared_ptr<View> XLATensor::UpdateView(std::shared_ptr<View> view,
                                             ir::Value ir_value) const {
   if (ir_value.shape().dimensions() != view->shape().dimensions()) {
-    XLA_CHECK_EQ(
-        xla::util::Multiply<int64_t>(ir_value.shape().dimensions()),
-        xla::util::Multiply<int64_t>(view->shape().dimensions()));
+    XLA_CHECK_EQ(xla::util::Multiply<int64_t>(ir_value.shape().dimensions()),
+                 xla::util::Multiply<int64_t>(view->shape().dimensions()));
 
     ViewInfo view_info(ViewInfo::Type::kReshape, ir_value.shape(),
                        view->shape());
@@ -1652,8 +1652,7 @@ std::shared_ptr<XLATensor::Async> XLATensor::SyncTensorsGraphInternal(
 }
 
 int64_t XLATensor::GetNextTensorId() {
-  static std::atomic<int64_t>* id_generator =
-      new std::atomic<int64_t>(1);
+  static std::atomic<int64_t>* id_generator = new std::atomic<int64_t>(1);
   return id_generator->fetch_add(1);
 }
 

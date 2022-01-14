@@ -41,10 +41,10 @@ std::vector<xla::XlaOp> BuildAllReduce(
     xla::XlaOp token, double scale,
     const std::vector<std::vector<int64_t>>& groups);
 
-AllToAllResult BuildAllToAll(
-    xla::XlaOp input, xla::XlaOp token, int64_t split_dimension,
-    int64_t concat_dimension, int64_t split_count,
-    const std::vector<std::vector<int64_t>>& groups);
+AllToAllResult BuildAllToAll(xla::XlaOp input, xla::XlaOp token,
+                             int64_t split_dimension, int64_t concat_dimension,
+                             int64_t split_count,
+                             const std::vector<std::vector<int64_t>>& groups);
 
 AllGatherResult BuildAllGather(
     xla::XlaOp input, xla::XlaOp token, xla::int64_t dim,
@@ -53,8 +53,7 @@ AllGatherResult BuildAllGather(
 
 CollectivePermuteResult BuildCollectivePermute(
     xla::XlaOp input, xla::XlaOp token,
-    const std::vector<std::pair<int64_t, int64_t>>&
-        source_target_pairs);
+    const std::vector<std::pair<int64_t, int64_t>>& source_target_pairs);
 
 ReduceScatterResult BuildReduceScatter(
     AllReduceType reduce_type, xla::XlaOp input, xla::XlaOp token, double scale,

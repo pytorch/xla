@@ -8,8 +8,7 @@ namespace ops {
 
 class IndexGet : public Node {
  public:
-  IndexGet(const ir::Value& base, const ir::Value& indices,
-           int64_t start_dim);
+  IndexGet(const ir::Value& base, const ir::Value& indices, int64_t start_dim);
 
   std::string ToString() const override;
 

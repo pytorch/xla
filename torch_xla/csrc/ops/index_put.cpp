@@ -8,8 +8,7 @@ namespace ir {
 namespace ops {
 
 IndexPut::IndexPut(const ir::Value& base, const ir::Value& indices,
-                   int64_t start_dim, const ir::Value& values,
-                   bool accumulate)
+                   int64_t start_dim, const ir::Value& values, bool accumulate)
     : Node(OpKind(at::aten::index_put), {base, indices, values}, base.shape(),
            /*num_outputs=*/1, torch::lazy::MHash(start_dim, accumulate)),
       start_dim_(start_dim),

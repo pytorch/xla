@@ -240,9 +240,9 @@ CanonicalIndexInfo GetCanonicalIndexInfo(
 
 ir::Value EnsureRank1(const ir::Value& index) {
   XLA_CHECK_LE(index->shape().rank(), 1);
-  return index->shape().rank() == 0 ? ir::MakeNode<ir::ops::Expand>(
-                                          index, std::vector<int64_t>{1})
-                                    : index;
+  return index->shape().rank() == 0
+             ? ir::MakeNode<ir::ops::Expand>(index, std::vector<int64_t>{1})
+             : index;
 }
 
 XLATensor IndexByTensors(const XLATensor& base,
@@ -308,8 +308,8 @@ ir::NodePtr IndexFill(const XLATensor& base, int64_t dim,
                      value.GetIrValue());
 }
 
-ir::Value IndexAdd(const XLATensor& base, int64_t dim,
-                   const XLATensor& index, const XLATensor& source) {
+ir::Value IndexAdd(const XLATensor& base, int64_t dim, const XLATensor& index,
+                   const XLATensor& source) {
   XLA_CHECK(index.dtype() == at::ScalarType::Long ||
             index.dtype() == at::ScalarType::Int)
       << "Add index is expected to be of scalar type Long or scalar type Int, "
@@ -321,8 +321,8 @@ ir::Value IndexAdd(const XLATensor& base, int64_t dim,
                     source.GetIrValue());
 }
 
-ir::Value IndexCopy(const XLATensor& base, int64_t dim,
-                    const XLATensor& index, const XLATensor& source) {
+ir::Value IndexCopy(const XLATensor& base, int64_t dim, const XLATensor& index,
+                    const XLATensor& source) {
   XLA_CHECK_EQ(index.dtype(), at::ScalarType::Long)
       << "Copy index is expected to be of scalar type Long, but it is "
       << index.dtype();

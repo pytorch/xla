@@ -11,8 +11,7 @@ namespace ops {
 // Split the tensor into chunks along a given dimension.
 class Split : public Node {
  public:
-  Split(const Value& input, std::vector<int64_t> split_sizes,
-        int64_t dim);
+  Split(const Value& input, std::vector<int64_t> split_sizes, int64_t dim);
 
   NodePtr Clone(OpList operands) const override;
 

@@ -11,8 +11,7 @@ namespace ops {
 
 class CumProd : public Node {
  public:
-  CumProd(const Value& input, int64_t dim,
-          c10::optional<at::ScalarType> dtype);
+  CumProd(const Value& input, int64_t dim, c10::optional<at::ScalarType> dtype);
 
   std::string ToString() const override;
 

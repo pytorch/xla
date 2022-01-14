@@ -8,8 +8,8 @@ namespace ops {
 
 class TopK : public Node {
  public:
-  TopK(const Value& input, int64_t k, int64_t dim, bool largest,
-       bool sorted, bool stable);
+  TopK(const Value& input, int64_t k, int64_t dim, bool largest, bool sorted,
+       bool stable);
 
   std::string ToString() const override;
 

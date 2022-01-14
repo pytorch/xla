@@ -242,7 +242,7 @@ void StridedCopy(D* dest, int64_t dest_stride, const S* source,
 // tensor data representation.
 template <typename S>
 int64_t GetFlatTensorOffset(const S& strides,
-                                 const std::vector<int64_t>& indices) {
+                            const std::vector<int64_t>& indices) {
   int64_t base = 0;
   for (size_t i = 0; i < indices.size(); ++i) {
     base += indices[i] * strides[i];
@@ -344,8 +344,7 @@ std::vector<int64_t> GetIterationDimensions(const xla::Shape& shape) {
   std::vector<int64_t> iter_dims =
       xla::util::ToVector<int64_t>(shape.layout().minor_to_major());
   size_t index = 0;
-  int64_t scaled_dim_size =
-      kMinorDimScale * shape.dimensions(iter_dims[index]);
+  int64_t scaled_dim_size = kMinorDimScale * shape.dimensions(iter_dims[index]);
   for (size_t i = 1; i < iter_dims.size(); ++i) {
     int64_t dim = iter_dims[i];
     if (shape.dimensions(dim) > scaled_dim_size) {
@@ -366,8 +365,7 @@ struct CopyPartition {
 };
 
 std::vector<CopyPartition> CreateCopyPartitions(
-    absl::Span<const int64_t> dimensions,
-    int64_t strided_copy_dimension) {
+    absl::Span<const int64_t> dimensions, int64_t strided_copy_dimension) {
   // The minimum number of elements copy that can be assigned to a thread.
   static const int64_t kMinThreadElements = 100000;
   // Use at most 50% of the available cores.
@@ -385,9 +383,9 @@ std::vector<CopyPartition> CreateCopyPartitions(
   int64_t num_elements = xla::util::Multiply<int64_t>(dimensions);
   int64_t max_dim_unit_elements = num_elements / dimensions[max_dim];
   int64_t max_dim_size = dimensions[max_dim];
-  int64_t part_size = std::max<int64_t>(
-      std::max<int64_t>(max_dim_size / max_parts, 1),
-      kMinThreadElements / max_dim_unit_elements);
+  int64_t part_size =
+      std::max<int64_t>(std::max<int64_t>(max_dim_size / max_parts, 1),
+                        kMinThreadElements / max_dim_unit_elements);
   std::vector<CopyPartition> parts;
   int64_t csize = 0;
   while (csize < max_dim_size) {
@@ -402,8 +400,7 @@ std::vector<CopyPartition> CreateCopyPartitions(
 }
 
 template <typename SType, typename DType>
-void SlicedCopy(absl::Span<const int64_t> dimensions,
-                const SType* src_data,
+void SlicedCopy(absl::Span<const int64_t> dimensions, const SType* src_data,
                 absl::Span<const int64_t> src_strides, DType* dest_data,
                 absl::Span<const int64_t> dest_strides,
                 absl::Span<const int64_t> iter_dims,
@@ -506,35 +503,35 @@ void TensorToBufferSType(const at::Tensor& tensor, const xla::Shape& dest_shape,
       break;
     case xla::PrimitiveType::U8:
       TensorToBuffer<SType, uint8_t>(tensor, dest_shape, dest_buffer,
-                                        dest_buffer_size, device);
+                                     dest_buffer_size, device);
       break;
     case xla::PrimitiveType::S8:
       TensorToBuffer<SType, int8_t>(tensor, dest_shape, dest_buffer,
-                                       dest_buffer_size, device);
+                                    dest_buffer_size, device);
       break;
     case xla::PrimitiveType::S16:
       TensorToBuffer<SType, int16_t>(tensor, dest_shape, dest_buffer,
-                                        dest_buffer_size, device);
+                                     dest_buffer_size, device);
       break;
     case xla::PrimitiveType::U16:
       TensorToBuffer<SType, uint16_t>(tensor, dest_shape, dest_buffer,
-                                         dest_buffer_size, device);
+                                      dest_buffer_size, device);
       break;
     case xla::PrimitiveType::S32:
       TensorToBuffer<SType, int32_t>(tensor, dest_shape, dest_buffer,
-                                        dest_buffer_size, device);
+                                     dest_buffer_size, device);
       break;
     case xla::PrimitiveType::U32:
       TensorToBuffer<SType, uint32_t>(tensor, dest_shape, dest_buffer,
-                                         dest_buffer_size, device);
+                                      dest_buffer_size, device);
       break;
     case xla::PrimitiveType::S64:
       TensorToBuffer<SType, int64_t>(tensor, dest_shape, dest_buffer,
-                                          dest_buffer_size, device);
+                                     dest_buffer_size, device);
       break;
     case xla::PrimitiveType::U64:
       TensorToBuffer<SType, uint64_t>(tensor, dest_shape, dest_buffer,
-                                         dest_buffer_size, device);
+                                      dest_buffer_size, device);
       break;
     case xla::PrimitiveType::C64:
       TensorToBuffer<SType, xla::complex64>(tensor, dest_shape, dest_buffer,
@@ -691,8 +688,7 @@ std::vector<int64_t> ComputeShapeStrides(const xla::Shape& shape) {
   return strides;
 }
 
-std::vector<int64_t> ComputeArrayStrides(
-    absl::Span<const int64_t> sizes) {
+std::vector<int64_t> ComputeArrayStrides(absl::Span<const int64_t> sizes) {
   std::vector<int64_t> strides(sizes.size(), 1);
   for (int64_t i = sizes.size(); i > 1; --i) {
     strides[i - 2] = strides[i - 1] * sizes[i - 1];

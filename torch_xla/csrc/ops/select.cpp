@@ -8,8 +8,8 @@ namespace torch_xla {
 namespace ir {
 namespace ops {
 
-Select::Select(const Value& input, int64_t dim, int64_t start,
-               int64_t end, int64_t stride)
+Select::Select(const Value& input, int64_t dim, int64_t start, int64_t end,
+               int64_t stride)
     : Node(xla_select, {input},
            [&]() {
              return MakeSelectShape(input.shape(), dim, start, end, stride);
@@ -39,8 +39,7 @@ std::string Select::ToString() const {
 }
 
 xla::Shape Select::MakeSelectShape(const xla::Shape& shape, int64_t dim,
-                                   int64_t start, int64_t end,
-                                   int64_t stride) {
+                                   int64_t start, int64_t end, int64_t stride) {
   int64_t effective_stride = GetStride(start, end, stride);
   xla::Shape select_shape(shape);
   select_shape.set_dimensions(
@@ -48,8 +47,7 @@ xla::Shape Select::MakeSelectShape(const xla::Shape& shape, int64_t dim,
   return select_shape;
 }
 
-int64_t Select::GetStride(int64_t start, int64_t end,
-                               int64_t stride) {
+int64_t Select::GetStride(int64_t start, int64_t end, int64_t stride) {
   if (stride == 0) {
     XLA_CHECK_EQ(start, end);
     stride = 1;
