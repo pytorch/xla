@@ -518,6 +518,7 @@ class DistributedExecutor(object):
     self.trials = 0
     print("xla_dist, run 0, thread id is {}".format(threading.get_ident()))
     while self.trials <= self.MAX_TPU_RETRY:
+      print("xla_dist, run 0-1, thread id is {}".format(threading.get_ident()))
       try:
         self.logger.info(
             'Command to distribute: {}'.format(concat_cmd_list(cmd)),
@@ -525,15 +526,18 @@ class DistributedExecutor(object):
                 'clientip': '',
                 'ordinal': ''
             })
+        print("xla_dist, run 0-2, thread id is {}".format(threading.get_ident()))
         self.logger.info(
             f'Cluster configuration: {self._cluster}',
             extra={
                 'clientip': '',
                 'ordinal': ''
             })
-
+        print("xla_dist, run 0-3, thread id is {}".format(threading.get_ident()))
         script_map = self._prepare_scripts(cmd)
+        print("xla_dist, run 0-4, thread id is {}".format(threading.get_ident()))
         proc = multiprocessing.Process(target=self._run_cmd, args=(script_map,))
+        print("xla_dist, run 0-5, thread id is {}".format(threading.get_ident()))
         proc.start()
         print("xla_dist, run 1, thread id is {}".format(threading.get_ident()))
         while True:
