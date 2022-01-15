@@ -17,7 +17,7 @@ import threading
 import torch_xla.core.xla_env_vars as xenv
 from torch_xla.distributed.cluster import ClusterResolver
 import torch_xla.utils.utils as xu
-
+import pdb
 
 def concat_cmd_list(cmd_list, delimiter=' ', quote='"'):
   concat = ''
@@ -503,8 +503,11 @@ class DistributedExecutor(object):
 
   def _run_cmd(self, script_map):
     try:
+      print("_run_cmd: 0")
       self._scp_scripts(script_map)
+      print("_run_cmd: 1")
       self._start_run(script_map)
+      print("_run_cmd: 2")
     except KeyboardInterrupt:
       self.logger.warning(
           'Child process received Ctrl^C. Exiting...',
@@ -513,6 +516,7 @@ class DistributedExecutor(object):
               'ordinal': ''
           })
       sys.exit(128 + signal.SIGINT)
+    print("_run_cmd: 3")
 
   def run(self, cmd):
     self.trials = 0
@@ -535,6 +539,7 @@ class DistributedExecutor(object):
             })
         print("xla_dist, run 0-3, thread id is {}".format(threading.get_ident()))
         script_map = self._prepare_scripts(cmd)
+        print(script_map)
         print("xla_dist, run 0-4, thread id is {}".format(threading.get_ident()))
         proc = multiprocessing.Process(target=self._run_cmd, args=(script_map,))
         print("xla_dist, run 0-5, thread id is {}".format(threading.get_ident()))
