@@ -213,6 +213,18 @@ std::pair<at::Tensor, std::shared_ptr<ir::Value>> ReduceScatter(
       std::make_shared<ir::Value>(new_token));
 }
 
+std::pair<at::Tensor, std::shared_ptr<ir::Value>> AllGather(
+    const at::Tensor& input, const std::shared_ptr<ir::Value>& token,
+    xla::int64_t dim, xla::int64_t shard_count,
+    const std::vector<std::vector<xla::int64_t>>& replica_groups) {
+  XLATensor result;
+  ir::Value new_token;
+  std::tie(result, new_token) = XLATensor::all_gather(
+      bridge::GetXlaTensor(input), *token, dim, shard_count, replica_groups);
+  return {bridge::AtenFromXlaTensor(std::move(result)),
+          std::make_shared<ir::Value>(new_token)};
+}
+
 std::pair<at::Tensor, std::shared_ptr<ir::Value>> AllToAll(
     const at::Tensor& input, const std::shared_ptr<ir::Value>& token,
     xla::int64_t split_dimension, xla::int64_t concat_dimension,
@@ -893,6 +905,24 @@ void InitXlaModuleBindings(py::module m) {
             std::tie(result, new_token) =
                 AllToAll(input, token, split_dimension, concat_dimension,
                          split_count, replica_groups);
+          }
+          auto result_tuple = py::tuple(2);
+          result_tuple[0] = torch::autograd::make_variable(
+              result, /*requires_grad=*/input.requires_grad());
+          result_tuple[1] = new_token;
+          return result_tuple;
+        });
+  m.def("_xla_all_gather",
+        [](const at::Tensor& input, const std::shared_ptr<ir::Value>& token,
+           xla::int64_t dim, xla::int64_t shard_count, const py::list& groups) {
+          std::vector<std::vector<xla::int64_t>> replica_groups =
+              CreateReduceGroups(groups);
+          at::Tensor result;
+          std::shared_ptr<ir::Value> new_token;
+          {
+            NoGilSection nogil;
+            std::tie(result, new_token) =
+                AllGather(input, token, dim, shard_count, replica_groups);
           }
           auto result_tuple = py::tuple(2);
           result_tuple[0] = torch::autograd::make_variable(
