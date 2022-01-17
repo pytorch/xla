@@ -8,7 +8,7 @@ import torch_xla.distributed.xla_multiprocessing as xmp
 
 def _mp_fn(index):
   device = xm.xla_device()
-  if xm.xla_device_hw(device) == 'TPU':
+  if xm.xla_device_hw(device) in ('TPU', 'GPU'):
     world_size = xm.xrt_world_size()
     ordinal_tensor = torch.tensor([index], dtype=torch.float).to(device)
     result = xm.all_gather(ordinal_tensor)
@@ -21,7 +21,8 @@ def _mp_fn(index):
       sys.exit(1)
   else:
     print(
-        'Default device {} is not a TPU device'.format(device), file=sys.stderr)
+        'Default device {} is not a TPU or GPU device'.format(device),
+        file=sys.stderr)
 
 
 if __name__ == '__main__':
