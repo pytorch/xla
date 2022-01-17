@@ -21,6 +21,7 @@
 #include "torch_xla/csrc/ops/adaptive_avg_pool3d.h"
 #include "torch_xla/csrc/ops/adaptive_max_pool2d.h"
 #include "torch_xla/csrc/ops/all.h"
+#include "torch_xla/csrc/ops/all_gather.h"
 #include "torch_xla/csrc/ops/all_reduce.h"
 #include "torch_xla/csrc/ops/all_to_all.h"
 #include "torch_xla/csrc/ops/amax.h"
@@ -386,6 +387,14 @@ std::pair<XLATensor, ir::Value> XLATensor::all_to_all(
   ir::NodePtr node = ir::MakeNode<ir::ops::AllToAll>(
       input.GetIrValue(), token, split_dimension, concat_dimension, split_count,
       std::move(groups));
+  return {input.CreateFrom(ir::Value(node, 0)), ir::Value(node, 1)};
+}
+
+std::pair<XLATensor, ir::Value> XLATensor::all_gather(
+    const XLATensor& input, const ir::Value& token, xla::int64_t dim,
+    xla::int64_t shard_count, std::vector<std::vector<xla::int64_t>> groups) {
+  ir::NodePtr node = ir::MakeNode<ir::ops::AllGather>(
+      input.GetIrValue(), token, dim, shard_count, std::move(groups));
   return {input.CreateFrom(ir::Value(node, 0)), ir::Value(node, 1)};
 }
 

@@ -209,6 +209,10 @@ class XLATensor {
       xla::int64_t split_dimension, xla::int64_t concat_dimension,
       xla::int64_t split_count, std::vector<std::vector<xla::int64_t>> groups);
 
+  static std::pair<XLATensor, ir::Value> all_gather(
+      const XLATensor& input, const ir::Value& token, xla::int64_t dim,
+      xla::int64_t shard_count, std::vector<std::vector<xla::int64_t>> groups);
+
   static std::pair<XLATensor, ir::Value> collective_permute(
       const XLATensor& input, const ir::Value& token,
       std::vector<std::pair<xla::int64_t, xla::int64_t>> source_target_pairs);

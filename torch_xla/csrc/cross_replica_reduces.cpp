@@ -140,6 +140,19 @@ AllToAllResult BuildAllToAll(
   return {reduce_result, token_handler.GetNewToken(reduce_result)};
 }
 
+AllGatherResult BuildAllGather(
+    xla::XlaOp input, xla::XlaOp token, xla::int64_t dim,
+    xla::int64_t shard_count,
+    const std::vector<std::vector<xla::int64_t>>& groups) {
+  std::vector<xla::ReplicaGroup> reduce_groups = CreateReduceGroups(groups);
+  const xla::Shape& input_shape = XlaHelpers::ShapeOfXlaOp(input);
+  TokenHandler token_handler(token);
+  xla::XlaOp all_gather_result =
+      xla::AllGather(token_handler.GetInput(input, &input_shape), dim,
+                     shard_count, reduce_groups);
+  return {all_gather_result, token_handler.GetNewToken(all_gather_result)};
+}
+
 CollectivePermuteResult BuildCollectivePermute(
     xla::XlaOp input, xla::XlaOp token,
     const std::vector<std::pair<xla::int64_t, xla::int64_t>>&
