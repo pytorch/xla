@@ -141,8 +141,7 @@ AllToAllResult BuildAllToAll(xla::XlaOp input, xla::XlaOp token,
 }
 
 AllGatherResult BuildAllGather(
-    xla::XlaOp input, xla::XlaOp token, int64_t dim,
-    int64_t shard_count,
+    xla::XlaOp input, xla::XlaOp token, int64_t dim, int64_t shard_count,
     const std::vector<std::vector<int64_t>>& groups) {
   std::vector<xla::ReplicaGroup> reduce_groups = CreateReduceGroups(groups);
   const xla::Shape& input_shape = XlaHelpers::ShapeOfXlaOp(input);
