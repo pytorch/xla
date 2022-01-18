@@ -10,8 +10,7 @@ namespace ops {
 class AllGather : public Node {
  public:
   AllGather(const Value& input, const Value& token, int64_t dim,
-            int64_t shard_count,
-            std::vector<std::vector<int64_t>> groups);
+            int64_t shard_count, std::vector<std::vector<int64_t>> groups);
 
   std::string ToString() const override;
 
@@ -23,9 +22,7 @@ class AllGather : public Node {
 
   int64_t shard_count() const { return shard_count_; }
 
-  const std::vector<std::vector<int64_t>>& groups() const {
-    return groups_;
-  }
+  const std::vector<std::vector<int64_t>>& groups() const { return groups_; }
 
  private:
   int64_t dim_;
