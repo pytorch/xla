@@ -211,8 +211,8 @@ class XLATensor {
       std::vector<std::vector<int64_t>> groups);
 
   static std::pair<XLATensor, ir::Value> all_gather(
-      const XLATensor& input, const ir::Value& token, xla::int64_t dim,
-      xla::int64_t shard_count, std::vector<std::vector<xla::int64_t>> groups);
+      const XLATensor& input, const ir::Value& token, int64_t dim,
+      int64_t shard_count, std::vector<std::vector<int64_t>> groups);
 
   static std::pair<XLATensor, ir::Value> collective_permute(
       const XLATensor& input, const ir::Value& token,

@@ -47,9 +47,9 @@ AllToAllResult BuildAllToAll(xla::XlaOp input, xla::XlaOp token,
                              const std::vector<std::vector<int64_t>>& groups);
 
 AllGatherResult BuildAllGather(
-    xla::XlaOp input, xla::XlaOp token, xla::int64_t dim,
-    xla::int64_t shard_count,
-    const std::vector<std::vector<xla::int64_t>>& groups);
+    xla::XlaOp input, xla::XlaOp token, int64_t dim,
+    int64_t shard_count,
+    const std::vector<std::vector<int64_t>>& groups);
 
 CollectivePermuteResult BuildCollectivePermute(
     xla::XlaOp input, xla::XlaOp token,
