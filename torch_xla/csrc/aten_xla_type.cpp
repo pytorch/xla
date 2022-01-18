@@ -1568,24 +1568,6 @@ at::Tensor XLANativeFunctions::hardshrink_backward(const at::Tensor& grad_out,
       bridge::GetXlaTensor(grad_out), bridge::GetXlaTensor(self), lambda));
 }
 
-at::Tensor XLANativeFunctions::hardtanh(const at::Tensor& self,
-                                        const at::Scalar& min_val,
-                                        const at::Scalar& max_val) {
-  XLA_FN_COUNTER("xla::");
-  return bridge::AtenFromXlaTensor(
-      XLATensor::clamp(bridge::GetXlaTensor(self), min_val, max_val));
-}
-
-at::Tensor XLANativeFunctions::hardtanh_backward(const at::Tensor& grad_output,
-                                                 const at::Tensor& self,
-                                                 const at::Scalar& min_val,
-                                                 const at::Scalar& max_val) {
-  XLA_FN_COUNTER("xla::");
-  return bridge::AtenFromXlaTensor(XLATensor::hardtanh_backward(
-      bridge::GetXlaTensor(grad_output), bridge::GetXlaTensor(self), min_val,
-      max_val));
-}
-
 at::Tensor XLANativeFunctions::index(
     const at::Tensor& self,
     const c10::List<c10::optional<at::Tensor>>& indices) {
