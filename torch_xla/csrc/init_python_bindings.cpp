@@ -924,24 +924,24 @@ void InitXlaModuleBindings(py::module m) {
           result_tuple[1] = new_token;
           return result_tuple;
         });
-  m.def("_xla_collective_permute", [](const at::Tensor& input,
-                                      const std::shared_ptr<ir::Value>& token,
-                                      const py::list& pairs) {
-    std::vector<std::pair<int64_t, int64_t>> source_target_pairs =
-        CreateSourceTargetPairs(pairs);
-    at::Tensor result;
-    std::shared_ptr<ir::Value> new_token;
-    {
-      NoGilSection nogil;
-      std::tie(result, new_token) =
-          CollectivePermute(input, token, source_target_pairs);
-    }
-    auto result_tuple = py::tuple(2);
-    result_tuple[0] = torch::autograd::make_variable(
-        result, /*requires_grad=*/input.requires_grad());
-    result_tuple[1] = new_token;
-    return result_tuple;
-  });
+  m.def("_xla_collective_permute",
+        [](const at::Tensor& input, const std::shared_ptr<ir::Value>& token,
+           const py::list& pairs) {
+          std::vector<std::pair<int64_t, int64_t>> source_target_pairs =
+              CreateSourceTargetPairs(pairs);
+          at::Tensor result;
+          std::shared_ptr<ir::Value> new_token;
+          {
+            NoGilSection nogil;
+            std::tie(result, new_token) =
+                CollectivePermute(input, token, source_target_pairs);
+          }
+          auto result_tuple = py::tuple(2);
+          result_tuple[0] = torch::autograd::make_variable(
+              result, /*requires_grad=*/input.requires_grad());
+          result_tuple[1] = new_token;
+          return result_tuple;
+        });
   m.def("_xla_reduce_scatter",
         [](const std::string& reduce_type, const at::Tensor& input,
            const std::shared_ptr<ir::Value>& token, double scale,
