@@ -214,8 +214,8 @@ std::pair<at::Tensor, std::shared_ptr<ir::Value>> ReduceScatter(
 
 std::pair<at::Tensor, std::shared_ptr<ir::Value>> AllGather(
     const at::Tensor& input, const std::shared_ptr<ir::Value>& token,
-    xla::int64_t dim, xla::int64_t shard_count,
-    const std::vector<std::vector<xla::int64_t>>& replica_groups) {
+    int64_t dim, int64_t shard_count,
+    const std::vector<std::vector<int64_t>>& replica_groups) {
   XLATensor result;
   ir::Value new_token;
   std::tie(result, new_token) = XLATensor::all_gather(

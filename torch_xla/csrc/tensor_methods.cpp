@@ -391,8 +391,8 @@ std::pair<XLATensor, ir::Value> XLATensor::all_to_all(
 }
 
 std::pair<XLATensor, ir::Value> XLATensor::all_gather(
-    const XLATensor& input, const ir::Value& token, xla::int64_t dim,
-    xla::int64_t shard_count, std::vector<std::vector<xla::int64_t>> groups) {
+    const XLATensor& input, const ir::Value& token, int64_t dim,
+    int64_t shard_count, std::vector<std::vector<int64_t>> groups) {
   ir::NodePtr node = ir::MakeNode<ir::ops::AllGather>(
       input.GetIrValue(), token, dim, shard_count, std::move(groups));
   return {input.CreateFrom(ir::Value(node, 0)), ir::Value(node, 1)};
