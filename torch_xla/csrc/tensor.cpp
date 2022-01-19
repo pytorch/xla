@@ -116,13 +116,7 @@ class DeviceLocker {
 class DeviceLockerArena {
  public:
   static DeviceLockerArena* Get() {
-    static DeviceContextArena* arena = []() {
-      auto* ret = new DeviceContextArena();
-      // Setting a flag in ExecutionContext to alert that the device
-      // context is created and the execution mode cannot be changed now
-      ExecutionContext::Get()->set_device_context_created();
-      return ret;
-    }();
+    static DeviceLockerArena* arena = new DeviceLockerArena();
     return arena;
   }
 
@@ -281,7 +275,13 @@ class XLATensor::DeviceContextArena {
 
  public:
   static DeviceContextArena* Get() {
-    static DeviceContextArena* arena = new DeviceContextArena();
+    static DeviceContextArena* arena = []() {
+      auto* ret = new DeviceContextArena();
+      // Setting a flag in ExecutionContext to alert that the device
+      // context is created and the execution mode cannot be changed now
+      ExecutionContext::Get()->set_device_context_created();
+      return ret;
+    } ();
     return arena;
   }
 
