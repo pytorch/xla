@@ -122,7 +122,7 @@ class DeviceLockerArena {
       // context is created and the execution mode cannot be changed now
       ExecutionContext::Get()->set_device_context_created();
       return ret;
-    } ();
+    }();
     return arena;
   }
 
@@ -633,8 +633,7 @@ void XLATensor::SetIrValue(ir::Value ir_value, bool copy_from_aten_tensor) {
     AssignIrValue(std::move(ir_value));
     TryLimitGraphSize();
   }
-  if (ExecutionContext::Get()->is_eager_execution()
-        && !copy_from_aten_tensor) {
+  if (ExecutionContext::Get()->is_eager_execution() && !copy_from_aten_tensor) {
     std::vector<XLATensor> xtensors({*this});
     ApplyEagerSync(xtensors);
   }

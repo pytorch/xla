@@ -1203,7 +1203,7 @@ void InitXlaModuleBindings(py::module m) {
         });
   m.def("_xla_enable_eager_execution", []() {
     ExecutionContext::Get()->set_execution_mode(
-      ExecutionContext::ExecutionMode::EAGER);
+        ExecutionContext::ExecutionMode::EAGER);
   });
 
   BuildProfilerSubmodule(&m);
