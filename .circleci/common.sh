@@ -21,10 +21,6 @@ function apply_patches() {
   ./xla/scripts/apply_patches.sh
 }
 
-function install_numpy() {
-  pip install numpy>=1.18.5
-}
-
 function rebase_pull_request_on_target_branch() {
   # TODO: directly use ENV_VAR when CircleCi exposes base branch.
   # Try rebasing on top of base (dest) branch first.
