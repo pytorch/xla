@@ -24,6 +24,38 @@
 
 namespace torch_xla {
 
+class ExecutionContext {
+ public:
+  enum ExecutionMode { LAZY, EAGER };
+  static ExecutionContext *Get() {
+    static ExecutionContext *context = new ExecutionContext();
+    return context;
+  }
+
+  void set_device_context_created() { is_device_context_created_ = true; }
+
+  void set_execution_mode(ExecutionMode mode) {
+    // DeviceContext is created whenever the first tensor is registered. Tensors
+    // get registered when we copy the cpu tensor to device. This would result
+    // in a call to aten::empty. Since, we want to sync output of each aten
+    // output, we cannot let the execution mode be set after the tensor is
+    // registered or after the device context is created.
+    XLA_CHECK(!is_device_context_created_)
+        << "Cannot change execution mode after device context"
+        << " is created. You need to set execution mode before creating "
+           "xla tensors";
+    mode_ = mode;
+  }
+
+  ExecutionMode get_execution_mode() { return mode_; }
+
+  bool is_eager_execution() { return mode_ == EAGER; }
+
+ private:
+  bool is_device_context_created_ = false;
+  ExecutionMode mode_ = LAZY; // default execution mode is lazy
+};
+
 class XLATensor {
   class DeviceContextArena;
   struct Data;
@@ -99,6 +131,25 @@ class XLATensor {
 
   // Applies the queue of operations in preparation for using the data.
   void ApplyPendingGraph();
+
+  // This method just Syncs the tensors passed as argument. This method is called
+  // at two places: 
+  // 1. Creating tensor from IR value. This is where an output tensor is created
+  // from an IR computation
+  // 2. SetIRValue(). This is where the IR value of in place operations are updated.
+  // Note: We do not sync the output of ViewTensors. This is because:
+  // 1. The operations that generate the ViewTensor would be re-done when its base
+  // tensor is updated. When the base tensor is updated, torch-xla would apply all 
+  // the views on it and hence the operations would be repeated. Hence, we don't sync
+  // the ViewTensors and in case users want to print them, they can still do it and 
+  // will incur a small graph compile. This way we avoid some extra compiles. This 
+  // makes it lazy just for view operations.
+  // Note: ViewTensors do not share the same storage as the input tensor. This is by
+  // design. Currently, to respect the definitions of view tensors, different view
+  // relationships between tensors is tracked and update all the tensors to make it
+  // look as if they share same storage. Hence, the operations on view tensor would be
+  // repeated when we try to sync the tensor that is affected by the view tensor.
+  static void ApplyEagerSync(std::vector<XLATensor> &tensors);
 
   static ir::Value GetDeviceDataIrValue(const at::Scalar& value,
                                         xla::PrimitiveType type,
@@ -1311,7 +1362,7 @@ class XLATensor {
 
   void SetXlaData(xla::ComputationClient::DataPtr xla_data, bool sync);
 
-  void SetIrValue(ir::Value ir_value);
+  void SetIrValue(ir::Value ir_value, bool copy_from_aten_tensor = false);
   void SetInPlaceIrValue(ir::Value ir_value);
 
   void AssignIrValue(ir::Value ir_value) const;

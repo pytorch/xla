@@ -116,7 +116,13 @@ class DeviceLocker {
 class DeviceLockerArena {
  public:
   static DeviceLockerArena* Get() {
-    static DeviceLockerArena* arena = new DeviceLockerArena();
+    static DeviceContextArena* arena = []() {
+      auto* ret = new DeviceContextArena();
+      // Setting a flag in ExecutionContext to alert that the device
+      // context is created and the execution mode cannot be changed now
+      ExecutionContext::Get()->set_device_context_created();
+      return ret;
+    } ();
     return arena;
   }
 
@@ -453,6 +459,10 @@ XLATensor XLATensor::Create(
     c10::optional<at::ScalarType> logical_element_type) {
   XLATensor xtensor(std::move(ir_value), device, logical_element_type);
   DeviceContextArena::Get()->RegisterTensor(xtensor.data_ptr());
+  if (ExecutionContext::Get()->is_eager_execution()) {
+    std::vector<XLATensor> xtensors({xtensor});
+    ApplyEagerSync(xtensors);
+  }
   return xtensor;
 }
 
@@ -610,7 +620,7 @@ void XLATensor::SetXlaData(xla::ComputationClient::DataPtr xla_data,
   }
 }
 
-void XLATensor::SetIrValue(ir::Value ir_value) {
+void XLATensor::SetIrValue(ir::Value ir_value, bool copy_from_aten_tensor) {
   data()->xla_data = nullptr;
   data()->tensor_data = c10::nullopt;
   if (data()->view != nullptr) {
@@ -622,6 +632,11 @@ void XLATensor::SetIrValue(ir::Value ir_value) {
   } else {
     AssignIrValue(std::move(ir_value));
     TryLimitGraphSize();
+  }
+  if (ExecutionContext::Get()->is_eager_execution()
+        && !copy_from_aten_tensor) {
+    std::vector<XLATensor> xtensors({*this});
+    ApplyEagerSync(xtensors);
   }
 }
 
@@ -1131,6 +1146,10 @@ void XLATensor::ApplyPendingGraph() {
     std::vector<XLATensor> tensors({*this});
     SyncTensorsGraph(&tensors, {}, /*wait=*/true, /*sync_xla_data=*/false);
   }
+}
+
+void XLATensor::ApplyEagerSync(std::vector<XLATensor>& tensors) {
+  SyncTensorsGraph(&tensors, {}, /*wait=*/false, /*sync_xla_data=*/false);
 }
 
 XLATensor::SyncTensorCollection XLATensor::CollectSyncTensors(

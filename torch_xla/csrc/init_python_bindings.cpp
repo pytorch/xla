@@ -1201,6 +1201,10 @@ void InitXlaModuleBindings(py::module m) {
                 weight_decay, eps, amsgrad, maximize, use_adamw);
           }
         });
+  m.def("_xla_enable_eager_execution", []() {
+    ExecutionContext::Get()->set_execution_mode(
+      ExecutionContext::ExecutionMode::EAGER);
+  });
 
   BuildProfilerSubmodule(&m);
 }
