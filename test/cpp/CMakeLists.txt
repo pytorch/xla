@@ -1,5 +1,9 @@
 cmake_minimum_required(VERSION 3.0)
 
+if( NOT CXX )
+  set(CMAKE_CXX_COMPILER clang++)
+endif()
+
 set(GTEST_DIR "${CMAKE_BINARY_DIR}/gtest")
 
 get_filename_component(PTXLA_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../.." ABSOLUTE)

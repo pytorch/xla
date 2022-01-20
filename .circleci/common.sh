@@ -21,10 +21,6 @@ function apply_patches() {
   ./xla/scripts/apply_patches.sh
 }
 
-function install_numpy() {
-  pip install numpy>=1.18.5
-}
-
 function rebase_pull_request_on_target_branch() {
   # TODO: directly use ENV_VAR when CircleCi exposes base branch.
   # Try rebasing on top of base (dest) branch first.
@@ -53,12 +49,16 @@ function checkout_torch_pin_if_available() {
 
 function install_deps_pytorch_xla() {
   XLA_DIR=$1
+
   # Install ninja to speedup the build
   pip install ninja
 
   # Install libraries required for running some PyTorch test suites
   pip install hypothesis
   pip install cloud-tpu-client
+  pip install absl-py
+  pip install --upgrade numpy>=1.18.5
+  pip install --upgrade numba
 
   # Using the Ninja generator requires CMake version 3.13 or greater
   pip install cmake>=3.13 --upgrade
@@ -94,12 +94,13 @@ function install_deps_pytorch_xla() {
   bazels3cache --bucket=${XLA_CLANG_CACHE_S3_BUCKET_NAME} --maxEntrySizeBytes=0 --logging.level=verbose
   # Use cloud cache to build when available.
   sed -i '/bazel build/ a --remote_http_cache=http://localhost:7777 \\' $XLA_DIR/build_torch_xla_libs.sh
+
 }
 
 function build_torch_xla() {
   XLA_DIR=$1
   pushd "$XLA_DIR"
-  CC=clang-9 CXX=clang++-9 python setup.py install
+  python setup.py install
   popd
 }
 
@@ -142,11 +143,11 @@ function run_torch_xla_tests() {
 
     pushd test/cpp
     echo "Running C++ Tests"
-    CC=clang-9 CXX=clang++-9 ./run_tests.sh
+    ./run_tests.sh
 
     if ! [ -x "$(command -v nvidia-smi)"  ]
     then
-      CC=clang-9 CXX=clang++-9 ./run_tests.sh -X early_sync -F AtenXlaTensorTest.TestEarlySyncLiveTensors -L""
+      ./run_tests.sh -X early_sync -F AtenXlaTensorTest.TestEarlySyncLiveTensors -L""
     fi
     popd
   popd
