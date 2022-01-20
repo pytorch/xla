@@ -1,10 +1,23 @@
+#!/bin/bash
+
 set -e
-pyenv local 3.6.5
+set -x
+
 pip install --upgrade pip
 pip install pyyaml -qqq
 echo "export AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_FOR_ECR_READ_WRITE}" >> $BASH_ENV
 echo "export AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY_FOR_ECR_READ_WRITE}" >> $BASH_ENV
 echo "export WORKDIR=/var/lib/jenkins/workspace" >> $BASH_ENV
+
+
+# Install google-cloud-sdk
+sudo apt-get update
+sudo apt-get install -y apt-transport-https ca-certificates gnupg
+echo "deb [signed-by=/usr/share/keyrings/cloud.google.gpg] https://packages.cloud.google.com/apt cloud-sdk main" | sudo tee -a /etc/apt/sources.list.d/google-cloud-sdk.list
+curl https://packages.cloud.google.com/apt/doc/apt-key.gpg | sudo apt-key --keyring /usr/share/keyrings/cloud.google.gpg add -
+sudo apt-get update && sudo apt-get -y install google-cloud-sdk
+echo $GCLOUD_SERVICE_KEY | gcloud auth activate-service-account --key-file=-
+/usr/bin/yes | gcloud auth configure-docker
 
 # Set up NVIDIA docker repo
 curl -s -L --retry 3 https://nvidia.github.io/nvidia-docker/gpgkey | sudo apt-key add -
@@ -60,9 +73,8 @@ sudo pkill -SIGHUP dockerd
 retry sudo pip -q install awscli==1.16.35
 
 if [ -n "${USE_CUDA_DOCKER_RUNTIME:-}" ]; then
-  DRIVER_FN="NVIDIA-Linux-x86_64-440.82.run"
-  wget "https://s3.amazonaws.com/ossci-linux/nvidia_driver/$DRIVER_FN"
+  DRIVER_FN="NVIDIA-Linux-x86_64-450.80.02.run"
+  wget "https://download.nvidia.com/XFree86/Linux-x86_64/450.80.02/$DRIVER_FN"
   sudo /bin/bash "$DRIVER_FN" -s --no-drm || (sudo cat /var/log/nvidia-installer.log && false)
   nvidia-smi
 fi
-
