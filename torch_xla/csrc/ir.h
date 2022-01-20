@@ -17,6 +17,7 @@
 #include "tensorflow/compiler/xla/xla_client/types.h"
 #include "tensorflow/core/lib/gtl/inlined_vector.h"
 #include "torch/csrc/lazy/core/hash.h"
+#include "torch/csrc/lazy/core/ir_metadata.h"
 #include "torch_xla/csrc/python_util.h"
 
 namespace torch_xla {
@@ -37,7 +38,7 @@ struct UserMetaData {
 
 struct MetaData {
   std::string scope;
-  std::vector<SourceLocation> frame_info;
+  std::vector<torch::lazy::SourceLocation> frame_info;
 };
 
 // Represents a use of the output of a given node.
@@ -249,7 +250,7 @@ class Node {
   static torch::lazy::hash_t GetOpHash(OpKind op, const xla::Shape& shape,
                                        torch::lazy::hash_t hash_seed);
 
-  static std::vector<SourceLocation> GetFrameInfo();
+  static std::vector<torch::lazy::SourceLocation> GetFrameInfo();
 
   // The ID of the operation captured by this node.
   OpKind op_;

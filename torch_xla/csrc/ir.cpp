@@ -65,22 +65,6 @@ ShapeCache* GetShapeCache() {
   static ShapeCache* cache = new ShapeCache(shape_cache_size);
   return cache;
 }
-
-void EmitShortFrameInfo(std::ostream& stream,
-                        const std::vector<SourceLocation>& frames) {
-  if (!frames.empty()) {
-    const SourceLocation& frame = frames.front();
-    std::string::size_type pos = frame.file.find_last_of('/');
-    if (pos == std::string::npos) {
-      pos = 0;
-    } else {
-      ++pos;
-    }
-    stream << ", location=" << frame.function << "@" << frame.file.substr(pos)
-           << ":" << frame.line;
-  }
-}
-
 }  // namespace
 
 bool Use::operator<(const Use& rhs) const {
@@ -235,7 +219,7 @@ std::string Node::ToString() const {
   if (!metadata_.scope.empty()) {
     ss << ", scope=" << metadata_.scope;
   }
-  EmitShortFrameInfo(ss, metadata_.frame_info);
+  torch::lazy::EmitShortFrameInfo(ss, metadata_.frame_info);
   return ss.str();
 }
 
@@ -263,12 +247,13 @@ xla::Shape Node::GetOpShape(const std::function<xla::Shape()>& shape_fn) const {
   return *shape;
 }
 
-std::vector<SourceLocation> Node::GetFrameInfo() {
+std::vector<torch::lazy::SourceLocation> Node::GetFrameInfo() {
   // At the time of writing, retrieving Python frames costs from 1us up to 20us.
   // This per IR Node. Since it is not unreasonable to have a many hundreds of
   // IR Node, this can be a multi-millisecond cost, which is not negligible.
   static bool wants_frames = xla::sys_util::GetEnvBool("XLA_IR_DEBUG", false);
-  return wants_frames ? GetPythonFrames() : std::vector<SourceLocation>();
+  return wants_frames ? GetPythonFrames()
+                      : std::vector<torch::lazy::SourceLocation>();
 }
 
 ScopePusher::ScopePusher(const std::string& name) { PushScope(name); }
