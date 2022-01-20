@@ -46,7 +46,7 @@ class HloMetadataSetter {
     std::string op_type =
         absl::StrReplaceAll(node->op().ToString(), {{":", "_"}});
     metadata.set_op_type(op_type);
-    const ir::MetaData& nmeta = node->metadata();
+    const torch::lazy::MetaData& nmeta = node->metadata();
     std::string op_name_prefix;
     if (!nmeta.scope.empty()) {
       op_name_prefix =
@@ -183,7 +183,7 @@ void LoweringContext::ReportBuilderError(const Node* node,
   if (error_msg != nullptr) {
     ss << "Error: " << error_msg << "\n";
   }
-  const ir::MetaData& nmeta = node->metadata();
+  const torch::lazy::MetaData& nmeta = node->metadata();
   if (!nmeta.scope.empty()) {
     ss << "Scope: " << nmeta.scope << "\n";
   }

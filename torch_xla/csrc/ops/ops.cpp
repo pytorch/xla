@@ -8,6 +8,7 @@
 #include "tensorflow/compiler/xla/shape_util.h"
 #include "tensorflow/compiler/xla/xla_client/debug_macros.h"
 #include "tensorflow/compiler/xla/xla_client/util.h"
+#include "torch/csrc/lazy/core/ir_metadata.h"
 #include "torch_xla/csrc/convert_ops.h"
 #include "torch_xla/csrc/data_ops.h"
 #include "torch_xla/csrc/elementwise.h"
@@ -201,7 +202,7 @@ NodePtr HardSigmoidBackward(const Value& grad_output, const Value& input) {
 }
 
 std::tuple<NodePtr, NodePtr> LogSigmoid(const Value& input) {
-  ScopePusher ir_scope(at::aten::log_sigmoid.toQualString());
+  torch::lazy::ScopePusher ir_scope(at::aten::log_sigmoid.toQualString());
   // Use log-sum-exp trick to avoid overflow.
   NodePtr neg_input = Neg(input);
   NodePtr max_elem = Max(ScalarOp(0, input.shape()), neg_input);
@@ -212,7 +213,8 @@ std::tuple<NodePtr, NodePtr> LogSigmoid(const Value& input) {
 
 NodePtr LogSigmoidBackward(const Value& grad_output, const Value& input,
                            const Value& buffer) {
-  ScopePusher ir_scope(at::aten::log_sigmoid_backward.toQualString());
+  torch::lazy::ScopePusher ir_scope(
+      at::aten::log_sigmoid_backward.toQualString());
   NodePtr zero = ScalarOp(0, input.shape());
   NodePtr one = ScalarOp(1, input.shape());
   NodePtr minus_one = ScalarOp(-1, input.shape());
@@ -576,7 +578,7 @@ NodePtr BroadcastTensors(absl::Span<const Value> tensors) {
 NodePtr Norm(const Value& input, const c10::optional<at::Scalar>& p,
              c10::optional<at::ScalarType> dtype,
              absl::Span<const int64_t> dims, bool keepdim) {
-  ScopePusher ir_scope(at::aten::norm.toQualString());
+  torch::lazy::ScopePusher ir_scope(at::aten::norm.toQualString());
   auto dimensions = xla::util::ToVector<int64_t>(dims);
   if (dimensions.empty()) {
     dimensions = xla::util::Iota<int64_t>(input.shape().rank());
@@ -624,7 +626,7 @@ NodePtr Identity(int64_t lines, int64_t cols, xla::PrimitiveType element_type) {
 
 NodePtr Elu(const Value& input, const at::Scalar& alpha,
             const at::Scalar& scale, const at::Scalar& input_scale) {
-  ScopePusher ir_scope(at::aten::elu.toQualString());
+  torch::lazy::ScopePusher ir_scope(at::aten::elu.toQualString());
   const xla::Shape& shape = input.shape();
   NodePtr scaled_input = input * ScalarOp(input_scale, shape);
   NodePtr zero = ScalarOp(0, shape);
@@ -638,7 +640,7 @@ NodePtr Elu(const Value& input, const at::Scalar& alpha,
 NodePtr EluBackward(const Value& grad_output, const Value& output,
                     const at::Scalar& alpha, const at::Scalar& scale,
                     const at::Scalar& input_scale) {
-  ScopePusher ir_scope(at::aten::elu_backward.toQualString());
+  torch::lazy::ScopePusher ir_scope(at::aten::elu_backward.toQualString());
   const xla::Shape& shape = grad_output.shape();
   NodePtr negative_output_branch =
       ScalarOp(input_scale, shape) *
@@ -650,7 +652,7 @@ NodePtr EluBackward(const Value& grad_output, const Value& output,
 }
 
 NodePtr Gelu(const Value& input) {
-  ScopePusher ir_scope("aten::gelu");
+  torch::lazy::ScopePusher ir_scope("aten::gelu");
   // input * 0.5 * (1.0 + torch.erf(input / math.sqrt(2.0)))
   const xla::Shape& shape = input.shape();
   return input * ScalarOp(0.5, shape) *
@@ -658,7 +660,7 @@ NodePtr Gelu(const Value& input) {
 }
 
 NodePtr GeluBackward(const Value& grad, const Value& input) {
-  ScopePusher ir_scope("aten::gelu_backward");
+  torch::lazy::ScopePusher ir_scope("aten::gelu_backward");
   const float kAlpha = M_2_SQRTPI * M_SQRT1_2 * 0.5;
   const xla::Shape& shape = input.shape();
   NodePtr scratch = Erf(input * ScalarOp(M_SQRT1_2, shape));
@@ -668,27 +670,27 @@ NodePtr GeluBackward(const Value& grad, const Value& input) {
 }
 
 NodePtr Lshift(const Value& input, const at::Scalar& other) {
-  ScopePusher ir_scope(at::aten::__lshift__.toQualString());
+  torch::lazy::ScopePusher ir_scope(at::aten::__lshift__.toQualString());
   return input * ScalarOp(pow(2, other.to<double>()), input.shape());
 }
 
 NodePtr Lshift(const Value& input, const Value& other) {
-  ScopePusher ir_scope(at::aten::__lshift__.toQualString());
+  torch::lazy::ScopePusher ir_scope(at::aten::__lshift__.toQualString());
   return input * Pow(ScalarOp(2, input.shape()), other);
 }
 
 NodePtr Rshift(const Value& input, const at::Scalar& other) {
-  ScopePusher ir_scope(at::aten::__rshift__.toQualString());
+  torch::lazy::ScopePusher ir_scope(at::aten::__rshift__.toQualString());
   return input / ScalarOp(pow(2, other.to<double>()), input.shape());
 }
 
 NodePtr Rshift(const Value& input, const Value& other) {
-  ScopePusher ir_scope(at::aten::__rshift__.toQualString());
+  torch::lazy::ScopePusher ir_scope(at::aten::__rshift__.toQualString());
   return input / Pow(ScalarOp(2, input.shape()), other);
 }
 
 NodePtr Remainder(const Value& input, const Value& divisor) {
-  ScopePusher ir_scope(at::aten::remainder.toQualString());
+  torch::lazy::ScopePusher ir_scope(at::aten::remainder.toQualString());
   NodePtr f = Fmod(input, Abs(divisor));
   return f + divisor * ComparisonOp(at::aten::lt, SignOp(f) * SignOp(divisor),
                                     ScalarOp(0, input.shape()));
@@ -803,7 +805,7 @@ NodePtr BaddBmm(const Value& lhs, const Value& rhs, const Value& bias,
 }
 
 NodePtr Lerp(const Value& start, const Value& end, const Value& weight) {
-  ScopePusher ir_scope(at::aten::lerp.toQualString());
+  torch::lazy::ScopePusher ir_scope(at::aten::lerp.toQualString());
   return start + weight * (end - start);
 }
 
