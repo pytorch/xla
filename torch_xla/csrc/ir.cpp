@@ -206,11 +206,13 @@ xla::Shape Node::GetOpShape(const std::function<xla::Shape()>& shape_fn) const {
 
 // TODO: map XLA_IR_DEBUG to FLAGS_torch_lazy_ir_debug
 // std::vector<torch::lazy::SourceLocation> Node::GetFrameInfo() {
-//   // At the time of writing, retrieving Python frames costs from 1us up to 20us.
-//   // This per IR Node. Since it is not unreasonable to have a many hundreds of
+//   // At the time of writing, retrieving Python frames costs from 1us up to
+//   20us.
+//   // This per IR Node. Since it is not unreasonable to have a many hundreds
+//   of
 //   // IR Node, this can be a multi-millisecond cost, which is not negligible.
-//   static bool wants_frames = xla::sys_util::GetEnvBool("XLA_IR_DEBUG", false);
-//   return wants_frames ? GetPythonFrames()
+//   static bool wants_frames = xla::sys_util::GetEnvBool("XLA_IR_DEBUG",
+//   false); return wants_frames ? GetPythonFrames()
 //                       : std::vector<torch::lazy::SourceLocation>();
 // }
 
