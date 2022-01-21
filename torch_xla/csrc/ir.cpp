@@ -85,9 +85,8 @@ Node::Node(OpKind op, OpList operands, xla::Shape shape, size_t num_outputs,
       shape_(std::move(shape)),
       node_hash_(torch::lazy::HashCombine(op_.hash(), hash_seed)),
       hash_(node_hash_) {
-  // TODO: get metadata using torch::lazy::GetMetaDataIfDebugging
-  metadata_.scope = torch::lazy::GetCurrentScope();
-  metadata_.frame_info = GetFrameInfo();
+  // TODO: register frame info
+  metadata_ = torch::lazy::GetMetaDataIfDebugging();
   for (auto& operand : operands) {
     AddOperand(operand.node, operand.index);
     hash_ = torch::lazy::HashCombine(hash_, operand.hash());
@@ -110,9 +109,8 @@ Node::Node(OpKind op, xla::Shape shape, size_t num_outputs,
       shape_(std::move(shape)),
       node_hash_(GetOpHash(op_, shape_, hash_seed)),
       hash_(node_hash_) {
-  // TODO: get metadata using torch::lazy::GetMetaDataIfDebugging
-  metadata_.scope = torch::lazy::GetCurrentScope();
-  metadata_.frame_info = GetFrameInfo();
+  // TODO: register frame info
+  metadata_ = torch::lazy::GetMetaDataIfDebugging();
 }
 
 Node::~Node() {
@@ -208,14 +206,15 @@ xla::Shape Node::GetOpShape(const std::function<xla::Shape()>& shape_fn) const {
   return *shape;
 }
 
-std::vector<torch::lazy::SourceLocation> Node::GetFrameInfo() {
-  // At the time of writing, retrieving Python frames costs from 1us up to 20us.
-  // This per IR Node. Since it is not unreasonable to have a many hundreds of
-  // IR Node, this can be a multi-millisecond cost, which is not negligible.
-  static bool wants_frames = xla::sys_util::GetEnvBool("XLA_IR_DEBUG", false);
-  return wants_frames ? GetPythonFrames()
-                      : std::vector<torch::lazy::SourceLocation>();
-}
+// TODO: map XLA_IR_DEBUG to FLAGS_torch_lazy_ir_debug
+// std::vector<torch::lazy::SourceLocation> Node::GetFrameInfo() {
+//   // At the time of writing, retrieving Python frames costs from 1us up to 20us.
+//   // This per IR Node. Since it is not unreasonable to have a many hundreds of
+//   // IR Node, this can be a multi-millisecond cost, which is not negligible.
+//   static bool wants_frames = xla::sys_util::GetEnvBool("XLA_IR_DEBUG", false);
+//   return wants_frames ? GetPythonFrames()
+//                       : std::vector<torch::lazy::SourceLocation>();
+// }
 
 }  // namespace ir
 }  // namespace torch_xla
