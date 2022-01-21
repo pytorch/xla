@@ -85,7 +85,6 @@ Node::Node(OpKind op, OpList operands, xla::Shape shape, size_t num_outputs,
       shape_(std::move(shape)),
       node_hash_(torch::lazy::HashCombine(op_.hash(), hash_seed)),
       hash_(node_hash_) {
-  // TODO: register frame info
   metadata_ = torch::lazy::GetMetaDataIfDebugging();
   for (auto& operand : operands) {
     AddOperand(operand.node, operand.index);
@@ -109,7 +108,6 @@ Node::Node(OpKind op, xla::Shape shape, size_t num_outputs,
       shape_(std::move(shape)),
       node_hash_(GetOpHash(op_, shape_, hash_seed)),
       hash_(node_hash_) {
-  // TODO: register frame info
   metadata_ = torch::lazy::GetMetaDataIfDebugging();
 }
 
