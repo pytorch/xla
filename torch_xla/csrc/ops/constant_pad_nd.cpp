@@ -14,7 +14,7 @@ namespace ops {
 namespace {
 
 xla::XlaOp LowerPad(xla::XlaOp input, const at::Scalar& value,
-                    absl::Span<const xla::int64_t> pad) {
+                    absl::Span<const int64_t> pad) {
   const xla::Shape& input_shape = XlaHelpers::ShapeOfXlaOp(input);
   return xla::Pad(input,
                   XlaHelpers::ScalarValue(value, input_shape.element_type(),
@@ -23,7 +23,7 @@ xla::XlaOp LowerPad(xla::XlaOp input, const at::Scalar& value,
 }
 
 xla::Shape NodeOutputShape(const Value& input, const at::Scalar& value,
-                           absl::Span<const xla::int64_t> pad) {
+                           absl::Span<const int64_t> pad) {
   auto lower_for_shape_fn =
       [&](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
     return LowerPad(operands[0], value, pad);
@@ -33,7 +33,7 @@ xla::Shape NodeOutputShape(const Value& input, const at::Scalar& value,
 
 }  // namespace
 
-ConstantPadNd::ConstantPadNd(const Value& input, std::vector<xla::int64_t> pad,
+ConstantPadNd::ConstantPadNd(const Value& input, std::vector<int64_t> pad,
                              const at::Scalar& value)
     : Node(ir::OpKind(at::aten::constant_pad_nd), {input},
            [&]() { return NodeOutputShape(input, value, pad); },

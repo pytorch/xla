@@ -8,7 +8,7 @@
 namespace xla {
 namespace util {
 
-RecordReader::RecordReader(std::string path, const string& compression,
+RecordReader::RecordReader(std::string path, const std::string& compression,
                            int64_t buffer_size)
     : path_(std::move(path)) {
   tensorflow::Env* env = tensorflow::Env::Default();

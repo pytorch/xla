@@ -22,8 +22,8 @@ xla::Shape NodeOutputShape(const Value& input, bool some) {
   const xla::Shape& input_shape = input.shape();
   XLA_CHECK_GE(input_shape.rank(), 2) << input_shape;
   // The input tensor is ..., M, N
-  xla::int64_t m_dim = input_shape.dimensions(input_shape.rank() - 2);
-  xla::int64_t n_dim = input_shape.dimensions(input_shape.rank() - 1);
+  int64_t m_dim = input_shape.dimensions(input_shape.rank() - 2);
+  int64_t n_dim = input_shape.dimensions(input_shape.rank() - 1);
   xla::Shape qshape(input_shape);
   xla::Shape rshape(input_shape);
   if (!some) {

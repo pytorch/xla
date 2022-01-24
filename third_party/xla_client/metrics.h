@@ -64,12 +64,12 @@ class CounterData {
  public:
   CounterData() : value_(0) {}
 
-  void AddValue(xla::int64_t value) { value_ += value; }
+  void AddValue(int64_t value) { value_ += value; }
 
-  xla::int64_t Value() const { return value_; }
+  int64_t Value() const { return value_; }
 
  private:
-  std::atomic<xla::int64_t> value_;
+  std::atomic<int64_t> value_;
 };
 
 class MetricsArena {
@@ -157,9 +157,9 @@ class Counter {
  public:
   explicit Counter(std::string name);
 
-  void AddValue(xla::int64_t value) { GetData()->AddValue(value); }
+  void AddValue(int64_t value) { GetData()->AddValue(value); }
 
-  xla::int64_t Value() const { return GetData()->Value(); }
+  int64_t Value() const { return GetData()->Value(); }
 
  private:
   CounterData* GetData() const;

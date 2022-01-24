@@ -9,7 +9,7 @@ namespace torch_xla {
 
 // Creates a minor-to-major layout from given dimensions. The dynamic_dimensions
 // slice should be either empty, or of the same size as dimensions.
-xla::Shape MakeTorchTensorLayout(absl::Span<const xla::int64_t> dimensions,
+xla::Shape MakeTorchTensorLayout(absl::Span<const int64_t> dimensions,
                                  absl::Span<const bool> dynamic_dimensions,
                                  xla::PrimitiveType type);
 
@@ -18,7 +18,7 @@ xla::Shape MakeTorchTensorLayout(absl::Span<const xla::int64_t> dimensions,
 // XLA layout. The dynamic_dimensions slice should be either empty, or of the
 // same size as dimensions.
 xla::Shape MakeArrayShapeFromDimensions(
-    absl::Span<const xla::int64_t> dimensions,
+    absl::Span<const int64_t> dimensions,
     absl::Span<const bool> dynamic_dimensions, xla::PrimitiveType type,
     DeviceType device_type);
 

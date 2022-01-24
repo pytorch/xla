@@ -31,8 +31,8 @@ void TestSingleReplication(const std::vector<Device>& devices,
                            const std::vector<Device>& all_devices) {
   // Simulates N threads executing the same computation, using separated XRT
   // executions, and issuing CRS operations.
-  std::vector<xla::string> device_strings;
-  std::vector<xla::string> all_device_strings;
+  std::vector<std::string> device_strings;
+  std::vector<std::string> all_device_strings;
   for (auto& device : devices) {
     device_strings.push_back(device.ToString());
   }
