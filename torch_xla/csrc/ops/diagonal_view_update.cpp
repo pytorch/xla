@@ -9,8 +9,8 @@ namespace ir {
 namespace ops {
 
 DiagonalViewUpdate::DiagonalViewUpdate(const Value& target, const Value& input,
-                                       xla::int64_t offset, xla::int64_t dim1,
-                                       xla::int64_t dim2)
+                                       int64_t offset, int64_t dim1,
+                                       int64_t dim2)
     : Node(xla_diagonal_view_update, {target, input}, target.shape(),
            /*num_outputs=*/1, torch::lazy::MHash(offset, dim1, dim2)),
       offset_(offset),

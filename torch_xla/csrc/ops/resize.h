@@ -8,7 +8,7 @@ namespace ops {
 
 class Resize : public Node {
  public:
-  Resize(const Value& input, std::vector<xla::int64_t> size);
+  Resize(const Value& input, std::vector<int64_t> size);
 
   NodePtr Clone(OpList operands) const override;
 
@@ -16,10 +16,10 @@ class Resize : public Node {
 
   std::string ToString() const override;
 
-  const std::vector<xla::int64_t>& size() const { return size_; }
+  const std::vector<int64_t>& size() const { return size_; }
 
  private:
-  std::vector<xla::int64_t> size_;
+  std::vector<int64_t> size_;
 };
 
 }  // namespace ops

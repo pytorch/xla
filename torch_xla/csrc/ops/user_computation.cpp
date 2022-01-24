@@ -34,7 +34,7 @@ XlaOpVector UserComputation::Lower(LoweringContext* loctx) const {
   XlaOpVector results;
   const xla::Shape& result_shape = computation_->program_shape().result();
   if (result_shape.IsTuple()) {
-    for (xla::int64_t i = 0; i < result_shape.tuple_shapes_size(); ++i) {
+    for (int64_t i = 0; i < result_shape.tuple_shapes_size(); ++i) {
       results.push_back(xla::GetTupleElement(output, i));
     }
   } else {

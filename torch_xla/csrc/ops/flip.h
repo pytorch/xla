@@ -9,7 +9,7 @@ namespace ops {
 
 class Flip : public Node {
  public:
-  Flip(const Value& input, std::vector<xla::int64_t> dims);
+  Flip(const Value& input, std::vector<int64_t> dims);
 
   NodePtr Clone(OpList operands) const override;
 
@@ -17,11 +17,11 @@ class Flip : public Node {
 
   std::string ToString() const override;
 
-  const std::vector<xla::int64_t>& dims() const { return dims_; }
+  const std::vector<int64_t>& dims() const { return dims_; }
 
  private:
   // The dimensions which are flipped.
-  std::vector<xla::int64_t> dims_;
+  std::vector<int64_t> dims_;
 };
 
 }  // namespace ops

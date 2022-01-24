@@ -10,7 +10,7 @@ namespace ops {
 // matrices input.
 class Tril : public Node {
  public:
-  Tril(const Value& input, xla::int64_t diagonal);
+  Tril(const Value& input, int64_t diagonal);
 
   NodePtr Clone(OpList operands) const override;
 
@@ -18,10 +18,10 @@ class Tril : public Node {
 
   std::string ToString() const override;
 
-  xla::int64_t diagonal() const { return diagonal_; }
+  int64_t diagonal() const { return diagonal_; }
 
  private:
-  xla::int64_t diagonal_;
+  int64_t diagonal_;
 };
 
 }  // namespace ops

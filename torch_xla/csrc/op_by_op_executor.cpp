@@ -218,7 +218,7 @@ OpByOpExecutor::AsyncTask OpByOpExecutor::ExecuteAsync(
 }
 
 OpByOpExecutor* OpByOpExecutor::Get() {
-  static const xla::int64_t compile_cache_size =
+  static const int64_t compile_cache_size =
       xla::sys_util::GetEnvInt("SPLIT_EXECUTOR_CACHE_SIZE", 2048);
   static OpByOpExecutor* split_executor =
       new OpByOpExecutor(compile_cache_size);

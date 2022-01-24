@@ -271,7 +271,7 @@ class ComputationClient {
 
   // Run the XRT local service, this will block the caller unitl the server
   // being stopped.
-  static void RunLocalService(xla::uint64 service_port);
+  static void RunLocalService(uint64_t service_port);
 
   // Retrieves the ordinal number out of a device string. This is the number
   // after the last ':' character of the device string.

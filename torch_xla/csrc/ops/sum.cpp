@@ -14,7 +14,7 @@ namespace ir {
 namespace ops {
 namespace {
 
-xla::XlaOp LowerSum(xla::XlaOp input, absl::Span<const xla::int64_t> dimensions,
+xla::XlaOp LowerSum(xla::XlaOp input, absl::Span<const int64_t> dimensions,
                     bool keep_reduced_dimensions,
                     c10::optional<at::ScalarType> dtype) {
   return BuildSum(CastToScalarType(input, dtype), dimensions,
@@ -22,7 +22,7 @@ xla::XlaOp LowerSum(xla::XlaOp input, absl::Span<const xla::int64_t> dimensions,
 }
 
 xla::Shape NodeOutputShape(const Value& input,
-                           absl::Span<const xla::int64_t> dimensions,
+                           absl::Span<const int64_t> dimensions,
                            bool keep_reduced_dimensions,
                            c10::optional<at::ScalarType> dtype) {
   auto lower_for_shape_fn =
@@ -34,7 +34,7 @@ xla::Shape NodeOutputShape(const Value& input,
 
 }  // namespace
 
-Sum::Sum(const Value& input, std::vector<xla::int64_t> dimensions,
+Sum::Sum(const Value& input, std::vector<int64_t> dimensions,
          bool keep_reduced_dimensions, c10::optional<at::ScalarType> dtype)
     : Node(ir::OpKind(at::aten::sum), {input},
            [&]() {

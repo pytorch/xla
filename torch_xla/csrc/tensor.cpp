@@ -266,9 +266,9 @@ bool ShouldSyncIrValue(const ir::Value& ir_value) {
 class XLATensor::DeviceContextArena {
   struct DeviceContext {
     std::mutex lock;
-    std::map<xla::int64_t, std::weak_ptr<Data>> tensors_data;
-    xla::uint64 seed = 101;
-    xla::uint64 running_seed = 101;
+    std::map<int64_t, std::weak_ptr<Data>> tensors_data;
+    uint64_t seed = 101;
+    uint64_t running_seed = 101;
     ir::Value seed_ir_value;
   };
 
@@ -309,8 +309,8 @@ class XLATensor::DeviceContextArena {
 
   ir::Value GetRngSeed(const Device& device) {
     static const at::ScalarType kSeedType = at::ScalarType::Long;
-    static const xla::uint64 kSeedMul = 214013;
-    static const xla::uint64 kSeedAdd = 2531011;
+    static const uint64_t kSeedMul = 214013;
+    static const uint64_t kSeedAdd = 2531011;
     DeviceContext* devctx = GetDeviceContext(device);
     std::lock_guard<std::mutex> lock(devctx->lock);
     if (!devctx->seed_ir_value) {
@@ -330,13 +330,13 @@ class XLATensor::DeviceContextArena {
     return devctx->seed_ir_value;
   }
 
-  xla::uint64 GetRunningSeed(const Device& device) {
+  uint64_t GetRunningSeed(const Device& device) {
     DeviceContext* devctx = GetDeviceContext(device);
     std::lock_guard<std::mutex> lock(devctx->lock);
     return devctx->running_seed;
   }
 
-  void SetRngSeed(const Device& device, xla::uint64 seed) {
+  void SetRngSeed(const Device& device, uint64_t seed) {
     DeviceContext* devctx = GetDeviceContext(device);
     std::lock_guard<std::mutex> lock(devctx->lock);
     devctx->seed = seed;
@@ -388,10 +388,10 @@ class XLATensor::DeviceContextArena {
 };
 
 struct DeviceDataInfo : public xla::ComputationClient::Data::Info {
-  DeviceDataInfo(xla::int64_t tensor_id, bool read_only)
+  DeviceDataInfo(int64_t tensor_id, bool read_only)
       : tensor_id(tensor_id), read_only(read_only) {}
 
-  xla::int64_t tensor_id = 0;
+  int64_t tensor_id = 0;
   bool read_only = false;
 };
 
@@ -490,7 +490,7 @@ XLATensor::Data* XLATensor::data() const {
   return data_.get();
 }
 
-xla::int64_t XLATensor::size(xla::int64_t dim) const {
+int64_t XLATensor::size(int64_t dim) const {
   auto xla_shape = shape();
   int rank = xla_shape.get().rank();
   int dim_index = XlaHelpers::GetCanonicalDimensionIndex(dim, rank);
@@ -533,7 +533,7 @@ xla::Shape XLATensor::shape_with_layout() const {
 
 const Device& XLATensor::GetDevice() const { return data()->device; }
 
-xla::int64_t XLATensor::GetUniqueId() const { return data()->unique_id; }
+int64_t XLATensor::GetUniqueId() const { return data()->unique_id; }
 
 std::ptrdiff_t XLATensor::GetViewAliasId() const {
   return data()->view != nullptr
@@ -728,7 +728,7 @@ ir::Value XLATensor::GetIrValueForConstant(const at::Scalar& value,
       ir::ops::ScalarOp(std::move(value), shape.element_type());
   if (!shape.dimensions().empty()) {
     ir_value = ir::MakeNode<ir::ops::Expand>(
-        ir_value, xla::util::ToVector<xla::int64_t>(shape.dimensions()));
+        ir_value, xla::util::ToVector<int64_t>(shape.dimensions()));
   }
   return ir_value;
 }
@@ -748,13 +748,14 @@ ir::Value XLATensor::GetIrValueForScalar(const at::Scalar& value,
       value, MakeXlaPrimitiveType(GetScalarType(value), &device), device);
 }
 
-ir::Value XLATensor::GetIrValueForScalar(
-    const at::Scalar& value, xla::PrimitiveType type,
-    absl::Span<const xla::int64_t> dimensions, const Device& device) {
+ir::Value XLATensor::GetIrValueForScalar(const at::Scalar& value,
+                                         xla::PrimitiveType type,
+                                         absl::Span<const int64_t> dimensions,
+                                         const Device& device) {
   ir::Value ir_value = GetIrValueForScalar(value, type, device);
   if (!dimensions.empty()) {
     ir_value = ir::MakeNode<ir::ops::Expand>(
-        ir_value, xla::util::ToVector<xla::int64_t>(dimensions));
+        ir_value, xla::util::ToVector<int64_t>(dimensions));
   }
   return ir_value;
 }
@@ -788,9 +789,8 @@ View::IrNode XLATensor::GetViewUpdate(const std::shared_ptr<View>& view) const {
 std::shared_ptr<View> XLATensor::UpdateView(std::shared_ptr<View> view,
                                             ir::Value ir_value) const {
   if (ir_value.shape().dimensions() != view->shape().dimensions()) {
-    XLA_CHECK_EQ(
-        xla::util::Multiply<xla::int64_t>(ir_value.shape().dimensions()),
-        xla::util::Multiply<xla::int64_t>(view->shape().dimensions()));
+    XLA_CHECK_EQ(xla::util::Multiply<int64_t>(ir_value.shape().dimensions()),
+                 xla::util::Multiply<int64_t>(view->shape().dimensions()));
 
     ViewInfo view_info(ViewInfo::Type::kReshape, ir_value.shape(),
                        view->shape());
@@ -928,10 +928,10 @@ std::vector<xla::ComputationClient::DataPtr> XLATensor::GatherTensorsXlaData(
     const std::vector<XLATensor>& tensors, absl::Span<const size_t> indices,
     absl::Span<const xla::ComputationClient::DataPtr> tensors_data) {
   std::vector<xla::ComputationClient::DataPtr> result_tensors_data;
-  std::unordered_map<xla::int64_t, size_t> uid_index_map;
+  std::unordered_map<int64_t, size_t> uid_index_map;
   size_t indices_index = 0;
   for (size_t i = 0; i < tensors.size(); ++i) {
-    xla::int64_t tensor_id = tensors[i].GetUniqueId();
+    int64_t tensor_id = tensors[i].GetUniqueId();
     auto it = uid_index_map.find(tensor_id);
     if (it != uid_index_map.end()) {
       // Current tensor is a duplicate of a previously processed tensor that had
@@ -1147,7 +1147,7 @@ XLATensor::SyncTensorCollection XLATensor::CollectSyncTensors(
   std::vector<at::Tensor> at_tensors;
   std::vector<std::string> devices;
   std::vector<size_t> at_tensor_index;
-  std::unordered_set<xla::int64_t> tensor_ids;
+  std::unordered_set<int64_t> tensor_ids;
   // The force_xla_data controls aliasing compilation, so effectively the same
   // graph with on/off force_xla_data should not match, hash wise.
   coll.hash = torch::lazy::MHash(config.force_xla_data);
@@ -1499,10 +1499,10 @@ XLATensor::OpByOpAsync XLATensor::SyncTensorsGraphOpByOp(
 void XLATensor::BuildInputOutputAliases(const std::vector<XLATensor>& tensors,
                                         absl::Span<const size_t> indices,
                                         ir::LoweringContext* lowering_ctx) {
-  std::unordered_map<xla::int64_t, size_t> output_tensor_id_map;
+  std::unordered_map<int64_t, size_t> output_tensor_id_map;
   for (size_t i = 0; i < indices.size(); ++i) {
     size_t tensor_index = indices[i];
-    xla::int64_t tensor_id = tensors[tensor_index].GetUniqueId();
+    int64_t tensor_id = tensors[tensor_index].GetUniqueId();
     output_tensor_id_map[tensor_id] = i;
   }
   const std::vector<xla::ComputationClient::DataPtr>& parameters_data =
@@ -1520,7 +1520,7 @@ void XLATensor::BuildInputOutputAliases(const std::vector<XLATensor>& tensors,
         if (parameters_data[i]->shape() == root_shape &&
             alias_map[output_index] < 0) {
           lowering_ctx->builder()->SetUpAlias(
-              {static_cast<xla::int64_t>(output_index)}, i, {});
+              {static_cast<int64_t>(output_index)}, i, {});
           alias_map[output_index] = i;
 
           TF_VLOG(6) << "Aliased paramter " << i << " with output "
@@ -1651,9 +1651,8 @@ std::shared_ptr<XLATensor::Async> XLATensor::SyncTensorsGraphInternal(
       compile_result.device.ToString(), std::move(cached_computation));
 }
 
-xla::int64_t XLATensor::GetNextTensorId() {
-  static std::atomic<xla::int64_t>* id_generator =
-      new std::atomic<xla::int64_t>(1);
+int64_t XLATensor::GetNextTensorId() {
+  static std::atomic<int64_t>* id_generator = new std::atomic<int64_t>(1);
   return id_generator->fetch_add(1);
 }
 
@@ -1661,11 +1660,11 @@ ir::Value XLATensor::GetRngSeed(const Device& device) {
   return DeviceContextArena::Get()->GetRngSeed(device);
 }
 
-void XLATensor::SetRngSeed(const Device& device, xla::uint64 seed) {
+void XLATensor::SetRngSeed(const Device& device, uint64_t seed) {
   DeviceContextArena::Get()->SetRngSeed(device, seed);
 }
 
-xla::uint64 XLATensor::GetRunningSeed(const Device& device) {
+uint64_t XLATensor::GetRunningSeed(const Device& device) {
   return DeviceContextArena::Get()->GetRunningSeed(device);
 }
 

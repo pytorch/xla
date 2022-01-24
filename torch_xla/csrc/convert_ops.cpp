@@ -18,14 +18,14 @@ xla::XlaOp ExplicitBooleanConvert(xla::XlaOp op, xla::PrimitiveType from) {
   return xla::Ne(op, zero);
 }
 
-xla::XlaOp CreateRawMask(xla::XlaOp op, xla::PrimitiveType type,
-                         xla::int64_t size, xla::int64_t narrow_size) {
-  xla::uint64 mask_value =
-      (static_cast<xla::uint64>(1) << narrow_size * CHAR_BIT) - 1;
+xla::XlaOp CreateRawMask(xla::XlaOp op, xla::PrimitiveType type, int64_t size,
+                         int64_t narrow_size) {
+  uint64_t mask_value =
+      (static_cast<uint64_t>(1) << narrow_size * CHAR_BIT) - 1;
   xla::XlaOp mask = XlaHelpers::ScalarValue(mask_value, type, op.builder());
   if (xla::primitive_util::IsSignedIntegralType(type)) {
     // Sign extend the truncation mask.
-    xla::XlaOp shift = XlaHelpers::ScalarValue<xla::int32>(
+    xla::XlaOp shift = XlaHelpers::ScalarValue<int32_t>(
         (size - narrow_size) * CHAR_BIT, op.builder());
     mask = (mask << shift) >> shift;
   }
@@ -38,9 +38,8 @@ xla::XlaOp ConvertData(xla::XlaOp op, xla::PrimitiveType type,
       !xla::primitive_util::IsIntegralType(narrow_type)) {
     return op;
   }
-  xla::int64_t size = xla::ShapeUtil::ByteSizeOfPrimitiveType(type);
-  xla::int64_t narrow_size =
-      xla::ShapeUtil::ByteSizeOfPrimitiveType(narrow_type);
+  int64_t size = xla::ShapeUtil::ByteSizeOfPrimitiveType(type);
+  int64_t narrow_size = xla::ShapeUtil::ByteSizeOfPrimitiveType(narrow_type);
   XLA_CHECK_GE(size, narrow_size);
   if (size == narrow_size) {
     return op;

@@ -12,7 +12,7 @@ namespace ops {
 // IR node for log(softmax) operation.
 class LogSoftmax : public Node {
  public:
-  LogSoftmax(const Value& input, xla::int64_t dim,
+  LogSoftmax(const Value& input, int64_t dim,
              c10::optional<at::ScalarType> dtype);
 
   NodePtr Clone(OpList operands) const override;
@@ -21,13 +21,13 @@ class LogSoftmax : public Node {
 
   std::string ToString() const override;
 
-  xla::int64_t dim() const { return dim_; }
+  int64_t dim() const { return dim_; }
 
   const c10::optional<at::ScalarType>& dtype() const { return dtype_; }
 
  private:
   // The dimension along which the result is computed.
-  xla::int64_t dim_;
+  int64_t dim_;
   c10::optional<at::ScalarType> dtype_;
 };
 

@@ -9,7 +9,7 @@ namespace ops {
 
 class ReplicationPad : public Node {
  public:
-  ReplicationPad(const Value& input, std::vector<xla::int64_t> padding);
+  ReplicationPad(const Value& input, std::vector<int64_t> padding);
 
   NodePtr Clone(OpList operands) const override;
 
@@ -17,10 +17,10 @@ class ReplicationPad : public Node {
 
   std::string ToString() const override;
 
-  const std::vector<xla::int64_t>& padding() const { return padding_; }
+  const std::vector<int64_t>& padding() const { return padding_; }
 
  private:
-  std::vector<xla::int64_t> padding_;
+  std::vector<int64_t> padding_;
 };
 
 }  // namespace ops

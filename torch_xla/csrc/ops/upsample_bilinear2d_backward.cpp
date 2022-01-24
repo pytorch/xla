@@ -10,8 +10,8 @@ namespace ir {
 namespace ops {
 
 UpsampleBilinearBackward::UpsampleBilinearBackward(
-    const Value& input, std::vector<xla::int64_t> output_size,
-    std::vector<xla::int64_t> input_size, bool align_corners)
+    const Value& input, std::vector<int64_t> output_size,
+    std::vector<int64_t> input_size, bool align_corners)
     : Node(ir::OpKind(at::aten::upsample_bilinear2d_backward), {input},
            [&]() {
              return resize::GetBackwardOutputShape2d(input.shape(), input_size);

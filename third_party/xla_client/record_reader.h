@@ -25,7 +25,7 @@ class RecordReader {
  private:
   std::string path_;
   std::mutex lock_;
-  uint64 offset_ = 0;
+  uint64_t offset_ = 0;
   std::unique_ptr<tensorflow::RandomAccessFile> file_;
   std::unique_ptr<tensorflow::io::RecordReader> reader_;
 };

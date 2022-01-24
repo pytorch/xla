@@ -24,15 +24,15 @@ std::vector<xla::XlaOp> LowerSVD(xla::XlaOp input, bool some, bool compute_uv) {
     u = xla::Zeros(input.builder(), XlaHelpers::ShapeOfXlaOp(u));
     v = xla::Zeros(input.builder(), XlaHelpers::ShapeOfXlaOp(v));
   } else if (some) {
-    xla::int64_t m_dim = input_shape.dimensions(input_shape.rank() - 2);
-    xla::int64_t n_dim = input_shape.dimensions(input_shape.rank() - 1);
-    std::vector<xla::int64_t> base_indices(input_shape.rank(), 0);
+    int64_t m_dim = input_shape.dimensions(input_shape.rank() - 2);
+    int64_t n_dim = input_shape.dimensions(input_shape.rank() - 1);
+    std::vector<int64_t> base_indices(input_shape.rank(), 0);
 
-    auto u_sizes = xla::util::ToVector<xla::int64_t>(input_shape.dimensions());
+    auto u_sizes = xla::util::ToVector<int64_t>(input_shape.dimensions());
     u_sizes[input_shape.rank() - 1] = std::min(m_dim, n_dim);
     u = BuildSlice(u, base_indices, u_sizes);
 
-    auto v_sizes = xla::util::ToVector<xla::int64_t>(input_shape.dimensions());
+    auto v_sizes = xla::util::ToVector<int64_t>(input_shape.dimensions());
     v_sizes[input_shape.rank() - 2] = n_dim;
     v_sizes[input_shape.rank() - 1] = std::min(m_dim, n_dim);
     v = BuildSlice(v, base_indices, v_sizes);
@@ -44,8 +44,8 @@ xla::Shape NodeOutputShape(const Value& input, bool some, bool compute_uv) {
   const xla::Shape& input_shape = input.shape();
   XLA_CHECK_GE(input_shape.rank(), 2) << input_shape;
   // The input tensor is ...,M,N
-  xla::int64_t m_dim = input_shape.dimensions(input_shape.rank() - 2);
-  xla::int64_t n_dim = input_shape.dimensions(input_shape.rank() - 1);
+  int64_t m_dim = input_shape.dimensions(input_shape.rank() - 2);
+  int64_t n_dim = input_shape.dimensions(input_shape.rank() - 1);
   xla::Shape ushape(input_shape);
   if (!compute_uv || !some) {
     ushape.set_dimensions(input_shape.rank() - 1, m_dim);
