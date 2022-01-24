@@ -3,6 +3,8 @@ import re
 import tempfile
 import subprocess
 
+from caffe2.python import workspace
+
 XRT_RUN_SERVER_PROCESS = 'torch_xla.core._xrt_run_server'
 XRT_SERVER_REGEX = '^python3 -m {} [0-9]+$'.format(XRT_RUN_SERVER_PROCESS)
 
@@ -68,6 +70,12 @@ def _setup_debug_env():
   return fd, tmp_fname
 
 
+# TODO @wonjoo - map all lazy tensor core related XLA env variables
+def _setup_lazy_tensor_core_env():
+  if 'XLA_IR_DEBUG' in os.environ and os.environ['XLA_IR_DEBUG']:
+    workspace.GlobalInit(['caffe2', '--torch_lazy_ir_debug=true'])
+
+
 def _summarize_fn_tracker():
   if not _tmp_fname:
     return
@@ -89,6 +97,7 @@ def _tpu_vm_init():
 _setup_default_env()
 _setup_grpc()
 _setup_xla_flags()
+_setup_lazy_tensor_core_env()
 if int(os.environ.get('PT_XLA_DEBUG', '0')):
   _fd, _tmp_fname = _setup_debug_env()
 
