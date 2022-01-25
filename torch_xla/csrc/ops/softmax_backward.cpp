@@ -10,7 +10,7 @@ namespace ir {
 namespace ops {
 
 SoftmaxBackward::SoftmaxBackward(const Value& grad_output, const Value& output,
-                                 xla::int64_t dim)
+                                 int64_t dim)
     : Node(ir::OpKind(at::aten::_softmax_backward_data), {grad_output, output},
            grad_output.shape(),
            /*num_outputs=*/1, torch::lazy::MHash(dim)),

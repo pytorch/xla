@@ -9,10 +9,10 @@ namespace torch_xla {
 namespace resize {
 
 xla::Shape GetForwardOutputShape2d(const xla::Shape& input_shape,
-                                   absl::Span<const xla::int64_t> output_size);
+                                   absl::Span<const int64_t> output_size);
 
 xla::Shape GetBackwardOutputShape2d(const xla::Shape& input_shape,
-                                    absl::Span<const xla::int64_t> input_size);
+                                    absl::Span<const int64_t> input_size);
 
 xla::XlaOp LowerForward2d(const std::string& target, xla::XlaOp input,
                           const xla::Shape& output_shape, bool align_corners,

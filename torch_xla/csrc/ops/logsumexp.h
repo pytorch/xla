@@ -12,7 +12,7 @@ namespace ops {
 
 class Logsumexp : public Node {
  public:
-  Logsumexp(const Value& input, std::vector<xla::int64_t> dimensions,
+  Logsumexp(const Value& input, std::vector<int64_t> dimensions,
             bool keep_reduced_dimensions);
 
   std::string ToString() const override;
@@ -21,12 +21,12 @@ class Logsumexp : public Node {
 
   XlaOpVector Lower(LoweringContext* loctx) const override;
 
-  const std::vector<xla::int64_t>& dimensions() const { return dimensions_; }
+  const std::vector<int64_t>& dimensions() const { return dimensions_; }
 
   bool keep_reduced_dimensions() const { return keep_reduced_dimensions_; }
 
  private:
-  std::vector<xla::int64_t> dimensions_;
+  std::vector<int64_t> dimensions_;
   bool keep_reduced_dimensions_;
 };
 

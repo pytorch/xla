@@ -12,7 +12,7 @@ namespace ops {
 namespace {
 
 xla::Shape NodeOutputShape(const Value& input, const Value& index,
-                           xla::int64_t dim) {
+                           int64_t dim) {
   auto lower_for_shape_fn =
       [&](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
     return xla::TorchGather(operands[0], operands[1], dim,
@@ -23,7 +23,7 @@ xla::Shape NodeOutputShape(const Value& input, const Value& index,
 
 }  // namespace
 
-Gather::Gather(const Value& input, xla::int64_t dim, const Value& index)
+Gather::Gather(const Value& input, int64_t dim, const Value& index)
     : Node(ir::OpKind(at::aten::gather), {input, index},
            [&]() { return NodeOutputShape(input, index, dim); },
            /*num_outputs=*/1, torch::lazy::MHash(dim)),
