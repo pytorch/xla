@@ -305,7 +305,7 @@ std::vector<std::string> ComputationClient::GetCompilationDevices(
   return compilation_devices;
 }
 
-void ComputationClient::RunLocalService(uint64_t service_port) {
+void ComputationClient::RunLocalService(xla::uint64 service_port) {
   try {
     XrtLocalService* service = new XrtLocalService(
         "localservice|localhost:" + std::to_string(service_port),

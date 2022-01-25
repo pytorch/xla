@@ -8,7 +8,7 @@ namespace ops {
 
 class IndexSelect : public Node {
  public:
-  IndexSelect(const Value& input, int64_t dim, const Value& index);
+  IndexSelect(const Value& input, xla::int64_t dim, const Value& index);
 
   std::string ToString() const override;
 
@@ -16,10 +16,10 @@ class IndexSelect : public Node {
 
   XlaOpVector Lower(LoweringContext* loctx) const override;
 
-  int64_t dim() const { return dim_; };
+  xla::int64_t dim() const { return dim_; };
 
  private:
-  int64_t dim_;
+  xla::int64_t dim_;
 };
 
 }  // namespace ops
