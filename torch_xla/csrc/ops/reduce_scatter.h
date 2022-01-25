@@ -10,8 +10,9 @@ namespace ops {
 class ReduceScatter : public Node {
  public:
   ReduceScatter(AllReduceType reduce_type, const Value& input,
-                const Value& token, double scale, int64_t scatter_dim,
-                int64_t shard_count, std::vector<std::vector<int64_t>> groups);
+                const Value& token, double scale, xla::int64_t scatter_dim,
+                xla::int64_t shard_count,
+                std::vector<std::vector<xla::int64_t>> groups);
 
   std::string ToString() const override;
 
@@ -23,14 +24,16 @@ class ReduceScatter : public Node {
 
   double scale() const { return scale_; }
 
-  const std::vector<std::vector<int64_t>>& groups() const { return groups_; }
+  const std::vector<std::vector<xla::int64_t>>& groups() const {
+    return groups_;
+  }
 
  private:
   AllReduceType reduce_type_;
   double scale_;
-  int64_t scatter_dim_;
-  int64_t shard_count_;
-  std::vector<std::vector<int64_t>> groups_;
+  xla::int64_t scatter_dim_;
+  xla::int64_t shard_count_;
+  std::vector<std::vector<xla::int64_t>> groups_;
 };
 
 }  // namespace ops

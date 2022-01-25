@@ -8,7 +8,7 @@ namespace ops {
 
 class ArgMax : public Node {
  public:
-  ArgMax(const Value& input, int64_t dim, bool keepdim);
+  ArgMax(const Value& input, xla::int64_t dim, bool keepdim);
 
   std::string ToString() const override;
 
@@ -16,12 +16,12 @@ class ArgMax : public Node {
 
   XlaOpVector Lower(LoweringContext* loctx) const override;
 
-  int64_t dim() const { return dim_; };
+  xla::int64_t dim() const { return dim_; };
 
   bool keepdim() const { return keepdim_; }
 
  private:
-  int64_t dim_;
+  xla::int64_t dim_;
   bool keepdim_;
 };
 

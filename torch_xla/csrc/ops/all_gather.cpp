@@ -12,9 +12,10 @@ namespace ir {
 namespace ops {
 namespace {
 
-xla::Shape NodeOutputShape(const Value& input, const Value& token, int64_t dim,
-                           int64_t shard_count,
-                           const std::vector<std::vector<int64_t>>& groups) {
+xla::Shape NodeOutputShape(
+    const Value& input, const Value& token, xla::int64_t dim,
+    xla::int64_t shard_count,
+    const std::vector<std::vector<xla::int64_t>>& groups) {
   auto shape_fn = [&](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
     AllGatherResult result =
         BuildAllGather(operands[0], operands[1], dim, shard_count, groups);
@@ -25,9 +26,9 @@ xla::Shape NodeOutputShape(const Value& input, const Value& token, int64_t dim,
 
 }  // namespace
 
-AllGather::AllGather(const Value& input, const Value& token, int64_t dim,
-                     int64_t shard_count,
-                     std::vector<std::vector<int64_t>> groups)
+AllGather::AllGather(const Value& input, const Value& token, xla::int64_t dim,
+                     xla::int64_t shard_count,
+                     std::vector<std::vector<xla::int64_t>> groups)
     : Node(xla_all_gather, {input, token},
            [&]() {
              return NodeOutputShape(input, token, dim, shard_count, groups);
