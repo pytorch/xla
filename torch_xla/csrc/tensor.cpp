@@ -633,8 +633,8 @@ void XLATensor::SetIrValue(ir::Value ir_value) {
     AssignIrValue(std::move(ir_value));
     TryLimitGraphSize();
   }
-  if (ExecutionContext::Get()->is_eager_debug_execution()
-        && this->data()->ir_value->op() != ir::ops::xla_device_data) {
+  if (ExecutionContext::Get()->is_eager_debug_execution() &&
+      this->data()->ir_value->op() != ir::ops::xla_device_data) {
     std::vector<XLATensor> xtensors({*this});
     ApplyEagerSync(xtensors);
   }
