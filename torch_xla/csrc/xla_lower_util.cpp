@@ -824,8 +824,8 @@ std::vector<xla::XlaOp> BuildAmpUpdateScale(const xla::XlaOp& current_scale,
 }
 
 std::vector<xla::XlaOp> BuildSgdOptimizerStep(
-    const xla::XlaOp& step, const xla::XlaOp& param, const xla::XlaOp& buf,
-    const xla::XlaOp& found_inf, const xla::XlaOp& d_p,
+    const xla::XlaOp& found_inf, const xla::XlaOp& step,
+    const xla::XlaOp& param, const xla::XlaOp& buf, const xla::XlaOp& d_p,
     const xla::XlaOp& weight_decay, const xla::XlaOp& momentum,
     const xla::XlaOp& lr, const xla::XlaOp& dampening, bool use_weight_decay,
     bool use_momentum, bool use_nesterov) {
@@ -855,14 +855,84 @@ std::vector<xla::XlaOp> BuildSgdOptimizerStep(
   xla::XlaOp new_param =
       xla::Select(found_inf_cond, param, param - d_p_compute * lr);
   // update step counter
+  // check if the current step is valid
   xla::XlaOp not_found_inf =
       xla::ConvertElementType(xla::Not(found_inf_cond), type);
+  // increment the step counter by one if the current step is valid
   xla::XlaOp new_step = step + not_found_inf;
 
   std::vector<xla::XlaOp> results;
   results.push_back(new_step);
   results.push_back(new_param);
   results.push_back(new_buf);
+  return results;
+}
+
+std::vector<xla::XlaOp> BuildAdamOptimizerStep(
+    const xla::XlaOp& found_inf, const xla::XlaOp& step,
+    const xla::XlaOp& param, const xla::XlaOp& grad, const xla::XlaOp& exp_avg,
+    const xla::XlaOp& exp_avg_sq, const xla::XlaOp& max_exp_avg_sq,
+    const xla::XlaOp& beta1, const xla::XlaOp& beta2, const xla::XlaOp& lr,
+    const xla::XlaOp& weight_decay, const xla::XlaOp& eps,
+    bool use_weight_decay, bool use_amsgrad, bool use_adamw) {
+  // XLA version of Adam/AdamW algorithm
+  // https://github.com/pytorch/pytorch/blob/master/torch/optim/_functional.py#L64-L110
+  // https://github.com/pytorch/pytorch/blob/master/torch/optim/_functional.py#L112-L155
+
+  xla::PrimitiveType type = XlaHelpers::ShapeOfXlaOp(param).element_type();
+  xla::XlaOp one = xla::One(param.builder(), type);
+  xla::XlaOp zero = xla::Zero(param.builder(), type);
+
+  xla::XlaOp found_inf_cond = xla::Ne(found_inf, zero);
+
+  // update step counter first
+  // check if the current step is valid
+  xla::XlaOp not_found_inf =
+      xla::ConvertElementType(xla::Not(found_inf_cond), type);
+  // increment the step counter by one if the current step is valid
+  xla::XlaOp new_step = step + not_found_inf;
+
+  xla::XlaOp bias_correction1 = one - xla::Pow(beta1, new_step);
+  xla::XlaOp bias_correction2 = one - xla::Pow(beta2, new_step);
+
+  // weight_decay
+  xla::XlaOp new_param = param;
+  xla::XlaOp new_grad = grad;
+  if (use_weight_decay) {
+    if (use_adamw) {
+      // AdamW
+      new_param =
+          xla::Select(found_inf_cond, param, param * (one - lr * weight_decay));
+    } else {
+      // Adam
+      new_grad = xla::Select(found_inf_cond, grad, grad + param * weight_decay);
+    }
+  }
+  // decay the first and second moment running average coefficient
+  xla::XlaOp new_exp_avg = xla::Select(
+      found_inf_cond, exp_avg, exp_avg * beta1 + new_grad * (one - beta1));
+  xla::XlaOp new_exp_avg_sq =
+      xla::Select(found_inf_cond, exp_avg_sq,
+                  exp_avg_sq * beta2 + new_grad * new_grad * (one - beta2));
+  xla::XlaOp new_max_exp_avg_sq = xla::Select(
+      found_inf_cond, max_exp_avg_sq, xla::Max(max_exp_avg_sq, new_exp_avg_sq));
+  xla::XlaOp denom;
+  if (use_amsgrad) {
+    denom = xla::Sqrt(new_max_exp_avg_sq) / xla::Sqrt(bias_correction2) + eps;
+  } else {
+    denom = xla::Sqrt(new_exp_avg_sq) / xla::Sqrt(bias_correction2) + eps;
+  }
+  // update param
+  xla::XlaOp step_size = lr / bias_correction1;
+  new_param = xla::Select(found_inf_cond, param,
+                          new_param - step_size * (new_exp_avg / denom));
+
+  std::vector<xla::XlaOp> results;
+  results.push_back(new_step);
+  results.push_back(new_param);
+  results.push_back(new_exp_avg);
+  results.push_back(new_exp_avg_sq);
+  results.push_back(new_max_exp_avg_sq);
   return results;
 }
 
