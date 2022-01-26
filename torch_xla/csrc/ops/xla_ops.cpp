@@ -4,6 +4,7 @@ namespace torch_xla {
 namespace ir {
 namespace ops {
 
+const OpKindWrapper xla_adam_optimizer_step("xla::adam_optimizer_step");
 const OpKindWrapper xla_all_gather("xla::all_gather");
 const OpKindWrapper xla_all_to_all("xla::all_to_all");
 const OpKindWrapper xla_as_strided_view_update("xla::as_strided_view_update");
