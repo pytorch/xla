@@ -281,7 +281,7 @@ class XLATensor::DeviceContextArena {
       // context is created and the execution mode cannot be changed now
       ExecutionContext::Get()->set_device_context_created();
       return ret;
-    } ();
+    }();
     return arena;
   }
 
@@ -459,7 +459,7 @@ XLATensor XLATensor::Create(
     c10::optional<at::ScalarType> logical_element_type) {
   XLATensor xtensor(std::move(ir_value), device, logical_element_type);
   DeviceContextArena::Get()->RegisterTensor(xtensor.data_ptr());
-  if (ExecutionContext::Get()->is_eager_execution()) {
+  if (ExecutionContext::Get()->is_eager_debug_execution()) {
     std::vector<XLATensor> xtensors({xtensor});
     ApplyEagerSync(xtensors);
   }
@@ -620,7 +620,7 @@ void XLATensor::SetXlaData(xla::ComputationClient::DataPtr xla_data,
   }
 }
 
-void XLATensor::SetIrValue(ir::Value ir_value, bool copy_from_aten_tensor) {
+void XLATensor::SetIrValue(ir::Value ir_value) {
   data()->xla_data = nullptr;
   data()->tensor_data = c10::nullopt;
   if (data()->view != nullptr) {
@@ -633,7 +633,8 @@ void XLATensor::SetIrValue(ir::Value ir_value, bool copy_from_aten_tensor) {
     AssignIrValue(std::move(ir_value));
     TryLimitGraphSize();
   }
-  if (ExecutionContext::Get()->is_eager_execution() && !copy_from_aten_tensor) {
+  if (ExecutionContext::Get()->is_eager_debug_execution()
+        && this->data()->ir_value->op() != ir::ops::xla_device_data) {
     std::vector<XLATensor> xtensors({*this});
     ApplyEagerSync(xtensors);
   }

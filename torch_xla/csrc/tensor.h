@@ -26,7 +26,7 @@ namespace torch_xla {
 
 class ExecutionContext {
  public:
-  enum ExecutionMode { LAZY, EAGER };
+  enum ExecutionMode { LAZY, EAGER_DEBUG };
   static ExecutionContext* Get() {
     static ExecutionContext* context = new ExecutionContext();
     return context;
@@ -49,7 +49,7 @@ class ExecutionContext {
 
   ExecutionMode get_execution_mode() { return mode_; }
 
-  bool is_eager_execution() { return mode_ == EAGER; }
+  bool is_eager_debug_execution() { return mode_ == EAGER_DEBUG; }
 
  private:
   bool is_device_context_created_ = false;
@@ -1363,7 +1363,7 @@ class XLATensor {
 
   void SetXlaData(xla::ComputationClient::DataPtr xla_data, bool sync);
 
-  void SetIrValue(ir::Value ir_value, bool copy_from_aten_tensor = false);
+  void SetIrValue(ir::Value ir_value);
   void SetInPlaceIrValue(ir::Value ir_value);
 
   void AssignIrValue(ir::Value ir_value) const;
