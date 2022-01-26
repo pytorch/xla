@@ -141,8 +141,8 @@ supported:
   - index.Tensor
   - index_add
   - index_copy_
-  - index_fill_.int_Scalar
-  - index_fill_.int_Tensor
+  - index_fill.int_Scalar
+  - index_fill.int_Tensor
   - index_put_
   - index_select
   - inverse
@@ -172,9 +172,9 @@ supported:
   - logsumexp
   - lt.Scalar
   - lt.Tensor
-  - masked_fill_.Scalar
-  - masked_fill_.Tensor
-  - masked_scatter_
+  - masked_fill.Scalar
+  - masked_fill.Tensor
+  - masked_scatter
   - masked_select
   - max
   - max.dim

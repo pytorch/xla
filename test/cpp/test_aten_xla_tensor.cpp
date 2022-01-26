@@ -4781,8 +4781,7 @@ TEST_F(AtenXlaTensorTest, TestMaskedScatter) {
       // calls.
       ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
     }
-    ExpectCounterChanged("xla::masked_scatter_",
-                         cpp_test::GetIgnoredCounters());
+    ExpectCounterChanged("xla::masked_scatter", cpp_test::GetIgnoredCounters());
     ResetCounters();
   });
 }
@@ -5333,7 +5332,7 @@ TEST_F(AtenXlaTensorTest, TestIndexFillWithScalar) {
       });
 
       ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
-      ExpectCounterChanged("xla::index_fill_", cpp_test::GetIgnoredCounters());
+      ExpectCounterChanged("xla::index_fill", cpp_test::GetIgnoredCounters());
     }
   }
 }
@@ -5362,7 +5361,7 @@ TEST_F(AtenXlaTensorTest, TestIndexFillWithScalarInPlace) {
       });
 
       ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
-      ExpectCounterChanged("xla::index_fill_", cpp_test::GetIgnoredCounters());
+      ExpectCounterChanged("xla::index_fill", cpp_test::GetIgnoredCounters());
     }
   }
 }
@@ -5392,7 +5391,7 @@ TEST_F(AtenXlaTensorTest, TestIndexFillWithTensor) {
       });
 
       ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
-      ExpectCounterChanged("xla::index_fill_", cpp_test::GetIgnoredCounters());
+      ExpectCounterChanged("xla::index_fill", cpp_test::GetIgnoredCounters());
     }
   }
 }
@@ -5424,7 +5423,7 @@ TEST_F(AtenXlaTensorTest, TestIndexFillWithTensorInPlace) {
       });
 
       ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
-      ExpectCounterChanged("xla::index_fill_", cpp_test::GetIgnoredCounters());
+      ExpectCounterChanged("xla::index_fill", cpp_test::GetIgnoredCounters());
     }
   }
 }
@@ -5454,7 +5453,7 @@ TEST_F(AtenXlaTensorTest, TestIndexFillRank0) {
       });
 
       ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
-      ExpectCounterChanged("xla::index_fill_", cpp_test::GetIgnoredCounters());
+      ExpectCounterChanged("xla::index_fill", cpp_test::GetIgnoredCounters());
     }
   }
 }
@@ -8138,7 +8137,7 @@ TEST_F(AtenXlaTensorTest, TestMaskedFill) {
   });
 
   ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
-  ExpectCounterChanged("xla::masked_fill_", cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::masked_fill", cpp_test::GetIgnoredCounters());
 }
 
 TEST_F(AtenXlaTensorTest, TestMaskedFillInPlace) {
@@ -8157,7 +8156,7 @@ TEST_F(AtenXlaTensorTest, TestMaskedFillInPlace) {
   });
 
   ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
-  ExpectCounterChanged("xla::masked_fill_", cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::masked_fill", cpp_test::GetIgnoredCounters());
 }
 
 TEST_F(AtenXlaTensorTest, TestMaskedFillBroadcast) {
@@ -8175,7 +8174,7 @@ TEST_F(AtenXlaTensorTest, TestMaskedFillBroadcast) {
   });
 
   ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
-  ExpectCounterChanged("xla::masked_fill_", cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::masked_fill", cpp_test::GetIgnoredCounters());
 }
 
 TEST_F(AtenXlaTensorTest, TestFill) {

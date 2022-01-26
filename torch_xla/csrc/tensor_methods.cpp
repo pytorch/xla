@@ -1414,20 +1414,6 @@ XLATensor XLATensor::index_fill(const XLATensor& input, xla::int64_t dim,
   return input.CreateFrom(IndexFill(input, canonical_dim, index, value));
 }
 
-void XLATensor::index_fill_(XLATensor& input, xla::int64_t dim,
-                            const XLATensor& index, const XLATensor& value) {
-  xla::int64_t canonical_dim =
-      XlaHelpers::GetCanonicalDimensionIndex(dim, input.shape().get().rank());
-  input.SetIrValue(IndexFill(input, canonical_dim, index, value));
-}
-
-void XLATensor::index_fill_(XLATensor& input, xla::int64_t dim,
-                            const XLATensor& index, const at::Scalar& value) {
-  xla::int64_t canonical_dim =
-      XlaHelpers::GetCanonicalDimensionIndex(dim, input.shape().get().rank());
-  input.SetIrValue(IndexFill(input, canonical_dim, index, value));
-}
-
 XLATensor XLATensor::index_put(
     const XLATensor& input, absl::Span<const XLATensor> indices,
     xla::int64_t start_dim, const XLATensor& values, bool accumulate,
@@ -1699,18 +1685,19 @@ XLATensor XLATensor::lt(const XLATensor& input, const XLATensor& other) {
   return DispatchComparisonOp(at::aten::lt, input, other);
 }
 
-void XLATensor::masked_fill_(XLATensor& input, const XLATensor& mask,
-                             const at::Scalar& value) {
+XLATensor XLATensor::masked_fill(const XLATensor& input, const XLATensor& mask,
+                                 const at::Scalar& value) {
   ir::ScopePusher ir_scope(at::aten::masked_fill.toQualString());
-  input.SetIrValue(ir::MakeNode<ir::ops::MaskedFill>(
+  return input.CreateFrom(ir::MakeNode<ir::ops::MaskedFill>(
       input.GetIrValue(), MaybeExpand(mask.GetIrValue(), input.shape()),
       value));
 }
 
-void XLATensor::masked_scatter_(XLATensor& input, const XLATensor& mask,
-                                const XLATensor& source) {
+XLATensor XLATensor::masked_scatter(const XLATensor& input,
+                                    const XLATensor& mask,
+                                    const XLATensor& source) {
   ir::ScopePusher ir_scope(at::aten::masked_scatter.toQualString());
-  input.SetIrValue(ir::MakeNode<ir::ops::MaskedScatter>(
+  return input.CreateFrom(ir::MakeNode<ir::ops::MaskedScatter>(
       input.GetIrValue(), MaybeExpand(mask.GetIrValue(), input.shape()),
       source.GetIrValue()));
 }
