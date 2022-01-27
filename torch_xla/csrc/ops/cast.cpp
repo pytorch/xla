@@ -1,6 +1,7 @@
 #include "torch_xla/csrc/ops/cast.h"
 
 #include "tensorflow/compiler/xla/primitive_util.h"
+#include "torch/csrc/lazy/core/tensor_util.h"
 #include "torch_xla/csrc/convert_ops.h"
 #include "torch_xla/csrc/helpers.h"
 #include "torch_xla/csrc/lowering_context.h"
@@ -35,7 +36,7 @@ Cast::Cast(const Value& input, at::ScalarType dtype,
                            MakeXlaPrimitiveType(dtype, /*device=*/nullptr)),
            /*num_outputs=*/1,
            torch::lazy::MHash(101, static_cast<int>(dtype),
-                              OptionalOr<int>(stype, -1))),
+                              torch::lazy::OptionalOr<int>(stype, -1))),
       type_(MakeXlaPrimitiveType(dtype, /*device=*/nullptr)),
       dtype_(dtype),
       stype_(stype) {}

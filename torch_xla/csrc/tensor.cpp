@@ -26,6 +26,7 @@
 #include "tensorflow/core/profiler/lib/traceme.h"
 #include "torch/csrc/autograd/variable.h"
 #include "torch/csrc/lazy/core/hash.h"
+#include "torch/csrc/lazy/core/tensor_util.h"
 #include "torch_xla/csrc/debug_util.h"
 #include "torch_xla/csrc/helpers.h"
 #include "torch_xla/csrc/ir_dump_util.h"
@@ -218,7 +219,7 @@ xla::ComputationClient::DataPtr GetDeviceData(const at::Tensor& tensor,
   XlaDataCacheArena::XlaDataCache* cache = GetXlaDataCache(device);
   xla::ComputationClient::DataPtr device_data = cache->Get(tensor);
   if (device_data == nullptr) {
-    at::Tensor tensor_copy = CopyTensor(tensor);
+    at::Tensor tensor_copy = torch::lazy::CopyTensor(tensor);
     device_data = TensorToXlaData(tensor_copy, device);
     cache->Add(std::move(tensor_copy), device_data);
     XLA_COUNTER("DeviceDataCacheMiss", 1);
@@ -864,7 +865,7 @@ at::Tensor XLATensor::ToTensor(bool detached) {
       } else {
         // Otherwise we need to make a copy to prevent the caller changing our
         // version.
-        tensor = CopyTensor(tensor);
+        tensor = torch::lazy::CopyTensor(tensor);
       }
     }
   }
@@ -889,10 +890,10 @@ void XLATensor::SetTensor(at::Tensor tensor) {
 
 void XLATensor::UpdateFromTensor(at::Tensor tensor, bool sync) {
   if (sync) {
-    at::Tensor typed_tensor = CopyTensor(tensor, dtype(), /*copy=*/false);
+    at::Tensor typed_tensor = torch::lazy::CopyTensor(tensor, dtype(), /*copy=*/false);
     SetIrValue(GetIrValueForTensor(typed_tensor, GetDevice()));
   } else {
-    at::Tensor coyped_tensor = CopyTensor(tensor, dtype());
+    at::Tensor coyped_tensor = torch::lazy::CopyTensor(tensor, dtype());
     SetTensorData(coyped_tensor);
     data()->xla_data = nullptr;
     AssignIrValue(ir::Value());
