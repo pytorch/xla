@@ -152,7 +152,7 @@ struct MinMaxValues {
 };
 
 ir::Value MaybeExpand(const ir::Value& input, const xla::Shape& target_shape) {
-  if (input.shape().dimensions() == target_shape.dimensions()) {
+  if (input.shape().dimensions() >= target_shape.dimensions()) {
     return input;
   }
   return ir::MakeNode<ir::ops::Expand>(
@@ -1689,8 +1689,8 @@ XLATensor XLATensor::masked_fill(const XLATensor& input, const XLATensor& mask,
                                  const at::Scalar& value) {
   ir::ScopePusher ir_scope(at::aten::masked_fill.toQualString());
   return input.CreateFrom(ir::MakeNode<ir::ops::MaskedFill>(
-      input.GetIrValue(), MaybeExpand(mask.GetIrValue(), input.shape()),
-      value));
+      MaybeExpand(input.GetIrValue(), mask.shape()),
+      MaybeExpand(mask.GetIrValue(), input.shape()), value));
 }
 
 XLATensor XLATensor::masked_scatter(const XLATensor& input,
@@ -1698,8 +1698,9 @@ XLATensor XLATensor::masked_scatter(const XLATensor& input,
                                     const XLATensor& source) {
   ir::ScopePusher ir_scope(at::aten::masked_scatter.toQualString());
   return input.CreateFrom(ir::MakeNode<ir::ops::MaskedScatter>(
-      input.GetIrValue(), MaybeExpand(mask.GetIrValue(), input.shape()),
-      source.GetIrValue()));
+      MaybeExpand(input.GetIrValue(), mask.shape()),
+      MaybeExpand(mask.GetIrValue(), input.shape()),
+      MaybeExpand(source.GetIrValue(), input.shape())));
 }
 
 XLATensor XLATensor::masked_select(const XLATensor& input,
