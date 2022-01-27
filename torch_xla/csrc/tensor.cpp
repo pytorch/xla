@@ -453,7 +453,7 @@ XLATensor XLATensor::Create(
     c10::optional<at::ScalarType> logical_element_type) {
   XLATensor xtensor(std::move(ir_value), device, logical_element_type);
   DeviceContextArena::Get()->RegisterTensor(xtensor.data_ptr());
-  if (use_eager_debug_mode()) {
+  if (UseEagerDebugMode()) {
     std::vector<XLATensor> xtensors({xtensor});
     ApplyEagerSync(xtensors);
   }
@@ -627,8 +627,7 @@ void XLATensor::SetIrValue(ir::Value ir_value) {
     AssignIrValue(std::move(ir_value));
     TryLimitGraphSize();
   }
-  if (use_eager_debug_mode() &&
-      this->data()->ir_value->op() != ir::ops::xla_device_data) {
+  if (UseEagerDebugMode() && ShouldSyncIrNode()) {
     std::vector<XLATensor> xtensors({*this});
     ApplyEagerSync(xtensors);
   }
@@ -1682,6 +1681,19 @@ void XLATensor::SetRngSeed(const Device& device, xla::uint64 seed) {
 
 xla::uint64 XLATensor::GetRunningSeed(const Device& device) {
   return DeviceContextArena::Get()->GetRunningSeed(device);
+}
+
+bool XLATensor::UseEagerDebugMode() {
+  static const bool use_eager_debug_mode =
+      xla::sys_util::GetEnvBool("XLA_USE_EAGER_DEBUG_MODE", false);
+  return use_eager_debug_mode;
+}
+
+bool XLATensor::ShouldSyncIrNode() {
+  if (!this->data()->ir_value) {
+    return false;
+  }
+  return this->data()->ir_value->op() != ir::ops::xla_device_data;
 }
 
 }  // namespace torch_xla

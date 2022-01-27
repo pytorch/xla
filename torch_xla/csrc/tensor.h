@@ -1456,11 +1456,9 @@ class XLATensor {
 
   static xla::int64_t GetNextTensorId();
 
-  static bool use_eager_debug_mode() {
-    static const bool use_eager_debug_mode =
-        xla::sys_util::GetEnvBool("XLA_USE_EAGER_DEBUG_MODE", false);
-    return use_eager_debug_mode;
-  }
+  static bool UseEagerDebugMode();
+
+  bool ShouldSyncIrNode();
 
   std::shared_ptr<Data> data_;
 };
