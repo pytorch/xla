@@ -140,7 +140,8 @@ void XLATensorImpl::SetupSizeProperties() {
       numel_ *= dim;
     }
     sizes_and_strides_.set_sizes(updated_sizes);
-    auto updated_strides = torch::lazy::ComputeArrayStrides(xla::util::ToVector<xla::int64_t>(shape.get().dimensions()));
+    auto updated_strides = torch::lazy::ComputeArrayStrides(
+        xla::util::ToVector<xla::int64_t>(shape.get().dimensions()));
     for (int i = 0; i < updated_strides.size(); i++) {
       sizes_and_strides_.stride_at_unchecked(i) = updated_strides[i];
     }

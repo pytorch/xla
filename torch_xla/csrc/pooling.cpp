@@ -223,7 +223,8 @@ PoolSliceIndices ComputeSliceIndices(
     xla::XlaOp linear_index, absl::Span<const xla::int64_t> dimensions,
     absl::Span<const xla::int64_t> window_strides) {
   xla::PrimitiveType scalar_type = XlaHelpers::TypeOfXlaOp(linear_index);
-  std::vector<xla::int64_t> strides = torch::lazy::ComputeArrayStrides(xla::util::ToVector<xla::int64_t>(dimensions));
+  std::vector<xla::int64_t> strides = torch::lazy::ComputeArrayStrides(
+      xla::util::ToVector<xla::int64_t>(dimensions));
   PoolSliceIndices indices;
   xla::XlaOp current_index = linear_index;
   for (size_t i = 0; i < dimensions.size(); ++i) {
