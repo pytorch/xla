@@ -152,7 +152,10 @@ struct MinMaxValues {
 };
 
 ir::Value MaybeExpand(const ir::Value& input, const xla::Shape& target_shape) {
-  if (input.shape().dimensions() >= target_shape.dimensions()) {
+  absl::Span<const xla::int64_t> input_dims = input.shape().dimensions();
+  absl::Span<const xla::int64_t> target_dims = target_shape.dimensions();
+  if (input_dims == target_dims ||
+      (input_dims.size() >= target_dims.size() && input_dims > target_dims)) {
     return input;
   }
   return ir::MakeNode<ir::ops::Expand>(
