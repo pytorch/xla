@@ -275,13 +275,7 @@ class XLATensor::DeviceContextArena {
 
  public:
   static DeviceContextArena* Get() {
-    static DeviceContextArena* arena = []() {
-      auto* ret = new DeviceContextArena();
-      // Setting a flag in ExecutionContext to alert that the device
-      // context is created and the execution mode cannot be changed now
-      ExecutionContext::Get()->set_device_context_created();
-      return ret;
-    }();
+    static DeviceContextArena* arena = new DeviceContextArena();
     return arena;
   }
 
@@ -459,7 +453,7 @@ XLATensor XLATensor::Create(
     c10::optional<at::ScalarType> logical_element_type) {
   XLATensor xtensor(std::move(ir_value), device, logical_element_type);
   DeviceContextArena::Get()->RegisterTensor(xtensor.data_ptr());
-  if (ExecutionContext::Get()->is_eager_debug_execution()) {
+  if (use_eager_debug_mode()) {
     std::vector<XLATensor> xtensors({xtensor});
     ApplyEagerSync(xtensors);
   }
@@ -633,7 +627,7 @@ void XLATensor::SetIrValue(ir::Value ir_value) {
     AssignIrValue(std::move(ir_value));
     TryLimitGraphSize();
   }
-  if (ExecutionContext::Get()->is_eager_debug_execution() &&
+  if (use_eager_debug_mode() &&
       this->data()->ir_value->op() != ir::ops::xla_device_data) {
     std::vector<XLATensor> xtensors({*this});
     ApplyEagerSync(xtensors);

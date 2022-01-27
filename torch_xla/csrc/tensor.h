@@ -24,38 +24,6 @@
 
 namespace torch_xla {
 
-class ExecutionContext {
- public:
-  enum ExecutionMode { LAZY, EAGER_DEBUG };
-  static ExecutionContext* Get() {
-    static ExecutionContext* context = new ExecutionContext();
-    return context;
-  }
-
-  void set_device_context_created() { is_device_context_created_ = true; }
-
-  void set_execution_mode(ExecutionMode mode) {
-    // DeviceContext is created whenever the first tensor is registered. Tensors
-    // get registered when we copy the cpu tensor to device. This would result
-    // in a call to aten::empty. Since, we want to sync output of each aten
-    // output, we cannot let the execution mode be set after the tensor is
-    // registered or after the device context is created.
-    XLA_CHECK(!is_device_context_created_)
-        << "Cannot change execution mode after device context"
-        << " is created. You need to set execution mode before creating "
-           "xla tensors";
-    mode_ = mode;
-  }
-
-  ExecutionMode get_execution_mode() { return mode_; }
-
-  bool is_eager_debug_execution() { return mode_ == EAGER_DEBUG; }
-
- private:
-  bool is_device_context_created_ = false;
-  ExecutionMode mode_ = LAZY;  // default execution mode is lazy
-};
-
 class XLATensor {
   class DeviceContextArena;
   struct Data;
@@ -1487,6 +1455,12 @@ class XLATensor {
       const SyncTensorsConfig& config);
 
   static xla::int64_t GetNextTensorId();
+
+  static bool use_eager_debug_mode() {
+    static const bool use_eager_debug_mode =
+        xla::sys_util::GetEnvBool("XLA_USE_EAGER_DEBUG_MODE", false);
+    return use_eager_debug_mode;
+  }
 
   std::shared_ptr<Data> data_;
 };

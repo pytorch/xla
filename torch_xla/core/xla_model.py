@@ -993,10 +993,3 @@ def get_memory_info(device):
     memory in KB) keys.
   """
   return torch_xla._XLAC._xla_memory_info(str(device))
-
-
-def enable_eager_debug_execution():
-  """Sets the execution mode to eager debug. This setting needs to be done before
-  creating the device context.
-  """
-  torch_xla._XLAC._xla_enable_eager_debug_execution()
