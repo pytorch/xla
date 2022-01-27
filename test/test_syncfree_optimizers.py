@@ -121,6 +121,62 @@ class TestSyncFreeSGD(TestSyncFreeOptimizerBase):
         "weight_decay": 0.1,
         "nesterov": True,
     })
+    self._test_optimizer(
+        syncfree.SGD, torch.optim.SGD, {
+            "lr": 1e-2,
+            "momentum": 0.5,
+            "weight_decay": 0.1,
+            "nesterov": True,
+            "maximize": True,
+        })
+
+
+class TestSyncFreeAdam(TestSyncFreeOptimizerBase):
+
+  def _test_adam_optimizer_helper(self, optim, optim_ref):
+    self._test_optimizer(optim, optim_ref, {
+        "lr": 1e-3,
+        "betas": (0.9, 0.99),
+    })
+    self._test_optimizer(optim, optim_ref, {
+        "lr": 1e-3,
+        "betas": (0.7, 0.77),
+        "weight_decay": 1e-4,
+    })
+    self._test_optimizer(optim, optim_ref, {
+        "lr": 1e-4,
+        "betas": (0.9, 0.999),
+        "weight_decay": 1e-4,
+    })
+    self._test_optimizer(optim, optim_ref, {
+        "lr": 1e-3,
+        "betas": (0.9, 0.999),
+        "weight_decay": 0.1,
+    })
+    self._test_optimizer(optim, optim_ref, {
+        "lr": 1e-3,
+        "betas": (0.9, 0.999),
+        "weight_decay": 0.1,
+        "amsgrad": True,
+    })
+    self._test_optimizer(optim, optim_ref, {
+        "lr": 1e-4,
+        "betas": (0.7, 0.799),
+        "weight_decay": 0.01,
+        "amsgrad": True,
+    })
+    self._test_optimizer(
+        optim, optim_ref, {
+            "lr": 1e-4,
+            "betas": (0.7, 0.799),
+            "weight_decay": 0.01,
+            "amsgrad": True,
+            "maximize": True,
+        })
+
+  def test_adam_optimizer(self):
+    self._test_adam_optimizer_helper(syncfree.Adam, torch.optim.Adam)
+    self._test_adam_optimizer_helper(syncfree.AdamW, torch.optim.AdamW)
 
 
 if __name__ == "__main__":

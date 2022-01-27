@@ -21,6 +21,11 @@ struct AllToAllResult {
   xla::XlaOp token;
 };
 
+struct AllGatherResult {
+  xla::XlaOp result;
+  xla::XlaOp token;
+};
+
 struct CollectivePermuteResult {
   xla::XlaOp result;
   xla::XlaOp token;
@@ -39,6 +44,11 @@ std::vector<xla::XlaOp> BuildAllReduce(
 AllToAllResult BuildAllToAll(
     xla::XlaOp input, xla::XlaOp token, xla::int64_t split_dimension,
     xla::int64_t concat_dimension, xla::int64_t split_count,
+    const std::vector<std::vector<xla::int64_t>>& groups);
+
+AllGatherResult BuildAllGather(
+    xla::XlaOp input, xla::XlaOp token, xla::int64_t dim,
+    xla::int64_t shard_count,
     const std::vector<std::vector<xla::int64_t>>& groups);
 
 CollectivePermuteResult BuildCollectivePermute(

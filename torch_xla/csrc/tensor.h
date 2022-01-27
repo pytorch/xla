@@ -209,6 +209,10 @@ class XLATensor {
       xla::int64_t split_dimension, xla::int64_t concat_dimension,
       xla::int64_t split_count, std::vector<std::vector<xla::int64_t>> groups);
 
+  static std::pair<XLATensor, ir::Value> all_gather(
+      const XLATensor& input, const ir::Value& token, xla::int64_t dim,
+      xla::int64_t shard_count, std::vector<std::vector<xla::int64_t>> groups);
+
   static std::pair<XLATensor, ir::Value> collective_permute(
       const XLATensor& input, const ir::Value& token,
       std::vector<std::pair<xla::int64_t, xla::int64_t>> source_target_pairs);
@@ -216,11 +220,19 @@ class XLATensor {
   static XLATensor get_dimensions_size(const XLATensor& input,
                                        std::vector<xla::int64_t> dimensions);
 
-  static void sgd_optimizer_step_(XLATensor& step, XLATensor& param,
-                                  XLATensor& buf, const XLATensor& found_inf,
+  static void sgd_optimizer_step_(const XLATensor& found_inf, XLATensor& step,
+                                  XLATensor& param, XLATensor& buf,
                                   const XLATensor& d_p, double weight_decay,
                                   double momentum, double lr, double dampening,
-                                  bool nesterov);
+                                  bool nesterov, bool maximize);
+
+  static void adam_optimizer_step_(const XLATensor& found_inf, XLATensor& step,
+                                   XLATensor& param, const XLATensor& grad,
+                                   XLATensor& exp_avg, XLATensor& exp_avg_sq,
+                                   XLATensor& max_exp_avg_sq, double beta1,
+                                   double beta2, double lr, double weight_decay,
+                                   double eps, bool amsgrad, bool maximize,
+                                   bool use_adamw);
 
   static std::vector<XLATensor> user_computation(
       const std::string& opname, absl::Span<const XLATensor> inputs,

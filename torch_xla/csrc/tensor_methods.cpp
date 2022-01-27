@@ -17,10 +17,12 @@
 #include "torch_xla/csrc/ir_util.h"
 #include "torch_xla/csrc/layout_manager.h"
 #include "torch_xla/csrc/lowering_context.h"
+#include "torch_xla/csrc/ops/adam_optimizer_step.h"
 #include "torch_xla/csrc/ops/adaptive_avg_pool2d.h"
 #include "torch_xla/csrc/ops/adaptive_avg_pool3d.h"
 #include "torch_xla/csrc/ops/adaptive_max_pool2d.h"
 #include "torch_xla/csrc/ops/all.h"
+#include "torch_xla/csrc/ops/all_gather.h"
 #include "torch_xla/csrc/ops/all_reduce.h"
 #include "torch_xla/csrc/ops/all_to_all.h"
 #include "torch_xla/csrc/ops/amax.h"
@@ -389,6 +391,14 @@ std::pair<XLATensor, ir::Value> XLATensor::all_to_all(
   return {input.CreateFrom(ir::Value(node, 0)), ir::Value(node, 1)};
 }
 
+std::pair<XLATensor, ir::Value> XLATensor::all_gather(
+    const XLATensor& input, const ir::Value& token, xla::int64_t dim,
+    xla::int64_t shard_count, std::vector<std::vector<xla::int64_t>> groups) {
+  ir::NodePtr node = ir::MakeNode<ir::ops::AllGather>(
+      input.GetIrValue(), token, dim, shard_count, std::move(groups));
+  return {input.CreateFrom(ir::Value(node, 0)), ir::Value(node, 1)};
+}
+
 std::pair<XLATensor, ir::Value> XLATensor::collective_permute(
     const XLATensor& input, const ir::Value& token,
     std::vector<std::pair<xla::int64_t, xla::int64_t>> source_target_pairs) {
@@ -404,28 +414,61 @@ XLATensor XLATensor::get_dimensions_size(const XLATensor& input,
                           at::ScalarType::Int);
 }
 
-void XLATensor::sgd_optimizer_step_(XLATensor& step, XLATensor& param,
-                                    XLATensor& buf, const XLATensor& found_inf,
+void XLATensor::sgd_optimizer_step_(const XLATensor& found_inf, XLATensor& step,
+                                    XLATensor& param, XLATensor& buf,
                                     const XLATensor& d_p, double weight_decay,
                                     double momentum, double lr,
-                                    double dampening, bool nesterov) {
+                                    double dampening, bool nesterov,
+                                    bool maximize) {
   ir::Value weight_decay_value =
       GetIrValueForScalar(weight_decay, param.shape(), param.GetDevice());
   ir::Value momentum_value =
       GetIrValueForScalar(momentum, param.shape(), param.GetDevice());
-  ir::Value lr_value =
-      GetIrValueForScalar(lr, param.shape(), param.GetDevice());
+  ir::Value lr_value = GetIrValueForScalar(maximize ? -lr : lr, param.shape(),
+                                           param.GetDevice());
   ir::Value dampening_value =
       GetIrValueForScalar(dampening, param.shape(), param.GetDevice());
   ir::NodePtr node = ir::MakeNode<ir::ops::SgdOptimizerStep>(
-      step.GetIrValue(), param.GetIrValue(), buf.GetIrValue(),
-      found_inf.GetIrValue(), d_p.GetIrValue(), weight_decay_value,
-      momentum_value, lr_value, dampening_value,
+      found_inf.GetIrValue(), step.GetIrValue(), param.GetIrValue(),
+      buf.GetIrValue(), d_p.GetIrValue(), weight_decay_value, momentum_value,
+      lr_value, dampening_value,
       /*use_weight_decay=*/weight_decay != 0,
       /*use_momentum=*/momentum != 0, /*use_nesterov=*/nesterov);
   step.SetInPlaceIrValue(ir::Value(node, 0));
   param.SetInPlaceIrValue(ir::Value(node, 1));
   buf.SetInPlaceIrValue(ir::Value(node, 2));
+}
+
+void XLATensor::adam_optimizer_step_(
+    const XLATensor& found_inf, XLATensor& step, XLATensor& param,
+    const XLATensor& grad, XLATensor& exp_avg, XLATensor& exp_avg_sq,
+    XLATensor& max_exp_avg_sq, double beta1, double beta2, double lr,
+    double weight_decay, double eps, bool amsgrad, bool maximize,
+    bool use_adamw) {
+  ir::Value grad_value =
+      maximize ? XLATensor::mul(grad, -1).GetIrValue() : grad.GetIrValue();
+  ir::Value beta1_value =
+      GetIrValueForScalar(beta1, found_inf.shape(), found_inf.GetDevice());
+  ir::Value beta2_value =
+      GetIrValueForScalar(beta2, found_inf.shape(), found_inf.GetDevice());
+  ir::Value lr_value =
+      GetIrValueForScalar(lr, found_inf.shape(), found_inf.GetDevice());
+  ir::Value weight_decay_value =
+      GetIrValueForScalar(weight_decay, param.shape(), param.GetDevice());
+  ir::Value eps_value =
+      GetIrValueForScalar(eps, param.shape(), param.GetDevice());
+  ir::NodePtr node = ir::MakeNode<ir::ops::AdamOptimizerStep>(
+      found_inf.GetIrValue(), step.GetIrValue(), param.GetIrValue(), grad_value,
+      exp_avg.GetIrValue(), exp_avg_sq.GetIrValue(),
+      max_exp_avg_sq.GetIrValue(), beta1_value, beta2_value, lr_value,
+      weight_decay_value, eps_value,
+      /*use_weight_decay=*/weight_decay != 0,
+      /*use_amsgrad=*/amsgrad, /*use_adamw=*/use_adamw);
+  step.SetInPlaceIrValue(ir::Value(node, 0));
+  param.SetInPlaceIrValue(ir::Value(node, 1));
+  exp_avg.SetInPlaceIrValue(ir::Value(node, 2));
+  exp_avg_sq.SetInPlaceIrValue(ir::Value(node, 3));
+  max_exp_avg_sq.SetInPlaceIrValue(ir::Value(node, 4));
 }
 
 std::vector<XLATensor> XLATensor::user_computation(
@@ -1453,6 +1496,14 @@ XLATensor XLATensor::isnan(const XLATensor& input) {
   ir::Value result = ir::ops::IsNan(input.GetIrValue());
   ir::Value casted = GetBooleanIrValue(result);
   return input.CreateFrom(casted, at::ScalarType::Bool);
+}
+
+XLATensor XLATensor::kl_div_backward(const XLATensor& grad_output,
+                                     const XLATensor& input,
+                                     const XLATensor& target,
+                                     xla::int64_t reduction, bool log_target) {
+  return tensor_ops::KlDivBackward(grad_output, input, target,
+                                   GetXlaReductionMode(reduction), log_target);
 }
 
 std::tuple<XLATensor, XLATensor> XLATensor::kthvalue(const XLATensor& input,

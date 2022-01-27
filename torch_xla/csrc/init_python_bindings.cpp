@@ -213,6 +213,18 @@ std::pair<at::Tensor, std::shared_ptr<ir::Value>> ReduceScatter(
       std::make_shared<ir::Value>(new_token));
 }
 
+std::pair<at::Tensor, std::shared_ptr<ir::Value>> AllGather(
+    const at::Tensor& input, const std::shared_ptr<ir::Value>& token,
+    xla::int64_t dim, xla::int64_t shard_count,
+    const std::vector<std::vector<xla::int64_t>>& replica_groups) {
+  XLATensor result;
+  ir::Value new_token;
+  std::tie(result, new_token) = XLATensor::all_gather(
+      bridge::GetXlaTensor(input), *token, dim, shard_count, replica_groups);
+  return {bridge::AtenFromXlaTensor(std::move(result)),
+          std::make_shared<ir::Value>(new_token)};
+}
+
 std::pair<at::Tensor, std::shared_ptr<ir::Value>> AllToAll(
     const at::Tensor& input, const std::shared_ptr<ir::Value>& token,
     xla::int64_t split_dimension, xla::int64_t concat_dimension,
@@ -900,6 +912,24 @@ void InitXlaModuleBindings(py::module m) {
           result_tuple[1] = new_token;
           return result_tuple;
         });
+  m.def("_xla_all_gather",
+        [](const at::Tensor& input, const std::shared_ptr<ir::Value>& token,
+           xla::int64_t dim, xla::int64_t shard_count, const py::list& groups) {
+          std::vector<std::vector<xla::int64_t>> replica_groups =
+              CreateReduceGroups(groups);
+          at::Tensor result;
+          std::shared_ptr<ir::Value> new_token;
+          {
+            NoGilSection nogil;
+            std::tie(result, new_token) =
+                AllGather(input, token, dim, shard_count, replica_groups);
+          }
+          auto result_tuple = py::tuple(2);
+          result_tuple[0] = torch::autograd::make_variable(
+              result, /*requires_grad=*/input.requires_grad());
+          result_tuple[1] = new_token;
+          return result_tuple;
+        });
   m.def("_xla_collective_permute", [](const at::Tensor& input,
                                       const std::shared_ptr<ir::Value>& token,
                                       const py::list& pairs) {
@@ -1134,10 +1164,10 @@ void InitXlaModuleBindings(py::module m) {
     xla::ComputationClient::RunLocalService(service_port);
   });
   m.def("_xla_sgd_optimizer_step_",
-        [](at::Tensor& step, at::Tensor& param, at::Tensor& buf,
-           const at::Tensor& found_inf, const at::Tensor& d_p,
-           double weight_decay, double momentum, double lr, double dampening,
-           bool nesterov) {
+        [](const at::Tensor& found_inf, at::Tensor& step, at::Tensor& param,
+           at::Tensor& buf, const at::Tensor& d_p, double weight_decay,
+           double momentum, double lr, double dampening, bool nesterov,
+           bool maximize) {
           {
             NoGilSection nogil;
             XLATensor found_inf_xla = bridge::GetXlaTensor(found_inf);
@@ -1145,9 +1175,30 @@ void InitXlaModuleBindings(py::module m) {
             XLATensor param_xla = bridge::GetXlaTensor(param);
             XLATensor d_p_xla = bridge::GetXlaTensor(d_p);
             XLATensor buf_xla = bridge::GetXlaTensor(buf);
-            XLATensor::sgd_optimizer_step_(step_xla, param_xla, buf_xla,
-                                           found_inf_xla, d_p_xla, weight_decay,
-                                           momentum, lr, dampening, nesterov);
+            XLATensor::sgd_optimizer_step_(
+                found_inf_xla, step_xla, param_xla, buf_xla, d_p_xla,
+                weight_decay, momentum, lr, dampening, nesterov, maximize);
+          }
+        });
+  m.def("_xla_adam_optimizer_step_",
+        [](const at::Tensor& found_inf, at::Tensor& step, at::Tensor& param,
+           at::Tensor& grad, at::Tensor& exp_avg, at::Tensor& exp_avg_sq,
+           at::Tensor& max_exp_avg_sq, double beta1, double beta2, double lr,
+           double weight_decay, double eps, bool amsgrad, bool maximize,
+           bool use_adamw) {
+          {
+            NoGilSection nogil;
+            XLATensor found_inf_xla = bridge::GetXlaTensor(found_inf);
+            XLATensor step_xla = bridge::GetXlaTensor(step);
+            XLATensor param_xla = bridge::GetXlaTensor(param);
+            XLATensor grad_xla = bridge::GetXlaTensor(grad);
+            XLATensor exp_avg_xla = bridge::GetXlaTensor(exp_avg);
+            XLATensor exp_avg_sq_xla = bridge::GetXlaTensor(exp_avg_sq);
+            XLATensor max_exp_avg_sq_xla = bridge::GetXlaTensor(max_exp_avg_sq);
+            XLATensor::adam_optimizer_step_(
+                found_inf_xla, step_xla, param_xla, grad_xla, exp_avg_xla,
+                exp_avg_sq_xla, max_exp_avg_sq_xla, beta1, beta2, lr,
+                weight_decay, eps, amsgrad, maximize, use_adamw);
           }
         });
 
