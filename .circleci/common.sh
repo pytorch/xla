@@ -12,7 +12,7 @@ export CMAKE_PREFIX_PATH=${CMAKE_PREFIX_PATH:-${CONDA_PREFIX:-"$(dirname $(which
 function clone_pytorch() {
   PYTORCH_DIR=$1
   XLA_DIR=$2
-  git clone --branch ivan/add-symbol-qr --quiet https://github.com/pytorch/pytorch.git "$PYTORCH_DIR"
+  git clone --quiet https://github.com/pytorch/pytorch.git "$PYTORCH_DIR"
   cp -r "$PWD" "$XLA_DIR"
 }
 
