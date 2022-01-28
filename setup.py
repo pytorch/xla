@@ -53,7 +53,7 @@ import torch
 base_dir = os.path.dirname(os.path.abspath(__file__))
 third_party_path = os.path.join(base_dir, 'third_party')
 
-_libtpu_version = '0.1.dev20220118'
+_libtpu_version = '0.1.dev20220128'
 _litbpu_storage_path = f'https://storage.googleapis.com/cloud-tpu-tpuvm-artifacts/wheels/libtpu-nightly/libtpu_nightly-{_libtpu_version}-py3-none-any.whl'
 
 
