@@ -1,6 +1,7 @@
 #include "torch_xla/csrc/ops/prod.h"
 
 #include "absl/strings/str_join.h"
+#include "torch/csrc/lazy/core/tensor_util.h"
 #include "torch_xla/csrc/convert_ops.h"
 #include "torch_xla/csrc/helpers.h"
 #include "torch_xla/csrc/lowering_context.h"
@@ -51,7 +52,7 @@ Prod::Prod(const Value& input, std::vector<xla::int64_t> dimensions,
            },
            /*num_outputs=*/1,
            torch::lazy::MHash(dimensions, keep_reduced_dimensions,
-                              OptionalOr<int>(dtype, -1))),
+                              torch::lazy::OptionalOr<int>(dtype, -1))),
       dimensions_(std::move(dimensions)),
       keep_reduced_dimensions_(keep_reduced_dimensions),
       dtype_(dtype) {}
@@ -71,7 +72,7 @@ std::string Prod::ToString() const {
   std::stringstream ss;
   ss << Node::ToString() << ", dimensions=(" << absl::StrJoin(dimensions_, ", ")
      << "), keep_reduced_dimensions=" << keep_reduced_dimensions_
-     << ", dtype=" << OptionalOr<int>(dtype_, -1);
+     << ", dtype=" << torch::lazy::OptionalOr<int>(dtype_, -1);
   return ss.str();
 }
 

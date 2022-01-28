@@ -30,8 +30,9 @@ inline NodePtr GenericOp(
     Generic::LowerFn lower_fn, size_t num_outputs = 1,
     // cast to uint32_t to avoid ambiguous constructor of uint128
     torch::lazy::hash_t hash_seed = (uint32_t)0x5a2d296e9) {
-  return MakeNode<Generic>(std::move(op), operands, std::move(shape),
-                           std::move(lower_fn), num_outputs, hash_seed);
+  return torch_xla::ir::MakeNode<Generic>(std::move(op), operands,
+                                          std::move(shape), std::move(lower_fn),
+                                          num_outputs, hash_seed);
 }
 
 inline NodePtr GenericOp(
@@ -40,14 +41,16 @@ inline NodePtr GenericOp(
     size_t num_outputs = 1,
     // cast to uint32_t to avoid ambiguous constructor of uint128
     torch::lazy::hash_t hash_seed = (uint32_t)0x5a2d296e9) {
-  return MakeNode<Generic>(std::move(op), operands, shape_fn,
-                           std::move(lower_fn), num_outputs, hash_seed);
+  return torch_xla::ir::MakeNode<Generic>(std::move(op), operands, shape_fn,
+                                          std::move(lower_fn), num_outputs,
+                                          hash_seed);
 }
 
 inline NodePtr GenericOp(OpKind op, xla::Shape shape, Generic::LowerFn lower_fn,
                          size_t num_outputs, torch::lazy::hash_t hash_seed) {
-  return MakeNode<Generic>(std::move(op), std::move(shape), std::move(lower_fn),
-                           num_outputs, hash_seed);
+  return torch_xla::ir::MakeNode<Generic>(std::move(op), std::move(shape),
+                                          std::move(lower_fn), num_outputs,
+                                          hash_seed);
 }
 
 NodePtr Acos(const Value& input);

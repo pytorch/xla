@@ -6,6 +6,7 @@
 
 #include "tensorflow/compiler/xla/xla_client/computation_client.h"
 #include "tensorflow/compiler/xla/xla_client/debug_macros.h"
+#include "torch/csrc/lazy/core/tensor_util.h"
 #include "torch_xla/csrc/aten_xla_bridge.h"
 #include "torch_xla/csrc/device.h"
 #include "torch_xla/csrc/layout_manager.h"
@@ -139,7 +140,8 @@ void XLATensorImpl::SetupSizeProperties() {
       numel_ *= dim;
     }
     sizes_and_strides_.set_sizes(updated_sizes);
-    auto updated_strides = ComputeArrayStrides(shape.get().dimensions());
+    auto updated_strides = torch::lazy::ComputeArrayStrides(
+        xla::util::ToVector<xla::int64_t>(shape.get().dimensions()));
     for (int i = 0; i < updated_strides.size(); i++) {
       sizes_and_strides_.stride_at_unchecked(i) = updated_strides[i];
     }
