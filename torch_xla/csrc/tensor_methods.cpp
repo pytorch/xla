@@ -1202,6 +1202,11 @@ XLATensor XLATensor::div(const XLATensor& input, const XLATensor& other,
 XLATensor XLATensor::div(const XLATensor& input, const at::Scalar& other) {
   at::ScalarType scalar_type =
       at::typeMetaToScalarType(c10::get_default_dtype());
+  xla::PrimitiveType input_type = input.shape().get().element_type();
+  bool input_is_float = xla::primitive_util::IsFloatingPointType(input_type);
+  if (input_is_float) {
+    scalar_type = TensorTypeFromXlaType(input_type);
+  }
   ir::Value input_value = GetFloatingIrValue(input, scalar_type);
   ir::Value other_value = GetIrValueForScalar(
       other, input_value.shape().element_type(), input.GetDevice());
