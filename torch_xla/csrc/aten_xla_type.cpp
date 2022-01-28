@@ -9,6 +9,7 @@
 #include "tensorflow/compiler/xla/xla_client/metrics.h"
 #include "tensorflow/compiler/xla/xla_client/sys_util.h"
 #include "tensorflow/compiler/xla/xla_client/util.h"
+#include "torch/csrc/lazy/core/tensor_util.h"
 #include "torch_xla/csrc/XLANativeFunctions.h"
 #include "torch_xla/csrc/aten_autograd_ops.h"
 #include "torch_xla/csrc/aten_cpu_fallback.h"
@@ -415,7 +416,7 @@ at::Tensor XLANativeFunctions::_copy_from(const at::Tensor& self,
   } else if (!dst_tensor) {
     at::Tensor tensor = self_tensor->ToTensor(/*detached=*/true);
     at::Tensor typed_tensor =
-        CopyTensor(tensor, dst.scalar_type(), /*copy=*/false);
+        torch::lazy::CopyTensor(tensor, dst.scalar_type(), /*copy=*/false);
     dst.resize_as_(typed_tensor).copy_(typed_tensor);
   } else {
     XLATensor::copy_(*dst_tensor, *self_tensor);
@@ -435,7 +436,7 @@ at::Tensor XLANativeFunctions::_copy_from_and_resize(const at::Tensor& self,
   } else if (!dst_tensor) {
     at::Tensor tensor = self_tensor->ToTensor(/*detached=*/true);
     at::Tensor typed_tensor =
-        CopyTensor(tensor, dst.scalar_type(), /*copy=*/false);
+        torch::lazy::CopyTensor(tensor, dst.scalar_type(), /*copy=*/false);
     dst.resize_as_(typed_tensor).copy_(typed_tensor);
   } else {
     // at this point we know dst is an XLA tensor
@@ -2230,7 +2231,7 @@ at::Tensor XLANativeFunctions::nan_to_num(const at::Tensor& self,
   XLA_FN_COUNTER("xla::");
   // nan_to_num doesn't apply to integer types.
   if (!at::native::is_floating_point(self)) {
-    return CopyTensor(self);
+    return torch::lazy::CopyTensor(self);
   }
   XLATensor input_tensor = bridge::GetXlaTensor(self);
   const Device& device = input_tensor.GetDevice();

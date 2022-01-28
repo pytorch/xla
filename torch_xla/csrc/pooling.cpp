@@ -7,6 +7,7 @@
 #include "tensorflow/compiler/xla/client/lib/slicing.h"
 #include "tensorflow/compiler/xla/xla_client/debug_macros.h"
 #include "tensorflow/compiler/xla/xla_client/util.h"
+#include "torch/csrc/lazy/core/tensor_util.h"
 #include "torch_xla/csrc/data_ops.h"
 #include "torch_xla/csrc/helpers.h"
 #include "torch_xla/csrc/tensor_util.h"
@@ -222,7 +223,8 @@ PoolSliceIndices ComputeSliceIndices(
     xla::XlaOp linear_index, absl::Span<const xla::int64_t> dimensions,
     absl::Span<const xla::int64_t> window_strides) {
   xla::PrimitiveType scalar_type = XlaHelpers::TypeOfXlaOp(linear_index);
-  std::vector<xla::int64_t> strides = ComputeArrayStrides(dimensions);
+  std::vector<xla::int64_t> strides = torch::lazy::ComputeArrayStrides(
+      xla::util::ToVector<xla::int64_t>(dimensions));
   PoolSliceIndices indices;
   xla::XlaOp current_index = linear_index;
   for (size_t i = 0; i < dimensions.size(); ++i) {
