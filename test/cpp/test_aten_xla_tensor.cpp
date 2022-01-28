@@ -4786,6 +4786,31 @@ TEST_F(AtenXlaTensorTest, TestMaskedScatter) {
   });
 }
 
+TEST_F(AtenXlaTensorTest, TestMaskedScatterInPlace) {
+  torch::Tensor a = torch::rand({3, 5}, torch::TensorOptions(torch::kFloat));
+  torch::Tensor b =
+      torch::randint(0, 2, {3, 5}, torch::TensorOptions(torch::kBool));
+  torch::Tensor c = torch::rand({15}, torch::TensorOptions(torch::kFloat));
+  ForEachDevice([&](const torch::Device& device) {
+    torch::Tensor xla_a = CopyToDevice(a, device);
+    torch::Tensor xla_b = CopyToDevice(b, device);
+    torch::Tensor xla_c = CopyToDevice(c, device);
+    torch::Tensor result = a.masked_scatter_(b, c);
+    torch::Tensor xla_result = xla_a.masked_scatter_(xla_b, xla_c);
+    AllClose(result, xla_result);
+    AllClose(a, xla_a);
+
+    if (DebugUtil::ExperimentEnabled("masked_scatter")) {
+      // If the masked_select support is enabled, we must not see any aten::
+      // calls.
+      ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+    }
+    ExpectCounterChanged("xla::masked_scatter_",
+                         cpp_test::GetIgnoredCounters());
+    ResetCounters();
+  });
+}
+
 TEST_F(AtenXlaTensorTest, TestMultiIndexHeadNull) {
   for (torch::ScalarType scalar_type :
        {torch::kFloat, torch::kByte, torch::kChar, torch::kShort, torch::kInt,
@@ -5361,7 +5386,7 @@ TEST_F(AtenXlaTensorTest, TestIndexFillWithScalarInPlace) {
       });
 
       ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
-      ExpectCounterChanged("xla::index_fill", cpp_test::GetIgnoredCounters());
+      ExpectCounterChanged("xla::index_fill_", cpp_test::GetIgnoredCounters());
     }
   }
 }
@@ -5423,7 +5448,7 @@ TEST_F(AtenXlaTensorTest, TestIndexFillWithTensorInPlace) {
       });
 
       ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
-      ExpectCounterChanged("xla::index_fill", cpp_test::GetIgnoredCounters());
+      ExpectCounterChanged("xla::index_fill_", cpp_test::GetIgnoredCounters());
     }
   }
 }
@@ -8156,7 +8181,7 @@ TEST_F(AtenXlaTensorTest, TestMaskedFillInPlace) {
   });
 
   ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
-  ExpectCounterChanged("xla::masked_fill", cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::masked_fill_", cpp_test::GetIgnoredCounters());
 }
 
 TEST_F(AtenXlaTensorTest, TestMaskedFillBroadcast) {

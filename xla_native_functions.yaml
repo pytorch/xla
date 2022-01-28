@@ -143,6 +143,8 @@ supported:
   - index_copy_
   - index_fill.int_Scalar
   - index_fill.int_Tensor
+  - index_fill_.int_Scalar
+  - index_fill_.int_Tensor
   - index_put_
   - index_select
   - inverse
@@ -174,7 +176,10 @@ supported:
   - lt.Tensor
   - masked_fill.Scalar
   - masked_fill.Tensor
+  - masked_fill_.Scalar
+  - masked_fill_.Tensor
   - masked_scatter
+  - masked_scatter_
   - masked_select
   - max
   - max.dim

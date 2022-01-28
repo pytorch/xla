@@ -614,6 +614,12 @@ class XLATensor {
   static XLATensor index_fill(const XLATensor& input, xla::int64_t dim,
                               const XLATensor& index, const XLATensor& value);
 
+  static void index_fill_(XLATensor& input, xla::int64_t dim,
+                          const XLATensor& index, const XLATensor& value);
+
+  static void index_fill_(XLATensor& input, xla::int64_t dim,
+                          const XLATensor& index, const at::Scalar& value);
+
   // Puts values into the input tensor using the given indices (a tuple of
   // tensors) and returns the result.
   static XLATensor index_put(const XLATensor& input,
@@ -726,8 +732,14 @@ class XLATensor {
   static XLATensor masked_fill(const XLATensor& input, const XLATensor& mask,
                                const at::Scalar& value);
 
+  static void masked_fill_(XLATensor& input, const XLATensor& mask,
+                           const at::Scalar& value);
+
   static XLATensor masked_scatter(const XLATensor& input, const XLATensor& mask,
                                   const XLATensor& source);
+
+  static void masked_scatter_(XLATensor& input, const XLATensor& mask,
+                              const XLATensor& source);
 
   static XLATensor masked_select(const XLATensor& input, const XLATensor& mask);
 

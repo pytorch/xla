@@ -1641,6 +1641,25 @@ at::Tensor XLANativeFunctions::index_fill(const at::Tensor& self, int64_t dim,
       bridge::GetXlaTensor(value)));
 }
 
+at::Tensor& XLANativeFunctions::index_fill_(at::Tensor& self, int64_t dim,
+                                            const at::Tensor& index,
+                                            const at::Scalar& value) {
+  XLA_FN_COUNTER("xla::");
+  XLATensor self_tensor = bridge::GetXlaTensor(self);
+  XLATensor::index_fill_(self_tensor, dim, bridge::GetXlaTensor(index), value);
+  return self;
+}
+
+at::Tensor& XLANativeFunctions::index_fill_(at::Tensor& self, int64_t dim,
+                                            const at::Tensor& index,
+                                            const at::Tensor& value) {
+  XLA_FN_COUNTER("xla::");
+  XLATensor self_tensor = bridge::GetXlaTensor(self);
+  XLATensor::index_fill_(self_tensor, dim, bridge::GetXlaTensor(index),
+                         bridge::GetXlaTensor(value));
+  return self;
+}
+
 at::Tensor& XLANativeFunctions::index_put_(
     at::Tensor& self, const c10::List<c10::optional<at::Tensor>>& indices,
     const at::Tensor& values, bool accumulate) {
@@ -1880,6 +1899,25 @@ at::Tensor XLANativeFunctions::masked_fill(const at::Tensor& self,
   return masked_fill(self, mask, value.item());
 }
 
+at::Tensor& XLANativeFunctions::masked_fill_(at::Tensor& self,
+                                             const at::Tensor& mask,
+                                             const at::Scalar& value) {
+  XLA_FN_COUNTER("xla::");
+  XLATensor self_tensor = bridge::GetXlaTensor(self);
+  XLATensor::masked_fill_(self_tensor, bridge::GetXlaTensor(mask), value);
+  return self;
+}
+
+at::Tensor& XLANativeFunctions::masked_fill_(at::Tensor& self,
+                                             const at::Tensor& mask,
+                                             const at::Tensor& value) {
+  XLA_FN_COUNTER("xla::");
+  XLA_CHECK_EQ(value.dim(), 0) << "masked_fill_ only supports a 0-dimensional "
+                               << "value tensor, but got tensor "
+                               << "with " << value.dim() << " dimension(s).";
+  return masked_fill_(self, mask, value.item());
+}
+
 at::Tensor XLANativeFunctions::masked_scatter(const at::Tensor& self,
                                               const at::Tensor& mask,
                                               const at::Tensor& source) {
@@ -1887,6 +1925,16 @@ at::Tensor XLANativeFunctions::masked_scatter(const at::Tensor& self,
   return bridge::AtenFromXlaTensor(XLATensor::masked_scatter(
       bridge::GetXlaTensor(self), bridge::GetXlaTensor(mask),
       bridge::GetXlaTensor(source)));
+}
+
+at::Tensor& XLANativeFunctions::masked_scatter_(at::Tensor& self,
+                                                const at::Tensor& mask,
+                                                const at::Tensor& source) {
+  XLA_FN_COUNTER("xla::");
+  XLATensor self_tensor = bridge::GetXlaTensor(self);
+  XLATensor::masked_scatter_(self_tensor, bridge::GetXlaTensor(mask),
+                             bridge::GetXlaTensor(source));
+  return self;
 }
 
 at::Tensor XLANativeFunctions::masked_select(const at::Tensor& self,

@@ -155,7 +155,8 @@ ir::Value MaybeExpand(const ir::Value& input, const xla::Shape& target_shape) {
   absl::Span<const xla::int64_t> input_dims = input.shape().dimensions();
   absl::Span<const xla::int64_t> target_dims = target_shape.dimensions();
   if (input_dims == target_dims ||
-      (input_dims.size() >= target_dims.size() && input_dims > target_dims)) {
+      (input_dims.size() == target_dims.size() && input_dims > target_dims) ||
+      input_dims.size() > target_dims.size()) {
     return input;
   }
   return ir::MakeNode<ir::ops::Expand>(
@@ -1417,6 +1418,20 @@ XLATensor XLATensor::index_fill(const XLATensor& input, xla::int64_t dim,
   return input.CreateFrom(IndexFill(input, canonical_dim, index, value));
 }
 
+void XLATensor::index_fill_(XLATensor& input, xla::int64_t dim,
+                            const XLATensor& index, const XLATensor& value) {
+  xla::int64_t canonical_dim =
+      XlaHelpers::GetCanonicalDimensionIndex(dim, input.shape().get().rank());
+  input.SetIrValue(IndexFill(input, canonical_dim, index, value));
+}
+
+void XLATensor::index_fill_(XLATensor& input, xla::int64_t dim,
+                            const XLATensor& index, const at::Scalar& value) {
+  xla::int64_t canonical_dim =
+      XlaHelpers::GetCanonicalDimensionIndex(dim, input.shape().get().rank());
+  input.SetIrValue(IndexFill(input, canonical_dim, index, value));
+}
+
 XLATensor XLATensor::index_put(
     const XLATensor& input, absl::Span<const XLATensor> indices,
     xla::int64_t start_dim, const XLATensor& values, bool accumulate,
@@ -1696,14 +1711,29 @@ XLATensor XLATensor::masked_fill(const XLATensor& input, const XLATensor& mask,
       MaybeExpand(mask.GetIrValue(), input.shape()), value));
 }
 
+void XLATensor::masked_fill_(XLATensor& input, const XLATensor& mask,
+                             const at::Scalar& value) {
+  ir::ScopePusher ir_scope(at::aten::masked_fill.toQualString());
+  input.SetIrValue(ir::MakeNode<ir::ops::MaskedFill>(
+      input.GetIrValue(), MaybeExpand(mask.GetIrValue(), input.shape()),
+      value));
+}
+
 XLATensor XLATensor::masked_scatter(const XLATensor& input,
                                     const XLATensor& mask,
                                     const XLATensor& source) {
   ir::ScopePusher ir_scope(at::aten::masked_scatter.toQualString());
   return input.CreateFrom(ir::MakeNode<ir::ops::MaskedScatter>(
       MaybeExpand(input.GetIrValue(), mask.shape()),
-      MaybeExpand(mask.GetIrValue(), input.shape()),
-      MaybeExpand(source.GetIrValue(), input.shape())));
+      MaybeExpand(mask.GetIrValue(), input.shape()), source.GetIrValue()));
+}
+
+void XLATensor::masked_scatter_(XLATensor& input, const XLATensor& mask,
+                                const XLATensor& source) {
+  ir::ScopePusher ir_scope(at::aten::masked_scatter.toQualString());
+  input.SetIrValue(ir::MakeNode<ir::ops::MaskedScatter>(
+      input.GetIrValue(), MaybeExpand(mask.GetIrValue(), input.shape()),
+      source.GetIrValue()));
 }
 
 XLATensor XLATensor::masked_select(const XLATensor& input,
