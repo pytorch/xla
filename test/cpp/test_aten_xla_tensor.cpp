@@ -2016,18 +2016,18 @@ TEST_F(AtenXlaTensorTest, TestLayerNormBackward) {
   }
 }
 
-TEST_F(AtenXlaTensorTest, TestNuclearNorm) {
-  torch::Tensor a = torch::rand({4, 3}, torch::TensorOptions(torch::kFloat));
-  torch::Tensor b = torch::nuclear_norm(a);
-  ForEachDevice([&](const torch::Device& device) {
-    torch::Tensor xla_a = CopyToDevice(a, device);
-    torch::Tensor xla_b = torch::nuclear_norm(xla_a);
-    AllClose(b, xla_b);
-  });
+// TEST_F(AtenXlaTensorTest, TestNuclearNorm) {
+//   torch::Tensor a = torch::rand({4, 3}, torch::TensorOptions(torch::kFloat));
+//   torch::Tensor b = torch::nuclear_norm(a);
+//   ForEachDevice([&](const torch::Device& device) {
+//     torch::Tensor xla_a = CopyToDevice(a, device);
+//     torch::Tensor xla_b = torch::nuclear_norm(xla_a);
+//     AllClose(b, xla_b);
+//   });
 
-  ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
-  ExpectCounterChanged("xla::svd", cpp_test::GetIgnoredCounters());
-}
+//   ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+//   ExpectCounterChanged("xla::svd", cpp_test::GetIgnoredCounters());
+// }
 
 TEST_F(AtenXlaTensorTest, TestPairwiseDistance) {
   torch::Tensor x1 = torch::rand({4, 3}, torch::TensorOptions(torch::kFloat));
