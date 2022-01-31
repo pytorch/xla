@@ -11,6 +11,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torch_xla.core.xla_model as xm
 import unittest
+import numpy as np
 try:
   from torch_xla.amp import syncfree
 except ImportError:
@@ -91,11 +92,19 @@ class TestSyncFreeOptimizerBase(unittest.TestCase):
         xm.optimizer_step(ref_optimizer)
       xm.mark_step()
       # check loss
-      assert syncfree_loss.allclose(ref_loss, rtol=1e-3, atol=1e-3)
+      np.testing.assert_allclose(
+          ref_loss.cpu().detach().numpy(),
+          syncfree_loss.cpu().detach().numpy(),
+          rtol=1e-2,
+          atol=1e-2)
 
     # check weight
     for p, p_ref in zip(syncfree_model.parameters(), ref_model.parameters()):
-      assert p.allclose(p_ref, rtol=1e-2, atol=1e-2)
+      np.testing.assert_allclose(
+          p.cpu().detach().numpy(),
+          p_ref.cpu().detach().numpy(),
+          rtol=1e-2,
+          atol=1e-2)
 
 
 class TestSyncFreeSGD(TestSyncFreeOptimizerBase):
