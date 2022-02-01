@@ -8,6 +8,7 @@
 #include "tensorflow/compiler/xla/xla_client/debug_macros.h"
 #include "tensorflow/compiler/xla/xla_client/util.h"
 #include "torch/csrc/lazy/core/tensor_util.h"
+#include "torch/csrc/lazy/core/util.h"
 #include "torch_xla/csrc/data_ops.h"
 #include "torch_xla/csrc/helpers.h"
 #include "torch_xla/csrc/tensor_util.h"
@@ -51,7 +52,7 @@ xla::TensorFormat MakeNCHWFormat(int64_t spatial_dim_count) {
   return {/*batch_dimension=*/0,
           /*feature_dimension=*/1,
           /*spatial_dimensions=*/
-          xla::util::Iota<int64_t>(spatial_dim_count, 2)};
+          torch::lazy::Iota<int64_t>(spatial_dim_count, 2)};
 }
 
 // Construct the pooling attributes for the given kernel size, stride and
@@ -225,7 +226,7 @@ PoolSliceIndices ComputeSliceIndices(xla::XlaOp linear_index,
                                      absl::Span<const int64_t> window_strides) {
   xla::PrimitiveType scalar_type = XlaHelpers::TypeOfXlaOp(linear_index);
   std::vector<int64_t> strides = torch::lazy::ComputeArrayStrides(
-      xla::util::ToVector<int64_t>(dimensions));
+      torch::lazy::ToVector<int64_t>(dimensions));
   PoolSliceIndices indices;
   xla::XlaOp current_index = linear_index;
   for (size_t i = 0; i < dimensions.size(); ++i) {

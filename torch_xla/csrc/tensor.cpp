@@ -28,6 +28,7 @@
 #include "torch/csrc/lazy/core/hash.h"
 #include "torch/csrc/lazy/core/helpers.h"
 #include "torch/csrc/lazy/core/tensor_util.h"
+#include "torch/csrc/lazy/core/util.h"
 #include "torch_xla/csrc/debug_util.h"
 #include "torch_xla/csrc/helpers.h"
 #include "torch_xla/csrc/ir_dump_util.h"
@@ -168,7 +169,7 @@ class XlaDataCacheArena {
   struct TensorHasher {
     size_t operator()(const at::Tensor& tensor) const {
       return torch::lazy::HashReduce(torch::lazy::HashCombine(
-          xla::util::GetEnumValue(tensor.scalar_type()), TensorHash(tensor)));
+          torch::lazy::GetEnumValue(tensor.scalar_type()), TensorHash(tensor)));
     };
   };
   struct TensorComparer {
@@ -738,7 +739,7 @@ ir::Value XLATensor::GetIrValueForConstant(const at::Scalar& value,
       ir::ops::ScalarOp(std::move(value), shape.element_type());
   if (!shape.dimensions().empty()) {
     ir_value = ir::MakeNode<ir::ops::Expand>(
-        ir_value, xla::util::ToVector<int64_t>(shape.dimensions()));
+        ir_value, torch::lazy::ToVector<int64_t>(shape.dimensions()));
   }
   return ir_value;
 }
@@ -765,7 +766,7 @@ ir::Value XLATensor::GetIrValueForScalar(const at::Scalar& value,
   ir::Value ir_value = GetIrValueForScalar(value, type, device);
   if (!dimensions.empty()) {
     ir_value = ir::MakeNode<ir::ops::Expand>(
-        ir_value, xla::util::ToVector<int64_t>(dimensions));
+        ir_value, torch::lazy::ToVector<int64_t>(dimensions));
   }
   return ir_value;
 }

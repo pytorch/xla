@@ -14,6 +14,7 @@
 #include "tensorflow/compiler/xla/xla_client/util.h"
 #include "tensorflow/stream_executor/dnn.h"
 #include "torch/csrc/lazy/core/helpers.h"
+#include "torch/csrc/lazy/core/util.h"
 #include "torch_xla/csrc/convert_ops.h"
 #include "torch_xla/csrc/data_ops.h"
 #include "torch_xla/csrc/helpers.h"
@@ -91,15 +92,17 @@ xla::XlaOp DotExpand(xla::XlaOp op, const xla::Shape& op_shape,
                            op_shape.dimensions().begin(),
                            op_shape.dimensions().end());
   return xla::BroadcastInDim(result, broadcasted_sizes,
-                             xla::util::Iota<int64_t>(to_shape.rank()));
+                             torch::lazy::Iota<int64_t>(to_shape.rank()));
 }
 
 std::pair<xla::XlaOp, xla::XlaOp> DotBroadcast(xla::XlaOp lhs,
                                                const xla::Shape& lhs_shape,
                                                xla::XlaOp rhs,
                                                const xla::Shape& rhs_shape) {
-  auto lhs_dimensions = xla::util::ToVector<int64_t>(lhs_shape.dimensions());
-  auto rhs_dimensions = xla::util::ToVector<int64_t>(rhs_shape.dimensions());
+  auto lhs_dimensions =
+      torch::lazy::ToVector<int64_t>(lhs_shape.dimensions());
+  auto rhs_dimensions =
+      torch::lazy::ToVector<int64_t>(rhs_shape.dimensions());
   XLA_CHECK_EQ(lhs_dimensions.size(), rhs_dimensions.size());
   for (int64_t i = 0; i < lhs_dimensions.size() - 2; ++i) {
     if (lhs_dimensions[i] == rhs_dimensions[i]) {
@@ -119,11 +122,13 @@ std::pair<xla::XlaOp, xla::XlaOp> DotBroadcast(xla::XlaOp lhs,
   xla::XlaOp broadcasted_rhs = rhs;
   if (lhs_dimensions != lhs_shape.dimensions()) {
     broadcasted_lhs = xla::BroadcastInDim(
-        lhs, lhs_dimensions, xla::util::Iota<int64_t>(lhs_dimensions.size()));
+        lhs, lhs_dimensions,
+        torch::lazy::Iota<int64_t>(lhs_dimensions.size()));
   }
   if (rhs_dimensions != rhs_shape.dimensions()) {
     broadcasted_rhs = xla::BroadcastInDim(
-        rhs, rhs_dimensions, xla::util::Iota<int64_t>(rhs_dimensions.size()));
+        rhs, rhs_dimensions,
+        torch::lazy::Iota<int64_t>(rhs_dimensions.size()));
   }
   return std::make_pair(broadcasted_lhs, broadcasted_rhs);
 }
@@ -167,7 +172,7 @@ xla::XlaOp CreateIndexAlongDim(
   if (broadcast_value_to_index) {
     const xla::Shape& index_shape = XlaHelpers::ShapeOfXlaOp(index);
     std::vector<int64_t> update_dimensions =
-        xla::util::ToVector<int64_t>(buffer_shape.dimensions());
+        torch::lazy::ToVector<int64_t>(buffer_shape.dimensions());
     update_dimensions[dim] = index_shape.dimensions(0);
     updates = xla::Broadcast(updates, update_dimensions);
   }

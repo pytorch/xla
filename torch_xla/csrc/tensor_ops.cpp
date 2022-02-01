@@ -3,6 +3,7 @@
 #include "tensorflow/compiler/xla/xla_client/debug_macros.h"
 #include "tensorflow/compiler/xla/xla_client/util.h"
 #include "torch/csrc/lazy/core/helpers.h"
+#include "torch/csrc/lazy/core/util.h"
 #include "torch_xla/csrc/helpers.h"
 #include "torch_xla/csrc/ir.h"
 
@@ -65,7 +66,7 @@ XLATensor KlDivBackward(const XLATensor& grad_output, const XLATensor& input,
   auto input_shape_ref = input.shape();
   XLATensor expanded_grad_output = XLATensor::expand(
       grad_output,
-      xla::util::ToVector<int64_t>(input_shape_ref.get().dimensions()));
+      torch::lazy::ToVector<int64_t>(input_shape_ref.get().dimensions()));
   XLATensor grad_input;
   if (!log_target) {
     grad_input = XLATensor::where(
@@ -114,7 +115,7 @@ XLATensor SmoothL1Loss(const XLATensor& input, const XLATensor& target,
   XLATensor elementwise_loss = XLATensor::where(
       XLATensor::lt(abs_diff, beta_scalar), squared_loss, l1_loss);
   auto all_dimensions =
-      xla::util::Iota<int64_t>((*broadcasted_input.shape()).rank());
+      torch::lazy::Iota<int64_t>((*broadcasted_input.shape()).rank());
   switch (reduction) {
     case ReductionMode::kNone:
       return elementwise_loss;
@@ -126,7 +127,7 @@ XLATensor SmoothL1Loss(const XLATensor& input, const XLATensor& target,
                             broadcasted_input.dtype());
     default:
       XLA_ERROR() << "Invalid reduction type: "
-                  << xla::util::GetEnumValue(reduction);
+                  << torch::lazy::GetEnumValue(reduction);
   }
 }
 
@@ -167,7 +168,7 @@ XLATensor SmoothL1LossBackward(const XLATensor& grad_output,
     }
     default:
       XLA_ERROR() << "Invalid reduction type: "
-                  << xla::util::GetEnumValue(reduction);
+                  << torch::lazy::GetEnumValue(reduction);
   }
 }
 
@@ -237,7 +238,7 @@ XLATensor EmbeddingDenseBackward(const XLATensor& grad_output,
       XLATensor::ne(indices_rank1, static_cast<double>(padding_idx)), 1);
   skip_padding = XLATensor::expand(
       skip_padding,
-      xla::util::ToVector<int64_t>(grad.shape().get().dimensions()));
+      torch::lazy::ToVector<int64_t>(grad.shape().get().dimensions()));
   XLATensor zero_grad =
       XLATensor::full_like(grad, 0, grad.GetDevice(), grad.dtype());
   return XLATensor::index_put(

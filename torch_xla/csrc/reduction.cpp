@@ -7,6 +7,7 @@
 #include "tensorflow/compiler/xla/client/lib/constants.h"
 #include "tensorflow/compiler/xla/literal_util.h"
 #include "tensorflow/compiler/xla/xla_client/debug_macros.h"
+#include "torch/csrc/lazy/core/util.h"
 #include "torch_xla/csrc/convert_ops.h"
 #include "torch_xla/csrc/helpers.h"
 #include "torch_xla/csrc/tensor_util.h"
@@ -289,7 +290,7 @@ xla::XlaOp BuildStdDeviation(xla::XlaOp input,
       BuildMean(input, dimensions, /*keep_reduced_dimensions*/ true);
   xla::XlaOp bcast_mean =
       xla::BroadcastInDim(mean, input_shape.dimensions(),
-                          xla::util::Iota<int64_t>(input_shape.rank()));
+                          torch::lazy::Iota<int64_t>(input_shape.rank()));
   xla::XlaOp input_mean_diff = input - bcast_mean;
   xla::XlaOp squared_var = input_mean_diff * input_mean_diff;
   xla::XlaOp squared_result;
@@ -391,7 +392,7 @@ xla::XlaOp BuildArgMax(xla::XlaOp input, int64_t dim, bool keepdim) {
       operand,
       GetDevicePrimitiveType(xla::PrimitiveType::S64, /*device=*/nullptr), dim);
   if (keepdim) {
-    auto dimensions = xla::util::ToVector<int64_t>(shape->dimensions());
+    auto dimensions = torch::lazy::ToVector<int64_t>(shape->dimensions());
     dimensions[dim] = 1;
     result = XlaHelpers::DynamicReshape(result, dimensions);
   }
@@ -411,7 +412,7 @@ xla::XlaOp BuildArgMin(xla::XlaOp input, int64_t dim, bool keepdim) {
       operand,
       GetDevicePrimitiveType(xla::PrimitiveType::S64, /*device=*/nullptr), dim);
   if (keepdim) {
-    auto dimensions = xla::util::ToVector<int64_t>(shape->dimensions());
+    auto dimensions = torch::lazy::ToVector<int64_t>(shape->dimensions());
     dimensions[dim] = 1;
     result = XlaHelpers::DynamicReshape(result, dimensions);
   }

@@ -2,6 +2,7 @@
 
 #include "absl/strings/str_join.h"
 #include "tensorflow/compiler/xla/shape_util.h"
+#include "torch/csrc/lazy/core/util.h"
 #include "torch_xla/csrc/lowering_context.h"
 #include "torch_xla/csrc/ops/infer_output_shape.h"
 #include "torch_xla/csrc/ops/xla_ops.h"
@@ -37,7 +38,7 @@ ReduceScatter::ReduceScatter(AllReduceType reduce_type, const Value& input,
                                     scatter_dim, shard_count, groups);
            },
            /*num_outputs=*/2,
-           torch::lazy::MHash(xla::util::GetEnumValue(reduce_type), scale,
+           torch::lazy::MHash(torch::lazy::GetEnumValue(reduce_type), scale,
                               scatter_dim, shard_count, groups)),
       reduce_type_(reduce_type),
       scale_(scale),
@@ -61,7 +62,7 @@ XlaOpVector ReduceScatter::Lower(LoweringContext* loctx) const {
 std::string ReduceScatter::ToString() const {
   std::stringstream ss;
   ss << Node::ToString()
-     << ", reduce_type=" << xla::util::GetEnumValue(reduce_type_)
+     << ", reduce_type=" << torch::lazy::GetEnumValue(reduce_type_)
      << ", scale=" << scale_ << ", scatter_dim=" << scatter_dim_
      << ", shard_count=" << shard_count_ << ", groups=(";
   for (size_t i = 0; i < groups_.size(); ++i) {

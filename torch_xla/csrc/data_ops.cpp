@@ -12,6 +12,8 @@
 #include "tensorflow/compiler/xla/xla_client/debug_macros.h"
 #include "tensorflow/compiler/xla/xla_client/sys_util.h"
 #include "tensorflow/compiler/xla/xla_client/util.h"
+#include "torch/csrc/lazy/core/tensor_util.h"
+#include "torch/csrc/lazy/core/util.h"
 #include "torch_xla/csrc/convert_ops.h"
 #include "torch_xla/csrc/helpers.h"
 #include "torch_xla/csrc/reduction.h"
@@ -58,7 +60,7 @@ std::vector<int64_t> GetCompleteShape(absl::Span<const int64_t> output_sizes,
                  xla::util::Multiply<int64_t>(output_sizes))
         << "(" << absl::StrJoin(output_sizes, ", ") << ") vs. ("
         << absl::StrJoin(input_sizes, ", ") << ")";
-    return xla::util::ToVector<int64_t>(output_sizes);
+    return torch::lazy::ToVector<int64_t>(output_sizes);
   }
   XLA_CHECK_GT(incomplete_element_count, 0)
       << "Cannot reshape tensor of 0 elements into shape "
@@ -68,7 +70,7 @@ std::vector<int64_t> GetCompleteShape(absl::Span<const int64_t> output_sizes,
       << "(" << absl::StrJoin(output_sizes, ", ") << ") vs. ("
       << absl::StrJoin(input_sizes, ", ") << ")";
   std::vector<int64_t> complete_output_sizes =
-      xla::util::ToVector<int64_t>(output_sizes);
+      torch::lazy::ToVector<int64_t>(output_sizes);
   complete_output_sizes[*incomplete_dim] =
       total_element_count / incomplete_element_count;
   return complete_output_sizes;
@@ -106,8 +108,9 @@ xla::XlaOp BuildExpand(xla::XlaOp input,
   input_sizes.insert(input_sizes.begin(),
                      output_sizes.size() - input_sizes.size(), 1);
   xla::XlaOp implicit_reshape = XlaHelpers::DynamicReshape(input, input_sizes);
-  return xla::BroadcastInDim(implicit_reshape, output_sizes,
-                             xla::util::Iota<int64_t>(output_sizes.size()));
+  return xla::BroadcastInDim(
+      implicit_reshape, output_sizes,
+      torch::lazy::Iota<int64_t>(output_sizes.size()));
 }
 
 std::vector<int64_t> BuildSqueezedDimensions(
@@ -125,7 +128,7 @@ std::vector<int64_t> BuildSqueezedDimensions(
 std::vector<int64_t> BuildUnsqueezeDimensions(
     absl::Span<const int64_t> dimensions, int64_t dim) {
   XLA_CHECK_LE(dim, dimensions.size());
-  auto unsqueeze_dimensions = xla::util::ToVector<int64_t>(dimensions);
+  auto unsqueeze_dimensions = torch::lazy::ToVector<int64_t>(dimensions);
   unsqueeze_dimensions.insert(unsqueeze_dimensions.begin() + dim, 1);
   return unsqueeze_dimensions;
 }

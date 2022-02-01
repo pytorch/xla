@@ -6,6 +6,7 @@
 #include "tensorflow/compiler/xla/permutation_util.h"
 #include "tensorflow/compiler/xla/xla_client/debug_macros.h"
 #include "tensorflow/compiler/xla/xla_client/util.h"
+#include "torch/csrc/lazy/core/util.h"
 #include "torch_xla/csrc/aten_xla_bridge.h"
 #include "torch_xla/csrc/helpers.h"
 #include "torch_xla/csrc/lowering_context.h"
@@ -118,7 +119,8 @@ CanonicalIndexInfo TransposeToFront(at::Tensor base, at::TensorList indices) {
   IndexAdjacencyInfo adjacency_info = GetIndexAdjacencyInfo(indices);
   if (adjacency_info.contiguous_non_null) {
     return {base, std::move(transposed_indices),
-            xla::util::Iota<int64_t>(base_rank), adjacency_info.start_dim};
+            torch::lazy::Iota<int64_t>(base_rank),
+            adjacency_info.start_dim};
   }
   return {base.permute(dims), std::move(transposed_indices),
           xla::InversePermutation(XlaHelpers::I64List(dims)), 0};
@@ -279,7 +281,7 @@ ir::Value IndexPutByTensors(const XLATensor& base,
       ir::MakeNode<ir::ops::IndexPut>(base.GetIrValue(),
                                       indices_nd.GetIrValue(), start_dim,
                                       values.GetIrValue(), accumulate),
-      xla::util::ToVector<int64_t>(result_permutation));
+      torch::lazy::ToVector<int64_t>(result_permutation));
 }
 
 ir::NodePtr IndexFill(const XLATensor& base, int64_t dim,

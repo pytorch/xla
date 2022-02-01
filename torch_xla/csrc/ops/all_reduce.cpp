@@ -3,6 +3,7 @@
 #include "absl/strings/str_join.h"
 #include "tensorflow/compiler/xla/shape_util.h"
 #include "tensorflow/compiler/xla/xla_client/util.h"
+#include "torch/csrc/lazy/core/util.h"
 #include "torch_xla/csrc/lowering_context.h"
 #include "torch_xla/csrc/ops/xla_ops.h"
 
@@ -37,7 +38,7 @@ AllReduce::AllReduce(AllReduceType reduce_type,
     : Node(xla_cross_replica_sum, GetOperandList(operands, token),
            [&]() { return NodeOutputShape(operands, token); },
            /*num_outputs=*/operands.size() + 1,
-           torch::lazy::MHash(xla::util::GetEnumValue(reduce_type), scale,
+           torch::lazy::MHash(torch::lazy::GetEnumValue(reduce_type), scale,
                               groups)),
       reduce_type_(reduce_type),
       scale_(scale),
@@ -64,7 +65,7 @@ XlaOpVector AllReduce::Lower(LoweringContext* loctx) const {
 std::string AllReduce::ToString() const {
   std::stringstream ss;
   ss << Node::ToString()
-     << ", reduce_type=" << xla::util::GetEnumValue(reduce_type_)
+     << ", reduce_type=" << torch::lazy::GetEnumValue(reduce_type_)
      << ", scale=" << scale_ << ", groups=(";
   for (size_t i = 0; i < groups_.size(); ++i) {
     ss << (i == 0 ? "(" : ",(");
