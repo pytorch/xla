@@ -340,6 +340,9 @@ DISABLED_TORCH_TESTS_TPU_ONLY = {
         'test_softplus_low_threshold_xla',  # server side crash
         'test_put_xla',  # slow on TPU (~20 min each)
         'test_cov_xla',  # precision (9.53674e-07 vs 0)
+        'test_diff_xla_float32',  # expected instruction to have shape equal
+        'test_diff_xla_float64',  # expected instruction to have shape equal
+        'test_nullary_op_mem_overlap_xla'  # core dumped
     },
 
     # test_indexing.py
