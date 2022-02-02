@@ -60,6 +60,14 @@ function run_dynamic {
   fi
 }
 
+function run_eager_debug {
+  echo "Running in Eager Debug mode: $@"
+  IR_DEBUG=ir_debug_file
+  XLA_USE_EAGER_DEBUG_MODE=1 XLA_IR_DEBUG=1 XLA_SAVE_TENSORS_FILE=$IR_DEBUG run_test "$@"
+  # Cleanup
+  rm $IR_DEBUG
+}
+
 function run_all_tests {
   run_dynamic python3 "$CDIR/../../test/test_view_ops.py" "$@" -v TestViewOpsXLA
   run_test python3 "$CDIR/../../test/test_torch.py" "$@" -v TestTorchDeviceTypeXLA
@@ -71,6 +79,7 @@ function run_all_tests {
   run_dynamic python3 "$CDIR/../../test/test_type_promotion.py" "$@" -v TestTypePromotionXLA
   run_dynamic python3 "$CDIR/test_operations.py" "$@" --verbosity=$VERBOSITY
   run_opbyop python3 "$CDIR/test_operations.py" "$@" --verbosity=$VERBOSITY
+  run_eager_debug python3 "$CDIR/test_operations.py" "$@" --verbosity=$VERBOSITY
   run_test python3 "$CDIR/test_mp_replication.py"
   run_test python3 "$CDIR/test_mp_all_to_all.py"
   run_test python3 "$CDIR/test_mp_collective_permute.py"
