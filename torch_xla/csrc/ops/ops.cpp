@@ -810,6 +810,11 @@ NodePtr Lerp(const Value& start, const Value& end, const Value& weight) {
 }
 
 NodePtr Linspace(const Value& start, const Value& end, const int64_t steps) {
+  XLA_CHECK_GE(steps, 0);
+  if (steps == 1) {
+    return MakeNode<Expand>(start, std::vector<int64_t>{1});
+  }
+
   NodePtr indices = ARange(0, steps, 1, at::ScalarType::Int);
 
   NodePtr last_index = ScalarOp(steps - 1, xla::PrimitiveType::S32);
