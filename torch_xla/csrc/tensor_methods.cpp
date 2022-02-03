@@ -1605,6 +1605,13 @@ XLATensor XLATensor::lerp(const XLATensor& input, const XLATensor& end,
       ir::ops::Lerp(input.GetIrValue(), end.GetIrValue(), weight_val));
 }
 
+XLATensor XLATensor::linspace(const at::Scalar& start, const at::Scalar& end,
+                              const int64_t steps, at::ScalarType element_type, const Device& device) {
+  return XLATensor::Create(
+    ir::ops::Linspace(start, end, steps),
+    device, element_type);
+}
+
 XLATensor XLATensor::log(const XLATensor& input) {
   // Here we explictly pass c10::nullopt as logical_element_type because
   // otherwise result will inherit the input's logical_element_type. In the

@@ -1789,6 +1789,13 @@ at::Tensor XLANativeFunctions::lerp(const at::Tensor& self,
       bridge::GetXlaTensor(self), bridge::GetXlaTensor(end), weight));
 }
 
+at::Tensor XLANativeFunctions::linspace(const at::Scalar& start, const at::Scalar& end, c10::optional<int64_t> steps, c10::optional<at::ScalarType> dtype, c10::optional<at::Layout> layout, c10::optional<at::Device> device, c10::optional<bool> pin_memory) {
+  XLA_FN_COUNTER("xla::");
+  // TODO: deal with layout and pin_memory
+  return bridge::AtenFromXlaTensor(XLATensor::linspace(
+    start, end, *steps, GetScalarTypeOrFloat(dtype), GetXlaDeviceOrCurrent(device)));
+}
+
 at::Tensor XLANativeFunctions::log(const at::Tensor& self) {
   XLA_FN_COUNTER("xla::");
   return bridge::AtenFromXlaTensor(XLATensor::log(bridge::GetXlaTensor(self)));

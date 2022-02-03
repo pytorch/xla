@@ -226,6 +226,8 @@ NodePtr BaddBmm(const Value& lhs, const Value& rhs, const Value& bias,
 
 NodePtr Lerp(const Value& start, const Value& end, const Value& weight);
 
+NodePtr Linspace(const at::Scalar& start, const at::Scalar& end, const int64_t steps);
+
 NodePtr LogicalNot(const Value& input);
 
 NodePtr LogicalXor(const Value& input, const Value& other);

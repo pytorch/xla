@@ -21,6 +21,7 @@
 #include "torch_xla/csrc/ops/infer_output_shape.h"
 #include "torch_xla/csrc/ops/log_softmax_backward.h"
 #include "torch_xla/csrc/ops/permute.h"
+#include "torch_xla/csrc/ops/put.h"
 #include "torch_xla/csrc/ops/softmax_backward.h"
 #include "torch_xla/csrc/ops/sum.h"
 #include "torch_xla/csrc/pooling.h"
@@ -806,6 +807,16 @@ NodePtr BaddBmm(const Value& lhs, const Value& rhs, const Value& bias,
 NodePtr Lerp(const Value& start, const Value& end, const Value& weight) {
   ScopePusher ir_scope(at::aten::lerp.toQualString());
   return start + weight * (end - start);
+}
+
+NodePtr Linspace(const at::Scalar& start, const at::Scalar& end, const int64_t steps) {
+  // TODO: dangerous when steps == 1 !
+  double step = (end.toDouble() - start.toDouble()) / (steps - 1);
+  // Add extra step to end because arange upper bound is exclusive
+  NodePtr res = ARange(start, end.toDouble() + step, step, at::ScalarType::Float);
+  auto last_idx = ScalarOp(steps - 1, xla::PrimitiveType::S32);
+  auto end_val = ScalarOp(end, xla::PrimitiveType::F32);
+  return MakeNode<Put>(res, last_idx, end_val, /*accumulate=*/false);
 }
 
 NodePtr LogicalNot(const Value& input) {
