@@ -2,6 +2,7 @@
 
 #include "tensorflow/compiler/xla/xla_client/debug_macros.h"
 #include "tensorflow/compiler/xla/xla_client/util.h"
+#include "torch/csrc/lazy/core/helpers.h"
 #include "torch_xla/csrc/helpers.h"
 #include "torch_xla/csrc/ir.h"
 
@@ -24,7 +25,7 @@ XLATensor Cross(const XLATensor& input, const XLATensor& other,
                 c10::optional<xla::int64_t> dim) {
   xla::int64_t canonical_dim;
   if (dim) {
-    canonical_dim = XlaHelpers::GetCanonicalDimensionIndex(
+    canonical_dim = torch::lazy::GetCanonicalDimensionIndex(
         *dim, input.shape().get().rank());
   } else {
     auto input_shape_ref = input.shape();
@@ -195,9 +196,11 @@ XLATensor SoftplusBackward(const XLATensor& grad_output, const XLATensor& input,
 
 XLATensor Select(const XLATensor& input, xla::int64_t dim, xla::int64_t index) {
   auto shape = input.shape();
-  dim = XlaHelpers::GetCanonicalDimensionIndex(dim, shape.get().rank());
+  dim = torch::lazy::GetCanonicalDimensionIndex(dim, shape.get().rank());
   XLATensor result = XLATensor::narrow(input, dim, index, 1);
-  auto new_dims = XlaHelpers::DropDimensions(shape.get().dimensions(), {dim});
+  auto new_dims = torch::lazy::DropDimensions(
+      xla::util::ToVector<xla::int64_t>(shape.get().dimensions()),
+      std::vector<xla::int64_t>({dim}));
   return XLATensor::view(result, new_dims);
 }
 

@@ -26,6 +26,7 @@
 #include "tensorflow/core/profiler/lib/traceme.h"
 #include "torch/csrc/autograd/variable.h"
 #include "torch/csrc/lazy/core/hash.h"
+#include "torch/csrc/lazy/core/helpers.h"
 #include "torch/csrc/lazy/core/tensor_util.h"
 #include "torch_xla/csrc/debug_util.h"
 #include "torch_xla/csrc/helpers.h"
@@ -494,7 +495,7 @@ XLATensor::Data* XLATensor::data() const {
 xla::int64_t XLATensor::size(xla::int64_t dim) const {
   auto xla_shape = shape();
   int rank = xla_shape.get().rank();
-  int dim_index = XlaHelpers::GetCanonicalDimensionIndex(dim, rank);
+  int dim_index = torch::lazy::GetCanonicalDimensionIndex(dim, rank);
   return xla_shape.get().dimensions(dim_index);
 }
 

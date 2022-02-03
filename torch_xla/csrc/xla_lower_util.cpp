@@ -12,6 +12,7 @@
 #include "tensorflow/compiler/xla/util.h"
 #include "tensorflow/compiler/xla/xla_client/debug_macros.h"
 #include "tensorflow/compiler/xla/xla_client/util.h"
+#include "torch/csrc/lazy/core/helpers.h"
 #include "torch_xla/csrc/convert_ops.h"
 #include "torch_xla/csrc/data_ops.h"
 #include "torch_xla/csrc/helpers.h"
@@ -338,7 +339,9 @@ std::vector<xla::XlaOp> CreateKthValue(xla::XlaOp input, xla::int64_t k,
   xla::XlaOp indices = xla::Slice(xla::GetTupleElement(sort_result, 1),
                                   start_indices, limit_indices, strides);
   if (!keepdim) {
-    auto reshape_sizes = XlaHelpers::DropDimensions(shape.dimensions(), {dim});
+    auto reshape_sizes = torch::lazy::DropDimensions(
+        xla::util::ToVector<xla::int64_t>(shape.dimensions()),
+        std::vector<xla::int64_t>({dim}));
     values = XlaHelpers::DynamicReshape(values, reshape_sizes);
     indices = XlaHelpers::DynamicReshape(indices, reshape_sizes);
   }
