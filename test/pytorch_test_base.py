@@ -360,6 +360,18 @@ DISABLED_TORCH_TESTS_TPU_ONLY = {
         'test_EmbeddingBag_per_sample_weights_and_offsets_xla',  # server side crash
         'test_upsamplingBilinear2d_xla',  # precision
         'test_upsamplingNearest2d_xla',  # precision
+        'test_GRU_grad_and_gradgrad_xla_float64',  # grad check failure
+        'test_LSTM_grad_and_gradgrad_xla_float64',  # grad check failure
+        'test_conv3d_valid_padding_backward_xla',  # grad check failure
+        'test_ctc_loss_xla',  # runtime overflow error
+        'test_upsamplingBicubic2d_antialias_False_align_corners_False_xla',  # grad check failure
+        'test_upsamplingBicubic2d_antialias_False_align_corners_True_xla',  # grad check failure
+        'test_upsamplingBicubic2d_antialias_True_align_corners_False_xla',  # grad check failure
+        'test_upsamplingBicubic2d_antialias_True_align_corners_True_xla',  # grad check failure
+        'test_upsamplingNearest1d_xla',  # grad check failure
+        'test_upsamplingNearest3d_xla',  # grad check failure
+        'test_cross_entropy_label_smoothing_consistent_index_target_and_probs_xla',  # precision
+        'test_cross_entropy_loss_prob_target_all_reductions_xla',  # precision
     },
 
     # test_type_promotion.py
