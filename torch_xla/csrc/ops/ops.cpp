@@ -809,14 +809,15 @@ NodePtr Lerp(const Value& start, const Value& end, const Value& weight) {
   return start + weight * (end - start);
 }
 
-NodePtr Linspace(const at::Scalar& start, const at::Scalar& end, const int64_t steps) {
-  // TODO: dangerous when steps == 1 !
-  double step = (end.toDouble() - start.toDouble()) / (steps - 1);
-  // Add extra step to end because arange upper bound is exclusive
-  NodePtr res = ARange(start, end.toDouble() + step, step, at::ScalarType::Float);
-  auto last_idx = ScalarOp(steps - 1, xla::PrimitiveType::S32);
-  auto end_val = ScalarOp(end, xla::PrimitiveType::F32);
-  return MakeNode<Put>(res, last_idx, end_val, /*accumulate=*/false);
+NodePtr Linspace(const Value& start, const Value& end, const int64_t steps) {
+  NodePtr indices = ARange(0, steps, 1, at::ScalarType::Int);
+
+  NodePtr last_index = ScalarOp(steps - 1, xla::PrimitiveType::S32);
+  NodePtr step_val = (end - start) / last_index;
+
+  NodePtr res = (indices * step_val) + start;
+
+  return MakeNode<Put>(res, last_index, end, /*accumulate=*/false);
 }
 
 NodePtr LogicalNot(const Value& input) {
