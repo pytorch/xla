@@ -1791,7 +1791,15 @@ at::Tensor XLANativeFunctions::lerp(const at::Tensor& self,
 
 at::Tensor XLANativeFunctions::linspace(const at::Scalar& start, const at::Scalar& end, c10::optional<int64_t> steps, c10::optional<at::ScalarType> dtype, c10::optional<at::Layout> layout, c10::optional<at::Device> device, c10::optional<bool> pin_memory) {
   XLA_FN_COUNTER("xla::");
-  // TODO: deal with layout and pin_memory
+  // Fall back to CPU if 1) layout or pin_memory are not default or 2) steps=None (deprecated)
+  if (layout.value_or(at::Layout::Strided) != at::Layout::Strided || pin_memory.value_or(false) || !steps) {
+    return at::native::call_fallback_fn<&xla_cpu_fallback,
+                                        ATEN_OP(linspace)>::call(start, end,
+                                                                 steps, dtype,
+                                                                 layout, device,
+                                                                 pin_memory);
+  }
+
   return bridge::AtenFromXlaTensor(XLATensor::linspace(
     start, end, *steps, GetScalarTypeOrFloat(dtype), GetXlaDeviceOrCurrent(device)));
 }
