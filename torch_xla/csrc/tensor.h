@@ -100,7 +100,7 @@ class XLATensor {
   // Applies the queue of operations in preparation for using the data.
   void ApplyPendingGraph();
 
-  // This method just Syncs the tensors passed as argument. This method is
+  // This method just syncs the tensors passed as argument. This method is
   // called at two places:
   // 1. Creating tensor from IR value. This is where an output tensor is created
   // from an IR computation

@@ -62,10 +62,7 @@ function run_dynamic {
 
 function run_eager_debug {
   echo "Running in Eager Debug mode: $@"
-  IR_DEBUG=ir_debug_file
-  XLA_USE_EAGER_DEBUG_MODE=1 XLA_IR_DEBUG=1 XLA_SAVE_TENSORS_FILE=$IR_DEBUG run_test "$@"
-  # Cleanup
-  rm $IR_DEBUG
+  XLA_USE_EAGER_DEBUG_MODE=1 run_test "$@"
 }
 
 function run_all_tests {

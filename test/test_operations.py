@@ -1765,20 +1765,13 @@ class TestAtenXlaTensor(XlaTestCase):
     y = torch.rand(5)
     self.assertEqual(x + y, y + x)
 
+  @unittest.skipIf(
+      os.environ.get('XLA_USE_EAGER_DEBUG_MODE'),
+      'Since in eager mode the tensor would be materialized and hence _get_xla_tensors_text would not show the prim::Constant node.'
+  )
   def test_pow_constant(self):
-    xla_device = xm.xla_device()
     t1 = torch.pow(torch.tensor([2.0, 3.0], device=xm.xla_device()), 5)
-    if os.environ.get('XLA_USE_EAGER_DEBUG_MODE'):
-      # Since in eager mode the tensor would be materialized and hence getting
-      # _get_xla_tensors_text would not show the prim::Constant node. Hence, we write
-      # the IR nodes during execution, and then read the last IR to get the hlo_text
-      assert os.environ.get('XLA_SAVE_TENSORS_FILE') and os.environ.get(
-          'XLA_IR_DEBUG')
-      tensors_file = os.environ.get('XLA_SAVE_TENSORS_FILE')
-      with open(tensors_file, 'r') as f:
-        hlo_text = re.findall('IR {.*?## END_GRAPH', f.read(), re.DOTALL)[-1]
-    else:
-      hlo_text = torch_xla._XLAC._get_xla_tensors_text([t1])
+    hlo_text = torch_xla._XLAC._get_xla_tensors_text([t1])
     const_hlo = hlo_text.split('\n')[1]
     assert 'prim::Constant' in const_hlo
     assert 'xla::device_data' not in const_hlo
