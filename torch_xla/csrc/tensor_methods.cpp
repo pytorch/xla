@@ -2613,12 +2613,11 @@ XLATensor XLATensor::stack(absl::Span<const XLATensor> tensors, int64_t dim) {
 XLATensor XLATensor::std(const XLATensor& input,
                          std::vector<int64_t> dimensions,
                          bool keep_reduced_dimensions, int64_t correction) {
-  return input.CreateFrom(
-      ir::MakeNode<ir::ops::Std>(input.GetIrValue(),
-                                 torch::lazy::GetCanonicalDimensionIndices(
-                                     xla::util::ToVector<int64_t>(dimensions), 
-                                     input.shape().get().rank()),
-                                 keep_reduced_dimensions, correction));
+  return input.CreateFrom(ir::MakeNode<ir::ops::Std>(
+      input.GetIrValue(),
+      torch::lazy::GetCanonicalDimensionIndices(
+          xla::util::ToVector<int64_t>(dimensions), input.shape().get().rank()),
+      keep_reduced_dimensions, correction));
 }
 
 std::tuple<XLATensor, XLATensor> XLATensor::std_mean(
@@ -2818,7 +2817,8 @@ XLATensor XLATensor::trunc(const XLATensor& input) {
 }
 
 std::vector<XLATensor> XLATensor::unbind(const XLATensor& input, int64_t dim) {
-  dim = torch::lazy::GetCanonicalDimensionIndex(dim, input.shape().get().rank());
+  dim =
+      torch::lazy::GetCanonicalDimensionIndex(dim, input.shape().get().rank());
   int64_t dim_size = input.size(dim);
   std::vector<XLATensor> slices;
   slices.reserve(dim_size);
@@ -2841,8 +2841,8 @@ void XLATensor::uniform_(XLATensor& input, double from, double to) {
 
 XLATensor XLATensor::unsqueeze(const XLATensor& input, int64_t dim) {
   auto input_shape = input.shape();
-  int64_t squeeze_dim =
-      torch::lazy::GetCanonicalDimensionIndex(dim, input_shape.get().rank() + 1);
+  int64_t squeeze_dim = torch::lazy::GetCanonicalDimensionIndex(
+      dim, input_shape.get().rank() + 1);
   auto dimensions =
       BuildUnsqueezeDimensions(input_shape.get().dimensions(), squeeze_dim);
   return view(input, dimensions);
