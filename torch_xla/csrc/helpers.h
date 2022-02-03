@@ -180,26 +180,6 @@ class XlaHelpers {
   static xla::PaddingConfig MakeXlaPaddingConfigFromNdPadding(
       absl::Span<const xla::int64_t> padding);
 
-  // Creates a set of dimension by dropping the drop_dims ones.
-  static std::vector<xla::int64_t> DropDimensions(
-      absl::Span<const xla::int64_t> sizes,
-      absl::Span<const xla::int64_t> drop_dims);
-
-  // Get the canonical dimension index in the [0, rank) interval. Negative
-  // indices are interpreted as follows: -1 is rank-1, -2 is rank-2 etc.
-  static xla::int64_t GetCanonicalDimensionIndex(xla::int64_t dim,
-                                                 xla::int64_t rank);
-
-  // Same as above, for multiple dimensions.
-  static std::vector<xla::int64_t> GetCanonicalDimensionIndices(
-      absl::Span<const xla::int64_t> dimensions, xla::int64_t rank);
-
-  // Returns the canonical position in the dim dimension, handling negative
-  // values for the position.
-  static xla::int64_t GetCanonicalPosition(
-      absl::Span<const xla::int64_t> dimensions, xla::int64_t dim,
-      xla::int64_t pos);
-
   // Retrieves the dynamic dimension of an input shape, or returns -1 if none.
   static xla::int64_t GetDynamicDimension(const xla::Shape& shape);
 
@@ -255,11 +235,6 @@ class XlaHelpers {
     return output;
   }
 
-  // Creates a transposition from the given input and dimensions.
-  static std::vector<xla::int64_t> MakeTransposePermutation(xla::int64_t dim0,
-                                                            xla::int64_t dim1,
-                                                            xla::int64_t rank);
-
   static xla::PrimitiveType PromoteType(xla::PrimitiveType type1,
                                         xla::PrimitiveType type2);
 
@@ -292,21 +267,10 @@ class XlaHelpers {
   static std::pair<xla::XlaOp, xla::XlaOp> PromoteSecond(xla::XlaOp op1,
                                                          xla::XlaOp op2);
 
-  // Calculates the protomoted shape to which the input shapes should be
-  // broadcasted for an elementwise operation. The size of the common dimensions
-  // (2,3,4 for shape1, and 0,1,2 for shape2) must either match, or either one
-  // of the two be 1.
-  // Example:
-  //   shape1       = [9, 7, 6, 1, 2]
-  //   shape2       =       [6, 5, 2]
-  //   result_shape = [9, 7, 6, 5, 2]
-  static std::vector<xla::int64_t> GetPromotedShape(
-      absl::Span<const xla::int64_t> shape1_dims,
-      absl::Span<const xla::int64_t> shape2_dims);
-
   static xla::Shape GetPromotedShape(const xla::Shape& shape1,
                                      const xla::Shape& shape2);
 
+  // TODO @wonjoo - Migrate to torch::lazy after Shape is migrated
   static xla::Shape GetPromotedBinaryOpShape(const xla::Shape& shape1,
                                              const xla::Shape& shape2);
 
