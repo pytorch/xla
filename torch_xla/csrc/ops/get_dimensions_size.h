@@ -10,7 +10,7 @@ namespace ops {
 
 class GetDimensionsSize : public Node {
  public:
-  GetDimensionsSize(const Value& input, std::vector<xla::int64_t> dimensions);
+  GetDimensionsSize(const Value& input, std::vector<int64_t> dimensions);
 
   NodePtr Clone(OpList operands) const override;
 
@@ -18,10 +18,10 @@ class GetDimensionsSize : public Node {
 
   std::string ToString() const override;
 
-  const std::vector<xla::int64_t>& dimensions() const { return dimensions_; }
+  const std::vector<int64_t>& dimensions() const { return dimensions_; }
 
  private:
-  std::vector<xla::int64_t> dimensions_;
+  std::vector<int64_t> dimensions_;
 };
 
 }  // namespace ops

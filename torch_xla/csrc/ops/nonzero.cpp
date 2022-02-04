@@ -12,7 +12,7 @@ namespace {
 
 xla::Shape NodeOutputShape(const Value& input) {
   const xla::Shape& input_shape = input.shape();
-  xla::int64_t index_elements = xla::ShapeUtil::ElementsIn(input_shape);
+  int64_t index_elements = xla::ShapeUtil::ElementsIn(input_shape);
   xla::PrimitiveType size_type = GetShapeDimensionType(/*device=*/nullptr);
   xla::Shape result_shape = xla::ShapeUtil::MakeShape(
       size_type, {index_elements, input_shape.rank()});

@@ -14,7 +14,7 @@ namespace ir {
 namespace ops {
 namespace {
 
-xla::XlaOp LowerCumSum(xla::XlaOp input, xla::int64_t dim,
+xla::XlaOp LowerCumSum(xla::XlaOp input, int64_t dim,
                        c10::optional<at::ScalarType> dtype) {
   xla::XlaOp casted_input = CastToScalarType(input, dtype);
   const xla::Shape& input_shape = XlaHelpers::ShapeOfXlaOp(casted_input);
@@ -36,7 +36,7 @@ xla::Shape NodeOutputShape(const Value& input,
 
 }  // namespace
 
-CumSum::CumSum(const Value& input, xla::int64_t dim,
+CumSum::CumSum(const Value& input, int64_t dim,
                c10::optional<at::ScalarType> dtype)
     : Node(ir::OpKind(at::aten::cumsum), {input},
            [&]() { return NodeOutputShape(input, dtype); },

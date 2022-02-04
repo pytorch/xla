@@ -10,7 +10,7 @@ namespace ir {
 namespace ops {
 
 UpsampleBilinear::UpsampleBilinear(const Value& input,
-                                   std::vector<xla::int64_t> output_size,
+                                   std::vector<int64_t> output_size,
                                    bool align_corners)
     : Node(ir::OpKind(at::aten::upsample_bilinear2d), {input},
            [&]() {

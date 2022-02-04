@@ -39,28 +39,28 @@ XlaOpVector Scalar::Lower(LoweringContext* loctx) const {
       literal.Set<bool>({}, static_cast<bool>(value_.toInt()));
       break;
     case xla::PrimitiveType::S8:
-      literal.Set<xla::int8>({}, static_cast<xla::int8>(value_.toChar()));
+      literal.Set<int8_t>({}, static_cast<int8_t>(value_.toChar()));
       break;
     case xla::PrimitiveType::U8:
-      literal.Set<xla::uint8>({}, static_cast<xla::uint8>(value_.toByte()));
+      literal.Set<uint8_t>({}, static_cast<uint8_t>(value_.toByte()));
       break;
     case xla::PrimitiveType::S16:
-      literal.Set<xla::int16>({}, static_cast<xla::int16>(value_.toShort()));
+      literal.Set<int16_t>({}, static_cast<int16_t>(value_.toShort()));
       break;
     case xla::PrimitiveType::U16:
-      literal.Set<xla::uint16>({}, static_cast<xla::uint16>(value_.toShort()));
+      literal.Set<uint16_t>({}, static_cast<uint16_t>(value_.toShort()));
       break;
     case xla::PrimitiveType::S32:
-      literal.Set<xla::int32>({}, static_cast<xla::int32>(value_.toInt()));
+      literal.Set<int32_t>({}, static_cast<int32_t>(value_.toInt()));
       break;
     case xla::PrimitiveType::U32:
-      literal.Set<xla::uint32>({}, static_cast<xla::uint32>(value_.toInt()));
+      literal.Set<uint32_t>({}, static_cast<uint32_t>(value_.toInt()));
       break;
     case xla::PrimitiveType::S64:
-      literal.Set<xla::int64_t>({}, static_cast<xla::int64_t>(value_.toLong()));
+      literal.Set<int64_t>({}, static_cast<int64_t>(value_.toLong()));
       break;
     case xla::PrimitiveType::U64:
-      literal.Set<xla::uint64>({}, static_cast<xla::uint64>(value_.toLong()));
+      literal.Set<uint64_t>({}, static_cast<uint64_t>(value_.toLong()));
       break;
     case xla::PrimitiveType::F32:
       literal.Set<float>({}, static_cast<float>(value_.toDouble()));

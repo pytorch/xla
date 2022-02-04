@@ -12,7 +12,7 @@ namespace ops {
 
 class AdaptiveAvgPool3d : public Node {
  public:
-  AdaptiveAvgPool3d(const Value& input, std::vector<xla::int64_t> output_size);
+  AdaptiveAvgPool3d(const Value& input, std::vector<int64_t> output_size);
 
   NodePtr Clone(OpList operands) const override;
 
@@ -20,10 +20,10 @@ class AdaptiveAvgPool3d : public Node {
 
   std::string ToString() const override;
 
-  const std::vector<xla::int64_t>& output_size() const { return output_size_; }
+  const std::vector<int64_t>& output_size() const { return output_size_; }
 
  private:
-  std::vector<xla::int64_t> output_size_;
+  std::vector<int64_t> output_size_;
 };
 
 }  // namespace ops

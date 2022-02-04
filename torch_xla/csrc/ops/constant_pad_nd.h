@@ -10,7 +10,7 @@ namespace ops {
 
 class ConstantPadNd : public Node {
  public:
-  ConstantPadNd(const Value& input, std::vector<xla::int64_t> pad,
+  ConstantPadNd(const Value& input, std::vector<int64_t> pad,
                 const at::Scalar& value);
 
   std::string ToString() const override;
@@ -21,10 +21,10 @@ class ConstantPadNd : public Node {
 
   const at::Scalar& value() const { return value_; }
 
-  const std::vector<xla::int64_t>& pad() const { return pad_; }
+  const std::vector<int64_t>& pad() const { return pad_; }
 
  private:
-  std::vector<xla::int64_t> pad_;
+  std::vector<int64_t> pad_;
   at::Scalar value_;
 };
 

@@ -9,7 +9,7 @@ namespace ops {
 
 class Cat : public Node {
  public:
-  Cat(absl::Span<const ir::Value> values, xla::int64_t dim);
+  Cat(absl::Span<const ir::Value> values, int64_t dim);
 
   std::string ToString() const override;
 
@@ -17,10 +17,10 @@ class Cat : public Node {
 
   XlaOpVector Lower(LoweringContext* loctx) const override;
 
-  xla::int64_t dim() const { return dim_; };
+  int64_t dim() const { return dim_; };
 
  private:
-  xla::int64_t dim_;
+  int64_t dim_;
 };
 
 }  // namespace ops

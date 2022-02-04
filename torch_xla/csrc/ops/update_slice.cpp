@@ -13,7 +13,7 @@ namespace ops {
 namespace {
 
 xla::Shape NodeOutputShape(const Value& input, const Value& source,
-                           absl::Span<const xla::int64_t> base_indices) {
+                           absl::Span<const int64_t> base_indices) {
   auto lower_for_shape_fn =
       [&](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
     return BuildUpdateSlice(operands[0], operands[1], base_indices);
@@ -24,7 +24,7 @@ xla::Shape NodeOutputShape(const Value& input, const Value& source,
 }  // namespace
 
 UpdateSlice::UpdateSlice(const Value& input, const Value& source,
-                         absl::Span<const xla::int64_t> base_indices)
+                         absl::Span<const int64_t> base_indices)
     : Node(xla_update_slice, {input, source},
            [&]() { return NodeOutputShape(input, source, base_indices); },
            /*num_outputs=*/1, torch::lazy::Hash(base_indices)),

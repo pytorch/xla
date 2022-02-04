@@ -24,8 +24,8 @@ struct Percentile {
   };
 
   UnitOfMeaure unit_of_measure = UnitOfMeaure::kNumber;
-  uint64 start_nstime = 0;
-  uint64 end_nstime = 0;
+  uint64_t start_nstime = 0;
+  uint64_t end_nstime = 0;
   double min_value = NAN;
   double max_value = NAN;
   double mean = NAN;

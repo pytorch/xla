@@ -10,16 +10,16 @@ namespace {
 
 xla::XlaOp SliceOneToken(xla::XlaOp input) {
   const xla::Shape& input_shape = XlaHelpers::ShapeOfXlaOp(input);
-  xla::int64_t input_rank = input_shape.rank();
+  int64_t input_rank = input_shape.rank();
   if (input_rank > 0) {
     xla::GatherDimensionNumbers dim_numbers;
-    for (xla::int64_t i = 0; i < input_rank; ++i) {
+    for (int64_t i = 0; i < input_rank; ++i) {
       dim_numbers.add_collapsed_slice_dims(i);
       dim_numbers.add_start_index_map(i);
     }
     dim_numbers.set_index_vector_dim(0);
 
-    std::vector<xla::int64_t> slice_sizes(input_rank, 1);
+    std::vector<int64_t> slice_sizes(input_rank, 1);
     xla::XlaOp indices = xla::Zeros(
         input.builder(),
         xla::ShapeUtil::MakeShape(xla::PrimitiveType::S32, {input_rank}));

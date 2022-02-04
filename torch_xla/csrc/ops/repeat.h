@@ -9,7 +9,7 @@ namespace ops {
 
 class Repeat : public Node {
  public:
-  Repeat(const Value& input, std::vector<xla::int64_t> repeats);
+  Repeat(const Value& input, std::vector<int64_t> repeats);
 
   NodePtr Clone(OpList operands) const override;
 
@@ -17,11 +17,11 @@ class Repeat : public Node {
 
   std::string ToString() const override;
 
-  const std::vector<xla::int64_t>& repeats() const { return repeats_; }
+  const std::vector<int64_t>& repeats() const { return repeats_; }
 
  private:
   // The number of repeats along each dimension.
-  std::vector<xla::int64_t> repeats_;
+  std::vector<int64_t> repeats_;
 };
 
 }  // namespace ops

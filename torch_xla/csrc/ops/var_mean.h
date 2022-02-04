@@ -11,8 +11,8 @@ namespace ops {
 
 class VarMean : public Node {
  public:
-  VarMean(const Value& input, std::vector<xla::int64_t> dimensions,
-          xla::int64_t correction, bool keep_reduced_dimensions);
+  VarMean(const Value& input, std::vector<int64_t> dimensions,
+          int64_t correction, bool keep_reduced_dimensions);
 
   std::string ToString() const override;
 
@@ -20,15 +20,15 @@ class VarMean : public Node {
 
   XlaOpVector Lower(LoweringContext* loctx) const override;
 
-  const std::vector<xla::int64_t>& dimensions() const { return dimensions_; }
+  const std::vector<int64_t>& dimensions() const { return dimensions_; }
 
   bool keep_reduced_dimensions() const { return keep_reduced_dimensions_; }
 
-  xla::int64_t correction() const { return correction_; }
+  int64_t correction() const { return correction_; }
 
  private:
-  std::vector<xla::int64_t> dimensions_;
-  xla::int64_t correction_;
+  std::vector<int64_t> dimensions_;
+  int64_t correction_;
   bool keep_reduced_dimensions_;
 };
 

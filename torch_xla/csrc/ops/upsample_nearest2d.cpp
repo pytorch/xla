@@ -10,7 +10,7 @@ namespace ir {
 namespace ops {
 
 UpsampleNearest::UpsampleNearest(const Value& input,
-                                 std::vector<xla::int64_t> output_size)
+                                 std::vector<int64_t> output_size)
     : Node(ir::OpKind(at::aten::upsample_nearest2d), {input},
            [&]() {
              return resize::GetForwardOutputShape2d(input.shape(), output_size);
