@@ -197,8 +197,8 @@ XLATensor Select(const XLATensor& input, int64_t dim, int64_t index) {
   dim = torch::lazy::GetCanonicalDimensionIndex(dim, shape.get().rank());
   XLATensor result = XLATensor::narrow(input, dim, index, 1);
   auto new_dims = torch::lazy::DropDimensions(
-      xla::util::ToVector<xla::int64_t>(shape.get().dimensions()),
-      std::vector<xla::int64_t>({dim}));
+      xla::util::ToVector<int64_t>(shape.get().dimensions()),
+      std::vector<int64_t>({dim}));
   return XLATensor::view(result, new_dims);
 }
 
