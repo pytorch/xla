@@ -11,7 +11,7 @@ namespace ops {
 namespace {
 
 xla::Shape NodeOutputShape(const Value& base, const Value& indices,
-                           xla::int64_t start_dim) {
+                           int64_t start_dim) {
   auto lower_for_shape_fn =
       [start_dim](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
     XLA_CHECK_EQ(operands.size(), 2);
@@ -23,7 +23,7 @@ xla::Shape NodeOutputShape(const Value& base, const Value& indices,
 }  // namespace
 
 IndexGet::IndexGet(const ir::Value& base, const ir::Value& indices,
-                   xla::int64_t start_dim)
+                   int64_t start_dim)
     : Node(OpKind(at::aten::index), {base, indices},
            [&]() { return NodeOutputShape(base, indices, start_dim); },
            /*num_outputs=*/1, torch::lazy::MHash(start_dim)),

@@ -10,7 +10,7 @@ namespace ops {
 
 class ReflectionPad2d : public Node {
  public:
-  ReflectionPad2d(const Value& input, std::vector<xla::int64_t> padding);
+  ReflectionPad2d(const Value& input, std::vector<int64_t> padding);
 
   NodePtr Clone(OpList operands) const override;
 
@@ -18,10 +18,10 @@ class ReflectionPad2d : public Node {
 
   std::string ToString() const override;
 
-  const std::vector<xla::int64_t>& padding() const { return padding_; }
+  const std::vector<int64_t>& padding() const { return padding_; }
 
  private:
-  std::vector<xla::int64_t> padding_;
+  std::vector<int64_t> padding_;
 };
 
 }  // namespace ops
