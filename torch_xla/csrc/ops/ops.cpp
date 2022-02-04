@@ -16,6 +16,7 @@
 #include "torch_xla/csrc/matrix.h"
 #include "torch_xla/csrc/nll_loss.h"
 #include "torch_xla/csrc/ops/arithmetic_ir_ops.h"
+#include "torch_xla/csrc/ops/cast.h"
 #include "torch_xla/csrc/ops/constant.h"
 #include "torch_xla/csrc/ops/expand.h"
 #include "torch_xla/csrc/ops/infer_output_shape.h"
@@ -816,12 +817,11 @@ NodePtr Linspace(const Value& start, const Value& end, const int64_t steps) {
   }
 
   NodePtr indices = ARange(0, steps, 1, at::ScalarType::Int);
-
-  NodePtr last_index = ScalarOp(steps - 1, xla::PrimitiveType::S32);
-  NodePtr step_val = (end - start) / last_index;
+  NodePtr step_val = (end - start) / ScalarOp(steps - 1, xla::PrimitiveType::F32);
 
   NodePtr res = (indices * step_val) + start;
 
+  NodePtr last_index = ScalarOp(steps - 1, xla::PrimitiveType::S32);
   return MakeNode<Put>(res, last_index, end, /*accumulate=*/false);
 }
 
