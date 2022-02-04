@@ -322,9 +322,7 @@ supported:
   - upsample_nearest2d.vec
   - upsample_nearest2d_backward
   - upsample_nearest2d_backward.vec
-  - var
   - var.correction
-  - var.dim
   - var_mean.correction
   - view
   - xlogy.Tensor
