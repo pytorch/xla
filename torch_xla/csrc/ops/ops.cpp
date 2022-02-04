@@ -8,6 +8,7 @@
 #include "tensorflow/compiler/xla/shape_util.h"
 #include "tensorflow/compiler/xla/xla_client/debug_macros.h"
 #include "tensorflow/compiler/xla/xla_client/util.h"
+#include "torch/csrc/lazy/core/helpers.h"
 #include "torch_xla/csrc/convert_ops.h"
 #include "torch_xla/csrc/data_ops.h"
 #include "torch_xla/csrc/elementwise.h"
@@ -269,14 +270,14 @@ NodePtr LogSoftmaxBackwardOp(const Value& grad_output, const Value& output,
                              xla::int64_t dim) {
   return MakeNode<LogSoftmaxBackward>(
       grad_output, output,
-      XlaHelpers::GetCanonicalDimensionIndex(dim, grad_output.shape().rank()));
+      torch::lazy::GetCanonicalDimensionIndex(dim, grad_output.shape().rank()));
 }
 
 NodePtr SoftmaxBackwardOp(const Value& grad_output, const Value& output,
                           xla::int64_t dim) {
   return MakeNode<SoftmaxBackward>(
       grad_output, output,
-      XlaHelpers::GetCanonicalDimensionIndex(dim, grad_output.shape().rank()));
+      torch::lazy::GetCanonicalDimensionIndex(dim, grad_output.shape().rank()));
 }
 
 NodePtr Clamp(const Value& input, const Value& min, const Value& max) {

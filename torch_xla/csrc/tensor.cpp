@@ -26,6 +26,7 @@
 #include "tensorflow/core/profiler/lib/traceme.h"
 #include "torch/csrc/autograd/variable.h"
 #include "torch/csrc/lazy/core/hash.h"
+#include "torch/csrc/lazy/core/helpers.h"
 #include "torch/csrc/lazy/core/tensor_util.h"
 #include "torch_xla/csrc/debug_util.h"
 #include "torch_xla/csrc/helpers.h"
@@ -453,6 +454,10 @@ XLATensor XLATensor::Create(
     c10::optional<at::ScalarType> logical_element_type) {
   XLATensor xtensor(std::move(ir_value), device, logical_element_type);
   DeviceContextArena::Get()->RegisterTensor(xtensor.data_ptr());
+  if (UseEagerDebugMode()) {
+    std::vector<XLATensor> xtensors({xtensor});
+    ApplyEagerSync(xtensors);
+  }
   return xtensor;
 }
 
@@ -494,7 +499,7 @@ XLATensor::Data* XLATensor::data() const {
 xla::int64_t XLATensor::size(xla::int64_t dim) const {
   auto xla_shape = shape();
   int rank = xla_shape.get().rank();
-  int dim_index = XlaHelpers::GetCanonicalDimensionIndex(dim, rank);
+  int dim_index = torch::lazy::GetCanonicalDimensionIndex(dim, rank);
   return xla_shape.get().dimensions(dim_index);
 }
 
@@ -622,6 +627,10 @@ void XLATensor::SetIrValue(ir::Value ir_value) {
   } else {
     AssignIrValue(std::move(ir_value));
     TryLimitGraphSize();
+  }
+  if (UseEagerDebugMode() && ShouldSyncIrNode()) {
+    std::vector<XLATensor> xtensors({*this});
+    ApplyEagerSync(xtensors);
   }
 }
 
@@ -1131,6 +1140,10 @@ void XLATensor::ApplyPendingGraph() {
     std::vector<XLATensor> tensors({*this});
     SyncTensorsGraph(&tensors, {}, /*wait=*/true, /*sync_xla_data=*/false);
   }
+}
+
+void XLATensor::ApplyEagerSync(std::vector<XLATensor>& tensors) {
+  SyncTensorsGraph(&tensors, {}, /*wait=*/false, /*sync_xla_data=*/false);
 }
 
 XLATensor::SyncTensorCollection XLATensor::CollectSyncTensors(
@@ -1669,6 +1682,19 @@ void XLATensor::SetRngSeed(const Device& device, xla::uint64 seed) {
 
 xla::uint64 XLATensor::GetRunningSeed(const Device& device) {
   return DeviceContextArena::Get()->GetRunningSeed(device);
+}
+
+bool XLATensor::UseEagerDebugMode() {
+  static const bool use_eager_debug_mode =
+      xla::sys_util::GetEnvBool("XLA_USE_EAGER_DEBUG_MODE", false);
+  return use_eager_debug_mode;
+}
+
+bool XLATensor::ShouldSyncIrNode() {
+  if (!this->data()->ir_value) {
+    return false;
+  }
+  return this->data()->ir_value->op() != ir::ops::xla_device_data;
 }
 
 }  // namespace torch_xla
