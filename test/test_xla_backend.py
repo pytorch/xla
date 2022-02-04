@@ -155,23 +155,6 @@ def test_process_group_creation():
   assert pg_xla.size() == 2
 
 
-def test_process_group_interface():
-  # Verifies ProcessGroupXla has all ProcessGroup public APIs.
-  # This test is needed because ProcessGroupXla cannot inherit from
-  # ProcessGroup (see ProcessGroupXla doc), thus we have to use a unit
-  # test to guarentee that ProcessGroupXla has all the required APIs.
-
-  def is_public(n):
-    return not n.startswith('_')
-
-  process_group_apis = set(filter(is_public, dir(dist.ProcessGroup)))
-  pg_xla = get_process_group_xla(rank=1, size=2)
-  process_group_xla_apis = set(filter(is_public, dir(pg_xla)))
-  missing = process_group_apis - process_group_xla_apis
-  assert not missing, (f'ProcessGroupXla is missing the following '
-                       'ProcessGroup APIs: {missing}')
-
-
 def test_allreduce():
   device = xm.xla_device()
   tensor = torch.arange(2, device=device) + 1 + 2 * dist.get_rank()

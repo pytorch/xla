@@ -19,7 +19,6 @@ def _register_xla_backend():
   dist.Backend.register_backend('xla', _create_xla_process_group)
 
 
-print('_register_xla_backend', flush=True)
 _register_xla_backend()
 
 
@@ -115,8 +114,7 @@ class ProcessGroupXla(ProcessGroup):
 
   # Call site:
   # https://github.com/pytorch/pytorch/blob/70f57bcb1e45d21532bdb1c44d3aab018d1cbe88/torch/distributed/distributed_c10d.py#L1417
-  # We will not likely need `reduce`. see
-  # https://quip-amazon.com/dCxeAuZjrdtN/DeepSpeed-on-torchxla#BBU9CAhzaWi
+  # `reduce` is not needed by DeepSpeed for now.
   def reduce(self, *args):
     raise NotImplementedError
 
