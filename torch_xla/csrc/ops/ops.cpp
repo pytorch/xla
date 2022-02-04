@@ -817,7 +817,8 @@ NodePtr Linspace(const Value& start, const Value& end, const int64_t steps) {
   }
 
   NodePtr indices = ARange(0, steps, 1, at::ScalarType::Int);
-  NodePtr step_val = (end - start) / ScalarOp(steps - 1, xla::PrimitiveType::F32);
+  NodePtr step_val =
+      (end - start) / ScalarOp(steps - 1, xla::PrimitiveType::F32);
 
   NodePtr res = (indices * step_val) + start;
 

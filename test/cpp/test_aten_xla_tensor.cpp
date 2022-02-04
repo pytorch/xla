@@ -10820,7 +10820,8 @@ TEST_F(AtenXlaTensorTest, TestLinspace) {
   int64_t steps = 100;
   torch::Tensor res = torch::linspace(start, end, steps);
   ForEachDevice([&](const torch::Device& device) {
-    torch::Tensor xla_res = torch::linspace(start, end, steps, torch::TensorOptions().device(device));
+    torch::Tensor xla_res = torch::linspace(
+        start, end, steps, torch::TensorOptions().device(device));
     AllClose(res, xla_res);
     AllEqual(torch::scalar_tensor(end), xla_res[steps - 1]);
   });
@@ -10832,9 +10833,12 @@ TEST_F(AtenXlaTensorTest, TestLinspaceInteger) {
   torch::Scalar start = 1;
   torch::Scalar end = 100;
   int64_t steps = 5;
-  torch::Tensor res = torch::linspace(start, end, steps, torch::TensorOptions().dtype(torch::kInt32));
+  torch::Tensor res = torch::linspace(
+      start, end, steps, torch::TensorOptions().dtype(torch::kInt32));
   ForEachDevice([&](const torch::Device& device) {
-    torch::Tensor xla_res = torch::linspace(start, end, steps, torch::TensorOptions().dtype(torch::kInt32).device(device));
+    torch::Tensor xla_res = torch::linspace(
+        start, end, steps,
+        torch::TensorOptions().dtype(torch::kInt32).device(device));
     AllEqual(res, xla_res);
   });
   ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
@@ -10847,7 +10851,8 @@ TEST_F(AtenXlaTensorTest, TestLinspaceZeroSteps) {
   int64_t steps = 0;
   torch::Tensor res = torch::linspace(start, end, steps);
   ForEachDevice([&](const torch::Device& device) {
-    torch::Tensor xla_res = torch::linspace(start, end, steps, torch::TensorOptions().device(device));
+    torch::Tensor xla_res = torch::linspace(
+        start, end, steps, torch::TensorOptions().device(device));
     AllClose(res, xla_res);
   });
   ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
@@ -10860,7 +10865,8 @@ TEST_F(AtenXlaTensorTest, TestLinspaceOneStep) {
   int64_t steps = 1;
   torch::Tensor res = torch::linspace(start, end, steps);
   ForEachDevice([&](const torch::Device& device) {
-    torch::Tensor xla_res = torch::linspace(start, end, steps, torch::TensorOptions().device(device));
+    torch::Tensor xla_res = torch::linspace(
+        start, end, steps, torch::TensorOptions().device(device));
     AllClose(res, xla_res);
   });
   ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
@@ -10873,7 +10879,8 @@ TEST_F(AtenXlaTensorTest, TestLinspaceReverse) {
   int64_t steps = 100;
   torch::Tensor res = torch::linspace(start, end, steps);
   ForEachDevice([&](const torch::Device& device) {
-    torch::Tensor xla_res = torch::linspace(start, end, steps, torch::TensorOptions().device(device));
+    torch::Tensor xla_res = torch::linspace(
+        start, end, steps, torch::TensorOptions().device(device));
     AllClose(res, xla_res);
   });
   ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
