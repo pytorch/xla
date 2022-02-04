@@ -822,7 +822,7 @@ NodePtr Linspace(const Value& start, const Value& end, const int64_t steps) {
 
   NodePtr res = (indices * step_val) + start;
 
-  NodePtr last_index = ScalarOp(steps - 1, xla::PrimitiveType::S32);
+  NodePtr last_index = ScalarOp(steps - 1, xla::PrimitiveType::S64);
   return MakeNode<Put>(res, last_index, end, /*accumulate=*/false);
 }
 
