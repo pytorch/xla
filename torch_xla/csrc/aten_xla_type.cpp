@@ -1790,8 +1790,7 @@ at::Tensor XLANativeFunctions::lerp(const at::Tensor& self,
 }
 
 at::Tensor XLANativeFunctions::linspace(const at::Scalar& start,
-                                        const at::Scalar& end,
-                                        int64_t steps,
+                                        const at::Scalar& end, int64_t steps,
                                         c10::optional<at::ScalarType> dtype,
                                         c10::optional<at::Layout> layout,
                                         c10::optional<at::Device> device,
