@@ -17,7 +17,6 @@
 #include "torch_xla/csrc/matrix.h"
 #include "torch_xla/csrc/nll_loss.h"
 #include "torch_xla/csrc/ops/arithmetic_ir_ops.h"
-#include "torch_xla/csrc/ops/cast.h"
 #include "torch_xla/csrc/ops/constant.h"
 #include "torch_xla/csrc/ops/expand.h"
 #include "torch_xla/csrc/ops/infer_output_shape.h"
