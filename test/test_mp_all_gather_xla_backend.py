@@ -4,6 +4,7 @@ import torch
 import torch_xla
 import torch_xla.core.xla_model as xm
 import torch_xla.distributed.xla_multiprocessing as xmp
+import torch_xla.distributed.xla_backend
 import torch.distributed as dist
 
 
