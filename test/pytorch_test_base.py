@@ -465,7 +465,7 @@ DISABLED_TORCH_TESTS = {
 class XLATestBase(DeviceTypeTestBase):
   device_type = 'xla'
   unsupported_dtypes = {
-      torch.half, torch.complex32, torch.complex64, torch.complex128
+      torch.half, torch.complex64, torch.complex128
   }
   precision = DEFAULT_FLOATING_PRECISION
 
