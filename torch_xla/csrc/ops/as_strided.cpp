@@ -83,13 +83,10 @@ bool AsStrided::StrideIsSupported(const xla::Shape& input_shape,
 }
 
 std::vector<int64_t> AsStrided::GetArrayStridePermutation(
-    absl::Span<const int64_t> stride,
-    absl::Span<const int64_t> size) {
-  std::vector<int64_t> permutation =
-      torch::lazy::Iota<int64_t>(stride.size());
-  std::sort(
-      permutation.begin(), permutation.end(),
-      [&](int64_t a, int64_t b) { return stride[a] > stride[b]; });
+    absl::Span<const int64_t> stride, absl::Span<const int64_t> size) {
+  std::vector<int64_t> permutation = torch::lazy::Iota<int64_t>(stride.size());
+  std::sort(permutation.begin(), permutation.end(),
+            [&](int64_t a, int64_t b) { return stride[a] > stride[b]; });
   return permutation;
 }
 

@@ -99,10 +99,8 @@ std::pair<xla::XlaOp, xla::XlaOp> DotBroadcast(xla::XlaOp lhs,
                                                const xla::Shape& lhs_shape,
                                                xla::XlaOp rhs,
                                                const xla::Shape& rhs_shape) {
-  auto lhs_dimensions =
-      torch::lazy::ToVector<int64_t>(lhs_shape.dimensions());
-  auto rhs_dimensions =
-      torch::lazy::ToVector<int64_t>(rhs_shape.dimensions());
+  auto lhs_dimensions = torch::lazy::ToVector<int64_t>(lhs_shape.dimensions());
+  auto rhs_dimensions = torch::lazy::ToVector<int64_t>(rhs_shape.dimensions());
   XLA_CHECK_EQ(lhs_dimensions.size(), rhs_dimensions.size());
   for (int64_t i = 0; i < lhs_dimensions.size() - 2; ++i) {
     if (lhs_dimensions[i] == rhs_dimensions[i]) {
@@ -122,13 +120,11 @@ std::pair<xla::XlaOp, xla::XlaOp> DotBroadcast(xla::XlaOp lhs,
   xla::XlaOp broadcasted_rhs = rhs;
   if (lhs_dimensions != lhs_shape.dimensions()) {
     broadcasted_lhs = xla::BroadcastInDim(
-        lhs, lhs_dimensions,
-        torch::lazy::Iota<int64_t>(lhs_dimensions.size()));
+        lhs, lhs_dimensions, torch::lazy::Iota<int64_t>(lhs_dimensions.size()));
   }
   if (rhs_dimensions != rhs_shape.dimensions()) {
     broadcasted_rhs = xla::BroadcastInDim(
-        rhs, rhs_dimensions,
-        torch::lazy::Iota<int64_t>(rhs_dimensions.size()));
+        rhs, rhs_dimensions, torch::lazy::Iota<int64_t>(rhs_dimensions.size()));
   }
   return std::make_pair(broadcasted_lhs, broadcasted_rhs);
 }

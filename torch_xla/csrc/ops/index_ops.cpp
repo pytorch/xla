@@ -119,8 +119,7 @@ CanonicalIndexInfo TransposeToFront(at::Tensor base, at::TensorList indices) {
   IndexAdjacencyInfo adjacency_info = GetIndexAdjacencyInfo(indices);
   if (adjacency_info.contiguous_non_null) {
     return {base, std::move(transposed_indices),
-            torch::lazy::Iota<int64_t>(base_rank),
-            adjacency_info.start_dim};
+            torch::lazy::Iota<int64_t>(base_rank), adjacency_info.start_dim};
   }
   return {base.permute(dims), std::move(transposed_indices),
           xla::InversePermutation(XlaHelpers::I64List(dims)), 0};

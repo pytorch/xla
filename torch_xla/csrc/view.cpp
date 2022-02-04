@@ -105,8 +105,7 @@ ir::Value ApplyUpdate(ir::Value ir_value,
       case ViewInfo::Type::kAsStrided:
         result = ir::MakeNode<ir::ops::AsStridedViewUpdate>(
             tmp_values[i - 1], result,
-            torch::lazy::ToVector<int64_t>(
-                view_info.source_shape.dimensions()),
+            torch::lazy::ToVector<int64_t>(view_info.source_shape.dimensions()),
             view_info.as_strided->stride, view_info.as_strided->offset);
         break;
       case ViewInfo::Type::kDiagonal:

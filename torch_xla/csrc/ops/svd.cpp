@@ -29,13 +29,11 @@ std::vector<xla::XlaOp> LowerSVD(xla::XlaOp input, bool some, bool compute_uv) {
     int64_t n_dim = input_shape.dimensions(input_shape.rank() - 1);
     std::vector<int64_t> base_indices(input_shape.rank(), 0);
 
-    auto u_sizes =
-        torch::lazy::ToVector<int64_t>(input_shape.dimensions());
+    auto u_sizes = torch::lazy::ToVector<int64_t>(input_shape.dimensions());
     u_sizes[input_shape.rank() - 1] = std::min(m_dim, n_dim);
     u = BuildSlice(u, base_indices, u_sizes);
 
-    auto v_sizes =
-        torch::lazy::ToVector<int64_t>(input_shape.dimensions());
+    auto v_sizes = torch::lazy::ToVector<int64_t>(input_shape.dimensions());
     v_sizes[input_shape.rank() - 2] = n_dim;
     v_sizes[input_shape.rank() - 1] = std::min(m_dim, n_dim);
     v = BuildSlice(v, base_indices, v_sizes);

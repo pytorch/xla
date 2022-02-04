@@ -108,9 +108,8 @@ xla::XlaOp BuildExpand(xla::XlaOp input,
   input_sizes.insert(input_sizes.begin(),
                      output_sizes.size() - input_sizes.size(), 1);
   xla::XlaOp implicit_reshape = XlaHelpers::DynamicReshape(input, input_sizes);
-  return xla::BroadcastInDim(
-      implicit_reshape, output_sizes,
-      torch::lazy::Iota<int64_t>(output_sizes.size()));
+  return xla::BroadcastInDim(implicit_reshape, output_sizes,
+                             torch::lazy::Iota<int64_t>(output_sizes.size()));
 }
 
 std::vector<int64_t> BuildSqueezedDimensions(
