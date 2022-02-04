@@ -3514,26 +3514,6 @@ at::Tensor XLANativeFunctions::upsample_nearest2d_backward(
       xla::util::ToVector<xla::int64_t>(input_size)));
 }
 
-at::Tensor XLANativeFunctions::var(const at::Tensor& self, bool unbiased) {
-  XLA_FN_COUNTER("xla::");
-  XLATensor self_tensor = bridge::GetXlaTensor(self);
-  return bridge::AtenFromXlaTensor(
-      XLATensor::var(bridge::GetXlaTensor(self),
-                     xla::util::Iota<xla::int64_t>(
-                         bridge::GetXlaTensor(self).shape().get().rank()),
-                     /*correction=*/unbiased ? 1 : 0,
-                     /*keep_reduced_dimensions=*/false));
-}
-
-at::Tensor XLANativeFunctions::var(const at::Tensor& self, at::IntArrayRef dim,
-                                   bool unbiased, bool keepdim) {
-  XLA_FN_COUNTER("xla::");
-  XLATensor self_tensor = bridge::GetXlaTensor(self);
-  return bridge::AtenFromXlaTensor(
-      XLATensor::var(self_tensor, XlaHelpers::I64List(dim),
-                     /*correction=*/unbiased ? 1 : 0, keepdim));
-}
-
 at::Tensor XLANativeFunctions::var(const at::Tensor& self,
                                    c10::optional<at::IntArrayRef> dim,
                                    c10::optional<int64_t> correction,
