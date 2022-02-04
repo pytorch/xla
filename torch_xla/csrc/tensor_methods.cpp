@@ -681,7 +681,7 @@ XLATensor XLATensor::all(const XLATensor& input,
   return input.CreateFrom(ir::MakeNode<ir::ops::All>(
                               input.GetIrValue(),
                               torch::lazy::GetCanonicalDimensionIndices(
-                                  xla::util::ToVector<xla::int64_t>(dimensions),
+                                  xla::util::ToVector<int64_t>(dimensions),
                                   input.shape().get().rank()),
                               keep_reduced_dimensions),
                           result_type);
@@ -693,7 +693,7 @@ XLATensor XLATensor::amax(const XLATensor& input,
   return input.CreateFrom(ir::MakeNode<ir::ops::Amax>(
       input.GetIrValue(),
       torch::lazy::GetCanonicalDimensionIndices(
-          xla::util::ToVector<xla::int64_t>(dimensions),
+          xla::util::ToVector<int64_t>(dimensions),
           input.shape().get().rank()),
       keep_reduced_dimensions));
 }
@@ -704,7 +704,7 @@ XLATensor XLATensor::amin(const XLATensor& input,
   return input.CreateFrom(ir::MakeNode<ir::ops::Amin>(
       input.GetIrValue(),
       torch::lazy::GetCanonicalDimensionIndices(
-          xla::util::ToVector<xla::int64_t>(dimensions),
+          xla::util::ToVector<int64_t>(dimensions),
           input.shape().get().rank()),
       keep_reduced_dimensions));
 }
@@ -718,7 +718,7 @@ XLATensor XLATensor::any(const XLATensor& input,
   return input.CreateFrom(ir::MakeNode<ir::ops::Any>(
                               input.GetIrValue(),
                               torch::lazy::GetCanonicalDimensionIndices(
-                                  xla::util::ToVector<xla::int64_t>(dimensions),
+                                  xla::util::ToVector<int64_t>(dimensions),
                                   input.shape().get().rank()),
                               keep_reduced_dimensions),
                           result_type);
@@ -1715,7 +1715,7 @@ XLATensor XLATensor::logsumexp(const XLATensor& input,
   return input.CreateFrom(ir::MakeNode<ir::ops::Logsumexp>(
       input.GetIrValue(),
       torch::lazy::GetCanonicalDimensionIndices(
-          xla::util::ToVector<xla::int64_t>(dimensions),
+          xla::util::ToVector<int64_t>(dimensions),
           input.shape().get().rank()),
       keep_reduced_dimensions));
 }
@@ -1852,7 +1852,7 @@ XLATensor XLATensor::mean(const XLATensor& input,
   return input.CreateFrom(ir::MakeNode<ir::ops::Mean>(
                               input.GetIrValue(),
                               torch::lazy::GetCanonicalDimensionIndices(
-                                  xla::util::ToVector<xla::int64_t>(dimensions),
+                                  xla::util::ToVector<int64_t>(dimensions),
                                   input.shape().get().rank()),
                               keep_reduced_dimensions, dtype),
                           dtype);
@@ -1963,7 +1963,7 @@ XLATensor XLATensor::narrow(const XLATensor& input, int64_t dim, int64_t start,
                                  : ViewInfo::Type::kNarrow;
   ViewInfo view_info(view_type, std::move(narrow_shape), input_shape);
   view_info.indices[dim] = torch::lazy::GetCanonicalPosition(
-      xla::util::ToVector<xla::int64_t>(input_shape.get().dimensions()), dim,
+      xla::util::ToVector<int64_t>(input_shape.get().dimensions()), dim,
       start);
   return input.CreateViewTensor(std::move(view_info));
 }
@@ -2149,7 +2149,7 @@ XLATensor XLATensor::permute(const XLATensor& input,
   ViewInfo view_info(
       ViewInfo::Type::kPermute, input_shape,
       torch::lazy::GetCanonicalDimensionIndices(
-          xla::util::ToVector<xla::int64_t>(dims), input_shape.get().rank()));
+          xla::util::ToVector<int64_t>(dims), input_shape.get().rank()));
   return input.CreateViewTensor(std::move(view_info));
 }
 
@@ -2186,7 +2186,7 @@ XLATensor XLATensor::prod(const XLATensor& input,
   return input.CreateFrom(ir::MakeNode<ir::ops::Prod>(
                               input.GetIrValue(),
                               torch::lazy::GetCanonicalDimensionIndices(
-                                  xla::util::ToVector<xla::int64_t>(dimensions),
+                                  xla::util::ToVector<int64_t>(dimensions),
                                   input.shape().get().rank()),
                               keep_reduced_dimensions, dtype),
                           dtype);
@@ -2449,10 +2449,10 @@ XLATensor XLATensor::slice(const XLATensor& input, int64_t dim, int64_t start,
   auto input_shape = input.shape();
   dim = torch::lazy::GetCanonicalDimensionIndex(dim, input_shape.get().rank());
   start = torch::lazy::GetCanonicalPosition(
-      xla::util::ToVector<xla::int64_t>(input_shape.get().dimensions()), dim,
+      xla::util::ToVector<int64_t>(input_shape.get().dimensions()), dim,
       start);
   end = torch::lazy::GetCanonicalPosition(
-      xla::util::ToVector<xla::int64_t>(input_shape.get().dimensions()), dim,
+      xla::util::ToVector<int64_t>(input_shape.get().dimensions()), dim,
       end);
   // PyTorch allows tensor[-1:0] to return a 0-dim tensor.
   if (start > end) {
@@ -2626,7 +2626,7 @@ std::tuple<XLATensor, XLATensor> XLATensor::std_mean(
   ir::NodePtr node = ir::MakeNode<ir::ops::StdMean>(
       input.GetIrValue(),
       torch::lazy::GetCanonicalDimensionIndices(
-          xla::util::ToVector<xla::int64_t>(dimensions),
+          xla::util::ToVector<int64_t>(dimensions),
           input.shape().get().rank()),
       correction, keep_reduced_dimensions);
   return std::make_tuple(input.CreateFrom(ir::Value(node, 0)),
@@ -2665,7 +2665,7 @@ XLATensor XLATensor::sum(const XLATensor& input,
   return input.CreateFrom(ir::MakeNode<ir::ops::Sum>(
                               input.GetIrValue(),
                               torch::lazy::GetCanonicalDimensionIndices(
-                                  xla::util::ToVector<xla::int64_t>(dimensions),
+                                  xla::util::ToVector<int64_t>(dimensions),
                                   input.shape().get().rank()),
                               keep_reduced_dimensions, dtype),
                           dtype);
@@ -2900,7 +2900,7 @@ XLATensor XLATensor::var(const XLATensor& input,
   return input.CreateFrom(ir::MakeNode<ir::ops::Var>(
       input.GetIrValue(),
       torch::lazy::GetCanonicalDimensionIndices(
-          xla::util::ToVector<xla::int64_t>(dimensions),
+          xla::util::ToVector<int64_t>(dimensions),
           input.shape().get().rank()),
       correction, keep_reduced_dimensions));
 }
@@ -2911,7 +2911,7 @@ std::tuple<XLATensor, XLATensor> XLATensor::var_mean(
   ir::NodePtr node = ir::MakeNode<ir::ops::VarMean>(
       input.GetIrValue(),
       torch::lazy::GetCanonicalDimensionIndices(
-          xla::util::ToVector<xla::int64_t>(dimensions),
+          xla::util::ToVector<int64_t>(dimensions),
           input.shape().get().rank()),
       correction, keep_reduced_dimensions);
   return std::make_tuple(input.CreateFrom(ir::Value(node, 0)),
