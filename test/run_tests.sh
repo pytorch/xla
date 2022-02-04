@@ -65,6 +65,15 @@ function run_eager_debug {
   XLA_USE_EAGER_DEBUG_MODE=1 run_test "$@"
 }
 
+function run_pytest_distributed {
+  if [[ $(pip list | grep pytest-xdist) ]]; then
+    echo "Running pytest tests:"
+    "$@"
+  else
+    echo "pytest-xdist is not installed. Please run 'pip install pytest-xdist' and try again."
+  fi
+}
+
 function run_all_tests {
   run_dynamic python3 "$CDIR/../../test/test_view_ops.py" "$@" -v TestViewOpsXLA
   run_test python3 "$CDIR/../../test/test_torch.py" "$@" -v TestTorchDeviceTypeXLA
@@ -93,6 +102,7 @@ function run_all_tests {
   run_test python3 "$CDIR/test_ops.py"
   run_downcast_bf16 python3 "$CDIR/test_data_type.py"
   run_use_bf16 python3 "$CDIR/test_data_type.py"
+  run_pytest_distributed python3 -m pytest -n 18 -v "$CDIR/test_xla_backend.py"
 }
 
 if [ "$LOGFILE" != "" ]; then
