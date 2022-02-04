@@ -25,8 +25,8 @@ def _mp_fn(index):
     print("running all gather")
     dist.all_gather(xoutputs, xinput)
     for i, o in enumerate(xoutputs):
-        expected = torch.ones((2, 3)) * i
-        assert torch.all(o.cpu() == expected), f'{o} != {expected}'
+      expected = torch.ones((2, 3)) * i
+      assert torch.all(o.cpu() == expected), f'{o} != {expected}'
   else:
     print(
         'Default device {} is not a TPU or GPU device'.format(device),

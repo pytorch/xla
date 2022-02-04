@@ -18,7 +18,7 @@ def _mp_fn(index):
     print(f'RANK {rank} init\'ed torch.distributed.')
 
     input_size = (32, 3)
-    inputs = torch.ones(input_size).split(input_size[0]//world_size)
+    inputs = torch.ones(input_size).split(input_size[0] // world_size)
     output = torch.zeros_like(inputs[0])
     print("transferring input/output to device")
     xinputs = [i.to(device) for i in inputs]
