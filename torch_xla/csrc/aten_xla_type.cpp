@@ -1618,8 +1618,9 @@ at::Tensor XLANativeFunctions::index_copy(const at::Tensor& self, int64_t dim,
                                           const at::Tensor& source) {
   XLA_FN_COUNTER("xla::");
   XLATensor self_tensor = bridge::GetXlaTensor(self);
-  return bridge::AtenFromXlaTensor(XLATensor::index_copy(self_tensor, dim, bridge::GetXlaTensor(index),
-                         bridge::GetXlaTensor(source)));
+  return bridge::AtenFromXlaTensor(
+      XLATensor::index_copy(self_tensor, dim, bridge::GetXlaTensor(index),
+                            bridge::GetXlaTensor(source)));
 }
 
 at::Tensor& XLANativeFunctions::index_fill_(at::Tensor& self, int64_t dim,
