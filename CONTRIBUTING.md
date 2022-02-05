@@ -100,6 +100,7 @@ your code before submitting a pull request.
 If your PR touches the C++ source files, please run the following command before submmiting a PR.
 
 ```Shell
+# How to install: sudo apt install clang-format-7
 # If your PR only changes foo.cpp, run the following in xla/ folder
 clang-format-7 -i -style=file /PATH/TO/foo.cpp
 # To format all cpp files, run the follwoing in xla/ folder
@@ -112,7 +113,7 @@ find -name '*.cpp' -o -name '*.h' | xargs clang-format-7 -i -style=file
 If your PR touches the Python source files, please run the following command before submmiting a PR.
 
 ```Shell
-# pip install yapf=0.30.0
+# How to install: pip install yapf==0.30.0
 yapf --recursive -i *.py test/ scripts/ torch_xla/
 ```
 
