@@ -11,6 +11,7 @@
 #include "torch_xla/csrc/device.h"
 #include "torch_xla/csrc/layout_manager.h"
 #include "torch_xla/csrc/tensor_util.h"
+#include <csignal>
 
 namespace torch_xla {
 namespace {
@@ -128,6 +129,15 @@ int64_t XLATensorImpl::size(int64_t d) const {
 }
 
 void XLATensorImpl::SetupSizeProperties() {
+  if (getPythonPrinter() && !disablePrinter()) {
+    getPythonPrinter()();
+  }
+
+  static auto const XLA_BREAK_ON_SIZE = std::getenv("XLA_BREAK_ON_SIZE");
+
+  if (XLA_BREAK_ON_SIZE) {
+    raise(SIGINT);
+  }
   size_t generation = tensor_.generation();
   if (generation != generation_) {
     // Fill up the basic dimension data members which the base class

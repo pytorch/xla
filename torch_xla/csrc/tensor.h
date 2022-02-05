@@ -24,6 +24,29 @@
 
 namespace torch_xla {
 
+std::string& getPrinterOpName();
+
+struct OpNamePrinter {
+  OpNamePrinter(std::string opname) {
+    getPrinterOpName() = opname;
+  }
+
+  ~OpNamePrinter() {
+    getPrinterOpName() = "UNSET!";
+  }
+};
+
+/*
+we could use `disablePrinter()` to disable tracing on the regions
+we don't care about. For example,
+    torch::lazy::disablePrinter() = true;
+    // code that calls sizes
+    torch::lazy::disablePrinter() = false;
+*/
+bool& disablePrinter();
+
+std::function<void()>& getPythonPrinter();
+
 class XLATensor {
   class DeviceContextArena;
   struct Data;
