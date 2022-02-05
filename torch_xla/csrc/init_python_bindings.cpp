@@ -2,6 +2,7 @@
 #include <c10/core/Device.h>
 #include <c10/util/Optional.h>
 
+#include <csignal>
 #include <cstring>
 #include <sstream>
 #include <string>
@@ -47,7 +48,6 @@
 #include "torch_xla/csrc/torch_util.h"
 #include "torch_xla/csrc/version.h"
 #include "torch_xla/csrc/xla_op_builder.h"
-#include <csignal>
 
 namespace torch_xla {
 namespace {

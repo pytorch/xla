@@ -4,6 +4,8 @@
 #include <c10/core/impl/DeviceGuardImplInterface.h>
 #include <c10/macros/Macros.h>
 
+#include <csignal>
+
 #include "tensorflow/compiler/xla/xla_client/computation_client.h"
 #include "tensorflow/compiler/xla/xla_client/debug_macros.h"
 #include "torch/csrc/lazy/core/tensor_util.h"
@@ -11,7 +13,6 @@
 #include "torch_xla/csrc/device.h"
 #include "torch_xla/csrc/layout_manager.h"
 #include "torch_xla/csrc/tensor_util.h"
-#include <csignal>
 
 namespace torch_xla {
 namespace {

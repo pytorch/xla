@@ -46,17 +46,13 @@
 namespace torch_xla {
 
 namespace {
-  thread_local bool printer_ {false};
-  thread_local std::string op_name_;
-}
+thread_local bool printer_{false};
+thread_local std::string op_name_;
+}  // namespace
 
-std::string& getPrinterOpName() {
-  return op_name_;
-}
+std::string& getPrinterOpName() { return op_name_; }
 
-bool& disablePrinter() {
-  return printer_;
-}
+bool& disablePrinter() { return printer_; }
 
 std::function<void()>& getPythonPrinter() {
   static std::function<void()> fptr_;
