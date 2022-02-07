@@ -702,13 +702,16 @@ xla::XlaOp CreatePut(const Device& device, xla::XlaOp input, xla::XlaOp index,
   return XlaHelpers::DynamicReshapeAs(r1_scatter, input_shape);
 }
 
-xla::XlaOp CreateLinspace(const Device& device, xla::XlaOp start, xla::XlaOp end, int64_t steps) {
+xla::XlaOp CreateLinspace(const Device& device, xla::XlaOp start,
+                          xla::XlaOp end, int64_t steps) {
   if (steps == 1) {
     return BuildExpand(start, {1});
   }
-  xla::XlaOp indices = xla::ConstantLiteral(start.builder(), XlaHelpers::Range<int64_t>(0, steps, 1));
+  xla::XlaOp indices = xla::ConstantLiteral(
+      start.builder(), XlaHelpers::Range<int64_t>(0, steps, 1));
 
-  xla::XlaOp last_index = XlaHelpers::ScalarValue(steps - 1, xla::PrimitiveType::S64, start.builder());
+  xla::XlaOp last_index = XlaHelpers::ScalarValue(
+      steps - 1, xla::PrimitiveType::S64, start.builder());
   xla::XlaOp step_val = XlaHelpers::PromotedDiv(end - start, last_index);
 
   xla::XlaOp res = XlaHelpers::PromotedMul(indices, step_val) + start;

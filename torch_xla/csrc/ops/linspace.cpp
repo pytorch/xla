@@ -8,12 +8,12 @@ namespace ir {
 namespace ops {
 
 Linspace::Linspace(const Value& start, const Value& end, int64_t steps)
-  : Node(ir::OpKind(at::aten::linspace), {start, end},
-         [&]() {
-           // TODO: dtype is probably wrong
-           return xla::ShapeUtil::MakeShape(xla::PrimitiveType::F32, {steps});
-          }, /*num_outputs=*/1, torch::lazy::MHash(steps)),
-    steps_(steps) {}
+    : Node(ir::OpKind(at::aten::linspace), {start, end},
+           [&]() {
+             return xla::ShapeUtil::MakeShape(xla::PrimitiveType::F32, {steps});
+           },
+           /*num_outputs=*/1, torch::lazy::MHash(steps)),
+      steps_(steps) {}
 
 NodePtr Linspace::Clone(OpList operands) const {
   return MakeNode<Linspace>(operands.at(0), operands.at(1), steps_);
@@ -30,7 +30,6 @@ std::string Linspace::ToString() const {
   ss << Node::ToString() << ", steps=" << steps_;
   return ss.str();
 }
-
 
 }  // namespace ops
 }  // namespace ir

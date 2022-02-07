@@ -81,7 +81,8 @@ xla::XlaOp CreateScatter(const Device& device, xla::XlaOp input,
 xla::XlaOp CreatePut(const Device& device, xla::XlaOp input, xla::XlaOp index,
                      xla::XlaOp source, bool accumulate);
 
-xla::XlaOp CreateLinspace(const Device& device, xla::XlaOp start, xla::XlaOp end, int64_t steps);
+xla::XlaOp CreateLinspace(const Device& device, xla::XlaOp start,
+                          xla::XlaOp end, int64_t steps);
 
 std::vector<xla::XlaOp> BuildNonZero(xla::XlaOp input);
 

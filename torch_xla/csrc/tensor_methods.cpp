@@ -1617,8 +1617,9 @@ XLATensor XLATensor::linspace(const at::Scalar& start, const at::Scalar& end,
   ir::Value start_val =
       GetIrValueForScalar(start, xla::PrimitiveType::F32, device);
   ir::Value end_val = GetIrValueForScalar(end, xla::PrimitiveType::F32, device);
-  return XLATensor::Create(ir::MakeNode<ir::ops::Linspace>(start_val, end_val, steps), device,
-                           element_type);
+  return XLATensor::Create(
+      ir::MakeNode<ir::ops::Linspace>(start_val, end_val, steps), device,
+      element_type);
 }
 
 XLATensor XLATensor::log(const XLATensor& input) {
