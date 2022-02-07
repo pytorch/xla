@@ -20,6 +20,7 @@
 #include "torch_xla/csrc/ops/constant.h"
 #include "torch_xla/csrc/ops/expand.h"
 #include "torch_xla/csrc/ops/infer_output_shape.h"
+#include "torch_xla/csrc/ops/linspace.h"
 #include "torch_xla/csrc/ops/log_softmax_backward.h"
 #include "torch_xla/csrc/ops/permute.h"
 #include "torch_xla/csrc/ops/put.h"
@@ -808,22 +809,6 @@ NodePtr BaddBmm(const Value& lhs, const Value& rhs, const Value& bias,
 NodePtr Lerp(const Value& start, const Value& end, const Value& weight) {
   ScopePusher ir_scope(at::aten::lerp.toQualString());
   return start + weight * (end - start);
-}
-
-NodePtr Linspace(const Value& start, const Value& end, const int64_t steps) {
-  XLA_CHECK_GE(steps, 0);
-  if (steps == 1) {
-    return MakeNode<Expand>(start, std::vector<int64_t>{1});
-  }
-
-  NodePtr indices = ARange(0, steps, 1, at::ScalarType::Int);
-  NodePtr step_val =
-      (end - start) / ScalarOp(steps - 1, xla::PrimitiveType::F32);
-
-  NodePtr res = (indices * step_val) + start;
-
-  NodePtr last_index = ScalarOp(steps - 1, xla::PrimitiveType::S64);
-  return MakeNode<Put>(res, last_index, end, /*accumulate=*/false);
 }
 
 NodePtr LogicalNot(const Value& input) {
