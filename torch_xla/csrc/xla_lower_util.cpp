@@ -704,6 +704,7 @@ xla::XlaOp CreatePut(const Device& device, xla::XlaOp input, xla::XlaOp index,
 
 xla::XlaOp CreateLinspace(const Device& device, xla::XlaOp start,
                           xla::XlaOp end, int64_t steps) {
+  std::tie(start, end) = XlaHelpers::PromoteValues(start, end);
   if (steps == 1) {
     return BuildExpand(start, {1});
   }
