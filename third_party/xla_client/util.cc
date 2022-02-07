@@ -6,7 +6,7 @@ namespace xla {
 namespace util {
 namespace {
 
-hash_t LoadHash(const uint8** data, const uint8* top) {
+hash_t LoadHash(const uint8_t** data, const uint8_t* top) {
   std::ptrdiff_t size = top - (*data);
   if (size >= sizeof(hash_t)) {
     hash_t v;
@@ -17,7 +17,7 @@ hash_t LoadHash(const uint8** data, const uint8* top) {
 
   union {
     hash_t h;
-    uint8 b[sizeof(hash_t)];
+    uint8_t b[sizeof(hash_t)];
   } uval;
   uval.h = 0;
   std::memcpy(uval.b, *data, size);
@@ -31,8 +31,8 @@ hash_t HashBlock(const void* data, size_t n, const hash_t& seed) {
   const hash_t m = 0xc6a4a7935bd1e995;
   const int r = 47;
 
-  const uint8* u8_data = reinterpret_cast<const uint8*>(data);
-  const uint8* top = u8_data + n;
+  const uint8_t* u8_data = reinterpret_cast<const uint8_t*>(data);
+  const uint8_t* top = u8_data + n;
   hash_t h = seed ^ (n * m);
   while (u8_data < top) {
     hash_t k = LoadHash(&u8_data, top);

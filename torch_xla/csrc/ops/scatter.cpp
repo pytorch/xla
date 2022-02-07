@@ -8,7 +8,7 @@ namespace ir {
 namespace ops {
 
 Scatter::Scatter(const Value& input, const Value& index, const Value& src,
-                 xla::int64_t dim)
+                 int64_t dim)
     : Node(ir::OpKind(at::aten::scatter), {input, index, src}, input.shape(),
            /*num_outputs=*/1, torch::lazy::MHash(dim)),
       dim_(dim) {}

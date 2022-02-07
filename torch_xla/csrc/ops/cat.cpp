@@ -10,8 +10,7 @@ namespace ir {
 namespace ops {
 namespace {
 
-xla::Shape NodeOutputShape(absl::Span<const ir::Value> values,
-                           xla::int64_t dim) {
+xla::Shape NodeOutputShape(absl::Span<const ir::Value> values, int64_t dim) {
   auto lower_for_shape_fn =
       [&](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
     return BuildCat(operands, dim);
@@ -26,7 +25,7 @@ xla::Shape NodeOutputShape(absl::Span<const ir::Value> values,
 
 }  // namespace
 
-Cat::Cat(absl::Span<const ir::Value> values, xla::int64_t dim)
+Cat::Cat(absl::Span<const ir::Value> values, int64_t dim)
     : Node(ir::OpKind(at::aten::cat), values,
            [&]() { return NodeOutputShape(values, dim); },
            /*num_outputs=*/1, torch::lazy::MHash(dim)),

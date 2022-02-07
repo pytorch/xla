@@ -8,8 +8,7 @@ namespace ops {
 
 class SoftmaxBackward : public Node {
  public:
-  SoftmaxBackward(const Value& grad_output, const Value& output,
-                  xla::int64_t dim);
+  SoftmaxBackward(const Value& grad_output, const Value& output, int64_t dim);
 
   NodePtr Clone(OpList operands) const override;
 
@@ -17,11 +16,11 @@ class SoftmaxBackward : public Node {
 
   std::string ToString() const override;
 
-  xla::int64_t dim() const { return dim_; }
+  int64_t dim() const { return dim_; }
 
  private:
   // The dimension along which the result is computed.
-  xla::int64_t dim_;
+  int64_t dim_;
 };
 
 }  // namespace ops

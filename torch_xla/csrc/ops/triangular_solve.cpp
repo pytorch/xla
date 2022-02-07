@@ -17,8 +17,8 @@ namespace {
 std::pair<xla::Shape, xla::Shape> InferTriangularSolveShape(
     const xla::Shape& rhs_shape, const xla::Shape& lhs_shape) {
   // Obtain the number of right-hand sides, and dimension of the square matrix.
-  xla::int64_t nrhs = rhs_shape.dimensions(rhs_shape.rank() - 1);
-  xla::int64_t n = lhs_shape.dimensions(lhs_shape.rank() - 1);
+  int64_t nrhs = rhs_shape.dimensions(rhs_shape.rank() - 1);
+  int64_t n = lhs_shape.dimensions(lhs_shape.rank() - 1);
   xla::Shape rhs_batch_shape(rhs_shape);
   xla::Shape lhs_batch_shape(lhs_shape);
   rhs_batch_shape.DeleteDimension(rhs_batch_shape.rank() - 1);

@@ -9,7 +9,7 @@ namespace ops {
 class Nms : public Node {
  public:
   Nms(const Value& boxes, const Value& scores, const Value& score_threshold,
-      const Value& iou_threshold, xla::int64_t output_size);
+      const Value& iou_threshold, int64_t output_size);
 
   NodePtr Clone(OpList operands) const override;
 
@@ -17,10 +17,10 @@ class Nms : public Node {
 
   std::string ToString() const override;
 
-  xla::int64_t output_size() const { return output_size_; }
+  int64_t output_size() const { return output_size_; }
 
  private:
-  xla::int64_t output_size_;
+  int64_t output_size_;
 };
 
 }  // namespace ops
