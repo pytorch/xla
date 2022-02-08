@@ -140,7 +140,7 @@ supported:
   - hardtanh_backward
   - index.Tensor
   - index_add
-  - index_copy_
+  - index_copy
   - index_fill_.int_Scalar
   - index_fill_.int_Tensor
   - index_put_

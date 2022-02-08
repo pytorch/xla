@@ -620,9 +620,6 @@ class XLATensor {
   static XLATensor index_copy(const XLATensor& input, int64_t dim,
                               const XLATensor& index, const XLATensor& source);
 
-  static void index_copy_(XLATensor& input, int64_t dim, const XLATensor& index,
-                          const XLATensor& source);
-
   // Fills the elements of the base tensor with the given value in the given
   // dimension, at positions given by the index. The index must be a rank-1
   // tensor.
