@@ -110,6 +110,7 @@ function run_all_tests {
   run_pytest_distributed python3 -m pytest -n 17 -v "$CDIR/test_xla_backend.py"
   run_xla_backend_mp python3 "$CDIR/test_mp_all_gather_xla_backend.py"
   run_xla_backend_mp python3 "$CDIR/test_mp_all_reduce_xla_backend.py"
+  run_xla_backend_mp python3 "$CDIR/test_mp_multi_all_reduce_xla_backend.py"
   run_xla_backend_mp python3 "$CDIR/test_mp_reduce_scatter_xla_backend.py"
 }
 

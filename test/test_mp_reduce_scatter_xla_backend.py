@@ -14,17 +14,13 @@ def _mp_fn(index):
     world_size = xm.xrt_world_size()
     rank = xm.get_ordinal()
 
-    print(f'RANK {rank} init\'ing torch.distributed...')
     dist.init_process_group('xla', world_size=world_size, rank=rank)
-    print(f'RANK {rank} init\'ed torch.distributed.')
 
     input_size = (32, 3)
     inputs = torch.ones(input_size).split(input_size[0] // world_size)
     output = torch.zeros_like(inputs[0])
-    print("transferring input/output to device")
     xinputs = [i.to(device) for i in inputs]
     xoutput = output.to(device)
-    print("running reduce scatter")
     dist.reduce_scatter(xoutput, xinputs)
     expected = torch.ones_like(inputs[0]) * world_size
     assert torch.all(xoutput.cpu() == expected), f'{xoutput} != {expected}'

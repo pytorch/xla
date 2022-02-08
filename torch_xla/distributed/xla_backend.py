@@ -25,8 +25,9 @@ _register_xla_backend()
 class ProcessGroupXla(ProcessGroup):
   '''ProcessGroup for XLA devices. See ProcessGroup for doc.
 
-    https://github.com/pytorch/pytorch/blob/074c77601114c66df346c5465667ce8cfaa6d22c/torch/csrc/distributed/c10d/ProcessGroup.hpp#L79
-    https://github.com/pytorch/pytorch/blob/074c77601114c66df346c5465667ce8cfaa6d22c/torch/csrc/distributed/c10d/init.cpp#L937
+    Here we are implementing only a Python subclass. For implementing a
+    C++/Python extension, see
+    https://pytorch.org/tutorials/intermediate/process_group_cpp_extension_tutorial.html.
     '''
 
   def __init__(self, prefix_store, rank, size, timeout):
@@ -69,7 +70,7 @@ class ProcessGroupXla(ProcessGroup):
     return WorkXla([t for sublist in output_tensors_list for t in sublist])
 
   # Call site:
-  # https://github.com/pytorch/pytorch/blob/70f57bcb1e45d21532bdb1c44d3aab018d1cbe88/torch/distributed/distributed_c10d.py#L1138
+  # https://github.com/pytorch/pytorch/blob/release/1.10/torch/distributed/distributed_c10d.py#L1129
   def broadcast(self, tensors, opts):
     root_tensor = tensors[opts.rootTensor]
     root_rank = opts.rootRank
@@ -81,16 +82,15 @@ class ProcessGroupXla(ProcessGroup):
     return WorkXla([root_tensor])
 
   # Call site:
-  # https://github.com/pytorch/pytorch/blob/70f57bcb1e45d21532bdb1c44d3aab018d1cbe88/torch/distributed/distributed_c10d.py#L2355
+  # https://github.com/pytorch/pytorch/blob/release/1.10/torch/distributed/distributed_c10d.py#L2355
   def reduce_scatter(self, output_tensors, input_tensors_list, opts):
     for input_tensors, output_tensor in zip(input_tensors_list, output_tensors):
       # Ensure all inputs have the same shape.
-      last_shape = input_tensors[0].shape
+      first_shape = input_tensors[0].shape
       for i, t in enumerate(input_tensors[1:]):
-        if last_shape != t.shape:
-          raise ValueError(f"Input {i+1}'s shape is different from input {i}: "
-                           f"{t.shape} vs {last_shape}")
-        last_shape = t.shape
+        if first_shape != t.shape:
+          raise ValueError(f"Input {i+1}'s shape is different from input 0: "
+                           f"{t.shape} vs {first_shape}")
       input_tensor = torch.cat(input_tensors)
       reduce_type = self._get_reduce_type(opts.reduceOp)
       groups = self._mesh
@@ -189,7 +189,7 @@ class WorkXla(Work):
 _orig_new_group_fn = dist.new_group
 
 
-def infer_mesh(slice_ranks, world_size):
+def _infer_mesh(slice_ranks, world_size):
   '''Infers a rectangular mesh topology from a slice in the mesh.
 
     Example, given world size 12 and a slice like the following:
@@ -254,8 +254,10 @@ def infer_mesh(slice_ranks, world_size):
 
 def new_xla_process_group(ranks=None,
                           timeout=dist.default_pg_timeout,
-                          backend=None):
-  pg = _orig_new_group_fn(ranks, timeout, backend)
+                          backend=None,
+                          pg_options=None):
+  pg = _orig_new_group_fn(
+      ranks=ranks, timeout=timeout, backend=backend, pg_options=pg_options)
   if isinstance(pg, ProcessGroupXla) and ranks is not None:
     world_pg = dist.group.WORLD
     if not isinstance(world_pg, ProcessGroupXla):
@@ -273,7 +275,7 @@ def new_xla_process_group(ranks=None,
                          f'World size: {world_pg.size()}, ranks: {ranks}')
       pg._mesh = [[r] for r in range(world_pg.size())]
     elif len(ranks) < world_pg.size() and len(ranks) > 1:
-      pg._mesh = infer_mesh(ranks, world_pg.size())
+      pg._mesh = _infer_mesh(ranks, world_pg.size())
     else:
       logging.warn(
           f'Can\'t infer process group mesh from given ranks "{str(ranks)}". '

@@ -14,11 +14,11 @@ from contextlib import contextmanager
 from datetime import timedelta
 from pathlib import Path
 
+# To run this test on CPU, set the following env var (51011 is a random port):
+# XRT_DEVICE_MAP='CPU:0;/job:localservice/replica:0/task:0/device:XLA_CPU:0'
+# XRT_WORKERS='localservice:0;grpc://localhost:51011'
 os.environ[xenv.WORLD_SIZE] = '1'
 os.environ[xenv.ORDINAL] = '0'
-os.environ[
-    xenv.
-    DEVICE_MAP] = 'CPU:0;/job:localservice/replica:0/task:0/device:XLA_CPU:0'
 os.environ['XLA_SAVE_TENSORS_FMT'] = 'hlo'
 os.environ['XLA_BACKEND_BLOCKING_CC_OPS'] = 'True'
 
@@ -60,6 +60,8 @@ def hlo_matches(hlo, expected_pattern, match_times=1):
   assert len(list(matches)) == match_times, hlo
 
 
+# TODO(hjm-aws): revise this to get rid of the file store and XRT_WORKERS
+# setting once we can get rid of pytest.
 def init_torch_distributed():
   succeeded = False
   retries = 5  # retry for port collision.

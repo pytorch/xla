@@ -16,11 +16,18 @@ def _mp_fn(index):
 
     dist.init_process_group('xla', world_size=world_size, rank=rank)
 
-    ones = torch.ones((2, 3))
-    xones = ones.to(device)
-    dist.all_reduce(xones)
-    expected = torch.ones((2, 3)) * world_size
-    assert torch.all(xones.cpu() == expected), f'{xones} != {expected}'
+    num_all_reduces = 20
+    xinputs_list = []
+    for i in range(num_all_reduces):
+      inputs = torch.inputs((2, 3)) * i
+      xinputs = inputs.to(device)
+      xinputs_list.append(xinputs)
+      dist.all_reduce(xinputs)
+    for i in range(num_all_reduces):
+      expected = torch.inputs((2, 3)) * i * world_size
+      xinputs = xinputs_list[i]
+      assert torch.all(
+          xinputs.cpu() == expected), f'trial {i}, {xinputs} != {expected}'
   else:
     print(
         'Default device {} is not a TPU or GPU device'.format(device),

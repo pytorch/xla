@@ -14,20 +14,19 @@ def _mp_fn(index):
     world_size = xm.xrt_world_size()
     rank = xm.get_ordinal()
 
-    print(f'RANK {rank} init\'ing torch.distributed...')
     dist.init_process_group('xla', world_size=world_size, rank=rank)
-    print(f'RANK {rank} init\'ed torch.distributed.')
 
     input = torch.ones((2, 3)) * rank
     outputs = [torch.zeros_like(input)] * world_size
-    print("transferring input/outputs to device")
     xinput = input.to(device)
     xoutputs = [o.to(device) for o in outputs]
-    print("running all gather")
+    xoutput0 = outputs[0]
     dist.all_gather(xoutputs, xinput)
     for i, o in enumerate(xoutputs):
       expected = torch.ones((2, 3)) * i
       assert torch.all(o.cpu() == expected), f'{o} != {expected}'
+    expected0 = torch.zeros_like(input)
+    assert torch.all(xoutput0.cpu() == expected0), f'{xoutput0} != {expected0}'
   else:
     print(
         'Default device {} is not a TPU or GPU device'.format(device),
