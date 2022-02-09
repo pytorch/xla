@@ -1,6 +1,7 @@
 #include "torch_xla/csrc/ops/sum.h"
 
 #include "absl/strings/str_join.h"
+#include "torch/csrc/lazy/core/tensor_util.h"
 #include "torch_xla/csrc/convert_ops.h"
 #include "torch_xla/csrc/helpers.h"
 #include "torch_xla/csrc/lowering_context.h"
@@ -14,7 +15,7 @@ namespace ir {
 namespace ops {
 namespace {
 
-xla::XlaOp LowerSum(xla::XlaOp input, absl::Span<const xla::int64_t> dimensions,
+xla::XlaOp LowerSum(xla::XlaOp input, absl::Span<const int64_t> dimensions,
                     bool keep_reduced_dimensions,
                     c10::optional<at::ScalarType> dtype) {
   return BuildSum(CastToScalarType(input, dtype), dimensions,
@@ -22,7 +23,7 @@ xla::XlaOp LowerSum(xla::XlaOp input, absl::Span<const xla::int64_t> dimensions,
 }
 
 xla::Shape NodeOutputShape(const Value& input,
-                           absl::Span<const xla::int64_t> dimensions,
+                           absl::Span<const int64_t> dimensions,
                            bool keep_reduced_dimensions,
                            c10::optional<at::ScalarType> dtype) {
   auto lower_for_shape_fn =
@@ -34,7 +35,7 @@ xla::Shape NodeOutputShape(const Value& input,
 
 }  // namespace
 
-Sum::Sum(const Value& input, std::vector<xla::int64_t> dimensions,
+Sum::Sum(const Value& input, std::vector<int64_t> dimensions,
          bool keep_reduced_dimensions, c10::optional<at::ScalarType> dtype)
     : Node(ir::OpKind(at::aten::sum), {input},
            [&]() {
@@ -43,7 +44,7 @@ Sum::Sum(const Value& input, std::vector<xla::int64_t> dimensions,
            },
            /*num_outputs=*/1,
            torch::lazy::MHash(dimensions, keep_reduced_dimensions,
-                              OptionalOr<int>(dtype, -1))),
+                              torch::lazy::OptionalOr<int>(dtype, -1))),
       dimensions_(std::move(dimensions)),
       keep_reduced_dimensions_(keep_reduced_dimensions),
       dtype_(dtype) {}
@@ -63,7 +64,7 @@ std::string Sum::ToString() const {
   std::stringstream ss;
   ss << Node::ToString() << ", dimensions=(" << absl::StrJoin(dimensions_, ", ")
      << "), keep_reduced_dimensions=" << keep_reduced_dimensions_
-     << ", dtype=" << OptionalOr<int>(dtype_, -1);
+     << ", dtype=" << torch::lazy::OptionalOr<int>(dtype_, -1);
   return ss.str();
 }
 

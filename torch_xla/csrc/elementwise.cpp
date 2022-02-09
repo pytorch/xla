@@ -3,9 +3,11 @@
 #include "tensorflow/compiler/xla/client/lib/constants.h"
 #include "tensorflow/compiler/xla/xla_client/debug_macros.h"
 #include "torch_xla/csrc/convert_ops.h"
+#include "torch_xla/csrc/data_ops.h"
 #include "torch_xla/csrc/helpers.h"
 #include "torch_xla/csrc/random.h"
 #include "torch_xla/csrc/tensor_util.h"
+#include "torch_xla/csrc/xla_lower_util.h"
 
 namespace torch_xla {
 namespace {
@@ -175,6 +177,21 @@ xla::XlaOp BuildLeakyReluBackward(xla::XlaOp grad_output, xla::XlaOp input,
                      negative_slope * grad_output);
 }
 
+xla::XlaOp BuildPrelu(xla::XlaOp input, xla::XlaOp weight) {
+  const xla::Shape& input_shape = XlaHelpers::ShapeOfXlaOp(input);
+  const xla::Shape& weight_shape = XlaHelpers::ShapeOfXlaOp(weight);
+
+  int64_t weight_num = xla::ShapeUtil::ElementsIn(weight_shape);
+  int64_t broadcast_dim = weight_num == 1 ? 0 : 1;
+
+  xla::XlaOp zero = xla::Zero(input.builder(), input_shape.element_type());
+  xla::XlaOp broadcasted_weight =
+      xla::BroadcastInDim(weight, input_shape.dimensions(), {broadcast_dim});
+  xla::XlaOp product = xla::Mul(input, broadcasted_weight);
+
+  return xla::Select(xla::Gt(input, zero), input, product);
+}
+
 xla::XlaOp BuildSigmoid(xla::XlaOp input) {
   const xla::Shape& shape = XlaHelpers::ShapeOfXlaOp(input);
   xla::XlaOp half = XlaHelpers::ScalarValue<float>(0.5, shape.element_type(),
@@ -234,6 +251,13 @@ xla::XlaOp BuildAbs(xla::XlaOp input) {
     return input;
   }
   return xla::Abs(input);
+}
+
+xla::XlaOp BuildSoftplus(xla::XlaOp input, xla::XlaOp beta,
+                         xla::XlaOp threshold) {
+  return xla::Select(
+      xla::Gt(xla::Mul(input, beta), threshold), input,
+      xla::Div(xla::Log1p(xla::Exp(xla::Mul(input, beta))), beta));
 }
 
 }  // namespace torch_xla

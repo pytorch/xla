@@ -9,6 +9,7 @@
 #include "tensorflow/compiler/xla/xla_client/metrics.h"
 #include "tensorflow/compiler/xla/xla_client/sys_util.h"
 #include "tensorflow/compiler/xla/xla_client/util.h"
+#include "torch/csrc/lazy/core/tensor_util.h"
 #include "torch_xla/csrc/XLANativeFunctions.h"
 #include "torch_xla/csrc/aten_autograd_ops.h"
 #include "torch_xla/csrc/aten_cpu_fallback.h"
@@ -129,8 +130,8 @@ std::pair<XLATensor, XLATensor> GetBinaryOperands(const at::Tensor& self,
 }
 
 // The input is in format of {N, C, H, W} and the output will be {H, W}.
-std::vector<xla::int64_t> GetOutputSizeWithScale(
-    absl::Span<const xla::int64_t> input_size,
+std::vector<int64_t> GetOutputSizeWithScale(
+    absl::Span<const int64_t> input_size,
     const c10::optional<at::ArrayRef<double>>& scale_factors,
     const c10::optional<at::IntArrayRef>& output_size) {
   if (!output_size) {
@@ -138,12 +139,12 @@ std::vector<xla::int64_t> GetOutputSizeWithScale(
     XLA_CHECK_EQ(scale_factors->size(), 2);
     // Calculate the output size from input_shape and scale_factors
     XLA_CHECK_EQ(input_size.size(), 4);
-    xla::int64_t output_h = input_size[2] * (*scale_factors)[0];
-    xla::int64_t output_w = input_size[3] * (*scale_factors)[1];
+    int64_t output_h = input_size[2] * (*scale_factors)[0];
+    int64_t output_w = input_size[3] * (*scale_factors)[1];
     return {output_h, output_w};
   }
   XLA_CHECK(!scale_factors);
-  return xla::util::ToVector<xla::int64_t>(*output_size);
+  return xla::util::ToVector<int64_t>(*output_size);
 }
 
 void CheckBinaryOpTypePromotion(const at::Tensor& out, const at::Tensor& self,
@@ -293,9 +294,9 @@ at::Tensor XLANativeFunctions::_adaptive_avg_pool3d_backward(
     const at::Tensor& grad_output, const at::Tensor& self) {
   XLA_FN_COUNTER("xla::");
   int64_t rank = grad_output.dim();
-  std::vector<xla::int64_t> output_size{grad_output.size(rank - 3),
-                                        grad_output.size(rank - 2),
-                                        grad_output.size(rank - 1)};
+  std::vector<int64_t> output_size{grad_output.size(rank - 3),
+                                   grad_output.size(rank - 2),
+                                   grad_output.size(rank - 1)};
   if (!IsSupportedAdaptivePool(XlaHelpers::I64List(self.sizes()), output_size,
                                /*pool_dim=*/3)) {
     return at::native::call_fallback_fn<
@@ -324,8 +325,8 @@ at::Tensor XLANativeFunctions::_adaptive_avg_pool2d_backward(
     const at::Tensor& grad_output, const at::Tensor& self) {
   XLA_FN_COUNTER("xla::");
   int64_t rank = grad_output.dim();
-  std::vector<xla::int64_t> output_size{grad_output.size(rank - 2),
-                                        grad_output.size(rank - 1)};
+  std::vector<int64_t> output_size{grad_output.size(rank - 2),
+                                   grad_output.size(rank - 1)};
   if (!IsSupportedAdaptivePool(XlaHelpers::I64List(self.sizes()), output_size,
                                /*pool_dim=*/2)) {
     return at::native::call_fallback_fn<
@@ -357,8 +358,8 @@ at::Tensor XLANativeFunctions::adaptive_max_pool2d_backward(
     const at::Tensor& indices) {
   XLA_FN_COUNTER("xla::");
   int64_t rank = grad_output.dim();
-  std::vector<xla::int64_t> output_size{grad_output.size(rank - 2),
-                                        grad_output.size(rank - 1)};
+  std::vector<int64_t> output_size{grad_output.size(rank - 2),
+                                   grad_output.size(rank - 1)};
   if (!IsSupportedAdaptivePool(XlaHelpers::I64List(self.sizes()), output_size,
                                /*pool_dim=*/2)) {
     return at::native::call_fallback_fn<
@@ -415,7 +416,7 @@ at::Tensor XLANativeFunctions::_copy_from(const at::Tensor& self,
   } else if (!dst_tensor) {
     at::Tensor tensor = self_tensor->ToTensor(/*detached=*/true);
     at::Tensor typed_tensor =
-        CopyTensor(tensor, dst.scalar_type(), /*copy=*/false);
+        torch::lazy::CopyTensor(tensor, dst.scalar_type(), /*copy=*/false);
     dst.resize_as_(typed_tensor).copy_(typed_tensor);
   } else {
     XLATensor::copy_(*dst_tensor, *self_tensor);
@@ -435,7 +436,7 @@ at::Tensor XLANativeFunctions::_copy_from_and_resize(const at::Tensor& self,
   } else if (!dst_tensor) {
     at::Tensor tensor = self_tensor->ToTensor(/*detached=*/true);
     at::Tensor typed_tensor =
-        CopyTensor(tensor, dst.scalar_type(), /*copy=*/false);
+        torch::lazy::CopyTensor(tensor, dst.scalar_type(), /*copy=*/false);
     dst.resize_as_(typed_tensor).copy_(typed_tensor);
   } else {
     // at this point we know dst is an XLA tensor
@@ -622,8 +623,7 @@ at::Tensor XLANativeFunctions::all(const at::Tensor& self) {
   XLA_FN_COUNTER("xla::");
   XLATensor self_tensor = bridge::GetXlaTensor(self);
   return bridge::AtenFromXlaTensor(XLATensor::all(
-      self_tensor,
-      xla::util::Iota<xla::int64_t>(self_tensor.shape().get().rank()),
+      self_tensor, xla::util::Iota<int64_t>(self_tensor.shape().get().rank()),
       /*keep_reduced_dimensions=*/false));
 }
 
@@ -654,8 +654,7 @@ at::Tensor XLANativeFunctions::any(const at::Tensor& self) {
   XLA_FN_COUNTER("xla::");
   XLATensor self_tensor = bridge::GetXlaTensor(self);
   return bridge::AtenFromXlaTensor(XLATensor::any(
-      self_tensor,
-      xla::util::Iota<xla::int64_t>(self_tensor.shape().get().rank()),
+      self_tensor, xla::util::Iota<int64_t>(self_tensor.shape().get().rank()),
       /*keep_reduced_dimensions=*/false));
 }
 
@@ -1245,7 +1244,7 @@ at::Tensor XLANativeFunctions::div(
     c10::optional<c10::string_view> rounding_mode) {
   XLA_FN_COUNTER("xla::");
   at::ScalarType dtype = at::result_type(self, other);
-  auto operands = GetBinaryOperands(self, other);
+  auto operands = GetBinaryOperands(self, UnwrapNumber(other, dtype));
   return bridge::AtenFromXlaTensor(
       XLATensor::div(operands.first, operands.second, rounding_mode, dtype));
 }
@@ -1392,7 +1391,7 @@ at::Tensor XLANativeFunctions::expand(const at::Tensor& self,
                                       at::IntArrayRef size, bool implicit) {
   XLA_FN_COUNTER("xla::");
   return bridge::AtenFromXlaTensor(XLATensor::expand(
-      bridge::GetXlaTensor(self), xla::util::ToVector<xla::int64_t>(size)));
+      bridge::GetXlaTensor(self), xla::util::ToVector<int64_t>(size)));
 }
 
 at::Tensor XLANativeFunctions::expm1(const at::Tensor& self) {
@@ -1607,24 +1606,24 @@ at::Tensor XLANativeFunctions::index(
       canonical_index_info.start_dim));
 }
 
-at::Tensor& XLANativeFunctions::index_add_(at::Tensor& self, int64_t dim,
-                                           const at::Tensor& index,
-                                           const at::Tensor& source) {
+at::Tensor XLANativeFunctions::index_add(const at::Tensor& self, int64_t dim,
+                                         const at::Tensor& index,
+                                         const at::Tensor& source,
+                                         const at::Scalar& alpha) {
   XLA_FN_COUNTER("xla::");
-  XLATensor self_tensor = bridge::GetXlaTensor(self);
-  XLATensor::index_add_(self_tensor, dim, bridge::GetXlaTensor(index),
-                        bridge::GetXlaTensor(source));
-  return self;
+  return bridge::AtenFromXlaTensor(XLATensor::index_add(
+      bridge::GetXlaTensor(self), dim, bridge::GetXlaTensor(index),
+      bridge::GetXlaTensor(source), alpha));
 }
 
-at::Tensor& XLANativeFunctions::index_copy_(at::Tensor& self, int64_t dim,
-                                            const at::Tensor& index,
-                                            const at::Tensor& source) {
+at::Tensor XLANativeFunctions::index_copy(const at::Tensor& self, int64_t dim,
+                                          const at::Tensor& index,
+                                          const at::Tensor& source) {
   XLA_FN_COUNTER("xla::");
   XLATensor self_tensor = bridge::GetXlaTensor(self);
-  XLATensor::index_copy_(self_tensor, dim, bridge::GetXlaTensor(index),
-                         bridge::GetXlaTensor(source));
-  return self;
+  return bridge::AtenFromXlaTensor(
+      XLATensor::index_copy(self_tensor, dim, bridge::GetXlaTensor(index),
+                            bridge::GetXlaTensor(source)));
 }
 
 at::Tensor& XLANativeFunctions::index_fill_(at::Tensor& self, int64_t dim,
@@ -1759,7 +1758,7 @@ at::Tensor XLANativeFunctions::leaky_relu_backward(
     const at::Tensor& grad_output, const at::Tensor& self,
     const at::Scalar& negative_slope, bool self_is_result) {
   XLA_FN_COUNTER("xla::");
-  XLA_CHECK(!self_is_result || negative_slope.to<double>() > 0.0);
+  XLA_CHECK(!self_is_result || negative_slope.to<double>() >= 0.0);
   return bridge::AtenFromXlaTensor(XLATensor::leaky_relu_backward(
       bridge::GetXlaTensor(grad_output), bridge::GetXlaTensor(self),
       negative_slope.to<double>()));
@@ -1836,7 +1835,7 @@ at::Tensor XLANativeFunctions::logsumexp(const at::Tensor& self,
                                          at::IntArrayRef dim, bool keepdim) {
   XLA_FN_COUNTER("xla::");
   return bridge::AtenFromXlaTensor(XLATensor::logsumexp(
-      bridge::GetXlaTensor(self), xla::util::ToVector<xla::int64_t>(dim),
+      bridge::GetXlaTensor(self), xla::util::ToVector<int64_t>(dim),
       /*keep_reduced_dimensions=*/keepdim));
 }
 
@@ -1844,6 +1843,13 @@ at::Tensor XLANativeFunctions::logdet(const at::Tensor& self) {
   XLA_FN_COUNTER("xla::");
   return bridge::AtenFromXlaTensor(
       XLATensor::logdet(bridge::GetXlaTensor(self)));
+}
+
+at::Tensor XLANativeFunctions::xlogy(const at::Tensor& self,
+                                     const at::Tensor& other) {
+  XLA_FN_COUNTER("xla::");
+  return bridge::AtenFromXlaTensor(XLATensor::xlogy(
+      bridge::GetXlaTensor(self), bridge::GetXlaTensor(other)));
 }
 
 at::Tensor XLANativeFunctions::lt(const at::Tensor& self,
@@ -2046,7 +2052,7 @@ at::Tensor XLANativeFunctions::max_unpool2d(const at::Tensor& self,
   XLA_FN_COUNTER("xla::");
   return bridge::AtenFromXlaTensor(XLATensor::max_unpool(
       bridge::GetXlaTensor(self), bridge::GetXlaTensor(indices),
-      xla::util::ToVector<xla::int64_t>(output_size)));
+      xla::util::ToVector<int64_t>(output_size)));
 }
 
 at::Tensor XLANativeFunctions::max_unpool2d_backward(
@@ -2056,7 +2062,7 @@ at::Tensor XLANativeFunctions::max_unpool2d_backward(
   return bridge::AtenFromXlaTensor(XLATensor::max_unpool_backward(
       bridge::GetXlaTensor(grad_output), bridge::GetXlaTensor(self),
       bridge::GetXlaTensor(indices),
-      xla::util::ToVector<xla::int64_t>(output_size)));
+      xla::util::ToVector<int64_t>(output_size)));
 }
 
 at::Tensor XLANativeFunctions::max_unpool3d(const at::Tensor& self,
@@ -2067,7 +2073,7 @@ at::Tensor XLANativeFunctions::max_unpool3d(const at::Tensor& self,
   XLA_FN_COUNTER("xla::");
   return bridge::AtenFromXlaTensor(XLATensor::max_unpool(
       bridge::GetXlaTensor(self), bridge::GetXlaTensor(indices),
-      xla::util::ToVector<xla::int64_t>(output_size)));
+      xla::util::ToVector<int64_t>(output_size)));
 }
 
 at::Tensor XLANativeFunctions::max_unpool3d_backward(
@@ -2078,7 +2084,7 @@ at::Tensor XLANativeFunctions::max_unpool3d_backward(
   return bridge::AtenFromXlaTensor(XLATensor::max_unpool_backward(
       bridge::GetXlaTensor(grad_output), bridge::GetXlaTensor(self),
       bridge::GetXlaTensor(indices),
-      xla::util::ToVector<xla::int64_t>(output_size)));
+      xla::util::ToVector<int64_t>(output_size)));
 }
 
 at::Tensor XLANativeFunctions::mean(const at::Tensor& self,
@@ -2086,8 +2092,7 @@ at::Tensor XLANativeFunctions::mean(const at::Tensor& self,
   XLA_FN_COUNTER("xla::");
   XLATensor self_tensor = bridge::GetXlaTensor(self);
   return bridge::AtenFromXlaTensor(XLATensor::mean(
-      self_tensor,
-      xla::util::Iota<xla::int64_t>(self_tensor.shape().get().rank()),
+      self_tensor, xla::util::Iota<int64_t>(self_tensor.shape().get().rank()),
       /*keep_reduced_dimensions=*/false, dtype));
 }
 
@@ -2096,7 +2101,7 @@ at::Tensor XLANativeFunctions::mean(const at::Tensor& self, at::IntArrayRef dim,
                                     c10::optional<at::ScalarType> dtype) {
   XLA_FN_COUNTER("xla::");
   return bridge::AtenFromXlaTensor(XLATensor::mean(
-      bridge::GetXlaTensor(self), xla::util::ToVector<xla::int64_t>(dim),
+      bridge::GetXlaTensor(self), xla::util::ToVector<int64_t>(dim),
       /*keep_reduced_dimensions=*/keepdim, dtype));
 }
 
@@ -2121,6 +2126,11 @@ at::Tensor XLANativeFunctions::minimum(const at::Tensor& self,
                         at::ScalarType dtype) {
                       return XLATensor::min(xself, xother, dtype);
                     });
+}
+
+at::Tensor XLANativeFunctions::mish(const at::Tensor& self) {
+  XLA_FN_COUNTER("xla::");
+  return bridge::AtenFromXlaTensor(XLATensor::mish(bridge::GetXlaTensor(self)));
 }
 
 std::tuple<at::Tensor&, at::Tensor&> XLANativeFunctions::min_out(
@@ -2221,7 +2231,7 @@ at::Tensor XLANativeFunctions::nan_to_num(const at::Tensor& self,
   XLA_FN_COUNTER("xla::");
   // nan_to_num doesn't apply to integer types.
   if (!at::native::is_floating_point(self)) {
-    return CopyTensor(self);
+    return torch::lazy::CopyTensor(self);
   }
   XLATensor input_tensor = bridge::GetXlaTensor(self);
   const Device& device = input_tensor.GetDevice();
@@ -2552,13 +2562,36 @@ at::Tensor XLANativeFunctions::pow(const at::Scalar& self,
       XLATensor::pow(self, bridge::GetXlaTensor(exponent)));
 }
 
+at::Tensor XLANativeFunctions::prelu(const at::Tensor& self,
+                                     const at::Tensor& weight) {
+  XLA_FN_COUNTER("xla::");
+
+  // If multiple weights, check channel size == number of weights.
+  int64_t weight_num = weight.numel();
+  if (weight.numel() > 1) {
+    int64_t input_dim = self.dim();
+    XLA_CHECK_GT(input_dim, 0) << "Input tensor dimension cannot be 0";
+
+    int64_t channel_size = input_dim > 1 ? self.size(1) : 1;
+    XLA_CHECK_EQ(channel_size, weight_num)
+        << "Mismatch of parameter numbers and input channel size. Found "
+           "parameter numbers = "
+        << weight_num << " and channel size = " << channel_size;
+  }
+
+  XLATensor self_tensor = bridge::GetXlaTensor(self);
+  XLATensor weight_tensor = bridge::GetXlaTensor(weight);
+
+  return bridge::AtenFromXlaTensor(
+      XLATensor::prelu(self_tensor, weight_tensor));
+}
+
 at::Tensor XLANativeFunctions::prod(const at::Tensor& self,
                                     c10::optional<at::ScalarType> dtype) {
   XLA_FN_COUNTER("xla::");
   XLATensor self_tensor = bridge::GetXlaTensor(self);
   return bridge::AtenFromXlaTensor(XLATensor::prod(
-      self_tensor,
-      xla::util::Iota<xla::int64_t>(self_tensor.shape().get().rank()),
+      self_tensor, xla::util::Iota<int64_t>(self_tensor.shape().get().rank()),
       /*keep_reduced_dimensions=*/false,
       PromoteIntegralType(self.scalar_type(), dtype)));
 }
@@ -2653,7 +2686,7 @@ at::Tensor XLANativeFunctions::reflection_pad2d(const at::Tensor& self,
                                                 at::IntArrayRef padding) {
   XLA_FN_COUNTER("xla::");
   return bridge::AtenFromXlaTensor(XLATensor::reflection_pad2d(
-      bridge::GetXlaTensor(self), xla::util::ToVector<xla::int64_t>(padding)));
+      bridge::GetXlaTensor(self), xla::util::ToVector<int64_t>(padding)));
 }
 
 at::Tensor XLANativeFunctions::reflection_pad2d_backward(
@@ -2662,7 +2695,7 @@ at::Tensor XLANativeFunctions::reflection_pad2d_backward(
   XLA_FN_COUNTER("xla::");
   return bridge::AtenFromXlaTensor(XLATensor::reflection_pad2d_backward(
       bridge::GetXlaTensor(grad_output), bridge::GetXlaTensor(self),
-      xla::util::ToVector<xla::int64_t>(padding)));
+      xla::util::ToVector<int64_t>(padding)));
 }
 
 at::Tensor XLANativeFunctions::relu(const at::Tensor& self) {
@@ -2987,12 +3020,11 @@ at::Tensor XLANativeFunctions::softplus(const at::Tensor& self,
 at::Tensor XLANativeFunctions::softplus_backward(const at::Tensor& grad_output,
                                                  const at::Tensor& self,
                                                  const at::Scalar& beta,
-                                                 const at::Scalar& threshold,
-                                                 const at::Tensor& output) {
+                                                 const at::Scalar& threshold) {
   XLA_FN_COUNTER("xla::");
   return bridge::AtenFromXlaTensor(XLATensor::softplus_backward(
       bridge::GetXlaTensor(grad_output), bridge::GetXlaTensor(self), beta,
-      threshold, bridge::GetXlaTensor(output)));
+      threshold));
 }
 
 at::Tensor XLANativeFunctions::softshrink(const at::Tensor& self,
@@ -3013,8 +3045,21 @@ at::Tensor XLANativeFunctions::softshrink_backward(const at::Tensor& grad_out,
 std::tuple<at::Tensor, at::Tensor> XLANativeFunctions::sort(
     const at::Tensor& self, int64_t dim, bool descending) {
   XLA_FN_COUNTER("xla::");
-  auto results = XLATensor::topk(bridge::GetXlaTensor(self), self.size(dim),
-                                 dim, descending, true);
+  auto results =
+      XLATensor::topk(bridge::GetXlaTensor(self), self.size(dim), dim,
+                      descending, /*sorted=*/true, /*stable=*/false);
+  return std::make_tuple(bridge::AtenFromXlaTensor(std::get<0>(results)),
+                         bridge::AtenFromXlaTensor(std::get<1>(results)));
+}
+
+std::tuple<at::Tensor, at::Tensor> XLANativeFunctions::sort(
+    const at::Tensor& self, c10::optional<bool> stable, int64_t dim,
+    bool descending) {
+  XLA_FN_COUNTER("xla::");
+  auto results =
+      XLATensor::topk(bridge::GetXlaTensor(self), self.size(dim), dim,
+                      descending, /*sorted=*/false,
+                      /*stable=*/stable.has_value() ? stable.value() : false);
   return std::make_tuple(bridge::AtenFromXlaTensor(std::get<0>(results)),
                          bridge::AtenFromXlaTensor(std::get<1>(results)));
 }
@@ -3077,18 +3122,16 @@ at::Tensor XLANativeFunctions::std(const at::Tensor& self, bool unbiased) {
   XLA_FN_COUNTER("xla::");
   XLATensor self_tensor = bridge::GetXlaTensor(self);
   return bridge::AtenFromXlaTensor(XLATensor::std(
-      self_tensor,
-      xla::util::Iota<xla::int64_t>(self_tensor.shape().get().rank()),
+      self_tensor, xla::util::Iota<int64_t>(self_tensor.shape().get().rank()),
       /*keep_reduced_dimensions=*/false, /*correction=*/unbiased ? 1 : 0));
 }
 
 at::Tensor XLANativeFunctions::std(const at::Tensor& self, at::IntArrayRef dim,
                                    bool unbiased, bool keepdim) {
   XLA_FN_COUNTER("xla::");
-  return bridge::AtenFromXlaTensor(
-      XLATensor::std(bridge::GetXlaTensor(self),
-                     xla::util::ToVector<xla::int64_t>(dim), keepdim,
-                     /*correction=*/unbiased ? 1 : 0));
+  return bridge::AtenFromXlaTensor(XLATensor::std(
+      bridge::GetXlaTensor(self), xla::util::ToVector<int64_t>(dim), keepdim,
+      /*correction=*/unbiased ? 1 : 0));
 }
 
 at::Tensor XLANativeFunctions::std(const at::Tensor& self,
@@ -3099,8 +3142,8 @@ at::Tensor XLANativeFunctions::std(const at::Tensor& self,
   XLATensor self_tensor = bridge::GetXlaTensor(self);
   return bridge::AtenFromXlaTensor(XLATensor::std(
       self_tensor,
-      dim ? xla::util::ToVector<xla::int64_t>(*dim)
-          : xla::util::Iota<xla::int64_t>(self_tensor.shape().get().rank()),
+      dim ? xla::util::ToVector<int64_t>(*dim)
+          : xla::util::Iota<int64_t>(self_tensor.shape().get().rank()),
       keepdim, correction ? *correction : 1));
 }
 
@@ -3111,8 +3154,8 @@ std::tuple<at::Tensor, at::Tensor> XLANativeFunctions::std_mean(
   XLATensor self_tensor = bridge::GetXlaTensor(self);
   auto results = XLATensor::std_mean(
       self_tensor,
-      dim ? xla::util::ToVector<xla::int64_t>(*dim)
-          : xla::util::Iota<xla::int64_t>(self_tensor.shape().get().rank()),
+      dim ? xla::util::ToVector<int64_t>(*dim)
+          : xla::util::Iota<int64_t>(self_tensor.shape().get().rank()),
       correction ? *correction : 1, keepdim);
   return std::make_tuple(bridge::AtenFromXlaTensor(std::get<0>(results)),
                          bridge::AtenFromXlaTensor(std::get<1>(results)));
@@ -3148,8 +3191,7 @@ at::Tensor XLANativeFunctions::sum(const at::Tensor& self,
   XLA_FN_COUNTER("xla::");
   XLATensor self_tensor = bridge::GetXlaTensor(self);
   return bridge::AtenFromXlaTensor(XLATensor::sum(
-      self_tensor,
-      xla::util::Iota<xla::int64_t>(self_tensor.shape().get().rank()),
+      self_tensor, xla::util::Iota<int64_t>(self_tensor.shape().get().rank()),
       /*keep_reduced_dimensions=*/false, dtype));
 }
 
@@ -3159,7 +3201,7 @@ at::Tensor XLANativeFunctions::sum(const at::Tensor& self, at::IntArrayRef dim,
   XLA_FN_COUNTER("xla::");
   return bridge::AtenFromXlaTensor(
       XLATensor::sum(bridge::GetXlaTensor(self),
-                     xla::util::ToVector<xla::int64_t>(dim), keepdim, dtype));
+                     xla::util::ToVector<int64_t>(dim), keepdim, dtype));
 }
 
 std::tuple<at::Tensor, at::Tensor, at::Tensor> XLANativeFunctions::svd(
@@ -3237,8 +3279,8 @@ at::Tensor XLANativeFunctions::threshold_backward(const at::Tensor& grad_output,
 std::tuple<at::Tensor, at::Tensor> XLANativeFunctions::topk(
     const at::Tensor& self, int64_t k, int64_t dim, bool largest, bool sorted) {
   XLA_FN_COUNTER("xla::");
-  auto results =
-      XLATensor::topk(bridge::GetXlaTensor(self), k, dim, largest, sorted);
+  auto results = XLATensor::topk(bridge::GetXlaTensor(self), k, dim, largest,
+                                 sorted, /*stable=*/false);
   return std::make_tuple(bridge::AtenFromXlaTensor(std::get<0>(results)),
                          bridge::AtenFromXlaTensor(std::get<1>(results)));
 }
@@ -3360,8 +3402,7 @@ at::Tensor XLANativeFunctions::upsample_bilinear2d(
                                                                scales_w);
   }
   return bridge::AtenFromXlaTensor(XLATensor::upsample_bilinear2d(
-      self_tensor, xla::util::ToVector<xla::int64_t>(output_size),
-      align_corners));
+      self_tensor, xla::util::ToVector<int64_t>(output_size), align_corners));
 }
 
 at::Tensor XLANativeFunctions::upsample_bilinear2d_backward(
@@ -3381,8 +3422,8 @@ at::Tensor XLANativeFunctions::upsample_bilinear2d_backward(
                                                      scales_h, scales_w);
   }
   return bridge::AtenFromXlaTensor(XLATensor::upsample_bilinear2d_backward(
-      grad_output_tensor, xla::util::ToVector<xla::int64_t>(output_size),
-      xla::util::ToVector<xla::int64_t>(input_size), align_corners));
+      grad_output_tensor, xla::util::ToVector<int64_t>(output_size),
+      xla::util::ToVector<int64_t>(input_size), align_corners));
 }
 
 at::Tensor XLANativeFunctions::upsample_nearest2d(
@@ -3398,7 +3439,7 @@ at::Tensor XLANativeFunctions::upsample_nearest2d(
                                                  vec)>::call(input, output_size,
                                                              scale_factors);
   }
-  absl::Span<const xla::int64_t> input_dims =
+  absl::Span<const int64_t> input_dims =
       input_tensor.shape().get().dimensions();
   return bridge::AtenFromXlaTensor(XLATensor::upsample_nearest2d(
       input_tensor,
@@ -3421,8 +3462,7 @@ at::Tensor XLANativeFunctions::upsample_nearest2d_backward(
                                                              input_size,
                                                              scale_factors);
   }
-  std::vector<xla::int64_t> input_dim =
-      xla::util::ToVector<xla::int64_t>(input_size);
+  std::vector<int64_t> input_dim = xla::util::ToVector<int64_t>(input_size);
   return bridge::AtenFromXlaTensor(XLATensor::upsample_nearest2d_backward(
       grad_output_tensor,
       GetOutputSizeWithScale(input_dim, scale_factors, output_size),
@@ -3444,7 +3484,7 @@ at::Tensor XLANativeFunctions::upsample_nearest2d(
                                                               scales_w);
   }
   return bridge::AtenFromXlaTensor(XLATensor::upsample_nearest2d(
-      self_tensor, xla::util::ToVector<xla::int64_t>(output_size)));
+      self_tensor, xla::util::ToVector<int64_t>(output_size)));
 }
 
 at::Tensor XLANativeFunctions::upsample_nearest2d_backward(
@@ -3464,28 +3504,8 @@ at::Tensor XLANativeFunctions::upsample_nearest2d_backward(
                                                     scales_w);
   }
   return bridge::AtenFromXlaTensor(XLATensor::upsample_nearest2d_backward(
-      grad_output_tensor, xla::util::ToVector<xla::int64_t>(output_size),
-      xla::util::ToVector<xla::int64_t>(input_size)));
-}
-
-at::Tensor XLANativeFunctions::var(const at::Tensor& self, bool unbiased) {
-  XLA_FN_COUNTER("xla::");
-  XLATensor self_tensor = bridge::GetXlaTensor(self);
-  return bridge::AtenFromXlaTensor(
-      XLATensor::var(bridge::GetXlaTensor(self),
-                     xla::util::Iota<xla::int64_t>(
-                         bridge::GetXlaTensor(self).shape().get().rank()),
-                     /*correction=*/unbiased ? 1 : 0,
-                     /*keep_reduced_dimensions=*/false));
-}
-
-at::Tensor XLANativeFunctions::var(const at::Tensor& self, at::IntArrayRef dim,
-                                   bool unbiased, bool keepdim) {
-  XLA_FN_COUNTER("xla::");
-  XLATensor self_tensor = bridge::GetXlaTensor(self);
-  return bridge::AtenFromXlaTensor(
-      XLATensor::var(self_tensor, XlaHelpers::I64List(dim),
-                     /*correction=*/unbiased ? 1 : 0, keepdim));
+      grad_output_tensor, xla::util::ToVector<int64_t>(output_size),
+      xla::util::ToVector<int64_t>(input_size)));
 }
 
 at::Tensor XLANativeFunctions::var(const at::Tensor& self,
@@ -3497,7 +3517,7 @@ at::Tensor XLANativeFunctions::var(const at::Tensor& self,
   return bridge::AtenFromXlaTensor(
       XLATensor::var(self_tensor,
                      dim ? XlaHelpers::I64List(*dim)
-                         : xla::util::Iota<xla::int64_t>(
+                         : xla::util::Iota<int64_t>(
                                bridge::GetXlaTensor(self).shape().get().rank()),
                      correction ? *correction : 1, keepdim));
 }
@@ -3509,8 +3529,8 @@ std::tuple<at::Tensor, at::Tensor> XLANativeFunctions::var_mean(
   XLATensor self_tensor = bridge::GetXlaTensor(self);
   auto results = XLATensor::var_mean(
       self_tensor,
-      dim ? xla::util::ToVector<xla::int64_t>(*dim)
-          : xla::util::Iota<xla::int64_t>(self_tensor.shape().get().rank()),
+      dim ? xla::util::ToVector<int64_t>(*dim)
+          : xla::util::Iota<int64_t>(self_tensor.shape().get().rank()),
       correction ? *correction : 1, keepdim);
   return std::make_tuple(bridge::AtenFromXlaTensor(std::get<0>(results)),
                          bridge::AtenFromXlaTensor(std::get<1>(results)));

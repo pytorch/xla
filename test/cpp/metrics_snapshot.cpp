@@ -31,7 +31,7 @@ std::vector<MetricsSnapshot::ChangedCounter> MetricsSnapshot::CounterChanged(
     std::smatch match;
     if ((ignore_set == nullptr || ignore_set->count(name_counter.first) == 0) &&
         std::regex_match(name_counter.first, match, cregex)) {
-      xla::int64_t start_value =
+      int64_t start_value =
           xla::util::FindOr(counters_map_, name_counter.first, 0);
       if (name_counter.second != start_value) {
         changed.push_back(
@@ -48,7 +48,7 @@ std::string MetricsSnapshot::DumpDifferences(
   std::stringstream ss;
   for (auto& name_counter : after.counters_map_) {
     if (ignore_set == nullptr || ignore_set->count(name_counter.first) == 0) {
-      xla::int64_t start_value =
+      int64_t start_value =
           xla::util::FindOr(counters_map_, name_counter.first, 0);
       if (name_counter.second != start_value) {
         ss << "Counter '" << name_counter.first << "' changed from "

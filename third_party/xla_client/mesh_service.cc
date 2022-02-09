@@ -59,6 +59,17 @@ std::ostream& operator<<(std::ostream& ostrm, const ::grpc::Status& status) {
   return ostrm;
 }
 
+std::basic_ostringstream<char>& operator<<(std::basic_ostringstream<char> ostrm,
+                                           const ::grpc::Status& status) {
+  if (status.ok()) {
+    ostrm << "OK";
+  } else {
+    ostrm << status.error_message() << " ("
+          << static_cast<int>(status.error_code()) << ")";
+  }
+  return ostrm;
+}
+
 class MeshServiceImpl : public grpc::MeshService::Service {
  public:
   explicit MeshServiceImpl(grpc::Config config);
@@ -96,7 +107,9 @@ class MeshServiceImpl : public grpc::MeshService::Service {
     void Complete(int64_t ordinal, std::string payload,
                   const std::set<int64_t>& replicas);
 
-    const std::map<int64_t, std::string>& Payloads() const { return payloads_; };
+    const std::map<int64_t, std::string>& Payloads() const {
+      return payloads_;
+    };
 
    private:
     size_t count_;
@@ -189,7 +202,7 @@ MeshServiceImpl::MeshServiceImpl(grpc::Config config) {
     ::grpc::ServerContext* context, const grpc::RendezvousRequest* request,
     grpc::RendezvousResponse* response) {
   std::set<int64_t> replicas(request->replicas().begin(),
-                           request->replicas().end());
+                             request->replicas().end());
   auto rendezvous = GetRendezvous(request->tag(), replicas);
   rendezvous->Complete(request->ordinal(), request->payload(), replicas);
   TF_VLOG(3) << "Entering rendezvous: ordinal=" << request->ordinal()

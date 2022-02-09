@@ -139,8 +139,8 @@ supported:
   - hardtanh
   - hardtanh_backward
   - index.Tensor
-  - index_add_
-  - index_copy_
+  - index_add
+  - index_copy
   - index_fill_.int_Scalar
   - index_fill_.int_Tensor
   - index_put_
@@ -194,6 +194,7 @@ supported:
   - min.dim
   - min.dim_min
   - minimum
+  - mish
   - mm
   - mse_loss
   - mse_loss_backward
@@ -224,6 +225,7 @@ supported:
   - pow.Scalar
   - pow.Tensor_Scalar
   - pow.Tensor_Tensor
+  - prelu
   - prod
   - prod.dim_int
   - put_
@@ -273,6 +275,7 @@ supported:
   - softshrink
   - softshrink_backward
   - sort
+  - sort.stable
   - split.Tensor
   - split_with_sizes
   - sqrt
@@ -319,11 +322,10 @@ supported:
   - upsample_nearest2d.vec
   - upsample_nearest2d_backward
   - upsample_nearest2d_backward.vec
-  - var
   - var.correction
-  - var.dim
   - var_mean.correction
   - view
+  - xlogy.Tensor
   - zero_
 autograd:
   - max_pool2d

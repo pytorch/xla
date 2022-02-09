@@ -18,6 +18,8 @@ xla::XlaOp BuildThreshold(xla::XlaOp input, xla::XlaOp output,
 // Computes the rectified linear unit (replace negative elements with 0).
 xla::XlaOp BuildRelu(xla::XlaOp input);
 
+xla::XlaOp BuildPrelu(xla::XlaOp input, xla::XlaOp weight);
+
 std::vector<xla::XlaOp> BuildRrelu(xla::XlaOp input, const at::Scalar& lower,
                                    const at::Scalar& upper, bool training,
                                    xla::XlaOp rng_seed);
@@ -66,5 +68,8 @@ xla::XlaOp BuildSign(xla::XlaOp input);
 
 // Computes the absolute value of the input.
 xla::XlaOp BuildAbs(xla::XlaOp input);
+
+xla::XlaOp BuildSoftplus(xla::XlaOp input, xla::XlaOp beta,
+                         xla::XlaOp threshold);
 
 }  // namespace torch_xla

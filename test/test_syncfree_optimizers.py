@@ -11,7 +11,11 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torch_xla.core.xla_model as xm
 import unittest
-from torch_xla.amp import syncfree
+import numpy as np
+try:
+  from torch_xla.amp import syncfree
+except ImportError:
+  assert False, "Missing package syncfree; the package is available in torch-xla>=1.11"
 
 
 class MNIST(nn.Module):
@@ -88,11 +92,19 @@ class TestSyncFreeOptimizerBase(unittest.TestCase):
         xm.optimizer_step(ref_optimizer)
       xm.mark_step()
       # check loss
-      assert syncfree_loss.allclose(ref_loss, rtol=1e-3, atol=1e-3)
+      np.testing.assert_allclose(
+          ref_loss.cpu().detach().numpy(),
+          syncfree_loss.cpu().detach().numpy(),
+          rtol=1e-2,
+          atol=1e-2)
 
     # check weight
     for p, p_ref in zip(syncfree_model.parameters(), ref_model.parameters()):
-      assert p.allclose(p_ref, rtol=1e-2, atol=1e-2)
+      np.testing.assert_allclose(
+          p.cpu().detach().numpy(),
+          p_ref.cpu().detach().numpy(),
+          rtol=1e-2,
+          atol=1e-2)
 
 
 class TestSyncFreeSGD(TestSyncFreeOptimizerBase):
@@ -118,6 +130,62 @@ class TestSyncFreeSGD(TestSyncFreeOptimizerBase):
         "weight_decay": 0.1,
         "nesterov": True,
     })
+    self._test_optimizer(
+        syncfree.SGD, torch.optim.SGD, {
+            "lr": 1e-2,
+            "momentum": 0.5,
+            "weight_decay": 0.1,
+            "nesterov": True,
+            "maximize": True,
+        })
+
+
+class TestSyncFreeAdam(TestSyncFreeOptimizerBase):
+
+  def _test_adam_optimizer_helper(self, optim, optim_ref):
+    self._test_optimizer(optim, optim_ref, {
+        "lr": 1e-3,
+        "betas": (0.9, 0.99),
+    })
+    self._test_optimizer(optim, optim_ref, {
+        "lr": 1e-3,
+        "betas": (0.7, 0.77),
+        "weight_decay": 1e-4,
+    })
+    self._test_optimizer(optim, optim_ref, {
+        "lr": 1e-4,
+        "betas": (0.9, 0.999),
+        "weight_decay": 1e-4,
+    })
+    self._test_optimizer(optim, optim_ref, {
+        "lr": 1e-3,
+        "betas": (0.9, 0.999),
+        "weight_decay": 0.1,
+    })
+    self._test_optimizer(optim, optim_ref, {
+        "lr": 1e-3,
+        "betas": (0.9, 0.999),
+        "weight_decay": 0.1,
+        "amsgrad": True,
+    })
+    self._test_optimizer(optim, optim_ref, {
+        "lr": 1e-4,
+        "betas": (0.7, 0.799),
+        "weight_decay": 0.01,
+        "amsgrad": True,
+    })
+    self._test_optimizer(
+        optim, optim_ref, {
+            "lr": 1e-4,
+            "betas": (0.7, 0.799),
+            "weight_decay": 0.01,
+            "amsgrad": True,
+            "maximize": True,
+        })
+
+  def test_adam_optimizer(self):
+    self._test_adam_optimizer_helper(syncfree.Adam, torch.optim.Adam)
+    self._test_adam_optimizer_helper(syncfree.AdamW, torch.optim.AdamW)
 
 
 if __name__ == "__main__":

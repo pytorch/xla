@@ -10,10 +10,8 @@ namespace ir {
 namespace ops {
 namespace {
 
-xla::Shape NodeOutputShape(const Value& input,
-                           std::vector<xla::int64_t>& dimensions,
-                           bool keep_reduced_dimensions,
-                           xla::int64_t correction) {
+xla::Shape NodeOutputShape(const Value& input, std::vector<int64_t>& dimensions,
+                           bool keep_reduced_dimensions, int64_t correction) {
   auto lower_for_shape_fn_std_mean =
       [&](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
     xla::XlaOp std = BuildStdDeviation(operands[0], dimensions,
@@ -27,8 +25,8 @@ xla::Shape NodeOutputShape(const Value& input,
 
 }  // namespace
 
-StdMean::StdMean(const Value& input, std::vector<xla::int64_t> dimensions,
-                 xla::int64_t correction, bool keep_reduced_dimensions)
+StdMean::StdMean(const Value& input, std::vector<int64_t> dimensions,
+                 int64_t correction, bool keep_reduced_dimensions)
     : Node(ir::OpKind(at::aten::std_mean), {input},
            [&]() {
              return NodeOutputShape(input, dimensions, keep_reduced_dimensions,

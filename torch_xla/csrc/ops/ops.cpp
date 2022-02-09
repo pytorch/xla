@@ -8,6 +8,7 @@
 #include "tensorflow/compiler/xla/shape_util.h"
 #include "tensorflow/compiler/xla/xla_client/debug_macros.h"
 #include "tensorflow/compiler/xla/xla_client/util.h"
+#include "torch/csrc/lazy/core/helpers.h"
 #include "torch_xla/csrc/convert_ops.h"
 #include "torch_xla/csrc/data_ops.h"
 #include "torch_xla/csrc/elementwise.h"
@@ -168,6 +169,18 @@ NodePtr ReluOp(const Value& input) {
       std::move(lower_fn));
 }
 
+NodePtr Prelu(const Value& input, const Value& weight) {
+  auto lower_fn = [](const Node& node, LoweringContext* loctx) -> XlaOpVector {
+    xla::XlaOp xla_input = loctx->GetOutputOp(node.operand(0));
+    xla::XlaOp xla_weight = loctx->GetOutputOp(node.operand(1));
+    xla::XlaOp xla_output = BuildPrelu(xla_input, xla_weight);
+    return node.ReturnOp(xla_output, loctx);
+  };
+
+  return GenericOp(OpKind(at::aten::prelu), {input, weight}, input.shape(),
+                   std::move(lower_fn));
+}
+
 NodePtr HardSigmoid(const Value& input) {
   auto lower_fn = [](const Node& node, LoweringContext* loctx) -> XlaOpVector {
     xla::XlaOp xla_input = loctx->GetOutputOp(node.operand(0));
@@ -252,17 +265,17 @@ NodePtr SigmoidBackward(const Value& grad_output, const Value& output) {
 }
 
 NodePtr LogSoftmaxBackwardOp(const Value& grad_output, const Value& output,
-                             xla::int64_t dim) {
+                             int64_t dim) {
   return MakeNode<LogSoftmaxBackward>(
       grad_output, output,
-      XlaHelpers::GetCanonicalDimensionIndex(dim, grad_output.shape().rank()));
+      torch::lazy::GetCanonicalDimensionIndex(dim, grad_output.shape().rank()));
 }
 
 NodePtr SoftmaxBackwardOp(const Value& grad_output, const Value& output,
-                          xla::int64_t dim) {
+                          int64_t dim) {
   return MakeNode<SoftmaxBackward>(
       grad_output, output,
-      XlaHelpers::GetCanonicalDimensionIndex(dim, grad_output.shape().rank()));
+      torch::lazy::GetCanonicalDimensionIndex(dim, grad_output.shape().rank()));
 }
 
 NodePtr Clamp(const Value& input, const Value& min, const Value& max) {
@@ -501,36 +514,36 @@ NodePtr ARange(const at::Scalar& start, const at::Scalar& end,
                                          step.toDouble());
       break;
     case xla::PrimitiveType::U8:
-      values = XlaHelpers::Range<xla::uint8>(start.toByte(), end.toByte(),
-                                             step.toByte());
+      values = XlaHelpers::Range<uint8_t>(start.toByte(), end.toByte(),
+                                          step.toByte());
       break;
     case xla::PrimitiveType::S8:
-      values = XlaHelpers::Range<xla::int8>(start.toChar(), end.toChar(),
-                                            step.toChar());
+      values = XlaHelpers::Range<int8_t>(start.toChar(), end.toChar(),
+                                         step.toChar());
       break;
     case xla::PrimitiveType::S16:
-      values = XlaHelpers::Range<xla::int16>(start.toShort(), end.toShort(),
-                                             step.toShort());
+      values = XlaHelpers::Range<int16_t>(start.toShort(), end.toShort(),
+                                          step.toShort());
       break;
     case xla::PrimitiveType::U16:
-      values = XlaHelpers::Range<xla::uint16>(start.toInt(), end.toInt(),
-                                              step.toInt());
+      values =
+          XlaHelpers::Range<uint16_t>(start.toInt(), end.toInt(), step.toInt());
       break;
     case xla::PrimitiveType::S32:
-      values = XlaHelpers::Range<xla::int32>(start.toInt(), end.toInt(),
-                                             step.toInt());
+      values =
+          XlaHelpers::Range<int32_t>(start.toInt(), end.toInt(), step.toInt());
       break;
     case xla::PrimitiveType::U32:
-      values = XlaHelpers::Range<xla::uint32>(start.toLong(), end.toLong(),
-                                              step.toLong());
+      values = XlaHelpers::Range<uint32_t>(start.toLong(), end.toLong(),
+                                           step.toLong());
       break;
     case xla::PrimitiveType::S64:
-      values = XlaHelpers::Range<xla::int64_t>(start.toLong(), end.toLong(),
-                                               step.toLong());
+      values = XlaHelpers::Range<int64_t>(start.toLong(), end.toLong(),
+                                          step.toLong());
       break;
     case xla::PrimitiveType::U64:
-      values = XlaHelpers::Range<xla::uint64>(start.toLong(), end.toLong(),
-                                              step.toLong());
+      values = XlaHelpers::Range<uint64_t>(start.toLong(), end.toLong(),
+                                           step.toLong());
       break;
     default:
       XLA_ERROR() << "XLA type not supported: " << type;
@@ -563,11 +576,11 @@ NodePtr BroadcastTensors(absl::Span<const Value> tensors) {
 
 NodePtr Norm(const Value& input, const c10::optional<at::Scalar>& p,
              c10::optional<at::ScalarType> dtype,
-             absl::Span<const xla::int64_t> dims, bool keepdim) {
+             absl::Span<const int64_t> dims, bool keepdim) {
   ScopePusher ir_scope(at::aten::norm.toQualString());
-  auto dimensions = xla::util::ToVector<xla::int64_t>(dims);
+  auto dimensions = xla::util::ToVector<int64_t>(dims);
   if (dimensions.empty()) {
-    dimensions = xla::util::Iota<xla::int64_t>(input.shape().rank());
+    dimensions = xla::util::Iota<int64_t>(input.shape().rank());
   }
   if (!p.has_value() || p->toDouble() == 2.0) {
     NodePtr square = input * input;
@@ -598,8 +611,7 @@ NodePtr Norm(const Value& input, const c10::optional<at::Scalar>& p,
   return Pow(result, norm_exp_inv);
 }
 
-NodePtr Identity(xla::int64_t lines, xla::int64_t cols,
-                 xla::PrimitiveType element_type) {
+NodePtr Identity(int64_t lines, int64_t cols, xla::PrimitiveType element_type) {
   auto lower_fn = [=](const Node& node, LoweringContext* loctx) -> XlaOpVector {
     return node.ReturnOp(
         xla::IdentityMatrix(loctx->builder(), element_type, lines, cols),
@@ -733,7 +745,7 @@ NodePtr MaxUnary(const Value& input) {
         XlaHelpers::ScalarValue(min_max.min, element_type, loctx->builder());
     xla::XlaOp result = xla::Reduce(
         xla_input, init_value, XlaHelpers::CreateMaxComputation(element_type),
-        xla::util::Iota<xla::int64_t>(input_shape.rank()));
+        xla::util::Iota<int64_t>(input_shape.rank()));
     return node.ReturnOp(xla::Reshape(result, {}), loctx);
   };
   XLA_CHECK_GT(xla::ShapeUtil::ElementsIn(input.shape()), 0);
@@ -752,7 +764,7 @@ NodePtr MinUnary(const Value& input) {
         XlaHelpers::ScalarValue(min_max.max, element_type, loctx->builder());
     xla::XlaOp result = xla::Reduce(
         xla_input, init_value, XlaHelpers::CreateMinComputation(element_type),
-        xla::util::Iota<xla::int64_t>(input_shape.rank()));
+        xla::util::Iota<int64_t>(input_shape.rank()));
     return node.ReturnOp(xla::Reshape(result, {}), loctx);
   };
   XLA_CHECK_GT(xla::ShapeUtil::ElementsIn(input.shape()), 0);
@@ -922,6 +934,26 @@ NodePtr LogicalOr(const Value& input, const Value& other) {
       std::move(lower_fn));
 }
 
+NodePtr XLogY(const Value& input, const Value& other) {
+  auto lower_fn = [](const Node& node, LoweringContext* loctx) -> XlaOpVector {
+    xla::XlaOp xla_input = loctx->GetOutputOp(node.operand(0));
+    xla::XlaOp xla_other = loctx->GetOutputOp(node.operand(1));
+    xla::XlaOp xla_output = BuildXLogY(xla_input, xla_other);
+    return node.ReturnOp(xla_output, loctx);
+  };
+  auto lower_for_shape_fn =
+      [](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
+    XLA_CHECK_EQ(operands.size(), 2) << "Unexpected number of operands";
+    return BuildXLogY(operands[0], operands[1]);
+  };
+  return GenericOp(OpKind(at::aten::xlogy), {input, other},
+                   [&]() {
+                     return InferOutputShape({input.shape(), other.shape()},
+                                             lower_for_shape_fn);
+                   },
+                   std::move(lower_fn));
+}
+
 NodePtr NanToNum(const Value& input, const Value& nan, const Value& posinf,
                  const Value& neginf) {
   auto lower_fn = [](const Node& node, LoweringContext* loctx) -> XlaOpVector {
@@ -957,6 +989,20 @@ NodePtr SLogDet(const Value& input) {
       OpKind(at::aten::slogdet), {input},
       [&]() { return InferOutputShape({input.shape()}, lower_for_shape_fn); },
       std::move(lower_fn), /*num_outputs=*/2);
+}
+
+NodePtr Softplus(const Value& input, const Value& beta,
+                 const Value& threshold) {
+  auto lower_fn = [](const Node& node, LoweringContext* loctx) -> XlaOpVector {
+    xla::XlaOp xla_input = loctx->GetOutputOp(node.operand(0));
+    xla::XlaOp xla_beta = loctx->GetOutputOp(node.operand(1));
+    xla::XlaOp xla_threshold = loctx->GetOutputOp(node.operand(2));
+    xla::XlaOp xla_output = BuildSoftplus(xla_input, xla_beta, xla_threshold);
+    return node.ReturnOp(xla_output, loctx);
+  };
+
+  return GenericOp(OpKind(at::aten::softplus), {input, beta, threshold},
+                   input.shape(), std::move(lower_fn));
 }
 
 }  // namespace ops

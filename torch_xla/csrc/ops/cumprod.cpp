@@ -1,6 +1,7 @@
 #include "torch_xla/csrc/ops/cumprod.h"
 
 #include "tensorflow/compiler/xla/client/lib/constants.h"
+#include "torch/csrc/lazy/core/tensor_util.h"
 #include "torch_xla/csrc/convert_ops.h"
 #include "torch_xla/csrc/helpers.h"
 #include "torch_xla/csrc/lowering_context.h"
@@ -14,7 +15,7 @@ namespace ir {
 namespace ops {
 namespace {
 
-xla::XlaOp LowerCumProd(xla::XlaOp input, xla::int64_t dim,
+xla::XlaOp LowerCumProd(xla::XlaOp input, int64_t dim,
                         c10::optional<at::ScalarType> dtype) {
   xla::XlaOp casted_input = CastToScalarType(input, dtype);
   const xla::Shape& input_shape = XlaHelpers::ShapeOfXlaOp(casted_input);
@@ -36,12 +37,12 @@ xla::Shape NodeOutputShape(const Value& input,
 
 }  // namespace
 
-CumProd::CumProd(const Value& input, xla::int64_t dim,
+CumProd::CumProd(const Value& input, int64_t dim,
                  c10::optional<at::ScalarType> dtype)
     : Node(ir::OpKind(at::aten::cumprod), {input},
            [&]() { return NodeOutputShape(input, dtype); },
            /*num_outputs=*/1,
-           torch::lazy::MHash(dim, OptionalOr<int>(dtype, -1))),
+           torch::lazy::MHash(dim, torch::lazy::OptionalOr<int>(dtype, -1))),
       dim_(dim),
       dtype_(dtype) {}
 

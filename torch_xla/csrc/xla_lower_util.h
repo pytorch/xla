@@ -9,14 +9,14 @@
 
 namespace torch_xla {
 
-xla::XlaOp PadToSize(xla::XlaOp input, absl::Span<const xla::int64_t> size,
+xla::XlaOp PadToSize(xla::XlaOp input, absl::Span<const int64_t> size,
                      absl::optional<xla::XlaOp> pad_value = absl::nullopt);
 
-std::vector<xla::XlaOp> CreateKthValue(xla::XlaOp input, xla::int64_t k,
-                                       xla::int64_t dim, bool keepdim);
+std::vector<xla::XlaOp> CreateKthValue(xla::XlaOp input, int64_t k, int64_t dim,
+                                       bool keepdim);
 
-std::vector<xla::XlaOp> CreateTopK(xla::XlaOp input, xla::int64_t k,
-                                   xla::int64_t dim, bool largest, bool sorted);
+std::vector<xla::XlaOp> CreateTopK(xla::XlaOp input, int64_t k, int64_t dim,
+                                   bool largest, bool stable);
 
 xla::XlaOp CreateMatMul(xla::XlaOp lhs, xla::XlaOp rhs);
 
@@ -43,23 +43,22 @@ std::vector<xla::XlaOp> CreateBroadcastTensors(
     absl::Span<const xla::XlaOp> operands);
 
 // Similar to tf.gather_nd, used to implement advanced indexing.
-xla::XlaOp CreateIndex(xla::XlaOp input, xla::XlaOp indices,
-                       xla::int64_t start_dim);
+xla::XlaOp CreateIndex(xla::XlaOp input, xla::XlaOp indices, int64_t start_dim);
 
 // Similar to tf.scatter_nd, used to implement advanced indexing updates.
 xla::XlaOp CreateIndexUpdate(
-    xla::XlaOp buffer, xla::XlaOp indices, xla::int64_t start_dim,
+    xla::XlaOp buffer, xla::XlaOp indices, int64_t start_dim,
     xla::XlaOp updates,
     const std::function<xla::XlaOp(xla::XlaOp, xla::XlaOp)>& combiner);
 
-xla::XlaOp CreateIndexAdd(xla::XlaOp buffer, xla::int64_t dim, xla::XlaOp index,
+xla::XlaOp CreateIndexAdd(xla::XlaOp buffer, int64_t dim, xla::XlaOp index,
                           xla::XlaOp value);
 
-xla::XlaOp CreateIndexCopy(xla::XlaOp buffer, xla::int64_t dim,
-                           xla::XlaOp index, xla::XlaOp value);
+xla::XlaOp CreateIndexCopy(xla::XlaOp buffer, int64_t dim, xla::XlaOp index,
+                           xla::XlaOp value);
 
-xla::XlaOp CreateIndexFill(xla::XlaOp buffer, xla::int64_t dim,
-                           xla::XlaOp index, xla::XlaOp values);
+xla::XlaOp CreateIndexFill(xla::XlaOp buffer, int64_t dim, xla::XlaOp index,
+                           xla::XlaOp values);
 
 using XlaOpCombiner = std::function<xla::XlaOp(xla::XlaOp, xla::XlaOp)>;
 
@@ -75,7 +74,7 @@ struct ScatterOptions {
 };
 
 xla::XlaOp CreateScatter(const Device& device, xla::XlaOp input,
-                         xla::XlaOp index, xla::XlaOp source, xla::int64_t dim,
+                         xla::XlaOp index, xla::XlaOp source, int64_t dim,
                          const ScatterOptions& options);
 
 xla::XlaOp CreatePut(const Device& device, xla::XlaOp input, xla::XlaOp index,
@@ -100,10 +99,20 @@ std::vector<xla::XlaOp> BuildAmpUpdateScale(const xla::XlaOp& current_scale,
                                             int scale_growth_interval);
 
 std::vector<xla::XlaOp> BuildSgdOptimizerStep(
-    const xla::XlaOp& step, const xla::XlaOp& param, const xla::XlaOp& buf,
-    const xla::XlaOp& found_inf, const xla::XlaOp& d_p,
+    const xla::XlaOp& found_inf, const xla::XlaOp& step,
+    const xla::XlaOp& param, const xla::XlaOp& buf, const xla::XlaOp& d_p,
     const xla::XlaOp& weight_decay, const xla::XlaOp& momentum,
     const xla::XlaOp& lr, const xla::XlaOp& dampening, bool use_weight_decay,
     bool use_momentum, bool use_nesterov);
+
+std::vector<xla::XlaOp> BuildAdamOptimizerStep(
+    const xla::XlaOp& found_inf, const xla::XlaOp& step,
+    const xla::XlaOp& param, const xla::XlaOp& grad, const xla::XlaOp& exp_avg,
+    const xla::XlaOp& exp_avg_sq, const xla::XlaOp& max_exp_avg_sq,
+    const xla::XlaOp& beta1, const xla::XlaOp& beta2, const xla::XlaOp& lr,
+    const xla::XlaOp& weight_decay, const xla::XlaOp& eps,
+    bool use_weight_decay, bool use_amsgrad, bool use_adamw);
+
+xla::XlaOp BuildXLogY(xla::XlaOp input, xla::XlaOp other);
 
 }  // namespace torch_xla

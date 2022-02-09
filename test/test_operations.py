@@ -748,6 +748,21 @@ class TestDynamicShape(XlaTestCase):
     self.assertEqual(x_dim0_shape.item(), 3)
 
 
+class TestDataType(XlaTestCase):
+
+  def test_mixed_dtype_tuple(self):
+
+    def op_fn(a):
+      return xb.Op.tuple((a, a.cast(xb.Type.BF16)))
+
+    op = xor.register('test_mixed_dtype_tuple', op_fn)
+    xla_device = xm.xla_device()
+    a_tensor = torch.randn([2, 3]).to(xla_device)
+    a_result, a_cast = op(a_tensor)
+    self.assertEqual(a_result.dtype, torch.float)
+    self.assertEqual(a_cast.dtype, torch.bfloat16)
+
+
 class TestAtenXlaTensor(XlaTestCase):
 
   def test_get_real_xla_devices(self):
@@ -1749,6 +1764,17 @@ class TestAtenXlaTensor(XlaTestCase):
     x = torch.rand(5, device=xla_device)
     y = torch.rand(5)
     self.assertEqual(x + y, y + x)
+
+  @unittest.skipIf(
+      os.environ.get('XLA_USE_EAGER_DEBUG_MODE'),
+      'Since in eager mode the tensor would be materialized and hence _get_xla_tensors_text would not show the prim::Constant node.'
+  )
+  def test_pow_constant(self):
+    t1 = torch.pow(torch.tensor([2.0, 3.0], device=xm.xla_device()), 5)
+    hlo_text = torch_xla._XLAC._get_xla_tensors_text([t1])
+    const_hlo = hlo_text.split('\n')[1]
+    assert 'prim::Constant' in const_hlo
+    assert 'xla::device_data' not in const_hlo
 
 
 class MNISTComparator(nn.Module):

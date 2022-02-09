@@ -30,8 +30,9 @@ inline NodePtr GenericOp(
     Generic::LowerFn lower_fn, size_t num_outputs = 1,
     // cast to uint32_t to avoid ambiguous constructor of uint128
     torch::lazy::hash_t hash_seed = (uint32_t)0x5a2d296e9) {
-  return MakeNode<Generic>(std::move(op), operands, std::move(shape),
-                           std::move(lower_fn), num_outputs, hash_seed);
+  return torch_xla::ir::MakeNode<Generic>(std::move(op), operands,
+                                          std::move(shape), std::move(lower_fn),
+                                          num_outputs, hash_seed);
 }
 
 inline NodePtr GenericOp(
@@ -40,14 +41,16 @@ inline NodePtr GenericOp(
     size_t num_outputs = 1,
     // cast to uint32_t to avoid ambiguous constructor of uint128
     torch::lazy::hash_t hash_seed = (uint32_t)0x5a2d296e9) {
-  return MakeNode<Generic>(std::move(op), operands, shape_fn,
-                           std::move(lower_fn), num_outputs, hash_seed);
+  return torch_xla::ir::MakeNode<Generic>(std::move(op), operands, shape_fn,
+                                          std::move(lower_fn), num_outputs,
+                                          hash_seed);
 }
 
 inline NodePtr GenericOp(OpKind op, xla::Shape shape, Generic::LowerFn lower_fn,
                          size_t num_outputs, torch::lazy::hash_t hash_seed) {
-  return MakeNode<Generic>(std::move(op), std::move(shape), std::move(lower_fn),
-                           num_outputs, hash_seed);
+  return torch_xla::ir::MakeNode<Generic>(std::move(op), std::move(shape),
+                                          std::move(lower_fn), num_outputs,
+                                          hash_seed);
 }
 
 NodePtr Acos(const Value& input);
@@ -112,6 +115,8 @@ NodePtr Rsqrt(const Value& input);
 
 NodePtr ReciprocalOp(const Value& input);
 
+NodePtr Prelu(const Value& input, const Value& weight);
+
 NodePtr Pow(const Value& input, const Value& exponent);
 
 NodePtr Fmod(const Value& dividend, const Value& divisor);
@@ -136,10 +141,10 @@ NodePtr SiLUBackward(const Value& grad_output, const Value& input);
 NodePtr SigmoidBackward(const Value& grad_output, const Value& output);
 
 NodePtr LogSoftmaxBackwardOp(const Value& grad_output, const Value& output,
-                             xla::int64_t dim);
+                             int64_t dim);
 
 NodePtr SoftmaxBackwardOp(const Value& grad_output, const Value& output,
-                          xla::int64_t dim);
+                          int64_t dim);
 
 NodePtr Clamp(const Value& input, const Value& min, const Value& max);
 
@@ -178,10 +183,9 @@ NodePtr BroadcastTensors(absl::Span<const Value> tensors);
 
 NodePtr Norm(const Value& input, const c10::optional<at::Scalar>& p,
              c10::optional<at::ScalarType> dtype,
-             absl::Span<const xla::int64_t> dims, bool keepdim);
+             absl::Span<const int64_t> dims, bool keepdim);
 
-NodePtr Identity(xla::int64_t lines, xla::int64_t cols,
-                 xla::PrimitiveType element_type);
+NodePtr Identity(int64_t lines, int64_t cols, xla::PrimitiveType element_type);
 
 NodePtr Elu(const Value& input, const at::Scalar& alpha,
             const at::Scalar& scale, const at::Scalar& input_scale);
@@ -230,10 +234,14 @@ NodePtr LogicalAnd(const Value& input, const Value& other);
 
 NodePtr LogicalOr(const Value& input, const Value& other);
 
+NodePtr XLogY(const Value& input, const Value& other);
+
 NodePtr NanToNum(const Value& input, const Value& nan, const Value& posinf,
                  const Value& neginf);
 
 NodePtr SLogDet(const Value& input);
+
+NodePtr Softplus(const Value& input, const Value& beta, const Value& threshold);
 
 }  // namespace ops
 }  // namespace ir

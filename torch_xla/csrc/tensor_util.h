@@ -14,15 +14,13 @@
 
 namespace torch_xla {
 
-std::vector<xla::int64_t> ComputeShapeStrides(const xla::Shape& shape);
-
-std::vector<xla::int64_t> ComputeArrayStrides(
-    absl::Span<const xla::int64_t> sizes);
+std::vector<int64_t> ComputeShapeStrides(const xla::Shape& shape);
 
 // Converts an XLA literal to an at::Tensor of the given element type.
 at::Tensor MakeTensorFromXlaLiteral(const xla::Literal& literal,
                                     at::ScalarType dest_element_type);
 
+// TODO LTC @wonjoo - Migrate to upstream after Device -> BackendDevice
 std::vector<at::Tensor> XlaDataToTensors(
     absl::Span<const xla::ComputationClient::DataPtr> xla_data,
     at::ScalarType dest_element_type);
@@ -31,6 +29,7 @@ bool TensorCompare(const at::Tensor& t1, const at::Tensor& t2);
 
 // Uploads an ATEN tensor data to the device and fetches the corresponding
 // device data handle.
+// TODO LTC @wonjoo - Migrate to upstream after Device -> BackendDevice
 xla::ComputationClient::DataPtr TensorToXlaData(const at::Tensor& tensor,
                                                 const Device& device);
 
@@ -38,6 +37,7 @@ torch::lazy::hash_t TensorHash(const at::Tensor& tensor);
 
 // Retrieves the device data handles by parallel uploading data onto the
 // corresponding devices.
+// TODO LTC @wonjoo - Migrate to upstream after Device -> BackendDevice
 std::vector<xla::ComputationClient::DataPtr> CreateTensorsData(
     const std::vector<at::Tensor>& tensors,
     const std::vector<std::string>& devices);

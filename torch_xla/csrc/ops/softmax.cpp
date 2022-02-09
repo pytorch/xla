@@ -1,5 +1,6 @@
 #include "torch_xla/csrc/ops/softmax.h"
 
+#include "torch/csrc/lazy/core/tensor_util.h"
 #include "torch_xla/csrc/convert_ops.h"
 #include "torch_xla/csrc/lowering_context.h"
 #include "torch_xla/csrc/softmax_builder.h"
@@ -11,7 +12,7 @@ namespace ir {
 namespace ops {
 namespace {
 
-xla::XlaOp LowerSoftmax(xla::XlaOp input, xla::int64_t dim,
+xla::XlaOp LowerSoftmax(xla::XlaOp input, int64_t dim,
                         const c10::optional<at::ScalarType>& dtype) {
   xla::XlaOp result = BuildSoftmax(input, dim);
   return CastToScalarType(result, dtype);
@@ -28,12 +29,12 @@ xla::Shape NodeOutputShape(const Value& input,
 
 }  // namespace
 
-Softmax::Softmax(const Value& input, xla::int64_t dim,
+Softmax::Softmax(const Value& input, int64_t dim,
                  c10::optional<at::ScalarType> dtype)
     : Node(ir::OpKind(at::aten::softmax), {input},
            [&]() { return NodeOutputShape(input, dtype); },
            /*num_outputs=*/1,
-           torch::lazy::MHash(dim, OptionalOr<int>(dtype, -1))),
+           torch::lazy::MHash(dim, torch::lazy::OptionalOr<int>(dtype, -1))),
       dim_(dim),
       dtype_(dtype) {}
 
@@ -49,7 +50,7 @@ XlaOpVector Softmax::Lower(LoweringContext* loctx) const {
 std::string Softmax::ToString() const {
   std::stringstream ss;
   ss << Node::ToString() << ", dim=" << dim_
-     << ", dtype=" << OptionalOr<int>(dtype_, -1);
+     << ", dtype=" << torch::lazy::OptionalOr<int>(dtype_, -1);
   return ss.str();
 }
 

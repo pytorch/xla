@@ -11,7 +11,7 @@ namespace ops {
 namespace {
 
 xla::Shape NodeOutputShape(const Value& input,
-                           absl::Span<const xla::int64_t> output_size) {
+                           absl::Span<const int64_t> output_size) {
   auto lower_for_shape_fn =
       [output_size](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
     XLA_CHECK_EQ(operands.size(), 1);
@@ -23,7 +23,7 @@ xla::Shape NodeOutputShape(const Value& input,
 }  // namespace
 
 AdaptiveAvgPool3d::AdaptiveAvgPool3d(const Value& input,
-                                     std::vector<xla::int64_t> output_size)
+                                     std::vector<int64_t> output_size)
     : Node(ir::OpKind(at::aten::adaptive_avg_pool3d), {input},
            [&]() { return NodeOutputShape(input, output_size); },
            /*num_outputs=*/1, torch::lazy::MHash(output_size)),
