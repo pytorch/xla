@@ -44,6 +44,10 @@ function install_and_setup_conda() {
   /usr/bin/yes | pip install ninja  # Install ninja to speedup the build
   /usr/bin/yes | pip install cmake>=3.13 --upgrade  # Using Ninja requires CMake>=3.13
   /usr/bin/yes | pip install absl-py
+  # Additional PyTorch requirements
+  /usr/bin/yes | pip install boto3
+  /usr/bin/yes | pip install mypy
+  /usr/bin/yes | pip install psutil
 
 }
 
