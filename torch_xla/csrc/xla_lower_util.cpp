@@ -694,8 +694,8 @@ xla::XlaOp CreatePut(const Device& device, xla::XlaOp input, xla::XlaOp index,
   return XlaHelpers::DynamicReshapeAs(r1_scatter, input_shape);
 }
 
-xla::XlaOp CreateLinspace(const Device& device, xla::XlaOp start,
-                          xla::XlaOp end, int64_t steps) {
+xla::XlaOp BuildLinspace(const Device& device, xla::XlaOp start, xla::XlaOp end,
+                         int64_t steps) {
   XLA_CHECK_GE(steps, 0);
   if (steps == 1) {
     return BuildExpand(start, {1});

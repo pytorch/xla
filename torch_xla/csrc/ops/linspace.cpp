@@ -25,7 +25,7 @@ NodePtr Linspace::Clone(OpList operands) const {
 XlaOpVector Linspace::Lower(LoweringContext* loctx) const {
   xla::XlaOp start = loctx->GetOutputOp(operand(0));
   xla::XlaOp end = loctx->GetOutputOp(operand(1));
-  return ReturnOp(CreateLinspace(loctx->device(), start, end, steps_), loctx);
+  return ReturnOp(BuildLinspace(loctx->device(), start, end, steps_), loctx);
 }
 
 std::string Linspace::ToString() const {
