@@ -15,16 +15,16 @@ launch_docker_and_build: &launch_docker_and_build
   name: Launch Docker Container and Build
   no_output_timeout: "1h"
   command: |
-    set -e
+    set -ex
     eval $(aws ecr get-login --region us-east-1 --no-include-email)
-    time docker pull ${GCR_DOCKER_IMAGE} >/dev/null
+    docker pull ${GCR_DOCKER_IMAGE} >/dev/null
     # This is to stage PyTorch/XLA base image for use in the upstream. Right now,
     # we are using PyTorch base image in the upstream test -- but, in case
     # we also want the upstream workflow to use PyTorch/XLA build image, we
     # need to have them in the ECR. This is not expensive, and only pushes it
     # if image layers are not present in the repo.
-    time docker tag ${GCR_DOCKER_IMAGE} ${ECR_DOCKER_IMAGE_BASE}:latest >/dev/null
-    time docker push ${ECR_DOCKER_IMAGE_BASE}:latest >/dev/null
+    docker tag ${GCR_DOCKER_IMAGE} ${ECR_DOCKER_IMAGE_BASE}:latest >/dev/null
+    docker push ${ECR_DOCKER_IMAGE_BASE}:latest >/dev/null
     sudo pkill -SIGHUP dockerd
     # To enable remote caching, use SCCACHE_BUCKET=${SCCACHE_BUCKET}
     echo "declare -x SCCACHE_BUCKET=${LOCAL_BUCKET}" >> /home/circleci/project/env

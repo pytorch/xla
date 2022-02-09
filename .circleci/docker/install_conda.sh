@@ -31,7 +31,7 @@ function install_and_setup_conda() {
   conda install -y python=$PYTHON_VERSION
 
   conda install -y numpy pyyaml mkl-include setuptools cmake cffi typing \
-    tqdm coverage hypothesis dataclasses scipy cython scikit-image
+    tqdm coverage hypothesis dataclasses cython
   /usr/bin/yes | pip install typing_extensions==3.10.0.2  # Required for Python<=3.7
   /usr/bin/yes | pip install --upgrade oauth2client
   /usr/bin/yes | pip install lark-parser
@@ -43,10 +43,12 @@ function install_and_setup_conda() {
   /usr/bin/yes | pip install cmake>=3.13 --upgrade  # Using Ninja requires CMake>=3.13
   /usr/bin/yes | pip install absl-py
   # Additional PyTorch requirements
-  /usr/bin/yes | pip install boto3
-  /usr/bin/yes | pip install mypy
+  /usr/bin/yes | pip install scikit-image scipy==1.1.0  # >1.1.0 breaks PyTorch tests
+  /usr/bin/yes | pip install boto3==1.16.34
+  /usr/bin/yes | pip install mypy==0.812
   /usr/bin/yes | pip install psutil
   /usr/bin/yes | pip install unittest-xml-reporting
+  /usr/bin/yes | pip install pytest
 
 }
 
