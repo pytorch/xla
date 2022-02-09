@@ -20,7 +20,7 @@ def _mp_fn(index):
     outputs = [torch.zeros_like(input)] * world_size
     xinput = input.to(device)
     xoutputs = [o.to(device) for o in outputs]
-    xoutput0 = outputs[0]
+    xoutput0 = xoutputs[0]
     dist.all_gather(xoutputs, xinput)
     for i, o in enumerate(xoutputs):
       expected = torch.ones((2, 3)) * i
