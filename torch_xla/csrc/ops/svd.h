@@ -8,7 +8,8 @@ namespace ops {
 
 class SVD : public Node {
  public:
-  SVD(const Value& input, bool full_matrices, bool compute_uv, bool deprecated_svd);
+  SVD(const Value& input, bool full_matrices, bool compute_uv,
+      bool deprecated_svd);
 
   std::string ToString() const override;
 

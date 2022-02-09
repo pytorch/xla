@@ -852,10 +852,12 @@ TEST_F(AtenXlaTensorTest, TestLinalgSVD) {
     for (auto n : dims) {
       torch::Tensor a =
           torch::rand({m, n}, torch::TensorOptions(torch::kFloat));
-      auto b = torch::_linalg_svd(a, /*full_matrices=*/false, /*compute_uv=*/true);
+      auto b =
+          torch::_linalg_svd(a, /*full_matrices=*/false, /*compute_uv=*/true);
       ForEachDevice([&](const torch::Device& device) {
         torch::Tensor xla_a = CopyToDevice(a, device);
-        auto xla_b = torch::_linalg_svd(xla_a, /*full_matrices=*/false, /*compute_uv=*/true);
+        auto xla_b = torch::_linalg_svd(xla_a, /*full_matrices=*/false,
+                                        /*compute_uv=*/true);
         // The U and V matrices might have different sign for column vectors, so
         // cannot be compared if not by absolute value.
         AllClose(std::get<0>(b).abs(), std::get<0>(xla_b).abs(), /*rtol=*/1e-3,

@@ -322,7 +322,8 @@ class XLATensor {
                                  double scale_backoff_factor,
                                  int growth_interval);
 
-  static std::tuple<XLATensor, XLATensor, XLATensor> _linalg_svd(const XLATensor& A, bool full_matrices, bool compute_uv);
+  static std::tuple<XLATensor, XLATensor, XLATensor> _linalg_svd(
+      const XLATensor& A, bool full_matrices, bool compute_uv);
 
   static XLATensor abs(const XLATensor& input);
 
