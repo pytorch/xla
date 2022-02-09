@@ -631,6 +631,14 @@ void XLATensor::_amp_update_scale_(XLATensor& current_scale,
   current_scale.SetInPlaceIrValue(ir::Value(node, 0));
 }
 
+std::tuple<XLATensor, XLATensor, XLATensor> XLATensor::_linalg_svd(const XLATensor& input, bool full_matrices, bool compute_uv) {
+  ir::NodePtr node =
+    ir::MakeNode<ir::ops::SVD>(input.GetIrValue(), full_matrices, compute_uv, /*deprecated_svd=*/false);
+  return std::make_tuple(input.CreateFrom(ir::Value(node, 0)),
+                         input.CreateFrom(ir::Value(node, 1)),
+                         input.CreateFrom(ir::Value(node, 2)));
+}
+
 XLATensor XLATensor::abs(const XLATensor& input) {
   return input.CreateFrom(ir::ops::Abs(input.GetIrValue()));
 }
@@ -2709,7 +2717,7 @@ XLATensor XLATensor::sum(const XLATensor& input,
 std::tuple<XLATensor, XLATensor, XLATensor> XLATensor::svd(
     const XLATensor& input, bool some, bool compute_uv) {
   ir::NodePtr node =
-      ir::MakeNode<ir::ops::SVD>(input.GetIrValue(), some, compute_uv);
+      ir::MakeNode<ir::ops::SVD>(input.GetIrValue(), /*full_matrices=*/!some, compute_uv, /*deprecated_svd=*/true);
   return std::make_tuple(input.CreateFrom(ir::Value(node, 0)),
                          input.CreateFrom(ir::Value(node, 1)),
                          input.CreateFrom(ir::Value(node, 2)));

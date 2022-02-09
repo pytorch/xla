@@ -8,7 +8,7 @@ namespace ops {
 
 class SVD : public Node {
  public:
-  SVD(const Value& input, bool some, bool compute_uv);
+  SVD(const Value& input, bool full_matrices, bool compute_uv, bool deprecated_svd);
 
   std::string ToString() const override;
 
@@ -16,13 +16,14 @@ class SVD : public Node {
 
   XlaOpVector Lower(LoweringContext* loctx) const override;
 
-  bool some() const { return some_; }
+  bool full_matrices() const { return full_matrices_; }
 
   bool compute_uv() const { return compute_uv_; }
 
  private:
-  bool some_;
+  bool full_matrices_;
   bool compute_uv_;
+  bool deprecated_svd_;
 };
 
 }  // namespace ops

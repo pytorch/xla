@@ -462,6 +462,22 @@ at::Tensor& XLANativeFunctions::_index_put_impl_(
                                                    accumulate);
 }
 
+std::tuple<at::Tensor,at::Tensor,at::Tensor> XLANativeFunctions::_linalg_svd(const at::Tensor& A, bool full_matrices, bool compute_uv) {
+  XLA_FN_COUNTER("xla::");
+  // Should return conjugate transpose of V, but conjugate is not yet lowered.
+  // Fall back to CPU for complex types until conjugate is lowered.
+  if (A.is_complex()) {
+    return at::native::call_fallback_fn<&xla_cpu_fallback,
+                                        ATEN_OP(_linalg_svd)>::call(
+                                          A, full_matrices, compute_uv);
+  }
+
+  auto results = XLATensor::_linalg_svd(bridge::GetXlaTensor(A), full_matrices, compute_uv);
+  return std::make_tuple(bridge::AtenFromXlaTensor(std::get<0>(results)),
+                         bridge::AtenFromXlaTensor(std::get<1>(results)),
+                         bridge::AtenFromXlaTensor(std::get<2>(results)));
+}
+
 at::Tensor XLANativeFunctions::_log_softmax(const at::Tensor& self, int64_t dim,
                                             bool /* half_to_float */) {
   XLA_FN_COUNTER("xla::");
