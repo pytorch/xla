@@ -19,12 +19,12 @@ def _mp_fn(index):
     num_all_reduces = 20
     xinputs_list = []
     for i in range(num_all_reduces):
-      inputs = torch.inputs((2, 3)) * i
+      inputs = torch.ones((2, 3)) * i
       xinputs = inputs.to(device)
       xinputs_list.append(xinputs)
       dist.all_reduce(xinputs)
     for i in range(num_all_reduces):
-      expected = torch.inputs((2, 3)) * i * world_size
+      expected = torch.ones((2, 3)) * i * world_size
       xinputs = xinputs_list[i]
       assert torch.all(
           xinputs.cpu() == expected), f'trial {i}, {xinputs} != {expected}'
