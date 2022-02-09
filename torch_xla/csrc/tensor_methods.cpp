@@ -14,6 +14,7 @@
 #include "torch/csrc/lazy/core/helpers.h"
 #include "torch_xla/csrc/aten_xla_bridge.h"
 #include "torch_xla/csrc/data_ops.h"
+#include "torch_xla/csrc/gelu.h"
 #include "torch_xla/csrc/helpers.h"
 #include "torch_xla/csrc/ir_util.h"
 #include "torch_xla/csrc/layout_manager.h"
@@ -1381,13 +1382,13 @@ XLATensor XLATensor::ge(const XLATensor& input, const XLATensor& other) {
   return DispatchComparisonOp(at::aten::ge, input, other);
 }
 
-XLATensor XLATensor::gelu(const XLATensor& input, xla::int64_t approximate) {
+XLATensor XLATensor::gelu(const XLATensor& input, GeluType approximate) {
   return input.CreateFrom(ir::ops::Gelu(input.GetIrValue(), approximate));
 }
 
 XLATensor XLATensor::gelu_backward(const XLATensor& grad,
                                    const XLATensor& input,
-                                   xla::int64_t approximate) {
+                                   GeluType approximate) {
   return input.CreateFrom(ir::ops::GeluBackward(
       grad.GetIrValue(), input.GetIrValue(), approximate));
 }

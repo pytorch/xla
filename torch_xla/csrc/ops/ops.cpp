@@ -12,6 +12,7 @@
 #include "torch_xla/csrc/convert_ops.h"
 #include "torch_xla/csrc/data_ops.h"
 #include "torch_xla/csrc/elementwise.h"
+#include "torch_xla/csrc/gelu.h"
 #include "torch_xla/csrc/helpers.h"
 #include "torch_xla/csrc/lowering_context.h"
 #include "torch_xla/csrc/matrix.h"
@@ -650,11 +651,10 @@ NodePtr EluBackward(const Value& grad_output, const Value& output,
                positive_output_branch, negative_output_branch);
 }
 
-NodePtr Gelu(const Value& input, xla::int64_t approximate) {
+NodePtr Gelu(const Value& input, GeluType approximate) {
   ScopePusher ir_scope("aten::gelu");
   const xla::Shape& shape = input.shape();
-  const auto kTanh = 1;
-  if (approximate == kTanh) {
+  if (approximate == GeluType::Tanh) {
     // inner = math.sqrt(2 / math.pi) * (x + 0.044715 * torch.pow(input, 3))
     // input * 0.5 * (1.0 + torch.tanh(inner))
     const float kBeta = M_SQRT2 * M_2_SQRTPI * 0.5;
@@ -673,13 +673,11 @@ NodePtr Gelu(const Value& input, xla::int64_t approximate) {
 }
 
 NodePtr GeluBackward(const Value& grad, const Value& input,
-                     xla::int64_t approximate) {
+                     GeluType approximate) {
   ScopePusher ir_scope("aten::gelu_backward");
   const xla::Shape& shape = input.shape();
-  const int64_t kNone = 0;
-  const int64_t kTanh = 1;
-  if (approximate == kTanh) {
-    const float kBeta = M_SQRT2 * M_2_SQRTPI * 0.5;
+  if (approximate == GeluType::Tanh) {
+    constexpr float kBeta = M_SQRT2 * M_2_SQRTPI * 0.5;
     auto beta = ScalarOp(kBeta, shape);
     auto kappa = ScalarOp(0.044715, shape);
     auto one = ScalarOp(1, shape);
@@ -700,7 +698,7 @@ NodePtr GeluBackward(const Value& grad, const Value& input,
 
     return grad * (left_derivative + right_derivative);
   } else {
-    const float kAlpha = M_2_SQRTPI * M_SQRT1_2 * 0.5;
+    constexpr float kAlpha = M_2_SQRTPI * M_SQRT1_2 * 0.5;
     NodePtr scratch = Erf(input * ScalarOp(M_SQRT1_2, shape));
     NodePtr dinput = Exp(input * input * ScalarOp(-0.5, shape));
     return grad * (ScalarOp(0.5, shape) * (ScalarOp(1.0, shape) + scratch) +
