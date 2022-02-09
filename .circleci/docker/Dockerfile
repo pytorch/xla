@@ -87,7 +87,7 @@ ADD ./install_conda.sh install_conda.sh
 RUN sudo chown jenkins ./install_conda.sh
 RUN bash ./install_conda.sh "${python_version}" /opt/conda
 
-RUN echo "conda activate pytorch" >> ~/.bashrc
+RUN echo "conda activate base" >> ~/.bashrc
 RUN echo "export TF_CPP_LOG_THREAD_ID=1" >> ~/.bashrc
 ENV PATH /opt/conda/bin:$PATH
 

@@ -21,19 +21,17 @@ function install_and_setup_conda() {
 
   echo ". ${CONDA_PREFIX}/etc/profile.d/conda.sh" >> ~/.bashrc
   source "${CONDA_PREFIX}/etc/profile.d/conda.sh"
-  ENVNAME="pytorch"
-  if conda env list | awk '{print $1}' | grep "^$ENVNAME$"; then
-    conda remove --name "$ENVNAME" --all
-  fi
+
   if [ -z "$PYTHON_VERSION" ]; then
     PYTHON_VERSION=$DEFAULT_PYTHON_VERSION
   fi
-  conda create -y --name "$ENVNAME" python=${PYTHON_VERSION} anaconda
-  conda activate "$ENVNAME"
   export CMAKE_PREFIX_PATH="$(dirname $(which conda))/../"
 
+  conda update -y -n base conda
+  conda install -y python=$PYTHON_VERSION
+
   conda install -y numpy pyyaml mkl-include setuptools cmake cffi typing \
-    tqdm coverage hypothesis dataclasses scipy cython
+    tqdm coverage hypothesis dataclasses scipy cython scikit-image
   /usr/bin/yes | pip install typing_extensions==3.10.0.2  # Required for Python<=3.7
   /usr/bin/yes | pip install --upgrade oauth2client
   /usr/bin/yes | pip install lark-parser
@@ -48,6 +46,7 @@ function install_and_setup_conda() {
   /usr/bin/yes | pip install boto3
   /usr/bin/yes | pip install mypy
   /usr/bin/yes | pip install psutil
+  /usr/bin/yes | pip install unittest-xml-reporting
 
 }
 
