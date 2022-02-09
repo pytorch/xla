@@ -1429,13 +1429,6 @@ XLATensor XLATensor::index_copy(const XLATensor& input, int64_t dim,
   return input.CreateFrom(IndexCopy(input, canonical_dim, index, source));
 }
 
-void XLATensor::index_copy_(XLATensor& input, int64_t dim,
-                            const XLATensor& index, const XLATensor& source) {
-  int64_t canonical_dim =
-      torch::lazy::GetCanonicalDimensionIndex(dim, input.shape().get().rank());
-  input.SetIrValue(IndexCopy(input, canonical_dim, index, source));
-}
-
 XLATensor XLATensor::index_fill(const XLATensor& input, int64_t dim,
                                 const XLATensor& index,
                                 const at::Scalar& value) {
