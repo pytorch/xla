@@ -44,7 +44,7 @@ ENV TPUVM_MODE "${tpuvm}"
 # Install base system packages
 RUN apt-get update
 RUN apt-get install -y python-pip python3-pip git curl libopenblas-dev vim \
-  apt-transport-https ca-certificates wget procps openssl libssl-dev sudo
+  apt-transport-https ca-certificates wget procps openssl libssl-dev sudo libc6-dbg
 
 # Install clang & llvm
 ADD ./install_llvm_clang.sh install_llvm_clang.sh
