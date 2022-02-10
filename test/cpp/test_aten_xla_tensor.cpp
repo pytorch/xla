@@ -847,7 +847,7 @@ TEST_F(AtenXlaTensorTest, TestSVD) {
 }
 
 TEST_F(AtenXlaTensorTest, TestLinalgSVD) {
-  static const int dims[] = {4, 7};
+  static const int dims[] = {0, 4, 7};
   for (auto m : dims) {
     for (auto n : dims) {
       torch::Tensor a =
