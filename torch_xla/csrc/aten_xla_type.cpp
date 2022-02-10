@@ -2611,10 +2611,10 @@ at::Tensor& XLANativeFunctions::put_(at::Tensor& self, const at::Tensor& index,
   return self;
 }
 
-std::tuple<at::Tensor, at::Tensor> XLANativeFunctions::qr(
-    const at::Tensor& self, bool some) {
+std::tuple<at::Tensor, at::Tensor> XLANativeFunctions::linalg_qr(
+    const at::Tensor& self, c10::string_view mode) {
   XLA_FN_COUNTER("xla::");
-  auto results = XLATensor::qr(bridge::GetXlaTensor(self), some);
+  auto results = XLATensor::linalg_qr(bridge::GetXlaTensor(self), mode);
   return std::make_tuple(bridge::AtenFromXlaTensor(std::get<0>(results)),
                          bridge::AtenFromXlaTensor(std::get<1>(results)));
 }

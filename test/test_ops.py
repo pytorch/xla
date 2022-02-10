@@ -157,7 +157,6 @@ allowed_opinfo = set(
             AllowedOpInfoEntry('permute'),
             AllowedOpInfoEntry('pow'),
             AllowedOpInfoEntry('float_power'),
-            AllowedOpInfoEntry('qr'),
             AllowedOpInfoEntry('rad2deg'),
             AllowedOpInfoEntry('real'),
             AllowedOpInfoEntry('roll'),
