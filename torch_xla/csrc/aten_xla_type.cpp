@@ -1487,8 +1487,10 @@ at::Tensor XLANativeFunctions::frac(const at::Tensor& self) {
 at::Tensor XLANativeFunctions::gather(const at::Tensor& self, int64_t dim,
                                       const at::Tensor& index,
                                       bool /* sparse_grad */,
-                                      bool /* unique_indices */) {
+                                      bool unique_indices) {
   XLA_FN_COUNTER("xla::");
+  XLA_CHECK(unique_indices) << "gather will have a non-deterministic behavior "
+                               "when indices are not unqiue";
   return bridge::AtenFromXlaTensor(XLATensor::gather(
       bridge::GetXlaTensor(self), dim, bridge::GetXlaTensor(index)));
 }
@@ -2872,7 +2874,7 @@ at::Tensor scatter_reduce_helper(const at::Tensor& self, int64_t dim,
     // TODO: implement scatter_mul
     return at::native::call_fallback_fn<
         &xla_cpu_fallback, ATEN_OP2(scatter, reduce)>::call(self, dim, index,
-                                                            src, *reduce);
+                                                            src, *reduce, true);
   }
 }
 
@@ -2893,7 +2895,8 @@ at::Tensor scatter_reduce_helper(const at::Tensor& self, int64_t dim,
     return at::native::call_fallback_fn<
         &xla_cpu_fallback, ATEN_OP2(scatter, value_reduce)>::call(self, dim,
                                                                   index, value,
-                                                                  *reduce);
+                                                                  *reduce,
+                                                                  true);
   }
 }
 
@@ -2902,8 +2905,8 @@ at::Tensor XLANativeFunctions::scatter(const at::Tensor& self, int64_t dim,
                                        const at::Tensor& src,
                                        bool unique_indices) {
   XLA_FN_COUNTER("xla::");
-  XLA_CHECK(unique_indices)
-      << "scatter not have a deterministic implementation";
+  XLA_CHECK(unique_indices) << "scatter will have a non-deterministic behavior "
+                               "when indices are not unqiue";
   return scatter_reduce_helper(self, dim, index, src, c10::nullopt);
 }
 
@@ -2912,8 +2915,8 @@ at::Tensor XLANativeFunctions::scatter(const at::Tensor& self, int64_t dim,
                                        const at::Scalar& value,
                                        bool unique_indices) {
   XLA_FN_COUNTER("xla::");
-  XLA_CHECK(unique_indices)
-      << "scatter not have a deterministic implementation";
+  XLA_CHECK(unique_indices) << "scatter will have a non-deterministic behavior "
+                               "when indices are not unqiue";
   return scatter_reduce_helper(self, dim, index, value, c10::nullopt);
 }
 
@@ -2923,8 +2926,8 @@ at::Tensor XLANativeFunctions::scatter(const at::Tensor& self, int64_t dim,
                                        c10::string_view reduce,
                                        bool unique_indices) {
   XLA_FN_COUNTER("xla::");
-  XLA_CHECK(unique_indices)
-      << "scatter not have a deterministic implementation";
+  XLA_CHECK(unique_indices) << "scatter will have a non-deterministic behavior "
+                               "when indices are not unqiue";
   return scatter_reduce_helper(self, dim, index, src, reduce);
 }
 
@@ -2934,8 +2937,8 @@ at::Tensor XLANativeFunctions::scatter(const at::Tensor& self, int64_t dim,
                                        c10::string_view reduce,
                                        bool unique_indices) {
   XLA_FN_COUNTER("xla::");
-  XLA_CHECK(unique_indices)
-      << "scatter not have a deterministic implementation";
+  XLA_CHECK(unique_indices) << "scatter will have a non-deterministic behavior "
+                               "when indices are not unqiue";
   return scatter_reduce_helper(self, dim, index, value, reduce);
 }
 
@@ -2944,8 +2947,8 @@ at::Tensor XLANativeFunctions::scatter_add(const at::Tensor& self, int64_t dim,
                                            const at::Tensor& src,
                                            bool unique_indices) {
   XLA_FN_COUNTER("xla::");
-  XLA_CHECK(unique_indices)
-      << "scatter not have a deterministic implementation";
+  XLA_CHECK(unique_indices) << "scatter will have a non-deterministic behavior "
+                               "when indices are not unqiue";
   return scatter_reduce_helper(self, dim, index, src, "add");
 }
 
