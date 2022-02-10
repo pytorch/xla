@@ -249,6 +249,12 @@ XlaOpVector Node::Lower(LoweringContext* loctx) const {
 
 torch::lazy::hash_t Node::GetOpHash(OpKind op, const xla::Shape& shape,
                                     torch::lazy::hash_t hash_seed) {
+  if (xla::Shape::IsDynamicMode()) { //TODO: Milad to implement this
+    torch::lazy::hash_t h = torch_xla::HashCombine(
+        op.hash(), torch::lazy::Hash(shape.dim()));
+    return torch::lazy::HashCombine(h, hash_seed); //TODO: is this how DS wants to be designed?
+  }
+
   torch::lazy::hash_t h =
       torch::lazy::HashCombine(op.hash(), torch::lazy::Hash(shape.ToString()));
   return torch::lazy::HashCombine(h, hash_seed);

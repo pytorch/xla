@@ -47,6 +47,9 @@
 #include "torch_xla/csrc/torch_util.h"
 #include "torch_xla/csrc/version.h"
 #include "torch_xla/csrc/xla_op_builder.h"
+#include "torch_xla/csrc/ops/sum_to_size.h"
+#include "torch_xla/csrc/ops/dynamic_size.h"
+#include "torch_xla/csrc/ops/dynamic_expand.h"
 
 namespace torch_xla {
 namespace {
@@ -851,6 +854,7 @@ void InitXlaModuleBindings(py::module m) {
         });
 
   py::class_<ir::Value, std::shared_ptr<ir::Value>>(m, "IrValue");
+  py::class_<ir::Node, std::shared_ptr<ir::Node>>(m, "IrNode");
   m.def("_xla_create_token",
         [](const std::string& device) { return CreateToken(device); });
   m.def("_xla_all_reduce_inplace", [](const std::string& reduce_type,
@@ -867,6 +871,23 @@ void InitXlaModuleBindings(py::module m) {
     }
     return new_token;
   });
+  m.def("_dynamic_expand2",
+        [](at::Tensor& self, std::shared_ptr<ir::Node> val) {
+          LazyTensor self_lazy_tensor = bridge::GetLtcTensor(self);
+          return bridge::AtenFromLtcTensor(
+              self_lazy_tensor.CreateFrom(MakeNode<ir::ops::DynamicExpand2>(
+                  self_lazy_tensor.GetIrValue(),val)));
+        });
+  m.def("_dynamic_size2",
+        [](at::Tensor& self) {
+          LazyTensor self_lazy_tensor = bridge::GetLtcTensor(self);
+          return MakeNode<ir::ops::DynamicSize2>(self_lazy_tensor.GetIrValue());
+        });
+  m.def("_sum_to_size",
+        [](at::Tensor& self, std::shared_ptr<ir::Node> val) {
+          LazyTensor self_lazy_tensor = bridge::GetLtcTensor(self);
+          return bridge::AtenFromLtcTensor(self_lazy_tensor.CreateFrom(MakeNode<ir::ops::SumToOrThrow>(self_lazy_tensor.GetIrValue(), val)));
+        });
   m.def("_xla_all_reduce",
         [](const std::string& reduce_type, const at::Tensor& input,
            const std::shared_ptr<ir::Value>& token, double scale,
@@ -1196,6 +1217,8 @@ void InitXlaModuleBindings(py::module m) {
         });
 
   BuildProfilerSubmodule(&m);
+  m.def("_ltc_set_dynamic_shapes_mode",
+      []() { lazy_tensors::Shape::SetDynamicMode(); });
 }
 
 }  // namespace
