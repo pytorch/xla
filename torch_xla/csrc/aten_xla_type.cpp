@@ -2872,9 +2872,9 @@ at::Tensor scatter_reduce_helper(const at::Tensor& self, int64_t dim,
                                bridge::GetXlaTensor(src)));
   } else {
     // TODO: implement scatter_mul
-    return at::native::call_fallback_fn<
-        &xla_cpu_fallback, ATEN_OP2(scatter, reduce)>::call(self, dim, index,
-                                                            src, *reduce, true);
+    return at::native::
+        call_fallback_fn<&xla_cpu_fallback, ATEN_OP2(scatter, reduce)>::call(
+            self, dim, index, src, *reduce, /*unique_indices=*/true);
   }
 }
 
@@ -2893,10 +2893,9 @@ at::Tensor scatter_reduce_helper(const at::Tensor& self, int64_t dim,
   } else {
     // TODO: implement scatter_mul
     return at::native::call_fallback_fn<
-        &xla_cpu_fallback, ATEN_OP2(scatter, value_reduce)>::call(self, dim,
-                                                                  index, value,
-                                                                  *reduce,
-                                                                  true);
+        &xla_cpu_fallback,
+        ATEN_OP2(scatter, value_reduce)>::call(self, dim, index, value, *reduce,
+                                               /*unique_indices=*/true);
   }
 }
 
