@@ -296,7 +296,7 @@ workflows:
                 - /release\/.*/
       - pytorch_xla_run_test:
           name: pytorch_xla_run_GPU_test
-          resource_class: gpu.medium
+          resource_class: gpu.nvidia.small.multi
           use_cuda_docker_runtime: "1"
           requires:
             - pytorch_xla_run_build
