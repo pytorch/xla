@@ -126,7 +126,6 @@ function install_llvm_clang() {
   sudo apt-get install -y clang-8 clang++-8
   maybe_append 'export CC=clang-8 CXX=clang++-8' ~/.bashrc
   export CC=clang-8 CXX=clang++-8
-  sudo update-alternatives --install /usr/bin/clang++ clang++ $(which clang++-8) 70
 }
 
 function install_req_packages() {
