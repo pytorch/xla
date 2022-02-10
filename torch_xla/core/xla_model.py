@@ -284,8 +284,8 @@ def xla_replication_devices(local_devices):
   if len(kind_devices) != len(local_devices):
     # Replication can only happen among all devices of one kind.
     raise RuntimeError(
-        'Cannot replicate if number of devices ({}) is different from {}'.
-        format(len(local_devices), len(kind_devices)))
+        'Cannot replicate if number of devices ({}) is different from {}'
+        .format(len(local_devices), len(kind_devices)))
   replication_devices = []
   for device in torch_xla._XLAC._xla_get_all_devices():
     xdev = parse_xla_device(device)
@@ -304,8 +304,8 @@ def unlazy(tensors):
   This API is for benchmarking, don't use it in real models.
 
   Args:
-    tensors (List[torch.Tensor]): List of `torch.Tensor`s to materialize.
-      For each Tensor `t` in the list, `t.device` must be an `xla` device.
+    tensors (List[torch.Tensor]): List of `torch.Tensor`s to materialize. For
+      each Tensor `t` in the list, `t.device` must be an `xla` device.
   """
   torch_xla._XLAC._xla_sync_multi(tensors, devices=[], wait=True)
 
@@ -441,8 +441,9 @@ def check_view_sharing(obj):
         if aid in aliases:
           oobj = aliases[aid]
           raise RuntimeError(
-              'Tensor ID {} ({}) is sharing a view with tensor ID {} ({})'.
-              format(tid, tensor_info(obj), tensor_id(oobj), tensor_info(oobj)))
+              'Tensor ID {} ({}) is sharing a view with tensor ID {} ({})'
+              .format(tid, tensor_info(obj), tensor_id(oobj),
+                      tensor_info(oobj)))
         aliases[aid] = obj
 
   xu.for_each_instance(obj, lambda x: type(x) == torch.Tensor, check_object)
@@ -531,7 +532,8 @@ def all_reduce(reduce_type, inputs, scale=1.0, groups=None, cctx=None):
 
   Args:
     reduce_type (string): One of ``xm.REDUCE_SUM``, ``xm.REDUCE_MUL``,
-    ``xm.REDUCE_AND``, ``xm.REDUCE_OR``, ``xm.REDUCE_MIN`` and ``xm.REDUCE_MAX``.
+      ``xm.REDUCE_AND``, ``xm.REDUCE_OR``, ``xm.REDUCE_MIN`` and
+      ``xm.REDUCE_MAX``.
     inputs: Either a single `torch.Tensor` or a list of `torch.Tensor` to
       perform the all reduce op to.
     scale (float): A default scaling value to be applied after the reduce.
@@ -541,6 +543,7 @@ def all_reduce(reduce_type, inputs, scale=1.0, groups=None, cctx=None):
         defines two groups, one with the `[0, 1, 2, 3]` replicas and one with
         the `[4, 5, 6, 7]` replicas. If `None` there will be only one group with
         all the replicas in it.
+
   Returns:
     If a single `torch.Tensor` is passed, the return value is a `torch.Tensor`
     holding the reduced value (across the replicas). If a list/tuple is passed,
@@ -580,7 +583,7 @@ def all_reduce(reduce_type, inputs, scale=1.0, groups=None, cctx=None):
   return results[0] if isinstance(inputs, torch.Tensor) else results
 
 
-def all_gather(value, dim=0, groups=None):
+def all_gather(value, dim=0, groups=None, output=None):
   """Performs an all-gather operation along a given dimension.
 
   Args:
@@ -592,6 +595,8 @@ def all_gather(value, dim=0, groups=None):
         defines two groups, one with the `[0, 1, 2, 3]` replicas and one with
         the `[4, 5, 6, 7]` replicas. If `None` there will be only one group with
         all the replicas in it.
+    output (torch.Tensor): Optional output tensor.
+
   Returns:
     A tensor which has, in the ``dim`` dimension, all the values from the
     participating replicas.
@@ -600,10 +605,16 @@ def all_gather(value, dim=0, groups=None):
     dim = value.dim() + dim
   token, devctx = _get_all_reduce_token()
   shard_count = None if groups else xrt_world_size()
-  result = torch_xla._XLAC._xla_all_gather(value, token, dim, shard_count,
-                                           groups or [])
-  devctx.all_reduce_token = result[1]
-  return result[0]
+  if output != None:
+    new_token = torch_xla._XLAC._xla_all_gather_out(output, value, token, dim,
+                                                    shard_count, groups or [])
+    devctx.all_reduce_token = new_token
+    return output
+  else:
+    result = torch_xla._XLAC._xla_all_gather(value, token, dim, shard_count,
+                                             groups or [])
+    devctx.all_reduce_token = result[1]
+    return result[0]
 
 
 def all_to_all(value,
@@ -650,8 +661,8 @@ def collective_permute(value, pairs):
     pairs (list): A list of (source_replica_id, target_replica_id) pairs,
       representing the sender and receiver for the `collective_permute()`
       operation. Example: `[[0, 1], [1, 2], [2, 0]]` defines three pairs. The
-        tensor will be sent from replica 0 to replica 1, replica 1 to
-        replica 2, and replica 2 to replica 0.
+        tensor will be sent from replica 0 to replica 1, replica 1 to replica 2,
+        and replica 2 to replica 0.
 
   Returns:
     The result `torch.Tensor` of the `collective_permute()` operation.
@@ -667,14 +678,16 @@ def reduce_scatter(reduce_type,
                    scale,
                    scatter_dim,
                    shard_count,
-                   groups=None):
+                   groups=None,
+                   output=None):
   """Performs a XLA `ReduceScatter()` operation on the input tensor.
 
   See: https://www.tensorflow.org/xla/operation_semantics#reducescatter
 
   Args:
     reduce_type (string): One of ``xm.REDUCE_SUM``, ``xm.REDUCE_MUL``,
-      ``xm.REDUCE_AND``, ``xm.REDUCE_OR``, ``xm.REDUCE_MIN`` and ``xm.REDUCE_MAX``.
+      ``xm.REDUCE_AND``, ``xm.REDUCE_OR``, ``xm.REDUCE_MIN`` and
+      ``xm.REDUCE_MAX``.
     input: A single `torch.Tensor` all reduce + scatter op to.
     scale (float): A default scaling value to be applied after the reduce.
     scatter_dim (int): Dimension number to which apply scatter operation.
@@ -684,17 +697,28 @@ def reduce_scatter(reduce_type,
         defines two groups, one with the `[0, 1, 2, 3]` replicas and one with
         the `[4, 5, 6, 7]` replicas. If `None` there will be only one group with
         all the replicas in it.
+    output: Optional output tensor
+
   Returns:
     A `torch.Tensor` with all the values reduced accross replicas. Each process
     gets a shard split along the `scatter_dim`. All other dimensions are
     the same as the input.
   """
   token, devctx = _get_all_reduce_token()
-  result = torch_xla._XLAC._xla_reduce_scatter(reduce_type, input, token, scale,
-                                               scatter_dim, shard_count,
-                                               groups or [])
-  devctx.all_reduce_token = result[1]
-  return result[0]
+  if output != None:
+    new_token = torch_xla._XLAC._xla_reduce_scatter_out(reduce_type, output,
+                                                        input, token, scale,
+                                                        scatter_dim,
+                                                        shard_count, groups or
+                                                        [])
+    devctx.all_reduce_token = new_token
+    return output
+  else:
+    result = torch_xla._XLAC._xla_reduce_scatter(reduce_type, input, token,
+                                                 scale, scatter_dim,
+                                                 shard_count, groups or [])
+    devctx.all_reduce_token = result[1]
+    return result[0]
 
 
 def add_step_closure(closure, args=(), run_async=False):
