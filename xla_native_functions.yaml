@@ -158,6 +158,7 @@ supported:
   - leaky_relu_backward
   - lerp.Scalar
   - lerp.Tensor
+  - linspace
   - log
   - log1p
   - log2
