@@ -2902,7 +2902,8 @@ at::Tensor XLANativeFunctions::scatter(const at::Tensor& self, int64_t dim,
                                        const at::Tensor& src,
                                        bool unique_indices) {
   XLA_FN_COUNTER("xla::");
-  XLA_CHECK(!unique_indices) << "scatter not have a deterministic implementation";
+  XLA_CHECK(!unique_indices)
+      << "scatter not have a deterministic implementation";
   return scatter_reduce_helper(self, dim, index, src, c10::nullopt);
 }
 
@@ -2911,7 +2912,8 @@ at::Tensor XLANativeFunctions::scatter(const at::Tensor& self, int64_t dim,
                                        const at::Scalar& value,
                                        bool unique_indices) {
   XLA_FN_COUNTER("xla::");
-  XLA_CHECK(!unique_indices) << "scatter not have a deterministic implementation";
+  XLA_CHECK(!unique_indices)
+      << "scatter not have a deterministic implementation";
   return scatter_reduce_helper(self, dim, index, value, c10::nullopt);
 }
 
@@ -2921,7 +2923,8 @@ at::Tensor XLANativeFunctions::scatter(const at::Tensor& self, int64_t dim,
                                        c10::string_view reduce,
                                        bool unique_indices) {
   XLA_FN_COUNTER("xla::");
-  XLA_CHECK(!unique_indices) << "scatter not have a deterministic implementation";
+  XLA_CHECK(!unique_indices)
+      << "scatter not have a deterministic implementation";
   return scatter_reduce_helper(self, dim, index, src, reduce);
 }
 
@@ -2931,7 +2934,8 @@ at::Tensor XLANativeFunctions::scatter(const at::Tensor& self, int64_t dim,
                                        c10::string_view reduce,
                                        bool unique_indices) {
   XLA_FN_COUNTER("xla::");
-  XLA_CHECK(!unique_indices) << "scatter not have a deterministic implementation";
+  XLA_CHECK(!unique_indices)
+      << "scatter not have a deterministic implementation";
   return scatter_reduce_helper(self, dim, index, value, reduce);
 }
 
@@ -2940,7 +2944,8 @@ at::Tensor XLANativeFunctions::scatter_add(const at::Tensor& self, int64_t dim,
                                            const at::Tensor& src,
                                            bool unique_indices) {
   XLA_FN_COUNTER("xla::");
-  XLA_CHECK(!unique_indices) << "scatter not have a deterministic implementation";
+  XLA_CHECK(!unique_indices)
+      << "scatter not have a deterministic implementation";
   return scatter_reduce_helper(self, dim, index, src, "add");
 }
 
