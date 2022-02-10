@@ -50,6 +50,10 @@ RUN apt-get install -y python-pip python3-pip git curl libopenblas-dev vim \
 ADD ./install_llvm_clang.sh install_llvm_clang.sh
 RUN bash ./install_llvm_clang.sh
 
+# Install valgrind
+ADD ./install_valgrind.sh install_valgrind.sh
+RUN bash ./install_valgrind.sh
+
 # Sets up jenkins user.
 RUN useradd jenkins && \
     mkdir /home/jenkins && \
