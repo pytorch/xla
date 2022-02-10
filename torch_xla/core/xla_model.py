@@ -605,15 +605,16 @@ def all_gather(value, dim=0, groups=None, output=None):
   token, devctx = _get_all_reduce_token()
   shard_count = None if groups else xrt_world_size()
   if output != None:
+    # Call the out of place version of the all_gather
     new_token = torch_xla._XLAC._xla_all_gather_out(output, value, token, dim,
                                                     shard_count, groups or [])
     devctx.all_reduce_token = new_token
     return output
-  else:
-    result = torch_xla._XLAC._xla_all_gather(value, token, dim, shard_count,
-                                             groups or [])
-    devctx.all_reduce_token = result[1]
-    return result[0]
+
+  result = torch_xla._XLAC._xla_all_gather(value, token, dim, shard_count,
+                                           groups or [])
+  devctx.all_reduce_token = result[1]
+  return result[0]
 
 
 def all_to_all(value,
@@ -705,6 +706,7 @@ def reduce_scatter(reduce_type,
   """
   token, devctx = _get_all_reduce_token()
   if output != None:
+    # Call the out of place version of the reduce_scatter
     new_token = torch_xla._XLAC._xla_reduce_scatter_out(reduce_type, output,
                                                         input, token, scale,
                                                         scatter_dim,
@@ -712,12 +714,12 @@ def reduce_scatter(reduce_type,
                                                         [])
     devctx.all_reduce_token = new_token
     return output
-  else:
-    result = torch_xla._XLAC._xla_reduce_scatter(reduce_type, input, token,
-                                                 scale, scatter_dim,
-                                                 shard_count, groups or [])
-    devctx.all_reduce_token = result[1]
-    return result[0]
+
+  result = torch_xla._XLAC._xla_reduce_scatter(reduce_type, input, token, scale,
+                                               scatter_dim, shard_count,
+                                               groups or [])
+  devctx.all_reduce_token = result[1]
+  return result[0]
 
 
 def add_step_closure(closure, args=(), run_async=False):
