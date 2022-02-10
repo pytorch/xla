@@ -8,6 +8,7 @@
 #include "torch_xla/csrc/data_ops.h"
 #include "torch_xla/csrc/helpers.h"
 #include "torch_xla/csrc/lowering_context.h"
+#include "torch_xla/csrc/ops/infer_output_shape.h"
 
 namespace torch_xla {
 namespace ir {
@@ -63,41 +64,12 @@ std::vector<xla::XlaOp> LowerSVD(xla::XlaOp input, bool full_matrices,
 
 xla::Shape NodeOutputShape(const Value& input, bool full_matrices,
                            bool compute_uv, bool deprecated_svd) {
-  const xla::Shape& input_shape = input.shape();
-  XLA_CHECK_GE(input_shape.rank(), 2) << input_shape;
-  // The input tensor is ...,M,N
-  int64_t m_dim = input_shape.dimensions(input_shape.rank() - 2);
-  int64_t n_dim = input_shape.dimensions(input_shape.rank() - 1);
-  xla::Shape ushape(input_shape);
-
-  if (!compute_uv && !deprecated_svd) {
-    ushape = xla::ShapeUtil::MakeShape(input_shape.element_type(), {0});
-  } else if (!compute_uv || full_matrices) {
-    ushape.set_dimensions(input_shape.rank() - 1, m_dim);
-  } else {
-    ushape.set_dimensions(input_shape.rank() - 1, std::min(m_dim, n_dim));
-  }
-  // D is min(M, N).
-  xla::Shape dshape = xla::ShapeUtil::MakeShape(input_shape.element_type(),
-                                                {std::min(m_dim, n_dim)});
-  // V is NxN
-  xla::Shape vshape(input_shape);
-  if (!deprecated_svd) {
-    if (compute_uv) {
-      vshape.set_dimensions(input_shape.rank() - 1, n_dim);
-      vshape.set_dimensions(input_shape.rank() - 2,
-                            full_matrices ? m_dim : std::min(m_dim, n_dim));
-    } else {
-      vshape = xla::ShapeUtil::MakeShape(input_shape.element_type(), {0});
-    }
-  } else {
-    vshape.set_dimensions(input_shape.rank() - 2, n_dim);
-    if (!full_matrices) {
-      vshape.set_dimensions(input_shape.rank() - 1, std::min(m_dim, n_dim));
-    }
-  }
-
-  return xla::ShapeUtil::MakeTupleShape({ushape, dshape, vshape});
+  auto lower_for_shape_fn =
+      [&](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
+    std::vector<xla::XlaOp> values = LowerSVD(operands[0], full_matrices, compute_uv, deprecated_svd);
+    return xla::Tuple(operands[0].builder(), values);
+  };
+  return InferOutputShape({input.shape()}, lower_for_shape_fn);
 }
 
 }  // namespace
