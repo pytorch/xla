@@ -701,6 +701,10 @@ class XLATensor {
   static XLATensor lerp(const XLATensor& input, const XLATensor& end,
                         const at::Scalar& weight);
 
+  static XLATensor linspace(const at::Scalar& start, const at::Scalar& end,
+                            const int64_t steps, at::ScalarType element_type,
+                            const Device& device);
+
   static XLATensor log(const XLATensor& input);
 
   static XLATensor log_base(const XLATensor& input, ir::OpKind op, double base);

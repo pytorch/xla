@@ -694,6 +694,28 @@ xla::XlaOp CreatePut(const Device& device, xla::XlaOp input, xla::XlaOp index,
   return XlaHelpers::DynamicReshapeAs(r1_scatter, input_shape);
 }
 
+xla::XlaOp BuildLinspace(const Device& device, xla::XlaOp start, xla::XlaOp end,
+                         int64_t steps) {
+  XLA_CHECK_GE(steps, 0);
+  if (steps == 1) {
+    return BuildExpand(start, {1});
+  }
+
+  std::tie(start, end) = XlaHelpers::PromoteValues(start, end);
+  xla::XlaOp indices = xla::ConvertElementType(
+      xla::ConstantLiteral(start.builder(),
+                           XlaHelpers::Range<int64_t>(0, steps, 1)),
+      XlaHelpers::TypeOfXlaOp(start));
+
+  xla::XlaOp last_index = XlaHelpers::ScalarValue(
+      steps - 1, xla::PrimitiveType::S64, start.builder());
+  xla::XlaOp step_val = XlaHelpers::PromotedDiv(end - start, last_index);
+
+  xla::XlaOp res = (indices * step_val) + start;
+
+  return CreatePut(device, res, last_index, end, /*accumulate=*/false);
+}
+
 std::vector<xla::XlaOp> BuildNonZero(xla::XlaOp input) {
   const xla::Shape& input_shape = XlaHelpers::ShapeOfXlaOp(input);
   return BuildConditionIndices(
