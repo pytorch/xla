@@ -1394,6 +1394,13 @@ at::Tensor XLANativeFunctions::expand(const at::Tensor& self,
       bridge::GetXlaTensor(self), xla::util::ToVector<int64_t>(size)));
 }
 
+at::Tensor XLANativeFunctions::expand(const at::Tensor& self,
+                                      at::IntArrayRef size, bool implicit) {
+  XLA_FN_COUNTER("xla::");
+  return bridge::AtenFromXlaTensor(XLATensor::expand(
+      bridge::GetXlaTensor(self), xla::util::ToVector<int64_t>(size)));
+}
+
 at::Tensor XLANativeFunctions::expm1(const at::Tensor& self) {
   XLA_FN_COUNTER("xla::");
   return bridge::AtenFromXlaTensor(

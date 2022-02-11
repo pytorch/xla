@@ -47,7 +47,8 @@
 #include "torch_xla/csrc/torch_util.h"
 #include "torch_xla/csrc/version.h"
 #include "torch_xla/csrc/xla_op_builder.h"
-#include "torch_xla/csrc/ops/sum_to_size.h"
+
+//#include "torch_xla/csrc/ops/sum_to_size.h"
 #include "torch_xla/csrc/ops/dynamic_size.h"
 #include "torch_xla/csrc/ops/dynamic_expand.h"
 
@@ -873,20 +874,20 @@ void InitXlaModuleBindings(py::module m) {
   });
   m.def("_dynamic_expand2",
         [](at::Tensor& self, std::shared_ptr<ir::Node> val) {
-          LazyTensor self_lazy_tensor = bridge::GetLtcTensor(self);
-          return bridge::AtenFromLtcTensor(
-              self_lazy_tensor.CreateFrom(MakeNode<ir::ops::DynamicExpand2>(
-                  self_lazy_tensor.GetIrValue(),val)));
+          XLATensor self_xla_tensor = bridge::GetXlaTensor(self);
+          return bridge::AtenFromXlaTensor(
+              self_xla_tensor.CreateFrom(ir::MakeNode<ir::ops::DynamicExpand2>(
+                  self_xla_tensor.GetIrValue(),val)));
         });
   m.def("_dynamic_size2",
         [](at::Tensor& self) {
-          LazyTensor self_lazy_tensor = bridge::GetLtcTensor(self);
-          return MakeNode<ir::ops::DynamicSize2>(self_lazy_tensor.GetIrValue());
+          XLATensor self_xla_tensor = bridge::GetXlaTensor(self);
+          return ir::MakeNode<ir::ops::DynamicSize2>(self_xla_tensor.GetIrValue());
         });
   m.def("_sum_to_size",
         [](at::Tensor& self, std::shared_ptr<ir::Node> val) {
-          LazyTensor self_lazy_tensor = bridge::GetLtcTensor(self);
-          return bridge::AtenFromLtcTensor(self_lazy_tensor.CreateFrom(MakeNode<ir::ops::SumToOrThrow>(self_lazy_tensor.GetIrValue(), val)));
+          XLATensor self_xla_tensor = bridge::GetXlaTensor(self);
+          return bridge::AtenFromXlaTensor(self_xla_tensor.CreateFrom(ir::MakeNode<ir::ops::SumToOrThrow>(self_xla_tensor.GetIrValue(), val)));
         });
   m.def("_xla_all_reduce",
         [](const std::string& reduce_type, const at::Tensor& input,
