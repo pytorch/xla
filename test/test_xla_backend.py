@@ -89,20 +89,17 @@ class XlaBackendTest(unittest.TestCase):
     dist.init_process_group(
         'xla', rank=0, world_size=1, init_method='tcp://localhost:6789')
 
-
   def test_xla_backend_exists(self):
     # torch_xla.distributed._register_xla_backend() should have been
     # automatically called.
     pg_xla_creator = dist.Backend.XLA
     assert pg_xla_creator is not None
 
-
   def test_process_group_creation(self):
     pg_xla = get_process_group_xla(rank=1, size=2)
     assert pg_xla is not None
     assert pg_xla.rank() == 1
     assert pg_xla.size() == 2
-
 
   def test_allreduce(self):
     device = xm.xla_device()
@@ -116,7 +113,6 @@ class XlaBackendTest(unittest.TestCase):
     hlo = torch_xla._XLAC._get_xla_tensors_hlo([tensor])
     hlo_matches(hlo, all_reduce_pattern)
     xm.mark_step()  # purge all computations attached the device.
-
 
   def test_allreduce_with_mesh(self):
     device = xm.xla_device()
@@ -138,7 +134,6 @@ class XlaBackendTest(unittest.TestCase):
     hlo_matches(hlo, all_reduce_pattern)
     xm.mark_step()  # purge all computations attached the device.
 
-
   def test_allgather(self):
     device = xm.xla_device()
     tensor = torch.arange(2, device=device) + 1 + 2 * dist.get_rank()
@@ -149,7 +144,6 @@ class XlaBackendTest(unittest.TestCase):
     hlo = torch_xla._XLAC._get_xla_tensors_hlo(output_tensors)
     hlo_matches(hlo, all_gather_pattern)
     xm.mark_step()  # purge all computations attached the device.
-
 
   def test_broadcast(self):
     device = xm.xla_device()
@@ -166,7 +160,6 @@ class XlaBackendTest(unittest.TestCase):
     hlo_matches(hlo, all_reduce_pattern)
     xm.mark_step()  # purge all computations attached the device.
 
-
   # Needed for ZeRO stage 1
   def test_reduce_scatter(self):
     device = xm.xla_device()
@@ -182,14 +175,12 @@ class XlaBackendTest(unittest.TestCase):
     hlo_matches(hlo, reduce_scatter_pattern)
     xm.mark_step()  # purge all computations attached the device.
 
-
   def test_new_group_no_ranks(self):
     set_world_size(12)
     with new_group_barrier_disabled():
       pg = dist.new_group()
     assert isinstance(pg, torch_xla.distributed.xla_backend.ProcessGroupXla)
     assert pg.size() == get_world_size()
-
 
   def test_new_group_horizontal(self):
     set_world_size(12)
@@ -224,7 +215,6 @@ class XlaBackendTest(unittest.TestCase):
     assert pg.rank() == ranks.index(world_rank)
     assert pg._mesh == [[0, 1, 2, 3], [4, 5, 6, 7], [8, 9, 10, 11]]
 
-
   def test_new_group_vertical(self):
     set_world_size(12)
 
@@ -258,7 +248,6 @@ class XlaBackendTest(unittest.TestCase):
     assert pg.rank() == ranks.index(world_rank)
     assert pg._mesh == [[0, 4, 8], [1, 5, 9], [2, 6, 10], [3, 7, 11]]
 
-
   def test_new_group_one_paticipant(self):
     set_world_size(12)
 
@@ -267,13 +256,13 @@ class XlaBackendTest(unittest.TestCase):
     set_world_rank(world_rank)
     with new_group_barrier_disabled():
       pg = dist.new_group(ranks=ranks)
-    assert isinstance(pg, torch_xla.distributed.xla_backend.ProcessGroupXla), str(
-        type(pg))
+    assert isinstance(pg,
+                      torch_xla.distributed.xla_backend.ProcessGroupXla), str(
+                          type(pg))
     assert pg.size() == 1
     assert pg.rank() == 0
     assert pg._mesh == [[0], [1], [2], [3], [4], [5], [6], [7], [8], [9], [10],
                         [11]]
-
 
   def test_new_group_entire_world(self):
     set_world_size(12)
@@ -287,7 +276,6 @@ class XlaBackendTest(unittest.TestCase):
     assert pg.size() == 12
     assert pg.rank() == world_rank
     assert pg._mesh == [[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]]
-
 
   def test_new_group_invalid_horizontal(self):
     set_world_size(12)
@@ -313,7 +301,6 @@ class XlaBackendTest(unittest.TestCase):
       with self.assertRaises(ValueError):
         pg = dist.new_group(ranks=ranks)
 
-
   def test_new_group_invalid_vertical(self):
     set_world_size(12)
 
@@ -331,7 +318,6 @@ class XlaBackendTest(unittest.TestCase):
       with self.assertRaises(ValueError):
         pg = dist.new_group(ranks=ranks)
 
-
   def test_new_group_invalid_ranks(self):
     set_world_size(12)
 
@@ -343,11 +329,9 @@ class XlaBackendTest(unittest.TestCase):
       with self.assertRaises(ValueError):
         pg = dist.new_group(ranks=ranks)
 
-
   def test_barrier(self):
     # nothing to verify. Just run it through.
     dist.barrier()
-
 
   def test_unimplemented_ops(self):
     unimplemented_ops = (
