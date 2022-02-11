@@ -13,7 +13,8 @@ from datetime import timedelta
 
 # We set the following env vars to create a fake env to exercise the code under
 # test. We do not aim to test device specific behaviors.
-os.environ[xenv.DEVICE_MAP] = 'CPU:0;/job:localservice/replica:0/task:0/device:XLA_CPU:0'
+os.environ[xenv.DEVICE_MAP] = (
+    'CPU:0;/job:localservice/replica:0/task:0/device:XLA_CPU:0')
 os.environ[xenv.WORKERS] = 'localservice:0;grpc://localhost:51011'
 os.environ[xenv.WORLD_SIZE] = '1'
 os.environ[xenv.ORDINAL] = '0'
