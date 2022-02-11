@@ -57,7 +57,7 @@ class ProcessGroupXla(ProcessGroup):
   def allreduce(self, tensors, all_reduce_options):
     reduce_type = self._get_reduce_type(all_reduce_options.reduceOp)
 
-    # TODO(junminh): implement all_reduce_options.timeout.
+    # TODO(hjm-aws): implement all_reduce_options.timeout.
     xm.all_reduce(reduce_type, tensors, groups=self._mesh)
     return WorkXla(tensors)
 
