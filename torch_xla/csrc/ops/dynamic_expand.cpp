@@ -12,4 +12,4 @@ DynamicExpand2::DynamicExpand2(Value lhs, Value sz)
 
 }  // namespace ops
 }  // namespace ir
-}  // namespace torch_lazy_tensors
+}  // namespace torch_xla
