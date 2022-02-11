@@ -65,7 +65,7 @@ class ProcessGroupXla(ProcessGroup):
     for input_tensor, output_tensors in zip(input_tensors, output_tensors_list):
       result = xm.all_gather(input_tensor, groups=self._mesh)
       for i, slice in enumerate(torch.split(result, input_tensor.shape[0])):
-        output_tensors[i].set_(slice)
+        output_tensors[i].copy_(slice)
 
     return WorkXla([t for sublist in output_tensors_list for t in sublist])
 
@@ -95,15 +95,14 @@ class ProcessGroupXla(ProcessGroup):
       reduce_type = self._get_reduce_type(opts.reduceOp)
       groups = self._mesh
       shard_count = len(groups[0]) if groups else self.size()
-      result = xm.reduce_scatter(
+      xm.reduce_scatter(
           reduce_type,
           input_tensor,
           scatter_dim=0,
           shard_count=shard_count,
           scale=1,
-          groups=groups)
-
-      output_tensor.set_(result)
+          groups=groups,
+          output=output_tensor)
 
     return WorkXla(output_tensors)
 

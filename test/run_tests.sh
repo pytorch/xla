@@ -65,15 +65,6 @@ function run_eager_debug {
   XLA_USE_EAGER_DEBUG_MODE=1 run_test "$@"
 }
 
-function run_pytest_distributed {
-  if [[ $(pip list | grep pytest-xdist) ]]; then
-    echo "Running pytest tests:"
-    "$@"
-  else
-    echo "pytest-xdist is not installed. Please run 'pip install pytest-xdist' and try again."
-  fi
-}
-
 function run_xla_backend_mp {
   echo "Running XLA backend multiprocessing test: $@"
   MASTER_ADDR=localhost MASTER_PORT=6000 run_test "$@"
@@ -107,7 +98,7 @@ function run_all_tests {
   run_test python3 "$CDIR/test_ops.py"
   run_downcast_bf16 python3 "$CDIR/test_data_type.py"
   run_use_bf16 python3 "$CDIR/test_data_type.py"
-  run_pytest_distributed python3 -m pytest -n 17 -v "$CDIR/test_xla_backend.py"
+  run_test python3 "$CDIR/test_xla_backend.py"
   run_xla_backend_mp python3 "$CDIR/test_mp_all_gather_xla_backend.py"
   run_xla_backend_mp python3 "$CDIR/test_mp_all_reduce_xla_backend.py"
   run_xla_backend_mp python3 "$CDIR/test_mp_multi_all_reduce_xla_backend.py"
