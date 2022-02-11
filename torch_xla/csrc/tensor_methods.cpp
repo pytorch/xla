@@ -383,6 +383,17 @@ std::pair<XLATensor, ir::Value> XLATensor::reduce_scatter(
   return {input.CreateFrom(ir::Value(node, 0)), ir::Value(node, 1)};
 }
 
+ir::Value XLATensor::reduce_scatter_out(
+    XLATensor& output, const XLATensor& input, const ir::Value& token,
+    AllReduceType reduce_type, double scale, int64_t scatter_dim,
+    int64_t shard_count, std::vector<std::vector<int64_t>> groups) {
+  ir::NodePtr node = ir::MakeNode<ir::ops::ReduceScatter>(
+      reduce_type, input.GetIrValue(), token, scale, scatter_dim, shard_count,
+      std::move(groups));
+  output.SetIrValue(ir::Value(node, 0));
+  return ir::Value(node, 1);
+}
+
 std::pair<XLATensor, ir::Value> XLATensor::all_to_all(
     const XLATensor& input, const ir::Value& token, int64_t split_dimension,
     int64_t concat_dimension, int64_t split_count,
@@ -399,6 +410,16 @@ std::pair<XLATensor, ir::Value> XLATensor::all_gather(
   ir::NodePtr node = ir::MakeNode<ir::ops::AllGather>(
       input.GetIrValue(), token, dim, shard_count, std::move(groups));
   return {input.CreateFrom(ir::Value(node, 0)), ir::Value(node, 1)};
+}
+
+ir::Value XLATensor::all_gather_out(XLATensor& output, const XLATensor& input,
+                                    const ir::Value& token, int64_t dim,
+                                    int64_t shard_count,
+                                    std::vector<std::vector<int64_t>> groups) {
+  ir::NodePtr node = ir::MakeNode<ir::ops::AllGather>(
+      input.GetIrValue(), token, dim, shard_count, std::move(groups));
+  output.SetIrValue(ir::Value(node, 0));
+  return ir::Value(node, 1);
 }
 
 std::pair<XLATensor, ir::Value> XLATensor::collective_permute(
