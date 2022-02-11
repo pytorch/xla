@@ -1,8 +1,3 @@
-# To manually run this test on CPU, set the following env var (51011 is a
-#   random port):
-# XRT_DEVICE_MAP='CPU:0;/job:localservice/replica:0/task:0/device:XLA_CPU:0'
-# XRT_WORKERS='localservice:0;grpc://localhost:51011'
-
 import os
 import re
 import torch
@@ -16,6 +11,10 @@ import unittest
 from contextlib import contextmanager
 from datetime import timedelta
 
+# We set the following env vars to create a fake env to exercise the code under
+# test. We do not aim to test device specific behaviors.
+os.environ[xenv.DEVICE_MAP] = 'CPU:0;/job:localservice/replica:0/task:0/device:XLA_CPU:0'
+os.environ[xenv.WORKERS] = 'localservice:0;grpc://localhost:51011'
 os.environ[xenv.WORLD_SIZE] = '1'
 os.environ[xenv.ORDINAL] = '0'
 
