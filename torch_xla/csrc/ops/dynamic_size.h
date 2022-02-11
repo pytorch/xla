@@ -1,6 +1,6 @@
 #pragma once
 
-#include "lazy_tensor_core/csrc/ts_backend/TsNode.h"
+#include "torch_xla/csrc/ir.h"
 #include "lazy_tensor_core/csrc/ts_backend/ts_shape_inference.h"
 #include "lazy_tensor_core/csrc/ts_backend/ts_node_lowering.h"
 
