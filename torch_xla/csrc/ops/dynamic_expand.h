@@ -10,10 +10,9 @@ namespace ops {
 
 class DynamicExpand2 : public Node {
  public:
-  DynamicExpand2(Value lhs, Value sz);
+  DynamicExpand2(Value& lhs, Value& sz);
 
-  XlaOpVector Lower(std::shared_ptr<torch::jit::GraphFunction> function,
-                    LoweringContext* loctx) const override;
+  XlaOpVector Lower(LoweringContext* loctx) const override;
 };
 
 }  // namespace ops

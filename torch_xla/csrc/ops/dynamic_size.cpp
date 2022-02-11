@@ -6,7 +6,7 @@ namespace ir {
 namespace ops {
 
 DynamicSize2::DynamicSize2(Value lhs)
-    : Node(OpKind(c10::Symbol::prim("_dynamic_size2")), lhs,
+    : Node(ir::OpKind(c10::Symbol::prim("_dynamic_size2")), lhs,
              {ir::GetShapeFromTsValue(lhs)}) {}
 
 XlaOpVector Lower(std::shared_ptr<torch::jit::GraphFunction> function, //TODO: milad fix this
