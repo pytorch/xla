@@ -112,7 +112,8 @@ class XlaBackendTest(unittest.TestCase):
       pg_xla.allreduce([tensor], opts)
     hlo = torch_xla._XLAC._get_xla_tensors_hlo([tensor])
     hlo_matches(hlo, all_reduce_pattern)
-    xm.mark_step()  # purge all computations attached the device.
+    # purge all computations attached the device.
+    xm.mark_step()
 
   def test_allreduce_with_mesh(self):
     device = xm.xla_device()
@@ -132,7 +133,8 @@ class XlaBackendTest(unittest.TestCase):
       new_pg.allreduce([tensor], opts)
     hlo = torch_xla._XLAC._get_xla_tensors_hlo([tensor])
     hlo_matches(hlo, all_reduce_pattern)
-    xm.mark_step()  # purge all computations attached the device.
+    # purge all computations attached the device.
+    xm.mark_step()
 
   def test_allgather(self):
     device = xm.xla_device()
@@ -143,7 +145,8 @@ class XlaBackendTest(unittest.TestCase):
     pg_xla.allgather([output_tensors], [tensor])
     hlo = torch_xla._XLAC._get_xla_tensors_hlo(output_tensors)
     hlo_matches(hlo, all_gather_pattern)
-    xm.mark_step()  # purge all computations attached the device.
+    # purge all computations attached the device.
+    xm.mark_step()
 
   def test_broadcast(self):
     device = xm.xla_device()
@@ -158,7 +161,8 @@ class XlaBackendTest(unittest.TestCase):
       pg_xla.broadcast([tensor], opts)
     hlo = torch_xla._XLAC._get_xla_tensors_hlo([tensor])
     hlo_matches(hlo, all_reduce_pattern)
-    xm.mark_step()  # purge all computations attached the device.
+    # purge all computations attached the device.
+    xm.mark_step()
 
   # Needed for ZeRO stage 1
   def test_reduce_scatter(self):
@@ -173,7 +177,8 @@ class XlaBackendTest(unittest.TestCase):
     pg_xla.reduce_scatter([output], [input_list], opts)
     hlo = torch_xla._XLAC._get_xla_tensors_hlo([output])
     hlo_matches(hlo, reduce_scatter_pattern)
-    xm.mark_step()  # purge all computations attached the device.
+    # purge all computations attached the device.
+    xm.mark_step()
 
   def test_new_group_no_ranks(self):
     set_world_size(12)
@@ -356,7 +361,11 @@ class XlaBackendTest(unittest.TestCase):
 
 
 if __name__ == '__main__':
-  # Skip test if it's TPU or GPU
-  if (xenv.TPU_CONFIG not in os.environ and
-      xenv.GPU_NUM_DEVICES not in os.environ):
+  skipping_msg = ('Skipping XLA backend unit test as this test doesn\'t '
+                  'exercise %s-specific behaviors.')
+  if xenv.TPU_CONFIG in os.environ:
+    print(skipping_msg % 'TPU')
+  elif xenv.GPU_NUM_DEVICES in os.environ:
+    print(skipping_msg % 'GPU')
+  else:
     unittest.main()
