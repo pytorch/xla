@@ -356,4 +356,7 @@ class XlaBackendTest(unittest.TestCase):
 
 
 if __name__ == '__main__':
-  unittest.main()
+  # Skip test if it's TPU or GPU
+  if (xenv.TPU_CONFIG not in os.environ and
+      xenv.GPU_NUM_DEVICES not in os.environ):
+    unittest.main()
