@@ -14,7 +14,7 @@ if [ -f "$TORCH_PIN" ]; then
   if [[ $CID = \#* ]]; then
     PRNUM="${CID//[!0-9]/}"
     set +x
-    MCHECK=$(git -C $PTDIR log -1000)
+    MCHECK=$(git -C $PTDIR log -100)
     if [[ $MCHECK != *"Pull Request resolved: https://github.com/pytorch/pytorch/pull/$PRNUM"* ]]; then
       echo "Fetching PyTorch PR #$PRNUM"
       pushd "$PTDIR"

@@ -6356,14 +6356,16 @@ TEST_F(AtenXlaTensorTest, TestCeluInPlace) {
 TEST_F(AtenXlaTensorTest, TestGelu) {
   torch::Tensor input =
       torch::rand({2, 3}, torch::TensorOptions(torch::kFloat));
-  torch::Tensor output = torch::gelu(input);
-  ForEachDevice([&](const torch::Device& device) {
-    torch::Tensor xla_input = CopyToDevice(input, device);
-    torch::Tensor xla_output = torch::gelu(xla_input);
-    AllClose(output, xla_output);
-  });
-  ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
-  ExpectCounterChanged("xla::gelu", cpp_test::GetIgnoredCounters());
+  for (const auto& approximate : {"none", "tanh"}) {
+    torch::Tensor output = torch::gelu(input, approximate);
+    ForEachDevice([&](const torch::Device& device) {
+      torch::Tensor xla_input = CopyToDevice(input, device);
+      torch::Tensor xla_output = torch::gelu(xla_input, approximate);
+      AllClose(output, xla_output);
+    });
+    ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+    ExpectCounterChanged("xla::gelu", cpp_test::GetIgnoredCounters());
+  }
 }
 
 TEST_F(AtenXlaTensorTest, TestAddMatMul) {
@@ -10173,16 +10175,19 @@ TEST_F(AtenXlaTensorTest, TestEluBackward) {
 }
 
 TEST_F(AtenXlaTensorTest, TestGeluBackward) {
-  auto testfn = [&](const std::vector<torch::Tensor>& inputs) -> torch::Tensor {
-    return torch::gelu(inputs[0]);
-  };
-  ForEachDevice([&](const torch::Device& device) {
-    TestBackward(
-        {torch::rand({2, 3},
-                     torch::TensorOptions(torch::kFloat).requires_grad(true))},
-        device, testfn);
-  });
-  ExpectCounterChanged("xla::gelu_backward", cpp_test::GetIgnoredCounters());
+  for (const auto& approximate : {"none", "tanh"}) {
+    auto testfn =
+        [&](const std::vector<torch::Tensor>& inputs) -> torch::Tensor {
+      return torch::gelu(inputs[0], approximate);
+    };
+    ForEachDevice([&](const torch::Device& device) {
+      TestBackward(
+          {torch::rand(
+              {2, 3}, torch::TensorOptions(torch::kFloat).requires_grad(true))},
+          device, testfn);
+    });
+    ExpectCounterChanged("xla::gelu_backward", cpp_test::GetIgnoredCounters());
+  }
 }
 
 TEST_F(AtenXlaTensorTest, TestLeakyReluBackward) {

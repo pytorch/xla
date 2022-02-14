@@ -12,6 +12,7 @@
 #include "torch_xla/csrc/convert_ops.h"
 #include "torch_xla/csrc/data_ops.h"
 #include "torch_xla/csrc/elementwise.h"
+#include "torch_xla/csrc/gelu.h"
 #include "torch_xla/csrc/helpers.h"
 #include "torch_xla/csrc/lowering_context.h"
 #include "torch_xla/csrc/matrix.h"
@@ -650,22 +651,59 @@ NodePtr EluBackward(const Value& grad_output, const Value& output,
                positive_output_branch, negative_output_branch);
 }
 
-NodePtr Gelu(const Value& input) {
+NodePtr Gelu(const Value& input, GeluType approximate) {
   ScopePusher ir_scope("aten::gelu");
-  // input * 0.5 * (1.0 + torch.erf(input / math.sqrt(2.0)))
   const xla::Shape& shape = input.shape();
-  return input * ScalarOp(0.5, shape) *
-         (Erf(input * ScalarOp(M_SQRT1_2, shape)) + ScalarOp(1.0, shape));
+  if (approximate == GeluType::Tanh) {
+    // inner = math.sqrt(2 / math.pi) * (x + 0.044715 * torch.pow(input, 3))
+    // input * 0.5 * (1.0 + torch.tanh(inner))
+    const float kBeta = M_SQRT2 * M_2_SQRTPI * 0.5;
+    auto beta = ScalarOp(kBeta, shape);
+    auto kappa = ScalarOp(0.044715, shape);
+    auto three = ScalarOp(3, shape);
+    auto one = ScalarOp(1, shape);
+    auto half = ScalarOp(0.5, shape);
+    NodePtr inner = beta * (input + kappa * Pow(input, three));
+    return half * input * (one + Tanh(inner));
+  } else {
+    // input * 0.5 * (1.0 + torch.erf(input / math.sqrt(2.0)))
+    return input * ScalarOp(0.5, shape) *
+           (Erf(input * ScalarOp(M_SQRT1_2, shape)) + ScalarOp(1.0, shape));
+  }
 }
 
-NodePtr GeluBackward(const Value& grad, const Value& input) {
+NodePtr GeluBackward(const Value& grad, const Value& input,
+                     GeluType approximate) {
   ScopePusher ir_scope("aten::gelu_backward");
-  const float kAlpha = M_2_SQRTPI * M_SQRT1_2 * 0.5;
   const xla::Shape& shape = input.shape();
-  NodePtr scratch = Erf(input * ScalarOp(M_SQRT1_2, shape));
-  NodePtr dinput = Exp(input * input * ScalarOp(-0.5, shape));
-  return grad * (ScalarOp(0.5, shape) * (ScalarOp(1.0, shape) + scratch) +
-                 input * dinput * ScalarOp(kAlpha, shape));
+  if (approximate == GeluType::Tanh) {
+    constexpr float kBeta = M_SQRT2 * M_2_SQRTPI * 0.5;
+    auto beta = ScalarOp(kBeta, shape);
+    auto kappa = ScalarOp(0.044715, shape);
+    auto one = ScalarOp(1, shape);
+    auto two = ScalarOp(2, shape);
+    auto three = ScalarOp(3, shape);
+    auto half = ScalarOp(0.5, shape);
+    NodePtr inner = beta * (input + kappa * Pow(input, three));
+    NodePtr tanh_inner = Tanh(inner);
+
+    NodePtr left = half * input;
+    NodePtr right = one + tanh_inner;
+
+    NodePtr left_derivative = half * right;
+
+    NodePtr tanh_derivative = one - tanh_inner * tanh_inner;
+    NodePtr inner_derivative = beta * (one + three * kappa * Pow(input, two));
+    NodePtr right_derivative = left * tanh_derivative * inner_derivative;
+
+    return grad * (left_derivative + right_derivative);
+  } else {
+    constexpr float kAlpha = M_2_SQRTPI * M_SQRT1_2 * 0.5;
+    NodePtr scratch = Erf(input * ScalarOp(M_SQRT1_2, shape));
+    NodePtr dinput = Exp(input * input * ScalarOp(-0.5, shape));
+    return grad * (ScalarOp(0.5, shape) * (ScalarOp(1.0, shape) + scratch) +
+                   input * dinput * ScalarOp(kAlpha, shape));
+  }
 }
 
 NodePtr Lshift(const Value& input, const at::Scalar& other) {

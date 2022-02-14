@@ -16,6 +16,7 @@
 #include "torch_xla/csrc/aten_xla_bridge.h"
 #include "torch_xla/csrc/debug_util.h"
 #include "torch_xla/csrc/device.h"
+#include "torch_xla/csrc/gelu.h"
 #include "torch_xla/csrc/helpers.h"
 #include "torch_xla/csrc/ops/as_strided.h"
 #include "torch_xla/csrc/ops/index_ops.h"
@@ -197,6 +198,16 @@ void DoBinaryOpOut(const at::Tensor& self, const at::Tensor& other,
       GetBinaryOperands(self, UnwrapNumber(other, dtype));
   XLATensor out_tensor = bridge::GetXlaTensor(out);
   bin_op_out(operands.first, operands.second, out_tensor);
+}
+
+GeluType GetXlaGeluType(const c10::string_view approximate) {
+  if (approximate == "none") {
+    return GeluType::None;
+  } else if (approximate == "tanh") {
+    return GeluType::Tanh;
+  } else {
+    XLA_ERROR() << "Unknown gelu type: " << approximate;
+  }
 }
 
 }  // namespace
@@ -1506,16 +1517,20 @@ at::Tensor XLANativeFunctions::ge(const at::Tensor& self,
       XLATensor::ge(bridge::GetXlaTensor(self), bridge::GetXlaTensor(other)));
 }
 
-at::Tensor XLANativeFunctions::gelu(const at::Tensor& self) {
+at::Tensor XLANativeFunctions::gelu(const at::Tensor& self,
+                                    c10::string_view approximate) {
   XLA_FN_COUNTER("xla::");
-  return bridge::AtenFromXlaTensor(XLATensor::gelu(bridge::GetXlaTensor(self)));
+  return bridge::AtenFromXlaTensor(
+      XLATensor::gelu(bridge::GetXlaTensor(self), GetXlaGeluType(approximate)));
 }
 
 at::Tensor XLANativeFunctions::gelu_backward(const at::Tensor& grad,
-                                             const at::Tensor& self) {
+                                             const at::Tensor& self,
+                                             c10::string_view approximate) {
   XLA_FN_COUNTER("xla::");
   return bridge::AtenFromXlaTensor(XLATensor::gelu_backward(
-      bridge::GetXlaTensor(grad), bridge::GetXlaTensor(self)));
+      bridge::GetXlaTensor(grad), bridge::GetXlaTensor(self),
+      GetXlaGeluType(approximate)));
 }
 
 at::Tensor XLANativeFunctions::ger(const at::Tensor& self,
