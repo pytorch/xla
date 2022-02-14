@@ -1492,7 +1492,8 @@ at::Tensor XLANativeFunctions::gather(const at::Tensor& self, int64_t dim,
   XLA_FN_COUNTER("xla::");
   if (!unique_indices) {
     TF_LOG(WARNING) << "gather will have a non-deterministic behavior "
-    "when indices are not unqiue";;
+                       "when indices are not unqiue";
+    ;
   }
   return bridge::AtenFromXlaTensor(XLATensor::gather(
       bridge::GetXlaTensor(self), dim, bridge::GetXlaTensor(index)));
@@ -2909,7 +2910,8 @@ at::Tensor XLANativeFunctions::scatter(const at::Tensor& self, int64_t dim,
   XLA_FN_COUNTER("xla::");
   if (!unique_indices) {
     TF_LOG(WARNING) << "gather will have a non-deterministic behavior "
-    "when indices are not unqiue";;
+                       "when indices are not unqiue";
+    ;
   }
   return scatter_reduce_helper(self, dim, index, src, c10::nullopt);
 }
@@ -2921,7 +2923,8 @@ at::Tensor XLANativeFunctions::scatter(const at::Tensor& self, int64_t dim,
   XLA_FN_COUNTER("xla::");
   if (!unique_indices) {
     TF_LOG(WARNING) << "gather will have a non-deterministic behavior "
-    "when indices are not unqiue";;
+                       "when indices are not unqiue";
+    ;
   }
   return scatter_reduce_helper(self, dim, index, value, c10::nullopt);
 }
@@ -2934,7 +2937,8 @@ at::Tensor XLANativeFunctions::scatter(const at::Tensor& self, int64_t dim,
   XLA_FN_COUNTER("xla::");
   if (!unique_indices) {
     TF_LOG(WARNING) << "gather will have a non-deterministic behavior "
-    "when indices are not unqiue";;
+                       "when indices are not unqiue";
+    ;
   }
   return scatter_reduce_helper(self, dim, index, src, reduce);
 }
@@ -2947,7 +2951,8 @@ at::Tensor XLANativeFunctions::scatter(const at::Tensor& self, int64_t dim,
   XLA_FN_COUNTER("xla::");
   if (!unique_indices) {
     TF_LOG(WARNING) << "gather will have a non-deterministic behavior "
-    "when indices are not unqiue";;
+                       "when indices are not unqiue";
+    ;
   }
   return scatter_reduce_helper(self, dim, index, value, reduce);
 }
@@ -2959,7 +2964,8 @@ at::Tensor XLANativeFunctions::scatter_add(const at::Tensor& self, int64_t dim,
   XLA_FN_COUNTER("xla::");
   if (!unique_indices) {
     TF_LOG(WARNING) << "gather will have a non-deterministic behavior "
-    "when indices are not unqiue";;
+                       "when indices are not unqiue";
+    ;
   }
   return scatter_reduce_helper(self, dim, index, src, "add");
 }
