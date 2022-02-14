@@ -2909,7 +2909,7 @@ at::Tensor XLANativeFunctions::scatter(const at::Tensor& self, int64_t dim,
                                        bool unique_indices) {
   XLA_FN_COUNTER("xla::");
   if (!unique_indices) {
-    TF_LOG(WARNING) << "gather will have a non-deterministic behavior "
+    TF_LOG(WARNING) << "scatter will have a non-deterministic behavior "
                        "when indices are not unqiue";
     ;
   }
@@ -2922,7 +2922,7 @@ at::Tensor XLANativeFunctions::scatter(const at::Tensor& self, int64_t dim,
                                        bool unique_indices) {
   XLA_FN_COUNTER("xla::");
   if (!unique_indices) {
-    TF_LOG(WARNING) << "gather will have a non-deterministic behavior "
+    TF_LOG(WARNING) << "scatter will have a non-deterministic behavior "
                        "when indices are not unqiue";
     ;
   }
@@ -2936,7 +2936,7 @@ at::Tensor XLANativeFunctions::scatter(const at::Tensor& self, int64_t dim,
                                        bool unique_indices) {
   XLA_FN_COUNTER("xla::");
   if (!unique_indices) {
-    TF_LOG(WARNING) << "gather will have a non-deterministic behavior "
+    TF_LOG(WARNING) << "scatter will have a non-deterministic behavior "
                        "when indices are not unqiue";
     ;
   }
@@ -2950,7 +2950,7 @@ at::Tensor XLANativeFunctions::scatter(const at::Tensor& self, int64_t dim,
                                        bool unique_indices) {
   XLA_FN_COUNTER("xla::");
   if (!unique_indices) {
-    TF_LOG(WARNING) << "gather will have a non-deterministic behavior "
+    TF_LOG(WARNING) << "scatter will have a non-deterministic behavior "
                        "when indices are not unqiue";
     ;
   }
@@ -2963,7 +2963,7 @@ at::Tensor XLANativeFunctions::scatter_add(const at::Tensor& self, int64_t dim,
                                            bool unique_indices) {
   XLA_FN_COUNTER("xla::");
   if (!unique_indices) {
-    TF_LOG(WARNING) << "gather will have a non-deterministic behavior "
+    TF_LOG(WARNING) << "scatter_add will have a non-deterministic behavior "
                        "when indices are not unqiue";
     ;
   }
