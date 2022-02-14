@@ -189,6 +189,10 @@ DISABLED_TORCH_TESTS_ANY = {
         'test_random_from_to_bool',  # doesn't raise
         'test_random_from_to_xla',  # doesn't raise
         'test_random_to_xla',  # doesn't raise
+        'test_nondeterministic_alert_scatter_add_autograd_xla',  # expects non-deterministic warning
+        'test_nondeterministic_alert_scatter_add_xla',  # expects non-deterministic warning
+        'test_nondeterministic_alert_scatter_autograd_xla',  # expects non-deterministic warning
+        'test_nondeterministic_alert_scatter_xla',  # expects non-deterministic warning
     },
 
     # test_view_ops.py

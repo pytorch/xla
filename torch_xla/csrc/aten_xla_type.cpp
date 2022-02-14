@@ -8,6 +8,7 @@
 #include "tensorflow/compiler/xla/xla_client/debug_macros.h"
 #include "tensorflow/compiler/xla/xla_client/metrics.h"
 #include "tensorflow/compiler/xla/xla_client/sys_util.h"
+#include "tensorflow/compiler/xla/xla_client/tf_logging.h"
 #include "tensorflow/compiler/xla/xla_client/util.h"
 #include "torch/csrc/lazy/core/tensor_util.h"
 #include "torch_xla/csrc/XLANativeFunctions.h"
@@ -1489,8 +1490,10 @@ at::Tensor XLANativeFunctions::gather(const at::Tensor& self, int64_t dim,
                                       bool /* sparse_grad */,
                                       bool unique_indices) {
   XLA_FN_COUNTER("xla::");
-  XLA_CHECK(unique_indices) << "gather will have a non-deterministic behavior "
-                               "when indices are not unqiue";
+  if (!unique_indices) {
+    TF_LOG(WARNING) << "gather will have a non-deterministic behavior "
+    "when indices are not unqiue";;
+  }
   return bridge::AtenFromXlaTensor(XLATensor::gather(
       bridge::GetXlaTensor(self), dim, bridge::GetXlaTensor(index)));
 }
@@ -2904,8 +2907,10 @@ at::Tensor XLANativeFunctions::scatter(const at::Tensor& self, int64_t dim,
                                        const at::Tensor& src,
                                        bool unique_indices) {
   XLA_FN_COUNTER("xla::");
-  XLA_CHECK(unique_indices) << "scatter will have a non-deterministic behavior "
-                               "when indices are not unqiue";
+  if (!unique_indices) {
+    TF_LOG(WARNING) << "gather will have a non-deterministic behavior "
+    "when indices are not unqiue";;
+  }
   return scatter_reduce_helper(self, dim, index, src, c10::nullopt);
 }
 
@@ -2914,8 +2919,10 @@ at::Tensor XLANativeFunctions::scatter(const at::Tensor& self, int64_t dim,
                                        const at::Scalar& value,
                                        bool unique_indices) {
   XLA_FN_COUNTER("xla::");
-  XLA_CHECK(unique_indices) << "scatter will have a non-deterministic behavior "
-                               "when indices are not unqiue";
+  if (!unique_indices) {
+    TF_LOG(WARNING) << "gather will have a non-deterministic behavior "
+    "when indices are not unqiue";;
+  }
   return scatter_reduce_helper(self, dim, index, value, c10::nullopt);
 }
 
@@ -2925,8 +2932,10 @@ at::Tensor XLANativeFunctions::scatter(const at::Tensor& self, int64_t dim,
                                        c10::string_view reduce,
                                        bool unique_indices) {
   XLA_FN_COUNTER("xla::");
-  XLA_CHECK(unique_indices) << "scatter will have a non-deterministic behavior "
-                               "when indices are not unqiue";
+  if (!unique_indices) {
+    TF_LOG(WARNING) << "gather will have a non-deterministic behavior "
+    "when indices are not unqiue";;
+  }
   return scatter_reduce_helper(self, dim, index, src, reduce);
 }
 
@@ -2936,8 +2945,10 @@ at::Tensor XLANativeFunctions::scatter(const at::Tensor& self, int64_t dim,
                                        c10::string_view reduce,
                                        bool unique_indices) {
   XLA_FN_COUNTER("xla::");
-  XLA_CHECK(unique_indices) << "scatter will have a non-deterministic behavior "
-                               "when indices are not unqiue";
+  if (!unique_indices) {
+    TF_LOG(WARNING) << "gather will have a non-deterministic behavior "
+    "when indices are not unqiue";;
+  }
   return scatter_reduce_helper(self, dim, index, value, reduce);
 }
 
@@ -2946,8 +2957,10 @@ at::Tensor XLANativeFunctions::scatter_add(const at::Tensor& self, int64_t dim,
                                            const at::Tensor& src,
                                            bool unique_indices) {
   XLA_FN_COUNTER("xla::");
-  XLA_CHECK(unique_indices) << "scatter will have a non-deterministic behavior "
-                               "when indices are not unqiue";
+  if (!unique_indices) {
+    TF_LOG(WARNING) << "gather will have a non-deterministic behavior "
+    "when indices are not unqiue";;
+  }
   return scatter_reduce_helper(self, dim, index, src, "add");
 }
 
