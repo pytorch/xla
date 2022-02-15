@@ -65,6 +65,11 @@ function run_eager_debug {
   XLA_USE_EAGER_DEBUG_MODE=1 run_test "$@"
 }
 
+function run_xla_backend_mp {
+  echo "Running XLA backend multiprocessing test: $@"
+  MASTER_ADDR=localhost MASTER_PORT=6000 run_test "$@"
+}
+
 function run_all_tests {
   run_dynamic python3 "$CDIR/../../test/test_view_ops.py" "$@" -v TestViewOpsXLA
   run_test python3 "$CDIR/../../test/test_torch.py" "$@" -v TestTorchDeviceTypeXLA
@@ -93,6 +98,11 @@ function run_all_tests {
   run_test python3 "$CDIR/test_ops.py"
   run_downcast_bf16 python3 "$CDIR/test_data_type.py"
   run_use_bf16 python3 "$CDIR/test_data_type.py"
+  run_test python3 "$CDIR/test_torch_distributed_xla_backend.py"
+  run_xla_backend_mp python3 "$CDIR/test_torch_distributed_all_gather_xla_backend.py"
+  run_xla_backend_mp python3 "$CDIR/test_torch_distributed_all_reduce_xla_backend.py"
+  run_xla_backend_mp python3 "$CDIR/test_torch_distributed_multi_all_reduce_xla_backend.py"
+  run_xla_backend_mp python3 "$CDIR/test_torch_distributed_reduce_scatter_xla_backend.py"
 }
 
 if [ "$LOGFILE" != "" ]; then
