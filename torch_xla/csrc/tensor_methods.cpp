@@ -14,7 +14,6 @@
 #include "torch/csrc/lazy/core/helpers.h"
 #include "torch_xla/csrc/aten_xla_bridge.h"
 #include "torch_xla/csrc/data_ops.h"
-#include "torch_xla/csrc/gelu.h"
 #include "torch_xla/csrc/helpers.h"
 #include "torch_xla/csrc/ir_util.h"
 #include "torch_xla/csrc/layout_manager.h"
@@ -1404,15 +1403,29 @@ XLATensor XLATensor::ge(const XLATensor& input, const XLATensor& other) {
   return DispatchComparisonOp(at::aten::ge, input, other);
 }
 
-XLATensor XLATensor::gelu(const XLATensor& input, GeluType approximate) {
-  return input.CreateFrom(ir::ops::Gelu(input.GetIrValue(), approximate));
+XLATensor XLATensor::gelu(const XLATensor& input,
+                          const c10::string_view approximate) {
+  if (approximate == "none") {
+    return input.CreateFrom(ir::ops::Gelu(input.GetIrValue()));
+  } else if (approximate == "tanh") {
+    return input.CreateFrom(ir::ops::TanhGelu(input.GetIrValue()));
+  } else {
+    XLA_ERROR() << "Unknown gelu type: " << approximate;
+  }
 }
 
 XLATensor XLATensor::gelu_backward(const XLATensor& grad,
                                    const XLATensor& input,
-                                   GeluType approximate) {
-  return input.CreateFrom(ir::ops::GeluBackward(
-      grad.GetIrValue(), input.GetIrValue(), approximate));
+                                   const c10::string_view approximate) {
+  if (approximate == "none") {
+    return input.CreateFrom(
+        ir::ops::GeluBackward(grad.GetIrValue(), input.GetIrValue()));
+  } else if (approximate == "tanh") {
+    return input.CreateFrom(
+        ir::ops::TanhGeluBackward(grad.GetIrValue(), input.GetIrValue()));
+  } else {
+    XLA_ERROR() << "Unknown gelu type: " << approximate;
+  }
 }
 
 XLATensor XLATensor::ger(const XLATensor& input, const XLATensor& vec2) {
