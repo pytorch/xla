@@ -590,8 +590,8 @@
 <span class="sd">  This API is for benchmarking, don&#39;t use it in real models.</span>
 
 <span class="sd">  Args:</span>
-<span class="sd">    tensors (List[torch.Tensor]): List of `torch.Tensor`s to materialize.</span>
-<span class="sd">      For each Tensor `t` in the list, `t.device` must be an `xla` device.</span>
+<span class="sd">    tensors (List[torch.Tensor]): List of `torch.Tensor`s to materialize. For</span>
+<span class="sd">      each Tensor `t` in the list, `t.device` must be an `xla` device.</span>
 <span class="sd">  &quot;&quot;&quot;</span>
   <span class="n">torch_xla</span><span class="o">.</span><span class="n">_XLAC</span><span class="o">.</span><span class="n">_xla_sync_multi</span><span class="p">(</span><span class="n">tensors</span><span class="p">,</span> <span class="n">devices</span><span class="o">=</span><span class="p">[],</span> <span class="n">wait</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
 
@@ -817,7 +817,8 @@
 
 <span class="sd">  Args:</span>
 <span class="sd">    reduce_type (string): One of ``xm.REDUCE_SUM``, ``xm.REDUCE_MUL``,</span>
-<span class="sd">    ``xm.REDUCE_AND``, ``xm.REDUCE_OR``, ``xm.REDUCE_MIN`` and ``xm.REDUCE_MAX``.</span>
+<span class="sd">      ``xm.REDUCE_AND``, ``xm.REDUCE_OR``, ``xm.REDUCE_MIN`` and</span>
+<span class="sd">      ``xm.REDUCE_MAX``.</span>
 <span class="sd">    inputs: Either a single `torch.Tensor` or a list of `torch.Tensor` to</span>
 <span class="sd">      perform the all reduce op to.</span>
 <span class="sd">    scale (float): A default scaling value to be applied after the reduce.</span>
@@ -827,6 +828,7 @@
 <span class="sd">        defines two groups, one with the `[0, 1, 2, 3]` replicas and one with</span>
 <span class="sd">        the `[4, 5, 6, 7]` replicas. If `None` there will be only one group with</span>
 <span class="sd">        all the replicas in it.</span>
+
 <span class="sd">  Returns:</span>
 <span class="sd">    If a single `torch.Tensor` is passed, the return value is a `torch.Tensor`</span>
 <span class="sd">    holding the reduced value (across the replicas). If a list/tuple is passed,</span>
@@ -866,7 +868,7 @@
   <span class="k">return</span> <span class="n">results</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">inputs</span><span class="p">,</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">)</span> <span class="k">else</span> <span class="n">results</span></div>
 
 
-<div class="viewcode-block" id="all_gather"><a class="viewcode-back" href="../../../index.html#torch_xla.core.xla_model.all_gather">[docs]</a><span class="k">def</span> <span class="nf">all_gather</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="n">dim</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">groups</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+<div class="viewcode-block" id="all_gather"><a class="viewcode-back" href="../../../index.html#torch_xla.core.xla_model.all_gather">[docs]</a><span class="k">def</span> <span class="nf">all_gather</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="n">dim</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">groups</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">output</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
   <span class="sd">&quot;&quot;&quot;Performs an all-gather operation along a given dimension.</span>
 
 <span class="sd">  Args:</span>
@@ -878,6 +880,8 @@
 <span class="sd">        defines two groups, one with the `[0, 1, 2, 3]` replicas and one with</span>
 <span class="sd">        the `[4, 5, 6, 7]` replicas. If `None` there will be only one group with</span>
 <span class="sd">        all the replicas in it.</span>
+<span class="sd">    output (torch.Tensor): Optional output tensor.</span>
+
 <span class="sd">  Returns:</span>
 <span class="sd">    A tensor which has, in the ``dim`` dimension, all the values from the</span>
 <span class="sd">    participating replicas.</span>
@@ -886,6 +890,13 @@
     <span class="n">dim</span> <span class="o">=</span> <span class="n">value</span><span class="o">.</span><span class="n">dim</span><span class="p">()</span> <span class="o">+</span> <span class="n">dim</span>
   <span class="n">token</span><span class="p">,</span> <span class="n">devctx</span> <span class="o">=</span> <span class="n">_get_all_reduce_token</span><span class="p">()</span>
   <span class="n">shard_count</span> <span class="o">=</span> <span class="kc">None</span> <span class="k">if</span> <span class="n">groups</span> <span class="k">else</span> <span class="n">xrt_world_size</span><span class="p">()</span>
+  <span class="k">if</span> <span class="n">output</span> <span class="o">!=</span> <span class="kc">None</span><span class="p">:</span>
+    <span class="c1"># Call the out of place version of the all_gather</span>
+    <span class="n">new_token</span> <span class="o">=</span> <span class="n">torch_xla</span><span class="o">.</span><span class="n">_XLAC</span><span class="o">.</span><span class="n">_xla_all_gather_out</span><span class="p">(</span><span class="n">output</span><span class="p">,</span> <span class="n">value</span><span class="p">,</span> <span class="n">token</span><span class="p">,</span> <span class="n">dim</span><span class="p">,</span>
+                                                    <span class="n">shard_count</span><span class="p">,</span> <span class="n">groups</span> <span class="ow">or</span> <span class="p">[])</span>
+    <span class="n">devctx</span><span class="o">.</span><span class="n">all_reduce_token</span> <span class="o">=</span> <span class="n">new_token</span>
+    <span class="k">return</span> <span class="n">output</span>
+
   <span class="n">result</span> <span class="o">=</span> <span class="n">torch_xla</span><span class="o">.</span><span class="n">_XLAC</span><span class="o">.</span><span class="n">_xla_all_gather</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="n">token</span><span class="p">,</span> <span class="n">dim</span><span class="p">,</span> <span class="n">shard_count</span><span class="p">,</span>
                                            <span class="n">groups</span> <span class="ow">or</span> <span class="p">[])</span>
   <span class="n">devctx</span><span class="o">.</span><span class="n">all_reduce_token</span> <span class="o">=</span> <span class="n">result</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
@@ -936,8 +947,8 @@
 <span class="sd">    pairs (list): A list of (source_replica_id, target_replica_id) pairs,</span>
 <span class="sd">      representing the sender and receiver for the `collective_permute()`</span>
 <span class="sd">      operation. Example: `[[0, 1], [1, 2], [2, 0]]` defines three pairs. The</span>
-<span class="sd">        tensor will be sent from replica 0 to replica 1, replica 1 to</span>
-<span class="sd">        replica 2, and replica 2 to replica 0.</span>
+<span class="sd">        tensor will be sent from replica 0 to replica 1, replica 1 to replica 2,</span>
+<span class="sd">        and replica 2 to replica 0.</span>
 
 <span class="sd">  Returns:</span>
 <span class="sd">    The result `torch.Tensor` of the `collective_permute()` operation.</span>
@@ -953,14 +964,16 @@
                    <span class="n">scale</span><span class="p">,</span>
                    <span class="n">scatter_dim</span><span class="p">,</span>
                    <span class="n">shard_count</span><span class="p">,</span>
-                   <span class="n">groups</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+                   <span class="n">groups</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+                   <span class="n">output</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
   <span class="sd">&quot;&quot;&quot;Performs a XLA `ReduceScatter()` operation on the input tensor.</span>
 
 <span class="sd">  See: https://www.tensorflow.org/xla/operation_semantics#reducescatter</span>
 
 <span class="sd">  Args:</span>
 <span class="sd">    reduce_type (string): One of ``xm.REDUCE_SUM``, ``xm.REDUCE_MUL``,</span>
-<span class="sd">      ``xm.REDUCE_AND``, ``xm.REDUCE_OR``, ``xm.REDUCE_MIN`` and ``xm.REDUCE_MAX``.</span>
+<span class="sd">      ``xm.REDUCE_AND``, ``xm.REDUCE_OR``, ``xm.REDUCE_MIN`` and</span>
+<span class="sd">      ``xm.REDUCE_MAX``.</span>
 <span class="sd">    input: A single `torch.Tensor` all reduce + scatter op to.</span>
 <span class="sd">    scale (float): A default scaling value to be applied after the reduce.</span>
 <span class="sd">    scatter_dim (int): Dimension number to which apply scatter operation.</span>
@@ -970,12 +983,24 @@
 <span class="sd">        defines two groups, one with the `[0, 1, 2, 3]` replicas and one with</span>
 <span class="sd">        the `[4, 5, 6, 7]` replicas. If `None` there will be only one group with</span>
 <span class="sd">        all the replicas in it.</span>
+<span class="sd">    output: Optional output tensor</span>
+
 <span class="sd">  Returns:</span>
 <span class="sd">    A `torch.Tensor` with all the values reduced accross replicas. Each process</span>
 <span class="sd">    gets a shard split along the `scatter_dim`. All other dimensions are</span>
 <span class="sd">    the same as the input.</span>
 <span class="sd">  &quot;&quot;&quot;</span>
   <span class="n">token</span><span class="p">,</span> <span class="n">devctx</span> <span class="o">=</span> <span class="n">_get_all_reduce_token</span><span class="p">()</span>
+  <span class="k">if</span> <span class="n">output</span> <span class="o">!=</span> <span class="kc">None</span><span class="p">:</span>
+    <span class="c1"># Call the out of place version of the reduce_scatter</span>
+    <span class="n">new_token</span> <span class="o">=</span> <span class="n">torch_xla</span><span class="o">.</span><span class="n">_XLAC</span><span class="o">.</span><span class="n">_xla_reduce_scatter_out</span><span class="p">(</span><span class="n">reduce_type</span><span class="p">,</span> <span class="n">output</span><span class="p">,</span>
+                                                        <span class="nb">input</span><span class="p">,</span> <span class="n">token</span><span class="p">,</span> <span class="n">scale</span><span class="p">,</span>
+                                                        <span class="n">scatter_dim</span><span class="p">,</span>
+                                                        <span class="n">shard_count</span><span class="p">,</span> <span class="n">groups</span> <span class="ow">or</span>
+                                                        <span class="p">[])</span>
+    <span class="n">devctx</span><span class="o">.</span><span class="n">all_reduce_token</span> <span class="o">=</span> <span class="n">new_token</span>
+    <span class="k">return</span> <span class="n">output</span>
+
   <span class="n">result</span> <span class="o">=</span> <span class="n">torch_xla</span><span class="o">.</span><span class="n">_XLAC</span><span class="o">.</span><span class="n">_xla_reduce_scatter</span><span class="p">(</span><span class="n">reduce_type</span><span class="p">,</span> <span class="nb">input</span><span class="p">,</span> <span class="n">token</span><span class="p">,</span> <span class="n">scale</span><span class="p">,</span>
                                                <span class="n">scatter_dim</span><span class="p">,</span> <span class="n">shard_count</span><span class="p">,</span>
                                                <span class="n">groups</span> <span class="ow">or</span> <span class="p">[])</span>
