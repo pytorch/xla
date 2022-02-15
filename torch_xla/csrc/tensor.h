@@ -17,7 +17,6 @@
 #include "torch_xla/csrc/computation.h"
 #include "torch_xla/csrc/cross_replica_reduces.h"
 #include "torch_xla/csrc/device.h"
-#include "torch_xla/csrc/gelu.h"
 #include "torch_xla/csrc/ir.h"
 #include "torch_xla/csrc/ir_util.h"
 #include "torch_xla/csrc/lowering_context.h"
@@ -607,10 +606,11 @@ class XLATensor {
 
   static XLATensor ge(const XLATensor& input, const XLATensor& other);
 
-  static XLATensor gelu(const XLATensor& input, GeluType approximate);
+  static XLATensor gelu(const XLATensor& input,
+                        const c10::string_view approximate);
 
   static XLATensor gelu_backward(const XLATensor& grad, const XLATensor& input,
-                                 GeluType approximate);
+                                 const c10::string_view approximate);
 
   static XLATensor ger(const XLATensor& input, const XLATensor& vec2);
 
