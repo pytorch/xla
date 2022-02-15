@@ -5,7 +5,6 @@
 
 #include <memory>
 
-#include "torch_xla/csrc/gelu.h"
 #include "torch_xla/csrc/ir.h"
 #include "torch_xla/csrc/ops/constant.h"
 #include "torch_xla/csrc/ops/generic.h"
@@ -195,10 +194,9 @@ NodePtr EluBackward(const Value& grad_output, const Value& output,
                     const at::Scalar& alpha, const at::Scalar& scale,
                     const at::Scalar& input_scale);
 
-NodePtr Gelu(const Value& input, GeluType approximate);
+NodePtr Gelu(const Value& input);
 
-NodePtr GeluBackward(const Value& grad, const Value& input,
-                     GeluType approximate);
+NodePtr GeluBackward(const Value& grad, const Value& input);
 
 NodePtr Lshift(const Value& input, const at::Scalar& other);
 
@@ -215,6 +213,10 @@ NodePtr MaxUnary(const Value& input);
 NodePtr MinUnary(const Value& input);
 
 NodePtr Take(const Value& input, const Value& index);
+
+NodePtr TanhGelu(const Value& input);
+
+NodePtr TanhGeluBackward(const Value& grad, const Value& input);
 
 NodePtr LogDet(const Value& input);
 
