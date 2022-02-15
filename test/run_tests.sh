@@ -98,11 +98,11 @@ function run_all_tests {
   run_test python3 "$CDIR/test_ops.py"
   run_downcast_bf16 python3 "$CDIR/test_data_type.py"
   run_use_bf16 python3 "$CDIR/test_data_type.py"
-  run_test python3 "$CDIR/test_xla_backend.py"
-  run_xla_backend_mp python3 "$CDIR/test_mp_all_gather_xla_backend.py"
-  run_xla_backend_mp python3 "$CDIR/test_mp_all_reduce_xla_backend.py"
-  run_xla_backend_mp python3 "$CDIR/test_mp_multi_all_reduce_xla_backend.py"
-  run_xla_backend_mp python3 "$CDIR/test_mp_reduce_scatter_xla_backend.py"
+  run_test python3 "$CDIR/test_torch_distributed_xla_backend.py"
+  run_xla_backend_mp python3 "$CDIR/test_torch_distributed_all_gather_xla_backend.py"
+  run_xla_backend_mp python3 "$CDIR/test_torch_distributed_all_reduce_xla_backend.py"
+  run_xla_backend_mp python3 "$CDIR/test_torch_distributed_multi_all_reduce_xla_backend.py"
+  run_xla_backend_mp python3 "$CDIR/test_torch_distributed_reduce_scatter_xla_backend.py"
 }
 
 if [ "$LOGFILE" != "" ]; then
