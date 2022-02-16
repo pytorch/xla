@@ -34,7 +34,10 @@ if [[ $git_status ]]; then
   echo "Doc is updated... Pushing to public"
   echo "${git_status}"
   sudo apt-get -qq update
-  DEBIAN_FRONTEND=noninteractive TZ=Etc/UTC sudo apt-get -y install tzdata
+  export DEBIAN_FRONTEND=noninteractive
+  sudo ln -snf /usr/share/zoneinfo/Etc/UTC /etc/localtime
+  sudo sh -c "echo Etc/UTC > /etc/timezone"
+  sudo apt-get -qq -y install tzdata
   sudo apt-get -qq install expect
   git add .
 
