@@ -44,11 +44,15 @@ ENV TPUVM_MODE "${tpuvm}"
 # Install base system packages
 RUN apt-get update
 RUN apt-get install -y python-pip python3-pip git curl libopenblas-dev vim \
-  apt-transport-https ca-certificates wget procps openssl libssl-dev sudo
+  apt-transport-https ca-certificates wget procps openssl libssl-dev sudo libc6-dbg
 
 # Install clang & llvm
 ADD ./install_llvm_clang.sh install_llvm_clang.sh
 RUN bash ./install_llvm_clang.sh
+
+# Install valgrind
+ADD ./install_valgrind.sh install_valgrind.sh
+RUN bash ./install_valgrind.sh
 
 # Sets up jenkins user.
 RUN useradd jenkins && \
@@ -87,7 +91,7 @@ ADD ./install_conda.sh install_conda.sh
 RUN sudo chown jenkins ./install_conda.sh
 RUN bash ./install_conda.sh "${python_version}" /opt/conda
 
-RUN echo "conda activate pytorch" >> ~/.bashrc
+RUN echo "conda activate base" >> ~/.bashrc
 RUN echo "export TF_CPP_LOG_THREAD_ID=1" >> ~/.bashrc
 ENV PATH /opt/conda/bin:$PATH
 
