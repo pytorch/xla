@@ -21,29 +21,33 @@ function install_and_setup_conda() {
 
   echo ". ${CONDA_PREFIX}/etc/profile.d/conda.sh" >> ~/.bashrc
   source "${CONDA_PREFIX}/etc/profile.d/conda.sh"
-  ENVNAME="pytorch"
-  if conda env list | awk '{print $1}' | grep "^$ENVNAME$"; then
-    conda remove --name "$ENVNAME" --all
-  fi
+
   if [ -z "$PYTHON_VERSION" ]; then
     PYTHON_VERSION=$DEFAULT_PYTHON_VERSION
   fi
-  conda create -y --name "$ENVNAME" python=${PYTHON_VERSION} anaconda
-  conda activate "$ENVNAME"
   export CMAKE_PREFIX_PATH="$(dirname $(which conda))/../"
 
-  conda install -y numpy pyyaml mkl-include setuptools cmake cffi typing \
-    tqdm coverage hypothesis dataclasses scipy cython
+  conda update -y -n base conda
+  conda install -y python=$PYTHON_VERSION
+
+  conda install -y numpy=1.18.5 pyyaml mkl-include setuptools cmake cffi typing \
+    tqdm coverage hypothesis dataclasses cython
   /usr/bin/yes | pip install typing_extensions==3.10.0.2  # Required for Python<=3.7
   /usr/bin/yes | pip install --upgrade oauth2client
   /usr/bin/yes | pip install lark-parser
-  /usr/bin/yes | pip install --upgrade numpy>=1.14
   /usr/bin/yes | pip install --upgrade numba
   /usr/bin/yes | pip install cloud-tpu-client
   /usr/bin/yes | pip install expecttest==0.1.3
   /usr/bin/yes | pip install ninja  # Install ninja to speedup the build
   /usr/bin/yes | pip install cmake>=3.13 --upgrade  # Using Ninja requires CMake>=3.13
   /usr/bin/yes | pip install absl-py
+  # Additional PyTorch requirements
+  /usr/bin/yes | pip install scikit-image scipy==1.1.0  # >1.1.0 breaks PyTorch tests
+  /usr/bin/yes | pip install boto3==1.16.34
+  /usr/bin/yes | pip install mypy==0.812
+  /usr/bin/yes | pip install psutil
+  /usr/bin/yes | pip install unittest-xml-reporting
+  /usr/bin/yes | pip install pytest
 
 }
 
