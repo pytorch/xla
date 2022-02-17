@@ -11,13 +11,13 @@ namespace {
 
 thread_local absl::optional<Device> g_current_device;
 
-std::string DeviceTypeToString(DeviceType hw_type) {
-  switch (hw_type) {
-    case DeviceType::CPU:
+std::string DeviceTypeToString(DeviceType device_type) {
+  switch (device_type.hw_type) {
+    case TorchXLADeviceType::CPU:
       return "CPU";
-    case DeviceType::GPU:
+    case TorchXLADeviceType::GPU:
       return "GPU";
-    case DeviceType::TPU:
+    case TorchXLADeviceType::TPU:
       return "TPU";
   }
   XLA_ERROR() << "Invalid device type";
@@ -44,11 +44,11 @@ void ParseDevice(const std::string& device_spec, Device* device) {
 
   device->ordinal = std::stoi(device_spec_parts[1]);
   if (device_spec_parts[0] == "TPU") {
-    device->hw_type = DeviceType::TPU;
+    device->device_type.hw_type = TorchXLADeviceType::TPU;
   } else if (device_spec_parts[0] == "CPU") {
-    device->hw_type = DeviceType::CPU;
+    device->device_type.hw_type = TorchXLADeviceType::CPU;
   } else if (device_spec_parts[0] == "GPU") {
-    device->hw_type = DeviceType::GPU;
+    device->device_type.hw_type = TorchXLADeviceType::GPU;
   } else {
     XLA_ERROR() << "Invalid device specification: " << device_spec;
   }
@@ -61,7 +61,7 @@ Device::Device(const std::string& device_spec) {
 }
 
 std::string Device::ToString() const {
-  return absl::StrCat(DeviceTypeToString(hw_type), ":", ordinal);
+  return absl::StrCat(DeviceTypeToString(device_type.hw_type), ":", ordinal);
 }
 
 const Device* GetDefaultDevice() {

@@ -4,45 +4,38 @@
 #include <string>
 
 #include "tensorflow/compiler/xla/xla_client/util.h"
+#include "torch/csrc/lazy/backend/backend_device.h"
 #include "torch/csrc/lazy/core/hash.h"
 #include "torch/csrc/lazy/core/util.h"
 
 namespace torch_xla {
 
-enum class DeviceType { CPU, GPU, TPU };
+enum class TorchXLADeviceType { CPU, GPU, TPU };
 
-struct Device {
+struct DeviceType : public torch::lazy::BackendDeviceType {
+  TorchXLADeviceType hw_type;
+
+  DeviceType(TorchXLADeviceType torch_xla_device_type) {
+    hw_type = torch_xla_device_type;
+    type = static_cast<int>(hw_type);
+  }
+};
+
+struct Device : public torch::lazy::BackendDevice {
   Device() = default;
   explicit Device(const std::string& device_spec);
-  Device(DeviceType hw_type, int ordinal)
-      : hw_type(hw_type), ordinal(ordinal) {}
-
-  bool operator==(const Device& other) const { return compare(other) == 0; }
-
-  bool operator!=(const Device& other) const { return compare(other) != 0; }
-
-  bool operator<(const Device& rhs) const { return compare(rhs) < 0; }
-
-  int compare(const Device& rhs) const {
-    if (hw_type != rhs.hw_type) {
-      return hw_type < rhs.hw_type ? -1 : +1;
-    }
-    return ordinal < rhs.ordinal ? -1 : (ordinal > rhs.ordinal ? +1 : 0);
-  }
+  Device(DeviceType device_type, int ordinal)
+        : torch::lazy::BackendDevice(std::make_shared<torch::lazy::BackendDeviceType>(device_type), ordinal),
+        device_type(device_type), ordinal(ordinal) {}
 
   std::string ToString() const;
 
-  friend std::ostream& operator<<(std::ostream& os, const Device& device) {
-    os << device.ToString();
-    return os;
-  }
-
   size_t hash() const {
-    return torch::lazy::StdHashCombine(torch::lazy::GetEnumValue(hw_type),
+    return torch::lazy::StdHashCombine(torch::lazy::GetEnumValue(device_type.hw_type),
                                        ordinal + 1);
   }
 
-  DeviceType hw_type = DeviceType::CPU;
+  DeviceType device_type = DeviceType(TorchXLADeviceType::CPU);
   int ordinal = 0;
 };
 
