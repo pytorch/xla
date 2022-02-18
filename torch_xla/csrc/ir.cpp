@@ -137,8 +137,8 @@ torch::lazy::hash_t Value::hash() const {
 //   return torch::lazy::StringHash(op.toQualString());
 // }
 
-Node::Node(torch::lazy::OpKind op, OpList operands, xla::Shape shape, size_t num_outputs,
-           torch::lazy::hash_t hash_seed)
+Node::Node(torch::lazy::OpKind op, OpList operands, xla::Shape shape,
+           size_t num_outputs, torch::lazy::hash_t hash_seed)
     : op_(std::move(op)),
       num_outputs_(num_outputs),
       shape_(std::move(shape)),
@@ -249,7 +249,8 @@ XlaOpVector Node::Lower(LoweringContext* loctx) const {
   XLA_ERROR() << "Lowering not implemented for node: " << *this;
 }
 
-torch::lazy::hash_t Node::GetOpHash(torch::lazy::OpKind op, const xla::Shape& shape,
+torch::lazy::hash_t Node::GetOpHash(torch::lazy::OpKind op,
+                                    const xla::Shape& shape,
                                     torch::lazy::hash_t hash_seed) {
   torch::lazy::hash_t h =
       torch::lazy::HashCombine(op.hash(), torch::lazy::Hash(shape.ToString()));
