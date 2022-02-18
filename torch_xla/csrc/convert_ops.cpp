@@ -55,7 +55,8 @@ xla::XlaOp ConvertTo(xla::XlaOp op, xla::PrimitiveType from,
   if (from == to) {
     return op;
   }
-  if (GetDeviceOrCurrent(device).device_type.hw_type != TorchXLADeviceType::TPU) {
+  if (GetDeviceOrCurrent(device).device_type.hw_type !=
+      TorchXLADeviceType::TPU) {
     return xla::ConvertElementType(op, to);
   }
   switch (from) {

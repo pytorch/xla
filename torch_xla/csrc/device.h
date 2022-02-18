@@ -25,14 +25,17 @@ struct Device : public torch::lazy::BackendDevice {
   Device() = default;
   explicit Device(const std::string& device_spec);
   Device(DeviceType device_type, int ordinal)
-        : torch::lazy::BackendDevice(std::make_shared<torch::lazy::BackendDeviceType>(device_type), ordinal),
-        device_type(device_type), ordinal(ordinal) {}
+      : torch::lazy::BackendDevice(
+            std::make_shared<torch::lazy::BackendDeviceType>(device_type),
+            ordinal),
+        device_type(device_type),
+        ordinal(ordinal) {}
 
   std::string ToString() const;
 
   size_t hash() const {
-    return torch::lazy::StdHashCombine(torch::lazy::GetEnumValue(device_type.hw_type),
-                                       ordinal + 1);
+    return torch::lazy::StdHashCombine(
+        torch::lazy::GetEnumValue(device_type.hw_type), ordinal + 1);
   }
 
   DeviceType device_type = DeviceType(TorchXLADeviceType::CPU);

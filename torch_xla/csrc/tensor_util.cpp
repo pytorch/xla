@@ -139,8 +139,9 @@ xla::PrimitiveType XlaTypeFromTensorType(at::ScalarType scalar_type,
                                          const Device& device) {
   switch (scalar_type) {
     case at::ScalarType::Double:
-      return device.device_type.hw_type != TorchXLADeviceType::TPU ? xla::PrimitiveType::F64
-                                               : xla::PrimitiveType::F32;
+      return device.device_type.hw_type != TorchXLADeviceType::TPU
+                 ? xla::PrimitiveType::F64
+                 : xla::PrimitiveType::F32;
     case at::ScalarType::Float:
       return xla::PrimitiveType::F32;
     case at::ScalarType::BFloat16:
@@ -1052,8 +1053,9 @@ xla::PrimitiveType GetDevicePrimitiveType(xla::PrimitiveType type,
       if (DowncastBF16() || DowncastF16()) {
         return xla::PrimitiveType::F32;
       }
-      return xla_device.device_type.hw_type != TorchXLADeviceType::TPU ? xla::PrimitiveType::F64
-                                                   : xla::PrimitiveType::F32;
+      return xla_device.device_type.hw_type != TorchXLADeviceType::TPU
+                 ? xla::PrimitiveType::F64
+                 : xla::PrimitiveType::F32;
     case xla::PrimitiveType::F32:
       if (UseF16() || DowncastF16()) {
         return xla::PrimitiveType::F16;
@@ -1061,18 +1063,21 @@ xla::PrimitiveType GetDevicePrimitiveType(xla::PrimitiveType type,
       return UseBF16() || DowncastBF16() ? xla::PrimitiveType::BF16
                                          : xla::PrimitiveType::F32;
     case xla::PrimitiveType::U16:
-      return xla_device.device_type.hw_type != TorchXLADeviceType::TPU ? xla::PrimitiveType::U16
-                                                   : xla::PrimitiveType::U32;
+      return xla_device.device_type.hw_type != TorchXLADeviceType::TPU
+                 ? xla::PrimitiveType::U16
+                 : xla::PrimitiveType::U32;
     case xla::PrimitiveType::S16:
-      return xla_device.device_type.hw_type != TorchXLADeviceType::TPU ? xla::PrimitiveType::S16
-                                                   : xla::PrimitiveType::S32;
+      return xla_device.device_type.hw_type != TorchXLADeviceType::TPU
+                 ? xla::PrimitiveType::S16
+                 : xla::PrimitiveType::S32;
     case xla::PrimitiveType::S64:
       return Use32BitLong() ? xla::PrimitiveType::S32 : xla::PrimitiveType::S64;
     case xla::PrimitiveType::U64:
       return Use32BitLong() ? xla::PrimitiveType::U32 : xla::PrimitiveType::U64;
     case xla::PrimitiveType::C128:
-      return xla_device.device_type.hw_type != TorchXLADeviceType::TPU ? xla::PrimitiveType::C128
-                                                   : xla::PrimitiveType::C64;
+      return xla_device.device_type.hw_type != TorchXLADeviceType::TPU
+                 ? xla::PrimitiveType::C128
+                 : xla::PrimitiveType::C64;
     default:
       return type;
   }
@@ -1124,8 +1129,9 @@ bool RequiresRawTypeCasting(at::ScalarType scalar_type, const Device* device) {
 
 xla::PrimitiveType GetShapeDimensionType(const Device* device) {
   Device xla_device = GetDeviceOrCurrent(device);
-  return xla_device.device_type.hw_type == TorchXLADeviceType::CPU ? xla::PrimitiveType::S64
-                                               : xla::PrimitiveType::S32;
+  return xla_device.device_type.hw_type == TorchXLADeviceType::CPU
+             ? xla::PrimitiveType::S64
+             : xla::PrimitiveType::S32;
 }
 
 }  // namespace torch_xla

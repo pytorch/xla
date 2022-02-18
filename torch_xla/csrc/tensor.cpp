@@ -1328,8 +1328,8 @@ std::vector<xla::ComputationClient::DataPtr> XLATensor::FetchTensorData(
     xla::ComputationClient::DataPtr xla_data = tensor.CurrentXlaData();
     if (xla_data == nullptr && config.force_xla_data) {
       const Device& tensor_device = tensor.GetDevice();
-      xla::Shape shape =
-          MakeShapeWithDeviceLayout(tensor.shape(), tensor_device.device_type.hw_type);
+      xla::Shape shape = MakeShapeWithDeviceLayout(
+          tensor.shape(), tensor_device.device_type.hw_type);
       xla_data = xla::ComputationClient::Get()->CreateDataPlaceholder(
           tensor_device.ToString(), std::move(shape));
       tensor.SetXlaData(xla_data, config.sync_xla_data);
@@ -1606,8 +1606,8 @@ XLATensor::CompilationResult XLATensor::Compile(
 
   xla::XlaComputation computation = ConsumeValue(lowering_ctx.Build());
   xla::ProgramShape program_shape = ConsumeValue(computation.GetProgramShape());
-  xla::Shape shape =
-      MakeShapeWithDeviceLayout(program_shape.result(), coll.device.device_type.hw_type);
+  xla::Shape shape = MakeShapeWithDeviceLayout(program_shape.result(),
+                                               coll.device.device_type.hw_type);
 
   std::vector<xla::ComputationClient::CompileInstance> instances;
   instances.push_back({std::move(computation), coll.device.ToString(),
