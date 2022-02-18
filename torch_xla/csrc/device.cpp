@@ -44,11 +44,11 @@ void ParseDevice(const std::string& device_spec, Device* device) {
 
   device->ordinal = std::stoi(device_spec_parts[1]);
   if (device_spec_parts[0] == "TPU") {
-    device->device_type.hw_type = TorchXLADeviceType::TPU;
+    device->device_type = DeviceType(TorchXLADeviceType::TPU);
   } else if (device_spec_parts[0] == "CPU") {
-    device->device_type.hw_type = TorchXLADeviceType::CPU;
+    device->device_type = DeviceType(TorchXLADeviceType::CPU);
   } else if (device_spec_parts[0] == "GPU") {
-    device->device_type.hw_type = TorchXLADeviceType::GPU;
+    device->device_type = DeviceType(TorchXLADeviceType::GPU);
   } else {
     XLA_ERROR() << "Invalid device specification: " << device_spec;
   }
