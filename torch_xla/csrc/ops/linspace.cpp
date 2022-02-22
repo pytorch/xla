@@ -1,5 +1,6 @@
 #include "torch_xla/csrc/ops/linspace.h"
 
+#include "torch/csrc/lazy/core/ir.h"
 #include "torch_xla/csrc/helpers.h"
 #include "torch_xla/csrc/lowering_context.h"
 #include "torch_xla/csrc/xla_lower_util.h"
@@ -9,7 +10,7 @@ namespace ir {
 namespace ops {
 
 Linspace::Linspace(const Value& start, const Value& end, int64_t steps)
-    : Node(ir::OpKind(at::aten::linspace), {start, end},
+    : Node(torch::lazy::OpKind(at::aten::linspace), {start, end},
            [&]() {
              xla::PrimitiveType dtype = XlaHelpers::PromoteType(
                  start.shape().element_type(), end.shape().element_type());

@@ -1,5 +1,6 @@
 #include "torch_xla/csrc/ops/scatter.h"
 
+#include "torch/csrc/lazy/core/ir.h"
 #include "torch_xla/csrc/lowering_context.h"
 #include "torch_xla/csrc/xla_lower_util.h"
 
@@ -9,7 +10,7 @@ namespace ops {
 
 Scatter::Scatter(const Value& input, const Value& index, const Value& src,
                  int64_t dim)
-    : Node(ir::OpKind(at::aten::scatter), {input, index, src}, input.shape(),
+    : Node(torch::lazy::OpKind(at::aten::scatter), {input, index, src}, input.shape(),
            /*num_outputs=*/1, torch::lazy::MHash(dim)),
       dim_(dim) {}
 

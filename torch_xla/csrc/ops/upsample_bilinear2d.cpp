@@ -2,6 +2,7 @@
 
 #include "absl/strings/str_join.h"
 #include "tensorflow/compiler/xla/util.h"
+#include "torch/csrc/lazy/core/ir.h"
 #include "torch_xla/csrc/lowering_context.h"
 #include "torch_xla/csrc/resize_ops.h"
 
@@ -12,7 +13,7 @@ namespace ops {
 UpsampleBilinear::UpsampleBilinear(const Value& input,
                                    std::vector<int64_t> output_size,
                                    bool align_corners)
-    : Node(ir::OpKind(at::aten::upsample_bilinear2d), {input},
+    : Node(torch::lazy::OpKind(at::aten::upsample_bilinear2d), {input},
            [&]() {
              return resize::GetForwardOutputShape2d(input.shape(), output_size);
            },

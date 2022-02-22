@@ -1,6 +1,7 @@
 #include "torch_xla/csrc/ops/softmax_backward.h"
 
 #include "tensorflow/compiler/xla/xla_client/debug_macros.h"
+#include "torch/csrc/lazy/core/ir.h"
 #include "torch_xla/csrc/lowering_context.h"
 #include "torch_xla/csrc/ops/infer_output_shape.h"
 #include "torch_xla/csrc/softmax_builder.h"
@@ -11,7 +12,7 @@ namespace ops {
 
 SoftmaxBackward::SoftmaxBackward(const Value& grad_output, const Value& output,
                                  int64_t dim)
-    : Node(ir::OpKind(at::aten::_softmax_backward_data), {grad_output, output},
+    : Node(torch::lazy::OpKind(at::aten::_softmax_backward_data), {grad_output, output},
            grad_output.shape(),
            /*num_outputs=*/1, torch::lazy::MHash(dim)),
       dim_(dim) {}

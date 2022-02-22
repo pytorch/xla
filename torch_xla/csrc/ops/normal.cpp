@@ -1,5 +1,6 @@
 #include "torch_xla/csrc/ops/normal.h"
 
+#include "torch/csrc/lazy/core/ir.h"
 #include "torch_xla/csrc/helpers.h"
 #include "torch_xla/csrc/lowering_context.h"
 #include "torch_xla/csrc/random.h"
@@ -9,7 +10,7 @@ namespace ir {
 namespace ops {
 
 Normal::Normal(const Value& mean, const Value& std, const Value& seed)
-    : Node(ir::OpKind(at::aten::normal), {mean, std, seed}, mean.shape()) {}
+    : Node(torch::lazy::OpKind(at::aten::normal), {mean, std, seed}, mean.shape()) {}
 
 NodePtr Normal::Clone(OpList operands) const {
   return MakeNode<Normal>(operands.at(0), operands.at(1), operands.at(2));

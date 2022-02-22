@@ -1,5 +1,6 @@
 #include "torch_xla/csrc/ops/log_softmax.h"
 
+#include "torch/csrc/lazy/core/ir.h"
 #include "torch/csrc/lazy/core/tensor_util.h"
 #include "torch_xla/csrc/convert_ops.h"
 #include "torch_xla/csrc/lowering_context.h"
@@ -31,7 +32,7 @@ xla::Shape NodeOutputShape(const Value& input,
 
 LogSoftmax::LogSoftmax(const Value& input, int64_t dim,
                        c10::optional<at::ScalarType> dtype)
-    : Node(ir::OpKind(at::aten::log_softmax), {input},
+    : Node(torch::lazy::OpKind(at::aten::log_softmax), {input},
            [&]() { return NodeOutputShape(input, dtype); },
            /*num_outputs=*/1,
            torch::lazy::MHash(dim, torch::lazy::OptionalOr<int>(dtype, -1))),

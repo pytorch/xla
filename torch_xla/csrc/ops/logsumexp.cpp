@@ -1,6 +1,7 @@
 #include "torch_xla/csrc/ops/logsumexp.h"
 
 #include "absl/strings/str_join.h"
+#include "torch/csrc/lazy/core/ir.h"
 #include "torch_xla/csrc/helpers.h"
 #include "torch_xla/csrc/lowering_context.h"
 #include "torch_xla/csrc/ops/infer_output_shape.h"
@@ -26,7 +27,7 @@ xla::Shape NodeOutputShape(const Value& input, std::vector<int64_t>& dimensions,
 
 Logsumexp::Logsumexp(const Value& input, std::vector<int64_t> dimensions,
                      bool keep_reduced_dimensions)
-    : Node(ir::OpKind(at::aten::logsumexp), {input},
+    : Node(torch::lazy::OpKind(at::aten::logsumexp), {input},
            [&]() {
              return NodeOutputShape(input, dimensions, keep_reduced_dimensions);
            },

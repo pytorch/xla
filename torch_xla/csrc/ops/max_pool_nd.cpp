@@ -1,6 +1,7 @@
 #include "torch_xla/csrc/ops/max_pool_nd.h"
 
 #include "tensorflow/compiler/xla/xla_client/debug_macros.h"
+#include "torch/csrc/lazy/core/ir.h"
 #include "torch_xla/csrc/lowering_context.h"
 #include "torch_xla/csrc/ops/infer_output_shape.h"
 #include "torch_xla/csrc/pooling.h"
@@ -43,7 +44,7 @@ MaxPoolNd::MaxPoolNd(const Value& input, int64_t spatial_dim_count,
                      std::vector<int64_t> kernel_size,
                      std::vector<int64_t> stride, std::vector<int64_t> padding,
                      bool ceil_mode)
-    : Node(ir::OpKind(MaxPoolNdSymbol(spatial_dim_count)), {input},
+    : Node(torch::lazy::OpKind(MaxPoolNdSymbol(spatial_dim_count)), {input},
            [&]() {
              return NodeOutputShape(input, spatial_dim_count, kernel_size,
                                     stride, padding, ceil_mode);

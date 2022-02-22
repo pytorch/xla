@@ -6,6 +6,7 @@
 #include "tensorflow/compiler/xla/permutation_util.h"
 #include "tensorflow/compiler/xla/xla_client/debug_macros.h"
 #include "tensorflow/compiler/xla/xla_client/util.h"
+#include "torch/csrc/lazy/core/ir.h"
 #include "torch_xla/csrc/aten_xla_bridge.h"
 #include "torch_xla/csrc/helpers.h"
 #include "torch_xla/csrc/lowering_context.h"
@@ -164,7 +165,7 @@ ir::NodePtr IndexFillOp(const ir::Value& buffer, int64_t dim,
   };
   ir::Value index_rank1 = EnsureRank1(index);
   return ir::ops::GenericOp(
-      ir::OpKind(at::aten::index_fill), {buffer, index_rank1, value},
+      torch::lazy::OpKind(at::aten::index_fill), {buffer, index_rank1, value},
       [&]() {
         return ir::ops::InferOutputShape(
             {buffer.shape(), index_rank1.shape(), value.shape()},
@@ -189,7 +190,7 @@ ir::NodePtr IndexAddOp(const ir::Value& buffer, int64_t dim,
   };
   ir::Value index_rank1 = EnsureRank1(index);
   return ir::ops::GenericOp(
-      ir::OpKind(at::aten::index_add), {buffer, index_rank1, source},
+      torch::lazy::OpKind(at::aten::index_add), {buffer, index_rank1, source},
       [&]() {
         return ir::ops::InferOutputShape(
             {buffer.shape(), index_rank1.shape(), source.shape()},
@@ -214,7 +215,7 @@ ir::NodePtr IndexCopyOp(const ir::Value& buffer, int64_t dim,
   };
   ir::Value index_rank1 = EnsureRank1(index);
   return ir::ops::GenericOp(
-      ir::OpKind(at::aten::index_copy), {buffer, index_rank1, source},
+      torch::lazy::OpKind(at::aten::index_copy), {buffer, index_rank1, source},
       [&]() {
         return ir::ops::InferOutputShape(
             {buffer.shape(), index_rank1.shape(), source.shape()},

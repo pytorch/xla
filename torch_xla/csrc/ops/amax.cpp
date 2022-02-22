@@ -1,5 +1,6 @@
 #include "torch_xla/csrc/ops/amax.h"
 
+#include "torch/csrc/lazy/core/ir.h"
 #include "torch_xla/csrc/lowering_context.h"
 #include "torch_xla/csrc/ops/infer_output_shape.h"
 #include "torch_xla/csrc/reduction.h"
@@ -21,7 +22,7 @@ xla::Shape NodeOutputShape(const Value& input, std::vector<int64_t>& dimensions,
 }  // namespace
 
 Amax::Amax(const Value& input, std::vector<int64_t> dimensions, bool keepdim)
-    : Node(ir::OpKind(at::aten::amax), {input},
+    : Node(torch::lazy::OpKind(at::aten::amax), {input},
            [&]() { return NodeOutputShape(input, dimensions, keepdim); },
            /*num_outputs=*/1, torch::lazy::MHash(dimensions, keepdim)),
       dimensions_(std::move(dimensions)),

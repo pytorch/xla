@@ -1,5 +1,6 @@
 #include "torch_xla/csrc/ops/threshold.h"
 
+#include "torch/csrc/lazy/core/ir.h"
 #include "torch_xla/csrc/elementwise.h"
 #include "torch_xla/csrc/lowering_context.h"
 
@@ -8,7 +9,7 @@ namespace ir {
 namespace ops {
 
 Threshold::Threshold(const Value& input, float threshold, float value)
-    : Node(ir::OpKind(at::aten::threshold), {input}, input.shape(),
+    : Node(torch::lazy::OpKind(at::aten::threshold), {input}, input.shape(),
            /*num_outputs=*/1, torch::lazy::MHash(threshold, value)),
       threshold_(threshold),
       value_(value) {}

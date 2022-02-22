@@ -1,5 +1,6 @@
 #include "torch_xla/csrc/ops/bitwise_ir_ops.h"
 
+#include "torch/csrc/lazy/core/ir.h"
 #include "torch_xla/csrc/helpers.h"
 #include "torch_xla/csrc/lowering_context.h"
 #include "torch_xla/csrc/ops/infer_output_shape.h"
@@ -23,7 +24,7 @@ Value BitwiseAnd(const Value& node1, const Value& node2) {
         [](xla::XlaOp lhs, xla::XlaOp rhs) { return lhs & rhs; });
   };
   return GenericOp(
-      OpKind(at::aten::__and__), {node1, node2},
+      torch::lazy::OpKind(at::aten::__and__), {node1, node2},
       [&]() {
         return InferOutputShape({node1.shape(), node2.shape()}, shape_fn);
       },
@@ -44,7 +45,7 @@ Value BitwiseOr(const Value& node1, const Value& node2) {
         [](xla::XlaOp lhs, xla::XlaOp rhs) { return lhs | rhs; });
   };
   return GenericOp(
-      OpKind(at::aten::__or__), {node1, node2},
+      torch::lazy::OpKind(at::aten::__or__), {node1, node2},
       [&]() {
         return InferOutputShape({node1.shape(), node2.shape()}, shape_fn);
       },
@@ -65,7 +66,7 @@ Value BitwiseXor(const Value& node1, const Value& node2) {
         [](xla::XlaOp lhs, xla::XlaOp rhs) { return lhs ^ rhs; });
   };
   return GenericOp(
-      OpKind(at::aten::__xor__), {node1, node2},
+      torch::lazy::OpKind(at::aten::__xor__), {node1, node2},
       [&]() {
         return InferOutputShape({node1.shape(), node2.shape()}, shape_fn);
       },

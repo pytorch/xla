@@ -1,6 +1,7 @@
 #include "torch_xla/csrc/ops/std.h"
 
 #include "absl/strings/str_join.h"
+#include "torch/csrc/lazy/core/ir.h"
 #include "torch_xla/csrc/lowering_context.h"
 #include "torch_xla/csrc/ops/infer_output_shape.h"
 #include "torch_xla/csrc/reduction.h"
@@ -24,7 +25,7 @@ xla::Shape NodeOutputShape(const Value& input, std::vector<int64_t>& dimensions,
 
 Std::Std(const Value& input, std::vector<int64_t> dimensions,
          bool keep_reduced_dimensions, int64_t correction)
-    : Node(ir::OpKind(at::aten::std), {input},
+    : Node(torch::lazy::OpKind(at::aten::std), {input},
            [&]() {
              return NodeOutputShape(input, dimensions, keep_reduced_dimensions,
                                     correction);

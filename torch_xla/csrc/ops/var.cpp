@@ -1,6 +1,7 @@
 #include "torch_xla/csrc/ops/var.h"
 
 #include "absl/strings/str_join.h"
+#include "torch/csrc/lazy/core/ir.h"
 #include "torch_xla/csrc/helpers.h"
 #include "torch_xla/csrc/lowering_context.h"
 #include "torch_xla/csrc/ops/infer_output_shape.h"
@@ -27,7 +28,7 @@ xla::Shape NodeOutputShape(const Value& input, std::vector<int64_t>& dimensions,
 
 Var::Var(const Value& input, std::vector<int64_t> dimensions,
          int64_t correction, bool keep_reduced_dimensions)
-    : Node(ir::OpKind(at::aten::var), {input},
+    : Node(torch::lazy::OpKind(at::aten::var), {input},
            NodeOutputShape(input, dimensions, correction,
                            keep_reduced_dimensions),
            /*num_outputs=*/1,

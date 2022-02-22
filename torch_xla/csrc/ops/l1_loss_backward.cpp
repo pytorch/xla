@@ -1,6 +1,7 @@
 #include "torch_xla/csrc/ops/l1_loss_backward.h"
 
 #include "tensorflow/compiler/xla/xla_client/util.h"
+#include "torch/csrc/lazy/core/ir.h"
 #include "torch_xla/csrc/lowering_context.h"
 #include "torch_xla/csrc/ops/infer_output_shape.h"
 
@@ -24,7 +25,7 @@ xla::Shape NodeOutputShape(const Value& grad_output, const Value& input,
 
 L1LossBackward::L1LossBackward(const Value& grad_output, const Value& input,
                                const Value& target, ReductionMode reduction)
-    : Node(ir::OpKind(at::aten::l1_loss_backward), {grad_output, input, target},
+    : Node(torch::lazy::OpKind(at::aten::l1_loss_backward), {grad_output, input, target},
            [&]() {
              return NodeOutputShape(grad_output, input, target, reduction);
            },

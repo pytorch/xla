@@ -1,5 +1,6 @@
 #include "torch_xla/csrc/ops/masked_scatter.h"
 
+#include "torch/csrc/lazy/core/ir.h"
 #include "torch_xla/csrc/lowering_context.h"
 #include "torch_xla/csrc/xla_lower_util.h"
 
@@ -9,7 +10,7 @@ namespace ops {
 
 MaskedScatter::MaskedScatter(const Value& input, const Value& mask,
                              const Value& source)
-    : Node(ir::OpKind(at::aten::masked_scatter), {input, mask, source},
+    : Node(torch::lazy::OpKind(at::aten::masked_scatter), {input, mask, source},
            input.shape(),
            /*num_outputs=*/1) {}
 

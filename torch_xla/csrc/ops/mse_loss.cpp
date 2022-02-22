@@ -4,6 +4,7 @@
 
 #include "tensorflow/compiler/xla/xla_client/debug_macros.h"
 #include "tensorflow/compiler/xla/xla_client/util.h"
+#include "torch/csrc/lazy/core/ir.h"
 #include "torch_xla/csrc/lowering_context.h"
 #include "torch_xla/csrc/ops/infer_output_shape.h"
 
@@ -25,7 +26,7 @@ xla::Shape NodeOutputShape(const Value& input, const Value& target,
 
 MseLoss::MseLoss(const Value& input, const Value& target,
                  ReductionMode reduction)
-    : Node(ir::OpKind(at::aten::mse_loss), {input, target},
+    : Node(torch::lazy::OpKind(at::aten::mse_loss), {input, target},
            [&]() { return NodeOutputShape(input, target, reduction); },
            /*num_outputs=*/1,
            torch::lazy::MHash(xla::util::GetEnumValue(reduction))),

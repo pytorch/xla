@@ -1,6 +1,7 @@
 #include "torch_xla/csrc/ops/prod.h"
 
 #include "absl/strings/str_join.h"
+#include "torch/csrc/lazy/core/ir.h"
 #include "torch/csrc/lazy/core/tensor_util.h"
 #include "torch_xla/csrc/convert_ops.h"
 #include "torch_xla/csrc/helpers.h"
@@ -43,7 +44,7 @@ xla::Shape NodeOutputShape(const Value& input, std::vector<int64_t>& dimensions,
 
 Prod::Prod(const Value& input, std::vector<int64_t> dimensions,
            bool keep_reduced_dimensions, c10::optional<at::ScalarType> dtype)
-    : Node(ir::OpKind(at::aten::prod), {input},
+    : Node(torch::lazy::OpKind(at::aten::prod), {input},
            [&]() {
              return NodeOutputShape(input, dimensions, keep_reduced_dimensions,
                                     dtype);

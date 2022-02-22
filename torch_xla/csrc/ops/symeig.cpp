@@ -3,6 +3,7 @@
 #include "tensorflow/compiler/xla/client/lib/constants.h"
 #include "tensorflow/compiler/xla/client/lib/matrix.h"
 #include "tensorflow/compiler/xla/client/lib/self_adjoint_eig.h"
+#include "torch/csrc/lazy/core/ir.h"
 #include "torch_xla/csrc/helpers.h"
 #include "torch_xla/csrc/lowering_context.h"
 
@@ -46,7 +47,7 @@ xla::Shape NodeOutputShape(const Value& input, bool eigenvectors, bool lower) {
 }  // namespace
 
 SymEig::SymEig(const Value& input, bool eigenvectors, bool lower)
-    : Node(ir::OpKind(at::aten::symeig), {input},
+    : Node(torch::lazy::OpKind(at::aten::symeig), {input},
            [&]() { return NodeOutputShape(input, eigenvectors, lower); },
            /*num_outputs=*/2, torch::lazy::MHash(eigenvectors, lower)),
       eigenvectors_(eigenvectors),

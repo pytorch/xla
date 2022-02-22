@@ -1,5 +1,6 @@
 #include "torch_xla/csrc/ops/rrelu_with_noise.h"
 
+#include "torch/csrc/lazy/core/ir.h"
 #include "torch_xla/csrc/elementwise.h"
 #include "torch_xla/csrc/helpers.h"
 #include "torch_xla/csrc/lowering_context.h"
@@ -12,7 +13,7 @@ namespace ops {
 RreluWithNoise::RreluWithNoise(const Value& input, const Value& seed,
                                const at::Scalar& lower, const at::Scalar& upper,
                                bool training)
-    : Node(ir::OpKind(at::aten::rrelu_with_noise), {input, seed},
+    : Node(torch::lazy::OpKind(at::aten::rrelu_with_noise), {input, seed},
            xla::ShapeUtil::MakeTupleShape({input.shape(), input.shape()}),
            /*num_outputs=*/2,
            torch::lazy::MHash(ScalarHash(lower), ScalarHash(upper), training)),

@@ -9,6 +9,8 @@
 #include "absl/strings/string_view.h"
 #include "tensorflow/compiler/xla/xla_client/debug_macros.h"
 #include "tensorflow/compiler/xla/xla_client/sys_util.h"
+#include "torch/csrc/lazy/core/ir.h"
+#include "torch/csrc/lazy/core/ir_metadata.h"
 #include "torch_xla/csrc/python_util.h"
 
 namespace torch_xla {
@@ -45,7 +47,7 @@ class HloMetadataSetter {
     std::string op_type =
         absl::StrReplaceAll(node->op().ToString(), {{":", "_"}});
     metadata.set_op_type(op_type);
-    const ir::MetaData& nmeta = node->metadata();
+    const torch::lazy::MetaData& nmeta = node->metadata();
     std::string op_name_prefix;
     if (!nmeta.scope.empty()) {
       op_name_prefix =
@@ -54,7 +56,7 @@ class HloMetadataSetter {
     metadata.set_op_name(absl::StrCat(op_name_prefix, op_type));
 
     if (!nmeta.frame_info.empty()) {
-      const SourceLocation& frame = nmeta.frame_info.front();
+      const torch::lazy::SourceLocation& frame = nmeta.frame_info.front();
       std::string::size_type pos = frame.file.find_last_of('/');
       if (pos == std::string::npos) {
         pos = 0;
@@ -182,7 +184,7 @@ void LoweringContext::ReportBuilderError(const Node* node,
   if (error_msg != nullptr) {
     ss << "Error: " << error_msg << "\n";
   }
-  const ir::MetaData& nmeta = node->metadata();
+  const torch::lazy::MetaData& nmeta = node->metadata();
   if (!nmeta.scope.empty()) {
     ss << "Scope: " << nmeta.scope << "\n";
   }

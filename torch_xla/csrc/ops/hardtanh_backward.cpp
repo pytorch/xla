@@ -1,5 +1,6 @@
 #include "torch_xla/csrc/ops/hardtanh_backward.h"
 
+#include "torch/csrc/lazy/core/ir.h"
 #include "torch_xla/csrc/elementwise.h"
 #include "torch_xla/csrc/lowering_context.h"
 #include "torch_xla/csrc/ops/scalar.h"
@@ -11,7 +12,7 @@ namespace ops {
 HardtanhBackward::HardtanhBackward(const Value& grad_output, const Value& input,
                                    const at::Scalar& min_val,
                                    const at::Scalar& max_val)
-    : Node(OpKind(at::aten::hardtanh_backward), {grad_output, input},
+    : Node(torch::lazy::OpKind(at::aten::hardtanh_backward), {grad_output, input},
            grad_output.shape(), /*num_outputs=*/1,
            torch::lazy::MHash(ScalarHash(min_val), ScalarHash(max_val))),
       min_val_(min_val),

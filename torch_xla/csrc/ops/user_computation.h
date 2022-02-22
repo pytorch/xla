@@ -1,5 +1,6 @@
 #pragma once
 
+#include "torch/csrc/lazy/core/ir.h"
 #include "torch_xla/csrc/computation.h"
 #include "torch_xla/csrc/ir.h"
 
@@ -9,7 +10,7 @@ namespace ops {
 
 class UserComputation : public Node {
  public:
-  UserComputation(OpKind op, OpList operands, ComputationPtr computation);
+  UserComputation(torch::lazy::OpKind op, OpList operands, ComputationPtr computation);
 
   NodePtr Clone(OpList operands) const override;
 

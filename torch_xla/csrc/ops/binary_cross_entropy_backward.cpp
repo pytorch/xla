@@ -2,6 +2,7 @@
 
 #include "tensorflow/compiler/xla/xla_client/debug_macros.h"
 #include "tensorflow/compiler/xla/xla_client/util.h"
+#include "torch/csrc/lazy/core/ir.h"
 #include "torch_xla/csrc/lowering_context.h"
 #include "torch_xla/csrc/ops/infer_output_shape.h"
 
@@ -36,7 +37,7 @@ xla::Shape NodeOutputShape(const Value& grad_output, const Value& logits,
 BinaryCrossEntropyBackward::BinaryCrossEntropyBackward(
     const Value& grad_output, const Value& logits, const Value& labels,
     const absl::optional<Value>& weight, ReductionMode reduction)
-    : Node(ir::OpKind(at::aten::binary_cross_entropy_backward),
+    : Node(torch::lazy::OpKind(at::aten::binary_cross_entropy_backward),
            xla::util::GetValuesVector<Value>({grad_output, logits, labels},
                                              {&weight}),
            [&]() {

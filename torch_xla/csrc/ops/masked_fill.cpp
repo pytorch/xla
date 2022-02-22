@@ -1,6 +1,7 @@
 #include "torch_xla/csrc/ops/masked_fill.h"
 
 #include "tensorflow/compiler/xla/client/lib/constants.h"
+#include "torch/csrc/lazy/core/ir.h"
 #include "torch_xla/csrc/helpers.h"
 #include "torch_xla/csrc/lowering_context.h"
 #include "torch_xla/csrc/ops/scalar.h"
@@ -11,7 +12,7 @@ namespace ops {
 
 MaskedFill::MaskedFill(const Value& input, const Value& mask,
                        const at::Scalar& value)
-    : Node(OpKind(at::aten::masked_fill), {input, mask}, input.shape(),
+    : Node(torch::lazy::OpKind(at::aten::masked_fill), {input, mask}, input.shape(),
            /*num_outputs=*/1, ScalarHash(value)),
       value_(std::move(value)) {}
 

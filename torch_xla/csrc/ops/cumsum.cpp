@@ -1,5 +1,6 @@
 #include "torch_xla/csrc/ops/cumsum.h"
 
+#include "torch/csrc/lazy/core/ir.h"
 #include "torch/csrc/lazy/core/tensor_util.h"
 #include "torch_xla/csrc/convert_ops.h"
 #include "torch_xla/csrc/helpers.h"
@@ -38,7 +39,7 @@ xla::Shape NodeOutputShape(const Value& input,
 
 CumSum::CumSum(const Value& input, int64_t dim,
                c10::optional<at::ScalarType> dtype)
-    : Node(ir::OpKind(at::aten::cumsum), {input},
+    : Node(torch::lazy::OpKind(at::aten::cumsum), {input},
            [&]() { return NodeOutputShape(input, dtype); },
            /*num_outputs=*/1,
            torch::lazy::MHash(dim, torch::lazy::OptionalOr<int>(dtype, -1))),

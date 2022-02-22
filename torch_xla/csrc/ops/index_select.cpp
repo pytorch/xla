@@ -1,6 +1,7 @@
 #include "torch_xla/csrc/ops/index_select.h"
 
 #include "tensorflow/compiler/xla/client/lib/slicing.h"
+#include "torch/csrc/lazy/core/ir.h"
 #include "torch_xla/csrc/helpers.h"
 #include "torch_xla/csrc/lowering_context.h"
 #include "torch_xla/csrc/ops/infer_output_shape.h"
@@ -22,7 +23,7 @@ xla::Shape NodeOutputShape(const Value& input, const Value& index,
 }  // namespace
 
 IndexSelect::IndexSelect(const Value& input, int64_t dim, const Value& index)
-    : Node(ir::OpKind(at::aten::index_select), {input, index},
+    : Node(torch::lazy::OpKind(at::aten::index_select), {input, index},
            [&]() { return NodeOutputShape(input, index, dim); },
            /*num_outputs=*/1, torch::lazy::MHash(dim)),
       dim_(dim) {}

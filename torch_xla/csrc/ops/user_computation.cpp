@@ -1,5 +1,6 @@
 #include "torch_xla/csrc/ops/user_computation.h"
 
+#include "torch/csrc/lazy/core/ir.h"
 #include "torch_xla/csrc/lowering_context.h"
 
 namespace torch_xla {
@@ -13,7 +14,7 @@ size_t GetNumOutputs(const xla::Shape& shape) {
 
 }  // namespace
 
-UserComputation::UserComputation(OpKind op, OpList operands,
+UserComputation::UserComputation(torch::lazy::OpKind op, OpList operands,
                                  ComputationPtr computation)
     : Node(std::move(op), operands, computation->program_shape().result(),
            GetNumOutputs(computation->program_shape().result()),

@@ -1,5 +1,6 @@
 #include "torch_xla/csrc/ops/tril.h"
 
+#include "torch/csrc/lazy/core/ir.h"
 #include "torch_xla/csrc/lowering_context.h"
 #include "torch_xla/csrc/matrix.h"
 
@@ -8,7 +9,7 @@ namespace ir {
 namespace ops {
 
 Tril::Tril(const Value& input, int64_t diagonal)
-    : Node(ir::OpKind(at::aten::tril), {input}, input.shape(),
+    : Node(torch::lazy::OpKind(at::aten::tril), {input}, input.shape(),
            /*num_outputs=*/1, torch::lazy::MHash(diagonal)),
       diagonal_(diagonal) {}
 

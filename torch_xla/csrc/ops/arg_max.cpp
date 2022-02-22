@@ -1,5 +1,6 @@
 #include "torch_xla/csrc/ops/arg_max.h"
 
+#include "torch/csrc/lazy/core/ir.h"
 #include "torch_xla/csrc/lowering_context.h"
 #include "torch_xla/csrc/ops/infer_output_shape.h"
 #include "torch_xla/csrc/reduction.h"
@@ -20,7 +21,7 @@ xla::Shape NodeOutputShape(const Value& input, int64_t dim, bool keepdim) {
 }  // namespace
 
 ArgMax::ArgMax(const Value& input, int64_t dim, bool keepdim)
-    : Node(ir::OpKind(at::aten::argmax), {input},
+    : Node(torch::lazy::OpKind(at::aten::argmax), {input},
            [&]() { return NodeOutputShape(input, dim, keepdim); },
            /*num_outputs=*/1, torch::lazy::MHash(dim, keepdim)),
       dim_(dim),

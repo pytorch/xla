@@ -1,5 +1,6 @@
 #include "torch_xla/csrc/ops/scatter_add.h"
 
+#include "torch/csrc/lazy/core/ir.h"
 #include "torch_xla/csrc/convert_ops.h"
 #include "torch_xla/csrc/helpers.h"
 #include "torch_xla/csrc/lowering_context.h"
@@ -11,7 +12,7 @@ namespace ops {
 
 ScatterAdd::ScatterAdd(const Value& input, const Value& index, const Value& src,
                        int64_t dim)
-    : Node(ir::OpKind(at::aten::scatter_add), {input, index, src},
+    : Node(torch::lazy::OpKind(at::aten::scatter_add), {input, index, src},
            input.shape(),
            /*num_outputs=*/1, torch::lazy::MHash(dim)),
       dim_(dim) {}

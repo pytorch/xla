@@ -5,6 +5,7 @@
 #include "tensorflow/compiler/xla/shape_util.h"
 #include "tensorflow/compiler/xla/util.h"
 #include "tensorflow/compiler/xla/xla_client/util.h"
+#include "torch/csrc/lazy/core/ir.h"
 #include "torch_xla/csrc/data_ops.h"
 #include "torch_xla/csrc/helpers.h"
 #include "torch_xla/csrc/lowering_context.h"
@@ -44,7 +45,7 @@ xla::XlaOp LowerAsStrided(xla::XlaOp input, absl::Span<const int64_t> size,
 
 AsStrided::AsStrided(const Value& input, std::vector<int64_t> size,
                      std::vector<int64_t> stride, int64_t storage_offset)
-    : Node(ir::OpKind(at::aten::as_strided), {input},
+    : Node(torch::lazy::OpKind(at::aten::as_strided), {input},
            [&]() {
              return xla::ShapeUtil::MakeShape(input.shape().element_type(),
                                               size);

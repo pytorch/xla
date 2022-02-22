@@ -1,6 +1,7 @@
 #include "torch_xla/csrc/ops/nonzero.h"
 
 #include "tensorflow/compiler/xla/shape_util.h"
+#include "torch/csrc/lazy/core/ir.h"
 #include "torch_xla/csrc/lowering_context.h"
 #include "torch_xla/csrc/tensor_util.h"
 #include "torch_xla/csrc/xla_lower_util.h"
@@ -24,7 +25,7 @@ xla::Shape NodeOutputShape(const Value& input) {
 }  // namespace
 
 NonZero::NonZero(const Value& input)
-    : Node(ir::OpKind(at::aten::nonzero), {input}, NodeOutputShape(input),
+    : Node(torch::lazy::OpKind(at::aten::nonzero), {input}, NodeOutputShape(input),
            /*num_outputs=*/2) {}
 
 NodePtr NonZero::Clone(OpList operands) const {

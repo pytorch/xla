@@ -1,5 +1,6 @@
 #include "torch_xla/csrc/ops/leaky_relu.h"
 
+#include "torch/csrc/lazy/core/ir.h"
 #include "torch_xla/csrc/elementwise.h"
 #include "torch_xla/csrc/lowering_context.h"
 
@@ -8,7 +9,7 @@ namespace ir {
 namespace ops {
 
 LeakyRelu::LeakyRelu(const Value& input, double negative_slope)
-    : Node(ir::OpKind(at::aten::leaky_relu), {input}, input.shape(),
+    : Node(torch::lazy::OpKind(at::aten::leaky_relu), {input}, input.shape(),
            /*num_outputs=*/1, torch::lazy::MHash(negative_slope)),
       negative_slope_(negative_slope) {}
 

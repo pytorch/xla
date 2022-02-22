@@ -1,5 +1,6 @@
 #include "torch_xla/csrc/ops/exponential.h"
 
+#include "torch/csrc/lazy/core/ir.h"
 #include "torch_xla/csrc/helpers.h"
 #include "torch_xla/csrc/lowering_context.h"
 #include "torch_xla/csrc/xla_lower_util.h"
@@ -10,7 +11,7 @@ namespace ops {
 
 Exponential::Exponential(const Value& lambda, const Value& seed,
                          xla::Shape shape)
-    : Node(ir::OpKind(at::aten::exponential), {lambda, seed},
+    : Node(torch::lazy::OpKind(at::aten::exponential), {lambda, seed},
            std::move(shape)) {}
 
 NodePtr Exponential::Clone(OpList operands) const {

@@ -5,9 +5,11 @@
 #include <pybind11/pybind11.h>
 #include <torch/csrc/utils/python_strings.h>
 
+#include "torch/csrc/lazy/core/ir_metadata.h"
+
 namespace torch_xla {
 
-absl::optional<SourceLocation> GetPythonFrameTop() {
+absl::optional<torch::lazy::SourceLocation> GetPythonFrameTop() {
   if (!Py_IsInitialized()) {
     return absl::nullopt;
   }
@@ -16,20 +18,20 @@ absl::optional<SourceLocation> GetPythonFrameTop() {
   if (frame == nullptr) {
     return absl::nullopt;
   }
-  SourceLocation loc;
+  torch::lazy::SourceLocation loc;
   loc.line = PyCode_Addr2Line(frame->f_code, frame->f_lasti);
   loc.file = THPUtils_unpackString(frame->f_code->co_filename);
   loc.function = THPUtils_unpackString(frame->f_code->co_name);
   return loc;
 }
 
-std::vector<SourceLocation> GetPythonFrames() {
-  std::vector<SourceLocation> frames;
+std::vector<torch::lazy::SourceLocation> GetPythonFrames() {
+  std::vector<torch::lazy::SourceLocation> frames;
   if (Py_IsInitialized()) {
     pybind11::gil_scoped_acquire gil;
     PyFrameObject* frame = PyEval_GetFrame();
     while (frame != nullptr) {
-      SourceLocation loc;
+      torch::lazy::SourceLocation loc;
       loc.line = PyCode_Addr2Line(frame->f_code, frame->f_lasti);
       loc.file = THPUtils_unpackString(frame->f_code->co_filename);
       loc.function = THPUtils_unpackString(frame->f_code->co_name);
@@ -40,14 +42,14 @@ std::vector<SourceLocation> GetPythonFrames() {
   return frames;
 }
 
-std::ostream& operator<<(std::ostream& stream,
-                         const std::vector<SourceLocation>& frames) {
-  stream << "Python Frames:\n";
-  for (auto& location : frames) {
-    stream << "  " << location.function << " (" << location.file << ":"
-           << location.line << ")\n";
-  }
-  return stream;
-}
+// std::ostream& operator<<(std::ostream& stream,
+//                          const std::vector<torch::lazy::SourceLocation>& frames) {
+//   stream << "Python Frames:\n";
+//   for (auto& location : frames) {
+//     stream << "  " << location.function << " (" << location.file << ":"
+//            << location.line << ")\n";
+//   }
+//   return stream;
+// }
 
 }  // namespace torch_xla

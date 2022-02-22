@@ -2,6 +2,7 @@
 
 #include "absl/types/span.h"
 #include "tensorflow/compiler/xla/xla_client/util.h"
+#include "torch/csrc/lazy/core/ir.h"
 #include "torch_xla/csrc/lowering_context.h"
 #include "torch_xla/csrc/nll_loss.h"
 #include "torch_xla/csrc/ops/infer_output_shape.h"
@@ -37,7 +38,7 @@ NllLoss::NllLoss(const Value& logits, const Value& labels,
                  const absl::optional<Value>& weight, ReductionMode reduction,
                  int ignore_index)
     : Node(
-          ir::OpKind(at::aten::nll_loss),
+          torch::lazy::OpKind(at::aten::nll_loss),
           xla::util::GetValuesVector<Value>({logits, labels}, {&weight}),
           [&]() {
             return NodeOutputShape(logits, labels, weight, reduction,

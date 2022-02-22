@@ -1,6 +1,7 @@
 #include "torch_xla/csrc/ops/index_get.h"
 
 #include "tensorflow/compiler/xla/xla_client/debug_macros.h"
+#include "torch/csrc/lazy/core/ir.h"
 #include "torch_xla/csrc/lowering_context.h"
 #include "torch_xla/csrc/ops/infer_output_shape.h"
 #include "torch_xla/csrc/xla_lower_util.h"
@@ -24,7 +25,7 @@ xla::Shape NodeOutputShape(const Value& base, const Value& indices,
 
 IndexGet::IndexGet(const ir::Value& base, const ir::Value& indices,
                    int64_t start_dim)
-    : Node(OpKind(at::aten::index), {base, indices},
+    : Node(torch::lazy::OpKind(at::aten::index), {base, indices},
            [&]() { return NodeOutputShape(base, indices, start_dim); },
            /*num_outputs=*/1, torch::lazy::MHash(start_dim)),
       start_dim_(start_dim) {}

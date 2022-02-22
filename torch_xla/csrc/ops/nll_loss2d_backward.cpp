@@ -2,6 +2,7 @@
 
 #include "tensorflow/compiler/xla/xla_client/debug_macros.h"
 #include "tensorflow/compiler/xla/xla_client/util.h"
+#include "torch/csrc/lazy/core/ir.h"
 #include "torch_xla/csrc/lowering_context.h"
 #include "torch_xla/csrc/nll_loss.h"
 #include "torch_xla/csrc/ops/infer_output_shape.h"
@@ -45,7 +46,7 @@ NllLoss2dBackward::NllLoss2dBackward(const Value& grad_output,
                                      const absl::optional<Value>& total_weight,
                                      ReductionMode reduction, int ignore_index)
     : Node(
-          ir::OpKind(at::aten::nll_loss2d_backward),
+          torch::lazy::OpKind(at::aten::nll_loss2d_backward),
           xla::util::GetValuesVector<Value>({grad_output, logits, labels},
                                             {&weight, &total_weight}),
           [&]() {

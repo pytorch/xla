@@ -1,6 +1,7 @@
 #include "torch_xla/csrc/ops/amp_foreach_non_finite_check_and_unscale.h"
 
 #include "tensorflow/compiler/xla/shape_util.h"
+#include "torch/csrc/lazy/core/ir.h"
 #include "torch_xla/csrc/lowering_context.h"
 #include "torch_xla/csrc/ops/xla_ops.h"
 #include "torch_xla/csrc/tensor_util.h"
@@ -35,7 +36,7 @@ std::vector<Value> GetOperandList(absl::Span<const Value> operands,
 
 AmpForachNonFiniteCheckAndUnscale::AmpForachNonFiniteCheckAndUnscale(
     const OpList& inputs, const Value& found_inf, const Value& inv_scale)
-    : Node(ir::OpKind(at::aten::_amp_foreach_non_finite_check_and_unscale_),
+    : Node(torch::lazy::OpKind(at::aten::_amp_foreach_non_finite_check_and_unscale_),
            GetOperandList(inputs, found_inf, inv_scale),
            NodeOutputShape(inputs, found_inf),
            /*num_outputs=*/inputs.size() + 1) {}

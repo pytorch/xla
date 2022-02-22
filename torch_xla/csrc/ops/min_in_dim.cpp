@@ -1,5 +1,6 @@
 #include "torch_xla/csrc/ops/min_in_dim.h"
 
+#include "torch/csrc/lazy/core/ir.h"
 #include "torch_xla/csrc/lowering_context.h"
 #include "torch_xla/csrc/ops/infer_output_shape.h"
 #include "torch_xla/csrc/reduction.h"
@@ -22,7 +23,7 @@ xla::Shape NodeOutputShape(const Value& input, int64_t dim, bool keepdim) {
 }  // namespace
 
 MinInDim::MinInDim(const Value& input, int64_t dim, bool keepdim)
-    : Node(ir::OpKind(at::aten::min), {input},
+    : Node(torch::lazy::OpKind(at::aten::min), {input},
            [&]() { return NodeOutputShape(input, dim, keepdim); },
            /*num_outputs=*/2, torch::lazy::MHash(dim, keepdim)),
       dim_(dim),

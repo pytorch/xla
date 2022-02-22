@@ -1,6 +1,7 @@
 #include "torch_xla/csrc/ops/mean.h"
 
 #include "absl/strings/str_join.h"
+#include "torch/csrc/lazy/core/ir.h"
 #include "torch/csrc/lazy/core/tensor_util.h"
 #include "torch_xla/csrc/helpers.h"
 #include "torch_xla/csrc/lowering_context.h"
@@ -38,7 +39,7 @@ xla::Shape NodeOutputShape(const Value& input,
 
 Mean::Mean(const Value& input, std::vector<int64_t> dimensions,
            bool keep_reduced_dimensions, c10::optional<at::ScalarType> dtype)
-    : Node(ir::OpKind(at::aten::mean), {input},
+    : Node(torch::lazy::OpKind(at::aten::mean), {input},
            [&]() {
              return NodeOutputShape(input, dimensions, keep_reduced_dimensions,
                                     dtype);

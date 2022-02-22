@@ -2,6 +2,7 @@
 
 #include "absl/strings/str_join.h"
 #include "tensorflow/compiler/xla/xla_client/debug_macros.h"
+#include "torch/csrc/lazy/core/ir.h"
 #include "torch_xla/csrc/convolution.h"
 #include "torch_xla/csrc/lowering_context.h"
 #include "torch_xla/csrc/ops/infer_output_shape.h"
@@ -36,7 +37,7 @@ ConvolutionOverrideable::ConvolutionOverrideable(
     std::vector<int64_t> stride, std::vector<int64_t> padding,
     std::vector<int64_t> dilation, bool transposed,
     std::vector<int64_t> output_padding, int64_t groups)
-    : Node(ir::OpKind(at::aten::convolution_overrideable),
+    : Node(torch::lazy::OpKind(at::aten::convolution_overrideable),
            {input, weight, bias},
            [&]() {
              return NodeOutputShape(input, weight, stride, padding, dilation,
@@ -56,7 +57,7 @@ ConvolutionOverrideable::ConvolutionOverrideable(
     const Value& input, const Value& weight, std::vector<int64_t> stride,
     std::vector<int64_t> padding, std::vector<int64_t> dilation,
     bool transposed, std::vector<int64_t> output_padding, int64_t groups)
-    : Node(ir::OpKind(at::aten::convolution_overrideable), {input, weight},
+    : Node(torch::lazy::OpKind(at::aten::convolution_overrideable), {input, weight},
            [&]() {
              return NodeOutputShape(input, weight, stride, padding, dilation,
                                     transposed, output_padding, groups);

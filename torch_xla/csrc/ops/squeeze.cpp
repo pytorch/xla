@@ -1,6 +1,7 @@
 #include "torch_xla/csrc/ops/squeeze.h"
 
 #include "tensorflow/compiler/xla/xla_client/debug_macros.h"
+#include "torch/csrc/lazy/core/ir.h"
 #include "torch_xla/csrc/data_ops.h"
 #include "torch_xla/csrc/lowering_context.h"
 #include "torch_xla/csrc/ops/infer_output_shape.h"
@@ -30,7 +31,7 @@ xla::Shape NodeOutputShape(const Value& input, int dim) {
 }  // namespace
 
 Squeeze::Squeeze(const Value& input, int dim)
-    : Node(ir::OpKind(at::aten::squeeze), {input},
+    : Node(torch::lazy::OpKind(at::aten::squeeze), {input},
            [&]() { return NodeOutputShape(input, dim); },
            /*num_outputs=*/1, torch::lazy::MHash(dim)),
       dim_(dim) {}

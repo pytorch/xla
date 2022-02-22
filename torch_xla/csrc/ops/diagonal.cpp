@@ -4,6 +4,7 @@
 
 #include "tensorflow/compiler/xla/shape_util.h"
 #include "tensorflow/compiler/xla/xla_client/debug_macros.h"
+#include "torch/csrc/lazy/core/ir.h"
 #include "torch_xla/csrc/lowering_context.h"
 #include "torch_xla/csrc/matrix.h"
 
@@ -13,7 +14,7 @@ namespace ops {
 
 Diagonal::Diagonal(const Value& input, int64_t offset, int64_t dim1,
                    int64_t dim2)
-    : Node(ir::OpKind(at::aten::diagonal), {input},
+    : Node(torch::lazy::OpKind(at::aten::diagonal), {input},
            [&]() {
              return MakeDiagonalShape(input.shape(), offset, dim1, dim2);
            },

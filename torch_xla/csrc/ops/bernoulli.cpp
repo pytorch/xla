@@ -1,5 +1,6 @@
 #include "torch_xla/csrc/ops/bernoulli.h"
 
+#include "torch/csrc/lazy/core/ir.h"
 #include "torch_xla/csrc/helpers.h"
 #include "torch_xla/csrc/lowering_context.h"
 #include "torch_xla/csrc/xla_lower_util.h"
@@ -10,7 +11,7 @@ namespace ops {
 
 Bernoulli::Bernoulli(const Value& probability, const Value& seed,
                      xla::Shape shape)
-    : Node(ir::OpKind(at::aten::bernoulli), {probability, seed},
+    : Node(torch::lazy::OpKind(at::aten::bernoulli), {probability, seed},
            std::move(shape)) {}
 
 NodePtr Bernoulli::Clone(OpList operands) const {

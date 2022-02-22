@@ -1,6 +1,7 @@
 #include "torch_xla/csrc/ops/masked_select.h"
 
 #include "tensorflow/compiler/xla/shape_util.h"
+#include "torch/csrc/lazy/core/ir.h"
 #include "torch_xla/csrc/lowering_context.h"
 #include "torch_xla/csrc/tensor_util.h"
 #include "torch_xla/csrc/xla_lower_util.h"
@@ -24,7 +25,7 @@ xla::Shape NodeOutputShape(const Value& input) {
 }  // namespace
 
 MaskedSelect::MaskedSelect(const Value& input, const Value& mask)
-    : Node(ir::OpKind(at::aten::masked_select), {input, mask},
+    : Node(torch::lazy::OpKind(at::aten::masked_select), {input, mask},
            NodeOutputShape(input),
            /*num_outputs=*/2) {}
 

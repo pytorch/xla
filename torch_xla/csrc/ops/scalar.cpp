@@ -5,6 +5,7 @@
 
 #include "tensorflow/compiler/xla/shape_util.h"
 #include "tensorflow/compiler/xla/xla_client/debug_macros.h"
+#include "torch/csrc/lazy/core/ir.h"
 #include "torch_xla/csrc/helpers.h"
 #include "torch_xla/csrc/lowering_context.h"
 
@@ -13,12 +14,12 @@ namespace ir {
 namespace ops {
 
 Scalar::Scalar(const at::Scalar& value, xla::Shape shape)
-    : Node(OpKind(at::prim::Constant), std::move(shape), /*num_outputs=*/1,
+    : Node(torch::lazy::OpKind(at::prim::Constant), std::move(shape), /*num_outputs=*/1,
            ScalarHash(value)),
       value_(std::move(value)) {}
 
 Scalar::Scalar(const at::Scalar& value, xla::PrimitiveType type)
-    : Node(OpKind(at::prim::Constant), xla::ShapeUtil::MakeShape(type, {}),
+    : Node(torch::lazy::OpKind(at::prim::Constant), xla::ShapeUtil::MakeShape(type, {}),
            /*num_outputs=*/1, ScalarHash(value)),
       value_(std::move(value)) {}
 

@@ -2,6 +2,7 @@
 
 #include "absl/strings/str_join.h"
 #include "tensorflow/compiler/xla/shape_util.h"
+#include "torch/csrc/lazy/core/ir.h"
 #include "torch_xla/csrc/data_ops.h"
 #include "torch_xla/csrc/helpers.h"
 #include "torch_xla/csrc/lowering_context.h"
@@ -27,7 +28,7 @@ xla::Shape NodeOutputShape(const Value& input,
 }  // namespace
 
 View::View(const Value& input, std::vector<int64_t> output_size)
-    : Node(ir::OpKind(at::aten::view), {input},
+    : Node(torch::lazy::OpKind(at::aten::view), {input},
            NodeOutputShape(input, output_size),
            /*num_outputs=*/1, torch::lazy::MHash(output_size)),
       output_size_(std::move(output_size)) {}

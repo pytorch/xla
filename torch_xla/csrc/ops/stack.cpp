@@ -1,5 +1,6 @@
 #include "torch_xla/csrc/ops/stack.h"
 
+#include "torch/csrc/lazy/core/ir.h"
 #include "torch_xla/csrc/data_ops.h"
 #include "torch_xla/csrc/helpers.h"
 #include "torch_xla/csrc/lowering_context.h"
@@ -26,7 +27,7 @@ xla::Shape NodeOutputShape(absl::Span<const ir::Value> values, int64_t dim) {
 }  // namespace
 
 Stack::Stack(absl::Span<const ir::Value> values, int64_t dim)
-    : Node(ir::OpKind(at::aten::stack), values,
+    : Node(torch::lazy::OpKind(at::aten::stack), values,
            [&]() { return NodeOutputShape(values, dim); },
            /*num_outputs=*/1, torch::lazy::MHash(dim)),
       dim_(dim) {}

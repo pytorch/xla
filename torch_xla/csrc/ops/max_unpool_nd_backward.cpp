@@ -1,6 +1,7 @@
 #include "torch_xla/csrc/ops/max_unpool_nd_backward.h"
 
 #include "tensorflow/compiler/xla/xla_client/debug_macros.h"
+#include "torch/csrc/lazy/core/ir.h"
 #include "torch_xla/csrc/lowering_context.h"
 #include "torch_xla/csrc/ops/infer_output_shape.h"
 #include "torch_xla/csrc/pooling.h"
@@ -39,7 +40,7 @@ MaxUnpoolNdBackward::MaxUnpoolNdBackward(const Value& grad_output,
                                          const Value& input,
                                          const Value& indices,
                                          std::vector<int64_t> output_size)
-    : Node(ir::OpKind(MaxUnpoolNdBackwardSymbol(output_size.size())),
+    : Node(torch::lazy::OpKind(MaxUnpoolNdBackwardSymbol(output_size.size())),
            {grad_output, input, indices},
            [&]() {
              return NodeOutputShape(grad_output, input, indices, output_size);

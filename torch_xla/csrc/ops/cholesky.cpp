@@ -1,5 +1,6 @@
 #include "torch_xla/csrc/ops/cholesky.h"
 
+#include "torch/csrc/lazy/core/ir.h"
 #include "tensorflow/compiler/xla/client/lib/matrix.h"
 #include "tensorflow/compiler/xla/client/xla_builder.h"
 #include "torch_xla/csrc/lowering_context.h"
@@ -9,7 +10,7 @@ namespace ir {
 namespace ops {
 
 Cholesky::Cholesky(const Value& input, bool lower)
-    : Node(ir::OpKind(at::aten::cholesky), {input}, input.shape(),
+    : Node(torch::lazy::OpKind(at::aten::cholesky), {input}, input.shape(),
            /*num_outputs=*/1, torch::lazy::MHash(lower)),
       lower_(lower) {}
 

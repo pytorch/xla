@@ -1,6 +1,7 @@
 #include "torch_xla/csrc/ops/reflection_pad2d_backward.h"
 
 #include "absl/strings/str_join.h"
+#include "torch/csrc/lazy/core/ir.h"
 #include "torch_xla/csrc/data_ops.h"
 #include "torch_xla/csrc/lowering_context.h"
 #include "torch_xla/csrc/ops/infer_output_shape.h"
@@ -25,7 +26,7 @@ xla::Shape NodeOutputShape(const Value& grad_output, const Value& input,
 ReflectionPad2dBackward::ReflectionPad2dBackward(const Value& grad_output,
                                                  const Value& input,
                                                  std::vector<int64_t> padding)
-    : Node(OpKind(at::aten::reflection_pad2d_backward), {grad_output, input},
+    : Node(torch::lazy::OpKind(at::aten::reflection_pad2d_backward), {grad_output, input},
            [&]() { return NodeOutputShape(grad_output, input, padding); },
            /*num_outputs=*/1, torch::lazy::MHash(padding)),
       padding_(std::move(padding)) {}

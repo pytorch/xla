@@ -2,6 +2,7 @@
 
 #include "absl/types/span.h"
 #include "tensorflow/compiler/xla/xla_client/util.h"
+#include "torch/csrc/lazy/core/ir.h"
 #include "torch_xla/csrc/lowering_context.h"
 #include "torch_xla/csrc/ops/infer_output_shape.h"
 
@@ -34,7 +35,7 @@ xla::Shape NodeOutputShape(const Value& logits, const Value& labels,
 BinaryCrossEntropy::BinaryCrossEntropy(const Value& logits, const Value& labels,
                                        const absl::optional<Value>& weight,
                                        ReductionMode reduction)
-    : Node(ir::OpKind(at::aten::binary_cross_entropy),
+    : Node(torch::lazy::OpKind(at::aten::binary_cross_entropy),
            xla::util::GetValuesVector<Value>({logits, labels}, {&weight}),
            [&]() { return NodeOutputShape(logits, labels, weight, reduction); },
            /*num_outputs=*/1,

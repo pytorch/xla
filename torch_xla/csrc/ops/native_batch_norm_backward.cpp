@@ -1,6 +1,7 @@
 #include "torch_xla/csrc/ops/native_batch_norm_backward.h"
 
 #include "tensorflow/compiler/xla/xla_client/debug_macros.h"
+#include "torch/csrc/lazy/core/ir.h"
 #include "torch_xla/csrc/batch_norm.h"
 #include "torch_xla/csrc/lowering_context.h"
 #include "torch_xla/csrc/ops/infer_output_shape.h"
@@ -32,7 +33,7 @@ xla::Shape NodeOutputShape(const Value& grad_out, const Value& input,
 NativeBatchNormBackward::NativeBatchNormBackward(
     const Value& grad_out, const Value& input, const Value& weight,
     const Value& save_mean, const Value& save_invstd, bool training, double eps)
-    : Node(ir::OpKind(at::aten::native_batch_norm_backward),
+    : Node(torch::lazy::OpKind(at::aten::native_batch_norm_backward),
            {grad_out, input, weight, save_mean, save_invstd},
            [&]() {
              return NodeOutputShape(grad_out, input, weight, save_mean,

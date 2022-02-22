@@ -1,5 +1,6 @@
 #include "torch_xla/csrc/ops/leaky_relu_backward.h"
 
+#include "torch/csrc/lazy/core/ir.h"
 #include "torch_xla/csrc/elementwise.h"
 #include "torch_xla/csrc/lowering_context.h"
 
@@ -9,7 +10,7 @@ namespace ops {
 
 LeakyReluBackward::LeakyReluBackward(const Value& grad_output,
                                      const Value& input, double negative_slope)
-    : Node(ir::OpKind(at::aten::leaky_relu_backward), {grad_output, input},
+    : Node(torch::lazy::OpKind(at::aten::leaky_relu_backward), {grad_output, input},
            input.shape(),
            /*num_outputs=*/1, torch::lazy::MHash(negative_slope)),
       negative_slope_(negative_slope) {}

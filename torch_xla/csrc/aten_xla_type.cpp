@@ -9,6 +9,7 @@
 #include "tensorflow/compiler/xla/xla_client/metrics.h"
 #include "tensorflow/compiler/xla/xla_client/sys_util.h"
 #include "tensorflow/compiler/xla/xla_client/util.h"
+#include "torch/csrc/lazy/core/ir.h"
 #include "torch/csrc/lazy/core/tensor_util.h"
 #include "torch_xla/csrc/XLANativeFunctions.h"
 #include "torch_xla/csrc/aten_autograd_ops.h"
@@ -1820,7 +1821,7 @@ at::Tensor XLANativeFunctions::log(const at::Tensor& self) {
 at::Tensor XLANativeFunctions::log10(const at::Tensor& self) {
   XLA_FN_COUNTER("xla::");
   return bridge::AtenFromXlaTensor(XLATensor::log_base(
-      bridge::GetXlaTensor(self), ir::OpKind(at::aten::log10), 10.0));
+      bridge::GetXlaTensor(self), torch::lazy::OpKind(at::aten::log10), 10.0));
 }
 
 at::Tensor XLANativeFunctions::log1p(const at::Tensor& self) {
@@ -1832,7 +1833,7 @@ at::Tensor XLANativeFunctions::log1p(const at::Tensor& self) {
 at::Tensor XLANativeFunctions::log2(const at::Tensor& self) {
   XLA_FN_COUNTER("xla::");
   return bridge::AtenFromXlaTensor(XLATensor::log_base(
-      bridge::GetXlaTensor(self), ir::OpKind(at::aten::log2), 2.0));
+      bridge::GetXlaTensor(self), torch::lazy::OpKind(at::aten::log2), 2.0));
 }
 
 at::Tensor XLANativeFunctions::log_sigmoid_backward(

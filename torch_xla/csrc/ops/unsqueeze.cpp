@@ -1,5 +1,6 @@
 #include "torch_xla/csrc/ops/unsqueeze.h"
 
+#include "torch/csrc/lazy/core/ir.h"
 #include "torch_xla/csrc/data_ops.h"
 #include "torch_xla/csrc/lowering_context.h"
 
@@ -17,7 +18,7 @@ xla::Shape NodeOutputShape(const Value& input, int dim) {
 }  // namespace
 
 Unsqueeze::Unsqueeze(const Value& input, int dim)
-    : Node(ir::OpKind(at::aten::unsqueeze), {input},
+    : Node(torch::lazy::OpKind(at::aten::unsqueeze), {input},
            [&]() { return NodeOutputShape(input, dim); },
            /*num_outputs=*/1, torch::lazy::MHash(dim)),
       dim_(dim) {}

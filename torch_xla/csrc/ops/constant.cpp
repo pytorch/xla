@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <sstream>
 
+#include "torch/csrc/lazy/core/ir.h"
 #include "torch_xla/csrc/lowering_context.h"
 
 namespace torch_xla {
@@ -10,7 +11,7 @@ namespace ir {
 namespace ops {
 
 Constant::Constant(xla::Literal value)
-    : Node(OpKind(at::prim::Constant), value.shape(), /*num_outputs=*/1,
+    : Node(torch::lazy::OpKind(at::prim::Constant), value.shape(), /*num_outputs=*/1,
            absl::Hash<xla::LiteralBase>{}(value)),
       value_(std::move(value)) {}
 

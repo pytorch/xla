@@ -4,6 +4,7 @@
 #include "tensorflow/compiler/xla/client/lib/matrix.h"
 #include "tensorflow/compiler/xla/client/lib/svd.h"
 #include "tensorflow/compiler/xla/xla_client/util.h"
+#include "torch/csrc/lazy/core/ir.h"
 #include "torch_xla/csrc/data_ops.h"
 #include "torch_xla/csrc/helpers.h"
 #include "torch_xla/csrc/lowering_context.h"
@@ -67,7 +68,7 @@ xla::Shape NodeOutputShape(const Value& input, bool some, bool compute_uv) {
 }  // namespace
 
 SVD::SVD(const Value& input, bool some, bool compute_uv)
-    : Node(ir::OpKind(at::aten::svd), {input},
+    : Node(torch::lazy::OpKind(at::aten::svd), {input},
            [&]() { return NodeOutputShape(input, some, compute_uv); },
            /*num_outputs=*/3, torch::lazy::MHash(some, compute_uv)),
       some_(some),

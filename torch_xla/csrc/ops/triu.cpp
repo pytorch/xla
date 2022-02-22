@@ -1,5 +1,6 @@
 #include "torch_xla/csrc/ops/triu.h"
 
+#include "torch/csrc/lazy/core/ir.h"
 #include "torch_xla/csrc/lowering_context.h"
 #include "torch_xla/csrc/matrix.h"
 
@@ -8,7 +9,7 @@ namespace ir {
 namespace ops {
 
 Triu::Triu(const Value& input, int64_t diagonal)
-    : Node(ir::OpKind(at::aten::triu), {input}, input.shape(),
+    : Node(torch::lazy::OpKind(at::aten::triu), {input}, input.shape(),
            /*num_outputs=*/1, torch::lazy::MHash(diagonal)),
       diagonal_(diagonal) {}
 

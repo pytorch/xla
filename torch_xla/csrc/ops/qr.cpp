@@ -3,6 +3,7 @@
 #include "tensorflow/compiler/xla/client/lib/constants.h"
 #include "tensorflow/compiler/xla/client/lib/matrix.h"
 #include "tensorflow/compiler/xla/client/lib/qr.h"
+#include "torch/csrc/lazy/core/ir.h"
 #include "torch_xla/csrc/data_ops.h"
 #include "torch_xla/csrc/helpers.h"
 #include "torch_xla/csrc/lowering_context.h"
@@ -42,7 +43,7 @@ xla::Shape NodeOutputShape(const Value& input, bool some) {
 }  // namespace
 
 QR::QR(const Value& input, bool some)
-    : Node(ir::OpKind(at::aten::qr), {input},
+    : Node(torch::lazy::OpKind(at::aten::qr), {input},
            [&]() { return NodeOutputShape(input, some); },
            /*num_outputs=*/2, torch::lazy::MHash(some)),
       some_(some) {}

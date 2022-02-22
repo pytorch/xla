@@ -1,6 +1,7 @@
 #include "torch_xla/csrc/ops/cumprod.h"
 
 #include "tensorflow/compiler/xla/client/lib/constants.h"
+#include "torch/csrc/lazy/core/ir.h"
 #include "torch/csrc/lazy/core/tensor_util.h"
 #include "torch_xla/csrc/convert_ops.h"
 #include "torch_xla/csrc/helpers.h"
@@ -39,7 +40,7 @@ xla::Shape NodeOutputShape(const Value& input,
 
 CumProd::CumProd(const Value& input, int64_t dim,
                  c10::optional<at::ScalarType> dtype)
-    : Node(ir::OpKind(at::aten::cumprod), {input},
+    : Node(torch::lazy::OpKind(at::aten::cumprod), {input},
            [&]() { return NodeOutputShape(input, dtype); },
            /*num_outputs=*/1,
            torch::lazy::MHash(dim, torch::lazy::OptionalOr<int>(dtype, -1))),

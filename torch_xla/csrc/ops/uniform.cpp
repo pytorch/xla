@@ -1,6 +1,7 @@
 #include "torch_xla/csrc/ops/uniform.h"
 
 #include "tensorflow/compiler/xla/xla_client/xla_util.h"
+#include "torch/csrc/lazy/core/ir.h"
 #include "torch_xla/csrc/helpers.h"
 #include "torch_xla/csrc/lowering_context.h"
 #include "torch_xla/csrc/random.h"
@@ -12,7 +13,7 @@ namespace ops {
 
 Uniform::Uniform(const Value& from, const Value& to, const Value& seed,
                  const xla::Shape& rng_shape)
-    : Node(ir::OpKind(at::aten::uniform), {from, to, seed}, rng_shape,
+    : Node(torch::lazy::OpKind(at::aten::uniform), {from, to, seed}, rng_shape,
            /*num_outputs=*/1, torch::lazy::Hash(rng_shape)) {}
 
 NodePtr Uniform::Clone(OpList operands) const {

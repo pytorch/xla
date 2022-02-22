@@ -2,6 +2,7 @@
 
 #include <memory>
 
+#include "torch/csrc/lazy/core/ir.h"
 #include "torch_xla/csrc/helpers.h"
 #include "torch_xla/csrc/lowering_context.h"
 #include "torch_xla/csrc/ops/ops.h"
@@ -16,7 +17,7 @@ NodePtr operator+(const Value& node1, const Value& node2) {
     return node.ReturnOp(XlaHelpers::PromotedAdd(op0, op1), loctx);
   };
   return ops::GenericOp(
-      OpKind(at::aten::add), {node1, node2},
+      torch::lazy::OpKind(at::aten::add), {node1, node2},
       XlaHelpers::GetPromotedBinaryOpShape(node1.shape(), node2.shape()),
       std::move(lower_fn));
 }
@@ -28,7 +29,7 @@ NodePtr operator-(const Value& node1, const Value& node2) {
     return node.ReturnOp(XlaHelpers::PromotedSub(op0, op1), loctx);
   };
   return ops::GenericOp(
-      OpKind(at::aten::sub), {node1, node2},
+      torch::lazy::OpKind(at::aten::sub), {node1, node2},
       XlaHelpers::GetPromotedBinaryOpShape(node1.shape(), node2.shape()),
       std::move(lower_fn));
 }
@@ -40,7 +41,7 @@ NodePtr operator*(const Value& node1, const Value& node2) {
     return node.ReturnOp(XlaHelpers::PromotedMul(op0, op1), loctx);
   };
   return ops::GenericOp(
-      OpKind(at::aten::mul), {node1, node2},
+      torch::lazy::OpKind(at::aten::mul), {node1, node2},
       XlaHelpers::GetPromotedBinaryOpShape(node1.shape(), node2.shape()),
       std::move(lower_fn));
 }
@@ -52,7 +53,7 @@ NodePtr operator/(const Value& node1, const Value& node2) {
     return node.ReturnOp(XlaHelpers::PromotedDiv(op0, op1), loctx);
   };
   return ops::GenericOp(
-      OpKind(at::aten::div), {node1, node2},
+      torch::lazy::OpKind(at::aten::div), {node1, node2},
       XlaHelpers::GetPromotedBinaryOpShape(node1.shape(), node2.shape()),
       std::move(lower_fn));
 }

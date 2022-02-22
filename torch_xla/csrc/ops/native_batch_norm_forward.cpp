@@ -1,6 +1,7 @@
 #include "torch_xla/csrc/ops/native_batch_norm_forward.h"
 
 #include "tensorflow/compiler/xla/xla_client/debug_macros.h"
+#include "torch/csrc/lazy/core/ir.h"
 #include "torch_xla/csrc/batch_norm.h"
 #include "torch_xla/csrc/lowering_context.h"
 #include "torch_xla/csrc/ops/infer_output_shape.h"
@@ -56,7 +57,7 @@ NativeBatchNormForward::NativeBatchNormForward(const Value& input,
                                                const Value& running_mean,
                                                const Value& running_var,
                                                bool training, double eps)
-    : Node(ir::OpKind(at::aten::native_batch_norm),
+    : Node(torch::lazy::OpKind(at::aten::native_batch_norm),
            {input, weight, bias, running_mean, running_var},
            [&]() {
              return NodeOutputShape(input, weight, bias, running_mean,
