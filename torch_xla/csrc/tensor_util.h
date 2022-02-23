@@ -31,7 +31,8 @@ bool TensorCompare(const at::Tensor& t1, const at::Tensor& t2);
 // device data handle.
 // TODO LTC @wonjoo - Migrate to upstream after Device -> BackendDevice
 xla::ComputationClient::DataPtr TensorToXlaData(const at::Tensor& tensor,
-                                                const Device& device);
+                                                const Device& device,
+                                                bool transfer_async = false);
 
 torch::lazy::hash_t TensorHash(const at::Tensor& tensor);
 
@@ -40,7 +41,7 @@ torch::lazy::hash_t TensorHash(const at::Tensor& tensor);
 // TODO LTC @wonjoo - Migrate to upstream after Device -> BackendDevice
 std::vector<xla::ComputationClient::DataPtr> CreateTensorsData(
     const std::vector<at::Tensor>& tensors,
-    const std::vector<std::string>& devices);
+    const std::vector<std::string>& devices, bool transfer_async = false);
 
 // Creates an XLA literal out of an ATEN tensor. If shape is specified, that
 // shape+layout will be used, otherwise one will be generated out of the ATEN
