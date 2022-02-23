@@ -18,13 +18,55 @@
 #include "tensorflow/compiler/xla/xla_client/tf_logging.h"
 #include "tensorflow/compiler/xla/xla_client/thread_pool.h"
 #include "tensorflow/compiler/xla/xla_client/util.h"
+#include "tensorflow/compiler/xla/xla_client/xrt_computation_client.h"
 #include "tensorflow/core/lib/bfloat16/bfloat16.h"
 #include "torch/csrc/lazy/core/hash.h"
 #include "torch_xla/csrc/helpers.h"
 #include "torch_xla/csrc/layout_manager.h"
+#include "torch_xla/csrc/torch_util.h"
 
 namespace torch_xla {
 namespace {
+
+struct DataAsync {
+  std::vector<xla::ComputationClient::TensorSource> source_tensors;
+  std::vector<xla::ComputationClient::DataPtr> async_datas;
+  std::vector<xla::util::ExceptionCleanup> handle_unlockers;
+};
+
+void TransferToServerAsync(std::shared_ptr<DataAsync> async,
+                           const std::vector<std::string>& devices) {
+  // Create dummy XRTData and lock handles.
+  async->async_datas =
+      xla::ComputationClient::Get()->CreateAsyncDatas(async->source_tensors);
+  async->handle_unlockers =
+      xla::ComputationClient::Get()->LockAsyncDatas(async->async_datas);
+
+  auto mwait = std::make_shared<xla::util::MultiWait>(1);
+  auto update_data = [async]() {
+    try {
+      xla::ComputationClient::Get()->TransferToServer(async->source_tensors,
+                                                      async->async_datas);
+    } catch (...) {
+      // There are two paths of discovery of an exception happening on an
+      // asynchronous task. One happens if the creator of the asynchronous task
+      // explicitly waits for completion, in which case the exception will be
+      // thrown from the Wait() API. Re-throwing the exception below makes sure
+      // this will be captured by the completer function created below, and
+      // surfaced by the Wait() API. But we also need to surface the exception
+      // even in case the caller does not wait, and that is accomplished by
+      // setting the unlockers status. In that case the exception will be
+      // surfaced when the user tries to acquire the device locks the next time.
+      std::exception_ptr exptr = std::current_exception();
+      for (auto& unlocker : async->handle_unlockers) {
+        unlocker.SetStatus(exptr);
+      }
+      throw;
+    }
+  };
+  xla::env::ScheduleIoClosure(
+      xla::util::MultiWait::Completer(mwait, std::move(update_data)));
+}
 
 bool ShouldUseBF16() {
   bool use_bf16 = xla::sys_util::GetEnvBool("XLA_USE_BF16", false);
@@ -605,21 +647,46 @@ void PopulateTensorBuffer(const at::Tensor& tensor,
 
 xla::ComputationClient::DataPtr TensorToXlaData(const at::Tensor& tensor,
                                                 const xla::Shape& shape,
-                                                const Device& device) {
-  auto populate_fn =
-      [&](const xla::ComputationClient::TensorSource& source_tensor,
-          void* dest_buffer, size_t dest_buffer_size) {
-        PopulateTensorBuffer(tensor, source_tensor.shape, dest_buffer,
-                             dest_buffer_size, device);
-      };
+                                                const Device& device,
+                                                bool transfer_async) {
+  XLA_TIMED("TensorToData");
+  if (transfer_async) {
+    std::shared_ptr<DataAsync> async = std::make_shared<DataAsync>();
+    auto populate_mwait = std::make_shared<xla::util::MultiWait>(1);
+    auto populate_fn =
+        [&](const xla::ComputationClient::TensorSource& source_tensor,
+            void* dest_buffer, size_t dest_buffer_size) {
+          PopulateTensorBuffer(tensor, source_tensor.shape, dest_buffer,
+                               dest_buffer_size, device);
+          populate_mwait->Done();
+        };
 
-  std::vector<xla::ComputationClient::TensorSource> source_tensors;
-  source_tensors.emplace_back(shape, device.ToString(), std::move(populate_fn));
+    async->source_tensors.emplace_back(shape, device.ToString(),
+                                       std::move(populate_fn));
+    TransferToServerAsync(async, {device.ToString()});
+    XLA_CHECK_EQ(async->async_datas.size(), 1);
+    // Tensor is a reference and can be inplace updated between this function
+    // returned and populate_fn being called. Need to wait for populate_fn to be
+    // called.
+    populate_mwait->Wait();
+    return async->async_datas.front();
+  } else {
+    auto populate_fn =
+        [&](const xla::ComputationClient::TensorSource& source_tensor,
+            void* dest_buffer, size_t dest_buffer_size) {
+          PopulateTensorBuffer(tensor, source_tensor.shape, dest_buffer,
+                               dest_buffer_size, device);
+        };
 
-  auto handles =
-      xla::ComputationClient::Get()->TransferToServer(source_tensors);
-  XLA_CHECK_EQ(handles.size(), 1);
-  return std::move(handles.front());
+    std::vector<xla::ComputationClient::TensorSource> source_tensors;
+    source_tensors.emplace_back(shape, device.ToString(),
+                                std::move(populate_fn));
+
+    auto handles =
+        xla::ComputationClient::Get()->TransferToServer(source_tensors);
+    XLA_CHECK_EQ(handles.size(), 1);
+    return std::move(handles.front());
+  }
 }
 
 template <typename SType, typename DType>
@@ -743,30 +810,59 @@ bool TensorCompare(const at::Tensor& t1, const at::Tensor& t2) {
 }
 
 xla::ComputationClient::DataPtr TensorToXlaData(const at::Tensor& tensor,
-                                                const Device& device) {
-  return TensorToXlaData(
-      tensor, CreateComputationShapeFromTensor(tensor, &device), device);
+                                                const Device& device,
+                                                bool transfer_async) {
+  return TensorToXlaData(tensor,
+                         CreateComputationShapeFromTensor(tensor, &device),
+                         device, transfer_async);
 }
 
 std::vector<xla::ComputationClient::DataPtr> CreateTensorsData(
     const std::vector<at::Tensor>& tensors,
-    const std::vector<std::string>& devices) {
+    const std::vector<std::string>& devices, bool transfer_async) {
+  XLA_TIMED("TensorToData");
   XLA_CHECK_EQ(tensors.size(), devices.size());
-  std::vector<xla::ComputationClient::TensorSource> source_tensors;
-  for (size_t i = 0; i < tensors.size(); ++i) {
-    Device device(devices[i]);
-    xla::Shape shape = CreateComputationShapeFromTensor(tensors[i], &device);
-    auto populate_fn =
-        [&, i, device](
-            const xla::ComputationClient::TensorSource& source_tensor,
-            void* dest_buffer, size_t dest_buffer_size) {
-          PopulateTensorBuffer(tensors[i], source_tensor.shape, dest_buffer,
-                               dest_buffer_size, device);
-        };
-    source_tensors.emplace_back(std::move(shape), devices[i],
-                                std::move(populate_fn));
+  if (transfer_async) {
+    std::shared_ptr<DataAsync> async = std::make_shared<DataAsync>();
+    auto populate_mwait =
+        std::make_shared<xla::util::MultiWait>(tensors.size());
+    for (size_t i = 0; i < tensors.size(); ++i) {
+      Device device(devices[i]);
+      xla::Shape shape = CreateComputationShapeFromTensor(tensors[i], &device);
+      auto populate_fn =
+          [&, i, device](
+              const xla::ComputationClient::TensorSource& source_tensor,
+              void* dest_buffer, size_t dest_buffer_size) {
+            PopulateTensorBuffer(tensors[i], source_tensor.shape, dest_buffer,
+                                 dest_buffer_size, device);
+            populate_mwait->Done();
+          };
+      async->source_tensors.emplace_back(std::move(shape), devices[i],
+                                         std::move(populate_fn));
+    }
+    TransferToServerAsync(async, devices);
+    // Tensors is a vector reference and can be inplace updated between this
+    // function returned and populate_fn being called. Need to wait for
+    // populate_fn to be called.
+    populate_mwait->Wait();
+    return async->async_datas;
+  } else {
+    std::vector<xla::ComputationClient::TensorSource> source_tensors;
+    for (size_t i = 0; i < tensors.size(); ++i) {
+      Device device(devices[i]);
+      xla::Shape shape = CreateComputationShapeFromTensor(tensors[i], &device);
+      auto populate_fn =
+          [&, i, device](
+              const xla::ComputationClient::TensorSource& source_tensor,
+              void* dest_buffer, size_t dest_buffer_size) {
+            PopulateTensorBuffer(tensors[i], source_tensor.shape, dest_buffer,
+                                 dest_buffer_size, device);
+          };
+      source_tensors.emplace_back(std::move(shape), devices[i],
+                                  std::move(populate_fn));
+    }
+    return xla::ComputationClient::Get()->TransferToServer(source_tensors);
   }
-  return xla::ComputationClient::Get()->TransferToServer(source_tensors);
 }
 
 xla::Literal GetTensorLiteral(const at::Tensor& tensor, const xla::Shape* shape,

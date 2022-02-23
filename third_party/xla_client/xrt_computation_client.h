@@ -34,20 +34,112 @@
 
 namespace xla {
 
+class XrtLocker {
+ public:
+  void Lock() {
+    std::unique_lock<std::mutex> lock(mutex_);
+    cv_.wait(lock, [this] { return !locked_; });
+    CheckResetException();
+    locked_ = true;
+  }
+
+  void Unlock(std::exception_ptr exptr) {
+    std::lock_guard<std::mutex> lock(mutex_);
+    locked_ = false;
+    exptr_ = std::move(exptr);
+    cv_.notify_all();
+  }
+
+  void Barrier() {
+    std::unique_lock<std::mutex> lock(mutex_);
+    cv_.wait(lock, [this] { return !locked_; });
+    cv_.notify_all();
+    CheckResetException();
+  }
+
+ private:
+  void CheckResetException() {
+    std::exception_ptr exptr = std::move(exptr_);
+    exptr_ = nullptr;
+    if (exptr != nullptr) {
+      std::rethrow_exception(exptr);
+    }
+  }
+
+  std::mutex mutex_;
+  std::condition_variable cv_;
+  bool locked_ = false;
+  std::exception_ptr exptr_;
+};
+
+class DataHandleLocker : public XrtLocker {
+ public:
+  static const int64_t dummy_handle = -151235;
+};
+
 class XrtComputationClient : public ComputationClient {
   struct DeviceHandle {
     std::string device;
     int64_t handle;
   };
 
-  struct XrtHandle {
-    XrtHandle(int64_t handle, std::function<void()> releaser)
-        : handle(handle), releaser(std::move(releaser)) {}
+  class XrtHandle {
+   public:
+    XrtHandle(int64_t handle, std::function<void(int64_t)> releaser,
+              bool async = false)
+        : handle_(handle), releaser(std::move(releaser)) {
+      if (async) {
+        locker = std::make_shared<DataHandleLocker>();
+      } else {
+        locker = nullptr;
+      }
+    }
 
-    ~XrtHandle() { releaser(); }
+    ~XrtHandle() {
+      // Handle might only contain dummy value, need to wait for the
+      // true handle assigniment.
+      if (locker) {
+        XLA_TIMED("HandleBarrierWait");
+        locker->Barrier();
+      }
+      releaser(handle_);
+    }
 
-    int64_t handle;
-    std::function<void()> releaser;
+    // Lock the current XrtHandle and prevent other caller from accessing the
+    // handle_ value. This function will return an ExceptionCleanup object which
+    // will rethrow the exception if there is one and unlock the XrtHandle upon
+    // destruction.
+    xla::util::ExceptionCleanup LockHandle() {
+      std::shared_ptr<DataHandleLocker> locker_copy = this->locker;
+      locker_copy->Lock();
+      return xla::util::ExceptionCleanup(
+          [locker_copy = std::move(locker_copy)](
+              xla::util::ExceptionCleanup::StatusType status) {
+            locker_copy->Unlock(std::move(status));
+          });
+    }
+
+    void update_handle(int64_t handle) {
+      // handle can only be updated once when it is dummy.
+      XLA_CHECK_EQ(handle_, DataHandleLocker::dummy_handle);
+      handle_ = handle;
+    }
+
+    int64_t handle() {
+      // Handle might only contain dummy value, need to wait for the
+      // true handle assigniment
+      if (locker) {
+        XLA_TIMED("HandleBarrierWait");
+        locker->Barrier();
+      }
+      return handle_;
+      ;
+    }
+
+   private:
+    int64_t handle_;
+    std::shared_ptr<DataHandleLocker> locker;
+    std::function<void(int64_t)> releaser;
   };
 
   using XrtHandlePtr = std::shared_ptr<XrtHandle>;
@@ -59,11 +151,16 @@ class XrtComputationClient : public ComputationClient {
             int64_t handle)
         : Data(std::move(device), std::move(device_shape)),
           handle_ptr(std::make_shared<XrtHandle>(
-              handle, [self, device = this->device(), handle]() {
+              handle, [self, device = this->device()](int64_t handle) {
                 self->ReleaseXrtData(device, handle);
               })) {}
 
-    int64_t get_handle() const { return handle_ptr->handle; }
+    XrtData(XrtComputationClient* self, std::string device, Shape device_shape,
+            XrtHandlePtr handle)
+        : Data(std::move(device), std::move(device_shape)),
+          handle_ptr(handle) {}
+
+    int64_t get_handle() const { return handle_ptr->handle(); }
 
     OpaqueHandle GetOpaqueHandle() override { return get_handle(); }
 
@@ -81,12 +178,12 @@ class XrtComputationClient : public ComputationClient {
         : Computation(std::move(computation), std::move(program_shape),
                       std::move(devices)),
           handle_ptr(std::make_shared<XrtHandle>(
-              handle, [self, compilation_device = std::move(compilation_device),
-                       handle]() {
+              handle, [self, compilation_device = std::move(
+                                 compilation_device)](int64_t handle) {
                 self->ReleaseXrtComputation(compilation_device, handle);
               })) {}
 
-    int64_t get_handle() const { return handle_ptr->handle; }
+    int64_t get_handle() const { return handle_ptr->handle(); }
 
     XrtHandlePtr handle_ptr;
   };
@@ -141,8 +238,17 @@ class XrtComputationClient : public ComputationClient {
 
   DataPtr CreateDataPlaceholder(std::string device, Shape shape) override;
 
+  std::vector<DataPtr> CreateAsyncDatas(
+      absl::Span<const TensorSource> tensors) override;
+
+  std::vector<xla::util::ExceptionCleanup> LockAsyncDatas(
+      absl::Span<const DataPtr> datas) override;
+
   std::vector<DataPtr> TransferToServer(
       absl::Span<const TensorSource> tensors) override;
+
+  void TransferToServer(absl::Span<const TensorSource> tensors,
+                        absl::Span<const DataPtr> datas) override;
 
   std::vector<Literal> TransferFromServer(
       absl::Span<const DataPtr> handles) override;
@@ -281,8 +387,11 @@ class XrtComputationClient : public ComputationClient {
       absl::Span<const std::string> devices,
       const tensorflow::ClientSession::FeedType& feed_inputs);
 
+  std::vector<DataPtr> TransferToServerHelper(
+      absl::Span<const TensorSource> tensors, absl::Span<const DataPtr> datas);
+
   std::vector<DataPtr> TransferToServerInternal(
-      absl::Span<const TensorSource> tensors);
+      absl::Span<const TensorSource> tensors, absl::Span<const DataPtr> datas);
 
   // Retrieves the worker,worker_host pair for a given PyTorch device (ie,
   // TPU:0).

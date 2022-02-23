@@ -209,9 +209,10 @@ XlaDataCacheArena::XlaDataCache* GetXlaDataCache(const Device& device) {
 }
 
 ir::Value IrValueFromScalar(const at::Scalar& value, at::ScalarType scalar_type,
-                            const Device& device) {
+                            const Device& device, bool transfer_async) {
   at::Tensor tensor = at::scalar_tensor(value, at::TensorOptions(scalar_type));
-  xla::ComputationClient::DataPtr device_data = TensorToXlaData(tensor, device);
+  xla::ComputationClient::DataPtr device_data =
+      TensorToXlaData(tensor, device, transfer_async);
   return ir::MakeNode<ir::ops::DeviceData>(std::move(device_data));
 }
 
@@ -317,7 +318,8 @@ class XLATensor::DeviceContextArena {
     std::lock_guard<std::mutex> lock(devctx->lock);
     if (!devctx->seed_ir_value) {
       devctx->seed_ir_value =
-          IrValueFromScalar(MakeIntScalar(devctx->seed), kSeedType, device);
+          IrValueFromScalar(MakeIntScalar(devctx->seed), kSeedType, device,
+                            /*transfer_async=*/true);
     }
     // Keep the running seed as scalar as well, so we can return it directly
     // without executing graphs.
