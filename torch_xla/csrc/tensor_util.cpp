@@ -36,13 +36,14 @@ struct DataAsync {
 
 void TransferToServerAsync(std::shared_ptr<DataAsync> async,
                            const std::vector<std::string>& devices) {
+  XLA_TIMED("TransferToServerAsync");
   // Create dummy XRTData and lock handles.
   async->async_datas =
       xla::ComputationClient::Get()->CreateAsyncDatas(async->source_tensors);
   async->handle_unlockers =
       xla::ComputationClient::Get()->LockAsyncDatas(async->async_datas);
 
-  auto mwait = std::make_shared<xla::util::MultiWait>(1);
+  auto mwait = std::make_shared<xla::util::MultiWait>(/*num_wait=*/1);
   auto update_data = [async]() {
     try {
       xla::ComputationClient::Get()->TransferToServer(async->source_tensors,
@@ -652,7 +653,8 @@ xla::ComputationClient::DataPtr TensorToXlaData(const at::Tensor& tensor,
   XLA_TIMED("TensorToData");
   if (transfer_async) {
     std::shared_ptr<DataAsync> async = std::make_shared<DataAsync>();
-    auto populate_mwait = std::make_shared<xla::util::MultiWait>(1);
+    auto populate_mwait =
+        std::make_shared<xla::util::MultiWait>(/*num_wait=*/1);
     auto populate_fn =
         [&](const xla::ComputationClient::TensorSource& source_tensor,
             void* dest_buffer, size_t dest_buffer_size) {
