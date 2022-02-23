@@ -1828,6 +1828,26 @@ class TestModelComparator(XlaTestCase):
     self.assertEqual(len(report), 0)
 
 
+class TestAsyncRNG(XlaTestCase):
+
+  def test(self):
+    xla_device = xm.xla_device()
+    async_rng_mode = xu.getenv_as('XLA_TRANSFER_SEED_ASYNC', bool, defval=False)
+    # mark_step to clear the rng seed
+    xm.mark_step()
+
+    transfer_to_server_async_metric = met.metric_data("TransferToServerAsync")
+    async_transfer_count = 0 if transfer_to_server_async_metric == None else transfer_to_server_async_metric[
+        0]
+    t1 = torch.randn(3, 3, device=xla_device)
+    xm.mark_step()
+    if async_rng_mode:
+      assert met.metric_data(
+          "TransferToServerAsync")[0] == async_transfer_count + 1
+    else:
+      assert met.metric_data("TransferToServerAsync") == None
+
+
 class TestOpBuilder(XlaTestCase):
 
   def runOpBuilderTest(self,

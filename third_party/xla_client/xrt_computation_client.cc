@@ -295,6 +295,36 @@ ComputationClient::DataPtr XrtComputationClient::CreateDataPlaceholder(
   return std::make_shared<XrtData>(std::move(device), std::move(shape));
 }
 
+std::vector<xla::ComputationClient::DataPtr>
+XrtComputationClient::CreateAsyncDatas(absl::Span<const TensorSource> tensors) {
+  std::vector<xla::ComputationClient::DataPtr> results(tensors.size());
+  for (size_t i = 0; i < tensors.size(); ++i) {
+    // Create a XrtHandle with dummy handle, releasr needs to take the
+    // real handle upon destructon.
+    XrtHandlePtr handle_ptr = std::make_shared<XrtHandle>(
+        DataHandleLocker::dummy_handle,
+        [this, device = tensors[i].device](int64_t handle) {
+          this->ReleaseXrtData(device, handle);
+        },
+        /*async=*/true);
+    results[i] = std::make_shared<XrtData>(this, tensors[i].device,
+                                           tensors[i].shape, handle_ptr);
+  }
+  CreateAsyncDataHandlesCounter()->AddValue(results.size());
+  return results;
+}
+
+std::vector<xla::util::ExceptionCleanup> XrtComputationClient::LockAsyncDatas(
+    absl::Span<const xla::ComputationClient::DataPtr> datas) {
+  std::vector<xla::util::ExceptionCleanup> unlcoker;
+  unlcoker.reserve(datas.size());
+  for (int i = 0; i < datas.size(); i++) {
+    unlcoker.emplace_back(
+        dynamic_cast<XrtData&>(*datas[i]).handle_ptr->LockHandle());
+  }
+  return unlcoker;
+}
+
 std::vector<size_t> XrtComputationClient::PartitionTransferToServer(
     absl::Span<const TensorSource> tensors) {
   int64_t max_partition_size = GetMaxTensorsPartitionSize();
@@ -319,11 +349,24 @@ std::vector<size_t> XrtComputationClient::PartitionTransferToServer(
 
 std::vector<ComputationClient::DataPtr> XrtComputationClient::TransferToServer(
     absl::Span<const TensorSource> tensors) {
+  return TransferToServerHelper(tensors, {});
+}
+
+void XrtComputationClient::TransferToServer(
+    absl::Span<const TensorSource> tensors, absl::Span<const DataPtr> datas) {
+  XLA_CHECK_EQ(tensors.size(), datas.size());
+  TransferToServerHelper(tensors, datas);
+  return;
+}
+
+std::vector<ComputationClient::DataPtr>
+XrtComputationClient::TransferToServerHelper(
+    absl::Span<const TensorSource> tensors, absl::Span<const DataPtr> datas) {
   auto partitions = PartitionTransferToServer(tensors);
   if (partitions.size() == 1) {
     // Fast path in case of single partition. Avoid creating threads and
     // waiting, since this is the common case.
-    return TransferToServerInternal(tensors);
+    return TransferToServerInternal(tensors, datas);
   }
   XLA_COUNTER("XrtPartitionedTransferToServer", 1);
 
@@ -335,8 +378,16 @@ std::vector<ComputationClient::DataPtr> XrtComputationClient::TransferToServer(
       size_t length = (i + 1 < partitions.size())
                           ? partitions[i + 1] - base_index
                           : tensors.size() - base_index;
-      auto partitions_results =
-          TransferToServerInternal(tensors.subspan(base_index, length));
+      std::vector<ComputationClient::DataPtr> partitions_results;
+      // Only pass datas if it is not empty.
+      if (datas.size()) {
+        partitions_results =
+            TransferToServerInternal(tensors.subspan(base_index, length),
+                                     datas.subspan(base_index, length));
+      } else {
+        partitions_results =
+            TransferToServerInternal(tensors.subspan(base_index, length), {});
+      }
       for (size_t r = 0; r < length; ++r) {
         results[base_index + r] = std::move(partitions_results[r]);
       }
@@ -350,11 +401,14 @@ std::vector<ComputationClient::DataPtr> XrtComputationClient::TransferToServer(
 
 std::vector<ComputationClient::DataPtr>
 XrtComputationClient::TransferToServerInternal(
-    absl::Span<const TensorSource> tensors) {
+    absl::Span<const TensorSource> tensors, absl::Span<const DataPtr> datas) {
   metrics::TimedSection timed(TransferToServerMetric());
   tensorflow::profiler::TraceMe activity(
       "TransferToServerInternal", tensorflow::profiler::TraceMeLevel::kInfo);
 
+  // If datas are passed in, don't create new datas but modify the passed in
+  // datas.
+  bool create_new_data = (datas.size() == 0);
   std::mutex lock;
   XrtSessionCache::SessionMap session_map;
   int64_t total_size = 0;
@@ -401,7 +455,10 @@ XrtComputationClient::TransferToServerInternal(
   OutboundDataMetric()->AddSample(total_size);
 
   mwait->Reset(session_work_map.size());
-  std::vector<DataPtr> results(tensors.size());
+  std::vector<DataPtr> results;
+  if (create_new_data) {
+    results.resize(tensors.size());
+  }
   {
     tensorflow::profiler::TraceMe activity(
         [&] {
@@ -423,9 +480,14 @@ XrtComputationClient::TransferToServerInternal(
 
         for (size_t i = 0; i < outputs.size(); ++i) {
           size_t li = session_work->index_mapping[i];
-          results[li] = std::make_shared<XrtData>(this, tensors[li].device,
-                                                  tensors[li].shape,
-                                                  outputs[i].scalar<int64_t>()());
+          if (create_new_data) {
+            results[li] = std::make_shared<XrtData>(
+                this, tensors[li].device, tensors[li].shape,
+                outputs[i].scalar<int64_t>()());
+          } else {
+            dynamic_cast<XrtData&>(*datas[li])
+                .handle_ptr->update_handle(outputs[i].scalar<int64_t>()());
+          }
         }
         CreateDataHandlesCounter()->AddValue(outputs.size());
       };
@@ -1337,9 +1399,9 @@ void XrtComputationClient::InitializeDevices(
     // mesh coordinates are usually [x, y, z, c] ('x', 'y' and 'z' being the
     // spatial chip coordinated and 'c' the core number).
     int64_t base_index = parsed_device.task *
-                           topology_proto->num_tpu_devices_per_task() *
-                           topology_proto->mesh_shape_size() +
-                       parsed_device.id * topology_proto->mesh_shape_size();
+                             topology_proto->num_tpu_devices_per_task() *
+                             topology_proto->mesh_shape_size() +
+                         parsed_device.id * topology_proto->mesh_shape_size();
     std::vector<int> device_mesh_coords(topology_proto->mesh_shape_size());
     for (int i = 0; i < topology_proto->mesh_shape_size(); ++i) {
       device_mesh_coords[i] =
@@ -1442,8 +1504,8 @@ XrtComputationClient::GetComputationResults(
           handles_vec(i)));
     }
   } else {
-    results.push_back(std::make_shared<XrtData>(this, device, result_shape,
-                                                xrt_result.scalar<int64_t>()()));
+    results.push_back(std::make_shared<XrtData>(
+        this, device, result_shape, xrt_result.scalar<int64_t>()()));
   }
   CreateDataHandlesCounter()->AddValue(results.size());
   return results;

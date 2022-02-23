@@ -32,7 +32,8 @@ NcclUidManager* NcclUidManager::Get() {
   return nccl_mgr;
 }
 
-std::string NcclUidManager::GetNcclUniqueUid(absl::Span<const int64_t> replicas) {
+std::string NcclUidManager::GetNcclUniqueUid(
+    absl::Span<const int64_t> replicas) {
   std::string replicas_str = absl::StrJoin(replicas, ",");
   std::lock_guard<std::mutex> lock(mutex_);
   auto it = replicas_uid_map_.find(replicas_str);
