@@ -314,12 +314,13 @@ class XLATensor::DeviceContextArena {
     static const at::ScalarType kSeedType = at::ScalarType::Long;
     static const uint64_t kSeedMul = 214013;
     static const uint64_t kSeedAdd = 2531011;
+    static bool transfer_async =
+        xla::sys_util::GetEnvBool("XLA_TRANSFER_SEED_ASYNC", false);
     DeviceContext* devctx = GetDeviceContext(device);
     std::lock_guard<std::mutex> lock(devctx->lock);
     if (!devctx->seed_ir_value) {
-      devctx->seed_ir_value =
-          IrValueFromScalar(MakeIntScalar(devctx->seed), kSeedType, device,
-                            /*transfer_async=*/true);
+      devctx->seed_ir_value = IrValueFromScalar(
+          MakeIntScalar(devctx->seed), kSeedType, device, transfer_async);
     }
     // Keep the running seed as scalar as well, so we can return it directly
     // without executing graphs.
