@@ -14,7 +14,6 @@ namespace xla {
 namespace metrics {
 namespace {
 
-
 const std::vector<double>* ReadEnvPercentiles() {
   std::string percentiles = sys_util::GetEnvString(
       "XLA_METRICS_PERCENTILES", "0.01:0.05:0.1:0.2:0.5:0.8:0.9:0.95:0.99");

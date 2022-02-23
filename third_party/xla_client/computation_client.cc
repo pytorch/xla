@@ -392,6 +392,12 @@ metrics::Metric* ComputationClient::DeconstructTupleMetric() {
   return metric;
 }
 
+metrics::Counter* ComputationClient::CreateAsyncDataHandlesCounter() {
+  // Do not change the name of the counter as xla_model.py references it.
+  static metrics::Counter* counter = new metrics::Counter("CreateAsyncDataHandles");
+  return counter;
+}
+
 metrics::Counter* ComputationClient::CreateDataHandlesCounter() {
   // Do not change the name of the counter as xla_model.py references it.
   static metrics::Counter* counter = new metrics::Counter("CreateDataHandles");

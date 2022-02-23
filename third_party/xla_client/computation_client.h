@@ -15,6 +15,7 @@
 #include "tensorflow/compiler/xla/types.h"
 #include "tensorflow/compiler/xla/xla_client/metrics.h"
 #include "tensorflow/compiler/xla/xla_client/types.h"
+#include "tensorflow/compiler/xla/xla_client/util.h"
 
 namespace xla {
 
@@ -166,9 +167,24 @@ class ComputationClient {
   // will be populated in an asynchrounous fashion.
   virtual DataPtr CreateDataPlaceholder(std::string device, Shape shape) = 0;
 
+  // Create DataPtr that only has dummy information which can be filled in
+  // later.
+  virtual std::vector<DataPtr> CreateAsyncDatas(
+      absl::Span<const TensorSource> tensors) = 0;
+
+  // Lock the DataPtr
+  virtual std::vector<xla::util::ExceptionCleanup> LockAsyncDatas(
+      absl::Span<const DataPtr> datas) = 0;
+
   // Transfers local tensor values to the TPU servers and fetches the handles.
   virtual std::vector<DataPtr> TransferToServer(
       absl::Span<const TensorSource> tensors) = 0;
+
+  // Transfers local tensor values to the TPU servers and fetches the handles.
+  // Update the handles associated with DataPtrs passed instead of creating new
+  // datas.
+  virtual void TransferToServer(absl::Span<const TensorSource> tensors,
+                                absl::Span<const DataPtr> datas) = 0;
 
   // Reads the tensor literal values stored at TPU server sites, behind the
   // supplied handles.
@@ -293,6 +309,7 @@ class ComputationClient {
   static metrics::Metric* ExecuteParallelMetric();
   static metrics::Metric* ExecuteChainedMetric();
   static metrics::Metric* DeconstructTupleMetric();
+  static metrics::Counter* CreateAsyncDataHandlesCounter();
   static metrics::Counter* CreateDataHandlesCounter();
   static metrics::Counter* ReleaseDataHandlesCounter();
   static metrics::Counter* DestroyDataHandlesCounter();
