@@ -11,6 +11,8 @@ ARG cuda="0"
 ARG cuda_compute="7.0,7.5"
 ARG cxx_abi="0"
 ARG tpuvm=""
+ARG bazel_jobs=""
+ARG git_clone="false"
 
 RUN apt-get update
 RUN apt-get install -y git sudo python-pip python3-pip
@@ -38,7 +40,7 @@ ENV BAZEL_JOBS "${bazel_jobs}"
 # cloud build. Otherwise, just use local.
 # https://github.com/GoogleCloudPlatform/cloud-builders/issues/435
 COPY . /pytorch/xla
-RUN if [ "${git_clone}" = true ]; then github_branch="${release_version}" && \
+RUN if [ "${git_clone}" = "true" ]; then github_branch="${release_version}" && \
   if [ "${release_version}" = "nightly" ]; then github_branch="master"; fi && \
   cd /pytorch && \
   rm -rf xla && \
