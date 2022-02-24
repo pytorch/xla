@@ -76,7 +76,7 @@ XlaOpVector NllLossBackward::Lower(LoweringContext* loctx) const {
   xla::XlaOp labels = loctx->GetOutputOp(operand_with_shape(2));
   xla::XlaOp weight;
   xla::XlaOp total_weight;
-  if (operands().size() > 3) {
+  if (operands_with_shape().size() > 3) {
     weight = loctx->GetOutputOp(operand_with_shape(3));
     total_weight = loctx->GetOutputOp(operand_with_shape(4));
   }

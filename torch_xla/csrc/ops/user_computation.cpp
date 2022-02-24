@@ -27,7 +27,7 @@ NodePtr UserComputation::Clone(OpList operands) const {
 
 XlaOpVector UserComputation::Lower(LoweringContext* loctx) const {
   std::vector<xla::XlaOp> inputs;
-  for (auto& op : operands()) {
+  for (auto& op : operands_with_shape()) {
     inputs.push_back(loctx->GetOutputOp(op));
   }
   xla::XlaOp output =

@@ -68,20 +68,20 @@ ShapeCache* GetShapeCache() {
   return cache;
 }
 
-void EmitShortFrameInfo(std::ostream& stream,
-                        const std::vector<torch::lazy::SourceLocation>& frames) {
-  if (!frames.empty()) {
-    const torch::lazy::SourceLocation& frame = frames.front();
-    std::string::size_type pos = frame.file.find_last_of('/');
-    if (pos == std::string::npos) {
-      pos = 0;
-    } else {
-      ++pos;
-    }
-    stream << ", location=" << frame.function << "@" << frame.file.substr(pos)
-           << ":" << frame.line;
-  }
-}
+// void EmitShortFrameInfo(std::ostream& stream,
+//                         const std::vector<torch::lazy::SourceLocation>& frames) {
+//   if (!frames.empty()) {
+//     const torch::lazy::SourceLocation& frame = frames.front();
+//     std::string::size_type pos = frame.file.find_last_of('/');
+//     if (pos == std::string::npos) {
+//       pos = 0;
+//     } else {
+//       ++pos;
+//     }
+//     stream << ", location=" << frame.function << "@" << frame.file.substr(pos)
+//            << ":" << frame.line;
+//   }
+// }
 
 }  // namespace
 
@@ -142,7 +142,8 @@ torch::lazy::hash_t Value::hash() const {
 
 Node::Node(torch::lazy::OpKind op, OpList operands, xla::Shape shape,
            size_t num_outputs, torch::lazy::hash_t hash_seed)
-    : op_(std::move(op)),
+    : torch::lazy::Node(op, num_outputs, hash_seed),
+      op_(std::move(op)),
       num_outputs_(num_outputs),
       shape_(std::move(shape)),
       node_hash_(torch::lazy::HashCombine(op_.hash(), hash_seed)),
@@ -166,7 +167,8 @@ Node::Node(torch::lazy::OpKind op, OpList operands,
 
 Node::Node(torch::lazy::OpKind op, xla::Shape shape, size_t num_outputs,
            torch::lazy::hash_t hash_seed)
-    : op_(std::move(op)),
+    : torch::lazy::Node(op, num_outputs, hash_seed),
+      op_(std::move(op)),
       num_outputs_(num_outputs),
       shape_(std::move(shape)),
       node_hash_(GetOpHash(op_, shape_, hash_seed)),

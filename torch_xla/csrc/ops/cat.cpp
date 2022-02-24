@@ -38,7 +38,7 @@ NodePtr Cat::Clone(OpList operands) const {
 
 XlaOpVector Cat::Lower(LoweringContext* loctx) const {
   std::vector<xla::XlaOp> inputs;
-  for (auto& operand : operands()) {
+  for (auto& operand : operands_with_shape()) {
     inputs.push_back(loctx->GetOutputOp(operand));
   }
   return ReturnOp(BuildCat(inputs, dim_), loctx);

@@ -155,7 +155,7 @@ std::string GenerateTextNodeSpec(const Node* node, const NodeIdMap& id_map) {
   std::stringstream ss;
   ss << node->shape() << " " << node->op() << "(";
   size_t count = 0;
-  for (auto& output : node->operands()) {
+  for (auto& output : node->operands_with_shape()) {
     if (count > 0) {
       ss << ", ";
     }
@@ -192,10 +192,10 @@ std::string DumpUtil::PostOrderToDot(absl::Span<const Node* const> post_order,
   for (auto it = post_order.rbegin(); it != post_order.rend(); ++it) {
     const Node* node = *it;
     size_t id = id_map.at(node);
-    for (size_t i = 0; i < node->operands().size(); ++i) {
+    for (size_t i = 0; i < node->operands_with_shape().size(); ++i) {
       const ir::Output& output = node->operand_with_shape(i);
       ss << "  node" << id_map.at(output.node) << " -> node" << id;
-      if (node->operands().size() > 1) {
+      if (node->operands_with_shape().size() > 1) {
         ss << " [label=\"i=" << i;
         if (output.node->num_outputs() > 1) {
           ss << ",o=" << output.index;

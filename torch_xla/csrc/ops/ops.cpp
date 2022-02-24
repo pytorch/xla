@@ -149,7 +149,7 @@ NodePtr Abs(const Value& input) {
     xla::XlaOp xla_input = loctx->GetOutputOp(node.operand_with_shape(0));
     return node.ReturnOp(BuildAbs(xla_input), loctx);
   };
-  return GenericOp(OpKind(at::aten::abs), {input}, input.shape(),
+  return GenericOp(torch::lazy::OpKind(at::aten::abs), {input}, input.shape(),
                    std::move(lower_fn));
 }
 
@@ -316,7 +316,7 @@ NodePtr Ger(const Value& input, const Value& other) {
 NodePtr AddMatMulOp(const Value& input, const Value& weight,
                     const Value& bias) {
   auto lower_fn = [](const Node& node, LoweringContext* loctx) -> XlaOpVector {
-    XLA_CHECK_EQ(node.operands().size(), 3) << "Unexpected number of operands";
+    XLA_CHECK_EQ(node.operands_with_shape().size(), 3) << "Unexpected number of operands";
     xla::XlaOp xla_input = loctx->GetOutputOp(node.operand_with_shape(0));
     xla::XlaOp xla_weight = loctx->GetOutputOp(node.operand_with_shape(1));
     xla::XlaOp xla_bias = loctx->GetOutputOp(node.operand_with_shape(2));
@@ -555,7 +555,7 @@ NodePtr ARange(const at::Scalar& start, const at::Scalar& end,
 NodePtr BroadcastTensors(absl::Span<const Value> tensors) {
   auto lower_fn = [](const Node& node, LoweringContext* loctx) -> XlaOpVector {
     std::vector<xla::XlaOp> xla_operands;
-    for (const Output& operand : node.operands()) {
+    for (const Output& operand : node.operands_with_shape()) {
       xla_operands.push_back(loctx->GetOutputOp(operand));
     }
     return node.ReturnOps(CreateBroadcastTensors(xla_operands), loctx);

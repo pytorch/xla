@@ -38,7 +38,7 @@ NodePtr Stack::Clone(OpList operands) const {
 
 XlaOpVector Stack::Lower(LoweringContext* loctx) const {
   std::vector<xla::XlaOp> inputs;
-  for (auto& operand : operands()) {
+  for (auto& operand : operands_with_shape()) {
     inputs.push_back(loctx->GetOutputOp(operand));
   }
   return ReturnOp(BuildStack(inputs, dim_), loctx);

@@ -50,7 +50,7 @@ NodePtr AllReduce::Clone(OpList operands) const {
 }
 
 XlaOpVector AllReduce::Lower(LoweringContext* loctx) const {
-  auto& operand_list = operands();
+  auto& operand_list = operands_with_shape();
   std::vector<xla::XlaOp> inputs;
   inputs.reserve(operand_list.size());
   for (size_t i = 0; i + 1 < operand_list.size(); ++i) {
