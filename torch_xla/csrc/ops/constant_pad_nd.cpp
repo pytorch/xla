@@ -43,7 +43,7 @@ ConstantPadNd::ConstantPadNd(const Value& input, std::vector<int64_t> pad,
       value_(value) {}
 
 NodePtr ConstantPadNd::Clone(OpList operands) const {
-  return MakeNode<ConstantPadNd>(operands.at(0), pad_, value_);
+  return ir::MakeNode<ConstantPadNd>(operands.at(0), pad_, value_);
 }
 
 XlaOpVector ConstantPadNd::Lower(LoweringContext* loctx) const {

@@ -37,7 +37,7 @@ MseLossBackward::MseLossBackward(const Value& grad_output, const Value& input,
       reduction_(reduction) {}
 
 NodePtr MseLossBackward::Clone(OpList operands) const {
-  return MakeNode<MseLossBackward>(operands.at(0), operands.at(1),
+  return ir::MakeNode<MseLossBackward>(operands.at(0), operands.at(1),
                                    operands.at(2), reduction_);
 }
 

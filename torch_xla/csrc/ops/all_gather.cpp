@@ -38,7 +38,7 @@ AllGather::AllGather(const Value& input, const Value& token, int64_t dim,
       groups_(std::move(groups)) {}
 
 NodePtr AllGather::Clone(OpList operands) const {
-  return MakeNode<AllGather>(operands.at(0), operands.at(1), dim_, shard_count_,
+  return ir::MakeNode<AllGather>(operands.at(0), operands.at(1), dim_, shard_count_,
                              groups_);
 }
 

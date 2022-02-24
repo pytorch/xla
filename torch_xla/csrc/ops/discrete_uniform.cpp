@@ -17,7 +17,7 @@ DiscreteUniform::DiscreteUniform(const Value& from, const Value& to,
            /*num_outputs=*/1, torch::lazy::Hash(rng_shape)) {}
 
 NodePtr DiscreteUniform::Clone(OpList operands) const {
-  return MakeNode<DiscreteUniform>(operands.at(0), operands.at(1),
+  return ir::MakeNode<DiscreteUniform>(operands.at(0), operands.at(1),
                                    operands.at(2), shape());
 }
 

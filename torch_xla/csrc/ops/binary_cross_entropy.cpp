@@ -47,7 +47,7 @@ NodePtr BinaryCrossEntropy::Clone(OpList operands) const {
   if (operands.size() > 2) {
     weight = operands.at(2);
   }
-  return MakeNode<BinaryCrossEntropy>(operands.at(0), operands.at(1), weight,
+  return ir::MakeNode<BinaryCrossEntropy>(operands.at(0), operands.at(1), weight,
                                       reduction_);
 }
 

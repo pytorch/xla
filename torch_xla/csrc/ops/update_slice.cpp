@@ -31,7 +31,7 @@ UpdateSlice::UpdateSlice(const Value& input, const Value& source,
       base_indices_(base_indices.begin(), base_indices.end()) {}
 
 NodePtr UpdateSlice::Clone(OpList operands) const {
-  return MakeNode<UpdateSlice>(operands.at(0), operands.at(1), base_indices_);
+  return ir::MakeNode<UpdateSlice>(operands.at(0), operands.at(1), base_indices_);
 }
 
 XlaOpVector UpdateSlice::Lower(LoweringContext* loctx) const {

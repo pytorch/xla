@@ -302,18 +302,18 @@ struct ScopePusher {
   static void ResetScopes();
 };
 
-inline std::ostream& operator<<(std::ostream& stream, const Node& node) {
+inline std::ostream& operator<<(std::ostream& stream, const ir::Node& node) {
   stream << node.ToString();
   return stream;
 }
 
 template <typename T, typename... Args>
-NodePtr MakeNode(Args&&... args) {
+ir::NodePtr MakeNode(Args&&... args) {
   return std::make_shared<T>(std::forward<Args>(args)...);
 }
 
 template <typename T>
-T* NodeCast(const Node* node, torch::lazy::OpKind op) {
+T* NodeCast(const ir::Node* node, torch::lazy::OpKind op) {
   if (op != node->op()) {
     return nullptr;
   }

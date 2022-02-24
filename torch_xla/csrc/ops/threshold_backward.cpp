@@ -15,7 +15,7 @@ ThresholdBackward::ThresholdBackward(const Value& grad_output,
       threshold_(threshold) {}
 
 NodePtr ThresholdBackward::Clone(OpList operands) const {
-  return MakeNode<ThresholdBackward>(operands.at(0), operands.at(1),
+  return ir::MakeNode<ThresholdBackward>(operands.at(0), operands.at(1),
                                      threshold_);
 }
 

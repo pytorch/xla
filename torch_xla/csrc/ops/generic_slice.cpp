@@ -34,7 +34,7 @@ GenericSlice::GenericSlice(const Value& input,
       sizes_(sizes.begin(), sizes.end()) {}
 
 NodePtr GenericSlice::Clone(OpList operands) const {
-  return MakeNode<GenericSlice>(operands.at(0), base_indices_, sizes_);
+  return ir::MakeNode<GenericSlice>(operands.at(0), base_indices_, sizes_);
 }
 
 XlaOpVector GenericSlice::Lower(LoweringContext* loctx) const {

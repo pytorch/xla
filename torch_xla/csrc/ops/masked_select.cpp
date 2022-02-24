@@ -30,7 +30,7 @@ MaskedSelect::MaskedSelect(const Value& input, const Value& mask)
            /*num_outputs=*/2) {}
 
 NodePtr MaskedSelect::Clone(OpList operands) const {
-  return MakeNode<MaskedSelect>(operands.at(0), operands.at(1));
+  return ir::MakeNode<MaskedSelect>(operands.at(0), operands.at(1));
 }
 
 XlaOpVector MaskedSelect::Lower(LoweringContext* loctx) const {

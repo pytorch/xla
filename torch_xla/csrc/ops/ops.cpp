@@ -267,14 +267,14 @@ NodePtr SigmoidBackward(const Value& grad_output, const Value& output) {
 
 NodePtr LogSoftmaxBackwardOp(const Value& grad_output, const Value& output,
                              int64_t dim) {
-  return MakeNode<LogSoftmaxBackward>(
+  return ir::MakeNode<LogSoftmaxBackward>(
       grad_output, output,
       torch::lazy::GetCanonicalDimensionIndex(dim, grad_output.shape().rank()));
 }
 
 NodePtr SoftmaxBackwardOp(const Value& grad_output, const Value& output,
                           int64_t dim) {
-  return MakeNode<SoftmaxBackward>(
+  return ir::MakeNode<SoftmaxBackward>(
       grad_output, output,
       torch::lazy::GetCanonicalDimensionIndex(dim, grad_output.shape().rank()));
 }
@@ -549,7 +549,7 @@ NodePtr ARange(const at::Scalar& start, const at::Scalar& end,
     default:
       XLA_ERROR() << "XLA type not supported: " << type;
   }
-  return MakeNode<Constant>(std::move(values));
+  return ir::MakeNode<Constant>(std::move(values));
 }
 
 NodePtr BroadcastTensors(absl::Span<const Value> tensors) {
@@ -585,7 +585,7 @@ NodePtr Norm(const Value& input, const c10::optional<at::Scalar>& p,
   }
   if (!p.has_value() || p->toDouble() == 2.0) {
     NodePtr square = input * input;
-    NodePtr result = MakeNode<Sum>(square, dimensions, keepdim, dtype);
+    NodePtr result = ir::MakeNode<Sum>(square, dimensions, keepdim, dtype);
     return Sqrt(result);
   }
   double norm_value = p->toDouble();
@@ -601,14 +601,14 @@ NodePtr Norm(const Value& input, const c10::optional<at::Scalar>& p,
     //   tensor(3.1235)
     //   >>> print(x.abs().sum())
     //   tensor(11.9437)
-    return MakeNode<Sum>(Abs(input), dimensions, keepdim, dtype);
+    return ir::MakeNode<Sum>(Abs(input), dimensions, keepdim, dtype);
   }
   // Generic sum(x^p)^(1/p) norms.
   NodePtr norm_exp = ScalarOp(norm_value, input.shape().element_type());
   NodePtr norm_exp_inv =
       ScalarOp(1.0 / norm_value, input.shape().element_type());
   NodePtr exp = Pow(Abs(input), norm_exp);
-  NodePtr result = MakeNode<Sum>(exp, dimensions, keepdim, dtype);
+  NodePtr result = ir::MakeNode<Sum>(exp, dimensions, keepdim, dtype);
   return Pow(result, norm_exp_inv);
 }
 

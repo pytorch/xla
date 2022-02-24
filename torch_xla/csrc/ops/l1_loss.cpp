@@ -30,7 +30,7 @@ L1Loss::L1Loss(const Value& input, const Value& target, ReductionMode reduction)
       reduction_(reduction) {}
 
 NodePtr L1Loss::Clone(OpList operands) const {
-  return MakeNode<L1Loss>(operands.at(0), operands.at(1), reduction_);
+  return ir::MakeNode<L1Loss>(operands.at(0), operands.at(1), reduction_);
 }
 
 XlaOpVector L1Loss::Lower(LoweringContext* loctx) const {

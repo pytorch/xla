@@ -31,7 +31,7 @@ Gather::Gather(const Value& input, int64_t dim, const Value& index)
       dim_(dim) {}
 
 NodePtr Gather::Clone(OpList operands) const {
-  return MakeNode<Gather>(operands.at(0), dim_, operands.at(1));
+  return ir::MakeNode<Gather>(operands.at(0), dim_, operands.at(1));
 }
 
 XlaOpVector Gather::Lower(LoweringContext* loctx) const {

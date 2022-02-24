@@ -30,7 +30,7 @@ ReflectionPad2d::ReflectionPad2d(const Value& input,
       padding_(std::move(padding)) {}
 
 NodePtr ReflectionPad2d::Clone(OpList operands) const {
-  return MakeNode<ReflectionPad2d>(operands.at(0), padding_);
+  return ir::MakeNode<ReflectionPad2d>(operands.at(0), padding_);
 }
 
 XlaOpVector ReflectionPad2d::Lower(LoweringContext* loctx) const {

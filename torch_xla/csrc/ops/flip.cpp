@@ -14,7 +14,7 @@ Flip::Flip(const Value& input, std::vector<int64_t> dims)
       dims_(std::move(dims)) {}
 
 NodePtr Flip::Clone(OpList operands) const {
-  return MakeNode<Flip>(operands.at(0), dims_);
+  return ir::MakeNode<Flip>(operands.at(0), dims_);
 }
 
 XlaOpVector Flip::Lower(LoweringContext* loctx) const {

@@ -87,7 +87,7 @@ TriangularSolve::TriangularSolve(const Value& rhs, const Value& lhs,
       unit_diagonal_(unit_diagonal) {}
 
 NodePtr TriangularSolve::Clone(OpList operands) const {
-  return MakeNode<TriangularSolve>(operands.at(0), operands.at(1), left_side_,
+  return ir::MakeNode<TriangularSolve>(operands.at(0), operands.at(1), left_side_,
                                    lower_, transpose_, unit_diagonal_);
 }
 

@@ -23,7 +23,7 @@ std::string IndexPut::ToString() const {
 }
 
 NodePtr IndexPut::Clone(OpList operands) const {
-  return MakeNode<IndexPut>(operands.at(0), operands.at(1), start_dim_,
+  return ir::MakeNode<IndexPut>(operands.at(0), operands.at(1), start_dim_,
                             operands.at(2), accumulate_);
 }
 

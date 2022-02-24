@@ -40,7 +40,7 @@ Softmax::Softmax(const Value& input, int64_t dim,
       dtype_(dtype) {}
 
 NodePtr Softmax::Clone(OpList operands) const {
-  return MakeNode<Softmax>(operands.at(0), dim_, dtype_);
+  return ir::MakeNode<Softmax>(operands.at(0), dim_, dtype_);
 }
 
 XlaOpVector Softmax::Lower(LoweringContext* loctx) const {

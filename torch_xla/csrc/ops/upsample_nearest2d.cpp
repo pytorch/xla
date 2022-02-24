@@ -20,7 +20,7 @@ UpsampleNearest::UpsampleNearest(const Value& input,
       output_size_(std::move(output_size)) {}
 
 NodePtr UpsampleNearest::Clone(OpList operands) const {
-  return MakeNode<UpsampleNearest>(operands.at(0), output_size_);
+  return ir::MakeNode<UpsampleNearest>(operands.at(0), output_size_);
 }
 
 XlaOpVector UpsampleNearest::Lower(LoweringContext* loctx) const {

@@ -32,7 +32,7 @@ ReflectionPad2dBackward::ReflectionPad2dBackward(const Value& grad_output,
       padding_(std::move(padding)) {}
 
 NodePtr ReflectionPad2dBackward::Clone(OpList operands) const {
-  return MakeNode<ReflectionPad2dBackward>(operands.at(0), operands.at(1),
+  return ir::MakeNode<ReflectionPad2dBackward>(operands.at(0), operands.at(1),
                                            padding_);
 }
 

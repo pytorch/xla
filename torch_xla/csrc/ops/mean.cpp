@@ -52,7 +52,7 @@ Mean::Mean(const Value& input, std::vector<int64_t> dimensions,
       dtype_(dtype) {}
 
 NodePtr Mean::Clone(OpList operands) const {
-  return MakeNode<Mean>(operands.at(0), dimensions_, keep_reduced_dimensions_,
+  return ir::MakeNode<Mean>(operands.at(0), dimensions_, keep_reduced_dimensions_,
                         dtype_);
 }
 

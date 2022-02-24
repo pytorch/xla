@@ -28,7 +28,7 @@ ArgMax::ArgMax(const Value& input, int64_t dim, bool keepdim)
       keepdim_(keepdim) {}
 
 NodePtr ArgMax::Clone(OpList operands) const {
-  return MakeNode<ArgMax>(operands.at(0), dim_, keepdim_);
+  return ir::MakeNode<ArgMax>(operands.at(0), dim_, keepdim_);
 }
 
 XlaOpVector ArgMax::Lower(LoweringContext* loctx) const {

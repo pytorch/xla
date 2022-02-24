@@ -31,7 +31,7 @@ KthValue::KthValue(const Value& input, int64_t k, int64_t dim, bool keepdim)
       keepdim_(keepdim) {}
 
 NodePtr KthValue::Clone(OpList operands) const {
-  return MakeNode<KthValue>(operands.at(0), k_, dim_, keepdim_);
+  return ir::MakeNode<KthValue>(operands.at(0), k_, dim_, keepdim_);
 }
 
 XlaOpVector KthValue::Lower(LoweringContext* loctx) const {

@@ -33,7 +33,7 @@ CollectivePermute::CollectivePermute(
       source_target_pairs_(std::move(source_target_pairs)) {}
 
 NodePtr CollectivePermute::Clone(OpList operands) const {
-  return MakeNode<CollectivePermute>(operands.at(0), operands.at(1),
+  return ir::MakeNode<CollectivePermute>(operands.at(0), operands.at(1),
                                      source_target_pairs_);
 }
 

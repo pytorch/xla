@@ -24,7 +24,7 @@ UpsampleBilinearBackward::UpsampleBilinearBackward(
       align_corners_(align_corners) {}
 
 NodePtr UpsampleBilinearBackward::Clone(OpList operands) const {
-  return MakeNode<UpsampleBilinearBackward>(operands.at(0), output_size_,
+  return ir::MakeNode<UpsampleBilinearBackward>(operands.at(0), output_size_,
                                             input_size_, align_corners_);
 }
 

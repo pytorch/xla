@@ -23,7 +23,7 @@ std::string ShrinkBackward::ToString() const {
 }
 
 NodePtr ShrinkBackward::Clone(OpList operands) const {
-  return MakeNode<ShrinkBackward>(op(), operands.at(0), operands.at(1),
+  return ir::MakeNode<ShrinkBackward>(op(), operands.at(0), operands.at(1),
                                   lambda_);
 }
 

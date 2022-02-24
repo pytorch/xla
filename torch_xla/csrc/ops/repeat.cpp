@@ -30,7 +30,7 @@ Repeat::Repeat(const Value& input, std::vector<int64_t> repeats)
       repeats_(std::move(repeats)) {}
 
 NodePtr Repeat::Clone(OpList operands) const {
-  return MakeNode<Repeat>(operands.at(0), repeats_);
+  return ir::MakeNode<Repeat>(operands.at(0), repeats_);
 }
 
 XlaOpVector Repeat::Lower(LoweringContext* loctx) const {

@@ -14,7 +14,7 @@ LeakyRelu::LeakyRelu(const Value& input, double negative_slope)
       negative_slope_(negative_slope) {}
 
 NodePtr LeakyRelu::Clone(OpList operands) const {
-  return MakeNode<LeakyRelu>(operands.at(0), negative_slope_);
+  return ir::MakeNode<LeakyRelu>(operands.at(0), negative_slope_);
 }
 
 XlaOpVector LeakyRelu::Lower(LoweringContext* loctx) const {

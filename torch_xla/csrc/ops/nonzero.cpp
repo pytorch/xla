@@ -29,7 +29,7 @@ NonZero::NonZero(const Value& input)
            /*num_outputs=*/2) {}
 
 NodePtr NonZero::Clone(OpList operands) const {
-  return MakeNode<NonZero>(operands.at(0));
+  return ir::MakeNode<NonZero>(operands.at(0));
 }
 
 XlaOpVector NonZero::Lower(LoweringContext* loctx) const {

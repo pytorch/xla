@@ -24,7 +24,7 @@ Resize::Resize(const Value& input, std::vector<int64_t> size)
       size_(std::move(size)) {}
 
 NodePtr Resize::Clone(OpList operands) const {
-  return MakeNode<Resize>(operands.at(0), size_);
+  return ir::MakeNode<Resize>(operands.at(0), size_);
 }
 
 XlaOpVector Resize::Lower(LoweringContext* loctx) const {

@@ -37,7 +37,7 @@ Logsumexp::Logsumexp(const Value& input, std::vector<int64_t> dimensions,
       keep_reduced_dimensions_(keep_reduced_dimensions) {}
 
 NodePtr Logsumexp::Clone(OpList operands) const {
-  return MakeNode<Logsumexp>(operands.at(0), dimensions_,
+  return ir::MakeNode<Logsumexp>(operands.at(0), dimensions_,
                              keep_reduced_dimensions_);
 }
 

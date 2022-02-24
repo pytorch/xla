@@ -65,7 +65,7 @@ NodePtr NllLossBackward::Clone(OpList operands) const {
     weight = operands.at(3);
     total_weight = operands.at(4);
   }
-  return MakeNode<NllLossBackward>(operands.at(0), operands.at(1),
+  return ir::MakeNode<NllLossBackward>(operands.at(0), operands.at(1),
                                    operands.at(2), weight, total_weight,
                                    reduction_, ignore_index_);
 }

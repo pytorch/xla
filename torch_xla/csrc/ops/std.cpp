@@ -37,7 +37,7 @@ Std::Std(const Value& input, std::vector<int64_t> dimensions,
       correction_(correction) {}
 
 NodePtr Std::Clone(OpList operands) const {
-  return MakeNode<Std>(operands.at(0), dimensions_, keep_reduced_dimensions_,
+  return ir::MakeNode<Std>(operands.at(0), dimensions_, keep_reduced_dimensions_,
                        correction_);
 }
 

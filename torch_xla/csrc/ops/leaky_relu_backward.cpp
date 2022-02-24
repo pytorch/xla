@@ -16,7 +16,7 @@ LeakyReluBackward::LeakyReluBackward(const Value& grad_output,
       negative_slope_(negative_slope) {}
 
 NodePtr LeakyReluBackward::Clone(OpList operands) const {
-  return MakeNode<LeakyReluBackward>(operands.at(0), operands.at(1),
+  return ir::MakeNode<LeakyReluBackward>(operands.at(0), operands.at(1),
                                      negative_slope_);
 }
 

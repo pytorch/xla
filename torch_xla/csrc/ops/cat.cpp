@@ -33,7 +33,7 @@ Cat::Cat(absl::Span<const ir::Value> values, int64_t dim)
       dim_(dim) {}
 
 NodePtr Cat::Clone(OpList operands) const {
-  return MakeNode<Cat>(operands, dim_);
+  return ir::MakeNode<Cat>(operands, dim_);
 }
 
 XlaOpVector Cat::Lower(LoweringContext* loctx) const {

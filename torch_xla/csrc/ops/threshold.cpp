@@ -15,7 +15,7 @@ Threshold::Threshold(const Value& input, float threshold, float value)
       value_(value) {}
 
 NodePtr Threshold::Clone(OpList operands) const {
-  return MakeNode<Threshold>(operands.at(0), threshold_, value_);
+  return ir::MakeNode<Threshold>(operands.at(0), threshold_, value_);
 }
 
 XlaOpVector Threshold::Lower(LoweringContext* loctx) const {

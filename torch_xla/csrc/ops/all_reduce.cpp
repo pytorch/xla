@@ -45,7 +45,7 @@ AllReduce::AllReduce(AllReduceType reduce_type,
 
 NodePtr AllReduce::Clone(OpList operands) const {
   std::vector<Value> operand_list(operands.begin(), operands.end() - 1);
-  return MakeNode<AllReduce>(reduce_type_, operand_list, operands.back(),
+  return ir::MakeNode<AllReduce>(reduce_type_, operand_list, operands.back(),
                              scale_, groups_);
 }
 

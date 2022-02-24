@@ -75,7 +75,7 @@ SVD::SVD(const Value& input, bool some, bool compute_uv)
       compute_uv_(compute_uv) {}
 
 NodePtr SVD::Clone(OpList operands) const {
-  return MakeNode<SVD>(operands.at(0), some_, compute_uv_);
+  return ir::MakeNode<SVD>(operands.at(0), some_, compute_uv_);
 }
 
 XlaOpVector SVD::Lower(LoweringContext* loctx) const {

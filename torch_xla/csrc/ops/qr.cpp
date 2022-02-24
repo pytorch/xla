@@ -49,7 +49,7 @@ QR::QR(const Value& input, bool some)
       some_(some) {}
 
 NodePtr QR::Clone(OpList operands) const {
-  return MakeNode<QR>(operands.at(0), some_);
+  return ir::MakeNode<QR>(operands.at(0), some_);
 }
 
 XlaOpVector QR::Lower(LoweringContext* loctx) const {

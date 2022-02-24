@@ -24,7 +24,7 @@ Unsqueeze::Unsqueeze(const Value& input, int dim)
       dim_(dim) {}
 
 NodePtr Unsqueeze::Clone(OpList operands) const {
-  return MakeNode<Unsqueeze>(operands.at(0), dim_);
+  return ir::MakeNode<Unsqueeze>(operands.at(0), dim_);
 }
 
 XlaOpVector Unsqueeze::Lower(LoweringContext* loctx) const {

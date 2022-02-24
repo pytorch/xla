@@ -29,7 +29,7 @@ IndexSelect::IndexSelect(const Value& input, int64_t dim, const Value& index)
       dim_(dim) {}
 
 NodePtr IndexSelect::Clone(OpList operands) const {
-  return MakeNode<IndexSelect>(operands.at(0), dim_, operands.at(1));
+  return ir::MakeNode<IndexSelect>(operands.at(0), dim_, operands.at(1));
 }
 
 XlaOpVector IndexSelect::Lower(LoweringContext* loctx) const {

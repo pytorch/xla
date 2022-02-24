@@ -17,7 +17,7 @@ MaskedFill::MaskedFill(const Value& input, const Value& mask,
       value_(std::move(value)) {}
 
 NodePtr MaskedFill::Clone(OpList operands) const {
-  return MakeNode<MaskedFill>(operands.at(0), operands.at(1), value_);
+  return ir::MakeNode<MaskedFill>(operands.at(0), operands.at(1), value_);
 }
 
 XlaOpVector MaskedFill::Lower(LoweringContext* loctx) const {

@@ -61,7 +61,7 @@ MaxPoolNdBackward::MaxPoolNdBackward(
       ceil_mode_(ceil_mode) {}
 
 NodePtr MaxPoolNdBackward::Clone(OpList operands) const {
-  return MakeNode<MaxPoolNdBackward>(operands.at(0), operands.at(1),
+  return ir::MakeNode<MaxPoolNdBackward>(operands.at(0), operands.at(1),
                                      spatial_dim_count_, kernel_size_, stride_,
                                      padding_, ceil_mode_);
 }

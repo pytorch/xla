@@ -34,7 +34,7 @@ Split::Split(const Value& input, std::vector<int64_t> split_sizes, int64_t dim)
       dim_(dim) {}
 
 NodePtr Split::Clone(OpList operands) const {
-  return MakeNode<Split>(operands.at(0), split_sizes_, dim_);
+  return ir::MakeNode<Split>(operands.at(0), split_sizes_, dim_);
 }
 
 XlaOpVector Split::Lower(LoweringContext* loctx) const {

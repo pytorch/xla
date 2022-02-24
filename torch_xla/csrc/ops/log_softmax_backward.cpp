@@ -18,7 +18,7 @@ LogSoftmaxBackward::LogSoftmaxBackward(const Value& grad_output,
       dim_(dim) {}
 
 NodePtr LogSoftmaxBackward::Clone(OpList operands) const {
-  return MakeNode<LogSoftmaxBackward>(operands.at(0), operands.at(1), dim_);
+  return ir::MakeNode<LogSoftmaxBackward>(operands.at(0), operands.at(1), dim_);
 }
 
 XlaOpVector LogSoftmaxBackward::Lower(LoweringContext* loctx) const {

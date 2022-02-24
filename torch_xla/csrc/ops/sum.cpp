@@ -51,7 +51,7 @@ Sum::Sum(const Value& input, std::vector<int64_t> dimensions,
       dtype_(dtype) {}
 
 NodePtr Sum::Clone(OpList operands) const {
-  return MakeNode<Sum>(operands.at(0), dimensions_, keep_reduced_dimensions_,
+  return ir::MakeNode<Sum>(operands.at(0), dimensions_, keep_reduced_dimensions_,
                        dtype_);
 }
 

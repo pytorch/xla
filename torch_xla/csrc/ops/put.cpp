@@ -15,7 +15,7 @@ Put::Put(const Value& input, const Value& index, const Value& source,
       accumulate_(accumulate) {}
 
 NodePtr Put::Clone(OpList operands) const {
-  return MakeNode<Put>(operands.at(0), operands.at(1), operands.at(2),
+  return ir::MakeNode<Put>(operands.at(0), operands.at(1), operands.at(2),
                        accumulate_);
 }
 

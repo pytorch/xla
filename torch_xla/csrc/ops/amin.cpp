@@ -29,7 +29,7 @@ Amin::Amin(const Value& input, std::vector<int64_t> dimensions, bool keepdim)
       keepdim_(keepdim) {}
 
 NodePtr Amin::Clone(OpList operands) const {
-  return MakeNode<Amin>(operands.at(0), dimensions_, keepdim_);
+  return ir::MakeNode<Amin>(operands.at(0), dimensions_, keepdim_);
 }
 
 XlaOpVector Amin::Lower(LoweringContext* loctx) const {

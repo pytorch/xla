@@ -42,7 +42,7 @@ MaxUnpoolNd::MaxUnpoolNd(const Value& input, const Value& indices,
       output_size_(std::move(output_size)) {}
 
 NodePtr MaxUnpoolNd::Clone(OpList operands) const {
-  return MakeNode<MaxUnpoolNd>(operands.at(0), operands.at(1), output_size_);
+  return ir::MakeNode<MaxUnpoolNd>(operands.at(0), operands.at(1), output_size_);
 }
 
 XlaOpVector MaxUnpoolNd::Lower(LoweringContext* loctx) const {

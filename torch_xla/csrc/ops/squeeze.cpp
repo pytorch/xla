@@ -37,7 +37,7 @@ Squeeze::Squeeze(const Value& input, int dim)
       dim_(dim) {}
 
 NodePtr Squeeze::Clone(OpList operands) const {
-  return MakeNode<Squeeze>(operands.at(0), dim_);
+  return ir::MakeNode<Squeeze>(operands.at(0), dim_);
 }
 
 XlaOpVector Squeeze::Lower(LoweringContext* loctx) const {

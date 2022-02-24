@@ -33,7 +33,7 @@ Stack::Stack(absl::Span<const ir::Value> values, int64_t dim)
       dim_(dim) {}
 
 NodePtr Stack::Clone(OpList operands) const {
-  return MakeNode<Stack>(operands, dim_);
+  return ir::MakeNode<Stack>(operands, dim_);
 }
 
 XlaOpVector Stack::Lower(LoweringContext* loctx) const {

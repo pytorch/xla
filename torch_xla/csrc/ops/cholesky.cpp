@@ -15,7 +15,7 @@ Cholesky::Cholesky(const Value& input, bool lower)
       lower_(lower) {}
 
 NodePtr Cholesky::Clone(OpList operands) const {
-  return MakeNode<Cholesky>(operands.at(0), lower_);
+  return ir::MakeNode<Cholesky>(operands.at(0), lower_);
 }
 
 XlaOpVector Cholesky::Lower(LoweringContext* loctx) const {

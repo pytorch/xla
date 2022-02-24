@@ -21,7 +21,7 @@ RreluWithNoiseBackward::RreluWithNoiseBackward(
       training_(training) {}
 
 NodePtr RreluWithNoiseBackward::Clone(OpList operands) const {
-  return MakeNode<RreluWithNoiseBackward>(operands.at(0), operands.at(1),
+  return ir::MakeNode<RreluWithNoiseBackward>(operands.at(0), operands.at(1),
                                           operands.at(2), lower_, upper_,
                                           training_);
 }

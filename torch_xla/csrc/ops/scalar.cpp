@@ -30,7 +30,7 @@ std::string Scalar::ToString() const {
 }
 
 NodePtr Scalar::Clone(OpList operands) const {
-  return MakeNode<Scalar>(value_, shape());
+  return ir::MakeNode<Scalar>(value_, shape());
 }
 
 XlaOpVector Scalar::Lower(LoweringContext* loctx) const {

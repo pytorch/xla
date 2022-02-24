@@ -33,7 +33,7 @@ MseLoss::MseLoss(const Value& input, const Value& target,
       reduction_(reduction) {}
 
 NodePtr MseLoss::Clone(OpList operands) const {
-  return MakeNode<MseLoss>(operands.at(0), operands.at(1), reduction_);
+  return ir::MakeNode<MseLoss>(operands.at(0), operands.at(1), reduction_);
 }
 
 XlaOpVector MseLoss::Lower(LoweringContext* loctx) const {

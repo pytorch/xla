@@ -22,7 +22,7 @@ RreluWithNoise::RreluWithNoise(const Value& input, const Value& seed,
       training_(training) {}
 
 NodePtr RreluWithNoise::Clone(OpList operands) const {
-  return MakeNode<RreluWithNoise>(operands.at(0), operands.at(1), lower_,
+  return ir::MakeNode<RreluWithNoise>(operands.at(0), operands.at(1), lower_,
                                   upper_, training_);
 }
 

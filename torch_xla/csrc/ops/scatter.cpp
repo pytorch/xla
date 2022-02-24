@@ -15,7 +15,7 @@ Scatter::Scatter(const Value& input, const Value& index, const Value& src,
       dim_(dim) {}
 
 NodePtr Scatter::Clone(OpList operands) const {
-  return MakeNode<Scatter>(operands.at(0), operands.at(1), operands.at(2),
+  return ir::MakeNode<Scatter>(operands.at(0), operands.at(1), operands.at(2),
                            dim_);
 }
 

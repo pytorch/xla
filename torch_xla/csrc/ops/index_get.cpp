@@ -37,7 +37,7 @@ std::string IndexGet::ToString() const {
 }
 
 NodePtr IndexGet::Clone(OpList operands) const {
-  return MakeNode<IndexGet>(operands.at(0), operands.at(1), start_dim_);
+  return ir::MakeNode<IndexGet>(operands.at(0), operands.at(1), start_dim_);
 }
 
 XlaOpVector IndexGet::Lower(LoweringContext* loctx) const {

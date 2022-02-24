@@ -30,7 +30,7 @@ MinInDim::MinInDim(const Value& input, int64_t dim, bool keepdim)
       keepdim_(keepdim) {}
 
 NodePtr MinInDim::Clone(OpList operands) const {
-  return MakeNode<MinInDim>(operands.at(0), dim_, keepdim_);
+  return ir::MakeNode<MinInDim>(operands.at(0), dim_, keepdim_);
 }
 
 XlaOpVector MinInDim::Lower(LoweringContext* loctx) const {

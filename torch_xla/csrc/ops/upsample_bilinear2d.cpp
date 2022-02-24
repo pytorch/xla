@@ -22,7 +22,7 @@ UpsampleBilinear::UpsampleBilinear(const Value& input,
       align_corners_(align_corners) {}
 
 NodePtr UpsampleBilinear::Clone(OpList operands) const {
-  return MakeNode<UpsampleBilinear>(operands.at(0), output_size_,
+  return ir::MakeNode<UpsampleBilinear>(operands.at(0), output_size_,
                                     align_corners_);
 }
 

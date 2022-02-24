@@ -29,7 +29,7 @@ Permute::Permute(const Value& input, std::vector<int64_t> dims)
       dims_(std::move(dims)) {}
 
 NodePtr Permute::Clone(OpList operands) const {
-  return MakeNode<Permute>(operands.at(0), dims_);
+  return ir::MakeNode<Permute>(operands.at(0), dims_);
 }
 
 XlaOpVector Permute::Lower(LoweringContext* loctx) const {

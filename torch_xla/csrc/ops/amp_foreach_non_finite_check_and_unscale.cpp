@@ -44,7 +44,7 @@ AmpForachNonFiniteCheckAndUnscale::AmpForachNonFiniteCheckAndUnscale(
 NodePtr AmpForachNonFiniteCheckAndUnscale::Clone(OpList operands) const {
   std::vector<Value> operand_list(operands.begin(), operands.end() - 2);
   size_t sz = operand_list.size();
-  return MakeNode<AmpForachNonFiniteCheckAndUnscale>(operand_list, operands[sz],
+  return ir::MakeNode<AmpForachNonFiniteCheckAndUnscale>(operand_list, operands[sz],
                                                      operands[sz + 1]);
 }
 

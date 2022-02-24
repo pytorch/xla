@@ -42,8 +42,8 @@ Cast::Cast(const Value& input, at::ScalarType dtype,
       stype_(stype) {}
 
 NodePtr Cast::Clone(OpList operands) const {
-  return dtype_ ? MakeNode<Cast>(operands.at(0), *dtype_, stype_)
-                : MakeNode<Cast>(operands.at(0), type_);
+  return dtype_ ? ir::MakeNode<Cast>(operands.at(0), *dtype_, stype_)
+                : ir::MakeNode<Cast>(operands.at(0), type_);
 }
 
 XlaOpVector Cast::Lower(LoweringContext* loctx) const {

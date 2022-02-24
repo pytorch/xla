@@ -24,7 +24,7 @@ Diagonal::Diagonal(const Value& input, int64_t offset, int64_t dim1,
       dim2_(dim2) {}
 
 NodePtr Diagonal::Clone(OpList operands) const {
-  return MakeNode<Diagonal>(operands.at(0), offset_, dim1_, dim2_);
+  return ir::MakeNode<Diagonal>(operands.at(0), offset_, dim1_, dim2_);
 }
 
 XlaOpVector Diagonal::Lower(LoweringContext* loctx) const {

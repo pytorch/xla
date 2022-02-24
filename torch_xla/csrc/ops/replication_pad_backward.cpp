@@ -32,7 +32,7 @@ ReplicationPadBackward::ReplicationPadBackward(const Value& grad_output,
       padding_(std::move(padding)) {}
 
 NodePtr ReplicationPadBackward::Clone(OpList operands) const {
-  return MakeNode<ReplicationPadBackward>(operands.at(0), operands.at(1),
+  return ir::MakeNode<ReplicationPadBackward>(operands.at(0), operands.at(1),
                                           padding_);
 }
 

@@ -22,7 +22,7 @@ UpsampleNearestBackward::UpsampleNearestBackward(
       input_size_(std::move(input_size)) {}
 
 NodePtr UpsampleNearestBackward::Clone(OpList operands) const {
-  return MakeNode<UpsampleNearestBackward>(operands.at(0), output_size_,
+  return ir::MakeNode<UpsampleNearestBackward>(operands.at(0), output_size_,
                                            input_size_);
 }
 

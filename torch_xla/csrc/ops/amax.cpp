@@ -29,7 +29,7 @@ Amax::Amax(const Value& input, std::vector<int64_t> dimensions, bool keepdim)
       keepdim_(keepdim) {}
 
 NodePtr Amax::Clone(OpList operands) const {
-  return MakeNode<Amax>(operands.at(0), dimensions_, keepdim_);
+  return ir::MakeNode<Amax>(operands.at(0), dimensions_, keepdim_);
 }
 
 XlaOpVector Amax::Lower(LoweringContext* loctx) const {

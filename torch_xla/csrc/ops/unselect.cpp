@@ -21,7 +21,7 @@ Unselect::Unselect(const Value& target, const Value& source, int64_t dim,
       stride_(stride) {}
 
 NodePtr Unselect::Clone(OpList operands) const {
-  return MakeNode<Unselect>(operands.at(0), operands.at(1), dim_, start_, end_,
+  return ir::MakeNode<Unselect>(operands.at(0), operands.at(1), dim_, start_, end_,
                             stride_);
 }
 

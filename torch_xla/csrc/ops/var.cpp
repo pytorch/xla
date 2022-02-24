@@ -38,7 +38,7 @@ Var::Var(const Value& input, std::vector<int64_t> dimensions,
       keep_reduced_dimensions_(keep_reduced_dimensions) {}
 
 NodePtr Var::Clone(OpList operands) const {
-  return MakeNode<Var>(operands.at(0), dimensions_, correction_,
+  return ir::MakeNode<Var>(operands.at(0), dimensions_, correction_,
                        keep_reduced_dimensions_);
 }
 

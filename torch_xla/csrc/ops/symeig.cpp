@@ -54,7 +54,7 @@ SymEig::SymEig(const Value& input, bool eigenvectors, bool lower)
       lower_(lower) {}
 
 NodePtr SymEig::Clone(OpList operands) const {
-  return MakeNode<SymEig>(operands.at(0), eigenvectors_, lower_);
+  return ir::MakeNode<SymEig>(operands.at(0), eigenvectors_, lower_);
 }
 
 XlaOpVector SymEig::Lower(LoweringContext* loctx) const {

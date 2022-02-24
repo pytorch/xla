@@ -74,10 +74,10 @@ ConvolutionOverrideable::ConvolutionOverrideable(
 
 NodePtr ConvolutionOverrideable::Clone(OpList operands) const {
   return operands.size() == 3
-             ? MakeNode<ConvolutionOverrideable>(
+             ? ir::MakeNode<ConvolutionOverrideable>(
                    operands.at(0), operands.at(1), operands.at(2), stride_,
                    padding_, dilation_, transposed_, output_padding_, groups_)
-             : MakeNode<ConvolutionOverrideable>(
+             : ir::MakeNode<ConvolutionOverrideable>(
                    operands.at(0), operands.at(1), stride_, padding_, dilation_,
                    transposed_, output_padding_, groups_);
 }

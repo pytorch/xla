@@ -14,7 +14,7 @@ Tril::Tril(const Value& input, int64_t diagonal)
       diagonal_(diagonal) {}
 
 NodePtr Tril::Clone(OpList operands) const {
-  return MakeNode<Tril>(operands.at(0), diagonal_);
+  return ir::MakeNode<Tril>(operands.at(0), diagonal_);
 }
 
 XlaOpVector Tril::Lower(LoweringContext* loctx) const {

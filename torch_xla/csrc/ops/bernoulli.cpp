@@ -15,7 +15,7 @@ Bernoulli::Bernoulli(const Value& probability, const Value& seed,
            std::move(shape)) {}
 
 NodePtr Bernoulli::Clone(OpList operands) const {
-  return MakeNode<Bernoulli>(operands.at(0), operands.at(1), shape());
+  return ir::MakeNode<Bernoulli>(operands.at(0), operands.at(1), shape());
 }
 
 XlaOpVector Bernoulli::Lower(LoweringContext* loctx) const {

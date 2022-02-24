@@ -14,7 +14,7 @@ Triu::Triu(const Value& input, int64_t diagonal)
       diagonal_(diagonal) {}
 
 NodePtr Triu::Clone(OpList operands) const {
-  return MakeNode<Triu>(operands.at(0), diagonal_);
+  return ir::MakeNode<Triu>(operands.at(0), diagonal_);
 }
 
 XlaOpVector Triu::Lower(LoweringContext* loctx) const {

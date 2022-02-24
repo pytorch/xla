@@ -48,7 +48,7 @@ CumProd::CumProd(const Value& input, int64_t dim,
       dtype_(dtype) {}
 
 NodePtr CumProd::Clone(OpList operands) const {
-  return MakeNode<CumProd>(operands.at(0), dim_, dtype_);
+  return ir::MakeNode<CumProd>(operands.at(0), dim_, dtype_);
 }
 
 XlaOpVector CumProd::Lower(LoweringContext* loctx) const {

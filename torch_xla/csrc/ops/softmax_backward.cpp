@@ -18,7 +18,7 @@ SoftmaxBackward::SoftmaxBackward(const Value& grad_output, const Value& output,
       dim_(dim) {}
 
 NodePtr SoftmaxBackward::Clone(OpList operands) const {
-  return MakeNode<SoftmaxBackward>(operands.at(0), operands.at(1), dim_);
+  return ir::MakeNode<SoftmaxBackward>(operands.at(0), operands.at(1), dim_);
 }
 
 XlaOpVector SoftmaxBackward::Lower(LoweringContext* loctx) const {

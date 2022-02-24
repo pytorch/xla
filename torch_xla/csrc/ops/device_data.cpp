@@ -21,7 +21,7 @@ std::string DeviceData::ToString() const {
 }
 
 NodePtr DeviceData::Clone(OpList operands) const {
-  return MakeNode<DeviceData>(data_);
+  return ir::MakeNode<DeviceData>(data_);
 }
 
 XlaOpVector DeviceData::Lower(LoweringContext* loctx) const {

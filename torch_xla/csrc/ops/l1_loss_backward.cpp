@@ -34,7 +34,7 @@ L1LossBackward::L1LossBackward(const Value& grad_output, const Value& input,
       reduction_(reduction) {}
 
 NodePtr L1LossBackward::Clone(OpList operands) const {
-  return MakeNode<L1LossBackward>(operands.at(0), operands.at(1),
+  return ir::MakeNode<L1LossBackward>(operands.at(0), operands.at(1),
                                   operands.at(2), reduction_);
 }
 

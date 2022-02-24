@@ -22,7 +22,7 @@ std::string Hardshrink::ToString() const {
 }
 
 NodePtr Hardshrink::Clone(OpList operands) const {
-  return MakeNode<Hardshrink>(operands.at(0), lambda_);
+  return ir::MakeNode<Hardshrink>(operands.at(0), lambda_);
 }
 
 XlaOpVector Hardshrink::Lower(LoweringContext* loctx) const {

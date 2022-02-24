@@ -32,7 +32,7 @@ AdaptiveMaxPool2d::AdaptiveMaxPool2d(const Value& input,
       output_size_(std::move(output_size)) {}
 
 NodePtr AdaptiveMaxPool2d::Clone(OpList operands) const {
-  return MakeNode<AdaptiveMaxPool2d>(operands.at(0), output_size_);
+  return ir::MakeNode<AdaptiveMaxPool2d>(operands.at(0), output_size_);
 }
 
 XlaOpVector AdaptiveMaxPool2d::Lower(LoweringContext* loctx) const {

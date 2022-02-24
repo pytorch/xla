@@ -15,7 +15,7 @@ Exponential::Exponential(const Value& lambda, const Value& seed,
            std::move(shape)) {}
 
 NodePtr Exponential::Clone(OpList operands) const {
-  return MakeNode<Exponential>(operands.at(0), operands.at(1), shape());
+  return ir::MakeNode<Exponential>(operands.at(0), operands.at(1), shape());
 }
 
 XlaOpVector Exponential::Lower(LoweringContext* loctx) const {

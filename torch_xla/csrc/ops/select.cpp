@@ -21,7 +21,7 @@ Select::Select(const Value& input, int64_t dim, int64_t start, int64_t end,
       stride_(stride) {}
 
 NodePtr Select::Clone(OpList operands) const {
-  return MakeNode<Select>(operands.at(0), dim_, start_, end_, stride_);
+  return ir::MakeNode<Select>(operands.at(0), dim_, start_, end_, stride_);
 }
 
 XlaOpVector Select::Lower(LoweringContext* loctx) const {

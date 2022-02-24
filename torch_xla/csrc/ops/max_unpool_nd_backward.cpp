@@ -49,7 +49,7 @@ MaxUnpoolNdBackward::MaxUnpoolNdBackward(const Value& grad_output,
       output_size_(std::move(output_size)) {}
 
 NodePtr MaxUnpoolNdBackward::Clone(OpList operands) const {
-  return MakeNode<MaxUnpoolNdBackward>(operands.at(0), operands.at(1),
+  return ir::MakeNode<MaxUnpoolNdBackward>(operands.at(0), operands.at(1),
                                        operands.at(2), output_size_);
 }
 

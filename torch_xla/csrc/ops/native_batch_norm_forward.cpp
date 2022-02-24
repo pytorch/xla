@@ -68,7 +68,7 @@ NativeBatchNormForward::NativeBatchNormForward(const Value& input,
       eps_(eps) {}
 
 NodePtr NativeBatchNormForward::Clone(OpList operands) const {
-  return MakeNode<NativeBatchNormForward>(operands.at(0), operands.at(1),
+  return ir::MakeNode<NativeBatchNormForward>(operands.at(0), operands.at(1),
                                           operands.at(2), operands.at(3),
                                           operands.at(4), training_, eps_);
 }

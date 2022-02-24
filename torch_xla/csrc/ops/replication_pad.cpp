@@ -28,7 +28,7 @@ ReplicationPad::ReplicationPad(const Value& input, std::vector<int64_t> padding)
       padding_(std::move(padding)) {}
 
 NodePtr ReplicationPad::Clone(OpList operands) const {
-  return MakeNode<ReplicationPad>(operands.at(0), padding_);
+  return ir::MakeNode<ReplicationPad>(operands.at(0), padding_);
 }
 
 XlaOpVector ReplicationPad::Lower(LoweringContext* loctx) const {
