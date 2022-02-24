@@ -10,8 +10,8 @@ steps:
           '--build-arg', 'python_version=${_PYTHON_VERSION}',
           '--build-arg', 'release_version=${_RELEASE_VERSION}',
           '--build-arg', 'tpuvm=${_TPU_VM}',
-          '--build-arg', 'bazel_jobs=${_BAZEL_JOBS}'
-          '--build-arg', 'git_clone=${_GIT_CLONE}'
+          '--build-arg', 'bazel_jobs=${_BAZEL_JOBS}',
+          '--build-arg', 'git_clone=${_GIT_CLONE}',
           '-t', 'gcr.io/tpu-pytorch/xla:${_IMAGE_NAME}',
           '-f', 'docker/Dockerfile', '.'
         ]
@@ -40,7 +40,8 @@ substitutions:
     _BAZEL_JOBS: ''
     _GIT_CLONE: 'true'
 options:
-    machineType: 'N1_HIGHCPU_32'
+    pool:
+      name: 'projects/tpu-pytorch/locations/us-central1/workerPools/wheel_build'
     dynamic_substitutions: true
     substitution_option: 'ALLOW_LOOSE'
 timeout: 18000s
