@@ -5,7 +5,6 @@ ARG base_image="debian:buster"
 FROM "${base_image}"
 
 ARG python_version="3.6"
-ARG cloud_build="false"
 ARG release_version="nightly"
 ARG cuda="0"
 ARG cuda_compute="7.0,7.5"
