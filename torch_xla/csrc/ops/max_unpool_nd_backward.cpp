@@ -54,9 +54,9 @@ NodePtr MaxUnpoolNdBackward::Clone(OpList operands) const {
 }
 
 XlaOpVector MaxUnpoolNdBackward::Lower(LoweringContext* loctx) const {
-  xla::XlaOp grad_output = loctx->GetOutputOp(operand(0));
-  xla::XlaOp input = loctx->GetOutputOp(operand(1));
-  xla::XlaOp indices = loctx->GetOutputOp(operand(2));
+  xla::XlaOp grad_output = loctx->GetOutputOp(operand_with_shape(0));
+  xla::XlaOp input = loctx->GetOutputOp(operand_with_shape(1));
+  xla::XlaOp indices = loctx->GetOutputOp(operand_with_shape(2));
   xla::XlaOp output =
       BuildMaxUnpoolNdBackward(grad_output, input, indices, output_size_);
   return ReturnOp(output, loctx);

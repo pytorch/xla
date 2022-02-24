@@ -52,12 +52,12 @@ XlaOpVector AmpForachNonFiniteCheckAndUnscale::Lower(
     LoweringContext* loctx) const {
   std::vector<xla::XlaOp> inputs;
   for (size_t i = 0; i < operands().size() - 2; ++i) {
-    inputs.push_back(loctx->GetOutputOp(operand(i)));
+    inputs.push_back(loctx->GetOutputOp(operand_with_shape(i)));
   }
   return ReturnOps(
       BuildAmpForeachNonFiniteCheckAndUnscale(
-          inputs, loctx->GetOutputOp(operand(operands().size() - 2)),
-          loctx->GetOutputOp(operand(operands().size() - 1))),
+          inputs, loctx->GetOutputOp(operand_with_shape(operands().size() - 2)),
+          loctx->GetOutputOp(operand_with_shape(operands().size() - 1))),
       loctx);
 }
 

@@ -23,8 +23,8 @@ NodePtr DiagonalViewUpdate::Clone(OpList operands) const {
 }
 
 XlaOpVector DiagonalViewUpdate::Lower(LoweringContext* loctx) const {
-  xla::XlaOp target = loctx->GetOutputOp(operand(0));
-  xla::XlaOp input = loctx->GetOutputOp(operand(1));
+  xla::XlaOp target = loctx->GetOutputOp(operand_with_shape(0));
+  xla::XlaOp input = loctx->GetOutputOp(operand_with_shape(1));
   xla::XlaOp output =
       BuildDiagonalViewUpdate(target, input, offset_, dim1_, dim2_);
   return ReturnOp(output, loctx);

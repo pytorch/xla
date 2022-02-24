@@ -28,7 +28,7 @@ namespace ir {
 class Node;
 class LoweringContext;
 
-using NodePtr = std::shared_ptr<torch::lazy::Node>;
+using NodePtr = std::shared_ptr<ir::Node>;
 
 using XlaOpVector = tensorflow::gtl::InlinedVector<xla::XlaOp, 1>;
 
@@ -50,7 +50,7 @@ using XlaOpVector = tensorflow::gtl::InlinedVector<xla::XlaOp, 1>;
 // U.index of the node N.
 struct Use {
   Use() = default;
-  Use(Node* node, size_t operand_index, size_t index)
+  Use(ir::Node* node, size_t operand_index, size_t index)
       : node(node), operand_index(operand_index), index(index) {}
 
   bool operator<(const Use& rhs) const;
@@ -58,7 +58,7 @@ struct Use {
   std::string ToString() const;
 
   // The node using the output of the node this use belongs to.
-  Node* node = nullptr;
+  ir::Node* node = nullptr;
   // The operand index, within node's operands, which this use refers to.
   size_t operand_index = 0;
   // The index within output the user node refers to.
@@ -73,15 +73,14 @@ inline std::ostream& operator<<(std::ostream& stream, const Use& use) {
 // Represents a specific output produced by a node. Since the output of a node
 // can be composed by multiple outputs, the node+index coordinates fully qualify
 // each single output.
-struct Output : public torch::lazy::Output {
-  // TODO @wonjoo Remove
-  // struct Hasher {
-  //   size_t operator()(const Output& output) const;
-  // };
+struct Output {
+  struct Hasher {
+    size_t operator()(const ir::Output& output) const;
+  };
 
   Output() = default;
-  explicit Output(const Node* node, size_t index = 0)
-      : node(node), index(index), torch::lazy::Output(node, index) {}
+  explicit Output(const ir::Node* node, size_t index = 0)
+      : node(node), index(index) {}
 
   // Retrieves the shape of this output. If the IR Node generating the value is
   // a multi-output node, the shape returned by this API will not be the full
@@ -90,36 +89,35 @@ struct Output : public torch::lazy::Output {
   const xla::Shape& shape() const;
   const xla::Shape& node_shape() const;
 
-  // torch::lazy::hash_t hash() const;
+  torch::lazy::hash_t hash() const;
 
-  // bool operator==(const Output& rhs) const {
-  //   return node == rhs.node && index == rhs.index;
-  // }
-  // bool operator!=(const Output& rhs) const { return !operator==(rhs); }
+  bool operator==(const ir::Output& rhs) const {
+    return node == rhs.node && index == rhs.index;
+  }
+  bool operator!=(const ir::Output& rhs) const { return !operator==(rhs); }
 
-  // std::string ToString() const;
+  std::string ToString() const;
 
   // The node providing the output.
-  const Node* node = nullptr;
+  const ir::Node* node = nullptr;
   // The index in the node's output this output refers to.
   size_t index = 0;
 };
 
-inline std::ostream& operator<<(std::ostream& stream, const Output& output) {
+inline std::ostream& operator<<(std::ostream& stream, const ir::Output& output) {
   stream << output.ToString();
   return stream;
 }
 
-using OutputSet = std::unordered_set<Output, Output::Hasher>;
+using OutputSet = std::unordered_set<ir::Output, ir::Output::Hasher>;
 
 template <typename T>
-using OutputMap = std::unordered_map<Output, T, Output::Hasher>;
+using OutputMap = std::unordered_map<ir::Output, T, ir::Output::Hasher>;
 
 // Represents an input/operand for a Node object.
-struct Value : public torch::lazy::Value {
-  // TODO @wonjoo Remove
+struct Value {
   Value() = default;
-  Value(NodePtr node, size_t index = 0) : node(std::move(node)), index(index), torch::lazy::Value(node, index) {}
+  Value(ir::NodePtr node, size_t index = 0) : node(std::move(node)), index(index) {}
 
   // Retrieves the shape of this value. If the IR Node generating the value is a
   // multi-output node, the shape returned by this API will not be the full
@@ -128,15 +126,15 @@ struct Value : public torch::lazy::Value {
   const xla::Shape& shape() const;
   const xla::Shape& node_shape() const;
 
-  // torch::lazy::hash_t hash() const;
+  torch::lazy::hash_t hash() const;
 
-  // operator bool() const { return node != nullptr; }
+  operator bool() const { return node != nullptr; }
 
-  // operator Output() const { return Output(node.get(), index); }
+  operator Output() const { return ir::Output(node.get(), index); }
 
-  // Node* operator->() const { return node.get(); }
+  ir::Node* operator->() const { return node.get(); }
 
-  NodePtr node;
+  ir::NodePtr node;
   size_t index = 0;
 };
 
@@ -215,12 +213,16 @@ class Node : public torch::lazy::Node {
   const xla::Shape& shape(size_t output_index) const;
 
   // TODO @wonjoo Remove
-  // const std::vector<Output>& operands() const { return operands_as_outputs_; }
+  const std::vector<torch::lazy::Output>& operands() const { return operands_as_outputs_lazy_; }
+
+  const std::vector<ir::Output>& operands_with_shape() const { return operands_as_outputs_; }
 
   // TODO @wonjoo Remove
-  // const Output& operand(size_t i) const { return operands_as_outputs_.at(i); }
+  const torch::lazy::Output& operand(size_t i) const { return operands_as_outputs_lazy_.at(i); }
 
-  const std::set<Use>& uses() const { return uses_; }
+  const ir::Output& operand_with_shape(size_t i) const { return operands_as_outputs_.at(i); }
+
+  const std::set<ir::Use>& uses() const { return uses_; }
 
   // torch::lazy::hash_t node_hash() const { return node_hash_; }
 
@@ -272,12 +274,13 @@ class Node : public torch::lazy::Node {
   size_t num_outputs_ = 1;
   xla::Shape shape_;
   // A node holds a real reference to its operands.
-  std::vector<NodePtr> operands_;
+  std::vector<ir::NodePtr> operands_;
   // Outputs do not hold references on the nodes, and neither do the uses, since
   // otherwise we get into circular reference counting.
-  std::vector<Output> operands_as_outputs_;
+  std::vector<ir::Output> operands_as_outputs_;
+  std::vector<torch::lazy::Output> operands_as_outputs_lazy_;
   // We use a set for uses, as we want deterministic use sequencing.
-  std::set<Use> uses_;
+  std::set<ir::Use> uses_;
   // The hash value of this node.
   torch::lazy::hash_t node_hash_ = 0;
   // The hash value of the graph rooted at this node.

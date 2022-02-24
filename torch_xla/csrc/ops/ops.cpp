@@ -38,7 +38,7 @@ namespace ops {
   NodePtr name(const Value& input) {                              \
     auto lower_fn = [](const Node& node,                          \
                        LoweringContext* loctx) -> XlaOpVector {   \
-      xla::XlaOp xla_input = loctx->GetOutputOp(node.operand(0)); \
+      xla::XlaOp xla_input = loctx->GetOutputOp(node.operand_with_shape(0)); \
       return node.ReturnOp(xla_fn(xla_input), loctx);             \
     };                                                            \
     return GenericOp(torch::lazy::OpKind(sym), {input}, input.shape(),         \
@@ -53,8 +53,8 @@ namespace ops {
     };                                                                         \
     auto lower_fn = [](const Node& node,                                       \
                        LoweringContext* loctx) -> XlaOpVector {                \
-      xla::XlaOp xla_input0 = loctx->GetOutputOp(node.operand(0));             \
-      xla::XlaOp xla_input1 = loctx->GetOutputOp(node.operand(1));             \
+      xla::XlaOp xla_input0 = loctx->GetOutputOp(node.operand_with_shape(0));             \
+      xla::XlaOp xla_input1 = loctx->GetOutputOp(node.operand_with_shape(1));             \
       auto promoted = XlaHelpers::Promote(xla_input0, xla_input1);             \
       return node.ReturnOp(xla_fn(promoted.first, promoted.second), loctx);    \
     };                                                                         \
@@ -107,7 +107,7 @@ NodePtr FracOp(const Value& input) { return input - Trunc(input); }
 NodePtr LogBase(const Value& input, torch::lazy::OpKind op, double base) {
   auto lower_fn = [base](const Node& node,
                          LoweringContext* loctx) -> XlaOpVector {
-    xla::XlaOp xla_input = loctx->GetOutputOp(node.operand(0));
+    xla::XlaOp xla_input = loctx->GetOutputOp(node.operand_with_shape(0));
     xla::XlaOp result = xla::Log(xla_input);
     xla::XlaOp ln_base = XlaHelpers::ScalarValue<float>(
         1.0 / std::log(base), node.shape().element_type(), xla_input.builder());
@@ -119,7 +119,7 @@ NodePtr LogBase(const Value& input, torch::lazy::OpKind op, double base) {
 
 NodePtr ReciprocalOp(const Value& input) {
   auto lower_fn = [](const Node& node, LoweringContext* loctx) -> XlaOpVector {
-    xla::XlaOp xla_input = loctx->GetOutputOp(node.operand(0));
+    xla::XlaOp xla_input = loctx->GetOutputOp(node.operand_with_shape(0));
     return node.ReturnOp(BuildReciprocal(xla_input), loctx);
   };
   return GenericOp(torch::lazy::OpKind(at::aten::reciprocal), {input}, input.shape(),
@@ -128,7 +128,7 @@ NodePtr ReciprocalOp(const Value& input) {
 
 NodePtr SgnOp(const Value& input) {
   auto lower_fn = [](const Node& node, LoweringContext* loctx) -> XlaOpVector {
-    xla::XlaOp xla_input = loctx->GetOutputOp(node.operand(0));
+    xla::XlaOp xla_input = loctx->GetOutputOp(node.operand_with_shape(0));
     return node.ReturnOp(BuildSgn(xla_input), loctx);
   };
   return GenericOp(torch::lazy::OpKind(at::aten::sgn), {input}, input.shape(),
@@ -137,7 +137,7 @@ NodePtr SgnOp(const Value& input) {
 
 NodePtr SignOp(const Value& input) {
   auto lower_fn = [](const Node& node, LoweringContext* loctx) -> XlaOpVector {
-    xla::XlaOp xla_input = loctx->GetOutputOp(node.operand(0));
+    xla::XlaOp xla_input = loctx->GetOutputOp(node.operand_with_shape(0));
     return node.ReturnOp(BuildSign(xla_input), loctx);
   };
   return GenericOp(torch::lazy::OpKind(at::aten::sign), {input}, input.shape(),
@@ -146,7 +146,7 @@ NodePtr SignOp(const Value& input) {
 
 NodePtr Abs(const Value& input) {
   auto lower_fn = [](const Node& node, LoweringContext* loctx) -> XlaOpVector {
-    xla::XlaOp xla_input = loctx->GetOutputOp(node.operand(0));
+    xla::XlaOp xla_input = loctx->GetOutputOp(node.operand_with_shape(0));
     return node.ReturnOp(BuildAbs(xla_input), loctx);
   };
   return GenericOp(OpKind(at::aten::abs), {input}, input.shape(),
@@ -155,7 +155,7 @@ NodePtr Abs(const Value& input) {
 
 NodePtr ReluOp(const Value& input) {
   auto lower_fn = [](const Node& node, LoweringContext* loctx) -> XlaOpVector {
-    xla::XlaOp xla_input = loctx->GetOutputOp(node.operand(0));
+    xla::XlaOp xla_input = loctx->GetOutputOp(node.operand_with_shape(0));
     xla::XlaOp xla_output = BuildRelu(xla_input);
     return node.ReturnOp(xla_output, loctx);
   };
@@ -172,8 +172,8 @@ NodePtr ReluOp(const Value& input) {
 
 NodePtr Prelu(const Value& input, const Value& weight) {
   auto lower_fn = [](const Node& node, LoweringContext* loctx) -> XlaOpVector {
-    xla::XlaOp xla_input = loctx->GetOutputOp(node.operand(0));
-    xla::XlaOp xla_weight = loctx->GetOutputOp(node.operand(1));
+    xla::XlaOp xla_input = loctx->GetOutputOp(node.operand_with_shape(0));
+    xla::XlaOp xla_weight = loctx->GetOutputOp(node.operand_with_shape(1));
     xla::XlaOp xla_output = BuildPrelu(xla_input, xla_weight);
     return node.ReturnOp(xla_output, loctx);
   };
@@ -184,7 +184,7 @@ NodePtr Prelu(const Value& input, const Value& weight) {
 
 NodePtr HardSigmoid(const Value& input) {
   auto lower_fn = [](const Node& node, LoweringContext* loctx) -> XlaOpVector {
-    xla::XlaOp xla_input = loctx->GetOutputOp(node.operand(0));
+    xla::XlaOp xla_input = loctx->GetOutputOp(node.operand_with_shape(0));
     return node.ReturnOp(BuildHardSigmoid(xla_input), loctx);
   };
   return GenericOp(torch::lazy::OpKind(at::aten::hardsigmoid), {input}, input.shape(),
@@ -193,8 +193,8 @@ NodePtr HardSigmoid(const Value& input) {
 
 NodePtr HardSigmoidBackward(const Value& grad_output, const Value& input) {
   auto lower_fn = [](const Node& node, LoweringContext* loctx) -> XlaOpVector {
-    xla::XlaOp xla_grad_output = loctx->GetOutputOp(node.operand(0));
-    xla::XlaOp xla_input = loctx->GetOutputOp(node.operand(1));
+    xla::XlaOp xla_grad_output = loctx->GetOutputOp(node.operand_with_shape(0));
+    xla::XlaOp xla_input = loctx->GetOutputOp(node.operand_with_shape(1));
     return node.ReturnOp(BuildHardSigmoidBackward(xla_grad_output, xla_input),
                          loctx);
   };
@@ -226,7 +226,7 @@ NodePtr LogSigmoidBackward(const Value& grad_output, const Value& input,
 
 NodePtr SiLU(const Value& input) {
   auto lower_fn = [](const Node& node, LoweringContext* loctx) -> XlaOpVector {
-    xla::XlaOp xla_input = loctx->GetOutputOp(node.operand(0));
+    xla::XlaOp xla_input = loctx->GetOutputOp(node.operand_with_shape(0));
     return node.ReturnOp(xla_input * BuildSigmoid(xla_input), loctx);
   };
   return GenericOp(torch::lazy::OpKind(at::aten::silu), {input}, input.shape(),
@@ -235,8 +235,8 @@ NodePtr SiLU(const Value& input) {
 
 NodePtr SiLUBackward(const Value& grad_output, const Value& input) {
   auto lower_fn = [](const Node& node, LoweringContext* loctx) -> XlaOpVector {
-    xla::XlaOp xla_grad_output = loctx->GetOutputOp(node.operand(0));
-    xla::XlaOp xla_input = loctx->GetOutputOp(node.operand(1));
+    xla::XlaOp xla_grad_output = loctx->GetOutputOp(node.operand_with_shape(0));
+    xla::XlaOp xla_input = loctx->GetOutputOp(node.operand_with_shape(1));
     return node.ReturnOp(BuildSiLUBackward(xla_grad_output, xla_input), loctx);
   };
   auto lower_for_shape_fn =
@@ -254,7 +254,7 @@ NodePtr SiLUBackward(const Value& grad_output, const Value& input) {
 
 NodePtr Sigmoid(const Value& input) {
   auto lower_fn = [](const Node& node, LoweringContext* loctx) -> XlaOpVector {
-    xla::XlaOp xla_input = loctx->GetOutputOp(node.operand(0));
+    xla::XlaOp xla_input = loctx->GetOutputOp(node.operand_with_shape(0));
     return node.ReturnOp(BuildSigmoid(xla_input), loctx);
   };
   return GenericOp(torch::lazy::OpKind(at::aten::sigmoid), {input}, input.shape(),
@@ -281,9 +281,9 @@ NodePtr SoftmaxBackwardOp(const Value& grad_output, const Value& output,
 
 NodePtr Clamp(const Value& input, const Value& min, const Value& max) {
   auto lower_fn = [](const Node& node, LoweringContext* loctx) -> XlaOpVector {
-    xla::XlaOp xla_input = loctx->GetOutputOp(node.operand(0));
-    xla::XlaOp xla_min = loctx->GetOutputOp(node.operand(1));
-    xla::XlaOp xla_max = loctx->GetOutputOp(node.operand(2));
+    xla::XlaOp xla_input = loctx->GetOutputOp(node.operand_with_shape(0));
+    xla::XlaOp xla_min = loctx->GetOutputOp(node.operand_with_shape(1));
+    xla::XlaOp xla_max = loctx->GetOutputOp(node.operand_with_shape(2));
     xla::PrimitiveType input_type = XlaHelpers::TypeOfXlaOp(xla_input);
     xla_min = ConvertTo(xla_min, XlaHelpers::TypeOfXlaOp(xla_min), input_type,
                         /*device=*/nullptr);
@@ -297,8 +297,8 @@ NodePtr Clamp(const Value& input, const Value& min, const Value& max) {
 
 NodePtr Ger(const Value& input, const Value& other) {
   auto lower_fn = [](const Node& node, LoweringContext* loctx) -> XlaOpVector {
-    xla::XlaOp xla_input = loctx->GetOutputOp(node.operand(0));
-    xla::XlaOp xla_other = loctx->GetOutputOp(node.operand(1));
+    xla::XlaOp xla_input = loctx->GetOutputOp(node.operand_with_shape(0));
+    xla::XlaOp xla_other = loctx->GetOutputOp(node.operand_with_shape(1));
     return node.ReturnOp(BuildGer(xla_input, xla_other), loctx);
   };
   auto lower_for_shape_fn =
@@ -317,9 +317,9 @@ NodePtr AddMatMulOp(const Value& input, const Value& weight,
                     const Value& bias) {
   auto lower_fn = [](const Node& node, LoweringContext* loctx) -> XlaOpVector {
     XLA_CHECK_EQ(node.operands().size(), 3) << "Unexpected number of operands";
-    xla::XlaOp xla_input = loctx->GetOutputOp(node.operand(0));
-    xla::XlaOp xla_weight = loctx->GetOutputOp(node.operand(1));
-    xla::XlaOp xla_bias = loctx->GetOutputOp(node.operand(2));
+    xla::XlaOp xla_input = loctx->GetOutputOp(node.operand_with_shape(0));
+    xla::XlaOp xla_weight = loctx->GetOutputOp(node.operand_with_shape(1));
+    xla::XlaOp xla_bias = loctx->GetOutputOp(node.operand_with_shape(2));
     return node.ReturnOp(BuildMatMul(xla_input, xla_weight, xla_bias), loctx);
   };
   auto lower_for_shape_fn =
@@ -337,8 +337,8 @@ NodePtr AddMatMulOp(const Value& input, const Value& weight,
 
 NodePtr Dot(const Value& input, const Value& weight) {
   auto lower_fn = [](const Node& node, LoweringContext* loctx) -> XlaOpVector {
-    xla::XlaOp xla_input = loctx->GetOutputOp(node.operand(0));
-    xla::XlaOp xla_weight = loctx->GetOutputOp(node.operand(1));
+    xla::XlaOp xla_input = loctx->GetOutputOp(node.operand_with_shape(0));
+    xla::XlaOp xla_weight = loctx->GetOutputOp(node.operand_with_shape(1));
     return node.ReturnOp(BuildDot(xla_input, xla_weight), loctx);
   };
   auto lower_for_shape_fn =
@@ -355,8 +355,8 @@ NodePtr Dot(const Value& input, const Value& weight) {
 
 NodePtr MatMul(const Value& lhs, const Value& rhs) {
   auto lower_fn = [](const Node& node, LoweringContext* loctx) -> XlaOpVector {
-    xla::XlaOp xla_lhs = loctx->GetOutputOp(node.operand(0));
-    xla::XlaOp xla_rhs = loctx->GetOutputOp(node.operand(1));
+    xla::XlaOp xla_lhs = loctx->GetOutputOp(node.operand_with_shape(0));
+    xla::XlaOp xla_rhs = loctx->GetOutputOp(node.operand_with_shape(1));
     std::tie(xla_lhs, xla_rhs) = XlaHelpers::PromoteValues(xla_lhs, xla_rhs);
 
     return node.ReturnOp(CreateMatMul(xla_lhs, xla_rhs), loctx);
@@ -376,8 +376,8 @@ NodePtr MatMul(const Value& lhs, const Value& rhs) {
 NodePtr AdaptiveMaxPool2dBackward(const Value& grad_output,
                                   const Value& input) {
   auto lower_fn = [](const Node& node, LoweringContext* loctx) -> XlaOpVector {
-    xla::XlaOp grad_output = loctx->GetOutputOp(node.operand(0));
-    xla::XlaOp input = loctx->GetOutputOp(node.operand(1));
+    xla::XlaOp grad_output = loctx->GetOutputOp(node.operand_with_shape(0));
+    xla::XlaOp input = loctx->GetOutputOp(node.operand_with_shape(1));
     xla::XlaOp xla_output = BuildAdaptiveMaxPoolNdBackward(
         /*out_backprop=*/grad_output, /*input=*/input, /*pool_dim=*/2);
     return node.ReturnOp(xla_output, loctx);
@@ -401,8 +401,8 @@ NodePtr AdaptiveMaxPool2dBackward(const Value& grad_output,
 NodePtr AdaptiveAvgPool3dBackward(const Value& grad_output,
                                   const Value& input) {
   auto lower_fn = [](const Node& node, LoweringContext* loctx) -> XlaOpVector {
-    xla::XlaOp grad_output = loctx->GetOutputOp(node.operand(0));
-    xla::XlaOp input = loctx->GetOutputOp(node.operand(1));
+    xla::XlaOp grad_output = loctx->GetOutputOp(node.operand_with_shape(0));
+    xla::XlaOp input = loctx->GetOutputOp(node.operand_with_shape(1));
     xla::XlaOp xla_output = BuildAdaptiveAvgPool3dBackward(
         /*out_backprop=*/grad_output, /*input=*/input);
     return node.ReturnOp(xla_output, loctx);
@@ -425,8 +425,8 @@ NodePtr AdaptiveAvgPool3dBackward(const Value& grad_output,
 NodePtr AdaptiveAvgPool2dBackward(const Value& grad_output,
                                   const Value& input) {
   auto lower_fn = [](const Node& node, LoweringContext* loctx) -> XlaOpVector {
-    xla::XlaOp grad_output = loctx->GetOutputOp(node.operand(0));
-    xla::XlaOp input = loctx->GetOutputOp(node.operand(1));
+    xla::XlaOp grad_output = loctx->GetOutputOp(node.operand_with_shape(0));
+    xla::XlaOp input = loctx->GetOutputOp(node.operand_with_shape(1));
     xla::XlaOp xla_output = BuildAdaptiveAvgPool2dBackward(
         /*out_backprop=*/grad_output, /*input=*/input);
     return node.ReturnOp(xla_output, loctx);
@@ -449,8 +449,8 @@ NodePtr AdaptiveAvgPool2dBackward(const Value& grad_output,
 NodePtr ComparisonOp(c10::Symbol kind, const Value& input, const Value& other) {
   auto lower_fn = [kind](const Node& node,
                          LoweringContext* loctx) -> XlaOpVector {
-    xla::XlaOp xla_input = loctx->GetOutputOp(node.operand(0));
-    xla::XlaOp xla_other = loctx->GetOutputOp(node.operand(1));
+    xla::XlaOp xla_input = loctx->GetOutputOp(node.operand_with_shape(0));
+    xla::XlaOp xla_other = loctx->GetOutputOp(node.operand_with_shape(1));
     xla::XlaOp xla_output = BuildComparisonOp(kind, xla_input, xla_other);
     return node.ReturnOp(xla_output, loctx);
   };
@@ -468,9 +468,9 @@ NodePtr ComparisonOp(c10::Symbol kind, const Value& input, const Value& other) {
 
 NodePtr Where(const Value& condition, const Value& input, const Value& other) {
   auto lower_fn = [](const Node& node, LoweringContext* loctx) -> XlaOpVector {
-    xla::XlaOp xla_condition = loctx->GetOutputOp(node.operand(0));
-    xla::XlaOp xla_input = loctx->GetOutputOp(node.operand(1));
-    xla::XlaOp xla_other = loctx->GetOutputOp(node.operand(2));
+    xla::XlaOp xla_condition = loctx->GetOutputOp(node.operand_with_shape(0));
+    xla::XlaOp xla_input = loctx->GetOutputOp(node.operand_with_shape(1));
+    xla::XlaOp xla_other = loctx->GetOutputOp(node.operand_with_shape(2));
     xla::XlaOp pred_condition =
         ConvertTo(xla_condition, XlaHelpers::TypeOfXlaOp(xla_condition),
                   xla::PrimitiveType::PRED, /*device=*/nullptr);
@@ -698,7 +698,7 @@ NodePtr Remainder(const Value& input, const Value& divisor) {
 
 NodePtr MaxUnary(const Value& input) {
   auto lower_fn = [](const Node& node, LoweringContext* loctx) -> XlaOpVector {
-    xla::XlaOp xla_input = loctx->GetOutputOp(node.operand(0));
+    xla::XlaOp xla_input = loctx->GetOutputOp(node.operand_with_shape(0));
     const xla::Shape& input_shape = XlaHelpers::ShapeOfXlaOp(xla_input);
     xla::PrimitiveType element_type = input_shape.element_type();
     XlaHelpers::MinMax min_max = XlaHelpers::MinMaxValues(element_type);
@@ -717,7 +717,7 @@ NodePtr MaxUnary(const Value& input) {
 
 NodePtr MinUnary(const Value& input) {
   auto lower_fn = [](const Node& node, LoweringContext* loctx) -> XlaOpVector {
-    xla::XlaOp xla_input = loctx->GetOutputOp(node.operand(0));
+    xla::XlaOp xla_input = loctx->GetOutputOp(node.operand_with_shape(0));
     const xla::Shape& input_shape = XlaHelpers::ShapeOfXlaOp(xla_input);
     xla::PrimitiveType element_type = input_shape.element_type();
     XlaHelpers::MinMax min_max = XlaHelpers::MinMaxValues(element_type);
@@ -736,8 +736,8 @@ NodePtr MinUnary(const Value& input) {
 
 NodePtr Take(const Value& input, const Value& index) {
   auto lower_fn = [](const Node& node, LoweringContext* loctx) -> XlaOpVector {
-    xla::XlaOp xla_input = loctx->GetOutputOp(node.operand(0));
-    xla::XlaOp xla_index = loctx->GetOutputOp(node.operand(1));
+    xla::XlaOp xla_input = loctx->GetOutputOp(node.operand_with_shape(0));
+    xla::XlaOp xla_index = loctx->GetOutputOp(node.operand_with_shape(1));
     xla::XlaOp result = BuildTake(xla_input, xla_index);
     return node.ReturnOp(result, loctx);
   };
@@ -791,7 +791,7 @@ NodePtr TanhGeluBackward(const Value& grad, const Value& input) {
 
 NodePtr LogDet(const Value& input) {
   auto lower_fn = [](const Node& node, LoweringContext* loctx) -> XlaOpVector {
-    xla::XlaOp xla_input = loctx->GetOutputOp(node.operand(0));
+    xla::XlaOp xla_input = loctx->GetOutputOp(node.operand_with_shape(0));
     xla::XlaOp result = xla::LogDet(xla_input);
     return node.ReturnOp(result, loctx);
   };
@@ -807,7 +807,7 @@ NodePtr LogDet(const Value& input) {
 
 NodePtr Inverse(const Value& input) {
   auto lower_fn = [](const Node& node, LoweringContext* loctx) -> XlaOpVector {
-    xla::XlaOp xla_input = loctx->GetOutputOp(node.operand(0));
+    xla::XlaOp xla_input = loctx->GetOutputOp(node.operand_with_shape(0));
     xla::XlaOp result = BuildInverse(xla_input);
     return node.ReturnOp(result, loctx);
   };
@@ -818,11 +818,11 @@ NodePtr Inverse(const Value& input) {
 NodePtr BaddBmm(const Value& lhs, const Value& rhs, const Value& bias,
                 const Value& product_multiplier, const Value& bias_multiplier) {
   auto lower_fn = [](const Node& node, LoweringContext* loctx) -> XlaOpVector {
-    xla::XlaOp xla_lhs = loctx->GetOutputOp(node.operand(0));
-    xla::XlaOp xla_rhs = loctx->GetOutputOp(node.operand(1));
-    xla::XlaOp xla_bias = loctx->GetOutputOp(node.operand(2));
-    xla::XlaOp xla_product_multiplier = loctx->GetOutputOp(node.operand(3));
-    xla::XlaOp xla_bias_multiplier = loctx->GetOutputOp(node.operand(4));
+    xla::XlaOp xla_lhs = loctx->GetOutputOp(node.operand_with_shape(0));
+    xla::XlaOp xla_rhs = loctx->GetOutputOp(node.operand_with_shape(1));
+    xla::XlaOp xla_bias = loctx->GetOutputOp(node.operand_with_shape(2));
+    xla::XlaOp xla_product_multiplier = loctx->GetOutputOp(node.operand_with_shape(3));
+    xla::XlaOp xla_bias_multiplier = loctx->GetOutputOp(node.operand_with_shape(4));
     std::tie(xla_lhs, xla_rhs) = XlaHelpers::PromoteValues(xla_lhs, xla_rhs);
 
     return node.ReturnOp(
@@ -853,7 +853,7 @@ NodePtr Lerp(const Value& start, const Value& end, const Value& weight) {
 
 NodePtr LogicalNot(const Value& input) {
   auto lower_fn = [](const Node& node, LoweringContext* loctx) -> XlaOpVector {
-    xla::XlaOp op = loctx->GetOutputOp(node.operand(0));
+    xla::XlaOp op = loctx->GetOutputOp(node.operand_with_shape(0));
     return node.ReturnOp(XlaHelpers::PromotedLogicalUnaryOp(
                              op, [](xla::XlaOp lhs) { return xla::Not(lhs); }),
                          loctx);
@@ -870,8 +870,8 @@ NodePtr LogicalNot(const Value& input) {
 
 NodePtr LogicalXor(const Value& input, const Value& other) {
   auto lower_fn = [](const Node& node, LoweringContext* loctx) -> XlaOpVector {
-    xla::XlaOp op1 = loctx->GetOutputOp(node.operand(0));
-    xla::XlaOp op2 = loctx->GetOutputOp(node.operand(1));
+    xla::XlaOp op1 = loctx->GetOutputOp(node.operand_with_shape(0));
+    xla::XlaOp op2 = loctx->GetOutputOp(node.operand_with_shape(1));
     return node.ReturnOp(
         XlaHelpers::PromotedLogicalBinaryOp(
             op1, op2,
@@ -893,8 +893,8 @@ NodePtr LogicalXor(const Value& input, const Value& other) {
 
 NodePtr LogicalAnd(const Value& input, const Value& other) {
   auto lower_fn = [](const Node& node, LoweringContext* loctx) -> XlaOpVector {
-    xla::XlaOp op1 = loctx->GetOutputOp(node.operand(0));
-    xla::XlaOp op2 = loctx->GetOutputOp(node.operand(1));
+    xla::XlaOp op1 = loctx->GetOutputOp(node.operand_with_shape(0));
+    xla::XlaOp op2 = loctx->GetOutputOp(node.operand_with_shape(1));
     return node.ReturnOp(
         XlaHelpers::PromotedLogicalBinaryOp(
             op1, op2,
@@ -916,8 +916,8 @@ NodePtr LogicalAnd(const Value& input, const Value& other) {
 
 NodePtr LogicalOr(const Value& input, const Value& other) {
   auto lower_fn = [](const Node& node, LoweringContext* loctx) -> XlaOpVector {
-    xla::XlaOp op1 = loctx->GetOutputOp(node.operand(0));
-    xla::XlaOp op2 = loctx->GetOutputOp(node.operand(1));
+    xla::XlaOp op1 = loctx->GetOutputOp(node.operand_with_shape(0));
+    xla::XlaOp op2 = loctx->GetOutputOp(node.operand_with_shape(1));
     return node.ReturnOp(
         XlaHelpers::PromotedLogicalBinaryOp(
             op1, op2,
@@ -939,8 +939,8 @@ NodePtr LogicalOr(const Value& input, const Value& other) {
 
 NodePtr XLogY(const Value& input, const Value& other) {
   auto lower_fn = [](const Node& node, LoweringContext* loctx) -> XlaOpVector {
-    xla::XlaOp xla_input = loctx->GetOutputOp(node.operand(0));
-    xla::XlaOp xla_other = loctx->GetOutputOp(node.operand(1));
+    xla::XlaOp xla_input = loctx->GetOutputOp(node.operand_with_shape(0));
+    xla::XlaOp xla_other = loctx->GetOutputOp(node.operand_with_shape(1));
     xla::XlaOp xla_output = BuildXLogY(xla_input, xla_other);
     return node.ReturnOp(xla_output, loctx);
   };
@@ -960,10 +960,10 @@ NodePtr XLogY(const Value& input, const Value& other) {
 NodePtr NanToNum(const Value& input, const Value& nan, const Value& posinf,
                  const Value& neginf) {
   auto lower_fn = [](const Node& node, LoweringContext* loctx) -> XlaOpVector {
-    xla::XlaOp xla_input = loctx->GetOutputOp(node.operand(0));
-    xla::XlaOp nan_replacement = loctx->GetOutputOp(node.operand(1));
-    xla::XlaOp posinf_replacement = loctx->GetOutputOp(node.operand(2));
-    xla::XlaOp neginf_replacement = loctx->GetOutputOp(node.operand(3));
+    xla::XlaOp xla_input = loctx->GetOutputOp(node.operand_with_shape(0));
+    xla::XlaOp nan_replacement = loctx->GetOutputOp(node.operand_with_shape(1));
+    xla::XlaOp posinf_replacement = loctx->GetOutputOp(node.operand_with_shape(2));
+    xla::XlaOp neginf_replacement = loctx->GetOutputOp(node.operand_with_shape(3));
     xla::XlaOp result =
         xla::Select(xla::IsNan(xla_input), nan_replacement,
                     xla::Select(xla::IsPosInf(xla_input), posinf_replacement,
@@ -977,7 +977,7 @@ NodePtr NanToNum(const Value& input, const Value& nan, const Value& posinf,
 
 NodePtr SLogDet(const Value& input) {
   auto lower_fn = [](const Node& node, LoweringContext* loctx) -> XlaOpVector {
-    xla::XlaOp xla_input = loctx->GetOutputOp(node.operand(0));
+    xla::XlaOp xla_input = loctx->GetOutputOp(node.operand_with_shape(0));
     xla::SignAndLogDet result = xla::SLogDet(xla_input);
     return node.ReturnOps({result.sign, result.logdet}, loctx);
   };
@@ -997,9 +997,9 @@ NodePtr SLogDet(const Value& input) {
 NodePtr Softplus(const Value& input, const Value& beta,
                  const Value& threshold) {
   auto lower_fn = [](const Node& node, LoweringContext* loctx) -> XlaOpVector {
-    xla::XlaOp xla_input = loctx->GetOutputOp(node.operand(0));
-    xla::XlaOp xla_beta = loctx->GetOutputOp(node.operand(1));
-    xla::XlaOp xla_threshold = loctx->GetOutputOp(node.operand(2));
+    xla::XlaOp xla_input = loctx->GetOutputOp(node.operand_with_shape(0));
+    xla::XlaOp xla_beta = loctx->GetOutputOp(node.operand_with_shape(1));
+    xla::XlaOp xla_threshold = loctx->GetOutputOp(node.operand_with_shape(2));
     xla::XlaOp xla_output = BuildSoftplus(xla_input, xla_beta, xla_threshold);
     return node.ReturnOp(xla_output, loctx);
   };

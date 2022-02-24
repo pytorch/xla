@@ -18,7 +18,7 @@ NodePtr LeakyRelu::Clone(OpList operands) const {
 }
 
 XlaOpVector LeakyRelu::Lower(LoweringContext* loctx) const {
-  xla::XlaOp input = loctx->GetOutputOp(operand(0));
+  xla::XlaOp input = loctx->GetOutputOp(operand_with_shape(0));
   xla::XlaOp output = BuildLeakyRelu(input, negative_slope_);
   return ReturnOp(output, loctx);
 }

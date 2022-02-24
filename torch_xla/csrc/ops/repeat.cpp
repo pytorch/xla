@@ -34,7 +34,7 @@ NodePtr Repeat::Clone(OpList operands) const {
 }
 
 XlaOpVector Repeat::Lower(LoweringContext* loctx) const {
-  xla::XlaOp input = loctx->GetOutputOp(operand(0));
+  xla::XlaOp input = loctx->GetOutputOp(operand_with_shape(0));
   xla::XlaOp output = BuildRepeat(input, repeats_);
   return ReturnOp(output, loctx);
 }

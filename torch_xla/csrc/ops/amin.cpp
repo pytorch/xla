@@ -33,7 +33,7 @@ NodePtr Amin::Clone(OpList operands) const {
 }
 
 XlaOpVector Amin::Lower(LoweringContext* loctx) const {
-  xla::XlaOp input = loctx->GetOutputOp(operand(0));
+  xla::XlaOp input = loctx->GetOutputOp(operand_with_shape(0));
   return ReturnOp(BuildMinInDims(input, dimensions_, keepdim_), loctx);
 }
 

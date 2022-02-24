@@ -33,7 +33,7 @@ NodePtr Expand::Clone(OpList operands) const {
 }
 
 XlaOpVector Expand::Lower(LoweringContext* loctx) const {
-  xla::XlaOp input = loctx->GetOutputOp(operand(0));
+  xla::XlaOp input = loctx->GetOutputOp(operand_with_shape(0));
   return ReturnOp(BuildExpand(input, size_), loctx);
 }
 

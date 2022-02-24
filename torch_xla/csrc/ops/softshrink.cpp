@@ -26,7 +26,7 @@ NodePtr Softshrink::Clone(OpList operands) const {
 }
 
 XlaOpVector Softshrink::Lower(LoweringContext* loctx) const {
-  xla::XlaOp input = loctx->GetOutputOp(operand(0));
+  xla::XlaOp input = loctx->GetOutputOp(operand_with_shape(0));
   return ReturnOp(BuildSoftshrink(input, lambda_), loctx);
 }
 

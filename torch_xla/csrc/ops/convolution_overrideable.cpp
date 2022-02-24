@@ -83,11 +83,11 @@ NodePtr ConvolutionOverrideable::Clone(OpList operands) const {
 }
 
 XlaOpVector ConvolutionOverrideable::Lower(LoweringContext* loctx) const {
-  xla::XlaOp input = loctx->GetOutputOp(operand(0));
-  xla::XlaOp kernel = loctx->GetOutputOp(operand(1));
+  xla::XlaOp input = loctx->GetOutputOp(operand_with_shape(0));
+  xla::XlaOp kernel = loctx->GetOutputOp(operand_with_shape(1));
   xla::XlaOp output;
   if (operands().size() == 3) {
-    xla::XlaOp bias = loctx->GetOutputOp(operand(2));
+    xla::XlaOp bias = loctx->GetOutputOp(operand_with_shape(2));
     output = BuildConvolutionOverrideableBias(input, kernel, bias, stride_,
                                               padding_, dilation_, transposed_,
                                               output_padding_, groups_);

@@ -28,7 +28,7 @@ NodePtr Resize::Clone(OpList operands) const {
 }
 
 XlaOpVector Resize::Lower(LoweringContext* loctx) const {
-  xla::XlaOp input = loctx->GetOutputOp(operand(0));
+  xla::XlaOp input = loctx->GetOutputOp(operand_with_shape(0));
   xla::XlaOp output = BuildResize(input, size_);
   return ReturnOp(output, loctx);
 }

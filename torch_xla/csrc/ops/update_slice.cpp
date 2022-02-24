@@ -35,8 +35,8 @@ NodePtr UpdateSlice::Clone(OpList operands) const {
 }
 
 XlaOpVector UpdateSlice::Lower(LoweringContext* loctx) const {
-  xla::XlaOp input = loctx->GetOutputOp(operand(0));
-  xla::XlaOp source = loctx->GetOutputOp(operand(1));
+  xla::XlaOp input = loctx->GetOutputOp(operand_with_shape(0));
+  xla::XlaOp source = loctx->GetOutputOp(operand_with_shape(1));
   xla::XlaOp output = BuildUpdateSlice(input, source, base_indices_);
   return ReturnOp(output, loctx);
 }

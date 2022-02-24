@@ -20,9 +20,9 @@ NodePtr MaskedScatter::Clone(OpList operands) const {
 }
 
 XlaOpVector MaskedScatter::Lower(LoweringContext* loctx) const {
-  xla::XlaOp input = loctx->GetOutputOp(operand(0));
-  xla::XlaOp mask = loctx->GetOutputOp(operand(1));
-  xla::XlaOp source = loctx->GetOutputOp(operand(2));
+  xla::XlaOp input = loctx->GetOutputOp(operand_with_shape(0));
+  xla::XlaOp mask = loctx->GetOutputOp(operand_with_shape(1));
+  xla::XlaOp source = loctx->GetOutputOp(operand_with_shape(2));
   return ReturnOp(BuildMaskedScatter(input, mask, source), loctx);
 }
 

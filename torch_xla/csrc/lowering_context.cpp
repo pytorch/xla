@@ -19,7 +19,7 @@ namespace {
 
 class HloMetadataSetter {
  public:
-  HloMetadataSetter(LoweringContext* loctx, const Node* node) {
+  HloMetadataSetter(LoweringContext* loctx, const ir::Node* node) {
     if (ShouldPopulateXlaOpMetadata()) {
       PopulateXlaOpMetadata(loctx, node);
       loctx_ = loctx;
@@ -38,7 +38,7 @@ class HloMetadataSetter {
     return op_metadata;
   }
 
-  static void PopulateXlaOpMetadata(LoweringContext* loctx, const Node* node) {
+  static void PopulateXlaOpMetadata(LoweringContext* loctx, const ir::Node* node) {
     xla::OpMetadata metadata;
     // NOTE: we apply some string manipulation as xprof backend utility
     // for nesting/grouping traces depends on certain op name/type
@@ -78,7 +78,7 @@ LoweringContext::LoweringContext(const std::string& name, Device device)
     : builder_(name), device_(std::move(device)) {}
 
 LoweringContext::LoweringContext(const std::string& name, Device device,
-                                 absl::Span<const Node* const> post_order,
+                                 absl::Span<const ir::Node* const> post_order,
                                  Util::EmissionMap emit_status)
     : builder_(name),
       device_(std::move(device)),
@@ -139,11 +139,11 @@ xla::StatusOr<xla::XlaComputation> LoweringContext::Build(xla::XlaOp root) {
   return builder()->Build(root);
 }
 
-void LoweringContext::AssignOutputOp(const Output& output, xla::XlaOp op) {
+void LoweringContext::AssignOutputOp(const ir::Output& output, xla::XlaOp op) {
   emitted_outputs_[output] = std::move(op);
 }
 
-xla::XlaOp LoweringContext::GetOutputOp(const Output& output) {
+xla::XlaOp LoweringContext::GetOutputOp(const ir::Output& output) {
   auto it = emitted_outputs_.find(output);
   if (it == emitted_outputs_.end()) {
     auto post_order = Util::ComputePostOrder(output.node, &emit_status_);
@@ -159,7 +159,7 @@ xla::XlaOp LoweringContext::GetOutputOp(const Output& output) {
   return it->second;
 }
 
-XlaOpVector LoweringContext::LowerNode(const Node* node) {
+XlaOpVector LoweringContext::LowerNode(const ir::Node* node) {
   XlaOpVector result_ops;
   try {
     HloMetadataSetter meta_setter(this, node);
@@ -174,7 +174,7 @@ XlaOpVector LoweringContext::LowerNode(const Node* node) {
   return result_ops;
 }
 
-void LoweringContext::ReportBuilderError(const Node* node,
+void LoweringContext::ReportBuilderError(const ir::Node* node,
                                          const char* error_msg) {
   std::stringstream ss;
   ss << "Error while lowering: " << node->ToString() << "\n";

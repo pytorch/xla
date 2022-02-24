@@ -22,9 +22,9 @@ NodePtr DiscreteUniform::Clone(OpList operands) const {
 }
 
 XlaOpVector DiscreteUniform::Lower(LoweringContext* loctx) const {
-  xla::XlaOp from = loctx->GetOutputOp(operand(0));
-  xla::XlaOp to = loctx->GetOutputOp(operand(1));
-  xla::XlaOp rng_seed = loctx->GetOutputOp(operand(2));
+  xla::XlaOp from = loctx->GetOutputOp(operand_with_shape(0));
+  xla::XlaOp to = loctx->GetOutputOp(operand_with_shape(1));
+  xla::XlaOp rng_seed = loctx->GetOutputOp(operand_with_shape(2));
   return ReturnOp(RngDiscreteUniform(rng_seed, shape(), from, to), loctx);
 }
 

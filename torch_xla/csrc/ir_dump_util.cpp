@@ -193,7 +193,7 @@ std::string DumpUtil::PostOrderToDot(absl::Span<const Node* const> post_order,
     const Node* node = *it;
     size_t id = id_map.at(node);
     for (size_t i = 0; i < node->operands().size(); ++i) {
-      const ir::Output& output = node->operand(i);
+      const ir::Output& output = node->operand_with_shape(i);
       ss << "  node" << id_map.at(output.node) << " -> node" << id;
       if (node->operands().size() > 1) {
         ss << " [label=\"i=" << i;

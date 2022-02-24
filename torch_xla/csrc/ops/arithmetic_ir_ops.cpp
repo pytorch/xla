@@ -12,8 +12,8 @@ namespace ir {
 
 NodePtr operator+(const Value& node1, const Value& node2) {
   auto lower_fn = [](const Node& node, LoweringContext* loctx) -> XlaOpVector {
-    xla::XlaOp op0 = loctx->GetOutputOp(node.operand(0));
-    xla::XlaOp op1 = loctx->GetOutputOp(node.operand(1));
+    xla::XlaOp op0 = loctx->GetOutputOp(node.operand_with_shape(0));
+    xla::XlaOp op1 = loctx->GetOutputOp(node.operand_with_shape(1));
     return node.ReturnOp(XlaHelpers::PromotedAdd(op0, op1), loctx);
   };
   return ops::GenericOp(
@@ -24,8 +24,8 @@ NodePtr operator+(const Value& node1, const Value& node2) {
 
 NodePtr operator-(const Value& node1, const Value& node2) {
   auto lower_fn = [](const Node& node, LoweringContext* loctx) -> XlaOpVector {
-    xla::XlaOp op0 = loctx->GetOutputOp(node.operand(0));
-    xla::XlaOp op1 = loctx->GetOutputOp(node.operand(1));
+    xla::XlaOp op0 = loctx->GetOutputOp(node.operand_with_shape(0));
+    xla::XlaOp op1 = loctx->GetOutputOp(node.operand_with_shape(1));
     return node.ReturnOp(XlaHelpers::PromotedSub(op0, op1), loctx);
   };
   return ops::GenericOp(
@@ -36,8 +36,8 @@ NodePtr operator-(const Value& node1, const Value& node2) {
 
 NodePtr operator*(const Value& node1, const Value& node2) {
   auto lower_fn = [](const Node& node, LoweringContext* loctx) -> XlaOpVector {
-    xla::XlaOp op0 = loctx->GetOutputOp(node.operand(0));
-    xla::XlaOp op1 = loctx->GetOutputOp(node.operand(1));
+    xla::XlaOp op0 = loctx->GetOutputOp(node.operand_with_shape(0));
+    xla::XlaOp op1 = loctx->GetOutputOp(node.operand_with_shape(1));
     return node.ReturnOp(XlaHelpers::PromotedMul(op0, op1), loctx);
   };
   return ops::GenericOp(
@@ -48,8 +48,8 @@ NodePtr operator*(const Value& node1, const Value& node2) {
 
 NodePtr operator/(const Value& node1, const Value& node2) {
   auto lower_fn = [](const Node& node, LoweringContext* loctx) -> XlaOpVector {
-    xla::XlaOp op0 = loctx->GetOutputOp(node.operand(0));
-    xla::XlaOp op1 = loctx->GetOutputOp(node.operand(1));
+    xla::XlaOp op0 = loctx->GetOutputOp(node.operand_with_shape(0));
+    xla::XlaOp op1 = loctx->GetOutputOp(node.operand_with_shape(1));
     return node.ReturnOp(XlaHelpers::PromotedDiv(op0, op1), loctx);
   };
   return ops::GenericOp(

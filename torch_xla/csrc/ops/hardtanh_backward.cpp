@@ -31,8 +31,8 @@ NodePtr HardtanhBackward::Clone(OpList operands) const {
 }
 
 XlaOpVector HardtanhBackward::Lower(LoweringContext* loctx) const {
-  xla::XlaOp grad_output = loctx->GetOutputOp(operand(0));
-  xla::XlaOp input = loctx->GetOutputOp(operand(1));
+  xla::XlaOp grad_output = loctx->GetOutputOp(operand_with_shape(0));
+  xla::XlaOp input = loctx->GetOutputOp(operand_with_shape(1));
   xla::XlaOp output =
       BuildHardtanhBackward(grad_output, input, min_val_, max_val_);
   return ReturnOp(output, loctx);

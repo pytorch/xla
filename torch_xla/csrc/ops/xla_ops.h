@@ -16,7 +16,7 @@ class OpKindWrapper {
 
   const torch::lazy::OpKind& operator*() const { return get(); }
 
-  operator OpKind() const { return get(); }
+  operator torch::lazy::OpKind() const { return get(); }
 
  private:
   const torch::lazy::OpKind& get() const {

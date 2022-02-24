@@ -39,9 +39,9 @@ NodePtr L1LossBackward::Clone(OpList operands) const {
 }
 
 XlaOpVector L1LossBackward::Lower(LoweringContext* loctx) const {
-  xla::XlaOp grad_output = loctx->GetOutputOp(operand(0));
-  xla::XlaOp input = loctx->GetOutputOp(operand(1));
-  xla::XlaOp target = loctx->GetOutputOp(operand(2));
+  xla::XlaOp grad_output = loctx->GetOutputOp(operand_with_shape(0));
+  xla::XlaOp input = loctx->GetOutputOp(operand_with_shape(1));
+  xla::XlaOp target = loctx->GetOutputOp(operand_with_shape(2));
   return ReturnOp(BuildL1LossBackward(grad_output, input, target, reduction_),
                   loctx);
 }

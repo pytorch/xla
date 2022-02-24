@@ -5,10 +5,10 @@
 namespace torch_xla {
 namespace ir {
 
-std::vector<const Node*> Util::ComputePostOrder(const Node* node,
+std::vector<const ir::Node*> Util::ComputePostOrder(const ir::Node* node,
                                                 EmissionMap* emap) {
-  std::vector<const Node*> post_order;
-  std::vector<const Node*> queue;
+  std::vector<const ir::Node*> post_order;
+  std::vector<const ir::Node*> queue;
   queue.push_back(node);
   while (!queue.empty()) {
     node = queue.back();
@@ -41,9 +41,9 @@ std::vector<const Node*> Util::ComputePostOrder(const Node* node,
   return post_order;
 }
 
-std::vector<const Node*> Util::ComputePostOrder(
-    absl::Span<const Node* const> nodes, EmissionMap* emap) {
-  std::vector<const Node*> post_order;
+std::vector<const ir::Node*> Util::ComputePostOrder(
+    absl::Span<const ir::Node* const> nodes, EmissionMap* emap) {
+  std::vector<const ir::Node*> post_order;
   for (auto node : nodes) {
     auto node_post_order = ComputePostOrder(node, emap);
     post_order.insert(post_order.end(), node_post_order.begin(),
@@ -52,15 +52,15 @@ std::vector<const Node*> Util::ComputePostOrder(
   return post_order;
 }
 
-std::vector<const Node*> Util::ComputePostOrder(
-    absl::Span<const Node* const> nodes) {
+std::vector<const ir::Node*> Util::ComputePostOrder(
+    absl::Span<const ir::Node* const> nodes) {
   EmissionMap emap;
   return ComputePostOrder(nodes, &emap);
 }
 
-std::vector<Value> Util::Clone(absl::Span<const Value> values,
-                               absl::Span<const Node* const> post_order) {
-  std::unordered_map<const Node*, NodePtr> clone_map;
+std::vector<Value> Util::Clone(absl::Span<const ir::Value> values,
+                               absl::Span<const ir::Node* const> post_order) {
+  std::unordered_map<const ir::Node*, ir::NodePtr> clone_map;
   for (auto node : post_order) {
     if (clone_map.count(node) > 0) {
       continue;
@@ -85,16 +85,16 @@ std::vector<Value> Util::Clone(absl::Span<const Value> values,
 }
 
 std::vector<Value> Util::Clone(absl::Span<const Value> values) {
-  std::vector<const Node*> nodes;
+  std::vector<const ir::Node*> nodes;
   for (auto& value : values) {
     nodes.push_back(value.node.get());
   }
-  std::vector<const Node*> post_order = ComputePostOrder(nodes);
+  std::vector<const ir::Node*> post_order = ComputePostOrder(nodes);
   return Clone(values, post_order);
 }
 
-size_t Util::GetGraphSize(absl::Span<const Node* const> nodes) {
-  std::vector<const Node*> post_order = ComputePostOrder(nodes);
+size_t Util::GetGraphSize(absl::Span<const ir::Node* const> nodes) {
+  std::vector<const ir::Node*> post_order = ComputePostOrder(nodes);
   return post_order.size();
 }
 
