@@ -23,9 +23,6 @@ ENV USE_CUDA "0"
 ENV XLA_CUDA "${cuda}"
 ENV TF_CUDA_COMPUTE_CAPABILITIES "${cuda_compute}"
 
-# Whether the build is running on GCB
-ENV CLOUD_BUILD "${cloud_build}"
-
 # Whether to build torch and torch_xla libraries with CXX ABI
 ENV CXX_ABI "${cxx_abi}"
 ENV _GLIBCXX_USE_CXX11_ABI "${cxx_abi}"
@@ -33,12 +30,15 @@ ENV _GLIBCXX_USE_CXX11_ABI "${cxx_abi}"
 # Whether to build for TPUVM mode
 ENV TPUVM_MODE "${tpuvm}"
 
+# Maximum number of jobs to use for bazel build
+ENV BAZEL_JOBS "${bazel_jobs}"
+
 # To get around issue of Cloud Build with recursive submodule update
 # clone recursively from pytorch/xla if building docker image with
 # cloud build. Otherwise, just use local.
 # https://github.com/GoogleCloudPlatform/cloud-builders/issues/435
 COPY . /pytorch/xla
-RUN if [ "${cloud_build}" = true ]; then github_branch="${release_version}" && \
+RUN if [ "${git_clone}" = true ]; then github_branch="${release_version}" && \
   if [ "${release_version}" = "nightly" ]; then github_branch="master"; fi && \
   cd /pytorch && \
   rm -rf xla && \
@@ -46,9 +46,7 @@ RUN if [ "${cloud_build}" = true ]; then github_branch="${release_version}" && \
   cd / && \
   git clone -b "${github_branch}" --recursive https://github.com/pytorch-tpu/examples tpu-examples; fi
 
-ENV CLOUD_BUILD false
 RUN cd /pytorch && bash xla/scripts/build_torch_wheels.sh ${python_version} ${release_version}
-ENV CLOUD_BUILD "${cloud_build}"
 
 # Use conda environment on startup or when running scripts.
 RUN echo "conda activate pytorch" >> ~/.bashrc
