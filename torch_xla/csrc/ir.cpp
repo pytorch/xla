@@ -68,23 +68,6 @@ ShapeCache* GetShapeCache() {
   return cache;
 }
 
-// void EmitShortFrameInfo(std::ostream& stream,
-//                         const std::vector<torch::lazy::SourceLocation>&
-//                         frames) {
-//   if (!frames.empty()) {
-//     const torch::lazy::SourceLocation& frame = frames.front();
-//     std::string::size_type pos = frame.file.find_last_of('/');
-//     if (pos == std::string::npos) {
-//       pos = 0;
-//     } else {
-//       ++pos;
-//     }
-//     stream << ", location=" << frame.function << "@" <<
-//     frame.file.substr(pos)
-//            << ":" << frame.line;
-//   }
-// }
-
 }  // namespace
 
 bool Use::operator<(const Use& rhs) const {
