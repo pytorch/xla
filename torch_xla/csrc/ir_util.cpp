@@ -6,7 +6,7 @@ namespace torch_xla {
 namespace ir {
 
 std::vector<const ir::Node*> Util::ComputePostOrder(const ir::Node* node,
-                                                EmissionMap* emap) {
+                                                    EmissionMap* emap) {
   std::vector<const ir::Node*> post_order;
   std::vector<const ir::Node*> queue;
   queue.push_back(node);

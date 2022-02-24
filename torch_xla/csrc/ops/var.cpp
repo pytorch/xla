@@ -39,7 +39,7 @@ Var::Var(const Value& input, std::vector<int64_t> dimensions,
 
 NodePtr Var::Clone(OpList operands) const {
   return ir::MakeNode<Var>(operands.at(0), dimensions_, correction_,
-                       keep_reduced_dimensions_);
+                           keep_reduced_dimensions_);
 }
 
 XlaOpVector Var::Lower(LoweringContext* loctx) const {

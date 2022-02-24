@@ -27,7 +27,7 @@ class Util {
   // emitted inside the emission map. An error is generated if a loop is
   // detected.
   static std::vector<const ir::Node*> ComputePostOrder(const ir::Node* node,
-                                                   EmissionMap* emap);
+                                                       EmissionMap* emap);
 
   static std::vector<const ir::Node*> ComputePostOrder(
       absl::Span<const ir::Node* const> nodes, EmissionMap* emap);

@@ -18,8 +18,8 @@ ScatterAdd::ScatterAdd(const Value& input, const Value& index, const Value& src,
       dim_(dim) {}
 
 NodePtr ScatterAdd::Clone(OpList operands) const {
-  return ir::MakeNode<ScatterAdd>(operands.at(0), operands.at(1), operands.at(2),
-                              dim_);
+  return ir::MakeNode<ScatterAdd>(operands.at(0), operands.at(1),
+                                  operands.at(2), dim_);
 }
 
 XlaOpVector ScatterAdd::Lower(LoweringContext* loctx) const {

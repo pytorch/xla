@@ -54,8 +54,8 @@ NodePtr NllLoss2d::Clone(OpList operands) const {
   if (operands.size() > 2) {
     weight = operands.at(2);
   }
-  return ir::MakeNode<NllLoss2d>(operands.at(0), operands.at(1), weight, reduction_,
-                             ignore_index_);
+  return ir::MakeNode<NllLoss2d>(operands.at(0), operands.at(1), weight,
+                                 reduction_, ignore_index_);
 }
 
 XlaOpVector NllLoss2d::Lower(LoweringContext* loctx) const {

@@ -10,13 +10,14 @@ namespace ops {
 
 ThresholdBackward::ThresholdBackward(const Value& grad_output,
                                      const Value& input, float threshold)
-    : Node(torch::lazy::OpKind(at::aten::threshold_backward), {grad_output, input},
-           input.shape(), /*num_outputs=*/1, torch::lazy::MHash(threshold)),
+    : Node(torch::lazy::OpKind(at::aten::threshold_backward),
+           {grad_output, input}, input.shape(), /*num_outputs=*/1,
+           torch::lazy::MHash(threshold)),
       threshold_(threshold) {}
 
 NodePtr ThresholdBackward::Clone(OpList operands) const {
   return ir::MakeNode<ThresholdBackward>(operands.at(0), operands.at(1),
-                                     threshold_);
+                                         threshold_);
 }
 
 XlaOpVector ThresholdBackward::Lower(LoweringContext* loctx) const {

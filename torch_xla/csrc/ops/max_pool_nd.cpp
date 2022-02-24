@@ -59,8 +59,8 @@ MaxPoolNd::MaxPoolNd(const Value& input, int64_t spatial_dim_count,
       ceil_mode_(ceil_mode) {}
 
 NodePtr MaxPoolNd::Clone(OpList operands) const {
-  return ir::MakeNode<MaxPoolNd>(operands.at(0), spatial_dim_count_, kernel_size_,
-                             stride_, padding_, ceil_mode_);
+  return ir::MakeNode<MaxPoolNd>(operands.at(0), spatial_dim_count_,
+                                 kernel_size_, stride_, padding_, ceil_mode_);
 }
 
 XlaOpVector MaxPoolNd::Lower(LoweringContext* loctx) const {

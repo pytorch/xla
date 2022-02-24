@@ -66,8 +66,8 @@ NodePtr NllLoss2dBackward::Clone(OpList operands) const {
     total_weight = operands.at(4);
   }
   return ir::MakeNode<NllLoss2dBackward>(operands.at(0), operands.at(1),
-                                     operands.at(2), weight, total_weight,
-                                     reduction_, ignore_index_);
+                                         operands.at(2), weight, total_weight,
+                                         reduction_, ignore_index_);
 }
 
 XlaOpVector NllLoss2dBackward::Lower(LoweringContext* loctx) const {

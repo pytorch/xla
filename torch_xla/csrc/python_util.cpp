@@ -43,7 +43,8 @@ std::vector<torch::lazy::SourceLocation> GetPythonFrames() {
 }
 
 // std::ostream& operator<<(std::ostream& stream,
-//                          const std::vector<torch::lazy::SourceLocation>& frames) {
+//                          const std::vector<torch::lazy::SourceLocation>&
+//                          frames) {
 //   stream << "Python Frames:\n";
 //   for (auto& location : frames) {
 //     stream << "  " << location.function << " (" << location.file << ":"

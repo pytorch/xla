@@ -25,7 +25,8 @@ xla::Shape NodeOutputShape(const Value& grad_output, const Value& input,
 
 L1LossBackward::L1LossBackward(const Value& grad_output, const Value& input,
                                const Value& target, ReductionMode reduction)
-    : Node(torch::lazy::OpKind(at::aten::l1_loss_backward), {grad_output, input, target},
+    : Node(torch::lazy::OpKind(at::aten::l1_loss_backward),
+           {grad_output, input, target},
            [&]() {
              return NodeOutputShape(grad_output, input, target, reduction);
            },
@@ -35,7 +36,7 @@ L1LossBackward::L1LossBackward(const Value& grad_output, const Value& input,
 
 NodePtr L1LossBackward::Clone(OpList operands) const {
   return ir::MakeNode<L1LossBackward>(operands.at(0), operands.at(1),
-                                  operands.at(2), reduction_);
+                                      operands.at(2), reduction_);
 }
 
 XlaOpVector L1LossBackward::Lower(LoweringContext* loctx) const {

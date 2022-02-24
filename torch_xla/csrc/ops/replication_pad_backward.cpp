@@ -33,7 +33,7 @@ ReplicationPadBackward::ReplicationPadBackward(const Value& grad_output,
 
 NodePtr ReplicationPadBackward::Clone(OpList operands) const {
   return ir::MakeNode<ReplicationPadBackward>(operands.at(0), operands.at(1),
-                                          padding_);
+                                              padding_);
 }
 
 XlaOpVector ReplicationPadBackward::Lower(LoweringContext* loctx) const {

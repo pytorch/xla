@@ -47,8 +47,8 @@ NodePtr BinaryCrossEntropy::Clone(OpList operands) const {
   if (operands.size() > 2) {
     weight = operands.at(2);
   }
-  return ir::MakeNode<BinaryCrossEntropy>(operands.at(0), operands.at(1), weight,
-                                      reduction_);
+  return ir::MakeNode<BinaryCrossEntropy>(operands.at(0), operands.at(1),
+                                          weight, reduction_);
 }
 
 XlaOpVector BinaryCrossEntropy::Lower(LoweringContext* loctx) const {

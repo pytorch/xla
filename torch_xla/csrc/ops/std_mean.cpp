@@ -41,7 +41,7 @@ StdMean::StdMean(const Value& input, std::vector<int64_t> dimensions,
 
 NodePtr StdMean::Clone(OpList operands) const {
   return ir::MakeNode<StdMean>(operands.at(0), dimensions_, correction_,
-                           keep_reduced_dimensions_);
+                               keep_reduced_dimensions_);
 }
 
 XlaOpVector StdMean::Lower(LoweringContext* loctx) const {

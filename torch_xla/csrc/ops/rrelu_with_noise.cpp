@@ -23,7 +23,7 @@ RreluWithNoise::RreluWithNoise(const Value& input, const Value& seed,
 
 NodePtr RreluWithNoise::Clone(OpList operands) const {
   return ir::MakeNode<RreluWithNoise>(operands.at(0), operands.at(1), lower_,
-                                  upper_, training_);
+                                      upper_, training_);
 }
 
 XlaOpVector RreluWithNoise::Lower(LoweringContext* loctx) const {

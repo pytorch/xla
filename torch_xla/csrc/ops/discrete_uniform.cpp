@@ -18,7 +18,7 @@ DiscreteUniform::DiscreteUniform(const Value& from, const Value& to,
 
 NodePtr DiscreteUniform::Clone(OpList operands) const {
   return ir::MakeNode<DiscreteUniform>(operands.at(0), operands.at(1),
-                                   operands.at(2), shape());
+                                       operands.at(2), shape());
 }
 
 XlaOpVector DiscreteUniform::Lower(LoweringContext* loctx) const {

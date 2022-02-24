@@ -39,7 +39,7 @@ Nms::Nms(const Value& boxes, const Value& scores, const Value& score_threshold,
 
 NodePtr Nms::Clone(OpList operands) const {
   return ir::MakeNode<Nms>(operands.at(0), operands.at(1), operands.at(2),
-                       operands.at(3), output_size_);
+                           operands.at(3), output_size_);
 }
 
 XlaOpVector Nms::Lower(LoweringContext* loctx) const {

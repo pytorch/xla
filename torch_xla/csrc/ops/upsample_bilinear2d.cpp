@@ -23,7 +23,7 @@ UpsampleBilinear::UpsampleBilinear(const Value& input,
 
 NodePtr UpsampleBilinear::Clone(OpList operands) const {
   return ir::MakeNode<UpsampleBilinear>(operands.at(0), output_size_,
-                                    align_corners_);
+                                        align_corners_);
 }
 
 XlaOpVector UpsampleBilinear::Lower(LoweringContext* loctx) const {

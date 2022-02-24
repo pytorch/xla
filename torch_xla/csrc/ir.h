@@ -32,19 +32,6 @@ using NodePtr = std::shared_ptr<ir::Node>;
 
 using XlaOpVector = tensorflow::gtl::InlinedVector<xla::XlaOp, 1>;
 
-// TODO @wonjoo Remove
-// The base class for user defined metadata which is possible to attach to IR
-// nodes.
-// struct UserMetaData {
-//   virtual ~UserMetaData() {}
-// };
-
-// TODO @wonjoo Remove
-// struct MetaData {
-//   std::string scope;
-//   std::vector<SourceLocation> frame_info;
-// };
-
 // Represents a use of the output of a given node.
 // If use U is within node N, it means that node U.node is using the output
 // U.index of the node N.
@@ -104,7 +91,8 @@ struct Output {
   size_t index = 0;
 };
 
-inline std::ostream& operator<<(std::ostream& stream, const ir::Output& output) {
+inline std::ostream& operator<<(std::ostream& stream,
+                                const ir::Output& output) {
   stream << output.ToString();
   return stream;
 }
@@ -117,7 +105,8 @@ using OutputMap = std::unordered_map<ir::Output, T, ir::Output::Hasher>;
 // Represents an input/operand for a Node object.
 struct Value {
   Value() = default;
-  Value(ir::NodePtr node, size_t index = 0) : node(std::move(node)), index(index) {}
+  Value(ir::NodePtr node, size_t index = 0)
+      : node(std::move(node)), index(index) {}
 
   // Retrieves the shape of this value. If the IR Node generating the value is a
   // multi-output node, the shape returned by this API will not be the full
@@ -137,37 +126,6 @@ struct Value {
   ir::NodePtr node;
   size_t index = 0;
 };
-
-// TODO @wonjoo Remove this, as exact same is defined in torch::lazy::OpKind
-// The Kind of operation a Node can be associated to.
-// struct OpKind {
-//   OpKind() = default;
-//   explicit OpKind(c10::Symbol op) : op(std::move(op)) {}
-
-//   bool operator==(const OpKind& rhs) const { return op == rhs.op; }
-//   bool operator!=(const OpKind& rhs) const { return !operator==(rhs); }
-//   bool operator<(const OpKind& rhs) const {
-//     return c10::unique_t(op) < c10::unique_t(rhs.op);
-//   }
-
-//   torch::lazy::hash_t hash() const;
-
-//   std::string ToString() const { return op.toQualString(); }
-
-//   // Retrieves an existing operation object, or creates a new one. Operations
-//   // that are specific to the XLA side, should live within the 'xla::'
-//   // namespace.
-//   static OpKind Get(const std::string& name);
-
-//   c10::Symbol op;
-// };
-
-// TODO @wonjoo Remove
-// inline std::ostream& operator<<(std::ostream& stream, const
-// torch::lazy::OpKind& op) {
-//   stream << op.ToString();
-//   return stream;
-// }
 
 using OpList = absl::Span<const Value>;
 
@@ -198,12 +156,6 @@ class Node : public torch::lazy::Node {
 
   virtual ~Node();
 
-  // TODO @wonjoo Remove
-  // const torch::lazy::OpKind& op() const { return op_; }
-
-  // TODO @wonjoo Remove
-  // size_t num_outputs() const { return num_outputs_; }
-
   // Retrieves the full shape of the IR Node. Note that if this is a
   // multi-output node, the returned shape will be a tuple.
   const xla::Shape& shape() const { return shape_; }
@@ -212,31 +164,23 @@ class Node : public torch::lazy::Node {
   // multi-output node, output_index must be zero.
   const xla::Shape& shape(size_t output_index) const;
 
-  // TODO @wonjoo Remove
-  const std::vector<torch::lazy::Output>& operands() const { return operands_as_outputs_lazy_; }
+  const std::vector<torch::lazy::Output>& operands() const {
+    return operands_as_outputs_lazy_;
+  }
 
-  const std::vector<ir::Output>& operands_with_shape() const { return operands_as_outputs_; }
+  const std::vector<ir::Output>& operands_with_shape() const {
+    return operands_as_outputs_;
+  }
 
-  // TODO @wonjoo Remove
-  const torch::lazy::Output& operand(size_t i) const { return operands_as_outputs_lazy_.at(i); }
+  const torch::lazy::Output& operand(size_t i) const {
+    return operands_as_outputs_lazy_.at(i);
+  }
 
-  const ir::Output& operand_with_shape(size_t i) const { return operands_as_outputs_.at(i); }
+  const ir::Output& operand_with_shape(size_t i) const {
+    return operands_as_outputs_.at(i);
+  }
 
   const std::set<ir::Use>& uses() const { return uses_; }
-
-  // torch::lazy::hash_t node_hash() const { return node_hash_; }
-
-  // torch::lazy::hash_t hash() const { return hash_; }
-
-  // const MetaData& metadata() const { return metadata_; }
-
-  // torch::lazy::UserMetaData* user_metadata() const { return user_metadata_.get(); }
-
-  // std::shared_ptr<torch::lazy::UserMetaData> SetUserMetadata(
-  //     std::shared_ptr<torch::lazy::UserMetaData> user_meta) {
-  //   std::swap(user_metadata_, user_meta);
-  //   return user_meta;
-  // }
 
   void ReplaceOperand(size_t operand_no, NodePtr node, size_t index = 0);
 

@@ -25,7 +25,7 @@ UpsampleBilinearBackward::UpsampleBilinearBackward(
 
 NodePtr UpsampleBilinearBackward::Clone(OpList operands) const {
   return ir::MakeNode<UpsampleBilinearBackward>(operands.at(0), output_size_,
-                                            input_size_, align_corners_);
+                                                input_size_, align_corners_);
 }
 
 XlaOpVector UpsampleBilinearBackward::Lower(LoweringContext* loctx) const {

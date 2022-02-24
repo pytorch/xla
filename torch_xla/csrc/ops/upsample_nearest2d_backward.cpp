@@ -23,7 +23,7 @@ UpsampleNearestBackward::UpsampleNearestBackward(
 
 NodePtr UpsampleNearestBackward::Clone(OpList operands) const {
   return ir::MakeNode<UpsampleNearestBackward>(operands.at(0), output_size_,
-                                           input_size_);
+                                               input_size_);
 }
 
 XlaOpVector UpsampleNearestBackward::Lower(LoweringContext* loctx) const {

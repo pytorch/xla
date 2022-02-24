@@ -34,16 +34,17 @@ AmpUpdateScale::AmpUpdateScale(const Value& current_scale,
 
 NodePtr AmpUpdateScale::Clone(OpList operands) const {
   return ir::MakeNode<AmpUpdateScale>(operands[0], operands[1], operands[2],
-                                  scale_growth_factor_, scale_backoff_factor_,
-                                  growth_interval_);
+                                      scale_growth_factor_,
+                                      scale_backoff_factor_, growth_interval_);
 }
 
 XlaOpVector AmpUpdateScale::Lower(LoweringContext* loctx) const {
   return ReturnOps(
       BuildAmpUpdateScale(loctx->GetOutputOp(operand_with_shape(0)),
                           loctx->GetOutputOp(operand_with_shape(1)),
-                          loctx->GetOutputOp(operand_with_shape(2)), scale_growth_factor_,
-                          scale_backoff_factor_, growth_interval_),
+                          loctx->GetOutputOp(operand_with_shape(2)),
+                          scale_growth_factor_, scale_backoff_factor_,
+                          growth_interval_),
       loctx);
 }
 

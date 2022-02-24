@@ -18,8 +18,8 @@ DiagonalViewUpdate::DiagonalViewUpdate(const Value& target, const Value& input,
       dim2_(dim2) {}
 
 NodePtr DiagonalViewUpdate::Clone(OpList operands) const {
-  return ir::MakeNode<DiagonalViewUpdate>(operands.at(0), operands.at(1), offset_,
-                                      dim1_, dim2_);
+  return ir::MakeNode<DiagonalViewUpdate>(operands.at(0), operands.at(1),
+                                          offset_, dim1_, dim2_);
 }
 
 XlaOpVector DiagonalViewUpdate::Lower(LoweringContext* loctx) const {

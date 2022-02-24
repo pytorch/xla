@@ -10,7 +10,8 @@ namespace ops {
 
 class UserComputation : public Node {
  public:
-  UserComputation(torch::lazy::OpKind op, OpList operands, ComputationPtr computation);
+  UserComputation(torch::lazy::OpKind op, OpList operands,
+                  ComputationPtr computation);
 
   NodePtr Clone(OpList operands) const override;
 

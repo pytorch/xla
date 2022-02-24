@@ -35,7 +35,8 @@ All::All(const Value& input, std::vector<int64_t> dimensions,
       keep_reduced_dimensions_(keep_reduced_dimensions) {}
 
 NodePtr All::Clone(OpList operands) const {
-  return ir::MakeNode<All>(operands.at(0), dimensions_, keep_reduced_dimensions_);
+  return ir::MakeNode<All>(operands.at(0), dimensions_,
+                           keep_reduced_dimensions_);
 }
 
 XlaOpVector All::Lower(LoweringContext* loctx) const {

@@ -46,8 +46,9 @@ ReduceScatter::ReduceScatter(AllReduceType reduce_type, const Value& input,
       groups_(std::move(groups)) {}
 
 NodePtr ReduceScatter::Clone(OpList operands) const {
-  return ir::MakeNode<ReduceScatter>(reduce_type_, operands.at(0), operands.at(1),
-                                 scale_, scatter_dim_, shard_count_, groups_);
+  return ir::MakeNode<ReduceScatter>(reduce_type_, operands.at(0),
+                                     operands.at(1), scale_, scatter_dim_,
+                                     shard_count_, groups_);
 }
 
 XlaOpVector ReduceScatter::Lower(LoweringContext* loctx) const {

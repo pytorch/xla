@@ -44,7 +44,7 @@ VarMean::VarMean(const Value& input, std::vector<int64_t> dimensions,
 
 NodePtr VarMean::Clone(OpList operands) const {
   return ir::MakeNode<VarMean>(operands.at(0), dimensions_, correction_,
-                           keep_reduced_dimensions_);
+                               keep_reduced_dimensions_);
 }
 
 XlaOpVector VarMean::Lower(LoweringContext* loctx) const {

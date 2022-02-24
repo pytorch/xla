@@ -26,14 +26,15 @@ xla::Shape NodeOutputShape(const Value& grad_output, const Value& input,
 ReflectionPad2dBackward::ReflectionPad2dBackward(const Value& grad_output,
                                                  const Value& input,
                                                  std::vector<int64_t> padding)
-    : Node(torch::lazy::OpKind(at::aten::reflection_pad2d_backward), {grad_output, input},
+    : Node(torch::lazy::OpKind(at::aten::reflection_pad2d_backward),
+           {grad_output, input},
            [&]() { return NodeOutputShape(grad_output, input, padding); },
            /*num_outputs=*/1, torch::lazy::MHash(padding)),
       padding_(std::move(padding)) {}
 
 NodePtr ReflectionPad2dBackward::Clone(OpList operands) const {
   return ir::MakeNode<ReflectionPad2dBackward>(operands.at(0), operands.at(1),
-                                           padding_);
+                                               padding_);
 }
 
 XlaOpVector ReflectionPad2dBackward::Lower(LoweringContext* loctx) const {

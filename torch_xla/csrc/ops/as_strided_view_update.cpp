@@ -65,8 +65,8 @@ std::string AsStridedViewUpdate::ToString() const {
 }
 
 NodePtr AsStridedViewUpdate::Clone(OpList operands) const {
-  return ir::MakeNode<AsStridedViewUpdate>(operands.at(0), operands.at(1), size_,
-                                       stride_, storage_offset_);
+  return ir::MakeNode<AsStridedViewUpdate>(operands.at(0), operands.at(1),
+                                           size_, stride_, storage_offset_);
 }
 
 XlaOpVector AsStridedViewUpdate::Lower(LoweringContext* loctx) const {

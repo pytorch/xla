@@ -38,7 +38,7 @@ MseLossBackward::MseLossBackward(const Value& grad_output, const Value& input,
 
 NodePtr MseLossBackward::Clone(OpList operands) const {
   return ir::MakeNode<MseLossBackward>(operands.at(0), operands.at(1),
-                                   operands.at(2), reduction_);
+                                       operands.at(2), reduction_);
 }
 
 XlaOpVector MseLossBackward::Lower(LoweringContext* loctx) const {

@@ -36,7 +36,8 @@ std::vector<Value> GetOperandList(absl::Span<const Value> operands,
 
 AmpForachNonFiniteCheckAndUnscale::AmpForachNonFiniteCheckAndUnscale(
     const OpList& inputs, const Value& found_inf, const Value& inv_scale)
-    : Node(torch::lazy::OpKind(at::aten::_amp_foreach_non_finite_check_and_unscale_),
+    : Node(torch::lazy::OpKind(
+               at::aten::_amp_foreach_non_finite_check_and_unscale_),
            GetOperandList(inputs, found_inf, inv_scale),
            NodeOutputShape(inputs, found_inf),
            /*num_outputs=*/inputs.size() + 1) {}
@@ -44,8 +45,8 @@ AmpForachNonFiniteCheckAndUnscale::AmpForachNonFiniteCheckAndUnscale(
 NodePtr AmpForachNonFiniteCheckAndUnscale::Clone(OpList operands) const {
   std::vector<Value> operand_list(operands.begin(), operands.end() - 2);
   size_t sz = operand_list.size();
-  return ir::MakeNode<AmpForachNonFiniteCheckAndUnscale>(operand_list, operands[sz],
-                                                     operands[sz + 1]);
+  return ir::MakeNode<AmpForachNonFiniteCheckAndUnscale>(
+      operand_list, operands[sz], operands[sz + 1]);
 }
 
 XlaOpVector AmpForachNonFiniteCheckAndUnscale::Lower(
@@ -54,11 +55,13 @@ XlaOpVector AmpForachNonFiniteCheckAndUnscale::Lower(
   for (size_t i = 0; i < operands_with_shape().size() - 2; ++i) {
     inputs.push_back(loctx->GetOutputOp(operand_with_shape(i)));
   }
-  return ReturnOps(
-      BuildAmpForeachNonFiniteCheckAndUnscale(
-          inputs, loctx->GetOutputOp(operand_with_shape(operands_with_shape().size() - 2)),
-          loctx->GetOutputOp(operand_with_shape(operands_with_shape().size() - 1))),
-      loctx);
+  return ReturnOps(BuildAmpForeachNonFiniteCheckAndUnscale(
+                       inputs,
+                       loctx->GetOutputOp(operand_with_shape(
+                           operands_with_shape().size() - 2)),
+                       loctx->GetOutputOp(operand_with_shape(
+                           operands_with_shape().size() - 1))),
+                   loctx);
 }
 
 }  // namespace ops

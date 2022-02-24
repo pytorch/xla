@@ -14,12 +14,13 @@ namespace ir {
 namespace ops {
 
 Scalar::Scalar(const at::Scalar& value, xla::Shape shape)
-    : Node(torch::lazy::OpKind(at::prim::Constant), std::move(shape), /*num_outputs=*/1,
-           ScalarHash(value)),
+    : Node(torch::lazy::OpKind(at::prim::Constant), std::move(shape),
+           /*num_outputs=*/1, ScalarHash(value)),
       value_(std::move(value)) {}
 
 Scalar::Scalar(const at::Scalar& value, xla::PrimitiveType type)
-    : Node(torch::lazy::OpKind(at::prim::Constant), xla::ShapeUtil::MakeShape(type, {}),
+    : Node(torch::lazy::OpKind(at::prim::Constant),
+           xla::ShapeUtil::MakeShape(type, {}),
            /*num_outputs=*/1, ScalarHash(value)),
       value_(std::move(value)) {}
 

@@ -47,8 +47,9 @@ inline NodePtr GenericOp(
                                           hash_seed);
 }
 
-inline NodePtr GenericOp(torch::lazy::OpKind op, xla::Shape shape, Generic::LowerFn lower_fn,
-                         size_t num_outputs, torch::lazy::hash_t hash_seed) {
+inline NodePtr GenericOp(torch::lazy::OpKind op, xla::Shape shape,
+                         Generic::LowerFn lower_fn, size_t num_outputs,
+                         torch::lazy::hash_t hash_seed) {
   return torch_xla::ir::MakeNode<Generic>(std::move(op), std::move(shape),
                                           std::move(lower_fn), num_outputs,
                                           hash_seed);

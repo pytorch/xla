@@ -48,7 +48,8 @@ AvgPoolNdBackward::AvgPoolNdBackward(
     const Value& grad_output, const Value& input, int64_t spatial_dim_count,
     std::vector<int64_t> kernel_size, std::vector<int64_t> stride,
     std::vector<int64_t> padding, bool ceil_mode, bool count_include_pad)
-    : Node(torch::lazy::OpKind(AvgNdBackwardSymbol(spatial_dim_count)), {grad_output, input},
+    : Node(torch::lazy::OpKind(AvgNdBackwardSymbol(spatial_dim_count)),
+           {grad_output, input},
            [&]() {
              return NodeOutputShape(grad_output, input, spatial_dim_count,
                                     kernel_size, stride, padding, ceil_mode,
@@ -65,9 +66,9 @@ AvgPoolNdBackward::AvgPoolNdBackward(
       count_include_pad_(count_include_pad) {}
 
 NodePtr AvgPoolNdBackward::Clone(OpList operands) const {
-  return ir::MakeNode<AvgPoolNdBackward>(operands.at(0), operands.at(1),
-                                     spatial_dim_count_, kernel_size_, stride_,
-                                     padding_, ceil_mode_, count_include_pad_);
+  return ir::MakeNode<AvgPoolNdBackward>(
+      operands.at(0), operands.at(1), spatial_dim_count_, kernel_size_, stride_,
+      padding_, ceil_mode_, count_include_pad_);
 }
 
 XlaOpVector AvgPoolNdBackward::Lower(LoweringContext* loctx) const {

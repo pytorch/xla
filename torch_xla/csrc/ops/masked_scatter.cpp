@@ -16,7 +16,7 @@ MaskedScatter::MaskedScatter(const Value& input, const Value& mask,
 
 NodePtr MaskedScatter::Clone(OpList operands) const {
   return ir::MakeNode<MaskedScatter>(operands.at(0), operands.at(1),
-                                 operands.at(2));
+                                     operands.at(2));
 }
 
 XlaOpVector MaskedScatter::Lower(LoweringContext* loctx) const {

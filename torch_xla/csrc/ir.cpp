@@ -69,7 +69,8 @@ ShapeCache* GetShapeCache() {
 }
 
 // void EmitShortFrameInfo(std::ostream& stream,
-//                         const std::vector<torch::lazy::SourceLocation>& frames) {
+//                         const std::vector<torch::lazy::SourceLocation>&
+//                         frames) {
 //   if (!frames.empty()) {
 //     const torch::lazy::SourceLocation& frame = frames.front();
 //     std::string::size_type pos = frame.file.find_last_of('/');
@@ -78,7 +79,8 @@ ShapeCache* GetShapeCache() {
 //     } else {
 //       ++pos;
 //     }
-//     stream << ", location=" << frame.function << "@" << frame.file.substr(pos)
+//     stream << ", location=" << frame.function << "@" <<
+//     frame.file.substr(pos)
 //            << ":" << frame.line;
 //   }
 // }
@@ -102,25 +104,9 @@ std::string Use::ToString() const {
   return ss.str();
 }
 
-// TODO @wonjoo Remove
-// size_t Output::Hasher::operator()(const Output& output) const {
-//   return torch::lazy::StdHashCombine(
-//       reinterpret_cast<std::ptrdiff_t>(output.node), output.index);
-// }
-
 const xla::Shape& Output::shape() const { return node->shape(index); }
 
 const xla::Shape& Output::node_shape() const { return node->shape(); }
-
-// torch::lazy::hash_t Output::hash() const {
-//   return torch::lazy::HashCombine(node->hash(), index);
-// }
-
-// std::string Output::ToString() const {
-//   std::stringstream ss;
-//   ss << node->ToString() << ", index=" << index;
-//   return ss.str();
-// }
 
 const xla::Shape& Value::shape() const { return node->shape(index); }
 
@@ -129,16 +115,6 @@ const xla::Shape& Value::node_shape() const { return node->shape(); }
 torch::lazy::hash_t Value::hash() const {
   return torch::lazy::HashCombine(node->hash(), index);
 }
-
-// TODO @wonjoo Remove
-// OpKind OpKind::Get(const std::string& name) {
-//   return OpKind(c10::Symbol::fromQualString(name));
-// }
-
-// TODO @wonjoo Remove
-// torch::lazy::hash_t OpKind::hash() const {
-//   return torch::lazy::StringHash(op.toQualString());
-// }
 
 Node::Node(torch::lazy::OpKind op, OpList operands, xla::Shape shape,
            size_t num_outputs, torch::lazy::hash_t hash_seed)
@@ -276,7 +252,8 @@ std::vector<torch::lazy::SourceLocation> Node::GetFrameInfo() {
   // This per IR Node. Since it is not unreasonable to have a many hundreds of
   // IR Node, this can be a multi-millisecond cost, which is not negligible.
   static bool wants_frames = xla::sys_util::GetEnvBool("XLA_IR_DEBUG", false);
-  return wants_frames ? GetPythonFrames() : std::vector<torch::lazy::SourceLocation>();
+  return wants_frames ? GetPythonFrames()
+                      : std::vector<torch::lazy::SourceLocation>();
 }
 
 ScopePusher::ScopePusher(const std::string& name) { PushScope(name); }

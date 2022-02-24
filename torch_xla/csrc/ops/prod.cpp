@@ -57,8 +57,8 @@ Prod::Prod(const Value& input, std::vector<int64_t> dimensions,
       dtype_(dtype) {}
 
 NodePtr Prod::Clone(OpList operands) const {
-  return ir::MakeNode<Prod>(operands.at(0), dimensions_, keep_reduced_dimensions_,
-                        dtype_);
+  return ir::MakeNode<Prod>(operands.at(0), dimensions_,
+                            keep_reduced_dimensions_, dtype_);
 }
 
 XlaOpVector Prod::Lower(LoweringContext* loctx) const {

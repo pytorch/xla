@@ -69,8 +69,8 @@ NativeBatchNormForward::NativeBatchNormForward(const Value& input,
 
 NodePtr NativeBatchNormForward::Clone(OpList operands) const {
   return ir::MakeNode<NativeBatchNormForward>(operands.at(0), operands.at(1),
-                                          operands.at(2), operands.at(3),
-                                          operands.at(4), training_, eps_);
+                                              operands.at(2), operands.at(3),
+                                              operands.at(4), training_, eps_);
 }
 
 XlaOpVector NativeBatchNormForward::Lower(LoweringContext* loctx) const {

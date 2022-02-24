@@ -20,7 +20,8 @@ class OpKindWrapper {
 
  private:
   const torch::lazy::OpKind& get() const {
-    std::call_once(once_, [this]() { op_kind_ = torch::lazy::OpKind::Get(name_); });
+    std::call_once(once_,
+                   [this]() { op_kind_ = torch::lazy::OpKind::Get(name_); });
     return op_kind_;
   }
 

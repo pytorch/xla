@@ -10,14 +10,14 @@ namespace ops {
 
 LeakyReluBackward::LeakyReluBackward(const Value& grad_output,
                                      const Value& input, double negative_slope)
-    : Node(torch::lazy::OpKind(at::aten::leaky_relu_backward), {grad_output, input},
-           input.shape(),
+    : Node(torch::lazy::OpKind(at::aten::leaky_relu_backward),
+           {grad_output, input}, input.shape(),
            /*num_outputs=*/1, torch::lazy::MHash(negative_slope)),
       negative_slope_(negative_slope) {}
 
 NodePtr LeakyReluBackward::Clone(OpList operands) const {
   return ir::MakeNode<LeakyReluBackward>(operands.at(0), operands.at(1),
-                                     negative_slope_);
+                                         negative_slope_);
 }
 
 XlaOpVector LeakyReluBackward::Lower(LoweringContext* loctx) const {

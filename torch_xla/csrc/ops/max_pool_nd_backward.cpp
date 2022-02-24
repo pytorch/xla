@@ -62,8 +62,8 @@ MaxPoolNdBackward::MaxPoolNdBackward(
 
 NodePtr MaxPoolNdBackward::Clone(OpList operands) const {
   return ir::MakeNode<MaxPoolNdBackward>(operands.at(0), operands.at(1),
-                                     spatial_dim_count_, kernel_size_, stride_,
-                                     padding_, ceil_mode_);
+                                         spatial_dim_count_, kernel_size_,
+                                         stride_, padding_, ceil_mode_);
 }
 
 XlaOpVector MaxPoolNdBackward::Lower(LoweringContext* loctx) const {

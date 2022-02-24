@@ -34,7 +34,7 @@ CollectivePermute::CollectivePermute(
 
 NodePtr CollectivePermute::Clone(OpList operands) const {
   return ir::MakeNode<CollectivePermute>(operands.at(0), operands.at(1),
-                                     source_target_pairs_);
+                                         source_target_pairs_);
 }
 
 XlaOpVector CollectivePermute::Lower(LoweringContext* loctx) const {

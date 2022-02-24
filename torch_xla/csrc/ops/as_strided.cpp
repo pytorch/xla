@@ -64,7 +64,8 @@ std::string AsStrided::ToString() const {
 }
 
 NodePtr AsStrided::Clone(OpList operands) const {
-  return ir::MakeNode<AsStrided>(operands.at(0), size_, stride_, storage_offset_);
+  return ir::MakeNode<AsStrided>(operands.at(0), size_, stride_,
+                                 storage_offset_);
 }
 
 XlaOpVector AsStrided::Lower(LoweringContext* loctx) const {

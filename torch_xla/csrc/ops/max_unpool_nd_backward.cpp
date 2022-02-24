@@ -50,7 +50,7 @@ MaxUnpoolNdBackward::MaxUnpoolNdBackward(const Value& grad_output,
 
 NodePtr MaxUnpoolNdBackward::Clone(OpList operands) const {
   return ir::MakeNode<MaxUnpoolNdBackward>(operands.at(0), operands.at(1),
-                                       operands.at(2), output_size_);
+                                           operands.at(2), output_size_);
 }
 
 XlaOpVector MaxUnpoolNdBackward::Lower(LoweringContext* loctx) const {

@@ -38,7 +38,8 @@ class HloMetadataSetter {
     return op_metadata;
   }
 
-  static void PopulateXlaOpMetadata(LoweringContext* loctx, const ir::Node* node) {
+  static void PopulateXlaOpMetadata(LoweringContext* loctx,
+                                    const ir::Node* node) {
     xla::OpMetadata metadata;
     // NOTE: we apply some string manipulation as xprof backend utility
     // for nesting/grouping traces depends on certain op name/type

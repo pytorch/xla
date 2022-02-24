@@ -11,8 +11,8 @@ namespace ir {
 namespace ops {
 
 Constant::Constant(xla::Literal value)
-    : Node(torch::lazy::OpKind(at::prim::Constant), value.shape(), /*num_outputs=*/1,
-           absl::Hash<xla::LiteralBase>{}(value)),
+    : Node(torch::lazy::OpKind(at::prim::Constant), value.shape(),
+           /*num_outputs=*/1, absl::Hash<xla::LiteralBase>{}(value)),
       value_(std::move(value)) {}
 
 std::string Constant::ToString() const {
