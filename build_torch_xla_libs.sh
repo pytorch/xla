@@ -40,8 +40,8 @@ if [[ "$TPUVM_MODE" == "1" ]]; then
 fi
 
 MAX_JOBS=
-if [[ "$XLA_CUDA" == "1" ]] && [[ "$CLOUD_BUILD" == "true" ]]; then
-  MAX_JOBS="--jobs=16"
+if [[ ! -z "$BAZEL_JOBS" ]]; then
+  MAX_JOBS="--jobs=$BAZEL_JOBS"
 fi
 
 OPTS+=(--cxxopt="-std=c++14")

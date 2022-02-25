@@ -1,0 +1,4 @@
+privatePoolV1Config:
+  workerConfig:
+    diskSizeGb: '500'
+    machineType: e2-standard-32
