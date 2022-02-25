@@ -6,11 +6,12 @@ steps:
   args: [
           'build',
           '--build-arg', 'base_image=${_DOCKER_BASE_IMAGE}',
-          '--build-arg', 'cloud_build=true',
           '--build-arg', 'cuda=${_CUDA}',
           '--build-arg', 'python_version=${_PYTHON_VERSION}',
           '--build-arg', 'release_version=${_RELEASE_VERSION}',
           '--build-arg', 'tpuvm=${_TPU_VM}',
+          '--build-arg', 'bazel_jobs=${_BAZEL_JOBS}',
+          '--build-arg', 'git_clone=${_GIT_CLONE}',
           '-t', 'gcr.io/tpu-pytorch/xla:${_IMAGE_NAME}',
           '-f', 'docker/Dockerfile', '.'
         ]
@@ -36,8 +37,11 @@ substitutions:
     _IMAGE_NAME: '${_RELEASE_VERSION}_${_PYTHON_VERSION}'
     _UPLOAD_SUBDIR: ''
     _TPU_VM: ''
+    _BAZEL_JOBS: ''
+    _GIT_CLONE: 'true'
 options:
-    machineType: 'N1_HIGHCPU_32'
+    pool:
+      name: 'projects/tpu-pytorch/locations/us-central1/workerPools/wheel_build'
     dynamic_substitutions: true
     substitution_option: 'ALLOW_LOOSE'
 timeout: 18000s
