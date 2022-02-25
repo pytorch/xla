@@ -101,7 +101,10 @@ torch::lazy::hash_t Value::hash() const {
 
 Node::Node(torch::lazy::OpKind op, OpList operands, xla::Shape shape,
            size_t num_outputs, torch::lazy::hash_t hash_seed)
-    : torch::lazy::Node(op, num_outputs, hash_seed),
+    : torch::lazy::Node(op, num_outputs, /* hash_func */
+                        [&](bool /*bakeInSizes*/) -> torch::lazy::hash_t {
+                          return GetOpHash(op_, shape_, hash_seed);
+                        }),
       op_(std::move(op)),
       num_outputs_(num_outputs),
       shape_(std::move(shape)),
@@ -126,7 +129,10 @@ Node::Node(torch::lazy::OpKind op, OpList operands,
 
 Node::Node(torch::lazy::OpKind op, xla::Shape shape, size_t num_outputs,
            torch::lazy::hash_t hash_seed)
-    : torch::lazy::Node(op, num_outputs, hash_seed),
+    : torch::lazy::Node(op, num_outputs, /* hash_func */
+                        [&](bool /*bakeInSizes*/) -> torch::lazy::hash_t {
+                          return GetOpHash(op_, shape_, hash_seed);
+                        }),
       op_(std::move(op)),
       num_outputs_(num_outputs),
       shape_(std::move(shape)),
