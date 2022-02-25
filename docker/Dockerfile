@@ -5,12 +5,13 @@ ARG base_image="debian:buster"
 FROM "${base_image}"
 
 ARG python_version="3.6"
-ARG cloud_build="false"
 ARG release_version="nightly"
 ARG cuda="0"
 ARG cuda_compute="7.0,7.5"
 ARG cxx_abi="0"
 ARG tpuvm=""
+ARG bazel_jobs=""
+ARG git_clone="false"
 
 RUN apt-get update
 RUN apt-get install -y git sudo python-pip python3-pip
@@ -23,9 +24,6 @@ ENV USE_CUDA "0"
 ENV XLA_CUDA "${cuda}"
 ENV TF_CUDA_COMPUTE_CAPABILITIES "${cuda_compute}"
 
-# Whether the build is running on GCB
-ENV CLOUD_BUILD "${cloud_build}"
-
 # Whether to build torch and torch_xla libraries with CXX ABI
 ENV CXX_ABI "${cxx_abi}"
 ENV _GLIBCXX_USE_CXX11_ABI "${cxx_abi}"
@@ -33,12 +31,15 @@ ENV _GLIBCXX_USE_CXX11_ABI "${cxx_abi}"
 # Whether to build for TPUVM mode
 ENV TPUVM_MODE "${tpuvm}"
 
+# Maximum number of jobs to use for bazel build
+ENV BAZEL_JOBS "${bazel_jobs}"
+
 # To get around issue of Cloud Build with recursive submodule update
 # clone recursively from pytorch/xla if building docker image with
 # cloud build. Otherwise, just use local.
 # https://github.com/GoogleCloudPlatform/cloud-builders/issues/435
 COPY . /pytorch/xla
-RUN if [ "${cloud_build}" = true ]; then github_branch="${release_version}" && \
+RUN if [ "${git_clone}" = "true" ]; then github_branch="${release_version}" && \
   if [ "${release_version}" = "nightly" ]; then github_branch="master"; fi && \
   cd /pytorch && \
   rm -rf xla && \
