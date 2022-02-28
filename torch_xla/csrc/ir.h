@@ -143,7 +143,7 @@ using OpList = absl::Span<const Value>;
 // NodeConstant class (inheriting from Node) with an extra xla::Literal field,
 // or a tensor value might create a new NodeTensor with computation client data
 // handle in it.
-class Node {
+class Node : public torch::lazy::Node {
  public:
   // Creates a new node with the given op name. The op is a unique identifier
   // for the operation. The num_outputs tells how many outputs a given operation
@@ -176,9 +176,13 @@ class Node {
   // multi-output node, output_index must be zero.
   const xla::Shape& shape(size_t output_index) const;
 
-  const std::vector<Output>& operands() const { return operands_as_outputs_; }
+  const std::vector<torch::lazy::Output>& operands() const { return operands_as_outputs_; }
 
-  const Output& operand(size_t i) const { return operands_as_outputs_.at(i); }
+  const std::vector<Output>& operands_with_shape() const { return operands_as_outputs_with_shape_; }
+
+  const torch::lazy::Output& operand(size_t i) const { return operands_as_outputs_.at(i); }
+
+  const Output& operand_with_shape(size_t i) const { return operands_as_outputs_with_shape_.at(i); }
 
   const std::set<Use>& uses() const { return uses_; }
 
@@ -235,7 +239,8 @@ class Node {
   std::vector<NodePtr> operands_;
   // Outputs do not hold references on the nodes, and neither do the uses, since
   // otherwise we get into circular reference counting.
-  std::vector<Output> operands_as_outputs_;
+  std::vector<torch::lazy::Output> operands_as_outputs_;
+  std::vector<Output> operands_as_outputs_with_shape_;
   // We use a set for uses, as we want deterministic use sequencing.
   std::set<Use> uses_;
   // The hash value of this node.
