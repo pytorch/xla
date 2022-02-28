@@ -12,6 +12,7 @@
 #include "tensorflow/compiler/xla/xla_client/xla_util.h"
 #include "torch/csrc/autograd/variable.h"
 #include "torch/csrc/lazy/core/helpers.h"
+#include "torch/csrc/lazy/core/util.h"
 #include "torch_xla/csrc/aten_xla_bridge.h"
 #include "torch_xla/csrc/data_ops.h"
 #include "torch_xla/csrc/helpers.h"
@@ -159,7 +160,7 @@ ir::Value MaybeExpand(const ir::Value& input, const xla::Shape& target_shape) {
     return input;
   }
   return ir::MakeNode<ir::ops::Expand>(
-      input, xla::util::ToVector<int64_t>(target_shape.dimensions()));
+      input, torch::lazy::ToVector<int64_t>(target_shape.dimensions()));
 }
 
 MinMaxValues GetMinMaxValues(const XLATensor& tensor,
@@ -252,7 +253,7 @@ std::vector<int64_t> CheckIntList(absl::Span<const int64_t> list, size_t length,
   if (list.empty()) {
     result = std::move(def);
   } else {
-    result = xla::util::ToVector<int64_t>(list);
+    result = torch::lazy::ToVector<int64_t>(list);
   }
   if (result.size() == 1 && length > 1) {
     result.resize(length, result[0]);
@@ -2398,7 +2399,7 @@ void XLATensor::copy_(XLATensor& input, XLATensor& src) {
     at::Tensor src_tensor = src.ToTensor(/*detached=*/true);
     if (!xla::util::Equal(src_tensor.sizes(), input_shape.get().dimensions())) {
       src_tensor = src_tensor.expand(
-          xla::util::ToVector<int64_t>(input_shape.get().dimensions()));
+          torch::lazy::ToVector<int64_t>(input_shape.get().dimensions()));
     }
     input.UpdateFromTensor(std::move(src_tensor), /*sync=*/false);
   }

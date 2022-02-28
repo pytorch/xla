@@ -1,6 +1,7 @@
 #include "torch_xla/csrc/ops/l1_loss_backward.h"
 
 #include "tensorflow/compiler/xla/xla_client/util.h"
+#include "torch/csrc/lazy/core/util.h"
 #include "torch_xla/csrc/lowering_context.h"
 #include "torch_xla/csrc/ops/infer_output_shape.h"
 
@@ -29,7 +30,7 @@ L1LossBackward::L1LossBackward(const Value& grad_output, const Value& input,
              return NodeOutputShape(grad_output, input, target, reduction);
            },
            /*num_outputs=*/1,
-           torch::lazy::MHash(xla::util::GetEnumValue(reduction))),
+           torch::lazy::MHash(torch::lazy::GetEnumValue(reduction))),
       reduction_(reduction) {}
 
 NodePtr L1LossBackward::Clone(OpList operands) const {
@@ -48,7 +49,7 @@ XlaOpVector L1LossBackward::Lower(LoweringContext* loctx) const {
 std::string L1LossBackward::ToString() const {
   std::stringstream ss;
   ss << Node::ToString()
-     << ", reduction=" << xla::util::GetEnumValue(reduction_);
+     << ", reduction=" << torch::lazy::GetEnumValue(reduction_);
   return ss.str();
 }
 

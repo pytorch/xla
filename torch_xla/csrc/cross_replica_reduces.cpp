@@ -5,6 +5,7 @@
 #include "tensorflow/compiler/xla/shape_util.h"
 #include "tensorflow/compiler/xla/xla_client/debug_macros.h"
 #include "tensorflow/compiler/xla/xla_client/util.h"
+#include "torch/csrc/lazy/core/util.h"
 #include "torch_xla/csrc/convert_ops.h"
 #include "torch_xla/csrc/device.h"
 #include "torch_xla/csrc/helpers.h"
@@ -65,7 +66,7 @@ xla::XlaComputation GetReduceComutation(AllReduceType reduce_type,
       return XlaHelpers::CreateMaxComputation(type);
   }
   XLA_ERROR() << "Invalid reduce type: "
-              << xla::util::GetEnumValue(reduce_type);
+              << torch::lazy::GetEnumValue(reduce_type);
 }
 
 std::vector<xla::ReplicaGroup> CreateReduceGroups(
