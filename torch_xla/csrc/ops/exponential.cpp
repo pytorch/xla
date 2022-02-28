@@ -10,7 +10,7 @@ namespace ops {
 
 Exponential::Exponential(const Value& lambda, const Value& seed,
                          xla::Shape shape)
-    : Node(ir::OpKind(at::aten::exponential), {lambda, seed},
+    : Node(torch::lazy::OpKind(at::aten::exponential), {lambda, seed},
            std::move(shape)) {}
 
 NodePtr Exponential::Clone(OpList operands) const {

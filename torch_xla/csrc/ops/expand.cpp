@@ -22,7 +22,7 @@ xla::Shape NodeOutputShape(const Value& input,
 }  // namespace
 
 Expand::Expand(const Value& input, std::vector<int64_t> size)
-    : Node(ir::OpKind(at::aten::expand), {input},
+    : Node(torch::lazy::OpKind(at::aten::expand), {input},
            [&]() { return NodeOutputShape(input, size); },
            /*num_outputs=*/1, torch::lazy::MHash(size)),
       size_(std::move(size)) {}

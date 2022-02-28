@@ -12,7 +12,7 @@ namespace ops {
 UpsampleNearestBackward::UpsampleNearestBackward(
     const Value& input, std::vector<int64_t> output_size,
     std::vector<int64_t> input_size)
-    : Node(ir::OpKind(at::aten::upsample_nearest2d_backward), {input},
+    : Node(torch::lazy::OpKind(at::aten::upsample_nearest2d_backward), {input},
            [&]() {
              return resize::GetBackwardOutputShape2d(input.shape(), input_size);
            },

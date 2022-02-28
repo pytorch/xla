@@ -39,7 +39,7 @@ xla::Shape NodeOutputShape(const Value& input,
 
 CumProd::CumProd(const Value& input, int64_t dim,
                  c10::optional<at::ScalarType> dtype)
-    : Node(ir::OpKind(at::aten::cumprod), {input},
+    : Node(torch::lazy::OpKind(at::aten::cumprod), {input},
            [&]() { return NodeOutputShape(input, dtype); },
            /*num_outputs=*/1,
            torch::lazy::MHash(dim, torch::lazy::OptionalOr<int>(dtype, -1))),

@@ -32,7 +32,7 @@ xla::Shape NodeOutputShape(const Value& grad_out, const Value& input,
 NativeBatchNormBackward::NativeBatchNormBackward(
     const Value& grad_out, const Value& input, const Value& weight,
     const Value& save_mean, const Value& save_invstd, bool training, double eps)
-    : Node(ir::OpKind(at::aten::native_batch_norm_backward),
+    : Node(torch::lazy::OpKind(at::aten::native_batch_norm_backward),
            {grad_out, input, weight, save_mean, save_invstd},
            [&]() {
              return NodeOutputShape(grad_out, input, weight, save_mean,
