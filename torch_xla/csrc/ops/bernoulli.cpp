@@ -18,8 +18,8 @@ NodePtr Bernoulli::Clone(OpList operands) const {
 }
 
 XlaOpVector Bernoulli::Lower(LoweringContext* loctx) const {
-  xla::XlaOp probability = loctx->GetOutputOp(operand(0));
-  xla::XlaOp rng_seed = loctx->GetOutputOp(operand(1));
+  xla::XlaOp probability = loctx->GetOutputOp(operand_with_shape(0));
+  xla::XlaOp rng_seed = loctx->GetOutputOp(operand_with_shape(1));
   const xla::Shape& probability_shape = XlaHelpers::ShapeOfXlaOp(probability);
   xla::Shape bcast_shape(shape());
   bcast_shape.set_element_type(probability_shape.element_type());

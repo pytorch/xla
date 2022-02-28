@@ -153,9 +153,9 @@ ir::NodePtr IndexFillOp(const ir::Value& buffer, int64_t dim,
                         const ir::Value& index, const ir::Value& value) {
   auto lower_fn = [dim](const ir::Node& node,
                         ir::LoweringContext* loctx) -> ir::XlaOpVector {
-    xla::XlaOp xla_base = loctx->GetOutputOp(node.operand(0));
-    xla::XlaOp xla_index = loctx->GetOutputOp(node.operand(1));
-    xla::XlaOp xla_value = loctx->GetOutputOp(node.operand(2));
+    xla::XlaOp xla_base = loctx->GetOutputOp(node.operand_with_shape(0));
+    xla::XlaOp xla_index = loctx->GetOutputOp(node.operand_with_shape(1));
+    xla::XlaOp xla_value = loctx->GetOutputOp(node.operand_with_shape(2));
     return node.ReturnOp(CreateIndexFill(xla_base, dim, xla_index, xla_value),
                          loctx);
   };
@@ -178,9 +178,9 @@ ir::NodePtr IndexAddOp(const ir::Value& buffer, int64_t dim,
                        const ir::Value& index, const ir::Value& source) {
   auto lower_fn = [dim](const ir::Node& node,
                         ir::LoweringContext* loctx) -> ir::XlaOpVector {
-    xla::XlaOp xla_base = loctx->GetOutputOp(node.operand(0));
-    xla::XlaOp xla_index = loctx->GetOutputOp(node.operand(1));
-    xla::XlaOp xla_source = loctx->GetOutputOp(node.operand(2));
+    xla::XlaOp xla_base = loctx->GetOutputOp(node.operand_with_shape(0));
+    xla::XlaOp xla_index = loctx->GetOutputOp(node.operand_with_shape(1));
+    xla::XlaOp xla_source = loctx->GetOutputOp(node.operand_with_shape(2));
     return node.ReturnOp(CreateIndexAdd(xla_base, dim, xla_index, xla_source),
                          loctx);
   };
@@ -203,9 +203,9 @@ ir::NodePtr IndexCopyOp(const ir::Value& buffer, int64_t dim,
                         const ir::Value& index, const ir::Value& source) {
   auto lower_fn = [dim](const ir::Node& node,
                         ir::LoweringContext* loctx) -> ir::XlaOpVector {
-    xla::XlaOp xla_base = loctx->GetOutputOp(node.operand(0));
-    xla::XlaOp xla_index = loctx->GetOutputOp(node.operand(1));
-    xla::XlaOp xla_source = loctx->GetOutputOp(node.operand(2));
+    xla::XlaOp xla_base = loctx->GetOutputOp(node.operand_with_shape(0));
+    xla::XlaOp xla_index = loctx->GetOutputOp(node.operand_with_shape(1));
+    xla::XlaOp xla_source = loctx->GetOutputOp(node.operand_with_shape(2));
     return node.ReturnOp(CreateIndexCopy(xla_base, dim, xla_index, xla_source),
                          loctx);
   };

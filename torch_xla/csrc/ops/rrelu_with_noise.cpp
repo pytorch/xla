@@ -26,8 +26,8 @@ NodePtr RreluWithNoise::Clone(OpList operands) const {
 }
 
 XlaOpVector RreluWithNoise::Lower(LoweringContext* loctx) const {
-  xla::XlaOp input = loctx->GetOutputOp(operand(0));
-  xla::XlaOp rng_seed = loctx->GetOutputOp(operand(1));
+  xla::XlaOp input = loctx->GetOutputOp(operand_with_shape(0));
+  xla::XlaOp rng_seed = loctx->GetOutputOp(operand_with_shape(1));
   return ReturnOps(BuildRrelu(input, lower_, upper_, training_, rng_seed),
                    loctx);
 }

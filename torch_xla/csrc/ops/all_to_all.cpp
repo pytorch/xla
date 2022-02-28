@@ -49,8 +49,8 @@ NodePtr AllToAll::Clone(OpList operands) const {
 }
 
 XlaOpVector AllToAll::Lower(LoweringContext* loctx) const {
-  xla::XlaOp input = loctx->GetOutputOp(operand(0));
-  xla::XlaOp token = loctx->GetOutputOp(operand(1));
+  xla::XlaOp input = loctx->GetOutputOp(operand_with_shape(0));
+  xla::XlaOp token = loctx->GetOutputOp(operand_with_shape(1));
   AllToAllResult result = BuildAllToAll(
       input, token, split_dimension_, concat_dimension_, split_count_, groups_);
   return ReturnOps({result.result, result.token}, loctx);

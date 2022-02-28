@@ -33,7 +33,7 @@ NodePtr MinInDim::Clone(OpList operands) const {
 }
 
 XlaOpVector MinInDim::Lower(LoweringContext* loctx) const {
-  xla::XlaOp input = loctx->GetOutputOp(operand(0));
+  xla::XlaOp input = loctx->GetOutputOp(operand_with_shape(0));
   xla::XlaOp values = BuildMinInDim(input, dim_, keepdim_);
   xla::XlaOp indices = BuildArgMin(input, dim_, keepdim_);
   return ReturnOps({values, indices}, loctx);

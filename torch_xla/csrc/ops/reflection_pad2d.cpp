@@ -33,7 +33,7 @@ NodePtr ReflectionPad2d::Clone(OpList operands) const {
 }
 
 XlaOpVector ReflectionPad2d::Lower(LoweringContext* loctx) const {
-  xla::XlaOp input = loctx->GetOutputOp(operand(0));
+  xla::XlaOp input = loctx->GetOutputOp(operand_with_shape(0));
   xla::XlaOp output = BuildReflectionPad2d(input, padding_);
   return ReturnOp(output, loctx);
 }

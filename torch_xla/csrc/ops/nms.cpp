@@ -43,10 +43,10 @@ NodePtr Nms::Clone(OpList operands) const {
 }
 
 XlaOpVector Nms::Lower(LoweringContext* loctx) const {
-  xla::XlaOp boxes = loctx->GetOutputOp(operand(0));
-  xla::XlaOp scores = loctx->GetOutputOp(operand(1));
-  xla::XlaOp score_threshold = loctx->GetOutputOp(operand(2));
-  xla::XlaOp iou_threshold = loctx->GetOutputOp(operand(3));
+  xla::XlaOp boxes = loctx->GetOutputOp(operand_with_shape(0));
+  xla::XlaOp scores = loctx->GetOutputOp(operand_with_shape(1));
+  xla::XlaOp score_threshold = loctx->GetOutputOp(operand_with_shape(2));
+  xla::XlaOp iou_threshold = loctx->GetOutputOp(operand_with_shape(3));
   NmsResult result =
       BuildNms(boxes, scores, score_threshold, iou_threshold, output_size_);
   return ReturnOps({result.selected_indices, result.num_valid}, loctx);

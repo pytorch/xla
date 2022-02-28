@@ -43,18 +43,18 @@ NodePtr AdamOptimizerStep::Clone(OpList operands) const {
 }
 
 XlaOpVector AdamOptimizerStep::Lower(LoweringContext* loctx) const {
-  xla::XlaOp found_inf = loctx->GetOutputOp(operand(0));
-  xla::XlaOp step = loctx->GetOutputOp(operand(1));
-  xla::XlaOp param = loctx->GetOutputOp(operand(2));
-  xla::XlaOp grad = loctx->GetOutputOp(operand(3));
-  xla::XlaOp exp_avg = loctx->GetOutputOp(operand(4));
-  xla::XlaOp exp_avg_sq = loctx->GetOutputOp(operand(5));
-  xla::XlaOp max_exp_avg_sq = loctx->GetOutputOp(operand(6));
-  xla::XlaOp beta1 = loctx->GetOutputOp(operand(7));
-  xla::XlaOp beta2 = loctx->GetOutputOp(operand(8));
-  xla::XlaOp lr = loctx->GetOutputOp(operand(9));
-  xla::XlaOp weight_decay = loctx->GetOutputOp(operand(10));
-  xla::XlaOp eps = loctx->GetOutputOp(operand(11));
+  xla::XlaOp found_inf = loctx->GetOutputOp(operand_with_shape(0));
+  xla::XlaOp step = loctx->GetOutputOp(operand_with_shape(1));
+  xla::XlaOp param = loctx->GetOutputOp(operand_with_shape(2));
+  xla::XlaOp grad = loctx->GetOutputOp(operand_with_shape(3));
+  xla::XlaOp exp_avg = loctx->GetOutputOp(operand_with_shape(4));
+  xla::XlaOp exp_avg_sq = loctx->GetOutputOp(operand_with_shape(5));
+  xla::XlaOp max_exp_avg_sq = loctx->GetOutputOp(operand_with_shape(6));
+  xla::XlaOp beta1 = loctx->GetOutputOp(operand_with_shape(7));
+  xla::XlaOp beta2 = loctx->GetOutputOp(operand_with_shape(8));
+  xla::XlaOp lr = loctx->GetOutputOp(operand_with_shape(9));
+  xla::XlaOp weight_decay = loctx->GetOutputOp(operand_with_shape(10));
+  xla::XlaOp eps = loctx->GetOutputOp(operand_with_shape(11));
   return ReturnOps(
       BuildAdamOptimizerStep(found_inf, step, param, grad, exp_avg, exp_avg_sq,
                              max_exp_avg_sq, beta1, beta2, lr, weight_decay,

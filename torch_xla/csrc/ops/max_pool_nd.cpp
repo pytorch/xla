@@ -63,7 +63,7 @@ NodePtr MaxPoolNd::Clone(OpList operands) const {
 }
 
 XlaOpVector MaxPoolNd::Lower(LoweringContext* loctx) const {
-  xla::XlaOp input = loctx->GetOutputOp(operand(0));
+  xla::XlaOp input = loctx->GetOutputOp(operand_with_shape(0));
   MaxPoolResult result = BuildMaxPoolNd(input, spatial_dim_count_, kernel_size_,
                                         stride_, padding_, ceil_mode_);
   return ReturnOps({result.result, result.indices}, loctx);

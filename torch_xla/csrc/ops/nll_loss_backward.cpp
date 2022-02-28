@@ -71,14 +71,14 @@ NodePtr NllLossBackward::Clone(OpList operands) const {
 }
 
 XlaOpVector NllLossBackward::Lower(LoweringContext* loctx) const {
-  xla::XlaOp grad_output = loctx->GetOutputOp(operand(0));
-  xla::XlaOp logits = loctx->GetOutputOp(operand(1));
-  xla::XlaOp labels = loctx->GetOutputOp(operand(2));
+  xla::XlaOp grad_output = loctx->GetOutputOp(operand_with_shape(0));
+  xla::XlaOp logits = loctx->GetOutputOp(operand_with_shape(1));
+  xla::XlaOp labels = loctx->GetOutputOp(operand_with_shape(2));
   xla::XlaOp weight;
   xla::XlaOp total_weight;
-  if (operands().size() > 3) {
-    weight = loctx->GetOutputOp(operand(3));
-    total_weight = loctx->GetOutputOp(operand(4));
+  if (operands_with_shape().size() > 3) {
+    weight = loctx->GetOutputOp(operand_with_shape(3));
+    total_weight = loctx->GetOutputOp(operand_with_shape(4));
   }
   return ReturnOp(BuildNllLossBackward(grad_output, logits, labels, weight,
                                        total_weight, ignore_index_, reduction_),
