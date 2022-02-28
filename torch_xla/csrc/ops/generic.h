@@ -15,8 +15,8 @@ class Generic : public Node {
  public:
   using LowerFn = std::function<XlaOpVector(const Node&, LoweringContext*)>;
 
-  Generic(torch::lazy::OpKind op, absl::Span<const Value> operands, xla::Shape shape,
-          LowerFn lower_fn, size_t num_outputs = 1,
+  Generic(torch::lazy::OpKind op, absl::Span<const Value> operands,
+          xla::Shape shape, LowerFn lower_fn, size_t num_outputs = 1,
           torch::lazy::hash_t hash_seed = (uint32_t)0x5a2d296e9);
 
   Generic(torch::lazy::OpKind op, absl::Span<const Value> operands,
@@ -24,8 +24,8 @@ class Generic : public Node {
           size_t num_outputs = 1,
           torch::lazy::hash_t hash_seed = (uint32_t)0x5a2d296e9);
 
-  Generic(torch::lazy::OpKind op, xla::Shape shape, LowerFn lower_fn, size_t num_outputs,
-          torch::lazy::hash_t hash_seed);
+  Generic(torch::lazy::OpKind op, xla::Shape shape, LowerFn lower_fn,
+          size_t num_outputs, torch::lazy::hash_t hash_seed);
 
   NodePtr Clone(OpList operands) const override;
 

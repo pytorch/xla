@@ -11,8 +11,8 @@ namespace ops {
 
 SoftmaxBackward::SoftmaxBackward(const Value& grad_output, const Value& output,
                                  int64_t dim)
-    : Node(torch::lazy::OpKind(at::aten::_softmax_backward_data), {grad_output, output},
-           grad_output.shape(),
+    : Node(torch::lazy::OpKind(at::aten::_softmax_backward_data),
+           {grad_output, output}, grad_output.shape(),
            /*num_outputs=*/1, torch::lazy::MHash(dim)),
       dim_(dim) {}
 

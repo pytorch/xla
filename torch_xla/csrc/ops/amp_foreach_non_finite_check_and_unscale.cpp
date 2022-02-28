@@ -35,7 +35,8 @@ std::vector<Value> GetOperandList(absl::Span<const Value> operands,
 
 AmpForachNonFiniteCheckAndUnscale::AmpForachNonFiniteCheckAndUnscale(
     const OpList& inputs, const Value& found_inf, const Value& inv_scale)
-    : Node(torch::lazy::OpKind(at::aten::_amp_foreach_non_finite_check_and_unscale_),
+    : Node(torch::lazy::OpKind(
+               at::aten::_amp_foreach_non_finite_check_and_unscale_),
            GetOperandList(inputs, found_inf, inv_scale),
            NodeOutputShape(inputs, found_inf),
            /*num_outputs=*/inputs.size() + 1) {}
