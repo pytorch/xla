@@ -37,7 +37,7 @@ NodePtr Split::Clone(OpList operands) const {
 }
 
 XlaOpVector Split::Lower(LoweringContext* loctx) const {
-  xla::XlaOp input = loctx->GetOutputOp(operand(0));
+  xla::XlaOp input = loctx->GetOutputOp(operand_with_shape(0));
   const auto outputs = BuildSplit(input, split_sizes_, dim_);
   return ReturnOps(outputs, loctx);
 }

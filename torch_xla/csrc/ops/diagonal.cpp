@@ -27,7 +27,7 @@ NodePtr Diagonal::Clone(OpList operands) const {
 }
 
 XlaOpVector Diagonal::Lower(LoweringContext* loctx) const {
-  xla::XlaOp input = loctx->GetOutputOp(operand(0));
+  xla::XlaOp input = loctx->GetOutputOp(operand_with_shape(0));
   xla::XlaOp output = BuildDiagonal(input, offset_, dim1_, dim2_);
   return ReturnOp(output, loctx);
 }

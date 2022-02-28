@@ -56,7 +56,7 @@ NodePtr Mean::Clone(OpList operands) const {
 }
 
 XlaOpVector Mean::Lower(LoweringContext* loctx) const {
-  xla::XlaOp input = loctx->GetOutputOp(operand(0));
+  xla::XlaOp input = loctx->GetOutputOp(operand_with_shape(0));
   return ReturnOp(
       LowerMean(input, dimensions_, keep_reduced_dimensions_, dtype_), loctx);
 }

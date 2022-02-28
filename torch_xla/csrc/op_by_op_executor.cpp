@@ -46,7 +46,7 @@ torch::lazy::hash_t ComputeNodeKey(
     const ir::Node* node, absl::Span<const xla::Shape* const> input_shapes,
     const torch::lazy::hash_t& seed) {
   torch::lazy::hash_t key = seed;
-  const auto& operands = node->operands();
+  const auto& operands = node->operands_with_shape();
   for (size_t i = 0; i < operands.size(); ++i) {
     key = torch::lazy::HashCombine(key, torch::lazy::Hash(GetParameterShape(
                                             operands[i], *input_shapes[i])));
@@ -59,7 +59,7 @@ xla::XlaComputation BuildNodeComputation(
     const ir::Node* node, absl::Span<const xla::Shape* const> input_shapes,
     const Device& device) {
   ir::LoweringContext loctx("BuildNodeComputation", device);
-  const auto& operands = node->operands();
+  const auto& operands = node->operands_with_shape();
   for (size_t i = 0; i < operands.size(); ++i) {
     xla::XlaOp param = xla::Parameter(
         loctx.builder(), i, GetParameterShape(operands[i], *input_shapes[i]),
@@ -128,7 +128,7 @@ std::vector<xla::ComputationClient::ExecuteChainedOp> OpByOpExecutor::BuildOps(
       device_data_ops[i] = true;
     } else {
       std::vector<const xla::Shape*> op_input_shapes;
-      for (auto& operand : node->operands()) {
+      for (auto& operand : node->operands_with_shape()) {
         size_t op_index = node_to_index.at(operand.node);
         cxop.inputs.push_back(
             {op_index,

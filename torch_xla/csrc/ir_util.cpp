@@ -16,7 +16,7 @@ std::vector<const Node*> Util::ComputePostOrder(const Node* node,
     if (it == emap->end()) {
       (*emap)[node] = kEmitting;
 
-      for (auto& output : node->operands()) {
+      for (auto& output : node->operands_with_shape()) {
         auto oit = emap->find(output.node);
         if (oit == emap->end()) {
           queue.push_back(output.node);
@@ -25,7 +25,7 @@ std::vector<const Node*> Util::ComputePostOrder(const Node* node,
         }
       }
     } else if (it->second == kEmitting) {
-      for (auto& output : node->operands()) {
+      for (auto& output : node->operands_with_shape()) {
         auto oit = emap->find(output.node);
         XLA_CHECK(oit != emap->end() && oit->second == kEmitted)
             << "Graph loop found at " << *output.node;
@@ -66,7 +66,7 @@ std::vector<Value> Util::Clone(absl::Span<const Value> values,
       continue;
     }
     std::vector<Value> inputs;
-    for (auto& output : node->operands()) {
+    for (auto& output : node->operands_with_shape()) {
       auto it = clone_map.find(output.node);
       XLA_CHECK(it != clone_map.end())
           << "Bad post-order: " << node->ToString();

@@ -26,8 +26,8 @@ NodePtr Unselect::Clone(OpList operands) const {
 }
 
 XlaOpVector Unselect::Lower(LoweringContext* loctx) const {
-  xla::XlaOp target = loctx->GetOutputOp(operand(0));
-  xla::XlaOp source = loctx->GetOutputOp(operand(1));
+  xla::XlaOp target = loctx->GetOutputOp(operand_with_shape(0));
+  xla::XlaOp source = loctx->GetOutputOp(operand_with_shape(1));
   xla::XlaOp output = BuildUnselect(target, source, dim_, start_, end_,
                                     Select::GetStride(start_, end_, stride_));
   return ReturnOp(output, loctx);

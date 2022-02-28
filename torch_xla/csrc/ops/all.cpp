@@ -38,7 +38,7 @@ NodePtr All::Clone(OpList operands) const {
 }
 
 XlaOpVector All::Lower(LoweringContext* loctx) const {
-  xla::XlaOp input = loctx->GetOutputOp(operand(0));
+  xla::XlaOp input = loctx->GetOutputOp(operand_with_shape(0));
   return ReturnOp(BuildAll(input, dimensions_, keep_reduced_dimensions_),
                   loctx);
 }

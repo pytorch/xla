@@ -33,7 +33,7 @@ View::View(const Value& input, std::vector<int64_t> output_size)
       output_size_(std::move(output_size)) {}
 
 XlaOpVector View::Lower(LoweringContext* loctx) const {
-  xla::XlaOp input = loctx->GetOutputOp(operand(0));
+  xla::XlaOp input = loctx->GetOutputOp(operand_with_shape(0));
   xla::XlaOp output = BuildView(input, output_size_);
   return ReturnOp(output, loctx);
 }

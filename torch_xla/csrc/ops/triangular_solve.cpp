@@ -91,8 +91,8 @@ NodePtr TriangularSolve::Clone(OpList operands) const {
 }
 
 XlaOpVector TriangularSolve::Lower(LoweringContext* loctx) const {
-  xla::XlaOp rhs = loctx->GetOutputOp(operand(0));
-  xla::XlaOp lhs = loctx->GetOutputOp(operand(1));
+  xla::XlaOp rhs = loctx->GetOutputOp(operand_with_shape(0));
+  xla::XlaOp lhs = loctx->GetOutputOp(operand_with_shape(1));
   return ReturnOps(LowerTriangularSolve(rhs, lhs, left_side_, lower_,
                                         transpose_, unit_diagonal_),
                    loctx);
