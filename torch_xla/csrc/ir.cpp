@@ -192,6 +192,7 @@ void Node::AddOperand(NodePtr node, size_t index) {
   std::cout << "WONJOO AddOperand" << std::endl;
   XLA_CHECK_LT(index, node->num_outputs());
   operands_.push_back(std::move(node));
+  operands_as_outputs_.push_back(torch::lazy::Output(operands_.back().get(), index));
   operands_as_outputs_with_shape_.push_back(Output(operands_.back().get(), index));
   operands_.back()->AddUse(Use(this, operands_.size() - 1, index));
 }
