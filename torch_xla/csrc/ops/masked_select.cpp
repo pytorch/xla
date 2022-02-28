@@ -33,8 +33,8 @@ NodePtr MaskedSelect::Clone(OpList operands) const {
 }
 
 XlaOpVector MaskedSelect::Lower(LoweringContext* loctx) const {
-  xla::XlaOp input = loctx->GetOutputOp(operand(0));
-  xla::XlaOp mask = loctx->GetOutputOp(operand(1));
+  xla::XlaOp input = loctx->GetOutputOp(operand_with_shape(0));
+  xla::XlaOp mask = loctx->GetOutputOp(operand_with_shape(1));
   return ReturnOps(BuildMaskedSelect(input, mask), loctx);
 }
 

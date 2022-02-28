@@ -17,9 +17,9 @@ NodePtr Normal::Clone(OpList operands) const {
 }
 
 XlaOpVector Normal::Lower(LoweringContext* loctx) const {
-  xla::XlaOp mean = loctx->GetOutputOp(operand(0));
-  xla::XlaOp std = loctx->GetOutputOp(operand(1));
-  xla::XlaOp rng_seed = loctx->GetOutputOp(operand(2));
+  xla::XlaOp mean = loctx->GetOutputOp(operand_with_shape(0));
+  xla::XlaOp std = loctx->GetOutputOp(operand_with_shape(1));
+  xla::XlaOp rng_seed = loctx->GetOutputOp(operand_with_shape(2));
   return ReturnOp(
       RngNormal(rng_seed, XlaHelpers::ShapeOfXlaOp(mean), mean, std), loctx);
 }

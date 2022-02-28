@@ -35,7 +35,7 @@ NodePtr AdaptiveMaxPool2d::Clone(OpList operands) const {
 }
 
 XlaOpVector AdaptiveMaxPool2d::Lower(LoweringContext* loctx) const {
-  xla::XlaOp input = loctx->GetOutputOp(operand(0));
+  xla::XlaOp input = loctx->GetOutputOp(operand_with_shape(0));
   MaxPoolResult result = BuildAdaptiveMaxPoolNd(input, output_size_, 2);
   return ReturnOps({result.result, result.indices}, loctx);
 }

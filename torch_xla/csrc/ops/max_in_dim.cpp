@@ -33,7 +33,7 @@ NodePtr MaxInDim::Clone(OpList operands) const {
 }
 
 XlaOpVector MaxInDim::Lower(LoweringContext* loctx) const {
-  xla::XlaOp input = loctx->GetOutputOp(operand(0));
+  xla::XlaOp input = loctx->GetOutputOp(operand_with_shape(0));
   xla::XlaOp values = BuildMaxInDim(input, dim_, keepdim_);
   xla::XlaOp indices = BuildArgMax(input, dim_, keepdim_);
   return ReturnOps({values, indices}, loctx);

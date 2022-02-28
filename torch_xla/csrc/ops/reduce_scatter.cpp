@@ -52,8 +52,8 @@ NodePtr ReduceScatter::Clone(OpList operands) const {
 }
 
 XlaOpVector ReduceScatter::Lower(LoweringContext* loctx) const {
-  xla::XlaOp input = loctx->GetOutputOp(operand(0));
-  xla::XlaOp token = loctx->GetOutputOp(operand(1));
+  xla::XlaOp input = loctx->GetOutputOp(operand_with_shape(0));
+  xla::XlaOp token = loctx->GetOutputOp(operand_with_shape(1));
   ReduceScatterResult result = BuildReduceScatter(
       reduce_type_, input, token, scale_, scatter_dim_, shard_count_, groups_);
   return ReturnOps({result.result, result.token}, loctx);

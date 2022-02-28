@@ -17,7 +17,7 @@ NodePtr Flip::Clone(OpList operands) const {
 }
 
 XlaOpVector Flip::Lower(LoweringContext* loctx) const {
-  xla::XlaOp input = loctx->GetOutputOp(operand(0));
+  xla::XlaOp input = loctx->GetOutputOp(operand_with_shape(0));
   xla::XlaOp output = xla::Rev(input, dims_);
   return ReturnOp(output, loctx);
 }

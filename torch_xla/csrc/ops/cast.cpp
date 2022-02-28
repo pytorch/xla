@@ -47,7 +47,7 @@ NodePtr Cast::Clone(OpList operands) const {
 }
 
 XlaOpVector Cast::Lower(LoweringContext* loctx) const {
-  xla::XlaOp input = loctx->GetOutputOp(operand(0));
+  xla::XlaOp input = loctx->GetOutputOp(operand_with_shape(0));
   const xla::Shape& input_shape = XlaHelpers::ShapeOfXlaOp(input);
   xla::PrimitiveType raw_from =
       stype_ ? TensorTypeToRawXlaType(*stype_) : input_shape.element_type();

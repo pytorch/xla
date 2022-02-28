@@ -20,8 +20,8 @@ NodePtr LeakyReluBackward::Clone(OpList operands) const {
 }
 
 XlaOpVector LeakyReluBackward::Lower(LoweringContext* loctx) const {
-  xla::XlaOp grad_output = loctx->GetOutputOp(operand(0));
-  xla::XlaOp input = loctx->GetOutputOp(operand(1));
+  xla::XlaOp grad_output = loctx->GetOutputOp(operand_with_shape(0));
+  xla::XlaOp input = loctx->GetOutputOp(operand_with_shape(1));
   xla::XlaOp output =
       BuildLeakyReluBackward(grad_output, input, negative_slope_);
   return ReturnOp(output, loctx);
