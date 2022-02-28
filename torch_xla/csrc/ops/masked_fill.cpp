@@ -11,7 +11,7 @@ namespace ops {
 
 MaskedFill::MaskedFill(const Value& input, const Value& mask,
                        const at::Scalar& value)
-    : Node(OpKind(at::aten::masked_fill), {input, mask}, input.shape(),
+    : Node(torch::lazy::OpKind(at::aten::masked_fill), {input, mask}, input.shape(),
            /*num_outputs=*/1, ScalarHash(value)),
       value_(std::move(value)) {}
 

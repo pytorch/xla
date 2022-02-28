@@ -26,7 +26,7 @@ inline NodePtr ConstantOp(xla::Literal value) {
 }
 
 inline NodePtr GenericOp(
-    OpKind op, absl::Span<const Value> operands, xla::Shape shape,
+    torch::lazy::OpKind op, absl::Span<const Value> operands, xla::Shape shape,
     Generic::LowerFn lower_fn, size_t num_outputs = 1,
     // cast to uint32_t to avoid ambiguous constructor of uint128
     torch::lazy::hash_t hash_seed = (uint32_t)0x5a2d296e9) {
@@ -36,7 +36,7 @@ inline NodePtr GenericOp(
 }
 
 inline NodePtr GenericOp(
-    OpKind op, absl::Span<const Value> operands,
+    torch::lazy::OpKind op, absl::Span<const Value> operands,
     const std::function<xla::Shape()>& shape_fn, Generic::LowerFn lower_fn,
     size_t num_outputs = 1,
     // cast to uint32_t to avoid ambiguous constructor of uint128
@@ -46,7 +46,7 @@ inline NodePtr GenericOp(
                                           hash_seed);
 }
 
-inline NodePtr GenericOp(OpKind op, xla::Shape shape, Generic::LowerFn lower_fn,
+inline NodePtr GenericOp(torch::lazy::OpKind op, xla::Shape shape, Generic::LowerFn lower_fn,
                          size_t num_outputs, torch::lazy::hash_t hash_seed) {
   return torch_xla::ir::MakeNode<Generic>(std::move(op), std::move(shape),
                                           std::move(lower_fn), num_outputs,
@@ -105,7 +105,7 @@ NodePtr Erfinv(const Value& input);
 
 NodePtr Log(const Value& input);
 
-NodePtr LogBase(const Value& input, OpKind op, double base);
+NodePtr LogBase(const Value& input, torch::lazy::OpKind op, double base);
 
 NodePtr Log1p(const Value& input);
 

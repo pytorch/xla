@@ -13,18 +13,18 @@ class OpKindWrapper {
  public:
   OpKindWrapper(const char* name) : name_(name) {}
 
-  const OpKind& operator*() const { return get(); }
+  const torch::lazy::OpKind& operator*() const { return get(); }
 
-  operator OpKind() const { return get(); }
+  operator torch::lazy::OpKind() const { return get(); }
 
  private:
-  const OpKind& get() const {
-    std::call_once(once_, [this]() { op_kind_ = OpKind::Get(name_); });
+  const torch::lazy::OpKind& get() const {
+    std::call_once(once_, [this]() { op_kind_ = torch::lazy::OpKind::Get(name_); });
     return op_kind_;
   }
 
   const char* name_;
-  mutable OpKind op_kind_;
+  mutable torch::lazy::OpKind op_kind_;
   mutable std::once_flag once_;
 };
 

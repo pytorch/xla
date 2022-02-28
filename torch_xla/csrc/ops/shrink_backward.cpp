@@ -9,7 +9,7 @@ namespace torch_xla {
 namespace ir {
 namespace ops {
 
-ShrinkBackward::ShrinkBackward(OpKind kind, const Value& grad_output,
+ShrinkBackward::ShrinkBackward(torch::lazy::OpKind kind, const Value& grad_output,
                                const Value& input, const at::Scalar& lambda)
     : Node(kind, {grad_output, input}, input.shape(), /*num_outputs=*/1,
            ScalarHash(lambda)),
@@ -22,7 +22,7 @@ std::string ShrinkBackward::ToString() const {
 }
 
 NodePtr ShrinkBackward::Clone(OpList operands) const {
-  return MakeNode<ShrinkBackward>(op(), operands.at(0), operands.at(1),
+  return ir::MakeNode<ShrinkBackward>(op(), operands.at(0), operands.at(1),
                                   lambda_);
 }
 
