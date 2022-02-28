@@ -127,16 +127,6 @@ torch::lazy::hash_t Value::hash() const {
   return torch::lazy::HashCombine(node->hash(), index);
 }
 
-// TODO @wonjoo Remove
-// OpKind OpKind::Get(const std::string& name) {
-//   return OpKind(c10::Symbol::fromQualString(name));
-// }
-
-// TODO @wonjoo Remove
-// torch::lazy::hash_t OpKind::hash() const {
-//   return torch::lazy::StringHash(op.toQualString());
-// }
-
 Node::Node(torch::lazy::OpKind op, OpList operands, xla::Shape shape,
            size_t num_outputs, torch::lazy::hash_t hash_seed)
     : op_(std::move(op)),

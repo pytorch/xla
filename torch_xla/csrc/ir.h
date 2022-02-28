@@ -135,37 +135,6 @@ struct Value {
   size_t index = 0;
 };
 
-// TODO @wonjoo Remove this, as exact same is defined in torch::lazy::OpKind
-// The Kind of operation a Node can be associated to.
-// struct OpKind {
-//   OpKind() = default;
-//   explicit OpKind(c10::Symbol op) : op(std::move(op)) {}
-
-//   bool operator==(const OpKind& rhs) const { return op == rhs.op; }
-//   bool operator!=(const OpKind& rhs) const { return !operator==(rhs); }
-//   bool operator<(const OpKind& rhs) const {
-//     return c10::unique_t(op) < c10::unique_t(rhs.op);
-//   }
-
-//   torch::lazy::hash_t hash() const;
-
-//   std::string ToString() const { return op.toQualString(); }
-
-//   // Retrieves an existing operation object, or creates a new one. Operations
-//   // that are specific to the XLA side, should live within the 'xla::'
-//   // namespace.
-//   static OpKind Get(const std::string& name);
-
-//   c10::Symbol op;
-// };
-
-// TODO @wonjoo Remove
-// inline std::ostream& operator<<(std::ostream& stream, const
-// torch::lazy::OpKind& op) {
-//   stream << op.ToString();
-//   return stream;
-// }
-
 using OpList = absl::Span<const Value>;
 
 // A node in the graph. Nodes for operations which requires extra data to be
