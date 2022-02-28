@@ -11,6 +11,7 @@
 #include "tensorflow/compiler/xla/xla_client/tf_logging.h"
 #include "tensorflow/compiler/xla/xla_client/util.h"
 #include "torch/csrc/lazy/core/helpers.h"
+#include "torch/csrc/lazy/core/util.h"
 #include "torch_xla/csrc/convert_ops.h"
 #include "torch_xla/csrc/tensor_util.h"
 

@@ -10,6 +10,7 @@
 #include "tensorflow/compiler/xla/util.h"
 #include "tensorflow/compiler/xla/xla_client/debug_macros.h"
 #include "tensorflow/compiler/xla/xla_client/util.h"
+#include "torch/csrc/lazy/core/util.h"
 #include "torch_xla/csrc/helpers.h"
 
 // Code extracted from:
@@ -92,7 +93,7 @@ xla::XlaOp NmsGather(xla::XlaOp input, absl::Span<const int64_t> input_sizes,
   int64_t num_indices = xla::util::Multiply<int64_t>(indices_sizes);
   if (num_indices == 0) {
     std::vector<int64_t> output_sizes =
-        xla::util::ToVector<int64_t>(input_sizes);
+        torch::lazy::ToVector<int64_t>(input_sizes);
     output_sizes.erase(std::next(output_sizes.begin(), axis));
     return xla::Broadcast(
         xla::Zero(input.builder(), input_shape.element_type()), output_sizes);

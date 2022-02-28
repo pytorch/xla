@@ -2,6 +2,7 @@
 
 #include "absl/types/span.h"
 #include "tensorflow/compiler/xla/xla_client/util.h"
+#include "torch/csrc/lazy/core/util.h"
 #include "torch_xla/csrc/lowering_context.h"
 #include "torch_xla/csrc/nll_loss.h"
 #include "torch_xla/csrc/ops/infer_output_shape.h"
@@ -36,15 +37,15 @@ xla::Shape NodeOutputShape(const Value& logits, const Value& labels,
 NllLoss::NllLoss(const Value& logits, const Value& labels,
                  const absl::optional<Value>& weight, ReductionMode reduction,
                  int ignore_index)
-    : Node(
-          ir::OpKind(at::aten::nll_loss),
-          xla::util::GetValuesVector<Value>({logits, labels}, {&weight}),
-          [&]() {
-            return NodeOutputShape(logits, labels, weight, reduction,
-                                   ignore_index);
-          },
-          /*num_outputs=*/1,
-          torch::lazy::MHash(xla::util::GetEnumValue(reduction), ignore_index)),
+    : Node(ir::OpKind(at::aten::nll_loss),
+           xla::util::GetValuesVector<Value>({logits, labels}, {&weight}),
+           [&]() {
+             return NodeOutputShape(logits, labels, weight, reduction,
+                                    ignore_index);
+           },
+           /*num_outputs=*/1,
+           torch::lazy::MHash(torch::lazy::GetEnumValue(reduction),
+                              ignore_index)),
       reduction_(reduction),
       ignore_index_(ignore_index) {}
 
@@ -71,7 +72,7 @@ XlaOpVector NllLoss::Lower(LoweringContext* loctx) const {
 std::string NllLoss::ToString() const {
   std::stringstream ss;
   ss << Node::ToString()
-     << ", reduction=" << xla::util::GetEnumValue(reduction_)
+     << ", reduction=" << torch::lazy::GetEnumValue(reduction_)
      << ", ignore_index=" << ignore_index_;
   return ss.str();
 }

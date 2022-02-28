@@ -14,6 +14,7 @@
 #include "tensorflow/compiler/xla/xla_client/sys_util.h"
 #include "tensorflow/compiler/xla/xla_client/tf_logging.h"
 #include "tensorflow/compiler/xla/xla_client/util.h"
+#include "torch/csrc/lazy/core/util.h"
 
 namespace torch_xla {
 namespace {
@@ -115,7 +116,7 @@ xla::Shape MakeShapeWithSortedLayout(absl::Span<const int64_t> dimensions,
                                      xla::PrimitiveType type) {
   // Place bigger dimensions on most minor layout locations.
   std::vector<int64_t> layout =
-      xla::util::Iota<int64_t>(dimensions.size(), dimensions.size() - 1, -1);
+      torch::lazy::Iota<int64_t>(dimensions.size(), dimensions.size() - 1, -1);
   std::sort(layout.begin(), layout.end(), [&](int64_t a, int64_t b) {
     return dimensions[a] > dimensions[b];
   });

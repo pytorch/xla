@@ -2,6 +2,7 @@
 
 #include "tensorflow/compiler/xla/xla_client/debug_macros.h"
 #include "tensorflow/compiler/xla/xla_client/util.h"
+#include "torch/csrc/lazy/core/util.h"
 #include "torch_xla/csrc/lowering_context.h"
 #include "torch_xla/csrc/ops/infer_output_shape.h"
 
@@ -44,7 +45,7 @@ BinaryCrossEntropyBackward::BinaryCrossEntropyBackward(
                                     reduction);
            },
            /*num_outputs=*/1,
-           torch::lazy::MHash(xla::util::GetEnumValue(reduction))),
+           torch::lazy::MHash(torch::lazy::GetEnumValue(reduction))),
       reduction_(reduction) {}
 
 NodePtr BinaryCrossEntropyBackward::Clone(OpList operands) const {
@@ -72,7 +73,7 @@ XlaOpVector BinaryCrossEntropyBackward::Lower(LoweringContext* loctx) const {
 std::string BinaryCrossEntropyBackward::ToString() const {
   std::stringstream ss;
   ss << Node::ToString()
-     << ", reduction=" << xla::util::GetEnumValue(reduction_);
+     << ", reduction=" << torch::lazy::GetEnumValue(reduction_);
   return ss.str();
 }
 

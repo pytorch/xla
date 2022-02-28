@@ -5,6 +5,7 @@
 
 #include "tensorflow/compiler/xla/xla_client/util.h"
 #include "torch/csrc/lazy/core/hash.h"
+#include "torch/csrc/lazy/core/util.h"
 
 namespace torch_xla {
 
@@ -37,7 +38,7 @@ struct Device {
   }
 
   size_t hash() const {
-    return torch::lazy::StdHashCombine(xla::util::GetEnumValue(hw_type),
+    return torch::lazy::StdHashCombine(torch::lazy::GetEnumValue(hw_type),
                                        ordinal + 1);
   }
 
