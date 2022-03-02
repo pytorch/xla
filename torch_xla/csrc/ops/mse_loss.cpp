@@ -26,7 +26,7 @@ xla::Shape NodeOutputShape(const Value& input, const Value& target,
 
 MseLoss::MseLoss(const Value& input, const Value& target,
                  ReductionMode reduction)
-    : Node(ir::OpKind(at::aten::mse_loss), {input, target},
+    : Node(torch::lazy::OpKind(at::aten::mse_loss), {input, target},
            [&]() { return NodeOutputShape(input, target, reduction); },
            /*num_outputs=*/1,
            torch::lazy::MHash(torch::lazy::GetEnumValue(reduction))),

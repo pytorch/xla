@@ -45,7 +45,7 @@ xla::XlaOp LowerAsStrided(xla::XlaOp input, absl::Span<const int64_t> size,
 
 AsStrided::AsStrided(const Value& input, std::vector<int64_t> size,
                      std::vector<int64_t> stride, int64_t storage_offset)
-    : Node(ir::OpKind(at::aten::as_strided), {input},
+    : Node(torch::lazy::OpKind(at::aten::as_strided), {input},
            [&]() {
              return xla::ShapeUtil::MakeShape(input.shape().element_type(),
                                               size);

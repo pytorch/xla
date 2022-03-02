@@ -23,7 +23,7 @@ xla::Shape NodeOutputShape(const Value& input,
 }  // namespace
 
 Repeat::Repeat(const Value& input, std::vector<int64_t> repeats)
-    : Node(ir::OpKind(at::aten::repeat), {input},
+    : Node(torch::lazy::OpKind(at::aten::repeat), {input},
            [&]() { return NodeOutputShape(input, repeats); },
            /*num_outputs=*/1, torch::lazy::MHash(repeats)),
       repeats_(std::move(repeats)) {}

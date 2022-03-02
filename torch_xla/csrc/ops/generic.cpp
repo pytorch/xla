@@ -6,29 +6,29 @@ namespace torch_xla {
 namespace ir {
 namespace ops {
 
-Generic::Generic(OpKind op, absl::Span<const Value> operands, xla::Shape shape,
-                 LowerFn lower_fn, size_t num_outputs,
+Generic::Generic(torch::lazy::OpKind op, absl::Span<const Value> operands,
+                 xla::Shape shape, LowerFn lower_fn, size_t num_outputs,
                  torch::lazy::hash_t hash_seed)
     : Node(std::move(op), operands, std::move(shape), num_outputs, hash_seed),
       lower_fn_(std::move(lower_fn)),
       hash_seed_(hash_seed) {}
 
-Generic::Generic(OpKind op, absl::Span<const Value> operands,
+Generic::Generic(torch::lazy::OpKind op, absl::Span<const Value> operands,
                  const std::function<xla::Shape()>& shape_fn, LowerFn lower_fn,
                  size_t num_outputs, torch::lazy::hash_t hash_seed)
     : Node(std::move(op), operands, shape_fn, num_outputs, hash_seed),
       lower_fn_(std::move(lower_fn)),
       hash_seed_(hash_seed) {}
 
-Generic::Generic(OpKind op, xla::Shape shape, LowerFn lower_fn,
+Generic::Generic(torch::lazy::OpKind op, xla::Shape shape, LowerFn lower_fn,
                  size_t num_outputs, torch::lazy::hash_t hash_seed)
     : Node(std::move(op), std::move(shape), num_outputs, hash_seed),
       lower_fn_(std::move(lower_fn)),
       hash_seed_(hash_seed) {}
 
 NodePtr Generic::Clone(OpList operands) const {
-  return MakeNode<Generic>(op(), operands, shape(), lower_fn_, num_outputs(),
-                           hash_seed_);
+  return ir::MakeNode<Generic>(op(), operands, shape(), lower_fn_,
+                               num_outputs(), hash_seed_);
 }
 
 XlaOpVector Generic::Lower(LoweringContext* loctx) const {

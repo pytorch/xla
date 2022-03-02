@@ -45,7 +45,7 @@ NllLoss2dBackward::NllLoss2dBackward(const Value& grad_output,
                                      const absl::optional<Value>& weight,
                                      const absl::optional<Value>& total_weight,
                                      ReductionMode reduction, int ignore_index)
-    : Node(ir::OpKind(at::aten::nll_loss2d_backward),
+    : Node(torch::lazy::OpKind(at::aten::nll_loss2d_backward),
            xla::util::GetValuesVector<Value>({grad_output, logits, labels},
                                              {&weight, &total_weight}),
            [&]() {

@@ -504,7 +504,7 @@ std::vector<XLATensor> XLATensor::user_computation(
     input_values.push_back(input.GetIrValue());
   }
   ir::NodePtr node = ir::MakeNode<ir::ops::UserComputation>(
-      ir::OpKind::Get(opname), input_values, std::move(computation));
+      torch::lazy::OpKind::Get(opname), input_values, std::move(computation));
   // Cast can be one of the user computation and we don't want to inherit the
   // logical_element_type in this case
   return inputs.front().MakeOutputTensors(node, /*inherit_logical_type=*/false);
@@ -1586,7 +1586,7 @@ XLATensor XLATensor::hardshrink_backward(const XLATensor& grad_out,
                                          const XLATensor& input,
                                          const at::Scalar& lambda) {
   return input.CreateFrom(ir::MakeNode<ir::ops::ShrinkBackward>(
-      ir::OpKind(at::aten::hardshrink_backward), grad_out.GetIrValue(),
+      torch::lazy::OpKind(at::aten::hardshrink_backward), grad_out.GetIrValue(),
       input.GetIrValue(), lambda));
 }
 
@@ -1655,7 +1655,7 @@ XLATensor XLATensor::log(const XLATensor& input) {
       c10::nullopt);
 }
 
-XLATensor XLATensor::log_base(const XLATensor& input, ir::OpKind op,
+XLATensor XLATensor::log_base(const XLATensor& input, torch::lazy::OpKind op,
                               double base) {
   // Here we explictly pass c10::nullopt as logical_element_type because
   // otherwise result will inherit the input's logical_element_type. In the
@@ -2568,7 +2568,7 @@ XLATensor XLATensor::softshrink_backward(const XLATensor& grad_out,
                                          const XLATensor& input,
                                          const at::Scalar& lambda) {
   return input.CreateFrom(ir::MakeNode<ir::ops::ShrinkBackward>(
-      ir::OpKind(at::aten::softshrink_backward), grad_out.GetIrValue(),
+      torch::lazy::OpKind(at::aten::softshrink_backward), grad_out.GetIrValue(),
       input.GetIrValue(), lambda));
 }
 

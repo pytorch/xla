@@ -45,7 +45,7 @@ NllLossBackward::NllLossBackward(const Value& grad_output, const Value& logits,
                                  const absl::optional<Value>& weight,
                                  const absl::optional<Value>& total_weight,
                                  ReductionMode reduction, int ignore_index)
-    : Node(ir::OpKind(at::aten::nll_loss_backward),
+    : Node(torch::lazy::OpKind(at::aten::nll_loss_backward),
            xla::util::GetValuesVector<Value>({grad_output, logits, labels},
                                              {&weight, &total_weight}),
            [&]() {

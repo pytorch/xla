@@ -17,7 +17,7 @@ xla::Shape NodeOutputShape(const Value& input, absl::Span<const int64_t> size) {
 }  // namespace
 
 Resize::Resize(const Value& input, std::vector<int64_t> size)
-    : Node(ir::OpKind(at::aten::resize), {input},
+    : Node(torch::lazy::OpKind(at::aten::resize), {input},
            [&]() { return NodeOutputShape(input, size); },
            /*num_outputs=*/1, torch::lazy::MHash(size)),
       size_(std::move(size)) {}

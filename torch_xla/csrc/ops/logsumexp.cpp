@@ -26,7 +26,7 @@ xla::Shape NodeOutputShape(const Value& input, std::vector<int64_t>& dimensions,
 
 Logsumexp::Logsumexp(const Value& input, std::vector<int64_t> dimensions,
                      bool keep_reduced_dimensions)
-    : Node(ir::OpKind(at::aten::logsumexp), {input},
+    : Node(torch::lazy::OpKind(at::aten::logsumexp), {input},
            [&]() {
              return NodeOutputShape(input, dimensions, keep_reduced_dimensions);
            },
