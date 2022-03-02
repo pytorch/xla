@@ -131,7 +131,7 @@ Node::Node(torch::lazy::OpKind op, OpList operands, xla::Shape shape,
            size_t num_outputs, torch::lazy::hash_t hash_seed)
     : torch::lazy::Node(op, num_outputs, /* hash_func */
                         [&](bool /*bakeInSizes*/) -> torch::lazy::hash_t {
-                          return GetOpHash(op_, shape_, hash_seed);
+                          return GetOpHash(op, shape, hash_seed);
                         }),
       op_(std::move(op)),
       num_outputs_(num_outputs),
@@ -144,7 +144,6 @@ Node::Node(torch::lazy::OpKind op, OpList operands, xla::Shape shape,
     AddOperand(operand.node, operand.index);
     hash_ = torch::lazy::HashCombine(hash_, operand.hash());
   }
-  std::cout << "WONJOO constructor1" << std::endl;
 }
 
 Node::Node(torch::lazy::OpKind op, OpList operands,
@@ -160,22 +159,20 @@ Node::Node(torch::lazy::OpKind op, xla::Shape shape, size_t num_outputs,
            torch::lazy::hash_t hash_seed)
     : torch::lazy::Node(op, num_outputs, /* hash_func */
                         [&](bool /*bakeInSizes*/) -> torch::lazy::hash_t {
-                          return GetOpHash(op_, shape_, hash_seed);
+                          return GetOpHash(op, shape, hash_seed);
                         }),
       op_(std::move(op)),
       num_outputs_(num_outputs),
       shape_(std::move(shape)),
-      node_hash_(GetOpHash(op_, shape_, hash_seed)),
+      node_hash_(GetOpHash(op, shape, hash_seed)),
       hash_(node_hash_) {
   metadata_.scope = GetCurrentScope();
   metadata_.frame_info = GetFrameInfo();
-  std::cout << "WONJOO constructor2" << std::endl;
-  std::cout << "WONJOO num_outputs_=" << num_outputs_ << std::endl;
-  std::cout << "WONJOO constructor2 finished" << std::endl;
 }
 
 Node::~Node() {
   for (size_t i = 0; i < operands_as_outputs_with_shape_.size(); ++i) {
+    operands_[i]->RemoveUse(Use(this, i, operands_as_outputs_[i].index));
     operands_[i]->RemoveUse(Use(this, i, operands_as_outputs_with_shape_[i].index));
   }
 }
@@ -189,7 +186,6 @@ const xla::Shape& Node::shape(size_t output_index) const {
 }
 
 void Node::AddOperand(NodePtr node, size_t index) {
-  std::cout << "WONJOO AddOperand" << std::endl;
   XLA_CHECK_LT(index, node->num_outputs());
   operands_.push_back(std::move(node));
   operands_as_outputs_.push_back(torch::lazy::Output(operands_.back().get(), index));
