@@ -71,10 +71,9 @@ void CheckSubOperandTypes(at::ScalarType type1, at::ScalarType type2) {
 
 c10::optional<at::ScalarType> PromoteIntegralType(
     at::ScalarType src_dtype, const c10::optional<at::ScalarType>& opt_dtype) {
-  return opt_dtype.has_value()
-             ? opt_dtype.value()
-             : at::isIntegralType(src_dtype, /*includeBool=*/true) ? at::kLong
-                                                                   : opt_dtype;
+  return opt_dtype.has_value() ? opt_dtype.value()
+         : at::isIntegralType(src_dtype, /*includeBool=*/true) ? at::kLong
+                                                               : opt_dtype;
 }
 
 bool IsTypeWithLargerRangeThanLong(torch::ScalarType dtype) {
@@ -483,15 +482,6 @@ std::tuple<at::Tensor, at::Tensor> XLANativeFunctions::_pack_padded_sequence(
   std::vector<at::Tensor> xla_tensors = {lengths};
   auto cpu_tensors = bridge::XlaCreateTensorList(xla_tensors);
   return at::native::_pack_padded_sequence(input, cpu_tensors[0], batch_first);
-}
-
-at::Tensor XLANativeFunctions::_s_where(const at::Tensor& condition,
-                                        const at::Tensor& self,
-                                        const at::Tensor& other) {
-  XLA_FN_COUNTER("xla::");
-  return bridge::AtenFromXlaTensor(XLATensor::where(
-      bridge::GetXlaTensor(condition), bridge::GetXlaTensor(self),
-      bridge::GetXlaTensor(other)));
 }
 
 at::Tensor XLANativeFunctions::_softmax(const at::Tensor& self, int64_t dim,
@@ -3564,6 +3554,15 @@ at::Tensor XLANativeFunctions::view(const at::Tensor& self,
   XLA_FN_COUNTER("xla::");
   return bridge::AtenFromXlaTensor(
       XLATensor::view(bridge::GetXlaTensor(self), XlaHelpers::I64List(size)));
+}
+
+at::Tensor XLANativeFunctions::where(const at::Tensor& condition,
+                                     const at::Tensor& self,
+                                     const at::Tensor& other) {
+  XLA_FN_COUNTER("xla::");
+  return bridge::AtenFromXlaTensor(XLATensor::where(
+      bridge::GetXlaTensor(condition), bridge::GetXlaTensor(self),
+      bridge::GetXlaTensor(other)));
 }
 
 at::Tensor& XLANativeFunctions::zero_(at::Tensor& self) {
