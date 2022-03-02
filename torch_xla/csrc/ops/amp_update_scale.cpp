@@ -42,8 +42,9 @@ XlaOpVector AmpUpdateScale::Lower(LoweringContext* loctx) const {
   return ReturnOps(
       BuildAmpUpdateScale(loctx->GetOutputOp(operand_with_shape(0)),
                           loctx->GetOutputOp(operand_with_shape(1)),
-                          loctx->GetOutputOp(operand_with_shape(2)), scale_growth_factor_,
-                          scale_backoff_factor_, growth_interval_),
+                          loctx->GetOutputOp(operand_with_shape(2)),
+                          scale_growth_factor_, scale_backoff_factor_,
+                          growth_interval_),
       loctx);
 }
 
