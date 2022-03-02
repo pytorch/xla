@@ -172,7 +172,6 @@ Node::Node(torch::lazy::OpKind op, xla::Shape shape, size_t num_outputs,
 
 Node::~Node() {
   for (size_t i = 0; i < operands_as_outputs_with_shape_.size(); ++i) {
-    operands_[i]->RemoveUse(Use(this, i, operands_as_outputs_[i].index));
     operands_[i]->RemoveUse(Use(this, i, operands_as_outputs_with_shape_[i].index));
   }
 }
@@ -188,7 +187,6 @@ const xla::Shape& Node::shape(size_t output_index) const {
 void Node::AddOperand(NodePtr node, size_t index) {
   XLA_CHECK_LT(index, node->num_outputs());
   operands_.push_back(std::move(node));
-  operands_as_outputs_.push_back(torch::lazy::Output(operands_.back().get(), index));
   operands_as_outputs_with_shape_.push_back(Output(operands_.back().get(), index));
   operands_.back()->AddUse(Use(this, operands_.size() - 1, index));
 }
