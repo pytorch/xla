@@ -53,8 +53,8 @@ namespace ops {
     };                                                                         \
     auto lower_fn = [](const Node& node,                                       \
                        LoweringContext* loctx) -> XlaOpVector {                \
-      xla::XlaOp xla_input0 = loctx->GetOutputOp(node.operand_with_shape(0));             \
-      xla::XlaOp xla_input1 = loctx->GetOutputOp(node.operand_with_shape(1));             \
+      xla::XlaOp xla_input0 = loctx->GetOutputOp(node.operand_with_shape(0));  \
+      xla::XlaOp xla_input1 = loctx->GetOutputOp(node.operand_with_shape(1));  \
       auto promoted = XlaHelpers::Promote(xla_input0, xla_input1);             \
       return node.ReturnOp(xla_fn(promoted.first, promoted.second), loctx);    \
     };                                                                         \
@@ -316,7 +316,8 @@ NodePtr Ger(const Value& input, const Value& other) {
 NodePtr AddMatMulOp(const Value& input, const Value& weight,
                     const Value& bias) {
   auto lower_fn = [](const Node& node, LoweringContext* loctx) -> XlaOpVector {
-    XLA_CHECK_EQ(node.operands_with_shape().size(), 3) << "Unexpected number of operands";
+    XLA_CHECK_EQ(node.operands_with_shape().size(), 3)
+        << "Unexpected number of operands";
     xla::XlaOp xla_input = loctx->GetOutputOp(node.operand_with_shape(0));
     xla::XlaOp xla_weight = loctx->GetOutputOp(node.operand_with_shape(1));
     xla::XlaOp xla_bias = loctx->GetOutputOp(node.operand_with_shape(2));
@@ -825,8 +826,10 @@ NodePtr BaddBmm(const Value& lhs, const Value& rhs, const Value& bias,
     xla::XlaOp xla_lhs = loctx->GetOutputOp(node.operand_with_shape(0));
     xla::XlaOp xla_rhs = loctx->GetOutputOp(node.operand_with_shape(1));
     xla::XlaOp xla_bias = loctx->GetOutputOp(node.operand_with_shape(2));
-    xla::XlaOp xla_product_multiplier = loctx->GetOutputOp(node.operand_with_shape(3));
-    xla::XlaOp xla_bias_multiplier = loctx->GetOutputOp(node.operand_with_shape(4));
+    xla::XlaOp xla_product_multiplier =
+        loctx->GetOutputOp(node.operand_with_shape(3));
+    xla::XlaOp xla_bias_multiplier =
+        loctx->GetOutputOp(node.operand_with_shape(4));
     std::tie(xla_lhs, xla_rhs) = XlaHelpers::PromoteValues(xla_lhs, xla_rhs);
 
     return node.ReturnOp(
@@ -966,8 +969,10 @@ NodePtr NanToNum(const Value& input, const Value& nan, const Value& posinf,
   auto lower_fn = [](const Node& node, LoweringContext* loctx) -> XlaOpVector {
     xla::XlaOp xla_input = loctx->GetOutputOp(node.operand_with_shape(0));
     xla::XlaOp nan_replacement = loctx->GetOutputOp(node.operand_with_shape(1));
-    xla::XlaOp posinf_replacement = loctx->GetOutputOp(node.operand_with_shape(2));
-    xla::XlaOp neginf_replacement = loctx->GetOutputOp(node.operand_with_shape(3));
+    xla::XlaOp posinf_replacement =
+        loctx->GetOutputOp(node.operand_with_shape(2));
+    xla::XlaOp neginf_replacement =
+        loctx->GetOutputOp(node.operand_with_shape(3));
     xla::XlaOp result =
         xla::Select(xla::IsNan(xla_input), nan_replacement,
                     xla::Select(xla::IsPosInf(xla_input), posinf_replacement,

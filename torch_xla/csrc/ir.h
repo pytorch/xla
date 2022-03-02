@@ -176,13 +176,21 @@ class Node : public torch::lazy::Node {
   // multi-output node, output_index must be zero.
   const xla::Shape& shape(size_t output_index) const;
 
-  const std::vector<torch::lazy::Output>& operands() const { return operands_as_outputs_; }
+  const std::vector<torch::lazy::Output>& operands() const {
+    return operands_as_outputs_;
+  }
 
-  const std::vector<Output>& operands_with_shape() const { return operands_as_outputs_with_shape_; }
+  const std::vector<Output>& operands_with_shape() const {
+    return operands_as_outputs_with_shape_;
+  }
 
-  const torch::lazy::Output& operand(size_t i) const { return operands_as_outputs_.at(i); }
+  const torch::lazy::Output& operand(size_t i) const {
+    return operands_as_outputs_.at(i);
+  }
 
-  const Output& operand_with_shape(size_t i) const { return operands_as_outputs_with_shape_.at(i); }
+  const Output& operand_with_shape(size_t i) const {
+    return operands_as_outputs_with_shape_.at(i);
+  }
 
   const std::set<Use>& uses() const { return uses_; }
 
