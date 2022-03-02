@@ -40,7 +40,7 @@ ConvolutionBackwardOverrideable::ConvolutionBackwardOverrideable(
     std::vector<int64_t> stride, std::vector<int64_t> padding,
     std::vector<int64_t> dilation, bool transposed,
     std::vector<int64_t> output_padding, int64_t groups)
-    : Node(ir::OpKind(at::aten::convolution_backward_overrideable),
+    : Node(torch::lazy::OpKind(at::aten::convolution_backward_overrideable),
            {grad_output, input, weight},
            [&]() {
              return NodeOutputShape(grad_output, input, weight, stride, padding,

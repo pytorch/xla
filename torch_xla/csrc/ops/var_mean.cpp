@@ -30,7 +30,7 @@ xla::Shape NodeOutputShape(const Value& input, std::vector<int64_t>& dimensions,
 
 VarMean::VarMean(const Value& input, std::vector<int64_t> dimensions,
                  int64_t correction, bool keep_reduced_dimensions)
-    : Node(ir::OpKind(at::aten::var_mean), {input},
+    : Node(torch::lazy::OpKind(at::aten::var_mean), {input},
            [&]() {
              return NodeOutputShape(input, dimensions, correction,
                                     keep_reduced_dimensions);

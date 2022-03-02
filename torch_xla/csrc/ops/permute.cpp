@@ -22,7 +22,7 @@ xla::Shape NodeOutputShape(const Value& input, absl::Span<const int64_t> dims) {
 }  // namespace
 
 Permute::Permute(const Value& input, std::vector<int64_t> dims)
-    : Node(ir::OpKind(at::aten::permute), {input},
+    : Node(torch::lazy::OpKind(at::aten::permute), {input},
            [&]() { return NodeOutputShape(input, dims); },
            /*num_outputs=*/1, torch::lazy::MHash(dims)),
       dims_(std::move(dims)) {}

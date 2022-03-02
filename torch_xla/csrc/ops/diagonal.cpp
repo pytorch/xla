@@ -13,7 +13,7 @@ namespace ops {
 
 Diagonal::Diagonal(const Value& input, int64_t offset, int64_t dim1,
                    int64_t dim2)
-    : Node(ir::OpKind(at::aten::diagonal), {input},
+    : Node(torch::lazy::OpKind(at::aten::diagonal), {input},
            [&]() {
              return MakeDiagonalShape(input.shape(), offset, dim1, dim2);
            },

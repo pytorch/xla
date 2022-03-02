@@ -9,7 +9,7 @@ namespace ir {
 namespace ops {
 
 Linspace::Linspace(const Value& start, const Value& end, int64_t steps)
-    : Node(ir::OpKind(at::aten::linspace), {start, end},
+    : Node(torch::lazy::OpKind(at::aten::linspace), {start, end},
            [&]() {
              xla::PrimitiveType dtype = XlaHelpers::PromoteType(
                  start.shape().element_type(), end.shape().element_type());

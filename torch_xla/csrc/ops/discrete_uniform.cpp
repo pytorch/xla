@@ -12,7 +12,7 @@ namespace ops {
 
 DiscreteUniform::DiscreteUniform(const Value& from, const Value& to,
                                  const Value& seed, const xla::Shape& rng_shape)
-    : Node(ir::OpKind(at::aten::random), {from, to, seed}, rng_shape,
+    : Node(torch::lazy::OpKind(at::aten::random), {from, to, seed}, rng_shape,
            /*num_outputs=*/1, torch::lazy::Hash(rng_shape)) {}
 
 NodePtr DiscreteUniform::Clone(OpList operands) const {

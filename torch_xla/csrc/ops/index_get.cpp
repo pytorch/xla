@@ -24,7 +24,7 @@ xla::Shape NodeOutputShape(const Value& base, const Value& indices,
 
 IndexGet::IndexGet(const ir::Value& base, const ir::Value& indices,
                    int64_t start_dim)
-    : Node(OpKind(at::aten::index), {base, indices},
+    : Node(torch::lazy::OpKind(at::aten::index), {base, indices},
            [&]() { return NodeOutputShape(base, indices, start_dim); },
            /*num_outputs=*/1, torch::lazy::MHash(start_dim)),
       start_dim_(start_dim) {}

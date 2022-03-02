@@ -20,7 +20,7 @@ xla::Shape NodeOutputShape(const Value& input, int64_t dim, bool keepdim) {
 }  // namespace
 
 ArgMin::ArgMin(const Value& input, int64_t dim, bool keepdim)
-    : Node(ir::OpKind(at::aten::argmin), {input},
+    : Node(torch::lazy::OpKind(at::aten::argmin), {input},
            [&]() { return NodeOutputShape(input, dim, keepdim); },
            /*num_outputs=*/1, torch::lazy::MHash(dim, keepdim)),
       dim_(dim),

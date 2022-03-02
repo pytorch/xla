@@ -721,7 +721,8 @@ class XLATensor {
 
   static XLATensor log(const XLATensor& input);
 
-  static XLATensor log_base(const XLATensor& input, ir::OpKind op, double base);
+  static XLATensor log_base(const XLATensor& input, torch::lazy::OpKind op,
+                            double base);
 
   static XLATensor log_sigmoid(const XLATensor& input);
   static std::tuple<XLATensor, XLATensor> log_sigmoid_forward(

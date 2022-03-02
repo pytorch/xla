@@ -9,7 +9,8 @@ namespace ops {
 
 Put::Put(const Value& input, const Value& index, const Value& source,
          bool accumulate)
-    : Node(ir::OpKind(at::aten::put), {input, index, source}, input.shape(),
+    : Node(torch::lazy::OpKind(at::aten::put), {input, index, source},
+           input.shape(),
            /*num_outputs=*/1, torch::lazy::MHash(accumulate)),
       accumulate_(accumulate) {}
 

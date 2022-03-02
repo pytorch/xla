@@ -38,7 +38,7 @@ xla::Shape NodeOutputShape(const Value& input,
 
 Mean::Mean(const Value& input, std::vector<int64_t> dimensions,
            bool keep_reduced_dimensions, c10::optional<at::ScalarType> dtype)
-    : Node(ir::OpKind(at::aten::mean), {input},
+    : Node(torch::lazy::OpKind(at::aten::mean), {input},
            [&]() {
              return NodeOutputShape(input, dimensions, keep_reduced_dimensions,
                                     dtype);

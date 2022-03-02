@@ -23,7 +23,7 @@ xla::Shape NodeOutputShape(const Value& input, int64_t k, int64_t dim,
 
 TopK::TopK(const Value& input, int64_t k, int64_t dim, bool largest,
            bool sorted, bool stable)
-    : Node(ir::OpKind(at::aten::topk), {input},
+    : Node(torch::lazy::OpKind(at::aten::topk), {input},
            [&]() {
              return NodeOutputShape(input, k, dim, largest, sorted, stable);
            },

@@ -26,7 +26,7 @@ xla::Shape NodeOutputShape(const Value& input, std::vector<int64_t>& dimensions,
 
 All::All(const Value& input, std::vector<int64_t> dimensions,
          bool keep_reduced_dimensions)
-    : Node(ir::OpKind(at::aten::all), {input},
+    : Node(torch::lazy::OpKind(at::aten::all), {input},
            NodeOutputShape(input, dimensions, keep_reduced_dimensions),
            /*num_outputs=*/1,
            torch::lazy::MHash(dimensions, keep_reduced_dimensions)),

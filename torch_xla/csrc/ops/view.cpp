@@ -27,7 +27,7 @@ xla::Shape NodeOutputShape(const Value& input,
 }  // namespace
 
 View::View(const Value& input, std::vector<int64_t> output_size)
-    : Node(ir::OpKind(at::aten::view), {input},
+    : Node(torch::lazy::OpKind(at::aten::view), {input},
            NodeOutputShape(input, output_size),
            /*num_outputs=*/1, torch::lazy::MHash(output_size)),
       output_size_(std::move(output_size)) {}

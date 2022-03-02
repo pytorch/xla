@@ -25,7 +25,7 @@ xla::Shape NodeOutputShape(const Value& input,
 
 AdaptiveMaxPool2d::AdaptiveMaxPool2d(const Value& input,
                                      std::vector<int64_t> output_size)
-    : Node(ir::OpKind(at::aten::adaptive_max_pool2d), {input},
+    : Node(torch::lazy::OpKind(at::aten::adaptive_max_pool2d), {input},
            [&]() { return NodeOutputShape(input, output_size); },
            /*num_outputs=*/2, torch::lazy::MHash(output_size)),
       output_size_(std::move(output_size)) {}

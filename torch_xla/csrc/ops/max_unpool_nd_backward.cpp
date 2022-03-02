@@ -39,7 +39,7 @@ MaxUnpoolNdBackward::MaxUnpoolNdBackward(const Value& grad_output,
                                          const Value& input,
                                          const Value& indices,
                                          std::vector<int64_t> output_size)
-    : Node(ir::OpKind(MaxUnpoolNdBackwardSymbol(output_size.size())),
+    : Node(torch::lazy::OpKind(MaxUnpoolNdBackwardSymbol(output_size.size())),
            {grad_output, input, indices},
            [&]() {
              return NodeOutputShape(grad_output, input, indices, output_size);

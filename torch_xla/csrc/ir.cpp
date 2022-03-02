@@ -127,16 +127,8 @@ torch::lazy::hash_t Value::hash() const {
   return torch::lazy::HashCombine(node->hash(), index);
 }
 
-OpKind OpKind::Get(const std::string& name) {
-  return OpKind(c10::Symbol::fromQualString(name));
-}
-
-torch::lazy::hash_t OpKind::hash() const {
-  return torch::lazy::StringHash(op.toQualString());
-}
-
-Node::Node(OpKind op, OpList operands, xla::Shape shape, size_t num_outputs,
-           torch::lazy::hash_t hash_seed)
+Node::Node(torch::lazy::OpKind op, OpList operands, xla::Shape shape,
+           size_t num_outputs, torch::lazy::hash_t hash_seed)
     : op_(std::move(op)),
       num_outputs_(num_outputs),
       shape_(std::move(shape)),
@@ -150,7 +142,7 @@ Node::Node(OpKind op, OpList operands, xla::Shape shape, size_t num_outputs,
   }
 }
 
-Node::Node(OpKind op, OpList operands,
+Node::Node(torch::lazy::OpKind op, OpList operands,
            const std::function<xla::Shape()>& shape_fn, size_t num_outputs,
            torch::lazy::hash_t hash_seed)
     : Node(std::move(op), operands, xla::Shape(), num_outputs, hash_seed) {
@@ -159,7 +151,7 @@ Node::Node(OpKind op, OpList operands,
   shape_ = GetOpShape(shape_fn);
 }
 
-Node::Node(OpKind op, xla::Shape shape, size_t num_outputs,
+Node::Node(torch::lazy::OpKind op, xla::Shape shape, size_t num_outputs,
            torch::lazy::hash_t hash_seed)
     : op_(std::move(op)),
       num_outputs_(num_outputs),
@@ -247,7 +239,8 @@ XlaOpVector Node::Lower(LoweringContext* loctx) const {
   XLA_ERROR() << "Lowering not implemented for node: " << *this;
 }
 
-torch::lazy::hash_t Node::GetOpHash(OpKind op, const xla::Shape& shape,
+torch::lazy::hash_t Node::GetOpHash(torch::lazy::OpKind op,
+                                    const xla::Shape& shape,
                                     torch::lazy::hash_t hash_seed) {
   torch::lazy::hash_t h =
       torch::lazy::HashCombine(op.hash(), torch::lazy::Hash(shape.ToString()));

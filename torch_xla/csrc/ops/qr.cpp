@@ -42,7 +42,7 @@ xla::Shape NodeOutputShape(const Value& input, bool some) {
 }  // namespace
 
 QR::QR(const Value& input, bool some)
-    : Node(ir::OpKind(at::aten::qr), {input},
+    : Node(torch::lazy::OpKind(at::aten::qr), {input},
            [&]() { return NodeOutputShape(input, some); },
            /*num_outputs=*/2, torch::lazy::MHash(some)),
       some_(some) {}

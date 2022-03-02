@@ -46,7 +46,7 @@ xla::Shape NodeOutputShape(const Value& input, bool eigenvectors, bool lower) {
 }  // namespace
 
 SymEig::SymEig(const Value& input, bool eigenvectors, bool lower)
-    : Node(ir::OpKind(at::aten::symeig), {input},
+    : Node(torch::lazy::OpKind(at::aten::symeig), {input},
            [&]() { return NodeOutputShape(input, eigenvectors, lower); },
            /*num_outputs=*/2, torch::lazy::MHash(eigenvectors, lower)),
       eigenvectors_(eigenvectors),

@@ -37,7 +37,7 @@ xla::Shape NodeOutputShape(const Value& logits, const Value& labels,
 NllLoss::NllLoss(const Value& logits, const Value& labels,
                  const absl::optional<Value>& weight, ReductionMode reduction,
                  int ignore_index)
-    : Node(ir::OpKind(at::aten::nll_loss),
+    : Node(torch::lazy::OpKind(at::aten::nll_loss),
            xla::util::GetValuesVector<Value>({logits, labels}, {&weight}),
            [&]() {
              return NodeOutputShape(logits, labels, weight, reduction,

@@ -23,7 +23,7 @@ xla::Shape NodeOutputShape(const Value& input,
 
 ReflectionPad2d::ReflectionPad2d(const Value& input,
                                  std::vector<int64_t> padding)
-    : Node(OpKind(at::aten::reflection_pad2d), {input},
+    : Node(torch::lazy::OpKind(at::aten::reflection_pad2d), {input},
            [&]() { return NodeOutputShape(input, padding); },
            /*num_outputs=*/1, torch::lazy::MHash(padding)),
       padding_(std::move(padding)) {}

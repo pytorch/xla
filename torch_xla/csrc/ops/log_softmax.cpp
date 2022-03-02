@@ -31,7 +31,7 @@ xla::Shape NodeOutputShape(const Value& input,
 
 LogSoftmax::LogSoftmax(const Value& input, int64_t dim,
                        c10::optional<at::ScalarType> dtype)
-    : Node(ir::OpKind(at::aten::log_softmax), {input},
+    : Node(torch::lazy::OpKind(at::aten::log_softmax), {input},
            [&]() { return NodeOutputShape(input, dtype); },
            /*num_outputs=*/1,
            torch::lazy::MHash(dim, torch::lazy::OptionalOr<int>(dtype, -1))),

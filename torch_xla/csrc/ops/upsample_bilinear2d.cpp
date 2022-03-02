@@ -12,7 +12,7 @@ namespace ops {
 UpsampleBilinear::UpsampleBilinear(const Value& input,
                                    std::vector<int64_t> output_size,
                                    bool align_corners)
-    : Node(ir::OpKind(at::aten::upsample_bilinear2d), {input},
+    : Node(torch::lazy::OpKind(at::aten::upsample_bilinear2d), {input},
            [&]() {
              return resize::GetForwardOutputShape2d(input.shape(), output_size);
            },

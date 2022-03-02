@@ -27,7 +27,7 @@ xla::Shape NodeOutputShape(const Value& grad_output, const Value& input,
 
 MseLossBackward::MseLossBackward(const Value& grad_output, const Value& input,
                                  const Value& target, ReductionMode reduction)
-    : Node(ir::OpKind(at::aten::mse_loss_backward),
+    : Node(torch::lazy::OpKind(at::aten::mse_loss_backward),
            {grad_output, input, target},
            [&]() {
              return NodeOutputShape(grad_output, input, target, reduction);

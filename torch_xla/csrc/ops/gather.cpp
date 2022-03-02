@@ -24,7 +24,7 @@ xla::Shape NodeOutputShape(const Value& input, const Value& index,
 }  // namespace
 
 Gather::Gather(const Value& input, int64_t dim, const Value& index)
-    : Node(ir::OpKind(at::aten::gather), {input, index},
+    : Node(torch::lazy::OpKind(at::aten::gather), {input, index},
            [&]() { return NodeOutputShape(input, index, dim); },
            /*num_outputs=*/1, torch::lazy::MHash(dim)),
       dim_(dim) {}
