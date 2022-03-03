@@ -34,15 +34,15 @@ namespace torch_xla {
 namespace ir {
 namespace ops {
 
-#define PTXLA_UNARY_OP(name, sym, xla_fn)                              \
-  NodePtr name(const Value& input) {                                   \
-    auto lower_fn = [](const Node& node,                               \
-                       LoweringContext* loctx) -> XlaOpVector {        \
-      xla::XlaOp xla_input = loctx->GetOutputOp(node.operand(0));      \
-      return node.ReturnOp(xla_fn(xla_input), loctx);                  \
-    };                                                                 \
-    return GenericOp(torch::lazy::OpKind(sym), {input}, input.shape(), \
-                     std::move(lower_fn));                             \
+#define PTXLA_UNARY_OP(name, sym, xla_fn)                                    \
+  NodePtr name(const Value& input) {                                         \
+    auto lower_fn = [](const Node& node,                                     \
+                       LoweringContext* loctx) -> XlaOpVector {              \
+      xla::XlaOp xla_input = loctx->GetOutputOp(node.operand_with_shape(0)); \
+      return node.ReturnOp(xla_fn(xla_input), loctx);                        \
+    };                                                                       \
+    return GenericOp(torch::lazy::OpKind(sym), {input}, input.shape(),       \
+                     std::move(lower_fn));                                   \
   }
 
 #define PTXLA_BINARY_OP(name, sym, xla_fn)                                     \
