@@ -30,13 +30,13 @@ ENV TORCH_CUDA_ARCH_LIST Maxwell
 ENV TORCH_NVCC_FLAGS "-Xfatbin -compress-all"
 ENV CUDA_PATH /usr/local/cuda
 
-# Whether to build torch and torch_xla libraries with CXX ABI
+# Set C/C++ compilers
 ENV CC "${cc}"
 ENV CXX "${cxx}"
-ENV CXX_ABI "${cxx_abi}"
+
+# Whether to build torch and torch_xla libraries with CXX ABI
 ENV _GLIBCXX_USE_CXX11_ABI "${cxx_abi}"
-ENV CFLAGS "${CFLAGS} -D_GLIBCXX_USE_CXX11_ABI=${CXX_ABI}"
-ENV CXXFLAGS="${CXXFLAGS} -D_GLIBCXX_USE_CXX11_ABI=${CXX_ABI}"
+ENV CXXFLAGS "${CXXFLAGS} -D_GLIBCXX_USE_CXX11_ABI=${cxx_abi}"
 
 # Whether to build for TPUVM mode
 ENV TPUVM_MODE "${tpuvm}"

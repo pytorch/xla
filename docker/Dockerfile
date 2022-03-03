@@ -25,8 +25,8 @@ ENV XLA_CUDA "${cuda}"
 ENV TF_CUDA_COMPUTE_CAPABILITIES "${cuda_compute}"
 
 # Whether to build torch and torch_xla libraries with CXX ABI
-ENV CXX_ABI "${cxx_abi}"
 ENV _GLIBCXX_USE_CXX11_ABI "${cxx_abi}"
+ENV CXXFLAGS "${CXXFLAGS} -D_GLIBCXX_USE_CXX11_ABI=${cxx_abi}"
 
 # Whether to build for TPUVM mode
 ENV TPUVM_MODE "${tpuvm}"
