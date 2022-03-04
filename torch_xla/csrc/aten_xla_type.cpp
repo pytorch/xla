@@ -1,4 +1,5 @@
 #include <ATen/Context.h>
+#include <ATen/ExpandUtils.h>
 #include <ATen/Operators.h>
 #include <ATen/native/BinaryOps.h>
 #include <ATen/native/CPUFallback.h>
@@ -3561,9 +3562,12 @@ at::Tensor XLANativeFunctions::where(const at::Tensor& condition,
                                      const at::Tensor& self,
                                      const at::Tensor& other) {
   XLA_FN_COUNTER("xla::");
+  c10::MaybeOwned<at::Tensor> b_condition, b_self, b_other;
+  std::tie(b_condition, b_self, b_other) =
+      expand_outplace(condition, self, other, "where");
   return bridge::AtenFromXlaTensor(XLATensor::where(
-      bridge::GetXlaTensor(condition), bridge::GetXlaTensor(self),
-      bridge::GetXlaTensor(other)));
+      bridge::GetXlaTensor(*b_condition), bridge::GetXlaTensor(*b_self),
+      bridge::GetXlaTensor(*b_other)));
 }
 
 at::Tensor& XLANativeFunctions::zero_(at::Tensor& self) {
