@@ -69,7 +69,7 @@ NodePtr AvgPoolNd::Clone(OpList operands) const {
 }
 
 XlaOpVector AvgPoolNd::Lower(LoweringContext* loctx) const {
-  xla::XlaOp input = loctx->GetOutputOp(operand_with_shape(0));
+  xla::XlaOp input = loctx->GetOutputOp(operand(0));
   xla::XlaOp output =
       BuildAvgPoolNd(input, spatial_dim_count_, kernel_size_, stride_, padding_,
                      ceil_mode_, count_include_pad_);

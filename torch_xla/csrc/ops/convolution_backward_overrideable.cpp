@@ -65,9 +65,9 @@ NodePtr ConvolutionBackwardOverrideable::Clone(OpList operands) const {
 
 XlaOpVector ConvolutionBackwardOverrideable::Lower(
     LoweringContext* loctx) const {
-  xla::XlaOp grad_output = loctx->GetOutputOp(operand_with_shape(0));
-  xla::XlaOp input = loctx->GetOutputOp(operand_with_shape(1));
-  xla::XlaOp weight = loctx->GetOutputOp(operand_with_shape(2));
+  xla::XlaOp grad_output = loctx->GetOutputOp(operand(0));
+  xla::XlaOp input = loctx->GetOutputOp(operand(1));
+  xla::XlaOp weight = loctx->GetOutputOp(operand(2));
   auto grads = BuildConvolutionBackwardOverrideable(
       grad_output, input, weight, stride_, padding_, dilation_, transposed_,
       output_padding_, groups_);

@@ -38,8 +38,8 @@ NodePtr CollectivePermute::Clone(OpList operands) const {
 }
 
 XlaOpVector CollectivePermute::Lower(LoweringContext* loctx) const {
-  xla::XlaOp input = loctx->GetOutputOp(operand_with_shape(0));
-  xla::XlaOp token = loctx->GetOutputOp(operand_with_shape(1));
+  xla::XlaOp input = loctx->GetOutputOp(operand(0));
+  xla::XlaOp token = loctx->GetOutputOp(operand(1));
   CollectivePermuteResult result =
       BuildCollectivePermute(input, token, source_target_pairs_);
   return ReturnOps({result.result, result.token}, loctx);

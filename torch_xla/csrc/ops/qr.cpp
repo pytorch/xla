@@ -52,7 +52,7 @@ NodePtr QR::Clone(OpList operands) const {
 }
 
 XlaOpVector QR::Lower(LoweringContext* loctx) const {
-  xla::XlaOp input = loctx->GetOutputOp(operand_with_shape(0));
+  xla::XlaOp input = loctx->GetOutputOp(operand(0));
   return ReturnOps(LowerQR(input, some_), loctx);
 }
 

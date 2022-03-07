@@ -21,8 +21,8 @@ NodePtr LogSoftmaxBackward::Clone(OpList operands) const {
 }
 
 XlaOpVector LogSoftmaxBackward::Lower(LoweringContext* loctx) const {
-  xla::XlaOp grad_output = loctx->GetOutputOp(operand_with_shape(0));
-  xla::XlaOp output = loctx->GetOutputOp(operand_with_shape(1));
+  xla::XlaOp grad_output = loctx->GetOutputOp(operand(0));
+  xla::XlaOp output = loctx->GetOutputOp(operand(1));
   xla::XlaOp grad_input =
       BuildLogSoftmaxGrad(/*grad_output=*/grad_output, /*output=*/output, dim_);
   return ReturnOp(grad_input, loctx);

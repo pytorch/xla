@@ -41,15 +41,15 @@ NodePtr SgdOptimizerStep::Clone(OpList operands) const {
 }
 
 XlaOpVector SgdOptimizerStep::Lower(LoweringContext* loctx) const {
-  xla::XlaOp found_inf = loctx->GetOutputOp(operand_with_shape(0));
-  xla::XlaOp step = loctx->GetOutputOp(operand_with_shape(1));
-  xla::XlaOp param = loctx->GetOutputOp(operand_with_shape(2));
-  xla::XlaOp buf = loctx->GetOutputOp(operand_with_shape(3));
-  xla::XlaOp d_p = loctx->GetOutputOp(operand_with_shape(4));
-  xla::XlaOp weight_decay = loctx->GetOutputOp(operand_with_shape(5));
-  xla::XlaOp momentum = loctx->GetOutputOp(operand_with_shape(6));
-  xla::XlaOp lr = loctx->GetOutputOp(operand_with_shape(7));
-  xla::XlaOp dampening = loctx->GetOutputOp(operand_with_shape(8));
+  xla::XlaOp found_inf = loctx->GetOutputOp(operand(0));
+  xla::XlaOp step = loctx->GetOutputOp(operand(1));
+  xla::XlaOp param = loctx->GetOutputOp(operand(2));
+  xla::XlaOp buf = loctx->GetOutputOp(operand(3));
+  xla::XlaOp d_p = loctx->GetOutputOp(operand(4));
+  xla::XlaOp weight_decay = loctx->GetOutputOp(operand(5));
+  xla::XlaOp momentum = loctx->GetOutputOp(operand(6));
+  xla::XlaOp lr = loctx->GetOutputOp(operand(7));
+  xla::XlaOp dampening = loctx->GetOutputOp(operand(8));
   return ReturnOps(
       BuildSgdOptimizerStep(found_inf, step, param, buf, d_p, weight_decay,
                             momentum, lr, dampening, use_weight_decay_,

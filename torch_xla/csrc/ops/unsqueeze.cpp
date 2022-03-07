@@ -27,7 +27,7 @@ NodePtr Unsqueeze::Clone(OpList operands) const {
 }
 
 XlaOpVector Unsqueeze::Lower(LoweringContext* loctx) const {
-  xla::XlaOp input = loctx->GetOutputOp(operand_with_shape(0));
+  xla::XlaOp input = loctx->GetOutputOp(operand(0));
   xla::XlaOp output = BuildUnsqueeze(input, dim_);
   return ReturnOp(output, loctx);
 }

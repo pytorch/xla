@@ -40,8 +40,8 @@ NodePtr IndexGet::Clone(OpList operands) const {
 }
 
 XlaOpVector IndexGet::Lower(LoweringContext* loctx) const {
-  xla::XlaOp base = loctx->GetOutputOp(operand_with_shape(0));
-  xla::XlaOp indices = loctx->GetOutputOp(operand_with_shape(1));
+  xla::XlaOp base = loctx->GetOutputOp(operand(0));
+  xla::XlaOp indices = loctx->GetOutputOp(operand(1));
   xla::XlaOp output = CreateIndex(base, indices, start_dim_);
   return ReturnOp(output, loctx);
 }

@@ -18,7 +18,7 @@ NodePtr Threshold::Clone(OpList operands) const {
 }
 
 XlaOpVector Threshold::Lower(LoweringContext* loctx) const {
-  xla::XlaOp input = loctx->GetOutputOp(operand_with_shape(0));
+  xla::XlaOp input = loctx->GetOutputOp(operand(0));
   xla::XlaOp output = BuildThreshold(input, input, threshold_, value_);
   return ReturnOp(output, loctx);
 }

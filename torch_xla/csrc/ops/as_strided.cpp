@@ -68,7 +68,7 @@ NodePtr AsStrided::Clone(OpList operands) const {
 }
 
 XlaOpVector AsStrided::Lower(LoweringContext* loctx) const {
-  xla::XlaOp input = loctx->GetOutputOp(operand_with_shape(0));
+  xla::XlaOp input = loctx->GetOutputOp(operand(0));
   return ReturnOp(LowerAsStrided(input, size_, stride_, storage_offset_),
                   loctx);
 }

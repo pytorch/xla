@@ -70,8 +70,8 @@ NodePtr AsStridedViewUpdate::Clone(OpList operands) const {
 }
 
 XlaOpVector AsStridedViewUpdate::Lower(LoweringContext* loctx) const {
-  xla::XlaOp target = loctx->GetOutputOp(operand_with_shape(0));
-  xla::XlaOp input = loctx->GetOutputOp(operand_with_shape(1));
+  xla::XlaOp target = loctx->GetOutputOp(operand(0));
+  xla::XlaOp input = loctx->GetOutputOp(operand(1));
   return ReturnOp(
       LowerAsStridedViewUpdate(target, input, size_, stride_, storage_offset_),
       loctx);

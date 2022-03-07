@@ -54,7 +54,7 @@ DebugUtil::GraphFormat DebugUtil::GetDefaultGraphFormat() {
 std::string DebugUtil::GetTensorsGraphInfo(absl::Span<const XLATensor> tensors,
                                            const std::vector<size_t>* indices,
                                            GraphFormat format) {
-  std::vector<const ir::Node*> root_nodes;
+  std::vector<const torch::lazy::Node*> root_nodes;
   std::vector<ir::Value> root_values;
   std::vector<torch::lazy::hash_t> root_hashes;
   xla::util::Unique<Device> unique_device;

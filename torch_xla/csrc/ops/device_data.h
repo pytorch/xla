@@ -21,7 +21,7 @@ class DeviceData : public Node {
     return data_;
   }
 
-  static DeviceData* Cast(const Node* node);
+  static DeviceData* Cast(const torch::lazy::Node* node);
 
  private:
   std::shared_ptr<xla::ComputationClient::Data> data_;

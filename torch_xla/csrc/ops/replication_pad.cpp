@@ -32,7 +32,7 @@ NodePtr ReplicationPad::Clone(OpList operands) const {
 }
 
 XlaOpVector ReplicationPad::Lower(LoweringContext* loctx) const {
-  xla::XlaOp input = loctx->GetOutputOp(operand_with_shape(0));
+  xla::XlaOp input = loctx->GetOutputOp(operand(0));
   xla::XlaOp output = BuildReplicationPad(input, padding_);
   return ReturnOp(output, loctx);
 }

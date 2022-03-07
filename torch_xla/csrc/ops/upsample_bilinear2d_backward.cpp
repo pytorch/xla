@@ -28,7 +28,7 @@ NodePtr UpsampleBilinearBackward::Clone(OpList operands) const {
 }
 
 XlaOpVector UpsampleBilinearBackward::Lower(LoweringContext* loctx) const {
-  xla::XlaOp input = loctx->GetOutputOp(operand_with_shape(0));
+  xla::XlaOp input = loctx->GetOutputOp(operand(0));
   xla::XlaOp output = resize::LowerBackward2d(
       "ResizeBilinearGrad", input, shape(), align_corners_,
       /*half_pixel_centers=*/!align_corners_);

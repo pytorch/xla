@@ -18,7 +18,7 @@ NodePtr Cholesky::Clone(OpList operands) const {
 }
 
 XlaOpVector Cholesky::Lower(LoweringContext* loctx) const {
-  xla::XlaOp input = loctx->GetOutputOp(operand_with_shape(0));
+  xla::XlaOp input = loctx->GetOutputOp(operand(0));
   xla::XlaOp output =
       xla::Triangle(xla::Cholesky(input, /*lower=*/lower_), /*lower=*/lower_);
   return ReturnOp(output, loctx);

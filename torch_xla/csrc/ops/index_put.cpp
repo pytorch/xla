@@ -31,9 +31,9 @@ XlaOpVector IndexPut::Lower(LoweringContext* loctx) const {
   std::function<xla::XlaOp(xla::XlaOp, xla::XlaOp)> add_scatter_combiner =
       [](xla::XlaOp x, xla::XlaOp y) -> xla::XlaOp { return x + y; };
 
-  xla::XlaOp base = loctx->GetOutputOp(operand_with_shape(0));
-  xla::XlaOp indices = loctx->GetOutputOp(operand_with_shape(1));
-  xla::XlaOp values = loctx->GetOutputOp(operand_with_shape(2));
+  xla::XlaOp base = loctx->GetOutputOp(operand(0));
+  xla::XlaOp indices = loctx->GetOutputOp(operand(1));
+  xla::XlaOp values = loctx->GetOutputOp(operand(2));
   xla::XlaOp output =
       CreateIndexUpdate(base, indices, start_dim_, values,
                         accumulate_ ? add_scatter_combiner : nullptr);
