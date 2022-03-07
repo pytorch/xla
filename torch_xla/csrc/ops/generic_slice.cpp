@@ -38,7 +38,7 @@ NodePtr GenericSlice::Clone(OpList operands) const {
 }
 
 XlaOpVector GenericSlice::Lower(LoweringContext* loctx) const {
-  xla::XlaOp input = loctx->GetOutputOp(operand_with_shape(0));
+  xla::XlaOp input = loctx->GetOutputOp(operand(0));
   xla::XlaOp output = BuildSlice(input, base_indices_, sizes_);
   return ReturnOp(output, loctx);
 }

@@ -10,6 +10,7 @@
 #include "tensorflow/compiler/xla/xla_client/sys_util.h"
 #include "tensorflow/compiler/xla/xla_client/xla_util.h"
 #include "torch/csrc/lazy/core/hash.h"
+#include "torch/csrc/lazy/core/ir_util.h"
 #include "torch_xla/csrc/device.h"
 #include "torch_xla/csrc/ir_util.h"
 #include "torch_xla/csrc/lowering_context.h"
@@ -31,7 +32,7 @@ absl::optional<size_t> GetOutputIndex(bool is_device_data, size_t index) {
   return index;
 }
 
-const xla::Shape& GetParameterShape(const ir::Output& operand,
+const xla::Shape& GetParameterShape(const torch::lazy::Output& operand,
                                     const xla::Shape& input_shape) {
   // See comment in GetOutputIndex() about device data WRT computation outpout
   // shape handling.
@@ -43,23 +44,25 @@ const xla::Shape& GetParameterShape(const ir::Output& operand,
 }
 
 torch::lazy::hash_t ComputeNodeKey(
-    const ir::Node* node, absl::Span<const xla::Shape* const> input_shapes,
+    const torch::lazy::Node* node,
+    absl::Span<const xla::Shape* const> input_shapes,
     const torch::lazy::hash_t& seed) {
   torch::lazy::hash_t key = seed;
-  const auto& operands = node->operands_with_shape();
+  const auto& operands = node->operands();
   for (size_t i = 0; i < operands.size(); ++i) {
     key = torch::lazy::HashCombine(key, torch::lazy::Hash(GetParameterShape(
                                             operands[i], *input_shapes[i])));
   }
-  key = torch::lazy::HashCombine(key, torch::lazy::Hash(node->shape()));
+  const ir::Node* casted = dynamic_cast<const ir::Node*>(node);
+  key = torch::lazy::HashCombine(key, torch::lazy::Hash(casted->shape()));
   return torch::lazy::HashCombine(key, node->node_hash());
 }
 
 xla::XlaComputation BuildNodeComputation(
-    const ir::Node* node, absl::Span<const xla::Shape* const> input_shapes,
-    const Device& device) {
+    const torch::lazy::Node* node,
+    absl::Span<const xla::Shape* const> input_shapes, const Device& device) {
   ir::LoweringContext loctx("BuildNodeComputation", device);
-  const auto& operands = node->operands_with_shape();
+  const auto& operands = node->operands();
   for (size_t i = 0; i < operands.size(); ++i) {
     xla::XlaOp param = xla::Parameter(
         loctx.builder(), i, GetParameterShape(operands[i], *input_shapes[i]),
@@ -85,17 +88,17 @@ OpByOpExecutor::OpByOpExecutor(size_t compile_cache_size)
 std::vector<xla::ComputationClient::ExecuteChainedOp> OpByOpExecutor::BuildOps(
     absl::Span<const ir::Value> roots, const std::string& device,
     absl::Span<const std::string> devices) {
-  std::vector<const ir::Node*> root_nodes;
+  std::vector<const torch::lazy::Node*> root_nodes;
   root_nodes.reserve(roots.size());
   for (auto& root : roots) {
     root_nodes.push_back(root.node.get());
   }
-  std::vector<const ir::Node*> post_order =
+  std::vector<const torch::lazy::Node*> post_order =
       ir::Util::ComputePostOrder(root_nodes);
   XLA_VALUE_METRIC("OpByOpGraphSize", post_order.size());
   TF_VLOG(5) << "TensorsGraphSize=" << post_order.size();
 
-  std::unordered_map<const ir::Node*, size_t> node_to_index;
+  std::unordered_map<const torch::lazy::Node*, size_t> node_to_index;
   node_to_index.reserve(post_order.size());
   for (size_t i = 0; i < post_order.size(); ++i) {
     node_to_index[post_order[i]] = i;
@@ -119,7 +122,7 @@ std::vector<xla::ComputationClient::ExecuteChainedOp> OpByOpExecutor::BuildOps(
   std::vector<xla::ComputationClient::ExecuteChainedOp> chained_exec_ops(
       post_order.size());
   for (size_t i = 0; i < post_order.size(); ++i) {
-    const ir::Node* node = post_order[i];
+    const torch::lazy::Node* node = post_order[i];
     xla::ComputationClient::ExecuteChainedOp& cxop = chained_exec_ops[i];
     const ir::ops::DeviceData* device_data = ir::ops::DeviceData::Cast(node);
     if (device_data != nullptr) {
@@ -128,7 +131,7 @@ std::vector<xla::ComputationClient::ExecuteChainedOp> OpByOpExecutor::BuildOps(
       device_data_ops[i] = true;
     } else {
       std::vector<const xla::Shape*> op_input_shapes;
-      for (auto& operand : node->operands_with_shape()) {
+      for (auto& operand : node->operands()) {
         size_t op_index = node_to_index.at(operand.node);
         cxop.inputs.push_back(
             {op_index,

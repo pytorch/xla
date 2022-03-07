@@ -33,6 +33,7 @@
 #include "torch/csrc/autograd/utils/wrap_outputs.h"
 #include "torch/csrc/autograd/variable.h"
 #include "torch/csrc/jit/python/pybind.h"
+#include "torch/csrc/lazy/core/ir_util.h"
 #include "torch_xla/csrc/XLANativeFunctions.h"
 #include "torch_xla/csrc/aten_xla_bridge.h"
 #include "torch_xla/csrc/computation.h"
@@ -81,9 +82,9 @@ void PrepareToExit() {
 
 std::string GetTensorsDump(
     const std::vector<at::Tensor>& tensors,
-    const std::function<std::string(absl::Span<const ir::Node* const>)>&
-        coverter) {
-  std::vector<const ir::Node*> nodes;
+    const std::function<
+        std::string(absl::Span<const torch::lazy::Node* const>)>& coverter) {
+  std::vector<const torch::lazy::Node*> nodes;
   std::vector<ir::Value> values;
   for (auto& tensor : tensors) {
     XLATensor xtensor = bridge::GetXlaTensor(tensor);
@@ -334,7 +335,7 @@ std::string GetLiveTensorsReport(size_t nodes_threshold,
   for (auto& tensor : tensors) {
     ir::Value ir_value = tensor.CurrentIrValue();
     if (ir_value) {
-      std::vector<const ir::Node*> roots({ir_value.node.get()});
+      std::vector<const torch::lazy::Node*> roots({ir_value.node.get()});
       auto post_order = ir::Util::ComputePostOrder(roots);
       if (post_order.size() > nodes_threshold) {
         ss << "Tensor: id=" << tensor.GetUniqueId()
@@ -790,14 +791,14 @@ void InitXlaModuleBindings(py::module m) {
         });
   m.def("_get_xla_tensors_dot",
         [](const std::vector<at::Tensor>& tensors) -> std::string {
-          auto coverter = [](absl::Span<const ir::Node* const> nodes) {
+          auto coverter = [](absl::Span<const torch::lazy::Node* const> nodes) {
             return ir::DumpUtil::ToDot(nodes);
           };
           return GetTensorsDump(tensors, coverter);
         });
   m.def("_get_xla_tensors_text",
         [](const std::vector<at::Tensor>& tensors) -> std::string {
-          auto coverter = [](absl::Span<const ir::Node* const> nodes) {
+          auto coverter = [](absl::Span<const torch::lazy::Node* const> nodes) {
             return ir::DumpUtil::ToText(nodes);
           };
           return GetTensorsDump(tensors, coverter);

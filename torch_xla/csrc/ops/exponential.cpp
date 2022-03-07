@@ -18,8 +18,8 @@ NodePtr Exponential::Clone(OpList operands) const {
 }
 
 XlaOpVector Exponential::Lower(LoweringContext* loctx) const {
-  xla::XlaOp lambda = loctx->GetOutputOp(operand_with_shape(0));
-  xla::XlaOp rng_seed = loctx->GetOutputOp(operand_with_shape(1));
+  xla::XlaOp lambda = loctx->GetOutputOp(operand(0));
+  xla::XlaOp rng_seed = loctx->GetOutputOp(operand(1));
   const xla::Shape& lambda_shape = XlaHelpers::ShapeOfXlaOp(lambda);
   xla::Shape bcast_shape(shape());
   bcast_shape.set_element_type(lambda_shape.element_type());

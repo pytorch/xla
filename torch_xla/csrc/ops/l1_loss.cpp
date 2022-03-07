@@ -34,8 +34,8 @@ NodePtr L1Loss::Clone(OpList operands) const {
 }
 
 XlaOpVector L1Loss::Lower(LoweringContext* loctx) const {
-  xla::XlaOp input = loctx->GetOutputOp(operand_with_shape(0));
-  xla::XlaOp target = loctx->GetOutputOp(operand_with_shape(1));
+  xla::XlaOp input = loctx->GetOutputOp(operand(0));
+  xla::XlaOp target = loctx->GetOutputOp(operand(1));
   return ReturnOp(BuildL1Loss(input, target, reduction_), loctx);
 }
 

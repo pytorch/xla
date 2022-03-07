@@ -22,9 +22,9 @@ NodePtr ScatterAdd::Clone(OpList operands) const {
 }
 
 XlaOpVector ScatterAdd::Lower(LoweringContext* loctx) const {
-  xla::XlaOp input = loctx->GetOutputOp(operand_with_shape(0));
-  xla::XlaOp index = loctx->GetOutputOp(operand_with_shape(1));
-  xla::XlaOp src = loctx->GetOutputOp(operand_with_shape(2));
+  xla::XlaOp input = loctx->GetOutputOp(operand(0));
+  xla::XlaOp index = loctx->GetOutputOp(operand(1));
+  xla::XlaOp src = loctx->GetOutputOp(operand(2));
   ScatterOptions options(NumericAddCombiner());
   return ReturnOp(
       CreateScatter(loctx->device(), input, index, src, dim_, options), loctx);

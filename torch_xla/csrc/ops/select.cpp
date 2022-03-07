@@ -25,7 +25,7 @@ NodePtr Select::Clone(OpList operands) const {
 }
 
 XlaOpVector Select::Lower(LoweringContext* loctx) const {
-  xla::XlaOp input = loctx->GetOutputOp(operand_with_shape(0));
+  xla::XlaOp input = loctx->GetOutputOp(operand(0));
   xla::XlaOp output = xla::SliceInDim(input, start_, end_,
                                       GetStride(start_, end_, stride_), dim_);
   return ReturnOp(output, loctx);

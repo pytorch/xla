@@ -57,7 +57,7 @@ NodePtr SymEig::Clone(OpList operands) const {
 }
 
 XlaOpVector SymEig::Lower(LoweringContext* loctx) const {
-  xla::XlaOp input = loctx->GetOutputOp(operand_with_shape(0));
+  xla::XlaOp input = loctx->GetOutputOp(operand(0));
   return ReturnOps(LowerSymEig(input, eigenvectors_, lower_), loctx);
 }
 

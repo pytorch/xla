@@ -40,7 +40,7 @@ NodePtr Squeeze::Clone(OpList operands) const {
 }
 
 XlaOpVector Squeeze::Lower(LoweringContext* loctx) const {
-  xla::XlaOp input = loctx->GetOutputOp(operand_with_shape(0));
+  xla::XlaOp input = loctx->GetOutputOp(operand(0));
   xla::XlaOp output = LowerSqueeze(input, dim_);
   return ReturnOp(output, loctx);
 }

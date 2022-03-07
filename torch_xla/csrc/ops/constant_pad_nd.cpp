@@ -46,7 +46,7 @@ NodePtr ConstantPadNd::Clone(OpList operands) const {
 }
 
 XlaOpVector ConstantPadNd::Lower(LoweringContext* loctx) const {
-  xla::XlaOp input = loctx->GetOutputOp(operand_with_shape(0));
+  xla::XlaOp input = loctx->GetOutputOp(operand(0));
   xla::XlaOp output = LowerPad(input, value_, pad_);
   return ReturnOp(output, loctx);
 }

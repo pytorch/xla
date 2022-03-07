@@ -49,11 +49,11 @@ NodePtr NativeBatchNormBackward::Clone(OpList operands) const {
 }
 
 XlaOpVector NativeBatchNormBackward::Lower(LoweringContext* loctx) const {
-  xla::XlaOp grad_out = loctx->GetOutputOp(operand_with_shape(0));
-  xla::XlaOp input = loctx->GetOutputOp(operand_with_shape(1));
-  xla::XlaOp weight = loctx->GetOutputOp(operand_with_shape(2));
-  xla::XlaOp save_mean = loctx->GetOutputOp(operand_with_shape(3));
-  xla::XlaOp save_invstd = loctx->GetOutputOp(operand_with_shape(4));
+  xla::XlaOp grad_out = loctx->GetOutputOp(operand(0));
+  xla::XlaOp input = loctx->GetOutputOp(operand(1));
+  xla::XlaOp weight = loctx->GetOutputOp(operand(2));
+  xla::XlaOp save_mean = loctx->GetOutputOp(operand(3));
+  xla::XlaOp save_invstd = loctx->GetOutputOp(operand(4));
   BatchNormGrads grads = BuildBatchNormBackward(
       grad_out, input, weight, save_mean, save_invstd, training_, eps_);
   return ReturnOps({std::move(grads.grad_input), std::move(grads.grad_weight),
