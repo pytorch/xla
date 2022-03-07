@@ -34,7 +34,7 @@ NodePtr KthValue::Clone(OpList operands) const {
 }
 
 XlaOpVector KthValue::Lower(LoweringContext* loctx) const {
-  xla::XlaOp input = loctx->GetOutputOp(operand_with_shape(0));
+  xla::XlaOp input = loctx->GetOutputOp(operand(0));
   return ReturnOps(CreateKthValue(input, k_, dim_, keepdim_), loctx);
 }
 

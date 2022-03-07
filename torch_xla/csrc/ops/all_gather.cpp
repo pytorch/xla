@@ -43,8 +43,8 @@ NodePtr AllGather::Clone(OpList operands) const {
 }
 
 XlaOpVector AllGather::Lower(LoweringContext* loctx) const {
-  xla::XlaOp input = loctx->GetOutputOp(operand_with_shape(0));
-  xla::XlaOp token = loctx->GetOutputOp(operand_with_shape(1));
+  xla::XlaOp input = loctx->GetOutputOp(operand(0));
+  xla::XlaOp token = loctx->GetOutputOp(operand(1));
   AllGatherResult result =
       BuildAllGather(input, token, dim_, shard_count_, groups_);
   return ReturnOps({result.result, result.token}, loctx);

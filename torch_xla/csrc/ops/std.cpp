@@ -41,7 +41,7 @@ NodePtr Std::Clone(OpList operands) const {
 }
 
 XlaOpVector Std::Lower(LoweringContext* loctx) const {
-  xla::XlaOp input = loctx->GetOutputOp(operand_with_shape(0));
+  xla::XlaOp input = loctx->GetOutputOp(operand(0));
   return ReturnOp(BuildStdDeviation(input, dimensions_,
                                     keep_reduced_dimensions_, correction_),
                   loctx);

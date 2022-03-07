@@ -32,7 +32,7 @@ NodePtr Permute::Clone(OpList operands) const {
 }
 
 XlaOpVector Permute::Lower(LoweringContext* loctx) const {
-  xla::XlaOp input = loctx->GetOutputOp(operand_with_shape(0));
+  xla::XlaOp input = loctx->GetOutputOp(operand(0));
   xla::XlaOp output = xla::Transpose(input, dims_);
   return ReturnOp(output, loctx);
 }

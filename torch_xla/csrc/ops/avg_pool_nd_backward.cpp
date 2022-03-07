@@ -71,8 +71,8 @@ NodePtr AvgPoolNdBackward::Clone(OpList operands) const {
 }
 
 XlaOpVector AvgPoolNdBackward::Lower(LoweringContext* loctx) const {
-  xla::XlaOp grad_output = loctx->GetOutputOp(operand_with_shape(0));
-  xla::XlaOp input = loctx->GetOutputOp(operand_with_shape(1));
+  xla::XlaOp grad_output = loctx->GetOutputOp(operand(0));
+  xla::XlaOp input = loctx->GetOutputOp(operand(1));
   xla::XlaOp output = BuildAvgPoolNdBackward(
       /*out_backprop=*/grad_output, /*input=*/input, spatial_dim_count_,
       kernel_size_, stride_, padding_, ceil_mode_, count_include_pad_);

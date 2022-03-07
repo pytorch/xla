@@ -21,8 +21,8 @@ NodePtr MaskedFill::Clone(OpList operands) const {
 }
 
 XlaOpVector MaskedFill::Lower(LoweringContext* loctx) const {
-  xla::XlaOp input = loctx->GetOutputOp(operand_with_shape(0));
-  xla::XlaOp mask = loctx->GetOutputOp(operand_with_shape(1));
+  xla::XlaOp input = loctx->GetOutputOp(operand(0));
+  xla::XlaOp mask = loctx->GetOutputOp(operand(1));
   xla::XlaOp zero = xla::Zero(loctx->builder(), XlaHelpers::TypeOfXlaOp(mask));
   xla::XlaOp mask_pred = xla::Ne(mask, zero);
   // Input shape is the same as output shape.

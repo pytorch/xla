@@ -58,12 +58,12 @@ NodePtr BinaryCrossEntropyBackward::Clone(OpList operands) const {
 }
 
 XlaOpVector BinaryCrossEntropyBackward::Lower(LoweringContext* loctx) const {
-  xla::XlaOp grad_output = loctx->GetOutputOp(operand_with_shape(0));
-  xla::XlaOp logits = loctx->GetOutputOp(operand_with_shape(1));
-  xla::XlaOp labels = loctx->GetOutputOp(operand_with_shape(2));
+  xla::XlaOp grad_output = loctx->GetOutputOp(operand(0));
+  xla::XlaOp logits = loctx->GetOutputOp(operand(1));
+  xla::XlaOp labels = loctx->GetOutputOp(operand(2));
   absl::optional<xla::XlaOp> weight;
-  if (operands_with_shape().size() > 3) {
-    weight = loctx->GetOutputOp(operand_with_shape(3));
+  if (operands().size() > 3) {
+    weight = loctx->GetOutputOp(operand(3));
   }
   return ReturnOp(BuildBinaryCrossEntropyBackward(grad_output, logits, labels,
                                                   weight, reduction_),

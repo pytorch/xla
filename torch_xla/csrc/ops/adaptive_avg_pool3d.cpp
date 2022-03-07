@@ -34,7 +34,7 @@ NodePtr AdaptiveAvgPool3d::Clone(OpList operands) const {
 }
 
 XlaOpVector AdaptiveAvgPool3d::Lower(LoweringContext* loctx) const {
-  xla::XlaOp input = loctx->GetOutputOp(operand_with_shape(0));
+  xla::XlaOp input = loctx->GetOutputOp(operand(0));
   xla::XlaOp output = BuildAdaptiveAvgPool3d(input, output_size_);
   return ReturnOp(output, loctx);
 }

@@ -73,11 +73,11 @@ NodePtr NativeBatchNormForward::Clone(OpList operands) const {
 }
 
 XlaOpVector NativeBatchNormForward::Lower(LoweringContext* loctx) const {
-  xla::XlaOp input = loctx->GetOutputOp(operand_with_shape(0));
-  xla::XlaOp weight = loctx->GetOutputOp(operand_with_shape(1));
-  xla::XlaOp bias = loctx->GetOutputOp(operand_with_shape(2));
-  xla::XlaOp running_mean = loctx->GetOutputOp(operand_with_shape(3));
-  xla::XlaOp running_var = loctx->GetOutputOp(operand_with_shape(4));
+  xla::XlaOp input = loctx->GetOutputOp(operand(0));
+  xla::XlaOp weight = loctx->GetOutputOp(operand(1));
+  xla::XlaOp bias = loctx->GetOutputOp(operand(2));
+  xla::XlaOp running_mean = loctx->GetOutputOp(operand(3));
+  xla::XlaOp running_var = loctx->GetOutputOp(operand(4));
 
   return ReturnOps(LowerBatchNorm(input, weight, bias, running_mean,
                                   running_var, training_, eps_),

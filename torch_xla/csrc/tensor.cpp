@@ -27,6 +27,7 @@
 #include "torch/csrc/autograd/variable.h"
 #include "torch/csrc/lazy/core/hash.h"
 #include "torch/csrc/lazy/core/helpers.h"
+#include "torch/csrc/lazy/core/ir_util.h"
 #include "torch/csrc/lazy/core/tensor_util.h"
 #include "torch/csrc/lazy/core/util.h"
 #include "torch_xla/csrc/debug_util.h"
@@ -661,7 +662,8 @@ void XLATensor::TryLimitGraphSize() {
   static const size_t kMaxPendingGraphSize =
       xla::sys_util::GetEnvInt("XLA_TRIM_GRAPH_SIZE", 100000);
   if (data()->ir_value && ++g_tls_data.trim_counter % kCheckFrequency == 0) {
-    size_t graph_size = ir::Util::GetGraphSize({data()->ir_value.node.get()});
+    size_t graph_size =
+        torch::lazy::Util::GetGraphSize({data()->ir_value.node.get()});
     if (graph_size > kMaxPendingGraphSize) {
       XLA_COUNTER("TrimIrGraph", 1);
       ApplyPendingGraph();
@@ -1271,7 +1273,7 @@ XLATensor::ComputationCache* XLATensor::GetComputationCache() {
 
 XLATensor::PostOrderData XLATensor::RunPostOrder(
     const std::vector<XLATensor>& tensors, absl::Span<const size_t> indices) {
-  std::vector<const ir::Node*> roots;
+  std::vector<const torch::lazy::Node*> roots;
   roots.reserve(indices.size());
   for (auto index : indices) {
     ir::Value ir_value = tensors.at(index).CurrentIrValue();
@@ -1573,7 +1575,8 @@ XLATensor::CompilationResult XLATensor::Compile(
                                    std::move(po_data->emission_map));
   for (auto index : coll.indices) {
     ir::Value ir_value = tensors[index].CurrentIrValue();
-    xla::XlaOp root = lowering_ctx.GetOutputOp(ir_value);
+    xla::XlaOp root = lowering_ctx.GetOutputOp(
+        torch::lazy::Output(ir_value.node.get(), ir_value.index));
     lowering_ctx.AddResult(root);
   }
   if (enable_aliasing && coll.config.sync_xla_data) {

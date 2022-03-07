@@ -19,8 +19,8 @@ NodePtr LinearInterpolation::Clone(OpList operands) const {
 }
 
 XlaOpVector LinearInterpolation::Lower(LoweringContext* loctx) const {
-  xla::XlaOp value = loctx->GetOutputOp(operand_with_shape(0));
-  xla::XlaOp new_value = loctx->GetOutputOp(operand_with_shape(1));
+  xla::XlaOp value = loctx->GetOutputOp(operand(0));
+  xla::XlaOp new_value = loctx->GetOutputOp(operand(1));
   return ReturnOp(XlaHelpers::LinearInterpolation(value, new_value, alpha_),
                   loctx);
 }

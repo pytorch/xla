@@ -37,8 +37,8 @@ NodePtr MseLoss::Clone(OpList operands) const {
 }
 
 XlaOpVector MseLoss::Lower(LoweringContext* loctx) const {
-  xla::XlaOp input = loctx->GetOutputOp(operand_with_shape(0));
-  xla::XlaOp target = loctx->GetOutputOp(operand_with_shape(1));
+  xla::XlaOp input = loctx->GetOutputOp(operand(0));
+  xla::XlaOp target = loctx->GetOutputOp(operand(1));
   return ReturnOp(BuildMseLoss(input, target, reduction_), loctx);
 }
 

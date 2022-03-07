@@ -100,24 +100,24 @@ std::string Use::ToString() const {
   return ss.str();
 }
 
-size_t Output::Hasher::operator()(const Output& output) const {
-  return torch::lazy::StdHashCombine(
-      reinterpret_cast<std::ptrdiff_t>(output.node), output.index);
-}
+// size_t Output::Hasher::operator()(const Output& output) const {
+//   return torch::lazy::StdHashCombine(
+//       reinterpret_cast<std::ptrdiff_t>(output.node), output.index);
+// }
 
-const xla::Shape& Output::shape() const { return node->shape(index); }
+// const xla::Shape& Output::shape() const { return node->shape(index); }
 
-const xla::Shape& Output::node_shape() const { return node->shape(); }
+// const xla::Shape& Output::node_shape() const { return node->shape(); }
 
-torch::lazy::hash_t Output::hash() const {
-  return torch::lazy::HashCombine(node->hash(), index);
-}
+// torch::lazy::hash_t Output::hash() const {
+//   return torch::lazy::HashCombine(node->hash(), index);
+// }
 
-std::string Output::ToString() const {
-  std::stringstream ss;
-  ss << node->ToString() << ", index=" << index;
-  return ss.str();
-}
+// std::string Output::ToString() const {
+//   std::stringstream ss;
+//   ss << node->ToString() << ", index=" << index;
+//   return ss.str();
+// }
 
 const xla::Shape& Value::shape() const { return node->shape(index); }
 
@@ -171,9 +171,8 @@ Node::Node(torch::lazy::OpKind op, xla::Shape shape, size_t num_outputs,
 }
 
 Node::~Node() {
-  for (size_t i = 0; i < operands_as_outputs_with_shape_.size(); ++i) {
-    operands_[i]->RemoveUse(
-        Use(this, i, operands_as_outputs_with_shape_[i].index));
+  for (size_t i = 0; i < operands_as_outputs_.size(); ++i) {
+    operands_[i]->RemoveUse(Use(this, i, operands_as_outputs_[i].index));
   }
 }
 
@@ -188,17 +187,17 @@ const xla::Shape& Node::shape(size_t output_index) const {
 void Node::AddOperand(NodePtr node, size_t index) {
   XLA_CHECK_LT(index, node->num_outputs());
   operands_.push_back(std::move(node));
-  operands_as_outputs_with_shape_.push_back(
-      Output(operands_.back().get(), index));
+  operands_as_outputs_.push_back(
+      torch::lazy::Output(operands_.back().get(), index));
   operands_.back()->AddUse(Use(this, operands_.size() - 1, index));
 }
 
 void Node::ReplaceOperand(size_t operand_no, NodePtr node, size_t index) {
   XLA_CHECK_LT(index, node->num_outputs());
-  Output* output = &operands_as_outputs_with_shape_.at(operand_no);
+  torch::lazy::Output* output = &operands_as_outputs_.at(operand_no);
   operands_[operand_no]->RemoveUse(Use(this, operand_no, output->index));
   node->AddUse(Use(this, operand_no, index));
-  *output = Output(node.get(), index);
+  *output = torch::lazy::Output(node.get(), index);
   operands_[operand_no] = std::move(node);
 }
 
@@ -213,7 +212,7 @@ void Node::ReplaceAllUsesWith(NodePtr node, size_t index) {
 
 XlaOpVector Node::ReturnOp(xla::XlaOp op, LoweringContext* loctx) const {
   XLA_CHECK_EQ(num_outputs(), 1);
-  loctx->AssignOutputOp(Output(this), op);
+  loctx->AssignOutputOp(torch::lazy::Output(this), op);
   return XlaOpVector({std::move(op)});
 }
 
@@ -222,7 +221,7 @@ XlaOpVector Node::ReturnOps(absl::Span<const xla::XlaOp> ops,
   XLA_CHECK_EQ(num_outputs(), ops.size());
   XlaOpVector result;
   for (size_t i = 0; i < ops.size(); ++i) {
-    loctx->AssignOutputOp(Output(this, i), ops[i]);
+    loctx->AssignOutputOp(torch::lazy::Output(this, i), ops[i]);
     result.push_back(ops[i]);
   }
   return result;

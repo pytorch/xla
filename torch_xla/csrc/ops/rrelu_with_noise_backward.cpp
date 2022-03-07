@@ -26,9 +26,9 @@ NodePtr RreluWithNoiseBackward::Clone(OpList operands) const {
 }
 
 XlaOpVector RreluWithNoiseBackward::Lower(LoweringContext* loctx) const {
-  xla::XlaOp grad_output = loctx->GetOutputOp(operand_with_shape(0));
-  xla::XlaOp input = loctx->GetOutputOp(operand_with_shape(1));
-  xla::XlaOp noise = loctx->GetOutputOp(operand_with_shape(2));
+  xla::XlaOp grad_output = loctx->GetOutputOp(operand(0));
+  xla::XlaOp input = loctx->GetOutputOp(operand(1));
+  xla::XlaOp noise = loctx->GetOutputOp(operand(2));
   return ReturnOp(
       BuildRreluBackward(grad_output, input, noise, lower_, upper_, training_),
       loctx);

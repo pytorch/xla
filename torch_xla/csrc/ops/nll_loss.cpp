@@ -59,11 +59,11 @@ NodePtr NllLoss::Clone(OpList operands) const {
 }
 
 XlaOpVector NllLoss::Lower(LoweringContext* loctx) const {
-  xla::XlaOp logits = loctx->GetOutputOp(operand_with_shape(0));
-  xla::XlaOp labels = loctx->GetOutputOp(operand_with_shape(1));
+  xla::XlaOp logits = loctx->GetOutputOp(operand(0));
+  xla::XlaOp labels = loctx->GetOutputOp(operand(1));
   xla::XlaOp weight;
-  if (operands_with_shape().size() > 2) {
-    weight = loctx->GetOutputOp(operand_with_shape(2));
+  if (operands().size() > 2) {
+    weight = loctx->GetOutputOp(operand(2));
   }
   return ReturnOp(
       BuildNllLoss(logits, labels, weight, ignore_index_, reduction_), loctx);

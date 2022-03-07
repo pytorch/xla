@@ -26,7 +26,7 @@ NodePtr UpsampleNearestBackward::Clone(OpList operands) const {
 }
 
 XlaOpVector UpsampleNearestBackward::Lower(LoweringContext* loctx) const {
-  xla::XlaOp input = loctx->GetOutputOp(operand_with_shape(0));
+  xla::XlaOp input = loctx->GetOutputOp(operand(0));
   xla::XlaOp output = resize::LowerBackward2d(
       "ResizeNearestGrad", input, shape(),
       /*align_corners=*/false, /*half_pixel_centers=*/false);

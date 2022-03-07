@@ -46,8 +46,8 @@ NodePtr MaxUnpoolNd::Clone(OpList operands) const {
 }
 
 XlaOpVector MaxUnpoolNd::Lower(LoweringContext* loctx) const {
-  xla::XlaOp input = loctx->GetOutputOp(operand_with_shape(0));
-  xla::XlaOp indices = loctx->GetOutputOp(operand_with_shape(1));
+  xla::XlaOp input = loctx->GetOutputOp(operand(0));
+  xla::XlaOp indices = loctx->GetOutputOp(operand(1));
   xla::XlaOp output =
       BuildMaxUnpoolNd(loctx->device(), input, indices, output_size_);
   return ReturnOp(output, loctx);

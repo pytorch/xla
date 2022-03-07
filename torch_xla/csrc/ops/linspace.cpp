@@ -23,8 +23,8 @@ NodePtr Linspace::Clone(OpList operands) const {
 }
 
 XlaOpVector Linspace::Lower(LoweringContext* loctx) const {
-  xla::XlaOp start = loctx->GetOutputOp(operand_with_shape(0));
-  xla::XlaOp end = loctx->GetOutputOp(operand_with_shape(1));
+  xla::XlaOp start = loctx->GetOutputOp(operand(0));
+  xla::XlaOp end = loctx->GetOutputOp(operand(1));
   return ReturnOp(BuildLinspace(loctx->device(), start, end, steps_), loctx);
 }
 
