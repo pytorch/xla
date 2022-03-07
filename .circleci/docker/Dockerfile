@@ -36,6 +36,7 @@ ENV CXX "${cxx}"
 
 # Whether to build torch and torch_xla libraries with CXX ABI
 ENV _GLIBCXX_USE_CXX11_ABI "${cxx_abi}"
+ENV CFLAGS "${CFLAGS} -D_GLIBCXX_USE_CXX11_ABI=${cxx_abi}"
 ENV CXXFLAGS "${CXXFLAGS} -D_GLIBCXX_USE_CXX11_ABI=${cxx_abi}"
 
 # Whether to build for TPUVM mode
