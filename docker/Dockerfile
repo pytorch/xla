@@ -7,7 +7,7 @@ FROM "${base_image}"
 ARG python_version="3.6"
 ARG release_version="nightly"
 ARG cuda="0"
-ARG cuda_compute="7.0,7.5"
+ARG cuda_compute="3.7,7.0,7.5"
 ARG cxx_abi="0"
 ARG tpuvm=""
 ARG bazel_jobs=""
@@ -26,6 +26,7 @@ ENV TF_CUDA_COMPUTE_CAPABILITIES "${cuda_compute}"
 
 # Whether to build torch and torch_xla libraries with CXX ABI
 ENV _GLIBCXX_USE_CXX11_ABI "${cxx_abi}"
+ENV CFLAGS "${CFLAGS} -D_GLIBCXX_USE_CXX11_ABI=${cxx_abi}"
 ENV CXXFLAGS "${CXXFLAGS} -D_GLIBCXX_USE_CXX11_ABI=${cxx_abi}"
 
 # Whether to build for TPUVM mode
