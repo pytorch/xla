@@ -907,7 +907,8 @@ void XLATensor::UpdateFromTensor(at::Tensor tensor, bool sync) {
   if (sync) {
     at::Tensor typed_tensor =
         torch::lazy::CopyTensor(tensor, dtype(), /*copy=*/false);
-    SetIrValue(GetIrValueForTensor(typed_tensor, GetDevice()), /*inplace=*/true);
+    SetIrValue(GetIrValueForTensor(typed_tensor, GetDevice()),
+               /*inplace=*/true);
   } else {
     at::Tensor coyped_tensor = torch::lazy::CopyTensor(tensor, dtype());
     SetTensorData(coyped_tensor);

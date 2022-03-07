@@ -1240,13 +1240,14 @@ class TestAtenXlaTensor(XlaTestCase):
     self.assertEqual(v.tolist(), [[0.0, 0.0], [0.0, 0.0]])
 
   def test_view_out_computation(self):
+
     def func(a, b):
       v = a.view(2, 2)
       torch.add(b, 1, out=v)
       return a, v
 
     a = torch.zeros(4)
-    b = torch.ones([2,2])
+    b = torch.ones([2, 2])
     self.runAtenTest((a, b), func)
 
   def test_view_data_slice(self):
