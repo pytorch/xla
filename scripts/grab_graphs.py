@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/usr/bin/env python
 # Parses the output of XLA_SAVE_TENSORS_FILE and produces statistics about graph
 # types and Python frames.
 

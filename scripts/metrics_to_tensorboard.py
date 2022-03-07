@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/usr/bin/env python
 # Add metrics images to tensorboard summary for easy viewing/comparisons
 
 import argparse
