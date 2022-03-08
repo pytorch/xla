@@ -26,15 +26,17 @@ std::vector<int64_t> TransposePermutation(int64_t rank) {
   return dims;
 }
 
-std::pair<xla::Shape, xla::Shape> UVShapes(const xla::Shape& input_shape, bool full_matrices, bool compute_uv, bool deprecated_svd) {
+std::pair<xla::Shape, xla::Shape> UVShapes(const xla::Shape& input_shape,
+                                           bool full_matrices, bool compute_uv,
+                                           bool deprecated_svd) {
   // The input tensor is (..., M, N)
   int64_t m_dim = input_shape.dimensions(input_shape.rank() - 2);
   int64_t n_dim = input_shape.dimensions(input_shape.rank() - 1);
 
   if (!compute_uv && !deprecated_svd) {
     return std::make_pair(
-      xla::ShapeUtil::MakeShape(input_shape.element_type(), {0}),
-      xla::ShapeUtil::MakeShape(input_shape.element_type(), {0}));
+        xla::ShapeUtil::MakeShape(input_shape.element_type(), {0}),
+        xla::ShapeUtil::MakeShape(input_shape.element_type(), {0}));
   }
 
   xla::Shape u_shape(input_shape);
@@ -49,7 +51,7 @@ std::pair<xla::Shape, xla::Shape> UVShapes(const xla::Shape& input_shape, bool f
     v_shape.set_dimensions(input_shape.rank() - 2, n_dim);
   } else if (!deprecated_svd) {
     v_shape.set_dimensions(input_shape.rank() - 2,
-                          full_matrices ? m_dim : std::min(m_dim, n_dim));
+                           full_matrices ? m_dim : std::min(m_dim, n_dim));
   } else {
     v_shape.set_dimensions(input_shape.rank() - 2, n_dim);
     v_shape.set_dimensions(input_shape.rank() - 1, std::min(m_dim, n_dim));
@@ -64,7 +66,8 @@ std::vector<xla::XlaOp> LowerSVD(xla::XlaOp input, bool full_matrices,
   XLA_CHECK_GE(input_shape.rank(), 2) << input_shape;
 
   xla::Shape u_shape, v_shape;
-  std::tie(u_shape, v_shape) = UVShapes(input_shape, full_matrices, compute_uv, deprecated_svd);
+  std::tie(u_shape, v_shape) =
+      UVShapes(input_shape, full_matrices, compute_uv, deprecated_svd);
 
   if (xla::ShapeUtil::IsZeroElementArray(input_shape)) {
     xla::Shape d_shape(input_shape);
@@ -73,10 +76,9 @@ std::vector<xla::XlaOp> LowerSVD(xla::XlaOp input, bool full_matrices,
     int64_t n_dim = input_shape.dimensions(input_shape.rank() - 1);
     d_shape.set_dimensions(d_shape.rank() - 1, std::min(m_dim, n_dim));
 
-    return {
-      xla::Zeros(input.builder(), u_shape),
-      xla::Zeros(input.builder(), d_shape),
-      xla::Zeros(input.builder(), v_shape)};
+    return {xla::Zeros(input.builder(), u_shape),
+            xla::Zeros(input.builder(), d_shape),
+            xla::Zeros(input.builder(), v_shape)};
   }
 
   xla::SVDResult svd_result =
@@ -118,7 +120,8 @@ xla::Shape NodeOutputShape(const Value& input, bool full_matrices,
                            bool compute_uv, bool deprecated_svd) {
   auto lower_for_shape_fn =
       [&](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
-    std::vector<xla::XlaOp> values = LowerSVD(operands[0], full_matrices, compute_uv, deprecated_svd);
+    std::vector<xla::XlaOp> values =
+        LowerSVD(operands[0], full_matrices, compute_uv, deprecated_svd);
     return xla::Tuple(operands[0].builder(), values);
   };
   return InferOutputShape({input.shape()}, lower_for_shape_fn);
