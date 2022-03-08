@@ -15,48 +15,100 @@ namespace ir {
 namespace ops {
 namespace {
 
+std::vector<int64_t> TransposePermutation(int64_t rank) {
+  auto dims = std::vector<int64_t>(rank);
+  std::iota(dims.begin(), dims.end(), 0);
+
+  // Flip only the last two dimensions
+  dims[rank - 1] = rank - 2;
+  dims[rank - 2] = rank - 1;
+
+  return dims;
+}
+
+std::pair<xla::Shape, xla::Shape> UVShapes(const xla::Shape& input_shape, bool full_matrices, bool compute_uv, bool deprecated_svd) {
+  // The input tensor is (..., M, N)
+  int64_t m_dim = input_shape.dimensions(input_shape.rank() - 2);
+  int64_t n_dim = input_shape.dimensions(input_shape.rank() - 1);
+
+  if (!compute_uv && !deprecated_svd) {
+    return std::make_pair(
+      xla::ShapeUtil::MakeShape(input_shape.element_type(), {0}),
+      xla::ShapeUtil::MakeShape(input_shape.element_type(), {0}));
+  }
+
+  xla::Shape u_shape(input_shape);
+  if (full_matrices || (!compute_uv && deprecated_svd)) {
+    u_shape.set_dimensions(input_shape.rank() - 1, m_dim);
+  } else {
+    u_shape.set_dimensions(input_shape.rank() - 1, std::min(m_dim, n_dim));
+  }
+
+  xla::Shape v_shape(input_shape);
+  if (full_matrices) {
+    v_shape.set_dimensions(input_shape.rank() - 2, n_dim);
+  } else if (!deprecated_svd) {
+    v_shape.set_dimensions(input_shape.rank() - 2,
+                          full_matrices ? m_dim : std::min(m_dim, n_dim));
+  } else {
+    v_shape.set_dimensions(input_shape.rank() - 2, n_dim);
+    v_shape.set_dimensions(input_shape.rank() - 1, std::min(m_dim, n_dim));
+  }
+
+  return std::make_pair(u_shape, v_shape);
+}
+
 std::vector<xla::XlaOp> LowerSVD(xla::XlaOp input, bool full_matrices,
                                  bool compute_uv, bool deprecated_svd) {
+  const xla::Shape& input_shape = XlaHelpers::ShapeOfXlaOp(input);
+  XLA_CHECK_GE(input_shape.rank(), 2) << input_shape;
+
+  xla::Shape u_shape, v_shape;
+  std::tie(u_shape, v_shape) = UVShapes(input_shape, full_matrices, compute_uv, deprecated_svd);
+
+  if (xla::ShapeUtil::IsZeroElementArray(input_shape)) {
+    xla::Shape d_shape(input_shape);
+    d_shape.DeleteDimension(d_shape.rank() - 1);
+    int64_t m_dim = input_shape.dimensions(input_shape.rank() - 2);
+    int64_t n_dim = input_shape.dimensions(input_shape.rank() - 1);
+    d_shape.set_dimensions(d_shape.rank() - 1, std::min(m_dim, n_dim));
+
+    return {
+      xla::Zeros(input.builder(), u_shape),
+      xla::Zeros(input.builder(), d_shape),
+      xla::Zeros(input.builder(), v_shape)};
+  }
+
   xla::SVDResult svd_result =
       xla::SVD(input, /*max_iter=*/100, /*epsilon=*/1e-6,
                XlaHelpers::mat_mul_precision());
-  const xla::Shape& input_shape = XlaHelpers::ShapeOfXlaOp(input);
   xla::XlaOp u = svd_result.u;
   xla::XlaOp v = svd_result.v;
+
+  int64_t v_rank = XlaHelpers::ShapeOfXlaOp(v).rank();
+  auto perm = TransposePermutation(v_rank);
+
   if (!compute_uv) {
-    xla::Shape u_shape = deprecated_svd ? XlaHelpers::ShapeOfXlaOp(u)
-                                        : xla::ShapeUtil::MakeShape(
-                                              input_shape.element_type(), {0});
-    xla::Shape v_shape = deprecated_svd ? XlaHelpers::ShapeOfXlaOp(v)
-                                        : xla::ShapeUtil::MakeShape(
-                                              input_shape.element_type(), {0});
     u = xla::Zeros(input.builder(), u_shape);
     v = xla::Zeros(input.builder(), v_shape);
   } else if (!full_matrices) {
-    int64_t m_dim = input_shape.dimensions(input_shape.rank() - 2);
-    int64_t n_dim = input_shape.dimensions(input_shape.rank() - 1);
-    std::vector<int64_t> base_indices(input_shape.rank(), 0);
+    std::vector<int64_t> base_indices(u_shape.rank(), 0);
 
-    auto u_sizes = torch::lazy::ToVector<int64_t>(input_shape.dimensions());
-    u_sizes[input_shape.rank() - 1] = std::min(m_dim, n_dim);
+    auto u_sizes = torch::lazy::ToVector<int64_t>(u_shape.dimensions());
     u = BuildSlice(u, base_indices, u_sizes);
 
-    auto v_sizes = torch::lazy::ToVector<int64_t>(input_shape.dimensions());
-    v_sizes[input_shape.rank() - 2] = n_dim;
-    v_sizes[input_shape.rank() - 1] = std::min(m_dim, n_dim);
-    v = BuildSlice(v, base_indices, v_sizes);
-  }
-
-  // Return Vh (conjugate transpose) for torch.linalg.svd. Conjugate not lowered
-  // yet so just transpose.
-  if (compute_uv && !deprecated_svd) {
-    int64_t v_rank = XlaHelpers::ShapeOfXlaOp(v).rank();
-    auto dims = std::vector<int64_t>(v_rank);
-    std::iota(dims.begin(), dims.end(), 0);
-
-    dims[v_rank - 2] = v_rank - 1;
-    dims[v_rank - 1] = v_rank - 2;
-    v = xla::Transpose(v, dims);
+    if (!deprecated_svd) {
+      // xla::SVD's v is transposed from our expected output shape
+      xla::Shape vt_shape = xla::ShapeUtil::PermuteDimensions(perm, v_shape);
+      auto v_sizes = torch::lazy::ToVector<int64_t>(vt_shape.dimensions());
+      v = BuildSlice(v, base_indices, v_sizes);
+      v = xla::Transpose(v, perm);
+    } else {
+      auto v_sizes = torch::lazy::ToVector<int64_t>(v_shape.dimensions());
+      v = BuildSlice(v, base_indices, v_sizes);
+    }
+  } else if (full_matrices && !deprecated_svd) {
+    v = xla::Transpose(v, perm);
   }
 
   return {u, svd_result.d, v};
