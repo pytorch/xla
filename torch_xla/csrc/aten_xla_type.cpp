@@ -1562,9 +1562,8 @@ at::Tensor XLANativeFunctions::hardtanh_backward(const at::Tensor& grad_output,
       max_val));
 }
 
-at::Tensor XLANativeFunctions::index(
-    const at::Tensor& self,
-    at::IOptTensorRefList indices indices) {
+at::Tensor XLANativeFunctions::index(const at::Tensor& self,
+                                     at::IOptTensorRefList indices indices) {
   XLA_FN_COUNTER("xla::");
   bool indices_on_cpu_or_dev = std::all_of(
       indices.begin(), indices.end(), [=](const at::OptionalTensorRef& opt) {
@@ -1572,8 +1571,9 @@ at::Tensor XLANativeFunctions::index(
       });
   XLA_CHECK(indices_on_cpu_dev)
       << "indices should be either on cpu or on the same"
-      << " device as the indexed tensor (", dev, "). When",
-      << " using XLA, the indexed tensor must be an XLA tensor.";
+      << " device as the indexed tensor (",
+      dev,
+      "). When", << " using XLA, the indexed tensor must be an XLA tensor.";
   CanonicalIndexInfo canonical_index_info =
       GetCanonicalIndexInfo(self, indices);
   c10::optional<torch::lazy::BackendDevice> device =
