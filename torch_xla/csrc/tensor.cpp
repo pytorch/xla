@@ -1656,6 +1656,7 @@ std::shared_ptr<XLATensor::Async> XLATensor::SyncTensorsGraphInternal(
              << torch::lazy::HashToString(coll.hash);
   std::shared_ptr<Async> async = TryRunCachedSync(tensors, &coll, &po_data);
   if (async != nullptr) {
+    std::cout << "[WONJOO] SaveTensorsGraphInfo found cache" << std::endl;
     return async;
   }
 

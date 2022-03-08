@@ -129,14 +129,15 @@ torch::lazy::hash_t Value::hash() const {
 
 Node::Node(torch::lazy::OpKind op, OpList operands, xla::Shape shape,
            size_t num_outputs, torch::lazy::hash_t hash_seed)
-    : torch::lazy::Node(op, num_outputs, /* hash_func */
+    : torch::lazy::Node(op, num_outputs,
+                        GetOpHash(op, shape, hash_seed), /* hash_func */
                         [&](bool /*bakeInSizes*/) -> torch::lazy::hash_t {
                           return GetOpHash(op, shape, hash_seed);
                         }),
       op_(std::move(op)),
       num_outputs_(num_outputs),
       shape_(std::move(shape)),
-      node_hash_(torch::lazy::HashCombine(op_.hash(), hash_seed)),
+      node_hash_(GetOpHash(op, shape, hash_seed)),
       hash_(node_hash_) {
   metadata_.scope = GetCurrentScope();
   metadata_.frame_info = GetFrameInfo();
@@ -144,6 +145,8 @@ Node::Node(torch::lazy::OpKind op, OpList operands, xla::Shape shape,
     AddOperand(operand.node, operand.index);
     hash_ = torch::lazy::HashCombine(hash_, operand.hash());
   }
+  std::cout << "[WONJOO] Node1 node_hash_: " << node_hash_ << std::endl;
+  ;
 }
 
 Node::Node(torch::lazy::OpKind op, OpList operands,
@@ -168,6 +171,8 @@ Node::Node(torch::lazy::OpKind op, xla::Shape shape, size_t num_outputs,
       hash_(node_hash_) {
   metadata_.scope = GetCurrentScope();
   metadata_.frame_info = GetFrameInfo();
+  std::cout << "[WONJOO] Node3 node_hash_: " << node_hash_ << std::endl;
+  ;
 }
 
 Node::~Node() {
