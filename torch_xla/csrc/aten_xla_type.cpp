@@ -1564,8 +1564,17 @@ at::Tensor XLANativeFunctions::hardtanh_backward(const at::Tensor& grad_output,
 
 at::Tensor XLANativeFunctions::index(
     const at::Tensor& self,
-    const c10::List<c10::optional<at::Tensor>>& indices) {
+    at::IOptTensorRefList indices indices) {
   XLA_FN_COUNTER("xla::");
+  bool indices_on_cpu_or_dev = std::all_of(
+      indices.begin(), indices.end(), [=](const at::OptionalTensorRef& opt) {
+        return opt.has_value() ? (opt->is_cpu() || opt->device() == dev) : true;
+      });
+  TORCH_CHECK(
+      indices_on_cpu_or_dev,
+      "indices should be either on ", kCPU,
+      " or on the same device as the indexed tensor (", dev, ")",
+      ". When using XLA, the indexed tensor must be an XLA tensor.");
   CanonicalIndexInfo canonical_index_info =
       GetCanonicalIndexInfo(self, indices);
   c10::optional<torch::lazy::BackendDevice> device =
