@@ -1,4 +1,5 @@
 #include <ATen/Context.h>
+#include <ATen/ExpandUtils.h>
 #include <ATen/Operators.h>
 #include <ATen/native/BinaryOps.h>
 #include <ATen/native/CPUFallback.h>
@@ -483,15 +484,6 @@ std::tuple<at::Tensor, at::Tensor> XLANativeFunctions::_pack_padded_sequence(
   std::vector<at::Tensor> xla_tensors = {lengths};
   auto cpu_tensors = bridge::XlaCreateTensorList(xla_tensors);
   return at::native::_pack_padded_sequence(input, cpu_tensors[0], batch_first);
-}
-
-at::Tensor XLANativeFunctions::_s_where(const at::Tensor& condition,
-                                        const at::Tensor& self,
-                                        const at::Tensor& other) {
-  XLA_FN_COUNTER("xla::");
-  return bridge::AtenFromXlaTensor(XLATensor::where(
-      bridge::GetXlaTensor(condition), bridge::GetXlaTensor(self),
-      bridge::GetXlaTensor(other)));
 }
 
 at::Tensor XLANativeFunctions::_softmax(const at::Tensor& self, int64_t dim,
@@ -3564,6 +3556,18 @@ at::Tensor XLANativeFunctions::view(const at::Tensor& self,
   XLA_FN_COUNTER("xla::");
   return bridge::AtenFromXlaTensor(
       XLATensor::view(bridge::GetXlaTensor(self), XlaHelpers::I64List(size)));
+}
+
+at::Tensor XLANativeFunctions::where(const at::Tensor& condition,
+                                     const at::Tensor& self,
+                                     const at::Tensor& other) {
+  XLA_FN_COUNTER("xla::");
+  c10::MaybeOwned<at::Tensor> b_condition, b_self, b_other;
+  std::tie(b_condition, b_self, b_other) =
+      expand_outplace(condition, self, other, "where");
+  return bridge::AtenFromXlaTensor(XLATensor::where(
+      bridge::GetXlaTensor(*b_condition), bridge::GetXlaTensor(*b_self),
+      bridge::GetXlaTensor(*b_other)));
 }
 
 at::Tensor& XLANativeFunctions::zero_(at::Tensor& self) {

@@ -6189,7 +6189,7 @@ TEST_F(AtenXlaTensorTest, TestWhere) {
   });
 
   ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
-  ExpectCounterChanged("xla::_s_where", cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::where", cpp_test::GetIgnoredCounters());
 }
 
 TEST_F(AtenXlaTensorTest, TestWhereBroadcast) {
@@ -6211,7 +6211,7 @@ TEST_F(AtenXlaTensorTest, TestWhereBroadcast) {
   });
 
   ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
-  ExpectCounterChanged("xla::_s_where", cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::where", cpp_test::GetIgnoredCounters());
 }
 
 TEST_F(AtenXlaTensorTest, TestWhereAutograd) {
@@ -6223,17 +6223,17 @@ TEST_F(AtenXlaTensorTest, TestWhereAutograd) {
       c[i][j] = i == j;
     }
   }
-  torch::Tensor d = torch::_s_where(c, a, b);
+  torch::Tensor d = torch::where(c, a, b);
   ForEachDevice([&](const torch::Device& device) {
     torch::Tensor xla_a = CopyToDevice(a, device);
     torch::Tensor xla_b = CopyToDevice(b, device);
     torch::Tensor xla_c = CopyToDevice(c, device);
-    torch::Tensor xla_d = torch::_s_where(xla_c, xla_a, xla_b);
+    torch::Tensor xla_d = torch::where(xla_c, xla_a, xla_b);
     AllClose(d, xla_d);
   });
 
   ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
-  ExpectCounterChanged("xla::_s_where", cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::where", cpp_test::GetIgnoredCounters());
 }
 
 TEST_F(AtenXlaTensorTest, TestThreshold) {
