@@ -1322,7 +1322,7 @@ class XLATensor {
 
   void SetXlaData(xla::ComputationClient::DataPtr xla_data, bool sync);
 
-  void SetIrValue(ir::Value ir_value);
+  void SetIrValue(ir::Value ir_value, bool inplace = true);
   void SetInPlaceIrValue(ir::Value ir_value);
 
   void AssignIrValue(ir::Value ir_value) const;
