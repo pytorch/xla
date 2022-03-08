@@ -631,6 +631,7 @@ void XLATensor::SetIrValue(ir::Value ir_value, bool inplace) {
   } else {
     // Reset the view if we are not within an in-place execution context
     data()->view = nullptr;
+    data()->generation = 1;
     AssignIrValue(std::move(ir_value));
     TryLimitGraphSize();
   }
