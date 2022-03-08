@@ -22,7 +22,6 @@ supported:
   - _log_softmax
   - _log_softmax_backward_data
   - _pack_padded_sequence
-  - _s_where
   - _softmax
   - _softmax_backward_data
   - _to_cpu
@@ -326,6 +325,7 @@ supported:
   - var.correction
   - var_mean.correction
   - view
+  - where.self
   - xlogy.Tensor
   - zero_
 autograd:
