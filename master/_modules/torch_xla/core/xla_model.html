@@ -893,7 +893,13 @@
   <span class="k">if</span> <span class="n">dim</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">:</span>
     <span class="n">dim</span> <span class="o">=</span> <span class="n">value</span><span class="o">.</span><span class="n">dim</span><span class="p">()</span> <span class="o">+</span> <span class="n">dim</span>
   <span class="n">token</span><span class="p">,</span> <span class="n">devctx</span> <span class="o">=</span> <span class="n">_get_all_reduce_token</span><span class="p">()</span>
-  <span class="n">shard_count</span> <span class="o">=</span> <span class="kc">None</span> <span class="k">if</span> <span class="n">groups</span> <span class="k">else</span> <span class="n">xrt_world_size</span><span class="p">()</span>
+  <span class="k">if</span> <span class="n">groups</span><span class="p">:</span>
+    <span class="n">shard_count</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">groups</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+    <span class="k">assert</span> <span class="nb">all</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">group</span><span class="p">)</span> <span class="o">==</span> <span class="n">shard_count</span> <span class="k">for</span> <span class="n">group</span> <span class="ow">in</span> <span class="n">groups</span><span class="p">),</span> \
+      <span class="s2">&quot;Replica groups must have the same number of replicas/shards.&quot;</span>
+  <span class="k">else</span><span class="p">:</span>
+    <span class="c1"># All replicas belong to a single group</span>
+    <span class="n">shard_count</span> <span class="o">=</span> <span class="n">xrt_world_size</span><span class="p">()</span>
   <span class="k">if</span> <span class="n">output</span> <span class="o">!=</span> <span class="kc">None</span><span class="p">:</span>
     <span class="c1"># Call the out of place version of the all_gather</span>
     <span class="n">new_token</span> <span class="o">=</span> <span class="n">torch_xla</span><span class="o">.</span><span class="n">_XLAC</span><span class="o">.</span><span class="n">_xla_all_gather_out</span><span class="p">(</span><span class="n">output</span><span class="p">,</span> <span class="n">value</span><span class="p">,</span> <span class="n">token</span><span class="p">,</span> <span class="n">dim</span><span class="p">,</span>
