@@ -1574,7 +1574,7 @@ at::Tensor XLANativeFunctions::index(
       });
   XLA_CHECK(indices_on_cpu_or_xla)
       << "indices should be either on cpu or on the same"
-      << " device as the indexed tensor (" << dev << ").
+      << " device as the indexed tensor (" << dev << ")."
       << " When using XLA, the indexed tensor must be an XLA tensor.";
   CanonicalIndexInfo canonical_index_info =
       GetCanonicalIndexInfo(self, indices);
