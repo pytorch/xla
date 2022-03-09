@@ -603,7 +603,13 @@ def all_gather(value, dim=0, groups=None, output=None):
   if dim < 0:
     dim = value.dim() + dim
   token, devctx = _get_all_reduce_token()
-  shard_count = None if groups else xrt_world_size()
+  if groups:
+    shard_count = len(groups[0])
+    assert all(len(group) == shard_count for group in groups), \
+      "Replica groups must have the same number of replicas/shards."
+  else:
+    # All replicas belong to a single group
+    shard_count = xrt_world_size()
   if output != None:
     # Call the out of place version of the all_gather
     new_token = torch_xla._XLAC._xla_all_gather_out(output, value, token, dim,
