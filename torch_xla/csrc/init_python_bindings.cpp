@@ -1332,6 +1332,18 @@ void InitXlaModuleBindings(py::module m) {
                 weight_decay, eps, amsgrad, maximize, use_adamw);
           }
         });
+  m.def("_xla_mark_sharding",
+        [](const at::Tensor& input, std::vector<int> mesh_shape,
+           std::vector<int> partition_spec) {
+          bool DEBUG = true;
+          if DEBUG {
+            std::cout << "mesh_shape: " << mesh_shape;
+            std::cout << "partition_spec: " << partition_spec;
+          }
+
+          XLATensor input_xla = bridge::GetXlaTensor(input);
+          // TODO: annotate HLO IR node
+        });
 
   BuildProfilerSubmodule(&m);
 }
