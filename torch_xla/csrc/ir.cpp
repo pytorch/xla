@@ -146,17 +146,9 @@ Node::Node(torch::lazy::OpKind op, OpList operands, xla::Shape shape,
                                  torch::lazy::HashCombine(op.hash(), hash_seed),
                                  bakeInSizes);
           }),
-      op_(std::move(op)),
-      num_outputs_(num_outputs),
-      shape_(std::move(shape)),
-      node_hash_(torch::lazy::HashCombine(op_.hash(), hash_seed)),
-      hash_(node_hash_) {
+      shape_(std::move(shape)) {
   metadata_.scope = GetCurrentScope();
   metadata_.frame_info = GetFrameInfo();
-  for (auto& operand : operands) {
-    AddOperand(operand.node, operand.index);
-    hash_ = torch::lazy::HashCombine(hash_, operand.hash());
-  }
 }
 
 Node::Node(torch::lazy::OpKind op, OpList operands,
@@ -174,11 +166,7 @@ Node::Node(torch::lazy::OpKind op, xla::Shape shape, size_t num_outputs,
                         [&](bool /*bakeInSizes*/) -> torch::lazy::hash_t {
                           return GetOpHash(op, shape, hash_seed);
                         }),
-      op_(std::move(op)),
-      num_outputs_(num_outputs),
-      shape_(std::move(shape)),
-      node_hash_(GetOpHash(op_, shape_, hash_seed)),
-      hash_(node_hash_) {
+      shape_(std::move(shape)) {
   metadata_.scope = GetCurrentScope();
   metadata_.frame_info = GetFrameInfo();
 }
