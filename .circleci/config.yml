@@ -94,7 +94,7 @@ calculate_docker_image: &calculate_docker_image
 run_build: &run_build
   resource_class: 2xlarge
   machine:
-    image: ubuntu-1604:201903-01
+    image: ubuntu-2004:202111-02
   steps:
   - checkout
   - run:
@@ -113,7 +113,7 @@ run_build: &run_build
 
 run_test: &run_test
   machine:
-    image: ubuntu-1604:201903-01
+    image: ubuntu-2004:202111-02
   steps:
   - checkout
   - run:
@@ -137,7 +137,7 @@ run_test: &run_test
 
 run_test_and_push_doc: &run_test_and_push_doc
   machine:
-    image: ubuntu-1604:201903-01
+    image: ubuntu-2004:202111-02
   steps:
   - checkout
   - run:
@@ -239,7 +239,7 @@ ci_params: &ci_params
 jobs:
   linter_check:
     machine:
-      image: ubuntu-1604:201903-01
+      image: ubuntu-2004:202111-02
     steps:
     - checkout
     - run:
@@ -249,7 +249,7 @@ jobs:
 
   linter_check_no_torch_pin:
     machine:
-      image: ubuntu-1604:201903-01
+      image: ubuntu-2004:202111-02
     steps:
     - checkout
     - run:
