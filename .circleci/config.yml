@@ -100,7 +100,8 @@ run_build: &run_build
   - run:
       name: "Setup custom environment variables"
       command: |
-        pyenv global 3.6.5
+        pyenv install 3.7.0
+        pyenv global 3.7.0
         echo "export CLOUDSDK_PYTHON=$(which python3)" >> $BASH_ENV
   - run:
       <<: *update_submodule
@@ -119,7 +120,8 @@ run_test: &run_test
   - run:
       name: "Setup custom environment variables"
       command: |
-        pyenv global 3.6.5
+        pyenv install 3.7.0
+        pyenv global 3.7.0
         echo "export CLOUDSDK_PYTHON=$(which python3)" >> $BASH_ENV
   - run:
       <<: *update_submodule
@@ -143,7 +145,8 @@ run_test_and_push_doc: &run_test_and_push_doc
   - run:
       name: "Setup custom environment variables"
       command: |
-        pyenv global 3.6.5
+        pyenv install 3.7.0
+        pyenv global 3.7.0
         echo "export CLOUDSDK_PYTHON=$(which python3)" >> $BASH_ENV
   - run:
       <<: *update_submodule
@@ -168,8 +171,6 @@ run_test_and_push_doc: &run_test_and_push_doc
 run_clang_format: &run_clang_format
   name: Run clang-format
   command: |
-    wget -O - https://apt.llvm.org/llvm-snapshot.gpg.key|sudo apt-key add -
-    sudo add-apt-repository 'deb http://apt.llvm.org/xenial/ llvm-toolchain-xenial-7 main'
     sudo apt-get update
     sudo apt install -y clang-format-7
     git_status=$(git status --porcelain)
@@ -192,6 +193,7 @@ run_clang_format: &run_clang_format
 run_yapf: &run_yapf
   name: Run yapf
   command: |
+    pyenv install 3.7.0
     pyenv global 3.7.0
     pip install --upgrade pip
     pip install yapf==0.30.0
