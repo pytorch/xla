@@ -258,7 +258,8 @@ std::vector<xla::ComputationClient::DataPtr> Execute(
     absl::Span<const ir::Value> roots, const Device& device) {
   ir::LoweringContext lowering_ctx("Execute", device);
   for (auto node : roots) {
-    xla::XlaOp root = lowering_ctx.GetOutputOp(node);
+    xla::XlaOp root = lowering_ctx.GetOutputOp(
+        torch::lazy::Output(node.node.get(), node.index));
     lowering_ctx.AddResult(root);
   }
 

@@ -81,6 +81,23 @@ void EmitShortFrameInfo(std::ostream& stream,
   }
 }
 
+torch::lazy::hash_t OperandHashes(const OpList& operands,
+                                  const torch::lazy::hash_t& seed,
+                                  bool bakeInSizes) {
+  torch::lazy::hash_t hash = seed;
+  for (auto& operand : operands) {
+    if (!operand) {
+      hash = torch::lazy::HashCombine(
+          hash, static_cast<uint64_t>(torch::lazy::kNullOpt));
+      continue;
+    }
+    auto operand_hash =
+        bakeInSizes ? operand.hash_with_sizes() : operand.hash_without_sizes();
+    hash = torch::lazy::HashCombine(hash, operand_hash);
+  }
+  return hash;
+}
+
 }  // namespace
 
 bool Use::operator<(const Use& rhs) const {
@@ -127,12 +144,27 @@ torch::lazy::hash_t Value::hash() const {
   return torch::lazy::HashCombine(node->hash(), index);
 }
 
+torch::lazy::hash_t Value::hash_with_sizes() const {
+  return torch::lazy::HashCombine(node->hash_with_sizes(),
+                                  torch::lazy::Hash(index));
+}
+
+torch::lazy::hash_t Value::hash_without_sizes() const {
+  return torch::lazy::HashCombine(node->hash_without_sizes(),
+                                  torch::lazy::Hash(index));
+}
+
 Node::Node(torch::lazy::OpKind op, OpList operands, xla::Shape shape,
            size_t num_outputs, torch::lazy::hash_t hash_seed)
-    : torch::lazy::Node(op, num_outputs, /* hash_func */
-                        [&](bool /*bakeInSizes*/) -> torch::lazy::hash_t {
-                          return GetOpHash(op, shape, hash_seed);
-                        }),
+    : torch::lazy::Node(
+          op, num_outputs,
+          /* node_hash */ torch::lazy::HashCombine(op.hash(), hash_seed),
+          /* hash_func */
+          [&](bool bakeInSizes) -> torch::lazy::hash_t {
+            return OperandHashes(operands,
+                                 torch::lazy::HashCombine(op.hash(), hash_seed),
+                                 bakeInSizes);
+          }),
       op_(std::move(op)),
       num_outputs_(num_outputs),
       shape_(std::move(shape)),
@@ -164,7 +196,7 @@ Node::Node(torch::lazy::OpKind op, xla::Shape shape, size_t num_outputs,
       op_(std::move(op)),
       num_outputs_(num_outputs),
       shape_(std::move(shape)),
-      node_hash_(GetOpHash(op, shape, hash_seed)),
+      node_hash_(GetOpHash(op_, shape_, hash_seed)),
       hash_(node_hash_) {
   metadata_.scope = GetCurrentScope();
   metadata_.frame_info = GetFrameInfo();
