@@ -127,10 +127,6 @@ class Node : public torch::lazy::Node {
 
   virtual ~Node();
 
-  const torch::lazy::OpKind& op() const { return op_; }
-
-  size_t num_outputs() const { return num_outputs_; }
-
   // Retrieves the full shape of the IR Node. Note that if this is a
   // multi-output node, the returned shape will be a tuple.
   const xla::Shape& shape() const { return shape_; }
@@ -148,10 +144,6 @@ class Node : public torch::lazy::Node {
   }
 
   const std::set<Use>& uses() const { return uses_; }
-
-  torch::lazy::hash_t node_hash() const { return node_hash_; }
-
-  torch::lazy::hash_t hash() const { return hash_; }
 
   const MetaData& metadata() const { return metadata_; }
 
@@ -194,9 +186,6 @@ class Node : public torch::lazy::Node {
 
   static std::vector<SourceLocation> GetFrameInfo();
 
-  // The ID of the operation captured by this node.
-  torch::lazy::OpKind op_;
-  size_t num_outputs_ = 1;
   xla::Shape shape_;
   // A node holds a real reference to its operands.
   std::vector<NodePtr> operands_;
@@ -205,10 +194,6 @@ class Node : public torch::lazy::Node {
   std::vector<torch::lazy::Output> operands_as_outputs_;
   // We use a set for uses, as we want deterministic use sequencing.
   std::set<Use> uses_;
-  // The hash value of this node.
-  torch::lazy::hash_t node_hash_ = 0;
-  // The hash value of the graph rooted at this node.
-  torch::lazy::hash_t hash_ = 0;
   // The IR specific metadata attached to the IR node.
   MetaData metadata_;
   // The IR framework user can attach a user defined metadata object deriving
