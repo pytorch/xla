@@ -67,48 +67,6 @@ inline std::ostream& operator<<(std::ostream& stream, const Use& use) {
   return stream;
 }
 
-// Represents a specific output produced by a node. Since the output of a node
-// can be composed by multiple outputs, the node+index coordinates fully qualify
-// each single output.
-// struct Output {
-//   struct Hasher {
-//     size_t operator()(const Output& output) const;
-//   };
-
-//   Output() = default;
-//   explicit Output(const Node* node, size_t index = 0)
-//       : node(node), index(index) {}
-
-//   // Retrieves the shape of this output. If the IR Node generating the value
-//   is
-//   // a multi-output node, the shape returned by this API will not be the full
-//   // tuple shape, but only the shape at index referred by this value.
-//   // To retrieve the full tuple shape in that case, use the node_shape() API.
-//   const xla::Shape& shape() const;
-//   const xla::Shape& node_shape() const;
-
-//   torch::lazy::hash_t hash() const;
-
-//   bool operator==(const Output& rhs) const {
-//     return node == rhs.node && index == rhs.index;
-//   }
-//   bool operator!=(const Output& rhs) const { return !operator==(rhs); }
-
-//   std::string ToString() const;
-
-//   // The node providing the output.
-//   const Node* node = nullptr;
-//   // The index in the node's output this output refers to.
-//   size_t index = 0;
-// };
-
-// inline std::ostream& operator<<(std::ostream& stream, const Output& output) {
-//   stream << output.ToString();
-//   return stream;
-// }
-
-// using OutputSet = std::unordered_set<Output, Output::Hasher>;
-
 template <typename T>
 using OutputMap =
     std::unordered_map<torch::lazy::Output, T, torch::lazy::Output::Hasher>;

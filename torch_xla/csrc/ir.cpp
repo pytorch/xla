@@ -117,25 +117,6 @@ std::string Use::ToString() const {
   return ss.str();
 }
 
-// size_t Output::Hasher::operator()(const Output& output) const {
-//   return torch::lazy::StdHashCombine(
-//       reinterpret_cast<std::ptrdiff_t>(output.node), output.index);
-// }
-
-// const xla::Shape& Output::shape() const { return node->shape(index); }
-
-// const xla::Shape& Output::node_shape() const { return node->shape(); }
-
-// torch::lazy::hash_t Output::hash() const {
-//   return torch::lazy::HashCombine(node->hash(), index);
-// }
-
-// std::string Output::ToString() const {
-//   std::stringstream ss;
-//   ss << node->ToString() << ", index=" << index;
-//   return ss.str();
-// }
-
 const xla::Shape& Value::shape() const { return node->shape(index); }
 
 const xla::Shape& Value::node_shape() const { return node->shape(); }
