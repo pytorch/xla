@@ -15,7 +15,7 @@ class XlaShardingTest(unittest.TestCase):
   def test_xla_sharded_tensor(self):
     # Simple 1-D sharding
     mesh_shape = (1, xm.xrt_world_size())
-    partition_spec = (1)
+    partition_spec = (1,)
     t1 = torch.tensor([2.0, 3.0], dtype=torch.float, device=xm.xla_device())
     t1_sharded = XLAShardedTensor(t1, mesh_shape, partition_spec)
     t2 = torch.tensor([2.0, 3.0], dtype=torch.float, device=xm.xla_device())
