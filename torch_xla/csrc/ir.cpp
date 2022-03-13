@@ -149,6 +149,9 @@ Node::Node(torch::lazy::OpKind op, OpList operands, xla::Shape shape,
       shape_(std::move(shape)) {
   metadata_.scope = GetCurrentScope();
   metadata_.frame_info = GetFrameInfo();
+  for (auto& operand : operands) {
+    AddOperand(operand.node, operand.index);
+  }
 }
 
 Node::Node(torch::lazy::OpKind op, OpList operands,
