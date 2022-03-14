@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # Sample usage:
-#   python env-setup.py --version 1.5 --apt-packages libomp5
+#   python env-setup.py --version 1.11 --apt-packages libomp5
 import argparse
 import collections
 from datetime import datetime
@@ -14,14 +14,15 @@ import sys
 
 VersionConfig = collections.namedtuple('VersionConfig',
                                        ['wheels', 'tpu', 'py_version', 'cuda_version'])
-DEFAULT_CUDA_VERSION = '10.2'
+DEFAULT_CUDA_VERSION = '11.2'
 OLDEST_VERSION = datetime.strptime('20200318', '%Y%m%d')
+NEW_VERSION = datetime.strptime('20220315', '%Y%m%d')  # 1.11 release date
 OLDEST_GPU_VERSION = datetime.strptime('20200707', '%Y%m%d')
 DIST_BUCKET = 'gs://tpu-pytorch/wheels'
 TORCH_WHEEL_TMPL = 'torch-{whl_version}-cp{py_version}-cp{py_version}m-linux_x86_64.whl'
 TORCH_XLA_WHEEL_TMPL = 'torch_xla-{whl_version}-cp{py_version}-cp{py_version}m-linux_x86_64.whl'
 TORCHVISION_WHEEL_TMPL = 'torchvision-{whl_version}-cp{py_version}-cp{py_version}m-linux_x86_64.whl'
-
+VERSION_REGEX = re.compile(r'^(\d+\.)+\d+$')
 
 def is_gpu_runtime():
   return os.environ.get('COLAB_GPU', 0) == 1
@@ -77,8 +78,8 @@ def get_version(version):
     return VersionConfig(f'nightly+{version}', f'pytorch-dev{version}',
                          get_py_version(), cuda_version)
 
-  version_regex = re.compile(r'^(\d+\.)+\d+$')
-  if not version_regex.match(version):
+
+  if not VERSION_REGEX.match(version):
     raise ValueError(f'{version} is an invalid torch_xla version pattern')
   return VersionConfig(
     version, f'pytorch-{version}', get_py_version(), cuda_version)
@@ -86,9 +87,29 @@ def get_version(version):
 
 def install_vm(version, apt_packages, is_root=False):
   dist_bucket = DIST_BUCKET
+
   if version.cuda_version:
+    # Distributions for GPU runtime
+    # Note: GPU wheels available from 1.11
     dist_bucket = os.path.join(
       DIST_BUCKET, 'cuda/{}'.format(version.cuda_version.replace('.', '')))
+  else:
+    # Distributions for TPU runtime
+    # Note: this redirection is required for 1.11 & nightly releases
+    # because the current 2 VM wheels are not compatible with colab environment.
+    if version.wheels == 'nightly':
+      dist_bucket = os.path.join(DIST_BUCKET, 'colab/')
+    elif 'nightly+' in version.wheels:
+      build_date = datetime.strptime( version.wheels.split('+')[1], '%Y%m%d')
+      if build_date >= NEW_VERSION:
+        dist_bucket = os.path.join(DIST_BUCKET, 'colab/')
+    elif VERSION_REGEX.match(version.wheels):
+      minor = int(version.wheels.split('.')[1])
+      if minor >= 11:
+        dist_bucket = os.path.join(DIST_BUCKET, 'colab/')
+    else:
+      raise ValueError(f'{version} is an invalid torch_xla version pattern')
+
   torch_whl = TORCH_WHEEL_TMPL.format(
       whl_version=version.wheels, py_version=version.py_version)
   torch_whl_path = os.path.join(dist_bucket, torch_whl)
