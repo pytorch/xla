@@ -31,6 +31,8 @@ struct Device : public torch::lazy::BackendDevice {
         device_type(device_type),
         ordinal(ordinal) {}
 
+  bool operator==(const Device& other) const { return compare(other) == 0; }
+
   bool operator!=(const Device& other) const { return compare(other) != 0; }
 
   bool operator<(const Device& rhs) const { return compare(rhs) < 0; }
