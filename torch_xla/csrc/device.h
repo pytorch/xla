@@ -19,7 +19,6 @@ struct DeviceType : public torch::lazy::BackendDeviceType {
     hw_type = torch_xla_device_type;
     type = static_cast<int>(hw_type);
   }
-  
 };
 
 struct Device : public torch::lazy::BackendDevice {
