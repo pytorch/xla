@@ -16,10 +16,19 @@ def mark_sharding(t: torch.Tensor, mesh_shape: Tuple[int],
 
     Args:
         t (torch.Tensor): input tensor to be annotated with partition_sepc.
+
         mesh_shape (Tuple[Union[int, None]]): A int tuple describing the logical topology
-        of the device mesh and each element is the number of devices in the dimension.
+        of the device mesh, and each element describes the number of devices in
+        the corresponding axis.
+
         partition_spec (Tuple[int, None]): A tuple of device_mesh dimension index or `None`.
-        This specifies how each input tensor rank is split or replicated across the device.
+        This specifies how each input rank is sharded (index to mesh_shape) or replicated (None).
+        For example, we can shard an 8x10 tensor 4-way row-wise, and replicate column-wise.
+        >> input = torch.randn(8, 10)
+        >> mesh_shape = (4, 2)
+        >> assert np.prod(mesh_shape) == xm.xrt_world_size()
+        >> partition_spec = (0, None)
+        >> assert len(input.shape) == len(partition_spec)
 
     Examples
     —------------------------------
@@ -50,4 +59,4 @@ def mark_sharding(t: torch.Tensor, mesh_shape: Tuple[int],
   partition_spec_list = [-1 if d is None else d for d in list(mesh_shape)]
   torch_xla._XLAC._mark_sharding(t, mesh_shape_list, partition_spec_list)
 
-  return XLAShardedTensor(t, mesh_shape, partition_spec)
+  return XLAShardedTensor(t)

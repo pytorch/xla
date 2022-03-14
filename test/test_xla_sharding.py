@@ -21,8 +21,10 @@ class XlaShardingTest(unittest.TestCase):
     t2 = torch.tensor([2.0, 3.0], dtype=torch.float, device=xm.xla_device())
     t3 = torch.add(t1_sharded, t2)
 
-    assert isinstance(t3, XLAShardedTensor), "Sharded ops should return XLAShardedTensor."
-    assert t3.size() == t1.size(), "Sharded output should return unpartitioned tensor size."
+    assert isinstance(
+        t3, XLAShardedTensor), "Sharded ops should return XLAShardedTensor."
+    assert t3.size() == t1.size(
+    ), "Sharded output should return unpartitioned tensor size."
 
 
 if __name__ == '__main__':
