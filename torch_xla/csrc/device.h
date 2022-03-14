@@ -19,6 +19,7 @@ struct DeviceType : public torch::lazy::BackendDeviceType {
     hw_type = torch_xla_device_type;
     type = static_cast<int>(hw_type);
   }
+  
 };
 
 struct Device : public torch::lazy::BackendDevice {
@@ -30,6 +31,17 @@ struct Device : public torch::lazy::BackendDevice {
             ordinal),
         device_type(device_type),
         ordinal(ordinal) {}
+
+  bool operator!=(const Device& other) const { return compare(other) != 0; }
+
+  bool operator<(const Device& rhs) const { return compare(rhs) < 0; }
+
+  int compare(const Device& rhs) const {
+    if (device_type.hw_type != rhs.device_type.hw_type) {
+      return device_type.hw_type < rhs.device_type.hw_type ? -1 : +1;
+    }
+    return ordinal < rhs.ordinal ? -1 : (ordinal > rhs.ordinal ? +1 : 0);
+  }
 
   std::string ToString() const;
 
