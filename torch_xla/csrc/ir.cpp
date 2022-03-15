@@ -81,18 +81,16 @@ void EmitShortFrameInfo(std::ostream& stream,
   }
 }
 
-torch::lazy::hash_t OperandHashes(const OpList& operands,
-                                  const torch::lazy::hash_t& seed,
-                                  bool bakeInSizes) {
-  torch::lazy::hash_t hash = seed;
+torch::lazy::hash_t GetOperandHashes(const OpList& operands,
+                                     const torch::lazy::hash_t& node_hash) {
+  torch::lazy::hash_t hash = node_hash;
   for (auto& operand : operands) {
     if (!operand) {
       hash = torch::lazy::HashCombine(
           hash, static_cast<uint64_t>(torch::lazy::kNullOpt));
       continue;
     }
-    auto operand_hash =
-        bakeInSizes ? operand.hash_with_sizes() : operand.hash_without_sizes();
+    auto operand_hash = operand.hash_with_sizes();
     hash = torch::lazy::HashCombine(hash, operand_hash);
   }
   return hash;
@@ -130,21 +128,15 @@ torch::lazy::hash_t Value::hash_with_sizes() const {
                                   torch::lazy::Hash(index));
 }
 
-torch::lazy::hash_t Value::hash_without_sizes() const {
-  return torch::lazy::HashCombine(node->hash_without_sizes(),
-                                  torch::lazy::Hash(index));
-}
-
 Node::Node(torch::lazy::OpKind op, OpList operands, xla::Shape shape,
            size_t num_outputs, torch::lazy::hash_t hash_seed)
     : torch::lazy::Node(
           op, num_outputs,
-          /* node_hash */ torch::lazy::HashCombine(op.hash(), hash_seed),
-          /* hash_func */
-          [&](bool bakeInSizes) -> torch::lazy::hash_t {
-            return OperandHashes(operands,
-                                 torch::lazy::HashCombine(op.hash(), hash_seed),
-                                 bakeInSizes);
+          /*node_hash=*/torch::lazy::HashCombine(op.hash(), hash_seed),
+          /*hash_func=*/
+          [&](bool /*bakeInSizes*/) -> torch::lazy::hash_t {
+            return GetOperandHashes(
+                operands, torch::lazy::HashCombine(op.hash(), hash_seed));
           }),
       shape_(std::move(shape)) {
   metadata_.scope = GetCurrentScope();
@@ -165,7 +157,7 @@ Node::Node(torch::lazy::OpKind op, OpList operands,
 
 Node::Node(torch::lazy::OpKind op, xla::Shape shape, size_t num_outputs,
            torch::lazy::hash_t hash_seed)
-    : torch::lazy::Node(op, num_outputs, /* hash_func */
+    : torch::lazy::Node(op, num_outputs, /*hash_func=*/
                         [&](bool /*bakeInSizes*/) -> torch::lazy::hash_t {
                           return GetOpHash(op, shape, hash_seed);
                         }),
