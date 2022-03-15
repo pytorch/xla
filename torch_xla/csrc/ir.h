@@ -89,9 +89,6 @@ struct Value {
 
   operator bool() const { return node != nullptr; }
 
-  // operator torch::lazy::Output() const { return
-  // torch::lazy::Output(node.get(), index); }
-
   Node* operator->() const { return node.get(); }
 
   NodePtr node;

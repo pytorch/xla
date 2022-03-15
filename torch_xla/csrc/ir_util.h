@@ -12,14 +12,6 @@ namespace ir {
 
 class Util {
  public:
-  // Tracks the emission status of the nodes during the post-order generation.
-  // It helps tracking loops within the computation graphs.
-  // enum EmitStatus {
-  //   kNotEmitted,
-  //   kEmitting,
-  //   kEmitted,
-  // };
-
   using EmissionMap = std::unordered_map<const torch::lazy::Node*,
                                          torch::lazy::Util::EmitStatus>;
 
