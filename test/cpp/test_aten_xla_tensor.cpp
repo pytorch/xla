@@ -899,7 +899,7 @@ TEST_F(AtenXlaTensorTest, TestCholesky) {
       torch::Tensor a =
           torch::rand({3, m, m}, torch::TensorOptions(torch::kFloat));
       torch::Tensor pd_a = torch::matmul(a, torch::transpose(a, 1, 2)) +
-                           torch::eye(m, torch::TensorOptions(torch::kFloat));
+                           torch::eye(m, m, /*k=*/0, torch::TensorOptions(torch::kFloat));
       auto b = torch::cholesky(pd_a, upper);
       ForEachDevice([&](const torch::Device& device) {
         torch::Tensor xla_a = CopyToDevice(pd_a, device);
@@ -916,7 +916,7 @@ TEST_F(AtenXlaTensorTest, TestLogDet) {
     torch::Tensor a =
         torch::rand({3, m, m}, torch::TensorOptions(torch::kFloat));
     torch::Tensor pd_a = torch::matmul(a, torch::transpose(a, 1, 2)) +
-                         torch::eye(m, torch::TensorOptions(torch::kFloat));
+                         torch::eye(m, m, /*k=*/0, torch::TensorOptions(torch::kFloat));
     torch::Tensor b = torch::logdet(pd_a);
     ForEachDevice([&](const torch::Device& device) {
       torch::Tensor xla_a = CopyToDevice(pd_a, device);
@@ -932,7 +932,7 @@ TEST_F(AtenXlaTensorTest, TestSLogDet) {
     torch::Tensor a =
         torch::rand({3, m, m}, torch::TensorOptions(torch::kFloat));
     torch::Tensor pd_a = torch::matmul(a, torch::transpose(a, 1, 2)) +
-                         torch::eye(m, torch::TensorOptions(torch::kFloat));
+                         torch::eye(m, m, /*k=*/0, torch::TensorOptions(torch::kFloat));
     auto b = torch::slogdet(pd_a);
     ForEachDevice([&](const torch::Device& device) {
       torch::Tensor xla_a = CopyToDevice(pd_a, device);
@@ -4623,9 +4623,9 @@ TEST_F(AtenXlaTensorTest, TestExpandAs) {
 TEST_F(AtenXlaTensorTest, TestEye) {
   int n = 5;
   ForEachDevice([&](const torch::Device& device) {
-    torch::Tensor out = torch::eye(n, torch::TensorOptions(torch::kFloat));
+    torch::Tensor out = torch::eye(n, n, /*k=*/0, torch::TensorOptions(torch::kFloat));
     torch::Tensor xla_out =
-        torch::eye(n, torch::TensorOptions(torch::kFloat).device(device));
+        torch::eye(n, n, /*k=*/0, torch::TensorOptions(torch::kFloat).device(device));
     AllClose(out, xla_out);
   });
 
@@ -4638,9 +4638,9 @@ TEST_F(AtenXlaTensorTest, TestEyeWide) {
   int cols = 5;
   ForEachDevice([&](const torch::Device& device) {
     torch::Tensor out =
-        torch::eye(lines, cols, torch::TensorOptions(torch::kFloat));
+        torch::eye(lines, cols, /*k=*/0, torch::TensorOptions(torch::kFloat));
     torch::Tensor xla_out = torch::eye(
-        lines, cols, torch::TensorOptions(torch::kFloat).device(device));
+        lines, cols, /*k=*/0, torch::TensorOptions(torch::kFloat).device(device));
     AllClose(out, xla_out);
   });
 
@@ -4653,9 +4653,9 @@ TEST_F(AtenXlaTensorTest, TestEyeNarrow) {
   int cols = 3;
   ForEachDevice([&](const torch::Device& device) {
     torch::Tensor out =
-        torch::eye(lines, cols, torch::TensorOptions(torch::kFloat));
+        torch::eye(lines, cols, /*k=*/0, torch::TensorOptions(torch::kFloat));
     torch::Tensor xla_out = torch::eye(
-        lines, cols, torch::TensorOptions(torch::kFloat).device(device));
+        lines, cols, /*k=*/0, torch::TensorOptions(torch::kFloat).device(device));
     AllClose(out, xla_out);
   });
 

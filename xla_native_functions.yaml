@@ -114,7 +114,6 @@ supported:
   - expand
   - expm1
   - exponential_
-  - eye.m_out
   - eye.out
   - fill_.Scalar
   - fill_.Tensor
