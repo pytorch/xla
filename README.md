@@ -55,7 +55,7 @@ Cloud TPU:
 * [Training FairSeq Transformer on Cloud TPUs](https://cloud.google.com/tpu/docs/tutorials/transformer-pytorch)
 * [Training Resnet50 on Cloud TPUs](https://cloud.google.com/tpu/docs/tutorials/resnet-pytorch)
 
-To start, [you create a Cloud TPU node](https://cloud.google.com/tpu/docs/tutorials/resnet-alpha-py#create_tpu) with the corresponding release you wish to consume (TPU software version: ex. `pytorch-1.10`):
+To start, [you create a Cloud TPU node](https://cloud.google.com/tpu/docs/tutorials/resnet-alpha-py#create_tpu) with the corresponding release you wish to consume (TPU software version: ex. `pytorch-1.11`):
 
 Once you've created a Cloud TPU node, you can train your PyTorch models by either:
 
@@ -75,10 +75,9 @@ Follow these steps to train a PyTorch model with Docker on a Cloud TPU:
 
 2. SSH into the VM and pull a version of the docker image into the VM. The currently available versions are:
 
-    * `gcr.io/tpu-pytorch/xla:r1.10`: The current stable version.
-    * `gcr.io/tpu-pytorch/xla:nightly_3.6`: Nightly version using Python 3.6.
+    * `gcr.io/tpu-pytorch/xla:r1.11`: The current stable version.
     * `gcr.io/tpu-pytorch/xla:nightly_3.7`: Nightly version using Python 3.7.
-    * `gcr.io/tpu-pytorch/xla:nightly_3.6_YYYYMMDD (e.g.: gcr.io/tpu-pytorch/xla:nightly_3.6_20190531)`: The nightly version of the given day. You can replace `3.6` with `3.7` if desired.
+    * `gcr.io/tpu-pytorch/xla:nightly_3.7_YYYYMMDD (e.g.: gcr.io/tpu-pytorch/xla:nightly_3.7_20220301)`.
 
     At this time is recommended to use nightly versions and eventually switch to the stable version in case there are issues with nightly.
     Remember to create a TPU with `pytorch-nightly` version when using nightly.
@@ -94,19 +93,19 @@ Follow these steps to train a PyTorch model with Docker on a Cloud TPU:
     ```
 
     ```Shell
-    (vm)$ docker pull gcr.io/tpu-pytorch/xla:r1.10
+    (vm)$ docker pull gcr.io/tpu-pytorch/xla:r1.11
     ```
 
 3. Where `$TPU_IP_ADDRESS` (e.g.: `10.1.1.2`) is your TPU Internal IP displayed in GCP UI, after pulling the docker image you can either:
 
     * Run the container with a single command:
       ```Shell
-      (vm)$ docker run --shm-size 16G -e XRT_TPU_CONFIG="tpu_worker;0;$TPU_IP_ADDRESS:8470" gcr.io/tpu-pytorch/xla:r1.10 python /pytorch/xla/test/test_train_mp_mnist.py
+      (vm)$ docker run --shm-size 16G -e XRT_TPU_CONFIG="tpu_worker;0;$TPU_IP_ADDRESS:8470" gcr.io/tpu-pytorch/xla:r1.11 python /pytorch/xla/test/test_train_mp_mnist.py
       ```
 
     * Run the script in an interactive shell:
       ```Shell
-      (vm)$ docker run -it --shm-size 16G gcr.io/tpu-pytorch/xla:r1.10
+      (vm)$ docker run -it --shm-size 16G gcr.io/tpu-pytorch/xla:r1.11
       (pytorch) root@CONTAINERID:/$ export XRT_TPU_CONFIG="tpu_worker;0;$TPU_IP_ADDRESS:8470"
       (pytorch) root@CONTAINERID:/$ python pytorch/xla/test/test_train_mp_mnist.py
       ```
@@ -126,7 +125,7 @@ Follow these steps to train a PyTorch model with a VM Image on a Cloud TPU:
     * Click **Create** to create the instance.
 
 
-2. SSH into VM and activate the conda environment you wish to use. Each release (e.g.: `1.9`, `1.10`, `nightly`) is a separate conda environment.
+2. SSH into VM and activate the conda environment you wish to use. Each release (e.g.: `1.10`, `1.11`, `nightly`) is a separate conda environment.
 
     ```Shell
     (vm)$ export XRT_TPU_CONFIG="tpu_worker;0;$TPU_IP_ADDRESS:8470"
@@ -134,14 +133,14 @@ Follow these steps to train a PyTorch model with a VM Image on a Cloud TPU:
     # conda environments:
     #
     base                  *  /anaconda3
-    torch-xla-1.8.1              /anaconda3/envs/torch-xla-1.8.1
     torch-xla-1.9            /anaconda3/envs/torch-xla-1.9
     torch-xla-1.10           /anaconda3/envs/torch-xla-1.10
+    torch-xla-1.11           /anaconda3/envs/torch-xla-1.11
     torch-xla-nightly          /anaconda3/envs/torch-xla-nightly
 
-    (vm)$ conda activate torch-xla-1.10
-    (torch-xla-1.10)$ cd /usr/share/torch-xla-1.10/pytorch/xla
-    (torch-xla-1.10)$ python test/test_train_mp_mnist.py
+    (vm)$ conda activate torch-xla-1.11
+    (torch-xla-1.11)$ cd /usr/share/torch-xla-1.11/pytorch/xla
+    (torch-xla-1.11)$ python test/test_train_mp_mnist.py
     ```
 
     To update the wheels `torch` and `torch_xla` to the latest nightly
@@ -194,19 +193,19 @@ Training on pods can be broken down to largely 3 different steps:
 2. Let's say the command you ran to run a v3-8 was: `XLA_USE_BF16=1 python test/test_train_mp_imagenet.py --fake_data`.
 * To distribute training as a conda environment process:
 ```
-(torch-xla-1.10)$ python -m torch_xla.distributed.xla_dist --tpu=$TPU_POD_NAME --conda-env=torch-xla-1.10 --env=XLA_USE_BF16=1 -- python /usr/share/torch-xla-1.10/pytorch/xla/test/test_train_mp_imagenet.py --fake_data
+(torch-xla-1.11)$ python -m torch_xla.distributed.xla_dist --tpu=$TPU_POD_NAME --conda-env=torch-xla-1.11 --env=XLA_USE_BF16=1 -- python /usr/share/torch-xla-1.11/pytorch/xla/test/test_train_mp_imagenet.py --fake_data
 ```
 
 * Or, to distribute training as a docker container:
 ```
-(torch-xla-1.10)$ python -m torch_xla.distributed.xla_dist --tpu=$TPU_POD_NAME --docker-image=gcr.io/tpu-pytorch/xla:r1.10 --docker-run-flag=--rm=true --docker-run-flag=--shm-size=50GB --env=XLA_USE_BF16=1 -- python /pytorch/xla/test/test_train_mp_imagenet.py --fake_data
+(torch-xla-1.11)$ python -m torch_xla.distributed.xla_dist --tpu=$TPU_POD_NAME --docker-image=gcr.io/tpu-pytorch/xla:r1.11 --docker-run-flag=--rm=true --docker-run-flag=--shm-size=50GB --env=XLA_USE_BF16=1 -- python /pytorch/xla/test/test_train_mp_imagenet.py --fake_data
 ```
 
 ### List of VMs
 If you prefer to not use an [instance group](#create-your-instance-group), you can decide to use a list of VM instances that you may have already created (or can create individually). Make sure that you create all the VM instances in the same zone as the TPU node, and also make sure that the VMs have the same configuration (datasets, VM size, disk size, etc.). Then you can [start distributed training](#start-distributed-training) after creating your TPU pod. The difference is in the `python -m torch_xla.distributed.xla_dist` command. For example, to use a list of VMs run the following command (ex. conda with v3-32):
 ```
-(torch-xla-1.10)$ cd /usr/share/torch-xla-1.10/pytorch/xla
-(torch-xla-1.10)$ python -m torch_xla.distributed.xla_dist --tpu=$TPU_POD_NAME --vm $VM1 --vm $VM2 --vm $VM3 --vm $VM4 --conda-env=torch-xla-1.10 --env=XLA_USE_BF16=1 -- python test/test_train_mp_imagenet.py --fake_data
+(torch-xla-1.11)$ cd /usr/share/torch-xla-1.11/pytorch/xla
+(torch-xla-1.11)$ python -m torch_xla.distributed.xla_dist --tpu=$TPU_POD_NAME --vm $VM1 --vm $VM2 --vm $VM3 --vm $VM4 --conda-env=torch-xla-1.11 --env=XLA_USE_BF16=1 -- python test/test_train_mp_imagenet.py --fake_data
 ```
 
 ### Datasets for distributed training
