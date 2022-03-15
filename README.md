@@ -76,9 +76,8 @@ Follow these steps to train a PyTorch model with Docker on a Cloud TPU:
 2. SSH into the VM and pull a version of the docker image into the VM. The currently available versions are:
 
     * `gcr.io/tpu-pytorch/xla:r1.11`: The current stable version.
-    * `gcr.io/tpu-pytorch/xla:nightly_3.6`: Nightly version using Python 3.6.
     * `gcr.io/tpu-pytorch/xla:nightly_3.7`: Nightly version using Python 3.7.
-    * `gcr.io/tpu-pytorch/xla:nightly_3.6_YYYYMMDD (e.g.: gcr.io/tpu-pytorch/xla:nightly_3.6_20190531)`: The nightly version of the given day. You can replace `3.6` with `3.7` if desired.
+    * `gcr.io/tpu-pytorch/xla:nightly_3.7_YYYYMMDD (e.g.: gcr.io/tpu-pytorch/xla:nightly_3.7_20220301)`.
 
     At this time is recommended to use nightly versions and eventually switch to the stable version in case there are issues with nightly.
     Remember to create a TPU with `pytorch-nightly` version when using nightly.
