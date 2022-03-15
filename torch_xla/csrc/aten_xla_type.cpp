@@ -1409,13 +1409,14 @@ at::Tensor& XLANativeFunctions::exponential_(
 }
 
 at::Tensor& XLANativeFunctions::eye_out(int64_t n, c10::optional<int64_t> m,
-                                        c10::optional<int64_t> k, at::Tensor& out) {
+                                        c10::optional<int64_t> k,
+                                        at::Tensor& out) {
   XLA_FN_COUNTER("xla::");
   XLATensor out_tensor = bridge::GetXlaTensor(out);
   // We can use BuildDiagonal to lower eye when offset is not 0.
   if (k.has_value() && *k != 0) {
     return at::native::call_fallback_fn<&xla_cpu_fallback,
-        ATEN_OP(eye_out)>::call(n, m, k, out);
+                                        ATEN_OP(eye_out)>::call(n, m, k, out);
   }
   XLATensor::eye_out(out_tensor, n, m.has_value() ? *m : n);
   return out;
