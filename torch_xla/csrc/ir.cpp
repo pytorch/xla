@@ -66,21 +66,6 @@ ShapeCache* GetShapeCache() {
   return cache;
 }
 
-void EmitShortFrameInfo(std::ostream& stream,
-                        const std::vector<SourceLocation>& frames) {
-  if (!frames.empty()) {
-    const SourceLocation& frame = frames.front();
-    std::string::size_type pos = frame.file.find_last_of('/');
-    if (pos == std::string::npos) {
-      pos = 0;
-    } else {
-      ++pos;
-    }
-    stream << ", location=" << frame.function << "@" << frame.file.substr(pos)
-           << ":" << frame.line;
-  }
-}
-
 torch::lazy::hash_t GetOperandHashes(const OpList& operands,
                                      const torch::lazy::hash_t& node_hash) {
   torch::lazy::hash_t hash = node_hash;
@@ -139,8 +124,6 @@ Node::Node(torch::lazy::OpKind op, OpList operands, xla::Shape shape,
                 operands, torch::lazy::HashCombine(op.hash(), hash_seed));
           }),
       shape_(std::move(shape)) {
-  metadata_.scope = GetCurrentScope();
-  metadata_.frame_info = GetFrameInfo();
   for (auto& operand : operands) {
     AddOperand(operand.node, operand.index);
   }
@@ -162,8 +145,6 @@ Node::Node(torch::lazy::OpKind op, xla::Shape shape, size_t num_outputs,
                           return GetOpHash(op, shape, hash_seed);
                         }),
       shape_(std::move(shape)) {
-  metadata_.scope = GetCurrentScope();
-  metadata_.frame_info = GetFrameInfo();
 }
 
 Node::~Node() {
@@ -229,10 +210,11 @@ std::string Node::ToString() const {
   if (num_outputs() > 1) {
     ss << ", num_outputs=" << num_outputs();
   }
-  if (!metadata_.scope.empty()) {
-    ss << ", scope=" << metadata_.scope;
+  torch::lazy::MetaData metadata = torch::lazy::GetMetaDataIfDebugging();
+  if (!metadata.scope.empty()) {
+    ss << ", scope=" << metadata.scope;
   }
-  EmitShortFrameInfo(ss, metadata_.frame_info);
+  torch::lazy::EmitShortFrameInfo(ss, metadata.frame_info);
   return ss.str();
 }
 

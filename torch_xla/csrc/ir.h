@@ -31,17 +31,6 @@ using NodePtr = std::shared_ptr<Node>;
 
 using XlaOpVector = tensorflow::gtl::InlinedVector<xla::XlaOp, 1>;
 
-// The base class for user defined metadata which is possible to attach to IR
-// nodes.
-struct UserMetaData {
-  virtual ~UserMetaData() {}
-};
-
-struct MetaData {
-  std::string scope;
-  std::vector<SourceLocation> frame_info;
-};
-
 // Represents a use of the output of a given node.
 // If use U is within node N, it means that node U.node is using the output
 // U.index of the node N.
@@ -142,15 +131,15 @@ class Node : public torch::lazy::Node {
 
   const std::set<Use>& uses() const { return uses_; }
 
-  const MetaData& metadata() const { return metadata_; }
+  // const MetaData& metadata() const { return metadata_; }
 
-  UserMetaData* user_metadata() const { return user_metadata_.get(); }
+  // UserMetaData* user_metadata() const { return user_metadata_.get(); }
 
-  std::shared_ptr<UserMetaData> SetUserMetadata(
-      std::shared_ptr<UserMetaData> user_meta) {
-    std::swap(user_metadata_, user_meta);
-    return user_meta;
-  }
+  // std::shared_ptr<UserMetaData> SetUserMetadata(
+  //     std::shared_ptr<UserMetaData> user_meta) {
+  //   std::swap(user_metadata_, user_meta);
+  //   return user_meta;
+  // }
 
   void ReplaceOperand(size_t operand_no, NodePtr node, size_t index = 0);
 
@@ -191,11 +180,6 @@ class Node : public torch::lazy::Node {
   std::vector<torch::lazy::Output> operands_as_outputs_;
   // We use a set for uses, as we want deterministic use sequencing.
   std::set<Use> uses_;
-  // The IR specific metadata attached to the IR node.
-  MetaData metadata_;
-  // The IR framework user can attach a user defined metadata object deriving
-  // from UserMetaData.
-  std::shared_ptr<UserMetaData> user_metadata_;
 };
 
 // RAII data structure to be used a stack variable to enter a new IR scope. IR
