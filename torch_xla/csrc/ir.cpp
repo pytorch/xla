@@ -144,8 +144,7 @@ Node::Node(torch::lazy::OpKind op, xla::Shape shape, size_t num_outputs,
                         [&](bool /*bakeInSizes*/) -> torch::lazy::hash_t {
                           return GetOpHash(op, shape, hash_seed);
                         }),
-      shape_(std::move(shape)) {
-}
+      shape_(std::move(shape)) {}
 
 Node::~Node() {
   for (size_t i = 0; i < operands_as_outputs_.size(); ++i) {
