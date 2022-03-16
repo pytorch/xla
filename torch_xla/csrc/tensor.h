@@ -1282,22 +1282,6 @@ class XLATensor : public c10::intrusive_ptr_target {
     std::vector<torch::lazy::BackendDataPtr> tensors_data;
   };
 
-  // XLA SPMD sharding spec annoation. The XLA tensor uses this to create
-  // HloSharding for replication, manual and tile shardings.
-  struct ShardingSpec {
-    ShardingSpec(const xla::Array<int64_t>& tile_assignment, bool replicated,
-                 bool maximal, bool manual)
-        : replicated(replicated),
-          maximal(maximal),
-          manual(manual),
-          tile_assignment(tile_assignment) {}
-
-    const xla::Array<int64_t>& tile_assignment;
-    bool replicated;
-    bool maximal;
-    bool manual;
-  };
-
   // This is the core XLA tensor data structure where all the tensor data is
   // held. The XLA tensor is nothing more than a shared pointer to a Data
   // object.
