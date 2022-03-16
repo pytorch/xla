@@ -8,6 +8,7 @@
 #include "tensorflow/compiler/xla/xla_client/debug_macros.h"
 #include "tensorflow/compiler/xla/xla_client/sys_util.h"
 #include "torch/csrc/lazy/core/hash.h"
+#include "torch/csrc/lazy/core/ir_metadata.h"
 #include "torch_xla/csrc/lowering_context.h"
 
 namespace torch_xla {
@@ -209,11 +210,12 @@ std::string Node::ToString() const {
   if (num_outputs() > 1) {
     ss << ", num_outputs=" << num_outputs();
   }
-  torch::lazy::MetaData metadata = torch::lazy::GetMetaDataIfDebugging();
-  if (!metadata.scope.empty()) {
-    ss << ", scope=" << metadata.scope;
-  }
-  torch::lazy::EmitShortFrameInfo(ss, metadata.frame_info);
+  // TODO @wonjoo Fix the import _XLAC ImportError
+  // torch::lazy::MetaData metadata = torch::lazy::GetMetaDataIfDebugging();
+  // if (!metadata.scope.empty()) {
+  //   ss << ", scope=" << metadata.scope;
+  // }
+  // torch::lazy::EmitShortFrameInfo(ss, metadata.frame_info);
   return ss.str();
 }
 
