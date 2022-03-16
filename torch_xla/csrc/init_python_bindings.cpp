@@ -770,21 +770,25 @@ void BuildProfilerSubmodule(py::module* m) {
   py::class_<xla::profiler::ProfilerServer,
              std::unique_ptr<xla::profiler::ProfilerServer>>
       profiler_server_class(profiler, "ProfilerServer");
-  profiler.def("start_server",
-               [](int port) -> std::unique_ptr<xla::profiler::ProfilerServer> {
-                 auto server =
-                     absl::make_unique<xla::profiler::ProfilerServer>();
-                 server->Start(port);
-                 return server;
-               },
-               py::arg("port"));
+  profiler.def(
+      "start_server",
+      [](int port) -> std::unique_ptr<xla::profiler::ProfilerServer> {
+        auto server = absl::make_unique<xla::profiler::ProfilerServer>();
+        server->Start(port);
+        return server;
+      },
+      py::arg("port"));
 
   profiler.def(
       "trace",
       [](const char* service_addr, const char* logdir, int duration_ms,
          int num_tracing_attempts, int timeout_s, int interval_s,
          py::dict options) {
+<<<<<<< HEAD
         absl::flat_hash_map<std::string, std::variant<int, std::string>> opts =
+=======
+        absl::flat_hash_map<std::string, absl::variant<int>> opts =
+>>>>>>> bad34848 (Update sharding spec to support full replication & mesh sharding)
             ConvertDictToMap(options);
         std::chrono::seconds sleep_s(interval_s);
         tensorflow::Status status;
@@ -1191,32 +1195,35 @@ void InitXlaModuleBindings(py::module m) {
   });
   m.def("_xla_metrics_report",
         []() { return xla::metrics_reader::CreateMetricReport(); });
-  m.def("_xla_tensors_report",
-        [](size_t nodes_threshold, const std::string& device) {
-          return GetLiveTensorsReport(nodes_threshold, device);
-        },
-        py::arg("nodes_threshold") = 100, py::arg("device") = "");
+  m.def(
+      "_xla_tensors_report",
+      [](size_t nodes_threshold, const std::string& device) {
+        return GetLiveTensorsReport(nodes_threshold, device);
+      },
+      py::arg("nodes_threshold") = 100, py::arg("device") = "");
   m.def("_xla_memory_info", [](const std::string& device) -> py::object {
     return GetMemoryInfo(device);
   });
-  m.def("_xla_set_use_full_mat_mul_precision",
-        [](bool use_full_mat_mul_precision) {
-          XlaHelpers::set_mat_mul_precision(
-              use_full_mat_mul_precision ? xla::PrecisionConfig::HIGHEST
-                                         : xla::PrecisionConfig::DEFAULT);
-        },
-        py::arg("use_full_mat_mul_precision") = true);
+  m.def(
+      "_xla_set_use_full_mat_mul_precision",
+      [](bool use_full_mat_mul_precision) {
+        XlaHelpers::set_mat_mul_precision(use_full_mat_mul_precision
+                                              ? xla::PrecisionConfig::HIGHEST
+                                              : xla::PrecisionConfig::DEFAULT);
+      },
+      py::arg("use_full_mat_mul_precision") = true);
 
   py::class_<xla::util::RecordReader, std::shared_ptr<xla::util::RecordReader>>(
       m, "RecordReader");
-  m.def("_xla_create_tfrecord_reader",
-        [](const std::string& path, const std::string& compression,
-           int64_t buffer_size) {
-          NoGilSection nogil;
-          return CreateRecordReader(path, compression, buffer_size);
-        },
-        py::arg("path"), py::arg("compression") = "",
-        py::arg("buffer_size") = 16 * 1024 * 1024);
+  m.def(
+      "_xla_create_tfrecord_reader",
+      [](const std::string& path, const std::string& compression,
+         int64_t buffer_size) {
+        NoGilSection nogil;
+        return CreateRecordReader(path, compression, buffer_size);
+      },
+      py::arg("path"), py::arg("compression") = "",
+      py::arg("buffer_size") = 16 * 1024 * 1024);
   m.def(
       "_xla_tfrecord_read",
       [](const std::shared_ptr<xla::util::RecordReader>& reader) -> py::object {
@@ -1492,6 +1499,27 @@ void InitXlaModuleBindings(py::module m) {
           }
           return module->ToString();
         });
+  m.def("_xla_get_sharding_spec", [](const at::Tensor& input) {
+    // TODO: fix this
+    XLATensor xtensor = bridge::GetXlaTensor(input);
+    auto sharding_spec = xtensor.sharding_spec();
+
+    std::vector<std::vector<int64_t>> partition_vector =
+        sharding_spec->tile_assignment;
+    py::list tile_assignment(partition_vector.size());
+    for (std::vector<int64_t>& partition : partition_vector) {
+      py::list tile(partition.size());
+      for (int64_t& device_id : partition) {
+        tile.append(device_id);
+      }
+      tile_assignment.append(tile);
+    }
+
+    auto sharding_attrs = py::tuple(2);
+    sharding_attrs[0] = tile_assignment;
+    sharding_attrs[1] = sharding_spec->replicated;
+    return sharding_attrs;
+  });
 
   m.def("_init_xla_lazy_backend", []() {
     MapXlaEnvVarsToLazy();

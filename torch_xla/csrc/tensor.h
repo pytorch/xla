@@ -1491,6 +1491,7 @@ class XLATensor : public c10::intrusive_ptr_target {
   // points to the same storage, and thus alias of each other.
   // FIXME(alanwaketan): Remove this once we have functionalization (bdhirsh).
   c10::Storage storage_;
+  std::shared_ptr<ShardingSpec> sharding_spec_;
 };
 
 }  // namespace torch_xla
