@@ -12,6 +12,10 @@
 #include "absl/container/flat_hash_map.h"
 #include "absl/strings/str_cat.h"
 #include "absl/types/variant.h"
+#include "tensorflow/compiler/xla/service/hlo_parser.h"
+#include "tensorflow/compiler/xla/service/hlo_pass_pipeline.h"
+#include "tensorflow/compiler/xla/service/hlo_verifier.h"
+#include "tensorflow/compiler/xla/service/spmd/spmd_partitioner.h"
 #include "tensorflow/compiler/xla/xla_client/computation_client.h"
 #include "tensorflow/compiler/xla/xla_client/mesh_service.h"
 #include "tensorflow/compiler/xla/xla_client/metrics.h"
@@ -1355,7 +1359,7 @@ void InitXlaModuleBindings(py::module m) {
           XLATensor xtensor = bridge::GetXlaTensor(input);
           xtensor.SetShardingSpec(partition_mapping, replicated);
         });
-  m.def("_xla_get_sharding_spec", [](const at::Tensor& input) {
+  m.def("_get_xla_sharding_spec", [](const at::Tensor& input) {
     // TODO: fix this
     XLATensor xtensor = bridge::GetXlaTensor(input);
     auto sharding_spec = xtensor.sharding_spec();
@@ -1376,6 +1380,50 @@ void InitXlaModuleBindings(py::module m) {
     sharding_attrs[1] = sharding_spec->replicated;
     return sharding_attrs;
   });
+  m.def("_get_xla_tensors_hlo_with_sharding",
+        [](const std::vector<at::Tensor>& tensors, int64_t num_replicas,
+           int64_t num_devices, bool conv_halo_exchange_always_on_lhs = true,
+           bool choose_faster_windowed_einsum = false,
+           bool unroll_windowed_einsum = false,
+           bool bidirectional_windowed_einsum = false) -> std::string {
+          xla::spmd::SpmdPartitionerOptions options;
+          options.conv_halo_exchange_always_on_lhs =
+              conv_halo_exchange_always_on_lhs;
+          options.allow_module_signature_change = true;
+          options.choose_faster_windowed_einsum_over_mem =
+              choose_faster_windowed_einsum;
+          options.unroll_windowed_einsum = unroll_windowed_einsum;
+          options.bidirectional_windowed_einsum = bidirectional_windowed_einsum;
+
+          xla::HloModuleConfig config;
+          config.set_replica_count(num_replicas);
+          config.set_num_partitions(num_devices);
+
+          absl::string_view hlo_text = GetTensorsHloGraph(tensors);
+          auto hlo_module_error =
+              xla::ParseAndReturnUnverifiedModule(hlo_text, config);
+          if (!hlo_module_error.ok()) {
+            LOG(ERROR) << "HLO Module loading failed: "
+                       << hlo_module_error.status();
+            return nullptr;
+          }
+          auto module = std::move(hlo_module_error.ValueOrDie());
+
+          // Run SPMDPartitioner
+          auto collective_ops_creator =
+              xla::spmd::GetDefaultCollectiveOpsCreator(
+                  num_devices, /*num_replicas=*/num_replicas);
+
+          xla::HloPassPipeline pass("spmd-partitioning");
+          pass.AddPass<xla::HloVerifier>(/*layout_sensitive=*/false,
+                                         /*allow_mixed_precision=*/false);
+          pass.AddPass<xla::spmd::SpmdPartitioner>(
+              num_devices, /*num_replicas=*/1, options, collective_ops_creator);
+          pass.AddPass<xla::HloVerifier>(/*layout_sensitive=*/false,
+                                         /*allow_mixed_precision=*/false);
+          pass.Run(module.get());
+          return module->ToString();
+        });
 
   BuildProfilerSubmodule(&m);
 }
