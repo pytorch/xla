@@ -95,6 +95,25 @@ void RunPartitioner(
 class XLAShardingTest : public AtenXlaTensorTestBase {};
 
 TEST_F(XLAShardingTest, TestSPMDPartitioner) {
+  const int64_t replica_count_ = 8;
+
+  absl::string_view hlo_string =
+      R"(
+      HloModule module
+
+      ENTRY entry {
+        constant = f32[3,3]{1,0} constant({{1,3,7},{5,1,4},{1,2,8}}),
+          sharding={replicated}
+        constant.1 = f32[3,3]{1,0} constant({{2,7,2},{2,9,2},{2,6,2}}),
+          sharding={replicated}
+        multiply = f32[3,3]{1,0} multiply(constant, constant.1),
+          sharding={devices=[2,1,2]0,1,2,3 last_tile_dim_replicate}
+        add = f32[3,3]{1,0} add(multiply, constant.1),
+          sharding={devices=[4,1]0,1,2,3}
+        ROOT copy = f32[3,3]{1,0} copy(add),
+          sharding={replicated}
+      }
+      )";
   // Run SPMDPartitioner
 }
 

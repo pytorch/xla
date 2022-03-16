@@ -1198,6 +1198,21 @@ class XLATensor : public c10::intrusive_ptr_target {
   static XLATensor where(const XLATensor& condition, const XLATensor& input,
                          const XLATensor& other);
 
+  // XLA SPMD sharding spec annoation. The XLA tensor uses this to create
+  // HloSharding for replication, manual and tile shardings.
+  struct ShardingSpec {
+    ShardingSpec(const std::vector<std::vector<int64_t>>& tile_assignment,
+                 bool replicated)
+        : tile_assignment(tile_assignment), replicated(replicated) {}
+
+    const std::vector<std::vector<int64_t>>& tile_assignment;
+    bool replicated;
+  };
+
+  ShardingSpec* sharding_spec();
+  void SetShardingSpec(const std::vector<std::vector<int64_t>>& tile_assignment,
+                       bool replicated);
+
  private:
   struct SyncTensorsConfig {
     // Whether we want to force XLA data on the target tensors (hence trimming
@@ -1259,22 +1274,6 @@ class XLATensor : public c10::intrusive_ptr_target {
     std::string device;
     ComputationCache::TypePtr cached_computation;
     std::vector<torch::lazy::BackendDataPtr> tensors_data;
-  };
-
-  // XLA SPMD sharding spec annoation. The XLA tensor uses this to create
-  // HloSharding for replication, manual and tile shardings.
-  struct ShardingSpec {
-    ShardingSpec(const xla::Array<int64_t>& tile_assignment, bool replicated,
-                 bool maximal, bool manual)
-        : replicated(replicated),
-          maximal(maximal),
-          manual(manual),
-          tile_assignment(tile_assignment) {}
-
-    const xla::Array<int64_t>& tile_assignment;
-    bool replicated;
-    bool maximal;
-    bool manual;
   };
 
   // This is the core XLA tensor data structure where all the tensor data is
@@ -1475,6 +1474,8 @@ class XLATensor : public c10::intrusive_ptr_target {
   bool ShouldSyncIrNode();
 
   std::shared_ptr<Data> data_;
+
+  std::shared_ptr<ShardingSpec> sharding_spec_;
 };
 
 using XLATensorPtr = c10::intrusive_ptr<XLATensor>;

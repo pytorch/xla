@@ -8,14 +8,15 @@ from typing import Tuple, Union
 
 
 # torch_xla.distributed.xla_sharding
-def mark_sharding(t: torch.Tensor, mesh_shape: Tuple[int],
+def mark_sharding(t: Union[torch.Tensor,
+                           XLAShardedTensor], mesh_shape: Tuple[int],
                   partition_spec: Tuple[Union[int, None]]) -> XLAShardedTensor:
   """
     Annotates the tensor provided with XLA partition spec. Internally,
     it annotates the corresponding XLATensor as sharded for the XLA SpmdPartitioner pass.
 
     Args:
-        t (torch.Tensor): input tensor to be annotated with partition_sepc.
+        t (Union[torch.Tensor, XLAShardedTensor]): input tensor to be annotated with partition_sepc.
 
         mesh_shape (Tuple[Union[int, None]]): A int tuple describing the logical topology
         of the device mesh, and each element describes the number of devices in
@@ -55,8 +56,18 @@ def mark_sharding(t: torch.Tensor, mesh_shape: Tuple[int],
   assert len(t.shape) == len(partition_spec), \
     f"Partition spec length ({len(partition_spec)}) is not equal to the input rank ({len(t.shape)})."
 
-  mesh_shape_list = list(mesh_shape)
-  partition_spec_list = [-1 if d is None else d for d in list(mesh_shape)]
-  torch_xla._XLAC._mark_sharding(t, mesh_shape_list, partition_spec_list)
+  device_ids = np.array(range(num_devices))
+  tile_assignment = list(device_ids.reshape(mesh_shape))
+  replicated = False
+  if all(d is None for d in partition_spec):
+    # TODO: support partial replication
+    replicated = True
 
+  if isinstance(t, XLAShardedTensor):
+    # Update sharding annotation
+    torch_xla._XLAC._xla_mark_sharding(t.global_tensor, tile_assignment,
+                                       replicated)
+    return t  #  XLAShardedTensor
+
+  torch_xla._XLAC._xla_mark_sharding(t, tile_assignment, replicated)
   return XLAShardedTensor(t)

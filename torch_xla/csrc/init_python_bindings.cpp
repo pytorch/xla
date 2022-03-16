@@ -1342,25 +1342,40 @@ void InitXlaModuleBindings(py::module m) {
           }
         });
   m.def("_xla_mark_sharding",
-        [](const at::Tensor& input, absl::Span<int> mesh_shape,
-           absl::Span<int> partition_spec) {
-          bool DEBUG = true;
-          if (DEBUG) {
-            for (const auto& e : mesh_shape) {
-              std::cout << e << ' ';
+        [](const at::Tensor& input, const py::list& tile_assignment,
+           bool replicated) {
+          std::vector<std::vector<int64_t>> partition_mapping;
+          for (auto& partition : tile_assignment) {
+            partition_mapping.emplace_back();
+            for (auto& device_id : partition.cast<py::list>()) {
+              partition_mapping.back().push_back(device_id.cast<int64_t>());
             }
-            std::cout << '\n';
-            for (const auto& e : partition_spec) {
-              std::cout << e << ' ';
-            }
-            std::cout << '\n';
           }
-
+          // TODO: this only supports full replication or tile sharding.
           XLATensor xtensor = bridge::GetXlaTensor(input);
-          // TODO: add sharding spec to XLATensor
-          // when we create an IR node and dump HLO text,
-          // it should be annotated with the sharding spec.
+          xtensor.SetShardingSpec(partition_mapping, replicated);
         });
+  m.def("_xla_get_sharding_spec", [](const at::Tensor& input) {
+    // TODO: fix this
+    XLATensor xtensor = bridge::GetXlaTensor(input);
+    auto sharding_spec = xtensor.sharding_spec();
+
+    std::vector<std::vector<int64_t>> partition_vector =
+        sharding_spec->tile_assignment;
+    py::list tile_assignment(partition_vector.size());
+    for (std::vector<int64_t>& partition : partition_vector) {
+      py::list tile(partition.size());
+      for (int64_t& device_id : partition) {
+        tile.append(device_id);
+      }
+      tile_assignment.append(tile);
+    }
+
+    auto sharding_attrs = py::tuple(2);
+    sharding_attrs[0] = tile_assignment;
+    sharding_attrs[1] = sharding_spec->replicated;
+    return sharding_attrs;
+  });
 
   BuildProfilerSubmodule(&m);
 }
