@@ -101,9 +101,15 @@ std::string Use::ToString() const {
   return ss.str();
 }
 
-const xla::Shape& Value::shape() const { return node->shape(index); }
+const xla::Shape& Value::shape() const {
+  const Node* casted = dynamic_cast<const Node*>(node.get());
+  return casted->shape(index);
+}
 
-const xla::Shape& Value::node_shape() const { return node->shape(); }
+const xla::Shape& Value::node_shape() const {
+  const Node* casted = dynamic_cast<const Node*>(node.get());
+  return casted->shape();
+}
 
 torch::lazy::hash_t Value::hash() const {
   return torch::lazy::HashCombine(node->hash(), index);
@@ -149,7 +155,8 @@ Node::Node(torch::lazy::OpKind op, xla::Shape shape, size_t num_outputs,
 
 Node::~Node() {
   for (size_t i = 0; i < operands_as_outputs_.size(); ++i) {
-    operands_[i]->RemoveUse(Use(this, i, operands_as_outputs_[i].index));
+    Node* casted = dynamic_cast<Node*>(operands_[i].get());
+    casted->RemoveUse(Use(this, i, operands_as_outputs_[i].index));
   }
 }
 
@@ -166,14 +173,17 @@ void Node::AddOperand(NodePtr node, size_t index) {
   operands_.push_back(std::move(node));
   operands_as_outputs_.push_back(
       torch::lazy::Output(operands_.back().get(), index));
-  operands_.back()->AddUse(Use(this, operands_.size() - 1, index));
+  Node* casted = dynamic_cast<Node*>(operands_.back().get());
+  casted->AddUse(Use(this, operands_.size() - 1, index));
 }
 
 void Node::ReplaceOperand(size_t operand_no, NodePtr node, size_t index) {
   XLA_CHECK_LT(index, node->num_outputs());
   torch::lazy::Output* output = &operands_as_outputs_.at(operand_no);
-  operands_[operand_no]->RemoveUse(Use(this, operand_no, output->index));
-  node->AddUse(Use(this, operand_no, index));
+  Node* remove_casted = dynamic_cast<Node*>(operands_[operand_no].get());
+  remove_casted->RemoveUse(Use(this, operand_no, output->index));
+  Node* casted = dynamic_cast<Node*>(node.get());
+  casted->AddUse(Use(this, operand_no, index));
   *output = torch::lazy::Output(node.get(), index);
   operands_[operand_no] = std::move(node);
 }
