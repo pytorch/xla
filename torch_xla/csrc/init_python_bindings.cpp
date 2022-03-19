@@ -1468,7 +1468,7 @@ void InitXlaModuleBindings(py::module m) {
 
           auto hlo_text = GetTensorsHloGraph(tensors);
           auto hlo_module_error =
-              xla::ParseAndReturnUnverifiedModule(hlo_text, config);
+              xla::ParseAndReturnUnverifiedModule(hlo_text);  // TODO: config
           if (!hlo_module_error.ok()) {
             LOG(ERROR) << "HLO Module loading failed: "
                        << hlo_module_error.status();
@@ -1487,6 +1487,7 @@ void InitXlaModuleBindings(py::module m) {
           pass.AddPass<xla::spmd::SpmdPartitioner>(
               num_devices, /*num_replicas=*/num_replicas, options,
               collective_ops_creator);
+          // TODO: propagate
           pass.AddPass<xla::HloVerifier>(/*layout_sensitive=*/false,
                                          /*allow_mixed_precision=*/false);
           const auto& pass_status = pass.Run(module.get());
