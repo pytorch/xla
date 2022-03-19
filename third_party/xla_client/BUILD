@@ -153,6 +153,7 @@ cc_library(
         "//tensorflow/compiler/xla/rpc:grpc_stub",
         "//tensorflow/compiler/xla/service:cpu_plugin",
         "//tensorflow/compiler/xla/service:platform_util",
+        "//tensorflow/compiler/xla/service/spmd:spmd_partitioner",
         "//tensorflow/compiler/xrt:xrt_proto_cc",
         "//tensorflow/compiler/xrt:xrt_server",
         "//tensorflow/compiler/xrt:xrt_utils",
