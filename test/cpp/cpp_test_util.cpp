@@ -143,12 +143,15 @@ bool EqualValuesNoElementTypeCheck(at::Tensor tensor1, at::Tensor tensor2) {
 
 void ForEachDevice(absl::Span<const DeviceType> device_types,
                    const std::function<void(const Device&)>& devfn) {
-  const Device* device = GetDefaultDevice();
+  const Device* default_device = GetDefaultDevice();
   if (device_types.empty() ||
-      std::find(device_types.begin(), device_types.end(), device->hw_type) !=
-          device_types.end()) {
-    bridge::SetCurrentDevice(*device);
-    devfn(*device);
+      std::find_if(device_types.begin(), device_types.end(),
+                   [&](const DeviceType device_type) {
+                     return device_type.hw_type ==
+                            default_device->device_type.hw_type;
+                   }) != device_types.end()) {
+    bridge::SetCurrentDevice(*default_device);
+    devfn(*default_device);
   } else {
     GTEST_SKIP();
   }
@@ -156,11 +159,14 @@ void ForEachDevice(absl::Span<const DeviceType> device_types,
 
 void ForEachDevice(absl::Span<const DeviceType> device_types,
                    const std::function<void(const torch::Device&)>& devfn) {
-  const Device* device = GetDefaultDevice();
+  const Device* default_device = GetDefaultDevice();
   if (device_types.empty() ||
-      std::find(device_types.begin(), device_types.end(), device->hw_type) !=
-          device_types.end()) {
-    torch::Device torch_device = bridge::XlaDeviceToAtenDevice(*device);
+      std::find_if(device_types.begin(), device_types.end(),
+                   [&](const DeviceType device_type) {
+                     return device_type.hw_type ==
+                            default_device->device_type.hw_type;
+                   }) != device_types.end()) {
+    torch::Device torch_device = bridge::XlaDeviceToAtenDevice(*default_device);
     bridge::SetCurrentDevice(torch_device);
     devfn(torch_device);
   } else {
@@ -211,14 +217,14 @@ void WithAllDevices(
     for (const auto& device_str :
          xla::ComputationClient::Get()->GetLocalDevices()) {
       Device device(device_str);
-      if (device.hw_type == device_type) {
+      if (device.device_type.hw_type == device_type.hw_type) {
         devices.push_back(device);
       }
     }
     for (const auto& device_str :
          xla::ComputationClient::Get()->GetAllDevices()) {
       Device device(device_str);
-      if (device.hw_type == device_type) {
+      if (device.device_type.hw_type == device_type.hw_type) {
         all_devices.push_back(device);
       }
     }
@@ -258,8 +264,8 @@ std::vector<xla::ComputationClient::DataPtr> Execute(
 
   xla::XlaComputation computation = ConsumeValue(lowering_ctx.Build());
   xla::ProgramShape program_shape = ConsumeValue(computation.GetProgramShape());
-  xla::Shape shape =
-      MakeShapeWithDeviceLayout(program_shape.result(), device.hw_type);
+  xla::Shape shape = MakeShapeWithDeviceLayout(program_shape.result(),
+                                               device.device_type.hw_type);
 
   std::vector<xla::ComputationClient::CompileInstance> instances;
   instances.push_back({std::move(computation), device.ToString(),
