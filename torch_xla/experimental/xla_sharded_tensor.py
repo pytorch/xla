@@ -138,6 +138,7 @@ class XLAShardedTensor(torch.Tensor):
   @property
   def sharding_spec(self):
     # TODO: check if global_tensor is an XLA tensor
+    # TODO/DEBUG
     return torch_xla._XLAC._get_xla_sharding_spec(self.global_tensor)
 
   def __repr__(self):

@@ -17,7 +17,11 @@ namespace torch_xla {
 namespace {
 
 using xla::internal::XlaBuilderFriend;
+<<<<<<< HEAD
 using NodeIdMap = std::unordered_map<const torch::lazy::Node*, size_t>;
+=======
+using NodeIdMap = std::unordered_map<const Node*, size_t>;
+>>>>>>> 57825c13 (Tensor sharding annotation and sharded HLO dumping function.)
 
 struct AttrTag {
   std::string name;
