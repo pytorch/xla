@@ -1503,22 +1503,8 @@ void InitXlaModuleBindings(py::module m) {
     // TODO: fix this
     XLATensor xtensor = bridge::GetXlaTensor(input);
     auto sharding_spec = xtensor.sharding_spec();
-
-    std::vector<std::vector<int64_t>> partition_vector =
-        sharding_spec->tile_assignment;
-    py::list tile_assignment(partition_vector.size());
-    for (std::vector<int64_t>& partition : partition_vector) {
-      py::list tile(partition.size());
-      for (int64_t& device_id : partition) {
-        tile.append(device_id);
-      }
-      tile_assignment.append(tile);
-    }
-
-    auto sharding_attrs = py::tuple(2);
-    sharding_attrs[0] = tile_assignment;
-    sharding_attrs[1] = sharding_spec->replicated;
-    return sharding_attrs;
+    auto hlo_sharding = xla::HloSharding::FromProto(sharding_spec->sharding);
+    return hlo_sharding->ToString();
   });
 
   m.def("_init_xla_lazy_backend", []() {
