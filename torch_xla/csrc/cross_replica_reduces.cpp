@@ -32,7 +32,7 @@ xla::Shape MakeReduceShape(absl::Span<const xla::Shape> operand_shapes) {
   for (auto& shape : operand_shapes) {
     shapes_and_layouts.push_back(MakeArrayShapeFromDimensions(
         shape.dimensions(), shape.dynamic_dimensions(), shape.element_type(),
-        xla_device.device_type.hw_type));
+        xla_device.hw_type));
   }
   return xla::ShapeUtil::MakeTupleShape(shapes_and_layouts);
 }
@@ -133,7 +133,7 @@ AllToAllResult BuildAllToAll(xla::XlaOp input, xla::XlaOp token,
   const xla::Shape& input_shape = XlaHelpers::ShapeOfXlaOp(input);
   xla::Shape reduce_shape = MakeArrayShapeFromDimensions(
       input_shape.dimensions(), input_shape.dynamic_dimensions(),
-      input_shape.element_type(), GetCurrentDevice().device_type.hw_type);
+      input_shape.element_type(), GetCurrentDevice().hw_type);
   TokenHandler token_handler(token);
   xla::XlaOp reduce_result = xla::AllToAll(
       token_handler.GetInput(input, &input_shape), split_dimension,
@@ -175,7 +175,7 @@ ReduceScatterResult BuildReduceScatter(
   const xla::Shape& input_shape = XlaHelpers::ShapeOfXlaOp(input);
   xla::Shape reduce_shape = MakeArrayShapeFromDimensions(
       input_shape.dimensions(), input_shape.dynamic_dimensions(),
-      input_shape.element_type(), GetCurrentDevice().device_type.hw_type);
+      input_shape.element_type(), GetCurrentDevice().hw_type);
 
   xla::XlaOp reduce_result = xla::ReduceScatter(
       token_handler.GetInput(input, &input_shape),
