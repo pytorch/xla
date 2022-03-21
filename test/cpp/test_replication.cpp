@@ -86,7 +86,7 @@ void TestSingleReplication(const std::vector<Device>& devices,
 class ReplicationTest : public AtenXlaTensorTestBase {};
 
 TEST_F(ReplicationTest, TestNSingleReplication) {
-  WithAllDevices({DeviceType::TPU, DeviceType::GPU},
+  WithAllDevices({TorchXLADeviceType::TPU, TorchXLADeviceType::GPU},
                  [&](const std::vector<Device>& devices,
                      const std::vector<Device>& all_devices) {
                    TestSingleReplication(devices, all_devices);

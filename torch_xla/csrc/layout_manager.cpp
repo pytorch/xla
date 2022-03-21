@@ -181,7 +181,7 @@ xla::Shape MakeArrayShapeFromDimensions(
     return MakeShapeWithLayout(type, dimensions, dynamic_dimensions,
                                *layout_ptr);
   }
-  if (dimensions.size() > 1 && device_type == DeviceType::TPU) {
+  if (dimensions.size() > 1 && device_type.hw_type == TorchXLADeviceType::TPU) {
     return MakeTpuShape(dimensions, dynamic_dimensions, type);
   }
   return MakeTorchTensorLayout(dimensions, dynamic_dimensions, type);
