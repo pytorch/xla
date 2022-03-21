@@ -11,6 +11,7 @@
 #include <stdexcept>
 #include <unordered_set>
 
+#include "absl/container/flat_hash_map.h"
 #include "absl/memory/memory.h"
 #include "absl/strings/str_join.h"
 #include "tensorflow/compiler/xla/literal_util.h"
@@ -624,1175 +625,1168 @@ std::string XLATensor::DumpHloComputation(
                             : std::string();
 }
 
+std::shared_ptr<XLATensor::ShardingSpec> XLATensor::sharding_spec() const {
+  XLA_CHECK(data()->sharding_spec != nullptr)
+      << "Trying to access a null cursor";
+  return data()->sharding_spec;
+}
+bool XLATensor::IsShardingAnnotated() const {
+  return data()->sharding_spec != nullptr;
+}
+void XLATensor::SetShardingSpec(const xla::OpSharding& sharding,
+                                bool replicated, bool manual) {
+  auto new_sharding_spec =
+      std::make_shared<ShardingSpec>(sharding, replicated, manual);
+  data()->sharding_spec = new_sharding_spec;
+  XLA_CHECK(bool(data()->ir_value.node)) << "Tyring to access a null cursor";
+  dynamic_cast<XlaNode*>(data()->ir_value.node.get())
+      ->SetSharding(&new_sharding_spec->sharding);
+}
+void XLATensor::ClearShardingSpec() {
+  if (data()->ir_value.node.get() != nullptr) {
+    dynamic_cast<XlaNode*>(data()->ir_value.node.get())->ClearSharding();
+  }
+  data()->sharding_spec = nullptr;
+}
+
 void XLATensor::SetXlaData(torch::lazy::BackendDataPtr xla_data) {
-  XLATensor::ShardingSpec* XLATensor::sharding_spec() {
-    XLA_CHECK(data_ != nullptr) << "Trying to access a null cursor";
-    return sharding_spec_.get();
+  SetXlaData(std::move(xla_data), /*sync=*/true);
+}
+
+void XLATensor::SetXlaData(torch::lazy::BackendDataPtr xla_data, bool sync) {
+  data()->xla_data = std::move(xla_data);
+  // Assigning a device data should always clear the IR node, to allow graph
+  // trimming. A view cannot be reset though, unless we are at a step-end
+  // sync.
+  AssignIrValue(torch::lazy::Value());
+  if (sync) {
+    data()->view = nullptr;
+    data()->tensor_data = c10::nullopt;
   }
-  void XLATensor::SetShardingSpec(
-      const std::vector<std::vector<int64_t>>& tile_assignment,
-      bool replicated) {
-    sharding_spec_ =
-        std::make_shared<XLATensor::ShardingSpec>(tile_assignment, replicated);
-    if (replicated) {
-      auto hlo_sharding = xla::HloSharding::Replicate();
-    } else {
-      // TODO: currently forcing maximal sharding
-      xla::Array<int64_t> maximal({1});
-      auto hlo_sharding = xla::HloSharding::Tile(maximal);
+}
+
+void XLATensor::SetIrValue(torch::lazy::Value ir_value, bool inplace) {
+  data()->xla_data = nullptr;
+  data()->tensor_data = c10::nullopt;
+  if (data()->view != nullptr && inplace) {
+    // If we have an active view, SetIrValue() happens, and we are
+    // within an in-place execution context, we need to update the view's
+    // alias as well.
+    data()->view = UpdateView(data()->view, std::move(ir_value));
+    data()->generation += 1;
+  } else {
+    // Reset the view if we are not within an in-place execution context
+    data()->view = nullptr;
+    data()->generation = 1;
+    AssignIrValue(std::move(ir_value));
+    TryLimitGraphSize();
+  }
+  if (UseEagerDebugMode() && ShouldSyncIrNode()) {
+    std::vector<XLATensor> xtensors({*this});
+    ApplyEagerSync(xtensors);
+  }
+}
+
+void XLATensor::SetInPlaceIrValue(torch::lazy::Value ir_value) {
+  auto xla_shape = shape();
+  if (xla_shape.get().element_type() != GetXlaShape(ir_value).element_type()) {
+    ir_value =
+        torch::lazy::MakeNode<Cast>(ir_value, xla_shape.get().element_type());
+  }
+  SetIrValue(std::move(ir_value), /*inplace=*/true);
+}
+
+void XLATensor::AssignIrValue(torch::lazy::Value ir_value) const {
+  data()->ir_value = std::move(ir_value);
+  data()->generation += 1;
+}
+
+void XLATensor::TryLimitGraphSize() {
+  static const size_t kCheckFrequency =
+      xla::sys_util::GetEnvInt("XLA_TRIM_GRAPH_CHECK_FREQUENCY", 5000);
+  static const size_t kMaxPendingGraphSize =
+      xla::sys_util::GetEnvInt("XLA_TRIM_GRAPH_SIZE", 100000);
+  if (data()->ir_value && ++g_tls_data.trim_counter % kCheckFrequency == 0) {
+    size_t graph_size =
+        torch::lazy::Util::GetGraphSize({data()->ir_value.node.get()});
+    if (graph_size > kMaxPendingGraphSize) {
+      XLA_COUNTER("TrimIrGraph", 1);
+      ApplyPendingGraph();
     }
   }
+}
 
-  void XLATensor::SetXlaData(torch::lazy::BackendDataPtr xla_data, bool sync) {
-    data()->xla_data = std::move(xla_data);
-    // Assigning a device data should always clear the IR node, to allow graph
-    // trimming. A view cannot be reset though, unless we are at a step-end
-    // sync.
-    AssignIrValue(torch::lazy::Value());
-    if (sync) {
-      data()->view = nullptr;
-      data()->tensor_data = c10::nullopt;
-    }
+torch::lazy::Value XLATensor::GetIrValue() const {
+  torch::lazy::Value ir_value = CurrentIrValue();
+  if (ir_value) {
+    return ir_value;
   }
+  torch::lazy::BackendDataPtr xla_data = CurrentXlaData();
+  if (xla_data != nullptr) {
+    // In case of tensor node, we do not clear the XLA data when we set the IR
+    // node. This because we want further calls to GetIrValue() to fetch the
+    // same IR node, and not create new ones (even though the lowering context
+    // will still collapse them all into a single XLA parameter op). So call
+    // which wants the XLA data will still find it, w/out having to fetch it
+    // via a computation client from-server call.
+    AssignIrValue(CreateTensorNode(xla_data, /*read_only=*/false));
+    return data()->ir_value;
+  }
+  c10::optional<at::Tensor> tensor_data = CurrentTensorData();
+  XLA_CHECK(tensor_data);
+  AssignIrValue(GetIrValueForTensor(*tensor_data, GetDevice()));
+  return data()->ir_value;
+}
 
-  void XLATensor::SetIrValue(torch::lazy::Value ir_value, bool inplace) {
+torch::lazy::Value XLATensor::CurrentIrValue() const {
+  if (data()->view != nullptr) {
+    return GetViewUpdate(data()->view).ir_value;
+  }
+  return data()->ir_value;
+}
+
+void XLATensor::SetTensorData(at::Tensor tensor_data) {
+  data()->tensor_data = std::move(tensor_data);
+}
+
+c10::optional<at::Tensor> XLATensor::CurrentTensorData() const {
+  if (data()->view != nullptr && !data()->view->IsUpToDate()) {
+    return c10::nullopt;
+  }
+  return data()->tensor_data;
+}
+
+torch::lazy::Value XLATensor::GetIrValueForTensor(
+    const at::Tensor& tensor, const torch::lazy::BackendDevice& device) const {
+  torch::lazy::BackendDataPtr data;
+  bool read_only = false;
+  if (tensor.dim() == 0 && tensor.numel() == 1) {
+    at::Scalar value = tensor.item();
+    if (IsSpecialScalar(value)) {
+      return ScalarOp(std::move(value),
+                      MakeXlaPrimitiveType(tensor.scalar_type(), &device));
+    }
+    data = GetDeviceData(tensor, device);
+    read_only = true;
+  } else {
+    XLA_TIMED("IrValueTensorToXlaData");
+    data = TensorToXlaData(tensor, device);
+  }
+  return CreateTensorNode(std::move(data), read_only);
+}
+
+torch::lazy::Value XLATensor::GetDeviceDataIrValue(
+    const at::Scalar& value, xla::PrimitiveType type,
+    const torch::lazy::BackendDevice& device) {
+  torch::lazy::BackendDataPtr data =
+      GetDeviceData(value, TensorTypeFromXlaType(type), device);
+  // TODO: consider using upstream info class if possible
+  UnwrapXlaData(data)->SetInfo(
+      std::make_shared<DeviceDataInfo>(/*tensor_id=*/-1, /*read_only=*/true));
+  return torch::lazy::MakeNode<DeviceData>(std::move(data));
+}
+
+torch::lazy::Value XLATensor::GetIrValueForConstant(const at::Scalar& value,
+                                                    const xla::Shape& shape) {
+  torch::lazy::Value ir_value =
+      ScalarOp(std::move(value), shape.element_type());
+  if (!shape.dimensions().empty()) {
+    ir_value = torch::lazy::MakeNode<Expand>(
+        ir_value, torch::lazy::ToVector<int64_t>(shape.dimensions()));
+  }
+  return ir_value;
+}
+
+torch::lazy::Value XLATensor::GetIrValueForScalar(
+    const at::Scalar& value, xla::PrimitiveType type,
+    const torch::lazy::BackendDevice& device) {
+  if (IsSpecialScalar(value)) {
+    return ScalarOp(std::move(value), type);
+  }
+  return GetDeviceDataIrValue(value, type, device);
+}
+
+torch::lazy::Value XLATensor::GetIrValueForScalar(
+    const at::Scalar& value, const torch::lazy::BackendDevice& device) {
+  return GetIrValueForScalar(
+      value, MakeXlaPrimitiveType(GetScalarType(value), &device), device);
+}
+
+torch::lazy::Value XLATensor::GetIrValueForScalar(
+    const at::Scalar& value, xla::PrimitiveType type,
+    absl::Span<const int64_t> dimensions,
+    const torch::lazy::BackendDevice& device) {
+  torch::lazy::Value ir_value = GetIrValueForScalar(value, type, device);
+  if (!dimensions.empty()) {
+    ir_value = torch::lazy::MakeNode<Expand>(
+        ir_value, torch::lazy::ToVector<int64_t>(dimensions));
+  }
+  return ir_value;
+}
+
+torch::lazy::Value XLATensor::GetIrValueForScalar(
+    const at::Scalar& value, const xla::Shape& shape,
+    const torch::lazy::BackendDevice& device) {
+  return GetIrValueForScalar(value, shape.element_type(), shape.dimensions(),
+                             device);
+}
+
+torch::lazy::Value XLATensor::GetIrValueForScalar(
+    const at::Scalar& value, const xla::Shape& shape,
+    c10::optional<at::ScalarType> logical_element_type,
+    const torch::lazy::BackendDevice& device) {
+  xla::PrimitiveType type =
+      logical_element_type
+          ? MakeXlaPrimitiveType(*logical_element_type, &device)
+          : shape.element_type();
+  return GetIrValueForScalar(value, type, shape.dimensions(), device);
+}
+
+View::IrNode XLATensor::GetViewUpdate(const std::shared_ptr<View>& view) const {
+  View::IrNode ir_value_updated = view->GetViewIrNode();
+  if (ir_value_updated.updated) {
     data()->xla_data = nullptr;
     data()->tensor_data = c10::nullopt;
-    if (data()->view != nullptr && inplace) {
-      // If we have an active view, SetIrValue() happens, and we are
-      // within an in-place execution context, we need to update the view's
-      // alias as well.
-      data()->view = UpdateView(data()->view, std::move(ir_value));
-      data()->generation += 1;
-    } else {
-      // Reset the view if we are not within an in-place execution context
-      data()->view = nullptr;
-      data()->generation = 1;
-      AssignIrValue(std::move(ir_value));
-      TryLimitGraphSize();
-    }
-    if (UseEagerDebugMode() && ShouldSyncIrNode()) {
-      std::vector<XLATensor> xtensors({*this});
-      ApplyEagerSync(xtensors);
-    }
   }
+  return ir_value_updated;
+}
 
-  void XLATensor::SetInPlaceIrValue(torch::lazy::Value ir_value) {
-    auto xla_shape = shape();
-    if (xla_shape.get().element_type() !=
-        GetXlaShape(ir_value).element_type()) {
-      ir_value =
-          torch::lazy::MakeNode<Cast>(ir_value, xla_shape.get().element_type());
+std::shared_ptr<View> XLATensor::UpdateView(std::shared_ptr<View> view,
+                                            torch::lazy::Value ir_value) const {
+  if (GetXlaShape(ir_value).dimensions() != view->shape().dimensions()) {
+    XLA_CHECK_EQ(
+        xla::util::Multiply<int64_t>(GetXlaShape(ir_value).dimensions()),
+        xla::util::Multiply<int64_t>(view->shape().dimensions()));
+
+    ViewInfo view_info(ViewInfo::Type::kReshape, GetXlaShape(ir_value),
+                       view->shape());
+    view = view->CreateSubView(view_info.shape, view_info);
+  }
+  view->Update(std::move(ir_value));
+  return view;
+}
+
+void XLATensor::SetSubView(ViewInfo view_info) const {
+  data()->view = data()->view->CreateSubView(view_info.shape, view_info);
+  data()->generation += 1;
+}
+
+void XLATensor::ModifyCurrentView(ViewInfo view_info) const {
+  if (data()->view != nullptr) {
+    SetSubView(view_info);
+    return;
+  }
+  // This node is not a view. Since this function is meant to modify a view
+  // in place, we need to turn this existing tensor into a view.
+  torch::lazy::Value ir_value = GetIrValue();
+  std::shared_ptr<Alias> alias = std::make_shared<Alias>(ir_value);
+  data()->view =
+      std::make_shared<View>(view_info.shape, alias, std::move(view_info));
+  AssignIrValue(torch::lazy::Value());
+}
+
+std::shared_ptr<View> XLATensor::CreateView(ViewInfo view_info) const {
+  if (data()->view != nullptr) {
+    return data()->view->CreateSubView(view_info.shape, view_info);
+  }
+  // This node is not a view, and creating a view forks the current node into
+  // becoming one itself. This means creating an alias with the current IR
+  // XlaNode, and using the same alias for the created IR XlaNode.
+  torch::lazy::Value ir_value = GetIrValue();
+  std::shared_ptr<Alias> alias = std::make_shared<Alias>(ir_value);
+  ViewInfo this_view_info(ViewInfo::Type::kNoOp, GetXlaShape(ir_value),
+                          GetXlaShape(ir_value));
+  data()->view = std::make_shared<View>(GetXlaShape(ir_value), alias,
+                                        std::move(this_view_info));
+  AssignIrValue(torch::lazy::Value());
+  return std::make_shared<View>(view_info.shape, alias, view_info);
+}
+
+XLATensor XLATensor::CreateViewTensor(ViewInfo view_info) const {
+  return Create(CreateView(std::move(view_info)), GetDevice(),
+                dtype_optional());
+}
+
+at::Tensor XLATensor::ToTensor(bool detached) {
+  at::Tensor tensor;
+  c10::optional<at::Tensor> tensor_data = CurrentTensorData();
+  if (!tensor_data) {
+    DeviceBarrier(GetDevice());
+    // The GetXlaData() call will trigger an ApplyPendingGraph() if an IR
+    // XlaNode is available on the tensor.
+    std::vector<at::Tensor> tensors = XlaDataToTensors({GetXlaData()}, dtype());
+    tensor = std::move(tensors.front());
+    if (!detached) {
+      SetTensorData(tensor);
     }
-    SetIrValue(std::move(ir_value), /*inplace=*/true);
-  }
-
-  void XLATensor::AssignIrValue(torch::lazy::Value ir_value) const {
-    data()->ir_value = std::move(ir_value);
-    data()->generation += 1;
-  }
-
-  void XLATensor::TryLimitGraphSize() {
-    static const size_t kCheckFrequency =
-        xla::sys_util::GetEnvInt("XLA_TRIM_GRAPH_CHECK_FREQUENCY", 5000);
-    static const size_t kMaxPendingGraphSize =
-        xla::sys_util::GetEnvInt("XLA_TRIM_GRAPH_SIZE", 100000);
-    if (data()->ir_value && ++g_tls_data.trim_counter % kCheckFrequency == 0) {
-      size_t graph_size =
-          torch::lazy::Util::GetGraphSize({data()->ir_value.node.get()});
-      if (graph_size > kMaxPendingGraphSize) {
-        XLA_COUNTER("TrimIrGraph", 1);
-        ApplyPendingGraph();
+  } else {
+    tensor = *tensor_data;
+    if (detached) {
+      if (data()->ir_value || data()->xla_data != nullptr ||
+          data()->view != nullptr) {
+        // If we have other authoritive sources, just drop our reference and
+        // transfer it to the caller.
+        data()->tensor_data = c10::nullopt;
+      } else {
+        // Otherwise we need to make a copy to prevent the caller changing our
+        // version.
+        tensor = torch::lazy::CopyTensor(tensor);
       }
     }
   }
+  return tensor;
+}
 
-  torch::lazy::Value XLATensor::GetIrValue() const {
-    torch::lazy::Value ir_value = CurrentIrValue();
-    if (ir_value) {
-      return ir_value;
-    }
-    torch::lazy::BackendDataPtr xla_data = CurrentXlaData();
-    if (xla_data != nullptr) {
-      // In case of tensor node, we do not clear the XLA data when we set the IR
-      // node. This because we want further calls to GetIrValue() to fetch the
-      // same IR node, and not create new ones (even though the lowering context
-      // will still collapse them all into a single XLA parameter op). So call
-      // which wants the XLA data will still find it, w/out having to fetch it
-      // via a computation client from-server call.
-      AssignIrValue(CreateTensorNode(xla_data, /*read_only=*/false));
-      return data()->ir_value;
-    }
-    c10::optional<at::Tensor> tensor_data = CurrentTensorData();
-    XLA_CHECK(tensor_data);
-    AssignIrValue(GetIrValueForTensor(*tensor_data, GetDevice()));
-    return data()->ir_value;
-  }
+void XLATensor::ShallowCopyTo(XLATensor* dest) const {
+  dest->SetIrValue(GetIrValue(), /*inplace=*/false);
+}
 
-  torch::lazy::Value XLATensor::CurrentIrValue() const {
-    if (data()->view != nullptr) {
-      return GetViewUpdate(data()->view).ir_value;
-    }
-    return data()->ir_value;
-  }
+void XLATensor::SetScalarType(
+    c10::optional<at::ScalarType> logical_element_type) {
+  data()->logical_element_type = logical_element_type;
+}
 
-  void XLATensor::SetTensorData(at::Tensor tensor_data) {
-    data()->tensor_data = std::move(tensor_data);
-  }
+void XLATensor::SetTensor(at::Tensor tensor) {
+  SetTensorData(tensor);
+  data()->view = nullptr;
+  data()->xla_data = nullptr;
+  AssignIrValue(torch::lazy::Value());
+}
 
-  c10::optional<at::Tensor> XLATensor::CurrentTensorData() const {
-    if (data()->view != nullptr && !data()->view->IsUpToDate()) {
-      return c10::nullopt;
-    }
-    return data()->tensor_data;
-  }
-
-  torch::lazy::Value XLATensor::GetIrValueForTensor(
-      const at::Tensor& tensor, const torch::lazy::BackendDevice& device)
-      const {
-    torch::lazy::BackendDataPtr data;
-    bool read_only = false;
-    if (tensor.dim() == 0 && tensor.numel() == 1) {
-      at::Scalar value = tensor.item();
-      if (IsSpecialScalar(value)) {
-        return ScalarOp(std::move(value),
-                        MakeXlaPrimitiveType(tensor.scalar_type(), &device));
-      }
-      data = GetDeviceData(tensor, device);
-      read_only = true;
-    } else {
-      XLA_TIMED("IrValueTensorToXlaData");
-      data = TensorToXlaData(tensor, device);
-    }
-    return CreateTensorNode(std::move(data), read_only);
-  }
-
-  torch::lazy::Value XLATensor::GetDeviceDataIrValue(
-      const at::Scalar& value, xla::PrimitiveType type,
-      const torch::lazy::BackendDevice& device) {
-    torch::lazy::BackendDataPtr data =
-        GetDeviceData(value, TensorTypeFromXlaType(type), device);
-    // TODO: consider using upstream info class if possible
-    UnwrapXlaData(data)->SetInfo(
-        std::make_shared<DeviceDataInfo>(/*tensor_id=*/-1, /*read_only=*/true));
-    return torch::lazy::MakeNode<DeviceData>(std::move(data));
-  }
-
-  torch::lazy::Value XLATensor::GetIrValueForConstant(const at::Scalar& value,
-                                                      const xla::Shape& shape) {
-    torch::lazy::Value ir_value =
-        ScalarOp(std::move(value), shape.element_type());
-    if (!shape.dimensions().empty()) {
-      ir_value = torch::lazy::MakeNode<Expand>(
-          ir_value, torch::lazy::ToVector<int64_t>(shape.dimensions()));
-    }
-    return ir_value;
-  }
-
-  torch::lazy::Value XLATensor::GetIrValueForScalar(
-      const at::Scalar& value, xla::PrimitiveType type,
-      const torch::lazy::BackendDevice& device) {
-    if (IsSpecialScalar(value)) {
-      return ScalarOp(std::move(value), type);
-    }
-    return GetDeviceDataIrValue(value, type, device);
-  }
-
-  torch::lazy::Value XLATensor::GetIrValueForScalar(
-      const at::Scalar& value, const torch::lazy::BackendDevice& device) {
-    return GetIrValueForScalar(
-        value, MakeXlaPrimitiveType(GetScalarType(value), &device), device);
-  }
-
-  torch::lazy::Value XLATensor::GetIrValueForScalar(
-      const at::Scalar& value, xla::PrimitiveType type,
-      absl::Span<const int64_t> dimensions,
-      const torch::lazy::BackendDevice& device) {
-    torch::lazy::Value ir_value = GetIrValueForScalar(value, type, device);
-    if (!dimensions.empty()) {
-      ir_value = torch::lazy::MakeNode<Expand>(
-          ir_value, torch::lazy::ToVector<int64_t>(dimensions));
-    }
-    return ir_value;
-  }
-
-  torch::lazy::Value XLATensor::GetIrValueForScalar(
-      const at::Scalar& value, const xla::Shape& shape,
-      const torch::lazy::BackendDevice& device) {
-    return GetIrValueForScalar(value, shape.element_type(), shape.dimensions(),
-                               device);
-  }
-
-  torch::lazy::Value XLATensor::GetIrValueForScalar(
-      const at::Scalar& value, const xla::Shape& shape,
-      c10::optional<at::ScalarType> logical_element_type,
-      const torch::lazy::BackendDevice& device) {
-    xla::PrimitiveType type =
-        logical_element_type
-            ? MakeXlaPrimitiveType(*logical_element_type, &device)
-            : shape.element_type();
-    return GetIrValueForScalar(value, type, shape.dimensions(), device);
-  }
-
-  View::IrNode XLATensor::GetViewUpdate(const std::shared_ptr<View>& view)
-      const {
-    View::IrNode ir_value_updated = view->GetViewIrNode();
-    if (ir_value_updated.updated) {
-      data()->xla_data = nullptr;
-      data()->tensor_data = c10::nullopt;
-    }
-    return ir_value_updated;
-  }
-
-  std::shared_ptr<View> XLATensor::UpdateView(
-      std::shared_ptr<View> view, torch::lazy::Value ir_value) const {
-    if (GetXlaShape(ir_value).dimensions() != view->shape().dimensions()) {
-      XLA_CHECK_EQ(
-          xla::util::Multiply<int64_t>(GetXlaShape(ir_value).dimensions()),
-          xla::util::Multiply<int64_t>(view->shape().dimensions()));
-
-      ViewInfo view_info(ViewInfo::Type::kReshape, GetXlaShape(ir_value),
-                         view->shape());
-      view = view->CreateSubView(view_info.shape, view_info);
-    }
-    view->Update(std::move(ir_value));
-    return view;
-  }
-
-  void XLATensor::SetSubView(ViewInfo view_info) const {
-    data()->view = data()->view->CreateSubView(view_info.shape, view_info);
-    data()->generation += 1;
-  }
-
-  void XLATensor::ModifyCurrentView(ViewInfo view_info) const {
-    if (data()->view != nullptr) {
-      SetSubView(view_info);
-      return;
-    }
-    // This node is not a view. Since this function is meant to modify a view
-    // in place, we need to turn this existing tensor into a view.
-    torch::lazy::Value ir_value = GetIrValue();
-    std::shared_ptr<Alias> alias = std::make_shared<Alias>(ir_value);
-    data()->view =
-        std::make_shared<View>(view_info.shape, alias, std::move(view_info));
-    AssignIrValue(torch::lazy::Value());
-  }
-
-  std::shared_ptr<View> XLATensor::CreateView(ViewInfo view_info) const {
-    if (data()->view != nullptr) {
-      return data()->view->CreateSubView(view_info.shape, view_info);
-    }
-    // This node is not a view, and creating a view forks the current node into
-    // becoming one itself. This means creating an alias with the current IR
-    // XlaNode, and using the same alias for the created IR XlaNode.
-    torch::lazy::Value ir_value = GetIrValue();
-    std::shared_ptr<Alias> alias = std::make_shared<Alias>(ir_value);
-    ViewInfo this_view_info(ViewInfo::Type::kNoOp, GetXlaShape(ir_value),
-                            GetXlaShape(ir_value));
-    data()->view = std::make_shared<View>(GetXlaShape(ir_value), alias,
-                                          std::move(this_view_info));
-    AssignIrValue(torch::lazy::Value());
-    return std::make_shared<View>(view_info.shape, alias, view_info);
-  }
-
-  XLATensor XLATensor::CreateViewTensor(ViewInfo view_info) const {
-    return Create(CreateView(std::move(view_info)), GetDevice(),
-                  dtype_optional());
-  }
-
-  at::Tensor XLATensor::ToTensor(bool detached) {
-    at::Tensor tensor;
-    c10::optional<at::Tensor> tensor_data = CurrentTensorData();
-    if (!tensor_data) {
-      DeviceBarrier(GetDevice());
-      // The GetXlaData() call will trigger an ApplyPendingGraph() if an IR
-      // XlaNode is available on the tensor.
-      std::vector<at::Tensor> tensors =
-          XlaDataToTensors({GetXlaData()}, dtype());
-      tensor = std::move(tensors.front());
-      if (!detached) {
-        SetTensorData(tensor);
-      }
-    } else {
-      tensor = *tensor_data;
-      if (detached) {
-        if (data()->ir_value || data()->xla_data != nullptr ||
-            data()->view != nullptr) {
-          // If we have other authoritive sources, just drop our reference and
-          // transfer it to the caller.
-          data()->tensor_data = c10::nullopt;
-        } else {
-          // Otherwise we need to make a copy to prevent the caller changing our
-          // version.
-          tensor = torch::lazy::CopyTensor(tensor);
-        }
-      }
-    }
-    return tensor;
-  }
-
-  void XLATensor::ShallowCopyTo(XLATensor * dest) const {
-    dest->SetIrValue(GetIrValue(), /*inplace=*/false);
-  }
-
-  void XLATensor::SetScalarType(
-      c10::optional<at::ScalarType> logical_element_type) {
-    data()->logical_element_type = logical_element_type;
-  }
-
-  void XLATensor::SetTensor(at::Tensor tensor) {
-    SetTensorData(tensor);
-    data()->view = nullptr;
+void XLATensor::UpdateFromTensor(at::Tensor tensor, bool sync) {
+  if (sync) {
+    at::Tensor typed_tensor =
+        torch::lazy::CopyTensor(tensor, dtype(), /*copy=*/false);
+    SetIrValue(GetIrValueForTensor(typed_tensor, GetDevice()),
+               /*inplace=*/true);
+  } else {
+    at::Tensor coyped_tensor = torch::lazy::CopyTensor(tensor, dtype());
+    SetTensorData(coyped_tensor);
     data()->xla_data = nullptr;
     AssignIrValue(torch::lazy::Value());
-  }
-
-  void XLATensor::UpdateFromTensor(at::Tensor tensor, bool sync) {
-    if (sync) {
-      at::Tensor typed_tensor =
-          torch::lazy::CopyTensor(tensor, dtype(), /*copy=*/false);
-      SetIrValue(GetIrValueForTensor(typed_tensor, GetDevice()),
-                 /*inplace=*/true);
-    } else {
-      at::Tensor coyped_tensor = torch::lazy::CopyTensor(tensor, dtype());
-      SetTensorData(coyped_tensor);
-      data()->xla_data = nullptr;
-      AssignIrValue(torch::lazy::Value());
-      if (data()->view != nullptr) {
-        torch::lazy::Value ir_value =
-            GetIrValueForTensor(coyped_tensor, GetDevice());
-        data()->view = UpdateView(data()->view, std::move(ir_value));
-      }
+    if (data()->view != nullptr) {
+      torch::lazy::Value ir_value =
+          GetIrValueForTensor(coyped_tensor, GetDevice());
+      data()->view = UpdateView(data()->view, std::move(ir_value));
     }
   }
+}
 
-  void XLATensor::UpdateFromTensorOut(at::Tensor tensor) {
-    if (data()->view != nullptr &&
-        xla::ShapeUtil::ElementsIn(shape()) != tensor.numel()) {
-      data()->view = nullptr;
-    }
-    UpdateFromTensor(std::move(tensor), /*sync=*/false);
+void XLATensor::UpdateFromTensorOut(at::Tensor tensor) {
+  if (data()->view != nullptr &&
+      xla::ShapeUtil::ElementsIn(shape()) != tensor.numel()) {
+    data()->view = nullptr;
   }
+  UpdateFromTensor(std::move(tensor), /*sync=*/false);
+}
 
-  void XLATensor::UpdateFromTensorOut(const XLATensor& tensor) {
-    if (data()->view != nullptr &&
-        xla::ShapeUtil::ElementsIn(shape()) !=
-            xla::ShapeUtil::ElementsIn(tensor.shape())) {
-      data()->view = nullptr;
-    }
-    SetIrValue(tensor.GetIrValue(), /*inplace=*/true);
+void XLATensor::UpdateFromTensorOut(const XLATensor& tensor) {
+  if (data()->view != nullptr &&
+      xla::ShapeUtil::ElementsIn(shape()) !=
+          xla::ShapeUtil::ElementsIn(tensor.shape())) {
+    data()->view = nullptr;
   }
+  SetIrValue(tensor.GetIrValue(), /*inplace=*/true);
+}
 
-  std::vector<XLATensor> XLATensor::GetLiveTensors(
-      const torch::lazy::BackendDevice* device) {
-    return DeviceContextArena::Get()->GetLiveTensors(device);
-  }
+std::vector<XLATensor> XLATensor::GetLiveTensors(
+    const torch::lazy::BackendDevice* device) {
+  return DeviceContextArena::Get()->GetLiveTensors(device);
+}
 
-  std::vector<torch::lazy::BackendDataPtr> XLATensor::GatherTensorsXlaData(
-      const std::vector<XLATensor>& tensors, absl::Span<const size_t> indices,
-      absl::Span<const torch::lazy::BackendDataPtr> tensors_data) {
-    std::vector<torch::lazy::BackendDataPtr> result_tensors_data;
-    std::unordered_map<int64_t, size_t> uid_index_map;
-    size_t indices_index = 0;
-    for (size_t i = 0; i < tensors.size(); ++i) {
-      int64_t tensor_id = tensors[i].GetUniqueId();
-      auto it = uid_index_map.find(tensor_id);
-      if (it != uid_index_map.end()) {
-        // Current tensor is a duplicate of a previously processed tensor that
-        // had an IR XlaNode to sync. Get the XLA data from the tensor_data_map.
-        result_tensors_data.push_back(result_tensors_data[it->second]);
-      } else if (indices_index < indices.size() &&
-                 i == indices[indices_index]) {
-        // If we are at the current index (it means that the tensor at index
-        // 'i' had an IR node to sync), use the XLA data held within the Async
-        // object.
-        uid_index_map.emplace(tensor_id, result_tensors_data.size());
-        result_tensors_data.push_back(tensors_data[indices_index]);
-        ++indices_index;
-      } else if (!tensors[i].CurrentTensorData()) {
-        torch::lazy::BackendDataPtr xla_data = tensors[i].CurrentXlaData();
-        XLA_CHECK(xla_data != nullptr);
-        result_tensors_data.push_back(std::move(xla_data));
-      }
-    }
-    return result_tensors_data;
-  }
-
-  void XLATensor::TensorCollectionBarrier(SyncTensorCollection * coll) {
-    static const std::string invalid_device(
-        "Unknown0"); /* Temp solution to idetify unassigned devices */
-    if (coll->device.toString().compare(invalid_device) == 0 ||
-        coll->unlocker.size() > 0) {
-      return;
-    }
-    TF_VLOG(4) << "Waiting on device barrier for device " << coll->device
-               << " ...";
-    {
-      XLA_TIMED("DeviceLockWait");
-      coll->unlocker = LockDevices({coll->device});
-    }
-    TF_VLOG(4) << "Waiting on device barrier for device " << coll->device
-               << " done!";
-  }
-
-  std::vector<at::Tensor> XLATensor::GetTensorsOpByOp(std::vector<XLATensor> *
-                                                      tensors) {
-    SyncTensorsConfig config;
-    config.force_xla_data = false;
-    SyncTensorCollection coll = CollectSyncTensors(*tensors, config);
-    std::vector<torch::lazy::BackendDataPtr> async_tensors_data;
-    if (!coll.indices.empty()) {
-      DebugUtil::SaveTensorsGraphInfo("GetTensorsOpByOp", *tensors,
-                                      &coll.indices);
-
-      std::vector<torch::lazy::Value> roots =
-          CollectRoots(*tensors, coll.indices);
-      TensorCollectionBarrier(&coll);
-      async_tensors_data =
-          OpByOpExecutor::Get()->Execute(roots, coll.device.toString(), {});
-    }
-
-    std::vector<torch::lazy::BackendDataPtr> tensors_data =
-        GatherTensorsXlaData(*tensors, coll.indices, async_tensors_data);
-    std::vector<xla::Literal> literals =
-        xla::ComputationClient::Get()->TransferFromServer(
-            UnwrapXlaData(tensors_data));
-
-    return FetchTensors(tensors, literals, &coll.indices);
-  }
-
-  std::vector<at::Tensor> XLATensor::GetTensors(std::vector<XLATensor> *
-                                                tensors) {
-    TF_VLOG(4) << "Trying to get the value of " << tensors->size()
-               << " tensor(s)";
-    static const bool op_by_op =
-        xla::sys_util::GetEnvBool("XLA_GET_TENSORS_OPBYOP", false);
-    return op_by_op ? GetTensorsOpByOp(tensors) : GetTensorsFused(tensors);
-  }
-
-  std::vector<at::Tensor> XLATensor::GetTensorsFused(std::vector<XLATensor> *
-                                                     tensors) {
-    SyncTensorsConfig config;
-    config.force_xla_data = false;
-    auto async = SyncTensorsGraphInternal(tensors, {}, config);
-    if (async != nullptr) {
-      async->mwait.Wait();
-    }
-    std::vector<torch::lazy::BackendDataPtr> tensors_data =
-        GatherTensorsXlaData(
-            *tensors,
-            async != nullptr ? async->indices : absl::Span<const size_t>(),
-            async != nullptr ? async->tensors_data
-                             : absl::Span<const torch::lazy::BackendDataPtr>());
-    std::vector<xla::Literal> literals =
-        xla::ComputationClient::Get()->TransferFromServer(
-            UnwrapXlaData(tensors_data));
-    return FetchTensors(tensors, literals,
-                        async != nullptr ? &async->indices : nullptr);
-  }
-
-  std::vector<at::Tensor> XLATensor::FetchTensors(
-      std::vector<XLATensor> * tensors, absl::Span<const xla::Literal> literals,
-      const std::vector<size_t>* indices) {
-    std::vector<at::Tensor> results;
-    size_t literals_index = 0;
-    size_t sync_index = 0;
-    results.reserve(tensors->size());
-    for (size_t i = 0; i < tensors->size(); ++i) {
-      if (indices != nullptr && sync_index < indices->size() &&
-          i == (*indices)[sync_index]) {
-        results.push_back(MakeTensorFromXlaLiteral(literals[literals_index],
-                                                   (*tensors)[i].dtype()));
-        ++literals_index;
-        ++sync_index;
-      } else {
-        c10::optional<at::Tensor> tensor_data =
-            (*tensors)[i].CurrentTensorData();
-        if (tensor_data) {
-          results.push_back(*tensor_data);
-        } else {
-          XLA_CHECK_LT(literals_index, literals.size());
-          results.push_back(MakeTensorFromXlaLiteral(literals[literals_index],
-                                                     (*tensors)[i].dtype()));
-          ++literals_index;
-        }
-      }
-    }
-    return results;
-  }
-
-  std::vector<XLATensor> XLATensor::CreateTensors(
-      const std::vector<at::Tensor>& tensors,
-      const std::vector<std::string>& devices) {
-    std::vector<torch::lazy::BackendDataPtr> handles =
-        CreateTensorsData(tensors, devices);
-    std::vector<XLATensor> xla_tensors;
-    for (size_t i = 0; i < handles.size(); ++i) {
-      xla_tensors.push_back(
-          Create(std::move(handles[i]), tensors[i].scalar_type()));
-    }
-    return xla_tensors;
-  }
-
-  torch::lazy::Value XLATensor::CreateTensorNode(
-      torch::lazy::BackendDataPtr data, bool read_only) const {
-    UnwrapXlaData(data)->SetInfo(
-        std::make_shared<DeviceDataInfo>(GetUniqueId(), read_only));
-    return torch::lazy::MakeNode<DeviceData>(std::move(data));
-  }
-
-  std::vector<XLATensor> XLATensor::MakeOutputTensors(
-      torch::lazy::NodePtr node, bool inherit_logical_type) const {
-    std::vector<XLATensor> tensors;
-    tensors.reserve(node->num_outputs());
-    for (size_t i = 0; i < node->num_outputs(); ++i) {
-      if (inherit_logical_type) {
-        tensors.push_back(CreateFrom(torch::lazy::Value(node, i)));
-      } else {
-        tensors.push_back(CreateFrom(torch::lazy::Value(node, i),
-                                     /*logical_element_type=*/c10::nullopt));
-      }
-    }
-    return tensors;
-  }
-
-  XLATensor XLATensor::CopyTensorToDevice(
-      const torch::lazy::BackendDevice& device) {
-    // TODO: This can be optimized via proper XRT/XLA computation.
-    return Create(ToTensor(/*detached=*/true), device);
-  }
-
-  torch::lazy::Value XLATensor::MaybeCastIrValue(
-      torch::lazy::Value ir_value, const torch::lazy::BackendDevice& device,
-      c10::optional<at::ScalarType> logical_element_type) const {
-    if (!logical_element_type) {
-      logical_element_type = dtype_optional();
-    }
-    if (logical_element_type &&
-        RequiresRawTypeCasting(*logical_element_type, &device)) {
-      ir_value = torch::lazy::MakeNode<Cast>(ir_value, *logical_element_type);
-    }
-    return ir_value;
-  }
-
-  XLATensor XLATensor::CreateFrom(torch::lazy::Value ir_value) const {
-    ir_value = MaybeCastIrValue(std::move(ir_value), GetDevice(),
-                                /*logical_element_type=*/c10::nullopt);
-    return Create(std::move(ir_value), GetDevice(), dtype_optional());
-  }
-
-  XLATensor XLATensor::CreateFrom(torch::lazy::Value ir_value,
-                                  const torch::lazy::BackendDevice& device)
-      const {
-    ir_value = MaybeCastIrValue(std::move(ir_value), device,
-                                /*logical_element_type=*/c10::nullopt);
-    return Create(std::move(ir_value), device, dtype_optional());
-  }
-
-  XLATensor XLATensor::CreateFrom(torch::lazy::Value ir_value,
-                                  at::ScalarType logical_element_type) const {
-    ir_value = MaybeCastIrValue(std::move(ir_value), GetDevice(),
-                                logical_element_type);
-    return Create(std::move(ir_value), GetDevice(), logical_element_type);
-  }
-
-  XLATensor XLATensor::CreateFrom(
-      torch::lazy::Value ir_value,
-      c10::optional<at::ScalarType> logical_element_type_opt) const {
-    ir_value = MaybeCastIrValue(std::move(ir_value), GetDevice(),
-                                logical_element_type_opt);
-    return Create(std::move(ir_value), GetDevice(), logical_element_type_opt);
-  }
-
-  XLATensor XLATensor::CreateFrom(torch::lazy::Value ir_value,
-                                  const torch::lazy::BackendDevice& device,
-                                  at::ScalarType logical_element_type) const {
-    ir_value =
-        MaybeCastIrValue(std::move(ir_value), device, logical_element_type);
-    return Create(std::move(ir_value), device, logical_element_type);
-  }
-
-  void XLATensor::ApplyPendingGraph() {
-    DeviceBarrier(GetDevice());
-    // This method is called to ensure that the tensor data is available on
-    // device, so that a call to CurrentXlaData() returns a valid pointer.
-    if (CurrentXlaData() == nullptr) {
-      std::vector<XLATensor> tensors({*this});
-      SyncTensorsGraph(&tensors, {}, /*wait=*/true, /*sync_xla_data=*/false);
+std::vector<torch::lazy::BackendDataPtr> XLATensor::GatherTensorsXlaData(
+    const std::vector<XLATensor>& tensors, absl::Span<const size_t> indices,
+    absl::Span<const torch::lazy::BackendDataPtr> tensors_data) {
+  std::vector<torch::lazy::BackendDataPtr> result_tensors_data;
+  std::unordered_map<int64_t, size_t> uid_index_map;
+  size_t indices_index = 0;
+  for (size_t i = 0; i < tensors.size(); ++i) {
+    int64_t tensor_id = tensors[i].GetUniqueId();
+    auto it = uid_index_map.find(tensor_id);
+    if (it != uid_index_map.end()) {
+      // Current tensor is a duplicate of a previously processed tensor that
+      // had an IR XlaNode to sync. Get the XLA data from the tensor_data_map.
+      result_tensors_data.push_back(result_tensors_data[it->second]);
+    } else if (indices_index < indices.size() && i == indices[indices_index]) {
+      // If we are at the current index (it means that the tensor at index
+      // 'i' had an IR node to sync), use the XLA data held within the Async
+      // object.
+      uid_index_map.emplace(tensor_id, result_tensors_data.size());
+      result_tensors_data.push_back(tensors_data[indices_index]);
+      ++indices_index;
+    } else if (!tensors[i].CurrentTensorData()) {
+      torch::lazy::BackendDataPtr xla_data = tensors[i].CurrentXlaData();
+      XLA_CHECK(xla_data != nullptr);
+      result_tensors_data.push_back(std::move(xla_data));
     }
   }
+  return result_tensors_data;
+}
 
-  void XLATensor::ApplyEagerSync(std::vector<XLATensor> & tensors) {
-    SyncTensorsGraph(&tensors, {}, /*wait=*/false, /*sync_xla_data=*/false);
+void XLATensor::TensorCollectionBarrier(SyncTensorCollection* coll) {
+  static const std::string invalid_device(
+      "Unknown0"); /* Temp solution to idetify unassigned devices */
+  if (coll->device.toString().compare(invalid_device) == 0 ||
+      coll->unlocker.size() > 0) {
+    return;
   }
-
-  XLATensor::SyncTensorCollection XLATensor::CollectSyncTensors(
-      const std::vector<XLATensor>& tensors, const SyncTensorsConfig& config) {
-    tensorflow::profiler::TraceMe activity(
-        "CollectSyncTensors", tensorflow::profiler::TraceMeLevel::kInfo);
-    xla::util::Unique<torch::lazy::BackendDevice> unique_device;
-    for (size_t i = 0; i < tensors.size(); ++i) {
-      unique_device.set(tensors[i].GetDevice());
-    }
-    SyncTensorCollection coll;
-    if (!unique_device) {
-      return coll;
-    }
-
-    std::vector<at::Tensor> at_tensors;
-    std::vector<std::string> devices;
-    std::vector<size_t> at_tensor_index;
-    std::unordered_set<int64_t> tensor_ids;
-    // The force_xla_data controls aliasing compilation, so effectively the same
-    // graph with on/off force_xla_data should not match, hash wise.
-    coll.hash = torch::lazy::MHash(config.force_xla_data);
-    coll.config = config;
-    coll.device = *unique_device;
-    coll.indices.reserve(tensors.size());
-    for (size_t i = 0; i < tensors.size(); ++i) {
-      if (tensor_ids.insert(tensors[i].GetUniqueId()).second &&
-          tensors[i].CurrentXlaData() == nullptr) {
-        torch::lazy::Value ir_value = tensors[i].CurrentIrValue();
-        if (ir_value) {
-          if (ShouldSyncIrValue(ir_value)) {
-            // Add only tensors which need to be synced.
-            coll.hash = torch::lazy::HashCombine(coll.hash, ir_value.hash());
-            coll.indices.push_back(i);
-          }
-        } else if (config.force_xla_data) {
-          // The tensor only has at::Tensor data. We need to queue it for a
-          // device upload.
-          c10::optional<at::Tensor> tensor_data =
-              tensors[i].CurrentTensorData();
-          XLA_CHECK(tensor_data);
-          at_tensors.push_back(*tensor_data);
-          devices.push_back(tensors[i].GetDevice().toString());
-          at_tensor_index.push_back(i);
-        }
-      }
-    }
-    // Mix the hash with the resource domain hashes as compile handles are only
-    // valid within a domain (usually a single host).
-    coll.hash = torch::lazy::MHash(
-        coll.hash, xla::ComputationClient::Get()->GetResourceDomain(
-                       coll.device.toString()));
-    if (!at_tensors.empty()) {
-      XLA_COUNTER("SyncTensorsToData", at_tensors.size());
-      std::vector<torch::lazy::BackendDataPtr> handles =
-          CreateTensorsData(at_tensors, devices);
-      for (size_t i = 0; i < handles.size(); ++i) {
-        // If we are here, it means that the IR torch::lazy::Value for the
-        // tensor is not present. Also, we uploaded the at::Tensor data to the
-        // device, but such data is still valid so we leave it live on the XLA
-        // tensor (so that a following ToTensor() does not need to fetch it from
-        // device).
-        tensors[at_tensor_index[i]].data()->xla_data = std::move(handles[i]);
-      }
-    }
-    TF_VLOG(4) << "Tensors graph hash " << torch::lazy::HashToString(coll.hash)
-               << " on device " << coll.device;
-    return coll;
+  TF_VLOG(4) << "Waiting on device barrier for device " << coll->device
+             << " ...";
+  {
+    XLA_TIMED("DeviceLockWait");
+    coll->unlocker = LockDevices({coll->device});
   }
+  TF_VLOG(4) << "Waiting on device barrier for device " << coll->device
+             << " done!";
+}
 
-  XLATensor::ComputationCache::TypePtr XLATensor::LookupCachedCompile(
-      const std::vector<XLATensor>& tensors, const torch::lazy::hash_t& hash) {
-    ComputationCache::TypePtr cached_computation =
-        GetComputationCache()->Get(hash);
-    if (cached_computation == nullptr) {
-      XLA_COUNTER("UncachedCompile", 1);
-      return nullptr;
-    }
-    TF_VLOG(5) << "Graph hash " << torch::lazy::HashToString(hash)
-               << " is computation hash "
-               << torch::lazy::HashToString(torch::lazy::Hash(
-                      cached_computation->computation->computation()
-                          .proto()
-                          .SerializeAsString()));
-    XLA_COUNTER("CachedCompile", 1);
-    return cached_computation;
-  }
-
-  std::shared_ptr<XLATensor::Async> XLATensor::TryRunCachedSync(
-      std::vector<XLATensor> * tensors, SyncTensorCollection * coll,
-      PostOrderData * po_data) {
-    ComputationCache::TypePtr cached_computation =
-        LookupCachedCompile(*tensors, coll->hash);
-    if (cached_computation == nullptr) {
-      return nullptr;
-    }
-    XLA_VALUE_METRIC("TensorsGraphSize", po_data->post_order.size());
-    TF_VLOG(5) << "TensorsGraphSize=" << po_data->post_order.size();
-
-    return ScheduleSyncTensorsGraph(
-        tensors, coll, std::move(po_data->parameters_data),
-        coll->device.toString(), std::move(cached_computation));
-  }
-
-  XLATensor::ComputationCache* XLATensor::GetComputationCache() {
-    static const size_t kMaxCacheSize =
-        xla::sys_util::GetEnvInt("XLA_COMPILATION_CACHE_SIZE", 1024);
-    static ComputationCache* cache = new ComputationCache(kMaxCacheSize);
-    return cache;
-  }
-
-  XLATensor::PostOrderData XLATensor::RunPostOrder(
-      const std::vector<XLATensor>& tensors, SyncTensorCollection* coll) {
-    tensorflow::profiler::TraceMe activity(
-        "RunPostOrder", tensorflow::profiler::TraceMeLevel::kInfo);
-    absl::Span<const size_t> indices = coll->indices;
-    std::vector<const torch::lazy::Node*> roots;
-    roots.reserve(indices.size());
-    for (auto index : indices) {
-      torch::lazy::Value ir_value = tensors.at(index).CurrentIrValue();
-      roots.push_back(ir_value.node.get());
-    }
-    PostOrderData po_data;
-    po_data.post_order = Util::ComputePostOrder(roots, &po_data.emission_map);
-    std::unordered_map<xla::ComputationClient::Data::OpaqueHandle, size_t>
-        data_handles;
-
-    for (auto node : po_data.post_order) {
-      const DeviceData* device_data = DeviceData::Cast(node);
-      if (device_data != nullptr) {
-        /* Acceptable race condition: HasValue may return false. This is OK
-         * since the conditional barrier is a performance optimization. */
-        if (!device_data->data()->HasValue()) {
-          TensorCollectionBarrier(coll);
-        }
-        xla::ComputationClient::Data::OpaqueHandle handle =
-            device_data->data()->GetHandle();
-        auto it = data_handles.find(handle);
-        if (it != data_handles.end()) {
-          po_data.parameter_sequence.push_back(it->second);
-        } else {
-          po_data.parameter_sequence.push_back(po_data.parameters_data.size());
-          data_handles[handle] = po_data.parameters_data.size();
-          po_data.parameters_data.push_back(device_data->data());
-        }
-      }
-    }
-    return po_data;
-  }
-
-  std::vector<torch::lazy::Value> XLATensor::CollectRoots(
-      const std::vector<XLATensor>& tensors, absl::Span<const size_t> indices) {
-    std::vector<torch::lazy::Value> roots;
-    roots.reserve(indices.size());
-    for (auto index : indices) {
-      roots.push_back(tensors.at(index).CurrentIrValue());
-    }
-    return roots;
-  }
-
-  std::vector<torch::lazy::BackendDataPtr> XLATensor::FetchTensorData(
-      std::vector<XLATensor> * tensors, const SyncTensorsConfig& config,
-      absl::Span<const size_t> indices) {
-    std::vector<torch::lazy::BackendDataPtr> tensors_data;
-    tensors_data.reserve(indices.size());
-    for (auto index : indices) {
-      XLATensor& tensor = (*tensors)[index];
-      // If the config.force_xla_data flag is true, the purpose of this tensor
-      // sync operation is to truncate the IR graph and materialize device data
-      // in place of IR graph, on selected tensors. But since operation will
-      // complete asynchronously, if a tensor does not already have device data,
-      // we need to install a placeholder. Since at this point we hold a lock on
-      // the device where the tensors reside (locks held within the coll
-      // structure, and moved into the async variable), any other operation
-      // trying to access the tensor's device data will have to wait until the
-      // asynchronous operation completes.
-      torch::lazy::BackendDataPtr xla_data = tensor.CurrentXlaData();
-      if (xla_data == nullptr && config.force_xla_data) {
-        const torch::lazy::BackendDevice& tensor_device = tensor.GetDevice();
-        xla::Shape shape = MakeShapeWithDeviceLayout(
-            tensor.shape(), static_cast<XlaDeviceType>(tensor_device.type()));
-        xla_data =
-            WrapXlaData(xla::ComputationClient::Get()->CreateDataPlaceholder(
-                tensor_device.toString(), std::move(shape)));
-        tensor.SetXlaData(xla_data, config.sync_xla_data);
-      }
-      tensors_data.emplace_back(std::move(xla_data));
-    }
-    return tensors_data;
-  }
-
-  std::shared_ptr<XLATensor::Async> XLATensor::ScheduleSyncTensorsGraph(
-      SyncTensorCollection * coll,
-      std::vector<torch::lazy::BackendDataPtr> parameters_data,
-      std::vector<torch::lazy::BackendDataPtr> tensors_data,
-      ComputationCache::TypePtr cached_computation) {
-    tensorflow::profiler::TraceMe activity(
-        "ScheduleSyncTensorsGraph", tensorflow::profiler::TraceMeLevel::kInfo);
-    TensorCollectionBarrier(coll);
-    std::shared_ptr<Async> async = std::make_shared<Async>(
-        coll, std::move(parameters_data), std::move(tensors_data),
-        std::move(cached_computation));
-
-    auto syncfn = [async, hash = coll->hash]() {
-      xla::ComputationClient::ExecuteComputationOptions options;
-      try {
-        TF_VLOG(3) << "Executing IR graph hash "
-                   << torch::lazy::HashToString(hash) << " on device "
-                   << async->device << " ...";
-        auto results = xla::ComputationClient::Get()->ExecuteComputation(
-            *async->cached_computation->computation,
-            UnwrapXlaData(async->parameters_data), async->device, options);
-        TF_VLOG(3) << "Executing IR graph hash "
-                   << torch::lazy::HashToString(hash) << " on device "
-                   << async->device << " done!";
-
-        for (size_t i = 0; i < results.size(); ++i) {
-          if (async->tensors_data[i] != nullptr) {
-            UnwrapXlaData(async->tensors_data[i])->Assign(*results[i]);
-          } else {
-            async->tensors_data[i] = WrapXlaData(std::move(results[i]));
-          }
-        }
-      } catch (...) {
-        // There are two paths of discovery of an exception happening on an
-        // asynchronous task. One happens if the creator of the asynchronous
-        // task explicitly waits for completion, in which case the exception
-        // will be thrown from the Wait() API. Re-throwing the exception below
-        // makes sure this will be captured by the completer function created
-        // below, and surfaced by the Wait() API. But we also need to surface
-        // the exception even in case the caller does not wait, and that is
-        // accomplished by setting the unlockers status. In that case the
-        // exception will be surfaced when the user tries to acquire the device
-        // locks the next time.
-        std::exception_ptr exptr = std::current_exception();
-        for (auto& unlocker : async->unlocker) {
-          unlocker.SetStatus(exptr);
-        }
-        throw;
-      }
-    };
-
-    xla::env::ScheduleIoClosure(async->mwait.Completer(std::move(syncfn)));
-    return async;
-  }
-
-  std::shared_ptr<XLATensor::Async> XLATensor::ScheduleSyncTensorsGraph(
-      std::vector<XLATensor> * tensors, SyncTensorCollection * coll,
-      std::vector<torch::lazy::BackendDataPtr> parameters_data,
-      std::string device, ComputationCache::TypePtr cached_computation) {
-    auto tensors_data = FetchTensorData(tensors, coll->config, coll->indices);
-    return ScheduleSyncTensorsGraph(coll, std::move(parameters_data),
-                                    std::move(tensors_data),
-                                    std::move(cached_computation));
-  }
-
-  void XLATensor::SyncTensorsGraph(std::vector<XLATensor> * tensors,
-                                   absl::Span<const std::string> devices,
-                                   bool wait, bool sync_xla_data) {
-    TF_VLOG(4) << "Trying to sync the value of " << tensors->size()
-               << " tensor(s)";
-    tensorflow::profiler::TraceMe activity(
-        "SyncTensorsGraph", tensorflow::profiler::TraceMeLevel::kInfo);
-    static const bool op_by_op =
-        xla::sys_util::GetEnvBool("XLA_SYNC_TENSORS_OPBYOP", false);
-    SyncTensorsConfig config;
-    config.sync_xla_data = sync_xla_data;
-    if (op_by_op) {
-      OpByOpAsync async = SyncTensorsGraphOpByOp(tensors, devices, config);
-      if (wait) {
-        async.Wait();
-      }
-    } else {
-      auto async = SyncTensorsGraphInternal(tensors, devices, config);
-      if (wait && async != nullptr) {
-        async->mwait.Wait();
-      }
-    }
-  }
-
-  void XLATensor::SyncLiveTensorsGraph(const torch::lazy::BackendDevice* device,
-                                       absl::Span<const std::string> devices,
-                                       bool wait) {
-    tensorflow::profiler::TraceMe activity(
-        "SyncLiveTensorsGraph", tensorflow::profiler::TraceMeLevel::kInfo);
-    auto tensors = GetLiveTensors(device);
-    TF_VLOG(4) << tensors.size() << " live tensors: devices=("
-               << absl::StrJoin(devices, ",") << ")";
-    SyncTensorsGraph(&tensors, devices, wait, /*sync_xla_data=*/true);
-  }
-
-  void XLATensor::MarkStep(const torch::lazy::BackendDevice& device) {
-    XLA_COUNTER("MarkStep", 1);
-    DeviceContextArena::Get()->MarkStep(device);
-    ScopePusher::ResetScopes();
-    g_tls_data.Reset();
-  }
-
-  void XLATensor::WaitDeviceOps(absl::Span<const std::string> devices) {
-    std::set<torch::lazy::BackendDevice> wait_devices;
-    if (!devices.empty()) {
-      for (auto& device_str : devices) {
-        wait_devices.insert(ParseDeviceString(device_str));
-      }
-    } else {
-      for (auto& device_str :
-           xla::ComputationClient::Get()->GetLocalDevices()) {
-        wait_devices.insert(ParseDeviceString(device_str));
-      }
-    }
-    // The LockDevices() API returns a vector of xla::util::ExceptionCleanup
-    // object, which is going to be freed immediately, turning this operation
-    // into a lock barrier.
-    LockDevices(wait_devices);
-  }
-
-  XLATensor::OpByOpAsync XLATensor::SyncTensorsGraphOpByOp(
-      std::vector<XLATensor> * tensors, absl::Span<const std::string> devices,
-      const SyncTensorsConfig& config) {
-    struct Async {
-      explicit Async(SyncTensorCollection coll,
-                     std::vector<torch::lazy::BackendDataPtr> tensors_data,
-                     std::vector<torch::lazy::Value> roots,
-                     absl::Span<const std::string> devices)
-          : coll(std::move(coll)),
-            tensors_data(std::move(tensors_data)),
-            roots(std::move(roots)),
-            devices(devices.begin(), devices.end()) {}
-
-      SyncTensorCollection coll;
-      std::vector<torch::lazy::BackendDataPtr> tensors_data;
-      std::vector<torch::lazy::Value> roots;
-      std::vector<std::string> devices;
-    };
-
-    SyncTensorCollection coll = CollectSyncTensors(*tensors, config);
-    DebugUtil::SaveTensorsGraphInfo("SyncTensorsGraphOpByOp", *tensors,
+std::vector<at::Tensor> XLATensor::GetTensorsOpByOp(
+    std::vector<XLATensor>* tensors) {
+  SyncTensorsConfig config;
+  config.force_xla_data = false;
+  SyncTensorCollection coll = CollectSyncTensors(*tensors, config);
+  std::vector<torch::lazy::BackendDataPtr> async_tensors_data;
+  if (!coll.indices.empty()) {
+    DebugUtil::SaveTensorsGraphInfo("GetTensorsOpByOp", *tensors,
                                     &coll.indices);
 
     std::vector<torch::lazy::Value> roots =
         CollectRoots(*tensors, coll.indices);
-    auto tensors_data = FetchTensorData(tensors, coll.config, coll.indices);
     TensorCollectionBarrier(&coll);
-    auto async = std::make_shared<Async>(
-        std::move(coll), std::move(tensors_data), std::move(roots), devices);
-    auto syncfn = [async]() -> int {
-      try {
-        TF_VLOG(3) << "Executing (OpByOp) IR graph hash "
-                   << torch::lazy::HashToString(async->coll.hash)
-                   << " on device " << async->coll.device << " ...";
-        std::vector<torch::lazy::BackendDataPtr> results =
-            OpByOpExecutor::Get()->Execute(
-                async->roots, async->coll.device.toString(), async->devices);
-        TF_VLOG(3) << "Executing (OpByOp) IR graph hash "
-                   << torch::lazy::HashToString(async->coll.hash)
-                   << " on device " << async->coll.device << " done!";
+    async_tensors_data =
+        OpByOpExecutor::Get()->Execute(roots, coll.device.toString(), {});
+  }
 
-        for (size_t i = 0; i < results.size(); ++i) {
-          if (async->tensors_data[i] != nullptr) {
-            async->tensors_data[i]->Assign(*results[i]);
-          }
-        }
-      } catch (...) {
-        std::exception_ptr exptr = std::current_exception();
-        for (auto& unlocker : async->coll.unlocker) {
-          unlocker.SetStatus(exptr);
-        }
-        throw;
+  std::vector<torch::lazy::BackendDataPtr> tensors_data =
+      GatherTensorsXlaData(*tensors, coll.indices, async_tensors_data);
+  std::vector<xla::Literal> literals =
+      xla::ComputationClient::Get()->TransferFromServer(
+          UnwrapXlaData(tensors_data));
+
+  return FetchTensors(tensors, literals, &coll.indices);
+}
+
+std::vector<at::Tensor> XLATensor::GetTensors(std::vector<XLATensor>* tensors) {
+  TF_VLOG(4) << "Trying to get the value of " << tensors->size()
+             << " tensor(s)";
+  static const bool op_by_op =
+      xla::sys_util::GetEnvBool("XLA_GET_TENSORS_OPBYOP", false);
+  return op_by_op ? GetTensorsOpByOp(tensors) : GetTensorsFused(tensors);
+}
+
+std::vector<at::Tensor> XLATensor::GetTensorsFused(
+    std::vector<XLATensor>* tensors) {
+  SyncTensorsConfig config;
+  config.force_xla_data = false;
+  auto async = SyncTensorsGraphInternal(tensors, {}, config);
+  if (async != nullptr) {
+    async->mwait.Wait();
+  }
+  std::vector<torch::lazy::BackendDataPtr> tensors_data = GatherTensorsXlaData(
+      *tensors, async != nullptr ? async->indices : absl::Span<const size_t>(),
+      async != nullptr ? async->tensors_data
+                       : absl::Span<const torch::lazy::BackendDataPtr>());
+  std::vector<xla::Literal> literals =
+      xla::ComputationClient::Get()->TransferFromServer(
+          UnwrapXlaData(tensors_data));
+  return FetchTensors(tensors, literals,
+                      async != nullptr ? &async->indices : nullptr);
+}
+
+std::vector<at::Tensor> XLATensor::FetchTensors(
+    std::vector<XLATensor>* tensors, absl::Span<const xla::Literal> literals,
+    const std::vector<size_t>* indices) {
+  std::vector<at::Tensor> results;
+  size_t literals_index = 0;
+  size_t sync_index = 0;
+  results.reserve(tensors->size());
+  for (size_t i = 0; i < tensors->size(); ++i) {
+    if (indices != nullptr && sync_index < indices->size() &&
+        i == (*indices)[sync_index]) {
+      results.push_back(MakeTensorFromXlaLiteral(literals[literals_index],
+                                                 (*tensors)[i].dtype()));
+      ++literals_index;
+      ++sync_index;
+    } else {
+      c10::optional<at::Tensor> tensor_data = (*tensors)[i].CurrentTensorData();
+      if (tensor_data) {
+        results.push_back(*tensor_data);
+      } else {
+        XLA_CHECK_LT(literals_index, literals.size());
+        results.push_back(MakeTensorFromXlaLiteral(literals[literals_index],
+                                                   (*tensors)[i].dtype()));
+        ++literals_index;
       }
-      return 0;
-    };
-    OpByOpAsync async_op(std::move(syncfn));
-    return async_op.Schedule();
+    }
+  }
+  return results;
+}
+
+std::vector<XLATensor> XLATensor::CreateTensors(
+    const std::vector<at::Tensor>& tensors,
+    const std::vector<std::string>& devices) {
+  std::vector<torch::lazy::BackendDataPtr> handles =
+      CreateTensorsData(tensors, devices);
+  std::vector<XLATensor> xla_tensors;
+  for (size_t i = 0; i < handles.size(); ++i) {
+    xla_tensors.push_back(
+        Create(std::move(handles[i]), tensors[i].scalar_type()));
+  }
+  return xla_tensors;
+}
+
+torch::lazy::Value XLATensor::CreateTensorNode(torch::lazy::BackendDataPtr data,
+                                               bool read_only) const {
+  UnwrapXlaData(data)->SetInfo(
+      std::make_shared<DeviceDataInfo>(GetUniqueId(), read_only));
+  return torch::lazy::MakeNode<DeviceData>(std::move(data));
+}
+
+std::vector<XLATensor> XLATensor::MakeOutputTensors(
+    torch::lazy::NodePtr node, bool inherit_logical_type) const {
+  std::vector<XLATensor> tensors;
+  tensors.reserve(node->num_outputs());
+  for (size_t i = 0; i < node->num_outputs(); ++i) {
+    if (inherit_logical_type) {
+      tensors.push_back(CreateFrom(torch::lazy::Value(node, i)));
+    } else {
+      tensors.push_back(CreateFrom(torch::lazy::Value(node, i),
+                                   /*logical_element_type=*/c10::nullopt));
+    }
+  }
+  return tensors;
+}
+
+XLATensor XLATensor::CopyTensorToDevice(
+    const torch::lazy::BackendDevice& device) {
+  // TODO: This can be optimized via proper XRT/XLA computation.
+  return Create(ToTensor(/*detached=*/true), device);
+}
+
+torch::lazy::Value XLATensor::MaybeCastIrValue(
+    torch::lazy::Value ir_value, const torch::lazy::BackendDevice& device,
+    c10::optional<at::ScalarType> logical_element_type) const {
+  if (!logical_element_type) {
+    logical_element_type = dtype_optional();
+  }
+  if (logical_element_type &&
+      RequiresRawTypeCasting(*logical_element_type, &device)) {
+    ir_value = torch::lazy::MakeNode<Cast>(ir_value, *logical_element_type);
+  }
+  return ir_value;
+}
+
+XLATensor XLATensor::CreateFrom(torch::lazy::Value ir_value) const {
+  ir_value = MaybeCastIrValue(std::move(ir_value), GetDevice(),
+                              /*logical_element_type=*/c10::nullopt);
+  return Create(std::move(ir_value), GetDevice(), dtype_optional());
+}
+
+XLATensor XLATensor::CreateFrom(
+    torch::lazy::Value ir_value,
+    const torch::lazy::BackendDevice& device) const {
+  ir_value = MaybeCastIrValue(std::move(ir_value), device,
+                              /*logical_element_type=*/c10::nullopt);
+  return Create(std::move(ir_value), device, dtype_optional());
+}
+
+XLATensor XLATensor::CreateFrom(torch::lazy::Value ir_value,
+                                at::ScalarType logical_element_type) const {
+  ir_value =
+      MaybeCastIrValue(std::move(ir_value), GetDevice(), logical_element_type);
+  return Create(std::move(ir_value), GetDevice(), logical_element_type);
+}
+
+XLATensor XLATensor::CreateFrom(
+    torch::lazy::Value ir_value,
+    c10::optional<at::ScalarType> logical_element_type_opt) const {
+  ir_value = MaybeCastIrValue(std::move(ir_value), GetDevice(),
+                              logical_element_type_opt);
+  return Create(std::move(ir_value), GetDevice(), logical_element_type_opt);
+}
+
+XLATensor XLATensor::CreateFrom(torch::lazy::Value ir_value,
+                                const torch::lazy::BackendDevice& device,
+                                at::ScalarType logical_element_type) const {
+  ir_value =
+      MaybeCastIrValue(std::move(ir_value), device, logical_element_type);
+  return Create(std::move(ir_value), device, logical_element_type);
+}
+
+void XLATensor::ApplyPendingGraph() {
+  DeviceBarrier(GetDevice());
+  // This method is called to ensure that the tensor data is available on
+  // device, so that a call to CurrentXlaData() returns a valid pointer.
+  if (CurrentXlaData() == nullptr) {
+    std::vector<XLATensor> tensors({*this});
+    SyncTensorsGraph(&tensors, {}, /*wait=*/true, /*sync_xla_data=*/false);
+  }
+}
+
+void XLATensor::ApplyEagerSync(std::vector<XLATensor>& tensors) {
+  SyncTensorsGraph(&tensors, {}, /*wait=*/false, /*sync_xla_data=*/false);
+}
+
+XLATensor::SyncTensorCollection XLATensor::CollectSyncTensors(
+    const std::vector<XLATensor>& tensors, const SyncTensorsConfig& config) {
+  tensorflow::profiler::TraceMe activity(
+      "CollectSyncTensors", tensorflow::profiler::TraceMeLevel::kInfo);
+  xla::util::Unique<torch::lazy::BackendDevice> unique_device;
+  for (size_t i = 0; i < tensors.size(); ++i) {
+    unique_device.set(tensors[i].GetDevice());
+  }
+  SyncTensorCollection coll;
+  if (!unique_device) {
+    return coll;
   }
 
-  void XLATensor::BuildInputOutputAliases(const std::vector<XLATensor>& tensors,
-                                          absl::Span<const size_t> indices,
-                                          LoweringContext* lowering_ctx) {
-    std::unordered_map<int64_t, size_t> output_tensor_id_map;
-    for (size_t i = 0; i < indices.size(); ++i) {
-      size_t tensor_index = indices[i];
-      int64_t tensor_id = tensors[tensor_index].GetUniqueId();
-      output_tensor_id_map[tensor_id] = i;
+  std::vector<at::Tensor> at_tensors;
+  std::vector<std::string> devices;
+  std::vector<size_t> at_tensor_index;
+  std::unordered_set<int64_t> tensor_ids;
+  // The force_xla_data controls aliasing compilation, so effectively the same
+  // graph with on/off force_xla_data should not match, hash wise.
+  coll.hash = torch::lazy::MHash(config.force_xla_data);
+  coll.config = config;
+  coll.device = *unique_device;
+  coll.indices.reserve(tensors.size());
+  for (size_t i = 0; i < tensors.size(); ++i) {
+    if (tensor_ids.insert(tensors[i].GetUniqueId()).second &&
+        tensors[i].CurrentXlaData() == nullptr) {
+      torch::lazy::Value ir_value = tensors[i].CurrentIrValue();
+      if (ir_value) {
+        if (ShouldSyncIrValue(ir_value)) {
+          // Add only tensors which need to be synced.
+          coll.hash = torch::lazy::HashCombine(coll.hash, ir_value.hash());
+          coll.indices.push_back(i);
+        }
+      } else if (config.force_xla_data) {
+        // The tensor only has at::Tensor data. We need to queue it for a
+        // device upload.
+        c10::optional<at::Tensor> tensor_data = tensors[i].CurrentTensorData();
+        XLA_CHECK(tensor_data);
+        at_tensors.push_back(*tensor_data);
+        devices.push_back(tensors[i].GetDevice().toString());
+        at_tensor_index.push_back(i);
+      }
     }
-    // TODO we need xla_shape here.
-    const std::vector<xla::ComputationClient::DataPtr>& parameters_data =
-        UnwrapXlaData(lowering_ctx->GetParametersData());
-    std::vector<ssize_t> alias_map(indices.size(), -1);
-    for (size_t i = 0; i < parameters_data.size(); ++i) {
-      DeviceDataInfo* data_info =
-          dynamic_cast<DeviceDataInfo*>(parameters_data[i]->info());
-      if (data_info != nullptr && !data_info->read_only) {
-        auto it = output_tensor_id_map.find(data_info->tensor_id);
-        if (it != output_tensor_id_map.end()) {
-          size_t output_index = it->second;
-          xla::XlaOp root = lowering_ctx->GetResult(output_index);
-          const xla::Shape& root_shape = XlaHelpers::ShapeOfXlaOp(root);
-          if (parameters_data[i]->shape() == root_shape &&
-              alias_map[output_index] < 0) {
-            lowering_ctx->builder()->SetUpAlias(
-                {static_cast<int64_t>(output_index)}, i, {});
-            alias_map[output_index] = i;
+  }
+  // Mix the hash with the resource domain hashes as compile handles are only
+  // valid within a domain (usually a single host).
+  coll.hash = torch::lazy::MHash(
+      coll.hash,
+      xla::ComputationClient::Get()->GetResourceDomain(coll.device.toString()));
+  if (!at_tensors.empty()) {
+    XLA_COUNTER("SyncTensorsToData", at_tensors.size());
+    std::vector<torch::lazy::BackendDataPtr> handles =
+        CreateTensorsData(at_tensors, devices);
+    for (size_t i = 0; i < handles.size(); ++i) {
+      // If we are here, it means that the IR torch::lazy::Value for the
+      // tensor is not present. Also, we uploaded the at::Tensor data to the
+      // device, but such data is still valid so we leave it live on the XLA
+      // tensor (so that a following ToTensor() does not need to fetch it from
+      // device).
+      tensors[at_tensor_index[i]].data()->xla_data = std::move(handles[i]);
+    }
+  }
+  TF_VLOG(4) << "Tensors graph hash " << torch::lazy::HashToString(coll.hash)
+             << " on device " << coll.device;
+  return coll;
+}
 
-            TF_VLOG(6) << "Aliased paramter " << i << " with output "
-                       << output_index << ": " << parameters_data[i]->shape();
-          }
+XLATensor::ComputationCache::TypePtr XLATensor::LookupCachedCompile(
+    const std::vector<XLATensor>& tensors, const torch::lazy::hash_t& hash) {
+  ComputationCache::TypePtr cached_computation =
+      GetComputationCache()->Get(hash);
+  if (cached_computation == nullptr) {
+    XLA_COUNTER("UncachedCompile", 1);
+    return nullptr;
+  }
+  TF_VLOG(5) << "Graph hash " << torch::lazy::HashToString(hash)
+             << " is computation hash "
+             << torch::lazy::HashToString(torch::lazy::Hash(
+                    cached_computation->computation->computation()
+                        .proto()
+                        .SerializeAsString()));
+  XLA_COUNTER("CachedCompile", 1);
+  return cached_computation;
+}
+
+std::shared_ptr<XLATensor::Async> XLATensor::TryRunCachedSync(
+    std::vector<XLATensor>* tensors, SyncTensorCollection* coll,
+    PostOrderData* po_data) {
+  ComputationCache::TypePtr cached_computation =
+      LookupCachedCompile(*tensors, coll->hash);
+  if (cached_computation == nullptr) {
+    return nullptr;
+  }
+  XLA_VALUE_METRIC("TensorsGraphSize", po_data->post_order.size());
+  TF_VLOG(5) << "TensorsGraphSize=" << po_data->post_order.size();
+
+  return ScheduleSyncTensorsGraph(
+      tensors, coll, std::move(po_data->parameters_data),
+      coll->device.toString(), std::move(cached_computation));
+}
+
+XLATensor::ComputationCache* XLATensor::GetComputationCache() {
+  static const size_t kMaxCacheSize =
+      xla::sys_util::GetEnvInt("XLA_COMPILATION_CACHE_SIZE", 1024);
+  static ComputationCache* cache = new ComputationCache(kMaxCacheSize);
+  return cache;
+}
+
+XLATensor::PostOrderData XLATensor::RunPostOrder(
+    const std::vector<XLATensor>& tensors, SyncTensorCollection* coll) {
+  tensorflow::profiler::TraceMe activity(
+      "RunPostOrder", tensorflow::profiler::TraceMeLevel::kInfo);
+  absl::Span<const size_t> indices = coll->indices;
+  std::vector<const torch::lazy::Node*> roots;
+  roots.reserve(indices.size());
+  for (auto index : indices) {
+    torch::lazy::Value ir_value = tensors.at(index).CurrentIrValue();
+    roots.push_back(ir_value.node.get());
+  }
+  PostOrderData po_data;
+  po_data.post_order = Util::ComputePostOrder(roots, &po_data.emission_map);
+  std::unordered_map<xla::ComputationClient::Data::OpaqueHandle, size_t>
+      data_handles;
+
+  for (auto node : po_data.post_order) {
+    const DeviceData* device_data = DeviceData::Cast(node);
+    if (device_data != nullptr) {
+      /* Acceptable race condition: HasValue may return false. This is OK
+       * since the conditional barrier is a performance optimization. */
+      if (!device_data->data()->HasValue()) {
+        TensorCollectionBarrier(coll);
+      }
+      xla::ComputationClient::Data::OpaqueHandle handle =
+          device_data->data()->GetHandle();
+      auto it = data_handles.find(handle);
+      if (it != data_handles.end()) {
+        po_data.parameter_sequence.push_back(it->second);
+      } else {
+        po_data.parameter_sequence.push_back(po_data.parameters_data.size());
+        data_handles[handle] = po_data.parameters_data.size();
+        po_data.parameters_data.push_back(device_data->data());
+      }
+    }
+  }
+  return po_data;
+}
+
+std::vector<torch::lazy::Value> XLATensor::CollectRoots(
+    const std::vector<XLATensor>& tensors, absl::Span<const size_t> indices) {
+  std::vector<torch::lazy::Value> roots;
+  roots.reserve(indices.size());
+  for (auto index : indices) {
+    roots.push_back(tensors.at(index).CurrentIrValue());
+  }
+  return roots;
+}
+
+std::vector<torch::lazy::BackendDataPtr> XLATensor::FetchTensorData(
+    std::vector<XLATensor>* tensors, const SyncTensorsConfig& config,
+    absl::Span<const size_t> indices) {
+  std::vector<torch::lazy::BackendDataPtr> tensors_data;
+  tensors_data.reserve(indices.size());
+  for (auto index : indices) {
+    XLATensor& tensor = (*tensors)[index];
+    // If the config.force_xla_data flag is true, the purpose of this tensor
+    // sync operation is to truncate the IR graph and materialize device data
+    // in place of IR graph, on selected tensors. But since operation will
+    // complete asynchronously, if a tensor does not already have device data,
+    // we need to install a placeholder. Since at this point we hold a lock on
+    // the device where the tensors reside (locks held within the coll
+    // structure, and moved into the async variable), any other operation
+    // trying to access the tensor's device data will have to wait until the
+    // asynchronous operation completes.
+    torch::lazy::BackendDataPtr xla_data = tensor.CurrentXlaData();
+    if (xla_data == nullptr && config.force_xla_data) {
+      const torch::lazy::BackendDevice& tensor_device = tensor.GetDevice();
+      xla::Shape shape = MakeShapeWithDeviceLayout(
+          tensor.shape(), static_cast<XlaDeviceType>(tensor_device.type()));
+      xla_data =
+          WrapXlaData(xla::ComputationClient::Get()->CreateDataPlaceholder(
+              tensor_device.toString(), std::move(shape)));
+      tensor.SetXlaData(xla_data, config.sync_xla_data);
+    }
+    tensors_data.emplace_back(std::move(xla_data));
+  }
+  return tensors_data;
+}
+
+std::shared_ptr<XLATensor::Async> XLATensor::ScheduleSyncTensorsGraph(
+    SyncTensorCollection* coll,
+    std::vector<torch::lazy::BackendDataPtr> parameters_data,
+    std::vector<torch::lazy::BackendDataPtr> tensors_data,
+    ComputationCache::TypePtr cached_computation) {
+  tensorflow::profiler::TraceMe activity(
+      "ScheduleSyncTensorsGraph", tensorflow::profiler::TraceMeLevel::kInfo);
+  TensorCollectionBarrier(coll);
+  std::shared_ptr<Async> async = std::make_shared<Async>(
+      coll, std::move(parameters_data), std::move(tensors_data),
+      std::move(cached_computation));
+
+  auto syncfn = [async, hash = coll->hash]() {
+    xla::ComputationClient::ExecuteComputationOptions options;
+    try {
+      TF_VLOG(3) << "Executing IR graph hash "
+                 << torch::lazy::HashToString(hash) << " on device "
+                 << async->device << " ...";
+      auto results = xla::ComputationClient::Get()->ExecuteComputation(
+          *async->cached_computation->computation,
+          UnwrapXlaData(async->parameters_data), async->device, options);
+      TF_VLOG(3) << "Executing IR graph hash "
+                 << torch::lazy::HashToString(hash) << " on device "
+                 << async->device << " done!";
+
+      for (size_t i = 0; i < results.size(); ++i) {
+        if (async->tensors_data[i] != nullptr) {
+          UnwrapXlaData(async->tensors_data[i])->Assign(*results[i]);
+        } else {
+          async->tensors_data[i] = WrapXlaData(std::move(results[i]));
+        }
+      }
+    } catch (...) {
+      // There are two paths of discovery of an exception happening on an
+      // asynchronous task. One happens if the creator of the asynchronous
+      // task explicitly waits for completion, in which case the exception
+      // will be thrown from the Wait() API. Re-throwing the exception below
+      // makes sure this will be captured by the completer function created
+      // below, and surfaced by the Wait() API. But we also need to surface
+      // the exception even in case the caller does not wait, and that is
+      // accomplished by setting the unlockers status. In that case the
+      // exception will be surfaced when the user tries to acquire the device
+      // locks the next time.
+      std::exception_ptr exptr = std::current_exception();
+      for (auto& unlocker : async->unlocker) {
+        unlocker.SetStatus(exptr);
+      }
+      throw;
+    }
+  };
+
+  xla::env::ScheduleIoClosure(async->mwait.Completer(std::move(syncfn)));
+  return async;
+}
+
+std::shared_ptr<XLATensor::Async> XLATensor::ScheduleSyncTensorsGraph(
+    std::vector<XLATensor>* tensors, SyncTensorCollection* coll,
+    std::vector<torch::lazy::BackendDataPtr> parameters_data,
+    std::string device, ComputationCache::TypePtr cached_computation) {
+  auto tensors_data = FetchTensorData(tensors, coll->config, coll->indices);
+  return ScheduleSyncTensorsGraph(coll, std::move(parameters_data),
+                                  std::move(tensors_data),
+                                  std::move(cached_computation));
+}
+
+void XLATensor::SyncTensorsGraph(std::vector<XLATensor>* tensors,
+                                 absl::Span<const std::string> devices,
+                                 bool wait, bool sync_xla_data) {
+  TF_VLOG(4) << "Trying to sync the value of " << tensors->size()
+             << " tensor(s)";
+  tensorflow::profiler::TraceMe activity(
+      "SyncTensorsGraph", tensorflow::profiler::TraceMeLevel::kInfo);
+  static const bool op_by_op =
+      xla::sys_util::GetEnvBool("XLA_SYNC_TENSORS_OPBYOP", false);
+  SyncTensorsConfig config;
+  config.sync_xla_data = sync_xla_data;
+  if (op_by_op) {
+    OpByOpAsync async = SyncTensorsGraphOpByOp(tensors, devices, config);
+    if (wait) {
+      async.Wait();
+    }
+  } else {
+    auto async = SyncTensorsGraphInternal(tensors, devices, config);
+    if (wait && async != nullptr) {
+      async->mwait.Wait();
+    }
+  }
+}
+
+void XLATensor::SyncLiveTensorsGraph(const torch::lazy::BackendDevice* device,
+                                     absl::Span<const std::string> devices,
+                                     bool wait) {
+  tensorflow::profiler::TraceMe activity(
+      "SyncLiveTensorsGraph", tensorflow::profiler::TraceMeLevel::kInfo);
+  auto tensors = GetLiveTensors(device);
+  TF_VLOG(4) << tensors.size() << " live tensors: devices=("
+             << absl::StrJoin(devices, ",") << ")";
+  SyncTensorsGraph(&tensors, devices, wait, /*sync_xla_data=*/true);
+}
+
+void XLATensor::MarkStep(const torch::lazy::BackendDevice& device) {
+  XLA_COUNTER("MarkStep", 1);
+  DeviceContextArena::Get()->MarkStep(device);
+  ScopePusher::ResetScopes();
+  g_tls_data.Reset();
+}
+
+void XLATensor::WaitDeviceOps(absl::Span<const std::string> devices) {
+  std::set<torch::lazy::BackendDevice> wait_devices;
+  if (!devices.empty()) {
+    for (auto& device_str : devices) {
+      wait_devices.insert(ParseDeviceString(device_str));
+    }
+  } else {
+    for (auto& device_str : xla::ComputationClient::Get()->GetLocalDevices()) {
+      wait_devices.insert(ParseDeviceString(device_str));
+    }
+  }
+  // The LockDevices() API returns a vector of xla::util::ExceptionCleanup
+  // object, which is going to be freed immediately, turning this operation
+  // into a lock barrier.
+  LockDevices(wait_devices);
+}
+
+XLATensor::OpByOpAsync XLATensor::SyncTensorsGraphOpByOp(
+    std::vector<XLATensor>* tensors, absl::Span<const std::string> devices,
+    const SyncTensorsConfig& config) {
+  struct Async {
+    explicit Async(SyncTensorCollection coll,
+                   std::vector<torch::lazy::BackendDataPtr> tensors_data,
+                   std::vector<torch::lazy::Value> roots,
+                   absl::Span<const std::string> devices)
+        : coll(std::move(coll)),
+          tensors_data(std::move(tensors_data)),
+          roots(std::move(roots)),
+          devices(devices.begin(), devices.end()) {}
+
+    SyncTensorCollection coll;
+    std::vector<torch::lazy::BackendDataPtr> tensors_data;
+    std::vector<torch::lazy::Value> roots;
+    std::vector<std::string> devices;
+  };
+
+  SyncTensorCollection coll = CollectSyncTensors(*tensors, config);
+  DebugUtil::SaveTensorsGraphInfo("SyncTensorsGraphOpByOp", *tensors,
+                                  &coll.indices);
+
+  std::vector<torch::lazy::Value> roots = CollectRoots(*tensors, coll.indices);
+  auto tensors_data = FetchTensorData(tensors, coll.config, coll.indices);
+  TensorCollectionBarrier(&coll);
+  auto async = std::make_shared<Async>(std::move(coll), std::move(tensors_data),
+                                       std::move(roots), devices);
+  auto syncfn = [async]() -> int {
+    try {
+      TF_VLOG(3) << "Executing (OpByOp) IR graph hash "
+                 << torch::lazy::HashToString(async->coll.hash) << " on device "
+                 << async->coll.device << " ...";
+      std::vector<torch::lazy::BackendDataPtr> results =
+          OpByOpExecutor::Get()->Execute(
+              async->roots, async->coll.device.toString(), async->devices);
+      TF_VLOG(3) << "Executing (OpByOp) IR graph hash "
+                 << torch::lazy::HashToString(async->coll.hash) << " on device "
+                 << async->coll.device << " done!";
+
+      for (size_t i = 0; i < results.size(); ++i) {
+        if (async->tensors_data[i] != nullptr) {
+          async->tensors_data[i]->Assign(*results[i]);
+        }
+      }
+    } catch (...) {
+      std::exception_ptr exptr = std::current_exception();
+      for (auto& unlocker : async->coll.unlocker) {
+        unlocker.SetStatus(exptr);
+      }
+      throw;
+    }
+    return 0;
+  };
+  OpByOpAsync async_op(std::move(syncfn));
+  return async_op.Schedule();
+}
+
+void XLATensor::BuildInputOutputAliases(const std::vector<XLATensor>& tensors,
+                                        absl::Span<const size_t> indices,
+                                        LoweringContext* lowering_ctx) {
+  std::unordered_map<int64_t, size_t> output_tensor_id_map;
+  for (size_t i = 0; i < indices.size(); ++i) {
+    size_t tensor_index = indices[i];
+    int64_t tensor_id = tensors[tensor_index].GetUniqueId();
+    output_tensor_id_map[tensor_id] = i;
+  }
+  // TODO we need xla_shape here.
+  const std::vector<xla::ComputationClient::DataPtr>& parameters_data =
+      UnwrapXlaData(lowering_ctx->GetParametersData());
+  std::vector<ssize_t> alias_map(indices.size(), -1);
+  for (size_t i = 0; i < parameters_data.size(); ++i) {
+    DeviceDataInfo* data_info =
+        dynamic_cast<DeviceDataInfo*>(parameters_data[i]->info());
+    if (data_info != nullptr && !data_info->read_only) {
+      auto it = output_tensor_id_map.find(data_info->tensor_id);
+      if (it != output_tensor_id_map.end()) {
+        size_t output_index = it->second;
+        xla::XlaOp root = lowering_ctx->GetResult(output_index);
+        const xla::Shape& root_shape = XlaHelpers::ShapeOfXlaOp(root);
+        if (parameters_data[i]->shape() == root_shape &&
+            alias_map[output_index] < 0) {
+          lowering_ctx->builder()->SetUpAlias(
+              {static_cast<int64_t>(output_index)}, i, {});
+          alias_map[output_index] = i;
+
+          TF_VLOG(6) << "Aliased paramter " << i << " with output "
+                     << output_index << ": " << parameters_data[i]->shape();
         }
       }
     }
-    XLA_VALUE_METRIC("InputOutputAliasCount", alias_map.size());
+  }
+  XLA_VALUE_METRIC("InputOutputAliasCount", alias_map.size());
+}
+
+XLATensor::CompilationResult XLATensor::Compile(
+    const std::vector<XLATensor>& tensors,
+    absl::Span<const std::string> devices, const SyncTensorCollection& coll,
+    PostOrderData* po_data) {
+  tensorflow::profiler::TraceMe activity(
+      [&] {
+        return tensorflow::profiler::TraceMeEncode(
+            "XLATensor::Compile",
+            {{"graph_hash", torch::lazy::HashToString(coll.hash)}});
+      },
+      tensorflow::profiler::TraceMeLevel::kInfo);
+  static const bool enable_aliasing =
+      xla::sys_util::GetEnvBool("XLA_ENABLE_PARAM_ALIASING", true);
+  LoweringContext lowering_ctx("SyncTensorsGraph", coll.device,
+                               po_data->post_order,
+                               std::move(po_data->emission_map));
+  for (auto index : coll.indices) {
+    torch::lazy::Value ir_value = tensors[index].CurrentIrValue();
+    xla::XlaOp root = lowering_ctx.GetOutputOp(
+        torch::lazy::Output(ir_value.node.get(), ir_value.index));
+    lowering_ctx.AddResult(root);
+  }
+  if (enable_aliasing && coll.config.sync_xla_data) {
+    // We can only alias at the step barrier, when force_xla_data is true.
+    // Consider the case:
+    //   1. Tensor A(DEVICE_DATA)
+    //   2. Tensor B = A + 0.9
+    //   3. A += 0.4
+    // If we activate aliasing for A's graph, and we do:
+    //   print(A)
+    //   print(A)
+    // The first print will update DEVICE_DATA' with DEVICE_DATA+0.4, and the
+    // second print will again update DEVICE_DATA" with DEVICE_DATA'+0.4, which
+    // will lead to incorrect results.
+    // We cannot normally turn A's state into DEVICE_DATA, as if any of the
+    // sources is a view, this will not lead to correct results (as A's value
+    // taken at different times need to reflect view source changes):
+    //   1. Tensor A = some_graph_with_view_source(V)
+    //   2. print(A)
+    //   3. V += 1
+    //   4. print(A)
+    // The second print should reflect the new value due to V's changes.
+    // Also in the first example, unless we are doing a step barrier and hence
+    // include all live tensors, if the B value is not part of the graph, it
+    // will later fetch the new value of A, which is incorrect.
+    // But, when we issue a step barrier (force_xla_data == true) we have to
+    // turn everything into DEVICE_DATA, so we can activate aliasing.
+    BuildInputOutputAliases(tensors, coll.indices, &lowering_ctx);
   }
 
-  XLATensor::CompilationResult XLATensor::Compile(
-      const std::vector<XLATensor>& tensors,
-      absl::Span<const std::string> devices, const SyncTensorCollection& coll,
-      PostOrderData* po_data) {
-    tensorflow::profiler::TraceMe activity(
-        [&] {
-          return tensorflow::profiler::TraceMeEncode(
-              "XLATensor::Compile",
-              {{"graph_hash", torch::lazy::HashToString(coll.hash)}});
-        },
-        tensorflow::profiler::TraceMeLevel::kInfo);
-    static const bool enable_aliasing =
-        xla::sys_util::GetEnvBool("XLA_ENABLE_PARAM_ALIASING", true);
-    LoweringContext lowering_ctx("SyncTensorsGraph", coll.device,
-                                 po_data->post_order,
-                                 std::move(po_data->emission_map));
-    for (auto index : coll.indices) {
-      torch::lazy::Value ir_value = tensors[index].CurrentIrValue();
-      xla::XlaOp root = lowering_ctx.GetOutputOp(
-          torch::lazy::Output(ir_value.node.get(), ir_value.index));
-      lowering_ctx.AddResult(root);
-    }
-    if (enable_aliasing && coll.config.sync_xla_data) {
-      // We can only alias at the step barrier, when force_xla_data is true.
-      // Consider the case:
-      //   1. Tensor A(DEVICE_DATA)
-      //   2. Tensor B = A + 0.9
-      //   3. A += 0.4
-      // If we activate aliasing for A's graph, and we do:
-      //   print(A)
-      //   print(A)
-      // The first print will update DEVICE_DATA' with DEVICE_DATA+0.4, and the
-      // second print will again update DEVICE_DATA" with DEVICE_DATA'+0.4,
-      // which will lead to incorrect results. We cannot normally turn A's state
-      // into DEVICE_DATA, as if any of the sources is a view, this will not
-      // lead to correct results (as A's value taken at different times need to
-      // reflect view source changes):
-      //   1. Tensor A = some_graph_with_view_source(V)
-      //   2. print(A)
-      //   3. V += 1
-      //   4. print(A)
-      // The second print should reflect the new value due to V's changes.
-      // Also in the first example, unless we are doing a step barrier and hence
-      // include all live tensors, if the B value is not part of the graph, it
-      // will later fetch the new value of A, which is incorrect.
-      // But, when we issue a step barrier (force_xla_data == true) we have to
-      // turn everything into DEVICE_DATA, so we can activate aliasing.
-      BuildInputOutputAliases(tensors, coll.indices, &lowering_ctx);
-    }
+  xla::XlaComputation computation = ConsumeValue(lowering_ctx.BuildXla());
+  xla::ProgramShape program_shape = ConsumeValue(computation.GetProgramShape());
+  xla::Shape shape = MakeShapeWithDeviceLayout(
+      program_shape.result(), static_cast<XlaDeviceType>(coll.device.type()));
 
-    xla::XlaComputation computation = ConsumeValue(lowering_ctx.BuildXla());
-    xla::ProgramShape program_shape =
-        ConsumeValue(computation.GetProgramShape());
-    xla::Shape shape = MakeShapeWithDeviceLayout(
-        program_shape.result(), static_cast<XlaDeviceType>(coll.device.type()));
+  std::vector<xla::ComputationClient::CompileInstance> instances;
+  instances.push_back({std::move(computation), coll.device.toString(),
+                       xla::ComputationClient::Get()->GetCompilationDevices(
+                           coll.device.toString(), devices),
+                       &shape});
 
-    std::vector<xla::ComputationClient::CompileInstance> instances;
-    instances.push_back({std::move(computation), coll.device.toString(),
-                         xla::ComputationClient::Get()->GetCompilationDevices(
-                             coll.device.toString(), devices),
-                         &shape});
+  TF_VLOG(3) << "Compiling IR graph hash "
+             << torch::lazy::HashToString(coll.hash) << " on device "
+             << coll.device << " ...";
+  std::vector<std::shared_ptr<xla::ComputationClient::Computation>>
+      computations =
+          xla::ComputationClient::Get()->Compile(std::move(instances));
+  TF_VLOG(3) << "Compiling IR graph hash "
+             << torch::lazy::HashToString(coll.hash) << " on device "
+             << coll.device << " done!";
+  TF_VLOG(5)
+      << "Graph hash " << torch::lazy::HashToString(coll.hash)
+      << " is computation hash "
+      << torch::lazy::HashToString(torch::lazy::Hash(
+             computations.front()->computation().proto().SerializeAsString()));
+  XLA_CHECK_EQ(program_shape.parameters_size(),
+               po_data->parameters_data.size());
 
-    TF_VLOG(3) << "Compiling IR graph hash "
-               << torch::lazy::HashToString(coll.hash) << " on device "
-               << coll.device << " ...";
-    std::vector<std::shared_ptr<xla::ComputationClient::Computation>>
-        computations =
-            xla::ComputationClient::Get()->Compile(std::move(instances));
-    TF_VLOG(3) << "Compiling IR graph hash "
-               << torch::lazy::HashToString(coll.hash) << " on device "
-               << coll.device << " done!";
-    TF_VLOG(5) << "Graph hash " << torch::lazy::HashToString(coll.hash)
-               << " is computation hash "
-               << torch::lazy::HashToString(
-                      torch::lazy::Hash(computations.front()
-                                            ->computation()
-                                            .proto()
-                                            .SerializeAsString()));
-    XLA_CHECK_EQ(program_shape.parameters_size(),
-                 po_data->parameters_data.size());
+  return {/*device=*/coll.device,
+          /*emitted_nodes=*/lowering_ctx.GetEmittedNodeCount(),
+          /*computation=*/std::move(computations.front()),
+          /*parameters_data=*/std::move(po_data->parameters_data)};
+}
 
-    return {/*device=*/coll.device,
-            /*emitted_nodes=*/lowering_ctx.GetEmittedNodeCount(),
-            /*computation=*/std::move(computations.front()),
-            /*parameters_data=*/std::move(po_data->parameters_data)};
+std::shared_ptr<XLATensor::Async> XLATensor::SyncTensorsGraphInternal(
+    std::vector<XLATensor>* tensors, absl::Span<const std::string> devices,
+    const SyncTensorsConfig& config) {
+  tensorflow::profiler::TraceMe activity(
+      "SyncTensorsGraphInternal", tensorflow::profiler::TraceMeLevel::kInfo);
+  SyncTensorCollection coll = CollectSyncTensors(*tensors, config);
+  if (coll.indices.empty()) {
+    /* Enure previous execution is complete before exiting this
+     * function */
+    TensorCollectionBarrier(&coll);
+    return nullptr;
+  }
+  PostOrderData po_data = RunPostOrder(*tensors, &coll);
+  DebugUtil::SaveTensorsGraphInfo("ScheduleSyncTensorsGraph", *tensors,
+                                  &coll.indices);
+
+  coll.hash = torch::lazy::HashCombine(
+      coll.hash, torch::lazy::Hash(po_data.parameter_sequence));
+  TF_VLOG(4) << "Parameter sequence graph hash "
+             << torch::lazy::HashToString(coll.hash);
+  std::shared_ptr<Async> async = TryRunCachedSync(tensors, &coll, &po_data);
+  if (async != nullptr) {
+    return async;
   }
 
-  std::shared_ptr<XLATensor::Async> XLATensor::SyncTensorsGraphInternal(
-      std::vector<XLATensor> * tensors, absl::Span<const std::string> devices,
-      const SyncTensorsConfig& config) {
-    tensorflow::profiler::TraceMe activity(
-        "SyncTensorsGraphInternal", tensorflow::profiler::TraceMeLevel::kInfo);
-    SyncTensorCollection coll = CollectSyncTensors(*tensors, config);
-    if (coll.indices.empty()) {
-      /* Enure previous execution is complete before exiting this
-       * function */
-      TensorCollectionBarrier(&coll);
-      return nullptr;
-    }
-    PostOrderData po_data = RunPostOrder(*tensors, &coll);
-    DebugUtil::SaveTensorsGraphInfo("ScheduleSyncTensorsGraph", *tensors,
-                                    &coll.indices);
+  CompilationResult compile_result = Compile(*tensors, devices, coll, &po_data);
 
-    coll.hash = torch::lazy::HashCombine(
-        coll.hash, torch::lazy::Hash(po_data.parameter_sequence));
-    TF_VLOG(4) << "Parameter sequence graph hash "
-               << torch::lazy::HashToString(coll.hash);
-    std::shared_ptr<Async> async = TryRunCachedSync(tensors, &coll, &po_data);
-    if (async != nullptr) {
-      return async;
-    }
+  XLA_VALUE_METRIC("TensorsGraphSize", compile_result.emitted_nodes);
+  TF_VLOG(5) << "TensorsGraphSize=" << compile_result.emitted_nodes;
 
-    CompilationResult compile_result =
-        Compile(*tensors, devices, coll, &po_data);
+  auto cached_computation = std::make_shared<CachedComputation>(
+      std::move(compile_result.computation));
+  GetComputationCache()->Add(coll.hash, cached_computation);
 
-    XLA_VALUE_METRIC("TensorsGraphSize", compile_result.emitted_nodes);
-    TF_VLOG(5) << "TensorsGraphSize=" << compile_result.emitted_nodes;
+  return ScheduleSyncTensorsGraph(
+      tensors, &coll, std::move(compile_result.parameters_data),
+      compile_result.device.toString(), std::move(cached_computation));
+}
 
-    auto cached_computation = std::make_shared<CachedComputation>(
-        std::move(compile_result.computation));
-    GetComputationCache()->Add(coll.hash, cached_computation);
+int64_t XLATensor::GetNextTensorId() {
+  static std::atomic<int64_t>* id_generator = new std::atomic<int64_t>(1);
+  return id_generator->fetch_add(1);
+}
 
-    return ScheduleSyncTensorsGraph(
-        tensors, &coll, std::move(compile_result.parameters_data),
-        compile_result.device.toString(), std::move(cached_computation));
+torch::lazy::Value XLATensor::GetRngSeed(
+    const torch::lazy::BackendDevice& device) {
+  return DeviceContextArena::Get()->GetRngSeed(device);
+}
+
+void XLATensor::SetRngSeed(const torch::lazy::BackendDevice& device,
+                           uint64_t seed) {
+  DeviceContextArena::Get()->SetRngSeed(device, seed);
+}
+
+uint64_t XLATensor::GetRunningSeed(const torch::lazy::BackendDevice& device) {
+  return DeviceContextArena::Get()->GetRunningSeed(device);
+}
+
+bool XLATensor::UseEagerDebugMode() {
+  static const bool use_eager_debug_mode =
+      xla::sys_util::GetEnvBool("XLA_USE_EAGER_DEBUG_MODE", false);
+  return use_eager_debug_mode;
+}
+
+bool XLATensor::ShouldSyncIrNode() {
+  if (!this->data()->ir_value) {
+    return false;
   }
-
-  int64_t XLATensor::GetNextTensorId() {
-    static std::atomic<int64_t>* id_generator = new std::atomic<int64_t>(1);
-    return id_generator->fetch_add(1);
-  }
-
-  torch::lazy::Value XLATensor::GetRngSeed(
-      const torch::lazy::BackendDevice& device) {
-    return DeviceContextArena::Get()->GetRngSeed(device);
-  }
-
-  void XLATensor::SetRngSeed(const torch::lazy::BackendDevice& device,
-                             uint64_t seed) {
-    DeviceContextArena::Get()->SetRngSeed(device, seed);
-  }
-
-  uint64_t XLATensor::GetRunningSeed(const torch::lazy::BackendDevice& device) {
-    return DeviceContextArena::Get()->GetRunningSeed(device);
-  }
-
-  bool XLATensor::UseEagerDebugMode() {
-    static const bool use_eager_debug_mode =
-        xla::sys_util::GetEnvBool("XLA_USE_EAGER_DEBUG_MODE", false);
-    return use_eager_debug_mode;
-  }
-
-  bool XLATensor::ShouldSyncIrNode() {
-    if (!this->data()->ir_value) {
-      return false;
-    }
-    return this->data()->ir_value->op() != xla_device_data;
-  }
+  return this->data()->ir_value->op() != xla_device_data;
+}
 
 }  // namespace torch_xla

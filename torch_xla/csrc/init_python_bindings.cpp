@@ -1347,38 +1347,44 @@ void InitXlaModuleBindings(py::module m) {
         });
   m.def("_xla_mark_sharding",
         [](const at::Tensor& input, const py::list& tile_assignment,
-           bool replicated) {
-          std::vector<std::vector<int64_t>> partition_mapping;
-          for (auto& partition : tile_assignment) {
-            partition_mapping.emplace_back();
-            for (auto& device_id : partition.cast<py::list>()) {
-              partition_mapping.back().push_back(device_id.cast<int64_t>());
-            }
-          }
-          // TODO: this only supports full replication or tile sharding.
+           bool replicated = false, bool manual = false) {
+          // TODO: assert tile_assignment is 2D mesh
+          size_t nrow = tile_assignment.size();
+          size_t ncol = tile_assignment[0].cast<py::list>().size();
+
+          std::vector<int64_t> tile_shape{static_cast<long>(nrow),
+                                          static_cast<long>(ncol)};
+          xla::Array<int64_t> tile_array(tile_shape);
+          tile_array.Each([&](absl::Span<const int64_t> indices, int64_t* v) {
+            auto r = tile_assignment[indices[0]].cast<py::list>();
+            *v = r[indices[1]].cast<int64_t>();
+          });
+
+          // TODO: use the following op sharding types
+          // (third_party/tensorflow/compiler/xla/xla_data.proto:667):
+          // - REPLICATED
+          // - OTHER (tile)
+          // - MANUAL (a.k.a., do not touch)
+          //
+          // For Type::OTHER, declare
+          // - tile_shape
+          // - tile_assignment_dimensions
+          // - tile_assignment_devices
+          xla::HloSharding hlo_sharding = xla::HloSharding::Tile(tile_array);
+          xla::OpSharding sharding = hlo_sharding.ToProto();
+
           XLATensor xtensor = bridge::GetXlaTensor(input);
-          xtensor.SetShardingSpec(partition_mapping, replicated);
+          xtensor.SetShardingSpec(sharding, replicated, manual);
         });
-  m.def("_get_xla_sharding_spec", [](const at::Tensor& input) {
-    // TODO: fix this
+  m.def("_xla_clear_sharding", [](const at::Tensor& input) {
+    XLATensor xtensor = bridge::GetXlaTensor(input);
+    xtensor.ClearShardingSpec();
+  });
+  m.def("_get_xla_sharding_spec", [](const at::Tensor& input) -> std::string {
     XLATensor xtensor = bridge::GetXlaTensor(input);
     auto sharding_spec = xtensor.sharding_spec();
-
-    std::vector<std::vector<int64_t>> partition_vector =
-        sharding_spec->tile_assignment;
-    py::list tile_assignment(partition_vector.size());
-    for (std::vector<int64_t>& partition : partition_vector) {
-      py::list tile(partition.size());
-      for (int64_t& device_id : partition) {
-        tile.append(device_id);
-      }
-      tile_assignment.append(tile);
-    }
-
-    auto sharding_attrs = py::tuple(2);
-    sharding_attrs[0] = tile_assignment;
-    sharding_attrs[1] = sharding_spec->replicated;
-    return sharding_attrs;
+    auto hlo_sharding = xla::HloSharding::FromProto(sharding_spec->sharding);
+    return hlo_sharding->ToString();
   });
   m.def("_get_xla_tensors_hlo_with_sharding",
         [](const std::vector<at::Tensor>& tensors, int64_t num_replicas,
@@ -1400,8 +1406,9 @@ void InitXlaModuleBindings(py::module m) {
           config.set_num_partitions(num_devices);
 
           auto hlo_text = GetTensorsHloGraph(tensors);
-          auto hlo_module_error =
-              xla::ParseAndReturnUnverifiedModule(hlo_text);  // TODO: config
+          // TODO: verify: Instead of HloModule config, I used SpmdPartitioning
+          // pass to take care of the same settings.
+          auto hlo_module_error = xla::ParseAndReturnUnverifiedModule(hlo_text);
           if (!hlo_module_error.ok()) {
             LOG(ERROR) << "HLO Module loading failed: "
                        << hlo_module_error.status();
@@ -1409,7 +1416,6 @@ void InitXlaModuleBindings(py::module m) {
           }
           auto module = std::move(hlo_module_error.ValueOrDie());
 
-          // Run SPMDPartitioner
           auto collective_ops_creator =
               xla::spmd::GetDefaultCollectiveOpsCreator(
                   num_devices, /*num_replicas=*/num_replicas);
@@ -1420,7 +1426,7 @@ void InitXlaModuleBindings(py::module m) {
           pass.AddPass<xla::spmd::SpmdPartitioner>(
               num_devices, /*num_replicas=*/num_replicas, options,
               collective_ops_creator);
-          // TODO: propagate
+          // TODO: propagation, but may be skipped.
           pass.AddPass<xla::HloVerifier>(/*layout_sensitive=*/false,
                                          /*allow_mixed_precision=*/false);
           pass.Run(module.get());

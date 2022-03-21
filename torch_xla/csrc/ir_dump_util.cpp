@@ -4,6 +4,7 @@
 #include <sstream>
 #include <unordered_map>
 
+#include "absl/container/flat_hash_map.h"
 #include "absl/types/optional.h"
 #include "tensorflow/compiler/xla/xla_client/debug_macros.h"
 #include "tensorflow/compiler/xla/xla_client/xla_util.h"
@@ -14,7 +15,8 @@
 namespace torch_xla {
 namespace {
 
-using NodeIdMap = std::unordered_map<const torch::lazy::Node*, size_t>;
+using xla::internal::XlaBuilderFriend;
+using NodeIdMap = std::unordered_map<const Node*, size_t>;
 
 struct AttrTag {
   std::string name;

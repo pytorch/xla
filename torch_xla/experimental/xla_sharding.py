@@ -58,6 +58,8 @@ def mark_sharding(t: Union[torch.Tensor,
 
   device_ids = np.array(range(num_devices))
   tile_assignment = list(device_ids.reshape(mesh_shape))
+
+  manual = False
   replicated = False
   if all(d is None for d in partition_spec):
     # TODO: support partial replication
@@ -66,8 +68,8 @@ def mark_sharding(t: Union[torch.Tensor,
   if isinstance(t, XLAShardedTensor):
     # Update sharding annotation
     torch_xla._XLAC._xla_mark_sharding(t.global_tensor, tile_assignment,
-                                       replicated)
+                                       replicated, manual)
     return t  #  XLAShardedTensor
 
-  torch_xla._XLAC._xla_mark_sharding(t, tile_assignment, replicated)
+  torch_xla._XLAC._xla_mark_sharding(t, tile_assignment, replicated, manual)
   return XLAShardedTensor(t)
