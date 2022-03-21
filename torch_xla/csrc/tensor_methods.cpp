@@ -1369,7 +1369,7 @@ XLATensor XLATensor::full(absl::Span<const int64_t> size,
   CheckShapeDimensions(size);
   xla::Shape shape = MakeArrayShapeFromDimensions(
       size, /*dynamic_dimensions=*/{},
-      MakeXlaPrimitiveType(scalar_type, &device), device.device_type.hw_type);
+      MakeXlaPrimitiveType(scalar_type, &device), device.hw_type);
   return Create(GetIrValueForScalar(fill_value, shape, device), device,
                 scalar_type);
 }
