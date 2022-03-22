@@ -98,6 +98,9 @@ class XlaHelpers {
     if (scalar_value.isFloatingPoint()) {
       return ScalarValue(scalar_value.toDouble(), type, builder);
     }
+    if (scalar_value.isBoolean()) {
+      return ScalarValue(scalar_value.toBool(), type, builder);
+    }
     XLA_CHECK(scalar_value.isIntegral()) << "Scalar type not supported";
     return ScalarValue(static_cast<int64_t>(scalar_value.toLong()), type,
                        builder);
