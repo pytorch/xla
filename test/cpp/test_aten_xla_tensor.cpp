@@ -4311,11 +4311,11 @@ TEST_F(AtenXlaTensorTest, TestGather) {
     }
   }
   for (bool sparse_grad : {false, true}) {
-    torch::Tensor c = torch::gather(a, 1, b, sparse_grad);
+    torch::Tensor c = torch::gather(a, 1, b, sparse_grad, true);
     ForEachDevice([&](const torch::Device& device) {
       torch::Tensor xla_a = CopyToDevice(a, device);
       torch::Tensor xla_b = CopyToDevice(b, device);
-      torch::Tensor xla_c = torch::gather(xla_a, 1, xla_b, sparse_grad);
+      torch::Tensor xla_c = torch::gather(xla_a, 1, xla_b, sparse_grad, true);
       AllClose(c, xla_c);
     });
   }
@@ -4331,12 +4331,12 @@ TEST_F(AtenXlaTensorTest, TestScatter) {
         c[i][j] = (i + j) % c.sizes()[dim];
       }
     }
-    torch::Tensor d = torch::scatter(a, dim, c, b);
+    torch::Tensor d = torch::scatter(a, dim, c, b, true);
     ForEachDevice([&](const torch::Device& device) {
       torch::Tensor xla_a = CopyToDevice(a, device);
       torch::Tensor xla_b = CopyToDevice(b, device);
       torch::Tensor xla_c = CopyToDevice(c, device);
-      torch::Tensor xla_d = torch::scatter(xla_a, dim, xla_c, xla_b);
+      torch::Tensor xla_d = torch::scatter(xla_a, dim, xla_c, xla_b, true);
       AllClose(d, xla_d);
     });
   }
@@ -4350,12 +4350,12 @@ TEST_F(AtenXlaTensorTest, TestScatterR1) {
   torch::Tensor c = torch::empty({2}, torch::TensorOptions(torch::kLong));
   c[0] = 1;
   c[1] = 3;
-  torch::Tensor d = torch::scatter(a, 0, c, b);
+  torch::Tensor d = torch::scatter(a, 0, c, b, true);
   ForEachDevice([&](const torch::Device& device) {
     torch::Tensor xla_a = CopyToDevice(a, device);
     torch::Tensor xla_b = CopyToDevice(b, device);
     torch::Tensor xla_c = CopyToDevice(c, device);
-    torch::Tensor xla_d = torch::scatter(xla_a, 0, xla_c, xla_b);
+    torch::Tensor xla_d = torch::scatter(xla_a, 0, xla_c, xla_b, true);
     AllClose(d, xla_d);
   });
 
@@ -4374,12 +4374,12 @@ TEST_F(AtenXlaTensorTest, TestScatterR3) {
       }
     }
   }
-  torch::Tensor d = torch::scatter(a, 1, c, b);
+  torch::Tensor d = torch::scatter(a, 1, c, b, true);
   ForEachDevice([&](const torch::Device& device) {
     torch::Tensor xla_a = CopyToDevice(a, device);
     torch::Tensor xla_b = CopyToDevice(b, device);
     torch::Tensor xla_c = CopyToDevice(c, device);
-    torch::Tensor xla_d = torch::scatter(xla_a, 1, xla_c, xla_b);
+    torch::Tensor xla_d = torch::scatter(xla_a, 1, xla_c, xla_b, true);
     AllClose(d, xla_d);
   });
 
@@ -4397,12 +4397,12 @@ TEST_F(AtenXlaTensorTest, TestScatterBiggerSource) {
     }
   }
   for (int dim = 0; dim < 2; ++dim) {
-    torch::Tensor d = torch::scatter(a, dim, c, b);
+    torch::Tensor d = torch::scatter(a, dim, c, b, true);
     ForEachDevice([&](const torch::Device& device) {
       torch::Tensor xla_a = CopyToDevice(a, device);
       torch::Tensor xla_b = CopyToDevice(b, device);
       torch::Tensor xla_c = CopyToDevice(c, device);
-      torch::Tensor xla_d = torch::scatter(xla_a, dim, xla_c, xla_b);
+      torch::Tensor xla_d = torch::scatter(xla_a, dim, xla_c, xla_b, true);
       AllClose(d, xla_d);
     });
   }
@@ -4421,11 +4421,11 @@ TEST_F(AtenXlaTensorTest, TestScatterScalar) {
     }
   }
   for (int dim = 0; dim < 2; ++dim) {
-    torch::Tensor d = torch::scatter(a, dim, c, b);
+    torch::Tensor d = torch::scatter(a, dim, c, b, true);
     ForEachDevice([&](const torch::Device& device) {
       torch::Tensor xla_a = CopyToDevice(a, device);
       torch::Tensor xla_c = CopyToDevice(c, device);
-      torch::Tensor xla_d = torch::scatter(xla_a, dim, xla_c, b);
+      torch::Tensor xla_d = torch::scatter(xla_a, dim, xla_c, b, true);
       AllClose(d, xla_d);
     });
   }
@@ -4444,12 +4444,13 @@ TEST_F(AtenXlaTensorTest, TestScatterReduceAdd) {
         c[i][j] = (i + j) % c.sizes()[dim];
       }
     }
-    torch::Tensor d = torch::scatter(a, dim, c, b, "add");
+    torch::Tensor d = torch::scatter(a, dim, c, b, "add", true);
     ForEachDevice([&](const torch::Device& device) {
       torch::Tensor xla_a = CopyToDevice(a, device);
       torch::Tensor xla_b = CopyToDevice(b, device);
       torch::Tensor xla_c = CopyToDevice(c, device);
-      torch::Tensor xla_d = torch::scatter(xla_a, dim, xla_c, xla_b, "add");
+      torch::Tensor xla_d =
+          torch::scatter(xla_a, dim, xla_c, xla_b, "add", true);
       AllClose(d, xla_d);
     });
   }
@@ -4468,12 +4469,12 @@ TEST_F(AtenXlaTensorTest, TestScatterAdd) {
         c[i][j] = (i + j) % c.sizes()[dim];
       }
     }
-    torch::Tensor d = torch::scatter_add(a, dim, c, b);
+    torch::Tensor d = torch::scatter_add(a, dim, c, b, true);
     ForEachDevice([&](const torch::Device& device) {
       torch::Tensor xla_a = CopyToDevice(a, device);
       torch::Tensor xla_b = CopyToDevice(b, device);
       torch::Tensor xla_c = CopyToDevice(c, device);
-      torch::Tensor xla_d = torch::scatter_add(xla_a, dim, xla_c, xla_b);
+      torch::Tensor xla_d = torch::scatter_add(xla_a, dim, xla_c, xla_b, true);
       AllClose(d, xla_d);
     });
   }
@@ -4495,10 +4496,10 @@ TEST_F(AtenXlaTensorTest, TestScatterAddInPlace) {
       torch::Tensor a =
           torch::rand({4, 4}, torch::TensorOptions(torch::kFloat));
       torch::Tensor xla_a = CopyToDevice(a, device);
-      torch::Tensor d = a.scatter_add_(dim, c, b);
+      torch::Tensor d = a.scatter_add_(dim, c, b, true);
       torch::Tensor xla_b = CopyToDevice(b, device);
       torch::Tensor xla_c = CopyToDevice(c, device);
-      torch::Tensor xla_d = xla_a.scatter_add_(dim, xla_c, xla_b);
+      torch::Tensor xla_d = xla_a.scatter_add_(dim, xla_c, xla_b, true);
       AllClose(d, xla_d);
       AllClose(a, xla_a);
     });
