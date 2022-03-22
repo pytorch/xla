@@ -43,7 +43,7 @@ import torch_xla.core.xla_model as xm
 import torch_xla.distributed.xla_multiprocessing as xmp
 import torch_xla.test.test_utils as test_utils
 
-from fsdp import (
+from torch_xla.distributed.fsdp import (
     XlaFullyShardedDataParallel as FSDP,
     consolidate_sharded_model_checkpoints,
 )
