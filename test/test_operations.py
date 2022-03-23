@@ -1216,6 +1216,32 @@ class TestAtenXlaTensor(XlaTestCase):
     x.sum().backward()
     self.assertEqual(root.grad.tolist(), [[1, 2], [1, 1], [1, 1]])
 
+  def test_view_data_update(self):
+    a = torch.zeros(4, device=xm.xla_device())
+    v = a.view(2, 2)
+    a.data = a.data + 1
+    self.assertEqual(a.tolist(), [1, 1, 1, 1])
+    # Upadting a.data should not update v's value.
+    self.assertEqual(v.tolist(), [[0.0, 0.0], [0.0, 0.0]])
+
+  def test_view_out_computation(self):
+
+    def func(a, b):
+      v = a.view(2, 2)
+      torch.add(b, 1, out=v)
+      return a, v
+
+    a = torch.zeros(4)
+    b = torch.ones([2, 2])
+    self.runAtenTest((a, b), func)
+
+  def test_view_data_slice(self):
+    t1 = torch.zeros(50, device=xm.xla_device())
+    t1_slice = t1.data[:5]
+    # Assigning the view back to origonal tensor's data should be OK.
+    t1.data = t1_slice
+    self.assertEqual(t1.tolist(), [0, 0, 0, 0, 0])
+
   def test_pred_type(self):
     xla_device = xm.xla_device()
     a = torch.rand(4)

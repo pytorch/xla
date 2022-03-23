@@ -608,16 +608,19 @@ void XLATensor::SetXlaData(xla::ComputationClient::DataPtr xla_data,
   }
 }
 
-void XLATensor::SetIrValue(ir::Value ir_value) {
+void XLATensor::SetIrValue(ir::Value ir_value, bool inplace) {
   data()->xla_data = nullptr;
   data()->tensor_data = c10::nullopt;
-  if (data()->view != nullptr) {
-    // If we have an active view, and a SetIrValue() happens, it means we are
-    // within an in-place execution context, and we need to update the view's
+  if (data()->view != nullptr && inplace) {
+    // If we have an active view, SetIrValue() happens, and we are
+    // within an in-place execution context, we need to update the view's
     // alias as well.
     data()->view = UpdateView(data()->view, std::move(ir_value));
     data()->generation += 1;
   } else {
+    // Reset the view if we are not within an in-place execution context
+    data()->view = nullptr;
+    data()->generation = 1;
     AssignIrValue(std::move(ir_value));
     TryLimitGraphSize();
   }
@@ -629,7 +632,7 @@ void XLATensor::SetInPlaceIrValue(ir::Value ir_value) {
     ir_value =
         ir::MakeNode<ir::ops::Cast>(ir_value, xla_shape.get().element_type());
   }
-  SetIrValue(std::move(ir_value));
+  SetIrValue(std::move(ir_value), /*inplace=*/true);
 }
 
 void XLATensor::AssignIrValue(ir::Value ir_value) const {
@@ -860,7 +863,7 @@ at::Tensor XLATensor::ToTensor(bool detached) {
 }
 
 void XLATensor::ShallowCopyTo(XLATensor* dest) const {
-  dest->SetIrValue(GetIrValue());
+  dest->SetIrValue(GetIrValue(), /*inplace=*/false);
 }
 
 void XLATensor::SetScalarType(
@@ -878,7 +881,8 @@ void XLATensor::SetTensor(at::Tensor tensor) {
 void XLATensor::UpdateFromTensor(at::Tensor tensor, bool sync) {
   if (sync) {
     at::Tensor typed_tensor = CopyTensor(tensor, dtype(), /*copy=*/false);
-    SetIrValue(GetIrValueForTensor(typed_tensor, GetDevice()));
+    SetIrValue(GetIrValueForTensor(typed_tensor, GetDevice()),
+               /*inplace=*/true);
   } else {
     at::Tensor coyped_tensor = CopyTensor(tensor, dtype());
     SetTensorData(coyped_tensor);
@@ -905,7 +909,7 @@ void XLATensor::UpdateFromTensorOut(const XLATensor& tensor) {
           xla::ShapeUtil::ElementsIn(tensor.shape())) {
     data()->view = nullptr;
   }
-  SetIrValue(tensor.GetIrValue());
+  SetIrValue(tensor.GetIrValue(), /*inplace=*/true);
 }
 
 std::vector<XLATensor> XLATensor::GetLiveTensors(const Device* device) {
