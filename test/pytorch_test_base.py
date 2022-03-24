@@ -189,6 +189,7 @@ DISABLED_TORCH_TESTS_ANY = {
         'test_random_from_to_bool',  # doesn't raise
         'test_random_from_to_xla',  # doesn't raise
         'test_random_to_xla',  # doesn't raise
+        'test_copy_',  # test against complex32 which is nto supported
     },
 
     # test_view_ops.py
