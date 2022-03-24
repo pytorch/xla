@@ -651,6 +651,12 @@ void XLATensor::ClearShardingSpec() {
     dynamic_cast<XlaNode*>(data()->ir_value.node.get())->ClearSharding();
   }
 }
+void XLATensor::ClearShardingSpec() {
+  if (data()->ir_value.node != nullptr) {
+    data()->ir_value.node->ClearSharding();
+  }
+  data()->sharding_spec = nullptr;
+}
 
 void XLATensor::SetXlaData(torch::lazy::BackendDataPtr xla_data) {
   SetXlaData(std::move(xla_data), /*sync=*/true);
