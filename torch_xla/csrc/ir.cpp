@@ -76,7 +76,7 @@ torch::lazy::hash_t GetOperandHashes(const OpList& operands,
           hash, static_cast<uint64_t>(torch::lazy::kNullOpt));
       continue;
     }
-    auto operand_hash = operand.hash_with_sizes();
+    auto operand_hash = operand.hash();
     hash = torch::lazy::HashCombine(hash, operand_hash);
   }
   return hash;
@@ -107,11 +107,6 @@ const xla::Shape& Value::node_shape() const { return node->shape(); }
 
 torch::lazy::hash_t Value::hash() const {
   return torch::lazy::HashCombine(node->hash(), index);
-}
-
-torch::lazy::hash_t Value::hash_with_sizes() const {
-  return torch::lazy::HashCombine(node->hash_with_sizes(),
-                                  torch::lazy::Hash(index));
 }
 
 Node::Node(torch::lazy::OpKind op, OpList operands, xla::Shape shape,
