@@ -73,8 +73,6 @@ struct Value {
   const xla::Shape& node_shape() const;
 
   torch::lazy::hash_t hash() const;
-  torch::lazy::hash_t hash_with_sizes() const;
-  torch::lazy::hash_t hash_without_sizes() const;
 
   operator bool() const { return node != nullptr; }
 
