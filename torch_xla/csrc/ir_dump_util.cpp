@@ -17,11 +17,7 @@ namespace torch_xla {
 namespace {
 
 using xla::internal::XlaBuilderFriend;
-<<<<<<< HEAD
 using NodeIdMap = std::unordered_map<const torch::lazy::Node*, size_t>;
-=======
-using NodeIdMap = std::unordered_map<const Node*, size_t>;
->>>>>>> 57825c13 (Tensor sharding annotation and sharded HLO dumping function.)
 
 struct AttrTag {
   std::string name;
@@ -259,8 +255,12 @@ std::string DumpUtil::ToHlo(c10::ArrayRef<torch::lazy::Value> values,
         torch::lazy::Output(ir_value.node.get(), ir_value.index));
   }
   // Annotate HLO sharding selectively in the compuation.
+<<<<<<< HEAD
   // This is no-op if an instruction doesn't have any sharding annotation.
   ShardingUtil::SetHloSharding(&lowering_ctx);
+=======
+  ir::ShardingUtil::SetHloSharding(&lowering_ctx);
+>>>>>>> 7add8fb4 (Compile tensor ops with sharding annotations)
 
   xla::XlaComputation computation = ConsumeValue(lowering_ctx.BuildXla());
   return ConsumeValue(xla::util::GetComputationHloText(computation));
