@@ -11,6 +11,7 @@
 #include "torch/csrc/lazy/core/ir_util.h"
 #include "torch_xla/csrc/ir_util.h"
 #include "torch_xla/csrc/lowering_context.h"
+#include "torch_xla/csrc/xla_sharding_util.h"
 
 namespace torch_xla {
 namespace {
@@ -253,6 +254,9 @@ std::string DumpUtil::ToHlo(c10::ArrayRef<torch::lazy::Value> values,
     lowering_ctx.AddResult(
         torch::lazy::Output(ir_value.node.get(), ir_value.index));
   }
+  // Annotate HLO sharding selectively in the compuation.
+  ir::ShardingUtil::SetHloSharding(&lowering_ctx);
+
   xla::XlaComputation computation = ConsumeValue(lowering_ctx.BuildXla());
   return ConsumeValue(xla::util::GetComputationHloText(computation));
 }

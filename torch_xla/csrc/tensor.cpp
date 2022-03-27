@@ -1662,6 +1662,9 @@ XLATensor::CompilationResult XLATensor::Compile(
         torch::lazy::Output(ir_value.node.get(), ir_value.index));
     lowering_ctx.AddResult(root);
   }
+  // Annotate HLO sharding selectively in the compuation.
+  ir::ShardingUtil::SetHloSharding(&lowering_ctx);
+
   if (enable_aliasing && coll.config.sync_xla_data) {
     // We can only alias at the step barrier, when force_xla_data is true.
     // Consider the case:
