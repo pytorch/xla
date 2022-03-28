@@ -76,8 +76,7 @@ torch::lazy::hash_t GetOperandHashes(const OpList& operands,
           hash, static_cast<uint64_t>(torch::lazy::kNullOpt));
       continue;
     }
-    auto operand_hash = operand.hash();
-    hash = torch::lazy::HashCombine(hash, operand_hash);
+    hash = torch::lazy::HashCombine(hash, operand.hash());
   }
   return hash;
 }
@@ -101,9 +100,9 @@ std::string Use::ToString() const {
   return ss.str();
 }
 
-const xla::Shape& Value::shape() const { return node->shape(index); }
+const xla::Shape& Value::shape() const { return node->xla_shape(index); }
 
-const xla::Shape& Value::node_shape() const { return node->shape(); }
+const xla::Shape& Value::node_shape() const { return node->xla_shape(); }
 
 torch::lazy::hash_t Value::hash() const {
   return torch::lazy::HashCombine(node->hash(), index);
@@ -114,12 +113,12 @@ Node::Node(torch::lazy::OpKind op, OpList operands, xla::Shape shape,
     : torch::lazy::Node(
           op, num_outputs,
           /*node_hash=*/torch::lazy::HashCombine(op.hash(), hash_seed),
-          /*hash_func=*/
+          /*dag_hash_fn=*/
           [&](bool /*bakeInSizes*/) -> torch::lazy::hash_t {
             return GetOperandHashes(
                 operands, torch::lazy::HashCombine(op.hash(), hash_seed));
           }),
-      shape_(std::move(shape)) {
+      xla_shape_(std::move(shape)) {
   for (auto& operand : operands) {
     AddOperand(operand.node, operand.index);
   }
@@ -131,16 +130,16 @@ Node::Node(torch::lazy::OpKind op, OpList operands,
     : Node(std::move(op), operands, xla::Shape(), num_outputs, hash_seed) {
   // Forward the constructor to the one above (with empty shape), so we have the
   // full hash information, then fetch/compute the real shape.
-  shape_ = GetOpShape(shape_fn);
+  xla_shape_ = GetOpShape(shape_fn);
 }
 
 Node::Node(torch::lazy::OpKind op, xla::Shape shape, size_t num_outputs,
            torch::lazy::hash_t hash_seed)
-    : torch::lazy::Node(op, num_outputs, /*hash_func=*/
+    : torch::lazy::Node(op, num_outputs, /*node_hash_fn=*/
                         [&](bool /*bakeInSizes*/) -> torch::lazy::hash_t {
                           return GetOpHash(op, shape, hash_seed);
                         }),
-      shape_(std::move(shape)) {}
+      xla_shape_(std::move(shape)) {}
 
 Node::~Node() {
   for (size_t i = 0; i < operands_as_outputs_.size(); ++i) {
@@ -148,12 +147,16 @@ Node::~Node() {
   }
 }
 
-const xla::Shape& Node::shape(size_t output_index) const {
-  if (shape_.IsTuple()) {
-    return shape_.tuple_shapes(output_index);
+const xla::Shape& Node::xla_shape(size_t output_index) const {
+  if (xla_shape_.IsTuple()) {
+    return xla_shape_.tuple_shapes(output_index);
   }
   XLA_CHECK_EQ(output_index, 0);
-  return shape_;
+  return xla_shape_;
+}
+
+const torch::lazy::Shape& Node::shape(size_t output_index) const {
+  return shapes_.at(output_index);
 }
 
 void Node::AddOperand(NodePtr node, size_t index) {
@@ -201,16 +204,15 @@ XlaOpVector Node::ReturnOps(absl::Span<const xla::XlaOp> ops,
 
 std::string Node::ToString() const {
   std::stringstream ss;
-  ss << shape() << " " << op();
+  ss << xla_shape() << " " << op();
   if (num_outputs() > 1) {
     ss << ", num_outputs=" << num_outputs();
   }
-  // TODO @wonjoo Fix the import _XLAC ImportError
-  // torch::lazy::MetaData metadata = torch::lazy::GetMetaDataIfDebugging();
-  // if (!metadata.scope.empty()) {
-  //   ss << ", scope=" << metadata.scope;
-  // }
-  // torch::lazy::EmitShortFrameInfo(ss, metadata.frame_info);
+  torch::lazy::MetaData metadata = torch::lazy::GetMetaDataIfDebugging();
+  if (!metadata.scope.empty()) {
+    ss << ", scope=" << metadata.scope;
+  }
+  torch::lazy::EmitShortFrameInfo(ss, metadata.frame_info);
   return ss.str();
 }
 

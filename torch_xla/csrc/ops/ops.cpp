@@ -110,7 +110,8 @@ NodePtr LogBase(const Value& input, torch::lazy::OpKind op, double base) {
     xla::XlaOp xla_input = loctx->GetOutputOp(node.operand(0));
     xla::XlaOp result = xla::Log(xla_input);
     xla::XlaOp ln_base = XlaHelpers::ScalarValue<float>(
-        1.0 / std::log(base), node.shape().element_type(), xla_input.builder());
+        1.0 / std::log(base), node.xla_shape().element_type(),
+        xla_input.builder());
     return node.ReturnOp(result * ln_base, loctx);
   };
   return GenericOp(op, {input}, input.shape(), std::move(lower_fn),
