@@ -67,7 +67,7 @@ bool ShouldUseDenseScatter(const Device& device, const xla::Shape& input_shape,
                            const xla::Shape& index_shape) {
   static int dense_scatter_factor =
       xla::sys_util::GetEnvInt("XLA_DENSE_SCATTER_FACTOR", 100);
-  if (device.hw_type == DeviceType::TPU) {
+  if (device.device_type.hw_type == TorchXLADeviceType::TPU) {
     int64_t input_elements = xla::ShapeUtil::ElementsIn(input_shape);
     int64_t index_elements = xla::ShapeUtil::ElementsIn(index_shape);
     return index_elements * dense_scatter_factor >= input_elements;

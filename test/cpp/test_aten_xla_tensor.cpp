@@ -1892,19 +1892,20 @@ TEST_F(AtenXlaTensorTest, TestGroupNormBackward) {
             /*cudnn_enabled=*/false);
       };
       torch::Tensor undef;
-      ForEachDevice(
-          {DeviceType::GPU, DeviceType::TPU}, [&](const torch::Device& device) {
-            TestBackward({input, undef_weight ? undef : weight,
-                          undef_weight ? undef : bias},
-                         device, testfn,
-                         /*rtol=*/1e-3, /*atol=*/1e-3,
-                         /*derivative_level=*/2);
-            ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
-            ExpectCounterChanged("xla::native_batch_norm",
-                                 cpp_test::GetIgnoredCounters());
-            ExpectCounterChanged("xla::native_batch_norm_backward",
-                                 cpp_test::GetIgnoredCounters());
-          });
+      ForEachDevice({TorchXLADeviceType::GPU, TorchXLADeviceType::TPU},
+                    [&](const torch::Device& device) {
+                      TestBackward({input, undef_weight ? undef : weight,
+                                    undef_weight ? undef : bias},
+                                   device, testfn,
+                                   /*rtol=*/1e-3, /*atol=*/1e-3,
+                                   /*derivative_level=*/2);
+                      ExpectCounterNotChanged("aten::.*",
+                                              cpp_test::GetIgnoredCounters());
+                      ExpectCounterChanged("xla::native_batch_norm",
+                                           cpp_test::GetIgnoredCounters());
+                      ExpectCounterChanged("xla::native_batch_norm_backward",
+                                           cpp_test::GetIgnoredCounters());
+                    });
     }
   }
 }
@@ -5620,7 +5621,8 @@ TEST_F(AtenXlaTensorTest, TestIndexCopyInPlace) {
         torch::kLong}) {
     for (int dim = -rank; dim < rank; ++dim) {
       ForEachDevice(
-          {DeviceType::CPU, DeviceType::TPU}, [&](const torch::Device& device) {
+          {TorchXLADeviceType::CPU, TorchXLADeviceType::TPU},
+          [&](const torch::Device& device) {
             torch::Tensor base =
                 isFloatingType(scalar_type)
                     ? torch::rand({5, 3, 7}, torch::TensorOptions(scalar_type))
@@ -7513,9 +7515,9 @@ TEST_F(AtenXlaTensorTest, TestAvgPool3DNoBatch) {
 }
 
 TEST_F(AtenXlaTensorTest, TestAdaptiveMaxPool2D) {
-  DeviceType hw_type = GetDefaultDevice()->hw_type;
+  TorchXLADeviceType hw_type = GetDefaultDevice()->device_type.hw_type;
   // skip this test until the tile mismatch bug is fixed.
-  if (hw_type == DeviceType::TPU) {
+  if (hw_type == TorchXLADeviceType::TPU) {
     return;
   }
   std::vector<torch::Tensor> inputs = {
@@ -7543,9 +7545,9 @@ TEST_F(AtenXlaTensorTest, TestAdaptiveMaxPool2D) {
 }
 
 TEST_F(AtenXlaTensorTest, TestAdaptiveMaxPool2DBackward) {
-  DeviceType hw_type = GetDefaultDevice()->hw_type;
+  TorchXLADeviceType hw_type = GetDefaultDevice()->device_type.hw_type;
   // skip this test until the tile mismatch bug is fixed.
-  if (hw_type == DeviceType::TPU) {
+  if (hw_type == TorchXLADeviceType::TPU) {
     return;
   }
   std::vector<torch::Tensor> inputs = {
@@ -10580,8 +10582,9 @@ TEST_F(AtenXlaTensorTest, TestEmbeddingBackward) {
 }
 
 TEST_F(AtenXlaTensorTest, TestAmpForeachNonFiniteCheckAndUnscale) {
-  DeviceType hw_type = GetDefaultDevice()->hw_type;
-  if (hw_type != DeviceType::GPU && hw_type != DeviceType::CPU) {
+  TorchXLADeviceType hw_type = GetDefaultDevice()->device_type.hw_type;
+  if (hw_type != TorchXLADeviceType::GPU &&
+      hw_type != TorchXLADeviceType::CPU) {
     return;
   }
   torch::Tensor grads0 =
@@ -10617,8 +10620,9 @@ TEST_F(AtenXlaTensorTest, TestAmpForeachNonFiniteCheckAndUnscale) {
 }
 
 TEST_F(AtenXlaTensorTest, TestAmpUpdateScale) {
-  DeviceType hw_type = GetDefaultDevice()->hw_type;
-  if (hw_type != DeviceType::GPU && hw_type != DeviceType::CPU) {
+  TorchXLADeviceType hw_type = GetDefaultDevice()->device_type.hw_type;
+  if (hw_type != TorchXLADeviceType::GPU &&
+      hw_type != TorchXLADeviceType::CPU) {
     return;
   }
   torch::Tensor growth_tracker =
@@ -10899,7 +10903,8 @@ TEST_F(AtenXlaTensorTest, TestNanToNum) {
     ForEachDevice([&](const torch::Device& device) {
       torch::Tensor xla_input = CopyToDevice(input, device);
       torch::Tensor xla_output = torch::nan_to_num(xla_input);
-      if (bridge::AtenDeviceToXlaDevice(device).hw_type == DeviceType::TPU &&
+      if (bridge::AtenDeviceToXlaDevice(device).device_type.hw_type ==
+              TorchXLADeviceType::TPU &&
           scalar_type == torch::kDouble) {
         // Since TPU converts double to float (unlike CPU), the Inf entries are
         // expected to be different. Skipping checks for Inf entries.
@@ -10938,7 +10943,8 @@ TEST_F(AtenXlaTensorTest, TestNanToNumInplace) {
     ForEachDevice([&](const torch::Device& device) {
       torch::Tensor xla_input = CopyToDevice(input_copy, device);
       xla_input.nan_to_num_();
-      if (bridge::AtenDeviceToXlaDevice(device).hw_type == DeviceType::TPU &&
+      if (bridge::AtenDeviceToXlaDevice(device).device_type.hw_type ==
+              TorchXLADeviceType::TPU &&
           scalar_type == torch::kDouble) {
         // Since TPU converts double to float (unlike CPU), the Inf entries are
         // expected to be different. Skipping checks for Inf entries.
@@ -10977,7 +10983,8 @@ TEST_F(AtenXlaTensorTest, TestNanToNumOut) {
       torch::Tensor xla_input = CopyToDevice(input, device);
       torch::Tensor xla_output = torch::zeros_like(input);
       torch::nan_to_num_out(xla_output, xla_input);
-      if (bridge::AtenDeviceToXlaDevice(device).hw_type == DeviceType::TPU &&
+      if (bridge::AtenDeviceToXlaDevice(device).device_type.hw_type ==
+              TorchXLADeviceType::TPU &&
           scalar_type == torch::kDouble) {
         // Since TPU converts double to float (unlike CPU), the Inf entries are
         // expected to be different. Skipping checks for Inf entries.
