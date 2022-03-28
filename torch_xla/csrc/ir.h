@@ -60,7 +60,7 @@ using OutputMap =
     std::unordered_map<torch::lazy::Output, T, torch::lazy::Output::Hasher>;
 
 // Represents an input/operand for a Node object.
-struct Value {
+struct Value : public torch::lazy::Value {
   Value() = default;
   Value(NodePtr node, size_t index = 0) : node(std::move(node)), index(index) {}
 
