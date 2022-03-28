@@ -129,7 +129,7 @@ std::string GenerateDotNodeLabel(
   static const size_t kMaxValueSize = 64;
   std::stringstream ss;
   const Node* casted = dynamic_cast<const Node*>(node);
-  ss << node->op() << "\\n" << casted->shape();
+  ss << node->op() << "\\n" << casted->xla_shape();
   for (auto& tag : GetNodeTags(node)) {
     ss << "\\n" << tag.name << "=";
     if (tag.value.size() < kMaxValueSize) {
@@ -157,7 +157,7 @@ std::string GenerateTextNodeSpec(const torch::lazy::Node* node,
                                  const NodeIdMap& id_map) {
   std::stringstream ss;
   const Node* casted = dynamic_cast<const Node*>(node);
-  ss << casted->shape() << " " << node->op() << "(";
+  ss << casted->xla_shape() << " " << node->op() << "(";
   size_t count = 0;
   for (auto& output : node->operands()) {
     if (count > 0) {

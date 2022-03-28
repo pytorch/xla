@@ -14,19 +14,20 @@ Exponential::Exponential(const Value& lambda, const Value& seed,
            std::move(shape)) {}
 
 NodePtr Exponential::Clone(OpList operands) const {
-  return MakeNode<Exponential>(operands.at(0), operands.at(1), shape());
+  return ir::MakeNode<Exponential>(operands.at(0), operands.at(1), xla_shape());
 }
 
 XlaOpVector Exponential::Lower(LoweringContext* loctx) const {
   xla::XlaOp lambda = loctx->GetOutputOp(operand(0));
   xla::XlaOp rng_seed = loctx->GetOutputOp(operand(1));
   const xla::Shape& lambda_shape = XlaHelpers::ShapeOfXlaOp(lambda);
-  xla::Shape bcast_shape(shape());
+  xla::Shape bcast_shape(xla_shape());
   bcast_shape.set_element_type(lambda_shape.element_type());
   xla::XlaOp bcast_lambda =
       XlaHelpers::ImplicitBroadcast(lambda, lambda_shape, bcast_shape);
   return ReturnOp(
-      BuildExponential(bcast_lambda, rng_seed, shape().element_type()), loctx);
+      BuildExponential(bcast_lambda, rng_seed, xla_shape().element_type()),
+      loctx);
 }
 
 }  // namespace ops

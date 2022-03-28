@@ -113,37 +113,33 @@ class Node : public torch::lazy::Node {
 
   // Retrieves the full shape of the IR Node. Note that if this is a
   // multi-output node, the returned shape will be a tuple.
-  const xla::Shape& shape() const { return shape_; }
+  const xla::Shape& xla_shape() const { return xla_shape_; }
 
   // Retrieves the shape of the output at a given index. If the node is not a
   // multi-output node, output_index must be zero.
-  const xla::Shape& shape(size_t output_index) const;
+  const xla::Shape& xla_shape(size_t output_index) const;
 
-  const std::vector<torch::lazy::Output>& operands() const {
+  // Retrieves the full shape of the IR Node.
+  c10::ArrayRef<torch::lazy::Shape> shapes() const override { return shapes_; }
+
+  // Retrieves the shape of the output at a given index.
+  const torch::lazy::Shape& shape(size_t output_index = 0) const override;
+
+  const std::vector<torch::lazy::Output>& operands() const override {
     return operands_as_outputs_;
   }
 
-  const torch::lazy::Output& operand(size_t i) const {
+  const torch::lazy::Output& operand(size_t i) const override {
     return operands_as_outputs_.at(i);
   }
 
   const std::set<Use>& uses() const { return uses_; }
 
-  // const MetaData& metadata() const { return metadata_; }
-
-  // UserMetaData* user_metadata() const { return user_metadata_.get(); }
-
-  // std::shared_ptr<UserMetaData> SetUserMetadata(
-  //     std::shared_ptr<UserMetaData> user_meta) {
-  //   std::swap(user_metadata_, user_meta);
-  //   return user_meta;
-  // }
-
   void ReplaceOperand(size_t operand_no, NodePtr node, size_t index = 0);
 
   void ReplaceAllUsesWith(NodePtr node, size_t index = 0);
 
-  virtual std::string ToString() const;
+  virtual std::string ToString() const override;
 
   virtual NodePtr Clone(OpList operands) const;
 
@@ -170,7 +166,8 @@ class Node : public torch::lazy::Node {
 
   static std::vector<SourceLocation> GetFrameInfo();
 
-  xla::Shape shape_;
+  xla::Shape xla_shape_;
+  std::vector<torch::lazy::Shape> shapes_;
   // A node holds a real reference to its operands.
   std::vector<NodePtr> operands_;
   // Outputs do not hold references on the nodes, and neither do the uses, since

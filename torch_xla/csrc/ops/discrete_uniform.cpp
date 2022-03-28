@@ -16,15 +16,15 @@ DiscreteUniform::DiscreteUniform(const Value& from, const Value& to,
            /*num_outputs=*/1, torch::lazy::Hash(rng_shape)) {}
 
 NodePtr DiscreteUniform::Clone(OpList operands) const {
-  return MakeNode<DiscreteUniform>(operands.at(0), operands.at(1),
-                                   operands.at(2), shape());
+  return ir::MakeNode<DiscreteUniform>(operands.at(0), operands.at(1),
+                                       operands.at(2), xla_shape());
 }
 
 XlaOpVector DiscreteUniform::Lower(LoweringContext* loctx) const {
   xla::XlaOp from = loctx->GetOutputOp(operand(0));
   xla::XlaOp to = loctx->GetOutputOp(operand(1));
   xla::XlaOp rng_seed = loctx->GetOutputOp(operand(2));
-  return ReturnOp(RngDiscreteUniform(rng_seed, shape(), from, to), loctx);
+  return ReturnOp(RngDiscreteUniform(rng_seed, xla_shape(), from, to), loctx);
 }
 
 }  // namespace ops
