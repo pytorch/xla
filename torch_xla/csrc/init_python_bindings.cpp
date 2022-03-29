@@ -15,6 +15,7 @@
 #include "tensorflow/compiler/xla/service/hlo_parser.h"
 #include "tensorflow/compiler/xla/service/hlo_pass_pipeline.h"
 #include "tensorflow/compiler/xla/service/hlo_verifier.h"
+#include "tensorflow/compiler/xla/service/sharding_propagation.h"
 #include "tensorflow/compiler/xla/service/spmd/spmd_partitioner.h"
 #include "tensorflow/compiler/xla/xla_client/computation_client.h"
 #include "tensorflow/compiler/xla/xla_client/mesh_service.h"
@@ -1436,13 +1437,13 @@ void InitXlaModuleBindings(py::module m) {
           options.bidirectional_windowed_einsum = bidirectional_windowed_einsum;
 
           xla::HloModuleConfig config;
+          config.set_use_spmd_partitioning(true);
           config.set_replica_count(num_replicas);
           config.set_num_partitions(num_devices);
 
           auto hlo_text = GetTensorsHloGraph(tensors);
-          // TODO: verify: Instead of HloModule config, I used SpmdPartitioning
-          // pass to take care of the same settings.
-          auto hlo_module_error = xla::ParseAndReturnUnverifiedModule(hlo_text);
+          auto hlo_module_error =
+              xla::ParseAndReturnUnverifiedModule(hlo_text, config);
           if (!hlo_module_error.ok()) {
             LOG(ERROR) << "HLO Module loading failed: "
                        << hlo_module_error.status();
@@ -1457,10 +1458,10 @@ void InitXlaModuleBindings(py::module m) {
           xla::HloPassPipeline pass("spmd-partitioning");
           pass.AddPass<xla::HloVerifier>(/*layout_sensitive=*/false,
                                          /*allow_mixed_precision=*/false);
+          pass.AddPass<xla::ShardingPropagation>(/*is_spmd=*/true);
           pass.AddPass<xla::spmd::SpmdPartitioner>(
               num_devices, /*num_replicas=*/num_replicas, options,
               collective_ops_creator);
-          // TODO: propagation, but may be skipped.
           pass.AddPass<xla::HloVerifier>(/*layout_sensitive=*/false,
                                          /*allow_mixed_precision=*/false);
           pass.Run(module.get());

@@ -119,7 +119,7 @@ class XlaNode : public torch::lazy::Node {
   void SetSharding(const xla::OpSharding* sharding) {
     output_sharding_ = sharding;
   }
-  void ClearSharding() { output_sharding_ = nullptr; }
+  void ClearSharding() { output_sharding_ = nulltpr; }
 
  private:
   xla::Shape GetOpShape(const std::function<xla::Shape()>& shape_fn) const;
@@ -131,8 +131,6 @@ class XlaNode : public torch::lazy::Node {
   static std::vector<torch::lazy::SourceLocation> GetFrameInfo();
 
   xla::Shape xla_shape_;
-  torch::lazy::hash_t node_hash_;
-  torch::lazy::hash_t dag_hash_;
 
   std::vector<torch::lazy::Shape> shapes_;
   // A node holds a real reference to its operands.
@@ -142,6 +140,9 @@ class XlaNode : public torch::lazy::Node {
   std::vector<torch::lazy::Output> operands_as_outputs_;
   // We use a set for uses, as we want deterministic use sequencing.
   std::set<Use> uses_;
+  // The hash value of this node.
+  torch::lazy::hash_t node_hash_ = 0;
+  torch::lazy::hash_t dag_hash_;
   // The hash value of the graph rooted at this node.
   torch::lazy::hash_t hash_ = 0;
   // The IR specific metadata attached to the IR node.
