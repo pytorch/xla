@@ -9,6 +9,7 @@
 #include "tensorflow/compiler/xla/xla_client/sys_util.h"
 #include "torch/csrc/lazy/core/hash.h"
 #include "torch/csrc/lazy/core/ir_metadata.h"
+#include "torch/csrc/lazy/python/python_util.h"
 #include "torch_xla/csrc/lowering_context.h"
 
 namespace torch_xla {
@@ -81,6 +82,9 @@ torch::lazy::hash_t GetOperandHashes(const OpList& operands,
   return hash;
 }
 
+// Register GetFrameInfo function
+// torch::lazy::RegisterGetFrameInfo()
+
 }  // namespace
 
 bool Use::operator<(const Use& rhs) const {
@@ -122,6 +126,7 @@ Node::Node(torch::lazy::OpKind op, OpList operands, xla::Shape shape,
   for (auto& operand : operands) {
     AddOperand(operand.node, operand.index);
   }
+  RegisterGetFrameInfo(GetFrameInfo);
 }
 
 Node::Node(torch::lazy::OpKind op, OpList operands,
@@ -139,7 +144,9 @@ Node::Node(torch::lazy::OpKind op, xla::Shape shape, size_t num_outputs,
                         [&](bool /*bakeInSizes*/) -> torch::lazy::hash_t {
                           return GetOpHash(op, shape, hash_seed);
                         }),
-      xla_shape_(std::move(shape)) {}
+      xla_shape_(std::move(shape)) {
+  RegisterGetFrameInfo(GetFrameInfo);
+}
 
 Node::~Node() {
   for (size_t i = 0; i < operands_as_outputs_.size(); ++i) {
@@ -241,12 +248,13 @@ xla::Shape Node::GetOpShape(const std::function<xla::Shape()>& shape_fn) const {
   return *shape;
 }
 
-std::vector<SourceLocation> Node::GetFrameInfo() {
+std::vector<torch::lazy::SourceLocation> Node::GetFrameInfo() {
   // At the time of writing, retrieving Python frames costs from 1us up to 20us.
   // This per IR Node. Since it is not unreasonable to have a many hundreds of
   // IR Node, this can be a multi-millisecond cost, which is not negligible.
   static bool wants_frames = xla::sys_util::GetEnvBool("XLA_IR_DEBUG", false);
-  return wants_frames ? GetPythonFrames() : std::vector<SourceLocation>();
+  return wants_frames ? torch::lazy::GetPythonFrames()
+                      : std::vector<torch::lazy::SourceLocation>();
 }
 
 ScopePusher::ScopePusher(const std::string& name) { PushScope(name); }

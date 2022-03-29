@@ -164,7 +164,7 @@ class Node : public torch::lazy::Node {
                                        const xla::Shape& shape,
                                        torch::lazy::hash_t hash_seed);
 
-  static std::vector<SourceLocation> GetFrameInfo();
+  static std::vector<torch::lazy::SourceLocation> GetFrameInfo();
 
   xla::Shape xla_shape_;
   std::vector<torch::lazy::Shape> shapes_;
