@@ -11,6 +11,7 @@
 #include "tensorflow/compiler/xla/xla_client/sys_util.h"
 #include "tensorflow/compiler/xla/xla_client/unique.h"
 #include "torch/csrc/lazy/core/hash.h"
+#include "torch/csrc/lazy/python/python_util.h"
 #include "torch_xla/csrc/device.h"
 #include "torch_xla/csrc/ir.h"
 #include "torch_xla/csrc/ir_dump_util.h"
@@ -81,7 +82,8 @@ std::string DebugUtil::GetTensorsGraphInfo(absl::Span<const XLATensor> tensors,
     }
   }
   std::stringstream ss;
-  std::vector<SourceLocation> frames = GetPythonFrames();
+  std::vector<torch::lazy::SourceLocation> frames =
+      torch::lazy::GetPythonFrames();
   ss << "TensorsGraphInfo:\n";
   for (auto& location : frames) {
     ss << "  " << location.function << " (" << location.file << ":"
