@@ -30,6 +30,7 @@ struct ScopeContext {
 };
 
 thread_local ScopeContext g_scope_context;
+RegisterGetFrameInfo(GetFrameInfo);
 
 void PushScope(const std::string& name) {
   size_t id = g_scope_context.next_id;
