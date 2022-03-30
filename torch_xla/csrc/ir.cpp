@@ -123,7 +123,6 @@ Node::Node(torch::lazy::OpKind op, OpList operands, xla::Shape shape,
   for (auto& operand : operands) {
     AddOperand(operand.node, operand.index);
   }
-  RegisterGetFrameInfo(GetFrameInfo);
 }
 
 Node::Node(torch::lazy::OpKind op, OpList operands,
@@ -142,7 +141,6 @@ Node::Node(torch::lazy::OpKind op, xla::Shape shape, size_t num_outputs,
                           return GetOpHash(op, shape, hash_seed);
                         }),
       xla_shape_(std::move(shape)) {
-  RegisterGetFrameInfo(GetFrameInfo);
 }
 
 Node::~Node() {
