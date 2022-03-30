@@ -1200,14 +1200,6 @@ XLATensor::SyncTensorCollection XLATensor::CollectSyncTensors(
   coll.config = config;
   coll.device = *unique_device;
   coll.indices.reserve(tensors.size());
-  TF_VLOG(4) << "Waiting on device barrier for device " << coll.device
-             << " ...";
-  {
-    XLA_TIMED("DeviceLockWait");
-    coll.unlocker = LockDevices(unique_device.AsSet());
-  }
-  TF_VLOG(4) << "Waiting on device barrier for device " << coll.device
-             << " done!";
   for (size_t i = 0; i < tensors.size(); ++i) {
     if (tensor_ids.insert(tensors[i].GetUniqueId()).second &&
         tensors[i].CurrentXlaData() == nullptr) {
@@ -1369,6 +1361,14 @@ std::shared_ptr<XLATensor::Async> XLATensor::ScheduleSyncTensorsGraph(
     ComputationCache::TypePtr cached_computation) {
   tensorflow::profiler::TraceMe activity(
       "ScheduleSyncTensorsGraph", tensorflow::profiler::TraceMeLevel::kInfo);
+  TF_VLOG(4) << "Waiting on device barrier for device " << coll->device
+             << " ...";
+  {
+    XLA_TIMED("DeviceLockWait");
+    coll->unlocker = LockDevices({coll->device});
+  }
+  TF_VLOG(4) << "Waiting on device barrier for device " << coll->device
+             << " done!";
   std::shared_ptr<Async> async = std::make_shared<Async>(
       coll, std::move(parameters_data), std::move(tensors_data),
       std::move(cached_computation));
