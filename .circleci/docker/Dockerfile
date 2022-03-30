@@ -42,6 +42,9 @@ ENV CXXFLAGS "${CXXFLAGS} -D_GLIBCXX_USE_CXX11_ABI=${cxx_abi}"
 # Whether to build for TPUVM mode
 ENV TPUVM_MODE "${tpuvm}"
 
+# Remove deprecated deb repo:
+# https://developer.download.nvidia.com/compute/machine-learning/repos/ubuntu1804/x86_64
+RUN rm /etc/apt/sources.list.d/nvidia-ml.list
 
 # Install base system packages
 RUN apt-get update
