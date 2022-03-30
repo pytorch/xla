@@ -82,9 +82,6 @@ torch::lazy::hash_t GetOperandHashes(const OpList& operands,
   return hash;
 }
 
-// Register GetFrameInfo function
-// torch::lazy::RegisterGetFrameInfo()
-
 }  // namespace
 
 bool Use::operator<(const Use& rhs) const {
