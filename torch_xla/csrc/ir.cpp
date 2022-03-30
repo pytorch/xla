@@ -30,7 +30,6 @@ struct ScopeContext {
 };
 
 thread_local ScopeContext g_scope_context;
-RegisterGetFrameInfo(GetFrameInfo);
 
 void PushScope(const std::string& name) {
   size_t id = g_scope_context.next_id;
@@ -124,6 +123,7 @@ Node::Node(torch::lazy::OpKind op, OpList operands, xla::Shape shape,
   for (auto& operand : operands) {
     AddOperand(operand.node, operand.index);
   }
+  RegisterGetFrameInfo(GetFrameInfo);
 }
 
 Node::Node(torch::lazy::OpKind op, OpList operands,
@@ -141,7 +141,9 @@ Node::Node(torch::lazy::OpKind op, xla::Shape shape, size_t num_outputs,
                         [&](bool /*bakeInSizes*/) -> torch::lazy::hash_t {
                           return GetOpHash(op, shape, hash_seed);
                         }),
-      xla_shape_(std::move(shape)) {}
+      xla_shape_(std::move(shape)) {
+  RegisterGetFrameInfo(GetFrameInfo);
+}
 
 Node::~Node() {
   for (size_t i = 0; i < operands_as_outputs_.size(); ++i) {
