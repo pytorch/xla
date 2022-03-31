@@ -11,7 +11,6 @@
 #include "tensorflow/compiler/xla/xla_client/sys_util.h"
 #include "tensorflow/core/platform/stacktrace.h"
 #include "torch/csrc/lazy/python/python_util.h"
-#include "torch_xla/csrc/python_util.h"
 
 namespace torch_xla {
 namespace fn_tracker {

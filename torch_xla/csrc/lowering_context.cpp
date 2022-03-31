@@ -10,7 +10,6 @@
 #include "tensorflow/compiler/xla/xla_client/debug_macros.h"
 #include "tensorflow/compiler/xla/xla_client/sys_util.h"
 #include "torch/csrc/lazy/core/ir_metadata.h"
-#include "torch_xla/csrc/python_util.h"
 
 namespace torch_xla {
 namespace ir {
