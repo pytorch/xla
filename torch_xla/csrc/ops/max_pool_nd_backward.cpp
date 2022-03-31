@@ -22,7 +22,7 @@ xla::Shape NodeOutputShape(const Value& grad_output, const Value& input,
                                   /*input=*/operands[1], spatial_dim_count,
                                   kernel_size, stride, padding, ceil_mode);
   };
-  return InferOutputShape({grad_output.shape(), input.shape()},
+  return InferOutputShape({grad_output.xla_shape(), input.xla_shape()},
                           lower_for_shape_fn);
 }
 
@@ -60,9 +60,9 @@ MaxPoolNdBackward::MaxPoolNdBackward(
       ceil_mode_(ceil_mode) {}
 
 NodePtr MaxPoolNdBackward::Clone(OpList operands) const {
-  return MakeNode<MaxPoolNdBackward>(operands.at(0), operands.at(1),
-                                     spatial_dim_count_, kernel_size_, stride_,
-                                     padding_, ceil_mode_);
+  return ir::MakeNode<MaxPoolNdBackward>(operands.at(0), operands.at(1),
+                                         spatial_dim_count_, kernel_size_,
+                                         stride_, padding_, ceil_mode_);
 }
 
 XlaOpVector MaxPoolNdBackward::Lower(LoweringContext* loctx) const {

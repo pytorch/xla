@@ -12,12 +12,12 @@ namespace ops {
 LogSoftmaxBackward::LogSoftmaxBackward(const Value& grad_output,
                                        const Value& output, int64_t dim)
     : Node(torch::lazy::OpKind(at::aten::_log_softmax_backward_data),
-           {grad_output, output}, grad_output.shape(),
+           {grad_output, output}, grad_output.xla_shape(),
            /*num_outputs=*/1, torch::lazy::MHash(dim)),
       dim_(dim) {}
 
 NodePtr LogSoftmaxBackward::Clone(OpList operands) const {
-  return MakeNode<LogSoftmaxBackward>(operands.at(0), operands.at(1), dim_);
+  return ir::MakeNode<LogSoftmaxBackward>(operands.at(0), operands.at(1), dim_);
 }
 
 XlaOpVector LogSoftmaxBackward::Lower(LoweringContext* loctx) const {

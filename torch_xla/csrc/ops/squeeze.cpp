@@ -24,7 +24,7 @@ xla::Shape NodeOutputShape(const Value& input, int dim) {
     XLA_CHECK_EQ(operands.size(), 1);
     return LowerSqueeze(operands[0], dim);
   };
-  return InferOutputShape({input.shape()}, lower_for_shape_fn);
+  return InferOutputShape({input.xla_shape()}, lower_for_shape_fn);
 }
 
 }  // namespace
@@ -36,7 +36,7 @@ Squeeze::Squeeze(const Value& input, int dim)
       dim_(dim) {}
 
 NodePtr Squeeze::Clone(OpList operands) const {
-  return MakeNode<Squeeze>(operands.at(0), dim_);
+  return ir::MakeNode<Squeeze>(operands.at(0), dim_);
 }
 
 XlaOpVector Squeeze::Lower(LoweringContext* loctx) const {

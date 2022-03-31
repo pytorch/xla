@@ -14,15 +14,16 @@ UpsampleNearestBackward::UpsampleNearestBackward(
     std::vector<int64_t> input_size)
     : Node(torch::lazy::OpKind(at::aten::upsample_nearest2d_backward), {input},
            [&]() {
-             return resize::GetBackwardOutputShape2d(input.shape(), input_size);
+             return resize::GetBackwardOutputShape2d(input.xla_shape(),
+                                                     input_size);
            },
            /*num_outputs=*/1, torch::lazy::MHash(output_size, input_size)),
       output_size_(std::move(output_size)),
       input_size_(std::move(input_size)) {}
 
 NodePtr UpsampleNearestBackward::Clone(OpList operands) const {
-  return MakeNode<UpsampleNearestBackward>(operands.at(0), output_size_,
-                                           input_size_);
+  return ir::MakeNode<UpsampleNearestBackward>(operands.at(0), output_size_,
+                                               input_size_);
 }
 
 XlaOpVector UpsampleNearestBackward::Lower(LoweringContext* loctx) const {

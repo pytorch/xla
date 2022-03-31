@@ -17,7 +17,7 @@ xla::Shape NodeOutputShape(const Value& input,
     XLA_CHECK_EQ(operands.size(), 1);
     return BuildAdaptiveAvgPool2d(operands[0], output_size);
   };
-  return InferOutputShape({input.shape()}, lower_for_shape_fn);
+  return InferOutputShape({input.xla_shape()}, lower_for_shape_fn);
 }
 
 }  // namespace
@@ -30,7 +30,7 @@ AdaptiveAvgPool2d::AdaptiveAvgPool2d(const Value& input,
       output_size_(std::move(output_size)) {}
 
 NodePtr AdaptiveAvgPool2d::Clone(OpList operands) const {
-  return MakeNode<AdaptiveAvgPool2d>(operands.at(0), output_size_);
+  return ir::MakeNode<AdaptiveAvgPool2d>(operands.at(0), output_size_);
 }
 
 XlaOpVector AdaptiveAvgPool2d::Lower(LoweringContext* loctx) const {

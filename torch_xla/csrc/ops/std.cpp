@@ -17,7 +17,7 @@ xla::Shape NodeOutputShape(const Value& input, std::vector<int64_t>& dimensions,
     return BuildStdDeviation(operands[0], dimensions, keep_reduced_dimensions,
                              correction);
   };
-  return InferOutputShape({input.shape()}, lower_for_shape_fn);
+  return InferOutputShape({input.xla_shape()}, lower_for_shape_fn);
 }
 
 }  // namespace
@@ -36,8 +36,8 @@ Std::Std(const Value& input, std::vector<int64_t> dimensions,
       correction_(correction) {}
 
 NodePtr Std::Clone(OpList operands) const {
-  return MakeNode<Std>(operands.at(0), dimensions_, keep_reduced_dimensions_,
-                       correction_);
+  return ir::MakeNode<Std>(operands.at(0), dimensions_,
+                           keep_reduced_dimensions_, correction_);
 }
 
 XlaOpVector Std::Lower(LoweringContext* loctx) const {

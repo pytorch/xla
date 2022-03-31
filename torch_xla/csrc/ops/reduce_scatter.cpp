@@ -23,7 +23,7 @@ xla::Shape NodeOutputShape(AllReduceType reduce_type, const Value input,
         reduce_type, inputOp, tokenOp, scale, scatter_dim, shard_count, groups);
     return xla::Tuple(operands[0].builder(), {result.result, result.token});
   };
-  return InferOutputShape({input.shape(), token.shape()}, shape_fn);
+  return InferOutputShape({input.xla_shape(), token.xla_shape()}, shape_fn);
 }
 
 }  // namespace
@@ -47,8 +47,9 @@ ReduceScatter::ReduceScatter(AllReduceType reduce_type, const Value& input,
       groups_(std::move(groups)) {}
 
 NodePtr ReduceScatter::Clone(OpList operands) const {
-  return MakeNode<ReduceScatter>(reduce_type_, operands.at(0), operands.at(1),
-                                 scale_, scatter_dim_, shard_count_, groups_);
+  return ir::MakeNode<ReduceScatter>(reduce_type_, operands.at(0),
+                                     operands.at(1), scale_, scatter_dim_,
+                                     shard_count_, groups_);
 }
 
 XlaOpVector ReduceScatter::Lower(LoweringContext* loctx) const {

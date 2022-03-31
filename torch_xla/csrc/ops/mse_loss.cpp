@@ -19,7 +19,8 @@ xla::Shape NodeOutputShape(const Value& input, const Value& target,
       [&](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
     return BuildMseLoss(operands[0], operands[1], reduction);
   };
-  return InferOutputShape({input.shape(), target.shape()}, lower_for_shape_fn);
+  return InferOutputShape({input.xla_shape(), target.xla_shape()},
+                          lower_for_shape_fn);
 }
 
 }  // namespace
@@ -33,7 +34,7 @@ MseLoss::MseLoss(const Value& input, const Value& target,
       reduction_(reduction) {}
 
 NodePtr MseLoss::Clone(OpList operands) const {
-  return MakeNode<MseLoss>(operands.at(0), operands.at(1), reduction_);
+  return ir::MakeNode<MseLoss>(operands.at(0), operands.at(1), reduction_);
 }
 
 XlaOpVector MseLoss::Lower(LoweringContext* loctx) const {

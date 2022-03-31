@@ -19,7 +19,7 @@ std::vector<xla::XlaOp> LowerQR(xla::XlaOp input, bool some) {
 }
 
 xla::Shape NodeOutputShape(const Value& input, bool some) {
-  const xla::Shape& input_shape = input.shape();
+  const xla::Shape& input_shape = input.xla_shape();
   XLA_CHECK_GE(input_shape.rank(), 2) << input_shape;
   // The input tensor is ..., M, N
   int64_t m_dim = input_shape.dimensions(input_shape.rank() - 2);
@@ -48,7 +48,7 @@ QR::QR(const Value& input, bool some)
       some_(some) {}
 
 NodePtr QR::Clone(OpList operands) const {
-  return MakeNode<QR>(operands.at(0), some_);
+  return ir::MakeNode<QR>(operands.at(0), some_);
 }
 
 XlaOpVector QR::Lower(LoweringContext* loctx) const {

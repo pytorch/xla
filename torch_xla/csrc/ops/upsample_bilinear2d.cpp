@@ -14,15 +14,16 @@ UpsampleBilinear::UpsampleBilinear(const Value& input,
                                    bool align_corners)
     : Node(torch::lazy::OpKind(at::aten::upsample_bilinear2d), {input},
            [&]() {
-             return resize::GetForwardOutputShape2d(input.shape(), output_size);
+             return resize::GetForwardOutputShape2d(input.xla_shape(),
+                                                    output_size);
            },
            /*num_outputs=*/1, torch::lazy::MHash(output_size, align_corners)),
       output_size_(std::move(output_size)),
       align_corners_(align_corners) {}
 
 NodePtr UpsampleBilinear::Clone(OpList operands) const {
-  return MakeNode<UpsampleBilinear>(operands.at(0), output_size_,
-                                    align_corners_);
+  return ir::MakeNode<UpsampleBilinear>(operands.at(0), output_size_,
+                                        align_corners_);
 }
 
 XlaOpVector UpsampleBilinear::Lower(LoweringContext* loctx) const {

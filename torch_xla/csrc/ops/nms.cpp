@@ -20,9 +20,10 @@ xla::Shape NodeOutputShape(const Value& boxes, const Value& scores,
     return xla::Tuple(result.selected_indices.builder(),
                       {result.selected_indices, result.num_valid});
   };
-  return InferOutputShape({boxes.shape(), scores.shape(),
-                           score_threshold.shape(), iou_threshold.shape()},
-                          shape_fn);
+  return InferOutputShape(
+      {boxes.xla_shape(), scores.xla_shape(), score_threshold.xla_shape(),
+       iou_threshold.xla_shape()},
+      shape_fn);
 }
 
 }  // namespace
@@ -38,8 +39,8 @@ Nms::Nms(const Value& boxes, const Value& scores, const Value& score_threshold,
       output_size_(output_size) {}
 
 NodePtr Nms::Clone(OpList operands) const {
-  return MakeNode<Nms>(operands.at(0), operands.at(1), operands.at(2),
-                       operands.at(3), output_size_);
+  return ir::MakeNode<Nms>(operands.at(0), operands.at(1), operands.at(2),
+                           operands.at(3), output_size_);
 }
 
 XlaOpVector Nms::Lower(LoweringContext* loctx) const {

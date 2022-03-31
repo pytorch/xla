@@ -68,8 +68,8 @@ struct Value : public torch::lazy::Value {
   // multi-output node, the shape returned by this API will not be the full
   // tuple shape, but only the shape at index referred by this value.
   // To retrieve the full tuple shape in that case, use the node_shape() API.
-  const xla::Shape& shape() const;
-  const xla::Shape& node_shape() const;
+  const xla::Shape& xla_shape() const;
+  const xla::Shape& xla_node_shape() const;
 
   torch::lazy::hash_t hash() const;
 

@@ -13,7 +13,7 @@ namespace {
 
 xla::Shape NodeOutputShape(const Value& input,
                            absl::Span<const int64_t> output_sizes) {
-  const xla::Shape& input_shape = input.shape();
+  const xla::Shape& input_shape = input.xla_shape();
   auto info = XlaHelpers::GetDynamicReshapeInfo(input_shape, output_sizes);
   if (info) {
     return std::move(info->output_shape);

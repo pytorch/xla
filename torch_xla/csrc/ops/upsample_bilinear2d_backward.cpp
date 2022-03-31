@@ -14,7 +14,8 @@ UpsampleBilinearBackward::UpsampleBilinearBackward(
     std::vector<int64_t> input_size, bool align_corners)
     : Node(torch::lazy::OpKind(at::aten::upsample_bilinear2d_backward), {input},
            [&]() {
-             return resize::GetBackwardOutputShape2d(input.shape(), input_size);
+             return resize::GetBackwardOutputShape2d(input.xla_shape(),
+                                                     input_size);
            },
            /*num_outputs=*/1,
            torch::lazy::MHash(output_size, input_size, align_corners)),
@@ -23,8 +24,8 @@ UpsampleBilinearBackward::UpsampleBilinearBackward(
       align_corners_(align_corners) {}
 
 NodePtr UpsampleBilinearBackward::Clone(OpList operands) const {
-  return MakeNode<UpsampleBilinearBackward>(operands.at(0), output_size_,
-                                            input_size_, align_corners_);
+  return ir::MakeNode<UpsampleBilinearBackward>(operands.at(0), output_size_,
+                                                input_size_, align_corners_);
 }
 
 XlaOpVector UpsampleBilinearBackward::Lower(LoweringContext* loctx) const {

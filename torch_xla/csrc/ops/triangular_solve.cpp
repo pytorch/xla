@@ -66,7 +66,7 @@ std::vector<xla::XlaOp> LowerTriangularSolve(xla::XlaOp rhs, xla::XlaOp lhs,
 
 xla::Shape NodeOutputShape(const Value& rhs, const Value& lhs) {
   std::pair<xla::Shape, xla::Shape> broadcasted_shapes =
-      InferTriangularSolveShape(rhs.shape(), lhs.shape());
+      InferTriangularSolveShape(rhs.xla_shape(), lhs.xla_shape());
   return xla::ShapeUtil::MakeTupleShape(
       {broadcasted_shapes.first, broadcasted_shapes.second});
 }
@@ -86,8 +86,9 @@ TriangularSolve::TriangularSolve(const Value& rhs, const Value& lhs,
       unit_diagonal_(unit_diagonal) {}
 
 NodePtr TriangularSolve::Clone(OpList operands) const {
-  return MakeNode<TriangularSolve>(operands.at(0), operands.at(1), left_side_,
-                                   lower_, transpose_, unit_diagonal_);
+  return ir::MakeNode<TriangularSolve>(operands.at(0), operands.at(1),
+                                       left_side_, lower_, transpose_,
+                                       unit_diagonal_);
 }
 
 XlaOpVector TriangularSolve::Lower(LoweringContext* loctx) const {

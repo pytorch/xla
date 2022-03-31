@@ -12,7 +12,7 @@ Select::Select(const Value& input, int64_t dim, int64_t start, int64_t end,
                int64_t stride)
     : Node(xla_select, {input},
            [&]() {
-             return MakeSelectShape(input.shape(), dim, start, end, stride);
+             return MakeSelectShape(input.xla_shape(), dim, start, end, stride);
            },
            /*num_outputs=*/1, torch::lazy::MHash(dim, start, end, stride)),
       dim_(dim),
@@ -21,7 +21,7 @@ Select::Select(const Value& input, int64_t dim, int64_t start, int64_t end,
       stride_(stride) {}
 
 NodePtr Select::Clone(OpList operands) const {
-  return MakeNode<Select>(operands.at(0), dim_, start_, end_, stride_);
+  return ir::MakeNode<Select>(operands.at(0), dim_, start_, end_, stride_);
 }
 
 XlaOpVector Select::Lower(LoweringContext* loctx) const {

@@ -17,7 +17,7 @@ xla::Shape NodeOutputShape(const Value& input,
     XLA_CHECK_EQ(operands.size(), 1);
     return BuildRepeat(operands[0], repeats);
   };
-  return InferOutputShape({input.shape()}, lower_for_shape_fn);
+  return InferOutputShape({input.xla_shape()}, lower_for_shape_fn);
 }
 
 }  // namespace
@@ -29,7 +29,7 @@ Repeat::Repeat(const Value& input, std::vector<int64_t> repeats)
       repeats_(std::move(repeats)) {}
 
 NodePtr Repeat::Clone(OpList operands) const {
-  return MakeNode<Repeat>(operands.at(0), repeats_);
+  return ir::MakeNode<Repeat>(operands.at(0), repeats_);
 }
 
 XlaOpVector Repeat::Lower(LoweringContext* loctx) const {
