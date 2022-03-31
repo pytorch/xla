@@ -16,15 +16,15 @@ Uniform::Uniform(const Value& from, const Value& to, const Value& seed,
            /*num_outputs=*/1, torch::lazy::Hash(rng_shape)) {}
 
 NodePtr Uniform::Clone(OpList operands) const {
-  return MakeNode<Uniform>(operands.at(0), operands.at(1), operands.at(2),
-                           shape());
+  return ir::MakeNode<Uniform>(operands.at(0), operands.at(1), operands.at(2),
+                               xla_shape());
 }
 
 XlaOpVector Uniform::Lower(LoweringContext* loctx) const {
   xla::XlaOp from = loctx->GetOutputOp(operand(0));
   xla::XlaOp to = loctx->GetOutputOp(operand(1));
   xla::XlaOp rng_seed = loctx->GetOutputOp(operand(2));
-  return ReturnOp(RngUniform(rng_seed, shape(), from, to), loctx);
+  return ReturnOp(RngUniform(rng_seed, xla_shape(), from, to), loctx);
 }
 
 }  // namespace ops

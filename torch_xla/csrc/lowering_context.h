@@ -11,6 +11,7 @@
 #include "tensorflow/compiler/xla/types.h"
 #include "tensorflow/compiler/xla/xla_client/computation_client.h"
 #include "tensorflow/core/platform/macros.h"
+#include "torch/csrc/lazy/core/ir_util.h"
 #include "torch_xla/csrc/device.h"
 #include "torch_xla/csrc/ir.h"
 #include "torch_xla/csrc/ir_util.h"
@@ -22,8 +23,8 @@ class LoweringContext {
  public:
   explicit LoweringContext(const std::string& name, Device device);
   LoweringContext(const std::string& name, Device device,
-                  absl::Span<const Node* const> post_order,
-                  Util::EmissionMap emit_status);
+                  absl::Span<const torch::lazy::Node* const> post_order,
+                  torch::lazy::Util::EmissionMap emit_status);
 
   xla::XlaBuilder* builder() { return &builder_; }
 
@@ -52,12 +53,12 @@ class LoweringContext {
   // Assigns the given XLA operation to the specified output. As outputs are
   // lowered in a post-order fashion, later nodes should always find their
   // operands among the emitted outputs.
-  void AssignOutputOp(const Output& output, xla::XlaOp op);
+  void AssignOutputOp(const torch::lazy::Output& output, xla::XlaOp op);
 
   // Retrieves the lowered operation for a output. If the requested output is
   // not available yet, the graph behind the output's Node is lowered, and the
   // corresponding XLA operation returned.
-  xla::XlaOp GetOutputOp(const Output& output);
+  xla::XlaOp GetOutputOp(const torch::lazy::Output& output);
 
   // Build the XLA computation capturing all the operations created with the
   // embedded XLA builder (returned by the builder() API).
@@ -71,7 +72,7 @@ class LoweringContext {
 
   // Lowers a single IR node. All the inputs to the node must have a lowering
   // before calling this API. Returns the generated XLA operations.
-  XlaOpVector LowerNode(const Node* node);
+  XlaOpVector LowerNode(const torch::lazy::Node* node);
 
   size_t GetEmittedNodeCount() const { return emit_status_.size(); }
 
@@ -82,7 +83,7 @@ class LoweringContext {
   };
 
   // Reports an XLA builder error for the given node.
-  TF_ATTRIBUTE_NORETURN void ReportBuilderError(const Node* node,
+  TF_ATTRIBUTE_NORETURN void ReportBuilderError(const torch::lazy::Node* node,
                                                 const char* error_msg);
 
   xla::XlaBuilder builder_;
@@ -93,7 +94,7 @@ class LoweringContext {
   std::vector<size_t> parameter_sequence_;
   std::vector<xla::XlaOp> root_tuple_;
   OutputMap<xla::XlaOp> emitted_outputs_;
-  Util::EmissionMap emit_status_;
+  torch::lazy::Util::EmissionMap emit_status_;
 };
 
 }  // namespace ir

@@ -14,6 +14,7 @@
 #include "tensorflow/compiler/xla/xla_client/multi_wait.h"
 #include "tensorflow/compiler/xla/xla_client/util.h"
 #include "torch/csrc/autograd/variable.h"
+#include "torch/csrc/lazy/core/ir_util.h"
 #include "torch_xla/csrc/computation.h"
 #include "torch_xla/csrc/cross_replica_reduces.h"
 #include "torch_xla/csrc/device.h"
@@ -1221,8 +1222,8 @@ class XLATensor {
   };
 
   struct PostOrderData {
-    std::vector<const ir::Node*> post_order;
-    ir::Util::EmissionMap emission_map;
+    std::vector<const torch::lazy::Node*> post_order;
+    torch::lazy::Util::EmissionMap emission_map;
     std::vector<xla::ComputationClient::DataPtr> parameters_data;
     std::vector<size_t> parameter_sequence;
   };

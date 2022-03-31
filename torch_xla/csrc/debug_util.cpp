@@ -11,11 +11,11 @@
 #include "tensorflow/compiler/xla/xla_client/sys_util.h"
 #include "tensorflow/compiler/xla/xla_client/unique.h"
 #include "torch/csrc/lazy/core/hash.h"
+#include "torch/csrc/lazy/python/python_util.h"
 #include "torch_xla/csrc/device.h"
 #include "torch_xla/csrc/ir.h"
 #include "torch_xla/csrc/ir_dump_util.h"
 #include "torch_xla/csrc/ir_util.h"
-#include "torch_xla/csrc/python_util.h"
 
 namespace torch_xla {
 namespace {
@@ -54,7 +54,7 @@ DebugUtil::GraphFormat DebugUtil::GetDefaultGraphFormat() {
 std::string DebugUtil::GetTensorsGraphInfo(absl::Span<const XLATensor> tensors,
                                            const std::vector<size_t>* indices,
                                            GraphFormat format) {
-  std::vector<const ir::Node*> root_nodes;
+  std::vector<const torch::lazy::Node*> root_nodes;
   std::vector<ir::Value> root_values;
   std::vector<torch::lazy::hash_t> root_hashes;
   xla::util::Unique<Device> unique_device;
@@ -81,7 +81,8 @@ std::string DebugUtil::GetTensorsGraphInfo(absl::Span<const XLATensor> tensors,
     }
   }
   std::stringstream ss;
-  std::vector<SourceLocation> frames = GetPythonFrames();
+  std::vector<torch::lazy::SourceLocation> frames =
+      torch::lazy::GetPythonFrames();
   ss << "TensorsGraphInfo:\n";
   for (auto& location : frames) {
     ss << "  " << location.function << " (" << location.file << ":"
