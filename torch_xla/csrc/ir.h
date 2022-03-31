@@ -62,7 +62,7 @@ using OutputMap =
 // Represents an input/operand for a Node object.
 struct Value : public torch::lazy::Value {
   Value() = default;
-  Value(NodePtr node, size_t index = 0) : torch::lazy::Value(node, index), node(std::move(node)), index(index) {}
+  Value(NodePtr node, size_t index = 0) : torch::lazy::Value(node.get(), index), node(std::move(node)), index(index) {}
 
   // Retrieves the shape of this value. If the IR Node generating the value is a
   // multi-output node, the shape returned by this API will not be the full
