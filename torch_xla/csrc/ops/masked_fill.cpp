@@ -26,7 +26,7 @@ XlaOpVector MaskedFill::Lower(LoweringContext* loctx) const {
   xla::XlaOp zero = xla::Zero(loctx->builder(), XlaHelpers::TypeOfXlaOp(mask));
   xla::XlaOp mask_pred = xla::Ne(mask, zero);
   // Input shape is the same as output shape.
-  const xla::Shape& input_shape = shape();
+  const xla::Shape& input_shape = xla_shape();
   xla::XlaOp value =
       xla::Broadcast(XlaHelpers::ScalarValue(value_, input_shape.element_type(),
                                              input.builder()),

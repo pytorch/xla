@@ -30,12 +30,13 @@ std::string Scalar::ToString() const {
 }
 
 NodePtr Scalar::Clone(OpList operands) const {
-  return MakeNode<Scalar>(value_, shape());
+  return ir::MakeNode<Scalar>(value_, xla_shape());
 }
 
 XlaOpVector Scalar::Lower(LoweringContext* loctx) const {
-  xla::Literal literal(xla::ShapeUtil::MakeShape(shape().element_type(), {}));
-  switch (shape().element_type()) {
+  xla::Literal literal(
+      xla::ShapeUtil::MakeShape(xla_shape().element_type(), {}));
+  switch (xla_shape().element_type()) {
     case xla::PrimitiveType::PRED:
       literal.Set<bool>({}, static_cast<bool>(value_.toInt()));
       break;
@@ -85,12 +86,12 @@ XlaOpVector Scalar::Lower(LoweringContext* loctx) const {
       break;
     default:
       XLA_ERROR() << "Unable to lower scalar " << &value_ << " of shape "
-                  << shape();
+                  << xla_shape();
   }
 
   xla::XlaOp op = xla::ConstantLiteral(loctx->builder(), literal);
-  if (shape().rank() > 0) {
-    op = xla::Broadcast(op, shape().dimensions());
+  if (xla_shape().rank() > 0) {
+    op = xla::Broadcast(op, xla_shape().dimensions());
   }
   return ReturnOp(op, loctx);
 }
