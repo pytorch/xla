@@ -1408,6 +1408,9 @@ class XLATensor {
   static SyncTensorCollection CollectSyncTensors(
       const std::vector<XLATensor>& tensors, const SyncTensorsConfig& config);
 
+  // Waits for this SyncTensorCollection's device barrier and acuire the lock.
+  static void TensorCollectionBarrier(SyncTensorCollection* coll);
+
   // Implementation of the GetTensors() API using the op-by-op executor.
   static std::vector<at::Tensor> GetTensorsOpByOp(
       std::vector<XLATensor>* tensors);
