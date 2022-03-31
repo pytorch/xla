@@ -16,6 +16,7 @@
 #include "tensorflow/compiler/xla/xla_client/mesh_service.h"
 #include "tensorflow/compiler/xla/xla_client/sys_util.h"
 #include "tensorflow/compiler/xla/xla_client/xrt_computation_client.h"
+#include "tensorflow/compiler/xla/xla_client/pjrt_computation_client.h"
 #include "tensorflow/core/platform/net.h"
 #include "tensorflow/core/platform/stacktrace_handler.h"
 #include "tensorflow/core/util/device_name_utils.h"
@@ -265,16 +266,18 @@ bool ParseEnvDevices(XrtComputationClient::Options* options) {
 }  // namespace
 
 std::unique_ptr<ComputationClient> ComputationClient::Create() {
-  XrtComputationClient::Options options;
-  std::unique_ptr<tensorflow::tpu::TopologyProto> topology_proto;
-  if (!ParseEnvBasedTpuClusterConfig(&options) &&
-      !ParseEnvDeviceCounts(&options) && !ParseEnvDevices(&options) &&
-      !ParseMeshConfig(&options, &topology_proto)) {
-    XLA_ERROR() << "Missing XLA configuration";
-  }
-  PopulateLocalDevices(&options);
-  return std::unique_ptr<ComputationClient>(
-      new XrtComputationClient(options, std::move(topology_proto)));
+  // XrtComputationClient::Options options;
+  // std::unique_ptr<tensorflow::tpu::TopologyProto> topology_proto;
+  // if (!ParseEnvBasedTpuClusterConfig(&options) &&
+  //     !ParseEnvDeviceCounts(&options) && !ParseEnvDevices(&options) &&
+  //     !ParseMeshConfig(&options, &topology_proto)) {
+  //   XLA_ERROR() << "Missing XLA configuration";
+  // }
+  // PopulateLocalDevices(&options);
+  // return std::unique_ptr<ComputationClient>(
+  //     new XrtComputationClient(options, std::move(topology_proto)));
+  PjRtComputationClient::Options options;
+  return std::unique_ptr<ComputationClient>(new PjRtComputationClient(options));
 }
 
 std::shared_ptr<ComputationClient::Computation> ComputationClient::Compile(
