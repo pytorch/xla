@@ -12,6 +12,7 @@ steps:
           '--build-arg', 'tpuvm=${_TPU_VM}',
           '--build-arg', 'bazel_jobs=${_BAZEL_JOBS}',
           '--build-arg', 'git_clone=${_GIT_CLONE}',
+          '--build-arg', 'cuda_compute=${_CUDA_COMPUTE}',
           '-t', 'gcr.io/tpu-pytorch/xla:${_IMAGE_NAME}',
           '-f', 'docker/Dockerfile', '.'
         ]
@@ -39,6 +40,7 @@ substitutions:
     _TPU_VM: ''
     _BAZEL_JOBS: ''
     _GIT_CLONE: 'true'
+    _CUDA_COMPUTE: '3.7,7.0,7.5,8.0'
 options:
     pool:
       name: 'projects/tpu-pytorch/locations/us-central1/workerPools/wheel_build'
