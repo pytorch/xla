@@ -11,6 +11,12 @@
 #include <stdexcept>
 #include <unordered_set>
 
+#include "torch/csrc/autograd/function.h"
+#include "torch_xla/csrc/ops/sum_to_size.h"
+#include "torch_xla/csrc/ops/dynamic_size.h"
+#include "torch_xla/csrc/ops/dynamic_expand.h"
+#include "torch_xla/csrc/aten_ltc_bridge.h"
+
 #include "absl/memory/memory.h"
 #include "absl/strings/str_join.h"
 #include "tensorflow/compiler/xla/literal_util.h"
@@ -47,6 +53,20 @@
 
 namespace torch_xla {
 namespace {
+
+static at::Tensor generate_size_check_for(at::Tensor& input, at::Tensor& grad) {
+    auto grad_lt = bridge::GetOrCreateLtcTensor(grad, GetCurrentDevice());
+    auto input_lt = bridge::GetLtcTensor(input);
+    auto sz = ir::MakeNode<ir::ops::DynamicSize2>(input_lt.GetIrValue());
+    return bridge::AtenFromLtcTensor(
+      grad_lt.CreateFrom(ir::MakeNode<ir::ops::SumToOrThrow>(grad_lt.GetIrValue(), sz)));
+  }
+
+static struct InitializeHandlers {
+    InitializeHandlers() {
+      torch::autograd::setSumToOrThrowHandler(generate_size_check_for);
+    }
+} init_handlers;
 
 struct TlsData {
   void Reset() { trim_counter = 0; }

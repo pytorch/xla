@@ -35,6 +35,12 @@ xla::XlaOp SqueezeAllTrivialDimensions(xla::XlaOp input);
 xla::XlaOp BuildExpand(xla::XlaOp input,
                        absl::Span<const int64_t> output_sizes);
 
+// Creates a new tensor with the dynamic dimensions expanded to the specified
+// output sizes.
+xla::XlaOp BuildDynamicExpand(xla::XlaOp input,
+                              xla::XlaOp output_size,
+                              xla::Shape output_shape);
+ 
 std::vector<int64_t> BuildSqueezedDimensions(
     absl::Span<const int64_t> dimensions, int64_t squeeze_dim);
 

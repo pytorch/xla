@@ -112,6 +112,19 @@ xla::XlaOp BuildExpand(xla::XlaOp input,
                              torch::lazy::Iota<int64_t>(output_sizes.size()));
 }
 
+xla::XlaOp BuildDynamicExpand(xla::XlaOp input,
+                              xla::XlaOp output_size,
+                              xla::Shape output_shape) {
+  xla::XlaOp output = BuildExpand(input, output_shape.dimensions());
+  for (int i = 0; i < output_dims.dimensions(); ++i) {
+    if (output_shape.is_dynamic_dimension(i)) {
+      output = xla::SetDimensionSize(output, MaybeConvertTo(output_size, 
+                                                       xla::PrimitiveType::S32) , i);
+    }
+  }
+  return output;
+}
+ 
 std::vector<int64_t> BuildSqueezedDimensions(
     absl::Span<const int64_t> dimensions, int64_t squeeze_dim) {
   std::vector<int64_t> output_dimensions;
