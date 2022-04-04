@@ -7,6 +7,7 @@
 #include "tensorflow/compiler/xla/xla_client/cache.h"
 #include "tensorflow/compiler/xla/xla_client/debug_macros.h"
 #include "tensorflow/compiler/xla/xla_client/sys_util.h"
+#include "torch/csrc/lazy/core/config.h"
 #include "torch/csrc/lazy/core/hash.h"
 #include "torch/csrc/lazy/core/ir_metadata.h"
 #include "torch/csrc/lazy/python/python_util.h"
@@ -80,6 +81,11 @@ torch::lazy::hash_t GetOperandHashes(const OpList& operands,
     hash = torch::lazy::HashCombine(hash, operand.hash());
   }
   return hash;
+}
+
+void setXlaEnvVars() {
+  static bool wants_frames = xla::sys_util::GetEnvBool("XLA_IR_DEBUG", false);
+  FLAGS_torch_lazy_ir_debug = wants_frames;
 }
 
 }  // namespace
@@ -259,3 +265,11 @@ void ScopePusher::ResetScopes() { ResetScopeContext(); }
 
 }  // namespace ir
 }  // namespace torch_xla
+
+void setXlaEnvVars() {
+  std::cout << "WONJOO: before, FLAGS_torch_lazy_ir_debug=" << FLAGS_torch_lazy_ir_debug << std::endl;
+  static bool wants_frames = xla::sys_util::GetEnvBool("XLA_IR_DEBUG", false);
+  std::cout << "WONJOO: wants_frames=" << wants_frames << std::endl;
+  FLAGS_torch_lazy_ir_debug = wants_frames;
+  std::cout << "WONJOO: after, FLAGS_torch_lazy_ir_debug=" << FLAGS_torch_lazy_ir_debug << std::endl;
+}
