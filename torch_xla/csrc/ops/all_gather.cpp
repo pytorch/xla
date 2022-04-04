@@ -20,7 +20,7 @@ xla::Shape NodeOutputShape(const Value& input, const Value& token, int64_t dim,
         BuildAllGather(operands[0], operands[1], dim, shard_count, groups);
     return xla::Tuple(operands[0].builder(), {result.result, result.token});
   };
-  return InferOutputShape({input.shape(), token.shape()}, shape_fn);
+  return InferOutputShape({input.xla_shape(), token.xla_shape()}, shape_fn);
 }
 
 }  // namespace
@@ -38,8 +38,8 @@ AllGather::AllGather(const Value& input, const Value& token, int64_t dim,
       groups_(std::move(groups)) {}
 
 NodePtr AllGather::Clone(OpList operands) const {
-  return MakeNode<AllGather>(operands.at(0), operands.at(1), dim_, shard_count_,
-                             groups_);
+  return ir::MakeNode<AllGather>(operands.at(0), operands.at(1), dim_,
+                                 shard_count_, groups_);
 }
 
 XlaOpVector AllGather::Lower(LoweringContext* loctx) const {

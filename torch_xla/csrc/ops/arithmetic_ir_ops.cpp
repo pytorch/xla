@@ -15,10 +15,10 @@ NodePtr operator+(const Value& node1, const Value& node2) {
     xla::XlaOp op1 = loctx->GetOutputOp(node.operand(1));
     return node.ReturnOp(XlaHelpers::PromotedAdd(op0, op1), loctx);
   };
-  return ops::GenericOp(
-      torch::lazy::OpKind(at::aten::add), {node1, node2},
-      XlaHelpers::GetPromotedBinaryOpShape(node1.shape(), node2.shape()),
-      std::move(lower_fn));
+  return ops::GenericOp(torch::lazy::OpKind(at::aten::add), {node1, node2},
+                        XlaHelpers::GetPromotedBinaryOpShape(node1.xla_shape(),
+                                                             node2.xla_shape()),
+                        std::move(lower_fn));
 }
 
 NodePtr operator-(const Value& node1, const Value& node2) {
@@ -27,10 +27,10 @@ NodePtr operator-(const Value& node1, const Value& node2) {
     xla::XlaOp op1 = loctx->GetOutputOp(node.operand(1));
     return node.ReturnOp(XlaHelpers::PromotedSub(op0, op1), loctx);
   };
-  return ops::GenericOp(
-      torch::lazy::OpKind(at::aten::sub), {node1, node2},
-      XlaHelpers::GetPromotedBinaryOpShape(node1.shape(), node2.shape()),
-      std::move(lower_fn));
+  return ops::GenericOp(torch::lazy::OpKind(at::aten::sub), {node1, node2},
+                        XlaHelpers::GetPromotedBinaryOpShape(node1.xla_shape(),
+                                                             node2.xla_shape()),
+                        std::move(lower_fn));
 }
 
 NodePtr operator*(const Value& node1, const Value& node2) {
@@ -39,10 +39,10 @@ NodePtr operator*(const Value& node1, const Value& node2) {
     xla::XlaOp op1 = loctx->GetOutputOp(node.operand(1));
     return node.ReturnOp(XlaHelpers::PromotedMul(op0, op1), loctx);
   };
-  return ops::GenericOp(
-      torch::lazy::OpKind(at::aten::mul), {node1, node2},
-      XlaHelpers::GetPromotedBinaryOpShape(node1.shape(), node2.shape()),
-      std::move(lower_fn));
+  return ops::GenericOp(torch::lazy::OpKind(at::aten::mul), {node1, node2},
+                        XlaHelpers::GetPromotedBinaryOpShape(node1.xla_shape(),
+                                                             node2.xla_shape()),
+                        std::move(lower_fn));
 }
 
 NodePtr operator/(const Value& node1, const Value& node2) {
@@ -51,10 +51,10 @@ NodePtr operator/(const Value& node1, const Value& node2) {
     xla::XlaOp op1 = loctx->GetOutputOp(node.operand(1));
     return node.ReturnOp(XlaHelpers::PromotedDiv(op0, op1), loctx);
   };
-  return ops::GenericOp(
-      torch::lazy::OpKind(at::aten::div), {node1, node2},
-      XlaHelpers::GetPromotedBinaryOpShape(node1.shape(), node2.shape()),
-      std::move(lower_fn));
+  return ops::GenericOp(torch::lazy::OpKind(at::aten::div), {node1, node2},
+                        XlaHelpers::GetPromotedBinaryOpShape(node1.xla_shape(),
+                                                             node2.xla_shape()),
+                        std::move(lower_fn));
 }
 
 }  // namespace ir

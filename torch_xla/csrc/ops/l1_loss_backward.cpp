@@ -17,8 +17,9 @@ xla::Shape NodeOutputShape(const Value& grad_output, const Value& input,
     return BuildL1LossBackward(operands[0], operands[1], operands[2],
                                reduction);
   };
-  return InferOutputShape({grad_output.shape(), input.shape(), target.shape()},
-                          lower_for_shape_fn);
+  return InferOutputShape(
+      {grad_output.xla_shape(), input.xla_shape(), target.xla_shape()},
+      lower_for_shape_fn);
 }
 
 }  // namespace
@@ -35,8 +36,8 @@ L1LossBackward::L1LossBackward(const Value& grad_output, const Value& input,
       reduction_(reduction) {}
 
 NodePtr L1LossBackward::Clone(OpList operands) const {
-  return MakeNode<L1LossBackward>(operands.at(0), operands.at(1),
-                                  operands.at(2), reduction_);
+  return ir::MakeNode<L1LossBackward>(operands.at(0), operands.at(1),
+                                      operands.at(2), reduction_);
 }
 
 XlaOpVector L1LossBackward::Lower(LoweringContext* loctx) const {

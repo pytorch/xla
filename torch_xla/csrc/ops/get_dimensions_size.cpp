@@ -20,7 +20,7 @@ GetDimensionsSize::GetDimensionsSize(const Value& input,
       dimensions_(std::move(dimensions)) {}
 
 NodePtr GetDimensionsSize::Clone(OpList operands) const {
-  return MakeNode<GetDimensionsSize>(operands.at(0), dimensions_);
+  return ir::MakeNode<GetDimensionsSize>(operands.at(0), dimensions_);
 }
 
 XlaOpVector GetDimensionsSize::Lower(LoweringContext* loctx) const {

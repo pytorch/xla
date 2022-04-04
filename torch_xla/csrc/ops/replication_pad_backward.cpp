@@ -17,7 +17,7 @@ xla::Shape NodeOutputShape(const Value& grad_output, const Value& input,
       [&](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
     return BuildReplicationPadBackward(operands[0], operands[1], padding);
   };
-  return InferOutputShape({grad_output.shape(), input.shape()},
+  return InferOutputShape({grad_output.xla_shape(), input.xla_shape()},
                           lower_for_shape_fn);
 }
 
@@ -32,8 +32,8 @@ ReplicationPadBackward::ReplicationPadBackward(const Value& grad_output,
       padding_(std::move(padding)) {}
 
 NodePtr ReplicationPadBackward::Clone(OpList operands) const {
-  return MakeNode<ReplicationPadBackward>(operands.at(0), operands.at(1),
-                                          padding_);
+  return ir::MakeNode<ReplicationPadBackward>(operands.at(0), operands.at(1),
+                                              padding_);
 }
 
 XlaOpVector ReplicationPadBackward::Lower(LoweringContext* loctx) const {

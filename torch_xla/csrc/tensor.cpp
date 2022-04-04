@@ -526,7 +526,7 @@ xla::util::MaybeRef<xla::Shape> XLATensor::shape() const {
     return data()->xla_data->shape();
   }
   if (data()->ir_value) {
-    return data()->ir_value.shape();
+    return data()->ir_value.xla_shape();
   }
   XLA_CHECK(data()->tensor_data);
   const Device& device = GetDevice();
@@ -644,7 +644,7 @@ void XLATensor::SetIrValue(ir::Value ir_value, bool inplace) {
 
 void XLATensor::SetInPlaceIrValue(ir::Value ir_value) {
   auto xla_shape = shape();
-  if (xla_shape.get().element_type() != ir_value.shape().element_type()) {
+  if (xla_shape.get().element_type() != ir_value.xla_shape().element_type()) {
     ir_value =
         ir::MakeNode<ir::ops::Cast>(ir_value, xla_shape.get().element_type());
   }
@@ -807,11 +807,12 @@ View::IrNode XLATensor::GetViewUpdate(const std::shared_ptr<View>& view) const {
 
 std::shared_ptr<View> XLATensor::UpdateView(std::shared_ptr<View> view,
                                             ir::Value ir_value) const {
-  if (ir_value.shape().dimensions() != view->shape().dimensions()) {
-    XLA_CHECK_EQ(xla::util::Multiply<int64_t>(ir_value.shape().dimensions()),
-                 xla::util::Multiply<int64_t>(view->shape().dimensions()));
+  if (ir_value.xla_shape().dimensions() != view->shape().dimensions()) {
+    XLA_CHECK_EQ(
+        xla::util::Multiply<int64_t>(ir_value.xla_shape().dimensions()),
+        xla::util::Multiply<int64_t>(view->shape().dimensions()));
 
-    ViewInfo view_info(ViewInfo::Type::kReshape, ir_value.shape(),
+    ViewInfo view_info(ViewInfo::Type::kReshape, ir_value.xla_shape(),
                        view->shape());
     view = view->CreateSubView(view_info.shape, view_info);
   }
@@ -847,9 +848,9 @@ std::shared_ptr<View> XLATensor::CreateView(ViewInfo view_info) const {
   // Node, and using the same alias for the created IR Node.
   ir::Value ir_value = GetIrValue();
   std::shared_ptr<Alias> alias = std::make_shared<Alias>(ir_value);
-  ViewInfo this_view_info(ViewInfo::Type::kNoOp, ir_value.shape(),
-                          ir_value.shape());
-  data()->view = std::make_shared<View>(ir_value.shape(), alias,
+  ViewInfo this_view_info(ViewInfo::Type::kNoOp, ir_value.xla_shape(),
+                          ir_value.xla_shape());
+  data()->view = std::make_shared<View>(ir_value.xla_shape(), alias,
                                         std::move(this_view_info));
   AssignIrValue(ir::Value());
   return std::make_shared<View>(view_info.shape, alias, view_info);

@@ -18,7 +18,8 @@ xla::Shape NodeOutputShape(const Value& input, const Value& index,
     return xla::TorchGather(operands[0], operands[1], dim,
                             IsSparseGather(operands[0], operands[1], dim));
   };
-  return InferOutputShape({input.shape(), index.shape()}, lower_for_shape_fn);
+  return InferOutputShape({input.xla_shape(), index.xla_shape()},
+                          lower_for_shape_fn);
 }
 
 }  // namespace
@@ -30,7 +31,7 @@ Gather::Gather(const Value& input, int64_t dim, const Value& index)
       dim_(dim) {}
 
 NodePtr Gather::Clone(OpList operands) const {
-  return MakeNode<Gather>(operands.at(0), dim_, operands.at(1));
+  return ir::MakeNode<Gather>(operands.at(0), dim_, operands.at(1));
 }
 
 XlaOpVector Gather::Lower(LoweringContext* loctx) const {

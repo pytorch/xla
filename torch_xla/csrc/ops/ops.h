@@ -15,14 +15,14 @@ namespace ir {
 namespace ops {
 
 inline NodePtr ScalarOp(const at::Scalar& value, xla::Shape shape) {
-  return MakeNode<Scalar>(value, std::move(shape));
+  return ir::MakeNode<Scalar>(value, std::move(shape));
 }
 inline NodePtr ScalarOp(const at::Scalar& value, xla::PrimitiveType type) {
-  return MakeNode<Scalar>(value, type);
+  return ir::MakeNode<Scalar>(value, type);
 }
 
 inline NodePtr ConstantOp(xla::Literal value) {
-  return MakeNode<Constant>(std::move(value));
+  return ir::MakeNode<Constant>(std::move(value));
 }
 
 inline NodePtr GenericOp(

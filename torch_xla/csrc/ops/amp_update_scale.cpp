@@ -14,7 +14,7 @@ namespace {
 xla::Shape NodeOutputShape(const Value& growth_tracker,
                            const Value& current_scale) {
   return xla::ShapeUtil::MakeTupleShape(
-      {growth_tracker.shape(), current_scale.shape()});
+      {growth_tracker.xla_shape(), current_scale.xla_shape()});
 }
 
 }  // namespace
@@ -33,9 +33,9 @@ AmpUpdateScale::AmpUpdateScale(const Value& current_scale,
       growth_interval_(growth_interval) {}
 
 NodePtr AmpUpdateScale::Clone(OpList operands) const {
-  return MakeNode<AmpUpdateScale>(operands[0], operands[1], operands[2],
-                                  scale_growth_factor_, scale_backoff_factor_,
-                                  growth_interval_);
+  return ir::MakeNode<AmpUpdateScale>(operands[0], operands[1], operands[2],
+                                      scale_growth_factor_,
+                                      scale_backoff_factor_, growth_interval_);
 }
 
 XlaOpVector AmpUpdateScale::Lower(LoweringContext* loctx) const {

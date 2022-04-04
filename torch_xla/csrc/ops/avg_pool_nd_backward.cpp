@@ -25,7 +25,7 @@ xla::Shape NodeOutputShape(const Value& grad_output, const Value& input,
                                   kernel_size, stride, padding, ceil_mode,
                                   count_include_pad);
   };
-  return InferOutputShape({grad_output.shape(), input.shape()},
+  return InferOutputShape({grad_output.xla_shape(), input.xla_shape()},
                           lower_for_shape_fn);
 }
 
@@ -65,9 +65,9 @@ AvgPoolNdBackward::AvgPoolNdBackward(
       count_include_pad_(count_include_pad) {}
 
 NodePtr AvgPoolNdBackward::Clone(OpList operands) const {
-  return MakeNode<AvgPoolNdBackward>(operands.at(0), operands.at(1),
-                                     spatial_dim_count_, kernel_size_, stride_,
-                                     padding_, ceil_mode_, count_include_pad_);
+  return ir::MakeNode<AvgPoolNdBackward>(
+      operands.at(0), operands.at(1), spatial_dim_count_, kernel_size_, stride_,
+      padding_, ceil_mode_, count_include_pad_);
 }
 
 XlaOpVector AvgPoolNdBackward::Lower(LoweringContext* loctx) const {

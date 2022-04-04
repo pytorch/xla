@@ -16,7 +16,7 @@ xla::Shape NodeOutputShape(const Value& input, int64_t k, int64_t dim,
     return xla::Tuple(operands[0].builder(),
                       CreateTopK(operands[0], k, dim, largest, stable));
   };
-  return InferOutputShape({input.shape()}, lower_for_shape_fn);
+  return InferOutputShape({input.xla_shape()}, lower_for_shape_fn);
 }
 
 }  // namespace
@@ -36,7 +36,8 @@ TopK::TopK(const Value& input, int64_t k, int64_t dim, bool largest,
       stable_(stable) {}
 
 NodePtr TopK::Clone(OpList operands) const {
-  return MakeNode<TopK>(operands.at(0), k_, dim_, largest_, sorted_, stable_);
+  return ir::MakeNode<TopK>(operands.at(0), k_, dim_, largest_, sorted_,
+                            stable_);
 }
 
 XlaOpVector TopK::Lower(LoweringContext* loctx) const {

@@ -16,7 +16,7 @@ xla::Shape NodeOutputShape(const Value& input,
   auto shape_fn = [&](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
     return BuildReplicationPad(operands[0], padding);
   };
-  return InferOutputShape({input.shape()}, shape_fn);
+  return InferOutputShape({input.xla_shape()}, shape_fn);
 }
 
 }  // namespace
@@ -28,7 +28,7 @@ ReplicationPad::ReplicationPad(const Value& input, std::vector<int64_t> padding)
       padding_(std::move(padding)) {}
 
 NodePtr ReplicationPad::Clone(OpList operands) const {
-  return MakeNode<ReplicationPad>(operands.at(0), padding_);
+  return ir::MakeNode<ReplicationPad>(operands.at(0), padding_);
 }
 
 XlaOpVector ReplicationPad::Lower(LoweringContext* loctx) const {

@@ -12,13 +12,13 @@ namespace ops {
 ScatterAdd::ScatterAdd(const Value& input, const Value& index, const Value& src,
                        int64_t dim)
     : Node(torch::lazy::OpKind(at::aten::scatter_add), {input, index, src},
-           input.shape(),
+           input.xla_shape(),
            /*num_outputs=*/1, torch::lazy::MHash(dim)),
       dim_(dim) {}
 
 NodePtr ScatterAdd::Clone(OpList operands) const {
-  return MakeNode<ScatterAdd>(operands.at(0), operands.at(1), operands.at(2),
-                              dim_);
+  return ir::MakeNode<ScatterAdd>(operands.at(0), operands.at(1),
+                                  operands.at(2), dim_);
 }
 
 XlaOpVector ScatterAdd::Lower(LoweringContext* loctx) const {

@@ -29,8 +29,9 @@ xla::Shape NodeOutputShape(const Value& grad_output, const Value& input,
     return xla::Tuple(operands[0].builder(),
                       {grads.grad_input, grads.grad_weight, grads.grad_bias});
   };
-  return InferOutputShape({grad_output.shape(), input.shape(), weight.shape()},
-                          lower_for_shape_fn);
+  return InferOutputShape(
+      {grad_output.xla_shape(), input.xla_shape(), weight.xla_shape()},
+      lower_for_shape_fn);
 }
 
 }  // namespace
@@ -58,7 +59,7 @@ ConvolutionBackwardOverrideable::ConvolutionBackwardOverrideable(
       groups_(groups) {}
 
 NodePtr ConvolutionBackwardOverrideable::Clone(OpList operands) const {
-  return MakeNode<ConvolutionBackwardOverrideable>(
+  return ir::MakeNode<ConvolutionBackwardOverrideable>(
       operands.at(0), operands.at(1), operands.at(2), stride_, padding_,
       dilation_, transposed_, output_padding_, groups_);
 }

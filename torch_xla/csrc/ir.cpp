@@ -101,9 +101,9 @@ std::string Use::ToString() const {
   return ss.str();
 }
 
-const xla::Shape& Value::shape() const { return node->xla_shape(index); }
+const xla::Shape& Value::xla_shape() const { return node->xla_shape(index); }
 
-const xla::Shape& Value::node_shape() const { return node->xla_shape(); }
+const xla::Shape& Value::xla_node_shape() const { return node->xla_shape(); }
 
 torch::lazy::hash_t Value::hash() const {
   return torch::lazy::HashCombine(node->hash(), index);

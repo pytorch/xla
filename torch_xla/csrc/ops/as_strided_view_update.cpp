@@ -48,7 +48,7 @@ AsStridedViewUpdate::AsStridedViewUpdate(const Value& target,
                                          int64_t storage_offset)
     : Node(xla_as_strided_view_update, {target, input},
            [&]() {
-             return xla::ShapeUtil::MakeShape(target.shape().element_type(),
+             return xla::ShapeUtil::MakeShape(target.xla_shape().element_type(),
                                               size);
            },
            /*num_outputs=*/1, torch::lazy::MHash(size, stride, storage_offset)),
@@ -65,8 +65,8 @@ std::string AsStridedViewUpdate::ToString() const {
 }
 
 NodePtr AsStridedViewUpdate::Clone(OpList operands) const {
-  return MakeNode<AsStridedViewUpdate>(operands.at(0), operands.at(1), size_,
-                                       stride_, storage_offset_);
+  return ir::MakeNode<AsStridedViewUpdate>(operands.at(0), operands.at(1),
+                                           size_, stride_, storage_offset_);
 }
 
 XlaOpVector AsStridedViewUpdate::Lower(LoweringContext* loctx) const {

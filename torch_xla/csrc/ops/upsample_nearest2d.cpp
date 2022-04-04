@@ -13,13 +13,14 @@ UpsampleNearest::UpsampleNearest(const Value& input,
                                  std::vector<int64_t> output_size)
     : Node(torch::lazy::OpKind(at::aten::upsample_nearest2d), {input},
            [&]() {
-             return resize::GetForwardOutputShape2d(input.shape(), output_size);
+             return resize::GetForwardOutputShape2d(input.xla_shape(),
+                                                    output_size);
            },
            /*num_outputs=*/1, torch::lazy::MHash(output_size)),
       output_size_(std::move(output_size)) {}
 
 NodePtr UpsampleNearest::Clone(OpList operands) const {
-  return MakeNode<UpsampleNearest>(operands.at(0), output_size_);
+  return ir::MakeNode<UpsampleNearest>(operands.at(0), output_size_);
 }
 
 XlaOpVector UpsampleNearest::Lower(LoweringContext* loctx) const {

@@ -16,7 +16,7 @@ xla::Shape NodeOutputShape(const Value& input,
       [&](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
     return BuildReflectionPad2d(operands[0], padding);
   };
-  return InferOutputShape({input.shape()}, lower_for_shape_fn);
+  return InferOutputShape({input.xla_shape()}, lower_for_shape_fn);
 }
 
 }  // namespace
@@ -29,7 +29,7 @@ ReflectionPad2d::ReflectionPad2d(const Value& input,
       padding_(std::move(padding)) {}
 
 NodePtr ReflectionPad2d::Clone(OpList operands) const {
-  return MakeNode<ReflectionPad2d>(operands.at(0), padding_);
+  return ir::MakeNode<ReflectionPad2d>(operands.at(0), padding_);
 }
 
 XlaOpVector ReflectionPad2d::Lower(LoweringContext* loctx) const {

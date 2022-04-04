@@ -15,7 +15,7 @@ xla::Shape NodeOutputShape(const Value& input, std::vector<int64_t>& dimensions,
       [&](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
     return BuildMinInDims(operands[0], dimensions, keepdim);
   };
-  return InferOutputShape({input.shape()}, lower_for_shape_fn);
+  return InferOutputShape({input.xla_shape()}, lower_for_shape_fn);
 }
 
 }  // namespace
@@ -28,7 +28,7 @@ Amin::Amin(const Value& input, std::vector<int64_t> dimensions, bool keepdim)
       keepdim_(keepdim) {}
 
 NodePtr Amin::Clone(OpList operands) const {
-  return MakeNode<Amin>(operands.at(0), dimensions_, keepdim_);
+  return ir::MakeNode<Amin>(operands.at(0), dimensions_, keepdim_);
 }
 
 XlaOpVector Amin::Lower(LoweringContext* loctx) const {

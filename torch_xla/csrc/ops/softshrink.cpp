@@ -10,7 +10,8 @@ namespace ir {
 namespace ops {
 
 Softshrink::Softshrink(const Value& input, const at::Scalar& lambda)
-    : Node(torch::lazy::OpKind(at::aten::softshrink), {input}, input.shape(),
+    : Node(torch::lazy::OpKind(at::aten::softshrink), {input},
+           input.xla_shape(),
            /*num_outputs=*/1, ScalarHash(lambda)),
       lambda_(std::move(lambda)) {}
 
@@ -21,7 +22,7 @@ std::string Softshrink::ToString() const {
 }
 
 NodePtr Softshrink::Clone(OpList operands) const {
-  return MakeNode<Softshrink>(operands.at(0), lambda_);
+  return ir::MakeNode<Softshrink>(operands.at(0), lambda_);
 }
 
 XlaOpVector Softshrink::Lower(LoweringContext* loctx) const {

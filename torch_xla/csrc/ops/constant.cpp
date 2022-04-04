@@ -25,7 +25,7 @@ std::string Constant::ToString() const {
 }
 
 NodePtr Constant::Clone(OpList operands) const {
-  return MakeNode<Constant>(value_.Clone());
+  return ir::MakeNode<Constant>(value_.Clone());
 }
 
 XlaOpVector Constant::Lower(LoweringContext* loctx) const {

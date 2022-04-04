@@ -27,7 +27,7 @@ xla::Shape NodeOutputShape(const Value& grad_output, const Value& logits,
   std::vector<xla::Shape> shapes;
   for (auto& input : xla::util::GetValuesVector<Value>(
            {grad_output, logits, labels}, {&weight})) {
-    shapes.push_back(input.shape());
+    shapes.push_back(input.xla_shape());
   }
   return InferOutputShape(shapes, lower_for_shape_fn);
 }
@@ -53,7 +53,7 @@ NodePtr BinaryCrossEntropyBackward::Clone(OpList operands) const {
   if (operands.size() > 3) {
     weight = operands.at(3);
   }
-  return MakeNode<BinaryCrossEntropyBackward>(
+  return ir::MakeNode<BinaryCrossEntropyBackward>(
       operands.at(0), operands.at(1), operands.at(2), weight, reduction_);
 }
 

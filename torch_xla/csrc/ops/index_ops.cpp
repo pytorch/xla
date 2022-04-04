@@ -168,7 +168,7 @@ ir::NodePtr IndexFillOp(const ir::Value& buffer, int64_t dim,
       torch::lazy::OpKind(at::aten::index_fill), {buffer, index_rank1, value},
       [&]() {
         return ir::ops::InferOutputShape(
-            {buffer.shape(), index_rank1.shape(), value.shape()},
+            {buffer.xla_shape(), index_rank1.xla_shape(), value.xla_shape()},
             lower_for_shape_fn);
       },
       std::move(lower_fn), /*num_outputs=*/1, torch::lazy::MHash(dim));
@@ -193,7 +193,7 @@ ir::NodePtr IndexAddOp(const ir::Value& buffer, int64_t dim,
       torch::lazy::OpKind(at::aten::index_add), {buffer, index_rank1, source},
       [&]() {
         return ir::ops::InferOutputShape(
-            {buffer.shape(), index_rank1.shape(), source.shape()},
+            {buffer.xla_shape(), index_rank1.xla_shape(), source.xla_shape()},
             lower_for_shape_fn);
       },
       std::move(lower_fn));
@@ -218,7 +218,7 @@ ir::NodePtr IndexCopyOp(const ir::Value& buffer, int64_t dim,
       torch::lazy::OpKind(at::aten::index_copy), {buffer, index_rank1, source},
       [&]() {
         return ir::ops::InferOutputShape(
-            {buffer.shape(), index_rank1.shape(), source.shape()},
+            {buffer.xla_shape(), index_rank1.xla_shape(), source.xla_shape()},
             lower_for_shape_fn);
       },
       std::move(lower_fn));

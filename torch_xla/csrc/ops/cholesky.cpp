@@ -9,12 +9,12 @@ namespace ir {
 namespace ops {
 
 Cholesky::Cholesky(const Value& input, bool lower)
-    : Node(torch::lazy::OpKind(at::aten::cholesky), {input}, input.shape(),
+    : Node(torch::lazy::OpKind(at::aten::cholesky), {input}, input.xla_shape(),
            /*num_outputs=*/1, torch::lazy::MHash(lower)),
       lower_(lower) {}
 
 NodePtr Cholesky::Clone(OpList operands) const {
-  return MakeNode<Cholesky>(operands.at(0), lower_);
+  return ir::MakeNode<Cholesky>(operands.at(0), lower_);
 }
 
 XlaOpVector Cholesky::Lower(LoweringContext* loctx) const {

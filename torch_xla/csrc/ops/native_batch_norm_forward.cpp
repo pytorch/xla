@@ -43,9 +43,10 @@ xla::Shape NodeOutputShape(const Value& input, const Value& weight,
                        operands[4], training, 0.5);
     return xla::Tuple(operands[0].builder(), values);
   };
-  return InferOutputShape({input.shape(), weight.shape(), bias.shape(),
-                           running_mean.shape(), running_var.shape()},
-                          lower_for_shape_fn);
+  return InferOutputShape(
+      {input.xla_shape(), weight.xla_shape(), bias.xla_shape(),
+       running_mean.xla_shape(), running_var.xla_shape()},
+      lower_for_shape_fn);
 }
 
 }  // namespace
@@ -67,9 +68,9 @@ NativeBatchNormForward::NativeBatchNormForward(const Value& input,
       eps_(eps) {}
 
 NodePtr NativeBatchNormForward::Clone(OpList operands) const {
-  return MakeNode<NativeBatchNormForward>(operands.at(0), operands.at(1),
-                                          operands.at(2), operands.at(3),
-                                          operands.at(4), training_, eps_);
+  return ir::MakeNode<NativeBatchNormForward>(operands.at(0), operands.at(1),
+                                              operands.at(2), operands.at(3),
+                                              operands.at(4), training_, eps_);
 }
 
 XlaOpVector NativeBatchNormForward::Lower(LoweringContext* loctx) const {

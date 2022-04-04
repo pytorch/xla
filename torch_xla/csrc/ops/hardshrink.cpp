@@ -10,7 +10,8 @@ namespace ir {
 namespace ops {
 
 Hardshrink::Hardshrink(const Value& input, const at::Scalar& lambda)
-    : Node(torch::lazy::OpKind(at::aten::hardshrink), {input}, input.shape(),
+    : Node(torch::lazy::OpKind(at::aten::hardshrink), {input},
+           input.xla_shape(),
            /*num_outputs=*/1, ScalarHash(lambda)),
       lambda_(std::move(lambda)) {}
 
@@ -21,7 +22,7 @@ std::string Hardshrink::ToString() const {
 }
 
 NodePtr Hardshrink::Clone(OpList operands) const {
-  return MakeNode<Hardshrink>(operands.at(0), lambda_);
+  return ir::MakeNode<Hardshrink>(operands.at(0), lambda_);
 }
 
 XlaOpVector Hardshrink::Lower(LoweringContext* loctx) const {

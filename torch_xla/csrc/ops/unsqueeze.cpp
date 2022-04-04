@@ -9,7 +9,7 @@ namespace ops {
 namespace {
 
 xla::Shape NodeOutputShape(const Value& input, int dim) {
-  const xla::Shape& shape = input.shape();
+  const xla::Shape& shape = input.xla_shape();
   auto dimensions = BuildUnsqueezeDimensions(shape.dimensions(), dim);
   return xla::ShapeUtil::MakeShape(shape.element_type(), dimensions);
 }
@@ -23,7 +23,7 @@ Unsqueeze::Unsqueeze(const Value& input, int dim)
       dim_(dim) {}
 
 NodePtr Unsqueeze::Clone(OpList operands) const {
-  return MakeNode<Unsqueeze>(operands.at(0), dim_);
+  return ir::MakeNode<Unsqueeze>(operands.at(0), dim_);
 }
 
 XlaOpVector Unsqueeze::Lower(LoweringContext* loctx) const {

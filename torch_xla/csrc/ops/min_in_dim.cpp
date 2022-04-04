@@ -16,7 +16,7 @@ xla::Shape NodeOutputShape(const Value& input, int64_t dim, bool keepdim) {
     xla::XlaOp indices = BuildArgMin(operands[0], dim, keepdim);
     return xla::Tuple(values.builder(), {values, indices});
   };
-  return InferOutputShape({input.shape()}, lower_for_shape_fn);
+  return InferOutputShape({input.xla_shape()}, lower_for_shape_fn);
 }
 
 }  // namespace
@@ -29,7 +29,7 @@ MinInDim::MinInDim(const Value& input, int64_t dim, bool keepdim)
       keepdim_(keepdim) {}
 
 NodePtr MinInDim::Clone(OpList operands) const {
-  return MakeNode<MinInDim>(operands.at(0), dim_, keepdim_);
+  return ir::MakeNode<MinInDim>(operands.at(0), dim_, keepdim_);
 }
 
 XlaOpVector MinInDim::Lower(LoweringContext* loctx) const {

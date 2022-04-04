@@ -22,9 +22,9 @@ xla::Shape NodeOutputShape(const Value& input,
                            const c10::optional<at::ScalarType>& dtype) {
   if (dtype) {
     return xla::ShapeUtil::ChangeElementType(
-        input.shape(), MakeXlaPrimitiveType(*dtype, /*device=*/nullptr));
+        input.xla_shape(), MakeXlaPrimitiveType(*dtype, /*device=*/nullptr));
   }
-  return input.shape();
+  return input.xla_shape();
 }
 
 }  // namespace
@@ -39,7 +39,7 @@ Softmax::Softmax(const Value& input, int64_t dim,
       dtype_(dtype) {}
 
 NodePtr Softmax::Clone(OpList operands) const {
-  return MakeNode<Softmax>(operands.at(0), dim_, dtype_);
+  return ir::MakeNode<Softmax>(operands.at(0), dim_, dtype_);
 }
 
 XlaOpVector Softmax::Lower(LoweringContext* loctx) const {

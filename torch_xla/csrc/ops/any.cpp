@@ -19,7 +19,7 @@ xla::Shape NodeOutputShape(const Value& input, std::vector<int64_t>& dimensions,
       [&](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
     return BuildAny(operands[0], dimensions, keep_reduced_dimensions);
   };
-  return InferOutputShape({input.shape()}, lower_for_shape_fn);
+  return InferOutputShape({input.xla_shape()}, lower_for_shape_fn);
 }
 
 }  // namespace
@@ -34,7 +34,8 @@ Any::Any(const Value& input, std::vector<int64_t> dimensions,
       keep_reduced_dimensions_(keep_reduced_dimensions) {}
 
 NodePtr Any::Clone(OpList operands) const {
-  return MakeNode<Any>(operands.at(0), dimensions_, keep_reduced_dimensions_);
+  return ir::MakeNode<Any>(operands.at(0), dimensions_,
+                           keep_reduced_dimensions_);
 }
 
 XlaOpVector Any::Lower(LoweringContext* loctx) const {

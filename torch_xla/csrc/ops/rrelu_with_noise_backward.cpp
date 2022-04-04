@@ -12,7 +12,7 @@ RreluWithNoiseBackward::RreluWithNoiseBackward(
     const Value& grad_output, const Value& input, const Value& noise,
     const at::Scalar& lower, const at::Scalar& upper, bool training)
     : Node(torch::lazy::OpKind(at::aten::rrelu_with_noise_backward),
-           {grad_output, input, noise}, input.shape(),
+           {grad_output, input, noise}, input.xla_shape(),
            /*num_outputs=*/1,
            torch::lazy::MHash(ScalarHash(lower), ScalarHash(upper), training)),
       lower_(std::move(lower)),
@@ -20,9 +20,9 @@ RreluWithNoiseBackward::RreluWithNoiseBackward(
       training_(training) {}
 
 NodePtr RreluWithNoiseBackward::Clone(OpList operands) const {
-  return MakeNode<RreluWithNoiseBackward>(operands.at(0), operands.at(1),
-                                          operands.at(2), lower_, upper_,
-                                          training_);
+  return ir::MakeNode<RreluWithNoiseBackward>(operands.at(0), operands.at(1),
+                                              operands.at(2), lower_, upper_,
+                                              training_);
 }
 
 XlaOpVector RreluWithNoiseBackward::Lower(LoweringContext* loctx) const {

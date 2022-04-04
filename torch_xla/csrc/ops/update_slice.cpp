@@ -18,7 +18,8 @@ xla::Shape NodeOutputShape(const Value& input, const Value& source,
       [&](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
     return BuildUpdateSlice(operands[0], operands[1], base_indices);
   };
-  return InferOutputShape({input.shape(), source.shape()}, lower_for_shape_fn);
+  return InferOutputShape({input.xla_shape(), source.xla_shape()},
+                          lower_for_shape_fn);
 }
 
 }  // namespace
@@ -31,7 +32,8 @@ UpdateSlice::UpdateSlice(const Value& input, const Value& source,
       base_indices_(base_indices.begin(), base_indices.end()) {}
 
 NodePtr UpdateSlice::Clone(OpList operands) const {
-  return MakeNode<UpdateSlice>(operands.at(0), operands.at(1), base_indices_);
+  return ir::MakeNode<UpdateSlice>(operands.at(0), operands.at(1),
+                                   base_indices_);
 }
 
 XlaOpVector UpdateSlice::Lower(LoweringContext* loctx) const {
