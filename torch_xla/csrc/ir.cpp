@@ -83,7 +83,7 @@ torch::lazy::hash_t GetOperandHashes(const OpList& operands,
   return hash;
 }
 
-void setXlaEnvVars() {
+void SetXlaEnvVars() {
   static bool wants_frames = xla::sys_util::GetEnvBool("XLA_IR_DEBUG", false);
   FLAGS_torch_lazy_ir_debug = wants_frames;
 }
@@ -129,6 +129,7 @@ Node::Node(torch::lazy::OpKind op, OpList operands, xla::Shape shape,
   for (auto& operand : operands) {
     AddOperand(operand.node, operand.index);
   }
+  SetXlaEnvVars();
 }
 
 Node::Node(torch::lazy::OpKind op, OpList operands,
@@ -146,7 +147,9 @@ Node::Node(torch::lazy::OpKind op, xla::Shape shape, size_t num_outputs,
                         [&](bool /*bakeInSizes*/) -> torch::lazy::hash_t {
                           return GetOpHash(op, shape, hash_seed);
                         }),
-      xla_shape_(std::move(shape)) {}
+      xla_shape_(std::move(shape)) {
+  SetXlaEnvVars();
+}
 
 Node::~Node() {
   for (size_t i = 0; i < operands_as_outputs_.size(); ++i) {
@@ -265,11 +268,3 @@ void ScopePusher::ResetScopes() { ResetScopeContext(); }
 
 }  // namespace ir
 }  // namespace torch_xla
-
-void setXlaEnvVars() {
-  std::cout << "WONJOO: before, FLAGS_torch_lazy_ir_debug=" << FLAGS_torch_lazy_ir_debug << std::endl;
-  static bool wants_frames = xla::sys_util::GetEnvBool("XLA_IR_DEBUG", false);
-  std::cout << "WONJOO: wants_frames=" << wants_frames << std::endl;
-  FLAGS_torch_lazy_ir_debug = wants_frames;
-  std::cout << "WONJOO: after, FLAGS_torch_lazy_ir_debug=" << FLAGS_torch_lazy_ir_debug << std::endl;
-}
