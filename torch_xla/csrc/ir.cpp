@@ -83,11 +83,6 @@ torch::lazy::hash_t GetOperandHashes(const OpList& operands,
   return hash;
 }
 
-void SetXlaEnvVars() {
-  static bool wants_frames = xla::sys_util::GetEnvBool("XLA_IR_DEBUG", false);
-  FLAGS_torch_lazy_ir_debug = wants_frames;
-}
-
 }  // namespace
 
 bool Use::operator<(const Use& rhs) const {
@@ -129,7 +124,6 @@ Node::Node(torch::lazy::OpKind op, OpList operands, xla::Shape shape,
   for (auto& operand : operands) {
     AddOperand(operand.node, operand.index);
   }
-  SetXlaEnvVars();
 }
 
 Node::Node(torch::lazy::OpKind op, OpList operands,
@@ -147,9 +141,7 @@ Node::Node(torch::lazy::OpKind op, xla::Shape shape, size_t num_outputs,
                         [&](bool /*bakeInSizes*/) -> torch::lazy::hash_t {
                           return GetOpHash(op, shape, hash_seed);
                         }),
-      xla_shape_(std::move(shape)) {
-  SetXlaEnvVars();
-}
+      xla_shape_(std::move(shape)) {}
 
 Node::~Node() {
   for (size_t i = 0; i < operands_as_outputs_.size(); ++i) {
