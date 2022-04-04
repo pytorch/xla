@@ -8,12 +8,12 @@ namespace ir {
 namespace ops {
 
 Tril::Tril(const Value& input, int64_t diagonal)
-    : Node(torch::lazy::OpKind(at::aten::tril), {input}, input.shape(),
+    : Node(torch::lazy::OpKind(at::aten::tril), {input}, input.xla_shape(),
            /*num_outputs=*/1, torch::lazy::MHash(diagonal)),
       diagonal_(diagonal) {}
 
 NodePtr Tril::Clone(OpList operands) const {
-  return MakeNode<Tril>(operands.at(0), diagonal_);
+  return ir::MakeNode<Tril>(operands.at(0), diagonal_);
 }
 
 XlaOpVector Tril::Lower(LoweringContext* loctx) const {

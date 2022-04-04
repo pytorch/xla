@@ -17,7 +17,8 @@ xla::Shape NodeOutputShape(const Value& input, const Value& target,
       [&](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
     return BuildL1Loss(operands[0], operands[1], reduction);
   };
-  return InferOutputShape({input.shape(), target.shape()}, lower_for_shape_fn);
+  return InferOutputShape({input.xla_shape(), target.xla_shape()},
+                          lower_for_shape_fn);
 }
 
 }  // namespace
@@ -30,7 +31,7 @@ L1Loss::L1Loss(const Value& input, const Value& target, ReductionMode reduction)
       reduction_(reduction) {}
 
 NodePtr L1Loss::Clone(OpList operands) const {
-  return MakeNode<L1Loss>(operands.at(0), operands.at(1), reduction_);
+  return ir::MakeNode<L1Loss>(operands.at(0), operands.at(1), reduction_);
 }
 
 XlaOpVector L1Loss::Lower(LoweringContext* loctx) const {

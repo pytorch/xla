@@ -17,9 +17,9 @@ xla::Shape NodeOutputShape(absl::Span<const Value> operands,
   std::vector<xla::Shape> tuple_shapes;
   tuple_shapes.reserve(operands.size() + 1);
   for (auto& operand : operands) {
-    tuple_shapes.push_back(operand.shape());
+    tuple_shapes.push_back(operand.xla_shape());
   }
-  tuple_shapes.push_back(token.shape());
+  tuple_shapes.push_back(token.xla_shape());
   return xla::ShapeUtil::MakeTupleShape(tuple_shapes);
 }
 
@@ -46,8 +46,8 @@ AllReduce::AllReduce(AllReduceType reduce_type,
 
 NodePtr AllReduce::Clone(OpList operands) const {
   std::vector<Value> operand_list(operands.begin(), operands.end() - 1);
-  return MakeNode<AllReduce>(reduce_type_, operand_list, operands.back(),
-                             scale_, groups_);
+  return ir::MakeNode<AllReduce>(reduce_type_, operand_list, operands.back(),
+                                 scale_, groups_);
 }
 
 XlaOpVector AllReduce::Lower(LoweringContext* loctx) const {

@@ -14,7 +14,7 @@ xla::Shape NodeOutputShape(const Value& input, int64_t dim, bool keepdim) {
       [&](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
     return BuildArgMax(operands[0], dim, keepdim);
   };
-  return InferOutputShape({input.shape()}, lower_for_shape_fn);
+  return InferOutputShape({input.xla_shape()}, lower_for_shape_fn);
 }
 
 }  // namespace
@@ -27,7 +27,7 @@ ArgMax::ArgMax(const Value& input, int64_t dim, bool keepdim)
       keepdim_(keepdim) {}
 
 NodePtr ArgMax::Clone(OpList operands) const {
-  return MakeNode<ArgMax>(operands.at(0), dim_, keepdim_);
+  return ir::MakeNode<ArgMax>(operands.at(0), dim_, keepdim_);
 }
 
 XlaOpVector ArgMax::Lower(LoweringContext* loctx) const {

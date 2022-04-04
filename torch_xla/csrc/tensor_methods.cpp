@@ -156,7 +156,7 @@ struct MinMaxValues {
 };
 
 ir::Value MaybeExpand(const ir::Value& input, const xla::Shape& target_shape) {
-  if (input.shape().dimensions() == target_shape.dimensions()) {
+  if (input.xla_shape().dimensions() == target_shape.dimensions()) {
     return input;
   }
   return ir::MakeNode<ir::ops::Expand>(
@@ -288,14 +288,15 @@ ir::Value GetIrValueOrDefault(const XLATensor& input,
 ir::Value GetFloatingIrValue(const XLATensor& input,
                              at::ScalarType float_type) {
   ir::Value input_value = input.GetIrValue();
-  if (xla::primitive_util::IsIntegralType(input_value.shape().element_type())) {
+  if (xla::primitive_util::IsIntegralType(
+          input_value.xla_shape().element_type())) {
     input_value = ir::MakeNode<ir::ops::Cast>(input_value, float_type);
   }
   return input_value;
 }
 
 ir::Value GetBooleanIrValue(ir::Value input_value) {
-  if (input_value.shape().element_type() != xla::PrimitiveType::PRED) {
+  if (input_value.xla_shape().element_type() != xla::PrimitiveType::PRED) {
     input_value =
         ir::MakeNode<ir::ops::Cast>(input_value, xla::PrimitiveType::PRED);
   }
@@ -1209,7 +1210,7 @@ XLATensor XLATensor::div(const XLATensor& input, const XLATensor& other,
     if (logical_element_type.has_value()) {
       xla::PrimitiveType res_intended_type =
           MakeXlaPrimitiveType(*logical_element_type, &input.GetDevice());
-      if (res.shape().element_type() != res_intended_type) {
+      if (res.xla_shape().element_type() != res_intended_type) {
         res = ir::MakeNode<ir::ops::Cast>(res, res_intended_type);
       }
     }
@@ -1231,7 +1232,7 @@ XLATensor XLATensor::div(const XLATensor& input, const at::Scalar& other) {
   }
   ir::Value input_value = GetFloatingIrValue(input, scalar_type);
   ir::Value other_value = GetIrValueForScalar(
-      other, input_value.shape().element_type(), input.GetDevice());
+      other, input_value.xla_shape().element_type(), input.GetDevice());
   return input.CreateFrom(input_value / other_value, scalar_type);
 }
 

@@ -36,7 +36,7 @@ xla::Shape NodeOutputShape(const Value& input, std::vector<int64_t>& dimensions,
       [&](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
     return LowerProd(operands[0], dimensions, keep_reduced_dimensions, dtype);
   };
-  return InferOutputShape({input.shape()}, lower_for_shape_fn);
+  return InferOutputShape({input.xla_shape()}, lower_for_shape_fn);
 }
 
 }  // namespace
@@ -56,8 +56,8 @@ Prod::Prod(const Value& input, std::vector<int64_t> dimensions,
       dtype_(dtype) {}
 
 NodePtr Prod::Clone(OpList operands) const {
-  return MakeNode<Prod>(operands.at(0), dimensions_, keep_reduced_dimensions_,
-                        dtype_);
+  return ir::MakeNode<Prod>(operands.at(0), dimensions_,
+                            keep_reduced_dimensions_, dtype_);
 }
 
 XlaOpVector Prod::Lower(LoweringContext* loctx) const {

@@ -16,7 +16,7 @@ xla::Shape NodeOutputShape(const Value& input,
       [&](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
     return BuildExpand(operands[0], size);
   };
-  return InferOutputShape({input.shape()}, lower_for_shape_fn);
+  return InferOutputShape({input.xla_shape()}, lower_for_shape_fn);
 }
 
 }  // namespace
@@ -28,7 +28,7 @@ Expand::Expand(const Value& input, std::vector<int64_t> size)
       size_(std::move(size)) {}
 
 NodePtr Expand::Clone(OpList operands) const {
-  return MakeNode<Expand>(operands.at(0), size_);
+  return ir::MakeNode<Expand>(operands.at(0), size_);
 }
 
 XlaOpVector Expand::Lower(LoweringContext* loctx) const {

@@ -30,7 +30,7 @@ xla::Shape NodeOutputShape(const Value& input,
       [&](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
     return LowerSum(operands[0], dimensions, keep_reduced_dimensions, dtype);
   };
-  return InferOutputShape({input.shape()}, lower_for_shape_fn);
+  return InferOutputShape({input.xla_shape()}, lower_for_shape_fn);
 }
 
 }  // namespace
@@ -50,8 +50,8 @@ Sum::Sum(const Value& input, std::vector<int64_t> dimensions,
       dtype_(dtype) {}
 
 NodePtr Sum::Clone(OpList operands) const {
-  return MakeNode<Sum>(operands.at(0), dimensions_, keep_reduced_dimensions_,
-                       dtype_);
+  return ir::MakeNode<Sum>(operands.at(0), dimensions_,
+                           keep_reduced_dimensions_, dtype_);
 }
 
 XlaOpVector Sum::Lower(LoweringContext* loctx) const {

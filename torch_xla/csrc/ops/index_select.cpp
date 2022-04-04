@@ -16,7 +16,8 @@ xla::Shape NodeOutputShape(const Value& input, const Value& index,
       [&](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
     return xla::TorchIndexSelect(operands[0], operands[1], dim);
   };
-  return InferOutputShape({input.shape(), index.shape()}, lower_for_shape_fn);
+  return InferOutputShape({input.xla_shape(), index.xla_shape()},
+                          lower_for_shape_fn);
 }
 
 }  // namespace
@@ -28,7 +29,7 @@ IndexSelect::IndexSelect(const Value& input, int64_t dim, const Value& index)
       dim_(dim) {}
 
 NodePtr IndexSelect::Clone(OpList operands) const {
-  return MakeNode<IndexSelect>(operands.at(0), dim_, operands.at(1));
+  return ir::MakeNode<IndexSelect>(operands.at(0), dim_, operands.at(1));
 }
 
 XlaOpVector IndexSelect::Lower(LoweringContext* loctx) const {

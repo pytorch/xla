@@ -21,7 +21,7 @@ xla::Shape NodeOutputShape(const Value& input, const Value& token,
                       concat_dimension, split_count, groups);
     return xla::Tuple(operands[0].builder(), {result.result, result.token});
   };
-  return InferOutputShape({input.shape(), token.shape()}, shape_fn);
+  return InferOutputShape({input.xla_shape(), token.xla_shape()}, shape_fn);
 }
 
 }  // namespace
@@ -44,8 +44,9 @@ AllToAll::AllToAll(const Value& input, const Value& token,
       groups_(std::move(groups)) {}
 
 NodePtr AllToAll::Clone(OpList operands) const {
-  return MakeNode<AllToAll>(operands.at(0), operands.at(1), split_dimension_,
-                            concat_dimension_, split_count_, groups_);
+  return ir::MakeNode<AllToAll>(operands.at(0), operands.at(1),
+                                split_dimension_, concat_dimension_,
+                                split_count_, groups_);
 }
 
 XlaOpVector AllToAll::Lower(LoweringContext* loctx) const {

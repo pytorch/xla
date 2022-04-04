@@ -16,7 +16,7 @@ xla::Shape NodeOutputShape(const Value& input, absl::Span<const int64_t> dims) {
     XLA_CHECK_EQ(operands.size(), 1);
     return xla::Transpose(operands[0], dims);
   };
-  return InferOutputShape({input.shape()}, lower_for_shape_fn);
+  return InferOutputShape({input.xla_shape()}, lower_for_shape_fn);
 }
 
 }  // namespace
@@ -28,7 +28,7 @@ Permute::Permute(const Value& input, std::vector<int64_t> dims)
       dims_(std::move(dims)) {}
 
 NodePtr Permute::Clone(OpList operands) const {
-  return MakeNode<Permute>(operands.at(0), dims_);
+  return ir::MakeNode<Permute>(operands.at(0), dims_);
 }
 
 XlaOpVector Permute::Lower(LoweringContext* loctx) const {
