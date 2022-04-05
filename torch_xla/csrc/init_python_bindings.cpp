@@ -343,6 +343,7 @@ std::string GetLiveTensorsReport(size_t nodes_threshold,
            << ", device=" << tensor.GetDevice()
            << ", ir_nodes=" << post_order.size() << "\n";
         for (size_t i = post_order.size(); i > 0; --i) {
+          std::cout << "WONJOO: frame_info.empty()=" << (post_order[i - 1]->metadata().frame_info.empty()) << std::endl;
           if (!post_order[i - 1]->metadata().frame_info.empty()) {
             ss << post_order[i - 1]->metadata().frame_info;
             break;

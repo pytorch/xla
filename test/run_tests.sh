@@ -51,6 +51,11 @@ function run_downcast_bf16 {
   XLA_DOWNCAST_BF16=1 run_test "$@"
 }
 
+function run_xla_ir_debug_enabled {
+  echo "Running with XLA_IR_DEBUG enabled: $@"
+  XLA_IR_DEBUG=1 run_test "$@"
+}
+
 function run_dynamic {
   if [[ "$TPUVM_MODE" == "1" ]]; then
     run_test "$@"
@@ -76,39 +81,40 @@ function run_async_rng {
 }
 
 function run_all_tests {
-  run_dynamic python3 "$CDIR/../../test/test_view_ops.py" "$@" -v TestViewOpsXLA
-  run_test python3 "$CDIR/../../test/test_torch.py" "$@" -v TestTorchDeviceTypeXLA
-  run_dynamic python3 "$CDIR/../../test/test_torch.py" "$@" -v TestDevicePrecisionXLA
-  run_test python3 "$CDIR/../../test/test_torch.py" "$@" -v TestTensorDeviceOpsXLA
-  run_test python3 "$CDIR/../../test/test_indexing.py" "$@" -v TestIndexingXLA
-  run_test python3 "$CDIR/../../test/test_indexing.py" "$@" -v NumpyTestsXLA
-  run_dynamic python3 "$CDIR/../../test/test_nn.py" "$@" -v TestNNDeviceTypeXLA
-  run_dynamic python3 "$CDIR/../../test/test_type_promotion.py" "$@" -v TestTypePromotionXLA
-  run_dynamic python3 "$CDIR/test_operations.py" "$@" --verbosity=$VERBOSITY
-  run_opbyop python3 "$CDIR/test_operations.py" "$@" --verbosity=$VERBOSITY
-  run_eager_debug python3 "$CDIR/test_operations.py" "$@" --verbosity=$VERBOSITY
-  run_async_rng python3 "$CDIR/test_operations.py" "$@" --verbosity=$VERBOSITY
-  run_test python3 "$CDIR/test_mp_replication.py"
-  run_test python3 "$CDIR/test_mp_all_to_all.py"
-  run_test python3 "$CDIR/test_mp_collective_permute.py"
-  run_test python3 "$CDIR/test_mp_all_gather.py"
-  run_test python3 "$CDIR/test_mp_reduce_scatter.py"
-  run_test python3 "$CDIR/test_mp_distributed_mm.py"
-  run_test python3 "$CDIR/test_mp_rendezvous.py"
-  run_test python3 "$CDIR/test_mp_save.py"
-  run_test python3 "$CDIR/test_mp_mesh_reduce.py"
-  run_test python3 "$CDIR/test_mp_sync_batch_norm.py"
-  run_test python3 "$CDIR/test_async_closures.py"
-  run_test python3 "$CDIR/test_xla_dist.py"
-  run_test python3 "$CDIR/test_profiler.py"
-  run_test python3 "$CDIR/test_ops.py"
-  run_downcast_bf16 python3 "$CDIR/test_data_type.py"
-  run_use_bf16 python3 "$CDIR/test_data_type.py"
-  run_test python3 "$CDIR/test_torch_distributed_xla_backend.py"
-  run_xla_backend_mp python3 "$CDIR/test_torch_distributed_all_gather_xla_backend.py"
-  run_xla_backend_mp python3 "$CDIR/test_torch_distributed_all_reduce_xla_backend.py"
-  run_xla_backend_mp python3 "$CDIR/test_torch_distributed_multi_all_reduce_xla_backend.py"
-  run_xla_backend_mp python3 "$CDIR/test_torch_distributed_reduce_scatter_xla_backend.py"
+  # run_dynamic python3 "$CDIR/../../test/test_view_ops.py" "$@" -v TestViewOpsXLA
+  # run_test python3 "$CDIR/../../test/test_torch.py" "$@" -v TestTorchDeviceTypeXLA
+  # run_dynamic python3 "$CDIR/../../test/test_torch.py" "$@" -v TestDevicePrecisionXLA
+  # run_test python3 "$CDIR/../../test/test_torch.py" "$@" -v TestTensorDeviceOpsXLA
+  # run_test python3 "$CDIR/../../test/test_indexing.py" "$@" -v TestIndexingXLA
+  # run_test python3 "$CDIR/../../test/test_indexing.py" "$@" -v NumpyTestsXLA
+  # run_dynamic python3 "$CDIR/../../test/test_nn.py" "$@" -v TestNNDeviceTypeXLA
+  # run_dynamic python3 "$CDIR/../../test/test_type_promotion.py" "$@" -v TestTypePromotionXLA
+  # run_dynamic python3 "$CDIR/test_operations.py" "$@" --verbosity=$VERBOSITY
+  # run_opbyop python3 "$CDIR/test_operations.py" "$@" --verbosity=$VERBOSITY
+  # run_eager_debug python3 "$CDIR/test_operations.py" "$@" --verbosity=$VERBOSITY
+  # run_async_rng python3 "$CDIR/test_operations.py" "$@" --verbosity=$VERBOSITY
+  # run_test python3 "$CDIR/test_mp_replication.py"
+  # run_test python3 "$CDIR/test_mp_all_to_all.py"
+  # run_test python3 "$CDIR/test_mp_collective_permute.py"
+  # run_test python3 "$CDIR/test_mp_all_gather.py"
+  # run_test python3 "$CDIR/test_mp_reduce_scatter.py"
+  # run_test python3 "$CDIR/test_mp_distributed_mm.py"
+  # run_test python3 "$CDIR/test_mp_rendezvous.py"
+  # run_test python3 "$CDIR/test_mp_save.py"
+  # run_test python3 "$CDIR/test_mp_mesh_reduce.py"
+  # run_test python3 "$CDIR/test_mp_sync_batch_norm.py"
+  # run_test python3 "$CDIR/test_async_closures.py"
+  # run_test python3 "$CDIR/test_xla_dist.py"
+  # run_test python3 "$CDIR/test_profiler.py"
+  # run_test python3 "$CDIR/test_ops.py"
+  # run_downcast_bf16 python3 "$CDIR/test_data_type.py"
+  # run_use_bf16 python3 "$CDIR/test_data_type.py"
+  # run_test python3 "$CDIR/test_torch_distributed_xla_backend.py"
+  # run_xla_backend_mp python3 "$CDIR/test_torch_distributed_all_gather_xla_backend.py"
+  # run_xla_backend_mp python3 "$CDIR/test_torch_distributed_all_reduce_xla_backend.py"
+  # run_xla_backend_mp python3 "$CDIR/test_torch_distributed_multi_all_reduce_xla_backend.py"
+  # run_xla_backend_mp python3 "$CDIR/test_torch_distributed_reduce_scatter_xla_backend.py"
+  run_xla_ir_debug_enabled python3 "$CDIR/test_env_var_mapper.py"
 }
 
 if [ "$LOGFILE" != "" ]; then
