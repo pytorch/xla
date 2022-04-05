@@ -33,6 +33,7 @@
 #include "torch/csrc/autograd/utils/wrap_outputs.h"
 #include "torch/csrc/autograd/variable.h"
 #include "torch/csrc/jit/python/pybind.h"
+#include "torch/csrc/lazy/core/config.h"
 #include "torch/csrc/lazy/core/ir_util.h"
 #include "torch_xla/csrc/XLANativeFunctions.h"
 #include "torch_xla/csrc/aten_xla_bridge.h"
@@ -698,6 +699,13 @@ absl::flat_hash_map<std::string, absl::variant<int>> ConvertDictToMap(
   return map;
 }
 
+// Maps PT/XLA env vars to upstream torch::lazy env vars.
+// Upstream lazy env vars defined in torch/csrc/lazy/core/config.h.
+void MapXlaEnvVarsToLazy() {
+  static bool wants_frames = xla::sys_util::GetEnvBool("XLA_IR_DEBUG", false);
+  FLAGS_torch_lazy_ir_debug = wants_frames;
+}
+
 void BuildProfilerSubmodule(py::module* m) {
   py::module profiler = m->def_submodule("profiler", "Profiler integration");
   py::class_<xla::profiler::ProfilerServer,
@@ -769,6 +777,7 @@ void BuildProfilerSubmodule(py::module* m) {
 void InitXlaModuleBindings(py::module m) {
   m.def("_prepare_to_exit", []() { PrepareToExit(); });
   m.def("_get_git_revs", []() { return GetRevisions(); });
+  m.def("_map_xla_env_vars_to_lazy", []() { return MapXlaEnvVarsToLazy(); });
   m.def("_get_xla_tensor_dimension_size",
         [](const at::Tensor& tensor, int dim) {
           return GetXlaTensorDimensionSize(tensor, dim);
