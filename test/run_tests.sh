@@ -51,8 +51,8 @@ function run_downcast_bf16 {
   XLA_DOWNCAST_BF16=1 run_test "$@"
 }
 
-function run_xla_ir_debug_enabled {
-  echo "Running with XLA_IR_DEBUG enabled: $@"
+function run_xla_ir_debug {
+  echo "Running with XLA_IR_DEBUG: $@"
   XLA_IR_DEBUG=1 run_test "$@"
 }
 
@@ -114,7 +114,7 @@ function run_all_tests {
   run_xla_backend_mp python3 "$CDIR/test_torch_distributed_all_reduce_xla_backend.py"
   run_xla_backend_mp python3 "$CDIR/test_torch_distributed_multi_all_reduce_xla_backend.py"
   run_xla_backend_mp python3 "$CDIR/test_torch_distributed_reduce_scatter_xla_backend.py"
-  run_xla_ir_debug_enabled python3 "$CDIR/test_env_var_mapper.py"
+  run_xla_ir_debug python3 "$CDIR/test_env_var_mapper.py"
 }
 
 if [ "$LOGFILE" != "" ]; then
