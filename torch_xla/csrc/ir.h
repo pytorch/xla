@@ -122,14 +122,6 @@ class Node : public torch::lazy::Node {
   // multi-output node, output_index must be zero.
   const xla::Shape& xla_shape(size_t output_index) const;
 
-  const std::vector<torch::lazy::Output>& operands() const override {
-    return operands_as_outputs_;
-  }
-
-  const torch::lazy::Output& operand(size_t i) const override {
-    return operands_as_outputs_.at(i);
-  }
-
   const std::set<Use>& uses() const { return uses_; }
 
   void ReplaceOperand(size_t operand_no, NodePtr node, size_t index = 0);
@@ -166,9 +158,6 @@ class Node : public torch::lazy::Node {
   xla::Shape xla_shape_;
   // A node holds a real reference to its operands.
   std::vector<NodePtr> operands_;
-  // Outputs do not hold references on the nodes, and neither do the uses, since
-  // otherwise we get into circular reference counting.
-  std::vector<torch::lazy::Output> operands_as_outputs_;
   // We use a set for uses, as we want deterministic use sequencing.
   std::set<Use> uses_;
 };
