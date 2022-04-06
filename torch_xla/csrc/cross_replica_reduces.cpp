@@ -150,10 +150,9 @@ AllGatherResult BuildAllGather(
   xla::Shape reduce_shape = MakeArrayShapeFromDimensions(
       input_shape.dimensions(), input_shape.dynamic_dimensions(),
       input_shape.element_type(), GetCurrentDevice().device_type.hw_type);
-  xla::XlaOp all_gather_result =
-      xla::AllGather(token_handler.GetInput(input, &input_shape), dim,
-                     shard_count, reduce_groups, /*channel_id=*/absl::nullopt,
-                     reduce_shape.layout());
+  xla::XlaOp all_gather_result = xla::AllGather(
+      token_handler.GetInput(input, &input_shape), dim, shard_count,
+      reduce_groups, /*channel_id=*/absl::nullopt, reduce_shape.layout());
   return {all_gather_result, token_handler.GetNewToken(all_gather_result)};
 }
 
