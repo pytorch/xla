@@ -122,12 +122,6 @@ class Node : public torch::lazy::Node {
   // multi-output node, output_index must be zero.
   const xla::Shape& xla_shape(size_t output_index) const;
 
-  // Retrieves the full shape of the IR Node.
-  c10::ArrayRef<torch::lazy::Shape> shapes() const override { return shapes_; }
-
-  // Retrieves the shape of the output at a given index.
-  const torch::lazy::Shape& shape(size_t output_index = 0) const override;
-
   const std::vector<torch::lazy::Output>& operands() const override {
     return operands_as_outputs_;
   }
@@ -170,7 +164,6 @@ class Node : public torch::lazy::Node {
   static std::vector<torch::lazy::SourceLocation> GetFrameInfo();
 
   xla::Shape xla_shape_;
-  std::vector<torch::lazy::Shape> shapes_;
   // A node holds a real reference to its operands.
   std::vector<NodePtr> operands_;
   // Outputs do not hold references on the nodes, and neither do the uses, since

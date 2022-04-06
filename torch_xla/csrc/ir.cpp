@@ -157,10 +157,6 @@ const xla::Shape& Node::xla_shape(size_t output_index) const {
   return xla_shape_;
 }
 
-const torch::lazy::Shape& Node::shape(size_t output_index) const {
-  return shapes_.at(output_index);
-}
-
 void Node::AddOperand(NodePtr node, size_t index) {
   XLA_CHECK_LT(index, node->num_outputs());
   operands_.push_back(std::move(node));
