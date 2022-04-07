@@ -107,7 +107,7 @@ class XlaHelpers {
   }
 
   // Performa a linear interpolation between value0 and value1, by calculating:
-  //   result = value0 * alpha + value1 * (1 - alpha)
+  //   result = value0 + alpha * (value1 - value0)
   static xla::XlaOp LinearInterpolation(xla::XlaOp value0, xla::XlaOp value1,
                                         double alpha);
 

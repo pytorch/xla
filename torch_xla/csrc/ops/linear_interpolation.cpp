@@ -9,7 +9,7 @@ namespace ops {
 
 LinearInterpolation::LinearInterpolation(const Value& value,
                                          const Value& new_value, double alpha)
-    : Node(ir::OpKind(at::aten::lerp), {value, new_value}, value.xla_shape(),
+    : Node(torch::lazy::OpKind(at::aten::lerp), {value, new_value}, value.xla_shape(),
            /*num_outputs=*/1, torch::lazy::MHash(alpha)),
       alpha_(alpha) {}
 
