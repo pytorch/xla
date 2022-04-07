@@ -368,10 +368,9 @@ xla::XlaOp XlaHelpers::FlattenDimRange(xla::XlaOp input, int64_t start,
 xla::XlaOp XlaHelpers::LinearInterpolation(xla::XlaOp value0, xla::XlaOp value1,
                                            double alpha) {
   const xla::Shape& shape = XlaHelpers::ShapeOfXlaOp(value0);
-  xla::XlaOp one = xla::One(value0.builder(), shape.element_type());
   xla::XlaOp alpha_value =
       ScalarValue(alpha, shape.element_type(), value0.builder());
-  return value0 * alpha_value + value1 * (one - alpha_value);
+  return value0 + alpha_value * (value1 - value0);
 }
 
 xla::PrimitiveType XlaHelpers::PromoteType(xla::PrimitiveType type1,

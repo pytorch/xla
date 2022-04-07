@@ -2,7 +2,6 @@
 
 #include "torch_xla/csrc/helpers.h"
 #include "torch_xla/csrc/lowering_context.h"
-#include "torch_xla/csrc/ops/xla_ops.h"
 
 namespace torch_xla {
 namespace ir {
@@ -10,7 +9,7 @@ namespace ops {
 
 LinearInterpolation::LinearInterpolation(const Value& value,
                                          const Value& new_value, double alpha)
-    : Node(xla_moving_average, {value, new_value}, value.xla_shape(),
+    : Node(ir::OpKind(at::aten::lerp), {value, new_value}, value.xla_shape(),
            /*num_outputs=*/1, torch::lazy::MHash(alpha)),
       alpha_(alpha) {}
 
