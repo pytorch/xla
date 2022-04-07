@@ -29,8 +29,8 @@ std::vector<std::string> PjRtDevicesToString(
   std::vector<std::string> strs;
   strs.reserve(devices.size());
 
-  for (size_t i = 0; i < devices.size(); ++i) {
-    strs.push_back(PjRtDeviceToString(devices[i]));
+  for (auto* device : devices) {
+    strs.push_back(PjRtDeviceToString(device));
   }
 
   return strs;
@@ -67,18 +67,17 @@ std::vector<ComputationClient::DataPtr> PjRtComputationClient::TransferToServer(
     absl::Span<const TensorSource> tensors) {
   std::vector<ComputationClient::DataPtr> datas;
   datas.reserve(tensors.size());
-  for (size_t i = 0; i < tensors.size(); ++i) {
-    xla::Shape shape = tensors[i].shape;
+  for (auto& tensor : tensors) {
+    xla::Shape shape = tensor.shape;
     xla::Literal literal(shape);
-    tensors[i].populate_fn(tensors[i], literal.untyped_data(),
-                           literal.size_bytes());
+    tensor.populate_fn(tensor, literal.untyped_data(), literal.size_bytes());
 
     std::shared_ptr<xla::PjRtBuffer> buffer =
         client->BufferFromHostLiteral(literal, client->addressable_devices()[0])
             .ValueOrDie();
     buffer->BlockHostUntilReady();
     ComputationClient::DataPtr data =
-        std::make_shared<PjRtData>(tensors[i].device, tensors[i].shape, buffer);
+        std::make_shared<PjRtData>(tensor.device, tensor.shape, buffer);
     datas.push_back(data);
   }
 
@@ -90,8 +89,8 @@ std::vector<xla::Literal> PjRtComputationClient::TransferFromServer(
   std::vector<xla::Literal> literals;
   literals.reserve(handles.size());
 
-  for (size_t i = 0; i < handles.size(); ++i) {
-    const PjRtData& pjrt_data = dynamic_cast<const PjRtData&>(*handles[i]);
+  for (auto handle : handles) {
+    const PjRtData& pjrt_data = dynamic_cast<const PjRtData&>(*handle);
 
     std::shared_ptr<xla::Literal> literal =
         pjrt_data.buffer->ToLiteral().ValueOrDie();
@@ -105,14 +104,14 @@ std::vector<ComputationClient::ComputationPtr> PjRtComputationClient::Compile(
     std::vector<ComputationClient::CompileInstance> instances) {
   std::vector<ComputationClient::ComputationPtr> computations;
 
-  for (size_t i = 0; i < instances.size(); ++i) {
+  for (auto& instance : instances) {
     xla::ProgramShape program_shape =
-        instances[i].computation.GetProgramShape().ValueOrDie();
+        instance.computation.GetProgramShape().ValueOrDie();
     xla::CompileOptions compile_options;
     std::shared_ptr<PjRtComputation> pjrt_computation =
         std::make_shared<PjRtComputation>(
-            client.get(), std::move(instances[i].computation), program_shape,
-            instances[i].devices, compile_options);
+            client.get(), std::move(instance.computation), program_shape,
+            instance.devices, compile_options);
 
     computations.push_back(pjrt_computation);
   }
@@ -131,8 +130,8 @@ PjRtComputationClient::ExecuteComputation(
 
   std::vector<xla::PjRtBuffer*> buffers;
   buffers.reserve(arguments.size());
-  for (size_t i = 0; i < arguments.size(); ++i) {
-    const PjRtData* pjrt_data = dynamic_cast<PjRtData*>(arguments[i].get());
+  for (auto& argument : arguments) {
+    const PjRtData* pjrt_data = dynamic_cast<PjRtData*>(argument.get());
     buffers.push_back(pjrt_data->buffer.get());
   }
 
@@ -144,8 +143,8 @@ PjRtComputationClient::ExecuteComputation(
 
   std::vector<DataPtr> datas;
   datas.reserve(results[0].size());
-  for (size_t i = 0; i < results[0].size(); ++i) {
-    std::unique_ptr<xla::PjRtBuffer> buffer = std::move(results[0][i]);
+  for (auto& result : results[0]) {
+    std::unique_ptr<xla::PjRtBuffer> buffer = std::move(result);
 
     std::shared_ptr<PjRtData> data = std::make_shared<PjRtData>(
         device, buffer->logical_on_device_shape().ValueOrDie(),
