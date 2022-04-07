@@ -14,9 +14,9 @@
 #include "tensorflow/compiler/xla/xla_client/debug_macros.h"
 #include "tensorflow/compiler/xla/xla_client/env_vars.h"
 #include "tensorflow/compiler/xla/xla_client/mesh_service.h"
+#include "tensorflow/compiler/xla/xla_client/pjrt_computation_client.h"
 #include "tensorflow/compiler/xla/xla_client/sys_util.h"
 #include "tensorflow/compiler/xla/xla_client/xrt_computation_client.h"
-#include "tensorflow/compiler/xla/xla_client/pjrt_computation_client.h"
 #include "tensorflow/core/platform/net.h"
 #include "tensorflow/core/platform/stacktrace_handler.h"
 #include "tensorflow/core/util/device_name_utils.h"
@@ -270,7 +270,8 @@ std::unique_ptr<ComputationClient> ComputationClient::Create() {
 
   if (sys_util::GetEnvString(env::kEnvPjRtDevice, "") != "") {
     PjRtComputationClient::Options options;
-    client = std::unique_ptr<ComputationClient>(new PjRtComputationClient(options));
+    client =
+        std::unique_ptr<ComputationClient>(new PjRtComputationClient(options));
   } else {
     XrtComputationClient::Options options;
     std::unique_ptr<tensorflow::tpu::TopologyProto> topology_proto;
@@ -281,7 +282,7 @@ std::unique_ptr<ComputationClient> ComputationClient::Create() {
     }
     PopulateLocalDevices(&options);
     client = std::unique_ptr<ComputationClient>(
-      new XrtComputationClient(options, std::move(topology_proto)));
+        new XrtComputationClient(options, std::move(topology_proto)));
   }
 
   XLA_CHECK(client.get() != nullptr);
@@ -405,7 +406,8 @@ metrics::Metric* ComputationClient::DeconstructTupleMetric() {
 
 metrics::Counter* ComputationClient::CreateAsyncDataHandlesCounter() {
   // Do not change the name of the counter as xla_model.py references it.
-  static metrics::Counter* counter = new metrics::Counter("CreateAsyncDataHandles");
+  static metrics::Counter* counter =
+      new metrics::Counter("CreateAsyncDataHandles");
   return counter;
 }
 

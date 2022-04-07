@@ -52,7 +52,7 @@ class PjRtComputationClient : public ComputationClient {
 
  public:
   // TODO(wcromar): add options
-  struct Options { };
+  struct Options {};
 
   PjRtComputationClient(Options options);
 
