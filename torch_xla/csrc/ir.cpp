@@ -102,13 +102,21 @@ std::string Use::ToString() const {
   return ss.str();
 }
 
-const xla::Shape& Value::xla_shape() const { return node->xla_shape(index); }
+const xla::Shape& Value::xla_shape() const {
+  Node* casted = dynamic_cast<Node*>(node.get());
+  return casted->xla_shape(index);
+}
 
-const xla::Shape& Value::xla_node_shape() const { return node->xla_shape(); }
+const xla::Shape& Value::xla_node_shape() const {
+  Node* casted = dynamic_cast<Node*>(node.get());
+  return casted->xla_shape();
+}
 
 torch::lazy::hash_t Value::hash() const {
   return torch::lazy::HashCombine(node->hash(), index);
 }
+
+Node* Value::operator->() const { return dynamic_cast<Node*>(node.get()); }
 
 Node::Node(torch::lazy::OpKind op, OpList operands, xla::Shape shape,
            size_t num_outputs, torch::lazy::hash_t hash_seed)
@@ -145,7 +153,8 @@ Node::Node(torch::lazy::OpKind op, xla::Shape shape, size_t num_outputs,
 
 Node::~Node() {
   for (size_t i = 0; i < operands_as_outputs_.size(); ++i) {
-    operands_[i]->RemoveUse(Use(this, i, operands_as_outputs_[i].index));
+    Node* casted = dynamic_cast<Node*>(operands_[i].get());
+    casted->RemoveUse(Use(this, i, operands_as_outputs_[i].index));
   }
 }
 
@@ -162,14 +171,17 @@ void Node::AddOperand(NodePtr node, size_t index) {
   operands_.push_back(std::move(node));
   operands_as_outputs_.push_back(
       torch::lazy::Output(operands_.back().get(), index));
-  operands_.back()->AddUse(Use(this, operands_.size() - 1, index));
+  Node* casted = dynamic_cast<Node*>(operands_.back().get());
+  casted->AddUse(Use(this, operands_.size() - 1, index));
 }
 
 void Node::ReplaceOperand(size_t operand_no, NodePtr node, size_t index) {
   XLA_CHECK_LT(index, node->num_outputs());
+  Node* casted = dynamic_cast<Node*>(node.get());
   torch::lazy::Output* output = &operands_as_outputs_.at(operand_no);
-  operands_[operand_no]->RemoveUse(Use(this, operand_no, output->index));
-  node->AddUse(Use(this, operand_no, index));
+  Node* casted_to_remove = dynamic_cast<Node*>(operands_[operand_no].get());
+  casted_to_remove->RemoveUse(Use(this, operand_no, output->index));
+  casted->AddUse(Use(this, operand_no, index));
   *output = torch::lazy::Output(node.get(), index);
   operands_[operand_no] = std::move(node);
 }

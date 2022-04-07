@@ -26,7 +26,7 @@ namespace ir {
 class Node;
 class LoweringContext;
 
-using NodePtr = std::shared_ptr<Node>;
+using NodePtr = std::shared_ptr<torch::lazy::Node>;
 
 using XlaOpVector = tensorflow::gtl::InlinedVector<xla::XlaOp, 1>;
 
@@ -79,7 +79,7 @@ struct Value : public torch::lazy::Value {
 
   operator bool() const { return node != nullptr; }
 
-  Node* operator->() const { return node.get(); }
+  Node* operator->() const;
 
   NodePtr node;
   size_t index = 0;
