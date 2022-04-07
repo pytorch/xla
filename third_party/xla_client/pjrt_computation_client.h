@@ -10,6 +10,7 @@
 #include "tensorflow/compiler/xla/status.h"
 #include "tensorflow/compiler/xla/statusor.h"
 #include "tensorflow/compiler/xla/xla_client/computation_client.h"
+#include "tensorflow/compiler/xla/xla_client/debug_macros.h"
 
 namespace xla {
 
@@ -46,31 +47,19 @@ class PjRtComputationClient : public ComputationClient {
           executable(self->Compile(this->computation(), options).ValueOrDie()) {
     }
 
-    // TODO: something other than what I'm doing here
-    int64_t get_handle() const {
-      return executable->SizeOfGeneratedCodeInBytes();
-    }
-
     std::unique_ptr<xla::PjRtExecutable> executable;
   };
 
  public:
-  struct Options {};
+  // TODO(wcromar): add options
+  struct Options { };
 
-  PjRtComputationClient(
-      Options options/*,
-      // TODO: fix
-      std::unique_ptr<tensorflow::tpu::TopologyProto> topology_proto*/);
+  PjRtComputationClient(Options options);
 
   DataPtr CreateDataPlaceholder(std::string device, Shape shape) override;
 
   std::vector<DataPtr> TransferToServer(
       absl::Span<const TensorSource> tensors) override;
-
-  void TransferToServer(absl::Span<const TensorSource> tensors,
-                        absl::Span<const DataPtr> datas) override {
-    throw std::logic_error(__FUNCTION__);
-  };
 
   std::vector<Literal> TransferFromServer(
       absl::Span<const DataPtr> handles) override;
@@ -97,19 +86,24 @@ class PjRtComputationClient : public ComputationClient {
 
   // NOT IMPLEMENTED
 
+  void TransferToServer(absl::Span<const TensorSource> tensors,
+                        absl::Span<const DataPtr> datas) override {
+    XLA_ERROR() << __FUNCTION__ << " not implemented";
+  };
+
   std::vector<DataPtr> CreateAsyncDatas(
       absl::Span<const TensorSource> tensors) override {
-    throw std::logic_error(__FUNCTION__);
+    XLA_ERROR() << __FUNCTION__ << " not implemented";
   };
 
   std::vector<xla::util::ExceptionCleanup> LockAsyncDatas(
       absl::Span<const DataPtr> datas) override {
-    throw std::logic_error(__FUNCTION__);
+    XLA_ERROR() << __FUNCTION__ << " not implemented";
   };
 
   std::vector<std::vector<DataPtr>> DeconstructTuple(
       absl::Span<const DataPtr> tuples) override {
-    throw std::logic_error(__FUNCTION__);
+    XLA_ERROR() << __FUNCTION__ << " not implemented";
   };
 
   std::vector<std::vector<DataPtr>> ExecuteReplicated(
@@ -117,7 +111,7 @@ class PjRtComputationClient : public ComputationClient {
       const std::vector<std::vector<DataPtr>>& arguments,
       absl::Span<const std::string> devices,
       const ExecuteReplicatedOptions& options) override {
-    throw std::logic_error(__FUNCTION__);
+    XLA_ERROR() << __FUNCTION__ << " not implemented";
   };
 
   std::vector<std::vector<DataPtr>> ExecuteParallel(
@@ -125,33 +119,34 @@ class PjRtComputationClient : public ComputationClient {
       const std::vector<std::vector<DataPtr>>& arguments,
       absl::Span<const std::string> devices,
       const ExecuteParallelOptions& options) override {
-    throw std::logic_error(__FUNCTION__);
+    XLA_ERROR() << __FUNCTION__ << " not implemented";
   };
 
   std::vector<DataPtr> ExecuteChained(absl::Span<const ExecuteChainedOp> ops,
                                       const std::string& device) override {
-    throw std::logic_error(__FUNCTION__);
+    XLA_ERROR() << __FUNCTION__ << " not implemented";
   };
 
   std::string GetResourceDomain(const std::string& device) const override {
+    // TODO(wcromar): return a meaningful value
     return "getresourcedomainplaceholder";
   };
 
   void SetReplicationDevices(
       std::shared_ptr<std::vector<std::string>> devices) override {
-    throw std::logic_error(__FUNCTION__);
+    XLA_ERROR() << __FUNCTION__ << " not implemented";
   };
 
   void SetRngSeed(size_t seed) override {
-    throw std::logic_error(__FUNCTION__);
+    XLA_ERROR() << __FUNCTION__ << " not implemented";
   };
 
   std::map<std::string, Metric> GetMetrics() const override {
-    throw std::logic_error(__FUNCTION__);
+    XLA_ERROR() << __FUNCTION__ << " not implemented";
   };
 
   MemoryInfo GetMemoryInfo(const std::string& device) override {
-    throw std::logic_error(__FUNCTION__);
+    XLA_ERROR() << __FUNCTION__ << " not implemented";
   };
 
  private:

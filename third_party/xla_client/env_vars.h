@@ -18,6 +18,7 @@ extern const char* const kEnvHostOrdinal;
 extern const char* const kEnvShardOrdinal;
 extern const char* const kEnvStartService;
 extern const char* const kEnvTpuvmMode;
+extern const char* const kEnvPjRtDevice;
 
 }  // namespace env
 }  // namespace xla

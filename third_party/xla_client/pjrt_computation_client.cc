@@ -3,13 +3,15 @@
 #include <algorithm>
 
 #include "tensorflow/compiler/xla/xla_client/computation_client.h"
+#include "tensorflow/compiler/xla/xla_client/debug_macros.h"
+#include "tensorflow/compiler/xla/xla_client/env_vars.h"
 #include "tensorflow/compiler/xla/xla_client/tf_logging.h"
 
 namespace xla {
 
 namespace {
 
-// TODO: relying on the debug string here is probably a bad idea
+// TODO(wcromar): relying on the debug string here is probably a bad idea
 std::string PjRtDeviceToString(PjRtDevice* const device) {
   std::string str = device->DebugString();
   std::transform(str.begin(), str.end(), str.begin(), ::toupper);
@@ -29,10 +31,16 @@ std::vector<std::string> PjRtDevicesToString(absl::Span<PjRtDevice* const> devic
 
 }
 
-// TODO: change this back to tensorflow::tpu::TopologyProto
-PjRtComputationClient::PjRtComputationClient(Options options/*, std::unique_ptr<tensorflow::tpu::TopologyProto> topology_proto*/) {
-  // TODO: use options and topology to construct TPU client
-  client = xla::GetCpuClient(/*asynchronous=*/false).ValueOrDie();
+PjRtComputationClient::PjRtComputationClient(Options options) {
+  std::string device_type = sys_util::GetEnvString(env::kEnvPjRtDevice, "");
+  if (device_type == "CPU") {
+    TF_VLOG(1) << "Initializing PjRt CPU client...";
+    client = xla::GetCpuClient(/*asynchronous=*/false).ValueOrDie();
+  } else {
+    XLA_ERROR() << absl::StrFormat("Unknown %s '%s'", env::kEnvPjRtDevice, device_type);
+  }
+
+  XLA_CHECK(client.get() != nullptr);
 }
 
 void PjRtComputationClient::PjRtData::Assign(const Data& data) {
@@ -104,6 +112,7 @@ std::vector<ComputationClient::DataPtr> PjRtComputationClient::ExecuteComputatio
     const ComputationClient::Computation& computation, absl::Span<const ComputationClient::DataPtr> arguments,
     const std::string& device,
     const ExecuteComputationOptions& options) {
+  TF_VLOG(1) << "Executing PjRt computation on " << device;
   const PjRtComputation& pjrt_computation = dynamic_cast<const PjRtComputation&>(computation);
 
   std::vector<xla::PjRtBuffer*> buffers;
@@ -129,6 +138,7 @@ std::vector<ComputationClient::DataPtr> PjRtComputationClient::ExecuteComputatio
     datas.push_back(data);
   }
 
+  TF_VLOG(1) << "Returning " << datas.size() << " results";
   return datas;
 }
 

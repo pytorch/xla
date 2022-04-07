@@ -266,18 +266,26 @@ bool ParseEnvDevices(XrtComputationClient::Options* options) {
 }  // namespace
 
 std::unique_ptr<ComputationClient> ComputationClient::Create() {
-  // XrtComputationClient::Options options;
-  // std::unique_ptr<tensorflow::tpu::TopologyProto> topology_proto;
-  // if (!ParseEnvBasedTpuClusterConfig(&options) &&
-  //     !ParseEnvDeviceCounts(&options) && !ParseEnvDevices(&options) &&
-  //     !ParseMeshConfig(&options, &topology_proto)) {
-  //   XLA_ERROR() << "Missing XLA configuration";
-  // }
-  // PopulateLocalDevices(&options);
-  // return std::unique_ptr<ComputationClient>(
-  //     new XrtComputationClient(options, std::move(topology_proto)));
-  PjRtComputationClient::Options options;
-  return std::unique_ptr<ComputationClient>(new PjRtComputationClient(options));
+  std::unique_ptr<ComputationClient> client;
+
+  if (sys_util::GetEnvString(env::kEnvPjRtDevice, "") != "") {
+    PjRtComputationClient::Options options;
+    client = std::unique_ptr<ComputationClient>(new PjRtComputationClient(options));
+  } else {
+    XrtComputationClient::Options options;
+    std::unique_ptr<tensorflow::tpu::TopologyProto> topology_proto;
+    if (!ParseEnvBasedTpuClusterConfig(&options) &&
+        !ParseEnvDeviceCounts(&options) && !ParseEnvDevices(&options) &&
+        !ParseMeshConfig(&options, &topology_proto)) {
+      XLA_ERROR() << "Missing XLA configuration";
+    }
+    PopulateLocalDevices(&options);
+    client = std::unique_ptr<ComputationClient>(
+      new XrtComputationClient(options, std::move(topology_proto)));
+  }
+
+  XLA_CHECK(client.get() != nullptr);
+  return client;
 }
 
 std::shared_ptr<ComputationClient::Computation> ComputationClient::Compile(
