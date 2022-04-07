@@ -347,9 +347,10 @@ setup(
         ],
     },
     data_files=[
-        'test/cpp/build/test_ptxla',
         'scripts/fixup_binary.py',
-    ],
+    ] + [
+        'test/cpp/build/test_ptxla'
+    ] if _check_env_flag('BUILD_CPP_TESTS', default='1') else [],
     cmdclass={
         'build_ext': Build,
         'clean': Clean,
