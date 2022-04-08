@@ -131,6 +131,7 @@ class PjRtComputationClient : public ComputationClient {
 
   void SetReplicationDevices(
       std::shared_ptr<std::vector<std::string>> devices) override {
+    // TODO(wcromar): use replication devices
     TF_VLOG(2) << __FUNCTION__ << " not implemented";
   };
 
