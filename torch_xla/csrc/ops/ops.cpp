@@ -877,7 +877,7 @@ NodePtr Lerp(const Value& start, const Value& end, const Value& weight) {
   };
   return GenericOp(torch::lazy::OpKind(at::aten::lerp),
                   {start, end, weight},
-                  start.shape(),
+                  start.xla_shape(),
                   std::move(lower_fn));
 }
 
