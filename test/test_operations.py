@@ -10,6 +10,8 @@ parser = argparse.ArgumentParser(add_help=False)
 parser.add_argument('--replicated', action='store_true')
 parser.add_argument('--long_test', action='store_true')
 parser.add_argument('--max_diff_count', type=int, default=25)
+parser.add_argument('--runtime', type=str, default='xrt',
+                    choices=['xrt', 'pjrt'])
 parser.add_argument('--verbosity', type=int, default=0)
 FLAGS, leftovers = parser.parse_known_args()
 sys.argv = [sys.argv[0]] + leftovers
@@ -44,6 +46,13 @@ import torchvision
 import unittest
 
 DeviceSupport = collections.namedtuple('DeviceSupport', ['num_devices'])
+
+
+def _set_runtime(runtime):
+  if runtime == 'xrt':
+    del os.environ['PJRT_DEVICE']
+  elif runtime == 'pjrt':
+    os.environ.setdefault('PJRT_DEVICE', 'CPU')
 
 
 def _gen_tensor(*args, **kwargs):
@@ -2174,6 +2183,7 @@ if __name__ == '__main__':
   torch.manual_seed(42)
   torch_xla._XLAC._xla_set_use_full_mat_mul_precision(
       use_full_mat_mul_precision=True)
+  _set_runtime(FLAGS.runtime)
   test = unittest.main(verbosity=FLAGS.verbosity, exit=False)
   if xu.getenv_as('METRICS_DEBUG', bool, defval=False):
     print(met.metrics_report())

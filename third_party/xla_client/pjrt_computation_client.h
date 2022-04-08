@@ -131,7 +131,7 @@ class PjRtComputationClient : public ComputationClient {
 
   void SetReplicationDevices(
       std::shared_ptr<std::vector<std::string>> devices) override {
-    XLA_ERROR() << __FUNCTION__ << " not implemented";
+    TF_VLOG(2) << __FUNCTION__ << " not implemented";
   };
 
   void SetRngSeed(size_t seed) override {
