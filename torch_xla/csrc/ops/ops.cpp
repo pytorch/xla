@@ -25,6 +25,7 @@
 #include "torch_xla/csrc/ops/permute.h"
 #include "torch_xla/csrc/ops/softmax_backward.h"
 #include "torch_xla/csrc/ops/sum.h"
+#include "torch_xla/csrc/ops/xla_ops.h"
 #include "torch_xla/csrc/pooling.h"
 #include "torch_xla/csrc/tensor_util.h"
 #include "torch_xla/csrc/torch_util.h"
@@ -1028,6 +1029,17 @@ NodePtr Softplus(const Value& input, const Value& beta,
 
   return GenericOp(torch::lazy::OpKind(at::aten::softplus),
                    {input, beta, threshold}, input.xla_shape(),
+                   std::move(lower_fn));
+}
+
+NodePtr OptimizationBarrier(const Value& input) {
+  auto lower_fn = [](const Node& node, LoweringContext* loctx) -> XlaOpVector {
+    xla::XlaOp xla_input = loctx->GetOutputOp(node.operand(0));
+    xla::XlaOp xla_output = xla::OptimizationBarrier(xla_input);
+    return node.ReturnOp(xla_output, loctx);
+  };
+
+  return GenericOp(xla_optimization_barrier, {input}, input.xla_shape(),
                    std::move(lower_fn));
 }
 

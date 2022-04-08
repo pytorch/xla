@@ -247,6 +247,8 @@ NodePtr SLogDet(const Value& input);
 
 NodePtr Softplus(const Value& input, const Value& beta, const Value& threshold);
 
+NodePtr OptimizationBarrier(const Value& input);
+
 }  // namespace ops
 }  // namespace ir
 }  // namespace torch_xla

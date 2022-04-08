@@ -276,6 +276,13 @@ std::pair<at::Tensor, std::shared_ptr<ir::Value>> CollectivePermute(
       std::make_shared<ir::Value>(new_token));
 }
 
+at::Tensor OptimizationBarrier(const at::Tensor& input) {
+  at::Tensor result = bridge::AtenFromXlaTensor(
+      XLATensor::optimization_barrier(bridge::GetXlaTensor(input)));
+  return torch::autograd::make_variable(
+      result, /*requires_grad=*/input.requires_grad());
+}
+
 void SyncTensors(const std::vector<at::Tensor>& tensors,
                  const std::vector<std::string>& devices, bool wait,
                  bool sync_xla_data) {
@@ -1028,6 +1035,8 @@ void InitXlaModuleBindings(py::module m) {
           }
           return new_token;
         });
+  m.def("_xla_optimization_barrier",
+        [](const at::Tensor& input) { return OptimizationBarrier(input); });
   m.def("_xla_set_default_device", [](const std::string& device) {
     return SetCurrentThreadDevice(device);
   });
