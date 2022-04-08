@@ -10,8 +10,8 @@ parser = argparse.ArgumentParser(add_help=False)
 parser.add_argument('--replicated', action='store_true')
 parser.add_argument('--long_test', action='store_true')
 parser.add_argument('--max_diff_count', type=int, default=25)
-parser.add_argument('--runtime', type=str, default='xrt',
-                    choices=['xrt', 'pjrt'])
+parser.add_argument(
+    '--runtime', type=str, default='xrt', choices=['xrt', 'pjrt'])
 parser.add_argument('--verbosity', type=int, default=0)
 FLAGS, leftovers = parser.parse_known_args()
 sys.argv = [sys.argv[0]] + leftovers
