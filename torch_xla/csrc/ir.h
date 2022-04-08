@@ -128,8 +128,6 @@ class Node : public torch::lazy::Node {
 
   void ReplaceAllUsesWith(NodePtr node, size_t index = 0);
 
-  virtual std::string ToString() const override;
-
   virtual NodePtr Clone(OpList operands) const;
 
   virtual XlaOpVector Lower(LoweringContext* loctx) const;

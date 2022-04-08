@@ -200,20 +200,6 @@ XlaOpVector Node::ReturnOps(absl::Span<const xla::XlaOp> ops,
   return result;
 }
 
-std::string Node::ToString() const {
-  std::stringstream ss;
-  ss << xla_shape() << " " << op();
-  if (num_outputs() > 1) {
-    ss << ", num_outputs=" << num_outputs();
-  }
-  torch::lazy::MetaData metadata = torch::lazy::GetMetaDataIfDebugging();
-  if (!metadata.scope.empty()) {
-    ss << ", scope=" << metadata.scope;
-  }
-  torch::lazy::EmitShortFrameInfo(ss, metadata.frame_info);
-  return ss.str();
-}
-
 NodePtr Node::Clone(OpList operands) const {
   XLA_ERROR() << "Cloning not implemented for node: " << *this;
 }
