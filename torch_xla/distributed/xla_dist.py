@@ -316,6 +316,17 @@ class DistributedExecutor(object):
         'v3-512': '8,8,1',
         'v3-1024': '8,16,1',
         'v3-2048': '16,16,1',
+        # v4
+        'v4-8': '1,1,1',
+        'v4-16': '1,1,2',
+        'v4-32': '1,1,4',
+        'v4-64': '1,2,4',
+        'v4-128': '2,2,4',
+        'v4-256': '2,2,8',
+        'v4-512': '2,4,8',
+        'v4-1024': '4,4,8',
+        'v4-2048': '4,4,16',
+        'v4-4096': '4,8,16',
     }
 
     env_vars[xenv.TPU_HOST_BOUNDS] = accelerator_type_to_host_bounds[
@@ -327,6 +338,13 @@ class DistributedExecutor(object):
 
   def _env_vars_cmd(self, worker_idx):
     client_worker = self._cluster.get_client_workers()[worker_idx]
+    accelerator_gen = self._cluster.get_service_workers(
+    )[0]._machine_type.split('-')[0]
+    accelerator_gen_to_tpu_num_devices = {
+        'v2': 8,
+        'v3': 8,
+        'v4': 4,
+    }
     worker_name = 'c_localservice' if self.tpuvm_mode else 'c_tpu_worker'
     env_vars = {
         xenv.LOCAL_WORKER:
@@ -339,7 +357,7 @@ class DistributedExecutor(object):
         xenv.ORDINAL:
             worker_idx,
         xenv.TPU_NUM_DEVICES:
-            8,
+            accelerator_gen_to_tpu_num_devices[accelerator_gen],
         'XLA_EMIT_STEPLOG':
             1,
     }
