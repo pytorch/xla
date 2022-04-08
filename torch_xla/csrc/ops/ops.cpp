@@ -865,20 +865,8 @@ NodePtr BaddBmm(const Value& lhs, const Value& rhs, const Value& bias,
 }
 
 NodePtr Lerp(const Value& start, const Value& end, const Value& weight) {
-  auto lower_fn = [](const Node& node, LoweringContext* loctx) -> XlaOpVector {
-    XLA_CHECK_EQ(node.operands().size(), 3) << "Unexpected number of operands";
-    xla::XlaOp start = loctx->GetOutputOp(node.operand(0));
-    xla::XlaOp end = loctx->GetOutputOp(node.operand(1));
-    xla::XlaOp weight = loctx->GetOutputOp(node.operand(2));
-
-    auto result = start + weight * (end - start);
-
-    return node.ReturnOp(result, loctx);
-  };
-  return GenericOp(torch::lazy::OpKind(at::aten::lerp),
-                  {start, end, weight},
-                  start.xla_shape(),
-                  std::move(lower_fn));
+  ScopePusher ir_scope(at::aten::lerp.toQualString());
+  return start + weight * (end - start);
 }
 
 NodePtr LogicalNot(const Value& input) {
