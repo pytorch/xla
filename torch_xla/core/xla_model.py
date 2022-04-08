@@ -1032,6 +1032,6 @@ def optimization_barrier(tensors):
   the gradient checkpointing.
 
   Args:
-    tensors (torch.Tensor): `torch.Tensor`s to add barrier to.
+    tensors (List[torch.Tensor]): List of `torch.Tensor` to add barrier to.
   """
   return torch_xla._XLAC._xla_optimization_barrier(tensors)
