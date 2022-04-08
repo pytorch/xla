@@ -1314,6 +1314,17 @@
 <span class="sd">    memory in KB) keys.</span>
 <span class="sd">  &quot;&quot;&quot;</span>
   <span class="k">return</span> <span class="n">torch_xla</span><span class="o">.</span><span class="n">_XLAC</span><span class="o">.</span><span class="n">_xla_memory_info</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">device</span><span class="p">))</span></div>
+
+
+<span class="k">def</span> <span class="nf">optimization_barrier</span><span class="p">(</span><span class="n">tensors</span><span class="p">):</span>
+  <span class="sd">&quot;&quot;&quot;Blocks xla compiler from moving computations across this barrier. The common</span>
+<span class="sd">  use case would be blocking xla common-subexpression elimination pass from undoing</span>
+<span class="sd">  the gradient checkpointing.</span>
+
+<span class="sd">  Args:</span>
+<span class="sd">    tensors (List[torch.Tensor]): List of `torch.Tensor` to add barrier to.</span>
+<span class="sd">  &quot;&quot;&quot;</span>
+  <span class="k">return</span> <span class="n">torch_xla</span><span class="o">.</span><span class="n">_XLAC</span><span class="o">.</span><span class="n">_xla_optimization_barrier</span><span class="p">(</span><span class="n">tensors</span><span class="p">)</span>
 </pre></div>
 
              </article>
