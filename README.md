@@ -302,9 +302,9 @@ The following pre-built docker images are available to run on Cloud TPUs (see [d
 
 We also have pre-built docker images to run on Cloud compute instances with GPUs (`CUDA 11.2`):
 
-    * `gcr.io/tpu-pytorch/xla:r1.11_cuda11.2`: The current stable version.
-    * `gcr.io/tpu-pytorch/xla:nightly_3.7_cuda11.2`: Nightly version using Python 3.7.
-    * `gcr.io/tpu-pytorch/xla:nightly_3.7_cuda11.2_YYYYMMDD`.
+    * `gcr.io/tpu-pytorch/xla:r1.11_3.7_cuda_11.2`: The current stable version.
+    * `gcr.io/tpu-pytorch/xla:nightly_3.7_cuda_11.2`: Nightly version using Python 3.7.
+    * `gcr.io/tpu-pytorch/xla:nightly_3.7_cuda_11.2_YYYYMMDD`.
 
 To run on [compute instances with GPUs](https://cloud.google.com/compute/docs/gpus/create-vm-with-gpus).
 
