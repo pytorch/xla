@@ -269,9 +269,8 @@ std::unique_ptr<ComputationClient> ComputationClient::Create() {
   std::unique_ptr<ComputationClient> client;
 
   if (sys_util::GetEnvString(env::kEnvPjRtDevice, "") != "") {
-    PjRtComputationClient::Options options;
     client =
-        std::unique_ptr<ComputationClient>(new PjRtComputationClient(options));
+        std::unique_ptr<ComputationClient>(new PjRtComputationClient());
   } else {
     XrtComputationClient::Options options;
     std::unique_ptr<tensorflow::tpu::TopologyProto> topology_proto;

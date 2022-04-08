@@ -51,10 +51,7 @@ class PjRtComputationClient : public ComputationClient {
   };
 
  public:
-  // TODO(wcromar): add options
-  struct Options {};
-
-  PjRtComputationClient(Options options);
+  PjRtComputationClient();
 
   DataPtr CreateDataPlaceholder(std::string device, Shape shape) override;
 

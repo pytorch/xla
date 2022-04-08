@@ -38,7 +38,7 @@ std::vector<std::string> PjRtDevicesToString(
 
 }  // namespace
 
-PjRtComputationClient::PjRtComputationClient(Options options) {
+PjRtComputationClient::PjRtComputationClient() {
   std::string device_type = sys_util::GetEnvString(env::kEnvPjRtDevice, "");
   if (device_type == "CPU") {
     TF_VLOG(1) << "Initializing PjRt CPU client...";
