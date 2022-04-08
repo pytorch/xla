@@ -157,10 +157,6 @@ const xla::Shape& Node::xla_shape(size_t output_index) const {
   return xla_shape_;
 }
 
-const torch::lazy::Shape& Node::shape(size_t output_index) const {
-  return shapes_.at(output_index);
-}
-
 void Node::AddOperand(NodePtr node, size_t index) {
   XLA_CHECK_LT(index, node->num_outputs());
   operands_.push_back(std::move(node));
@@ -202,20 +198,6 @@ XlaOpVector Node::ReturnOps(absl::Span<const xla::XlaOp> ops,
     result.push_back(ops[i]);
   }
   return result;
-}
-
-std::string Node::ToString() const {
-  std::stringstream ss;
-  ss << xla_shape() << " " << op();
-  if (num_outputs() > 1) {
-    ss << ", num_outputs=" << num_outputs();
-  }
-  torch::lazy::MetaData metadata = torch::lazy::GetMetaDataIfDebugging();
-  if (!metadata.scope.empty()) {
-    ss << ", scope=" << metadata.scope;
-  }
-  torch::lazy::EmitShortFrameInfo(ss, metadata.frame_info);
-  return ss.str();
 }
 
 NodePtr Node::Clone(OpList operands) const {
