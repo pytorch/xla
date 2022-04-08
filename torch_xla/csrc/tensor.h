@@ -918,6 +918,8 @@ class XLATensor {
   static XLATensor not_supported(std::string description, xla::Shape shape,
                                  const Device& device);
 
+  static XLATensor optimization_barrier(const XLATensor& input);
+
   // Permute the dimensions of this tensor according to the given permutation.
   static XLATensor permute(const XLATensor& input,
                            absl::Span<const int64_t> dims);

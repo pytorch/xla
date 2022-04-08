@@ -1024,3 +1024,14 @@ def get_memory_info(device):
     memory in KB) keys.
   """
   return torch_xla._XLAC._xla_memory_info(str(device))
+
+
+def optimization_barrier(tensors):
+  """Blocks xla compiler from moving computations across this barrier. The common
+  use case would be blocking xla common-subexpression elimination pass from undoing
+  the gradient checkpointing.
+
+  Args:
+    tensors (List[torch.Tensor]): List of `torch.Tensor` to add barrier to.
+  """
+  return torch_xla._XLAC._xla_optimization_barrier(tensors)
