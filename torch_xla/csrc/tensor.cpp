@@ -994,9 +994,6 @@ std::vector<xla::ComputationClient::DataPtr> XLATensor::GatherTensorsXlaData(
 }
 
 void XLATensor::TensorCollectionBarrier(SyncTensorCollection* coll) {
-  if (coll->indices.empty()) {
-    return;
-  }
   TF_VLOG(4) << "Waiting on device barrier for device " << coll->device
              << " ...";
   {
@@ -1300,8 +1297,9 @@ XLATensor::ComputationCache* XLATensor::GetComputationCache() {
 }
 
 XLATensor::PostOrderData XLATensor::RunPostOrder(
-    const std::vector<XLATensor>& tensors, absl::Span<const size_t> indices) {
-  std::vector<const torch::lazy::Node*> roots;
+    const std::vector<XLATensor>& tensors, SyncTensorCollection* coll) {
+  absl::Span<const size_t> indices = coll->indices;
+  std::vector<const ir::Node*> roots;
   roots.reserve(indices.size());
   for (auto index : indices) {
     ir::XlaValue ir_value = tensors.at(index).CurrentIrValue();
@@ -1311,6 +1309,7 @@ XLATensor::PostOrderData XLATensor::RunPostOrder(
   po_data.post_order = ir::Util::ComputePostOrder(roots, &po_data.emission_map);
   std::unordered_map<xla::ComputationClient::Data::OpaqueHandle, size_t>
       data_handles;
+  TensorCollectionBarrier(coll);
   for (auto node : po_data.post_order) {
     const ir::ops::DeviceData* device_data = ir::ops::DeviceData::Cast(node);
     if (device_data != nullptr) {
@@ -1376,7 +1375,6 @@ std::shared_ptr<XLATensor::Async> XLATensor::ScheduleSyncTensorsGraph(
     ComputationCache::TypePtr cached_computation) {
   tensorflow::profiler::TraceMe activity(
       "ScheduleSyncTensorsGraph", tensorflow::profiler::TraceMeLevel::kInfo);
-  TensorCollectionBarrier(coll);
   std::shared_ptr<Async> async = std::make_shared<Async>(
       coll, std::move(parameters_data), std::move(tensors_data),
       std::move(cached_computation));
@@ -1677,12 +1675,13 @@ std::shared_ptr<XLATensor::Async> XLATensor::SyncTensorsGraphInternal(
       "SyncTensorsGraphInternal", tensorflow::profiler::TraceMeLevel::kInfo);
   SyncTensorCollection coll = CollectSyncTensors(*tensors, config);
   if (coll.indices.empty()) {
+    TensorCollectionBarrier(&coll);
     return nullptr;
   }
+  PostOrderData po_data = RunPostOrder(*tensors, &coll);
   DebugUtil::SaveTensorsGraphInfo("ScheduleSyncTensorsGraph", *tensors,
                                   &coll.indices);
 
-  PostOrderData po_data = RunPostOrder(*tensors, coll.indices);
   coll.hash = torch::lazy::HashCombine(
       coll.hash, torch::lazy::Hash(po_data.parameter_sequence));
   TF_VLOG(4) << "Parameter sequence graph hash "

@@ -1456,7 +1456,7 @@ class XLATensor {
       std::string device, ComputationCache::TypePtr cached_computation);
 
   static PostOrderData RunPostOrder(const std::vector<XLATensor>& tensors,
-                                    absl::Span<const size_t> indices);
+                                    SyncTensorCollection* coll);
 
   static ComputationCache::TypePtr LookupCachedCompile(
       const std::vector<XLATensor>& tensors, const torch::lazy::hash_t& hash);
