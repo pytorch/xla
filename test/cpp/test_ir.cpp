@@ -20,36 +20,46 @@ TEST(IrTest, TestScalarCreate) {
 TEST(IrTest, TestReplace) {
   ir::NodePtr scalar1 = ir::ops::ScalarOp(1.0, xla::F32);
   ir::NodePtr scalar2 = ir::ops::ScalarOp(2.0, xla::F32);
-  ir::Value add = scalar1 + scalar2;
-  EXPECT_EQ(scalar1->uses().size(), 1);
-  EXPECT_EQ(scalar2->uses().size(), 1);
+  ir::Value value1 = ir::Value(scalar1, 0);
+  ir::Value value2 = ir::Value(scalar2, 0);
+  ir::NodePtr add = value1 + value2;
+
+  EXPECT_EQ(dynamic_cast<ir::Node*>(scalar1.get())->uses().size(), 1);
+  EXPECT_EQ(dynamic_cast<ir::Node*>(scalar2.get())->uses().size(), 1);
 
   ir::NodePtr scalar3 = ir::ops::ScalarOp(3.0, xla::F32);
-  scalar1->ReplaceAllUsesWith(scalar3);
-  EXPECT_EQ(scalar1->uses().size(), 0);
-  EXPECT_EQ(scalar3->uses().size(), 1);
+  dynamic_cast<ir::Node*>(scalar1.get())->ReplaceAllUsesWith(scalar3);
 
-  add->ReplaceOperand(0, scalar1);
-  EXPECT_EQ(scalar1->uses().size(), 1);
+  EXPECT_EQ(dynamic_cast<ir::Node*>(scalar1.get())->uses().size(), 0);
+  EXPECT_EQ(dynamic_cast<ir::Node*>(scalar3.get())->uses().size(), 1);
+
+  dynamic_cast<ir::Node*>(add.get())->ReplaceOperand(0, scalar1);
+  EXPECT_EQ(dynamic_cast<ir::Node*>(scalar1.get())->uses().size(), 1);
 }
 
 TEST(IrTest, TestHash) {
   ir::NodePtr scalar1 = ir::ops::ScalarOp(1.0, xla::F32);
   ir::NodePtr scalar2 = ir::ops::ScalarOp(2.0, xla::F32);
-  ir::Value add1 = scalar1 + scalar2;
+  ir::Value value1 = ir::Value(scalar1, 0);
+  ir::Value value2 = ir::Value(scalar2, 0);
+  ir::Value add1 = value1 + value2;
 
   ir::NodePtr scalar3 = ir::ops::ScalarOp(1.0, xla::F32);
   ir::NodePtr scalar4 = ir::ops::ScalarOp(2.0, xla::F32);
-  ir::Value add2 = scalar1 + scalar2;
+  ir::Value value3 = ir::Value(scalar3, 0);
+  ir::Value value4 = ir::Value(scalar4, 0);
+  ir::Value add2 = value3 + value4;
 
   ir::NodePtr scalar5 = ir::ops::ScalarOp(11.0, xla::F32);
   ir::NodePtr scalar6 = ir::ops::ScalarOp(22.0, xla::F32);
-  ir::Value add3 = scalar5 + scalar6;
+  ir::Value value5 = ir::Value(scalar5, 0);
+  ir::Value value6 = ir::Value(scalar6, 0);
+  ir::Value add3 = value5 + value6;
 
   EXPECT_EQ(add1->hash(), add2->hash());
   EXPECT_NE(add1->hash(), add3->hash());
 
-  ir::Value sub = scalar1 - scalar2;
+  ir::Value sub = value1 - value2;
 
   EXPECT_NE(add1->hash(), sub->hash());
 }

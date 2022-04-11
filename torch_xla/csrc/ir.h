@@ -64,9 +64,7 @@ struct Value : public torch::lazy::Value {
   Value() = default;
   Value(NodePtr node, size_t index = 0)
       : torch::lazy::Value(std::dynamic_pointer_cast<torch::lazy::Node>(node),
-                           index),
-        node(std::move(node)),
-        index(index) {}
+                           index) {}
 
   // Retrieves the shape of this value. If the IR Node generating the value is a
   // multi-output node, the shape returned by this API will not be the full
@@ -75,14 +73,7 @@ struct Value : public torch::lazy::Value {
   const xla::Shape& xla_shape() const;
   const xla::Shape& xla_node_shape() const;
 
-  torch::lazy::hash_t hash() const;
-
-  operator bool() const { return node != nullptr; }
-
   Node* operator->() const;
-
-  NodePtr node;
-  size_t index = 0;
 };
 
 using OpList = absl::Span<const Value>;
@@ -155,7 +146,7 @@ class Node : public torch::lazy::Node {
 
   xla::Shape xla_shape_;
   // A node holds a real reference to its operands.
-  std::vector<NodePtr> operands_;
+  // std::vector<NodePtr> operands_;
   // We use a set for uses, as we want deterministic use sequencing.
   std::set<Use> uses_;
 };
