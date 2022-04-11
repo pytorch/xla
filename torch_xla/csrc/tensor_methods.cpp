@@ -1391,10 +1391,18 @@ XLATensor XLATensor::full_like(const XLATensor& input,
 
 XLATensor XLATensor::gather(const XLATensor& input, int64_t dim,
                             const XLATensor& index) {
+  xla::Shape input_shape = input.shape();
+  xla::Shape index_shape = index.shape();
+  XLA_CHECK_EQ(input_shape.rank(), index_shape.rank());
+  int64_t canonical_dim =
+      torch::lazy::GetCanonicalDimensionIndex(dim, input_shape.rank());
+  for (size_t dim = 0; dim < input_shape.rank(); dim++) {
+    if (dim != canonical_dim) {
+      XLA_CHECK_LE(index.size(dim), input.size(dim));
+    }
+  }
   return input.CreateFrom(ir::MakeNode<ir::ops::Gather>(
-      input.GetIrValue(),
-      torch::lazy::GetCanonicalDimensionIndex(dim, input.shape().get().rank()),
-      index.GetIrValue()));
+      input.GetIrValue(), canonical_dim, index.GetIrValue()));
 }
 
 XLATensor XLATensor::ge(const XLATensor& input, const at::Scalar& other) {
