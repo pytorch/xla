@@ -145,8 +145,6 @@ class Node : public torch::lazy::Node {
   static std::vector<torch::lazy::SourceLocation> GetFrameInfo();
 
   xla::Shape xla_shape_;
-  // A node holds a real reference to its operands.
-  // std::vector<NodePtr> operands_;
   // We use a set for uses, as we want deterministic use sequencing.
   std::set<Use> uses_;
 };

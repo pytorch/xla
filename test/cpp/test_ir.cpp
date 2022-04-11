@@ -20,9 +20,7 @@ TEST(IrTest, TestScalarCreate) {
 TEST(IrTest, TestReplace) {
   ir::NodePtr scalar1 = ir::ops::ScalarOp(1.0, xla::F32);
   ir::NodePtr scalar2 = ir::ops::ScalarOp(2.0, xla::F32);
-  ir::Value value1 = ir::Value(scalar1, 0);
-  ir::Value value2 = ir::Value(scalar2, 0);
-  ir::NodePtr add = value1 + value2;
+  ir::NodePtr add = ir::Value(scalar1, 0) + ir::Value(scalar2, 0);
 
   EXPECT_EQ(dynamic_cast<ir::Node*>(scalar1.get())->uses().size(), 1);
   EXPECT_EQ(dynamic_cast<ir::Node*>(scalar2.get())->uses().size(), 1);
@@ -40,26 +38,20 @@ TEST(IrTest, TestReplace) {
 TEST(IrTest, TestHash) {
   ir::NodePtr scalar1 = ir::ops::ScalarOp(1.0, xla::F32);
   ir::NodePtr scalar2 = ir::ops::ScalarOp(2.0, xla::F32);
-  ir::Value value1 = ir::Value(scalar1, 0);
-  ir::Value value2 = ir::Value(scalar2, 0);
-  ir::Value add1 = value1 + value2;
+  ir::Value add1 = ir::Value(scalar1, 0) + ir::Value(scalar2, 0);
 
   ir::NodePtr scalar3 = ir::ops::ScalarOp(1.0, xla::F32);
   ir::NodePtr scalar4 = ir::ops::ScalarOp(2.0, xla::F32);
-  ir::Value value3 = ir::Value(scalar3, 0);
-  ir::Value value4 = ir::Value(scalar4, 0);
-  ir::Value add2 = value3 + value4;
+  ir::Value add2 = ir::Value(scalar3, 0) + ir::Value(scalar4, 0);
 
   ir::NodePtr scalar5 = ir::ops::ScalarOp(11.0, xla::F32);
   ir::NodePtr scalar6 = ir::ops::ScalarOp(22.0, xla::F32);
-  ir::Value value5 = ir::Value(scalar5, 0);
-  ir::Value value6 = ir::Value(scalar6, 0);
-  ir::Value add3 = value5 + value6;
+  ir::Value add3 = ir::Value(scalar5, 0) + ir::Value(scalar6, 0);
 
   EXPECT_EQ(add1->hash(), add2->hash());
   EXPECT_NE(add1->hash(), add3->hash());
 
-  ir::Value sub = value1 - value2;
+  ir::Value sub = ir::Value(scalar1, 0) + ir::Value(scalar2, 0);
 
   EXPECT_NE(add1->hash(), sub->hash());
 }
