@@ -112,8 +112,6 @@ const xla::Shape& Value::xla_node_shape() const {
   return casted->xla_shape();
 }
 
-Node* Value::operator->() const { return dynamic_cast<Node*>(node.get()); }
-
 Node::Node(torch::lazy::OpKind op, OpList operands, xla::Shape shape,
            size_t num_outputs, torch::lazy::hash_t hash_seed)
     : torch::lazy::Node(

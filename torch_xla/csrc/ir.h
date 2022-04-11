@@ -70,8 +70,6 @@ struct Value : public torch::lazy::Value {
   // To retrieve the full tuple shape in that case, use the node_shape() API.
   const xla::Shape& xla_shape() const;
   const xla::Shape& xla_node_shape() const;
-
-  Node* operator->() const;
 };
 
 using OpList = absl::Span<const Value>;

@@ -243,8 +243,9 @@ CanonicalIndexInfo GetCanonicalIndexInfo(
 }
 
 ir::Value EnsureRank1(const ir::Value& index) {
-  XLA_CHECK_LE(index->xla_shape().rank(), 1);
-  return index->xla_shape().rank() == 0
+  const ir::Node* casted = dynamic_cast<const ir::Node*>(index.node.get());
+  XLA_CHECK_LE(casted->xla_shape().rank(), 1);
+  return casted->xla_shape().rank() == 0
              ? ir::MakeNode<ir::ops::Expand>(index, std::vector<int64_t>{1})
              : index;
 }
