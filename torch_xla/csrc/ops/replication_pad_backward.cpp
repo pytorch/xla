@@ -31,7 +31,7 @@ ReplicationPadBackward::ReplicationPadBackward(const Value& grad_output,
            /*num_outputs=*/1, torch::lazy::MHash(padding)),
       padding_(std::move(padding)) {}
 
-NodePtr ReplicationPadBackward::Clone(OpList operands) const {
+torch::lazy::NodePtr ReplicationPadBackward::Clone(OpList operands) const {
   return ir::MakeNode<ReplicationPadBackward>(operands.at(0), operands.at(1),
                                               padding_);
 }

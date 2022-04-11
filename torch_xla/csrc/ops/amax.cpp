@@ -27,7 +27,7 @@ Amax::Amax(const Value& input, std::vector<int64_t> dimensions, bool keepdim)
       dimensions_(std::move(dimensions)),
       keepdim_(keepdim) {}
 
-NodePtr Amax::Clone(OpList operands) const {
+torch::lazy::NodePtr Amax::Clone(OpList operands) const {
   return ir::MakeNode<Amax>(operands.at(0), dimensions_, keepdim_);
 }
 

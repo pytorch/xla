@@ -35,7 +35,7 @@ Squeeze::Squeeze(const Value& input, int dim)
            /*num_outputs=*/1, torch::lazy::MHash(dim)),
       dim_(dim) {}
 
-NodePtr Squeeze::Clone(OpList operands) const {
+torch::lazy::NodePtr Squeeze::Clone(OpList operands) const {
   return ir::MakeNode<Squeeze>(operands.at(0), dim_);
 }
 

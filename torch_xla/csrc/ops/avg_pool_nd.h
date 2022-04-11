@@ -13,7 +13,7 @@ class AvgPoolNd : public Node {
             std::vector<int64_t> padding, bool ceil_mode,
             bool count_include_pad);
 
-  NodePtr Clone(OpList operands) const override;
+  torch::lazy::NodePtr Clone(OpList operands) const override;
 
   XlaOpVector Lower(LoweringContext* loctx) const override;
 

@@ -12,7 +12,7 @@ class NativeBatchNormForward : public Node {
                          const Value& bias, const Value& running_mean,
                          const Value& running_var, bool training, double eps);
 
-  NodePtr Clone(OpList operands) const override;
+  torch::lazy::NodePtr Clone(OpList operands) const override;
 
   XlaOpVector Lower(LoweringContext* loctx) const override;
 

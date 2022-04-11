@@ -13,7 +13,7 @@ class MaskedSelect : public Node {
  public:
   MaskedSelect(const Value& input, const Value& mask);
 
-  NodePtr Clone(OpList operands) const override;
+  torch::lazy::NodePtr Clone(OpList operands) const override;
 
   XlaOpVector Lower(LoweringContext* loctx) const override;
 };

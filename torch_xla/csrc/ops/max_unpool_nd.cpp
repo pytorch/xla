@@ -41,7 +41,7 @@ MaxUnpoolNd::MaxUnpoolNd(const Value& input, const Value& indices,
            /*num_outputs=*/1, torch::lazy::MHash(output_size)),
       output_size_(std::move(output_size)) {}
 
-NodePtr MaxUnpoolNd::Clone(OpList operands) const {
+torch::lazy::NodePtr MaxUnpoolNd::Clone(OpList operands) const {
   return ir::MakeNode<MaxUnpoolNd>(operands.at(0), operands.at(1),
                                    output_size_);
 }

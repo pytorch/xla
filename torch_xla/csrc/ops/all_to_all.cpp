@@ -43,7 +43,7 @@ AllToAll::AllToAll(const Value& input, const Value& token,
       split_count_(split_count),
       groups_(std::move(groups)) {}
 
-NodePtr AllToAll::Clone(OpList operands) const {
+torch::lazy::NodePtr AllToAll::Clone(OpList operands) const {
   return ir::MakeNode<AllToAll>(operands.at(0), operands.at(1),
                                 split_dimension_, concat_dimension_,
                                 split_count_, groups_);

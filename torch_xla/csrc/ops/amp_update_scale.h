@@ -12,7 +12,7 @@ class AmpUpdateScale : public Node {
                  const Value& found_inf, double scale_growth_factor,
                  double scale_backoff_factor, int growth_interval);
 
-  NodePtr Clone(OpList operands) const override;
+  torch::lazy::NodePtr Clone(OpList operands) const override;
 
   XlaOpVector Lower(LoweringContext* loctx) const override;
 

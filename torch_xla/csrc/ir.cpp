@@ -162,7 +162,7 @@ const xla::Shape& Node::xla_shape(size_t output_index) const {
   return xla_shape_;
 }
 
-void Node::AddOperand(NodePtr node, size_t index) {
+void Node::AddOperand(torch::lazy::NodePtr node, size_t index) {
   XLA_CHECK_LT(index, node->num_outputs());
   operands_.push_back(std::move(node));
   operands_as_outputs_.push_back(
@@ -171,7 +171,8 @@ void Node::AddOperand(NodePtr node, size_t index) {
   casted->AddUse(Use(this, operands_.size() - 1, index));
 }
 
-void Node::ReplaceOperand(size_t operand_no, NodePtr node, size_t index) {
+void Node::ReplaceOperand(size_t operand_no, torch::lazy::NodePtr node,
+                          size_t index) {
   XLA_CHECK_LT(index, node->num_outputs());
   Node* casted = dynamic_cast<Node*>(node.get());
   torch::lazy::Output* output = &operands_as_outputs_.at(operand_no);
@@ -182,7 +183,7 @@ void Node::ReplaceOperand(size_t operand_no, NodePtr node, size_t index) {
   operands_[operand_no] = std::move(node);
 }
 
-void Node::ReplaceAllUsesWith(NodePtr node, size_t index) {
+void Node::ReplaceAllUsesWith(torch::lazy::NodePtr node, size_t index) {
   // A call to ReplaceOperand() will end up calling RemoveUse() into the
   // current node, so snapshot the current uses and iterate over them.
   std::vector<Use> current_uses(uses_.begin(), uses_.end());
@@ -208,7 +209,7 @@ XlaOpVector Node::ReturnOps(absl::Span<const xla::XlaOp> ops,
   return result;
 }
 
-NodePtr Node::Clone(OpList operands) const {
+torch::lazy::NodePtr Node::Clone(OpList operands) const {
   XLA_ERROR() << "Cloning not implemented for node: " << *this;
 }
 

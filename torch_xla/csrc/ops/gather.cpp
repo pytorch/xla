@@ -30,7 +30,7 @@ Gather::Gather(const Value& input, int64_t dim, const Value& index)
            /*num_outputs=*/1, torch::lazy::MHash(dim)),
       dim_(dim) {}
 
-NodePtr Gather::Clone(OpList operands) const {
+torch::lazy::NodePtr Gather::Clone(OpList operands) const {
   return ir::MakeNode<Gather>(operands.at(0), dim_, operands.at(1));
 }
 

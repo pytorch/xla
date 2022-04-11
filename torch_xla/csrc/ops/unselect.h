@@ -11,7 +11,7 @@ class Unselect : public Node {
   Unselect(const Value& target, const Value& source, int64_t dim, int64_t start,
            int64_t end, int64_t stride);
 
-  NodePtr Clone(OpList operands) const override;
+  torch::lazy::NodePtr Clone(OpList operands) const override;
 
   XlaOpVector Lower(LoweringContext* loctx) const override;
 

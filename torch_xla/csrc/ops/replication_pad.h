@@ -11,7 +11,7 @@ class ReplicationPad : public Node {
  public:
   ReplicationPad(const Value& input, std::vector<int64_t> padding);
 
-  NodePtr Clone(OpList operands) const override;
+  torch::lazy::NodePtr Clone(OpList operands) const override;
 
   XlaOpVector Lower(LoweringContext* loctx) const override;
 

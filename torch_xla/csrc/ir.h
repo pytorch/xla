@@ -26,8 +26,6 @@ namespace ir {
 class Node;
 class LoweringContext;
 
-using NodePtr = std::shared_ptr<torch::lazy::Node>;
-
 using XlaOpVector = tensorflow::gtl::InlinedVector<xla::XlaOp, 1>;
 
 // Represents a use of the output of a given node.
@@ -62,7 +60,7 @@ using OutputMap =
 // Represents an input/operand for a Node object.
 struct Value : public torch::lazy::Value {
   Value() = default;
-  Value(NodePtr node, size_t index = 0)
+  Value(torch::lazy::NodePtr node, size_t index = 0)
       : torch::lazy::Value(std::dynamic_pointer_cast<torch::lazy::Node>(node),
                            index) {}
 
@@ -115,11 +113,12 @@ class Node : public torch::lazy::Node {
 
   const std::set<Use>& uses() const { return uses_; }
 
-  void ReplaceOperand(size_t operand_no, NodePtr node, size_t index = 0);
+  void ReplaceOperand(size_t operand_no, torch::lazy::NodePtr node,
+                      size_t index = 0);
 
-  void ReplaceAllUsesWith(NodePtr node, size_t index = 0);
+  void ReplaceAllUsesWith(torch::lazy::NodePtr node, size_t index = 0);
 
-  virtual NodePtr Clone(OpList operands) const;
+  virtual torch::lazy::NodePtr Clone(OpList operands) const;
 
   virtual XlaOpVector Lower(LoweringContext* loctx) const;
 
@@ -130,7 +129,7 @@ class Node : public torch::lazy::Node {
 
  private:
   // Adds node's index output number as operand.
-  void AddOperand(NodePtr node, size_t index = 0);
+  void AddOperand(torch::lazy::NodePtr node, size_t index = 0);
 
   void AddUse(Use use) { uses_.insert(std::move(use)); }
 
@@ -165,7 +164,7 @@ inline std::ostream& operator<<(std::ostream& stream, const Node& node) {
 }
 
 template <typename T, typename... Args>
-NodePtr MakeNode(Args&&... args) {
+torch::lazy::NodePtr MakeNode(Args&&... args) {
   return std::make_shared<T>(std::forward<Args>(args)...);
 }
 

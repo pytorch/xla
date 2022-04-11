@@ -57,7 +57,7 @@ MaxPoolNd::MaxPoolNd(const Value& input, int64_t spatial_dim_count,
       padding_(std::move(padding)),
       ceil_mode_(ceil_mode) {}
 
-NodePtr MaxPoolNd::Clone(OpList operands) const {
+torch::lazy::NodePtr MaxPoolNd::Clone(OpList operands) const {
   return ir::MakeNode<MaxPoolNd>(operands.at(0), spatial_dim_count_,
                                  kernel_size_, stride_, padding_, ceil_mode_);
 }

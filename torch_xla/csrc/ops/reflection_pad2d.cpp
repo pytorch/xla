@@ -28,7 +28,7 @@ ReflectionPad2d::ReflectionPad2d(const Value& input,
            /*num_outputs=*/1, torch::lazy::MHash(padding)),
       padding_(std::move(padding)) {}
 
-NodePtr ReflectionPad2d::Clone(OpList operands) const {
+torch::lazy::NodePtr ReflectionPad2d::Clone(OpList operands) const {
   return ir::MakeNode<ReflectionPad2d>(operands.at(0), padding_);
 }
 

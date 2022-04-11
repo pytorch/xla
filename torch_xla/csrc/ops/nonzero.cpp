@@ -28,7 +28,7 @@ NonZero::NonZero(const Value& input)
            NodeOutputShape(input),
            /*num_outputs=*/2) {}
 
-NodePtr NonZero::Clone(OpList operands) const {
+torch::lazy::NodePtr NonZero::Clone(OpList operands) const {
   return ir::MakeNode<NonZero>(operands.at(0));
 }
 

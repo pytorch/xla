@@ -20,7 +20,7 @@ Select::Select(const Value& input, int64_t dim, int64_t start, int64_t end,
       end_(end),
       stride_(stride) {}
 
-NodePtr Select::Clone(OpList operands) const {
+torch::lazy::NodePtr Select::Clone(OpList operands) const {
   return ir::MakeNode<Select>(operands.at(0), dim_, start_, end_, stride_);
 }
 

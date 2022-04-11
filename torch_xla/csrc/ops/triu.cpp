@@ -12,7 +12,7 @@ Triu::Triu(const Value& input, int64_t diagonal)
            /*num_outputs=*/1, torch::lazy::MHash(diagonal)),
       diagonal_(diagonal) {}
 
-NodePtr Triu::Clone(OpList operands) const {
+torch::lazy::NodePtr Triu::Clone(OpList operands) const {
   return ir::MakeNode<Triu>(operands.at(0), diagonal_);
 }
 

@@ -13,19 +13,19 @@ namespace torch_xla {
 namespace cpp_test {
 
 TEST(IrTest, TestScalarCreate) {
-  ir::NodePtr scalar = ir::ops::ScalarOp(1.0, xla::F32);
+  torch::lazy::NodePtr scalar = ir::ops::ScalarOp(1.0, xla::F32);
   ASSERT_TRUE(scalar != nullptr);
 }
 
 TEST(IrTest, TestReplace) {
-  ir::NodePtr scalar1 = ir::ops::ScalarOp(1.0, xla::F32);
-  ir::NodePtr scalar2 = ir::ops::ScalarOp(2.0, xla::F32);
-  ir::NodePtr add = ir::Value(scalar1, 0) + ir::Value(scalar2, 0);
+  torch::lazy::NodePtr scalar1 = ir::ops::ScalarOp(1.0, xla::F32);
+  torch::lazy::NodePtr scalar2 = ir::ops::ScalarOp(2.0, xla::F32);
+  torch::lazy::NodePtr add = ir::Value(scalar1, 0) + ir::Value(scalar2, 0);
 
   EXPECT_EQ(dynamic_cast<ir::Node*>(scalar1.get())->uses().size(), 1);
   EXPECT_EQ(dynamic_cast<ir::Node*>(scalar2.get())->uses().size(), 1);
 
-  ir::NodePtr scalar3 = ir::ops::ScalarOp(3.0, xla::F32);
+  torch::lazy::NodePtr scalar3 = ir::ops::ScalarOp(3.0, xla::F32);
   dynamic_cast<ir::Node*>(scalar1.get())->ReplaceAllUsesWith(scalar3);
 
   EXPECT_EQ(dynamic_cast<ir::Node*>(scalar1.get())->uses().size(), 0);
@@ -36,16 +36,16 @@ TEST(IrTest, TestReplace) {
 }
 
 TEST(IrTest, TestHash) {
-  ir::NodePtr scalar1 = ir::ops::ScalarOp(1.0, xla::F32);
-  ir::NodePtr scalar2 = ir::ops::ScalarOp(2.0, xla::F32);
+  torch::lazy::NodePtr scalar1 = ir::ops::ScalarOp(1.0, xla::F32);
+  torch::lazy::NodePtr scalar2 = ir::ops::ScalarOp(2.0, xla::F32);
   ir::Value add1 = ir::Value(scalar1, 0) + ir::Value(scalar2, 0);
 
-  ir::NodePtr scalar3 = ir::ops::ScalarOp(1.0, xla::F32);
-  ir::NodePtr scalar4 = ir::ops::ScalarOp(2.0, xla::F32);
+  torch::lazy::NodePtr scalar3 = ir::ops::ScalarOp(1.0, xla::F32);
+  torch::lazy::NodePtr scalar4 = ir::ops::ScalarOp(2.0, xla::F32);
   ir::Value add2 = ir::Value(scalar3, 0) + ir::Value(scalar4, 0);
 
-  ir::NodePtr scalar5 = ir::ops::ScalarOp(11.0, xla::F32);
-  ir::NodePtr scalar6 = ir::ops::ScalarOp(22.0, xla::F32);
+  torch::lazy::NodePtr scalar5 = ir::ops::ScalarOp(11.0, xla::F32);
+  torch::lazy::NodePtr scalar6 = ir::ops::ScalarOp(22.0, xla::F32);
   ir::Value add3 = ir::Value(scalar5, 0) + ir::Value(scalar6, 0);
 
   EXPECT_EQ(add1->hash(), add2->hash());
