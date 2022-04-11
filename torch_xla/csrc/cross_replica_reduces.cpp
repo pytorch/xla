@@ -173,15 +173,11 @@ ReduceScatterResult BuildReduceScatter(
   std::vector<xla::ReplicaGroup> reduce_groups = CreateReduceGroups(groups);
   TokenHandler token_handler(token);
   const xla::Shape& input_shape = XlaHelpers::ShapeOfXlaOp(input);
-  xla::Shape reduce_shape = MakeArrayShapeFromDimensions(
-      input_shape.dimensions(), input_shape.dynamic_dimensions(),
-      input_shape.element_type(), GetCurrentDevice().device_type.hw_type);
 
   xla::XlaOp reduce_result = xla::ReduceScatter(
       token_handler.GetInput(input, &input_shape),
       GetReduceComutation(reduce_type, input_shape.element_type()), scatter_dim,
-      shard_count, reduce_groups, /*channel_id=*/absl::nullopt,
-      reduce_shape.layout());
+      shard_count, reduce_groups);
 
   if (scale != 1.0) {
     xla::XlaOp scaling_value = XlaHelpers::ScalarValue<float>(
