@@ -125,6 +125,12 @@ class XlaFullyShardedDataParallel(nn.Module):
           if ``True``, use PyTorch XLA 1.10's all_gather implementation,
           which performs all_gather via padding and all_reduce and avoids
           the GRPC error (see https://github.com/pytorch/xla/issues/3423).
+      mark_step_on_freeing (bool, Optional):
+          if ``True``, call `xm.mark_step` upon freeing full parameters.
+          This is a temporary and inefficient workaround to avoid XLA compiler
+          fusion that breaks parameter freeing in nested FSDP. It is useful
+          only when ``reshard_after_forward`` is ``True``. See details in
+          https://github.com/pytorch/xla/issues/3455#issuecomment-1085448513.
   """
 
   def __init__(
@@ -134,6 +140,7 @@ class XlaFullyShardedDataParallel(nn.Module):
       flatten_parameters: bool = True,
       execute_sharding_on_init: bool = True,
       use_all_gather_via_all_reduce: bool = True,
+      mark_step_on_freeing: bool = False,
   ):
     is_forward_defined = (
         hasattr(module, "forward") and hasattr(module.forward, "__func__") and
@@ -232,8 +239,16 @@ class XlaFullyShardedDataParallel(nn.Module):
 
     if execute_sharding_on_init:
       # Execute the parameter sharding immediately and free up the memory
-      xm.mark_step()
       gc.collect()
+      xm.mark_step()
+
+    # TODO (ronghanghu): remove when https://github.com/pytorch/xla/issues/3455 is resolved
+    # This is a temporary workaround before after we have a mature solution
+    # to avoid undesired fusion with XLA compiler optimization barrier (see
+    # https://github.com/pytorch/xla/issues/3455#issuecomment-1085448513
+    # for details). This workaround notably increases the execution time and
+    # may trigger more compilation, so we need a permanent solution to #3455.
+    self._mark_step_on_freeing = mark_step_on_freeing
 
   def _get_gradient_predivide_factor(self, world_size: int) -> float:
     factor: int = 1
@@ -864,6 +879,11 @@ class XlaFullyShardedDataParallel(nn.Module):
         # free the original full parameter
         p.data = self._dummy_data_placeholder
         p._has_full_param = False
+    # immediately execute the parameter freeing as a workaround to undesired XLA fusion
+    # see https://github.com/pytorch/xla/issues/3455#issuecomment-1085448513 for details
+    # TODO (ronghanghu): remove when https://github.com/pytorch/xla/issues/3455 is resolved
+    if self._mark_step_on_freeing:
+      xm.mark_step()
 
   def assert_state(self, state: Union[TrainingState,
                                       List[TrainingState]]) -> None:
