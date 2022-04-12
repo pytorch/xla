@@ -22,7 +22,7 @@ std::string IndexPut::ToString() const {
   return ss.str();
 }
 
-NodePtr IndexPut::Clone(OpList operands) const {
+torch::lazy::NodePtr IndexPut::Clone(OpList operands) const {
   return ir::MakeNode<IndexPut>(operands.at(0), operands.at(1), start_dim_,
                                 operands.at(2), accumulate_);
 }

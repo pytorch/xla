@@ -30,7 +30,7 @@ L1Loss::L1Loss(const Value& input, const Value& target, ReductionMode reduction)
            torch::lazy::MHash(torch::lazy::GetEnumValue(reduction))),
       reduction_(reduction) {}
 
-NodePtr L1Loss::Clone(OpList operands) const {
+torch::lazy::NodePtr L1Loss::Clone(OpList operands) const {
   return ir::MakeNode<L1Loss>(operands.at(0), operands.at(1), reduction_);
 }
 

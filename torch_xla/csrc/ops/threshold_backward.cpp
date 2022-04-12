@@ -14,7 +14,7 @@ ThresholdBackward::ThresholdBackward(const Value& grad_output,
            torch::lazy::MHash(threshold)),
       threshold_(threshold) {}
 
-NodePtr ThresholdBackward::Clone(OpList operands) const {
+torch::lazy::NodePtr ThresholdBackward::Clone(OpList operands) const {
   return ir::MakeNode<ThresholdBackward>(operands.at(0), operands.at(1),
                                          threshold_);
 }

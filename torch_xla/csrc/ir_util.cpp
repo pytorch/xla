@@ -62,7 +62,7 @@ std::vector<const torch::lazy::Node*> Util::ComputePostOrder(
 std::vector<Value> Util::Clone(
     absl::Span<const Value> values,
     absl::Span<const torch::lazy::Node* const> post_order) {
-  std::unordered_map<const torch::lazy::Node*, NodePtr> clone_map;
+  std::unordered_map<const torch::lazy::Node*, torch::lazy::NodePtr> clone_map;
   for (auto node : post_order) {
     if (clone_map.count(node) > 0) {
       continue;

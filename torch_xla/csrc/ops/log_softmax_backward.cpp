@@ -16,7 +16,7 @@ LogSoftmaxBackward::LogSoftmaxBackward(const Value& grad_output,
            /*num_outputs=*/1, torch::lazy::MHash(dim)),
       dim_(dim) {}
 
-NodePtr LogSoftmaxBackward::Clone(OpList operands) const {
+torch::lazy::NodePtr LogSoftmaxBackward::Clone(OpList operands) const {
   return ir::MakeNode<LogSoftmaxBackward>(operands.at(0), operands.at(1), dim_);
 }
 

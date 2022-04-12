@@ -12,7 +12,7 @@ class AdaptiveAvgPool2d : public Node {
  public:
   AdaptiveAvgPool2d(const Value& input, std::vector<int64_t> output_size);
 
-  NodePtr Clone(OpList operands) const override;
+  torch::lazy::NodePtr Clone(OpList operands) const override;
 
   XlaOpVector Lower(LoweringContext* loctx) const override;
 

@@ -12,7 +12,7 @@ class GenericSlice : public Node {
   GenericSlice(const Value& input, absl::Span<const int64_t> base_indices,
                absl::Span<const int64_t> sizes);
 
-  NodePtr Clone(OpList operands) const override;
+  torch::lazy::NodePtr Clone(OpList operands) const override;
 
   XlaOpVector Lower(LoweringContext* loctx) const override;
 

@@ -15,7 +15,7 @@ class AdamOptimizerStep : public Node {
                     const Value& weight_decay, const Value& eps,
                     bool use_weight_decay, bool use_amsgrad, bool use_adamw);
 
-  NodePtr Clone(OpList operands) const override;
+  torch::lazy::NodePtr Clone(OpList operands) const override;
 
   XlaOpVector Lower(LoweringContext* loctx) const override;
 

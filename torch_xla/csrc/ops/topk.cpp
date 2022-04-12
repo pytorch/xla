@@ -35,7 +35,7 @@ TopK::TopK(const Value& input, int64_t k, int64_t dim, bool largest,
       sorted_(sorted),
       stable_(stable) {}
 
-NodePtr TopK::Clone(OpList operands) const {
+torch::lazy::NodePtr TopK::Clone(OpList operands) const {
   return ir::MakeNode<TopK>(operands.at(0), k_, dim_, largest_, sorted_,
                             stable_);
 }

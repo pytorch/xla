@@ -22,7 +22,7 @@ Unsqueeze::Unsqueeze(const Value& input, int dim)
            /*num_outputs=*/1, torch::lazy::MHash(dim)),
       dim_(dim) {}
 
-NodePtr Unsqueeze::Clone(OpList operands) const {
+torch::lazy::NodePtr Unsqueeze::Clone(OpList operands) const {
   return ir::MakeNode<Unsqueeze>(operands.at(0), dim_);
 }
 

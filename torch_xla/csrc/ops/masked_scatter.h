@@ -13,7 +13,7 @@ class MaskedScatter : public Node {
  public:
   MaskedScatter(const Value& input, const Value& mask, const Value& source);
 
-  NodePtr Clone(OpList operands) const override;
+  torch::lazy::NodePtr Clone(OpList operands) const override;
 
   XlaOpVector Lower(LoweringContext* loctx) const override;
 };

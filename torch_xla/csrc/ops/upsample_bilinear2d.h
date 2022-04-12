@@ -13,7 +13,7 @@ class UpsampleBilinear : public Node {
   UpsampleBilinear(const Value& input, std::vector<int64_t> output_size,
                    bool align_corners);
 
-  NodePtr Clone(OpList operands) const override;
+  torch::lazy::NodePtr Clone(OpList operands) const override;
 
   XlaOpVector Lower(LoweringContext* loctx) const override;
 

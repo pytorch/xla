@@ -11,7 +11,7 @@ class ThresholdBackward : public Node {
   ThresholdBackward(const Value& grad_output, const Value& input,
                     float threshold);
 
-  NodePtr Clone(OpList operands) const override;
+  torch::lazy::NodePtr Clone(OpList operands) const override;
 
   XlaOpVector Lower(LoweringContext* loctx) const override;
 

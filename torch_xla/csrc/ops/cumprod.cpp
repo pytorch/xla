@@ -46,7 +46,7 @@ CumProd::CumProd(const Value& input, int64_t dim,
       dim_(dim),
       dtype_(dtype) {}
 
-NodePtr CumProd::Clone(OpList operands) const {
+torch::lazy::NodePtr CumProd::Clone(OpList operands) const {
   return ir::MakeNode<CumProd>(operands.at(0), dim_, dtype_);
 }
 

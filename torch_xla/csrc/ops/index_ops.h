@@ -65,11 +65,11 @@ ir::Value IndexPutByTensors(const XLATensor& base,
                             bool accumulate,
                             absl::Span<const int64_t> result_permutation);
 
-ir::NodePtr IndexFill(const XLATensor& base, int64_t dim,
-                      const XLATensor& index, const at::Scalar& value);
+torch::lazy::NodePtr IndexFill(const XLATensor& base, int64_t dim,
+                               const XLATensor& index, const at::Scalar& value);
 
-ir::NodePtr IndexFill(const XLATensor& base, int64_t dim,
-                      const XLATensor& index, const XLATensor& value);
+torch::lazy::NodePtr IndexFill(const XLATensor& base, int64_t dim,
+                               const XLATensor& index, const XLATensor& value);
 
 ir::Value IndexAdd(const XLATensor& base, int64_t dim, const XLATensor& index,
                    const XLATensor& source);

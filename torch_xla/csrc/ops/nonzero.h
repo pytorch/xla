@@ -13,7 +13,7 @@ class NonZero : public Node {
  public:
   NonZero(const Value& input);
 
-  NodePtr Clone(OpList operands) const override;
+  torch::lazy::NodePtr Clone(OpList operands) const override;
 
   XlaOpVector Lower(LoweringContext* loctx) const override;
 };

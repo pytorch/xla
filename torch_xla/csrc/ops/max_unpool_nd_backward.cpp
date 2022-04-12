@@ -48,7 +48,7 @@ MaxUnpoolNdBackward::MaxUnpoolNdBackward(const Value& grad_output,
            /*num_outputs=*/1, torch::lazy::MHash(output_size)),
       output_size_(std::move(output_size)) {}
 
-NodePtr MaxUnpoolNdBackward::Clone(OpList operands) const {
+torch::lazy::NodePtr MaxUnpoolNdBackward::Clone(OpList operands) const {
   return ir::MakeNode<MaxUnpoolNdBackward>(operands.at(0), operands.at(1),
                                            operands.at(2), output_size_);
 }

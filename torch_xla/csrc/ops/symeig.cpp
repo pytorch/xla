@@ -52,7 +52,7 @@ SymEig::SymEig(const Value& input, bool eigenvectors, bool lower)
       eigenvectors_(eigenvectors),
       lower_(lower) {}
 
-NodePtr SymEig::Clone(OpList operands) const {
+torch::lazy::NodePtr SymEig::Clone(OpList operands) const {
   return ir::MakeNode<SymEig>(operands.at(0), eigenvectors_, lower_);
 }
 

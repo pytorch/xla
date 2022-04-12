@@ -13,7 +13,7 @@ class Split : public Node {
  public:
   Split(const Value& input, std::vector<int64_t> split_sizes, int64_t dim);
 
-  NodePtr Clone(OpList operands) const override;
+  torch::lazy::NodePtr Clone(OpList operands) const override;
 
   XlaOpVector Lower(LoweringContext* loctx) const override;
 

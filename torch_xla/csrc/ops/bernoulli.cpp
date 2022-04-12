@@ -13,7 +13,7 @@ Bernoulli::Bernoulli(const Value& probability, const Value& seed,
     : Node(torch::lazy::OpKind(at::aten::bernoulli), {probability, seed},
            std::move(shape)) {}
 
-NodePtr Bernoulli::Clone(OpList operands) const {
+torch::lazy::NodePtr Bernoulli::Clone(OpList operands) const {
   return ir::MakeNode<Bernoulli>(operands.at(0), operands.at(1), xla_shape());
 }
 

@@ -11,7 +11,7 @@ class Squeeze : public Node {
   // Squeeze out the specified dimension index, -1 for all trivial dimensions.
   Squeeze(const Value& input, int dim);
 
-  NodePtr Clone(OpList operands) const override;
+  torch::lazy::NodePtr Clone(OpList operands) const override;
 
   XlaOpVector Lower(LoweringContext* loctx) const override;
 

@@ -73,7 +73,7 @@ ConvolutionOverrideable::ConvolutionOverrideable(
       transposed_(transposed),
       groups_(groups) {}
 
-NodePtr ConvolutionOverrideable::Clone(OpList operands) const {
+torch::lazy::NodePtr ConvolutionOverrideable::Clone(OpList operands) const {
   return operands.size() == 3
              ? ir::MakeNode<ConvolutionOverrideable>(
                    operands.at(0), operands.at(1), operands.at(2), stride_,

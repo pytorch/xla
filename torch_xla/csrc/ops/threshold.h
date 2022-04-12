@@ -11,7 +11,7 @@ class Threshold : public Node {
  public:
   Threshold(const Value& input, float threshold, float value);
 
-  NodePtr Clone(OpList operands) const override;
+  torch::lazy::NodePtr Clone(OpList operands) const override;
 
   XlaOpVector Lower(LoweringContext* loctx) const override;
 

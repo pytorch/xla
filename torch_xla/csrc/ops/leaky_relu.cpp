@@ -13,7 +13,7 @@ LeakyRelu::LeakyRelu(const Value& input, double negative_slope)
            /*num_outputs=*/1, torch::lazy::MHash(negative_slope)),
       negative_slope_(negative_slope) {}
 
-NodePtr LeakyRelu::Clone(OpList operands) const {
+torch::lazy::NodePtr LeakyRelu::Clone(OpList operands) const {
   return ir::MakeNode<LeakyRelu>(operands.at(0), negative_slope_);
 }
 

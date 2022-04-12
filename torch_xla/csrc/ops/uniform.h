@@ -11,7 +11,7 @@ class Uniform : public Node {
   Uniform(const Value& from, const Value& to, const Value& seed,
           const xla::Shape& rng_shape);
 
-  NodePtr Clone(OpList operands) const override;
+  torch::lazy::NodePtr Clone(OpList operands) const override;
 
   XlaOpVector Lower(LoweringContext* loctx) const override;
 };

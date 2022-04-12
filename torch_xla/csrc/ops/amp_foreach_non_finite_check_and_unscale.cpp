@@ -41,7 +41,8 @@ AmpForachNonFiniteCheckAndUnscale::AmpForachNonFiniteCheckAndUnscale(
            NodeOutputShape(inputs, found_inf),
            /*num_outputs=*/inputs.size() + 1) {}
 
-NodePtr AmpForachNonFiniteCheckAndUnscale::Clone(OpList operands) const {
+torch::lazy::NodePtr AmpForachNonFiniteCheckAndUnscale::Clone(
+    OpList operands) const {
   std::vector<Value> operand_list(operands.begin(), operands.end() - 2);
   size_t sz = operand_list.size();
   return ir::MakeNode<AmpForachNonFiniteCheckAndUnscale>(

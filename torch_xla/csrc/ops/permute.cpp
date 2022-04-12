@@ -27,7 +27,7 @@ Permute::Permute(const Value& input, std::vector<int64_t> dims)
            /*num_outputs=*/1, torch::lazy::MHash(dims)),
       dims_(std::move(dims)) {}
 
-NodePtr Permute::Clone(OpList operands) const {
+torch::lazy::NodePtr Permute::Clone(OpList operands) const {
   return ir::MakeNode<Permute>(operands.at(0), dims_);
 }
 

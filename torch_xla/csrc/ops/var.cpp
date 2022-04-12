@@ -36,7 +36,7 @@ Var::Var(const Value& input, std::vector<int64_t> dimensions,
       correction_(correction),
       keep_reduced_dimensions_(keep_reduced_dimensions) {}
 
-NodePtr Var::Clone(OpList operands) const {
+torch::lazy::NodePtr Var::Clone(OpList operands) const {
   return ir::MakeNode<Var>(operands.at(0), dimensions_, correction_,
                            keep_reduced_dimensions_);
 }

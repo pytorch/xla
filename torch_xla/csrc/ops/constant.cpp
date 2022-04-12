@@ -24,7 +24,7 @@ std::string Constant::ToString() const {
   return ss.str();
 }
 
-NodePtr Constant::Clone(OpList operands) const {
+torch::lazy::NodePtr Constant::Clone(OpList operands) const {
   return ir::MakeNode<Constant>(value_.Clone());
 }
 

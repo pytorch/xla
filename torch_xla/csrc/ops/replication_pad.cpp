@@ -27,7 +27,7 @@ ReplicationPad::ReplicationPad(const Value& input, std::vector<int64_t> padding)
            /*num_outputs=*/1, torch::lazy::MHash(padding)),
       padding_(std::move(padding)) {}
 
-NodePtr ReplicationPad::Clone(OpList operands) const {
+torch::lazy::NodePtr ReplicationPad::Clone(OpList operands) const {
   return ir::MakeNode<ReplicationPad>(operands.at(0), padding_);
 }
 

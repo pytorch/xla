@@ -29,7 +29,7 @@ KthValue::KthValue(const Value& input, int64_t k, int64_t dim, bool keepdim)
       dim_(dim),
       keepdim_(keepdim) {}
 
-NodePtr KthValue::Clone(OpList operands) const {
+torch::lazy::NodePtr KthValue::Clone(OpList operands) const {
   return ir::MakeNode<KthValue>(operands.at(0), k_, dim_, keepdim_);
 }
 

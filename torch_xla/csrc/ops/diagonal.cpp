@@ -22,7 +22,7 @@ Diagonal::Diagonal(const Value& input, int64_t offset, int64_t dim1,
       dim1_(dim1),
       dim2_(dim2) {}
 
-NodePtr Diagonal::Clone(OpList operands) const {
+torch::lazy::NodePtr Diagonal::Clone(OpList operands) const {
   return ir::MakeNode<Diagonal>(operands.at(0), offset_, dim1_, dim2_);
 }
 

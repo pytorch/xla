@@ -20,7 +20,7 @@ UserComputation::UserComputation(torch::lazy::OpKind op, OpList operands,
            computation->hash()),
       computation_(std::move(computation)) {}
 
-NodePtr UserComputation::Clone(OpList operands) const {
+torch::lazy::NodePtr UserComputation::Clone(OpList operands) const {
   return ir::MakeNode<UserComputation>(op(), operands, computation_);
 }
 

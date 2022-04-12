@@ -21,7 +21,7 @@ RreluWithNoise::RreluWithNoise(const Value& input, const Value& seed,
       upper_(std::move(upper)),
       training_(training) {}
 
-NodePtr RreluWithNoise::Clone(OpList operands) const {
+torch::lazy::NodePtr RreluWithNoise::Clone(OpList operands) const {
   return ir::MakeNode<RreluWithNoise>(operands.at(0), operands.at(1), lower_,
                                       upper_, training_);
 }

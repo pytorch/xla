@@ -31,7 +31,7 @@ Cat::Cat(absl::Span<const ir::Value> values, int64_t dim)
            /*num_outputs=*/1, torch::lazy::MHash(dim)),
       dim_(dim) {}
 
-NodePtr Cat::Clone(OpList operands) const {
+torch::lazy::NodePtr Cat::Clone(OpList operands) const {
   return ir::MakeNode<Cat>(operands, dim_);
 }
 

@@ -20,7 +20,7 @@ std::string DeviceData::ToString() const {
   return ss.str();
 }
 
-NodePtr DeviceData::Clone(OpList operands) const {
+torch::lazy::NodePtr DeviceData::Clone(OpList operands) const {
   return ir::MakeNode<DeviceData>(data_);
 }
 

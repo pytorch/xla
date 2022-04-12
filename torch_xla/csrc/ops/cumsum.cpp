@@ -45,7 +45,7 @@ CumSum::CumSum(const Value& input, int64_t dim,
       dim_(dim),
       dtype_(dtype) {}
 
-NodePtr CumSum::Clone(OpList operands) const {
+torch::lazy::NodePtr CumSum::Clone(OpList operands) const {
   return ir::MakeNode<CumSum>(operands.at(0), dim_, dtype_);
 }
 

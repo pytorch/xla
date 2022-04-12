@@ -44,7 +44,7 @@ AllReduce::AllReduce(AllReduceType reduce_type,
       scale_(scale),
       groups_(std::move(groups)) {}
 
-NodePtr AllReduce::Clone(OpList operands) const {
+torch::lazy::NodePtr AllReduce::Clone(OpList operands) const {
   std::vector<Value> operand_list(operands.begin(), operands.end() - 1);
   return ir::MakeNode<AllReduce>(reduce_type_, operand_list, operands.back(),
                                  scale_, groups_);

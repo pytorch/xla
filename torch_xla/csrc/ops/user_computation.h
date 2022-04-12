@@ -12,7 +12,7 @@ class UserComputation : public Node {
   UserComputation(torch::lazy::OpKind op, OpList operands,
                   ComputationPtr computation);
 
-  NodePtr Clone(OpList operands) const override;
+  torch::lazy::NodePtr Clone(OpList operands) const override;
 
   XlaOpVector Lower(LoweringContext* loctx) const override;
 

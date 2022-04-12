@@ -10,7 +10,7 @@ class Normal : public Node {
  public:
   Normal(const Value& mean, const Value& std, const Value& seed);
 
-  NodePtr Clone(OpList operands) const override;
+  torch::lazy::NodePtr Clone(OpList operands) const override;
 
   XlaOpVector Lower(LoweringContext* loctx) const override;
 };

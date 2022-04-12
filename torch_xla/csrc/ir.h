@@ -26,8 +26,6 @@ namespace ir {
 class Node;
 class LoweringContext;
 
-using NodePtr = std::shared_ptr<Node>;
-
 using XlaOpVector = tensorflow::gtl::InlinedVector<xla::XlaOp, 1>;
 
 // Represents a use of the output of a given node.
@@ -62,11 +60,9 @@ using OutputMap =
 // Represents an input/operand for a Node object.
 struct Value : public torch::lazy::Value {
   Value() = default;
-  Value(NodePtr node, size_t index = 0)
+  Value(torch::lazy::NodePtr node, size_t index = 0)
       : torch::lazy::Value(std::dynamic_pointer_cast<torch::lazy::Node>(node),
-                           index),
-        node(std::move(node)),
-        index(index) {}
+                           index) {}
 
   // Retrieves the shape of this value. If the IR Node generating the value is a
   // multi-output node, the shape returned by this API will not be the full
@@ -74,15 +70,6 @@ struct Value : public torch::lazy::Value {
   // To retrieve the full tuple shape in that case, use the node_shape() API.
   const xla::Shape& xla_shape() const;
   const xla::Shape& xla_node_shape() const;
-
-  torch::lazy::hash_t hash() const;
-
-  operator bool() const { return node != nullptr; }
-
-  Node* operator->() const { return node.get(); }
-
-  NodePtr node;
-  size_t index = 0;
 };
 
 using OpList = absl::Span<const Value>;
@@ -124,11 +111,12 @@ class Node : public torch::lazy::Node {
 
   const std::set<Use>& uses() const { return uses_; }
 
-  void ReplaceOperand(size_t operand_no, NodePtr node, size_t index = 0);
+  void ReplaceOperand(size_t operand_no, torch::lazy::NodePtr node,
+                      size_t index = 0);
 
-  void ReplaceAllUsesWith(NodePtr node, size_t index = 0);
+  void ReplaceAllUsesWith(torch::lazy::NodePtr node, size_t index = 0);
 
-  virtual NodePtr Clone(OpList operands) const;
+  virtual torch::lazy::NodePtr Clone(OpList operands) const;
 
   virtual XlaOpVector Lower(LoweringContext* loctx) const;
 
@@ -139,7 +127,7 @@ class Node : public torch::lazy::Node {
 
  private:
   // Adds node's index output number as operand.
-  void AddOperand(NodePtr node, size_t index = 0);
+  void AddOperand(torch::lazy::NodePtr node, size_t index = 0);
 
   void AddUse(Use use) { uses_.insert(std::move(use)); }
 
@@ -154,8 +142,6 @@ class Node : public torch::lazy::Node {
   static std::vector<torch::lazy::SourceLocation> GetFrameInfo();
 
   xla::Shape xla_shape_;
-  // A node holds a real reference to its operands.
-  std::vector<NodePtr> operands_;
   // We use a set for uses, as we want deterministic use sequencing.
   std::set<Use> uses_;
 };
@@ -176,7 +162,7 @@ inline std::ostream& operator<<(std::ostream& stream, const Node& node) {
 }
 
 template <typename T, typename... Args>
-NodePtr MakeNode(Args&&... args) {
+torch::lazy::NodePtr MakeNode(Args&&... args) {
   return std::make_shared<T>(std::forward<Args>(args)...);
 }
 

@@ -13,7 +13,7 @@ Threshold::Threshold(const Value& input, float threshold, float value)
       threshold_(threshold),
       value_(value) {}
 
-NodePtr Threshold::Clone(OpList operands) const {
+torch::lazy::NodePtr Threshold::Clone(OpList operands) const {
   return ir::MakeNode<Threshold>(operands.at(0), threshold_, value_);
 }
 

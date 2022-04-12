@@ -12,7 +12,7 @@ class QR : public Node {
 
   std::string ToString() const override;
 
-  NodePtr Clone(OpList operands) const override;
+  torch::lazy::NodePtr Clone(OpList operands) const override;
 
   XlaOpVector Lower(LoweringContext* loctx) const override;
 

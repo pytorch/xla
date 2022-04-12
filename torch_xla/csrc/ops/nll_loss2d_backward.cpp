@@ -58,7 +58,7 @@ NllLoss2dBackward::NllLoss2dBackward(const Value& grad_output,
       reduction_(reduction),
       ignore_index_(ignore_index) {}
 
-NodePtr NllLoss2dBackward::Clone(OpList operands) const {
+torch::lazy::NodePtr NllLoss2dBackward::Clone(OpList operands) const {
   absl::optional<Value> weight;
   absl::optional<Value> total_weight;
   if (operands.size() > 3) {

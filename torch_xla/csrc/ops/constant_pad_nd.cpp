@@ -41,7 +41,7 @@ ConstantPadNd::ConstantPadNd(const Value& input, std::vector<int64_t> pad,
       pad_(std::move(pad)),
       value_(value) {}
 
-NodePtr ConstantPadNd::Clone(OpList operands) const {
+torch::lazy::NodePtr ConstantPadNd::Clone(OpList operands) const {
   return ir::MakeNode<ConstantPadNd>(operands.at(0), pad_, value_);
 }
 

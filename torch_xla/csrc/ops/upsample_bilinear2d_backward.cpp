@@ -23,7 +23,7 @@ UpsampleBilinearBackward::UpsampleBilinearBackward(
       input_size_(std::move(input_size)),
       align_corners_(align_corners) {}
 
-NodePtr UpsampleBilinearBackward::Clone(OpList operands) const {
+torch::lazy::NodePtr UpsampleBilinearBackward::Clone(OpList operands) const {
   return ir::MakeNode<UpsampleBilinearBackward>(operands.at(0), output_size_,
                                                 input_size_, align_corners_);
 }

@@ -14,7 +14,7 @@ Put::Put(const Value& input, const Value& index, const Value& source,
            /*num_outputs=*/1, torch::lazy::MHash(accumulate)),
       accumulate_(accumulate) {}
 
-NodePtr Put::Clone(OpList operands) const {
+torch::lazy::NodePtr Put::Clone(OpList operands) const {
   return ir::MakeNode<Put>(operands.at(0), operands.at(1), operands.at(2),
                            accumulate_);
 }

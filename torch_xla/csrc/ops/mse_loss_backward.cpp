@@ -37,7 +37,7 @@ MseLossBackward::MseLossBackward(const Value& grad_output, const Value& input,
            torch::lazy::MHash(torch::lazy::GetEnumValue(reduction))),
       reduction_(reduction) {}
 
-NodePtr MseLossBackward::Clone(OpList operands) const {
+torch::lazy::NodePtr MseLossBackward::Clone(OpList operands) const {
   return ir::MakeNode<MseLossBackward>(operands.at(0), operands.at(1),
                                        operands.at(2), reduction_);
 }
