@@ -994,14 +994,17 @@ std::vector<xla::ComputationClient::DataPtr> XLATensor::GatherTensorsXlaData(
 }
 
 void XLATensor::TensorCollectionBarrier(SyncTensorCollection* coll) {
-  TF_VLOG(4) << "Waiting on device barrier for device " << coll->device
-             << " ...";
-  {
-    XLA_TIMED("DeviceLockWait");
-    coll->unlocker = LockDevices({coll->device});
+  if (coll->barrier_applied == false) { /* I wonder if there can be a race condition on this variable */
+    TF_VLOG(4) << "Waiting on device barrier for device " << coll->device
+               << " ...";
+    {
+      XLA_TIMED("DeviceLockWait");
+      coll->unlocker = LockDevices({coll->device});
+      coll->barrier_applied = true;
+    }
+    TF_VLOG(4) << "Waiting on device barrier for device " << coll->device
+               << " done!";
   }
-  TF_VLOG(4) << "Waiting on device barrier for device " << coll->device
-             << " done!";
 }
 
 std::vector<at::Tensor> XLATensor::GetTensorsOpByOp(
@@ -1309,7 +1312,27 @@ XLATensor::PostOrderData XLATensor::RunPostOrder(
   po_data.post_order = ir::Util::ComputePostOrder(roots, &po_data.emission_map);
   std::unordered_map<xla::ComputationClient::Data::OpaqueHandle, size_t>
       data_handles;
-  TensorCollectionBarrier(coll);
+
+  //TensorCollectionBarrier(coll);
+  /* Condtionally Run TensorCollectionBarrier() */
+  for (auto node : po_data.post_order) {
+    const ir::ops::DeviceData* device_data = ir::ops::DeviceData::Cast(node);
+    if (device_data != nullptr && device_data->data()->HasValue() == 0) {
+      TensorCollectionBarrier(coll);
+      std::cout << "barrier at 0: " << device_data->data()->HasValue() << std::endl; /* If this line returns a 0, we have a problem. */
+      break;
+    } else if (device_data == nullptr { /* Ideally, we don't want this block, though it causes a segfault for `TestAtenXlaTensor.test_bfloat16_float32_cast` */
+      TensorCollectionBarrier(coll);
+      std::cout << "barrier at 0 - b/c of nullptr" << std::endl;
+      break;
+    }
+  }
+  /* Added for testing - most likely will remove */
+  if (po_data.post_order.size() == 0) {
+      std::cout << "empty po_data.post_order" << std::endl;
+      TensorCollectionBarrier(coll);
+  }
+
   for (auto node : po_data.post_order) {
     const ir::ops::DeviceData* device_data = ir::ops::DeviceData::Cast(node);
     if (device_data != nullptr) {
@@ -1688,6 +1711,7 @@ std::shared_ptr<XLATensor::Async> XLATensor::SyncTensorsGraphInternal(
              << torch::lazy::HashToString(coll.hash);
   std::shared_ptr<Async> async = TryRunCachedSync(tensors, &coll, &po_data);
   if (async != nullptr) {
+    TensorCollectionBarrier(&coll);
     return async;
   }
 
@@ -1700,6 +1724,7 @@ std::shared_ptr<XLATensor::Async> XLATensor::SyncTensorsGraphInternal(
       std::move(compile_result.computation));
   GetComputationCache()->Add(coll.hash, cached_computation);
 
+  TensorCollectionBarrier(&coll); /* Temp location. Will eventually move inside ScheduleSyncTensorsGraph() */
   return ScheduleSyncTensorsGraph(
       tensors, &coll, std::move(compile_result.parameters_data),
       compile_result.device.toString(), std::move(cached_computation));
