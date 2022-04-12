@@ -51,7 +51,7 @@ TEST(IrTest, TestHash) {
   EXPECT_EQ(add1->hash(), add2->hash());
   EXPECT_NE(add1->hash(), add3->hash());
 
-  ir::Value sub = ir::Value(scalar1, 0) + ir::Value(scalar2, 0);
+  ir::Value sub = ir::Value(scalar1, 0) - ir::Value(scalar2, 0);
 
   EXPECT_NE(add1->hash(), sub->hash());
 }
