@@ -994,7 +994,7 @@ std::vector<xla::ComputationClient::DataPtr> XLATensor::GatherTensorsXlaData(
 }
 
 void XLATensor::TensorCollectionBarrier(SyncTensorCollection* coll) {
-  if (coll->barrier_applied == false) { /* I wonder if there can be a race condition on this variable */
+  if (coll->barrier_applied == false) {
     TF_VLOG(4) << "Waiting on device barrier for device " << coll->device
                << " ...";
     {
@@ -1287,7 +1287,6 @@ std::shared_ptr<XLATensor::Async> XLATensor::TryRunCachedSync(
   XLA_VALUE_METRIC("TensorsGraphSize", po_data->post_order.size());
   TF_VLOG(5) << "TensorsGraphSize=" << po_data->post_order.size();
 
-  TensorCollectionBarrier(&coll); /* Temp location. Will eventually move inside ScheduleSyncTensorsGraph() */
   return ScheduleSyncTensorsGraph(
       tensors, coll, std::move(po_data->parameters_data),
       coll->device.toString(), std::move(cached_computation));
@@ -1314,29 +1313,12 @@ XLATensor::PostOrderData XLATensor::RunPostOrder(
   std::unordered_map<xla::ComputationClient::Data::OpaqueHandle, size_t>
       data_handles;
 
-  //TensorCollectionBarrier(coll);
-  /* Condtionally Run TensorCollectionBarrier() */
-  for (auto node : po_data.post_order) {
-    const ir::ops::DeviceData* device_data = ir::ops::DeviceData::Cast(node);
-    if (device_data != nullptr && device_data->data()->HasValue() == 0) {
-      TensorCollectionBarrier(coll);
-      std::cout << "barrier at 0: " << device_data->data()->HasValue() << std::endl; /* If this line returns a 0, we have a problem. */
-      break;
-    } else if (device_data == nullptr { /* Ideally, we don't want this block, though it causes a segfault for `TestAtenXlaTensor.test_bfloat16_float32_cast` */
-      TensorCollectionBarrier(coll);
-      std::cout << "barrier at 0 - b/c of nullptr" << std::endl;
-      break;
-    }
-  }
-  /* Added for testing - most likely will remove */
-  if (po_data.post_order.size() == 0) {
-      std::cout << "empty po_data.post_order" << std::endl;
-      TensorCollectionBarrier(coll);
-  }
-
   for (auto node : po_data.post_order) {
     const ir::ops::DeviceData* device_data = ir::ops::DeviceData::Cast(node);
     if (device_data != nullptr) {
+      if (device_data->data()->HasValue() == 0) {
+        TensorCollectionBarrier(coll);
+      }
       xla::ComputationClient::Data::OpaqueHandle handle =
           device_data->data()->GetOpaqueHandle();
       auto it = data_handles.find(handle);
@@ -1399,6 +1381,7 @@ std::shared_ptr<XLATensor::Async> XLATensor::ScheduleSyncTensorsGraph(
     ComputationCache::TypePtr cached_computation) {
   tensorflow::profiler::TraceMe activity(
       "ScheduleSyncTensorsGraph", tensorflow::profiler::TraceMeLevel::kInfo);
+  TensorCollectionBarrier(coll);
   std::shared_ptr<Async> async = std::make_shared<Async>(
       coll, std::move(parameters_data), std::move(tensors_data),
       std::move(cached_computation));
@@ -1724,7 +1707,6 @@ std::shared_ptr<XLATensor::Async> XLATensor::SyncTensorsGraphInternal(
       std::move(compile_result.computation));
   GetComputationCache()->Add(coll.hash, cached_computation);
 
-  TensorCollectionBarrier(&coll); /* Temp location. Will eventually move inside ScheduleSyncTensorsGraph() */
   return ScheduleSyncTensorsGraph(
       tensors, &coll, std::move(compile_result.parameters_data),
       compile_result.device.toString(), std::move(cached_computation));
