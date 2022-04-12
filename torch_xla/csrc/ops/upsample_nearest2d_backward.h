@@ -13,7 +13,7 @@ class UpsampleNearestBackward : public Node {
   UpsampleNearestBackward(const Value& input, std::vector<int64_t> output_size,
                           std::vector<int64_t> input_size);
 
-  NodePtr Clone(OpList operands) const override;
+  torch::lazy::NodePtr Clone(OpList operands) const override;
 
   XlaOpVector Lower(LoweringContext* loctx) const override;
 

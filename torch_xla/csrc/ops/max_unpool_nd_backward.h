@@ -11,7 +11,7 @@ class MaxUnpoolNdBackward : public Node {
   MaxUnpoolNdBackward(const Value& grad_output, const Value& input,
                       const Value& indices, std::vector<int64_t> output_size);
 
-  NodePtr Clone(OpList operands) const override;
+  torch::lazy::NodePtr Clone(OpList operands) const override;
 
   XlaOpVector Lower(LoweringContext* loctx) const override;
 

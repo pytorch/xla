@@ -16,7 +16,7 @@ ScatterAdd::ScatterAdd(const Value& input, const Value& index, const Value& src,
            /*num_outputs=*/1, torch::lazy::MHash(dim)),
       dim_(dim) {}
 
-NodePtr ScatterAdd::Clone(OpList operands) const {
+torch::lazy::NodePtr ScatterAdd::Clone(OpList operands) const {
   return ir::MakeNode<ScatterAdd>(operands.at(0), operands.at(1),
                                   operands.at(2), dim_);
 }

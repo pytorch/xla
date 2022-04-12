@@ -12,7 +12,7 @@ class GetDimensionsSize : public Node {
  public:
   GetDimensionsSize(const Value& input, std::vector<int64_t> dimensions);
 
-  NodePtr Clone(OpList operands) const override;
+  torch::lazy::NodePtr Clone(OpList operands) const override;
 
   XlaOpVector Lower(LoweringContext* loctx) const override;
 

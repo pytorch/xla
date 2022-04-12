@@ -16,7 +16,7 @@ SoftmaxBackward::SoftmaxBackward(const Value& grad_output, const Value& output,
            /*num_outputs=*/1, torch::lazy::MHash(dim)),
       dim_(dim) {}
 
-NodePtr SoftmaxBackward::Clone(OpList operands) const {
+torch::lazy::NodePtr SoftmaxBackward::Clone(OpList operands) const {
   return ir::MakeNode<SoftmaxBackward>(operands.at(0), operands.at(1), dim_);
 }
 

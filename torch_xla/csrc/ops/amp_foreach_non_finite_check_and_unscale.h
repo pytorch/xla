@@ -12,7 +12,7 @@ class AmpForachNonFiniteCheckAndUnscale : public Node {
                                     const Value& found_inf,
                                     const Value& inv_scale);
 
-  NodePtr Clone(OpList operands) const override;
+  torch::lazy::NodePtr Clone(OpList operands) const override;
 
   XlaOpVector Lower(LoweringContext* loctx) const override;
 };

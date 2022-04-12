@@ -38,7 +38,7 @@ Nms::Nms(const Value& boxes, const Value& scores, const Value& score_threshold,
            /*num_outputs=*/2, torch::lazy::MHash(output_size)),
       output_size_(output_size) {}
 
-NodePtr Nms::Clone(OpList operands) const {
+torch::lazy::NodePtr Nms::Clone(OpList operands) const {
   return ir::MakeNode<Nms>(operands.at(0), operands.at(1), operands.at(2),
                            operands.at(3), output_size_);
 }

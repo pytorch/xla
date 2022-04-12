@@ -38,7 +38,7 @@ LogSoftmax::LogSoftmax(const Value& input, int64_t dim,
       dim_(dim),
       dtype_(dtype) {}
 
-NodePtr LogSoftmax::Clone(OpList operands) const {
+torch::lazy::NodePtr LogSoftmax::Clone(OpList operands) const {
   return ir::MakeNode<LogSoftmax>(operands.at(0), dim_, dtype_);
 }
 

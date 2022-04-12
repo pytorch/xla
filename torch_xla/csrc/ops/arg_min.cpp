@@ -26,7 +26,7 @@ ArgMin::ArgMin(const Value& input, int64_t dim, bool keepdim)
       dim_(dim),
       keepdim_(keepdim) {}
 
-NodePtr ArgMin::Clone(OpList operands) const {
+torch::lazy::NodePtr ArgMin::Clone(OpList operands) const {
   return ir::MakeNode<ArgMin>(operands.at(0), dim_, keepdim_);
 }
 

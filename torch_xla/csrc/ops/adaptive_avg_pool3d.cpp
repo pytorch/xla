@@ -29,7 +29,7 @@ AdaptiveAvgPool3d::AdaptiveAvgPool3d(const Value& input,
            /*num_outputs=*/1, torch::lazy::MHash(output_size)),
       output_size_(std::move(output_size)) {}
 
-NodePtr AdaptiveAvgPool3d::Clone(OpList operands) const {
+torch::lazy::NodePtr AdaptiveAvgPool3d::Clone(OpList operands) const {
   return ir::MakeNode<AdaptiveAvgPool3d>(operands.at(0), output_size_);
 }
 

@@ -24,7 +24,7 @@ std::string HardtanhBackward::ToString() const {
   return ss.str();
 }
 
-NodePtr HardtanhBackward::Clone(OpList operands) const {
+torch::lazy::NodePtr HardtanhBackward::Clone(OpList operands) const {
   return ir::MakeNode<HardtanhBackward>(operands.at(0), operands.at(1),
                                         min_val_, max_val_);
 }

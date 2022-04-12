@@ -13,7 +13,7 @@ MaskedScatter::MaskedScatter(const Value& input, const Value& mask,
            input.xla_shape(),
            /*num_outputs=*/1) {}
 
-NodePtr MaskedScatter::Clone(OpList operands) const {
+torch::lazy::NodePtr MaskedScatter::Clone(OpList operands) const {
   return ir::MakeNode<MaskedScatter>(operands.at(0), operands.at(1),
                                      operands.at(2));
 }

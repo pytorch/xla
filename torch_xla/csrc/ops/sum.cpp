@@ -49,7 +49,7 @@ Sum::Sum(const Value& input, std::vector<int64_t> dimensions,
       keep_reduced_dimensions_(keep_reduced_dimensions),
       dtype_(dtype) {}
 
-NodePtr Sum::Clone(OpList operands) const {
+torch::lazy::NodePtr Sum::Clone(OpList operands) const {
   return ir::MakeNode<Sum>(operands.at(0), dimensions_,
                            keep_reduced_dimensions_, dtype_);
 }

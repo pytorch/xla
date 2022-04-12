@@ -19,7 +19,7 @@ Linspace::Linspace(const Value& start, const Value& end, int64_t steps)
            /*num_outputs=*/1, torch::lazy::MHash(steps)),
       steps_(steps) {}
 
-NodePtr Linspace::Clone(OpList operands) const {
+torch::lazy::NodePtr Linspace::Clone(OpList operands) const {
   return ir::MakeNode<Linspace>(operands.at(0), operands.at(1), steps_);
 }
 

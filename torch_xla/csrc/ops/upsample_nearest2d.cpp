@@ -19,7 +19,7 @@ UpsampleNearest::UpsampleNearest(const Value& input,
            /*num_outputs=*/1, torch::lazy::MHash(output_size)),
       output_size_(std::move(output_size)) {}
 
-NodePtr UpsampleNearest::Clone(OpList operands) const {
+torch::lazy::NodePtr UpsampleNearest::Clone(OpList operands) const {
   return ir::MakeNode<UpsampleNearest>(operands.at(0), output_size_);
 }
 

@@ -1076,7 +1076,7 @@ ir::Value XLATensor::CreateTensorNode(xla::ComputationClient::DataPtr data,
 }
 
 std::vector<XLATensor> XLATensor::MakeOutputTensors(
-    ir::NodePtr node, bool inherit_logical_type) const {
+    torch::lazy::NodePtr node, bool inherit_logical_type) const {
   std::vector<XLATensor> tensors;
   tensors.reserve(node->num_outputs());
   for (size_t i = 0; i < node->num_outputs(); ++i) {

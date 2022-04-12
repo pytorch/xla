@@ -15,7 +15,7 @@ Uniform::Uniform(const Value& from, const Value& to, const Value& seed,
     : Node(torch::lazy::OpKind(at::aten::uniform), {from, to, seed}, rng_shape,
            /*num_outputs=*/1, torch::lazy::Hash(rng_shape)) {}
 
-NodePtr Uniform::Clone(OpList operands) const {
+torch::lazy::NodePtr Uniform::Clone(OpList operands) const {
   return ir::MakeNode<Uniform>(operands.at(0), operands.at(1), operands.at(2),
                                xla_shape());
 }

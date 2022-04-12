@@ -55,7 +55,7 @@ Prod::Prod(const Value& input, std::vector<int64_t> dimensions,
       keep_reduced_dimensions_(keep_reduced_dimensions),
       dtype_(dtype) {}
 
-NodePtr Prod::Clone(OpList operands) const {
+torch::lazy::NodePtr Prod::Clone(OpList operands) const {
   return ir::MakeNode<Prod>(operands.at(0), dimensions_,
                             keep_reduced_dimensions_, dtype_);
 }

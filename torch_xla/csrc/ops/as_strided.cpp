@@ -63,7 +63,7 @@ std::string AsStrided::ToString() const {
   return ss.str();
 }
 
-NodePtr AsStrided::Clone(OpList operands) const {
+torch::lazy::NodePtr AsStrided::Clone(OpList operands) const {
   return ir::MakeNode<AsStrided>(operands.at(0), size_, stride_,
                                  storage_offset_);
 }

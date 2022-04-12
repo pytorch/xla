@@ -14,7 +14,7 @@ LinearInterpolation::LinearInterpolation(const Value& value,
            /*num_outputs=*/1, torch::lazy::MHash(alpha)),
       alpha_(alpha) {}
 
-NodePtr LinearInterpolation::Clone(OpList operands) const {
+torch::lazy::NodePtr LinearInterpolation::Clone(OpList operands) const {
   return ir::MakeNode<LinearInterpolation>(operands.at(0), operands.at(1),
                                            alpha_);
 }

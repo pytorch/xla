@@ -31,7 +31,7 @@ UpdateSlice::UpdateSlice(const Value& input, const Value& source,
            /*num_outputs=*/1, torch::lazy::Hash(base_indices)),
       base_indices_(base_indices.begin(), base_indices.end()) {}
 
-NodePtr UpdateSlice::Clone(OpList operands) const {
+torch::lazy::NodePtr UpdateSlice::Clone(OpList operands) const {
   return ir::MakeNode<UpdateSlice>(operands.at(0), operands.at(1),
                                    base_indices_);
 }

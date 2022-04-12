@@ -21,7 +21,7 @@ std::string Hardshrink::ToString() const {
   return ss.str();
 }
 
-NodePtr Hardshrink::Clone(OpList operands) const {
+torch::lazy::NodePtr Hardshrink::Clone(OpList operands) const {
   return ir::MakeNode<Hardshrink>(operands.at(0), lambda_);
 }
 

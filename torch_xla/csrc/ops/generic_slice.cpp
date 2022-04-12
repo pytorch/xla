@@ -33,7 +33,7 @@ GenericSlice::GenericSlice(const Value& input,
       base_indices_(base_indices.begin(), base_indices.end()),
       sizes_(sizes.begin(), sizes.end()) {}
 
-NodePtr GenericSlice::Clone(OpList operands) const {
+torch::lazy::NodePtr GenericSlice::Clone(OpList operands) const {
   return ir::MakeNode<GenericSlice>(operands.at(0), base_indices_, sizes_);
 }
 

@@ -37,7 +37,7 @@ AllGather::AllGather(const Value& input, const Value& token, int64_t dim,
       shard_count_(shard_count),
       groups_(std::move(groups)) {}
 
-NodePtr AllGather::Clone(OpList operands) const {
+torch::lazy::NodePtr AllGather::Clone(OpList operands) const {
   return ir::MakeNode<AllGather>(operands.at(0), operands.at(1), dim_,
                                  shard_count_, groups_);
 }
