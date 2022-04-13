@@ -99,7 +99,7 @@ xla::XlaOp BuildHardSwish(xla::XlaOp input) {
                                                     input.builder());
   xla::XlaOp six = XlaHelpers::ScalarValue<float>(6.0, shape.element_type(),
                                                   input.builder());
-  return xla::Mul(input, (xla::Min(xla::Max(input + three, zero), six) / six);
+  return xla::Mul(input, (xla::Min(xla::Max(input + three, zero), six) / six));
 }
 
 xla::XlaOp BuildHardSwishBackward(xla::XlaOp grad_output, xla::XlaOp input) {
