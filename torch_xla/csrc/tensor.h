@@ -704,7 +704,7 @@ class XLATensor {
   static XLATensor hardswish(const XLATensor& input);
 
   static XLATensor hardswish_backward(const XLATensor& grad_output,
-                                        const XLATensor& input);
+                                      const XLATensor& input);
 
   static XLATensor hardtanh_backward(const XLATensor& grad_output,
                                      const XLATensor& input,
