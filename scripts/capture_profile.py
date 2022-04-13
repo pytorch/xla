@@ -1,3 +1,11 @@
+#!/usr/bin/env python
+"""A utility script for capturing PyTorch/XLA performance profiles interactively and/or automatically
+
+Example run commands:
+    $ python3 capture_profile.py --service_addr "localhost:9001" --logdir "gs://path/to/logdir" --duration_ms 20000 --interactive loop
+    $ python3 capture_profile.py --service_addr "10.0.0.2:9001" --logdir "gs://path/to/logdir" --duration_ms 30000 --automatic 100 60
+"""
+
 import argparse
 import sys
 from time import sleep
