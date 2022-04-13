@@ -59,13 +59,13 @@ namespace ops {
       auto promoted = XlaHelpers::Promote(xla_input0, xla_input1);             \
       return node.ReturnOp(xla_fn(promoted.first, promoted.second), loctx);    \
     };                                                                         \
-    return GenericOp(torch::lazy::OpKind(sym), {input0, input1},               \
-                     [&]() {                                                   \
-                       return InferOutputShape(                                \
-                           {input0.xla_shape(), input1.xla_shape()},           \
-                           shape_fn);                                          \
-                     },                                                        \
-                     std::move(lower_fn));                                     \
+    return GenericOp(                                                          \
+        torch::lazy::OpKind(sym), {input0, input1},                            \
+        [&]() {                                                                \
+          return InferOutputShape({input0.xla_shape(), input1.xla_shape()},    \
+                                  shape_fn);                                   \
+        },                                                                     \
+        std::move(lower_fn));                                                  \
   }
 
 PTXLA_UNARY_OP(Acos, at::aten::acos, xla::Acos);
@@ -170,12 +170,12 @@ torch::lazy::NodePtr ReluOp(const Value& input) {
     XLA_CHECK_EQ(operands.size(), 1) << "Unexpected number of operands";
     return BuildRelu(operands[0]);
   };
-  return GenericOp(torch::lazy::OpKind(at::aten::relu), {input},
-                   [&]() {
-                     return InferOutputShape({input.xla_shape()},
-                                             lower_for_shape_fn);
-                   },
-                   std::move(lower_fn));
+  return GenericOp(
+      torch::lazy::OpKind(at::aten::relu), {input},
+      [&]() {
+        return InferOutputShape({input.xla_shape()}, lower_for_shape_fn);
+      },
+      std::move(lower_fn));
 }
 
 torch::lazy::NodePtr Prelu(const Value& input, const Value& weight) {
@@ -208,6 +208,28 @@ torch::lazy::NodePtr HardSigmoidBackward(const Value& grad_output,
                          loctx);
   };
   return GenericOp(torch::lazy::OpKind(at::aten::hardsigmoid_backward),
+                   {grad_output, input}, input.xla_shape(),
+                   std::move(lower_fn));
+}
+
+torch::lazy::NodePtr HardSwish(const Value& input) {
+  auto lower_fn = [](const Node& node, LoweringContext* loctx) -> XlaOpVector {
+    xla::XlaOp xla_input = loctx->GetOutputOp(node.operand(0));
+    return node.ReturnOp(BuildHardSwish(xla_input), loctx);
+  };
+  return GenericOp(torch::lazy::OpKind(at::aten::hardswish), {input},
+                   input.xla_shape(), std::move(lower_fn));
+}
+
+torch::lazy::NodePtr HardSwishBackward(const Value& grad_output,
+                                       const Value& input) {
+  auto lower_fn = [](const Node& node, LoweringContext* loctx) -> XlaOpVector {
+    xla::XlaOp xla_grad_output = loctx->GetOutputOp(node.operand(0));
+    xla::XlaOp xla_input = loctx->GetOutputOp(node.operand(1));
+    return node.ReturnOp(BuildHardSwishBackward(xla_grad_output, xla_input),
+                         loctx);
+  };
+  return GenericOp(torch::lazy::OpKind(at::aten::hardswish_backward),
                    {grad_output, input}, input.xla_shape(),
                    std::move(lower_fn));
 }
@@ -324,13 +346,13 @@ torch::lazy::NodePtr Ger(const Value& input, const Value& other) {
       [](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
     return BuildGer(operands[0], operands[1]);
   };
-  return GenericOp(torch::lazy::OpKind(at::aten::ger), {input, other},
-                   [&]() {
-                     return InferOutputShape(
-                         {input.xla_shape(), other.xla_shape()},
-                         lower_for_shape_fn);
-                   },
-                   std::move(lower_fn));
+  return GenericOp(
+      torch::lazy::OpKind(at::aten::ger), {input, other},
+      [&]() {
+        return InferOutputShape({input.xla_shape(), other.xla_shape()},
+                                lower_for_shape_fn);
+      },
+      std::move(lower_fn));
 }
 
 torch::lazy::NodePtr AddMatMulOp(const Value& input, const Value& weight,
@@ -366,13 +388,13 @@ torch::lazy::NodePtr Dot(const Value& input, const Value& weight) {
       [](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
     return BuildDot(operands[0], operands[1]);
   };
-  return GenericOp(torch::lazy::OpKind(at::aten::mm), {input, weight},
-                   [&]() {
-                     return InferOutputShape(
-                         {input.xla_shape(), weight.xla_shape()},
-                         lower_for_shape_fn);
-                   },
-                   std::move(lower_fn));
+  return GenericOp(
+      torch::lazy::OpKind(at::aten::mm), {input, weight},
+      [&]() {
+        return InferOutputShape({input.xla_shape(), weight.xla_shape()},
+                                lower_for_shape_fn);
+      },
+      std::move(lower_fn));
 }
 
 torch::lazy::NodePtr MatMul(const Value& lhs, const Value& rhs) {
@@ -387,12 +409,13 @@ torch::lazy::NodePtr MatMul(const Value& lhs, const Value& rhs) {
       [](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
     return CreateMatMul(operands[0], operands[1]);
   };
-  return GenericOp(torch::lazy::OpKind(at::aten::matmul), {lhs, rhs},
-                   [&]() {
-                     return InferOutputShape({lhs.xla_shape(), rhs.xla_shape()},
-                                             lower_for_shape_fn);
-                   },
-                   std::move(lower_fn));
+  return GenericOp(
+      torch::lazy::OpKind(at::aten::matmul), {lhs, rhs},
+      [&]() {
+        return InferOutputShape({lhs.xla_shape(), rhs.xla_shape()},
+                                lower_for_shape_fn);
+      },
+      std::move(lower_fn));
 }
 
 torch::lazy::NodePtr AdaptiveMaxPool2dBackward(const Value& grad_output,
@@ -411,14 +434,14 @@ torch::lazy::NodePtr AdaptiveMaxPool2dBackward(const Value& grad_output,
                                           /*input=*/operands[1],
                                           /*pool_dim=*/2);
   };
-  return GenericOp(torch::lazy::OpKind(at::aten::adaptive_max_pool2d_backward),
-                   {grad_output, input},
-                   [&]() {
-                     return InferOutputShape(
-                         {grad_output.xla_shape(), input.xla_shape()},
-                         lower_for_shape_fn);
-                   },
-                   std::move(lower_fn));
+  return GenericOp(
+      torch::lazy::OpKind(at::aten::adaptive_max_pool2d_backward),
+      {grad_output, input},
+      [&]() {
+        return InferOutputShape({grad_output.xla_shape(), input.xla_shape()},
+                                lower_for_shape_fn);
+      },
+      std::move(lower_fn));
 }
 
 torch::lazy::NodePtr AdaptiveAvgPool3dBackward(const Value& grad_output,
@@ -436,14 +459,14 @@ torch::lazy::NodePtr AdaptiveAvgPool3dBackward(const Value& grad_output,
     return BuildAdaptiveAvgPool3dBackward(/*out_backprop=*/operands[0],
                                           /*input=*/operands[1]);
   };
-  return GenericOp(torch::lazy::OpKind(at::aten::adaptive_avg_pool3d_backward),
-                   {grad_output, input},
-                   [&]() {
-                     return InferOutputShape(
-                         {grad_output.xla_shape(), input.xla_shape()},
-                         lower_for_shape_fn);
-                   },
-                   std::move(lower_fn));
+  return GenericOp(
+      torch::lazy::OpKind(at::aten::adaptive_avg_pool3d_backward),
+      {grad_output, input},
+      [&]() {
+        return InferOutputShape({grad_output.xla_shape(), input.xla_shape()},
+                                lower_for_shape_fn);
+      },
+      std::move(lower_fn));
 }
 
 torch::lazy::NodePtr AdaptiveAvgPool2dBackward(const Value& grad_output,
@@ -461,14 +484,14 @@ torch::lazy::NodePtr AdaptiveAvgPool2dBackward(const Value& grad_output,
     return BuildAdaptiveAvgPool2dBackward(/*out_backprop=*/operands[0],
                                           /*input=*/operands[1]);
   };
-  return GenericOp(torch::lazy::OpKind(at::aten::adaptive_avg_pool2d_backward),
-                   {grad_output, input},
-                   [&]() {
-                     return InferOutputShape(
-                         {grad_output.xla_shape(), input.xla_shape()},
-                         lower_for_shape_fn);
-                   },
-                   std::move(lower_fn));
+  return GenericOp(
+      torch::lazy::OpKind(at::aten::adaptive_avg_pool2d_backward),
+      {grad_output, input},
+      [&]() {
+        return InferOutputShape({grad_output.xla_shape(), input.xla_shape()},
+                                lower_for_shape_fn);
+      },
+      std::move(lower_fn));
 }
 
 torch::lazy::NodePtr ComparisonOp(c10::Symbol kind, const Value& input,
@@ -484,13 +507,13 @@ torch::lazy::NodePtr ComparisonOp(c10::Symbol kind, const Value& input,
       [kind](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
     return BuildComparisonOp(kind, operands[0], operands[1]);
   };
-  return GenericOp(torch::lazy::OpKind(kind), {input, other},
-                   [&]() {
-                     return InferOutputShape(
-                         {input.xla_shape(), other.xla_shape()},
-                         lower_for_shape_fn);
-                   },
-                   std::move(lower_fn));
+  return GenericOp(
+      torch::lazy::OpKind(kind), {input, other},
+      [&]() {
+        return InferOutputShape({input.xla_shape(), other.xla_shape()},
+                                lower_for_shape_fn);
+      },
+      std::move(lower_fn));
 }
 
 torch::lazy::NodePtr Where(const Value& condition, const Value& input,
@@ -927,12 +950,13 @@ torch::lazy::NodePtr LogicalXor(const Value& input, const Value& other) {
         operands[0], operands[1],
         [](xla::XlaOp lhs, xla::XlaOp rhs) { return xla::Xor(lhs, rhs); });
   };
-  return GenericOp(torch::lazy::OpKind(at::aten::logical_xor), {input, other},
-                   [&]() {
-                     return InferOutputShape(
-                         {input.xla_shape(), other.xla_shape()}, shape_fn);
-                   },
-                   std::move(lower_fn));
+  return GenericOp(
+      torch::lazy::OpKind(at::aten::logical_xor), {input, other},
+      [&]() {
+        return InferOutputShape({input.xla_shape(), other.xla_shape()},
+                                shape_fn);
+      },
+      std::move(lower_fn));
 }
 
 torch::lazy::NodePtr LogicalAnd(const Value& input, const Value& other) {
@@ -950,12 +974,13 @@ torch::lazy::NodePtr LogicalAnd(const Value& input, const Value& other) {
         operands[0], operands[1],
         [](xla::XlaOp lhs, xla::XlaOp rhs) { return xla::And(lhs, rhs); });
   };
-  return GenericOp(torch::lazy::OpKind(at::aten::logical_and), {input, other},
-                   [&]() {
-                     return InferOutputShape(
-                         {input.xla_shape(), other.xla_shape()}, shape_fn);
-                   },
-                   std::move(lower_fn));
+  return GenericOp(
+      torch::lazy::OpKind(at::aten::logical_and), {input, other},
+      [&]() {
+        return InferOutputShape({input.xla_shape(), other.xla_shape()},
+                                shape_fn);
+      },
+      std::move(lower_fn));
 }
 
 torch::lazy::NodePtr LogicalOr(const Value& input, const Value& other) {
@@ -973,12 +998,13 @@ torch::lazy::NodePtr LogicalOr(const Value& input, const Value& other) {
         operands[0], operands[1],
         [](xla::XlaOp lhs, xla::XlaOp rhs) { return xla::Or(lhs, rhs); });
   };
-  return GenericOp(torch::lazy::OpKind(at::aten::logical_or), {input, other},
-                   [&]() {
-                     return InferOutputShape(
-                         {input.xla_shape(), other.xla_shape()}, shape_fn);
-                   },
-                   std::move(lower_fn));
+  return GenericOp(
+      torch::lazy::OpKind(at::aten::logical_or), {input, other},
+      [&]() {
+        return InferOutputShape({input.xla_shape(), other.xla_shape()},
+                                shape_fn);
+      },
+      std::move(lower_fn));
 }
 
 torch::lazy::NodePtr XLogY(const Value& input, const Value& other) {
@@ -993,13 +1019,13 @@ torch::lazy::NodePtr XLogY(const Value& input, const Value& other) {
     XLA_CHECK_EQ(operands.size(), 2) << "Unexpected number of operands";
     return BuildXLogY(operands[0], operands[1]);
   };
-  return GenericOp(torch::lazy::OpKind(at::aten::xlogy), {input, other},
-                   [&]() {
-                     return InferOutputShape(
-                         {input.xla_shape(), other.xla_shape()},
-                         lower_for_shape_fn);
-                   },
-                   std::move(lower_fn));
+  return GenericOp(
+      torch::lazy::OpKind(at::aten::xlogy), {input, other},
+      [&]() {
+        return InferOutputShape({input.xla_shape(), other.xla_shape()},
+                                lower_for_shape_fn);
+      },
+      std::move(lower_fn));
 }
 
 torch::lazy::NodePtr NanToNum(const Value& input, const Value& nan,
@@ -1034,12 +1060,12 @@ torch::lazy::NodePtr SLogDet(const Value& input) {
     return xla::Tuple(operands[0].builder(), {result.sign, result.logdet});
   };
 
-  return GenericOp(torch::lazy::OpKind(at::aten::slogdet), {input},
-                   [&]() {
-                     return InferOutputShape({input.xla_shape()},
-                                             lower_for_shape_fn);
-                   },
-                   std::move(lower_fn), /*num_outputs=*/2);
+  return GenericOp(
+      torch::lazy::OpKind(at::aten::slogdet), {input},
+      [&]() {
+        return InferOutputShape({input.xla_shape()}, lower_for_shape_fn);
+      },
+      std::move(lower_fn), /*num_outputs=*/2);
 }
 
 torch::lazy::NodePtr Softplus(const Value& input, const Value& beta,
