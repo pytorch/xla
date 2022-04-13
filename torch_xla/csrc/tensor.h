@@ -262,6 +262,14 @@ class XLATensor {
   static XLATensor get_dimensions_size(const XLATensor& input,
                                        std::vector<int64_t> dimensions);
 
+  static std::pair<XLATensor, ir::Value> recv(XLATensor& output,
+                                              const ir::Value& token,
+                                              int64_t channel_id);
+
+  static std::pair<XLATensor, ir::Value> send(const XLATensor& input,
+                                              const ir::Value& token,
+                                              int64_t channel_id);
+
   static void sgd_optimizer_step_(const XLATensor& found_inf, XLATensor& step,
                                   XLATensor& param, XLATensor& buf,
                                   const XLATensor& d_p, double weight_decay,

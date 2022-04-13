@@ -199,6 +199,26 @@ CollectivePermuteResult BuildCollectivePermute(
   return {result, token_handler.GetNewToken(result)};
 }
 
+SendResult BuildSendWithToken(xla::XlaOp input, xla::XlaOp token,
+                              int64_t channel_id) {
+  xla::ChannelHandle channel_handle;
+  channel_handle.set_handle(channel_id);
+  channel_handle.set_type(xla::ChannelHandle::DEVICE_TO_DEVICE);
+  xla::XlaOp result_token = xla::SendWithToken(input, token, channel_handle);
+  return {result_token};
+}
+
+RecvResult BuildRecvWithToken(xla::XlaOp token, const xla::Shape& recv_shape,
+                              int64_t channel_id) {
+  xla::ChannelHandle channel_handle;
+  channel_handle.set_handle(channel_id);
+  channel_handle.set_type(xla::ChannelHandle::DEVICE_TO_DEVICE);
+  xla::XlaOp recv = xla::RecvWithToken(token, recv_shape, channel_handle);
+  xla::XlaOp result = xla::GetTupleElement(recv, 0);
+  xla::XlaOp new_token = xla::GetTupleElement(recv, 1);
+  return {result, new_token};
+}
+
 ReduceScatterResult BuildReduceScatter(
     AllReduceType reduce_type, xla::XlaOp input, xla::XlaOp token, double scale,
     int64_t scatter_dim, int64_t shard_count,
