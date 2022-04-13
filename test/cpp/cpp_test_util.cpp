@@ -142,13 +142,13 @@ bool EqualValuesNoElementTypeCheck(at::Tensor tensor1, at::Tensor tensor2) {
 }
 
 void ForEachDevice(absl::Span<const DeviceType> device_types,
-                   const std::function<void(const Device&)>& devfn) {
-  const Device* default_device = GetDefaultDevice();
+                   const std::function<void(const torch::lazy::BackendDevice&)>& devfn) {
+  const torch::lazy::BackendDevice* default_device = GetDefaultDevice();
   if (device_types.empty() ||
       std::find_if(device_types.begin(), device_types.end(),
                    [&](const DeviceType device_type) {
-                     return device_type.hw_type ==
-                            default_device->device_type.hw_type;
+                     return device_type.type ==
+                            default_device->type();
                    }) != device_types.end()) {
     bridge::SetCurrentDevice(*default_device);
     devfn(*default_device);
@@ -159,12 +159,12 @@ void ForEachDevice(absl::Span<const DeviceType> device_types,
 
 void ForEachDevice(absl::Span<const DeviceType> device_types,
                    const std::function<void(const torch::Device&)>& devfn) {
-  const Device* default_device = GetDefaultDevice();
+  const torch::lazy::BackendDevice* default_device = GetDefaultDevice();
   if (device_types.empty() ||
       std::find_if(device_types.begin(), device_types.end(),
                    [&](const DeviceType device_type) {
-                     return device_type.hw_type ==
-                            default_device->device_type.hw_type;
+                     return device_type.type ==
+                            default_device->type();
                    }) != device_types.end()) {
     torch::Device torch_device = bridge::XlaDeviceToAtenDevice(*default_device);
     bridge::SetCurrentDevice(torch_device);
@@ -174,7 +174,7 @@ void ForEachDevice(absl::Span<const DeviceType> device_types,
   }
 }
 
-void ForEachDevice(const std::function<void(const Device&)>& devfn) {
+void ForEachDevice(const std::function<void(const torch::lazy::BackendDevice&)>& devfn) {
   ForEachDevice({}, devfn);
 }
 
@@ -209,22 +209,22 @@ bool CloseValues(at::Tensor tensor1, at::Tensor tensor2, double rtol,
 
 void WithAllDevices(
     absl::Span<const DeviceType> device_types,
-    const std::function<void(const std::vector<Device>&,
-                             const std::vector<Device>&)>& devfn) {
+    const std::function<void(const std::vector<torch::lazy::BackendDevice>&,
+                             const std::vector<torch::lazy::BackendDevice>&)>& devfn) {
   for (auto device_type : device_types) {
-    std::vector<Device> devices;
-    std::vector<Device> all_devices;
+    std::vector<torch::lazy::BackendDevice> devices;
+    std::vector<torch::lazy::BackendDevice> all_devices;
     for (const auto& device_str :
          xla::ComputationClient::Get()->GetLocalDevices()) {
-      Device device(device_str);
-      if (device.device_type.hw_type == device_type.hw_type) {
+      torch::lazy::BackendDevice device(device_str);
+      if (device.type() == device_type.type) {
         devices.push_back(device);
       }
     }
     for (const auto& device_str :
          xla::ComputationClient::Get()->GetAllDevices()) {
-      Device device(device_str);
-      if (device.device_type.hw_type == device_type.hw_type) {
+      torch::lazy::BackendDevice device(device_str);
+      if (device.type() == device_type.type) {
         all_devices.push_back(device);
       }
     }
@@ -249,13 +249,13 @@ std::string GetTensorHloGraph(at::Tensor tensor) {
   return ir::DumpUtil::ToHlo({xtensor.GetIrValue()}, xtensor.GetDevice());
 }
 
-ir::Value GetTensorIrValue(const at::Tensor& tensor, const Device& device) {
+ir::Value GetTensorIrValue(const at::Tensor& tensor, const torch::lazy::BackendDevice& device) {
   xla::ComputationClient::DataPtr data = TensorToXlaData(tensor, device);
   return ir::MakeNode<ir::ops::DeviceData>(std::move(data));
 }
 
 std::vector<xla::ComputationClient::DataPtr> Execute(
-    absl::Span<const ir::Value> roots, const Device& device) {
+    absl::Span<const ir::Value> roots, const torch::lazy::BackendDevice& device) {
   ir::LoweringContext lowering_ctx("Execute", device);
   for (auto node : roots) {
     xla::XlaOp root = lowering_ctx.GetOutputOp(
@@ -266,12 +266,12 @@ std::vector<xla::ComputationClient::DataPtr> Execute(
   xla::XlaComputation computation = ConsumeValue(lowering_ctx.Build());
   xla::ProgramShape program_shape = ConsumeValue(computation.GetProgramShape());
   xla::Shape shape = MakeShapeWithDeviceLayout(program_shape.result(),
-                                               device.device_type.hw_type);
+                                               static_cast<XlaDeviceType>(device.type()));
 
   std::vector<xla::ComputationClient::CompileInstance> instances;
-  instances.push_back({std::move(computation), device.ToString(),
+  instances.push_back({std::move(computation), device.toString(),
                        xla::ComputationClient::Get()->GetCompilationDevices(
-                           device.ToString(), {}),
+                           device.toString(), {}),
                        &shape});
 
   std::vector<std::shared_ptr<xla::ComputationClient::Computation>>
@@ -281,7 +281,7 @@ std::vector<xla::ComputationClient::DataPtr> Execute(
   xla::ComputationClient::ExecuteComputationOptions options;
   return xla::ComputationClient::Get()->ExecuteComputation(
       *computations.front(), lowering_ctx.GetParametersData(),
-      device.ToString(), options);
+      device.toString(), options);
 }
 
 std::vector<at::Tensor> Fetch(
@@ -297,7 +297,7 @@ std::vector<at::Tensor> Fetch(
 }
 
 std::vector<at::Tensor> ExecuteAndFetch(absl::Span<const ir::Value> roots,
-                                        const Device& device) {
+                                        const torch::lazy::BackendDevice& device) {
   auto results = Execute(roots, device);
   return Fetch(results);
 }

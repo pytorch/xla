@@ -27,17 +27,17 @@ xla::XlaComputation CreateCrsComputation(const xla::Shape& shape) {
   return ConsumeValue(builder.Build());
 }
 
-void TestSingleReplication(const std::vector<Device>& devices,
-                           const std::vector<Device>& all_devices) {
+void TestSingleReplication(const std::vector<torch::lazy::BackendDevice>& devices,
+                           const std::vector<torch::lazy::BackendDevice>& all_devices) {
   // Simulates N threads executing the same computation, using separated XRT
   // executions, and issuing CRS operations.
   std::vector<std::string> device_strings;
   std::vector<std::string> all_device_strings;
   for (auto& device : devices) {
-    device_strings.push_back(device.ToString());
+    device_strings.push_back(device.toString());
   }
   for (auto& device : all_devices) {
-    all_device_strings.push_back(device.ToString());
+    all_device_strings.push_back(device.toString());
   }
   xla::Shape shape = xla::ShapeUtil::MakeShape(xla::PrimitiveType::F32, {8, 8});
   std::vector<xla::ComputationClient::CompileInstance> instances;
@@ -86,9 +86,9 @@ void TestSingleReplication(const std::vector<Device>& devices,
 class ReplicationTest : public AtenXlaTensorTestBase {};
 
 TEST_F(ReplicationTest, TestNSingleReplication) {
-  WithAllDevices({TorchXLADeviceType::TPU, TorchXLADeviceType::GPU},
-                 [&](const std::vector<Device>& devices,
-                     const std::vector<Device>& all_devices) {
+  WithAllDevices({XlaDeviceType::TPU, XlaDeviceType::GPU},
+                 [&](const std::vector<torch::lazy::BackendDevice>& devices,
+                     const std::vector<torch::lazy::BackendDevice>& all_devices) {
                    TestSingleReplication(devices, all_devices);
                  });
 }
