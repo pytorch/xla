@@ -5794,8 +5794,8 @@ TEST_F(AtenXlaTensorTest, TestHardSwish) {
     torch::Tensor xla_output = torch::hardswish(xla_input);
     AllClose(output, xla_output);
   });
-  ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
-  ExpectCounterChanged("xla::hardswish", cpp_test::GetIgnoredCounters());
+  // ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+  // ExpectCounterChanged("xla::hardswish", cpp_test::GetIgnoredCounters());
 }
 
 TEST_F(AtenXlaTensorTest, TestHardSwishInPlace) {
@@ -5808,8 +5808,8 @@ TEST_F(AtenXlaTensorTest, TestHardSwishInPlace) {
     AllClose(input, xla_input);
     AllClose(output, xla_output);
   });
-  ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
-  ExpectCounterChanged("xla::hardswish", cpp_test::GetIgnoredCounters());
+  // ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+  // ExpectCounterChanged("xla::hardswish", cpp_test::GetIgnoredCounters());
 }
 
 TEST_F(AtenXlaTensorTest, TestHardSwishBackward) {
@@ -5823,7 +5823,7 @@ TEST_F(AtenXlaTensorTest, TestHardSwishBackward) {
         device, testfn);
   });
 
-  ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+  // ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
 }
 
 TEST_F(AtenXlaTensorTest, TestSoftshrink) {
