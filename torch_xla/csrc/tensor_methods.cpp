@@ -2195,8 +2195,8 @@ XLATensor XLATensor::not_supported(std::string description, xla::Shape shape,
                 device);
 }
 
-XLATensor XLATensor::optimization_barrier(const XLATensor& input) {
-  return input.CreateFrom(ir::ops::OptimizationBarrier(input.GetIrValue()));
+void XLATensor::optimization_barrier_(XLATensor& input) {
+  return input.SetInPlaceIrValue(ir::ops::OptimizationBarrier(input.GetIrValue()));
 }
 
 XLATensor XLATensor::permute(const XLATensor& input,
