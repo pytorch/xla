@@ -1302,7 +1302,7 @@ XLATensor::ComputationCache* XLATensor::GetComputationCache() {
 XLATensor::PostOrderData XLATensor::RunPostOrder(
     const std::vector<XLATensor>& tensors, SyncTensorCollection* coll) {
   absl::Span<const size_t> indices = coll->indices;
-  std::vector<const ir::Node*> roots;
+  std::vector<const torch::lazy::Node*> roots;
   roots.reserve(indices.size());
   for (auto index : indices) {
     ir::XlaValue ir_value = tensors.at(index).CurrentIrValue();
