@@ -40,7 +40,7 @@ xla::XlaOp BuildAvgPoolNdBackward(xla::XlaOp out_backprop, xla::XlaOp input,
                                   absl::Span<const int64_t> padding,
                                   bool ceil_mode, bool count_include_pad);
 
-xla::XlaOp BuildMaxUnpoolNd(const Device& device, xla::XlaOp input,
+xla::XlaOp BuildMaxUnpoolNd(const torch::lazy::BackendDevice& device, xla::XlaOp input,
                             xla::XlaOp indices,
                             absl::Span<const int64_t> output_size);
 

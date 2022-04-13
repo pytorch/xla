@@ -21,14 +21,14 @@ namespace ir {
 
 class LoweringContext {
  public:
-  explicit LoweringContext(const std::string& name, Device device);
-  LoweringContext(const std::string& name, Device device,
+  explicit LoweringContext(const std::string& name, torch::lazy::BackendDevice device);
+  LoweringContext(const std::string& name, torch::lazy::BackendDevice device,
                   absl::Span<const torch::lazy::Node* const> post_order,
                   torch::lazy::Util::EmissionMap emit_status);
 
   xla::XlaBuilder* builder() { return &builder_; }
 
-  const Device& device() const { return device_; };
+  const torch::lazy::BackendDevice& device() const { return device_; };
 
   // If a parameter associated with data has already been declared, it will be
   // returned. Otherwise a new one will be created, associated with the tensor
@@ -87,7 +87,7 @@ class LoweringContext {
                                                 const char* error_msg);
 
   xla::XlaBuilder builder_;
-  Device device_;
+  torch::lazy::BackendDevice device_;
   std::vector<xla::ComputationClient::DataPtr> parameters_;
   std::unordered_map<xla::ComputationClient::Data::OpaqueHandle, Parameter>
       parameters_map_;

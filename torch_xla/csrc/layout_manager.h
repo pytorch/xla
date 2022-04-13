@@ -20,6 +20,6 @@ xla::Shape MakeTorchTensorLayout(absl::Span<const int64_t> dimensions,
 xla::Shape MakeArrayShapeFromDimensions(
     absl::Span<const int64_t> dimensions,
     absl::Span<const bool> dynamic_dimensions, xla::PrimitiveType type,
-    DeviceType device_type);
+    XlaDeviceType hw_type);
 
 }  // namespace torch_xla

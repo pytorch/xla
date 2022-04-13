@@ -58,14 +58,14 @@ struct NoGilSection {
   PyThreadState* state = nullptr;
 };
 
-c10::optional<Device> GetOptionalDevice(const std::string& device_str) {
+c10::optional<torch::lazy::BackendDevice> GetOptionalDevice(const std::string& device_str) {
   if (device_str.empty()) {
     return c10::nullopt;
   }
   return bridge::AtenDeviceToXlaDevice(c10::Device(device_str));
 }
 
-Device GetDeviceOrCurrent(const std::string& device_str) {
+torch::lazy::BackendDevice GetDeviceOrCurrent(const std::string& device_str) {
   if (device_str.empty()) {
     return GetCurrentDevice();
   }
@@ -110,8 +110,8 @@ std::vector<std::string> GetXlaDevices(
   std::vector<std::string> xla_devices;
   xla_devices.reserve(devices.size());
   for (auto& device_str : devices) {
-    Device device = bridge::AtenDeviceToXlaDevice(c10::Device(device_str));
-    xla_devices.emplace_back(device.ToString());
+    torch::lazy::BackendDevice device = bridge::AtenDeviceToXlaDevice(c10::Device(device_str));
+    xla_devices.emplace_back(device.toString());
   }
   return xla_devices;
 }
@@ -301,7 +301,7 @@ void StepMarker(const std::string& device_str,
                 const std::vector<std::string>& devices, bool wait) {
   tensorflow::profiler::TraceMe activity(
       "StepMarker", tensorflow::profiler::TraceMeLevel::kInfo);
-  Device device = GetDeviceOrCurrent(device_str);
+  torch::lazy::BackendDevice device = GetDeviceOrCurrent(device_str);
   XLATensor::SyncLiveTensorsGraph(&device, devices, wait);
   XLATensor::MarkStep(device);
   bool debug_mode = xla::sys_util::GetEnvBool("PT_XLA_DEBUG", false);
@@ -320,7 +320,7 @@ void StepMarker(const std::string& device_str,
 }
 
 void SetRngSeed(uint64_t seed, const std::string& device_str) {
-  Device device = GetDeviceOrCurrent(device_str);
+  torch::lazy::BackendDevice device = GetDeviceOrCurrent(device_str);
   XLATensor::SetRngSeed(device, seed);
 }
 
@@ -394,7 +394,7 @@ std::shared_ptr<ir::Value> CreateToken(const std::string& device_str) {
   // This needs to be device data (hence coming in as XLA computation parameter)
   // as otherwise the XLA compiler passes will remove it, vanishing its
   // sequencing effects.
-  Device device = GetDeviceOrCurrent(device_str);
+  torch::lazy::BackendDevice device = GetDeviceOrCurrent(device_str);
   ir::Value ir_value =
       XLATensor::GetDeviceDataIrValue(0.0, xla::PrimitiveType::F32, device);
   return std::make_shared<ir::Value>(std::move(ir_value));
@@ -676,7 +676,7 @@ xla::Shape GetTensorShape(const at::Tensor& tensor,
   if (xtensor) {
     return xtensor->shape();
   }
-  Device device = GetDeviceOrCurrent(device_str);
+  torch::lazy::BackendDevice device = GetDeviceOrCurrent(device_str);
   return CreateComputationShapeFromTensor(tensor, &device);
 }
 
@@ -684,8 +684,8 @@ py::dict GetMemoryInfo(const std::string& device_str) {
   xla::ComputationClient::MemoryInfo mem_info;
   {
     NoGilSection nogil;
-    Device device = GetDeviceOrCurrent(device_str);
-    mem_info = xla::ComputationClient::Get()->GetMemoryInfo(device.ToString());
+    torch::lazy::BackendDevice device = GetDeviceOrCurrent(device_str);
+    mem_info = xla::ComputationClient::Get()->GetMemoryInfo(device.toString());
   }
   auto py_dict = py::dict();
   py_dict["kb_free"] = mem_info.kb_free;
