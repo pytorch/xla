@@ -63,7 +63,8 @@ xla::XlaOp GetPromotedR1Mask(xla::XlaOp mask, const xla::Shape& input_shape) {
   return XlaHelpers::Flatten(GetPromotedMask(mask, input_shape));
 }
 
-bool ShouldUseDenseScatter(const torch::lazy::BackendDevice& device, const xla::Shape& input_shape,
+bool ShouldUseDenseScatter(const torch::lazy::BackendDevice& device,
+                           const xla::Shape& input_shape,
                            const xla::Shape& index_shape) {
   static int dense_scatter_factor =
       xla::sys_util::GetEnvInt("XLA_DENSE_SCATTER_FACTOR", 100);
@@ -634,9 +635,9 @@ XlaOpCombiner NumericAddCombiner() {
   };
 }
 
-xla::XlaOp CreateScatter(const torch::lazy::BackendDevice& device, xla::XlaOp input,
-                         xla::XlaOp index, xla::XlaOp source, int64_t dim,
-                         const ScatterOptions& options) {
+xla::XlaOp CreateScatter(const torch::lazy::BackendDevice& device,
+                         xla::XlaOp input, xla::XlaOp index, xla::XlaOp source,
+                         int64_t dim, const ScatterOptions& options) {
   const xla::Shape& input_shape = XlaHelpers::ShapeOfXlaOp(input);
   xla::Shape index_shape = XlaHelpers::ShapeOfXlaOp(index);
   const xla::Shape& source_shape = XlaHelpers::ShapeOfXlaOp(source);
@@ -675,8 +676,8 @@ xla::XlaOp CreateScatter(const torch::lazy::BackendDevice& device, xla::XlaOp in
       scatter_dnums);
 }
 
-xla::XlaOp CreatePut(const torch::lazy::BackendDevice& device, xla::XlaOp input, xla::XlaOp index,
-                     xla::XlaOp source, bool accumulate) {
+xla::XlaOp CreatePut(const torch::lazy::BackendDevice& device, xla::XlaOp input,
+                     xla::XlaOp index, xla::XlaOp source, bool accumulate) {
   xla::Shape input_shape;
   xla::XlaOp r1_input = XlaHelpers::Flatten(input, &input_shape);
   xla::Shape index_shape;
@@ -696,8 +697,8 @@ xla::XlaOp CreatePut(const torch::lazy::BackendDevice& device, xla::XlaOp input,
   return XlaHelpers::DynamicReshapeAs(r1_scatter, input_shape);
 }
 
-xla::XlaOp BuildLinspace(const torch::lazy::BackendDevice& device, xla::XlaOp start, xla::XlaOp end,
-                         int64_t steps) {
+xla::XlaOp BuildLinspace(const torch::lazy::BackendDevice& device,
+                         xla::XlaOp start, xla::XlaOp end, int64_t steps) {
   XLA_CHECK_GE(steps, 0);
   if (steps == 1) {
     return BuildExpand(start, {1});

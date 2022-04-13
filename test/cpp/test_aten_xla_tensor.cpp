@@ -7559,7 +7559,8 @@ TEST_F(AtenXlaTensorTest, TestAvgPool3DNoBatch) {
 }
 
 TEST_F(AtenXlaTensorTest, TestAdaptiveMaxPool2D) {
-  XlaDeviceType hw_type = static_cast<XlaDeviceType>(GetDefaultDevice()->type());
+  XlaDeviceType hw_type =
+      static_cast<XlaDeviceType>(GetDefaultDevice()->type());
   // skip this test until the tile mismatch bug is fixed.
   if (hw_type == XlaDeviceType::TPU) {
     return;
@@ -7589,7 +7590,8 @@ TEST_F(AtenXlaTensorTest, TestAdaptiveMaxPool2D) {
 }
 
 TEST_F(AtenXlaTensorTest, TestAdaptiveMaxPool2DBackward) {
-  XlaDeviceType hw_type = static_cast<XlaDeviceType>(GetDefaultDevice()->type());
+  XlaDeviceType hw_type =
+      static_cast<XlaDeviceType>(GetDefaultDevice()->type());
   // skip this test until the tile mismatch bug is fixed.
   if (hw_type == XlaDeviceType::TPU) {
     return;
@@ -10626,9 +10628,9 @@ TEST_F(AtenXlaTensorTest, TestEmbeddingBackward) {
 }
 
 TEST_F(AtenXlaTensorTest, TestAmpForeachNonFiniteCheckAndUnscale) {
-  XlaDeviceType hw_type = static_cast<XlaDeviceType>(GetDefaultDevice()->type());
-  if (hw_type != XlaDeviceType::GPU &&
-      hw_type != XlaDeviceType::CPU) {
+  XlaDeviceType hw_type =
+      static_cast<XlaDeviceType>(GetDefaultDevice()->type());
+  if (hw_type != XlaDeviceType::GPU && hw_type != XlaDeviceType::CPU) {
     return;
   }
   torch::Tensor grads0 =
@@ -10664,9 +10666,9 @@ TEST_F(AtenXlaTensorTest, TestAmpForeachNonFiniteCheckAndUnscale) {
 }
 
 TEST_F(AtenXlaTensorTest, TestAmpUpdateScale) {
-  XlaDeviceType hw_type = static_cast<XlaDeviceType>(GetDefaultDevice()->type());
-  if (hw_type != XlaDeviceType::GPU &&
-      hw_type != XlaDeviceType::CPU) {
+  XlaDeviceType hw_type =
+      static_cast<XlaDeviceType>(GetDefaultDevice()->type());
+  if (hw_type != XlaDeviceType::GPU && hw_type != XlaDeviceType::CPU) {
     return;
   }
   torch::Tensor growth_tracker =
@@ -10947,7 +10949,8 @@ TEST_F(AtenXlaTensorTest, TestNanToNum) {
     ForEachDevice([&](const torch::Device& device) {
       torch::Tensor xla_input = CopyToDevice(input, device);
       torch::Tensor xla_output = torch::nan_to_num(xla_input);
-      if (static_cast<XlaDeviceType>(bridge::AtenDeviceToXlaDevice(device).type()) ==
+      if (static_cast<XlaDeviceType>(
+              bridge::AtenDeviceToXlaDevice(device).type()) ==
               XlaDeviceType::TPU &&
           scalar_type == torch::kDouble) {
         // Since TPU converts double to float (unlike CPU), the Inf entries are
@@ -10987,7 +10990,8 @@ TEST_F(AtenXlaTensorTest, TestNanToNumInplace) {
     ForEachDevice([&](const torch::Device& device) {
       torch::Tensor xla_input = CopyToDevice(input_copy, device);
       xla_input.nan_to_num_();
-      if (static_cast<XlaDeviceType>(bridge::AtenDeviceToXlaDevice(device).type()) ==
+      if (static_cast<XlaDeviceType>(
+              bridge::AtenDeviceToXlaDevice(device).type()) ==
               XlaDeviceType::TPU &&
           scalar_type == torch::kDouble) {
         // Since TPU converts double to float (unlike CPU), the Inf entries are
@@ -11027,7 +11031,8 @@ TEST_F(AtenXlaTensorTest, TestNanToNumOut) {
       torch::Tensor xla_input = CopyToDevice(input, device);
       torch::Tensor xla_output = torch::zeros_like(input);
       torch::nan_to_num_out(xla_output, xla_input);
-      if (static_cast<XlaDeviceType>(bridge::AtenDeviceToXlaDevice(device).type()) ==
+      if (static_cast<XlaDeviceType>(
+              bridge::AtenDeviceToXlaDevice(device).type()) ==
               XlaDeviceType::TPU &&
           scalar_type == torch::kDouble) {
         // Since TPU converts double to float (unlike CPU), the Inf entries are

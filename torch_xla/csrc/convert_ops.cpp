@@ -51,13 +51,14 @@ xla::XlaOp ConvertData(xla::XlaOp op, xla::PrimitiveType type,
 }  // namespace
 
 xla::XlaOp ConvertTo(xla::XlaOp op, xla::PrimitiveType from,
-                     xla::PrimitiveType to, const torch::lazy::BackendDevice* device) {
+                     xla::PrimitiveType to,
+                     const torch::lazy::BackendDevice* device) {
   if (from == to) {
     return op;
   }
-  XlaDeviceType hw_type = static_cast<XlaDeviceType>(GetDeviceOrCurrent(device).type());
-  if (hw_type !=
-      XlaDeviceType::TPU) {
+  XlaDeviceType hw_type =
+      static_cast<XlaDeviceType>(GetDeviceOrCurrent(device).type());
+  if (hw_type != XlaDeviceType::TPU) {
     return xla::ConvertElementType(op, to);
   }
   switch (from) {
@@ -88,7 +89,8 @@ xla::XlaOp ConvertTo(xla::XlaOp op, xla::PrimitiveType from,
 
 xla::XlaOp ConvertToRaw(xla::XlaOp op, xla::PrimitiveType from,
                         xla::PrimitiveType raw_from, xla::PrimitiveType to,
-                        xla::PrimitiveType raw_to, const torch::lazy::BackendDevice* device) {
+                        xla::PrimitiveType raw_to,
+                        const torch::lazy::BackendDevice* device) {
   if (from != raw_from) {
     op = ConvertData(op, from, raw_from);
   }

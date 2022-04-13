@@ -503,8 +503,8 @@ xla::XlaOp BuildMaxPoolNdBackward(xla::XlaOp out_backprop, xla::XlaOp input,
                             /*spatial_dim_count=*/spatial_dim_count);
 }
 
-xla::XlaOp BuildMaxUnpoolNd(const torch::lazy::BackendDevice& device, xla::XlaOp input,
-                            xla::XlaOp indices,
+xla::XlaOp BuildMaxUnpoolNd(const torch::lazy::BackendDevice& device,
+                            xla::XlaOp input, xla::XlaOp indices,
                             absl::Span<const int64_t> output_size) {
   const xla::Shape& input_shape = XlaHelpers::ShapeOfXlaOp(input);
   XLA_CHECK_EQ(input_shape.rank(), 2 + output_size.size());

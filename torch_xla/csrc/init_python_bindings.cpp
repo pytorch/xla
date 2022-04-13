@@ -58,7 +58,8 @@ struct NoGilSection {
   PyThreadState* state = nullptr;
 };
 
-c10::optional<torch::lazy::BackendDevice> GetOptionalDevice(const std::string& device_str) {
+c10::optional<torch::lazy::BackendDevice> GetOptionalDevice(
+    const std::string& device_str) {
   if (device_str.empty()) {
     return c10::nullopt;
   }
@@ -110,7 +111,8 @@ std::vector<std::string> GetXlaDevices(
   std::vector<std::string> xla_devices;
   xla_devices.reserve(devices.size());
   for (auto& device_str : devices) {
-    torch::lazy::BackendDevice device = bridge::AtenDeviceToXlaDevice(c10::Device(device_str));
+    torch::lazy::BackendDevice device =
+        bridge::AtenDeviceToXlaDevice(c10::Device(device_str));
     xla_devices.emplace_back(device.toString());
   }
   return xla_devices;

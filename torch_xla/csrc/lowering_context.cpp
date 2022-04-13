@@ -73,7 +73,8 @@ class HloMetadataSetter {
 
 }  // namespace
 
-LoweringContext::LoweringContext(const std::string& name, torch::lazy::BackendDevice device)
+LoweringContext::LoweringContext(const std::string& name,
+                                 torch::lazy::BackendDevice device)
     : builder_(name), device_(std::move(device)) {}
 
 LoweringContext::LoweringContext(

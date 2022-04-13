@@ -73,15 +73,15 @@ struct ScatterOptions {
   bool indices_are_unique = true;
 };
 
-xla::XlaOp CreateScatter(const torch::lazy::BackendDevice& device, xla::XlaOp input,
-                         xla::XlaOp index, xla::XlaOp source, int64_t dim,
-                         const ScatterOptions& options);
+xla::XlaOp CreateScatter(const torch::lazy::BackendDevice& device,
+                         xla::XlaOp input, xla::XlaOp index, xla::XlaOp source,
+                         int64_t dim, const ScatterOptions& options);
 
-xla::XlaOp CreatePut(const torch::lazy::BackendDevice& device, xla::XlaOp input, xla::XlaOp index,
-                     xla::XlaOp source, bool accumulate);
+xla::XlaOp CreatePut(const torch::lazy::BackendDevice& device, xla::XlaOp input,
+                     xla::XlaOp index, xla::XlaOp source, bool accumulate);
 
-xla::XlaOp BuildLinspace(const torch::lazy::BackendDevice& device, xla::XlaOp start, xla::XlaOp end,
-                         int64_t steps);
+xla::XlaOp BuildLinspace(const torch::lazy::BackendDevice& device,
+                         xla::XlaOp start, xla::XlaOp end, int64_t steps);
 
 std::vector<xla::XlaOp> BuildNonZero(xla::XlaOp input);
 

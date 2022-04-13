@@ -1323,7 +1323,8 @@ void XLATensor::exponential_(XLATensor& input, double lambd) {
       GetRngSeed(input.GetDevice()), input_shape.get()));
 }
 
-XLATensor XLATensor::eye(int64_t lines, int64_t cols, const torch::lazy::BackendDevice& device,
+XLATensor XLATensor::eye(int64_t lines, int64_t cols,
+                         const torch::lazy::BackendDevice& device,
                          at::ScalarType element_type) {
   return XLATensor::Create(
       ir::ops::Identity(lines, cols,
@@ -1377,12 +1378,14 @@ XLATensor XLATensor::frac(const XLATensor& input) {
 }
 
 XLATensor XLATensor::full(absl::Span<const int64_t> size,
-                          const at::Scalar& fill_value, const torch::lazy::BackendDevice& device,
+                          const at::Scalar& fill_value,
+                          const torch::lazy::BackendDevice& device,
                           at::ScalarType scalar_type) {
   CheckShapeDimensions(size);
-  xla::Shape shape = MakeArrayShapeFromDimensions(
-      size, /*dynamic_dimensions=*/{},
-      MakeXlaPrimitiveType(scalar_type, &device), static_cast<XlaDeviceType>(device.type()));
+  xla::Shape shape =
+      MakeArrayShapeFromDimensions(size, /*dynamic_dimensions=*/{},
+                                   MakeXlaPrimitiveType(scalar_type, &device),
+                                   static_cast<XlaDeviceType>(device.type()));
   return Create(GetIrValueForScalar(fill_value, shape, device), device,
                 scalar_type);
 }
@@ -2802,7 +2805,8 @@ XLATensor XLATensor::threshold_backward(const XLATensor& grad_output,
       grad_output.GetIrValue(), input.GetIrValue(), threshold));
 }
 
-XLATensor XLATensor::to(XLATensor& input, c10::optional<torch::lazy::BackendDevice> device,
+XLATensor XLATensor::to(XLATensor& input,
+                        c10::optional<torch::lazy::BackendDevice> device,
                         c10::optional<at::ScalarType> scalar_type) {
   if (!device) {
     device = input.GetDevice();

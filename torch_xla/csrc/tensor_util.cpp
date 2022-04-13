@@ -135,14 +135,13 @@ bool Use32BitLong() {
   return use_32bit_long;
 }
 
-xla::PrimitiveType XlaTypeFromTensorType(at::ScalarType scalar_type,
-                                         const torch::lazy::BackendDevice& device) {
+xla::PrimitiveType XlaTypeFromTensorType(
+    at::ScalarType scalar_type, const torch::lazy::BackendDevice& device) {
   XlaDeviceType hw_type = static_cast<XlaDeviceType>(device.type());
   switch (scalar_type) {
     case at::ScalarType::Double:
-      return hw_type != XlaDeviceType::TPU
-                 ? xla::PrimitiveType::F64
-                 : xla::PrimitiveType::F32;
+      return hw_type != XlaDeviceType::TPU ? xla::PrimitiveType::F64
+                                           : xla::PrimitiveType::F32;
     case at::ScalarType::Float:
       return xla::PrimitiveType::F32;
     case at::ScalarType::BFloat16:
@@ -594,7 +593,8 @@ void TensorToBufferSType(const at::Tensor& tensor, const xla::Shape& dest_shape,
 
 void PopulateTensorBuffer(const at::Tensor& tensor,
                           const xla::Shape& dest_shape, void* dest_buffer,
-                          size_t dest_buffer_size, const torch::lazy::BackendDevice& device) {
+                          size_t dest_buffer_size,
+                          const torch::lazy::BackendDevice& device) {
   switch (tensor.type().scalarType()) {
     case at::ScalarType::Double:
       TensorToBufferSType<double>(tensor, dest_shape, dest_buffer,
@@ -649,10 +649,9 @@ void PopulateTensorBuffer(const at::Tensor& tensor,
   }
 }
 
-xla::ComputationClient::DataPtr TensorToXlaData(const at::Tensor& tensor,
-                                                const xla::Shape& shape,
-                                                const torch::lazy::BackendDevice& device,
-                                                bool transfer_async) {
+xla::ComputationClient::DataPtr TensorToXlaData(
+    const at::Tensor& tensor, const xla::Shape& shape,
+    const torch::lazy::BackendDevice& device, bool transfer_async) {
   XLA_TIMED("TensorToData");
   if (transfer_async) {
     std::shared_ptr<DataAsync> async = std::make_shared<DataAsync>();
@@ -814,9 +813,9 @@ bool TensorCompare(const at::Tensor& t1, const at::Tensor& t2) {
                      contiguous_t1.numel() * contiguous_t1.itemsize()) == 0;
 }
 
-xla::ComputationClient::DataPtr TensorToXlaData(const at::Tensor& tensor,
-                                                const torch::lazy::BackendDevice& device,
-                                                bool transfer_async) {
+xla::ComputationClient::DataPtr TensorToXlaData(
+    const at::Tensor& tensor, const torch::lazy::BackendDevice& device,
+    bool transfer_async) {
   return TensorToXlaData(tensor,
                          CreateComputationShapeFromTensor(tensor, &device),
                          device, transfer_async);
@@ -964,8 +963,8 @@ xla::Shape MakeShapeWithDeviceLayout(const xla::Shape& shape,
   return device_shape;
 }
 
-xla::Shape CreateComputationShapeFromTensor(const at::Tensor& tensor,
-                                            const torch::lazy::BackendDevice* device) {
+xla::Shape CreateComputationShapeFromTensor(
+    const at::Tensor& tensor, const torch::lazy::BackendDevice* device) {
   torch::lazy::BackendDevice xla_device = GetDeviceOrCurrent(device);
   return MakeArrayShapeFromDimensions(
       XlaHelpers::I64List(tensor.sizes()),
@@ -1042,8 +1041,8 @@ xla::PrimitiveType TensorTypeToRawXlaType(at::ScalarType scalar_type) {
   }
 }
 
-xla::PrimitiveType GetDevicePrimitiveType(xla::PrimitiveType type,
-                                          const torch::lazy::BackendDevice* device) {
+xla::PrimitiveType GetDevicePrimitiveType(
+    xla::PrimitiveType type, const torch::lazy::BackendDevice* device) {
   torch::lazy::BackendDevice xla_device = GetDeviceOrCurrent(device);
   XlaDeviceType hw_type = static_cast<XlaDeviceType>(device->type());
   switch (type) {
@@ -1057,9 +1056,8 @@ xla::PrimitiveType GetDevicePrimitiveType(xla::PrimitiveType type,
       if (DowncastBF16() || DowncastF16()) {
         return xla::PrimitiveType::F32;
       }
-      return hw_type != XlaDeviceType::TPU
-                 ? xla::PrimitiveType::F64
-                 : xla::PrimitiveType::F32;
+      return hw_type != XlaDeviceType::TPU ? xla::PrimitiveType::F64
+                                           : xla::PrimitiveType::F32;
     case xla::PrimitiveType::F32:
       if (UseF16() || DowncastF16()) {
         return xla::PrimitiveType::F16;
@@ -1067,28 +1065,25 @@ xla::PrimitiveType GetDevicePrimitiveType(xla::PrimitiveType type,
       return UseBF16() || DowncastBF16() ? xla::PrimitiveType::BF16
                                          : xla::PrimitiveType::F32;
     case xla::PrimitiveType::U16:
-      return hw_type != XlaDeviceType::TPU
-                 ? xla::PrimitiveType::U16
-                 : xla::PrimitiveType::U32;
+      return hw_type != XlaDeviceType::TPU ? xla::PrimitiveType::U16
+                                           : xla::PrimitiveType::U32;
     case xla::PrimitiveType::S16:
-      return hw_type != XlaDeviceType::TPU
-                 ? xla::PrimitiveType::S16
-                 : xla::PrimitiveType::S32;
+      return hw_type != XlaDeviceType::TPU ? xla::PrimitiveType::S16
+                                           : xla::PrimitiveType::S32;
     case xla::PrimitiveType::S64:
       return Use32BitLong() ? xla::PrimitiveType::S32 : xla::PrimitiveType::S64;
     case xla::PrimitiveType::U64:
       return Use32BitLong() ? xla::PrimitiveType::U32 : xla::PrimitiveType::U64;
     case xla::PrimitiveType::C128:
-      return hw_type != XlaDeviceType::TPU
-                 ? xla::PrimitiveType::C128
-                 : xla::PrimitiveType::C64;
+      return hw_type != XlaDeviceType::TPU ? xla::PrimitiveType::C128
+                                           : xla::PrimitiveType::C64;
     default:
       return type;
   }
 }
 
-xla::PrimitiveType MakeXlaPrimitiveType(at::ScalarType scalar_type,
-                                        const torch::lazy::BackendDevice* device) {
+xla::PrimitiveType MakeXlaPrimitiveType(
+    at::ScalarType scalar_type, const torch::lazy::BackendDevice* device) {
   switch (scalar_type) {
     case at::ScalarType::Double:
       return GetDevicePrimitiveType(xla::PrimitiveType::F64, device);
@@ -1119,7 +1114,8 @@ xla::PrimitiveType MakeXlaPrimitiveType(at::ScalarType scalar_type,
   }
 }
 
-bool RequiresRawTypeCasting(at::ScalarType scalar_type, const torch::lazy::BackendDevice* device) {
+bool RequiresRawTypeCasting(at::ScalarType scalar_type,
+                            const torch::lazy::BackendDevice* device) {
   switch (scalar_type) {
     case at::ScalarType::Byte:
     case at::ScalarType::Char:
@@ -1131,12 +1127,12 @@ bool RequiresRawTypeCasting(at::ScalarType scalar_type, const torch::lazy::Backe
   }
 }
 
-xla::PrimitiveType GetShapeDimensionType(const torch::lazy::BackendDevice* device) {
+xla::PrimitiveType GetShapeDimensionType(
+    const torch::lazy::BackendDevice* device) {
   torch::lazy::BackendDevice xla_device = GetDeviceOrCurrent(device);
   XlaDeviceType hw_type = static_cast<XlaDeviceType>(xla_device.type());
-  return hw_type == XlaDeviceType::CPU
-             ? xla::PrimitiveType::S64
-             : xla::PrimitiveType::S32;
+  return hw_type == XlaDeviceType::CPU ? xla::PrimitiveType::S64
+                                       : xla::PrimitiveType::S32;
 }
 
 }  // namespace torch_xla

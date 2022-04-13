@@ -30,9 +30,9 @@ bool TensorCompare(const at::Tensor& t1, const at::Tensor& t2);
 // Uploads an ATEN tensor data to the device and fetches the corresponding
 // device data handle.
 // TODO LTC @wonjoo - Migrate to upstream after Device -> BackendDevice
-xla::ComputationClient::DataPtr TensorToXlaData(const at::Tensor& tensor,
-                                                const torch::lazy::BackendDevice& device,
-                                                bool transfer_async = false);
+xla::ComputationClient::DataPtr TensorToXlaData(
+    const at::Tensor& tensor, const torch::lazy::BackendDevice& device,
+    bool transfer_async = false);
 
 torch::lazy::hash_t TensorHash(const at::Tensor& tensor);
 
@@ -60,8 +60,8 @@ xla::Shape MakeShapeWithDeviceLayout(const xla::Shape& shape,
 
 // Create the XLA shape to be used within a lowered XLA computation, to
 // represent a given tensor data.
-xla::Shape CreateComputationShapeFromTensor(const at::Tensor& tensor,
-                                            const torch::lazy::BackendDevice* device);
+xla::Shape CreateComputationShapeFromTensor(
+    const at::Tensor& tensor, const torch::lazy::BackendDevice* device);
 
 at::ScalarType TensorTypeFromXlaType(xla::PrimitiveType xla_type);
 
@@ -69,15 +69,17 @@ xla::PrimitiveType TensorTypeToRawXlaType(at::ScalarType scalar_type);
 
 // Maps an XLA type to the one which can be used on the given device (or the
 // default device, id device is nullptr).
-xla::PrimitiveType GetDevicePrimitiveType(xla::PrimitiveType type,
-                                          const torch::lazy::BackendDevice* device);
+xla::PrimitiveType GetDevicePrimitiveType(
+    xla::PrimitiveType type, const torch::lazy::BackendDevice* device);
 
 // Converts the given scalar type to an XLA primitive type.
-xla::PrimitiveType MakeXlaPrimitiveType(at::ScalarType scalar_type,
-                                        const torch::lazy::BackendDevice* device);
+xla::PrimitiveType MakeXlaPrimitiveType(
+    at::ScalarType scalar_type, const torch::lazy::BackendDevice* device);
 
-bool RequiresRawTypeCasting(at::ScalarType scalar_type, const torch::lazy::BackendDevice* device);
+bool RequiresRawTypeCasting(at::ScalarType scalar_type,
+                            const torch::lazy::BackendDevice* device);
 
-xla::PrimitiveType GetShapeDimensionType(const torch::lazy::BackendDevice* device);
+xla::PrimitiveType GetShapeDimensionType(
+    const torch::lazy::BackendDevice* device);
 
 }  // namespace torch_xla

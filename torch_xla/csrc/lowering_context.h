@@ -21,7 +21,8 @@ namespace ir {
 
 class LoweringContext {
  public:
-  explicit LoweringContext(const std::string& name, torch::lazy::BackendDevice device);
+  explicit LoweringContext(const std::string& name,
+                           torch::lazy::BackendDevice device);
   LoweringContext(const std::string& name, torch::lazy::BackendDevice device,
                   absl::Span<const torch::lazy::Node* const> post_order,
                   torch::lazy::Util::EmissionMap emit_status);

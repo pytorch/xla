@@ -30,7 +30,8 @@ class XLATensor {
   struct Data;
 
  public:
-  static XLATensor Create(const at::Tensor& tensor, const torch::lazy::BackendDevice& device);
+  static XLATensor Create(const at::Tensor& tensor,
+                          const torch::lazy::BackendDevice& device);
   static XLATensor Create(
       xla::ComputationClient::DataPtr xla_data,
       c10::optional<at::ScalarType> logical_element_type = c10::nullopt);
@@ -121,32 +122,34 @@ class XLATensor {
   // that is affected by the view tensor.
   static void ApplyEagerSync(std::vector<XLATensor>& tensors);
 
-  static ir::Value GetDeviceDataIrValue(const at::Scalar& value,
-                                        xla::PrimitiveType type,
-                                        const torch::lazy::BackendDevice& device);
+  static ir::Value GetDeviceDataIrValue(
+      const at::Scalar& value, xla::PrimitiveType type,
+      const torch::lazy::BackendDevice& device);
   // Use with caution, constant will cause more frequent recompilation
   // compared to the device_data.
   static ir::Value GetIrValueForConstant(const at::Scalar& value,
                                          const xla::Shape& shape);
-  static ir::Value GetIrValueForScalar(const at::Scalar& value,
-                                       xla::PrimitiveType type,
-                                       const torch::lazy::BackendDevice& device);
-  static ir::Value GetIrValueForScalar(const at::Scalar& value,
-                                       const torch::lazy::BackendDevice& device);
-  static ir::Value GetIrValueForScalar(const at::Scalar& value,
-                                       xla::PrimitiveType type,
-                                       absl::Span<const int64_t> dimensions,
-                                       const torch::lazy::BackendDevice& device);
-  static ir::Value GetIrValueForScalar(const at::Scalar& value,
-                                       const xla::Shape& shape,
-                                       const torch::lazy::BackendDevice& device);
+  static ir::Value GetIrValueForScalar(
+      const at::Scalar& value, xla::PrimitiveType type,
+      const torch::lazy::BackendDevice& device);
+  static ir::Value GetIrValueForScalar(
+      const at::Scalar& value, const torch::lazy::BackendDevice& device);
+  static ir::Value GetIrValueForScalar(
+      const at::Scalar& value, xla::PrimitiveType type,
+      absl::Span<const int64_t> dimensions,
+      const torch::lazy::BackendDevice& device);
   static ir::Value GetIrValueForScalar(
       const at::Scalar& value, const xla::Shape& shape,
-      c10::optional<at::ScalarType> logical_element_type, const torch::lazy::BackendDevice& device);
+      const torch::lazy::BackendDevice& device);
+  static ir::Value GetIrValueForScalar(
+      const at::Scalar& value, const xla::Shape& shape,
+      c10::optional<at::ScalarType> logical_element_type,
+      const torch::lazy::BackendDevice& device);
 
   static ir::Value GetRngSeed(const torch::lazy::BackendDevice& device);
 
-  static void SetRngSeed(const torch::lazy::BackendDevice& device, uint64_t seed);
+  static void SetRngSeed(const torch::lazy::BackendDevice& device,
+                         uint64_t seed);
 
   static uint64_t GetRunningSeed(const torch::lazy::BackendDevice& device);
 
@@ -169,7 +172,8 @@ class XLATensor {
   // for the given device. If device is nullptr, the live tensors for all
   // devices will be returned. Returned tensors are sorted by device as primary
   // key, and by unique ID as secondary key.
-  static std::vector<XLATensor> GetLiveTensors(const torch::lazy::BackendDevice* device);
+  static std::vector<XLATensor> GetLiveTensors(
+      const torch::lazy::BackendDevice* device);
 
   // Applies all the pending IR operations queued over the input tensors. All
   // the tensors must be on the same device. If wait is true, the sync operation
@@ -576,7 +580,8 @@ class XLATensor {
   static void exponential_(XLATensor& input, double lambd);
 
   // Returns a 2-D tensor with ones on the diagonal and zeros elsewhere.
-  static XLATensor eye(int64_t lines, int64_t cols, const torch::lazy::BackendDevice& device,
+  static XLATensor eye(int64_t lines, int64_t cols,
+                       const torch::lazy::BackendDevice& device,
                        at::ScalarType element_type);
 
   static void eye_out(XLATensor& out, int64_t lines, int64_t cols);
@@ -599,10 +604,12 @@ class XLATensor {
   static XLATensor frac(const XLATensor& input);
 
   static XLATensor full(absl::Span<const int64_t> size,
-                        const at::Scalar& fill_value, const torch::lazy::BackendDevice& device,
+                        const at::Scalar& fill_value,
+                        const torch::lazy::BackendDevice& device,
                         at::ScalarType scalar_type);
   static XLATensor full_like(const XLATensor& input,
-                             const at::Scalar& fill_value, const torch::lazy::BackendDevice& device,
+                             const at::Scalar& fill_value,
+                             const torch::lazy::BackendDevice& device,
                              c10::optional<at::ScalarType> scalar_type);
 
   static XLATensor gather(const XLATensor& input, int64_t dim,
@@ -1132,7 +1139,8 @@ class XLATensor {
   static XLATensor threshold_backward(const XLATensor& grad_output,
                                       const XLATensor& input, float threshold);
 
-  static XLATensor to(XLATensor& input, c10::optional<torch::lazy::BackendDevice> device,
+  static XLATensor to(XLATensor& input,
+                      c10::optional<torch::lazy::BackendDevice> device,
                       c10::optional<at::ScalarType> scalar_type);
 
   static std::tuple<XLATensor, XLATensor> topk(const XLATensor& input,
@@ -1280,7 +1288,8 @@ class XLATensor {
   // held. The XLA tensor is nothing more than a shared pointer to a Data
   // object.
   struct Data {
-    Data(xla::ComputationClient::DataPtr xla_data, const torch::lazy::BackendDevice& device,
+    Data(xla::ComputationClient::DataPtr xla_data,
+         const torch::lazy::BackendDevice& device,
          c10::optional<at::ScalarType> logical_element_type)
         : xla_data(std::move(xla_data)),
           logical_element_type(logical_element_type),
@@ -1321,7 +1330,8 @@ class XLATensor {
             c10::optional<at::ScalarType> logical_element_type = c10::nullopt);
   XLATensor(ir::Value ir_value, const torch::lazy::BackendDevice& device,
             c10::optional<at::ScalarType> logical_element_type = c10::nullopt);
-  XLATensor(std::shared_ptr<View> view, const torch::lazy::BackendDevice& device,
+  XLATensor(std::shared_ptr<View> view,
+            const torch::lazy::BackendDevice& device,
             c10::optional<at::ScalarType> logical_element_type = c10::nullopt);
   XLATensor(std::shared_ptr<Data> data);
 
@@ -1364,13 +1374,15 @@ class XLATensor {
   // Create a new XLA tensor with the same metadata of the input tensor (with
   // possible overrides), and the new IR value.
   XLATensor CreateFrom(ir::Value ir_value) const;
-  XLATensor CreateFrom(ir::Value ir_value, const torch::lazy::BackendDevice& device) const;
+  XLATensor CreateFrom(ir::Value ir_value,
+                       const torch::lazy::BackendDevice& device) const;
   XLATensor CreateFrom(ir::Value ir_value,
                        at::ScalarType logical_element_type) const;
   XLATensor CreateFrom(
       ir::Value ir_value,
       c10::optional<at::ScalarType> logical_element_type_opt) const;
-  XLATensor CreateFrom(ir::Value ir_value, const torch::lazy::BackendDevice& device,
+  XLATensor CreateFrom(ir::Value ir_value,
+                       const torch::lazy::BackendDevice& device,
                        at::ScalarType logical_element_type) const;
 
   // We build an XLA graph accumulating XLA operations, but at a given point we

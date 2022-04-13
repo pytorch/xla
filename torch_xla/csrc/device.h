@@ -13,9 +13,7 @@ namespace torch_xla {
 enum class XlaDeviceType { CPU, GPU, TPU };
 
 struct DeviceType : public torch::lazy::BackendDeviceType {
-  DeviceType() {
-    type = static_cast<int>(XlaDeviceType::CPU);
-  }
+  DeviceType() { type = static_cast<int>(XlaDeviceType::CPU); }
   DeviceType(XlaDeviceType xla_device_type) {
     type = static_cast<int>(xla_device_type);
   }
@@ -63,9 +61,11 @@ const torch::lazy::BackendDevice* GetDefaultDevice();
 
 torch::lazy::BackendDevice GetCurrentDevice();
 
-torch::lazy::BackendDevice SetCurrentDevice(const torch::lazy::BackendDevice& device);
+torch::lazy::BackendDevice SetCurrentDevice(
+    const torch::lazy::BackendDevice& device);
 
-static inline torch::lazy::BackendDevice GetDeviceOrCurrent(const torch::lazy::BackendDevice* device) {
+static inline torch::lazy::BackendDevice GetDeviceOrCurrent(
+    const torch::lazy::BackendDevice* device) {
   return device != nullptr ? *device : GetCurrentDevice();
 }
 

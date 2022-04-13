@@ -38,8 +38,8 @@ std::string XlaDeviceTypeToString(XlaDeviceType hw_type) {
 //     return ParseDevice(default_device_spec.substr(0, pos) + device_spec,
 //                        device);
 //   }
-//   std::vector<std::string> device_spec_parts = absl::StrSplit(device_spec, ':');
-//   XLA_CHECK_EQ(device_spec_parts.size(), 2)
+//   std::vector<std::string> device_spec_parts = absl::StrSplit(device_spec,
+//   ':'); XLA_CHECK_EQ(device_spec_parts.size(), 2)
 //       << "Invalid device specification: " << device_spec;
 
 //   device->ordinal = std::stoi(device_spec_parts[1]);
@@ -65,7 +65,8 @@ std::string XlaDeviceTypeToString(XlaDeviceType hw_type) {
 // }
 
 std::string DeviceType::toString() const {
-  return absl::StrCat(XlaDeviceTypeToString(static_cast<XlaDeviceType>(type)), ":");
+  return absl::StrCat(XlaDeviceTypeToString(static_cast<XlaDeviceType>(type)),
+                      ":");
 }
 
 torch::lazy::BackendDevice ParseDeviceString(const std::string& device_spec) {
@@ -89,11 +90,14 @@ torch::lazy::BackendDevice ParseDeviceString(const std::string& device_spec) {
   int ordinal = std::stoi(device_spec_parts[1]);
   auto device_type = std::make_shared<DeviceType>();
   if (device_spec_parts[0] == "TPU") {
-    device_type->type = static_cast<std::underlying_type_t<XlaDeviceType>>(XlaDeviceType::TPU);
+    device_type->type =
+        static_cast<std::underlying_type_t<XlaDeviceType>>(XlaDeviceType::TPU);
   } else if (device_spec_parts[0] == "CPU") {
-     device_type->type = static_cast<std::underlying_type_t<XlaDeviceType>>(XlaDeviceType::CPU);
+    device_type->type =
+        static_cast<std::underlying_type_t<XlaDeviceType>>(XlaDeviceType::CPU);
   } else if (device_spec_parts[0] == "GPU") {
-     device_type->type = static_cast<std::underlying_type_t<XlaDeviceType>>(XlaDeviceType::GPU);
+    device_type->type =
+        static_cast<std::underlying_type_t<XlaDeviceType>>(XlaDeviceType::GPU);
   } else {
     XLA_ERROR() << "Invalid device specification: " << device_spec;
   }
@@ -102,7 +106,8 @@ torch::lazy::BackendDevice ParseDeviceString(const std::string& device_spec) {
 }
 
 const torch::lazy::BackendDevice* GetDefaultDevice() {
-  static const torch::lazy::BackendDevice* default_device = new torch::lazy::BackendDevice();
+  static const torch::lazy::BackendDevice* default_device =
+      new torch::lazy::BackendDevice();
   return default_device;
 }
 
@@ -113,7 +118,8 @@ torch::lazy::BackendDevice GetCurrentDevice() {
   return *g_current_device;
 }
 
-torch::lazy::BackendDevice SetCurrentDevice(const torch::lazy::BackendDevice& device) {
+torch::lazy::BackendDevice SetCurrentDevice(
+    const torch::lazy::BackendDevice& device) {
   torch::lazy::BackendDevice current = GetCurrentDevice();
   g_current_device = device;
   TF_VLOG(2) << "New current device: " << device;

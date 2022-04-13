@@ -61,20 +61,23 @@ static inline void AllEqual(at::Tensor tensor, at::Tensor xla_tensor) {
   EXPECT_TRUE(EqualValues(tensor, xla_tensor));
 }
 
-void ForEachDevice(absl::Span<const DeviceType> device_types,
-                   const std::function<void(const torch::lazy::BackendDevice&)>& devfn);
+void ForEachDevice(
+    absl::Span<const DeviceType> device_types,
+    const std::function<void(const torch::lazy::BackendDevice&)>& devfn);
 
 void ForEachDevice(absl::Span<const DeviceType> device_types,
                    const std::function<void(const torch::Device&)>& devfn);
 
-void ForEachDevice(const std::function<void(const torch::lazy::BackendDevice&)>& devfn);
+void ForEachDevice(
+    const std::function<void(const torch::lazy::BackendDevice&)>& devfn);
 
 void ForEachDevice(const std::function<void(const torch::Device&)>& devfn);
 
 void WithAllDevices(
     absl::Span<const DeviceType> device_types,
     const std::function<void(const std::vector<torch::lazy::BackendDevice>&,
-                             const std::vector<torch::lazy::BackendDevice>&)>& devfn);
+                             const std::vector<torch::lazy::BackendDevice>&)>&
+        devfn);
 
 std::string GetTensorTextGraph(at::Tensor tensor);
 
@@ -82,16 +85,19 @@ std::string GetTensorDotGraph(at::Tensor tensor);
 
 std::string GetTensorHloGraph(at::Tensor tensor);
 
-ir::Value GetTensorIrValue(const at::Tensor& tensor, const torch::lazy::BackendDevice& device);
+ir::Value GetTensorIrValue(const at::Tensor& tensor,
+                           const torch::lazy::BackendDevice& device);
 
 std::vector<xla::ComputationClient::DataPtr> Execute(
-    absl::Span<const ir::Value> roots, const torch::lazy::BackendDevice& device);
+    absl::Span<const ir::Value> roots,
+    const torch::lazy::BackendDevice& device);
 
 std::vector<at::Tensor> Fetch(
     absl::Span<const xla::ComputationClient::DataPtr> device_data);
 
-std::vector<at::Tensor> ExecuteAndFetch(absl::Span<const ir::Value> roots,
-                                        const torch::lazy::BackendDevice& device);
+std::vector<at::Tensor> ExecuteAndFetch(
+    absl::Span<const ir::Value> roots,
+    const torch::lazy::BackendDevice& device);
 
 void AssertBackward(const torch::Tensor& xla_output,
                     const std::vector<torch::Tensor>& xla_inputs,

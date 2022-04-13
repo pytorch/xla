@@ -60,7 +60,8 @@ torch::lazy::hash_t ComputeNodeKey(
 
 xla::XlaComputation BuildNodeComputation(
     const torch::lazy::Node* node,
-    absl::Span<const xla::Shape* const> input_shapes, const torch::lazy::BackendDevice& device) {
+    absl::Span<const xla::Shape* const> input_shapes,
+    const torch::lazy::BackendDevice& device) {
   ir::LoweringContext loctx("BuildNodeComputation", device);
   const auto& operands = node->operands();
   for (size_t i = 0; i < operands.size(); ++i) {
@@ -159,7 +160,8 @@ std::vector<xla::ComputationClient::ExecuteChainedOp> OpByOpExecutor::BuildOps(
           xla::ProgramShape program_shape =
               ConsumeValue(computation.GetProgramShape());
           compile_shapes.push_back(MakeShapeWithDeviceLayout(
-              program_shape.result(), static_cast<XlaDeviceType>(exec_device.type())));
+              program_shape.result(),
+              static_cast<XlaDeviceType>(exec_device.type())));
           compile_instances.push_back({std::move(computation), device,
                                        compilation_devices,
                                        &compile_shapes.back()});
