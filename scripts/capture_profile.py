@@ -4,6 +4,14 @@
 Example run commands:
     $ python3 capture_profile.py --service_addr "localhost:9001" --logdir "gs://path/to/logdir" --duration_ms 20000 --interactive loop
     $ python3 capture_profile.py --service_addr "10.0.0.2:9001" --logdir "gs://path/to/logdir" --duration_ms 30000 --automatic 100 60
+
+Once you have captured & saved the performance profiles, you can view them using Tensorboard.
+
+Example commands to launch the Tensorboard server:
+    $ (vm) tensorboard --logdir "gs://path/to/logdir --port 8001"
+    $ tensorboard --logdir "/local/path/to/logdir --port 8001"
+
+After that, visit http://localhost:8001/#profile on your machine to view the performance profile in Tensorboard.
 """
 
 import argparse
