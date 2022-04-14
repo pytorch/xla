@@ -918,7 +918,7 @@ class XLATensor {
   static XLATensor not_supported(std::string description, xla::Shape shape,
                                  const Device& device);
 
-  static void optimization_barrier_(XLATensor& input);
+  static void optimization_barrier_(std::vector<XLATensor>& tensors);
 
   // Permute the dimensions of this tensor according to the given permutation.
   static XLATensor permute(const XLATensor& input,

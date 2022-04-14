@@ -277,10 +277,8 @@ std::pair<at::Tensor, std::shared_ptr<ir::Value>> CollectivePermute(
 }
 
 void OptimizationBarrier_(std::vector<at::Tensor>& tensors) {
-  for (auto& tensor : tensors) {
-    XLATensor xtensor = bridge::GetXlaTensor(tensor);
-    XLATensor::optimization_barrier_(xtensor);
-  }
+  std::vector<XLATensor> xtensors = GetXlaTensors(tensors, /*want_all=*/false);
+  XLATensor::optimization_barrier_(xtensors);
 }
 
 void SyncTensors(const std::vector<at::Tensor>& tensors,
@@ -1035,9 +1033,8 @@ void InitXlaModuleBindings(py::module m) {
           }
           return new_token;
         });
-  m.def("_xla_optimization_barrier_", [](std::vector<at::Tensor>& inputs) {
-    OptimizationBarrier_(inputs);
-  });
+  m.def("_xla_optimization_barrier_",
+        [](std::vector<at::Tensor>& inputs) { OptimizationBarrier_(inputs); });
   m.def("_xla_set_default_device", [](const std::string& device) {
     return SetCurrentThreadDevice(device);
   });

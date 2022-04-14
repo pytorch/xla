@@ -98,6 +98,7 @@
 #include "torch_xla/csrc/ops/normal.h"
 #include "torch_xla/csrc/ops/not_supported.h"
 #include "torch_xla/csrc/ops/ops.h"
+#include "torch_xla/csrc/ops/optimization_barrier.h"
 #include "torch_xla/csrc/ops/permute.h"
 #include "torch_xla/csrc/ops/prod.h"
 #include "torch_xla/csrc/ops/put.h"
@@ -2195,8 +2196,16 @@ XLATensor XLATensor::not_supported(std::string description, xla::Shape shape,
                 device);
 }
 
-void XLATensor::optimization_barrier_(XLATensor& input) {
-  return input.SetInPlaceIrValue(ir::ops::OptimizationBarrier(input.GetIrValue()));
+void XLATensor::optimization_barrier_(std::vector<XLATensor>& tensors) {
+  std::vector<ir::Value> irs;
+  irs.reserve(tensors.size());
+  for (XLATensor& tensor : tensors) {
+    irs.push_back(tensor.GetIrValue());
+  }
+  torch::lazy::NodePtr result = ir::MakeNode<ir::ops::OptimizationBarrier>(irs);
+  for (int i = 0; i < tensors.size(); i++) {
+    tensors[i].SetInPlaceIrValue(ir::Value(result, i));
+  }
 }
 
 XLATensor XLATensor::permute(const XLATensor& input,
