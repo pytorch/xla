@@ -5784,6 +5784,8 @@ TEST_F(AtenXlaTensorTest, TestHardSigmoidBackward) {
   });
 
   ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::hardsigmoid_backward",
+                       cpp_test::GetIgnoredCounters());
 }
 
 TEST_F(AtenXlaTensorTest, TestHardSwish) {
