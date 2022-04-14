@@ -107,8 +107,6 @@ xla::XlaOp BuildHardSwishBackward(xla::XlaOp grad_output, xla::XlaOp input) {
   xla::XlaOp three = XlaHelpers::ScalarValue<float>(3.0, shape.element_type(),
                                                     input.builder());
   xla::XlaOp zero = xla::Zero(input.builder(), shape.element_type());
-  xla::XlaOp one = XlaHelpers::ScalarValue<float>(1.0, shape.element_type(),
-                                                  input.builder());
   xla::XlaOp pointfive = XlaHelpers::ScalarValue<float>(
       0.5, shape.element_type(), input.builder());
 
@@ -116,7 +114,7 @@ xla::XlaOp BuildHardSwishBackward(xla::XlaOp grad_output, xla::XlaOp input) {
       xla::Select(Between(input, -3.0, 3.0),
                   xla::Mul(grad_output, pointfive + (input / three)), zero);
 
-  return xla::Select(xla::Ge(input, three), one, stepone);
+  return xla::Select(xla::Ge(input, three), grad_output, stepone);
 }
 
 xla::XlaOp BuildSoftshrink(xla::XlaOp input, const at::Scalar& lambda) {
