@@ -5824,7 +5824,8 @@ TEST_F(AtenXlaTensorTest, TestHardSwishBackward) {
   });
 
   ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
-  ExpectCounterChanged("xla::hardswish_backward", cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::hardswish_backward",
+                       cpp_test::GetIgnoredCounters());
 }
 
 TEST_F(AtenXlaTensorTest, TestSoftshrink) {
