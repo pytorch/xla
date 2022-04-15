@@ -525,7 +525,7 @@ xla::XlaOp BuildLogsumexp(xla::XlaOp input,
 
 /**
  * @brief Returns a random permutation of integers from 0 to n - 1
- *
+
  * [Algorithm of randperm]: randperm is implemented by sorting an
  * arange tensor of size n with randomly generated keys. When random
  * keys are different from each other, all different permutations have
