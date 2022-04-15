@@ -79,4 +79,3 @@ std::string Roll::ToString() const {
 }  // namespace ops
 }  // namespace ir
 }  // namespace torch_xla
-

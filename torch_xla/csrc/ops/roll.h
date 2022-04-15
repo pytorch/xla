@@ -30,4 +30,3 @@ class Roll : public Node {
 }  // namespace ops
 }  // namespace ir
 }  // namespace torch_xla
-
