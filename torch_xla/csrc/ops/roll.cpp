@@ -15,13 +15,13 @@ namespace ops {
 
 Roll::Roll(const Value& input, std::vector<int64_t> shifts,
            std::vector<int64_t> dims)
-    : Node(torch::lazy::OpKind(at::aten::roll)), {input}, input.shape(),
+    : Node(torch::lazy::OpKind(at::aten::roll), {input}, input.shape(),
            /*num_outputs=*/1, torch::lazy::MHash(shifts, dims)),
       shifts_(std::move(shifts)),
       dims_(std::move(dims)) {}
 
-NodePtr Roll::Clone(OpList operands) const {
-  return MakeNode<Roll>(operands.at(0), shifts_, dims_);
+torch::lazy::NodePtr Roll::Clone(OpList operands) const {
+  return ir::MakeNode<Roll>(operands.at(0), shifts_, dims_);
 }
 
 XlaOpVector Roll::Lower(LoweringContext* loctx) const {
