@@ -2705,6 +2705,18 @@ at::Tensor& XLANativeFunctions::random_(
   return self;
 }
 
+at::Tensor& XLANativeFunctions::randperm_out(
+    int64_t n, c10::optional<at::Generator> generator, at::Tensor& out) {
+  XLA_FN_COUNTER("xla::");
+  if (generator.has_value() && generator->defined()) {
+    return at::native::call_fallback_fn<&xla_cpu_fallback,
+                                        ATEN_OP(randperm_out)>::call(n, out);
+  }
+  XLATensor out_tensor = bridge::GetXlaTensor(out);
+  XLATensor::randperm_out(n, out_tensor);
+  return out;
+}
+
 at::Tensor XLANativeFunctions::reciprocal(const at::Tensor& self) {
   XLA_FN_COUNTER("xla::");
   return bridge::AtenFromXlaTensor(

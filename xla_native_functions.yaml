@@ -235,6 +235,7 @@ supported:
   - random_
   - random_.from
   - random_.to
+  - randperm.generator_out
   - reciprocal
   - reflection_pad2d
   - reflection_pad2d_backward

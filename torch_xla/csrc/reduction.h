@@ -104,4 +104,6 @@ xla::XlaOp BuildLogsumexp(xla::XlaOp input,
                           absl::Span<const int64_t> dimensions,
                           bool keep_reduced_dimensions);
 
+xla::XlaOp BuildRandpermOut(int64_t n);
+
 }  // namespace torch_xla

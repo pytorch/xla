@@ -1,7 +1,10 @@
 #include "torch_xla/csrc/reduction.h"
 
+#include <stdlib.h>
+
 #include <cmath>
 #include <unordered_set>
+#include <vector>
 
 #include "tensorflow/compiler/xla/client/lib/arithmetic.h"
 #include "tensorflow/compiler/xla/client/lib/constants.h"
@@ -10,6 +13,7 @@
 #include "torch/csrc/lazy/core/util.h"
 #include "torch_xla/csrc/convert_ops.h"
 #include "torch_xla/csrc/helpers.h"
+#include "torch_xla/csrc/random.h"
 #include "torch_xla/csrc/tensor_util.h"
 
 namespace torch_xla {
@@ -516,6 +520,82 @@ xla::XlaOp BuildLogsumexp(xla::XlaOp input,
             .result;
   }
   return logs + max_in_dim;
+}
+
+/**
+ * @brief Returns a random permutation of integers from 0 to n - 1
+ * [Algorithm of randperm]: randperm is implemented by sorting an
+ * arange tensor of size n with randomly generated keys. When random
+ * keys are different from each other, all different permutations have
+ * the same probability.
+ *
+ * However, there is a pitfall here:
+ * For better performance, these N random keys are generated independently,
+ * and there is no effort to make sure they are different at the time of
+ * generation. When two keys are identical, stable sorting algorithms will not
+ * permute these two keys. As a result, (0, 1) will appear more often than (1,
+ * 0).
+ *
+ * The PyTorch CUDA implementation for randperm performs some additional
+ * post-processing to resolve this pitfall, which guarantees that the
+ * permutation is truely uniformaly distributed. However, this XLA
+ * impementation has not address this pitfall yet. It simply sorts an arange
+ * tensor of size n with random keys.
+ */
+xla::XlaOp BuildRandpermOut(int64_t n) {
+  xla::XlaBuilder builder("RandpermOut");
+
+  xla::XlaOp min_val =
+      XlaHelpers::ScalarValue(0, xla::PrimitiveType::U64, &builder);
+  xla::XlaOp max_val =
+      XlaHelpers::ScalarValue(n, xla::PrimitiveType::U64, &builder);
+  // A random seed to use for generating the random keys
+  xla::XlaOp random_seed =
+      XlaHelpers::ScalarValue(rand(), xla::PrimitiveType::U64, &builder);
+  xla::Shape scalar_shape =
+      xla::ShapeUtil::MakeShape(xla::PrimitiveType::U64, {});
+
+  // Create a span of tuples `(random_key, number)`,
+  // where `number` is from 0 to n - 1
+  std::vector<xla::XlaOp> key_num_vec;
+  for (size_t i = 0; i < n; ++i) {
+    xla::XlaOp random_key =
+        RngDiscreteUniform(random_seed, scalar_shape, min_val, max_val);
+    xla::XlaOp number =
+        XlaHelpers::ScalarValue(i, xla::PrimitiveType::U64, &builder);
+    key_num_vec.push_back(xla::Tuple(&builder, {random_key, number}));
+  }
+  auto key_num_span = absl::Span<const xla::XlaOp>(key_num_vec);
+
+  // Create a comparator that sorts the tuples
+  // `(random_key, number)` by their `random_key`
+  xla::XlaComputation comparator;
+  {
+    xla::XlaBuilder b("compare_key");
+    xla::XlaOp key_num_1 = xla::Parameter(&b, 0, scalar_shape, "key_num_1");
+    xla::XlaOp key_num_2 = xla::Parameter(&b, 1, scalar_shape, "key_num_2");
+    xla::XlaOp key1 = xla::GetTupleElement(key_num_1, 0);
+    xla::XlaOp key2 = xla::GetTupleElement(key_num_2, 0);
+    xla::Lt(key1, key2);
+    xla::StatusOr<xla::XlaComputation> computation_status = b.Build();
+    assert(xla::Status::OK() == computation_status.status());
+    comparator = computation_status.ConsumeValueOrDie();
+  }
+
+  // Create a random permutation by sorting the numbers with their random keys
+  xla::XlaOp sorted_key_nums = xla::Sort(key_num_span, comparator);
+
+  // Map each tuple `(random_key, number)` to just `number`,
+  // i.e. we only keep the numbers, which is the random
+  // permutation that we return
+  std::vector<xla::XlaOp> perm;
+  for (size_t i = 0; i < n; ++i) {
+    xla::XlaOp key_num = xla::GetTupleElement(sorted_key_nums, i);
+    perm.push_back(xla::GetTupleElement(key_num, 1));
+  }
+  auto perm_span = absl::Span<const xla::XlaOp>(perm);
+
+  return xla::Tuple(&builder, perm_span);
 }
 
 }  // namespace torch_xla

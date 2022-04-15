@@ -962,6 +962,8 @@ class XLATensor {
   static XLATensor randperm(int64_t n, const torch::lazy::BackendDevice& device,
                             at::ScalarType scalar_type);
 
+  static void randperm_out(int64_t n, XLATensor& out);
+
   static XLATensor reciprocal(const XLATensor& input);
 
   static XLATensor reflection_pad2d(const XLATensor& input,
