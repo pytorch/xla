@@ -12,7 +12,7 @@ class Roll : public Node {
   Roll(const Value& input, std::vector<int64_t> shifts,
        std::vector<int64_t> dims);
 
-  NodePtr Clone(OpList operands) const override;
+  torch::lazy::NodePtr Clone(OpList operands) const override;
 
   XlaOpVector Lower(LoweringContext* loctx) const override;
 

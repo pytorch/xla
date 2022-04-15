@@ -2393,7 +2393,7 @@ XLATensor XLATensor::roll(const XLATensor& input,
         << "shifts and dimensions must align. shifts: " << shifts.size()
         << ", dims:" << dims.size();
   }
-  auto canonical_dims = XlaHelpers::GetCanonicalDimensionIndices(
+  auto canonical_dims = torch::lazy::GetCanonicalDimensionIndices(
       torch::lazy::ToVector<int64_t>(dims), input.shape().get().rank());
   return input.CreateFrom(ir::MakeNode<ir::ops::Roll>(
       input.GetIrValue(), torch::lazy::ToVector<int64_t>(shifts),
