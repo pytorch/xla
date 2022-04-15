@@ -142,6 +142,11 @@ class XlaFullyShardedDataParallel(nn.Module):
       use_all_gather_via_all_reduce: bool = True,
       mark_step_on_freeing: bool = False,
   ):
+    if isinstance(module, XlaFullyShardedDataParallel):
+      raise RuntimeError(
+          "Cannot wrap a module that is already wrapped with FSDP. For nested FSDP, "
+          "first wrap the inner child modules before wrapping the outer parent module."
+      )
     is_forward_defined = (
         hasattr(module, "forward") and hasattr(module.forward, "__func__") and
         module.forward.__func__ != torch.nn.Module.forward)
@@ -383,10 +388,10 @@ class XlaFullyShardedDataParallel(nn.Module):
     for module_name, m in self.named_modules():
       for n, p in m.named_parameters(recurse=False):
         if "xla" not in str(p.device):
-          raise Exception(
+          raise ValueError(
               "please moved the module to XLA device before wrapping with FSDP")
         if p.dtype != torch.float32:
-          raise Exception("only fp32 parameters are supported")
+          raise TypeError("only fp32 parameters are supported")
         if p in params_to_shard_set:
           if p in shared_full_param_memo:
             mname, shared_m, shared_n = shared_full_param_memo[p]
