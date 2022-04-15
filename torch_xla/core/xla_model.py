@@ -1026,7 +1026,7 @@ def get_memory_info(device):
   return torch_xla._XLAC._xla_memory_info(str(device))
 
 
-def optimization_barrier(tensors):
+def optimization_barrier_(tensors):
   """Blocks xla compiler from moving computations across this barrier. The common
   use case would be blocking xla common-subexpression elimination pass from undoing
   the gradient checkpointing.
@@ -1034,4 +1034,4 @@ def optimization_barrier(tensors):
   Args:
     tensors (List[torch.Tensor]): List of `torch.Tensor` to add barrier to.
   """
-  return torch_xla._XLAC._xla_optimization_barrier(tensors)
+  torch_xla._XLAC._xla_optimization_barrier_(tensors)
