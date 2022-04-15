@@ -1057,17 +1057,6 @@ torch::lazy::NodePtr Softplus(const Value& input, const Value& beta,
                    std::move(lower_fn));
 }
 
-torch::lazy::NodePtr OptimizationBarrier(const Value& input) {
-  auto lower_fn = [](const Node& node, LoweringContext* loctx) -> XlaOpVector {
-    xla::XlaOp xla_input = loctx->GetOutputOp(node.operand(0));
-    xla::XlaOp xla_output = xla::OptimizationBarrier(xla_input);
-    return node.ReturnOp(xla_output, loctx);
-  };
-
-  return GenericOp(xla_optimization_barrier, {input}, input.xla_shape(),
-                   std::move(lower_fn));
-}
-
 }  // namespace ops
 }  // namespace ir
 }  // namespace torch_xla

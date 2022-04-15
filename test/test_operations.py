@@ -757,8 +757,9 @@ class TestOptimizationBarrier(XlaTestCase):
       return
     x = torch.randn(5, 5, device=device)
     y = torch.randn(5, 5, device=device)
-    (x1, y1) = xm.optimization_barrier([x, y])
-    self.assertEqual(x + y, x1 + y1)
+    z = x + y
+    xm.optimization_barrier_([x, y])
+    self.assertEqual(z, x + y)
 
 
 class TestDataType(XlaTestCase):

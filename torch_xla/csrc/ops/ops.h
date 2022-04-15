@@ -269,8 +269,6 @@ torch::lazy::NodePtr SLogDet(const Value& input);
 torch::lazy::NodePtr Softplus(const Value& input, const Value& beta,
                               const Value& threshold);
 
-torch::lazy::NodePtr OptimizationBarrier(const Value& input);
-
 }  // namespace ops
 }  // namespace ir
 }  // namespace torch_xla
