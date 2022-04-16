@@ -121,6 +121,10 @@ class XlaFullyShardedDataParallel(nn.Module):
       execute_sharding_on_init (bool, Optional):
           if ``True``, immediately execute the parameter sharding via
           `xm.mark_step` to free up the memory of the full parameters.
+      optimization_barrier_on_output (bool, Optional):
+          if ``True``, apply `xm.optimization_barrier_` on the FSDP module's
+          outputs. This avoids fusion (by the XLA compiler) with subsequent
+          computation after the FSDP module and could save additional memory.
       use_all_gather_via_all_reduce (bool, Optional):
           if ``True``, use PyTorch XLA 1.10's all_gather implementation,
           which performs all_gather via padding and all_reduce and avoids
@@ -139,7 +143,8 @@ class XlaFullyShardedDataParallel(nn.Module):
       reshard_after_forward: bool = True,
       flatten_parameters: bool = True,
       execute_sharding_on_init: bool = True,
-      use_all_gather_via_all_reduce: bool = True,
+      optimization_barrier_on_output: bool = True,
+      use_all_gather_via_all_reduce: bool = False,
       mark_step_on_freeing: bool = False,
   ):
     if isinstance(module, XlaFullyShardedDataParallel):
@@ -165,6 +170,7 @@ class XlaFullyShardedDataParallel(nn.Module):
     self.world_size = xm.xrt_world_size()
     self.reshard_after_forward = self._orig_reshard_after_forward = reshard_after_forward
     self.flatten_parameters = flatten_parameters
+    self.optimization_barrier_on_output = optimization_barrier_on_output
     if use_all_gather_via_all_reduce:
       self.all_gather_op = all_gather_via_all_reduce
     else:
@@ -591,6 +597,16 @@ class XlaFullyShardedDataParallel(nn.Module):
     if self.reshard_after_forward:
       self._free_full_params()
 
+    if self.optimization_barrier_on_output:
+      # Apply the XLA compiler optimization barrier to avoid fusion with
+      # subsequent computation. This potentially saves additional memory
+      # since fusion sometimes results in higher memory consumption.
+      def _apply_barrier(t):
+        xm.optimization_barrier_([t])
+        return t
+
+      outputs = apply_to_tensors(_apply_barrier, outputs)
+
     # Register pre-backward hooks to all-gather the params for the backward
     # pass (if output's grad was needed). This won't register anything if
     # we are in eval mode.
@@ -865,12 +881,32 @@ class XlaFullyShardedDataParallel(nn.Module):
     """
     if self.has_full_params:
       return
+    p_list, p_shard_list, p_data_list, p_shared_data_list = [], [], [], []
     for p, p_shard in zip(self.full_params, self.sharded_params):
       if not p._has_full_param:
         # gather full parameter from shards
-        p_padded = self.all_gather_op(p_shard).flatten().detach()
-        p.data = p_padded[:p_shard._orig_size.numel()].view(p_shard._orig_size)
-        p._has_full_param = True
+        p_padded = self.all_gather_op(p_shard.data).flatten().detach()
+        p_data = p_padded[:p_shard._orig_size.numel()].view(p_shard._orig_size)
+        p_list.append(p)
+        p_shard_list.append(p_shard)
+        p_data_list.append(p_data)
+        p_shared_data_list.append(p_shard.data)
+
+    if len(p_data_list) + len(p_shared_data_list) > 0:
+      # Apply the XLA compiler optimization barrier to avoid fusion of the
+      # full parameter reconstruction with other computation.
+      # Otherwise, the XLA compiler might fuse `_rebuild_full_params` in the
+      # the forward pass with any `_rebuild_full_params` in the backward pass
+      # through common subexpression elimination (CSE) and keep the full
+      # parameters (not freeing them and rebuilding them later, essentially
+      # changing `reshard_after_forward` to `False`` and using more memory).
+      xm.optimization_barrier_(p_data_list + p_shared_data_list)
+    for p, p_shard, p_data, p_shard_data in zip(p_list, p_shard_list,
+                                                p_data_list,
+                                                p_shared_data_list):
+      p.data = p_data
+      p_shard.data = p_shard_data
+      p._has_full_param = True
     self.has_full_params = True
 
   @torch.no_grad()
@@ -879,11 +915,27 @@ class XlaFullyShardedDataParallel(nn.Module):
     if params is None:
       params = self.full_params
     self.has_full_params = False
+    p_list, p_data_list = [], []
     for p in params:
       if p._has_full_param:
         # free the original full parameter
-        p.data = self._dummy_data_placeholder
-        p._has_full_param = False
+        p_data = self._dummy_data_placeholder
+        p_list.append(p)
+        p_data_list.append(p_data)
+
+    if len(p_data_list) > 0:
+      # Apply the XLA compiler optimization barrier to avoid fusion of the
+      # full parameter freeing with other computation.
+      # Otherwise, the XLA compiler might fuse `_free_full_params` in the
+      # forward pass with any `_free_full_params` in the backward pass
+      # through common subexpression elimination (CSE) and keep the full
+      # parameters (not freeing them and rebuilding them later, essentially
+      # changing `reshard_after_forward` to `False`` and using more memory).
+      xm.optimization_barrier_(p_data_list)
+    for p, p_data in zip(p_list, p_data_list):
+      p.data = p_data
+      p._has_full_param = False
+
     # immediately execute the parameter freeing as a workaround to undesired XLA fusion
     # see https://github.com/pytorch/xla/issues/3455#issuecomment-1085448513 for details
     # TODO (ronghanghu): remove when https://github.com/pytorch/xla/issues/3455 is resolved
