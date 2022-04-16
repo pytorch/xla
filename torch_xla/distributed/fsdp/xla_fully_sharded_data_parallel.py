@@ -123,7 +123,7 @@ class XlaFullyShardedDataParallel(nn.Module):
           `xm.mark_step` to free up the memory of the full parameters.
       optimization_barrier_on_output (bool, Optional):
           if ``True``, apply `xm.optimization_barrier_` on the FSDP module's
-          outputs. This avoids fusion (by the XLA compiler) with subsequent
+          outputs and their gradients. This avoids XLA fusion with subsequent
           computation after the FSDP module and could save additional memory.
       use_all_gather_via_all_reduce (bool, Optional):
           if ``True``, use PyTorch XLA 1.10's all_gather implementation,
@@ -598,14 +598,9 @@ class XlaFullyShardedDataParallel(nn.Module):
       self._free_full_params()
 
     if self.optimization_barrier_on_output:
-      # Apply the XLA compiler optimization barrier to avoid fusion with
-      # subsequent computation. This potentially saves additional memory
-      # since fusion sometimes results in higher memory consumption.
-      def _apply_barrier(t):
-        xm.optimization_barrier_([t])
-        return t
-
-      outputs = apply_to_tensors(_apply_barrier, outputs)
+      # Apply XLA compiler optimization barrier to FSDP outputs and their gradients to avoid
+      # fusion across FSDP modules (which sometimes results in higher memory consumption).
+      outputs = self._register_optimization_barrier_hooks(outputs)
 
     # Register pre-backward hooks to all-gather the params for the backward
     # pass (if output's grad was needed). This won't register anything if
@@ -619,6 +614,23 @@ class XlaFullyShardedDataParallel(nn.Module):
     # Done with a forward pass.
     self.training_state = TrainingState.IDLE
 
+    return outputs
+
+  def _register_optimization_barrier_hooks(self, outputs: Any) -> Any:
+    """
+    Apply `xm.optimization_barrier_` to the outputs and their gradients.
+    """
+
+    def _optimization_barrier_grad_hook(t_grad):
+      xm.optimization_barrier_([t_grad])
+      return t_grad
+
+    def _apply_optimization_barrier(t):
+      xm.optimization_barrier_([t])
+      t.register_hook(_optimization_barrier_grad_hook)
+      return t
+
+    outputs = apply_to_tensors(_apply_optimization_barrier, outputs)
     return outputs
 
   def _register_pre_backward_hooks(self, outputs: Any) -> Any:
