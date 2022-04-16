@@ -15,7 +15,7 @@ namespace ops {
 
 Roll::Roll(const Value& input, std::vector<int64_t> shifts,
            std::vector<int64_t> dims)
-    : Node(torch::lazy::OpKind(at::aten::roll), {input}, input.shape(),
+    : Node(torch::lazy::OpKind(at::aten::roll), {input}, input.xla_shape(),
            /*num_outputs=*/1, torch::lazy::MHash(shifts, dims)),
       shifts_(std::move(shifts)),
       dims_(std::move(dims)) {}
