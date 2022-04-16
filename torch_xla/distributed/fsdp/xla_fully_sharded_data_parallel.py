@@ -128,13 +128,16 @@ class XlaFullyShardedDataParallel(nn.Module):
       use_all_gather_via_all_reduce (bool, Optional):
           if ``True``, use PyTorch XLA 1.10's all_gather implementation,
           which performs all_gather via padding and all_reduce and avoids
-          the GRPC error (see https://github.com/pytorch/xla/issues/3423).
+          memory layout error (see https://github.com/pytorch/xla/issues/3423)
+          in previous PyTorch XLA versions (before #3423 is resolved).
       mark_step_on_freeing (bool, Optional):
           if ``True``, call `xm.mark_step` upon freeing full parameters.
-          This is a temporary and inefficient workaround to avoid XLA compiler
-          fusion that breaks parameter freeing in nested FSDP. It is useful
-          only when ``reshard_after_forward`` is ``True``. See details in
-          https://github.com/pytorch/xla/issues/3455#issuecomment-1085448513.
+          When ``reshard_after_forward`` is ``True``, this option avoid XLA
+          compiler fusion by forcing an execution to free memory (see
+          https://github.com/pytorch/xla/issues/3455#issuecomment-1085448513
+          for details). This option may notably increase the execution time
+          and trigger frequent compilation, so it should only be used for
+          debugging (e.g. memory profiling) and not in real cases.
   """
 
   def __init__(
@@ -175,6 +178,13 @@ class XlaFullyShardedDataParallel(nn.Module):
       self.all_gather_op = all_gather_via_all_reduce
     else:
       self.all_gather_op = xm.all_gather
+    # TODO (ronghanghu): remove when https://github.com/pytorch/xla/issues/3455 is resolved
+    # This is a temporary workaround before after we have a mature solution
+    # to avoid undesired fusion with XLA compiler optimization barrier (see
+    # https://github.com/pytorch/xla/issues/3455#issuecomment-1085448513
+    # for details). This workaround notably increases the execution time and
+    # may trigger more compilation, so we need a permanent solution to #3455.
+    self.mark_step_on_freeing = mark_step_on_freeing
 
     self.gradient_predivide_factor: float = self._get_gradient_predivide_factor(
         self.world_size)
@@ -252,14 +262,7 @@ class XlaFullyShardedDataParallel(nn.Module):
       # Execute the parameter sharding immediately and free up the memory
       gc.collect()
       xm.mark_step()
-
-    # TODO (ronghanghu): remove when https://github.com/pytorch/xla/issues/3455 is resolved
-    # This is a temporary workaround before after we have a mature solution
-    # to avoid undesired fusion with XLA compiler optimization barrier (see
-    # https://github.com/pytorch/xla/issues/3455#issuecomment-1085448513
-    # for details). This workaround notably increases the execution time and
-    # may trigger more compilation, so we need a permanent solution to #3455.
-    self._mark_step_on_freeing = mark_step_on_freeing
+      xm.wait_device_ops()
 
   def _get_gradient_predivide_factor(self, world_size: int) -> float:
     factor: int = 1
@@ -596,6 +599,12 @@ class XlaFullyShardedDataParallel(nn.Module):
     outputs = self.module(*args, **kwargs)
     if self.reshard_after_forward:
       self._free_full_params()
+      # Forcing an execution to free the full parameter memory immediately and avoid any XLA compiler
+      # fusion (see https://github.com/pytorch/xla/issues/3455#issuecomment-1085448513 for details).
+      # This option may notably increase the execution time and trigger frequent compilation,
+      # so it should only be used for debugging (e.g. memory profiling) and not in real cases.
+      if self.mark_step_on_freeing:
+        xm.mark_step()
 
     if self.optimization_barrier_on_output:
       # Apply XLA compiler optimization barrier to FSDP outputs and their gradients to avoid
@@ -662,6 +671,14 @@ class XlaFullyShardedDataParallel(nn.Module):
       # Note, ``self._rebuild_full_params`` is idempotent. So in case it is called
       # unnecessarily, it doesn't incur much overhead.
       if self.reshard_after_forward:
+        # Forcing an execution to finish all previous ops (such as freeing earlier params and
+        # sharding their gradients) before rebuilding the full parameters and avoid any XLA compiler
+        # fusion (see https://github.com/pytorch/xla/issues/3455#issuecomment-1085448513 for details).
+        # This option may notably increase the execution time and trigger frequent compilation,
+        # so it should only be used for debugging (e.g. memory profiling) and not in real cases.
+        if self.mark_step_on_freeing:
+          xm.mark_step()
+
         self._rebuild_full_params()
 
       # Only run the following once per iteration (i.e. in case
@@ -947,12 +964,6 @@ class XlaFullyShardedDataParallel(nn.Module):
     for p, p_data in zip(p_list, p_data_list):
       p.data = p_data
       p._has_full_param = False
-
-    # immediately execute the parameter freeing as a workaround to undesired XLA fusion
-    # see https://github.com/pytorch/xla/issues/3455#issuecomment-1085448513 for details
-    # TODO (ronghanghu): remove when https://github.com/pytorch/xla/issues/3455 is resolved
-    if self._mark_step_on_freeing:
-      xm.mark_step()
 
   def assert_state(self, state: Union[TrainingState,
                                       List[TrainingState]]) -> None:
