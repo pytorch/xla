@@ -7,6 +7,7 @@ import contextlib
 from enum import Enum, auto
 import functools
 import gc
+from itertools import chain
 import logging
 from math import inf
 import time
@@ -149,6 +150,8 @@ class XlaFullyShardedDataParallel(nn.Module):
       optimization_barrier_on_output: bool = True,
       use_all_gather_via_all_reduce: bool = False,
       mark_step_on_freeing: bool = False,
+      _debug_dummy_forward_pass: bool = False,
+      _debug_msg: str = "xla_fsdp",
   ):
     if isinstance(module, XlaFullyShardedDataParallel):
       raise RuntimeError(
@@ -185,6 +188,8 @@ class XlaFullyShardedDataParallel(nn.Module):
     # for details). This workaround notably increases the execution time and
     # may trigger more compilation, so we need a permanent solution to #3455.
     self.mark_step_on_freeing = mark_step_on_freeing
+    self._debug_dummy_forward_pass = _debug_dummy_forward_pass
+    self._debug_msg = _debug_msg
 
     self.gradient_predivide_factor: float = self._get_gradient_predivide_factor(
         self.world_size)
@@ -596,7 +601,13 @@ class XlaFullyShardedDataParallel(nn.Module):
     # These need to be re-registered every forward pass.
     self._register_post_backward_hooks()
 
-    outputs = self.module(*args, **kwargs)
+    if not self._debug_dummy_forward_pass:
+      outputs = self.module(*args, **kwargs)
+    else:
+      # Run a dummy forward pass by summing the inputs and full parameter.
+      # This can be used to debug FSDP parameter memory consumption.
+      outputs = self._dummy_forward(*args, **kwargs)
+
     if self.reshard_after_forward:
       self._free_full_params()
       # Forcing an execution to free the full parameter memory immediately and avoid any XLA compiler
@@ -622,6 +633,29 @@ class XlaFullyShardedDataParallel(nn.Module):
 
     # Done with a forward pass.
     self.training_state = TrainingState.IDLE
+
+    return outputs
+
+  def _dummy_forward(self, *args: Any, **kwargs: Any) -> torch.Tensor:
+    """
+    A dummy forward passs with minimal computation that sums all inputs and
+    full parameters, e.g. to debug parameter memory consumption.
+    """
+    outputs = torch.zeros(1, device=xm.xla_device())
+    for t in chain(args, kwargs.values(), self.full_params):
+      if isinstance(t, torch.Tensor) and t.dtype == torch.float32:
+        outputs = outputs + t.mean()
+
+    # recursively run dummy forward pass on inner FSDP modules (if any)
+    resursive = kwargs.pop("_xla_fsdp_dummy_forward_resursive", True)
+    if resursive:
+      assert self._is_root
+      for m in self.modules():
+        if isinstance(m, XlaFullyShardedDataParallel) and m != self:
+          _m_orig_debug_dummy_forward_pass = m._debug_dummy_forward_pass
+          m._debug_dummy_forward_pass = True
+          outputs = m(outputs, _xla_fsdp_dummy_forward_resursive=False)
+          m._debug_dummy_forward_pass = _m_orig_debug_dummy_forward_pass
 
     return outputs
 
@@ -843,7 +877,27 @@ class XlaFullyShardedDataParallel(nn.Module):
     if not self._post_backward_callback_queued:
       self.assert_state([TrainingState.IDLE])
       self._post_backward_callback_queued = True
-      Variable._execution_engine.queue_callback(self._wait_for_post_backward)
+      Variable._execution_engine.queue_callback(
+          self._try_wait_for_post_backward)
+
+  def _try_wait_for_post_backward(self) -> None:
+    """
+    Catch and print any exception in `_wait_for_post_backward`. Otherwise the
+    exception is not printed and error is very confusing as shown below.
+    ```
+    built-in method run_backward of torch._C._EngineBase object at 0x7f26dc335aa0> returned NULL without setting an error
+    ```
+    """
+    try:
+      self._wait_for_post_backward()
+    except Exception as e:
+      print(
+          f"Exception below occurred in post-backward (_debug_msg: {self._debug_msg}). "
+          f"This is often due to some inner FSDP modules not being used "
+          f"in an outer FSDP module's forward pass. Please make sure that all inner "
+          f"FSDP modules participate in the forward pass when using nested FSDP.\n"
+          f"{type(e).__name__}: {e}")
+      raise
 
   @torch.no_grad()
   def _wait_for_post_backward(self) -> None:
