@@ -1442,16 +1442,6 @@ class TestAtenXlaTensor(XlaTestCase):
         torch.tensor([8, 1, 2, 3, 4, 5, 6, 7], device=device),
         numbers.roll(1, 0))
 
-    # disable non-contiguous because xla tensor is always contiguous.
-    # # test non-contiguous
-    # # strided equivalent to numbers.as_strided(size=(4, 2), stride=(1, 4))
-    # strided = numbers.view(2, 4).transpose(0, 1)
-    # self.assertFalse(strided.is_contiguous(), "this test needs a non-contiguous tensor")
-    # expected = torch.tensor([4, 8, 1, 5, 2, 6, 3, 7]).view(4, 2)
-    # rolled = strided.roll(1, 0)
-    # self.assertEqual(expected, rolled,
-    #                   message="non contiguous tensor rolled to {} instead of {} ".format(rolled, expected))
-
     # test roll with no dimension specified
     expected = numbers.roll(1, 0).view(2, 4)
     self.assertEqual(
