@@ -9,7 +9,7 @@ fi
 
 set -e
 pushd $PTDIR
-python -m tools.codegen.gen_backend_stubs \
+python -m torchgen.gen_backend_stubs \
   --output_dir="$XDIR/torch_xla/csrc" \
   --source_yaml="$XDIR/xla_native_functions.yaml"\
   --impl_path="$XDIR/torch_xla/csrc/aten_xla_type.cpp"\
