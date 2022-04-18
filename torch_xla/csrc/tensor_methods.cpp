@@ -342,19 +342,20 @@ ViewInfo CreateAsStridedViewInfo(const xla::Shape& input_shape,
 //////////////////////////////////////////////////////////////////////////////
 std::pair<XLATensor, ir::Value> XLATensor::all_reduce(
     const XLATensor& input, const ir::Value& token, AllReduceType reduce_type,
-    double scale, std::vector<std::vector<int64_t>> groups) {
+    double scale, std::vector<std::vector<int64_t>> groups, bool pin_layout) {
   std::vector<ir::Value> input_values({input.GetIrValue()});
   torch::lazy::NodePtr node = ir::MakeNode<ir::ops::AllReduce>(
-      reduce_type, input_values, token, scale, std::move(groups));
+      reduce_type, input_values, token, scale, std::move(groups), pin_layout);
   return {input.CreateFrom(ir::Value(node, 0)), ir::Value(node, 1)};
 }
 
 ir::Value XLATensor::all_reduce_(XLATensor& input, const ir::Value& token,
                                  AllReduceType reduce_type, double scale,
-                                 std::vector<std::vector<int64_t>> groups) {
+                                 std::vector<std::vector<int64_t>> groups,
+                                 bool pin_layout) {
   std::vector<ir::Value> input_values({input.GetIrValue()});
   torch::lazy::NodePtr node = ir::MakeNode<ir::ops::AllReduce>(
-      reduce_type, input_values, token, scale, std::move(groups));
+      reduce_type, input_values, token, scale, std::move(groups), pin_layout);
   input.SetInPlaceIrValue(ir::Value(node, 0));
   return ir::Value(node, 1);
 }
@@ -362,14 +363,15 @@ ir::Value XLATensor::all_reduce_(XLATensor& input, const ir::Value& token,
 ir::Value XLATensor::all_reduce(std::vector<XLATensor>* inputs,
                                 const ir::Value& token,
                                 AllReduceType reduce_type, double scale,
-                                std::vector<std::vector<int64_t>> groups) {
+                                std::vector<std::vector<int64_t>> groups,
+                                bool pin_layout) {
   std::vector<ir::Value> input_values;
   input_values.reserve(inputs->size());
   for (auto& input : *inputs) {
     input_values.push_back(input.GetIrValue());
   }
   torch::lazy::NodePtr node = ir::MakeNode<ir::ops::AllReduce>(
-      reduce_type, input_values, token, scale, std::move(groups));
+      reduce_type, input_values, token, scale, std::move(groups), pin_layout);
   for (size_t i = 0; i < inputs->size(); ++i) {
     (*inputs)[i].SetInPlaceIrValue(ir::Value(node, i));
   }
@@ -379,20 +381,21 @@ ir::Value XLATensor::all_reduce(std::vector<XLATensor>* inputs,
 std::pair<XLATensor, ir::Value> XLATensor::reduce_scatter(
     const XLATensor& input, const ir::Value& token, AllReduceType reduce_type,
     double scale, int64_t scatter_dim, int64_t shard_count,
-    std::vector<std::vector<int64_t>> groups) {
+    std::vector<std::vector<int64_t>> groups, bool pin_layout) {
   torch::lazy::NodePtr node = ir::MakeNode<ir::ops::ReduceScatter>(
       reduce_type, input.GetIrValue(), token, scale, scatter_dim, shard_count,
-      std::move(groups));
+      std::move(groups), pin_layout);
   return {input.CreateFrom(ir::Value(node, 0)), ir::Value(node, 1)};
 }
 
 ir::Value XLATensor::reduce_scatter_out(
     XLATensor& output, const XLATensor& input, const ir::Value& token,
     AllReduceType reduce_type, double scale, int64_t scatter_dim,
-    int64_t shard_count, std::vector<std::vector<int64_t>> groups) {
+    int64_t shard_count, std::vector<std::vector<int64_t>> groups,
+    bool pin_layout) {
   torch::lazy::NodePtr node = ir::MakeNode<ir::ops::ReduceScatter>(
       reduce_type, input.GetIrValue(), token, scale, scatter_dim, shard_count,
-      std::move(groups));
+      std::move(groups), pin_layout);
   output.SetIrValue(ir::Value(node, 0));
   return ir::Value(node, 1);
 }
@@ -400,27 +403,31 @@ ir::Value XLATensor::reduce_scatter_out(
 std::pair<XLATensor, ir::Value> XLATensor::all_to_all(
     const XLATensor& input, const ir::Value& token, int64_t split_dimension,
     int64_t concat_dimension, int64_t split_count,
-    std::vector<std::vector<int64_t>> groups) {
+    std::vector<std::vector<int64_t>> groups, bool pin_layout) {
   torch::lazy::NodePtr node = ir::MakeNode<ir::ops::AllToAll>(
       input.GetIrValue(), token, split_dimension, concat_dimension, split_count,
-      std::move(groups));
+      std::move(groups), pin_layout);
   return {input.CreateFrom(ir::Value(node, 0)), ir::Value(node, 1)};
 }
 
 std::pair<XLATensor, ir::Value> XLATensor::all_gather(
     const XLATensor& input, const ir::Value& token, int64_t dim,
-    int64_t shard_count, std::vector<std::vector<int64_t>> groups) {
+    int64_t shard_count, std::vector<std::vector<int64_t>> groups,
+    bool pin_layout) {
   torch::lazy::NodePtr node = ir::MakeNode<ir::ops::AllGather>(
-      input.GetIrValue(), token, dim, shard_count, std::move(groups));
+      input.GetIrValue(), token, dim, shard_count, std::move(groups),
+      pin_layout);
   return {input.CreateFrom(ir::Value(node, 0)), ir::Value(node, 1)};
 }
 
 ir::Value XLATensor::all_gather_out(XLATensor& output, const XLATensor& input,
                                     const ir::Value& token, int64_t dim,
                                     int64_t shard_count,
-                                    std::vector<std::vector<int64_t>> groups) {
+                                    std::vector<std::vector<int64_t>> groups,
+                                    bool pin_layout) {
   torch::lazy::NodePtr node = ir::MakeNode<ir::ops::AllGather>(
-      input.GetIrValue(), token, dim, shard_count, std::move(groups));
+      input.GetIrValue(), token, dim, shard_count, std::move(groups),
+      pin_layout);
   output.SetIrValue(ir::Value(node, 0));
   return ir::Value(node, 1);
 }
