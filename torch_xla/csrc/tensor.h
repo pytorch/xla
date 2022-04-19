@@ -210,41 +210,46 @@ class XLATensor {
   //////////////////////////////////////////////////////////////////////////////
   static std::pair<XLATensor, ir::Value> all_reduce(
       const XLATensor& input, const ir::Value& token, AllReduceType reduce_type,
-      double scale, std::vector<std::vector<int64_t>> groups);
+      double scale, std::vector<std::vector<int64_t>> groups, bool pin_layout);
 
   static ir::Value all_reduce_(XLATensor& input, const ir::Value& token,
                                AllReduceType reduce_type, double scale,
-                               std::vector<std::vector<int64_t>> groups);
+                               std::vector<std::vector<int64_t>> groups,
+                               bool pin_layout);
 
   static ir::Value all_reduce(std::vector<XLATensor>* inputs,
                               const ir::Value& token, AllReduceType reduce_type,
                               double scale,
-                              std::vector<std::vector<int64_t>> groups);
+                              std::vector<std::vector<int64_t>> groups,
+                              bool pin_layout);
 
   static std::pair<XLATensor, ir::Value> reduce_scatter(
       const XLATensor& input, const ir::Value& token, AllReduceType reduce_type,
       double scale, int64_t scatter_dim, int64_t shard_count,
-      std::vector<std::vector<int64_t>> groups);
+      std::vector<std::vector<int64_t>> groups, bool pin_layout);
 
   static ir::Value reduce_scatter_out(XLATensor& output, const XLATensor& input,
                                       const ir::Value& token,
                                       AllReduceType reduce_type, double scale,
                                       int64_t scatter_dim, int64_t shard_count,
-                                      std::vector<std::vector<int64_t>> groups);
+                                      std::vector<std::vector<int64_t>> groups,
+                                      bool pin_layout);
 
   static std::pair<XLATensor, ir::Value> all_to_all(
       const XLATensor& input, const ir::Value& token, int64_t split_dimension,
       int64_t concat_dimension, int64_t split_count,
-      std::vector<std::vector<int64_t>> groups);
+      std::vector<std::vector<int64_t>> groups, bool pin_layout);
 
   static std::pair<XLATensor, ir::Value> all_gather(
       const XLATensor& input, const ir::Value& token, int64_t dim,
-      int64_t shard_count, std::vector<std::vector<int64_t>> groups);
+      int64_t shard_count, std::vector<std::vector<int64_t>> groups,
+      bool pin_layout);
 
   static ir::Value all_gather_out(XLATensor& output, const XLATensor& input,
                                   const ir::Value& token, int64_t dim,
                                   int64_t shard_count,
-                                  std::vector<std::vector<int64_t>> groups);
+                                  std::vector<std::vector<int64_t>> groups,
+                                  bool pin_layout);
 
   static std::pair<XLATensor, ir::Value> collective_permute(
       const XLATensor& input, const ir::Value& token,
