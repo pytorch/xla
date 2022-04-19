@@ -212,6 +212,28 @@ torch::lazy::NodePtr HardSigmoidBackward(const Value& grad_output,
                    std::move(lower_fn));
 }
 
+torch::lazy::NodePtr HardSwish(const Value& input) {
+  auto lower_fn = [](const Node& node, LoweringContext* loctx) -> XlaOpVector {
+    xla::XlaOp xla_input = loctx->GetOutputOp(node.operand(0));
+    return node.ReturnOp(BuildHardSwish(xla_input), loctx);
+  };
+  return GenericOp(torch::lazy::OpKind(at::aten::hardswish), {input},
+                   input.xla_shape(), std::move(lower_fn));
+}
+
+torch::lazy::NodePtr HardSwishBackward(const Value& grad_output,
+                                       const Value& input) {
+  auto lower_fn = [](const Node& node, LoweringContext* loctx) -> XlaOpVector {
+    xla::XlaOp xla_grad_output = loctx->GetOutputOp(node.operand(0));
+    xla::XlaOp xla_input = loctx->GetOutputOp(node.operand(1));
+    return node.ReturnOp(BuildHardSwishBackward(xla_grad_output, xla_input),
+                         loctx);
+  };
+  return GenericOp(torch::lazy::OpKind(at::aten::hardswish_backward),
+                   {grad_output, input}, input.xla_shape(),
+                   std::move(lower_fn));
+}
+
 std::tuple<torch::lazy::NodePtr, torch::lazy::NodePtr> LogSigmoid(
     const Value& input) {
   ScopePusher ir_scope(at::aten::log_sigmoid.toQualString());

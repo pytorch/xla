@@ -701,6 +701,11 @@ class XLATensor {
   static XLATensor hardsigmoid_backward(const XLATensor& grad_output,
                                         const XLATensor& input);
 
+  static XLATensor hardswish(const XLATensor& input);
+
+  static XLATensor hardswish_backward(const XLATensor& grad_output,
+                                      const XLATensor& input);
+
   static XLATensor hardtanh_backward(const XLATensor& grad_output,
                                      const XLATensor& input,
                                      const at::Scalar& min_val,
