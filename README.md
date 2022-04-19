@@ -80,7 +80,7 @@ Follow these steps to train a PyTorch model with Docker on a Cloud TPU:
 
 2. SSH into the VM and pull a version of the docker image into the VM. The currently available versions are:
 
-    * `gcr.io/tpu-pytorch/xla:r1.11`: The current stable version.
+    * `gcr.io/tpu-pytorch/xla:r1.11_3.7`: The current stable version.
     * `gcr.io/tpu-pytorch/xla:nightly_3.7`: Nightly version using Python 3.7.
     * `gcr.io/tpu-pytorch/xla:nightly_3.7_YYYYMMDD (e.g.: gcr.io/tpu-pytorch/xla:nightly_3.7_20220301)`.
 
@@ -98,19 +98,19 @@ Follow these steps to train a PyTorch model with Docker on a Cloud TPU:
     ```
 
     ```Shell
-    (vm)$ docker pull gcr.io/tpu-pytorch/xla:r1.11
+    (vm)$ docker pull gcr.io/tpu-pytorch/xla:r1.11_3.7
     ```
 
 3. Where `$TPU_IP_ADDRESS` (e.g.: `10.1.1.2`) is your TPU Internal IP displayed in GCP UI, after pulling the docker image you can either (for TPU VMs set `XRT_TPU_CONFIG` to `"localservice;0;localhost:51011"`):
 
     * Run the container with a single command:
       ```Shell
-      (vm)$ docker run --shm-size 16G -e XRT_TPU_CONFIG="tpu_worker;0;$TPU_IP_ADDRESS:8470" gcr.io/tpu-pytorch/xla:r1.11 python /pytorch/xla/test/test_train_mp_mnist.py
+      (vm)$ docker run --shm-size 16G -e XRT_TPU_CONFIG="tpu_worker;0;$TPU_IP_ADDRESS:8470" gcr.io/tpu-pytorch/xla:r1.11_3.7 python /pytorch/xla/test/test_train_mp_mnist.py
       ```
 
     * Run the script in an interactive shell:
       ```Shell
-      (vm)$ docker run -it --shm-size 16G gcr.io/tpu-pytorch/xla:r1.11
+      (vm)$ docker run -it --shm-size 16G gcr.io/tpu-pytorch/xla:r1.11_3.7
       (pytorch) root@CONTAINERID:/$ export XRT_TPU_CONFIG="tpu_worker;0;$TPU_IP_ADDRESS:8470"
       (pytorch) root@CONTAINERID:/$ python pytorch/xla/test/test_train_mp_mnist.py
       ```
@@ -203,7 +203,7 @@ Training on pods can be broken down to largely 3 different steps:
 
 * Or, to distribute training as a docker container:
 ```
-(torch-xla-1.11)$ python -m torch_xla.distributed.xla_dist --tpu=$TPU_POD_NAME --docker-image=gcr.io/tpu-pytorch/xla:r1.11 --docker-run-flag=--rm=true --docker-run-flag=--shm-size=50GB --env=XLA_USE_BF16=1 -- python /pytorch/xla/test/test_train_mp_imagenet.py --fake_data
+(torch-xla-1.11)$ python -m torch_xla.distributed.xla_dist --tpu=$TPU_POD_NAME --docker-image=gcr.io/tpu-pytorch/xla:r1.11_3.7 --docker-run-flag=--rm=true --docker-run-flag=--shm-size=50GB --env=XLA_USE_BF16=1 -- python /pytorch/xla/test/test_train_mp_imagenet.py --fake_data
 ```
 
 ### List of VMs
@@ -296,7 +296,7 @@ post](https://cloud.google.com/blog/products/ai-machine-learning/googles-scalabl
 ## <a name="Resource"></a> Available images and wheels
 The following pre-built docker images are available to run on Cloud TPUs (see [docker images](#DockerImage) for instructions):
 
-    * `gcr.io/tpu-pytorch/xla:r1.11`: The current stable version.
+    * `gcr.io/tpu-pytorch/xla:r1.11_3.7`: The current stable version.
     * `gcr.io/tpu-pytorch/xla:nightly_3.7`: Nightly version using Python 3.7.
     * `gcr.io/tpu-pytorch/xla:nightly_3.7_YYYYMMDD (e.g.: gcr.io/tpu-pytorch/xla:nightly_3.7_20220301)`.
 
