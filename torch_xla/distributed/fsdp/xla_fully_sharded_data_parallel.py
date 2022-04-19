@@ -36,6 +36,7 @@ import torch_xla.core.xla_model as xm
 from .xla_flatten_params_wrapper import XlaFlattenParamsWrapper
 from .checkpoint_consolidation import consolidate_sharded_model_checkpoints
 from .all_gather_via_all_reduce import all_gather_via_all_reduce
+from .utils import dummy_all_gather, dummy_reduce_scatter
 
 
 class TrainingState(Enum):
@@ -129,8 +130,8 @@ class XlaFullyShardedDataParallel(nn.Module):
       use_all_gather_via_all_reduce (bool, Optional):
           if ``True``, use PyTorch XLA 1.10's all_gather implementation,
           which performs all_gather via padding and all_reduce and avoids
-          memory layout error (see https://github.com/pytorch/xla/issues/3423)
-          in previous PyTorch XLA versions (before #3423 is resolved).
+          memory inefficiency (see https://github.com/pytorch/xla/issues/3510)
+          in previous PyTorch XLA versions (before #3510 is resolved).
       mark_step_on_freeing (bool, Optional):
           if ``True``, call `xm.mark_step` upon freeing full parameters.
           When ``reshard_after_forward`` is ``True``, this option avoid XLA
@@ -152,6 +153,12 @@ class XlaFullyShardedDataParallel(nn.Module):
       mark_step_on_freeing: bool = False,
       _debug_dummy_forward_pass: bool = False,
       _debug_msg: str = "xla_fsdp",
+      _shard_size_multiple: int = 128,
+      _pin_layout_in_all_reduce: bool = False,
+      _pin_layout_in_all_gather: bool = False,
+      _pin_layout_in_reduce_scatter: bool = False,
+      _debug_dummy_all_gather_op: bool = False,
+      _debug_dummy_reduce_scatter_op: bool = False,
   ):
     if isinstance(module, XlaFullyShardedDataParallel):
       raise RuntimeError(
@@ -177,10 +184,19 @@ class XlaFullyShardedDataParallel(nn.Module):
     self.reshard_after_forward = self._orig_reshard_after_forward = reshard_after_forward
     self.flatten_parameters = flatten_parameters
     self.optimization_barrier_on_output = optimization_barrier_on_output
-    if use_all_gather_via_all_reduce:
-      self.all_gather_op = all_gather_via_all_reduce
+    if _debug_dummy_all_gather_op:
+      self.all_gather_op = dummy_all_gather
+    elif use_all_gather_via_all_reduce:
+      self.all_gather_op = functools.partial(
+          all_gather_via_all_reduce, pin_layout=_pin_layout_in_all_reduce)
     else:
-      self.all_gather_op = xm.all_gather
+      self.all_gather_op = functools.partial(
+          xm.all_gather, pin_layout=_pin_layout_in_all_gather)
+    if _debug_dummy_reduce_scatter_op:
+      self.reduce_scatter_op = dummy_reduce_scatter
+    else:
+      self.reduce_scatter_op = functools.partial(
+          xm.reduce_scatter, pin_layout=_pin_layout_in_reduce_scatter)
     # TODO (ronghanghu): remove when https://github.com/pytorch/xla/issues/3455 is resolved
     # This is a temporary workaround before after we have a mature solution
     # to avoid undesired fusion with XLA compiler optimization barrier (see
@@ -190,12 +206,20 @@ class XlaFullyShardedDataParallel(nn.Module):
     self.mark_step_on_freeing = mark_step_on_freeing
     self._debug_dummy_forward_pass = _debug_dummy_forward_pass
     self._debug_msg = _debug_msg
+    # TODO (ronghanghu) change to 1 after https://github.com/pytorch/xla/issues/3510 is resolved
+    # make sharded parameter sizes a multiple of 128 for efficient all_gather ops on TPUs
+    # (see https://github.com/pytorch/xla/issues/3510#issuecomment-1101739677 for details)
+    # # Update 04/19/2022: we reverted to the old all_gather impelmentation via all_reduce as a
+    # # workaround to https://github.com/pytorch/xla/issues/3510 after layout pinning is introduced
+    # # (https://github.com/pytorch/xla/pull/3511). Hence we changed default _shard_size_multiple = 1
+    # # here and deprecated the new all_gather until https://github.com/pytorch/xla/issues/3510 is
+    # # fully resolved.
+    self._shard_size_multiple = _shard_size_multiple
 
     self.gradient_predivide_factor: float = self._get_gradient_predivide_factor(
         self.world_size)
     self.gradient_postdivide_factor: float = self.world_size / self.gradient_predivide_factor
 
-    self.numel_padded_per_param: List[int] = []
     self._tstart = time.time()
 
     # Only handle params which are not already sharded. This enables
@@ -435,12 +459,11 @@ class XlaFullyShardedDataParallel(nn.Module):
       object.__setattr__(m, n, p)
 
     # allocate and register new sharded parameters
-    self.numel_padded_per_param = []
     self.sharded_params = []
     for p, (module_name, _, n) in zip(self.full_params, self.full_param_infos):
       assert not hasattr(p, "_is_sharded")
 
-      shard_data, num_padded = self._get_shard(p.data)
+      shard_data = self._get_shard(p.data)
       p_shard = nn.Parameter(shard_data, requires_grad=p.requires_grad)
       p_shard._is_sharded = True
       p_shard._orig_size = p.data.size()
@@ -448,7 +471,6 @@ class XlaFullyShardedDataParallel(nn.Module):
       p_shard._name = f"_fsdp_shard.{p_shard._orig_name}".replace(
           ".", "_FSDP_SHARD_SEPARATOR_")
       self.register_parameter(p_shard._name, p_shard)
-      self.numel_padded_per_param.append(num_padded)
       self.sharded_params.append(p_shard)
       p._sharded_param = p_shard  # add a handle to the sharded parameter
       # Free the full parameter storage (here we free its `.data`) but keep the tensor itself
@@ -456,24 +478,16 @@ class XlaFullyShardedDataParallel(nn.Module):
       p.data = self._dummy_data_placeholder
       p._has_full_param = False
 
-    assert len(self.numel_padded_per_param) == len(self.full_params)
     assert len(self.sharded_params) == len(self.full_params)
 
   def _get_shard(self, tensor: torch.Tensor) -> Tuple[torch.Tensor, int]:
     """Return the local shard of a full tensor."""
-    # Shard using torch.chunk to match all-gather/reduce-scatter.
-    chunks = list(torch.flatten(tensor).chunk(self.world_size))
-    while len(chunks) < self.world_size:
-      chunks.append(chunks[0].new_empty(0))
-
-    # Determine number of padding elements.
-    num_to_pad = chunks[0].numel() - chunks[self.rank].numel()
-    assert num_to_pad >= 0, num_to_pad
-
-    shard = chunks[self.rank].clone()
-    if num_to_pad > 0:
-      shard = F.pad(shard, [0, num_to_pad])
-    return shard, num_to_pad
+    tensor = _flatten_and_pad_to_world_size(
+        tensor, self.world_size * self._shard_size_multiple)
+    local_numel = tensor.numel() // self.world_size
+    begin, end = self.rank * local_numel, (self.rank + 1) * local_numel
+    tensor = tensor[begin:end].clone()
+    return tensor
 
   def extra_repr(self) -> str:
     repr = (f"world_size={self.world_size}, "
@@ -845,8 +859,9 @@ class XlaFullyShardedDataParallel(nn.Module):
     grad = param.grad.data
     # Clear grad on the tensor, so any repeated gradient computations do not interfere with this reduction.
     param.grad = None
-    grad_flat = _flatten_and_pad_to_world_size(grad, self.world_size)
-    reduced_grad = xm.reduce_scatter(
+    grad_flat = _flatten_and_pad_to_world_size(
+        grad, self.world_size * self._shard_size_multiple)
+    reduced_grad = self.reduce_scatter_op(
         xm.REDUCE_SUM,
         grad_flat,
         scale=1.0,
@@ -968,7 +983,13 @@ class XlaFullyShardedDataParallel(nn.Module):
     for p, p_shard in zip(self.full_params, self.sharded_params):
       if not p._has_full_param:
         # gather full parameter from shards
-        p_padded = self.all_gather_op(p_shard.data).flatten().detach()
+        # reshape sharded parameters to 2d tensors for efficient gathering on
+        # TPUs (see https://github.com/pytorch/xla/issues/3510 for details).
+        p_shard_2d = p_shard.data.view(-1, self._shard_size_multiple)
+        p_padded = self.all_gather_op(p_shard_2d).flatten().detach()
+        # # Update 04/19/2022: we reverted to the old all_gather impelmentation
+        # # via all_reduce using https://github.com/pytorch/xla/issues/3511
+        # p_padded = self.all_gather_op(p_shard.data).flatten().detach()
         p_data = p_padded[:p_shard._orig_size.numel()].view(p_shard._orig_size)
         p_list.append(p)
         p_shard_list.append(p_shard)
