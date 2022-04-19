@@ -62,7 +62,7 @@ def mark_sharding(t: Union[torch.Tensor,
   manual = False
   replicated = False
   if all(d is None for d in partition_spec):
-    # TODO: support partial replication
+    # TODO(yeounoh) support partial replication
     replicated = True
 
   if isinstance(t, XLAShardedTensor):

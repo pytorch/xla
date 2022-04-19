@@ -75,7 +75,8 @@ class TensorAllocator : public tensorflow::Allocator {
     // to store a pointer to its AllocBlocks.
     alignment = std::max<size_t>(alignment, sizeof(void*));
     // To call aligned_alloc(), num_bytes must be multiple of alignment.
-    num_bytes = tensorflow::MathUtil::CeilOfRatio(num_bytes, alignment) * alignment;
+    num_bytes =
+        tensorflow::MathUtil::CeilOfRatio(num_bytes, alignment) * alignment;
 
     AllocKey alloc_key = {alignment, num_bytes};
     void* block = nullptr;
@@ -1073,7 +1074,22 @@ std::unique_ptr<xrt::XLAComputation> XrtComputationClient::CreateXrtComputation(
   std::unique_ptr<xrt::XLAComputation> xrt_computation(
       new xrt::XLAComputation());
   auto config = xrt_computation->mutable_config();
-  config->set_num_cores_per_replica(1);
+  if (device.kind == "TPU") {
+    // TODO: this used to be hard-coded to 1; now overlaying
+    // replicas and shards, co-existing across devices.
+    config->set_num_cores_per_replica(devices.size());
+    for (int64_t i = 0; i < devices.size(); ++i) {
+      ProgramShapeProto* per_core_program_shape =
+          config->add_per_core_program_shape();
+      *per_core_program_shape =
+          computation.GetProgramShape().ValueOrDie().ToProto();
+    }
+  } else {
+    config->set_num_cores_per_replica(1);
+  }
+
+  // TODO: current design assumes that all devices would participate in
+  // replication. This affects the groupings of replica groups.
   if (devices.size() > 1) {
     auto device_assignment = config->mutable_device_assignment();
     auto computation_device = device_assignment->add_computation_devices();
@@ -1099,6 +1115,7 @@ std::unique_ptr<xrt::XLAComputation> XrtComputationClient::CreateXrtComputation(
     }
     config->set_num_replicas(devices.size());
   }
+  // TODO: Program shape for the whole computation
   *config->mutable_program_shape() =
       computation.GetProgramShape().ValueOrDie().ToProto();
   if (output_shape != nullptr) {
@@ -1693,7 +1710,7 @@ void XrtComputationClient::InitSession(XrtSession* session) const {
   struct InitNode {
     int count;
     const XrtSession::CachedNode& (XrtComputationClient::*node_ctor)(
-        XrtSession*, const tensorflow::Scope&, const std::string&)const;
+        XrtSession*, const tensorflow::Scope&, const std::string&) const;
   } const init_nodes[] = {
       {16, &XrtComputationClient::GetCompileNode},
       {16, &XrtComputationClient::GetExecuteNode},
