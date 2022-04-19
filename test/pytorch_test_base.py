@@ -252,6 +252,7 @@ DISABLED_TORCH_TESTS_ANY = {
         'test_fold',  # The gradient check code errors out on type() call, and code is slow on XLA
         'test_unfold',  # The gradient check code errors out on type() call, and code is slow on XLA
         'test_hardsigmoid_grad_xla',  # gradient check is slow
+        'test_hardswish_grad_xla',  # gradient check is as slow as above
         'test_leaky_relu_inplace_overlap_xla',  # doesn't raise
         # zero slope not supported; see https://github.com/pytorch/xla/commit/9cda83d383d8a8dae98c00c566012020c93d8ab1
         'test_leaky_relu_inplace_with_zero_slope_xla',

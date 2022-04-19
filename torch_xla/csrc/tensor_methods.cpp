@@ -1614,6 +1614,16 @@ XLATensor XLATensor::hardsigmoid_backward(const XLATensor& grad_output,
                                                        input.GetIrValue()));
 }
 
+XLATensor XLATensor::hardswish(const XLATensor& input) {
+  return input.CreateFrom(ir::ops::HardSwish(input.GetIrValue()));
+}
+
+XLATensor XLATensor::hardswish_backward(const XLATensor& grad_output,
+                                        const XLATensor& input) {
+  return input.CreateFrom(
+      ir::ops::HardSwishBackward(grad_output.GetIrValue(), input.GetIrValue()));
+}
+
 XLATensor XLATensor::hardtanh_backward(const XLATensor& grad_output,
                                        const XLATensor& input,
                                        const at::Scalar& min_val,

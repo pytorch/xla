@@ -92,6 +92,31 @@ xla::XlaOp BuildHardSigmoidBackward(xla::XlaOp grad_output, xla::XlaOp input) {
   return xla::Select(Between(input, -3.0, 3.0), grad_output / six, zero);
 }
 
+xla::XlaOp BuildHardSwish(xla::XlaOp input) {
+  const xla::Shape& shape = XlaHelpers::ShapeOfXlaOp(input);
+  xla::XlaOp zero = xla::Zero(input.builder(), shape.element_type());
+  xla::XlaOp three = XlaHelpers::ScalarValue<float>(3.0, shape.element_type(),
+                                                    input.builder());
+  xla::XlaOp six = XlaHelpers::ScalarValue<float>(6.0, shape.element_type(),
+                                                  input.builder());
+  return xla::Mul(input, (xla::Min(xla::Max(input + three, zero), six) / six));
+}
+
+xla::XlaOp BuildHardSwishBackward(xla::XlaOp grad_output, xla::XlaOp input) {
+  const xla::Shape& shape = XlaHelpers::ShapeOfXlaOp(input);
+  xla::XlaOp three = XlaHelpers::ScalarValue<float>(3.0, shape.element_type(),
+                                                    input.builder());
+  xla::XlaOp zero = xla::Zero(input.builder(), shape.element_type());
+  xla::XlaOp pointfive = XlaHelpers::ScalarValue<float>(
+      0.5, shape.element_type(), input.builder());
+
+  xla::XlaOp stepone =
+      xla::Select(Between(input, -3.0, 3.0),
+                  xla::Mul(grad_output, pointfive + (input / three)), zero);
+
+  return xla::Select(xla::Ge(input, three), grad_output, stepone);
+}
+
 xla::XlaOp BuildSoftshrink(xla::XlaOp input, const at::Scalar& lambda) {
   xla::XlaBuilder* builder = input.builder();
   const xla::Shape& shape = XlaHelpers::ShapeOfXlaOp(input);
