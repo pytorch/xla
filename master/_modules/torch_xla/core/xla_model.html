@@ -816,7 +816,12 @@
         <span class="n">REDUCE_SUM</span><span class="p">,</span> <span class="n">inputs</span><span class="p">,</span> <span class="n">token</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">,</span> <span class="p">[])</span>
 
 
-<div class="viewcode-block" id="all_reduce"><a class="viewcode-back" href="../../../index.html#torch_xla.core.xla_model.all_reduce">[docs]</a><span class="k">def</span> <span class="nf">all_reduce</span><span class="p">(</span><span class="n">reduce_type</span><span class="p">,</span> <span class="n">inputs</span><span class="p">,</span> <span class="n">scale</span><span class="o">=</span><span class="mf">1.0</span><span class="p">,</span> <span class="n">groups</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">cctx</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+<div class="viewcode-block" id="all_reduce"><a class="viewcode-back" href="../../../index.html#torch_xla.core.xla_model.all_reduce">[docs]</a><span class="k">def</span> <span class="nf">all_reduce</span><span class="p">(</span><span class="n">reduce_type</span><span class="p">,</span>
+               <span class="n">inputs</span><span class="p">,</span>
+               <span class="n">scale</span><span class="o">=</span><span class="mf">1.0</span><span class="p">,</span>
+               <span class="n">groups</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+               <span class="n">cctx</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+               <span class="n">pin_layout</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
   <span class="sd">&quot;&quot;&quot;Performs an inplace reduce operation on the input tensor(s).</span>
 
 <span class="sd">  Args:</span>
@@ -832,6 +837,11 @@
 <span class="sd">        defines two groups, one with the `[0, 1, 2, 3]` replicas and one with</span>
 <span class="sd">        the `[4, 5, 6, 7]` replicas. If `None` there will be only one group with</span>
 <span class="sd">        all the replicas in it.</span>
+<span class="sd">    pin_layout (bool, optional): whether to pin the layout for this communication op.</span>
+<span class="sd">      Layout pining can prevent potential data corruption when each process that</span>
+<span class="sd">      participate in the communication has slightly different program, but it might</span>
+<span class="sd">      cause some xla compiation to fail. Unpin the layout when you see error message</span>
+<span class="sd">      like &quot;HloModule has a mix of layout constrained&quot;.</span>
 
 <span class="sd">  Returns:</span>
 <span class="sd">    If a single `torch.Tensor` is passed, the return value is a `torch.Tensor`</span>
@@ -852,12 +862,13 @@
     <span class="n">token</span><span class="p">,</span> <span class="n">devctx</span> <span class="o">=</span> <span class="n">_get_all_reduce_token</span><span class="p">()</span>
     <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">inputs</span><span class="p">,</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">):</span>
       <span class="n">result</span> <span class="o">=</span> <span class="n">torch_xla</span><span class="o">.</span><span class="n">_XLAC</span><span class="o">.</span><span class="n">_xla_all_reduce</span><span class="p">(</span><span class="n">reduce_type</span><span class="p">,</span> <span class="n">inputs</span><span class="p">,</span> <span class="n">token</span><span class="p">,</span>
-                                               <span class="n">scale</span><span class="p">,</span> <span class="n">cctx</span><span class="o">.</span><span class="n">intercore_group</span><span class="p">)</span>
+                                               <span class="n">scale</span><span class="p">,</span> <span class="n">cctx</span><span class="o">.</span><span class="n">intercore_group</span><span class="p">,</span>
+                                               <span class="n">pin_layout</span><span class="p">)</span>
       <span class="n">devctx</span><span class="o">.</span><span class="n">all_reduce_token</span> <span class="o">=</span> <span class="n">result</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
       <span class="n">results</span> <span class="o">=</span> <span class="p">[</span><span class="n">result</span><span class="p">[</span><span class="mi">0</span><span class="p">]]</span>
     <span class="k">else</span><span class="p">:</span>
       <span class="n">devctx</span><span class="o">.</span><span class="n">all_reduce_token</span> <span class="o">=</span> <span class="n">torch_xla</span><span class="o">.</span><span class="n">_XLAC</span><span class="o">.</span><span class="n">_xla_all_reduce_inplace</span><span class="p">(</span>
-          <span class="n">reduce_type</span><span class="p">,</span> <span class="n">inputs</span><span class="p">,</span> <span class="n">token</span><span class="p">,</span> <span class="n">scale</span><span class="p">,</span> <span class="n">cctx</span><span class="o">.</span><span class="n">intercore_group</span><span class="p">)</span>
+          <span class="n">reduce_type</span><span class="p">,</span> <span class="n">inputs</span><span class="p">,</span> <span class="n">token</span><span class="p">,</span> <span class="n">scale</span><span class="p">,</span> <span class="n">cctx</span><span class="o">.</span><span class="n">intercore_group</span><span class="p">,</span> <span class="n">pin_layout</span><span class="p">)</span>
       <span class="n">results</span> <span class="o">=</span> <span class="n">inputs</span>
   <span class="k">else</span><span class="p">:</span>
     <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">inputs</span><span class="p">,</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">):</span>
@@ -872,7 +883,7 @@
   <span class="k">return</span> <span class="n">results</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">inputs</span><span class="p">,</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">)</span> <span class="k">else</span> <span class="n">results</span></div>
 
 
-<div class="viewcode-block" id="all_gather"><a class="viewcode-back" href="../../../index.html#torch_xla.core.xla_model.all_gather">[docs]</a><span class="k">def</span> <span class="nf">all_gather</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="n">dim</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">groups</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">output</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+<div class="viewcode-block" id="all_gather"><a class="viewcode-back" href="../../../index.html#torch_xla.core.xla_model.all_gather">[docs]</a><span class="k">def</span> <span class="nf">all_gather</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="n">dim</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">groups</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">output</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">pin_layout</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
   <span class="sd">&quot;&quot;&quot;Performs an all-gather operation along a given dimension.</span>
 
 <span class="sd">  Args:</span>
@@ -885,6 +896,11 @@
 <span class="sd">        the `[4, 5, 6, 7]` replicas. If `None` there will be only one group with</span>
 <span class="sd">        all the replicas in it.</span>
 <span class="sd">    output (torch.Tensor): Optional output tensor.</span>
+<span class="sd">    pin_layout (bool, optional): whether to pin the layout for this communication op.</span>
+<span class="sd">      Layout pining can prevent potential data corruption when each process that</span>
+<span class="sd">      participate in the communication has slightly different program, but it might</span>
+<span class="sd">      cause some xla compiation to fail. Unpin the layout when you see error message</span>
+<span class="sd">      like &quot;HloModule has a mix of layout constrained&quot;.</span>
 
 <span class="sd">  Returns:</span>
 <span class="sd">    A tensor which has, in the ``dim`` dimension, all the values from the</span>
@@ -903,12 +919,13 @@
   <span class="k">if</span> <span class="n">output</span> <span class="o">!=</span> <span class="kc">None</span><span class="p">:</span>
     <span class="c1"># Call the out of place version of the all_gather</span>
     <span class="n">new_token</span> <span class="o">=</span> <span class="n">torch_xla</span><span class="o">.</span><span class="n">_XLAC</span><span class="o">.</span><span class="n">_xla_all_gather_out</span><span class="p">(</span><span class="n">output</span><span class="p">,</span> <span class="n">value</span><span class="p">,</span> <span class="n">token</span><span class="p">,</span> <span class="n">dim</span><span class="p">,</span>
-                                                    <span class="n">shard_count</span><span class="p">,</span> <span class="n">groups</span> <span class="ow">or</span> <span class="p">[])</span>
+                                                    <span class="n">shard_count</span><span class="p">,</span> <span class="n">groups</span> <span class="ow">or</span> <span class="p">[],</span>
+                                                    <span class="n">pin_layout</span><span class="p">)</span>
     <span class="n">devctx</span><span class="o">.</span><span class="n">all_reduce_token</span> <span class="o">=</span> <span class="n">new_token</span>
     <span class="k">return</span> <span class="n">output</span>
 
   <span class="n">result</span> <span class="o">=</span> <span class="n">torch_xla</span><span class="o">.</span><span class="n">_XLAC</span><span class="o">.</span><span class="n">_xla_all_gather</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="n">token</span><span class="p">,</span> <span class="n">dim</span><span class="p">,</span> <span class="n">shard_count</span><span class="p">,</span>
-                                           <span class="n">groups</span> <span class="ow">or</span> <span class="p">[])</span>
+                                           <span class="n">groups</span> <span class="ow">or</span> <span class="p">[],</span> <span class="n">pin_layout</span><span class="p">)</span>
   <span class="n">devctx</span><span class="o">.</span><span class="n">all_reduce_token</span> <span class="o">=</span> <span class="n">result</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
   <span class="k">return</span> <span class="n">result</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span></div>
 
@@ -917,7 +934,8 @@
                <span class="n">split_dimension</span><span class="p">,</span>
                <span class="n">concat_dimension</span><span class="p">,</span>
                <span class="n">split_count</span><span class="p">,</span>
-               <span class="n">groups</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+               <span class="n">groups</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+               <span class="n">pin_layout</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
   <span class="sd">&quot;&quot;&quot;Performs an XLA `AllToAll()` operation on the input tensor.</span>
 
 <span class="sd">  See: https://www.tensorflow.org/xla/operation_semantics#alltoall</span>
@@ -932,6 +950,11 @@
 <span class="sd">        defines two groups, one with the `[0, 1, 2, 3]` replicas and one with</span>
 <span class="sd">        the `[4, 5, 6, 7]` replicas. If `None` there will be only one group with</span>
 <span class="sd">        all the replicas in it.</span>
+<span class="sd">    pin_layout (bool, optional): whether to pin the layout for this communication op.</span>
+<span class="sd">      Layout pining can prevent potential data corruption when each process that</span>
+<span class="sd">      participate in the communication has slightly different program, but it might</span>
+<span class="sd">      cause some xla compiation to fail. Unpin the layout when you see error message</span>
+<span class="sd">      like &quot;HloModule has a mix of layout constrained&quot;.</span>
 
 <span class="sd">  Returns:</span>
 <span class="sd">    The result `torch.Tensor` of the `all_to_all()` operation.</span>
@@ -939,7 +962,7 @@
   <span class="n">token</span><span class="p">,</span> <span class="n">devctx</span> <span class="o">=</span> <span class="n">_get_all_reduce_token</span><span class="p">()</span>
   <span class="n">result</span> <span class="o">=</span> <span class="n">torch_xla</span><span class="o">.</span><span class="n">_XLAC</span><span class="o">.</span><span class="n">_xla_all_to_all</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="n">token</span><span class="p">,</span> <span class="n">split_dimension</span><span class="p">,</span>
                                            <span class="n">concat_dimension</span><span class="p">,</span> <span class="n">split_count</span><span class="p">,</span>
-                                           <span class="n">groups</span> <span class="ow">or</span> <span class="p">[])</span>
+                                           <span class="n">groups</span> <span class="ow">or</span> <span class="p">[],</span> <span class="n">pin_layout</span><span class="p">)</span>
   <span class="n">devctx</span><span class="o">.</span><span class="n">all_reduce_token</span> <span class="o">=</span> <span class="n">result</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
   <span class="k">return</span> <span class="n">result</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span></div>
 
@@ -975,7 +998,8 @@
                    <span class="n">scatter_dim</span><span class="p">,</span>
                    <span class="n">shard_count</span><span class="p">,</span>
                    <span class="n">groups</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
-                   <span class="n">output</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+                   <span class="n">output</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+                   <span class="n">pin_layout</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
   <span class="sd">&quot;&quot;&quot;Performs a XLA `ReduceScatter()` operation on the input tensor.</span>
 
 <span class="sd">  See: https://www.tensorflow.org/xla/operation_semantics#reducescatter</span>
@@ -994,6 +1018,11 @@
 <span class="sd">        the `[4, 5, 6, 7]` replicas. If `None` there will be only one group with</span>
 <span class="sd">        all the replicas in it.</span>
 <span class="sd">    output: Optional output tensor</span>
+<span class="sd">    pin_layout (bool, optional): whether to pin the layout for this communication op.</span>
+<span class="sd">      Layout pining can prevent potential data corruption when each process that</span>
+<span class="sd">      participate in the communication has slightly different program, but it might</span>
+<span class="sd">      cause some xla compiation to fail. Unpin the layout when you see error message</span>
+<span class="sd">      like &quot;HloModule has a mix of layout constrained&quot;.</span>
 
 <span class="sd">  Returns:</span>
 <span class="sd">    A `torch.Tensor` with all the values reduced accross replicas. Each process</span>
@@ -1007,13 +1036,13 @@
                                                         <span class="nb">input</span><span class="p">,</span> <span class="n">token</span><span class="p">,</span> <span class="n">scale</span><span class="p">,</span>
                                                         <span class="n">scatter_dim</span><span class="p">,</span>
                                                         <span class="n">shard_count</span><span class="p">,</span> <span class="n">groups</span> <span class="ow">or</span>
-                                                        <span class="p">[])</span>
+                                                        <span class="p">[],</span> <span class="n">pin_layout</span><span class="p">)</span>
     <span class="n">devctx</span><span class="o">.</span><span class="n">all_reduce_token</span> <span class="o">=</span> <span class="n">new_token</span>
     <span class="k">return</span> <span class="n">output</span>
 
   <span class="n">result</span> <span class="o">=</span> <span class="n">torch_xla</span><span class="o">.</span><span class="n">_XLAC</span><span class="o">.</span><span class="n">_xla_reduce_scatter</span><span class="p">(</span><span class="n">reduce_type</span><span class="p">,</span> <span class="nb">input</span><span class="p">,</span> <span class="n">token</span><span class="p">,</span> <span class="n">scale</span><span class="p">,</span>
                                                <span class="n">scatter_dim</span><span class="p">,</span> <span class="n">shard_count</span><span class="p">,</span>
-                                               <span class="n">groups</span> <span class="ow">or</span> <span class="p">[])</span>
+                                               <span class="n">groups</span> <span class="ow">or</span> <span class="p">[],</span> <span class="n">pin_layout</span><span class="p">)</span>
   <span class="n">devctx</span><span class="o">.</span><span class="n">all_reduce_token</span> <span class="o">=</span> <span class="n">result</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
   <span class="k">return</span> <span class="n">result</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
 

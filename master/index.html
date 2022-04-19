@@ -714,7 +714,7 @@ Default: 1</p>
 
 <dl class="function">
 <dt id="torch_xla.core.xla_model.all_reduce">
-<code class="sig-prename descclassname">torch_xla.core.xla_model.</code><code class="sig-name descname">all_reduce</code><span class="sig-paren">(</span><em class="sig-param">reduce_type</em>, <em class="sig-param">inputs</em>, <em class="sig-param">scale=1.0</em>, <em class="sig-param">groups=None</em>, <em class="sig-param">cctx=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/torch_xla/core/xla_model.html#all_reduce"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#torch_xla.core.xla_model.all_reduce" title="Permalink to this definition">¶</a></dt>
+<code class="sig-prename descclassname">torch_xla.core.xla_model.</code><code class="sig-name descname">all_reduce</code><span class="sig-paren">(</span><em class="sig-param">reduce_type</em>, <em class="sig-param">inputs</em>, <em class="sig-param">scale=1.0</em>, <em class="sig-param">groups=None</em>, <em class="sig-param">cctx=None</em>, <em class="sig-param">pin_layout=True</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/torch_xla/core/xla_model.html#all_reduce"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#torch_xla.core.xla_model.all_reduce" title="Permalink to this definition">¶</a></dt>
 <dd><p>Performs an inplace reduce operation on the input tensor(s).</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
@@ -734,6 +734,11 @@ the <cite>[4, 5, 6, 7]</cite> replicas. If <cite>None</cite> there will be only 
 all the replicas in it.</p>
 </div></blockquote>
 </p></li>
+<li><p><strong>pin_layout</strong> (<em>bool</em><em>, </em><em>optional</em>) – whether to pin the layout for this communication op.
+Layout pining can prevent potential data corruption when each process that
+participate in the communication has slightly different program, but it might
+cause some xla compiation to fail. Unpin the layout when you see error message
+like “HloModule has a mix of layout constrained”.</p></li>
 </ul>
 </dd>
 <dt class="field-even">Returns</dt>
@@ -747,7 +752,7 @@ returns the list/tuple itself.</p>
 
 <dl class="function">
 <dt id="torch_xla.core.xla_model.all_gather">
-<code class="sig-prename descclassname">torch_xla.core.xla_model.</code><code class="sig-name descname">all_gather</code><span class="sig-paren">(</span><em class="sig-param">value</em>, <em class="sig-param">dim=0</em>, <em class="sig-param">groups=None</em>, <em class="sig-param">output=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/torch_xla/core/xla_model.html#all_gather"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#torch_xla.core.xla_model.all_gather" title="Permalink to this definition">¶</a></dt>
+<code class="sig-prename descclassname">torch_xla.core.xla_model.</code><code class="sig-name descname">all_gather</code><span class="sig-paren">(</span><em class="sig-param">value</em>, <em class="sig-param">dim=0</em>, <em class="sig-param">groups=None</em>, <em class="sig-param">output=None</em>, <em class="sig-param">pin_layout=False</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/torch_xla/core/xla_model.html#all_gather"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#torch_xla.core.xla_model.all_gather" title="Permalink to this definition">¶</a></dt>
 <dd><p>Performs an all-gather operation along a given dimension.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
@@ -764,6 +769,11 @@ all the replicas in it.</p>
 </div></blockquote>
 </p></li>
 <li><p><strong>output</strong> (<em>torch.Tensor</em>) – Optional output tensor.</p></li>
+<li><p><strong>pin_layout</strong> (<em>bool</em><em>, </em><em>optional</em>) – whether to pin the layout for this communication op.
+Layout pining can prevent potential data corruption when each process that
+participate in the communication has slightly different program, but it might
+cause some xla compiation to fail. Unpin the layout when you see error message
+like “HloModule has a mix of layout constrained”.</p></li>
 </ul>
 </dd>
 <dt class="field-even">Returns</dt>
@@ -775,7 +785,7 @@ participating replicas.</p>
 
 <dl class="function">
 <dt id="torch_xla.core.xla_model.all_to_all">
-<code class="sig-prename descclassname">torch_xla.core.xla_model.</code><code class="sig-name descname">all_to_all</code><span class="sig-paren">(</span><em class="sig-param">value</em>, <em class="sig-param">split_dimension</em>, <em class="sig-param">concat_dimension</em>, <em class="sig-param">split_count</em>, <em class="sig-param">groups=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/torch_xla/core/xla_model.html#all_to_all"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#torch_xla.core.xla_model.all_to_all" title="Permalink to this definition">¶</a></dt>
+<code class="sig-prename descclassname">torch_xla.core.xla_model.</code><code class="sig-name descname">all_to_all</code><span class="sig-paren">(</span><em class="sig-param">value</em>, <em class="sig-param">split_dimension</em>, <em class="sig-param">concat_dimension</em>, <em class="sig-param">split_count</em>, <em class="sig-param">groups=None</em>, <em class="sig-param">pin_layout=False</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/torch_xla/core/xla_model.html#all_to_all"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#torch_xla.core.xla_model.all_to_all" title="Permalink to this definition">¶</a></dt>
 <dd><p>Performs an XLA <cite>AllToAll()</cite> operation on the input tensor.</p>
 <p>See: <a class="reference external" href="https://www.tensorflow.org/xla/operation_semantics#alltoall">https://www.tensorflow.org/xla/operation_semantics#alltoall</a></p>
 <dl class="field-list simple">
@@ -793,6 +803,11 @@ the <cite>[4, 5, 6, 7]</cite> replicas. If <cite>None</cite> there will be only 
 all the replicas in it.</p>
 </div></blockquote>
 </p></li>
+<li><p><strong>pin_layout</strong> (<em>bool</em><em>, </em><em>optional</em>) – whether to pin the layout for this communication op.
+Layout pining can prevent potential data corruption when each process that
+participate in the communication has slightly different program, but it might
+cause some xla compiation to fail. Unpin the layout when you see error message
+like “HloModule has a mix of layout constrained”.</p></li>
 </ul>
 </dd>
 <dt class="field-even">Returns</dt>
