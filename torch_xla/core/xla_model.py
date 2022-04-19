@@ -526,7 +526,12 @@ def _host_all_reduce(reduce_type, inputs, cctx, scale=None):
         REDUCE_SUM, inputs, token, 1.0, [])
 
 
-def all_reduce(reduce_type, inputs, scale=1.0, groups=None, cctx=None):
+def all_reduce(reduce_type,
+               inputs,
+               scale=1.0,
+               groups=None,
+               cctx=None,
+               pin_layout=True):
   """Performs an inplace reduce operation on the input tensor(s).
 
   Args:
@@ -542,6 +547,11 @@ def all_reduce(reduce_type, inputs, scale=1.0, groups=None, cctx=None):
         defines two groups, one with the `[0, 1, 2, 3]` replicas and one with
         the `[4, 5, 6, 7]` replicas. If `None` there will be only one group with
         all the replicas in it.
+    pin_layout (bool, optional): whether to pin the layout for this communication op.
+      Layout pining can prevent potential data corruption when each process that
+      participate in the communication has slightly different program, but it might
+      cause some xla compiation to fail. Unpin the layout when you see error message
+      like "HloModule has a mix of layout constrained".
 
   Returns:
     If a single `torch.Tensor` is passed, the return value is a `torch.Tensor`
@@ -562,12 +572,13 @@ def all_reduce(reduce_type, inputs, scale=1.0, groups=None, cctx=None):
     token, devctx = _get_all_reduce_token()
     if isinstance(inputs, torch.Tensor):
       result = torch_xla._XLAC._xla_all_reduce(reduce_type, inputs, token,
-                                               scale, cctx.intercore_group)
+                                               scale, cctx.intercore_group,
+                                               pin_layout)
       devctx.all_reduce_token = result[1]
       results = [result[0]]
     else:
       devctx.all_reduce_token = torch_xla._XLAC._xla_all_reduce_inplace(
-          reduce_type, inputs, token, scale, cctx.intercore_group)
+          reduce_type, inputs, token, scale, cctx.intercore_group, pin_layout)
       results = inputs
   else:
     if isinstance(inputs, torch.Tensor):
@@ -582,7 +593,7 @@ def all_reduce(reduce_type, inputs, scale=1.0, groups=None, cctx=None):
   return results[0] if isinstance(inputs, torch.Tensor) else results
 
 
-def all_gather(value, dim=0, groups=None, output=None):
+def all_gather(value, dim=0, groups=None, output=None, pin_layout=False):
   """Performs an all-gather operation along a given dimension.
 
   Args:
@@ -595,6 +606,11 @@ def all_gather(value, dim=0, groups=None, output=None):
         the `[4, 5, 6, 7]` replicas. If `None` there will be only one group with
         all the replicas in it.
     output (torch.Tensor): Optional output tensor.
+    pin_layout (bool, optional): whether to pin the layout for this communication op.
+      Layout pining can prevent potential data corruption when each process that
+      participate in the communication has slightly different program, but it might
+      cause some xla compiation to fail. Unpin the layout when you see error message
+      like "HloModule has a mix of layout constrained".
 
   Returns:
     A tensor which has, in the ``dim`` dimension, all the values from the
@@ -613,12 +629,13 @@ def all_gather(value, dim=0, groups=None, output=None):
   if output != None:
     # Call the out of place version of the all_gather
     new_token = torch_xla._XLAC._xla_all_gather_out(output, value, token, dim,
-                                                    shard_count, groups or [])
+                                                    shard_count, groups or [],
+                                                    pin_layout)
     devctx.all_reduce_token = new_token
     return output
 
   result = torch_xla._XLAC._xla_all_gather(value, token, dim, shard_count,
-                                           groups or [])
+                                           groups or [], pin_layout)
   devctx.all_reduce_token = result[1]
   return result[0]
 
@@ -627,7 +644,8 @@ def all_to_all(value,
                split_dimension,
                concat_dimension,
                split_count,
-               groups=None):
+               groups=None,
+               pin_layout=False):
   """Performs an XLA `AllToAll()` operation on the input tensor.
 
   See: https://www.tensorflow.org/xla/operation_semantics#alltoall
@@ -642,6 +660,11 @@ def all_to_all(value,
         defines two groups, one with the `[0, 1, 2, 3]` replicas and one with
         the `[4, 5, 6, 7]` replicas. If `None` there will be only one group with
         all the replicas in it.
+    pin_layout (bool, optional): whether to pin the layout for this communication op.
+      Layout pining can prevent potential data corruption when each process that
+      participate in the communication has slightly different program, but it might
+      cause some xla compiation to fail. Unpin the layout when you see error message
+      like "HloModule has a mix of layout constrained".
 
   Returns:
     The result `torch.Tensor` of the `all_to_all()` operation.
@@ -649,7 +672,7 @@ def all_to_all(value,
   token, devctx = _get_all_reduce_token()
   result = torch_xla._XLAC._xla_all_to_all(value, token, split_dimension,
                                            concat_dimension, split_count,
-                                           groups or [])
+                                           groups or [], pin_layout)
   devctx.all_reduce_token = result[1]
   return result[0]
 
@@ -685,7 +708,8 @@ def reduce_scatter(reduce_type,
                    scatter_dim,
                    shard_count,
                    groups=None,
-                   output=None):
+                   output=None,
+                   pin_layout=False):
   """Performs a XLA `ReduceScatter()` operation on the input tensor.
 
   See: https://www.tensorflow.org/xla/operation_semantics#reducescatter
@@ -704,6 +728,11 @@ def reduce_scatter(reduce_type,
         the `[4, 5, 6, 7]` replicas. If `None` there will be only one group with
         all the replicas in it.
     output: Optional output tensor
+    pin_layout (bool, optional): whether to pin the layout for this communication op.
+      Layout pining can prevent potential data corruption when each process that
+      participate in the communication has slightly different program, but it might
+      cause some xla compiation to fail. Unpin the layout when you see error message
+      like "HloModule has a mix of layout constrained".
 
   Returns:
     A `torch.Tensor` with all the values reduced accross replicas. Each process
@@ -717,13 +746,13 @@ def reduce_scatter(reduce_type,
                                                         input, token, scale,
                                                         scatter_dim,
                                                         shard_count, groups or
-                                                        [])
+                                                        [], pin_layout)
     devctx.all_reduce_token = new_token
     return output
 
   result = torch_xla._XLAC._xla_reduce_scatter(reduce_type, input, token, scale,
                                                scatter_dim, shard_count,
-                                               groups or [])
+                                               groups or [], pin_layout)
   devctx.all_reduce_token = result[1]
   return result[0]
 

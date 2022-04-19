@@ -34,20 +34,22 @@ std::vector<Value> GetOperandList(absl::Span<const Value> operands,
 
 AllReduce::AllReduce(AllReduceType reduce_type,
                      absl::Span<const Value> operands, const Value& token,
-                     double scale, std::vector<std::vector<int64_t>> groups)
+                     double scale, std::vector<std::vector<int64_t>> groups,
+                     bool pin_layout)
     : Node(xla_cross_replica_sum, GetOperandList(operands, token),
            [&]() { return NodeOutputShape(operands, token); },
            /*num_outputs=*/operands.size() + 1,
            torch::lazy::MHash(torch::lazy::GetEnumValue(reduce_type), scale,
-                              groups)),
+                              groups, pin_layout)),
       reduce_type_(reduce_type),
       scale_(scale),
-      groups_(std::move(groups)) {}
+      groups_(std::move(groups)),
+      pin_layout_(pin_layout) {}
 
 torch::lazy::NodePtr AllReduce::Clone(OpList operands) const {
   std::vector<Value> operand_list(operands.begin(), operands.end() - 1);
   return ir::MakeNode<AllReduce>(reduce_type_, operand_list, operands.back(),
-                                 scale_, groups_);
+                                 scale_, groups_, pin_layout_);
 }
 
 XlaOpVector AllReduce::Lower(LoweringContext* loctx) const {
@@ -58,15 +60,16 @@ XlaOpVector AllReduce::Lower(LoweringContext* loctx) const {
     inputs.push_back(loctx->GetOutputOp(operand_list[i]));
   }
   xla::XlaOp token = loctx->GetOutputOp(operand_list.back());
-  return ReturnOps(BuildAllReduce(reduce_type_, inputs, token, scale_, groups_),
-                   loctx);
+  return ReturnOps(
+      BuildAllReduce(reduce_type_, inputs, token, scale_, groups_, pin_layout_),
+      loctx);
 }
 
 std::string AllReduce::ToString() const {
   std::stringstream ss;
   ss << Node::ToString()
      << ", reduce_type=" << torch::lazy::GetEnumValue(reduce_type_)
-     << ", scale=" << scale_ << ", groups=(";
+     << ", scale=" << scale_ << ", pin_layout=" << pin_layout_ << ", groups=(";
   for (size_t i = 0; i < groups_.size(); ++i) {
     ss << (i == 0 ? "(" : ",(");
     ss << absl::StrJoin(groups_[i], ", ") << ")";
