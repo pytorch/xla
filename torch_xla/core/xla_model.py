@@ -593,7 +593,7 @@ def all_reduce(reduce_type,
   return results[0] if isinstance(inputs, torch.Tensor) else results
 
 
-def all_gather(value, dim=0, groups=None, output=None, pin_layout=True):
+def all_gather(value, dim=0, groups=None, output=None, pin_layout=False):
   """Performs an all-gather operation along a given dimension.
 
   Args:
@@ -645,7 +645,7 @@ def all_to_all(value,
                concat_dimension,
                split_count,
                groups=None,
-               pin_layout=True):
+               pin_layout=False):
   """Performs an XLA `AllToAll()` operation on the input tensor.
 
   See: https://www.tensorflow.org/xla/operation_semantics#alltoall
@@ -709,7 +709,7 @@ def reduce_scatter(reduce_type,
                    shard_count,
                    groups=None,
                    output=None,
-                   pin_layout=True):
+                   pin_layout=False):
   """Performs a XLA `ReduceScatter()` operation on the input tensor.
 
   See: https://www.tensorflow.org/xla/operation_semantics#reducescatter
