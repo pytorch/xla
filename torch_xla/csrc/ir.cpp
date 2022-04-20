@@ -114,15 +114,11 @@ const xla::Shape& Value::xla_node_shape() const {
 
 Node::Node(torch::lazy::OpKind op, OpList operands, xla::Shape shape,
            size_t num_outputs, torch::lazy::hash_t hash_seed)
-    : torch::lazy::Node(
-          op, num_outputs,
-          /*node_hash=*/torch::lazy::HashCombine(op.hash(), hash_seed),
-          /*dag_hash_fn=*/
-          [&](bool /*bakeInSizes*/) -> torch::lazy::hash_t {
-            return GetOperandHashes(
-                operands, torch::lazy::HashCombine(op.hash(), hash_seed));
-          }),
-      xla_shape_(std::move(shape)) {
+    : torch::lazy::Node(op, num_outputs),
+      xla_shape_(std::move(shape)),
+      node_hash_(torch::lazy::HashCombine(op.hash(), hash_seed)),
+      dag_hash_(GetOperandHashes(
+          operands, torch::lazy::HashCombine(op.hash(), hash_seed))) {
   for (auto& operand : operands) {
     AddOperand(operand.node, operand.index);
   }
@@ -139,11 +135,10 @@ Node::Node(torch::lazy::OpKind op, OpList operands,
 
 Node::Node(torch::lazy::OpKind op, xla::Shape shape, size_t num_outputs,
            torch::lazy::hash_t hash_seed)
-    : torch::lazy::Node(op, num_outputs, /*node_hash_fn=*/
-                        [&](bool /*bakeInSizes*/) -> torch::lazy::hash_t {
-                          return GetOpHash(op, shape, hash_seed);
-                        }),
-      xla_shape_(std::move(shape)) {}
+    : torch::lazy::Node(op, num_outputs),
+      xla_shape_(std::move(shape)),
+      node_hash_(GetOpHash(op, xla_shape_, hash_seed)),
+      dag_hash_(node_hash_) {}
 
 Node::~Node() {
   for (size_t i = 0; i < operands_as_outputs_.size(); ++i) {
