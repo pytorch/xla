@@ -12,7 +12,7 @@ namespace ops {
 ShrinkBackward::ShrinkBackward(torch::lazy::OpKind kind,
                                const Value& grad_output, const Value& input,
                                const at::Scalar& lambda)
-    : Node(kind, {grad_output, input}, input.shape(), /*num_outputs=*/1,
+    : Node(kind, {grad_output, input}, input.xla_shape(), /*num_outputs=*/1,
            ScalarHash(lambda)),
       lambda_(std::move(lambda)) {}
 
@@ -22,7 +22,7 @@ std::string ShrinkBackward::ToString() const {
   return ss.str();
 }
 
-NodePtr ShrinkBackward::Clone(OpList operands) const {
+torch::lazy::NodePtr ShrinkBackward::Clone(OpList operands) const {
   return ir::MakeNode<ShrinkBackward>(op(), operands.at(0), operands.at(1),
                                       lambda_);
 }

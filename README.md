@@ -26,11 +26,14 @@ The rest of this README covers:
 
 * [Running PyTorch on Cloud TPUs in production on Google Cloud.](#Cloud)
 Google Cloud also runs networks faster than Google Colab.
+* [Available images and wheels](#Resource)
 * [API & Best Practices](#API)
 * [Performance Profiling and Auto-Metrics Analysis](#PerfMetrics)
 * [Troubleshooting](#Troubleshooting)
 * [Providing Feedback](#Feedback)
 * [Building and Contributing to PyTorch/XLA](#Contributing)
+
+
 
 Additional information on PyTorch/XLA, including a description of its
 semantics and functions, is available at [PyTorch.org](http://pytorch.org/xla/).
@@ -40,12 +43,14 @@ semantics and functions, is available at [PyTorch.org](http://pytorch.org/xla/).
 Google Cloud Platform lets you deploy PyTorch networks running on Cloud TPUs.
 This guide is split into two parts:
 
-* [Running on a Cloud TPU VM](#TPUVM)
 * [Running on a single Cloud TPU](#CloudSingle)
 * [Running on a Cloud TPU Pod](#Pod)
 
-## <a name="TPUVM"></a> Running on a Cloud TPU VM
-Please check out our [Cloud TPU VM User Guide](https://cloud.google.com/tpu/docs/pytorch-xla-ug-tpu-vm). Cloud TPU VM is currently on public preview and provides direct access to the TPU host. To learn more about the Cloud TPU System Architecture, please check out [this doc](https://cloud.google.com/tpu/docs/system-architecture-tpu-vm#tpu_vms).
+We are also introducing *new* TPU VMs for more transparent and easier access to the TPU hardware. Please check out our [Cloud TPU VM User Guide](https://cloud.google.com/tpu/docs/pytorch-xla-ug-tpu-vm). Cloud TPU VM is currently on public preview and provides direct access to the TPU host. To learn more about the Cloud TPU System Architecture, please check out [this doc](https://cloud.google.com/tpu/docs/system-architecture-tpu-vm#tpu_vms).
+
+The following instructions were originally written for Cloud TPU nodes, and should be applicable to training on TPU VMs.
+
+---
 
 ## <a name="CloudSingle"></a> Running on a Single Cloud TPU
 
@@ -75,7 +80,7 @@ Follow these steps to train a PyTorch model with Docker on a Cloud TPU:
 
 2. SSH into the VM and pull a version of the docker image into the VM. The currently available versions are:
 
-    * `gcr.io/tpu-pytorch/xla:r1.11`: The current stable version.
+    * `gcr.io/tpu-pytorch/xla:r1.11_3.7`: The current stable version.
     * `gcr.io/tpu-pytorch/xla:nightly_3.7`: Nightly version using Python 3.7.
     * `gcr.io/tpu-pytorch/xla:nightly_3.7_YYYYMMDD (e.g.: gcr.io/tpu-pytorch/xla:nightly_3.7_20220301)`.
 
@@ -93,19 +98,19 @@ Follow these steps to train a PyTorch model with Docker on a Cloud TPU:
     ```
 
     ```Shell
-    (vm)$ docker pull gcr.io/tpu-pytorch/xla:r1.11
+    (vm)$ docker pull gcr.io/tpu-pytorch/xla:r1.11_3.7
     ```
 
-3. Where `$TPU_IP_ADDRESS` (e.g.: `10.1.1.2`) is your TPU Internal IP displayed in GCP UI, after pulling the docker image you can either:
+3. Where `$TPU_IP_ADDRESS` (e.g.: `10.1.1.2`) is your TPU Internal IP displayed in GCP UI, after pulling the docker image you can either (for TPU VMs set `XRT_TPU_CONFIG` to `"localservice;0;localhost:51011"`):
 
     * Run the container with a single command:
       ```Shell
-      (vm)$ docker run --shm-size 16G -e XRT_TPU_CONFIG="tpu_worker;0;$TPU_IP_ADDRESS:8470" gcr.io/tpu-pytorch/xla:r1.11 python /pytorch/xla/test/test_train_mp_mnist.py
+      (vm)$ docker run --shm-size 16G -e XRT_TPU_CONFIG="tpu_worker;0;$TPU_IP_ADDRESS:8470" gcr.io/tpu-pytorch/xla:r1.11_3.7 python /pytorch/xla/test/test_train_mp_mnist.py
       ```
 
     * Run the script in an interactive shell:
       ```Shell
-      (vm)$ docker run -it --shm-size 16G gcr.io/tpu-pytorch/xla:r1.11
+      (vm)$ docker run -it --shm-size 16G gcr.io/tpu-pytorch/xla:r1.11_3.7
       (pytorch) root@CONTAINERID:/$ export XRT_TPU_CONFIG="tpu_worker;0;$TPU_IP_ADDRESS:8470"
       (pytorch) root@CONTAINERID:/$ python pytorch/xla/test/test_train_mp_mnist.py
       ```
@@ -198,7 +203,7 @@ Training on pods can be broken down to largely 3 different steps:
 
 * Or, to distribute training as a docker container:
 ```
-(torch-xla-1.11)$ python -m torch_xla.distributed.xla_dist --tpu=$TPU_POD_NAME --docker-image=gcr.io/tpu-pytorch/xla:r1.11 --docker-run-flag=--rm=true --docker-run-flag=--shm-size=50GB --env=XLA_USE_BF16=1 -- python /pytorch/xla/test/test_train_mp_imagenet.py --fake_data
+(torch-xla-1.11)$ python -m torch_xla.distributed.xla_dist --tpu=$TPU_POD_NAME --docker-image=gcr.io/tpu-pytorch/xla:r1.11_3.7 --docker-run-flag=--rm=true --docker-run-flag=--shm-size=50GB --env=XLA_USE_BF16=1 -- python /pytorch/xla/test/test_train_mp_imagenet.py --fake_data
 ```
 
 ### List of VMs
@@ -287,6 +292,35 @@ To learn more about TPU Pods check out this [blog
 post](https://cloud.google.com/blog/products/ai-machine-learning/googles-scalable-supercomputers-for-machine-learning-cloud-tpu-pods-are-now-publicly-available-in-beta). For more information regarding system architecture, please refer to the
 [Cloud TPU System Architecture](https://cloud.google.com/tpu/docs/system-architecture) page.
 
+
+## <a name="Resource"></a> Available images and wheels
+The following pre-built docker images are available to run on Cloud TPUs (see [docker images](#DockerImage) for instructions):
+
+    * `gcr.io/tpu-pytorch/xla:r1.11_3.7`: The current stable version.
+    * `gcr.io/tpu-pytorch/xla:nightly_3.7`: Nightly version using Python 3.7.
+    * `gcr.io/tpu-pytorch/xla:nightly_3.7_YYYYMMDD (e.g.: gcr.io/tpu-pytorch/xla:nightly_3.7_20220301)`.
+
+We also have pre-built docker images to run on Cloud compute instances with GPUs (`CUDA 11.2`):
+
+    * `gcr.io/tpu-pytorch/xla:r1.11_3.7_cuda_11.2`: The current stable version.
+    * `gcr.io/tpu-pytorch/xla:nightly_3.7_cuda_11.2`: Nightly version using Python 3.7.
+    * `gcr.io/tpu-pytorch/xla:nightly_3.7_cuda_11.2_YYYYMMDD`.
+
+To run on [compute instances with GPUs](https://cloud.google.com/compute/docs/gpus/create-vm-with-gpus).
+
+The following pre-built wheels are avaialble for Cloud TPUs:
+
+* `https://storage.googleapis.com/tpu-pytorch/wheels/torch_xla-nightly-cp37-cp37m-linux_x86_64.whl`
+* `https://storage.googleapis.com/tpu-pytorch/wheels/torch_xla-1.11-cp37-cp37m-linux_x86_64.whl`
+* `https://storage.googleapis.com/tpu-pytorch/wheels/torch_xla-1.10-cp37-cp37m-linux_x86_64.whl`
+* `https://storage.googleapis.com/tpu-pytorch/wheels/torch_xla-1.9-cp37-cp37m-linux_x86_64.whl`
+
+and for Colab:
+
+* `https://storage.googleapis.com/tpu-pytorch/wheels/colab/torch_xla-1.11-cp37-cp37m-linux_x86_64.whl (TPU runtime)`
+* `https://storage.googleapis.com/tpu-pytorch/wheels/cuda/112/torch_xla-1.11-cp37-cp37m-linux_x86_64.whl (GPU runtime)`
+
+
 ## <a name="API"></a> API & Best Practices
 
 In general PyTorch/XLA follows PyTorch APIs, some additional torch_xla specific APIs are available at:
@@ -304,6 +338,7 @@ With PyTorch/XLA we provide a set of performance profiling tooling and auto-metr
 * [Official tutorial](https://cloud.google.com/tpu/docs/pytorch-xla-performance-profiling-tpu-vm)
 * [Colab notebook](https://colab.research.google.com/github/pytorch/xla/blob/master/contrib/colab/pytorch-xla-profiling-colab.ipynb)
 * [Sample MNIST training script with profiling](https://github.com/pytorch/xla/blob/master/test/test_profile_mp_mnist.py)
+* [Utility script for capturing performance profiles](https://github.com/pytorch/xla/blob/master/scripts/capture_profile.py)
 
 ## <a name="Troubleshooting"></a> Troubleshooting
 
@@ -321,5 +356,5 @@ bug reports, feature requests, build issues, etc. are all welcome!
 
 See the [contribution guide](CONTRIBUTING.md).
 
-## Disclaimer 
+## Disclaimer
 This repository is jointly operated and maintained by Google, Facebook and a number of individual contributors listed in the [CONTRIBUTORS](https://github.com/pytorch/xla/graphs/contributors) file. For questions directed at Facebook, please send an email to opensource@fb.com. For questions directed at Google, please send an email to pytorch-xla@googlegroups.com. For all other questions, please open up an issue in this repository [here](https://github.com/pytorch/xla/issues).

@@ -14,6 +14,7 @@
 #include "tensorflow/compiler/xla/xla_client/multi_wait.h"
 #include "tensorflow/compiler/xla/xla_client/util.h"
 #include "torch/csrc/autograd/variable.h"
+#include "torch/csrc/lazy/core/ir_util.h"
 #include "torch_xla/csrc/computation.h"
 #include "torch_xla/csrc/cross_replica_reduces.h"
 #include "torch_xla/csrc/device.h"
@@ -209,41 +210,46 @@ class XLATensor {
   //////////////////////////////////////////////////////////////////////////////
   static std::pair<XLATensor, ir::Value> all_reduce(
       const XLATensor& input, const ir::Value& token, AllReduceType reduce_type,
-      double scale, std::vector<std::vector<int64_t>> groups);
+      double scale, std::vector<std::vector<int64_t>> groups, bool pin_layout);
 
   static ir::Value all_reduce_(XLATensor& input, const ir::Value& token,
                                AllReduceType reduce_type, double scale,
-                               std::vector<std::vector<int64_t>> groups);
+                               std::vector<std::vector<int64_t>> groups,
+                               bool pin_layout);
 
   static ir::Value all_reduce(std::vector<XLATensor>* inputs,
                               const ir::Value& token, AllReduceType reduce_type,
                               double scale,
-                              std::vector<std::vector<int64_t>> groups);
+                              std::vector<std::vector<int64_t>> groups,
+                              bool pin_layout);
 
   static std::pair<XLATensor, ir::Value> reduce_scatter(
       const XLATensor& input, const ir::Value& token, AllReduceType reduce_type,
       double scale, int64_t scatter_dim, int64_t shard_count,
-      std::vector<std::vector<int64_t>> groups);
+      std::vector<std::vector<int64_t>> groups, bool pin_layout);
 
   static ir::Value reduce_scatter_out(XLATensor& output, const XLATensor& input,
                                       const ir::Value& token,
                                       AllReduceType reduce_type, double scale,
                                       int64_t scatter_dim, int64_t shard_count,
-                                      std::vector<std::vector<int64_t>> groups);
+                                      std::vector<std::vector<int64_t>> groups,
+                                      bool pin_layout);
 
   static std::pair<XLATensor, ir::Value> all_to_all(
       const XLATensor& input, const ir::Value& token, int64_t split_dimension,
       int64_t concat_dimension, int64_t split_count,
-      std::vector<std::vector<int64_t>> groups);
+      std::vector<std::vector<int64_t>> groups, bool pin_layout);
 
   static std::pair<XLATensor, ir::Value> all_gather(
       const XLATensor& input, const ir::Value& token, int64_t dim,
-      int64_t shard_count, std::vector<std::vector<int64_t>> groups);
+      int64_t shard_count, std::vector<std::vector<int64_t>> groups,
+      bool pin_layout);
 
   static ir::Value all_gather_out(XLATensor& output, const XLATensor& input,
                                   const ir::Value& token, int64_t dim,
                                   int64_t shard_count,
-                                  std::vector<std::vector<int64_t>> groups);
+                                  std::vector<std::vector<int64_t>> groups,
+                                  bool pin_layout);
 
   static std::pair<XLATensor, ir::Value> collective_permute(
       const XLATensor& input, const ir::Value& token,
@@ -700,6 +706,11 @@ class XLATensor {
   static XLATensor hardsigmoid_backward(const XLATensor& grad_output,
                                         const XLATensor& input);
 
+  static XLATensor hardswish(const XLATensor& input);
+
+  static XLATensor hardswish_backward(const XLATensor& grad_output,
+                                      const XLATensor& input);
+
   static XLATensor hardtanh_backward(const XLATensor& grad_output,
                                      const XLATensor& input,
                                      const at::Scalar& min_val,
@@ -916,6 +927,8 @@ class XLATensor {
 
   static XLATensor not_supported(std::string description, xla::Shape shape,
                                  const Device& device);
+
+  static void optimization_barrier_(std::vector<XLATensor>& tensors);
 
   // Permute the dimensions of this tensor according to the given permutation.
   static XLATensor permute(const XLATensor& input,
@@ -1221,8 +1234,8 @@ class XLATensor {
   };
 
   struct PostOrderData {
-    std::vector<const ir::Node*> post_order;
-    ir::Util::EmissionMap emission_map;
+    std::vector<const torch::lazy::Node*> post_order;
+    torch::lazy::Util::EmissionMap emission_map;
     std::vector<xla::ComputationClient::DataPtr> parameters_data;
     std::vector<size_t> parameter_sequence;
   };
@@ -1368,7 +1381,7 @@ class XLATensor {
   void TryLimitGraphSize();
 
   std::vector<XLATensor> MakeOutputTensors(
-      ir::NodePtr node, bool inherit_logical_type = true) const;
+      torch::lazy::NodePtr node, bool inherit_logical_type = true) const;
 
   ir::Value GetIrValueForTensor(const at::Tensor& tensor,
                                 const Device& device) const;

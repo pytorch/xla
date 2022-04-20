@@ -11,15 +11,16 @@ namespace ops {
 Linspace::Linspace(const Value& start, const Value& end, int64_t steps)
     : Node(torch::lazy::OpKind(at::aten::linspace), {start, end},
            [&]() {
-             xla::PrimitiveType dtype = XlaHelpers::PromoteType(
-                 start.shape().element_type(), end.shape().element_type());
+             xla::PrimitiveType dtype =
+                 XlaHelpers::PromoteType(start.xla_shape().element_type(),
+                                         end.xla_shape().element_type());
              return xla::ShapeUtil::MakeShape(dtype, {steps});
            },
            /*num_outputs=*/1, torch::lazy::MHash(steps)),
       steps_(steps) {}
 
-NodePtr Linspace::Clone(OpList operands) const {
-  return MakeNode<Linspace>(operands.at(0), operands.at(1), steps_);
+torch::lazy::NodePtr Linspace::Clone(OpList operands) const {
+  return ir::MakeNode<Linspace>(operands.at(0), operands.at(1), steps_);
 }
 
 XlaOpVector Linspace::Lower(LoweringContext* loctx) const {

@@ -16,7 +16,7 @@ xla::Shape NodeOutputShape(const Value& input, int64_t k, int64_t dim,
     return xla::Tuple(operands[0].builder(),
                       CreateKthValue(operands[0], k, dim, keepdim));
   };
-  return InferOutputShape({input.shape()}, lower_for_shape_fn);
+  return InferOutputShape({input.xla_shape()}, lower_for_shape_fn);
 }
 
 }  // namespace
@@ -29,8 +29,8 @@ KthValue::KthValue(const Value& input, int64_t k, int64_t dim, bool keepdim)
       dim_(dim),
       keepdim_(keepdim) {}
 
-NodePtr KthValue::Clone(OpList operands) const {
-  return MakeNode<KthValue>(operands.at(0), k_, dim_, keepdim_);
+torch::lazy::NodePtr KthValue::Clone(OpList operands) const {
+  return ir::MakeNode<KthValue>(operands.at(0), k_, dim_, keepdim_);
 }
 
 XlaOpVector KthValue::Lower(LoweringContext* loctx) const {

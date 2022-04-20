@@ -15,15 +15,15 @@ Diagonal::Diagonal(const Value& input, int64_t offset, int64_t dim1,
                    int64_t dim2)
     : Node(torch::lazy::OpKind(at::aten::diagonal), {input},
            [&]() {
-             return MakeDiagonalShape(input.shape(), offset, dim1, dim2);
+             return MakeDiagonalShape(input.xla_shape(), offset, dim1, dim2);
            },
            /*num_outputs=*/1, torch::lazy::MHash(offset, dim1, dim2)),
       offset_(offset),
       dim1_(dim1),
       dim2_(dim2) {}
 
-NodePtr Diagonal::Clone(OpList operands) const {
-  return MakeNode<Diagonal>(operands.at(0), offset_, dim1_, dim2_);
+torch::lazy::NodePtr Diagonal::Clone(OpList operands) const {
+  return ir::MakeNode<Diagonal>(operands.at(0), offset_, dim1_, dim2_);
 }
 
 XlaOpVector Diagonal::Lower(LoweringContext* loctx) const {

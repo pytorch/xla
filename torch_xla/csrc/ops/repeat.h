@@ -11,7 +11,7 @@ class Repeat : public Node {
  public:
   Repeat(const Value& input, std::vector<int64_t> repeats);
 
-  NodePtr Clone(OpList operands) const override;
+  torch::lazy::NodePtr Clone(OpList operands) const override;
 
   XlaOpVector Lower(LoweringContext* loctx) const override;
 

@@ -13,7 +13,7 @@ class Softmax : public Node {
  public:
   Softmax(const Value& input, int64_t dim, c10::optional<at::ScalarType> dtype);
 
-  NodePtr Clone(OpList operands) const override;
+  torch::lazy::NodePtr Clone(OpList operands) const override;
 
   XlaOpVector Lower(LoweringContext* loctx) const override;
 

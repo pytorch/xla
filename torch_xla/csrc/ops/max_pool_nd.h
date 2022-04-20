@@ -12,7 +12,7 @@ class MaxPoolNd : public Node {
             std::vector<int64_t> kernel_size, std::vector<int64_t> stride,
             std::vector<int64_t> padding, bool ceil_mode);
 
-  NodePtr Clone(OpList operands) const override;
+  torch::lazy::NodePtr Clone(OpList operands) const override;
 
   XlaOpVector Lower(LoweringContext* loctx) const override;
 

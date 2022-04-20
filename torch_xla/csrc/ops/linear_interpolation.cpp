@@ -10,12 +10,13 @@ namespace ops {
 
 LinearInterpolation::LinearInterpolation(const Value& value,
                                          const Value& new_value, double alpha)
-    : Node(xla_moving_average, {value, new_value}, value.shape(),
+    : Node(xla_moving_average, {value, new_value}, value.xla_shape(),
            /*num_outputs=*/1, torch::lazy::MHash(alpha)),
       alpha_(alpha) {}
 
-NodePtr LinearInterpolation::Clone(OpList operands) const {
-  return MakeNode<LinearInterpolation>(operands.at(0), operands.at(1), alpha_);
+torch::lazy::NodePtr LinearInterpolation::Clone(OpList operands) const {
+  return ir::MakeNode<LinearInterpolation>(operands.at(0), operands.at(1),
+                                           alpha_);
 }
 
 XlaOpVector LinearInterpolation::Lower(LoweringContext* loctx) const {

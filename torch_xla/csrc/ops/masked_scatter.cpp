@@ -10,12 +10,12 @@ namespace ops {
 MaskedScatter::MaskedScatter(const Value& input, const Value& mask,
                              const Value& source)
     : Node(torch::lazy::OpKind(at::aten::masked_scatter), {input, mask, source},
-           input.shape(),
+           input.xla_shape(),
            /*num_outputs=*/1) {}
 
-NodePtr MaskedScatter::Clone(OpList operands) const {
-  return MakeNode<MaskedScatter>(operands.at(0), operands.at(1),
-                                 operands.at(2));
+torch::lazy::NodePtr MaskedScatter::Clone(OpList operands) const {
+  return ir::MakeNode<MaskedScatter>(operands.at(0), operands.at(1),
+                                     operands.at(2));
 }
 
 XlaOpVector MaskedScatter::Lower(LoweringContext* loctx) const {

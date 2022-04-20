@@ -10,10 +10,10 @@ namespace ops {
 
 Normal::Normal(const Value& mean, const Value& std, const Value& seed)
     : Node(torch::lazy::OpKind(at::aten::normal), {mean, std, seed},
-           mean.shape()) {}
+           mean.xla_shape()) {}
 
-NodePtr Normal::Clone(OpList operands) const {
-  return MakeNode<Normal>(operands.at(0), operands.at(1), operands.at(2));
+torch::lazy::NodePtr Normal::Clone(OpList operands) const {
+  return ir::MakeNode<Normal>(operands.at(0), operands.at(1), operands.at(2));
 }
 
 XlaOpVector Normal::Lower(LoweringContext* loctx) const {

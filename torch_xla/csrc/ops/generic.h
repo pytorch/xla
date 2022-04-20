@@ -27,7 +27,7 @@ class Generic : public Node {
   Generic(torch::lazy::OpKind op, xla::Shape shape, LowerFn lower_fn,
           size_t num_outputs, torch::lazy::hash_t hash_seed);
 
-  NodePtr Clone(OpList operands) const override;
+  torch::lazy::NodePtr Clone(OpList operands) const override;
 
   XlaOpVector Lower(LoweringContext* loctx) const override;
 

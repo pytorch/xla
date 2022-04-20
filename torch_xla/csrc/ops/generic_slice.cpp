@@ -19,7 +19,7 @@ xla::Shape NodeOutputShape(const Value& input,
       [&](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
     return BuildSlice(operands[0], base_indices, sizes);
   };
-  return InferOutputShape({input.shape()}, lower_for_shape_fn);
+  return InferOutputShape({input.xla_shape()}, lower_for_shape_fn);
 }
 
 }  // namespace
@@ -33,8 +33,8 @@ GenericSlice::GenericSlice(const Value& input,
       base_indices_(base_indices.begin(), base_indices.end()),
       sizes_(sizes.begin(), sizes.end()) {}
 
-NodePtr GenericSlice::Clone(OpList operands) const {
-  return MakeNode<GenericSlice>(operands.at(0), base_indices_, sizes_);
+torch::lazy::NodePtr GenericSlice::Clone(OpList operands) const {
+  return ir::MakeNode<GenericSlice>(operands.at(0), base_indices_, sizes_);
 }
 
 XlaOpVector GenericSlice::Lower(LoweringContext* loctx) const {

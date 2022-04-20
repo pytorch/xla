@@ -15,7 +15,7 @@ xla::Shape NodeOutputShape(const Value& input, std::vector<int64_t>& dimensions,
       [&](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
     return BuildMaxInDims(operands[0], dimensions, keepdim);
   };
-  return InferOutputShape({input.shape()}, lower_for_shape_fn);
+  return InferOutputShape({input.xla_shape()}, lower_for_shape_fn);
 }
 
 }  // namespace
@@ -27,8 +27,8 @@ Amax::Amax(const Value& input, std::vector<int64_t> dimensions, bool keepdim)
       dimensions_(std::move(dimensions)),
       keepdim_(keepdim) {}
 
-NodePtr Amax::Clone(OpList operands) const {
-  return MakeNode<Amax>(operands.at(0), dimensions_, keepdim_);
+torch::lazy::NodePtr Amax::Clone(OpList operands) const {
+  return ir::MakeNode<Amax>(operands.at(0), dimensions_, keepdim_);
 }
 
 XlaOpVector Amax::Lower(LoweringContext* loctx) const {

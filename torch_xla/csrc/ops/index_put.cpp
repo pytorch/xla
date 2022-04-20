@@ -10,7 +10,7 @@ namespace ops {
 IndexPut::IndexPut(const ir::Value& base, const ir::Value& indices,
                    int64_t start_dim, const ir::Value& values, bool accumulate)
     : Node(torch::lazy::OpKind(at::aten::index_put), {base, indices, values},
-           base.shape(),
+           base.xla_shape(),
            /*num_outputs=*/1, torch::lazy::MHash(start_dim, accumulate)),
       start_dim_(start_dim),
       accumulate_(accumulate) {}
@@ -22,9 +22,9 @@ std::string IndexPut::ToString() const {
   return ss.str();
 }
 
-NodePtr IndexPut::Clone(OpList operands) const {
-  return MakeNode<IndexPut>(operands.at(0), operands.at(1), start_dim_,
-                            operands.at(2), accumulate_);
+torch::lazy::NodePtr IndexPut::Clone(OpList operands) const {
+  return ir::MakeNode<IndexPut>(operands.at(0), operands.at(1), start_dim_,
+                                operands.at(2), accumulate_);
 }
 
 XlaOpVector IndexPut::Lower(LoweringContext* loctx) const {

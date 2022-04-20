@@ -7,7 +7,10 @@
 #include "tensorflow/compiler/xla/xla_client/cache.h"
 #include "tensorflow/compiler/xla/xla_client/debug_macros.h"
 #include "tensorflow/compiler/xla/xla_client/sys_util.h"
+#include "torch/csrc/lazy/core/config.h"
 #include "torch/csrc/lazy/core/hash.h"
+#include "torch/csrc/lazy/core/ir_metadata.h"
+#include "torch/csrc/lazy/python/python_util.h"
 #include "torch_xla/csrc/lowering_context.h"
 
 namespace torch_xla {
@@ -66,19 +69,18 @@ ShapeCache* GetShapeCache() {
   return cache;
 }
 
-void EmitShortFrameInfo(std::ostream& stream,
-                        const std::vector<SourceLocation>& frames) {
-  if (!frames.empty()) {
-    const SourceLocation& frame = frames.front();
-    std::string::size_type pos = frame.file.find_last_of('/');
-    if (pos == std::string::npos) {
-      pos = 0;
-    } else {
-      ++pos;
+torch::lazy::hash_t GetOperandHashes(const OpList& operands,
+                                     const torch::lazy::hash_t& node_hash) {
+  torch::lazy::hash_t hash = node_hash;
+  for (auto& operand : operands) {
+    if (!operand) {
+      hash = torch::lazy::HashCombine(
+          hash, static_cast<uint64_t>(torch::lazy::kNullOpt));
+      continue;
     }
-    stream << ", location=" << frame.function << "@" << frame.file.substr(pos)
-           << ":" << frame.line;
+    hash = torch::lazy::HashCombine(hash, operand.hash());
   }
+  return hash;
 }
 
 }  // namespace
@@ -100,45 +102,29 @@ std::string Use::ToString() const {
   return ss.str();
 }
 
-size_t Output::Hasher::operator()(const Output& output) const {
-  return torch::lazy::StdHashCombine(
-      reinterpret_cast<std::ptrdiff_t>(output.node), output.index);
+const xla::Shape& Value::xla_shape() const {
+  Node* casted = dynamic_cast<Node*>(node.get());
+  return casted->xla_shape(index);
 }
 
-const xla::Shape& Output::shape() const { return node->shape(index); }
-
-const xla::Shape& Output::node_shape() const { return node->shape(); }
-
-torch::lazy::hash_t Output::hash() const {
-  return torch::lazy::HashCombine(node->hash(), index);
-}
-
-std::string Output::ToString() const {
-  std::stringstream ss;
-  ss << node->ToString() << ", index=" << index;
-  return ss.str();
-}
-
-const xla::Shape& Value::shape() const { return node->shape(index); }
-
-const xla::Shape& Value::node_shape() const { return node->shape(); }
-
-torch::lazy::hash_t Value::hash() const {
-  return torch::lazy::HashCombine(node->hash(), index);
+const xla::Shape& Value::xla_node_shape() const {
+  Node* casted = dynamic_cast<Node*>(node.get());
+  return casted->xla_shape();
 }
 
 Node::Node(torch::lazy::OpKind op, OpList operands, xla::Shape shape,
            size_t num_outputs, torch::lazy::hash_t hash_seed)
-    : op_(std::move(op)),
-      num_outputs_(num_outputs),
-      shape_(std::move(shape)),
-      node_hash_(torch::lazy::HashCombine(op_.hash(), hash_seed)),
-      hash_(node_hash_) {
-  metadata_.scope = GetCurrentScope();
-  metadata_.frame_info = GetFrameInfo();
+    : torch::lazy::Node(
+          op, num_outputs,
+          /*node_hash=*/torch::lazy::HashCombine(op.hash(), hash_seed),
+          /*dag_hash_fn=*/
+          [&](bool /*bakeInSizes*/) -> torch::lazy::hash_t {
+            return GetOperandHashes(
+                operands, torch::lazy::HashCombine(op.hash(), hash_seed));
+          }),
+      xla_shape_(std::move(shape)) {
   for (auto& operand : operands) {
     AddOperand(operand.node, operand.index);
-    hash_ = torch::lazy::HashCombine(hash_, operand.hash());
   }
 }
 
@@ -148,51 +134,54 @@ Node::Node(torch::lazy::OpKind op, OpList operands,
     : Node(std::move(op), operands, xla::Shape(), num_outputs, hash_seed) {
   // Forward the constructor to the one above (with empty shape), so we have the
   // full hash information, then fetch/compute the real shape.
-  shape_ = GetOpShape(shape_fn);
+  xla_shape_ = GetOpShape(shape_fn);
 }
 
 Node::Node(torch::lazy::OpKind op, xla::Shape shape, size_t num_outputs,
            torch::lazy::hash_t hash_seed)
-    : op_(std::move(op)),
-      num_outputs_(num_outputs),
-      shape_(std::move(shape)),
-      node_hash_(GetOpHash(op_, shape_, hash_seed)),
-      hash_(node_hash_) {
-  metadata_.scope = GetCurrentScope();
-  metadata_.frame_info = GetFrameInfo();
-}
+    : torch::lazy::Node(op, num_outputs, /*node_hash_fn=*/
+                        [&](bool /*bakeInSizes*/) -> torch::lazy::hash_t {
+                          return GetOpHash(op, shape, hash_seed);
+                        }),
+      xla_shape_(std::move(shape)) {}
 
 Node::~Node() {
   for (size_t i = 0; i < operands_as_outputs_.size(); ++i) {
-    operands_[i]->RemoveUse(Use(this, i, operands_as_outputs_[i].index));
+    Node* casted = dynamic_cast<Node*>(operands_[i].get());
+    casted->RemoveUse(Use(this, i, operands_as_outputs_[i].index));
   }
 }
 
-const xla::Shape& Node::shape(size_t output_index) const {
-  if (shape_.IsTuple()) {
-    return shape_.tuple_shapes(output_index);
+const xla::Shape& Node::xla_shape(size_t output_index) const {
+  if (xla_shape_.IsTuple()) {
+    return xla_shape_.tuple_shapes(output_index);
   }
   XLA_CHECK_EQ(output_index, 0);
-  return shape_;
+  return xla_shape_;
 }
 
-void Node::AddOperand(NodePtr node, size_t index) {
+void Node::AddOperand(torch::lazy::NodePtr node, size_t index) {
   XLA_CHECK_LT(index, node->num_outputs());
   operands_.push_back(std::move(node));
-  operands_as_outputs_.push_back(Output(operands_.back().get(), index));
-  operands_.back()->AddUse(Use(this, operands_.size() - 1, index));
+  operands_as_outputs_.push_back(
+      torch::lazy::Output(operands_.back().get(), index));
+  Node* casted = dynamic_cast<Node*>(operands_.back().get());
+  casted->AddUse(Use(this, operands_.size() - 1, index));
 }
 
-void Node::ReplaceOperand(size_t operand_no, NodePtr node, size_t index) {
+void Node::ReplaceOperand(size_t operand_no, torch::lazy::NodePtr node,
+                          size_t index) {
   XLA_CHECK_LT(index, node->num_outputs());
-  Output* output = &operands_as_outputs_.at(operand_no);
-  operands_[operand_no]->RemoveUse(Use(this, operand_no, output->index));
-  node->AddUse(Use(this, operand_no, index));
-  *output = Output(node.get(), index);
+  Node* casted = dynamic_cast<Node*>(node.get());
+  torch::lazy::Output* output = &operands_as_outputs_.at(operand_no);
+  Node* casted_to_remove = dynamic_cast<Node*>(operands_[operand_no].get());
+  casted_to_remove->RemoveUse(Use(this, operand_no, output->index));
+  casted->AddUse(Use(this, operand_no, index));
+  *output = torch::lazy::Output(node.get(), index);
   operands_[operand_no] = std::move(node);
 }
 
-void Node::ReplaceAllUsesWith(NodePtr node, size_t index) {
+void Node::ReplaceAllUsesWith(torch::lazy::NodePtr node, size_t index) {
   // A call to ReplaceOperand() will end up calling RemoveUse() into the
   // current node, so snapshot the current uses and iterate over them.
   std::vector<Use> current_uses(uses_.begin(), uses_.end());
@@ -203,7 +192,7 @@ void Node::ReplaceAllUsesWith(NodePtr node, size_t index) {
 
 XlaOpVector Node::ReturnOp(xla::XlaOp op, LoweringContext* loctx) const {
   XLA_CHECK_EQ(num_outputs(), 1);
-  loctx->AssignOutputOp(Output(this), op);
+  loctx->AssignOutputOp(torch::lazy::Output(this), op);
   return XlaOpVector({std::move(op)});
 }
 
@@ -212,26 +201,13 @@ XlaOpVector Node::ReturnOps(absl::Span<const xla::XlaOp> ops,
   XLA_CHECK_EQ(num_outputs(), ops.size());
   XlaOpVector result;
   for (size_t i = 0; i < ops.size(); ++i) {
-    loctx->AssignOutputOp(Output(this, i), ops[i]);
+    loctx->AssignOutputOp(torch::lazy::Output(this, i), ops[i]);
     result.push_back(ops[i]);
   }
   return result;
 }
 
-std::string Node::ToString() const {
-  std::stringstream ss;
-  ss << shape() << " " << op();
-  if (num_outputs() > 1) {
-    ss << ", num_outputs=" << num_outputs();
-  }
-  if (!metadata_.scope.empty()) {
-    ss << ", scope=" << metadata_.scope;
-  }
-  EmitShortFrameInfo(ss, metadata_.frame_info);
-  return ss.str();
-}
-
-NodePtr Node::Clone(OpList operands) const {
+torch::lazy::NodePtr Node::Clone(OpList operands) const {
   XLA_ERROR() << "Cloning not implemented for node: " << *this;
 }
 
@@ -256,12 +232,13 @@ xla::Shape Node::GetOpShape(const std::function<xla::Shape()>& shape_fn) const {
   return *shape;
 }
 
-std::vector<SourceLocation> Node::GetFrameInfo() {
+std::vector<torch::lazy::SourceLocation> Node::GetFrameInfo() {
   // At the time of writing, retrieving Python frames costs from 1us up to 20us.
   // This per IR Node. Since it is not unreasonable to have a many hundreds of
   // IR Node, this can be a multi-millisecond cost, which is not negligible.
   static bool wants_frames = xla::sys_util::GetEnvBool("XLA_IR_DEBUG", false);
-  return wants_frames ? GetPythonFrames() : std::vector<SourceLocation>();
+  return wants_frames ? torch::lazy::GetPythonFrames()
+                      : std::vector<torch::lazy::SourceLocation>();
 }
 
 ScopePusher::ScopePusher(const std::string& name) { PushScope(name); }

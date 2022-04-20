@@ -28,7 +28,7 @@ xla::Shape NodeOutputShape(const Value& input, const at::Scalar& value,
       [&](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
     return LowerPad(operands[0], value, pad);
   };
-  return InferOutputShape({input.shape()}, lower_for_shape_fn);
+  return InferOutputShape({input.xla_shape()}, lower_for_shape_fn);
 }
 
 }  // namespace
@@ -41,8 +41,8 @@ ConstantPadNd::ConstantPadNd(const Value& input, std::vector<int64_t> pad,
       pad_(std::move(pad)),
       value_(value) {}
 
-NodePtr ConstantPadNd::Clone(OpList operands) const {
-  return MakeNode<ConstantPadNd>(operands.at(0), pad_, value_);
+torch::lazy::NodePtr ConstantPadNd::Clone(OpList operands) const {
+  return ir::MakeNode<ConstantPadNd>(operands.at(0), pad_, value_);
 }
 
 XlaOpVector ConstantPadNd::Lower(LoweringContext* loctx) const {

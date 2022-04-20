@@ -12,7 +12,7 @@ class UpdateSlice : public Node {
   UpdateSlice(const Value& input, const Value& source,
               absl::Span<const int64_t> base_indices);
 
-  NodePtr Clone(OpList operands) const override;
+  torch::lazy::NodePtr Clone(OpList operands) const override;
 
   XlaOpVector Lower(LoweringContext* loctx) const override;
 

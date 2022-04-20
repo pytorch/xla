@@ -11,7 +11,7 @@ namespace ops {
 namespace {
 
 xla::Shape NodeOutputShape(const Value& input) {
-  const xla::Shape& input_shape = input.shape();
+  const xla::Shape& input_shape = input.xla_shape();
   int64_t input_elements = xla::ShapeUtil::ElementsIn(input_shape);
   xla::PrimitiveType size_type = GetShapeDimensionType(/*device=*/nullptr);
   xla::Shape result_shape =
@@ -28,8 +28,8 @@ MaskedSelect::MaskedSelect(const Value& input, const Value& mask)
            NodeOutputShape(input),
            /*num_outputs=*/2) {}
 
-NodePtr MaskedSelect::Clone(OpList operands) const {
-  return MakeNode<MaskedSelect>(operands.at(0), operands.at(1));
+torch::lazy::NodePtr MaskedSelect::Clone(OpList operands) const {
+  return ir::MakeNode<MaskedSelect>(operands.at(0), operands.at(1));
 }
 
 XlaOpVector MaskedSelect::Lower(LoweringContext* loctx) const {

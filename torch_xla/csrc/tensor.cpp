@@ -27,6 +27,7 @@
 #include "torch/csrc/autograd/variable.h"
 #include "torch/csrc/lazy/core/hash.h"
 #include "torch/csrc/lazy/core/helpers.h"
+#include "torch/csrc/lazy/core/ir_util.h"
 #include "torch/csrc/lazy/core/tensor_util.h"
 #include "torch/csrc/lazy/core/util.h"
 #include "torch_xla/csrc/debug_util.h"
@@ -525,7 +526,7 @@ xla::util::MaybeRef<xla::Shape> XLATensor::shape() const {
     return data()->xla_data->shape();
   }
   if (data()->ir_value) {
-    return data()->ir_value.shape();
+    return data()->ir_value.xla_shape();
   }
   XLA_CHECK(data()->tensor_data);
   const Device& device = GetDevice();
@@ -538,7 +539,7 @@ xla::Shape XLATensor::shape_with_layout() const {
   auto xla_shape = shape();
   return MakeArrayShapeFromDimensions(
       xla_shape.get().dimensions(), xla_shape.get().dynamic_dimensions(),
-      xla_shape.get().element_type(), GetDevice().hw_type);
+      xla_shape.get().element_type(), GetDevice().device_type.hw_type);
 }
 
 const Device& XLATensor::GetDevice() const { return data()->device; }
@@ -643,7 +644,7 @@ void XLATensor::SetIrValue(ir::Value ir_value, bool inplace) {
 
 void XLATensor::SetInPlaceIrValue(ir::Value ir_value) {
   auto xla_shape = shape();
-  if (xla_shape.get().element_type() != ir_value.shape().element_type()) {
+  if (xla_shape.get().element_type() != ir_value.xla_shape().element_type()) {
     ir_value =
         ir::MakeNode<ir::ops::Cast>(ir_value, xla_shape.get().element_type());
   }
@@ -661,7 +662,8 @@ void XLATensor::TryLimitGraphSize() {
   static const size_t kMaxPendingGraphSize =
       xla::sys_util::GetEnvInt("XLA_TRIM_GRAPH_SIZE", 100000);
   if (data()->ir_value && ++g_tls_data.trim_counter % kCheckFrequency == 0) {
-    size_t graph_size = ir::Util::GetGraphSize({data()->ir_value.node.get()});
+    size_t graph_size =
+        torch::lazy::Util::GetGraphSize({data()->ir_value.node.get()});
     if (graph_size > kMaxPendingGraphSize) {
       XLA_COUNTER("TrimIrGraph", 1);
       ApplyPendingGraph();
@@ -805,11 +807,12 @@ View::IrNode XLATensor::GetViewUpdate(const std::shared_ptr<View>& view) const {
 
 std::shared_ptr<View> XLATensor::UpdateView(std::shared_ptr<View> view,
                                             ir::Value ir_value) const {
-  if (ir_value.shape().dimensions() != view->shape().dimensions()) {
-    XLA_CHECK_EQ(xla::util::Multiply<int64_t>(ir_value.shape().dimensions()),
-                 xla::util::Multiply<int64_t>(view->shape().dimensions()));
+  if (ir_value.xla_shape().dimensions() != view->shape().dimensions()) {
+    XLA_CHECK_EQ(
+        xla::util::Multiply<int64_t>(ir_value.xla_shape().dimensions()),
+        xla::util::Multiply<int64_t>(view->shape().dimensions()));
 
-    ViewInfo view_info(ViewInfo::Type::kReshape, ir_value.shape(),
+    ViewInfo view_info(ViewInfo::Type::kReshape, ir_value.xla_shape(),
                        view->shape());
     view = view->CreateSubView(view_info.shape, view_info);
   }
@@ -845,9 +848,9 @@ std::shared_ptr<View> XLATensor::CreateView(ViewInfo view_info) const {
   // Node, and using the same alias for the created IR Node.
   ir::Value ir_value = GetIrValue();
   std::shared_ptr<Alias> alias = std::make_shared<Alias>(ir_value);
-  ViewInfo this_view_info(ViewInfo::Type::kNoOp, ir_value.shape(),
-                          ir_value.shape());
-  data()->view = std::make_shared<View>(ir_value.shape(), alias,
+  ViewInfo this_view_info(ViewInfo::Type::kNoOp, ir_value.xla_shape(),
+                          ir_value.xla_shape());
+  data()->view = std::make_shared<View>(ir_value.xla_shape(), alias,
                                         std::move(this_view_info));
   AssignIrValue(ir::Value());
   return std::make_shared<View>(view_info.shape, alias, view_info);
@@ -1073,7 +1076,7 @@ ir::Value XLATensor::CreateTensorNode(xla::ComputationClient::DataPtr data,
 }
 
 std::vector<XLATensor> XLATensor::MakeOutputTensors(
-    ir::NodePtr node, bool inherit_logical_type) const {
+    torch::lazy::NodePtr node, bool inherit_logical_type) const {
   std::vector<XLATensor> tensors;
   tensors.reserve(node->num_outputs());
   for (size_t i = 0; i < node->num_outputs(); ++i) {
@@ -1271,7 +1274,7 @@ XLATensor::ComputationCache* XLATensor::GetComputationCache() {
 
 XLATensor::PostOrderData XLATensor::RunPostOrder(
     const std::vector<XLATensor>& tensors, absl::Span<const size_t> indices) {
-  std::vector<const ir::Node*> roots;
+  std::vector<const torch::lazy::Node*> roots;
   roots.reserve(indices.size());
   for (auto index : indices) {
     ir::Value ir_value = tensors.at(index).CurrentIrValue();
@@ -1328,8 +1331,8 @@ std::vector<xla::ComputationClient::DataPtr> XLATensor::FetchTensorData(
     xla::ComputationClient::DataPtr xla_data = tensor.CurrentXlaData();
     if (xla_data == nullptr && config.force_xla_data) {
       const Device& tensor_device = tensor.GetDevice();
-      xla::Shape shape =
-          MakeShapeWithDeviceLayout(tensor.shape(), tensor_device.hw_type);
+      xla::Shape shape = MakeShapeWithDeviceLayout(
+          tensor.shape(), tensor_device.device_type.hw_type);
       xla_data = xla::ComputationClient::Get()->CreateDataPlaceholder(
           tensor_device.ToString(), std::move(shape));
       tensor.SetXlaData(xla_data, config.sync_xla_data);
@@ -1573,7 +1576,8 @@ XLATensor::CompilationResult XLATensor::Compile(
                                    std::move(po_data->emission_map));
   for (auto index : coll.indices) {
     ir::Value ir_value = tensors[index].CurrentIrValue();
-    xla::XlaOp root = lowering_ctx.GetOutputOp(ir_value);
+    xla::XlaOp root = lowering_ctx.GetOutputOp(
+        torch::lazy::Output(ir_value.node.get(), ir_value.index));
     lowering_ctx.AddResult(root);
   }
   if (enable_aliasing && coll.config.sync_xla_data) {
@@ -1606,8 +1610,8 @@ XLATensor::CompilationResult XLATensor::Compile(
 
   xla::XlaComputation computation = ConsumeValue(lowering_ctx.Build());
   xla::ProgramShape program_shape = ConsumeValue(computation.GetProgramShape());
-  xla::Shape shape =
-      MakeShapeWithDeviceLayout(program_shape.result(), coll.device.hw_type);
+  xla::Shape shape = MakeShapeWithDeviceLayout(program_shape.result(),
+                                               coll.device.device_type.hw_type);
 
   std::vector<xla::ComputationClient::CompileInstance> instances;
   instances.push_back({std::move(computation), coll.device.ToString(),

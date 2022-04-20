@@ -15,10 +15,10 @@ xla::Shape NodeOutputShape(const OpList& inputs, const Value& found_inf) {
   std::vector<xla::Shape> output_shapes;
   output_shapes.reserve(inputs.size() + 1);
   for (size_t i = 0; i < inputs.size(); ++i) {
-    const xla::Shape& input_shape = inputs[i].shape();
+    const xla::Shape& input_shape = inputs[i].xla_shape();
     output_shapes.push_back(input_shape);
   }
-  output_shapes.push_back(found_inf.shape());
+  output_shapes.push_back(found_inf.xla_shape());
   return xla::ShapeUtil::MakeTupleShape(output_shapes);
 }
 
@@ -41,11 +41,12 @@ AmpForachNonFiniteCheckAndUnscale::AmpForachNonFiniteCheckAndUnscale(
            NodeOutputShape(inputs, found_inf),
            /*num_outputs=*/inputs.size() + 1) {}
 
-NodePtr AmpForachNonFiniteCheckAndUnscale::Clone(OpList operands) const {
+torch::lazy::NodePtr AmpForachNonFiniteCheckAndUnscale::Clone(
+    OpList operands) const {
   std::vector<Value> operand_list(operands.begin(), operands.end() - 2);
   size_t sz = operand_list.size();
-  return MakeNode<AmpForachNonFiniteCheckAndUnscale>(operand_list, operands[sz],
-                                                     operands[sz + 1]);
+  return ir::MakeNode<AmpForachNonFiniteCheckAndUnscale>(
+      operand_list, operands[sz], operands[sz + 1]);
 }
 
 XlaOpVector AmpForachNonFiniteCheckAndUnscale::Lower(

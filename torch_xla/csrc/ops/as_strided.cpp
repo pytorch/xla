@@ -47,7 +47,7 @@ AsStrided::AsStrided(const Value& input, std::vector<int64_t> size,
                      std::vector<int64_t> stride, int64_t storage_offset)
     : Node(torch::lazy::OpKind(at::aten::as_strided), {input},
            [&]() {
-             return xla::ShapeUtil::MakeShape(input.shape().element_type(),
+             return xla::ShapeUtil::MakeShape(input.xla_shape().element_type(),
                                               size);
            },
            /*num_outputs=*/1, torch::lazy::MHash(size, stride, storage_offset)),
@@ -63,8 +63,9 @@ std::string AsStrided::ToString() const {
   return ss.str();
 }
 
-NodePtr AsStrided::Clone(OpList operands) const {
-  return MakeNode<AsStrided>(operands.at(0), size_, stride_, storage_offset_);
+torch::lazy::NodePtr AsStrided::Clone(OpList operands) const {
+  return ir::MakeNode<AsStrided>(operands.at(0), size_, stride_,
+                                 storage_offset_);
 }
 
 XlaOpVector AsStrided::Lower(LoweringContext* loctx) const {

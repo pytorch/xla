@@ -18,7 +18,7 @@ xla::Shape NodeOutputShape(absl::Span<const ir::Value> values, int64_t dim) {
   std::vector<xla::Shape> shapes;
   shapes.reserve(values.size());
   for (auto& value : values) {
-    shapes.push_back(value.shape());
+    shapes.push_back(value.xla_shape());
   }
   return InferOutputShape(shapes, lower_for_shape_fn);
 }
@@ -31,8 +31,8 @@ Stack::Stack(absl::Span<const ir::Value> values, int64_t dim)
            /*num_outputs=*/1, torch::lazy::MHash(dim)),
       dim_(dim) {}
 
-NodePtr Stack::Clone(OpList operands) const {
-  return MakeNode<Stack>(operands, dim_);
+torch::lazy::NodePtr Stack::Clone(OpList operands) const {
+  return ir::MakeNode<Stack>(operands, dim_);
 }
 
 XlaOpVector Stack::Lower(LoweringContext* loctx) const {

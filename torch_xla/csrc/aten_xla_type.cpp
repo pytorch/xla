@@ -135,7 +135,7 @@ std::pair<XLATensor, XLATensor> GetBinaryOperands(const at::Tensor& self,
 std::vector<int64_t> GetOutputSizeWithScale(
     absl::Span<const int64_t> input_size,
     const c10::optional<at::ArrayRef<double>>& scale_factors,
-    const c10::optional<at::IntArrayRef>& output_size) {
+    const at::OptionalIntArrayRef& output_size) {
   if (!output_size) {
     XLA_CHECK(scale_factors);
     XLA_CHECK_EQ(scale_factors->size(), 2);
@@ -377,8 +377,9 @@ void XLANativeFunctions::_amp_foreach_non_finite_check_and_unscale_(
     at::TensorList self, at::Tensor& found_inf, const at::Tensor& inv_scale) {
   XLA_FN_COUNTER("xla::");
   XLATensor found_inf_tensor = bridge::GetXlaTensor(found_inf);
-  DeviceType hw_type = found_inf_tensor.GetDevice().hw_type;
-  XLA_CHECK(hw_type == DeviceType::GPU || hw_type == DeviceType::CPU)
+  TorchXLADeviceType hw_type = found_inf_tensor.GetDevice().device_type.hw_type;
+  XLA_CHECK(hw_type == TorchXLADeviceType::GPU ||
+            hw_type == TorchXLADeviceType::CPU)
       << "AMP should be used with XLA:GPU";
   XLATensor::_amp_foreach_non_finite_check_and_unscale_(
       bridge::GetXlaTensors(self), found_inf_tensor,
@@ -394,8 +395,10 @@ at::Tensor& XLANativeFunctions::_amp_update_scale_(at::Tensor& current_scale,
   XLA_FN_COUNTER("xla::");
   XLATensor growth_tracker_tensor = bridge::GetXlaTensor(growth_tracker);
   XLATensor current_scale_tensor = bridge::GetXlaTensor(current_scale);
-  DeviceType hw_type = growth_tracker_tensor.GetDevice().hw_type;
-  XLA_CHECK(hw_type == DeviceType::GPU || hw_type == DeviceType::CPU)
+  TorchXLADeviceType hw_type =
+      growth_tracker_tensor.GetDevice().device_type.hw_type;
+  XLA_CHECK(hw_type == TorchXLADeviceType::GPU ||
+            hw_type == TorchXLADeviceType::CPU)
       << "AMP should be used with XLA:GPU";
   XLATensor::_amp_update_scale_(growth_tracker_tensor, current_scale_tensor,
                                 bridge::GetXlaTensor(found_inf),
@@ -1552,6 +1555,19 @@ at::Tensor XLANativeFunctions::hardsigmoid_backward(
     const at::Tensor& grad_output, const at::Tensor& self) {
   XLA_FN_COUNTER("xla::");
   return bridge::AtenFromXlaTensor(XLATensor::hardsigmoid_backward(
+      bridge::GetXlaTensor(grad_output), bridge::GetXlaTensor(self)));
+}
+
+at::Tensor XLANativeFunctions::hardswish(const at::Tensor& self) {
+  XLA_FN_COUNTER("xla::");
+  return bridge::AtenFromXlaTensor(
+      XLATensor::hardswish(bridge::GetXlaTensor(self)));
+}
+
+at::Tensor XLANativeFunctions::hardswish_backward(const at::Tensor& grad_output,
+                                                  const at::Tensor& self) {
+  XLA_FN_COUNTER("xla::");
+  return bridge::AtenFromXlaTensor(XLATensor::hardswish_backward(
       bridge::GetXlaTensor(grad_output), bridge::GetXlaTensor(self)));
 }
 
@@ -3150,7 +3166,7 @@ at::Tensor XLANativeFunctions::std(const at::Tensor& self, at::IntArrayRef dim,
 }
 
 at::Tensor XLANativeFunctions::std(const at::Tensor& self,
-                                   c10::optional<at::IntArrayRef> dim,
+                                   at::OptionalIntArrayRef dim,
                                    c10::optional<int64_t> correction,
                                    bool keepdim) {
   XLA_FN_COUNTER("xla::");
@@ -3163,7 +3179,7 @@ at::Tensor XLANativeFunctions::std(const at::Tensor& self,
 }
 
 std::tuple<at::Tensor, at::Tensor> XLANativeFunctions::std_mean(
-    const at::Tensor& self, c10::optional<at::IntArrayRef> dim,
+    const at::Tensor& self, at::OptionalIntArrayRef dim,
     c10::optional<int64_t> correction, bool keepdim) {
   XLA_FN_COUNTER("xla::");
   XLATensor self_tensor = bridge::GetXlaTensor(self);
@@ -3407,7 +3423,7 @@ at::Tensor XLANativeFunctions::upsample_bilinear2d(
   XLATensor self_tensor = bridge::GetXlaTensor(self);
   // Only the XLA TPU backend for now implements the CustomCall required by
   // our XLA lowering.
-  if (self_tensor.GetDevice().hw_type != DeviceType::TPU ||
+  if (self_tensor.GetDevice().device_type.hw_type != TorchXLADeviceType::TPU ||
       (scales_h && *scales_h != 1.0) || (scales_w && *scales_w != 1.0)) {
     return at::native::call_fallback_fn<
         &xla_cpu_fallback, ATEN_OP(upsample_bilinear2d)>::call(self,
@@ -3428,7 +3444,8 @@ at::Tensor XLANativeFunctions::upsample_bilinear2d_backward(
   XLATensor grad_output_tensor = bridge::GetXlaTensor(grad_output);
   // Only the XLA TPU backend for now implements the CustomCall required by
   // our XLA lowering.
-  if (grad_output_tensor.GetDevice().hw_type != DeviceType::TPU ||
+  if (grad_output_tensor.GetDevice().device_type.hw_type !=
+          TorchXLADeviceType::TPU ||
       (scales_h && *scales_h != 1.0) || (scales_w && *scales_w != 1.0)) {
     return at::native::call_fallback_fn<
         &xla_cpu_fallback,
@@ -3442,13 +3459,13 @@ at::Tensor XLANativeFunctions::upsample_bilinear2d_backward(
 }
 
 at::Tensor XLANativeFunctions::upsample_nearest2d(
-    const at::Tensor& input, c10::optional<at::IntArrayRef> output_size,
+    const at::Tensor& input, at::OptionalIntArrayRef output_size,
     c10::optional<at::ArrayRef<double>> scale_factors) {
   XLA_FN_COUNTER("xla::");
   XLATensor input_tensor = bridge::GetXlaTensor(input);
   // Only the XLA TPU backend for now implements the CustomCall required by our
   // XLA lowering.
-  if (input_tensor.GetDevice().hw_type != DeviceType::TPU) {
+  if (input_tensor.GetDevice().device_type.hw_type != TorchXLADeviceType::TPU) {
     return at::native::call_fallback_fn<&xla_cpu_fallback,
                                         ATEN_OP2(upsample_nearest2d,
                                                  vec)>::call(input, output_size,
@@ -3462,14 +3479,15 @@ at::Tensor XLANativeFunctions::upsample_nearest2d(
 }
 
 at::Tensor XLANativeFunctions::upsample_nearest2d_backward(
-    const at::Tensor& grad_output, c10::optional<at::IntArrayRef> output_size,
+    const at::Tensor& grad_output, at::OptionalIntArrayRef output_size,
     at::IntArrayRef input_size,
     c10::optional<at::ArrayRef<double>> scale_factors) {
   XLA_FN_COUNTER("xla::");
   XLATensor grad_output_tensor = bridge::GetXlaTensor(grad_output);
   // Only the XLA TPU backend for now implements the CustomCall required by our
   // XLA lowering.
-  if (grad_output_tensor.GetDevice().hw_type != DeviceType::TPU) {
+  if (grad_output_tensor.GetDevice().device_type.hw_type !=
+      TorchXLADeviceType::TPU) {
     return at::native::call_fallback_fn<&xla_cpu_fallback,
                                         ATEN_OP2(upsample_nearest2d_backward,
                                                  vec)>::call(grad_output,
@@ -3491,7 +3509,7 @@ at::Tensor XLANativeFunctions::upsample_nearest2d(
   XLATensor self_tensor = bridge::GetXlaTensor(self);
   // Only the XLA TPU backend for now implements the CustomCall required by
   // our XLA lowering.
-  if (self_tensor.GetDevice().hw_type != DeviceType::TPU ||
+  if (self_tensor.GetDevice().device_type.hw_type != TorchXLADeviceType::TPU ||
       (scales_h && *scales_h != 1.0) || (scales_w && *scales_w != 1.0)) {
     return at::native::call_fallback_fn<
         &xla_cpu_fallback, ATEN_OP(upsample_nearest2d)>::call(self, output_size,
@@ -3510,7 +3528,8 @@ at::Tensor XLANativeFunctions::upsample_nearest2d_backward(
   XLATensor grad_output_tensor = bridge::GetXlaTensor(grad_output);
   // Only the XLA TPU backend for now implements the CustomCall required by
   // our XLA lowering.
-  if (grad_output_tensor.GetDevice().hw_type != DeviceType::TPU ||
+  if (grad_output_tensor.GetDevice().device_type.hw_type !=
+          TorchXLADeviceType::TPU ||
       (scales_h && *scales_h != 1.0) || (scales_w && *scales_w != 1.0)) {
     return at::native::call_fallback_fn<
         &xla_cpu_fallback,
@@ -3524,7 +3543,7 @@ at::Tensor XLANativeFunctions::upsample_nearest2d_backward(
 }
 
 at::Tensor XLANativeFunctions::var(const at::Tensor& self,
-                                   c10::optional<at::IntArrayRef> dim,
+                                   at::OptionalIntArrayRef dim,
                                    c10::optional<int64_t> correction,
                                    bool keepdim) {
   XLA_FN_COUNTER("xla::");
@@ -3538,7 +3557,7 @@ at::Tensor XLANativeFunctions::var(const at::Tensor& self,
 }
 
 std::tuple<at::Tensor, at::Tensor> XLANativeFunctions::var_mean(
-    const at::Tensor& self, c10::optional<at::IntArrayRef> dim,
+    const at::Tensor& self, at::OptionalIntArrayRef dim,
     c10::optional<int64_t> correction, bool keepdim) {
   XLA_FN_COUNTER("xla::");
   XLATensor self_tensor = bridge::GetXlaTensor(self);

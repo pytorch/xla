@@ -10,11 +10,12 @@ namespace ops {
 class AllGather : public Node {
  public:
   AllGather(const Value& input, const Value& token, int64_t dim,
-            int64_t shard_count, std::vector<std::vector<int64_t>> groups);
+            int64_t shard_count, std::vector<std::vector<int64_t>> groups,
+            bool pin_layout);
 
   std::string ToString() const override;
 
-  NodePtr Clone(OpList operands) const override;
+  torch::lazy::NodePtr Clone(OpList operands) const override;
 
   XlaOpVector Lower(LoweringContext* loctx) const override;
 
@@ -24,10 +25,13 @@ class AllGather : public Node {
 
   const std::vector<std::vector<int64_t>>& groups() const { return groups_; }
 
+  bool pin_layout() const { return pin_layout_; }
+
  private:
   int64_t dim_;
   int64_t shard_count_;
   std::vector<std::vector<int64_t>> groups_;
+  bool pin_layout_;
 };
 
 }  // namespace ops

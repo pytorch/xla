@@ -20,16 +20,16 @@ std::string DeviceData::ToString() const {
   return ss.str();
 }
 
-NodePtr DeviceData::Clone(OpList operands) const {
-  return MakeNode<DeviceData>(data_);
+torch::lazy::NodePtr DeviceData::Clone(OpList operands) const {
+  return ir::MakeNode<DeviceData>(data_);
 }
 
 XlaOpVector DeviceData::Lower(LoweringContext* loctx) const {
   return ReturnOp(loctx->GetParameter(data_), loctx);
 }
 
-DeviceData* DeviceData::Cast(const Node* node) {
-  return NodeCast<DeviceData>(node, xla_device_data);
+DeviceData* DeviceData::Cast(const torch::lazy::Node* node) {
+  return ir::NodeCast<DeviceData>(node, xla_device_data);
 }
 
 }  // namespace ops

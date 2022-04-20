@@ -17,7 +17,7 @@ namespace ops {
 namespace {
 
 xla::Shape NodeOutputShape(const Value& input, xla::PrimitiveType type) {
-  xla::Shape shape = input.shape();
+  xla::Shape shape = input.xla_shape();
   shape.set_element_type(type);
   return shape;
 }
@@ -41,9 +41,9 @@ Cast::Cast(const Value& input, at::ScalarType dtype,
       dtype_(dtype),
       stype_(stype) {}
 
-NodePtr Cast::Clone(OpList operands) const {
-  return dtype_ ? MakeNode<Cast>(operands.at(0), *dtype_, stype_)
-                : MakeNode<Cast>(operands.at(0), type_);
+torch::lazy::NodePtr Cast::Clone(OpList operands) const {
+  return dtype_ ? ir::MakeNode<Cast>(operands.at(0), *dtype_, stype_)
+                : ir::MakeNode<Cast>(operands.at(0), type_);
 }
 
 XlaOpVector Cast::Lower(LoweringContext* loctx) const {

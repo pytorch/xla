@@ -11,7 +11,7 @@ namespace ops {
 namespace {
 
 xla::Shape NodeOutputShape(const Value& input) {
-  const xla::Shape& input_shape = input.shape();
+  const xla::Shape& input_shape = input.xla_shape();
   int64_t index_elements = xla::ShapeUtil::ElementsIn(input_shape);
   xla::PrimitiveType size_type = GetShapeDimensionType(/*device=*/nullptr);
   xla::Shape result_shape = xla::ShapeUtil::MakeShape(
@@ -28,8 +28,8 @@ NonZero::NonZero(const Value& input)
            NodeOutputShape(input),
            /*num_outputs=*/2) {}
 
-NodePtr NonZero::Clone(OpList operands) const {
-  return MakeNode<NonZero>(operands.at(0));
+torch::lazy::NodePtr NonZero::Clone(OpList operands) const {
+  return ir::MakeNode<NonZero>(operands.at(0));
 }
 
 XlaOpVector NonZero::Lower(LoweringContext* loctx) const {

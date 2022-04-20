@@ -1,5 +1,6 @@
 #pragma once
 
+#include <ATen/core/Formatting.h>
 #include <c10/core/Scalar.h>
 
 #include <iostream>
@@ -22,7 +23,7 @@ class Scalar : public Node {
 
   std::string ToString() const override;
 
-  NodePtr Clone(OpList operands) const override;
+  torch::lazy::NodePtr Clone(OpList operands) const override;
 
   XlaOpVector Lower(LoweringContext* loctx) const override;
 
@@ -33,8 +34,6 @@ class Scalar : public Node {
 };
 
 torch::lazy::hash_t ScalarHash(const at::Scalar& s);
-
-std::ostream& operator<<(std::ostream& ostrm, at::Scalar s);
 
 }  // namespace ops
 }  // namespace ir

@@ -42,7 +42,7 @@ std::vector<xla::XlaOp> LowerSVD(xla::XlaOp input, bool some, bool compute_uv) {
 }
 
 xla::Shape NodeOutputShape(const Value& input, bool some, bool compute_uv) {
-  const xla::Shape& input_shape = input.shape();
+  const xla::Shape& input_shape = input.xla_shape();
   XLA_CHECK_GE(input_shape.rank(), 2) << input_shape;
   // The input tensor is ...,M,N
   int64_t m_dim = input_shape.dimensions(input_shape.rank() - 2);
@@ -74,8 +74,8 @@ SVD::SVD(const Value& input, bool some, bool compute_uv)
       some_(some),
       compute_uv_(compute_uv) {}
 
-NodePtr SVD::Clone(OpList operands) const {
-  return MakeNode<SVD>(operands.at(0), some_, compute_uv_);
+torch::lazy::NodePtr SVD::Clone(OpList operands) const {
+  return ir::MakeNode<SVD>(operands.at(0), some_, compute_uv_);
 }
 
 XlaOpVector SVD::Lower(LoweringContext* loctx) const {

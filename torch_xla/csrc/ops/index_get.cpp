@@ -17,7 +17,8 @@ xla::Shape NodeOutputShape(const Value& base, const Value& indices,
     XLA_CHECK_EQ(operands.size(), 2);
     return CreateIndex(operands[0], operands[1], start_dim);
   };
-  return InferOutputShape({base.shape(), indices.shape()}, lower_for_shape_fn);
+  return InferOutputShape({base.xla_shape(), indices.xla_shape()},
+                          lower_for_shape_fn);
 }
 
 }  // namespace
@@ -35,8 +36,8 @@ std::string IndexGet::ToString() const {
   return ss.str();
 }
 
-NodePtr IndexGet::Clone(OpList operands) const {
-  return MakeNode<IndexGet>(operands.at(0), operands.at(1), start_dim_);
+torch::lazy::NodePtr IndexGet::Clone(OpList operands) const {
+  return ir::MakeNode<IndexGet>(operands.at(0), operands.at(1), start_dim_);
 }
 
 XlaOpVector IndexGet::Lower(LoweringContext* loctx) const {

@@ -10,7 +10,7 @@
 #include "absl/strings/str_split.h"
 #include "tensorflow/compiler/xla/xla_client/sys_util.h"
 #include "tensorflow/core/platform/stacktrace.h"
-#include "torch_xla/csrc/python_util.h"
+#include "torch/csrc/lazy/python/python_util.h"
 
 namespace torch_xla {
 namespace fn_tracker {
@@ -56,7 +56,7 @@ void LogFunction(TrackerContext* tctx, const char* tag) {
   std::ofstream fn_file(tctx->path, std::ios_base::app);
   fn_file << "[TAG " << tag << " From Thread " << std::this_thread::get_id()
           << "]\n"
-          << GetPythonFrames() << "\nC++ Frames:\n"
+          << torch::lazy::GetPythonFrames() << "\nC++ Frames:\n"
           << tensorflow::CurrentStackTrace() << "\n";
 }
 

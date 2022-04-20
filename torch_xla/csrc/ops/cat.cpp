@@ -18,7 +18,7 @@ xla::Shape NodeOutputShape(absl::Span<const ir::Value> values, int64_t dim) {
   std::vector<xla::Shape> shapes;
   shapes.reserve(values.size());
   for (auto& value : values) {
-    shapes.push_back(value.shape());
+    shapes.push_back(value.xla_shape());
   }
   return InferOutputShape(shapes, lower_for_shape_fn);
 }
@@ -31,8 +31,8 @@ Cat::Cat(absl::Span<const ir::Value> values, int64_t dim)
            /*num_outputs=*/1, torch::lazy::MHash(dim)),
       dim_(dim) {}
 
-NodePtr Cat::Clone(OpList operands) const {
-  return MakeNode<Cat>(operands, dim_);
+torch::lazy::NodePtr Cat::Clone(OpList operands) const {
+  return ir::MakeNode<Cat>(operands, dim_);
 }
 
 XlaOpVector Cat::Lower(LoweringContext* loctx) const {

@@ -11,9 +11,9 @@ namespace {
 
 xla::Shape NodeOutputShape(const Value& step, const Value& param) {
   return xla::ShapeUtil::MakeTupleShape(
-      {/*step=*/step.shape(), /*param=*/param.shape(),
-       /*exp_avg=*/param.shape(), /*exp_avg_sq=*/param.shape(),
-       /*max_exp_avg_sq=*/param.shape()});
+      {/*step=*/step.xla_shape(), /*param=*/param.xla_shape(),
+       /*exp_avg=*/param.xla_shape(), /*exp_avg_sq=*/param.xla_shape(),
+       /*max_exp_avg_sq=*/param.xla_shape()});
 }
 
 }  // namespace
@@ -34,8 +34,8 @@ AdamOptimizerStep::AdamOptimizerStep(
       use_amsgrad_(use_amsgrad),
       use_adamw_(use_adamw) {}
 
-NodePtr AdamOptimizerStep::Clone(OpList operands) const {
-  return MakeNode<AdamOptimizerStep>(
+torch::lazy::NodePtr AdamOptimizerStep::Clone(OpList operands) const {
+  return ir::MakeNode<AdamOptimizerStep>(
       operands.at(0), operands.at(1), operands.at(2), operands.at(3),
       operands.at(4), operands.at(5), operands.at(6), operands.at(7),
       operands.at(8), operands.at(9), operands.at(10), operands.at(11),

@@ -13,7 +13,7 @@ class DeviceData : public Node {
 
   std::string ToString() const override;
 
-  NodePtr Clone(OpList operands) const override;
+  torch::lazy::NodePtr Clone(OpList operands) const override;
 
   XlaOpVector Lower(LoweringContext* loctx) const override;
 
@@ -21,7 +21,7 @@ class DeviceData : public Node {
     return data_;
   }
 
-  static DeviceData* Cast(const Node* node);
+  static DeviceData* Cast(const torch::lazy::Node* node);
 
  private:
   std::shared_ptr<xla::ComputationClient::Data> data_;

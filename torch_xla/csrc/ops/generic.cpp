@@ -26,8 +26,8 @@ Generic::Generic(torch::lazy::OpKind op, xla::Shape shape, LowerFn lower_fn,
       lower_fn_(std::move(lower_fn)),
       hash_seed_(hash_seed) {}
 
-NodePtr Generic::Clone(OpList operands) const {
-  return ir::MakeNode<Generic>(op(), operands, shape(), lower_fn_,
+torch::lazy::NodePtr Generic::Clone(OpList operands) const {
+  return ir::MakeNode<Generic>(op(), operands, xla_shape(), lower_fn_,
                                num_outputs(), hash_seed_);
 }
 

@@ -22,9 +22,9 @@ xla::Shape NodeOutputShape(const Value& input,
                            const c10::optional<at::ScalarType>& dtype) {
   if (dtype) {
     return xla::ShapeUtil::ChangeElementType(
-        input.shape(), MakeXlaPrimitiveType(*dtype, /*device=*/nullptr));
+        input.xla_shape(), MakeXlaPrimitiveType(*dtype, /*device=*/nullptr));
   }
-  return input.shape();
+  return input.xla_shape();
 }
 
 }  // namespace
@@ -38,8 +38,8 @@ LogSoftmax::LogSoftmax(const Value& input, int64_t dim,
       dim_(dim),
       dtype_(dtype) {}
 
-NodePtr LogSoftmax::Clone(OpList operands) const {
-  return MakeNode<LogSoftmax>(operands.at(0), dim_, dtype_);
+torch::lazy::NodePtr LogSoftmax::Clone(OpList operands) const {
+  return ir::MakeNode<LogSoftmax>(operands.at(0), dim_, dtype_);
 }
 
 XlaOpVector LogSoftmax::Lower(LoweringContext* loctx) const {

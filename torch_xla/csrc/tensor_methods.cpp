@@ -98,6 +98,7 @@
 #include "torch_xla/csrc/ops/normal.h"
 #include "torch_xla/csrc/ops/not_supported.h"
 #include "torch_xla/csrc/ops/ops.h"
+#include "torch_xla/csrc/ops/optimization_barrier.h"
 #include "torch_xla/csrc/ops/permute.h"
 #include "torch_xla/csrc/ops/prod.h"
 #include "torch_xla/csrc/ops/put.h"
@@ -156,7 +157,7 @@ struct MinMaxValues {
 };
 
 ir::Value MaybeExpand(const ir::Value& input, const xla::Shape& target_shape) {
-  if (input.shape().dimensions() == target_shape.dimensions()) {
+  if (input.xla_shape().dimensions() == target_shape.dimensions()) {
     return input;
   }
   return ir::MakeNode<ir::ops::Expand>(
@@ -288,14 +289,15 @@ ir::Value GetIrValueOrDefault(const XLATensor& input,
 ir::Value GetFloatingIrValue(const XLATensor& input,
                              at::ScalarType float_type) {
   ir::Value input_value = input.GetIrValue();
-  if (xla::primitive_util::IsIntegralType(input_value.shape().element_type())) {
+  if (xla::primitive_util::IsIntegralType(
+          input_value.xla_shape().element_type())) {
     input_value = ir::MakeNode<ir::ops::Cast>(input_value, float_type);
   }
   return input_value;
 }
 
 ir::Value GetBooleanIrValue(ir::Value input_value) {
-  if (input_value.shape().element_type() != xla::PrimitiveType::PRED) {
+  if (input_value.xla_shape().element_type() != xla::PrimitiveType::PRED) {
     input_value =
         ir::MakeNode<ir::ops::Cast>(input_value, xla::PrimitiveType::PRED);
   }
@@ -340,19 +342,20 @@ ViewInfo CreateAsStridedViewInfo(const xla::Shape& input_shape,
 //////////////////////////////////////////////////////////////////////////////
 std::pair<XLATensor, ir::Value> XLATensor::all_reduce(
     const XLATensor& input, const ir::Value& token, AllReduceType reduce_type,
-    double scale, std::vector<std::vector<int64_t>> groups) {
+    double scale, std::vector<std::vector<int64_t>> groups, bool pin_layout) {
   std::vector<ir::Value> input_values({input.GetIrValue()});
-  ir::NodePtr node = ir::MakeNode<ir::ops::AllReduce>(
-      reduce_type, input_values, token, scale, std::move(groups));
+  torch::lazy::NodePtr node = ir::MakeNode<ir::ops::AllReduce>(
+      reduce_type, input_values, token, scale, std::move(groups), pin_layout);
   return {input.CreateFrom(ir::Value(node, 0)), ir::Value(node, 1)};
 }
 
 ir::Value XLATensor::all_reduce_(XLATensor& input, const ir::Value& token,
                                  AllReduceType reduce_type, double scale,
-                                 std::vector<std::vector<int64_t>> groups) {
+                                 std::vector<std::vector<int64_t>> groups,
+                                 bool pin_layout) {
   std::vector<ir::Value> input_values({input.GetIrValue()});
-  ir::NodePtr node = ir::MakeNode<ir::ops::AllReduce>(
-      reduce_type, input_values, token, scale, std::move(groups));
+  torch::lazy::NodePtr node = ir::MakeNode<ir::ops::AllReduce>(
+      reduce_type, input_values, token, scale, std::move(groups), pin_layout);
   input.SetInPlaceIrValue(ir::Value(node, 0));
   return ir::Value(node, 1);
 }
@@ -360,14 +363,15 @@ ir::Value XLATensor::all_reduce_(XLATensor& input, const ir::Value& token,
 ir::Value XLATensor::all_reduce(std::vector<XLATensor>* inputs,
                                 const ir::Value& token,
                                 AllReduceType reduce_type, double scale,
-                                std::vector<std::vector<int64_t>> groups) {
+                                std::vector<std::vector<int64_t>> groups,
+                                bool pin_layout) {
   std::vector<ir::Value> input_values;
   input_values.reserve(inputs->size());
   for (auto& input : *inputs) {
     input_values.push_back(input.GetIrValue());
   }
-  ir::NodePtr node = ir::MakeNode<ir::ops::AllReduce>(
-      reduce_type, input_values, token, scale, std::move(groups));
+  torch::lazy::NodePtr node = ir::MakeNode<ir::ops::AllReduce>(
+      reduce_type, input_values, token, scale, std::move(groups), pin_layout);
   for (size_t i = 0; i < inputs->size(); ++i) {
     (*inputs)[i].SetInPlaceIrValue(ir::Value(node, i));
   }
@@ -377,20 +381,21 @@ ir::Value XLATensor::all_reduce(std::vector<XLATensor>* inputs,
 std::pair<XLATensor, ir::Value> XLATensor::reduce_scatter(
     const XLATensor& input, const ir::Value& token, AllReduceType reduce_type,
     double scale, int64_t scatter_dim, int64_t shard_count,
-    std::vector<std::vector<int64_t>> groups) {
-  ir::NodePtr node = ir::MakeNode<ir::ops::ReduceScatter>(
+    std::vector<std::vector<int64_t>> groups, bool pin_layout) {
+  torch::lazy::NodePtr node = ir::MakeNode<ir::ops::ReduceScatter>(
       reduce_type, input.GetIrValue(), token, scale, scatter_dim, shard_count,
-      std::move(groups));
+      std::move(groups), pin_layout);
   return {input.CreateFrom(ir::Value(node, 0)), ir::Value(node, 1)};
 }
 
 ir::Value XLATensor::reduce_scatter_out(
     XLATensor& output, const XLATensor& input, const ir::Value& token,
     AllReduceType reduce_type, double scale, int64_t scatter_dim,
-    int64_t shard_count, std::vector<std::vector<int64_t>> groups) {
-  ir::NodePtr node = ir::MakeNode<ir::ops::ReduceScatter>(
+    int64_t shard_count, std::vector<std::vector<int64_t>> groups,
+    bool pin_layout) {
+  torch::lazy::NodePtr node = ir::MakeNode<ir::ops::ReduceScatter>(
       reduce_type, input.GetIrValue(), token, scale, scatter_dim, shard_count,
-      std::move(groups));
+      std::move(groups), pin_layout);
   output.SetIrValue(ir::Value(node, 0));
   return ir::Value(node, 1);
 }
@@ -398,27 +403,31 @@ ir::Value XLATensor::reduce_scatter_out(
 std::pair<XLATensor, ir::Value> XLATensor::all_to_all(
     const XLATensor& input, const ir::Value& token, int64_t split_dimension,
     int64_t concat_dimension, int64_t split_count,
-    std::vector<std::vector<int64_t>> groups) {
-  ir::NodePtr node = ir::MakeNode<ir::ops::AllToAll>(
+    std::vector<std::vector<int64_t>> groups, bool pin_layout) {
+  torch::lazy::NodePtr node = ir::MakeNode<ir::ops::AllToAll>(
       input.GetIrValue(), token, split_dimension, concat_dimension, split_count,
-      std::move(groups));
+      std::move(groups), pin_layout);
   return {input.CreateFrom(ir::Value(node, 0)), ir::Value(node, 1)};
 }
 
 std::pair<XLATensor, ir::Value> XLATensor::all_gather(
     const XLATensor& input, const ir::Value& token, int64_t dim,
-    int64_t shard_count, std::vector<std::vector<int64_t>> groups) {
-  ir::NodePtr node = ir::MakeNode<ir::ops::AllGather>(
-      input.GetIrValue(), token, dim, shard_count, std::move(groups));
+    int64_t shard_count, std::vector<std::vector<int64_t>> groups,
+    bool pin_layout) {
+  torch::lazy::NodePtr node = ir::MakeNode<ir::ops::AllGather>(
+      input.GetIrValue(), token, dim, shard_count, std::move(groups),
+      pin_layout);
   return {input.CreateFrom(ir::Value(node, 0)), ir::Value(node, 1)};
 }
 
 ir::Value XLATensor::all_gather_out(XLATensor& output, const XLATensor& input,
                                     const ir::Value& token, int64_t dim,
                                     int64_t shard_count,
-                                    std::vector<std::vector<int64_t>> groups) {
-  ir::NodePtr node = ir::MakeNode<ir::ops::AllGather>(
-      input.GetIrValue(), token, dim, shard_count, std::move(groups));
+                                    std::vector<std::vector<int64_t>> groups,
+                                    bool pin_layout) {
+  torch::lazy::NodePtr node = ir::MakeNode<ir::ops::AllGather>(
+      input.GetIrValue(), token, dim, shard_count, std::move(groups),
+      pin_layout);
   output.SetIrValue(ir::Value(node, 0));
   return ir::Value(node, 1);
 }
@@ -426,7 +435,7 @@ ir::Value XLATensor::all_gather_out(XLATensor& output, const XLATensor& input,
 std::pair<XLATensor, ir::Value> XLATensor::collective_permute(
     const XLATensor& input, const ir::Value& token,
     std::vector<std::pair<int64_t, int64_t>> source_target_pairs) {
-  ir::NodePtr node = ir::MakeNode<ir::ops::CollectivePermute>(
+  torch::lazy::NodePtr node = ir::MakeNode<ir::ops::CollectivePermute>(
       input.GetIrValue(), token, std::move(source_target_pairs));
   return {input.CreateFrom(ir::Value(node, 0)), ir::Value(node, 1)};
 }
@@ -452,7 +461,7 @@ void XLATensor::sgd_optimizer_step_(const XLATensor& found_inf, XLATensor& step,
                                            param.GetDevice());
   ir::Value dampening_value =
       GetIrValueForScalar(dampening, param.shape(), param.GetDevice());
-  ir::NodePtr node = ir::MakeNode<ir::ops::SgdOptimizerStep>(
+  torch::lazy::NodePtr node = ir::MakeNode<ir::ops::SgdOptimizerStep>(
       found_inf.GetIrValue(), step.GetIrValue(), param.GetIrValue(),
       buf.GetIrValue(), d_p.GetIrValue(), weight_decay_value, momentum_value,
       lr_value, dampening_value,
@@ -481,7 +490,7 @@ void XLATensor::adam_optimizer_step_(
       GetIrValueForScalar(weight_decay, param.shape(), param.GetDevice());
   ir::Value eps_value =
       GetIrValueForScalar(eps, param.shape(), param.GetDevice());
-  ir::NodePtr node = ir::MakeNode<ir::ops::AdamOptimizerStep>(
+  torch::lazy::NodePtr node = ir::MakeNode<ir::ops::AdamOptimizerStep>(
       found_inf.GetIrValue(), step.GetIrValue(), param.GetIrValue(), grad_value,
       exp_avg.GetIrValue(), exp_avg_sq.GetIrValue(),
       max_exp_avg_sq.GetIrValue(), beta1_value, beta2_value, lr_value,
@@ -503,7 +512,7 @@ std::vector<XLATensor> XLATensor::user_computation(
   for (auto& input : inputs) {
     input_values.push_back(input.GetIrValue());
   }
-  ir::NodePtr node = ir::MakeNode<ir::ops::UserComputation>(
+  torch::lazy::NodePtr node = ir::MakeNode<ir::ops::UserComputation>(
       torch::lazy::OpKind::Get(opname), input_values, std::move(computation));
   // Cast can be one of the user computation and we don't want to inherit the
   // logical_element_type in this case
@@ -563,7 +572,7 @@ XLATensor XLATensor::__rshift__(
 
 std::tuple<XLATensor, XLATensor> XLATensor::adaptive_max_pool2d(
     const XLATensor& input, std::vector<int64_t> output_size) {
-  ir::NodePtr node =
+  torch::lazy::NodePtr node =
       ir::MakeNode<ir::ops::AdaptiveMaxPool2d>(input.GetIrValue(), output_size);
   XLATensor out = input.CreateFrom(ir::Value(node, 0));
   XLATensor indices =
@@ -609,8 +618,9 @@ void XLATensor::_amp_foreach_non_finite_check_and_unscale_(
   for (const auto& x : self) {
     inputs.push_back(x.GetIrValue());
   }
-  ir::NodePtr node = ir::MakeNode<ir::ops::AmpForachNonFiniteCheckAndUnscale>(
-      inputs, found_inf.GetIrValue(), new_inv_scale.GetIrValue());
+  torch::lazy::NodePtr node =
+      ir::MakeNode<ir::ops::AmpForachNonFiniteCheckAndUnscale>(
+          inputs, found_inf.GetIrValue(), new_inv_scale.GetIrValue());
   for (size_t i = 0; i < self.size(); ++i) {
     self[i].SetInPlaceIrValue(ir::Value(node, i));
   }
@@ -623,7 +633,7 @@ void XLATensor::_amp_update_scale_(XLATensor& current_scale,
                                    double scale_growth_factor,
                                    double scale_backoff_factor,
                                    int growth_interval) {
-  ir::NodePtr node = ir::MakeNode<ir::ops::AmpUpdateScale>(
+  torch::lazy::NodePtr node = ir::MakeNode<ir::ops::AmpUpdateScale>(
       growth_tracker.GetIrValue(), current_scale.GetIrValue(),
       found_inf.GetIrValue(), scale_growth_factor, scale_backoff_factor,
       growth_interval);
@@ -970,7 +980,7 @@ std::vector<XLATensor> XLATensor::broadcast_tensors(
   for (const auto& tensor : tensors) {
     tensor_ir_values.push_back(tensor.GetIrValue());
   }
-  ir::NodePtr node = ir::ops::BroadcastTensors(tensor_ir_values);
+  torch::lazy::NodePtr node = ir::ops::BroadcastTensors(tensor_ir_values);
   return tensors.front().MakeOutputTensors(node);
 }
 
@@ -1071,10 +1081,11 @@ XLATensor XLATensor::convolution_overrideable(
     std::vector<int64_t> stride, std::vector<int64_t> padding,
     std::vector<int64_t> dilation, bool transposed,
     std::vector<int64_t> output_padding, int64_t groups) {
-  ir::NodePtr ir_value = ir::MakeNode<ir::ops::ConvolutionOverrideable>(
-      input.GetIrValue(), weight.GetIrValue(), bias.GetIrValue(),
-      std::move(stride), std::move(padding), std::move(dilation), transposed,
-      std::move(output_padding), groups);
+  torch::lazy::NodePtr ir_value =
+      ir::MakeNode<ir::ops::ConvolutionOverrideable>(
+          input.GetIrValue(), weight.GetIrValue(), bias.GetIrValue(),
+          std::move(stride), std::move(padding), std::move(dilation),
+          transposed, std::move(output_padding), groups);
   return input.CreateFrom(ir_value);
 }
 
@@ -1083,10 +1094,11 @@ XLATensor XLATensor::convolution_overrideable(
     std::vector<int64_t> stride, std::vector<int64_t> padding,
     std::vector<int64_t> dilation, bool transposed,
     std::vector<int64_t> output_padding, int64_t groups) {
-  ir::NodePtr ir_value = ir::MakeNode<ir::ops::ConvolutionOverrideable>(
-      input.GetIrValue(), weight.GetIrValue(), std::move(stride),
-      std::move(padding), std::move(dilation), transposed,
-      std::move(output_padding), groups);
+  torch::lazy::NodePtr ir_value =
+      ir::MakeNode<ir::ops::ConvolutionOverrideable>(
+          input.GetIrValue(), weight.GetIrValue(), std::move(stride),
+          std::move(padding), std::move(dilation), transposed,
+          std::move(output_padding), groups);
   return input.CreateFrom(ir_value);
 }
 
@@ -1096,10 +1108,11 @@ XLATensor::convolution_backward_overrideable(
     const XLATensor& weight, std::vector<int64_t> stride,
     std::vector<int64_t> padding, std::vector<int64_t> dilation,
     bool transposed, std::vector<int64_t> output_padding, int64_t groups) {
-  ir::NodePtr node = ir::MakeNode<ir::ops::ConvolutionBackwardOverrideable>(
-      out_backprop.GetIrValue(), input.GetIrValue(), weight.GetIrValue(),
-      std::move(stride), std::move(padding), std::move(dilation), transposed,
-      std::move(output_padding), groups);
+  torch::lazy::NodePtr node =
+      ir::MakeNode<ir::ops::ConvolutionBackwardOverrideable>(
+          out_backprop.GetIrValue(), input.GetIrValue(), weight.GetIrValue(),
+          std::move(stride), std::move(padding), std::move(dilation),
+          transposed, std::move(output_padding), groups);
   XLATensor grad_input = out_backprop.CreateFrom(ir::Value(node, 0));
   XLATensor grad_weight = out_backprop.CreateFrom(ir::Value(node, 1));
   XLATensor grad_bias = out_backprop.CreateFrom(ir::Value(node, 2));
@@ -1209,7 +1222,7 @@ XLATensor XLATensor::div(const XLATensor& input, const XLATensor& other,
     if (logical_element_type.has_value()) {
       xla::PrimitiveType res_intended_type =
           MakeXlaPrimitiveType(*logical_element_type, &input.GetDevice());
-      if (res.shape().element_type() != res_intended_type) {
+      if (res.xla_shape().element_type() != res_intended_type) {
         res = ir::MakeNode<ir::ops::Cast>(res, res_intended_type);
       }
     }
@@ -1231,7 +1244,7 @@ XLATensor XLATensor::div(const XLATensor& input, const at::Scalar& other) {
   }
   ir::Value input_value = GetFloatingIrValue(input, scalar_type);
   ir::Value other_value = GetIrValueForScalar(
-      other, input_value.shape().element_type(), input.GetDevice());
+      other, input_value.xla_shape().element_type(), input.GetDevice());
   return input.CreateFrom(input_value / other_value, scalar_type);
 }
 
@@ -1369,7 +1382,7 @@ XLATensor XLATensor::full(absl::Span<const int64_t> size,
   CheckShapeDimensions(size);
   xla::Shape shape = MakeArrayShapeFromDimensions(
       size, /*dynamic_dimensions=*/{},
-      MakeXlaPrimitiveType(scalar_type, &device), device.hw_type);
+      MakeXlaPrimitiveType(scalar_type, &device), device.device_type.hw_type);
   return Create(GetIrValueForScalar(fill_value, shape, device), device,
                 scalar_type);
 }
@@ -1390,10 +1403,18 @@ XLATensor XLATensor::full_like(const XLATensor& input,
 
 XLATensor XLATensor::gather(const XLATensor& input, int64_t dim,
                             const XLATensor& index) {
+  xla::Shape input_shape = input.shape();
+  xla::Shape index_shape = index.shape();
+  XLA_CHECK_EQ(input_shape.rank(), index_shape.rank());
+  int64_t canonical_dim =
+      torch::lazy::GetCanonicalDimensionIndex(dim, input_shape.rank());
+  for (size_t dim = 0; dim < input_shape.rank(); dim++) {
+    if (dim != canonical_dim) {
+      XLA_CHECK_LE(index.size(dim), input.size(dim));
+    }
+  }
   return input.CreateFrom(ir::MakeNode<ir::ops::Gather>(
-      input.GetIrValue(),
-      torch::lazy::GetCanonicalDimensionIndex(dim, input.shape().get().rank()),
-      index.GetIrValue()));
+      input.GetIrValue(), canonical_dim, index.GetIrValue()));
 }
 
 XLATensor XLATensor::ge(const XLATensor& input, const at::Scalar& other) {
@@ -1544,7 +1565,7 @@ XLATensor XLATensor::kl_div_backward(const XLATensor& grad_output,
 std::tuple<XLATensor, XLATensor> XLATensor::kthvalue(const XLATensor& input,
                                                      int64_t k, int64_t dim,
                                                      bool keepdim) {
-  ir::NodePtr node = ir::MakeNode<ir::ops::KthValue>(
+  torch::lazy::NodePtr node = ir::MakeNode<ir::ops::KthValue>(
       input.GetIrValue(), k,
       torch::lazy::GetCanonicalDimensionIndex(dim, input.shape().get().rank()),
       keepdim);
@@ -1598,6 +1619,16 @@ XLATensor XLATensor::hardsigmoid_backward(const XLATensor& grad_output,
                                           const XLATensor& input) {
   return input.CreateFrom(ir::ops::HardSigmoidBackward(grad_output.GetIrValue(),
                                                        input.GetIrValue()));
+}
+
+XLATensor XLATensor::hardswish(const XLATensor& input) {
+  return input.CreateFrom(ir::ops::HardSwish(input.GetIrValue()));
+}
+
+XLATensor XLATensor::hardswish_backward(const XLATensor& grad_output,
+                                        const XLATensor& input) {
+  return input.CreateFrom(
+      ir::ops::HardSwishBackward(grad_output.GetIrValue(), input.GetIrValue()));
 }
 
 XLATensor XLATensor::hardtanh_backward(const XLATensor& grad_output,
@@ -1796,8 +1827,8 @@ void XLATensor::masked_scatter_(XLATensor& input, const XLATensor& mask,
 
 XLATensor XLATensor::masked_select(const XLATensor& input,
                                    const XLATensor& mask) {
-  ir::NodePtr node = ir::MakeNode<ir::ops::MaskedSelect>(input.GetIrValue(),
-                                                         mask.GetIrValue());
+  torch::lazy::NodePtr node = ir::MakeNode<ir::ops::MaskedSelect>(
+      input.GetIrValue(), mask.GetIrValue());
   return input.CreateFrom(ir::Value(node, 0));
 }
 
@@ -1820,8 +1851,8 @@ std::tuple<XLATensor, XLATensor> XLATensor::max(const XLATensor& input,
                                                 int64_t dim, bool keepdim) {
   int64_t canonical_dim =
       torch::lazy::GetCanonicalDimensionIndex(dim, input.shape().get().rank());
-  ir::NodePtr node = ir::MakeNode<ir::ops::MaxInDim>(input.GetIrValue(),
-                                                     canonical_dim, keepdim);
+  torch::lazy::NodePtr node = ir::MakeNode<ir::ops::MaxInDim>(
+      input.GetIrValue(), canonical_dim, keepdim);
   return std::make_tuple(
       input.CreateFrom(ir::Value(node, 0)),
       input.CreateFrom(ir::Value(node, 1), at::ScalarType::Long));
@@ -1831,8 +1862,8 @@ void XLATensor::max_out(XLATensor& max, XLATensor& max_values,
                         const XLATensor& input, int64_t dim, bool keepdim) {
   int64_t canonical_dim =
       torch::lazy::GetCanonicalDimensionIndex(dim, input.shape().get().rank());
-  ir::NodePtr node = ir::MakeNode<ir::ops::MaxInDim>(input.GetIrValue(),
-                                                     canonical_dim, keepdim);
+  torch::lazy::NodePtr node = ir::MakeNode<ir::ops::MaxInDim>(
+      input.GetIrValue(), canonical_dim, keepdim);
   max.SetIrValue(ir::Value(node, 0));
   max_values.SetIrValue(ir::Value(node, 1));
 }
@@ -1844,7 +1875,7 @@ std::tuple<XLATensor, XLATensor> XLATensor::max_pool_nd(
   kernel_size = CheckIntList(kernel_size, spatial_dim_count, "kernel_size");
   stride = CheckIntList(stride, spatial_dim_count, "stride", kernel_size);
   padding = CheckIntList(padding, spatial_dim_count, "padding");
-  ir::NodePtr node = ir::MakeNode<ir::ops::MaxPoolNd>(
+  torch::lazy::NodePtr node = ir::MakeNode<ir::ops::MaxPoolNd>(
       input.GetIrValue(), spatial_dim_count, std::move(kernel_size),
       std::move(stride), std::move(padding), ceil_mode);
   return std::make_tuple(
@@ -1911,8 +1942,8 @@ std::tuple<XLATensor, XLATensor> XLATensor::min(const XLATensor& input,
                                                 int64_t dim, bool keepdim) {
   int64_t canonical_dim =
       torch::lazy::GetCanonicalDimensionIndex(dim, input.shape().get().rank());
-  ir::NodePtr node = ir::MakeNode<ir::ops::MinInDim>(input.GetIrValue(),
-                                                     canonical_dim, keepdim);
+  torch::lazy::NodePtr node = ir::MakeNode<ir::ops::MinInDim>(
+      input.GetIrValue(), canonical_dim, keepdim);
   return std::make_tuple(
       input.CreateFrom(ir::Value(node, 0)),
       input.CreateFrom(ir::Value(node, 1), at::ScalarType::Long));
@@ -1922,8 +1953,8 @@ void XLATensor::min_out(XLATensor& min, XLATensor& min_indices,
                         const XLATensor& input, int64_t dim, bool keepdim) {
   int64_t canonical_dim =
       torch::lazy::GetCanonicalDimensionIndex(dim, input.shape().get().rank());
-  ir::NodePtr node = ir::MakeNode<ir::ops::MinInDim>(input.GetIrValue(),
-                                                     canonical_dim, keepdim);
+  torch::lazy::NodePtr node = ir::MakeNode<ir::ops::MinInDim>(
+      input.GetIrValue(), canonical_dim, keepdim);
   min.SetIrValue(ir::Value(node, 0));
   min_indices.SetIrValue(ir::Value(node, 1));
 }
@@ -2019,7 +2050,7 @@ std::tuple<XLATensor, XLATensor, XLATensor> XLATensor::native_batch_norm(
       GetIrValueOrDefault(running_mean, 0, features_shape, input.GetDevice());
   ir::Value running_var_value =
       GetIrValueOrDefault(running_var, 0, features_shape, input.GetDevice());
-  ir::NodePtr node = ir::MakeNode<ir::ops::NativeBatchNormForward>(
+  torch::lazy::NodePtr node = ir::MakeNode<ir::ops::NativeBatchNormForward>(
       input.GetIrValue(), weight_value, bias_value, running_mean_value,
       running_var_value, training, eps);
   XLATensor output = input.CreateFrom(ir::Value(node, 0));
@@ -2055,7 +2086,7 @@ XLATensor::native_batch_norm_backward(const XLATensor& grad_out,
   xla::Shape features_shape = BatchNormFeaturesShape(input);
   ir::Value weight_value =
       GetIrValueOrDefault(weight, 1, features_shape, input.GetDevice());
-  ir::NodePtr node = ir::MakeNode<ir::ops::NativeBatchNormBackward>(
+  torch::lazy::NodePtr node = ir::MakeNode<ir::ops::NativeBatchNormBackward>(
       grad_out.GetIrValue(), input.GetIrValue(), weight_value,
       save_mean.GetIrValue(), save_invstd.GetIrValue(), training, eps);
   XLATensor grad_input = input.CreateFrom(ir::Value(node, 0));
@@ -2122,7 +2153,7 @@ std::pair<XLATensor, XLATensor> XLATensor::nms(const XLATensor& boxes,
                                                const XLATensor& score_threshold,
                                                const XLATensor& iou_threshold,
                                                int64_t output_size) {
-  ir::NodePtr node = ir::MakeNode<ir::ops::Nms>(
+  torch::lazy::NodePtr node = ir::MakeNode<ir::ops::Nms>(
       boxes.GetIrValue(), scores.GetIrValue(), score_threshold.GetIrValue(),
       iou_threshold.GetIrValue(), output_size);
   return std::pair<XLATensor, XLATensor>(
@@ -2131,7 +2162,8 @@ std::pair<XLATensor, XLATensor> XLATensor::nms(const XLATensor& boxes,
 }
 
 XLATensor XLATensor::nonzero(const XLATensor& input) {
-  ir::NodePtr node = ir::MakeNode<ir::ops::NonZero>(input.GetIrValue());
+  torch::lazy::NodePtr node =
+      ir::MakeNode<ir::ops::NonZero>(input.GetIrValue());
   return input.CreateFrom(ir::Value(node, 0), at::ScalarType::Long);
 }
 
@@ -2179,6 +2211,18 @@ XLATensor XLATensor::not_supported(std::string description, xla::Shape shape,
   return Create(ir::MakeNode<ir::ops::NotSupported>(std::move(description),
                                                     std::move(shape)),
                 device);
+}
+
+void XLATensor::optimization_barrier_(std::vector<XLATensor>& tensors) {
+  std::vector<ir::Value> irs;
+  irs.reserve(tensors.size());
+  for (XLATensor& tensor : tensors) {
+    irs.push_back(tensor.GetIrValue());
+  }
+  torch::lazy::NodePtr result = ir::MakeNode<ir::ops::OptimizationBarrier>(irs);
+  for (int i = 0; i < tensors.size(); i++) {
+    tensors[i].SetInPlaceIrValue(ir::Value(result, i));
+  }
 }
 
 XLATensor XLATensor::permute(const XLATensor& input,
@@ -2238,7 +2282,8 @@ void XLATensor::put_(XLATensor& input, const XLATensor& index,
 
 std::tuple<XLATensor, XLATensor> XLATensor::qr(const XLATensor& input,
                                                bool some) {
-  ir::NodePtr node = ir::MakeNode<ir::ops::QR>(input.GetIrValue(), some);
+  torch::lazy::NodePtr node =
+      ir::MakeNode<ir::ops::QR>(input.GetIrValue(), some);
   return std::make_tuple(input.CreateFrom(ir::Value(node, 0)),
                          input.CreateFrom(ir::Value(node, 1)));
 }
@@ -2342,7 +2387,7 @@ XLATensor XLATensor::round(const XLATensor& input) {
 XLATensor XLATensor::rrelu_with_noise(const XLATensor& input, XLATensor& noise,
                                       const at::Scalar& lower,
                                       const at::Scalar& upper, bool training) {
-  ir::NodePtr output_node = ir::MakeNode<ir::ops::RreluWithNoise>(
+  torch::lazy::NodePtr output_node = ir::MakeNode<ir::ops::RreluWithNoise>(
       input.GetIrValue(), GetRngSeed(input.GetDevice()), lower, upper,
       training);
   noise.SetIrValue(ir::Value(output_node, 1));
@@ -2502,7 +2547,7 @@ XLATensor XLATensor::slice(const XLATensor& input, int64_t dim, int64_t start,
 }
 
 std::tuple<XLATensor, XLATensor> XLATensor::slogdet(const XLATensor& input) {
-  ir::NodePtr node = ir::ops::SLogDet(input.GetIrValue());
+  torch::lazy::NodePtr node = ir::ops::SLogDet(input.GetIrValue());
   return std::make_tuple(input.CreateFrom(ir::Value(node, 0)),
                          input.CreateFrom(ir::Value(node, 1)));
 }
@@ -2589,7 +2634,7 @@ std::vector<XLATensor> XLATensor::split(const XLATensor& input,
   for (; dim_size > 0; dim_size -= split_size) {
     split_sizes.push_back(std::min<int64_t>(dim_size, split_size));
   }
-  ir::NodePtr node = ir::MakeNode<ir::ops::Split>(
+  torch::lazy::NodePtr node = ir::MakeNode<ir::ops::Split>(
       input.GetIrValue(), std::move(split_sizes), split_dim);
   return input.MakeOutputTensors(node);
 }
@@ -2599,7 +2644,7 @@ std::vector<XLATensor> XLATensor::split_with_sizes(
   auto input_shape = input.shape();
   int split_dim =
       torch::lazy::GetCanonicalDimensionIndex(dim, input_shape.get().rank());
-  ir::NodePtr node = ir::MakeNode<ir::ops::Split>(
+  torch::lazy::NodePtr node = ir::MakeNode<ir::ops::Split>(
       input.GetIrValue(), std::move(split_size), split_dim);
   return input.MakeOutputTensors(node);
 }
@@ -2659,7 +2704,7 @@ XLATensor XLATensor::std(const XLATensor& input,
 std::tuple<XLATensor, XLATensor> XLATensor::std_mean(
     const XLATensor& input, std::vector<int64_t> dimensions, int64_t correction,
     bool keep_reduced_dimensions) {
-  ir::NodePtr node = ir::MakeNode<ir::ops::StdMean>(
+  torch::lazy::NodePtr node = ir::MakeNode<ir::ops::StdMean>(
       input.GetIrValue(),
       torch::lazy::GetCanonicalDimensionIndices(
           xla::util::ToVector<int64_t>(dimensions), input.shape().get().rank()),
@@ -2708,7 +2753,7 @@ XLATensor XLATensor::sum(const XLATensor& input,
 
 std::tuple<XLATensor, XLATensor, XLATensor> XLATensor::svd(
     const XLATensor& input, bool some, bool compute_uv) {
-  ir::NodePtr node =
+  torch::lazy::NodePtr node =
       ir::MakeNode<ir::ops::SVD>(input.GetIrValue(), some, compute_uv);
   return std::make_tuple(input.CreateFrom(ir::Value(node, 0)),
                          input.CreateFrom(ir::Value(node, 1)),
@@ -2719,7 +2764,7 @@ std::tuple<XLATensor, XLATensor> XLATensor::symeig(const XLATensor& input,
                                                    bool eigenvectors,
                                                    bool upper) {
   // SymEig takes lower instead of upper, hence the negation.
-  ir::NodePtr node =
+  torch::lazy::NodePtr node =
       ir::MakeNode<ir::ops::SymEig>(input.GetIrValue(), eigenvectors, !upper);
   return std::make_tuple(input.CreateFrom(ir::Value(node, 0)),
                          input.CreateFrom(ir::Value(node, 1)));
@@ -2781,7 +2826,7 @@ std::tuple<XLATensor, XLATensor> XLATensor::topk(const XLATensor& input,
                                                  int64_t k, int64_t dim,
                                                  bool largest, bool sorted,
                                                  bool stable) {
-  ir::NodePtr node = ir::MakeNode<ir::ops::TopK>(
+  torch::lazy::NodePtr node = ir::MakeNode<ir::ops::TopK>(
       input.GetIrValue(), k,
       torch::lazy::GetCanonicalDimensionIndex(dim, input.shape().get().rank()),
       largest, sorted, stable);
@@ -2794,9 +2839,9 @@ XLATensor XLATensor::trace(const XLATensor& input) {
   auto input_shape_ref = input.shape();
   XLA_CHECK_EQ((*input_shape_ref).rank(), 2)
       << "invalid argument for trace: expected a matrix";
-  ir::NodePtr eye = ir::ops::Identity((*input_shape_ref).dimensions(0),
-                                      (*input_shape_ref).dimensions(1),
-                                      (*input_shape_ref).element_type());
+  torch::lazy::NodePtr eye = ir::ops::Identity(
+      (*input_shape_ref).dimensions(0), (*input_shape_ref).dimensions(1),
+      (*input_shape_ref).element_type());
   return XLATensor::sum(input.CreateFrom(eye * input.GetIrValue()), {0, 1},
                         false, input.dtype());
 }
@@ -2822,7 +2867,7 @@ std::tuple<XLATensor, XLATensor> XLATensor::triangular_solve(
     const XLATensor& rhs, const XLATensor& lhs, bool left_side, bool upper,
     bool transpose, bool unitriangular) {
   // TriangularSolve takes lower instead of upper, hence the negation.
-  ir::NodePtr node = ir::MakeNode<ir::ops::TriangularSolve>(
+  torch::lazy::NodePtr node = ir::MakeNode<ir::ops::TriangularSolve>(
       rhs.GetIrValue(), lhs.GetIrValue(), left_side, !upper, transpose,
       unitriangular);
   return std::make_tuple(rhs.CreateFrom(ir::Value(node, 0)),
@@ -2942,7 +2987,7 @@ XLATensor XLATensor::var(const XLATensor& input,
 std::tuple<XLATensor, XLATensor> XLATensor::var_mean(
     const XLATensor& input, std::vector<int64_t> dimensions, int64_t correction,
     bool keep_reduced_dimensions) {
-  ir::NodePtr node = ir::MakeNode<ir::ops::VarMean>(
+  torch::lazy::NodePtr node = ir::MakeNode<ir::ops::VarMean>(
       input.GetIrValue(),
       torch::lazy::GetCanonicalDimensionIndices(
           xla::util::ToVector<int64_t>(dimensions), input.shape().get().rank()),
@@ -2966,7 +3011,7 @@ XLATensor XLATensor::where(const XLATensor& condition, const XLATensor& input,
 XLATensor XLATensor::DispatchComparisonOp(c10::Symbol kind,
                                           const XLATensor& input,
                                           const at::Scalar& other) {
-  ir::NodePtr node = ir::ops::ComparisonOp(
+  torch::lazy::NodePtr node = ir::ops::ComparisonOp(
       kind, input.GetIrValue(), GetIrValueForScalar(other, input.GetDevice()));
   return Create(node, input.GetDevice(), at::ScalarType::Bool);
 }
@@ -2974,7 +3019,7 @@ XLATensor XLATensor::DispatchComparisonOp(c10::Symbol kind,
 XLATensor XLATensor::DispatchComparisonOp(c10::Symbol kind,
                                           const XLATensor& input,
                                           const XLATensor& other) {
-  ir::NodePtr node =
+  torch::lazy::NodePtr node =
       ir::ops::ComparisonOp(kind, input.GetIrValue(), other.GetIrValue());
   return Create(node, input.GetDevice(), at::ScalarType::Bool);
 }

@@ -22,9 +22,10 @@ xla::Shape NodeOutputShape(const Value& grad_out, const Value& input,
                       {xla_outputs.grad_input, xla_outputs.grad_weight,
                        xla_outputs.grad_bias});
   };
-  return InferOutputShape({grad_out.shape(), input.shape(), weight.shape(),
-                           save_mean.shape(), save_invstd.shape()},
-                          lower_for_shape_fn);
+  return InferOutputShape(
+      {grad_out.xla_shape(), input.xla_shape(), weight.xla_shape(),
+       save_mean.xla_shape(), save_invstd.xla_shape()},
+      lower_for_shape_fn);
 }
 
 }  // namespace
@@ -42,10 +43,10 @@ NativeBatchNormBackward::NativeBatchNormBackward(
       training_(training),
       eps_(eps) {}
 
-NodePtr NativeBatchNormBackward::Clone(OpList operands) const {
-  return MakeNode<NativeBatchNormBackward>(operands.at(0), operands.at(1),
-                                           operands.at(2), operands.at(3),
-                                           operands.at(4), training_, eps_);
+torch::lazy::NodePtr NativeBatchNormBackward::Clone(OpList operands) const {
+  return ir::MakeNode<NativeBatchNormBackward>(operands.at(0), operands.at(1),
+                                               operands.at(2), operands.at(3),
+                                               operands.at(4), training_, eps_);
 }
 
 XlaOpVector NativeBatchNormBackward::Lower(LoweringContext* loctx) const {

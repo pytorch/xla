@@ -13,16 +13,17 @@ RreluWithNoise::RreluWithNoise(const Value& input, const Value& seed,
                                const at::Scalar& lower, const at::Scalar& upper,
                                bool training)
     : Node(torch::lazy::OpKind(at::aten::rrelu_with_noise), {input, seed},
-           xla::ShapeUtil::MakeTupleShape({input.shape(), input.shape()}),
+           xla::ShapeUtil::MakeTupleShape(
+               {input.xla_shape(), input.xla_shape()}),
            /*num_outputs=*/2,
            torch::lazy::MHash(ScalarHash(lower), ScalarHash(upper), training)),
       lower_(std::move(lower)),
       upper_(std::move(upper)),
       training_(training) {}
 
-NodePtr RreluWithNoise::Clone(OpList operands) const {
-  return MakeNode<RreluWithNoise>(operands.at(0), operands.at(1), lower_,
-                                  upper_, training_);
+torch::lazy::NodePtr RreluWithNoise::Clone(OpList operands) const {
+  return ir::MakeNode<RreluWithNoise>(operands.at(0), operands.at(1), lower_,
+                                      upper_, training_);
 }
 
 XlaOpVector RreluWithNoise::Lower(LoweringContext* loctx) const {

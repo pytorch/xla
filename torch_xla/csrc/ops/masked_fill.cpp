@@ -12,12 +12,12 @@ namespace ops {
 MaskedFill::MaskedFill(const Value& input, const Value& mask,
                        const at::Scalar& value)
     : Node(torch::lazy::OpKind(at::aten::masked_fill), {input, mask},
-           input.shape(),
+           input.xla_shape(),
            /*num_outputs=*/1, ScalarHash(value)),
       value_(std::move(value)) {}
 
-NodePtr MaskedFill::Clone(OpList operands) const {
-  return MakeNode<MaskedFill>(operands.at(0), operands.at(1), value_);
+torch::lazy::NodePtr MaskedFill::Clone(OpList operands) const {
+  return ir::MakeNode<MaskedFill>(operands.at(0), operands.at(1), value_);
 }
 
 XlaOpVector MaskedFill::Lower(LoweringContext* loctx) const {
@@ -26,7 +26,7 @@ XlaOpVector MaskedFill::Lower(LoweringContext* loctx) const {
   xla::XlaOp zero = xla::Zero(loctx->builder(), XlaHelpers::TypeOfXlaOp(mask));
   xla::XlaOp mask_pred = xla::Ne(mask, zero);
   // Input shape is the same as output shape.
-  const xla::Shape& input_shape = shape();
+  const xla::Shape& input_shape = xla_shape();
   xla::XlaOp value =
       xla::Broadcast(XlaHelpers::ScalarValue(value_, input_shape.element_type(),
                                              input.builder()),

@@ -9,7 +9,7 @@
 #include "absl/strings/string_view.h"
 #include "tensorflow/compiler/xla/xla_client/debug_macros.h"
 #include "tensorflow/compiler/xla/xla_client/sys_util.h"
-#include "torch_xla/csrc/python_util.h"
+#include "torch/csrc/lazy/core/ir_metadata.h"
 
 namespace torch_xla {
 namespace ir {
@@ -17,7 +17,7 @@ namespace {
 
 class HloMetadataSetter {
  public:
-  HloMetadataSetter(LoweringContext* loctx, const Node* node) {
+  HloMetadataSetter(LoweringContext* loctx, const torch::lazy::Node* node) {
     if (ShouldPopulateXlaOpMetadata()) {
       PopulateXlaOpMetadata(loctx, node);
       loctx_ = loctx;
@@ -36,7 +36,8 @@ class HloMetadataSetter {
     return op_metadata;
   }
 
-  static void PopulateXlaOpMetadata(LoweringContext* loctx, const Node* node) {
+  static void PopulateXlaOpMetadata(LoweringContext* loctx,
+                                    const torch::lazy::Node* node) {
     xla::OpMetadata metadata;
     // NOTE: we apply some string manipulation as xprof backend utility
     // for nesting/grouping traces depends on certain op name/type
@@ -45,7 +46,7 @@ class HloMetadataSetter {
     std::string op_type =
         absl::StrReplaceAll(node->op().ToString(), {{":", "_"}});
     metadata.set_op_type(op_type);
-    const ir::MetaData& nmeta = node->metadata();
+    const torch::lazy::MetaData& nmeta = node->metadata();
     std::string op_name_prefix;
     if (!nmeta.scope.empty()) {
       op_name_prefix =
@@ -54,7 +55,7 @@ class HloMetadataSetter {
     metadata.set_op_name(absl::StrCat(op_name_prefix, op_type));
 
     if (!nmeta.frame_info.empty()) {
-      const SourceLocation& frame = nmeta.frame_info.front();
+      const torch::lazy::SourceLocation& frame = nmeta.frame_info.front();
       std::string::size_type pos = frame.file.find_last_of('/');
       if (pos == std::string::npos) {
         pos = 0;
@@ -75,9 +76,10 @@ class HloMetadataSetter {
 LoweringContext::LoweringContext(const std::string& name, Device device)
     : builder_(name), device_(std::move(device)) {}
 
-LoweringContext::LoweringContext(const std::string& name, Device device,
-                                 absl::Span<const Node* const> post_order,
-                                 Util::EmissionMap emit_status)
+LoweringContext::LoweringContext(
+    const std::string& name, Device device,
+    absl::Span<const torch::lazy::Node* const> post_order,
+    torch::lazy::Util::EmissionMap emit_status)
     : builder_(name),
       device_(std::move(device)),
       emit_status_(std::move(emit_status)) {
@@ -137,11 +139,12 @@ xla::StatusOr<xla::XlaComputation> LoweringContext::Build(xla::XlaOp root) {
   return builder()->Build(root);
 }
 
-void LoweringContext::AssignOutputOp(const Output& output, xla::XlaOp op) {
+void LoweringContext::AssignOutputOp(const torch::lazy::Output& output,
+                                     xla::XlaOp op) {
   emitted_outputs_[output] = std::move(op);
 }
 
-xla::XlaOp LoweringContext::GetOutputOp(const Output& output) {
+xla::XlaOp LoweringContext::GetOutputOp(const torch::lazy::Output& output) {
   auto it = emitted_outputs_.find(output);
   if (it == emitted_outputs_.end()) {
     auto post_order = Util::ComputePostOrder(output.node, &emit_status_);
@@ -157,12 +160,13 @@ xla::XlaOp LoweringContext::GetOutputOp(const Output& output) {
   return it->second;
 }
 
-XlaOpVector LoweringContext::LowerNode(const Node* node) {
+XlaOpVector LoweringContext::LowerNode(const torch::lazy::Node* node) {
   XlaOpVector result_ops;
   try {
     HloMetadataSetter meta_setter(this, node);
 
-    result_ops = node->Lower(this);
+    const Node* casted = dynamic_cast<const Node*>(node);
+    result_ops = casted->Lower(this);
   } catch (const std::exception& ex) {
     ReportBuilderError(node, ex.what());
   }
@@ -172,7 +176,7 @@ XlaOpVector LoweringContext::LowerNode(const Node* node) {
   return result_ops;
 }
 
-void LoweringContext::ReportBuilderError(const Node* node,
+void LoweringContext::ReportBuilderError(const torch::lazy::Node* node,
                                          const char* error_msg) {
   std::stringstream ss;
   ss << "Error while lowering: " << node->ToString() << "\n";
@@ -182,7 +186,7 @@ void LoweringContext::ReportBuilderError(const Node* node,
   if (error_msg != nullptr) {
     ss << "Error: " << error_msg << "\n";
   }
-  const ir::MetaData& nmeta = node->metadata();
+  const torch::lazy::MetaData& nmeta = node->metadata();
   if (!nmeta.scope.empty()) {
     ss << "Scope: " << nmeta.scope << "\n";
   }

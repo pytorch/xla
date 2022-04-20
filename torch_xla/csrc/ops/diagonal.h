@@ -10,7 +10,7 @@ class Diagonal : public Node {
  public:
   Diagonal(const Value& input, int64_t offset, int64_t dim1, int64_t dim2);
 
-  NodePtr Clone(OpList operands) const override;
+  torch::lazy::NodePtr Clone(OpList operands) const override;
 
   XlaOpVector Lower(LoweringContext* loctx) const override;
 

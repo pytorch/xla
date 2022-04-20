@@ -8,12 +8,12 @@ namespace ir {
 namespace ops {
 
 Triu::Triu(const Value& input, int64_t diagonal)
-    : Node(torch::lazy::OpKind(at::aten::triu), {input}, input.shape(),
+    : Node(torch::lazy::OpKind(at::aten::triu), {input}, input.xla_shape(),
            /*num_outputs=*/1, torch::lazy::MHash(diagonal)),
       diagonal_(diagonal) {}
 
-NodePtr Triu::Clone(OpList operands) const {
-  return MakeNode<Triu>(operands.at(0), diagonal_);
+torch::lazy::NodePtr Triu::Clone(OpList operands) const {
+  return ir::MakeNode<Triu>(operands.at(0), diagonal_);
 }
 
 XlaOpVector Triu::Lower(LoweringContext* loctx) const {

@@ -11,7 +11,7 @@ class DiagonalViewUpdate : public Node {
   DiagonalViewUpdate(const Value& target, const Value& input, int64_t offset,
                      int64_t dim1, int64_t dim2);
 
-  NodePtr Clone(OpList operands) const override;
+  torch::lazy::NodePtr Clone(OpList operands) const override;
 
   XlaOpVector Lower(LoweringContext* loctx) const override;
 

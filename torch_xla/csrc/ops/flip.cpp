@@ -8,12 +8,12 @@ namespace ir {
 namespace ops {
 
 Flip::Flip(const Value& input, std::vector<int64_t> dims)
-    : Node(torch::lazy::OpKind(at::aten::flip), {input}, input.shape(),
+    : Node(torch::lazy::OpKind(at::aten::flip), {input}, input.xla_shape(),
            /*num_outputs=*/1, torch::lazy::MHash(dims)),
       dims_(std::move(dims)) {}
 
-NodePtr Flip::Clone(OpList operands) const {
-  return MakeNode<Flip>(operands.at(0), dims_);
+torch::lazy::NodePtr Flip::Clone(OpList operands) const {
+  return ir::MakeNode<Flip>(operands.at(0), dims_);
 }
 
 XlaOpVector Flip::Lower(LoweringContext* loctx) const {

@@ -8,12 +8,13 @@ namespace ir {
 namespace ops {
 
 LeakyRelu::LeakyRelu(const Value& input, double negative_slope)
-    : Node(torch::lazy::OpKind(at::aten::leaky_relu), {input}, input.shape(),
+    : Node(torch::lazy::OpKind(at::aten::leaky_relu), {input},
+           input.xla_shape(),
            /*num_outputs=*/1, torch::lazy::MHash(negative_slope)),
       negative_slope_(negative_slope) {}
 
-NodePtr LeakyRelu::Clone(OpList operands) const {
-  return MakeNode<LeakyRelu>(operands.at(0), negative_slope_);
+torch::lazy::NodePtr LeakyRelu::Clone(OpList operands) const {
+  return ir::MakeNode<LeakyRelu>(operands.at(0), negative_slope_);
 }
 
 XlaOpVector LeakyRelu::Lower(LoweringContext* loctx) const {

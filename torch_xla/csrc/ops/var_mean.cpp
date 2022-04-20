@@ -23,7 +23,7 @@ xla::Shape NodeOutputShape(const Value& input, std::vector<int64_t>& dimensions,
         BuildMean(operands[0], dimensions, keep_reduced_dimensions);
     return xla::Tuple(operands[0].builder(), {var, mean});
   };
-  return InferOutputShape({input.shape()}, lower_for_shape_fn);
+  return InferOutputShape({input.xla_shape()}, lower_for_shape_fn);
 }
 
 }  // namespace
@@ -41,9 +41,9 @@ VarMean::VarMean(const Value& input, std::vector<int64_t> dimensions,
       correction_(correction),
       keep_reduced_dimensions_(keep_reduced_dimensions) {}
 
-NodePtr VarMean::Clone(OpList operands) const {
-  return MakeNode<VarMean>(operands.at(0), dimensions_, correction_,
-                           keep_reduced_dimensions_);
+torch::lazy::NodePtr VarMean::Clone(OpList operands) const {
+  return ir::MakeNode<VarMean>(operands.at(0), dimensions_, correction_,
+                               keep_reduced_dimensions_);
 }
 
 XlaOpVector VarMean::Lower(LoweringContext* loctx) const {

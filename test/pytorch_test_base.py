@@ -189,6 +189,7 @@ DISABLED_TORCH_TESTS_ANY = {
         'test_random_from_to_bool',  # doesn't raise
         'test_random_from_to_xla',  # doesn't raise
         'test_random_to_xla',  # doesn't raise
+        'test_copy_',  # test against complex32 which is nto supported
     },
 
     # test_view_ops.py
@@ -251,6 +252,7 @@ DISABLED_TORCH_TESTS_ANY = {
         'test_fold',  # The gradient check code errors out on type() call, and code is slow on XLA
         'test_unfold',  # The gradient check code errors out on type() call, and code is slow on XLA
         'test_hardsigmoid_grad_xla',  # gradient check is slow
+        'test_hardswish_grad_xla',  # gradient check is as slow as above
         'test_leaky_relu_inplace_overlap_xla',  # doesn't raise
         # zero slope not supported; see https://github.com/pytorch/xla/commit/9cda83d383d8a8dae98c00c566012020c93d8ab1
         'test_leaky_relu_inplace_with_zero_slope_xla',
@@ -364,10 +366,7 @@ DISABLED_TORCH_TESTS_TPU_ONLY = {
         'test_LSTM_grad_and_gradgrad_xla_float64',  # grad check failure
         'test_conv3d_valid_padding_backward_xla',  # grad check failure
         'test_ctc_loss_xla',  # runtime overflow error
-        'test_upsamplingBicubic2d_antialias_False_align_corners_False_xla',  # grad check failure
-        'test_upsamplingBicubic2d_antialias_False_align_corners_True_xla',  # grad check failure
-        'test_upsamplingBicubic2d_antialias_True_align_corners_False_xla',  # grad check failure
-        'test_upsamplingBicubic2d_antialias_True_align_corners_True_xla',  # grad check failure
+        'test_upsamplingBicubic2d_xla',  # grad check failure
         'test_upsamplingNearest1d_xla',  # grad check failure
         'test_upsamplingNearest3d_xla',  # grad check failure
         'test_cross_entropy_label_smoothing_consistent_index_target_and_probs_xla',  # precision

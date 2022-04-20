@@ -25,7 +25,7 @@ xla::Shape NodeOutputShape(const Value& logits, const Value& labels,
   std::vector<xla::Shape> shapes;
   for (auto& input :
        xla::util::GetValuesVector<Value>({logits, labels}, {&weight})) {
-    shapes.push_back(input.shape());
+    shapes.push_back(input.xla_shape());
   }
   return InferOutputShape(shapes, lower_for_shape_fn);
 }
@@ -42,13 +42,13 @@ BinaryCrossEntropy::BinaryCrossEntropy(const Value& logits, const Value& labels,
            torch::lazy::MHash(torch::lazy::GetEnumValue(reduction))),
       reduction_(reduction) {}
 
-NodePtr BinaryCrossEntropy::Clone(OpList operands) const {
+torch::lazy::NodePtr BinaryCrossEntropy::Clone(OpList operands) const {
   absl::optional<Value> weight;
   if (operands.size() > 2) {
     weight = operands.at(2);
   }
-  return MakeNode<BinaryCrossEntropy>(operands.at(0), operands.at(1), weight,
-                                      reduction_);
+  return ir::MakeNode<BinaryCrossEntropy>(operands.at(0), operands.at(1),
+                                          weight, reduction_);
 }
 
 XlaOpVector BinaryCrossEntropy::Lower(LoweringContext* loctx) const {

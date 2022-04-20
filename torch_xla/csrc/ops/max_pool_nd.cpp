@@ -20,7 +20,7 @@ xla::Shape NodeOutputShape(const Value& input, int64_t spatial_dim_count,
                        padding, ceil_mode);
     return xla::Tuple(operands[0].builder(), {result.result, result.indices});
   };
-  return InferOutputShape({input.shape()}, shape_fn);
+  return InferOutputShape({input.xla_shape()}, shape_fn);
 }
 
 c10::Symbol MaxPoolNdSymbol(int64_t spatial_dim_count) {
@@ -57,9 +57,9 @@ MaxPoolNd::MaxPoolNd(const Value& input, int64_t spatial_dim_count,
       padding_(std::move(padding)),
       ceil_mode_(ceil_mode) {}
 
-NodePtr MaxPoolNd::Clone(OpList operands) const {
-  return MakeNode<MaxPoolNd>(operands.at(0), spatial_dim_count_, kernel_size_,
-                             stride_, padding_, ceil_mode_);
+torch::lazy::NodePtr MaxPoolNd::Clone(OpList operands) const {
+  return ir::MakeNode<MaxPoolNd>(operands.at(0), spatial_dim_count_,
+                                 kernel_size_, stride_, padding_, ceil_mode_);
 }
 
 XlaOpVector MaxPoolNd::Lower(LoweringContext* loctx) const {

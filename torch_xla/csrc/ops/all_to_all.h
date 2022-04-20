@@ -11,11 +11,11 @@ class AllToAll : public Node {
  public:
   AllToAll(const Value& input, const Value& token, int64_t split_dimension,
            int64_t concat_dimension, int64_t split_count,
-           std::vector<std::vector<int64_t>> groups);
+           std::vector<std::vector<int64_t>> groups, bool pin_layout);
 
   std::string ToString() const override;
 
-  NodePtr Clone(OpList operands) const override;
+  torch::lazy::NodePtr Clone(OpList operands) const override;
 
   XlaOpVector Lower(LoweringContext* loctx) const override;
 
@@ -27,11 +27,14 @@ class AllToAll : public Node {
 
   const std::vector<std::vector<int64_t>>& groups() const { return groups_; }
 
+  bool pin_layout() const { return pin_layout_; }
+
  private:
   int64_t split_dimension_;
   int64_t concat_dimension_;
   int64_t split_count_;
   std::vector<std::vector<int64_t>> groups_;
+  bool pin_layout_;
 };
 
 }  // namespace ops

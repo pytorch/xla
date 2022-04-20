@@ -31,7 +31,7 @@ xla::Shape NodeOutputShape(const Value& input,
       [&](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
     return LowerMean(operands[0], dimensions, keep_reduced_dimensions, dtype);
   };
-  return InferOutputShape({input.shape()}, lower_for_shape_fn);
+  return InferOutputShape({input.xla_shape()}, lower_for_shape_fn);
 }
 
 }  // namespace
@@ -50,9 +50,9 @@ Mean::Mean(const Value& input, std::vector<int64_t> dimensions,
       keep_reduced_dimensions_(keep_reduced_dimensions),
       dtype_(dtype) {}
 
-NodePtr Mean::Clone(OpList operands) const {
-  return MakeNode<Mean>(operands.at(0), dimensions_, keep_reduced_dimensions_,
-                        dtype_);
+torch::lazy::NodePtr Mean::Clone(OpList operands) const {
+  return ir::MakeNode<Mean>(operands.at(0), dimensions_,
+                            keep_reduced_dimensions_, dtype_);
 }
 
 XlaOpVector Mean::Lower(LoweringContext* loctx) const {

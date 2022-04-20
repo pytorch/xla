@@ -8,13 +8,13 @@ namespace ir {
 namespace ops {
 
 Threshold::Threshold(const Value& input, float threshold, float value)
-    : Node(torch::lazy::OpKind(at::aten::threshold), {input}, input.shape(),
+    : Node(torch::lazy::OpKind(at::aten::threshold), {input}, input.xla_shape(),
            /*num_outputs=*/1, torch::lazy::MHash(threshold, value)),
       threshold_(threshold),
       value_(value) {}
 
-NodePtr Threshold::Clone(OpList operands) const {
-  return MakeNode<Threshold>(operands.at(0), threshold_, value_);
+torch::lazy::NodePtr Threshold::Clone(OpList operands) const {
+  return ir::MakeNode<Threshold>(operands.at(0), threshold_, value_);
 }
 
 XlaOpVector Threshold::Lower(LoweringContext* loctx) const {

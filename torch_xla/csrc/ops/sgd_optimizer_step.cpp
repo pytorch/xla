@@ -10,8 +10,9 @@ namespace ops {
 namespace {
 
 xla::Shape NodeOutputShape(const Value& step, const Value& param) {
-  return xla::ShapeUtil::MakeTupleShape(
-      {/*step=*/step.shape(), /*param=*/param.shape(), /*buf=*/param.shape()});
+  return xla::ShapeUtil::MakeTupleShape({/*step=*/step.xla_shape(),
+                                         /*param=*/param.xla_shape(),
+                                         /*buf=*/param.xla_shape()});
 }
 
 }  // namespace
@@ -33,8 +34,8 @@ SgdOptimizerStep::SgdOptimizerStep(const Value& found_inf, const Value& step,
       use_momentum_(use_momentum),
       use_nesterov_(use_nesterov) {}
 
-NodePtr SgdOptimizerStep::Clone(OpList operands) const {
-  return MakeNode<SgdOptimizerStep>(
+torch::lazy::NodePtr SgdOptimizerStep::Clone(OpList operands) const {
+  return ir::MakeNode<SgdOptimizerStep>(
       operands.at(0), operands.at(1), operands.at(2), operands.at(3),
       operands.at(4), operands.at(5), operands.at(6), operands.at(7),
       operands.at(8), use_weight_decay_, use_momentum_, use_nesterov_);

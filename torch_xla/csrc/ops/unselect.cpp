@@ -13,16 +13,16 @@ namespace ops {
 
 Unselect::Unselect(const Value& target, const Value& source, int64_t dim,
                    int64_t start, int64_t end, int64_t stride)
-    : Node(xla_unselect, {target, source}, target.shape(),
+    : Node(xla_unselect, {target, source}, target.xla_shape(),
            /*num_outputs=*/1, torch::lazy::MHash(dim, start, end, stride)),
       dim_(dim),
       start_(start),
       end_(end),
       stride_(stride) {}
 
-NodePtr Unselect::Clone(OpList operands) const {
-  return MakeNode<Unselect>(operands.at(0), operands.at(1), dim_, start_, end_,
-                            stride_);
+torch::lazy::NodePtr Unselect::Clone(OpList operands) const {
+  return ir::MakeNode<Unselect>(operands.at(0), operands.at(1), dim_, start_,
+                                end_, stride_);
 }
 
 XlaOpVector Unselect::Lower(LoweringContext* loctx) const {

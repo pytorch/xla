@@ -159,15 +159,6 @@ class TestAutocastBase(unittest.TestCase):
 
 class TestAutocast(TestAutocastBase):
 
-  def test_autocast_torch_fp16(self):
-    with torch.backends.cudnn.flags(enabled=True, deterministic=True):
-      for op_with_args in self.get_autocast_list('torch_fp16'):
-        if len(op_with_args) == 3:
-          # TEST_WITH_ROCM
-          continue
-        op, args = op_with_args[0], op_with_args[1]
-        self._run_autocast_outofplace(op, args, torch.float16)
-
   def test_autocast_torch_fp32(self):
     for op_with_args in self.get_autocast_list('torch_fp32'):
       op, args, maybe_kwargs = self.args_maybe_kwargs(op_with_args)

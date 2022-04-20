@@ -26,7 +26,8 @@ xla::Shape NodeOutputShape(const Value& input, const Value& weight,
                                         padding, dilation, transposed,
                                         output_padding, groups);
   };
-  return InferOutputShape({input.shape(), weight.shape()}, lower_for_shape_fn);
+  return InferOutputShape({input.xla_shape(), weight.xla_shape()},
+                          lower_for_shape_fn);
 }
 
 }  // namespace
@@ -72,12 +73,12 @@ ConvolutionOverrideable::ConvolutionOverrideable(
       transposed_(transposed),
       groups_(groups) {}
 
-NodePtr ConvolutionOverrideable::Clone(OpList operands) const {
+torch::lazy::NodePtr ConvolutionOverrideable::Clone(OpList operands) const {
   return operands.size() == 3
-             ? MakeNode<ConvolutionOverrideable>(
+             ? ir::MakeNode<ConvolutionOverrideable>(
                    operands.at(0), operands.at(1), operands.at(2), stride_,
                    padding_, dilation_, transposed_, output_padding_, groups_)
-             : MakeNode<ConvolutionOverrideable>(
+             : ir::MakeNode<ConvolutionOverrideable>(
                    operands.at(0), operands.at(1), stride_, padding_, dilation_,
                    transposed_, output_padding_, groups_);
 }

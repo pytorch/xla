@@ -24,7 +24,7 @@ xla::Shape NodeOutputShape(const Value& input, int64_t spatial_dim_count,
     return BuildAvgPoolNd(operands[0], spatial_dim_count, kernel_size, stride,
                           padding, ceil_mode, count_include_pad);
   };
-  return InferOutputShape({input.shape()}, lower_for_shape_fn);
+  return InferOutputShape({input.xla_shape()}, lower_for_shape_fn);
 }
 
 c10::Symbol AvgPoolNdSymbol(int64_t spatial_dim_count) {
@@ -63,9 +63,10 @@ AvgPoolNd::AvgPoolNd(const Value& input, int64_t spatial_dim_count,
       ceil_mode_(ceil_mode),
       count_include_pad_(count_include_pad) {}
 
-NodePtr AvgPoolNd::Clone(OpList operands) const {
-  return MakeNode<AvgPoolNd>(operands.at(0), spatial_dim_count_, kernel_size_,
-                             stride_, padding_, ceil_mode_, count_include_pad_);
+torch::lazy::NodePtr AvgPoolNd::Clone(OpList operands) const {
+  return ir::MakeNode<AvgPoolNd>(operands.at(0), spatial_dim_count_,
+                                 kernel_size_, stride_, padding_, ceil_mode_,
+                                 count_include_pad_);
 }
 
 XlaOpVector AvgPoolNd::Lower(LoweringContext* loctx) const {

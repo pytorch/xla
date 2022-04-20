@@ -18,7 +18,7 @@ xla::Shape NodeOutputShape(const Value& input,
     MaxPoolResult result = BuildAdaptiveMaxPoolNd(operands[0], output_size, 2);
     return xla::Tuple(operands[0].builder(), {result.result, result.indices});
   };
-  return InferOutputShape({input.shape()}, lower_for_shape_fn);
+  return InferOutputShape({input.xla_shape()}, lower_for_shape_fn);
 }
 
 }  // namespace
@@ -30,8 +30,8 @@ AdaptiveMaxPool2d::AdaptiveMaxPool2d(const Value& input,
            /*num_outputs=*/2, torch::lazy::MHash(output_size)),
       output_size_(std::move(output_size)) {}
 
-NodePtr AdaptiveMaxPool2d::Clone(OpList operands) const {
-  return MakeNode<AdaptiveMaxPool2d>(operands.at(0), output_size_);
+torch::lazy::NodePtr AdaptiveMaxPool2d::Clone(OpList operands) const {
+  return ir::MakeNode<AdaptiveMaxPool2d>(operands.at(0), output_size_);
 }
 
 XlaOpVector AdaptiveMaxPool2d::Lower(LoweringContext* loctx) const {

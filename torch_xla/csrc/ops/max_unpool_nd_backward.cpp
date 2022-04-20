@@ -17,8 +17,9 @@ xla::Shape NodeOutputShape(const Value& grad_output, const Value& input,
     return BuildMaxUnpoolNdBackward(operands[0], operands[1], operands[2],
                                     output_size);
   };
-  return InferOutputShape({grad_output.shape(), input.shape(), indices.shape()},
-                          shape_fn);
+  return InferOutputShape(
+      {grad_output.xla_shape(), input.xla_shape(), indices.xla_shape()},
+      shape_fn);
 }
 
 c10::Symbol MaxUnpoolNdBackwardSymbol(int64_t spatial_dim_count) {
@@ -47,9 +48,9 @@ MaxUnpoolNdBackward::MaxUnpoolNdBackward(const Value& grad_output,
            /*num_outputs=*/1, torch::lazy::MHash(output_size)),
       output_size_(std::move(output_size)) {}
 
-NodePtr MaxUnpoolNdBackward::Clone(OpList operands) const {
-  return MakeNode<MaxUnpoolNdBackward>(operands.at(0), operands.at(1),
-                                       operands.at(2), output_size_);
+torch::lazy::NodePtr MaxUnpoolNdBackward::Clone(OpList operands) const {
+  return ir::MakeNode<MaxUnpoolNdBackward>(operands.at(0), operands.at(1),
+                                           operands.at(2), output_size_);
 }
 
 XlaOpVector MaxUnpoolNdBackward::Lower(LoweringContext* loctx) const {

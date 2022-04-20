@@ -19,8 +19,9 @@ xla::Shape NodeOutputShape(const Value& grad_output, const Value& input,
     return BuildMseLossBackward(operands[0], operands[1], operands[2],
                                 reduction);
   };
-  return InferOutputShape({grad_output.shape(), input.shape(), target.shape()},
-                          lower_for_shape_fn);
+  return InferOutputShape(
+      {grad_output.xla_shape(), input.xla_shape(), target.xla_shape()},
+      lower_for_shape_fn);
 }
 
 }  // namespace
@@ -36,9 +37,9 @@ MseLossBackward::MseLossBackward(const Value& grad_output, const Value& input,
            torch::lazy::MHash(torch::lazy::GetEnumValue(reduction))),
       reduction_(reduction) {}
 
-NodePtr MseLossBackward::Clone(OpList operands) const {
-  return MakeNode<MseLossBackward>(operands.at(0), operands.at(1),
-                                   operands.at(2), reduction_);
+torch::lazy::NodePtr MseLossBackward::Clone(OpList operands) const {
+  return ir::MakeNode<MseLossBackward>(operands.at(0), operands.at(1),
+                                       operands.at(2), reduction_);
 }
 
 XlaOpVector MseLossBackward::Lower(LoweringContext* loctx) const {

@@ -748,6 +748,20 @@ class TestDynamicShape(XlaTestCase):
     self.assertEqual(x_dim0_shape.item(), 3)
 
 
+class TestOptimizationBarrier(XlaTestCase):
+
+  def test_optimization_barrier_correctness(self):
+    device = xm.xla_device()
+    # only test optimization_barrier on TPU
+    if xm.xla_device_hw(device) != 'TPU':
+      return
+    x = torch.randn(5, 5, device=device)
+    y = torch.randn(5, 5, device=device)
+    z = x + y
+    xm.optimization_barrier_([x, y])
+    self.assertEqual(z, x + y)
+
+
 class TestDataType(XlaTestCase):
 
   def test_mixed_dtype_tuple(self):

@@ -27,7 +27,7 @@ std::vector<xla::XlaOp> LowerSymEig(xla::XlaOp input, bool eigenvectors,
 }
 
 xla::Shape NodeOutputShape(const Value& input, bool eigenvectors, bool lower) {
-  const xla::Shape& input_shape = input.shape();
+  const xla::Shape& input_shape = input.xla_shape();
   XLA_CHECK_GE(input_shape.rank(), 2) << input_shape;
   // W is ..., M
   xla::Shape wshape(input_shape);
@@ -52,8 +52,8 @@ SymEig::SymEig(const Value& input, bool eigenvectors, bool lower)
       eigenvectors_(eigenvectors),
       lower_(lower) {}
 
-NodePtr SymEig::Clone(OpList operands) const {
-  return MakeNode<SymEig>(operands.at(0), eigenvectors_, lower_);
+torch::lazy::NodePtr SymEig::Clone(OpList operands) const {
+  return ir::MakeNode<SymEig>(operands.at(0), eigenvectors_, lower_);
 }
 
 XlaOpVector SymEig::Lower(LoweringContext* loctx) const {

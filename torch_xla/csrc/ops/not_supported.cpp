@@ -13,8 +13,8 @@ NotSupported::NotSupported(std::string description, xla::Shape shape)
            torch::lazy::MHash(description)),
       description_(std::move(description)) {}
 
-NodePtr NotSupported::Clone(OpList operands) const {
-  return MakeNode<NotSupported>(description_, shape());
+torch::lazy::NodePtr NotSupported::Clone(OpList operands) const {
+  return ir::MakeNode<NotSupported>(description_, xla_shape());
 }
 
 XlaOpVector NotSupported::Lower(LoweringContext* /* loctx */) const {

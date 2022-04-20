@@ -33,7 +33,7 @@ xla::Shape NodeOutputShape(const Value& grad_output, const Value& logits,
   std::vector<xla::Shape> shapes;
   for (auto& input : xla::util::GetValuesVector<Value>(
            {grad_output, logits, labels}, {&weight, &total_weight})) {
-    shapes.push_back(input.shape());
+    shapes.push_back(input.xla_shape());
   }
   return InferOutputShape(shapes, lower_for_shape_fn);
 }
@@ -58,16 +58,16 @@ NllLossBackward::NllLossBackward(const Value& grad_output, const Value& logits,
       reduction_(reduction),
       ignore_index_(ignore_index) {}
 
-NodePtr NllLossBackward::Clone(OpList operands) const {
+torch::lazy::NodePtr NllLossBackward::Clone(OpList operands) const {
   absl::optional<Value> weight;
   absl::optional<Value> total_weight;
   if (operands.size() > 3) {
     weight = operands.at(3);
     total_weight = operands.at(4);
   }
-  return MakeNode<NllLossBackward>(operands.at(0), operands.at(1),
-                                   operands.at(2), weight, total_weight,
-                                   reduction_, ignore_index_);
+  return ir::MakeNode<NllLossBackward>(operands.at(0), operands.at(1),
+                                       operands.at(2), weight, total_weight,
+                                       reduction_, ignore_index_);
 }
 
 XlaOpVector NllLossBackward::Lower(LoweringContext* loctx) const {

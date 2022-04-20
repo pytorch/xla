@@ -19,7 +19,7 @@ xla::Shape NodeOutputShape(
         BuildCollectivePermute(operands[0], operands[1], source_target_pairs);
     return xla::Tuple(operands[0].builder(), {result.result, result.token});
   };
-  return InferOutputShape({input.shape(), token.shape()}, shape_fn);
+  return InferOutputShape({input.xla_shape(), token.xla_shape()}, shape_fn);
 }
 
 }  // namespace
@@ -32,9 +32,9 @@ CollectivePermute::CollectivePermute(
            /*num_outputs=*/2, torch::lazy::MHash(source_target_pairs)),
       source_target_pairs_(std::move(source_target_pairs)) {}
 
-NodePtr CollectivePermute::Clone(OpList operands) const {
-  return MakeNode<CollectivePermute>(operands.at(0), operands.at(1),
-                                     source_target_pairs_);
+torch::lazy::NodePtr CollectivePermute::Clone(OpList operands) const {
+  return ir::MakeNode<CollectivePermute>(operands.at(0), operands.at(1),
+                                         source_target_pairs_);
 }
 
 XlaOpVector CollectivePermute::Lower(LoweringContext* loctx) const {

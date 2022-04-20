@@ -17,7 +17,7 @@ xla::Shape NodeOutputShape(const Value& input,
     XLA_CHECK_EQ(operands.size(), 1);
     return BuildAdaptiveAvgPool3d(operands[0], output_size);
   };
-  return InferOutputShape({input.shape()}, lower_for_shape_fn);
+  return InferOutputShape({input.xla_shape()}, lower_for_shape_fn);
 }
 
 }  // namespace
@@ -29,8 +29,8 @@ AdaptiveAvgPool3d::AdaptiveAvgPool3d(const Value& input,
            /*num_outputs=*/1, torch::lazy::MHash(output_size)),
       output_size_(std::move(output_size)) {}
 
-NodePtr AdaptiveAvgPool3d::Clone(OpList operands) const {
-  return MakeNode<AdaptiveAvgPool3d>(operands.at(0), output_size_);
+torch::lazy::NodePtr AdaptiveAvgPool3d::Clone(OpList operands) const {
+  return ir::MakeNode<AdaptiveAvgPool3d>(operands.at(0), output_size_);
 }
 
 XlaOpVector AdaptiveAvgPool3d::Lower(LoweringContext* loctx) const {

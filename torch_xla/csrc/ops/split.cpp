@@ -19,7 +19,7 @@ xla::Shape NodeOutputShape(const Value& input,
     return xla::Tuple(operands[0].builder(),
                       BuildSplit(operands[0], split_sizes, dim));
   };
-  return InferOutputShape({input.shape()}, lower_for_shape_fn);
+  return InferOutputShape({input.xla_shape()}, lower_for_shape_fn);
 }
 
 }  // namespace
@@ -27,13 +27,13 @@ xla::Shape NodeOutputShape(const Value& input,
 Split::Split(const Value& input, std::vector<int64_t> split_sizes, int64_t dim)
     : Node(torch::lazy::OpKind(at::aten::split), {input},
            [&]() { return NodeOutputShape(input, split_sizes, dim); },
-           ComputeSplitCount(input.shape().dimensions(dim), split_sizes),
+           ComputeSplitCount(input.xla_shape().dimensions(dim), split_sizes),
            torch::lazy::MHash(split_sizes, dim)),
       split_sizes_(std::move(split_sizes)),
       dim_(dim) {}
 
-NodePtr Split::Clone(OpList operands) const {
-  return MakeNode<Split>(operands.at(0), split_sizes_, dim_);
+torch::lazy::NodePtr Split::Clone(OpList operands) const {
+  return ir::MakeNode<Split>(operands.at(0), split_sizes_, dim_);
 }
 
 XlaOpVector Split::Lower(LoweringContext* loctx) const {

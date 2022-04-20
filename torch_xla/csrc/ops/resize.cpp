@@ -11,7 +11,7 @@ namespace ops {
 namespace {
 
 xla::Shape NodeOutputShape(const Value& input, absl::Span<const int64_t> size) {
-  return xla::ShapeUtil::MakeShape(input.shape().element_type(), size);
+  return xla::ShapeUtil::MakeShape(input.xla_shape().element_type(), size);
 }
 
 }  // namespace
@@ -22,8 +22,8 @@ Resize::Resize(const Value& input, std::vector<int64_t> size)
            /*num_outputs=*/1, torch::lazy::MHash(size)),
       size_(std::move(size)) {}
 
-NodePtr Resize::Clone(OpList operands) const {
-  return MakeNode<Resize>(operands.at(0), size_);
+torch::lazy::NodePtr Resize::Clone(OpList operands) const {
+  return ir::MakeNode<Resize>(operands.at(0), size_);
 }
 
 XlaOpVector Resize::Lower(LoweringContext* loctx) const {
