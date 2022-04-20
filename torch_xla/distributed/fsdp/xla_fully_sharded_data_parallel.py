@@ -123,10 +123,15 @@ class XlaFullyShardedDataParallel(nn.Module):
       execute_sharding_on_init (bool, Optional):
           if ``True``, immediately execute the parameter sharding via
           `xm.mark_step` to free up the memory of the full parameters.
-      optimization_barrier_on_output (bool, Optional):
+      optimization_barrier_in_forward (bool, Optional):
           if ``True``, apply `xm.optimization_barrier_` on the FSDP module's
-          outputs and their gradients. This avoids XLA fusion with subsequent
-          computation after the FSDP module and could save additional memory.
+          inputs and outputs. This avoids XLA fusion with other forward pass
+          computation outside the FSDP module and could save additional memory.
+      optimization_barrier_in_backward (bool, Optional):
+          if ``True``, apply `xm.optimization_barrier_` on the FSDP module's
+          backward incoming gradients. This avoids XLA fusion with other
+          backward pass computation outside the FSDP module and could save
+          additional memory.
       use_all_gather_via_all_reduce (bool, Optional):
           if ``True``, use PyTorch XLA 1.10's all_gather implementation,
           which performs all_gather via padding and all_reduce and avoids
@@ -140,6 +145,14 @@ class XlaFullyShardedDataParallel(nn.Module):
           for details). This option may notably increase the execution time
           and trigger frequent compilation, so it should only be used for
           debugging (e.g. memory profiling) and not in real cases.
+      mark_step_on_finalization (bool, Optional):
+          if ``True``, call `xm.mark_step` upon finalizing gradients in the
+          root FSDP module. Unlike `mark_step_on_freeing` that forces an
+          `xm.mark_step` call in every FSDP module's forward and backward
+          passes, here in `xm.mark_step` is only called once for the entire
+          backward pass and should therefore only moderately increase the
+          execution time. When setting to ``True``, this option may help
+          prevent undesired fusion in backward pass and save more memory.
   """
 
   def __init__(
@@ -148,11 +161,14 @@ class XlaFullyShardedDataParallel(nn.Module):
       reshard_after_forward: bool = True,
       flatten_parameters: bool = True,
       execute_sharding_on_init: bool = True,
-      optimization_barrier_on_output: bool = True,
+      optimization_barrier_in_forward: bool = True,
+      optimization_barrier_in_backward: bool = True,
       use_all_gather_via_all_reduce: bool = False,
       mark_step_on_freeing: bool = False,
+      mark_step_on_finalization: bool = False,
       _debug_dummy_forward_pass: bool = False,
       _debug_msg: str = "xla_fsdp",
+      _debug_print: bool = False,
       _shard_size_multiple: int = 128,
       _pin_layout_in_all_reduce: bool = False,
       _pin_layout_in_all_gather: bool = False,
@@ -183,7 +199,8 @@ class XlaFullyShardedDataParallel(nn.Module):
     self.world_size = xm.xrt_world_size()
     self.reshard_after_forward = self._orig_reshard_after_forward = reshard_after_forward
     self.flatten_parameters = flatten_parameters
-    self.optimization_barrier_on_output = optimization_barrier_on_output
+    self.optimization_barrier_in_forward = optimization_barrier_in_forward
+    self.optimization_barrier_in_backward = optimization_barrier_in_backward
     if _debug_dummy_all_gather_op:
       self.all_gather_op = dummy_all_gather
     elif use_all_gather_via_all_reduce:
@@ -204,8 +221,10 @@ class XlaFullyShardedDataParallel(nn.Module):
     # for details). This workaround notably increases the execution time and
     # may trigger more compilation, so we need a permanent solution to #3455.
     self.mark_step_on_freeing = mark_step_on_freeing
+    self.mark_step_on_finalization = mark_step_on_finalization
     self._debug_dummy_forward_pass = _debug_dummy_forward_pass
     self._debug_msg = _debug_msg
+    self._debug_print = _debug_print
     # TODO (ronghanghu) change to 1 after https://github.com/pytorch/xla/issues/3510 is resolved
     # make sharded parameter sizes a multiple of 128 for efficient all_gather ops on TPUs
     # (see https://github.com/pytorch/xla/issues/3510#issuecomment-1101739677 for details)
@@ -544,6 +563,8 @@ class XlaFullyShardedDataParallel(nn.Module):
     """Reset instance so :func:`_lazy_init` will run on the next forward."""
     self._is_root: Optional[bool] = None
     self._output_pre_backward_hook_registered: Optional[List] = None
+    self._backward_opt_barrier_tensors: Optional[List] = None
+    self._backward_opt_barrier_tensor_ids: Optional[Set] = None
     self.reshard_after_forward = self._orig_reshard_after_forward
 
   def _lazy_init(self) -> None:
@@ -556,7 +577,7 @@ class XlaFullyShardedDataParallel(nn.Module):
     # entire model hierarchy is setup, thus we run it lazily.
     if self._is_root is None:
       self._set_is_root()
-      self._setup_output_hook_list()
+      self._setup_output_hook_and_backward_opt_barrier_lists()
 
     if self._is_root:
       # Don't free the full params for the outer-most (root) instance,
@@ -594,13 +615,20 @@ class XlaFullyShardedDataParallel(nn.Module):
         if m._is_root is None:
           m._is_root = False
 
-  def _setup_output_hook_list(self) -> None:
-    """set up a list to avoid registering pre-backward hooks incorrectly."""
+  def _setup_output_hook_and_backward_opt_barrier_lists(self) -> None:
+    """
+    Set up a list to avoid registering pre-backward hooks incorrectly.
+    And a list to apply optimization barrier on backward pass tensors.
+    """
     assert self._is_root, "This should only be called on the root"
     self._output_pre_backward_hook_registered = []
+    self._backward_opt_barrier_tensors = []
+    self._backward_opt_barrier_tensor_ids = set()
     for n, m in self.named_modules():
       if n != "" and isinstance(m, XlaFullyShardedDataParallel):
         m._output_pre_backward_hook_registered = self._output_pre_backward_hook_registered
+        m._backward_opt_barrier_tensors = self._backward_opt_barrier_tensors
+        m._backward_opt_barrier_tensor_ids = self._backward_opt_barrier_tensor_ids
 
   def forward(self, *args: Any, **kwargs: Any) -> torch.Tensor:
     self._lazy_init()
@@ -609,7 +637,13 @@ class XlaFullyShardedDataParallel(nn.Module):
     self.training_state = TrainingState.FORWARD
 
     # All-gather full parameters.
-    self._rebuild_full_params()
+    input_opt_barrier_tensors = []
+    if self.optimization_barrier_in_forward:
+      # Ensure that previous ops to build this module's inputs (which are
+      # usually performed in previous modules) are finished before rebuilding
+      # the full params of this FSDP module.
+      input_opt_barrier_tensors = collect_tensors((args, kwargs))
+    self._rebuild_full_params(dependency_tensors=input_opt_barrier_tensors)
 
     # Register backward hooks to reshard params and reduce-scatter grads.
     # These need to be re-registered every forward pass.
@@ -623,18 +657,24 @@ class XlaFullyShardedDataParallel(nn.Module):
       outputs = self._dummy_forward(*args, **kwargs)
 
     if self.reshard_after_forward:
-      self._free_full_params()
+      output_opt_barrier_tensors = []
+      if self.optimization_barrier_in_forward:
+        # Ensure that the full parameters of this FSDP module are freed
+        # before any new ops based on this module's outputs (which are usually
+        # performed in subsequent modules) can happen.
+        output_opt_barrier_tensors = collect_tensors(outputs)
+      self._free_full_params(dependency_tensors=output_opt_barrier_tensors)
       # Forcing an execution to free the full parameter memory immediately and avoid any XLA compiler
       # fusion (see https://github.com/pytorch/xla/issues/3455#issuecomment-1085448513 for details).
       # This option may notably increase the execution time and trigger frequent compilation,
       # so it should only be used for debugging (e.g. memory profiling) and not in real cases.
       if self.mark_step_on_freeing:
+        if self._debug_print:
+          xm.master_print(
+              f"mark_step called in FSDP forward (_debug_msg: {self._debug_msg})",
+              flush=True,
+          )
         xm.mark_step()
-
-    if self.optimization_barrier_on_output:
-      # Apply XLA compiler optimization barrier to FSDP outputs and their gradients to avoid
-      # fusion across FSDP modules (which sometimes results in higher memory consumption).
-      outputs = self._register_optimization_barrier_hooks(outputs)
 
     # Register pre-backward hooks to all-gather the params for the backward
     # pass (if output's grad was needed). This won't register anything if
@@ -644,6 +684,13 @@ class XlaFullyShardedDataParallel(nn.Module):
     # fire first to setup for backward. However, we use ``self._pre_backward_hook_has_run``
     # to prevent repeated overhead from multiple hook callbacks.
     outputs = self._register_pre_backward_hooks(outputs)
+
+    if self.optimization_barrier_in_backward:
+      # Apply XLA compiler optimization barrier to FSDP outputs and their gradients to avoid
+      # fusion across FSDP modules (which sometimes results in higher memory consumption).
+      input_grad_opt_barrier_tensors = input_opt_barrier_tensors or collect_tensors(
+          (args, kwargs))
+      self._register_grad_opt_barrier_hooks(input_grad_opt_barrier_tensors)
 
     # Done with a forward pass.
     self.training_state = TrainingState.IDLE
@@ -673,22 +720,40 @@ class XlaFullyShardedDataParallel(nn.Module):
 
     return outputs
 
-  def _register_optimization_barrier_hooks(self, outputs: Any) -> Any:
+  def _try_adding_to_backward_opt_barrier_lists(self,
+                                                tensor: torch.Tensor) -> None:
     """
-    Apply `xm.optimization_barrier_` to the outputs and their gradients.
+    Add tensor to backward pass optimization barrier list if it is not there.
     """
+    if id(tensor) not in self._backward_opt_barrier_tensor_ids:
+      self._backward_opt_barrier_tensor_ids.add(id(tensor))
+      self._backward_opt_barrier_tensors.append(tensor)
 
-    def _optimization_barrier_grad_hook(t_grad):
+  def _clear_backward_opt_barrier_lists(self) -> None:
+    """Reset the backward pass optimization barrier list"""
+    self._backward_opt_barrier_tensors.clear()
+    self._backward_opt_barrier_tensor_ids.clear()
+
+  def _register_grad_opt_barrier_hooks(
+      self, dependency_tensors: List[torch.Tensor]) -> None:
+    """
+    Register hook to `dependency_tensors` to put their gradient tensors into
+    self._backward_opt_barrier_tensors for backward pass optimization barrer.
+    """
+    if not torch.is_grad_enabled():
+      return  # don't register hooks if grad isn't enabled
+
+    def _grad_opt_barrier_hook(t_grad: torch.Tensor):
+      self._try_adding_to_backward_opt_barrier_lists(t_grad)
+
+      # return a view of the gradient with barrier applied
+      t_grad = t_grad.view(t_grad.size())
       xm.optimization_barrier_([t_grad])
       return t_grad
 
-    def _apply_optimization_barrier(t):
-      xm.optimization_barrier_([t])
-      t.register_hook(_optimization_barrier_grad_hook)
-      return t
-
-    outputs = apply_to_tensors(_apply_optimization_barrier, outputs)
-    return outputs
+    for t in dependency_tensors:
+      if t.requires_grad:
+        t.register_hook(_grad_opt_barrier_hook)
 
   def _register_pre_backward_hooks(self, outputs: Any) -> Any:
     """
@@ -707,7 +772,7 @@ class XlaFullyShardedDataParallel(nn.Module):
       # will assert on all other instances, giving us a nice bug checker.
       self._post_backward_callback_queued = False
 
-    def _pre_backward_hook(*unused: Any) -> None:
+    def _pre_backward_hook(t_grad: torch.Tensor) -> None:
       # try to queue final backward callback only once for root, so
       # that final backward callback is attached to the outer most
       # backward graph task and called after all the backward
@@ -725,9 +790,25 @@ class XlaFullyShardedDataParallel(nn.Module):
         # This option may notably increase the execution time and trigger frequent compilation,
         # so it should only be used for debugging (e.g. memory profiling) and not in real cases.
         if self.mark_step_on_freeing:
+          if self._debug_print:
+            xm.master_print(
+                f"mark_step called in FSDP _pre_backward_hook (_debug_msg: {self._debug_msg})",
+                flush=True,
+            )
           xm.mark_step()
 
-        self._rebuild_full_params()
+        self._try_adding_to_backward_opt_barrier_lists(t_grad)
+        dependency_tensors = []
+        if self.optimization_barrier_in_backward:
+          # Ensure that backward pass ops of feature gradients, parameter
+          # gradient and sharding, and full-param freeing (which are usually
+          # performed in previous modules and are registered to
+          # self._backward_opt_barrier_tensors in _grad_opt_barrier_hook,
+          # _pre_backward_hook, and _post_backward_hook) are finished before
+          # rebuilding the full params of this FSDP module.
+          dependency_tensors = self._backward_opt_barrier_tensors
+        self._rebuild_full_params(dependency_tensors=dependency_tensors)
+        self._clear_backward_opt_barrier_lists()
 
       # Only run the following once per iteration (i.e. in case
       # it is multiple outputs or multiple forward passes).
@@ -748,6 +829,11 @@ class XlaFullyShardedDataParallel(nn.Module):
         self.training_state = TrainingState.BACKWARD_PRE
       self.assert_state(
           [TrainingState.BACKWARD_PRE, TrainingState.BACKWARD_POST])
+
+      # return a view of the gradient with barrier applied
+      t_grad = t_grad.view(t_grad.size())
+      xm.optimization_barrier_([t_grad])
+      return t_grad
 
     _registered = 0
 
@@ -840,36 +926,40 @@ class XlaFullyShardedDataParallel(nn.Module):
       raise RuntimeError(
           "FSDP only works with gradients that don't require gradients")
 
+    grad = param.grad.data
     if self._require_backward_grad_sync or self.reshard_after_forward:
       # Free full params. As a special case, we don't free the full params
       # when in a ``no_sync`` context (as inversely indicated by
       # ``self._require_backward_grad_sync``), since the params will not
       # get updated before the next forward. This saves networking
       # bandwidth but uses more TPU memory.
-      self._free_full_params([param])
+      self._free_full_params([param], dependency_tensors=[grad])
 
     if not self._require_backward_grad_sync:
       return
 
     if self.gradient_predivide_factor > 1:
       # Average grad by world_size for consistency with PyTorch DDP.
-      param.grad.data.div_(self.gradient_predivide_factor)
+      grad.div_(self.gradient_predivide_factor)
 
     # Shard the gradients with `reduce_scatter`.
-    grad = param.grad.data
     # Clear grad on the tensor, so any repeated gradient computations do not interfere with this reduction.
     param.grad = None
-    grad_flat = _flatten_and_pad_to_world_size(
+    grad = _flatten_and_pad_to_world_size(
         grad, self.world_size * self._shard_size_multiple)
     reduced_grad = self.reduce_scatter_op(
         xm.REDUCE_SUM,
-        grad_flat,
+        grad,
         scale=1.0,
         scatter_dim=0,
         shard_count=self.world_size)
     if self.gradient_postdivide_factor > 1:
       # Average grad by world_size for consistency with PyTorch DDP.
       reduced_grad.data.div_(self.gradient_postdivide_factor)
+
+    grad._has_full_param = True
+    self._free_full_params([grad], dependency_tensors=[reduced_grad])
+    self._try_adding_to_backward_opt_barrier_lists(reduced_grad)
 
     # Accumulate into the gradient shard.
     assert hasattr(param, "_sharded_param")
@@ -968,18 +1058,58 @@ class XlaFullyShardedDataParallel(nn.Module):
           # clear this list for next iteration
           assert self._output_pre_backward_hook_registered is not None
           self._output_pre_backward_hook_registered.clear()
+          if self.optimization_barrier_in_backward:
+            # Ensure that backward pass ops of feature gradients, parameter
+            # gradient and sharding, and full-param freeing (which are usually
+            # performed in previous modules and are registered to
+            # self._backward_opt_barrier_tensors in _grad_opt_barrier_hook,
+            # _pre_backward_hook, and _post_backward_hook) are finished before
+            # accessing the sharded gradients of this FSDP module.
+            params_and_grads = [
+                (p, p.grad) for p in self.sharded_params if p.grad is not None
+            ]
+            dependency_tensors = [g for _, g in params_and_grads]
+            self._apply_opt_barrier_to_params_and_tensors(
+                self.full_params, self.sharded_params, dependency_tensors)
+            for p, g in params_and_grads:
+              p.grad = g
+          self._clear_backward_opt_barrier_lists()
+
+    if self.mark_step_on_finalization:
+      # Forcing an execution at the end of backward pass to avoid any XLA compiler
+      # fusion between backward and optimizer (e.g. AdamW and SGD) step.
+      # Unlike `mark_step_on_freeing` that forces an `xm.mark_step` call in every
+      # FSDP module's forward and backward passes, here in `xm.mark_step` is only
+      # called once for the entire backward pass and should therefore only moderately
+      # increase the execution time.
+      # It may help prevent undesired fusion in backward pass and save more memory.
+      if self._debug_print:
+        xm.master_print(
+            f"mark_step called in FSDP _wait_for_post_backward (_debug_msg: {self._debug_msg})",
+            flush=True,
+        )
+      xm.mark_step()
 
   @torch.no_grad()
-  def _rebuild_full_params(self) -> None:
+  def _rebuild_full_params(
+      self, dependency_tensors: Optional[List[torch.Tensor]] = None) -> None:
     """
-    Gather all shards of params.
+    Gather all shards of params. If `dependency_tensors` is provided,
+    it ensures that previous ops to compute tensors in `dependency_tensors`
+    are finished before rebuiding the full parameters.
 
     Note, this is idempotent if full params are already gathered. Callers
     assume the idempotency. So please keep it that way.
     """
     if self.has_full_params:
       return
-    p_list, p_shard_list, p_data_list, p_shared_data_list = [], [], [], []
+    if dependency_tensors is None:
+      dependency_tensors = []
+
+    self._apply_opt_barrier_to_params_and_tensors(self.full_params,
+                                                  self.sharded_params,
+                                                  dependency_tensors)
+
     for p, p_shard in zip(self.full_params, self.sharded_params):
       if not p._has_full_param:
         # gather full parameter from shards
@@ -990,55 +1120,73 @@ class XlaFullyShardedDataParallel(nn.Module):
         # # Update 04/19/2022: we reverted to the old all_gather impelmentation
         # # via all_reduce using https://github.com/pytorch/xla/issues/3511
         # p_padded = self.all_gather_op(p_shard.data).flatten().detach()
-        p_data = p_padded[:p_shard._orig_size.numel()].view(p_shard._orig_size)
-        p_list.append(p)
-        p_shard_list.append(p_shard)
-        p_data_list.append(p_data)
-        p_shared_data_list.append(p_shard.data)
+        p.data = p_padded[:p_shard._orig_size.numel()].view(p_shard._orig_size)
+        p._has_full_param = True
 
-    if len(p_data_list) + len(p_shared_data_list) > 0:
-      # Apply the XLA compiler optimization barrier to avoid fusion of the
-      # full parameter reconstruction with other computation.
-      # Otherwise, the XLA compiler might fuse `_rebuild_full_params` in the
-      # the forward pass with any `_rebuild_full_params` in the backward pass
-      # through common subexpression elimination (CSE) and keep the full
-      # parameters (not freeing them and rebuilding them later, essentially
-      # changing `reshard_after_forward` to `False`` and using more memory).
-      xm.optimization_barrier_(p_data_list + p_shared_data_list)
-    for p, p_shard, p_data, p_shard_data in zip(p_list, p_shard_list,
-                                                p_data_list,
-                                                p_shared_data_list):
-      p.data = p_data
-      p_shard.data = p_shard_data
-      p._has_full_param = True
     self.has_full_params = True
 
   @torch.no_grad()
-  def _free_full_params(self, params: Optional[List[Parameter]] = None) -> None:
-    """Free up storage for full parameters."""
+  def _free_full_params(
+      self,
+      params: Optional[List[Parameter]] = None,
+      dependency_tensors: Optional[List[torch.Tensor]] = None) -> None:
+    """
+    Free up storage for full parameters. If `dependency_tensors` is provided,
+    it ensures that the full parameters are freed before any new ops that
+    depend on tensors in `dependency_tensors` can be executed.
+    """
     if params is None:
-      params = self.full_params
+      full_params = self.full_params
+      sharded_params = self.sharded_params
+    else:
+      full_params = params
+      sharded_params = [
+          p._sharded_param for p in params if hasattr(p, "_sharded_param")
+      ]
+    if dependency_tensors is None:
+      dependency_tensors = []
+
     self.has_full_params = False
-    p_list, p_data_list = [], []
-    for p in params:
+    for p in full_params:
       if p._has_full_param:
         # free the original full parameter
-        p_data = self._dummy_data_placeholder
-        p_list.append(p)
-        p_data_list.append(p_data)
+        p.data = self._dummy_data_placeholder
+        p._has_full_param = False
 
-    if len(p_data_list) > 0:
-      # Apply the XLA compiler optimization barrier to avoid fusion of the
-      # full parameter freeing with other computation.
-      # Otherwise, the XLA compiler might fuse `_free_full_params` in the
-      # forward pass with any `_free_full_params` in the backward pass
-      # through common subexpression elimination (CSE) and keep the full
-      # parameters (not freeing them and rebuilding them later, essentially
-      # changing `reshard_after_forward` to `False`` and using more memory).
-      xm.optimization_barrier_(p_data_list)
+    self._apply_opt_barrier_to_params_and_tensors(full_params, sharded_params,
+                                                  dependency_tensors)
+
+  def _apply_opt_barrier_to_params_and_tensors(
+      self, p_list: List[torch.Tensor], p_shard_list: List[torch.Tensor],
+      dependency_tensors: List[torch.Tensor]):
+    """
+    Apply XLA compiler optimization barrier to full and shared parameters
+    and other dependency tensors. This is to avoid fusion of the full
+    parameter rebuilding and freeing with other computation.
+
+    Otherwise, the XLA compiler might fuse `_rebuild_full_params` and
+    `_free_full_params` in the forward pass with any of these calls in the
+    backward pass through common subexpression elimination (CSE) and keep the
+    full parameters (not freeing them and rebuilding them later, essentially
+    changing `reshard_after_forward` to `False` and using more memory).
+
+    This method also introduce control dependency on `dependency_tensors`, so
+    that all tensors in `dependency_tensors` must be evaluated before any new
+    computation on the full or sharded parameters or `dependency_tensors` can
+    happen.
+    """
+    if len(p_list) + len(p_shard_list) + len(dependency_tensors) == 0:
+      return
+
+    p_data_list = [p.data for p in p_list]
+    p_shared_data_list = [p_shard.data for p_shard in p_shard_list]
+    xm.optimization_barrier_(p_data_list + p_shared_data_list +
+                             dependency_tensors)
+
     for p, p_data in zip(p_list, p_data_list):
       p.data = p_data
-      p._has_full_param = False
+    for p_shard, p_shard_data in zip(p_shard_list, p_shared_data_list):
+      p_shard.data = p_shard_data
 
   def assert_state(self, state: Union[TrainingState,
                                       List[TrainingState]]) -> None:
@@ -1163,6 +1311,30 @@ def apply_to_tensors(
       return x
 
   return _apply(container)
+
+
+def collect_tensors(
+    container: Union[torch.Tensor, Dict, List, Tuple,
+                     Set]) -> List[torch.Tensor]:
+  """Recursively collect to all tensor in different kinds of container types."""
+
+  def _collect(x, out, out_ids) -> None:
+    if torch.is_tensor(x):
+      if id(x) not in out_ids:
+        out_ids.add(id(x))
+        out.append(x)
+    elif isinstance(x, PackedSequence):
+      _collect(x.data, out, out_ids)
+    elif isinstance(x, dict) or isinstance(x, OrderedDict):
+      for value in x.values():
+        _collect(value, out, out_ids)
+    elif isinstance(x, list) or isinstance(x, tuple) or isinstance(x, set):
+      for value in x:
+        _collect(value, out, out_ids)
+
+  tensors = []
+  _collect(container, tensors, set())
+  return tensors
 
 
 def _calc_grad_norm(parameters: List[torch.nn.Parameter],
