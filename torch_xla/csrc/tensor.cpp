@@ -1301,6 +1301,8 @@ XLATensor::ComputationCache* XLATensor::GetComputationCache() {
 
 XLATensor::PostOrderData XLATensor::RunPostOrder(
     const std::vector<XLATensor>& tensors, SyncTensorCollection* coll) {
+  tensorflow::profiler::TraceMe activity(
+      "RunPostOrder", tensorflow::profiler::TraceMeLevel::kInfo);
   absl::Span<const size_t> indices = coll->indices;
   std::vector<const torch::lazy::Node*> roots;
   roots.reserve(indices.size());
@@ -1316,6 +1318,8 @@ XLATensor::PostOrderData XLATensor::RunPostOrder(
   for (auto node : po_data.post_order) {
     const ir::ops::DeviceData* device_data = ir::ops::DeviceData::Cast(node);
     if (device_data != nullptr) {
+      /* Acceptable race condition: HasValue may return falsse. This is OK
+       * since the conditional barrier is a performance optimization. */
       if (!device_data->data()->HasValue()) {
         TensorCollectionBarrier(coll);
       }
