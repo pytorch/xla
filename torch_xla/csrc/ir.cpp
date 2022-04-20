@@ -117,8 +117,7 @@ Node::Node(torch::lazy::OpKind op, OpList operands, xla::Shape shape,
     : torch::lazy::Node(op, num_outputs),
       xla_shape_(std::move(shape)),
       node_hash_(torch::lazy::HashCombine(op.hash(), hash_seed)),
-      dag_hash_(GetOperandHashes(
-          operands, torch::lazy::HashCombine(op.hash(), hash_seed))) {
+      dag_hash_(GetOperandHashes(operands, node_hash_)) {
   for (auto& operand : operands) {
     AddOperand(operand.node, operand.index);
   }
