@@ -125,12 +125,6 @@ class Node : public torch::lazy::Node {
   XlaOpVector ReturnOps(absl::Span<const xla::XlaOp> ops,
                         LoweringContext* loctx) const;
 
-  torch::lazy::hash_t node_hash() const { return node_hash_; }
-
-  torch::lazy::hash_t hash() const override { return dag_hash_; }
-
-  torch::lazy::hash_t shapeHash() const override { return dag_hash_; }
-
  private:
   // Adds node's index output number as operand.
   void AddOperand(torch::lazy::NodePtr node, size_t index = 0);
@@ -150,8 +144,6 @@ class Node : public torch::lazy::Node {
   xla::Shape xla_shape_;
   // We use a set for uses, as we want deterministic use sequencing.
   std::set<Use> uses_;
-  torch::lazy::hash_t node_hash_;
-  torch::lazy::hash_t dag_hash_;
 };
 
 // RAII data structure to be used a stack variable to enter a new IR scope. IR
