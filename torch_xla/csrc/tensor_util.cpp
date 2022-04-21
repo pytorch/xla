@@ -831,7 +831,6 @@ std::vector<xla::ComputationClient::DataPtr> CreateTensorsData(
     auto populate_mwait =
         std::make_shared<xla::util::MultiWait>(tensors.size());
     for (size_t i = 0; i < tensors.size(); ++i) {
-      // TODO @wonjoo device string constructor
       torch::lazy::BackendDevice device = ParseDeviceString(devices[i]);
       xla::Shape shape = CreateComputationShapeFromTensor(tensors[i], &device);
       auto populate_fn =
@@ -854,7 +853,6 @@ std::vector<xla::ComputationClient::DataPtr> CreateTensorsData(
   } else {
     std::vector<xla::ComputationClient::TensorSource> source_tensors;
     for (size_t i = 0; i < tensors.size(); ++i) {
-      // TODO @wonjoo device string constructor
       torch::lazy::BackendDevice device = ParseDeviceString(devices[i]);
       xla::Shape shape = CreateComputationShapeFromTensor(tensors[i], &device);
       auto populate_fn =
@@ -1044,7 +1042,7 @@ xla::PrimitiveType TensorTypeToRawXlaType(at::ScalarType scalar_type) {
 xla::PrimitiveType GetDevicePrimitiveType(
     xla::PrimitiveType type, const torch::lazy::BackendDevice* device) {
   torch::lazy::BackendDevice xla_device = GetDeviceOrCurrent(device);
-  XlaDeviceType hw_type = static_cast<XlaDeviceType>(device->type());
+  XlaDeviceType hw_type = static_cast<XlaDeviceType>(xla_device.type());
   switch (type) {
     case xla::PrimitiveType::F64:
       if (UseF16()) {

@@ -32,7 +32,7 @@ class AtenXlaDeviceMapper {
  private:
   AtenXlaDeviceMapper() {
     for (auto& device_str : xla::ComputationClient::Get()->GetLocalDevices()) {
-      devices_.emplace_back(device_str);
+      devices_.emplace_back(ParseDeviceString(device_str));
       devices_ordinals_[devices_.back()] = devices_.size() - 1;
     }
   }

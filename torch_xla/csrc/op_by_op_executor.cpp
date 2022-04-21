@@ -109,7 +109,6 @@ std::vector<xla::ComputationClient::ExecuteChainedOp> OpByOpExecutor::BuildOps(
       xla::ComputationClient::Get()->GetCompilationDevices(device, devices);
   torch::lazy::hash_t nodes_key_seed =
       GetNodesKeySeed(device, compilation_devices);
-  // TODO @wonjoo device string constructor
   torch::lazy::BackendDevice exec_device = ParseDeviceString(device);
   std::vector<torch::lazy::hash_t> cache_keys;
   std::unordered_map<torch::lazy::hash_t, std::vector<size_t>,

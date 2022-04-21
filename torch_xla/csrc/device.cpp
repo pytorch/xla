@@ -23,46 +23,7 @@ std::string XlaDeviceTypeToString(XlaDeviceType hw_type) {
   XLA_ERROR() << "Invalid device type";
 }
 
-// void ParseDevice(const std::string& device_spec, Device* device) {
-//   if (device_spec.empty()) {
-//     std::string default_device_spec =
-//         xla::ComputationClient::Get()->GetDefaultDevice();
-//     XLA_CHECK(!default_device_spec.empty());
-//     return ParseDevice(default_device_spec, device);
-//   }
-//   if (device_spec[0] == ':') {
-//     std::string default_device_spec =
-//         xla::ComputationClient::Get()->GetDefaultDevice();
-//     auto pos = default_device_spec.find(':');
-//     XLA_CHECK_NE(pos, std::string::npos) << default_device_spec;
-//     return ParseDevice(default_device_spec.substr(0, pos) + device_spec,
-//                        device);
-//   }
-//   std::vector<std::string> device_spec_parts = absl::StrSplit(device_spec,
-//   ':'); XLA_CHECK_EQ(device_spec_parts.size(), 2)
-//       << "Invalid device specification: " << device_spec;
-
-//   device->ordinal = std::stoi(device_spec_parts[1]);
-//   if (device_spec_parts[0] == "TPU") {
-//     device->device_type = DeviceType(XlaDeviceType::TPU);
-//   } else if (device_spec_parts[0] == "CPU") {
-//     device->device_type = DeviceType(XlaDeviceType::CPU);
-//   } else if (device_spec_parts[0] == "GPU") {
-//     device->device_type = DeviceType(XlaDeviceType::GPU);
-//   } else {
-//     XLA_ERROR() << "Invalid device specification: " << device_spec;
-//   }
-// }
-
 }  // namespace
-
-// Device::Device(const std::string& device_spec) {
-//   ParseDevice(device_spec, this);
-// }
-
-// std::string Device::ToString() const {
-//   return absl::StrCat(DeviceTypeToString(device_type.hw_type), ":", ordinal);
-// }
 
 std::string DeviceType::toString() const {
   return absl::StrCat(XlaDeviceTypeToString(static_cast<XlaDeviceType>(type)),

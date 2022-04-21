@@ -143,9 +143,11 @@ AllToAllResult BuildAllToAll(xla::XlaOp input, xla::XlaOp token,
   TokenHandler token_handler(token);
   xla::XlaOp reduce_result;
   if (pin_layout) {
+    torch::lazy::BackendDevice xla_device = GetCurrentDevice();
     xla::Shape reduce_shape = MakeArrayShapeFromDimensions(
         input_shape.dimensions(), input_shape.dynamic_dimensions(),
-        input_shape.element_type(), GetCurrentDevice().device_type.hw_type);
+        input_shape.element_type(),
+        static_cast<XlaDeviceType>(xla_device.type()));
     reduce_result = xla::AllToAll(token_handler.GetInput(input, &input_shape),
                                   split_dimension, concat_dimension,
                                   split_count, reduce_groups,
@@ -167,9 +169,11 @@ AllGatherResult BuildAllGather(xla::XlaOp input, xla::XlaOp token, int64_t dim,
   TokenHandler token_handler(token);
   xla::XlaOp all_gather_result;
   if (pin_layout) {
+    torch::lazy::BackendDevice xla_device = GetCurrentDevice();
     xla::Shape reduce_shape = MakeArrayShapeFromDimensions(
         input_shape.dimensions(), input_shape.dynamic_dimensions(),
-        input_shape.element_type(), GetCurrentDevice().device_type.hw_type);
+        input_shape.element_type(),
+        static_cast<XlaDeviceType>(xla_device.type()));
     all_gather_result =
         xla::AllGather(token_handler.GetInput(input, &input_shape), dim,
                        shard_count, reduce_groups, /*channel_id=*/absl::nullopt,
@@ -204,9 +208,11 @@ ReduceScatterResult BuildReduceScatter(
   const xla::Shape& input_shape = XlaHelpers::ShapeOfXlaOp(input);
   xla::XlaOp reduce_result;
   if (pin_layout) {
+    torch::lazy::BackendDevice xla_device = GetCurrentDevice();
     xla::Shape reduce_shape = MakeArrayShapeFromDimensions(
         input_shape.dimensions(), input_shape.dynamic_dimensions(),
-        input_shape.element_type(), GetCurrentDevice().device_type.hw_type);
+        input_shape.element_type(),
+        static_cast<XlaDeviceType>(xla_device.type()));
     reduce_result = xla::ReduceScatter(
         token_handler.GetInput(input, &input_shape),
         GetReduceComutation(reduce_type, input_shape.element_type()),
