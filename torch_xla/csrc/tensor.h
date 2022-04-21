@@ -1237,12 +1237,11 @@ class XLATensor {
   };
 
   struct SyncTensorCollection {
-    SyncTensorCollection() : hash(0), barrier_applied(false) {}
+    SyncTensorCollection() : hash(0) {}
 
     SyncTensorsConfig config;
     std::vector<size_t> indices;
     torch::lazy::hash_t hash;
-    bool barrier_applied;
     std::vector<xla::util::ExceptionCleanup> unlocker;
     torch::lazy::BackendDevice device;
   };

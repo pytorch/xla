@@ -994,18 +994,17 @@ std::vector<xla::ComputationClient::DataPtr> XLATensor::GatherTensorsXlaData(
 }
 
 void XLATensor::TensorCollectionBarrier(SyncTensorCollection* coll) {
-  std::string str1(
+  std::string invalid_device(
       "Unknown0"); /* Temp solution to idetify unassigned devices */
-  if (coll->device.ToString().compare(str1) == 0) {
+  if (coll->device.ToString().compare(invalid_device) == 0) {
     return;
   }
-  if (coll->barrier_applied == false) {
+  if (coll->unlocker.size() == 0) {
     TF_VLOG(4) << "Waiting on device barrier for device " << coll->device
                << " ...";
     {
       XLA_TIMED("DeviceLockWait");
       coll->unlocker = LockDevices({coll->device});
-      coll->barrier_applied = true;
     }
     TF_VLOG(4) << "Waiting on device barrier for device " << coll->device
                << " done!";
