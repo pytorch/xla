@@ -994,7 +994,8 @@ std::vector<xla::ComputationClient::DataPtr> XLATensor::GatherTensorsXlaData(
 }
 
 void XLATensor::TensorCollectionBarrier(SyncTensorCollection* coll) {
-  std::string str1 ("Unknown0"); /* Temp solution to idetify unassigned devices */
+  std::string str1(
+      "Unknown0"); /* Temp solution to idetify unassigned devices */
   if (coll->device.ToString().compare(str1) == 0) {
     return;
   }
