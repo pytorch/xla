@@ -21,6 +21,11 @@ function apply_patches() {
   ./xla/scripts/apply_patches.sh
 }
 
+function clean_xrt_server() {
+  echo "Cleanning up XRT server"
+  python -m torch_xla.core.xrt_run_server --stop
+}
+
 function rebase_pull_request_on_target_branch() {
   # TODO: directly use ENV_VAR when CircleCi exposes base branch.
   # Try rebasing on top of base (dest) branch first.
@@ -113,6 +118,7 @@ function run_torch_xla_tests() {
     export XRT_DEVICE_MAP="CPU:0;/job:localservice/replica:0/task:0/device:XLA_CPU:0"
     XLA_PORT=$(shuf -i 40701-40999 -n 1)
     export XRT_WORKERS="localservice:0;grpc://localhost:$XLA_PORT"
+    python -m torch_xla.core.xrt_run_server --port $XLA_PORT --restart
   fi
   export PYTORCH_TESTING_DEVICE_ONLY_FOR="xla"
 
@@ -141,6 +147,9 @@ function run_torch_xla_tests() {
       fi
     fi
 
+    # clear the XRT server before cpp test since CPP test won't run torch_xla's
+    # __init__.py hence will force a in process server.
+    clean_xrt_server
     pushd test/cpp
     echo "Running C++ Tests"
     ./run_tests.sh
