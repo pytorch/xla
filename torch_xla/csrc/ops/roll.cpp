@@ -56,12 +56,14 @@ XlaOpVector Roll::Lower(LoweringContext* loctx) const {
     // offset.
     xla::XlaOp concat =
         xla::ConcatInDim(loctx->builder(), {input, input}, cur_dim);
-    std::vector<int64_t> start_indices(
-        need_flatten ? 1 : input_shape.dimensions_size(), 0);
-    start_indices[cur_dim] = dim_size - offset;
-    input = BuildSlice(concat, start_indices,
-                       need_flatten ? absl::MakeConstSpan({input_numel})
-                                    : input_shape.dimensions());
+    std::vector<xla::XlaOp> start_indices(
+        need_flatten ? 1 : input_shape.dimensions_size(),
+        xla::Zero(loctx->builder(), xla::PrimitiveType::S64));
+    start_indices[cur_dim] = XlaHelpers::ScalarValue(
+        dim_size - offset, xla::PrimitiveType::S64, loctx->builder());
+    input = xla::DynamicSlice(concat, start_indices,
+                              need_flatten ? absl::MakeConstSpan({input_numel})
+                                           : input_shape.dimensions());
   }
 
   input = need_flatten ? xla::Reshape(input, input_shape.dimensions()) : input;
