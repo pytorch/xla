@@ -118,7 +118,7 @@ function run_torch_xla_tests() {
     export XRT_DEVICE_MAP="CPU:0;/job:localservice/replica:0/task:0/device:XLA_CPU:0"
     XLA_PORT=$(shuf -i 40701-40999 -n 1)
     export XRT_WORKERS="localservice:0;grpc://localhost:$XLA_PORT"
-    python -m torch_xla.core.xrt_run_server --port $XLA_PORT --restart
+    python torch_xla/core/xrt_run_server.py --port $XLA_PORT --restart
   fi
   export PYTORCH_TESTING_DEVICE_ONLY_FOR="xla"
 
@@ -148,8 +148,10 @@ function run_torch_xla_tests() {
     fi
 
     # clear the XRT server before cpp test since CPP test won't run torch_xla's
-    # __init__.py hence will force a in process server.
-    clean_xrt_server
+    # __init__.py hence will force a in process server. Note that we can not use
+    # -m here since we are in the XLA dir. Trying to run the torch_xla module
+    # from this dir will result in a `version.py` missing error.
+    python torch_xla/core/xrt_run_server.py --stop
     pushd test/cpp
     echo "Running C++ Tests"
     ./run_tests.sh
