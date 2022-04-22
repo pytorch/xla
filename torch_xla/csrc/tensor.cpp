@@ -488,9 +488,9 @@ XLATensor::XLATensor(const at::Tensor& tensor,
 
 XLATensor::XLATensor(xla::ComputationClient::DataPtr xla_data,
                      c10::optional<at::ScalarType> logical_element_type)
-    : data_(std::make_shared<Data>(
-          xla_data, torch::lazy::BackendDevice(xla_data->device()),
-          logical_element_type)) {}
+    : data_(std::make_shared<Data>(xla_data,
+                                   ParseDeviceString(xla_data->device()),
+                                   logical_element_type)) {}
 
 XLATensor::XLATensor(ir::Value ir_value,
                      const torch::lazy::BackendDevice& device,
@@ -1470,11 +1470,11 @@ void XLATensor::WaitDeviceOps(absl::Span<const std::string> devices) {
   std::set<torch::lazy::BackendDevice> wait_devices;
   if (!devices.empty()) {
     for (auto& device_str : devices) {
-      wait_devices.insert(torch::lazy::BackendDevice(device_str));
+      wait_devices.insert(ParseDeviceString(device_str));
     }
   } else {
     for (auto& device_str : xla::ComputationClient::Get()->GetLocalDevices()) {
-      wait_devices.insert(torch::lazy::BackendDevice(device_str));
+      wait_devices.insert(ParseDeviceString(device_str));
     }
   }
   // The LockDevices() API returns a vector of xla::util::ExceptionCleanup

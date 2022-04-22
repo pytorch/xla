@@ -217,14 +217,14 @@ void WithAllDevices(
     std::vector<torch::lazy::BackendDevice> all_devices;
     for (const auto& device_str :
          xla::ComputationClient::Get()->GetLocalDevices()) {
-      torch::lazy::BackendDevice device(device_str);
+      torch::lazy::BackendDevice device = ParseDeviceString(device_str);
       if (device.type() == device_type.type) {
         devices.push_back(device);
       }
     }
     for (const auto& device_str :
          xla::ComputationClient::Get()->GetAllDevices()) {
-      torch::lazy::BackendDevice device(device_str);
+      torch::lazy::BackendDevice device = ParseDeviceString(device_str);
       if (device.type() == device_type.type) {
         all_devices.push_back(device);
       }
