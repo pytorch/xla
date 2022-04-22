@@ -38,13 +38,13 @@ class PjRtComputationClient : public ComputationClient {
   };
 
   struct PjRtComputation : public Computation {
-    PjRtComputation(PjRtClient* self, XlaComputation computation,
+    PjRtComputation(XlaComputation computation,
                     ProgramShape program_shape,
                     std::vector<std::string> devices,
-                    xla::CompileOptions options)
+                    std::unique_ptr<xla::PjRtExecutable> executable)
         : Computation(std::move(computation), std::move(program_shape),
                       std::move(devices)),
-          executable(self->Compile(this->computation(), options).ValueOrDie()) {
+          executable(std::move(executable)) {
     }
 
     std::unique_ptr<xla::PjRtExecutable> executable;

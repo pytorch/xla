@@ -108,10 +108,12 @@ std::vector<ComputationClient::ComputationPtr> PjRtComputationClient::Compile(
     xla::ProgramShape program_shape =
         instance.computation.GetProgramShape().ValueOrDie();
     xla::CompileOptions compile_options;
+    std::unique_ptr<xla::PjRtExecutable> executable = client->Compile(
+        instance.computation, compile_options).ValueOrDie();
     std::shared_ptr<PjRtComputation> pjrt_computation =
         std::make_shared<PjRtComputation>(
-            client.get(), std::move(instance.computation), program_shape,
-            instance.devices, compile_options);
+            std::move(instance.computation), program_shape,
+            instance.devices, std::move(executable));
 
     computations.push_back(pjrt_computation);
   }
