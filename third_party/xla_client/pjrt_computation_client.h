@@ -38,14 +38,12 @@ class PjRtComputationClient : public ComputationClient {
   };
 
   struct PjRtComputation : public Computation {
-    PjRtComputation(XlaComputation computation,
-                    ProgramShape program_shape,
+    PjRtComputation(XlaComputation computation, ProgramShape program_shape,
                     std::vector<std::string> devices,
                     std::unique_ptr<xla::PjRtExecutable> executable)
         : Computation(std::move(computation), std::move(program_shape),
                       std::move(devices)),
-          executable(std::move(executable)) {
-    }
+          executable(std::move(executable)) {}
 
     std::unique_ptr<xla::PjRtExecutable> executable;
   };
