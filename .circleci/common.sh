@@ -84,16 +84,16 @@ function install_deps_pytorch_xla() {
     sudo ln -s $CUBLAS_PATTERN /usr/local/cuda/include
   fi
 
-  # Install bazels3cache for cloud cache
-  sudo npm install -g bazels3cache
-  BAZELS3CACHE="$(which bazels3cache)"
-  if [ -z "${BAZELS3CACHE}" ]; then
-    echo "Unable to find bazels3cache..."
-    exit 1
-  fi
-  bazels3cache --bucket=${XLA_CLANG_CACHE_S3_BUCKET_NAME} --maxEntrySizeBytes=0 --logging.level=verbose
-  # Use cloud cache to build when available.
-  sed -i '/bazel build/ a --remote_http_cache=http://localhost:7777 \\' $XLA_DIR/build_torch_xla_libs.sh
+  # # Install bazels3cache for cloud cache
+  # sudo npm install -g bazels3cache
+  # BAZELS3CACHE="$(which bazels3cache)"
+  # if [ -z "${BAZELS3CACHE}" ]; then
+  #   echo "Unable to find bazels3cache..."
+  #   exit 1
+  # fi
+  # bazels3cache --bucket=${XLA_CLANG_CACHE_S3_BUCKET_NAME} --maxEntrySizeBytes=0 --logging.level=verbose
+  # # Use cloud cache to build when available.
+  # sed -i '/bazel build/ a --remote_http_cache=http://localhost:7777 \\' $XLA_DIR/build_torch_xla_libs.sh
 
 }
 
