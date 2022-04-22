@@ -105,6 +105,14 @@ XLATensor GetOrCreateXlaTensor(const c10::optional<at::Tensor>& tensor,
   return xtensor ? *xtensor : XLATensor::Create(*tensor, device);
 }
 
+XLATensor GetXlaTensorOrCreateForWrappedNumber(const at::Tensor& tensor,
+                                               const Device& device) {
+  return (tensor.unsafeGetTensorImpl()->is_wrapped_number() ||
+          (tensor.dim() == 0 && tensor.numel() == 1))
+             ? GetOrCreateXlaTensor(tensor, device)
+             : GetXlaTensor(tensor);
+}
+
 std::vector<XLATensor> GetOrCreateXlaTensors(
     absl::Span<const at::Tensor> tensors, const Device& device) {
   std::vector<XLATensor> xla_tensors;

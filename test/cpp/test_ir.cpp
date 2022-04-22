@@ -17,24 +17,6 @@ TEST(IrTest, TestScalarCreate) {
   ASSERT_TRUE(scalar != nullptr);
 }
 
-TEST(IrTest, TestReplace) {
-  torch::lazy::NodePtr scalar1 = ir::ops::ScalarOp(1.0, xla::F32);
-  torch::lazy::NodePtr scalar2 = ir::ops::ScalarOp(2.0, xla::F32);
-  torch::lazy::NodePtr add = ir::Value(scalar1, 0) + ir::Value(scalar2, 0);
-
-  EXPECT_EQ(dynamic_cast<ir::Node*>(scalar1.get())->uses().size(), 1);
-  EXPECT_EQ(dynamic_cast<ir::Node*>(scalar2.get())->uses().size(), 1);
-
-  torch::lazy::NodePtr scalar3 = ir::ops::ScalarOp(3.0, xla::F32);
-  dynamic_cast<ir::Node*>(scalar1.get())->ReplaceAllUsesWith(scalar3);
-
-  EXPECT_EQ(dynamic_cast<ir::Node*>(scalar1.get())->uses().size(), 0);
-  EXPECT_EQ(dynamic_cast<ir::Node*>(scalar3.get())->uses().size(), 1);
-
-  dynamic_cast<ir::Node*>(add.get())->ReplaceOperand(0, scalar1);
-  EXPECT_EQ(dynamic_cast<ir::Node*>(scalar1.get())->uses().size(), 1);
-}
-
 TEST(IrTest, TestHash) {
   torch::lazy::NodePtr scalar1 = ir::ops::ScalarOp(1.0, xla::F32);
   torch::lazy::NodePtr scalar2 = ir::ops::ScalarOp(2.0, xla::F32);

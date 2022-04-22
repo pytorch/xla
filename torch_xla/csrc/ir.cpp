@@ -85,23 +85,6 @@ torch::lazy::hash_t GetOperandHashes(const OpList& operands,
 
 }  // namespace
 
-bool Use::operator<(const Use& rhs) const {
-  if (node->op() != rhs.node->op()) {
-    return node->op() < rhs.node->op();
-  }
-  if (operand_index != rhs.operand_index) {
-    return operand_index < rhs.operand_index;
-  }
-  return index < rhs.index;
-}
-
-std::string Use::ToString() const {
-  std::stringstream ss;
-  ss << node->ToString() << ", operand_index=" << operand_index
-     << ", index=" << index;
-  return ss.str();
-}
-
 const xla::Shape& Value::xla_shape() const {
   Node* casted = dynamic_cast<Node*>(node.get());
   return casted->xla_shape(index);
@@ -139,12 +122,7 @@ Node::Node(torch::lazy::OpKind op, xla::Shape shape, size_t num_outputs,
       node_hash_(GetOpHash(op, xla_shape_, hash_seed)),
       dag_hash_(node_hash_) {}
 
-Node::~Node() {
-  for (size_t i = 0; i < operands_as_outputs_.size(); ++i) {
-    Node* casted = dynamic_cast<Node*>(operands_[i].get());
-    casted->RemoveUse(Use(this, i, operands_as_outputs_[i].index));
-  }
-}
+Node::~Node() {}
 
 const xla::Shape& Node::xla_shape(size_t output_index) const {
   if (xla_shape_.IsTuple()) {
@@ -159,29 +137,14 @@ void Node::AddOperand(torch::lazy::NodePtr node, size_t index) {
   operands_.push_back(std::move(node));
   operands_as_outputs_.push_back(
       torch::lazy::Output(operands_.back().get(), index));
-  Node* casted = dynamic_cast<Node*>(operands_.back().get());
-  casted->AddUse(Use(this, operands_.size() - 1, index));
 }
 
 void Node::ReplaceOperand(size_t operand_no, torch::lazy::NodePtr node,
                           size_t index) {
   XLA_CHECK_LT(index, node->num_outputs());
-  Node* casted = dynamic_cast<Node*>(node.get());
   torch::lazy::Output* output = &operands_as_outputs_.at(operand_no);
-  Node* casted_to_remove = dynamic_cast<Node*>(operands_[operand_no].get());
-  casted_to_remove->RemoveUse(Use(this, operand_no, output->index));
-  casted->AddUse(Use(this, operand_no, index));
   *output = torch::lazy::Output(node.get(), index);
   operands_[operand_no] = std::move(node);
-}
-
-void Node::ReplaceAllUsesWith(torch::lazy::NodePtr node, size_t index) {
-  // A call to ReplaceOperand() will end up calling RemoveUse() into the
-  // current node, so snapshot the current uses and iterate over them.
-  std::vector<Use> current_uses(uses_.begin(), uses_.end());
-  for (auto& use : current_uses) {
-    use.node->ReplaceOperand(use.operand_index, node, index);
-  }
 }
 
 XlaOpVector Node::ReturnOp(xla::XlaOp op, LoweringContext* loctx) const {

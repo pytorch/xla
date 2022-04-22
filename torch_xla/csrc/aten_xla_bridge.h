@@ -34,6 +34,9 @@ XLATensor GetOrCreateXlaTensor(const at::Tensor& tensor, const Device& device);
 
 XLATensor GetOrCreateXlaTensor(const c10::optional<at::Tensor>& tensor,
                                const Device& device);
+// TODO: change to upstream BackendDevice
+XLATensor GetXlaTensorOrCreateForWrappedNumber(const at::Tensor& tensor,
+                                               const Device& device);
 
 std::vector<XLATensor> GetOrCreateXlaTensors(
     absl::Span<const at::Tensor> tensors, const Device& device);
