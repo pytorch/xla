@@ -106,8 +106,8 @@ XLATensor GetOrCreateXlaTensor(const c10::optional<at::Tensor>& tensor,
   return xtensor ? *xtensor : XLATensor::Create(*tensor, device);
 }
 
-XLATensor GetXlaTensorOrCreateForWrappedNumber(const at::Tensor& tensor,
-                                               const torch::lazy::BackendDevice& device) {
+XLATensor GetXlaTensorOrCreateForWrappedNumber(
+    const at::Tensor& tensor, const torch::lazy::BackendDevice& device) {
   return (tensor.unsafeGetTensorImpl()->is_wrapped_number() ||
           (tensor.dim() == 0 && tensor.numel() == 1))
              ? GetOrCreateXlaTensor(tensor, device)

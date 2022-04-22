@@ -36,8 +36,8 @@ XLATensor GetOrCreateXlaTensor(const at::Tensor& tensor,
 XLATensor GetOrCreateXlaTensor(const c10::optional<at::Tensor>& tensor,
                                const torch::lazy::BackendDevice& device);
 
-XLATensor GetXlaTensorOrCreateForWrappedNumber(const at::Tensor& tensor,
-                                               const torch::lazy::BackendDevice& device);
+XLATensor GetXlaTensorOrCreateForWrappedNumber(
+    const at::Tensor& tensor, const torch::lazy::BackendDevice& device);
 
 std::vector<XLATensor> GetOrCreateXlaTensors(
     absl::Span<const at::Tensor> tensors,

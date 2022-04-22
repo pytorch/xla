@@ -67,9 +67,9 @@ torch::lazy::BackendDevice ParseDeviceString(const std::string& device_spec) {
 }
 
 const torch::lazy::BackendDevice* GetDefaultDevice() {
-  static const torch::lazy::BackendDevice* default_device =
-      new torch::lazy::BackendDevice();
-  return default_device;
+  static const torch::lazy::BackendDevice default_device =
+      ParseDeviceString("");
+  return &default_device;
 }
 
 torch::lazy::BackendDevice GetCurrentDevice() {
