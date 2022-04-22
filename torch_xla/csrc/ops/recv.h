@@ -1,3 +1,5 @@
+#pragma once
+
 #include "torch_xla/csrc/cross_replica_reduces.h"
 #include "torch_xla/csrc/ir.h"
 
@@ -11,7 +13,7 @@ class Recv : public Node {
 
   std::string ToString() const override;
 
-  NodePtr Clone(OpList operands) const override;
+  torch::lazy::NodePtr Clone(OpList operands) const override;
 
   XlaOpVector Lower(LoweringContext* loctx) const override;
 

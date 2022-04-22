@@ -30,7 +30,7 @@ Send::Send(const Value& input, const Value& token, int64_t channel_id)
            /*num_outputs=*/1, torch::lazy::MHash(channel_id)),
       channel_id_(channel_id) {}
 
-NodePtr Send::Clone(OpList operands) const {
+torch::lazy::NodePtr Send::Clone(OpList operands) const {
   return ir::MakeNode<Send>(operands.at(0), operands.at(1), channel_id_);
 }
 
