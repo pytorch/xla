@@ -453,7 +453,7 @@ XLATensor XLATensor::get_dimensions_size(const XLATensor& input,
 std::pair<XLATensor, ir::Value> XLATensor::recv(XLATensor& output,
                                                 const ir::Value& token,
                                                 int64_t channel_id) {
-  ir::NodePtr node = ir::MakeNode<ir::ops::Recv>(
+  torch::lazy::NodePtr node = ir::MakeNode<ir::ops::Recv>(
       token, output.GetIrValue().xla_shape(), channel_id);
   output.SetIrValue(ir::Value(node, 0));
   return {output.CreateFrom(ir::Value(node, 0)), ir::Value(node, 1)};
@@ -462,7 +462,7 @@ std::pair<XLATensor, ir::Value> XLATensor::recv(XLATensor& output,
 std::pair<XLATensor, ir::Value> XLATensor::send(const XLATensor& input,
                                                 const ir::Value& token,
                                                 int64_t channel_id) {
-  ir::NodePtr node =
+  torch::lazy::NodePtr node =
       ir::MakeNode<ir::ops::Send>(input.GetIrValue(), token, channel_id);
   // return the token as both XLATensor and ir::Value for caller's convenience.
   return {input.CreateFrom(ir::Value(node, 0)), ir::Value(node, 0)};
