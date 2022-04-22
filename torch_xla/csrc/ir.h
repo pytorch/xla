@@ -28,31 +28,6 @@ class LoweringContext;
 
 using XlaOpVector = tensorflow::gtl::InlinedVector<xla::XlaOp, 1>;
 
-// Represents a use of the output of a given node.
-// If use U is within node N, it means that node U.node is using the output
-// U.index of the node N.
-struct Use {
-  Use() = default;
-  Use(Node* node, size_t operand_index, size_t index)
-      : node(node), operand_index(operand_index), index(index) {}
-
-  bool operator<(const Use& rhs) const;
-
-  std::string ToString() const;
-
-  // The node using the output of the node this use belongs to.
-  Node* node = nullptr;
-  // The operand index, within node's operands, which this use refers to.
-  size_t operand_index = 0;
-  // The index within output the user node refers to.
-  size_t index = 0;
-};
-
-inline std::ostream& operator<<(std::ostream& stream, const Use& use) {
-  stream << use.ToString();
-  return stream;
-}
-
 template <typename T>
 using OutputMap =
     std::unordered_map<torch::lazy::Output, T, torch::lazy::Output::Hasher>;
@@ -109,12 +84,8 @@ class Node : public torch::lazy::Node {
   // multi-output node, output_index must be zero.
   const xla::Shape& xla_shape(size_t output_index) const;
 
-  const std::set<Use>& uses() const { return uses_; }
-
   void ReplaceOperand(size_t operand_no, torch::lazy::NodePtr node,
                       size_t index = 0);
-
-  void ReplaceAllUsesWith(torch::lazy::NodePtr node, size_t index = 0);
 
   virtual torch::lazy::NodePtr Clone(OpList operands) const;
 
@@ -135,10 +106,6 @@ class Node : public torch::lazy::Node {
   // Adds node's index output number as operand.
   void AddOperand(torch::lazy::NodePtr node, size_t index = 0);
 
-  void AddUse(Use use) { uses_.insert(std::move(use)); }
-
-  void RemoveUse(const Use& use) { uses_.erase(use); }
-
   xla::Shape GetOpShape(const std::function<xla::Shape()>& shape_fn) const;
 
   static torch::lazy::hash_t GetOpHash(torch::lazy::OpKind op,
@@ -148,8 +115,6 @@ class Node : public torch::lazy::Node {
   static std::vector<torch::lazy::SourceLocation> GetFrameInfo();
 
   xla::Shape xla_shape_;
-  // We use a set for uses, as we want deterministic use sequencing.
-  std::set<Use> uses_;
   torch::lazy::hash_t node_hash_;
   torch::lazy::hash_t dag_hash_;
 };
