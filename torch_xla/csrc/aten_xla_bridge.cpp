@@ -109,8 +109,8 @@ XLATensor GetXlaTensorOrCreateForWrappedNumber(const at::Tensor& tensor,
                                                const Device& device) {
   return (tensor.unsafeGetTensorImpl()->is_wrapped_number() ||
           (tensor.dim() == 0 && tensor.numel() == 1))
-      ? GetOrCreateXlaTensor(tensor, device)
-      : GetXlaTensor(tensor);
+             ? GetOrCreateXlaTensor(tensor, device)
+             : GetXlaTensor(tensor);
 }
 
 std::vector<XLATensor> GetOrCreateXlaTensors(
