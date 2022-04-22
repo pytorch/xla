@@ -226,7 +226,7 @@ class XlaBackendTest(unittest.TestCase):
       pg_xla = dist.new_group(ranks=ranks)
 
     recv_pattern = r'%recv\.\d+ = .+ recv\(.+\), channel_id=3'
-    recvdone_pattern = r'%recv\-done\.\d+ = .+ recv\-done\(.+\), channel_id=4'
+    recvdone_pattern = r'%recv\-done\.\d+ = .+ recv\-done\(.+\), channel_id=3'
     # seeing 'recv is not implemented on CPU' means we have successfully
     # generated `recv` in the HLO.
     with self.assertRaises(RuntimeError) as cm:
