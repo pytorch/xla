@@ -1,4 +1,3 @@
-#include <ATen/Context.h>
 #include <ATen/ExpandUtils.h>
 #include <ATen/Operators.h>
 #include <ATen/native/BinaryOps.h>
@@ -25,7 +24,6 @@
 #include "torch_xla/csrc/tensor_impl.h"
 #include "torch_xla/csrc/tensor_util.h"
 #include "torch_xla/csrc/torch_util.h"
-#include "torch_xla/csrc/version.h"
 
 // [Implementation Guidelines]
 // - If you want to call a at::func which doesn't have a kernel registered
