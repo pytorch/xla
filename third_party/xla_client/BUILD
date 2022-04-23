@@ -65,6 +65,8 @@ tf_cc_shared_object(
         "//tensorflow/core/platform/cloud:gcs_file_system",
         "//tensorflow/python/profiler/internal:profiler_pywrap_impl",
         "@com_google_absl//absl/strings",
+        "@llvm-project//llvm:Support",
+        "@llvm-project//mlir:Support",
     ],
 )
 
