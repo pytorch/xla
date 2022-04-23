@@ -93,7 +93,7 @@ function install_deps_pytorch_xla() {
   fi
   bazels3cache --bucket=${XLA_CLANG_CACHE_S3_BUCKET_NAME} --maxEntrySizeBytes=0 --logging.level=verbose
   # Use cloud cache to build when available.
-  sed -i '/bazel build/ a --remote_http_cache=http://localhost:7777 \\' $XLA_DIR/build_torch_xla_libs.sh
+  sed -i '/bazel build/ a --disk_cache=~/.cache/build \\' $XLA_DIR/build_torch_xla_libs.sh
 
 }
 
