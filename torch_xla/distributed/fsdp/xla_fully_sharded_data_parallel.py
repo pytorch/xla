@@ -228,11 +228,6 @@ class XlaFullyShardedDataParallel(nn.Module):
     # TODO (ronghanghu) change to 1 after https://github.com/pytorch/xla/issues/3510 is resolved
     # make sharded parameter sizes a multiple of 128 for efficient all_gather ops on TPUs
     # (see https://github.com/pytorch/xla/issues/3510#issuecomment-1101739677 for details)
-    # # Update 04/19/2022: we reverted to the old all_gather impelmentation via all_reduce as a
-    # # workaround to https://github.com/pytorch/xla/issues/3510 after layout pinning is introduced
-    # # (https://github.com/pytorch/xla/pull/3511). Hence we changed default _shard_size_multiple = 1
-    # # here and deprecated the new all_gather until https://github.com/pytorch/xla/issues/3510 is
-    # # fully resolved.
     self._shard_size_multiple = _shard_size_multiple
 
     self.gradient_predivide_factor: float = self._get_gradient_predivide_factor(
@@ -562,6 +557,7 @@ class XlaFullyShardedDataParallel(nn.Module):
   def _reset_lazy_init(self) -> None:
     """Reset instance so :func:`_lazy_init` will run on the next forward."""
     self._is_root: Optional[bool] = None
+    self._all_sharded_params: Optional[Parameter] = None
     self._output_pre_backward_hook_registered: Optional[List] = None
     self._backward_opt_barrier_tensors: Optional[List] = None
     self._backward_opt_barrier_tensor_ids: Optional[Set] = None
@@ -597,6 +593,11 @@ class XlaFullyShardedDataParallel(nn.Module):
       return
     # No FSDP instance wraps this, else _is_root would be set to False.
     self._is_root = True
+    self._all_sharded_params = list(self.parameters())
+    if self._debug_print:
+      xm.master_print(
+          f"root FSDP got {len(self._all_sharded_params)} total params (_debug_msg: {self._debug_msg}).",
+          flush=True)
     # If final backward callback is never been queued, state should be IDLE.
     # If final backward callback is queued, the callback should be finished
     # and the state was reset to be IDLE.
@@ -745,11 +746,8 @@ class XlaFullyShardedDataParallel(nn.Module):
 
     def _grad_opt_barrier_hook(t_grad: torch.Tensor):
       self._try_adding_to_backward_opt_barrier_lists(t_grad)
-
-      # return a view of the gradient with barrier applied
-      t_grad = t_grad.view(t_grad.size())
       xm.optimization_barrier_([t_grad])
-      return t_grad
+      return t_grad.view(t_grad.size())  # a view with barrier applied
 
     for t in dependency_tensors:
       if t.requires_grad:
@@ -780,6 +778,7 @@ class XlaFullyShardedDataParallel(nn.Module):
       if self._is_root:
         self._queue_wait_for_post_backward()
 
+      self._try_adding_to_backward_opt_barrier_lists(t_grad)
       # All-gather full parameters or switching to the full params.
       # Note, ``self._rebuild_full_params`` is idempotent. So in case it is called
       # unnecessarily, it doesn't incur much overhead.
@@ -797,7 +796,6 @@ class XlaFullyShardedDataParallel(nn.Module):
             )
           xm.mark_step()
 
-        self._try_adding_to_backward_opt_barrier_lists(t_grad)
         dependency_tensors = []
         if self.optimization_barrier_in_backward:
           # Ensure that backward pass ops of feature gradients, parameter
@@ -830,10 +828,9 @@ class XlaFullyShardedDataParallel(nn.Module):
       self.assert_state(
           [TrainingState.BACKWARD_PRE, TrainingState.BACKWARD_POST])
 
-      # return a view of the gradient with barrier applied
-      t_grad = t_grad.view(t_grad.size())
+      self._try_adding_to_backward_opt_barrier_lists(t_grad)
       xm.optimization_barrier_([t_grad])
-      return t_grad
+      return t_grad.view(t_grad.size())  # a view with barrier applied
 
     _registered = 0
 
@@ -945,20 +942,23 @@ class XlaFullyShardedDataParallel(nn.Module):
     # Shard the gradients with `reduce_scatter`.
     # Clear grad on the tensor, so any repeated gradient computations do not interfere with this reduction.
     param.grad = None
-    grad = _flatten_and_pad_to_world_size(
+    grad_flat = _flatten_and_pad_to_world_size(
         grad, self.world_size * self._shard_size_multiple)
+    xm.optimization_barrier_([grad_flat])
     reduced_grad = self.reduce_scatter_op(
         xm.REDUCE_SUM,
-        grad,
+        grad_flat.detach(),
         scale=1.0,
         scatter_dim=0,
-        shard_count=self.world_size)
+        shard_count=self.world_size).detach()
+    xm.optimization_barrier_([reduced_grad])
     if self.gradient_postdivide_factor > 1:
       # Average grad by world_size for consistency with PyTorch DDP.
       reduced_grad.data.div_(self.gradient_postdivide_factor)
 
     grad._has_full_param = True
-    self._free_full_params([grad], dependency_tensors=[reduced_grad])
+    grad_flat._has_full_param = True
+    self._free_full_params([grad, grad_flat], dependency_tensors=[reduced_grad])
     self._try_adding_to_backward_opt_barrier_lists(reduced_grad)
 
     # Accumulate into the gradient shard.
@@ -1065,14 +1065,18 @@ class XlaFullyShardedDataParallel(nn.Module):
             # self._backward_opt_barrier_tensors in _grad_opt_barrier_hook,
             # _pre_backward_hook, and _post_backward_hook) are finished before
             # accessing the sharded gradients of this FSDP module.
-            params_and_grads = [
-                (p, p.grad) for p in self.sharded_params if p.grad is not None
+            params_with_grad = [
+                p for p in self._all_sharded_params if p.grad is not None
             ]
-            dependency_tensors = [g for _, g in params_and_grads]
-            self._apply_opt_barrier_to_params_and_tensors(
-                self.full_params, self.sharded_params, dependency_tensors)
-            for p, g in params_and_grads:
-              p.grad = g
+            params_data = [p.data for p in params_with_grad]
+            grad_data = [p.grad.data for p in params_with_grad]
+            dependency_tensors = params_data + grad_data
+            dependency_tensors.extend(self._backward_opt_barrier_tensors)
+            xm.optimization_barrier_(dependency_tensors)
+            for p, p_data, g_data in zip(params_with_grad, params_data,
+                                         grad_data):
+              p.data = p_data
+              p.grad.data = g_data
           self._clear_backward_opt_barrier_lists()
 
     if self.mark_step_on_finalization:
@@ -1116,10 +1120,9 @@ class XlaFullyShardedDataParallel(nn.Module):
         # reshape sharded parameters to 2d tensors for efficient gathering on
         # TPUs (see https://github.com/pytorch/xla/issues/3510 for details).
         p_shard_2d = p_shard.data.view(-1, self._shard_size_multiple)
-        p_padded = self.all_gather_op(p_shard_2d).flatten().detach()
-        # # Update 04/19/2022: we reverted to the old all_gather impelmentation
-        # # via all_reduce using https://github.com/pytorch/xla/issues/3511
-        # p_padded = self.all_gather_op(p_shard.data).flatten().detach()
+        xm.optimization_barrier_([p_shard_2d])
+        p_padded = self.all_gather_op(p_shard_2d.detach()).flatten().detach()
+        xm.optimization_barrier_([p_padded])
         p.data = p_padded[:p_shard._orig_size.numel()].view(p_shard._orig_size)
         p._has_full_param = True
 
