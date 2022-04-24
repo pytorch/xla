@@ -2,6 +2,7 @@
 #include <torch/torch.h>
 
 #include <iostream>
+#include <random>
 
 #include "cpp_test_util.h"
 #include "tensorflow/compiler/xla/permutation_util.h"
@@ -11055,6 +11056,46 @@ TEST_F(AtenXlaTensorTest, TestNanToNumOut) {
   }
   ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
   ExpectCounterChanged("xla::nan_to_num", cpp_test::GetIgnoredCounters());
+}
+
+TEST_F(AtenXlaTensorTest, TestRoll) {
+  std::random_device rng_device;
+  std::mt19937 gen(rng_device());
+  std::uniform_int_distribution<int64_t> rand_int64_t(-8, 8);
+
+  std::vector<int64_t> input_shape = {2, 3, 4};
+  for (torch::ScalarType scalar_type :
+       {torch::kFloat, torch::kByte, torch::kChar, torch::kShort, torch::kInt,
+        torch::kLong}) {
+    torch::Tensor input =
+        isFloatingType(scalar_type)
+            ? torch::rand(input_shape, torch::TensorOptions(scalar_type))
+            : torch::randint(0, 100, input_shape,
+                             torch::TensorOptions(scalar_type));
+    std::vector<std::vector<int64_t>> dim_powerset = {
+        {}, {0}, {1}, {2}, {0, 1}, {1, 2}, {2, 0}, {0, 1, 2}};
+    for (std::vector<int64_t> roll_dims : dim_powerset) {
+      std::vector<int64_t> roll_shifts(
+          roll_dims.size() == 0 ? 1 : roll_dims.size());
+      std::for_each(roll_shifts.begin(), roll_shifts.end(),
+                    [rand_int64_t, gen](int64_t& shift) mutable {
+                      shift = rand_int64_t(gen);
+                    });
+      for (bool negative_dims : {false, true}) {
+        if (negative_dims) {
+          std::for_each(roll_dims.begin(), roll_dims.end(),
+                        [](int64_t& dim) { dim -= 3; });
+        }
+        torch::Tensor output = torch::roll(input, roll_shifts, roll_dims);
+        ForEachDevice([&](const torch::Device& device) {
+          torch::Tensor xla_input = CopyToDevice(input, device);
+          torch::Tensor xla_output =
+              torch::roll(xla_input, roll_shifts, roll_dims);
+          AllClose(output, xla_output);
+        });
+      }
+    }
+  }
 }
 
 }  // namespace cpp_test
