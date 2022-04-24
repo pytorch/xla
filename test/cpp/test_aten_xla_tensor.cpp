@@ -2,7 +2,6 @@
 #include <torch/torch.h>
 
 #include <iostream>
-#include <random>
 
 #include "cpp_test_util.h"
 #include "tensorflow/compiler/xla/permutation_util.h"
@@ -11059,10 +11058,6 @@ TEST_F(AtenXlaTensorTest, TestNanToNumOut) {
 }
 
 TEST_F(AtenXlaTensorTest, TestRoll) {
-  std::random_device rng_device;
-  std::mt19937 gen(rng_device());
-  std::uniform_int_distribution<int64_t> rand_int64_t(-8, 8);
-
   std::vector<int64_t> input_shape = {2, 3, 4};
   for (torch::ScalarType scalar_type :
        {torch::kFloat, torch::kByte, torch::kChar, torch::kShort, torch::kInt,
@@ -11074,25 +11069,32 @@ TEST_F(AtenXlaTensorTest, TestRoll) {
                              torch::TensorOptions(scalar_type));
     std::vector<std::vector<int64_t>> dim_powerset = {
         {}, {0}, {1}, {2}, {0, 1}, {1, 2}, {2, 0}, {0, 1, 2}};
-    for (std::vector<int64_t> roll_dims : dim_powerset) {
-      std::vector<int64_t> roll_shifts(
-          roll_dims.size() == 0 ? 1 : roll_dims.size());
-      std::for_each(roll_shifts.begin(), roll_shifts.end(),
-                    [rand_int64_t, gen](int64_t& shift) mutable {
-                      shift = rand_int64_t(gen);
-                    });
+    std::vector<std::vector<std::vector<int64_t>>> shift_set = {
+        {{0}, {1}, {1}, {-24}, {24}, {-27}, {27}},
+        {{0}, {-1}, {1}, {-5}, {5}},
+        {{0}, {-1}, {1}, {-5}, {5}},
+        {{0}, {-1}, {1}, {-5}, {5}},
+        {{0, 0}, {-1, 4}},
+        {{1, 2}, {0, -1}},
+        {{0, 2}, {-1, 0}},
+        {{4, 3, 2}, {-4, 3, 2}},
+    };
+    for (size_t i = 0; i < dim_powerset.size(); ++i) {
+      std::vector<int64_t> roll_dims = dim_powerset[i];
       for (bool negative_dims : {false, true}) {
         if (negative_dims) {
           std::for_each(roll_dims.begin(), roll_dims.end(),
                         [](int64_t& dim) { dim -= 3; });
         }
-        torch::Tensor output = torch::roll(input, roll_shifts, roll_dims);
-        ForEachDevice([&](const torch::Device& device) {
-          torch::Tensor xla_input = CopyToDevice(input, device);
-          torch::Tensor xla_output =
-              torch::roll(xla_input, roll_shifts, roll_dims);
-          AllClose(output, xla_output);
-        });
+        for (std::vector<int64_t> roll_shifts : shift_set[i]) {
+          torch::Tensor output = torch::roll(input, roll_shifts, roll_dims);
+          ForEachDevice([&](const torch::Device& device) {
+            torch::Tensor xla_input = CopyToDevice(input, device);
+            torch::Tensor xla_output =
+                torch::roll(xla_input, roll_shifts, roll_dims);
+            AllClose(output, xla_output);
+          });
+        }
       }
     }
   }
