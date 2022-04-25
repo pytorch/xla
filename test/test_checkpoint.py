@@ -5,7 +5,7 @@ import torch_xla
 import torch_xla.utils.checkpoint as checkpoint
 
 
-def run(grad_checkpoint):
+def run():
   device = xm.xla_device()
   model = torch.nn.ModuleList([
       torch.nn.Sequential(
@@ -22,16 +22,15 @@ def run(grad_checkpoint):
     optimizer.zero_grad()
     x = dummy_data
     for n_l, layer in enumerate(model):
-      x = checkpoint.checkpoint(layer, x)
+      if n_l > 0:
+        x = checkpoint.checkpoint(layer, x)
+      else:
+        x = layer(x)
     dummy_loss = x.sum()
     dummy_loss.backward()
     optimizer.step()
     xm.mark_step()
-    xm.wait_device_ops()
 
 
 if __name__ == "__main__":
-  parser = argparse.ArgumentParser()
-  parser.add_argument("--grad_checkpoint", type=int, required=True)
-  args = parser.parse_args()
-  run(args.grad_checkpoint)
+  run()
