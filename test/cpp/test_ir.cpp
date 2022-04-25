@@ -39,7 +39,7 @@ TEST(IrTest, TestHash) {
 }
 
 TEST(IrTest, TestSelectUnselect) {
-  ForEachDevice([&](const Device& device) {
+  ForEachDevice([&](const torch::lazy::BackendDevice& device) {
     at::Tensor a =
         at::rand({4, 16, 3}, at::TensorOptions(at::kFloat)).abs() + 1.0;
 

@@ -278,7 +278,7 @@ xla::Shape BatchNormFeaturesShape(const XLATensor& input) {
 ir::Value GetIrValueOrDefault(const XLATensor& input,
                               const at::Scalar& default_value,
                               const xla::Shape& default_shape,
-                              const Device& device) {
+                              const torch::lazy::BackendDevice& device) {
   return input.is_null() ? XLATensor::GetIrValueForScalar(default_value,
                                                           default_shape, device)
                          : input.GetIrValue();
@@ -1323,7 +1323,8 @@ void XLATensor::exponential_(XLATensor& input, double lambd) {
       GetRngSeed(input.GetDevice()), input_shape.get()));
 }
 
-XLATensor XLATensor::eye(int64_t lines, int64_t cols, const Device& device,
+XLATensor XLATensor::eye(int64_t lines, int64_t cols,
+                         const torch::lazy::BackendDevice& device,
                          at::ScalarType element_type) {
   return XLATensor::Create(
       ir::ops::Identity(lines, cols,
@@ -1377,19 +1378,21 @@ XLATensor XLATensor::frac(const XLATensor& input) {
 }
 
 XLATensor XLATensor::full(absl::Span<const int64_t> size,
-                          const at::Scalar& fill_value, const Device& device,
+                          const at::Scalar& fill_value,
+                          const torch::lazy::BackendDevice& device,
                           at::ScalarType scalar_type) {
   CheckShapeDimensions(size);
-  xla::Shape shape = MakeArrayShapeFromDimensions(
-      size, /*dynamic_dimensions=*/{},
-      MakeXlaPrimitiveType(scalar_type, &device), device.device_type.hw_type);
+  xla::Shape shape =
+      MakeArrayShapeFromDimensions(size, /*dynamic_dimensions=*/{},
+                                   MakeXlaPrimitiveType(scalar_type, &device),
+                                   static_cast<XlaDeviceType>(device.type()));
   return Create(GetIrValueForScalar(fill_value, shape, device), device,
                 scalar_type);
 }
 
 XLATensor XLATensor::full_like(const XLATensor& input,
                                const at::Scalar& fill_value,
-                               const Device& device,
+                               const torch::lazy::BackendDevice& device,
                                c10::optional<at::ScalarType> scalar_type) {
   xla::Shape tensor_shape = input.shape();
   if (scalar_type) {
@@ -1667,7 +1670,7 @@ XLATensor XLATensor::lerp(const XLATensor& input, const XLATensor& end,
 
 XLATensor XLATensor::linspace(const at::Scalar& start, const at::Scalar& end,
                               const int64_t steps, at::ScalarType element_type,
-                              const Device& device) {
+                              const torch::lazy::BackendDevice& device) {
   ir::Value start_val =
       GetIrValueForScalar(start, xla::PrimitiveType::F32, device);
   ir::Value end_val = GetIrValueForScalar(end, xla::PrimitiveType::F32, device);
@@ -2207,7 +2210,7 @@ void XLATensor::normal_(XLATensor& input, double mean, double std) {
 }
 
 XLATensor XLATensor::not_supported(std::string description, xla::Shape shape,
-                                   const Device& device) {
+                                   const torch::lazy::BackendDevice& device) {
   return Create(ir::MakeNode<ir::ops::NotSupported>(std::move(description),
                                                     std::move(shape)),
                 device);
@@ -2802,7 +2805,8 @@ XLATensor XLATensor::threshold_backward(const XLATensor& grad_output,
       grad_output.GetIrValue(), input.GetIrValue(), threshold));
 }
 
-XLATensor XLATensor::to(XLATensor& input, c10::optional<Device> device,
+XLATensor XLATensor::to(XLATensor& input,
+                        c10::optional<torch::lazy::BackendDevice> device,
                         c10::optional<at::ScalarType> scalar_type) {
   if (!device) {
     device = input.GetDevice();

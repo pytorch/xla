@@ -24,7 +24,7 @@ class DumpUtil {
       absl::Span<const torch::lazy::Node* const> roots);
 
   static std::string ToHlo(absl::Span<const Value> values,
-                           const Device& device);
+                           const torch::lazy::BackendDevice& device);
 };
 
 }  // namespace ir

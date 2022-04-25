@@ -57,7 +57,7 @@ std::string DebugUtil::GetTensorsGraphInfo(absl::Span<const XLATensor> tensors,
   std::vector<const torch::lazy::Node*> root_nodes;
   std::vector<ir::Value> root_values;
   std::vector<torch::lazy::hash_t> root_hashes;
-  xla::util::Unique<Device> unique_device;
+  xla::util::Unique<torch::lazy::BackendDevice> unique_device;
   if (indices != nullptr) {
     for (auto index : *indices) {
       const XLATensor& tensor = tensors[index];

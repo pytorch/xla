@@ -41,7 +41,8 @@
 namespace torch_xla {
 namespace {
 
-Device GetXlaDeviceOrCurrent(const c10::optional<c10::Device>& device) {
+torch::lazy::BackendDevice GetXlaDeviceOrCurrent(
+    const c10::optional<c10::Device>& device) {
   auto xla_device_opt = bridge::GetXlaDevice(device);
   return xla_device_opt ? *xla_device_opt : GetCurrentDevice();
 }
@@ -375,9 +376,9 @@ void XLANativeFunctions::_amp_foreach_non_finite_check_and_unscale_(
     at::TensorList self, at::Tensor& found_inf, const at::Tensor& inv_scale) {
   XLA_FN_COUNTER("xla::");
   XLATensor found_inf_tensor = bridge::GetXlaTensor(found_inf);
-  TorchXLADeviceType hw_type = found_inf_tensor.GetDevice().device_type.hw_type;
-  XLA_CHECK(hw_type == TorchXLADeviceType::GPU ||
-            hw_type == TorchXLADeviceType::CPU)
+  XlaDeviceType hw_type =
+      static_cast<XlaDeviceType>(found_inf_tensor.GetDevice().type());
+  XLA_CHECK(hw_type == XlaDeviceType::GPU || hw_type == XlaDeviceType::CPU)
       << "AMP should be used with XLA:GPU";
   XLATensor::_amp_foreach_non_finite_check_and_unscale_(
       bridge::GetXlaTensors(self), found_inf_tensor,
@@ -393,10 +394,9 @@ at::Tensor& XLANativeFunctions::_amp_update_scale_(at::Tensor& current_scale,
   XLA_FN_COUNTER("xla::");
   XLATensor growth_tracker_tensor = bridge::GetXlaTensor(growth_tracker);
   XLATensor current_scale_tensor = bridge::GetXlaTensor(current_scale);
-  TorchXLADeviceType hw_type =
-      growth_tracker_tensor.GetDevice().device_type.hw_type;
-  XLA_CHECK(hw_type == TorchXLADeviceType::GPU ||
-            hw_type == TorchXLADeviceType::CPU)
+  XlaDeviceType hw_type =
+      static_cast<XlaDeviceType>(growth_tracker_tensor.GetDevice().type());
+  XLA_CHECK(hw_type == XlaDeviceType::GPU || hw_type == XlaDeviceType::CPU)
       << "AMP should be used with XLA:GPU";
   XLATensor::_amp_update_scale_(growth_tracker_tensor, current_scale_tensor,
                                 bridge::GetXlaTensor(found_inf),
@@ -1601,7 +1601,7 @@ at::Tensor XLANativeFunctions::index(
   XLA_FN_COUNTER("xla::");
   CanonicalIndexInfo canonical_index_info =
       GetCanonicalIndexInfo(self, indices);
-  c10::optional<Device> device =
+  c10::optional<torch::lazy::BackendDevice> device =
       bridge::GetXlaDevice(canonical_index_info.base);
   if (!device.has_value()) {
     device = bridge::GetXlaDevice(canonical_index_info.indices);
@@ -1659,7 +1659,7 @@ at::Tensor& XLANativeFunctions::index_put_(
   XLA_CHECK(self.scalar_type() == values.scalar_type());
   CanonicalIndexInfo canonical_index_info =
       GetCanonicalIndexInfo(self, indices);
-  c10::optional<Device> device =
+  c10::optional<torch::lazy::BackendDevice> device =
       bridge::GetXlaDevice(canonical_index_info.base);
   if (!device.has_value()) {
     device = bridge::GetXlaDevice(canonical_index_info.indices);
@@ -2263,7 +2263,7 @@ at::Tensor XLANativeFunctions::nan_to_num(const at::Tensor& self,
     return torch::lazy::CopyTensor(self);
   }
   XLATensor input_tensor = bridge::GetXlaTensor(self);
-  const Device& device = input_tensor.GetDevice();
+  const torch::lazy::BackendDevice& device = input_tensor.GetDevice();
   auto element_type = MakeXlaPrimitiveType(self.scalar_type(), &device);
   XlaHelpers::MinMax min_max = XlaHelpers::MinMaxValues(element_type);
   at::Scalar nan_replacement = nan.has_value() ? *nan : 0.0;
@@ -2290,7 +2290,7 @@ XLANativeFunctions::native_batch_norm(
     double momentum, double eps) {
   XLA_FN_COUNTER("xla::");
   XLATensor input_tensor = bridge::GetXlaTensor(input);
-  const Device& device = input_tensor.GetDevice();
+  const torch::lazy::BackendDevice& device = input_tensor.GetDevice();
   XLATensor running_mean_tensor =
       bridge::GetOrCreateXlaTensor(running_mean, device);
   XLATensor running_var_tensor =
@@ -2315,7 +2315,7 @@ XLANativeFunctions::native_batch_norm_backward(
     std::array<bool, 3> output_mask) {
   XLA_FN_COUNTER("xla::");
   XLATensor grad_out_tensor = bridge::GetXlaTensor(grad_out);
-  const Device& device = grad_out_tensor.GetDevice();
+  const torch::lazy::BackendDevice& device = grad_out_tensor.GetDevice();
   auto gradients = XLATensor::native_batch_norm_backward(
       bridge::GetXlaTensor(grad_out), bridge::GetXlaTensor(input),
       bridge::GetOrCreateXlaTensor(weight, device),
@@ -3421,8 +3421,10 @@ at::Tensor XLANativeFunctions::upsample_bilinear2d(
   XLATensor self_tensor = bridge::GetXlaTensor(self);
   // Only the XLA TPU backend for now implements the CustomCall required by
   // our XLA lowering.
-  if (self_tensor.GetDevice().device_type.hw_type != TorchXLADeviceType::TPU ||
-      (scales_h && *scales_h != 1.0) || (scales_w && *scales_w != 1.0)) {
+  XlaDeviceType hw_type =
+      static_cast<XlaDeviceType>(self_tensor.GetDevice().type());
+  if (hw_type != XlaDeviceType::TPU || (scales_h && *scales_h != 1.0) ||
+      (scales_w && *scales_w != 1.0)) {
     return at::native::call_fallback_fn<
         &xla_cpu_fallback, ATEN_OP(upsample_bilinear2d)>::call(self,
                                                                output_size,
@@ -3442,9 +3444,10 @@ at::Tensor XLANativeFunctions::upsample_bilinear2d_backward(
   XLATensor grad_output_tensor = bridge::GetXlaTensor(grad_output);
   // Only the XLA TPU backend for now implements the CustomCall required by
   // our XLA lowering.
-  if (grad_output_tensor.GetDevice().device_type.hw_type !=
-          TorchXLADeviceType::TPU ||
-      (scales_h && *scales_h != 1.0) || (scales_w && *scales_w != 1.0)) {
+  XlaDeviceType hw_type =
+      static_cast<XlaDeviceType>(grad_output_tensor.GetDevice().type());
+  if (hw_type != XlaDeviceType::TPU || (scales_h && *scales_h != 1.0) ||
+      (scales_w && *scales_w != 1.0)) {
     return at::native::call_fallback_fn<
         &xla_cpu_fallback,
         ATEN_OP(upsample_bilinear2d_backward)>::call(grad_output, output_size,
@@ -3463,7 +3466,9 @@ at::Tensor XLANativeFunctions::upsample_nearest2d(
   XLATensor input_tensor = bridge::GetXlaTensor(input);
   // Only the XLA TPU backend for now implements the CustomCall required by our
   // XLA lowering.
-  if (input_tensor.GetDevice().device_type.hw_type != TorchXLADeviceType::TPU) {
+  XlaDeviceType hw_type =
+      static_cast<XlaDeviceType>(input_tensor.GetDevice().type());
+  if (hw_type != XlaDeviceType::TPU) {
     return at::native::call_fallback_fn<&xla_cpu_fallback,
                                         ATEN_OP2(upsample_nearest2d,
                                                  vec)>::call(input, output_size,
@@ -3484,8 +3489,9 @@ at::Tensor XLANativeFunctions::upsample_nearest2d_backward(
   XLATensor grad_output_tensor = bridge::GetXlaTensor(grad_output);
   // Only the XLA TPU backend for now implements the CustomCall required by our
   // XLA lowering.
-  if (grad_output_tensor.GetDevice().device_type.hw_type !=
-      TorchXLADeviceType::TPU) {
+  XlaDeviceType hw_type =
+      static_cast<XlaDeviceType>(grad_output_tensor.GetDevice().type());
+  if (hw_type != XlaDeviceType::TPU) {
     return at::native::call_fallback_fn<&xla_cpu_fallback,
                                         ATEN_OP2(upsample_nearest2d_backward,
                                                  vec)>::call(grad_output,
@@ -3507,8 +3513,10 @@ at::Tensor XLANativeFunctions::upsample_nearest2d(
   XLATensor self_tensor = bridge::GetXlaTensor(self);
   // Only the XLA TPU backend for now implements the CustomCall required by
   // our XLA lowering.
-  if (self_tensor.GetDevice().device_type.hw_type != TorchXLADeviceType::TPU ||
-      (scales_h && *scales_h != 1.0) || (scales_w && *scales_w != 1.0)) {
+  XlaDeviceType hw_type =
+      static_cast<XlaDeviceType>(self_tensor.GetDevice().type());
+  if (hw_type != XlaDeviceType::TPU || (scales_h && *scales_h != 1.0) ||
+      (scales_w && *scales_w != 1.0)) {
     return at::native::call_fallback_fn<
         &xla_cpu_fallback, ATEN_OP(upsample_nearest2d)>::call(self, output_size,
                                                               scales_h,
@@ -3526,9 +3534,10 @@ at::Tensor XLANativeFunctions::upsample_nearest2d_backward(
   XLATensor grad_output_tensor = bridge::GetXlaTensor(grad_output);
   // Only the XLA TPU backend for now implements the CustomCall required by
   // our XLA lowering.
-  if (grad_output_tensor.GetDevice().device_type.hw_type !=
-          TorchXLADeviceType::TPU ||
-      (scales_h && *scales_h != 1.0) || (scales_w && *scales_w != 1.0)) {
+  XlaDeviceType hw_type =
+      static_cast<XlaDeviceType>(grad_output_tensor.GetDevice().type());
+  if (hw_type != XlaDeviceType::TPU || (scales_h && *scales_h != 1.0) ||
+      (scales_w && *scales_w != 1.0)) {
     return at::native::call_fallback_fn<
         &xla_cpu_fallback,
         ATEN_OP(upsample_nearest2d_backward)>::call(grad_output, output_size,
