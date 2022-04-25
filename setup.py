@@ -114,6 +114,7 @@ def create_version_files(base_dir, version, xla_git_sha, torch_git_sha):
 def generate_xla_aten_code(base_dir):
   generate_code_cmd = [os.path.join(base_dir, 'scripts', 'generate_code.sh')]
   if subprocess.call(generate_code_cmd) != 0:
+    print(os.getcwd())
     print(
         'Failed to generate ATEN bindings: {}'.format(generate_code_cmd),
         file=sys.stderr)
