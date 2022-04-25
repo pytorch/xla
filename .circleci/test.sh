@@ -12,5 +12,3 @@ source "$PYTORCH_DIR/.jenkins/pytorch/common_utils.sh"
 install_torchvision
 
 run_torch_xla_tests $PYTORCH_DIR $XLA_DIR
-
-trap clean_xrt_server ERR EXIT
