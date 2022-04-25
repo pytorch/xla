@@ -77,7 +77,7 @@ TEST_F(TensorTest, TestAdd) {
   at::Tensor b = at::rand({2, 2}, at::TensorOptions(at::kFloat));
   at::Tensor c = a.add(b, 1.0);
 
-  ForEachDevice([&](const Device& device) {
+  ForEachDevice([&](const torch::lazy::BackendDevice& device) {
     XLATensor dev_a = XLATensor::Create(a, device);
     XLATensor dev_b = XLATensor::Create(b, device);
     XLATensor dev_c = XLATensor::add(dev_a, dev_b, 1.0);
@@ -90,7 +90,7 @@ TEST_F(TensorTest, TestIntegerAdd) {
   std::vector<at::ScalarType> types(
       {at::kByte, at::kChar, at::kShort, at::kInt, at::kLong});
 
-  ForEachDevice([&](const Device& device) {
+  ForEachDevice([&](const torch::lazy::BackendDevice& device) {
     for (auto type : types) {
       at::Tensor a = at::randint(0, 63, {2, 2}, at::TensorOptions(type));
       at::Tensor b = at::randint(0, 63, {2, 2}, at::TensorOptions(type));
@@ -111,7 +111,7 @@ TEST_F(TensorTest, TestIntegerAdd) {
 TEST_F(TensorTest, TestSize) {
   at::Tensor input = at::rand({2, 1, 4, 6}, at::TensorOptions(at::kFloat));
   int rank = input.dim();
-  ForEachDevice([&](const Device& device) {
+  ForEachDevice([&](const torch::lazy::BackendDevice& device) {
     XLATensor dev_input = XLATensor::Create(input, device);
     for (int dim = -rank; dim < rank; ++dim) {
       EXPECT_EQ(input.size(dim), dev_input.size(dim));
@@ -122,7 +122,7 @@ TEST_F(TensorTest, TestSize) {
 TEST_F(TensorTest, TestRelu) {
   at::Tensor input = at::rand({2, 1, 4, 6}, at::TensorOptions(at::kFloat));
   at::Tensor output = input.relu();
-  ForEachDevice([&](const Device& device) {
+  ForEachDevice([&](const torch::lazy::BackendDevice& device) {
     XLATensor dev_input = XLATensor::Create(input, device);
     XLATensor dev_output = XLATensor::relu(dev_input);
     AllClose(output, dev_output);
@@ -133,7 +133,7 @@ TEST_F(TensorTest, TestRrelu) {
   at::Tensor input = at::rand({2, 1, 4, 6}, at::TensorOptions(at::kFloat));
   float lower = 0.125;
   float upper = 0.5;
-  ForEachDevice([&](const Device& device) {
+  ForEachDevice([&](const torch::lazy::BackendDevice& device) {
     for (bool training : {true, false}) {
       at::Tensor noise = at::zeros_like(input);
       at::Tensor output =
@@ -153,7 +153,7 @@ TEST_F(TensorTest, TestThreshold) {
   float threshold = 0.4;
   float value = 20;
   at::Tensor output = at::threshold(input, threshold, value);
-  ForEachDevice([&](const Device& device) {
+  ForEachDevice([&](const torch::lazy::BackendDevice& device) {
     XLATensor dev_input = XLATensor::Create(input, device);
     XLATensor dev_output = XLATensor::threshold(dev_input, threshold, value);
     AllClose(output, dev_output);
@@ -170,7 +170,7 @@ TEST_F(TensorTest, TestAddMatMul) {
       at::rand({out_channels, labels}, at::TensorOptions(at::kFloat));
   at::Tensor bias = at::rand({labels}, at::TensorOptions(at::kFloat));
   at::Tensor output = at::addmm(bias, input, weight);
-  ForEachDevice([&](const Device& device) {
+  ForEachDevice([&](const torch::lazy::BackendDevice& device) {
     XLATensor dev_input = XLATensor::Create(input, device);
     XLATensor dev_weight = XLATensor::Create(weight, device);
     XLATensor dev_bias = XLATensor::Create(bias, device);
@@ -182,7 +182,7 @@ TEST_F(TensorTest, TestAddMatMul) {
 TEST_F(TensorTest, TestTranspose) {
   at::Tensor input = at::rand({2, 3}, at::TensorOptions(at::kFloat));
   at::Tensor output = at::transpose(input, 0, 1);
-  ForEachDevice([&](const Device& device) {
+  ForEachDevice([&](const torch::lazy::BackendDevice& device) {
     XLATensor dev_input = XLATensor::Create(input, device);
     XLATensor dev_output = XLATensor::transpose(dev_input, 0, 1);
     AllClose(output, dev_output);
@@ -192,7 +192,7 @@ TEST_F(TensorTest, TestTranspose) {
 TEST_F(TensorTest, TestView) {
   at::Tensor input = at::rand({32, 20, 4, 4}, at::TensorOptions(at::kFloat));
   at::Tensor output = input.view({-1, 320});
-  ForEachDevice([&](const Device& device) {
+  ForEachDevice([&](const torch::lazy::BackendDevice& device) {
     XLATensor dev_input = XLATensor::Create(input, device);
     XLATensor dev_output = XLATensor::view(dev_input, {-1, 320});
     AllClose(output, dev_output);
@@ -205,7 +205,7 @@ TEST_F(TensorTest, TestViewMod) {
   at::Tensor output = input.view({-1, 320});
   output.add_(one, 1.0);
   input.add_(one, 1.0);
-  ForEachDevice([&](const Device& device) {
+  ForEachDevice([&](const torch::lazy::BackendDevice& device) {
     at::Tensor dev_input =
         at::zeros({32, 20, 4, 4},
                   at::TensorOptions(bridge::XlaDeviceToAtenDevice(device)));
@@ -226,7 +226,7 @@ TEST_F(TensorTest, TestViewModComplex) {
   output1.add_(one, 1.0);
   at::Tensor output2 = input.view({-1, 160});
   output2.add_(one, 1.0);
-  ForEachDevice([&](const Device& device) {
+  ForEachDevice([&](const torch::lazy::BackendDevice& device) {
     at::Tensor dev_input =
         at::zeros({32, 20, 4, 4},
                   at::TensorOptions(bridge::XlaDeviceToAtenDevice(device)));
@@ -248,7 +248,7 @@ TEST_F(TensorTest, TestViewOfViewMod) {
   output1.add_(one, 1.0);
   at::Tensor output2 = output1.view({-1, 160});
   output2.add_(one, 1.0);
-  ForEachDevice([&](const Device& device) {
+  ForEachDevice([&](const torch::lazy::BackendDevice& device) {
     at::Tensor dev_input =
         at::zeros({32, 20, 4, 4},
                   at::TensorOptions(bridge::XlaDeviceToAtenDevice(device)));
@@ -265,7 +265,7 @@ TEST_F(TensorTest, TestViewOfViewMod) {
 
 TEST_F(TensorTest, TestLogSoftmax) {
   at::Tensor input = at::rand({5, 3, 4, 2}, at::TensorOptions(at::kFloat));
-  ForEachDevice([&](const Device& device) {
+  ForEachDevice([&](const torch::lazy::BackendDevice& device) {
     XLATensor dev_input = XLATensor::Create(input, device);
     for (int dim = 0; dim < input.dim(); ++dim) {
       at::Tensor output = input.log_softmax(dim);
@@ -286,7 +286,7 @@ TEST_F(TensorTest, TestMaxPool2D) {
                          /*stride=*/{stride, stride},
                          /*padding=*/{padding, padding}, /*dilation=*/{1, 1},
                          /*ceil_mode=*/false);
-      ForEachDevice([&](const Device& device) {
+      ForEachDevice([&](const torch::lazy::BackendDevice& device) {
         XLATensor dev_input = XLATensor::Create(input, device);
         auto dev_output = XLATensor::max_pool_nd(
             dev_input,
@@ -310,7 +310,7 @@ TEST_F(TensorTest, TestMaxPool2DNonSquare) {
           /*stride=*/{stride, stride + 1},
           /*padding=*/{padding, padding + 1}, /*dilation=*/{1, 1},
           /*ceil_mode=*/false);
-      ForEachDevice([&](const Device& device) {
+      ForEachDevice([&](const torch::lazy::BackendDevice& device) {
         XLATensor dev_input = XLATensor::Create(input, device);
         auto dev_output = XLATensor::max_pool_nd(
             dev_input,
@@ -337,7 +337,7 @@ TEST_F(TensorTest, TestAvgPool2D) {
                            /*stride=*/{stride, stride},
                            /*padding=*/{padding, padding},
                            /*ceil_mode=*/false, count_include_pad);
-        ForEachDevice([&](const Device& device) {
+        ForEachDevice([&](const torch::lazy::BackendDevice& device) {
           XLATensor dev_input = XLATensor::Create(input, device);
           XLATensor dev_output =
               XLATensor::avg_pool_nd(dev_input,
@@ -365,7 +365,7 @@ TEST_F(TensorTest, TestAvgPool2DNonSquare) {
             /*stride=*/{stride, stride + 1},
             /*padding=*/{padding, padding + 1}, /*ceil_mode=*/false,
             /*count_include_pad=*/count_include_pad);
-        ForEachDevice([&](const Device& device) {
+        ForEachDevice([&](const torch::lazy::BackendDevice& device) {
           XLATensor dev_input = XLATensor::Create(input, device);
           XLATensor dev_output = XLATensor::avg_pool_nd(
               dev_input,
@@ -402,7 +402,7 @@ TEST_F(TensorTest, TestBatchNorm1D) {
           /*bias=*/undef_weight_bias ? undef : bias,
           /*running_mean=*/running_mean, /*running_var=*/running_var,
           /*training=*/training, /*momentum=*/momentum, /*eps=*/eps);
-      ForEachDevice([&](const Device& device) {
+      ForEachDevice([&](const torch::lazy::BackendDevice& device) {
         XLATensor xla_input = XLATensor::Create(input, device);
         XLATensor xla_weight =
             undef_weight_bias ? XLATensor() : XLATensor::Create(weight, device);
@@ -462,7 +462,7 @@ TEST_F(TensorTest, TestConv2D) {
                     /*transposed=*/transposed,
                     /*output_padding=*/{output_padding, output_padding},
                     /*groups=*/groups, false, false, false);
-                ForEachDevice([&](const Device& device) {
+                ForEachDevice([&](const torch::lazy::BackendDevice& device) {
                   XLATensor dev_input = XLATensor::Create(input, device);
                   XLATensor dev_weight = XLATensor::Create(weight, device);
                   XLATensor dev_output;
@@ -531,7 +531,7 @@ TEST_F(TensorTest, TestConv2DNonSquare) {
                     /*output_padding=*/{output_padding, output_padding + 1},
                     /*groups=*/groups, false, false, false);
 
-                ForEachDevice([&](const Device& device) {
+                ForEachDevice([&](const torch::lazy::BackendDevice& device) {
                   XLATensor dev_input = XLATensor::Create(input, device);
                   XLATensor dev_weight = XLATensor::Create(weight, device);
                   XLATensor dev_output;
@@ -601,7 +601,7 @@ TEST_F(TensorTest, TestConv3D) {
                     /*output_padding=*/
                     {output_padding, output_padding, output_padding},
                     /*groups=*/groups, false, false, false);
-                ForEachDevice([&](const Device& device) {
+                ForEachDevice([&](const torch::lazy::BackendDevice& device) {
                   XLATensor dev_input = XLATensor::Create(input, device);
                   XLATensor dev_weight = XLATensor::Create(weight, device);
                   XLATensor dev_output;
@@ -673,7 +673,7 @@ TEST_F(TensorTest, TestConv3D) {
 //                     /*output_padding=*/
 //                     {output_padding, output_padding + 1, output_padding},
 //                     /*groups=*/groups, false, false, false);
-//                 ForEachDevice([&](const Device& device) {
+//                 ForEachDevice([&](const torch::lazy::BackendDevice& device) {
 //                   XLATensor dev_input = XLATensor::Create(input, device);
 //                   XLATensor dev_weight = XLATensor::Create(weight, device);
 //                   XLATensor dev_output;

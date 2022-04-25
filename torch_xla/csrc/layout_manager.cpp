@@ -175,13 +175,13 @@ xla::Shape MakeTorchTensorLayout(absl::Span<const int64_t> dimensions,
 xla::Shape MakeArrayShapeFromDimensions(
     absl::Span<const int64_t> dimensions,
     absl::Span<const bool> dynamic_dimensions, xla::PrimitiveType type,
-    DeviceType device_type) {
+    XlaDeviceType hw_type) {
   auto layout_ptr = LayoutManager::Get()->GetLayout(dimensions);
   if (layout_ptr != nullptr) {
     return MakeShapeWithLayout(type, dimensions, dynamic_dimensions,
                                *layout_ptr);
   }
-  if (dimensions.size() > 1 && device_type.hw_type == TorchXLADeviceType::TPU) {
+  if (dimensions.size() > 1 && hw_type == XlaDeviceType::TPU) {
     return MakeTpuShape(dimensions, dynamic_dimensions, type);
   }
   return MakeTorchTensorLayout(dimensions, dynamic_dimensions, type);
