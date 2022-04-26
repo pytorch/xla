@@ -118,4 +118,7 @@ std::vector<xla::XlaOp> BuildAdamOptimizerStep(
 
 xla::XlaOp BuildXLogY(xla::XlaOp input, xla::XlaOp other);
 
+xla::XlaOp BuildRoll(xla::XlaOp input, absl::Span<const int64_t> shifts,
+                     absl::Span<const int64_t> dims);
+
 }  // namespace torch_xla

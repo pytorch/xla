@@ -994,6 +994,10 @@ class XLATensor {
 
   static void resize_(XLATensor& input, std::vector<int64_t> size);
 
+  static XLATensor roll(const XLATensor& input,
+                        absl::Span<const int64_t> shifts,
+                        absl::Span<const int64_t> dims);
+
   static XLATensor round(const XLATensor& input);
 
   static XLATensor rrelu_with_noise(const XLATensor& input, XLATensor& noise,

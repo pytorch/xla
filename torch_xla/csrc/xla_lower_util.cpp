@@ -973,4 +973,49 @@ xla::XlaOp BuildXLogY(xla::XlaOp input, xla::XlaOp other) {
   return res;
 }
 
+xla::XlaOp BuildRoll(xla::XlaOp input, absl::Span<const int64_t> shifts,
+                     absl::Span<const int64_t> dims) {
+  const xla::Shape& input_shape = XlaHelpers::ShapeOfXlaOp(input);
+
+  int64_t input_dims = input_shape.dimensions_size();
+  int64_t num_dims = dims.size();
+
+  bool need_flatten = num_dims == 0 ? true : false;
+
+  int64_t step = need_flatten ? 1 : num_dims;
+  int64_t input_numel = xla::ShapeUtil::ElementsIn(input_shape);
+
+  for (int64_t i = 0; i != step; ++i) {
+    input = need_flatten ? xla::Reshape(input, {input_numel}) : input;
+
+    int64_t cur_dim = need_flatten ? 0 : dims[i];
+    if (cur_dim < 0) {
+      cur_dim += input_dims;
+    }
+
+    int64_t offset = shifts[i];
+    int64_t dim_size =
+        need_flatten ? input_numel : input_shape.dimensions(cur_dim);
+
+    // Adjust large offsets into [0, dim_size). This also makes negative
+    // offsets positive.
+    offset = ((offset % dim_size) + dim_size) % dim_size;
+
+    // Stack two copies of the dimension, then slice from the calculated
+    // offset.
+    xla::XlaOp concat =
+        xla::ConcatInDim(input.builder(), {input, input}, cur_dim);
+    std::vector<xla::XlaOp> start_indices(
+        need_flatten ? 1 : input_shape.dimensions_size(),
+        xla::Zero(input.builder(), xla::PrimitiveType::S64));
+    start_indices[cur_dim] = XlaHelpers::ScalarValue(
+        dim_size - offset, xla::PrimitiveType::S64, input.builder());
+    input = xla::DynamicSlice(concat, start_indices,
+                              need_flatten ? absl::MakeConstSpan({input_numel})
+                                           : input_shape.dimensions());
+  }
+
+  return need_flatten ? xla::Reshape(input, input_shape.dimensions()) : input;
+}
+
 }  // namespace torch_xla

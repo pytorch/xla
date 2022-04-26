@@ -2801,6 +2801,15 @@ const at::Tensor& XLANativeFunctions::resize_(
   return self;
 }
 
+at::Tensor XLANativeFunctions::roll(const at::Tensor& self,
+                                    at::IntArrayRef shifts,
+                                    at::IntArrayRef dims) {
+  XLA_FN_COUNTER("xla::");
+  return bridge::AtenFromXlaTensor(XLATensor::roll(bridge::GetXlaTensor(self),
+                                                   XlaHelpers::I64List(shifts),
+                                                   XlaHelpers::I64List(dims)));
+}
+
 at::Tensor XLANativeFunctions::round(const at::Tensor& self) {
   XLA_FN_COUNTER("xla::");
   return bridge::AtenFromXlaTensor(

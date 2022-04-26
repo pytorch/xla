@@ -110,6 +110,7 @@
 #include "torch_xla/csrc/ops/replication_pad.h"
 #include "torch_xla/csrc/ops/replication_pad_backward.h"
 #include "torch_xla/csrc/ops/resize.h"
+#include "torch_xla/csrc/ops/roll.h"
 #include "torch_xla/csrc/ops/rrelu_with_noise.h"
 #include "torch_xla/csrc/ops/rrelu_with_noise_backward.h"
 #include "torch_xla/csrc/ops/scalar.h"
@@ -2381,6 +2382,22 @@ void XLATensor::resize_(XLATensor& input, std::vector<int64_t> size) {
                        input_shape);
     input.SetSubView(std::move(view_info));
   }
+}
+
+XLATensor XLATensor::roll(const XLATensor& input,
+                          absl::Span<const int64_t> shifts,
+                          absl::Span<const int64_t> dims) {
+  XLA_CHECK_GT(shifts.size(), 0) << "`shifts` required";
+  if (dims.size() != 0) {
+    XLA_CHECK_EQ(shifts.size(), dims.size())
+        << "shifts and dimensions must align. shifts: " << shifts.size()
+        << ", dims:" << dims.size();
+  }
+  auto canonical_dims = torch::lazy::GetCanonicalDimensionIndices(
+      torch::lazy::ToVector<int64_t>(dims), input.shape().get().rank());
+  return input.CreateFrom(ir::MakeNode<ir::ops::Roll>(
+      input.GetIrValue(), torch::lazy::ToVector<int64_t>(shifts),
+      canonical_dims));
 }
 
 XLATensor XLATensor::round(const XLATensor& input) {
