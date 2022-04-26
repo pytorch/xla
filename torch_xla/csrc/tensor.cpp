@@ -994,7 +994,7 @@ std::vector<xla::ComputationClient::DataPtr> XLATensor::GatherTensorsXlaData(
 }
 
 void XLATensor::TensorCollectionBarrier(SyncTensorCollection* coll) {
-  std::string invalid_device(
+  static const std::string invalid_device(
       "Unknown0"); /* Temp solution to idetify unassigned devices */
   if (coll->device.ToString().compare(invalid_device) == 0 ||
       coll->unlocker.size() > 0) {
@@ -1321,7 +1321,7 @@ XLATensor::PostOrderData XLATensor::RunPostOrder(
   for (auto node : po_data.post_order) {
     const ir::ops::DeviceData* device_data = ir::ops::DeviceData::Cast(node);
     if (device_data != nullptr) {
-      /* Acceptable race condition: HasValue may return falsse. This is OK
+      /* Acceptable race condition: HasValue may return false. This is OK
        * since the conditional barrier is a performance optimization. */
       if (!device_data->data()->HasValue()) {
         TensorCollectionBarrier(coll);
@@ -1689,6 +1689,8 @@ std::shared_ptr<XLATensor::Async> XLATensor::SyncTensorsGraphInternal(
       "SyncTensorsGraphInternal", tensorflow::profiler::TraceMeLevel::kInfo);
   SyncTensorCollection coll = CollectSyncTensors(*tensors, config);
   if (coll.indices.empty()) {
+    /* Enure previous execution is complete before exiting this
+     * function */
     TensorCollectionBarrier(&coll);
     return nullptr;
   }
