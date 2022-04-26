@@ -32,13 +32,6 @@ if [ -f "$TORCH_PIN" ]; then
     git submodule update --init --recursive
     popd
   fi
-else
-  pushd "$PTDIR"
-  git fetch origin
-  git checkout master
-  git pull
-  git submodule update --init --recursive
-  popd
 fi
 
 python $CDIR/cond_patch.py \
