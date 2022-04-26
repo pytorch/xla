@@ -10,7 +10,7 @@ namespace ops {
 
 NotSupported::NotSupported(std::string description, xla::Shape shape)
     : XlaNode(xla_not_supported, std::move(shape), /*num_outputs=*/1,
-           torch::lazy::MHash(description)),
+              torch::lazy::MHash(description)),
       description_(std::move(description)) {}
 
 torch::lazy::NodePtr NotSupported::Clone(OpList operands) const {

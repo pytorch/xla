@@ -11,10 +11,11 @@ namespace ops {
 Select::Select(const XlaValue& input, int64_t dim, int64_t start, int64_t end,
                int64_t stride)
     : XlaNode(xla_select, {input},
-           [&]() {
-             return MakeSelectShape(input.xla_shape(), dim, start, end, stride);
-           },
-           /*num_outputs=*/1, torch::lazy::MHash(dim, start, end, stride)),
+              [&]() {
+                return MakeSelectShape(input.xla_shape(), dim, start, end,
+                                       stride);
+              },
+              /*num_outputs=*/1, torch::lazy::MHash(dim, start, end, stride)),
       dim_(dim),
       start_(start),
       end_(end),

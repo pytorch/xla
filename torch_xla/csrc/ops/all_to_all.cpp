@@ -32,14 +32,14 @@ AllToAll::AllToAll(const XlaValue& input, const XlaValue& token,
                    int64_t split_count,
                    std::vector<std::vector<int64_t>> groups, bool pin_layout)
     : XlaNode(xla_all_to_all, {input, token},
-           [&]() {
-             return NodeOutputShape(input, token, split_dimension,
-                                    concat_dimension, split_count, groups,
-                                    pin_layout);
-           },
-           /*num_outputs=*/2,
-           torch::lazy::MHash(split_dimension, concat_dimension, split_count,
-                              groups, pin_layout)),
+              [&]() {
+                return NodeOutputShape(input, token, split_dimension,
+                                       concat_dimension, split_count, groups,
+                                       pin_layout);
+              },
+              /*num_outputs=*/2,
+              torch::lazy::MHash(split_dimension, concat_dimension, split_count,
+                                 groups, pin_layout)),
       split_dimension_(split_dimension),
       concat_dimension_(concat_dimension),
       split_count_(split_count),

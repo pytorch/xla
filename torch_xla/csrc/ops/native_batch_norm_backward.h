@@ -11,7 +11,8 @@ class NativeBatchNormBackward : public XlaNode {
  public:
   NativeBatchNormBackward(const XlaValue& grad_out, const XlaValue& input,
                           const XlaValue& weight, const XlaValue& save_mean,
-                          const XlaValue& save_invstd, bool training, double eps);
+                          const XlaValue& save_invstd, bool training,
+                          double eps);
 
   torch::lazy::NodePtr Clone(OpList operands) const override;
 

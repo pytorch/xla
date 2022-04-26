@@ -10,7 +10,8 @@ namespace ir {
 namespace ops {
 namespace {
 
-xla::Shape NodeOutputShape(const XlaValue& input, absl::Span<const int64_t> dims) {
+xla::Shape NodeOutputShape(const XlaValue& input,
+                           absl::Span<const int64_t> dims) {
   auto lower_for_shape_fn =
       [dims](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
     XLA_CHECK_EQ(operands.size(), 1);
@@ -23,8 +24,8 @@ xla::Shape NodeOutputShape(const XlaValue& input, absl::Span<const int64_t> dims
 
 Permute::Permute(const XlaValue& input, std::vector<int64_t> dims)
     : XlaNode(torch::lazy::OpKind(at::aten::permute), {input},
-           [&]() { return NodeOutputShape(input, dims); },
-           /*num_outputs=*/1, torch::lazy::MHash(dims)),
+              [&]() { return NodeOutputShape(input, dims); },
+              /*num_outputs=*/1, torch::lazy::MHash(dims)),
       dims_(std::move(dims)) {}
 
 torch::lazy::NodePtr Permute::Clone(OpList operands) const {

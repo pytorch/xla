@@ -40,21 +40,21 @@ xla::Shape NodeOutputShape(const XlaValue& grad_output, const XlaValue& logits,
 
 }  // namespace
 
-NllLossBackward::NllLossBackward(const XlaValue& grad_output, const XlaValue& logits,
-                                 const XlaValue& labels,
+NllLossBackward::NllLossBackward(const XlaValue& grad_output,
+                                 const XlaValue& logits, const XlaValue& labels,
                                  const absl::optional<XlaValue>& weight,
                                  const absl::optional<XlaValue>& total_weight,
                                  ReductionMode reduction, int ignore_index)
     : XlaNode(torch::lazy::OpKind(at::aten::nll_loss_backward),
-           xla::util::GetValuesVector<XlaValue>({grad_output, logits, labels},
-                                             {&weight, &total_weight}),
-           [&]() {
-             return NodeOutputShape(grad_output, logits, labels, weight,
-                                    total_weight, reduction, ignore_index);
-           },
-           /*num_outputs=*/1,
-           torch::lazy::MHash(torch::lazy::GetEnumValue(reduction),
-                              ignore_index)),
+              xla::util::GetValuesVector<XlaValue>(
+                  {grad_output, logits, labels}, {&weight, &total_weight}),
+              [&]() {
+                return NodeOutputShape(grad_output, logits, labels, weight,
+                                       total_weight, reduction, ignore_index);
+              },
+              /*num_outputs=*/1,
+              torch::lazy::MHash(torch::lazy::GetEnumValue(reduction),
+                                 ignore_index)),
       reduction_(reduction),
       ignore_index_(ignore_index) {}
 

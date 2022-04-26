@@ -11,8 +11,8 @@ namespace ops {
 
 Softshrink::Softshrink(const XlaValue& input, const at::Scalar& lambda)
     : XlaNode(torch::lazy::OpKind(at::aten::softshrink), {input},
-           input.xla_shape(),
-           /*num_outputs=*/1, ScalarHash(lambda)),
+              input.xla_shape(),
+              /*num_outputs=*/1, ScalarHash(lambda)),
       lambda_(std::move(lambda)) {}
 
 std::string Softshrink::ToString() const {

@@ -12,8 +12,9 @@ namespace ops {
 
 Uniform::Uniform(const XlaValue& from, const XlaValue& to, const XlaValue& seed,
                  const xla::Shape& rng_shape)
-    : XlaNode(torch::lazy::OpKind(at::aten::uniform), {from, to, seed}, rng_shape,
-           /*num_outputs=*/1, torch::lazy::Hash(rng_shape)) {}
+    : XlaNode(torch::lazy::OpKind(at::aten::uniform), {from, to, seed},
+              rng_shape,
+              /*num_outputs=*/1, torch::lazy::Hash(rng_shape)) {}
 
 torch::lazy::NodePtr Uniform::Clone(OpList operands) const {
   return ir::MakeNode<Uniform>(operands.at(0), operands.at(1), operands.at(2),

@@ -9,7 +9,7 @@ namespace ops {
 
 Flip::Flip(const XlaValue& input, std::vector<int64_t> dims)
     : XlaNode(torch::lazy::OpKind(at::aten::flip), {input}, input.xla_shape(),
-           /*num_outputs=*/1, torch::lazy::MHash(dims)),
+              /*num_outputs=*/1, torch::lazy::MHash(dims)),
       dims_(std::move(dims)) {}
 
 torch::lazy::NodePtr Flip::Clone(OpList operands) const {

@@ -8,8 +8,9 @@ namespace ir {
 namespace ops {
 
 Threshold::Threshold(const XlaValue& input, float threshold, float value)
-    : XlaNode(torch::lazy::OpKind(at::aten::threshold), {input}, input.xla_shape(),
-           /*num_outputs=*/1, torch::lazy::MHash(threshold, value)),
+    : XlaNode(torch::lazy::OpKind(at::aten::threshold), {input},
+              input.xla_shape(),
+              /*num_outputs=*/1, torch::lazy::MHash(threshold, value)),
       threshold_(threshold),
       value_(value) {}
 

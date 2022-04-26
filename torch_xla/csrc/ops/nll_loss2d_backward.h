@@ -11,7 +11,8 @@ namespace ops {
 class NllLoss2dBackward : public XlaNode {
  public:
   NllLoss2dBackward(const XlaValue& grad_output, const XlaValue& logits,
-                    const XlaValue& labels, const absl::optional<XlaValue>& weight,
+                    const XlaValue& labels,
+                    const absl::optional<XlaValue>& weight,
                     const absl::optional<XlaValue>& total_weight,
                     ReductionMode reduction, int ignore_index);
 

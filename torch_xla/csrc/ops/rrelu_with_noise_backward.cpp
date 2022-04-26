@@ -11,10 +11,11 @@ namespace ops {
 RreluWithNoiseBackward::RreluWithNoiseBackward(
     const XlaValue& grad_output, const XlaValue& input, const XlaValue& noise,
     const at::Scalar& lower, const at::Scalar& upper, bool training)
-    : XlaNode(torch::lazy::OpKind(at::aten::rrelu_with_noise_backward),
-           {grad_output, input, noise}, input.xla_shape(),
-           /*num_outputs=*/1,
-           torch::lazy::MHash(ScalarHash(lower), ScalarHash(upper), training)),
+    : XlaNode(
+          torch::lazy::OpKind(at::aten::rrelu_with_noise_backward),
+          {grad_output, input, noise}, input.xla_shape(),
+          /*num_outputs=*/1,
+          torch::lazy::MHash(ScalarHash(lower), ScalarHash(upper), training)),
       lower_(std::move(lower)),
       upper_(std::move(upper)),
       training_(training) {}

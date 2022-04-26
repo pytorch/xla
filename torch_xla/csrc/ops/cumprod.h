@@ -11,7 +11,8 @@ namespace ops {
 
 class CumProd : public XlaNode {
  public:
-  CumProd(const XlaValue& input, int64_t dim, c10::optional<at::ScalarType> dtype);
+  CumProd(const XlaValue& input, int64_t dim,
+          c10::optional<at::ScalarType> dtype);
 
   std::string ToString() const override;
 

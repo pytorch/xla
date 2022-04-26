@@ -60,10 +60,10 @@ XLATensor IndexByTensors(const XLATensor& base,
                          int64_t start_dim);
 
 ir::XlaValue IndexPutByTensors(const XLATensor& base,
-                            absl::Span<const XLATensor> indices,
-                            int64_t start_dim, const XLATensor& updates,
-                            bool accumulate,
-                            absl::Span<const int64_t> result_permutation);
+                               absl::Span<const XLATensor> indices,
+                               int64_t start_dim, const XLATensor& updates,
+                               bool accumulate,
+                               absl::Span<const int64_t> result_permutation);
 
 torch::lazy::NodePtr IndexFill(const XLATensor& base, int64_t dim,
                                const XLATensor& index, const at::Scalar& value);
@@ -71,10 +71,10 @@ torch::lazy::NodePtr IndexFill(const XLATensor& base, int64_t dim,
 torch::lazy::NodePtr IndexFill(const XLATensor& base, int64_t dim,
                                const XLATensor& index, const XLATensor& value);
 
-ir::XlaValue IndexAdd(const XLATensor& base, int64_t dim, const XLATensor& index,
-                   const XLATensor& source);
+ir::XlaValue IndexAdd(const XLATensor& base, int64_t dim,
+                      const XLATensor& index, const XLATensor& source);
 
-ir::XlaValue IndexCopy(const XLATensor& base, int64_t dim, const XLATensor& index,
-                    const XLATensor& source);
+ir::XlaValue IndexCopy(const XLATensor& base, int64_t dim,
+                       const XLATensor& index, const XLATensor& source);
 
 }  // namespace torch_xla

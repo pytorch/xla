@@ -27,9 +27,10 @@ xla::Shape NodeOutputShape(
 CollectivePermute::CollectivePermute(
     const XlaValue& input, const XlaValue& token,
     std::vector<std::pair<int64_t, int64_t>> source_target_pairs)
-    : XlaNode(xla_collective_permute, {input, token},
-           [&]() { return NodeOutputShape(input, token, source_target_pairs); },
-           /*num_outputs=*/2, torch::lazy::MHash(source_target_pairs)),
+    : XlaNode(
+          xla_collective_permute, {input, token},
+          [&]() { return NodeOutputShape(input, token, source_target_pairs); },
+          /*num_outputs=*/2, torch::lazy::MHash(source_target_pairs)),
       source_target_pairs_(std::move(source_target_pairs)) {}
 
 torch::lazy::NodePtr CollectivePermute::Clone(OpList operands) const {

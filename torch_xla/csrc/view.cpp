@@ -63,7 +63,7 @@ ir::XlaValue ApplyViewInfo(ir::XlaValue ir_value, const ViewInfo& view_info) {
 }
 
 ir::XlaValue ApplyUpdate(ir::XlaValue ir_value,
-                      const Alias::UpdateData& update_data) {
+                         const Alias::UpdateData& update_data) {
   // We first bring the source IR value forward, by reshaping and slicing.
   std::vector<ir::XlaValue> tmp_values({ir_value});
   for (size_t i = 0; i < update_data.view_infos.size(); ++i) {

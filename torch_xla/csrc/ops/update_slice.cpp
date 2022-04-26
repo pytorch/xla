@@ -27,8 +27,8 @@ xla::Shape NodeOutputShape(const XlaValue& input, const XlaValue& source,
 UpdateSlice::UpdateSlice(const XlaValue& input, const XlaValue& source,
                          absl::Span<const int64_t> base_indices)
     : XlaNode(xla_update_slice, {input, source},
-           [&]() { return NodeOutputShape(input, source, base_indices); },
-           /*num_outputs=*/1, torch::lazy::Hash(base_indices)),
+              [&]() { return NodeOutputShape(input, source, base_indices); },
+              /*num_outputs=*/1, torch::lazy::Hash(base_indices)),
       base_indices_(base_indices.begin(), base_indices.end()) {}
 
 torch::lazy::NodePtr UpdateSlice::Clone(OpList operands) const {

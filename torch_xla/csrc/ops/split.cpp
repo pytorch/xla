@@ -24,11 +24,12 @@ xla::Shape NodeOutputShape(const XlaValue& input,
 
 }  // namespace
 
-Split::Split(const XlaValue& input, std::vector<int64_t> split_sizes, int64_t dim)
+Split::Split(const XlaValue& input, std::vector<int64_t> split_sizes,
+             int64_t dim)
     : XlaNode(torch::lazy::OpKind(at::aten::split), {input},
-           [&]() { return NodeOutputShape(input, split_sizes, dim); },
-           ComputeSplitCount(input.xla_shape().dimensions(dim), split_sizes),
-           torch::lazy::MHash(split_sizes, dim)),
+              [&]() { return NodeOutputShape(input, split_sizes, dim); },
+              ComputeSplitCount(input.xla_shape().dimensions(dim), split_sizes),
+              torch::lazy::MHash(split_sizes, dim)),
       split_sizes_(std::move(split_sizes)),
       dim_(dim) {}
 

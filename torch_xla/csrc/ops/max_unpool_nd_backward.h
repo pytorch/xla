@@ -9,7 +9,8 @@ namespace ops {
 class MaxUnpoolNdBackward : public XlaNode {
  public:
   MaxUnpoolNdBackward(const XlaValue& grad_output, const XlaValue& input,
-                      const XlaValue& indices, std::vector<int64_t> output_size);
+                      const XlaValue& indices,
+                      std::vector<int64_t> output_size);
 
   torch::lazy::NodePtr Clone(OpList operands) const override;
 

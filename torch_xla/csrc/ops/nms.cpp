@@ -28,14 +28,15 @@ xla::Shape NodeOutputShape(const XlaValue& boxes, const XlaValue& scores,
 
 }  // namespace
 
-Nms::Nms(const XlaValue& boxes, const XlaValue& scores, const XlaValue& score_threshold,
-         const XlaValue& iou_threshold, int64_t output_size)
+Nms::Nms(const XlaValue& boxes, const XlaValue& scores,
+         const XlaValue& score_threshold, const XlaValue& iou_threshold,
+         int64_t output_size)
     : XlaNode(xla_nms, {boxes, scores, score_threshold, iou_threshold},
-           [&]() {
-             return NodeOutputShape(boxes, scores, score_threshold,
-                                    iou_threshold, output_size);
-           },
-           /*num_outputs=*/2, torch::lazy::MHash(output_size)),
+              [&]() {
+                return NodeOutputShape(boxes, scores, score_threshold,
+                                       iou_threshold, output_size);
+              },
+              /*num_outputs=*/2, torch::lazy::MHash(output_size)),
       output_size_(output_size) {}
 
 torch::lazy::NodePtr Nms::Clone(OpList operands) const {

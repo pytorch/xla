@@ -6,8 +6,8 @@ namespace torch_xla {
 namespace ir {
 namespace ops {
 
-// Generic IR XlaNode implementation for nodes which can simply be described by a
-// specific OpKind and a lowering function. IR nodes carrying metadata should
+// Generic IR XlaNode implementation for nodes which can simply be described by
+// a specific OpKind and a lowering function. IR nodes carrying metadata should
 // not be using this class (and have the metadata captured by the LowerFn), but
 // they should instead create a dedicated IR node. Doing the former would limit
 // IR introspection.

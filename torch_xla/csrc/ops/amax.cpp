@@ -9,8 +9,8 @@ namespace ir {
 namespace ops {
 namespace {
 
-xla::Shape NodeOutputShape(const XlaValue& input, std::vector<int64_t>& dimensions,
-                           bool keepdim) {
+xla::Shape NodeOutputShape(const XlaValue& input,
+                           std::vector<int64_t>& dimensions, bool keepdim) {
   auto lower_for_shape_fn =
       [&](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
     return BuildMaxInDims(operands[0], dimensions, keepdim);
@@ -22,8 +22,8 @@ xla::Shape NodeOutputShape(const XlaValue& input, std::vector<int64_t>& dimensio
 
 Amax::Amax(const XlaValue& input, std::vector<int64_t> dimensions, bool keepdim)
     : XlaNode(torch::lazy::OpKind(at::aten::amax), {input},
-           [&]() { return NodeOutputShape(input, dimensions, keepdim); },
-           /*num_outputs=*/1, torch::lazy::MHash(dimensions, keepdim)),
+              [&]() { return NodeOutputShape(input, dimensions, keepdim); },
+              /*num_outputs=*/1, torch::lazy::MHash(dimensions, keepdim)),
       dimensions_(std::move(dimensions)),
       keepdim_(keepdim) {}
 
@@ -38,7 +38,8 @@ XlaOpVector Amax::Lower(LoweringContext* loctx) const {
 
 std::string Amax::ToString() const {
   std::stringstream ss;
-  ss << XlaNode::ToString() << ", dimensions=" << absl::StrJoin(dimensions_, ", ")
+  ss << XlaNode::ToString()
+     << ", dimensions=" << absl::StrJoin(dimensions_, ", ")
      << ", keepdim=" << keepdim_;
   return ss.str();
 }

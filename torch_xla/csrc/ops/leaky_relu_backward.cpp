@@ -8,10 +8,11 @@ namespace ir {
 namespace ops {
 
 LeakyReluBackward::LeakyReluBackward(const XlaValue& grad_output,
-                                     const XlaValue& input, double negative_slope)
+                                     const XlaValue& input,
+                                     double negative_slope)
     : XlaNode(torch::lazy::OpKind(at::aten::leaky_relu_backward),
-           {grad_output, input}, input.xla_shape(),
-           /*num_outputs=*/1, torch::lazy::MHash(negative_slope)),
+              {grad_output, input}, input.xla_shape(),
+              /*num_outputs=*/1, torch::lazy::MHash(negative_slope)),
       negative_slope_(negative_slope) {}
 
 torch::lazy::NodePtr LeakyReluBackward::Clone(OpList operands) const {

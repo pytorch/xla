@@ -32,14 +32,16 @@ xla::Shape NodeOutputShape(const XlaValue& logits, const XlaValue& labels,
 
 }  // namespace
 
-BinaryCrossEntropy::BinaryCrossEntropy(const XlaValue& logits, const XlaValue& labels,
+BinaryCrossEntropy::BinaryCrossEntropy(const XlaValue& logits,
+                                       const XlaValue& labels,
                                        const absl::optional<XlaValue>& weight,
                                        ReductionMode reduction)
-    : XlaNode(torch::lazy::OpKind(at::aten::binary_cross_entropy),
-           xla::util::GetValuesVector<XlaValue>({logits, labels}, {&weight}),
-           [&]() { return NodeOutputShape(logits, labels, weight, reduction); },
-           /*num_outputs=*/1,
-           torch::lazy::MHash(torch::lazy::GetEnumValue(reduction))),
+    : XlaNode(
+          torch::lazy::OpKind(at::aten::binary_cross_entropy),
+          xla::util::GetValuesVector<XlaValue>({logits, labels}, {&weight}),
+          [&]() { return NodeOutputShape(logits, labels, weight, reduction); },
+          /*num_outputs=*/1,
+          torch::lazy::MHash(torch::lazy::GetEnumValue(reduction))),
       reduction_(reduction) {}
 
 torch::lazy::NodePtr BinaryCrossEntropy::Clone(OpList operands) const {

@@ -24,11 +24,11 @@ xla::Shape NodeOutputShape(const XlaValue& input, int64_t k, int64_t dim,
 TopK::TopK(const XlaValue& input, int64_t k, int64_t dim, bool largest,
            bool sorted, bool stable)
     : XlaNode(torch::lazy::OpKind(at::aten::topk), {input},
-           [&]() {
-             return NodeOutputShape(input, k, dim, largest, sorted, stable);
-           },
-           /*num_outputs=*/2,
-           torch::lazy::MHash(k, dim, largest, sorted, stable)),
+              [&]() {
+                return NodeOutputShape(input, k, dim, largest, sorted, stable);
+              },
+              /*num_outputs=*/2,
+              torch::lazy::MHash(k, dim, largest, sorted, stable)),
       k_(k),
       dim_(dim),
       largest_(largest),

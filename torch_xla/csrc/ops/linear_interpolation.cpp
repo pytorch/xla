@@ -9,9 +9,10 @@ namespace ir {
 namespace ops {
 
 LinearInterpolation::LinearInterpolation(const XlaValue& value,
-                                         const XlaValue& new_value, double alpha)
+                                         const XlaValue& new_value,
+                                         double alpha)
     : XlaNode(xla_moving_average, {value, new_value}, value.xla_shape(),
-           /*num_outputs=*/1, torch::lazy::MHash(alpha)),
+              /*num_outputs=*/1, torch::lazy::MHash(alpha)),
       alpha_(alpha) {}
 
 torch::lazy::NodePtr LinearInterpolation::Clone(OpList operands) const {

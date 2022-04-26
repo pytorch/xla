@@ -10,8 +10,8 @@ namespace ops {
 
 class BinaryCrossEntropyBackward : public XlaNode {
  public:
-  BinaryCrossEntropyBackward(const XlaValue& grad_output, const XlaValue& logits,
-                             const XlaValue& labels,
+  BinaryCrossEntropyBackward(const XlaValue& grad_output,
+                             const XlaValue& logits, const XlaValue& labels,
                              const absl::optional<XlaValue>& weight,
                              ReductionMode reduction);
 

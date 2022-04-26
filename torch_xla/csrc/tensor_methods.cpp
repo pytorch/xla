@@ -157,7 +157,8 @@ struct MinMaxValues {
   ir::XlaValue max;
 };
 
-ir::XlaValue MaybeExpand(const ir::XlaValue& input, const xla::Shape& target_shape) {
+ir::XlaValue MaybeExpand(const ir::XlaValue& input,
+                         const xla::Shape& target_shape) {
   if (input.xla_shape().dimensions() == target_shape.dimensions()) {
     return input;
   }
@@ -277,9 +278,9 @@ xla::Shape BatchNormFeaturesShape(const XLATensor& input) {
 // Returns the IR for the given input or the provided default value broadcasted
 // to the default shape, if the input is undefined.
 ir::XlaValue GetIrValueOrDefault(const XLATensor& input,
-                              const at::Scalar& default_value,
-                              const xla::Shape& default_shape,
-                              const torch::lazy::BackendDevice& device) {
+                                 const at::Scalar& default_value,
+                                 const xla::Shape& default_shape,
+                                 const torch::lazy::BackendDevice& device) {
   return input.is_null() ? XLATensor::GetIrValueForScalar(default_value,
                                                           default_shape, device)
                          : input.GetIrValue();
@@ -288,7 +289,7 @@ ir::XlaValue GetIrValueOrDefault(const XLATensor& input,
 // Returns the IR for the given input. If the IR is not a floating point value,
 // cast it to the float_type.
 ir::XlaValue GetFloatingIrValue(const XLATensor& input,
-                             at::ScalarType float_type) {
+                                at::ScalarType float_type) {
   ir::XlaValue input_value = input.GetIrValue();
   if (xla::primitive_util::IsIntegralType(
           input_value.xla_shape().element_type())) {
@@ -342,8 +343,9 @@ ViewInfo CreateAsStridedViewInfo(const xla::Shape& input_shape,
 // XLA dedicated operators follows here, listed in alphabetical order.
 //////////////////////////////////////////////////////////////////////////////
 std::pair<XLATensor, ir::XlaValue> XLATensor::all_reduce(
-    const XLATensor& input, const ir::XlaValue& token, AllReduceType reduce_type,
-    double scale, std::vector<std::vector<int64_t>> groups, bool pin_layout) {
+    const XLATensor& input, const ir::XlaValue& token,
+    AllReduceType reduce_type, double scale,
+    std::vector<std::vector<int64_t>> groups, bool pin_layout) {
   std::vector<ir::XlaValue> input_values({input.GetIrValue()});
   torch::lazy::NodePtr node = ir::MakeNode<ir::ops::AllReduce>(
       reduce_type, input_values, token, scale, std::move(groups), pin_layout);
@@ -351,9 +353,9 @@ std::pair<XLATensor, ir::XlaValue> XLATensor::all_reduce(
 }
 
 ir::XlaValue XLATensor::all_reduce_(XLATensor& input, const ir::XlaValue& token,
-                                 AllReduceType reduce_type, double scale,
-                                 std::vector<std::vector<int64_t>> groups,
-                                 bool pin_layout) {
+                                    AllReduceType reduce_type, double scale,
+                                    std::vector<std::vector<int64_t>> groups,
+                                    bool pin_layout) {
   std::vector<ir::XlaValue> input_values({input.GetIrValue()});
   torch::lazy::NodePtr node = ir::MakeNode<ir::ops::AllReduce>(
       reduce_type, input_values, token, scale, std::move(groups), pin_layout);
@@ -362,10 +364,10 @@ ir::XlaValue XLATensor::all_reduce_(XLATensor& input, const ir::XlaValue& token,
 }
 
 ir::XlaValue XLATensor::all_reduce(std::vector<XLATensor>* inputs,
-                                const ir::XlaValue& token,
-                                AllReduceType reduce_type, double scale,
-                                std::vector<std::vector<int64_t>> groups,
-                                bool pin_layout) {
+                                   const ir::XlaValue& token,
+                                   AllReduceType reduce_type, double scale,
+                                   std::vector<std::vector<int64_t>> groups,
+                                   bool pin_layout) {
   std::vector<ir::XlaValue> input_values;
   input_values.reserve(inputs->size());
   for (auto& input : *inputs) {
@@ -380,9 +382,10 @@ ir::XlaValue XLATensor::all_reduce(std::vector<XLATensor>* inputs,
 }
 
 std::pair<XLATensor, ir::XlaValue> XLATensor::reduce_scatter(
-    const XLATensor& input, const ir::XlaValue& token, AllReduceType reduce_type,
-    double scale, int64_t scatter_dim, int64_t shard_count,
-    std::vector<std::vector<int64_t>> groups, bool pin_layout) {
+    const XLATensor& input, const ir::XlaValue& token,
+    AllReduceType reduce_type, double scale, int64_t scatter_dim,
+    int64_t shard_count, std::vector<std::vector<int64_t>> groups,
+    bool pin_layout) {
   torch::lazy::NodePtr node = ir::MakeNode<ir::ops::ReduceScatter>(
       reduce_type, input.GetIrValue(), token, scale, scatter_dim, shard_count,
       std::move(groups), pin_layout);
@@ -421,11 +424,12 @@ std::pair<XLATensor, ir::XlaValue> XLATensor::all_gather(
   return {input.CreateFrom(ir::XlaValue(node, 0)), ir::XlaValue(node, 1)};
 }
 
-ir::XlaValue XLATensor::all_gather_out(XLATensor& output, const XLATensor& input,
-                                    const ir::XlaValue& token, int64_t dim,
-                                    int64_t shard_count,
-                                    std::vector<std::vector<int64_t>> groups,
-                                    bool pin_layout) {
+ir::XlaValue XLATensor::all_gather_out(XLATensor& output,
+                                       const XLATensor& input,
+                                       const ir::XlaValue& token, int64_t dim,
+                                       int64_t shard_count,
+                                       std::vector<std::vector<int64_t>> groups,
+                                       bool pin_layout) {
   torch::lazy::NodePtr node = ir::MakeNode<ir::ops::AllGather>(
       input.GetIrValue(), token, dim, shard_count, std::move(groups),
       pin_layout);
@@ -458,8 +462,8 @@ void XLATensor::sgd_optimizer_step_(const XLATensor& found_inf, XLATensor& step,
       GetIrValueForScalar(weight_decay, param.shape(), param.GetDevice());
   ir::XlaValue momentum_value =
       GetIrValueForScalar(momentum, param.shape(), param.GetDevice());
-  ir::XlaValue lr_value = GetIrValueForScalar(maximize ? -lr : lr, param.shape(),
-                                           param.GetDevice());
+  ir::XlaValue lr_value = GetIrValueForScalar(maximize ? -lr : lr,
+                                              param.shape(), param.GetDevice());
   ir::XlaValue dampening_value =
       GetIrValueForScalar(dampening, param.shape(), param.GetDevice());
   torch::lazy::NodePtr node = ir::MakeNode<ir::ops::SgdOptimizerStep>(
@@ -1674,7 +1678,8 @@ XLATensor XLATensor::linspace(const at::Scalar& start, const at::Scalar& end,
                               const torch::lazy::BackendDevice& device) {
   ir::XlaValue start_val =
       GetIrValueForScalar(start, xla::PrimitiveType::F32, device);
-  ir::XlaValue end_val = GetIrValueForScalar(end, xla::PrimitiveType::F32, device);
+  ir::XlaValue end_val =
+      GetIrValueForScalar(end, xla::PrimitiveType::F32, device);
   return XLATensor::Create(
       ir::MakeNode<ir::ops::Linspace>(start_val, end_val, steps), device,
       element_type);

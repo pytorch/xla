@@ -25,9 +25,9 @@ AmpUpdateScale::AmpUpdateScale(const XlaValue& current_scale,
                                double scale_growth_factor,
                                double scale_backoff_factor, int growth_interval)
     : XlaNode(torch::lazy::OpKind(at::aten::_amp_update_scale_),
-           {current_scale, growth_tracker, found_inf},
-           NodeOutputShape(growth_tracker, current_scale),
-           /*num_outputs=*/2),
+              {current_scale, growth_tracker, found_inf},
+              NodeOutputShape(growth_tracker, current_scale),
+              /*num_outputs=*/2),
       scale_growth_factor_(scale_growth_factor),
       scale_backoff_factor_(scale_backoff_factor),
       growth_interval_(growth_interval) {}

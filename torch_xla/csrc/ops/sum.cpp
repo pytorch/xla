@@ -38,13 +38,13 @@ xla::Shape NodeOutputShape(const XlaValue& input,
 Sum::Sum(const XlaValue& input, std::vector<int64_t> dimensions,
          bool keep_reduced_dimensions, c10::optional<at::ScalarType> dtype)
     : XlaNode(torch::lazy::OpKind(at::aten::sum), {input},
-           [&]() {
-             return NodeOutputShape(input, dimensions, keep_reduced_dimensions,
-                                    dtype);
-           },
-           /*num_outputs=*/1,
-           torch::lazy::MHash(dimensions, keep_reduced_dimensions,
-                              torch::lazy::OptionalOr<int>(dtype, -1))),
+              [&]() {
+                return NodeOutputShape(input, dimensions,
+                                       keep_reduced_dimensions, dtype);
+              },
+              /*num_outputs=*/1,
+              torch::lazy::MHash(dimensions, keep_reduced_dimensions,
+                                 torch::lazy::OptionalOr<int>(dtype, -1))),
       dimensions_(std::move(dimensions)),
       keep_reduced_dimensions_(keep_reduced_dimensions),
       dtype_(dtype) {}
@@ -62,7 +62,8 @@ XlaOpVector Sum::Lower(LoweringContext* loctx) const {
 
 std::string Sum::ToString() const {
   std::stringstream ss;
-  ss << XlaNode::ToString() << ", dimensions=(" << absl::StrJoin(dimensions_, ", ")
+  ss << XlaNode::ToString() << ", dimensions=("
+     << absl::StrJoin(dimensions_, ", ")
      << "), keep_reduced_dimensions=" << keep_reduced_dimensions_
      << ", dtype=" << torch::lazy::OptionalOr<int>(dtype_, -1);
   return ss.str();

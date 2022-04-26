@@ -42,15 +42,15 @@ ConvolutionBackwardOverrideable::ConvolutionBackwardOverrideable(
     std::vector<int64_t> dilation, bool transposed,
     std::vector<int64_t> output_padding, int64_t groups)
     : XlaNode(torch::lazy::OpKind(at::aten::convolution_backward_overrideable),
-           {grad_output, input, weight},
-           [&]() {
-             return NodeOutputShape(grad_output, input, weight, stride, padding,
-                                    dilation, transposed, output_padding,
-                                    groups);
-           },
-           /*num_outputs=*/3,
-           torch::lazy::MHash(stride, padding, dilation, transposed,
-                              output_padding, groups)),
+              {grad_output, input, weight},
+              [&]() {
+                return NodeOutputShape(grad_output, input, weight, stride,
+                                       padding, dilation, transposed,
+                                       output_padding, groups);
+              },
+              /*num_outputs=*/3,
+              torch::lazy::MHash(stride, padding, dilation, transposed,
+                                 output_padding, groups)),
       stride_(std::move(stride)),
       padding_(std::move(padding)),
       dilation_(std::move(dilation)),

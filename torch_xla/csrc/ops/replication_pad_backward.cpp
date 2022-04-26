@@ -27,8 +27,8 @@ ReplicationPadBackward::ReplicationPadBackward(const XlaValue& grad_output,
                                                const XlaValue& input,
                                                std::vector<int64_t> padding)
     : XlaNode(xla_replication_pad_backward, {grad_output, input},
-           [&]() { return NodeOutputShape(grad_output, input, padding); },
-           /*num_outputs=*/1, torch::lazy::MHash(padding)),
+              [&]() { return NodeOutputShape(grad_output, input, padding); },
+              /*num_outputs=*/1, torch::lazy::MHash(padding)),
       padding_(std::move(padding)) {}
 
 torch::lazy::NodePtr ReplicationPadBackward::Clone(OpList operands) const {

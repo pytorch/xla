@@ -12,8 +12,8 @@ namespace ops {
 MaskedFill::MaskedFill(const XlaValue& input, const XlaValue& mask,
                        const at::Scalar& value)
     : XlaNode(torch::lazy::OpKind(at::aten::masked_fill), {input, mask},
-           input.xla_shape(),
-           /*num_outputs=*/1, ScalarHash(value)),
+              input.xla_shape(),
+              /*num_outputs=*/1, ScalarHash(value)),
       value_(std::move(value)) {}
 
 torch::lazy::NodePtr MaskedFill::Clone(OpList operands) const {

@@ -31,8 +31,8 @@ xla::Shape NodeOutputShape(const XlaValue& input, int dim) {
 
 Squeeze::Squeeze(const XlaValue& input, int dim)
     : XlaNode(torch::lazy::OpKind(at::aten::squeeze), {input},
-           [&]() { return NodeOutputShape(input, dim); },
-           /*num_outputs=*/1, torch::lazy::MHash(dim)),
+              [&]() { return NodeOutputShape(input, dim); },
+              /*num_outputs=*/1, torch::lazy::MHash(dim)),
       dim_(dim) {}
 
 torch::lazy::NodePtr Squeeze::Clone(OpList operands) const {

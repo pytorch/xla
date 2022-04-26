@@ -27,8 +27,8 @@ xla::Shape NodeOutputShape(absl::Span<const ir::XlaValue> values, int64_t dim) {
 
 Cat::Cat(absl::Span<const ir::XlaValue> values, int64_t dim)
     : XlaNode(torch::lazy::OpKind(at::aten::cat), values,
-           [&]() { return NodeOutputShape(values, dim); },
-           /*num_outputs=*/1, torch::lazy::MHash(dim)),
+              [&]() { return NodeOutputShape(values, dim); },
+              /*num_outputs=*/1, torch::lazy::MHash(dim)),
       dim_(dim) {}
 
 torch::lazy::NodePtr Cat::Clone(OpList operands) const {

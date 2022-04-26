@@ -203,8 +203,8 @@ std::pair<at::Tensor, std::shared_ptr<ir::XlaValue>> AllReduce(
 
 std::pair<at::Tensor, std::shared_ptr<ir::XlaValue>> ReduceScatter(
     const std::string& reduce_type, const at::Tensor& input,
-    const std::shared_ptr<ir::XlaValue>& token, double scale, int64_t scatter_dim,
-    int64_t shard_count,
+    const std::shared_ptr<ir::XlaValue>& token, double scale,
+    int64_t scatter_dim, int64_t shard_count,
     const std::vector<std::vector<int64_t>>& replica_groups, bool pin_layout) {
   XLATensor result;
   ir::XlaValue new_token;
@@ -218,8 +218,8 @@ std::pair<at::Tensor, std::shared_ptr<ir::XlaValue>> ReduceScatter(
 
 std::shared_ptr<ir::XlaValue> ReduceScatterOut(
     const std::string& reduce_type, at::Tensor& output, const at::Tensor& input,
-    const std::shared_ptr<ir::XlaValue>& token, double scale, int64_t scatter_dim,
-    int64_t shard_count,
+    const std::shared_ptr<ir::XlaValue>& token, double scale,
+    int64_t scatter_dim, int64_t shard_count,
     const std::vector<std::vector<int64_t>>& replica_groups, bool pin_layout) {
   XLATensor out = bridge::GetXlaTensor(output);
   ir::XlaValue new_token;
@@ -244,7 +244,8 @@ std::pair<at::Tensor, std::shared_ptr<ir::XlaValue>> AllGather(
 
 std::shared_ptr<ir::XlaValue> AllGatherOut(
     at::Tensor& output, const at::Tensor& input,
-    const std::shared_ptr<ir::XlaValue>& token, int64_t dim, int64_t shard_count,
+    const std::shared_ptr<ir::XlaValue>& token, int64_t dim,
+    int64_t shard_count,
     const std::vector<std::vector<int64_t>>& replica_groups, bool pin_layout) {
   XLATensor out = bridge::GetXlaTensor(output);
   ir::XlaValue new_token;

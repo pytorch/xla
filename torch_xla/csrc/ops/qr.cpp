@@ -43,8 +43,8 @@ xla::Shape NodeOutputShape(const XlaValue& input, bool some) {
 
 QR::QR(const XlaValue& input, bool some)
     : XlaNode(torch::lazy::OpKind(at::aten::qr), {input},
-           [&]() { return NodeOutputShape(input, some); },
-           /*num_outputs=*/2, torch::lazy::MHash(some)),
+              [&]() { return NodeOutputShape(input, some); },
+              /*num_outputs=*/2, torch::lazy::MHash(some)),
       some_(some) {}
 
 torch::lazy::NodePtr QR::Clone(OpList operands) const {

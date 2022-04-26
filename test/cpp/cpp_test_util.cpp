@@ -251,7 +251,7 @@ std::string GetTensorHloGraph(at::Tensor tensor) {
 }
 
 ir::XlaValue GetTensorIrValue(const at::Tensor& tensor,
-                           const torch::lazy::BackendDevice& device) {
+                              const torch::lazy::BackendDevice& device) {
   xla::ComputationClient::DataPtr data = TensorToXlaData(tensor, device);
   return ir::MakeNode<ir::ops::DeviceData>(std::move(data));
 }

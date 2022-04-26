@@ -21,10 +21,11 @@ xla::Shape NodeOutputShape(const XlaValue& input,
 
 }  // namespace
 
-ReplicationPad::ReplicationPad(const XlaValue& input, std::vector<int64_t> padding)
+ReplicationPad::ReplicationPad(const XlaValue& input,
+                               std::vector<int64_t> padding)
     : XlaNode(xla_replication_pad, {input},
-           [&]() { return NodeOutputShape(input, padding); },
-           /*num_outputs=*/1, torch::lazy::MHash(padding)),
+              [&]() { return NodeOutputShape(input, padding); },
+              /*num_outputs=*/1, torch::lazy::MHash(padding)),
       padding_(std::move(padding)) {}
 
 torch::lazy::NodePtr ReplicationPad::Clone(OpList operands) const {

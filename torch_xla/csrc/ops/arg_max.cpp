@@ -21,8 +21,8 @@ xla::Shape NodeOutputShape(const XlaValue& input, int64_t dim, bool keepdim) {
 
 ArgMax::ArgMax(const XlaValue& input, int64_t dim, bool keepdim)
     : XlaNode(torch::lazy::OpKind(at::aten::argmax), {input},
-           [&]() { return NodeOutputShape(input, dim, keepdim); },
-           /*num_outputs=*/1, torch::lazy::MHash(dim, keepdim)),
+              [&]() { return NodeOutputShape(input, dim, keepdim); },
+              /*num_outputs=*/1, torch::lazy::MHash(dim, keepdim)),
       dim_(dim),
       keepdim_(keepdim) {}
 

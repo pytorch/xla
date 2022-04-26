@@ -28,8 +28,8 @@ inline torch::lazy::NodePtr ConstantOp(xla::Literal value) {
 }
 
 inline torch::lazy::NodePtr GenericOp(
-    torch::lazy::OpKind op, absl::Span<const XlaValue> operands, xla::Shape shape,
-    Generic::LowerFn lower_fn, size_t num_outputs = 1,
+    torch::lazy::OpKind op, absl::Span<const XlaValue> operands,
+    xla::Shape shape, Generic::LowerFn lower_fn, size_t num_outputs = 1,
     // cast to uint32_t to avoid ambiguous constructor of uint128
     torch::lazy::hash_t hash_seed = (uint32_t)0x5a2d296e9) {
   return torch_xla::ir::MakeNode<Generic>(std::move(op), operands,
@@ -149,7 +149,8 @@ torch::lazy::NodePtr Sigmoid(const XlaValue& input);
 
 torch::lazy::NodePtr SiLU(const XlaValue& input);
 
-torch::lazy::NodePtr SiLUBackward(const XlaValue& grad_output, const XlaValue& input);
+torch::lazy::NodePtr SiLUBackward(const XlaValue& grad_output,
+                                  const XlaValue& input);
 
 torch::lazy::NodePtr SigmoidBackward(const XlaValue& grad_output,
                                      const XlaValue& output);
@@ -214,7 +215,8 @@ torch::lazy::NodePtr Elu(const XlaValue& input, const at::Scalar& alpha,
                          const at::Scalar& scale,
                          const at::Scalar& input_scale);
 
-torch::lazy::NodePtr EluBackward(const XlaValue& grad_output, const XlaValue& output,
+torch::lazy::NodePtr EluBackward(const XlaValue& grad_output,
+                                 const XlaValue& output,
                                  const at::Scalar& alpha,
                                  const at::Scalar& scale,
                                  const at::Scalar& input_scale);
@@ -241,7 +243,8 @@ torch::lazy::NodePtr Take(const XlaValue& input, const XlaValue& index);
 
 torch::lazy::NodePtr TanhGelu(const XlaValue& input);
 
-torch::lazy::NodePtr TanhGeluBackward(const XlaValue& grad, const XlaValue& input);
+torch::lazy::NodePtr TanhGeluBackward(const XlaValue& grad,
+                                      const XlaValue& input);
 
 torch::lazy::NodePtr LogDet(const XlaValue& input);
 
@@ -250,7 +253,8 @@ torch::lazy::NodePtr Inverse(const XlaValue& input);
 torch::lazy::NodePtr IsNan(const XlaValue& input);
 
 torch::lazy::NodePtr BaddBmm(const XlaValue& lhs, const XlaValue& rhs,
-                             const XlaValue& bias, const XlaValue& product_multiplier,
+                             const XlaValue& bias,
+                             const XlaValue& product_multiplier,
                              const XlaValue& bias_multiplier);
 
 torch::lazy::NodePtr Lerp(const XlaValue& start, const XlaValue& end,

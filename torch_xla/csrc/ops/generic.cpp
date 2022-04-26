@@ -9,7 +9,8 @@ namespace ops {
 Generic::Generic(torch::lazy::OpKind op, absl::Span<const XlaValue> operands,
                  xla::Shape shape, LowerFn lower_fn, size_t num_outputs,
                  torch::lazy::hash_t hash_seed)
-    : XlaNode(std::move(op), operands, std::move(shape), num_outputs, hash_seed),
+    : XlaNode(std::move(op), operands, std::move(shape), num_outputs,
+              hash_seed),
       lower_fn_(std::move(lower_fn)),
       hash_seed_(hash_seed) {}
 

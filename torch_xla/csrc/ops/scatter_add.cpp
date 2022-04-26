@@ -9,11 +9,11 @@ namespace torch_xla {
 namespace ir {
 namespace ops {
 
-ScatterAdd::ScatterAdd(const XlaValue& input, const XlaValue& index, const XlaValue& src,
-                       int64_t dim)
+ScatterAdd::ScatterAdd(const XlaValue& input, const XlaValue& index,
+                       const XlaValue& src, int64_t dim)
     : XlaNode(torch::lazy::OpKind(at::aten::scatter_add), {input, index, src},
-           input.xla_shape(),
-           /*num_outputs=*/1, torch::lazy::MHash(dim)),
+              input.xla_shape(),
+              /*num_outputs=*/1, torch::lazy::MHash(dim)),
       dim_(dim) {}
 
 torch::lazy::NodePtr ScatterAdd::Clone(OpList operands) const {

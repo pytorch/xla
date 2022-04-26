@@ -24,8 +24,8 @@ xla::Shape NodeOutputShape(const XlaValue& input,
 
 Repeat::Repeat(const XlaValue& input, std::vector<int64_t> repeats)
     : XlaNode(torch::lazy::OpKind(at::aten::repeat), {input},
-           [&]() { return NodeOutputShape(input, repeats); },
-           /*num_outputs=*/1, torch::lazy::MHash(repeats)),
+              [&]() { return NodeOutputShape(input, repeats); },
+              /*num_outputs=*/1, torch::lazy::MHash(repeats)),
       repeats_(std::move(repeats)) {}
 
 torch::lazy::NodePtr Repeat::Clone(OpList operands) const {

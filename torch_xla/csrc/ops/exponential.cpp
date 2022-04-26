@@ -11,7 +11,7 @@ namespace ops {
 Exponential::Exponential(const XlaValue& lambda, const XlaValue& seed,
                          xla::Shape shape)
     : XlaNode(torch::lazy::OpKind(at::aten::exponential), {lambda, seed},
-           std::move(shape)) {}
+              std::move(shape)) {}
 
 torch::lazy::NodePtr Exponential::Clone(OpList operands) const {
   return ir::MakeNode<Exponential>(operands.at(0), operands.at(1), xla_shape());

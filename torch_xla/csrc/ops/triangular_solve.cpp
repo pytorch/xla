@@ -77,9 +77,9 @@ TriangularSolve::TriangularSolve(const XlaValue& rhs, const XlaValue& lhs,
                                  bool left_side, bool lower, bool transpose,
                                  bool unit_diagonal)
     : XlaNode(torch::lazy::OpKind(at::aten::triangular_solve), {rhs, lhs},
-           [&]() { return NodeOutputShape(rhs, lhs); },
-           /*num_outputs=*/2,
-           torch::lazy::MHash(left_side, lower, transpose, unit_diagonal)),
+              [&]() { return NodeOutputShape(rhs, lhs); },
+              /*num_outputs=*/2,
+              torch::lazy::MHash(left_side, lower, transpose, unit_diagonal)),
       left_side_(left_side),
       lower_(lower),
       transpose_(transpose),
@@ -101,8 +101,9 @@ XlaOpVector TriangularSolve::Lower(LoweringContext* loctx) const {
 
 std::string TriangularSolve::ToString() const {
   std::stringstream ss;
-  ss << XlaNode::ToString() << ", left_side=" << left_side_ << ", lower=" << lower_
-     << ", transpose=" << transpose_ << ", unit_diagonal=" << unit_diagonal_;
+  ss << XlaNode::ToString() << ", left_side=" << left_side_
+     << ", lower=" << lower_ << ", transpose=" << transpose_
+     << ", unit_diagonal=" << unit_diagonal_;
   return ss.str();
 }
 

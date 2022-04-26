@@ -9,9 +9,10 @@ namespace ops {
 class AdamOptimizerStep : public XlaNode {
  public:
   AdamOptimizerStep(const XlaValue& found_inf, const XlaValue& step,
-                    const XlaValue& param, const XlaValue& grad, const XlaValue& exp_avg,
-                    const XlaValue& exp_avg_sq, const XlaValue& max_exp_avg_sq,
-                    const XlaValue& beta1, const XlaValue& beta2, const XlaValue& lr,
+                    const XlaValue& param, const XlaValue& grad,
+                    const XlaValue& exp_avg, const XlaValue& exp_avg_sq,
+                    const XlaValue& max_exp_avg_sq, const XlaValue& beta1,
+                    const XlaValue& beta2, const XlaValue& lr,
                     const XlaValue& weight_decay, const XlaValue& eps,
                     bool use_weight_decay, bool use_amsgrad, bool use_adamw);
 

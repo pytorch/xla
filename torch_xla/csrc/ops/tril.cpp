@@ -9,7 +9,7 @@ namespace ops {
 
 Tril::Tril(const XlaValue& input, int64_t diagonal)
     : XlaNode(torch::lazy::OpKind(at::aten::tril), {input}, input.xla_shape(),
-           /*num_outputs=*/1, torch::lazy::MHash(diagonal)),
+              /*num_outputs=*/1, torch::lazy::MHash(diagonal)),
       diagonal_(diagonal) {}
 
 torch::lazy::NodePtr Tril::Clone(OpList operands) const {

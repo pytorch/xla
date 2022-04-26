@@ -177,7 +177,7 @@ XlaOpVector Node::ReturnOp(xla::XlaOp op, LoweringContext* loctx) const {
 }
 
 XlaOpVector XlaNode::ReturnOps(absl::Span<const xla::XlaOp> ops,
-                            LoweringContext* loctx) const {
+                               LoweringContext* loctx) const {
   XLA_CHECK_EQ(num_outputs(), ops.size());
   XlaOpVector result;
   for (size_t i = 0; i < ops.size(); ++i) {
@@ -196,14 +196,15 @@ XlaOpVector XlaNode::Lower(LoweringContext* loctx) const {
 }
 
 torch::lazy::hash_t XlaNode::GetOpHash(torch::lazy::OpKind op,
-                                    const xla::Shape& shape,
-                                    torch::lazy::hash_t hash_seed) {
+                                       const xla::Shape& shape,
+                                       torch::lazy::hash_t hash_seed) {
   torch::lazy::hash_t h =
       torch::lazy::HashCombine(op.hash(), torch::lazy::Hash(shape.ToString()));
   return torch::lazy::HashCombine(h, hash_seed);
 }
 
-xla::Shape XlaNode::GetOpShape(const std::function<xla::Shape()>& shape_fn) const {
+xla::Shape XlaNode::GetOpShape(
+    const std::function<xla::Shape()>& shape_fn) const {
   ShapeCache* shape_cache = GetShapeCache();
   auto shape = shape_cache->Get(hash());
   if (shape == nullptr) {

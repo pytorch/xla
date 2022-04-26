@@ -11,8 +11,8 @@ namespace ops {
 
 Hardshrink::Hardshrink(const XlaValue& input, const at::Scalar& lambda)
     : XlaNode(torch::lazy::OpKind(at::aten::hardshrink), {input},
-           input.xla_shape(),
-           /*num_outputs=*/1, ScalarHash(lambda)),
+              input.xla_shape(),
+              /*num_outputs=*/1, ScalarHash(lambda)),
       lambda_(std::move(lambda)) {}
 
 std::string Hardshrink::ToString() const {

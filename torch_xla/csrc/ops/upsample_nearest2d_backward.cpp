@@ -12,12 +12,13 @@ namespace ops {
 UpsampleNearestBackward::UpsampleNearestBackward(
     const XlaValue& input, std::vector<int64_t> output_size,
     std::vector<int64_t> input_size)
-    : XlaNode(torch::lazy::OpKind(at::aten::upsample_nearest2d_backward), {input},
-           [&]() {
-             return resize::GetBackwardOutputShape2d(input.xla_shape(),
-                                                     input_size);
-           },
-           /*num_outputs=*/1, torch::lazy::MHash(output_size, input_size)),
+    : XlaNode(torch::lazy::OpKind(at::aten::upsample_nearest2d_backward),
+              {input},
+              [&]() {
+                return resize::GetBackwardOutputShape2d(input.xla_shape(),
+                                                        input_size);
+              },
+              /*num_outputs=*/1, torch::lazy::MHash(output_size, input_size)),
       output_size_(std::move(output_size)),
       input_size_(std::move(input_size)) {}
 

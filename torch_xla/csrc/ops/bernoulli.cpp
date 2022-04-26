@@ -11,7 +11,7 @@ namespace ops {
 Bernoulli::Bernoulli(const XlaValue& probability, const XlaValue& seed,
                      xla::Shape shape)
     : XlaNode(torch::lazy::OpKind(at::aten::bernoulli), {probability, seed},
-           std::move(shape)) {}
+              std::move(shape)) {}
 
 torch::lazy::NodePtr Bernoulli::Clone(OpList operands) const {
   return ir::MakeNode<Bernoulli>(operands.at(0), operands.at(1), xla_shape());

@@ -17,19 +17,17 @@ xla::Shape NodeOutputShape(const XlaValue& step, const XlaValue& param) {
 
 }  // namespace
 
-SgdOptimizerStep::SgdOptimizerStep(const XlaValue& found_inf, const XlaValue& step,
-                                   const XlaValue& param, const XlaValue& buf,
-                                   const XlaValue& d_p, const XlaValue& weight_decay,
-                                   const XlaValue& momentum, const XlaValue& lr,
-                                   const XlaValue& dampening,
-                                   bool use_weight_decay, bool use_momentum,
-                                   bool use_nesterov)
+SgdOptimizerStep::SgdOptimizerStep(
+    const XlaValue& found_inf, const XlaValue& step, const XlaValue& param,
+    const XlaValue& buf, const XlaValue& d_p, const XlaValue& weight_decay,
+    const XlaValue& momentum, const XlaValue& lr, const XlaValue& dampening,
+    bool use_weight_decay, bool use_momentum, bool use_nesterov)
     : XlaNode(xla_sgd_optimizer_step,
-           {found_inf, step, param, buf, d_p, weight_decay, momentum, lr,
-            dampening},
-           NodeOutputShape(step, param),
-           /*num_outputs=*/3,
-           torch::lazy::MHash(use_weight_decay, use_momentum, use_nesterov)),
+              {found_inf, step, param, buf, d_p, weight_decay, momentum, lr,
+               dampening},
+              NodeOutputShape(step, param),
+              /*num_outputs=*/3,
+              torch::lazy::MHash(use_weight_decay, use_momentum, use_nesterov)),
       use_weight_decay_(use_weight_decay),
       use_momentum_(use_momentum),
       use_nesterov_(use_nesterov) {}

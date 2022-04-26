@@ -25,8 +25,8 @@ xla::Shape NodeOutputShape(const XlaValue& input) {
 
 NonZero::NonZero(const XlaValue& input)
     : XlaNode(torch::lazy::OpKind(at::aten::nonzero), {input},
-           NodeOutputShape(input),
-           /*num_outputs=*/2) {}
+              NodeOutputShape(input),
+              /*num_outputs=*/2) {}
 
 torch::lazy::NodePtr NonZero::Clone(OpList operands) const {
   return ir::MakeNode<NonZero>(operands.at(0));

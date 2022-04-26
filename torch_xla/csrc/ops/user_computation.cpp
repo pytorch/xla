@@ -16,8 +16,8 @@ size_t GetNumOutputs(const xla::Shape& shape) {
 UserComputation::UserComputation(torch::lazy::OpKind op, OpList operands,
                                  ComputationPtr computation)
     : XlaNode(std::move(op), operands, computation->program_shape().result(),
-           GetNumOutputs(computation->program_shape().result()),
-           computation->hash()),
+              GetNumOutputs(computation->program_shape().result()),
+              computation->hash()),
       computation_(std::move(computation)) {}
 
 torch::lazy::NodePtr UserComputation::Clone(OpList operands) const {

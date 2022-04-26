@@ -47,11 +47,12 @@ AsStridedViewUpdate::AsStridedViewUpdate(const XlaValue& target,
                                          std::vector<int64_t> stride,
                                          int64_t storage_offset)
     : XlaNode(xla_as_strided_view_update, {target, input},
-           [&]() {
-             return xla::ShapeUtil::MakeShape(target.xla_shape().element_type(),
-                                              size);
-           },
-           /*num_outputs=*/1, torch::lazy::MHash(size, stride, storage_offset)),
+              [&]() {
+                return xla::ShapeUtil::MakeShape(
+                    target.xla_shape().element_type(), size);
+              },
+              /*num_outputs=*/1,
+              torch::lazy::MHash(size, stride, storage_offset)),
       size_(std::move(size)),
       stride_(std::move(stride)),
       storage_offset_(storage_offset) {}

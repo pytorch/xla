@@ -36,9 +36,9 @@ c10::Symbol MaxUnpoolNdSymbol(int64_t spatial_dim_count) {
 MaxUnpoolNd::MaxUnpoolNd(const XlaValue& input, const XlaValue& indices,
                          std::vector<int64_t> output_size)
     : XlaNode(torch::lazy::OpKind(MaxUnpoolNdSymbol(output_size.size())),
-           {input, indices},
-           [&]() { return NodeOutputShape(input, indices, output_size); },
-           /*num_outputs=*/1, torch::lazy::MHash(output_size)),
+              {input, indices},
+              [&]() { return NodeOutputShape(input, indices, output_size); },
+              /*num_outputs=*/1, torch::lazy::MHash(output_size)),
       output_size_(std::move(output_size)) {}
 
 torch::lazy::NodePtr MaxUnpoolNd::Clone(OpList operands) const {

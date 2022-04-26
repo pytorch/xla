@@ -10,7 +10,8 @@ namespace ir {
 namespace ops {
 
 XlaValue BitwiseAnd(const XlaValue& node1, const XlaValue& node2) {
-  auto lower_fn = [](const XlaNode& node, LoweringContext* loctx) -> XlaOpVector {
+  auto lower_fn = [](const XlaNode& node,
+                     LoweringContext* loctx) -> XlaOpVector {
     xla::XlaOp op0 = loctx->GetOutputOp(node.operand(0));
     xla::XlaOp op1 = loctx->GetOutputOp(node.operand(1));
     xla::XlaOp result = XlaHelpers::PromotedBinaryOp(
@@ -31,7 +32,8 @@ XlaValue BitwiseAnd(const XlaValue& node1, const XlaValue& node2) {
 }
 
 XlaValue BitwiseOr(const XlaValue& node1, const XlaValue& node2) {
-  auto lower_fn = [](const XlaNode& node, LoweringContext* loctx) -> XlaOpVector {
+  auto lower_fn = [](const XlaNode& node,
+                     LoweringContext* loctx) -> XlaOpVector {
     xla::XlaOp op0 = loctx->GetOutputOp(node.operand(0));
     xla::XlaOp op1 = loctx->GetOutputOp(node.operand(1));
     xla::XlaOp result = XlaHelpers::PromotedBinaryOp(
@@ -52,7 +54,8 @@ XlaValue BitwiseOr(const XlaValue& node1, const XlaValue& node2) {
 }
 
 XlaValue BitwiseXor(const XlaValue& node1, const XlaValue& node2) {
-  auto lower_fn = [](const XlaNode& node, LoweringContext* loctx) -> XlaOpVector {
+  auto lower_fn = [](const XlaNode& node,
+                     LoweringContext* loctx) -> XlaOpVector {
     xla::XlaOp op0 = loctx->GetOutputOp(node.operand(0));
     xla::XlaOp op1 = loctx->GetOutputOp(node.operand(1));
     xla::XlaOp result = XlaHelpers::PromotedBinaryOp(

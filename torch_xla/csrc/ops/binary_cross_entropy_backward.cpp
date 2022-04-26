@@ -38,14 +38,14 @@ BinaryCrossEntropyBackward::BinaryCrossEntropyBackward(
     const XlaValue& grad_output, const XlaValue& logits, const XlaValue& labels,
     const absl::optional<XlaValue>& weight, ReductionMode reduction)
     : XlaNode(torch::lazy::OpKind(at::aten::binary_cross_entropy_backward),
-           xla::util::GetValuesVector<XlaValue>({grad_output, logits, labels},
-                                             {&weight}),
-           [&]() {
-             return NodeOutputShape(grad_output, logits, labels, weight,
-                                    reduction);
-           },
-           /*num_outputs=*/1,
-           torch::lazy::MHash(torch::lazy::GetEnumValue(reduction))),
+              xla::util::GetValuesVector<XlaValue>(
+                  {grad_output, logits, labels}, {&weight}),
+              [&]() {
+                return NodeOutputShape(grad_output, logits, labels, weight,
+                                       reduction);
+              },
+              /*num_outputs=*/1,
+              torch::lazy::MHash(torch::lazy::GetEnumValue(reduction))),
       reduction_(reduction) {}
 
 torch::lazy::NodePtr BinaryCrossEntropyBackward::Clone(OpList operands) const {

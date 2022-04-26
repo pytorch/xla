@@ -12,9 +12,9 @@ namespace ops {
 
 Gather::Gather(const XlaValue& input, int64_t dim, const XlaValue& index)
     : XlaNode(torch::lazy::OpKind(at::aten::gather), {input, index},
-           xla::ShapeUtil::MakeShape(input.xla_shape().element_type(),
-                                     index.xla_shape().dimensions()),
-           /*num_outputs=*/1, torch::lazy::MHash(dim)),
+              xla::ShapeUtil::MakeShape(input.xla_shape().element_type(),
+                                        index.xla_shape().dimensions()),
+              /*num_outputs=*/1, torch::lazy::MHash(dim)),
       dim_(dim) {}
 
 torch::lazy::NodePtr Gather::Clone(OpList operands) const {

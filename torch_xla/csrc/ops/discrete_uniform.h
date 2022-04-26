@@ -8,8 +8,8 @@ namespace ops {
 
 class DiscreteUniform : public XlaNode {
  public:
-  DiscreteUniform(const XlaValue& from, const XlaValue& to, const XlaValue& seed,
-                  const xla::Shape& rng_shape);
+  DiscreteUniform(const XlaValue& from, const XlaValue& to,
+                  const XlaValue& seed, const xla::Shape& rng_shape);
 
   torch::lazy::NodePtr Clone(OpList operands) const override;
 

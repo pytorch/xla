@@ -24,7 +24,7 @@ xla::Shape NodeOutputShape(absl::Span<const XlaValue> operands,
 }
 
 std::vector<XlaValue> GetOperandList(absl::Span<const XlaValue> operands,
-                                  const XlaValue& token) {
+                                     const XlaValue& token) {
   std::vector<XlaValue> operand_list(operands.begin(), operands.end());
   operand_list.push_back(token);
   return operand_list;
@@ -37,10 +37,10 @@ AllReduce::AllReduce(AllReduceType reduce_type,
                      double scale, std::vector<std::vector<int64_t>> groups,
                      bool pin_layout)
     : XlaNode(xla_cross_replica_sum, GetOperandList(operands, token),
-           [&]() { return NodeOutputShape(operands, token); },
-           /*num_outputs=*/operands.size() + 1,
-           torch::lazy::MHash(torch::lazy::GetEnumValue(reduce_type), scale,
-                              groups, pin_layout)),
+              [&]() { return NodeOutputShape(operands, token); },
+              /*num_outputs=*/operands.size() + 1,
+              torch::lazy::MHash(torch::lazy::GetEnumValue(reduce_type), scale,
+                                 groups, pin_layout)),
       reduce_type_(reduce_type),
       scale_(scale),
       groups_(std::move(groups)),

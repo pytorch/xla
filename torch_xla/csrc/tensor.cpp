@@ -215,9 +215,10 @@ XlaDataCacheArena::XlaDataCache* GetXlaDataCache(
   return arena->Get(device);
 }
 
-ir::XlaValue IrValueFromScalar(const at::Scalar& value, at::ScalarType scalar_type,
-                            const torch::lazy::BackendDevice& device,
-                            bool transfer_async) {
+ir::XlaValue IrValueFromScalar(const at::Scalar& value,
+                               at::ScalarType scalar_type,
+                               const torch::lazy::BackendDevice& device,
+                               bool transfer_async) {
   at::Tensor tensor = at::scalar_tensor(value, at::TensorOptions(scalar_type));
   xla::ComputationClient::DataPtr device_data =
       TensorToXlaData(tensor, device, transfer_async);
@@ -336,10 +337,10 @@ class XLATensor::DeviceContextArena {
     devctx->running_seed = kSeedAdd + kSeedMul * devctx->running_seed;
     // Compose new seeds from the root seed, to avoid creating too many XLA
     // computation parameters which might overflow the TPU capacity.
-    ir::XlaValue k = ir::ops::ScalarOp(MakeIntScalar(kSeedMul),
-                                    MakeXlaPrimitiveType(kSeedType, &device));
-    ir::XlaValue b = ir::ops::ScalarOp(MakeIntScalar(kSeedAdd),
-                                    MakeXlaPrimitiveType(kSeedType, &device));
+    ir::XlaValue k = ir::ops::ScalarOp(
+        MakeIntScalar(kSeedMul), MakeXlaPrimitiveType(kSeedType, &device));
+    ir::XlaValue b = ir::ops::ScalarOp(
+        MakeIntScalar(kSeedAdd), MakeXlaPrimitiveType(kSeedType, &device));
     devctx->seed_ir_value = b + k * devctx->seed_ir_value;
     return devctx->seed_ir_value;
   }
@@ -757,7 +758,7 @@ ir::XlaValue XLATensor::GetDeviceDataIrValue(
 }
 
 ir::XlaValue XLATensor::GetIrValueForConstant(const at::Scalar& value,
-                                           const xla::Shape& shape) {
+                                              const xla::Shape& shape) {
   ir::XlaValue ir_value =
       ir::ops::ScalarOp(std::move(value), shape.element_type());
   if (!shape.dimensions().empty()) {
@@ -882,8 +883,8 @@ at::Tensor XLATensor::ToTensor(bool detached) {
   c10::optional<at::Tensor> tensor_data = CurrentTensorData();
   if (!tensor_data) {
     DeviceBarrier(GetDevice());
-    // The GetXlaData() call will trigger an ApplyPendingGraph() if an IR XlaNode
-    // is available on the tensor.
+    // The GetXlaData() call will trigger an ApplyPendingGraph() if an IR
+    // XlaNode is available on the tensor.
     std::vector<at::Tensor> tensors = XlaDataToTensors({GetXlaData()}, dtype());
     tensor = std::move(tensors.front());
     if (!detached) {
@@ -1087,7 +1088,7 @@ std::vector<XLATensor> XLATensor::CreateTensors(
 }
 
 ir::XlaValue XLATensor::CreateTensorNode(xla::ComputationClient::DataPtr data,
-                                      bool read_only) const {
+                                         bool read_only) const {
   data->SetInfo(std::make_shared<DeviceDataInfo>(GetUniqueId(), read_only));
   return ir::MakeNode<ir::ops::DeviceData>(std::move(data));
 }

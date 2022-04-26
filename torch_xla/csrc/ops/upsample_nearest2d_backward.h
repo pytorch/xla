@@ -10,7 +10,8 @@ namespace ops {
 
 class UpsampleNearestBackward : public XlaNode {
  public:
-  UpsampleNearestBackward(const XlaValue& input, std::vector<int64_t> output_size,
+  UpsampleNearestBackward(const XlaValue& input,
+                          std::vector<int64_t> output_size,
                           std::vector<int64_t> input_size);
 
   torch::lazy::NodePtr Clone(OpList operands) const override;

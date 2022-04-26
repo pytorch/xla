@@ -23,8 +23,8 @@ xla::Shape NodeOutputShape(const XlaValue& input, int64_t dim, bool keepdim) {
 
 MinInDim::MinInDim(const XlaValue& input, int64_t dim, bool keepdim)
     : XlaNode(torch::lazy::OpKind(at::aten::min), {input},
-           [&]() { return NodeOutputShape(input, dim, keepdim); },
-           /*num_outputs=*/2, torch::lazy::MHash(dim, keepdim)),
+              [&]() { return NodeOutputShape(input, dim, keepdim); },
+              /*num_outputs=*/2, torch::lazy::MHash(dim, keepdim)),
       dim_(dim),
       keepdim_(keepdim) {}
 

@@ -10,7 +10,8 @@ namespace ops {
 
 class L1Loss : public XlaNode {
  public:
-  L1Loss(const XlaValue& input, const XlaValue& target, ReductionMode reduction);
+  L1Loss(const XlaValue& input, const XlaValue& target,
+         ReductionMode reduction);
 
   std::string ToString() const override;
 

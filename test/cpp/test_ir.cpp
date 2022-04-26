@@ -44,8 +44,9 @@ TEST(IrTest, TestSelectUnselect) {
         at::rand({4, 16, 3}, at::TensorOptions(at::kFloat)).abs() + 1.0;
 
     ir::XlaValue v_a = GetTensorIrValue(a, device);
-    ir::XlaValue v_s = ir::MakeNode<ir::ops::Select>(v_a, /*dim=*/1, /*start=*/3,
-                                                  /*end=*/14, /*stride=*/3);
+    ir::XlaValue v_s =
+        ir::MakeNode<ir::ops::Select>(v_a, /*dim=*/1, /*start=*/3,
+                                      /*end=*/14, /*stride=*/3);
 
     auto results = ExecuteAndFetch({v_s}, device);
     at::Tensor b =

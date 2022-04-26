@@ -12,11 +12,11 @@ namespace ops {
 UpsampleNearest::UpsampleNearest(const XlaValue& input,
                                  std::vector<int64_t> output_size)
     : XlaNode(torch::lazy::OpKind(at::aten::upsample_nearest2d), {input},
-           [&]() {
-             return resize::GetForwardOutputShape2d(input.xla_shape(),
-                                                    output_size);
-           },
-           /*num_outputs=*/1, torch::lazy::MHash(output_size)),
+              [&]() {
+                return resize::GetForwardOutputShape2d(input.xla_shape(),
+                                                       output_size);
+              },
+              /*num_outputs=*/1, torch::lazy::MHash(output_size)),
       output_size_(std::move(output_size)) {}
 
 torch::lazy::NodePtr UpsampleNearest::Clone(OpList operands) const {

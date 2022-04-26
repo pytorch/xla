@@ -35,17 +35,17 @@ xla::Shape NodeOutputShape(const XlaValue& logits, const XlaValue& labels,
 }  // namespace
 
 NllLoss::NllLoss(const XlaValue& logits, const XlaValue& labels,
-                 const absl::optional<XlaValue>& weight, ReductionMode reduction,
-                 int ignore_index)
+                 const absl::optional<XlaValue>& weight,
+                 ReductionMode reduction, int ignore_index)
     : XlaNode(torch::lazy::OpKind(at::aten::nll_loss),
-           xla::util::GetValuesVector<XlaValue>({logits, labels}, {&weight}),
-           [&]() {
-             return NodeOutputShape(logits, labels, weight, reduction,
-                                    ignore_index);
-           },
-           /*num_outputs=*/1,
-           torch::lazy::MHash(torch::lazy::GetEnumValue(reduction),
-                              ignore_index)),
+              xla::util::GetValuesVector<XlaValue>({logits, labels}, {&weight}),
+              [&]() {
+                return NodeOutputShape(logits, labels, weight, reduction,
+                                       ignore_index);
+              },
+              /*num_outputs=*/1,
+              torch::lazy::MHash(torch::lazy::GetEnumValue(reduction),
+                                 ignore_index)),
       reduction_(reduction),
       ignore_index_(ignore_index) {}
 

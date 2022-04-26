@@ -9,8 +9,9 @@ namespace ir {
 namespace ops {
 
 Cholesky::Cholesky(const XlaValue& input, bool lower)
-    : XlaNode(torch::lazy::OpKind(at::aten::cholesky), {input}, input.xla_shape(),
-           /*num_outputs=*/1, torch::lazy::MHash(lower)),
+    : XlaNode(torch::lazy::OpKind(at::aten::cholesky), {input},
+              input.xla_shape(),
+              /*num_outputs=*/1, torch::lazy::MHash(lower)),
       lower_(lower) {}
 
 torch::lazy::NodePtr Cholesky::Clone(OpList operands) const {

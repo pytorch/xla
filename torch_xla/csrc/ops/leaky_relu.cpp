@@ -9,8 +9,8 @@ namespace ops {
 
 LeakyRelu::LeakyRelu(const XlaValue& input, double negative_slope)
     : XlaNode(torch::lazy::OpKind(at::aten::leaky_relu), {input},
-           input.xla_shape(),
-           /*num_outputs=*/1, torch::lazy::MHash(negative_slope)),
+              input.xla_shape(),
+              /*num_outputs=*/1, torch::lazy::MHash(negative_slope)),
       negative_slope_(negative_slope) {}
 
 torch::lazy::NodePtr LeakyRelu::Clone(OpList operands) const {

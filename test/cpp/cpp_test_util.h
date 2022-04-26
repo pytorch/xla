@@ -86,7 +86,7 @@ std::string GetTensorDotGraph(at::Tensor tensor);
 std::string GetTensorHloGraph(at::Tensor tensor);
 
 ir::XlaValue GetTensorIrValue(const at::Tensor& tensor,
-                           const torch::lazy::BackendDevice& device);
+                              const torch::lazy::BackendDevice& device);
 
 std::vector<xla::ComputationClient::DataPtr> Execute(
     absl::Span<const ir::XlaValue> roots,

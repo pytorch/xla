@@ -30,16 +30,19 @@ xla::Shape NodeOutputShape(const XlaValue& grad_out, const XlaValue& input,
 
 }  // namespace
 
-NativeBatchNormBackward::NativeBatchNormBackward(
-    const XlaValue& grad_out, const XlaValue& input, const XlaValue& weight,
-    const XlaValue& save_mean, const XlaValue& save_invstd, bool training, double eps)
+NativeBatchNormBackward::NativeBatchNormBackward(const XlaValue& grad_out,
+                                                 const XlaValue& input,
+                                                 const XlaValue& weight,
+                                                 const XlaValue& save_mean,
+                                                 const XlaValue& save_invstd,
+                                                 bool training, double eps)
     : XlaNode(torch::lazy::OpKind(at::aten::native_batch_norm_backward),
-           {grad_out, input, weight, save_mean, save_invstd},
-           [&]() {
-             return NodeOutputShape(grad_out, input, weight, save_mean,
-                                    save_invstd, training);
-           },
-           /*num_outputs=*/3, torch::lazy::MHash(training, eps)),
+              {grad_out, input, weight, save_mean, save_invstd},
+              [&]() {
+                return NodeOutputShape(grad_out, input, weight, save_mean,
+                                       save_invstd, training);
+              },
+              /*num_outputs=*/3, torch::lazy::MHash(training, eps)),
       training_(training),
       eps_(eps) {}
 

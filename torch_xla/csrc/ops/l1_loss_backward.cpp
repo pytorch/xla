@@ -24,15 +24,16 @@ xla::Shape NodeOutputShape(const XlaValue& grad_output, const XlaValue& input,
 
 }  // namespace
 
-L1LossBackward::L1LossBackward(const XlaValue& grad_output, const XlaValue& input,
-                               const XlaValue& target, ReductionMode reduction)
+L1LossBackward::L1LossBackward(const XlaValue& grad_output,
+                               const XlaValue& input, const XlaValue& target,
+                               ReductionMode reduction)
     : XlaNode(torch::lazy::OpKind(at::aten::l1_loss_backward),
-           {grad_output, input, target},
-           [&]() {
-             return NodeOutputShape(grad_output, input, target, reduction);
-           },
-           /*num_outputs=*/1,
-           torch::lazy::MHash(torch::lazy::GetEnumValue(reduction))),
+              {grad_output, input, target},
+              [&]() {
+                return NodeOutputShape(grad_output, input, target, reduction);
+              },
+              /*num_outputs=*/1,
+              torch::lazy::MHash(torch::lazy::GetEnumValue(reduction))),
       reduction_(reduction) {}
 
 torch::lazy::NodePtr L1LossBackward::Clone(OpList operands) const {

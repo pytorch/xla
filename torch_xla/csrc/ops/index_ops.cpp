@@ -243,7 +243,8 @@ CanonicalIndexInfo GetCanonicalIndexInfo(
 }
 
 ir::XlaValue EnsureRank1(const ir::XlaValue& index) {
-  const ir::XlaNode* casted = dynamic_cast<const ir::XlaNode*>(index.node.get());
+  const ir::XlaNode* casted =
+      dynamic_cast<const ir::XlaNode*>(index.node.get());
   XLA_CHECK_LE(casted->xla_shape().rank(), 1);
   return casted->xla_shape().rank() == 0
              ? ir::MakeNode<ir::ops::Expand>(index, std::vector<int64_t>{1})
@@ -268,10 +269,10 @@ XLATensor IndexByTensors(const XLATensor& base,
 }
 
 ir::XlaValue IndexPutByTensors(const XLATensor& base,
-                            absl::Span<const XLATensor> indices,
-                            int64_t start_dim, const XLATensor& values,
-                            bool accumulate,
-                            absl::Span<const int64_t> result_permutation) {
+                               absl::Span<const XLATensor> indices,
+                               int64_t start_dim, const XLATensor& values,
+                               bool accumulate,
+                               absl::Span<const int64_t> result_permutation) {
   if (indices.empty()) {
     return base.GetIrValue();
   }
@@ -314,8 +315,8 @@ torch::lazy::NodePtr IndexFill(const XLATensor& base, int64_t dim,
                      value.GetIrValue());
 }
 
-ir::XlaValue IndexAdd(const XLATensor& base, int64_t dim, const XLATensor& index,
-                   const XLATensor& source) {
+ir::XlaValue IndexAdd(const XLATensor& base, int64_t dim,
+                      const XLATensor& index, const XLATensor& source) {
   XLA_CHECK(index.dtype() == at::ScalarType::Long ||
             index.dtype() == at::ScalarType::Int)
       << "Add index is expected to be of scalar type Long or scalar type Int, "
@@ -327,8 +328,8 @@ ir::XlaValue IndexAdd(const XLATensor& base, int64_t dim, const XLATensor& index
                     source.GetIrValue());
 }
 
-ir::XlaValue IndexCopy(const XLATensor& base, int64_t dim, const XLATensor& index,
-                    const XLATensor& source) {
+ir::XlaValue IndexCopy(const XLATensor& base, int64_t dim,
+                       const XLATensor& index, const XLATensor& source) {
   XLA_CHECK_EQ(index.dtype(), at::ScalarType::Long)
       << "Copy index is expected to be of scalar type Long, but it is "
       << index.dtype();

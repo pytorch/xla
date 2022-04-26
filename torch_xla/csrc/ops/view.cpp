@@ -28,8 +28,8 @@ xla::Shape NodeOutputShape(const XlaValue& input,
 
 View::View(const XlaValue& input, std::vector<int64_t> output_size)
     : XlaNode(torch::lazy::OpKind(at::aten::view), {input},
-           NodeOutputShape(input, output_size),
-           /*num_outputs=*/1, torch::lazy::MHash(output_size)),
+              NodeOutputShape(input, output_size),
+              /*num_outputs=*/1, torch::lazy::MHash(output_size)),
       output_size_(std::move(output_size)) {}
 
 XlaOpVector View::Lower(LoweringContext* loctx) const {

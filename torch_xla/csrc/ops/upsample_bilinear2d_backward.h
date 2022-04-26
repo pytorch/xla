@@ -10,7 +10,8 @@ namespace ops {
 
 class UpsampleBilinearBackward : public XlaNode {
  public:
-  UpsampleBilinearBackward(const XlaValue& input, std::vector<int64_t> output_size,
+  UpsampleBilinearBackward(const XlaValue& input,
+                           std::vector<int64_t> output_size,
                            std::vector<int64_t> input_size, bool align_corners);
 
   torch::lazy::NodePtr Clone(OpList operands) const override;

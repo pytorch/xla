@@ -88,12 +88,12 @@ class XLATensor {
 
   void SetXlaData(xla::ComputationClient::DataPtr xla_data);
 
-  // Retrieves the current IR XlaNode, or nullptr in case no active IR XlaNode is
-  // available.
+  // Retrieves the current IR XlaNode, or nullptr in case no active IR XlaNode
+  // is available.
   ir::XlaValue CurrentIrValue() const;
 
-  // Retrieves the IR XlaNode representing this XLATensor. One will be created if
-  // missing. Note that although this is a const API, it actually changes the
+  // Retrieves the IR XlaNode representing this XLATensor. One will be created
+  // if missing. Note that although this is a const API, it actually changes the
   // internal state ofthe object.
   ir::XlaValue GetIrValue() const;
 
@@ -128,7 +128,7 @@ class XLATensor {
   // Use with caution, constant will cause more frequent recompilation
   // compared to the device_data.
   static ir::XlaValue GetIrValueForConstant(const at::Scalar& value,
-                                         const xla::Shape& shape);
+                                            const xla::Shape& shape);
   static ir::XlaValue GetIrValueForScalar(
       const at::Scalar& value, xla::PrimitiveType type,
       const torch::lazy::BackendDevice& device);
@@ -213,35 +213,36 @@ class XLATensor {
   // XLA dedicated operators follows here, listed in alphabetical order.
   //////////////////////////////////////////////////////////////////////////////
   static std::pair<XLATensor, ir::XlaValue> all_reduce(
-      const XLATensor& input, const ir::XlaValue& token, AllReduceType reduce_type,
-      double scale, std::vector<std::vector<int64_t>> groups, bool pin_layout);
-
-  static ir::XlaValue all_reduce_(XLATensor& input, const ir::XlaValue& token,
-                               AllReduceType reduce_type, double scale,
-                               std::vector<std::vector<int64_t>> groups,
-                               bool pin_layout);
-
-  static ir::XlaValue all_reduce(std::vector<XLATensor>* inputs,
-                              const ir::XlaValue& token, AllReduceType reduce_type,
-                              double scale,
-                              std::vector<std::vector<int64_t>> groups,
-                              bool pin_layout);
-
-  static std::pair<XLATensor, ir::XlaValue> reduce_scatter(
-      const XLATensor& input, const ir::XlaValue& token, AllReduceType reduce_type,
-      double scale, int64_t scatter_dim, int64_t shard_count,
+      const XLATensor& input, const ir::XlaValue& token,
+      AllReduceType reduce_type, double scale,
       std::vector<std::vector<int64_t>> groups, bool pin_layout);
 
-  static ir::XlaValue reduce_scatter_out(XLATensor& output, const XLATensor& input,
-                                      const ir::XlaValue& token,
-                                      AllReduceType reduce_type, double scale,
-                                      int64_t scatter_dim, int64_t shard_count,
-                                      std::vector<std::vector<int64_t>> groups,
-                                      bool pin_layout);
+  static ir::XlaValue all_reduce_(XLATensor& input, const ir::XlaValue& token,
+                                  AllReduceType reduce_type, double scale,
+                                  std::vector<std::vector<int64_t>> groups,
+                                  bool pin_layout);
+
+  static ir::XlaValue all_reduce(std::vector<XLATensor>* inputs,
+                                 const ir::XlaValue& token,
+                                 AllReduceType reduce_type, double scale,
+                                 std::vector<std::vector<int64_t>> groups,
+                                 bool pin_layout);
+
+  static std::pair<XLATensor, ir::XlaValue> reduce_scatter(
+      const XLATensor& input, const ir::XlaValue& token,
+      AllReduceType reduce_type, double scale, int64_t scatter_dim,
+      int64_t shard_count, std::vector<std::vector<int64_t>> groups,
+      bool pin_layout);
+
+  static ir::XlaValue reduce_scatter_out(
+      XLATensor& output, const XLATensor& input, const ir::XlaValue& token,
+      AllReduceType reduce_type, double scale, int64_t scatter_dim,
+      int64_t shard_count, std::vector<std::vector<int64_t>> groups,
+      bool pin_layout);
 
   static std::pair<XLATensor, ir::XlaValue> all_to_all(
-      const XLATensor& input, const ir::XlaValue& token, int64_t split_dimension,
-      int64_t concat_dimension, int64_t split_count,
+      const XLATensor& input, const ir::XlaValue& token,
+      int64_t split_dimension, int64_t concat_dimension, int64_t split_count,
       std::vector<std::vector<int64_t>> groups, bool pin_layout);
 
   static std::pair<XLATensor, ir::XlaValue> all_gather(
@@ -250,10 +251,10 @@ class XLATensor {
       bool pin_layout);
 
   static ir::XlaValue all_gather_out(XLATensor& output, const XLATensor& input,
-                                  const ir::XlaValue& token, int64_t dim,
-                                  int64_t shard_count,
-                                  std::vector<std::vector<int64_t>> groups,
-                                  bool pin_layout);
+                                     const ir::XlaValue& token, int64_t dim,
+                                     int64_t shard_count,
+                                     std::vector<std::vector<int64_t>> groups,
+                                     bool pin_layout);
 
   static std::pair<XLATensor, ir::XlaValue> collective_permute(
       const XLATensor& input, const ir::XlaValue& token,
@@ -1357,7 +1358,7 @@ class XLATensor {
   void SetTensorData(at::Tensor tensor_data);
 
   ir::XlaValue CreateTensorNode(xla::ComputationClient::DataPtr data,
-                             bool read_only) const;
+                                bool read_only) const;
 
   View::IrNode GetViewUpdate(const std::shared_ptr<View>& view) const;
 
@@ -1399,8 +1400,8 @@ class XLATensor {
   std::vector<XLATensor> MakeOutputTensors(
       torch::lazy::NodePtr node, bool inherit_logical_type = true) const;
 
-  ir::XlaValue GetIrValueForTensor(const at::Tensor& tensor,
-                                const torch::lazy::BackendDevice& device) const;
+  ir::XlaValue GetIrValueForTensor(
+      const at::Tensor& tensor, const torch::lazy::BackendDevice& device) const;
 
   static ComputationCache* GetComputationCache();
 

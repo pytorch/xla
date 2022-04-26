@@ -58,12 +58,12 @@ NativeBatchNormForward::NativeBatchNormForward(const XlaValue& input,
                                                const XlaValue& running_var,
                                                bool training, double eps)
     : XlaNode(torch::lazy::OpKind(at::aten::native_batch_norm),
-           {input, weight, bias, running_mean, running_var},
-           [&]() {
-             return NodeOutputShape(input, weight, bias, running_mean,
-                                    running_var, training);
-           },
-           /*num_outputs=*/4, torch::lazy::MHash(training, eps)),
+              {input, weight, bias, running_mean, running_var},
+              [&]() {
+                return NodeOutputShape(input, weight, bias, running_mean,
+                                       running_var, training);
+              },
+              /*num_outputs=*/4, torch::lazy::MHash(training, eps)),
       training_(training),
       eps_(eps) {}
 

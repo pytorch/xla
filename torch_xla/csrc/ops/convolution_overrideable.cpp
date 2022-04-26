@@ -38,14 +38,14 @@ ConvolutionOverrideable::ConvolutionOverrideable(
     std::vector<int64_t> dilation, bool transposed,
     std::vector<int64_t> output_padding, int64_t groups)
     : XlaNode(torch::lazy::OpKind(at::aten::convolution_overrideable),
-           {input, weight, bias},
-           [&]() {
-             return NodeOutputShape(input, weight, stride, padding, dilation,
-                                    transposed, output_padding, groups);
-           },
-           /*num_outputs=*/1,
-           torch::lazy::MHash(stride, padding, dilation, transposed,
-                              output_padding, groups)),
+              {input, weight, bias},
+              [&]() {
+                return NodeOutputShape(input, weight, stride, padding, dilation,
+                                       transposed, output_padding, groups);
+              },
+              /*num_outputs=*/1,
+              torch::lazy::MHash(stride, padding, dilation, transposed,
+                                 output_padding, groups)),
       stride_(std::move(stride)),
       padding_(std::move(padding)),
       dilation_(std::move(dilation)),
@@ -58,14 +58,14 @@ ConvolutionOverrideable::ConvolutionOverrideable(
     std::vector<int64_t> padding, std::vector<int64_t> dilation,
     bool transposed, std::vector<int64_t> output_padding, int64_t groups)
     : XlaNode(torch::lazy::OpKind(at::aten::convolution_overrideable),
-           {input, weight},
-           [&]() {
-             return NodeOutputShape(input, weight, stride, padding, dilation,
-                                    transposed, output_padding, groups);
-           },
-           /*num_outputs=*/1,
-           torch::lazy::MHash(stride, padding, dilation, transposed,
-                              output_padding, groups)),
+              {input, weight},
+              [&]() {
+                return NodeOutputShape(input, weight, stride, padding, dilation,
+                                       transposed, output_padding, groups);
+              },
+              /*num_outputs=*/1,
+              torch::lazy::MHash(stride, padding, dilation, transposed,
+                                 output_padding, groups)),
       stride_(std::move(stride)),
       padding_(std::move(padding)),
       dilation_(std::move(dilation)),

@@ -11,9 +11,11 @@ namespace ir {
 namespace ops {
 
 DiscreteUniform::DiscreteUniform(const XlaValue& from, const XlaValue& to,
-                                 const XlaValue& seed, const xla::Shape& rng_shape)
-    : XlaNode(torch::lazy::OpKind(at::aten::random), {from, to, seed}, rng_shape,
-           /*num_outputs=*/1, torch::lazy::Hash(rng_shape)) {}
+                                 const XlaValue& seed,
+                                 const xla::Shape& rng_shape)
+    : XlaNode(torch::lazy::OpKind(at::aten::random), {from, to, seed},
+              rng_shape,
+              /*num_outputs=*/1, torch::lazy::Hash(rng_shape)) {}
 
 torch::lazy::NodePtr DiscreteUniform::Clone(OpList operands) const {
   return ir::MakeNode<DiscreteUniform>(operands.at(0), operands.at(1),

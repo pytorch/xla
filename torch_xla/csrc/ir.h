@@ -41,8 +41,8 @@ struct XlaValue : public torch::lazy::Value {
       : torch::lazy::Value(std::dynamic_pointer_cast<torch::lazy::Node>(node),
                            index) {}
 
-  // Retrieves the shape of this value. If the IR XlaNode generating the value is a
-  // multi-output node, the shape returned by this API will not be the full
+  // Retrieves the shape of this value. If the IR XlaNode generating the value
+  // is a multi-output node, the shape returned by this API will not be the full
   // tuple shape, but only the shape at index referred by this value.
   // To retrieve the full tuple shape in that case, use the node_shape() API.
   const xla::Shape& xla_shape() const;
@@ -54,9 +54,9 @@ using OpList = absl::Span<const XlaValue>;
 // A node in the graph. Nodes for operations which requires extra data to be
 // stored for lowering, should inherit from this class and add operation
 // specific member there. For example, a constant might create a new
-// NodeConstant class (inheriting from XlaNode) with an extra xla::Literal field,
-// or a tensor value might create a new NodeTensor with computation client data
-// handle in it.
+// NodeConstant class (inheriting from XlaNode) with an extra xla::Literal
+// field, or a tensor value might create a new NodeTensor with computation
+// client data handle in it.
 class XlaNode : public torch::lazy::Node {
  public:
   // Creates a new node with the given op name. The op is a unique identifier

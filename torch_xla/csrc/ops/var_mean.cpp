@@ -13,8 +13,9 @@ namespace ir {
 namespace ops {
 namespace {
 
-xla::Shape NodeOutputShape(const XlaValue& input, std::vector<int64_t>& dimensions,
-                           int64_t correction, bool keep_reduced_dimensions) {
+xla::Shape NodeOutputShape(const XlaValue& input,
+                           std::vector<int64_t>& dimensions, int64_t correction,
+                           bool keep_reduced_dimensions) {
   auto lower_for_shape_fn =
       [&](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
     xla::XlaOp var =
@@ -30,13 +31,14 @@ xla::Shape NodeOutputShape(const XlaValue& input, std::vector<int64_t>& dimensio
 
 VarMean::VarMean(const XlaValue& input, std::vector<int64_t> dimensions,
                  int64_t correction, bool keep_reduced_dimensions)
-    : XlaNode(torch::lazy::OpKind(at::aten::var_mean), {input},
-           [&]() {
-             return NodeOutputShape(input, dimensions, correction,
-                                    keep_reduced_dimensions);
-           },
-           /*num_outputs=*/2,
-           torch::lazy::MHash(dimensions, correction, keep_reduced_dimensions)),
+    : XlaNode(
+          torch::lazy::OpKind(at::aten::var_mean), {input},
+          [&]() {
+            return NodeOutputShape(input, dimensions, correction,
+                                   keep_reduced_dimensions);
+          },
+          /*num_outputs=*/2,
+          torch::lazy::MHash(dimensions, correction, keep_reduced_dimensions)),
       dimensions_(std::move(dimensions)),
       correction_(correction),
       keep_reduced_dimensions_(keep_reduced_dimensions) {}
@@ -56,7 +58,8 @@ XlaOpVector VarMean::Lower(LoweringContext* loctx) const {
 
 std::string VarMean::ToString() const {
   std::stringstream ss;
-  ss << XlaNode::ToString() << ", dimensions=(" << absl::StrJoin(dimensions_, ", ")
+  ss << XlaNode::ToString() << ", dimensions=("
+     << absl::StrJoin(dimensions_, ", ")
      << "), keep_reduced_dimensions=" << keep_reduced_dimensions_
      << ", correction=" << correction_;
   return ss.str();

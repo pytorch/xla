@@ -9,9 +9,10 @@ namespace ops {
 
 class AllToAll : public XlaNode {
  public:
-  AllToAll(const XlaValue& input, const XlaValue& token, int64_t split_dimension,
-           int64_t concat_dimension, int64_t split_count,
-           std::vector<std::vector<int64_t>> groups, bool pin_layout);
+  AllToAll(const XlaValue& input, const XlaValue& token,
+           int64_t split_dimension, int64_t concat_dimension,
+           int64_t split_count, std::vector<std::vector<int64_t>> groups,
+           bool pin_layout);
 
   std::string ToString() const override;
 

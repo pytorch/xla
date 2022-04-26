@@ -9,11 +9,11 @@ namespace torch_xla {
 namespace ir {
 namespace ops {
 
-SoftmaxBackward::SoftmaxBackward(const XlaValue& grad_output, const XlaValue& output,
-                                 int64_t dim)
+SoftmaxBackward::SoftmaxBackward(const XlaValue& grad_output,
+                                 const XlaValue& output, int64_t dim)
     : XlaNode(torch::lazy::OpKind(at::aten::_softmax_backward_data),
-           {grad_output, output}, grad_output.xla_shape(),
-           /*num_outputs=*/1, torch::lazy::MHash(dim)),
+              {grad_output, output}, grad_output.xla_shape(),
+              /*num_outputs=*/1, torch::lazy::MHash(dim)),
       dim_(dim) {}
 
 torch::lazy::NodePtr SoftmaxBackward::Clone(OpList operands) const {

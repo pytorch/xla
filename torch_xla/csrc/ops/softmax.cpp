@@ -32,9 +32,9 @@ xla::Shape NodeOutputShape(const XlaValue& input,
 Softmax::Softmax(const XlaValue& input, int64_t dim,
                  c10::optional<at::ScalarType> dtype)
     : XlaNode(torch::lazy::OpKind(at::aten::softmax), {input},
-           [&]() { return NodeOutputShape(input, dtype); },
-           /*num_outputs=*/1,
-           torch::lazy::MHash(dim, torch::lazy::OptionalOr<int>(dtype, -1))),
+              [&]() { return NodeOutputShape(input, dtype); },
+              /*num_outputs=*/1,
+              torch::lazy::MHash(dim, torch::lazy::OptionalOr<int>(dtype, -1))),
       dim_(dim),
       dtype_(dtype) {}
 

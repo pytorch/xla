@@ -11,7 +11,8 @@ namespace ops {
 
 class Softmax : public XlaNode {
  public:
-  Softmax(const XlaValue& input, int64_t dim, c10::optional<at::ScalarType> dtype);
+  Softmax(const XlaValue& input, int64_t dim,
+          c10::optional<at::ScalarType> dtype);
 
   torch::lazy::NodePtr Clone(OpList operands) const override;
 

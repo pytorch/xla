@@ -10,8 +10,8 @@ namespace ops {
 Put::Put(const XlaValue& input, const XlaValue& index, const XlaValue& source,
          bool accumulate)
     : XlaNode(torch::lazy::OpKind(at::aten::put), {input, index, source},
-           input.xla_shape(),
-           /*num_outputs=*/1, torch::lazy::MHash(accumulate)),
+              input.xla_shape(),
+              /*num_outputs=*/1, torch::lazy::MHash(accumulate)),
       accumulate_(accumulate) {}
 
 torch::lazy::NodePtr Put::Clone(OpList operands) const {

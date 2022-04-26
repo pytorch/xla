@@ -21,15 +21,16 @@ xla::Shape NodeOutputShape(const XlaValue& step, const XlaValue& param) {
 AdamOptimizerStep::AdamOptimizerStep(
     const XlaValue& found_inf, const XlaValue& step, const XlaValue& param,
     const XlaValue& grad, const XlaValue& exp_avg, const XlaValue& exp_avg_sq,
-    const XlaValue& max_exp_avg_sq, const XlaValue& beta1, const XlaValue& beta2,
-    const XlaValue& lr, const XlaValue& weight_decay, const XlaValue& eps,
-    bool use_weight_decay, bool use_amsgrad, bool use_adamw)
+    const XlaValue& max_exp_avg_sq, const XlaValue& beta1,
+    const XlaValue& beta2, const XlaValue& lr, const XlaValue& weight_decay,
+    const XlaValue& eps, bool use_weight_decay, bool use_amsgrad,
+    bool use_adamw)
     : XlaNode(xla_adam_optimizer_step,
-           {found_inf, step, param, grad, exp_avg, exp_avg_sq, max_exp_avg_sq,
-            beta1, beta2, lr, weight_decay, eps},
-           NodeOutputShape(step, param),
-           /*num_outputs=*/5,
-           torch::lazy::MHash(use_weight_decay, use_amsgrad, use_adamw)),
+              {found_inf, step, param, grad, exp_avg, exp_avg_sq,
+               max_exp_avg_sq, beta1, beta2, lr, weight_decay, eps},
+              NodeOutputShape(step, param),
+              /*num_outputs=*/5,
+              torch::lazy::MHash(use_weight_decay, use_amsgrad, use_adamw)),
       use_weight_decay_(use_weight_decay),
       use_amsgrad_(use_amsgrad),
       use_adamw_(use_adamw) {}

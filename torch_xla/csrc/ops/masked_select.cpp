@@ -25,8 +25,8 @@ xla::Shape NodeOutputShape(const XlaValue& input) {
 
 MaskedSelect::MaskedSelect(const XlaValue& input, const XlaValue& mask)
     : XlaNode(torch::lazy::OpKind(at::aten::masked_select), {input, mask},
-           NodeOutputShape(input),
-           /*num_outputs=*/2) {}
+              NodeOutputShape(input),
+              /*num_outputs=*/2) {}
 
 torch::lazy::NodePtr MaskedSelect::Clone(OpList operands) const {
   return ir::MakeNode<MaskedSelect>(operands.at(0), operands.at(1));
