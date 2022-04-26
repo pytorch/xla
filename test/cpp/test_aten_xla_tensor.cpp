@@ -11057,5 +11057,50 @@ TEST_F(AtenXlaTensorTest, TestNanToNumOut) {
   ExpectCounterChanged("xla::nan_to_num", cpp_test::GetIgnoredCounters());
 }
 
+TEST_F(AtenXlaTensorTest, TestRoll) {
+  std::vector<int64_t> input_shape = {2, 3, 4};
+  for (torch::ScalarType scalar_type :
+       {torch::kFloat, torch::kByte, torch::kChar, torch::kShort, torch::kInt,
+        torch::kLong}) {
+    torch::Tensor input =
+        isFloatingType(scalar_type)
+            ? torch::rand(input_shape, torch::TensorOptions(scalar_type))
+            : torch::randint(0, 100, input_shape,
+                             torch::TensorOptions(scalar_type));
+    std::vector<std::vector<int64_t>> dim_powerset = {
+        {}, {0}, {1}, {2}, {0, 1}, {1, 2}, {2, 0}, {0, 1, 2}};
+    std::vector<std::vector<std::vector<int64_t>>> shift_set = {
+        {{0}, {1}, {1}, {-24}, {24}, {-27}, {27}},
+        {{0}, {-1}, {1}, {-5}, {5}},
+        {{0}, {-1}, {1}, {-5}, {5}},
+        {{0}, {-1}, {1}, {-5}, {5}},
+        {{0, 0}, {-1, 4}},
+        {{1, 2}, {0, -1}},
+        {{0, 2}, {-1, 0}},
+        {{4, 3, 2}, {-4, 3, 2}},
+    };
+    for (size_t i = 0; i < dim_powerset.size(); ++i) {
+      std::vector<int64_t> roll_dims = dim_powerset[i];
+      for (bool negative_dims : {false, true}) {
+        if (negative_dims) {
+          std::for_each(roll_dims.begin(), roll_dims.end(),
+                        [](int64_t& dim) { dim -= 3; });
+        }
+        for (std::vector<int64_t> roll_shifts : shift_set[i]) {
+          torch::Tensor output = torch::roll(input, roll_shifts, roll_dims);
+          ForEachDevice([&](const torch::Device& device) {
+            torch::Tensor xla_input = CopyToDevice(input, device);
+            torch::Tensor xla_output =
+                torch::roll(xla_input, roll_shifts, roll_dims);
+            AllClose(output, xla_output);
+          });
+        }
+      }
+    }
+  }
+  ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::roll", cpp_test::GetIgnoredCounters());
+}
+
 }  // namespace cpp_test
 }  // namespace torch_xla
