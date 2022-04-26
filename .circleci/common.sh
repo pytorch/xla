@@ -21,11 +21,6 @@ function apply_patches() {
   ./xla/scripts/apply_patches.sh
 }
 
-function clean_xrt_server() {
-  echo "Cleanning up XRT server"
-  python -m torch_xla.core.xrt_run_server --stop
-}
-
 function rebase_pull_request_on_target_branch() {
   # TODO: directly use ENV_VAR when CircleCi exposes base branch.
   # Try rebasing on top of base (dest) branch first.
