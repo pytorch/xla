@@ -11098,6 +11098,8 @@ TEST_F(AtenXlaTensorTest, TestRoll) {
       }
     }
   }
+  ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::roll", cpp_test::GetIgnoredCounters());
 }
 
 }  // namespace cpp_test
