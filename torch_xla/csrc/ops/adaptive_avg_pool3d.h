@@ -10,7 +10,7 @@ namespace torch_xla {
 namespace ir {
 namespace ops {
 
-class AdaptiveAvgPool3d : public Node {
+class AdaptiveAvgPool3d : public XlaNode {
  public:
   AdaptiveAvgPool3d(const Value& input, std::vector<int64_t> output_size);
 

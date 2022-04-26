@@ -8,7 +8,7 @@ namespace torch_xla {
 namespace ir {
 namespace ops {
 
-class LeakyRelu : public Node {
+class LeakyRelu : public XlaNode {
  public:
   LeakyRelu(const Value& input, double negative_slope);
 

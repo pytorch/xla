@@ -6,7 +6,7 @@ namespace torch_xla {
 namespace ir {
 namespace ops {
 
-class LinearInterpolation : public Node {
+class LinearInterpolation : public XlaNode {
  public:
   LinearInterpolation(const Value& value, const Value& new_value, double alpha);
 

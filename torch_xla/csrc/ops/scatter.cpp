@@ -9,7 +9,7 @@ namespace ops {
 
 Scatter::Scatter(const Value& input, const Value& index, const Value& src,
                  int64_t dim)
-    : Node(torch::lazy::OpKind(at::aten::scatter), {input, index, src},
+    : XlaNode(torch::lazy::OpKind(at::aten::scatter), {input, index, src},
            input.xla_shape(),
            /*num_outputs=*/1, torch::lazy::MHash(dim)),
       dim_(dim) {}
@@ -31,7 +31,7 @@ XlaOpVector Scatter::Lower(LoweringContext* loctx) const {
 
 std::string Scatter::ToString() const {
   std::stringstream ss;
-  ss << Node::ToString() << ", dim=" << dim_;
+  ss << XlaNode::ToString() << ", dim=" << dim_;
   return ss.str();
 }
 

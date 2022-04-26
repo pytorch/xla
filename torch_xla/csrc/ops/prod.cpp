@@ -43,7 +43,7 @@ xla::Shape NodeOutputShape(const Value& input, std::vector<int64_t>& dimensions,
 
 Prod::Prod(const Value& input, std::vector<int64_t> dimensions,
            bool keep_reduced_dimensions, c10::optional<at::ScalarType> dtype)
-    : Node(torch::lazy::OpKind(at::aten::prod), {input},
+    : XlaNode(torch::lazy::OpKind(at::aten::prod), {input},
            [&]() {
              return NodeOutputShape(input, dimensions, keep_reduced_dimensions,
                                     dtype);
@@ -68,7 +68,7 @@ XlaOpVector Prod::Lower(LoweringContext* loctx) const {
 
 std::string Prod::ToString() const {
   std::stringstream ss;
-  ss << Node::ToString() << ", dimensions=(" << absl::StrJoin(dimensions_, ", ")
+  ss << XlaNode::ToString() << ", dimensions=(" << absl::StrJoin(dimensions_, ", ")
      << "), keep_reduced_dimensions=" << keep_reduced_dimensions_
      << ", dtype=" << torch::lazy::OptionalOr<int>(dtype_, -1);
   return ss.str();

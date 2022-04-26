@@ -8,7 +8,7 @@ namespace torch_xla {
 namespace ir {
 namespace ops {
 
-class MseLoss : public Node {
+class MseLoss : public XlaNode {
  public:
   MseLoss(const Value& input, const Value& target, ReductionMode reduction);
 

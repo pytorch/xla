@@ -24,7 +24,7 @@ SgdOptimizerStep::SgdOptimizerStep(const Value& found_inf, const Value& step,
                                    const Value& dampening,
                                    bool use_weight_decay, bool use_momentum,
                                    bool use_nesterov)
-    : Node(xla_sgd_optimizer_step,
+    : XlaNode(xla_sgd_optimizer_step,
            {found_inf, step, param, buf, d_p, weight_decay, momentum, lr,
             dampening},
            NodeOutputShape(step, param),

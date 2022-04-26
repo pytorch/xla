@@ -6,7 +6,7 @@ namespace torch_xla {
 namespace ir {
 namespace ops {
 
-class Unsqueeze : public Node {
+class Unsqueeze : public XlaNode {
  public:
   // Insert a dimension of size one at the specified position.
   Unsqueeze(const Value& input, int dim);

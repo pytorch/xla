@@ -91,7 +91,7 @@ struct ViewInfo {
 };
 
 // When a "view" (capture by reference) is taken on a node, an Alias object is
-// created on the captured node itself, with its current IR Node value.
+// created on the captured node itself, with its current IR XlaNode value.
 class Alias {
  public:
   struct UpdateData {

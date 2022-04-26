@@ -22,7 +22,7 @@ xla::Shape NodeOutputShape(const Value& input, absl::Span<const int64_t> dims) {
 }  // namespace
 
 Permute::Permute(const Value& input, std::vector<int64_t> dims)
-    : Node(torch::lazy::OpKind(at::aten::permute), {input},
+    : XlaNode(torch::lazy::OpKind(at::aten::permute), {input},
            [&]() { return NodeOutputShape(input, dims); },
            /*num_outputs=*/1, torch::lazy::MHash(dims)),
       dims_(std::move(dims)) {}
@@ -39,7 +39,7 @@ XlaOpVector Permute::Lower(LoweringContext* loctx) const {
 
 std::string Permute::ToString() const {
   std::stringstream ss;
-  ss << Node::ToString() << ", dims=(" << absl::StrJoin(dims_, ", ") << ")";
+  ss << XlaNode::ToString() << ", dims=(" << absl::StrJoin(dims_, ", ") << ")";
   return ss.str();
 }
 

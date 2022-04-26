@@ -7,7 +7,7 @@ namespace torch_xla {
 namespace ir {
 namespace ops {
 
-class ReduceScatter : public Node {
+class ReduceScatter : public XlaNode {
  public:
   ReduceScatter(AllReduceType reduce_type, const Value& input,
                 const Value& token, double scale, int64_t scatter_dim,

@@ -6,7 +6,7 @@ namespace torch_xla {
 namespace ir {
 namespace ops {
 
-class Unselect : public Node {
+class Unselect : public XlaNode {
  public:
   Unselect(const Value& target, const Value& source, int64_t dim, int64_t start,
            int64_t end, int64_t stride);

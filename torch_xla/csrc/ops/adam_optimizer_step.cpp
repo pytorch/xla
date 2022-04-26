@@ -24,7 +24,7 @@ AdamOptimizerStep::AdamOptimizerStep(
     const Value& max_exp_avg_sq, const Value& beta1, const Value& beta2,
     const Value& lr, const Value& weight_decay, const Value& eps,
     bool use_weight_decay, bool use_amsgrad, bool use_adamw)
-    : Node(xla_adam_optimizer_step,
+    : XlaNode(xla_adam_optimizer_step,
            {found_inf, step, param, grad, exp_avg, exp_avg_sq, max_exp_avg_sq,
             beta1, beta2, lr, weight_decay, eps},
            NodeOutputShape(step, param),

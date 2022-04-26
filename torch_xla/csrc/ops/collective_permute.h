@@ -7,7 +7,7 @@ namespace torch_xla {
 namespace ir {
 namespace ops {
 
-class CollectivePermute : public Node {
+class CollectivePermute : public XlaNode {
  public:
   CollectivePermute(
       const Value& input, const Value& token,

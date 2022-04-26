@@ -17,7 +17,7 @@ xla::Shape NodeOutputShape(const Value& input, absl::Span<const int64_t> size) {
 }  // namespace
 
 Resize::Resize(const Value& input, std::vector<int64_t> size)
-    : Node(torch::lazy::OpKind(at::aten::resize), {input},
+    : XlaNode(torch::lazy::OpKind(at::aten::resize), {input},
            [&]() { return NodeOutputShape(input, size); },
            /*num_outputs=*/1, torch::lazy::MHash(size)),
       size_(std::move(size)) {}
@@ -34,7 +34,7 @@ XlaOpVector Resize::Lower(LoweringContext* loctx) const {
 
 std::string Resize::ToString() const {
   std::stringstream ss;
-  ss << Node::ToString() << ", size=(" << absl::StrJoin(size_, ", ") << ")";
+  ss << XlaNode::ToString() << ", size=(" << absl::StrJoin(size_, ", ") << ")";
   return ss.str();
 }
 

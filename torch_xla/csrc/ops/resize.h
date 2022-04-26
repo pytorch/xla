@@ -6,7 +6,7 @@ namespace torch_xla {
 namespace ir {
 namespace ops {
 
-class Resize : public Node {
+class Resize : public XlaNode {
  public:
   Resize(const Value& input, std::vector<int64_t> size);
 

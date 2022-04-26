@@ -6,9 +6,9 @@ namespace torch_xla {
 namespace ir {
 namespace ops {
 
-// Node for the upper triangular part of a matrix (2-D tensor) or batch of
+// XlaNode for the upper triangular part of a matrix (2-D tensor) or batch of
 // matrices input.
-class Triu : public Node {
+class Triu : public XlaNode {
  public:
   Triu(const Value& input, int64_t diagonal);
 

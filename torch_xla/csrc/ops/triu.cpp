@@ -8,7 +8,7 @@ namespace ir {
 namespace ops {
 
 Triu::Triu(const Value& input, int64_t diagonal)
-    : Node(torch::lazy::OpKind(at::aten::triu), {input}, input.xla_shape(),
+    : XlaNode(torch::lazy::OpKind(at::aten::triu), {input}, input.xla_shape(),
            /*num_outputs=*/1, torch::lazy::MHash(diagonal)),
       diagonal_(diagonal) {}
 
@@ -24,7 +24,7 @@ XlaOpVector Triu::Lower(LoweringContext* loctx) const {
 
 std::string Triu::ToString() const {
   std::stringstream ss;
-  ss << Node::ToString() << ", diagonal=" << diagonal_;
+  ss << XlaNode::ToString() << ", diagonal=" << diagonal_;
   return ss.str();
 }
 

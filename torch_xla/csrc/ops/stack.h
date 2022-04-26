@@ -7,7 +7,7 @@ namespace torch_xla {
 namespace ir {
 namespace ops {
 
-class Stack : public Node {
+class Stack : public XlaNode {
  public:
   Stack(absl::Span<const ir::Value> values, int64_t dim);
 

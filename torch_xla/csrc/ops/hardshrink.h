@@ -8,7 +8,7 @@ namespace torch_xla {
 namespace ir {
 namespace ops {
 
-class Hardshrink : public Node {
+class Hardshrink : public XlaNode {
  public:
   Hardshrink(const Value& input, const at::Scalar& lambda);
 

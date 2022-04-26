@@ -22,7 +22,7 @@ xla::Shape NodeOutputShape(const Value& input,
 }  // namespace
 
 ReplicationPad::ReplicationPad(const Value& input, std::vector<int64_t> padding)
-    : Node(xla_replication_pad, {input},
+    : XlaNode(xla_replication_pad, {input},
            [&]() { return NodeOutputShape(input, padding); },
            /*num_outputs=*/1, torch::lazy::MHash(padding)),
       padding_(std::move(padding)) {}
@@ -39,7 +39,7 @@ XlaOpVector ReplicationPad::Lower(LoweringContext* loctx) const {
 
 std::string ReplicationPad::ToString() const {
   std::stringstream ss;
-  ss << Node::ToString() << ", padding=(" << absl::StrJoin(padding_, ", ")
+  ss << XlaNode::ToString() << ", padding=(" << absl::StrJoin(padding_, ", ")
      << ")";
   return ss.str();
 }

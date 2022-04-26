@@ -6,7 +6,7 @@ namespace torch_xla {
 namespace ir {
 namespace ops {
 
-class Scatter : public Node {
+class Scatter : public XlaNode {
  public:
   Scatter(const Value& input, const Value& index, const Value& src,
           int64_t dim);

@@ -45,7 +45,7 @@ NllLoss2dBackward::NllLoss2dBackward(const Value& grad_output,
                                      const absl::optional<Value>& weight,
                                      const absl::optional<Value>& total_weight,
                                      ReductionMode reduction, int ignore_index)
-    : Node(torch::lazy::OpKind(at::aten::nll_loss2d_backward),
+    : XlaNode(torch::lazy::OpKind(at::aten::nll_loss2d_backward),
            xla::util::GetValuesVector<Value>({grad_output, logits, labels},
                                              {&weight, &total_weight}),
            [&]() {
@@ -87,7 +87,7 @@ XlaOpVector NllLoss2dBackward::Lower(LoweringContext* loctx) const {
 
 std::string NllLoss2dBackward::ToString() const {
   std::stringstream ss;
-  ss << Node::ToString()
+  ss << XlaNode::ToString()
      << ", reduction=" << torch::lazy::GetEnumValue(reduction_)
      << ", ignore_index=" << ignore_index_;
   return ss.str();

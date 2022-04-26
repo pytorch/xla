@@ -53,7 +53,7 @@ torch::lazy::hash_t ComputeNodeKey(
     key = torch::lazy::HashCombine(key, torch::lazy::Hash(GetParameterShape(
                                             operands[i], *input_shapes[i])));
   }
-  const ir::Node* casted = dynamic_cast<const ir::Node*>(node);
+  const ir::XlaNode* casted = dynamic_cast<const ir::XlaNode*>(node);
   key = torch::lazy::HashCombine(key, torch::lazy::Hash(casted->xla_shape()));
   return torch::lazy::HashCombine(key, casted->node_hash());
 }

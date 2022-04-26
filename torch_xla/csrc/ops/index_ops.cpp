@@ -152,7 +152,7 @@ std::vector<XLATensor> WrapIndicesOnce(const XLATensor& base,
 torch::lazy::NodePtr IndexFillOp(const ir::Value& buffer, int64_t dim,
                                  const ir::Value& index,
                                  const ir::Value& value) {
-  auto lower_fn = [dim](const ir::Node& node,
+  auto lower_fn = [dim](const ir::XlaNode& node,
                         ir::LoweringContext* loctx) -> ir::XlaOpVector {
     xla::XlaOp xla_base = loctx->GetOutputOp(node.operand(0));
     xla::XlaOp xla_index = loctx->GetOutputOp(node.operand(1));
@@ -178,7 +178,7 @@ torch::lazy::NodePtr IndexFillOp(const ir::Value& buffer, int64_t dim,
 torch::lazy::NodePtr IndexAddOp(const ir::Value& buffer, int64_t dim,
                                 const ir::Value& index,
                                 const ir::Value& source) {
-  auto lower_fn = [dim](const ir::Node& node,
+  auto lower_fn = [dim](const ir::XlaNode& node,
                         ir::LoweringContext* loctx) -> ir::XlaOpVector {
     xla::XlaOp xla_base = loctx->GetOutputOp(node.operand(0));
     xla::XlaOp xla_index = loctx->GetOutputOp(node.operand(1));
@@ -204,7 +204,7 @@ torch::lazy::NodePtr IndexAddOp(const ir::Value& buffer, int64_t dim,
 torch::lazy::NodePtr IndexCopyOp(const ir::Value& buffer, int64_t dim,
                                  const ir::Value& index,
                                  const ir::Value& source) {
-  auto lower_fn = [dim](const ir::Node& node,
+  auto lower_fn = [dim](const ir::XlaNode& node,
                         ir::LoweringContext* loctx) -> ir::XlaOpVector {
     xla::XlaOp xla_base = loctx->GetOutputOp(node.operand(0));
     xla::XlaOp xla_index = loctx->GetOutputOp(node.operand(1));
@@ -243,7 +243,7 @@ CanonicalIndexInfo GetCanonicalIndexInfo(
 }
 
 ir::Value EnsureRank1(const ir::Value& index) {
-  const ir::Node* casted = dynamic_cast<const ir::Node*>(index.node.get());
+  const ir::XlaNode* casted = dynamic_cast<const ir::XlaNode*>(index.node.get());
   XLA_CHECK_LE(casted->xla_shape().rank(), 1);
   return casted->xla_shape().rank() == 0
              ? ir::MakeNode<ir::ops::Expand>(index, std::vector<int64_t>{1})

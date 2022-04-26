@@ -37,7 +37,7 @@ xla::Shape NodeOutputShape(const Value& logits, const Value& labels,
 NllLoss::NllLoss(const Value& logits, const Value& labels,
                  const absl::optional<Value>& weight, ReductionMode reduction,
                  int ignore_index)
-    : Node(torch::lazy::OpKind(at::aten::nll_loss),
+    : XlaNode(torch::lazy::OpKind(at::aten::nll_loss),
            xla::util::GetValuesVector<Value>({logits, labels}, {&weight}),
            [&]() {
              return NodeOutputShape(logits, labels, weight, reduction,
@@ -71,7 +71,7 @@ XlaOpVector NllLoss::Lower(LoweringContext* loctx) const {
 
 std::string NllLoss::ToString() const {
   std::stringstream ss;
-  ss << Node::ToString()
+  ss << XlaNode::ToString()
      << ", reduction=" << torch::lazy::GetEnumValue(reduction_)
      << ", ignore_index=" << ignore_index_;
   return ss.str();

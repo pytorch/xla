@@ -23,7 +23,7 @@ xla::Shape NodeOutputShape(const Value& input, int64_t k, int64_t dim,
 
 TopK::TopK(const Value& input, int64_t k, int64_t dim, bool largest,
            bool sorted, bool stable)
-    : Node(torch::lazy::OpKind(at::aten::topk), {input},
+    : XlaNode(torch::lazy::OpKind(at::aten::topk), {input},
            [&]() {
              return NodeOutputShape(input, k, dim, largest, sorted, stable);
            },
@@ -47,7 +47,7 @@ XlaOpVector TopK::Lower(LoweringContext* loctx) const {
 
 std::string TopK::ToString() const {
   std::stringstream ss;
-  ss << Node::ToString() << ", k=" << k_ << ", dim=" << dim_
+  ss << XlaNode::ToString() << ", k=" << k_ << ", dim=" << dim_
      << ", largest=" << largest_ << ", sorted=" << sorted_
      << ", stable=" << stable_;
   return ss.str();

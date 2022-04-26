@@ -22,7 +22,7 @@ xla::Shape NodeOutputShape(const Value& input,
 }  // namespace
 
 Expand::Expand(const Value& input, std::vector<int64_t> size)
-    : Node(torch::lazy::OpKind(at::aten::expand), {input},
+    : XlaNode(torch::lazy::OpKind(at::aten::expand), {input},
            [&]() { return NodeOutputShape(input, size); },
            /*num_outputs=*/1, torch::lazy::MHash(size)),
       size_(std::move(size)) {}
@@ -38,7 +38,7 @@ XlaOpVector Expand::Lower(LoweringContext* loctx) const {
 
 std::string Expand::ToString() const {
   std::stringstream ss;
-  ss << Node::ToString() << ", size=(" << absl::StrJoin(size_, ", ") << ")";
+  ss << XlaNode::ToString() << ", size=(" << absl::StrJoin(size_, ", ") << ")";
   return ss.str();
 }
 

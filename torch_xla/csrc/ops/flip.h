@@ -7,7 +7,7 @@ namespace torch_xla {
 namespace ir {
 namespace ops {
 
-class Flip : public Node {
+class Flip : public XlaNode {
  public:
   Flip(const Value& input, std::vector<int64_t> dims);
 

@@ -7,7 +7,7 @@ namespace torch_xla {
 namespace ir {
 namespace ops {
 
-class Cat : public Node {
+class Cat : public XlaNode {
  public:
   Cat(absl::Span<const ir::Value> values, int64_t dim);
 

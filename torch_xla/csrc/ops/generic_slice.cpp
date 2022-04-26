@@ -27,7 +27,7 @@ xla::Shape NodeOutputShape(const Value& input,
 GenericSlice::GenericSlice(const Value& input,
                            absl::Span<const int64_t> base_indices,
                            absl::Span<const int64_t> sizes)
-    : Node(xla_generic_slice, {input},
+    : XlaNode(xla_generic_slice, {input},
            [&]() { return NodeOutputShape(input, base_indices, sizes); },
            /*num_outputs=*/1, torch::lazy::MHash(base_indices, sizes)),
       base_indices_(base_indices.begin(), base_indices.end()),
@@ -45,7 +45,7 @@ XlaOpVector GenericSlice::Lower(LoweringContext* loctx) const {
 
 std::string GenericSlice::ToString() const {
   std::stringstream ss;
-  ss << Node::ToString() << ", base_indices=("
+  ss << XlaNode::ToString() << ", base_indices=("
      << absl::StrJoin(base_indices_, ", ") << "), sizes=("
      << absl::StrJoin(sizes_, ", ") << ")";
   return ss.str();

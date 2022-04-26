@@ -34,14 +34,14 @@ template <typename T>
 using OutputMap =
     std::unordered_map<torch::lazy::Output, T, torch::lazy::Output::Hasher>;
 
-// Represents an input/operand for a Node object.
+// Represents an input/operand for a XlaNode object.
 struct Value : public torch::lazy::Value {
   Value() = default;
   Value(torch::lazy::NodePtr node, size_t index = 0)
       : torch::lazy::Value(std::dynamic_pointer_cast<torch::lazy::Node>(node),
                            index) {}
 
-  // Retrieves the shape of this value. If the IR Node generating the value is a
+  // Retrieves the shape of this value. If the IR XlaNode generating the value is a
   // multi-output node, the shape returned by this API will not be the full
   // tuple shape, but only the shape at index referred by this value.
   // To retrieve the full tuple shape in that case, use the node_shape() API.
@@ -54,10 +54,10 @@ using OpList = absl::Span<const Value>;
 // A node in the graph. Nodes for operations which requires extra data to be
 // stored for lowering, should inherit from this class and add operation
 // specific member there. For example, a constant might create a new
-// NodeConstant class (inheriting from Node) with an extra xla::Literal field,
+// NodeConstant class (inheriting from XlaNode) with an extra xla::Literal field,
 // or a tensor value might create a new NodeTensor with computation client data
 // handle in it.
-class Node : public torch::lazy::Node {
+class XlaNode : public torch::lazy::Node {
  public:
   // Creates a new node with the given op name. The op is a unique identifier
   // for the operation. The num_outputs tells how many outputs a given operation
@@ -96,9 +96,9 @@ class Node : public torch::lazy::Node {
   Node(torch::lazy::OpKind op, xla::Shape xla_shape, size_t num_outputs,
        torch::lazy::hash_t hash_seed);
 
-  virtual ~Node();
+  virtual ~XlaNode();
 
-  // Retrieves the full shape of the IR Node. Note that if this is a
+  // Retrieves the full shape of the IR XlaNode. Note that if this is a
   // multi-output node, the returned shape will be a tuple.
   const xla::Shape& xla_shape() const { return xla_shape_; }
 
@@ -145,7 +145,7 @@ struct ScopePusher {
   static void ResetScopes();
 };
 
-inline std::ostream& operator<<(std::ostream& stream, const Node& node) {
+inline std::ostream& operator<<(std::ostream& stream, const XlaNode& node) {
   stream << node.ToString();
   return stream;
 }

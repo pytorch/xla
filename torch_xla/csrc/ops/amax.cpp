@@ -21,7 +21,7 @@ xla::Shape NodeOutputShape(const Value& input, std::vector<int64_t>& dimensions,
 }  // namespace
 
 Amax::Amax(const Value& input, std::vector<int64_t> dimensions, bool keepdim)
-    : Node(torch::lazy::OpKind(at::aten::amax), {input},
+    : XlaNode(torch::lazy::OpKind(at::aten::amax), {input},
            [&]() { return NodeOutputShape(input, dimensions, keepdim); },
            /*num_outputs=*/1, torch::lazy::MHash(dimensions, keepdim)),
       dimensions_(std::move(dimensions)),
@@ -38,7 +38,7 @@ XlaOpVector Amax::Lower(LoweringContext* loctx) const {
 
 std::string Amax::ToString() const {
   std::stringstream ss;
-  ss << Node::ToString() << ", dimensions=" << absl::StrJoin(dimensions_, ", ")
+  ss << XlaNode::ToString() << ", dimensions=" << absl::StrJoin(dimensions_, ", ")
      << ", keepdim=" << keepdim_;
   return ss.str();
 }

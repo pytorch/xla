@@ -8,7 +8,7 @@ namespace torch_xla {
 namespace ir {
 namespace ops {
 
-class UpsampleNearestBackward : public Node {
+class UpsampleNearestBackward : public XlaNode {
  public:
   UpsampleNearestBackward(const Value& input, std::vector<int64_t> output_size,
                           std::vector<int64_t> input_size);

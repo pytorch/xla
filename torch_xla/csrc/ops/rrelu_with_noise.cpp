@@ -12,7 +12,7 @@ namespace ops {
 RreluWithNoise::RreluWithNoise(const Value& input, const Value& seed,
                                const at::Scalar& lower, const at::Scalar& upper,
                                bool training)
-    : Node(torch::lazy::OpKind(at::aten::rrelu_with_noise), {input, seed},
+    : XlaNode(torch::lazy::OpKind(at::aten::rrelu_with_noise), {input, seed},
            xla::ShapeUtil::MakeTupleShape(
                {input.xla_shape(), input.xla_shape()}),
            /*num_outputs=*/2,
@@ -35,7 +35,7 @@ XlaOpVector RreluWithNoise::Lower(LoweringContext* loctx) const {
 
 std::string RreluWithNoise::ToString() const {
   std::stringstream ss;
-  ss << Node::ToString() << ", lower=" << lower_ << ", upper=" << upper_
+  ss << XlaNode::ToString() << ", lower=" << lower_ << ", upper=" << upper_
      << ", training=" << training_;
   return ss.str();
 }

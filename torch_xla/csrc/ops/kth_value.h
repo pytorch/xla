@@ -6,7 +6,7 @@ namespace torch_xla {
 namespace ir {
 namespace ops {
 
-class KthValue : public Node {
+class KthValue : public XlaNode {
  public:
   KthValue(const Value& input, int64_t k, int64_t dim, bool keepdim);
 

@@ -6,7 +6,7 @@ namespace torch_xla {
 namespace ir {
 namespace ops {
 
-class Cholesky : public Node {
+class Cholesky : public XlaNode {
  public:
   Cholesky(const Value& input, bool lower);
 

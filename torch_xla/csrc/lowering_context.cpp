@@ -166,7 +166,7 @@ XlaOpVector LoweringContext::LowerNode(const torch::lazy::Node* node) {
   try {
     HloMetadataSetter meta_setter(this, node);
 
-    const Node* casted = dynamic_cast<const Node*>(node);
+    const XlaNode* casted = dynamic_cast<const XlaNode*>(node);
     result_ops = casted->Lower(this);
   } catch (const std::exception& ex) {
     ReportBuilderError(node, ex.what());

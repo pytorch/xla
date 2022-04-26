@@ -6,7 +6,7 @@ namespace torch_xla {
 namespace ir {
 namespace ops {
 
-class TriangularSolve : public Node {
+class TriangularSolve : public XlaNode {
  public:
   TriangularSolve(const Value& rhs, const Value& lhs, bool left_side,
                   bool lower, bool transpose, bool unit_diagonal);

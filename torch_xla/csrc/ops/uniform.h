@@ -6,7 +6,7 @@ namespace torch_xla {
 namespace ir {
 namespace ops {
 
-class Uniform : public Node {
+class Uniform : public XlaNode {
  public:
   Uniform(const Value& from, const Value& to, const Value& seed,
           const xla::Shape& rng_shape);

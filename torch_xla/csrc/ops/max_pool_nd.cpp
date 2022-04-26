@@ -43,7 +43,7 @@ MaxPoolNd::MaxPoolNd(const Value& input, int64_t spatial_dim_count,
                      std::vector<int64_t> kernel_size,
                      std::vector<int64_t> stride, std::vector<int64_t> padding,
                      bool ceil_mode)
-    : Node(torch::lazy::OpKind(MaxPoolNdSymbol(spatial_dim_count)), {input},
+    : XlaNode(torch::lazy::OpKind(MaxPoolNdSymbol(spatial_dim_count)), {input},
            [&]() {
              return NodeOutputShape(input, spatial_dim_count, kernel_size,
                                     stride, padding, ceil_mode);
@@ -71,7 +71,7 @@ XlaOpVector MaxPoolNd::Lower(LoweringContext* loctx) const {
 
 std::string MaxPoolNd::ToString() const {
   std::stringstream ss;
-  ss << Node::ToString() << ", spatial_dim_count=" << spatial_dim_count_
+  ss << XlaNode::ToString() << ", spatial_dim_count=" << spatial_dim_count_
      << ", kernel_size=(" << absl::StrJoin(kernel_size_, ", ") << "), stride=("
      << absl::StrJoin(stride_, ", ") << "), padding=("
      << absl::StrJoin(padding_, ", ") << "), ceil_mode=" << ceil_mode_;

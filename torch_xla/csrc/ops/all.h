@@ -9,7 +9,7 @@ namespace torch_xla {
 namespace ir {
 namespace ops {
 
-class All : public Node {
+class All : public XlaNode {
  public:
   All(const Value& input, std::vector<int64_t> dimensions,
       bool keep_reduced_dimensions);

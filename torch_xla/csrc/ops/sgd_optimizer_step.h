@@ -6,7 +6,7 @@ namespace torch_xla {
 namespace ir {
 namespace ops {
 
-class SgdOptimizerStep : public Node {
+class SgdOptimizerStep : public XlaNode {
  public:
   SgdOptimizerStep(const Value& found_inf, const Value& step,
                    const Value& param, const Value& buf, const Value& d_p,

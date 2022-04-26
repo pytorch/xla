@@ -39,7 +39,7 @@ xla::Shape NodeOutputShape(const Value& input,
 
 CumProd::CumProd(const Value& input, int64_t dim,
                  c10::optional<at::ScalarType> dtype)
-    : Node(torch::lazy::OpKind(at::aten::cumprod), {input},
+    : XlaNode(torch::lazy::OpKind(at::aten::cumprod), {input},
            [&]() { return NodeOutputShape(input, dtype); },
            /*num_outputs=*/1,
            torch::lazy::MHash(dim, torch::lazy::OptionalOr<int>(dtype, -1))),
@@ -57,7 +57,7 @@ XlaOpVector CumProd::Lower(LoweringContext* loctx) const {
 
 std::string CumProd::ToString() const {
   std::stringstream ss;
-  ss << Node::ToString() << ", dim=" << dim_;
+  ss << XlaNode::ToString() << ", dim=" << dim_;
   if (dtype_) {
     ss << ", dtype=" << *dtype_;
   }

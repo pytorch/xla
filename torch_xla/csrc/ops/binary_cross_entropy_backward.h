@@ -8,7 +8,7 @@ namespace torch_xla {
 namespace ir {
 namespace ops {
 
-class BinaryCrossEntropyBackward : public Node {
+class BinaryCrossEntropyBackward : public XlaNode {
  public:
   BinaryCrossEntropyBackward(const Value& grad_output, const Value& logits,
                              const Value& labels,

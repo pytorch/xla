@@ -22,7 +22,7 @@ xla::Shape NodeOutputShape(const Value& input, int64_t dim, bool keepdim) {
 }  // namespace
 
 MaxInDim::MaxInDim(const Value& input, int64_t dim, bool keepdim)
-    : Node(torch::lazy::OpKind(at::aten::max), {input},
+    : XlaNode(torch::lazy::OpKind(at::aten::max), {input},
            [&]() { return NodeOutputShape(input, dim, keepdim); },
            /*num_outputs=*/2, torch::lazy::MHash(dim, keepdim)),
       dim_(dim),
@@ -41,7 +41,7 @@ XlaOpVector MaxInDim::Lower(LoweringContext* loctx) const {
 
 std::string MaxInDim::ToString() const {
   std::stringstream ss;
-  ss << Node::ToString() << ", dim=" << dim_ << ", keepdim=" << keepdim_;
+  ss << XlaNode::ToString() << ", dim=" << dim_ << ", keepdim=" << keepdim_;
   return ss.str();
 }
 

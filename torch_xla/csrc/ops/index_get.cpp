@@ -25,14 +25,14 @@ xla::Shape NodeOutputShape(const Value& base, const Value& indices,
 
 IndexGet::IndexGet(const ir::Value& base, const ir::Value& indices,
                    int64_t start_dim)
-    : Node(torch::lazy::OpKind(at::aten::index), {base, indices},
+    : XlaNode(torch::lazy::OpKind(at::aten::index), {base, indices},
            [&]() { return NodeOutputShape(base, indices, start_dim); },
            /*num_outputs=*/1, torch::lazy::MHash(start_dim)),
       start_dim_(start_dim) {}
 
 std::string IndexGet::ToString() const {
   std::stringstream ss;
-  ss << Node::ToString() << ", start_dim=" << start_dim_;
+  ss << XlaNode::ToString() << ", start_dim=" << start_dim_;
   return ss.str();
 }
 

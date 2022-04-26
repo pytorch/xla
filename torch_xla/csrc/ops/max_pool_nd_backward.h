@@ -6,7 +6,7 @@ namespace torch_xla {
 namespace ir {
 namespace ops {
 
-class MaxPoolNdBackward : public Node {
+class MaxPoolNdBackward : public XlaNode {
  public:
   MaxPoolNdBackward(const Value& grad_output, const Value& input,
                     int64_t spatial_dim_count, std::vector<int64_t> kernel_size,

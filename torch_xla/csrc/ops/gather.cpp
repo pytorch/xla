@@ -11,7 +11,7 @@ namespace ir {
 namespace ops {
 
 Gather::Gather(const Value& input, int64_t dim, const Value& index)
-    : Node(torch::lazy::OpKind(at::aten::gather), {input, index},
+    : XlaNode(torch::lazy::OpKind(at::aten::gather), {input, index},
            xla::ShapeUtil::MakeShape(input.xla_shape().element_type(),
                                      index.xla_shape().dimensions()),
            /*num_outputs=*/1, torch::lazy::MHash(dim)),
@@ -29,7 +29,7 @@ XlaOpVector Gather::Lower(LoweringContext* loctx) const {
 
 std::string Gather::ToString() const {
   std::stringstream ss;
-  ss << Node::ToString() << ", dim=" << dim_;
+  ss << XlaNode::ToString() << ", dim=" << dim_;
   return ss.str();
 }
 

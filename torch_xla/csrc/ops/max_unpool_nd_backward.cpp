@@ -40,7 +40,7 @@ MaxUnpoolNdBackward::MaxUnpoolNdBackward(const Value& grad_output,
                                          const Value& input,
                                          const Value& indices,
                                          std::vector<int64_t> output_size)
-    : Node(torch::lazy::OpKind(MaxUnpoolNdBackwardSymbol(output_size.size())),
+    : XlaNode(torch::lazy::OpKind(MaxUnpoolNdBackwardSymbol(output_size.size())),
            {grad_output, input, indices},
            [&]() {
              return NodeOutputShape(grad_output, input, indices, output_size);
@@ -64,7 +64,7 @@ XlaOpVector MaxUnpoolNdBackward::Lower(LoweringContext* loctx) const {
 
 std::string MaxUnpoolNdBackward::ToString() const {
   std::stringstream ss;
-  ss << Node::ToString() << ", output_size=("
+  ss << XlaNode::ToString() << ", output_size=("
      << absl::StrJoin(output_size_, ", ") << ")";
   return ss.str();
 }

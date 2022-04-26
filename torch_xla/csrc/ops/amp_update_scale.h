@@ -6,7 +6,7 @@ namespace torch_xla {
 namespace ir {
 namespace ops {
 
-class AmpUpdateScale : public Node {
+class AmpUpdateScale : public XlaNode {
  public:
   AmpUpdateScale(const Value& current_scale, const Value& growth_tracker,
                  const Value& found_inf, double scale_growth_factor,

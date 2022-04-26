@@ -42,7 +42,7 @@ xla::Shape NodeOutputShape(const Value& input, bool some) {
 }  // namespace
 
 QR::QR(const Value& input, bool some)
-    : Node(torch::lazy::OpKind(at::aten::qr), {input},
+    : XlaNode(torch::lazy::OpKind(at::aten::qr), {input},
            [&]() { return NodeOutputShape(input, some); },
            /*num_outputs=*/2, torch::lazy::MHash(some)),
       some_(some) {}
@@ -58,7 +58,7 @@ XlaOpVector QR::Lower(LoweringContext* loctx) const {
 
 std::string QR::ToString() const {
   std::stringstream ss;
-  ss << Node::ToString() << ", some=" << some_;
+  ss << XlaNode::ToString() << ", some=" << some_;
   return ss.str();
 }
 

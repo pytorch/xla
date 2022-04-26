@@ -74,7 +74,7 @@ std::vector<Value> Util::Clone(
           << "Bad post-order: " << node->ToString();
       inputs.emplace_back(it->second, output.index);
     }
-    const Node* casted = dynamic_cast<const Node*>(node);
+    const XlaNode* casted = dynamic_cast<const XlaNode*>(node);
     clone_map[node] = casted->Clone(inputs);
   }
 

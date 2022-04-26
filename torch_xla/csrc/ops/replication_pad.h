@@ -7,7 +7,7 @@ namespace torch_xla {
 namespace ir {
 namespace ops {
 
-class ReplicationPad : public Node {
+class ReplicationPad : public XlaNode {
  public:
   ReplicationPad(const Value& input, std::vector<int64_t> padding);
 

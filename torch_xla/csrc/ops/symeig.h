@@ -6,7 +6,7 @@ namespace torch_xla {
 namespace ir {
 namespace ops {
 
-class SymEig : public Node {
+class SymEig : public XlaNode {
  public:
   SymEig(const Value& input, bool eigenvectors, bool lower);
 

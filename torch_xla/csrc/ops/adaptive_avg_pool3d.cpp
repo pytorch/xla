@@ -24,7 +24,7 @@ xla::Shape NodeOutputShape(const Value& input,
 
 AdaptiveAvgPool3d::AdaptiveAvgPool3d(const Value& input,
                                      std::vector<int64_t> output_size)
-    : Node(torch::lazy::OpKind(at::aten::adaptive_avg_pool3d), {input},
+    : XlaNode(torch::lazy::OpKind(at::aten::adaptive_avg_pool3d), {input},
            [&]() { return NodeOutputShape(input, output_size); },
            /*num_outputs=*/1, torch::lazy::MHash(output_size)),
       output_size_(std::move(output_size)) {}
@@ -41,7 +41,7 @@ XlaOpVector AdaptiveAvgPool3d::Lower(LoweringContext* loctx) const {
 
 std::string AdaptiveAvgPool3d::ToString() const {
   std::stringstream ss;
-  ss << Node::ToString() << ", output_size=("
+  ss << XlaNode::ToString() << ", output_size=("
      << absl::StrJoin(output_size_, ", ") << ")";
   return ss.str();
 }

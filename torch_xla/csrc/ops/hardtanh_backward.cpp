@@ -11,7 +11,7 @@ namespace ops {
 HardtanhBackward::HardtanhBackward(const Value& grad_output, const Value& input,
                                    const at::Scalar& min_val,
                                    const at::Scalar& max_val)
-    : Node(torch::lazy::OpKind(at::aten::hardtanh_backward),
+    : XlaNode(torch::lazy::OpKind(at::aten::hardtanh_backward),
            {grad_output, input}, grad_output.xla_shape(), /*num_outputs=*/1,
            torch::lazy::MHash(ScalarHash(min_val), ScalarHash(max_val))),
       min_val_(min_val),
@@ -19,7 +19,7 @@ HardtanhBackward::HardtanhBackward(const Value& grad_output, const Value& input,
 
 std::string HardtanhBackward::ToString() const {
   std::stringstream ss;
-  ss << Node::ToString() << ", min_val=" << min_val_
+  ss << XlaNode::ToString() << ", min_val=" << min_val_
      << ", max_val=" << max_val_;
   return ss.str();
 }

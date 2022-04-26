@@ -24,7 +24,7 @@ xla::Shape NodeOutputShape(const Value& input) {
 }  // namespace
 
 MaskedSelect::MaskedSelect(const Value& input, const Value& mask)
-    : Node(torch::lazy::OpKind(at::aten::masked_select), {input, mask},
+    : XlaNode(torch::lazy::OpKind(at::aten::masked_select), {input, mask},
            NodeOutputShape(input),
            /*num_outputs=*/2) {}
 

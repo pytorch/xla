@@ -861,7 +861,7 @@ std::shared_ptr<View> XLATensor::CreateView(ViewInfo view_info) const {
   }
   // This node is not a view, and creating a view forks the current node into
   // becoming one itself. This means creating an alias with the current IR
-  // Node, and using the same alias for the created IR Node.
+  // XlaNode, and using the same alias for the created IR XlaNode.
   ir::Value ir_value = GetIrValue();
   std::shared_ptr<Alias> alias = std::make_shared<Alias>(ir_value);
   ViewInfo this_view_info(ViewInfo::Type::kNoOp, ir_value.xla_shape(),
@@ -882,7 +882,7 @@ at::Tensor XLATensor::ToTensor(bool detached) {
   c10::optional<at::Tensor> tensor_data = CurrentTensorData();
   if (!tensor_data) {
     DeviceBarrier(GetDevice());
-    // The GetXlaData() call will trigger an ApplyPendingGraph() if an IR Node
+    // The GetXlaData() call will trigger an ApplyPendingGraph() if an IR XlaNode
     // is available on the tensor.
     std::vector<at::Tensor> tensors = XlaDataToTensors({GetXlaData()}, dtype());
     tensor = std::move(tensors.front());
@@ -974,7 +974,7 @@ std::vector<xla::ComputationClient::DataPtr> XLATensor::GatherTensorsXlaData(
     auto it = uid_index_map.find(tensor_id);
     if (it != uid_index_map.end()) {
       // Current tensor is a duplicate of a previously processed tensor that had
-      // an IR Node to sync. Get the XLA data from the tensor_data_map.
+      // an IR XlaNode to sync. Get the XLA data from the tensor_data_map.
       result_tensors_data.push_back(result_tensors_data[it->second]);
     } else if (indices_index < indices.size() && i == indices[indices_index]) {
       // If we are at the current index (it means that the tensor at index

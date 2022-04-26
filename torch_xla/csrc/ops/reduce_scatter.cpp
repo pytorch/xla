@@ -35,7 +35,7 @@ ReduceScatter::ReduceScatter(AllReduceType reduce_type, const Value& input,
                              int64_t scatter_dim, int64_t shard_count,
                              std::vector<std::vector<int64_t>> groups,
                              bool pin_layout)
-    : Node(xla_reduce_scatter, {input, token},
+    : XlaNode(xla_reduce_scatter, {input, token},
            [&]() {
              return NodeOutputShape(reduce_type, input, token, scale,
                                     scatter_dim, shard_count, groups,
@@ -68,7 +68,7 @@ XlaOpVector ReduceScatter::Lower(LoweringContext* loctx) const {
 
 std::string ReduceScatter::ToString() const {
   std::stringstream ss;
-  ss << Node::ToString()
+  ss << XlaNode::ToString()
      << ", reduce_type=" << torch::lazy::GetEnumValue(reduce_type_)
      << ", scale=" << scale_ << ", scatter_dim=" << scatter_dim_
      << ", shard_count=" << shard_count_ << ", pin_layout=" << pin_layout_

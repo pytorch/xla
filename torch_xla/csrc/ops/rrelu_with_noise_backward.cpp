@@ -11,7 +11,7 @@ namespace ops {
 RreluWithNoiseBackward::RreluWithNoiseBackward(
     const Value& grad_output, const Value& input, const Value& noise,
     const at::Scalar& lower, const at::Scalar& upper, bool training)
-    : Node(torch::lazy::OpKind(at::aten::rrelu_with_noise_backward),
+    : XlaNode(torch::lazy::OpKind(at::aten::rrelu_with_noise_backward),
            {grad_output, input, noise}, input.xla_shape(),
            /*num_outputs=*/1,
            torch::lazy::MHash(ScalarHash(lower), ScalarHash(upper), training)),
@@ -36,7 +36,7 @@ XlaOpVector RreluWithNoiseBackward::Lower(LoweringContext* loctx) const {
 
 std::string RreluWithNoiseBackward::ToString() const {
   std::stringstream ss;
-  ss << Node::ToString() << ", lower=" << lower_ << ", upper=" << upper_
+  ss << XlaNode::ToString() << ", lower=" << lower_ << ", upper=" << upper_
      << ", training=" << training_;
   return ss.str();
 }

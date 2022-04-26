@@ -13,7 +13,7 @@ namespace ops {
 
 GetDimensionsSize::GetDimensionsSize(const Value& input,
                                      std::vector<int64_t> dimensions)
-    : Node(xla_get_dimensions_size, {input},
+    : XlaNode(xla_get_dimensions_size, {input},
            xla::ShapeUtil::MakeShape(GetShapeDimensionType(/*device=*/nullptr),
                                      {}),
            /*num_outputs=*/1, torch::lazy::MHash(dimensions)),
@@ -31,7 +31,7 @@ XlaOpVector GetDimensionsSize::Lower(LoweringContext* loctx) const {
 
 std::string GetDimensionsSize::ToString() const {
   std::stringstream ss;
-  ss << Node::ToString() << ", dimensions=(" << absl::StrJoin(dimensions_, ", ")
+  ss << XlaNode::ToString() << ", dimensions=(" << absl::StrJoin(dimensions_, ", ")
      << ")";
   return ss.str();
 }

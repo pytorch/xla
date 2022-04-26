@@ -6,7 +6,7 @@ namespace torch_xla {
 namespace ir {
 namespace ops {
 
-class SVD : public Node {
+class SVD : public XlaNode {
  public:
   SVD(const Value& input, bool some, bool compute_uv);
 

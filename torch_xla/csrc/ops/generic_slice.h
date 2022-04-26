@@ -7,7 +7,7 @@ namespace torch_xla {
 namespace ir {
 namespace ops {
 
-class GenericSlice : public Node {
+class GenericSlice : public XlaNode {
  public:
   GenericSlice(const Value& input, absl::Span<const int64_t> base_indices,
                absl::Span<const int64_t> sizes);

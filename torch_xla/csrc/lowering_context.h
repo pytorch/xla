@@ -57,7 +57,7 @@ class LoweringContext {
   void AssignOutputOp(const torch::lazy::Output& output, xla::XlaOp op);
 
   // Retrieves the lowered operation for a output. If the requested output is
-  // not available yet, the graph behind the output's Node is lowered, and the
+  // not available yet, the graph behind the output's XlaNode is lowered, and the
   // corresponding XLA operation returned.
   xla::XlaOp GetOutputOp(const torch::lazy::Output& output);
 

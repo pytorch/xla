@@ -57,7 +57,7 @@ NativeBatchNormForward::NativeBatchNormForward(const Value& input,
                                                const Value& running_mean,
                                                const Value& running_var,
                                                bool training, double eps)
-    : Node(torch::lazy::OpKind(at::aten::native_batch_norm),
+    : XlaNode(torch::lazy::OpKind(at::aten::native_batch_norm),
            {input, weight, bias, running_mean, running_var},
            [&]() {
              return NodeOutputShape(input, weight, bias, running_mean,
@@ -87,7 +87,7 @@ XlaOpVector NativeBatchNormForward::Lower(LoweringContext* loctx) const {
 
 std::string NativeBatchNormForward::ToString() const {
   std::stringstream ss;
-  ss << Node::ToString() << ", training=" << training_ << ", eps=" << eps_;
+  ss << XlaNode::ToString() << ", training=" << training_ << ", eps=" << eps_;
   return ss.str();
 }
 

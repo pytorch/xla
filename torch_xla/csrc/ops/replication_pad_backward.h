@@ -8,7 +8,7 @@ namespace torch_xla {
 namespace ir {
 namespace ops {
 
-class ReplicationPadBackward : public Node {
+class ReplicationPadBackward : public XlaNode {
  public:
   ReplicationPadBackward(const Value& gard_output, const Value& input,
                          std::vector<int64_t> padding);

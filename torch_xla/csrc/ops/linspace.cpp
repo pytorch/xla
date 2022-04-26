@@ -9,7 +9,7 @@ namespace ir {
 namespace ops {
 
 Linspace::Linspace(const Value& start, const Value& end, int64_t steps)
-    : Node(torch::lazy::OpKind(at::aten::linspace), {start, end},
+    : XlaNode(torch::lazy::OpKind(at::aten::linspace), {start, end},
            [&]() {
              xla::PrimitiveType dtype =
                  XlaHelpers::PromoteType(start.xla_shape().element_type(),
@@ -31,7 +31,7 @@ XlaOpVector Linspace::Lower(LoweringContext* loctx) const {
 
 std::string Linspace::ToString() const {
   std::stringstream ss;
-  ss << Node::ToString() << ", steps=" << steps_;
+  ss << XlaNode::ToString() << ", steps=" << steps_;
   return ss.str();
 }
 

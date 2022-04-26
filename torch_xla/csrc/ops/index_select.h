@@ -6,7 +6,7 @@ namespace torch_xla {
 namespace ir {
 namespace ops {
 
-class IndexSelect : public Node {
+class IndexSelect : public XlaNode {
  public:
   IndexSelect(const Value& input, int64_t dim, const Value& index);
 

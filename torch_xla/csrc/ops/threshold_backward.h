@@ -6,7 +6,7 @@ namespace torch_xla {
 namespace ir {
 namespace ops {
 
-class ThresholdBackward : public Node {
+class ThresholdBackward : public XlaNode {
  public:
   ThresholdBackward(const Value& grad_output, const Value& input,
                     float threshold);

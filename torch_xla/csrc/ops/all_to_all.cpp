@@ -31,7 +31,7 @@ AllToAll::AllToAll(const Value& input, const Value& token,
                    int64_t split_dimension, int64_t concat_dimension,
                    int64_t split_count,
                    std::vector<std::vector<int64_t>> groups, bool pin_layout)
-    : Node(xla_all_to_all, {input, token},
+    : XlaNode(xla_all_to_all, {input, token},
            [&]() {
              return NodeOutputShape(input, token, split_dimension,
                                     concat_dimension, split_count, groups,
@@ -63,7 +63,7 @@ XlaOpVector AllToAll::Lower(LoweringContext* loctx) const {
 
 std::string AllToAll::ToString() const {
   std::stringstream ss;
-  ss << Node::ToString() << ", split_dimension=" << split_dimension_
+  ss << XlaNode::ToString() << ", split_dimension=" << split_dimension_
      << ", concat_dimension=" << concat_dimension_
      << ", split_count=" << split_count_ << ", pin_layout=" << pin_layout_
      << ", groups=(";

@@ -26,7 +26,7 @@ xla::Shape NodeOutputShape(const Value& grad_output, const Value& input,
 
 L1LossBackward::L1LossBackward(const Value& grad_output, const Value& input,
                                const Value& target, ReductionMode reduction)
-    : Node(torch::lazy::OpKind(at::aten::l1_loss_backward),
+    : XlaNode(torch::lazy::OpKind(at::aten::l1_loss_backward),
            {grad_output, input, target},
            [&]() {
              return NodeOutputShape(grad_output, input, target, reduction);
@@ -50,7 +50,7 @@ XlaOpVector L1LossBackward::Lower(LoweringContext* loctx) const {
 
 std::string L1LossBackward::ToString() const {
   std::stringstream ss;
-  ss << Node::ToString()
+  ss << XlaNode::ToString()
      << ", reduction=" << torch::lazy::GetEnumValue(reduction_);
   return ss.str();
 }

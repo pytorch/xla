@@ -24,7 +24,7 @@ xla::Shape NodeOutputShape(const Value& input) {
 }  // namespace
 
 NonZero::NonZero(const Value& input)
-    : Node(torch::lazy::OpKind(at::aten::nonzero), {input},
+    : XlaNode(torch::lazy::OpKind(at::aten::nonzero), {input},
            NodeOutputShape(input),
            /*num_outputs=*/2) {}
 

@@ -8,7 +8,7 @@ namespace torch_xla {
 namespace ir {
 namespace ops {
 
-class ConstantPadNd : public Node {
+class ConstantPadNd : public XlaNode {
  public:
   ConstantPadNd(const Value& input, std::vector<int64_t> pad,
                 const at::Scalar& value);

@@ -6,7 +6,7 @@ namespace torch_xla {
 namespace ir {
 namespace ops {
 
-class NativeBatchNormForward : public Node {
+class NativeBatchNormForward : public XlaNode {
  public:
   NativeBatchNormForward(const Value& input, const Value& weight,
                          const Value& bias, const Value& running_mean,

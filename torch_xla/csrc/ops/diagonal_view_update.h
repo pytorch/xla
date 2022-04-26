@@ -6,7 +6,7 @@ namespace torch_xla {
 namespace ir {
 namespace ops {
 
-class DiagonalViewUpdate : public Node {
+class DiagonalViewUpdate : public XlaNode {
  public:
   DiagonalViewUpdate(const Value& target, const Value& input, int64_t offset,
                      int64_t dim1, int64_t dim2);

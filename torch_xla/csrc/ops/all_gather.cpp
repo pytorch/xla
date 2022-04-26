@@ -29,7 +29,7 @@ xla::Shape NodeOutputShape(const Value& input, const Value& token, int64_t dim,
 AllGather::AllGather(const Value& input, const Value& token, int64_t dim,
                      int64_t shard_count,
                      std::vector<std::vector<int64_t>> groups, bool pin_layout)
-    : Node(xla_all_gather, {input, token},
+    : XlaNode(xla_all_gather, {input, token},
            [&]() {
              return NodeOutputShape(input, token, dim, shard_count, groups,
                                     pin_layout);
@@ -56,7 +56,7 @@ XlaOpVector AllGather::Lower(LoweringContext* loctx) const {
 
 std::string AllGather::ToString() const {
   std::stringstream ss;
-  ss << Node::ToString() << ", dim=" << dim_ << ", shard_count=" << shard_count_
+  ss << XlaNode::ToString() << ", dim=" << dim_ << ", shard_count=" << shard_count_
      << ", pin_layout=" << pin_layout_ << ", groups=(";
   for (size_t i = 0; i < groups_.size(); ++i) {
     ss << (i == 0 ? "(" : ",(");

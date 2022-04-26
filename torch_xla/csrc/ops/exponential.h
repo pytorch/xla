@@ -6,7 +6,7 @@ namespace torch_xla {
 namespace ir {
 namespace ops {
 
-class Exponential : public Node {
+class Exponential : public XlaNode {
  public:
   Exponential(const Value& lambda, const Value& seed, xla::Shape shape);
 

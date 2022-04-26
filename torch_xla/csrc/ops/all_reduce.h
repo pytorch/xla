@@ -7,7 +7,7 @@ namespace torch_xla {
 namespace ir {
 namespace ops {
 
-class AllReduce : public Node {
+class AllReduce : public XlaNode {
  public:
   AllReduce(AllReduceType reduce_type, absl::Span<const Value> operands,
             const Value& token, double scale,

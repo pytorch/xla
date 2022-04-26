@@ -8,7 +8,7 @@ namespace torch_xla {
 namespace ir {
 namespace ops {
 
-class AdaptiveMaxPool2d : public Node {
+class AdaptiveMaxPool2d : public XlaNode {
  public:
   AdaptiveMaxPool2d(const Value& input, std::vector<int64_t> output_size);
 

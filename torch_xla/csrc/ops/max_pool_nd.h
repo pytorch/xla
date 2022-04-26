@@ -6,7 +6,7 @@ namespace torch_xla {
 namespace ir {
 namespace ops {
 
-class MaxPoolNd : public Node {
+class MaxPoolNd : public XlaNode {
  public:
   MaxPoolNd(const Value& input, int64_t spatial_dim_count,
             std::vector<int64_t> kernel_size, std::vector<int64_t> stride,

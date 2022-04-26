@@ -6,7 +6,7 @@ namespace torch_xla {
 namespace ir {
 namespace ops {
 
-class SoftmaxBackward : public Node {
+class SoftmaxBackward : public XlaNode {
  public:
   SoftmaxBackward(const Value& grad_output, const Value& output, int64_t dim);
 

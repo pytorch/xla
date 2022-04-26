@@ -8,7 +8,7 @@ namespace torch_xla {
 namespace ir {
 namespace ops {
 
-class ShrinkBackward : public Node {
+class ShrinkBackward : public XlaNode {
  public:
   ShrinkBackward(torch::lazy::OpKind kind, const Value& grad_output,
                  const Value& input, const at::Scalar& lambda);

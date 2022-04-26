@@ -31,7 +31,7 @@ xla::Shape NodeOutputShape(const Value& input,
 
 Softmax::Softmax(const Value& input, int64_t dim,
                  c10::optional<at::ScalarType> dtype)
-    : Node(torch::lazy::OpKind(at::aten::softmax), {input},
+    : XlaNode(torch::lazy::OpKind(at::aten::softmax), {input},
            [&]() { return NodeOutputShape(input, dtype); },
            /*num_outputs=*/1,
            torch::lazy::MHash(dim, torch::lazy::OptionalOr<int>(dtype, -1))),
@@ -49,7 +49,7 @@ XlaOpVector Softmax::Lower(LoweringContext* loctx) const {
 
 std::string Softmax::ToString() const {
   std::stringstream ss;
-  ss << Node::ToString() << ", dim=" << dim_
+  ss << XlaNode::ToString() << ", dim=" << dim_
      << ", dtype=" << torch::lazy::OptionalOr<int>(dtype_, -1);
   return ss.str();
 }

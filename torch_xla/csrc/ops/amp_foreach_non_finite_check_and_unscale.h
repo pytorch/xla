@@ -6,7 +6,7 @@ namespace torch_xla {
 namespace ir {
 namespace ops {
 
-class AmpForachNonFiniteCheckAndUnscale : public Node {
+class AmpForachNonFiniteCheckAndUnscale : public XlaNode {
  public:
   AmpForachNonFiniteCheckAndUnscale(const OpList& inputs,
                                     const Value& found_inf,

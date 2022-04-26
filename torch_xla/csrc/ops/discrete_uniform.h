@@ -6,7 +6,7 @@ namespace torch_xla {
 namespace ir {
 namespace ops {
 
-class DiscreteUniform : public Node {
+class DiscreteUniform : public XlaNode {
  public:
   DiscreteUniform(const Value& from, const Value& to, const Value& seed,
                   const xla::Shape& rng_shape);

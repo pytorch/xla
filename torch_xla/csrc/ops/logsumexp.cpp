@@ -26,7 +26,7 @@ xla::Shape NodeOutputShape(const Value& input, std::vector<int64_t>& dimensions,
 
 Logsumexp::Logsumexp(const Value& input, std::vector<int64_t> dimensions,
                      bool keep_reduced_dimensions)
-    : Node(torch::lazy::OpKind(at::aten::logsumexp), {input},
+    : XlaNode(torch::lazy::OpKind(at::aten::logsumexp), {input},
            [&]() {
              return NodeOutputShape(input, dimensions, keep_reduced_dimensions);
            },
@@ -48,7 +48,7 @@ XlaOpVector Logsumexp::Lower(LoweringContext* loctx) const {
 
 std::string Logsumexp::ToString() const {
   std::stringstream ss;
-  ss << Node::ToString() << ", dimensions=(" << absl::StrJoin(dimensions_, ", ")
+  ss << XlaNode::ToString() << ", dimensions=(" << absl::StrJoin(dimensions_, ", ")
      << "), keep_reduced_dimensions=" << keep_reduced_dimensions_;
   return ss.str();
 }

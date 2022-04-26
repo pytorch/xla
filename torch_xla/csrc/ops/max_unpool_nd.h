@@ -6,7 +6,7 @@ namespace torch_xla {
 namespace ir {
 namespace ops {
 
-class MaxUnpoolNd : public Node {
+class MaxUnpoolNd : public XlaNode {
  public:
   MaxUnpoolNd(const Value& input, const Value& indices,
               std::vector<int64_t> output_size);

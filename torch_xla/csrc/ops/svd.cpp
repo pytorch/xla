@@ -68,7 +68,7 @@ xla::Shape NodeOutputShape(const Value& input, bool some, bool compute_uv) {
 }  // namespace
 
 SVD::SVD(const Value& input, bool some, bool compute_uv)
-    : Node(torch::lazy::OpKind(at::aten::svd), {input},
+    : XlaNode(torch::lazy::OpKind(at::aten::svd), {input},
            [&]() { return NodeOutputShape(input, some, compute_uv); },
            /*num_outputs=*/3, torch::lazy::MHash(some, compute_uv)),
       some_(some),
@@ -85,7 +85,7 @@ XlaOpVector SVD::Lower(LoweringContext* loctx) const {
 
 std::string SVD::ToString() const {
   std::stringstream ss;
-  ss << Node::ToString() << ", some=" << some_
+  ss << XlaNode::ToString() << ", some=" << some_
      << ", compute_uv=" << compute_uv_;
   return ss.str();
 }

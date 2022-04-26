@@ -6,7 +6,7 @@ namespace torch_xla {
 namespace ir {
 namespace ops {
 
-class Linspace : public Node {
+class Linspace : public XlaNode {
  public:
   Linspace(const Value& start, const Value& end, const int64_t steps);
 

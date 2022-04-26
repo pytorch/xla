@@ -9,7 +9,7 @@ namespace ops {
 
 ThresholdBackward::ThresholdBackward(const Value& grad_output,
                                      const Value& input, float threshold)
-    : Node(torch::lazy::OpKind(at::aten::threshold_backward),
+    : XlaNode(torch::lazy::OpKind(at::aten::threshold_backward),
            {grad_output, input}, input.xla_shape(), /*num_outputs=*/1,
            torch::lazy::MHash(threshold)),
       threshold_(threshold) {}
@@ -28,7 +28,7 @@ XlaOpVector ThresholdBackward::Lower(LoweringContext* loctx) const {
 
 std::string ThresholdBackward::ToString() const {
   std::stringstream ss;
-  ss << Node::ToString() << ", threshold=" << threshold_;
+  ss << XlaNode::ToString() << ", threshold=" << threshold_;
   return ss.str();
 }
 

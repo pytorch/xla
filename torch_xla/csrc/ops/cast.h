@@ -9,7 +9,7 @@ namespace torch_xla {
 namespace ir {
 namespace ops {
 
-class Cast : public Node {
+class Cast : public XlaNode {
  public:
   Cast(const Value& input, xla::PrimitiveType type);
   Cast(const Value& input, at::ScalarType dtype,

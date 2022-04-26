@@ -35,7 +35,7 @@ xla::Shape NodeOutputShape(const Value& logits, const Value& labels,
 BinaryCrossEntropy::BinaryCrossEntropy(const Value& logits, const Value& labels,
                                        const absl::optional<Value>& weight,
                                        ReductionMode reduction)
-    : Node(torch::lazy::OpKind(at::aten::binary_cross_entropy),
+    : XlaNode(torch::lazy::OpKind(at::aten::binary_cross_entropy),
            xla::util::GetValuesVector<Value>({logits, labels}, {&weight}),
            [&]() { return NodeOutputShape(logits, labels, weight, reduction); },
            /*num_outputs=*/1,
@@ -64,7 +64,7 @@ XlaOpVector BinaryCrossEntropy::Lower(LoweringContext* loctx) const {
 
 std::string BinaryCrossEntropy::ToString() const {
   std::stringstream ss;
-  ss << Node::ToString()
+  ss << XlaNode::ToString()
      << ", reduction=" << torch::lazy::GetEnumValue(reduction_);
   return ss.str();
 }

@@ -27,7 +27,7 @@ xla::Shape NodeOutputShape(
 CollectivePermute::CollectivePermute(
     const Value& input, const Value& token,
     std::vector<std::pair<int64_t, int64_t>> source_target_pairs)
-    : Node(xla_collective_permute, {input, token},
+    : XlaNode(xla_collective_permute, {input, token},
            [&]() { return NodeOutputShape(input, token, source_target_pairs); },
            /*num_outputs=*/2, torch::lazy::MHash(source_target_pairs)),
       source_target_pairs_(std::move(source_target_pairs)) {}
@@ -47,7 +47,7 @@ XlaOpVector CollectivePermute::Lower(LoweringContext* loctx) const {
 
 std::string CollectivePermute::ToString() const {
   std::stringstream ss;
-  ss << Node::ToString() << ", source_target_pairs=(";
+  ss << XlaNode::ToString() << ", source_target_pairs=(";
   for (size_t i = 0; i < source_target_pairs_.size(); ++i) {
     ss << (i == 0 ? "(" : ", (");
     ss << source_target_pairs_[i].first << ", "

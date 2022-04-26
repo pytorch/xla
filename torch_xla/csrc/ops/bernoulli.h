@@ -6,7 +6,7 @@ namespace torch_xla {
 namespace ir {
 namespace ops {
 
-class Bernoulli : public Node {
+class Bernoulli : public XlaNode {
  public:
   Bernoulli(const Value& probability, const Value& seed, xla::Shape shape);
 

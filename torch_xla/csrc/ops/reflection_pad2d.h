@@ -8,7 +8,7 @@ namespace torch_xla {
 namespace ir {
 namespace ops {
 
-class ReflectionPad2d : public Node {
+class ReflectionPad2d : public XlaNode {
  public:
   ReflectionPad2d(const Value& input, std::vector<int64_t> padding);
 

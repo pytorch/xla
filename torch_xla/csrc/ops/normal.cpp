@@ -9,7 +9,7 @@ namespace ir {
 namespace ops {
 
 Normal::Normal(const Value& mean, const Value& std, const Value& seed)
-    : Node(torch::lazy::OpKind(at::aten::normal), {mean, std, seed},
+    : XlaNode(torch::lazy::OpKind(at::aten::normal), {mean, std, seed},
            mean.xla_shape()) {}
 
 torch::lazy::NodePtr Normal::Clone(OpList operands) const {

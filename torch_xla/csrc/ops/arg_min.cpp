@@ -20,7 +20,7 @@ xla::Shape NodeOutputShape(const Value& input, int64_t dim, bool keepdim) {
 }  // namespace
 
 ArgMin::ArgMin(const Value& input, int64_t dim, bool keepdim)
-    : Node(torch::lazy::OpKind(at::aten::argmin), {input},
+    : XlaNode(torch::lazy::OpKind(at::aten::argmin), {input},
            [&]() { return NodeOutputShape(input, dim, keepdim); },
            /*num_outputs=*/1, torch::lazy::MHash(dim, keepdim)),
       dim_(dim),
@@ -37,7 +37,7 @@ XlaOpVector ArgMin::Lower(LoweringContext* loctx) const {
 
 std::string ArgMin::ToString() const {
   std::stringstream ss;
-  ss << Node::ToString() << ", dim=" << dim_ << ", keepdim=" << keepdim_;
+  ss << XlaNode::ToString() << ", dim=" << dim_ << ", keepdim=" << keepdim_;
   return ss.str();
 }
 

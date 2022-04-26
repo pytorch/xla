@@ -8,7 +8,7 @@ namespace torch_xla {
 namespace ir {
 namespace ops {
 
-class Expand : public Node {
+class Expand : public XlaNode {
  public:
   Expand(const Value& input, std::vector<int64_t> size);
 

@@ -6,7 +6,7 @@ namespace torch_xla {
 namespace ir {
 namespace ops {
 
-class Nms : public Node {
+class Nms : public XlaNode {
  public:
   Nms(const Value& boxes, const Value& scores, const Value& score_threshold,
       const Value& iou_threshold, int64_t output_size);

@@ -9,7 +9,7 @@ namespace ops {
 
 Put::Put(const Value& input, const Value& index, const Value& source,
          bool accumulate)
-    : Node(torch::lazy::OpKind(at::aten::put), {input, index, source},
+    : XlaNode(torch::lazy::OpKind(at::aten::put), {input, index, source},
            input.xla_shape(),
            /*num_outputs=*/1, torch::lazy::MHash(accumulate)),
       accumulate_(accumulate) {}
@@ -29,7 +29,7 @@ XlaOpVector Put::Lower(LoweringContext* loctx) const {
 
 std::string Put::ToString() const {
   std::stringstream ss;
-  ss << Node::ToString() << ", accumulate=" << accumulate_;
+  ss << XlaNode::ToString() << ", accumulate=" << accumulate_;
   return ss.str();
 }
 

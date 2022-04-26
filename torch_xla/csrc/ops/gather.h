@@ -6,7 +6,7 @@ namespace torch_xla {
 namespace ir {
 namespace ops {
 
-class Gather : public Node {
+class Gather : public XlaNode {
  public:
   Gather(const Value& input, int64_t dim, const Value& index);
 

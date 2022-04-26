@@ -37,7 +37,7 @@ ConvolutionOverrideable::ConvolutionOverrideable(
     std::vector<int64_t> stride, std::vector<int64_t> padding,
     std::vector<int64_t> dilation, bool transposed,
     std::vector<int64_t> output_padding, int64_t groups)
-    : Node(torch::lazy::OpKind(at::aten::convolution_overrideable),
+    : XlaNode(torch::lazy::OpKind(at::aten::convolution_overrideable),
            {input, weight, bias},
            [&]() {
              return NodeOutputShape(input, weight, stride, padding, dilation,
@@ -57,7 +57,7 @@ ConvolutionOverrideable::ConvolutionOverrideable(
     const Value& input, const Value& weight, std::vector<int64_t> stride,
     std::vector<int64_t> padding, std::vector<int64_t> dilation,
     bool transposed, std::vector<int64_t> output_padding, int64_t groups)
-    : Node(torch::lazy::OpKind(at::aten::convolution_overrideable),
+    : XlaNode(torch::lazy::OpKind(at::aten::convolution_overrideable),
            {input, weight},
            [&]() {
              return NodeOutputShape(input, weight, stride, padding, dilation,
@@ -103,7 +103,7 @@ XlaOpVector ConvolutionOverrideable::Lower(LoweringContext* loctx) const {
 
 std::string ConvolutionOverrideable::ToString() const {
   std::stringstream ss;
-  ss << Node::ToString() << ", stride=(" << absl::StrJoin(stride_, ", ")
+  ss << XlaNode::ToString() << ", stride=(" << absl::StrJoin(stride_, ", ")
      << "), padding=(" << absl::StrJoin(padding_, ", ") << "), dilation=("
      << absl::StrJoin(dilation_, ", ") << "), transpose=" << transposed_
      << ", output_padding=(" << absl::StrJoin(output_padding_, ", ")

@@ -9,7 +9,7 @@ namespace torch_xla {
 namespace ir {
 namespace ops {
 
-class CumProd : public Node {
+class CumProd : public XlaNode {
  public:
   CumProd(const Value& input, int64_t dim, c10::optional<at::ScalarType> dtype);
 

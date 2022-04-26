@@ -8,7 +8,7 @@ namespace torch_xla {
 namespace ir {
 namespace ops {
 
-class GetDimensionsSize : public Node {
+class GetDimensionsSize : public XlaNode {
  public:
   GetDimensionsSize(const Value& input, std::vector<int64_t> dimensions);
 

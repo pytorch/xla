@@ -46,7 +46,7 @@ AsStridedViewUpdate::AsStridedViewUpdate(const Value& target,
                                          std::vector<int64_t> size,
                                          std::vector<int64_t> stride,
                                          int64_t storage_offset)
-    : Node(xla_as_strided_view_update, {target, input},
+    : XlaNode(xla_as_strided_view_update, {target, input},
            [&]() {
              return xla::ShapeUtil::MakeShape(target.xla_shape().element_type(),
                                               size);
@@ -58,7 +58,7 @@ AsStridedViewUpdate::AsStridedViewUpdate(const Value& target,
 
 std::string AsStridedViewUpdate::ToString() const {
   std::stringstream ss;
-  ss << Node::ToString() << ", size=(" << absl::StrJoin(size_, ", ")
+  ss << XlaNode::ToString() << ", size=(" << absl::StrJoin(size_, ", ")
      << "), stride=(" << absl::StrJoin(stride_, ", ")
      << "), storage_offset=" << storage_offset_;
   return ss.str();

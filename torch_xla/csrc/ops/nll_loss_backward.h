@@ -8,7 +8,7 @@ namespace torch_xla {
 namespace ir {
 namespace ops {
 
-class NllLossBackward : public Node {
+class NllLossBackward : public XlaNode {
  public:
   NllLossBackward(const Value& grad_output, const Value& logits,
                   const Value& labels, const absl::optional<Value>& weight,

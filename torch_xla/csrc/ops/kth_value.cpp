@@ -22,7 +22,7 @@ xla::Shape NodeOutputShape(const Value& input, int64_t k, int64_t dim,
 }  // namespace
 
 KthValue::KthValue(const Value& input, int64_t k, int64_t dim, bool keepdim)
-    : Node(torch::lazy::OpKind(at::aten::kthvalue), {input},
+    : XlaNode(torch::lazy::OpKind(at::aten::kthvalue), {input},
            [&]() { return NodeOutputShape(input, k, dim, keepdim); },
            /*num_outputs=*/2, torch::lazy::MHash(k, dim, keepdim)),
       k_(k),
@@ -40,7 +40,7 @@ XlaOpVector KthValue::Lower(LoweringContext* loctx) const {
 
 std::string KthValue::ToString() const {
   std::stringstream ss;
-  ss << Node::ToString() << ", k=" << k_ << ", dim=" << dim_
+  ss << XlaNode::ToString() << ", k=" << k_ << ", dim=" << dim_
      << ", keepdim=" << keepdim_;
   return ss.str();
 }

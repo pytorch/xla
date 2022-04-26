@@ -15,7 +15,7 @@ size_t GetNumOutputs(const xla::Shape& shape) {
 
 UserComputation::UserComputation(torch::lazy::OpKind op, OpList operands,
                                  ComputationPtr computation)
-    : Node(std::move(op), operands, computation->program_shape().result(),
+    : XlaNode(std::move(op), operands, computation->program_shape().result(),
            GetNumOutputs(computation->program_shape().result()),
            computation->hash()),
       computation_(std::move(computation)) {}
@@ -45,7 +45,7 @@ XlaOpVector UserComputation::Lower(LoweringContext* loctx) const {
 
 std::string UserComputation::ToString() const {
   std::stringstream ss;
-  ss << Node::ToString() << ", computation=" << computation_->name();
+  ss << XlaNode::ToString() << ", computation=" << computation_->name();
   return ss.str();
 }
 

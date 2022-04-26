@@ -88,11 +88,11 @@ class XLATensor {
 
   void SetXlaData(xla::ComputationClient::DataPtr xla_data);
 
-  // Retrieves the current IR Node, or nullptr in case no active IR Node is
+  // Retrieves the current IR XlaNode, or nullptr in case no active IR XlaNode is
   // available.
   ir::Value CurrentIrValue() const;
 
-  // Retrieves the IR Node representing this XLATensor. One will be created if
+  // Retrieves the IR XlaNode representing this XLATensor. One will be created if
   // missing. Note that although this is a const API, it actually changes the
   // internal state ofthe object.
   ir::Value GetIrValue() const;

@@ -7,7 +7,7 @@ namespace torch_xla {
 namespace ir {
 namespace ops {
 
-class AllGather : public Node {
+class AllGather : public XlaNode {
  public:
   AllGather(const Value& input, const Value& token, int64_t dim,
             int64_t shard_count, std::vector<std::vector<int64_t>> groups,

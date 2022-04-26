@@ -30,7 +30,7 @@ xla::Shape NodeOutputShape(const Value& input, int dim) {
 }  // namespace
 
 Squeeze::Squeeze(const Value& input, int dim)
-    : Node(torch::lazy::OpKind(at::aten::squeeze), {input},
+    : XlaNode(torch::lazy::OpKind(at::aten::squeeze), {input},
            [&]() { return NodeOutputShape(input, dim); },
            /*num_outputs=*/1, torch::lazy::MHash(dim)),
       dim_(dim) {}
@@ -47,7 +47,7 @@ XlaOpVector Squeeze::Lower(LoweringContext* loctx) const {
 
 std::string Squeeze::ToString() const {
   std::stringstream ss;
-  ss << Node::ToString() << ", dim=" << dim_;
+  ss << XlaNode::ToString() << ", dim=" << dim_;
   return ss.str();
 }
 

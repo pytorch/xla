@@ -6,7 +6,7 @@ namespace torch_xla {
 namespace ir {
 namespace ops {
 
-class AdamOptimizerStep : public Node {
+class AdamOptimizerStep : public XlaNode {
  public:
   AdamOptimizerStep(const Value& found_inf, const Value& step,
                     const Value& param, const Value& grad, const Value& exp_avg,

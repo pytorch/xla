@@ -8,7 +8,7 @@ namespace torch_xla {
 namespace ir {
 namespace ops {
 
-class ConvolutionBackwardOverrideable : public Node {
+class ConvolutionBackwardOverrideable : public XlaNode {
  public:
   ConvolutionBackwardOverrideable(
       const Value& grad_output, const Value& input, const Value& weight,

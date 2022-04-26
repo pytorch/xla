@@ -36,7 +36,7 @@ AllReduce::AllReduce(AllReduceType reduce_type,
                      absl::Span<const Value> operands, const Value& token,
                      double scale, std::vector<std::vector<int64_t>> groups,
                      bool pin_layout)
-    : Node(xla_cross_replica_sum, GetOperandList(operands, token),
+    : XlaNode(xla_cross_replica_sum, GetOperandList(operands, token),
            [&]() { return NodeOutputShape(operands, token); },
            /*num_outputs=*/operands.size() + 1,
            torch::lazy::MHash(torch::lazy::GetEnumValue(reduce_type), scale,
@@ -67,7 +67,7 @@ XlaOpVector AllReduce::Lower(LoweringContext* loctx) const {
 
 std::string AllReduce::ToString() const {
   std::stringstream ss;
-  ss << Node::ToString()
+  ss << XlaNode::ToString()
      << ", reduce_type=" << torch::lazy::GetEnumValue(reduce_type_)
      << ", scale=" << scale_ << ", pin_layout=" << pin_layout_ << ", groups=(";
   for (size_t i = 0; i < groups_.size(); ++i) {

@@ -30,7 +30,7 @@ xla::Shape NodeOutputShape(const Value& boxes, const Value& scores,
 
 Nms::Nms(const Value& boxes, const Value& scores, const Value& score_threshold,
          const Value& iou_threshold, int64_t output_size)
-    : Node(xla_nms, {boxes, scores, score_threshold, iou_threshold},
+    : XlaNode(xla_nms, {boxes, scores, score_threshold, iou_threshold},
            [&]() {
              return NodeOutputShape(boxes, scores, score_threshold,
                                     iou_threshold, output_size);
@@ -55,7 +55,7 @@ XlaOpVector Nms::Lower(LoweringContext* loctx) const {
 
 std::string Nms::ToString() const {
   std::stringstream ss;
-  ss << Node::ToString() << ", output_size=" << output_size_;
+  ss << XlaNode::ToString() << ", output_size=" << output_size_;
   return ss.str();
 }
 

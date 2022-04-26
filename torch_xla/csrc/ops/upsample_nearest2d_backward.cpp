@@ -12,7 +12,7 @@ namespace ops {
 UpsampleNearestBackward::UpsampleNearestBackward(
     const Value& input, std::vector<int64_t> output_size,
     std::vector<int64_t> input_size)
-    : Node(torch::lazy::OpKind(at::aten::upsample_nearest2d_backward), {input},
+    : XlaNode(torch::lazy::OpKind(at::aten::upsample_nearest2d_backward), {input},
            [&]() {
              return resize::GetBackwardOutputShape2d(input.xla_shape(),
                                                      input_size);
@@ -36,7 +36,7 @@ XlaOpVector UpsampleNearestBackward::Lower(LoweringContext* loctx) const {
 
 std::string UpsampleNearestBackward::ToString() const {
   std::stringstream ss;
-  ss << Node::ToString() << ", output_size=("
+  ss << XlaNode::ToString() << ", output_size=("
      << absl::StrJoin(output_size_, ", ") << "), input_size=("
      << absl::StrJoin(input_size_, ", ") << ")";
   return ss.str();

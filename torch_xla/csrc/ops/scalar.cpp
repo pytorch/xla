@@ -13,19 +13,19 @@ namespace ir {
 namespace ops {
 
 Scalar::Scalar(const at::Scalar& value, xla::Shape shape)
-    : Node(torch::lazy::OpKind(at::prim::Constant), std::move(shape),
+    : XlaNode(torch::lazy::OpKind(at::prim::Constant), std::move(shape),
            /*num_outputs=*/1, ScalarHash(value)),
       value_(std::move(value)) {}
 
 Scalar::Scalar(const at::Scalar& value, xla::PrimitiveType type)
-    : Node(torch::lazy::OpKind(at::prim::Constant),
+    : XlaNode(torch::lazy::OpKind(at::prim::Constant),
            xla::ShapeUtil::MakeShape(type, {}),
            /*num_outputs=*/1, ScalarHash(value)),
       value_(std::move(value)) {}
 
 std::string Scalar::ToString() const {
   std::stringstream ss;
-  ss << Node::ToString() << ", value=" << value_;
+  ss << XlaNode::ToString() << ", value=" << value_;
   return ss.str();
 }
 

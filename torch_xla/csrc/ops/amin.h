@@ -6,7 +6,7 @@ namespace torch_xla {
 namespace ir {
 namespace ops {
 
-class Amin : public Node {
+class Amin : public XlaNode {
  public:
   Amin(const Value& input, std::vector<int64_t> dimensions, bool keepdim);
 

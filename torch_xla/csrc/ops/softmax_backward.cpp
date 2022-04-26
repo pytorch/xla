@@ -11,7 +11,7 @@ namespace ops {
 
 SoftmaxBackward::SoftmaxBackward(const Value& grad_output, const Value& output,
                                  int64_t dim)
-    : Node(torch::lazy::OpKind(at::aten::_softmax_backward_data),
+    : XlaNode(torch::lazy::OpKind(at::aten::_softmax_backward_data),
            {grad_output, output}, grad_output.xla_shape(),
            /*num_outputs=*/1, torch::lazy::MHash(dim)),
       dim_(dim) {}
@@ -30,7 +30,7 @@ XlaOpVector SoftmaxBackward::Lower(LoweringContext* loctx) const {
 
 std::string SoftmaxBackward::ToString() const {
   std::stringstream ss;
-  ss << Node::ToString() << ", dim=" << dim_;
+  ss << XlaNode::ToString() << ", dim=" << dim_;
   return ss.str();
 }
 

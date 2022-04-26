@@ -17,7 +17,7 @@ xla::Shape NodeOutputShape(const Value& input, int dim) {
 }  // namespace
 
 Unsqueeze::Unsqueeze(const Value& input, int dim)
-    : Node(torch::lazy::OpKind(at::aten::unsqueeze), {input},
+    : XlaNode(torch::lazy::OpKind(at::aten::unsqueeze), {input},
            [&]() { return NodeOutputShape(input, dim); },
            /*num_outputs=*/1, torch::lazy::MHash(dim)),
       dim_(dim) {}
@@ -34,7 +34,7 @@ XlaOpVector Unsqueeze::Lower(LoweringContext* loctx) const {
 
 std::string Unsqueeze::ToString() const {
   std::stringstream ss;
-  ss << Node::ToString() << ", dim=" << dim_;
+  ss << XlaNode::ToString() << ", dim=" << dim_;
   return ss.str();
 }
 

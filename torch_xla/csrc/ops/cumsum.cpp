@@ -38,7 +38,7 @@ xla::Shape NodeOutputShape(const Value& input,
 
 CumSum::CumSum(const Value& input, int64_t dim,
                c10::optional<at::ScalarType> dtype)
-    : Node(torch::lazy::OpKind(at::aten::cumsum), {input},
+    : XlaNode(torch::lazy::OpKind(at::aten::cumsum), {input},
            [&]() { return NodeOutputShape(input, dtype); },
            /*num_outputs=*/1,
            torch::lazy::MHash(dim, torch::lazy::OptionalOr<int>(dtype, -1))),
@@ -56,7 +56,7 @@ XlaOpVector CumSum::Lower(LoweringContext* loctx) const {
 
 std::string CumSum::ToString() const {
   std::stringstream ss;
-  ss << Node::ToString() << ", dim=" << dim_;
+  ss << XlaNode::ToString() << ", dim=" << dim_;
   if (dtype_) {
     ss << ", dtype=" << *dtype_;
   }

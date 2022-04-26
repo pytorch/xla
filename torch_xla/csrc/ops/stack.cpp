@@ -26,7 +26,7 @@ xla::Shape NodeOutputShape(absl::Span<const ir::Value> values, int64_t dim) {
 }  // namespace
 
 Stack::Stack(absl::Span<const ir::Value> values, int64_t dim)
-    : Node(torch::lazy::OpKind(at::aten::stack), values,
+    : XlaNode(torch::lazy::OpKind(at::aten::stack), values,
            [&]() { return NodeOutputShape(values, dim); },
            /*num_outputs=*/1, torch::lazy::MHash(dim)),
       dim_(dim) {}
@@ -45,7 +45,7 @@ XlaOpVector Stack::Lower(LoweringContext* loctx) const {
 
 std::string Stack::ToString() const {
   std::stringstream ss;
-  ss << Node::ToString() << ", dim=" << dim_;
+  ss << XlaNode::ToString() << ", dim=" << dim_;
   return ss.str();
 }
 

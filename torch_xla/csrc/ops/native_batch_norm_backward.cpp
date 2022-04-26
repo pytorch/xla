@@ -33,7 +33,7 @@ xla::Shape NodeOutputShape(const Value& grad_out, const Value& input,
 NativeBatchNormBackward::NativeBatchNormBackward(
     const Value& grad_out, const Value& input, const Value& weight,
     const Value& save_mean, const Value& save_invstd, bool training, double eps)
-    : Node(torch::lazy::OpKind(at::aten::native_batch_norm_backward),
+    : XlaNode(torch::lazy::OpKind(at::aten::native_batch_norm_backward),
            {grad_out, input, weight, save_mean, save_invstd},
            [&]() {
              return NodeOutputShape(grad_out, input, weight, save_mean,
@@ -64,7 +64,7 @@ XlaOpVector NativeBatchNormBackward::Lower(LoweringContext* loctx) const {
 
 std::string NativeBatchNormBackward::ToString() const {
   std::stringstream ss;
-  ss << Node::ToString() << ", training=" << training_ << ", eps=" << eps_;
+  ss << XlaNode::ToString() << ", training=" << training_ << ", eps=" << eps_;
   return ss.str();
 }
 
