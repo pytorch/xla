@@ -1,13 +1,13 @@
 #!/bin/bash
 
 CDIR="$(cd "$(dirname "$0")" ; pwd -P)"
-echo $CDIR
+
 XDIR="$CDIR/.."
 PTDIR="$XDIR/.."
 if [ -z "$PT_INC_DIR" ]; then
   PT_INC_DIR="$PTDIR/build/aten/src/ATen"
 fi
-ecoh $PTDIR
+
 set -e
 pushd $PTDIR
 python -m torchgen.gen_backend_stubs \
