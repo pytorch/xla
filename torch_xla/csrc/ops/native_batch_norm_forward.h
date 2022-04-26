@@ -8,9 +8,9 @@ namespace ops {
 
 class NativeBatchNormForward : public XlaNode {
  public:
-  NativeBatchNormForward(const Value& input, const Value& weight,
-                         const Value& bias, const Value& running_mean,
-                         const Value& running_var, bool training, double eps);
+  NativeBatchNormForward(const XlaValue& input, const XlaValue& weight,
+                         const XlaValue& bias, const XlaValue& running_mean,
+                         const XlaValue& running_var, bool training, double eps);
 
   torch::lazy::NodePtr Clone(OpList operands) const override;
 

@@ -16,7 +16,7 @@ namespace ir {
 namespace ops {
 namespace {
 
-xla::Shape NodeOutputShape(const Value& input, xla::PrimitiveType type) {
+xla::Shape NodeOutputShape(const XlaValue& input, xla::PrimitiveType type) {
   xla::Shape shape = input.xla_shape();
   shape.set_element_type(type);
   return shape;
@@ -24,12 +24,12 @@ xla::Shape NodeOutputShape(const Value& input, xla::PrimitiveType type) {
 
 }  // namespace
 
-Cast::Cast(const Value& input, xla::PrimitiveType type)
+Cast::Cast(const XlaValue& input, xla::PrimitiveType type)
     : XlaNode(xla_cast, {input}, NodeOutputShape(input, type),
            /*num_outputs=*/1, torch::lazy::MHash(static_cast<int>(type))),
       type_(type) {}
 
-Cast::Cast(const Value& input, at::ScalarType dtype,
+Cast::Cast(const XlaValue& input, at::ScalarType dtype,
            c10::optional<at::ScalarType> stype)
     : XlaNode(xla_cast, {input},
            NodeOutputShape(input,

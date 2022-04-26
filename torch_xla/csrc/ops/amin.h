@@ -8,7 +8,7 @@ namespace ops {
 
 class Amin : public XlaNode {
  public:
-  Amin(const Value& input, std::vector<int64_t> dimensions, bool keepdim);
+  Amin(const XlaValue& input, std::vector<int64_t> dimensions, bool keepdim);
 
   std::string ToString() const override;
 

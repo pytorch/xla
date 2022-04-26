@@ -9,7 +9,7 @@ namespace ir {
 namespace ops {
 
 RreluWithNoiseBackward::RreluWithNoiseBackward(
-    const Value& grad_output, const Value& input, const Value& noise,
+    const XlaValue& grad_output, const XlaValue& input, const XlaValue& noise,
     const at::Scalar& lower, const at::Scalar& upper, bool training)
     : XlaNode(torch::lazy::OpKind(at::aten::rrelu_with_noise_backward),
            {grad_output, input, noise}, input.xla_shape(),

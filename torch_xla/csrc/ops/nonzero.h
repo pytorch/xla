@@ -11,7 +11,7 @@ namespace ops {
 // it gets its own IR node class.
 class NonZero : public XlaNode {
  public:
-  NonZero(const Value& input);
+  NonZero(const XlaValue& input);
 
   torch::lazy::NodePtr Clone(OpList operands) const override;
 

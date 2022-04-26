@@ -10,7 +10,7 @@ namespace ir {
 namespace ops {
 
 ShrinkBackward::ShrinkBackward(torch::lazy::OpKind kind,
-                               const Value& grad_output, const Value& input,
+                               const XlaValue& grad_output, const XlaValue& input,
                                const at::Scalar& lambda)
     : XlaNode(kind, {grad_output, input}, input.xla_shape(), /*num_outputs=*/1,
            ScalarHash(lambda)),

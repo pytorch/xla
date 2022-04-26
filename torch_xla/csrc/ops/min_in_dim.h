@@ -8,7 +8,7 @@ namespace ops {
 
 class MinInDim : public XlaNode {
  public:
-  MinInDim(const Value& input, int64_t dim, bool keepdim);
+  MinInDim(const XlaValue& input, int64_t dim, bool keepdim);
 
   std::string ToString() const override;
 

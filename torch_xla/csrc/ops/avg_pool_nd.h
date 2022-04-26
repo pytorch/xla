@@ -8,7 +8,7 @@ namespace ops {
 
 class AvgPoolNd : public XlaNode {
  public:
-  AvgPoolNd(const Value& input, int64_t spatial_dim_count,
+  AvgPoolNd(const XlaValue& input, int64_t spatial_dim_count,
             std::vector<int64_t> kernel_size, std::vector<int64_t> stride,
             std::vector<int64_t> padding, bool ceil_mode,
             bool count_include_pad);

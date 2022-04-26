@@ -13,7 +13,7 @@ namespace ir {
 namespace ops {
 namespace {
 
-xla::Shape NodeOutputShape(const Value& input, const Value& target,
+xla::Shape NodeOutputShape(const XlaValue& input, const XlaValue& target,
                            ReductionMode reduction) {
   auto lower_for_shape_fn =
       [&](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
@@ -25,7 +25,7 @@ xla::Shape NodeOutputShape(const Value& input, const Value& target,
 
 }  // namespace
 
-MseLoss::MseLoss(const Value& input, const Value& target,
+MseLoss::MseLoss(const XlaValue& input, const XlaValue& target,
                  ReductionMode reduction)
     : XlaNode(torch::lazy::OpKind(at::aten::mse_loss), {input, target},
            [&]() { return NodeOutputShape(input, target, reduction); },

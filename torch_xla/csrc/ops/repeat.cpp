@@ -10,7 +10,7 @@ namespace ir {
 namespace ops {
 namespace {
 
-xla::Shape NodeOutputShape(const Value& input,
+xla::Shape NodeOutputShape(const XlaValue& input,
                            absl::Span<const int64_t> repeats) {
   auto lower_for_shape_fn =
       [repeats](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
@@ -22,7 +22,7 @@ xla::Shape NodeOutputShape(const Value& input,
 
 }  // namespace
 
-Repeat::Repeat(const Value& input, std::vector<int64_t> repeats)
+Repeat::Repeat(const XlaValue& input, std::vector<int64_t> repeats)
     : XlaNode(torch::lazy::OpKind(at::aten::repeat), {input},
            [&]() { return NodeOutputShape(input, repeats); },
            /*num_outputs=*/1, torch::lazy::MHash(repeats)),

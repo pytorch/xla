@@ -59,15 +59,15 @@ std::vector<const torch::lazy::Node*> Util::ComputePostOrder(
   return ComputePostOrder(nodes, &emap);
 }
 
-std::vector<Value> Util::Clone(
-    absl::Span<const Value> values,
+std::vector<XlaValue> Util::Clone(
+    absl::Span<const XlaValue> values,
     absl::Span<const torch::lazy::Node* const> post_order) {
   std::unordered_map<const torch::lazy::Node*, torch::lazy::NodePtr> clone_map;
   for (auto node : post_order) {
     if (clone_map.count(node) > 0) {
       continue;
     }
-    std::vector<Value> inputs;
+    std::vector<XlaValue> inputs;
     for (auto& output : node->operands()) {
       auto it = clone_map.find(output.node);
       XLA_CHECK(it != clone_map.end())
@@ -78,7 +78,7 @@ std::vector<Value> Util::Clone(
     clone_map[node] = casted->Clone(inputs);
   }
 
-  std::vector<Value> cloned;
+  std::vector<XlaValue> cloned;
   for (auto& value : values) {
     auto it = clone_map.find(value.node.get());
     XLA_CHECK(it != clone_map.end()) << "Bad post-order: " << value->ToString();
@@ -87,7 +87,7 @@ std::vector<Value> Util::Clone(
   return cloned;
 }
 
-std::vector<Value> Util::Clone(absl::Span<const Value> values) {
+std::vector<XlaValue> Util::Clone(absl::Span<const XlaValue> values) {
   std::vector<const torch::lazy::Node*> nodes;
   for (auto& value : values) {
     nodes.push_back(value.node.get());

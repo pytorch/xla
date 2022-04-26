@@ -9,7 +9,7 @@ namespace torch_xla {
 namespace ir {
 namespace ops {
 
-Value BitwiseAnd(const Value& node1, const Value& node2) {
+XlaValue BitwiseAnd(const XlaValue& node1, const XlaValue& node2) {
   auto lower_fn = [](const XlaNode& node, LoweringContext* loctx) -> XlaOpVector {
     xla::XlaOp op0 = loctx->GetOutputOp(node.operand(0));
     xla::XlaOp op1 = loctx->GetOutputOp(node.operand(1));
@@ -30,7 +30,7 @@ Value BitwiseAnd(const Value& node1, const Value& node2) {
                    std::move(lower_fn));
 }
 
-Value BitwiseOr(const Value& node1, const Value& node2) {
+XlaValue BitwiseOr(const XlaValue& node1, const XlaValue& node2) {
   auto lower_fn = [](const XlaNode& node, LoweringContext* loctx) -> XlaOpVector {
     xla::XlaOp op0 = loctx->GetOutputOp(node.operand(0));
     xla::XlaOp op1 = loctx->GetOutputOp(node.operand(1));
@@ -51,7 +51,7 @@ Value BitwiseOr(const Value& node1, const Value& node2) {
                    std::move(lower_fn));
 }
 
-Value BitwiseXor(const Value& node1, const Value& node2) {
+XlaValue BitwiseXor(const XlaValue& node1, const XlaValue& node2) {
   auto lower_fn = [](const XlaNode& node, LoweringContext* loctx) -> XlaOpVector {
     xla::XlaOp op0 = loctx->GetOutputOp(node.operand(0));
     xla::XlaOp op1 = loctx->GetOutputOp(node.operand(1));

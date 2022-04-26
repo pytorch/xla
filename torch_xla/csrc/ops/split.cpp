@@ -11,7 +11,7 @@ namespace ir {
 namespace ops {
 namespace {
 
-xla::Shape NodeOutputShape(const Value& input,
+xla::Shape NodeOutputShape(const XlaValue& input,
                            const std::vector<int64_t>& split_sizes,
                            int64_t dim) {
   auto lower_for_shape_fn =
@@ -24,7 +24,7 @@ xla::Shape NodeOutputShape(const Value& input,
 
 }  // namespace
 
-Split::Split(const Value& input, std::vector<int64_t> split_sizes, int64_t dim)
+Split::Split(const XlaValue& input, std::vector<int64_t> split_sizes, int64_t dim)
     : XlaNode(torch::lazy::OpKind(at::aten::split), {input},
            [&]() { return NodeOutputShape(input, split_sizes, dim); },
            ComputeSplitCount(input.xla_shape().dimensions(dim), split_sizes),

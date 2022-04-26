@@ -10,8 +10,8 @@ namespace ir {
 namespace ops {
 namespace {
 
-xla::Shape NodeOutputShape(const Value& grad_output, const Value& input,
-                           const Value& indices,
+xla::Shape NodeOutputShape(const XlaValue& grad_output, const XlaValue& input,
+                           const XlaValue& indices,
                            absl::Span<const int64_t> output_size) {
   auto shape_fn = [&](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
     return BuildMaxUnpoolNdBackward(operands[0], operands[1], operands[2],
@@ -36,9 +36,9 @@ c10::Symbol MaxUnpoolNdBackwardSymbol(int64_t spatial_dim_count) {
 
 }  // namespace
 
-MaxUnpoolNdBackward::MaxUnpoolNdBackward(const Value& grad_output,
-                                         const Value& input,
-                                         const Value& indices,
+MaxUnpoolNdBackward::MaxUnpoolNdBackward(const XlaValue& grad_output,
+                                         const XlaValue& input,
+                                         const XlaValue& indices,
                                          std::vector<int64_t> output_size)
     : XlaNode(torch::lazy::OpKind(MaxUnpoolNdBackwardSymbol(output_size.size())),
            {grad_output, input, indices},

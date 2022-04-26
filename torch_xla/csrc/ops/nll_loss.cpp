@@ -12,8 +12,8 @@ namespace ir {
 namespace ops {
 namespace {
 
-xla::Shape NodeOutputShape(const Value& logits, const Value& labels,
-                           const absl::optional<Value>& weight,
+xla::Shape NodeOutputShape(const XlaValue& logits, const XlaValue& labels,
+                           const absl::optional<XlaValue>& weight,
                            ReductionMode reduction, int ignore_index) {
   auto lower_for_shape_fn =
       [&](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
@@ -26,7 +26,7 @@ xla::Shape NodeOutputShape(const Value& logits, const Value& labels,
   };
   std::vector<xla::Shape> shapes;
   for (auto& input :
-       xla::util::GetValuesVector<Value>({logits, labels}, {&weight})) {
+       xla::util::GetValuesVector<XlaValue>({logits, labels}, {&weight})) {
     shapes.push_back(input.xla_shape());
   }
   return InferOutputShape(shapes, lower_for_shape_fn);
@@ -34,11 +34,11 @@ xla::Shape NodeOutputShape(const Value& logits, const Value& labels,
 
 }  // namespace
 
-NllLoss::NllLoss(const Value& logits, const Value& labels,
-                 const absl::optional<Value>& weight, ReductionMode reduction,
+NllLoss::NllLoss(const XlaValue& logits, const XlaValue& labels,
+                 const absl::optional<XlaValue>& weight, ReductionMode reduction,
                  int ignore_index)
     : XlaNode(torch::lazy::OpKind(at::aten::nll_loss),
-           xla::util::GetValuesVector<Value>({logits, labels}, {&weight}),
+           xla::util::GetValuesVector<XlaValue>({logits, labels}, {&weight}),
            [&]() {
              return NodeOutputShape(logits, labels, weight, reduction,
                                     ignore_index);
@@ -50,7 +50,7 @@ NllLoss::NllLoss(const Value& logits, const Value& labels,
       ignore_index_(ignore_index) {}
 
 torch::lazy::NodePtr NllLoss::Clone(OpList operands) const {
-  absl::optional<Value> weight;
+  absl::optional<XlaValue> weight;
   if (operands.size() > 2) {
     weight = operands.at(2);
   }

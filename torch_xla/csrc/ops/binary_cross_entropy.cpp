@@ -11,8 +11,8 @@ namespace ir {
 namespace ops {
 namespace {
 
-xla::Shape NodeOutputShape(const Value& logits, const Value& labels,
-                           const absl::optional<Value>& weight,
+xla::Shape NodeOutputShape(const XlaValue& logits, const XlaValue& labels,
+                           const absl::optional<XlaValue>& weight,
                            ReductionMode reduction) {
   auto lower_for_shape_fn =
       [&](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
@@ -24,7 +24,7 @@ xla::Shape NodeOutputShape(const Value& logits, const Value& labels,
   };
   std::vector<xla::Shape> shapes;
   for (auto& input :
-       xla::util::GetValuesVector<Value>({logits, labels}, {&weight})) {
+       xla::util::GetValuesVector<XlaValue>({logits, labels}, {&weight})) {
     shapes.push_back(input.xla_shape());
   }
   return InferOutputShape(shapes, lower_for_shape_fn);
@@ -32,18 +32,18 @@ xla::Shape NodeOutputShape(const Value& logits, const Value& labels,
 
 }  // namespace
 
-BinaryCrossEntropy::BinaryCrossEntropy(const Value& logits, const Value& labels,
-                                       const absl::optional<Value>& weight,
+BinaryCrossEntropy::BinaryCrossEntropy(const XlaValue& logits, const XlaValue& labels,
+                                       const absl::optional<XlaValue>& weight,
                                        ReductionMode reduction)
     : XlaNode(torch::lazy::OpKind(at::aten::binary_cross_entropy),
-           xla::util::GetValuesVector<Value>({logits, labels}, {&weight}),
+           xla::util::GetValuesVector<XlaValue>({logits, labels}, {&weight}),
            [&]() { return NodeOutputShape(logits, labels, weight, reduction); },
            /*num_outputs=*/1,
            torch::lazy::MHash(torch::lazy::GetEnumValue(reduction))),
       reduction_(reduction) {}
 
 torch::lazy::NodePtr BinaryCrossEntropy::Clone(OpList operands) const {
-  absl::optional<Value> weight;
+  absl::optional<XlaValue> weight;
   if (operands.size() > 2) {
     weight = operands.at(2);
   }

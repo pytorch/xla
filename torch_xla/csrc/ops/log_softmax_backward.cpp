@@ -9,8 +9,8 @@ namespace torch_xla {
 namespace ir {
 namespace ops {
 
-LogSoftmaxBackward::LogSoftmaxBackward(const Value& grad_output,
-                                       const Value& output, int64_t dim)
+LogSoftmaxBackward::LogSoftmaxBackward(const XlaValue& grad_output,
+                                       const XlaValue& output, int64_t dim)
     : XlaNode(torch::lazy::OpKind(at::aten::_log_softmax_backward_data),
            {grad_output, output}, grad_output.xla_shape(),
            /*num_outputs=*/1, torch::lazy::MHash(dim)),

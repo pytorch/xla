@@ -8,7 +8,7 @@ namespace ops {
 
 class LinearInterpolation : public XlaNode {
  public:
-  LinearInterpolation(const Value& value, const Value& new_value, double alpha);
+  LinearInterpolation(const XlaValue& value, const XlaValue& new_value, double alpha);
 
   std::string ToString() const override;
 

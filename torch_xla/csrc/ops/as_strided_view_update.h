@@ -11,7 +11,7 @@ namespace ops {
 
 class AsStridedViewUpdate : public XlaNode {
  public:
-  AsStridedViewUpdate(const Value& target, const Value& input,
+  AsStridedViewUpdate(const XlaValue& target, const XlaValue& input,
                       std::vector<int64_t> size, std::vector<int64_t> stride,
                       int64_t storage_offset);
 

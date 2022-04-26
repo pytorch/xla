@@ -10,7 +10,7 @@ namespace ops {
 
 class Hardshrink : public XlaNode {
  public:
-  Hardshrink(const Value& input, const at::Scalar& lambda);
+  Hardshrink(const XlaValue& input, const at::Scalar& lambda);
 
   std::string ToString() const override;
 

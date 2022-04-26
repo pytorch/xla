@@ -10,7 +10,7 @@ namespace ops {
 
 class UpsampleNearest : public XlaNode {
  public:
-  UpsampleNearest(const Value& input, std::vector<int64_t> output_size);
+  UpsampleNearest(const XlaValue& input, std::vector<int64_t> output_size);
 
   torch::lazy::NodePtr Clone(OpList operands) const override;
 

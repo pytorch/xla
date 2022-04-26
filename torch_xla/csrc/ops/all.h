@@ -11,7 +11,7 @@ namespace ops {
 
 class All : public XlaNode {
  public:
-  All(const Value& input, std::vector<int64_t> dimensions,
+  All(const XlaValue& input, std::vector<int64_t> dimensions,
       bool keep_reduced_dimensions);
 
   std::string ToString() const override;

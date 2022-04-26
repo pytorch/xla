@@ -8,10 +8,10 @@ namespace ops {
 
 class SgdOptimizerStep : public XlaNode {
  public:
-  SgdOptimizerStep(const Value& found_inf, const Value& step,
-                   const Value& param, const Value& buf, const Value& d_p,
-                   const Value& weight_decay, const Value& momentum,
-                   const Value& lr, const Value& dampening,
+  SgdOptimizerStep(const XlaValue& found_inf, const XlaValue& step,
+                   const XlaValue& param, const XlaValue& buf, const XlaValue& d_p,
+                   const XlaValue& weight_decay, const XlaValue& momentum,
+                   const XlaValue& lr, const XlaValue& dampening,
                    bool use_weight_decay, bool use_momentum, bool use_nesterov);
 
   torch::lazy::NodePtr Clone(OpList operands) const override;

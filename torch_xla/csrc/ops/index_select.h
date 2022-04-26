@@ -8,7 +8,7 @@ namespace ops {
 
 class IndexSelect : public XlaNode {
  public:
-  IndexSelect(const Value& input, int64_t dim, const Value& index);
+  IndexSelect(const XlaValue& input, int64_t dim, const XlaValue& index);
 
   std::string ToString() const override;
 

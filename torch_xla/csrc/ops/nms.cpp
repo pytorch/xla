@@ -11,9 +11,9 @@ namespace ir {
 namespace ops {
 namespace {
 
-xla::Shape NodeOutputShape(const Value& boxes, const Value& scores,
-                           const Value& score_threshold,
-                           const Value& iou_threshold, int64_t output_size) {
+xla::Shape NodeOutputShape(const XlaValue& boxes, const XlaValue& scores,
+                           const XlaValue& score_threshold,
+                           const XlaValue& iou_threshold, int64_t output_size) {
   auto shape_fn = [&](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
     NmsResult result = BuildNms(operands[0], operands[1], operands[2],
                                 operands[3], output_size);
@@ -28,8 +28,8 @@ xla::Shape NodeOutputShape(const Value& boxes, const Value& scores,
 
 }  // namespace
 
-Nms::Nms(const Value& boxes, const Value& scores, const Value& score_threshold,
-         const Value& iou_threshold, int64_t output_size)
+Nms::Nms(const XlaValue& boxes, const XlaValue& scores, const XlaValue& score_threshold,
+         const XlaValue& iou_threshold, int64_t output_size)
     : XlaNode(xla_nms, {boxes, scores, score_threshold, iou_threshold},
            [&]() {
              return NodeOutputShape(boxes, scores, score_threshold,

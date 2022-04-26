@@ -8,7 +8,7 @@ namespace torch_xla {
 namespace ir {
 namespace ops {
 
-HardtanhBackward::HardtanhBackward(const Value& grad_output, const Value& input,
+HardtanhBackward::HardtanhBackward(const XlaValue& grad_output, const XlaValue& input,
                                    const at::Scalar& min_val,
                                    const at::Scalar& max_val)
     : XlaNode(torch::lazy::OpKind(at::aten::hardtanh_backward),

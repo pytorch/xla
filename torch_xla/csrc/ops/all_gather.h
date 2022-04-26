@@ -9,7 +9,7 @@ namespace ops {
 
 class AllGather : public XlaNode {
  public:
-  AllGather(const Value& input, const Value& token, int64_t dim,
+  AllGather(const XlaValue& input, const XlaValue& token, int64_t dim,
             int64_t shard_count, std::vector<std::vector<int64_t>> groups,
             bool pin_layout);
 

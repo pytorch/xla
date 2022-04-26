@@ -26,7 +26,7 @@ xla::XlaOp LowerCumProd(xla::XlaOp input, int64_t dim,
   return BuildCumulativeComputation(casted_input, dim, reducer, init);
 }
 
-xla::Shape NodeOutputShape(const Value& input,
+xla::Shape NodeOutputShape(const XlaValue& input,
                            c10::optional<at::ScalarType> dtype) {
   if (dtype) {
     return xla::ShapeUtil::ChangeElementType(
@@ -37,7 +37,7 @@ xla::Shape NodeOutputShape(const Value& input,
 
 }  // namespace
 
-CumProd::CumProd(const Value& input, int64_t dim,
+CumProd::CumProd(const XlaValue& input, int64_t dim,
                  c10::optional<at::ScalarType> dtype)
     : XlaNode(torch::lazy::OpKind(at::aten::cumprod), {input},
            [&]() { return NodeOutputShape(input, dtype); },

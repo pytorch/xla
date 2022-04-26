@@ -9,7 +9,7 @@ namespace torch_xla {
 namespace ir {
 namespace ops {
 
-UpsampleNearest::UpsampleNearest(const Value& input,
+UpsampleNearest::UpsampleNearest(const XlaValue& input,
                                  std::vector<int64_t> output_size)
     : XlaNode(torch::lazy::OpKind(at::aten::upsample_nearest2d), {input},
            [&]() {

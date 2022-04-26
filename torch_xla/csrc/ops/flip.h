@@ -9,7 +9,7 @@ namespace ops {
 
 class Flip : public XlaNode {
  public:
-  Flip(const Value& input, std::vector<int64_t> dims);
+  Flip(const XlaValue& input, std::vector<int64_t> dims);
 
   torch::lazy::NodePtr Clone(OpList operands) const override;
 

@@ -11,7 +11,7 @@ namespace ir {
 namespace ops {
 namespace {
 
-xla::Shape NodeOutputShape(const Value& input,
+xla::Shape NodeOutputShape(const XlaValue& input,
                            absl::Span<const int64_t> output_sizes) {
   const xla::Shape& input_shape = input.xla_shape();
   auto info = XlaHelpers::GetDynamicReshapeInfo(input_shape, output_sizes);
@@ -26,7 +26,7 @@ xla::Shape NodeOutputShape(const Value& input,
 
 }  // namespace
 
-View::View(const Value& input, std::vector<int64_t> output_size)
+View::View(const XlaValue& input, std::vector<int64_t> output_size)
     : XlaNode(torch::lazy::OpKind(at::aten::view), {input},
            NodeOutputShape(input, output_size),
            /*num_outputs=*/1, torch::lazy::MHash(output_size)),

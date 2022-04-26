@@ -85,12 +85,12 @@ torch::lazy::hash_t GetOperandHashes(const OpList& operands,
 
 }  // namespace
 
-const xla::Shape& Value::xla_shape() const {
+const xla::Shape& XlaValue::xla_shape() const {
   XlaNode* casted = dynamic_cast<XlaNode*>(node.get());
   return casted->xla_shape(index);
 }
 
-const xla::Shape& Value::xla_node_shape() const {
+const xla::Shape& XlaValue::xla_node_shape() const {
   XlaNode* casted = dynamic_cast<XlaNode*>(node.get());
   return casted->xla_shape();
 }

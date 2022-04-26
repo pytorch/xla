@@ -8,7 +8,7 @@ namespace ops {
 
 class Gather : public XlaNode {
  public:
-  Gather(const Value& input, int64_t dim, const Value& index);
+  Gather(const XlaValue& input, int64_t dim, const XlaValue& index);
 
   std::string ToString() const override;
 

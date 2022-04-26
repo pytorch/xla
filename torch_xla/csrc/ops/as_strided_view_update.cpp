@@ -41,8 +41,8 @@ xla::XlaOp LowerAsStridedViewUpdate(xla::XlaOp target, xla::XlaOp input,
 
 }  // namespace
 
-AsStridedViewUpdate::AsStridedViewUpdate(const Value& target,
-                                         const Value& input,
+AsStridedViewUpdate::AsStridedViewUpdate(const XlaValue& target,
+                                         const XlaValue& input,
                                          std::vector<int64_t> size,
                                          std::vector<int64_t> stride,
                                          int64_t storage_offset)

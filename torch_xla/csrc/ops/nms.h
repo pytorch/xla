@@ -8,8 +8,8 @@ namespace ops {
 
 class Nms : public XlaNode {
  public:
-  Nms(const Value& boxes, const Value& scores, const Value& score_threshold,
-      const Value& iou_threshold, int64_t output_size);
+  Nms(const XlaValue& boxes, const XlaValue& scores, const XlaValue& score_threshold,
+      const XlaValue& iou_threshold, int64_t output_size);
 
   torch::lazy::NodePtr Clone(OpList operands) const override;
 

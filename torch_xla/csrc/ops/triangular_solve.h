@@ -8,7 +8,7 @@ namespace ops {
 
 class TriangularSolve : public XlaNode {
  public:
-  TriangularSolve(const Value& rhs, const Value& lhs, bool left_side,
+  TriangularSolve(const XlaValue& rhs, const XlaValue& lhs, bool left_side,
                   bool lower, bool transpose, bool unit_diagonal);
 
   std::string ToString() const override;

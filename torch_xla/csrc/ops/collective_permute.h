@@ -10,7 +10,7 @@ namespace ops {
 class CollectivePermute : public XlaNode {
  public:
   CollectivePermute(
-      const Value& input, const Value& token,
+      const XlaValue& input, const XlaValue& token,
       std::vector<std::pair<int64_t, int64_t>> source_target_pairs);
 
   std::string ToString() const override;

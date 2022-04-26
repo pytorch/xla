@@ -9,7 +9,7 @@ namespace ops {
 
 class Cat : public XlaNode {
  public:
-  Cat(absl::Span<const ir::Value> values, int64_t dim);
+  Cat(absl::Span<const ir::XlaValue> values, int64_t dim);
 
   std::string ToString() const override;
 

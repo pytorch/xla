@@ -9,7 +9,7 @@ namespace torch_xla {
 namespace ir {
 namespace ops {
 
-UpsampleBilinear::UpsampleBilinear(const Value& input,
+UpsampleBilinear::UpsampleBilinear(const XlaValue& input,
                                    std::vector<int64_t> output_size,
                                    bool align_corners)
     : XlaNode(torch::lazy::OpKind(at::aten::upsample_bilinear2d), {input},

@@ -7,7 +7,7 @@ namespace torch_xla {
 namespace ir {
 namespace ops {
 
-Put::Put(const Value& input, const Value& index, const Value& source,
+Put::Put(const XlaValue& input, const XlaValue& index, const XlaValue& source,
          bool accumulate)
     : XlaNode(torch::lazy::OpKind(at::aten::put), {input, index, source},
            input.xla_shape(),

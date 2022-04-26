@@ -10,7 +10,7 @@ namespace ops {
 // matrices input.
 class Tril : public XlaNode {
  public:
-  Tril(const Value& input, int64_t diagonal);
+  Tril(const XlaValue& input, int64_t diagonal);
 
   torch::lazy::NodePtr Clone(OpList operands) const override;
 

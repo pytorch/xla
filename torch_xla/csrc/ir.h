@@ -35,9 +35,9 @@ using OutputMap =
     std::unordered_map<torch::lazy::Output, T, torch::lazy::Output::Hasher>;
 
 // Represents an input/operand for a XlaNode object.
-struct Value : public torch::lazy::Value {
-  Value() = default;
-  Value(torch::lazy::NodePtr node, size_t index = 0)
+struct XlaValue : public torch::lazy::Value {
+  XlaValue() = default;
+  XlaValue(torch::lazy::NodePtr node, size_t index = 0)
       : torch::lazy::Value(std::dynamic_pointer_cast<torch::lazy::Node>(node),
                            index) {}
 
@@ -49,7 +49,7 @@ struct Value : public torch::lazy::Value {
   const xla::Shape& xla_node_shape() const;
 };
 
-using OpList = absl::Span<const Value>;
+using OpList = absl::Span<const XlaValue>;
 
 // A node in the graph. Nodes for operations which requires extra data to be
 // stored for lowering, should inherit from this class and add operation

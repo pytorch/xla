@@ -9,7 +9,7 @@ namespace torch_xla {
 namespace ir {
 namespace ops {
 
-MaskedFill::MaskedFill(const Value& input, const Value& mask,
+MaskedFill::MaskedFill(const XlaValue& input, const XlaValue& mask,
                        const at::Scalar& value)
     : XlaNode(torch::lazy::OpKind(at::aten::masked_fill), {input, mask},
            input.xla_shape(),

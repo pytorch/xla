@@ -12,8 +12,8 @@ namespace ir {
 namespace ops {
 namespace {
 
-xla::Shape NodeOutputShape(AllReduceType reduce_type, const Value input,
-                           const Value& token, double scale,
+xla::Shape NodeOutputShape(AllReduceType reduce_type, const XlaValue input,
+                           const XlaValue& token, double scale,
                            int64_t scatter_dim, int64_t shard_count,
                            const std::vector<std::vector<int64_t>>& groups,
                            bool pin_layout) {
@@ -30,8 +30,8 @@ xla::Shape NodeOutputShape(AllReduceType reduce_type, const Value input,
 
 }  // namespace
 
-ReduceScatter::ReduceScatter(AllReduceType reduce_type, const Value& input,
-                             const Value& token, double scale,
+ReduceScatter::ReduceScatter(AllReduceType reduce_type, const XlaValue& input,
+                             const XlaValue& token, double scale,
                              int64_t scatter_dim, int64_t shard_count,
                              std::vector<std::vector<int64_t>> groups,
                              bool pin_layout)

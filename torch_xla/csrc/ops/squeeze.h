@@ -9,7 +9,7 @@ namespace ops {
 class Squeeze : public XlaNode {
  public:
   // Squeeze out the specified dimension index, -1 for all trivial dimensions.
-  Squeeze(const Value& input, int dim);
+  Squeeze(const XlaValue& input, int dim);
 
   torch::lazy::NodePtr Clone(OpList operands) const override;
 

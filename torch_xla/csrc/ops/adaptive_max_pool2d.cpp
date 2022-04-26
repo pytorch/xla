@@ -10,7 +10,7 @@ namespace ir {
 namespace ops {
 namespace {
 
-xla::Shape NodeOutputShape(const Value& input,
+xla::Shape NodeOutputShape(const XlaValue& input,
                            absl::Span<const int64_t> output_size) {
   auto lower_for_shape_fn =
       [output_size](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
@@ -23,7 +23,7 @@ xla::Shape NodeOutputShape(const Value& input,
 
 }  // namespace
 
-AdaptiveMaxPool2d::AdaptiveMaxPool2d(const Value& input,
+AdaptiveMaxPool2d::AdaptiveMaxPool2d(const XlaValue& input,
                                      std::vector<int64_t> output_size)
     : XlaNode(torch::lazy::OpKind(at::aten::adaptive_max_pool2d), {input},
            [&]() { return NodeOutputShape(input, output_size); },

@@ -11,7 +11,7 @@ namespace ops {
 
 class AsStrided : public XlaNode {
  public:
-  AsStrided(const Value& input, std::vector<int64_t> size,
+  AsStrided(const XlaValue& input, std::vector<int64_t> size,
             std::vector<int64_t> stride, int64_t storage_offset);
 
   std::string ToString() const override;

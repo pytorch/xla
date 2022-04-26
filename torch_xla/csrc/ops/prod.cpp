@@ -29,7 +29,7 @@ xla::XlaOp LowerProd(xla::XlaOp input, const std::vector<int64_t>& dimensions,
   return BuildProd(casted_input, dimensions, keep_reduced_dimensions);
 }
 
-xla::Shape NodeOutputShape(const Value& input, std::vector<int64_t>& dimensions,
+xla::Shape NodeOutputShape(const XlaValue& input, std::vector<int64_t>& dimensions,
                            bool keep_reduced_dimensions,
                            c10::optional<at::ScalarType> dtype) {
   auto lower_for_shape_fn =
@@ -41,7 +41,7 @@ xla::Shape NodeOutputShape(const Value& input, std::vector<int64_t>& dimensions,
 
 }  // namespace
 
-Prod::Prod(const Value& input, std::vector<int64_t> dimensions,
+Prod::Prod(const XlaValue& input, std::vector<int64_t> dimensions,
            bool keep_reduced_dimensions, c10::optional<at::ScalarType> dtype)
     : XlaNode(torch::lazy::OpKind(at::aten::prod), {input},
            [&]() {

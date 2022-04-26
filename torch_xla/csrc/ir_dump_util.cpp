@@ -245,7 +245,7 @@ std::string DumpUtil::PostOrderToText(
   return ss.str();
 }
 
-std::string DumpUtil::ToHlo(absl::Span<const Value> values,
+std::string DumpUtil::ToHlo(absl::Span<const XlaValue> values,
                             const torch::lazy::BackendDevice& device) {
   ir::LoweringContext lowering_ctx("IrToHlo", device);
   for (auto& ir_value : values) {

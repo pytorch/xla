@@ -12,7 +12,7 @@ namespace ops {
 namespace {
 
 xla::Shape NodeOutputShape(
-    const Value& input, const Value& token,
+    const XlaValue& input, const XlaValue& token,
     const std::vector<std::pair<int64_t, int64_t>>& source_target_pairs) {
   auto shape_fn = [&](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
     CollectivePermuteResult result =
@@ -25,7 +25,7 @@ xla::Shape NodeOutputShape(
 }  // namespace
 
 CollectivePermute::CollectivePermute(
-    const Value& input, const Value& token,
+    const XlaValue& input, const XlaValue& token,
     std::vector<std::pair<int64_t, int64_t>> source_target_pairs)
     : XlaNode(xla_collective_permute, {input, token},
            [&]() { return NodeOutputShape(input, token, source_target_pairs); },

@@ -12,7 +12,7 @@ namespace ops {
 // IR node for log(softmax) operation.
 class LogSoftmax : public XlaNode {
  public:
-  LogSoftmax(const Value& input, int64_t dim,
+  LogSoftmax(const XlaValue& input, int64_t dim,
              c10::optional<at::ScalarType> dtype);
 
   torch::lazy::NodePtr Clone(OpList operands) const override;

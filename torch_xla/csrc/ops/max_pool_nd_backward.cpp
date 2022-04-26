@@ -10,7 +10,7 @@ namespace ir {
 namespace ops {
 namespace {
 
-xla::Shape NodeOutputShape(const Value& grad_output, const Value& input,
+xla::Shape NodeOutputShape(const XlaValue& grad_output, const XlaValue& input,
                            int64_t spatial_dim_count,
                            absl::Span<const int64_t> kernel_size,
                            absl::Span<const int64_t> stride,
@@ -41,7 +41,7 @@ c10::Symbol MaxPoolNdBackwardSymbol(int64_t spatial_dim_count) {
 }  // namespace
 
 MaxPoolNdBackward::MaxPoolNdBackward(
-    const Value& grad_output, const Value& input, int64_t spatial_dim_count,
+    const XlaValue& grad_output, const XlaValue& input, int64_t spatial_dim_count,
     std::vector<int64_t> kernel_size, std::vector<int64_t> stride,
     std::vector<int64_t> padding, bool ceil_mode)
     : XlaNode(torch::lazy::OpKind(MaxPoolNdBackwardSymbol(spatial_dim_count)),

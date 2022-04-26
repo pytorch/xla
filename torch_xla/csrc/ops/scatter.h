@@ -8,7 +8,7 @@ namespace ops {
 
 class Scatter : public XlaNode {
  public:
-  Scatter(const Value& input, const Value& index, const Value& src,
+  Scatter(const XlaValue& input, const XlaValue& index, const XlaValue& src,
           int64_t dim);
 
   std::string ToString() const override;

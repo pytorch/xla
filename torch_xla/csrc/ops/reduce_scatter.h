@@ -9,8 +9,8 @@ namespace ops {
 
 class ReduceScatter : public XlaNode {
  public:
-  ReduceScatter(AllReduceType reduce_type, const Value& input,
-                const Value& token, double scale, int64_t scatter_dim,
+  ReduceScatter(AllReduceType reduce_type, const XlaValue& input,
+                const XlaValue& token, double scale, int64_t scatter_dim,
                 int64_t shard_count, std::vector<std::vector<int64_t>> groups,
                 bool pin_layout);
 

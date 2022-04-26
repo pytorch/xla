@@ -10,7 +10,7 @@ namespace ir {
 namespace ops {
 
 UpsampleNearestBackward::UpsampleNearestBackward(
-    const Value& input, std::vector<int64_t> output_size,
+    const XlaValue& input, std::vector<int64_t> output_size,
     std::vector<int64_t> input_size)
     : XlaNode(torch::lazy::OpKind(at::aten::upsample_nearest2d_backward), {input},
            [&]() {

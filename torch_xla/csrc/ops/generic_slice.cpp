@@ -12,7 +12,7 @@ namespace ir {
 namespace ops {
 namespace {
 
-xla::Shape NodeOutputShape(const Value& input,
+xla::Shape NodeOutputShape(const XlaValue& input,
                            absl::Span<const int64_t> base_indices,
                            absl::Span<const int64_t> sizes) {
   auto lower_for_shape_fn =
@@ -24,7 +24,7 @@ xla::Shape NodeOutputShape(const Value& input,
 
 }  // namespace
 
-GenericSlice::GenericSlice(const Value& input,
+GenericSlice::GenericSlice(const XlaValue& input,
                            absl::Span<const int64_t> base_indices,
                            absl::Span<const int64_t> sizes)
     : XlaNode(xla_generic_slice, {input},

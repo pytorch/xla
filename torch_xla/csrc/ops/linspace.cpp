@@ -8,7 +8,7 @@ namespace torch_xla {
 namespace ir {
 namespace ops {
 
-Linspace::Linspace(const Value& start, const Value& end, int64_t steps)
+Linspace::Linspace(const XlaValue& start, const XlaValue& end, int64_t steps)
     : XlaNode(torch::lazy::OpKind(at::aten::linspace), {start, end},
            [&]() {
              xla::PrimitiveType dtype =

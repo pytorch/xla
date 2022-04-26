@@ -11,7 +11,7 @@ namespace ir {
 namespace ops {
 namespace {
 
-xla::Shape NodeOutputShape(const OpList& inputs, const Value& found_inf) {
+xla::Shape NodeOutputShape(const OpList& inputs, const XlaValue& found_inf) {
   std::vector<xla::Shape> output_shapes;
   output_shapes.reserve(inputs.size() + 1);
   for (size_t i = 0; i < inputs.size(); ++i) {
@@ -22,10 +22,10 @@ xla::Shape NodeOutputShape(const OpList& inputs, const Value& found_inf) {
   return xla::ShapeUtil::MakeTupleShape(output_shapes);
 }
 
-std::vector<Value> GetOperandList(absl::Span<const Value> operands,
-                                  const Value& found_inf,
-                                  const Value& inv_scale) {
-  std::vector<Value> operand_list(operands.begin(), operands.end());
+std::vector<XlaValue> GetOperandList(absl::Span<const XlaValue> operands,
+                                  const XlaValue& found_inf,
+                                  const XlaValue& inv_scale) {
+  std::vector<XlaValue> operand_list(operands.begin(), operands.end());
   operand_list.push_back(found_inf);
   operand_list.push_back(inv_scale);
   return operand_list;
@@ -34,7 +34,7 @@ std::vector<Value> GetOperandList(absl::Span<const Value> operands,
 }  // namespace
 
 AmpForachNonFiniteCheckAndUnscale::AmpForachNonFiniteCheckAndUnscale(
-    const OpList& inputs, const Value& found_inf, const Value& inv_scale)
+    const OpList& inputs, const XlaValue& found_inf, const XlaValue& inv_scale)
     : XlaNode(torch::lazy::OpKind(
                at::aten::_amp_foreach_non_finite_check_and_unscale_),
            GetOperandList(inputs, found_inf, inv_scale),
@@ -43,7 +43,7 @@ AmpForachNonFiniteCheckAndUnscale::AmpForachNonFiniteCheckAndUnscale(
 
 torch::lazy::NodePtr AmpForachNonFiniteCheckAndUnscale::Clone(
     OpList operands) const {
-  std::vector<Value> operand_list(operands.begin(), operands.end() - 2);
+  std::vector<XlaValue> operand_list(operands.begin(), operands.end() - 2);
   size_t sz = operand_list.size();
   return ir::MakeNode<AmpForachNonFiniteCheckAndUnscale>(
       operand_list, operands[sz], operands[sz + 1]);

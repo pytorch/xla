@@ -7,7 +7,7 @@ namespace torch_xla {
 namespace ir {
 namespace ops {
 
-Scatter::Scatter(const Value& input, const Value& index, const Value& src,
+Scatter::Scatter(const XlaValue& input, const XlaValue& index, const XlaValue& src,
                  int64_t dim)
     : XlaNode(torch::lazy::OpKind(at::aten::scatter), {input, index, src},
            input.xla_shape(),

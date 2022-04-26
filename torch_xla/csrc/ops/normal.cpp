@@ -8,7 +8,7 @@ namespace torch_xla {
 namespace ir {
 namespace ops {
 
-Normal::Normal(const Value& mean, const Value& std, const Value& seed)
+Normal::Normal(const XlaValue& mean, const XlaValue& std, const XlaValue& seed)
     : XlaNode(torch::lazy::OpKind(at::aten::normal), {mean, std, seed},
            mean.xla_shape()) {}
 

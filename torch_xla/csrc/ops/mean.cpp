@@ -23,7 +23,7 @@ xla::XlaOp LowerMean(xla::XlaOp input, const std::vector<int64_t>& dimensions,
                : result;
 }
 
-xla::Shape NodeOutputShape(const Value& input,
+xla::Shape NodeOutputShape(const XlaValue& input,
                            const std::vector<int64_t>& dimensions,
                            bool keep_reduced_dimensions,
                            const c10::optional<at::ScalarType>& dtype) {
@@ -36,7 +36,7 @@ xla::Shape NodeOutputShape(const Value& input,
 
 }  // namespace
 
-Mean::Mean(const Value& input, std::vector<int64_t> dimensions,
+Mean::Mean(const XlaValue& input, std::vector<int64_t> dimensions,
            bool keep_reduced_dimensions, c10::optional<at::ScalarType> dtype)
     : XlaNode(torch::lazy::OpKind(at::aten::mean), {input},
            [&]() {

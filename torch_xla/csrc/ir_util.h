@@ -32,11 +32,11 @@ class Util {
       absl::Span<const torch::lazy::Node* const> nodes);
 
   // Clones the IR graph whose roots are passed in the values parameter.
-  static std::vector<Value> Clone(absl::Span<const Value> values);
+  static std::vector<XlaValue> Clone(absl::Span<const XlaValue> values);
 
   // Same as the above, but the post-order is passed as parameter.
-  static std::vector<Value> Clone(
-      absl::Span<const Value> values,
+  static std::vector<XlaValue> Clone(
+      absl::Span<const XlaValue> values,
       absl::Span<const torch::lazy::Node* const> post_order);
 
   // Retrieves the number of nodes within the graph whose sink are passed in the

@@ -11,7 +11,7 @@ namespace ops {
 class ConvolutionBackwardOverrideable : public XlaNode {
  public:
   ConvolutionBackwardOverrideable(
-      const Value& grad_output, const Value& input, const Value& weight,
+      const XlaValue& grad_output, const XlaValue& input, const XlaValue& weight,
       std::vector<int64_t> stride, std::vector<int64_t> padding,
       std::vector<int64_t> dilation, bool transposed,
       std::vector<int64_t> output_padding, int64_t groups);

@@ -9,7 +9,7 @@ namespace ir {
 namespace ops {
 namespace {
 
-xla::Shape NodeOutputShape(const Value& step, const Value& param) {
+xla::Shape NodeOutputShape(const XlaValue& step, const XlaValue& param) {
   return xla::ShapeUtil::MakeTupleShape({/*step=*/step.xla_shape(),
                                          /*param=*/param.xla_shape(),
                                          /*buf=*/param.xla_shape()});
@@ -17,11 +17,11 @@ xla::Shape NodeOutputShape(const Value& step, const Value& param) {
 
 }  // namespace
 
-SgdOptimizerStep::SgdOptimizerStep(const Value& found_inf, const Value& step,
-                                   const Value& param, const Value& buf,
-                                   const Value& d_p, const Value& weight_decay,
-                                   const Value& momentum, const Value& lr,
-                                   const Value& dampening,
+SgdOptimizerStep::SgdOptimizerStep(const XlaValue& found_inf, const XlaValue& step,
+                                   const XlaValue& param, const XlaValue& buf,
+                                   const XlaValue& d_p, const XlaValue& weight_decay,
+                                   const XlaValue& momentum, const XlaValue& lr,
+                                   const XlaValue& dampening,
                                    bool use_weight_decay, bool use_momentum,
                                    bool use_nesterov)
     : XlaNode(xla_sgd_optimizer_step,

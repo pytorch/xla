@@ -10,7 +10,7 @@ namespace ir {
 namespace ops {
 
 UpsampleBilinearBackward::UpsampleBilinearBackward(
-    const Value& input, std::vector<int64_t> output_size,
+    const XlaValue& input, std::vector<int64_t> output_size,
     std::vector<int64_t> input_size, bool align_corners)
     : XlaNode(torch::lazy::OpKind(at::aten::upsample_bilinear2d_backward), {input},
            [&]() {

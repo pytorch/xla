@@ -8,7 +8,7 @@ namespace ops {
 
 class Amax : public XlaNode {
  public:
-  Amax(const Value& input, std::vector<int64_t> dimensions, bool keepdim);
+  Amax(const XlaValue& input, std::vector<int64_t> dimensions, bool keepdim);
 
   std::string ToString() const override;
 

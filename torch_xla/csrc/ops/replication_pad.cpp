@@ -11,7 +11,7 @@ namespace ir {
 namespace ops {
 namespace {
 
-xla::Shape NodeOutputShape(const Value& input,
+xla::Shape NodeOutputShape(const XlaValue& input,
                            absl::Span<const int64_t> padding) {
   auto shape_fn = [&](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
     return BuildReplicationPad(operands[0], padding);
@@ -21,7 +21,7 @@ xla::Shape NodeOutputShape(const Value& input,
 
 }  // namespace
 
-ReplicationPad::ReplicationPad(const Value& input, std::vector<int64_t> padding)
+ReplicationPad::ReplicationPad(const XlaValue& input, std::vector<int64_t> padding)
     : XlaNode(xla_replication_pad, {input},
            [&]() { return NodeOutputShape(input, padding); },
            /*num_outputs=*/1, torch::lazy::MHash(padding)),

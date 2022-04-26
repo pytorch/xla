@@ -11,7 +11,7 @@ namespace torch_xla {
 namespace ir {
 namespace ops {
 
-GetDimensionsSize::GetDimensionsSize(const Value& input,
+GetDimensionsSize::GetDimensionsSize(const XlaValue& input,
                                      std::vector<int64_t> dimensions)
     : XlaNode(xla_get_dimensions_size, {input},
            xla::ShapeUtil::MakeShape(GetShapeDimensionType(/*device=*/nullptr),

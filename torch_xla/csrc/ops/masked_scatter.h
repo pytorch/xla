@@ -11,7 +11,7 @@ namespace ops {
 // it gets its own IR node class.
 class MaskedScatter : public XlaNode {
  public:
-  MaskedScatter(const Value& input, const Value& mask, const Value& source);
+  MaskedScatter(const XlaValue& input, const XlaValue& mask, const XlaValue& source);
 
   torch::lazy::NodePtr Clone(OpList operands) const override;
 

@@ -8,7 +8,7 @@ namespace ops {
 
 class MaxPoolNdBackward : public XlaNode {
  public:
-  MaxPoolNdBackward(const Value& grad_output, const Value& input,
+  MaxPoolNdBackward(const XlaValue& grad_output, const XlaValue& input,
                     int64_t spatial_dim_count, std::vector<int64_t> kernel_size,
                     std::vector<int64_t> stride, std::vector<int64_t> padding,
                     bool ceil_mode);

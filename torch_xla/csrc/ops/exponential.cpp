@@ -8,7 +8,7 @@ namespace torch_xla {
 namespace ir {
 namespace ops {
 
-Exponential::Exponential(const Value& lambda, const Value& seed,
+Exponential::Exponential(const XlaValue& lambda, const XlaValue& seed,
                          xla::Shape shape)
     : XlaNode(torch::lazy::OpKind(at::aten::exponential), {lambda, seed},
            std::move(shape)) {}

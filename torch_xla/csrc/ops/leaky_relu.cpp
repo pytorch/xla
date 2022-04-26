@@ -7,7 +7,7 @@ namespace torch_xla {
 namespace ir {
 namespace ops {
 
-LeakyRelu::LeakyRelu(const Value& input, double negative_slope)
+LeakyRelu::LeakyRelu(const XlaValue& input, double negative_slope)
     : XlaNode(torch::lazy::OpKind(at::aten::leaky_relu), {input},
            input.xla_shape(),
            /*num_outputs=*/1, torch::lazy::MHash(negative_slope)),

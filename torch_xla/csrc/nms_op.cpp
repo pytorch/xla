@@ -275,7 +275,7 @@ NmsResult BuildNms(xla::XlaOp boxes, xla::XlaOp scores,
   xla::XlaOp ones_included =
       xla::Select(included, xla::Broadcast(one_s32, {num_boxes}),
                   xla::Broadcast(zero_s32, {num_boxes}));
-  // num_valid is scalar. Value should be bound by output_size.
+  // num_valid is scalar. XlaValue should be bound by output_size.
   xla::XlaOp num_valid_total = xla::Reduce(
       ones_included,
       /*init_value=*/zero_s32,

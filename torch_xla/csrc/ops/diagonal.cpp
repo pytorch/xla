@@ -11,7 +11,7 @@ namespace torch_xla {
 namespace ir {
 namespace ops {
 
-Diagonal::Diagonal(const Value& input, int64_t offset, int64_t dim1,
+Diagonal::Diagonal(const XlaValue& input, int64_t offset, int64_t dim1,
                    int64_t dim2)
     : XlaNode(torch::lazy::OpKind(at::aten::diagonal), {input},
            [&]() {

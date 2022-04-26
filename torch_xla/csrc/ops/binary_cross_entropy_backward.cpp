@@ -11,9 +11,9 @@ namespace ir {
 namespace ops {
 namespace {
 
-xla::Shape NodeOutputShape(const Value& grad_output, const Value& logits,
-                           const Value& labels,
-                           const absl::optional<Value>& weight,
+xla::Shape NodeOutputShape(const XlaValue& grad_output, const XlaValue& logits,
+                           const XlaValue& labels,
+                           const absl::optional<XlaValue>& weight,
                            ReductionMode reduction) {
   auto lower_for_shape_fn =
       [&](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
@@ -25,7 +25,7 @@ xla::Shape NodeOutputShape(const Value& grad_output, const Value& logits,
                                            operands[2], weight, reduction);
   };
   std::vector<xla::Shape> shapes;
-  for (auto& input : xla::util::GetValuesVector<Value>(
+  for (auto& input : xla::util::GetValuesVector<XlaValue>(
            {grad_output, logits, labels}, {&weight})) {
     shapes.push_back(input.xla_shape());
   }
@@ -35,10 +35,10 @@ xla::Shape NodeOutputShape(const Value& grad_output, const Value& logits,
 }  // namespace
 
 BinaryCrossEntropyBackward::BinaryCrossEntropyBackward(
-    const Value& grad_output, const Value& logits, const Value& labels,
-    const absl::optional<Value>& weight, ReductionMode reduction)
+    const XlaValue& grad_output, const XlaValue& logits, const XlaValue& labels,
+    const absl::optional<XlaValue>& weight, ReductionMode reduction)
     : XlaNode(torch::lazy::OpKind(at::aten::binary_cross_entropy_backward),
-           xla::util::GetValuesVector<Value>({grad_output, logits, labels},
+           xla::util::GetValuesVector<XlaValue>({grad_output, logits, labels},
                                              {&weight}),
            [&]() {
              return NodeOutputShape(grad_output, logits, labels, weight,
@@ -49,7 +49,7 @@ BinaryCrossEntropyBackward::BinaryCrossEntropyBackward(
       reduction_(reduction) {}
 
 torch::lazy::NodePtr BinaryCrossEntropyBackward::Clone(OpList operands) const {
-  absl::optional<Value> weight;
+  absl::optional<XlaValue> weight;
   if (operands.size() > 3) {
     weight = operands.at(3);
   }

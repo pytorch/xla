@@ -8,7 +8,7 @@ namespace torch_xla {
 namespace ir {
 namespace ops {
 
-DiagonalViewUpdate::DiagonalViewUpdate(const Value& target, const Value& input,
+DiagonalViewUpdate::DiagonalViewUpdate(const XlaValue& target, const XlaValue& input,
                                        int64_t offset, int64_t dim1,
                                        int64_t dim2)
     : XlaNode(xla_diagonal_view_update, {target, input}, target.xla_shape(),

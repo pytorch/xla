@@ -10,8 +10,8 @@ namespace ir {
 namespace ops {
 namespace {
 
-xla::Shape NodeOutputShape(const Value& grad_output, const Value& input,
-                           const Value& target, ReductionMode reduction) {
+xla::Shape NodeOutputShape(const XlaValue& grad_output, const XlaValue& input,
+                           const XlaValue& target, ReductionMode reduction) {
   auto lower_for_shape_fn =
       [&](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
     return BuildL1LossBackward(operands[0], operands[1], operands[2],
@@ -24,8 +24,8 @@ xla::Shape NodeOutputShape(const Value& grad_output, const Value& input,
 
 }  // namespace
 
-L1LossBackward::L1LossBackward(const Value& grad_output, const Value& input,
-                               const Value& target, ReductionMode reduction)
+L1LossBackward::L1LossBackward(const XlaValue& grad_output, const XlaValue& input,
+                               const XlaValue& target, ReductionMode reduction)
     : XlaNode(torch::lazy::OpKind(at::aten::l1_loss_backward),
            {grad_output, input, target},
            [&]() {

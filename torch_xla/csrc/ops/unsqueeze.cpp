@@ -8,7 +8,7 @@ namespace ir {
 namespace ops {
 namespace {
 
-xla::Shape NodeOutputShape(const Value& input, int dim) {
+xla::Shape NodeOutputShape(const XlaValue& input, int dim) {
   const xla::Shape& shape = input.xla_shape();
   auto dimensions = BuildUnsqueezeDimensions(shape.dimensions(), dim);
   return xla::ShapeUtil::MakeShape(shape.element_type(), dimensions);
@@ -16,7 +16,7 @@ xla::Shape NodeOutputShape(const Value& input, int dim) {
 
 }  // namespace
 
-Unsqueeze::Unsqueeze(const Value& input, int dim)
+Unsqueeze::Unsqueeze(const XlaValue& input, int dim)
     : XlaNode(torch::lazy::OpKind(at::aten::unsqueeze), {input},
            [&]() { return NodeOutputShape(input, dim); },
            /*num_outputs=*/1, torch::lazy::MHash(dim)),

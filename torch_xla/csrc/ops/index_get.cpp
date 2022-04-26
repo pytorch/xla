@@ -10,7 +10,7 @@ namespace ir {
 namespace ops {
 namespace {
 
-xla::Shape NodeOutputShape(const Value& base, const Value& indices,
+xla::Shape NodeOutputShape(const XlaValue& base, const XlaValue& indices,
                            int64_t start_dim) {
   auto lower_for_shape_fn =
       [start_dim](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
@@ -23,7 +23,7 @@ xla::Shape NodeOutputShape(const Value& base, const Value& indices,
 
 }  // namespace
 
-IndexGet::IndexGet(const ir::Value& base, const ir::Value& indices,
+IndexGet::IndexGet(const ir::XlaValue& base, const ir::XlaValue& indices,
                    int64_t start_dim)
     : XlaNode(torch::lazy::OpKind(at::aten::index), {base, indices},
            [&]() { return NodeOutputShape(base, indices, start_dim); },

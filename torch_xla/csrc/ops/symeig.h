@@ -8,7 +8,7 @@ namespace ops {
 
 class SymEig : public XlaNode {
  public:
-  SymEig(const Value& input, bool eigenvectors, bool lower);
+  SymEig(const XlaValue& input, bool eigenvectors, bool lower);
 
   std::string ToString() const override;
 

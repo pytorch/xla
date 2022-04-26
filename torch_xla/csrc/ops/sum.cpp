@@ -22,7 +22,7 @@ xla::XlaOp LowerSum(xla::XlaOp input, absl::Span<const int64_t> dimensions,
                   keep_reduced_dimensions);
 }
 
-xla::Shape NodeOutputShape(const Value& input,
+xla::Shape NodeOutputShape(const XlaValue& input,
                            absl::Span<const int64_t> dimensions,
                            bool keep_reduced_dimensions,
                            c10::optional<at::ScalarType> dtype) {
@@ -35,7 +35,7 @@ xla::Shape NodeOutputShape(const Value& input,
 
 }  // namespace
 
-Sum::Sum(const Value& input, std::vector<int64_t> dimensions,
+Sum::Sum(const XlaValue& input, std::vector<int64_t> dimensions,
          bool keep_reduced_dimensions, c10::optional<at::ScalarType> dtype)
     : XlaNode(torch::lazy::OpKind(at::aten::sum), {input},
            [&]() {

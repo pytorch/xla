@@ -9,7 +9,7 @@ namespace torch_xla {
 namespace ir {
 namespace ops {
 
-Softshrink::Softshrink(const Value& input, const at::Scalar& lambda)
+Softshrink::Softshrink(const XlaValue& input, const at::Scalar& lambda)
     : XlaNode(torch::lazy::OpKind(at::aten::softshrink), {input},
            input.xla_shape(),
            /*num_outputs=*/1, ScalarHash(lambda)),

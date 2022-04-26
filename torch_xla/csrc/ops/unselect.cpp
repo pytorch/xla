@@ -11,7 +11,7 @@ namespace torch_xla {
 namespace ir {
 namespace ops {
 
-Unselect::Unselect(const Value& target, const Value& source, int64_t dim,
+Unselect::Unselect(const XlaValue& target, const XlaValue& source, int64_t dim,
                    int64_t start, int64_t end, int64_t stride)
     : XlaNode(xla_unselect, {target, source}, target.xla_shape(),
            /*num_outputs=*/1, torch::lazy::MHash(dim, start, end, stride)),

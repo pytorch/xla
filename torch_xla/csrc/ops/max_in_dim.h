@@ -8,7 +8,7 @@ namespace ops {
 
 class MaxInDim : public XlaNode {
  public:
-  MaxInDim(const Value& input, int64_t dim, bool keepdim);
+  MaxInDim(const XlaValue& input, int64_t dim, bool keepdim);
 
   std::string ToString() const override;
 

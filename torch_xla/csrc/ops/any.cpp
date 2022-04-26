@@ -13,7 +13,7 @@ namespace ir {
 namespace ops {
 namespace {
 
-xla::Shape NodeOutputShape(const Value& input, std::vector<int64_t>& dimensions,
+xla::Shape NodeOutputShape(const XlaValue& input, std::vector<int64_t>& dimensions,
                            bool keep_reduced_dimensions) {
   auto lower_for_shape_fn =
       [&](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
@@ -24,7 +24,7 @@ xla::Shape NodeOutputShape(const Value& input, std::vector<int64_t>& dimensions,
 
 }  // namespace
 
-Any::Any(const Value& input, std::vector<int64_t> dimensions,
+Any::Any(const XlaValue& input, std::vector<int64_t> dimensions,
          bool keep_reduced_dimensions)
     : XlaNode(torch::lazy::OpKind(at::aten::any), {input},
            NodeOutputShape(input, dimensions, keep_reduced_dimensions),

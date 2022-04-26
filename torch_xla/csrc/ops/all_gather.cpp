@@ -12,7 +12,7 @@ namespace ir {
 namespace ops {
 namespace {
 
-xla::Shape NodeOutputShape(const Value& input, const Value& token, int64_t dim,
+xla::Shape NodeOutputShape(const XlaValue& input, const XlaValue& token, int64_t dim,
                            int64_t shard_count,
                            const std::vector<std::vector<int64_t>>& groups,
                            bool pin_layout) {
@@ -26,7 +26,7 @@ xla::Shape NodeOutputShape(const Value& input, const Value& token, int64_t dim,
 
 }  // namespace
 
-AllGather::AllGather(const Value& input, const Value& token, int64_t dim,
+AllGather::AllGather(const XlaValue& input, const XlaValue& token, int64_t dim,
                      int64_t shard_count,
                      std::vector<std::vector<int64_t>> groups, bool pin_layout)
     : XlaNode(xla_all_gather, {input, token},

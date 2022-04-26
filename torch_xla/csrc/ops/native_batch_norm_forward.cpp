@@ -33,9 +33,9 @@ std::vector<xla::XlaOp> LowerBatchNorm(xla::XlaOp input, xla::XlaOp weight,
   return values;
 }
 
-xla::Shape NodeOutputShape(const Value& input, const Value& weight,
-                           const Value& bias, const Value& running_mean,
-                           const Value& running_var, bool training) {
+xla::Shape NodeOutputShape(const XlaValue& input, const XlaValue& weight,
+                           const XlaValue& bias, const XlaValue& running_mean,
+                           const XlaValue& running_var, bool training) {
   auto lower_for_shape_fn =
       [training](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
     std::vector<xla::XlaOp> values =
@@ -51,11 +51,11 @@ xla::Shape NodeOutputShape(const Value& input, const Value& weight,
 
 }  // namespace
 
-NativeBatchNormForward::NativeBatchNormForward(const Value& input,
-                                               const Value& weight,
-                                               const Value& bias,
-                                               const Value& running_mean,
-                                               const Value& running_var,
+NativeBatchNormForward::NativeBatchNormForward(const XlaValue& input,
+                                               const XlaValue& weight,
+                                               const XlaValue& bias,
+                                               const XlaValue& running_mean,
+                                               const XlaValue& running_var,
                                                bool training, double eps)
     : XlaNode(torch::lazy::OpKind(at::aten::native_batch_norm),
            {input, weight, bias, running_mean, running_var},

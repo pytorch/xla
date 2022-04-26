@@ -8,7 +8,7 @@ namespace ops {
 
 class Resize : public XlaNode {
  public:
-  Resize(const Value& input, std::vector<int64_t> size);
+  Resize(const XlaValue& input, std::vector<int64_t> size);
 
   torch::lazy::NodePtr Clone(OpList operands) const override;
 

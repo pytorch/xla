@@ -11,8 +11,8 @@ namespace ir {
 namespace ops {
 namespace {
 
-xla::Shape NodeOutputShape(const Value& grad_output, const Value& input,
-                           const Value& weight,
+xla::Shape NodeOutputShape(const XlaValue& grad_output, const XlaValue& input,
+                           const XlaValue& weight,
                            absl::Span<const int64_t> stride,
                            absl::Span<const int64_t> padding,
                            absl::Span<const int64_t> dilation, bool transposed,
@@ -37,7 +37,7 @@ xla::Shape NodeOutputShape(const Value& grad_output, const Value& input,
 }  // namespace
 
 ConvolutionBackwardOverrideable::ConvolutionBackwardOverrideable(
-    const Value& grad_output, const Value& input, const Value& weight,
+    const XlaValue& grad_output, const XlaValue& input, const XlaValue& weight,
     std::vector<int64_t> stride, std::vector<int64_t> padding,
     std::vector<int64_t> dilation, bool transposed,
     std::vector<int64_t> output_padding, int64_t groups)

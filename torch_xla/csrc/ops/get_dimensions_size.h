@@ -10,7 +10,7 @@ namespace ops {
 
 class GetDimensionsSize : public XlaNode {
  public:
-  GetDimensionsSize(const Value& input, std::vector<int64_t> dimensions);
+  GetDimensionsSize(const XlaValue& input, std::vector<int64_t> dimensions);
 
   torch::lazy::NodePtr Clone(OpList operands) const override;
 

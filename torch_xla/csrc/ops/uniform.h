@@ -8,7 +8,7 @@ namespace ops {
 
 class Uniform : public XlaNode {
  public:
-  Uniform(const Value& from, const Value& to, const Value& seed,
+  Uniform(const XlaValue& from, const XlaValue& to, const XlaValue& seed,
           const xla::Shape& rng_shape);
 
   torch::lazy::NodePtr Clone(OpList operands) const override;

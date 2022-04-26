@@ -10,7 +10,7 @@ namespace ir {
 namespace ops {
 namespace {
 
-xla::Shape NodeOutputShape(absl::Span<const ir::Value> values, int64_t dim) {
+xla::Shape NodeOutputShape(absl::Span<const ir::XlaValue> values, int64_t dim) {
   auto lower_for_shape_fn =
       [&](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
     return BuildStack(operands, dim);
@@ -25,7 +25,7 @@ xla::Shape NodeOutputShape(absl::Span<const ir::Value> values, int64_t dim) {
 
 }  // namespace
 
-Stack::Stack(absl::Span<const ir::Value> values, int64_t dim)
+Stack::Stack(absl::Span<const ir::XlaValue> values, int64_t dim)
     : XlaNode(torch::lazy::OpKind(at::aten::stack), values,
            [&]() { return NodeOutputShape(values, dim); },
            /*num_outputs=*/1, torch::lazy::MHash(dim)),

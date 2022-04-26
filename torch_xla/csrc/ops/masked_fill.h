@@ -10,7 +10,7 @@ namespace ops {
 
 class MaskedFill : public XlaNode {
  public:
-  MaskedFill(const Value& input, const Value& mask, const at::Scalar& value);
+  MaskedFill(const XlaValue& input, const XlaValue& mask, const at::Scalar& value);
 
   std::string ToString() const override;
 

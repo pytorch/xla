@@ -8,8 +8,8 @@ namespace ops {
 
 class AmpUpdateScale : public XlaNode {
  public:
-  AmpUpdateScale(const Value& current_scale, const Value& growth_tracker,
-                 const Value& found_inf, double scale_growth_factor,
+  AmpUpdateScale(const XlaValue& current_scale, const XlaValue& growth_tracker,
+                 const XlaValue& found_inf, double scale_growth_factor,
                  double scale_backoff_factor, int growth_interval);
 
   torch::lazy::NodePtr Clone(OpList operands) const override;

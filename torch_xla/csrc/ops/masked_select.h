@@ -11,7 +11,7 @@ namespace ops {
 // it gets its own IR node class.
 class MaskedSelect : public XlaNode {
  public:
-  MaskedSelect(const Value& input, const Value& mask);
+  MaskedSelect(const XlaValue& input, const XlaValue& mask);
 
   torch::lazy::NodePtr Clone(OpList operands) const override;
 

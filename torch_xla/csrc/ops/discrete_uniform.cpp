@@ -10,8 +10,8 @@ namespace torch_xla {
 namespace ir {
 namespace ops {
 
-DiscreteUniform::DiscreteUniform(const Value& from, const Value& to,
-                                 const Value& seed, const xla::Shape& rng_shape)
+DiscreteUniform::DiscreteUniform(const XlaValue& from, const XlaValue& to,
+                                 const XlaValue& seed, const xla::Shape& rng_shape)
     : XlaNode(torch::lazy::OpKind(at::aten::random), {from, to, seed}, rng_shape,
            /*num_outputs=*/1, torch::lazy::Hash(rng_shape)) {}
 

@@ -9,7 +9,7 @@ namespace ir {
 namespace ops {
 namespace {
 
-xla::Shape NodeOutputShape(const Value& input, int64_t k, int64_t dim,
+xla::Shape NodeOutputShape(const XlaValue& input, int64_t k, int64_t dim,
                            bool keepdim) {
   auto lower_for_shape_fn =
       [&](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
@@ -21,7 +21,7 @@ xla::Shape NodeOutputShape(const Value& input, int64_t k, int64_t dim,
 
 }  // namespace
 
-KthValue::KthValue(const Value& input, int64_t k, int64_t dim, bool keepdim)
+KthValue::KthValue(const XlaValue& input, int64_t k, int64_t dim, bool keepdim)
     : XlaNode(torch::lazy::OpKind(at::aten::kthvalue), {input},
            [&]() { return NodeOutputShape(input, k, dim, keepdim); },
            /*num_outputs=*/2, torch::lazy::MHash(k, dim, keepdim)),

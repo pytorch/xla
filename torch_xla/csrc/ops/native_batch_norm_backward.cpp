@@ -10,9 +10,9 @@ namespace ir {
 namespace ops {
 namespace {
 
-xla::Shape NodeOutputShape(const Value& grad_out, const Value& input,
-                           const Value& weight, const Value& save_mean,
-                           const Value& save_invstd, bool training) {
+xla::Shape NodeOutputShape(const XlaValue& grad_out, const XlaValue& input,
+                           const XlaValue& weight, const XlaValue& save_mean,
+                           const XlaValue& save_invstd, bool training) {
   auto lower_for_shape_fn =
       [&](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
     BatchNormGrads xla_outputs =
@@ -31,8 +31,8 @@ xla::Shape NodeOutputShape(const Value& grad_out, const Value& input,
 }  // namespace
 
 NativeBatchNormBackward::NativeBatchNormBackward(
-    const Value& grad_out, const Value& input, const Value& weight,
-    const Value& save_mean, const Value& save_invstd, bool training, double eps)
+    const XlaValue& grad_out, const XlaValue& input, const XlaValue& weight,
+    const XlaValue& save_mean, const XlaValue& save_invstd, bool training, double eps)
     : XlaNode(torch::lazy::OpKind(at::aten::native_batch_norm_backward),
            {grad_out, input, weight, save_mean, save_invstd},
            [&]() {

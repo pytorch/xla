@@ -9,7 +9,7 @@ namespace torch_xla {
 namespace ir {
 namespace ops {
 
-RreluWithNoise::RreluWithNoise(const Value& input, const Value& seed,
+RreluWithNoise::RreluWithNoise(const XlaValue& input, const XlaValue& seed,
                                const at::Scalar& lower, const at::Scalar& upper,
                                bool training)
     : XlaNode(torch::lazy::OpKind(at::aten::rrelu_with_noise), {input, seed},

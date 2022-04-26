@@ -26,7 +26,7 @@
 namespace torch_xla {
 namespace {
 
-ir::Value ApplyViewInfo(ir::Value ir_value, const ViewInfo& view_info) {
+ir::XlaValue ApplyViewInfo(ir::XlaValue ir_value, const ViewInfo& view_info) {
   switch (view_info.view_type) {
     case ViewInfo::Type::kSelect:
       return ir::MakeNode<ir::ops::Select>(
@@ -62,17 +62,17 @@ ir::Value ApplyViewInfo(ir::Value ir_value, const ViewInfo& view_info) {
   }
 }
 
-ir::Value ApplyUpdate(ir::Value ir_value,
+ir::XlaValue ApplyUpdate(ir::XlaValue ir_value,
                       const Alias::UpdateData& update_data) {
   // We first bring the source IR value forward, by reshaping and slicing.
-  std::vector<ir::Value> tmp_values({ir_value});
+  std::vector<ir::XlaValue> tmp_values({ir_value});
   for (size_t i = 0; i < update_data.view_infos.size(); ++i) {
     const ViewInfo& view_info = update_data.view_infos[i];
     tmp_values.push_back(ApplyViewInfo(tmp_values.back(), view_info));
   }
   // We then move backward given the source update value, by reshaping and
   // slice-updating.
-  ir::Value result = update_data.ir_value;
+  ir::XlaValue result = update_data.ir_value;
   for (size_t i = update_data.view_infos.size(); i > 0; --i) {
     const ViewInfo& view_info = update_data.view_infos[i - 1];
     switch (view_info.view_type) {
@@ -167,7 +167,7 @@ ViewInfo::ViewInfo(Type view_type, const xla::Shape& source_shape,
   XLA_CHECK(view_type == Type::kDiagonal);
 }
 
-void Alias::Update(ir::Value ir_value, std::vector<ViewInfo> view_infos) {
+void Alias::Update(ir::XlaValue ir_value, std::vector<ViewInfo> view_infos) {
   if (!updates_.empty() && updates_.back().view_infos == view_infos) {
     updates_.back().ir_value = std::move(ir_value);
   } else {
@@ -176,7 +176,7 @@ void Alias::Update(ir::Value ir_value, std::vector<ViewInfo> view_infos) {
   ++generation_;
 }
 
-ir::Value Alias::SyncUpdateOperations() {
+ir::XlaValue Alias::SyncUpdateOperations() {
   for (auto& update_data : updates_) {
     ir_value_ = ApplyUpdate(ir_value_, update_data);
   }
@@ -195,7 +195,7 @@ View::View(xla::Shape shape, std::shared_ptr<Alias> alias,
       shape_(std::move(shape)),
       alias_(std::move(alias)) {}
 
-void View::Update(ir::Value ir_value) {
+void View::Update(ir::XlaValue ir_value) {
   alias_->Update(std::move(ir_value), view_infos_);
 }
 
@@ -211,7 +211,7 @@ View::IrNode View::GetViewIrNode() {
   if (IsUpToDate()) {
     return {ir_value_, false};
   }
-  ir::Value update = alias_->SyncUpdateOperations();
+  ir::XlaValue update = alias_->SyncUpdateOperations();
   for (auto& view_info : view_infos_) {
     update = ApplyViewInfo(update, view_info);
   }

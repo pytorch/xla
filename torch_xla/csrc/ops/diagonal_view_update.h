@@ -8,7 +8,7 @@ namespace ops {
 
 class DiagonalViewUpdate : public XlaNode {
  public:
-  DiagonalViewUpdate(const Value& target, const Value& input, int64_t offset,
+  DiagonalViewUpdate(const XlaValue& target, const XlaValue& input, int64_t offset,
                      int64_t dim1, int64_t dim2);
 
   torch::lazy::NodePtr Clone(OpList operands) const override;

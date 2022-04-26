@@ -7,7 +7,7 @@ namespace torch_xla {
 namespace ir {
 namespace ops {
 
-Tril::Tril(const Value& input, int64_t diagonal)
+Tril::Tril(const XlaValue& input, int64_t diagonal)
     : XlaNode(torch::lazy::OpKind(at::aten::tril), {input}, input.xla_shape(),
            /*num_outputs=*/1, torch::lazy::MHash(diagonal)),
       diagonal_(diagonal) {}

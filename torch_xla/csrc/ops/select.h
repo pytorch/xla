@@ -8,7 +8,7 @@ namespace ops {
 
 class Select : public XlaNode {
  public:
-  Select(const Value& input, int64_t dim, int64_t start, int64_t end,
+  Select(const XlaValue& input, int64_t dim, int64_t start, int64_t end,
          int64_t stride);
 
   torch::lazy::NodePtr Clone(OpList operands) const override;

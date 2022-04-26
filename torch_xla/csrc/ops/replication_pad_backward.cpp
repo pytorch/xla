@@ -11,7 +11,7 @@ namespace ir {
 namespace ops {
 namespace {
 
-xla::Shape NodeOutputShape(const Value& grad_output, const Value& input,
+xla::Shape NodeOutputShape(const XlaValue& grad_output, const XlaValue& input,
                            absl::Span<const int64_t> padding) {
   auto lower_for_shape_fn =
       [&](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
@@ -23,8 +23,8 @@ xla::Shape NodeOutputShape(const Value& grad_output, const Value& input,
 
 }  // namespace
 
-ReplicationPadBackward::ReplicationPadBackward(const Value& grad_output,
-                                               const Value& input,
+ReplicationPadBackward::ReplicationPadBackward(const XlaValue& grad_output,
+                                               const XlaValue& input,
                                                std::vector<int64_t> padding)
     : XlaNode(xla_replication_pad_backward, {grad_output, input},
            [&]() { return NodeOutputShape(grad_output, input, padding); },
