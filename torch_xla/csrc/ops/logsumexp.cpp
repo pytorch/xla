@@ -9,8 +9,6 @@
 #include "torch_xla/csrc/torch_util.h"
 
 namespace torch_xla {
-namespace ir {
-namespace ops {
 namespace {
 
 xla::Shape NodeOutputShape(const XlaValue& input,
@@ -38,7 +36,7 @@ Logsumexp::Logsumexp(const XlaValue& input, std::vector<int64_t> dimensions,
       keep_reduced_dimensions_(keep_reduced_dimensions) {}
 
 torch::lazy::NodePtr Logsumexp::Clone(OpList operands) const {
-  return ir::MakeNode<Logsumexp>(operands.at(0), dimensions_,
+  return torch::lazy::MakeNode<Logsumexp>(operands.at(0), dimensions_,
                                  keep_reduced_dimensions_);
 }
 
@@ -56,6 +54,4 @@ std::string Logsumexp::ToString() const {
   return ss.str();
 }
 
-}  // namespace ops
-}  // namespace ir
-}  // namespace torch_xla
+} // namespace torch_xla

@@ -6,8 +6,6 @@
 #include "torch_xla/csrc/resize_ops.h"
 
 namespace torch_xla {
-namespace ir {
-namespace ops {
 
 UpsampleBilinear::UpsampleBilinear(const XlaValue& input,
                                    std::vector<int64_t> output_size,
@@ -23,7 +21,7 @@ UpsampleBilinear::UpsampleBilinear(const XlaValue& input,
       align_corners_(align_corners) {}
 
 torch::lazy::NodePtr UpsampleBilinear::Clone(OpList operands) const {
-  return ir::MakeNode<UpsampleBilinear>(operands.at(0), output_size_,
+  return torch::lazy::MakeNode<UpsampleBilinear>(operands.at(0), output_size_,
                                         align_corners_);
 }
 
@@ -43,6 +41,4 @@ std::string UpsampleBilinear::ToString() const {
   return ss.str();
 }
 
-}  // namespace ops
-}  // namespace ir
-}  // namespace torch_xla
+} // namespace torch_xla

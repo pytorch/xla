@@ -3,8 +3,6 @@
 #include "torch_xla/csrc/lowering_context.h"
 
 namespace torch_xla {
-namespace ir {
-namespace ops {
 namespace {
 
 size_t GetNumOutputs(const xla::Shape& shape) {
@@ -21,7 +19,7 @@ UserComputation::UserComputation(torch::lazy::OpKind op, OpList operands,
       computation_(std::move(computation)) {}
 
 torch::lazy::NodePtr UserComputation::Clone(OpList operands) const {
-  return ir::MakeNode<UserComputation>(op(), operands, computation_);
+  return torch::lazy::MakeNode<UserComputation>(op(), operands, computation_);
 }
 
 XlaOpVector UserComputation::Lower(LoweringContext* loctx) const {
@@ -49,6 +47,4 @@ std::string UserComputation::ToString() const {
   return ss.str();
 }
 
-}  // namespace ops
-}  // namespace ir
-}  // namespace torch_xla
+} // namespace torch_xla

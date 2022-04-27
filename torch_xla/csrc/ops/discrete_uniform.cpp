@@ -7,8 +7,6 @@
 #include "torch_xla/csrc/torch_util.h"
 
 namespace torch_xla {
-namespace ir {
-namespace ops {
 
 DiscreteUniform::DiscreteUniform(const XlaValue& from, const XlaValue& to,
                                  const XlaValue& seed,
@@ -18,7 +16,7 @@ DiscreteUniform::DiscreteUniform(const XlaValue& from, const XlaValue& to,
               /*num_outputs=*/1, torch::lazy::Hash(rng_shape)) {}
 
 torch::lazy::NodePtr DiscreteUniform::Clone(OpList operands) const {
-  return ir::MakeNode<DiscreteUniform>(operands.at(0), operands.at(1),
+  return torch::lazy::MakeNode<DiscreteUniform>(operands.at(0), operands.at(1),
                                        operands.at(2), xla_shape());
 }
 
@@ -29,6 +27,4 @@ XlaOpVector DiscreteUniform::Lower(LoweringContext* loctx) const {
   return ReturnOp(RngDiscreteUniform(rng_seed, xla_shape(), from, to), loctx);
 }
 
-}  // namespace ops
-}  // namespace ir
-}  // namespace torch_xla
+} // namespace torch_xla

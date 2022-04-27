@@ -5,8 +5,6 @@
 #include "torch_xla/csrc/ops/xla_ops.h"
 
 namespace torch_xla {
-namespace ir {
-namespace ops {
 
 Select::Select(const XlaValue& input, int64_t dim, int64_t start, int64_t end,
                int64_t stride)
@@ -22,7 +20,7 @@ Select::Select(const XlaValue& input, int64_t dim, int64_t start, int64_t end,
       stride_(stride) {}
 
 torch::lazy::NodePtr Select::Clone(OpList operands) const {
-  return ir::MakeNode<Select>(operands.at(0), dim_, start_, end_, stride_);
+  return torch::lazy::MakeNode<Select>(operands.at(0), dim_, start_, end_, stride_);
 }
 
 XlaOpVector Select::Lower(LoweringContext* loctx) const {
@@ -56,6 +54,4 @@ int64_t Select::GetStride(int64_t start, int64_t end, int64_t stride) {
   return stride;
 }
 
-}  // namespace ops
-}  // namespace ir
-}  // namespace torch_xla
+} // namespace torch_xla

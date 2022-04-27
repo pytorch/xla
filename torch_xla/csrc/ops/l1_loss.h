@@ -5,8 +5,6 @@
 #include "torch_xla/csrc/reduction.h"
 
 namespace torch_xla {
-namespace ir {
-namespace ops {
 
 class L1Loss : public XlaNode {
  public:
@@ -25,6 +23,4 @@ class L1Loss : public XlaNode {
   ReductionMode reduction_;
 };
 
-}  // namespace ops
-}  // namespace ir
-}  // namespace torch_xla
+} // namespace torch_xla

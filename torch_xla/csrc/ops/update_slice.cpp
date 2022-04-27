@@ -8,8 +8,6 @@
 #include "torch_xla/csrc/torch_util.h"
 
 namespace torch_xla {
-namespace ir {
-namespace ops {
 namespace {
 
 xla::Shape NodeOutputShape(const XlaValue& input, const XlaValue& source,
@@ -32,7 +30,7 @@ UpdateSlice::UpdateSlice(const XlaValue& input, const XlaValue& source,
       base_indices_(base_indices.begin(), base_indices.end()) {}
 
 torch::lazy::NodePtr UpdateSlice::Clone(OpList operands) const {
-  return ir::MakeNode<UpdateSlice>(operands.at(0), operands.at(1),
+  return torch::lazy::MakeNode<UpdateSlice>(operands.at(0), operands.at(1),
                                    base_indices_);
 }
 
@@ -50,6 +48,4 @@ std::string UpdateSlice::ToString() const {
   return ss.str();
 }
 
-}  // namespace ops
-}  // namespace ir
-}  // namespace torch_xla
+} // namespace torch_xla

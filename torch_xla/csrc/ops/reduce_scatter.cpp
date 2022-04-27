@@ -8,8 +8,6 @@
 #include "torch_xla/csrc/ops/xla_ops.h"
 
 namespace torch_xla {
-namespace ir {
-namespace ops {
 namespace {
 
 xla::Shape NodeOutputShape(AllReduceType reduce_type, const XlaValue input,
@@ -52,7 +50,7 @@ ReduceScatter::ReduceScatter(AllReduceType reduce_type, const XlaValue& input,
       pin_layout_(pin_layout) {}
 
 torch::lazy::NodePtr ReduceScatter::Clone(OpList operands) const {
-  return ir::MakeNode<ReduceScatter>(reduce_type_, operands.at(0),
+  return torch::lazy::MakeNode<ReduceScatter>(reduce_type_, operands.at(0),
                                      operands.at(1), scale_, scatter_dim_,
                                      shard_count_, groups_, pin_layout_);
 }
@@ -81,6 +79,4 @@ std::string ReduceScatter::ToString() const {
   return ss.str();
 }
 
-}  // namespace ops
-}  // namespace ir
-}  // namespace torch_xla
+} // namespace torch_xla

@@ -1,8 +1,6 @@
 #include "torch_xla/csrc/ops/xla_ops.h"
 
 namespace torch_xla {
-namespace ir {
-namespace ops {
 
 const OpKindWrapper xla_adam_optimizer_step("xla::adam_optimizer_step");
 const OpKindWrapper xla_all_gather("xla::all_gather");
@@ -29,6 +27,4 @@ const OpKindWrapper xla_tensor_data("xla::tensor_data");
 const OpKindWrapper xla_unselect("xla::unselect");
 const OpKindWrapper xla_update_slice("xla::update_slice");
 
-}  // namespace ops
-}  // namespace ir
-}  // namespace torch_xla
+} // namespace torch_xla

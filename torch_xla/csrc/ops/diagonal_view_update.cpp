@@ -5,8 +5,6 @@
 #include "torch_xla/csrc/ops/xla_ops.h"
 
 namespace torch_xla {
-namespace ir {
-namespace ops {
 
 DiagonalViewUpdate::DiagonalViewUpdate(const XlaValue& target,
                                        const XlaValue& input, int64_t offset,
@@ -18,7 +16,7 @@ DiagonalViewUpdate::DiagonalViewUpdate(const XlaValue& target,
       dim2_(dim2) {}
 
 torch::lazy::NodePtr DiagonalViewUpdate::Clone(OpList operands) const {
-  return ir::MakeNode<DiagonalViewUpdate>(operands.at(0), operands.at(1),
+  return torch::lazy::MakeNode<DiagonalViewUpdate>(operands.at(0), operands.at(1),
                                           offset_, dim1_, dim2_);
 }
 
@@ -37,6 +35,4 @@ std::string DiagonalViewUpdate::ToString() const {
   return ss.str();
 }
 
-}  // namespace ops
-}  // namespace ir
-}  // namespace torch_xla
+} // namespace torch_xla

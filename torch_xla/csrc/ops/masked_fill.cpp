@@ -6,8 +6,6 @@
 #include "torch_xla/csrc/ops/scalar.h"
 
 namespace torch_xla {
-namespace ir {
-namespace ops {
 
 MaskedFill::MaskedFill(const XlaValue& input, const XlaValue& mask,
                        const at::Scalar& value)
@@ -17,7 +15,7 @@ MaskedFill::MaskedFill(const XlaValue& input, const XlaValue& mask,
       value_(std::move(value)) {}
 
 torch::lazy::NodePtr MaskedFill::Clone(OpList operands) const {
-  return ir::MakeNode<MaskedFill>(operands.at(0), operands.at(1), value_);
+  return torch::lazy::MakeNode<MaskedFill>(operands.at(0), operands.at(1), value_);
 }
 
 XlaOpVector MaskedFill::Lower(LoweringContext* loctx) const {
@@ -40,6 +38,4 @@ std::string MaskedFill::ToString() const {
   return ss.str();
 }
 
-}  // namespace ops
-}  // namespace ir
-}  // namespace torch_xla
+} // namespace torch_xla

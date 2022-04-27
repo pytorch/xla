@@ -3,8 +3,6 @@
 #include "torch_xla/csrc/helpers.h"
 
 namespace torch_xla {
-namespace ir {
-namespace ops {
 
 xla::Shape InferOutputShape(absl::Span<const xla::Shape> input_shapes,
                             const LowerForShapeFn& core_lowering_fn) {
@@ -20,6 +18,4 @@ xla::Shape InferOutputShape(absl::Span<const xla::Shape> input_shapes,
   return XlaHelpers::ShapeOfXlaOp(result);
 }
 
-}  // namespace ops
-}  // namespace ir
-}  // namespace torch_xla
+} // namespace torch_xla

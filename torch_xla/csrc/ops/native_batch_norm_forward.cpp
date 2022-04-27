@@ -6,8 +6,6 @@
 #include "torch_xla/csrc/ops/infer_output_shape.h"
 
 namespace torch_xla {
-namespace ir {
-namespace ops {
 namespace {
 
 std::vector<xla::XlaOp> LowerBatchNorm(xla::XlaOp input, xla::XlaOp weight,
@@ -68,7 +66,7 @@ NativeBatchNormForward::NativeBatchNormForward(const XlaValue& input,
       eps_(eps) {}
 
 torch::lazy::NodePtr NativeBatchNormForward::Clone(OpList operands) const {
-  return ir::MakeNode<NativeBatchNormForward>(operands.at(0), operands.at(1),
+  return torch::lazy::MakeNode<NativeBatchNormForward>(operands.at(0), operands.at(1),
                                               operands.at(2), operands.at(3),
                                               operands.at(4), training_, eps_);
 }
@@ -91,6 +89,4 @@ std::string NativeBatchNormForward::ToString() const {
   return ss.str();
 }
 
-}  // namespace ops
-}  // namespace ir
-}  // namespace torch_xla
+} // namespace torch_xla

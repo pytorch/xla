@@ -7,8 +7,6 @@
 #include "torch_xla/csrc/ops/infer_output_shape.h"
 
 namespace torch_xla {
-namespace ir {
-namespace ops {
 namespace {
 
 xla::Shape NodeOutputShape(const XlaValue& input,
@@ -34,7 +32,7 @@ Split::Split(const XlaValue& input, std::vector<int64_t> split_sizes,
       dim_(dim) {}
 
 torch::lazy::NodePtr Split::Clone(OpList operands) const {
-  return ir::MakeNode<Split>(operands.at(0), split_sizes_, dim_);
+  return torch::lazy::MakeNode<Split>(operands.at(0), split_sizes_, dim_);
 }
 
 XlaOpVector Split::Lower(LoweringContext* loctx) const {
@@ -50,6 +48,4 @@ std::string Split::ToString() const {
   return ss.str();
 }
 
-}  // namespace ops
-}  // namespace ir
-}  // namespace torch_xla
+} // namespace torch_xla

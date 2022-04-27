@@ -5,8 +5,6 @@
 #include "torch_xla/csrc/xla_lower_util.h"
 
 namespace torch_xla {
-namespace ir {
-namespace ops {
 namespace {
 
 xla::Shape NodeOutputShape(const XlaValue& input, int64_t k, int64_t dim,
@@ -36,7 +34,7 @@ TopK::TopK(const XlaValue& input, int64_t k, int64_t dim, bool largest,
       stable_(stable) {}
 
 torch::lazy::NodePtr TopK::Clone(OpList operands) const {
-  return ir::MakeNode<TopK>(operands.at(0), k_, dim_, largest_, sorted_,
+  return torch::lazy::MakeNode<TopK>(operands.at(0), k_, dim_, largest_, sorted_,
                             stable_);
 }
 
@@ -53,6 +51,4 @@ std::string TopK::ToString() const {
   return ss.str();
 }
 
-}  // namespace ops
-}  // namespace ir
-}  // namespace torch_xla
+} // namespace torch_xla

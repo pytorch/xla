@@ -215,14 +215,14 @@ XlaDataCacheArena::XlaDataCache* GetXlaDataCache(
   return arena->Get(device);
 }
 
-ir::XlaValue IrValueFromScalar(const at::Scalar& value,
+XlaValue IrValueFromScalar(const at::Scalar& value,
                                at::ScalarType scalar_type,
                                const torch::lazy::BackendDevice& device,
                                bool transfer_async) {
   at::Tensor tensor = at::scalar_tensor(value, at::TensorOptions(scalar_type));
   xla::ComputationClient::DataPtr device_data =
       TensorToXlaData(tensor, device, transfer_async);
-  return ir::MakeNode<ir::ops::DeviceData>(std::move(device_data));
+  return torch::lazy::MakeNode<DeviceData>(std::move(device_data));
 }
 
 xla::ComputationClient::DataPtr GetDeviceData(
@@ -264,8 +264,8 @@ bool IsSpecialScalar(const at::Scalar& value) {
   return false;
 }
 
-bool ShouldSyncIrValue(const ir::XlaValue& ir_value) {
-  return ir_value->op() != ir::ops::xla_not_supported;
+bool ShouldSyncIrValue(const XlaValue& ir_value) {
+  return ir_value->op() != xla_not_supported;
 }
 
 }  // namespace
@@ -281,7 +281,7 @@ class XLATensor::DeviceContextArena {
     std::map<int64_t, std::weak_ptr<Data>> tensors_data;
     uint64_t seed = 101;
     uint64_t running_seed = 101;
-    ir::XlaValue seed_ir_value;
+    XlaValue seed_ir_value;
   };
 
  public:
@@ -320,7 +320,7 @@ class XLATensor::DeviceContextArena {
     return tensors;
   }
 
-  ir::XlaValue GetRngSeed(const torch::lazy::BackendDevice& device) {
+  XlaValue GetRngSeed(const torch::lazy::BackendDevice& device) {
     static const at::ScalarType kSeedType = at::ScalarType::Long;
     static const uint64_t kSeedMul = 214013;
     static const uint64_t kSeedAdd = 2531011;
@@ -337,9 +337,9 @@ class XLATensor::DeviceContextArena {
     devctx->running_seed = kSeedAdd + kSeedMul * devctx->running_seed;
     // Compose new seeds from the root seed, to avoid creating too many XLA
     // computation parameters which might overflow the TPU capacity.
-    ir::XlaValue k = ir::ops::ScalarOp(
+    XlaValue k = ScalarOp(
         MakeIntScalar(kSeedMul), MakeXlaPrimitiveType(kSeedType, &device));
-    ir::XlaValue b = ir::ops::ScalarOp(
+    XlaValue b = ScalarOp(
         MakeIntScalar(kSeedAdd), MakeXlaPrimitiveType(kSeedType, &device));
     devctx->seed_ir_value = b + k * devctx->seed_ir_value;
     return devctx->seed_ir_value;
@@ -356,7 +356,7 @@ class XLATensor::DeviceContextArena {
     std::lock_guard<std::mutex> lock(devctx->lock);
     devctx->seed = seed;
     devctx->running_seed = devctx->seed;
-    devctx->seed_ir_value = ir::XlaValue();
+    devctx->seed_ir_value = XlaValue();
   }
 
   void MarkStep(const torch::lazy::BackendDevice& device) {
@@ -364,7 +364,7 @@ class XLATensor::DeviceContextArena {
     std::lock_guard<std::mutex> lock(devctx->lock);
     devctx->seed = 1012031 + devctx->seed * 7012063;
     devctx->running_seed = devctx->seed;
-    devctx->seed_ir_value = ir::XlaValue();
+    devctx->seed_ir_value = XlaValue();
   }
 
  private:
@@ -464,7 +464,7 @@ XLATensor XLATensor::Create(
 }
 
 XLATensor XLATensor::Create(
-    ir::XlaValue ir_value, const torch::lazy::BackendDevice& device,
+    XlaValue ir_value, const torch::lazy::BackendDevice& device,
     c10::optional<at::ScalarType> logical_element_type) {
   XLATensor xtensor(std::move(ir_value), device, logical_element_type);
   DeviceContextArena::Get()->RegisterTensor(xtensor.data_ptr());
@@ -493,7 +493,7 @@ XLATensor::XLATensor(xla::ComputationClient::DataPtr xla_data,
                                    ParseDeviceString(xla_data->device()),
                                    logical_element_type)) {}
 
-XLATensor::XLATensor(ir::XlaValue ir_value,
+XLATensor::XLATensor(XlaValue ir_value,
                      const torch::lazy::BackendDevice& device,
                      c10::optional<at::ScalarType> logical_element_type)
     : data_(std::make_shared<Data>(std::move(ir_value), device,
@@ -572,7 +572,7 @@ xla::ComputationClient::DataPtr XLATensor::GetXlaData() {
   // XLA data can coexist with a view, but we need to check that the view did
   // not receive any updates before calling the current XLA valid.
   bool up_to_date = true;
-  ir::XlaValue ir_value;
+  XlaValue ir_value;
   if (data()->view != nullptr) {
     View::IrNode ir_value_updated = GetViewUpdate(data()->view);
     up_to_date = !ir_value_updated.updated;
@@ -609,14 +609,14 @@ xla::ComputationClient::DataPtr XLATensor::CurrentXlaData() const {
 
 std::string XLATensor::DumpHloComputation(
     const std::vector<XLATensor>& tensors) {
-  std::vector<ir::XlaValue> ir_values;
+  std::vector<XlaValue> ir_values;
   for (auto& tensor : tensors) {
-    ir::XlaValue ir_value = tensor.CurrentIrValue();
+    XlaValue ir_value = tensor.CurrentIrValue();
     if (ir_value) {
       ir_values.push_back(std::move(ir_value));
     }
   }
-  return !ir_values.empty() ? ir::DumpUtil::ToHlo(ir_values, GetCurrentDevice())
+  return !ir_values.empty() ? DumpUtil::ToHlo(ir_values, GetCurrentDevice())
                             : std::string();
 }
 
@@ -629,14 +629,14 @@ void XLATensor::SetXlaData(xla::ComputationClient::DataPtr xla_data,
   data()->xla_data = std::move(xla_data);
   // Assigning a device data should always clear the IR node, to allow graph
   // trimming. A view cannot be reset though, unless we are at a step-end sync.
-  AssignIrValue(ir::XlaValue());
+  AssignIrValue(XlaValue());
   if (sync) {
     data()->view = nullptr;
     data()->tensor_data = c10::nullopt;
   }
 }
 
-void XLATensor::SetIrValue(ir::XlaValue ir_value, bool inplace) {
+void XLATensor::SetIrValue(XlaValue ir_value, bool inplace) {
   data()->xla_data = nullptr;
   data()->tensor_data = c10::nullopt;
   if (data()->view != nullptr && inplace) {
@@ -658,16 +658,16 @@ void XLATensor::SetIrValue(ir::XlaValue ir_value, bool inplace) {
   }
 }
 
-void XLATensor::SetInPlaceIrValue(ir::XlaValue ir_value) {
+void XLATensor::SetInPlaceIrValue(XlaValue ir_value) {
   auto xla_shape = shape();
   if (xla_shape.get().element_type() != ir_value.xla_shape().element_type()) {
     ir_value =
-        ir::MakeNode<ir::ops::Cast>(ir_value, xla_shape.get().element_type());
+        torch::lazy::MakeNode<Cast>(ir_value, xla_shape.get().element_type());
   }
   SetIrValue(std::move(ir_value), /*inplace=*/true);
 }
 
-void XLATensor::AssignIrValue(ir::XlaValue ir_value) const {
+void XLATensor::AssignIrValue(XlaValue ir_value) const {
   data()->ir_value = std::move(ir_value);
   data()->generation += 1;
 }
@@ -687,8 +687,8 @@ void XLATensor::TryLimitGraphSize() {
   }
 }
 
-ir::XlaValue XLATensor::GetIrValue() const {
-  ir::XlaValue ir_value = CurrentIrValue();
+XlaValue XLATensor::GetIrValue() const {
+  XlaValue ir_value = CurrentIrValue();
   if (ir_value) {
     return ir_value;
   }
@@ -709,7 +709,7 @@ ir::XlaValue XLATensor::GetIrValue() const {
   return data()->ir_value;
 }
 
-ir::XlaValue XLATensor::CurrentIrValue() const {
+XlaValue XLATensor::CurrentIrValue() const {
   if (data()->view != nullptr) {
     return GetViewUpdate(data()->view).ir_value;
   }
@@ -727,14 +727,14 @@ c10::optional<at::Tensor> XLATensor::CurrentTensorData() const {
   return data()->tensor_data;
 }
 
-ir::XlaValue XLATensor::GetIrValueForTensor(
+XlaValue XLATensor::GetIrValueForTensor(
     const at::Tensor& tensor, const torch::lazy::BackendDevice& device) const {
   xla::ComputationClient::DataPtr data;
   bool read_only = false;
   if (tensor.dim() == 0 && tensor.numel() == 1) {
     at::Scalar value = tensor.item();
     if (IsSpecialScalar(value)) {
-      return ir::ops::ScalarOp(
+      return ScalarOp(
           std::move(value),
           MakeXlaPrimitiveType(tensor.scalar_type(), &device));
     }
@@ -747,62 +747,62 @@ ir::XlaValue XLATensor::GetIrValueForTensor(
   return CreateTensorNode(std::move(data), read_only);
 }
 
-ir::XlaValue XLATensor::GetDeviceDataIrValue(
+XlaValue XLATensor::GetDeviceDataIrValue(
     const at::Scalar& value, xla::PrimitiveType type,
     const torch::lazy::BackendDevice& device) {
   xla::ComputationClient::DataPtr data =
       GetDeviceData(value, TensorTypeFromXlaType(type), device);
   data->SetInfo(
       std::make_shared<DeviceDataInfo>(/*tensor_id=*/-1, /*read_only=*/true));
-  return ir::MakeNode<ir::ops::DeviceData>(std::move(data));
+  return torch::lazy::MakeNode<DeviceData>(std::move(data));
 }
 
-ir::XlaValue XLATensor::GetIrValueForConstant(const at::Scalar& value,
+XlaValue XLATensor::GetIrValueForConstant(const at::Scalar& value,
                                               const xla::Shape& shape) {
-  ir::XlaValue ir_value =
-      ir::ops::ScalarOp(std::move(value), shape.element_type());
+  XlaValue ir_value =
+      ScalarOp(std::move(value), shape.element_type());
   if (!shape.dimensions().empty()) {
-    ir_value = ir::MakeNode<ir::ops::Expand>(
+    ir_value = torch::lazy::MakeNode<Expand>(
         ir_value, torch::lazy::ToVector<int64_t>(shape.dimensions()));
   }
   return ir_value;
 }
 
-ir::XlaValue XLATensor::GetIrValueForScalar(
+XlaValue XLATensor::GetIrValueForScalar(
     const at::Scalar& value, xla::PrimitiveType type,
     const torch::lazy::BackendDevice& device) {
   if (IsSpecialScalar(value)) {
-    return ir::ops::ScalarOp(std::move(value), type);
+    return ScalarOp(std::move(value), type);
   }
   return GetDeviceDataIrValue(value, type, device);
 }
 
-ir::XlaValue XLATensor::GetIrValueForScalar(
+XlaValue XLATensor::GetIrValueForScalar(
     const at::Scalar& value, const torch::lazy::BackendDevice& device) {
   return GetIrValueForScalar(
       value, MakeXlaPrimitiveType(GetScalarType(value), &device), device);
 }
 
-ir::XlaValue XLATensor::GetIrValueForScalar(
+XlaValue XLATensor::GetIrValueForScalar(
     const at::Scalar& value, xla::PrimitiveType type,
     absl::Span<const int64_t> dimensions,
     const torch::lazy::BackendDevice& device) {
-  ir::XlaValue ir_value = GetIrValueForScalar(value, type, device);
+  XlaValue ir_value = GetIrValueForScalar(value, type, device);
   if (!dimensions.empty()) {
-    ir_value = ir::MakeNode<ir::ops::Expand>(
+    ir_value = torch::lazy::MakeNode<Expand>(
         ir_value, torch::lazy::ToVector<int64_t>(dimensions));
   }
   return ir_value;
 }
 
-ir::XlaValue XLATensor::GetIrValueForScalar(
+XlaValue XLATensor::GetIrValueForScalar(
     const at::Scalar& value, const xla::Shape& shape,
     const torch::lazy::BackendDevice& device) {
   return GetIrValueForScalar(value, shape.element_type(), shape.dimensions(),
                              device);
 }
 
-ir::XlaValue XLATensor::GetIrValueForScalar(
+XlaValue XLATensor::GetIrValueForScalar(
     const at::Scalar& value, const xla::Shape& shape,
     c10::optional<at::ScalarType> logical_element_type,
     const torch::lazy::BackendDevice& device) {
@@ -823,7 +823,7 @@ View::IrNode XLATensor::GetViewUpdate(const std::shared_ptr<View>& view) const {
 }
 
 std::shared_ptr<View> XLATensor::UpdateView(std::shared_ptr<View> view,
-                                            ir::XlaValue ir_value) const {
+                                            XlaValue ir_value) const {
   if (ir_value.xla_shape().dimensions() != view->shape().dimensions()) {
     XLA_CHECK_EQ(
         xla::util::Multiply<int64_t>(ir_value.xla_shape().dimensions()),
@@ -849,11 +849,11 @@ void XLATensor::ModifyCurrentView(ViewInfo view_info) const {
   }
   // This node is not a view. Since this function is meant to modify a view
   // in place, we need to turn this existing tensor into a view.
-  ir::XlaValue ir_value = GetIrValue();
+  XlaValue ir_value = GetIrValue();
   std::shared_ptr<Alias> alias = std::make_shared<Alias>(ir_value);
   data()->view =
       std::make_shared<View>(view_info.shape, alias, std::move(view_info));
-  AssignIrValue(ir::XlaValue());
+  AssignIrValue(XlaValue());
 }
 
 std::shared_ptr<View> XLATensor::CreateView(ViewInfo view_info) const {
@@ -863,13 +863,13 @@ std::shared_ptr<View> XLATensor::CreateView(ViewInfo view_info) const {
   // This node is not a view, and creating a view forks the current node into
   // becoming one itself. This means creating an alias with the current IR
   // XlaNode, and using the same alias for the created IR XlaNode.
-  ir::XlaValue ir_value = GetIrValue();
+  XlaValue ir_value = GetIrValue();
   std::shared_ptr<Alias> alias = std::make_shared<Alias>(ir_value);
   ViewInfo this_view_info(ViewInfo::Type::kNoOp, ir_value.xla_shape(),
                           ir_value.xla_shape());
   data()->view = std::make_shared<View>(ir_value.xla_shape(), alias,
                                         std::move(this_view_info));
-  AssignIrValue(ir::XlaValue());
+  AssignIrValue(XlaValue());
   return std::make_shared<View>(view_info.shape, alias, view_info);
 }
 
@@ -921,7 +921,7 @@ void XLATensor::SetTensor(at::Tensor tensor) {
   SetTensorData(tensor);
   data()->view = nullptr;
   data()->xla_data = nullptr;
-  AssignIrValue(ir::XlaValue());
+  AssignIrValue(XlaValue());
 }
 
 void XLATensor::UpdateFromTensor(at::Tensor tensor, bool sync) {
@@ -934,9 +934,9 @@ void XLATensor::UpdateFromTensor(at::Tensor tensor, bool sync) {
     at::Tensor coyped_tensor = torch::lazy::CopyTensor(tensor, dtype());
     SetTensorData(coyped_tensor);
     data()->xla_data = nullptr;
-    AssignIrValue(ir::XlaValue());
+    AssignIrValue(XlaValue());
     if (data()->view != nullptr) {
-      ir::XlaValue ir_value = GetIrValueForTensor(coyped_tensor, GetDevice());
+      XlaValue ir_value = GetIrValueForTensor(coyped_tensor, GetDevice());
       data()->view = UpdateView(data()->view, std::move(ir_value));
     }
   }
@@ -1020,7 +1020,7 @@ std::vector<at::Tensor> XLATensor::GetTensorsOpByOp(
     DebugUtil::SaveTensorsGraphInfo("GetTensorsOpByOp", *tensors,
                                     &coll.indices);
 
-    std::vector<ir::XlaValue> roots = CollectRoots(*tensors, coll.indices);
+    std::vector<XlaValue> roots = CollectRoots(*tensors, coll.indices);
     TensorCollectionBarrier(&coll);
     async_tensors_data =
         OpByOpExecutor::Get()->Execute(roots, coll.device.toString(), {});
@@ -1105,10 +1105,10 @@ std::vector<XLATensor> XLATensor::CreateTensors(
   return xla_tensors;
 }
 
-ir::XlaValue XLATensor::CreateTensorNode(xla::ComputationClient::DataPtr data,
+XlaValue XLATensor::CreateTensorNode(xla::ComputationClient::DataPtr data,
                                          bool read_only) const {
   data->SetInfo(std::make_shared<DeviceDataInfo>(GetUniqueId(), read_only));
-  return ir::MakeNode<ir::ops::DeviceData>(std::move(data));
+  return torch::lazy::MakeNode<DeviceData>(std::move(data));
 }
 
 std::vector<XLATensor> XLATensor::MakeOutputTensors(
@@ -1117,9 +1117,9 @@ std::vector<XLATensor> XLATensor::MakeOutputTensors(
   tensors.reserve(node->num_outputs());
   for (size_t i = 0; i < node->num_outputs(); ++i) {
     if (inherit_logical_type) {
-      tensors.push_back(CreateFrom(ir::XlaValue(node, i)));
+      tensors.push_back(CreateFrom(XlaValue(node, i)));
     } else {
-      tensors.push_back(CreateFrom(ir::XlaValue(node, i),
+      tensors.push_back(CreateFrom(XlaValue(node, i),
                                    /*logical_element_type=*/c10::nullopt));
     }
   }
@@ -1132,33 +1132,33 @@ XLATensor XLATensor::CopyTensorToDevice(
   return Create(ToTensor(/*detached=*/true), device);
 }
 
-ir::XlaValue XLATensor::MaybeCastIrValue(
-    ir::XlaValue ir_value, const torch::lazy::BackendDevice& device,
+XlaValue XLATensor::MaybeCastIrValue(
+    XlaValue ir_value, const torch::lazy::BackendDevice& device,
     c10::optional<at::ScalarType> logical_element_type) const {
   if (!logical_element_type) {
     logical_element_type = dtype_optional();
   }
   if (logical_element_type &&
       RequiresRawTypeCasting(*logical_element_type, &device)) {
-    ir_value = ir::MakeNode<ir::ops::Cast>(ir_value, *logical_element_type);
+    ir_value = torch::lazy::MakeNode<Cast>(ir_value, *logical_element_type);
   }
   return ir_value;
 }
 
-XLATensor XLATensor::CreateFrom(ir::XlaValue ir_value) const {
+XLATensor XLATensor::CreateFrom(XlaValue ir_value) const {
   ir_value = MaybeCastIrValue(std::move(ir_value), GetDevice(),
                               /*logical_element_type=*/c10::nullopt);
   return Create(std::move(ir_value), GetDevice(), dtype_optional());
 }
 
 XLATensor XLATensor::CreateFrom(
-    ir::XlaValue ir_value, const torch::lazy::BackendDevice& device) const {
+    XlaValue ir_value, const torch::lazy::BackendDevice& device) const {
   ir_value = MaybeCastIrValue(std::move(ir_value), device,
                               /*logical_element_type=*/c10::nullopt);
   return Create(std::move(ir_value), device, dtype_optional());
 }
 
-XLATensor XLATensor::CreateFrom(ir::XlaValue ir_value,
+XLATensor XLATensor::CreateFrom(XlaValue ir_value,
                                 at::ScalarType logical_element_type) const {
   ir_value =
       MaybeCastIrValue(std::move(ir_value), GetDevice(), logical_element_type);
@@ -1166,14 +1166,14 @@ XLATensor XLATensor::CreateFrom(ir::XlaValue ir_value,
 }
 
 XLATensor XLATensor::CreateFrom(
-    ir::XlaValue ir_value,
+    XlaValue ir_value,
     c10::optional<at::ScalarType> logical_element_type_opt) const {
   ir_value = MaybeCastIrValue(std::move(ir_value), GetDevice(),
                               logical_element_type_opt);
   return Create(std::move(ir_value), GetDevice(), logical_element_type_opt);
 }
 
-XLATensor XLATensor::CreateFrom(ir::XlaValue ir_value,
+XLATensor XLATensor::CreateFrom(XlaValue ir_value,
                                 const torch::lazy::BackendDevice& device,
                                 at::ScalarType logical_element_type) const {
   ir_value =
@@ -1221,7 +1221,7 @@ XLATensor::SyncTensorCollection XLATensor::CollectSyncTensors(
   for (size_t i = 0; i < tensors.size(); ++i) {
     if (tensor_ids.insert(tensors[i].GetUniqueId()).second &&
         tensors[i].CurrentXlaData() == nullptr) {
-      ir::XlaValue ir_value = tensors[i].CurrentIrValue();
+      XlaValue ir_value = tensors[i].CurrentIrValue();
       if (ir_value) {
         if (ShouldSyncIrValue(ir_value)) {
           // Add only tensors which need to be synced.
@@ -1310,16 +1310,16 @@ XLATensor::PostOrderData XLATensor::RunPostOrder(
   std::vector<const torch::lazy::Node*> roots;
   roots.reserve(indices.size());
   for (auto index : indices) {
-    ir::XlaValue ir_value = tensors.at(index).CurrentIrValue();
+    XlaValue ir_value = tensors.at(index).CurrentIrValue();
     roots.push_back(ir_value.node.get());
   }
   PostOrderData po_data;
-  po_data.post_order = ir::Util::ComputePostOrder(roots, &po_data.emission_map);
+  po_data.post_order = Util::ComputePostOrder(roots, &po_data.emission_map);
   std::unordered_map<xla::ComputationClient::Data::OpaqueHandle, size_t>
       data_handles;
 
   for (auto node : po_data.post_order) {
-    const ir::ops::DeviceData* device_data = ir::ops::DeviceData::Cast(node);
+    const DeviceData* device_data = DeviceData::Cast(node);
     if (device_data != nullptr) {
       /* Acceptable race condition: HasValue may return false. This is OK
        * since the conditional barrier is a performance optimization. */
@@ -1341,9 +1341,9 @@ XLATensor::PostOrderData XLATensor::RunPostOrder(
   return po_data;
 }
 
-std::vector<ir::XlaValue> XLATensor::CollectRoots(
+std::vector<XlaValue> XLATensor::CollectRoots(
     const std::vector<XLATensor>& tensors, absl::Span<const size_t> indices) {
-  std::vector<ir::XlaValue> roots;
+  std::vector<XlaValue> roots;
   roots.reserve(indices.size());
   for (auto index : indices) {
     roots.push_back(tensors.at(index).CurrentIrValue());
@@ -1483,7 +1483,7 @@ void XLATensor::SyncLiveTensorsGraph(const torch::lazy::BackendDevice* device,
 void XLATensor::MarkStep(const torch::lazy::BackendDevice& device) {
   XLA_COUNTER("MarkStep", 1);
   DeviceContextArena::Get()->MarkStep(device);
-  ir::ScopePusher::ResetScopes();
+  ScopePusher::ResetScopes();
   g_tls_data.Reset();
 }
 
@@ -1510,7 +1510,7 @@ XLATensor::OpByOpAsync XLATensor::SyncTensorsGraphOpByOp(
   struct Async {
     explicit Async(SyncTensorCollection coll,
                    std::vector<xla::ComputationClient::DataPtr> tensors_data,
-                   std::vector<ir::XlaValue> roots,
+                   std::vector<XlaValue> roots,
                    absl::Span<const std::string> devices)
         : coll(std::move(coll)),
           tensors_data(std::move(tensors_data)),
@@ -1519,7 +1519,7 @@ XLATensor::OpByOpAsync XLATensor::SyncTensorsGraphOpByOp(
 
     SyncTensorCollection coll;
     std::vector<xla::ComputationClient::DataPtr> tensors_data;
-    std::vector<ir::XlaValue> roots;
+    std::vector<XlaValue> roots;
     std::vector<std::string> devices;
   };
 
@@ -1527,7 +1527,7 @@ XLATensor::OpByOpAsync XLATensor::SyncTensorsGraphOpByOp(
   DebugUtil::SaveTensorsGraphInfo("SyncTensorsGraphOpByOp", *tensors,
                                   &coll.indices);
 
-  std::vector<ir::XlaValue> roots = CollectRoots(*tensors, coll.indices);
+  std::vector<XlaValue> roots = CollectRoots(*tensors, coll.indices);
   auto tensors_data = FetchTensorData(tensors, coll.config, coll.indices);
   TensorCollectionBarrier(&coll);
   auto async = std::make_shared<Async>(std::move(coll), std::move(tensors_data),
@@ -1564,7 +1564,7 @@ XLATensor::OpByOpAsync XLATensor::SyncTensorsGraphOpByOp(
 
 void XLATensor::BuildInputOutputAliases(const std::vector<XLATensor>& tensors,
                                         absl::Span<const size_t> indices,
-                                        ir::LoweringContext* lowering_ctx) {
+                                        LoweringContext* lowering_ctx) {
   std::unordered_map<int64_t, size_t> output_tensor_id_map;
   for (size_t i = 0; i < indices.size(); ++i) {
     size_t tensor_index = indices[i];
@@ -1611,11 +1611,11 @@ XLATensor::CompilationResult XLATensor::Compile(
       tensorflow::profiler::TraceMeLevel::kInfo);
   static const bool enable_aliasing =
       xla::sys_util::GetEnvBool("XLA_ENABLE_PARAM_ALIASING", true);
-  ir::LoweringContext lowering_ctx("SyncTensorsGraph", coll.device,
+  LoweringContext lowering_ctx("SyncTensorsGraph", coll.device,
                                    po_data->post_order,
                                    std::move(po_data->emission_map));
   for (auto index : coll.indices) {
-    ir::XlaValue ir_value = tensors[index].CurrentIrValue();
+    XlaValue ir_value = tensors[index].CurrentIrValue();
     xla::XlaOp root = lowering_ctx.GetOutputOp(
         torch::lazy::Output(ir_value.node.get(), ir_value.index));
     lowering_ctx.AddResult(root);
@@ -1726,7 +1726,7 @@ int64_t XLATensor::GetNextTensorId() {
   return id_generator->fetch_add(1);
 }
 
-ir::XlaValue XLATensor::GetRngSeed(const torch::lazy::BackendDevice& device) {
+XlaValue XLATensor::GetRngSeed(const torch::lazy::BackendDevice& device) {
   return DeviceContextArena::Get()->GetRngSeed(device);
 }
 
@@ -1749,7 +1749,7 @@ bool XLATensor::ShouldSyncIrNode() {
   if (!this->data()->ir_value) {
     return false;
   }
-  return this->data()->ir_value->op() != ir::ops::xla_device_data;
+  return this->data()->ir_value->op() != xla_device_data;
 }
 
 }  // namespace torch_xla

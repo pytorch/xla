@@ -6,8 +6,6 @@
 #include "torch_xla/csrc/ir.h"
 
 namespace torch_xla {
-namespace ir {
-namespace ops {
 
 class Std : public XlaNode {
  public:
@@ -32,6 +30,4 @@ class Std : public XlaNode {
   int64_t correction_;
 };
 
-}  // namespace ops
-}  // namespace ir
-}  // namespace torch_xla
+} // namespace torch_xla

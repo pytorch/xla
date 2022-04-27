@@ -6,8 +6,6 @@
 #include "torch_xla/csrc/ops/infer_output_shape.h"
 
 namespace torch_xla {
-namespace ir {
-namespace ops {
 namespace {
 
 xla::XlaOp LowerSqueeze(xla::XlaOp input, int dim) {
@@ -36,7 +34,7 @@ Squeeze::Squeeze(const XlaValue& input, int dim)
       dim_(dim) {}
 
 torch::lazy::NodePtr Squeeze::Clone(OpList operands) const {
-  return ir::MakeNode<Squeeze>(operands.at(0), dim_);
+  return torch::lazy::MakeNode<Squeeze>(operands.at(0), dim_);
 }
 
 XlaOpVector Squeeze::Lower(LoweringContext* loctx) const {
@@ -51,6 +49,4 @@ std::string Squeeze::ToString() const {
   return ss.str();
 }
 
-}  // namespace ops
-}  // namespace ir
-}  // namespace torch_xla
+} // namespace torch_xla

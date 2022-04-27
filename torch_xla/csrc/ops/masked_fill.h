@@ -5,8 +5,6 @@
 #include "torch_xla/csrc/ir.h"
 
 namespace torch_xla {
-namespace ir {
-namespace ops {
 
 class MaskedFill : public XlaNode {
  public:
@@ -25,6 +23,4 @@ class MaskedFill : public XlaNode {
   at::Scalar value_;
 };
 
-}  // namespace ops
-}  // namespace ir
-}  // namespace torch_xla
+} // namespace torch_xla

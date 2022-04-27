@@ -3,8 +3,6 @@
 #include "torch_xla/csrc/lowering_context.h"
 #include "torch_xla/csrc/xla_lower_util.h"
 namespace torch_xla {
-namespace ir {
-namespace ops {
 
 Roll::Roll(const XlaValue& input, std::vector<int64_t> shifts,
            std::vector<int64_t> dims)
@@ -14,7 +12,7 @@ Roll::Roll(const XlaValue& input, std::vector<int64_t> shifts,
       dims_(std::move(dims)) {}
 
 torch::lazy::NodePtr Roll::Clone(OpList operands) const {
-  return ir::MakeNode<Roll>(operands.at(0), shifts_, dims_);
+  return torch::lazy::MakeNode<Roll>(operands.at(0), shifts_, dims_);
 }
 
 XlaOpVector Roll::Lower(LoweringContext* loctx) const {
@@ -30,6 +28,4 @@ std::string Roll::ToString() const {
   return ss.str();
 }
 
-}  // namespace ops
-}  // namespace ir
-}  // namespace torch_xla
+} // namespace torch_xla

@@ -3,13 +3,11 @@
 #include "torch_xla/csrc/ir.h"
 
 namespace torch_xla {
-namespace ir {
-namespace ops {
 
 class IndexPut : public XlaNode {
  public:
-  IndexPut(const ir::XlaValue& base, const ir::XlaValue& indices,
-           int64_t start_dim, const ir::XlaValue& values, bool accumulate);
+  IndexPut(const XlaValue& base, const XlaValue& indices,
+           int64_t start_dim, const XlaValue& values, bool accumulate);
 
   std::string ToString() const override;
 
@@ -28,6 +26,4 @@ class IndexPut : public XlaNode {
   bool accumulate_;
 };
 
-}  // namespace ops
-}  // namespace ir
-}  // namespace torch_xla
+} // namespace torch_xla

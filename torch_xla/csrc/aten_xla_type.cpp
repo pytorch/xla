@@ -696,7 +696,7 @@ at::Tensor XLANativeFunctions::as_strided(
   XLATensor self_tensor = bridge::GetXlaTensor(self);
   auto xsize = XlaHelpers::I64List(size);
   auto xstride = XlaHelpers::I64List(stride);
-  if (!ir::ops::AsStrided::StrideIsSupported(
+  if (!AsStrided::StrideIsSupported(
           self_tensor.shape(), xsize, xstride, storage_offset.value_or(0))) {
     return at::native::call_fallback_fn<
         &xla_cpu_fallback, ATEN_OP(as_strided)>::call(self, size, stride,
@@ -714,7 +714,7 @@ const at::Tensor& XLANativeFunctions::as_strided_(
   XLATensor self_tensor = bridge::GetXlaTensor(self);
   auto xsize = XlaHelpers::I64List(size);
   auto xstride = XlaHelpers::I64List(stride);
-  if (!ir::ops::AsStrided::StrideIsSupported(
+  if (!AsStrided::StrideIsSupported(
           self_tensor.shape(), xsize, xstride, storage_offset.value_or(0))) {
     return at::native::call_fallback_fn<
         &xla_cpu_fallback, ATEN_OP(as_strided_)>::call(self, size, stride,

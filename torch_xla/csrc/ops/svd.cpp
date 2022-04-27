@@ -10,8 +10,6 @@
 #include "torch_xla/csrc/lowering_context.h"
 
 namespace torch_xla {
-namespace ir {
-namespace ops {
 namespace {
 
 std::vector<xla::XlaOp> LowerSVD(xla::XlaOp input, bool some, bool compute_uv) {
@@ -75,7 +73,7 @@ SVD::SVD(const XlaValue& input, bool some, bool compute_uv)
       compute_uv_(compute_uv) {}
 
 torch::lazy::NodePtr SVD::Clone(OpList operands) const {
-  return ir::MakeNode<SVD>(operands.at(0), some_, compute_uv_);
+  return torch::lazy::MakeNode<SVD>(operands.at(0), some_, compute_uv_);
 }
 
 XlaOpVector SVD::Lower(LoweringContext* loctx) const {
@@ -90,6 +88,4 @@ std::string SVD::ToString() const {
   return ss.str();
 }
 
-}  // namespace ops
-}  // namespace ir
-}  // namespace torch_xla
+} // namespace torch_xla

@@ -7,8 +7,6 @@
 #include "torch_xla/csrc/ops/xla_ops.h"
 
 namespace torch_xla {
-namespace ir {
-namespace ops {
 namespace {
 
 xla::Shape NodeOutputShape(const XlaValue& grad_output, const XlaValue& input,
@@ -32,7 +30,7 @@ ReplicationPadBackward::ReplicationPadBackward(const XlaValue& grad_output,
       padding_(std::move(padding)) {}
 
 torch::lazy::NodePtr ReplicationPadBackward::Clone(OpList operands) const {
-  return ir::MakeNode<ReplicationPadBackward>(operands.at(0), operands.at(1),
+  return torch::lazy::MakeNode<ReplicationPadBackward>(operands.at(0), operands.at(1),
                                               padding_);
 }
 
@@ -50,6 +48,4 @@ std::string ReplicationPadBackward::ToString() const {
   return ss.str();
 }
 
-}  // namespace ops
-}  // namespace ir
-}  // namespace torch_xla
+} // namespace torch_xla

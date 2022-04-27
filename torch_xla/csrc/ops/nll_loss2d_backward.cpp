@@ -8,8 +8,6 @@
 #include "torch_xla/csrc/ops/infer_output_shape.h"
 
 namespace torch_xla {
-namespace ir {
-namespace ops {
 namespace {
 
 xla::Shape NodeOutputShape(const XlaValue& grad_output, const XlaValue& logits,
@@ -65,7 +63,7 @@ torch::lazy::NodePtr NllLoss2dBackward::Clone(OpList operands) const {
     weight = operands.at(3);
     total_weight = operands.at(4);
   }
-  return ir::MakeNode<NllLoss2dBackward>(operands.at(0), operands.at(1),
+  return torch::lazy::MakeNode<NllLoss2dBackward>(operands.at(0), operands.at(1),
                                          operands.at(2), weight, total_weight,
                                          reduction_, ignore_index_);
 }
@@ -93,6 +91,4 @@ std::string NllLoss2dBackward::ToString() const {
   return ss.str();
 }
 
-}  // namespace ops
-}  // namespace ir
-}  // namespace torch_xla
+} // namespace torch_xla

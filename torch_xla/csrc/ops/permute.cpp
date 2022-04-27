@@ -6,8 +6,6 @@
 #include "torch_xla/csrc/ops/infer_output_shape.h"
 
 namespace torch_xla {
-namespace ir {
-namespace ops {
 namespace {
 
 xla::Shape NodeOutputShape(const XlaValue& input,
@@ -29,7 +27,7 @@ Permute::Permute(const XlaValue& input, std::vector<int64_t> dims)
       dims_(std::move(dims)) {}
 
 torch::lazy::NodePtr Permute::Clone(OpList operands) const {
-  return ir::MakeNode<Permute>(operands.at(0), dims_);
+  return torch::lazy::MakeNode<Permute>(operands.at(0), dims_);
 }
 
 XlaOpVector Permute::Lower(LoweringContext* loctx) const {
@@ -51,6 +49,4 @@ xla::Shape Permute::MakePermuteShape(const xla::Shape& source_shape,
       XlaHelpers::Permute(permutation, source_shape.dimensions()));
 }
 
-}  // namespace ops
-}  // namespace ir
-}  // namespace torch_xla
+} // namespace torch_xla

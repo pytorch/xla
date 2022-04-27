@@ -11,8 +11,6 @@
 #include "torch_xla/csrc/torch_util.h"
 
 namespace torch_xla {
-namespace ir {
-namespace ops {
 namespace {
 
 xla::XlaOp LowerCumProd(xla::XlaOp input, int64_t dim,
@@ -47,7 +45,7 @@ CumProd::CumProd(const XlaValue& input, int64_t dim,
       dtype_(dtype) {}
 
 torch::lazy::NodePtr CumProd::Clone(OpList operands) const {
-  return ir::MakeNode<CumProd>(operands.at(0), dim_, dtype_);
+  return torch::lazy::MakeNode<CumProd>(operands.at(0), dim_, dtype_);
 }
 
 XlaOpVector CumProd::Lower(LoweringContext* loctx) const {
@@ -64,6 +62,4 @@ std::string CumProd::ToString() const {
   return ss.str();
 }
 
-}  // namespace ops
-}  // namespace ir
-}  // namespace torch_xla
+} // namespace torch_xla

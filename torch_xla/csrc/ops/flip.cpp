@@ -4,8 +4,6 @@
 #include "torch_xla/csrc/lowering_context.h"
 
 namespace torch_xla {
-namespace ir {
-namespace ops {
 
 Flip::Flip(const XlaValue& input, std::vector<int64_t> dims)
     : XlaNode(torch::lazy::OpKind(at::aten::flip), {input}, input.xla_shape(),
@@ -13,7 +11,7 @@ Flip::Flip(const XlaValue& input, std::vector<int64_t> dims)
       dims_(std::move(dims)) {}
 
 torch::lazy::NodePtr Flip::Clone(OpList operands) const {
-  return ir::MakeNode<Flip>(operands.at(0), dims_);
+  return torch::lazy::MakeNode<Flip>(operands.at(0), dims_);
 }
 
 XlaOpVector Flip::Lower(LoweringContext* loctx) const {
@@ -28,6 +26,4 @@ std::string Flip::ToString() const {
   return ss.str();
 }
 
-}  // namespace ops
-}  // namespace ir
-}  // namespace torch_xla
+} // namespace torch_xla

@@ -7,8 +7,6 @@
 #include "torch_xla/csrc/xla_lower_util.h"
 
 namespace torch_xla {
-namespace ir {
-namespace ops {
 namespace {
 
 xla::Shape NodeOutputShape(const OpList& inputs) {
@@ -27,7 +25,7 @@ OptimizationBarrier::OptimizationBarrier(const OpList& inputs)
               /*num_outputs=*/inputs.size()) {}
 
 torch::lazy::NodePtr OptimizationBarrier::Clone(OpList operands) const {
-  return ir::MakeNode<OptimizationBarrier>(operands);
+  return torch::lazy::MakeNode<OptimizationBarrier>(operands);
 }
 
 XlaOpVector OptimizationBarrier::Lower(LoweringContext* loctx) const {
@@ -45,6 +43,4 @@ XlaOpVector OptimizationBarrier::Lower(LoweringContext* loctx) const {
   return ReturnOps({outputs}, loctx);
 }
 
-}  // namespace ops
-}  // namespace ir
-}  // namespace torch_xla
+} // namespace torch_xla

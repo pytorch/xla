@@ -4,8 +4,6 @@
 #include "torch_xla/csrc/lowering_context.h"
 
 namespace torch_xla {
-namespace ir {
-namespace ops {
 
 LeakyReluBackward::LeakyReluBackward(const XlaValue& grad_output,
                                      const XlaValue& input,
@@ -16,7 +14,7 @@ LeakyReluBackward::LeakyReluBackward(const XlaValue& grad_output,
       negative_slope_(negative_slope) {}
 
 torch::lazy::NodePtr LeakyReluBackward::Clone(OpList operands) const {
-  return ir::MakeNode<LeakyReluBackward>(operands.at(0), operands.at(1),
+  return torch::lazy::MakeNode<LeakyReluBackward>(operands.at(0), operands.at(1),
                                          negative_slope_);
 }
 
@@ -34,6 +32,4 @@ std::string LeakyReluBackward::ToString() const {
   return ss.str();
 }
 
-}  // namespace ops
-}  // namespace ir
-}  // namespace torch_xla
+} // namespace torch_xla

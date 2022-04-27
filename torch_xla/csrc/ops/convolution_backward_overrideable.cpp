@@ -7,8 +7,6 @@
 #include "torch_xla/csrc/ops/infer_output_shape.h"
 
 namespace torch_xla {
-namespace ir {
-namespace ops {
 namespace {
 
 xla::Shape NodeOutputShape(const XlaValue& grad_output, const XlaValue& input,
@@ -60,7 +58,7 @@ ConvolutionBackwardOverrideable::ConvolutionBackwardOverrideable(
 
 torch::lazy::NodePtr ConvolutionBackwardOverrideable::Clone(
     OpList operands) const {
-  return ir::MakeNode<ConvolutionBackwardOverrideable>(
+  return torch::lazy::MakeNode<ConvolutionBackwardOverrideable>(
       operands.at(0), operands.at(1), operands.at(2), stride_, padding_,
       dilation_, transposed_, output_padding_, groups_);
 }
@@ -88,6 +86,4 @@ std::string ConvolutionBackwardOverrideable::ToString() const {
   return ss.str();
 }
 
-}  // namespace ops
-}  // namespace ir
-}  // namespace torch_xla
+} // namespace torch_xla

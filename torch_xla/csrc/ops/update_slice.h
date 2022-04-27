@@ -4,8 +4,6 @@
 #include "torch_xla/csrc/ir.h"
 
 namespace torch_xla {
-namespace ir {
-namespace ops {
 
 class UpdateSlice : public XlaNode {
  public:
@@ -24,6 +22,4 @@ class UpdateSlice : public XlaNode {
   std::vector<int64_t> base_indices_;
 };
 
-}  // namespace ops
-}  // namespace ir
-}  // namespace torch_xla
+} // namespace torch_xla

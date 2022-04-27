@@ -4,8 +4,6 @@
 #include "torch_xla/csrc/lowering_context.h"
 
 namespace torch_xla {
-namespace ir {
-namespace ops {
 
 Threshold::Threshold(const XlaValue& input, float threshold, float value)
     : XlaNode(torch::lazy::OpKind(at::aten::threshold), {input},
@@ -15,7 +13,7 @@ Threshold::Threshold(const XlaValue& input, float threshold, float value)
       value_(value) {}
 
 torch::lazy::NodePtr Threshold::Clone(OpList operands) const {
-  return ir::MakeNode<Threshold>(operands.at(0), threshold_, value_);
+  return torch::lazy::MakeNode<Threshold>(operands.at(0), threshold_, value_);
 }
 
 XlaOpVector Threshold::Lower(LoweringContext* loctx) const {
@@ -31,6 +29,4 @@ std::string Threshold::ToString() const {
   return ss.str();
 }
 
-}  // namespace ops
-}  // namespace ir
-}  // namespace torch_xla
+} // namespace torch_xla

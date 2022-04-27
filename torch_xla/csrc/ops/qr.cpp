@@ -8,8 +8,6 @@
 #include "torch_xla/csrc/lowering_context.h"
 
 namespace torch_xla {
-namespace ir {
-namespace ops {
 namespace {
 
 std::vector<xla::XlaOp> LowerQR(xla::XlaOp input, bool some) {
@@ -48,7 +46,7 @@ QR::QR(const XlaValue& input, bool some)
       some_(some) {}
 
 torch::lazy::NodePtr QR::Clone(OpList operands) const {
-  return ir::MakeNode<QR>(operands.at(0), some_);
+  return torch::lazy::MakeNode<QR>(operands.at(0), some_);
 }
 
 XlaOpVector QR::Lower(LoweringContext* loctx) const {
@@ -62,6 +60,4 @@ std::string QR::ToString() const {
   return ss.str();
 }
 
-}  // namespace ops
-}  // namespace ir
-}  // namespace torch_xla
+} // namespace torch_xla

@@ -32,8 +32,6 @@
 #include "torch_xla/csrc/xla_lower_util.h"
 
 namespace torch_xla {
-namespace ir {
-namespace ops {
 
 #define PTXLA_UNARY_OP(name, sym, xla_fn)                                  \
   torch::lazy::NodePtr name(const XlaValue& input) {                       \
@@ -320,7 +318,7 @@ torch::lazy::NodePtr SigmoidBackward(const XlaValue& grad_output,
 
 torch::lazy::NodePtr LogSoftmaxBackwardOp(const XlaValue& grad_output,
                                           const XlaValue& output, int64_t dim) {
-  return ir::MakeNode<LogSoftmaxBackward>(
+  return torch::lazy::MakeNode<LogSoftmaxBackward>(
       grad_output, output,
       torch::lazy::GetCanonicalDimensionIndex(dim,
                                               grad_output.xla_shape().rank()));
@@ -328,7 +326,7 @@ torch::lazy::NodePtr LogSoftmaxBackwardOp(const XlaValue& grad_output,
 
 torch::lazy::NodePtr SoftmaxBackwardOp(const XlaValue& grad_output,
                                        const XlaValue& output, int64_t dim) {
-  return ir::MakeNode<SoftmaxBackward>(
+  return torch::lazy::MakeNode<SoftmaxBackward>(
       grad_output, output,
       torch::lazy::GetCanonicalDimensionIndex(dim,
                                               grad_output.xla_shape().rank()));
@@ -625,7 +623,7 @@ torch::lazy::NodePtr ARange(const at::Scalar& start, const at::Scalar& end,
     default:
       XLA_ERROR() << "XLA type not supported: " << type;
   }
-  return ir::MakeNode<Constant>(std::move(values));
+  return torch::lazy::MakeNode<Constant>(std::move(values));
 }
 
 torch::lazy::NodePtr BroadcastTensors(absl::Span<const XlaValue> tensors) {
@@ -664,7 +662,7 @@ torch::lazy::NodePtr Norm(const XlaValue& input,
   if (!p.has_value() || p->toDouble() == 2.0) {
     torch::lazy::NodePtr square = input * input;
     torch::lazy::NodePtr result =
-        ir::MakeNode<Sum>(square, dimensions, keepdim, dtype);
+        torch::lazy::MakeNode<Sum>(square, dimensions, keepdim, dtype);
     return Sqrt(result);
   }
   double norm_value = p->toDouble();
@@ -680,7 +678,7 @@ torch::lazy::NodePtr Norm(const XlaValue& input,
     //   tensor(3.1235)
     //   >>> print(x.abs().sum())
     //   tensor(11.9437)
-    return ir::MakeNode<Sum>(Abs(input), dimensions, keepdim, dtype);
+    return torch::lazy::MakeNode<Sum>(Abs(input), dimensions, keepdim, dtype);
   }
   // Generic sum(x^p)^(1/p) norms.
   torch::lazy::NodePtr norm_exp =
@@ -689,7 +687,7 @@ torch::lazy::NodePtr Norm(const XlaValue& input,
       ScalarOp(1.0 / norm_value, input.xla_shape().element_type());
   torch::lazy::NodePtr exp = Pow(Abs(input), norm_exp);
   torch::lazy::NodePtr result =
-      ir::MakeNode<Sum>(exp, dimensions, keepdim, dtype);
+      torch::lazy::MakeNode<Sum>(exp, dimensions, keepdim, dtype);
   return Pow(result, norm_exp_inv);
 }
 
@@ -1127,6 +1125,4 @@ torch::lazy::NodePtr Softplus(const XlaValue& input, const XlaValue& beta,
                    std::move(lower_fn));
 }
 
-}  // namespace ops
-}  // namespace ir
-}  // namespace torch_xla
+} // namespace torch_xla

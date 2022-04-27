@@ -4,8 +4,6 @@
 #include "torch_xla/csrc/xla_lower_util.h"
 
 namespace torch_xla {
-namespace ir {
-namespace ops {
 
 Put::Put(const XlaValue& input, const XlaValue& index, const XlaValue& source,
          bool accumulate)
@@ -15,7 +13,7 @@ Put::Put(const XlaValue& input, const XlaValue& index, const XlaValue& source,
       accumulate_(accumulate) {}
 
 torch::lazy::NodePtr Put::Clone(OpList operands) const {
-  return ir::MakeNode<Put>(operands.at(0), operands.at(1), operands.at(2),
+  return torch::lazy::MakeNode<Put>(operands.at(0), operands.at(1), operands.at(2),
                            accumulate_);
 }
 
@@ -33,6 +31,4 @@ std::string Put::ToString() const {
   return ss.str();
 }
 
-}  // namespace ops
-}  // namespace ir
-}  // namespace torch_xla
+} // namespace torch_xla

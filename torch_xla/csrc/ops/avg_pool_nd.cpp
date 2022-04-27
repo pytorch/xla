@@ -7,8 +7,6 @@
 #include "torch_xla/csrc/pooling.h"
 
 namespace torch_xla {
-namespace ir {
-namespace ops {
 namespace {
 
 // Infers the output shape of the max pooling operation.
@@ -64,7 +62,7 @@ AvgPoolNd::AvgPoolNd(const XlaValue& input, int64_t spatial_dim_count,
       count_include_pad_(count_include_pad) {}
 
 torch::lazy::NodePtr AvgPoolNd::Clone(OpList operands) const {
-  return ir::MakeNode<AvgPoolNd>(operands.at(0), spatial_dim_count_,
+  return torch::lazy::MakeNode<AvgPoolNd>(operands.at(0), spatial_dim_count_,
                                  kernel_size_, stride_, padding_, ceil_mode_,
                                  count_include_pad_);
 }
@@ -87,6 +85,4 @@ std::string AvgPoolNd::ToString() const {
   return ss.str();
 }
 
-}  // namespace ops
-}  // namespace ir
 }  // namespace torch_xla

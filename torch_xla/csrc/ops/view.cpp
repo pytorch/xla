@@ -7,8 +7,6 @@
 #include "torch_xla/csrc/lowering_context.h"
 
 namespace torch_xla {
-namespace ir {
-namespace ops {
 namespace {
 
 xla::Shape NodeOutputShape(const XlaValue& input,
@@ -26,25 +24,23 @@ xla::Shape NodeOutputShape(const XlaValue& input,
 
 }  // namespace
 
-View::View(const XlaValue& input, std::vector<int64_t> output_size)
+ViewOp::ViewOp(const XlaValue& input, std::vector<int64_t> output_size)
     : XlaNode(torch::lazy::OpKind(at::aten::view), {input},
               NodeOutputShape(input, output_size),
               /*num_outputs=*/1, torch::lazy::MHash(output_size)),
       output_size_(std::move(output_size)) {}
 
-XlaOpVector View::Lower(LoweringContext* loctx) const {
+XlaOpVector ViewOp::Lower(LoweringContext* loctx) const {
   xla::XlaOp input = loctx->GetOutputOp(operand(0));
   xla::XlaOp output = BuildView(input, output_size_);
   return ReturnOp(output, loctx);
 }
 
-std::string View::ToString() const {
+std::string ViewOp::ToString() const {
   std::stringstream ss;
   ss << XlaNode::ToString() << ", output_size=("
      << absl::StrJoin(output_size_, ", ") << ")";
   return ss.str();
 }
 
-}  // namespace ops
-}  // namespace ir
-}  // namespace torch_xla
+} // namespace torch_xla

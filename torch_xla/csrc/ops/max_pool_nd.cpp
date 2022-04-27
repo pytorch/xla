@@ -6,8 +6,6 @@
 #include "torch_xla/csrc/pooling.h"
 
 namespace torch_xla {
-namespace ir {
-namespace ops {
 namespace {
 
 xla::Shape NodeOutputShape(const XlaValue& input, int64_t spatial_dim_count,
@@ -58,7 +56,7 @@ MaxPoolNd::MaxPoolNd(const XlaValue& input, int64_t spatial_dim_count,
       ceil_mode_(ceil_mode) {}
 
 torch::lazy::NodePtr MaxPoolNd::Clone(OpList operands) const {
-  return ir::MakeNode<MaxPoolNd>(operands.at(0), spatial_dim_count_,
+  return torch::lazy::MakeNode<MaxPoolNd>(operands.at(0), spatial_dim_count_,
                                  kernel_size_, stride_, padding_, ceil_mode_);
 }
 
@@ -78,6 +76,4 @@ std::string MaxPoolNd::ToString() const {
   return ss.str();
 }
 
-}  // namespace ops
-}  // namespace ir
-}  // namespace torch_xla
+} // namespace torch_xla

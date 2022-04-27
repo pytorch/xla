@@ -8,8 +8,6 @@
 #include "torch_xla/csrc/reduction.h"
 
 namespace torch_xla {
-namespace ir {
-namespace ops {
 namespace {
 
 xla::Shape NodeOutputShape(const XlaValue& grad_output, const XlaValue& input,
@@ -39,7 +37,7 @@ MseLossBackward::MseLossBackward(const XlaValue& grad_output,
       reduction_(reduction) {}
 
 torch::lazy::NodePtr MseLossBackward::Clone(OpList operands) const {
-  return ir::MakeNode<MseLossBackward>(operands.at(0), operands.at(1),
+  return torch::lazy::MakeNode<MseLossBackward>(operands.at(0), operands.at(1),
                                        operands.at(2), reduction_);
 }
 
@@ -58,6 +56,4 @@ std::string MseLossBackward::ToString() const {
   return ss.str();
 }
 
-}  // namespace ops
-}  // namespace ir
-}  // namespace torch_xla
+} // namespace torch_xla

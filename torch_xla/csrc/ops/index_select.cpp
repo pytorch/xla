@@ -6,8 +6,6 @@
 #include "torch_xla/csrc/ops/infer_output_shape.h"
 
 namespace torch_xla {
-namespace ir {
-namespace ops {
 namespace {
 
 xla::Shape NodeOutputShape(const XlaValue& input, const XlaValue& index,
@@ -30,7 +28,7 @@ IndexSelect::IndexSelect(const XlaValue& input, int64_t dim,
       dim_(dim) {}
 
 torch::lazy::NodePtr IndexSelect::Clone(OpList operands) const {
-  return ir::MakeNode<IndexSelect>(operands.at(0), dim_, operands.at(1));
+  return torch::lazy::MakeNode<IndexSelect>(operands.at(0), dim_, operands.at(1));
 }
 
 XlaOpVector IndexSelect::Lower(LoweringContext* loctx) const {
@@ -45,6 +43,4 @@ std::string IndexSelect::ToString() const {
   return ss.str();
 }
 
-}  // namespace ops
-}  // namespace ir
-}  // namespace torch_xla
+} // namespace torch_xla

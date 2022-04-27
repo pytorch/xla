@@ -6,8 +6,6 @@
 #include "torch_xla/csrc/ops/infer_output_shape.h"
 
 namespace torch_xla {
-namespace ir {
-namespace ops {
 namespace {
 
 xla::Shape NodeOutputShape(const XlaValue& input,
@@ -29,7 +27,7 @@ ReflectionPad2d::ReflectionPad2d(const XlaValue& input,
       padding_(std::move(padding)) {}
 
 torch::lazy::NodePtr ReflectionPad2d::Clone(OpList operands) const {
-  return ir::MakeNode<ReflectionPad2d>(operands.at(0), padding_);
+  return torch::lazy::MakeNode<ReflectionPad2d>(operands.at(0), padding_);
 }
 
 XlaOpVector ReflectionPad2d::Lower(LoweringContext* loctx) const {
@@ -45,6 +43,4 @@ std::string ReflectionPad2d::ToString() const {
   return ss.str();
 }
 
-}  // namespace ops
-}  // namespace ir
-}  // namespace torch_xla
+} // namespace torch_xla

@@ -6,8 +6,6 @@
 #include "torch_xla/csrc/pooling.h"
 
 namespace torch_xla {
-namespace ir {
-namespace ops {
 namespace {
 
 xla::Shape NodeOutputShape(const XlaValue& grad_output, const XlaValue& input,
@@ -50,7 +48,7 @@ MaxUnpoolNdBackward::MaxUnpoolNdBackward(const XlaValue& grad_output,
       output_size_(std::move(output_size)) {}
 
 torch::lazy::NodePtr MaxUnpoolNdBackward::Clone(OpList operands) const {
-  return ir::MakeNode<MaxUnpoolNdBackward>(operands.at(0), operands.at(1),
+  return torch::lazy::MakeNode<MaxUnpoolNdBackward>(operands.at(0), operands.at(1),
                                            operands.at(2), output_size_);
 }
 
@@ -70,6 +68,4 @@ std::string MaxUnpoolNdBackward::ToString() const {
   return ss.str();
 }
 
-}  // namespace ops
-}  // namespace ir
-}  // namespace torch_xla
+} // namespace torch_xla

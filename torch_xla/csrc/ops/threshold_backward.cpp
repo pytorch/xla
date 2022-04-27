@@ -4,8 +4,6 @@
 #include "torch_xla/csrc/lowering_context.h"
 
 namespace torch_xla {
-namespace ir {
-namespace ops {
 
 ThresholdBackward::ThresholdBackward(const XlaValue& grad_output,
                                      const XlaValue& input, float threshold)
@@ -15,7 +13,7 @@ ThresholdBackward::ThresholdBackward(const XlaValue& grad_output,
       threshold_(threshold) {}
 
 torch::lazy::NodePtr ThresholdBackward::Clone(OpList operands) const {
-  return ir::MakeNode<ThresholdBackward>(operands.at(0), operands.at(1),
+  return torch::lazy::MakeNode<ThresholdBackward>(operands.at(0), operands.at(1),
                                          threshold_);
 }
 
@@ -32,6 +30,4 @@ std::string ThresholdBackward::ToString() const {
   return ss.str();
 }
 
-}  // namespace ops
-}  // namespace ir
-}  // namespace torch_xla
+} // namespace torch_xla

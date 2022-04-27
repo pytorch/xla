@@ -8,8 +8,6 @@
 #include "torch_xla/csrc/tensor_util.h"
 
 namespace torch_xla {
-namespace ir {
-namespace ops {
 
 GetDimensionsSize::GetDimensionsSize(const XlaValue& input,
                                      std::vector<int64_t> dimensions)
@@ -20,7 +18,7 @@ GetDimensionsSize::GetDimensionsSize(const XlaValue& input,
       dimensions_(std::move(dimensions)) {}
 
 torch::lazy::NodePtr GetDimensionsSize::Clone(OpList operands) const {
-  return ir::MakeNode<GetDimensionsSize>(operands.at(0), dimensions_);
+  return torch::lazy::MakeNode<GetDimensionsSize>(operands.at(0), dimensions_);
 }
 
 XlaOpVector GetDimensionsSize::Lower(LoweringContext* loctx) const {
@@ -36,6 +34,4 @@ std::string GetDimensionsSize::ToString() const {
   return ss.str();
 }
 
-}  // namespace ops
-}  // namespace ir
-}  // namespace torch_xla
+} // namespace torch_xla

@@ -8,8 +8,6 @@
 #include "torch_xla/csrc/torch_util.h"
 
 namespace torch_xla {
-namespace ir {
-namespace ops {
 namespace {
 
 xla::XlaOp LowerLogSoftmax(xla::XlaOp input, int64_t dim,
@@ -39,7 +37,7 @@ LogSoftmax::LogSoftmax(const XlaValue& input, int64_t dim,
       dtype_(dtype) {}
 
 torch::lazy::NodePtr LogSoftmax::Clone(OpList operands) const {
-  return ir::MakeNode<LogSoftmax>(operands.at(0), dim_, dtype_);
+  return torch::lazy::MakeNode<LogSoftmax>(operands.at(0), dim_, dtype_);
 }
 
 XlaOpVector LogSoftmax::Lower(LoweringContext* loctx) const {
@@ -54,6 +52,4 @@ std::string LogSoftmax::ToString() const {
   return ss.str();
 }
 
-}  // namespace ops
-}  // namespace ir
-}  // namespace torch_xla
+} // namespace torch_xla

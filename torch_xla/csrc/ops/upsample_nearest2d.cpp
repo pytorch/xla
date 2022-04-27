@@ -6,8 +6,6 @@
 #include "torch_xla/csrc/resize_ops.h"
 
 namespace torch_xla {
-namespace ir {
-namespace ops {
 
 UpsampleNearest::UpsampleNearest(const XlaValue& input,
                                  std::vector<int64_t> output_size)
@@ -20,7 +18,7 @@ UpsampleNearest::UpsampleNearest(const XlaValue& input,
       output_size_(std::move(output_size)) {}
 
 torch::lazy::NodePtr UpsampleNearest::Clone(OpList operands) const {
-  return ir::MakeNode<UpsampleNearest>(operands.at(0), output_size_);
+  return torch::lazy::MakeNode<UpsampleNearest>(operands.at(0), output_size_);
 }
 
 XlaOpVector UpsampleNearest::Lower(LoweringContext* loctx) const {
@@ -39,6 +37,4 @@ std::string UpsampleNearest::ToString() const {
   return ss.str();
 }
 
-}  // namespace ops
-}  // namespace ir
-}  // namespace torch_xla
+} // namespace torch_xla

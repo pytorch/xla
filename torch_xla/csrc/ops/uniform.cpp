@@ -7,8 +7,6 @@
 #include "torch_xla/csrc/torch_util.h"
 
 namespace torch_xla {
-namespace ir {
-namespace ops {
 
 Uniform::Uniform(const XlaValue& from, const XlaValue& to, const XlaValue& seed,
                  const xla::Shape& rng_shape)
@@ -17,7 +15,7 @@ Uniform::Uniform(const XlaValue& from, const XlaValue& to, const XlaValue& seed,
               /*num_outputs=*/1, torch::lazy::Hash(rng_shape)) {}
 
 torch::lazy::NodePtr Uniform::Clone(OpList operands) const {
-  return ir::MakeNode<Uniform>(operands.at(0), operands.at(1), operands.at(2),
+  return torch::lazy::MakeNode<Uniform>(operands.at(0), operands.at(1), operands.at(2),
                                xla_shape());
 }
 
@@ -28,6 +26,4 @@ XlaOpVector Uniform::Lower(LoweringContext* loctx) const {
   return ReturnOp(RngUniform(rng_seed, xla_shape(), from, to), loctx);
 }
 
-}  // namespace ops
-}  // namespace ir
-}  // namespace torch_xla
+} // namespace torch_xla

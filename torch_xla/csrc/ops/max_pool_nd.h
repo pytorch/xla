@@ -3,8 +3,6 @@
 #include "torch_xla/csrc/ir.h"
 
 namespace torch_xla {
-namespace ir {
-namespace ops {
 
 class MaxPoolNd : public XlaNode {
  public:
@@ -38,6 +36,4 @@ class MaxPoolNd : public XlaNode {
   bool ceil_mode_;
 };
 
-}  // namespace ops
-}  // namespace ir
-}  // namespace torch_xla
+} // namespace torch_xla

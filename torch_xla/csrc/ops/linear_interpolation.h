@@ -3,8 +3,6 @@
 #include "torch_xla/csrc/ir.h"
 
 namespace torch_xla {
-namespace ir {
-namespace ops {
 
 class LinearInterpolation : public XlaNode {
  public:
@@ -23,6 +21,4 @@ class LinearInterpolation : public XlaNode {
   double alpha_;
 };
 
-}  // namespace ops
-}  // namespace ir
-}  // namespace torch_xla
+} // namespace torch_xla

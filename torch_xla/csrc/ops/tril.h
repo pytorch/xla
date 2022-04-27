@@ -3,8 +3,6 @@
 #include "torch_xla/csrc/ir.h"
 
 namespace torch_xla {
-namespace ir {
-namespace ops {
 
 // XlaNode for the lower triangular part of a matrix (2-D tensor) or batch of
 // matrices input.
@@ -24,6 +22,4 @@ class Tril : public XlaNode {
   int64_t diagonal_;
 };
 
-}  // namespace ops
-}  // namespace ir
-}  // namespace torch_xla
+} // namespace torch_xla

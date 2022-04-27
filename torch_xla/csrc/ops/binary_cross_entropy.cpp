@@ -7,8 +7,6 @@
 #include "torch_xla/csrc/ops/infer_output_shape.h"
 
 namespace torch_xla {
-namespace ir {
-namespace ops {
 namespace {
 
 xla::Shape NodeOutputShape(const XlaValue& logits, const XlaValue& labels,
@@ -49,7 +47,7 @@ torch::lazy::NodePtr BinaryCrossEntropy::Clone(OpList operands) const {
   if (operands.size() > 2) {
     weight = operands.at(2);
   }
-  return ir::MakeNode<BinaryCrossEntropy>(operands.at(0), operands.at(1),
+  return torch::lazy::MakeNode<BinaryCrossEntropy>(operands.at(0), operands.at(1),
                                           weight, reduction_);
 }
 
@@ -71,6 +69,4 @@ std::string BinaryCrossEntropy::ToString() const {
   return ss.str();
 }
 
-}  // namespace ops
-}  // namespace ir
 }  // namespace torch_xla

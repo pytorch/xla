@@ -6,8 +6,6 @@
 #include "torch_xla/csrc/ops/infer_output_shape.h"
 
 namespace torch_xla {
-namespace ir {
-namespace ops {
 namespace {
 
 xla::Shape NodeOutputShape(const XlaValue& grad_out, const XlaValue& input,
@@ -47,7 +45,7 @@ NativeBatchNormBackward::NativeBatchNormBackward(const XlaValue& grad_out,
       eps_(eps) {}
 
 torch::lazy::NodePtr NativeBatchNormBackward::Clone(OpList operands) const {
-  return ir::MakeNode<NativeBatchNormBackward>(operands.at(0), operands.at(1),
+  return torch::lazy::MakeNode<NativeBatchNormBackward>(operands.at(0), operands.at(1),
                                                operands.at(2), operands.at(3),
                                                operands.at(4), training_, eps_);
 }
@@ -71,6 +69,4 @@ std::string NativeBatchNormBackward::ToString() const {
   return ss.str();
 }
 
-}  // namespace ops
-}  // namespace ir
-}  // namespace torch_xla
+} // namespace torch_xla

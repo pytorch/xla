@@ -8,8 +8,6 @@
 #include "torch_xla/csrc/tensor_util.h"
 
 namespace torch_xla {
-namespace ir {
-namespace ops {
 
 Unselect::Unselect(const XlaValue& target, const XlaValue& source, int64_t dim,
                    int64_t start, int64_t end, int64_t stride)
@@ -21,7 +19,7 @@ Unselect::Unselect(const XlaValue& target, const XlaValue& source, int64_t dim,
       stride_(stride) {}
 
 torch::lazy::NodePtr Unselect::Clone(OpList operands) const {
-  return ir::MakeNode<Unselect>(operands.at(0), operands.at(1), dim_, start_,
+  return torch::lazy::MakeNode<Unselect>(operands.at(0), operands.at(1), dim_, start_,
                                 end_, stride_);
 }
 
@@ -40,6 +38,4 @@ std::string Unselect::ToString() const {
   return ss.str();
 }
 
-}  // namespace ops
-}  // namespace ir
-}  // namespace torch_xla
+} // namespace torch_xla

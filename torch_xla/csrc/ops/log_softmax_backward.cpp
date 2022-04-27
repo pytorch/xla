@@ -6,8 +6,6 @@
 #include "torch_xla/csrc/softmax_builder.h"
 
 namespace torch_xla {
-namespace ir {
-namespace ops {
 
 LogSoftmaxBackward::LogSoftmaxBackward(const XlaValue& grad_output,
                                        const XlaValue& output, int64_t dim)
@@ -17,7 +15,7 @@ LogSoftmaxBackward::LogSoftmaxBackward(const XlaValue& grad_output,
       dim_(dim) {}
 
 torch::lazy::NodePtr LogSoftmaxBackward::Clone(OpList operands) const {
-  return ir::MakeNode<LogSoftmaxBackward>(operands.at(0), operands.at(1), dim_);
+  return torch::lazy::MakeNode<LogSoftmaxBackward>(operands.at(0), operands.at(1), dim_);
 }
 
 XlaOpVector LogSoftmaxBackward::Lower(LoweringContext* loctx) const {
@@ -34,6 +32,4 @@ std::string LogSoftmaxBackward::ToString() const {
   return ss.str();
 }
 
-}  // namespace ops
-}  // namespace ir
-}  // namespace torch_xla
+} // namespace torch_xla

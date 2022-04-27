@@ -5,12 +5,10 @@
 #include "torch_xla/csrc/ir.h"
 
 namespace torch_xla {
-namespace ir {
-namespace ops {
 
-class View : public XlaNode {
+class ViewOp : public XlaNode {
  public:
-  View(const XlaValue& input, std::vector<int64_t> output_size);
+  ViewOp(const XlaValue& input, std::vector<int64_t> output_size);
 
   XlaOpVector Lower(LoweringContext* loctx) const override;
 
@@ -22,6 +20,4 @@ class View : public XlaNode {
   std::vector<int64_t> output_size_;
 };
 
-}  // namespace ops
-}  // namespace ir
-}  // namespace torch_xla
+} // namespace torch_xla

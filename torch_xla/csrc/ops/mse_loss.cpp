@@ -9,8 +9,6 @@
 #include "torch_xla/csrc/ops/infer_output_shape.h"
 
 namespace torch_xla {
-namespace ir {
-namespace ops {
 namespace {
 
 xla::Shape NodeOutputShape(const XlaValue& input, const XlaValue& target,
@@ -34,7 +32,7 @@ MseLoss::MseLoss(const XlaValue& input, const XlaValue& target,
       reduction_(reduction) {}
 
 torch::lazy::NodePtr MseLoss::Clone(OpList operands) const {
-  return ir::MakeNode<MseLoss>(operands.at(0), operands.at(1), reduction_);
+  return torch::lazy::MakeNode<MseLoss>(operands.at(0), operands.at(1), reduction_);
 }
 
 XlaOpVector MseLoss::Lower(LoweringContext* loctx) const {
@@ -50,6 +48,4 @@ std::string MseLoss::ToString() const {
   return ss.str();
 }
 
-}  // namespace ops
-}  // namespace ir
-}  // namespace torch_xla
+} // namespace torch_xla

@@ -8,8 +8,6 @@
 #include "torch_xla/csrc/ops/xla_ops.h"
 
 namespace torch_xla {
-namespace ir {
-namespace ops {
 namespace {
 
 xla::Shape NodeOutputShape(const XlaValue& input, const XlaValue& token,
@@ -42,7 +40,7 @@ AllGather::AllGather(const XlaValue& input, const XlaValue& token, int64_t dim,
       pin_layout_(pin_layout) {}
 
 torch::lazy::NodePtr AllGather::Clone(OpList operands) const {
-  return ir::MakeNode<AllGather>(operands.at(0), operands.at(1), dim_,
+  return torch::lazy::MakeNode<AllGather>(operands.at(0), operands.at(1), dim_,
                                  shard_count_, groups_, pin_layout_);
 }
 
@@ -67,6 +65,4 @@ std::string AllGather::ToString() const {
   return ss.str();
 }
 
-}  // namespace ops
-}  // namespace ir
 }  // namespace torch_xla

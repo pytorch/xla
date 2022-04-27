@@ -3,8 +3,6 @@
 #include "torch_xla/csrc/ir.h"
 
 namespace torch_xla {
-namespace ir {
-namespace ops {
 
 // Generic IR XlaNode implementation for nodes which can simply be described by
 // a specific OpKind and a lowering function. IR nodes carrying metadata should
@@ -36,6 +34,4 @@ class Generic : public XlaNode {
   torch::lazy::hash_t hash_seed_;
 };
 
-}  // namespace ops
-}  // namespace ir
-}  // namespace torch_xla
+} // namespace torch_xla

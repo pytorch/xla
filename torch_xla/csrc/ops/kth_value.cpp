@@ -5,8 +5,6 @@
 #include "torch_xla/csrc/xla_lower_util.h"
 
 namespace torch_xla {
-namespace ir {
-namespace ops {
 namespace {
 
 xla::Shape NodeOutputShape(const XlaValue& input, int64_t k, int64_t dim,
@@ -30,7 +28,7 @@ KthValue::KthValue(const XlaValue& input, int64_t k, int64_t dim, bool keepdim)
       keepdim_(keepdim) {}
 
 torch::lazy::NodePtr KthValue::Clone(OpList operands) const {
-  return ir::MakeNode<KthValue>(operands.at(0), k_, dim_, keepdim_);
+  return torch::lazy::MakeNode<KthValue>(operands.at(0), k_, dim_, keepdim_);
 }
 
 XlaOpVector KthValue::Lower(LoweringContext* loctx) const {
@@ -45,6 +43,4 @@ std::string KthValue::ToString() const {
   return ss.str();
 }
 
-}  // namespace ops
-}  // namespace ir
-}  // namespace torch_xla
+} // namespace torch_xla

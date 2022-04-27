@@ -13,8 +13,6 @@
 #include "torch_xla/csrc/torch_util.h"
 
 namespace torch_xla {
-namespace ir {
-namespace ops {
 namespace {
 
 xla::XlaOp LowerAsStrided(xla::XlaOp input, absl::Span<const int64_t> size,
@@ -65,7 +63,7 @@ std::string AsStrided::ToString() const {
 }
 
 torch::lazy::NodePtr AsStrided::Clone(OpList operands) const {
-  return ir::MakeNode<AsStrided>(operands.at(0), size_, stride_,
+  return torch::lazy::MakeNode<AsStrided>(operands.at(0), size_, stride_,
                                  storage_offset_);
 }
 
@@ -92,6 +90,4 @@ std::vector<int64_t> AsStrided::GetArrayStridePermutation(
   return permutation;
 }
 
-}  // namespace ops
-}  // namespace ir
 }  // namespace torch_xla
