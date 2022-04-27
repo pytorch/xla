@@ -78,7 +78,7 @@ xla::XlaOp BuildSoftplus(xla::XlaOp input, xla::XlaOp beta,
 // GELU(x) = x * 0.5 * (1.0 + torch.erf(x / math.sqrt(2.0)))
 xla::XlaOp BuildGelu(xla::XlaOp input);
 
-// Computes the backward of GELU. 
+// Computes the backward of GELU.
 xla::XlaOp BuildGeluBackward(xla::XlaOp grad_output, xla::XlaOp input);
 
 }  // namespace torch_xla

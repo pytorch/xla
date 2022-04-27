@@ -738,20 +738,22 @@ torch::lazy::NodePtr EluBackward(const XlaValue& grad_output,
 }
 
 torch::lazy::NodePtr Gelu(const XlaValue& input) {
-  auto lower_fn = [](const XlaNode& node, LoweringContext* loctx) -> XlaOpVector {
+  auto lower_fn = [](const XlaNode& node,
+                     LoweringContext* loctx) -> XlaOpVector {
     xla::XlaOp xla_input = loctx->GetOutputOp(node.operand(0));
     return node.ReturnOp(BuildGelu(xla_input), loctx);
   };
-  return GenericOp(torch::lazy::OpKind(at::aten::gelu),
-                   {input}, input.xla_shape(), std::move(lower_fn));
+  return GenericOp(torch::lazy::OpKind(at::aten::gelu), {input},
+                   input.xla_shape(), std::move(lower_fn));
 }
 
-torch::lazy::NodePtr GeluBackward(const XlaValue& grad_output, const XlaValue& input) {
-  auto lower_fn = [](const XlaNode& node, LoweringContext* loctx) -> XlaOpVector {
+torch::lazy::NodePtr GeluBackward(const XlaValue& grad_output,
+                                  const XlaValue& input) {
+  auto lower_fn = [](const XlaNode& node,
+                     LoweringContext* loctx) -> XlaOpVector {
     xla::XlaOp xla_grad_output = loctx->GetOutputOp(node.operand(0));
     xla::XlaOp xla_input = loctx->GetOutputOp(node.operand(1));
-    return node.ReturnOp(BuildGeluBackward(xla_grad_output, xla_input),
-                         loctx);
+    return node.ReturnOp(BuildGeluBackward(xla_grad_output, xla_input), loctx);
   };
   return GenericOp(torch::lazy::OpKind(at::aten::gelu_backward),
                    {grad_output, input}, input.xla_shape(),
