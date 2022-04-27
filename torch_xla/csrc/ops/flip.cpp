@@ -7,9 +7,9 @@ namespace torch_xla {
 namespace ir {
 namespace ops {
 
-Flip::Flip(const Value& input, std::vector<int64_t> dims)
-    : Node(torch::lazy::OpKind(at::aten::flip), {input}, input.xla_shape(),
-           /*num_outputs=*/1, torch::lazy::MHash(dims)),
+Flip::Flip(const XlaValue& input, std::vector<int64_t> dims)
+    : XlaNode(torch::lazy::OpKind(at::aten::flip), {input}, input.xla_shape(),
+              /*num_outputs=*/1, torch::lazy::MHash(dims)),
       dims_(std::move(dims)) {}
 
 torch::lazy::NodePtr Flip::Clone(OpList operands) const {
@@ -24,7 +24,7 @@ XlaOpVector Flip::Lower(LoweringContext* loctx) const {
 
 std::string Flip::ToString() const {
   std::stringstream ss;
-  ss << Node::ToString() << ", dims=(" << absl::StrJoin(dims_, ", ") << ")";
+  ss << XlaNode::ToString() << ", dims=(" << absl::StrJoin(dims_, ", ") << ")";
   return ss.str();
 }
 

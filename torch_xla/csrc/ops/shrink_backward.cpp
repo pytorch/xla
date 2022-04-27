@@ -10,15 +10,15 @@ namespace ir {
 namespace ops {
 
 ShrinkBackward::ShrinkBackward(torch::lazy::OpKind kind,
-                               const Value& grad_output, const Value& input,
-                               const at::Scalar& lambda)
-    : Node(kind, {grad_output, input}, input.xla_shape(), /*num_outputs=*/1,
-           ScalarHash(lambda)),
+                               const XlaValue& grad_output,
+                               const XlaValue& input, const at::Scalar& lambda)
+    : XlaNode(kind, {grad_output, input}, input.xla_shape(), /*num_outputs=*/1,
+              ScalarHash(lambda)),
       lambda_(std::move(lambda)) {}
 
 std::string ShrinkBackward::ToString() const {
   std::stringstream ss;
-  ss << Node::ToString() << ", lambda=" << lambda_;
+  ss << XlaNode::ToString() << ", lambda=" << lambda_;
   return ss.str();
 }
 

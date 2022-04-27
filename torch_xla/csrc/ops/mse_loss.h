@@ -8,9 +8,10 @@ namespace torch_xla {
 namespace ir {
 namespace ops {
 
-class MseLoss : public Node {
+class MseLoss : public XlaNode {
  public:
-  MseLoss(const Value& input, const Value& target, ReductionMode reduction);
+  MseLoss(const XlaValue& input, const XlaValue& target,
+          ReductionMode reduction);
 
   std::string ToString() const override;
 

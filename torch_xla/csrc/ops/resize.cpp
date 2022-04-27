@@ -10,16 +10,17 @@ namespace ir {
 namespace ops {
 namespace {
 
-xla::Shape NodeOutputShape(const Value& input, absl::Span<const int64_t> size) {
+xla::Shape NodeOutputShape(const XlaValue& input,
+                           absl::Span<const int64_t> size) {
   return xla::ShapeUtil::MakeShape(input.xla_shape().element_type(), size);
 }
 
 }  // namespace
 
-Resize::Resize(const Value& input, std::vector<int64_t> size)
-    : Node(torch::lazy::OpKind(at::aten::resize), {input},
-           [&]() { return NodeOutputShape(input, size); },
-           /*num_outputs=*/1, torch::lazy::MHash(size)),
+Resize::Resize(const XlaValue& input, std::vector<int64_t> size)
+    : XlaNode(torch::lazy::OpKind(at::aten::resize), {input},
+              [&]() { return NodeOutputShape(input, size); },
+              /*num_outputs=*/1, torch::lazy::MHash(size)),
       size_(std::move(size)) {}
 
 torch::lazy::NodePtr Resize::Clone(OpList operands) const {
@@ -34,7 +35,7 @@ XlaOpVector Resize::Lower(LoweringContext* loctx) const {
 
 std::string Resize::ToString() const {
   std::stringstream ss;
-  ss << Node::ToString() << ", size=(" << absl::StrJoin(size_, ", ") << ")";
+  ss << XlaNode::ToString() << ", size=(" << absl::StrJoin(size_, ", ") << ")";
   return ss.str();
 }
 

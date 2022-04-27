@@ -16,7 +16,7 @@ namespace ir {
 namespace ops {
 namespace {
 
-xla::Shape NodeOutputShape(const Value& input, xla::PrimitiveType type) {
+xla::Shape NodeOutputShape(const XlaValue& input, xla::PrimitiveType type) {
   xla::Shape shape = input.xla_shape();
   shape.set_element_type(type);
   return shape;
@@ -24,19 +24,19 @@ xla::Shape NodeOutputShape(const Value& input, xla::PrimitiveType type) {
 
 }  // namespace
 
-Cast::Cast(const Value& input, xla::PrimitiveType type)
-    : Node(xla_cast, {input}, NodeOutputShape(input, type),
-           /*num_outputs=*/1, torch::lazy::MHash(static_cast<int>(type))),
+Cast::Cast(const XlaValue& input, xla::PrimitiveType type)
+    : XlaNode(xla_cast, {input}, NodeOutputShape(input, type),
+              /*num_outputs=*/1, torch::lazy::MHash(static_cast<int>(type))),
       type_(type) {}
 
-Cast::Cast(const Value& input, at::ScalarType dtype,
+Cast::Cast(const XlaValue& input, at::ScalarType dtype,
            c10::optional<at::ScalarType> stype)
-    : Node(xla_cast, {input},
-           NodeOutputShape(input,
-                           MakeXlaPrimitiveType(dtype, /*device=*/nullptr)),
-           /*num_outputs=*/1,
-           torch::lazy::MHash(101, static_cast<int>(dtype),
-                              torch::lazy::OptionalOr<int>(stype, -1))),
+    : XlaNode(xla_cast, {input},
+              NodeOutputShape(input,
+                              MakeXlaPrimitiveType(dtype, /*device=*/nullptr)),
+              /*num_outputs=*/1,
+              torch::lazy::MHash(101, static_cast<int>(dtype),
+                                 torch::lazy::OptionalOr<int>(stype, -1))),
       type_(MakeXlaPrimitiveType(dtype, /*device=*/nullptr)),
       dtype_(dtype),
       stype_(stype) {}
@@ -60,7 +60,7 @@ XlaOpVector Cast::Lower(LoweringContext* loctx) const {
 
 std::string Cast::ToString() const {
   std::stringstream ss;
-  ss << Node::ToString()
+  ss << XlaNode::ToString()
      << ", type=" << xla::primitive_util::LowercasePrimitiveTypeName(type_);
   if (dtype_) {
     ss << ", dtype=" << *dtype_;

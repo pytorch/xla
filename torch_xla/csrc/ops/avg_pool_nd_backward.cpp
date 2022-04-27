@@ -10,7 +10,7 @@ namespace ir {
 namespace ops {
 namespace {
 
-xla::Shape NodeOutputShape(const Value& grad_output, const Value& input,
+xla::Shape NodeOutputShape(const XlaValue& grad_output, const XlaValue& input,
                            int64_t spatial_dim_count,
                            absl::Span<const int64_t> kernel_size,
                            absl::Span<const int64_t> stride,
@@ -43,20 +43,23 @@ c10::Symbol AvgNdBackwardSymbol(int64_t spatial_dim_count) {
 
 }  // namespace
 
-AvgPoolNdBackward::AvgPoolNdBackward(
-    const Value& grad_output, const Value& input, int64_t spatial_dim_count,
-    std::vector<int64_t> kernel_size, std::vector<int64_t> stride,
-    std::vector<int64_t> padding, bool ceil_mode, bool count_include_pad)
-    : Node(torch::lazy::OpKind(AvgNdBackwardSymbol(spatial_dim_count)),
-           {grad_output, input},
-           [&]() {
-             return NodeOutputShape(grad_output, input, spatial_dim_count,
-                                    kernel_size, stride, padding, ceil_mode,
-                                    count_include_pad);
-           },
-           /*num_outputs=*/1,
-           torch::lazy::MHash(spatial_dim_count, kernel_size, stride, padding,
-                              ceil_mode, count_include_pad)),
+AvgPoolNdBackward::AvgPoolNdBackward(const XlaValue& grad_output,
+                                     const XlaValue& input,
+                                     int64_t spatial_dim_count,
+                                     std::vector<int64_t> kernel_size,
+                                     std::vector<int64_t> stride,
+                                     std::vector<int64_t> padding,
+                                     bool ceil_mode, bool count_include_pad)
+    : XlaNode(torch::lazy::OpKind(AvgNdBackwardSymbol(spatial_dim_count)),
+              {grad_output, input},
+              [&]() {
+                return NodeOutputShape(grad_output, input, spatial_dim_count,
+                                       kernel_size, stride, padding, ceil_mode,
+                                       count_include_pad);
+              },
+              /*num_outputs=*/1,
+              torch::lazy::MHash(spatial_dim_count, kernel_size, stride,
+                                 padding, ceil_mode, count_include_pad)),
       spatial_dim_count_(spatial_dim_count),
       kernel_size_(std::move(kernel_size)),
       stride_(std::move(stride)),
@@ -81,7 +84,7 @@ XlaOpVector AvgPoolNdBackward::Lower(LoweringContext* loctx) const {
 
 std::string AvgPoolNdBackward::ToString() const {
   std::stringstream ss;
-  ss << Node::ToString() << ", spatial_dim_count=" << spatial_dim_count_
+  ss << XlaNode::ToString() << ", spatial_dim_count=" << spatial_dim_count_
      << ", kernel_size=(" << absl::StrJoin(kernel_size_, ", ") << "), stride=("
      << absl::StrJoin(stride_, ", ") << "), padding=("
      << absl::StrJoin(padding_, ", ")

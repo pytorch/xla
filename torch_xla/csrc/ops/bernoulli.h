@@ -6,9 +6,10 @@ namespace torch_xla {
 namespace ir {
 namespace ops {
 
-class Bernoulli : public Node {
+class Bernoulli : public XlaNode {
  public:
-  Bernoulli(const Value& probability, const Value& seed, xla::Shape shape);
+  Bernoulli(const XlaValue& probability, const XlaValue& seed,
+            xla::Shape shape);
 
   torch::lazy::NodePtr Clone(OpList operands) const override;
 

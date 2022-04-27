@@ -12,8 +12,8 @@ namespace ir {
 namespace ops {
 namespace {
 
-xla::Shape NodeOutputShape(const Value& grad_output, const Value& input,
-                           const Value& target, ReductionMode reduction) {
+xla::Shape NodeOutputShape(const XlaValue& grad_output, const XlaValue& input,
+                           const XlaValue& target, ReductionMode reduction) {
   auto lower_for_shape_fn =
       [&](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
     return BuildMseLossBackward(operands[0], operands[1], operands[2],
@@ -26,15 +26,16 @@ xla::Shape NodeOutputShape(const Value& grad_output, const Value& input,
 
 }  // namespace
 
-MseLossBackward::MseLossBackward(const Value& grad_output, const Value& input,
-                                 const Value& target, ReductionMode reduction)
-    : Node(torch::lazy::OpKind(at::aten::mse_loss_backward),
-           {grad_output, input, target},
-           [&]() {
-             return NodeOutputShape(grad_output, input, target, reduction);
-           },
-           /*num_outputs=*/1,
-           torch::lazy::MHash(torch::lazy::GetEnumValue(reduction))),
+MseLossBackward::MseLossBackward(const XlaValue& grad_output,
+                                 const XlaValue& input, const XlaValue& target,
+                                 ReductionMode reduction)
+    : XlaNode(torch::lazy::OpKind(at::aten::mse_loss_backward),
+              {grad_output, input, target},
+              [&]() {
+                return NodeOutputShape(grad_output, input, target, reduction);
+              },
+              /*num_outputs=*/1,
+              torch::lazy::MHash(torch::lazy::GetEnumValue(reduction))),
       reduction_(reduction) {}
 
 torch::lazy::NodePtr MseLossBackward::Clone(OpList operands) const {
@@ -52,7 +53,7 @@ XlaOpVector MseLossBackward::Lower(LoweringContext* loctx) const {
 
 std::string MseLossBackward::ToString() const {
   std::stringstream ss;
-  ss << Node::ToString()
+  ss << XlaNode::ToString()
      << ", reduction=" << torch::lazy::GetEnumValue(reduction_);
   return ss.str();
 }

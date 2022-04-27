@@ -10,9 +10,9 @@ namespace torch_xla {
 namespace ir {
 namespace ops {
 
-class Sum : public Node {
+class Sum : public XlaNode {
  public:
-  Sum(const Value& input, std::vector<int64_t> dimensions,
+  Sum(const XlaValue& input, std::vector<int64_t> dimensions,
       bool keep_reduced_dimensions, c10::optional<at::ScalarType> dtype);
 
   std::string ToString() const override;

@@ -10,7 +10,7 @@ namespace ir {
 namespace ops {
 namespace {
 
-xla::Shape NodeOutputShape(const Value& input) {
+xla::Shape NodeOutputShape(const XlaValue& input) {
   const xla::Shape& input_shape = input.xla_shape();
   int64_t index_elements = xla::ShapeUtil::ElementsIn(input_shape);
   xla::PrimitiveType size_type = GetShapeDimensionType(/*device=*/nullptr);
@@ -23,10 +23,10 @@ xla::Shape NodeOutputShape(const Value& input) {
 
 }  // namespace
 
-NonZero::NonZero(const Value& input)
-    : Node(torch::lazy::OpKind(at::aten::nonzero), {input},
-           NodeOutputShape(input),
-           /*num_outputs=*/2) {}
+NonZero::NonZero(const XlaValue& input)
+    : XlaNode(torch::lazy::OpKind(at::aten::nonzero), {input},
+              NodeOutputShape(input),
+              /*num_outputs=*/2) {}
 
 torch::lazy::NodePtr NonZero::Clone(OpList operands) const {
   return ir::MakeNode<NonZero>(operands.at(0));

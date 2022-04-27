@@ -7,9 +7,9 @@ namespace torch_xla {
 namespace ir {
 namespace ops {
 
-class Stack : public Node {
+class Stack : public XlaNode {
  public:
-  Stack(absl::Span<const ir::Value> values, int64_t dim);
+  Stack(absl::Span<const ir::XlaValue> values, int64_t dim);
 
   std::string ToString() const override;
 

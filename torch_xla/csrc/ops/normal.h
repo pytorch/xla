@@ -6,9 +6,9 @@ namespace torch_xla {
 namespace ir {
 namespace ops {
 
-class Normal : public Node {
+class Normal : public XlaNode {
  public:
-  Normal(const Value& mean, const Value& std, const Value& seed);
+  Normal(const XlaValue& mean, const XlaValue& std, const XlaValue& seed);
 
   torch::lazy::NodePtr Clone(OpList operands) const override;
 

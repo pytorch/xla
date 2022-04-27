@@ -10,9 +10,9 @@ namespace torch_xla {
 namespace ir {
 namespace ops {
 
-class Prod : public Node {
+class Prod : public XlaNode {
  public:
-  Prod(const Value& input, std::vector<int64_t> dimensions,
+  Prod(const XlaValue& input, std::vector<int64_t> dimensions,
        bool keep_reduced_dimensions, c10::optional<at::ScalarType> dtype);
 
   std::string ToString() const override;

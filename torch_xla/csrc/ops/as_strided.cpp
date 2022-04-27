@@ -43,21 +43,22 @@ xla::XlaOp LowerAsStrided(xla::XlaOp input, absl::Span<const int64_t> size,
 
 }  // namespace
 
-AsStrided::AsStrided(const Value& input, std::vector<int64_t> size,
+AsStrided::AsStrided(const XlaValue& input, std::vector<int64_t> size,
                      std::vector<int64_t> stride, int64_t storage_offset)
-    : Node(torch::lazy::OpKind(at::aten::as_strided), {input},
-           [&]() {
-             return xla::ShapeUtil::MakeShape(input.xla_shape().element_type(),
-                                              size);
-           },
-           /*num_outputs=*/1, torch::lazy::MHash(size, stride, storage_offset)),
+    : XlaNode(torch::lazy::OpKind(at::aten::as_strided), {input},
+              [&]() {
+                return xla::ShapeUtil::MakeShape(
+                    input.xla_shape().element_type(), size);
+              },
+              /*num_outputs=*/1,
+              torch::lazy::MHash(size, stride, storage_offset)),
       size_(std::move(size)),
       stride_(std::move(stride)),
       storage_offset_(storage_offset) {}
 
 std::string AsStrided::ToString() const {
   std::stringstream ss;
-  ss << Node::ToString() << ", size=(" << absl::StrJoin(size_, ", ")
+  ss << XlaNode::ToString() << ", size=(" << absl::StrJoin(size_, ", ")
      << "), stride=(" << absl::StrJoin(stride_, ", ")
      << "), storage_offset=" << storage_offset_;
   return ss.str();

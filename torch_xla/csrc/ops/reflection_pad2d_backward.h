@@ -8,9 +8,9 @@ namespace torch_xla {
 namespace ir {
 namespace ops {
 
-class ReflectionPad2dBackward : public Node {
+class ReflectionPad2dBackward : public XlaNode {
  public:
-  ReflectionPad2dBackward(const Value& gard_output, const Value& input,
+  ReflectionPad2dBackward(const XlaValue& gard_output, const XlaValue& input,
                           std::vector<int64_t> padding);
 
   torch::lazy::NodePtr Clone(OpList operands) const override;

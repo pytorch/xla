@@ -8,7 +8,7 @@ namespace torch_xla {
 namespace ir {
 namespace ops {
 
-class NotSupported : public Node {
+class NotSupported : public XlaNode {
  public:
   NotSupported(std::string description, xla::Shape shape);
 

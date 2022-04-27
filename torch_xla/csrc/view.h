@@ -91,17 +91,17 @@ struct ViewInfo {
 };
 
 // When a "view" (capture by reference) is taken on a node, an Alias object is
-// created on the captured node itself, with its current IR Node value.
+// created on the captured node itself, with its current IR XlaNode value.
 class Alias {
  public:
   struct UpdateData {
-    ir::Value ir_value;
+    ir::XlaValue ir_value;
     std::vector<ViewInfo> view_infos;
   };
 
-  explicit Alias(ir::Value ir_value) : ir_value_(std::move(ir_value)) {}
+  explicit Alias(ir::XlaValue ir_value) : ir_value_(std::move(ir_value)) {}
 
-  const ir::Value& ir_value() const { return ir_value_; }
+  const ir::XlaValue& ir_value() const { return ir_value_; }
 
   const std::vector<UpdateData>& updates() const { return updates_; }
 
@@ -110,13 +110,13 @@ class Alias {
   // Appends an update to the IR value stored within the alias. The ir_value is
   // the value to be written, and view_infos represents the forward path from
   // the alias's ir_value to the update ir_value.
-  void Update(ir::Value ir_value, std::vector<ViewInfo> view_infos);
+  void Update(ir::XlaValue ir_value, std::vector<ViewInfo> view_infos);
 
-  ir::Value SyncUpdateOperations();
+  ir::XlaValue SyncUpdateOperations();
 
  private:
   // The IR value which is the root at which the view was created.
-  ir::Value ir_value_;
+  ir::XlaValue ir_value_;
   // The stacked updates on the view. Orders matter, as most recent updates
   // might overwrite older ones.
   std::vector<UpdateData> updates_;
@@ -128,7 +128,7 @@ class Alias {
 class View {
  public:
   struct IrNode {
-    ir::Value ir_value;
+    ir::XlaValue ir_value;
     bool updated;
   };
 
@@ -136,7 +136,7 @@ class View {
   View(xla::Shape shape, std::shared_ptr<Alias> alias,
        std::vector<ViewInfo> view_infos);
 
-  void Update(ir::Value ir_value);
+  void Update(ir::XlaValue ir_value);
 
   const xla::Shape& shape() const { return shape_; }
 
@@ -157,7 +157,7 @@ class View {
   std::vector<ViewInfo> view_infos_;
   xla::Shape shape_;
   std::shared_ptr<Alias> alias_;
-  ir::Value ir_value_;
+  ir::XlaValue ir_value_;
   size_t generation_ = 0;
 };
 

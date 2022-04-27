@@ -10,7 +10,7 @@ namespace ir {
 namespace ops {
 namespace {
 
-xla::Shape NodeOutputShape(const Value& input, const Value& indices,
+xla::Shape NodeOutputShape(const XlaValue& input, const XlaValue& indices,
                            absl::Span<const int64_t> output_size) {
   auto shape_fn = [&](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
     return BuildMaxUnpoolNd(GetCurrentDevice(), operands[0], operands[1],
@@ -33,12 +33,12 @@ c10::Symbol MaxUnpoolNdSymbol(int64_t spatial_dim_count) {
 
 }  // namespace
 
-MaxUnpoolNd::MaxUnpoolNd(const Value& input, const Value& indices,
+MaxUnpoolNd::MaxUnpoolNd(const XlaValue& input, const XlaValue& indices,
                          std::vector<int64_t> output_size)
-    : Node(torch::lazy::OpKind(MaxUnpoolNdSymbol(output_size.size())),
-           {input, indices},
-           [&]() { return NodeOutputShape(input, indices, output_size); },
-           /*num_outputs=*/1, torch::lazy::MHash(output_size)),
+    : XlaNode(torch::lazy::OpKind(MaxUnpoolNdSymbol(output_size.size())),
+              {input, indices},
+              [&]() { return NodeOutputShape(input, indices, output_size); },
+              /*num_outputs=*/1, torch::lazy::MHash(output_size)),
       output_size_(std::move(output_size)) {}
 
 torch::lazy::NodePtr MaxUnpoolNd::Clone(OpList operands) const {
@@ -56,7 +56,7 @@ XlaOpVector MaxUnpoolNd::Lower(LoweringContext* loctx) const {
 
 std::string MaxUnpoolNd::ToString() const {
   std::stringstream ss;
-  ss << Node::ToString() << ", output_size=("
+  ss << XlaNode::ToString() << ", output_size=("
      << absl::StrJoin(output_size_, ", ") << ")";
   return ss.str();
 }

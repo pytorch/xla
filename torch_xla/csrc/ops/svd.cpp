@@ -41,7 +41,7 @@ std::vector<xla::XlaOp> LowerSVD(xla::XlaOp input, bool some, bool compute_uv) {
   return {u, svd_result.d, v};
 }
 
-xla::Shape NodeOutputShape(const Value& input, bool some, bool compute_uv) {
+xla::Shape NodeOutputShape(const XlaValue& input, bool some, bool compute_uv) {
   const xla::Shape& input_shape = input.xla_shape();
   XLA_CHECK_GE(input_shape.rank(), 2) << input_shape;
   // The input tensor is ...,M,N
@@ -67,10 +67,10 @@ xla::Shape NodeOutputShape(const Value& input, bool some, bool compute_uv) {
 
 }  // namespace
 
-SVD::SVD(const Value& input, bool some, bool compute_uv)
-    : Node(torch::lazy::OpKind(at::aten::svd), {input},
-           [&]() { return NodeOutputShape(input, some, compute_uv); },
-           /*num_outputs=*/3, torch::lazy::MHash(some, compute_uv)),
+SVD::SVD(const XlaValue& input, bool some, bool compute_uv)
+    : XlaNode(torch::lazy::OpKind(at::aten::svd), {input},
+              [&]() { return NodeOutputShape(input, some, compute_uv); },
+              /*num_outputs=*/3, torch::lazy::MHash(some, compute_uv)),
       some_(some),
       compute_uv_(compute_uv) {}
 
@@ -85,7 +85,7 @@ XlaOpVector SVD::Lower(LoweringContext* loctx) const {
 
 std::string SVD::ToString() const {
   std::stringstream ss;
-  ss << Node::ToString() << ", some=" << some_
+  ss << XlaNode::ToString() << ", some=" << some_
      << ", compute_uv=" << compute_uv_;
   return ss.str();
 }

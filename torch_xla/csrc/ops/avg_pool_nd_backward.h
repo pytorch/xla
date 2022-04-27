@@ -6,9 +6,9 @@ namespace torch_xla {
 namespace ir {
 namespace ops {
 
-class AvgPoolNdBackward : public Node {
+class AvgPoolNdBackward : public XlaNode {
  public:
-  AvgPoolNdBackward(const Value& grad_output, const Value& input,
+  AvgPoolNdBackward(const XlaValue& grad_output, const XlaValue& input,
                     int64_t spatial_dim_count, std::vector<int64_t> kernel_size,
                     std::vector<int64_t> stride, std::vector<int64_t> padding,
                     bool ceil_mode, bool count_include_pad);

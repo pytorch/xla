@@ -22,7 +22,7 @@ xla::XlaOp LowerPad(xla::XlaOp input, const at::Scalar& value,
                   XlaHelpers::MakeXlaPaddingConfigFromNdPadding(pad));
 }
 
-xla::Shape NodeOutputShape(const Value& input, const at::Scalar& value,
+xla::Shape NodeOutputShape(const XlaValue& input, const at::Scalar& value,
                            absl::Span<const int64_t> pad) {
   auto lower_for_shape_fn =
       [&](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
@@ -33,11 +33,11 @@ xla::Shape NodeOutputShape(const Value& input, const at::Scalar& value,
 
 }  // namespace
 
-ConstantPadNd::ConstantPadNd(const Value& input, std::vector<int64_t> pad,
+ConstantPadNd::ConstantPadNd(const XlaValue& input, std::vector<int64_t> pad,
                              const at::Scalar& value)
-    : Node(torch::lazy::OpKind(at::aten::constant_pad_nd), {input},
-           [&]() { return NodeOutputShape(input, value, pad); },
-           /*num_outputs=*/1, torch::lazy::MHash(pad, ScalarHash(value))),
+    : XlaNode(torch::lazy::OpKind(at::aten::constant_pad_nd), {input},
+              [&]() { return NodeOutputShape(input, value, pad); },
+              /*num_outputs=*/1, torch::lazy::MHash(pad, ScalarHash(value))),
       pad_(std::move(pad)),
       value_(value) {}
 
@@ -53,7 +53,7 @@ XlaOpVector ConstantPadNd::Lower(LoweringContext* loctx) const {
 
 std::string ConstantPadNd::ToString() const {
   std::stringstream ss;
-  ss << Node::ToString() << ", pad=(" << absl::StrJoin(pad_, ", ") << ")"
+  ss << XlaNode::ToString() << ", pad=(" << absl::StrJoin(pad_, ", ") << ")"
      << ", value=" << value_;
   return ss.str();
 }

@@ -12,8 +12,8 @@ namespace ir {
 namespace ops {
 namespace {
 
-xla::Shape NodeOutputShape(const Value& input, const Value& token, int64_t dim,
-                           int64_t shard_count,
+xla::Shape NodeOutputShape(const XlaValue& input, const XlaValue& token,
+                           int64_t dim, int64_t shard_count,
                            const std::vector<std::vector<int64_t>>& groups,
                            bool pin_layout) {
   auto shape_fn = [&](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
@@ -26,16 +26,16 @@ xla::Shape NodeOutputShape(const Value& input, const Value& token, int64_t dim,
 
 }  // namespace
 
-AllGather::AllGather(const Value& input, const Value& token, int64_t dim,
+AllGather::AllGather(const XlaValue& input, const XlaValue& token, int64_t dim,
                      int64_t shard_count,
                      std::vector<std::vector<int64_t>> groups, bool pin_layout)
-    : Node(xla_all_gather, {input, token},
-           [&]() {
-             return NodeOutputShape(input, token, dim, shard_count, groups,
-                                    pin_layout);
-           },
-           /*num_outputs=*/2,
-           torch::lazy::MHash(dim, shard_count, groups, pin_layout)),
+    : XlaNode(xla_all_gather, {input, token},
+              [&]() {
+                return NodeOutputShape(input, token, dim, shard_count, groups,
+                                       pin_layout);
+              },
+              /*num_outputs=*/2,
+              torch::lazy::MHash(dim, shard_count, groups, pin_layout)),
       dim_(dim),
       shard_count_(shard_count),
       groups_(std::move(groups)),
@@ -56,8 +56,9 @@ XlaOpVector AllGather::Lower(LoweringContext* loctx) const {
 
 std::string AllGather::ToString() const {
   std::stringstream ss;
-  ss << Node::ToString() << ", dim=" << dim_ << ", shard_count=" << shard_count_
-     << ", pin_layout=" << pin_layout_ << ", groups=(";
+  ss << XlaNode::ToString() << ", dim=" << dim_
+     << ", shard_count=" << shard_count_ << ", pin_layout=" << pin_layout_
+     << ", groups=(";
   for (size_t i = 0; i < groups_.size(); ++i) {
     ss << (i == 0 ? "(" : ",(");
     ss << absl::StrJoin(groups_[i], ", ") << ")";

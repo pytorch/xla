@@ -12,9 +12,9 @@ namespace torch_xla {
 namespace ir {
 namespace ops {
 
-class Mean : public Node {
+class Mean : public XlaNode {
  public:
-  Mean(const Value& input, std::vector<int64_t> dimensions,
+  Mean(const XlaValue& input, std::vector<int64_t> dimensions,
        bool keep_reduced_dimensions, c10::optional<at::ScalarType> dtype);
 
   std::string ToString() const override;

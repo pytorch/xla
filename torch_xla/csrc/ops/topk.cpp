@@ -9,7 +9,7 @@ namespace ir {
 namespace ops {
 namespace {
 
-xla::Shape NodeOutputShape(const Value& input, int64_t k, int64_t dim,
+xla::Shape NodeOutputShape(const XlaValue& input, int64_t k, int64_t dim,
                            bool largest, bool sorted, bool stable) {
   auto lower_for_shape_fn =
       [&](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
@@ -21,14 +21,14 @@ xla::Shape NodeOutputShape(const Value& input, int64_t k, int64_t dim,
 
 }  // namespace
 
-TopK::TopK(const Value& input, int64_t k, int64_t dim, bool largest,
+TopK::TopK(const XlaValue& input, int64_t k, int64_t dim, bool largest,
            bool sorted, bool stable)
-    : Node(torch::lazy::OpKind(at::aten::topk), {input},
-           [&]() {
-             return NodeOutputShape(input, k, dim, largest, sorted, stable);
-           },
-           /*num_outputs=*/2,
-           torch::lazy::MHash(k, dim, largest, sorted, stable)),
+    : XlaNode(torch::lazy::OpKind(at::aten::topk), {input},
+              [&]() {
+                return NodeOutputShape(input, k, dim, largest, sorted, stable);
+              },
+              /*num_outputs=*/2,
+              torch::lazy::MHash(k, dim, largest, sorted, stable)),
       k_(k),
       dim_(dim),
       largest_(largest),
@@ -47,7 +47,7 @@ XlaOpVector TopK::Lower(LoweringContext* loctx) const {
 
 std::string TopK::ToString() const {
   std::stringstream ss;
-  ss << Node::ToString() << ", k=" << k_ << ", dim=" << dim_
+  ss << XlaNode::ToString() << ", k=" << k_ << ", dim=" << dim_
      << ", largest=" << largest_ << ", sorted=" << sorted_
      << ", stable=" << stable_;
   return ss.str();

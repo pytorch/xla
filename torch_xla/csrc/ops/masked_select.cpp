@@ -10,7 +10,7 @@ namespace ir {
 namespace ops {
 namespace {
 
-xla::Shape NodeOutputShape(const Value& input) {
+xla::Shape NodeOutputShape(const XlaValue& input) {
   const xla::Shape& input_shape = input.xla_shape();
   int64_t input_elements = xla::ShapeUtil::ElementsIn(input_shape);
   xla::PrimitiveType size_type = GetShapeDimensionType(/*device=*/nullptr);
@@ -23,10 +23,10 @@ xla::Shape NodeOutputShape(const Value& input) {
 
 }  // namespace
 
-MaskedSelect::MaskedSelect(const Value& input, const Value& mask)
-    : Node(torch::lazy::OpKind(at::aten::masked_select), {input, mask},
-           NodeOutputShape(input),
-           /*num_outputs=*/2) {}
+MaskedSelect::MaskedSelect(const XlaValue& input, const XlaValue& mask)
+    : XlaNode(torch::lazy::OpKind(at::aten::masked_select), {input, mask},
+              NodeOutputShape(input),
+              /*num_outputs=*/2) {}
 
 torch::lazy::NodePtr MaskedSelect::Clone(OpList operands) const {
   return ir::MakeNode<MaskedSelect>(operands.at(0), operands.at(1));

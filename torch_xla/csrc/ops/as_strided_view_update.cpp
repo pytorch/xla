@@ -41,24 +41,25 @@ xla::XlaOp LowerAsStridedViewUpdate(xla::XlaOp target, xla::XlaOp input,
 
 }  // namespace
 
-AsStridedViewUpdate::AsStridedViewUpdate(const Value& target,
-                                         const Value& input,
+AsStridedViewUpdate::AsStridedViewUpdate(const XlaValue& target,
+                                         const XlaValue& input,
                                          std::vector<int64_t> size,
                                          std::vector<int64_t> stride,
                                          int64_t storage_offset)
-    : Node(xla_as_strided_view_update, {target, input},
-           [&]() {
-             return xla::ShapeUtil::MakeShape(target.xla_shape().element_type(),
-                                              size);
-           },
-           /*num_outputs=*/1, torch::lazy::MHash(size, stride, storage_offset)),
+    : XlaNode(xla_as_strided_view_update, {target, input},
+              [&]() {
+                return xla::ShapeUtil::MakeShape(
+                    target.xla_shape().element_type(), size);
+              },
+              /*num_outputs=*/1,
+              torch::lazy::MHash(size, stride, storage_offset)),
       size_(std::move(size)),
       stride_(std::move(stride)),
       storage_offset_(storage_offset) {}
 
 std::string AsStridedViewUpdate::ToString() const {
   std::stringstream ss;
-  ss << Node::ToString() << ", size=(" << absl::StrJoin(size_, ", ")
+  ss << XlaNode::ToString() << ", size=(" << absl::StrJoin(size_, ", ")
      << "), stride=(" << absl::StrJoin(stride_, ", ")
      << "), storage_offset=" << storage_offset_;
   return ss.str();

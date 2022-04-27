@@ -9,15 +9,15 @@ namespace torch_xla {
 namespace ir {
 namespace ops {
 
-Hardshrink::Hardshrink(const Value& input, const at::Scalar& lambda)
-    : Node(torch::lazy::OpKind(at::aten::hardshrink), {input},
-           input.xla_shape(),
-           /*num_outputs=*/1, ScalarHash(lambda)),
+Hardshrink::Hardshrink(const XlaValue& input, const at::Scalar& lambda)
+    : XlaNode(torch::lazy::OpKind(at::aten::hardshrink), {input},
+              input.xla_shape(),
+              /*num_outputs=*/1, ScalarHash(lambda)),
       lambda_(std::move(lambda)) {}
 
 std::string Hardshrink::ToString() const {
   std::stringstream ss;
-  ss << Node::ToString() << ", lambda=" << lambda_;
+  ss << XlaNode::ToString() << ", lambda=" << lambda_;
   return ss.str();
 }
 

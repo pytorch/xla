@@ -8,9 +8,9 @@ namespace torch_xla {
 namespace ir {
 namespace ops {
 
-class UpsampleBilinear : public Node {
+class UpsampleBilinear : public XlaNode {
  public:
-  UpsampleBilinear(const Value& input, std::vector<int64_t> output_size,
+  UpsampleBilinear(const XlaValue& input, std::vector<int64_t> output_size,
                    bool align_corners);
 
   torch::lazy::NodePtr Clone(OpList operands) const override;

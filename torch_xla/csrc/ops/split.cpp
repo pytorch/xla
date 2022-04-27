@@ -11,7 +11,7 @@ namespace ir {
 namespace ops {
 namespace {
 
-xla::Shape NodeOutputShape(const Value& input,
+xla::Shape NodeOutputShape(const XlaValue& input,
                            const std::vector<int64_t>& split_sizes,
                            int64_t dim) {
   auto lower_for_shape_fn =
@@ -24,11 +24,12 @@ xla::Shape NodeOutputShape(const Value& input,
 
 }  // namespace
 
-Split::Split(const Value& input, std::vector<int64_t> split_sizes, int64_t dim)
-    : Node(torch::lazy::OpKind(at::aten::split), {input},
-           [&]() { return NodeOutputShape(input, split_sizes, dim); },
-           ComputeSplitCount(input.xla_shape().dimensions(dim), split_sizes),
-           torch::lazy::MHash(split_sizes, dim)),
+Split::Split(const XlaValue& input, std::vector<int64_t> split_sizes,
+             int64_t dim)
+    : XlaNode(torch::lazy::OpKind(at::aten::split), {input},
+              [&]() { return NodeOutputShape(input, split_sizes, dim); },
+              ComputeSplitCount(input.xla_shape().dimensions(dim), split_sizes),
+              torch::lazy::MHash(split_sizes, dim)),
       split_sizes_(std::move(split_sizes)),
       dim_(dim) {}
 
@@ -44,7 +45,7 @@ XlaOpVector Split::Lower(LoweringContext* loctx) const {
 
 std::string Split::ToString() const {
   std::stringstream ss;
-  ss << Node::ToString() << ", split_sizes=("
+  ss << XlaNode::ToString() << ", split_sizes=("
      << absl::StrJoin(split_sizes_, ", ") << "), dim=" << dim_;
   return ss.str();
 }

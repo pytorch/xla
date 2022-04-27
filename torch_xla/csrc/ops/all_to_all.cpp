@@ -11,7 +11,7 @@ namespace ir {
 namespace ops {
 namespace {
 
-xla::Shape NodeOutputShape(const Value& input, const Value& token,
+xla::Shape NodeOutputShape(const XlaValue& input, const XlaValue& token,
                            int64_t split_dimension, int64_t concat_dimension,
                            int64_t split_count,
                            const std::vector<std::vector<int64_t>>& groups,
@@ -27,19 +27,19 @@ xla::Shape NodeOutputShape(const Value& input, const Value& token,
 
 }  // namespace
 
-AllToAll::AllToAll(const Value& input, const Value& token,
+AllToAll::AllToAll(const XlaValue& input, const XlaValue& token,
                    int64_t split_dimension, int64_t concat_dimension,
                    int64_t split_count,
                    std::vector<std::vector<int64_t>> groups, bool pin_layout)
-    : Node(xla_all_to_all, {input, token},
-           [&]() {
-             return NodeOutputShape(input, token, split_dimension,
-                                    concat_dimension, split_count, groups,
-                                    pin_layout);
-           },
-           /*num_outputs=*/2,
-           torch::lazy::MHash(split_dimension, concat_dimension, split_count,
-                              groups, pin_layout)),
+    : XlaNode(xla_all_to_all, {input, token},
+              [&]() {
+                return NodeOutputShape(input, token, split_dimension,
+                                       concat_dimension, split_count, groups,
+                                       pin_layout);
+              },
+              /*num_outputs=*/2,
+              torch::lazy::MHash(split_dimension, concat_dimension, split_count,
+                                 groups, pin_layout)),
       split_dimension_(split_dimension),
       concat_dimension_(concat_dimension),
       split_count_(split_count),
@@ -63,7 +63,7 @@ XlaOpVector AllToAll::Lower(LoweringContext* loctx) const {
 
 std::string AllToAll::ToString() const {
   std::stringstream ss;
-  ss << Node::ToString() << ", split_dimension=" << split_dimension_
+  ss << XlaNode::ToString() << ", split_dimension=" << split_dimension_
      << ", concat_dimension=" << concat_dimension_
      << ", split_count=" << split_count_ << ", pin_layout=" << pin_layout_
      << ", groups=(";

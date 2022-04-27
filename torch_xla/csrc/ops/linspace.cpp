@@ -8,15 +8,15 @@ namespace torch_xla {
 namespace ir {
 namespace ops {
 
-Linspace::Linspace(const Value& start, const Value& end, int64_t steps)
-    : Node(torch::lazy::OpKind(at::aten::linspace), {start, end},
-           [&]() {
-             xla::PrimitiveType dtype =
-                 XlaHelpers::PromoteType(start.xla_shape().element_type(),
-                                         end.xla_shape().element_type());
-             return xla::ShapeUtil::MakeShape(dtype, {steps});
-           },
-           /*num_outputs=*/1, torch::lazy::MHash(steps)),
+Linspace::Linspace(const XlaValue& start, const XlaValue& end, int64_t steps)
+    : XlaNode(torch::lazy::OpKind(at::aten::linspace), {start, end},
+              [&]() {
+                xla::PrimitiveType dtype =
+                    XlaHelpers::PromoteType(start.xla_shape().element_type(),
+                                            end.xla_shape().element_type());
+                return xla::ShapeUtil::MakeShape(dtype, {steps});
+              },
+              /*num_outputs=*/1, torch::lazy::MHash(steps)),
       steps_(steps) {}
 
 torch::lazy::NodePtr Linspace::Clone(OpList operands) const {
@@ -31,7 +31,7 @@ XlaOpVector Linspace::Lower(LoweringContext* loctx) const {
 
 std::string Linspace::ToString() const {
   std::stringstream ss;
-  ss << Node::ToString() << ", steps=" << steps_;
+  ss << XlaNode::ToString() << ", steps=" << steps_;
   return ss.str();
 }
 

@@ -10,7 +10,7 @@ namespace ir {
 namespace ops {
 namespace {
 
-xla::Shape NodeOutputShape(const Value& input, int64_t spatial_dim_count,
+xla::Shape NodeOutputShape(const XlaValue& input, int64_t spatial_dim_count,
                            absl::Span<const int64_t> kernel_size,
                            absl::Span<const int64_t> stride,
                            absl::Span<const int64_t> padding, bool ceil_mode) {
@@ -39,18 +39,18 @@ c10::Symbol MaxPoolNdSymbol(int64_t spatial_dim_count) {
 
 }  // namespace
 
-MaxPoolNd::MaxPoolNd(const Value& input, int64_t spatial_dim_count,
+MaxPoolNd::MaxPoolNd(const XlaValue& input, int64_t spatial_dim_count,
                      std::vector<int64_t> kernel_size,
                      std::vector<int64_t> stride, std::vector<int64_t> padding,
                      bool ceil_mode)
-    : Node(torch::lazy::OpKind(MaxPoolNdSymbol(spatial_dim_count)), {input},
-           [&]() {
-             return NodeOutputShape(input, spatial_dim_count, kernel_size,
-                                    stride, padding, ceil_mode);
-           },
-           /*num_outputs=*/2,
-           torch::lazy::MHash(spatial_dim_count, kernel_size, stride, padding,
-                              ceil_mode)),
+    : XlaNode(torch::lazy::OpKind(MaxPoolNdSymbol(spatial_dim_count)), {input},
+              [&]() {
+                return NodeOutputShape(input, spatial_dim_count, kernel_size,
+                                       stride, padding, ceil_mode);
+              },
+              /*num_outputs=*/2,
+              torch::lazy::MHash(spatial_dim_count, kernel_size, stride,
+                                 padding, ceil_mode)),
       spatial_dim_count_(spatial_dim_count),
       kernel_size_(std::move(kernel_size)),
       stride_(std::move(stride)),
@@ -71,7 +71,7 @@ XlaOpVector MaxPoolNd::Lower(LoweringContext* loctx) const {
 
 std::string MaxPoolNd::ToString() const {
   std::stringstream ss;
-  ss << Node::ToString() << ", spatial_dim_count=" << spatial_dim_count_
+  ss << XlaNode::ToString() << ", spatial_dim_count=" << spatial_dim_count_
      << ", kernel_size=(" << absl::StrJoin(kernel_size_, ", ") << "), stride=("
      << absl::StrJoin(stride_, ", ") << "), padding=("
      << absl::StrJoin(padding_, ", ") << "), ceil_mode=" << ceil_mode_;

@@ -6,9 +6,9 @@ namespace torch_xla {
 namespace ir {
 namespace ops {
 
-class ThresholdBackward : public Node {
+class ThresholdBackward : public XlaNode {
  public:
-  ThresholdBackward(const Value& grad_output, const Value& input,
+  ThresholdBackward(const XlaValue& grad_output, const XlaValue& input,
                     float threshold);
 
   torch::lazy::NodePtr Clone(OpList operands) const override;

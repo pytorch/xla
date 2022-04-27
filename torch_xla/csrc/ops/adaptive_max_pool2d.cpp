@@ -10,7 +10,7 @@ namespace ir {
 namespace ops {
 namespace {
 
-xla::Shape NodeOutputShape(const Value& input,
+xla::Shape NodeOutputShape(const XlaValue& input,
                            absl::Span<const int64_t> output_size) {
   auto lower_for_shape_fn =
       [output_size](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
@@ -23,11 +23,11 @@ xla::Shape NodeOutputShape(const Value& input,
 
 }  // namespace
 
-AdaptiveMaxPool2d::AdaptiveMaxPool2d(const Value& input,
+AdaptiveMaxPool2d::AdaptiveMaxPool2d(const XlaValue& input,
                                      std::vector<int64_t> output_size)
-    : Node(torch::lazy::OpKind(at::aten::adaptive_max_pool2d), {input},
-           [&]() { return NodeOutputShape(input, output_size); },
-           /*num_outputs=*/2, torch::lazy::MHash(output_size)),
+    : XlaNode(torch::lazy::OpKind(at::aten::adaptive_max_pool2d), {input},
+              [&]() { return NodeOutputShape(input, output_size); },
+              /*num_outputs=*/2, torch::lazy::MHash(output_size)),
       output_size_(std::move(output_size)) {}
 
 torch::lazy::NodePtr AdaptiveMaxPool2d::Clone(OpList operands) const {
@@ -42,7 +42,7 @@ XlaOpVector AdaptiveMaxPool2d::Lower(LoweringContext* loctx) const {
 
 std::string AdaptiveMaxPool2d::ToString() const {
   std::stringstream ss;
-  ss << Node::ToString() << ", output_size=("
+  ss << XlaNode::ToString() << ", output_size=("
      << absl::StrJoin(output_size_, ", ") << ")";
   return ss.str();
 }

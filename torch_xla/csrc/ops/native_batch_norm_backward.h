@@ -6,12 +6,13 @@ namespace torch_xla {
 namespace ir {
 namespace ops {
 
-// Node for the backward batch norm operator.
-class NativeBatchNormBackward : public Node {
+// XlaNode for the backward batch norm operator.
+class NativeBatchNormBackward : public XlaNode {
  public:
-  NativeBatchNormBackward(const Value& grad_out, const Value& input,
-                          const Value& weight, const Value& save_mean,
-                          const Value& save_invstd, bool training, double eps);
+  NativeBatchNormBackward(const XlaValue& grad_out, const XlaValue& input,
+                          const XlaValue& weight, const XlaValue& save_mean,
+                          const XlaValue& save_invstd, bool training,
+                          double eps);
 
   torch::lazy::NodePtr Clone(OpList operands) const override;
 

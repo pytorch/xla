@@ -11,12 +11,12 @@ namespace torch_xla {
 namespace ir {
 namespace ops {
 
-GetDimensionsSize::GetDimensionsSize(const Value& input,
+GetDimensionsSize::GetDimensionsSize(const XlaValue& input,
                                      std::vector<int64_t> dimensions)
-    : Node(xla_get_dimensions_size, {input},
-           xla::ShapeUtil::MakeShape(GetShapeDimensionType(/*device=*/nullptr),
-                                     {}),
-           /*num_outputs=*/1, torch::lazy::MHash(dimensions)),
+    : XlaNode(xla_get_dimensions_size, {input},
+              xla::ShapeUtil::MakeShape(
+                  GetShapeDimensionType(/*device=*/nullptr), {}),
+              /*num_outputs=*/1, torch::lazy::MHash(dimensions)),
       dimensions_(std::move(dimensions)) {}
 
 torch::lazy::NodePtr GetDimensionsSize::Clone(OpList operands) const {
@@ -31,8 +31,8 @@ XlaOpVector GetDimensionsSize::Lower(LoweringContext* loctx) const {
 
 std::string GetDimensionsSize::ToString() const {
   std::stringstream ss;
-  ss << Node::ToString() << ", dimensions=(" << absl::StrJoin(dimensions_, ", ")
-     << ")";
+  ss << XlaNode::ToString() << ", dimensions=("
+     << absl::StrJoin(dimensions_, ", ") << ")";
   return ss.str();
 }
 

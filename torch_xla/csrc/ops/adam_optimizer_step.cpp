@@ -9,7 +9,7 @@ namespace ir {
 namespace ops {
 namespace {
 
-xla::Shape NodeOutputShape(const Value& step, const Value& param) {
+xla::Shape NodeOutputShape(const XlaValue& step, const XlaValue& param) {
   return xla::ShapeUtil::MakeTupleShape(
       {/*step=*/step.xla_shape(), /*param=*/param.xla_shape(),
        /*exp_avg=*/param.xla_shape(), /*exp_avg_sq=*/param.xla_shape(),
@@ -19,17 +19,18 @@ xla::Shape NodeOutputShape(const Value& step, const Value& param) {
 }  // namespace
 
 AdamOptimizerStep::AdamOptimizerStep(
-    const Value& found_inf, const Value& step, const Value& param,
-    const Value& grad, const Value& exp_avg, const Value& exp_avg_sq,
-    const Value& max_exp_avg_sq, const Value& beta1, const Value& beta2,
-    const Value& lr, const Value& weight_decay, const Value& eps,
-    bool use_weight_decay, bool use_amsgrad, bool use_adamw)
-    : Node(xla_adam_optimizer_step,
-           {found_inf, step, param, grad, exp_avg, exp_avg_sq, max_exp_avg_sq,
-            beta1, beta2, lr, weight_decay, eps},
-           NodeOutputShape(step, param),
-           /*num_outputs=*/5,
-           torch::lazy::MHash(use_weight_decay, use_amsgrad, use_adamw)),
+    const XlaValue& found_inf, const XlaValue& step, const XlaValue& param,
+    const XlaValue& grad, const XlaValue& exp_avg, const XlaValue& exp_avg_sq,
+    const XlaValue& max_exp_avg_sq, const XlaValue& beta1,
+    const XlaValue& beta2, const XlaValue& lr, const XlaValue& weight_decay,
+    const XlaValue& eps, bool use_weight_decay, bool use_amsgrad,
+    bool use_adamw)
+    : XlaNode(xla_adam_optimizer_step,
+              {found_inf, step, param, grad, exp_avg, exp_avg_sq,
+               max_exp_avg_sq, beta1, beta2, lr, weight_decay, eps},
+              NodeOutputShape(step, param),
+              /*num_outputs=*/5,
+              torch::lazy::MHash(use_weight_decay, use_amsgrad, use_adamw)),
       use_weight_decay_(use_weight_decay),
       use_amsgrad_(use_amsgrad),
       use_adamw_(use_adamw) {}

@@ -20,20 +20,20 @@ TEST(IrTest, TestScalarCreate) {
 TEST(IrTest, TestHash) {
   torch::lazy::NodePtr scalar1 = ir::ops::ScalarOp(1.0, xla::F32);
   torch::lazy::NodePtr scalar2 = ir::ops::ScalarOp(2.0, xla::F32);
-  ir::Value add1 = ir::Value(scalar1, 0) + ir::Value(scalar2, 0);
+  ir::XlaValue add1 = ir::XlaValue(scalar1, 0) + ir::XlaValue(scalar2, 0);
 
   torch::lazy::NodePtr scalar3 = ir::ops::ScalarOp(1.0, xla::F32);
   torch::lazy::NodePtr scalar4 = ir::ops::ScalarOp(2.0, xla::F32);
-  ir::Value add2 = ir::Value(scalar3, 0) + ir::Value(scalar4, 0);
+  ir::XlaValue add2 = ir::XlaValue(scalar3, 0) + ir::XlaValue(scalar4, 0);
 
   torch::lazy::NodePtr scalar5 = ir::ops::ScalarOp(11.0, xla::F32);
   torch::lazy::NodePtr scalar6 = ir::ops::ScalarOp(22.0, xla::F32);
-  ir::Value add3 = ir::Value(scalar5, 0) + ir::Value(scalar6, 0);
+  ir::XlaValue add3 = ir::XlaValue(scalar5, 0) + ir::XlaValue(scalar6, 0);
 
   EXPECT_EQ(add1->hash(), add2->hash());
   EXPECT_NE(add1->hash(), add3->hash());
 
-  ir::Value sub = ir::Value(scalar1, 0) - ir::Value(scalar2, 0);
+  ir::XlaValue sub = ir::XlaValue(scalar1, 0) - ir::XlaValue(scalar2, 0);
 
   EXPECT_NE(add1->hash(), sub->hash());
 }
@@ -43,9 +43,10 @@ TEST(IrTest, TestSelectUnselect) {
     at::Tensor a =
         at::rand({4, 16, 3}, at::TensorOptions(at::kFloat)).abs() + 1.0;
 
-    ir::Value v_a = GetTensorIrValue(a, device);
-    ir::Value v_s = ir::MakeNode<ir::ops::Select>(v_a, /*dim=*/1, /*start=*/3,
-                                                  /*end=*/14, /*stride=*/3);
+    ir::XlaValue v_a = GetTensorIrValue(a, device);
+    ir::XlaValue v_s =
+        ir::MakeNode<ir::ops::Select>(v_a, /*dim=*/1, /*start=*/3,
+                                      /*end=*/14, /*stride=*/3);
 
     auto results = ExecuteAndFetch({v_s}, device);
     at::Tensor b =
@@ -54,8 +55,8 @@ TEST(IrTest, TestSelectUnselect) {
 
     // Paste zeros back into the selected view.
     at::Tensor z = at::zeros_like(b);
-    ir::Value v_z = GetTensorIrValue(z, device);
-    ir::Value v_u =
+    ir::XlaValue v_z = GetTensorIrValue(z, device);
+    ir::XlaValue v_u =
         ir::MakeNode<ir::ops::Unselect>(v_a, v_z, /*dim=*/1, /*start=*/3,
                                         /*end=*/14, /*stride=*/3);
     results = ExecuteAndFetch({v_u}, device);

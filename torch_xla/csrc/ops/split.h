@@ -9,9 +9,9 @@ namespace ir {
 namespace ops {
 
 // Split the tensor into chunks along a given dimension.
-class Split : public Node {
+class Split : public XlaNode {
  public:
-  Split(const Value& input, std::vector<int64_t> split_sizes, int64_t dim);
+  Split(const XlaValue& input, std::vector<int64_t> split_sizes, int64_t dim);
 
   torch::lazy::NodePtr Clone(OpList operands) const override;
 

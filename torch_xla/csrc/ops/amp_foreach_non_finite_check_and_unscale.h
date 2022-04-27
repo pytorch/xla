@@ -6,11 +6,11 @@ namespace torch_xla {
 namespace ir {
 namespace ops {
 
-class AmpForachNonFiniteCheckAndUnscale : public Node {
+class AmpForachNonFiniteCheckAndUnscale : public XlaNode {
  public:
   AmpForachNonFiniteCheckAndUnscale(const OpList& inputs,
-                                    const Value& found_inf,
-                                    const Value& inv_scale);
+                                    const XlaValue& found_inf,
+                                    const XlaValue& inv_scale);
 
   torch::lazy::NodePtr Clone(OpList operands) const override;
 

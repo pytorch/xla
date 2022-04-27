@@ -22,7 +22,7 @@ xla::XlaOp LowerSum(xla::XlaOp input, absl::Span<const int64_t> dimensions,
                   keep_reduced_dimensions);
 }
 
-xla::Shape NodeOutputShape(const Value& input,
+xla::Shape NodeOutputShape(const XlaValue& input,
                            absl::Span<const int64_t> dimensions,
                            bool keep_reduced_dimensions,
                            c10::optional<at::ScalarType> dtype) {
@@ -35,16 +35,16 @@ xla::Shape NodeOutputShape(const Value& input,
 
 }  // namespace
 
-Sum::Sum(const Value& input, std::vector<int64_t> dimensions,
+Sum::Sum(const XlaValue& input, std::vector<int64_t> dimensions,
          bool keep_reduced_dimensions, c10::optional<at::ScalarType> dtype)
-    : Node(torch::lazy::OpKind(at::aten::sum), {input},
-           [&]() {
-             return NodeOutputShape(input, dimensions, keep_reduced_dimensions,
-                                    dtype);
-           },
-           /*num_outputs=*/1,
-           torch::lazy::MHash(dimensions, keep_reduced_dimensions,
-                              torch::lazy::OptionalOr<int>(dtype, -1))),
+    : XlaNode(torch::lazy::OpKind(at::aten::sum), {input},
+              [&]() {
+                return NodeOutputShape(input, dimensions,
+                                       keep_reduced_dimensions, dtype);
+              },
+              /*num_outputs=*/1,
+              torch::lazy::MHash(dimensions, keep_reduced_dimensions,
+                                 torch::lazy::OptionalOr<int>(dtype, -1))),
       dimensions_(std::move(dimensions)),
       keep_reduced_dimensions_(keep_reduced_dimensions),
       dtype_(dtype) {}
@@ -62,7 +62,8 @@ XlaOpVector Sum::Lower(LoweringContext* loctx) const {
 
 std::string Sum::ToString() const {
   std::stringstream ss;
-  ss << Node::ToString() << ", dimensions=(" << absl::StrJoin(dimensions_, ", ")
+  ss << XlaNode::ToString() << ", dimensions=("
+     << absl::StrJoin(dimensions_, ", ")
      << "), keep_reduced_dimensions=" << keep_reduced_dimensions_
      << ", dtype=" << torch::lazy::OptionalOr<int>(dtype_, -1);
   return ss.str();

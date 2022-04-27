@@ -7,11 +7,11 @@ namespace torch_xla {
 namespace ir {
 namespace ops {
 
-MaskedScatter::MaskedScatter(const Value& input, const Value& mask,
-                             const Value& source)
-    : Node(torch::lazy::OpKind(at::aten::masked_scatter), {input, mask, source},
-           input.xla_shape(),
-           /*num_outputs=*/1) {}
+MaskedScatter::MaskedScatter(const XlaValue& input, const XlaValue& mask,
+                             const XlaValue& source)
+    : XlaNode(torch::lazy::OpKind(at::aten::masked_scatter),
+              {input, mask, source}, input.xla_shape(),
+              /*num_outputs=*/1) {}
 
 torch::lazy::NodePtr MaskedScatter::Clone(OpList operands) const {
   return ir::MakeNode<MaskedScatter>(operands.at(0), operands.at(1),

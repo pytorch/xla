@@ -9,11 +9,11 @@ namespace torch_xla {
 namespace ir {
 namespace ops {
 
-MaskedFill::MaskedFill(const Value& input, const Value& mask,
+MaskedFill::MaskedFill(const XlaValue& input, const XlaValue& mask,
                        const at::Scalar& value)
-    : Node(torch::lazy::OpKind(at::aten::masked_fill), {input, mask},
-           input.xla_shape(),
-           /*num_outputs=*/1, ScalarHash(value)),
+    : XlaNode(torch::lazy::OpKind(at::aten::masked_fill), {input, mask},
+              input.xla_shape(),
+              /*num_outputs=*/1, ScalarHash(value)),
       value_(std::move(value)) {}
 
 torch::lazy::NodePtr MaskedFill::Clone(OpList operands) const {
@@ -36,7 +36,7 @@ XlaOpVector MaskedFill::Lower(LoweringContext* loctx) const {
 
 std::string MaskedFill::ToString() const {
   std::stringstream ss;
-  ss << Node::ToString() << ", value=" << value_;
+  ss << XlaNode::ToString() << ", value=" << value_;
   return ss.str();
 }
 

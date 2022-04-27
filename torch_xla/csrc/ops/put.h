@@ -6,9 +6,9 @@ namespace torch_xla {
 namespace ir {
 namespace ops {
 
-class Put : public Node {
+class Put : public XlaNode {
  public:
-  Put(const Value& input, const Value& index, const Value& source,
+  Put(const XlaValue& input, const XlaValue& index, const XlaValue& source,
       bool accumulate);
 
   std::string ToString() const override;

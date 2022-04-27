@@ -7,11 +7,11 @@ namespace torch_xla {
 namespace ir {
 namespace ops {
 
-ThresholdBackward::ThresholdBackward(const Value& grad_output,
-                                     const Value& input, float threshold)
-    : Node(torch::lazy::OpKind(at::aten::threshold_backward),
-           {grad_output, input}, input.xla_shape(), /*num_outputs=*/1,
-           torch::lazy::MHash(threshold)),
+ThresholdBackward::ThresholdBackward(const XlaValue& grad_output,
+                                     const XlaValue& input, float threshold)
+    : XlaNode(torch::lazy::OpKind(at::aten::threshold_backward),
+              {grad_output, input}, input.xla_shape(), /*num_outputs=*/1,
+              torch::lazy::MHash(threshold)),
       threshold_(threshold) {}
 
 torch::lazy::NodePtr ThresholdBackward::Clone(OpList operands) const {
@@ -28,7 +28,7 @@ XlaOpVector ThresholdBackward::Lower(LoweringContext* loctx) const {
 
 std::string ThresholdBackward::ToString() const {
   std::stringstream ss;
-  ss << Node::ToString() << ", threshold=" << threshold_;
+  ss << XlaNode::ToString() << ", threshold=" << threshold_;
   return ss.str();
 }
 

@@ -11,9 +11,9 @@ namespace ir {
 namespace ops {
 namespace {
 
-xla::Shape NodeOutputShape(const Value& boxes, const Value& scores,
-                           const Value& score_threshold,
-                           const Value& iou_threshold, int64_t output_size) {
+xla::Shape NodeOutputShape(const XlaValue& boxes, const XlaValue& scores,
+                           const XlaValue& score_threshold,
+                           const XlaValue& iou_threshold, int64_t output_size) {
   auto shape_fn = [&](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
     NmsResult result = BuildNms(operands[0], operands[1], operands[2],
                                 operands[3], output_size);
@@ -28,14 +28,15 @@ xla::Shape NodeOutputShape(const Value& boxes, const Value& scores,
 
 }  // namespace
 
-Nms::Nms(const Value& boxes, const Value& scores, const Value& score_threshold,
-         const Value& iou_threshold, int64_t output_size)
-    : Node(xla_nms, {boxes, scores, score_threshold, iou_threshold},
-           [&]() {
-             return NodeOutputShape(boxes, scores, score_threshold,
-                                    iou_threshold, output_size);
-           },
-           /*num_outputs=*/2, torch::lazy::MHash(output_size)),
+Nms::Nms(const XlaValue& boxes, const XlaValue& scores,
+         const XlaValue& score_threshold, const XlaValue& iou_threshold,
+         int64_t output_size)
+    : XlaNode(xla_nms, {boxes, scores, score_threshold, iou_threshold},
+              [&]() {
+                return NodeOutputShape(boxes, scores, score_threshold,
+                                       iou_threshold, output_size);
+              },
+              /*num_outputs=*/2, torch::lazy::MHash(output_size)),
       output_size_(output_size) {}
 
 torch::lazy::NodePtr Nms::Clone(OpList operands) const {
@@ -55,7 +56,7 @@ XlaOpVector Nms::Lower(LoweringContext* loctx) const {
 
 std::string Nms::ToString() const {
   std::stringstream ss;
-  ss << Node::ToString() << ", output_size=" << output_size_;
+  ss << XlaNode::ToString() << ", output_size=" << output_size_;
   return ss.str();
 }
 

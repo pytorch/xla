@@ -6,9 +6,9 @@ namespace torch_xla {
 namespace ir {
 namespace ops {
 
-class ArgMax : public Node {
+class ArgMax : public XlaNode {
  public:
-  ArgMax(const Value& input, int64_t dim, bool keepdim);
+  ArgMax(const XlaValue& input, int64_t dim, bool keepdim);
 
   std::string ToString() const override;
 

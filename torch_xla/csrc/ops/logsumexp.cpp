@@ -13,7 +13,8 @@ namespace ir {
 namespace ops {
 namespace {
 
-xla::Shape NodeOutputShape(const Value& input, std::vector<int64_t>& dimensions,
+xla::Shape NodeOutputShape(const XlaValue& input,
+                           std::vector<int64_t>& dimensions,
                            bool keep_reduced_dimensions) {
   auto lower_for_shape_fn =
       [&](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
@@ -24,14 +25,15 @@ xla::Shape NodeOutputShape(const Value& input, std::vector<int64_t>& dimensions,
 
 }  // namespace
 
-Logsumexp::Logsumexp(const Value& input, std::vector<int64_t> dimensions,
+Logsumexp::Logsumexp(const XlaValue& input, std::vector<int64_t> dimensions,
                      bool keep_reduced_dimensions)
-    : Node(torch::lazy::OpKind(at::aten::logsumexp), {input},
-           [&]() {
-             return NodeOutputShape(input, dimensions, keep_reduced_dimensions);
-           },
-           /*num_outputs=*/1,
-           torch::lazy::MHash(dimensions, keep_reduced_dimensions)),
+    : XlaNode(torch::lazy::OpKind(at::aten::logsumexp), {input},
+              [&]() {
+                return NodeOutputShape(input, dimensions,
+                                       keep_reduced_dimensions);
+              },
+              /*num_outputs=*/1,
+              torch::lazy::MHash(dimensions, keep_reduced_dimensions)),
       dimensions_(std::move(dimensions)),
       keep_reduced_dimensions_(keep_reduced_dimensions) {}
 
@@ -48,7 +50,8 @@ XlaOpVector Logsumexp::Lower(LoweringContext* loctx) const {
 
 std::string Logsumexp::ToString() const {
   std::stringstream ss;
-  ss << Node::ToString() << ", dimensions=(" << absl::StrJoin(dimensions_, ", ")
+  ss << XlaNode::ToString() << ", dimensions=("
+     << absl::StrJoin(dimensions_, ", ")
      << "), keep_reduced_dimensions=" << keep_reduced_dimensions_;
   return ss.str();
 }
