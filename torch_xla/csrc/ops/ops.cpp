@@ -738,21 +738,24 @@ torch::lazy::NodePtr EluBackward(const XlaValue& grad_output,
 }
 
 torch::lazy::NodePtr Gelu(const XlaValue& input) {
-  ScopePusher ir_scope("aten::gelu");
-  const xla::Shape& shape = input.xla_shape();
-  // input * 0.5 * (1.0 + torch.erf(input / math.sqrt(2.0)))
-  return input * ScalarOp(0.5, shape) *
-         (Erf(input * ScalarOp(M_SQRT1_2, shape)) + ScalarOp(1.0, shape));
+  auto lower_fn = [](const XlaNode& node, LoweringContext* loctx) -> XlaOpVector {
+    xla::XlaOp xla_input = loctx->GetOutputOp(node.operand(0));
+    return node.ReturnOp(BuildGelu(xla_input), loctx);
+  };
+  return GenericOp(torch::lazy::OpKind(at::aten::gelu),
+                   {input}, input.xla_shape(), std::move(lower_fn));
 }
 
-torch::lazy::NodePtr GeluBackward(const XlaValue& grad, const XlaValue& input) {
-  ScopePusher ir_scope("aten::gelu_backward");
-  const xla::Shape& shape = input.xla_shape();
-  constexpr float kAlpha = M_2_SQRTPI * M_SQRT1_2 * 0.5;
-  torch::lazy::NodePtr scratch = Erf(input * ScalarOp(M_SQRT1_2, shape));
-  torch::lazy::NodePtr dinput = Exp(input * input * ScalarOp(-0.5, shape));
-  return grad * (ScalarOp(0.5, shape) * (ScalarOp(1.0, shape) + scratch) +
-                 input * dinput * ScalarOp(kAlpha, shape));
+torch::lazy::NodePtr GeluBackward(const XlaValue& grad_output, const XlaValue& input) {
+  auto lower_fn = [](const XlaNode& node, LoweringContext* loctx) -> XlaOpVector {
+    xla::XlaOp xla_grad_output = loctx->GetOutputOp(node.operand(0));
+    xla::XlaOp xla_input = loctx->GetOutputOp(node.operand(1));
+    return node.ReturnOp(BuildGeluBackward(xla_grad_output, xla_input),
+                         loctx);
+  };
+  return GenericOp(torch::lazy::OpKind(at::aten::gelu_backward),
+                   {grad_output, input}, input.xla_shape(),
+                   std::move(lower_fn));
 }
 
 torch::lazy::NodePtr Lshift(const XlaValue& input, const at::Scalar& other) {

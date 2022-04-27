@@ -1,6 +1,7 @@
 #include "torch_xla/csrc/elementwise.h"
 
 #include "tensorflow/compiler/xla/client/lib/constants.h"
+#include "tensorflow/compiler/xla/client/lib/math.h"
 #include "tensorflow/compiler/xla/xla_client/debug_macros.h"
 #include "torch_xla/csrc/convert_ops.h"
 #include "torch_xla/csrc/data_ops.h"
@@ -283,6 +284,37 @@ xla::XlaOp BuildSoftplus(xla::XlaOp input, xla::XlaOp beta,
   return xla::Select(
       xla::Gt(xla::Mul(input, beta), threshold), input,
       xla::Div(xla::Log1p(xla::Exp(xla::Mul(input, beta))), beta));
+}
+
+xla::XlaOp BuildGelu(xla::XlaOp input) {
+  const xla::Shape& shape = XlaHelpers::ShapeOfXlaOp(input);
+  xla::XlaOp half = XlaHelpers::ScalarValue<float>(0.5, shape.element_type(),
+                                                    input.builder());
+  xla::XlaOp one = XlaHelpers::ScalarValue<float>(1.0, shape.element_type(),
+                                                    input.builder());
+  xla::XlaOp m_sqrt2 = XlaHelpers::ScalarValue<float>(M_SQRT2, shape.element_type(),
+                                                    input.builder());
+  xla::XlaOp m_sqrt1_2 = XlaHelpers::ScalarValue<float>(M_SQRT1_2, shape.element_type(),
+                                                    input.builder());
+
+  return input * half * (xla::Erf(input * m_sqrt1_2) + one);
+}
+
+xla::XlaOp BuildGeluBackward(xla::XlaOp grad_output, xla::XlaOp input) {
+  const xla::Shape& shape = XlaHelpers::ShapeOfXlaOp(input);
+  xla::XlaOp half = XlaHelpers::ScalarValue<float>(0.5, shape.element_type(),
+                                                    input.builder());
+  xla::XlaOp one = XlaHelpers::ScalarValue<float>(1.0, shape.element_type(),
+                                                    input.builder());
+  xla::XlaOp m_2_sqrtpi = XlaHelpers::ScalarValue<float>(M_2_SQRTPI, shape.element_type(),
+                                                    input.builder());
+  xla::XlaOp m_sqrt1_2 = XlaHelpers::ScalarValue<float>(M_SQRT1_2, shape.element_type(),
+                                                    input.builder());
+
+  xla::XlaOp kAlpha = m_2_sqrtpi * m_sqrt1_2 * half;
+  xla::XlaOp scratch = xla::Erf(input * m_sqrt1_2);
+  xla::XlaOp dinput = xla::Exp(input * input * xla::Neg(half));
+  return grad_output * (half * (one + scratch) + input * dinput * kAlpha);
 }
 
 }  // namespace torch_xla
