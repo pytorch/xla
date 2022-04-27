@@ -6,10 +6,10 @@ namespace torch_xla {
 namespace ir {
 namespace ops {
 
-Roll::Roll(const Value& input, std::vector<int64_t> shifts,
+Roll::Roll(const XlaValue& input, std::vector<int64_t> shifts,
            std::vector<int64_t> dims)
-    : Node(torch::lazy::OpKind(at::aten::roll), {input}, input.xla_shape(),
-           /*num_outputs=*/1, torch::lazy::MHash(shifts, dims)),
+    : XlaNode(torch::lazy::OpKind(at::aten::roll), {input}, input.xla_shape(),
+              /*num_outputs=*/1, torch::lazy::MHash(shifts, dims)),
       shifts_(std::move(shifts)),
       dims_(std::move(dims)) {}
 
@@ -24,7 +24,8 @@ XlaOpVector Roll::Lower(LoweringContext* loctx) const {
 
 std::string Roll::ToString() const {
   std::stringstream ss;
-  ss << Node::ToString() << ", shifts=(" << absl::StrJoin(shifts_, ", ") << ")"
+  ss << XlaNode::ToString() << ", shifts=(" << absl::StrJoin(shifts_, ", ")
+     << ")"
      << ", dims=(" << absl::StrJoin(dims_, ", ") << ")";
   return ss.str();
 }
