@@ -55,13 +55,13 @@ std::string DebugUtil::GetTensorsGraphInfo(absl::Span<const XLATensor> tensors,
                                            const std::vector<size_t>* indices,
                                            GraphFormat format) {
   std::vector<const torch::lazy::Node*> root_nodes;
-  std::vector<ir::Value> root_values;
+  std::vector<ir::XlaValue> root_values;
   std::vector<torch::lazy::hash_t> root_hashes;
   xla::util::Unique<torch::lazy::BackendDevice> unique_device;
   if (indices != nullptr) {
     for (auto index : *indices) {
       const XLATensor& tensor = tensors[index];
-      ir::Value ir_value = tensor.CurrentIrValue();
+      ir::XlaValue ir_value = tensor.CurrentIrValue();
       if (ir_value) {
         root_nodes.push_back(ir_value.node.get());
         root_hashes.push_back(ir_value.hash());
@@ -71,7 +71,7 @@ std::string DebugUtil::GetTensorsGraphInfo(absl::Span<const XLATensor> tensors,
     }
   } else {
     for (auto& tensor : tensors) {
-      ir::Value ir_value = tensor.CurrentIrValue();
+      ir::XlaValue ir_value = tensor.CurrentIrValue();
       if (ir_value) {
         root_nodes.push_back(ir_value.node.get());
         root_hashes.push_back(ir_value.hash());

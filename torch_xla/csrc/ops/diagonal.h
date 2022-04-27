@@ -6,9 +6,9 @@ namespace torch_xla {
 namespace ir {
 namespace ops {
 
-class Diagonal : public Node {
+class Diagonal : public XlaNode {
  public:
-  Diagonal(const Value& input, int64_t offset, int64_t dim1, int64_t dim2);
+  Diagonal(const XlaValue& input, int64_t offset, int64_t dim1, int64_t dim2);
 
   torch::lazy::NodePtr Clone(OpList operands) const override;
 

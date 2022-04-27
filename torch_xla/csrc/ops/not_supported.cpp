@@ -9,8 +9,8 @@ namespace ir {
 namespace ops {
 
 NotSupported::NotSupported(std::string description, xla::Shape shape)
-    : Node(xla_not_supported, std::move(shape), /*num_outputs=*/1,
-           torch::lazy::MHash(description)),
+    : XlaNode(xla_not_supported, std::move(shape), /*num_outputs=*/1,
+              torch::lazy::MHash(description)),
       description_(std::move(description)) {}
 
 torch::lazy::NodePtr NotSupported::Clone(OpList operands) const {
@@ -23,7 +23,7 @@ XlaOpVector NotSupported::Lower(LoweringContext* /* loctx */) const {
 
 std::string NotSupported::ToString() const {
   std::stringstream ss;
-  ss << Node::ToString() << ", description=" << description_;
+  ss << XlaNode::ToString() << ", description=" << description_;
   return ss.str();
 }
 

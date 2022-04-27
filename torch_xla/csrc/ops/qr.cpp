@@ -18,7 +18,7 @@ std::vector<xla::XlaOp> LowerQR(xla::XlaOp input, bool some) {
   return {q, r};
 }
 
-xla::Shape NodeOutputShape(const Value& input, bool some) {
+xla::Shape NodeOutputShape(const XlaValue& input, bool some) {
   const xla::Shape& input_shape = input.xla_shape();
   XLA_CHECK_GE(input_shape.rank(), 2) << input_shape;
   // The input tensor is ..., M, N
@@ -41,10 +41,10 @@ xla::Shape NodeOutputShape(const Value& input, bool some) {
 
 }  // namespace
 
-QR::QR(const Value& input, bool some)
-    : Node(torch::lazy::OpKind(at::aten::qr), {input},
-           [&]() { return NodeOutputShape(input, some); },
-           /*num_outputs=*/2, torch::lazy::MHash(some)),
+QR::QR(const XlaValue& input, bool some)
+    : XlaNode(torch::lazy::OpKind(at::aten::qr), {input},
+              [&]() { return NodeOutputShape(input, some); },
+              /*num_outputs=*/2, torch::lazy::MHash(some)),
       some_(some) {}
 
 torch::lazy::NodePtr QR::Clone(OpList operands) const {
@@ -58,7 +58,7 @@ XlaOpVector QR::Lower(LoweringContext* loctx) const {
 
 std::string QR::ToString() const {
   std::stringstream ss;
-  ss << Node::ToString() << ", some=" << some_;
+  ss << XlaNode::ToString() << ", some=" << some_;
   return ss.str();
 }
 

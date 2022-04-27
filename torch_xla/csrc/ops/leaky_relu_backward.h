@@ -8,9 +8,9 @@ namespace torch_xla {
 namespace ir {
 namespace ops {
 
-class LeakyReluBackward : public Node {
+class LeakyReluBackward : public XlaNode {
  public:
-  LeakyReluBackward(const Value& grad_output, const Value& input,
+  LeakyReluBackward(const XlaValue& grad_output, const XlaValue& input,
                     double negative_slope);
 
   torch::lazy::NodePtr Clone(OpList operands) const override;

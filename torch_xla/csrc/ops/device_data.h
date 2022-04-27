@@ -7,7 +7,7 @@ namespace torch_xla {
 namespace ir {
 namespace ops {
 
-class DeviceData : public Node {
+class DeviceData : public XlaNode {
  public:
   DeviceData(std::shared_ptr<xla::ComputationClient::Data> data);
 

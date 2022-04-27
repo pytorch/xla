@@ -8,11 +8,11 @@ namespace torch_xla {
 namespace ir {
 namespace ops {
 
-class BinaryCrossEntropyBackward : public Node {
+class BinaryCrossEntropyBackward : public XlaNode {
  public:
-  BinaryCrossEntropyBackward(const Value& grad_output, const Value& logits,
-                             const Value& labels,
-                             const absl::optional<Value>& weight,
+  BinaryCrossEntropyBackward(const XlaValue& grad_output,
+                             const XlaValue& logits, const XlaValue& labels,
+                             const absl::optional<XlaValue>& weight,
                              ReductionMode reduction);
 
   std::string ToString() const override;

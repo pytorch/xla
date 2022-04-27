@@ -85,18 +85,18 @@ std::string GetTensorDotGraph(at::Tensor tensor);
 
 std::string GetTensorHloGraph(at::Tensor tensor);
 
-ir::Value GetTensorIrValue(const at::Tensor& tensor,
-                           const torch::lazy::BackendDevice& device);
+ir::XlaValue GetTensorIrValue(const at::Tensor& tensor,
+                              const torch::lazy::BackendDevice& device);
 
 std::vector<xla::ComputationClient::DataPtr> Execute(
-    absl::Span<const ir::Value> roots,
+    absl::Span<const ir::XlaValue> roots,
     const torch::lazy::BackendDevice& device);
 
 std::vector<at::Tensor> Fetch(
     absl::Span<const xla::ComputationClient::DataPtr> device_data);
 
 std::vector<at::Tensor> ExecuteAndFetch(
-    absl::Span<const ir::Value> roots,
+    absl::Span<const ir::XlaValue> roots,
     const torch::lazy::BackendDevice& device);
 
 void AssertBackward(const torch::Tensor& xla_output,

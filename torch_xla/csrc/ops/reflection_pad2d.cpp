@@ -10,7 +10,7 @@ namespace ir {
 namespace ops {
 namespace {
 
-xla::Shape NodeOutputShape(const Value& input,
+xla::Shape NodeOutputShape(const XlaValue& input,
                            absl::Span<const int64_t> padding) {
   auto lower_for_shape_fn =
       [&](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
@@ -21,11 +21,11 @@ xla::Shape NodeOutputShape(const Value& input,
 
 }  // namespace
 
-ReflectionPad2d::ReflectionPad2d(const Value& input,
+ReflectionPad2d::ReflectionPad2d(const XlaValue& input,
                                  std::vector<int64_t> padding)
-    : Node(torch::lazy::OpKind(at::aten::reflection_pad2d), {input},
-           [&]() { return NodeOutputShape(input, padding); },
-           /*num_outputs=*/1, torch::lazy::MHash(padding)),
+    : XlaNode(torch::lazy::OpKind(at::aten::reflection_pad2d), {input},
+              [&]() { return NodeOutputShape(input, padding); },
+              /*num_outputs=*/1, torch::lazy::MHash(padding)),
       padding_(std::move(padding)) {}
 
 torch::lazy::NodePtr ReflectionPad2d::Clone(OpList operands) const {
@@ -40,7 +40,7 @@ XlaOpVector ReflectionPad2d::Lower(LoweringContext* loctx) const {
 
 std::string ReflectionPad2d::ToString() const {
   std::stringstream ss;
-  ss << Node::ToString() << ", padding=(" << absl::StrJoin(padding_, ", ")
+  ss << XlaNode::ToString() << ", padding=(" << absl::StrJoin(padding_, ", ")
      << ")";
   return ss.str();
 }

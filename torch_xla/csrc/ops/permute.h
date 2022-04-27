@@ -7,9 +7,9 @@ namespace torch_xla {
 namespace ir {
 namespace ops {
 
-class Permute : public Node {
+class Permute : public XlaNode {
  public:
-  Permute(const Value& input, std::vector<int64_t> dims);
+  Permute(const XlaValue& input, std::vector<int64_t> dims);
 
   torch::lazy::NodePtr Clone(OpList operands) const override;
 

@@ -16,7 +16,7 @@ namespace ops {
 // Even though a Constant could have been used, for simple scalars broadcasted
 // to big shapes, the Constant leads to big literals expanded within the XLA
 // graph.
-class Scalar : public Node {
+class Scalar : public XlaNode {
  public:
   Scalar(const at::Scalar& value, xla::Shape shape);
   Scalar(const at::Scalar& value, xla::PrimitiveType type);

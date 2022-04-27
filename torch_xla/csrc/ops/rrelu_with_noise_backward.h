@@ -8,10 +8,10 @@ namespace torch_xla {
 namespace ir {
 namespace ops {
 
-class RreluWithNoiseBackward : public Node {
+class RreluWithNoiseBackward : public XlaNode {
  public:
-  RreluWithNoiseBackward(const Value& grad_output, const Value& input,
-                         const Value& noise, const at::Scalar& lower,
+  RreluWithNoiseBackward(const XlaValue& grad_output, const XlaValue& input,
+                         const XlaValue& noise, const at::Scalar& lower,
                          const at::Scalar& upper, bool training);
 
   std::string ToString() const override;

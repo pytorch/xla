@@ -7,7 +7,7 @@ namespace torch_xla {
 namespace ir {
 namespace ops {
 
-class UserComputation : public Node {
+class UserComputation : public XlaNode {
  public:
   UserComputation(torch::lazy::OpKind op, OpList operands,
                   ComputationPtr computation);

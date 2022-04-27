@@ -6,9 +6,9 @@ namespace torch_xla {
 namespace ir {
 namespace ops {
 
-class TopK : public Node {
+class TopK : public XlaNode {
  public:
-  TopK(const Value& input, int64_t k, int64_t dim, bool largest, bool sorted,
+  TopK(const XlaValue& input, int64_t k, int64_t dim, bool largest, bool sorted,
        bool stable);
 
   std::string ToString() const override;

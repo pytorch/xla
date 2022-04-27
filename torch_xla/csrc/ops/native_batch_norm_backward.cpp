@@ -10,9 +10,9 @@ namespace ir {
 namespace ops {
 namespace {
 
-xla::Shape NodeOutputShape(const Value& grad_out, const Value& input,
-                           const Value& weight, const Value& save_mean,
-                           const Value& save_invstd, bool training) {
+xla::Shape NodeOutputShape(const XlaValue& grad_out, const XlaValue& input,
+                           const XlaValue& weight, const XlaValue& save_mean,
+                           const XlaValue& save_invstd, bool training) {
   auto lower_for_shape_fn =
       [&](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
     BatchNormGrads xla_outputs =
@@ -30,16 +30,19 @@ xla::Shape NodeOutputShape(const Value& grad_out, const Value& input,
 
 }  // namespace
 
-NativeBatchNormBackward::NativeBatchNormBackward(
-    const Value& grad_out, const Value& input, const Value& weight,
-    const Value& save_mean, const Value& save_invstd, bool training, double eps)
-    : Node(torch::lazy::OpKind(at::aten::native_batch_norm_backward),
-           {grad_out, input, weight, save_mean, save_invstd},
-           [&]() {
-             return NodeOutputShape(grad_out, input, weight, save_mean,
-                                    save_invstd, training);
-           },
-           /*num_outputs=*/3, torch::lazy::MHash(training, eps)),
+NativeBatchNormBackward::NativeBatchNormBackward(const XlaValue& grad_out,
+                                                 const XlaValue& input,
+                                                 const XlaValue& weight,
+                                                 const XlaValue& save_mean,
+                                                 const XlaValue& save_invstd,
+                                                 bool training, double eps)
+    : XlaNode(torch::lazy::OpKind(at::aten::native_batch_norm_backward),
+              {grad_out, input, weight, save_mean, save_invstd},
+              [&]() {
+                return NodeOutputShape(grad_out, input, weight, save_mean,
+                                       save_invstd, training);
+              },
+              /*num_outputs=*/3, torch::lazy::MHash(training, eps)),
       training_(training),
       eps_(eps) {}
 
@@ -64,7 +67,7 @@ XlaOpVector NativeBatchNormBackward::Lower(LoweringContext* loctx) const {
 
 std::string NativeBatchNormBackward::ToString() const {
   std::stringstream ss;
-  ss << Node::ToString() << ", training=" << training_ << ", eps=" << eps_;
+  ss << XlaNode::ToString() << ", training=" << training_ << ", eps=" << eps_;
   return ss.str();
 }
 

@@ -26,7 +26,8 @@ std::vector<xla::XlaOp> LowerSymEig(xla::XlaOp input, bool eigenvectors,
   return {w, v};
 }
 
-xla::Shape NodeOutputShape(const Value& input, bool eigenvectors, bool lower) {
+xla::Shape NodeOutputShape(const XlaValue& input, bool eigenvectors,
+                           bool lower) {
   const xla::Shape& input_shape = input.xla_shape();
   XLA_CHECK_GE(input_shape.rank(), 2) << input_shape;
   // W is ..., M
@@ -45,10 +46,10 @@ xla::Shape NodeOutputShape(const Value& input, bool eigenvectors, bool lower) {
 
 }  // namespace
 
-SymEig::SymEig(const Value& input, bool eigenvectors, bool lower)
-    : Node(torch::lazy::OpKind(at::aten::symeig), {input},
-           [&]() { return NodeOutputShape(input, eigenvectors, lower); },
-           /*num_outputs=*/2, torch::lazy::MHash(eigenvectors, lower)),
+SymEig::SymEig(const XlaValue& input, bool eigenvectors, bool lower)
+    : XlaNode(torch::lazy::OpKind(at::aten::symeig), {input},
+              [&]() { return NodeOutputShape(input, eigenvectors, lower); },
+              /*num_outputs=*/2, torch::lazy::MHash(eigenvectors, lower)),
       eigenvectors_(eigenvectors),
       lower_(lower) {}
 
@@ -63,7 +64,7 @@ XlaOpVector SymEig::Lower(LoweringContext* loctx) const {
 
 std::string SymEig::ToString() const {
   std::stringstream ss;
-  ss << Node::ToString() << ", eigenvectors=" << eigenvectors_
+  ss << XlaNode::ToString() << ", eigenvectors=" << eigenvectors_
      << ", lower=" << lower_;
   return ss.str();
 }

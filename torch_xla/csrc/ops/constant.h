@@ -6,7 +6,7 @@ namespace torch_xla {
 namespace ir {
 namespace ops {
 
-class Constant : public Node {
+class Constant : public XlaNode {
  public:
   Constant(xla::Literal value);
 

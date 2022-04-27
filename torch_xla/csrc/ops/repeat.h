@@ -7,9 +7,9 @@ namespace torch_xla {
 namespace ir {
 namespace ops {
 
-class Repeat : public Node {
+class Repeat : public XlaNode {
  public:
-  Repeat(const Value& input, std::vector<int64_t> repeats);
+  Repeat(const XlaValue& input, std::vector<int64_t> repeats);
 
   torch::lazy::NodePtr Clone(OpList operands) const override;
 

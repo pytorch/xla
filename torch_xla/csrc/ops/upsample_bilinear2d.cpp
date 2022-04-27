@@ -9,15 +9,16 @@ namespace torch_xla {
 namespace ir {
 namespace ops {
 
-UpsampleBilinear::UpsampleBilinear(const Value& input,
+UpsampleBilinear::UpsampleBilinear(const XlaValue& input,
                                    std::vector<int64_t> output_size,
                                    bool align_corners)
-    : Node(torch::lazy::OpKind(at::aten::upsample_bilinear2d), {input},
-           [&]() {
-             return resize::GetForwardOutputShape2d(input.xla_shape(),
-                                                    output_size);
-           },
-           /*num_outputs=*/1, torch::lazy::MHash(output_size, align_corners)),
+    : XlaNode(torch::lazy::OpKind(at::aten::upsample_bilinear2d), {input},
+              [&]() {
+                return resize::GetForwardOutputShape2d(input.xla_shape(),
+                                                       output_size);
+              },
+              /*num_outputs=*/1,
+              torch::lazy::MHash(output_size, align_corners)),
       output_size_(std::move(output_size)),
       align_corners_(align_corners) {}
 
@@ -36,7 +37,7 @@ XlaOpVector UpsampleBilinear::Lower(LoweringContext* loctx) const {
 
 std::string UpsampleBilinear::ToString() const {
   std::stringstream ss;
-  ss << Node::ToString() << ", output_size=("
+  ss << XlaNode::ToString() << ", output_size=("
      << absl::StrJoin(output_size_, ", ")
      << "), align_corners=" << align_corners_;
   return ss.str();

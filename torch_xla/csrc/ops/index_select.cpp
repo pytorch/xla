@@ -10,7 +10,7 @@ namespace ir {
 namespace ops {
 namespace {
 
-xla::Shape NodeOutputShape(const Value& input, const Value& index,
+xla::Shape NodeOutputShape(const XlaValue& input, const XlaValue& index,
                            int64_t dim) {
   auto lower_for_shape_fn =
       [&](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
@@ -22,10 +22,11 @@ xla::Shape NodeOutputShape(const Value& input, const Value& index,
 
 }  // namespace
 
-IndexSelect::IndexSelect(const Value& input, int64_t dim, const Value& index)
-    : Node(torch::lazy::OpKind(at::aten::index_select), {input, index},
-           [&]() { return NodeOutputShape(input, index, dim); },
-           /*num_outputs=*/1, torch::lazy::MHash(dim)),
+IndexSelect::IndexSelect(const XlaValue& input, int64_t dim,
+                         const XlaValue& index)
+    : XlaNode(torch::lazy::OpKind(at::aten::index_select), {input, index},
+              [&]() { return NodeOutputShape(input, index, dim); },
+              /*num_outputs=*/1, torch::lazy::MHash(dim)),
       dim_(dim) {}
 
 torch::lazy::NodePtr IndexSelect::Clone(OpList operands) const {
@@ -40,7 +41,7 @@ XlaOpVector IndexSelect::Lower(LoweringContext* loctx) const {
 
 std::string IndexSelect::ToString() const {
   std::stringstream ss;
-  ss << Node::ToString() << ", dim=" << dim_;
+  ss << XlaNode::ToString() << ", dim=" << dim_;
   return ss.str();
 }
 

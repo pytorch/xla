@@ -6,9 +6,9 @@ namespace torch_xla {
 namespace ir {
 namespace ops {
 
-class Roll : public Node {
+class Roll : public XlaNode {
  public:
-  Roll(const Value& input, std::vector<int64_t> shifts,
+  Roll(const XlaValue& input, std::vector<int64_t> shifts,
        std::vector<int64_t> dims);
 
   torch::lazy::NodePtr Clone(OpList operands) const override;

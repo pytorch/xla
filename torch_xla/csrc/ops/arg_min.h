@@ -6,9 +6,9 @@ namespace torch_xla {
 namespace ir {
 namespace ops {
 
-class ArgMin : public Node {
+class ArgMin : public XlaNode {
  public:
-  ArgMin(const Value& input, int64_t dim, bool keepdim);
+  ArgMin(const XlaValue& input, int64_t dim, bool keepdim);
 
   std::string ToString() const override;
 

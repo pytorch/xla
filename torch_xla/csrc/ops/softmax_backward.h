@@ -6,9 +6,10 @@ namespace torch_xla {
 namespace ir {
 namespace ops {
 
-class SoftmaxBackward : public Node {
+class SoftmaxBackward : public XlaNode {
  public:
-  SoftmaxBackward(const Value& grad_output, const Value& output, int64_t dim);
+  SoftmaxBackward(const XlaValue& grad_output, const XlaValue& output,
+                  int64_t dim);
 
   torch::lazy::NodePtr Clone(OpList operands) const override;
 

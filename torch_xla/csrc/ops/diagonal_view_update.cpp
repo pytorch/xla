@@ -8,11 +8,11 @@ namespace torch_xla {
 namespace ir {
 namespace ops {
 
-DiagonalViewUpdate::DiagonalViewUpdate(const Value& target, const Value& input,
-                                       int64_t offset, int64_t dim1,
-                                       int64_t dim2)
-    : Node(xla_diagonal_view_update, {target, input}, target.xla_shape(),
-           /*num_outputs=*/1, torch::lazy::MHash(offset, dim1, dim2)),
+DiagonalViewUpdate::DiagonalViewUpdate(const XlaValue& target,
+                                       const XlaValue& input, int64_t offset,
+                                       int64_t dim1, int64_t dim2)
+    : XlaNode(xla_diagonal_view_update, {target, input}, target.xla_shape(),
+              /*num_outputs=*/1, torch::lazy::MHash(offset, dim1, dim2)),
       offset_(offset),
       dim1_(dim1),
       dim2_(dim2) {}
@@ -32,7 +32,7 @@ XlaOpVector DiagonalViewUpdate::Lower(LoweringContext* loctx) const {
 
 std::string DiagonalViewUpdate::ToString() const {
   std::stringstream ss;
-  ss << Node::ToString() << ", offset=" << offset_ << ", dim1=" << dim1_
+  ss << XlaNode::ToString() << ", offset=" << offset_ << ", dim1=" << dim1_
      << ", dim2=" << dim2_;
   return ss.str();
 }

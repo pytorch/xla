@@ -9,7 +9,7 @@ namespace ir {
 namespace ops {
 namespace {
 
-xla::Shape NodeOutputShape(const Value& input, int64_t dim, bool keepdim) {
+xla::Shape NodeOutputShape(const XlaValue& input, int64_t dim, bool keepdim) {
   auto lower_for_shape_fn =
       [&](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
     return BuildArgMin(operands[0], dim, keepdim);
@@ -19,10 +19,10 @@ xla::Shape NodeOutputShape(const Value& input, int64_t dim, bool keepdim) {
 
 }  // namespace
 
-ArgMin::ArgMin(const Value& input, int64_t dim, bool keepdim)
-    : Node(torch::lazy::OpKind(at::aten::argmin), {input},
-           [&]() { return NodeOutputShape(input, dim, keepdim); },
-           /*num_outputs=*/1, torch::lazy::MHash(dim, keepdim)),
+ArgMin::ArgMin(const XlaValue& input, int64_t dim, bool keepdim)
+    : XlaNode(torch::lazy::OpKind(at::aten::argmin), {input},
+              [&]() { return NodeOutputShape(input, dim, keepdim); },
+              /*num_outputs=*/1, torch::lazy::MHash(dim, keepdim)),
       dim_(dim),
       keepdim_(keepdim) {}
 
@@ -37,7 +37,7 @@ XlaOpVector ArgMin::Lower(LoweringContext* loctx) const {
 
 std::string ArgMin::ToString() const {
   std::stringstream ss;
-  ss << Node::ToString() << ", dim=" << dim_ << ", keepdim=" << keepdim_;
+  ss << XlaNode::ToString() << ", dim=" << dim_ << ", keepdim=" << keepdim_;
   return ss.str();
 }
 

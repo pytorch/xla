@@ -9,14 +9,14 @@ namespace torch_xla {
 namespace ir {
 namespace ops {
 
-UpsampleNearest::UpsampleNearest(const Value& input,
+UpsampleNearest::UpsampleNearest(const XlaValue& input,
                                  std::vector<int64_t> output_size)
-    : Node(torch::lazy::OpKind(at::aten::upsample_nearest2d), {input},
-           [&]() {
-             return resize::GetForwardOutputShape2d(input.xla_shape(),
-                                                    output_size);
-           },
-           /*num_outputs=*/1, torch::lazy::MHash(output_size)),
+    : XlaNode(torch::lazy::OpKind(at::aten::upsample_nearest2d), {input},
+              [&]() {
+                return resize::GetForwardOutputShape2d(input.xla_shape(),
+                                                       output_size);
+              },
+              /*num_outputs=*/1, torch::lazy::MHash(output_size)),
       output_size_(std::move(output_size)) {}
 
 torch::lazy::NodePtr UpsampleNearest::Clone(OpList operands) const {
@@ -34,7 +34,7 @@ XlaOpVector UpsampleNearest::Lower(LoweringContext* loctx) const {
 
 std::string UpsampleNearest::ToString() const {
   std::stringstream ss;
-  ss << Node::ToString() << ", output_size=("
+  ss << XlaNode::ToString() << ", output_size=("
      << absl::StrJoin(output_size_, ", ") << ")";
   return ss.str();
 }

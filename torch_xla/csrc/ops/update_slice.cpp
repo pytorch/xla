@@ -12,7 +12,7 @@ namespace ir {
 namespace ops {
 namespace {
 
-xla::Shape NodeOutputShape(const Value& input, const Value& source,
+xla::Shape NodeOutputShape(const XlaValue& input, const XlaValue& source,
                            absl::Span<const int64_t> base_indices) {
   auto lower_for_shape_fn =
       [&](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
@@ -24,11 +24,11 @@ xla::Shape NodeOutputShape(const Value& input, const Value& source,
 
 }  // namespace
 
-UpdateSlice::UpdateSlice(const Value& input, const Value& source,
+UpdateSlice::UpdateSlice(const XlaValue& input, const XlaValue& source,
                          absl::Span<const int64_t> base_indices)
-    : Node(xla_update_slice, {input, source},
-           [&]() { return NodeOutputShape(input, source, base_indices); },
-           /*num_outputs=*/1, torch::lazy::Hash(base_indices)),
+    : XlaNode(xla_update_slice, {input, source},
+              [&]() { return NodeOutputShape(input, source, base_indices); },
+              /*num_outputs=*/1, torch::lazy::Hash(base_indices)),
       base_indices_(base_indices.begin(), base_indices.end()) {}
 
 torch::lazy::NodePtr UpdateSlice::Clone(OpList operands) const {
@@ -45,7 +45,7 @@ XlaOpVector UpdateSlice::Lower(LoweringContext* loctx) const {
 
 std::string UpdateSlice::ToString() const {
   std::stringstream ss;
-  ss << Node::ToString() << ", base_indices=("
+  ss << XlaNode::ToString() << ", base_indices=("
      << absl::StrJoin(base_indices_, ", ") << ")";
   return ss.str();
 }

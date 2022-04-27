@@ -11,23 +11,23 @@ namespace ir {
 namespace ops {
 namespace {
 
-xla::Shape NodeOutputShape(const Value& growth_tracker,
-                           const Value& current_scale) {
+xla::Shape NodeOutputShape(const XlaValue& growth_tracker,
+                           const XlaValue& current_scale) {
   return xla::ShapeUtil::MakeTupleShape(
       {growth_tracker.xla_shape(), current_scale.xla_shape()});
 }
 
 }  // namespace
 
-AmpUpdateScale::AmpUpdateScale(const Value& current_scale,
-                               const Value& growth_tracker,
-                               const Value& found_inf,
+AmpUpdateScale::AmpUpdateScale(const XlaValue& current_scale,
+                               const XlaValue& growth_tracker,
+                               const XlaValue& found_inf,
                                double scale_growth_factor,
                                double scale_backoff_factor, int growth_interval)
-    : Node(torch::lazy::OpKind(at::aten::_amp_update_scale_),
-           {current_scale, growth_tracker, found_inf},
-           NodeOutputShape(growth_tracker, current_scale),
-           /*num_outputs=*/2),
+    : XlaNode(torch::lazy::OpKind(at::aten::_amp_update_scale_),
+              {current_scale, growth_tracker, found_inf},
+              NodeOutputShape(growth_tracker, current_scale),
+              /*num_outputs=*/2),
       scale_growth_factor_(scale_growth_factor),
       scale_backoff_factor_(scale_backoff_factor),
       growth_interval_(growth_interval) {}

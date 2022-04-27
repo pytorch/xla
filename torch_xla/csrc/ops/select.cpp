@@ -8,13 +8,14 @@ namespace torch_xla {
 namespace ir {
 namespace ops {
 
-Select::Select(const Value& input, int64_t dim, int64_t start, int64_t end,
+Select::Select(const XlaValue& input, int64_t dim, int64_t start, int64_t end,
                int64_t stride)
-    : Node(xla_select, {input},
-           [&]() {
-             return MakeSelectShape(input.xla_shape(), dim, start, end, stride);
-           },
-           /*num_outputs=*/1, torch::lazy::MHash(dim, start, end, stride)),
+    : XlaNode(xla_select, {input},
+              [&]() {
+                return MakeSelectShape(input.xla_shape(), dim, start, end,
+                                       stride);
+              },
+              /*num_outputs=*/1, torch::lazy::MHash(dim, start, end, stride)),
       dim_(dim),
       start_(start),
       end_(end),
@@ -33,7 +34,7 @@ XlaOpVector Select::Lower(LoweringContext* loctx) const {
 
 std::string Select::ToString() const {
   std::stringstream ss;
-  ss << Node::ToString() << ", dim=" << dim_ << ", start=" << start_
+  ss << XlaNode::ToString() << ", dim=" << dim_ << ", start=" << start_
      << ", end=" << end_ << ", stride=" << stride_;
   return ss.str();
 }

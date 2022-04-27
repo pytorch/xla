@@ -8,9 +8,10 @@ namespace torch_xla {
 namespace ir {
 namespace ops {
 
-Cholesky::Cholesky(const Value& input, bool lower)
-    : Node(torch::lazy::OpKind(at::aten::cholesky), {input}, input.xla_shape(),
-           /*num_outputs=*/1, torch::lazy::MHash(lower)),
+Cholesky::Cholesky(const XlaValue& input, bool lower)
+    : XlaNode(torch::lazy::OpKind(at::aten::cholesky), {input},
+              input.xla_shape(),
+              /*num_outputs=*/1, torch::lazy::MHash(lower)),
       lower_(lower) {}
 
 torch::lazy::NodePtr Cholesky::Clone(OpList operands) const {
@@ -26,7 +27,7 @@ XlaOpVector Cholesky::Lower(LoweringContext* loctx) const {
 
 std::string Cholesky::ToString() const {
   std::stringstream ss;
-  ss << Node::ToString() << ", lower=" << lower_;
+  ss << XlaNode::ToString() << ", lower=" << lower_;
   return ss.str();
 }
 

@@ -9,9 +9,9 @@ namespace torch_xla {
 namespace ir {
 namespace ops {
 
-class Any : public Node {
+class Any : public XlaNode {
  public:
-  Any(const Value& input, std::vector<int64_t> dimensions,
+  Any(const XlaValue& input, std::vector<int64_t> dimensions,
       bool keep_reduced_dimensions);
 
   std::string ToString() const override;

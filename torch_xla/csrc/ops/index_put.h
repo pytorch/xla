@@ -6,10 +6,10 @@ namespace torch_xla {
 namespace ir {
 namespace ops {
 
-class IndexPut : public Node {
+class IndexPut : public XlaNode {
  public:
-  IndexPut(const ir::Value& base, const ir::Value& indices, int64_t start_dim,
-           const ir::Value& values, bool accumulate);
+  IndexPut(const ir::XlaValue& base, const ir::XlaValue& indices,
+           int64_t start_dim, const ir::XlaValue& values, bool accumulate);
 
   std::string ToString() const override;
 

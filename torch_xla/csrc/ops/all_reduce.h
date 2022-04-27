@@ -7,10 +7,10 @@ namespace torch_xla {
 namespace ir {
 namespace ops {
 
-class AllReduce : public Node {
+class AllReduce : public XlaNode {
  public:
-  AllReduce(AllReduceType reduce_type, absl::Span<const Value> operands,
-            const Value& token, double scale,
+  AllReduce(AllReduceType reduce_type, absl::Span<const XlaValue> operands,
+            const XlaValue& token, double scale,
             std::vector<std::vector<int64_t>> groups, bool pin_layout);
 
   std::string ToString() const override;

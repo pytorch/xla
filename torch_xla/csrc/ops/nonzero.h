@@ -9,9 +9,9 @@ namespace ops {
 // This node has no metadata, so it could have been implemented as generic-op in
 // ops.cpp, but since this might require special handling from upper IR layers,
 // it gets its own IR node class.
-class NonZero : public Node {
+class NonZero : public XlaNode {
  public:
-  NonZero(const Value& input);
+  NonZero(const XlaValue& input);
 
   torch::lazy::NodePtr Clone(OpList operands) const override;
 

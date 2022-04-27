@@ -6,11 +6,11 @@ namespace torch_xla {
 namespace ir {
 namespace ops {
 
-// Node for the lower triangular part of a matrix (2-D tensor) or batch of
+// XlaNode for the lower triangular part of a matrix (2-D tensor) or batch of
 // matrices input.
-class Tril : public Node {
+class Tril : public XlaNode {
  public:
-  Tril(const Value& input, int64_t diagonal);
+  Tril(const XlaValue& input, int64_t diagonal);
 
   torch::lazy::NodePtr Clone(OpList operands) const override;
 

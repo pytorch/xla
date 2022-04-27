@@ -6,7 +6,7 @@ namespace torch_xla {
 namespace ir {
 namespace ops {
 
-class OptimizationBarrier : public Node {
+class OptimizationBarrier : public XlaNode {
  public:
   OptimizationBarrier(const OpList& inputs);
 

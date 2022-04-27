@@ -7,17 +7,18 @@ namespace torch_xla {
 namespace ir {
 namespace ops {
 
-IndexPut::IndexPut(const ir::Value& base, const ir::Value& indices,
-                   int64_t start_dim, const ir::Value& values, bool accumulate)
-    : Node(torch::lazy::OpKind(at::aten::index_put), {base, indices, values},
-           base.xla_shape(),
-           /*num_outputs=*/1, torch::lazy::MHash(start_dim, accumulate)),
+IndexPut::IndexPut(const ir::XlaValue& base, const ir::XlaValue& indices,
+                   int64_t start_dim, const ir::XlaValue& values,
+                   bool accumulate)
+    : XlaNode(torch::lazy::OpKind(at::aten::index_put), {base, indices, values},
+              base.xla_shape(),
+              /*num_outputs=*/1, torch::lazy::MHash(start_dim, accumulate)),
       start_dim_(start_dim),
       accumulate_(accumulate) {}
 
 std::string IndexPut::ToString() const {
   std::stringstream ss;
-  ss << Node::ToString() << ", start_dim=" << start_dim_
+  ss << XlaNode::ToString() << ", start_dim=" << start_dim_
      << ", accumulate=" << accumulate_;
   return ss.str();
 }

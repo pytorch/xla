@@ -23,7 +23,7 @@ class DumpUtil {
       absl::Span<const torch::lazy::Node* const> post_order,
       absl::Span<const torch::lazy::Node* const> roots);
 
-  static std::string ToHlo(absl::Span<const Value> values,
+  static std::string ToHlo(absl::Span<const XlaValue> values,
                            const torch::lazy::BackendDevice& device);
 };
 

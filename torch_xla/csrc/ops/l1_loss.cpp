@@ -11,7 +11,7 @@ namespace ir {
 namespace ops {
 namespace {
 
-xla::Shape NodeOutputShape(const Value& input, const Value& target,
+xla::Shape NodeOutputShape(const XlaValue& input, const XlaValue& target,
                            ReductionMode reduction) {
   auto lower_for_shape_fn =
       [&](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
@@ -23,11 +23,12 @@ xla::Shape NodeOutputShape(const Value& input, const Value& target,
 
 }  // namespace
 
-L1Loss::L1Loss(const Value& input, const Value& target, ReductionMode reduction)
-    : Node(torch::lazy::OpKind(at::aten::l1_loss), {input, target},
-           [&]() { return NodeOutputShape(input, target, reduction); },
-           /*num_outputs=*/1,
-           torch::lazy::MHash(torch::lazy::GetEnumValue(reduction))),
+L1Loss::L1Loss(const XlaValue& input, const XlaValue& target,
+               ReductionMode reduction)
+    : XlaNode(torch::lazy::OpKind(at::aten::l1_loss), {input, target},
+              [&]() { return NodeOutputShape(input, target, reduction); },
+              /*num_outputs=*/1,
+              torch::lazy::MHash(torch::lazy::GetEnumValue(reduction))),
       reduction_(reduction) {}
 
 torch::lazy::NodePtr L1Loss::Clone(OpList operands) const {
@@ -42,7 +43,7 @@ XlaOpVector L1Loss::Lower(LoweringContext* loctx) const {
 
 std::string L1Loss::ToString() const {
   std::stringstream ss;
-  ss << Node::ToString()
+  ss << XlaNode::ToString()
      << ", reduction=" << torch::lazy::GetEnumValue(reduction_);
   return ss.str();
 }

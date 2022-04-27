@@ -12,7 +12,7 @@ namespace ir {
 namespace ops {
 namespace {
 
-xla::Shape NodeOutputShape(const Value& input,
+xla::Shape NodeOutputShape(const XlaValue& input,
                            absl::Span<const int64_t> base_indices,
                            absl::Span<const int64_t> sizes) {
   auto lower_for_shape_fn =
@@ -24,12 +24,12 @@ xla::Shape NodeOutputShape(const Value& input,
 
 }  // namespace
 
-GenericSlice::GenericSlice(const Value& input,
+GenericSlice::GenericSlice(const XlaValue& input,
                            absl::Span<const int64_t> base_indices,
                            absl::Span<const int64_t> sizes)
-    : Node(xla_generic_slice, {input},
-           [&]() { return NodeOutputShape(input, base_indices, sizes); },
-           /*num_outputs=*/1, torch::lazy::MHash(base_indices, sizes)),
+    : XlaNode(xla_generic_slice, {input},
+              [&]() { return NodeOutputShape(input, base_indices, sizes); },
+              /*num_outputs=*/1, torch::lazy::MHash(base_indices, sizes)),
       base_indices_(base_indices.begin(), base_indices.end()),
       sizes_(sizes.begin(), sizes.end()) {}
 
@@ -45,7 +45,7 @@ XlaOpVector GenericSlice::Lower(LoweringContext* loctx) const {
 
 std::string GenericSlice::ToString() const {
   std::stringstream ss;
-  ss << Node::ToString() << ", base_indices=("
+  ss << XlaNode::ToString() << ", base_indices=("
      << absl::StrJoin(base_indices_, ", ") << "), sizes=("
      << absl::StrJoin(sizes_, ", ") << ")";
   return ss.str();

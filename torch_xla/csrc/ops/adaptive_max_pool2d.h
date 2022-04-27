@@ -8,9 +8,9 @@ namespace torch_xla {
 namespace ir {
 namespace ops {
 
-class AdaptiveMaxPool2d : public Node {
+class AdaptiveMaxPool2d : public XlaNode {
  public:
-  AdaptiveMaxPool2d(const Value& input, std::vector<int64_t> output_size);
+  AdaptiveMaxPool2d(const XlaValue& input, std::vector<int64_t> output_size);
 
   torch::lazy::NodePtr Clone(OpList operands) const override;
 

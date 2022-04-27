@@ -6,9 +6,9 @@ namespace torch_xla {
 namespace ir {
 namespace ops {
 
-class Cholesky : public Node {
+class Cholesky : public XlaNode {
  public:
-  Cholesky(const Value& input, bool lower);
+  Cholesky(const XlaValue& input, bool lower);
 
   std::string ToString() const override;
 

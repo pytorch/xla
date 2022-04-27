@@ -10,7 +10,8 @@ namespace ir {
 namespace ops {
 namespace {
 
-xla::Shape NodeOutputShape(const Value& input, std::vector<int64_t>& dimensions,
+xla::Shape NodeOutputShape(const XlaValue& input,
+                           std::vector<int64_t>& dimensions,
                            bool keep_reduced_dimensions, int64_t correction) {
   auto lower_for_shape_fn_std_mean =
       [&](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
@@ -25,15 +26,16 @@ xla::Shape NodeOutputShape(const Value& input, std::vector<int64_t>& dimensions,
 
 }  // namespace
 
-StdMean::StdMean(const Value& input, std::vector<int64_t> dimensions,
+StdMean::StdMean(const XlaValue& input, std::vector<int64_t> dimensions,
                  int64_t correction, bool keep_reduced_dimensions)
-    : Node(torch::lazy::OpKind(at::aten::std_mean), {input},
-           [&]() {
-             return NodeOutputShape(input, dimensions, keep_reduced_dimensions,
-                                    correction);
-           },
-           /*num_outputs=*/2,
-           torch::lazy::MHash(dimensions, correction, keep_reduced_dimensions)),
+    : XlaNode(
+          torch::lazy::OpKind(at::aten::std_mean), {input},
+          [&]() {
+            return NodeOutputShape(input, dimensions, keep_reduced_dimensions,
+                                   correction);
+          },
+          /*num_outputs=*/2,
+          torch::lazy::MHash(dimensions, correction, keep_reduced_dimensions)),
       dimensions_(std::move(dimensions)),
       correction_(correction),
       keep_reduced_dimensions_(keep_reduced_dimensions) {}
@@ -53,7 +55,8 @@ XlaOpVector StdMean::Lower(LoweringContext* loctx) const {
 
 std::string StdMean::ToString() const {
   std::stringstream ss;
-  ss << Node::ToString() << ", dimensions=(" << absl::StrJoin(dimensions_, ", ")
+  ss << XlaNode::ToString() << ", dimensions=("
+     << absl::StrJoin(dimensions_, ", ")
      << "), keep_reduced_dimensions=" << keep_reduced_dimensions_
      << ", correction=" << correction_;
   return ss.str();

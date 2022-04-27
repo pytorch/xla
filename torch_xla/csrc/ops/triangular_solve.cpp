@@ -64,7 +64,7 @@ std::vector<xla::XlaOp> LowerTriangularSolve(xla::XlaOp rhs, xla::XlaOp lhs,
   return {solution, lhs_broadcasted};
 }
 
-xla::Shape NodeOutputShape(const Value& rhs, const Value& lhs) {
+xla::Shape NodeOutputShape(const XlaValue& rhs, const XlaValue& lhs) {
   std::pair<xla::Shape, xla::Shape> broadcasted_shapes =
       InferTriangularSolveShape(rhs.xla_shape(), lhs.xla_shape());
   return xla::ShapeUtil::MakeTupleShape(
@@ -73,13 +73,13 @@ xla::Shape NodeOutputShape(const Value& rhs, const Value& lhs) {
 
 }  // namespace
 
-TriangularSolve::TriangularSolve(const Value& rhs, const Value& lhs,
+TriangularSolve::TriangularSolve(const XlaValue& rhs, const XlaValue& lhs,
                                  bool left_side, bool lower, bool transpose,
                                  bool unit_diagonal)
-    : Node(torch::lazy::OpKind(at::aten::triangular_solve), {rhs, lhs},
-           [&]() { return NodeOutputShape(rhs, lhs); },
-           /*num_outputs=*/2,
-           torch::lazy::MHash(left_side, lower, transpose, unit_diagonal)),
+    : XlaNode(torch::lazy::OpKind(at::aten::triangular_solve), {rhs, lhs},
+              [&]() { return NodeOutputShape(rhs, lhs); },
+              /*num_outputs=*/2,
+              torch::lazy::MHash(left_side, lower, transpose, unit_diagonal)),
       left_side_(left_side),
       lower_(lower),
       transpose_(transpose),
@@ -101,8 +101,9 @@ XlaOpVector TriangularSolve::Lower(LoweringContext* loctx) const {
 
 std::string TriangularSolve::ToString() const {
   std::stringstream ss;
-  ss << Node::ToString() << ", left_side=" << left_side_ << ", lower=" << lower_
-     << ", transpose=" << transpose_ << ", unit_diagonal=" << unit_diagonal_;
+  ss << XlaNode::ToString() << ", left_side=" << left_side_
+     << ", lower=" << lower_ << ", transpose=" << transpose_
+     << ", unit_diagonal=" << unit_diagonal_;
   return ss.str();
 }
 

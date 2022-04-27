@@ -7,9 +7,10 @@ namespace torch_xla {
 namespace ir {
 namespace ops {
 
-Threshold::Threshold(const Value& input, float threshold, float value)
-    : Node(torch::lazy::OpKind(at::aten::threshold), {input}, input.xla_shape(),
-           /*num_outputs=*/1, torch::lazy::MHash(threshold, value)),
+Threshold::Threshold(const XlaValue& input, float threshold, float value)
+    : XlaNode(torch::lazy::OpKind(at::aten::threshold), {input},
+              input.xla_shape(),
+              /*num_outputs=*/1, torch::lazy::MHash(threshold, value)),
       threshold_(threshold),
       value_(value) {}
 
@@ -25,7 +26,7 @@ XlaOpVector Threshold::Lower(LoweringContext* loctx) const {
 
 std::string Threshold::ToString() const {
   std::stringstream ss;
-  ss << Node::ToString() << ", threshold=" << threshold_
+  ss << XlaNode::ToString() << ", threshold=" << threshold_
      << ", value=" << value_;
   return ss.str();
 }

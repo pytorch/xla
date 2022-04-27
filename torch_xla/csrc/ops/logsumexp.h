@@ -10,9 +10,9 @@ namespace torch_xla {
 namespace ir {
 namespace ops {
 
-class Logsumexp : public Node {
+class Logsumexp : public XlaNode {
  public:
-  Logsumexp(const Value& input, std::vector<int64_t> dimensions,
+  Logsumexp(const XlaValue& input, std::vector<int64_t> dimensions,
             bool keep_reduced_dimensions);
 
   std::string ToString() const override;

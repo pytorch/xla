@@ -6,9 +6,9 @@ namespace torch_xla {
 namespace ir {
 namespace ops {
 
-class Linspace : public Node {
+class Linspace : public XlaNode {
  public:
-  Linspace(const Value& start, const Value& end, const int64_t steps);
+  Linspace(const XlaValue& start, const XlaValue& end, const int64_t steps);
 
   std::string ToString() const override;
 

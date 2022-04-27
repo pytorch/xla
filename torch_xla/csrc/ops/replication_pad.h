@@ -7,9 +7,9 @@ namespace torch_xla {
 namespace ir {
 namespace ops {
 
-class ReplicationPad : public Node {
+class ReplicationPad : public XlaNode {
  public:
-  ReplicationPad(const Value& input, std::vector<int64_t> padding);
+  ReplicationPad(const XlaValue& input, std::vector<int64_t> padding);
 
   torch::lazy::NodePtr Clone(OpList operands) const override;
 

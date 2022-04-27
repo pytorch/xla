@@ -11,13 +11,13 @@ namespace torch_xla {
 namespace ir {
 namespace ops {
 
-Diagonal::Diagonal(const Value& input, int64_t offset, int64_t dim1,
+Diagonal::Diagonal(const XlaValue& input, int64_t offset, int64_t dim1,
                    int64_t dim2)
-    : Node(torch::lazy::OpKind(at::aten::diagonal), {input},
-           [&]() {
-             return MakeDiagonalShape(input.xla_shape(), offset, dim1, dim2);
-           },
-           /*num_outputs=*/1, torch::lazy::MHash(offset, dim1, dim2)),
+    : XlaNode(torch::lazy::OpKind(at::aten::diagonal), {input},
+              [&]() {
+                return MakeDiagonalShape(input.xla_shape(), offset, dim1, dim2);
+              },
+              /*num_outputs=*/1, torch::lazy::MHash(offset, dim1, dim2)),
       offset_(offset),
       dim1_(dim1),
       dim2_(dim2) {}
@@ -34,7 +34,7 @@ XlaOpVector Diagonal::Lower(LoweringContext* loctx) const {
 
 std::string Diagonal::ToString() const {
   std::stringstream ss;
-  ss << Node::ToString() << ", offset=" << offset_ << ", dim1=" << dim1_
+  ss << XlaNode::ToString() << ", offset=" << offset_ << ", dim1=" << dim1_
      << ", dim2=" << dim2_;
   return ss.str();
 }

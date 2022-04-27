@@ -10,8 +10,8 @@ namespace ir {
 namespace ops {
 namespace {
 
-xla::Shape NodeOutputShape(const Value& grad_output, const Value& input,
-                           const Value& indices,
+xla::Shape NodeOutputShape(const XlaValue& grad_output, const XlaValue& input,
+                           const XlaValue& indices,
                            absl::Span<const int64_t> output_size) {
   auto shape_fn = [&](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
     return BuildMaxUnpoolNdBackward(operands[0], operands[1], operands[2],
@@ -36,16 +36,17 @@ c10::Symbol MaxUnpoolNdBackwardSymbol(int64_t spatial_dim_count) {
 
 }  // namespace
 
-MaxUnpoolNdBackward::MaxUnpoolNdBackward(const Value& grad_output,
-                                         const Value& input,
-                                         const Value& indices,
+MaxUnpoolNdBackward::MaxUnpoolNdBackward(const XlaValue& grad_output,
+                                         const XlaValue& input,
+                                         const XlaValue& indices,
                                          std::vector<int64_t> output_size)
-    : Node(torch::lazy::OpKind(MaxUnpoolNdBackwardSymbol(output_size.size())),
-           {grad_output, input, indices},
-           [&]() {
-             return NodeOutputShape(grad_output, input, indices, output_size);
-           },
-           /*num_outputs=*/1, torch::lazy::MHash(output_size)),
+    : XlaNode(
+          torch::lazy::OpKind(MaxUnpoolNdBackwardSymbol(output_size.size())),
+          {grad_output, input, indices},
+          [&]() {
+            return NodeOutputShape(grad_output, input, indices, output_size);
+          },
+          /*num_outputs=*/1, torch::lazy::MHash(output_size)),
       output_size_(std::move(output_size)) {}
 
 torch::lazy::NodePtr MaxUnpoolNdBackward::Clone(OpList operands) const {
@@ -64,7 +65,7 @@ XlaOpVector MaxUnpoolNdBackward::Lower(LoweringContext* loctx) const {
 
 std::string MaxUnpoolNdBackward::ToString() const {
   std::stringstream ss;
-  ss << Node::ToString() << ", output_size=("
+  ss << XlaNode::ToString() << ", output_size=("
      << absl::StrJoin(output_size_, ", ") << ")";
   return ss.str();
 }

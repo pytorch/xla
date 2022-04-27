@@ -9,8 +9,9 @@
 namespace torch_xla {
 namespace ir {
 
-torch::lazy::NodePtr operator+(const Value& node1, const Value& node2) {
-  auto lower_fn = [](const Node& node, LoweringContext* loctx) -> XlaOpVector {
+torch::lazy::NodePtr operator+(const XlaValue& node1, const XlaValue& node2) {
+  auto lower_fn = [](const XlaNode& node,
+                     LoweringContext* loctx) -> XlaOpVector {
     xla::XlaOp op0 = loctx->GetOutputOp(node.operand(0));
     xla::XlaOp op1 = loctx->GetOutputOp(node.operand(1));
     return node.ReturnOp(XlaHelpers::PromotedAdd(op0, op1), loctx);
@@ -21,8 +22,9 @@ torch::lazy::NodePtr operator+(const Value& node1, const Value& node2) {
                         std::move(lower_fn));
 }
 
-torch::lazy::NodePtr operator-(const Value& node1, const Value& node2) {
-  auto lower_fn = [](const Node& node, LoweringContext* loctx) -> XlaOpVector {
+torch::lazy::NodePtr operator-(const XlaValue& node1, const XlaValue& node2) {
+  auto lower_fn = [](const XlaNode& node,
+                     LoweringContext* loctx) -> XlaOpVector {
     xla::XlaOp op0 = loctx->GetOutputOp(node.operand(0));
     xla::XlaOp op1 = loctx->GetOutputOp(node.operand(1));
     return node.ReturnOp(XlaHelpers::PromotedSub(op0, op1), loctx);
@@ -33,8 +35,9 @@ torch::lazy::NodePtr operator-(const Value& node1, const Value& node2) {
                         std::move(lower_fn));
 }
 
-torch::lazy::NodePtr operator*(const Value& node1, const Value& node2) {
-  auto lower_fn = [](const Node& node, LoweringContext* loctx) -> XlaOpVector {
+torch::lazy::NodePtr operator*(const XlaValue& node1, const XlaValue& node2) {
+  auto lower_fn = [](const XlaNode& node,
+                     LoweringContext* loctx) -> XlaOpVector {
     xla::XlaOp op0 = loctx->GetOutputOp(node.operand(0));
     xla::XlaOp op1 = loctx->GetOutputOp(node.operand(1));
     return node.ReturnOp(XlaHelpers::PromotedMul(op0, op1), loctx);
@@ -45,8 +48,9 @@ torch::lazy::NodePtr operator*(const Value& node1, const Value& node2) {
                         std::move(lower_fn));
 }
 
-torch::lazy::NodePtr operator/(const Value& node1, const Value& node2) {
-  auto lower_fn = [](const Node& node, LoweringContext* loctx) -> XlaOpVector {
+torch::lazy::NodePtr operator/(const XlaValue& node1, const XlaValue& node2) {
+  auto lower_fn = [](const XlaNode& node,
+                     LoweringContext* loctx) -> XlaOpVector {
     xla::XlaOp op0 = loctx->GetOutputOp(node.operand(0));
     xla::XlaOp op1 = loctx->GetOutputOp(node.operand(1));
     return node.ReturnOp(XlaHelpers::PromotedDiv(op0, op1), loctx);

@@ -9,9 +9,9 @@ namespace ops {
 // This node has no metadata, so it could have been implemented as generic-op in
 // ops.cpp, but since this might require special handling from upper IR layers,
 // it gets its own IR node class.
-class MaskedSelect : public Node {
+class MaskedSelect : public XlaNode {
  public:
-  MaskedSelect(const Value& input, const Value& mask);
+  MaskedSelect(const XlaValue& input, const XlaValue& mask);
 
   torch::lazy::NodePtr Clone(OpList operands) const override;
 

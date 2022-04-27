@@ -8,9 +8,9 @@ namespace torch_xla {
 namespace ir {
 namespace ops {
 
-class HardtanhBackward : public Node {
+class HardtanhBackward : public XlaNode {
  public:
-  HardtanhBackward(const Value& grad_output, const Value& input,
+  HardtanhBackward(const XlaValue& grad_output, const XlaValue& input,
                    const at::Scalar& min_val, const at::Scalar& max_val);
 
   std::string ToString() const override;

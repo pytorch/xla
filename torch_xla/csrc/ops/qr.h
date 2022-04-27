@@ -6,9 +6,9 @@ namespace torch_xla {
 namespace ir {
 namespace ops {
 
-class QR : public Node {
+class QR : public XlaNode {
  public:
-  QR(const Value& input, bool some);
+  QR(const XlaValue& input, bool some);
 
   std::string ToString() const override;
 

@@ -7,10 +7,10 @@ namespace torch_xla {
 namespace ir {
 namespace ops {
 
-LeakyRelu::LeakyRelu(const Value& input, double negative_slope)
-    : Node(torch::lazy::OpKind(at::aten::leaky_relu), {input},
-           input.xla_shape(),
-           /*num_outputs=*/1, torch::lazy::MHash(negative_slope)),
+LeakyRelu::LeakyRelu(const XlaValue& input, double negative_slope)
+    : XlaNode(torch::lazy::OpKind(at::aten::leaky_relu), {input},
+              input.xla_shape(),
+              /*num_outputs=*/1, torch::lazy::MHash(negative_slope)),
       negative_slope_(negative_slope) {}
 
 torch::lazy::NodePtr LeakyRelu::Clone(OpList operands) const {
@@ -25,7 +25,7 @@ XlaOpVector LeakyRelu::Lower(LoweringContext* loctx) const {
 
 std::string LeakyRelu::ToString() const {
   std::stringstream ss;
-  ss << Node::ToString() << ", negative_slope=" << negative_slope_;
+  ss << XlaNode::ToString() << ", negative_slope=" << negative_slope_;
   return ss.str();
 }
 

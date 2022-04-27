@@ -8,11 +8,12 @@ namespace torch_xla {
 namespace ir {
 namespace ops {
 
-class NllLossBackward : public Node {
+class NllLossBackward : public XlaNode {
  public:
-  NllLossBackward(const Value& grad_output, const Value& logits,
-                  const Value& labels, const absl::optional<Value>& weight,
-                  const absl::optional<Value>& total_weight,
+  NllLossBackward(const XlaValue& grad_output, const XlaValue& logits,
+                  const XlaValue& labels,
+                  const absl::optional<XlaValue>& weight,
+                  const absl::optional<XlaValue>& total_weight,
                   ReductionMode reduction, int ignore_index);
 
   std::string ToString() const override;

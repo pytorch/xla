@@ -7,9 +7,9 @@ namespace torch_xla {
 namespace ir {
 namespace ops {
 
-Tril::Tril(const Value& input, int64_t diagonal)
-    : Node(torch::lazy::OpKind(at::aten::tril), {input}, input.xla_shape(),
-           /*num_outputs=*/1, torch::lazy::MHash(diagonal)),
+Tril::Tril(const XlaValue& input, int64_t diagonal)
+    : XlaNode(torch::lazy::OpKind(at::aten::tril), {input}, input.xla_shape(),
+              /*num_outputs=*/1, torch::lazy::MHash(diagonal)),
       diagonal_(diagonal) {}
 
 torch::lazy::NodePtr Tril::Clone(OpList operands) const {
@@ -24,7 +24,7 @@ XlaOpVector Tril::Lower(LoweringContext* loctx) const {
 
 std::string Tril::ToString() const {
   std::stringstream ss;
-  ss << Node::ToString() << ", diagonal=" << diagonal_;
+  ss << XlaNode::ToString() << ", diagonal=" << diagonal_;
   return ss.str();
 }
 

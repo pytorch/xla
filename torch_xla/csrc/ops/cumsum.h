@@ -9,9 +9,10 @@ namespace torch_xla {
 namespace ir {
 namespace ops {
 
-class CumSum : public Node {
+class CumSum : public XlaNode {
  public:
-  CumSum(const Value& input, int64_t dim, c10::optional<at::ScalarType> dtype);
+  CumSum(const XlaValue& input, int64_t dim,
+         c10::optional<at::ScalarType> dtype);
 
   std::string ToString() const override;
 

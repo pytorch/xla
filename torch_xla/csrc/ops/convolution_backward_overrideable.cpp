@@ -11,8 +11,8 @@ namespace ir {
 namespace ops {
 namespace {
 
-xla::Shape NodeOutputShape(const Value& grad_output, const Value& input,
-                           const Value& weight,
+xla::Shape NodeOutputShape(const XlaValue& grad_output, const XlaValue& input,
+                           const XlaValue& weight,
                            absl::Span<const int64_t> stride,
                            absl::Span<const int64_t> padding,
                            absl::Span<const int64_t> dilation, bool transposed,
@@ -37,20 +37,20 @@ xla::Shape NodeOutputShape(const Value& grad_output, const Value& input,
 }  // namespace
 
 ConvolutionBackwardOverrideable::ConvolutionBackwardOverrideable(
-    const Value& grad_output, const Value& input, const Value& weight,
+    const XlaValue& grad_output, const XlaValue& input, const XlaValue& weight,
     std::vector<int64_t> stride, std::vector<int64_t> padding,
     std::vector<int64_t> dilation, bool transposed,
     std::vector<int64_t> output_padding, int64_t groups)
-    : Node(torch::lazy::OpKind(at::aten::convolution_backward_overrideable),
-           {grad_output, input, weight},
-           [&]() {
-             return NodeOutputShape(grad_output, input, weight, stride, padding,
-                                    dilation, transposed, output_padding,
-                                    groups);
-           },
-           /*num_outputs=*/3,
-           torch::lazy::MHash(stride, padding, dilation, transposed,
-                              output_padding, groups)),
+    : XlaNode(torch::lazy::OpKind(at::aten::convolution_backward_overrideable),
+              {grad_output, input, weight},
+              [&]() {
+                return NodeOutputShape(grad_output, input, weight, stride,
+                                       padding, dilation, transposed,
+                                       output_padding, groups);
+              },
+              /*num_outputs=*/3,
+              torch::lazy::MHash(stride, padding, dilation, transposed,
+                                 output_padding, groups)),
       stride_(std::move(stride)),
       padding_(std::move(padding)),
       dilation_(std::move(dilation)),
@@ -80,7 +80,7 @@ XlaOpVector ConvolutionBackwardOverrideable::Lower(
 
 std::string ConvolutionBackwardOverrideable::ToString() const {
   std::stringstream ss;
-  ss << Node::ToString() << ", stride=(" << absl::StrJoin(stride_, ", ")
+  ss << XlaNode::ToString() << ", stride=(" << absl::StrJoin(stride_, ", ")
      << "), padding=(" << absl::StrJoin(padding_, ", ") << "), dilation=("
      << absl::StrJoin(dilation_, ", ") << "), transpose=" << transposed_
      << ", output_padding=(" << absl::StrJoin(output_padding_, ", ")

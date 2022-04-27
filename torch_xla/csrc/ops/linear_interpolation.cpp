@@ -8,10 +8,11 @@ namespace torch_xla {
 namespace ir {
 namespace ops {
 
-LinearInterpolation::LinearInterpolation(const Value& value,
-                                         const Value& new_value, double alpha)
-    : Node(xla_moving_average, {value, new_value}, value.xla_shape(),
-           /*num_outputs=*/1, torch::lazy::MHash(alpha)),
+LinearInterpolation::LinearInterpolation(const XlaValue& value,
+                                         const XlaValue& new_value,
+                                         double alpha)
+    : XlaNode(xla_moving_average, {value, new_value}, value.xla_shape(),
+              /*num_outputs=*/1, torch::lazy::MHash(alpha)),
       alpha_(alpha) {}
 
 torch::lazy::NodePtr LinearInterpolation::Clone(OpList operands) const {
@@ -28,7 +29,7 @@ XlaOpVector LinearInterpolation::Lower(LoweringContext* loctx) const {
 
 std::string LinearInterpolation::ToString() const {
   std::stringstream ss;
-  ss << Node::ToString() << ", alpha=" << alpha_;
+  ss << XlaNode::ToString() << ", alpha=" << alpha_;
   return ss.str();
 }
 
