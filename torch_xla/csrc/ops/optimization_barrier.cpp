@@ -43,4 +43,4 @@ XlaOpVector OptimizationBarrier::Lower(LoweringContext* loctx) const {
   return ReturnOps({outputs}, loctx);
 }
 
-} // namespace torch_xla
+}  // namespace torch_xla

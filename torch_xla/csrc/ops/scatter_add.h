@@ -21,4 +21,4 @@ class ScatterAdd : public XlaNode {
   int64_t dim_;
 };
 
-} // namespace torch_xla
+}  // namespace torch_xla

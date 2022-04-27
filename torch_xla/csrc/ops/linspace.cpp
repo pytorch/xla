@@ -18,7 +18,8 @@ Linspace::Linspace(const XlaValue& start, const XlaValue& end, int64_t steps)
       steps_(steps) {}
 
 torch::lazy::NodePtr Linspace::Clone(OpList operands) const {
-  return torch::lazy::MakeNode<Linspace>(operands.at(0), operands.at(1), steps_);
+  return torch::lazy::MakeNode<Linspace>(operands.at(0), operands.at(1),
+                                         steps_);
 }
 
 XlaOpVector Linspace::Lower(LoweringContext* loctx) const {
@@ -33,4 +34,4 @@ std::string Linspace::ToString() const {
   return ss.str();
 }
 
-} // namespace torch_xla
+}  // namespace torch_xla

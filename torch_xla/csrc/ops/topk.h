@@ -33,4 +33,4 @@ class TopK : public XlaNode {
   bool stable_;
 };
 
-} // namespace torch_xla
+}  // namespace torch_xla

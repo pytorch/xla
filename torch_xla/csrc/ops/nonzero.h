@@ -16,4 +16,4 @@ class NonZero : public XlaNode {
   XlaOpVector Lower(LoweringContext* loctx) const override;
 };
 
-} // namespace torch_xla
+}  // namespace torch_xla

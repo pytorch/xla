@@ -19,8 +19,8 @@ Unselect::Unselect(const XlaValue& target, const XlaValue& source, int64_t dim,
       stride_(stride) {}
 
 torch::lazy::NodePtr Unselect::Clone(OpList operands) const {
-  return torch::lazy::MakeNode<Unselect>(operands.at(0), operands.at(1), dim_, start_,
-                                end_, stride_);
+  return torch::lazy::MakeNode<Unselect>(operands.at(0), operands.at(1), dim_,
+                                         start_, end_, stride_);
 }
 
 XlaOpVector Unselect::Lower(LoweringContext* loctx) const {
@@ -38,4 +38,4 @@ std::string Unselect::ToString() const {
   return ss.str();
 }
 
-} // namespace torch_xla
+}  // namespace torch_xla

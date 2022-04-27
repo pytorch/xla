@@ -1125,4 +1125,4 @@ torch::lazy::NodePtr Softplus(const XlaValue& input, const XlaValue& beta,
                    std::move(lower_fn));
 }
 
-} // namespace torch_xla
+}  // namespace torch_xla

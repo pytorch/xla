@@ -22,4 +22,4 @@ class Expand : public XlaNode {
   std::vector<int64_t> size_;
 };
 
-} // namespace torch_xla
+}  // namespace torch_xla

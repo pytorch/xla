@@ -20,4 +20,4 @@ class Constant : public XlaNode {
   xla::Literal value_;
 };
 
-} // namespace torch_xla
+}  // namespace torch_xla

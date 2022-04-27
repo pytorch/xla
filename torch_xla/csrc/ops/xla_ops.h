@@ -51,4 +51,4 @@ extern const OpKindWrapper xla_tensor_data;
 extern const OpKindWrapper xla_unselect;
 extern const OpKindWrapper xla_update_slice;
 
-} // namespace torch_xla
+}  // namespace torch_xla

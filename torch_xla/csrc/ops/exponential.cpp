@@ -12,7 +12,8 @@ Exponential::Exponential(const XlaValue& lambda, const XlaValue& seed,
               std::move(shape)) {}
 
 torch::lazy::NodePtr Exponential::Clone(OpList operands) const {
-  return torch::lazy::MakeNode<Exponential>(operands.at(0), operands.at(1), xla_shape());
+  return torch::lazy::MakeNode<Exponential>(operands.at(0), operands.at(1),
+                                            xla_shape());
 }
 
 XlaOpVector Exponential::Lower(LoweringContext* loctx) const {
@@ -28,4 +29,4 @@ XlaOpVector Exponential::Lower(LoweringContext* loctx) const {
       loctx);
 }
 
-} // namespace torch_xla
+}  // namespace torch_xla

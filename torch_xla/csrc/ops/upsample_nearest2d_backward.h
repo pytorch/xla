@@ -27,4 +27,4 @@ class UpsampleNearestBackward : public XlaNode {
   std::vector<int64_t> input_size_;
 };
 
-} // namespace torch_xla
+}  // namespace torch_xla

@@ -26,4 +26,4 @@ class NativeBatchNormForward : public XlaNode {
   double eps_;
 };
 
-} // namespace torch_xla
+}  // namespace torch_xla

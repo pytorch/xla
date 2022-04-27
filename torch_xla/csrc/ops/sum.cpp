@@ -49,7 +49,7 @@ Sum::Sum(const XlaValue& input, std::vector<int64_t> dimensions,
 
 torch::lazy::NodePtr Sum::Clone(OpList operands) const {
   return torch::lazy::MakeNode<Sum>(operands.at(0), dimensions_,
-                           keep_reduced_dimensions_, dtype_);
+                                    keep_reduced_dimensions_, dtype_);
 }
 
 XlaOpVector Sum::Lower(LoweringContext* loctx) const {
@@ -67,4 +67,4 @@ std::string Sum::ToString() const {
   return ss.str();
 }
 
-} // namespace torch_xla
+}  // namespace torch_xla

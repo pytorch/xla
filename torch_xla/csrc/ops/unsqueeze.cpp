@@ -36,4 +36,4 @@ std::string Unsqueeze::ToString() const {
   return ss.str();
 }
 
-} // namespace torch_xla
+}  // namespace torch_xla

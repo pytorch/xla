@@ -20,4 +20,4 @@ class QR : public XlaNode {
   bool some_;
 };
 
-} // namespace torch_xla
+}  // namespace torch_xla

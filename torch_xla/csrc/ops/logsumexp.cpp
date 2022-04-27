@@ -37,7 +37,7 @@ Logsumexp::Logsumexp(const XlaValue& input, std::vector<int64_t> dimensions,
 
 torch::lazy::NodePtr Logsumexp::Clone(OpList operands) const {
   return torch::lazy::MakeNode<Logsumexp>(operands.at(0), dimensions_,
-                                 keep_reduced_dimensions_);
+                                          keep_reduced_dimensions_);
 }
 
 XlaOpVector Logsumexp::Lower(LoweringContext* loctx) const {
@@ -54,4 +54,4 @@ std::string Logsumexp::ToString() const {
   return ss.str();
 }
 
-} // namespace torch_xla
+}  // namespace torch_xla

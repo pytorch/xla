@@ -24,4 +24,4 @@ class Threshold : public XlaNode {
   float value_;
 };
 
-} // namespace torch_xla
+}  // namespace torch_xla

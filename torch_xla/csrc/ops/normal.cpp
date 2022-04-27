@@ -11,7 +11,8 @@ Normal::Normal(const XlaValue& mean, const XlaValue& std, const XlaValue& seed)
               mean.xla_shape()) {}
 
 torch::lazy::NodePtr Normal::Clone(OpList operands) const {
-  return torch::lazy::MakeNode<Normal>(operands.at(0), operands.at(1), operands.at(2));
+  return torch::lazy::MakeNode<Normal>(operands.at(0), operands.at(1),
+                                       operands.at(2));
 }
 
 XlaOpVector Normal::Lower(LoweringContext* loctx) const {
@@ -22,4 +23,4 @@ XlaOpVector Normal::Lower(LoweringContext* loctx) const {
       RngNormal(rng_seed, XlaHelpers::ShapeOfXlaOp(mean), mean, std), loctx);
 }
 
-} // namespace torch_xla
+}  // namespace torch_xla

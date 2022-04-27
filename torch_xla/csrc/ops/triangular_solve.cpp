@@ -85,8 +85,8 @@ TriangularSolve::TriangularSolve(const XlaValue& rhs, const XlaValue& lhs,
 
 torch::lazy::NodePtr TriangularSolve::Clone(OpList operands) const {
   return torch::lazy::MakeNode<TriangularSolve>(operands.at(0), operands.at(1),
-                                       left_side_, lower_, transpose_,
-                                       unit_diagonal_);
+                                                left_side_, lower_, transpose_,
+                                                unit_diagonal_);
 }
 
 XlaOpVector TriangularSolve::Lower(LoweringContext* loctx) const {
@@ -105,4 +105,4 @@ std::string TriangularSolve::ToString() const {
   return ss.str();
 }
 
-} // namespace torch_xla
+}  // namespace torch_xla

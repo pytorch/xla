@@ -23,4 +23,4 @@ class SVD : public XlaNode {
   bool compute_uv_;
 };
 
-} // namespace torch_xla
+}  // namespace torch_xla

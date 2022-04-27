@@ -18,4 +18,4 @@ xla::Shape InferOutputShape(absl::Span<const xla::Shape> input_shapes,
   return XlaHelpers::ShapeOfXlaOp(result);
 }
 
-} // namespace torch_xla
+}  // namespace torch_xla

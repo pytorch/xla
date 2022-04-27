@@ -34,4 +34,4 @@ class Generic : public XlaNode {
   torch::lazy::hash_t hash_seed_;
 };
 
-} // namespace torch_xla
+}  // namespace torch_xla

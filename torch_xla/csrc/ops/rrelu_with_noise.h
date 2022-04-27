@@ -31,4 +31,4 @@ class RreluWithNoise : public XlaNode {
   bool training_;
 };
 
-} // namespace torch_xla
+}  // namespace torch_xla

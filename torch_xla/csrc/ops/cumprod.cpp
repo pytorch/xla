@@ -62,4 +62,4 @@ std::string CumProd::ToString() const {
   return ss.str();
 }
 
-} // namespace torch_xla
+}  // namespace torch_xla

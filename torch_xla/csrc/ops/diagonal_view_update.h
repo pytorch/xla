@@ -27,4 +27,4 @@ class DiagonalViewUpdate : public XlaNode {
   int64_t dim2_;
 };
 
-} // namespace torch_xla
+}  // namespace torch_xla

@@ -31,7 +31,7 @@ UpdateSlice::UpdateSlice(const XlaValue& input, const XlaValue& source,
 
 torch::lazy::NodePtr UpdateSlice::Clone(OpList operands) const {
   return torch::lazy::MakeNode<UpdateSlice>(operands.at(0), operands.at(1),
-                                   base_indices_);
+                                            base_indices_);
 }
 
 XlaOpVector UpdateSlice::Lower(LoweringContext* loctx) const {
@@ -48,4 +48,4 @@ std::string UpdateSlice::ToString() const {
   return ss.str();
 }
 
-} // namespace torch_xla
+}  // namespace torch_xla

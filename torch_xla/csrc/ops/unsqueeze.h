@@ -22,4 +22,4 @@ class Unsqueeze : public XlaNode {
   int dim_;
 };
 
-} // namespace torch_xla
+}  // namespace torch_xla

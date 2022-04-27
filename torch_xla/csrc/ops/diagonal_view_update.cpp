@@ -16,8 +16,8 @@ DiagonalViewUpdate::DiagonalViewUpdate(const XlaValue& target,
       dim2_(dim2) {}
 
 torch::lazy::NodePtr DiagonalViewUpdate::Clone(OpList operands) const {
-  return torch::lazy::MakeNode<DiagonalViewUpdate>(operands.at(0), operands.at(1),
-                                          offset_, dim1_, dim2_);
+  return torch::lazy::MakeNode<DiagonalViewUpdate>(
+      operands.at(0), operands.at(1), offset_, dim1_, dim2_);
 }
 
 XlaOpVector DiagonalViewUpdate::Lower(LoweringContext* loctx) const {
@@ -35,4 +35,4 @@ std::string DiagonalViewUpdate::ToString() const {
   return ss.str();
 }
 
-} // namespace torch_xla
+}  // namespace torch_xla

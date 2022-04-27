@@ -23,4 +23,4 @@ class MaskedFill : public XlaNode {
   at::Scalar value_;
 };
 
-} // namespace torch_xla
+}  // namespace torch_xla

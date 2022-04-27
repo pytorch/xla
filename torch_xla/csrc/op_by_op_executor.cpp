@@ -36,8 +36,7 @@ const xla::Shape& GetParameterShape(const torch::lazy::Output& operand,
                                     const xla::Shape& input_shape) {
   // See comment in GetOutputIndex() about device data WRT computation outpout
   // shape handling.
-  const DeviceData* device_data =
-      DeviceData::Cast(operand.node);
+  const DeviceData* device_data = DeviceData::Cast(operand.node);
   return device_data != nullptr
              ? input_shape
              : xla::ShapeUtil::GetTupleElementShape(input_shape, operand.index);

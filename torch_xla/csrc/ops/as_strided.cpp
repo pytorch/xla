@@ -64,7 +64,7 @@ std::string AsStrided::ToString() const {
 
 torch::lazy::NodePtr AsStrided::Clone(OpList operands) const {
   return torch::lazy::MakeNode<AsStrided>(operands.at(0), size_, stride_,
-                                 storage_offset_);
+                                          storage_offset_);
 }
 
 XlaOpVector AsStrided::Lower(LoweringContext* loctx) const {

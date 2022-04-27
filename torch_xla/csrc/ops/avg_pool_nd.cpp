@@ -63,8 +63,8 @@ AvgPoolNd::AvgPoolNd(const XlaValue& input, int64_t spatial_dim_count,
 
 torch::lazy::NodePtr AvgPoolNd::Clone(OpList operands) const {
   return torch::lazy::MakeNode<AvgPoolNd>(operands.at(0), spatial_dim_count_,
-                                 kernel_size_, stride_, padding_, ceil_mode_,
-                                 count_include_pad_);
+                                          kernel_size_, stride_, padding_,
+                                          ceil_mode_, count_include_pad_);
 }
 
 XlaOpVector AvgPoolNd::Lower(LoweringContext* loctx) const {

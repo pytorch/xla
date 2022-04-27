@@ -35,4 +35,4 @@ XlaOpVector NonZero::Lower(LoweringContext* loctx) const {
   return ReturnOps(BuildNonZero(input), loctx);
 }
 
-} // namespace torch_xla
+}  // namespace torch_xla

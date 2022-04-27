@@ -25,4 +25,4 @@ class GenericSlice : public XlaNode {
   std::vector<int64_t> sizes_;
 };
 
-} // namespace torch_xla
+}  // namespace torch_xla

@@ -44,9 +44,8 @@ TEST(IrTest, TestSelectUnselect) {
         at::rand({4, 16, 3}, at::TensorOptions(at::kFloat)).abs() + 1.0;
 
     XlaValue v_a = GetTensorIrValue(a, device);
-    XlaValue v_s =
-        torch::lazy::MakeNode<Select>(v_a, /*dim=*/1, /*start=*/3,
-                                      /*end=*/14, /*stride=*/3);
+    XlaValue v_s = torch::lazy::MakeNode<Select>(v_a, /*dim=*/1, /*start=*/3,
+                                                 /*end=*/14, /*stride=*/3);
 
     auto results = ExecuteAndFetch({v_s}, device);
     at::Tensor b =

@@ -45,9 +45,9 @@ NativeBatchNormBackward::NativeBatchNormBackward(const XlaValue& grad_out,
       eps_(eps) {}
 
 torch::lazy::NodePtr NativeBatchNormBackward::Clone(OpList operands) const {
-  return torch::lazy::MakeNode<NativeBatchNormBackward>(operands.at(0), operands.at(1),
-                                               operands.at(2), operands.at(3),
-                                               operands.at(4), training_, eps_);
+  return torch::lazy::MakeNode<NativeBatchNormBackward>(
+      operands.at(0), operands.at(1), operands.at(2), operands.at(3),
+      operands.at(4), training_, eps_);
 }
 
 XlaOpVector NativeBatchNormBackward::Lower(LoweringContext* loctx) const {
@@ -69,4 +69,4 @@ std::string NativeBatchNormBackward::ToString() const {
   return ss.str();
 }
 
-} // namespace torch_xla
+}  // namespace torch_xla

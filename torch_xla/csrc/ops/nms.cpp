@@ -38,8 +38,9 @@ Nms::Nms(const XlaValue& boxes, const XlaValue& scores,
       output_size_(output_size) {}
 
 torch::lazy::NodePtr Nms::Clone(OpList operands) const {
-  return torch::lazy::MakeNode<Nms>(operands.at(0), operands.at(1), operands.at(2),
-                           operands.at(3), output_size_);
+  return torch::lazy::MakeNode<Nms>(operands.at(0), operands.at(1),
+                                    operands.at(2), operands.at(3),
+                                    output_size_);
 }
 
 XlaOpVector Nms::Lower(LoweringContext* loctx) const {
@@ -58,4 +59,4 @@ std::string Nms::ToString() const {
   return ss.str();
 }
 
-} // namespace torch_xla
+}  // namespace torch_xla

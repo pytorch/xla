@@ -32,7 +32,8 @@ GenericSlice::GenericSlice(const XlaValue& input,
       sizes_(sizes.begin(), sizes.end()) {}
 
 torch::lazy::NodePtr GenericSlice::Clone(OpList operands) const {
-  return torch::lazy::MakeNode<GenericSlice>(operands.at(0), base_indices_, sizes_);
+  return torch::lazy::MakeNode<GenericSlice>(operands.at(0), base_indices_,
+                                             sizes_);
 }
 
 XlaOpVector GenericSlice::Lower(LoweringContext* loctx) const {
@@ -49,4 +50,4 @@ std::string GenericSlice::ToString() const {
   return ss.str();
 }
 
-} // namespace torch_xla
+}  // namespace torch_xla

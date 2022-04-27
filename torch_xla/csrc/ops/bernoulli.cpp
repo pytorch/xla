@@ -12,7 +12,8 @@ Bernoulli::Bernoulli(const XlaValue& probability, const XlaValue& seed,
               std::move(shape)) {}
 
 torch::lazy::NodePtr Bernoulli::Clone(OpList operands) const {
-  return torch::lazy::MakeNode<Bernoulli>(operands.at(0), operands.at(1), xla_shape());
+  return torch::lazy::MakeNode<Bernoulli>(operands.at(0), operands.at(1),
+                                          xla_shape());
 }
 
 XlaOpVector Bernoulli::Lower(LoweringContext* loctx) const {

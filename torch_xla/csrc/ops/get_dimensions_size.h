@@ -22,4 +22,4 @@ class GetDimensionsSize : public XlaNode {
   std::vector<int64_t> dimensions_;
 };
 
-} // namespace torch_xla
+}  // namespace torch_xla

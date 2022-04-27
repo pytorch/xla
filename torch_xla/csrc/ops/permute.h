@@ -25,4 +25,4 @@ class Permute : public XlaNode {
   std::vector<int64_t> dims_;
 };
 
-} // namespace torch_xla
+}  // namespace torch_xla

@@ -26,4 +26,4 @@ class UpsampleBilinear : public XlaNode {
   bool align_corners_;
 };
 
-} // namespace torch_xla
+}  // namespace torch_xla

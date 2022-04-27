@@ -21,4 +21,4 @@ class Put : public XlaNode {
   bool accumulate_;
 };
 
-} // namespace torch_xla
+}  // namespace torch_xla

@@ -30,8 +30,8 @@ ReplicationPadBackward::ReplicationPadBackward(const XlaValue& grad_output,
       padding_(std::move(padding)) {}
 
 torch::lazy::NodePtr ReplicationPadBackward::Clone(OpList operands) const {
-  return torch::lazy::MakeNode<ReplicationPadBackward>(operands.at(0), operands.at(1),
-                                              padding_);
+  return torch::lazy::MakeNode<ReplicationPadBackward>(
+      operands.at(0), operands.at(1), padding_);
 }
 
 XlaOpVector ReplicationPadBackward::Lower(LoweringContext* loctx) const {
@@ -48,4 +48,4 @@ std::string ReplicationPadBackward::ToString() const {
   return ss.str();
 }
 
-} // namespace torch_xla
+}  // namespace torch_xla

@@ -27,4 +27,4 @@ class CumProd : public XlaNode {
   c10::optional<at::ScalarType> dtype_;
 };
 
-} // namespace torch_xla
+}  // namespace torch_xla

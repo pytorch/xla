@@ -203,8 +203,8 @@ std::pair<at::Tensor, std::shared_ptr<XlaValue>> AllReduce(
 
 std::pair<at::Tensor, std::shared_ptr<XlaValue>> ReduceScatter(
     const std::string& reduce_type, const at::Tensor& input,
-    const std::shared_ptr<XlaValue>& token, double scale,
-    int64_t scatter_dim, int64_t shard_count,
+    const std::shared_ptr<XlaValue>& token, double scale, int64_t scatter_dim,
+    int64_t shard_count,
     const std::vector<std::vector<int64_t>>& replica_groups, bool pin_layout) {
   XLATensor result;
   XlaValue new_token;
@@ -218,8 +218,8 @@ std::pair<at::Tensor, std::shared_ptr<XlaValue>> ReduceScatter(
 
 std::shared_ptr<XlaValue> ReduceScatterOut(
     const std::string& reduce_type, at::Tensor& output, const at::Tensor& input,
-    const std::shared_ptr<XlaValue>& token, double scale,
-    int64_t scatter_dim, int64_t shard_count,
+    const std::shared_ptr<XlaValue>& token, double scale, int64_t scatter_dim,
+    int64_t shard_count,
     const std::vector<std::vector<int64_t>>& replica_groups, bool pin_layout) {
   XLATensor out = bridge::GetXlaTensor(output);
   XlaValue new_token;
@@ -244,8 +244,7 @@ std::pair<at::Tensor, std::shared_ptr<XlaValue>> AllGather(
 
 std::shared_ptr<XlaValue> AllGatherOut(
     at::Tensor& output, const at::Tensor& input,
-    const std::shared_ptr<XlaValue>& token, int64_t dim,
-    int64_t shard_count,
+    const std::shared_ptr<XlaValue>& token, int64_t dim, int64_t shard_count,
     const std::vector<std::vector<int64_t>>& replica_groups, bool pin_layout) {
   XLATensor out = bridge::GetXlaTensor(output);
   XlaValue new_token;
@@ -776,8 +775,8 @@ void BuildProfilerSubmodule(py::module* m) {
       .def_static("is_enabled",
                   &tensorflow::profiler::TraceMeWrapper::IsEnabled);
 
-  py::class_<ScopePusher, std::unique_ptr<ScopePusher>>
-      scope_pusher_class(profiler, "ScopePusher");
+  py::class_<ScopePusher, std::unique_ptr<ScopePusher>> scope_pusher_class(
+      profiler, "ScopePusher");
   profiler.def("scope_pusher",
                [](const std::string& name) -> std::unique_ptr<ScopePusher> {
                  return absl::make_unique<ScopePusher>(name);

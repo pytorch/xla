@@ -21,8 +21,8 @@ std::string ShrinkBackward::ToString() const {
 }
 
 torch::lazy::NodePtr ShrinkBackward::Clone(OpList operands) const {
-  return torch::lazy::MakeNode<ShrinkBackward>(op(), operands.at(0), operands.at(1),
-                                      lambda_);
+  return torch::lazy::MakeNode<ShrinkBackward>(op(), operands.at(0),
+                                               operands.at(1), lambda_);
 }
 
 XlaOpVector ShrinkBackward::Lower(LoweringContext* loctx) const {
@@ -31,4 +31,4 @@ XlaOpVector ShrinkBackward::Lower(LoweringContext* loctx) const {
   return ReturnOp(BuildShrinkBackward(grad_output, input, lambda_), loctx);
 }
 
-} // namespace torch_xla
+}  // namespace torch_xla

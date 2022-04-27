@@ -34,8 +34,8 @@ TopK::TopK(const XlaValue& input, int64_t k, int64_t dim, bool largest,
       stable_(stable) {}
 
 torch::lazy::NodePtr TopK::Clone(OpList operands) const {
-  return torch::lazy::MakeNode<TopK>(operands.at(0), k_, dim_, largest_, sorted_,
-                            stable_);
+  return torch::lazy::MakeNode<TopK>(operands.at(0), k_, dim_, largest_,
+                                     sorted_, stable_);
 }
 
 XlaOpVector TopK::Lower(LoweringContext* loctx) const {
@@ -51,4 +51,4 @@ std::string TopK::ToString() const {
   return ss.str();
 }
 
-} // namespace torch_xla
+}  // namespace torch_xla

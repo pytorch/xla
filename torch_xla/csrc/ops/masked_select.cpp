@@ -36,4 +36,4 @@ XlaOpVector MaskedSelect::Lower(LoweringContext* loctx) const {
   return ReturnOps(BuildMaskedSelect(input, mask), loctx);
 }
 
-} // namespace torch_xla
+}  // namespace torch_xla

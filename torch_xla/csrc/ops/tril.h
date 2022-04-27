@@ -22,4 +22,4 @@ class Tril : public XlaNode {
   int64_t diagonal_;
 };
 
-} // namespace torch_xla
+}  // namespace torch_xla

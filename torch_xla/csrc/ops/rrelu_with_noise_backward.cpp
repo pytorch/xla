@@ -19,9 +19,9 @@ RreluWithNoiseBackward::RreluWithNoiseBackward(
       training_(training) {}
 
 torch::lazy::NodePtr RreluWithNoiseBackward::Clone(OpList operands) const {
-  return torch::lazy::MakeNode<RreluWithNoiseBackward>(operands.at(0), operands.at(1),
-                                              operands.at(2), lower_, upper_,
-                                              training_);
+  return torch::lazy::MakeNode<RreluWithNoiseBackward>(
+      operands.at(0), operands.at(1), operands.at(2), lower_, upper_,
+      training_);
 }
 
 XlaOpVector RreluWithNoiseBackward::Lower(LoweringContext* loctx) const {
@@ -40,4 +40,4 @@ std::string RreluWithNoiseBackward::ToString() const {
   return ss.str();
 }
 
-} // namespace torch_xla
+}  // namespace torch_xla

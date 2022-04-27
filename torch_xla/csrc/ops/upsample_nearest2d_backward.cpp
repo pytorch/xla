@@ -21,8 +21,8 @@ UpsampleNearestBackward::UpsampleNearestBackward(
       input_size_(std::move(input_size)) {}
 
 torch::lazy::NodePtr UpsampleNearestBackward::Clone(OpList operands) const {
-  return torch::lazy::MakeNode<UpsampleNearestBackward>(operands.at(0), output_size_,
-                                               input_size_);
+  return torch::lazy::MakeNode<UpsampleNearestBackward>(
+      operands.at(0), output_size_, input_size_);
 }
 
 XlaOpVector UpsampleNearestBackward::Lower(LoweringContext* loctx) const {
@@ -41,4 +41,4 @@ std::string UpsampleNearestBackward::ToString() const {
   return ss.str();
 }
 
-} // namespace torch_xla
+}  // namespace torch_xla

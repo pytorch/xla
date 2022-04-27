@@ -22,4 +22,4 @@ class Repeat : public XlaNode {
   std::vector<int64_t> repeats_;
 };
 
-} // namespace torch_xla
+}  // namespace torch_xla

@@ -31,8 +31,8 @@ inline torch::lazy::NodePtr GenericOp(
     // cast to uint32_t to avoid ambiguous constructor of uint128
     torch::lazy::hash_t hash_seed = (uint32_t)0x5a2d296e9) {
   return torch::lazy::MakeNode<Generic>(std::move(op), operands,
-                                          std::move(shape), std::move(lower_fn),
-                                          num_outputs, hash_seed);
+                                        std::move(shape), std::move(lower_fn),
+                                        num_outputs, hash_seed);
 }
 
 inline torch::lazy::NodePtr GenericOp(
@@ -42,8 +42,8 @@ inline torch::lazy::NodePtr GenericOp(
     // cast to uint32_t to avoid ambiguous constructor of uint128
     torch::lazy::hash_t hash_seed = (uint32_t)0x5a2d296e9) {
   return torch::lazy::MakeNode<Generic>(std::move(op), operands, shape_fn,
-                                          std::move(lower_fn), num_outputs,
-                                          hash_seed);
+                                        std::move(lower_fn), num_outputs,
+                                        hash_seed);
 }
 
 inline torch::lazy::NodePtr GenericOp(torch::lazy::OpKind op, xla::Shape shape,
@@ -51,8 +51,8 @@ inline torch::lazy::NodePtr GenericOp(torch::lazy::OpKind op, xla::Shape shape,
                                       size_t num_outputs,
                                       torch::lazy::hash_t hash_seed) {
   return torch::lazy::MakeNode<Generic>(std::move(op), std::move(shape),
-                                          std::move(lower_fn), num_outputs,
-                                          hash_seed);
+                                        std::move(lower_fn), num_outputs,
+                                        hash_seed);
 }
 
 torch::lazy::NodePtr Acos(const XlaValue& input);
@@ -276,4 +276,4 @@ torch::lazy::NodePtr SLogDet(const XlaValue& input);
 torch::lazy::NodePtr Softplus(const XlaValue& input, const XlaValue& beta,
                               const XlaValue& threshold);
 
-} // namespace torch_xla
+}  // namespace torch_xla

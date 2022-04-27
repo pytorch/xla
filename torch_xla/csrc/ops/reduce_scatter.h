@@ -35,4 +35,4 @@ class ReduceScatter : public XlaNode {
   bool pin_layout_;
 };
 
-} // namespace torch_xla
+}  // namespace torch_xla

@@ -23,4 +23,4 @@ class MaxInDim : public XlaNode {
   bool keepdim_;
 };
 
-} // namespace torch_xla
+}  // namespace torch_xla

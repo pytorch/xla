@@ -38,7 +38,7 @@ Var::Var(const XlaValue& input, std::vector<int64_t> dimensions,
 
 torch::lazy::NodePtr Var::Clone(OpList operands) const {
   return torch::lazy::MakeNode<Var>(operands.at(0), dimensions_, correction_,
-                           keep_reduced_dimensions_);
+                                    keep_reduced_dimensions_);
 }
 
 XlaOpVector Var::Lower(LoweringContext* loctx) const {
@@ -56,4 +56,4 @@ std::string Var::ToString() const {
   return ss.str();
 }
 
-} // namespace torch_xla
+}  // namespace torch_xla

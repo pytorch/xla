@@ -39,8 +39,8 @@ StdMean::StdMean(const XlaValue& input, std::vector<int64_t> dimensions,
       keep_reduced_dimensions_(keep_reduced_dimensions) {}
 
 torch::lazy::NodePtr StdMean::Clone(OpList operands) const {
-  return torch::lazy::MakeNode<StdMean>(operands.at(0), dimensions_, correction_,
-                               keep_reduced_dimensions_);
+  return torch::lazy::MakeNode<StdMean>(operands.at(0), dimensions_,
+                                        correction_, keep_reduced_dimensions_);
 }
 
 XlaOpVector StdMean::Lower(LoweringContext* loctx) const {
@@ -60,4 +60,4 @@ std::string StdMean::ToString() const {
   return ss.str();
 }
 
-} // namespace torch_xla
+}  // namespace torch_xla

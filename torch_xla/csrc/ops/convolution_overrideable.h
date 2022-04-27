@@ -48,4 +48,4 @@ class ConvolutionOverrideable : public XlaNode {
   int64_t groups_;
 };
 
-} // namespace torch_xla
+}  // namespace torch_xla

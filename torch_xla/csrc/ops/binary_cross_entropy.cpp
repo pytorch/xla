@@ -47,8 +47,8 @@ torch::lazy::NodePtr BinaryCrossEntropy::Clone(OpList operands) const {
   if (operands.size() > 2) {
     weight = operands.at(2);
   }
-  return torch::lazy::MakeNode<BinaryCrossEntropy>(operands.at(0), operands.at(1),
-                                          weight, reduction_);
+  return torch::lazy::MakeNode<BinaryCrossEntropy>(
+      operands.at(0), operands.at(1), weight, reduction_);
 }
 
 XlaOpVector BinaryCrossEntropy::Lower(LoweringContext* loctx) const {

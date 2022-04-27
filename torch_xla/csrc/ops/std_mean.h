@@ -30,4 +30,4 @@ class StdMean : public XlaNode {
   bool keep_reduced_dimensions_;
 };
 
-} // namespace torch_xla
+}  // namespace torch_xla

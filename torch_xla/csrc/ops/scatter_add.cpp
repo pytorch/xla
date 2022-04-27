@@ -16,7 +16,7 @@ ScatterAdd::ScatterAdd(const XlaValue& input, const XlaValue& index,
 
 torch::lazy::NodePtr ScatterAdd::Clone(OpList operands) const {
   return torch::lazy::MakeNode<ScatterAdd>(operands.at(0), operands.at(1),
-                                  operands.at(2), dim_);
+                                           operands.at(2), dim_);
 }
 
 XlaOpVector ScatterAdd::Lower(LoweringContext* loctx) const {
@@ -34,4 +34,4 @@ std::string ScatterAdd::ToString() const {
   return ss.str();
 }
 
-} // namespace torch_xla
+}  // namespace torch_xla

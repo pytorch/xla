@@ -53,7 +53,7 @@ torch::lazy::NodePtr NllLoss::Clone(OpList operands) const {
     weight = operands.at(2);
   }
   return torch::lazy::MakeNode<NllLoss>(operands.at(0), operands.at(1), weight,
-                               reduction_, ignore_index_);
+                                        reduction_, ignore_index_);
 }
 
 XlaOpVector NllLoss::Lower(LoweringContext* loctx) const {
@@ -75,4 +75,4 @@ std::string NllLoss::ToString() const {
   return ss.str();
 }
 
-} // namespace torch_xla
+}  // namespace torch_xla

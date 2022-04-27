@@ -33,4 +33,4 @@ class Scalar : public XlaNode {
 
 torch::lazy::hash_t ScalarHash(const at::Scalar& s);
 
-} // namespace torch_xla
+}  // namespace torch_xla

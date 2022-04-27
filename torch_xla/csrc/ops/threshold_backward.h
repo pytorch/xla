@@ -21,4 +21,4 @@ class ThresholdBackward : public XlaNode {
   float threshold_;
 };
 
-} // namespace torch_xla
+}  // namespace torch_xla

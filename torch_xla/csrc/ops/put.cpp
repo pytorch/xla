@@ -13,8 +13,8 @@ Put::Put(const XlaValue& input, const XlaValue& index, const XlaValue& source,
       accumulate_(accumulate) {}
 
 torch::lazy::NodePtr Put::Clone(OpList operands) const {
-  return torch::lazy::MakeNode<Put>(operands.at(0), operands.at(1), operands.at(2),
-                           accumulate_);
+  return torch::lazy::MakeNode<Put>(operands.at(0), operands.at(1),
+                                    operands.at(2), accumulate_);
 }
 
 XlaOpVector Put::Lower(LoweringContext* loctx) const {
@@ -31,4 +31,4 @@ std::string Put::ToString() const {
   return ss.str();
 }
 
-} // namespace torch_xla
+}  // namespace torch_xla

@@ -30,4 +30,4 @@ class TriangularSolve : public XlaNode {
   bool unit_diagonal_;
 };
 
-} // namespace torch_xla
+}  // namespace torch_xla

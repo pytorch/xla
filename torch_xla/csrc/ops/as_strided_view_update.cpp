@@ -64,8 +64,8 @@ std::string AsStridedViewUpdate::ToString() const {
 }
 
 torch::lazy::NodePtr AsStridedViewUpdate::Clone(OpList operands) const {
-  return torch::lazy::MakeNode<AsStridedViewUpdate>(operands.at(0), operands.at(1),
-                                           size_, stride_, storage_offset_);
+  return torch::lazy::MakeNode<AsStridedViewUpdate>(
+      operands.at(0), operands.at(1), size_, stride_, storage_offset_);
 }
 
 XlaOpVector AsStridedViewUpdate::Lower(LoweringContext* loctx) const {

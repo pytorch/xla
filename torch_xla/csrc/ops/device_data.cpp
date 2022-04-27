@@ -30,4 +30,4 @@ DeviceData* DeviceData::Cast(const torch::lazy::Node* node) {
   return torch_xla::NodeCast<DeviceData>(node, xla_device_data);
 }
 
-} // namespace torch_xla
+}  // namespace torch_xla

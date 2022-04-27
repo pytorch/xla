@@ -41,7 +41,7 @@ MaxUnpoolNd::MaxUnpoolNd(const XlaValue& input, const XlaValue& indices,
 
 torch::lazy::NodePtr MaxUnpoolNd::Clone(OpList operands) const {
   return torch::lazy::MakeNode<MaxUnpoolNd>(operands.at(0), operands.at(1),
-                                   output_size_);
+                                            output_size_);
 }
 
 XlaOpVector MaxUnpoolNd::Lower(LoweringContext* loctx) const {
@@ -59,4 +59,4 @@ std::string MaxUnpoolNd::ToString() const {
   return ss.str();
 }
 
-} // namespace torch_xla
+}  // namespace torch_xla

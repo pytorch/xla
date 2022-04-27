@@ -26,4 +26,4 @@ class HardtanhBackward : public XlaNode {
   at::Scalar max_val_;
 };
 
-} // namespace torch_xla
+}  // namespace torch_xla

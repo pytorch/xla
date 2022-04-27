@@ -20,4 +20,4 @@ class Linspace : public XlaNode {
   int64_t steps_;
 };
 
-} // namespace torch_xla
+}  // namespace torch_xla

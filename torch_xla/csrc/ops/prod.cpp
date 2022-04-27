@@ -56,7 +56,7 @@ Prod::Prod(const XlaValue& input, std::vector<int64_t> dimensions,
 
 torch::lazy::NodePtr Prod::Clone(OpList operands) const {
   return torch::lazy::MakeNode<Prod>(operands.at(0), dimensions_,
-                            keep_reduced_dimensions_, dtype_);
+                                     keep_reduced_dimensions_, dtype_);
 }
 
 XlaOpVector Prod::Lower(LoweringContext* loctx) const {
@@ -74,4 +74,4 @@ std::string Prod::ToString() const {
   return ss.str();
 }
 
-} // namespace torch_xla
+}  // namespace torch_xla

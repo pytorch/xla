@@ -31,9 +31,9 @@ AmpUpdateScale::AmpUpdateScale(const XlaValue& current_scale,
       growth_interval_(growth_interval) {}
 
 torch::lazy::NodePtr AmpUpdateScale::Clone(OpList operands) const {
-  return torch::lazy::MakeNode<AmpUpdateScale>(operands[0], operands[1], operands[2],
-                                      scale_growth_factor_,
-                                      scale_backoff_factor_, growth_interval_);
+  return torch::lazy::MakeNode<AmpUpdateScale>(
+      operands[0], operands[1], operands[2], scale_growth_factor_,
+      scale_backoff_factor_, growth_interval_);
 }
 
 XlaOpVector AmpUpdateScale::Lower(LoweringContext* loctx) const {

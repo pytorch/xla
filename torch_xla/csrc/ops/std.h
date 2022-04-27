@@ -30,4 +30,4 @@ class Std : public XlaNode {
   int64_t correction_;
 };
 
-} // namespace torch_xla
+}  // namespace torch_xla

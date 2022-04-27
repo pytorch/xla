@@ -62,8 +62,7 @@ XlaValue ApplyViewInfo(XlaValue ir_value, const ViewInfo& view_info) {
   }
 }
 
-XlaValue ApplyUpdate(XlaValue ir_value,
-                         const Alias::UpdateData& update_data) {
+XlaValue ApplyUpdate(XlaValue ir_value, const Alias::UpdateData& update_data) {
   // We first bring the source IR value forward, by reshaping and slicing.
   std::vector<XlaValue> tmp_values({ir_value});
   for (size_t i = 0; i < update_data.view_infos.size(); ++i) {
@@ -141,8 +140,8 @@ ViewInfo::ViewInfo(Type view_type, xla::Shape source_shape,
 ViewInfo::ViewInfo(Type view_type, const xla::Shape& source_shape,
                    SelectInfo select)
     : view_type(view_type),
-      shape(Select::MakeSelectShape(
-          source_shape, select.dim, select.start, select.end, select.stride)),
+      shape(Select::MakeSelectShape(source_shape, select.dim, select.start,
+                                    select.end, select.stride)),
       source_shape(source_shape),
       select(std::move(select)) {
   XLA_CHECK(view_type == Type::kSelect);
@@ -161,7 +160,7 @@ ViewInfo::ViewInfo(Type view_type, const xla::Shape& source_shape,
                    DiagonalInfo diagonal)
     : view_type(view_type),
       shape(Diagonal::MakeDiagonalShape(source_shape, diagonal.offset,
-                                                 diagonal.dim1, diagonal.dim2)),
+                                        diagonal.dim1, diagonal.dim2)),
       source_shape(source_shape),
       diagonal(std::move(diagonal)) {
   XLA_CHECK(view_type == Type::kDiagonal);

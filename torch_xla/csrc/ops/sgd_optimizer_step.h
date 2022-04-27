@@ -23,4 +23,4 @@ class SgdOptimizerStep : public XlaNode {
   bool use_nesterov_;
 };
 
-} // namespace torch_xla
+}  // namespace torch_xla

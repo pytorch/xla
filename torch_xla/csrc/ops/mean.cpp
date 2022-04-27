@@ -50,7 +50,7 @@ Mean::Mean(const XlaValue& input, std::vector<int64_t> dimensions,
 
 torch::lazy::NodePtr Mean::Clone(OpList operands) const {
   return torch::lazy::MakeNode<Mean>(operands.at(0), dimensions_,
-                            keep_reduced_dimensions_, dtype_);
+                                     keep_reduced_dimensions_, dtype_);
 }
 
 XlaOpVector Mean::Lower(LoweringContext* loctx) const {
@@ -68,4 +68,4 @@ std::string Mean::ToString() const {
   return ss.str();
 }
 
-} // namespace torch_xla
+}  // namespace torch_xla

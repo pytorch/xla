@@ -22,4 +22,4 @@ class NotSupported : public XlaNode {
   std::string description_;
 };
 
-} // namespace torch_xla
+}  // namespace torch_xla

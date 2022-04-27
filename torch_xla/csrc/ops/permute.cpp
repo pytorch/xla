@@ -49,4 +49,4 @@ xla::Shape Permute::MakePermuteShape(const xla::Shape& source_shape,
       XlaHelpers::Permute(permutation, source_shape.dimensions()));
 }
 
-} // namespace torch_xla
+}  // namespace torch_xla

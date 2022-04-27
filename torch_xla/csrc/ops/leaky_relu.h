@@ -22,4 +22,4 @@ class LeakyRelu : public XlaNode {
   double negative_slope_;
 };
 
-} // namespace torch_xla
+}  // namespace torch_xla

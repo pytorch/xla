@@ -23,4 +23,4 @@ class ReflectionPad2dBackward : public XlaNode {
   std::vector<int64_t> padding_;
 };
 
-} // namespace torch_xla
+}  // namespace torch_xla

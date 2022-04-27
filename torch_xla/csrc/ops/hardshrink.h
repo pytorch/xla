@@ -22,4 +22,4 @@ class Hardshrink : public XlaNode {
   at::Scalar lambda_;
 };
 
-} // namespace torch_xla
+}  // namespace torch_xla

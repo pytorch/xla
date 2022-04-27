@@ -41,7 +41,7 @@ AllGather::AllGather(const XlaValue& input, const XlaValue& token, int64_t dim,
 
 torch::lazy::NodePtr AllGather::Clone(OpList operands) const {
   return torch::lazy::MakeNode<AllGather>(operands.at(0), operands.at(1), dim_,
-                                 shard_count_, groups_, pin_layout_);
+                                          shard_count_, groups_, pin_layout_);
 }
 
 XlaOpVector AllGather::Lower(LoweringContext* loctx) const {

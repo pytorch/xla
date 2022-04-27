@@ -43,4 +43,4 @@ std::string KthValue::ToString() const {
   return ss.str();
 }
 
-} // namespace torch_xla
+}  // namespace torch_xla

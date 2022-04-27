@@ -27,11 +27,11 @@ Generic::Generic(torch::lazy::OpKind op, xla::Shape shape, LowerFn lower_fn,
 
 torch::lazy::NodePtr Generic::Clone(OpList operands) const {
   return torch::lazy::MakeNode<Generic>(op(), operands, xla_shape(), lower_fn_,
-                               num_outputs(), hash_seed_);
+                                        num_outputs(), hash_seed_);
 }
 
 XlaOpVector Generic::Lower(LoweringContext* loctx) const {
   return lower_fn_(*this, loctx);
 }
 
-} // namespace torch_xla
+}  // namespace torch_xla

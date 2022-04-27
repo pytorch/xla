@@ -29,4 +29,4 @@ class NllLossBackward : public XlaNode {
   int ignore_index_;
 };
 
-} // namespace torch_xla
+}  // namespace torch_xla

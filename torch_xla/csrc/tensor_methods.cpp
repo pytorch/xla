@@ -157,8 +157,7 @@ struct MinMaxValues {
   XlaValue max;
 };
 
-XlaValue MaybeExpand(const XlaValue& input,
-                         const xla::Shape& target_shape) {
+XlaValue MaybeExpand(const XlaValue& input, const xla::Shape& target_shape) {
   if (input.xla_shape().dimensions() == target_shape.dimensions()) {
     return input;
   }
@@ -278,9 +277,9 @@ xla::Shape BatchNormFeaturesShape(const XLATensor& input) {
 // Returns the IR for the given input or the provided default value broadcasted
 // to the default shape, if the input is undefined.
 XlaValue GetIrValueOrDefault(const XLATensor& input,
-                                 const at::Scalar& default_value,
-                                 const xla::Shape& default_shape,
-                                 const torch::lazy::BackendDevice& device) {
+                             const at::Scalar& default_value,
+                             const xla::Shape& default_shape,
+                             const torch::lazy::BackendDevice& device) {
   return input.is_null() ? XLATensor::GetIrValueForScalar(default_value,
                                                           default_shape, device)
                          : input.GetIrValue();
@@ -288,8 +287,7 @@ XlaValue GetIrValueOrDefault(const XLATensor& input,
 
 // Returns the IR for the given input. If the IR is not a floating point value,
 // cast it to the float_type.
-XlaValue GetFloatingIrValue(const XLATensor& input,
-                                at::ScalarType float_type) {
+XlaValue GetFloatingIrValue(const XLATensor& input, at::ScalarType float_type) {
   XlaValue input_value = input.GetIrValue();
   if (xla::primitive_util::IsIntegralType(
           input_value.xla_shape().element_type())) {
@@ -343,9 +341,8 @@ ViewInfo CreateAsStridedViewInfo(const xla::Shape& input_shape,
 // XLA dedicated operators follows here, listed in alphabetical order.
 //////////////////////////////////////////////////////////////////////////////
 std::pair<XLATensor, XlaValue> XLATensor::all_reduce(
-    const XLATensor& input, const XlaValue& token,
-    AllReduceType reduce_type, double scale,
-    std::vector<std::vector<int64_t>> groups, bool pin_layout) {
+    const XLATensor& input, const XlaValue& token, AllReduceType reduce_type,
+    double scale, std::vector<std::vector<int64_t>> groups, bool pin_layout) {
   std::vector<XlaValue> input_values({input.GetIrValue()});
   torch::lazy::NodePtr node = torch::lazy::MakeNode<AllReduce>(
       reduce_type, input_values, token, scale, std::move(groups), pin_layout);
@@ -353,9 +350,9 @@ std::pair<XLATensor, XlaValue> XLATensor::all_reduce(
 }
 
 XlaValue XLATensor::all_reduce_(XLATensor& input, const XlaValue& token,
-                                    AllReduceType reduce_type, double scale,
-                                    std::vector<std::vector<int64_t>> groups,
-                                    bool pin_layout) {
+                                AllReduceType reduce_type, double scale,
+                                std::vector<std::vector<int64_t>> groups,
+                                bool pin_layout) {
   std::vector<XlaValue> input_values({input.GetIrValue()});
   torch::lazy::NodePtr node = torch::lazy::MakeNode<AllReduce>(
       reduce_type, input_values, token, scale, std::move(groups), pin_layout);
@@ -364,10 +361,10 @@ XlaValue XLATensor::all_reduce_(XLATensor& input, const XlaValue& token,
 }
 
 XlaValue XLATensor::all_reduce(std::vector<XLATensor>* inputs,
-                                   const XlaValue& token,
-                                   AllReduceType reduce_type, double scale,
-                                   std::vector<std::vector<int64_t>> groups,
-                                   bool pin_layout) {
+                               const XlaValue& token, AllReduceType reduce_type,
+                               double scale,
+                               std::vector<std::vector<int64_t>> groups,
+                               bool pin_layout) {
   std::vector<XlaValue> input_values;
   input_values.reserve(inputs->size());
   for (auto& input : *inputs) {
@@ -382,21 +379,22 @@ XlaValue XLATensor::all_reduce(std::vector<XLATensor>* inputs,
 }
 
 std::pair<XLATensor, XlaValue> XLATensor::reduce_scatter(
-    const XLATensor& input, const XlaValue& token,
-    AllReduceType reduce_type, double scale, int64_t scatter_dim,
-    int64_t shard_count, std::vector<std::vector<int64_t>> groups,
-    bool pin_layout) {
+    const XLATensor& input, const XlaValue& token, AllReduceType reduce_type,
+    double scale, int64_t scatter_dim, int64_t shard_count,
+    std::vector<std::vector<int64_t>> groups, bool pin_layout) {
   torch::lazy::NodePtr node = torch::lazy::MakeNode<ReduceScatter>(
       reduce_type, input.GetIrValue(), token, scale, scatter_dim, shard_count,
       std::move(groups), pin_layout);
   return {input.CreateFrom(XlaValue(node, 0)), XlaValue(node, 1)};
 }
 
-XlaValue XLATensor::reduce_scatter_out(
-    XLATensor& output, const XLATensor& input, const XlaValue& token,
-    AllReduceType reduce_type, double scale, int64_t scatter_dim,
-    int64_t shard_count, std::vector<std::vector<int64_t>> groups,
-    bool pin_layout) {
+XlaValue XLATensor::reduce_scatter_out(XLATensor& output,
+                                       const XLATensor& input,
+                                       const XlaValue& token,
+                                       AllReduceType reduce_type, double scale,
+                                       int64_t scatter_dim, int64_t shard_count,
+                                       std::vector<std::vector<int64_t>> groups,
+                                       bool pin_layout) {
   torch::lazy::NodePtr node = torch::lazy::MakeNode<ReduceScatter>(
       reduce_type, input.GetIrValue(), token, scale, scatter_dim, shard_count,
       std::move(groups), pin_layout);
@@ -424,12 +422,11 @@ std::pair<XLATensor, XlaValue> XLATensor::all_gather(
   return {input.CreateFrom(XlaValue(node, 0)), XlaValue(node, 1)};
 }
 
-XlaValue XLATensor::all_gather_out(XLATensor& output,
-                                       const XLATensor& input,
-                                       const XlaValue& token, int64_t dim,
-                                       int64_t shard_count,
-                                       std::vector<std::vector<int64_t>> groups,
-                                       bool pin_layout) {
+XlaValue XLATensor::all_gather_out(XLATensor& output, const XLATensor& input,
+                                   const XlaValue& token, int64_t dim,
+                                   int64_t shard_count,
+                                   std::vector<std::vector<int64_t>> groups,
+                                   bool pin_layout) {
   torch::lazy::NodePtr node = torch::lazy::MakeNode<AllGather>(
       input.GetIrValue(), token, dim, shard_count, std::move(groups),
       pin_layout);
@@ -462,8 +459,8 @@ void XLATensor::sgd_optimizer_step_(const XLATensor& found_inf, XLATensor& step,
       GetIrValueForScalar(weight_decay, param.shape(), param.GetDevice());
   XlaValue momentum_value =
       GetIrValueForScalar(momentum, param.shape(), param.GetDevice());
-  XlaValue lr_value = GetIrValueForScalar(maximize ? -lr : lr,
-                                              param.shape(), param.GetDevice());
+  XlaValue lr_value = GetIrValueForScalar(maximize ? -lr : lr, param.shape(),
+                                          param.GetDevice());
   XlaValue dampening_value =
       GetIrValueForScalar(dampening, param.shape(), param.GetDevice());
   torch::lazy::NodePtr node = torch::lazy::MakeNode<SgdOptimizerStep>(
@@ -532,8 +529,7 @@ void XLATensor::__ilshift__(XLATensor& input, const at::Scalar& other) {
 }
 
 void XLATensor::__ilshift__(XLATensor& input, const XLATensor& other) {
-  input.SetInPlaceIrValue(
-      Lshift(input.GetIrValue(), other.GetIrValue()));
+  input.SetInPlaceIrValue(Lshift(input.GetIrValue(), other.GetIrValue()));
 }
 
 void XLATensor::__irshift__(XLATensor& input, const at::Scalar& other) {
@@ -541,8 +537,7 @@ void XLATensor::__irshift__(XLATensor& input, const at::Scalar& other) {
 }
 
 void XLATensor::__irshift__(XLATensor& input, const XLATensor& other) {
-  input.SetInPlaceIrValue(
-      Rshift(input.GetIrValue(), other.GetIrValue()));
+  input.SetInPlaceIrValue(Rshift(input.GetIrValue(), other.GetIrValue()));
 }
 
 XLATensor XLATensor::__lshift__(
@@ -555,9 +550,8 @@ XLATensor XLATensor::__lshift__(
 XLATensor XLATensor::__lshift__(
     const XLATensor& input, const XLATensor& other,
     c10::optional<at::ScalarType> logical_element_type) {
-  return input.CreateFrom(
-      Lshift(input.GetIrValue(), other.GetIrValue()),
-      logical_element_type);
+  return input.CreateFrom(Lshift(input.GetIrValue(), other.GetIrValue()),
+                          logical_element_type);
 }
 
 XLATensor XLATensor::__rshift__(
@@ -570,9 +564,8 @@ XLATensor XLATensor::__rshift__(
 XLATensor XLATensor::__rshift__(
     const XLATensor& input, const XLATensor& other,
     c10::optional<at::ScalarType> logical_element_type) {
-  return input.CreateFrom(
-      Rshift(input.GetIrValue(), other.GetIrValue()),
-      logical_element_type);
+  return input.CreateFrom(Rshift(input.GetIrValue(), other.GetIrValue()),
+                          logical_element_type);
 }
 
 std::tuple<XLATensor, XLATensor> XLATensor::adaptive_max_pool2d(
@@ -580,15 +573,14 @@ std::tuple<XLATensor, XLATensor> XLATensor::adaptive_max_pool2d(
   torch::lazy::NodePtr node =
       torch::lazy::MakeNode<AdaptiveMaxPool2d>(input.GetIrValue(), output_size);
   XLATensor out = input.CreateFrom(XlaValue(node, 0));
-  XLATensor indices =
-      input.CreateFrom(XlaValue(node, 1), at::ScalarType::Long);
+  XLATensor indices = input.CreateFrom(XlaValue(node, 1), at::ScalarType::Long);
   return std::make_tuple(std::move(out), std::move(indices));
 }
 
 XLATensor XLATensor::adaptive_max_pool2d_backward(const XLATensor& grad_output,
                                                   const XLATensor& input) {
-  return input.CreateFrom(AdaptiveMaxPool2dBackward(
-      grad_output.GetIrValue(), input.GetIrValue()));
+  return input.CreateFrom(
+      AdaptiveMaxPool2dBackward(grad_output.GetIrValue(), input.GetIrValue()));
 }
 
 XLATensor XLATensor::adaptive_avg_pool3d(const XLATensor& input,
@@ -599,8 +591,8 @@ XLATensor XLATensor::adaptive_avg_pool3d(const XLATensor& input,
 
 XLATensor XLATensor::adaptive_avg_pool3d_backward(const XLATensor& grad_output,
                                                   const XLATensor& input) {
-  return input.CreateFrom(AdaptiveAvgPool3dBackward(
-      grad_output.GetIrValue(), input.GetIrValue()));
+  return input.CreateFrom(
+      AdaptiveAvgPool3dBackward(grad_output.GetIrValue(), input.GetIrValue()));
 }
 
 XLATensor XLATensor::_adaptive_avg_pool2d(const XLATensor& input,
@@ -611,8 +603,8 @@ XLATensor XLATensor::_adaptive_avg_pool2d(const XLATensor& input,
 
 XLATensor XLATensor::_adaptive_avg_pool2d_backward(const XLATensor& grad_output,
                                                    const XLATensor& input) {
-  return input.CreateFrom(AdaptiveAvgPool2dBackward(
-      grad_output.GetIrValue(), input.GetIrValue()));
+  return input.CreateFrom(
+      AdaptiveAvgPool2dBackward(grad_output.GetIrValue(), input.GetIrValue()));
 }
 
 void XLATensor::_amp_foreach_non_finite_check_and_unscale_(
@@ -706,8 +698,8 @@ XLATensor XLATensor::addcmul(const XLATensor& input, const at::Scalar& value,
 
 XLATensor XLATensor::addmm(const XLATensor& input, const XLATensor& weight,
                            const XLATensor& bias) {
-  return input.CreateFrom(AddMatMulOp(
-      input.GetIrValue(), weight.GetIrValue(), bias.GetIrValue()));
+  return input.CreateFrom(
+      AddMatMulOp(input.GetIrValue(), weight.GetIrValue(), bias.GetIrValue()));
 }
 
 XLATensor XLATensor::all(const XLATensor& input,
@@ -836,9 +828,8 @@ XLATensor XLATensor::atanh(const XLATensor& input) {
 
 XLATensor XLATensor::atan2(const XLATensor& input, const XLATensor& other,
                            c10::optional<at::ScalarType> logical_element_type) {
-  return input.CreateFrom(
-      Atan2(input.GetIrValue(), other.GetIrValue()),
-      logical_element_type);
+  return input.CreateFrom(Atan2(input.GetIrValue(), other.GetIrValue()),
+                          logical_element_type);
 }
 
 XLATensor XLATensor::avg_pool_nd(const XLATensor& input,
@@ -877,9 +868,9 @@ XLATensor XLATensor::baddbmm(const XLATensor& input, const XLATensor& batch1,
       alpha, batch1.shape().get().element_type(), batch1.GetDevice());
   XlaValue bias_multiplier = XLATensor::GetIrValueForScalar(
       beta, input.shape().get().element_type(), input.GetDevice());
-  return input.CreateFrom(BaddBmm(
-      batch1.GetIrValue(), batch2.GetIrValue(), input.GetIrValue(),
-      product_multiplier, bias_multiplier));
+  return input.CreateFrom(BaddBmm(batch1.GetIrValue(), batch2.GetIrValue(),
+                                  input.GetIrValue(), product_multiplier,
+                                  bias_multiplier));
 }
 
 XLATensor XLATensor::bernoulli(const XLATensor& input, double probability) {
@@ -937,8 +928,7 @@ XLATensor XLATensor::bitwise_and(const XLATensor& input,
 XLATensor XLATensor::bitwise_and(const XLATensor& input,
                                  const XLATensor& other) {
   CheckIsIntegralOrPred(input.shape(), "__and__");
-  return input.CreateFrom(
-      BitwiseAnd(input.GetIrValue(), other.GetIrValue()));
+  return input.CreateFrom(BitwiseAnd(input.GetIrValue(), other.GetIrValue()));
 }
 
 void XLATensor::bitwise_not_out(XLATensor& out, const XLATensor& input) {
@@ -1034,8 +1024,7 @@ XLATensor XLATensor::clamp(const XLATensor& input,
                            const c10::optional<at::Scalar>& min,
                            const c10::optional<at::Scalar>& max) {
   MinMaxValues min_max = GetMinMaxValues(input, min, max);
-  return input.CreateFrom(
-      Clamp(input.GetIrValue(), min_max.min, min_max.max));
+  return input.CreateFrom(Clamp(input.GetIrValue(), min_max.min, min_max.max));
 }
 
 XLATensor XLATensor::clamp(const XLATensor& input,
@@ -1264,14 +1253,12 @@ XLATensor XLATensor::eq(const XLATensor& input, const XLATensor& other) {
 XLATensor XLATensor::elu(const XLATensor& input, const at::Scalar& alpha,
                          const at::Scalar& scale,
                          const at::Scalar& input_scale) {
-  return input.CreateFrom(
-      Elu(input.GetIrValue(), alpha, scale, input_scale));
+  return input.CreateFrom(Elu(input.GetIrValue(), alpha, scale, input_scale));
 }
 
 void XLATensor::elu_(XLATensor& input, const at::Scalar& alpha,
                      const at::Scalar& scale, const at::Scalar& input_scale) {
-  input.SetInPlaceIrValue(
-      Elu(input.GetIrValue(), alpha, scale, input_scale));
+  input.SetInPlaceIrValue(Elu(input.GetIrValue(), alpha, scale, input_scale));
 }
 
 XLATensor XLATensor::elu_backward(const XLATensor& grad_output,
@@ -1280,8 +1267,8 @@ XLATensor XLATensor::elu_backward(const XLATensor& grad_output,
                                   const at::Scalar& input_scale,
                                   const XLATensor& output) {
   return grad_output.CreateFrom(EluBackward(grad_output.GetIrValue(),
-                                                     output.GetIrValue(), alpha,
-                                                     scale, input_scale));
+                                            output.GetIrValue(), alpha, scale,
+                                            input_scale));
 }
 
 XLATensor XLATensor::embedding_dense_backward(const XLATensor& grad_output,
@@ -1332,16 +1319,15 @@ XLATensor XLATensor::eye(int64_t lines, int64_t cols,
                          const torch::lazy::BackendDevice& device,
                          at::ScalarType element_type) {
   return XLATensor::Create(
-      Identity(lines, cols,
-                        MakeXlaPrimitiveType(element_type, &device)),
+      Identity(lines, cols, MakeXlaPrimitiveType(element_type, &device)),
       device, element_type);
 }
 
 void XLATensor::eye_out(XLATensor& out, int64_t lines, int64_t cols) {
   out.SetIrValue(
       Identity(lines, cols >= 0 ? cols : lines,
-                        GetDevicePrimitiveType(out.shape().get().element_type(),
-                                               &out.GetDevice())));
+               GetDevicePrimitiveType(out.shape().get().element_type(),
+                                      &out.GetDevice())));
 }
 
 void XLATensor::fill_(XLATensor& input, const at::Scalar& value) {
@@ -1625,8 +1611,8 @@ XLATensor XLATensor::hardsigmoid(const XLATensor& input) {
 
 XLATensor XLATensor::hardsigmoid_backward(const XLATensor& grad_output,
                                           const XLATensor& input) {
-  return input.CreateFrom(HardSigmoidBackward(grad_output.GetIrValue(),
-                                                       input.GetIrValue()));
+  return input.CreateFrom(
+      HardSigmoidBackward(grad_output.GetIrValue(), input.GetIrValue()));
 }
 
 XLATensor XLATensor::hardswish(const XLATensor& input) {
@@ -1678,8 +1664,7 @@ XLATensor XLATensor::linspace(const at::Scalar& start, const at::Scalar& end,
                               const torch::lazy::BackendDevice& device) {
   XlaValue start_val =
       GetIrValueForScalar(start, xla::PrimitiveType::F32, device);
-  XlaValue end_val =
-      GetIrValueForScalar(end, xla::PrimitiveType::F32, device);
+  XlaValue end_val = GetIrValueForScalar(end, xla::PrimitiveType::F32, device);
   return XLATensor::Create(
       torch::lazy::MakeNode<Linspace>(start_val, end_val, steps), device,
       element_type);
@@ -1690,9 +1675,8 @@ XLATensor XLATensor::log(const XLATensor& input) {
   // otherwise result will inherit the input's logical_element_type. In the
   // case of log(int) -> float, we want to derive the dtype from IR value
   // instead of input's logical_element_type.
-  return input.CreateFrom(
-      Log(GetFloatingIrValue(input, at::ScalarType::Float)),
-      c10::nullopt);
+  return input.CreateFrom(Log(GetFloatingIrValue(input, at::ScalarType::Float)),
+                          c10::nullopt);
 }
 
 XLATensor XLATensor::log_base(const XLATensor& input, torch::lazy::OpKind op,
@@ -1702,8 +1686,7 @@ XLATensor XLATensor::log_base(const XLATensor& input, torch::lazy::OpKind op,
   // case of logbase(int) -> float, we want to derive the dtype from IR value
   // instead of input's logical_element_type.
   return input.CreateFrom(
-      LogBase(GetFloatingIrValue(input, at::ScalarType::Float), op,
-                       base),
+      LogBase(GetFloatingIrValue(input, at::ScalarType::Float), op, base),
       c10::nullopt);
 }
 
@@ -1741,8 +1724,8 @@ XLATensor XLATensor::log_softmax(const XLATensor& input, int64_t dim,
 XLATensor XLATensor::log_softmax_backward(const XLATensor& grad_output,
                                           const XLATensor& output,
                                           int64_t dim) {
-  return grad_output.CreateFrom(LogSoftmaxBackwardOp(
-      grad_output.GetIrValue(), output.GetIrValue(), dim));
+  return grad_output.CreateFrom(
+      LogSoftmaxBackwardOp(grad_output.GetIrValue(), output.GetIrValue(), dim));
 }
 
 XLATensor XLATensor::log1p(const XLATensor& input) {
@@ -1751,8 +1734,7 @@ XLATensor XLATensor::log1p(const XLATensor& input) {
   // case of log1p(int) -> float, we want to derive the dtype from IR value
   // instead of input's logical_element_type.
   return input.CreateFrom(
-      Log1p(GetFloatingIrValue(input, at::ScalarType::Float)),
-      c10::nullopt);
+      Log1p(GetFloatingIrValue(input, at::ScalarType::Float)), c10::nullopt);
 }
 
 void XLATensor::log1p_(XLATensor& input) {
@@ -1764,29 +1746,25 @@ XLATensor XLATensor::logdet(const XLATensor& input) {
 }
 
 XLATensor XLATensor::logical_not(const XLATensor& input) {
-  return input.CreateFrom(LogicalNot(input.GetIrValue()),
-                          at::ScalarType::Bool);
+  return input.CreateFrom(LogicalNot(input.GetIrValue()), at::ScalarType::Bool);
 }
 
 XLATensor XLATensor::logical_xor(const XLATensor& input,
                                  const XLATensor& other) {
-  return input.CreateFrom(
-      LogicalXor(input.GetIrValue(), other.GetIrValue()),
-      at::ScalarType::Bool);
+  return input.CreateFrom(LogicalXor(input.GetIrValue(), other.GetIrValue()),
+                          at::ScalarType::Bool);
 }
 
 XLATensor XLATensor::logical_and(const XLATensor& input,
                                  const XLATensor& other) {
-  return input.CreateFrom(
-      LogicalAnd(input.GetIrValue(), other.GetIrValue()),
-      at::ScalarType::Bool);
+  return input.CreateFrom(LogicalAnd(input.GetIrValue(), other.GetIrValue()),
+                          at::ScalarType::Bool);
 }
 
 XLATensor XLATensor::logical_or(const XLATensor& input,
                                 const XLATensor& other) {
-  return input.CreateFrom(
-      LogicalOr(input.GetIrValue(), other.GetIrValue()),
-      at::ScalarType::Bool);
+  return input.CreateFrom(LogicalOr(input.GetIrValue(), other.GetIrValue()),
+                          at::ScalarType::Bool);
 }
 
 XLATensor XLATensor::logsumexp(const XLATensor& input,
@@ -1806,7 +1784,7 @@ XLATensor XLATensor::xlogy(const XLATensor& input, const XLATensor& other) {
   // instead of input's logical_element_type.
   return input.CreateFrom(
       XLogY(input.GetIrValue(),
-                     GetFloatingIrValue(other, at::ScalarType::Float)),
+            GetFloatingIrValue(other, at::ScalarType::Float)),
       c10::nullopt);
 }
 
@@ -1842,8 +1820,7 @@ XLATensor XLATensor::masked_select(const XLATensor& input,
 }
 
 XLATensor XLATensor::matmul(const XLATensor& input, const XLATensor& other) {
-  return input.CreateFrom(
-      MatMul(input.GetIrValue(), other.GetIrValue()));
+  return input.CreateFrom(MatMul(input.GetIrValue(), other.GetIrValue()));
 }
 
 XLATensor XLATensor::max(const XLATensor& input, const XLATensor& other,
@@ -1975,8 +1952,7 @@ XLATensor XLATensor::mish(const XLATensor& input) {
 }
 
 XLATensor XLATensor::mm(const XLATensor& input, const XLATensor& weight) {
-  return input.CreateFrom(
-      Dot(input.GetIrValue(), weight.GetIrValue()));
+  return input.CreateFrom(Dot(input.GetIrValue(), weight.GetIrValue()));
 }
 
 XLATensor XLATensor::mse_loss(const XLATensor& input, const XLATensor& target,
@@ -2025,8 +2001,8 @@ XLATensor XLATensor::nan_to_num(const XLATensor& input, const at::Scalar& nan,
       GetIrValueForScalar(posinf, input.shape(), input.GetDevice());
   XlaValue neginf_value =
       GetIrValueForScalar(neginf, input.shape(), input.GetDevice());
-  return input.CreateFrom(NanToNum(input.GetIrValue(), nan_value,
-                                            posinf_value, neginf_value));
+  return input.CreateFrom(
+      NanToNum(input.GetIrValue(), nan_value, posinf_value, neginf_value));
 }
 
 XLATensor XLATensor::narrow(const XLATensor& input, int64_t dim, int64_t start,
@@ -2252,8 +2228,7 @@ XLATensor XLATensor::pow(const XLATensor& input, const at::Scalar& exponent) {
 }
 
 XLATensor XLATensor::pow(const XLATensor& input, const XLATensor& exponent) {
-  return input.CreateFrom(
-      Pow(input.GetIrValue(), exponent.GetIrValue()));
+  return input.CreateFrom(Pow(input.GetIrValue(), exponent.GetIrValue()));
 }
 
 XLATensor XLATensor::pow(const at::Scalar& input, const XLATensor& exponent) {
@@ -2263,8 +2238,7 @@ XLATensor XLATensor::pow(const at::Scalar& input, const XLATensor& exponent) {
 }
 
 XLATensor XLATensor::prelu(const XLATensor& input, const XLATensor& weight) {
-  return input.CreateFrom(
-      Prelu(input.GetIrValue(), weight.GetIrValue()));
+  return input.CreateFrom(Prelu(input.GetIrValue(), weight.GetIrValue()));
 }
 
 XLATensor XLATensor::prod(const XLATensor& input,
@@ -2332,8 +2306,7 @@ void XLATensor::relu_(XLATensor& input) {
 }
 
 XLATensor XLATensor::remainder(const XLATensor& input, const XLATensor& other) {
-  return input.CreateFrom(
-      Remainder(input.GetIrValue(), other.GetIrValue()));
+  return input.CreateFrom(Remainder(input.GetIrValue(), other.GetIrValue()));
 }
 
 XLATensor XLATensor::remainder(const XLATensor& input,
@@ -2607,8 +2580,8 @@ XLATensor XLATensor::softmax(const XLATensor& input, int64_t dim,
 
 XLATensor XLATensor::softmax_backward(const XLATensor& grad_output,
                                       const XLATensor& output, int64_t dim) {
-  return grad_output.CreateFrom(SoftmaxBackwardOp(
-      grad_output.GetIrValue(), output.GetIrValue(), dim));
+  return grad_output.CreateFrom(
+      SoftmaxBackwardOp(grad_output.GetIrValue(), output.GetIrValue(), dim));
 }
 
 XLATensor XLATensor::softplus(const XLATensor& input, const at::Scalar& beta,
@@ -2796,8 +2769,7 @@ std::tuple<XLATensor, XLATensor> XLATensor::symeig(const XLATensor& input,
 }
 
 XLATensor XLATensor::take(const XLATensor& input, const XLATensor& index) {
-  return input.CreateFrom(
-      Take(input.GetIrValue(), index.GetIrValue()));
+  return input.CreateFrom(Take(input.GetIrValue(), index.GetIrValue()));
 }
 
 XLATensor XLATensor::tan(const XLATensor& input) {
@@ -2865,9 +2837,9 @@ XLATensor XLATensor::trace(const XLATensor& input) {
   auto input_shape_ref = input.shape();
   XLA_CHECK_EQ((*input_shape_ref).rank(), 2)
       << "invalid argument for trace: expected a matrix";
-  torch::lazy::NodePtr eye = Identity(
-      (*input_shape_ref).dimensions(0), (*input_shape_ref).dimensions(1),
-      (*input_shape_ref).element_type());
+  torch::lazy::NodePtr eye = Identity((*input_shape_ref).dimensions(0),
+                                      (*input_shape_ref).dimensions(1),
+                                      (*input_shape_ref).element_type());
   return XLATensor::sum(input.CreateFrom(eye * input.GetIrValue()), {0, 1},
                         false, input.dtype());
 }
@@ -3030,8 +3002,8 @@ void XLATensor::zero_(XLATensor& input) {
 
 XLATensor XLATensor::where(const XLATensor& condition, const XLATensor& input,
                            const XLATensor& other) {
-  return input.CreateFrom(Where(
-      condition.GetIrValue(), input.GetIrValue(), other.GetIrValue()));
+  return input.CreateFrom(
+      Where(condition.GetIrValue(), input.GetIrValue(), other.GetIrValue()));
 }
 
 XLATensor XLATensor::DispatchComparisonOp(c10::Symbol kind,

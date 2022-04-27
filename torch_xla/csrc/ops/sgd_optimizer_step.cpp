@@ -54,4 +54,4 @@ XlaOpVector SgdOptimizerStep::Lower(LoweringContext* loctx) const {
       loctx);
 }
 
-} // namespace torch_xla
+}  // namespace torch_xla

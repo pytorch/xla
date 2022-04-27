@@ -15,7 +15,8 @@ MaskedFill::MaskedFill(const XlaValue& input, const XlaValue& mask,
       value_(std::move(value)) {}
 
 torch::lazy::NodePtr MaskedFill::Clone(OpList operands) const {
-  return torch::lazy::MakeNode<MaskedFill>(operands.at(0), operands.at(1), value_);
+  return torch::lazy::MakeNode<MaskedFill>(operands.at(0), operands.at(1),
+                                           value_);
 }
 
 XlaOpVector MaskedFill::Lower(LoweringContext* loctx) const {
@@ -38,4 +39,4 @@ std::string MaskedFill::ToString() const {
   return ss.str();
 }
 
-} // namespace torch_xla
+}  // namespace torch_xla

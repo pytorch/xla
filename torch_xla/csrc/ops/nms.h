@@ -22,4 +22,4 @@ class Nms : public XlaNode {
   int64_t output_size_;
 };
 
-} // namespace torch_xla
+}  // namespace torch_xla

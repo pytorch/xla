@@ -35,4 +35,4 @@ class Select : public XlaNode {
   int64_t stride_;
 };
 
-} // namespace torch_xla
+}  // namespace torch_xla

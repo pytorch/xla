@@ -30,7 +30,8 @@ L1Loss::L1Loss(const XlaValue& input, const XlaValue& target,
       reduction_(reduction) {}
 
 torch::lazy::NodePtr L1Loss::Clone(OpList operands) const {
-  return torch::lazy::MakeNode<L1Loss>(operands.at(0), operands.at(1), reduction_);
+  return torch::lazy::MakeNode<L1Loss>(operands.at(0), operands.at(1),
+                                       reduction_);
 }
 
 XlaOpVector L1Loss::Lower(LoweringContext* loctx) const {
@@ -46,4 +47,4 @@ std::string L1Loss::ToString() const {
   return ss.str();
 }
 
-} // namespace torch_xla
+}  // namespace torch_xla

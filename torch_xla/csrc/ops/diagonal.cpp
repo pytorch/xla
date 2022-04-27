@@ -57,4 +57,4 @@ xla::Shape Diagonal::MakeDiagonalShape(const xla::Shape& shape, int64_t offset,
   return xla::ShapeUtil::MakeShape(shape.element_type(), dimensions);
 }
 
-} // namespace torch_xla
+}  // namespace torch_xla

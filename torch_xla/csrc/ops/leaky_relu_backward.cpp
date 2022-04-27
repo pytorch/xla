@@ -14,8 +14,8 @@ LeakyReluBackward::LeakyReluBackward(const XlaValue& grad_output,
       negative_slope_(negative_slope) {}
 
 torch::lazy::NodePtr LeakyReluBackward::Clone(OpList operands) const {
-  return torch::lazy::MakeNode<LeakyReluBackward>(operands.at(0), operands.at(1),
-                                         negative_slope_);
+  return torch::lazy::MakeNode<LeakyReluBackward>(
+      operands.at(0), operands.at(1), negative_slope_);
 }
 
 XlaOpVector LeakyReluBackward::Lower(LoweringContext* loctx) const {
@@ -32,4 +32,4 @@ std::string LeakyReluBackward::ToString() const {
   return ss.str();
 }
 
-} // namespace torch_xla
+}  // namespace torch_xla

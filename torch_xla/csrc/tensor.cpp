@@ -215,10 +215,9 @@ XlaDataCacheArena::XlaDataCache* GetXlaDataCache(
   return arena->Get(device);
 }
 
-XlaValue IrValueFromScalar(const at::Scalar& value,
-                               at::ScalarType scalar_type,
-                               const torch::lazy::BackendDevice& device,
-                               bool transfer_async) {
+XlaValue IrValueFromScalar(const at::Scalar& value, at::ScalarType scalar_type,
+                           const torch::lazy::BackendDevice& device,
+                           bool transfer_async) {
   at::Tensor tensor = at::scalar_tensor(value, at::TensorOptions(scalar_type));
   xla::ComputationClient::DataPtr device_data =
       TensorToXlaData(tensor, device, transfer_async);
@@ -337,10 +336,10 @@ class XLATensor::DeviceContextArena {
     devctx->running_seed = kSeedAdd + kSeedMul * devctx->running_seed;
     // Compose new seeds from the root seed, to avoid creating too many XLA
     // computation parameters which might overflow the TPU capacity.
-    XlaValue k = ScalarOp(
-        MakeIntScalar(kSeedMul), MakeXlaPrimitiveType(kSeedType, &device));
-    XlaValue b = ScalarOp(
-        MakeIntScalar(kSeedAdd), MakeXlaPrimitiveType(kSeedType, &device));
+    XlaValue k = ScalarOp(MakeIntScalar(kSeedMul),
+                          MakeXlaPrimitiveType(kSeedType, &device));
+    XlaValue b = ScalarOp(MakeIntScalar(kSeedAdd),
+                          MakeXlaPrimitiveType(kSeedType, &device));
     devctx->seed_ir_value = b + k * devctx->seed_ir_value;
     return devctx->seed_ir_value;
   }
@@ -734,9 +733,8 @@ XlaValue XLATensor::GetIrValueForTensor(
   if (tensor.dim() == 0 && tensor.numel() == 1) {
     at::Scalar value = tensor.item();
     if (IsSpecialScalar(value)) {
-      return ScalarOp(
-          std::move(value),
-          MakeXlaPrimitiveType(tensor.scalar_type(), &device));
+      return ScalarOp(std::move(value),
+                      MakeXlaPrimitiveType(tensor.scalar_type(), &device));
     }
     data = GetDeviceData(tensor, device);
     read_only = true;
@@ -758,9 +756,8 @@ XlaValue XLATensor::GetDeviceDataIrValue(
 }
 
 XlaValue XLATensor::GetIrValueForConstant(const at::Scalar& value,
-                                              const xla::Shape& shape) {
-  XlaValue ir_value =
-      ScalarOp(std::move(value), shape.element_type());
+                                          const xla::Shape& shape) {
+  XlaValue ir_value = ScalarOp(std::move(value), shape.element_type());
   if (!shape.dimensions().empty()) {
     ir_value = torch::lazy::MakeNode<Expand>(
         ir_value, torch::lazy::ToVector<int64_t>(shape.dimensions()));
@@ -1106,7 +1103,7 @@ std::vector<XLATensor> XLATensor::CreateTensors(
 }
 
 XlaValue XLATensor::CreateTensorNode(xla::ComputationClient::DataPtr data,
-                                         bool read_only) const {
+                                     bool read_only) const {
   data->SetInfo(std::make_shared<DeviceDataInfo>(GetUniqueId(), read_only));
   return torch::lazy::MakeNode<DeviceData>(std::move(data));
 }
@@ -1612,8 +1609,8 @@ XLATensor::CompilationResult XLATensor::Compile(
   static const bool enable_aliasing =
       xla::sys_util::GetEnvBool("XLA_ENABLE_PARAM_ALIASING", true);
   LoweringContext lowering_ctx("SyncTensorsGraph", coll.device,
-                                   po_data->post_order,
-                                   std::move(po_data->emission_map));
+                               po_data->post_order,
+                               std::move(po_data->emission_map));
   for (auto index : coll.indices) {
     XlaValue ir_value = tensors[index].CurrentIrValue();
     xla::XlaOp root = lowering_ctx.GetOutputOp(

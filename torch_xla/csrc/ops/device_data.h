@@ -25,4 +25,4 @@ class DeviceData : public XlaNode {
   std::shared_ptr<xla::ComputationClient::Data> data_;
 };
 
-} // namespace torch_xla
+}  // namespace torch_xla

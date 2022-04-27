@@ -12,4 +12,4 @@ using LowerForShapeFn =
 xla::Shape InferOutputShape(absl::Span<const xla::Shape> input_shapes,
                             const LowerForShapeFn& core_lowering_fn);
 
-} // namespace torch_xla
+}  // namespace torch_xla

@@ -99,4 +99,4 @@ torch::lazy::hash_t ScalarHash(const at::Scalar& s) {
                              : torch::lazy::Hash(s.toLong());
 }
 
-} // namespace torch_xla
+}  // namespace torch_xla

@@ -6,8 +6,7 @@ namespace torch_xla {
 
 class IndexGet : public XlaNode {
  public:
-  IndexGet(const XlaValue& base, const XlaValue& indices,
-           int64_t start_dim);
+  IndexGet(const XlaValue& base, const XlaValue& indices, int64_t start_dim);
 
   std::string ToString() const override;
 
@@ -22,4 +21,4 @@ class IndexGet : public XlaNode {
   int64_t start_dim_;
 };
 
-} // namespace torch_xla
+}  // namespace torch_xla

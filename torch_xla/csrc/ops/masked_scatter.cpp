@@ -13,7 +13,7 @@ MaskedScatter::MaskedScatter(const XlaValue& input, const XlaValue& mask,
 
 torch::lazy::NodePtr MaskedScatter::Clone(OpList operands) const {
   return torch::lazy::MakeNode<MaskedScatter>(operands.at(0), operands.at(1),
-                                     operands.at(2));
+                                              operands.at(2));
 }
 
 XlaOpVector MaskedScatter::Lower(LoweringContext* loctx) const {
@@ -23,4 +23,4 @@ XlaOpVector MaskedScatter::Lower(LoweringContext* loctx) const {
   return ReturnOp(BuildMaskedScatter(input, mask, source), loctx);
 }
 
-} // namespace torch_xla
+}  // namespace torch_xla

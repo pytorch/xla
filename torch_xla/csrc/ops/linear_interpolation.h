@@ -21,4 +21,4 @@ class LinearInterpolation : public XlaNode {
   double alpha_;
 };
 
-} // namespace torch_xla
+}  // namespace torch_xla

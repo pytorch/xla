@@ -150,8 +150,7 @@ std::vector<XLATensor> WrapIndicesOnce(const XLATensor& base,
 }
 
 torch::lazy::NodePtr IndexFillOp(const XlaValue& buffer, int64_t dim,
-                                 const XlaValue& index,
-                                 const XlaValue& value) {
+                                 const XlaValue& index, const XlaValue& value) {
   auto lower_fn = [dim](const XlaNode& node,
                         LoweringContext* loctx) -> XlaOpVector {
     xla::XlaOp xla_base = loctx->GetOutputOp(node.operand(0));
@@ -176,8 +175,7 @@ torch::lazy::NodePtr IndexFillOp(const XlaValue& buffer, int64_t dim,
 }
 
 torch::lazy::NodePtr IndexAddOp(const XlaValue& buffer, int64_t dim,
-                                const XlaValue& index,
-                                const XlaValue& source) {
+                                const XlaValue& index, const XlaValue& source) {
   auto lower_fn = [dim](const XlaNode& node,
                         LoweringContext* loctx) -> XlaOpVector {
     xla::XlaOp xla_base = loctx->GetOutputOp(node.operand(0));
@@ -243,8 +241,7 @@ CanonicalIndexInfo GetCanonicalIndexInfo(
 }
 
 XlaValue EnsureRank1(const XlaValue& index) {
-  const XlaNode* casted =
-      dynamic_cast<const XlaNode*>(index.node.get());
+  const XlaNode* casted = dynamic_cast<const XlaNode*>(index.node.get());
   XLA_CHECK_LE(casted->xla_shape().rank(), 1);
   return casted->xla_shape().rank() == 0
              ? torch::lazy::MakeNode<Expand>(index, std::vector<int64_t>{1})
@@ -269,10 +266,10 @@ XLATensor IndexByTensors(const XLATensor& base,
 }
 
 XlaValue IndexPutByTensors(const XLATensor& base,
-                               absl::Span<const XLATensor> indices,
-                               int64_t start_dim, const XLATensor& values,
-                               bool accumulate,
-                               absl::Span<const int64_t> result_permutation) {
+                           absl::Span<const XLATensor> indices,
+                           int64_t start_dim, const XLATensor& values,
+                           bool accumulate,
+                           absl::Span<const int64_t> result_permutation) {
   if (indices.empty()) {
     return base.GetIrValue();
   }
@@ -315,8 +312,8 @@ torch::lazy::NodePtr IndexFill(const XLATensor& base, int64_t dim,
                      value.GetIrValue());
 }
 
-XlaValue IndexAdd(const XLATensor& base, int64_t dim,
-                      const XLATensor& index, const XLATensor& source) {
+XlaValue IndexAdd(const XLATensor& base, int64_t dim, const XLATensor& index,
+                  const XLATensor& source) {
   XLA_CHECK(index.dtype() == at::ScalarType::Long ||
             index.dtype() == at::ScalarType::Int)
       << "Add index is expected to be of scalar type Long or scalar type Int, "
@@ -328,8 +325,8 @@ XlaValue IndexAdd(const XLATensor& base, int64_t dim,
                     source.GetIrValue());
 }
 
-XlaValue IndexCopy(const XLATensor& base, int64_t dim,
-                       const XLATensor& index, const XLATensor& source) {
+XlaValue IndexCopy(const XLATensor& base, int64_t dim, const XLATensor& index,
+                   const XLATensor& source) {
   XLA_CHECK_EQ(index.dtype(), at::ScalarType::Long)
       << "Copy index is expected to be of scalar type Long, but it is "
       << index.dtype();

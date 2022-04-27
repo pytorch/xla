@@ -25,7 +25,7 @@ std::string HardtanhBackward::ToString() const {
 
 torch::lazy::NodePtr HardtanhBackward::Clone(OpList operands) const {
   return torch::lazy::MakeNode<HardtanhBackward>(operands.at(0), operands.at(1),
-                                        min_val_, max_val_);
+                                                 min_val_, max_val_);
 }
 
 XlaOpVector HardtanhBackward::Lower(LoweringContext* loctx) const {
@@ -36,4 +36,4 @@ XlaOpVector HardtanhBackward::Lower(LoweringContext* loctx) const {
   return ReturnOp(output, loctx);
 }
 
-} // namespace torch_xla
+}  // namespace torch_xla

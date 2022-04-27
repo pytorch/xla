@@ -28,4 +28,4 @@ XlaOpVector Softshrink::Lower(LoweringContext* loctx) const {
   return ReturnOp(BuildSoftshrink(input, lambda_), loctx);
 }
 
-} // namespace torch_xla
+}  // namespace torch_xla

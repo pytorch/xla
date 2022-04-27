@@ -23,4 +23,4 @@ class SymEig : public XlaNode {
   bool lower_;
 };
 
-} // namespace torch_xla
+}  // namespace torch_xla

@@ -36,4 +36,4 @@ class MaxPoolNd : public XlaNode {
   bool ceil_mode_;
 };
 
-} // namespace torch_xla
+}  // namespace torch_xla

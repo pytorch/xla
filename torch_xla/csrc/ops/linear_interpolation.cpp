@@ -14,8 +14,8 @@ LinearInterpolation::LinearInterpolation(const XlaValue& value,
       alpha_(alpha) {}
 
 torch::lazy::NodePtr LinearInterpolation::Clone(OpList operands) const {
-  return torch::lazy::MakeNode<LinearInterpolation>(operands.at(0), operands.at(1),
-                                           alpha_);
+  return torch::lazy::MakeNode<LinearInterpolation>(operands.at(0),
+                                                    operands.at(1), alpha_);
 }
 
 XlaOpVector LinearInterpolation::Lower(LoweringContext* loctx) const {
@@ -31,4 +31,4 @@ std::string LinearInterpolation::ToString() const {
   return ss.str();
 }
 
-} // namespace torch_xla
+}  // namespace torch_xla

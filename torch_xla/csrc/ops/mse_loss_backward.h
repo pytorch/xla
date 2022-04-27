@@ -23,4 +23,4 @@ class MseLossBackward : public XlaNode {
   ReductionMode reduction_;
 };
 
-} // namespace torch_xla
+}  // namespace torch_xla
