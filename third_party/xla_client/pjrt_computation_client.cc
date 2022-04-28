@@ -4,9 +4,11 @@
 
 #include "absl/types/span.h"
 #include "tensorflow/compiler/xla/client/xla_computation.h"
+#include "tensorflow/compiler/xla/layout_util.h"
 #include "tensorflow/compiler/xla/literal.h"
 #include "tensorflow/compiler/xla/pjrt/cpu_device.h"
 #include "tensorflow/compiler/xla/pjrt/pjrt_client.h"
+#include "tensorflow/compiler/xla/pjrt/tpu_client.h"
 #include "tensorflow/compiler/xla/shape.h"
 #include "tensorflow/compiler/xla/xla_client/computation_client.h"
 #include "tensorflow/compiler/xla/xla_client/debug_macros.h"
@@ -17,10 +19,10 @@ namespace xla {
 
 namespace {
 
-// TODO(wcromar): relying on the debug string here is probably a bad idea
 std::string PjRtDeviceToString(PjRtDevice* const device) {
-  std::string str = device->DebugString();
-  std::transform(str.begin(), str.end(), str.begin(), ::toupper);
+  std::string platform(device->client()->platform_name());
+  std::transform(platform.begin(), platform.end(), platform.begin(), ::toupper);
+  std::string str = absl::StrFormat("%s:%d", platform, device->id());
   return str;
 }
 
@@ -42,13 +44,21 @@ PjRtComputationClient::PjRtComputationClient() {
   std::string device_type = sys_util::GetEnvString(env::kEnvPjRtDevice, "");
   if (device_type == "CPU") {
     TF_VLOG(1) << "Initializing PjRt CPU client...";
-    client_ = xla::GetCpuClient(/*asynchronous=*/false).ValueOrDie();
+    client_ = std::move(xla::GetCpuClient(/*asynchronous=*/false).ValueOrDie());
+  } else if (device_type == "TPU") {
+    TF_VLOG(1) << "Initializing PjRt TPU client...";
+    client_ = xla::GetTpuClient(/*max_inflight_computations=*/1).ValueOrDie();
   } else {
     XLA_ERROR() << absl::StrFormat("Unknown %s '%s'", env::kEnvPjRtDevice,
                                    device_type);
   }
 
   XLA_CHECK(client_.get() != nullptr);
+
+  for (auto* device : client->addressable_devices()) {
+    std::string device_str = PjRtDeviceToString(device);
+    string_to_device.emplace(device_str, device);
+  }
 }
 
 void PjRtComputationClient::PjRtData::Assign(const Data& data) {
@@ -68,17 +78,17 @@ std::vector<ComputationClient::DataPtr> PjRtComputationClient::TransferToServer(
   std::vector<ComputationClient::DataPtr> datas;
   datas.reserve(tensors.size());
   for (auto& tensor : tensors) {
-    xla::Shape shape = tensor.shape;
-    xla::Literal literal(shape);
+    xla::Literal literal(tensor.shape);
     tensor.populate_fn(tensor, literal.untyped_data(), literal.size_bytes());
+    xla::Shape shape = LayoutUtil::GetWithDefaultLayout(tensor.shape);
+    literal = literal.Relayout(shape);
 
+    PjRtDevice* pjrt_device = StringToPjRtDevice(tensor.device);
     std::shared_ptr<xla::PjRtBuffer> buffer =
-        client_
-            ->BufferFromHostLiteral(literal, client_->addressable_devices()[0])
-            .ValueOrDie();
+        client_->BufferFromHostLiteral(literal, pjrt_device).ValueOrDie();
     buffer->GetReadyFuture().Await();
     ComputationClient::DataPtr data =
-        std::make_shared<PjRtData>(tensor.device, tensor.shape, buffer);
+        std::make_shared<PjRtData>(tensor.device, shape, buffer);
     datas.push_back(data);
   }
 
@@ -106,9 +116,11 @@ std::vector<ComputationClient::ComputationPtr> PjRtComputationClient::Compile(
   std::vector<ComputationClient::ComputationPtr> computations;
 
   for (auto& instance : instances) {
+    auto pjrt_device = StringToPjRtDevice(instance.devices[0]);
     xla::ProgramShape program_shape =
         instance.computation.GetProgramShape().ValueOrDie();
     xla::CompileOptions compile_options;
+    compile_options.compile_portable_executable = true;
     std::unique_ptr<xla::PjRtExecutable> executable =
         client_->Compile(instance.computation, compile_options).ValueOrDie();
     std::shared_ptr<PjRtComputation> pjrt_computation =
@@ -131,22 +143,27 @@ PjRtComputationClient::ExecuteComputation(
   const PjRtComputation& pjrt_computation =
       dynamic_cast<const PjRtComputation&>(computation);
 
+  xla::PjRtDevice* pjrt_device = StringToPjRtDevice(device);
+  XLA_CHECK(pjrt_device->IsAddressable()) << pjrt_device->DebugString();
+
   std::vector<xla::PjRtBuffer*> buffers;
   buffers.reserve(arguments.size());
   for (auto& argument : arguments) {
     const PjRtData* pjrt_data = dynamic_cast<PjRtData*>(argument.get());
+
+    XLA_CHECK(pjrt_device == pjrt_data->buffer->device()) << pjrt_device->DebugString() << " vs " << pjrt_data->buffer->device()->DebugString();
     buffers.push_back(pjrt_data->buffer.get());
   }
 
   xla::ExecuteOptions execute_options;
-  execute_options.untuple_result = true;
-  std::vector<std::vector<std::unique_ptr<xla::PjRtBuffer>>> results =
-      pjrt_computation.executable->Execute({buffers}, execute_options)
+  execute_options.untuple_result = options.explode_tuple;
+  std::vector<std::unique_ptr<xla::PjRtBuffer>> results =
+      pjrt_computation.executable->ExecutePortable(buffers, pjrt_device, execute_options)
           .ValueOrDie();
 
   std::vector<DataPtr> datas;
-  datas.reserve(results[0].size());
-  for (auto& result : results[0]) {
+  datas.reserve(results.size());
+  for (auto& result : results) {
     std::unique_ptr<xla::PjRtBuffer> buffer = std::move(result);
 
     std::shared_ptr<PjRtData> data = std::make_shared<PjRtData>(
@@ -176,10 +193,20 @@ std::vector<std::string> PjRtComputationClient::GetAllDevices() const {
   return PjRtDevicesToString(client_->devices());
 }
 
+void PjRtComputationClient::SetReplicationDevices(
+    std::shared_ptr<std::vector<std::string>> devices) {
+  replication_devices_ = std::move(devices);
+}
+
 std::shared_ptr<std::vector<std::string>>
 PjRtComputationClient::GetReplicationDevices() {
-  return std::make_shared<std::vector<std::string>>(
-      PjRtDevicesToString(client_->addressable_devices()));
+  return replication_devices_;
+}
+
+xla::PjRtDevice* PjRtComputationClient::StringToPjRtDevice(const std::string& device) {
+  XLA_CHECK(string_to_device.find(device) != string_to_device.end()) << "Unknown device " << device;
+  xla::PjRtDevice* pjrt_device = string_to_device[device];
+  return pjrt_device;
 }
 
 }  // namespace xla
