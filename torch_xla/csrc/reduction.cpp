@@ -1,3 +1,4 @@
+torch_xla/csrc/reduction.cpp
 #include "torch_xla/csrc/reduction.h"
 
 #include <stdlib.h>
@@ -555,7 +556,7 @@ xla::XlaOp BuildLogsumexp(xla::XlaOp input,
 xla::XlaOp BuildRandpermOut(int64_t n, xla::XlaBuilder* builder) {
   // Create an arange tensor of size n
   xla::PrimitiveType element_type = xla::U64;
-  xla::XlaOp input = xla::Iota(builder, element_type, n);
+  xla::XlaOp input = xla::Iota(builder, element_type, n);26
 
   // Ensure that the key space is greater than or equal to the cube of the
   // number of values to manage the number of collisions. Inspired by
