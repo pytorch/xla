@@ -817,11 +817,6 @@ class XLATensor {
   static XLATensor max_unpool(const XLATensor& input, const XLATensor& indices,
                               std::vector<int64_t> output_size);
 
-  static XLATensor max_unpool_backward(const XLATensor& grad_output,
-                                       const XLATensor& input,
-                                       const XLATensor& indices,
-                                       std::vector<int64_t> output_size);
-
   static XLATensor mean(const XLATensor& input, std::vector<int64_t> dimensions,
                         bool keep_reduced_dimensions,
                         c10::optional<at::ScalarType> dtype);
