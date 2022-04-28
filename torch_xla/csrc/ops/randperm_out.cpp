@@ -7,23 +7,11 @@
 namespace torch_xla {
 namespace ir {
 namespace ops {
-namespace {
-
-xla::Shape NodeOutputShape(int64_t n) {
-  auto lower_for_shape_fn_randperm_out =
-      [&](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
-    return BuildRandpermOut(n);
-  };
-  return InferOutputShape({}, lower_for_shape_fn_randperm_out);
-}
-
-}  // namespace
 
 RandpermOut::RandpermOut(int64_t n)
-    : Node(
-          torch::lazy::OpKind(at::aten::randperm), {},
-          [&]() { return NodeOutputShape(n); },
-          /*num_outputs=*/1, torch::lazy::MHash(n)),
+    : Node(torch::lazy::OpKind(at::aten::randperm), {},
+           xla::ShapeUtil::MakeShape(xla::U64, {n}),
+           /*num_outputs=*/1, torch::lazy::MHash(n)),
       n_(n) {}
 
 torch::lazy::NodePtr RandpermOut::Clone(OpList operands) const {
@@ -31,8 +19,7 @@ torch::lazy::NodePtr RandpermOut::Clone(OpList operands) const {
 }
 
 XlaOpVector RandpermOut::Lower(LoweringContext* loctx) const {
-  // xla::XlaOp out = loctx->GetOutputOp(operand(0));
-  xla::XlaOp op_randperm_out = BuildRandpermOut(n_);
+  xla::XlaOp op_randperm_out = BuildRandpermOut(n_, loctx->builder());
   return ReturnOp(op_randperm_out, loctx);
 }
 

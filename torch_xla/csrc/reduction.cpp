@@ -7,6 +7,7 @@
 #include <vector>
 
 #include "tensorflow/compiler/xla/client/lib/arithmetic.h"
+#include "tensorflow/compiler/xla/client/lib/comparators.h"
 #include "tensorflow/compiler/xla/client/lib/constants.h"
 #include "tensorflow/compiler/xla/literal_util.h"
 #include "tensorflow/compiler/xla/xla_client/debug_macros.h"
@@ -524,6 +525,7 @@ xla::XlaOp BuildLogsumexp(xla::XlaOp input,
 
 /**
  * @brief Returns a random permutation of integers from 0 to n - 1
+ *
  * [Algorithm of randperm]: randperm is implemented by sorting an
  * arange tensor of size n with randomly generated keys. When random
  * keys are different from each other, all different permutations have
@@ -538,64 +540,49 @@ xla::XlaOp BuildLogsumexp(xla::XlaOp input,
  *
  * The PyTorch CUDA implementation for randperm performs some additional
  * post-processing to resolve this pitfall, which guarantees that the
- * permutation is truely uniformaly distributed. However, this XLA
- * impementation has not address this pitfall yet. It simply sorts an arange
- * tensor of size n with random keys.
+ * permutation is truely uniformaly distributed. In contrast, this XLA
+ * implementation does not guarantee a true uniform distribution. However,
+ * it performs multiple rounds of sorting with random keys. Since the
+ * probability of multiple successive key collision is small, the resulting
+ * distribution of the permutations approximates a uniform distribution.
+ *
+ * TODO: Implement post-processing for the generated random permutation to
+ * resolve this pitfall, i.e. ensuring that the permutations are truly
+ * randomly uniformly distributed.
+ * Link to PyTorch CUDA implementation of this post-processing:
+ * https://github.com/pytorch/pytorch/blob/master/aten/src/ATen/native/cuda/Randperm.cu
  */
-xla::XlaOp BuildRandpermOut(int64_t n) {
-  xla::XlaBuilder builder("RandpermOut");
+xla::XlaOp BuildRandpermOut(int64_t n, xla::XlaBuilder* builder) {
+  // Create an arange tensor of size n
+  xla::PrimitiveType element_type = xla::U64;
+  xla::XlaOp input = xla::Iota(&builder, element_type, n);
 
-  xla::XlaOp min_val =
-      XlaHelpers::ScalarValue(0, xla::PrimitiveType::U64, &builder);
-  xla::XlaOp max_val =
-      XlaHelpers::ScalarValue(n, xla::PrimitiveType::U64, &builder);
-  // A random seed to use for generating the random keys
-  xla::XlaOp random_seed =
-      XlaHelpers::ScalarValue(rand(), xla::PrimitiveType::U64, &builder);
-  xla::Shape scalar_shape =
-      xla::ShapeUtil::MakeShape(xla::PrimitiveType::U64, {});
+  // Ensure that the key space is greater than or equal to the cube of the
+  // number of values to manage the number of collisions. Inspired by
+  // RandomShuffleOp in tf2xla, where the full rationale for picking the
+  // exponent value is described.
+  const int kExponent = 3;
+  const int rounds = static_cast<int>(
+      std::ceil(kExponent * std::log(n) / std::log(tensorflow::kuint32max)));
 
-  // Create a span of tuples `(random_key, number)`,
-  // where `number` is from 0 to n - 1
-  std::vector<xla::XlaOp> key_num_vec;
-  for (size_t i = 0; i < n; ++i) {
-    xla::XlaOp random_key =
-        RngDiscreteUniform(random_seed, scalar_shape, min_val, max_val);
-    xla::XlaOp number =
-        XlaHelpers::ScalarValue(i, xla::PrimitiveType::U64, &builder);
-    key_num_vec.push_back(xla::Tuple(&builder, {random_key, number}));
-  }
-  auto key_num_span = absl::Span<const xla::XlaOp>(key_num_vec);
+  // Define shapes and constants
+  const xla::Shape key_shape = xla::ShapeUtil::MakeShape(xla::U32, {n});
+  xla::XlaOp zero = XlaHelpers::ScalarValue(0U, &builder);
+  xla::XlaOp max_value =
+      XlaHelpers::ScalarValue(tensorflow::kuint32max, &builder);
 
-  // Create a comparator that sorts the tuples
-  // `(random_key, number)` by their `random_key`
-  xla::XlaComputation comparator;
-  {
-    xla::XlaBuilder b("compare_key");
-    xla::XlaOp key_num_1 = xla::Parameter(&b, 0, scalar_shape, "key_num_1");
-    xla::XlaOp key_num_2 = xla::Parameter(&b, 1, scalar_shape, "key_num_2");
-    xla::XlaOp key1 = xla::GetTupleElement(key_num_1, 0);
-    xla::XlaOp key2 = xla::GetTupleElement(key_num_2, 0);
-    xla::Lt(key1, key2);
-    xla::StatusOr<xla::XlaComputation> computation_status = b.Build();
-    assert(xla::Status::OK() == computation_status.status());
-    comparator = computation_status.ConsumeValueOrDie();
+  // To address the pitfall, sort the permutation with random keys for multiple
+  // rounds
+  xla::XlaOp curr = input;
+  for (int i = 0; i < rounds; ++i) {
+    xla::XlaOp keys = xla::RngUniform(zero, max_value, key_shape);
+    xla::XlaOp sorted = xla::Sort(
+        {keys, curr},
+        xla::CreateScalarLtComputation({xla::U32, element_type}, &builder));
+    curr = xla::GetTupleElement(sorted, 1);
   }
 
-  // Create a random permutation by sorting the numbers with their random keys
-  xla::XlaOp sorted_key_nums = xla::Sort(key_num_span, comparator);
-
-  // Map each tuple `(random_key, number)` to just `number`,
-  // i.e. we only keep the numbers, which is the random
-  // permutation that we return
-  std::vector<xla::XlaOp> perm;
-  for (size_t i = 0; i < n; ++i) {
-    xla::XlaOp key_num = xla::GetTupleElement(sorted_key_nums, i);
-    perm.push_back(xla::GetTupleElement(key_num, 1));
-  }
-  auto perm_span = absl::Span<const xla::XlaOp>(perm);
-
-  return xla::Tuple(&builder, perm_span);
+  return curr;
 }
 
 }  // namespace torch_xla
