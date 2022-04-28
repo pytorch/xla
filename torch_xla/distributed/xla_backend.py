@@ -148,6 +148,9 @@ class ProcessGroupXla(ProcessGroup):
     for t in tensors:
       channel_id = self.make_send_channel_id(dst_rank, tag)
       token = xm.send(t, channel_id)
+      # Make the sent tensor depend on the token, such that the `send`
+      # op can actually be built into the computation graph.
+      t.data.data = token
       tokens.append(token)
     return WorkXla(tokens)
 

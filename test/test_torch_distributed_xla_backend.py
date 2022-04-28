@@ -200,8 +200,8 @@ class XlaBackendTest(unittest.TestCase):
     # seeing 'Send is not implemented on CPU' means we have successfully
     # generated `send` in the HLO.
     with self.assertRaises(RuntimeError) as cm:
-      work = pg_xla.send(input_list, 1)
-      hlo = torch_xla._XLAC._get_xla_tensors_hlo(work.cc_tensors)
+      pg_xla.send(input_list, 1)
+      hlo = torch_xla._XLAC._get_xla_tensors_hlo(input_list)
       hlo_matches(hlo, send_pattern)
       hlo_matches(hlo, senddone_pattern)
       xm.mark_step()
@@ -230,8 +230,8 @@ class XlaBackendTest(unittest.TestCase):
     # seeing 'recv is not implemented on CPU' means we have successfully
     # generated `recv` in the HLO.
     with self.assertRaises(RuntimeError) as cm:
-      work = pg_xla.recv(output_list, 1)
-      hlo = torch_xla._XLAC._get_xla_tensors_hlo(work.cc_tensors)
+      pg_xla.recv(output_list, 1)
+      hlo = torch_xla._XLAC._get_xla_tensors_hlo(output_list)
       hlo_matches(hlo, recv_pattern)
       hlo_matches(hlo, recvdone_pattern)
       xm.mark_step()
