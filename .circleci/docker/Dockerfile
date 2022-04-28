@@ -46,10 +46,14 @@ ENV TPUVM_MODE "${tpuvm}"
 # https://developer.download.nvidia.com/compute/machine-learning/repos/ubuntu1804/x86_64
 RUN rm /etc/apt/sources.list.d/nvidia-ml.list
 
+# Rotate nvidia repo public key (last updated: 04/27/2022)
+# Unfortunately, nvidia/cuda image is shipped with invalid public key
+RUN apt-key adv --fetch-keys https://developer.download.nvidia.com/compute/cuda/repos/ubuntu1804/x86_64/3bf863cc.pub
+
 # Install base system packages
 RUN apt-get update
 RUN apt-get install -y python-pip python3-pip git curl libopenblas-dev vim \
-  apt-transport-https ca-certificates wget procps openssl libssl-dev sudo libc6-dbg
+  apt-transport-https ca-certificates procps openssl sudo wget libssl-dev libc6-dbg
 
 # Install clang & llvm
 ADD ./install_llvm_clang.sh install_llvm_clang.sh
