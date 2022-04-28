@@ -1408,6 +1408,9 @@ class XLATensor {
   static SyncTensorCollection CollectSyncTensors(
       const std::vector<XLATensor>& tensors, const SyncTensorsConfig& config);
 
+  // Waits for this SyncTensorCollection's device barrier and acuire the lock.
+  static void TensorCollectionBarrier(SyncTensorCollection* coll);
+
   // Implementation of the GetTensors() API using the op-by-op executor.
   static std::vector<at::Tensor> GetTensorsOpByOp(
       std::vector<XLATensor>* tensors);
@@ -1453,7 +1456,7 @@ class XLATensor {
       std::string device, ComputationCache::TypePtr cached_computation);
 
   static PostOrderData RunPostOrder(const std::vector<XLATensor>& tensors,
-                                    absl::Span<const size_t> indices);
+                                    SyncTensorCollection* coll);
 
   static ComputationCache::TypePtr LookupCachedCompile(
       const std::vector<XLATensor>& tensors, const torch::lazy::hash_t& hash);
