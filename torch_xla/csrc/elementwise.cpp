@@ -343,6 +343,9 @@ xla::XlaOp BuildSelu(xla::XlaOp input) {
   // SELU(x)=scale*(max(0,x)+min(0,a*(exp(x)−1)))
   return scale * (xla::Max(zero, input) +
                   xla::Min(zero, alpha * (xla::Exp(input) - one)));
+                  
+xla::XlaOp LogSigmoid(xla::XlaOp input) {
+  const xla::Shape& shape = XlaHelpers::ShapeOfXlaOp(input);
 }
 
 }  // namespace torch_xla

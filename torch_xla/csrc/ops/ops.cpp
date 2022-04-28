@@ -244,7 +244,7 @@ torch::lazy::NodePtr HardSwishBackward(const XlaValue& grad_output,
                    std::move(lower_fn));
 }
 
-std::tuple<torch::lazy::NodePtr, torch::lazy::NodePtr> LogSigmoid(
+torch::lazy::NodePtr LogSigmoid(
     const XlaValue& input) {
   ScopePusher ir_scope(at::aten::log_sigmoid.toQualString());
   // Use log-sum-exp trick to avoid overflow.

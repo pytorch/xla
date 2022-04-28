@@ -89,4 +89,7 @@ xla::XlaOp BuildCelu(xla::XlaOp input, const at::Scalar& alpha);
 // SELU(x)=scale*(max(0,x)+min(0,a*(exp(x)−1)))
 xla::XlaOp BuildSelu(xla::XlaOp input);
 
+// Computes the LogSigmoid function of input.
+xla::XlaOp LogSigmoid(xla::XlaOp input);
+
 }  // namespace torch_xla
