@@ -6,8 +6,6 @@
 #include "torch_xla/csrc/ir.h"
 
 namespace torch_xla {
-namespace ir {
-namespace ops {
 
 class Cast : public XlaNode {
  public:
@@ -33,6 +31,4 @@ class Cast : public XlaNode {
   c10::optional<at::ScalarType> stype_;
 };
 
-}  // namespace ops
-}  // namespace ir
 }  // namespace torch_xla

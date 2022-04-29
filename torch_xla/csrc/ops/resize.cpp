@@ -6,8 +6,6 @@
 #include "torch_xla/csrc/lowering_context.h"
 
 namespace torch_xla {
-namespace ir {
-namespace ops {
 namespace {
 
 xla::Shape NodeOutputShape(const XlaValue& input,
@@ -24,7 +22,7 @@ Resize::Resize(const XlaValue& input, std::vector<int64_t> size)
       size_(std::move(size)) {}
 
 torch::lazy::NodePtr Resize::Clone(OpList operands) const {
-  return ir::MakeNode<Resize>(operands.at(0), size_);
+  return torch::lazy::MakeNode<Resize>(operands.at(0), size_);
 }
 
 XlaOpVector Resize::Lower(LoweringContext* loctx) const {
@@ -39,6 +37,4 @@ std::string Resize::ToString() const {
   return ss.str();
 }
 
-}  // namespace ops
-}  // namespace ir
 }  // namespace torch_xla

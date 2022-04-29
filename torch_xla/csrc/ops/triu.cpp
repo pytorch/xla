@@ -4,8 +4,6 @@
 #include "torch_xla/csrc/matrix.h"
 
 namespace torch_xla {
-namespace ir {
-namespace ops {
 
 Triu::Triu(const XlaValue& input, int64_t diagonal)
     : XlaNode(torch::lazy::OpKind(at::aten::triu), {input}, input.xla_shape(),
@@ -13,7 +11,7 @@ Triu::Triu(const XlaValue& input, int64_t diagonal)
       diagonal_(diagonal) {}
 
 torch::lazy::NodePtr Triu::Clone(OpList operands) const {
-  return ir::MakeNode<Triu>(operands.at(0), diagonal_);
+  return torch::lazy::MakeNode<Triu>(operands.at(0), diagonal_);
 }
 
 XlaOpVector Triu::Lower(LoweringContext* loctx) const {
@@ -28,6 +26,4 @@ std::string Triu::ToString() const {
   return ss.str();
 }
 
-}  // namespace ops
-}  // namespace ir
 }  // namespace torch_xla

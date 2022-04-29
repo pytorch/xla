@@ -3,8 +3,6 @@
 #include "torch_xla/csrc/ir.h"
 
 namespace torch_xla {
-namespace ir {
-namespace ops {
 
 class SVD : public XlaNode {
  public:
@@ -25,6 +23,4 @@ class SVD : public XlaNode {
   bool compute_uv_;
 };
 
-}  // namespace ops
-}  // namespace ir
 }  // namespace torch_xla

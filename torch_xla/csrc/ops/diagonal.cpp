@@ -8,8 +8,6 @@
 #include "torch_xla/csrc/matrix.h"
 
 namespace torch_xla {
-namespace ir {
-namespace ops {
 
 Diagonal::Diagonal(const XlaValue& input, int64_t offset, int64_t dim1,
                    int64_t dim2)
@@ -23,7 +21,7 @@ Diagonal::Diagonal(const XlaValue& input, int64_t offset, int64_t dim1,
       dim2_(dim2) {}
 
 torch::lazy::NodePtr Diagonal::Clone(OpList operands) const {
-  return ir::MakeNode<Diagonal>(operands.at(0), offset_, dim1_, dim2_);
+  return torch::lazy::MakeNode<Diagonal>(operands.at(0), offset_, dim1_, dim2_);
 }
 
 XlaOpVector Diagonal::Lower(LoweringContext* loctx) const {
@@ -59,6 +57,4 @@ xla::Shape Diagonal::MakeDiagonalShape(const xla::Shape& shape, int64_t offset,
   return xla::ShapeUtil::MakeShape(shape.element_type(), dimensions);
 }
 
-}  // namespace ops
-}  // namespace ir
 }  // namespace torch_xla

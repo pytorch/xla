@@ -5,8 +5,6 @@
 #include "torch_xla/csrc/xla_lower_util.h"
 
 namespace torch_xla {
-namespace ir {
-namespace ops {
 
 Exponential::Exponential(const XlaValue& lambda, const XlaValue& seed,
                          xla::Shape shape)
@@ -14,7 +12,8 @@ Exponential::Exponential(const XlaValue& lambda, const XlaValue& seed,
               std::move(shape)) {}
 
 torch::lazy::NodePtr Exponential::Clone(OpList operands) const {
-  return ir::MakeNode<Exponential>(operands.at(0), operands.at(1), xla_shape());
+  return torch::lazy::MakeNode<Exponential>(operands.at(0), operands.at(1),
+                                            xla_shape());
 }
 
 XlaOpVector Exponential::Lower(LoweringContext* loctx) const {
@@ -30,6 +29,4 @@ XlaOpVector Exponential::Lower(LoweringContext* loctx) const {
       loctx);
 }
 
-}  // namespace ops
-}  // namespace ir
 }  // namespace torch_xla

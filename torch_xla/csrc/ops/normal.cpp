@@ -5,15 +5,14 @@
 #include "torch_xla/csrc/random.h"
 
 namespace torch_xla {
-namespace ir {
-namespace ops {
 
 Normal::Normal(const XlaValue& mean, const XlaValue& std, const XlaValue& seed)
     : XlaNode(torch::lazy::OpKind(at::aten::normal), {mean, std, seed},
               mean.xla_shape()) {}
 
 torch::lazy::NodePtr Normal::Clone(OpList operands) const {
-  return ir::MakeNode<Normal>(operands.at(0), operands.at(1), operands.at(2));
+  return torch::lazy::MakeNode<Normal>(operands.at(0), operands.at(1),
+                                       operands.at(2));
 }
 
 XlaOpVector Normal::Lower(LoweringContext* loctx) const {
@@ -24,6 +23,4 @@ XlaOpVector Normal::Lower(LoweringContext* loctx) const {
       RngNormal(rng_seed, XlaHelpers::ShapeOfXlaOp(mean), mean, std), loctx);
 }
 
-}  // namespace ops
-}  // namespace ir
 }  // namespace torch_xla

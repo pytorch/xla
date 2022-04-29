@@ -5,8 +5,6 @@
 #include "torch_xla/csrc/ir.h"
 
 namespace torch_xla {
-namespace ir {
-namespace ops {
 
 class UpsampleBilinearBackward : public XlaNode {
  public:
@@ -32,6 +30,4 @@ class UpsampleBilinearBackward : public XlaNode {
   bool align_corners_;
 };
 
-}  // namespace ops
-}  // namespace ir
 }  // namespace torch_xla

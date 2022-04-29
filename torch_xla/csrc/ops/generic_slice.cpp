@@ -8,8 +8,6 @@
 #include "torch_xla/csrc/torch_util.h"
 
 namespace torch_xla {
-namespace ir {
-namespace ops {
 namespace {
 
 xla::Shape NodeOutputShape(const XlaValue& input,
@@ -34,7 +32,8 @@ GenericSlice::GenericSlice(const XlaValue& input,
       sizes_(sizes.begin(), sizes.end()) {}
 
 torch::lazy::NodePtr GenericSlice::Clone(OpList operands) const {
-  return ir::MakeNode<GenericSlice>(operands.at(0), base_indices_, sizes_);
+  return torch::lazy::MakeNode<GenericSlice>(operands.at(0), base_indices_,
+                                             sizes_);
 }
 
 XlaOpVector GenericSlice::Lower(LoweringContext* loctx) const {
@@ -51,6 +50,4 @@ std::string GenericSlice::ToString() const {
   return ss.str();
 }
 
-}  // namespace ops
-}  // namespace ir
 }  // namespace torch_xla

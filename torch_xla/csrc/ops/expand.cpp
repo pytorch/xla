@@ -6,8 +6,6 @@
 #include "torch_xla/csrc/ops/infer_output_shape.h"
 
 namespace torch_xla {
-namespace ir {
-namespace ops {
 namespace {
 
 xla::Shape NodeOutputShape(const XlaValue& input,
@@ -28,7 +26,7 @@ Expand::Expand(const XlaValue& input, std::vector<int64_t> size)
       size_(std::move(size)) {}
 
 torch::lazy::NodePtr Expand::Clone(OpList operands) const {
-  return ir::MakeNode<Expand>(operands.at(0), size_);
+  return torch::lazy::MakeNode<Expand>(operands.at(0), size_);
 }
 
 XlaOpVector Expand::Lower(LoweringContext* loctx) const {
@@ -42,6 +40,4 @@ std::string Expand::ToString() const {
   return ss.str();
 }
 
-}  // namespace ops
-}  // namespace ir
 }  // namespace torch_xla

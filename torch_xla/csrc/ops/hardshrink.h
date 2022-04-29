@@ -5,8 +5,6 @@
 #include "torch_xla/csrc/ir.h"
 
 namespace torch_xla {
-namespace ir {
-namespace ops {
 
 class Hardshrink : public XlaNode {
  public:
@@ -24,6 +22,4 @@ class Hardshrink : public XlaNode {
   at::Scalar lambda_;
 };
 
-}  // namespace ops
-}  // namespace ir
 }  // namespace torch_xla

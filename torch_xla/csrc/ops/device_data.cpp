@@ -6,8 +6,6 @@
 #include "torch_xla/csrc/ops/xla_ops.h"
 
 namespace torch_xla {
-namespace ir {
-namespace ops {
 
 DeviceData::DeviceData(std::shared_ptr<xla::ComputationClient::Data> data)
     : XlaNode(xla_device_data, data->shape(), /*num_outputs=*/1,
@@ -21,7 +19,7 @@ std::string DeviceData::ToString() const {
 }
 
 torch::lazy::NodePtr DeviceData::Clone(OpList operands) const {
-  return ir::MakeNode<DeviceData>(data_);
+  return torch::lazy::MakeNode<DeviceData>(data_);
 }
 
 XlaOpVector DeviceData::Lower(LoweringContext* loctx) const {
@@ -29,9 +27,7 @@ XlaOpVector DeviceData::Lower(LoweringContext* loctx) const {
 }
 
 DeviceData* DeviceData::Cast(const torch::lazy::Node* node) {
-  return ir::NodeCast<DeviceData>(node, xla_device_data);
+  return torch_xla::NodeCast<DeviceData>(node, xla_device_data);
 }
 
-}  // namespace ops
-}  // namespace ir
 }  // namespace torch_xla

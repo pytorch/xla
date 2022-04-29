@@ -4,8 +4,6 @@
 #include "torch_xla/csrc/ir.h"
 
 namespace torch_xla {
-namespace ir {
-namespace ops {
 
 class ReplicationPad : public XlaNode {
  public:
@@ -23,6 +21,4 @@ class ReplicationPad : public XlaNode {
   std::vector<int64_t> padding_;
 };
 
-}  // namespace ops
-}  // namespace ir
 }  // namespace torch_xla

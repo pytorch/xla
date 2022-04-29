@@ -6,8 +6,6 @@
 #include "torch_xla/csrc/ir.h"
 
 namespace torch_xla {
-namespace ir {
-namespace ops {
 
 class CumProd : public XlaNode {
  public:
@@ -29,6 +27,4 @@ class CumProd : public XlaNode {
   c10::optional<at::ScalarType> dtype_;
 };
 
-}  // namespace ops
-}  // namespace ir
 }  // namespace torch_xla

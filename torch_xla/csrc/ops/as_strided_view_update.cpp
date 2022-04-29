@@ -11,8 +11,6 @@
 #include "torch_xla/csrc/torch_util.h"
 
 namespace torch_xla {
-namespace ir {
-namespace ops {
 namespace {
 
 xla::XlaOp LowerAsStridedViewUpdate(xla::XlaOp target, xla::XlaOp input,
@@ -66,8 +64,8 @@ std::string AsStridedViewUpdate::ToString() const {
 }
 
 torch::lazy::NodePtr AsStridedViewUpdate::Clone(OpList operands) const {
-  return ir::MakeNode<AsStridedViewUpdate>(operands.at(0), operands.at(1),
-                                           size_, stride_, storage_offset_);
+  return torch::lazy::MakeNode<AsStridedViewUpdate>(
+      operands.at(0), operands.at(1), size_, stride_, storage_offset_);
 }
 
 XlaOpVector AsStridedViewUpdate::Lower(LoweringContext* loctx) const {
@@ -78,6 +76,4 @@ XlaOpVector AsStridedViewUpdate::Lower(LoweringContext* loctx) const {
       loctx);
 }
 
-}  // namespace ops
-}  // namespace ir
 }  // namespace torch_xla

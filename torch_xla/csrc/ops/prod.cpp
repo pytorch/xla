@@ -11,8 +11,6 @@
 #include "torch_xla/csrc/torch_util.h"
 
 namespace torch_xla {
-namespace ir {
-namespace ops {
 namespace {
 
 xla::XlaOp LowerProd(xla::XlaOp input, const std::vector<int64_t>& dimensions,
@@ -57,8 +55,8 @@ Prod::Prod(const XlaValue& input, std::vector<int64_t> dimensions,
       dtype_(dtype) {}
 
 torch::lazy::NodePtr Prod::Clone(OpList operands) const {
-  return ir::MakeNode<Prod>(operands.at(0), dimensions_,
-                            keep_reduced_dimensions_, dtype_);
+  return torch::lazy::MakeNode<Prod>(operands.at(0), dimensions_,
+                                     keep_reduced_dimensions_, dtype_);
 }
 
 XlaOpVector Prod::Lower(LoweringContext* loctx) const {
@@ -76,6 +74,4 @@ std::string Prod::ToString() const {
   return ss.str();
 }
 
-}  // namespace ops
-}  // namespace ir
 }  // namespace torch_xla

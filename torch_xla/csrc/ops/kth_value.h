@@ -3,8 +3,6 @@
 #include "torch_xla/csrc/ir.h"
 
 namespace torch_xla {
-namespace ir {
-namespace ops {
 
 class KthValue : public XlaNode {
  public:
@@ -28,6 +26,4 @@ class KthValue : public XlaNode {
   bool keepdim_;
 };
 
-}  // namespace ops
-}  // namespace ir
 }  // namespace torch_xla

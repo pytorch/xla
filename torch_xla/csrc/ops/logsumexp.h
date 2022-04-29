@@ -7,8 +7,6 @@
 #include "torch_xla/csrc/ir.h"
 
 namespace torch_xla {
-namespace ir {
-namespace ops {
 
 class Logsumexp : public XlaNode {
  public:
@@ -30,6 +28,4 @@ class Logsumexp : public XlaNode {
   bool keep_reduced_dimensions_;
 };
 
-}  // namespace ops
-}  // namespace ir
 }  // namespace torch_xla

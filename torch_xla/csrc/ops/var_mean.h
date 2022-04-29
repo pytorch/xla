@@ -6,8 +6,6 @@
 #include "torch_xla/csrc/ir.h"
 
 namespace torch_xla {
-namespace ir {
-namespace ops {
 
 class VarMean : public XlaNode {
  public:
@@ -32,6 +30,4 @@ class VarMean : public XlaNode {
   bool keep_reduced_dimensions_;
 };
 
-}  // namespace ops
-}  // namespace ir
 }  // namespace torch_xla

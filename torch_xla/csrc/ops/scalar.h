@@ -9,8 +9,6 @@
 #include "torch_xla/csrc/ir.h"
 
 namespace torch_xla {
-namespace ir {
-namespace ops {
 
 // Differently from Constant, this is a scalar value broadcasted to a shape.
 // Even though a Constant could have been used, for simple scalars broadcasted
@@ -35,6 +33,4 @@ class Scalar : public XlaNode {
 
 torch::lazy::hash_t ScalarHash(const at::Scalar& s);
 
-}  // namespace ops
-}  // namespace ir
 }  // namespace torch_xla

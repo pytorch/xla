@@ -10,8 +10,6 @@
 #include "torch_xla/csrc/torch_util.h"
 
 namespace torch_xla {
-namespace ir {
-namespace ops {
 namespace {
 
 xla::XlaOp LowerCumSum(xla::XlaOp input, int64_t dim,
@@ -46,7 +44,7 @@ CumSum::CumSum(const XlaValue& input, int64_t dim,
       dtype_(dtype) {}
 
 torch::lazy::NodePtr CumSum::Clone(OpList operands) const {
-  return ir::MakeNode<CumSum>(operands.at(0), dim_, dtype_);
+  return torch::lazy::MakeNode<CumSum>(operands.at(0), dim_, dtype_);
 }
 
 XlaOpVector CumSum::Lower(LoweringContext* loctx) const {
@@ -63,6 +61,4 @@ std::string CumSum::ToString() const {
   return ss.str();
 }
 
-}  // namespace ops
-}  // namespace ir
 }  // namespace torch_xla

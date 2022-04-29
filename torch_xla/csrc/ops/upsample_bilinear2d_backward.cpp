@@ -6,8 +6,6 @@
 #include "torch_xla/csrc/resize_ops.h"
 
 namespace torch_xla {
-namespace ir {
-namespace ops {
 
 UpsampleBilinearBackward::UpsampleBilinearBackward(
     const XlaValue& input, std::vector<int64_t> output_size,
@@ -25,8 +23,8 @@ UpsampleBilinearBackward::UpsampleBilinearBackward(
       align_corners_(align_corners) {}
 
 torch::lazy::NodePtr UpsampleBilinearBackward::Clone(OpList operands) const {
-  return ir::MakeNode<UpsampleBilinearBackward>(operands.at(0), output_size_,
-                                                input_size_, align_corners_);
+  return torch::lazy::MakeNode<UpsampleBilinearBackward>(
+      operands.at(0), output_size_, input_size_, align_corners_);
 }
 
 XlaOpVector UpsampleBilinearBackward::Lower(LoweringContext* loctx) const {
@@ -46,6 +44,4 @@ std::string UpsampleBilinearBackward::ToString() const {
   return ss.str();
 }
 
-}  // namespace ops
-}  // namespace ir
 }  // namespace torch_xla

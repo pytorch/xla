@@ -5,8 +5,6 @@
 #include "torch_xla/csrc/ops/xla_ops.h"
 
 namespace torch_xla {
-namespace ir {
-namespace ops {
 
 NotSupported::NotSupported(std::string description, xla::Shape shape)
     : XlaNode(xla_not_supported, std::move(shape), /*num_outputs=*/1,
@@ -14,7 +12,7 @@ NotSupported::NotSupported(std::string description, xla::Shape shape)
       description_(std::move(description)) {}
 
 torch::lazy::NodePtr NotSupported::Clone(OpList operands) const {
-  return ir::MakeNode<NotSupported>(description_, xla_shape());
+  return torch::lazy::MakeNode<NotSupported>(description_, xla_shape());
 }
 
 XlaOpVector NotSupported::Lower(LoweringContext* /* loctx */) const {
@@ -27,6 +25,4 @@ std::string NotSupported::ToString() const {
   return ss.str();
 }
 
-}  // namespace ops
-}  // namespace ir
 }  // namespace torch_xla

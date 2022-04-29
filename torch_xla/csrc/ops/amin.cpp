@@ -5,8 +5,6 @@
 #include "torch_xla/csrc/reduction.h"
 
 namespace torch_xla {
-namespace ir {
-namespace ops {
 namespace {
 
 xla::Shape NodeOutputShape(const XlaValue& input,
@@ -28,7 +26,7 @@ Amin::Amin(const XlaValue& input, std::vector<int64_t> dimensions, bool keepdim)
       keepdim_(keepdim) {}
 
 torch::lazy::NodePtr Amin::Clone(OpList operands) const {
-  return ir::MakeNode<Amin>(operands.at(0), dimensions_, keepdim_);
+  return torch::lazy::MakeNode<Amin>(operands.at(0), dimensions_, keepdim_);
 }
 
 XlaOpVector Amin::Lower(LoweringContext* loctx) const {
@@ -44,6 +42,4 @@ std::string Amin::ToString() const {
   return ss.str();
 }
 
-}  // namespace ops
-}  // namespace ir
 }  // namespace torch_xla

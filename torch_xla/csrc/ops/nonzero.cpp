@@ -6,8 +6,6 @@
 #include "torch_xla/csrc/xla_lower_util.h"
 
 namespace torch_xla {
-namespace ir {
-namespace ops {
 namespace {
 
 xla::Shape NodeOutputShape(const XlaValue& input) {
@@ -29,7 +27,7 @@ NonZero::NonZero(const XlaValue& input)
               /*num_outputs=*/2) {}
 
 torch::lazy::NodePtr NonZero::Clone(OpList operands) const {
-  return ir::MakeNode<NonZero>(operands.at(0));
+  return torch::lazy::MakeNode<NonZero>(operands.at(0));
 }
 
 XlaOpVector NonZero::Lower(LoweringContext* loctx) const {
@@ -37,6 +35,4 @@ XlaOpVector NonZero::Lower(LoweringContext* loctx) const {
   return ReturnOps(BuildNonZero(input), loctx);
 }
 
-}  // namespace ops
-}  // namespace ir
 }  // namespace torch_xla

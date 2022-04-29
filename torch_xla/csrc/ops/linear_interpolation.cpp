@@ -5,8 +5,6 @@
 #include "torch_xla/csrc/ops/xla_ops.h"
 
 namespace torch_xla {
-namespace ir {
-namespace ops {
 
 LinearInterpolation::LinearInterpolation(const XlaValue& value,
                                          const XlaValue& new_value,
@@ -16,8 +14,8 @@ LinearInterpolation::LinearInterpolation(const XlaValue& value,
       alpha_(alpha) {}
 
 torch::lazy::NodePtr LinearInterpolation::Clone(OpList operands) const {
-  return ir::MakeNode<LinearInterpolation>(operands.at(0), operands.at(1),
-                                           alpha_);
+  return torch::lazy::MakeNode<LinearInterpolation>(operands.at(0),
+                                                    operands.at(1), alpha_);
 }
 
 XlaOpVector LinearInterpolation::Lower(LoweringContext* loctx) const {
@@ -33,6 +31,4 @@ std::string LinearInterpolation::ToString() const {
   return ss.str();
 }
 
-}  // namespace ops
-}  // namespace ir
 }  // namespace torch_xla

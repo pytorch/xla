@@ -5,8 +5,6 @@
 #include "torch_xla/csrc/ir.h"
 
 namespace torch_xla {
-namespace ir {
-namespace ops {
 
 class GetDimensionsSize : public XlaNode {
  public:
@@ -24,6 +22,4 @@ class GetDimensionsSize : public XlaNode {
   std::vector<int64_t> dimensions_;
 };
 
-}  // namespace ops
-}  // namespace ir
 }  // namespace torch_xla

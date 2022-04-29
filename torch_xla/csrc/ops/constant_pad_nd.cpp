@@ -9,8 +9,6 @@
 #include "torch_xla/csrc/ops/scalar.h"
 
 namespace torch_xla {
-namespace ir {
-namespace ops {
 namespace {
 
 xla::XlaOp LowerPad(xla::XlaOp input, const at::Scalar& value,
@@ -42,7 +40,7 @@ ConstantPadNd::ConstantPadNd(const XlaValue& input, std::vector<int64_t> pad,
       value_(value) {}
 
 torch::lazy::NodePtr ConstantPadNd::Clone(OpList operands) const {
-  return ir::MakeNode<ConstantPadNd>(operands.at(0), pad_, value_);
+  return torch::lazy::MakeNode<ConstantPadNd>(operands.at(0), pad_, value_);
 }
 
 XlaOpVector ConstantPadNd::Lower(LoweringContext* loctx) const {
@@ -58,6 +56,4 @@ std::string ConstantPadNd::ToString() const {
   return ss.str();
 }
 
-}  // namespace ops
-}  // namespace ir
 }  // namespace torch_xla

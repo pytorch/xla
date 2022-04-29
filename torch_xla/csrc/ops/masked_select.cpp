@@ -6,8 +6,6 @@
 #include "torch_xla/csrc/xla_lower_util.h"
 
 namespace torch_xla {
-namespace ir {
-namespace ops {
 namespace {
 
 xla::Shape NodeOutputShape(const XlaValue& input) {
@@ -29,7 +27,7 @@ MaskedSelect::MaskedSelect(const XlaValue& input, const XlaValue& mask)
               /*num_outputs=*/2) {}
 
 torch::lazy::NodePtr MaskedSelect::Clone(OpList operands) const {
-  return ir::MakeNode<MaskedSelect>(operands.at(0), operands.at(1));
+  return torch::lazy::MakeNode<MaskedSelect>(operands.at(0), operands.at(1));
 }
 
 XlaOpVector MaskedSelect::Lower(LoweringContext* loctx) const {
@@ -38,6 +36,4 @@ XlaOpVector MaskedSelect::Lower(LoweringContext* loctx) const {
   return ReturnOps(BuildMaskedSelect(input, mask), loctx);
 }
 
-}  // namespace ops
-}  // namespace ir
 }  // namespace torch_xla

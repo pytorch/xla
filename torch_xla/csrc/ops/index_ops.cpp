@@ -149,11 +149,10 @@ std::vector<XLATensor> WrapIndicesOnce(const XLATensor& base,
   return canonical_indices;
 }
 
-torch::lazy::NodePtr IndexFillOp(const ir::XlaValue& buffer, int64_t dim,
-                                 const ir::XlaValue& index,
-                                 const ir::XlaValue& value) {
-  auto lower_fn = [dim](const ir::XlaNode& node,
-                        ir::LoweringContext* loctx) -> ir::XlaOpVector {
+torch::lazy::NodePtr IndexFillOp(const XlaValue& buffer, int64_t dim,
+                                 const XlaValue& index, const XlaValue& value) {
+  auto lower_fn = [dim](const XlaNode& node,
+                        LoweringContext* loctx) -> XlaOpVector {
     xla::XlaOp xla_base = loctx->GetOutputOp(node.operand(0));
     xla::XlaOp xla_index = loctx->GetOutputOp(node.operand(1));
     xla::XlaOp xla_value = loctx->GetOutputOp(node.operand(2));
@@ -164,22 +163,21 @@ torch::lazy::NodePtr IndexFillOp(const ir::XlaValue& buffer, int64_t dim,
       [dim](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
     return CreateIndexFill(operands[0], dim, operands[1], operands[2]);
   };
-  ir::XlaValue index_rank1 = EnsureRank1(index);
-  return ir::ops::GenericOp(
+  XlaValue index_rank1 = EnsureRank1(index);
+  return GenericOp(
       torch::lazy::OpKind(at::aten::index_fill), {buffer, index_rank1, value},
       [&]() {
-        return ir::ops::InferOutputShape(
+        return InferOutputShape(
             {buffer.xla_shape(), index_rank1.xla_shape(), value.xla_shape()},
             lower_for_shape_fn);
       },
       std::move(lower_fn), /*num_outputs=*/1, torch::lazy::MHash(dim));
 }
 
-torch::lazy::NodePtr IndexAddOp(const ir::XlaValue& buffer, int64_t dim,
-                                const ir::XlaValue& index,
-                                const ir::XlaValue& source) {
-  auto lower_fn = [dim](const ir::XlaNode& node,
-                        ir::LoweringContext* loctx) -> ir::XlaOpVector {
+torch::lazy::NodePtr IndexAddOp(const XlaValue& buffer, int64_t dim,
+                                const XlaValue& index, const XlaValue& source) {
+  auto lower_fn = [dim](const XlaNode& node,
+                        LoweringContext* loctx) -> XlaOpVector {
     xla::XlaOp xla_base = loctx->GetOutputOp(node.operand(0));
     xla::XlaOp xla_index = loctx->GetOutputOp(node.operand(1));
     xla::XlaOp xla_source = loctx->GetOutputOp(node.operand(2));
@@ -190,22 +188,22 @@ torch::lazy::NodePtr IndexAddOp(const ir::XlaValue& buffer, int64_t dim,
       [dim](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
     return CreateIndexAdd(operands[0], dim, operands[1], operands[2]);
   };
-  ir::XlaValue index_rank1 = EnsureRank1(index);
-  return ir::ops::GenericOp(
+  XlaValue index_rank1 = EnsureRank1(index);
+  return GenericOp(
       torch::lazy::OpKind(at::aten::index_add), {buffer, index_rank1, source},
       [&]() {
-        return ir::ops::InferOutputShape(
+        return InferOutputShape(
             {buffer.xla_shape(), index_rank1.xla_shape(), source.xla_shape()},
             lower_for_shape_fn);
       },
       std::move(lower_fn));
 }
 
-torch::lazy::NodePtr IndexCopyOp(const ir::XlaValue& buffer, int64_t dim,
-                                 const ir::XlaValue& index,
-                                 const ir::XlaValue& source) {
-  auto lower_fn = [dim](const ir::XlaNode& node,
-                        ir::LoweringContext* loctx) -> ir::XlaOpVector {
+torch::lazy::NodePtr IndexCopyOp(const XlaValue& buffer, int64_t dim,
+                                 const XlaValue& index,
+                                 const XlaValue& source) {
+  auto lower_fn = [dim](const XlaNode& node,
+                        LoweringContext* loctx) -> XlaOpVector {
     xla::XlaOp xla_base = loctx->GetOutputOp(node.operand(0));
     xla::XlaOp xla_index = loctx->GetOutputOp(node.operand(1));
     xla::XlaOp xla_source = loctx->GetOutputOp(node.operand(2));
@@ -216,11 +214,11 @@ torch::lazy::NodePtr IndexCopyOp(const ir::XlaValue& buffer, int64_t dim,
       [dim](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
     return CreateIndexCopy(operands[0], dim, operands[1], operands[2]);
   };
-  ir::XlaValue index_rank1 = EnsureRank1(index);
-  return ir::ops::GenericOp(
+  XlaValue index_rank1 = EnsureRank1(index);
+  return GenericOp(
       torch::lazy::OpKind(at::aten::index_copy), {buffer, index_rank1, source},
       [&]() {
-        return ir::ops::InferOutputShape(
+        return InferOutputShape(
             {buffer.xla_shape(), index_rank1.xla_shape(), source.xla_shape()},
             lower_for_shape_fn);
       },
@@ -242,12 +240,11 @@ CanonicalIndexInfo GetCanonicalIndexInfo(
   return canonical_index_info;
 }
 
-ir::XlaValue EnsureRank1(const ir::XlaValue& index) {
-  const ir::XlaNode* casted =
-      dynamic_cast<const ir::XlaNode*>(index.node.get());
+XlaValue EnsureRank1(const XlaValue& index) {
+  const XlaNode* casted = dynamic_cast<const XlaNode*>(index.node.get());
   XLA_CHECK_LE(casted->xla_shape().rank(), 1);
   return casted->xla_shape().rank() == 0
-             ? ir::MakeNode<ir::ops::Expand>(index, std::vector<int64_t>{1})
+             ? torch::lazy::MakeNode<Expand>(index, std::vector<int64_t>{1})
              : index;
 }
 
@@ -263,16 +260,16 @@ XLATensor IndexByTensors(const XLATensor& base,
   // single gather.
   XLATensor indices_nd = XLATensor::stack(canonical_indices, indices_rank);
   return XLATensor::Create(
-      ir::MakeNode<ir::ops::IndexGet>(base.GetIrValue(),
+      torch::lazy::MakeNode<IndexGet>(base.GetIrValue(),
                                       indices_nd.GetIrValue(), start_dim),
       base.GetDevice(), base.dtype());
 }
 
-ir::XlaValue IndexPutByTensors(const XLATensor& base,
-                               absl::Span<const XLATensor> indices,
-                               int64_t start_dim, const XLATensor& values,
-                               bool accumulate,
-                               absl::Span<const int64_t> result_permutation) {
+XlaValue IndexPutByTensors(const XLATensor& base,
+                           absl::Span<const XLATensor> indices,
+                           int64_t start_dim, const XLATensor& values,
+                           bool accumulate,
+                           absl::Span<const int64_t> result_permutation) {
   if (indices.empty()) {
     return base.GetIrValue();
   }
@@ -281,8 +278,8 @@ ir::XlaValue IndexPutByTensors(const XLATensor& base,
   // Stack the indices to allow the whole multi-indexing to be dispatched with a
   // single scatter.
   XLATensor indices_nd = XLATensor::stack(canonical_indices, indices_rank);
-  return ir::MakeNode<ir::ops::Permute>(
-      ir::MakeNode<ir::ops::IndexPut>(base.GetIrValue(),
+  return torch::lazy::MakeNode<Permute>(
+      torch::lazy::MakeNode<IndexPut>(base.GetIrValue(),
                                       indices_nd.GetIrValue(), start_dim,
                                       values.GetIrValue(), accumulate),
       torch::lazy::ToVector<int64_t>(result_permutation));
@@ -315,8 +312,8 @@ torch::lazy::NodePtr IndexFill(const XLATensor& base, int64_t dim,
                      value.GetIrValue());
 }
 
-ir::XlaValue IndexAdd(const XLATensor& base, int64_t dim,
-                      const XLATensor& index, const XLATensor& source) {
+XlaValue IndexAdd(const XLATensor& base, int64_t dim, const XLATensor& index,
+                  const XLATensor& source) {
   XLA_CHECK(index.dtype() == at::ScalarType::Long ||
             index.dtype() == at::ScalarType::Int)
       << "Add index is expected to be of scalar type Long or scalar type Int, "
@@ -328,8 +325,8 @@ ir::XlaValue IndexAdd(const XLATensor& base, int64_t dim,
                     source.GetIrValue());
 }
 
-ir::XlaValue IndexCopy(const XLATensor& base, int64_t dim,
-                       const XLATensor& index, const XLATensor& source) {
+XlaValue IndexCopy(const XLATensor& base, int64_t dim, const XLATensor& index,
+                   const XLATensor& source) {
   XLA_CHECK_EQ(index.dtype(), at::ScalarType::Long)
       << "Copy index is expected to be of scalar type Long, but it is "
       << index.dtype();

@@ -237,29 +237,29 @@ void WithAllDevices(
 
 std::string GetTensorTextGraph(at::Tensor tensor) {
   XLATensor xtensor = bridge::GetXlaTensor(tensor);
-  return ir::DumpUtil::ToText({xtensor.GetIrValue().node.get()});
+  return DumpUtil::ToText({xtensor.GetIrValue().node.get()});
 }
 
 std::string GetTensorDotGraph(at::Tensor tensor) {
   XLATensor xtensor = bridge::GetXlaTensor(tensor);
-  return ir::DumpUtil::ToDot({xtensor.GetIrValue().node.get()});
+  return DumpUtil::ToDot({xtensor.GetIrValue().node.get()});
 }
 
 std::string GetTensorHloGraph(at::Tensor tensor) {
   XLATensor xtensor = bridge::GetXlaTensor(tensor);
-  return ir::DumpUtil::ToHlo({xtensor.GetIrValue()}, xtensor.GetDevice());
+  return DumpUtil::ToHlo({xtensor.GetIrValue()}, xtensor.GetDevice());
 }
 
-ir::XlaValue GetTensorIrValue(const at::Tensor& tensor,
-                              const torch::lazy::BackendDevice& device) {
+XlaValue GetTensorIrValue(const at::Tensor& tensor,
+                          const torch::lazy::BackendDevice& device) {
   xla::ComputationClient::DataPtr data = TensorToXlaData(tensor, device);
-  return ir::MakeNode<ir::ops::DeviceData>(std::move(data));
+  return torch::lazy::MakeNode<DeviceData>(std::move(data));
 }
 
 std::vector<xla::ComputationClient::DataPtr> Execute(
-    absl::Span<const ir::XlaValue> roots,
+    absl::Span<const XlaValue> roots,
     const torch::lazy::BackendDevice& device) {
-  ir::LoweringContext lowering_ctx("Execute", device);
+  LoweringContext lowering_ctx("Execute", device);
   for (auto node : roots) {
     xla::XlaOp root = lowering_ctx.GetOutputOp(
         torch::lazy::Output(node.node.get(), node.index));
@@ -300,7 +300,7 @@ std::vector<at::Tensor> Fetch(
 }
 
 std::vector<at::Tensor> ExecuteAndFetch(
-    absl::Span<const ir::XlaValue> roots,
+    absl::Span<const XlaValue> roots,
     const torch::lazy::BackendDevice& device) {
   auto results = Execute(roots, device);
   return Fetch(results);

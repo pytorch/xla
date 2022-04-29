@@ -5,8 +5,6 @@
 #include "torch_xla/csrc/xla_lower_util.h"
 
 namespace torch_xla {
-namespace ir {
-namespace ops {
 namespace {
 
 xla::Shape NodeOutputShape(const XlaValue& step, const XlaValue& param) {
@@ -36,7 +34,7 @@ AdamOptimizerStep::AdamOptimizerStep(
       use_adamw_(use_adamw) {}
 
 torch::lazy::NodePtr AdamOptimizerStep::Clone(OpList operands) const {
-  return ir::MakeNode<AdamOptimizerStep>(
+  return torch::lazy::MakeNode<AdamOptimizerStep>(
       operands.at(0), operands.at(1), operands.at(2), operands.at(3),
       operands.at(4), operands.at(5), operands.at(6), operands.at(7),
       operands.at(8), operands.at(9), operands.at(10), operands.at(11),
@@ -63,6 +61,4 @@ XlaOpVector AdamOptimizerStep::Lower(LoweringContext* loctx) const {
       loctx);
 }
 
-}  // namespace ops
-}  // namespace ir
 }  // namespace torch_xla
