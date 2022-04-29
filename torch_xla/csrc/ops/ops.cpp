@@ -244,16 +244,14 @@ torch::lazy::NodePtr HardSwishBackward(const XlaValue& grad_output,
                    std::move(lower_fn));
 }
 
-torch::lazy::NodePtr LogSigmoid(
-    const XlaValue& input) {
-  ScopePusher ir_scope(at::aten::log_sigmoid.toQualString());
-  // Use log-sum-exp trick to avoid overflow.
-  torch::lazy::NodePtr neg_input = Neg(input);
-  torch::lazy::NodePtr max_elem =
-      Max(ScalarOp(0, input.xla_shape()), neg_input);
-  torch::lazy::NodePtr buffer = Exp(Neg(max_elem)) + Exp(neg_input - max_elem);
-  torch::lazy::NodePtr output = Neg(max_elem + Log(buffer));
-  return std::make_tuple(output, buffer);
+torch::lazy::NodePtr LogSigmoid(const XlaValue& input) {
+  auto lower_fn = [](const XlaNode& node,
+                     LoweringContext* loctx) -> XlaOpVector {
+    xla::XlaOp xla_input = loctx->GetOutputOp(node.operand(0));
+    return node.ReturnOps(BuildLogSigmoid(xla_input), loctx);
+  };
+  return GenericOp(torch::lazy::OpKind(at::aten::log_sigmoid), {input},
+                   input.xla_shape(), std::move(lower_fn), /*num_outputs=*/2);
 }
 
 torch::lazy::NodePtr LogSigmoidBackward(const XlaValue& grad_output,

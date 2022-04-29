@@ -90,6 +90,10 @@ xla::XlaOp BuildCelu(xla::XlaOp input, const at::Scalar& alpha);
 xla::XlaOp BuildSelu(xla::XlaOp input);
 
 // Computes the LogSigmoid function of input.
-xla::XlaOp LogSigmoid(xla::XlaOp input);
+std::vector<xla::XlaOp> BuildLogSigmoid(xla::XlaOp input);
+
+xla::XlaOp BuildLogSigmoidBackward(xla::XlaOp grad_output,
+                                        xla::XlaOp input,
+                                        xla::XlaOp buffer)
 
 }  // namespace torch_xla

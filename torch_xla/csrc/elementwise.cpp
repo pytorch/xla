@@ -344,8 +344,27 @@ xla::XlaOp BuildSelu(xla::XlaOp input) {
   return scale * (xla::Max(zero, input) +
                   xla::Min(zero, alpha * (xla::Exp(input) - one)));
                   
-xla::XlaOp LogSigmoid(xla::XlaOp input) {
+std::vector<xla::XlaOp> LogSigmoid(xla::XlaOp input) {
   const xla::Shape& shape = XlaHelpers::ShapeOfXlaOp(input);
+  xla::XlaOp neg_input = xla::Neg(input);
+  xla::XlaOp zero = xla::Zero(input.builder(), shape.element_type());
+  xla::XlaOp max_elem = xla::Max(zero, neg_input);
+  xla::XlaOp buffer = xla::Exp(xla::Neg(max_elem)) + xla::Exp(neg_input - max_elem);
+  xla::XlaOp output = xla::Neg(max_elem + xla::Log(buffer));
+  return {output, buffer};
+}
+
+xla::XlaOp BuildLogSigmoidBackward(xla::XlaOp grad_output,
+                                        xla::XlaOp input,
+                                        xla::XlaOp buffer) {
+  const xla::Shape& shape = XlaHelpers::ShapeOfXlaOp(input);
+  xla::XlaOp zero = xla::Zero(input.builder(), shape.element_type());
+  xla::XlaOp one = XlaHelpers::ScalarValue<float>(1.0, shape.element_type(),
+                                                  input.builder());
+  xla::XlaOp minus_one = XlaHelpers::ScalarValue<float>(-1.0, shape.element_type(),
+                                                  input.builder());
+
+  xla::XlaOp max_deriv = xla::Select(xla::Lt)
 }
 
 }  // namespace torch_xla
