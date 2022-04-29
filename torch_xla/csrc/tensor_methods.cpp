@@ -1705,7 +1705,8 @@ XLATensor XLATensor::log_sigmoid(const XLATensor& input) {
 std::tuple<XLATensor, XLATensor> XLATensor::log_sigmoid_forward(
     const XLATensor& input) {
   torch::lazy::NodePtr node = ir::ops::LogSigmoid(input.GetIrValue());
-  return std::make_tuple(input.CreateFrom(ir::XlaValue(node, 0)), input.CreateFrom(ir::XlaValue(node, 1)));
+  return std::make_tuple(input.CreateFrom(ir::XlaValue(node, 0)),
+                         input.CreateFrom(ir::XlaValue(node, 1)));
 }
 
 XLATensor XLATensor::log_sigmoid_backward(const XLATensor& grad_output,

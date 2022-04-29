@@ -262,7 +262,8 @@ torch::lazy::NodePtr LogSigmoidBackward(const XlaValue& grad_output,
     xla::XlaOp xla_grad_output = loctx->GetOutputOp(node.operand(0));
     xla::XlaOp xla_input = loctx->GetOutputOp(node.operand(1));
     xla::XlaOp xla_buffer = loctx->GetOutputOp(node.operand(2));
-    return node.ReturnOp(BuildLogSigmoidBackward(xla_grad_output, xla_input, xla_buffer), loctx);
+    return node.ReturnOp(
+        BuildLogSigmoidBackward(xla_grad_output, xla_input, xla_buffer), loctx);
   };
   return GenericOp(torch::lazy::OpKind(at::aten::log_sigmoid_backward),
                    {grad_output, input, buffer}, input.xla_shape(),
@@ -718,13 +719,12 @@ torch::lazy::NodePtr Elu(const XlaValue& input, const at::Scalar& alpha,
                          const at::Scalar& scale,
                          const at::Scalar& input_scale) {
   auto lower_fn = [=](const XlaNode& node,
-                     LoweringContext* loctx) -> XlaOpVector {
+                      LoweringContext* loctx) -> XlaOpVector {
     xla::XlaOp xla_input = loctx->GetOutputOp(node.operand(0));
     return node.ReturnOp(BuildElu(xla_input, alpha, scale, input_scale), loctx);
   };
-  return GenericOp(torch::lazy::OpKind(at::aten::elu),
-                   {input}, input.xla_shape(),
-                   std::move(lower_fn));
+  return GenericOp(torch::lazy::OpKind(at::aten::elu), {input},
+                   input.xla_shape(), std::move(lower_fn));
 }
 
 torch::lazy::NodePtr EluBackward(const XlaValue& grad_output,
@@ -733,10 +733,12 @@ torch::lazy::NodePtr EluBackward(const XlaValue& grad_output,
                                  const at::Scalar& scale,
                                  const at::Scalar& input_scale) {
   auto lower_fn = [=](const XlaNode& node,
-                     LoweringContext* loctx) -> XlaOpVector {
+                      LoweringContext* loctx) -> XlaOpVector {
     xla::XlaOp xla_grad_output = loctx->GetOutputOp(node.operand(0));
     xla::XlaOp xla_output = loctx->GetOutputOp(node.operand(1));
-    return node.ReturnOp(BuildEluBackward(xla_grad_output, xla_output, alpha, scale, input_scale), loctx);
+    return node.ReturnOp(BuildEluBackward(xla_grad_output, xla_output, alpha,
+                                          scale, input_scale),
+                         loctx);
   };
   return GenericOp(torch::lazy::OpKind(at::aten::elu_backward),
                    {grad_output, output}, output.xla_shape(),
