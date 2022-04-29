@@ -120,7 +120,8 @@ std::vector<ComputationClient::ComputationPtr> PjRtComputationClient::Compile(
     xla::ProgramShape program_shape =
         instance.computation.GetProgramShape().ValueOrDie();
     xla::CompileOptions compile_options;
-    compile_options.compile_portable_executable = true;
+    compile_options.executable_build_options.set_num_replicas(client->addressable_device_count());
+    compile_options.executable_build_options.set_device_ordinal(pjrt_device->id());
     std::unique_ptr<xla::PjRtExecutable> executable =
         client_->Compile(instance.computation, compile_options).ValueOrDie();
     std::shared_ptr<PjRtComputation> pjrt_computation =
@@ -158,7 +159,7 @@ PjRtComputationClient::ExecuteComputation(
   xla::ExecuteOptions execute_options;
   execute_options.untuple_result = options.explode_tuple;
   std::vector<std::unique_ptr<xla::PjRtBuffer>> results =
-      pjrt_computation.executable->ExecutePortable(buffers, pjrt_device, execute_options)
+      pjrt_computation.executable->ExecuteSharded(buffers, pjrt_device, execute_options)
           .ValueOrDie();
 
   std::vector<DataPtr> datas;
