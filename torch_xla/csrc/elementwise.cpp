@@ -364,7 +364,41 @@ xla::XlaOp BuildLogSigmoidBackward(xla::XlaOp grad_output,
   xla::XlaOp minus_one = XlaHelpers::ScalarValue<float>(-1.0, shape.element_type(),
                                                   input.builder());
 
-  xla::XlaOp max_deriv = xla::Select(xla::Lt)
+  xla::XlaOp max_deriv = xla::Select(xla::Lt(input, zero), minus_one, zero);
+  xla::XlaOp sign = xla::Select(xla::Lt(input, zero), one, minus_one);
+  return grad_output * (xla::Neg(max_deriv) - sign * (buffer - one) / buffer);
+}
+
+xla::XlaOp BuildElu(xla::XlaOp input, const at::Scalar& alpha,
+                         const at::Scalar& scale,
+                         const at::Scalar& input_scale) {
+  const xla::Shape& shape = XlaHelpers::ShapeOfXlaOp(input);
+  xla::XlaOp scaled_input = input * XlaHelpers::ScalarValue(input_scale, shape.element_type(), input.builder());
+  xla::XlaOp zero = xla::Zero(input.builder(), shape.element_type());
+  xla::XlaOp one = XlaHelpers::ScalarValue<float>(1.0, shape.element_type(),
+                                                  input.builder());
+  xla::XlaOp alpha_scalar = XlaHelpers::ScalarValue(alpha, shape.element_type(), input.builder());
+  xla::XlaOp scale_scalar = XlaHelpers::ScalarValue(scale, shape.element_type(), input.builder());
+  return xla::Select(xla::Le(input, zero), alpha_scalar * (xla::Exp(scaled_input) - one), input) * scale_scalar;
+
+
+  // XlaHelpers::ScalarValue(lower, shape.element_type(), input.builder());
+
+}
+
+xla::XlaOp BuildEluBackward(xla::XlaOp grad_output,
+                                 xla::XlaOp output,
+                                 const at::Scalar& alpha,
+                                 const at::Scalar& scale,
+                                 const at::Scalar& input_scale) {
+  const xla::Shape& shape = XlaHelpers::ShapeOfXlaOp(output);
+  xla::XlaOp zero = xla::Zero(output.builder(), shape.element_type());
+  xla::XlaOp alpha_scalar = XlaHelpers::ScalarValue(alpha, shape.element_type(), output.builder());
+  xla::XlaOp scale_scalar = XlaHelpers::ScalarValue(scale, shape.element_type(), output.builder());
+  xla::XlaOp input_scale_scalar = XlaHelpers::ScalarValue(input_scale, shape.element_type(), output.builder());
+  xla::XlaOp negative_output_branch = input_scale_scalar * (output + alpha_scalar * scale_scalar);
+  return grad_output * xla::Select(xla::Gt(output, zero), scale_scalar, negative_output_branch);
+  
 }
 
 }  // namespace torch_xla
