@@ -21,7 +21,6 @@
 #include "torch/csrc/lazy/core/ir.h"
 
 namespace torch_xla {
-namespace ir {
 
 static const uint32_t default_hash_seed = (uint32_t)0x5a2d296e9;
 
@@ -153,11 +152,6 @@ inline std::ostream& operator<<(std::ostream& stream, const XlaNode& node) {
   return stream;
 }
 
-template <typename T, typename... Args>
-torch::lazy::NodePtr MakeNode(Args&&... args) {
-  return std::make_shared<T>(std::forward<Args>(args)...);
-}
-
 template <typename T>
 T* NodeCast(const torch::lazy::Node* node, torch::lazy::OpKind op) {
   if (op != node->op()) {
@@ -172,5 +166,4 @@ T* NodeCast(const torch::lazy::Node* node, torch::lazy::OpKind op) {
   return const_cast<T*>(casted);
 }
 
-}  // namespace ir
 }  // namespace torch_xla

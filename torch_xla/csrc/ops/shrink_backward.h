@@ -5,8 +5,6 @@
 #include "torch_xla/csrc/ir.h"
 
 namespace torch_xla {
-namespace ir {
-namespace ops {
 
 class ShrinkBackward : public XlaNode {
  public:
@@ -25,6 +23,4 @@ class ShrinkBackward : public XlaNode {
   at::Scalar lambda_;
 };
 
-}  // namespace ops
-}  // namespace ir
 }  // namespace torch_xla

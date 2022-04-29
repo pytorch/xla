@@ -5,8 +5,6 @@
 #include "torch_xla/csrc/ops/scalar.h"
 
 namespace torch_xla {
-namespace ir {
-namespace ops {
 
 RreluWithNoiseBackward::RreluWithNoiseBackward(
     const XlaValue& grad_output, const XlaValue& input, const XlaValue& noise,
@@ -21,9 +19,9 @@ RreluWithNoiseBackward::RreluWithNoiseBackward(
       training_(training) {}
 
 torch::lazy::NodePtr RreluWithNoiseBackward::Clone(OpList operands) const {
-  return ir::MakeNode<RreluWithNoiseBackward>(operands.at(0), operands.at(1),
-                                              operands.at(2), lower_, upper_,
-                                              training_);
+  return torch::lazy::MakeNode<RreluWithNoiseBackward>(
+      operands.at(0), operands.at(1), operands.at(2), lower_, upper_,
+      training_);
 }
 
 XlaOpVector RreluWithNoiseBackward::Lower(LoweringContext* loctx) const {
@@ -42,6 +40,4 @@ std::string RreluWithNoiseBackward::ToString() const {
   return ss.str();
 }
 
-}  // namespace ops
-}  // namespace ir
 }  // namespace torch_xla

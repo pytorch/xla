@@ -5,8 +5,6 @@
 #include "torch_xla/csrc/ops/scalar.h"
 
 namespace torch_xla {
-namespace ir {
-namespace ops {
 
 HardtanhBackward::HardtanhBackward(const XlaValue& grad_output,
                                    const XlaValue& input,
@@ -26,8 +24,8 @@ std::string HardtanhBackward::ToString() const {
 }
 
 torch::lazy::NodePtr HardtanhBackward::Clone(OpList operands) const {
-  return ir::MakeNode<HardtanhBackward>(operands.at(0), operands.at(1),
-                                        min_val_, max_val_);
+  return torch::lazy::MakeNode<HardtanhBackward>(operands.at(0), operands.at(1),
+                                                 min_val_, max_val_);
 }
 
 XlaOpVector HardtanhBackward::Lower(LoweringContext* loctx) const {
@@ -38,6 +36,4 @@ XlaOpVector HardtanhBackward::Lower(LoweringContext* loctx) const {
   return ReturnOp(output, loctx);
 }
 
-}  // namespace ops
-}  // namespace ir
 }  // namespace torch_xla

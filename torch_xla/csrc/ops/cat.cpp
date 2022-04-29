@@ -6,11 +6,9 @@
 #include "torch_xla/csrc/ops/infer_output_shape.h"
 
 namespace torch_xla {
-namespace ir {
-namespace ops {
 namespace {
 
-xla::Shape NodeOutputShape(absl::Span<const ir::XlaValue> values, int64_t dim) {
+xla::Shape NodeOutputShape(absl::Span<const XlaValue> values, int64_t dim) {
   auto lower_for_shape_fn =
       [&](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
     return BuildCat(operands, dim);
@@ -25,14 +23,14 @@ xla::Shape NodeOutputShape(absl::Span<const ir::XlaValue> values, int64_t dim) {
 
 }  // namespace
 
-Cat::Cat(absl::Span<const ir::XlaValue> values, int64_t dim)
+Cat::Cat(absl::Span<const XlaValue> values, int64_t dim)
     : XlaNode(torch::lazy::OpKind(at::aten::cat), values,
               [&]() { return NodeOutputShape(values, dim); },
               /*num_outputs=*/1, torch::lazy::MHash(dim)),
       dim_(dim) {}
 
 torch::lazy::NodePtr Cat::Clone(OpList operands) const {
-  return ir::MakeNode<Cat>(operands, dim_);
+  return torch::lazy::MakeNode<Cat>(operands, dim_);
 }
 
 XlaOpVector Cat::Lower(LoweringContext* loctx) const {
@@ -49,6 +47,4 @@ std::string Cat::ToString() const {
   return ss.str();
 }
 
-}  // namespace ops
-}  // namespace ir
 }  // namespace torch_xla

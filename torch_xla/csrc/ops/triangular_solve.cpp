@@ -6,8 +6,6 @@
 #include "torch_xla/csrc/lowering_context.h"
 
 namespace torch_xla {
-namespace ir {
-namespace ops {
 namespace {
 
 // This function plays two roles:
@@ -86,9 +84,9 @@ TriangularSolve::TriangularSolve(const XlaValue& rhs, const XlaValue& lhs,
       unit_diagonal_(unit_diagonal) {}
 
 torch::lazy::NodePtr TriangularSolve::Clone(OpList operands) const {
-  return ir::MakeNode<TriangularSolve>(operands.at(0), operands.at(1),
-                                       left_side_, lower_, transpose_,
-                                       unit_diagonal_);
+  return torch::lazy::MakeNode<TriangularSolve>(operands.at(0), operands.at(1),
+                                                left_side_, lower_, transpose_,
+                                                unit_diagonal_);
 }
 
 XlaOpVector TriangularSolve::Lower(LoweringContext* loctx) const {
@@ -107,6 +105,4 @@ std::string TriangularSolve::ToString() const {
   return ss.str();
 }
 
-}  // namespace ops
-}  // namespace ir
 }  // namespace torch_xla

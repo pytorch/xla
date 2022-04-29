@@ -5,8 +5,6 @@
 #include "torch_xla/csrc/ir.h"
 
 namespace torch_xla {
-namespace ir {
-namespace ops {
 
 class ConstantPadNd : public XlaNode {
  public:
@@ -28,6 +26,4 @@ class ConstantPadNd : public XlaNode {
   at::Scalar value_;
 };
 
-}  // namespace ops
-}  // namespace ir
 }  // namespace torch_xla

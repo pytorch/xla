@@ -11,8 +11,6 @@
 #include "torch_xla/csrc/torch_util.h"
 
 namespace torch_xla {
-namespace ir {
-namespace ops {
 namespace {
 
 xla::XlaOp LowerSum(xla::XlaOp input, absl::Span<const int64_t> dimensions,
@@ -50,8 +48,8 @@ Sum::Sum(const XlaValue& input, std::vector<int64_t> dimensions,
       dtype_(dtype) {}
 
 torch::lazy::NodePtr Sum::Clone(OpList operands) const {
-  return ir::MakeNode<Sum>(operands.at(0), dimensions_,
-                           keep_reduced_dimensions_, dtype_);
+  return torch::lazy::MakeNode<Sum>(operands.at(0), dimensions_,
+                                    keep_reduced_dimensions_, dtype_);
 }
 
 XlaOpVector Sum::Lower(LoweringContext* loctx) const {
@@ -69,6 +67,4 @@ std::string Sum::ToString() const {
   return ss.str();
 }
 
-}  // namespace ops
-}  // namespace ir
 }  // namespace torch_xla

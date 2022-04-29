@@ -6,8 +6,6 @@
 #include "torch_xla/csrc/lowering_context.h"
 
 namespace torch_xla {
-namespace ir {
-namespace ops {
 
 Constant::Constant(xla::Literal value)
     : XlaNode(torch::lazy::OpKind(at::prim::Constant), value.shape(),
@@ -25,13 +23,11 @@ std::string Constant::ToString() const {
 }
 
 torch::lazy::NodePtr Constant::Clone(OpList operands) const {
-  return ir::MakeNode<Constant>(value_.Clone());
+  return torch::lazy::MakeNode<Constant>(value_.Clone());
 }
 
 XlaOpVector Constant::Lower(LoweringContext* loctx) const {
   return ReturnOp(xla::ConstantLiteral(loctx->builder(), value_), loctx);
 }
 
-}  // namespace ops
-}  // namespace ir
 }  // namespace torch_xla

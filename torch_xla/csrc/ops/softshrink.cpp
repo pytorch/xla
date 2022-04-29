@@ -6,8 +6,6 @@
 #include "torch_xla/csrc/ops/scalar.h"
 
 namespace torch_xla {
-namespace ir {
-namespace ops {
 
 Softshrink::Softshrink(const XlaValue& input, const at::Scalar& lambda)
     : XlaNode(torch::lazy::OpKind(at::aten::softshrink), {input},
@@ -22,7 +20,7 @@ std::string Softshrink::ToString() const {
 }
 
 torch::lazy::NodePtr Softshrink::Clone(OpList operands) const {
-  return ir::MakeNode<Softshrink>(operands.at(0), lambda_);
+  return torch::lazy::MakeNode<Softshrink>(operands.at(0), lambda_);
 }
 
 XlaOpVector Softshrink::Lower(LoweringContext* loctx) const {
@@ -30,6 +28,4 @@ XlaOpVector Softshrink::Lower(LoweringContext* loctx) const {
   return ReturnOp(BuildSoftshrink(input, lambda_), loctx);
 }
 
-}  // namespace ops
-}  // namespace ir
 }  // namespace torch_xla

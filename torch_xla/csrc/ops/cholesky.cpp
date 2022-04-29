@@ -5,8 +5,6 @@
 #include "torch_xla/csrc/lowering_context.h"
 
 namespace torch_xla {
-namespace ir {
-namespace ops {
 
 Cholesky::Cholesky(const XlaValue& input, bool lower)
     : XlaNode(torch::lazy::OpKind(at::aten::cholesky), {input},
@@ -15,7 +13,7 @@ Cholesky::Cholesky(const XlaValue& input, bool lower)
       lower_(lower) {}
 
 torch::lazy::NodePtr Cholesky::Clone(OpList operands) const {
-  return ir::MakeNode<Cholesky>(operands.at(0), lower_);
+  return torch::lazy::MakeNode<Cholesky>(operands.at(0), lower_);
 }
 
 XlaOpVector Cholesky::Lower(LoweringContext* loctx) const {
@@ -31,6 +29,4 @@ std::string Cholesky::ToString() const {
   return ss.str();
 }
 
-}  // namespace ops
-}  // namespace ir
 }  // namespace torch_xla

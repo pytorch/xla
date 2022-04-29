@@ -5,8 +5,6 @@
 #include "torch_xla/csrc/xla_lower_util.h"
 
 namespace torch_xla {
-namespace ir {
-namespace ops {
 
 Linspace::Linspace(const XlaValue& start, const XlaValue& end, int64_t steps)
     : XlaNode(torch::lazy::OpKind(at::aten::linspace), {start, end},
@@ -20,7 +18,8 @@ Linspace::Linspace(const XlaValue& start, const XlaValue& end, int64_t steps)
       steps_(steps) {}
 
 torch::lazy::NodePtr Linspace::Clone(OpList operands) const {
-  return ir::MakeNode<Linspace>(operands.at(0), operands.at(1), steps_);
+  return torch::lazy::MakeNode<Linspace>(operands.at(0), operands.at(1),
+                                         steps_);
 }
 
 XlaOpVector Linspace::Lower(LoweringContext* loctx) const {
@@ -35,6 +34,4 @@ std::string Linspace::ToString() const {
   return ss.str();
 }
 
-}  // namespace ops
-}  // namespace ir
 }  // namespace torch_xla

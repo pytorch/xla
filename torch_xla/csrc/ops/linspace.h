@@ -3,8 +3,6 @@
 #include "torch_xla/csrc/ir.h"
 
 namespace torch_xla {
-namespace ir {
-namespace ops {
 
 class Linspace : public XlaNode {
  public:
@@ -22,6 +20,4 @@ class Linspace : public XlaNode {
   int64_t steps_;
 };
 
-}  // namespace ops
-}  // namespace ir
 }  // namespace torch_xla

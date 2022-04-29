@@ -5,8 +5,6 @@
 #include "torch_xla/csrc/xla_lower_util.h"
 
 namespace torch_xla {
-namespace ir {
-namespace ops {
 namespace {
 
 xla::Shape NodeOutputShape(const XlaValue& step, const XlaValue& param) {
@@ -33,7 +31,7 @@ SgdOptimizerStep::SgdOptimizerStep(
       use_nesterov_(use_nesterov) {}
 
 torch::lazy::NodePtr SgdOptimizerStep::Clone(OpList operands) const {
-  return ir::MakeNode<SgdOptimizerStep>(
+  return torch::lazy::MakeNode<SgdOptimizerStep>(
       operands.at(0), operands.at(1), operands.at(2), operands.at(3),
       operands.at(4), operands.at(5), operands.at(6), operands.at(7),
       operands.at(8), use_weight_decay_, use_momentum_, use_nesterov_);
@@ -56,6 +54,4 @@ XlaOpVector SgdOptimizerStep::Lower(LoweringContext* loctx) const {
       loctx);
 }
 
-}  // namespace ops
-}  // namespace ir
 }  // namespace torch_xla

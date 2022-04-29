@@ -3,13 +3,10 @@
 #include "torch_xla/csrc/ir.h"
 
 namespace torch_xla {
-namespace ir {
-namespace ops {
 
 class IndexGet : public XlaNode {
  public:
-  IndexGet(const ir::XlaValue& base, const ir::XlaValue& indices,
-           int64_t start_dim);
+  IndexGet(const XlaValue& base, const XlaValue& indices, int64_t start_dim);
 
   std::string ToString() const override;
 
@@ -24,6 +21,4 @@ class IndexGet : public XlaNode {
   int64_t start_dim_;
 };
 
-}  // namespace ops
-}  // namespace ir
 }  // namespace torch_xla

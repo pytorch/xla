@@ -5,8 +5,6 @@
 #include "torch_xla/csrc/reduction.h"
 
 namespace torch_xla {
-namespace ir {
-namespace ops {
 
 class NllLoss2dBackward : public XlaNode {
  public:
@@ -31,6 +29,4 @@ class NllLoss2dBackward : public XlaNode {
   int ignore_index_;
 };
 
-}  // namespace ops
-}  // namespace ir
 }  // namespace torch_xla

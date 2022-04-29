@@ -7,8 +7,6 @@
 #include "torch_xla/csrc/lowering_context.h"
 
 namespace torch_xla {
-namespace ir {
-namespace ops {
 namespace {
 
 std::vector<xla::XlaOp> LowerSymEig(xla::XlaOp input, bool eigenvectors,
@@ -54,7 +52,7 @@ SymEig::SymEig(const XlaValue& input, bool eigenvectors, bool lower)
       lower_(lower) {}
 
 torch::lazy::NodePtr SymEig::Clone(OpList operands) const {
-  return ir::MakeNode<SymEig>(operands.at(0), eigenvectors_, lower_);
+  return torch::lazy::MakeNode<SymEig>(operands.at(0), eigenvectors_, lower_);
 }
 
 XlaOpVector SymEig::Lower(LoweringContext* loctx) const {
@@ -69,6 +67,4 @@ std::string SymEig::ToString() const {
   return ss.str();
 }
 
-}  // namespace ops
-}  // namespace ir
 }  // namespace torch_xla

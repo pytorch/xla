@@ -10,8 +10,6 @@
 #include "torch_xla/csrc/torch_util.h"
 
 namespace torch_xla {
-namespace ir {
-namespace ops {
 namespace {
 
 xla::XlaOp LowerMean(xla::XlaOp input, const std::vector<int64_t>& dimensions,
@@ -51,8 +49,8 @@ Mean::Mean(const XlaValue& input, std::vector<int64_t> dimensions,
       dtype_(dtype) {}
 
 torch::lazy::NodePtr Mean::Clone(OpList operands) const {
-  return ir::MakeNode<Mean>(operands.at(0), dimensions_,
-                            keep_reduced_dimensions_, dtype_);
+  return torch::lazy::MakeNode<Mean>(operands.at(0), dimensions_,
+                                     keep_reduced_dimensions_, dtype_);
 }
 
 XlaOpVector Mean::Lower(LoweringContext* loctx) const {
@@ -70,6 +68,4 @@ std::string Mean::ToString() const {
   return ss.str();
 }
 
-}  // namespace ops
-}  // namespace ir
 }  // namespace torch_xla

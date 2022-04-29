@@ -36,8 +36,7 @@ const xla::Shape& GetParameterShape(const torch::lazy::Output& operand,
                                     const xla::Shape& input_shape) {
   // See comment in GetOutputIndex() about device data WRT computation outpout
   // shape handling.
-  const ir::ops::DeviceData* device_data =
-      ir::ops::DeviceData::Cast(operand.node);
+  const DeviceData* device_data = DeviceData::Cast(operand.node);
   return device_data != nullptr
              ? input_shape
              : xla::ShapeUtil::GetTupleElementShape(input_shape, operand.index);
@@ -53,7 +52,7 @@ torch::lazy::hash_t ComputeNodeKey(
     key = torch::lazy::HashCombine(key, torch::lazy::Hash(GetParameterShape(
                                             operands[i], *input_shapes[i])));
   }
-  const ir::XlaNode* casted = dynamic_cast<const ir::XlaNode*>(node);
+  const XlaNode* casted = dynamic_cast<const XlaNode*>(node);
   key = torch::lazy::HashCombine(key, torch::lazy::Hash(casted->xla_shape()));
   return torch::lazy::HashCombine(key, casted->node_hash());
 }
@@ -62,7 +61,7 @@ xla::XlaComputation BuildNodeComputation(
     const torch::lazy::Node* node,
     absl::Span<const xla::Shape* const> input_shapes,
     const torch::lazy::BackendDevice& device) {
-  ir::LoweringContext loctx("BuildNodeComputation", device);
+  LoweringContext loctx("BuildNodeComputation", device);
   const auto& operands = node->operands();
   for (size_t i = 0; i < operands.size(); ++i) {
     xla::XlaOp param = xla::Parameter(
@@ -87,7 +86,7 @@ OpByOpExecutor::OpByOpExecutor(size_t compile_cache_size)
     : compile_cache_(compile_cache_size) {}
 
 std::vector<xla::ComputationClient::ExecuteChainedOp> OpByOpExecutor::BuildOps(
-    absl::Span<const ir::XlaValue> roots, const std::string& device,
+    absl::Span<const XlaValue> roots, const std::string& device,
     absl::Span<const std::string> devices) {
   std::vector<const torch::lazy::Node*> root_nodes;
   root_nodes.reserve(roots.size());
@@ -95,7 +94,7 @@ std::vector<xla::ComputationClient::ExecuteChainedOp> OpByOpExecutor::BuildOps(
     root_nodes.push_back(root.node.get());
   }
   std::vector<const torch::lazy::Node*> post_order =
-      ir::Util::ComputePostOrder(root_nodes);
+      Util::ComputePostOrder(root_nodes);
   XLA_VALUE_METRIC("OpByOpGraphSize", post_order.size());
   TF_VLOG(5) << "TensorsGraphSize=" << post_order.size();
 
@@ -125,7 +124,7 @@ std::vector<xla::ComputationClient::ExecuteChainedOp> OpByOpExecutor::BuildOps(
   for (size_t i = 0; i < post_order.size(); ++i) {
     const torch::lazy::Node* node = post_order[i];
     xla::ComputationClient::ExecuteChainedOp& cxop = chained_exec_ops[i];
-    const ir::ops::DeviceData* device_data = ir::ops::DeviceData::Cast(node);
+    const DeviceData* device_data = DeviceData::Cast(node);
     if (device_data != nullptr) {
       cxop.device_data = device_data->data();
       ops_shapes[i] = &cxop.device_data->shape();
@@ -201,7 +200,7 @@ std::vector<xla::ComputationClient::ExecuteChainedOp> OpByOpExecutor::BuildOps(
 }
 
 std::vector<xla::ComputationClient::DataPtr> OpByOpExecutor::Execute(
-    absl::Span<const ir::XlaValue> roots, const std::string& device,
+    absl::Span<const XlaValue> roots, const std::string& device,
     absl::Span<const std::string> devices) {
   auto chained_exec_ops = BuildOps(roots, device, devices);
   return xla::ComputationClient::Get()->ExecuteChained(chained_exec_ops,
@@ -209,9 +208,9 @@ std::vector<xla::ComputationClient::DataPtr> OpByOpExecutor::Execute(
 }
 
 OpByOpExecutor::AsyncTask OpByOpExecutor::ExecuteAsync(
-    absl::Span<const ir::XlaValue> roots, const std::string& device,
+    absl::Span<const XlaValue> roots, const std::string& device,
     absl::Span<const std::string> devices) {
-  std::vector<ir::XlaValue> roots_vector(roots.begin(), roots.end());
+  std::vector<XlaValue> roots_vector(roots.begin(), roots.end());
   std::vector<std::string> devices_vector(devices.begin(), devices.end());
   auto taskfn = [this, roots = std::move(roots_vector),
                  devices = std::move(devices_vector), device]() -> AsyncResult {

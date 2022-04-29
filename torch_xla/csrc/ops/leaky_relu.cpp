@@ -4,8 +4,6 @@
 #include "torch_xla/csrc/lowering_context.h"
 
 namespace torch_xla {
-namespace ir {
-namespace ops {
 
 LeakyRelu::LeakyRelu(const XlaValue& input, double negative_slope)
     : XlaNode(torch::lazy::OpKind(at::aten::leaky_relu), {input},
@@ -14,7 +12,7 @@ LeakyRelu::LeakyRelu(const XlaValue& input, double negative_slope)
       negative_slope_(negative_slope) {}
 
 torch::lazy::NodePtr LeakyRelu::Clone(OpList operands) const {
-  return ir::MakeNode<LeakyRelu>(operands.at(0), negative_slope_);
+  return torch::lazy::MakeNode<LeakyRelu>(operands.at(0), negative_slope_);
 }
 
 XlaOpVector LeakyRelu::Lower(LoweringContext* loctx) const {
@@ -29,6 +27,4 @@ std::string LeakyRelu::ToString() const {
   return ss.str();
 }
 
-}  // namespace ops
-}  // namespace ir
 }  // namespace torch_xla

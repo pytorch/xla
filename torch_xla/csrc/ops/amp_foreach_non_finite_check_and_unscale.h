@@ -3,8 +3,6 @@
 #include "torch_xla/csrc/ir.h"
 
 namespace torch_xla {
-namespace ir {
-namespace ops {
 
 class AmpForachNonFiniteCheckAndUnscale : public XlaNode {
  public:
@@ -17,6 +15,4 @@ class AmpForachNonFiniteCheckAndUnscale : public XlaNode {
   XlaOpVector Lower(LoweringContext* loctx) const override;
 };
 
-}  // namespace ops
-}  // namespace ir
 }  // namespace torch_xla

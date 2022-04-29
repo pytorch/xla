@@ -5,8 +5,6 @@
 #include "torch_xla/csrc/ir.h"
 
 namespace torch_xla {
-namespace ir {
-namespace ops {
 
 class AdaptiveMaxPool2d : public XlaNode {
  public:
@@ -24,6 +22,4 @@ class AdaptiveMaxPool2d : public XlaNode {
   std::vector<int64_t> output_size_;
 };
 
-}  // namespace ops
-}  // namespace ir
 }  // namespace torch_xla

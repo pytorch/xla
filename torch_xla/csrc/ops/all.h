@@ -6,8 +6,6 @@
 #include "torch_xla/csrc/ir.h"
 
 namespace torch_xla {
-namespace ir {
-namespace ops {
 
 class All : public XlaNode {
  public:
@@ -29,6 +27,4 @@ class All : public XlaNode {
   bool keep_reduced_dimensions_;
 };
 
-}  // namespace ops
-}  // namespace ir
 }  // namespace torch_xla

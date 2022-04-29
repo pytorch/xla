@@ -6,8 +6,6 @@
 #include "torch_xla/csrc/pooling.h"
 
 namespace torch_xla {
-namespace ir {
-namespace ops {
 namespace {
 
 xla::Shape NodeOutputShape(const XlaValue& grad_output, const XlaValue& input,
@@ -68,7 +66,7 @@ AvgPoolNdBackward::AvgPoolNdBackward(const XlaValue& grad_output,
       count_include_pad_(count_include_pad) {}
 
 torch::lazy::NodePtr AvgPoolNdBackward::Clone(OpList operands) const {
-  return ir::MakeNode<AvgPoolNdBackward>(
+  return torch::lazy::MakeNode<AvgPoolNdBackward>(
       operands.at(0), operands.at(1), spatial_dim_count_, kernel_size_, stride_,
       padding_, ceil_mode_, count_include_pad_);
 }
@@ -92,6 +90,4 @@ std::string AvgPoolNdBackward::ToString() const {
   return ss.str();
 }
 
-}  // namespace ops
-}  // namespace ir
 }  // namespace torch_xla

@@ -3,8 +3,6 @@
 #include "torch_xla/csrc/ir.h"
 
 namespace torch_xla {
-namespace ir {
-namespace ops {
 
 class Unselect : public XlaNode {
  public:
@@ -32,6 +30,4 @@ class Unselect : public XlaNode {
   int64_t stride_;
 };
 
-}  // namespace ops
-}  // namespace ir
 }  // namespace torch_xla

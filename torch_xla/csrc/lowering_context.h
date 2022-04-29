@@ -17,7 +17,6 @@
 #include "torch_xla/csrc/ir_util.h"
 
 namespace torch_xla {
-namespace ir {
 
 class LoweringContext {
  public:
@@ -98,5 +97,4 @@ class LoweringContext {
   torch::lazy::Util::EmissionMap emit_status_;
 };
 
-}  // namespace ir
 }  // namespace torch_xla

@@ -4,8 +4,6 @@
 #include "torch_xla/csrc/ir.h"
 
 namespace torch_xla {
-namespace ir {
-namespace ops {
 
 class Repeat : public XlaNode {
  public:
@@ -24,6 +22,4 @@ class Repeat : public XlaNode {
   std::vector<int64_t> repeats_;
 };
 
-}  // namespace ops
-}  // namespace ir
 }  // namespace torch_xla

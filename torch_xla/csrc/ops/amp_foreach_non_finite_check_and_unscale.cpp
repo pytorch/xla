@@ -7,8 +7,6 @@
 #include "torch_xla/csrc/xla_lower_util.h"
 
 namespace torch_xla {
-namespace ir {
-namespace ops {
 namespace {
 
 xla::Shape NodeOutputShape(const OpList& inputs, const XlaValue& found_inf) {
@@ -45,7 +43,7 @@ torch::lazy::NodePtr AmpForachNonFiniteCheckAndUnscale::Clone(
     OpList operands) const {
   std::vector<XlaValue> operand_list(operands.begin(), operands.end() - 2);
   size_t sz = operand_list.size();
-  return ir::MakeNode<AmpForachNonFiniteCheckAndUnscale>(
+  return torch::lazy::MakeNode<AmpForachNonFiniteCheckAndUnscale>(
       operand_list, operands[sz], operands[sz + 1]);
 }
 
@@ -62,6 +60,4 @@ XlaOpVector AmpForachNonFiniteCheckAndUnscale::Lower(
       loctx);
 }
 
-}  // namespace ops
-}  // namespace ir
 }  // namespace torch_xla

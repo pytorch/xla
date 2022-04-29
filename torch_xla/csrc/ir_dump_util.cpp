@@ -12,7 +12,6 @@
 #include "torch_xla/csrc/lowering_context.h"
 
 namespace torch_xla {
-namespace ir {
 namespace {
 
 using NodeIdMap = std::unordered_map<const torch::lazy::Node*, size_t>;
@@ -247,7 +246,7 @@ std::string DumpUtil::PostOrderToText(
 
 std::string DumpUtil::ToHlo(absl::Span<const XlaValue> values,
                             const torch::lazy::BackendDevice& device) {
-  ir::LoweringContext lowering_ctx("IrToHlo", device);
+  LoweringContext lowering_ctx("IrToHlo", device);
   for (auto& ir_value : values) {
     xla::XlaOp root = lowering_ctx.GetOutputOp(
         torch::lazy::Output(ir_value.node.get(), ir_value.index));
@@ -257,5 +256,4 @@ std::string DumpUtil::ToHlo(absl::Span<const XlaValue> values,
   return ConsumeValue(xla::util::GetComputationHloText(computation));
 }
 
-}  // namespace ir
 }  // namespace torch_xla

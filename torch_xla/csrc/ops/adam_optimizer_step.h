@@ -3,8 +3,6 @@
 #include "torch_xla/csrc/ir.h"
 
 namespace torch_xla {
-namespace ir {
-namespace ops {
 
 class AdamOptimizerStep : public XlaNode {
  public:
@@ -26,6 +24,4 @@ class AdamOptimizerStep : public XlaNode {
   bool use_adamw_;
 };
 
-}  // namespace ops
-}  // namespace ir
 }  // namespace torch_xla

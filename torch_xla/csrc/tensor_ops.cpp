@@ -98,7 +98,7 @@ XLATensor MakeMatrixWithDiagonal(const XLATensor& input, int64_t diagonal) {
 
 XLATensor SmoothL1Loss(const XLATensor& input, const XLATensor& target,
                        ReductionMode reduction, double beta) {
-  torch_xla::ir::ScopePusher ir_scope(at::aten::smooth_l1_loss.toQualString());
+  torch_xla::ScopePusher ir_scope(at::aten::smooth_l1_loss.toQualString());
   auto broadcasted_inputs = XLATensor::broadcast_tensors({input, target});
   XLA_CHECK_EQ(broadcasted_inputs.size(), 2);
   const XLATensor& broadcasted_input = broadcasted_inputs[0];
@@ -134,7 +134,7 @@ XLATensor SmoothL1Loss(const XLATensor& input, const XLATensor& target,
 XLATensor SmoothL1LossBackward(const XLATensor& grad_output,
                                const XLATensor& input, const XLATensor& target,
                                ReductionMode reduction, double beta) {
-  torch_xla::ir::ScopePusher ir_scope(
+  torch_xla::ScopePusher ir_scope(
       at::aten::smooth_l1_loss_backward.toQualString());
   auto broadcasted_inputs = XLATensor::broadcast_tensors({input, target});
   XLA_CHECK_EQ(broadcasted_inputs.size(), 2);

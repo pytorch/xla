@@ -25,14 +25,14 @@ class OpByOpExecutor {
   static OpByOpExecutor* Get();
 
   std::vector<xla::ComputationClient::ExecuteChainedOp> BuildOps(
-      absl::Span<const ir::XlaValue> roots, const std::string& device,
+      absl::Span<const XlaValue> roots, const std::string& device,
       absl::Span<const std::string> devices);
 
   std::vector<xla::ComputationClient::DataPtr> Execute(
-      absl::Span<const ir::XlaValue> roots, const std::string& device,
+      absl::Span<const XlaValue> roots, const std::string& device,
       absl::Span<const std::string> devices);
 
-  AsyncTask ExecuteAsync(absl::Span<const ir::XlaValue> roots,
+  AsyncTask ExecuteAsync(absl::Span<const XlaValue> roots,
                          const std::string& device,
                          absl::Span<const std::string> devices);
 

@@ -8,7 +8,6 @@
 #include "torch_xla/csrc/ir.h"
 
 namespace torch_xla {
-namespace ir {
 
 class Util {
  public:
@@ -44,5 +43,4 @@ class Util {
   static size_t GetGraphSize(absl::Span<const torch::lazy::Node* const> nodes);
 };
 
-}  // namespace ir
 }  // namespace torch_xla

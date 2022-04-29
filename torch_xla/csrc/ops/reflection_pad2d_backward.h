@@ -5,8 +5,6 @@
 #include "torch_xla/csrc/ir.h"
 
 namespace torch_xla {
-namespace ir {
-namespace ops {
 
 class ReflectionPad2dBackward : public XlaNode {
  public:
@@ -25,6 +23,4 @@ class ReflectionPad2dBackward : public XlaNode {
   std::vector<int64_t> padding_;
 };
 
-}  // namespace ops
-}  // namespace ir
 }  // namespace torch_xla

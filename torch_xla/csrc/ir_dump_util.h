@@ -7,7 +7,6 @@
 #include "torch_xla/csrc/ir.h"
 
 namespace torch_xla {
-namespace ir {
 
 class DumpUtil {
  public:
@@ -27,5 +26,4 @@ class DumpUtil {
                            const torch::lazy::BackendDevice& device);
 };
 
-}  // namespace ir
 }  // namespace torch_xla

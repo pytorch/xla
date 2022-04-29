@@ -3,8 +3,6 @@
 #include "torch_xla/csrc/ir.h"
 
 namespace torch_xla {
-namespace ir {
-namespace ops {
 
 class Roll : public XlaNode {
  public:
@@ -26,6 +24,4 @@ class Roll : public XlaNode {
   std::vector<int64_t> dims_;
 };
 
-}  // namespace ops
-}  // namespace ir
 }  // namespace torch_xla

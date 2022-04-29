@@ -4,12 +4,10 @@
 #include "torch_xla/csrc/ir.h"
 
 namespace torch_xla {
-namespace ir {
-namespace ops {
 
 class Stack : public XlaNode {
  public:
-  Stack(absl::Span<const ir::XlaValue> values, int64_t dim);
+  Stack(absl::Span<const XlaValue> values, int64_t dim);
 
   std::string ToString() const override;
 
@@ -23,6 +21,4 @@ class Stack : public XlaNode {
   int64_t dim_;
 };
 
-}  // namespace ops
-}  // namespace ir
 }  // namespace torch_xla

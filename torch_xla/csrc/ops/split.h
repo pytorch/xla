@@ -5,8 +5,6 @@
 #include "torch_xla/csrc/ir.h"
 
 namespace torch_xla {
-namespace ir {
-namespace ops {
 
 // Split the tensor into chunks along a given dimension.
 class Split : public XlaNode {
@@ -28,6 +26,4 @@ class Split : public XlaNode {
   int64_t dim_;
 };
 
-}  // namespace ops
-}  // namespace ir
 }  // namespace torch_xla

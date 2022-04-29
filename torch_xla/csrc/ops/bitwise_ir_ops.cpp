@@ -6,8 +6,6 @@
 #include "torch_xla/csrc/ops/ops.h"
 
 namespace torch_xla {
-namespace ir {
-namespace ops {
 
 XlaValue BitwiseAnd(const XlaValue& node1, const XlaValue& node2) {
   auto lower_fn = [](const XlaNode& node,
@@ -75,6 +73,4 @@ XlaValue BitwiseXor(const XlaValue& node1, const XlaValue& node2) {
                    std::move(lower_fn));
 }
 
-}  // namespace ops
-}  // namespace ir
 }  // namespace torch_xla

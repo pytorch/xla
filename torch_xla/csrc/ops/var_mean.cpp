@@ -9,8 +9,6 @@
 #include "torch_xla/csrc/torch_util.h"
 
 namespace torch_xla {
-namespace ir {
-namespace ops {
 namespace {
 
 xla::Shape NodeOutputShape(const XlaValue& input,
@@ -44,8 +42,8 @@ VarMean::VarMean(const XlaValue& input, std::vector<int64_t> dimensions,
       keep_reduced_dimensions_(keep_reduced_dimensions) {}
 
 torch::lazy::NodePtr VarMean::Clone(OpList operands) const {
-  return ir::MakeNode<VarMean>(operands.at(0), dimensions_, correction_,
-                               keep_reduced_dimensions_);
+  return torch::lazy::MakeNode<VarMean>(operands.at(0), dimensions_,
+                                        correction_, keep_reduced_dimensions_);
 }
 
 XlaOpVector VarMean::Lower(LoweringContext* loctx) const {
@@ -65,6 +63,4 @@ std::string VarMean::ToString() const {
   return ss.str();
 }
 
-}  // namespace ops
-}  // namespace ir
 }  // namespace torch_xla

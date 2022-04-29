@@ -12,8 +12,6 @@
 #include "torch_xla/csrc/torch_util.h"
 
 namespace torch_xla {
-namespace ir {
-namespace ops {
 namespace {
 
 xla::Shape NodeOutputShape(const XlaValue& input, xla::PrimitiveType type) {
@@ -42,8 +40,8 @@ Cast::Cast(const XlaValue& input, at::ScalarType dtype,
       stype_(stype) {}
 
 torch::lazy::NodePtr Cast::Clone(OpList operands) const {
-  return dtype_ ? ir::MakeNode<Cast>(operands.at(0), *dtype_, stype_)
-                : ir::MakeNode<Cast>(operands.at(0), type_);
+  return dtype_ ? torch::lazy::MakeNode<Cast>(operands.at(0), *dtype_, stype_)
+                : torch::lazy::MakeNode<Cast>(operands.at(0), type_);
 }
 
 XlaOpVector Cast::Lower(LoweringContext* loctx) const {
@@ -71,6 +69,4 @@ std::string Cast::ToString() const {
   return ss.str();
 }
 
-}  // namespace ops
-}  // namespace ir
 }  // namespace torch_xla

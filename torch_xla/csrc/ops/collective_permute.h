@@ -4,8 +4,6 @@
 #include "torch_xla/csrc/ir.h"
 
 namespace torch_xla {
-namespace ir {
-namespace ops {
 
 class CollectivePermute : public XlaNode {
  public:
@@ -27,6 +25,4 @@ class CollectivePermute : public XlaNode {
   std::vector<std::pair<int64_t, int64_t>> source_target_pairs_;
 };
 
-}  // namespace ops
-}  // namespace ir
 }  // namespace torch_xla

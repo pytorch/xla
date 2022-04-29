@@ -7,8 +7,6 @@
 #include "torch_xla/csrc/ops/infer_output_shape.h"
 
 namespace torch_xla {
-namespace ir {
-namespace ops {
 namespace {
 
 // The bias doesn't matter for shape inference.
@@ -75,10 +73,10 @@ ConvolutionOverrideable::ConvolutionOverrideable(
 
 torch::lazy::NodePtr ConvolutionOverrideable::Clone(OpList operands) const {
   return operands.size() == 3
-             ? ir::MakeNode<ConvolutionOverrideable>(
+             ? torch::lazy::MakeNode<ConvolutionOverrideable>(
                    operands.at(0), operands.at(1), operands.at(2), stride_,
                    padding_, dilation_, transposed_, output_padding_, groups_)
-             : ir::MakeNode<ConvolutionOverrideable>(
+             : torch::lazy::MakeNode<ConvolutionOverrideable>(
                    operands.at(0), operands.at(1), stride_, padding_, dilation_,
                    transposed_, output_padding_, groups_);
 }
@@ -111,6 +109,4 @@ std::string ConvolutionOverrideable::ToString() const {
   return ss.str();
 }
 
-}  // namespace ops
-}  // namespace ir
 }  // namespace torch_xla

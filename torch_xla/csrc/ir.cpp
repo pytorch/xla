@@ -14,7 +14,6 @@
 #include "torch_xla/csrc/lowering_context.h"
 
 namespace torch_xla {
-namespace ir {
 namespace {
 
 using ShapeCache =
@@ -219,5 +218,4 @@ ScopePusher::~ScopePusher() { PopScope(); }
 
 void ScopePusher::ResetScopes() { ResetScopeContext(); }
 
-}  // namespace ir
 }  // namespace torch_xla

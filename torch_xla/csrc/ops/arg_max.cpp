@@ -5,8 +5,6 @@
 #include "torch_xla/csrc/reduction.h"
 
 namespace torch_xla {
-namespace ir {
-namespace ops {
 namespace {
 
 xla::Shape NodeOutputShape(const XlaValue& input, int64_t dim, bool keepdim) {
@@ -27,7 +25,7 @@ ArgMax::ArgMax(const XlaValue& input, int64_t dim, bool keepdim)
       keepdim_(keepdim) {}
 
 torch::lazy::NodePtr ArgMax::Clone(OpList operands) const {
-  return ir::MakeNode<ArgMax>(operands.at(0), dim_, keepdim_);
+  return torch::lazy::MakeNode<ArgMax>(operands.at(0), dim_, keepdim_);
 }
 
 XlaOpVector ArgMax::Lower(LoweringContext* loctx) const {
@@ -41,6 +39,4 @@ std::string ArgMax::ToString() const {
   return ss.str();
 }
 
-}  // namespace ops
-}  // namespace ir
 }  // namespace torch_xla

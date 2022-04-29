@@ -6,8 +6,6 @@
 #include "torch_xla/csrc/xla_lower_util.h"
 
 namespace torch_xla {
-namespace ir {
-namespace ops {
 
 ScatterAdd::ScatterAdd(const XlaValue& input, const XlaValue& index,
                        const XlaValue& src, int64_t dim)
@@ -17,8 +15,8 @@ ScatterAdd::ScatterAdd(const XlaValue& input, const XlaValue& index,
       dim_(dim) {}
 
 torch::lazy::NodePtr ScatterAdd::Clone(OpList operands) const {
-  return ir::MakeNode<ScatterAdd>(operands.at(0), operands.at(1),
-                                  operands.at(2), dim_);
+  return torch::lazy::MakeNode<ScatterAdd>(operands.at(0), operands.at(1),
+                                           operands.at(2), dim_);
 }
 
 XlaOpVector ScatterAdd::Lower(LoweringContext* loctx) const {
@@ -36,6 +34,4 @@ std::string ScatterAdd::ToString() const {
   return ss.str();
 }
 
-}  // namespace ops
-}  // namespace ir
 }  // namespace torch_xla

@@ -12,7 +12,6 @@
 #include "torch/csrc/lazy/core/ir_metadata.h"
 
 namespace torch_xla {
-namespace ir {
 namespace {
 
 class HloMetadataSetter {
@@ -195,5 +194,4 @@ void LoweringContext::ReportBuilderError(const torch::lazy::Node* node,
   throw std::runtime_error(ss.str());
 }
 
-}  // namespace ir
 }  // namespace torch_xla

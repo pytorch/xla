@@ -3,8 +3,6 @@
 #include "torch_xla/csrc/ir.h"
 
 namespace torch_xla {
-namespace ir {
-namespace ops {
 
 class DiscreteUniform : public XlaNode {
  public:
@@ -16,6 +14,4 @@ class DiscreteUniform : public XlaNode {
   XlaOpVector Lower(LoweringContext* loctx) const override;
 };
 
-}  // namespace ops
-}  // namespace ir
 }  // namespace torch_xla

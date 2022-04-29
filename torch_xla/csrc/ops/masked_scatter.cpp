@@ -4,8 +4,6 @@
 #include "torch_xla/csrc/xla_lower_util.h"
 
 namespace torch_xla {
-namespace ir {
-namespace ops {
 
 MaskedScatter::MaskedScatter(const XlaValue& input, const XlaValue& mask,
                              const XlaValue& source)
@@ -14,8 +12,8 @@ MaskedScatter::MaskedScatter(const XlaValue& input, const XlaValue& mask,
               /*num_outputs=*/1) {}
 
 torch::lazy::NodePtr MaskedScatter::Clone(OpList operands) const {
-  return ir::MakeNode<MaskedScatter>(operands.at(0), operands.at(1),
-                                     operands.at(2));
+  return torch::lazy::MakeNode<MaskedScatter>(operands.at(0), operands.at(1),
+                                              operands.at(2));
 }
 
 XlaOpVector MaskedScatter::Lower(LoweringContext* loctx) const {
@@ -25,6 +23,4 @@ XlaOpVector MaskedScatter::Lower(LoweringContext* loctx) const {
   return ReturnOp(BuildMaskedScatter(input, mask, source), loctx);
 }
 
-}  // namespace ops
-}  // namespace ir
 }  // namespace torch_xla

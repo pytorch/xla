@@ -6,8 +6,6 @@
 #include "torch_xla/csrc/ir.h"
 
 namespace torch_xla {
-namespace ir {
-namespace ops {
 
 // IR node for log(softmax) operation.
 class LogSoftmax : public XlaNode {
@@ -31,6 +29,4 @@ class LogSoftmax : public XlaNode {
   c10::optional<at::ScalarType> dtype_;
 };
 
-}  // namespace ops
-}  // namespace ir
 }  // namespace torch_xla
