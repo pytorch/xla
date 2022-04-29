@@ -3,7 +3,6 @@
 #include "tensorflow/compiler/xla/xla_client/debug_macros.h"
 
 namespace torch_xla {
-namespace ir {
 
 std::vector<const torch::lazy::Node*> Util::ComputePostOrder(
     const torch::lazy::Node* node, EmissionMap* emap) {
@@ -101,5 +100,4 @@ size_t Util::GetGraphSize(absl::Span<const torch::lazy::Node* const> nodes) {
   return post_order.size();
 }
 
-}  // namespace ir
 }  // namespace torch_xla

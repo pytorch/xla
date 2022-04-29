@@ -7,8 +7,6 @@
 #include "torch_xla/csrc/ops/xla_ops.h"
 
 namespace torch_xla {
-namespace ir {
-namespace ops {
 namespace {
 
 xla::Shape NodeOutputShape(const XlaValue& input, const XlaValue& token,
@@ -47,9 +45,9 @@ AllToAll::AllToAll(const XlaValue& input, const XlaValue& token,
       pin_layout_(pin_layout) {}
 
 torch::lazy::NodePtr AllToAll::Clone(OpList operands) const {
-  return ir::MakeNode<AllToAll>(operands.at(0), operands.at(1),
-                                split_dimension_, concat_dimension_,
-                                split_count_, groups_, pin_layout_);
+  return torch::lazy::MakeNode<AllToAll>(operands.at(0), operands.at(1),
+                                         split_dimension_, concat_dimension_,
+                                         split_count_, groups_, pin_layout_);
 }
 
 XlaOpVector AllToAll::Lower(LoweringContext* loctx) const {
@@ -75,6 +73,4 @@ std::string AllToAll::ToString() const {
   return ss.str();
 }
 
-}  // namespace ops
-}  // namespace ir
 }  // namespace torch_xla

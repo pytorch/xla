@@ -6,8 +6,6 @@
 #include "torch_xla/csrc/pooling.h"
 
 namespace torch_xla {
-namespace ir {
-namespace ops {
 namespace {
 
 xla::Shape NodeOutputShape(const XlaValue& input,
@@ -31,7 +29,7 @@ AdaptiveMaxPool2d::AdaptiveMaxPool2d(const XlaValue& input,
       output_size_(std::move(output_size)) {}
 
 torch::lazy::NodePtr AdaptiveMaxPool2d::Clone(OpList operands) const {
-  return ir::MakeNode<AdaptiveMaxPool2d>(operands.at(0), output_size_);
+  return torch::lazy::MakeNode<AdaptiveMaxPool2d>(operands.at(0), output_size_);
 }
 
 XlaOpVector AdaptiveMaxPool2d::Lower(LoweringContext* loctx) const {
@@ -47,6 +45,4 @@ std::string AdaptiveMaxPool2d::ToString() const {
   return ss.str();
 }
 
-}  // namespace ops
-}  // namespace ir
 }  // namespace torch_xla

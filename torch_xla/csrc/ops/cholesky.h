@@ -3,8 +3,6 @@
 #include "torch_xla/csrc/ir.h"
 
 namespace torch_xla {
-namespace ir {
-namespace ops {
 
 class Cholesky : public XlaNode {
  public:
@@ -22,6 +20,4 @@ class Cholesky : public XlaNode {
   bool lower_;
 };
 
-}  // namespace ops
-}  // namespace ir
 }  // namespace torch_xla

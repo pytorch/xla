@@ -4,8 +4,6 @@
 #include "torch_xla/csrc/lowering_context.h"
 
 namespace torch_xla {
-namespace ir {
-namespace ops {
 namespace {
 
 xla::Shape NodeOutputShape(const XlaValue& input, int dim) {
@@ -23,7 +21,7 @@ Unsqueeze::Unsqueeze(const XlaValue& input, int dim)
       dim_(dim) {}
 
 torch::lazy::NodePtr Unsqueeze::Clone(OpList operands) const {
-  return ir::MakeNode<Unsqueeze>(operands.at(0), dim_);
+  return torch::lazy::MakeNode<Unsqueeze>(operands.at(0), dim_);
 }
 
 XlaOpVector Unsqueeze::Lower(LoweringContext* loctx) const {
@@ -38,6 +36,4 @@ std::string Unsqueeze::ToString() const {
   return ss.str();
 }
 
-}  // namespace ops
-}  // namespace ir
 }  // namespace torch_xla

@@ -3,8 +3,6 @@
 #include "torch_xla/csrc/lowering_context.h"
 
 namespace torch_xla {
-namespace ir {
-namespace ops {
 
 Generic::Generic(torch::lazy::OpKind op, absl::Span<const XlaValue> operands,
                  xla::Shape shape, LowerFn lower_fn, size_t num_outputs,
@@ -28,14 +26,12 @@ Generic::Generic(torch::lazy::OpKind op, xla::Shape shape, LowerFn lower_fn,
       hash_seed_(hash_seed) {}
 
 torch::lazy::NodePtr Generic::Clone(OpList operands) const {
-  return ir::MakeNode<Generic>(op(), operands, xla_shape(), lower_fn_,
-                               num_outputs(), hash_seed_);
+  return torch::lazy::MakeNode<Generic>(op(), operands, xla_shape(), lower_fn_,
+                                        num_outputs(), hash_seed_);
 }
 
 XlaOpVector Generic::Lower(LoweringContext* loctx) const {
   return lower_fn_(*this, loctx);
 }
 
-}  // namespace ops
-}  // namespace ir
 }  // namespace torch_xla

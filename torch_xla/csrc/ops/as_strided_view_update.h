@@ -6,8 +6,6 @@
 #include "torch_xla/csrc/ir.h"
 
 namespace torch_xla {
-namespace ir {
-namespace ops {
 
 class AsStridedViewUpdate : public XlaNode {
  public:
@@ -33,6 +31,4 @@ class AsStridedViewUpdate : public XlaNode {
   int64_t storage_offset_;
 };
 
-}  // namespace ops
-}  // namespace ir
 }  // namespace torch_xla

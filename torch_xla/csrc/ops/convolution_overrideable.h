@@ -5,8 +5,6 @@
 #include "torch_xla/csrc/ir.h"
 
 namespace torch_xla {
-namespace ir {
-namespace ops {
 
 // IR node for 2D & 3D convolutions with or without bias.
 class ConvolutionOverrideable : public XlaNode {
@@ -50,6 +48,4 @@ class ConvolutionOverrideable : public XlaNode {
   int64_t groups_;
 };
 
-}  // namespace ops
-}  // namespace ir
 }  // namespace torch_xla

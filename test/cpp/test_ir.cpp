@@ -13,27 +13,27 @@ namespace torch_xla {
 namespace cpp_test {
 
 TEST(IrTest, TestScalarCreate) {
-  torch::lazy::NodePtr scalar = ir::ops::ScalarOp(1.0, xla::F32);
+  torch::lazy::NodePtr scalar = ScalarOp(1.0, xla::F32);
   ASSERT_TRUE(scalar != nullptr);
 }
 
 TEST(IrTest, TestHash) {
-  torch::lazy::NodePtr scalar1 = ir::ops::ScalarOp(1.0, xla::F32);
-  torch::lazy::NodePtr scalar2 = ir::ops::ScalarOp(2.0, xla::F32);
-  ir::XlaValue add1 = ir::XlaValue(scalar1, 0) + ir::XlaValue(scalar2, 0);
+  torch::lazy::NodePtr scalar1 = ScalarOp(1.0, xla::F32);
+  torch::lazy::NodePtr scalar2 = ScalarOp(2.0, xla::F32);
+  XlaValue add1 = XlaValue(scalar1, 0) + XlaValue(scalar2, 0);
 
-  torch::lazy::NodePtr scalar3 = ir::ops::ScalarOp(1.0, xla::F32);
-  torch::lazy::NodePtr scalar4 = ir::ops::ScalarOp(2.0, xla::F32);
-  ir::XlaValue add2 = ir::XlaValue(scalar3, 0) + ir::XlaValue(scalar4, 0);
+  torch::lazy::NodePtr scalar3 = ScalarOp(1.0, xla::F32);
+  torch::lazy::NodePtr scalar4 = ScalarOp(2.0, xla::F32);
+  XlaValue add2 = XlaValue(scalar3, 0) + XlaValue(scalar4, 0);
 
-  torch::lazy::NodePtr scalar5 = ir::ops::ScalarOp(11.0, xla::F32);
-  torch::lazy::NodePtr scalar6 = ir::ops::ScalarOp(22.0, xla::F32);
-  ir::XlaValue add3 = ir::XlaValue(scalar5, 0) + ir::XlaValue(scalar6, 0);
+  torch::lazy::NodePtr scalar5 = ScalarOp(11.0, xla::F32);
+  torch::lazy::NodePtr scalar6 = ScalarOp(22.0, xla::F32);
+  XlaValue add3 = XlaValue(scalar5, 0) + XlaValue(scalar6, 0);
 
   EXPECT_EQ(add1->hash(), add2->hash());
   EXPECT_NE(add1->hash(), add3->hash());
 
-  ir::XlaValue sub = ir::XlaValue(scalar1, 0) - ir::XlaValue(scalar2, 0);
+  XlaValue sub = XlaValue(scalar1, 0) - XlaValue(scalar2, 0);
 
   EXPECT_NE(add1->hash(), sub->hash());
 }
@@ -43,10 +43,9 @@ TEST(IrTest, TestSelectUnselect) {
     at::Tensor a =
         at::rand({4, 16, 3}, at::TensorOptions(at::kFloat)).abs() + 1.0;
 
-    ir::XlaValue v_a = GetTensorIrValue(a, device);
-    ir::XlaValue v_s =
-        ir::MakeNode<ir::ops::Select>(v_a, /*dim=*/1, /*start=*/3,
-                                      /*end=*/14, /*stride=*/3);
+    XlaValue v_a = GetTensorIrValue(a, device);
+    XlaValue v_s = torch::lazy::MakeNode<Select>(v_a, /*dim=*/1, /*start=*/3,
+                                                 /*end=*/14, /*stride=*/3);
 
     auto results = ExecuteAndFetch({v_s}, device);
     at::Tensor b =
@@ -55,9 +54,9 @@ TEST(IrTest, TestSelectUnselect) {
 
     // Paste zeros back into the selected view.
     at::Tensor z = at::zeros_like(b);
-    ir::XlaValue v_z = GetTensorIrValue(z, device);
-    ir::XlaValue v_u =
-        ir::MakeNode<ir::ops::Unselect>(v_a, v_z, /*dim=*/1, /*start=*/3,
+    XlaValue v_z = GetTensorIrValue(z, device);
+    XlaValue v_u =
+        torch::lazy::MakeNode<Unselect>(v_a, v_z, /*dim=*/1, /*start=*/3,
                                         /*end=*/14, /*stride=*/3);
     results = ExecuteAndFetch({v_u}, device);
     // Fetch back the zeros.

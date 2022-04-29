@@ -5,8 +5,6 @@
 #include "torch_xla/csrc/ir.h"
 
 namespace torch_xla {
-namespace ir {
-namespace ops {
 
 class ConvolutionBackwardOverrideable : public XlaNode {
  public:
@@ -43,6 +41,4 @@ class ConvolutionBackwardOverrideable : public XlaNode {
   int64_t groups_;
 };
 
-}  // namespace ops
-}  // namespace ir
 }  // namespace torch_xla

@@ -8,8 +8,6 @@
 #include "torch_xla/csrc/ops/xla_ops.h"
 
 namespace torch_xla {
-namespace ir {
-namespace ops {
 namespace {
 
 xla::Shape NodeOutputShape(absl::Span<const XlaValue> operands,
@@ -48,8 +46,9 @@ AllReduce::AllReduce(AllReduceType reduce_type,
 
 torch::lazy::NodePtr AllReduce::Clone(OpList operands) const {
   std::vector<XlaValue> operand_list(operands.begin(), operands.end() - 1);
-  return ir::MakeNode<AllReduce>(reduce_type_, operand_list, operands.back(),
-                                 scale_, groups_, pin_layout_);
+  return torch::lazy::MakeNode<AllReduce>(reduce_type_, operand_list,
+                                          operands.back(), scale_, groups_,
+                                          pin_layout_);
 }
 
 XlaOpVector AllReduce::Lower(LoweringContext* loctx) const {
@@ -78,6 +77,4 @@ std::string AllReduce::ToString() const {
   return ss.str();
 }
 
-}  // namespace ops
-}  // namespace ir
 }  // namespace torch_xla

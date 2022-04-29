@@ -9,8 +9,6 @@
 #include "torch_xla/csrc/lowering_context.h"
 
 namespace torch_xla {
-namespace ir {
-namespace ops {
 
 Scalar::Scalar(const at::Scalar& value, xla::Shape shape)
     : XlaNode(torch::lazy::OpKind(at::prim::Constant), std::move(shape),
@@ -30,7 +28,7 @@ std::string Scalar::ToString() const {
 }
 
 torch::lazy::NodePtr Scalar::Clone(OpList operands) const {
-  return ir::MakeNode<Scalar>(value_, xla_shape());
+  return torch::lazy::MakeNode<Scalar>(value_, xla_shape());
 }
 
 XlaOpVector Scalar::Lower(LoweringContext* loctx) const {
@@ -101,6 +99,4 @@ torch::lazy::hash_t ScalarHash(const at::Scalar& s) {
                              : torch::lazy::Hash(s.toLong());
 }
 
-}  // namespace ops
-}  // namespace ir
 }  // namespace torch_xla

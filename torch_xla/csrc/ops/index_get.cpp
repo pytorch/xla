@@ -6,8 +6,6 @@
 #include "torch_xla/csrc/xla_lower_util.h"
 
 namespace torch_xla {
-namespace ir {
-namespace ops {
 namespace {
 
 xla::Shape NodeOutputShape(const XlaValue& base, const XlaValue& indices,
@@ -23,7 +21,7 @@ xla::Shape NodeOutputShape(const XlaValue& base, const XlaValue& indices,
 
 }  // namespace
 
-IndexGet::IndexGet(const ir::XlaValue& base, const ir::XlaValue& indices,
+IndexGet::IndexGet(const XlaValue& base, const XlaValue& indices,
                    int64_t start_dim)
     : XlaNode(torch::lazy::OpKind(at::aten::index), {base, indices},
               [&]() { return NodeOutputShape(base, indices, start_dim); },
@@ -37,7 +35,8 @@ std::string IndexGet::ToString() const {
 }
 
 torch::lazy::NodePtr IndexGet::Clone(OpList operands) const {
-  return ir::MakeNode<IndexGet>(operands.at(0), operands.at(1), start_dim_);
+  return torch::lazy::MakeNode<IndexGet>(operands.at(0), operands.at(1),
+                                         start_dim_);
 }
 
 XlaOpVector IndexGet::Lower(LoweringContext* loctx) const {
@@ -47,6 +46,4 @@ XlaOpVector IndexGet::Lower(LoweringContext* loctx) const {
   return ReturnOp(output, loctx);
 }
 
-}  // namespace ops
-}  // namespace ir
 }  // namespace torch_xla

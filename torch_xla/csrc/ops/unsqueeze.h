@@ -3,8 +3,6 @@
 #include "torch_xla/csrc/ir.h"
 
 namespace torch_xla {
-namespace ir {
-namespace ops {
 
 class Unsqueeze : public XlaNode {
  public:
@@ -24,6 +22,4 @@ class Unsqueeze : public XlaNode {
   int dim_;
 };
 
-}  // namespace ops
-}  // namespace ir
 }  // namespace torch_xla

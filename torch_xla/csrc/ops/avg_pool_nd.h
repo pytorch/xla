@@ -3,8 +3,6 @@
 #include "torch_xla/csrc/ir.h"
 
 namespace torch_xla {
-namespace ir {
-namespace ops {
 
 class AvgPoolNd : public XlaNode {
  public:
@@ -43,6 +41,4 @@ class AvgPoolNd : public XlaNode {
   bool count_include_pad_;
 };
 
-}  // namespace ops
-}  // namespace ir
 }  // namespace torch_xla

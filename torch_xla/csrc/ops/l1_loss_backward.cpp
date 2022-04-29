@@ -6,8 +6,6 @@
 #include "torch_xla/csrc/ops/infer_output_shape.h"
 
 namespace torch_xla {
-namespace ir {
-namespace ops {
 namespace {
 
 xla::Shape NodeOutputShape(const XlaValue& grad_output, const XlaValue& input,
@@ -37,8 +35,8 @@ L1LossBackward::L1LossBackward(const XlaValue& grad_output,
       reduction_(reduction) {}
 
 torch::lazy::NodePtr L1LossBackward::Clone(OpList operands) const {
-  return ir::MakeNode<L1LossBackward>(operands.at(0), operands.at(1),
-                                      operands.at(2), reduction_);
+  return torch::lazy::MakeNode<L1LossBackward>(operands.at(0), operands.at(1),
+                                               operands.at(2), reduction_);
 }
 
 XlaOpVector L1LossBackward::Lower(LoweringContext* loctx) const {
@@ -56,6 +54,4 @@ std::string L1LossBackward::ToString() const {
   return ss.str();
 }
 
-}  // namespace ops
-}  // namespace ir
 }  // namespace torch_xla

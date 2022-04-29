@@ -6,8 +6,6 @@
 #include "torch_xla/csrc/ir.h"
 
 namespace torch_xla {
-namespace ir {
-namespace ops {
 
 class OpKindWrapper {
  public:
@@ -53,6 +51,4 @@ extern const OpKindWrapper xla_tensor_data;
 extern const OpKindWrapper xla_unselect;
 extern const OpKindWrapper xla_update_slice;
 
-}  // namespace ops
-}  // namespace ir
 }  // namespace torch_xla

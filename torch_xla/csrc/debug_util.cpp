@@ -55,13 +55,13 @@ std::string DebugUtil::GetTensorsGraphInfo(absl::Span<const XLATensor> tensors,
                                            const std::vector<size_t>* indices,
                                            GraphFormat format) {
   std::vector<const torch::lazy::Node*> root_nodes;
-  std::vector<ir::XlaValue> root_values;
+  std::vector<XlaValue> root_values;
   std::vector<torch::lazy::hash_t> root_hashes;
   xla::util::Unique<torch::lazy::BackendDevice> unique_device;
   if (indices != nullptr) {
     for (auto index : *indices) {
       const XLATensor& tensor = tensors[index];
-      ir::XlaValue ir_value = tensor.CurrentIrValue();
+      XlaValue ir_value = tensor.CurrentIrValue();
       if (ir_value) {
         root_nodes.push_back(ir_value.node.get());
         root_hashes.push_back(ir_value.hash());
@@ -71,7 +71,7 @@ std::string DebugUtil::GetTensorsGraphInfo(absl::Span<const XLATensor> tensors,
     }
   } else {
     for (auto& tensor : tensors) {
-      ir::XlaValue ir_value = tensor.CurrentIrValue();
+      XlaValue ir_value = tensor.CurrentIrValue();
       if (ir_value) {
         root_nodes.push_back(ir_value.node.get());
         root_hashes.push_back(ir_value.hash());
@@ -99,11 +99,11 @@ std::string DebugUtil::GetTensorsGraphInfo(absl::Span<const XLATensor> tensors,
 
   std::string graph_str;
   if (format == GraphFormat::kText) {
-    graph_str = ir::DumpUtil::ToText(root_nodes);
+    graph_str = DumpUtil::ToText(root_nodes);
   } else if (format == GraphFormat::kDot) {
-    graph_str = ir::DumpUtil::ToDot(root_nodes);
+    graph_str = DumpUtil::ToDot(root_nodes);
   } else if (format == GraphFormat::kHlo) {
-    graph_str = ir::DumpUtil::ToHlo(
+    graph_str = DumpUtil::ToHlo(
         root_values, unique_device ? *unique_device : GetCurrentDevice());
   } else {
     XLA_ERROR() << "Invalid graph format: " << format;

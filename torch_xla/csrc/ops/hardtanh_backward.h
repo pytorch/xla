@@ -5,8 +5,6 @@
 #include "torch_xla/csrc/ir.h"
 
 namespace torch_xla {
-namespace ir {
-namespace ops {
 
 class HardtanhBackward : public XlaNode {
  public:
@@ -28,6 +26,4 @@ class HardtanhBackward : public XlaNode {
   at::Scalar max_val_;
 };
 
-}  // namespace ops
-}  // namespace ir
 }  // namespace torch_xla

@@ -6,8 +6,6 @@
 #include "torch_xla/csrc/pooling.h"
 
 namespace torch_xla {
-namespace ir {
-namespace ops {
 namespace {
 
 xla::Shape NodeOutputShape(const XlaValue& input, const XlaValue& indices,
@@ -42,8 +40,8 @@ MaxUnpoolNd::MaxUnpoolNd(const XlaValue& input, const XlaValue& indices,
       output_size_(std::move(output_size)) {}
 
 torch::lazy::NodePtr MaxUnpoolNd::Clone(OpList operands) const {
-  return ir::MakeNode<MaxUnpoolNd>(operands.at(0), operands.at(1),
-                                   output_size_);
+  return torch::lazy::MakeNode<MaxUnpoolNd>(operands.at(0), operands.at(1),
+                                            output_size_);
 }
 
 XlaOpVector MaxUnpoolNd::Lower(LoweringContext* loctx) const {
@@ -61,6 +59,4 @@ std::string MaxUnpoolNd::ToString() const {
   return ss.str();
 }
 
-}  // namespace ops
-}  // namespace ir
 }  // namespace torch_xla

@@ -4,8 +4,6 @@
 #include "torch_xla/csrc/ir.h"
 
 namespace torch_xla {
-namespace ir {
-namespace ops {
 
 class AllToAll : public XlaNode {
  public:
@@ -38,6 +36,4 @@ class AllToAll : public XlaNode {
   bool pin_layout_;
 };
 
-}  // namespace ops
-}  // namespace ir
 }  // namespace torch_xla

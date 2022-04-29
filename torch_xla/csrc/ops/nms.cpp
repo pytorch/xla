@@ -7,8 +7,6 @@
 #include "torch_xla/csrc/ops/xla_ops.h"
 
 namespace torch_xla {
-namespace ir {
-namespace ops {
 namespace {
 
 xla::Shape NodeOutputShape(const XlaValue& boxes, const XlaValue& scores,
@@ -40,8 +38,9 @@ Nms::Nms(const XlaValue& boxes, const XlaValue& scores,
       output_size_(output_size) {}
 
 torch::lazy::NodePtr Nms::Clone(OpList operands) const {
-  return ir::MakeNode<Nms>(operands.at(0), operands.at(1), operands.at(2),
-                           operands.at(3), output_size_);
+  return torch::lazy::MakeNode<Nms>(operands.at(0), operands.at(1),
+                                    operands.at(2), operands.at(3),
+                                    output_size_);
 }
 
 XlaOpVector Nms::Lower(LoweringContext* loctx) const {
@@ -60,6 +59,4 @@ std::string Nms::ToString() const {
   return ss.str();
 }
 
-}  // namespace ops
-}  // namespace ir
 }  // namespace torch_xla
