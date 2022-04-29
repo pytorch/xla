@@ -344,7 +344,7 @@ xla::XlaOp BuildSelu(xla::XlaOp input) {
   return scale * (xla::Max(zero, input) +
                   xla::Min(zero, alpha * (xla::Exp(input) - one)));
                   
-std::vector<xla::XlaOp> LogSigmoid(xla::XlaOp input) {
+std::vector<xla::XlaOp> BuildLogSigmoid(xla::XlaOp input) {
   const xla::Shape& shape = XlaHelpers::ShapeOfXlaOp(input);
   xla::XlaOp neg_input = xla::Neg(input);
   xla::XlaOp zero = xla::Zero(input.builder(), shape.element_type());
