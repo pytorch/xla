@@ -464,13 +464,6 @@ at::Tensor& XLANativeFunctions::_index_put_impl_(
                                                    accumulate);
 }
 
-at::Tensor XLANativeFunctions::_log_softmax(const at::Tensor& self, int64_t dim,
-                                            bool /* half_to_float */) {
-  XLA_FN_COUNTER("xla::");
-  return bridge::AtenFromXlaTensor(
-      XLATensor::log_softmax(bridge::GetXlaTensor(self), dim, c10::nullopt));
-}
-
 at::Tensor XLANativeFunctions::_log_softmax_backward_data(
     const at::Tensor& grad_output, const at::Tensor& output, int64_t dim,
     at::ScalarType /* input_dtype */) {
@@ -1873,6 +1866,13 @@ std::tuple<at::Tensor, at::Tensor> XLANativeFunctions::log_sigmoid_forward(
       XLATensor::log_sigmoid_forward(bridge::GetXlaTensor(self));
   return std::make_tuple(bridge::AtenFromXlaTensor(std::get<0>(result_tuple)),
                          bridge::AtenFromXlaTensor(std::get<1>(result_tuple)));
+}
+
+at::Tensor XLANativeFunctions::log_softmax(const at::Tensor & self, int64_t dim,
+                                           c10::optional<at::ScalarType> dtype) {
+  XLA_FN_COUNTER("xla::");
+  return bridge::AtenFromXlaTensor(
+      XLATensor::log_softmax(bridge::GetXlaTensor(self), dim, dtype));
 }
 
 at::Tensor XLANativeFunctions::logsumexp(const at::Tensor& self,

@@ -19,7 +19,7 @@ supported:
   - _copy_from_and_resize
   - _index_put_impl_
   - _local_scalar_dense
-  - _log_softmax
+  - log_softmax.int
   - _log_softmax_backward_data
   - _pack_padded_sequence
   - _softmax

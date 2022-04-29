@@ -6848,7 +6848,7 @@ TEST_F(AtenXlaTensorTest, TestLogSoftmax) {
   });
 
   ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
-  ExpectCounterChanged("xla::_log_softmax", cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::log_softmax", cpp_test::GetIgnoredCounters());
 }
 
 TEST_F(AtenXlaTensorTest, TestLogSoftmaxCast) {
@@ -6866,7 +6866,7 @@ TEST_F(AtenXlaTensorTest, TestLogSoftmaxCast) {
   });
 
   ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
-  ExpectCounterChanged("xla::_log_softmax", cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::log_softmax", cpp_test::GetIgnoredCounters());
 }
 
 TEST_F(AtenXlaTensorTest, TestSoftmax) {
