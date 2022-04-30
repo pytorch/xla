@@ -285,26 +285,26 @@ void OptimizationBarrier_(std::vector<at::Tensor>& tensors) {
   XLATensor::optimization_barrier_(xtensors);
 }
 
-std::pair<at::Tensor, std::shared_ptr<ir::Value>> Send(
-    const at::Tensor& input, const std::shared_ptr<ir::Value>& token,
+std::pair<at::Tensor, std::shared_ptr<ir::XlaValue::Value>> Send(
+    const at::Tensor& input, const std::shared_ptr<ir::XlaValue::Value>& token,
     int64_t channel_id) {
   XLATensor result;
-  ir::Value new_token;
+  ir::XlaValue::Value new_token;
   std::tie(result, new_token) =
       XLATensor::send(bridge::GetXlaTensor(input), *token, channel_id);
   return {bridge::AtenFromXlaTensor(std::move(result)),
-          std::make_shared<ir::Value>(new_token)};
+          std::make_shared<ir::XlaValue::Value>(new_token)};
 }
 
-std::pair<at::Tensor, std::shared_ptr<ir::Value>> Recv(
-    at::Tensor& output, const std::shared_ptr<ir::Value>& token,
+std::pair<at::Tensor, std::shared_ptr<ir::XlaValue::Value>> Recv(
+    at::Tensor& output, const std::shared_ptr<ir::XlaValue::Value>& token,
     int64_t channel_id) {
   XLATensor out = bridge::GetXlaTensor(output);
   XLATensor result;
-  ir::Value new_token;
+  ir::XlaValue::Value new_token;
   std::tie(result, new_token) = XLATensor::recv(out, *token, channel_id);
   return {bridge::AtenFromXlaTensor(std::move(result)),
-          std::make_shared<ir::Value>(new_token)};
+          std::make_shared<ir::XlaValue::Value>(new_token)};
 }
 
 void SyncTensors(const std::vector<at::Tensor>& tensors,
@@ -1025,10 +1025,10 @@ void InitXlaModuleBindings(py::module m) {
           return result_tuple;
         });
   m.def("_xla_send", [](const at::Tensor& input,
-                        const std::shared_ptr<ir::Value>& token,
+                        const std::shared_ptr<ir::XlaValue::Value>& token,
                         int64_t channel_id) {
     at::Tensor new_token_tensor;
-    std::shared_ptr<ir::Value> new_token;
+    std::shared_ptr<ir::XlaValue::Value> new_token;
     {
       NoGilSection nogil;
       std::tie(new_token_tensor, new_token) = Send(input, token, channel_id);
@@ -1039,21 +1039,21 @@ void InitXlaModuleBindings(py::module m) {
     result_tuple[1] = new_token;
     return result_tuple;
   });
-  m.def("_xla_recv",
-        [](at::Tensor& output, const std::shared_ptr<ir::Value>& token,
-           int64_t channel_id) {
-          at::Tensor result;
-          std::shared_ptr<ir::Value> new_token;
-          {
-            NoGilSection nogil;
-            std::tie(result, new_token) = Recv(output, token, channel_id);
-          }
-          auto result_tuple = py::tuple(2);
-          result_tuple[0] = torch::autograd::make_variable(
-              result, /*requires_grad=*/output.requires_grad());
-          result_tuple[1] = new_token;
-          return result_tuple;
-        });
+  m.def("_xla_recv", [](at::Tensor& output,
+                        const std::shared_ptr<ir::XlaValue::Value>& token,
+                        int64_t channel_id) {
+    at::Tensor result;
+    std::shared_ptr<ir::XlaValue::Value> new_token;
+    {
+      NoGilSection nogil;
+      std::tie(result, new_token) = Recv(output, token, channel_id);
+    }
+    auto result_tuple = py::tuple(2);
+    result_tuple[0] = torch::autograd::make_variable(
+        result, /*requires_grad=*/output.requires_grad());
+    result_tuple[1] = new_token;
+    return result_tuple;
+  });
   m.def("_xla_reduce_scatter",
         [](const std::string& reduce_type, const at::Tensor& input,
            const std::shared_ptr<XlaValue>& token, double scale,
