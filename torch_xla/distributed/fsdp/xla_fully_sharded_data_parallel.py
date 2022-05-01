@@ -34,9 +34,7 @@ from torch.nn.utils.rnn import PackedSequence
 import torch_xla.core.xla_model as xm
 
 from .xla_flatten_params_wrapper import XlaFlattenParamsWrapper
-from .checkpoint_consolidation import consolidate_sharded_model_checkpoints
-from .all_gather_via_all_reduce import all_gather_via_all_reduce
-from .utils import dummy_all_gather, dummy_reduce_scatter
+from .utils import dummy_all_gather, dummy_all_reduce, dummy_reduce_scatter
 
 
 class TrainingState(Enum):
@@ -132,26 +130,11 @@ class XlaFullyShardedDataParallel(nn.Module):
           backward incoming gradients. This avoids XLA fusion with other
           backward pass computation outside the FSDP module and could save
           additional memory.
-      use_all_gather_via_all_reduce (bool, Optional):
-          if ``True``, use PyTorch XLA 1.10's all_gather implementation,
-          which performs all_gather via padding and all_reduce and avoids
-          memory inefficiency (see https://github.com/pytorch/xla/issues/3510)
-          in previous PyTorch XLA versions (before #3510 is resolved).
-      mark_step_on_freeing (bool, Optional):
-          if ``True``, call `xm.mark_step` upon freeing full parameters.
-          When ``reshard_after_forward`` is ``True``, this option avoid XLA
-          compiler fusion by forcing an execution to free memory (see
-          https://github.com/pytorch/xla/issues/3455#issuecomment-1085448513
-          for details). This option may notably increase the execution time
-          and trigger frequent compilation, so it should only be used for
-          debugging (e.g. memory profiling) and not in real cases.
       mark_step_on_finalization (bool, Optional):
           if ``True``, call `xm.mark_step` upon finalizing gradients in the
-          root FSDP module. Unlike `mark_step_on_freeing` that forces an
-          `xm.mark_step` call in every FSDP module's forward and backward
-          passes, here in `xm.mark_step` is only called once for the entire
-          backward pass and should therefore only moderately increase the
-          execution time. When setting to ``True``, this option may help
+          root FSDP module. Here in `xm.mark_step` is only called once for the
+          entire backward pass and should therefore only moderately increase
+          the execution time. When setting to ``True``, this option may help
           prevent undesired fusion in backward pass and save more memory.
   """
 
@@ -163,8 +146,6 @@ class XlaFullyShardedDataParallel(nn.Module):
       execute_sharding_on_init: bool = True,
       optimization_barrier_in_forward: bool = True,
       optimization_barrier_in_backward: bool = True,
-      use_all_gather_via_all_reduce: bool = False,
-      mark_step_on_freeing: bool = False,
       mark_step_on_finalization: bool = False,
       _debug_dummy_forward_pass: bool = False,
       _debug_msg: str = "xla_fsdp",
@@ -174,6 +155,7 @@ class XlaFullyShardedDataParallel(nn.Module):
       _pin_layout_in_all_gather: bool = False,
       _pin_layout_in_reduce_scatter: bool = False,
       _debug_dummy_all_gather_op: bool = False,
+      _debug_dummy_all_reduce_op: bool = False,
       _debug_dummy_reduce_scatter_op: bool = False,
   ):
     if isinstance(module, XlaFullyShardedDataParallel):
@@ -201,34 +183,32 @@ class XlaFullyShardedDataParallel(nn.Module):
     self.flatten_parameters = flatten_parameters
     self.optimization_barrier_in_forward = optimization_barrier_in_forward
     self.optimization_barrier_in_backward = optimization_barrier_in_backward
+    self.mark_step_on_finalization = mark_step_on_finalization
+    self._debug_dummy_forward_pass = _debug_dummy_forward_pass
+    self._debug_msg = _debug_msg
+    self._debug_print = _debug_print
+    # Make sharded parameter sizes a multiple of 128 for efficient all_gather ops on TPUs
+    # (see https://github.com/pytorch/xla/issues/3510#issuecomment-1101739677 for details)
+    # TODO (ronghanghu): change the default to 1 after https://github.com/pytorch/xla/issues/3510 is resolved
+    self._shard_size_multiple = _shard_size_multiple
+    # Set layout pinning to False in all_gather, all_reduce, and reduce_scatter so that they can work together
+    # TODO (ronghanghu): change the default layout pinning to True after it's supported simultaneously
+    # on all collective ops (see https://github.com/pytorch/xla/pull/3511 for details)
     if _debug_dummy_all_gather_op:
       self.all_gather_op = dummy_all_gather
-    elif use_all_gather_via_all_reduce:
-      self.all_gather_op = functools.partial(
-          all_gather_via_all_reduce, pin_layout=_pin_layout_in_all_reduce)
     else:
       self.all_gather_op = functools.partial(
           xm.all_gather, pin_layout=_pin_layout_in_all_gather)
+    if _debug_dummy_all_reduce_op:
+      self.all_reduce_op = dummy_all_reduce
+    else:
+      self.all_reduce_op = functools.partial(
+          xm.all_reduce, pin_layout=_pin_layout_in_all_reduce)
     if _debug_dummy_reduce_scatter_op:
       self.reduce_scatter_op = dummy_reduce_scatter
     else:
       self.reduce_scatter_op = functools.partial(
           xm.reduce_scatter, pin_layout=_pin_layout_in_reduce_scatter)
-    # TODO (ronghanghu): remove when https://github.com/pytorch/xla/issues/3455 is resolved
-    # This is a temporary workaround before after we have a mature solution
-    # to avoid undesired fusion with XLA compiler optimization barrier (see
-    # https://github.com/pytorch/xla/issues/3455#issuecomment-1085448513
-    # for details). This workaround notably increases the execution time and
-    # may trigger more compilation, so we need a permanent solution to #3455.
-    self.mark_step_on_freeing = mark_step_on_freeing
-    self.mark_step_on_finalization = mark_step_on_finalization
-    self._debug_dummy_forward_pass = _debug_dummy_forward_pass
-    self._debug_msg = _debug_msg
-    self._debug_print = _debug_print
-    # TODO (ronghanghu) change to 1 after https://github.com/pytorch/xla/issues/3510 is resolved
-    # make sharded parameter sizes a multiple of 128 for efficient all_gather ops on TPUs
-    # (see https://github.com/pytorch/xla/issues/3510#issuecomment-1101739677 for details)
-    self._shard_size_multiple = _shard_size_multiple
 
     self.gradient_predivide_factor: float = self._get_gradient_predivide_factor(
         self.world_size)
@@ -239,11 +219,9 @@ class XlaFullyShardedDataParallel(nn.Module):
     # Only handle params which are not already sharded. This enables
     # sharding individual layers of a Module, with an outer wrapper to
     # shard any leftover parameters.
-    param_names = []
     params = []
-    for param_name, param in module.named_parameters():
+    for param in module.parameters():
       if not hasattr(param, "_is_sharded"):
-        param_names.append(param_name)
         params.append(param)
 
     # For now, it is either all flatten or none flatten.
@@ -258,7 +236,6 @@ class XlaFullyShardedDataParallel(nn.Module):
     else:
       to_be_flatten_params: List[List[Parameter]] = [[]]
       non_flatten_params = params
-    del param_names
 
     # Here, we don't automatically unflatten XlaFlattenParamsWrapper's state dict
     # to avoid overhead on XLA devices. Use ``get_shard_metadata`` to save parameter info
@@ -306,6 +283,7 @@ class XlaFullyShardedDataParallel(nn.Module):
       gc.collect()
       xm.mark_step()
       xm.wait_device_ops()
+      xm.rendezvous("execute_sharding_on_init")
 
   def _get_gradient_predivide_factor(self, world_size: int) -> float:
     factor: int = 1
@@ -380,15 +358,15 @@ class XlaFullyShardedDataParallel(nn.Module):
     # Computes the max norm for this shard's gradients and sync's across workers
     local_norm = _calc_grad_norm(params_with_grad, norm_type)
     if norm_type == inf:
-      total_norm = xm.all_reduce(xm.REDUCE_MAX, local_norm)
+      total_norm = self.all_reduce_op(xm.REDUCE_MAX, local_norm)
     else:
-      total_norm = xm.all_reduce(xm.REDUCE_SUM, local_norm**norm_type)
+      total_norm = self.all_reduce_op(xm.REDUCE_SUM, local_norm**norm_type)
       total_norm = total_norm**(1.0 / norm_type)
 
     # Now multiply each grad by (max_norm/total_norm), same as torch 1.7 https://tinyurl.com/3wtxhhqq)
     clip_coef = torch.clip(max_norm / (total_norm + 1e-6), 0.0, 1.0)
     for p in params_with_grad:
-      p.grad.detach().mul_(clip_coef.to(p.grad.device))
+      p.grad.detach().mul_(clip_coef)
 
     return total_norm
 
@@ -665,17 +643,6 @@ class XlaFullyShardedDataParallel(nn.Module):
         # performed in subsequent modules) can happen.
         output_opt_barrier_tensors = collect_tensors(outputs)
       self._free_full_params(dependency_tensors=output_opt_barrier_tensors)
-      # Forcing an execution to free the full parameter memory immediately and avoid any XLA compiler
-      # fusion (see https://github.com/pytorch/xla/issues/3455#issuecomment-1085448513 for details).
-      # This option may notably increase the execution time and trigger frequent compilation,
-      # so it should only be used for debugging (e.g. memory profiling) and not in real cases.
-      if self.mark_step_on_freeing:
-        if self._debug_print:
-          xm.master_print(
-              f"mark_step called in FSDP forward (_debug_msg: {self._debug_msg})",
-              flush=True,
-          )
-        xm.mark_step()
 
     # Register pre-backward hooks to all-gather the params for the backward
     # pass (if output's grad was needed). This won't register anything if
@@ -783,19 +750,6 @@ class XlaFullyShardedDataParallel(nn.Module):
       # Note, ``self._rebuild_full_params`` is idempotent. So in case it is called
       # unnecessarily, it doesn't incur much overhead.
       if self.reshard_after_forward:
-        # Forcing an execution to finish all previous ops (such as freeing earlier params and
-        # sharding their gradients) before rebuilding the full parameters and avoid any XLA compiler
-        # fusion (see https://github.com/pytorch/xla/issues/3455#issuecomment-1085448513 for details).
-        # This option may notably increase the execution time and trigger frequent compilation,
-        # so it should only be used for debugging (e.g. memory profiling) and not in real cases.
-        if self.mark_step_on_freeing:
-          if self._debug_print:
-            xm.master_print(
-                f"mark_step called in FSDP _pre_backward_hook (_debug_msg: {self._debug_msg})",
-                flush=True,
-            )
-          xm.mark_step()
-
         dependency_tensors = []
         if self.optimization_barrier_in_backward:
           # Ensure that backward pass ops of feature gradients, parameter
@@ -1082,10 +1036,8 @@ class XlaFullyShardedDataParallel(nn.Module):
     if self.mark_step_on_finalization:
       # Forcing an execution at the end of backward pass to avoid any XLA compiler
       # fusion between backward and optimizer (e.g. AdamW and SGD) step.
-      # Unlike `mark_step_on_freeing` that forces an `xm.mark_step` call in every
-      # FSDP module's forward and backward passes, here in `xm.mark_step` is only
-      # called once for the entire backward pass and should therefore only moderately
-      # increase the execution time.
+      # Here `xm.mark_step` is only called once for the entire backward pass and
+      # should therefore only moderately increase the execution time.
       # It may help prevent undesired fusion in backward pass and save more memory.
       if self._debug_print:
         xm.master_print(
