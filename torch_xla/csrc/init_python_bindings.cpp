@@ -2,6 +2,7 @@
 #include <c10/core/Device.h>
 #include <c10/util/Optional.h>
 
+#include <csignal>
 #include <cstring>
 #include <sstream>
 #include <string>
@@ -78,6 +79,7 @@ void PrepareToExit() {
   if (client != nullptr) {
     XLATensor::WaitDeviceOps({});
     client->PrepareToExit();
+    getPythonPrinter() = nullptr;
   }
 }
 
@@ -1102,6 +1104,23 @@ void InitXlaModuleBindings(py::module m) {
   m.def("_xla_memory_info", [](const std::string& device) -> py::object {
     return GetMemoryInfo(device);
   });
+  m.def("_set_custom_printer", [](py::object pyobj) {
+    std::function<void()> printer = [pyobj]() {
+      py::gil_scoped_acquire acquire;
+      std::cerr << "========Python BEGIN==========\n";
+      pyobj();
+      std::cerr << "========Python END==========\n";
+      std::cerr << "=========CPP BEGIN=========\n";
+      std::cerr << c10::get_backtrace();
+      std::cerr << "=========CPP END=========\n";
+      std::cerr << "==========Lower Ops BEGIN=======\n";
+      std::cerr << getPrinterOpName() << std::endl;
+      std::cerr << "==========Lower Ops END=======\n";
+    };
+    getPythonPrinter() = printer;
+  });
+  m.def("_print_text",
+        [](const std::string& s) { std::cerr << s << std::endl; });
   m.def("_xla_set_use_full_mat_mul_precision",
         [](bool use_full_mat_mul_precision) {
           XlaHelpers::set_mat_mul_precision(

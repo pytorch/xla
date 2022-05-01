@@ -46,6 +46,21 @@
 #include "torch_xla/csrc/torch_util.h"
 
 namespace torch_xla {
+
+namespace {
+thread_local bool printer_{false};
+thread_local std::string op_name_;
+}  // namespace
+
+std::string& getPrinterOpName() { return op_name_; }
+
+bool& disablePrinter() { return printer_; }
+
+std::function<void()>& getPythonPrinter() {
+  static std::function<void()> fptr_;
+  return fptr_;
+}
+
 namespace {
 
 struct TlsData {

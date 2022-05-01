@@ -4,6 +4,8 @@
 #include <c10/core/impl/DeviceGuardImplInterface.h>
 #include <c10/macros/Macros.h>
 
+#include <csignal>
+
 #include "tensorflow/compiler/xla/xla_client/computation_client.h"
 #include "tensorflow/compiler/xla/xla_client/debug_macros.h"
 #include "torch/csrc/lazy/core/tensor_util.h"
@@ -129,6 +131,15 @@ int64_t XLATensorImpl::size(int64_t d) const {
 }
 
 void XLATensorImpl::SetupSizeProperties() {
+  if (getPythonPrinter() && !disablePrinter()) {
+    getPythonPrinter()();
+  }
+
+  static auto const XLA_BREAK_ON_SIZE = std::getenv("XLA_BREAK_ON_SIZE");
+
+  if (XLA_BREAK_ON_SIZE) {
+    raise(SIGINT);
+  }
   size_t generation = tensor_.generation();
   if (generation != generation_) {
     // Fill up the basic dimension data members which the base class
