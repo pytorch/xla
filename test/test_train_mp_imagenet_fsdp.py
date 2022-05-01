@@ -41,6 +41,9 @@ MODEL_OPTS = {
     '--use_nested_fsdp': {
         'action': 'store_true',
     },
+    '--use_gradient_checkpointing': {
+        'action': 'store_true',
+    },
 }
 
 FLAGS = args_parse.parse_common_options(
@@ -72,7 +75,7 @@ import torch_xla.core.xla_model as xm
 import torch_xla.distributed.xla_multiprocessing as xmp
 import torch_xla.test.test_utils as test_utils
 
-from torch_xla.distributed.fsdp import XlaFullyShardedDataParallel as FSDP
+from torch_xla.distributed.fsdp import XlaFullyShardedDataParallel as FSDP, checkpoint_module
 
 DEFAULT_KWARGS = dict(
     batch_size=128,
@@ -207,13 +210,21 @@ def train_imagenet():
   #   stage or each residual block or each conv layer).
   fsdp_wrap = lambda m: FSDP(
       m.to(device), flatten_parameters=FLAGS.flatten_parameters)
+  # Apply gradient checkpointing to sub-modules if specified
+  grad_ckpt_wrap = checkpoint_module if FLAGS.use_gradient_checkpointing else (
+      lambda x: x)
   if FLAGS.use_nested_fsdp:
     # Here we apply inner FSDP at the level of child modules for ZeRO-3, which
     # corresponds to different stages in resnet (i.e. Stage 1 to 5).
-    for submodule_name in [n for n, _ in model.named_children()]:
-      m_fsdp = fsdp_wrap(getattr(model, submodule_name))
+    for submodule_name, submodule in model.named_children():
+      if sum(p.numel() for p in submodule.parameters()) == 0:
+        # Skip those submodules without parameters (i.e. no need to shard them)
+        continue
+      # Note: wrap with `checkpoint_module` first BEFORE wrapping with FSDP
+      m_fsdp = fsdp_wrap(grad_ckpt_wrap(getattr(model, submodule_name)))
       setattr(model, submodule_name, m_fsdp)
-  model = fsdp_wrap(model)  # always wrap the base model with an outer FSDP
+  # Always wrap the base model with an outer FSDP
+  model = fsdp_wrap(model)
 
   writer = None
   if xm.is_master_ordinal():

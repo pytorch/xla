@@ -7,6 +7,9 @@ MODEL_OPTS = {
     '--use_nested_fsdp': {
         'action': 'store_true',
     },
+    '--use_gradient_checkpointing': {
+        'action': 'store_true',
+    },
     '--ckpt_prefix': {
         'type': str,
         'default': '/tmp/mnist-fsdp/final_ckpt',
@@ -46,6 +49,7 @@ import torch_xla.test.test_utils as test_utils
 from torch_xla.distributed.fsdp import (
     XlaFullyShardedDataParallel as FSDP,
     consolidate_sharded_model_checkpoints,
+    checkpoint_module,
 )
 
 
@@ -139,13 +143,18 @@ def train_mnist(flags, **kwargs):
   # Wrap the model with FSDP
   fsdp_wrap = lambda m: FSDP(
       m.to(device), flatten_parameters=flags.flatten_parameters)
+  # Apply gradient checkpointing to sub-modules if specified
+  grad_ckpt_wrap = checkpoint_module if flags.use_gradient_checkpointing else (
+      lambda x: x)
   if flags.use_nested_fsdp:
     # Wrap a few sub-modules with inner FSDP (to implement ZeRO-3)
-    model.conv1 = fsdp_wrap(model.conv1)
-    model.conv2 = fsdp_wrap(model.conv2)
-    model.fc1 = fsdp_wrap(model.fc1)
-    model.fc2 = fsdp_wrap(model.fc2)
-  model = fsdp_wrap(model)  # always wrap the base model with an outer FSDP
+    # Note: wrap with `checkpoint_module` first BEFORE wrapping with FSDP
+    model.conv1 = fsdp_wrap(grad_ckpt_wrap(model.conv1))
+    model.conv2 = fsdp_wrap(grad_ckpt_wrap(model.conv2))
+    model.fc1 = fsdp_wrap(grad_ckpt_wrap(model.fc1))
+    model.fc2 = fsdp_wrap(grad_ckpt_wrap(model.fc2))
+  # Always wrap the base model with an outer FSDP
+  model = fsdp_wrap(model)
 
   writer = None
   if xm.is_master_ordinal():
