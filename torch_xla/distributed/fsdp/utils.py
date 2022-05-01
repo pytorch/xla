@@ -9,14 +9,39 @@ def checkpoint_module(module):
   """
   Wrap a `module`'s `forward` method with gradient checkpointing (also called
   activation checkpointing) via `torch_xla.utils.checkpoint.checkpoint`.
-
-  Note that it doesn't support keyword arguments to `forward` at this moment.
   """
+
+  def _xla_checkpointed_forward_no_kwargs(m, num_args, num_kwargs,
+                                          *packed_args):
+    # unpack packed_args into args and kwargs
+    assert num_args + num_kwargs * 2 == len(packed_args)
+    args = packed_args[:num_args]
+    kwargs = packed_args[num_args:]
+    kwargs = dict(zip(kwargs[:num_kwargs], kwargs[num_kwargs:]))
+    return m._xla_checkpointed_forward_original(*args, **kwargs)
+
+  def _forward_with_checkpoint(m, *args, **kwargs):
+    # pack args and kwargs together as `torch_xla.utils.checkpoint.checkpoint`
+    # doesn't support keyword arguments
+    packed_args = args + tuple(kwargs.keys()) + tuple(kwargs.values())
+    input_requires_grad = any(
+        isinstance(t, torch.Tensor) and t.requires_grad for t in packed_args)
+    if input_requires_grad:
+      outputs = checkpoint(m._xla_checkpointed_forward_no_kwargs, len(args),
+                           len(kwargs), *packed_args)
+    else:
+      # No input requires gradients so we won't checkpoint this forward pass.
+      # Note that `m`` might have parameters that require gradients, but they
+      # are beyond what `torch_xla.utils.checkpoint.checkpoint` can handle.
+      outputs = m._xla_checkpointed_forward_original(*args, **kwargs)
+    return outputs
+
   assert isinstance(module, torch.nn.Module)
-  module._forward_before_wrap_no_grad_ckpt = module.forward
-  module.forward = MethodType(
-      (lambda m, *args: checkpoint(m._forward_before_wrap_no_grad_ckpt, *args)),
-      module)
+  # replace `module`'s forward method with its checkpointed version
+  module._xla_checkpointed_forward_original = module.forward
+  module._xla_checkpointed_forward_no_kwargs = MethodType(
+      _xla_checkpointed_forward_no_kwargs, module)
+  module.forward = MethodType(_forward_with_checkpoint, module)
   return module
 
 
