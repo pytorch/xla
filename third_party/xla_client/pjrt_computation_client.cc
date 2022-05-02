@@ -73,7 +73,8 @@ std::vector<ComputationClient::DataPtr> PjRtComputationClient::TransferToServer(
     tensor.populate_fn(tensor, literal.untyped_data(), literal.size_bytes());
 
     std::shared_ptr<xla::PjRtBuffer> buffer =
-        client_->BufferFromHostLiteral(literal, client_->addressable_devices()[0])
+        client_
+            ->BufferFromHostLiteral(literal, client_->addressable_devices()[0])
             .ValueOrDie();
     buffer->GetReadyFuture().Await();
     ComputationClient::DataPtr data =
