@@ -146,7 +146,7 @@ class PjRtComputationClient : public ComputationClient {
   };
 
  private:
-  std::unique_ptr<PjRtClient> client;
+  std::unique_ptr<PjRtClient> client_;
 };
 
 }  // namespace xla

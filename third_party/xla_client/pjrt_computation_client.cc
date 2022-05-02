@@ -42,13 +42,13 @@ PjRtComputationClient::PjRtComputationClient() {
   std::string device_type = sys_util::GetEnvString(env::kEnvPjRtDevice, "");
   if (device_type == "CPU") {
     TF_VLOG(1) << "Initializing PjRt CPU client...";
-    client = xla::GetCpuClient(/*asynchronous=*/false).ValueOrDie();
+    client_ = xla::GetCpuClient(/*asynchronous=*/false).ValueOrDie();
   } else {
     XLA_ERROR() << absl::StrFormat("Unknown %s '%s'", env::kEnvPjRtDevice,
                                    device_type);
   }
 
-  XLA_CHECK(client.get() != nullptr);
+  XLA_CHECK(client_.get() != nullptr);
 }
 
 void PjRtComputationClient::PjRtData::Assign(const Data& data) {
@@ -73,9 +73,9 @@ std::vector<ComputationClient::DataPtr> PjRtComputationClient::TransferToServer(
     tensor.populate_fn(tensor, literal.untyped_data(), literal.size_bytes());
 
     std::shared_ptr<xla::PjRtBuffer> buffer =
-        client->BufferFromHostLiteral(literal, client->addressable_devices()[0])
+        client_->BufferFromHostLiteral(literal, client_->addressable_devices()[0])
             .ValueOrDie();
-    buffer->BlockHostUntilReady();
+    buffer->GetReadyFuture().Await();
     ComputationClient::DataPtr data =
         std::make_shared<PjRtData>(tensor.device, tensor.shape, buffer);
     datas.push_back(data);
@@ -93,7 +93,7 @@ std::vector<xla::Literal> PjRtComputationClient::TransferFromServer(
     const PjRtData& pjrt_data = dynamic_cast<const PjRtData&>(*handle);
 
     std::shared_ptr<xla::Literal> literal =
-        pjrt_data.buffer->ToLiteral().ValueOrDie();
+        pjrt_data.buffer->ToLiteralSync().ValueOrDie();
     literals.push_back(std::move(*literal));
   }
 
@@ -109,7 +109,7 @@ std::vector<ComputationClient::ComputationPtr> PjRtComputationClient::Compile(
         instance.computation.GetProgramShape().ValueOrDie();
     xla::CompileOptions compile_options;
     std::unique_ptr<xla::PjRtExecutable> executable =
-        client->Compile(instance.computation, compile_options).ValueOrDie();
+        client_->Compile(instance.computation, compile_options).ValueOrDie();
     std::shared_ptr<PjRtComputation> pjrt_computation =
         std::make_shared<PjRtComputation>(std::move(instance.computation),
                                           program_shape, instance.devices,
@@ -160,25 +160,25 @@ PjRtComputationClient::ExecuteComputation(
 }
 
 size_t PjRtComputationClient::GetNumDevices() const {
-  return client->addressable_device_count();
+  return client_->addressable_device_count();
 }
 
 std::string PjRtComputationClient::GetDefaultDevice() const {
-  return PjRtDeviceToString(client->addressable_devices()[0]);
+  return PjRtDeviceToString(client_->addressable_devices()[0]);
 }
 
 std::vector<std::string> PjRtComputationClient::GetLocalDevices() const {
-  return PjRtDevicesToString(client->addressable_devices());
+  return PjRtDevicesToString(client_->addressable_devices());
 }
 
 std::vector<std::string> PjRtComputationClient::GetAllDevices() const {
-  return PjRtDevicesToString(client->devices());
+  return PjRtDevicesToString(client_->devices());
 }
 
 std::shared_ptr<std::vector<std::string>>
 PjRtComputationClient::GetReplicationDevices() {
   return std::make_shared<std::vector<std::string>>(
-      PjRtDevicesToString(client->addressable_devices()));
+      PjRtDevicesToString(client_->addressable_devices()));
 }
 
 }  // namespace xla
