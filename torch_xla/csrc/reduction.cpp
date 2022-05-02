@@ -1,4 +1,3 @@
-torch_xla/csrc/reduction.cpp
 #include "torch_xla/csrc/reduction.h"
 
 #include <stdlib.h>
@@ -551,12 +550,13 @@ xla::XlaOp BuildLogsumexp(xla::XlaOp input,
  * resolve this pitfall, i.e. ensuring that the permutations are truly
  * randomly uniformly distributed.
  * Link to PyTorch CUDA implementation of this post-processing:
- * https://github.com/pytorch/pytorch/blob/master/aten/src/ATen/native/cuda/Randperm.cu
+ *
+ https://github.com/pytorch/pytorch/blob/master/aten/src/ATen/native/cuda/Randperm.cu
  */
 xla::XlaOp BuildRandpermOut(int64_t n, xla::XlaBuilder* builder) {
   // Create an arange tensor of size n
   xla::PrimitiveType element_type = xla::U64;
-  xla::XlaOp input = xla::Iota(builder, element_type, n);26
+  xla::XlaOp input = xla::Iota(builder, element_type, n);
 
   // Ensure that the key space is greater than or equal to the cube of the
   // number of values to manage the number of collisions. Inspired by
