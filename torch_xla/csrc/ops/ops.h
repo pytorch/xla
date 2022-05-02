@@ -164,6 +164,8 @@ torch::lazy::NodePtr Clamp(const XlaValue& input, const XlaValue& min,
 
 torch::lazy::NodePtr Ceil(const XlaValue& input);
 
+torch::lazy::NodePtr Celu(const XlaValue& input, const at::Scalar& alpha);
+
 torch::lazy::NodePtr Floor(const XlaValue& input);
 
 torch::lazy::NodePtr Round(const XlaValue& input);
@@ -275,5 +277,7 @@ torch::lazy::NodePtr SLogDet(const XlaValue& input);
 
 torch::lazy::NodePtr Softplus(const XlaValue& input, const XlaValue& beta,
                               const XlaValue& threshold);
+
+torch::lazy::NodePtr Selu(const XlaValue& input);
 
 }  // namespace torch_xla

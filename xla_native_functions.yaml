@@ -76,6 +76,8 @@ supported:
   - bmm
   - cat
   - ceil
+  - celu
+  - celu_
   - cholesky
   - clamp
   - clamp.Tensor
@@ -261,6 +263,8 @@ supported:
   - scatter.value_reduce
   - scatter_add
   - select.int
+  - selu
+  - selu_
   - sgn
   - sigmoid
   - sigmoid_backward

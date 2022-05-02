@@ -467,6 +467,9 @@ class XLATensor {
 
   static XLATensor ceil(const XLATensor& input);
 
+  static XLATensor celu(const XLATensor& input, const at::Scalar& alpha);
+  static void celu_(XLATensor& input, const at::Scalar& alpha);
+
   static XLATensor cholesky(const XLATensor& input, bool upper);
 
   static XLATensor clamp(const XLATensor& input,
@@ -1033,6 +1036,9 @@ class XLATensor {
                                const XLATensor& index, const at::Scalar& value);
 
   static XLATensor select(const XLATensor& input, int64_t dim, int64_t index);
+
+  static XLATensor selu(const XLATensor& input);
+  static void selu_(XLATensor& input);
 
   static void silu_out(XLATensor& input, XLATensor& out);
   static XLATensor silu_backward(XLATensor& grad_output, XLATensor& input);
