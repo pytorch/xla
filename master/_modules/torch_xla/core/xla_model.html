@@ -1104,7 +1104,11 @@
 
 <span class="k">def</span> <span class="nf">mark_step</span><span class="p">():</span>
   <span class="k">if</span> <span class="n">xu</span><span class="o">.</span><span class="n">getenv_as</span><span class="p">(</span><span class="s1">&#39;XLA_EMIT_STEPLOG&#39;</span><span class="p">,</span> <span class="nb">bool</span><span class="p">,</span> <span class="kc">False</span><span class="p">):</span>
-    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;torch_xla.core.xla_model::mark_step&#39;</span><span class="p">,</span> <span class="n">file</span><span class="o">=</span><span class="n">sys</span><span class="o">.</span><span class="n">stderr</span><span class="p">,</span> <span class="n">flush</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span>
+        <span class="s1">&#39;torch_xla.core.xla_model::mark_step</span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">,</span>
+        <span class="n">end</span><span class="o">=</span><span class="s1">&#39;&#39;</span><span class="p">,</span>
+        <span class="n">file</span><span class="o">=</span><span class="n">sys</span><span class="o">.</span><span class="n">stderr</span><span class="p">,</span>
+        <span class="n">flush</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
   <span class="n">torch_xla</span><span class="o">.</span><span class="n">_XLAC</span><span class="o">.</span><span class="n">_xla_step_marker</span><span class="p">(</span>
       <span class="n">torch_xla</span><span class="o">.</span><span class="n">_XLAC</span><span class="o">.</span><span class="n">_xla_get_default_device</span><span class="p">(),</span> <span class="p">[],</span>
       <span class="n">wait</span><span class="o">=</span><span class="n">xu</span><span class="o">.</span><span class="n">getenv_as</span><span class="p">(</span><span class="s1">&#39;XLA_SYNC_WAIT&#39;</span><span class="p">,</span> <span class="nb">bool</span><span class="p">,</span> <span class="kc">False</span><span class="p">))</span>
