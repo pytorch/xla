@@ -6350,7 +6350,7 @@ TEST_F(AtenXlaTensorTest, TestSelu) {
   });
 
   ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
-  ExpectCounterChanged("xla::elu", cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::selu", cpp_test::GetIgnoredCounters());
 }
 
 TEST_F(AtenXlaTensorTest, TestSeluInPlace) {
@@ -6365,7 +6365,7 @@ TEST_F(AtenXlaTensorTest, TestSeluInPlace) {
   });
 
   ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
-  ExpectCounterChanged("xla::elu_", cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::selu_", cpp_test::GetIgnoredCounters());
 }
 
 TEST_F(AtenXlaTensorTest, TestCelu) {
@@ -6380,7 +6380,7 @@ TEST_F(AtenXlaTensorTest, TestCelu) {
   });
 
   ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
-  ExpectCounterChanged("xla::elu", cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::celu", cpp_test::GetIgnoredCounters());
 }
 
 TEST_F(AtenXlaTensorTest, TestCeluInPlace) {
@@ -6396,7 +6396,7 @@ TEST_F(AtenXlaTensorTest, TestCeluInPlace) {
   });
 
   ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
-  ExpectCounterChanged("xla::elu_", cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::celu_", cpp_test::GetIgnoredCounters());
 }
 
 TEST_F(AtenXlaTensorTest, TestGelu) {
