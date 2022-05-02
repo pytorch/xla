@@ -35,6 +35,7 @@ class AutocastTestUnsupportedLists(object):
     ]
     self.torch_fp32 = [
         "norm",  # produce f16 instead of f32
+        "log_softmax",  # precision
     ]
     self.torch_need_autocast_promote = [
         "scatter_add",  # cat currently requires all input tensors to be the same type
