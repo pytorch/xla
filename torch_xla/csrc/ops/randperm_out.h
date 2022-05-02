@@ -7,7 +7,7 @@ namespace torch_xla {
 namespace ir {
 namespace ops {
 
-class RandpermOut : public Node {
+class RandpermOut : public XlaNode {
  public:
   RandpermOut(int64_t n);
 

@@ -555,7 +555,7 @@ xla::XlaOp BuildLogsumexp(xla::XlaOp input,
 xla::XlaOp BuildRandpermOut(int64_t n, xla::XlaBuilder* builder) {
   // Create an arange tensor of size n
   xla::PrimitiveType element_type = xla::U64;
-  xla::XlaOp input = xla::Iota(&builder, element_type, n);
+  xla::XlaOp input = xla::Iota(builder, element_type, n);
 
   // Ensure that the key space is greater than or equal to the cube of the
   // number of values to manage the number of collisions. Inspired by
@@ -567,9 +567,9 @@ xla::XlaOp BuildRandpermOut(int64_t n, xla::XlaBuilder* builder) {
 
   // Define shapes and constants
   const xla::Shape key_shape = xla::ShapeUtil::MakeShape(xla::U32, {n});
-  xla::XlaOp zero = XlaHelpers::ScalarValue(0U, &builder);
+  xla::XlaOp zero = XlaHelpers::ScalarValue(0U, builder);
   xla::XlaOp max_value =
-      XlaHelpers::ScalarValue(tensorflow::kuint32max, &builder);
+      XlaHelpers::ScalarValue(tensorflow::kuint32max, builder);
 
   // To address the pitfall, sort the permutation with random keys for multiple
   // rounds
@@ -578,7 +578,7 @@ xla::XlaOp BuildRandpermOut(int64_t n, xla::XlaBuilder* builder) {
     xla::XlaOp keys = xla::RngUniform(zero, max_value, key_shape);
     xla::XlaOp sorted = xla::Sort(
         {keys, curr},
-        xla::CreateScalarLtComputation({xla::U32, element_type}, &builder));
+        xla::CreateScalarLtComputation({xla::U32, element_type}, builder));
     curr = xla::GetTupleElement(sorted, 1);
   }
 

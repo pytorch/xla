@@ -9,13 +9,13 @@ namespace ir {
 namespace ops {
 
 RandpermOut::RandpermOut(int64_t n)
-    : Node(torch::lazy::OpKind(at::aten::randperm), {},
-           xla::ShapeUtil::MakeShape(xla::U64, {n}),
-           /*num_outputs=*/1, torch::lazy::MHash(n)),
+    : XlaNode(torch::lazy::OpKind(at::aten::randperm), OpList(),
+              xla::ShapeUtil::MakeShape(xla::U64, {n}),
+              /*num_outputs=*/1, torch::lazy::MHash(n)),
       n_(n) {}
 
 torch::lazy::NodePtr RandpermOut::Clone(OpList operands) const {
-  return MakeNode<RandpermOut>(n_);
+  return torch::lazy::MakeNode<RandpermOut>(n_);
 }
 
 XlaOpVector RandpermOut::Lower(LoweringContext* loctx) const {

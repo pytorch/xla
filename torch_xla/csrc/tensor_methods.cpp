@@ -2282,8 +2282,8 @@ void XLATensor::random_(XLATensor& input, int64_t from, int64_t to) {
 }
 
 void XLATensor::randperm_out(int64_t n, XLATensor& out) {
-  torch::lazy::NodePtr node = ir::MakeNode<ir::ops::RandpermOut>(n);
-  out.SetInPlaceIrValue(ir::Value(node));
+  torch::lazy::NodePtr node = torch::lazy::MakeNode<ir::ops::RandpermOut>(n);
+  out.SetInPlaceIrValue(XlaValue(node));
 }
 
 XLATensor XLATensor::reciprocal(const XLATensor& input) {
