@@ -186,13 +186,27 @@ XlaValue Alias::SyncUpdateOperations() {
 View::View(xla::Shape shape, std::shared_ptr<Alias> alias, ViewInfo view_info)
     : shape_(std::move(shape)), alias_(std::move(alias)) {
   view_infos_.push_back(std::move(view_info));
+  if (view_info.view_type == ViewInfo::Type::kNoOp) {
+    ir_value_ = alias_->ir_value();
+  }
 }
 
 View::View(xla::Shape shape, std::shared_ptr<Alias> alias,
            std::vector<ViewInfo> view_infos)
     : view_infos_(std::move(view_infos)),
       shape_(std::move(shape)),
-      alias_(std::move(alias)) {}
+      alias_(std::move(alias)) {
+  bool all_view_info_no_op = true;
+  for (const ViewInfo& view_info : view_infos_) {
+    if (view_info.view_type != ViewInfo::Type::kNoOp) {
+      all_view_info_no_op = false;
+      break;
+    }
+  }
+  if (all_view_info_no_op) {
+    ir_value_ = alias_->ir_value();
+  }
+}
 
 void View::Update(XlaValue ir_value) {
   alias_->Update(std::move(ir_value), view_infos_);
