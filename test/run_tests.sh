@@ -80,6 +80,11 @@ function run_async_rng {
   XLA_TRANSFER_SEED_ASYNC=1 run_test "$@"
 }
 
+function run_pjrt {
+  echo "Running in PjRt runtime: $@"
+  PJRT_DEVICE=CPU run_test "$@"
+}
+
 function run_all_tests {
   run_dynamic python3 "$CDIR/../../test/test_view_ops.py" "$@" -v TestViewOpsXLA
   run_test python3 "$CDIR/../../test/test_torch.py" "$@" -v TestTorchDeviceTypeXLA
@@ -96,6 +101,7 @@ function run_all_tests {
   # TODO: enable this test after tf update, currently optimization_barrier does not
   # work on CPU.
   # run_test python3 "$CDIR/test_checkpoint.py"
+  run_pjrt python3 "$CDIR/test_operations.py" "$@" --verbosity=$VERBOSITY
   run_test python3 "$CDIR/test_mp_replication.py"
   run_test python3 "$CDIR/test_mp_all_to_all.py"
   run_test python3 "$CDIR/test_mp_collective_permute.py"

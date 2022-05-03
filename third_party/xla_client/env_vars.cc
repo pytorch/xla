@@ -17,6 +17,7 @@ const char* const kEnvHostOrdinal = "XRT_HOST_ORDINAL";
 const char* const kEnvShardOrdinal = "XRT_SHARD_ORDINAL";
 const char* const kEnvStartService = "XRT_START_LOCAL_SERVER";
 const char* const kEnvTpuvmMode = "TPUVM_MODE";
+const char* const kEnvPjRtDevice = "PJRT_DEVICE";
 
 }  // namespace env
 }  // namespace xla
