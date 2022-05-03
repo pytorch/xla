@@ -55,7 +55,7 @@ PjRtComputationClient::PjRtComputationClient() {
 
   XLA_CHECK(client_.get() != nullptr);
 
-  for (auto* device : client->addressable_devices()) {
+  for (auto* device : client_->addressable_devices()) {
     std::string device_str = PjRtDeviceToString(device);
     string_to_device.emplace(device_str, device);
   }
@@ -120,8 +120,10 @@ std::vector<ComputationClient::ComputationPtr> PjRtComputationClient::Compile(
     xla::ProgramShape program_shape =
         instance.computation.GetProgramShape().ValueOrDie();
     xla::CompileOptions compile_options;
-    compile_options.executable_build_options.set_num_replicas(client->addressable_device_count());
-    compile_options.executable_build_options.set_device_ordinal(pjrt_device->id());
+    compile_options.executable_build_options.set_num_replicas(
+        client_->addressable_device_count());
+    compile_options.executable_build_options.set_device_ordinal(
+        pjrt_device->id());
     std::unique_ptr<xla::PjRtExecutable> executable =
         client_->Compile(instance.computation, compile_options).ValueOrDie();
     std::shared_ptr<PjRtComputation> pjrt_computation =
@@ -152,14 +154,17 @@ PjRtComputationClient::ExecuteComputation(
   for (auto& argument : arguments) {
     const PjRtData* pjrt_data = dynamic_cast<PjRtData*>(argument.get());
 
-    XLA_CHECK(pjrt_device == pjrt_data->buffer->device()) << pjrt_device->DebugString() << " vs " << pjrt_data->buffer->device()->DebugString();
+    XLA_CHECK(pjrt_device == pjrt_data->buffer->device())
+        << pjrt_device->DebugString() << " vs "
+        << pjrt_data->buffer->device()->DebugString();
     buffers.push_back(pjrt_data->buffer.get());
   }
 
   xla::ExecuteOptions execute_options;
   execute_options.untuple_result = options.explode_tuple;
   std::vector<std::unique_ptr<xla::PjRtBuffer>> results =
-      pjrt_computation.executable->ExecuteSharded(buffers, pjrt_device, execute_options)
+      pjrt_computation.executable
+          ->ExecuteSharded(buffers, pjrt_device, execute_options)
           .ValueOrDie();
 
   std::vector<DataPtr> datas;
@@ -204,8 +209,10 @@ PjRtComputationClient::GetReplicationDevices() {
   return replication_devices_;
 }
 
-xla::PjRtDevice* PjRtComputationClient::StringToPjRtDevice(const std::string& device) {
-  XLA_CHECK(string_to_device.find(device) != string_to_device.end()) << "Unknown device " << device;
+xla::PjRtDevice* PjRtComputationClient::StringToPjRtDevice(
+    const std::string& device) {
+  XLA_CHECK(string_to_device.find(device) != string_to_device.end())
+      << "Unknown device " << device;
   xla::PjRtDevice* pjrt_device = string_to_device[device];
   return pjrt_device;
 }
