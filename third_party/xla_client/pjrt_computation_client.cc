@@ -116,7 +116,7 @@ std::vector<ComputationClient::ComputationPtr> PjRtComputationClient::Compile(
   std::vector<ComputationClient::ComputationPtr> computations;
 
   for (auto& instance : instances) {
-    auto pjrt_device = StringToPjRtDevice(instance.devices[0]);
+    PjRtDevice* pjrt_device = StringToPjRtDevice(instance.compilation_device);
     xla::ProgramShape program_shape =
         instance.computation.GetProgramShape().ValueOrDie();
     xla::CompileOptions compile_options;
