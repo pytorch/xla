@@ -19,6 +19,7 @@
 #include "tensorflow/core/lib/gtl/inlined_vector.h"
 #include "torch/csrc/lazy/core/hash.h"
 #include "torch/csrc/lazy/core/ir.h"
+#include "torch/csrc/lazy/core/ir_builder.h"
 
 namespace torch_xla {
 
