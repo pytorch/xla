@@ -144,7 +144,7 @@ class PjRtComputationClient : public ComputationClient {
 
  private:
   std::shared_ptr<PjRtClient> client_;
-  std::unordered_map<std::string, xla::PjRtDevice* const> string_to_device;
+  std::unordered_map<std::string, xla::PjRtDevice* const> string_to_device_;
   std::shared_ptr<std::vector<std::string>> replication_devices_;
 
   xla::PjRtDevice* StringToPjRtDevice(const std::string& device);

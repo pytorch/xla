@@ -57,7 +57,7 @@ PjRtComputationClient::PjRtComputationClient() {
 
   for (auto* device : client_->addressable_devices()) {
     std::string device_str = PjRtDeviceToString(device);
-    string_to_device.emplace(device_str, device);
+    string_to_device_.emplace(device_str, device);
   }
 }
 
@@ -211,9 +211,9 @@ PjRtComputationClient::GetReplicationDevices() {
 
 xla::PjRtDevice* PjRtComputationClient::StringToPjRtDevice(
     const std::string& device) {
-  XLA_CHECK(string_to_device.find(device) != string_to_device.end())
+  XLA_CHECK(string_to_device_.find(device) != string_to_device_.end())
       << "Unknown device " << device;
-  xla::PjRtDevice* pjrt_device = string_to_device[device];
+  xla::PjRtDevice* pjrt_device = string_to_device_[device];
   return pjrt_device;
 }
 
