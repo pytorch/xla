@@ -1868,8 +1868,8 @@ std::tuple<at::Tensor, at::Tensor> XLANativeFunctions::log_sigmoid_forward(
                          bridge::AtenFromXlaTensor(std::get<1>(result_tuple)));
 }
 
-at::Tensor XLANativeFunctions::log_softmax(const at::Tensor & self, int64_t dim,
-                                           c10::optional<at::ScalarType> dtype) {
+at::Tensor XLANativeFunctions::log_softmax(
+    const at::Tensor& self, int64_t dim, c10::optional<at::ScalarType> dtype) {
   XLA_FN_COUNTER("xla::");
   return bridge::AtenFromXlaTensor(
       XLATensor::log_softmax(bridge::GetXlaTensor(self), dim, dtype));
