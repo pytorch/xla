@@ -81,4 +81,12 @@ xla::XlaOp BuildGelu(xla::XlaOp input);
 // Computes the backward of GELU.
 xla::XlaOp BuildGeluBackward(xla::XlaOp grad_output, xla::XlaOp input);
 
+// Computes the CELU function of input.
+// CELU(x)=max(0,x)+min(0,a*(exp(x/a)−1))
+xla::XlaOp BuildCelu(xla::XlaOp input, const at::Scalar& alpha);
+
+// Computes the SELU function of input.
+// SELU(x)=scale*(max(0,x)+min(0,a*(exp(x)−1)))
+xla::XlaOp BuildSelu(xla::XlaOp input);
+
 }  // namespace torch_xla

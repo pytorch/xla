@@ -1049,6 +1049,21 @@ at::Tensor XLANativeFunctions::ceil(const at::Tensor& self) {
   return bridge::AtenFromXlaTensor(XLATensor::ceil(bridge::GetXlaTensor(self)));
 }
 
+at::Tensor XLANativeFunctions::celu(const at::Tensor& self,
+                                    const at::Scalar& alpha) {
+  XLA_FN_COUNTER("xla::");
+  return bridge::AtenFromXlaTensor(
+      XLATensor::celu(bridge::GetXlaTensor(self), alpha));
+}
+
+at::Tensor& XLANativeFunctions::celu_(at::Tensor& self,
+                                      const at::Scalar& alpha) {
+  XLA_FN_COUNTER("xla::");
+  XLATensor self_tensor = bridge::GetXlaTensor(self);
+  XLATensor::celu_(self_tensor, alpha);
+  return self;
+}
+
 at::Tensor XLANativeFunctions::cholesky(const at::Tensor& self, bool upper) {
   XLA_FN_COUNTER("xla::");
   return bridge::AtenFromXlaTensor(
@@ -2957,6 +2972,18 @@ at::Tensor XLANativeFunctions::select(const at::Tensor& self, int64_t dim,
   XLA_FN_COUNTER("xla::");
   return bridge::AtenFromXlaTensor(
       XLATensor::select(bridge::GetXlaTensor(self), dim, index));
+}
+
+at::Tensor XLANativeFunctions::selu(const at::Tensor& self) {
+  XLA_FN_COUNTER("xla::");
+  return bridge::AtenFromXlaTensor(XLATensor::selu(bridge::GetXlaTensor(self)));
+}
+
+at::Tensor& XLANativeFunctions::selu_(at::Tensor& self) {
+  XLA_FN_COUNTER("xla::");
+  XLATensor self_tensor = bridge::GetXlaTensor(self);
+  XLATensor::selu_(self_tensor);
+  return self;
 }
 
 at::Tensor& XLANativeFunctions::silu_out(const at::Tensor& self,

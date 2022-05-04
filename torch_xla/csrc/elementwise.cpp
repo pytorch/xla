@@ -317,4 +317,32 @@ xla::XlaOp BuildGeluBackward(xla::XlaOp grad_output, xla::XlaOp input) {
   return grad_output * (half * (one + scratch) + input * dinput * kAlpha);
 }
 
+xla::XlaOp BuildCelu(xla::XlaOp input, const at::Scalar& alpha) {
+  const xla::Shape& shape = XlaHelpers::ShapeOfXlaOp(input);
+  xla::XlaOp zero = xla::Zero(input.builder(), shape.element_type());
+  xla::XlaOp one = XlaHelpers::ScalarValue<float>(1.0, shape.element_type(),
+                                                  input.builder());
+  xla::XlaOp xla_alpha =
+      XlaHelpers::ScalarValue(alpha, shape.element_type(), input.builder());
+
+  // CELU(x)=max(0,x)+min(0,a*(exp(x/a)−1))
+  return xla::Max(zero, input) +
+         xla::Min(zero, xla_alpha * (xla::Exp(input / xla_alpha) - one));
+}
+
+xla::XlaOp BuildSelu(xla::XlaOp input) {
+  const xla::Shape& shape = XlaHelpers::ShapeOfXlaOp(input);
+  xla::XlaOp zero = xla::Zero(input.builder(), shape.element_type());
+  xla::XlaOp one = XlaHelpers::ScalarValue<float>(1.0, shape.element_type(),
+                                                  input.builder());
+  xla::XlaOp alpha = XlaHelpers::ScalarValue<float>(
+      1.6732632423543772848170429916717, shape.element_type(), input.builder());
+  xla::XlaOp scale = XlaHelpers::ScalarValue<float>(
+      1.0507009873554804934193349852946, shape.element_type(), input.builder());
+
+  // SELU(x)=scale*(max(0,x)+min(0,a*(exp(x)−1)))
+  return scale * (xla::Max(zero, input) +
+                  xla::Min(zero, alpha * (xla::Exp(input) - one)));
+}
+
 }  // namespace torch_xla

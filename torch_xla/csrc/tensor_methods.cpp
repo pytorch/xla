@@ -1014,6 +1014,14 @@ XLATensor XLATensor::ceil(const XLATensor& input) {
   return input.CreateFrom(Ceil(input.GetIrValue()));
 }
 
+XLATensor XLATensor::celu(const XLATensor& input, const at::Scalar& alpha) {
+  return input.CreateFrom(Celu(input.GetIrValue(), alpha));
+}
+
+void XLATensor::celu_(XLATensor& input, const at::Scalar& alpha) {
+  input.SetInPlaceIrValue(Celu(input.GetIrValue(), alpha));
+}
+
 XLATensor XLATensor::cholesky(const XLATensor& input, bool upper) {
   // Cholesky takes lower instead of upper, hence the negation.
   return input.CreateFrom(
@@ -2488,6 +2496,14 @@ XLATensor XLATensor::scatter_add(const XLATensor& input, int64_t dim,
 XLATensor XLATensor::select(const XLATensor& input, int64_t dim,
                             int64_t index) {
   return tensor_ops::Select(input, dim, index);
+}
+
+XLATensor XLATensor::selu(const XLATensor& input) {
+  return input.CreateFrom(Selu(input.GetIrValue()));
+}
+
+void XLATensor::selu_(XLATensor& input) {
+  input.SetInPlaceIrValue(Selu(input.GetIrValue()));
 }
 
 void XLATensor::silu_out(XLATensor& input, XLATensor& out) {
