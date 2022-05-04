@@ -268,6 +268,9 @@ DISABLED_TORCH_TESTS_ANY = {
         'test_upsamplingBicubic2d_correctness_xla',  # FIXME! Got dtypes torch.float32 and torch.float64
         'test_conv3d_same_padding_backward_xla',  # XLA tensors do not have storage,
         'test_CTCLoss_no_batch_dim_xla',  # Value out of range
+        'test_ctc_loss_xla',  # Numerical gradient for function expected to be zero, only on CI
+        'test_nll_loss_byte_target_matches_long_xla',  # Numerical gradient for function expected to be zero, only on CI
+        'test_softmax_results_xla_float32',  # Numerical gradient for function expected to be zero, only on CI
     },
 
     # test_type_promotion.py
