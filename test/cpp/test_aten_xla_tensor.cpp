@@ -10013,8 +10013,6 @@ TEST_F(AtenXlaTensorTest, TestMaxUnpool2DBackward) {
   }
 
   ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
-  ExpectCounterChanged("xla::max_unpool2d_backward",
-                       cpp_test::GetIgnoredCounters());
 }
 
 TEST_F(AtenXlaTensorTest, TestMaxUnpool3DBackward) {
@@ -10054,8 +10052,6 @@ TEST_F(AtenXlaTensorTest, TestMaxUnpool3DBackward) {
   }
 
   ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
-  ExpectCounterChanged("xla::max_unpool3d_backward",
-                       cpp_test::GetIgnoredCounters());
 }
 
 TEST_F(AtenXlaTensorTest, TestTanhBackward) {

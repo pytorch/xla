@@ -82,7 +82,6 @@
 #include "torch_xla/csrc/ops/max_pool_nd.h"
 #include "torch_xla/csrc/ops/max_pool_nd_backward.h"
 #include "torch_xla/csrc/ops/max_unpool_nd.h"
-#include "torch_xla/csrc/ops/max_unpool_nd_backward.h"
 #include "torch_xla/csrc/ops/mean.h"
 #include "torch_xla/csrc/ops/min_in_dim.h"
 #include "torch_xla/csrc/ops/mse_loss.h"
@@ -1895,15 +1894,6 @@ XLATensor XLATensor::max_unpool(const XLATensor& input,
                                 std::vector<int64_t> output_size) {
   return input.CreateFrom(torch::lazy::MakeNode<MaxUnpoolNd>(
       input.GetIrValue(), indices.GetIrValue(), std::move(output_size)));
-}
-
-XLATensor XLATensor::max_unpool_backward(const XLATensor& grad_output,
-                                         const XLATensor& input,
-                                         const XLATensor& indices,
-                                         std::vector<int64_t> output_size) {
-  return grad_output.CreateFrom(torch::lazy::MakeNode<MaxUnpoolNdBackward>(
-      grad_output.GetIrValue(), input.GetIrValue(), indices.GetIrValue(),
-      std::move(output_size)));
 }
 
 XLATensor XLATensor::mean(const XLATensor& input,
