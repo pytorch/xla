@@ -188,9 +188,7 @@ supported:
   - max_pool3d_with_indices
   - max_pool3d_with_indices_backward
   - max_unpool2d
-  - max_unpool2d_backward
   - max_unpool3d
-  - max_unpool3d_backward
   - maximum
   - mean
   - mean.dim
