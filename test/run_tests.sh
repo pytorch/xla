@@ -31,6 +31,7 @@ export TORCH_TEST_DEVICES="$CDIR/pytorch_test_base.py"
 export PYTORCH_TEST_WITH_SLOW=1
 export XLA_DUMP_FATAL_STACK=1
 export CPU_NUM_DEVICES=4
+export TORCH_SHOW_CPP_STACKTRACES=1
 
 function run_test {
   "$@"
