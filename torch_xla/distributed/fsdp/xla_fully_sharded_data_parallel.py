@@ -129,8 +129,12 @@ class XlaFullyShardedDataParallel(nn.Module):
           memory but slows training. This is only relevant when resharding
           individual layers.
       flatten_parameters (bool, Optional):
-          if ``True``, flatten parameters into a single contiguous tensor,
-          which improves training speed.
+          if ``True``, flatten parameters into a single contiguous tensor for
+          all_gather and reduce_scatter, which could potentially improve speed.
+          In this case, one cannot apply separate optimizer groups to different
+          original parameters in the wrapped module (e.g. setting bias terms or
+          any BatchNorm submodules to have zero weight decay) since all the
+          original parameters now become a single concatenated vector.
       execute_sharding_on_init (bool, Optional):
           if ``True``, immediately execute the parameter sharding via
           `xm.mark_step` to free up the memory of the full parameters.
@@ -155,7 +159,7 @@ class XlaFullyShardedDataParallel(nn.Module):
       self,
       module: nn.Module,
       reshard_after_forward: bool = True,
-      flatten_parameters: bool = True,
+      flatten_parameters: bool = False,
       execute_sharding_on_init: bool = True,
       optimization_barrier_in_forward: bool = True,
       optimization_barrier_in_backward: bool = True,
