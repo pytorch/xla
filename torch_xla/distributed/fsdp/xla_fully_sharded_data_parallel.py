@@ -77,15 +77,15 @@ class XlaFullyShardedDataParallel(nn.Module):
 
   It is also possible to shard individual layers separately and have an outer
   wrapper handle any leftover parameters. This can be helpful to further
-  reduce TPU memory usage, reduce system memory usage when initializing large
+  reduce XLA device memory usage and CPU memory usage when initializing large
   models and to improve training speed by overlapping the all-gather step
   across the forward pass.
 
   .. warning::
 
-      The module should be moved to TPU device *before* wrapping it with
-      FSDP. For nested FSDP, the inner FSDP modules also need to be on TPU
-      before wrapping.
+      The module should be moved to XLA device *before* wrapping it with
+      FSDP. For nested FSDP, the inner FSDP modules also need to be on XLA
+      device before wrapping.
 
   .. warning::
 
@@ -96,15 +96,16 @@ class XlaFullyShardedDataParallel(nn.Module):
   .. warning::
 
       Please use ``optim.step()`` instead of ``xm.optimizer_step(optim)`` for
-      optimizer update. The latter averages the gradients across TPUs, which
-      is incorrect for FSDP.
+      optimizer update. The latter averages the gradients across XLA devices,
+      which is incorrect for FSDP.
 
   .. warning::
 
-      When saving checkpoints, the training process on each TPU needs to save
-      its own (sharded) model and optimizer state_dict to a different path.
-      *Please also save ``model.get_shard_metadata()``* along with
-      ``model.state_dict()`` and ``optimizer.state_dict()`` as follows:
+      When saving checkpoints, the training process on each XLA device needs
+      to save its own (sharded) model and optimizer state_dict to a different
+      path. *To consolidate sharded checkpoints later, please also save
+      ``model.get_shard_metadata()``* along with ``model.state_dict()`` and
+      ``optimizer.state_dict()`` as follows:
 
           ckpt = {
               'model': model.state_dict(),
@@ -537,7 +538,7 @@ class XlaFullyShardedDataParallel(nn.Module):
         until the eventual sync.
 
     .. note:: Gradient accumulation can be done without this context,
-        avoiding the extra TPU memory overhead, but with the extra
+        avoiding the extra XLA device memory overhead, but with the extra
         networking overhead.
     """
     self._lazy_init()
@@ -884,18 +885,18 @@ class XlaFullyShardedDataParallel(nn.Module):
     At the start of :func:`_post_backward_hook`, ``param.grad`` contains the
     full gradient for the local batch. The reduce-scatter op will replace
     ``param.grad`` with a single shard of the summed gradient across all
-    TPUs. This shard will align with the current TPU rank. For example::
+    XLA devices. This shard will align with the current rank. For example::
 
         before reduce_scatter:
-            param.grad (TPU #0): [1, 2, 3, 4]
-            param.grad (TPU #1): [5, 6, 7, 8]
+            param.grad (rank #0): [1, 2, 3, 4]
+            param.grad (rank #1): [5, 6, 7, 8]
 
         after reduce_scatter:
-            param.grad (TPU #0): [6, 8]    # 1+5, 2+6
-            param.grad (TPU #1): [10, 12]  # 3+7, 4+8
+            param.grad (rank #0): [6, 8]    # 1+5, 2+6
+            param.grad (rank #1): [10, 12]  # 3+7, 4+8
 
-    The local TPU's ``optim.step`` is responsible for updating a single
-    shard of params, also corresponding to the current TPU's rank. This
+    The local XLA device's ``optim.step`` is responsible for updating a single
+    shard of params, also corresponding to the current XLA device's rank. This
     alignment is created by :func:`_shard_parameters_`, which ensures that
     the local optimizer only sees the relevant parameter shard.
     """
@@ -917,7 +918,7 @@ class XlaFullyShardedDataParallel(nn.Module):
       # when in a ``no_sync`` context (as inversely indicated by
       # ``self._require_backward_grad_sync``), since the params will not
       # get updated before the next forward. This saves networking
-      # bandwidth but uses more TPU memory.
+      # bandwidth but uses more XLA device memory.
       self._free_full_params(
           [param],
           dependency_tensors=[grad],
