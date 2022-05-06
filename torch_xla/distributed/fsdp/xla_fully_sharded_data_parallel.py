@@ -104,7 +104,8 @@ class XlaFullyShardedDataParallel(nn.Module):
       When saving checkpoints, the training process on each TPU needs to save
       its own (sharded) model and optimizer state_dict. When resuming, all
       training processes need to load their corresponding (sharded) model and
-      optimizer state_dict. Use ``consolidate_sharded_model_checkpoints`` to
+      optimizer state_dict. Use ``consolidate_sharded_model_checkpoints`` or
+      run ``python3 -m torch_xla.distributed.fsdp.consolidate_sharded_ckpts``
       build a full model state_dict for the original unwrapped module from
       the sharded model state_dict.
 
