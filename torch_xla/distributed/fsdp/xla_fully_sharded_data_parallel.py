@@ -102,7 +102,19 @@ class XlaFullyShardedDataParallel(nn.Module):
   .. warning::
 
       When saving checkpoints, the training process on each TPU needs to save
-      its own (sharded) model and optimizer state_dict. When resuming, all
+      its own (sharded) model and optimizer state_dict to a different path.
+      *Please also save ``model.get_shard_metadata()``* along with
+      ``model.state_dict()`` and ``optimizer.state_dict()`` as follows:
+
+          ckpt = {
+              'model': model.state_dict(),
+              'shard_metadata': model.get_shard_metadata(),
+              'optimizer': optimizer.state_dict(),
+          }
+          ckpt_path = f'/tmp/rank-{xm.get_ordinal()}-of-{xm.xrt_world_size()}.pth'
+          xm.save(ckpt, ckpt_path, master_only=False)
+
+      When resuming training of an FSDP model from saved checkpoints, all
       training processes need to load their corresponding (sharded) model and
       optimizer state_dict. Use ``consolidate_sharded_model_checkpoints`` or
       run ``python3 -m torch_xla.distributed.fsdp.consolidate_sharded_ckpts``
