@@ -128,19 +128,9 @@ ParamGroups = Optional[Union[List[List[nn.Parameter]], List[nn.Parameter]]]
 class XlaFlattenParamsWrapper(nn.Module):
   """
   A wrapper for transparently flattening a Module's parameters. The implementation
-  is mostly copy-pasted from ``fairscale.nn.misc.FlattenParamsWrapper``.
+  is mostly copy-pasted from ``fairscale.nn.misc.FlattenParamsWrapper`` [1].
 
-  Compared to the original implementation [1], this version:
-  - removes tracing
-  - supports shared parameters
-  - handles state_dict/load_state_dict transparently
-  - is renamed to XlaFlattenParamsWrapper
-  - refactored to use the FlatParameter class
-  - extended to support flattening multiple groups of params (useful
-    when different groups of params need different hyperparameters, like
-    learning rate or weight decay)
-
-  [1] https://github.com/SsnL/PyTorch-Reparam-Module
+  [1] https://github.com/facebookresearch/fairscale/blob/main/fairscale/nn/misc/flatten_params_wrapper.py
 
   Args:
       module (nn.Module):
@@ -154,6 +144,10 @@ class XlaFlattenParamsWrapper(nn.Module):
       flat_param_names (Optional[List[str]]):
           originally, give each flat_param a unique name. Note a "flat_param_"
           prefix will be added to those names.
+      auto_unflatten_state_dict (bool, Optional):
+          If ``True``, the original state dict with unflattened parameters will be
+          returned upon ``state_dict()``. Otherwise it returns the current state dict
+          in its flattened version.
   """
 
   def __init__(

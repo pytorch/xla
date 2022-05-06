@@ -545,7 +545,7 @@ class XlaFullyShardedDataParallel(nn.Module):
     """Reset instance so :func:`_lazy_init` will run on the next forward."""
     self._is_root: Optional[bool] = None
     self._all_sharded_params: Optional[Parameter] = None
-    self._output_pre_backward_hook_registered: Optional[List] = None
+    self._output_pre_backward_hook_registered: Optional[Set] = None
     self._backward_opt_barrier_tensors: Optional[List] = None
     self._backward_opt_barrier_tensor_ids: Optional[Set] = None
     self.reshard_after_forward = self._orig_reshard_after_forward
@@ -609,7 +609,7 @@ class XlaFullyShardedDataParallel(nn.Module):
     And a list to apply optimization barrier on backward pass tensors.
     """
     assert self._is_root, "This should only be called on the root"
-    self._output_pre_backward_hook_registered = []
+    self._output_pre_backward_hook_registered = set()
     self._backward_opt_barrier_tensors = []
     self._backward_opt_barrier_tensor_ids = set()
     for n, m in self.named_modules():
@@ -814,7 +814,7 @@ class XlaFullyShardedDataParallel(nn.Module):
       if t.requires_grad and (_registered == 0 or id(t)
                               not in self._output_pre_backward_hook_registered):
         t.register_hook(_pre_backward_hook)
-        self._output_pre_backward_hook_registered.append(id(t))
+        self._output_pre_backward_hook_registered.add(id(t))
         _registered += 1
       return t
 
