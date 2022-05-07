@@ -1073,7 +1073,7 @@ const std::string& XrtComputationClient::TorchDeviceToXrtDevice(
 
 std::unique_ptr<xrt::XLAComputation> XrtComputationClient::CreateXrtComputation(
     const XlaComputation& computation, absl::Span<const std::string> devices,
-    const Shape* output_shape) const {
+    const Shape* output_shape, bool is_spmd) const {
   std::unique_ptr<xrt::XLAComputation> xrt_computation(
       new xrt::XLAComputation());
   auto config = xrt_computation->mutable_config();
@@ -1086,25 +1086,48 @@ std::unique_ptr<xrt::XLAComputation> XrtComputationClient::CreateXrtComputation(
     for (int64_t i = 0; i < devices.size(); ++i) {
       Device device(devices[i]);
       auto replica_device = computation_device->add_replica_devices();
-      if (device.kind == "TPU") {
-        const std::string& xrt_device = TorchDeviceToXrtDevice(devices[i]);
-        const auto& core_coords = GetDeviceMeshCoords(xrt_device);
-        for (auto coord : core_coords) {
-          replica_device->add_value(coord);
-        }
-      } else if (device.kind == "GPU") {
-        // For GPU use X,Y,Z=0 and CORE=GPU_ORDINAL (where GPU_ORDINAL is the
-        // global ordinal value).
-        replica_device->add_value(0);
-        replica_device->add_value(0);
-        replica_device->add_value(0);
-        replica_device->add_value(device.ordinal);
-      } else {
-        XLA_ERROR() << "Unsupported replication device type: " << device.kind;
+      const std::string& xrt_device = TorchDeviceToXrtDevice(devices[i]);
+      const auto& core_coords = GetDeviceMeshCoords(xrt_device);
+      for (auto coord : core_coords) {
+        replica_device->add_value(coord);
       }
     }
-    config->set_num_replicas(devices.size());
+
+  } else {
+    // TODO(yeounoh) existing scheme assumes that all devices would participate
+    // in replication. This affects the groupings of replica groups.
+    config->set_num_cores_per_replica(1);
+    if (devices.size() > 1) {
+      auto device_assignment = config->mutable_device_assignment();
+      auto computation_device = device_assignment->add_computation_devices();
+      for (int64_t i = 0; i < devices.size(); ++i) {
+        Device device(devices[i]);
+        auto replica_device = computation_device->add_replica_devices();
+        if (device.kind == "TPU") {
+          const std::string& xrt_device = TorchDeviceToXrtDevice(devices[i]);
+          const auto& core_coords = GetDeviceMeshCoords(xrt_device);
+          for (auto coord : core_coords) {
+            replica_device->add_value(coord);
+          }
+        } else if (device.kind == "GPU") {
+          // For GPU use X,Y,Z=0 and CORE=GPU_ORDINAL (where GPU_ORDINAL is the
+          // global ordinal value).
+          replica_device->add_value(0);
+          replica_device->add_value(0);
+          replica_device->add_value(0);
+          replica_device->add_value(device.ordinal);
+        } else {
+          XLA_ERROR() << "Unsupported replication device type: " << device.kind;
+        }
+      }
+      config->set_num_replicas(devices.size());
+    }
   }
+<<<<<<< HEAD
+=======
+
+  // TODO(yeounoh) Program shape for the whole computation
+>>>>>>> b8ae6e9e (is_spmd device assignment for xrt_computation)
   *config->mutable_program_shape() =
       computation.GetProgramShape().ValueOrDie().ToProto();
   if (output_shape != nullptr) {
