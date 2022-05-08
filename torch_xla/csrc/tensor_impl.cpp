@@ -129,11 +129,6 @@ bool XLATensorImpl::is_contiguous_custom(at::MemoryFormat memory_format) const {
   return true;
 }
 
-int64_t XLATensorImpl::size(int64_t d) const {
-  const_cast<XLATensorImpl*>(this)->SetupSizeProperties();
-  return c10::TensorImpl::size(d);
-}
-
 void XLATensorImpl::SetupSizeProperties() {
   size_t generation = tensor_.generation();
   if (generation != generation_) {
