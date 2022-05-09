@@ -863,7 +863,7 @@ for. If empty, all the local devices will be waited for.</p>
 
 <dl class="function">
 <dt id="torch_xla.core.xla_model.optimizer_step">
-<code class="sig-prename descclassname">torch_xla.core.xla_model.</code><code class="sig-name descname">optimizer_step</code><span class="sig-paren">(</span><em class="sig-param">optimizer</em>, <em class="sig-param">barrier=False</em>, <em class="sig-param">optimizer_args={}</em>, <em class="sig-param">groups=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/torch_xla/core/xla_model.html#optimizer_step"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#torch_xla.core.xla_model.optimizer_step" title="Permalink to this definition">¶</a></dt>
+<code class="sig-prename descclassname">torch_xla.core.xla_model.</code><code class="sig-name descname">optimizer_step</code><span class="sig-paren">(</span><em class="sig-param">optimizer</em>, <em class="sig-param">barrier=False</em>, <em class="sig-param">optimizer_args={}</em>, <em class="sig-param">groups=None</em>, <em class="sig-param">pin_layout=True</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/torch_xla/core/xla_model.html#optimizer_step"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#torch_xla.core.xla_model.optimizer_step" title="Permalink to this definition">¶</a></dt>
 <dd><p>Run the provided optimizer step and issue the XLA device step computation.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
@@ -886,6 +886,8 @@ the <cite>[4, 5, 6, 7]</cite> replicas. If <cite>None</cite> there will be only 
 all the replicas in it.</p>
 </div></blockquote>
 </p></li>
+<li><p><strong>pin_layout</strong> (<em>bool</em><em>, </em><em>optional</em>) – whether to pin the layout when reducing gradients.
+See <cite>xm.all_reduce</cite> for details.</p></li>
 </ul>
 </dd>
 <dt class="field-even">Returns</dt>
