@@ -1698,14 +1698,15 @@ XLATensor XLATensor::log_base(const XLATensor& input, torch::lazy::OpKind op,
 }
 
 XLATensor XLATensor::log_sigmoid(const XLATensor& input) {
-  return input.CreateFrom(std::get<0>(LogSigmoid(input.GetIrValue())));
+  torch::lazy::NodePtr node = LogSigmoid(input.GetIrValue());
+  return input.CreateFrom(XlaValue(node, 0));
 }
 
 std::tuple<XLATensor, XLATensor> XLATensor::log_sigmoid_forward(
     const XLATensor& input) {
-  auto output_and_buffer = LogSigmoid(input.GetIrValue());
-  return std::make_tuple(input.CreateFrom(std::get<0>(output_and_buffer)),
-                         input.CreateFrom(std::get<1>(output_and_buffer)));
+  torch::lazy::NodePtr node = LogSigmoid(input.GetIrValue());
+  return std::make_tuple(input.CreateFrom(XlaValue(node, 0)),
+                         input.CreateFrom(XlaValue(node, 1)));
 }
 
 XLATensor XLATensor::log_sigmoid_backward(const XLATensor& grad_output,
