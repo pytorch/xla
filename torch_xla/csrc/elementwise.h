@@ -89,4 +89,20 @@ xla::XlaOp BuildCelu(xla::XlaOp input, const at::Scalar& alpha);
 // SELU(x)=scale*(max(0,x)+min(0,a*(exp(x)−1)))
 xla::XlaOp BuildSelu(xla::XlaOp input);
 
+// Computes the LogSigmoid function of input.
+std::vector<xla::XlaOp> BuildLogSigmoid(xla::XlaOp input);
+
+// Computes the backward of LogSigmoid.
+xla::XlaOp BuildLogSigmoidBackward(xla::XlaOp grad_output, xla::XlaOp input,
+                                   xla::XlaOp buffer);
+
+// Computes the Elu function of input.
+xla::XlaOp BuildElu(xla::XlaOp input, const at::Scalar& alpha,
+                    const at::Scalar& scale, const at::Scalar& input_scale);
+
+// Computes the backward of Elu.
+xla::XlaOp BuildEluBackward(xla::XlaOp grad_output, xla::XlaOp output,
+                            const at::Scalar& alpha, const at::Scalar& scale,
+                            const at::Scalar& input_scale);
+
 }  // namespace torch_xla

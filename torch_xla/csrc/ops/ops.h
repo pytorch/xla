@@ -136,8 +136,7 @@ torch::lazy::NodePtr HardSwish(const XlaValue& input);
 torch::lazy::NodePtr HardSwishBackward(const XlaValue& grad_output,
                                        const XlaValue& input);
 
-std::tuple<torch::lazy::NodePtr, torch::lazy::NodePtr> LogSigmoid(
-    const XlaValue& input);
+torch::lazy::NodePtr LogSigmoid(const XlaValue& input);
 
 torch::lazy::NodePtr LogSigmoidBackward(const XlaValue& grad_output,
                                         const XlaValue& input,
