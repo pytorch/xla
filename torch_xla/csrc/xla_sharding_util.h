@@ -14,7 +14,7 @@ class ShardingUtil {
   // Annotate HLO instructions in the lowered compuation by the embedded XLA
   // builder. For this call to be effective, this needs to be called after the
   // lowering and before building the computation; otherwise, this is a no-op.
-  static void SetHloSharding(const ir::LoweringContext* lowering_ctx);
+  static void SetHloSharding(const LoweringContext* lowering_ctx);
 
   static xla::HloModuleProto SpmdPartitioningPass(
       const xla::HloModuleProto& hlo_proto,

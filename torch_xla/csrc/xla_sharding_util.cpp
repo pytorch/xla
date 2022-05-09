@@ -44,7 +44,7 @@ xla::HloModuleProto ShardingUtil::SpmdPartitioningPass(
     const xla::HloModuleProto& hlo_proto, bool conv_halo_exchange_always_on_lhs,
     bool choose_faster_windowed_einsum_over_mem, bool unroll_windowed_einsum,
     bool bidirectional_windowed_einsum) {
-  // TODO: align with user provided sharding spec
+  // TODO(yeounoh) align with user provided sharding spec
   int64_t num_replicas = 1;
   int64_t num_partitions = 8;  // testing on v3-8
 
@@ -80,12 +80,6 @@ xla::HloModuleProto ShardingUtil::SpmdPartitioningPass(
   pass.AddPass<xla::HloVerifier>(/*layout_sensitive=*/false,
                                  /*allow_mixed_precision=*/false);
   pass.Run(module.get());
-
-  // TODO: debugging
-  std::cout << "=== ShardingUtil::SpmdPartitioningPass ===\n\n"
-            << module.get()->ToString()
-            << "==========================================\n\n"
-            << std::endl;
 
   return module.get()->ToProto();
 }

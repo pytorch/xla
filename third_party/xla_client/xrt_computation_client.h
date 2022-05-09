@@ -362,7 +362,7 @@ class XrtComputationClient : public ComputationClient {
 
   std::unique_ptr<xrt::XLAComputation> CreateXrtComputation(
       const XlaComputation& computation, absl::Span<const std::string> devices,
-      const Shape* output_shape) const;
+      const Shape* output_shape, bool is_spmd = false) const;
 
   tensorflow::Tensor GetArgumentsInputs(absl::Span<const DataPtr> arguments,
                                         const std::string& device);

@@ -1074,7 +1074,7 @@ std::unique_ptr<xrt::XLAComputation> XrtComputationClient::CreateXrtComputation(
   std::unique_ptr<xrt::XLAComputation> xrt_computation(
       new xrt::XLAComputation());
   auto config = xrt_computation->mutable_config();
-  if (device.kind == "TPU" && is_spmd) {
+  if (is_spmd) {
     // TODO(yeounoh) num_cores_per_replica is no longer hard-coded to 1;
     // setting the number of replicas to 1 for GSPMD test
     config->set_num_replicas(1);
@@ -1091,10 +1091,15 @@ std::unique_ptr<xrt::XLAComputation> XrtComputationClient::CreateXrtComputation(
       auto computation_device = device_assignment->add_computation_devices();
       Device device(devices[i]);
       auto replica_device = computation_device->add_replica_devices();
-      const std::string& xrt_device = TorchDeviceToXrtDevice(devices[i]);
-      const auto& core_coords = GetDeviceMeshCoords(xrt_device);
-      for (auto coord : core_coords) {
-        replica_device->add_value(coord);
+      if (device.kind == "TPU") {
+        const std::string& xrt_device = TorchDeviceToXrtDevice(devices[i]);
+        const auto& core_coords = GetDeviceMeshCoords(xrt_device);
+        for (auto coord : core_coords) {
+          replica_device->add_value(coord);
+        }
+      } else {
+        XLA_ERROR() << "Unsupported PyTorch/XLA SPMD device type: "
+                    << device.kind;
       }
     }
 
