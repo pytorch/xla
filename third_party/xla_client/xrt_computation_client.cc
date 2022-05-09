@@ -1086,10 +1086,15 @@ std::unique_ptr<xrt::XLAComputation> XrtComputationClient::CreateXrtComputation(
     for (int64_t i = 0; i < devices.size(); ++i) {
       Device device(devices[i]);
       auto replica_device = computation_device->add_replica_devices();
-      const std::string& xrt_device = TorchDeviceToXrtDevice(devices[i]);
-      const auto& core_coords = GetDeviceMeshCoords(xrt_device);
-      for (auto coord : core_coords) {
-        replica_device->add_value(coord);
+      if (device.kind == "TPU") {
+        const std::string& xrt_device = TorchDeviceToXrtDevice(devices[i]);
+        const auto& core_coords = GetDeviceMeshCoords(xrt_device);
+        for (auto coord : core_coords) {
+          replica_device->add_value(coord);
+        }
+      } else {
+        XLA_ERROR() << "Unsupported PyTorch/XLA SPMD device type: "
+                    << device.kind;
       }
     }
 
@@ -1123,11 +1128,6 @@ std::unique_ptr<xrt::XLAComputation> XrtComputationClient::CreateXrtComputation(
       config->set_num_replicas(devices.size());
     }
   }
-<<<<<<< HEAD
-=======
-
-  // TODO(yeounoh) Program shape for the whole computation
->>>>>>> b8ae6e9e (is_spmd device assignment for xrt_computation)
   *config->mutable_program_shape() =
       computation.GetProgramShape().ValueOrDie().ToProto();
   if (output_shape != nullptr) {

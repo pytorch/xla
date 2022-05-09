@@ -124,7 +124,7 @@ class XlaNode : public torch::lazy::Node {
   void SetSharding(const xla::OpSharding& sharding) {
     output_sharding_ = std::make_shared<xla::OpSharding>(sharding);
   }
-  void ClearSharding() { output_sharding_ = nulltpr; }
+  void ClearSharding() { output_sharding_ = nullptr; }
 
  private:
   xla::Shape GetOpShape(const std::function<xla::Shape()>& shape_fn) const;
