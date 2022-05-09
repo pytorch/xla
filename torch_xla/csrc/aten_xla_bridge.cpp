@@ -88,6 +88,18 @@ std::vector<XLATensor> GetXlaTensors(absl::Span<const at::Tensor> tensors) {
   return xla_tensors;
 }
 
+torch_xla::XLATensorPtr GetXlaTensorOrCreateForWrappedNumber(
+    const at::Tensor& tensor, const torch::lazy::BackendDevice& device) {
+  if (tensor.unsafeGetTensorImpl()->is_wrapped_number() ||
+      (tensor.dim() == 0 && tensor.numel() == 1)) {
+    return c10::make_intrusive<XLATensor>(
+        torch_xla::bridge::GetOrCreateXlaTensor(tensor, device));
+  } else {
+    return c10::make_intrusive<XLATensor>(
+        torch_xla::bridge::GetXlaTensor(tensor));
+  }
+}
+
 XLATensor GetOrCreateXlaTensor(const at::Tensor& tensor,
                                const torch::lazy::BackendDevice& device) {
   if (!tensor.defined()) {
@@ -217,6 +229,17 @@ c10::optional<torch::lazy::BackendDevice> GetXlaDevice(
 }
 
 c10::optional<torch::lazy::BackendDevice> GetXlaDevice(
+    const std::vector<at::Tensor>& tensors) {
+  for (const auto& tensor : tensors) {
+    auto device = GetXlaDevice(tensor);
+    if (device) {
+      return device;
+    }
+  }
+  return c10::nullopt;
+}
+
+c10::optional<torch::lazy::BackendDevice> GetXlaDevice(
     const at::TensorOptions& tensor_options) {
   if (!tensor_options.has_device()) {
     return c10::nullopt;
@@ -333,17 +356,3 @@ std::vector<at::Tensor> CreateXlaTensors(
 
 }  // namespace bridge
 }  // namespace torch_xla
-
-namespace torch {
-namespace lazy {
-
-torch_xla::XLATensor GetXlaTensorOrCreateForWrappedNumber(
-    const at::Tensor& tensor, const torch::lazy::BackendDevice& device) {
-  return (tensor.unsafeGetTensorImpl()->is_wrapped_number() ||
-          (tensor.dim() == 0 && tensor.numel() == 1))
-             ? torch_xla::bridge::GetOrCreateXlaTensor(tensor, device)
-             : torch_xla::bridge::GetXlaTensor(tensor);
-}
-
-}  // namespace lazy
-}  // namespace torch

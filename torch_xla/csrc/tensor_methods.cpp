@@ -15,6 +15,7 @@
 #include "torch/csrc/lazy/core/util.h"
 #include "torch_xla/csrc/aten_xla_bridge.h"
 #include "torch_xla/csrc/data_ops.h"
+#include "torch_xla/csrc/generated/LazyIr.h"
 #include "torch_xla/csrc/helpers.h"
 #include "torch_xla/csrc/ir_util.h"
 #include "torch_xla/csrc/layout_manager.h"
@@ -638,7 +639,8 @@ void XLATensor::_amp_update_scale_(XLATensor& current_scale,
 }
 
 XLATensor XLATensor::abs(const XLATensor& input) {
-  return input.CreateFrom(Abs(input.GetIrValue()));
+  return input.CreateFrom(torch::lazy::MakeNode<Abs>(
+      input.GetIrValue(), std::vector<torch::lazy::Shape>()));
 }
 
 XLATensor XLATensor::acos(const XLATensor& input) {
@@ -1041,7 +1043,9 @@ XLATensor XLATensor::clamp(const XLATensor& input,
       << "At least one of \'min\' or \'max\' must not be None";
   XlaValue res = input.GetIrValue();
   if (min) {
-    res = Max(res, bridge::GetXlaTensor(*min).GetIrValue());
+    res = torch::lazy::MakeNode<Maximum>(
+        res, bridge::GetXlaTensor(*min).GetIrValue(),
+        std::vector<torch::lazy::Shape>());
   }
   if (max) {
     res = Min(res, bridge::GetXlaTensor(*max).GetIrValue());
@@ -1056,7 +1060,9 @@ void XLATensor::clamp_out(XLATensor& out, const XLATensor& input,
       << "At least one of \'min\' or \'max\' must not be None";
   XlaValue res = input.GetIrValue();
   if (min) {
-    res = Max(res, bridge::GetXlaTensor(*min).GetIrValue());
+    res = torch::lazy::MakeNode<Maximum>(
+        res, bridge::GetXlaTensor(*min).GetIrValue(),
+        std::vector<torch::lazy::Shape>());
   }
   if (max) {
     res = Min(res, bridge::GetXlaTensor(*max).GetIrValue());
@@ -1829,12 +1835,6 @@ XLATensor XLATensor::masked_select(const XLATensor& input,
 
 XLATensor XLATensor::matmul(const XLATensor& input, const XLATensor& other) {
   return input.CreateFrom(MatMul(input.GetIrValue(), other.GetIrValue()));
-}
-
-XLATensor XLATensor::max(const XLATensor& input, const XLATensor& other,
-                         c10::optional<at::ScalarType> logical_element_type) {
-  return input.CreateFrom(Max(input.GetIrValue(), other.GetIrValue()),
-                          logical_element_type);
 }
 
 XLATensor XLATensor::max(const XLATensor& input) {
