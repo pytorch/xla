@@ -17,7 +17,7 @@ namespace torch_xla {
 namespace {
 
 using xla::internal::XlaBuilderFriend;
-using NodeIdMap = std::unordered_map<const Node*, size_t>;
+using NodeIdMap = std::unordered_map<const torch::lazy::Node*, size_t>;
 
 struct AttrTag {
   std::string name;
@@ -254,9 +254,9 @@ std::string DumpUtil::ToHlo(c10::ArrayRef<torch::lazy::Value> values,
     lowering_ctx.AddResult(
         torch::lazy::Output(ir_value.node.get(), ir_value.index));
   }
-  // TODO: if (is_spmd)
+  // TODO(yeounoh) if (is_spmd)
   // Annotate HLO sharding selectively in the compuation.
-  ir::ShardingUtil::SetHloSharding(&lowering_ctx);
+  ShardingUtil::SetHloSharding(&lowering_ctx);
 
   xla::XlaComputation computation = ConsumeValue(lowering_ctx.BuildXla());
   return ConsumeValue(xla::util::GetComputationHloText(computation));

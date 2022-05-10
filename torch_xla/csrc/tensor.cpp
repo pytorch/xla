@@ -630,9 +630,11 @@ std::shared_ptr<XLATensor::ShardingSpec> XLATensor::sharding_spec() const {
       << "Trying to access a null cursor";
   return data()->sharding_spec;
 }
+
 bool XLATensor::IsShardingAnnotated() const {
   return data()->sharding_spec != nullptr;
 }
+
 void XLATensor::SetShardingSpec(const xla::OpSharding& sharding,
                                 bool replicated, bool manual) {
   auto new_sharding_spec =
@@ -642,15 +644,10 @@ void XLATensor::SetShardingSpec(const xla::OpSharding& sharding,
   dynamic_cast<XlaNode*>(data()->ir_value.node.get())
       ->SetSharding(&new_sharding_spec->sharding);
 }
+
 void XLATensor::ClearShardingSpec() {
   if (data()->ir_value.node.get() != nullptr) {
     dynamic_cast<XlaNode*>(data()->ir_value.node.get())->ClearSharding();
-  }
-  data()->sharding_spec = nullptr;
-}
-void XLATensor::ClearShardingSpec() {
-  if (data()->ir_value.node != nullptr) {
-    data()->ir_value.node->ClearSharding();
   }
   data()->sharding_spec = nullptr;
 }
@@ -918,8 +915,8 @@ at::Tensor XLATensor::ToTensor(bool detached) {
   c10::optional<at::Tensor> tensor_data = CurrentTensorData();
   if (!tensor_data) {
     DeviceBarrier(GetDevice());
-    // The GetXlaData() call will trigger an ApplyPendingGraph() if an IR
-    // XlaNode is available on the tensor.
+    // The GetXlaData() call will trigger an ApplyPendingGraph() if an IR Node
+    // is available on the tensor.
     std::vector<at::Tensor> tensors = XlaDataToTensors({GetXlaData()}, dtype());
     tensor = std::move(tensors.front());
     if (!detached) {
@@ -1428,7 +1425,6 @@ std::shared_ptr<XLATensor::Async> XLATensor::ScheduleSyncTensorsGraph(
     ComputationCache::TypePtr cached_computation) {
   tensorflow::profiler::TraceMe activity(
       "ScheduleSyncTensorsGraph", tensorflow::profiler::TraceMeLevel::kInfo);
-  TensorCollectionBarrier(coll);
   std::shared_ptr<Async> async = std::make_shared<Async>(
       coll, std::move(parameters_data), std::move(tensors_data),
       std::move(cached_computation));
@@ -1570,9 +1566,9 @@ XLATensor::OpByOpAsync XLATensor::SyncTensorsGraphOpByOp(
 
   std::vector<torch::lazy::Value> roots = CollectRoots(*tensors, coll.indices);
   auto tensors_data = FetchTensorData(tensors, coll.config, coll.indices);
-  TensorCollectionBarrier(&coll);
   auto async = std::make_shared<Async>(std::move(coll), std::move(tensors_data),
                                        std::move(roots), devices);
+
   auto syncfn = [async]() -> int {
     try {
       TF_VLOG(3) << "Executing (OpByOp) IR graph hash "
@@ -1663,7 +1659,7 @@ XLATensor::CompilationResult XLATensor::Compile(
     lowering_ctx.AddResult(root);
   }
   // Annotate HLO sharding selectively in the compuation.
-  ir::ShardingUtil::SetHloSharding(&lowering_ctx);
+  ShardingUtil::SetHloSharding(&lowering_ctx);
 
   if (enable_aliasing && coll.config.sync_xla_data) {
     // We can only alias at the step barrier, when force_xla_data is true.

@@ -7,14 +7,13 @@
 #include "torch_xla/csrc/lowering_context.h"
 
 namespace torch_xla {
-namespace ir {
 
 class ShardingUtil {
  public:
   // Annotate HLO instructions in the lowered compuation by the embedded XLA
   // builder. For this call to be effective, this needs to be called after the
   // lowering and before building the computation; otherwise, this is a no-op.
-  static void SetHloSharding(const LoweringContext* lowering_ctx);
+  static void SetHloSharding(LoweringContext* lowering_ctx);
 
   static xla::HloModuleProto SpmdPartitioningPass(
       const xla::HloModuleProto& hlo_proto,
@@ -24,5 +23,4 @@ class ShardingUtil {
       bool bidirectional_windowed_einsum = false);
 };
 
-}  // namespace ir
 }  // namespace torch_xla

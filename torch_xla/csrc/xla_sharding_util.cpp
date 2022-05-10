@@ -13,27 +13,27 @@
 #include "tensorflow/compiler/xla/xla.pb.h"
 
 namespace torch_xla {
-namespace ir {
 namespace {
 
 using xla::internal::XlaBuilderFriend;
 
 }  // namespace
 
-void ShardingUtil::SetHloSharding(const ir::LoweringContext* lowering_ctx) {
-  for (std::pair<ir::Output, xla::XlaOp> elem :
+void ShardingUtil::SetHloSharding(LoweringContext* lowering_ctx) {
+  for (std::pair<torch::lazy::Output, xla::XlaOp> elem :
        lowering_ctx->GetEmittedOutputs()) {
-    const ir::Node* node = elem.first.node;
+    const torch::lazy::Node* node = elem.first.node;
+    const XlaNode* xla_node = dynamic_cast<const XlaNode*>(node);
     auto instruction = XlaBuilderFriend::GetInstruction(elem.second);
-    if (node->GetSharding() != nullptr) {
-      //*instruction->mutable_sharding() = *node->GetSharding();
+    if (xla_node->GetSharding() != nullptr) {
+      //*instruction->mutable_sharding() = *xla_node->GetSharding();
       {
         // Annotate the full-shape input with the sharding.
         xla::XlaScopedShardingAssignment assign_sharding(
-            lowering_ctx->builder(), *node->GetSharding());
+            lowering_ctx->builder(), *xla_node->GetSharding());
         xla::CustomCall(lowering_ctx->builder(),
                         /*call_target_name=*/"Sharding",
-                        node->Lower(lowering_ctx), node->xla_shape(),
+                        xla_node->Lower(lowering_ctx), xla_node->xla_shape(),
                         /*opaque=*/"");
       }
     }
@@ -84,5 +84,4 @@ xla::HloModuleProto ShardingUtil::SpmdPartitioningPass(
   return module.get()->ToProto();
 }
 
-}  // namespace ir
 }  // namespace torch_xla

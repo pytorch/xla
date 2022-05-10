@@ -89,12 +89,18 @@ class XLATensor : public c10::intrusive_ptr_target {
 
   void SetXlaData(torch::lazy::BackendDataPtr xla_data);
 
+<<<<<<< HEAD
   // Retrieves the current IR XlaNode, or nullptr in case no active IR XlaNode
   // is available.
   torch::lazy::Value CurrentIrValue() const;
+=======
+  // Retrieves the current IR Node, or nullptr in case no active IR Node is
+  // available.
+  XlaValue CurrentIrValue() const;
+>>>>>>> 7a6f25de (Rebasing master with ltc migration changes)
 
-  // Retrieves the IR XlaNode representing this XLATensor. One will be created
-  // if missing. Note that although this is a const API, it actually changes the
+  // Retrieves the IR Node representing this XLATensor. One will be created if
+  // missing. Note that although this is a const API, it actually changes the
   // internal state ofthe object.
   torch::lazy::Value GetIrValue() const;
 
@@ -804,6 +810,11 @@ class XLATensor : public c10::intrusive_ptr_target {
   static XLATensor max_unpool(const XLATensor& input, const XLATensor& indices,
                               std::vector<int64_t> output_size);
 
+  static XLATensor max_unpool_backward(const XLATensor& grad_output,
+                                       const XLATensor& input,
+                                       const XLATensor& indices,
+                                       std::vector<int64_t> output_size);
+
   static XLATensor mean(const XLATensor& input, std::vector<int64_t> dimensions,
                         bool keep_reduced_dimensions,
                         c10::optional<at::ScalarType> dtype);
@@ -1321,7 +1332,7 @@ class XLATensor : public c10::intrusive_ptr_target {
     size_t generation = 1;
 
     // Sharding annotation for the tensor
-    // TODO: detach & clear for the unpartitioned tensor
+    // TODO(yeounoh) detach & clear for the unpartitioned tensor
     std::shared_ptr<ShardingSpec> sharding_spec;
   };
 
