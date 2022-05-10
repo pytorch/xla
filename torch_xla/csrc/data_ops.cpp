@@ -144,7 +144,10 @@ xla::XlaOp BuildDynamicExpand(xla::XlaOp input,
   for (int i = 0; i < input_shape.rank(); i++) {
     if (input_shape.is_dynamic_dimension(i)) {
       output =
-          xla::SetDimensionSize(output, xla::GetDimensionSize(input, i), i);
+          xla::SetDimensionSize(output,
+                                MaybeConvertTo(xla::GetDimensionSize(input, i),
+                                               xla::PrimitiveType::S32),
+                                i);
     }
   }
 
