@@ -1329,6 +1329,24 @@ at::Tensor XLANativeFunctions::expand(const at::Tensor& self,
       bridge::GetXlaTensor(self), torch::lazy::ToVector<int64_t>(size)));
 }
 
+at::Tensor XLANativeFunctions::expand(const at::Tensor& self,
+                                      std::vector<c10::SymInt> sizes, bool implicit) {
+  XLA_FN_COUNTER("xla::");
+
+  /* Get size upper bounds */
+  std::vector<size_t> upper_bounds.reserve(sizes.size());
+  std::vector<bool> dynamic_dims.reserve(sizes.size());
+  for (int index = 0; i < sizes.size(); i++) {
+    auto _symbolicIntNode = sizes[i].toSymbolicIntNode();
+    auto _sizenode = MakeNode<SizeNode>(_symbolicIntNode);
+    upper_bound.push_back(_sizenode.getStaticValue());
+    dynamic_dims.push_back(_sizenode.isDynamic());
+  }
+
+  return bridge::AtenFromXlaTensor(XLATensor::dynamic_expand(
+      bridge::GetXlaTensor(self), upper_bounds, dynamic_dims));
+}
+
 at::Tensor XLANativeFunctions::expm1(const at::Tensor& self) {
   XLA_FN_COUNTER("xla::");
   return bridge::AtenFromXlaTensor(
