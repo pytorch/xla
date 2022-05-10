@@ -29,15 +29,6 @@ class GenXlaLazyIR(GenLazyIR):
                                        NativeFunction]) -> str:
     return f"""torch_xla::XlaOpVector Lower(LoweringContext* loctx) const override;"""
 
-  def node_ctor_args_call(self, all_args):
-    args_with_type = []
-    for i in all_args:
-      cpp_type = i.lazy_type.cpp_type()
-      if cpp_type == 'torch::lazy::Value':
-        cpp_type = 'torch_xla::XlaValue'
-      args_with_type.append(f"const {cpp_type}& {i.name}")
-    return ", ".join(args_with_type)
-
   def node_base_ctor_call(self, schema: LazyIrSchema) -> str:
     # backends can customize the way the node base class constructor is called,
     # as long as all of its arguments can be generated from information available from the schema

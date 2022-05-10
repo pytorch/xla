@@ -128,7 +128,6 @@ def generate_xla_lazy_code(base_dir):
   child = subprocess.Popen(generate_lazy_cmd)
   streamdata = child.communicate()[0]
   if child.returncode != 0:
-    #if subprocess.call(generate_lazy_cmd) != 0:
     print(
         'Failed to generate lazy files: {}'.format(generate_lazy_cmd),
         file=sys.stderr)
