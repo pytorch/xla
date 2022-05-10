@@ -136,32 +136,8 @@ class XlaNode : public torch::lazy::Node {
   static std::vector<torch::lazy::SourceLocation> GetFrameInfo();
 
   xla::Shape xla_shape_;
-<<<<<<< HEAD
   torch::lazy::hash_t node_hash_ = 0;
   torch::lazy::hash_t dag_hash_;
-
-=======
-
-  std::vector<torch::lazy::Shape> shapes_;
-  // A node holds a real reference to its operands.
-  std::vector<NodePtr> operands_;
-  // Outputs do not hold references on the nodes, and neither do the uses, since
-  // otherwise we get into circular reference counting.
-  std::vector<torch::lazy::Output> operands_as_outputs_;
-  // We use a set for uses, as we want deterministic use sequencing.
-  std::set<Use> uses_;
-  // The hash value of this node.
-  torch::lazy::hash_t node_hash_ = 0;
-  torch::lazy::hash_t dag_hash_;
-  // The hash value of the graph rooted at this node.
-  torch::lazy::hash_t hash_ = 0;
-  // The IR specific metadata attached to the IR node.
-  MetaData metadata_;
-  // The IR framework user can attach a user defined metadata object deriving
-  // from UserMetaData.
-  std::shared_ptr<UserMetaData> user_metadata_;
-
->>>>>>> 46b8e8e5 (Make SpmdPartitioningPass in tensor.Compile())
   // Experimental sharding annotation attached to the IR node.
   // TODO(yeounoh): make sure that view update doesn't reset this.
   std::shared_ptr<xla::OpSharding> output_sharding_ = nullptr;

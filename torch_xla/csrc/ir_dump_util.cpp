@@ -254,7 +254,7 @@ std::string DumpUtil::ToHlo(c10::ArrayRef<torch::lazy::Value> values,
     lowering_ctx.AddResult(
         torch::lazy::Output(ir_value.node.get(), ir_value.index));
   }
-  // TODO: if (is_spmd)
+  // TODO(yeounoh) if (is_spmd)
   // Annotate HLO sharding selectively in the compuation.
   // This is no-op if an instruction doesn't have any sharding annotation.
   ShardingUtil::SetHloSharding(&lowering_ctx);
