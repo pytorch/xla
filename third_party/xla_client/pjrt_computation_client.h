@@ -32,7 +32,9 @@ class PjRtComputationClient : public ComputationClient {
       return reinterpret_cast<std::uintptr_t>(get_handle());
     };
     void Assign(const Data& data) override;
-    bool HasValue() const override { return get_handle() != nullptr; };
+    bool HasValue() const override {
+      return buffer != nullptr && !buffer->IsDeleted();
+    };
 
     std::shared_ptr<PjRtBuffer> buffer;
   };

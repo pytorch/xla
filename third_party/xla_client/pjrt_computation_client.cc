@@ -55,7 +55,7 @@ PjRtComputationClient::PjRtComputationClient() {
 
   XLA_CHECK(client_.get() != nullptr);
 
-  for (auto* device : client_->addressable_devices()) {
+  for (auto* device : client_->devices()) {
     std::string device_str = PjRtDeviceToString(device);
     string_to_device_.emplace(device_str, device);
   }
