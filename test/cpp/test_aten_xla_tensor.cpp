@@ -9127,7 +9127,7 @@ TEST_F(AtenXlaTensorTest, TestBitwiseXorScalarInPlace) {
 
 TEST_F(AtenXlaTensorTest, TestLshift) {
   torch::Tensor input =
-      torch::ones({4, 2}, torch::TensorOptions(torch::kFloat));
+      torch::ones({4, 2}, torch::TensorOptions(torch::kInt32));
   torch::Tensor shift_amount = torch::randint(16, input.sizes());
   torch::Tensor result = torch::__lshift__(input, shift_amount);
   ForEachDevice([&](const torch::Device& device) {
@@ -9140,7 +9140,7 @@ TEST_F(AtenXlaTensorTest, TestLshift) {
 
 TEST_F(AtenXlaTensorTest, TestLshiftInPlace) {
   torch::Tensor input =
-      torch::ones({4, 2}, torch::TensorOptions(torch::kFloat));
+      torch::ones({4, 2}, torch::TensorOptions(torch::kInt32));
   ForEachDevice([&](const torch::Device& device) {
     torch::Tensor xla_input = CopyToDevice(input, device);
     torch::Tensor shift_amount = torch::randint(16, input.sizes());
@@ -9154,7 +9154,7 @@ TEST_F(AtenXlaTensorTest, TestLshiftInPlace) {
 
 TEST_F(AtenXlaTensorTest, TestLshiftScalar) {
   torch::Tensor input =
-      torch::ones({4, 2}, torch::TensorOptions(torch::kFloat));
+      torch::ones({4, 2}, torch::TensorOptions(torch::kInt32));
   torch::Scalar shift_amount = 3;
   torch::Tensor result = torch::__lshift__(input, shift_amount);
   ForEachDevice([&](const torch::Device& device) {
@@ -9166,7 +9166,7 @@ TEST_F(AtenXlaTensorTest, TestLshiftScalar) {
 
 TEST_F(AtenXlaTensorTest, TestLshiftScalarInPlace) {
   torch::Tensor input =
-      torch::ones({4, 2}, torch::TensorOptions(torch::kFloat));
+      torch::ones({4, 2}, torch::TensorOptions(torch::kInt32));
   torch::Scalar shift_amount = 3;
   ForEachDevice([&](const torch::Device& device) {
     torch::Tensor xla_input = CopyToDevice(input, device);
@@ -9179,7 +9179,7 @@ TEST_F(AtenXlaTensorTest, TestLshiftScalarInPlace) {
 
 TEST_F(AtenXlaTensorTest, TestRshift) {
   torch::Tensor input =
-      torch::ones({4, 2}, torch::TensorOptions(torch::kFloat));
+      torch::ones({4, 2}, torch::TensorOptions(torch::kInt32));
   torch::Tensor shift_amount = torch::randint(16, input.sizes());
   torch::Tensor result = torch::__rshift__(input, shift_amount);
   ForEachDevice([&](const torch::Device& device) {
@@ -9192,7 +9192,7 @@ TEST_F(AtenXlaTensorTest, TestRshift) {
 
 TEST_F(AtenXlaTensorTest, TestRshiftInPlace) {
   torch::Tensor input =
-      torch::ones({4, 2}, torch::TensorOptions(torch::kFloat));
+      torch::ones({4, 2}, torch::TensorOptions(torch::kInt32));
   ForEachDevice([&](const torch::Device& device) {
     torch::Tensor xla_input = CopyToDevice(input, device);
     torch::Tensor shift_amount = torch::randint(16, input.sizes());
@@ -9206,7 +9206,7 @@ TEST_F(AtenXlaTensorTest, TestRshiftInPlace) {
 
 TEST_F(AtenXlaTensorTest, TestRshiftScalar) {
   torch::Tensor input =
-      torch::ones({4, 2}, torch::TensorOptions(torch::kFloat));
+      torch::ones({4, 2}, torch::TensorOptions(torch::kInt32));
   torch::Scalar shift_amount = 3;
   torch::Tensor result = torch::__rshift__(input, shift_amount);
   ForEachDevice([&](const torch::Device& device) {
@@ -9218,7 +9218,7 @@ TEST_F(AtenXlaTensorTest, TestRshiftScalar) {
 
 TEST_F(AtenXlaTensorTest, TestRshiftScalarInPlace) {
   torch::Tensor input =
-      torch::ones({4, 2}, torch::TensorOptions(torch::kFloat));
+      torch::ones({4, 2}, torch::TensorOptions(torch::kInt32));
   torch::Scalar shift_amount = 3;
   ForEachDevice([&](const torch::Device& device) {
     torch::Tensor xla_input = CopyToDevice(input, device);
