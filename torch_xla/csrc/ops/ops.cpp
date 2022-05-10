@@ -1129,4 +1129,32 @@ torch::lazy::NodePtr Selu(const torch::lazy::Value& input) {
                    GetXlaShape(input), std::move(lower_fn));
 }
 
+torch::lazy::NodePtr DynamicExpand(const Value& input, std::vector<int64_t> upper_bound_size, std::vector<bool> dynamic_dim) {
+  xla::Shape target_shape = xla::ShapeUtil::MakeShape(xla::S32, upper_bound_size, dynamic_dim);
+
+  auto lower_fn = [&](const Node& node, LoweringContext* loctx) -> XlaOpVector {
+    xla::XlaOp input = loctx->GetOutputOp(node.operand(0));
+
+    /* Construct Upper Bound Tensor Shape */
+    xla::XlaOp upper_bound_size_input = xla::Parameter(loctx->builder(), 0, target_shape, "upper_bound_size");
+    xla::XlaOp output = BuildDynamicExpand(input, upper_bound_size_input);
+    return node.ReturnOp(output, loctx);
+  };
+
+  auto shape_fn = [&](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
+    return BuildDynamicExpand(operands[0], operands[1]);
+  };
+
+  return GenericOp(torch::lazy::OpKind(at::aten::expand),
+                   {input},
+                   [&]() {
+                     return InferOutputShape(
+                         {input.xla_shape(), target_shape},
+                         shape_fn);
+                   },
+                   std::move(lower_fn));
+}
+
+}  // namespace ops
+}  // namespace ir
 }  // namespace torch_xla

@@ -121,6 +121,31 @@ xla::XlaOp BuildExpand(xla::XlaOp input,
                              torch::lazy::Iota<int64_t>(output_sizes.size()));
 }
 
+xla::XlaOp BuildDynamicExpand(xla::XlaOp input,
+                              xla::XlaOp upper_bound_size_input) {
+  auto upper_bound_size_input_shape = XlaHelpers::ShapeOfXlaOp(upper_bound_size_input);
+  xla::XlaOp output = BuildExpand(input, upper_bound_size_input_shape.dimensions());
+
+  /* Update Output Dynamic Dimensions based on Input Size */
+  for (int i = 0; i < upper_bound_size_input_shape.rank(); ++i) {
+    if (upper_bound_size_input_shape.is_dynamic_dimension(i)) {
+      output = xla::SetDimensionSize(output,
+                                     MaybeConvertTo(xla::GetDimensionSize(upper_bound_size_input, i),
+                                                    xla::PrimitiveType::S32), i);
+    }
+  }
+
+  /* Update Output Dynamic Dimensions based on Input Tensor */
+  const xla::Shape& input_shape = XlaHelpers::ShapeOfXlaOp(input);
+  for (int i = 0; i < input_shape.rank(); i++) {
+    if (input_shape.is_dynamic_dimension(i)) {
+      output = xla::SetDimensionSize(output, xla::GetDimensionSize(input, i), i);
+    }
+  }
+
+  return output;
+}
+
 std::vector<int64_t> BuildSqueezedDimensions(
     absl::Span<const int64_t> dimensions, int64_t squeeze_dim) {
   std::vector<int64_t> output_dimensions;
