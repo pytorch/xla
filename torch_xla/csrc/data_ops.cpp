@@ -123,15 +123,19 @@ xla::XlaOp BuildExpand(xla::XlaOp input,
 
 xla::XlaOp BuildDynamicExpand(xla::XlaOp input,
                               xla::XlaOp upper_bound_size_input) {
-  auto upper_bound_size_input_shape = XlaHelpers::ShapeOfXlaOp(upper_bound_size_input);
-  xla::XlaOp output = BuildExpand(input, upper_bound_size_input_shape.dimensions());
+  auto upper_bound_size_input_shape =
+      XlaHelpers::ShapeOfXlaOp(upper_bound_size_input);
+  xla::XlaOp output =
+      BuildExpand(input, upper_bound_size_input_shape.dimensions());
 
   /* Update Output Dynamic Dimensions based on Input Size */
   for (int i = 0; i < upper_bound_size_input_shape.rank(); ++i) {
     if (upper_bound_size_input_shape.is_dynamic_dimension(i)) {
-      output = xla::SetDimensionSize(output,
-                                     MaybeConvertTo(xla::GetDimensionSize(upper_bound_size_input, i),
-                                                    xla::PrimitiveType::S32), i);
+      output = xla::SetDimensionSize(
+          output,
+          MaybeConvertTo(xla::GetDimensionSize(upper_bound_size_input, i),
+                         xla::PrimitiveType::S32),
+          i);
     }
   }
 
@@ -139,7 +143,8 @@ xla::XlaOp BuildDynamicExpand(xla::XlaOp input,
   const xla::Shape& input_shape = XlaHelpers::ShapeOfXlaOp(input);
   for (int i = 0; i < input_shape.rank(); i++) {
     if (input_shape.is_dynamic_dimension(i)) {
-      output = xla::SetDimensionSize(output, xla::GetDimensionSize(input, i), i);
+      output =
+          xla::SetDimensionSize(output, xla::GetDimensionSize(input, i), i);
     }
   }
 

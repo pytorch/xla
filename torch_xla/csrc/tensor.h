@@ -559,7 +559,9 @@ class XLATensor : public c10::intrusive_ptr_target {
 
   static XLATensor expand(const XLATensor& input, std::vector<int64_t> size);
 
-  static XLATensor dynamic_expand(const XLATensor& input, std::vector<int64_t> size, std::vector<bool> dynamic_dim);
+  static XLATensor dynamic_expand(const XLATensor& input,
+                                  std::vector<int64_t> size,
+                                  std::vector<bool> dynamic_dim);
 
   static XLATensor expm1(const XLATensor& input);
 

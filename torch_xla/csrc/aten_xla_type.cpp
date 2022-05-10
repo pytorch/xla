@@ -1330,7 +1330,8 @@ at::Tensor XLANativeFunctions::expand(const at::Tensor& self,
 }
 
 at::Tensor XLANativeFunctions::expand(const at::Tensor& self,
-                                      std::vector<c10::SymInt> sizes, bool implicit) {
+                                      std::vector<c10::SymInt> sizes,
+                                      bool implicit) {
   XLA_FN_COUNTER("xla::");
 
   /* Get size upper bounds */
