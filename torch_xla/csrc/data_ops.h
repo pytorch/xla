@@ -38,7 +38,7 @@ xla::XlaOp BuildExpand(xla::XlaOp input,
                        absl::Span<const int64_t> output_sizes);
 
 xla::XlaOp BuildDynamicExpand(xla::XlaOp input,
-                       xla::XlaOp upper_bound_size_input);
+                              xla::XlaOp upper_bound_size_input);
 
 std::vector<int64_t> BuildSqueezedDimensions(
     absl::Span<const int64_t> dimensions, int64_t squeeze_dim);
