@@ -254,14 +254,10 @@ std::string DumpUtil::ToHlo(c10::ArrayRef<torch::lazy::Value> values,
     lowering_ctx.AddResult(
         torch::lazy::Output(ir_value.node.get(), ir_value.index));
   }
-  // TODO: if (is_spmd)
+  // TODO(yeounoh) if (is_spmd)
   // Annotate HLO sharding selectively in the compuation.
-<<<<<<< HEAD
   // This is no-op if an instruction doesn't have any sharding annotation.
   ShardingUtil::SetHloSharding(&lowering_ctx);
-=======
-  ir::ShardingUtil::SetHloSharding(&lowering_ctx);
->>>>>>> 7add8fb4 (Compile tensor ops with sharding annotations)
 
   xla::XlaComputation computation = ConsumeValue(lowering_ctx.BuildXla());
   return ConsumeValue(xla::util::GetComputationHloText(computation));

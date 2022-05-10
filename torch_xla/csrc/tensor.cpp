@@ -640,21 +640,17 @@ XLATensor::ShardingSpecPtr XLATensor::sharding_spec() const {
   }
   return std::make_shared<ShardingSpec>(*sharding);
 }
+
 void XLATensor::SetShardingSpec(const ShardingSpec& sharding_spec) {
   XLA_CHECK(GetIrValue().node != nullptr) << "Tyring to access a null cursor";
   dynamic_cast<XlaNode*>(data()->ir_value.node.get())
       ->SetSharding(sharding_spec.sharding);
 }
+
 void XLATensor::ClearShardingSpec() {
   if (GetIrValue().node != nullptr) {
     dynamic_cast<XlaNode*>(data()->ir_value.node.get())->ClearSharding();
   }
-}
-void XLATensor::ClearShardingSpec() {
-  if (data()->ir_value.node != nullptr) {
-    data()->ir_value.node->ClearSharding();
-  }
-  data()->sharding_spec = nullptr;
 }
 
 void XLATensor::SetXlaData(torch::lazy::BackendDataPtr xla_data) {
@@ -922,8 +918,8 @@ at::Tensor XLATensor::ToTensor(bool detached) {
   c10::optional<at::Tensor> tensor_data = CurrentTensorData();
   if (!tensor_data) {
     DeviceBarrier(GetDevice());
-    // The GetXlaData() call will trigger an ApplyPendingGraph() if an IR
-    // XlaNode is available on the tensor.
+    // The GetXlaData() call will trigger an ApplyPendingGraph() if an IR Node
+    // is available on the tensor.
     std::vector<at::Tensor> tensors = XlaDataToTensors({GetXlaData()}, dtype());
     tensor = std::move(tensors.front());
     if (!detached) {
@@ -1436,7 +1432,6 @@ std::shared_ptr<XLATensor::Async> XLATensor::ScheduleSyncTensorsGraph(
     ComputationCache::TypePtr cached_computation) {
   tensorflow::profiler::TraceMe activity(
       "ScheduleSyncTensorsGraph", tensorflow::profiler::TraceMeLevel::kInfo);
-  TensorCollectionBarrier(coll);
   std::shared_ptr<Async> async = std::make_shared<Async>(
       coll, std::move(parameters_data), std::move(tensors_data),
       std::move(cached_computation));
@@ -1577,9 +1572,9 @@ XLATensor::OpByOpAsync XLATensor::SyncTensorsGraphOpByOp(
 
   std::vector<torch::lazy::Value> roots = CollectRoots(*tensors, coll.indices);
   auto tensors_data = FetchTensorData(tensors, coll.config, coll.indices);
-  TensorCollectionBarrier(&coll);
   auto async = std::make_shared<Async>(std::move(coll), std::move(tensors_data),
                                        std::move(roots), devices);
+
   auto syncfn = [async]() -> int {
     try {
       TF_VLOG(3) << "Executing (OpByOp) IR graph hash "
