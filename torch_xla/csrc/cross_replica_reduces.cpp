@@ -205,7 +205,12 @@ SendResult BuildSendWithToken(xla::XlaOp input, xla::XlaOp token,
   channel_handle.set_handle(channel_id);
   channel_handle.set_type(xla::ChannelHandle::DEVICE_TO_DEVICE);
   xla::XlaOp result_token = xla::SendWithToken(input, token, channel_handle);
-  return {result_token};
+  // Bind input into the result, so that the caller can depend on the result.
+  // This can enable building the `send` op into the graph when the token
+  // is ignored by some caller like `torch.distributed`.
+  xla::XlaOp tuple_res = xla::Tuple(input.builder(), {result_token, input});
+  xla::XlaOp input_as_result = xla::GetTupleElement(tuple_res, 1);
+  return {input_as_result, result_token};
 }
 
 RecvResult BuildRecvWithToken(xla::XlaOp token, const xla::Shape& recv_shape,

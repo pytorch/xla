@@ -712,10 +712,11 @@ def send(value, channel_id):
     channel_id (int64): opaque id identifying the destination of the send op.
   """
   token, devctx = _get_all_reduce_token()
-  new_token_tensor, new_token = torch_xla._XLAC._xla_send(
+  # The input will be returned as result.
+  input_as_result, new_token = torch_xla._XLAC._xla_send(
       value, token, channel_id)
   devctx.all_reduce_token = new_token
-  return new_token_tensor
+  return input_as_result
 
 
 def recv(output, channel_id):

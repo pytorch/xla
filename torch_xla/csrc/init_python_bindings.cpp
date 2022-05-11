@@ -1027,14 +1027,15 @@ void InitXlaModuleBindings(py::module m) {
   m.def("_xla_send", [](const at::Tensor& input,
                         const std::shared_ptr<XlaValue>& token,
                         int64_t channel_id) {
-    at::Tensor new_token_tensor;
+    // The input will be returned as result.
+    at::Tensor input_as_result;
     std::shared_ptr<XlaValue> new_token;
     {
       NoGilSection nogil;
-      std::tie(new_token_tensor, new_token) = Send(input, token, channel_id);
+      std::tie(input_as_result, new_token) = Send(input, token, channel_id);
     }
     auto result_tuple = py::tuple(2);
-    result_tuple[0] = torch::autograd::make_variable(new_token_tensor,
+    result_tuple[0] = torch::autograd::make_variable(input_as_result,
                                                      /*requires_grad=*/false);
     result_tuple[1] = new_token;
     return result_tuple;

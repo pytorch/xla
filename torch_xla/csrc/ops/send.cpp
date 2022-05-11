@@ -17,7 +17,8 @@ xla::Shape NodeOutputShape(const XlaValue& input, const XlaValue& token,
     xla::XlaOp inputOp = operands[0];
     xla::XlaOp tokenOp = operands[1];
     SendResult result = BuildSendWithToken(inputOp, tokenOp, channel_id);
-    return xla::Tuple(tokenOp.builder(), {result.token});
+    return xla::Tuple(tokenOp.builder(),
+                      {result.input_as_result, result.token});
   };
   return InferOutputShape({input.xla_shape(), token.xla_shape()}, shape_fn);
 }
@@ -27,7 +28,7 @@ xla::Shape NodeOutputShape(const XlaValue& input, const XlaValue& token,
 Send::Send(const XlaValue& input, const XlaValue& token, int64_t channel_id)
     : XlaNode(xla_send, {input, token},
               [&]() { return NodeOutputShape(input, token, channel_id); },
-              /*num_outputs=*/1, torch::lazy::MHash(channel_id)),
+              /*num_outputs=*/2, torch::lazy::MHash(channel_id)),
       channel_id_(channel_id) {}
 
 torch::lazy::NodePtr Send::Clone(OpList operands) const {
@@ -39,7 +40,7 @@ XlaOpVector Send::Lower(LoweringContext* loctx) const {
   xla::XlaOp input = loctx->GetOutputOp(operand(0));
   xla::XlaOp token = loctx->GetOutputOp(operand(1));
   SendResult result = BuildSendWithToken(input, token, channel_id_);
-  return ReturnOps({result.token}, loctx);
+  return ReturnOps({result.input_as_result, result.token}, loctx);
 }
 
 std::string Send::ToString() const {

@@ -139,26 +139,27 @@ class ProcessGroupXla(ProcessGroup):
   # the maker with their specific one. See unit test in
   # test/test_torch_distributed_xla_backend.py for an example.
   def make_send_channel_id(self, dst_rank, tag):
-    return dst_rank + tag
+    raise NotImplementedError
 
   # Call site e.g.
   # https://github.com/pytorch/pytorch/blob/release/1.10/torch/distributed/distributed_c10d.py#L877
   def send(self, tensors, dst_rank, tag=0):
-    tokens = []
+    results = []
     for t in tensors:
       channel_id = self.make_send_channel_id(dst_rank, tag)
-      token = xm.send(t, channel_id)
+      # The input will be returned as result.
+      input_as_result = xm.send(t, channel_id)
       # Make the sent tensor depend on the token, such that the `send`
       # op can actually be built into the computation graph.
-      t.data.data = token
-      tokens.append(token)
-    return WorkXla(tokens)
+      t.data = input_as_result
+      results.append(input_as_result)
+    return WorkXla(results)
 
   # Dummy channel id maker. Different backend (TPU, GPU, etc) should replace
   # the maker with their specific one. See unit test in
   # test/test_torch_distributed_xla_backend.py for an example.
   def make_recv_channel_id(self, src_rank, tag):
-    return src_rank + tag
+    raise NotImplementedError
 
   # Call site e.g.
   # https://github.com/pytorch/pytorch/blob/release/1.10/torch/distributed/distributed_c10d.py#L913

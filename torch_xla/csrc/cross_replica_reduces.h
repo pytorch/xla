@@ -32,6 +32,7 @@ struct CollectivePermuteResult {
 };
 
 struct SendResult {
+  xla::XlaOp input_as_result;
   xla::XlaOp token;
 };
 

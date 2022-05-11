@@ -464,9 +464,7 @@ std::pair<XLATensor, XlaValue> XLATensor::send(const XLATensor& input,
                                                int64_t channel_id) {
   torch::lazy::NodePtr node = torch::lazy::MakeNode<ir::ops::Send>(
       input.GetIrValue(), token, channel_id);
-  // return the token as both XLATensor and XlaValue for caller's
-  // convenience.
-  return {input.CreateFrom(XlaValue(node, 0)), XlaValue(node, 0)};
+  return {input.CreateFrom(XlaValue(node, 0)), XlaValue(node, 1)};
 }
 
 void XLATensor::sgd_optimizer_step_(const XLATensor& found_inf, XLATensor& step,
