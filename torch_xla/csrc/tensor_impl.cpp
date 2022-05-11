@@ -59,6 +59,7 @@ XLATensorImpl::XLATensorImpl(XLATensor tensor)
                       bridge::XlaDeviceToAtenDevice(tensor.GetDevice())),
       tensor_(std::move(tensor)) {
   is_non_overlapping_and_dense_ = false;
+  set_sizes_strides_policy(SizesStridesPolicy::CustomSizes);
 }
 
 void XLATensorImpl::set_tensor(XLATensor xla_tensor) {
@@ -102,30 +103,30 @@ void XLATensorImpl::shallow_copy_from(
   generation_ = 0;
 }
 
-at::IntArrayRef XLATensorImpl::sizes() const {
+at::IntArrayRef XLATensorImpl::sizes_custom() const {
   const_cast<XLATensorImpl*>(this)->SetupSizeProperties();
-  return c10::TensorImpl::sizes();
+  return sizes_default();
 }
 
-int64_t XLATensorImpl::dim() const {
+at::IntArrayRef XLATensorImpl::strides_custom() const {
   const_cast<XLATensorImpl*>(this)->SetupSizeProperties();
-  return c10::TensorImpl::dim();
+  return strides_default();
 }
 
-int64_t XLATensorImpl::numel() const {
+int64_t XLATensorImpl::dim_custom() const {
   const_cast<XLATensorImpl*>(this)->SetupSizeProperties();
-  return c10::TensorImpl::numel();
+  return dim_default();
 }
 
-bool XLATensorImpl::is_contiguous(at::MemoryFormat memory_format) const {
+int64_t XLATensorImpl::numel_custom() const {
+  const_cast<XLATensorImpl*>(this)->SetupSizeProperties();
+  return numel_default();
+}
+
+bool XLATensorImpl::is_contiguous_custom(at::MemoryFormat memory_format) const {
   // Only check that the storage is already contiguous.
   XLA_CHECK(is_contiguous_) << "Non-contiguous storage for XLA tensor";
   return true;
-}
-
-int64_t XLATensorImpl::size(int64_t d) const {
-  const_cast<XLATensorImpl*>(this)->SetupSizeProperties();
-  return c10::TensorImpl::size(d);
 }
 
 void XLATensorImpl::SetupSizeProperties() {
