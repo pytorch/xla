@@ -77,8 +77,6 @@ if __name__ == '__main__':
       try_get_tensor="TryGetXlaTensor",
       metrics_counter='XLA_FN_COUNTER("xla::")',
       create_tensor="XLATensor::Create",
-      #create_tensor = "CreateFrom",
-      #create_from_first_tensor = True,
       create_aten_from_ltc_tensor="torch_xla::bridge::AtenFromXlaTensor",
       tuple_aten_from_ltc_tensors="torch::lazy::TupleAtenFromLtcTensors",
       lazy_value_class="torch_xla::XlaValue",
