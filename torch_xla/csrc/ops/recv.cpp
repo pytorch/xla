@@ -10,7 +10,7 @@ namespace ir {
 namespace ops {
 namespace {
 
-xla::Shape NodeOutputShape(const Value& token, const xla::Shape& recv_shape,
+xla::Shape NodeOutputShape(const XlaValue& token, const xla::Shape& recv_shape,
                            int64_t channel_id) {
   auto shape_fn = [&](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
     xla::XlaOp tokenOp = operands[0];
@@ -22,16 +22,17 @@ xla::Shape NodeOutputShape(const Value& token, const xla::Shape& recv_shape,
 
 }  // namespace
 
-Recv::Recv(const Value& token, const xla::Shape& recv_shape, int64_t channel_id)
-    : Node(xla_recv, {token},
-           [&]() { return NodeOutputShape(token, recv_shape, channel_id); },
-           /*num_outputs=*/2,
-           torch::lazy::MHash(channel_id, recv_shape.ToString())),
+Recv::Recv(const XlaValue& token, const xla::Shape& recv_shape,
+           int64_t channel_id)
+    : XlaNode(xla_recv, {token},
+              [&]() { return NodeOutputShape(token, recv_shape, channel_id); },
+              /*num_outputs=*/2,
+              torch::lazy::MHash(channel_id, recv_shape.ToString())),
       recv_shape_(recv_shape.ToProto()),
       channel_id_(channel_id) {}
 
 torch::lazy::NodePtr Recv::Clone(OpList operands) const {
-  return ir::MakeNode<Recv>(operands.at(0), recv_shape_, channel_id_);
+  return torch::lazy::MakeNode<Recv>(operands.at(0), recv_shape_, channel_id_);
 }
 
 XlaOpVector Recv::Lower(LoweringContext* loctx) const {
@@ -42,7 +43,7 @@ XlaOpVector Recv::Lower(LoweringContext* loctx) const {
 
 std::string Recv::ToString() const {
   std::stringstream ss;
-  ss << Node::ToString() << ", recv shape=" << recv_shape_
+  ss << XlaNode::ToString() << ", recv shape=" << recv_shape_
      << ", channel_id=" << channel_id_;
   return ss.str();
 }

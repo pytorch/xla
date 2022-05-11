@@ -7,9 +7,9 @@ namespace torch_xla {
 namespace ir {
 namespace ops {
 
-class Recv : public Node {
+class Recv : public XlaNode {
  public:
-  Recv(const Value& token, const xla::Shape& recv_shape, int64_t channel_id);
+  Recv(const XlaValue& token, const xla::Shape& recv_shape, int64_t channel_id);
 
   std::string ToString() const override;
 

@@ -7,9 +7,9 @@ namespace torch_xla {
 namespace ir {
 namespace ops {
 
-class Send : public Node {
+class Send : public XlaNode {
  public:
-  Send(const Value& input, const Value& token, int64_t channel_id);
+  Send(const XlaValue& input, const XlaValue& token, int64_t channel_id);
 
   std::string ToString() const override;
 

@@ -450,24 +450,23 @@ XLATensor XLATensor::get_dimensions_size(const XLATensor& input,
                           at::ScalarType::Int);
 }
 
-std::pair<XLATensor, ir::XlaValue::Value> XLATensor::recv(
-    XLATensor& output, const ir::XlaValue::Value& token, int64_t channel_id) {
-  torch::lazy::NodePtr node = ir::MakeNode<ir::ops::Recv>(
+std::pair<XLATensor, XlaValue> XLATensor::recv(XLATensor& output,
+                                               const XlaValue& token,
+                                               int64_t channel_id) {
+  torch::lazy::NodePtr node = torch::lazy::MakeNode<ir::ops::Recv>(
       token, output.GetIrValue().xla_shape(), channel_id);
-  output.SetIrValue(ir::XlaValue::Value(node, 0));
-  return {output.CreateFrom(ir::XlaValue::Value(node, 0)),
-          ir::XlaValue::Value(node, 1)};
+  output.SetIrValue(XlaValue(node, 0));
+  return {output.CreateFrom(XlaValue(node, 0)), XlaValue(node, 1)};
 }
 
-std::pair<XLATensor, ir::XlaValue::Value> XLATensor::send(
-    const XLATensor& input, const ir::XlaValue::Value& token,
-    int64_t channel_id) {
-  torch::lazy::NodePtr node =
-      ir::MakeNode<ir::ops::Send>(input.GetIrValue(), token, channel_id);
-  // return the token as both XLATensor and ir::XlaValue::Value for caller's
+std::pair<XLATensor, XlaValue> XLATensor::send(const XLATensor& input,
+                                               const XlaValue& token,
+                                               int64_t channel_id) {
+  torch::lazy::NodePtr node = torch::lazy::MakeNode<ir::ops::Send>(
+      input.GetIrValue(), token, channel_id);
+  // return the token as both XLATensor and XlaValue for caller's
   // convenience.
-  return {input.CreateFrom(ir::XlaValue::Value(node, 0)),
-          ir::XlaValue::Value(node, 0)};
+  return {input.CreateFrom(XlaValue(node, 0)), XlaValue(node, 0)};
 }
 
 void XLATensor::sgd_optimizer_step_(const XLATensor& found_inf, XLATensor& step,

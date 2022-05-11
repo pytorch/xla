@@ -10,7 +10,7 @@ namespace ir {
 namespace ops {
 namespace {
 
-xla::Shape NodeOutputShape(const Value& input, const Value& token,
+xla::Shape NodeOutputShape(const XlaValue& input, const XlaValue& token,
                            int64_t channel_id) {
   auto shape_fn =
       [channel_id](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
@@ -24,14 +24,15 @@ xla::Shape NodeOutputShape(const Value& input, const Value& token,
 
 }  // namespace
 
-Send::Send(const Value& input, const Value& token, int64_t channel_id)
-    : Node(xla_send, {input, token},
-           [&]() { return NodeOutputShape(input, token, channel_id); },
-           /*num_outputs=*/1, torch::lazy::MHash(channel_id)),
+Send::Send(const XlaValue& input, const XlaValue& token, int64_t channel_id)
+    : XlaNode(xla_send, {input, token},
+              [&]() { return NodeOutputShape(input, token, channel_id); },
+              /*num_outputs=*/1, torch::lazy::MHash(channel_id)),
       channel_id_(channel_id) {}
 
 torch::lazy::NodePtr Send::Clone(OpList operands) const {
-  return ir::MakeNode<Send>(operands.at(0), operands.at(1), channel_id_);
+  return torch::lazy::MakeNode<Send>(operands.at(0), operands.at(1),
+                                     channel_id_);
 }
 
 XlaOpVector Send::Lower(LoweringContext* loctx) const {
@@ -43,7 +44,7 @@ XlaOpVector Send::Lower(LoweringContext* loctx) const {
 
 std::string Send::ToString() const {
   std::stringstream ss;
-  ss << Node::ToString() << ", channel_id=" << channel_id_;
+  ss << XlaNode::ToString() << ", channel_id=" << channel_id_;
   return ss.str();
 }
 
