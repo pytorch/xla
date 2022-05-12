@@ -18,10 +18,7 @@
 
 namespace torch_xla {
 namespace cpp_test {
-namespace {
-
-
-}  // namespace
+namespace {}  // namespace
 
 class XLAShardingTest : public AtenXlaTensorTestBase {};
 
@@ -51,11 +48,10 @@ TEST_F(XLAShardingTest, TestSPMDPartitioner) {
 
   // Parse and return a verified module
   // TODO: might need to update sharding with the given replica_count_
+  // and re-run SpmdPartitioner.
   auto module = absl::make_unique<HloModule>("TestSPMDPartitioner", config);
   auto parser = HloParser::CreateHloParserForTests(hlo_text);
   parser->run(module);
-
-  // Run SPMDPartitioner
 }
 
 }  // namespace cpp_test

@@ -30,7 +30,9 @@ class XlaShardingTest(unittest.TestCase):
 
     device_ids = np.array(range(num_devices))
     tile_assignment = list(device_ids.reshape(mesh_shape))
-    assert tile_assignment == t1_sharded.sharding_spec[0], "Invalid tile assignment."
+    assert tile_assignment == t1_sharded.sharding_spec[
+        0], "Invalid tile assignment."
+
 
 if __name__ == '__main__':
   test = unittest.main()

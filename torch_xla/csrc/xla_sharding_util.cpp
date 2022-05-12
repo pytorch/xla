@@ -44,10 +44,11 @@ xla::HloModuleProto ShardingUtil::SpmdPartitioningPass(
     const xla::HloModuleProto& hlo_proto, bool conv_halo_exchange_always_on_lhs,
     bool choose_faster_windowed_einsum_over_mem, bool unroll_windowed_einsum,
     bool bidirectional_windowed_einsum) {
-  // TODO(yeounoh) align with user provided sharding spec
+  // TODO(yeounoh) read available devices
   int64_t num_replicas = 1;
-  int64_t num_partitions = 8;  // testing on v3-8
+  int64_t num_partitions = 8;
 
+  // TODO(yeounoh) propagate this down to the PJRT client
   auto execution_options = xla::CreateDefaultExecutionOptions();
   execution_options.set_use_spmd_partitioning(true);
   execution_options.set_num_replicas(num_replicas);

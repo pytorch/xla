@@ -89,15 +89,9 @@ class XLATensor : public c10::intrusive_ptr_target {
 
   void SetXlaData(torch::lazy::BackendDataPtr xla_data);
 
-<<<<<<< HEAD
   // Retrieves the current IR XlaNode, or nullptr in case no active IR XlaNode
   // is available.
   torch::lazy::Value CurrentIrValue() const;
-=======
-  // Retrieves the current IR Node, or nullptr in case no active IR Node is
-  // available.
-  XlaValue CurrentIrValue() const;
->>>>>>> 7a6f25de (Rebasing master with ltc migration changes)
 
   // Retrieves the IR Node representing this XLATensor. One will be created if
   // missing. Note that although this is a const API, it actually changes the
