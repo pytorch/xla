@@ -3260,6 +3260,21 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor> XLANativeFunctions::svd(
 std::tuple<at::Tensor, at::Tensor, at::Tensor> XLANativeFunctions::linalg_svd(
     const at::Tensor& self, bool full_matrices) {
   XLA_FN_COUNTER("xla::");
+  if (self.numel() == 0) {
+    auto sizes = self.sizes().vec();
+    const auto m = sizes.cend()[-2];
+    const auto n = sizes.cend()[-1];
+    const auto k = std::min(m, n);
+    sizes.back() = full_matrices ? m : k;
+    auto U = at::zeros(sizes, self.options());
+    sizes.end()[-2] = full_matrices ? n : k;
+    sizes.end()[-1] = n;
+    auto Vh = at::zeros(sizes, self.options());
+    sizes.pop_back();
+    sizes.end()[-1] = k;
+    auto S = at::zeros(sizes, self.options());
+    return std::make_tuple(std::move(U), std::move(S), std::move(Vh));
+  }
   auto results = XLATensor::svd(bridge::GetXlaTensor(self),
                                 /*some=*/!full_matrices, /*compute_uv=*/true);
   return std::make_tuple(
