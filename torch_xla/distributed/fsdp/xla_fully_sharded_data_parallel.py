@@ -433,7 +433,7 @@ class XlaFullyShardedDataParallel(nn.Module):
         norm_type (float or int): type of the used p-norm. Can be ``'inf'``
             for infinity norm.
         groups (list, optional): A list of list, representing the replica
-            groups for the `all_reduce()` operation to compute global norms.
+            groups for the all-reduce operation to compute global norms.
             See `xm.all_reduce` for details.
 
     Returns:
@@ -611,8 +611,9 @@ class XlaFullyShardedDataParallel(nn.Module):
             continue
           if torch.is_floating_point(buf):
             orig_dtype = buf.dtype
-            if orig_dtype != self.buffer_dtype:
-              buf = buf.to(dtype=dtype or self.buffer_dtype)
+            cast_dtype = dtype or self.buffer_dtype
+            if orig_dtype != cast_dtype:
+              buf = buf.to(cast_dtype)
               buf._orig_dtype = orig_dtype
           setattr(module, name, buf)
 
@@ -1495,8 +1496,8 @@ def _calc_grad_norm(parameters: List[torch.nn.Parameter],
 def _cast_floats_tensors(dtype: torch.dtype, *args: Any,
                          **kwargs: Any) -> Tuple[Any, Any]:
   """
-    Cast floating point Tensors in *args or **kwargs to dtype if they are not.
-    """
+  Cast floating point Tensors in *args or **kwargs to dtype if they are not.
+  """
 
   def fn(t):
     if t.dtype != dtype and torch.is_floating_point(t):

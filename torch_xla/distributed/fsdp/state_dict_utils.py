@@ -62,7 +62,7 @@ def consolidate_sharded_state_dicts(state_dict_list, shard_metadata):
 
   # consolidate the sharded parameters
   for name, p in state_dict_list[0].items():
-    if name in buffer_info:  # cast buffers back to its original dtype
+    if name in buffer_info:  # cast buffer back to its original dtype
       p = p.to(buffer_info[name]["_orig_dtype"])
 
     is_sharded = False
