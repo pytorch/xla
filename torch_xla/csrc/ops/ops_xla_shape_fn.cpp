@@ -6,6 +6,10 @@ namespace torch_xla {
 
 xla::Shape AbsOutputShape(const XlaValue& input) { return input.xla_shape(); }
 
+xla::Shape AcosOutputShape(const XlaValue& input) { return input.xla_shape(); }
+
+xla::Shape AcoshOutputShape(const XlaValue& input) { return input.xla_shape(); }
+
 xla::Shape MaximumOutputShape(const XlaValue& input, const XlaValue& other) {
   auto lower_for_shape_fn =
       [&](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {

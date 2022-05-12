@@ -662,14 +662,6 @@ XLATensor XLATensor::abs(const XLATensor& input) {
       input.GetIrValue(), std::vector<torch::lazy::Shape>()));
 }
 
-XLATensor XLATensor::acos(const XLATensor& input) {
-  return input.CreateFrom(Acos(input.GetIrValue()));
-}
-
-XLATensor XLATensor::acosh(const XLATensor& input) {
-  return input.CreateFrom(Acosh(input.GetIrValue()));
-}
-
 XLATensor XLATensor::add(const XLATensor& input, const XLATensor& other,
                          const at::Scalar& alpha,
                          c10::optional<at::ScalarType> logical_element_type) {
