@@ -342,10 +342,6 @@ class XLATensor : public c10::intrusive_ptr_target {
 
   static XLATensor abs(const XLATensor& input);
 
-  static XLATensor acos(const XLATensor& input);
-
-  static XLATensor acosh(const XLATensor& input);
-
   static XLATensor add(
       const XLATensor& input, const XLATensor& other, const at::Scalar& alpha,
       c10::optional<at::ScalarType> logical_element_type = c10::nullopt);
