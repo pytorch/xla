@@ -28,6 +28,9 @@ void ReplaceXlaTensor(const at::Tensor& tensor, XLATensor new_xla_tensor);
 // Same as above, applied to a list of tensors.
 std::vector<XLATensor> GetXlaTensors(absl::Span<const at::Tensor> tensors);
 
+torch_xla::XLATensorPtr GetXlaTensorOrCreateForWrappedNumber(
+    const at::Tensor& tensor, const torch::lazy::BackendDevice& device);
+
 // If tensor is an XLA tensor type, returns the XLATensor embedded within it,
 // otherwise creates a new XLA tensor type with tensor as data.
 XLATensor GetOrCreateXlaTensor(const at::Tensor& tensor,
@@ -62,6 +65,9 @@ c10::optional<torch::lazy::BackendDevice> GetXlaDevice(
 
 c10::optional<torch::lazy::BackendDevice> GetXlaDevice(
     const at::TensorList& tensors);
+
+c10::optional<torch::lazy::BackendDevice> GetXlaDevice(
+    const std::vector<at::Tensor>& tensors);
 
 c10::optional<torch::lazy::BackendDevice> GetXlaDevice(
     const at::TensorOptions& tensor_options);
@@ -106,14 +112,15 @@ std::vector<at::Tensor> CreateXlaTensors(
     const std::vector<at::Tensor>& tensors,
     const c10::optional<torch::lazy::BackendDevice>& device);
 
+template <typename T, typename... Args>
+c10::optional<torch::lazy::BackendDevice> GetXlaDevice(
+    const T& tensor, const Args&... forward_tensors) {
+  auto optional_device = GetXlaDevice(tensor);
+  if (optional_device) {
+    return optional_device;
+  }
+  return GetXlaDevice(forward_tensors...);
+}
+
 }  // namespace bridge
 }  // namespace torch_xla
-
-namespace torch {
-namespace lazy {
-
-torch_xla::XLATensor GetXlaTensorOrCreateForWrappedNumber(
-    const at::Tensor& tensor, const torch::lazy::BackendDevice& device);
-
-}  // namespace lazy
-}  // namespace torch

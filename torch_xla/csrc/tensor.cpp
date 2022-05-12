@@ -465,6 +465,12 @@ XLATensor XLATensor::Create(
 XLATensor XLATensor::Create(
     XlaValue ir_value, const torch::lazy::BackendDevice& device,
     c10::optional<at::ScalarType> logical_element_type) {
+  // We should not call ir_value.shape() without checking node->shapes()
+  // is populated.
+  if (ir_value.node->shapes().size() &&
+      ir_value.shape().scalar_type() != c10::ScalarType::Undefined) {
+    logical_element_type = ir_value.shape().scalar_type();
+  }
   XLATensor xtensor(std::move(ir_value), device, logical_element_type);
   DeviceContextArena::Get()->RegisterTensor(xtensor.data_ptr());
   if (UseEagerDebugMode()) {

@@ -25,7 +25,7 @@
 
 namespace torch_xla {
 
-class XLATensor {
+class XLATensor : public c10::intrusive_ptr_target {
   class DeviceContextArena;
   struct Data;
 
@@ -792,10 +792,6 @@ class XLATensor {
 
   static XLATensor matmul(const XLATensor& input, const XLATensor& other);
 
-  static XLATensor max(
-      const XLATensor& input, const XLATensor& other,
-      c10::optional<at::ScalarType> logical_element_type = c10::nullopt);
-
   static XLATensor max(const XLATensor& input);
 
   static std::tuple<XLATensor, XLATensor> max(const XLATensor& input,
@@ -1323,6 +1319,7 @@ class XLATensor {
     xla::ComputationClient::DataPtr xla_data;
     XlaValue ir_value;
     std::shared_ptr<View> view;
+    // TODO: remove this in favor of torch::lazy::Shape within ir_value.
     c10::optional<at::ScalarType> logical_element_type;
     c10::optional<at::Tensor> tensor_data;
     const torch::lazy::BackendDevice device;
@@ -1486,5 +1483,7 @@ class XLATensor {
 
   std::shared_ptr<Data> data_;
 };
+
+using XLATensorPtr = c10::intrusive_ptr<XLATensor>;
 
 }  // namespace torch_xla
