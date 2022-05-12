@@ -262,6 +262,14 @@ class XLATensor : public c10::intrusive_ptr_target {
   static XLATensor get_dimensions_size(const XLATensor& input,
                                        std::vector<int64_t> dimensions);
 
+  static std::pair<XLATensor, XlaValue> recv(XLATensor& output,
+                                             const XlaValue& token,
+                                             int64_t channel_id);
+
+  static std::pair<XLATensor, XlaValue> send(const XLATensor& input,
+                                             const XlaValue& token,
+                                             int64_t channel_id);
+
   static void sgd_optimizer_step_(const XLATensor& found_inf, XLATensor& step,
                                   XLATensor& param, XLATensor& buf,
                                   const XLATensor& d_p, double weight_decay,

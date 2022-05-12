@@ -180,6 +180,66 @@ class XlaBackendTest(unittest.TestCase):
     # purge all computations attached the device.
     xm.mark_step()
 
+  def test_send(self):
+    device = xm.xla_device()
+    tensor = torch.arange(2, device=device) + 1 + 2 * dist.get_rank()
+    input_list = [tensor]
+    set_world_size(6)
+    ranks = [0, 3]
+    world_rank = 0
+    set_world_rank(world_rank)
+
+    torch_xla.distributed.xla_backend.ProcessGroupXla.make_send_channel_id = (
+        lambda self, dst_rank, tag: dst_rank * 2)
+
+    with new_group_barrier_disabled():
+      pg_xla = dist.new_group(ranks=ranks)
+
+    send_pattern = r'%send\.\d+ = .+ send\(.+\), channel_id=2'
+    senddone_pattern = r'%send\-done\.\d+ = .+ send\-done\(.+\), channel_id=2'
+    # seeing 'Send is not implemented on CPU' means we have successfully
+    # generated `send` in the HLO.
+    with self.assertRaises(RuntimeError) as cm:
+      pg_xla.send(input_list, 1)
+      hlo = torch_xla._XLAC._get_xla_tensors_hlo(input_list)
+      hlo_matches(hlo, send_pattern)
+      hlo_matches(hlo, senddone_pattern)
+      xm.mark_step()
+    assert 'UNIMPLEMENTED: Send is not implemented on CPU.' in str(
+        cm.exception), str(cm.exception)
+    # reset token to clean up the mess after the RuntimeError.
+    xm.set_replication(device, [])
+
+  def test_recv(self):
+    device = xm.xla_device()
+    tensor = torch.arange(2, device=device) + 1 + 2 * dist.get_rank()
+    output_list = [tensor]
+    set_world_size(6)
+    ranks = [0, 3]
+    world_rank = 0
+    set_world_rank(world_rank)
+
+    torch_xla.distributed.xla_backend.ProcessGroupXla.make_recv_channel_id = (
+        lambda self, src_rank, tag: src_rank * 3)
+
+    with new_group_barrier_disabled():
+      pg_xla = dist.new_group(ranks=ranks)
+
+    recv_pattern = r'%recv\.\d+ = .+ recv\(.+\), channel_id=3'
+    recvdone_pattern = r'%recv\-done\.\d+ = .+ recv\-done\(.+\), channel_id=3'
+    # seeing 'recv is not implemented on CPU' means we have successfully
+    # generated `recv` in the HLO.
+    with self.assertRaises(RuntimeError) as cm:
+      pg_xla.recv(output_list, 1)
+      hlo = torch_xla._XLAC._get_xla_tensors_hlo(output_list)
+      hlo_matches(hlo, recv_pattern)
+      hlo_matches(hlo, recvdone_pattern)
+      xm.mark_step()
+    assert 'UNIMPLEMENTED: Recv is not implemented on CPU.' in str(
+        cm.exception), str(cm.exception)
+    # reset token to clean up the mess after the RuntimeError.
+    xm.set_replication(device, [])
+
   def test_new_group_no_ranks(self):
     set_world_size(12)
     with new_group_barrier_disabled():
@@ -347,8 +407,6 @@ class XlaBackendTest(unittest.TestCase):
         'alltoall_base',
         'gather',
         'scatter',
-        'send',
-        'recv',
         'recv_anysource',
         'monitored_barrier',
     )

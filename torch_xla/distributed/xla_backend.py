@@ -135,11 +135,41 @@ class ProcessGroupXla(ProcessGroup):
   def scatter(self, *args):
     raise NotImplementedError
 
-  def send(self, *args):
+  # Dummy channel id maker. Different backend (TPU, GPU, etc) should replace
+  # the maker with their specific one. See unit test in
+  # test/test_torch_distributed_xla_backend.py for an example.
+  def make_send_channel_id(self, dst_rank, tag):
     raise NotImplementedError
 
-  def recv(self, *args):
+  # Call site e.g.
+  # https://github.com/pytorch/pytorch/blob/release/1.10/torch/distributed/distributed_c10d.py#L877
+  def send(self, tensors, dst_rank, tag=0):
+    results = []
+    for t in tensors:
+      channel_id = self.make_send_channel_id(dst_rank, tag)
+      # The input will be returned as result.
+      input_as_result = xm.send(t, channel_id)
+      # Make the sent tensor depend on the token, such that the `send`
+      # op can actually be built into the computation graph.
+      t.data = input_as_result
+      results.append(input_as_result)
+    return WorkXla(results)
+
+  # Dummy channel id maker. Different backend (TPU, GPU, etc) should replace
+  # the maker with their specific one. See unit test in
+  # test/test_torch_distributed_xla_backend.py for an example.
+  def make_recv_channel_id(self, src_rank, tag):
     raise NotImplementedError
+
+  # Call site e.g.
+  # https://github.com/pytorch/pytorch/blob/release/1.10/torch/distributed/distributed_c10d.py#L913
+  def recv(self, out_tensors, src_rank, tag=0):
+    results = []
+    for ot in out_tensors:
+      channel_id = self.make_recv_channel_id(src_rank, tag)
+      result = xm.recv(ot, channel_id)
+      results.append(result)
+    return WorkXla(results)
 
   def recv_anysource(self, *args):
     raise NotImplementedError
@@ -168,18 +198,18 @@ class WorkXla(Work):
     if self.cc_tensors is not None:
       if distutils.util.strtobool(
           os.environ.get('XLA_BACKEND_BLOCKING_CC_OPS', 'False')):
-        logging.info("XLA Backend: Waiting for tensor CC op...")
+        logging.debug("XLA Backend: Waiting for tensor CC op...")
         torch_xla._XLAC._xla_sync_multi(self.cc_tensors, devices=[], wait=True)
       else:
-        logging.info("XLA Backend: Skipping tensor CC op wait.")
+        logging.debug("XLA Backend: Skipping tensor CC op wait.")
     else:
       if distutils.util.strtobool(
           os.environ.get('XLA_BACKEND_BLOCKING_BARRIER', 'False')):
-        logging.info("XLA Backend: Non-tensor wait...")
+        logging.debug("XLA Backend: Non-tensor wait...")
         torch_xla._XLAC._xla_step_marker(
             torch_xla._XLAC._xla_get_default_device(), devices=[], wait=True)
       else:
-        logging.info("XLA Backend: Skipping non-tensor wait.")
+        logging.debug("XLA Backend: Skipping non-tensor wait.")
 
 
 # -------------------------------------

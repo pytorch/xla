@@ -199,6 +199,31 @@ CollectivePermuteResult BuildCollectivePermute(
   return {result, token_handler.GetNewToken(result)};
 }
 
+SendResult BuildSendWithToken(xla::XlaOp input, xla::XlaOp token,
+                              int64_t channel_id) {
+  xla::ChannelHandle channel_handle;
+  channel_handle.set_handle(channel_id);
+  channel_handle.set_type(xla::ChannelHandle::DEVICE_TO_DEVICE);
+  xla::XlaOp result_token = xla::SendWithToken(input, token, channel_handle);
+  // Bind input into the result, so that the caller can depend on the result.
+  // This can enable building the `send` op into the graph when the token
+  // is ignored by some caller like `torch.distributed`.
+  xla::XlaOp tuple_res = xla::Tuple(input.builder(), {result_token, input});
+  xla::XlaOp input_as_result = xla::GetTupleElement(tuple_res, 1);
+  return {input_as_result, result_token};
+}
+
+RecvResult BuildRecvWithToken(xla::XlaOp token, const xla::Shape& recv_shape,
+                              int64_t channel_id) {
+  xla::ChannelHandle channel_handle;
+  channel_handle.set_handle(channel_id);
+  channel_handle.set_type(xla::ChannelHandle::DEVICE_TO_DEVICE);
+  xla::XlaOp recv = xla::RecvWithToken(token, recv_shape, channel_handle);
+  xla::XlaOp result = xla::GetTupleElement(recv, 0);
+  xla::XlaOp new_token = xla::GetTupleElement(recv, 1);
+  return {result, new_token};
+}
+
 ReduceScatterResult BuildReduceScatter(
     AllReduceType reduce_type, xla::XlaOp input, xla::XlaOp token, double scale,
     int64_t scatter_dim, int64_t shard_count,
