@@ -13,6 +13,7 @@
 #include "torch_xla/csrc/convert_ops.h"
 #include "torch_xla/csrc/data_ops.h"
 #include "torch_xla/csrc/elementwise.h"
+#include "torch_xla/csrc/generated/LazyIr.h"
 #include "torch_xla/csrc/helpers.h"
 #include "torch_xla/csrc/lowering_context.h"
 #include "torch_xla/csrc/matrix.h"
@@ -95,13 +96,14 @@ PTXLA_UNARY_OP(Not, at::aten::bitwise_not, xla::Not);
 PTXLA_UNARY_OP(IsNan, at::aten::isnan, xla::IsNan);
 
 PTXLA_BINARY_OP(Min, at::aten::min, xla::Min);
-PTXLA_BINARY_OP(Max, at::aten::max, xla::Max);
 PTXLA_BINARY_OP(Pow, at::aten::pow, xla::Pow);
 PTXLA_BINARY_OP(Fmod, at::aten::fmod, xla::Rem);
 PTXLA_BINARY_OP(Atan2, at::aten::atan2, xla::Atan2);
 
 torch::lazy::NodePtr Trunc(const XlaValue& input) {
-  return Floor(Abs(input)) * SignOp(input);
+  std::vector<torch::lazy::Shape> shapes;
+  return Floor(torch::lazy::MakeNode<Abs>(input, std::move(shapes))) *
+         SignOp(input);
 }
 
 torch::lazy::NodePtr FracOp(const XlaValue& input) {
@@ -150,16 +152,6 @@ torch::lazy::NodePtr SignOp(const XlaValue& input) {
     return node.ReturnOp(BuildSign(xla_input), loctx);
   };
   return GenericOp(torch::lazy::OpKind(at::aten::sign), {input},
-                   input.xla_shape(), std::move(lower_fn));
-}
-
-torch::lazy::NodePtr Abs(const XlaValue& input) {
-  auto lower_fn = [](const XlaNode& node,
-                     LoweringContext* loctx) -> XlaOpVector {
-    xla::XlaOp xla_input = loctx->GetOutputOp(node.operand(0));
-    return node.ReturnOp(BuildAbs(xla_input), loctx);
-  };
-  return GenericOp(torch::lazy::OpKind(at::aten::abs), {input},
                    input.xla_shape(), std::move(lower_fn));
 }
 
@@ -688,14 +680,18 @@ torch::lazy::NodePtr Norm(const XlaValue& input,
     //   tensor(3.1235)
     //   >>> print(x.abs().sum())
     //   tensor(11.9437)
-    return torch::lazy::MakeNode<Sum>(Abs(input), dimensions, keepdim, dtype);
+    return torch::lazy::MakeNode<Sum>(
+        torch::lazy::MakeNode<Abs>(input, std::vector<torch::lazy::Shape>()),
+        dimensions, keepdim, dtype);
   }
   // Generic sum(x^p)^(1/p) norms.
   torch::lazy::NodePtr norm_exp =
       ScalarOp(norm_value, input.xla_shape().element_type());
   torch::lazy::NodePtr norm_exp_inv =
       ScalarOp(1.0 / norm_value, input.xla_shape().element_type());
-  torch::lazy::NodePtr exp = Pow(Abs(input), norm_exp);
+  torch::lazy::NodePtr exp =
+      Pow(torch::lazy::MakeNode<Abs>(input, std::vector<torch::lazy::Shape>()),
+          norm_exp);
   torch::lazy::NodePtr result =
       torch::lazy::MakeNode<Sum>(exp, dimensions, keepdim, dtype);
   return Pow(result, norm_exp_inv);
@@ -790,7 +786,9 @@ torch::lazy::NodePtr Rshift(const XlaValue& input, const XlaValue& other) {
 
 torch::lazy::NodePtr Remainder(const XlaValue& input, const XlaValue& divisor) {
   ScopePusher ir_scope(at::aten::remainder.toQualString());
-  torch::lazy::NodePtr f = Fmod(input, Abs(divisor));
+  torch::lazy::NodePtr f = Fmod(
+      input,
+      torch::lazy::MakeNode<Abs>(divisor, std::vector<torch::lazy::Shape>()));
   return f + divisor * ComparisonOp(at::aten::lt, SignOp(f) * SignOp(divisor),
                                     ScalarOp(0, input.xla_shape()));
 }

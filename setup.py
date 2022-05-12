@@ -120,6 +120,20 @@ def generate_xla_aten_code(base_dir):
     sys.exit(1)
 
 
+def generate_xla_lazy_code(base_dir):
+  generate_lazy_cmd = [
+      'python',
+      os.path.join(base_dir, 'scripts', 'gen_lazy_tensor.py')
+  ]
+  child = subprocess.Popen(generate_lazy_cmd)
+  streamdata = child.communicate()[0]
+  if child.returncode != 0:
+    print(
+        'Failed to generate lazy files: {}'.format(generate_lazy_cmd),
+        file=sys.stderr)
+    sys.exit(1)
+
+
 def build_extra_libraries(base_dir, build_mode=None):
   build_libs_cmd = [os.path.join(base_dir, 'build_torch_xla_libs.sh')]
   cxx_abi = getattr(torch._C, '_GLIBCXX_USE_CXX11_ABI', None)
@@ -243,6 +257,9 @@ if build_mode not in ['clean']:
   # Generate the code before globbing!
   generate_xla_aten_code(base_dir)
 
+  # Generate Lazy related files
+  generate_xla_lazy_code(base_dir)
+
   # Build the support libraries (ie, TF).
   build_extra_libraries(base_dir, build_mode=build_mode)
 
@@ -252,7 +269,8 @@ if build_mode not in ['clean']:
 # Fetch the sources to be built.
 torch_xla_sources = (
     glob.glob('torch_xla/csrc/*.cpp') + glob.glob('torch_xla/csrc/ops/*.cpp') +
-    glob.glob('torch_xla/pb/cpp/*.cc'))
+    glob.glob('torch_xla/pb/cpp/*.cc') +
+    glob.glob('torch_xla/csrc/generated/*.cpp'))
 
 # Constant known variables used throughout this file.
 lib_path = os.path.join(base_dir, 'torch_xla/lib')

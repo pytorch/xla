@@ -1,5 +1,8 @@
 backend: XLA
 cpp_namespace: torch_xla
+full_codegen:
+  - abs
+  - maximum
 supported:
   - __ilshift__.Scalar
   - __ilshift__.Tensor
@@ -27,7 +30,6 @@ supported:
   - _to_cpu
   - _trilinear
   - _unsafe_view
-  - abs
   - acos
   - acosh
   - adaptive_max_pool2d
@@ -189,7 +191,6 @@ supported:
   - max_pool3d_with_indices_backward
   - max_unpool2d
   - max_unpool3d
-  - maximum
   - mean
   - mean.dim
   - min

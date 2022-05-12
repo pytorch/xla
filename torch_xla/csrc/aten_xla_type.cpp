@@ -11,12 +11,12 @@
 #include "tensorflow/compiler/xla/xla_client/util.h"
 #include "torch/csrc/lazy/core/tensor_util.h"
 #include "torch/csrc/lazy/core/util.h"
-#include "torch_xla/csrc/XLANativeFunctions.h"
 #include "torch_xla/csrc/aten_autograd_ops.h"
 #include "torch_xla/csrc/aten_cpu_fallback.h"
 #include "torch_xla/csrc/aten_xla_bridge.h"
 #include "torch_xla/csrc/debug_util.h"
 #include "torch_xla/csrc/device.h"
+#include "torch_xla/csrc/generated/XLANativeFunctions.h"
 #include "torch_xla/csrc/helpers.h"
 #include "torch_xla/csrc/ops/as_strided.h"
 #include "torch_xla/csrc/ops/index_ops.h"
@@ -515,11 +515,6 @@ at::Tensor XLANativeFunctions::_unsafe_view(const at::Tensor& self,
                                             at::IntArrayRef size) {
   XLA_FN_COUNTER("xla::");
   return view(self, size);
-}
-
-at::Tensor XLANativeFunctions::abs(const at::Tensor& self) {
-  XLA_FN_COUNTER("xla::");
-  return bridge::AtenFromXlaTensor(XLATensor::abs(bridge::GetXlaTensor(self)));
 }
 
 at::Tensor XLANativeFunctions::acos(const at::Tensor& self) {
@@ -1965,16 +1960,6 @@ std::tuple<at::Tensor, at::Tensor> XLANativeFunctions::max(
   auto outputs = XLATensor::max(bridge::GetXlaTensor(self), dim, keepdim);
   return std::make_tuple(bridge::AtenFromXlaTensor(std::get<0>(outputs)),
                          bridge::AtenFromXlaTensor(std::get<1>(outputs)));
-}
-
-at::Tensor XLANativeFunctions::maximum(const at::Tensor& self,
-                                       const at::Tensor& other) {
-  XLA_FN_COUNTER("xla::");
-  return DoBinaryOp(self, other,
-                    [&](const XLATensor& xself, const XLATensor& xother,
-                        at::ScalarType dtype) {
-                      return XLATensor::max(xself, xother, dtype);
-                    });
 }
 
 std::tuple<at::Tensor&, at::Tensor&> XLANativeFunctions::max_out(

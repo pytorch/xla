@@ -67,6 +67,12 @@ class XlaNode : public torch::lazy::Node {
           size_t num_outputs = 1,
           torch::lazy::hash_t hash_seed = default_hash_seed);
 
+  XlaNode(torch::lazy::OpKind op, OpList operands,
+          std::vector<torch::lazy::Shape>&& shapes,
+          const std::function<xla::Shape()>& xla_shape_fn,
+          size_t num_outputs = 1,
+          torch::lazy::hash_t hash_seed = default_hash_seed);
+
   XlaNode(torch::lazy::OpKind op, OpList operands, torch::lazy::Shape shape,
           xla::Shape xla_shape, size_t num_outputs = 1,
           torch::lazy::hash_t hash_seed = default_hash_seed);
