@@ -1,6 +1,8 @@
 backend: XLA
 cpp_namespace: torch_xla
 full_codegen:
+  - acos
+  - acosh
   - abs
   - maximum
 supported:
@@ -30,8 +32,6 @@ supported:
   - _to_cpu
   - _trilinear
   - _unsafe_view
-  - acos
-  - acosh
   - adaptive_max_pool2d
   - adaptive_max_pool2d_backward
   - add.Scalar

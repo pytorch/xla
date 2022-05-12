@@ -517,17 +517,6 @@ at::Tensor XLANativeFunctions::_unsafe_view(const at::Tensor& self,
   return view(self, size);
 }
 
-at::Tensor XLANativeFunctions::acos(const at::Tensor& self) {
-  XLA_FN_COUNTER("xla::");
-  return bridge::AtenFromXlaTensor(XLATensor::acos(bridge::GetXlaTensor(self)));
-}
-
-at::Tensor XLANativeFunctions::acosh(const at::Tensor& self) {
-  XLA_FN_COUNTER("xla::");
-  return bridge::AtenFromXlaTensor(
-      XLATensor::acosh(bridge::GetXlaTensor(self)));
-}
-
 at::Tensor XLANativeFunctions::add(const at::Tensor& self,
                                    const at::Tensor& other,
                                    const at::Scalar& alpha) {
