@@ -5,6 +5,10 @@ namespace torch_xla {
 
 xla::Shape AbsOutputShape(const XlaValue& input);
 
+xla::Shape AcosOutputShape(const XlaValue& input);
+
+xla::Shape AcoshOutputShape(const XlaValue& input);
+
 xla::Shape MaximumOutputShape(const XlaValue& input, const XlaValue& other);
 
 }  // namespace torch_xla
