@@ -58,9 +58,13 @@ def consolidate_sharded_state_dicts(state_dict_list, shard_metadata):
   """
   assert len(state_dict_list) == shard_metadata["world_size"]
   full_state_dict = OrderedDict()
+  buffer_info = shard_metadata.get("buffer_info", {})
 
   # consolidate the sharded parameters
   for name, p in state_dict_list[0].items():
+    if name in buffer_info:  # cast buffers back to its original dtype
+      p = p.to(buffer_info[name]["_orig_dtype"])
+
     is_sharded = False
     name_splits = name.split(".")
     for idx, sep in enumerate(name_splits):
