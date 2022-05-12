@@ -103,6 +103,7 @@
 #include "torch_xla/csrc/ops/prod.h"
 #include "torch_xla/csrc/ops/put.h"
 #include "torch_xla/csrc/ops/qr.h"
+#include "torch_xla/csrc/ops/recv.h"
 #include "torch_xla/csrc/ops/reduce_scatter.h"
 #include "torch_xla/csrc/ops/reflection_pad2d.h"
 #include "torch_xla/csrc/ops/reflection_pad2d_backward.h"
@@ -116,6 +117,7 @@
 #include "torch_xla/csrc/ops/scalar.h"
 #include "torch_xla/csrc/ops/scatter.h"
 #include "torch_xla/csrc/ops/scatter_add.h"
+#include "torch_xla/csrc/ops/send.h"
 #include "torch_xla/csrc/ops/sgd_optimizer_step.h"
 #include "torch_xla/csrc/ops/shrink_backward.h"
 #include "torch_xla/csrc/ops/softmax.h"
@@ -447,6 +449,23 @@ XLATensor XLATensor::get_dimensions_size(const XLATensor& input,
   return input.CreateFrom(torch::lazy::MakeNode<GetDimensionsSize>(
                               input.GetIrValue(), std::move(dimensions)),
                           at::ScalarType::Int);
+}
+
+std::pair<XLATensor, XlaValue> XLATensor::recv(XLATensor& output,
+                                               const XlaValue& token,
+                                               int64_t channel_id) {
+  torch::lazy::NodePtr node = torch::lazy::MakeNode<ir::ops::Recv>(
+      token, output.GetIrValue().xla_shape(), channel_id);
+  output.SetIrValue(XlaValue(node, 0));
+  return {output.CreateFrom(XlaValue(node, 0)), XlaValue(node, 1)};
+}
+
+std::pair<XLATensor, XlaValue> XLATensor::send(const XLATensor& input,
+                                               const XlaValue& token,
+                                               int64_t channel_id) {
+  torch::lazy::NodePtr node = torch::lazy::MakeNode<ir::ops::Send>(
+      input.GetIrValue(), token, channel_id);
+  return {input.CreateFrom(XlaValue(node, 0)), XlaValue(node, 1)};
 }
 
 void XLATensor::sgd_optimizer_step_(const XLATensor& found_inf, XLATensor& step,

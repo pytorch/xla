@@ -702,6 +702,38 @@ def collective_permute(value, pairs):
   return result[0]
 
 
+def send(value, channel_id):
+  """Performs a XLA `Send()` operation on the input tensor.
+
+  See: https://www.tensorflow.org/xla/operation_semantics#send
+
+  Args:
+    value (torch.Tensor): The input tensor.
+    channel_id (int64): opaque id identifying the destination of the send op.
+  """
+  token, devctx = _get_all_reduce_token()
+  # The input will be returned as result.
+  input_as_result, new_token = torch_xla._XLAC._xla_send(
+      value, token, channel_id)
+  devctx.all_reduce_token = new_token
+  return input_as_result
+
+
+def recv(output, channel_id):
+  """Performs a XLA `Send()` operation on the input tensor.
+
+  See: https://www.tensorflow.org/xla/operation_semantics#recv
+
+  Args:
+    output (torch.Tensor): The output tensor.
+    channel_id (int64): opaque id identifying the source of the recv op.
+  """
+  token, devctx = _get_all_reduce_token()
+  result, new_token = torch_xla._XLAC._xla_recv(output, token, channel_id)
+  devctx.all_reduce_token = new_token
+  return result
+
+
 def reduce_scatter(reduce_type,
                    input,
                    scale,

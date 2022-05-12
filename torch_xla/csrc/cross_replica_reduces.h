@@ -31,6 +31,16 @@ struct CollectivePermuteResult {
   xla::XlaOp token;
 };
 
+struct SendResult {
+  xla::XlaOp input_as_result;
+  xla::XlaOp token;
+};
+
+struct RecvResult {
+  xla::XlaOp result;
+  xla::XlaOp token;
+};
+
 struct ReduceScatterResult {
   xla::XlaOp result;
   xla::XlaOp token;
@@ -55,6 +65,12 @@ AllGatherResult BuildAllGather(xla::XlaOp input, xla::XlaOp token, int64_t dim,
 CollectivePermuteResult BuildCollectivePermute(
     xla::XlaOp input, xla::XlaOp token,
     const std::vector<std::pair<int64_t, int64_t>>& source_target_pairs);
+
+SendResult BuildSendWithToken(xla::XlaOp input, xla::XlaOp token,
+                              int64_t channel_id);
+
+RecvResult BuildRecvWithToken(xla::XlaOp token, const xla::Shape& recv_shape,
+                              int64_t channel_id);
 
 ReduceScatterResult BuildReduceScatter(
     AllReduceType reduce_type, xla::XlaOp input, xla::XlaOp token, double scale,
