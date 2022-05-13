@@ -59,10 +59,12 @@ if [ "$CMD" == "clean" ]; then
   bazel clean
   popd
 else
+  # Temporary patch until tensorflow update bazel requirement to 5.2.0
+  echo "6e54699884cfad49d4e8f6dd59a4050bc95c4edf" > third_party/tensorflow/.bazelversion
   cp -r -u -p $THIRD_PARTY_DIR/xla_client $THIRD_PARTY_DIR/tensorflow/tensorflow/compiler/xla/
 
   pushd $THIRD_PARTY_DIR/tensorflow
-  bazel build $MAX_JOBS $VERBOSE $TPUVM_FLAG --spawn_strategy=sandboxed --define framework_shared_object=false -c "$MODE" "${OPTS[@]}" \
+  bazel build $MAX_JOBS $VERBOSE $TPUVM_FLAG --spawn_strategy=local --define framework_shared_object=false -c "$MODE" "${OPTS[@]}" \
     $XLA_CUDA_CFG //tensorflow/compiler/xla/xla_client:libxla_computation_client.so
 
   popd
