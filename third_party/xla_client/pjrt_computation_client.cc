@@ -80,15 +80,13 @@ std::vector<ComputationClient::DataPtr> PjRtComputationClient::TransferToServer(
   for (auto& tensor : tensors) {
     xla::Literal literal(tensor.shape);
     tensor.populate_fn(tensor, literal.untyped_data(), literal.size_bytes());
-    xla::Shape shape = LayoutUtil::GetWithDefaultLayout(tensor.shape);
-    literal = literal.Relayout(shape);
 
     PjRtDevice* pjrt_device = StringToPjRtDevice(tensor.device);
     std::shared_ptr<xla::PjRtBuffer> buffer =
         client_->BufferFromHostLiteral(literal, pjrt_device).ValueOrDie();
     buffer->GetReadyFuture().Await();
     ComputationClient::DataPtr data =
-        std::make_shared<PjRtData>(tensor.device, shape, buffer);
+        std::make_shared<PjRtData>(tensor.device, tensor.shape, buffer);
     datas.push_back(data);
   }
 
@@ -120,6 +118,7 @@ std::vector<ComputationClient::ComputationPtr> PjRtComputationClient::Compile(
     xla::ProgramShape program_shape =
         instance.computation.GetProgramShape().ValueOrDie();
     xla::CompileOptions compile_options;
+    // TODO(wcromar): set compile_options.argument_layouts, enable strict shapes
     compile_options.executable_build_options.set_num_replicas(
         client_->addressable_device_count());
     compile_options.executable_build_options.set_device_ordinal(
@@ -162,6 +161,7 @@ PjRtComputationClient::ExecuteComputation(
 
   xla::ExecuteOptions execute_options;
   execute_options.untuple_result = options.explode_tuple;
+  execute_options.strict_shape_checking = false;
   std::vector<std::unique_ptr<xla::PjRtBuffer>> results =
       pjrt_computation.executable
           ->ExecuteSharded(buffers, pjrt_device, execute_options)
