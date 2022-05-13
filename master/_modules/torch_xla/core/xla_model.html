@@ -996,6 +996,38 @@
   <span class="k">return</span> <span class="n">result</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
 
 
+<span class="k">def</span> <span class="nf">send</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="n">channel_id</span><span class="p">):</span>
+  <span class="sd">&quot;&quot;&quot;Performs a XLA `Send()` operation on the input tensor.</span>
+
+<span class="sd">  See: https://www.tensorflow.org/xla/operation_semantics#send</span>
+
+<span class="sd">  Args:</span>
+<span class="sd">    value (torch.Tensor): The input tensor.</span>
+<span class="sd">    channel_id (int64): opaque id identifying the destination of the send op.</span>
+<span class="sd">  &quot;&quot;&quot;</span>
+  <span class="n">token</span><span class="p">,</span> <span class="n">devctx</span> <span class="o">=</span> <span class="n">_get_all_reduce_token</span><span class="p">()</span>
+  <span class="c1"># The input will be returned as result.</span>
+  <span class="n">input_as_result</span><span class="p">,</span> <span class="n">new_token</span> <span class="o">=</span> <span class="n">torch_xla</span><span class="o">.</span><span class="n">_XLAC</span><span class="o">.</span><span class="n">_xla_send</span><span class="p">(</span>
+      <span class="n">value</span><span class="p">,</span> <span class="n">token</span><span class="p">,</span> <span class="n">channel_id</span><span class="p">)</span>
+  <span class="n">devctx</span><span class="o">.</span><span class="n">all_reduce_token</span> <span class="o">=</span> <span class="n">new_token</span>
+  <span class="k">return</span> <span class="n">input_as_result</span>
+
+
+<span class="k">def</span> <span class="nf">recv</span><span class="p">(</span><span class="n">output</span><span class="p">,</span> <span class="n">channel_id</span><span class="p">):</span>
+  <span class="sd">&quot;&quot;&quot;Performs a XLA `Send()` operation on the input tensor.</span>
+
+<span class="sd">  See: https://www.tensorflow.org/xla/operation_semantics#recv</span>
+
+<span class="sd">  Args:</span>
+<span class="sd">    output (torch.Tensor): The output tensor.</span>
+<span class="sd">    channel_id (int64): opaque id identifying the source of the recv op.</span>
+<span class="sd">  &quot;&quot;&quot;</span>
+  <span class="n">token</span><span class="p">,</span> <span class="n">devctx</span> <span class="o">=</span> <span class="n">_get_all_reduce_token</span><span class="p">()</span>
+  <span class="n">result</span><span class="p">,</span> <span class="n">new_token</span> <span class="o">=</span> <span class="n">torch_xla</span><span class="o">.</span><span class="n">_XLAC</span><span class="o">.</span><span class="n">_xla_recv</span><span class="p">(</span><span class="n">output</span><span class="p">,</span> <span class="n">token</span><span class="p">,</span> <span class="n">channel_id</span><span class="p">)</span>
+  <span class="n">devctx</span><span class="o">.</span><span class="n">all_reduce_token</span> <span class="o">=</span> <span class="n">new_token</span>
+  <span class="k">return</span> <span class="n">result</span>
+
+
 <span class="k">def</span> <span class="nf">reduce_scatter</span><span class="p">(</span><span class="n">reduce_type</span><span class="p">,</span>
                    <span class="nb">input</span><span class="p">,</span>
                    <span class="n">scale</span><span class="p">,</span>
