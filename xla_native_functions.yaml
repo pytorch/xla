@@ -4,6 +4,10 @@ full_codegen:
   - acos
   - acosh
   - abs
+  - asin
+  - asinh
+  - atan
+  - atanh
   - maximum
 supported:
   - __ilshift__.Scalar
@@ -52,11 +56,7 @@ supported:
   - argmin
   - as_strided
   - as_strided_
-  - asin
-  - asinh
-  - atan
   - atan2
-  - atanh
   - avg_pool2d
   - avg_pool2d_backward
   - avg_pool3d
