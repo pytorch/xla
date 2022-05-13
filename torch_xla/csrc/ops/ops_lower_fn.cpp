@@ -21,6 +21,15 @@ torch_xla::XlaOpVector Acosh::Lower(LoweringContext* loctx) const {
   return ReturnOp(xla::Acosh(xla_input), loctx);
 }
 
+torch_xla::XlaOpVector Addcmul::Lower(LoweringContext* loctx) const {
+  xla::XlaOp xla_input = loctx->GetOutputOp(operand(0));
+  xla::XlaOp xla_tensor_1 = loctx->GetOutputOp(operand(1));
+  xla::XlaOp xla_tensor_2 = loctx->GetOutputOp(operand(2));
+  xla::XlaOp xla_constant = loctx->GetOutputOp(operand(3));
+  xla::XlaOp mul = xla_tensor_1 * xla_tensor_2;
+  return ReturnOp(xla_input + mul * xla_constant, loctx);
+}
+
 torch_xla::XlaOpVector Asin::Lower(LoweringContext* loctx) const {
   xla::XlaOp xla_input = loctx->GetOutputOp(operand(0));
   return ReturnOp(xla::Asin(xla_input), loctx);

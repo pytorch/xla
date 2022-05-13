@@ -1,9 +1,10 @@
 backend: XLA
 cpp_namespace: torch_xla
 full_codegen:
+  - abs
   - acos
   - acosh
-  - abs
+  - addcmul
   - asin
   - asinh
   - atan
@@ -46,7 +47,6 @@ supported:
   - add.Tensor
   - addcdiv
   - addcdiv_
-  - addcmul
   - addmm
   - alias
   - all
