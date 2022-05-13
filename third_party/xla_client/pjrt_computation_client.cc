@@ -2,6 +2,7 @@
 
 #include <algorithm>
 
+#include "absl/strings/ascii.h"
 #include "absl/types/span.h"
 #include "tensorflow/compiler/xla/client/xla_computation.h"
 #include "tensorflow/compiler/xla/layout_util.h"
@@ -20,8 +21,8 @@ namespace xla {
 namespace {
 
 std::string PjRtDeviceToString(PjRtDevice* const device) {
-  std::string platform(device->client()->platform_name());
-  std::transform(platform.begin(), platform.end(), platform.begin(), ::toupper);
+  std::string platform =
+      absl::AsciiStrToUpper(device->client()->platform_name());
   std::string str = absl::StrFormat("%s:%d", platform, device->id());
   return str;
 }
