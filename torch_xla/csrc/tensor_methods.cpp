@@ -1415,7 +1415,7 @@ XLATensor XLATensor::gather(const XLATensor& input, int64_t dim,
     }
   }
   return input.CreateFrom(torch::lazy::MakeNode<Gather>(
-      input.GetIrValue(), canonical_dim, index.GetIrValue()));
+      input.GetIrValue(), canonical_dim, index.GetIrValue(), sparse_grad));
 }
 
 XLATensor XLATensor::ge(const XLATensor& input, const at::Scalar& other) {
