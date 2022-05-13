@@ -709,28 +709,6 @@ const at::Tensor& XLANativeFunctions::as_strided_(
   return self;
 }
 
-at::Tensor XLANativeFunctions::asin(const at::Tensor& self) {
-  XLA_FN_COUNTER("xla::");
-  return bridge::AtenFromXlaTensor(XLATensor::asin(bridge::GetXlaTensor(self)));
-}
-
-at::Tensor XLANativeFunctions::asinh(const at::Tensor& self) {
-  XLA_FN_COUNTER("xla::");
-  return bridge::AtenFromXlaTensor(
-      XLATensor::asinh(bridge::GetXlaTensor(self)));
-}
-
-at::Tensor XLANativeFunctions::atan(const at::Tensor& self) {
-  XLA_FN_COUNTER("xla::");
-  return bridge::AtenFromXlaTensor(XLATensor::atan(bridge::GetXlaTensor(self)));
-}
-
-at::Tensor XLANativeFunctions::atanh(const at::Tensor& self) {
-  XLA_FN_COUNTER("xla::");
-  return bridge::AtenFromXlaTensor(
-      XLATensor::atanh(bridge::GetXlaTensor(self)));
-}
-
 at::Tensor XLANativeFunctions::atan2(const at::Tensor& self,
                                      const at::Tensor& other) {
   XLA_FN_COUNTER("xla::");
