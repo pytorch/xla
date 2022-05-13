@@ -822,22 +822,6 @@ void XLATensor::as_strided_(XLATensor& input, std::vector<int64_t> size,
   }
 }
 
-XLATensor XLATensor::asin(const XLATensor& input) {
-  return input.CreateFrom(Asin(input.GetIrValue()));
-}
-
-XLATensor XLATensor::asinh(const XLATensor& input) {
-  return input.CreateFrom(Asinh(input.GetIrValue()));
-}
-
-XLATensor XLATensor::atan(const XLATensor& input) {
-  return input.CreateFrom(Atan(input.GetIrValue()));
-}
-
-XLATensor XLATensor::atanh(const XLATensor& input) {
-  return input.CreateFrom(Atanh(input.GetIrValue()));
-}
-
 XLATensor XLATensor::atan2(const XLATensor& input, const XLATensor& other,
                            c10::optional<at::ScalarType> logical_element_type) {
   return input.CreateFrom(Atan2(input.GetIrValue(), other.GetIrValue()),

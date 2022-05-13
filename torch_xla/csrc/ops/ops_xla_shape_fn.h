@@ -9,6 +9,14 @@ xla::Shape AcosOutputShape(const XlaValue& input);
 
 xla::Shape AcoshOutputShape(const XlaValue& input);
 
+xla::Shape AsinOutputShape(const XlaValue& input);
+
+xla::Shape AsinhOutputShape(const XlaValue& input);
+
+xla::Shape AtanOutputShape(const XlaValue& input);
+
+xla::Shape AtanhOutputShape(const XlaValue& input);
+
 xla::Shape MaximumOutputShape(const XlaValue& input, const XlaValue& other);
 
 }  // namespace torch_xla

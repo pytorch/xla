@@ -393,14 +393,6 @@ class XLATensor : public c10::intrusive_ptr_target {
                           std::vector<int64_t> stride,
                           c10::optional<int64_t> storage_offset);
 
-  static XLATensor asin(const XLATensor& input);
-
-  static XLATensor asinh(const XLATensor& input);
-
-  static XLATensor atan(const XLATensor& input);
-
-  static XLATensor atanh(const XLATensor& input);
-
   static XLATensor atan2(
       const XLATensor& input, const XLATensor& other,
       c10::optional<at::ScalarType> logical_element_type = c10::nullopt);
