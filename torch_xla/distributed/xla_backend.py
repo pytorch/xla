@@ -58,12 +58,12 @@ class ProcessGroupXla(ProcessGroup):
     reduce_type = self._get_reduce_type(all_reduce_options.reduceOp)
 
     # TODO(hjm-aws): implement all_reduce_options.timeout.
-    xm.all_reduce(reduce_type, tensors, groups=self._mesh)
+    xm.all_reduce(reduce_type, tensors, groups=self._mesh, pin_layout=False)
     return WorkXla(tensors)
 
   def allgather(self, output_tensors_list, input_tensors):
     for input_tensor, output_tensors in zip(input_tensors, output_tensors_list):
-      result = xm.all_gather(input_tensor, groups=self._mesh)
+      result = xm.all_gather(input_tensor, groups=self._mesh, pin_layout=False)
       for i, slice in enumerate(torch.split(result, input_tensor.shape[0])):
         output_tensors[i].copy_(slice)
 
@@ -77,7 +77,8 @@ class ProcessGroupXla(ProcessGroup):
     if root_rank != self.rank():
       with torch.no_grad():
         root_tensor.zero_()
-    xm.all_reduce(xm.REDUCE_SUM, [root_tensor], groups=self._mesh)
+    xm.all_reduce(
+        xm.REDUCE_SUM, [root_tensor], groups=self._mesh, pin_layout=False)
 
     return WorkXla([root_tensor])
 
@@ -102,7 +103,8 @@ class ProcessGroupXla(ProcessGroup):
           shard_count=shard_count,
           scale=1,
           groups=groups,
-          output=output_tensor)
+          output=output_tensor,
+          pin_layout=False)
 
     return WorkXla(output_tensors)
 

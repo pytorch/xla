@@ -593,7 +593,49 @@ def all_reduce(reduce_type,
   return results[0] if isinstance(inputs, torch.Tensor) else results
 
 
-def all_gather(value, dim=0, groups=None, output=None, pin_layout=False):
+def _all_gather_using_all_reduce(value, dim=0, groups=None, pin_layout=True):
+  """Performs an all-gather operation using all-reduce along a given dimension.
+
+  Args:
+    value (torch.Tensor): The input tensor.
+    dim (int): The gather dimension.
+      Default: 0
+    groups (list, optional): A list of list, representing the replica groups for
+      the `all_gather()` operation. Example: `[[0, 1, 2, 3], [4, 5, 6, 7]]`
+        defines two groups, one with the `[0, 1, 2, 3]` replicas and one with
+        the `[4, 5, 6, 7]` replicas. If `None` there will be only one group with
+        all the replicas in it.
+    output (torch.Tensor): Optional output tensor.
+    pin_layout (bool, optional): whether to pin the layout for this communication op.
+      Layout pining can prevent potential data corruption when each process that
+      participate in the communication has slightly different program, but it might
+      cause some xla compiation to fail. Unpin the layout when you see error message
+      like "HloModule has a mix of layout constrained".
+
+  Returns:
+    A tensor which has, in the ``dim`` dimension, all the values from the
+    participating replicas.
+  """
+  if dim < 0:
+    dim = value.dim() + dim
+  size = value.size(dim)
+  padding = [0] * (2 * value.dim())
+  ordinal = get_ordinal()
+  if groups is None:
+    left, right = ordinal, xrt_world_size() - 1 - ordinal
+  else:
+    ordinals = dict()
+    for g in groups:
+      for i, x in enumerate(g):
+        ordinals[x] = (i, len(g) - 1 - i)
+    left, right = ordinals[ordinal]
+  idx = value.dim() - 1 - dim
+  padding[2 * idx] = left * size
+  padding[2 * idx + 1] = right * size
+  return all_reduce(REDUCE_SUM, F.pad(value, padding), groups=groups)
+
+
+def all_gather(value, dim=0, groups=None, output=None, pin_layout=True):
   """Performs an all-gather operation along a given dimension.
 
   Args:
@@ -616,6 +658,11 @@ def all_gather(value, dim=0, groups=None, output=None, pin_layout=False):
     A tensor which has, in the ``dim`` dimension, all the values from the
     participating replicas.
   """
+  if pin_layout == True and output == None:
+    # There is not an easy way to pin the all_gather layout on TPU and GPU, use
+    # all_reduce based all_gather for this purpose.
+    return _all_gather_using_all_reduce(
+        value, dim=dim, groups=groups, pin_layout=True)
   if dim < 0:
     dim = value.dim() + dim
   token, devctx = _get_all_reduce_token()
@@ -645,7 +692,7 @@ def all_to_all(value,
                concat_dimension,
                split_count,
                groups=None,
-               pin_layout=False):
+               pin_layout=True):
   """Performs an XLA `AllToAll()` operation on the input tensor.
 
   See: https://www.tensorflow.org/xla/operation_semantics#alltoall
@@ -741,7 +788,7 @@ def reduce_scatter(reduce_type,
                    shard_count,
                    groups=None,
                    output=None,
-                   pin_layout=False):
+                   pin_layout=True):
   """Performs a XLA `ReduceScatter()` operation on the input tensor.
 
   See: https://www.tensorflow.org/xla/operation_semantics#reducescatter
