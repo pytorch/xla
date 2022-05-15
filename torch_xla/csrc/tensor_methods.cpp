@@ -1283,12 +1283,22 @@ XLATensor XLATensor::expand(const XLATensor& input, std::vector<int64_t> size) {
 }
 
 XLATensor XLATensor::dynamic_expand(const XLATensor& input,
-                                    std::vector<int64_t> size,
-                                    std::vector<bool> dynamic_dim) {
-  auto input_shape = input.shape();
+                                    std::vector<torch::lazy::NodePtr>& size_nodes,
+                                    std::vector<int64_t> upper_bounds,
+                                    std::vector<bool> dynamic_dims) {
+  std::vector<ir::Value> size_values;
+  for (auto& size_node : size_nodes) {
+    size_values.push_back(ir::Value(size_node)); //TODO: what do we set index to?
+  }
   return input.CreateFrom(ir::ops::DynamicExpand(
-      input.GetIrValue(), std::move(size), std::move(dynamic_dim)));
+      input.GetIrValue(), size_values, std::move(upper_bounds), std::move(dynamic_dims)));
 }
+
+// XLATensor XLATensor::size_node(const XLATensor& input,
+//                                const size_t dim) {
+//   return input.CreateFrom(ir::ops::SizdNode(
+//       input.GetIrValue(), std::move(dim));
+// }
 
 XLATensor XLATensor::expm1(const XLATensor& input) {
   return input.CreateFrom(Expm1(input.GetIrValue()));

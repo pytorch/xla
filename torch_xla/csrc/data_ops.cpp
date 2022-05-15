@@ -122,36 +122,19 @@ xla::XlaOp BuildExpand(xla::XlaOp input,
 }
 
 xla::XlaOp BuildDynamicExpand(xla::XlaOp input,
-                              xla::XlaOp upper_bound_size_input) {
-  auto upper_bound_size_input_shape =
-      XlaHelpers::ShapeOfXlaOp(upper_bound_size_input);
-  xla::XlaOp output =
-      BuildExpand(input, upper_bound_size_input_shape.dimensions());
-
+                              absl::Span<const xla::XlaOp> output_sizes) {
   /* Update Output Dynamic Dimensions based on Input Size */
-  for (int i = 0; i < upper_bound_size_input_shape.rank(); ++i) {
-    if (upper_bound_size_input_shape.is_dynamic_dimension(i)) {
-      output = xla::SetDimensionSize(
-          output,
-          MaybeConvertTo(xla::GetDimensionSize(upper_bound_size_input, i),
+  for (int i = 0; i < output_sizes.size(); i++) {
+    xla::Shape dim_shape = XlaHelpers::ShapeOfXlaOp(output_sizes[i]);
+    if (dim_shape.is_dynamic()) {
+      input = xla::SetDimensionSize(
+          input,
+          MaybeConvertTo(output_sizes[i],
                          xla::PrimitiveType::S32),
           i);
     }
   }
-
-  /* Update Output Dynamic Dimensions based on Input Tensor */
-  const xla::Shape& input_shape = XlaHelpers::ShapeOfXlaOp(input);
-  for (int i = 0; i < input_shape.rank(); i++) {
-    if (input_shape.is_dynamic_dimension(i)) {
-      output =
-          xla::SetDimensionSize(output,
-                                MaybeConvertTo(xla::GetDimensionSize(input, i),
-                                               xla::PrimitiveType::S32),
-                                i);
-    }
-  }
-
-  return output;
+  return input;
 }
 
 std::vector<int64_t> BuildSqueezedDimensions(
