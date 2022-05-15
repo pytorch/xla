@@ -1139,31 +1139,33 @@ torch::lazy::NodePtr DynamicExpand(const XlaValue& input,
   std::vector<xla::Shape> shapes;
   shapes.push_back(input.xla_shape());
   for (int i = 0; i < upper_bounds.size(); i++) {
-    shapes.push_back(xla::ShapeUtil::MakeShape(input.xla_shape().element_type(), {upper_bounds[i]}, {dynamic_dims[i]}));
+    shapes.push_back(xla::ShapeUtil::MakeShape(input.xla_shape().element_type(),
+                                               {upper_bounds[i]},
+                                               {dynamic_dims[i]}));
   }
 
-  auto lower_fn = [&](const XlaNode& node, LoweringContext* loctx) -> XlaOpVector {
+  auto lower_fn = [&](const XlaNode& node,
+                      LoweringContext* loctx) -> XlaOpVector {
     XLA_CHECK_GE(node.operands().size(), 2) << node.operands().size();
     xla::XlaOp input = loctx->GetOutputOp(node.operand(0));
     std::vector<xla::XlaOp> size_ops;
     for (int i = 1; i < node.operands().size(); i++) {
       size_ops.push_back(loctx->GetOutputOp(node.operand(i)));
     }
-    xla::XlaOp output = BuildDynamicExpand(BuildExpand(input, upper_bounds), size_ops);
+    xla::XlaOp output =
+        BuildDynamicExpand(BuildExpand(input, upper_bounds), size_ops);
     return node.ReturnOp(output, loctx);
   };
 
   auto shape_fn = [&](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
     XLA_CHECK_GE(operands.size(), 2) << operands.size();
-    return BuildDynamicExpand(BuildExpand(operands[0], upper_bounds), operands.subspan(1));
+    return BuildDynamicExpand(BuildExpand(operands[0], upper_bounds),
+                              operands.subspan(1));
   };
 
-  return GenericOp(
-      torch::lazy::OpKind(at::aten::expand), xla_values,
-      [&]() {
-        return InferOutputShape(shapes, shape_fn);
-      },
-      std::move(lower_fn));
+  return GenericOp(torch::lazy::OpKind(at::aten::expand), xla_values,
+                   [&]() { return InferOutputShape(shapes, shape_fn); },
+                   std::move(lower_fn));
 }
 
 }  // namespace torch_xla
