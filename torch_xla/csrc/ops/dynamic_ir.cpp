@@ -1,5 +1,6 @@
 #include "torch_xla/csrc/ops/dynamic_ir.h"
 
+#include "tensorflow/compiler/xla/xla_client/debug_macros.h"
 #include "absl/strings/str_join.h"
 #include "torch_xla/csrc/lowering_context.h"
 #include "torch_xla/csrc/ops/infer_output_shape.h"
@@ -61,10 +62,10 @@ SizeDiv::SizeDiv(XlaValue a, XlaValue b)
           torch::lazy::MHash(1)){};
 
 int64_t SizeDiv::getStaticValue() const {
-  TORCH_CHECK(
+  XLA_CHECK(
       dynamic_cast<const DimensionNode*>(operand(1).node)->getStaticValue() !=
-          0,
-      "Can't divide a dimension by zero");
+          0) << 
+      "Can't divide a dimension by zero";
   return dynamic_cast<const DimensionNode*>(operand(0).node)->getStaticValue() /
          dynamic_cast<const DimensionNode*>(operand(1).node)->getStaticValue();
 }
