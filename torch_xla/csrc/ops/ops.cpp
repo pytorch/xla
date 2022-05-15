@@ -1130,45 +1130,36 @@ torch::lazy::NodePtr Selu(const torch::lazy::Value& input) {
 }
 
 torch::lazy::NodePtr DynamicExpand(const XlaValue& input,
-                                   const std::vector<XlaValue>& size_values,
-                                   const std::vector<int64_t> upper_bound_size,
-                                   const std::vector<bool> dynamic_dim) {
-  std::vector<XlaValue> values = size_values;
-  values.insert(values.begin(), input);
+                                   const std::vector<XlaValue>& dimensions,
+                                   const std::vector<int64_t> upper_bounds,
+                                   const std::vector<bool> dynamic_dims) {
+  std::vector<XlaValue> xla_values = dimensions;
+  xla_values.insert(xla_values.begin(), input);
 
   std::vector<xla::Shape> shapes;
   shapes.push_back(input.xla_shape());
-  for (int i = 0; i < upper_bound_size.size(); i++) {
-    shapes.push_back(xla::ShapeUtil::MakeShape(xla::S32, {upper_bound_size[i]}, {dynamic_dim[i]}));
+  for (int i = 0; i < upper_bounds.size(); i++) {
+    shapes.push_back(xla::ShapeUtil::MakeShape(input.xla_shape().element_type(), {upper_bounds[i]}, {dynamic_dims[i]}));
   }
 
-  // xla::Shape target_shape =
-  //     xla::ShapeUtil::MakeShape(xla::S32, upper_bound_size, dynamic_dim);
-
   auto lower_fn = [&](const XlaNode& node, LoweringContext* loctx) -> XlaOpVector {
-    // XLA_CHECK_GE(node.size(), 2) << node.size();
+    XLA_CHECK_GE(node.operands().size(), 2) << node.operands().size();
     xla::XlaOp input = loctx->GetOutputOp(node.operand(0));
     std::vector<xla::XlaOp> size_ops;
     for (int i = 1; i < node.operands().size(); i++) {
       size_ops.push_back(loctx->GetOutputOp(node.operand(i)));
     }
-
-    /* Construct Upper Bound Tensor Shape */
-    // xla::XlaOp upper_bound_size_input =
-    //     xla::Parameter(loctx->builder(), 0, target_shape, "upper_bound_size");
-    xla::XlaOp output = BuildDynamicExpand(BuildExpand(input, upper_bound_size), size_ops);
+    xla::XlaOp output = BuildDynamicExpand(BuildExpand(input, upper_bounds), size_ops);
     return node.ReturnOp(output, loctx);
   };
 
   auto shape_fn = [&](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
-    // XLA_CHECK_GE(operands.size(), 2) << operands.size();
-    // std::vector<xla::XlaOp> output_sizes;
-    // std::copy(operands.begin()+1, operands.end(), output_sizes.begin());
-    return BuildDynamicExpand(BuildExpand(operands[0], upper_bound_size), operands.subspan(1));
+    XLA_CHECK_GE(operands.size(), 2) << operands.size();
+    return BuildDynamicExpand(BuildExpand(operands[0], upper_bounds), operands.subspan(1));
   };
 
   return GenericOp(
-      torch::lazy::OpKind(at::aten::expand), values,
+      torch::lazy::OpKind(at::aten::expand), xla_values,
       [&]() {
         return InferOutputShape(shapes, shape_fn);
       },

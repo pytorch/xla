@@ -12,12 +12,6 @@
 #include <vector>
 
 #include "torch_xla/csrc/ir.h"
-// #include <torch/c10/core/ScalarType.h>
-// #include <torch/csrc/lazy/core/hash.h>
-// #include <torch/csrc/lazy/core/ir.h>
-// #include <torch/csrc/lazy/core/ir_metadata.h>
-// #include <torch/csrc/lazy/ts_backend/ts_node.h>
-// #include <torch/c10/util/Flags.h>
 
 namespace torch_xla {
 
