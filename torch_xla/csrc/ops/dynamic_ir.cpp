@@ -5,21 +5,16 @@
 #include "torch_xla/csrc/ops/infer_output_shape.h"
 
 namespace torch_xla {
-namespace ir {
-namespace ops {
-namespace {
-  /* DO SHAPE EMPTY HERE */
-}
 
 DimensionNode::DimensionNode(torch::lazy::OpKind op, OpList operands, torch::lazy::hash_t hash_seed):
-  Node(op, operands, xla::ShapeUtil::MakeShape(xla::S32, {}), /*num_outputs=*/1, 
+  XlaNode(op, operands, xla::ShapeUtil::MakeShape(xla::S32, {}), /*num_outputs=*/1, 
   /* hash_seed */ hash_seed){}
 
 std::string DimensionNode::ToString() const {
   return "DimensionNode";
 }
 
-SizeNode::SizeNode(Value input, size_t dim):
+SizeNode::SizeNode(XlaValue input, size_t dim):
     DimensionNode(torch::lazy::OpKind{c10::Symbol::fromQualString("aten::size")}, {input}, torch::lazy::MHash(dim)),
     dim_(dim) {};
 
@@ -29,14 +24,14 @@ XlaOpVector SizeNode::Lower(LoweringContext* loctx) const {
 }
 
 int64_t SizeNode:: getStaticValue() const {
-    return dynamic_cast<const Node*>(operand(0).node)->shape(0).size(dim_);
+    return dynamic_cast<const XlaNode*>(operand(0).node)->shape(0).size(dim_);
 }
 
 std::string SizeNode::ToString() const {
   return "SizeNode";
 }
 
-SizeAdd::SizeAdd(Value a, Value b):
+SizeAdd::SizeAdd(XlaValue a, XlaValue b):
   DimensionNode(torch::lazy::OpKind{c10::Symbol::fromQualString("aten::add")}, {a, b}, torch::lazy::MHash(1)) {};
 
 int64_t SizeAdd::getStaticValue() const {
@@ -47,7 +42,7 @@ std::string SizeAdd::ToString() const {
   return "SizeAdd";
 }
 
-SizeMul::SizeMul(Value a, Value b):
+SizeMul::SizeMul(XlaValue a, XlaValue b):
   DimensionNode(torch::lazy::OpKind{c10::Symbol::fromQualString("aten::mul")}, {a, b}, torch::lazy::MHash(1)) {};
 
 int64_t SizeMul::getStaticValue() const {
@@ -58,7 +53,7 @@ std::string SizeMul::ToString() const {
   return "SizeMul";
 }
 
-SizeDiv::SizeDiv(Value a, Value b):
+SizeDiv::SizeDiv(XlaValue a, XlaValue b):
   DimensionNode(torch::lazy::OpKind{c10::Symbol::fromQualString("aten::div")}, {a, b}, torch::lazy::MHash(1)) {};
 
 int64_t SizeDiv::getStaticValue() const {
@@ -70,6 +65,4 @@ std::string SizeDiv::ToString() const {
   return "SizeDiv";
 }
 
-}  // namespace ops
-}  // namespace ir
 }  // namespace torch_xla

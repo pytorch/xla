@@ -12,6 +12,7 @@
 #include "tensorflow/compiler/xla/xla_client/metrics.h"
 #include "tensorflow/compiler/xla/xla_client/sys_util.h"
 #include "tensorflow/compiler/xla/xla_client/util.h"
+#include "torch/csrc/lazy/core/tensor.h"
 #include "torch/csrc/lazy/core/tensor_util.h"
 #include "torch/csrc/lazy/core/util.h"
 #include "torch_xla/csrc/aten_autograd_ops.h"
@@ -1330,22 +1331,21 @@ at::Tensor XLANativeFunctions::expand(const at::Tensor& self,
       bridge::GetXlaTensor(self), torch::lazy::ToVector<int64_t>(size)));
 }
 
-at::Tensor XLANativeFunctions::expand(const at::Tensor& self,
-                                      c10::SymIntArrayRef& sizes,
+at::Tensor XLANativeFunctions::expand(const at::Tensor & self, 
+                                      c10::SymIntArrayRef size, 
                                       bool implicit) {
   XLA_FN_COUNTER("xla::");
-  std::vector<c10::SymInt> _sizes = torch::lazy::ToVector<c10::SymInt>(sizes);
-  /* Get size size nodes */
-  std::vector<torch::lazy::NodePtr> size_nodes.reserve(_sizes.size());
+  std::vector<c10::SymInt> _sizes = torch::lazy::ToVector<c10::SymInt>(size);
+  std::vector<torch::lazy::NodePtr> size_nodes;
   std::vector<int64_t> upper_bounds;
   std::vector<bool> dynamic_dims;
-  for (int i = 0; i < _sizes.size(); i++) {
-    auto _symbolicIntNode = _sizes[i].toSymbolicIntNode();
-    auto _lazySymIntNode = dynamic_cast<torch::lazy::SymbolicIntNode>(_symbolicIntNode);
+  for (auto& _size : _sizes) {
+    std::shared_ptr<c10::SymbolicIntNode> _symbolicIntNode = _size.toSymbolicIntNode();
+    auto _lazySymIntNode = std::dynamic_pointer_cast<torch::lazy::SymbolicIntNode>(_symbolicIntNode);
     auto size_node = _lazySymIntNode->node_;
     size_nodes.push_back(size_node);
-    upper_bounds.push_back(dynamic_cast<ir::ops::DimensionNode&>(size_node).getStaticValue());
-    dynamic_dims.push_back(dynamic_cast<ir::ops::DimensionNode&>(size_node).isDynamic());
+    upper_bounds.push_back(std::dynamic_pointer_cast<torch_xla::DimensionNode>(size_node)->getStaticValue());
+    dynamic_dims.push_back(std::dynamic_pointer_cast<torch_xla::DimensionNode>(size_node)->isDynamic());
   }
 
   return bridge::AtenFromXlaTensor(XLATensor::dynamic_expand(
