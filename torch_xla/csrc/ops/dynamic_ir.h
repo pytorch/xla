@@ -37,11 +37,11 @@ namespace torch_xla {
 
 class DimensionNode : public XlaNode {
  public:
-  // DimensionNode(torch::lazy::OpKind op, OpList operands, torch::lazy:hash_t hash_seed = kHashSeed);
-  DimensionNode(torch::lazy::OpKind op, OpList operands, torch::lazy::hash_t hash_seed);
-  bool isDynamic() {
-      return false;
-  }
+  // DimensionNode(torch::lazy::OpKind op, OpList operands, torch::lazy:hash_t
+  // hash_seed = kHashSeed);
+  DimensionNode(torch::lazy::OpKind op, OpList operands,
+                torch::lazy::hash_t hash_seed);
+  bool isDynamic() { return false; }
 
   std::string ToString() const override;
 
@@ -58,21 +58,21 @@ class SizeNode : public DimensionNode {
   virtual XlaOpVector Lower(LoweringContext* loctx) const override;
 };
 
-class SizeAdd: public DimensionNode {
+class SizeAdd : public DimensionNode {
  public:
   SizeAdd(XlaValue a, XlaValue b);
   int64_t getStaticValue() const override;
   std::string ToString() const override;
 };
 
-class SizeMul: public DimensionNode {
+class SizeMul : public DimensionNode {
  public:
   SizeMul(XlaValue a, XlaValue b);
   int64_t getStaticValue() const override;
   std::string ToString() const override;
 };
 
-class SizeDiv: public DimensionNode {
+class SizeDiv : public DimensionNode {
  public:
   SizeDiv(XlaValue a, XlaValue b);
   int64_t getStaticValue() const override;
