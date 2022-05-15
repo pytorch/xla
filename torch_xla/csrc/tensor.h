@@ -566,11 +566,6 @@ class XLATensor : public c10::intrusive_ptr_target {
                           const std::vector<int64_t> upper_bounds,
                           const std::vector<bool> dynamic_dims);
 
-  //   static XLATensor size_node(const XLATensor& input,
-  //                              const
-  //                              std::vector<torch_xla::ir::ops::SizeNode>&
-  //                              size_nodes);
-
   static XLATensor expm1(const XLATensor& input);
 
   static void exponential_(XLATensor& input, double lambd);
