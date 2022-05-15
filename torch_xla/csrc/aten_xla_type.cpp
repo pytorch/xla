@@ -23,6 +23,7 @@
 #include "torch_xla/csrc/helpers.h"
 #include "torch_xla/csrc/ops/as_strided.h"
 #include "torch_xla/csrc/ops/index_ops.h"
+#include "torch_xla/csrc/ops/dynamic_ir.h"
 #include "torch_xla/csrc/pooling.h"
 #include "torch_xla/csrc/tensor_impl.h"
 #include "torch_xla/csrc/tensor_util.h"
@@ -1330,22 +1331,25 @@ at::Tensor XLANativeFunctions::expand(const at::Tensor& self,
 }
 
 at::Tensor XLANativeFunctions::expand(const at::Tensor& self,
-                                      std::vector<c10::SymInt> sizes,
+                                      c10::SymIntArrayRef& sizes,
                                       bool implicit) {
   XLA_FN_COUNTER("xla::");
-
-  /* Get size upper bounds */
-  std::vector<size_t> upper_bounds.reserve(sizes.size());
-  std::vector<bool> dynamic_dims.reserve(sizes.size());
-  for (int index = 0; i < sizes.size(); i++) {
-    auto _symbolicIntNode = sizes[i].toSymbolicIntNode();
-    auto _sizenode = MakeNode<SizeNode>(_symbolicIntNode);
-    upper_bound.push_back(_sizenode.getStaticValue());
-    dynamic_dims.push_back(_sizenode.isDynamic());
+  std::vector<c10::SymInt> _sizes = torch::lazy::ToVector<c10::SymInt>(sizes);
+  /* Get size size nodes */
+  std::vector<torch::lazy::NodePtr> size_nodes.reserve(_sizes.size());
+  std::vector<int64_t> upper_bounds;
+  std::vector<bool> dynamic_dims;
+  for (int i = 0; i < _sizes.size(); i++) {
+    auto _symbolicIntNode = _sizes[i].toSymbolicIntNode();
+    auto _lazySymIntNode = dynamic_cast<torch::lazy::SymbolicIntNode>(_symbolicIntNode);
+    auto size_node = _lazySymIntNode->node_;
+    size_nodes.push_back(size_node);
+    upper_bounds.push_back(dynamic_cast<ir::ops::DimensionNode&>(size_node).getStaticValue());
+    dynamic_dims.push_back(dynamic_cast<ir::ops::DimensionNode&>(size_node).isDynamic());
   }
 
   return bridge::AtenFromXlaTensor(XLATensor::dynamic_expand(
-      bridge::GetXlaTensor(self), upper_bounds, dynamic_dims));
+      bridge::GetXlaTensor(self), size_nodes, upper_bounds, dynamic_dims));
 }
 
 at::Tensor XLANativeFunctions::expm1(const at::Tensor& self) {
