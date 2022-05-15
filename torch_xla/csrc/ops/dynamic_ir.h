@@ -20,15 +20,13 @@
 // #include <torch/c10/util/Flags.h>
 
 namespace torch_xla {
-namespace ir {
-namespace ops {
 
 /**
  * The goal of "dynamic" Nodes is to patch a hole in our tracing.
  * Previously, if a user called `sizes` on a Tensor, it would leak out
  * of our tracing system, as `sizes` returns a torch.Size or an int. To
  * prevent this from happening, we introduce DimensionNode, a new type
- * of Node that abstracts the operation of getting the dimensions of a
+ * of XlaNode that abstracts the operation of getting the dimensions of a
  * Tensor.
  *
  * Consider the following example:
@@ -43,7 +41,7 @@ namespace ops {
  * burned into the Graph.
  */
 
-class DimensionNode : public Node {
+class DimensionNode : public XlaNode {
  public:
   // DimensionNode(torch::lazy::OpKind op, OpList operands, torch::lazy:hash_t hash_seed = kHashSeed);
   DimensionNode(torch::lazy::OpKind op, OpList operands, torch::lazy::hash_t hash_seed);
@@ -59,7 +57,7 @@ class DimensionNode : public Node {
 // Represents the result of calling `size` on a Tensor
 class SizeNode : public DimensionNode {
  public:
-  SizeNode(Value input, size_t dim);
+  SizeNode(XlaValue input, size_t dim);
   int64_t getStaticValue() const override;
   std::string ToString() const override;
   size_t dim_ = 0;
@@ -68,26 +66,23 @@ class SizeNode : public DimensionNode {
 
 class SizeAdd: public DimensionNode {
  public:
-  SizeAdd(Value a, Value b);
+  SizeAdd(XlaValue a, XlaValue b);
   int64_t getStaticValue() const override;
   std::string ToString() const override;
 };
 
 class SizeMul: public DimensionNode {
  public:
-  SizeMul(Value a, Value b);
+  SizeMul(XlaValue a, XlaValue b);
   int64_t getStaticValue() const override;
   std::string ToString() const override;
 };
 
 class SizeDiv: public DimensionNode {
  public:
-  SizeDiv(Value a, Value b);
+  SizeDiv(XlaValue a, XlaValue b);
   int64_t getStaticValue() const override;
   std::string ToString() const override;
 };
 
-
-}  // namespace ops
-}  // namespace ir
 }  // namespace torch_xla

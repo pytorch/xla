@@ -287,11 +287,9 @@ torch::lazy::NodePtr Softplus(const torch::lazy::Value& input,
 
 torch::lazy::NodePtr Selu(const torch::lazy::Value& input);
 
-torch::lazy::NodePtr DynamicExpand(const Value& input,
-                                   const std::vector<Value>& size_values,
+torch::lazy::NodePtr DynamicExpand(const XlaValue& input,
+                                   const std::vector<XlaValue>& size_values,
                                    const std::vector<int64_t> upper_bound_size,
                                    const std::vector<bool> dynamic_dim);
 
-}  // namespace ops
-}  // namespace ir
 }  // namespace torch_xla
