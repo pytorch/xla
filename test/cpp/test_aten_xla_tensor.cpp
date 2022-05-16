@@ -4650,8 +4650,8 @@ TEST_F(AtenXlaTensorTest, TestExpandSymInt) {
   ForEachDevice([&](const torch::Device& device) {
     auto y = torch::rand({Y_DIM});
     auto y_dev = CopyToDevice(y, device);
-    auto y_lt = torch::lazy::TryGetLtcTensor(y_dev);
-    auto y_node = MakeNode<SizeNode>(y_lt->GetIrValue(), 0);
+    auto y_lt = bridge::TryGetXlaTensor(y_dev);
+    auto y_node = torch::lazy::MakeNode<torch_xla::SizeNode>(y_lt->GetIrValue(), 0);
     auto y_lazy = std::make_shared<torch::lazy::SymbolicIntNode>(y_node);
 
     torch::Tensor xla_a = CopyToDevice(a, device);
