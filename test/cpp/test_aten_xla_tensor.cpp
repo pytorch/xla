@@ -4655,7 +4655,8 @@ TEST_F(AtenXlaTensorTest, TestExpandSymInt) {
     auto y_lazy = std::make_shared<torch::lazy::SymbolicIntNode>(y_node);
 
     torch::Tensor xla_a = CopyToDevice(a, device);
-    torch::Tensor xla_b = xla_a.expand({y_lazy->toSymInt(), 3, 4}, /*implicit=*/false);
+    torch::Tensor xla_b =
+        xla_a.expand({y_lazy->toSymInt(), 3, 4}, /*implicit=*/false);
     AllClose(b, xla_b);
   });
 }
