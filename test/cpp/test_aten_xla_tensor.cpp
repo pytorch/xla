@@ -4643,6 +4643,23 @@ TEST_F(AtenXlaTensorTest, TestExpandAs) {
   ExpectCounterChanged("xla::expand", cpp_test::GetIgnoredCounters());
 }
 
+TEST_F(AtenXlaTensorTest, TestExpandSymInt) {
+  const size_t Y_DIM = 3;
+  torch::Tensor a = torch::rand({3, 4}, torch::TensorOptions(torch::kFloat));
+  torch::Tensor b = a.expand({Y_DIM, 3, 4}, /*implicit=*/false);
+  ForEachDevice([&](const torch::Device& device) {
+    auto y = torch::rand({Y_DIM});
+    auto y_dev = CopyToDevice(y, device);
+    auto y_lt = torch::lazy::TryGetLtcTensor(y_dev);
+    auto y_node = MakeNode<SizeNode>(y_lt->GetIrValue(), 0);
+    auto y_lazy = std::make_shared<torch::lazy::SymbolicIntNode>(y_node);
+
+    torch::Tensor xla_a = CopyToDevice(a, device);
+    torch::Tensor xla_b = xla_a.expand({y_lazy->toSymInt(), 3, 4}, /*implicit=*/false);
+    AllClose(b, xla_b);
+  });
+}
+
 TEST_F(AtenXlaTensorTest, TestEye) {
   int n = 5;
   ForEachDevice([&](const torch::Device& device) {
