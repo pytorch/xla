@@ -1153,14 +1153,14 @@ torch::lazy::NodePtr DynamicExpand(const XlaValue& input,
       size_ops.push_back(loctx->GetOutputOp(node.operand(i)));
     }
     xla::XlaOp output =
-        BuildDynamicExpand(BuildExpand(input, upper_bounds), size_ops);
+        BuildDynamic(BuildExpand(input, upper_bounds), size_ops);
     return node.ReturnOp(output, loctx);
   };
 
   auto shape_fn = [&](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
     XLA_CHECK_GE(operands.size(), 2) << operands.size();
-    return BuildDynamicExpand(BuildExpand(operands[0], upper_bounds),
-                              operands.subspan(1));
+    return BuildDynamic(BuildExpand(operands[0], upper_bounds),
+                        operands.subspan(1));
   };
 
   return GenericOp(torch::lazy::OpKind(at::aten::expand), xla_values,
