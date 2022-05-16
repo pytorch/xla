@@ -8,26 +8,30 @@
 
 namespace torch_xla {
 
-Gather::Gather(const XlaValue& input, int64_t dim, const XlaValue& index)
+Gather::Gather(const XlaValue& input, int64_t dim, const XlaValue& index,
+               bool sparse_grad)
     : XlaNode(torch::lazy::OpKind(at::aten::gather), {input, index},
               xla::ShapeUtil::MakeShape(input.xla_shape().element_type(),
                                         index.xla_shape().dimensions()),
               /*num_outputs=*/1, torch::lazy::MHash(dim)),
-      dim_(dim) {}
+      dim_(dim),
+      sparse_grad_(sparse_grad) {}
 
 torch::lazy::NodePtr Gather::Clone(OpList operands) const {
-  return torch::lazy::MakeNode<Gather>(operands.at(0), dim_, operands.at(1));
+  return torch::lazy::MakeNode<Gather>(operands.at(0), dim_, operands.at(1),
+                                       sparse_grad_);
 }
 
 XlaOpVector Gather::Lower(LoweringContext* loctx) const {
   xla::XlaOp input = loctx->GetOutputOp(operand(0));
   xla::XlaOp index = loctx->GetOutputOp(operand(1));
-  return ReturnOp(xla::TorchGather(input, index, dim_, /*sparse=*/true), loctx);
+  return ReturnOp(xla::TorchGather(input, index, dim_, sparse_grad_), loctx);
 }
 
 std::string Gather::ToString() const {
   std::stringstream ss;
-  ss << XlaNode::ToString() << ", dim=" << dim_;
+  ss << XlaNode::ToString() << ", dim=" << dim_
+     << ", sparse_grad=" << sparse_grad_;
   return ss.str();
 }
 
