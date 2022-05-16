@@ -612,7 +612,7 @@ class XLATensor : public c10::intrusive_ptr_target {
                              c10::optional<at::ScalarType> scalar_type);
 
   static XLATensor gather(const XLATensor& input, int64_t dim,
-                          const XLATensor& index);
+                          const XLATensor& index, bool sparse_grad);
 
   static XLATensor ge(const XLATensor& input, const at::Scalar& other);
 

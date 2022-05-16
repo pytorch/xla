@@ -1404,7 +1404,7 @@ XLATensor XLATensor::full_like(const XLATensor& input,
 }
 
 XLATensor XLATensor::gather(const XLATensor& input, int64_t dim,
-                            const XLATensor& index) {
+                            const XLATensor& index, bool sparse_grad) {
   xla::Shape input_shape = input.shape();
   xla::Shape index_shape = index.shape();
   XLA_CHECK_EQ(input_shape.rank(), index_shape.rank());
@@ -1416,7 +1416,7 @@ XLATensor XLATensor::gather(const XLATensor& input, int64_t dim,
     }
   }
   return input.CreateFrom(torch::lazy::MakeNode<Gather>(
-      input.GetIrValue(), canonical_dim, index.GetIrValue()));
+      input.GetIrValue(), canonical_dim, index.GetIrValue(), sparse_grad));
 }
 
 XLATensor XLATensor::ge(const XLATensor& input, const at::Scalar& other) {
