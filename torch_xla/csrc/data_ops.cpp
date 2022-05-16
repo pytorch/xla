@@ -109,6 +109,17 @@ xla::XlaOp SqueezeAllTrivialDimensions(xla::XlaOp input) {
   return XlaHelpers::DynamicReshape(input, output_sizes);
 }
 
+xla::XlaOp BuildDynamic(xla::XlaOp input,
+                        absl::Span<const xla::XlaOp> output_sizes) {
+  for (int i = 0; i < output_sizes.size(); i++) {
+    xla::Shape dim_shape = XlaHelpers::ShapeOfXlaOp(output_sizes[i]);
+    if (dim_shape.is_dynamic()) {
+      input = xla::SetDimensionSize(input, output_sizes[i], i);
+    }
+  }
+  return input;
+}
+
 xla::XlaOp BuildExpand(xla::XlaOp input,
                        absl::Span<const int64_t> output_sizes) {
   auto input_sizes = XlaHelpers::SizesOfXlaOp(input);
@@ -119,18 +130,6 @@ xla::XlaOp BuildExpand(xla::XlaOp input,
   xla::XlaOp implicit_reshape = XlaHelpers::DynamicReshape(input, input_sizes);
   return xla::BroadcastInDim(implicit_reshape, output_sizes,
                              torch::lazy::Iota<int64_t>(output_sizes.size()));
-}
-
-xla::XlaOp BuildDynamicExpand(xla::XlaOp input,
-                              absl::Span<const xla::XlaOp> output_sizes) {
-  /* Update Output Dynamic Dimensions based on Input Size */
-  for (int i = 0; i < output_sizes.size(); i++) {
-    xla::Shape dim_shape = XlaHelpers::ShapeOfXlaOp(output_sizes[i]);
-    if (dim_shape.is_dynamic()) {
-      input = xla::SetDimensionSize(input, output_sizes[i], i);
-    }
-  }
-  return input;
 }
 
 std::vector<int64_t> BuildSqueezedDimensions(
