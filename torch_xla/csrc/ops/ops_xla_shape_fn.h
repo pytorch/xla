@@ -23,4 +23,8 @@ xla::Shape CoshOutputShape(const XlaValue& input);
 
 xla::Shape MaximumOutputShape(const XlaValue& input, const XlaValue& other);
 
+xla::Shape SgnOutputShape(const XlaValue& input);
+
+xla::Shape SignOutputShape(const XlaValue& input);
+
 }  // namespace torch_xla

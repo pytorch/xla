@@ -11,6 +11,8 @@ full_codegen:
   - cos
   - cosh
   - maximum
+  - sgn
+  - sign
 supported:
   - __ilshift__.Scalar
   - __ilshift__.Tensor
@@ -264,10 +266,8 @@ supported:
   - select.int
   - selu
   - selu_
-  - sgn
   - sigmoid
   - sigmoid_backward
-  - sign
   - silu.out
   - silu_backward
   - sin
