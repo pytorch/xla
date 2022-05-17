@@ -67,8 +67,6 @@ namespace torch_xla {
                      std::move(lower_fn));                                     \
   }
 
-PTXLA_UNARY_OP(Cos, at::aten::cos, xla::Cos);
-PTXLA_UNARY_OP(Cosh, at::aten::cosh, xla::Cosh);
 PTXLA_UNARY_OP(Sin, at::aten::sin, xla::Sin);
 PTXLA_UNARY_OP(Sinh, at::aten::sinh, xla::Sinh);
 PTXLA_UNARY_OP(Tan, at::aten::tan, xla::Tan);

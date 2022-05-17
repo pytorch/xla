@@ -18,6 +18,10 @@ xla::Shape AtanOutputShape(const XlaValue& input) { return input.xla_shape(); }
 
 xla::Shape AtanhOutputShape(const XlaValue& input) { return input.xla_shape(); }
 
+xla::Shape CosOutputShape(const XlaValue& input) { return input.xla_shape(); }
+
+xla::Shape CoshOutputShape(const XlaValue& input) { return input.xla_shape(); }
+
 xla::Shape MaximumOutputShape(const XlaValue& input, const XlaValue& other) {
   auto lower_for_shape_fn =
       [&](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {

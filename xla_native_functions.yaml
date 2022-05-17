@@ -8,6 +8,8 @@ full_codegen:
   - asinh
   - atan
   - atanh
+  - cos
+  - cosh
   - maximum
 supported:
   - __ilshift__.Scalar
@@ -91,8 +93,6 @@ supported:
   - constant_pad_nd
   - convolution_backward_overrideable
   - convolution_overrideable
-  - cos
-  - cosh
   - cross
   - cumprod
   - cumsum

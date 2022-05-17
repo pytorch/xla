@@ -1122,14 +1122,6 @@ XLATensor::convolution_backward_overrideable(
                          std::move(grad_bias));
 }
 
-XLATensor XLATensor::cos(const XLATensor& input) {
-  return input.CreateFrom(Cos(input.GetIrValue()));
-}
-
-XLATensor XLATensor::cosh(const XLATensor& input) {
-  return input.CreateFrom(Cosh(input.GetIrValue()));
-}
-
 XLATensor XLATensor::cross(const XLATensor& input, const XLATensor& other,
                            c10::optional<int64_t> dim) {
   return tensor_ops::Cross(input, other, dim);

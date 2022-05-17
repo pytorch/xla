@@ -505,10 +505,6 @@ class XLATensor : public c10::intrusive_ptr_target {
       std::vector<int64_t> dilation, bool transposed,
       std::vector<int64_t> output_padding, int64_t groups);
 
-  static XLATensor cos(const XLATensor& input);
-
-  static XLATensor cosh(const XLATensor& input);
-
   // Returns the cross product of the two input tensors in the given dimension.
   // If the dimension is not given, it defaults to the first dimension found
   // with the size 3.
