@@ -52,7 +52,7 @@ torch_xla::XlaOpVector Cosh::Lower(LoweringContext* loctx) const {
   return ReturnOp(xla::Cosh(xla_input), loctx);
 torch_xla::XlaOpVector Inverse::Lower(LoweringContext* loctx) const {
   xla::XlaOp xla_input = loctx->GetOutputOp(operand(0));
-  return node.ReturnOp(BuildInverse(xla_input), loctx);
+  return ReturnOp(BuildInverse(xla_input), loctx);
 }
 
 torch_xla::XlaOpVector Maximum::Lower(LoweringContext* loctx) const {
