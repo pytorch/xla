@@ -61,6 +61,10 @@ if [ "$CMD" == "clean" ]; then
 else
   # Temporary patch until tensorflow update bazel requirement to 5.2.0
   echo "6e54699884cfad49d4e8f6dd59a4050bc95c4edf" > third_party/tensorflow/.bazelversion
+  # We can remove this after https://github.com/bazelbuild/bazel/issues/15359 is resolved
+  unset CC
+  unset CXX
+
   cp -r -u -p $THIRD_PARTY_DIR/xla_client $THIRD_PARTY_DIR/tensorflow/tensorflow/compiler/xla/
 
   pushd $THIRD_PARTY_DIR/tensorflow
