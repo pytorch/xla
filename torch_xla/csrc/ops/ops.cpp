@@ -763,8 +763,13 @@ torch::lazy::NodePtr Remainder(const XlaValue& input, const XlaValue& divisor) {
   torch::lazy::NodePtr f = Fmod(
       input,
       torch::lazy::MakeNode<Abs>(divisor, std::vector<torch::lazy::Shape>()));
-  return f + divisor * ComparisonOp(at::aten::lt, torch::lazy::MakeNode<Sign>(f, std::vector<torch::lazy::Shape>()) * torch::lazy::MakeNode<Sign>(divisor, std::vector<torch::lazy::Shape>()),
-                                    ScalarOp(0, input.xla_shape()));
+  return f + divisor * ComparisonOp(
+                           at::aten::lt,
+                           torch::lazy::MakeNode<Sign>(
+                               f, std::vector<torch::lazy::Shape>()) *
+                               torch::lazy::MakeNode<Sign>(
+                                   divisor, std::vector<torch::lazy::Shape>()),
+                           ScalarOp(0, input.xla_shape()));
 }
 
 torch::lazy::NodePtr MaxUnary(const XlaValue& input) {
