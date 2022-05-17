@@ -50,6 +50,15 @@ torch_xla::XlaOpVector Cosh::Lower(LoweringContext* loctx) const {
   xla::XlaOp xla_input = loctx->GetOutputOp(operand(0));
   return ReturnOp(xla::Cosh(xla_input), loctx);
 }
+torch_xla::XlaOpVector Log::Lower(LoweringContext* loctx) const {
+  xla::XlaOp xla_input = loctx->GetOutputOp(operand(0));
+  return ReturnOp(xla::Log(xla_input), loctx);
+}
+
+// torch_xla::XlaOpVector Log1p::Lower(LoweringContext* loctx) const {
+//   xla::XlaOp xla_input = loctx->GetOutputOp(operand(0));
+//   return ReturnOp(xla::Log1p(xla_input), loctx);
+// }
 
 torch_xla::XlaOpVector Maximum::Lower(LoweringContext* loctx) const {
   xla::XlaOp xla_input = loctx->GetOutputOp(operand(0));

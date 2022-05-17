@@ -732,8 +732,6 @@ class XLATensor : public c10::intrusive_ptr_target {
                             const int64_t steps, at::ScalarType element_type,
                             const torch::lazy::BackendDevice& device);
 
-  static XLATensor log(const XLATensor& input);
-
   static XLATensor log_base(const XLATensor& input, torch::lazy::OpKind op,
                             double base);
 

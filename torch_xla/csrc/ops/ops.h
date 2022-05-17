@@ -81,8 +81,6 @@ torch::lazy::NodePtr Erfc(const XlaValue& input);
 
 torch::lazy::NodePtr Erfinv(const XlaValue& input);
 
-torch::lazy::NodePtr Log(const XlaValue& input);
-
 torch::lazy::NodePtr LogBase(const XlaValue& input, torch::lazy::OpKind op,
                              double base);
 

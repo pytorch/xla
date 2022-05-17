@@ -1670,15 +1670,6 @@ XLATensor XLATensor::linspace(const at::Scalar& start, const at::Scalar& end,
       element_type);
 }
 
-XLATensor XLATensor::log(const XLATensor& input) {
-  // Here we explictly pass c10::nullopt as logical_element_type because
-  // otherwise result will inherit the input's logical_element_type. In the
-  // case of log(int) -> float, we want to derive the dtype from IR value
-  // instead of input's logical_element_type.
-  return input.CreateFrom(Log(GetFloatingIrValue(input, at::ScalarType::Float)),
-                          c10::nullopt);
-}
-
 XLATensor XLATensor::log_base(const XLATensor& input, torch::lazy::OpKind op,
                               double base) {
   // Here we explictly pass c10::nullopt as logical_element_type because

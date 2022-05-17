@@ -10,6 +10,7 @@ full_codegen:
   - atanh
   - cos
   - cosh
+  - log
   - maximum
   - sgn
   - sign
@@ -166,7 +167,6 @@ supported:
   - lerp.Scalar
   - lerp.Tensor
   - linspace
-  - log
   - log1p
   - log2
   - log10

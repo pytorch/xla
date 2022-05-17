@@ -1787,11 +1787,6 @@ at::Tensor XLANativeFunctions::linspace(const at::Scalar& start,
                           GetXlaDeviceOrCurrent(device)));
 }
 
-at::Tensor XLANativeFunctions::log(const at::Tensor& self) {
-  XLA_FN_COUNTER("xla::");
-  return bridge::AtenFromXlaTensor(XLATensor::log(bridge::GetXlaTensor(self)));
-}
-
 at::Tensor XLANativeFunctions::log10(const at::Tensor& self) {
   XLA_FN_COUNTER("xla::");
   return bridge::AtenFromXlaTensor(XLATensor::log_base(
