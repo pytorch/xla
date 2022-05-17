@@ -658,7 +658,8 @@ def all_gather(value, dim=0, groups=None, output=None, pin_layout=True):
     A tensor which has, in the ``dim`` dimension, all the values from the
     participating replicas.
   """
-  if pin_layout == True and output == None:
+  if pin_layout and xm.xla_device_hw(
+      value.device) in ('TPU', 'GPU') and output == None:
     # There is not an easy way to pin the all_gather layout on TPU and GPU, use
     # all_reduce based all_gather for this purpose.
     return _all_gather_using_all_reduce(
