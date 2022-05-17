@@ -225,7 +225,7 @@ void ScopePusher::ResetScopes() { ResetScopeContext(); }
 
 const xla::Shape& GetXlaShape(const torch::lazy::Value& value) {
   XlaNode* casted = dynamic_cast<XlaNode*>(value.node.get());
-  return casted->xla_shape();
+  return casted->xla_shape(value.index);
 }
 
 }  // namespace torch_xla
