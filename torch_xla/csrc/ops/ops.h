@@ -71,10 +71,6 @@ torch::lazy::NodePtr Tanh(const XlaValue& input);
 
 torch::lazy::NodePtr Neg(const XlaValue& input);
 
-// torch::lazy::NodePtr SgnOp(const XlaValue& input);
-
-// torch::lazy::NodePtr SignOp(const XlaValue& input);
-
 torch::lazy::NodePtr ReluOp(const XlaValue& input);
 
 torch::lazy::NodePtr Min(const XlaValue& input, const XlaValue& other);

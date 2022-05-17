@@ -129,26 +129,6 @@ torch::lazy::NodePtr ReciprocalOp(const XlaValue& input) {
                    input.xla_shape(), std::move(lower_fn));
 }
 
-// torch::lazy::NodePtr SgnOp(const XlaValue& input) {
-//   auto lower_fn = [](const XlaNode& node,
-//                      LoweringContext* loctx) -> XlaOpVector {
-//     xla::XlaOp xla_input = loctx->GetOutputOp(node.operand(0));
-//     return node.ReturnOp(BuildSgn(xla_input), loctx);
-//   };
-//   return GenericOp(torch::lazy::OpKind(at::aten::sgn), {input},
-//                    input.xla_shape(), std::move(lower_fn));
-// }
-
-// torch::lazy::NodePtr SignOp(const XlaValue& input) {
-//   auto lower_fn = [](const XlaNode& node,
-//                      LoweringContext* loctx) -> XlaOpVector {
-//     xla::XlaOp xla_input = loctx->GetOutputOp(node.operand(0));
-//     return node.ReturnOp(BuildSign(xla_input), loctx);
-//   };
-//   return GenericOp(torch::lazy::OpKind(at::aten::sign), {input},
-//                    input.xla_shape(), std::move(lower_fn));
-// }
-
 torch::lazy::NodePtr ReluOp(const XlaValue& input) {
   auto lower_fn = [](const XlaNode& node,
                      LoweringContext* loctx) -> XlaOpVector {
