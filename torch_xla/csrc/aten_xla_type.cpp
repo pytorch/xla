@@ -1835,12 +1835,6 @@ at::Tensor XLANativeFunctions::logsumexp(const at::Tensor& self,
       /*keep_reduced_dimensions=*/keepdim));
 }
 
-at::Tensor XLANativeFunctions::logdet(const at::Tensor& self) {
-  XLA_FN_COUNTER("xla::");
-  return bridge::AtenFromXlaTensor(
-      XLATensor::logdet(bridge::GetXlaTensor(self)));
-}
-
 at::Tensor XLANativeFunctions::xlogy(const at::Tensor& self,
                                      const at::Tensor& other) {
   XLA_FN_COUNTER("xla::");
@@ -2946,15 +2940,6 @@ at::Tensor XLANativeFunctions::slice(const at::Tensor& self, int64_t dim,
   int64_t end_val = end.has_value() ? end.value() : INT64_MAX;
   return bridge::AtenFromXlaTensor(XLATensor::slice(
       bridge::GetXlaTensor(self), dim, start_val, end_val, step));
-}
-
-std::tuple<at::Tensor, at::Tensor> XLANativeFunctions::slogdet(
-    const at::Tensor& self) {
-  XLA_FN_COUNTER("xla::");
-  XLATensor self_tensor = bridge::GetXlaTensor(self);
-  auto outputs = XLATensor::slogdet(self_tensor);
-  return std::make_tuple(bridge::AtenFromXlaTensor(std::get<0>(outputs)),
-                         bridge::AtenFromXlaTensor(std::get<1>(outputs)));
 }
 
 at::Tensor XLANativeFunctions::smooth_l1_loss(const at::Tensor& self,

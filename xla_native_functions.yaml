@@ -17,6 +17,9 @@ full_codegen:
   - sin
   - sinh
   - tan
+  - logdet
+  - maximum
+  - slogdet
 supported:
   - __ilshift__.Scalar
   - __ilshift__.Tensor
@@ -175,7 +178,6 @@ supported:
   - log10
   - log_sigmoid_backward
   - log_sigmoid_forward
-  - logdet
   - logical_and
   - logical_not
   - logical_or
@@ -274,7 +276,6 @@ supported:
   - silu.out
   - silu_backward
   - slice.Tensor
-  - slogdet
   - smooth_l1_loss
   - smooth_l1_loss_backward
   - softplus

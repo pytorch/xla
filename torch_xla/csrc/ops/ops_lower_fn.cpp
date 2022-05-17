@@ -1,5 +1,6 @@
 #include <torch_xla/csrc/generated/LazyIr.h>
 
+#include "tensorflow/compiler/xla/client/lib/logdet.h"
 #include "tensorflow/compiler/xla/client/lib/math.h"
 #include "torch_xla/csrc/elementwise.h"
 #include "torch_xla/csrc/helpers.h"
@@ -50,6 +51,9 @@ torch_xla::XlaOpVector Cos::Lower(LoweringContext* loctx) const {
 torch_xla::XlaOpVector Cosh::Lower(LoweringContext* loctx) const {
   xla::XlaOp xla_input = loctx->GetOutputOp(operand(0));
   return ReturnOp(xla::Cosh(xla_input), loctx);
+torch_xla::XlaOpVector Logdet::Lower(LoweringContext* loctx) const {
+  xla::XlaOp xla_input = loctx->GetOutputOp(operand(0));
+  return ReturnOp(xla::LogDet(xla_input), loctx);
 }
 
 torch_xla::XlaOpVector Inverse::Lower(LoweringContext* loctx) const {
@@ -87,6 +91,10 @@ torch_xla::XlaOpVector Sinh::Lower(LoweringContext* loctx) const {
 torch_xla::XlaOpVector Tan::Lower(LoweringContext* loctx) const {
   xla::XlaOp xla_input = loctx->GetOutputOp(operand(0));
   return ReturnOp(xla::Tan(xla_input), loctx);
+torch_xla::XlaOpVector Slogdet::Lower(LoweringContext* loctx) const {
+  xla::XlaOp xla_input = loctx->GetOutputOp(operand(0));
+    xla::SignAndLogDet result = xla::SLogDet(xla_input);
+  return ReturnOps({result.sign, result.logdet}, loctx);
 }
 
 }  // namespace torch_xla
