@@ -28,4 +28,8 @@ xla::Shape MaximumOutputShape(const XlaValue& input, const XlaValue& other) {
                           lower_for_shape_fn);
 }
 
+xla::Shape SgnOutputShape(const XlaValue& input) { return input.xla_shape(); }
+
+xla::Shape SignOutputShape(const XlaValue& input) { return input.xla_shape(); }
+
 }  // namespace torch_xla

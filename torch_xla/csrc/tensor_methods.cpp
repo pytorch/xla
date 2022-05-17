@@ -2511,13 +2511,13 @@ XLATensor XLATensor::sigmoid_backward(const XLATensor& grad_output,
       SigmoidBackward(grad_output.GetIrValue(), output.GetIrValue()));
 }
 
-XLATensor XLATensor::sgn(const XLATensor& input) {
-  return input.CreateFrom(SgnOp(input.GetIrValue()));
-}
+// XLATensor XLATensor::sgn(const XLATensor& input) {
+//   return input.CreateFrom(SgnOp(input.GetIrValue()));
+// }
 
-XLATensor XLATensor::sign(const XLATensor& input) {
-  return input.CreateFrom(SignOp(input.GetIrValue()));
-}
+// XLATensor XLATensor::sign(const XLATensor& input) {
+//   return input.CreateFrom(SignOp(input.GetIrValue()));
+// }
 
 XLATensor XLATensor::sin(const XLATensor& input) {
   return input.CreateFrom(Sin(input.GetIrValue()));

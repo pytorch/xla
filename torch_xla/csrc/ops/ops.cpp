@@ -97,7 +97,7 @@ PTXLA_BINARY_OP(Atan2, at::aten::atan2, xla::Atan2);
 torch::lazy::NodePtr Trunc(const XlaValue& input) {
   std::vector<torch::lazy::Shape> shapes;
   return Floor(torch::lazy::MakeNode<Abs>(input, std::move(shapes))) *
-         SignOp(input);
+         torch::lazy::MakeNode<Sign>(input, std::vector<torch::lazy::Shape>());
 }
 
 torch::lazy::NodePtr FracOp(const XlaValue& input) {
@@ -129,25 +129,25 @@ torch::lazy::NodePtr ReciprocalOp(const XlaValue& input) {
                    input.xla_shape(), std::move(lower_fn));
 }
 
-torch::lazy::NodePtr SgnOp(const XlaValue& input) {
-  auto lower_fn = [](const XlaNode& node,
-                     LoweringContext* loctx) -> XlaOpVector {
-    xla::XlaOp xla_input = loctx->GetOutputOp(node.operand(0));
-    return node.ReturnOp(BuildSgn(xla_input), loctx);
-  };
-  return GenericOp(torch::lazy::OpKind(at::aten::sgn), {input},
-                   input.xla_shape(), std::move(lower_fn));
-}
+// torch::lazy::NodePtr SgnOp(const XlaValue& input) {
+//   auto lower_fn = [](const XlaNode& node,
+//                      LoweringContext* loctx) -> XlaOpVector {
+//     xla::XlaOp xla_input = loctx->GetOutputOp(node.operand(0));
+//     return node.ReturnOp(BuildSgn(xla_input), loctx);
+//   };
+//   return GenericOp(torch::lazy::OpKind(at::aten::sgn), {input},
+//                    input.xla_shape(), std::move(lower_fn));
+// }
 
-torch::lazy::NodePtr SignOp(const XlaValue& input) {
-  auto lower_fn = [](const XlaNode& node,
-                     LoweringContext* loctx) -> XlaOpVector {
-    xla::XlaOp xla_input = loctx->GetOutputOp(node.operand(0));
-    return node.ReturnOp(BuildSign(xla_input), loctx);
-  };
-  return GenericOp(torch::lazy::OpKind(at::aten::sign), {input},
-                   input.xla_shape(), std::move(lower_fn));
-}
+// torch::lazy::NodePtr SignOp(const XlaValue& input) {
+//   auto lower_fn = [](const XlaNode& node,
+//                      LoweringContext* loctx) -> XlaOpVector {
+//     xla::XlaOp xla_input = loctx->GetOutputOp(node.operand(0));
+//     return node.ReturnOp(BuildSign(xla_input), loctx);
+//   };
+//   return GenericOp(torch::lazy::OpKind(at::aten::sign), {input},
+//                    input.xla_shape(), std::move(lower_fn));
+// }
 
 torch::lazy::NodePtr ReluOp(const XlaValue& input) {
   auto lower_fn = [](const XlaNode& node,
@@ -783,7 +783,7 @@ torch::lazy::NodePtr Remainder(const XlaValue& input, const XlaValue& divisor) {
   torch::lazy::NodePtr f = Fmod(
       input,
       torch::lazy::MakeNode<Abs>(divisor, std::vector<torch::lazy::Shape>()));
-  return f + divisor * ComparisonOp(at::aten::lt, SignOp(f) * SignOp(divisor),
+  return f + divisor * ComparisonOp(at::aten::lt, torch::lazy::MakeNode<Sign>(f, std::vector<torch::lazy::Shape>()) * torch::lazy::MakeNode<Sign>(divisor, std::vector<torch::lazy::Shape>()),
                                     ScalarOp(0, input.xla_shape()));
 }
 
