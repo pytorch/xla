@@ -42,6 +42,9 @@ xla::Shape CoshOutputShape(const torch::lazy::Value& input) {
 
 xla::Shape MaximumOutputShape(const torch::lazy::Value& input,
                               const torch::lazy::Value& other) {
+xla::Shape InverseOutputShape(const XlaValue& input) { return input.xla_shape(); }
+
+xla::Shape MaximumOutputShape(const XlaValue& input, const XlaValue& other) {
   auto lower_for_shape_fn =
       [&](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
     auto promoted = XlaHelpers::Promote(operands[0], operands[1]);

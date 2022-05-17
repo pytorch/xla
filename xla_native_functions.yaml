@@ -10,6 +10,7 @@ full_codegen:
   - atanh
   - cos
   - cosh
+  - inverse
   - maximum
   - sgn
   - sign
@@ -155,7 +156,6 @@ supported:
   - index_fill_.int_Tensor
   - index_put_
   - index_select
-  - inverse
   - isnan
   - kl_div
   - kl_div_backward

@@ -674,7 +674,7 @@ class XLATensor : public c10::intrusive_ptr_target {
   static XLATensor index_select(const XLATensor& input, int64_t dim,
                                 const XLATensor& index);
 
-  static XLATensor inverse(const XLATensor& input);
+//   static XLATensor inverse(const XLATensor& input);
 
   static XLATensor isnan(const XLATensor& input);
 
