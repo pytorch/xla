@@ -53,7 +53,7 @@ xla::Shape LogdetOutputShape(const XlaValue& input) {
   xla::Shape logdet_shape(input_shape);
   logdet_shape.DeleteDimension(input_shape.rank() - 1);
   logdet_shape.DeleteDimension(input_shape.rank() - 2);
-  return logdet_shape; 
+  return logdet_shape;
 }
 
 xla::Shape MaximumOutputShape(const XlaValue& input, const XlaValue& other) {
