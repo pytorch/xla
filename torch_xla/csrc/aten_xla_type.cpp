@@ -1142,16 +1142,6 @@ XLANativeFunctions::convolution_backward_overrideable(
                      : at::Tensor());
 }
 
-at::Tensor XLANativeFunctions::cos(const at::Tensor& self) {
-  XLA_FN_COUNTER("xla::");
-  return bridge::AtenFromXlaTensor(XLATensor::cos(bridge::GetXlaTensor(self)));
-}
-
-at::Tensor XLANativeFunctions::cosh(const at::Tensor& self) {
-  XLA_FN_COUNTER("xla::");
-  return bridge::AtenFromXlaTensor(XLATensor::cosh(bridge::GetXlaTensor(self)));
-}
-
 at::Tensor XLANativeFunctions::cross(const at::Tensor& self,
                                      const at::Tensor& other,
                                      c10::optional<int64_t> dim) {
