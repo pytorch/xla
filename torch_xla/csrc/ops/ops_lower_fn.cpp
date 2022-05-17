@@ -58,4 +58,14 @@ torch_xla::XlaOpVector Maximum::Lower(LoweringContext* loctx) const {
   return ReturnOp(xla::Max(promoted.first, promoted.second), loctx);
 }
 
+torch_xla::XlaOpVector Sgn::Lower(LoweringContext* loctx) const {
+  xla::XlaOp xla_input = loctx->GetOutputOp(operand(0));
+  return ReturnOp(BuildSgn(xla_input), loctx);
+}
+
+torch_xla::XlaOpVector Sign::Lower(LoweringContext* loctx) const {
+  xla::XlaOp xla_input = loctx->GetOutputOp(operand(0));
+  return ReturnOp(BuildSign(xla_input), loctx);
+}
+
 }  // namespace torch_xla
