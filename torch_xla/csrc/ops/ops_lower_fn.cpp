@@ -73,14 +73,14 @@ torch_xla::XlaOpVector Log::Lower(LoweringContext* loctx) const {
 }
 
 torch_xla::XlaOpVector Log2::Lower(LoweringContext* loctx) const {
-  double base = 2.0;
+  static const double base = 2.0;
   xla::XlaOp xla_input =
       GetFloatingOp(loctx->GetOutputOp(operand(0)), xla::PrimitiveType::F32);
   return ReturnOp(BuildLogBase(xla_input, base), loctx);
 }
 
 torch_xla::XlaOpVector Log10::Lower(LoweringContext* loctx) const {
-  double base = 10.0;
+  static const double base = 10.0;
   xla::XlaOp xla_input =
       GetFloatingOp(loctx->GetOutputOp(operand(0)), xla::PrimitiveType::F32);
   return ReturnOp(BuildLogBase(xla_input, base), loctx);
