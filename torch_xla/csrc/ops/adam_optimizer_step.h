@@ -6,13 +6,14 @@ namespace torch_xla {
 
 class AdamOptimizerStep : public XlaNode {
  public:
-  AdamOptimizerStep(const XlaValue& found_inf, const XlaValue& step,
-                    const XlaValue& param, const XlaValue& grad,
-                    const XlaValue& exp_avg, const XlaValue& exp_avg_sq,
-                    const XlaValue& max_exp_avg_sq, const XlaValue& beta1,
-                    const XlaValue& beta2, const XlaValue& lr,
-                    const XlaValue& weight_decay, const XlaValue& eps,
-                    bool use_weight_decay, bool use_amsgrad, bool use_adamw);
+  AdamOptimizerStep(
+      const torch::lazy::Value& found_inf, const torch::lazy::Value& step,
+      const torch::lazy::Value& param, const torch::lazy::Value& grad,
+      const torch::lazy::Value& exp_avg, const torch::lazy::Value& exp_avg_sq,
+      const torch::lazy::Value& max_exp_avg_sq, const torch::lazy::Value& beta1,
+      const torch::lazy::Value& beta2, const torch::lazy::Value& lr,
+      const torch::lazy::Value& weight_decay, const torch::lazy::Value& eps,
+      bool use_weight_decay, bool use_amsgrad, bool use_adamw);
 
   torch::lazy::NodePtr Clone(OpList operands) const override;
 

@@ -8,7 +8,7 @@ namespace torch_xla {
 
 class Expand : public XlaNode {
  public:
-  Expand(const XlaValue& input, std::vector<int64_t> size);
+  Expand(const torch::lazy::Value& input, std::vector<int64_t> size);
 
   std::string ToString() const override;
 

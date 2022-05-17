@@ -7,19 +7,22 @@
 namespace torch_xla {
 namespace {
 
-xla::Shape NodeOutputShape(const XlaValue& step, const XlaValue& param) {
-  return xla::ShapeUtil::MakeTupleShape({/*step=*/step.xla_shape(),
-                                         /*param=*/param.xla_shape(),
-                                         /*buf=*/param.xla_shape()});
+xla::Shape NodeOutputShape(const torch::lazy::Value& step,
+                           const torch::lazy::Value& param) {
+  return xla::ShapeUtil::MakeTupleShape({/*step=*/GetXlaShape(step),
+                                         /*param=*/GetXlaShape(param),
+                                         /*buf=*/GetXlaShape(param)});
 }
 
 }  // namespace
 
 SgdOptimizerStep::SgdOptimizerStep(
-    const XlaValue& found_inf, const XlaValue& step, const XlaValue& param,
-    const XlaValue& buf, const XlaValue& d_p, const XlaValue& weight_decay,
-    const XlaValue& momentum, const XlaValue& lr, const XlaValue& dampening,
-    bool use_weight_decay, bool use_momentum, bool use_nesterov)
+    const torch::lazy::Value& found_inf, const torch::lazy::Value& step,
+    const torch::lazy::Value& param, const torch::lazy::Value& buf,
+    const torch::lazy::Value& d_p, const torch::lazy::Value& weight_decay,
+    const torch::lazy::Value& momentum, const torch::lazy::Value& lr,
+    const torch::lazy::Value& dampening, bool use_weight_decay,
+    bool use_momentum, bool use_nesterov)
     : XlaNode(xla_sgd_optimizer_step,
               {found_inf, step, param, buf, d_p, weight_decay, momentum, lr,
                dampening},

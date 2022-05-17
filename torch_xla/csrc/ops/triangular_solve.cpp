@@ -62,18 +62,19 @@ std::vector<xla::XlaOp> LowerTriangularSolve(xla::XlaOp rhs, xla::XlaOp lhs,
   return {solution, lhs_broadcasted};
 }
 
-xla::Shape NodeOutputShape(const XlaValue& rhs, const XlaValue& lhs) {
+xla::Shape NodeOutputShape(const torch::lazy::Value& rhs,
+                           const torch::lazy::Value& lhs) {
   std::pair<xla::Shape, xla::Shape> broadcasted_shapes =
-      InferTriangularSolveShape(rhs.xla_shape(), lhs.xla_shape());
+      InferTriangularSolveShape(GetXlaShape(rhs), GetXlaShape(lhs));
   return xla::ShapeUtil::MakeTupleShape(
       {broadcasted_shapes.first, broadcasted_shapes.second});
 }
 
 }  // namespace
 
-TriangularSolve::TriangularSolve(const XlaValue& rhs, const XlaValue& lhs,
-                                 bool left_side, bool lower, bool transpose,
-                                 bool unit_diagonal)
+TriangularSolve::TriangularSolve(const torch::lazy::Value& rhs,
+                                 const torch::lazy::Value& lhs, bool left_side,
+                                 bool lower, bool transpose, bool unit_diagonal)
     : XlaNode(torch::lazy::OpKind(at::aten::triangular_solve), {rhs, lhs},
               [&]() { return NodeOutputShape(rhs, lhs); },
               /*num_outputs=*/2,

@@ -7,17 +7,18 @@
 namespace torch_xla {
 namespace {
 
-xla::Shape NodeOutputShape(const XlaValue& input, int64_t dim, bool keepdim) {
+xla::Shape NodeOutputShape(const torch::lazy::Value& input, int64_t dim,
+                           bool keepdim) {
   auto lower_for_shape_fn =
       [&](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
     return BuildArgMin(operands[0], dim, keepdim);
   };
-  return InferOutputShape({input.xla_shape()}, lower_for_shape_fn);
+  return InferOutputShape({GetXlaShape(input)}, lower_for_shape_fn);
 }
 
 }  // namespace
 
-ArgMin::ArgMin(const XlaValue& input, int64_t dim, bool keepdim)
+ArgMin::ArgMin(const torch::lazy::Value& input, int64_t dim, bool keepdim)
     : XlaNode(torch::lazy::OpKind(at::aten::argmin), {input},
               [&]() { return NodeOutputShape(input, dim, keepdim); },
               /*num_outputs=*/1, torch::lazy::MHash(dim, keepdim)),

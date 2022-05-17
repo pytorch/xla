@@ -9,7 +9,7 @@ namespace torch_xla {
 // it gets its own IR node class.
 class MaskedSelect : public XlaNode {
  public:
-  MaskedSelect(const XlaValue& input, const XlaValue& mask);
+  MaskedSelect(const torch::lazy::Value& input, const torch::lazy::Value& mask);
 
   torch::lazy::NodePtr Clone(OpList operands) const override;
 

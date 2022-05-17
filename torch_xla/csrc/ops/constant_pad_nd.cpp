@@ -20,19 +20,20 @@ xla::XlaOp LowerPad(xla::XlaOp input, const at::Scalar& value,
                   XlaHelpers::MakeXlaPaddingConfigFromNdPadding(pad));
 }
 
-xla::Shape NodeOutputShape(const XlaValue& input, const at::Scalar& value,
+xla::Shape NodeOutputShape(const torch::lazy::Value& input,
+                           const at::Scalar& value,
                            absl::Span<const int64_t> pad) {
   auto lower_for_shape_fn =
       [&](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
     return LowerPad(operands[0], value, pad);
   };
-  return InferOutputShape({input.xla_shape()}, lower_for_shape_fn);
+  return InferOutputShape({GetXlaShape(input)}, lower_for_shape_fn);
 }
 
 }  // namespace
 
-ConstantPadNd::ConstantPadNd(const XlaValue& input, std::vector<int64_t> pad,
-                             const at::Scalar& value)
+ConstantPadNd::ConstantPadNd(const torch::lazy::Value& input,
+                             std::vector<int64_t> pad, const at::Scalar& value)
     : XlaNode(torch::lazy::OpKind(at::aten::constant_pad_nd), {input},
               [&]() { return NodeOutputShape(input, value, pad); },
               /*num_outputs=*/1, torch::lazy::MHash(pad, ScalarHash(value))),

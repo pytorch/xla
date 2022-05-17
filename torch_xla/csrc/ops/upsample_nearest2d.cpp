@@ -7,11 +7,11 @@
 
 namespace torch_xla {
 
-UpsampleNearest::UpsampleNearest(const XlaValue& input,
+UpsampleNearest::UpsampleNearest(const torch::lazy::Value& input,
                                  std::vector<int64_t> output_size)
     : XlaNode(torch::lazy::OpKind(at::aten::upsample_nearest2d), {input},
               [&]() {
-                return resize::GetForwardOutputShape2d(input.xla_shape(),
+                return resize::GetForwardOutputShape2d(GetXlaShape(input),
                                                        output_size);
               },
               /*num_outputs=*/1, torch::lazy::MHash(output_size)),

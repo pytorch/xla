@@ -5,10 +5,11 @@
 
 namespace torch_xla {
 
-ThresholdBackward::ThresholdBackward(const XlaValue& grad_output,
-                                     const XlaValue& input, float threshold)
+ThresholdBackward::ThresholdBackward(const torch::lazy::Value& grad_output,
+                                     const torch::lazy::Value& input,
+                                     float threshold)
     : XlaNode(torch::lazy::OpKind(at::aten::threshold_backward),
-              {grad_output, input}, input.xla_shape(), /*num_outputs=*/1,
+              {grad_output, input}, GetXlaShape(input), /*num_outputs=*/1,
               torch::lazy::MHash(threshold)),
       threshold_(threshold) {}
 

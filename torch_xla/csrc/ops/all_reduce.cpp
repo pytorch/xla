@@ -10,20 +10,22 @@
 namespace torch_xla {
 namespace {
 
-xla::Shape NodeOutputShape(absl::Span<const XlaValue> operands,
-                           const XlaValue& token) {
+xla::Shape NodeOutputShape(absl::Span<const torch::lazy::Value> operands,
+                           const torch::lazy::Value& token) {
   std::vector<xla::Shape> tuple_shapes;
   tuple_shapes.reserve(operands.size() + 1);
   for (auto& operand : operands) {
-    tuple_shapes.push_back(operand.xla_shape());
+    tuple_shapes.push_back(GetXlaShape(operand));
   }
-  tuple_shapes.push_back(token.xla_shape());
+  tuple_shapes.push_back(GetXlaShape(token));
   return xla::ShapeUtil::MakeTupleShape(tuple_shapes);
 }
 
-std::vector<XlaValue> GetOperandList(absl::Span<const XlaValue> operands,
-                                     const XlaValue& token) {
-  std::vector<XlaValue> operand_list(operands.begin(), operands.end());
+std::vector<torch::lazy::Value> GetOperandList(
+    absl::Span<const torch::lazy::Value> operands,
+    const torch::lazy::Value& token) {
+  std::vector<torch::lazy::Value> operand_list(operands.begin(),
+                                               operands.end());
   operand_list.push_back(token);
   return operand_list;
 }
@@ -31,9 +33,9 @@ std::vector<XlaValue> GetOperandList(absl::Span<const XlaValue> operands,
 }  // namespace
 
 AllReduce::AllReduce(AllReduceType reduce_type,
-                     absl::Span<const XlaValue> operands, const XlaValue& token,
-                     double scale, std::vector<std::vector<int64_t>> groups,
-                     bool pin_layout)
+                     absl::Span<const torch::lazy::Value> operands,
+                     const torch::lazy::Value& token, double scale,
+                     std::vector<std::vector<int64_t>> groups, bool pin_layout)
     : XlaNode(xla_cross_replica_sum, GetOperandList(operands, token),
               [&]() { return NodeOutputShape(operands, token); },
               /*num_outputs=*/operands.size() + 1,
@@ -45,7 +47,8 @@ AllReduce::AllReduce(AllReduceType reduce_type,
       pin_layout_(pin_layout) {}
 
 torch::lazy::NodePtr AllReduce::Clone(OpList operands) const {
-  std::vector<XlaValue> operand_list(operands.begin(), operands.end() - 1);
+  std::vector<torch::lazy::Value> operand_list(operands.begin(),
+                                               operands.end() - 1);
   return torch::lazy::MakeNode<AllReduce>(reduce_type_, operand_list,
                                           operands.back(), scale_, groups_,
                                           pin_layout_);

@@ -7,7 +7,7 @@ namespace torch_xla {
 class Squeeze : public XlaNode {
  public:
   // Squeeze out the specified dimension index, -1 for all trivial dimensions.
-  Squeeze(const XlaValue& input, int dim);
+  Squeeze(const torch::lazy::Value& input, int dim);
 
   torch::lazy::NodePtr Clone(OpList operands) const override;
 

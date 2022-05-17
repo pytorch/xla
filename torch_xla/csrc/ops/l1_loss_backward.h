@@ -8,8 +8,9 @@ namespace torch_xla {
 
 class L1LossBackward : public XlaNode {
  public:
-  L1LossBackward(const XlaValue& grad_output, const XlaValue& input,
-                 const XlaValue& target, ReductionMode reduction);
+  L1LossBackward(const torch::lazy::Value& grad_output,
+                 const torch::lazy::Value& input,
+                 const torch::lazy::Value& target, ReductionMode reduction);
 
   std::string ToString() const override;
 

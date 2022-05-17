@@ -6,9 +6,11 @@ namespace torch_xla {
 
 class AmpUpdateScale : public XlaNode {
  public:
-  AmpUpdateScale(const XlaValue& current_scale, const XlaValue& growth_tracker,
-                 const XlaValue& found_inf, double scale_growth_factor,
-                 double scale_backoff_factor, int growth_interval);
+  AmpUpdateScale(const torch::lazy::Value& current_scale,
+                 const torch::lazy::Value& growth_tracker,
+                 const torch::lazy::Value& found_inf,
+                 double scale_growth_factor, double scale_backoff_factor,
+                 int growth_interval);
 
   torch::lazy::NodePtr Clone(OpList operands) const override;
 

@@ -7,9 +7,10 @@
 
 namespace torch_xla {
 
-Softshrink::Softshrink(const XlaValue& input, const at::Scalar& lambda)
+Softshrink::Softshrink(const torch::lazy::Value& input,
+                       const at::Scalar& lambda)
     : XlaNode(torch::lazy::OpKind(at::aten::softshrink), {input},
-              input.xla_shape(),
+              GetXlaShape(input),
               /*num_outputs=*/1, ScalarHash(lambda)),
       lambda_(std::move(lambda)) {}
 

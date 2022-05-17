@@ -8,7 +8,8 @@ namespace torch_xla {
 
 class GetDimensionsSize : public XlaNode {
  public:
-  GetDimensionsSize(const XlaValue& input, std::vector<int64_t> dimensions);
+  GetDimensionsSize(const torch::lazy::Value& input,
+                    std::vector<int64_t> dimensions);
 
   torch::lazy::NodePtr Clone(OpList operands) const override;
 

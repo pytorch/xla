@@ -6,10 +6,11 @@
 
 namespace torch_xla {
 
-DiagonalViewUpdate::DiagonalViewUpdate(const XlaValue& target,
-                                       const XlaValue& input, int64_t offset,
-                                       int64_t dim1, int64_t dim2)
-    : XlaNode(xla_diagonal_view_update, {target, input}, target.xla_shape(),
+DiagonalViewUpdate::DiagonalViewUpdate(const torch::lazy::Value& target,
+                                       const torch::lazy::Value& input,
+                                       int64_t offset, int64_t dim1,
+                                       int64_t dim2)
+    : XlaNode(xla_diagonal_view_update, {target, input}, GetXlaShape(target),
               /*num_outputs=*/1, torch::lazy::MHash(offset, dim1, dim2)),
       offset_(offset),
       dim1_(dim1),

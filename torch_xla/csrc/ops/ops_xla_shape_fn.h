@@ -3,28 +3,29 @@
 
 namespace torch_xla {
 
-xla::Shape AbsOutputShape(const XlaValue& input);
+xla::Shape AbsOutputShape(const torch::lazy::Value& input);
 
-xla::Shape AcosOutputShape(const XlaValue& input);
+xla::Shape AcosOutputShape(const torch::lazy::Value& input);
 
-xla::Shape AcoshOutputShape(const XlaValue& input);
+xla::Shape AcoshOutputShape(const torch::lazy::Value& input);
 
-xla::Shape AsinOutputShape(const XlaValue& input);
+xla::Shape AsinOutputShape(const torch::lazy::Value& input);
 
-xla::Shape AsinhOutputShape(const XlaValue& input);
+xla::Shape AsinhOutputShape(const torch::lazy::Value& input);
 
-xla::Shape AtanOutputShape(const XlaValue& input);
+xla::Shape AtanOutputShape(const torch::lazy::Value& input);
 
-xla::Shape AtanhOutputShape(const XlaValue& input);
+xla::Shape AtanhOutputShape(const torch::lazy::Value& input);
 
-xla::Shape CosOutputShape(const XlaValue& input);
+xla::Shape CosOutputShape(const torch::lazy::Value& input);
 
-xla::Shape CoshOutputShape(const XlaValue& input);
+xla::Shape CoshOutputShape(const torch::lazy::Value& input);
 
-xla::Shape MaximumOutputShape(const XlaValue& input, const XlaValue& other);
+xla::Shape MaximumOutputShape(const torch::lazy::Value& input,
+                              const torch::lazy::Value& other);
 
-xla::Shape SgnOutputShape(const XlaValue& input);
+xla::Shape SgnOutputShape(const torch::lazy::Value& input);
 
-xla::Shape SignOutputShape(const XlaValue& input);
+xla::Shape SignOutputShape(const torch::lazy::Value& input);
 
 }  // namespace torch_xla

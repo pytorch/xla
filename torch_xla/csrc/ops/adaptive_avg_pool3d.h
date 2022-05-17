@@ -10,7 +10,8 @@ namespace torch_xla {
 
 class AdaptiveAvgPool3d : public XlaNode {
  public:
-  AdaptiveAvgPool3d(const XlaValue& input, std::vector<int64_t> output_size);
+  AdaptiveAvgPool3d(const torch::lazy::Value& input,
+                    std::vector<int64_t> output_size);
 
   torch::lazy::NodePtr Clone(OpList operands) const override;
 

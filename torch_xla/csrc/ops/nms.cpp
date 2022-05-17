@@ -9,9 +9,11 @@
 namespace torch_xla {
 namespace {
 
-xla::Shape NodeOutputShape(const XlaValue& boxes, const XlaValue& scores,
-                           const XlaValue& score_threshold,
-                           const XlaValue& iou_threshold, int64_t output_size) {
+xla::Shape NodeOutputShape(const torch::lazy::Value& boxes,
+                           const torch::lazy::Value& scores,
+                           const torch::lazy::Value& score_threshold,
+                           const torch::lazy::Value& iou_threshold,
+                           int64_t output_size) {
   auto shape_fn = [&](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
     NmsResult result = BuildNms(operands[0], operands[1], operands[2],
                                 operands[3], output_size);
@@ -19,16 +21,16 @@ xla::Shape NodeOutputShape(const XlaValue& boxes, const XlaValue& scores,
                       {result.selected_indices, result.num_valid});
   };
   return InferOutputShape(
-      {boxes.xla_shape(), scores.xla_shape(), score_threshold.xla_shape(),
-       iou_threshold.xla_shape()},
+      {GetXlaShape(boxes), GetXlaShape(scores), GetXlaShape(score_threshold),
+       GetXlaShape(iou_threshold)},
       shape_fn);
 }
 
 }  // namespace
 
-Nms::Nms(const XlaValue& boxes, const XlaValue& scores,
-         const XlaValue& score_threshold, const XlaValue& iou_threshold,
-         int64_t output_size)
+Nms::Nms(const torch::lazy::Value& boxes, const torch::lazy::Value& scores,
+         const torch::lazy::Value& score_threshold,
+         const torch::lazy::Value& iou_threshold, int64_t output_size)
     : XlaNode(xla_nms, {boxes, scores, score_threshold, iou_threshold},
               [&]() {
                 return NodeOutputShape(boxes, scores, score_threshold,

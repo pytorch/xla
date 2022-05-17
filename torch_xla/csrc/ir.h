@@ -35,21 +35,24 @@ using OutputMap =
     std::unordered_map<torch::lazy::Output, T, torch::lazy::Output::Hasher>;
 
 // Represents an input/operand for a XlaNode object.
-struct XlaValue : public torch::lazy::Value {
-  XlaValue() = default;
-  XlaValue(torch::lazy::NodePtr node, size_t index = 0)
-      : torch::lazy::Value(std::dynamic_pointer_cast<torch::lazy::Node>(node),
-                           index) {}
+// struct XlaValue : public torch::lazy::Value {
+//   torch::lazy::Value() = default;
+//   torch::lazy::Value(torch::lazy::NodePtr node, size_t index = 0)
+//       :
+//       torch::lazy::Value(std::dynamic_pointer_cast<torch::lazy::Node>(node),
+//                            index) {}
 
-  // Retrieves the shape of this value. If the IR XlaNode generating the value
-  // is a multi-output node, the shape returned by this API will not be the full
-  // tuple shape, but only the shape at index referred by this value.
-  // To retrieve the full tuple shape in that case, use the node_shape() API.
-  const xla::Shape& xla_shape() const;
-  const xla::Shape& xla_node_shape() const;
-};
+//   // Retrieves the shape of this value. If the IR XlaNode generating the
+//   value
+//   // is a multi-output node, the shape returned by this API will not be the
+//   full
+//   // tuple shape, but only the shape at index referred by this value.
+//   // To retrieve the full tuple shape in that case, use the node_shape() API.
+//   // const xla::Shape& xla_shape() const;
+//   // const xla::Shape& xla_node_shape() const;
+// };
 
-using OpList = absl::Span<const XlaValue>;
+using OpList = absl::Span<const torch::lazy::Value>;
 
 // A node in the graph. Nodes for operations which requires extra data to be
 // stored for lowering, should inherit from this class and add operation
@@ -158,6 +161,8 @@ inline std::ostream& operator<<(std::ostream& stream, const XlaNode& node) {
   stream << node.ToString();
   return stream;
 }
+
+const xla::Shape& GetXlaShape(const torch::lazy::Value& value);
 
 template <typename T>
 T* NodeCast(const torch::lazy::Node* node, torch::lazy::OpKind op) {

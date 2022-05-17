@@ -9,13 +9,16 @@ namespace torch_xla {
 // IR node for 2D & 3D convolutions with or without bias.
 class ConvolutionOverrideable : public XlaNode {
  public:
-  ConvolutionOverrideable(const XlaValue& input, const XlaValue& weight,
-                          const XlaValue& bias, std::vector<int64_t> stride,
+  ConvolutionOverrideable(const torch::lazy::Value& input,
+                          const torch::lazy::Value& weight,
+                          const torch::lazy::Value& bias,
+                          std::vector<int64_t> stride,
                           std::vector<int64_t> padding,
                           std::vector<int64_t> dilation, bool transposed,
                           std::vector<int64_t> output_padding, int64_t groups);
 
-  ConvolutionOverrideable(const XlaValue& input, const XlaValue& weight,
+  ConvolutionOverrideable(const torch::lazy::Value& input,
+                          const torch::lazy::Value& weight,
                           std::vector<int64_t> stride,
                           std::vector<int64_t> padding,
                           std::vector<int64_t> dilation, bool transposed,

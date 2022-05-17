@@ -9,7 +9,7 @@ namespace torch_xla {
 
 class StdMean : public XlaNode {
  public:
-  StdMean(const XlaValue& input, std::vector<int64_t> dimensions,
+  StdMean(const torch::lazy::Value& input, std::vector<int64_t> dimensions,
           int64_t correction, bool keep_reduced_dimensions);
 
   std::string ToString() const override;

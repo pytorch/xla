@@ -10,8 +10,9 @@
 namespace torch_xla {
 namespace {
 
-xla::Shape NodeOutputShape(const XlaValue& logits, const XlaValue& labels,
-                           const absl::optional<XlaValue>& weight,
+xla::Shape NodeOutputShape(const torch::lazy::Value& logits,
+                           const torch::lazy::Value& labels,
+                           const absl::optional<torch::lazy::Value>& weight,
                            ReductionMode reduction, int ignore_index) {
   auto lower_for_shape_fn =
       [&](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
@@ -23,20 +24,22 @@ xla::Shape NodeOutputShape(const XlaValue& logits, const XlaValue& labels,
                         reduction);
   };
   std::vector<xla::Shape> shapes;
-  for (auto& input :
-       xla::util::GetValuesVector<XlaValue>({logits, labels}, {&weight})) {
-    shapes.push_back(input.xla_shape());
+  for (auto& input : xla::util::GetValuesVector<torch::lazy::Value>(
+           {logits, labels}, {&weight})) {
+    shapes.push_back(GetXlaShape(input));
   }
   return InferOutputShape(shapes, lower_for_shape_fn);
 }
 
 }  // namespace
 
-NllLoss::NllLoss(const XlaValue& logits, const XlaValue& labels,
-                 const absl::optional<XlaValue>& weight,
+NllLoss::NllLoss(const torch::lazy::Value& logits,
+                 const torch::lazy::Value& labels,
+                 const absl::optional<torch::lazy::Value>& weight,
                  ReductionMode reduction, int ignore_index)
     : XlaNode(torch::lazy::OpKind(at::aten::nll_loss),
-              xla::util::GetValuesVector<XlaValue>({logits, labels}, {&weight}),
+              xla::util::GetValuesVector<torch::lazy::Value>({logits, labels},
+                                                             {&weight}),
               [&]() {
                 return NodeOutputShape(logits, labels, weight, reduction,
                                        ignore_index);
@@ -48,7 +51,7 @@ NllLoss::NllLoss(const XlaValue& logits, const XlaValue& labels,
       ignore_index_(ignore_index) {}
 
 torch::lazy::NodePtr NllLoss::Clone(OpList operands) const {
-  absl::optional<XlaValue> weight;
+  absl::optional<torch::lazy::Value> weight;
   if (operands.size() > 2) {
     weight = operands.at(2);
   }

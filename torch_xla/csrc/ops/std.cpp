@@ -8,7 +8,7 @@
 namespace torch_xla {
 namespace {
 
-xla::Shape NodeOutputShape(const XlaValue& input,
+xla::Shape NodeOutputShape(const torch::lazy::Value& input,
                            std::vector<int64_t>& dimensions,
                            bool keep_reduced_dimensions, int64_t correction) {
   auto lower_for_shape_fn =
@@ -16,12 +16,12 @@ xla::Shape NodeOutputShape(const XlaValue& input,
     return BuildStdDeviation(operands[0], dimensions, keep_reduced_dimensions,
                              correction);
   };
-  return InferOutputShape({input.xla_shape()}, lower_for_shape_fn);
+  return InferOutputShape({GetXlaShape(input)}, lower_for_shape_fn);
 }
 
 }  // namespace
 
-Std::Std(const XlaValue& input, std::vector<int64_t> dimensions,
+Std::Std(const torch::lazy::Value& input, std::vector<int64_t> dimensions,
          bool keep_reduced_dimensions, int64_t correction)
     : XlaNode(
           torch::lazy::OpKind(at::aten::std), {input},

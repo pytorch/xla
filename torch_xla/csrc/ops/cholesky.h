@@ -6,7 +6,7 @@ namespace torch_xla {
 
 class Cholesky : public XlaNode {
  public:
-  Cholesky(const XlaValue& input, bool lower);
+  Cholesky(const torch::lazy::Value& input, bool lower);
 
   std::string ToString() const override;
 

@@ -6,8 +6,8 @@ namespace torch_xla {
 
 class Gather : public XlaNode {
  public:
-  Gather(const XlaValue& input, int64_t dim, const XlaValue& index,
-         bool sparse_grad);
+  Gather(const torch::lazy::Value& input, int64_t dim,
+         const torch::lazy::Value& index, bool sparse_grad);
 
   std::string ToString() const override;
 

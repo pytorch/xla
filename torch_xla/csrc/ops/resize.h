@@ -6,7 +6,7 @@ namespace torch_xla {
 
 class Resize : public XlaNode {
  public:
-  Resize(const XlaValue& input, std::vector<int64_t> size);
+  Resize(const torch::lazy::Value& input, std::vector<int64_t> size);
 
   torch::lazy::NodePtr Clone(OpList operands) const override;
 

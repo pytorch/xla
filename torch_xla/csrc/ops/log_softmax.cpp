@@ -16,18 +16,18 @@ xla::XlaOp LowerLogSoftmax(xla::XlaOp input, int64_t dim,
   return CastToScalarType(result, dtype);
 }
 
-xla::Shape NodeOutputShape(const XlaValue& input,
+xla::Shape NodeOutputShape(const torch::lazy::Value& input,
                            const c10::optional<at::ScalarType>& dtype) {
   if (dtype) {
     return xla::ShapeUtil::ChangeElementType(
-        input.xla_shape(), MakeXlaPrimitiveType(*dtype, /*device=*/nullptr));
+        GetXlaShape(input), MakeXlaPrimitiveType(*dtype, /*device=*/nullptr));
   }
-  return input.xla_shape();
+  return GetXlaShape(input);
 }
 
 }  // namespace
 
-LogSoftmax::LogSoftmax(const XlaValue& input, int64_t dim,
+LogSoftmax::LogSoftmax(const torch::lazy::Value& input, int64_t dim,
                        c10::optional<at::ScalarType> dtype)
     : XlaNode(torch::lazy::OpKind(at::aten::log_softmax), {input},
               [&]() { return NodeOutputShape(input, dtype); },

@@ -24,9 +24,9 @@ std::vector<xla::XlaOp> LowerSymEig(xla::XlaOp input, bool eigenvectors,
   return {w, v};
 }
 
-xla::Shape NodeOutputShape(const XlaValue& input, bool eigenvectors,
+xla::Shape NodeOutputShape(const torch::lazy::Value& input, bool eigenvectors,
                            bool lower) {
-  const xla::Shape& input_shape = input.xla_shape();
+  const xla::Shape& input_shape = GetXlaShape(input);
   XLA_CHECK_GE(input_shape.rank(), 2) << input_shape;
   // W is ..., M
   xla::Shape wshape(input_shape);
@@ -44,7 +44,7 @@ xla::Shape NodeOutputShape(const XlaValue& input, bool eigenvectors,
 
 }  // namespace
 
-SymEig::SymEig(const XlaValue& input, bool eigenvectors, bool lower)
+SymEig::SymEig(const torch::lazy::Value& input, bool eigenvectors, bool lower)
     : XlaNode(torch::lazy::OpKind(at::aten::symeig), {input},
               [&]() { return NodeOutputShape(input, eigenvectors, lower); },
               /*num_outputs=*/2, torch::lazy::MHash(eigenvectors, lower)),

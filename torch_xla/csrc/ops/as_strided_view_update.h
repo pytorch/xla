@@ -9,7 +9,8 @@ namespace torch_xla {
 
 class AsStridedViewUpdate : public XlaNode {
  public:
-  AsStridedViewUpdate(const XlaValue& target, const XlaValue& input,
+  AsStridedViewUpdate(const torch::lazy::Value& target,
+                      const torch::lazy::Value& input,
                       std::vector<int64_t> size, std::vector<int64_t> stride,
                       int64_t storage_offset);
 

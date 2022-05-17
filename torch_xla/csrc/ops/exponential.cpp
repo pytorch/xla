@@ -6,8 +6,8 @@
 
 namespace torch_xla {
 
-Exponential::Exponential(const XlaValue& lambda, const XlaValue& seed,
-                         xla::Shape shape)
+Exponential::Exponential(const torch::lazy::Value& lambda,
+                         const torch::lazy::Value& seed, xla::Shape shape)
     : XlaNode(torch::lazy::OpKind(at::aten::exponential), {lambda, seed},
               std::move(shape)) {}
 

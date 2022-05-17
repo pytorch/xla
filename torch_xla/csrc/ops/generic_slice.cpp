@@ -10,19 +10,19 @@
 namespace torch_xla {
 namespace {
 
-xla::Shape NodeOutputShape(const XlaValue& input,
+xla::Shape NodeOutputShape(const torch::lazy::Value& input,
                            absl::Span<const int64_t> base_indices,
                            absl::Span<const int64_t> sizes) {
   auto lower_for_shape_fn =
       [&](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
     return BuildSlice(operands[0], base_indices, sizes);
   };
-  return InferOutputShape({input.xla_shape()}, lower_for_shape_fn);
+  return InferOutputShape({GetXlaShape(input)}, lower_for_shape_fn);
 }
 
 }  // namespace
 
-GenericSlice::GenericSlice(const XlaValue& input,
+GenericSlice::GenericSlice(const torch::lazy::Value& input,
                            absl::Span<const int64_t> base_indices,
                            absl::Span<const int64_t> sizes)
     : XlaNode(xla_generic_slice, {input},

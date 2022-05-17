@@ -13,7 +13,7 @@ xla::Shape NodeOutputShape(const OpList& inputs) {
   std::vector<xla::Shape> output_shapes;
   output_shapes.reserve(inputs.size());
   for (size_t i = 0; i < inputs.size(); ++i) {
-    output_shapes.push_back(inputs[i].xla_shape());
+    output_shapes.push_back(GetXlaShape(inputs[i]));
   }
   return xla::ShapeUtil::MakeTupleShape(output_shapes);
 }

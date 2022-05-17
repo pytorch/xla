@@ -8,7 +8,7 @@ namespace torch_xla {
 
 class Softshrink : public XlaNode {
  public:
-  Softshrink(const XlaValue& input, const at::Scalar& lambda);
+  Softshrink(const torch::lazy::Value& input, const at::Scalar& lambda);
 
   std::string ToString() const override;
 

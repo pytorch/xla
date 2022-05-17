@@ -39,15 +39,15 @@ xla::XlaOp LowerAsStridedViewUpdate(xla::XlaOp target, xla::XlaOp input,
 
 }  // namespace
 
-AsStridedViewUpdate::AsStridedViewUpdate(const XlaValue& target,
-                                         const XlaValue& input,
+AsStridedViewUpdate::AsStridedViewUpdate(const torch::lazy::Value& target,
+                                         const torch::lazy::Value& input,
                                          std::vector<int64_t> size,
                                          std::vector<int64_t> stride,
                                          int64_t storage_offset)
     : XlaNode(xla_as_strided_view_update, {target, input},
               [&]() {
                 return xla::ShapeUtil::MakeShape(
-                    target.xla_shape().element_type(), size);
+                    GetXlaShape(target).element_type(), size);
               },
               /*num_outputs=*/1,
               torch::lazy::MHash(size, stride, storage_offset)),
