@@ -55,10 +55,6 @@ inline torch::lazy::NodePtr GenericOp(torch::lazy::OpKind op, xla::Shape shape,
                                         hash_seed);
 }
 
-torch::lazy::NodePtr Cos(const XlaValue& input);
-
-torch::lazy::NodePtr Cosh(const XlaValue& input);
-
 torch::lazy::NodePtr Sin(const XlaValue& input);
 
 torch::lazy::NodePtr Sinh(const XlaValue& input);
