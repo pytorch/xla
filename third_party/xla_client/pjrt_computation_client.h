@@ -32,7 +32,9 @@ class PjRtComputationClient : public ComputationClient {
       return reinterpret_cast<std::uintptr_t>(get_handle());
     };
     void Assign(const Data& data) override;
-    bool HasValue() const override { return get_handle() != nullptr; };
+    bool HasValue() const override {
+      return buffer != nullptr && !buffer->IsDeleted();
+    };
 
     std::shared_ptr<PjRtBuffer> buffer;
   };
@@ -74,6 +76,9 @@ class PjRtComputationClient : public ComputationClient {
   std::vector<std::string> GetLocalDevices() const override;
 
   std::vector<std::string> GetAllDevices() const override;
+
+  void SetReplicationDevices(
+      std::shared_ptr<std::vector<std::string>> devices) override;
 
   std::shared_ptr<std::vector<std::string>> GetReplicationDevices() override;
 
@@ -127,12 +132,6 @@ class PjRtComputationClient : public ComputationClient {
     return "getresourcedomainplaceholder";
   };
 
-  void SetReplicationDevices(
-      std::shared_ptr<std::vector<std::string>> devices) override {
-    // TODO(wcromar): use replication devices
-    TF_VLOG(2) << __FUNCTION__ << " not implemented";
-  };
-
   void SetRngSeed(size_t seed) override {
     XLA_ERROR() << __FUNCTION__ << " not implemented";
   };
@@ -146,7 +145,11 @@ class PjRtComputationClient : public ComputationClient {
   };
 
  private:
-  std::unique_ptr<PjRtClient> client_;
+  std::shared_ptr<PjRtClient> client_;
+  std::unordered_map<std::string, xla::PjRtDevice* const> string_to_device_;
+  std::shared_ptr<std::vector<std::string>> replication_devices_;
+
+  xla::PjRtDevice* StringToPjRtDevice(const std::string& device);
 };
 
 }  // namespace xla
