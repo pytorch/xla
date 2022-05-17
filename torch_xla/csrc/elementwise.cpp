@@ -206,8 +206,7 @@ xla::XlaOp BuildLeakyReluBackward(xla::XlaOp grad_output, xla::XlaOp input,
 xla::XlaOp BuildLogBase(xla::XlaOp input, double base) {
   xla::XlaOp result = xla::Log(input);
   xla::XlaOp ln_base = XlaHelpers::ScalarValue<float>(
-      1.0 / std::log(base), XlaHelpers::TypeOfXlaOp(input),
-      input.builder());
+      1.0 / std::log(base), XlaHelpers::TypeOfXlaOp(input), input.builder());
   return (result * ln_base);
 }
 
