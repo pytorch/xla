@@ -250,14 +250,14 @@ std::string GetTensorHloGraph(at::Tensor tensor) {
   return DumpUtil::ToHlo({xtensor.GetIrValue()}, xtensor.GetDevice());
 }
 
-XlaValue GetTensorIrValue(const at::Tensor& tensor,
-                          const torch::lazy::BackendDevice& device) {
+torch::lazy::Value GetTensorIrValue(const at::Tensor& tensor,
+                                    const torch::lazy::BackendDevice& device) {
   xla::ComputationClient::DataPtr data = TensorToXlaData(tensor, device);
   return torch::lazy::MakeNode<DeviceData>(std::move(data));
 }
 
 std::vector<xla::ComputationClient::DataPtr> Execute(
-    absl::Span<const XlaValue> roots,
+    absl::Span<const torch::lazy::Value> roots,
     const torch::lazy::BackendDevice& device) {
   LoweringContext lowering_ctx("Execute", device);
   for (auto node : roots) {
@@ -300,7 +300,7 @@ std::vector<at::Tensor> Fetch(
 }
 
 std::vector<at::Tensor> ExecuteAndFetch(
-    absl::Span<const XlaValue> roots,
+    absl::Span<const torch::lazy::Value> roots,
     const torch::lazy::BackendDevice& device) {
   auto results = Execute(roots, device);
   return Fetch(results);

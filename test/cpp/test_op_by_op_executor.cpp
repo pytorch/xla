@@ -17,9 +17,9 @@ TEST(OpByOpExecutorTest, TestSimpleAdd) {
     at::Tensor b = at::rand({4, 16, 3}, at::TensorOptions(at::kFloat));
     at::Tensor c = a + b;
 
-    XlaValue v_a = GetTensorIrValue(a, device);
-    XlaValue v_b = GetTensorIrValue(b, device);
-    XlaValue v_c = v_a + v_b;
+    torch::lazy::Value v_a = GetTensorIrValue(a, device);
+    torch::lazy::Value v_b = GetTensorIrValue(b, device);
+    torch::lazy::Value v_c = v_a + v_b;
 
     auto results_data =
         OpByOpExecutor::Get()->Execute({v_c}, device.toString(), {});
@@ -35,10 +35,10 @@ TEST(OpByOpExecutorTest, TestStack) {
     at::Tensor b = at::rand({4, 8, 3}, at::TensorOptions(at::kFloat));
     at::Tensor c = at::stack({a, b}, 1);
 
-    XlaValue v_a = GetTensorIrValue(a, device);
-    XlaValue v_b = GetTensorIrValue(b, device);
-    XlaValue v_c =
-        torch::lazy::MakeNode<Stack>(std::vector<XlaValue>({v_a, v_b}), 1);
+    torch::lazy::Value v_a = GetTensorIrValue(a, device);
+    torch::lazy::Value v_b = GetTensorIrValue(b, device);
+    torch::lazy::Value v_c = torch::lazy::MakeNode<Stack>(
+        std::vector<torch::lazy::Value>({v_a, v_b}), 1);
 
     auto results_data =
         OpByOpExecutor::Get()->Execute({v_c}, device.toString(), {});
@@ -54,10 +54,10 @@ TEST(OpByOpExecutorTest, TestAsyncStack) {
     at::Tensor b = at::rand({4, 8, 3}, at::TensorOptions(at::kFloat));
     at::Tensor c = at::stack({a, b}, 1);
 
-    XlaValue v_a = GetTensorIrValue(a, device);
-    XlaValue v_b = GetTensorIrValue(b, device);
-    XlaValue v_c =
-        torch::lazy::MakeNode<Stack>(std::vector<XlaValue>({v_a, v_b}), 1);
+    torch::lazy::Value v_a = GetTensorIrValue(a, device);
+    torch::lazy::Value v_b = GetTensorIrValue(b, device);
+    torch::lazy::Value v_c = torch::lazy::MakeNode<Stack>(
+        std::vector<torch::lazy::Value>({v_a, v_b}), 1);
 
     auto async =
         OpByOpExecutor::Get()->ExecuteAsync({v_c}, device.toString(), {});
