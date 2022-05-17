@@ -9,18 +9,19 @@ namespace torch_xla {
 namespace {
 
 // If the XlaOp is not a floating point, cast it to float_type.
-xla::XlaOp GetFloatingOp(const xla::XlaOp& input, xla::PrimitiveType float_type) {
+xla::XlaOp GetFloatingOp(const xla::XlaOp& input,
+                         xla::PrimitiveType float_type) {
   if (xla::primitive_util::IsIntegralType(XlaHelpers::TypeOfXlaOp(input))) {
     const xla::Shape& input_shape = XlaHelpers::ShapeOfXlaOp(input);
     xla::PrimitiveType raw_from = input_shape.element_type();
     xla::PrimitiveType raw_to = float_type;
-    xla::XlaOp input =
-        ConvertToRaw(input, raw_from, raw_from, raw_to, raw_to, /*device=*/nullptr);
+    xla::XlaOp input = ConvertToRaw(input, raw_from, raw_from, raw_to, raw_to,
+                                    /*device=*/nullptr);
   }
   return input;
 }
 
-} // namespace
+}  // namespace
 
 torch_xla::XlaOpVector Abs::Lower(LoweringContext* loctx) const {
   xla::XlaOp xla_input = loctx->GetOutputOp(operand(0));
@@ -73,13 +74,15 @@ torch_xla::XlaOpVector Log::Lower(LoweringContext* loctx) const {
 
 torch_xla::XlaOpVector Log2::Lower(LoweringContext* loctx) const {
   double base = 2.0;
-  xla::XlaOp xla_input = GetFloatingOp(loctx->GetOutputOp(operand(0)), xla::PrimitiveType::F32);
+  xla::XlaOp xla_input =
+      GetFloatingOp(loctx->GetOutputOp(operand(0)), xla::PrimitiveType::F32);
   return ReturnOp(BuildLogBase(xla_input, base), loctx);
 }
 
 torch_xla::XlaOpVector Log10::Lower(LoweringContext* loctx) const {
   double base = 10.0;
-  xla::XlaOp xla_input = GetFloatingOp(loctx->GetOutputOp(operand(0)), xla::PrimitiveType::F32);
+  xla::XlaOp xla_input =
+      GetFloatingOp(loctx->GetOutputOp(operand(0)), xla::PrimitiveType::F32);
   return ReturnOp(BuildLogBase(xla_input, base), loctx);
 }
 
