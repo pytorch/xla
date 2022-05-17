@@ -1787,22 +1787,10 @@ at::Tensor XLANativeFunctions::linspace(const at::Scalar& start,
                           GetXlaDeviceOrCurrent(device)));
 }
 
-at::Tensor XLANativeFunctions::log10(const at::Tensor& self) {
-  XLA_FN_COUNTER("xla::");
-  return bridge::AtenFromXlaTensor(XLATensor::log_base(
-      bridge::GetXlaTensor(self), torch::lazy::OpKind(at::aten::log10), 10.0));
-}
-
 at::Tensor XLANativeFunctions::log1p(const at::Tensor& self) {
   XLA_FN_COUNTER("xla::");
   return bridge::AtenFromXlaTensor(
       XLATensor::log1p(bridge::GetXlaTensor(self)));
-}
-
-at::Tensor XLANativeFunctions::log2(const at::Tensor& self) {
-  XLA_FN_COUNTER("xla::");
-  return bridge::AtenFromXlaTensor(XLATensor::log_base(
-      bridge::GetXlaTensor(self), torch::lazy::OpKind(at::aten::log2), 2.0));
 }
 
 at::Tensor XLANativeFunctions::log_sigmoid_backward(

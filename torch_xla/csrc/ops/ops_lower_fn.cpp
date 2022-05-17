@@ -55,10 +55,17 @@ torch_xla::XlaOpVector Log::Lower(LoweringContext* loctx) const {
   return ReturnOp(xla::Log(xla_input), loctx);
 }
 
-// torch_xla::XlaOpVector Log1p::Lower(LoweringContext* loctx) const {
-//   xla::XlaOp xla_input = loctx->GetOutputOp(operand(0));
-//   return ReturnOp(xla::Log1p(xla_input), loctx);
-// }
+torch_xla::XlaOpVector Log2::Lower(LoweringContext* loctx) const {
+  double base = 2.0;
+  xla::XlaOp xla_input = loctx->GetOutputOp(operand(0));
+  return ReturnOp(BuildLogBase(xla_input, base), loctx);
+}
+
+torch_xla::XlaOpVector Log10::Lower(LoweringContext* loctx) const {
+  double base = 10.0;
+  xla::XlaOp xla_input = loctx->GetOutputOp(operand(0));
+  return ReturnOp(BuildLogBase(xla_input, base), loctx);
+}
 
 torch_xla::XlaOpVector Maximum::Lower(LoweringContext* loctx) const {
   xla::XlaOp xla_input = loctx->GetOutputOp(operand(0));

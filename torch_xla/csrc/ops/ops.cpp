@@ -101,21 +101,6 @@ torch::lazy::NodePtr FracOp(const XlaValue& input) {
   return input - Trunc(input);
 }
 
-torch::lazy::NodePtr LogBase(const XlaValue& input, torch::lazy::OpKind op,
-                             double base) {
-  auto lower_fn = [base](const XlaNode& node,
-                         LoweringContext* loctx) -> XlaOpVector {
-    xla::XlaOp xla_input = loctx->GetOutputOp(node.operand(0));
-    xla::XlaOp result = xla::Log(xla_input);
-    xla::XlaOp ln_base = XlaHelpers::ScalarValue<float>(
-        1.0 / std::log(base), node.xla_shape().element_type(),
-        xla_input.builder());
-    return node.ReturnOp(result * ln_base, loctx);
-  };
-  return GenericOp(op, {input}, input.xla_shape(), std::move(lower_fn),
-                   /*num_outputs=*/1, torch::lazy::MHash(base));
-}
-
 torch::lazy::NodePtr ReciprocalOp(const XlaValue& input) {
   auto lower_fn = [](const XlaNode& node,
                      LoweringContext* loctx) -> XlaOpVector {

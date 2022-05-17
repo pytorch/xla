@@ -48,6 +48,9 @@ xla::XlaOp BuildLeakyRelu(xla::XlaOp input, double negative_slope);
 xla::XlaOp BuildLeakyReluBackward(xla::XlaOp grad_output, xla::XlaOp input,
                                   double negative_slope_value);
 
+// Computes log of base on input
+xla::XlaOp BuildLogBase(xla::XlaOp input, double base);
+
 // Computes the sigmoid function using Tanh
 // Sigmoid(x) = (tanh(x ∗ 0.5) + 1) ∗ 0.5
 xla::XlaOp BuildSigmoid(xla::XlaOp input);

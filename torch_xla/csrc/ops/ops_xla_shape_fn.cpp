@@ -23,7 +23,9 @@ xla::Shape CosOutputShape(const XlaValue& input) { return input.xla_shape(); }
 xla::Shape CoshOutputShape(const XlaValue& input) { return input.xla_shape(); }
 xla::Shape LogOutputShape(const XlaValue& input) { return input.xla_shape(); }
 
-// xla::Shape Log1pOutputShape(const XlaValue& input) { return input.xla_shape(); }
+xla::Shape Log2OutputShape(const XlaValue& input) { return input.xla_shape(); }
+
+xla::Shape Log10OutputShape(const XlaValue& input) { return input.xla_shape(); }
 
 xla::Shape MaximumOutputShape(const XlaValue& input, const XlaValue& other) {
   auto lower_for_shape_fn =

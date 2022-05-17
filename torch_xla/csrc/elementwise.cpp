@@ -203,6 +203,14 @@ xla::XlaOp BuildLeakyReluBackward(xla::XlaOp grad_output, xla::XlaOp input,
                      negative_slope * grad_output);
 }
 
+xla::XlaOp BuildLogBase(xla::XlaOp input, double base) {
+  xla::XlaOp result = xla::Log(input);
+  xla::XlaOp ln_base = XlaHelpers::ScalarValue<float>(
+      1.0 / std::log(base), XlaHelpers::TypeOfXlaOp(input),
+      input.builder());
+  return (result * ln_base);
+}
+
 xla::XlaOp BuildPrelu(xla::XlaOp input, xla::XlaOp weight) {
   const xla::Shape& input_shape = XlaHelpers::ShapeOfXlaOp(input);
   const xla::Shape& weight_shape = XlaHelpers::ShapeOfXlaOp(weight);
