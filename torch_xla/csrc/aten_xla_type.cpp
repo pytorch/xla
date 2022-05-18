@@ -12,7 +12,6 @@
 #include "tensorflow/compiler/xla/xla_client/metrics.h"
 #include "tensorflow/compiler/xla/xla_client/sys_util.h"
 #include "tensorflow/compiler/xla/xla_client/util.h"
-#include "torch/csrc/lazy/core/tensor.h"
 #include "torch/csrc/lazy/core/tensor_util.h"
 #include "torch/csrc/lazy/core/util.h"
 #include "torch_xla/csrc/aten_autograd_ops.h"
@@ -23,7 +22,6 @@
 #include "torch_xla/csrc/generated/XLANativeFunctions.h"
 #include "torch_xla/csrc/helpers.h"
 #include "torch_xla/csrc/ops/as_strided.h"
-#include "torch_xla/csrc/ops/dynamic_ir.h"
 #include "torch_xla/csrc/ops/index_ops.h"
 #include "torch_xla/csrc/pooling.h"
 #include "torch_xla/csrc/tensor_impl.h"
@@ -1334,28 +1332,9 @@ at::Tensor XLANativeFunctions::expand(const at::Tensor& self,
 at::Tensor XLANativeFunctions::expand(const at::Tensor& self,
                                       c10::SymIntArrayRef size, bool implicit) {
   XLA_FN_COUNTER("xla::");
-  std::vector<c10::SymInt> _sizes = torch::lazy::ToVector<c10::SymInt>(size);
-  std::vector<torch::lazy::NodePtr> size_nodes;
-  std::vector<int64_t> upper_bounds;
-  std::vector<bool> dynamic_dims;
-  /* TODO: move this code to a helper function */
-  for (auto& _size : _sizes) {
-    std::shared_ptr<c10::SymbolicIntNode> _symbolicIntNode =
-        _size.toSymbolicIntNode();
-    auto _lazySymIntNode =
-        std::dynamic_pointer_cast<torch::lazy::SymbolicIntNode>(
-            _symbolicIntNode);
-    auto size_node = _lazySymIntNode->node_;
-    size_nodes.push_back(size_node);
-    upper_bounds.push_back(
-        std::dynamic_pointer_cast<torch_xla::DimensionNode>(size_node)
-            ->getStaticValue());
-    dynamic_dims.push_back(
-        std::dynamic_pointer_cast<torch_xla::DimensionNode>(size_node)
-            ->isDynamic());
-  }
+  SymIntElements size_elements = SymIntElements(size);
   return bridge::AtenFromXlaTensor(XLATensor::expand(
-      bridge::GetXlaTensor(self), size_nodes, upper_bounds, dynamic_dims));
+      bridge::GetXlaTensor(self), size_elements.size_nodes, size_elements.upper_bounds, size_elements.dynamic_dims));
 }
 
 at::Tensor XLANativeFunctions::expm1(const at::Tensor& self) {
