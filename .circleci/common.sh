@@ -49,6 +49,7 @@ function checkout_torch_pin_if_available() {
 
 function install_deps_pytorch_xla() {
   XLA_DIR=$1
+  USE_CACHE="${2:-1}"
 
   # Install ninja to speedup the build
   pip install ninja
@@ -92,9 +93,10 @@ function install_deps_pytorch_xla() {
     exit 1
   fi
   bazels3cache --bucket=${XLA_CLANG_CACHE_S3_BUCKET_NAME} --maxEntrySizeBytes=0 --logging.level=verbose
-  # Uncomment to use cloud cache to build when available.
-  #sed -i '/bazel build/ a --remote_http_cache=http://localhost:7777 \\' $XLA_DIR/build_torch_xla_libs.sh
-
+  # Use cloud cache to build when available.
+  if [[ "$USE_CACHE" == 1 ]]; then
+    sed -i '/bazel build/ a --remote_http_cache=http://localhost:7777 \\' $XLA_DIR/build_torch_xla_libs.sh
+  fi
 }
 
 function build_torch_xla() {
