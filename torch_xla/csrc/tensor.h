@@ -24,7 +24,6 @@
 #include "torch_xla/csrc/xla_sharding_util.h"
 #include "torch_xla/csrc/ops/dynamic_ir.h"
 #include "torch_xla/csrc/view.h"
-// #include "torch/Aten/csrc/lazy/core/util.h"
 
 namespace torch_xla {
 
