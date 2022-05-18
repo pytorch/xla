@@ -22,7 +22,7 @@ std::string Constant::ToString() const {
   return ss.str();
 }
 
-torch::lazy::NodePtr Constant::Clone(OpList operands) const {
+torch::lazy::NodePtr Constant::Clone(torch::lazy::OpList operands) const {
   return torch::lazy::MakeNode<Constant>(value_.Clone());
 }
 

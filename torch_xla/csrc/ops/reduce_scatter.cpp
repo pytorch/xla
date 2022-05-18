@@ -51,7 +51,7 @@ ReduceScatter::ReduceScatter(AllReduceType reduce_type,
       groups_(std::move(groups)),
       pin_layout_(pin_layout) {}
 
-torch::lazy::NodePtr ReduceScatter::Clone(OpList operands) const {
+torch::lazy::NodePtr ReduceScatter::Clone(torch::lazy::OpList operands) const {
   return torch::lazy::MakeNode<ReduceScatter>(
       reduce_type_, operands.at(0), operands.at(1), scale_, scatter_dim_,
       shard_count_, groups_, pin_layout_);

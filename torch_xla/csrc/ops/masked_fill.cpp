@@ -14,7 +14,7 @@ MaskedFill::MaskedFill(const torch::lazy::Value& input,
               /*num_outputs=*/1, ScalarHash(value)),
       value_(std::move(value)) {}
 
-torch::lazy::NodePtr MaskedFill::Clone(OpList operands) const {
+torch::lazy::NodePtr MaskedFill::Clone(torch::lazy::OpList operands) const {
   return torch::lazy::MakeNode<MaskedFill>(operands.at(0), operands.at(1),
                                            value_);
 }

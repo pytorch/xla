@@ -30,7 +30,7 @@ Stack::Stack(absl::Span<const torch::lazy::Value> values, int64_t dim)
               /*num_outputs=*/1, torch::lazy::MHash(dim)),
       dim_(dim) {}
 
-torch::lazy::NodePtr Stack::Clone(OpList operands) const {
+torch::lazy::NodePtr Stack::Clone(torch::lazy::OpList operands) const {
   return torch::lazy::MakeNode<Stack>(operands, dim_);
 }
 

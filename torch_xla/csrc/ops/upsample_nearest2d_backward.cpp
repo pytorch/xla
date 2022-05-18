@@ -20,7 +20,7 @@ UpsampleNearestBackward::UpsampleNearestBackward(
       output_size_(std::move(output_size)),
       input_size_(std::move(input_size)) {}
 
-torch::lazy::NodePtr UpsampleNearestBackward::Clone(OpList operands) const {
+torch::lazy::NodePtr UpsampleNearestBackward::Clone(torch::lazy::OpList operands) const {
   return torch::lazy::MakeNode<UpsampleNearestBackward>(
       operands.at(0), output_size_, input_size_);
 }

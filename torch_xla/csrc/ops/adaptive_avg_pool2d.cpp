@@ -27,7 +27,7 @@ AdaptiveAvgPool2d::AdaptiveAvgPool2d(const torch::lazy::Value& input,
               /*num_outputs=*/1, torch::lazy::MHash(output_size)),
       output_size_(std::move(output_size)) {}
 
-torch::lazy::NodePtr AdaptiveAvgPool2d::Clone(OpList operands) const {
+torch::lazy::NodePtr AdaptiveAvgPool2d::Clone(torch::lazy::OpList operands) const {
   return torch::lazy::MakeNode<AdaptiveAvgPool2d>(operands.at(0), output_size_);
 }
 

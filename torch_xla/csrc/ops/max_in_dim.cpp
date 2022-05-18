@@ -27,7 +27,7 @@ MaxInDim::MaxInDim(const torch::lazy::Value& input, int64_t dim, bool keepdim)
       dim_(dim),
       keepdim_(keepdim) {}
 
-torch::lazy::NodePtr MaxInDim::Clone(OpList operands) const {
+torch::lazy::NodePtr MaxInDim::Clone(torch::lazy::OpList operands) const {
   return torch::lazy::MakeNode<MaxInDim>(operands.at(0), dim_, keepdim_);
 }
 

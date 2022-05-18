@@ -9,7 +9,7 @@ class Unsqueeze : public XlaNode {
   // Insert a dimension of size one at the specified position.
   Unsqueeze(const torch::lazy::Value& input, int dim);
 
-  torch::lazy::NodePtr Clone(OpList operands) const override;
+  torch::lazy::NodePtr Clone(torch::lazy::OpList operands) const override;
 
   XlaOpVector Lower(LoweringContext* loctx) const override;
 

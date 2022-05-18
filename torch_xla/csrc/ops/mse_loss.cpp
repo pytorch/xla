@@ -32,7 +32,7 @@ MseLoss::MseLoss(const torch::lazy::Value& input,
               torch::lazy::MHash(torch::lazy::GetEnumValue(reduction))),
       reduction_(reduction) {}
 
-torch::lazy::NodePtr MseLoss::Clone(OpList operands) const {
+torch::lazy::NodePtr MseLoss::Clone(torch::lazy::OpList operands) const {
   return torch::lazy::MakeNode<MseLoss>(operands.at(0), operands.at(1),
                                         reduction_);
 }

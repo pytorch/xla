@@ -12,7 +12,7 @@ class ReplicationPadBackward : public XlaNode {
                          const torch::lazy::Value& input,
                          std::vector<int64_t> padding);
 
-  torch::lazy::NodePtr Clone(OpList operands) const override;
+  torch::lazy::NodePtr Clone(torch::lazy::OpList operands) const override;
 
   XlaOpVector Lower(LoweringContext* loctx) const override;
 

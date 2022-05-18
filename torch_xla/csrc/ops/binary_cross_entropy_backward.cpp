@@ -48,7 +48,7 @@ BinaryCrossEntropyBackward::BinaryCrossEntropyBackward(
               torch::lazy::MHash(torch::lazy::GetEnumValue(reduction))),
       reduction_(reduction) {}
 
-torch::lazy::NodePtr BinaryCrossEntropyBackward::Clone(OpList operands) const {
+torch::lazy::NodePtr BinaryCrossEntropyBackward::Clone(torch::lazy::OpList operands) const {
   absl::optional<torch::lazy::Value> weight;
   if (operands.size() > 3) {
     weight = operands.at(3);

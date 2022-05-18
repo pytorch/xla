@@ -11,7 +11,7 @@ class LeakyReluBackward : public XlaNode {
   LeakyReluBackward(const torch::lazy::Value& grad_output,
                     const torch::lazy::Value& input, double negative_slope);
 
-  torch::lazy::NodePtr Clone(OpList operands) const override;
+  torch::lazy::NodePtr Clone(torch::lazy::OpList operands) const override;
 
   XlaOpVector Lower(LoweringContext* loctx) const override;
 

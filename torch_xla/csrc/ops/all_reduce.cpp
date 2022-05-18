@@ -46,7 +46,7 @@ AllReduce::AllReduce(AllReduceType reduce_type,
       groups_(std::move(groups)),
       pin_layout_(pin_layout) {}
 
-torch::lazy::NodePtr AllReduce::Clone(OpList operands) const {
+torch::lazy::NodePtr AllReduce::Clone(torch::lazy::OpList operands) const {
   std::vector<torch::lazy::Value> operand_list(operands.begin(),
                                                operands.end() - 1);
   return torch::lazy::MakeNode<AllReduce>(reduce_type_, operand_list,

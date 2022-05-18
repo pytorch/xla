@@ -17,7 +17,7 @@ GetDimensionsSize::GetDimensionsSize(const torch::lazy::Value& input,
               /*num_outputs=*/1, torch::lazy::MHash(dimensions)),
       dimensions_(std::move(dimensions)) {}
 
-torch::lazy::NodePtr GetDimensionsSize::Clone(OpList operands) const {
+torch::lazy::NodePtr GetDimensionsSize::Clone(torch::lazy::OpList operands) const {
   return torch::lazy::MakeNode<GetDimensionsSize>(operands.at(0), dimensions_);
 }
 

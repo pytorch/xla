@@ -9,7 +9,7 @@ class LogSoftmaxBackward : public XlaNode {
   LogSoftmaxBackward(const torch::lazy::Value& grad_output,
                      const torch::lazy::Value& output, int64_t dim);
 
-  torch::lazy::NodePtr Clone(OpList operands) const override;
+  torch::lazy::NodePtr Clone(torch::lazy::OpList operands) const override;
 
   XlaOpVector Lower(LoweringContext* loctx) const override;
 

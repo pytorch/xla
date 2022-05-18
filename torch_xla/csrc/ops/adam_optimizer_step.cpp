@@ -35,7 +35,7 @@ AdamOptimizerStep::AdamOptimizerStep(
       use_amsgrad_(use_amsgrad),
       use_adamw_(use_adamw) {}
 
-torch::lazy::NodePtr AdamOptimizerStep::Clone(OpList operands) const {
+torch::lazy::NodePtr AdamOptimizerStep::Clone(torch::lazy::OpList operands) const {
   return torch::lazy::MakeNode<AdamOptimizerStep>(
       operands.at(0), operands.at(1), operands.at(2), operands.at(3),
       operands.at(4), operands.at(5), operands.at(6), operands.at(7),

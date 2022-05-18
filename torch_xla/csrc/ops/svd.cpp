@@ -73,7 +73,7 @@ SVD::SVD(const torch::lazy::Value& input, bool some, bool compute_uv)
       some_(some),
       compute_uv_(compute_uv) {}
 
-torch::lazy::NodePtr SVD::Clone(OpList operands) const {
+torch::lazy::NodePtr SVD::Clone(torch::lazy::OpList operands) const {
   return torch::lazy::MakeNode<SVD>(operands.at(0), some_, compute_uv_);
 }
 

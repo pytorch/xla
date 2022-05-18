@@ -48,7 +48,7 @@ Mean::Mean(const torch::lazy::Value& input, std::vector<int64_t> dimensions,
       keep_reduced_dimensions_(keep_reduced_dimensions),
       dtype_(dtype) {}
 
-torch::lazy::NodePtr Mean::Clone(OpList operands) const {
+torch::lazy::NodePtr Mean::Clone(torch::lazy::OpList operands) const {
   return torch::lazy::MakeNode<Mean>(operands.at(0), dimensions_,
                                      keep_reduced_dimensions_, dtype_);
 }

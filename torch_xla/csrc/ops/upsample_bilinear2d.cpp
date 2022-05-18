@@ -20,7 +20,7 @@ UpsampleBilinear::UpsampleBilinear(const torch::lazy::Value& input,
       output_size_(std::move(output_size)),
       align_corners_(align_corners) {}
 
-torch::lazy::NodePtr UpsampleBilinear::Clone(OpList operands) const {
+torch::lazy::NodePtr UpsampleBilinear::Clone(torch::lazy::OpList operands) const {
   return torch::lazy::MakeNode<UpsampleBilinear>(operands.at(0), output_size_,
                                                  align_corners_);
 }

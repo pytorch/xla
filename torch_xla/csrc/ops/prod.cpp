@@ -54,7 +54,7 @@ Prod::Prod(const torch::lazy::Value& input, std::vector<int64_t> dimensions,
       keep_reduced_dimensions_(keep_reduced_dimensions),
       dtype_(dtype) {}
 
-torch::lazy::NodePtr Prod::Clone(OpList operands) const {
+torch::lazy::NodePtr Prod::Clone(torch::lazy::OpList operands) const {
   return torch::lazy::MakeNode<Prod>(operands.at(0), dimensions_,
                                      keep_reduced_dimensions_, dtype_);
 }

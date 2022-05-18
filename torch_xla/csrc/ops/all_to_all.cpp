@@ -45,7 +45,7 @@ AllToAll::AllToAll(const torch::lazy::Value& input,
       groups_(std::move(groups)),
       pin_layout_(pin_layout) {}
 
-torch::lazy::NodePtr AllToAll::Clone(OpList operands) const {
+torch::lazy::NodePtr AllToAll::Clone(torch::lazy::OpList operands) const {
   return torch::lazy::MakeNode<AllToAll>(operands.at(0), operands.at(1),
                                          split_dimension_, concat_dimension_,
                                          split_count_, groups_, pin_layout_);

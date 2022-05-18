@@ -43,7 +43,7 @@ CumSum::CumSum(const torch::lazy::Value& input, int64_t dim,
       dim_(dim),
       dtype_(dtype) {}
 
-torch::lazy::NodePtr CumSum::Clone(OpList operands) const {
+torch::lazy::NodePtr CumSum::Clone(torch::lazy::OpList operands) const {
   return torch::lazy::MakeNode<CumSum>(operands.at(0), dim_, dtype_);
 }
 

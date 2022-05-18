@@ -12,7 +12,7 @@ Cholesky::Cholesky(const torch::lazy::Value& input, bool lower)
               /*num_outputs=*/1, torch::lazy::MHash(lower)),
       lower_(lower) {}
 
-torch::lazy::NodePtr Cholesky::Clone(OpList operands) const {
+torch::lazy::NodePtr Cholesky::Clone(torch::lazy::OpList operands) const {
   return torch::lazy::MakeNode<Cholesky>(operands.at(0), lower_);
 }
 

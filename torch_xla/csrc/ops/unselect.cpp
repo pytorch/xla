@@ -19,7 +19,7 @@ Unselect::Unselect(const torch::lazy::Value& target,
       end_(end),
       stride_(stride) {}
 
-torch::lazy::NodePtr Unselect::Clone(OpList operands) const {
+torch::lazy::NodePtr Unselect::Clone(torch::lazy::OpList operands) const {
   return torch::lazy::MakeNode<Unselect>(operands.at(0), operands.at(1), dim_,
                                          start_, end_, stride_);
 }

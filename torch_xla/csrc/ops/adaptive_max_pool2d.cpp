@@ -28,7 +28,7 @@ AdaptiveMaxPool2d::AdaptiveMaxPool2d(const torch::lazy::Value& input,
               /*num_outputs=*/2, torch::lazy::MHash(output_size)),
       output_size_(std::move(output_size)) {}
 
-torch::lazy::NodePtr AdaptiveMaxPool2d::Clone(OpList operands) const {
+torch::lazy::NodePtr AdaptiveMaxPool2d::Clone(torch::lazy::OpList operands) const {
   return torch::lazy::MakeNode<AdaptiveMaxPool2d>(operands.at(0), output_size_);
 }
 

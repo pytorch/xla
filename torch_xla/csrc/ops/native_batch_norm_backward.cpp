@@ -45,7 +45,7 @@ NativeBatchNormBackward::NativeBatchNormBackward(
       training_(training),
       eps_(eps) {}
 
-torch::lazy::NodePtr NativeBatchNormBackward::Clone(OpList operands) const {
+torch::lazy::NodePtr NativeBatchNormBackward::Clone(torch::lazy::OpList operands) const {
   return torch::lazy::MakeNode<NativeBatchNormBackward>(
       operands.at(0), operands.at(1), operands.at(2), operands.at(3),
       operands.at(4), training_, eps_);

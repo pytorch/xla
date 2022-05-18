@@ -36,7 +36,7 @@ Logsumexp::Logsumexp(const torch::lazy::Value& input,
       dimensions_(std::move(dimensions)),
       keep_reduced_dimensions_(keep_reduced_dimensions) {}
 
-torch::lazy::NodePtr Logsumexp::Clone(OpList operands) const {
+torch::lazy::NodePtr Logsumexp::Clone(torch::lazy::OpList operands) const {
   return torch::lazy::MakeNode<Logsumexp>(operands.at(0), dimensions_,
                                           keep_reduced_dimensions_);
 }
