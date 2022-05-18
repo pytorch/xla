@@ -6,12 +6,18 @@
 namespace torch_xla {
 
 void SymIntElements::SetSymIntNodeElements(c10::SymInt& size) {
-  std::shared_ptr<c10::SymbolicIntNode> symbolicIntNode = size.toSymbolicIntNode();
-  auto lazySymIntNode = std::dynamic_pointer_cast<torch::lazy::SymbolicIntNode>(symbolicIntNode);
+  std::shared_ptr<c10::SymbolicIntNode> symbolicIntNode =
+      size.toSymbolicIntNode();
+  auto lazySymIntNode =
+      std::dynamic_pointer_cast<torch::lazy::SymbolicIntNode>(symbolicIntNode);
   auto size_node = lazySymIntNode->node_;
   size_nodes.push_back(size_node);
-  upper_bounds.push_back(std::dynamic_pointer_cast<torch_xla::DimensionNode>(size_node)->getStaticValue());
-  dynamic_dims.push_back(std::dynamic_pointer_cast<torch_xla::DimensionNode>(size_node)->isDynamic());
+  upper_bounds.push_back(
+      std::dynamic_pointer_cast<torch_xla::DimensionNode>(size_node)
+          ->getStaticValue());
+  dynamic_dims.push_back(
+      std::dynamic_pointer_cast<torch_xla::DimensionNode>(size_node)
+          ->isDynamic());
 }
 
 at::ScalarType GetScalarType(const at::Scalar& scalar) {
