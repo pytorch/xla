@@ -25,14 +25,14 @@ class OpByOpExecutor {
   static OpByOpExecutor* Get();
 
   std::vector<xla::ComputationClient::ExecuteChainedOp> BuildOps(
-      absl::Span<const torch::lazy::Value> roots, const std::string& device,
+      c10::ArrayRef<torch::lazy::Value> roots, const std::string& device,
       absl::Span<const std::string> devices);
 
   std::vector<xla::ComputationClient::DataPtr> Execute(
-      absl::Span<const torch::lazy::Value> roots, const std::string& device,
+      c10::ArrayRef<torch::lazy::Value> roots, const std::string& device,
       absl::Span<const std::string> devices);
 
-  AsyncTask ExecuteAsync(absl::Span<const torch::lazy::Value> roots,
+  AsyncTask ExecuteAsync(c10::ArrayRef<torch::lazy::Value> roots,
                          const std::string& device,
                          absl::Span<const std::string> devices);
 

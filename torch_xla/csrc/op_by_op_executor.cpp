@@ -86,7 +86,7 @@ OpByOpExecutor::OpByOpExecutor(size_t compile_cache_size)
     : compile_cache_(compile_cache_size) {}
 
 std::vector<xla::ComputationClient::ExecuteChainedOp> OpByOpExecutor::BuildOps(
-    absl::Span<const torch::lazy::Value> roots, const std::string& device,
+    c10::ArrayRef<torch::lazy::Value> roots, const std::string& device,
     absl::Span<const std::string> devices) {
   std::vector<const torch::lazy::Node*> root_nodes;
   root_nodes.reserve(roots.size());
@@ -200,7 +200,7 @@ std::vector<xla::ComputationClient::ExecuteChainedOp> OpByOpExecutor::BuildOps(
 }
 
 std::vector<xla::ComputationClient::DataPtr> OpByOpExecutor::Execute(
-    absl::Span<const torch::lazy::Value> roots, const std::string& device,
+    c10::ArrayRef<torch::lazy::Value> roots, const std::string& device,
     absl::Span<const std::string> devices) {
   auto chained_exec_ops = BuildOps(roots, device, devices);
   return xla::ComputationClient::Get()->ExecuteChained(chained_exec_ops,
@@ -208,7 +208,7 @@ std::vector<xla::ComputationClient::DataPtr> OpByOpExecutor::Execute(
 }
 
 OpByOpExecutor::AsyncTask OpByOpExecutor::ExecuteAsync(
-    absl::Span<const torch::lazy::Value> roots, const std::string& device,
+    c10::ArrayRef<torch::lazy::Value> roots, const std::string& device,
     absl::Span<const std::string> devices) {
   std::vector<torch::lazy::Value> roots_vector(roots.begin(), roots.end());
   std::vector<std::string> devices_vector(devices.begin(), devices.end());

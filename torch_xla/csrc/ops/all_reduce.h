@@ -8,7 +8,7 @@ namespace torch_xla {
 class AllReduce : public XlaNode {
  public:
   AllReduce(AllReduceType reduce_type,
-            absl::Span<const torch::lazy::Value> operands,
+            c10::ArrayRef<torch::lazy::Value> operands,
             const torch::lazy::Value& token, double scale,
             std::vector<std::vector<int64_t>> groups, bool pin_layout);
 

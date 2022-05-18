@@ -26,7 +26,7 @@ inline torch::lazy::NodePtr ConstantOp(xla::Literal value) {
 }
 
 inline torch::lazy::NodePtr GenericOp(
-    torch::lazy::OpKind op, absl::Span<const torch::lazy::Value> operands,
+    torch::lazy::OpKind op, c10::ArrayRef<torch::lazy::Value> operands,
     xla::Shape shape, Generic::LowerFn lower_fn, size_t num_outputs = 1,
     // cast to uint32_t to avoid ambiguous constructor of uint128
     torch::lazy::hash_t hash_seed = (uint32_t)0x5a2d296e9) {
@@ -36,7 +36,7 @@ inline torch::lazy::NodePtr GenericOp(
 }
 
 inline torch::lazy::NodePtr GenericOp(
-    torch::lazy::OpKind op, absl::Span<const torch::lazy::Value> operands,
+    torch::lazy::OpKind op, c10::ArrayRef<torch::lazy::Value> operands,
     const std::function<xla::Shape()>& shape_fn, Generic::LowerFn lower_fn,
     size_t num_outputs = 1,
     // cast to uint32_t to avoid ambiguous constructor of uint128
@@ -200,7 +200,7 @@ torch::lazy::NodePtr ARange(const at::Scalar& start, const at::Scalar& end,
                             const at::Scalar& step, at::ScalarType scalar_type);
 
 torch::lazy::NodePtr BroadcastTensors(
-    absl::Span<const torch::lazy::Value> tensors);
+    c10::ArrayRef<torch::lazy::Value> tensors);
 
 torch::lazy::NodePtr Norm(const torch::lazy::Value& input,
                           const c10::optional<at::Scalar>& p,

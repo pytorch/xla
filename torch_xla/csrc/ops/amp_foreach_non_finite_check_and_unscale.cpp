@@ -22,7 +22,7 @@ xla::Shape NodeOutputShape(const torch::lazy::OpList& inputs,
 }
 
 std::vector<torch::lazy::Value> GetOperandList(
-    absl::Span<const torch::lazy::Value> operands,
+    c10::ArrayRef<torch::lazy::Value> operands,
     const torch::lazy::Value& found_inf, const torch::lazy::Value& inv_scale) {
   std::vector<torch::lazy::Value> operand_list(operands.begin(),
                                                operands.end());

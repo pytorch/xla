@@ -5,7 +5,7 @@
 namespace torch_xla {
 
 Generic::Generic(torch::lazy::OpKind op,
-                 absl::Span<const torch::lazy::Value> operands,
+                 c10::ArrayRef<torch::lazy::Value> operands,
                  xla::Shape shape, LowerFn lower_fn, size_t num_outputs,
                  torch::lazy::hash_t hash_seed)
     : XlaNode(std::move(op), operands, std::move(shape), num_outputs,
@@ -14,7 +14,7 @@ Generic::Generic(torch::lazy::OpKind op,
       hash_seed_(hash_seed) {}
 
 Generic::Generic(torch::lazy::OpKind op,
-                 absl::Span<const torch::lazy::Value> operands,
+                 c10::ArrayRef<torch::lazy::Value> operands,
                  const std::function<xla::Shape()>& shape_fn, LowerFn lower_fn,
                  size_t num_outputs, torch::lazy::hash_t hash_seed)
     : XlaNode(std::move(op), operands, shape_fn, num_outputs, hash_seed),

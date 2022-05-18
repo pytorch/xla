@@ -8,7 +8,7 @@
 namespace torch_xla {
 namespace {
 
-xla::Shape NodeOutputShape(absl::Span<const torch::lazy::Value> values,
+xla::Shape NodeOutputShape(c10::ArrayRef<torch::lazy::Value> values,
                            int64_t dim) {
   auto lower_for_shape_fn =
       [&](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
@@ -24,7 +24,7 @@ xla::Shape NodeOutputShape(absl::Span<const torch::lazy::Value> values,
 
 }  // namespace
 
-Cat::Cat(absl::Span<const torch::lazy::Value> values, int64_t dim)
+Cat::Cat(c10::ArrayRef<torch::lazy::Value> values, int64_t dim)
     : XlaNode(torch::lazy::OpKind(at::aten::cat), values,
               [&]() { return NodeOutputShape(values, dim); },
               /*num_outputs=*/1, torch::lazy::MHash(dim)),
