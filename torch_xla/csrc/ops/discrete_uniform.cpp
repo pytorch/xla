@@ -8,8 +8,9 @@
 
 namespace torch_xla {
 
-DiscreteUniform::DiscreteUniform(const XlaValue& from, const XlaValue& to,
-                                 const XlaValue& seed,
+DiscreteUniform::DiscreteUniform(const torch::lazy::Value& from,
+                                 const torch::lazy::Value& to,
+                                 const torch::lazy::Value& seed,
                                  const xla::Shape& rng_shape)
     : XlaNode(torch::lazy::OpKind(at::aten::random), {from, to, seed},
               rng_shape,

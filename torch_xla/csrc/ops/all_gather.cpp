@@ -10,8 +10,9 @@
 namespace torch_xla {
 namespace {
 
-xla::Shape NodeOutputShape(const XlaValue& input, const XlaValue& token,
-                           int64_t dim, int64_t shard_count,
+xla::Shape NodeOutputShape(const torch::lazy::Value& input,
+                           const torch::lazy::Value& token, int64_t dim,
+                           int64_t shard_count,
                            const std::vector<std::vector<int64_t>>& groups,
                            bool pin_layout) {
   auto shape_fn = [&](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
@@ -19,12 +20,13 @@ xla::Shape NodeOutputShape(const XlaValue& input, const XlaValue& token,
                                             shard_count, groups, pin_layout);
     return xla::Tuple(operands[0].builder(), {result.result, result.token});
   };
-  return InferOutputShape({input.xla_shape(), token.xla_shape()}, shape_fn);
+  return InferOutputShape({GetXlaShape(input), GetXlaShape(token)}, shape_fn);
 }
 
 }  // namespace
 
-AllGather::AllGather(const XlaValue& input, const XlaValue& token, int64_t dim,
+AllGather::AllGather(const torch::lazy::Value& input,
+                     const torch::lazy::Value& token, int64_t dim,
                      int64_t shard_count,
                      std::vector<std::vector<int64_t>> groups, bool pin_layout)
     : XlaNode(xla_all_gather, {input, token},

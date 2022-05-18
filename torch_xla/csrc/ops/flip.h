@@ -7,7 +7,7 @@ namespace torch_xla {
 
 class Flip : public XlaNode {
  public:
-  Flip(const XlaValue& input, std::vector<int64_t> dims);
+  Flip(const torch::lazy::Value& input, std::vector<int64_t> dims);
 
   torch::lazy::NodePtr Clone(OpList operands) const override;
 

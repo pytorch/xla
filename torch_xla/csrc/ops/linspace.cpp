@@ -6,12 +6,13 @@
 
 namespace torch_xla {
 
-Linspace::Linspace(const XlaValue& start, const XlaValue& end, int64_t steps)
+Linspace::Linspace(const torch::lazy::Value& start,
+                   const torch::lazy::Value& end, int64_t steps)
     : XlaNode(torch::lazy::OpKind(at::aten::linspace), {start, end},
               [&]() {
                 xla::PrimitiveType dtype =
-                    XlaHelpers::PromoteType(start.xla_shape().element_type(),
-                                            end.xla_shape().element_type());
+                    XlaHelpers::PromoteType(GetXlaShape(start).element_type(),
+                                            GetXlaShape(end).element_type());
                 return xla::ShapeUtil::MakeShape(dtype, {steps});
               },
               /*num_outputs=*/1, torch::lazy::MHash(steps)),

@@ -10,8 +10,9 @@
 namespace torch_xla {
 namespace {
 
-xla::Shape NodeOutputShape(AllReduceType reduce_type, const XlaValue input,
-                           const XlaValue& token, double scale,
+xla::Shape NodeOutputShape(AllReduceType reduce_type,
+                           const torch::lazy::Value input,
+                           const torch::lazy::Value& token, double scale,
                            int64_t scatter_dim, int64_t shard_count,
                            const std::vector<std::vector<int64_t>>& groups,
                            bool pin_layout) {
@@ -23,13 +24,14 @@ xla::Shape NodeOutputShape(AllReduceType reduce_type, const XlaValue input,
                            shard_count, groups, pin_layout);
     return xla::Tuple(operands[0].builder(), {result.result, result.token});
   };
-  return InferOutputShape({input.xla_shape(), token.xla_shape()}, shape_fn);
+  return InferOutputShape({GetXlaShape(input), GetXlaShape(token)}, shape_fn);
 }
 
 }  // namespace
 
-ReduceScatter::ReduceScatter(AllReduceType reduce_type, const XlaValue& input,
-                             const XlaValue& token, double scale,
+ReduceScatter::ReduceScatter(AllReduceType reduce_type,
+                             const torch::lazy::Value& input,
+                             const torch::lazy::Value& token, double scale,
                              int64_t scatter_dim, int64_t shard_count,
                              std::vector<std::vector<int64_t>> groups,
                              bool pin_layout)

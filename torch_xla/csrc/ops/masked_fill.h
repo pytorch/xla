@@ -8,7 +8,7 @@ namespace torch_xla {
 
 class MaskedFill : public XlaNode {
  public:
-  MaskedFill(const XlaValue& input, const XlaValue& mask,
+  MaskedFill(const torch::lazy::Value& input, const torch::lazy::Value& mask,
              const at::Scalar& value);
 
   std::string ToString() const override;

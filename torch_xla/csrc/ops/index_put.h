@@ -6,8 +6,9 @@ namespace torch_xla {
 
 class IndexPut : public XlaNode {
  public:
-  IndexPut(const XlaValue& base, const XlaValue& indices, int64_t start_dim,
-           const XlaValue& values, bool accumulate);
+  IndexPut(const torch::lazy::Value& base, const torch::lazy::Value& indices,
+           int64_t start_dim, const torch::lazy::Value& values,
+           bool accumulate);
 
   std::string ToString() const override;
 

@@ -8,19 +8,19 @@
 namespace torch_xla {
 namespace {
 
-xla::Shape NodeOutputShape(const XlaValue& input,
+xla::Shape NodeOutputShape(const torch::lazy::Value& input,
                            absl::Span<const int64_t> output_size) {
   auto lower_for_shape_fn =
       [output_size](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
     XLA_CHECK_EQ(operands.size(), 1);
     return BuildAdaptiveAvgPool3d(operands[0], output_size);
   };
-  return InferOutputShape({input.xla_shape()}, lower_for_shape_fn);
+  return InferOutputShape({GetXlaShape(input)}, lower_for_shape_fn);
 }
 
 }  // namespace
 
-AdaptiveAvgPool3d::AdaptiveAvgPool3d(const XlaValue& input,
+AdaptiveAvgPool3d::AdaptiveAvgPool3d(const torch::lazy::Value& input,
                                      std::vector<int64_t> output_size)
     : XlaNode(torch::lazy::OpKind(at::aten::adaptive_avg_pool3d), {input},
               [&]() { return NodeOutputShape(input, output_size); },

@@ -8,14 +8,14 @@
 namespace torch_xla {
 namespace {
 
-xla::Shape NodeOutputShape(const XlaValue& input,
+xla::Shape NodeOutputShape(const torch::lazy::Value& input,
                            absl::Span<const int64_t> size) {
-  return xla::ShapeUtil::MakeShape(input.xla_shape().element_type(), size);
+  return xla::ShapeUtil::MakeShape(GetXlaShape(input).element_type(), size);
 }
 
 }  // namespace
 
-Resize::Resize(const XlaValue& input, std::vector<int64_t> size)
+Resize::Resize(const torch::lazy::Value& input, std::vector<int64_t> size)
     : XlaNode(torch::lazy::OpKind(at::aten::resize), {input},
               [&]() { return NodeOutputShape(input, size); },
               /*num_outputs=*/1, torch::lazy::MHash(size)),

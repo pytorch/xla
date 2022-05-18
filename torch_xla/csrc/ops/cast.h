@@ -9,8 +9,8 @@ namespace torch_xla {
 
 class Cast : public XlaNode {
  public:
-  Cast(const XlaValue& input, xla::PrimitiveType type);
-  Cast(const XlaValue& input, at::ScalarType dtype,
+  Cast(const torch::lazy::Value& input, xla::PrimitiveType type);
+  Cast(const torch::lazy::Value& input, at::ScalarType dtype,
        c10::optional<at::ScalarType> stype = c10::nullopt);
 
   std::string ToString() const override;

@@ -10,22 +10,25 @@
 namespace torch_xla {
 namespace {
 
-xla::Shape NodeOutputShape(const XlaValue& grad_output, const XlaValue& input,
-                           const XlaValue& target, ReductionMode reduction) {
+xla::Shape NodeOutputShape(const torch::lazy::Value& grad_output,
+                           const torch::lazy::Value& input,
+                           const torch::lazy::Value& target,
+                           ReductionMode reduction) {
   auto lower_for_shape_fn =
       [&](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
     return BuildMseLossBackward(operands[0], operands[1], operands[2],
                                 reduction);
   };
   return InferOutputShape(
-      {grad_output.xla_shape(), input.xla_shape(), target.xla_shape()},
+      {GetXlaShape(grad_output), GetXlaShape(input), GetXlaShape(target)},
       lower_for_shape_fn);
 }
 
 }  // namespace
 
-MseLossBackward::MseLossBackward(const XlaValue& grad_output,
-                                 const XlaValue& input, const XlaValue& target,
+MseLossBackward::MseLossBackward(const torch::lazy::Value& grad_output,
+                                 const torch::lazy::Value& input,
+                                 const torch::lazy::Value& target,
                                  ReductionMode reduction)
     : XlaNode(torch::lazy::OpKind(at::aten::mse_loss_backward),
               {grad_output, input, target},

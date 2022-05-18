@@ -8,8 +8,8 @@ namespace torch_xla {
 
 class UpsampleBilinear : public XlaNode {
  public:
-  UpsampleBilinear(const XlaValue& input, std::vector<int64_t> output_size,
-                   bool align_corners);
+  UpsampleBilinear(const torch::lazy::Value& input,
+                   std::vector<int64_t> output_size, bool align_corners);
 
   torch::lazy::NodePtr Clone(OpList operands) const override;
 

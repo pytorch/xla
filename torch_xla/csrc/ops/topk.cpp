@@ -7,20 +7,21 @@
 namespace torch_xla {
 namespace {
 
-xla::Shape NodeOutputShape(const XlaValue& input, int64_t k, int64_t dim,
-                           bool largest, bool sorted, bool stable) {
+xla::Shape NodeOutputShape(const torch::lazy::Value& input, int64_t k,
+                           int64_t dim, bool largest, bool sorted,
+                           bool stable) {
   auto lower_for_shape_fn =
       [&](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
     return xla::Tuple(operands[0].builder(),
                       CreateTopK(operands[0], k, dim, largest, stable));
   };
-  return InferOutputShape({input.xla_shape()}, lower_for_shape_fn);
+  return InferOutputShape({GetXlaShape(input)}, lower_for_shape_fn);
 }
 
 }  // namespace
 
-TopK::TopK(const XlaValue& input, int64_t k, int64_t dim, bool largest,
-           bool sorted, bool stable)
+TopK::TopK(const torch::lazy::Value& input, int64_t k, int64_t dim,
+           bool largest, bool sorted, bool stable)
     : XlaNode(torch::lazy::OpKind(at::aten::topk), {input},
               [&]() {
                 return NodeOutputShape(input, k, dim, largest, sorted, stable);

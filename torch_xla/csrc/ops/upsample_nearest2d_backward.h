@@ -8,7 +8,7 @@ namespace torch_xla {
 
 class UpsampleNearestBackward : public XlaNode {
  public:
-  UpsampleNearestBackward(const XlaValue& input,
+  UpsampleNearestBackward(const torch::lazy::Value& input,
                           std::vector<int64_t> output_size,
                           std::vector<int64_t> input_size);
 

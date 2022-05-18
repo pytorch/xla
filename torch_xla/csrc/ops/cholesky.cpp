@@ -6,9 +6,9 @@
 
 namespace torch_xla {
 
-Cholesky::Cholesky(const XlaValue& input, bool lower)
+Cholesky::Cholesky(const torch::lazy::Value& input, bool lower)
     : XlaNode(torch::lazy::OpKind(at::aten::cholesky), {input},
-              input.xla_shape(),
+              GetXlaShape(input),
               /*num_outputs=*/1, torch::lazy::MHash(lower)),
       lower_(lower) {}
 

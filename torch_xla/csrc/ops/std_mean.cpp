@@ -8,7 +8,7 @@
 namespace torch_xla {
 namespace {
 
-xla::Shape NodeOutputShape(const XlaValue& input,
+xla::Shape NodeOutputShape(const torch::lazy::Value& input,
                            std::vector<int64_t>& dimensions,
                            bool keep_reduced_dimensions, int64_t correction) {
   auto lower_for_shape_fn_std_mean =
@@ -19,13 +19,14 @@ xla::Shape NodeOutputShape(const XlaValue& input,
         BuildMean(operands[0], dimensions, keep_reduced_dimensions);
     return xla::Tuple(operands[0].builder(), {std, mean});
   };
-  return InferOutputShape({input.xla_shape()}, lower_for_shape_fn_std_mean);
+  return InferOutputShape({GetXlaShape(input)}, lower_for_shape_fn_std_mean);
 }
 
 }  // namespace
 
-StdMean::StdMean(const XlaValue& input, std::vector<int64_t> dimensions,
-                 int64_t correction, bool keep_reduced_dimensions)
+StdMean::StdMean(const torch::lazy::Value& input,
+                 std::vector<int64_t> dimensions, int64_t correction,
+                 bool keep_reduced_dimensions)
     : XlaNode(
           torch::lazy::OpKind(at::aten::std_mean), {input},
           [&]() {

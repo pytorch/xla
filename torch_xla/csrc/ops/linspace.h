@@ -6,7 +6,8 @@ namespace torch_xla {
 
 class Linspace : public XlaNode {
  public:
-  Linspace(const XlaValue& start, const XlaValue& end, const int64_t steps);
+  Linspace(const torch::lazy::Value& start, const torch::lazy::Value& end,
+           const int64_t steps);
 
   std::string ToString() const override;
 

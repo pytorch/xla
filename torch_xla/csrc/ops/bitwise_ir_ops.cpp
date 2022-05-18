@@ -7,7 +7,8 @@
 
 namespace torch_xla {
 
-XlaValue BitwiseAnd(const XlaValue& node1, const XlaValue& node2) {
+torch::lazy::Value BitwiseAnd(const torch::lazy::Value& node1,
+                              const torch::lazy::Value& node2) {
   auto lower_fn = [](const XlaNode& node,
                      LoweringContext* loctx) -> XlaOpVector {
     xla::XlaOp op0 = loctx->GetOutputOp(node.operand(0));
@@ -24,12 +25,13 @@ XlaValue BitwiseAnd(const XlaValue& node1, const XlaValue& node2) {
   return GenericOp(torch::lazy::OpKind(at::aten::__and__), {node1, node2},
                    [&]() {
                      return InferOutputShape(
-                         {node1.xla_shape(), node2.xla_shape()}, shape_fn);
+                         {GetXlaShape(node1), GetXlaShape(node2)}, shape_fn);
                    },
                    std::move(lower_fn));
 }
 
-XlaValue BitwiseOr(const XlaValue& node1, const XlaValue& node2) {
+torch::lazy::Value BitwiseOr(const torch::lazy::Value& node1,
+                             const torch::lazy::Value& node2) {
   auto lower_fn = [](const XlaNode& node,
                      LoweringContext* loctx) -> XlaOpVector {
     xla::XlaOp op0 = loctx->GetOutputOp(node.operand(0));
@@ -46,12 +48,13 @@ XlaValue BitwiseOr(const XlaValue& node1, const XlaValue& node2) {
   return GenericOp(torch::lazy::OpKind(at::aten::__or__), {node1, node2},
                    [&]() {
                      return InferOutputShape(
-                         {node1.xla_shape(), node2.xla_shape()}, shape_fn);
+                         {GetXlaShape(node1), GetXlaShape(node2)}, shape_fn);
                    },
                    std::move(lower_fn));
 }
 
-XlaValue BitwiseXor(const XlaValue& node1, const XlaValue& node2) {
+torch::lazy::Value BitwiseXor(const torch::lazy::Value& node1,
+                              const torch::lazy::Value& node2) {
   auto lower_fn = [](const XlaNode& node,
                      LoweringContext* loctx) -> XlaOpVector {
     xla::XlaOp op0 = loctx->GetOutputOp(node.operand(0));
@@ -68,7 +71,7 @@ XlaValue BitwiseXor(const XlaValue& node1, const XlaValue& node2) {
   return GenericOp(torch::lazy::OpKind(at::aten::__xor__), {node1, node2},
                    [&]() {
                      return InferOutputShape(
-                         {node1.xla_shape(), node2.xla_shape()}, shape_fn);
+                         {GetXlaShape(node1), GetXlaShape(node2)}, shape_fn);
                    },
                    std::move(lower_fn));
 }

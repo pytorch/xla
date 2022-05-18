@@ -5,10 +5,10 @@
 
 namespace torch_xla {
 
-Put::Put(const XlaValue& input, const XlaValue& index, const XlaValue& source,
-         bool accumulate)
+Put::Put(const torch::lazy::Value& input, const torch::lazy::Value& index,
+         const torch::lazy::Value& source, bool accumulate)
     : XlaNode(torch::lazy::OpKind(at::aten::put), {input, index, source},
-              input.xla_shape(),
+              GetXlaShape(input),
               /*num_outputs=*/1, torch::lazy::MHash(accumulate)),
       accumulate_(accumulate) {}
 

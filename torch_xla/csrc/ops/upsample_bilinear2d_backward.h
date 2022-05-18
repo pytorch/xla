@@ -8,7 +8,7 @@ namespace torch_xla {
 
 class UpsampleBilinearBackward : public XlaNode {
  public:
-  UpsampleBilinearBackward(const XlaValue& input,
+  UpsampleBilinearBackward(const torch::lazy::Value& input,
                            std::vector<int64_t> output_size,
                            std::vector<int64_t> input_size, bool align_corners);
 

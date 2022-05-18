@@ -6,7 +6,7 @@ namespace torch_xla {
 
 class Roll : public XlaNode {
  public:
-  Roll(const XlaValue& input, std::vector<int64_t> shifts,
+  Roll(const torch::lazy::Value& input, std::vector<int64_t> shifts,
        std::vector<int64_t> dims);
 
   torch::lazy::NodePtr Clone(OpList operands) const override;

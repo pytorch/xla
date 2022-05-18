@@ -6,7 +6,8 @@ namespace torch_xla {
 
 class MaxUnpoolNd : public XlaNode {
  public:
-  MaxUnpoolNd(const XlaValue& input, const XlaValue& indices,
+  MaxUnpoolNd(const torch::lazy::Value& input,
+              const torch::lazy::Value& indices,
               std::vector<int64_t> output_size);
 
   torch::lazy::NodePtr Clone(OpList operands) const override;

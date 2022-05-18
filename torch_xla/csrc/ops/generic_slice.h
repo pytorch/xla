@@ -7,7 +7,8 @@ namespace torch_xla {
 
 class GenericSlice : public XlaNode {
  public:
-  GenericSlice(const XlaValue& input, absl::Span<const int64_t> base_indices,
+  GenericSlice(const torch::lazy::Value& input,
+               absl::Span<const int64_t> base_indices,
                absl::Span<const int64_t> sizes);
 
   torch::lazy::NodePtr Clone(OpList operands) const override;

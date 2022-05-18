@@ -8,7 +8,8 @@ namespace torch_xla {
 
 class ReplicationPadBackward : public XlaNode {
  public:
-  ReplicationPadBackward(const XlaValue& gard_output, const XlaValue& input,
+  ReplicationPadBackward(const torch::lazy::Value& gard_output,
+                         const torch::lazy::Value& input,
                          std::vector<int64_t> padding);
 
   torch::lazy::NodePtr Clone(OpList operands) const override;

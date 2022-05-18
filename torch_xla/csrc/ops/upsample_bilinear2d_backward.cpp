@@ -8,12 +8,12 @@
 namespace torch_xla {
 
 UpsampleBilinearBackward::UpsampleBilinearBackward(
-    const XlaValue& input, std::vector<int64_t> output_size,
+    const torch::lazy::Value& input, std::vector<int64_t> output_size,
     std::vector<int64_t> input_size, bool align_corners)
     : XlaNode(torch::lazy::OpKind(at::aten::upsample_bilinear2d_backward),
               {input},
               [&]() {
-                return resize::GetBackwardOutputShape2d(input.xla_shape(),
+                return resize::GetBackwardOutputShape2d(GetXlaShape(input),
                                                         input_size);
               },
               /*num_outputs=*/1,

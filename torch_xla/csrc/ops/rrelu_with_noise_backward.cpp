@@ -7,11 +7,12 @@
 namespace torch_xla {
 
 RreluWithNoiseBackward::RreluWithNoiseBackward(
-    const XlaValue& grad_output, const XlaValue& input, const XlaValue& noise,
-    const at::Scalar& lower, const at::Scalar& upper, bool training)
+    const torch::lazy::Value& grad_output, const torch::lazy::Value& input,
+    const torch::lazy::Value& noise, const at::Scalar& lower,
+    const at::Scalar& upper, bool training)
     : XlaNode(
           torch::lazy::OpKind(at::aten::rrelu_with_noise_backward),
-          {grad_output, input, noise}, input.xla_shape(),
+          {grad_output, input, noise}, GetXlaShape(input),
           /*num_outputs=*/1,
           torch::lazy::MHash(ScalarHash(lower), ScalarHash(upper), training)),
       lower_(std::move(lower)),

@@ -5,10 +5,11 @@
 
 namespace torch_xla {
 
-MaskedScatter::MaskedScatter(const XlaValue& input, const XlaValue& mask,
-                             const XlaValue& source)
+MaskedScatter::MaskedScatter(const torch::lazy::Value& input,
+                             const torch::lazy::Value& mask,
+                             const torch::lazy::Value& source)
     : XlaNode(torch::lazy::OpKind(at::aten::masked_scatter),
-              {input, mask, source}, input.xla_shape(),
+              {input, mask, source}, GetXlaShape(input),
               /*num_outputs=*/1) {}
 
 torch::lazy::NodePtr MaskedScatter::Clone(OpList operands) const {

@@ -8,13 +8,14 @@
 namespace torch_xla {
 namespace {
 
-xla::Shape NodeOutputShape(const XlaValue& input, const XlaValue& indices,
+xla::Shape NodeOutputShape(const torch::lazy::Value& input,
+                           const torch::lazy::Value& indices,
                            absl::Span<const int64_t> output_size) {
   auto shape_fn = [&](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
     return BuildMaxUnpoolNd(GetCurrentDevice(), operands[0], operands[1],
                             output_size);
   };
-  return InferOutputShape({input.xla_shape(), indices.xla_shape()}, shape_fn);
+  return InferOutputShape({GetXlaShape(input), GetXlaShape(indices)}, shape_fn);
 }
 
 c10::Symbol MaxUnpoolNdSymbol(int64_t spatial_dim_count) {
@@ -31,7 +32,8 @@ c10::Symbol MaxUnpoolNdSymbol(int64_t spatial_dim_count) {
 
 }  // namespace
 
-MaxUnpoolNd::MaxUnpoolNd(const XlaValue& input, const XlaValue& indices,
+MaxUnpoolNd::MaxUnpoolNd(const torch::lazy::Value& input,
+                         const torch::lazy::Value& indices,
                          std::vector<int64_t> output_size)
     : XlaNode(torch::lazy::OpKind(MaxUnpoolNdSymbol(output_size.size())),
               {input, indices},

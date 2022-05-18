@@ -7,7 +7,7 @@ namespace torch_xla {
 // IR node for the threshold operation.
 class Threshold : public XlaNode {
  public:
-  Threshold(const XlaValue& input, float threshold, float value);
+  Threshold(const torch::lazy::Value& input, float threshold, float value);
 
   torch::lazy::NodePtr Clone(OpList operands) const override;
 

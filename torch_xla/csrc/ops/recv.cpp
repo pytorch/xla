@@ -10,19 +10,19 @@ namespace ir {
 namespace ops {
 namespace {
 
-xla::Shape NodeOutputShape(const XlaValue& token, const xla::Shape& recv_shape,
-                           int64_t channel_id) {
+xla::Shape NodeOutputShape(const torch::lazy::Value& token,
+                           const xla::Shape& recv_shape, int64_t channel_id) {
   auto shape_fn = [&](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
     xla::XlaOp tokenOp = operands[0];
     RecvResult result = BuildRecvWithToken(tokenOp, recv_shape, channel_id);
     return xla::Tuple(tokenOp.builder(), {result.result, result.token});
   };
-  return InferOutputShape({recv_shape, token.xla_shape()}, shape_fn);
+  return InferOutputShape({recv_shape, GetXlaShape(token)}, shape_fn);
 }
 
 }  // namespace
 
-Recv::Recv(const XlaValue& token, const xla::Shape& recv_shape,
+Recv::Recv(const torch::lazy::Value& token, const xla::Shape& recv_shape,
            int64_t channel_id)
     : XlaNode(xla_recv, {token},
               [&]() { return NodeOutputShape(token, recv_shape, channel_id); },

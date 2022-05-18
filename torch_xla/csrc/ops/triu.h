@@ -8,7 +8,7 @@ namespace torch_xla {
 // matrices input.
 class Triu : public XlaNode {
  public:
-  Triu(const XlaValue& input, int64_t diagonal);
+  Triu(const torch::lazy::Value& input, int64_t diagonal);
 
   torch::lazy::NodePtr Clone(OpList operands) const override;
 

@@ -8,21 +8,22 @@
 namespace torch_xla {
 namespace {
 
-xla::Shape NodeOutputShape(const XlaValue& base, const XlaValue& indices,
+xla::Shape NodeOutputShape(const torch::lazy::Value& base,
+                           const torch::lazy::Value& indices,
                            int64_t start_dim) {
   auto lower_for_shape_fn =
       [start_dim](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
     XLA_CHECK_EQ(operands.size(), 2);
     return CreateIndex(operands[0], operands[1], start_dim);
   };
-  return InferOutputShape({base.xla_shape(), indices.xla_shape()},
+  return InferOutputShape({GetXlaShape(base), GetXlaShape(indices)},
                           lower_for_shape_fn);
 }
 
 }  // namespace
 
-IndexGet::IndexGet(const XlaValue& base, const XlaValue& indices,
-                   int64_t start_dim)
+IndexGet::IndexGet(const torch::lazy::Value& base,
+                   const torch::lazy::Value& indices, int64_t start_dim)
     : XlaNode(torch::lazy::OpKind(at::aten::index), {base, indices},
               [&]() { return NodeOutputShape(base, indices, start_dim); },
               /*num_outputs=*/1, torch::lazy::MHash(start_dim)),

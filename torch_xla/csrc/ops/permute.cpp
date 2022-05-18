@@ -8,19 +8,19 @@
 namespace torch_xla {
 namespace {
 
-xla::Shape NodeOutputShape(const XlaValue& input,
+xla::Shape NodeOutputShape(const torch::lazy::Value& input,
                            absl::Span<const int64_t> dims) {
   auto lower_for_shape_fn =
       [dims](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
     XLA_CHECK_EQ(operands.size(), 1);
     return xla::Transpose(operands[0], dims);
   };
-  return InferOutputShape({input.xla_shape()}, lower_for_shape_fn);
+  return InferOutputShape({GetXlaShape(input)}, lower_for_shape_fn);
 }
 
 }  // namespace
 
-Permute::Permute(const XlaValue& input, std::vector<int64_t> dims)
+Permute::Permute(const torch::lazy::Value& input, std::vector<int64_t> dims)
     : XlaNode(torch::lazy::OpKind(at::aten::permute), {input},
               [&]() { return NodeOutputShape(input, dims); },
               /*num_outputs=*/1, torch::lazy::MHash(dims)),

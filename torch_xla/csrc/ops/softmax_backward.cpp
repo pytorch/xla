@@ -7,10 +7,10 @@
 
 namespace torch_xla {
 
-SoftmaxBackward::SoftmaxBackward(const XlaValue& grad_output,
-                                 const XlaValue& output, int64_t dim)
+SoftmaxBackward::SoftmaxBackward(const torch::lazy::Value& grad_output,
+                                 const torch::lazy::Value& output, int64_t dim)
     : XlaNode(torch::lazy::OpKind(at::aten::_softmax_backward_data),
-              {grad_output, output}, grad_output.xla_shape(),
+              {grad_output, output}, GetXlaShape(grad_output),
               /*num_outputs=*/1, torch::lazy::MHash(dim)),
       dim_(dim) {}
 

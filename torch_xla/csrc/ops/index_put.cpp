@@ -5,10 +5,11 @@
 
 namespace torch_xla {
 
-IndexPut::IndexPut(const XlaValue& base, const XlaValue& indices,
-                   int64_t start_dim, const XlaValue& values, bool accumulate)
+IndexPut::IndexPut(const torch::lazy::Value& base,
+                   const torch::lazy::Value& indices, int64_t start_dim,
+                   const torch::lazy::Value& values, bool accumulate)
     : XlaNode(torch::lazy::OpKind(at::aten::index_put), {base, indices, values},
-              base.xla_shape(),
+              GetXlaShape(base),
               /*num_outputs=*/1, torch::lazy::MHash(start_dim, accumulate)),
       start_dim_(start_dim),
       accumulate_(accumulate) {}

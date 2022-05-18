@@ -79,6 +79,5 @@ if __name__ == '__main__':
       create_tensor="XLATensor::Create",
       create_aten_from_ltc_tensor="torch_xla::bridge::AtenFromXlaTensor",
       tuple_aten_from_ltc_tensors="torch::lazy::TupleAtenFromLtcTensors",
-      lazy_value_class="torch_xla::XlaValue",
       lazy_tensor_ptr="torch_xla::XLATensorPtr",
       get_device_fn="torch_xla::bridge::GetXlaDevice")

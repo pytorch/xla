@@ -8,7 +8,7 @@ namespace torch_xla {
 
 class ViewOp : public XlaNode {
  public:
-  ViewOp(const XlaValue& input, std::vector<int64_t> output_size);
+  ViewOp(const torch::lazy::Value& input, std::vector<int64_t> output_size);
 
   XlaOpVector Lower(LoweringContext* loctx) const override;
 

@@ -7,19 +7,20 @@
 namespace torch_xla {
 namespace {
 
-xla::Shape NodeOutputShape(const XlaValue& input, int64_t k, int64_t dim,
-                           bool keepdim) {
+xla::Shape NodeOutputShape(const torch::lazy::Value& input, int64_t k,
+                           int64_t dim, bool keepdim) {
   auto lower_for_shape_fn =
       [&](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
     return xla::Tuple(operands[0].builder(),
                       CreateKthValue(operands[0], k, dim, keepdim));
   };
-  return InferOutputShape({input.xla_shape()}, lower_for_shape_fn);
+  return InferOutputShape({GetXlaShape(input)}, lower_for_shape_fn);
 }
 
 }  // namespace
 
-KthValue::KthValue(const XlaValue& input, int64_t k, int64_t dim, bool keepdim)
+KthValue::KthValue(const torch::lazy::Value& input, int64_t k, int64_t dim,
+                   bool keepdim)
     : XlaNode(torch::lazy::OpKind(at::aten::kthvalue), {input},
               [&]() { return NodeOutputShape(input, k, dim, keepdim); },
               /*num_outputs=*/2, torch::lazy::MHash(k, dim, keepdim)),

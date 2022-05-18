@@ -9,8 +9,9 @@
 namespace torch_xla {
 namespace {
 
-xla::Shape NodeOutputShape(const XlaValue& logits, const XlaValue& labels,
-                           const absl::optional<XlaValue>& weight,
+xla::Shape NodeOutputShape(const torch::lazy::Value& logits,
+                           const torch::lazy::Value& labels,
+                           const absl::optional<torch::lazy::Value>& weight,
                            ReductionMode reduction) {
   auto lower_for_shape_fn =
       [&](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
@@ -21,29 +22,29 @@ xla::Shape NodeOutputShape(const XlaValue& logits, const XlaValue& labels,
     return BuildBinaryCrossEntropy(operands[0], operands[1], weight, reduction);
   };
   std::vector<xla::Shape> shapes;
-  for (auto& input :
-       xla::util::GetValuesVector<XlaValue>({logits, labels}, {&weight})) {
-    shapes.push_back(input.xla_shape());
+  for (auto& input : xla::util::GetValuesVector<torch::lazy::Value>(
+           {logits, labels}, {&weight})) {
+    shapes.push_back(GetXlaShape(input));
   }
   return InferOutputShape(shapes, lower_for_shape_fn);
 }
 
 }  // namespace
 
-BinaryCrossEntropy::BinaryCrossEntropy(const XlaValue& logits,
-                                       const XlaValue& labels,
-                                       const absl::optional<XlaValue>& weight,
-                                       ReductionMode reduction)
+BinaryCrossEntropy::BinaryCrossEntropy(
+    const torch::lazy::Value& logits, const torch::lazy::Value& labels,
+    const absl::optional<torch::lazy::Value>& weight, ReductionMode reduction)
     : XlaNode(
           torch::lazy::OpKind(at::aten::binary_cross_entropy),
-          xla::util::GetValuesVector<XlaValue>({logits, labels}, {&weight}),
+          xla::util::GetValuesVector<torch::lazy::Value>({logits, labels},
+                                                         {&weight}),
           [&]() { return NodeOutputShape(logits, labels, weight, reduction); },
           /*num_outputs=*/1,
           torch::lazy::MHash(torch::lazy::GetEnumValue(reduction))),
       reduction_(reduction) {}
 
 torch::lazy::NodePtr BinaryCrossEntropy::Clone(OpList operands) const {
-  absl::optional<XlaValue> weight;
+  absl::optional<torch::lazy::Value> weight;
   if (operands.size() > 2) {
     weight = operands.at(2);
   }

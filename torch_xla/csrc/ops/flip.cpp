@@ -5,8 +5,8 @@
 
 namespace torch_xla {
 
-Flip::Flip(const XlaValue& input, std::vector<int64_t> dims)
-    : XlaNode(torch::lazy::OpKind(at::aten::flip), {input}, input.xla_shape(),
+Flip::Flip(const torch::lazy::Value& input, std::vector<int64_t> dims)
+    : XlaNode(torch::lazy::OpKind(at::aten::flip), {input}, GetXlaShape(input),
               /*num_outputs=*/1, torch::lazy::MHash(dims)),
       dims_(std::move(dims)) {}
 

@@ -6,7 +6,8 @@ namespace torch_xla {
 
 class Amin : public XlaNode {
  public:
-  Amin(const XlaValue& input, std::vector<int64_t> dimensions, bool keepdim);
+  Amin(const torch::lazy::Value& input, std::vector<int64_t> dimensions,
+       bool keepdim);
 
   std::string ToString() const override;
 

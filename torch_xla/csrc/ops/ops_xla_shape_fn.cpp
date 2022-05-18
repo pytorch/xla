@@ -4,36 +4,59 @@
 
 namespace torch_xla {
 
-xla::Shape AbsOutputShape(const XlaValue& input) { return input.xla_shape(); }
+xla::Shape AbsOutputShape(const torch::lazy::Value& input) {
+  return GetXlaShape(input);
+}
 
-xla::Shape AcosOutputShape(const XlaValue& input) { return input.xla_shape(); }
+xla::Shape AcosOutputShape(const torch::lazy::Value& input) {
+  return GetXlaShape(input);
+}
 
-xla::Shape AcoshOutputShape(const XlaValue& input) { return input.xla_shape(); }
+xla::Shape AcoshOutputShape(const torch::lazy::Value& input) {
+  return GetXlaShape(input);
+}
 
-xla::Shape AsinOutputShape(const XlaValue& input) { return input.xla_shape(); }
+xla::Shape AsinOutputShape(const torch::lazy::Value& input) {
+  return GetXlaShape(input);
+}
 
-xla::Shape AsinhOutputShape(const XlaValue& input) { return input.xla_shape(); }
+xla::Shape AsinhOutputShape(const torch::lazy::Value& input) {
+  return GetXlaShape(input);
+}
 
-xla::Shape AtanOutputShape(const XlaValue& input) { return input.xla_shape(); }
+xla::Shape AtanOutputShape(const torch::lazy::Value& input) {
+  return GetXlaShape(input);
+}
 
-xla::Shape AtanhOutputShape(const XlaValue& input) { return input.xla_shape(); }
+xla::Shape AtanhOutputShape(const torch::lazy::Value& input) {
+  return GetXlaShape(input);
+}
 
-xla::Shape CosOutputShape(const XlaValue& input) { return input.xla_shape(); }
+xla::Shape CosOutputShape(const torch::lazy::Value& input) {
+  return GetXlaShape(input);
+}
 
-xla::Shape CoshOutputShape(const XlaValue& input) { return input.xla_shape(); }
+xla::Shape CoshOutputShape(const torch::lazy::Value& input) {
+  return GetXlaShape(input);
+}
 
-xla::Shape MaximumOutputShape(const XlaValue& input, const XlaValue& other) {
+xla::Shape MaximumOutputShape(const torch::lazy::Value& input,
+                              const torch::lazy::Value& other) {
   auto lower_for_shape_fn =
       [&](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
     auto promoted = XlaHelpers::Promote(operands[0], operands[1]);
     return xla::Max(promoted.first, promoted.second);
   };
-  return InferOutputShape({input.xla_shape(), other.xla_shape()},
+  return InferOutputShape({GetXlaShape(input), GetXlaShape(other)},
                           lower_for_shape_fn);
 }
 
-xla::Shape SgnOutputShape(const XlaValue& input) { return input.xla_shape(); }
+xla::Shape SgnOutputShape(const torch::lazy::Value& input) {
+  return GetXlaShape(input);
+}
 
-xla::Shape SignOutputShape(const XlaValue& input) { return input.xla_shape(); }
+xla::Shape SignOutputShape(const torch::lazy::Value& input) {
+  return GetXlaShape(input);
+}
 
 }  // namespace torch_xla

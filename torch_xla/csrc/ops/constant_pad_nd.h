@@ -8,7 +8,7 @@ namespace torch_xla {
 
 class ConstantPadNd : public XlaNode {
  public:
-  ConstantPadNd(const XlaValue& input, std::vector<int64_t> pad,
+  ConstantPadNd(const torch::lazy::Value& input, std::vector<int64_t> pad,
                 const at::Scalar& value);
 
   std::string ToString() const override;

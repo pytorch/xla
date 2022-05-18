@@ -5,11 +5,11 @@
 
 namespace torch_xla {
 
-LeakyReluBackward::LeakyReluBackward(const XlaValue& grad_output,
-                                     const XlaValue& input,
+LeakyReluBackward::LeakyReluBackward(const torch::lazy::Value& grad_output,
+                                     const torch::lazy::Value& input,
                                      double negative_slope)
     : XlaNode(torch::lazy::OpKind(at::aten::leaky_relu_backward),
-              {grad_output, input}, input.xla_shape(),
+              {grad_output, input}, GetXlaShape(input),
               /*num_outputs=*/1, torch::lazy::MHash(negative_slope)),
       negative_slope_(negative_slope) {}
 

@@ -9,9 +9,9 @@
 namespace torch_xla {
 namespace {
 
-xla::Shape NodeOutputShape(const XlaValue& input,
+xla::Shape NodeOutputShape(const torch::lazy::Value& input,
                            absl::Span<const int64_t> output_sizes) {
-  const xla::Shape& input_shape = input.xla_shape();
+  const xla::Shape& input_shape = GetXlaShape(input);
   auto info = XlaHelpers::GetDynamicReshapeInfo(input_shape, output_sizes);
   if (info) {
     return std::move(info->output_shape);
@@ -24,7 +24,8 @@ xla::Shape NodeOutputShape(const XlaValue& input,
 
 }  // namespace
 
-ViewOp::ViewOp(const XlaValue& input, std::vector<int64_t> output_size)
+ViewOp::ViewOp(const torch::lazy::Value& input,
+               std::vector<int64_t> output_size)
     : XlaNode(torch::lazy::OpKind(at::aten::view), {input},
               NodeOutputShape(input, output_size),
               /*num_outputs=*/1, torch::lazy::MHash(output_size)),

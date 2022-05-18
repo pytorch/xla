@@ -6,7 +6,7 @@ namespace torch_xla {
 
 class SVD : public XlaNode {
  public:
-  SVD(const XlaValue& input, bool some, bool compute_uv);
+  SVD(const torch::lazy::Value& input, bool some, bool compute_uv);
 
   std::string ToString() const override;
 

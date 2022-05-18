@@ -7,7 +7,7 @@ namespace torch_xla {
 
 class AllToAll : public XlaNode {
  public:
-  AllToAll(const XlaValue& input, const XlaValue& token,
+  AllToAll(const torch::lazy::Value& input, const torch::lazy::Value& token,
            int64_t split_dimension, int64_t concat_dimension,
            int64_t split_count, std::vector<std::vector<int64_t>> groups,
            bool pin_layout);

@@ -10,7 +10,8 @@ namespace ir {
 namespace ops {
 namespace {
 
-xla::Shape NodeOutputShape(const XlaValue& input, const XlaValue& token,
+xla::Shape NodeOutputShape(const torch::lazy::Value& input,
+                           const torch::lazy::Value& token,
                            int64_t channel_id) {
   auto shape_fn =
       [channel_id](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
@@ -20,12 +21,13 @@ xla::Shape NodeOutputShape(const XlaValue& input, const XlaValue& token,
     return xla::Tuple(tokenOp.builder(),
                       {result.input_as_result, result.token});
   };
-  return InferOutputShape({input.xla_shape(), token.xla_shape()}, shape_fn);
+  return InferOutputShape({GetXlaShape(input), GetXlaShape(token)}, shape_fn);
 }
 
 }  // namespace
 
-Send::Send(const XlaValue& input, const XlaValue& token, int64_t channel_id)
+Send::Send(const torch::lazy::Value& input, const torch::lazy::Value& token,
+           int64_t channel_id)
     : XlaNode(xla_send, {input, token},
               [&]() { return NodeOutputShape(input, token, channel_id); },
               /*num_outputs=*/2, torch::lazy::MHash(channel_id)),

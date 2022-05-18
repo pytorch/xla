@@ -8,18 +8,18 @@
 namespace torch_xla {
 namespace {
 
-xla::Shape NodeOutputShape(const XlaValue& input,
+xla::Shape NodeOutputShape(const torch::lazy::Value& input,
                            absl::Span<const int64_t> padding) {
   auto lower_for_shape_fn =
       [&](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
     return BuildReflectionPad2d(operands[0], padding);
   };
-  return InferOutputShape({input.xla_shape()}, lower_for_shape_fn);
+  return InferOutputShape({GetXlaShape(input)}, lower_for_shape_fn);
 }
 
 }  // namespace
 
-ReflectionPad2d::ReflectionPad2d(const XlaValue& input,
+ReflectionPad2d::ReflectionPad2d(const torch::lazy::Value& input,
                                  std::vector<int64_t> padding)
     : XlaNode(torch::lazy::OpKind(at::aten::reflection_pad2d), {input},
               [&]() { return NodeOutputShape(input, padding); },

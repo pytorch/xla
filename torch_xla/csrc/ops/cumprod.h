@@ -9,7 +9,7 @@ namespace torch_xla {
 
 class CumProd : public XlaNode {
  public:
-  CumProd(const XlaValue& input, int64_t dim,
+  CumProd(const torch::lazy::Value& input, int64_t dim,
           c10::optional<at::ScalarType> dtype);
 
   std::string ToString() const override;

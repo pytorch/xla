@@ -4,9 +4,9 @@
 #include "torch_xla/csrc/xla_lower_util.h"
 namespace torch_xla {
 
-Roll::Roll(const XlaValue& input, std::vector<int64_t> shifts,
+Roll::Roll(const torch::lazy::Value& input, std::vector<int64_t> shifts,
            std::vector<int64_t> dims)
-    : XlaNode(torch::lazy::OpKind(at::aten::roll), {input}, input.xla_shape(),
+    : XlaNode(torch::lazy::OpKind(at::aten::roll), {input}, GetXlaShape(input),
               /*num_outputs=*/1, torch::lazy::MHash(shifts, dims)),
       shifts_(std::move(shifts)),
       dims_(std::move(dims)) {}

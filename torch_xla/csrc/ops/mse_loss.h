@@ -8,7 +8,7 @@ namespace torch_xla {
 
 class MseLoss : public XlaNode {
  public:
-  MseLoss(const XlaValue& input, const XlaValue& target,
+  MseLoss(const torch::lazy::Value& input, const torch::lazy::Value& target,
           ReductionMode reduction);
 
   std::string ToString() const override;

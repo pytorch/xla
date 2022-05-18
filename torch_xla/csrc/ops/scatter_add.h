@@ -6,8 +6,8 @@ namespace torch_xla {
 
 class ScatterAdd : public XlaNode {
  public:
-  ScatterAdd(const XlaValue& input, const XlaValue& index, const XlaValue& src,
-             int64_t dim);
+  ScatterAdd(const torch::lazy::Value& input, const torch::lazy::Value& index,
+             const torch::lazy::Value& src, int64_t dim);
 
   std::string ToString() const override;
 

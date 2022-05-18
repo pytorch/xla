@@ -6,15 +6,15 @@
 namespace torch_xla {
 namespace {
 
-xla::Shape NodeOutputShape(const XlaValue& input, int dim) {
-  const xla::Shape& shape = input.xla_shape();
+xla::Shape NodeOutputShape(const torch::lazy::Value& input, int dim) {
+  const xla::Shape& shape = GetXlaShape(input);
   auto dimensions = BuildUnsqueezeDimensions(shape.dimensions(), dim);
   return xla::ShapeUtil::MakeShape(shape.element_type(), dimensions);
 }
 
 }  // namespace
 
-Unsqueeze::Unsqueeze(const XlaValue& input, int dim)
+Unsqueeze::Unsqueeze(const torch::lazy::Value& input, int dim)
     : XlaNode(torch::lazy::OpKind(at::aten::unsqueeze), {input},
               [&]() { return NodeOutputShape(input, dim); },
               /*num_outputs=*/1, torch::lazy::MHash(dim)),

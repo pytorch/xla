@@ -9,17 +9,17 @@
 namespace torch_xla {
 namespace {
 
-xla::Shape NodeOutputShape(const XlaValue& input,
+xla::Shape NodeOutputShape(const torch::lazy::Value& input,
                            absl::Span<const int64_t> padding) {
   auto shape_fn = [&](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
     return BuildReplicationPad(operands[0], padding);
   };
-  return InferOutputShape({input.xla_shape()}, shape_fn);
+  return InferOutputShape({GetXlaShape(input)}, shape_fn);
 }
 
 }  // namespace
 
-ReplicationPad::ReplicationPad(const XlaValue& input,
+ReplicationPad::ReplicationPad(const torch::lazy::Value& input,
                                std::vector<int64_t> padding)
     : XlaNode(xla_replication_pad, {input},
               [&]() { return NodeOutputShape(input, padding); },

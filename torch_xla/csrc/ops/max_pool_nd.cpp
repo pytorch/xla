@@ -8,7 +8,8 @@
 namespace torch_xla {
 namespace {
 
-xla::Shape NodeOutputShape(const XlaValue& input, int64_t spatial_dim_count,
+xla::Shape NodeOutputShape(const torch::lazy::Value& input,
+                           int64_t spatial_dim_count,
                            absl::Span<const int64_t> kernel_size,
                            absl::Span<const int64_t> stride,
                            absl::Span<const int64_t> padding, bool ceil_mode) {
@@ -18,7 +19,7 @@ xla::Shape NodeOutputShape(const XlaValue& input, int64_t spatial_dim_count,
                        padding, ceil_mode);
     return xla::Tuple(operands[0].builder(), {result.result, result.indices});
   };
-  return InferOutputShape({input.xla_shape()}, shape_fn);
+  return InferOutputShape({GetXlaShape(input)}, shape_fn);
 }
 
 c10::Symbol MaxPoolNdSymbol(int64_t spatial_dim_count) {
@@ -37,7 +38,7 @@ c10::Symbol MaxPoolNdSymbol(int64_t spatial_dim_count) {
 
 }  // namespace
 
-MaxPoolNd::MaxPoolNd(const XlaValue& input, int64_t spatial_dim_count,
+MaxPoolNd::MaxPoolNd(const torch::lazy::Value& input, int64_t spatial_dim_count,
                      std::vector<int64_t> kernel_size,
                      std::vector<int64_t> stride, std::vector<int64_t> padding,
                      bool ceil_mode)

@@ -9,8 +9,8 @@ namespace torch_xla {
 class ConvolutionBackwardOverrideable : public XlaNode {
  public:
   ConvolutionBackwardOverrideable(
-      const XlaValue& grad_output, const XlaValue& input,
-      const XlaValue& weight, std::vector<int64_t> stride,
+      const torch::lazy::Value& grad_output, const torch::lazy::Value& input,
+      const torch::lazy::Value& weight, std::vector<int64_t> stride,
       std::vector<int64_t> padding, std::vector<int64_t> dilation,
       bool transposed, std::vector<int64_t> output_padding, int64_t groups);
 

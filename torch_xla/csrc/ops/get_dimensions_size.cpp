@@ -9,7 +9,7 @@
 
 namespace torch_xla {
 
-GetDimensionsSize::GetDimensionsSize(const XlaValue& input,
+GetDimensionsSize::GetDimensionsSize(const torch::lazy::Value& input,
                                      std::vector<int64_t> dimensions)
     : XlaNode(xla_get_dimensions_size, {input},
               xla::ShapeUtil::MakeShape(

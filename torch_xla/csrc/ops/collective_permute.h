@@ -8,7 +8,7 @@ namespace torch_xla {
 class CollectivePermute : public XlaNode {
  public:
   CollectivePermute(
-      const XlaValue& input, const XlaValue& token,
+      const torch::lazy::Value& input, const torch::lazy::Value& token,
       std::vector<std::pair<int64_t, int64_t>> source_target_pairs);
 
   std::string ToString() const override;

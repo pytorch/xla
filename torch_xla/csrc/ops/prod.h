@@ -10,7 +10,7 @@ namespace torch_xla {
 
 class Prod : public XlaNode {
  public:
-  Prod(const XlaValue& input, std::vector<int64_t> dimensions,
+  Prod(const torch::lazy::Value& input, std::vector<int64_t> dimensions,
        bool keep_reduced_dimensions, c10::optional<at::ScalarType> dtype);
 
   std::string ToString() const override;

@@ -10,7 +10,8 @@ namespace torch_xla {
 namespace {
 
 // The bias doesn't matter for shape inference.
-xla::Shape NodeOutputShape(const XlaValue& input, const XlaValue& weight,
+xla::Shape NodeOutputShape(const torch::lazy::Value& input,
+                           const torch::lazy::Value& weight,
                            absl::Span<const int64_t> stride,
                            absl::Span<const int64_t> padding,
                            absl::Span<const int64_t> dilation, bool transposed,
@@ -24,17 +25,17 @@ xla::Shape NodeOutputShape(const XlaValue& input, const XlaValue& weight,
                                         padding, dilation, transposed,
                                         output_padding, groups);
   };
-  return InferOutputShape({input.xla_shape(), weight.xla_shape()},
+  return InferOutputShape({GetXlaShape(input), GetXlaShape(weight)},
                           lower_for_shape_fn);
 }
 
 }  // namespace
 
 ConvolutionOverrideable::ConvolutionOverrideable(
-    const XlaValue& input, const XlaValue& weight, const XlaValue& bias,
-    std::vector<int64_t> stride, std::vector<int64_t> padding,
-    std::vector<int64_t> dilation, bool transposed,
-    std::vector<int64_t> output_padding, int64_t groups)
+    const torch::lazy::Value& input, const torch::lazy::Value& weight,
+    const torch::lazy::Value& bias, std::vector<int64_t> stride,
+    std::vector<int64_t> padding, std::vector<int64_t> dilation,
+    bool transposed, std::vector<int64_t> output_padding, int64_t groups)
     : XlaNode(torch::lazy::OpKind(at::aten::convolution_overrideable),
               {input, weight, bias},
               [&]() {
@@ -52,9 +53,10 @@ ConvolutionOverrideable::ConvolutionOverrideable(
       groups_(groups) {}
 
 ConvolutionOverrideable::ConvolutionOverrideable(
-    const XlaValue& input, const XlaValue& weight, std::vector<int64_t> stride,
-    std::vector<int64_t> padding, std::vector<int64_t> dilation,
-    bool transposed, std::vector<int64_t> output_padding, int64_t groups)
+    const torch::lazy::Value& input, const torch::lazy::Value& weight,
+    std::vector<int64_t> stride, std::vector<int64_t> padding,
+    std::vector<int64_t> dilation, bool transposed,
+    std::vector<int64_t> output_padding, int64_t groups)
     : XlaNode(torch::lazy::OpKind(at::aten::convolution_overrideable),
               {input, weight},
               [&]() {

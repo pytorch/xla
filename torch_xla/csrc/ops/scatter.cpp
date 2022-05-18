@@ -5,10 +5,11 @@
 
 namespace torch_xla {
 
-Scatter::Scatter(const XlaValue& input, const XlaValue& index,
-                 const XlaValue& src, int64_t dim)
+Scatter::Scatter(const torch::lazy::Value& input,
+                 const torch::lazy::Value& index, const torch::lazy::Value& src,
+                 int64_t dim)
     : XlaNode(torch::lazy::OpKind(at::aten::scatter), {input, index, src},
-              input.xla_shape(),
+              GetXlaShape(input),
               /*num_outputs=*/1, torch::lazy::MHash(dim)),
       dim_(dim) {}
 

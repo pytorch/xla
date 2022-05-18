@@ -8,11 +8,11 @@
 
 namespace torch_xla {
 
-Gather::Gather(const XlaValue& input, int64_t dim, const XlaValue& index,
-               bool sparse_grad)
+Gather::Gather(const torch::lazy::Value& input, int64_t dim,
+               const torch::lazy::Value& index, bool sparse_grad)
     : XlaNode(torch::lazy::OpKind(at::aten::gather), {input, index},
-              xla::ShapeUtil::MakeShape(input.xla_shape().element_type(),
-                                        index.xla_shape().dimensions()),
+              xla::ShapeUtil::MakeShape(GetXlaShape(input).element_type(),
+                                        GetXlaShape(index).dimensions()),
               /*num_outputs=*/1, torch::lazy::MHash(dim)),
       dim_(dim),
       sparse_grad_(sparse_grad) {}

@@ -9,21 +9,23 @@
 namespace torch_xla {
 namespace {
 
-xla::Shape NodeOutputShape(const OpList& inputs, const XlaValue& found_inf) {
+xla::Shape NodeOutputShape(const OpList& inputs,
+                           const torch::lazy::Value& found_inf) {
   std::vector<xla::Shape> output_shapes;
   output_shapes.reserve(inputs.size() + 1);
   for (size_t i = 0; i < inputs.size(); ++i) {
-    const xla::Shape& input_shape = inputs[i].xla_shape();
+    const xla::Shape& input_shape = GetXlaShape(inputs[i]);
     output_shapes.push_back(input_shape);
   }
-  output_shapes.push_back(found_inf.xla_shape());
+  output_shapes.push_back(GetXlaShape(found_inf));
   return xla::ShapeUtil::MakeTupleShape(output_shapes);
 }
 
-std::vector<XlaValue> GetOperandList(absl::Span<const XlaValue> operands,
-                                     const XlaValue& found_inf,
-                                     const XlaValue& inv_scale) {
-  std::vector<XlaValue> operand_list(operands.begin(), operands.end());
+std::vector<torch::lazy::Value> GetOperandList(
+    absl::Span<const torch::lazy::Value> operands,
+    const torch::lazy::Value& found_inf, const torch::lazy::Value& inv_scale) {
+  std::vector<torch::lazy::Value> operand_list(operands.begin(),
+                                               operands.end());
   operand_list.push_back(found_inf);
   operand_list.push_back(inv_scale);
   return operand_list;
@@ -32,7 +34,8 @@ std::vector<XlaValue> GetOperandList(absl::Span<const XlaValue> operands,
 }  // namespace
 
 AmpForachNonFiniteCheckAndUnscale::AmpForachNonFiniteCheckAndUnscale(
-    const OpList& inputs, const XlaValue& found_inf, const XlaValue& inv_scale)
+    const OpList& inputs, const torch::lazy::Value& found_inf,
+    const torch::lazy::Value& inv_scale)
     : XlaNode(torch::lazy::OpKind(
                   at::aten::_amp_foreach_non_finite_check_and_unscale_),
               GetOperandList(inputs, found_inf, inv_scale),
@@ -41,7 +44,8 @@ AmpForachNonFiniteCheckAndUnscale::AmpForachNonFiniteCheckAndUnscale(
 
 torch::lazy::NodePtr AmpForachNonFiniteCheckAndUnscale::Clone(
     OpList operands) const {
-  std::vector<XlaValue> operand_list(operands.begin(), operands.end() - 2);
+  std::vector<torch::lazy::Value> operand_list(operands.begin(),
+                                               operands.end() - 2);
   size_t sz = operand_list.size();
   return torch::lazy::MakeNode<AmpForachNonFiniteCheckAndUnscale>(
       operand_list, operands[sz], operands[sz + 1]);

@@ -5,8 +5,8 @@
 
 namespace torch_xla {
 
-Triu::Triu(const XlaValue& input, int64_t diagonal)
-    : XlaNode(torch::lazy::OpKind(at::aten::triu), {input}, input.xla_shape(),
+Triu::Triu(const torch::lazy::Value& input, int64_t diagonal)
+    : XlaNode(torch::lazy::OpKind(at::aten::triu), {input}, GetXlaShape(input),
               /*num_outputs=*/1, torch::lazy::MHash(diagonal)),
       diagonal_(diagonal) {}
 

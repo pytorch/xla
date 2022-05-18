@@ -6,7 +6,8 @@ namespace torch_xla {
 
 class IndexSelect : public XlaNode {
  public:
-  IndexSelect(const XlaValue& input, int64_t dim, const XlaValue& index);
+  IndexSelect(const torch::lazy::Value& input, int64_t dim,
+              const torch::lazy::Value& index);
 
   std::string ToString() const override;
 

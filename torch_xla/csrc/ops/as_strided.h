@@ -9,7 +9,7 @@ namespace torch_xla {
 
 class AsStrided : public XlaNode {
  public:
-  AsStrided(const XlaValue& input, std::vector<int64_t> size,
+  AsStrided(const torch::lazy::Value& input, std::vector<int64_t> size,
             std::vector<int64_t> stride, int64_t storage_offset);
 
   std::string ToString() const override;

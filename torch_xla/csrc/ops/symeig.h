@@ -6,7 +6,7 @@ namespace torch_xla {
 
 class SymEig : public XlaNode {
  public:
-  SymEig(const XlaValue& input, bool eigenvectors, bool lower);
+  SymEig(const torch::lazy::Value& input, bool eigenvectors, bool lower);
 
   std::string ToString() const override;
 

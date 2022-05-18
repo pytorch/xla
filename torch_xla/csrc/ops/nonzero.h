@@ -9,7 +9,7 @@ namespace torch_xla {
 // it gets its own IR node class.
 class NonZero : public XlaNode {
  public:
-  NonZero(const XlaValue& input);
+  NonZero(const torch::lazy::Value& input);
 
   torch::lazy::NodePtr Clone(OpList operands) const override;
 

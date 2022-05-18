@@ -6,8 +6,8 @@ namespace torch_xla {
 
 class Uniform : public XlaNode {
  public:
-  Uniform(const XlaValue& from, const XlaValue& to, const XlaValue& seed,
-          const xla::Shape& rng_shape);
+  Uniform(const torch::lazy::Value& from, const torch::lazy::Value& to,
+          const torch::lazy::Value& seed, const xla::Shape& rng_shape);
 
   torch::lazy::NodePtr Clone(OpList operands) const override;
 

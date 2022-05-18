@@ -31,9 +31,12 @@ std::vector<xla::XlaOp> LowerBatchNorm(xla::XlaOp input, xla::XlaOp weight,
   return values;
 }
 
-xla::Shape NodeOutputShape(const XlaValue& input, const XlaValue& weight,
-                           const XlaValue& bias, const XlaValue& running_mean,
-                           const XlaValue& running_var, bool training) {
+xla::Shape NodeOutputShape(const torch::lazy::Value& input,
+                           const torch::lazy::Value& weight,
+                           const torch::lazy::Value& bias,
+                           const torch::lazy::Value& running_mean,
+                           const torch::lazy::Value& running_var,
+                           bool training) {
   auto lower_for_shape_fn =
       [training](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
     std::vector<xla::XlaOp> values =
@@ -42,19 +45,17 @@ xla::Shape NodeOutputShape(const XlaValue& input, const XlaValue& weight,
     return xla::Tuple(operands[0].builder(), values);
   };
   return InferOutputShape(
-      {input.xla_shape(), weight.xla_shape(), bias.xla_shape(),
-       running_mean.xla_shape(), running_var.xla_shape()},
+      {GetXlaShape(input), GetXlaShape(weight), GetXlaShape(bias),
+       GetXlaShape(running_mean), GetXlaShape(running_var)},
       lower_for_shape_fn);
 }
 
 }  // namespace
 
-NativeBatchNormForward::NativeBatchNormForward(const XlaValue& input,
-                                               const XlaValue& weight,
-                                               const XlaValue& bias,
-                                               const XlaValue& running_mean,
-                                               const XlaValue& running_var,
-                                               bool training, double eps)
+NativeBatchNormForward::NativeBatchNormForward(
+    const torch::lazy::Value& input, const torch::lazy::Value& weight,
+    const torch::lazy::Value& bias, const torch::lazy::Value& running_mean,
+    const torch::lazy::Value& running_var, bool training, double eps)
     : XlaNode(torch::lazy::OpKind(at::aten::native_batch_norm),
               {input, weight, bias, running_mean, running_var},
               [&]() {

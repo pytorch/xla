@@ -6,7 +6,7 @@ namespace torch_xla {
 
 class ArgMin : public XlaNode {
  public:
-  ArgMin(const XlaValue& input, int64_t dim, bool keepdim);
+  ArgMin(const torch::lazy::Value& input, int64_t dim, bool keepdim);
 
   std::string ToString() const override;
 

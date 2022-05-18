@@ -6,8 +6,9 @@ namespace torch_xla {
 
 class TriangularSolve : public XlaNode {
  public:
-  TriangularSolve(const XlaValue& rhs, const XlaValue& lhs, bool left_side,
-                  bool lower, bool transpose, bool unit_diagonal);
+  TriangularSolve(const torch::lazy::Value& rhs, const torch::lazy::Value& lhs,
+                  bool left_side, bool lower, bool transpose,
+                  bool unit_diagonal);
 
   std::string ToString() const override;
 

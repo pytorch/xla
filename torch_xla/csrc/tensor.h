@@ -37,7 +37,7 @@ class XLATensor : public c10::intrusive_ptr_target {
       c10::optional<at::ScalarType> logical_element_type = c10::nullopt);
 
   static XLATensor Create(
-      XlaValue ir_value, const torch::lazy::BackendDevice& device,
+      torch::lazy::Value ir_value, const torch::lazy::BackendDevice& device,
       c10::optional<at::ScalarType> logical_element_type = c10::nullopt);
 
   // Creates an empty/null tensor.
@@ -90,12 +90,12 @@ class XLATensor : public c10::intrusive_ptr_target {
 
   // Retrieves the current IR XlaNode, or nullptr in case no active IR XlaNode
   // is available.
-  XlaValue CurrentIrValue() const;
+  torch::lazy::Value CurrentIrValue() const;
 
   // Retrieves the IR XlaNode representing this XLATensor. One will be created
   // if missing. Note that although this is a const API, it actually changes the
   // internal state ofthe object.
-  XlaValue GetIrValue() const;
+  torch::lazy::Value GetIrValue() const;
 
   c10::optional<at::Tensor> CurrentTensorData() const;
 
@@ -122,31 +122,32 @@ class XLATensor : public c10::intrusive_ptr_target {
   // that is affected by the view tensor.
   static void ApplyEagerSync(std::vector<XLATensor>& tensors);
 
-  static XlaValue GetDeviceDataIrValue(
+  static torch::lazy::Value GetDeviceDataIrValue(
       const at::Scalar& value, xla::PrimitiveType type,
       const torch::lazy::BackendDevice& device);
   // Use with caution, constant will cause more frequent recompilation
   // compared to the device_data.
-  static XlaValue GetIrValueForConstant(const at::Scalar& value,
-                                        const xla::Shape& shape);
-  static XlaValue GetIrValueForScalar(const at::Scalar& value,
-                                      xla::PrimitiveType type,
-                                      const torch::lazy::BackendDevice& device);
-  static XlaValue GetIrValueForScalar(const at::Scalar& value,
-                                      const torch::lazy::BackendDevice& device);
-  static XlaValue GetIrValueForScalar(const at::Scalar& value,
-                                      xla::PrimitiveType type,
-                                      absl::Span<const int64_t> dimensions,
-                                      const torch::lazy::BackendDevice& device);
-  static XlaValue GetIrValueForScalar(const at::Scalar& value,
-                                      const xla::Shape& shape,
-                                      const torch::lazy::BackendDevice& device);
-  static XlaValue GetIrValueForScalar(
+  static torch::lazy::Value GetIrValueForConstant(const at::Scalar& value,
+                                                  const xla::Shape& shape);
+  static torch::lazy::Value GetIrValueForScalar(
+      const at::Scalar& value, xla::PrimitiveType type,
+      const torch::lazy::BackendDevice& device);
+  static torch::lazy::Value GetIrValueForScalar(
+      const at::Scalar& value, const torch::lazy::BackendDevice& device);
+  static torch::lazy::Value GetIrValueForScalar(
+      const at::Scalar& value, xla::PrimitiveType type,
+      absl::Span<const int64_t> dimensions,
+      const torch::lazy::BackendDevice& device);
+  static torch::lazy::Value GetIrValueForScalar(
+      const at::Scalar& value, const xla::Shape& shape,
+      const torch::lazy::BackendDevice& device);
+  static torch::lazy::Value GetIrValueForScalar(
       const at::Scalar& value, const xla::Shape& shape,
       c10::optional<at::ScalarType> logical_element_type,
       const torch::lazy::BackendDevice& device);
 
-  static XlaValue GetRngSeed(const torch::lazy::BackendDevice& device);
+  static torch::lazy::Value GetRngSeed(
+      const torch::lazy::BackendDevice& device);
 
   static void SetRngSeed(const torch::lazy::BackendDevice& device,
                          uint64_t seed);
@@ -212,63 +213,62 @@ class XLATensor : public c10::intrusive_ptr_target {
   //////////////////////////////////////////////////////////////////////////////
   // XLA dedicated operators follows here, listed in alphabetical order.
   //////////////////////////////////////////////////////////////////////////////
-  static std::pair<XLATensor, XlaValue> all_reduce(
-      const XLATensor& input, const XlaValue& token, AllReduceType reduce_type,
-      double scale, std::vector<std::vector<int64_t>> groups, bool pin_layout);
-
-  static XlaValue all_reduce_(XLATensor& input, const XlaValue& token,
-                              AllReduceType reduce_type, double scale,
-                              std::vector<std::vector<int64_t>> groups,
-                              bool pin_layout);
-
-  static XlaValue all_reduce(std::vector<XLATensor>* inputs,
-                             const XlaValue& token, AllReduceType reduce_type,
-                             double scale,
-                             std::vector<std::vector<int64_t>> groups,
-                             bool pin_layout);
-
-  static std::pair<XLATensor, XlaValue> reduce_scatter(
-      const XLATensor& input, const XlaValue& token, AllReduceType reduce_type,
-      double scale, int64_t scatter_dim, int64_t shard_count,
+  static std::pair<XLATensor, torch::lazy::Value> all_reduce(
+      const XLATensor& input, const torch::lazy::Value& token,
+      AllReduceType reduce_type, double scale,
       std::vector<std::vector<int64_t>> groups, bool pin_layout);
 
-  static XlaValue reduce_scatter_out(XLATensor& output, const XLATensor& input,
-                                     const XlaValue& token,
-                                     AllReduceType reduce_type, double scale,
-                                     int64_t scatter_dim, int64_t shard_count,
-                                     std::vector<std::vector<int64_t>> groups,
-                                     bool pin_layout);
-
-  static std::pair<XLATensor, XlaValue> all_to_all(
-      const XLATensor& input, const XlaValue& token, int64_t split_dimension,
-      int64_t concat_dimension, int64_t split_count,
+  static torch::lazy::Value all_reduce_(
+      XLATensor& input, const torch::lazy::Value& token,
+      AllReduceType reduce_type, double scale,
       std::vector<std::vector<int64_t>> groups, bool pin_layout);
 
-  static std::pair<XLATensor, XlaValue> all_gather(
-      const XLATensor& input, const XlaValue& token, int64_t dim,
+  static torch::lazy::Value all_reduce(std::vector<XLATensor>* inputs,
+                                       const torch::lazy::Value& token,
+                                       AllReduceType reduce_type, double scale,
+                                       std::vector<std::vector<int64_t>> groups,
+                                       bool pin_layout);
+
+  static std::pair<XLATensor, torch::lazy::Value> reduce_scatter(
+      const XLATensor& input, const torch::lazy::Value& token,
+      AllReduceType reduce_type, double scale, int64_t scatter_dim,
       int64_t shard_count, std::vector<std::vector<int64_t>> groups,
       bool pin_layout);
 
-  static XlaValue all_gather_out(XLATensor& output, const XLATensor& input,
-                                 const XlaValue& token, int64_t dim,
-                                 int64_t shard_count,
-                                 std::vector<std::vector<int64_t>> groups,
-                                 bool pin_layout);
+  static torch::lazy::Value reduce_scatter_out(
+      XLATensor& output, const XLATensor& input,
+      const torch::lazy::Value& token, AllReduceType reduce_type, double scale,
+      int64_t scatter_dim, int64_t shard_count,
+      std::vector<std::vector<int64_t>> groups, bool pin_layout);
 
-  static std::pair<XLATensor, XlaValue> collective_permute(
-      const XLATensor& input, const XlaValue& token,
+  static std::pair<XLATensor, torch::lazy::Value> all_to_all(
+      const XLATensor& input, const torch::lazy::Value& token,
+      int64_t split_dimension, int64_t concat_dimension, int64_t split_count,
+      std::vector<std::vector<int64_t>> groups, bool pin_layout);
+
+  static std::pair<XLATensor, torch::lazy::Value> all_gather(
+      const XLATensor& input, const torch::lazy::Value& token, int64_t dim,
+      int64_t shard_count, std::vector<std::vector<int64_t>> groups,
+      bool pin_layout);
+
+  static torch::lazy::Value all_gather_out(
+      XLATensor& output, const XLATensor& input,
+      const torch::lazy::Value& token, int64_t dim, int64_t shard_count,
+      std::vector<std::vector<int64_t>> groups, bool pin_layout);
+
+  static std::pair<XLATensor, torch::lazy::Value> collective_permute(
+      const XLATensor& input, const torch::lazy::Value& token,
       std::vector<std::pair<int64_t, int64_t>> source_target_pairs);
 
   static XLATensor get_dimensions_size(const XLATensor& input,
                                        std::vector<int64_t> dimensions);
 
-  static std::pair<XLATensor, XlaValue> recv(XLATensor& output,
-                                             const XlaValue& token,
-                                             int64_t channel_id);
+  static std::pair<XLATensor, torch::lazy::Value> recv(
+      XLATensor& output, const torch::lazy::Value& token, int64_t channel_id);
 
-  static std::pair<XLATensor, XlaValue> send(const XLATensor& input,
-                                             const XlaValue& token,
-                                             int64_t channel_id);
+  static std::pair<XLATensor, torch::lazy::Value> send(
+      const XLATensor& input, const torch::lazy::Value& token,
+      int64_t channel_id);
 
   static void sgd_optimizer_step_(const XLATensor& found_inf, XLATensor& step,
                                   XLATensor& param, XLATensor& buf,
@@ -1284,7 +1284,7 @@ class XLATensor : public c10::intrusive_ptr_target {
           logical_element_type(logical_element_type),
           device(device),
           unique_id(GetNextTensorId()) {}
-    Data(XlaValue ir_value, const torch::lazy::BackendDevice& device,
+    Data(torch::lazy::Value ir_value, const torch::lazy::BackendDevice& device,
          c10::optional<at::ScalarType> logical_element_type)
         : ir_value(std::move(ir_value)),
           logical_element_type(logical_element_type),
@@ -1305,7 +1305,7 @@ class XLATensor : public c10::intrusive_ptr_target {
     ~Data();
 
     xla::ComputationClient::DataPtr xla_data;
-    XlaValue ir_value;
+    torch::lazy::Value ir_value;
     std::shared_ptr<View> view;
     // TODO: remove this in favor of torch::lazy::Shape within ir_value.
     c10::optional<at::ScalarType> logical_element_type;
@@ -1318,7 +1318,8 @@ class XLATensor : public c10::intrusive_ptr_target {
   XLATensor(const at::Tensor& tensor, const torch::lazy::BackendDevice& device);
   XLATensor(xla::ComputationClient::DataPtr xla_data,
             c10::optional<at::ScalarType> logical_element_type = c10::nullopt);
-  XLATensor(XlaValue ir_value, const torch::lazy::BackendDevice& device,
+  XLATensor(torch::lazy::Value ir_value,
+            const torch::lazy::BackendDevice& device,
             c10::optional<at::ScalarType> logical_element_type = c10::nullopt);
   XLATensor(std::shared_ptr<View> view,
             const torch::lazy::BackendDevice& device,
@@ -1335,20 +1336,20 @@ class XLATensor : public c10::intrusive_ptr_target {
 
   void SetXlaData(xla::ComputationClient::DataPtr xla_data, bool sync);
 
-  void SetIrValue(XlaValue ir_value, bool inplace = true);
-  void SetInPlaceIrValue(XlaValue ir_value);
+  void SetIrValue(torch::lazy::Value ir_value, bool inplace = true);
+  void SetInPlaceIrValue(torch::lazy::Value ir_value);
 
-  void AssignIrValue(XlaValue ir_value) const;
+  void AssignIrValue(torch::lazy::Value ir_value) const;
 
   void SetTensorData(at::Tensor tensor_data);
 
-  XlaValue CreateTensorNode(xla::ComputationClient::DataPtr data,
-                            bool read_only) const;
+  torch::lazy::Value CreateTensorNode(xla::ComputationClient::DataPtr data,
+                                      bool read_only) const;
 
   View::IrNode GetViewUpdate(const std::shared_ptr<View>& view) const;
 
   std::shared_ptr<View> UpdateView(std::shared_ptr<View> view,
-                                   XlaValue ir_value) const;
+                                   torch::lazy::Value ir_value) const;
 
   void SetSubView(ViewInfo view_info) const;
   void ModifyCurrentView(ViewInfo view_info) const;
@@ -1357,21 +1358,21 @@ class XLATensor : public c10::intrusive_ptr_target {
 
   XLATensor CopyTensorToDevice(const torch::lazy::BackendDevice& device);
 
-  XlaValue MaybeCastIrValue(
-      XlaValue ir_value, const torch::lazy::BackendDevice& device,
+  torch::lazy::Value MaybeCastIrValue(
+      torch::lazy::Value ir_value, const torch::lazy::BackendDevice& device,
       c10::optional<at::ScalarType> logical_element_type) const;
 
   // Create a new XLA tensor with the same metadata of the input tensor (with
   // possible overrides), and the new IR value.
-  XLATensor CreateFrom(XlaValue ir_value) const;
-  XLATensor CreateFrom(XlaValue ir_value,
+  XLATensor CreateFrom(torch::lazy::Value ir_value) const;
+  XLATensor CreateFrom(torch::lazy::Value ir_value,
                        const torch::lazy::BackendDevice& device) const;
-  XLATensor CreateFrom(XlaValue ir_value,
+  XLATensor CreateFrom(torch::lazy::Value ir_value,
                        at::ScalarType logical_element_type) const;
   XLATensor CreateFrom(
-      XlaValue ir_value,
+      torch::lazy::Value ir_value,
       c10::optional<at::ScalarType> logical_element_type_opt) const;
-  XLATensor CreateFrom(XlaValue ir_value,
+  XLATensor CreateFrom(torch::lazy::Value ir_value,
                        const torch::lazy::BackendDevice& device,
                        at::ScalarType logical_element_type) const;
 
@@ -1385,8 +1386,8 @@ class XLATensor : public c10::intrusive_ptr_target {
   std::vector<XLATensor> MakeOutputTensors(
       torch::lazy::NodePtr node, bool inherit_logical_type = true) const;
 
-  XlaValue GetIrValueForTensor(const at::Tensor& tensor,
-                               const torch::lazy::BackendDevice& device) const;
+  torch::lazy::Value GetIrValueForTensor(
+      const at::Tensor& tensor, const torch::lazy::BackendDevice& device) const;
 
   static ComputationCache* GetComputationCache();
 
@@ -1415,7 +1416,7 @@ class XLATensor : public c10::intrusive_ptr_target {
       const std::vector<XLATensor>& tensors, absl::Span<const size_t> indices,
       absl::Span<const xla::ComputationClient::DataPtr> tensors_data);
 
-  static std::vector<XlaValue> CollectRoots(
+  static std::vector<torch::lazy::Value> CollectRoots(
       const std::vector<XLATensor>& tensors, absl::Span<const size_t> indices);
 
   static std::vector<xla::ComputationClient::DataPtr> FetchTensorData(

@@ -6,8 +6,8 @@ namespace torch_xla {
 
 class TopK : public XlaNode {
  public:
-  TopK(const XlaValue& input, int64_t k, int64_t dim, bool largest, bool sorted,
-       bool stable);
+  TopK(const torch::lazy::Value& input, int64_t k, int64_t dim, bool largest,
+       bool sorted, bool stable);
 
   std::string ToString() const override;
 

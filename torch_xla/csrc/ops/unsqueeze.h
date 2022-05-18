@@ -7,7 +7,7 @@ namespace torch_xla {
 class Unsqueeze : public XlaNode {
  public:
   // Insert a dimension of size one at the specified position.
-  Unsqueeze(const XlaValue& input, int dim);
+  Unsqueeze(const torch::lazy::Value& input, int dim);
 
   torch::lazy::NodePtr Clone(OpList operands) const override;
 

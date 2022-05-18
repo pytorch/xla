@@ -16,8 +16,8 @@ std::vector<xla::XlaOp> LowerQR(xla::XlaOp input, bool some) {
   return {q, r};
 }
 
-xla::Shape NodeOutputShape(const XlaValue& input, bool some) {
-  const xla::Shape& input_shape = input.xla_shape();
+xla::Shape NodeOutputShape(const torch::lazy::Value& input, bool some) {
+  const xla::Shape& input_shape = GetXlaShape(input);
   XLA_CHECK_GE(input_shape.rank(), 2) << input_shape;
   // The input tensor is ..., M, N
   int64_t m_dim = input_shape.dimensions(input_shape.rank() - 2);
@@ -39,7 +39,7 @@ xla::Shape NodeOutputShape(const XlaValue& input, bool some) {
 
 }  // namespace
 
-QR::QR(const XlaValue& input, bool some)
+QR::QR(const torch::lazy::Value& input, bool some)
     : XlaNode(torch::lazy::OpKind(at::aten::qr), {input},
               [&]() { return NodeOutputShape(input, some); },
               /*num_outputs=*/2, torch::lazy::MHash(some)),

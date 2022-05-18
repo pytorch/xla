@@ -8,19 +8,19 @@
 namespace torch_xla {
 namespace {
 
-xla::Shape NodeOutputShape(const XlaValue& input,
+xla::Shape NodeOutputShape(const torch::lazy::Value& input,
                            absl::Span<const int64_t> repeats) {
   auto lower_for_shape_fn =
       [repeats](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
     XLA_CHECK_EQ(operands.size(), 1);
     return BuildRepeat(operands[0], repeats);
   };
-  return InferOutputShape({input.xla_shape()}, lower_for_shape_fn);
+  return InferOutputShape({GetXlaShape(input)}, lower_for_shape_fn);
 }
 
 }  // namespace
 
-Repeat::Repeat(const XlaValue& input, std::vector<int64_t> repeats)
+Repeat::Repeat(const torch::lazy::Value& input, std::vector<int64_t> repeats)
     : XlaNode(torch::lazy::OpKind(at::aten::repeat), {input},
               [&]() { return NodeOutputShape(input, repeats); },
               /*num_outputs=*/1, torch::lazy::MHash(repeats)),

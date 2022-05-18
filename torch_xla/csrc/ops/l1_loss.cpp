@@ -9,20 +9,21 @@
 namespace torch_xla {
 namespace {
 
-xla::Shape NodeOutputShape(const XlaValue& input, const XlaValue& target,
+xla::Shape NodeOutputShape(const torch::lazy::Value& input,
+                           const torch::lazy::Value& target,
                            ReductionMode reduction) {
   auto lower_for_shape_fn =
       [&](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
     return BuildL1Loss(operands[0], operands[1], reduction);
   };
-  return InferOutputShape({input.xla_shape(), target.xla_shape()},
+  return InferOutputShape({GetXlaShape(input), GetXlaShape(target)},
                           lower_for_shape_fn);
 }
 
 }  // namespace
 
-L1Loss::L1Loss(const XlaValue& input, const XlaValue& target,
-               ReductionMode reduction)
+L1Loss::L1Loss(const torch::lazy::Value& input,
+               const torch::lazy::Value& target, ReductionMode reduction)
     : XlaNode(torch::lazy::OpKind(at::aten::l1_loss), {input, target},
               [&]() { return NodeOutputShape(input, target, reduction); },
               /*num_outputs=*/1,

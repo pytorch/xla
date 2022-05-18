@@ -8,8 +8,8 @@
 
 namespace torch_xla {
 
-Uniform::Uniform(const XlaValue& from, const XlaValue& to, const XlaValue& seed,
-                 const xla::Shape& rng_shape)
+Uniform::Uniform(const torch::lazy::Value& from, const torch::lazy::Value& to,
+                 const torch::lazy::Value& seed, const xla::Shape& rng_shape)
     : XlaNode(torch::lazy::OpKind(at::aten::uniform), {from, to, seed},
               rng_shape,
               /*num_outputs=*/1, torch::lazy::Hash(rng_shape)) {}
