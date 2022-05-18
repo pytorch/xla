@@ -57,6 +57,7 @@
 #include "torch_xla/csrc/ops/diagonal.h"
 #include "torch_xla/csrc/ops/discrete_uniform.h"
 #include "torch_xla/csrc/ops/expand.h"
+#include "torch_xla/csrc/ops/expand_dynamic.h"
 #include "torch_xla/csrc/ops/exponential.h"
 #include "torch_xla/csrc/ops/flip.h"
 #include "torch_xla/csrc/ops/gather.h"
@@ -1291,9 +1292,9 @@ XLATensor XLATensor::expand(const XLATensor& input,
     size_values.push_back(
         XlaValue(size_node));  // TODO: what do we set index to?
   }
-  return input.CreateFrom(DynamicExpand(input.GetIrValue(), size_values,
-                                        std::move(upper_bounds),
-                                        std::move(dynamic_dims)));
+  return input.CreateFrom(torch::lazy::MakeNode<ExpandDynamic>(input.GetIrValue(), std::move(size_values),
+                          std::move(upper_bounds),
+                          std::move(dynamic_dims)));
 }
 
 XLATensor XLATensor::expm1(const XLATensor& input) {
