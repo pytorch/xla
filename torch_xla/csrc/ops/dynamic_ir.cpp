@@ -11,7 +11,7 @@ DimensionNode::DimensionNode(torch::lazy::OpKind op, OpList operands,
                              torch::lazy::hash_t hash_seed)
     : XlaNode(op, operands, xla::ShapeUtil::MakeShape(xla::S32, {}),
               /*num_outputs=*/1,
-              /* hash_seed */ hash_seed) {}
+              /*hash_seed*/hash_seed) {}
 
 std::string DimensionNode::ToString() const { return "DimensionNode"; }
 
@@ -34,8 +34,7 @@ std::string SizeNode::ToString() const { return "SizeNode"; }
 
 SizeAdd::SizeAdd(XlaValue a, XlaValue b)
     : DimensionNode(
-          torch::lazy::OpKind{c10::Symbol::fromQualString("aten::add")}, {a, b},
-          torch::lazy::MHash(1)){};
+          torch::lazy::OpKind{c10::Symbol::fromQualString("aten::add")}, {a, b}){};
 
 int64_t SizeAdd::getStaticValue() const {
   return dynamic_cast<const DimensionNode*>(operand(0).node)->getStaticValue() +
@@ -46,8 +45,7 @@ std::string SizeAdd::ToString() const { return "SizeAdd"; }
 
 SizeMul::SizeMul(XlaValue a, XlaValue b)
     : DimensionNode(
-          torch::lazy::OpKind{c10::Symbol::fromQualString("aten::mul")}, {a, b},
-          torch::lazy::MHash(1)){};
+          torch::lazy::OpKind{c10::Symbol::fromQualString("aten::mul")}, {a, b}){};
 
 int64_t SizeMul::getStaticValue() const {
   return dynamic_cast<const DimensionNode*>(operand(0).node)->getStaticValue() *
@@ -58,8 +56,7 @@ std::string SizeMul::ToString() const { return "SizeMul"; }
 
 SizeDiv::SizeDiv(XlaValue a, XlaValue b)
     : DimensionNode(
-          torch::lazy::OpKind{c10::Symbol::fromQualString("aten::div")}, {a, b},
-          torch::lazy::MHash(1)){};
+          torch::lazy::OpKind{c10::Symbol::fromQualString("aten::div")}, {a, b}){};
 
 int64_t SizeDiv::getStaticValue() const {
   XLA_CHECK(

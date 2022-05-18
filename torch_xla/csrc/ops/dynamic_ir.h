@@ -37,11 +37,9 @@ namespace torch_xla {
 
 class DimensionNode : public XlaNode {
  public:
-  // DimensionNode(torch::lazy::OpKind op, OpList operands, torch::lazy:hash_t
-  // hash_seed = kHashSeed);
   DimensionNode(torch::lazy::OpKind op, OpList operands,
-                torch::lazy::hash_t hash_seed);
-  bool isDynamic() { return false; }
+                torch::lazy::hash_t hash_seed = default_hash_seed);
+  bool isDynamic() { return false; } /* NOTE: PLACEHOLDER FOR NOW */
 
   std::string ToString() const override;
 
