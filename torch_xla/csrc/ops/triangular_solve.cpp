@@ -84,7 +84,8 @@ TriangularSolve::TriangularSolve(const torch::lazy::Value& rhs,
       transpose_(transpose),
       unit_diagonal_(unit_diagonal) {}
 
-torch::lazy::NodePtr TriangularSolve::Clone(torch::lazy::OpList operands) const {
+torch::lazy::NodePtr TriangularSolve::Clone(
+    torch::lazy::OpList operands) const {
   return torch::lazy::MakeNode<TriangularSolve>(operands.at(0), operands.at(1),
                                                 left_side_, lower_, transpose_,
                                                 unit_diagonal_);

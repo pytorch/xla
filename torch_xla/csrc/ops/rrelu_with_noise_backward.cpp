@@ -19,7 +19,8 @@ RreluWithNoiseBackward::RreluWithNoiseBackward(
       upper_(std::move(upper)),
       training_(training) {}
 
-torch::lazy::NodePtr RreluWithNoiseBackward::Clone(torch::lazy::OpList operands) const {
+torch::lazy::NodePtr RreluWithNoiseBackward::Clone(
+    torch::lazy::OpList operands) const {
   return torch::lazy::MakeNode<RreluWithNoiseBackward>(
       operands.at(0), operands.at(1), operands.at(2), lower_, upper_,
       training_);

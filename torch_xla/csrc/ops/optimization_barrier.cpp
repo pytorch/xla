@@ -24,7 +24,8 @@ OptimizationBarrier::OptimizationBarrier(const torch::lazy::OpList& inputs)
     : XlaNode(xla_optimization_barrier, inputs, NodeOutputShape(inputs),
               /*num_outputs=*/inputs.size()) {}
 
-torch::lazy::NodePtr OptimizationBarrier::Clone(torch::lazy::OpList operands) const {
+torch::lazy::NodePtr OptimizationBarrier::Clone(
+    torch::lazy::OpList operands) const {
   return torch::lazy::MakeNode<OptimizationBarrier>(operands);
 }
 

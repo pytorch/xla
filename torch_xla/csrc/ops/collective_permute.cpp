@@ -31,7 +31,8 @@ CollectivePermute::CollectivePermute(
           /*num_outputs=*/2, torch::lazy::MHash(source_target_pairs)),
       source_target_pairs_(std::move(source_target_pairs)) {}
 
-torch::lazy::NodePtr CollectivePermute::Clone(torch::lazy::OpList operands) const {
+torch::lazy::NodePtr CollectivePermute::Clone(
+    torch::lazy::OpList operands) const {
   return torch::lazy::MakeNode<CollectivePermute>(
       operands.at(0), operands.at(1), source_target_pairs_);
 }

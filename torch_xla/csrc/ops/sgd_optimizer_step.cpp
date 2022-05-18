@@ -33,7 +33,8 @@ SgdOptimizerStep::SgdOptimizerStep(
       use_momentum_(use_momentum),
       use_nesterov_(use_nesterov) {}
 
-torch::lazy::NodePtr SgdOptimizerStep::Clone(torch::lazy::OpList operands) const {
+torch::lazy::NodePtr SgdOptimizerStep::Clone(
+    torch::lazy::OpList operands) const {
   return torch::lazy::MakeNode<SgdOptimizerStep>(
       operands.at(0), operands.at(1), operands.at(2), operands.at(3),
       operands.at(4), operands.at(5), operands.at(6), operands.at(7),
