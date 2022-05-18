@@ -20,6 +20,7 @@ xla::Shape AtanhOutputShape(const XlaValue& input);
 xla::Shape CosOutputShape(const XlaValue& input);
 
 xla::Shape CoshOutputShape(const XlaValue& input);
+
 xla::Shape LogOutputShape(const XlaValue& input);
 
 xla::Shape Log2OutputShape(const XlaValue& input);
