@@ -52,8 +52,8 @@ mkdir "$BUILDDIR" 2>/dev/null
 pushd "$BUILDDIR"
 cmake "$RUNDIR" \
   -DCMAKE_BUILD_TYPE=$BUILDTYPE \
-  -DPYTHON_INCLUDE_DIR=$(python3 -c "from distutils.sysconfig import get_python_inc; print(get_python_inc())") \
-  -DPYTHON_LIBRARY=$(python3 -c "import distutils.sysconfig as sysconfig; print(sysconfig.get_config_var('LIBDIR') + '/' + sysconfig.get_config_var('LDLIBRARY'))")
+  -DPYTHON_INCLUDE_DIR=$(python -c "from distutils.sysconfig import get_python_inc; print(get_python_inc())") \
+  -DPYTHON_LIBRARY=$(python -c "import distutils.sysconfig as sysconfig; print(sysconfig.get_config_var('LIBDIR') + '/' + sysconfig.get_config_var('LDLIBRARY'))")
 make -j $VERB
 
 if [ $BUILD_ONLY -eq 0 ]; then
