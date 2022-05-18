@@ -15,8 +15,8 @@ xla::XlaOp GetFloatingOp(const xla::XlaOp& input,
     const xla::Shape& input_shape = XlaHelpers::ShapeOfXlaOp(input);
     xla::PrimitiveType raw_from = input_shape.element_type();
     xla::PrimitiveType raw_to = float_type;
-    xla::XlaOp input = ConvertToRaw(input, raw_from, raw_from, raw_to, raw_to,
-                                    /*device=*/nullptr);
+    return ConvertToRaw(input, raw_from, raw_from, raw_to, raw_to,
+                        /*device=*/nullptr);
   }
   return input;
 }
