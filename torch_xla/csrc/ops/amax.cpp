@@ -7,18 +7,19 @@
 namespace torch_xla {
 namespace {
 
-xla::Shape NodeOutputShape(const XlaValue& input,
+xla::Shape NodeOutputShape(const torch::lazy::Value& input,
                            std::vector<int64_t>& dimensions, bool keepdim) {
   auto lower_for_shape_fn =
       [&](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
     return BuildMaxInDims(operands[0], dimensions, keepdim);
   };
-  return InferOutputShape({input.xla_shape()}, lower_for_shape_fn);
+  return InferOutputShape({GetXlaShape(input)}, lower_for_shape_fn);
 }
 
 }  // namespace
 
-Amax::Amax(const XlaValue& input, std::vector<int64_t> dimensions, bool keepdim)
+Amax::Amax(const torch::lazy::Value& input, std::vector<int64_t> dimensions,
+           bool keepdim)
     : XlaNode(torch::lazy::OpKind(at::aten::amax), {input},
               [&]() { return NodeOutputShape(input, dimensions, keepdim); },
               /*num_outputs=*/1, torch::lazy::MHash(dimensions, keepdim)),

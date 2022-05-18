@@ -9,7 +9,8 @@ namespace torch_xla {
 // Split the tensor into chunks along a given dimension.
 class Split : public XlaNode {
  public:
-  Split(const XlaValue& input, std::vector<int64_t> split_sizes, int64_t dim);
+  Split(const torch::lazy::Value& input, std::vector<int64_t> split_sizes,
+        int64_t dim);
 
   torch::lazy::NodePtr Clone(OpList operands) const override;
 

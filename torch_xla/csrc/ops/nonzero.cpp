@@ -8,8 +8,8 @@
 namespace torch_xla {
 namespace {
 
-xla::Shape NodeOutputShape(const XlaValue& input) {
-  const xla::Shape& input_shape = input.xla_shape();
+xla::Shape NodeOutputShape(const torch::lazy::Value& input) {
+  const xla::Shape& input_shape = GetXlaShape(input);
   int64_t index_elements = xla::ShapeUtil::ElementsIn(input_shape);
   xla::PrimitiveType size_type = GetShapeDimensionType(/*device=*/nullptr);
   xla::Shape result_shape = xla::ShapeUtil::MakeShape(
@@ -21,7 +21,7 @@ xla::Shape NodeOutputShape(const XlaValue& input) {
 
 }  // namespace
 
-NonZero::NonZero(const XlaValue& input)
+NonZero::NonZero(const torch::lazy::Value& input)
     : XlaNode(torch::lazy::OpKind(at::aten::nonzero), {input},
               NodeOutputShape(input),
               /*num_outputs=*/2) {}

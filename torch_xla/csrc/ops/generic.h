@@ -13,11 +13,11 @@ class Generic : public XlaNode {
  public:
   using LowerFn = std::function<XlaOpVector(const XlaNode&, LoweringContext*)>;
 
-  Generic(torch::lazy::OpKind op, absl::Span<const XlaValue> operands,
+  Generic(torch::lazy::OpKind op, absl::Span<const torch::lazy::Value> operands,
           xla::Shape shape, LowerFn lower_fn, size_t num_outputs = 1,
           torch::lazy::hash_t hash_seed = (uint32_t)0x5a2d296e9);
 
-  Generic(torch::lazy::OpKind op, absl::Span<const XlaValue> operands,
+  Generic(torch::lazy::OpKind op, absl::Span<const torch::lazy::Value> operands,
           const std::function<xla::Shape()>& shape_fn, LowerFn lower_fn,
           size_t num_outputs = 1,
           torch::lazy::hash_t hash_seed = (uint32_t)0x5a2d296e9);

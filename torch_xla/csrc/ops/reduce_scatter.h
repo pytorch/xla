@@ -7,10 +7,10 @@ namespace torch_xla {
 
 class ReduceScatter : public XlaNode {
  public:
-  ReduceScatter(AllReduceType reduce_type, const XlaValue& input,
-                const XlaValue& token, double scale, int64_t scatter_dim,
-                int64_t shard_count, std::vector<std::vector<int64_t>> groups,
-                bool pin_layout);
+  ReduceScatter(AllReduceType reduce_type, const torch::lazy::Value& input,
+                const torch::lazy::Value& token, double scale,
+                int64_t scatter_dim, int64_t shard_count,
+                std::vector<std::vector<int64_t>> groups, bool pin_layout);
 
   std::string ToString() const override;
 

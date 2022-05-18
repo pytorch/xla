@@ -10,20 +10,20 @@ namespace torch_xla {
 namespace {
 
 xla::Shape NodeOutputShape(
-    const XlaValue& input, const XlaValue& token,
+    const torch::lazy::Value& input, const torch::lazy::Value& token,
     const std::vector<std::pair<int64_t, int64_t>>& source_target_pairs) {
   auto shape_fn = [&](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
     CollectivePermuteResult result =
         BuildCollectivePermute(operands[0], operands[1], source_target_pairs);
     return xla::Tuple(operands[0].builder(), {result.result, result.token});
   };
-  return InferOutputShape({input.xla_shape(), token.xla_shape()}, shape_fn);
+  return InferOutputShape({GetXlaShape(input), GetXlaShape(token)}, shape_fn);
 }
 
 }  // namespace
 
 CollectivePermute::CollectivePermute(
-    const XlaValue& input, const XlaValue& token,
+    const torch::lazy::Value& input, const torch::lazy::Value& token,
     std::vector<std::pair<int64_t, int64_t>> source_target_pairs)
     : XlaNode(
           xla_collective_permute, {input, token},

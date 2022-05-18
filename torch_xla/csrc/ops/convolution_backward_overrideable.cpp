@@ -9,13 +9,11 @@
 namespace torch_xla {
 namespace {
 
-xla::Shape NodeOutputShape(const XlaValue& grad_output, const XlaValue& input,
-                           const XlaValue& weight,
-                           absl::Span<const int64_t> stride,
-                           absl::Span<const int64_t> padding,
-                           absl::Span<const int64_t> dilation, bool transposed,
-                           absl::Span<const int64_t> output_padding,
-                           int64_t groups) {
+xla::Shape NodeOutputShape(
+    const torch::lazy::Value& grad_output, const torch::lazy::Value& input,
+    const torch::lazy::Value& weight, absl::Span<const int64_t> stride,
+    absl::Span<const int64_t> padding, absl::Span<const int64_t> dilation,
+    bool transposed, absl::Span<const int64_t> output_padding, int64_t groups) {
   auto lower_for_shape_fn =
       [stride, padding, dilation, transposed, output_padding,
        groups](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
@@ -28,17 +26,17 @@ xla::Shape NodeOutputShape(const XlaValue& grad_output, const XlaValue& input,
                       {grads.grad_input, grads.grad_weight, grads.grad_bias});
   };
   return InferOutputShape(
-      {grad_output.xla_shape(), input.xla_shape(), weight.xla_shape()},
+      {GetXlaShape(grad_output), GetXlaShape(input), GetXlaShape(weight)},
       lower_for_shape_fn);
 }
 
 }  // namespace
 
 ConvolutionBackwardOverrideable::ConvolutionBackwardOverrideable(
-    const XlaValue& grad_output, const XlaValue& input, const XlaValue& weight,
-    std::vector<int64_t> stride, std::vector<int64_t> padding,
-    std::vector<int64_t> dilation, bool transposed,
-    std::vector<int64_t> output_padding, int64_t groups)
+    const torch::lazy::Value& grad_output, const torch::lazy::Value& input,
+    const torch::lazy::Value& weight, std::vector<int64_t> stride,
+    std::vector<int64_t> padding, std::vector<int64_t> dilation,
+    bool transposed, std::vector<int64_t> output_padding, int64_t groups)
     : XlaNode(torch::lazy::OpKind(at::aten::convolution_backward_overrideable),
               {grad_output, input, weight},
               [&]() {

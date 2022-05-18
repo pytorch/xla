@@ -16,18 +16,18 @@ xla::XlaOp LowerSqueeze(xla::XlaOp input, int dim) {
   return SqueezeTrivialDimension(input, dim);
 }
 
-xla::Shape NodeOutputShape(const XlaValue& input, int dim) {
+xla::Shape NodeOutputShape(const torch::lazy::Value& input, int dim) {
   auto lower_for_shape_fn =
       [dim](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
     XLA_CHECK_EQ(operands.size(), 1);
     return LowerSqueeze(operands[0], dim);
   };
-  return InferOutputShape({input.xla_shape()}, lower_for_shape_fn);
+  return InferOutputShape({GetXlaShape(input)}, lower_for_shape_fn);
 }
 
 }  // namespace
 
-Squeeze::Squeeze(const XlaValue& input, int dim)
+Squeeze::Squeeze(const torch::lazy::Value& input, int dim)
     : XlaNode(torch::lazy::OpKind(at::aten::squeeze), {input},
               [&]() { return NodeOutputShape(input, dim); },
               /*num_outputs=*/1, torch::lazy::MHash(dim)),

@@ -6,7 +6,7 @@ namespace torch_xla {
 
 class MaxInDim : public XlaNode {
  public:
-  MaxInDim(const XlaValue& input, int64_t dim, bool keepdim);
+  MaxInDim(const torch::lazy::Value& input, int64_t dim, bool keepdim);
 
   std::string ToString() const override;
 

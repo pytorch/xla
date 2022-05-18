@@ -6,8 +6,8 @@ namespace torch_xla {
 
 class LogSoftmaxBackward : public XlaNode {
  public:
-  LogSoftmaxBackward(const XlaValue& grad_output, const XlaValue& output,
-                     int64_t dim);
+  LogSoftmaxBackward(const torch::lazy::Value& grad_output,
+                     const torch::lazy::Value& output, int64_t dim);
 
   torch::lazy::NodePtr Clone(OpList operands) const override;
 

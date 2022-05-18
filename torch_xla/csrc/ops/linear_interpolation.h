@@ -6,8 +6,8 @@ namespace torch_xla {
 
 class LinearInterpolation : public XlaNode {
  public:
-  LinearInterpolation(const XlaValue& value, const XlaValue& new_value,
-                      double alpha);
+  LinearInterpolation(const torch::lazy::Value& value,
+                      const torch::lazy::Value& new_value, double alpha);
 
   std::string ToString() const override;
 

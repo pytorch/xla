@@ -8,9 +8,12 @@
 namespace torch_xla {
 namespace {
 
-xla::Shape NodeOutputShape(const XlaValue& grad_out, const XlaValue& input,
-                           const XlaValue& weight, const XlaValue& save_mean,
-                           const XlaValue& save_invstd, bool training) {
+xla::Shape NodeOutputShape(const torch::lazy::Value& grad_out,
+                           const torch::lazy::Value& input,
+                           const torch::lazy::Value& weight,
+                           const torch::lazy::Value& save_mean,
+                           const torch::lazy::Value& save_invstd,
+                           bool training) {
   auto lower_for_shape_fn =
       [&](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
     BatchNormGrads xla_outputs =
@@ -21,19 +24,17 @@ xla::Shape NodeOutputShape(const XlaValue& grad_out, const XlaValue& input,
                        xla_outputs.grad_bias});
   };
   return InferOutputShape(
-      {grad_out.xla_shape(), input.xla_shape(), weight.xla_shape(),
-       save_mean.xla_shape(), save_invstd.xla_shape()},
+      {GetXlaShape(grad_out), GetXlaShape(input), GetXlaShape(weight),
+       GetXlaShape(save_mean), GetXlaShape(save_invstd)},
       lower_for_shape_fn);
 }
 
 }  // namespace
 
-NativeBatchNormBackward::NativeBatchNormBackward(const XlaValue& grad_out,
-                                                 const XlaValue& input,
-                                                 const XlaValue& weight,
-                                                 const XlaValue& save_mean,
-                                                 const XlaValue& save_invstd,
-                                                 bool training, double eps)
+NativeBatchNormBackward::NativeBatchNormBackward(
+    const torch::lazy::Value& grad_out, const torch::lazy::Value& input,
+    const torch::lazy::Value& weight, const torch::lazy::Value& save_mean,
+    const torch::lazy::Value& save_invstd, bool training, double eps)
     : XlaNode(torch::lazy::OpKind(at::aten::native_batch_norm_backward),
               {grad_out, input, weight, save_mean, save_invstd},
               [&]() {

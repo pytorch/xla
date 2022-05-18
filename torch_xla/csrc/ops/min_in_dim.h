@@ -6,7 +6,7 @@ namespace torch_xla {
 
 class MinInDim : public XlaNode {
  public:
-  MinInDim(const XlaValue& input, int64_t dim, bool keepdim);
+  MinInDim(const torch::lazy::Value& input, int64_t dim, bool keepdim);
 
   std::string ToString() const override;
 

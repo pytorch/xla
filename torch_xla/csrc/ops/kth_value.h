@@ -6,7 +6,8 @@ namespace torch_xla {
 
 class KthValue : public XlaNode {
  public:
-  KthValue(const XlaValue& input, int64_t k, int64_t dim, bool keepdim);
+  KthValue(const torch::lazy::Value& input, int64_t k, int64_t dim,
+           bool keepdim);
 
   std::string ToString() const override;
 

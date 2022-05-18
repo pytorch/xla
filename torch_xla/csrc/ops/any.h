@@ -9,7 +9,7 @@ namespace torch_xla {
 
 class Any : public XlaNode {
  public:
-  Any(const XlaValue& input, std::vector<int64_t> dimensions,
+  Any(const torch::lazy::Value& input, std::vector<int64_t> dimensions,
       bool keep_reduced_dimensions);
 
   std::string ToString() const override;

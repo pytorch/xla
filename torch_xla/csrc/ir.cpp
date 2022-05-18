@@ -84,16 +84,6 @@ torch::lazy::hash_t GetOperandHashes(const OpList& operands,
 
 }  // namespace
 
-const xla::Shape& XlaValue::xla_shape() const {
-  XlaNode* casted = dynamic_cast<XlaNode*>(node.get());
-  return casted->xla_shape(index);
-}
-
-const xla::Shape& XlaValue::xla_node_shape() const {
-  XlaNode* casted = dynamic_cast<XlaNode*>(node.get());
-  return casted->xla_shape();
-}
-
 XlaNode::XlaNode(torch::lazy::OpKind op, OpList operands,
                  std::vector<torch::lazy::Shape>&& shapes, xla::Shape xla_shape,
                  size_t num_outputs, torch::lazy::hash_t hash_seed)
@@ -102,7 +92,7 @@ XlaNode::XlaNode(torch::lazy::OpKind op, OpList operands,
       node_hash_(torch::lazy::HashCombine(op.hash(), hash_seed)),
       dag_hash_(GetOperandHashes(operands, node_hash_)) {
   // We have to call AddOperand here since upstream OpList is
-  // an array of torch::lazy::Value while we uses XlaValue.
+  // an array of torch::lazy::Value while we uses torch::lazy::Value.
   for (auto& operand : operands) {
     AddOperand(operand.node, operand.index);
   }
@@ -116,7 +106,7 @@ XlaNode::XlaNode(torch::lazy::OpKind op, OpList operands,
       node_hash_(torch::lazy::HashCombine(op.hash(), hash_seed)),
       dag_hash_(GetOperandHashes(operands, node_hash_)) {
   // We have to call AddOperand here since upstream OpList is
-  // an array of torch::lazy::Value while we uses XlaValue.
+  // an array of torch::lazy::Value while we uses torch::lazy::Value.
   for (auto& operand : operands) {
     AddOperand(operand.node, operand.index);
   }
@@ -131,7 +121,7 @@ XlaNode::XlaNode(torch::lazy::OpKind op, OpList operands,
       node_hash_(torch::lazy::HashCombine(op.hash(), hash_seed)),
       dag_hash_(GetOperandHashes(operands, node_hash_)) {
   // We have to call AddOperand here since upstream OpList is
-  // an array of torch::lazy::Value while we uses XlaValue.
+  // an array of torch::lazy::Value while we uses torch::lazy::Value.
   for (auto& operand : operands) {
     AddOperand(operand.node, operand.index);
   }
@@ -232,5 +222,10 @@ ScopePusher::ScopePusher(const std::string& name) { PushScope(name); }
 ScopePusher::~ScopePusher() { PopScope(); }
 
 void ScopePusher::ResetScopes() { ResetScopeContext(); }
+
+const xla::Shape& GetXlaShape(const torch::lazy::Value& value) {
+  XlaNode* casted = dynamic_cast<XlaNode*>(value.node.get());
+  return casted->xla_shape(value.index);
+}
 
 }  // namespace torch_xla

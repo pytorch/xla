@@ -11,19 +11,19 @@
 namespace torch_xla {
 namespace {
 
-xla::Shape NodeOutputShape(const XlaValue& input,
+xla::Shape NodeOutputShape(const torch::lazy::Value& input,
                            std::vector<int64_t>& dimensions,
                            bool keep_reduced_dimensions) {
   auto lower_for_shape_fn =
       [&](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
     return BuildAny(operands[0], dimensions, keep_reduced_dimensions);
   };
-  return InferOutputShape({input.xla_shape()}, lower_for_shape_fn);
+  return InferOutputShape({GetXlaShape(input)}, lower_for_shape_fn);
 }
 
 }  // namespace
 
-Any::Any(const XlaValue& input, std::vector<int64_t> dimensions,
+Any::Any(const torch::lazy::Value& input, std::vector<int64_t> dimensions,
          bool keep_reduced_dimensions)
     : XlaNode(torch::lazy::OpKind(at::aten::any), {input},
               NodeOutputShape(input, dimensions, keep_reduced_dimensions),

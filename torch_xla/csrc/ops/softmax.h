@@ -9,7 +9,7 @@ namespace torch_xla {
 
 class Softmax : public XlaNode {
  public:
-  Softmax(const XlaValue& input, int64_t dim,
+  Softmax(const torch::lazy::Value& input, int64_t dim,
           c10::optional<at::ScalarType> dtype);
 
   torch::lazy::NodePtr Clone(OpList operands) const override;

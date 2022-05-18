@@ -9,7 +9,8 @@
 namespace torch_xla {
 namespace {
 
-xla::Shape NodeOutputShape(const XlaValue& input, const XlaValue& token,
+xla::Shape NodeOutputShape(const torch::lazy::Value& input,
+                           const torch::lazy::Value& token,
                            int64_t split_dimension, int64_t concat_dimension,
                            int64_t split_count,
                            const std::vector<std::vector<int64_t>>& groups,
@@ -20,14 +21,14 @@ xla::Shape NodeOutputShape(const XlaValue& input, const XlaValue& token,
                       concat_dimension, split_count, groups, pin_layout);
     return xla::Tuple(operands[0].builder(), {result.result, result.token});
   };
-  return InferOutputShape({input.xla_shape(), token.xla_shape()}, shape_fn);
+  return InferOutputShape({GetXlaShape(input), GetXlaShape(token)}, shape_fn);
 }
 
 }  // namespace
 
-AllToAll::AllToAll(const XlaValue& input, const XlaValue& token,
-                   int64_t split_dimension, int64_t concat_dimension,
-                   int64_t split_count,
+AllToAll::AllToAll(const torch::lazy::Value& input,
+                   const torch::lazy::Value& token, int64_t split_dimension,
+                   int64_t concat_dimension, int64_t split_count,
                    std::vector<std::vector<int64_t>> groups, bool pin_layout)
     : XlaNode(xla_all_to_all, {input, token},
               [&]() {

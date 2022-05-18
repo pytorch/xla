@@ -7,9 +7,11 @@ namespace torch_xla {
 // XlaNode for the backward batch norm operator.
 class NativeBatchNormBackward : public XlaNode {
  public:
-  NativeBatchNormBackward(const XlaValue& grad_out, const XlaValue& input,
-                          const XlaValue& weight, const XlaValue& save_mean,
-                          const XlaValue& save_invstd, bool training,
+  NativeBatchNormBackward(const torch::lazy::Value& grad_out,
+                          const torch::lazy::Value& input,
+                          const torch::lazy::Value& weight,
+                          const torch::lazy::Value& save_mean,
+                          const torch::lazy::Value& save_invstd, bool training,
                           double eps);
 
   torch::lazy::NodePtr Clone(OpList operands) const override;

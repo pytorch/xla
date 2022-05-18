@@ -6,9 +6,10 @@
 
 namespace torch_xla {
 
-Normal::Normal(const XlaValue& mean, const XlaValue& std, const XlaValue& seed)
+Normal::Normal(const torch::lazy::Value& mean, const torch::lazy::Value& std,
+               const torch::lazy::Value& seed)
     : XlaNode(torch::lazy::OpKind(at::aten::normal), {mean, std, seed},
-              mean.xla_shape()) {}
+              GetXlaShape(mean)) {}
 
 torch::lazy::NodePtr Normal::Clone(OpList operands) const {
   return torch::lazy::MakeNode<Normal>(operands.at(0), operands.at(1),

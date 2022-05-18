@@ -7,7 +7,7 @@ namespace torch_xla {
 
 class UpdateSlice : public XlaNode {
  public:
-  UpdateSlice(const XlaValue& input, const XlaValue& source,
+  UpdateSlice(const torch::lazy::Value& input, const torch::lazy::Value& source,
               absl::Span<const int64_t> base_indices);
 
   torch::lazy::NodePtr Clone(OpList operands) const override;

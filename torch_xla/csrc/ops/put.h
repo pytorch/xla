@@ -6,8 +6,8 @@ namespace torch_xla {
 
 class Put : public XlaNode {
  public:
-  Put(const XlaValue& input, const XlaValue& index, const XlaValue& source,
-      bool accumulate);
+  Put(const torch::lazy::Value& input, const torch::lazy::Value& index,
+      const torch::lazy::Value& source, bool accumulate);
 
   std::string ToString() const override;
 

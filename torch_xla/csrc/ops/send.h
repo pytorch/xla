@@ -9,7 +9,8 @@ namespace ops {
 
 class Send : public XlaNode {
  public:
-  Send(const XlaValue& input, const XlaValue& token, int64_t channel_id);
+  Send(const torch::lazy::Value& input, const torch::lazy::Value& token,
+       int64_t channel_id);
 
   std::string ToString() const override;
 

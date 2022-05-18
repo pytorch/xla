@@ -6,8 +6,8 @@
 
 namespace torch_xla {
 
-Bernoulli::Bernoulli(const XlaValue& probability, const XlaValue& seed,
-                     xla::Shape shape)
+Bernoulli::Bernoulli(const torch::lazy::Value& probability,
+                     const torch::lazy::Value& seed, xla::Shape shape)
     : XlaNode(torch::lazy::OpKind(at::aten::bernoulli), {probability, seed},
               std::move(shape)) {}
 

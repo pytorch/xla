@@ -8,8 +8,9 @@ namespace torch_xla {
 
 class HardtanhBackward : public XlaNode {
  public:
-  HardtanhBackward(const XlaValue& grad_output, const XlaValue& input,
-                   const at::Scalar& min_val, const at::Scalar& max_val);
+  HardtanhBackward(const torch::lazy::Value& grad_output,
+                   const torch::lazy::Value& input, const at::Scalar& min_val,
+                   const at::Scalar& max_val);
 
   std::string ToString() const override;
 

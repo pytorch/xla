@@ -9,7 +9,7 @@
 namespace torch_xla {
 namespace {
 
-xla::Shape NodeOutputShape(const XlaValue& input,
+xla::Shape NodeOutputShape(const torch::lazy::Value& input,
                            const std::vector<int64_t>& split_sizes,
                            int64_t dim) {
   auto lower_for_shape_fn =
@@ -17,17 +17,18 @@ xla::Shape NodeOutputShape(const XlaValue& input,
     return xla::Tuple(operands[0].builder(),
                       BuildSplit(operands[0], split_sizes, dim));
   };
-  return InferOutputShape({input.xla_shape()}, lower_for_shape_fn);
+  return InferOutputShape({GetXlaShape(input)}, lower_for_shape_fn);
 }
 
 }  // namespace
 
-Split::Split(const XlaValue& input, std::vector<int64_t> split_sizes,
+Split::Split(const torch::lazy::Value& input, std::vector<int64_t> split_sizes,
              int64_t dim)
-    : XlaNode(torch::lazy::OpKind(at::aten::split), {input},
-              [&]() { return NodeOutputShape(input, split_sizes, dim); },
-              ComputeSplitCount(input.xla_shape().dimensions(dim), split_sizes),
-              torch::lazy::MHash(split_sizes, dim)),
+    : XlaNode(
+          torch::lazy::OpKind(at::aten::split), {input},
+          [&]() { return NodeOutputShape(input, split_sizes, dim); },
+          ComputeSplitCount(GetXlaShape(input).dimensions(dim), split_sizes),
+          torch::lazy::MHash(split_sizes, dim)),
       split_sizes_(std::move(split_sizes)),
       dim_(dim) {}
 

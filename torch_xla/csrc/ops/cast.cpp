@@ -14,20 +14,21 @@
 namespace torch_xla {
 namespace {
 
-xla::Shape NodeOutputShape(const XlaValue& input, xla::PrimitiveType type) {
-  xla::Shape shape = input.xla_shape();
+xla::Shape NodeOutputShape(const torch::lazy::Value& input,
+                           xla::PrimitiveType type) {
+  xla::Shape shape = GetXlaShape(input);
   shape.set_element_type(type);
   return shape;
 }
 
 }  // namespace
 
-Cast::Cast(const XlaValue& input, xla::PrimitiveType type)
+Cast::Cast(const torch::lazy::Value& input, xla::PrimitiveType type)
     : XlaNode(xla_cast, {input}, NodeOutputShape(input, type),
               /*num_outputs=*/1, torch::lazy::MHash(static_cast<int>(type))),
       type_(type) {}
 
-Cast::Cast(const XlaValue& input, at::ScalarType dtype,
+Cast::Cast(const torch::lazy::Value& input, at::ScalarType dtype,
            c10::optional<at::ScalarType> stype)
     : XlaNode(xla_cast, {input},
               NodeOutputShape(input,

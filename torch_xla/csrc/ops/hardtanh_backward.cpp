@@ -6,12 +6,12 @@
 
 namespace torch_xla {
 
-HardtanhBackward::HardtanhBackward(const XlaValue& grad_output,
-                                   const XlaValue& input,
+HardtanhBackward::HardtanhBackward(const torch::lazy::Value& grad_output,
+                                   const torch::lazy::Value& input,
                                    const at::Scalar& min_val,
                                    const at::Scalar& max_val)
     : XlaNode(torch::lazy::OpKind(at::aten::hardtanh_backward),
-              {grad_output, input}, grad_output.xla_shape(), /*num_outputs=*/1,
+              {grad_output, input}, GetXlaShape(grad_output), /*num_outputs=*/1,
               torch::lazy::MHash(ScalarHash(min_val), ScalarHash(max_val))),
       min_val_(min_val),
       max_val_(max_val) {}

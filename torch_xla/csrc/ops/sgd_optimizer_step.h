@@ -6,11 +6,14 @@ namespace torch_xla {
 
 class SgdOptimizerStep : public XlaNode {
  public:
-  SgdOptimizerStep(const XlaValue& found_inf, const XlaValue& step,
-                   const XlaValue& param, const XlaValue& buf,
-                   const XlaValue& d_p, const XlaValue& weight_decay,
-                   const XlaValue& momentum, const XlaValue& lr,
-                   const XlaValue& dampening, bool use_weight_decay,
+  SgdOptimizerStep(const torch::lazy::Value& found_inf,
+                   const torch::lazy::Value& step,
+                   const torch::lazy::Value& param,
+                   const torch::lazy::Value& buf, const torch::lazy::Value& d_p,
+                   const torch::lazy::Value& weight_decay,
+                   const torch::lazy::Value& momentum,
+                   const torch::lazy::Value& lr,
+                   const torch::lazy::Value& dampening, bool use_weight_decay,
                    bool use_momentum, bool use_nesterov);
 
   torch::lazy::NodePtr Clone(OpList operands) const override;

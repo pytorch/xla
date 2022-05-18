@@ -39,8 +39,9 @@ std::vector<xla::XlaOp> LowerSVD(xla::XlaOp input, bool some, bool compute_uv) {
   return {u, svd_result.d, v};
 }
 
-xla::Shape NodeOutputShape(const XlaValue& input, bool some, bool compute_uv) {
-  const xla::Shape& input_shape = input.xla_shape();
+xla::Shape NodeOutputShape(const torch::lazy::Value& input, bool some,
+                           bool compute_uv) {
+  const xla::Shape& input_shape = GetXlaShape(input);
   XLA_CHECK_GE(input_shape.rank(), 2) << input_shape;
   // The input tensor is ...,M,N
   int64_t m_dim = input_shape.dimensions(input_shape.rank() - 2);
@@ -65,7 +66,7 @@ xla::Shape NodeOutputShape(const XlaValue& input, bool some, bool compute_uv) {
 
 }  // namespace
 
-SVD::SVD(const XlaValue& input, bool some, bool compute_uv)
+SVD::SVD(const torch::lazy::Value& input, bool some, bool compute_uv)
     : XlaNode(torch::lazy::OpKind(at::aten::svd), {input},
               [&]() { return NodeOutputShape(input, some, compute_uv); },
               /*num_outputs=*/3, torch::lazy::MHash(some, compute_uv)),

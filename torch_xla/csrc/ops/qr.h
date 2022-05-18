@@ -6,7 +6,7 @@ namespace torch_xla {
 
 class QR : public XlaNode {
  public:
-  QR(const XlaValue& input, bool some);
+  QR(const torch::lazy::Value& input, bool some);
 
   std::string ToString() const override;
 

@@ -9,17 +9,17 @@
 namespace torch_xla {
 namespace {
 
-xla::Shape NodeOutputShape(const XlaValue& growth_tracker,
-                           const XlaValue& current_scale) {
+xla::Shape NodeOutputShape(const torch::lazy::Value& growth_tracker,
+                           const torch::lazy::Value& current_scale) {
   return xla::ShapeUtil::MakeTupleShape(
-      {growth_tracker.xla_shape(), current_scale.xla_shape()});
+      {GetXlaShape(growth_tracker), GetXlaShape(current_scale)});
 }
 
 }  // namespace
 
-AmpUpdateScale::AmpUpdateScale(const XlaValue& current_scale,
-                               const XlaValue& growth_tracker,
-                               const XlaValue& found_inf,
+AmpUpdateScale::AmpUpdateScale(const torch::lazy::Value& current_scale,
+                               const torch::lazy::Value& growth_tracker,
+                               const torch::lazy::Value& found_inf,
                                double scale_growth_factor,
                                double scale_backoff_factor, int growth_interval)
     : XlaNode(torch::lazy::OpKind(at::aten::_amp_update_scale_),

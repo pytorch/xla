@@ -6,9 +6,11 @@ namespace torch_xla {
 
 class NativeBatchNormForward : public XlaNode {
  public:
-  NativeBatchNormForward(const XlaValue& input, const XlaValue& weight,
-                         const XlaValue& bias, const XlaValue& running_mean,
-                         const XlaValue& running_var, bool training,
+  NativeBatchNormForward(const torch::lazy::Value& input,
+                         const torch::lazy::Value& weight,
+                         const torch::lazy::Value& bias,
+                         const torch::lazy::Value& running_mean,
+                         const torch::lazy::Value& running_var, bool training,
                          double eps);
 
   torch::lazy::NodePtr Clone(OpList operands) const override;
