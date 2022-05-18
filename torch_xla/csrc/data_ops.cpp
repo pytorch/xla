@@ -109,7 +109,7 @@ xla::XlaOp SqueezeAllTrivialDimensions(xla::XlaOp input) {
   return XlaHelpers::DynamicReshape(input, output_sizes);
 }
 
-xla::XlaOp BuildDynamic(xla::XlaOp input,
+xla::XlaOp SetDimensionSizes(xla::XlaOp input,
                         absl::Span<const xla::XlaOp> output_sizes) {
   for (int i = 0; i < output_sizes.size(); i++) {
     xla::Shape dim_shape = XlaHelpers::ShapeOfXlaOp(output_sizes[i]);

@@ -23,17 +23,16 @@ xla::Shape NodeOutputShape(const XlaValue& input,
   }
   auto lower_for_shape_fn = [&](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
     XLA_CHECK_GE(operands.size(), 2) << operands.size();
-    return BuildDynamic(BuildExpand(operands[0], upper_bounds),
-                        operands.subspan(1));
+    return SetDimensionSizes(BuildExpand(operands[0], upper_bounds),
+                             operands.subspan(1));
   }; 
   return InferOutputShape(shapes, lower_for_shape_fn);
 }
 
 std::vector<XlaValue> GetXlaValues(const XlaValue& input,
-                                   const std::vector<XlaValue>& dimensions) {
-  std::vector<XlaValue> xla_values = dimensions;
-  xla_values.insert(xla_values.begin(), input);
-  return xla_values;
+                                   const std::vector<XlaValue> dimensions) {
+  dimensions.insert(dimensions.begin(), input);
+  return dimensions;
 }
 
 }  // namespace
@@ -57,7 +56,7 @@ XlaOpVector ExpandDynamic::Lower(LoweringContext* loctx) const {
     size_ops.push_back(loctx->GetOutputOp(operand(i)));
   }
   xla::XlaOp output =
-      BuildDynamic(BuildExpand(input, upper_bounds_), size_ops);
+      SetDimensionSizes(BuildExpand(input, upper_bounds_), size_ops);
   return ReturnOp(output, loctx);
 }
 
