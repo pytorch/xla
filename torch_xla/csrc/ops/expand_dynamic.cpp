@@ -31,8 +31,9 @@ xla::Shape NodeOutputShape(const XlaValue& input,
 
 std::vector<XlaValue> GetXlaValues(const XlaValue& input,
                                    const std::vector<XlaValue> dimensions) {
-  dimensions.insert(dimensions.begin(), input);
-  return dimensions;
+  std::vector<XlaValue> xla_values = dimensions;
+  xla_values.insert(xla_values.begin(), input);
+  return xla_values;
 }
 
 }  // namespace

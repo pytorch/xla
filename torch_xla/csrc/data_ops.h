@@ -33,8 +33,8 @@ xla::XlaOp SqueezeTrivialDimension(xla::XlaOp input, int64_t dim);
 xla::XlaOp SqueezeAllTrivialDimensions(xla::XlaOp input);
 
 // Update Output Dynamic Dimensions based on input size()
-xla::XlaOp BuildDynamic(xla::XlaOp input,
-                        absl::Span<const xla::XlaOp> output_sizes);
+xla::XlaOp SetDimensionSizes(xla::XlaOp input,
+                             absl::Span<const xla::XlaOp> output_sizes);
 
 // Creates a new tensor with the singleton dimensions expanded to the specified
 // output sizes.
