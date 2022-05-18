@@ -1334,7 +1334,8 @@ at::Tensor XLANativeFunctions::expand(const at::Tensor& self,
   XLA_FN_COUNTER("xla::");
   SymIntElements size_elements = SymIntElements(size);
   return bridge::AtenFromXlaTensor(XLATensor::expand(
-      bridge::GetXlaTensor(self), size_elements.size_nodes, size_elements.upper_bounds, size_elements.dynamic_dims));
+      bridge::GetXlaTensor(self), size_elements.size_nodes,
+      size_elements.upper_bounds, size_elements.dynamic_dims));
 }
 
 at::Tensor XLANativeFunctions::expm1(const at::Tensor& self) {

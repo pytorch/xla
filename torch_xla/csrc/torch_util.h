@@ -14,22 +14,22 @@ namespace torch_xla {
 
 // Unpack SymInt objects into their building blocks
 struct SymIntElements {
-  public:
-    SymIntElements(c10::SymInt& size) { SetSymIntNodeElements(size); }
+ public:
+  SymIntElements(c10::SymInt& size) { SetSymIntNodeElements(size); }
 
-    SymIntElements(c10::SymIntArrayRef& size) {
-      std::vector<c10::SymInt> _sizes = torch::lazy::ToVector<c10::SymInt>(size);
-      for (auto& _size : _sizes) {
-        SetSymIntNodeElements(_size);
-      }
+  SymIntElements(c10::SymIntArrayRef& size) {
+    std::vector<c10::SymInt> _sizes = torch::lazy::ToVector<c10::SymInt>(size);
+    for (auto& _size : _sizes) {
+      SetSymIntNodeElements(_size);
     }
+  }
 
-    std::vector<torch::lazy::NodePtr> size_nodes;
-    std::vector<int64_t> upper_bounds;
-    std::vector<bool> dynamic_dims;
+  std::vector<torch::lazy::NodePtr> size_nodes;
+  std::vector<int64_t> upper_bounds;
+  std::vector<bool> dynamic_dims;
 
-  private:
-    void SetSymIntNodeElements(c10::SymInt& size);
+ private:
+  void SetSymIntNodeElements(c10::SymInt& size);
 };
 
 // Return at::ScalarType from at::Scalar

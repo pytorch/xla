@@ -1291,9 +1291,9 @@ XLATensor XLATensor::expand(const XLATensor& input,
   for (auto& size_node : size_nodes) {
     size_values.push_back(XlaValue(size_node, 0));
   }
-  return input.CreateFrom(torch::lazy::MakeNode<ExpandDynamic>(input.GetIrValue(), size_values,
-                          std::move(upper_bounds),
-                          std::move(dynamic_dims)));
+  return input.CreateFrom(torch::lazy::MakeNode<ExpandDynamic>(
+      input.GetIrValue(), size_values, std::move(upper_bounds),
+      std::move(dynamic_dims)));
 }
 
 XLATensor XLATensor::expm1(const XLATensor& input) {
