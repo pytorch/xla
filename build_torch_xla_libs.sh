@@ -73,7 +73,8 @@ else
   cp -r -u -p $THIRD_PARTY_DIR/xla_client $THIRD_PARTY_DIR/tensorflow/tensorflow/compiler/xla/
 
   pushd $THIRD_PARTY_DIR/tensorflow
-  bazel build $MAX_JOBS $VERBOSE $TPUVM_FLAG --spawn_strategy=$BUILD_STRATEGY --define framework_shared_object=false -c "$MODE" "${OPTS[@]}" \
+  bazel build $MAX_JOBS $VERBOSE $TPUVM_FLAG --spawn_strategy=$BUILD_STRATEGY --show_progress_rate_limit=5 \
+    --define framework_shared_object=false -c "$MODE" "${OPTS[@]}" \
     $XLA_CUDA_CFG //tensorflow/compiler/xla/xla_client:libxla_computation_client.so
 
   popd
