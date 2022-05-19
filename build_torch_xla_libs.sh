@@ -34,6 +34,19 @@ if [[ "$XLA_BAZEL_VERBOSE" == "1" ]]; then
   VERBOSE="-s"
 fi
 
+BUILD_STRATEGY="standalone"
+if [[ "$XLA_SANDBOX_BUILD" == "0" ]]; then
+  # Temporary patch until tensorflow update bazel requirement to 5.2.0
+  echo "6e54699884cfad49d4e8f6dd59a4050bc95c4edf" > third_party/tensorflow/.bazelversion
+  # We can remove this after https://github.com/bazelbuild/bazel/issues/15359 is resolved
+  unset CC
+  unset CXX
+  BUILD_STRATEGY="local"
+fi
+if [[ "$XLA_SANDBOX_BUILD" == "1" ]]; then
+  BUILD_STRATEGY="sandboxed --sandbox_tmpfs_path=/tmp"
+fi
+
 TPUVM_FLAG=
 if [[ "$TPUVM_MODE" == "1" ]]; then
   TPUVM_FLAG="--define=with_tpu_support=true"
@@ -62,7 +75,8 @@ else
   cp -r -u -p $THIRD_PARTY_DIR/xla_client $THIRD_PARTY_DIR/tensorflow/tensorflow/compiler/xla/
 
   pushd $THIRD_PARTY_DIR/tensorflow
-  bazel build $MAX_JOBS $VERBOSE $TPUVM_FLAG --spawn_strategy=sandboxed --define framework_shared_object=false -c "$MODE" "${OPTS[@]}" \
+  bazel build $MAX_JOBS $VERBOSE $TPUVM_FLAG --spawn_strategy=$BUILD_STRATEGY --show_progress_rate_limit=20 \
+    --define framework_shared_object=false -c "$MODE" "${OPTS[@]}" \
     $XLA_CUDA_CFG //tensorflow/compiler/xla/xla_client:libxla_computation_client.so
 
   popd
