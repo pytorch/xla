@@ -4644,20 +4644,20 @@ TEST_F(AtenXlaTensorTest, TestExpandAs) {
 }
 
 TEST_F(AtenXlaTensorTest, TestExpandSymInt) {
-  const size_t Y_DIM = 3;
+  torch::Tensor x = torch::rand({5});
+  torch::Tensor y = torch::nonzero(x);
+  int64_t y0_size = y.sizes()[0];
   torch::Tensor a = torch::rand({3, 4}, torch::TensorOptions(torch::kFloat));
-  torch::Tensor b = a.expand({Y_DIM, 3, 4}, /*implicit=*/false);
-  ForEachDevice([&](const torch::Device& device) {
-    auto y = torch::rand({Y_DIM});
-    auto y_dev = CopyToDevice(y, device);
-    auto y_lt = bridge::TryGetXlaTensor(y_dev);
-    auto y_node =
-        torch::lazy::MakeNode<torch_xla::SizeNode>(y_lt->GetIrValue(), 0);
-    auto y_lazy = std::make_shared<torch::lazy::SymbolicIntNode>(y_node);
+  torch::Tensor b = a.expand({y0_size, 3, 4}, /*implicit=*/false);
 
+  ForEachDevice([&](const torch::Device& device) {
+    torch::Tensor xla_x = CopyToDevice(x, device);
+    torch::Tensor xla_y = torch::nonzero(xla_x);
+    c10::SymInt xla_y0_size = xla_y.sym_sizes()[0];
     torch::Tensor xla_a = CopyToDevice(a, device);
-    torch::Tensor xla_b =
-        xla_a.expand({y_lazy->toSymInt(), 3, 4}, /*implicit=*/false);
+    torch::Tensor xla_b = xla_a.expand(
+        c10::SymIntArrayRef({xla_y0_size, c10::SymInt(3), c10::SymInt(4)}),
+        /*implicit=*/false);
     AllClose(b, xla_b);
   });
 }
