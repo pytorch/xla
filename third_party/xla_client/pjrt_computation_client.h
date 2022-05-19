@@ -15,41 +15,6 @@
 namespace xla {
 
 class PjRtComputationClient : public ComputationClient {
-  struct PjRtData : public Data {
-    PjRtData(std::string device, Shape device_shape)
-        : Data(std::move(device), std::move(device_shape)) {}
-
-    PjRtData(std::string device, Shape device_shape,
-             std::shared_ptr<PjRtBuffer> buffer)
-        : Data(std::move(device), std::move(device_shape)), buffer(buffer) {}
-
-    void* get_handle() const {
-      return buffer->AcquireExternalReference()
-          .ValueOrDie()
-          ->OpaqueDeviceMemoryDataPointer();
-    };
-    OpaqueHandle GetOpaqueHandle() override {
-      return reinterpret_cast<std::uintptr_t>(get_handle());
-    };
-    void Assign(const Data& data) override;
-    bool HasValue() const override {
-      return buffer != nullptr && !buffer->IsDeleted();
-    };
-
-    std::shared_ptr<PjRtBuffer> buffer;
-  };
-
-  struct PjRtComputation : public Computation {
-    PjRtComputation(XlaComputation computation, ProgramShape program_shape,
-                    std::vector<std::string> devices,
-                    std::unique_ptr<xla::PjRtExecutable> executable)
-        : Computation(std::move(computation), std::move(program_shape),
-                      std::move(devices)),
-          executable(std::move(executable)) {}
-
-    std::unique_ptr<xla::PjRtExecutable> executable;
-  };
-
  public:
   PjRtComputationClient();
 
@@ -150,6 +115,41 @@ class PjRtComputationClient : public ComputationClient {
   std::shared_ptr<std::vector<std::string>> replication_devices_;
 
   xla::PjRtDevice* StringToPjRtDevice(const std::string& device);
+
+  struct PjRtData : public Data {
+    PjRtData(std::string device, Shape device_shape)
+        : Data(std::move(device), std::move(device_shape)) {}
+
+    PjRtData(std::string device, Shape device_shape,
+             std::shared_ptr<PjRtBuffer> buffer)
+        : Data(std::move(device), std::move(device_shape)), buffer(buffer) {}
+
+    void* get_handle() const {
+      return buffer->AcquireExternalReference()
+          .ValueOrDie()
+          ->OpaqueDeviceMemoryDataPointer();
+    };
+    OpaqueHandle GetOpaqueHandle() override {
+      return reinterpret_cast<std::uintptr_t>(get_handle());
+    };
+    void Assign(const Data& data) override;
+    bool HasValue() const override {
+      return buffer != nullptr && !buffer->IsDeleted();
+    };
+
+    std::shared_ptr<PjRtBuffer> buffer;
+  };
+
+  struct PjRtComputation : public Computation {
+    PjRtComputation(XlaComputation computation, ProgramShape program_shape,
+                    std::vector<std::string> devices,
+                    std::unique_ptr<xla::PjRtExecutable> executable)
+        : Computation(std::move(computation), std::move(program_shape),
+                      std::move(devices)),
+          executable(std::move(executable)) {}
+
+    std::unique_ptr<xla::PjRtExecutable> executable;
+  };
 };
 
 }  // namespace xla
