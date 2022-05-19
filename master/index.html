@@ -756,7 +756,7 @@ returns the list/tuple itself.</p>
 
 <dl class="function">
 <dt id="torch_xla.core.xla_model.all_gather">
-<code class="sig-prename descclassname">torch_xla.core.xla_model.</code><code class="sig-name descname">all_gather</code><span class="sig-paren">(</span><em class="sig-param">value</em>, <em class="sig-param">dim=0</em>, <em class="sig-param">groups=None</em>, <em class="sig-param">output=None</em>, <em class="sig-param">pin_layout=False</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/torch_xla/core/xla_model.html#all_gather"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#torch_xla.core.xla_model.all_gather" title="Permalink to this definition">¶</a></dt>
+<code class="sig-prename descclassname">torch_xla.core.xla_model.</code><code class="sig-name descname">all_gather</code><span class="sig-paren">(</span><em class="sig-param">value</em>, <em class="sig-param">dim=0</em>, <em class="sig-param">groups=None</em>, <em class="sig-param">output=None</em>, <em class="sig-param">pin_layout=True</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/torch_xla/core/xla_model.html#all_gather"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#torch_xla.core.xla_model.all_gather" title="Permalink to this definition">¶</a></dt>
 <dd><p>Performs an all-gather operation along a given dimension.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
@@ -789,7 +789,7 @@ participating replicas.</p>
 
 <dl class="function">
 <dt id="torch_xla.core.xla_model.all_to_all">
-<code class="sig-prename descclassname">torch_xla.core.xla_model.</code><code class="sig-name descname">all_to_all</code><span class="sig-paren">(</span><em class="sig-param">value</em>, <em class="sig-param">split_dimension</em>, <em class="sig-param">concat_dimension</em>, <em class="sig-param">split_count</em>, <em class="sig-param">groups=None</em>, <em class="sig-param">pin_layout=False</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/torch_xla/core/xla_model.html#all_to_all"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#torch_xla.core.xla_model.all_to_all" title="Permalink to this definition">¶</a></dt>
+<code class="sig-prename descclassname">torch_xla.core.xla_model.</code><code class="sig-name descname">all_to_all</code><span class="sig-paren">(</span><em class="sig-param">value</em>, <em class="sig-param">split_dimension</em>, <em class="sig-param">concat_dimension</em>, <em class="sig-param">split_count</em>, <em class="sig-param">groups=None</em>, <em class="sig-param">pin_layout=True</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/torch_xla/core/xla_model.html#all_to_all"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#torch_xla.core.xla_model.all_to_all" title="Permalink to this definition">¶</a></dt>
 <dd><p>Performs an XLA <cite>AllToAll()</cite> operation on the input tensor.</p>
 <p>See: <a class="reference external" href="https://www.tensorflow.org/xla/operation_semantics#alltoall">https://www.tensorflow.org/xla/operation_semantics#alltoall</a></p>
 <dl class="field-list simple">
