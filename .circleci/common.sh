@@ -117,8 +117,10 @@ function run_torch_xla_tests() {
   export PYTORCH_TESTING_DEVICE_ONLY_FOR="xla"
 
   pushd $XLA_DIR
-    echo "Starting GRPC server"
-    python torch_xla/core/xrt_run_server.py --port $XLA_PORT --restart
+    if [[ ! -z "${XLA_PORT}" ]]; then
+      echo "Starting GRPC server"
+      python torch_xla/core/xrt_run_server.py --port $XLA_PORT --restart
+    fi
     echo "Running Python Tests"
     ./test/run_tests.sh
     # only run test_autocast for cpu and gpu on circleCI.

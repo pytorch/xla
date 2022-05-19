@@ -101,7 +101,6 @@ function run_all_tests {
   # TODO: enable this test after tf update, currently optimization_barrier does not
   # work on CPU.
   # run_test python3 "$CDIR/test_checkpoint.py"
-  run_pjrt python3 "$CDIR/test_operations.py" "$@" --verbosity=$VERBOSITY
   run_test python3 "$CDIR/test_mp_replication.py"
   run_test python3 "$CDIR/test_mp_all_to_all.py"
   run_test python3 "$CDIR/test_mp_collective_permute.py"
