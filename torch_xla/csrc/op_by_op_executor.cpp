@@ -126,7 +126,7 @@ std::vector<xla::ComputationClient::ExecuteChainedOp> OpByOpExecutor::BuildOps(
     xla::ComputationClient::ExecuteChainedOp& cxop = chained_exec_ops[i];
     const DeviceData* device_data = DeviceData::Cast(node);
     if (device_data != nullptr) {
-      cxop.device_data = device_data->data();
+      cxop.device_data = UnwrapXlaData(device_data->data());
       ops_shapes[i] = &cxop.device_data->shape();
       device_data_ops[i] = true;
     } else {
@@ -199,12 +199,12 @@ std::vector<xla::ComputationClient::ExecuteChainedOp> OpByOpExecutor::BuildOps(
   return chained_exec_ops;
 }
 
-std::vector<xla::ComputationClient::DataPtr> OpByOpExecutor::Execute(
+std::vector<torch::lazy::BackendDataPtr> OpByOpExecutor::Execute(
     c10::ArrayRef<torch::lazy::Value> roots, const std::string& device,
     absl::Span<const std::string> devices) {
   auto chained_exec_ops = BuildOps(roots, device, devices);
-  return xla::ComputationClient::Get()->ExecuteChained(chained_exec_ops,
-                                                       device);
+  return WrapXlaData(
+      xla::ComputationClient::Get()->ExecuteChained(chained_exec_ops, device));
 }
 
 OpByOpExecutor::AsyncTask OpByOpExecutor::ExecuteAsync(

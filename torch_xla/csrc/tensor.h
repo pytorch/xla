@@ -33,7 +33,7 @@ class XLATensor : public c10::intrusive_ptr_target {
   static XLATensor Create(const at::Tensor& tensor,
                           const torch::lazy::BackendDevice& device);
   static XLATensor Create(
-      xla::ComputationClient::DataPtr xla_data,
+      torch::lazy::BackendDataPtr xla_data,
       c10::optional<at::ScalarType> logical_element_type = c10::nullopt);
 
   static XLATensor Create(
@@ -80,13 +80,13 @@ class XLATensor : public c10::intrusive_ptr_target {
 
   // Fetches the XLA data behind the tensor. If the tensor has a graph defining
   // its current value, executes the graph and fetches the XLA data result.
-  xla::ComputationClient::DataPtr GetXlaData();
+  torch::lazy::BackendDataPtr GetXlaData();
 
   // Fetches the current value of the XLA data, which can be missing (nullptr)
   // in case the tensor has a graph defining its current value,
-  xla::ComputationClient::DataPtr CurrentXlaData() const;
+  torch::lazy::BackendDataPtr CurrentXlaData() const;
 
-  void SetXlaData(xla::ComputationClient::DataPtr xla_data);
+  void SetXlaData(torch::lazy::BackendDataPtr xla_data);
 
   // Retrieves the current IR XlaNode, or nullptr in case no active IR XlaNode
   // is available.
@@ -1233,7 +1233,7 @@ class XLATensor : public c10::intrusive_ptr_target {
   struct PostOrderData {
     std::vector<const torch::lazy::Node*> post_order;
     torch::lazy::Util::EmissionMap emission_map;
-    std::vector<xla::ComputationClient::DataPtr> parameters_data;
+    std::vector<torch::lazy::BackendDataPtr> parameters_data;
     std::vector<size_t> parameter_sequence;
   };
 
@@ -1241,7 +1241,7 @@ class XLATensor : public c10::intrusive_ptr_target {
     torch::lazy::BackendDevice device;
     size_t emitted_nodes = 0;
     std::shared_ptr<xla::ComputationClient::Computation> computation;
-    std::vector<xla::ComputationClient::DataPtr> parameters_data;
+    std::vector<torch::lazy::BackendDataPtr> parameters_data;
   };
 
   struct CachedComputation {
@@ -1258,8 +1258,8 @@ class XLATensor : public c10::intrusive_ptr_target {
 
   struct Async {
     Async(SyncTensorCollection* coll,
-          std::vector<xla::ComputationClient::DataPtr> parameters_data,
-          std::vector<xla::ComputationClient::DataPtr> tensors_data,
+          std::vector<torch::lazy::BackendDataPtr> parameters_data,
+          std::vector<torch::lazy::BackendDataPtr> tensors_data,
           ComputationCache::TypePtr cached_computation);
 
     void Wait();
@@ -1267,17 +1267,17 @@ class XLATensor : public c10::intrusive_ptr_target {
     xla::util::MultiWait mwait;
     std::vector<size_t> indices;
     std::vector<xla::util::ExceptionCleanup> unlocker;
-    std::vector<xla::ComputationClient::DataPtr> parameters_data;
+    std::vector<torch::lazy::BackendDataPtr> parameters_data;
     std::string device;
     ComputationCache::TypePtr cached_computation;
-    std::vector<xla::ComputationClient::DataPtr> tensors_data;
+    std::vector<torch::lazy::BackendDataPtr> tensors_data;
   };
 
   // This is the core XLA tensor data structure where all the tensor data is
   // held. The XLA tensor is nothing more than a shared pointer to a Data
   // object.
   struct Data {
-    Data(xla::ComputationClient::DataPtr xla_data,
+    Data(torch::lazy::BackendDataPtr xla_data,
          const torch::lazy::BackendDevice& device,
          c10::optional<at::ScalarType> logical_element_type)
         : xla_data(std::move(xla_data)),
@@ -1304,7 +1304,7 @@ class XLATensor : public c10::intrusive_ptr_target {
 
     ~Data();
 
-    xla::ComputationClient::DataPtr xla_data;
+    torch::lazy::BackendDataPtr xla_data;
     torch::lazy::Value ir_value;
     std::shared_ptr<View> view;
     // TODO: remove this in favor of torch::lazy::Shape within ir_value.
@@ -1316,7 +1316,7 @@ class XLATensor : public c10::intrusive_ptr_target {
   };
 
   XLATensor(const at::Tensor& tensor, const torch::lazy::BackendDevice& device);
-  XLATensor(xla::ComputationClient::DataPtr xla_data,
+  XLATensor(torch::lazy::BackendDataPtr xla_data,
             c10::optional<at::ScalarType> logical_element_type = c10::nullopt);
   XLATensor(torch::lazy::Value ir_value,
             const torch::lazy::BackendDevice& device,
@@ -1334,7 +1334,7 @@ class XLATensor : public c10::intrusive_ptr_target {
 
   std::shared_ptr<Data> data_ptr() const { return data_; }
 
-  void SetXlaData(xla::ComputationClient::DataPtr xla_data, bool sync);
+  void SetXlaData(torch::lazy::BackendDataPtr xla_data, bool sync);
 
   void SetIrValue(torch::lazy::Value ir_value, bool inplace = true);
   void SetInPlaceIrValue(torch::lazy::Value ir_value);
@@ -1343,7 +1343,7 @@ class XLATensor : public c10::intrusive_ptr_target {
 
   void SetTensorData(at::Tensor tensor_data);
 
-  torch::lazy::Value CreateTensorNode(xla::ComputationClient::DataPtr data,
+  torch::lazy::Value CreateTensorNode(torch::lazy::BackendDataPtr data,
                                       bool read_only) const;
 
   View::IrNode GetViewUpdate(const std::shared_ptr<View>& view) const;
@@ -1412,14 +1412,14 @@ class XLATensor : public c10::intrusive_ptr_target {
 
   // Gathers the XLA device data for all the input tensors, after an
   // asynchronous operation.
-  static std::vector<xla::ComputationClient::DataPtr> GatherTensorsXlaData(
+  static std::vector<torch::lazy::BackendDataPtr> GatherTensorsXlaData(
       const std::vector<XLATensor>& tensors, absl::Span<const size_t> indices,
-      absl::Span<const xla::ComputationClient::DataPtr> tensors_data);
+      absl::Span<const torch::lazy::BackendDataPtr> tensors_data);
 
   static std::vector<torch::lazy::Value> CollectRoots(
       const std::vector<XLATensor>& tensors, absl::Span<const size_t> indices);
 
-  static std::vector<xla::ComputationClient::DataPtr> FetchTensorData(
+  static std::vector<torch::lazy::BackendDataPtr> FetchTensorData(
       std::vector<XLATensor>* tensors, const SyncTensorsConfig& config,
       absl::Span<const size_t> indices);
 
@@ -1432,13 +1432,13 @@ class XLATensor : public c10::intrusive_ptr_target {
   // present within the coll structure.
   static std::shared_ptr<XLATensor::Async> ScheduleSyncTensorsGraph(
       SyncTensorCollection* coll,
-      std::vector<xla::ComputationClient::DataPtr> parameters_data,
-      std::vector<xla::ComputationClient::DataPtr> tensors_data,
+      std::vector<torch::lazy::BackendDataPtr> parameters_data,
+      std::vector<torch::lazy::BackendDataPtr> tensors_data,
       ComputationCache::TypePtr cached_computation);
 
   static std::shared_ptr<Async> ScheduleSyncTensorsGraph(
       std::vector<XLATensor>* tensors, SyncTensorCollection* coll,
-      std::vector<xla::ComputationClient::DataPtr> parameters_data,
+      std::vector<torch::lazy::BackendDataPtr> parameters_data,
       std::string device, ComputationCache::TypePtr cached_computation);
 
   static PostOrderData RunPostOrder(const std::vector<XLATensor>& tensors,
