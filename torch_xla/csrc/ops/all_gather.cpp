@@ -41,7 +41,7 @@ AllGather::AllGather(const torch::lazy::Value& input,
       groups_(std::move(groups)),
       pin_layout_(pin_layout) {}
 
-torch::lazy::NodePtr AllGather::Clone(OpList operands) const {
+torch::lazy::NodePtr AllGather::Clone(torch::lazy::OpList operands) const {
   return torch::lazy::MakeNode<AllGather>(operands.at(0), operands.at(1), dim_,
                                           shard_count_, groups_, pin_layout_);
 }

@@ -12,7 +12,7 @@ class UpsampleNearestBackward : public XlaNode {
                           std::vector<int64_t> output_size,
                           std::vector<int64_t> input_size);
 
-  torch::lazy::NodePtr Clone(OpList operands) const override;
+  torch::lazy::NodePtr Clone(torch::lazy::OpList operands) const override;
 
   XlaOpVector Lower(LoweringContext* loctx) const override;
 

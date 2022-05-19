@@ -11,7 +11,7 @@ Roll::Roll(const torch::lazy::Value& input, std::vector<int64_t> shifts,
       shifts_(std::move(shifts)),
       dims_(std::move(dims)) {}
 
-torch::lazy::NodePtr Roll::Clone(OpList operands) const {
+torch::lazy::NodePtr Roll::Clone(torch::lazy::OpList operands) const {
   return torch::lazy::MakeNode<Roll>(operands.at(0), shifts_, dims_);
 }
 

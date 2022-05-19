@@ -16,7 +16,8 @@ DiagonalViewUpdate::DiagonalViewUpdate(const torch::lazy::Value& target,
       dim1_(dim1),
       dim2_(dim2) {}
 
-torch::lazy::NodePtr DiagonalViewUpdate::Clone(OpList operands) const {
+torch::lazy::NodePtr DiagonalViewUpdate::Clone(
+    torch::lazy::OpList operands) const {
   return torch::lazy::MakeNode<DiagonalViewUpdate>(
       operands.at(0), operands.at(1), offset_, dim1_, dim2_);
 }

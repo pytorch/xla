@@ -11,7 +11,7 @@ Normal::Normal(const torch::lazy::Value& mean, const torch::lazy::Value& std,
     : XlaNode(torch::lazy::OpKind(at::aten::normal), {mean, std, seed},
               GetXlaShape(mean)) {}
 
-torch::lazy::NodePtr Normal::Clone(OpList operands) const {
+torch::lazy::NodePtr Normal::Clone(torch::lazy::OpList operands) const {
   return torch::lazy::MakeNode<Normal>(operands.at(0), operands.at(1),
                                        operands.at(2));
 }

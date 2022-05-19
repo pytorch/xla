@@ -10,7 +10,7 @@ class Triu : public XlaNode {
  public:
   Triu(const torch::lazy::Value& input, int64_t diagonal);
 
-  torch::lazy::NodePtr Clone(OpList operands) const override;
+  torch::lazy::NodePtr Clone(torch::lazy::OpList operands) const override;
 
   XlaOpVector Lower(LoweringContext* loctx) const override;
 

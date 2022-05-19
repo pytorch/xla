@@ -10,7 +10,7 @@ Flip::Flip(const torch::lazy::Value& input, std::vector<int64_t> dims)
               /*num_outputs=*/1, torch::lazy::MHash(dims)),
       dims_(std::move(dims)) {}
 
-torch::lazy::NodePtr Flip::Clone(OpList operands) const {
+torch::lazy::NodePtr Flip::Clone(torch::lazy::OpList operands) const {
   return torch::lazy::MakeNode<Flip>(operands.at(0), dims_);
 }
 

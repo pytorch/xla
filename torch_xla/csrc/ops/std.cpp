@@ -35,7 +35,7 @@ Std::Std(const torch::lazy::Value& input, std::vector<int64_t> dimensions,
       keep_reduced_dimensions_(keep_reduced_dimensions),
       correction_(correction) {}
 
-torch::lazy::NodePtr Std::Clone(OpList operands) const {
+torch::lazy::NodePtr Std::Clone(torch::lazy::OpList operands) const {
   return torch::lazy::MakeNode<Std>(operands.at(0), dimensions_,
                                     keep_reduced_dimensions_, correction_);
 }

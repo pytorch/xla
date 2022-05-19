@@ -28,7 +28,7 @@ KthValue::KthValue(const torch::lazy::Value& input, int64_t k, int64_t dim,
       dim_(dim),
       keepdim_(keepdim) {}
 
-torch::lazy::NodePtr KthValue::Clone(OpList operands) const {
+torch::lazy::NodePtr KthValue::Clone(torch::lazy::OpList operands) const {
   return torch::lazy::MakeNode<KthValue>(operands.at(0), k_, dim_, keepdim_);
 }
 

@@ -32,7 +32,7 @@ Any::Any(const torch::lazy::Value& input, std::vector<int64_t> dimensions,
       dimensions_(std::move(dimensions)),
       keep_reduced_dimensions_(keep_reduced_dimensions) {}
 
-torch::lazy::NodePtr Any::Clone(OpList operands) const {
+torch::lazy::NodePtr Any::Clone(torch::lazy::OpList operands) const {
   return torch::lazy::MakeNode<Any>(operands.at(0), dimensions_,
                                     keep_reduced_dimensions_);
 }

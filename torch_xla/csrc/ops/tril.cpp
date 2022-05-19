@@ -10,7 +10,7 @@ Tril::Tril(const torch::lazy::Value& input, int64_t diagonal)
               /*num_outputs=*/1, torch::lazy::MHash(diagonal)),
       diagonal_(diagonal) {}
 
-torch::lazy::NodePtr Tril::Clone(OpList operands) const {
+torch::lazy::NodePtr Tril::Clone(torch::lazy::OpList operands) const {
   return torch::lazy::MakeNode<Tril>(operands.at(0), diagonal_);
 }
 

@@ -9,7 +9,7 @@ class Permute : public XlaNode {
  public:
   Permute(const torch::lazy::Value& input, std::vector<int64_t> dims);
 
-  torch::lazy::NodePtr Clone(OpList operands) const override;
+  torch::lazy::NodePtr Clone(torch::lazy::OpList operands) const override;
 
   XlaOpVector Lower(LoweringContext* loctx) const override;
 

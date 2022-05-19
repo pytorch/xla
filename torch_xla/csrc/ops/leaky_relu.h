@@ -10,7 +10,7 @@ class LeakyRelu : public XlaNode {
  public:
   LeakyRelu(const torch::lazy::Value& input, double negative_slope);
 
-  torch::lazy::NodePtr Clone(OpList operands) const override;
+  torch::lazy::NodePtr Clone(torch::lazy::OpList operands) const override;
 
   XlaOpVector Lower(LoweringContext* loctx) const override;
 

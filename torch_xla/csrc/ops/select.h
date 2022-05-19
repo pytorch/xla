@@ -9,7 +9,7 @@ class Select : public XlaNode {
   Select(const torch::lazy::Value& input, int64_t dim, int64_t start,
          int64_t end, int64_t stride);
 
-  torch::lazy::NodePtr Clone(OpList operands) const override;
+  torch::lazy::NodePtr Clone(torch::lazy::OpList operands) const override;
 
   XlaOpVector Lower(LoweringContext* loctx) const override;
 

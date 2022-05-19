@@ -32,7 +32,7 @@ Split::Split(const torch::lazy::Value& input, std::vector<int64_t> split_sizes,
       split_sizes_(std::move(split_sizes)),
       dim_(dim) {}
 
-torch::lazy::NodePtr Split::Clone(OpList operands) const {
+torch::lazy::NodePtr Split::Clone(torch::lazy::OpList operands) const {
   return torch::lazy::MakeNode<Split>(operands.at(0), split_sizes_, dim_);
 }
 

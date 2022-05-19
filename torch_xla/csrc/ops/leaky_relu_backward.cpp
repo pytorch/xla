@@ -13,7 +13,8 @@ LeakyReluBackward::LeakyReluBackward(const torch::lazy::Value& grad_output,
               /*num_outputs=*/1, torch::lazy::MHash(negative_slope)),
       negative_slope_(negative_slope) {}
 
-torch::lazy::NodePtr LeakyReluBackward::Clone(OpList operands) const {
+torch::lazy::NodePtr LeakyReluBackward::Clone(
+    torch::lazy::OpList operands) const {
   return torch::lazy::MakeNode<LeakyReluBackward>(
       operands.at(0), operands.at(1), negative_slope_);
 }

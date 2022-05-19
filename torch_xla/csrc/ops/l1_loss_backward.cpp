@@ -37,7 +37,7 @@ L1LossBackward::L1LossBackward(const torch::lazy::Value& grad_output,
               torch::lazy::MHash(torch::lazy::GetEnumValue(reduction))),
       reduction_(reduction) {}
 
-torch::lazy::NodePtr L1LossBackward::Clone(OpList operands) const {
+torch::lazy::NodePtr L1LossBackward::Clone(torch::lazy::OpList operands) const {
   return torch::lazy::MakeNode<L1LossBackward>(operands.at(0), operands.at(1),
                                                operands.at(2), reduction_);
 }

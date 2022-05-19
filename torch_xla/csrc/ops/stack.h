@@ -7,11 +7,11 @@ namespace torch_xla {
 
 class Stack : public XlaNode {
  public:
-  Stack(absl::Span<const torch::lazy::Value> values, int64_t dim);
+  Stack(c10::ArrayRef<torch::lazy::Value> values, int64_t dim);
 
   std::string ToString() const override;
 
-  torch::lazy::NodePtr Clone(OpList operands) const override;
+  torch::lazy::NodePtr Clone(torch::lazy::OpList operands) const override;
 
   XlaOpVector Lower(LoweringContext* loctx) const override;
 

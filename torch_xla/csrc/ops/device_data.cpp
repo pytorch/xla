@@ -18,7 +18,7 @@ std::string DeviceData::ToString() const {
   return ss.str();
 }
 
-torch::lazy::NodePtr DeviceData::Clone(OpList operands) const {
+torch::lazy::NodePtr DeviceData::Clone(torch::lazy::OpList operands) const {
   return torch::lazy::MakeNode<DeviceData>(data_);
 }
 

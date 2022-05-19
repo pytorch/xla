@@ -12,7 +12,7 @@ class AmpUpdateScale : public XlaNode {
                  double scale_growth_factor, double scale_backoff_factor,
                  int growth_interval);
 
-  torch::lazy::NodePtr Clone(OpList operands) const override;
+  torch::lazy::NodePtr Clone(torch::lazy::OpList operands) const override;
 
   XlaOpVector Lower(LoweringContext* loctx) const override;
 

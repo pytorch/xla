@@ -11,7 +11,7 @@ NotSupported::NotSupported(std::string description, xla::Shape shape)
               torch::lazy::MHash(description)),
       description_(std::move(description)) {}
 
-torch::lazy::NodePtr NotSupported::Clone(OpList operands) const {
+torch::lazy::NodePtr NotSupported::Clone(torch::lazy::OpList operands) const {
   return torch::lazy::MakeNode<NotSupported>(description_, xla_shape());
 }
 

@@ -50,7 +50,7 @@ NllLoss2d::NllLoss2d(const torch::lazy::Value& logits,
       reduction_(reduction),
       ignore_index_(ignore_index) {}
 
-torch::lazy::NodePtr NllLoss2d::Clone(OpList operands) const {
+torch::lazy::NodePtr NllLoss2d::Clone(torch::lazy::OpList operands) const {
   absl::optional<torch::lazy::Value> weight;
   if (operands.size() > 2) {
     weight = operands.at(2);

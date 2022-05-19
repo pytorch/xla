@@ -634,7 +634,7 @@ torch::lazy::NodePtr ARange(const at::Scalar& start, const at::Scalar& end,
 }
 
 torch::lazy::NodePtr BroadcastTensors(
-    absl::Span<const torch::lazy::Value> tensors) {
+    c10::ArrayRef<torch::lazy::Value> tensors) {
   auto lower_fn = [](const XlaNode& node,
                      LoweringContext* loctx) -> XlaOpVector {
     std::vector<xla::XlaOp> xla_operands;
