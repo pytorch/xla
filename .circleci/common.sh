@@ -111,13 +111,14 @@ function run_torch_xla_tests() {
     export GPU_NUM_DEVICES=2
   else
     export XRT_DEVICE_MAP="CPU:0;/job:localservice/replica:0/task:0/device:XLA_CPU:0"
-    XLA_PORT=$(shuf -i 40701-40999 -n 1)
+    export XLA_PORT=$(shuf -i 40701-40999 -n 1)
     export XRT_WORKERS="localservice:0;grpc://localhost:$XLA_PORT"
-    python torch_xla/core/xrt_run_server.py --port $XLA_PORT --restart
   fi
   export PYTORCH_TESTING_DEVICE_ONLY_FOR="xla"
 
   pushd $XLA_DIR
+    echo "Starting GRPC server"
+    python torch_xla/core/xrt_run_server.py --port $XLA_PORT --restart
     echo "Running Python Tests"
     ./test/run_tests.sh
     # only run test_autocast for cpu and gpu on circleCI.
