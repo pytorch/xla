@@ -36,7 +36,7 @@ fi
 
 BUILD_STRATEGY="local"
 if [[ "$XLA_SANDBOX_BUILD" == "1" ]]; then
-  BUILD_STRATEGY="sandboxed"
+  BUILD_STRATEGY="sandboxed --sandbox_tmpfs_path=/tmp"
 fi
 
 TPUVM_FLAG=
@@ -73,7 +73,7 @@ else
   cp -r -u -p $THIRD_PARTY_DIR/xla_client $THIRD_PARTY_DIR/tensorflow/tensorflow/compiler/xla/
 
   pushd $THIRD_PARTY_DIR/tensorflow
-  bazel build $MAX_JOBS $VERBOSE $TPUVM_FLAG --spawn_strategy=$BUILD_STRATEGY --show_progress_rate_limit=5 \
+  bazel build $MAX_JOBS $VERBOSE $TPUVM_FLAG --spawn_strategy=$BUILD_STRATEGY --show_progress_rate_limit=20 \
     --define framework_shared_object=false -c "$MODE" "${OPTS[@]}" \
     $XLA_CUDA_CFG //tensorflow/compiler/xla/xla_client:libxla_computation_client.so
 
