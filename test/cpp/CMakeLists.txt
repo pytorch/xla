@@ -32,7 +32,7 @@ set_directory_properties(PROPERTIES EP_PREFIX "${GTEST_DIR}")
 ExternalProject_Add(
   googletest
   GIT_REPOSITORY https://github.com/google/googletest.git
-  GIT_TAG e2239ee6043f73722e7aa812a459f54a28552929 #4679637f1c9d5a0728bdc347a531737fad0b1ca3 #6f5fd0d7199b9a19faa
+  GIT_TAG e2239ee6043f73722e7aa812a459f54a28552929
   SOURCE_DIR "${GTEST_DIR}/src/googletest-src"
   BINARY_DIR "${GTEST_DIR}/src/googletest-build"
   # Disable install step
