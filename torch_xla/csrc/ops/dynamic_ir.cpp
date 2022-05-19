@@ -44,6 +44,12 @@ int64_t SizeAdd::getStaticValue() const {
 
 std::string SizeAdd::ToString() const { return "SizeAdd"; }
 
+XlaOpVector SizeAdd::Lower(LoweringContext* loctx) const {
+  auto input1 = loctx->GetOutputOp(operand(0));
+  auto input2 = loctx->GetOutputOp(operand(1));
+  return ReturnOp((xla::GetDimensionSize(input1, 0) + xla::GetDimensionSize(input2, 0)), loctx);
+}
+
 SizeMul::SizeMul(XlaValue a, XlaValue b)
     : DimensionNode(
           torch::lazy::OpKind{c10::Symbol::fromQualString("aten::mul")},
@@ -55,6 +61,12 @@ int64_t SizeMul::getStaticValue() const {
 }
 
 std::string SizeMul::ToString() const { return "SizeMul"; }
+
+XlaOpVector SizeMul::Lower(LoweringContext* loctx) const {
+  auto input1 = loctx->GetOutputOp(operand(0));
+  auto input2 = loctx->GetOutputOp(operand(1));
+  return ReturnOp(xla::Mul(xla::GetDimensionSize(input1, 0), xla::GetDimensionSize(input2, 0)), loctx);
+}
 
 SizeDiv::SizeDiv(XlaValue a, XlaValue b)
     : DimensionNode(
@@ -71,5 +83,11 @@ int64_t SizeDiv::getStaticValue() const {
 }
 
 std::string SizeDiv::ToString() const { return "SizeDiv"; }
+
+XlaOpVector SizeDiv::Lower(LoweringContext* loctx) const {
+  auto input1 = loctx->GetOutputOp(operand(0));
+  auto input2 = loctx->GetOutputOp(operand(1));
+  return ReturnOp(xla::Div(xla::GetDimensionSize(input1, 0), xla::GetDimensionSize(input2, 0)), loctx);
+}
 
 }  // namespace torch_xla
