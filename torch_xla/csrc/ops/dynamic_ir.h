@@ -61,6 +61,7 @@ class SizeAdd : public DimensionNode {
   SizeAdd(XlaValue a, XlaValue b);
   int64_t getStaticValue() const override;
   std::string ToString() const override;
+  virtual XlaOpVector Lower(LoweringContext* loctx) const override;
 };
 
 class SizeMul : public DimensionNode {
@@ -68,6 +69,7 @@ class SizeMul : public DimensionNode {
   SizeMul(XlaValue a, XlaValue b);
   int64_t getStaticValue() const override;
   std::string ToString() const override;
+  virtual XlaOpVector Lower(LoweringContext* loctx) const override;
 };
 
 class SizeDiv : public DimensionNode {
@@ -75,6 +77,7 @@ class SizeDiv : public DimensionNode {
   SizeDiv(XlaValue a, XlaValue b);
   int64_t getStaticValue() const override;
   std::string ToString() const override;
+  virtual XlaOpVector Lower(LoweringContext* loctx) const override;
 };
 
 }  // namespace torch_xla
