@@ -35,7 +35,7 @@ if [[ "$XLA_BAZEL_VERBOSE" == "1" ]]; then
 fi
 
 BUILD_STRATEGY="standalone"
-if [[ "$XLA_SANDBOX_BUILD" == "0" ]]; then
+if [[ -z "$XLA_SANDBOX_BUILD" ]] || [[ "$XLA_SANDBOX_BUILD" == "0" ]]; then
   # Temporary patch until tensorflow update bazel requirement to 5.2.0
   echo "6e54699884cfad49d4e8f6dd59a4050bc95c4edf" > third_party/tensorflow/.bazelversion
   # We can remove this after https://github.com/bazelbuild/bazel/issues/15359 is resolved
