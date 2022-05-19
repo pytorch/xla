@@ -120,10 +120,9 @@ std::vector<ComputationClient::ComputationPtr> PjRtComputationClient::Compile(
         instance.computation.GetProgramShape().ValueOrDie();
     xla::CompileOptions compile_options;
     // TODO(wcromar): set compile_options.argument_layouts, enable strict shapes
+    compile_options.executable_build_options.set_num_partitions(1);
     compile_options.executable_build_options.set_num_replicas(
-        client_->addressable_device_count());
-    compile_options.executable_build_options.set_device_ordinal(
-        pjrt_device->id());
+        client_->device_count());
     std::unique_ptr<xla::PjRtExecutable> executable =
         client_->Compile(instance.computation, compile_options).ValueOrDie();
     std::shared_ptr<PjRtComputation> pjrt_computation =
