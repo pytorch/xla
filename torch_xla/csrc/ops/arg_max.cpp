@@ -25,7 +25,7 @@ ArgMax::ArgMax(const torch::lazy::Value& input, int64_t dim, bool keepdim)
       dim_(dim),
       keepdim_(keepdim) {}
 
-torch::lazy::NodePtr ArgMax::Clone(OpList operands) const {
+torch::lazy::NodePtr ArgMax::Clone(torch::lazy::OpList operands) const {
   return torch::lazy::MakeNode<ArgMax>(operands.at(0), dim_, keepdim_);
 }
 

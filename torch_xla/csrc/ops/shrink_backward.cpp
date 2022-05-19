@@ -21,7 +21,7 @@ std::string ShrinkBackward::ToString() const {
   return ss.str();
 }
 
-torch::lazy::NodePtr ShrinkBackward::Clone(OpList operands) const {
+torch::lazy::NodePtr ShrinkBackward::Clone(torch::lazy::OpList operands) const {
   return torch::lazy::MakeNode<ShrinkBackward>(op(), operands.at(0),
                                                operands.at(1), lambda_);
 }

@@ -27,7 +27,7 @@ MaskedSelect::MaskedSelect(const torch::lazy::Value& input,
               NodeOutputShape(input),
               /*num_outputs=*/2) {}
 
-torch::lazy::NodePtr MaskedSelect::Clone(OpList operands) const {
+torch::lazy::NodePtr MaskedSelect::Clone(torch::lazy::OpList operands) const {
   return torch::lazy::MakeNode<MaskedSelect>(operands.at(0), operands.at(1));
 }
 

@@ -59,7 +59,7 @@ std::vector<const torch::lazy::Node*> Util::ComputePostOrder(
 }
 
 std::vector<torch::lazy::Value> Util::Clone(
-    absl::Span<const torch::lazy::Value> values,
+    c10::ArrayRef<torch::lazy::Value> values,
     absl::Span<const torch::lazy::Node* const> post_order) {
   std::unordered_map<const torch::lazy::Node*, torch::lazy::NodePtr> clone_map;
   for (auto node : post_order) {
@@ -87,7 +87,7 @@ std::vector<torch::lazy::Value> Util::Clone(
 }
 
 std::vector<torch::lazy::Value> Util::Clone(
-    absl::Span<const torch::lazy::Value> values) {
+    c10::ArrayRef<torch::lazy::Value> values) {
   std::vector<const torch::lazy::Node*> nodes;
   for (auto& value : values) {
     nodes.push_back(value.node.get());

@@ -27,7 +27,7 @@ MinInDim::MinInDim(const torch::lazy::Value& input, int64_t dim, bool keepdim)
       dim_(dim),
       keepdim_(keepdim) {}
 
-torch::lazy::NodePtr MinInDim::Clone(OpList operands) const {
+torch::lazy::NodePtr MinInDim::Clone(torch::lazy::OpList operands) const {
   return torch::lazy::MakeNode<MinInDim>(operands.at(0), dim_, keepdim_);
 }
 

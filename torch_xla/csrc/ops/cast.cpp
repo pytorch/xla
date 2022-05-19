@@ -40,7 +40,7 @@ Cast::Cast(const torch::lazy::Value& input, at::ScalarType dtype,
       dtype_(dtype),
       stype_(stype) {}
 
-torch::lazy::NodePtr Cast::Clone(OpList operands) const {
+torch::lazy::NodePtr Cast::Clone(torch::lazy::OpList operands) const {
   return dtype_ ? torch::lazy::MakeNode<Cast>(operands.at(0), *dtype_, stype_)
                 : torch::lazy::MakeNode<Cast>(operands.at(0), type_);
 }

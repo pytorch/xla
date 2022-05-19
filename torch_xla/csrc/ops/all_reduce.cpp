@@ -10,7 +10,7 @@
 namespace torch_xla {
 namespace {
 
-xla::Shape NodeOutputShape(absl::Span<const torch::lazy::Value> operands,
+xla::Shape NodeOutputShape(c10::ArrayRef<torch::lazy::Value> operands,
                            const torch::lazy::Value& token) {
   std::vector<xla::Shape> tuple_shapes;
   tuple_shapes.reserve(operands.size() + 1);
@@ -22,7 +22,7 @@ xla::Shape NodeOutputShape(absl::Span<const torch::lazy::Value> operands,
 }
 
 std::vector<torch::lazy::Value> GetOperandList(
-    absl::Span<const torch::lazy::Value> operands,
+    c10::ArrayRef<torch::lazy::Value> operands,
     const torch::lazy::Value& token) {
   std::vector<torch::lazy::Value> operand_list(operands.begin(),
                                                operands.end());
@@ -33,7 +33,7 @@ std::vector<torch::lazy::Value> GetOperandList(
 }  // namespace
 
 AllReduce::AllReduce(AllReduceType reduce_type,
-                     absl::Span<const torch::lazy::Value> operands,
+                     c10::ArrayRef<torch::lazy::Value> operands,
                      const torch::lazy::Value& token, double scale,
                      std::vector<std::vector<int64_t>> groups, bool pin_layout)
     : XlaNode(xla_cross_replica_sum, GetOperandList(operands, token),
@@ -46,7 +46,7 @@ AllReduce::AllReduce(AllReduceType reduce_type,
       groups_(std::move(groups)),
       pin_layout_(pin_layout) {}
 
-torch::lazy::NodePtr AllReduce::Clone(OpList operands) const {
+torch::lazy::NodePtr AllReduce::Clone(torch::lazy::OpList operands) const {
   std::vector<torch::lazy::Value> operand_list(operands.begin(),
                                                operands.end() - 1);
   return torch::lazy::MakeNode<AllReduce>(reduce_type_, operand_list,

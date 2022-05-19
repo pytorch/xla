@@ -17,7 +17,7 @@ Gather::Gather(const torch::lazy::Value& input, int64_t dim,
       dim_(dim),
       sparse_grad_(sparse_grad) {}
 
-torch::lazy::NodePtr Gather::Clone(OpList operands) const {
+torch::lazy::NodePtr Gather::Clone(torch::lazy::OpList operands) const {
   return torch::lazy::MakeNode<Gather>(operands.at(0), dim_, operands.at(1),
                                        sparse_grad_);
 }

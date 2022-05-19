@@ -36,7 +36,7 @@ Softmax::Softmax(const torch::lazy::Value& input, int64_t dim,
       dim_(dim),
       dtype_(dtype) {}
 
-torch::lazy::NodePtr Softmax::Clone(OpList operands) const {
+torch::lazy::NodePtr Softmax::Clone(torch::lazy::OpList operands) const {
   return torch::lazy::MakeNode<Softmax>(operands.at(0), dim_, dtype_);
 }
 

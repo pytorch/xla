@@ -31,7 +31,7 @@ Recv::Recv(const torch::lazy::Value& token, const xla::Shape& recv_shape,
       recv_shape_(recv_shape.ToProto()),
       channel_id_(channel_id) {}
 
-torch::lazy::NodePtr Recv::Clone(OpList operands) const {
+torch::lazy::NodePtr Recv::Clone(torch::lazy::OpList operands) const {
   return torch::lazy::MakeNode<Recv>(operands.at(0), recv_shape_, channel_id_);
 }
 

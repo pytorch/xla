@@ -62,7 +62,7 @@ AvgPoolNd::AvgPoolNd(const torch::lazy::Value& input, int64_t spatial_dim_count,
       ceil_mode_(ceil_mode),
       count_include_pad_(count_include_pad) {}
 
-torch::lazy::NodePtr AvgPoolNd::Clone(OpList operands) const {
+torch::lazy::NodePtr AvgPoolNd::Clone(torch::lazy::OpList operands) const {
   return torch::lazy::MakeNode<AvgPoolNd>(operands.at(0), spatial_dim_count_,
                                           kernel_size_, stride_, padding_,
                                           ceil_mode_, count_include_pad_);

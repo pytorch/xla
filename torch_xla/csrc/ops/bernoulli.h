@@ -9,7 +9,7 @@ class Bernoulli : public XlaNode {
   Bernoulli(const torch::lazy::Value& probability,
             const torch::lazy::Value& seed, xla::Shape shape);
 
-  torch::lazy::NodePtr Clone(OpList operands) const override;
+  torch::lazy::NodePtr Clone(torch::lazy::OpList operands) const override;
 
   XlaOpVector Lower(LoweringContext* loctx) const override;
 };

@@ -20,7 +20,7 @@ std::string Hardshrink::ToString() const {
   return ss.str();
 }
 
-torch::lazy::NodePtr Hardshrink::Clone(OpList operands) const {
+torch::lazy::NodePtr Hardshrink::Clone(torch::lazy::OpList operands) const {
   return torch::lazy::MakeNode<Hardshrink>(operands.at(0), lambda_);
 }
 

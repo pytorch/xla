@@ -9,7 +9,7 @@
 namespace torch_xla {
 namespace {
 
-xla::Shape NodeOutputShape(const OpList& inputs) {
+xla::Shape NodeOutputShape(const torch::lazy::OpList& inputs) {
   std::vector<xla::Shape> output_shapes;
   output_shapes.reserve(inputs.size());
   for (size_t i = 0; i < inputs.size(); ++i) {
@@ -20,11 +20,12 @@ xla::Shape NodeOutputShape(const OpList& inputs) {
 
 }  // namespace
 
-OptimizationBarrier::OptimizationBarrier(const OpList& inputs)
+OptimizationBarrier::OptimizationBarrier(const torch::lazy::OpList& inputs)
     : XlaNode(xla_optimization_barrier, inputs, NodeOutputShape(inputs),
               /*num_outputs=*/inputs.size()) {}
 
-torch::lazy::NodePtr OptimizationBarrier::Clone(OpList operands) const {
+torch::lazy::NodePtr OptimizationBarrier::Clone(
+    torch::lazy::OpList operands) const {
   return torch::lazy::MakeNode<OptimizationBarrier>(operands);
 }
 

@@ -35,7 +35,7 @@ std::string IndexGet::ToString() const {
   return ss.str();
 }
 
-torch::lazy::NodePtr IndexGet::Clone(OpList operands) const {
+torch::lazy::NodePtr IndexGet::Clone(torch::lazy::OpList operands) const {
   return torch::lazy::MakeNode<IndexGet>(operands.at(0), operands.at(1),
                                          start_dim_);
 }

@@ -26,7 +26,7 @@ NonZero::NonZero(const torch::lazy::Value& input)
               NodeOutputShape(input),
               /*num_outputs=*/2) {}
 
-torch::lazy::NodePtr NonZero::Clone(OpList operands) const {
+torch::lazy::NodePtr NonZero::Clone(torch::lazy::OpList operands) const {
   return torch::lazy::MakeNode<NonZero>(operands.at(0));
 }
 

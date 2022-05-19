@@ -14,7 +14,7 @@ class ConvolutionBackwardOverrideable : public XlaNode {
       std::vector<int64_t> padding, std::vector<int64_t> dilation,
       bool transposed, std::vector<int64_t> output_padding, int64_t groups);
 
-  torch::lazy::NodePtr Clone(OpList operands) const override;
+  torch::lazy::NodePtr Clone(torch::lazy::OpList operands) const override;
 
   XlaOpVector Lower(LoweringContext* loctx) const override;
 

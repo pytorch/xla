@@ -27,7 +27,7 @@ std::string Scalar::ToString() const {
   return ss.str();
 }
 
-torch::lazy::NodePtr Scalar::Clone(OpList operands) const {
+torch::lazy::NodePtr Scalar::Clone(torch::lazy::OpList operands) const {
   return torch::lazy::MakeNode<Scalar>(value_, xla_shape());
 }
 

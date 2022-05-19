@@ -42,7 +42,7 @@ VarMean::VarMean(const torch::lazy::Value& input,
       correction_(correction),
       keep_reduced_dimensions_(keep_reduced_dimensions) {}
 
-torch::lazy::NodePtr VarMean::Clone(OpList operands) const {
+torch::lazy::NodePtr VarMean::Clone(torch::lazy::OpList operands) const {
   return torch::lazy::MakeNode<VarMean>(operands.at(0), dimensions_,
                                         correction_, keep_reduced_dimensions_);
 }

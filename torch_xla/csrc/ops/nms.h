@@ -10,7 +10,7 @@ class Nms : public XlaNode {
       const torch::lazy::Value& score_threshold,
       const torch::lazy::Value& iou_threshold, int64_t output_size);
 
-  torch::lazy::NodePtr Clone(OpList operands) const override;
+  torch::lazy::NodePtr Clone(torch::lazy::OpList operands) const override;
 
   XlaOpVector Lower(LoweringContext* loctx) const override;
 

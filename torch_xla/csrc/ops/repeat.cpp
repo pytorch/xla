@@ -26,7 +26,7 @@ Repeat::Repeat(const torch::lazy::Value& input, std::vector<int64_t> repeats)
               /*num_outputs=*/1, torch::lazy::MHash(repeats)),
       repeats_(std::move(repeats)) {}
 
-torch::lazy::NodePtr Repeat::Clone(OpList operands) const {
+torch::lazy::NodePtr Repeat::Clone(torch::lazy::OpList operands) const {
   return torch::lazy::MakeNode<Repeat>(operands.at(0), repeats_);
 }
 

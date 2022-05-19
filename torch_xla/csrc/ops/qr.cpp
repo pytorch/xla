@@ -45,7 +45,7 @@ QR::QR(const torch::lazy::Value& input, bool some)
               /*num_outputs=*/2, torch::lazy::MHash(some)),
       some_(some) {}
 
-torch::lazy::NodePtr QR::Clone(OpList operands) const {
+torch::lazy::NodePtr QR::Clone(torch::lazy::OpList operands) const {
   return torch::lazy::MakeNode<QR>(operands.at(0), some_);
 }
 

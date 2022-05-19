@@ -68,7 +68,7 @@ ShapeCache* GetShapeCache() {
   return cache;
 }
 
-torch::lazy::hash_t GetOperandHashes(const OpList& operands,
+torch::lazy::hash_t GetOperandHashes(const torch::lazy::OpList& operands,
                                      const torch::lazy::hash_t& node_hash) {
   torch::lazy::hash_t hash = node_hash;
   for (auto& operand : operands) {
@@ -84,55 +84,40 @@ torch::lazy::hash_t GetOperandHashes(const OpList& operands,
 
 }  // namespace
 
-XlaNode::XlaNode(torch::lazy::OpKind op, OpList operands,
+XlaNode::XlaNode(torch::lazy::OpKind op, torch::lazy::OpList operands,
                  std::vector<torch::lazy::Shape>&& shapes, xla::Shape xla_shape,
                  size_t num_outputs, torch::lazy::hash_t hash_seed)
-    : torch::lazy::Node(op, /*operands=*/{}, std::move(shapes), num_outputs),
+    : torch::lazy::Node(op, operands, std::move(shapes), num_outputs),
       xla_shape_(std::move(xla_shape)),
       node_hash_(torch::lazy::HashCombine(op.hash(), hash_seed)),
-      dag_hash_(GetOperandHashes(operands, node_hash_)) {
-  // We have to call AddOperand here since upstream OpList is
-  // an array of torch::lazy::Value while we uses torch::lazy::Value.
-  for (auto& operand : operands) {
-    AddOperand(operand.node, operand.index);
-  }
-}
+      dag_hash_(GetOperandHashes(operands, node_hash_)) {}
 
-XlaNode::XlaNode(torch::lazy::OpKind op, OpList operands,
+XlaNode::XlaNode(torch::lazy::OpKind op, torch::lazy::OpList operands,
                  std::vector<torch::lazy::Shape>&& shapes,
                  const std::function<xla::Shape()>& xla_shape_fn,
                  size_t num_outputs, torch::lazy::hash_t hash_seed)
-    : torch::lazy::Node(op, /*operands=*/{}, std::move(shapes), num_outputs),
+    : torch::lazy::Node(op, operands, std::move(shapes), num_outputs),
       node_hash_(torch::lazy::HashCombine(op.hash(), hash_seed)),
       dag_hash_(GetOperandHashes(operands, node_hash_)) {
-  // We have to call AddOperand here since upstream OpList is
-  // an array of torch::lazy::Value while we uses torch::lazy::Value.
-  for (auto& operand : operands) {
-    AddOperand(operand.node, operand.index);
-  }
   xla_shape_ = GetOpShape(xla_shape_fn);
 }
 
-XlaNode::XlaNode(torch::lazy::OpKind op, OpList operands,
+XlaNode::XlaNode(torch::lazy::OpKind op, torch::lazy::OpList operands,
                  torch::lazy::Shape shape, xla::Shape xla_shape,
                  size_t num_outputs, torch::lazy::hash_t hash_seed)
-    : torch::lazy::Node(op, shape, num_outputs),
+    : torch::lazy::Node(op, operands, std::vector<torch::lazy::Shape>{shape},
+                        num_outputs),
       xla_shape_(std::move(xla_shape)),
       node_hash_(torch::lazy::HashCombine(op.hash(), hash_seed)),
-      dag_hash_(GetOperandHashes(operands, node_hash_)) {
-  // We have to call AddOperand here since upstream OpList is
-  // an array of torch::lazy::Value while we uses torch::lazy::Value.
-  for (auto& operand : operands) {
-    AddOperand(operand.node, operand.index);
-  }
-}
+      dag_hash_(GetOperandHashes(operands, node_hash_)) {}
 
-XlaNode::XlaNode(torch::lazy::OpKind op, OpList operands, xla::Shape xla_shape,
-                 size_t num_outputs, torch::lazy::hash_t hash_seed)
+XlaNode::XlaNode(torch::lazy::OpKind op, torch::lazy::OpList operands,
+                 xla::Shape xla_shape, size_t num_outputs,
+                 torch::lazy::hash_t hash_seed)
     : XlaNode(op, operands, std::vector<torch::lazy::Shape>{}, xla_shape,
               num_outputs, hash_seed) {}
 
-XlaNode::XlaNode(torch::lazy::OpKind op, OpList operands,
+XlaNode::XlaNode(torch::lazy::OpKind op, torch::lazy::OpList operands,
                  const std::function<torch::lazy::Shape()>& shape_fn,
                  const std::function<xla::Shape()>& xla_shape_fn,
                  size_t num_outputs, torch::lazy::hash_t hash_seed)
@@ -143,7 +128,7 @@ XlaNode::XlaNode(torch::lazy::OpKind op, OpList operands,
   xla_shape_ = GetOpShape(xla_shape_fn);
 }
 
-XlaNode::XlaNode(torch::lazy::OpKind op, OpList operands,
+XlaNode::XlaNode(torch::lazy::OpKind op, torch::lazy::OpList operands,
                  const std::function<xla::Shape()>& xla_shape_fn,
                  size_t num_outputs, torch::lazy::hash_t hash_seed)
     : XlaNode(std::move(op), operands, xla::Shape(), num_outputs, hash_seed) {
@@ -191,7 +176,7 @@ XlaOpVector XlaNode::ReturnOps(absl::Span<const xla::XlaOp> ops,
   return result;
 }
 
-torch::lazy::NodePtr XlaNode::Clone(OpList operands) const {
+torch::lazy::NodePtr XlaNode::Clone(torch::lazy::OpList operands) const {
   XLA_ERROR() << "Cloning not implemented for node: " << *this;
 }
 

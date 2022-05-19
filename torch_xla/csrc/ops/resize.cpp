@@ -21,7 +21,7 @@ Resize::Resize(const torch::lazy::Value& input, std::vector<int64_t> size)
               /*num_outputs=*/1, torch::lazy::MHash(size)),
       size_(std::move(size)) {}
 
-torch::lazy::NodePtr Resize::Clone(OpList operands) const {
+torch::lazy::NodePtr Resize::Clone(torch::lazy::OpList operands) const {
   return torch::lazy::MakeNode<Resize>(operands.at(0), size_);
 }
 

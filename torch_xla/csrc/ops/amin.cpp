@@ -26,7 +26,7 @@ Amin::Amin(const torch::lazy::Value& input, std::vector<int64_t> dimensions,
       dimensions_(std::move(dimensions)),
       keepdim_(keepdim) {}
 
-torch::lazy::NodePtr Amin::Clone(OpList operands) const {
+torch::lazy::NodePtr Amin::Clone(torch::lazy::OpList operands) const {
   return torch::lazy::MakeNode<Amin>(operands.at(0), dimensions_, keepdim_);
 }
 

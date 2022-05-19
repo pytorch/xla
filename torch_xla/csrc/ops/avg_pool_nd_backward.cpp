@@ -66,7 +66,8 @@ AvgPoolNdBackward::AvgPoolNdBackward(const torch::lazy::Value& grad_output,
       ceil_mode_(ceil_mode),
       count_include_pad_(count_include_pad) {}
 
-torch::lazy::NodePtr AvgPoolNdBackward::Clone(OpList operands) const {
+torch::lazy::NodePtr AvgPoolNdBackward::Clone(
+    torch::lazy::OpList operands) const {
   return torch::lazy::MakeNode<AvgPoolNdBackward>(
       operands.at(0), operands.at(1), spatial_dim_count_, kernel_size_, stride_,
       padding_, ceil_mode_, count_include_pad_);
