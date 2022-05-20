@@ -10,6 +10,8 @@
 #include "tensorflow/compiler/xla/xla_client/debug_macros.h"
 #include "tensorflow/compiler/xla/xla_client/sys_util.h"
 #include "torch/csrc/lazy/core/ir_metadata.h"
+#include "torch_xla/csrc/computation.h"
+#include "torch_xla/csrc/helpers.h"
 #include "torch_xla/csrc/tensor_util.h"
 
 namespace torch_xla {
@@ -75,15 +77,14 @@ class HloMetadataSetter {
 
 LoweringContext::LoweringContext(const std::string& name,
                                  torch::lazy::BackendDevice device)
-    : builder_(name), device_(std::move(device)) {}
+    : torch::lazy::LoweringContext(name, device), builder_(name) {}
 
 LoweringContext::LoweringContext(
     const std::string& name, torch::lazy::BackendDevice device,
-    absl::Span<const torch::lazy::Node* const> post_order,
+    c10::ArrayRef<const torch::lazy::Node*> post_order,
     torch::lazy::Util::EmissionMap emit_status)
-    : builder_(name),
-      device_(std::move(device)),
-      emit_status_(std::move(emit_status)) {
+    : torch::lazy::LoweringContext(name, device, {}, emit_status),
+      builder_(name) {
   for (auto node : post_order) {
     LowerNode(node);
   }
@@ -114,11 +115,6 @@ const std::vector<size_t>& LoweringContext::GetParameterSequence() const {
   return parameter_sequence_;
 }
 
-size_t LoweringContext::AddResult(xla::XlaOp op) {
-  root_tuple_.push_back(std::move(op));
-  return root_tuple_.size() - 1;
-}
-
 xla::XlaOp LoweringContext::GetResult(size_t index) const {
   return root_tuple_.at(index);
 }
@@ -127,7 +123,7 @@ void LoweringContext::SetResult(size_t index, xla::XlaOp op) {
   root_tuple_.at(index) = std::move(op);
 }
 
-xla::StatusOr<xla::XlaComputation> LoweringContext::Build() {
+xla::StatusOr<xla::XlaComputation> LoweringContext::BuildXla() {
   if (!root_tuple_.empty()) {
     xla::XlaOp root = xla::Tuple(builder(), root_tuple_);
     return builder()->Build(root);
@@ -135,7 +131,7 @@ xla::StatusOr<xla::XlaComputation> LoweringContext::Build() {
   return builder()->Build();
 }
 
-xla::StatusOr<xla::XlaComputation> LoweringContext::Build(xla::XlaOp root) {
+xla::StatusOr<xla::XlaComputation> LoweringContext::BuildXla(xla::XlaOp root) {
   XLA_CHECK(root_tuple_.empty());
   return builder()->Build(root);
 }
@@ -193,6 +189,46 @@ void LoweringContext::ReportBuilderError(const torch::lazy::Node* node,
   }
   ss << nmeta.frame_info;
   throw std::runtime_error(ss.str());
+}
+
+void LoweringContext::SetUpAlias(const std::vector<int64_t>& output_index,
+                                 int64_t param_number,
+                                 const std::vector<int64_t>& param_index,
+                                 bool must_alias) {
+  XLA_CHECK_EQ(output_index.size(), 1);
+  XLA_CHECK_EQ(param_index.size(), 1);
+  builder_.SetUpAlias({output_index[0]}, param_number, {param_index[0]});
+}
+
+bool LoweringContext::CheckResultShape(
+    const torch::lazy::BackendDataPtr& parameter_data, size_t result_idx) {
+  xla::XlaOp root = GetResult(result_idx);
+  const xla::Shape& root_shape = XlaHelpers::ShapeOfXlaOp(root);
+  return UnwrapXlaData(parameter_data)->shape() == root_shape;
+}
+
+size_t LoweringContext::AddResult(const torch::lazy::Output& output) {
+  root_tuple_.push_back(GetOutputOp(output));
+  return root_tuple_.size() - 1;
+}
+
+size_t LoweringContext::AddResult(xla::XlaOp op) {
+  root_tuple_.push_back(op);
+  return root_tuple_.size() - 1;
+}
+
+void LoweringContext::AddParameter(const torch::lazy::Output& output,
+                                   size_t index,
+                                   const torch::lazy::Shape& shape,
+                                   const std::string& name) {
+  XLA_ERROR() << "not implemented";
+  return;
+}
+
+torch::lazy::ComputationPtr LoweringContext::Build() {
+  xla::XlaComputation xla_computation = ConsumeValue(BuildXla());
+  return std::make_shared<torch_xla::Computation>(builder_.name(),
+                                                  std::move(xla_computation));
 }
 
 }  // namespace torch_xla

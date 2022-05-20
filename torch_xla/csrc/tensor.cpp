@@ -1656,7 +1656,7 @@ XLATensor::CompilationResult XLATensor::Compile(
     BuildInputOutputAliases(tensors, coll.indices, &lowering_ctx);
   }
 
-  xla::XlaComputation computation = ConsumeValue(lowering_ctx.Build());
+  xla::XlaComputation computation = ConsumeValue(lowering_ctx.BuildXla());
   xla::ProgramShape program_shape = ConsumeValue(computation.GetProgramShape());
   xla::Shape shape = MakeShapeWithDeviceLayout(
       program_shape.result(), static_cast<XlaDeviceType>(coll.device.type()));
