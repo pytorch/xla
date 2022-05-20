@@ -623,8 +623,8 @@ class XlaFullyShardedDataParallel(nn.Module):
             f"compute_dtype={self.compute_dtype}, "
             f"buffer_dtype={self.buffer_dtype}, "
             f"flatten_parameters={self.flatten_parameters}, "
-            f"reshard_after_forward={self.reshard_after_forward}",
-            f"sharding_groups={self.sharding_groups}, ")
+            f"reshard_after_forward={self.reshard_after_forward}, "
+            f"sharding_groups={self.sharding_groups}")
     return repr
 
   def __getattr__(self, name: str) -> Any:
