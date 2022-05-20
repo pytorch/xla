@@ -1029,10 +1029,6 @@ class XLATensor : public c10::intrusive_ptr_target {
   static XLATensor sigmoid_backward(const XLATensor& grad_output,
                                     const XLATensor& output);
 
-  static XLATensor sin(const XLATensor& input);
-
-  static XLATensor sinh(const XLATensor& input);
-
   static XLATensor slice(const XLATensor& input, int64_t dim, int64_t start,
                          int64_t end, int64_t step);
 
@@ -1116,9 +1112,8 @@ class XLATensor : public c10::intrusive_ptr_target {
 
   static XLATensor take(const XLATensor& input, const XLATensor& index);
 
-  static XLATensor tan(const XLATensor& input);
-
   static XLATensor tanh(const XLATensor& input);
+
   static XLATensor tanh_backward(const XLATensor& grad_output,
                                  const XLATensor& output);
 
