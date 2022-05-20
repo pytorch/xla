@@ -21,6 +21,13 @@ class Computation : public torch::lazy::Computation {
 
   const xla::XlaComputation& computation() const { return computation_; }
 
+  // We don't want to make a copy when passing computation_ to the runtime.
+  // Class member will be accessed as const& and `xla::XlaComputation`
+  // explictly delete its const& copy constructor so we have to const cast here.
+  xla::XlaComputation move_computation() const {
+    return std::move(const_cast<Computation*>(this)->computation_);
+  }
+
   const xla::ProgramShape& program_shape() const { return program_shape_; }
 
   const torch::lazy::hash_t& hash() const { return hash_; }
@@ -52,8 +59,8 @@ class Computation : public torch::lazy::Computation {
 
  private:
   std::string name_;
-  xla::XlaComputation computation_;
   xla::ProgramShape program_shape_;
+  xla::XlaComputation computation_;
   torch::lazy::hash_t hash_;
   torch::lazy::Shape res_shape_;
   std::vector<torch::lazy::Shape> parameter_shapes_;
