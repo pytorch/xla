@@ -11,6 +11,7 @@
 #include "tensorflow/compiler/xla/types.h"
 #include "tensorflow/compiler/xla/xla_client/computation_client.h"
 #include "tensorflow/core/platform/macros.h"
+#include "torch/csrc/lazy/backend/backend_data.h"
 #include "torch/csrc/lazy/core/ir_util.h"
 #include "torch_xla/csrc/device.h"
 #include "torch_xla/csrc/ir.h"
@@ -34,11 +35,11 @@ class LoweringContext {
   // returned. Otherwise a new one will be created, associated with the tensor
   // held in data.
   xla::XlaOp GetParameter(
-      const std::shared_ptr<xla::ComputationClient::Data>& data);
+      const std::shared_ptr<torch::lazy::BackendData>& data);
 
   // Retrieves the vector holding all the tensors associated with the parameter
   // instructions which have been created.
-  const std::vector<xla::ComputationClient::DataPtr>& GetParametersData() const;
+  const std::vector<torch::lazy::BackendDataPtr>& GetParametersData() const;
 
   const std::vector<size_t>& GetParameterSequence() const;
 
@@ -88,8 +89,8 @@ class LoweringContext {
 
   xla::XlaBuilder builder_;
   torch::lazy::BackendDevice device_;
-  std::vector<xla::ComputationClient::DataPtr> parameters_;
-  std::unordered_map<xla::ComputationClient::Data::OpaqueHandle, Parameter>
+  std::vector<torch::lazy::BackendDataPtr> parameters_;
+  std::unordered_map<torch::lazy::BackendData::Handle, Parameter>
       parameters_map_;
   std::vector<size_t> parameter_sequence_;
   std::vector<xla::XlaOp> root_tuple_;

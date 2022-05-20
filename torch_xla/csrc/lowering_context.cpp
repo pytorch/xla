@@ -10,6 +10,7 @@
 #include "tensorflow/compiler/xla/xla_client/debug_macros.h"
 #include "tensorflow/compiler/xla/xla_client/sys_util.h"
 #include "torch/csrc/lazy/core/ir_metadata.h"
+#include "torch_xla/csrc/tensor_util.h"
 
 namespace torch_xla {
 namespace {
@@ -89,13 +90,13 @@ LoweringContext::LoweringContext(
 }
 
 xla::XlaOp LoweringContext::GetParameter(
-    const std::shared_ptr<xla::ComputationClient::Data>& data) {
-  xla::ComputationClient::Data::OpaqueHandle handle = data->GetOpaqueHandle();
+    const std::shared_ptr<torch::lazy::BackendData>& data) {
+  torch::lazy::BackendData::Handle handle = data->GetHandle();
   auto it = parameters_map_.find(handle);
   if (it == parameters_map_.end()) {
-    xla::XlaOp param =
-        xla::Parameter(builder(), parameters_.size(), data->shape(),
-                       absl::StrCat("p", parameters_.size()));
+    xla::XlaOp param = xla::Parameter(builder(), parameters_.size(),
+                                      UnwrapXlaData(data)->shape(),
+                                      absl::StrCat("p", parameters_.size()));
     it = parameters_map_.emplace(handle, Parameter{param, parameters_.size()})
              .first;
     parameters_.push_back(data);
@@ -104,7 +105,7 @@ xla::XlaOp LoweringContext::GetParameter(
   return it->second.param;
 }
 
-const std::vector<xla::ComputationClient::DataPtr>&
+const std::vector<torch::lazy::BackendDataPtr>&
 LoweringContext::GetParametersData() const {
   return parameters_;
 }

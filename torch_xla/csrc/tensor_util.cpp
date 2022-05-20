@@ -31,24 +31,24 @@ namespace {
 
 struct DataAsync {
   std::vector<xla::ComputationClient::TensorSource> source_tensors;
-  std::vector<xla::ComputationClient::DataPtr> async_datas;
+  std::vector<torch::lazy::BackendDataPtr> async_datas;
   std::vector<xla::util::ExceptionCleanup> handle_unlockers;
 };
 
 void TransferToServerAsync(std::shared_ptr<DataAsync> async,
                            const std::vector<std::string>& devices) {
   XLA_TIMED("TransferToServerAsync");
-  // Create dummy XRTData and lock handles.
-  async->async_datas =
+
+  std::vector<xla::ComputationClient::DataPtr> async_xla_datas =
       xla::ComputationClient::Get()->CreateAsyncDatas(async->source_tensors);
   async->handle_unlockers =
-      xla::ComputationClient::Get()->LockAsyncDatas(async->async_datas);
-
+      xla::ComputationClient::Get()->LockAsyncDatas(async_xla_datas);
+  async->async_datas = WrapXlaData(async_xla_datas);
   auto mwait = std::make_shared<xla::util::MultiWait>(/*num_wait=*/1);
-  auto update_data = [async]() {
+  auto update_data = [async, async_xla_datas]() {
     try {
       xla::ComputationClient::Get()->TransferToServer(async->source_tensors,
-                                                      async->async_datas);
+                                                      async_xla_datas);
     } catch (...) {
       // There are two paths of discovery of an exception happening on an
       // asynchronous task. One happens if the creator of the asynchronous task
@@ -649,7 +649,7 @@ void PopulateTensorBuffer(const at::Tensor& tensor,
   }
 }
 
-xla::ComputationClient::DataPtr TensorToXlaData(
+torch::lazy::BackendDataPtr TensorToXlaData(
     const at::Tensor& tensor, const xla::Shape& shape,
     const torch::lazy::BackendDevice& device, bool transfer_async) {
   XLA_TIMED("TensorToData");
@@ -689,7 +689,7 @@ xla::ComputationClient::DataPtr TensorToXlaData(
     auto handles =
         xla::ComputationClient::Get()->TransferToServer(source_tensors);
     XLA_CHECK_EQ(handles.size(), 1);
-    return std::move(handles.front());
+    return WrapXlaData(handles.front());
   }
 }
 
@@ -748,6 +748,40 @@ at::Tensor XlaLiteralToTensorHelper(const xla::Literal& literal,
 }
 
 }  // namespace
+
+xla::ComputationClient::DataPtr UnwrapXlaData(
+    const torch::lazy::BackendDataPtr& data) {
+  XLA_TIMED("UnwrapXlaData");
+  return dynamic_cast<XLAData*>(data.get())->xla_data();
+}
+
+std::vector<xla::ComputationClient::DataPtr> UnwrapXlaData(
+    absl::Span<const torch::lazy::BackendDataPtr> datas) {
+  XLA_TIMED("UnwrapXlaData");
+  std::vector<xla::ComputationClient::DataPtr> xla_datas;
+  xla_datas.reserve(datas.size());
+  for (const auto& data : datas) {
+    xla_datas.push_back(dynamic_cast<XLAData*>(data.get())->xla_data());
+  }
+  return xla_datas;
+}
+
+torch::lazy::BackendDataPtr WrapXlaData(
+    const xla::ComputationClient::DataPtr& xla_data) {
+  XLA_TIMED("WrapXlaData");
+  return std::make_shared<XLAData>(xla_data);
+}
+
+std::vector<torch::lazy::BackendDataPtr> WrapXlaData(
+    absl::Span<const xla::ComputationClient::DataPtr> xla_datas) {
+  XLA_TIMED("WrapXlaData");
+  std::vector<torch::lazy::BackendDataPtr> datas;
+  datas.reserve(xla_datas.size());
+  for (const auto& xla_data : xla_datas) {
+    datas.push_back(std::make_shared<XLAData>(xla_data));
+  }
+  return datas;
+}
 
 std::vector<int64_t> ComputeShapeStrides(const xla::Shape& shape) {
   std::vector<int64_t> strides(shape.rank());
@@ -813,7 +847,7 @@ bool TensorCompare(const at::Tensor& t1, const at::Tensor& t2) {
                      contiguous_t1.numel() * contiguous_t1.itemsize()) == 0;
 }
 
-xla::ComputationClient::DataPtr TensorToXlaData(
+torch::lazy::BackendDataPtr TensorToXlaData(
     const at::Tensor& tensor, const torch::lazy::BackendDevice& device,
     bool transfer_async) {
   return TensorToXlaData(tensor,
@@ -821,7 +855,7 @@ xla::ComputationClient::DataPtr TensorToXlaData(
                          device, transfer_async);
 }
 
-std::vector<xla::ComputationClient::DataPtr> CreateTensorsData(
+std::vector<torch::lazy::BackendDataPtr> CreateTensorsData(
     const std::vector<at::Tensor>& tensors,
     const std::vector<std::string>& devices, bool transfer_async) {
   XLA_TIMED("TensorToData");
@@ -865,7 +899,8 @@ std::vector<xla::ComputationClient::DataPtr> CreateTensorsData(
       source_tensors.emplace_back(std::move(shape), devices[i],
                                   std::move(populate_fn));
     }
-    return xla::ComputationClient::Get()->TransferToServer(source_tensors);
+    return WrapXlaData(
+        xla::ComputationClient::Get()->TransferToServer(source_tensors));
   }
 }
 
@@ -887,10 +922,11 @@ xla::Literal GetTensorLiteral(const at::Tensor& tensor, const xla::Shape* shape,
 }
 
 std::vector<at::Tensor> XlaDataToTensors(
-    absl::Span<const xla::ComputationClient::DataPtr> xla_data,
+    absl::Span<const torch::lazy::BackendDataPtr> xla_data,
     at::ScalarType dest_element_type) {
   std::vector<xla::Literal> literals =
-      xla::ComputationClient::Get()->TransferFromServer(xla_data);
+      xla::ComputationClient::Get()->TransferFromServer(
+          UnwrapXlaData(xla_data));
   std::vector<at::Tensor> tensors;
   tensors.reserve(literals.size());
   for (auto& literal : literals) {

@@ -11,8 +11,21 @@
 #include "torch/csrc/autograd/variable.h"
 #include "torch/csrc/lazy/core/hash.h"
 #include "torch_xla/csrc/device.h"
+#include "torch_xla/csrc/xla_backend_impl.h"
 
 namespace torch_xla {
+
+xla::ComputationClient::DataPtr UnwrapXlaData(
+    const torch::lazy::BackendDataPtr& data);
+
+std::vector<xla::ComputationClient::DataPtr> UnwrapXlaData(
+    absl::Span<const torch::lazy::BackendDataPtr> datas);
+
+torch::lazy::BackendDataPtr WrapXlaData(
+    const xla::ComputationClient::DataPtr& xla_data);
+
+std::vector<torch::lazy::BackendDataPtr> WrapXlaData(
+    absl::Span<const xla::ComputationClient::DataPtr> xla_datas);
 
 std::vector<int64_t> ComputeShapeStrides(const xla::Shape& shape);
 
@@ -22,7 +35,7 @@ at::Tensor MakeTensorFromXlaLiteral(const xla::Literal& literal,
 
 // TODO LTC @wonjoo - Migrate to upstream after Device -> BackendDevice
 std::vector<at::Tensor> XlaDataToTensors(
-    absl::Span<const xla::ComputationClient::DataPtr> xla_data,
+    absl::Span<const torch::lazy::BackendDataPtr> xla_data,
     at::ScalarType dest_element_type);
 
 bool TensorCompare(const at::Tensor& t1, const at::Tensor& t2);
@@ -30,7 +43,7 @@ bool TensorCompare(const at::Tensor& t1, const at::Tensor& t2);
 // Uploads an ATEN tensor data to the device and fetches the corresponding
 // device data handle.
 // TODO LTC @wonjoo - Migrate to upstream after Device -> BackendDevice
-xla::ComputationClient::DataPtr TensorToXlaData(
+torch::lazy::BackendDataPtr TensorToXlaData(
     const at::Tensor& tensor, const torch::lazy::BackendDevice& device,
     bool transfer_async = false);
 
@@ -39,7 +52,7 @@ torch::lazy::hash_t TensorHash(const at::Tensor& tensor);
 // Retrieves the device data handles by parallel uploading data onto the
 // corresponding devices.
 // TODO LTC @wonjoo - Migrate to upstream after Device -> BackendDevice
-std::vector<xla::ComputationClient::DataPtr> CreateTensorsData(
+std::vector<torch::lazy::BackendDataPtr> CreateTensorsData(
     const std::vector<at::Tensor>& tensors,
     const std::vector<std::string>& devices, bool transfer_async = false);
 

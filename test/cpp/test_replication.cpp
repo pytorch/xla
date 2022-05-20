@@ -62,8 +62,8 @@ void TestSingleReplication(
   for (size_t i = 0; i < device_strings.size(); ++i) {
     auto executor = [&, i]() {
       results[i] = xla::ComputationClient::Get()->ExecuteComputation(
-          *compiled_computations[i], {tensors_data[i]}, device_strings[i],
-          exec_options);
+          *compiled_computations[i], {UnwrapXlaData(tensors_data[i])},
+          device_strings[i], exec_options);
     };
     xla::env::ScheduleIoClosure(mwait.Completer(std::move(executor)));
   }

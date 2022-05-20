@@ -4,11 +4,12 @@
 
 #include "torch_xla/csrc/lowering_context.h"
 #include "torch_xla/csrc/ops/xla_ops.h"
+#include "torch_xla/csrc/tensor_util.h"
 
 namespace torch_xla {
 
-DeviceData::DeviceData(std::shared_ptr<xla::ComputationClient::Data> data)
-    : XlaNode(xla_device_data, data->shape(), /*num_outputs=*/1,
+DeviceData::DeviceData(std::shared_ptr<torch::lazy::BackendData> data)
+    : XlaNode(xla_device_data, UnwrapXlaData(data)->shape(), /*num_outputs=*/1,
               /*hash_seed=*/(uint32_t)101),
       data_(std::move(data)) {}
 

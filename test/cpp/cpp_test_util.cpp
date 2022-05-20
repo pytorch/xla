@@ -252,7 +252,7 @@ std::string GetTensorHloGraph(at::Tensor tensor) {
 
 torch::lazy::Value GetTensorIrValue(const at::Tensor& tensor,
                                     const torch::lazy::BackendDevice& device) {
-  xla::ComputationClient::DataPtr data = TensorToXlaData(tensor, device);
+  torch::lazy::BackendDataPtr data = TensorToXlaData(tensor, device);
   return torch::lazy::MakeNode<DeviceData>(std::move(data));
 }
 
@@ -283,7 +283,7 @@ std::vector<xla::ComputationClient::DataPtr> Execute(
 
   xla::ComputationClient::ExecuteComputationOptions options;
   return xla::ComputationClient::Get()->ExecuteComputation(
-      *computations.front(), lowering_ctx.GetParametersData(),
+      *computations.front(), UnwrapXlaData(lowering_ctx.GetParametersData()),
       device.toString(), options);
 }
 
