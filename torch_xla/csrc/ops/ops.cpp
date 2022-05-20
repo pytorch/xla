@@ -925,17 +925,6 @@ torch::lazy::NodePtr LogDet(const torch::lazy::Value& input) {
                    std::move(lower_fn));
 }
 
-// torch::lazy::NodePtr Inverse(const XlaValue& input) {
-//   auto lower_fn = [](const XlaNode& node,
-//                      LoweringContext* loctx) -> XlaOpVector {
-//     xla::XlaOp xla_input = loctx->GetOutputOp(node.operand(0));
-//     xla::XlaOp result = BuildInverse(xla_input);
-//     return node.ReturnOp(result, loctx);
-//   };
-//   return GenericOp(torch::lazy::OpKind(at::aten::inverse), {input},
-//                    input.xla_shape(), std::move(lower_fn));
-// }
-
 torch::lazy::NodePtr BaddBmm(const torch::lazy::Value& lhs,
                              const torch::lazy::Value& rhs,
                              const torch::lazy::Value& bias,

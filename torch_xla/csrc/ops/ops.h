@@ -254,7 +254,7 @@ torch::lazy::NodePtr TanhGeluBackward(const torch::lazy::Value& grad,
 
 torch::lazy::NodePtr LogDet(const torch::lazy::Value& input);
 
-torch::lazy::NodePtr IsNan(const XlaValue& input);
+torch::lazy::NodePtr IsNan(const torch::lazy::Value& input);
 
 torch::lazy::NodePtr BaddBmm(const torch::lazy::Value& lhs,
                              const torch::lazy::Value& rhs,

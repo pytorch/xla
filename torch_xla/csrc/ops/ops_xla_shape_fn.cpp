@@ -40,7 +40,7 @@ xla::Shape CoshOutputShape(const torch::lazy::Value& input) {
   return GetXlaShape(input);
 }
 
-xla::Shape InverseOutputShape(const XlaValue& input) { return input.xla_shape(); }
+xla::Shape InverseOutputShape(const torch::lazy::Value& input) { return GetXlaShape(input); }
 
 xla::Shape MaximumOutputShape(const torch::lazy::Value& input,
                               const torch::lazy::Value& other) {
