@@ -68,4 +68,19 @@ torch_xla::XlaOpVector Sign::Lower(LoweringContext* loctx) const {
   return ReturnOp(BuildSign(xla_input), loctx);
 }
 
+torch_xla::XlaOpVector Sin::Lower(LoweringContext* loctx) const {
+  xla::XlaOp xla_input = loctx->GetOutputOp(operand(0));
+  return ReturnOp(xla::Sin(xla_input), loctx);
+}
+
+torch_xla::XlaOpVector Sinh::Lower(LoweringContext* loctx) const {
+  xla::XlaOp xla_input = loctx->GetOutputOp(operand(0));
+  return ReturnOp(xla::Sinh(xla_input), loctx);
+}
+
+torch_xla::XlaOpVector Tan::Lower(LoweringContext* loctx) const {
+  xla::XlaOp xla_input = loctx->GetOutputOp(operand(0));
+  return ReturnOp(xla::Tan(xla_input), loctx);
+}
+
 }  // namespace torch_xla

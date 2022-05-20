@@ -1553,6 +1553,11 @@ at::Tensor XLANativeFunctions::hardtanh(const at::Tensor& self,
       XLATensor::clamp(bridge::GetXlaTensor(self), min_val, max_val));
 }
 
+at::Tensor XLANativeFunctions::tanh(const at::Tensor& self) {
+  XLA_FN_COUNTER("xla::");
+  return bridge::AtenFromXlaTensor(XLATensor::tanh(bridge::GetXlaTensor(self)));
+}
+
 at::Tensor XLANativeFunctions::hardtanh_backward(const at::Tensor& grad_output,
                                                  const at::Tensor& self,
                                                  const at::Scalar& min_val,
@@ -2939,16 +2944,6 @@ at::Tensor XLANativeFunctions::sigmoid_backward(const at::Tensor& grad_output,
       bridge::GetXlaTensor(grad_output), bridge::GetXlaTensor(output)));
 }
 
-at::Tensor XLANativeFunctions::sin(const at::Tensor& self) {
-  XLA_FN_COUNTER("xla::");
-  return bridge::AtenFromXlaTensor(XLATensor::sin(bridge::GetXlaTensor(self)));
-}
-
-at::Tensor XLANativeFunctions::sinh(const at::Tensor& self) {
-  XLA_FN_COUNTER("xla::");
-  return bridge::AtenFromXlaTensor(XLATensor::sinh(bridge::GetXlaTensor(self)));
-}
-
 at::Tensor XLANativeFunctions::slice(const at::Tensor& self, int64_t dim,
                                      c10::optional<int64_t> start,
                                      c10::optional<int64_t> end, int64_t step) {
@@ -3217,16 +3212,6 @@ at::Tensor XLANativeFunctions::take(const at::Tensor& self,
   XLA_FN_COUNTER("xla::");
   return bridge::AtenFromXlaTensor(
       XLATensor::take(bridge::GetXlaTensor(self), bridge::GetXlaTensor(index)));
-}
-
-at::Tensor XLANativeFunctions::tan(const at::Tensor& self) {
-  XLA_FN_COUNTER("xla::");
-  return bridge::AtenFromXlaTensor(XLATensor::tan(bridge::GetXlaTensor(self)));
-}
-
-at::Tensor XLANativeFunctions::tanh(const at::Tensor& self) {
-  XLA_FN_COUNTER("xla::");
-  return bridge::AtenFromXlaTensor(XLATensor::tanh(bridge::GetXlaTensor(self)));
 }
 
 at::Tensor XLANativeFunctions::tanh_backward(const at::Tensor& grad_output,

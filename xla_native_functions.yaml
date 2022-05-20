@@ -13,6 +13,9 @@ full_codegen:
   - maximum
   - sgn
   - sign
+  - sin
+  - sinh
+  - tan
 supported:
   - __ilshift__.Scalar
   - __ilshift__.Tensor
@@ -270,8 +273,6 @@ supported:
   - sigmoid_backward
   - silu.out
   - silu_backward
-  - sin
-  - sinh
   - slice.Tensor
   - slogdet
   - smooth_l1_loss
@@ -303,7 +304,6 @@ supported:
   - t
   - t_
   - take
-  - tan
   - tanh
   - tanh_backward
   - threshold

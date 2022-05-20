@@ -2513,14 +2513,6 @@ XLATensor XLATensor::sigmoid_backward(const XLATensor& grad_output,
       SigmoidBackward(grad_output.GetIrValue(), output.GetIrValue()));
 }
 
-XLATensor XLATensor::sin(const XLATensor& input) {
-  return input.CreateFrom(Sin(input.GetIrValue()));
-}
-
-XLATensor XLATensor::sinh(const XLATensor& input) {
-  return input.CreateFrom(Sinh(input.GetIrValue()));
-}
-
 XLATensor XLATensor::slice(const XLATensor& input, int64_t dim, int64_t start,
                            int64_t end, int64_t step) {
   auto input_shape = input.shape();
@@ -2766,10 +2758,6 @@ std::tuple<XLATensor, XLATensor> XLATensor::symeig(const XLATensor& input,
 
 XLATensor XLATensor::take(const XLATensor& input, const XLATensor& index) {
   return input.CreateFrom(Take(input.GetIrValue(), index.GetIrValue()));
-}
-
-XLATensor XLATensor::tan(const XLATensor& input) {
-  return input.CreateFrom(Tan(input.GetIrValue()));
 }
 
 XLATensor XLATensor::tanh(const XLATensor& input) {

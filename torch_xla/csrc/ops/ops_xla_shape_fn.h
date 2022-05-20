@@ -28,4 +28,10 @@ xla::Shape SgnOutputShape(const torch::lazy::Value& input);
 
 xla::Shape SignOutputShape(const torch::lazy::Value& input);
 
+xla::Shape SinOutputShape(const torch::lazy::Value& input);
+
+xla::Shape SinhOutputShape(const torch::lazy::Value& input);
+
+xla::Shape TanOutputShape(const torch::lazy::Value& input);
+
 }  // namespace torch_xla
