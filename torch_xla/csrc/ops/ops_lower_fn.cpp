@@ -51,6 +51,8 @@ torch_xla::XlaOpVector Cos::Lower(LoweringContext* loctx) const {
 torch_xla::XlaOpVector Cosh::Lower(LoweringContext* loctx) const {
   xla::XlaOp xla_input = loctx->GetOutputOp(operand(0));
   return ReturnOp(xla::Cosh(xla_input), loctx);
+}
+
 torch_xla::XlaOpVector Logdet::Lower(LoweringContext* loctx) const {
   xla::XlaOp xla_input = loctx->GetOutputOp(operand(0));
   return ReturnOp(xla::LogDet(xla_input), loctx);

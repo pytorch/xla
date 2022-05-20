@@ -56,7 +56,8 @@ xla::Shape LogdetOutputShape(const torch::lazy::Value& input) {
   return logdet_shape;
 }
 
-xla::Shape MaximumOutputShape(const torch::lazy::Value& input, const torch::lazy::Value& other) {
+xla::Shape MaximumOutputShape(const torch::lazy::Value& input,
+                              const torch::lazy::Value& other) {
   auto lower_for_shape_fn =
       [&](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
     auto promoted = XlaHelpers::Promote(operands[0], operands[1]);
@@ -82,7 +83,7 @@ xla::Shape SinhOutputShape(const torch::lazy::Value& input) {
   return GetXlaShape(input);
 }
 
-xla::Shape SlogdetOutputShape(const torch::lazy::Value& input) { 
+xla::Shape SlogdetOutputShape(const torch::lazy::Value& input) {
   auto lower_for_shape_fn =
       [](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
     xla::SignAndLogDet result = xla::SLogDet(operands[0]);

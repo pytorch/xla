@@ -27,7 +27,8 @@ xla::Shape MaximumOutputShape(const torch::lazy::Value& input,
                               const torch::lazy::Value& other);
 xla::Shape LogdetOutputShape(const torch::lazy::Value& input);
 
-xla::Shape MaximumOutputShape(const torch::lazy::Value& input, const torch::lazy::Value& other);
+xla::Shape MaximumOutputShape(const torch::lazy::Value& input,
+                              const torch::lazy::Value& other);
 
 xla::Shape SgnOutputShape(const torch::lazy::Value& input);
 
