@@ -9,7 +9,10 @@ xla::Shape AcosOutputShape(const torch::lazy::Value& input);
 
 xla::Shape AcoshOutputShape(const torch::lazy::Value& input);
 
-xla::Shape AddcmulOutputShape(const torch::lazy::Value& input, const torch::lazy::Value& tensor1, const torch::lazy::Value& tensor2, const torch::lazy::Value& value);
+xla::Shape AddcmulOutputShape(const torch::lazy::Value& input,
+                              const torch::lazy::Value& tensor1,
+                              const torch::lazy::Value& tensor2,
+                              const torch::lazy::Value& value);
 
 xla::Shape AsinOutputShape(const torch::lazy::Value& input);
 
