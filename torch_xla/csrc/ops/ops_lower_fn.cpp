@@ -88,13 +88,15 @@ torch_xla::XlaOpVector Sinh::Lower(LoweringContext* loctx) const {
   return ReturnOp(xla::Sinh(xla_input), loctx);
 }
 
-torch_xla::XlaOpVector Tan::Lower(LoweringContext* loctx) const {
-  xla::XlaOp xla_input = loctx->GetOutputOp(operand(0));
-  return ReturnOp(xla::Tan(xla_input), loctx);
 torch_xla::XlaOpVector Slogdet::Lower(LoweringContext* loctx) const {
   xla::XlaOp xla_input = loctx->GetOutputOp(operand(0));
   xla::SignAndLogDet result = xla::SLogDet(xla_input);
   return ReturnOps({result.sign, result.logdet}, loctx);
+}
+
+torch_xla::XlaOpVector Tan::Lower(LoweringContext* loctx) const {
+  xla::XlaOp xla_input = loctx->GetOutputOp(operand(0));
+  return ReturnOp(xla::Tan(xla_input), loctx);
 }
 
 }  // namespace torch_xla

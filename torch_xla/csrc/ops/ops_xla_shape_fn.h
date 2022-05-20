@@ -25,6 +25,9 @@ xla::Shape InverseOutputShape(const torch::lazy::Value& input);
 
 xla::Shape MaximumOutputShape(const torch::lazy::Value& input,
                               const torch::lazy::Value& other);
+xla::Shape LogdetOutputShape(const torch::lazy::Value& input);
+
+xla::Shape MaximumOutputShape(const torch::lazy::Value& input, const torch::lazy::Value& other);
 
 xla::Shape SgnOutputShape(const torch::lazy::Value& input);
 
@@ -34,11 +37,8 @@ xla::Shape SinOutputShape(const torch::lazy::Value& input);
 
 xla::Shape SinhOutputShape(const torch::lazy::Value& input);
 
+xla::Shape SlogdetOutputShape(const torch::lazy::Value& input);
+
 xla::Shape TanOutputShape(const torch::lazy::Value& input);
-xla::Shape LogdetOutputShape(const XlaValue& input);
-
-xla::Shape MaximumOutputShape(const XlaValue& input, const XlaValue& other);
-
-xla::Shape SlogdetOutputShape(const XlaValue& input);
 
 }  // namespace torch_xla

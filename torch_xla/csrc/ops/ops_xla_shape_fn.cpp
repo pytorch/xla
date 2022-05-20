@@ -46,8 +46,8 @@ xla::Shape InverseOutputShape(const torch::lazy::Value& input) {
 
 xla::Shape MaximumOutputShape(const torch::lazy::Value& input,
                               const torch::lazy::Value& other) {
-xla::Shape LogdetOutputShape(const XlaValue& input) { 
-  const xla::Shape& input_shape = input.xla_shape();
+xla::Shape LogdetOutputShape(const torch::lazy::Value& input) { 
+  const xla::Shape& input_shape = GetXlaShape(input);
   XLA_CHECK_GE(input_shape.rank(), 2) << input_shape;
   // The input tensor is ...,N,N
   xla::Shape logdet_shape(input_shape);
@@ -56,7 +56,7 @@ xla::Shape LogdetOutputShape(const XlaValue& input) {
   return logdet_shape;
 }
 
-xla::Shape MaximumOutputShape(const XlaValue& input, const XlaValue& other) {
+xla::Shape MaximumOutputShape(const torch::lazy::Value& input, const torch::lazy::Value& other) {
   auto lower_for_shape_fn =
       [&](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
     auto promoted = XlaHelpers::Promote(operands[0], operands[1]);
@@ -82,15 +82,17 @@ xla::Shape SinhOutputShape(const torch::lazy::Value& input) {
   return GetXlaShape(input);
 }
 
-xla::Shape TanOutputShape(const torch::lazy::Value& input) {
-  return GetXlaShape(input);
-xla::Shape SlogdetOutputShape(const XlaValue& input) { 
+xla::Shape SlogdetOutputShape(const torch::lazy::Value& input) { 
   auto lower_for_shape_fn =
       [](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
     xla::SignAndLogDet result = xla::SLogDet(operands[0]);
     return xla::Tuple(operands[0].builder(), {result.sign, result.logdet});
   };
-  return InferOutputShape({input.xla_shape()}, lower_for_shape_fn);
+  return InferOutputShape({GetXlaShape(input)}, lower_for_shape_fn);
+}
+
+xla::Shape TanOutputShape(const torch::lazy::Value& input) {
+  return GetXlaShape(input);
 }
 
 }  // namespace torch_xla
