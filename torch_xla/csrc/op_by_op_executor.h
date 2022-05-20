@@ -19,7 +19,7 @@ namespace torch_xla {
 // lowered and executed independently.
 class OpByOpExecutor {
  public:
-  using AsyncResult = std::vector<xla::ComputationClient::DataPtr>;
+  using AsyncResult = std::vector<torch::lazy::BackendDataPtr>;
   using AsyncTask = xla::util::AsyncTask<AsyncResult>;
 
   static OpByOpExecutor* Get();
@@ -28,7 +28,7 @@ class OpByOpExecutor {
       c10::ArrayRef<torch::lazy::Value> roots, const std::string& device,
       absl::Span<const std::string> devices);
 
-  std::vector<xla::ComputationClient::DataPtr> Execute(
+  std::vector<torch::lazy::BackendDataPtr> Execute(
       c10::ArrayRef<torch::lazy::Value> roots, const std::string& device,
       absl::Span<const std::string> devices);
 

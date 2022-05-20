@@ -7,6 +7,7 @@
 #include "torch_xla/csrc/ops/ops.h"
 #include "torch_xla/csrc/ops/scalar.h"
 #include "torch_xla/csrc/ops/stack.h"
+#include "torch_xla/csrc/tensor_util.h"
 
 namespace torch_xla {
 namespace cpp_test {
@@ -23,7 +24,7 @@ TEST(OpByOpExecutorTest, TestSimpleAdd) {
 
     auto results_data =
         OpByOpExecutor::Get()->Execute({v_c}, device.toString(), {});
-    auto results = Fetch(results_data);
+    auto results = Fetch(UnwrapXlaData(results_data));
 
     AllClose(results.front(), c);
   });
@@ -42,7 +43,7 @@ TEST(OpByOpExecutorTest, TestStack) {
 
     auto results_data =
         OpByOpExecutor::Get()->Execute({v_c}, device.toString(), {});
-    auto results = Fetch(results_data);
+    auto results = Fetch(UnwrapXlaData(results_data));
 
     AllClose(results.front(), c);
   });
@@ -62,7 +63,7 @@ TEST(OpByOpExecutorTest, TestAsyncStack) {
     auto async =
         OpByOpExecutor::Get()->ExecuteAsync({v_c}, device.toString(), {});
     async.Wait();
-    auto results = Fetch(async.ConsumeValue());
+    auto results = Fetch(UnwrapXlaData(async.ConsumeValue()));
 
     AllClose(results.front(), c);
   });

@@ -183,9 +183,8 @@ class XlaDataCacheArena {
     }
   };
 
-  using XlaDataCache =
-      xla::util::Cache<at::Tensor, xla::ComputationClient::Data, TensorHasher,
-                       TensorComparer>;
+  using XlaDataCache = xla::util::Cache<at::Tensor, torch::lazy::BackendData,
+                                        TensorHasher, TensorComparer>;
 
   explicit XlaDataCacheArena(size_t max_cache_size)
       : max_cache_size_(max_cache_size) {}
@@ -220,15 +219,15 @@ torch::lazy::Value IrValueFromScalar(const at::Scalar& value,
                                      const torch::lazy::BackendDevice& device,
                                      bool transfer_async) {
   at::Tensor tensor = at::scalar_tensor(value, at::TensorOptions(scalar_type));
-  xla::ComputationClient::DataPtr device_data =
+  torch::lazy::BackendDataPtr device_data =
       TensorToXlaData(tensor, device, transfer_async);
   return torch::lazy::MakeNode<DeviceData>(std::move(device_data));
 }
 
-xla::ComputationClient::DataPtr GetDeviceData(
+torch::lazy::BackendDataPtr GetDeviceData(
     const at::Tensor& tensor, const torch::lazy::BackendDevice& device) {
   XlaDataCacheArena::XlaDataCache* cache = GetXlaDataCache(device);
-  xla::ComputationClient::DataPtr device_data = cache->Get(tensor);
+  torch::lazy::BackendDataPtr device_data = cache->Get(tensor);
   if (device_data == nullptr) {
     at::Tensor tensor_copy = torch::lazy::CopyTensor(tensor);
     device_data = TensorToXlaData(tensor_copy, device);
@@ -238,7 +237,7 @@ xla::ComputationClient::DataPtr GetDeviceData(
   return device_data;
 }
 
-xla::ComputationClient::DataPtr GetDeviceData(
+torch::lazy::BackendDataPtr GetDeviceData(
     const at::Scalar& value, at::ScalarType scalar_type,
     const torch::lazy::BackendDevice& device) {
   // Workaround since at::scalar_tensor doesn't support bfloat16 yet.
@@ -414,8 +413,8 @@ XLATensor::Data::~Data() { DeviceContextArena::Get()->UnregisterTensor(this); }
 
 XLATensor::Async::Async(
     SyncTensorCollection* coll,
-    std::vector<xla::ComputationClient::DataPtr> parameters_data,
-    std::vector<xla::ComputationClient::DataPtr> tensors_data,
+    std::vector<torch::lazy::BackendDataPtr> parameters_data,
+    std::vector<torch::lazy::BackendDataPtr> tensors_data,
     ComputationCache::TypePtr cached_computation)
     : mwait(1),
       indices(std::move(coll->indices)),
@@ -456,7 +455,7 @@ XLATensor XLATensor::Create(const at::Tensor& tensor,
 }
 
 XLATensor XLATensor::Create(
-    xla::ComputationClient::DataPtr xla_data,
+    torch::lazy::BackendDataPtr xla_data,
     c10::optional<at::ScalarType> logical_element_type) {
   XLATensor xtensor(std::move(xla_data), logical_element_type);
   DeviceContextArena::Get()->RegisterTensor(xtensor.data_ptr());
@@ -493,10 +492,9 @@ XLATensor::XLATensor(const at::Tensor& tensor,
                      const torch::lazy::BackendDevice& device)
     : data_(std::make_shared<Data>(tensor, device)) {}
 
-XLATensor::XLATensor(xla::ComputationClient::DataPtr xla_data,
+XLATensor::XLATensor(torch::lazy::BackendDataPtr xla_data,
                      c10::optional<at::ScalarType> logical_element_type)
-    : data_(std::make_shared<Data>(xla_data,
-                                   ParseDeviceString(xla_data->device()),
+    : data_(std::make_shared<Data>(xla_data, xla_data->device(),
                                    logical_element_type)) {}
 
 XLATensor::XLATensor(torch::lazy::Value ir_value,
@@ -542,7 +540,7 @@ xla::util::MaybeRef<xla::Shape> XLATensor::shape() const {
     return data()->view->shape();
   }
   if (data()->xla_data != nullptr) {
-    return data()->xla_data->shape();
+    return UnwrapXlaData(data()->xla_data)->shape();
   }
   if (data()->ir_value) {
     return GetXlaShape(data()->ir_value);
@@ -574,7 +572,7 @@ std::ptrdiff_t XLATensor::GetViewAliasId() const {
              : 0;
 }
 
-xla::ComputationClient::DataPtr XLATensor::GetXlaData() {
+torch::lazy::BackendDataPtr XLATensor::GetXlaData() {
   // XLA data can coexist with a view, but we need to check that the view did
   // not receive any updates before calling the current XLA valid.
   bool up_to_date = true;
@@ -585,7 +583,7 @@ xla::ComputationClient::DataPtr XLATensor::GetXlaData() {
     ir_value = std::move(ir_value_updated.ir_value);
   }
   if (up_to_date) {
-    xla::ComputationClient::DataPtr xla_data = CurrentXlaData();
+    torch::lazy::BackendDataPtr xla_data = CurrentXlaData();
     if (xla_data != nullptr) {
       XLA_CHECK(xla_data->HasValue())
           << "Trying to access XLA data while an async operation is in flight: "
@@ -609,7 +607,7 @@ xla::ComputationClient::DataPtr XLATensor::GetXlaData() {
   return data()->xla_data;
 }
 
-xla::ComputationClient::DataPtr XLATensor::CurrentXlaData() const {
+torch::lazy::BackendDataPtr XLATensor::CurrentXlaData() const {
   return data()->xla_data;
 }
 
@@ -626,12 +624,11 @@ std::string XLATensor::DumpHloComputation(
                             : std::string();
 }
 
-void XLATensor::SetXlaData(xla::ComputationClient::DataPtr xla_data) {
+void XLATensor::SetXlaData(torch::lazy::BackendDataPtr xla_data) {
   SetXlaData(std::move(xla_data), /*sync=*/true);
 }
 
-void XLATensor::SetXlaData(xla::ComputationClient::DataPtr xla_data,
-                           bool sync) {
+void XLATensor::SetXlaData(torch::lazy::BackendDataPtr xla_data, bool sync) {
   data()->xla_data = std::move(xla_data);
   // Assigning a device data should always clear the IR node, to allow graph
   // trimming. A view cannot be reset though, unless we are at a step-end sync.
@@ -698,7 +695,7 @@ torch::lazy::Value XLATensor::GetIrValue() const {
   if (ir_value) {
     return ir_value;
   }
-  xla::ComputationClient::DataPtr xla_data = CurrentXlaData();
+  torch::lazy::BackendDataPtr xla_data = CurrentXlaData();
   if (xla_data != nullptr) {
     // In case of tensor node, we do not clear the XLA data when we set the IR
     // node. This because we want further calls to GetIrValue() to fetch the
@@ -735,7 +732,7 @@ c10::optional<at::Tensor> XLATensor::CurrentTensorData() const {
 
 torch::lazy::Value XLATensor::GetIrValueForTensor(
     const at::Tensor& tensor, const torch::lazy::BackendDevice& device) const {
-  xla::ComputationClient::DataPtr data;
+  torch::lazy::BackendDataPtr data;
   bool read_only = false;
   if (tensor.dim() == 0 && tensor.numel() == 1) {
     at::Scalar value = tensor.item();
@@ -755,9 +752,10 @@ torch::lazy::Value XLATensor::GetIrValueForTensor(
 torch::lazy::Value XLATensor::GetDeviceDataIrValue(
     const at::Scalar& value, xla::PrimitiveType type,
     const torch::lazy::BackendDevice& device) {
-  xla::ComputationClient::DataPtr data =
+  torch::lazy::BackendDataPtr data =
       GetDeviceData(value, TensorTypeFromXlaType(type), device);
-  data->SetInfo(
+  // TODO: consider using upstream info class if possible
+  UnwrapXlaData(data)->SetInfo(
       std::make_shared<DeviceDataInfo>(/*tensor_id=*/-1, /*read_only=*/true));
   return torch::lazy::MakeNode<DeviceData>(std::move(data));
 }
@@ -970,10 +968,10 @@ std::vector<XLATensor> XLATensor::GetLiveTensors(
   return DeviceContextArena::Get()->GetLiveTensors(device);
 }
 
-std::vector<xla::ComputationClient::DataPtr> XLATensor::GatherTensorsXlaData(
+std::vector<torch::lazy::BackendDataPtr> XLATensor::GatherTensorsXlaData(
     const std::vector<XLATensor>& tensors, absl::Span<const size_t> indices,
-    absl::Span<const xla::ComputationClient::DataPtr> tensors_data) {
-  std::vector<xla::ComputationClient::DataPtr> result_tensors_data;
+    absl::Span<const torch::lazy::BackendDataPtr> tensors_data) {
+  std::vector<torch::lazy::BackendDataPtr> result_tensors_data;
   std::unordered_map<int64_t, size_t> uid_index_map;
   size_t indices_index = 0;
   for (size_t i = 0; i < tensors.size(); ++i) {
@@ -991,7 +989,7 @@ std::vector<xla::ComputationClient::DataPtr> XLATensor::GatherTensorsXlaData(
       result_tensors_data.push_back(tensors_data[indices_index]);
       ++indices_index;
     } else if (!tensors[i].CurrentTensorData()) {
-      xla::ComputationClient::DataPtr xla_data = tensors[i].CurrentXlaData();
+      torch::lazy::BackendDataPtr xla_data = tensors[i].CurrentXlaData();
       XLA_CHECK(xla_data != nullptr);
       result_tensors_data.push_back(std::move(xla_data));
     }
@@ -1021,7 +1019,7 @@ std::vector<at::Tensor> XLATensor::GetTensorsOpByOp(
   SyncTensorsConfig config;
   config.force_xla_data = false;
   SyncTensorCollection coll = CollectSyncTensors(*tensors, config);
-  std::vector<xla::ComputationClient::DataPtr> async_tensors_data;
+  std::vector<torch::lazy::BackendDataPtr> async_tensors_data;
   if (!coll.indices.empty()) {
     DebugUtil::SaveTensorsGraphInfo("GetTensorsOpByOp", *tensors,
                                     &coll.indices);
@@ -1033,10 +1031,11 @@ std::vector<at::Tensor> XLATensor::GetTensorsOpByOp(
         OpByOpExecutor::Get()->Execute(roots, coll.device.toString(), {});
   }
 
-  std::vector<xla::ComputationClient::DataPtr> tensors_data =
+  std::vector<torch::lazy::BackendDataPtr> tensors_data =
       GatherTensorsXlaData(*tensors, coll.indices, async_tensors_data);
   std::vector<xla::Literal> literals =
-      xla::ComputationClient::Get()->TransferFromServer(tensors_data);
+      xla::ComputationClient::Get()->TransferFromServer(
+          UnwrapXlaData(tensors_data));
 
   return FetchTensors(tensors, literals, &coll.indices);
 }
@@ -1057,15 +1056,13 @@ std::vector<at::Tensor> XLATensor::GetTensorsFused(
   if (async != nullptr) {
     async->mwait.Wait();
   }
-  std::vector<xla::ComputationClient::DataPtr> tensors_data =
-      GatherTensorsXlaData(
-          *tensors,
-          async != nullptr ? async->indices : absl::Span<const size_t>(),
-          async != nullptr
-              ? async->tensors_data
-              : absl::Span<const xla::ComputationClient::DataPtr>());
+  std::vector<torch::lazy::BackendDataPtr> tensors_data = GatherTensorsXlaData(
+      *tensors, async != nullptr ? async->indices : absl::Span<const size_t>(),
+      async != nullptr ? async->tensors_data
+                       : absl::Span<const torch::lazy::BackendDataPtr>());
   std::vector<xla::Literal> literals =
-      xla::ComputationClient::Get()->TransferFromServer(tensors_data);
+      xla::ComputationClient::Get()->TransferFromServer(
+          UnwrapXlaData(tensors_data));
   return FetchTensors(tensors, literals,
                       async != nullptr ? &async->indices : nullptr);
 }
@@ -1102,7 +1099,7 @@ std::vector<at::Tensor> XLATensor::FetchTensors(
 std::vector<XLATensor> XLATensor::CreateTensors(
     const std::vector<at::Tensor>& tensors,
     const std::vector<std::string>& devices) {
-  std::vector<xla::ComputationClient::DataPtr> handles =
+  std::vector<torch::lazy::BackendDataPtr> handles =
       CreateTensorsData(tensors, devices);
   std::vector<XLATensor> xla_tensors;
   for (size_t i = 0; i < handles.size(); ++i) {
@@ -1112,9 +1109,10 @@ std::vector<XLATensor> XLATensor::CreateTensors(
   return xla_tensors;
 }
 
-torch::lazy::Value XLATensor::CreateTensorNode(
-    xla::ComputationClient::DataPtr data, bool read_only) const {
-  data->SetInfo(std::make_shared<DeviceDataInfo>(GetUniqueId(), read_only));
+torch::lazy::Value XLATensor::CreateTensorNode(torch::lazy::BackendDataPtr data,
+                                               bool read_only) const {
+  UnwrapXlaData(data)->SetInfo(
+      std::make_shared<DeviceDataInfo>(GetUniqueId(), read_only));
   return torch::lazy::MakeNode<DeviceData>(std::move(data));
 }
 
@@ -1254,7 +1252,7 @@ XLATensor::SyncTensorCollection XLATensor::CollectSyncTensors(
       xla::ComputationClient::Get()->GetResourceDomain(coll.device.toString()));
   if (!at_tensors.empty()) {
     XLA_COUNTER("SyncTensorsToData", at_tensors.size());
-    std::vector<xla::ComputationClient::DataPtr> handles =
+    std::vector<torch::lazy::BackendDataPtr> handles =
         CreateTensorsData(at_tensors, devices);
     for (size_t i = 0; i < handles.size(); ++i) {
       // If we are here, it means that the IR torch::lazy::Value for the tensor
@@ -1335,7 +1333,7 @@ XLATensor::PostOrderData XLATensor::RunPostOrder(
         TensorCollectionBarrier(coll);
       }
       xla::ComputationClient::Data::OpaqueHandle handle =
-          device_data->data()->GetOpaqueHandle();
+          device_data->data()->GetHandle();
       auto it = data_handles.find(handle);
       if (it != data_handles.end()) {
         po_data.parameter_sequence.push_back(it->second);
@@ -1359,10 +1357,10 @@ std::vector<torch::lazy::Value> XLATensor::CollectRoots(
   return roots;
 }
 
-std::vector<xla::ComputationClient::DataPtr> XLATensor::FetchTensorData(
+std::vector<torch::lazy::BackendDataPtr> XLATensor::FetchTensorData(
     std::vector<XLATensor>* tensors, const SyncTensorsConfig& config,
     absl::Span<const size_t> indices) {
-  std::vector<xla::ComputationClient::DataPtr> tensors_data;
+  std::vector<torch::lazy::BackendDataPtr> tensors_data;
   tensors_data.reserve(indices.size());
   for (auto index : indices) {
     XLATensor& tensor = (*tensors)[index];
@@ -1375,13 +1373,14 @@ std::vector<xla::ComputationClient::DataPtr> XLATensor::FetchTensorData(
     // into the async variable), any other operation trying to access the
     // tensor's device data will have to wait until the asynchronous operation
     // completes.
-    xla::ComputationClient::DataPtr xla_data = tensor.CurrentXlaData();
+    torch::lazy::BackendDataPtr xla_data = tensor.CurrentXlaData();
     if (xla_data == nullptr && config.force_xla_data) {
       const torch::lazy::BackendDevice& tensor_device = tensor.GetDevice();
       xla::Shape shape = MakeShapeWithDeviceLayout(
           tensor.shape(), static_cast<XlaDeviceType>(tensor_device.type()));
-      xla_data = xla::ComputationClient::Get()->CreateDataPlaceholder(
-          tensor_device.toString(), std::move(shape));
+      xla_data =
+          WrapXlaData(xla::ComputationClient::Get()->CreateDataPlaceholder(
+              tensor_device.toString(), std::move(shape)));
       tensor.SetXlaData(xla_data, config.sync_xla_data);
     }
     tensors_data.emplace_back(std::move(xla_data));
@@ -1391,8 +1390,8 @@ std::vector<xla::ComputationClient::DataPtr> XLATensor::FetchTensorData(
 
 std::shared_ptr<XLATensor::Async> XLATensor::ScheduleSyncTensorsGraph(
     SyncTensorCollection* coll,
-    std::vector<xla::ComputationClient::DataPtr> parameters_data,
-    std::vector<xla::ComputationClient::DataPtr> tensors_data,
+    std::vector<torch::lazy::BackendDataPtr> parameters_data,
+    std::vector<torch::lazy::BackendDataPtr> tensors_data,
     ComputationCache::TypePtr cached_computation) {
   tensorflow::profiler::TraceMe activity(
       "ScheduleSyncTensorsGraph", tensorflow::profiler::TraceMeLevel::kInfo);
@@ -1408,17 +1407,17 @@ std::shared_ptr<XLATensor::Async> XLATensor::ScheduleSyncTensorsGraph(
                  << torch::lazy::HashToString(hash) << " on device "
                  << async->device << " ...";
       auto results = xla::ComputationClient::Get()->ExecuteComputation(
-          *async->cached_computation->computation, async->parameters_data,
-          async->device, options);
+          *async->cached_computation->computation,
+          UnwrapXlaData(async->parameters_data), async->device, options);
       TF_VLOG(3) << "Executing IR graph hash "
                  << torch::lazy::HashToString(hash) << " on device "
                  << async->device << " done!";
 
       for (size_t i = 0; i < results.size(); ++i) {
         if (async->tensors_data[i] != nullptr) {
-          async->tensors_data[i]->Assign(*results[i]);
+          UnwrapXlaData(async->tensors_data[i])->Assign(*results[i]);
         } else {
-          async->tensors_data[i] = std::move(results[i]);
+          async->tensors_data[i] = WrapXlaData(std::move(results[i]));
         }
       }
     } catch (...) {
@@ -1445,7 +1444,7 @@ std::shared_ptr<XLATensor::Async> XLATensor::ScheduleSyncTensorsGraph(
 
 std::shared_ptr<XLATensor::Async> XLATensor::ScheduleSyncTensorsGraph(
     std::vector<XLATensor>* tensors, SyncTensorCollection* coll,
-    std::vector<xla::ComputationClient::DataPtr> parameters_data,
+    std::vector<torch::lazy::BackendDataPtr> parameters_data,
     std::string device, ComputationCache::TypePtr cached_computation) {
   auto tensors_data = FetchTensorData(tensors, coll->config, coll->indices);
   return ScheduleSyncTensorsGraph(coll, std::move(parameters_data),
@@ -1517,7 +1516,7 @@ XLATensor::OpByOpAsync XLATensor::SyncTensorsGraphOpByOp(
     const SyncTensorsConfig& config) {
   struct Async {
     explicit Async(SyncTensorCollection coll,
-                   std::vector<xla::ComputationClient::DataPtr> tensors_data,
+                   std::vector<torch::lazy::BackendDataPtr> tensors_data,
                    std::vector<torch::lazy::Value> roots,
                    absl::Span<const std::string> devices)
         : coll(std::move(coll)),
@@ -1526,7 +1525,7 @@ XLATensor::OpByOpAsync XLATensor::SyncTensorsGraphOpByOp(
           devices(devices.begin(), devices.end()) {}
 
     SyncTensorCollection coll;
-    std::vector<xla::ComputationClient::DataPtr> tensors_data;
+    std::vector<torch::lazy::BackendDataPtr> tensors_data;
     std::vector<torch::lazy::Value> roots;
     std::vector<std::string> devices;
   };
@@ -1545,7 +1544,7 @@ XLATensor::OpByOpAsync XLATensor::SyncTensorsGraphOpByOp(
       TF_VLOG(3) << "Executing (OpByOp) IR graph hash "
                  << torch::lazy::HashToString(async->coll.hash) << " on device "
                  << async->coll.device << " ...";
-      std::vector<xla::ComputationClient::DataPtr> results =
+      std::vector<torch::lazy::BackendDataPtr> results =
           OpByOpExecutor::Get()->Execute(
               async->roots, async->coll.device.toString(), async->devices);
       TF_VLOG(3) << "Executing (OpByOp) IR graph hash "
@@ -1579,8 +1578,9 @@ void XLATensor::BuildInputOutputAliases(const std::vector<XLATensor>& tensors,
     int64_t tensor_id = tensors[tensor_index].GetUniqueId();
     output_tensor_id_map[tensor_id] = i;
   }
+  // TODO we need xla_shape here.
   const std::vector<xla::ComputationClient::DataPtr>& parameters_data =
-      lowering_ctx->GetParametersData();
+      UnwrapXlaData(lowering_ctx->GetParametersData());
   std::vector<ssize_t> alias_map(indices.size(), -1);
   for (size_t i = 0; i < parameters_data.size(); ++i) {
     DeviceDataInfo* data_info =
