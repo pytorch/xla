@@ -256,17 +256,6 @@ torch::lazy::NodePtr Lerp(const torch::lazy::Value& start,
                           const torch::lazy::Value& end,
                           const torch::lazy::Value& weight);
 
-torch::lazy::NodePtr LogicalNot(const torch::lazy::Value& input);
-
-torch::lazy::NodePtr LogicalXor(const torch::lazy::Value& input,
-                                const torch::lazy::Value& other);
-
-torch::lazy::NodePtr LogicalAnd(const torch::lazy::Value& input,
-                                const torch::lazy::Value& other);
-
-torch::lazy::NodePtr LogicalOr(const torch::lazy::Value& input,
-                               const torch::lazy::Value& other);
-
 torch::lazy::NodePtr XLogY(const torch::lazy::Value& input,
                            const torch::lazy::Value& other);
 
