@@ -705,15 +705,6 @@ void XLATensor::addcdiv_(XLATensor& input, const at::Scalar& value,
   input.SetInPlaceIrValue(input.GetIrValue() + div * constant);
 }
 
-XLATensor XLATensor::addcmul(const XLATensor& input, const at::Scalar& value,
-                             const XLATensor& tensor1,
-                             const XLATensor& tensor2) {
-  torch::lazy::Value constant = GetIrValueForScalar(
-      value, tensor1.shape().get().element_type(), input.GetDevice());
-  torch::lazy::Value mul = tensor1.GetIrValue() * tensor2.GetIrValue();
-  return input.CreateFrom(input.GetIrValue() + mul * constant);
-}
-
 XLATensor XLATensor::addmm(const XLATensor& input, const XLATensor& weight,
                            const XLATensor& bias) {
   return input.CreateFrom(

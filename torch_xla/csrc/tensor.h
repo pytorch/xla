@@ -354,9 +354,6 @@ class XLATensor : public c10::intrusive_ptr_target {
   static void addcdiv_(XLATensor& input, const at::Scalar& value,
                        const XLATensor& tensor1, const XLATensor& tensor2);
 
-  static XLATensor addcmul(const XLATensor& input, const at::Scalar& value,
-                           const XLATensor& tensor1, const XLATensor& tensor2);
-
   static XLATensor addmm(const XLATensor& input, const XLATensor& weight,
                          const XLATensor& bias);
 
