@@ -4,14 +4,14 @@
 ARG base_image="debian:buster"
 FROM "${base_image}"
 
-ARG python_version="3.6"
+ARG python_version="3.7"
 ARG release_version="nightly"
 ARG cuda="0"
 ARG cuda_compute="3.7,7.0,7.5,8.0"
 ARG cxx_abi="0"
 ARG tpuvm=""
 ARG bazel_jobs=""
-ARG git_clone="false"
+ARG git_clone="true"
 
 RUN apt-get update
 RUN apt-get install -y git sudo python-pip python3-pip
