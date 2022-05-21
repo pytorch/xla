@@ -87,25 +87,12 @@ function maybe_install_sources {
 
 function install_bazel() {
   sudo apt-get install -y pkg-config zip zlib1g-dev unzip
-  local BAZEL_VERSION=$(cat "xla/third_party/tensorflow/.bazelversion")
-  local BAZEL_FILE="bazel-${BAZEL_VERSION}-installer-linux-x86_64.sh"
-
-  # Temporary patch until 5.2.0 is released and requested by tensorflow
-  if [[ "$BAZEL_VERSION" == "5.1.1" ]]; then
-    pushd /root/.bazel/bin
-    curl -fLO "https://releases.bazel.build/6e54699884cfad49d4e8f6dd59a4050bc95c4edf/release/bazel-6e54699884cfad49d4e8f6dd59a4050bc95c4edf-linux-x86_64"
-    chmod +x "bazel-6e54699884cfad49d4e8f6dd59a4050bc95c4edf-linux-x86_64"
-    popd
+  sudo apt-get -qq install npm nodejs
+  sudo npm install -g @bazel/bazelisk
+  if [[ -e /usr/bin/bazel ]]; then
+    sudo unlink /usr/bin/bazel
   fi
-
-  # Move to /tmp folder as otherwise the .bazelversion file found in tensorflow source makes
-  # the install fail.
-  pushd /tmp
-  curl -L -O "https://github.com/bazelbuild/bazel/releases/download/${BAZEL_VERSION}/${BAZEL_FILE}"
-  chmod 755 "$BAZEL_FILE"
-  ./"$BAZEL_FILE" --user
-  rm -f "$BAZEL_FILE"
-  popd
+  sudo ln -s "$(command -v bazelisk)" /usr/bin/bazel
   export PATH="$PATH:$HOME/bin"
 }
 
