@@ -751,8 +751,6 @@ class XLATensor : public c10::intrusive_ptr_target {
   static XLATensor log1p(const XLATensor& input);
   static void log1p_(XLATensor& input);
 
-  static XLATensor logdet(const XLATensor& input);
-
   static XLATensor logical_not(const XLATensor& input);
 
   static XLATensor logical_xor(const XLATensor& input, const XLATensor& other);
