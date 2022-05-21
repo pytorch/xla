@@ -45,9 +45,7 @@ xla::Shape InverseOutputShape(const torch::lazy::Value& input) {
   return GetXlaShape(input);
 }
 
-xla::Shape MaximumOutputShape(const torch::lazy::Value& input,
-                              const torch::lazy::Value& other) {
-xla::Shape LogdetOutputShape(const torch::lazy::Value& input) { 
+xla::Shape LogdetOutputShape(const torch::lazy::Value& input) {
   const xla::Shape& input_shape = GetXlaShape(input);
   XLA_CHECK_GE(input_shape.rank(), 2) << input_shape;
   // The input tensor is ...,N,N

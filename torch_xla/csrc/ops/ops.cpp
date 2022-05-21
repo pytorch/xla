@@ -908,23 +908,6 @@ torch::lazy::NodePtr TanhGeluBackward(const torch::lazy::Value& grad,
   return grad * (left_derivative + right_derivative);
 }
 
-torch::lazy::NodePtr LogDet(const torch::lazy::Value& input) {
-  auto lower_fn = [](const XlaNode& node,
-                     LoweringContext* loctx) -> XlaOpVector {
-    xla::XlaOp xla_input = loctx->GetOutputOp(node.operand(0));
-    xla::XlaOp result = xla::LogDet(xla_input);
-    return node.ReturnOp(result, loctx);
-  };
-  const xla::Shape& input_shape = GetXlaShape(input);
-  XLA_CHECK_GE(input_shape.rank(), 2) << input_shape;
-  // The input tensor is ...,N,N
-  xla::Shape logdet_shape(input_shape);
-  logdet_shape.DeleteDimension(input_shape.rank() - 1);
-  logdet_shape.DeleteDimension(input_shape.rank() - 2);
-  return GenericOp(torch::lazy::OpKind(at::aten::logdet), {input}, logdet_shape,
-                   std::move(lower_fn));
-}
-
 torch::lazy::NodePtr BaddBmm(const torch::lazy::Value& lhs,
                              const torch::lazy::Value& rhs,
                              const torch::lazy::Value& bias,
