@@ -1113,13 +1113,6 @@ torch::lazy::NodePtr SLogDet(const torch::lazy::Value& input) {
 
 torch::lazy::NodePtr Softplus(const torch::lazy::Value& input,
                               const torch::lazy::Value& beta,
-=======
-torch::lazy::NodePtr Softplus(const torch::lazy::Value& input, const torch::lazy::Value& beta,
->>>>>>> 15e41af4 (merge conflict resolution)
-=======
-torch::lazy::NodePtr Softplus(const torch::lazy::Value& input,
-                              const torch::lazy::Value& beta,
->>>>>>> 7260a694 (linter)
                               const torch::lazy::Value& threshold) {
   auto lower_fn = [](const XlaNode& node,
                      LoweringContext* loctx) -> XlaOpVector {
