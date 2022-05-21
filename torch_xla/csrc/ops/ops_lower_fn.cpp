@@ -58,6 +58,13 @@ torch_xla::XlaOpVector Maximum::Lower(LoweringContext* loctx) const {
   return ReturnOp(xla::Max(promoted.first, promoted.second), loctx);
 }
 
+torch_xla::XlaOpVector Minimum::Lower(LoweringContext* loctx) const {
+  xla::XlaOp xla_input = loctx->GetOutputOp(operand(0));
+  xla::XlaOp xla_other = loctx->GetOutputOp(operand(1));
+  auto promoted = XlaHelpers::Promote(xla_input, xla_other);
+  return ReturnOp(xla::Min(promoted.first, promoted.second), loctx);
+}
+
 torch_xla::XlaOpVector Sgn::Lower(LoweringContext* loctx) const {
   xla::XlaOp xla_input = loctx->GetOutputOp(operand(0));
   return ReturnOp(BuildSgn(xla_input), loctx);

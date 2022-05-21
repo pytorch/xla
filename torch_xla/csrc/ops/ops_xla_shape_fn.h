@@ -24,6 +24,9 @@ xla::Shape CoshOutputShape(const torch::lazy::Value& input);
 xla::Shape MaximumOutputShape(const torch::lazy::Value& input,
                               const torch::lazy::Value& other);
 
+xla::Shape MinimumOutputShape(const torch::lazy::Value& input,
+                              const torch::lazy::Value& other);
+
 xla::Shape SgnOutputShape(const torch::lazy::Value& input);
 
 xla::Shape SignOutputShape(const torch::lazy::Value& input);
