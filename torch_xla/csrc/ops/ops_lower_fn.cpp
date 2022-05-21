@@ -3,6 +3,7 @@
 #include "tensorflow/compiler/xla/client/lib/math.h"
 #include "torch_xla/csrc/elementwise.h"
 #include "torch_xla/csrc/helpers.h"
+#include "torch_xla/csrc/matrix.h"
 
 namespace torch_xla {
 
@@ -49,6 +50,11 @@ torch_xla::XlaOpVector Cos::Lower(LoweringContext* loctx) const {
 torch_xla::XlaOpVector Cosh::Lower(LoweringContext* loctx) const {
   xla::XlaOp xla_input = loctx->GetOutputOp(operand(0));
   return ReturnOp(xla::Cosh(xla_input), loctx);
+}
+
+torch_xla::XlaOpVector Inverse::Lower(LoweringContext* loctx) const {
+  xla::XlaOp xla_input = loctx->GetOutputOp(operand(0));
+  return ReturnOp(BuildInverse(xla_input), loctx);
 }
 
 torch_xla::XlaOpVector Maximum::Lower(LoweringContext* loctx) const {

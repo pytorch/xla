@@ -1544,10 +1544,6 @@ XLATensor XLATensor::index_select(const XLATensor& input, int64_t dim,
       index_value));
 }
 
-XLATensor XLATensor::inverse(const XLATensor& input) {
-  return input.CreateFrom(Inverse(input.GetIrValue()));
-}
-
 XLATensor XLATensor::isnan(const XLATensor& input) {
   torch::lazy::Value result = IsNan(input.GetIrValue());
   torch::lazy::Value casted = GetBooleanIrValue(result);
