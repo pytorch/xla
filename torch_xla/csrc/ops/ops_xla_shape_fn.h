@@ -21,6 +21,8 @@ xla::Shape CosOutputShape(const torch::lazy::Value& input);
 
 xla::Shape CoshOutputShape(const torch::lazy::Value& input);
 
+xla::Shape InverseOutputShape(const torch::lazy::Value& input);
+
 xla::Shape MaximumOutputShape(const torch::lazy::Value& input,
                               const torch::lazy::Value& other);
 
