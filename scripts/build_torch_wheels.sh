@@ -86,17 +86,13 @@ function maybe_install_sources {
 }
 
 function install_bazel() {
-  local BAZEL_VERSION=$(cat "xla/third_party/tensorflow/.bazelversion")
-  local BAZEL_FILE="bazel-${BAZEL_VERSION}-installer-linux-x86_64.sh"
   sudo apt-get install -y pkg-config zip zlib1g-dev unzip
-  # Move to /tmp folder as otherwise the .bazelversion file found in pytorch source makes
-  # the install fail.
-  pushd /tmp
-  curl -L -O "https://github.com/bazelbuild/bazel/releases/download/${BAZEL_VERSION}/${BAZEL_FILE}"
-  chmod 755 "$BAZEL_FILE"
-  ./"$BAZEL_FILE" --user
-  rm -f "$BAZEL_FILE"
-  popd
+  sudo apt-get -qq install npm nodejs
+  sudo npm install -g @bazel/bazelisk
+  if [[ -e /usr/bin/bazel ]]; then
+    sudo unlink /usr/bin/bazel
+  fi
+  sudo ln -s "$(command -v bazelisk)" /usr/bin/bazel
   export PATH="$PATH:$HOME/bin"
 }
 
