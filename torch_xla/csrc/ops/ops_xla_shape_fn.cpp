@@ -1,5 +1,6 @@
 #include "torch_xla/csrc/ops/ops_xla_shape_fn.h"
 
+#include "tensorflow/compiler/xla/client/lib/logdet.h"
 #include "torch_xla/csrc/helpers.h"
 
 namespace torch_xla {
@@ -83,14 +84,15 @@ xla::Shape SinhOutputShape(const torch::lazy::Value& input) {
   return GetXlaShape(input);
 }
 
-xla::Shape SlogdetOutputShape(const torch::lazy::Value& input) {
-  auto lower_for_shape_fn =
-      [](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
-    xla::SignAndLogDet result = xla::SLogDet(operands[0]);
-    return xla::Tuple(operands[0].builder(), {result.sign, result.logdet});
-  };
-  return InferOutputShape({GetXlaShape(input)}, lower_for_shape_fn);
-}
+/* Blocked on https://github.com/pytorch/xla/issues/3596 */
+// xla::Shape SlogdetOutputShape(const torch::lazy::Value& input) {
+//   auto lower_for_shape_fn =
+//       [](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
+//     xla::SignAndLogDet result = xla::SLogDet(operands[0]);
+//     return xla::Tuple(operands[0].builder(), {result.sign, result.logdet});
+//   };
+//   return InferOutputShape({GetXlaShape(input)}, lower_for_shape_fn);
+// }
 
 xla::Shape TanOutputShape(const torch::lazy::Value& input) {
   return GetXlaShape(input);

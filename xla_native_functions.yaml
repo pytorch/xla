@@ -11,15 +11,13 @@ full_codegen:
   - cos
   - cosh
   - inverse
+  - logdet
   - maximum
   - sgn
   - sign
   - sin
   - sinh
   - tan
-  - logdet
-  - maximum
-  - slogdet
 supported:
   - __ilshift__.Scalar
   - __ilshift__.Tensor
@@ -276,6 +274,7 @@ supported:
   - silu.out
   - silu_backward
   - slice.Tensor
+  - slogdet
   - smooth_l1_loss
   - smooth_l1_loss_backward
   - softplus

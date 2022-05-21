@@ -1028,6 +1028,8 @@ class XLATensor : public c10::intrusive_ptr_target {
   static XLATensor slice(const XLATensor& input, int64_t dim, int64_t start,
                          int64_t end, int64_t step);
 
+  static std::tuple<XLATensor, XLATensor> slogdet(const XLATensor& input);
+
   // Computes a loss that uses a squared term if the absolute element-wise error
   // falls below 1 and an L1 term otherwise.
   static XLATensor smooth_l1_loss(const XLATensor& input,

@@ -285,6 +285,8 @@ torch::lazy::NodePtr NanToNum(const torch::lazy::Value& input,
                               const torch::lazy::Value& posinf,
                               const torch::lazy::Value& neginf);
 
+torch::lazy::NodePtr SLogDet(const torch::lazy::Value& input);
+
 torch::lazy::NodePtr Softplus(const torch::lazy::Value& input,
                               const torch::lazy::Value& beta,
                               const torch::lazy::Value& threshold);

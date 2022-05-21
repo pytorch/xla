@@ -2,6 +2,7 @@
 
 #include <cmath>
 
+#include "tensorflow/compiler/xla/client/lib/logdet.h"
 #include "tensorflow/compiler/xla/client/lib/math.h"
 #include "tensorflow/compiler/xla/client/lib/matrix.h"
 #include "tensorflow/compiler/xla/shape_util.h"
@@ -1105,8 +1106,6 @@ torch::lazy::NodePtr NanToNum(const torch::lazy::Value& input,
                    std::move(lower_fn));
 }
 
-<<<<<<< HEAD
-<<<<<<< HEAD
 torch::lazy::NodePtr SLogDet(const torch::lazy::Value& input) {
   auto lower_fn = [](const XlaNode& node,
                      LoweringContext* loctx) -> XlaOpVector {

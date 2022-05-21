@@ -2524,6 +2524,12 @@ XLATensor XLATensor::slice(const XLATensor& input, int64_t dim, int64_t start,
   return input.CreateViewTensor(std::move(view_info));
 }
 
+std::tuple<XLATensor, XLATensor> XLATensor::slogdet(const XLATensor& input) {
+  torch::lazy::NodePtr node = SLogDet(input.GetIrValue());
+  return std::make_tuple(input.CreateFrom(torch::lazy::Value(node, 0)),
+                         input.CreateFrom(torch::lazy::Value(node, 1)));
+}
+
 XLATensor XLATensor::smooth_l1_loss(const XLATensor& input,
                                     const XLATensor& target, int64_t reduction,
                                     double beta) {
