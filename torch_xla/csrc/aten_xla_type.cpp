@@ -1835,6 +1835,12 @@ at::Tensor XLANativeFunctions::logsumexp(const at::Tensor& self,
       /*keep_reduced_dimensions=*/keepdim));
 }
 
+at::Tensor XLANativeFunctions::logdet(const at::Tensor& self) {
+  XLA_FN_COUNTER("xla::");
+  return bridge::AtenFromXlaTensor(
+      XLATensor::logdet(bridge::GetXlaTensor(self)));
+}
+
 at::Tensor XLANativeFunctions::xlogy(const at::Tensor& self,
                                      const at::Tensor& other) {
   XLA_FN_COUNTER("xla::");

@@ -23,8 +23,6 @@ xla::Shape CoshOutputShape(const torch::lazy::Value& input);
 
 xla::Shape InverseOutputShape(const torch::lazy::Value& input);
 
-xla::Shape LogdetOutputShape(const torch::lazy::Value& input);
-
 xla::Shape MaximumOutputShape(const torch::lazy::Value& input,
                               const torch::lazy::Value& other);
 
@@ -35,9 +33,6 @@ xla::Shape SignOutputShape(const torch::lazy::Value& input);
 xla::Shape SinOutputShape(const torch::lazy::Value& input);
 
 xla::Shape SinhOutputShape(const torch::lazy::Value& input);
-
-/* Blocked on https://github.com/pytorch/xla/issues/3596 */
-// xla::Shape SlogdetOutputShape(const torch::lazy::Value& input);
 
 xla::Shape TanOutputShape(const torch::lazy::Value& input);
 
