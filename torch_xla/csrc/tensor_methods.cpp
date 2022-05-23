@@ -1745,6 +1745,10 @@ void XLATensor::log1p_(XLATensor& input) {
   input.SetInPlaceIrValue(Log1p(input.GetIrValue()));
 }
 
+XLATensor XLATensor::logdet(const XLATensor& input) {
+  return input.CreateFrom(LogDet(input.GetIrValue()));
+}
+
 XLATensor XLATensor::logical_not(const XLATensor& input) {
   return input.CreateFrom(LogicalNot(input.GetIrValue()), at::ScalarType::Bool);
 }
