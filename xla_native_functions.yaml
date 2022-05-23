@@ -11,6 +11,7 @@ full_codegen:
   - cos
   - cosh
   - inverse
+  - logdet
   - maximum
   - sgn
   - sign
@@ -175,7 +176,6 @@ supported:
   - log10
   - log_sigmoid_backward
   - log_sigmoid_forward
-  - logdet
   - logical_and
   - logical_not
   - logical_or
