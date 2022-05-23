@@ -21,6 +21,8 @@ xla::Shape CosOutputShape(const torch::lazy::Value& input);
 
 xla::Shape CoshOutputShape(const torch::lazy::Value& input);
 
+xla::Shape FloorOutputShape(const torch::lazy::Value& input);
+
 xla::Shape InverseOutputShape(const torch::lazy::Value& input);
 
 xla::Shape LogdetOutputShape(const torch::lazy::Value& input);
@@ -30,6 +32,8 @@ xla::Shape MaximumOutputShape(const torch::lazy::Value& input,
 
 xla::Shape MinimumOutputShape(const torch::lazy::Value& input,
                               const torch::lazy::Value& other);
+                              
+xla::Shape ReciprocalOutputShape(const torch::lazy::Value& input);
 
 xla::Shape SgnOutputShape(const torch::lazy::Value& input);
 

@@ -1207,7 +1207,8 @@ XLATensor XLATensor::div(const XLATensor& input, const XLATensor& other,
     if (*rounding_mode == "trunc") {
       res = Trunc(res);
     } else if (*rounding_mode == "floor") {
-      res = Floor(res);
+      res =
+          torch::lazy::MakeNode<Floor>(res, std::vector<torch::lazy::Shape>());
     } else {
       XLA_CHECK(false)
           << "rounding_mode must be one of None, 'trunc', or 'floor'";
@@ -1350,10 +1351,6 @@ XLATensor XLATensor::flip(const XLATensor& input,
   XLA_CHECK_EQ(unique_dims.size(), dimensions.size());
   return input.CreateFrom(
       torch::lazy::MakeNode<Flip>(input.GetIrValue(), dimensions));
-}
-
-XLATensor XLATensor::floor(const XLATensor& input) {
-  return input.CreateFrom(Floor(input.GetIrValue()));
 }
 
 XLATensor XLATensor::fmod(const XLATensor& input, const XLATensor& other,
@@ -2266,10 +2263,6 @@ void XLATensor::random_(XLATensor& input, int64_t from, int64_t to) {
       GetIrValueForScalar(from, xla::PrimitiveType::S64, input.GetDevice()),
       GetIrValueForScalar(to, xla::PrimitiveType::S64, input.GetDevice()),
       GetRngSeed(input.GetDevice()), input_shape));
-}
-
-XLATensor XLATensor::reciprocal(const XLATensor& input) {
-  return input.CreateFrom(ReciprocalOp(input.GetIrValue()));
 }
 
 XLATensor XLATensor::reflection_pad2d(const XLATensor& input,

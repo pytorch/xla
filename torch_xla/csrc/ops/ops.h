@@ -102,8 +102,6 @@ torch::lazy::NodePtr Sqrt(const torch::lazy::Value& input);
 
 torch::lazy::NodePtr Rsqrt(const torch::lazy::Value& input);
 
-torch::lazy::NodePtr ReciprocalOp(const torch::lazy::Value& input);
-
 torch::lazy::NodePtr Prelu(const torch::lazy::Value& input,
                            const torch::lazy::Value& weight);
 
@@ -157,8 +155,6 @@ torch::lazy::NodePtr Ceil(const torch::lazy::Value& input);
 
 torch::lazy::NodePtr Celu(const torch::lazy::Value& input,
                           const at::Scalar& alpha);
-
-torch::lazy::NodePtr Floor(const torch::lazy::Value& input);
 
 torch::lazy::NodePtr Round(const torch::lazy::Value& input);
 
