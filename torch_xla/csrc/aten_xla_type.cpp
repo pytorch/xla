@@ -2077,16 +2077,6 @@ std::tuple<at::Tensor, at::Tensor> XLANativeFunctions::min(
                          bridge::AtenFromXlaTensor(std::get<1>(outputs)));
 }
 
-at::Tensor XLANativeFunctions::minimum(const at::Tensor& self,
-                                       const at::Tensor& other) {
-  XLA_FN_COUNTER("xla::");
-  return DoBinaryOp(self, other,
-                    [&](const XLATensor& xself, const XLATensor& xother,
-                        at::ScalarType dtype) {
-                      return XLATensor::min(xself, xother, dtype);
-                    });
-}
-
 at::Tensor XLANativeFunctions::mish(const at::Tensor& self) {
   XLA_FN_COUNTER("xla::");
   return bridge::AtenFromXlaTensor(XLATensor::mish(bridge::GetXlaTensor(self)));

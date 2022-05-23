@@ -13,6 +13,7 @@ full_codegen:
   - inverse
   - logdet
   - maximum
+  - minimum
   - sgn
   - sign
   - sin
@@ -201,7 +202,6 @@ supported:
   - min
   - min.dim
   - min.dim_min
-  - minimum
   - mish
   - mm
   - mse_loss
