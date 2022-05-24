@@ -587,8 +587,6 @@ class XLATensor : public c10::intrusive_ptr_target {
   // Flips (reverses) the values in the dimensions of the input tensor.
   static XLATensor flip(const XLATensor& input, absl::Span<const int64_t> dims);
 
-  static XLATensor floor(const XLATensor& input);
-
   static XLATensor fmod(
       const XLATensor& input, const XLATensor& other,
       c10::optional<at::ScalarType> logical_element_type = c10::nullopt);
@@ -942,8 +940,6 @@ class XLATensor : public c10::intrusive_ptr_target {
 
   static XLATensor randperm(int64_t n, const torch::lazy::BackendDevice& device,
                             at::ScalarType scalar_type);
-
-  static XLATensor reciprocal(const XLATensor& input);
 
   static XLATensor reflection_pad2d(const XLATensor& input,
                                     std::vector<int64_t> padding);
