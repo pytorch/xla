@@ -26,10 +26,9 @@ xla::Shape NodeOutputShape(c10::ArrayRef<torch::lazy::Value> values,
 
 Cat::Cat(c10::ArrayRef<torch::lazy::Value> values, int64_t dim,
          at::ScalarType dtype)
-    : XlaNode(
-          torch::lazy::OpKind(at::aten::cat), values,
-          [&]() { return NodeOutputShape(values, dim, dtype); },
-          /*num_outputs=*/1, torch::lazy::MHash(dim)),
+    : XlaNode(torch::lazy::OpKind(at::aten::cat), values,
+              [&]() { return NodeOutputShape(values, dim, dtype); },
+              /*num_outputs=*/1, torch::lazy::MHash(dim)),
       dim_(dim),
       dtype_(dtype) {}
 
