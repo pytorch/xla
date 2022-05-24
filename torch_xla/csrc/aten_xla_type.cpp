@@ -1414,12 +1414,6 @@ at::Tensor XLANativeFunctions::flip(const at::Tensor& self,
       XLATensor::flip(bridge::GetXlaTensor(self), XlaHelpers::I64List(dims)));
 }
 
-at::Tensor XLANativeFunctions::floor(const at::Tensor& self) {
-  XLA_FN_COUNTER("xla::");
-  return bridge::AtenFromXlaTensor(
-      XLATensor::floor(bridge::GetXlaTensor(self)));
-}
-
 at::Tensor XLANativeFunctions::fmod(const at::Tensor& self,
                                     const at::Tensor& other) {
   XLA_FN_COUNTER("xla::");
@@ -2623,12 +2617,6 @@ at::Tensor& XLANativeFunctions::random_(
   int64_t inc = (dtype == at::ScalarType::Long) ? 0 : 1;
   XLATensor::random_(self_tensor, 0, GetIntegerUpperLimitForType(dtype) + inc);
   return self;
-}
-
-at::Tensor XLANativeFunctions::reciprocal(const at::Tensor& self) {
-  XLA_FN_COUNTER("xla::");
-  return bridge::AtenFromXlaTensor(
-      XLATensor::reciprocal(bridge::GetXlaTensor(self)));
 }
 
 at::Tensor XLANativeFunctions::reflection_pad2d(const at::Tensor& self,

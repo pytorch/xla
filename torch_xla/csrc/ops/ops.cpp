@@ -80,7 +80,6 @@ PTXLA_UNARY_OP(Erfinv, at::aten::erfinv, xla::ErfInv);
 PTXLA_UNARY_OP(Sqrt, at::aten::sqrt, xla::Sqrt);
 PTXLA_UNARY_OP(Rsqrt, at::aten::rsqrt, xla::Rsqrt);
 PTXLA_UNARY_OP(Ceil, at::aten::ceil, xla::Ceil);
-PTXLA_UNARY_OP(Floor, at::aten::floor, xla::Floor);
 PTXLA_UNARY_OP(Round, at::aten::round, xla::RoundToEven);
 PTXLA_UNARY_OP(Not, at::aten::bitwise_not, xla::Not);
 PTXLA_UNARY_OP(IsNan, at::aten::isnan, xla::IsNan);
@@ -92,7 +91,9 @@ PTXLA_BINARY_OP(Atan2, at::aten::atan2, xla::Atan2);
 
 torch::lazy::NodePtr Trunc(const torch::lazy::Value& input) {
   std::vector<torch::lazy::Shape> shapes;
-  return Floor(torch::lazy::MakeNode<Abs>(input, std::move(shapes))) *
+  return torch::lazy::MakeNode<Floor>(
+             torch::lazy::MakeNode<Abs>(input, std::move(shapes)),
+             std::vector<torch::lazy::Shape>()) *
          torch::lazy::MakeNode<Sign>(input, std::vector<torch::lazy::Shape>());
 }
 
@@ -113,16 +114,6 @@ torch::lazy::NodePtr LogBase(const torch::lazy::Value& input,
   };
   return GenericOp(op, {input}, GetXlaShape(input), std::move(lower_fn),
                    /*num_outputs=*/1, torch::lazy::MHash(base));
-}
-
-torch::lazy::NodePtr ReciprocalOp(const torch::lazy::Value& input) {
-  auto lower_fn = [](const XlaNode& node,
-                     LoweringContext* loctx) -> XlaOpVector {
-    xla::XlaOp xla_input = loctx->GetOutputOp(node.operand(0));
-    return node.ReturnOp(BuildReciprocal(xla_input), loctx);
-  };
-  return GenericOp(torch::lazy::OpKind(at::aten::reciprocal), {input},
-                   GetXlaShape(input), std::move(lower_fn));
 }
 
 torch::lazy::NodePtr SgnOp(const torch::lazy::Value& input) {

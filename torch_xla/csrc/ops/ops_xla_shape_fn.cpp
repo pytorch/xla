@@ -41,6 +41,10 @@ xla::Shape CoshOutputShape(const torch::lazy::Value& input) {
   return GetXlaShape(input);
 }
 
+xla::Shape FloorOutputShape(const torch::lazy::Value& input) {
+  return GetXlaShape(input);
+}
+
 xla::Shape InverseOutputShape(const torch::lazy::Value& input) {
   return GetXlaShape(input);
 }
@@ -75,6 +79,10 @@ xla::Shape MinimumOutputShape(const torch::lazy::Value& input,
   };
   return InferOutputShape({GetXlaShape(input), GetXlaShape(other)},
                           lower_for_shape_fn);
+}
+
+xla::Shape ReciprocalOutputShape(const torch::lazy::Value& input) {
+  return GetXlaShape(input);
 }
 
 xla::Shape SgnOutputShape(const torch::lazy::Value& input) {

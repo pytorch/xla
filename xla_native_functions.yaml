@@ -10,10 +10,12 @@ full_codegen:
   - atanh
   - cos
   - cosh
+  - floor
   - inverse
   - logdet
   - maximum
   - minimum
+  - reciprocal
   - sgn
   - sign
   - sin
@@ -131,7 +133,6 @@ supported:
   - fill_.Scalar
   - fill_.Tensor
   - flip
-  - floor
   - fmod.Scalar
   - fmod.Tensor
   - frac
@@ -241,7 +242,6 @@ supported:
   - random_
   - random_.from
   - random_.to
-  - reciprocal
   - reflection_pad2d
   - reflection_pad2d_backward
   - relu
