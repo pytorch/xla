@@ -459,7 +459,7 @@ class XLATensor : public c10::intrusive_ptr_target {
   static std::vector<XLATensor> broadcast_tensors(
       absl::Span<const XLATensor> tensors);
 
-  static XLATensor cat(absl::Span<const XLATensor> tensors, int64_t dim);
+  static XLATensor cat(absl::Span<const XLATensor> tensors, int64_t dim, at::ScalarType dtype);
 
   static XLATensor ceil(const XLATensor& input);
 

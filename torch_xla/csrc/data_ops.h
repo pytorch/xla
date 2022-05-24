@@ -1,5 +1,7 @@
 #pragma once
 
+#include <c10/core/ScalarType.h>
+
 #include <vector>
 
 #include "absl/types/optional.h"
@@ -49,7 +51,8 @@ xla::XlaOp BuildStack(absl::Span<const xla::XlaOp> inputs, int64_t dim);
 
 // Concatenates a list of tensors along an existing dimension specified by the
 // dim argument.
-xla::XlaOp BuildCat(absl::Span<const xla::XlaOp> inputs, int64_t dim);
+xla::XlaOp BuildCat(absl::Span<const xla::XlaOp> inputs, int64_t dim,
+                    at::ScalarType dtype);
 
 // Repeats the input tensor along each dimension by the given number of repeats.
 xla::XlaOp BuildRepeat(xla::XlaOp input, absl::Span<const int64_t> repeats);
