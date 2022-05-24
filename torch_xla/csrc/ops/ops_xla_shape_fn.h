@@ -32,7 +32,7 @@ xla::Shape MaximumOutputShape(const torch::lazy::Value& input,
 
 xla::Shape MinimumOutputShape(const torch::lazy::Value& input,
                               const torch::lazy::Value& other);
-                              
+
 xla::Shape ReciprocalOutputShape(const torch::lazy::Value& input);
 
 xla::Shape SgnOutputShape(const torch::lazy::Value& input);
