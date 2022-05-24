@@ -93,10 +93,6 @@ class LoweringContext : public torch::lazy::LoweringContext {
     return emitted_outputs_;
   }
 
-  const OutputMap<xla::XlaOp> GetEmittedOutputs() const {
-    return emitted_outputs_;
-  }
-
  private:
   struct Parameter {
     xla::XlaOp param;

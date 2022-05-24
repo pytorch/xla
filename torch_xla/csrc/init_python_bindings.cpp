@@ -770,14 +770,14 @@ void BuildProfilerSubmodule(py::module* m) {
   py::class_<xla::profiler::ProfilerServer,
              std::unique_ptr<xla::profiler::ProfilerServer>>
       profiler_server_class(profiler, "ProfilerServer");
-  profiler.def("start_server",
-               [](int port) -> std::unique_ptr<xla::profiler::ProfilerServer> {
-                 auto server =
-                     absl::make_unique<xla::profiler::ProfilerServer>();
-                 server->Start(port);
-                 return server;
-               },
-               py::arg("port"));
+  profiler.def(
+      "start_server",
+      [](int port) -> std::unique_ptr<xla::profiler::ProfilerServer> {
+        auto server = absl::make_unique<xla::profiler::ProfilerServer>();
+        server->Start(port);
+        return server;
+      },
+      py::arg("port"));
 
   profiler.def(
       "trace",
@@ -1191,32 +1191,35 @@ void InitXlaModuleBindings(py::module m) {
   });
   m.def("_xla_metrics_report",
         []() { return xla::metrics_reader::CreateMetricReport(); });
-  m.def("_xla_tensors_report",
-        [](size_t nodes_threshold, const std::string& device) {
-          return GetLiveTensorsReport(nodes_threshold, device);
-        },
-        py::arg("nodes_threshold") = 100, py::arg("device") = "");
+  m.def(
+      "_xla_tensors_report",
+      [](size_t nodes_threshold, const std::string& device) {
+        return GetLiveTensorsReport(nodes_threshold, device);
+      },
+      py::arg("nodes_threshold") = 100, py::arg("device") = "");
   m.def("_xla_memory_info", [](const std::string& device) -> py::object {
     return GetMemoryInfo(device);
   });
-  m.def("_xla_set_use_full_mat_mul_precision",
-        [](bool use_full_mat_mul_precision) {
-          XlaHelpers::set_mat_mul_precision(
-              use_full_mat_mul_precision ? xla::PrecisionConfig::HIGHEST
-                                         : xla::PrecisionConfig::DEFAULT);
-        },
-        py::arg("use_full_mat_mul_precision") = true);
+  m.def(
+      "_xla_set_use_full_mat_mul_precision",
+      [](bool use_full_mat_mul_precision) {
+        XlaHelpers::set_mat_mul_precision(use_full_mat_mul_precision
+                                              ? xla::PrecisionConfig::HIGHEST
+                                              : xla::PrecisionConfig::DEFAULT);
+      },
+      py::arg("use_full_mat_mul_precision") = true);
 
   py::class_<xla::util::RecordReader, std::shared_ptr<xla::util::RecordReader>>(
       m, "RecordReader");
-  m.def("_xla_create_tfrecord_reader",
-        [](const std::string& path, const std::string& compression,
-           int64_t buffer_size) {
-          NoGilSection nogil;
-          return CreateRecordReader(path, compression, buffer_size);
-        },
-        py::arg("path"), py::arg("compression") = "",
-        py::arg("buffer_size") = 16 * 1024 * 1024);
+  m.def(
+      "_xla_create_tfrecord_reader",
+      [](const std::string& path, const std::string& compression,
+         int64_t buffer_size) {
+        NoGilSection nogil;
+        return CreateRecordReader(path, compression, buffer_size);
+      },
+      py::arg("path"), py::arg("compression") = "",
+      py::arg("buffer_size") = 16 * 1024 * 1024);
   m.def(
       "_xla_tfrecord_read",
       [](const std::shared_ptr<xla::util::RecordReader>& reader) -> py::object {
@@ -1473,17 +1476,13 @@ void InitXlaModuleBindings(py::module m) {
           }
           auto module = std::move(hlo_module_error.ValueOrDie());
 
-          auto collective_ops_creator =
-              xla::spmd::GetDefaultCollectiveOpsCreator(
-                  num_devices, /*num_replicas=*/num_replicas);
-
           xla::HloPassPipeline pass("spmd-partitioning");
           pass.AddPass<xla::HloVerifier>(/*layout_sensitive=*/false,
                                          /*allow_mixed_precision=*/false);
           pass.AddPass<xla::ShardingPropagation>(/*is_spmd=*/true);
           pass.AddPass<xla::spmd::SpmdPartitioner>(
-              num_devices, /*num_replicas=*/num_replicas, options,
-              collective_ops_creator);
+              /*num_partitions=*/num_devices,
+              /*num_replicas=*/num_replicas, options);
           pass.AddPass<xla::HloVerifier>(/*layout_sensitive=*/false,
                                          /*allow_mixed_precision=*/false);
           const auto& pass_status = pass.Run(module.get());
