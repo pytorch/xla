@@ -114,3 +114,12 @@ def _map_xla_env_vars_to_lazy():
 atexit.register(_prepare_to_exit)
 _apply_patches()
 _map_xla_env_vars_to_lazy()
+
+# Note [native_layer_norm_backward decomposition]
+# Register a decomposition for native_layer_norm_backward to XLA, through torchscript.
+# Pytorch core does not have a decomposition for native_layer_norm_backward in C++.
+# However, one exists in python, and we can torchscript it before using in XLA for perf.
+torch.jit._register_decomposition(
+    torch.ops.aten.native_layer_norm_backward,
+    torch.jit.script(torch._decomp.decompositions.native_layer_norm_backward).graph,
+)
