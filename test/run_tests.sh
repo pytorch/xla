@@ -85,7 +85,7 @@ function run_pjrt {
   PJRT_DEVICE=CPU run_test "$@"
 }
 
-function run_all_tests {
+function run_op_tests {
   run_dynamic python3 "$CDIR/../../test/test_view_ops.py" "$@" -v TestViewOpsXLA
   run_test python3 "$CDIR/../../test/test_torch.py" "$@" -v TestTorchDeviceTypeXLA
   run_dynamic python3 "$CDIR/../../test/test_torch.py" "$@" -v TestDevicePrecisionXLA
@@ -100,16 +100,6 @@ function run_all_tests {
   run_async_rng python3 "$CDIR/test_operations.py" "$@" --verbosity=$VERBOSITY
   run_test python3 "$CDIR/test_grad_checkpoint.py"
   run_pjrt python3 "$CDIR/test_operations.py" "$@" --verbosity=$VERBOSITY
-  run_test python3 "$CDIR/test_mp_replication.py"
-  run_test python3 "$CDIR/test_mp_all_to_all.py"
-  run_test python3 "$CDIR/test_mp_collective_permute.py"
-  run_test python3 "$CDIR/test_mp_all_gather.py"
-  run_test python3 "$CDIR/test_mp_reduce_scatter.py"
-  run_test python3 "$CDIR/test_mp_distributed_mm.py"
-  run_test python3 "$CDIR/test_mp_rendezvous.py"
-  run_test python3 "$CDIR/test_mp_save.py"
-  run_test python3 "$CDIR/test_mp_mesh_reduce.py"
-  run_test python3 "$CDIR/test_mp_sync_batch_norm.py"
   run_test python3 "$CDIR/test_async_closures.py"
   run_test python3 "$CDIR/test_xla_dist.py"
   run_test python3 "$CDIR/test_profiler.py"
@@ -124,8 +114,28 @@ function run_all_tests {
   run_xla_ir_debug python3 "$CDIR/test_env_var_mapper.py"
 }
 
+function run_mp_op_tests {
+  run_test python3 "$CDIR/test_mp_replication.py"
+  run_test python3 "$CDIR/test_mp_all_to_all.py"
+  run_test python3 "$CDIR/test_mp_collective_permute.py"
+  run_test python3 "$CDIR/test_mp_all_gather.py"
+  run_test python3 "$CDIR/test_mp_reduce_scatter.py"
+  run_test python3 "$CDIR/test_mp_distributed_mm.py"
+  run_test python3 "$CDIR/test_mp_rendezvous.py"
+  run_test python3 "$CDIR/test_mp_save.py"
+  run_test python3 "$CDIR/test_mp_mesh_reduce.py"
+  run_test python3 "$CDIR/test_mp_sync_batch_norm.py"
+}
+
+function run_tests {
+  run_op_tests
+  if [[ "$XLA_SKIP_MP_OP_TESTS" != "1" ]]; then
+    run_mp_op_tests
+  fi
+}
+
 if [ "$LOGFILE" != "" ]; then
-  run_all_tests 2>&1 | tee $LOGFILE
+  run_tests 2>&1 | tee $LOGFILE
 else
-  run_all_tests
+  run_tests
 fi
