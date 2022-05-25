@@ -151,9 +151,14 @@ xla::XlaOp BuildStack(absl::Span<const xla::XlaOp> inputs, int64_t dim) {
   return xla::ConcatInDim(inputs[0].builder(), reshaped_inputs, dim);
 }
 
-xla::XlaOp BuildCat(absl::Span<const xla::XlaOp> inputs, int64_t dim) {
+xla::XlaOp BuildCat(absl::Span<const xla::XlaOp> inputs, int64_t dim,
+                    at::ScalarType dtype) {
   XLA_CHECK_GT(inputs.size(), 0);
-  return xla::ConcatInDim(inputs[0].builder(), inputs, dim);
+  std::vector<xla::XlaOp> casted_inputs;
+  for (const auto& op : inputs) {
+    casted_inputs.push_back(CastToScalarType(op, dtype));
+  }
+  return xla::ConcatInDim(inputs[0].builder(), casted_inputs, dim);
 }
 
 xla::XlaOp BuildRepeat(xla::XlaOp input, absl::Span<const int64_t> repeats) {

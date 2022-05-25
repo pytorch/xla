@@ -981,7 +981,8 @@ std::vector<XLATensor> XLATensor::broadcast_tensors(
   return tensors.front().MakeOutputTensors(node);
 }
 
-XLATensor XLATensor::cat(absl::Span<const XLATensor> tensors, int64_t dim) {
+XLATensor XLATensor::cat(absl::Span<const XLATensor> tensors, int64_t dim,
+                         at::ScalarType dtype) {
   // Shape checks for cat:
   // - If not empty, every tensor shape must be the same.
   // - Empty tensor passes but is simply ignore in implementation,
@@ -1000,7 +1001,8 @@ XLATensor XLATensor::cat(absl::Span<const XLATensor> tensors, int64_t dim) {
     dim = torch::lazy::GetCanonicalDimensionIndex(dim, tensor_shape.rank());
     tensor_shape.DeleteDimension(dim);
     if (!shapes.empty()) {
-      XLA_CHECK(xla::ShapeUtil::Compatible(shapes.back(), tensor_shape))
+      XLA_CHECK(xla::ShapeUtil::CompatibleIgnoringElementType(shapes.back(),
+                                                              tensor_shape))
           << shapes.back() << " vs. " << tensor_shape;
     }
     shapes.push_back(tensor_shape);
@@ -1009,7 +1011,8 @@ XLATensor XLATensor::cat(absl::Span<const XLATensor> tensors, int64_t dim) {
   if (values.empty()) {
     return tensors[0];
   }
-  return tensors[0].CreateFrom(torch::lazy::MakeNode<Cat>(values, dim));
+  return tensors[0].CreateFrom(torch::lazy::MakeNode<Cat>(values, dim, dtype),
+                               dtype);
 }
 
 XLATensor XLATensor::ceil(const XLATensor& input) {
