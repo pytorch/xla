@@ -72,7 +72,7 @@ xla::XlaComputation BuildNodeComputation(
   for (auto& xla_op : loctx.LowerNode(node)) {
     loctx.AddResult(xla_op);
   }
-  return ConsumeValue(loctx.Build());
+  return ConsumeValue(loctx.BuildXla());
 }
 
 torch::lazy::hash_t GetNodesKeySeed(const std::string& device,

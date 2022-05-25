@@ -12,6 +12,7 @@
 #include "tensorflow/compiler/xla/xla_client/computation_client.h"
 #include "tensorflow/core/platform/macros.h"
 #include "torch/csrc/lazy/backend/backend_data.h"
+#include "torch/csrc/lazy/backend/lowering_context.h"
 #include "torch/csrc/lazy/core/ir_util.h"
 #include "torch_xla/csrc/device.h"
 #include "torch_xla/csrc/ir.h"
@@ -19,12 +20,12 @@
 
 namespace torch_xla {
 
-class LoweringContext {
+class LoweringContext : public torch::lazy::LoweringContext {
  public:
   explicit LoweringContext(const std::string& name,
                            torch::lazy::BackendDevice device);
   LoweringContext(const std::string& name, torch::lazy::BackendDevice device,
-                  absl::Span<const torch::lazy::Node* const> post_order,
+                  c10::ArrayRef<const torch::lazy::Node*> post_order,
                   torch::lazy::Util::EmissionMap emit_status);
 
   xla::XlaBuilder* builder() { return &builder_; }
@@ -43,10 +44,6 @@ class LoweringContext {
 
   const std::vector<size_t>& GetParameterSequence() const;
 
-  // Adds the output of a given operation to the result tuple. Returns the index
-  // of the output within the tuple.
-  size_t AddResult(xla::XlaOp op);
-
   xla::XlaOp GetResult(size_t index) const;
 
   void SetResult(size_t index, xla::XlaOp op);
@@ -63,19 +60,34 @@ class LoweringContext {
 
   // Build the XLA computation capturing all the operations created with the
   // embedded XLA builder (returned by the builder() API).
-  xla::StatusOr<xla::XlaComputation> Build();
+  xla::StatusOr<xla::XlaComputation> BuildXla();
 
   // Build the XLA computation capturing all the operations created with the
   // embedded XLA builder (returned by the builder() API).
   // Uses root as return value forthe computation. It is an error to use this
   // API after having called the AddResult() API.
-  xla::StatusOr<xla::XlaComputation> Build(xla::XlaOp root);
+  xla::StatusOr<xla::XlaComputation> BuildXla(xla::XlaOp root);
 
   // Lowers a single IR node. All the inputs to the node must have a lowering
   // before calling this API. Returns the generated XLA operations.
   XlaOpVector LowerNode(const torch::lazy::Node* node);
 
-  size_t GetEmittedNodeCount() const { return emit_status_.size(); }
+  void SetUpAlias(const std::vector<int64_t>& output_index,
+                  int64_t param_number, const std::vector<int64_t>& param_index,
+                  bool must_alias = false) override;
+
+  bool CheckResultShape(const torch::lazy::BackendDataPtr& parameter_data,
+                        size_t result_idx) override;
+
+  size_t AddResult(const torch::lazy::Output& output) override;
+
+  size_t AddResult(xla::XlaOp op);
+
+  void AddParameter(const torch::lazy::Output& output, size_t index,
+                    const torch::lazy::Shape& shape,
+                    const std::string& name) override;
+
+  torch::lazy::ComputationPtr Build() override;
 
  private:
   struct Parameter {
@@ -88,14 +100,10 @@ class LoweringContext {
                                                 const char* error_msg);
 
   xla::XlaBuilder builder_;
-  torch::lazy::BackendDevice device_;
-  std::vector<torch::lazy::BackendDataPtr> parameters_;
   std::unordered_map<torch::lazy::BackendData::Handle, Parameter>
       parameters_map_;
-  std::vector<size_t> parameter_sequence_;
   std::vector<xla::XlaOp> root_tuple_;
   OutputMap<xla::XlaOp> emitted_outputs_;
-  torch::lazy::Util::EmissionMap emit_status_;
-};
+};  // namespace torch_xla
 
 }  // namespace torch_xla

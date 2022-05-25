@@ -248,11 +248,10 @@ std::string DumpUtil::ToHlo(c10::ArrayRef<torch::lazy::Value> values,
                             const torch::lazy::BackendDevice& device) {
   LoweringContext lowering_ctx("IrToHlo", device);
   for (auto& ir_value : values) {
-    xla::XlaOp root = lowering_ctx.GetOutputOp(
+    lowering_ctx.AddResult(
         torch::lazy::Output(ir_value.node.get(), ir_value.index));
-    lowering_ctx.AddResult(root);
   }
-  xla::XlaComputation computation = ConsumeValue(lowering_ctx.Build());
+  xla::XlaComputation computation = ConsumeValue(lowering_ctx.BuildXla());
   return ConsumeValue(xla::util::GetComputationHloText(computation));
 }
 
