@@ -4269,6 +4269,28 @@ TEST_F(AtenXlaTensorTest, TestCat) {
   }
 }
 
+TEST_F(AtenXlaTensorTest, TestCatTypePromotion) {
+  for (torch::ScalarType scalar_type_1 :
+       {torch::kHalf, torch::kFloat, torch::kDouble, torch::kShort, torch::kInt,
+        torch::kLong}) {
+    for (torch::ScalarType scalar_type_2 :
+         {torch::kHalf, torch::kFloat, torch::kDouble, torch::kShort,
+          torch::kInt, torch::kLong}) {
+      torch::Tensor a =
+          torch::ones({2, 1, 3}, torch::TensorOptions(scalar_type_1));
+      torch::Tensor b =
+          torch::ones({2, 2, 3}, torch::TensorOptions(scalar_type_2));
+      torch::Tensor c = torch::cat({a, b}, /*dim=*/1);
+      ForEachDevice([&](const torch::Device& device) {
+        torch::Tensor xla_a = CopyToDevice(a, device);
+        torch::Tensor xla_b = CopyToDevice(b, device);
+        torch::Tensor xla_c = torch::cat({xla_a, xla_b}, /*dim=*/1);
+        EXPECT_EQ(c.scalar_type(), xla_c.scalar_type());
+      });
+    }
+  };
+}
+
 TEST_F(AtenXlaTensorTest, TestUnbind) {
   torch::Tensor input =
       torch::rand({4, 3, 7}, torch::TensorOptions(torch::kFloat));

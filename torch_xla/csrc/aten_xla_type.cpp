@@ -2,6 +2,7 @@
 #include <ATen/Operators.h>
 #include <ATen/native/BinaryOps.h>
 #include <ATen/native/CPUFallback.h>
+#include <ATen/native/TypeProperties.h>
 
 #include <mutex>
 
@@ -1002,8 +1003,8 @@ at::Tensor XLANativeFunctions::bmm(const at::Tensor& self,
 
 at::Tensor XLANativeFunctions::cat(at::TensorList tensors, int64_t dim) {
   XLA_FN_COUNTER("xla::");
-  return bridge::AtenFromXlaTensor(
-      XLATensor::cat(bridge::GetXlaTensors(tensors), dim));
+  return bridge::AtenFromXlaTensor(XLATensor::cat(
+      bridge::GetXlaTensors(tensors), dim, at::native::result_type(tensors)));
 }
 
 at::Tensor XLANativeFunctions::ceil(const at::Tensor& self) {
