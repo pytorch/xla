@@ -125,7 +125,7 @@ class XLATensor : public c10::intrusive_ptr_target {
 
   static torch::lazy::Value GetDeviceDataIrValue(
       const at::Scalar& value, xla::PrimitiveType type,
-      const torch::lazy::BackendDevice& device);
+      const torch::lazy::BackendDevice& device, bool transfer_async = false);
   // Use with caution, constant will cause more frequent recompilation
   // compared to the device_data.
   static torch::lazy::Value GetIrValueForConstant(const at::Scalar& value,

@@ -85,6 +85,11 @@ function run_pjrt {
   PJRT_DEVICE=CPU run_test "$@"
 }
 
+function run_async_scalar {
+  echo "Running in Async Scalar Upload mode: $@"
+  XLA_TRANSFER_SCALAR_ASYNC=1 run_test "$@"
+}
+
 function run_op_tests {
   run_dynamic python3 "$CDIR/../../test/test_view_ops.py" "$@" -v TestViewOpsXLA
   run_test python3 "$CDIR/../../test/test_torch.py" "$@" -v TestTorchDeviceTypeXLA
@@ -98,6 +103,7 @@ function run_op_tests {
   run_opbyop python3 "$CDIR/test_operations.py" "$@" --verbosity=$VERBOSITY
   run_eager_debug python3 "$CDIR/test_operations.py" "$@" --verbosity=$VERBOSITY
   run_async_rng python3 "$CDIR/test_operations.py" "$@" --verbosity=$VERBOSITY
+  run_async_scalar python3 "$CDIR/test_operations.py" "$@" --verbosity=$VERBOSITY
   run_test python3 "$CDIR/test_grad_checkpoint.py"
   run_pjrt python3 "$CDIR/test_operations.py" "$@" --verbosity=$VERBOSITY
   run_test python3 "$CDIR/test_async_closures.py"

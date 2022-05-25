@@ -207,6 +207,14 @@ class XlaDataCacheArena {
       device_caches_;
 };
 
+bool ShouldTransferScalarAsync() {
+  // TODO: Test the transfer_async with different models, and if it helps
+  // make it default
+  static const bool transfer_async =
+      xla::sys_util::GetEnvBool("XLA_TRANSFER_SCALAR_ASYNC", false);
+  return transfer_async;
+}
+
 XlaDataCacheArena::XlaDataCache* GetXlaDataCache(
     const torch::lazy::BackendDevice& device) {
   static const size_t kMaxCacheSize =
@@ -220,18 +228,19 @@ torch::lazy::Value IrValueFromScalar(const at::Scalar& value,
                                      const torch::lazy::BackendDevice& device,
                                      bool transfer_async) {
   at::Tensor tensor = at::scalar_tensor(value, at::TensorOptions(scalar_type));
-  torch::lazy::BackendDataPtr device_data =
-      TensorToXlaData(tensor, device, transfer_async);
+  torch::lazy::BackendDataPtr device_data = TensorToXlaData(
+      tensor, device, transfer_async || ShouldTransferScalarAsync());
   return torch::lazy::MakeNode<DeviceData>(std::move(device_data));
 }
 
 torch::lazy::BackendDataPtr GetDeviceData(
-    const at::Tensor& tensor, const torch::lazy::BackendDevice& device) {
+    const at::Tensor& tensor, const torch::lazy::BackendDevice& device,
+    bool transfer_async = false) {
   XlaDataCacheArena::XlaDataCache* cache = GetXlaDataCache(device);
   torch::lazy::BackendDataPtr device_data = cache->Get(tensor);
   if (device_data == nullptr) {
     at::Tensor tensor_copy = torch::lazy::CopyTensor(tensor);
-    device_data = TensorToXlaData(tensor_copy, device);
+    device_data = TensorToXlaData(tensor_copy, device, transfer_async);
     cache->Add(std::move(tensor_copy), device_data);
     XLA_COUNTER("DeviceDataCacheMiss", 1);
   }
@@ -240,14 +249,14 @@ torch::lazy::BackendDataPtr GetDeviceData(
 
 torch::lazy::BackendDataPtr GetDeviceData(
     const at::Scalar& value, at::ScalarType scalar_type,
-    const torch::lazy::BackendDevice& device) {
+    const torch::lazy::BackendDevice& device, bool transfer_async = false) {
   // Workaround since at::scalar_tensor doesn't support bfloat16 yet.
   at::Tensor t = at::scalar_tensor(
       value, at::TensorOptions(scalar_type == at::ScalarType::BFloat16
                                    ? at::ScalarType::Float
                                    : scalar_type));
   if (scalar_type == at::ScalarType::BFloat16) t = t.to(scalar_type);
-  return GetDeviceData(t, device);
+  return GetDeviceData(t, device, transfer_async);
 }
 
 // Routing values to device data maximizes the changes for compilation cache
@@ -767,7 +776,8 @@ torch::lazy::Value XLATensor::GetIrValueForTensor(
       return ScalarOp(std::move(value),
                       MakeXlaPrimitiveType(tensor.scalar_type(), &device));
     }
-    data = GetDeviceData(tensor, device);
+    data = GetDeviceData(tensor, device,
+                         /*transfer_async=*/ShouldTransferScalarAsync());
     read_only = true;
   } else {
     XLA_TIMED("IrValueTensorToXlaData");
@@ -778,9 +788,9 @@ torch::lazy::Value XLATensor::GetIrValueForTensor(
 
 torch::lazy::Value XLATensor::GetDeviceDataIrValue(
     const at::Scalar& value, xla::PrimitiveType type,
-    const torch::lazy::BackendDevice& device) {
+    const torch::lazy::BackendDevice& device, bool transfer_async) {
   torch::lazy::BackendDataPtr data =
-      GetDeviceData(value, TensorTypeFromXlaType(type), device);
+      GetDeviceData(value, TensorTypeFromXlaType(type), device, transfer_async);
   // TODO: consider using upstream info class if possible
   UnwrapXlaData(data)->SetInfo(
       std::make_shared<DeviceDataInfo>(/*tensor_id=*/-1, /*read_only=*/true));
@@ -804,7 +814,8 @@ torch::lazy::Value XLATensor::GetIrValueForScalar(
   if (IsSpecialScalar(value)) {
     return ScalarOp(std::move(value), type);
   }
-  return GetDeviceDataIrValue(value, type, device);
+  return GetDeviceDataIrValue(value, type, device,
+                              /*transfer_async=*/ShouldTransferScalarAsync());
 }
 
 torch::lazy::Value XLATensor::GetIrValueForScalar(
