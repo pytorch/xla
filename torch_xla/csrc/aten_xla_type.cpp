@@ -71,10 +71,9 @@ void CheckSubOperandTypes(at::ScalarType type1, at::ScalarType type2) {
 
 c10::optional<at::ScalarType> PromoteIntegralType(
     at::ScalarType src_dtype, const c10::optional<at::ScalarType>& opt_dtype) {
-  return opt_dtype.has_value()
-             ? opt_dtype.value()
-             : at::isIntegralType(src_dtype, /*includeBool=*/true) ? at::kLong
-                                                                   : opt_dtype;
+  return opt_dtype.has_value() ? opt_dtype.value()
+         : at::isIntegralType(src_dtype, /*includeBool=*/true) ? at::kLong
+                                                               : opt_dtype;
 }
 
 bool IsTypeWithLargerRangeThanLong(torch::ScalarType dtype) {
@@ -1441,11 +1440,10 @@ at::Tensor XLANativeFunctions::frac(const at::Tensor& self) {
 
 at::Tensor XLANativeFunctions::gather(const at::Tensor& self, int64_t dim,
                                       const at::Tensor& index,
-                                      bool sparse_grad) {
+                                      bool /* sparse_grad */) {
   XLA_FN_COUNTER("xla::");
-  return bridge::AtenFromXlaTensor(
-      XLATensor::gather(bridge::GetXlaTensor(self), dim,
-                        bridge::GetXlaTensor(index), sparse_grad));
+  return bridge::AtenFromXlaTensor(XLATensor::gather(
+      bridge::GetXlaTensor(self), dim, bridge::GetXlaTensor(index)));
 }
 
 at::Tensor XLANativeFunctions::ge(const at::Tensor& self,

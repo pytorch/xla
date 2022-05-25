@@ -24,12 +24,19 @@ namespace {
 
 bool IsSparseGather(const xla::Shape& input_shape,
                     const xla::Shape& index_shape, int64_t dim) {
-  static int dense_gather_factor =
-      xla::sys_util::GetEnvInt("XLA_DENSE_GATHER_FACTOR", 100);
-  int64_t input_elements = xla::ShapeUtil::ElementsIn(input_shape);
-  int64_t index_elements = xla::ShapeUtil::ElementsIn(index_shape);
-  // Simple heuristic. Might need fine tuning.
-  return index_elements < input_elements / dense_gather_factor;
+  // Conservative sparsity check for multi-platform support
+  // to avoid gather on a single float on TPU.
+  XlaDeviceType hw_type = static_cast<XlaDeviceType>(GetCurrentDevice().type());
+  if (hw_type == XlaDeviceType::TPU) {
+    // XLA_DENSE_GATHER_FACTOR can be used to finely control the
+    // sparsity check.
+    static int dense_gather_factor =
+        xla::sys_util::GetEnvInt("XLA_DENSE_GATHER_FACTOR", 8192);
+    int64_t input_elements = input_shape.dimensions()[dim];
+    return input_elements < dense_gather_factor;
+  }
+  // Use sparse gather for non-TPU platforms.
+  return true;
 }
 
 }  // namespace
