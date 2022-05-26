@@ -18,6 +18,13 @@ MODEL_OPTS = {
         'dest': 'ckpt_consolidation',
         'action': 'store_false',
     },
+    '--compute_dtype': {
+        'choices': ['float32', 'float16', 'bfloat16'],
+        'default': 'float32',
+    },
+    '--fp32_reduce_scatter': {
+        'action': 'store_true',
+    },
 }
 
 FLAGS = args_parse.parse_common_options(
@@ -142,7 +149,10 @@ def train_mnist(flags, **kwargs):
   model = MNIST()
   # Wrap the model with FSDP
   fsdp_wrap = lambda m: FSDP(
-      m.to(device), flatten_parameters=flags.flatten_parameters)
+      m.to(device),
+      compute_dtype=getattr(torch, flags.compute_dtype),
+      fp32_reduce_scatter=flags.fp32_reduce_scatter,
+      flatten_parameters=flags.flatten_parameters)
   # Apply gradient checkpointing to sub-modules if specified
   grad_ckpt_wrap = checkpoint_module if flags.use_gradient_checkpointing else (
       lambda x: x)
