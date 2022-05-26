@@ -337,3 +337,5 @@ supported:
 autograd:
   - max_pool2d
   - max_pool3d
+  - native_layer_norm
+  - native_group_norm
