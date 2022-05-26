@@ -45,21 +45,26 @@ def checkpoint_module(module):
   return module
 
 
-def dummy_all_gather(value, dim=0):
+def dummy_all_gather(value, dim=0, groups=None):
   """A dummy op for debugging with the same output shape as all_gather"""
   repeat_num = [1] * value.dim()
   repeat_num[dim] = xm.xrt_world_size()
   return value.repeat(tuple(repeat_num))
 
 
-def dummy_all_reduce(reduce_type, inputs, scale=1.0):
+def dummy_all_reduce(reduce_type, inputs, scale=1.0, groups=None):
   """A dummy op for debugging with the same output shape as all_reduce"""
   if isinstance(inputs, torch.Tensor):
     return inputs * scale
   return [t.mul_(scale) for t in inputs]
 
 
-def dummy_reduce_scatter(reduce_type, input, scale, scatter_dim, shard_count):
+def dummy_reduce_scatter(reduce_type,
+                         input,
+                         scale,
+                         scatter_dim,
+                         shard_count,
+                         groups=None):
   """A dummy op for debugging with the same output shape as reduce_scatter"""
   assert shard_count == xm.xrt_world_size()
   full_size = input.size(scatter_dim)

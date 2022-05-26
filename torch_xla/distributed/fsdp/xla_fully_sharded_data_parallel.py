@@ -36,6 +36,8 @@ import torch_xla.core.xla_model as xm
 from .xla_flatten_params_wrapper import XlaFlattenParamsWrapper
 from .utils import dummy_all_gather, dummy_all_reduce, dummy_reduce_scatter
 
+FLOAT_DTYPES = [torch.float32, torch.float16, torch.bfloat16]
+
 
 class TrainingState(Enum):
   """
@@ -154,6 +156,40 @@ class XlaFullyShardedDataParallel(nn.Module):
           entire backward pass and should therefore only moderately increase
           the execution time. When setting to ``True``, this option may help
           prevent undesired fusion in backward pass and save more memory.
+      disable_reshard_on_root (bool, Optional):
+          If ``True``, ``reshard_after_forward`` will be set to ``False`` if
+          the module is a FSDP root module to improve performance. For some
+          cases, we do not reshard the full parameters of an FSDP root module
+          since those parameters are needed immediately for the backward pass.
+          If ``False``, the performance will be lower, but it is needed because
+          it helps to save memory. Consider a case that an FSDP root module is
+          a submodule of a model. Backward pass may not start immediate after
+          the FSDP root module finishes its forward. So, reshard the parameters
+          for the FSDP root modules can help to save memory in this case.
+          Default: True.
+      compute_dtype (torch.dtype, Optional):
+          dtype for full parameters for computation. This defaults to
+          ``torch.float32`` but can be set to ``torch.float16`` or
+          ``torch.bfloat16``. The sharded parameters will always be in FP32.
+      buffer_dtype (torch.dtype, Optional):
+          dtype for buffers for computation. This defaults to ``compute_dtype``.
+      fp32_reduce_scatter (bool, Optional):
+          if ``True``, then reduce-scatter gradients in FP32. This is only
+          relevant when *``compute_dtype``* is not ``torch.float32``.
+      sharding_groups (list, Optional):
+          If specified, FSDP will use this ``sharding_groups`` for all-gather
+          and reduce-scatter ops in full parameter construction and gradient
+          sharding. This can be useful for mixing FSDP with model parallelism
+          such as Megatron. One must also specify ``sharding_rank`` and
+          ``sharding_world_size`` when using ``sharding_groups``.
+      sharding_rank (int, Optional):
+          The rank of this sharding instance. This must be specified if
+          ``sharding_groups`` is provided. Otherwise it defaults to
+          ``xm.get_ordinal()``.
+      sharding_world_size (int, Optional):
+          The world_size of this sharding instance. This must be specified if
+          ``sharding_groups`` is provided. Otherwise it defaults to
+          ``xm.xrt_world_size()``.
   """
 
   def __init__(
@@ -165,6 +201,13 @@ class XlaFullyShardedDataParallel(nn.Module):
       optimization_barrier_in_forward: bool = True,
       optimization_barrier_in_backward: bool = True,
       mark_step_on_finalization: bool = False,
+      disable_reshard_on_root: bool = True,
+      compute_dtype: Optional[torch.dtype] = None,
+      buffer_dtype: Optional[torch.dtype] = None,
+      fp32_reduce_scatter: bool = False,
+      sharding_groups: Optional[List[List[int]]] = None,
+      sharding_rank: Optional[int] = None,
+      sharding_world_size: Optional[int] = None,
       _shard_size_multiple: int = 128,
       _pin_layout_in_all_reduce: bool = False,
       _pin_layout_in_all_gather: bool = False,
@@ -196,13 +239,23 @@ class XlaFullyShardedDataParallel(nn.Module):
           "instead of using any of its submodules or its weights).")
 
     super().__init__()
-    self.rank = xm.get_ordinal()
-    self.world_size = xm.xrt_world_size()
     self.reshard_after_forward = self._orig_reshard_after_forward = reshard_after_forward
+    self.disable_reshard_on_root = disable_reshard_on_root
     self.flatten_parameters = flatten_parameters
     self.optimization_barrier_in_forward = optimization_barrier_in_forward
     self.optimization_barrier_in_backward = optimization_barrier_in_backward
     self.mark_step_on_finalization = mark_step_on_finalization
+
+    if compute_dtype is not None and compute_dtype not in FLOAT_DTYPES:
+      raise ValueError(
+          f"compute_dtype must be one of {FLOAT_DTYPES}, not {compute_dtype}")
+    self.compute_dtype = compute_dtype or torch.float32
+    if buffer_dtype is not None and buffer_dtype not in FLOAT_DTYPES:
+      raise ValueError(
+          f"buffer_dtype must be one of {FLOAT_DTYPES}, not {buffer_dtype}")
+    self.buffer_dtype = buffer_dtype or self.compute_dtype
+    self.fp32_reduce_scatter = fp32_reduce_scatter
+
     # Make sharded parameter sizes a multiple of 128 for efficient all_gather ops on TPUs
     # (see https://github.com/pytorch/xla/issues/3510#issuecomment-1101739677 for details)
     # TODO (ronghanghu): change the default to 1 after https://github.com/pytorch/xla/issues/3510 is resolved
@@ -229,6 +282,21 @@ class XlaFullyShardedDataParallel(nn.Module):
       self.optimization_barrier_op = lambda *args: None
     else:
       self.optimization_barrier_op = xm.optimization_barrier_
+
+    # Allow specifying groups for the sharding collective ops, useful for mixing
+    # FSDP data parallelism with model parallelism (e.g. Megatron)
+    self.sharding_groups = sharding_groups
+    if sharding_groups is None:
+      self.rank = xm.get_ordinal()
+      self.world_size = xm.xrt_world_size()
+    else:
+      if sharding_rank is None or sharding_world_size is None:
+        raise ValueError(
+            "sharding_rank and sharding_world_size must be provided when sharding_groups is specified"
+        )
+      self.rank = sharding_rank
+      self.world_size = sharding_world_size
+
     # Options for debugging
     # - set _debug_dummy_forward_pass=True to check for parameter-only memory consumption
     # - set _debug_msg="xxx" and _debug_print=True to distinguish different FSDP instance
@@ -282,6 +350,8 @@ class XlaFullyShardedDataParallel(nn.Module):
 
     # Shard module parameters in place
     self._shard_parameters_(params_to_shard)
+    # Cast the module buffers to the specified buffer_dtype
+    self._cast_buffers(self.buffer_dtype)
 
     # Make sure all parameters are sharded.
     for n, p in self.named_parameters():
@@ -351,6 +421,7 @@ class XlaFullyShardedDataParallel(nn.Module):
       self,
       max_norm: Union[float, int],
       norm_type: Union[float, int] = 2.0,
+      groups: Optional[List[List[int]]] = None,
   ) -> torch.Tensor:
     """
     Clip all gradients at this point in time. The norm is computed over all
@@ -361,6 +432,9 @@ class XlaFullyShardedDataParallel(nn.Module):
         max_norm (float or int): max norm of the gradients
         norm_type (float or int): type of the used p-norm. Can be ``'inf'``
             for infinity norm.
+        groups (list, optional): A list of list, representing the replica
+            groups for the all-reduce operation to compute global norms.
+            See `xm.all_reduce` for details.
 
     Returns:
         Total norm of the parameters (viewed as a single vector).
@@ -384,9 +458,10 @@ class XlaFullyShardedDataParallel(nn.Module):
     # Computes the max norm for this shard's gradients and sync's across workers
     local_norm = _calc_grad_norm(params_with_grad, norm_type)
     if norm_type == inf:
-      total_norm = self.all_reduce_op(xm.REDUCE_MAX, local_norm)
+      total_norm = self.all_reduce_op(xm.REDUCE_MAX, local_norm, groups=groups)
     else:
-      total_norm = self.all_reduce_op(xm.REDUCE_SUM, local_norm**norm_type)
+      total_norm = self.all_reduce_op(
+          xm.REDUCE_SUM, local_norm**norm_type, groups=groups)
       total_norm = total_norm**(1.0 / norm_type)
 
     # Now multiply each grad by (max_norm/total_norm), same as torch 1.7 https://tinyurl.com/3wtxhhqq)
@@ -431,7 +506,7 @@ class XlaFullyShardedDataParallel(nn.Module):
       # When freeing the full parameters, we point their `.data` to this placeholder
       # (so that the XLA compiler can reuse the memory storage).
       self._dummy_data_placeholder = torch.zeros(
-          1, device=params_to_shard[0].device)
+          1, dtype=self.compute_dtype, device=params_to_shard[0].device)
 
     # get the module names of each full parameter to shard
     params_to_shard_set = set(params_to_shard)
@@ -507,11 +582,49 @@ class XlaFullyShardedDataParallel(nn.Module):
     tensor = tensor[begin:end].clone()
     return tensor
 
+  @torch.no_grad()
+  def _cast_buffers(self,
+                    dtype: Optional[torch.dtype] = None,
+                    memo: Optional[Set] = None) -> None:
+    """Move all buffers to the given *dtype*.
+
+    If *dtype* is not given, then it will default to ``self.buffer_dtype``.
+    In the case of nested FSDP instances, we will respect the child instance's
+    ``buffer_dtype`` configuration.
+
+    Args:
+        dtype (torch.dtype, Optional):
+            dtype to cast buffers to (defaults to buffer_dtype)
+        memo (Set, Optional):
+            set of modules that have already been processed
+    """
+    if memo is None:
+      memo = set()
+    for module in self.modules():
+      if module is not self and isinstance(module, XlaFullyShardedDataParallel):
+        # Allow any child FSDP instances to handle their own buffers.
+        module._cast_buffers(dtype=dtype, memo=memo)
+      elif module not in memo:
+        memo.add(module)
+        for name, buf in module.named_buffers(recurse=False):
+          if buf is None:
+            continue
+          if torch.is_floating_point(buf):
+            orig_dtype = buf.dtype
+            cast_dtype = dtype or self.buffer_dtype
+            if orig_dtype != cast_dtype:
+              buf = buf.to(cast_dtype)
+              buf._orig_dtype = orig_dtype
+          setattr(module, name, buf)
+
   def extra_repr(self) -> str:
     repr = (f"world_size={self.world_size}, "
             f"rank={self.rank}, "
+            f"compute_dtype={self.compute_dtype}, "
+            f"buffer_dtype={self.buffer_dtype}, "
             f"flatten_parameters={self.flatten_parameters}, "
-            f"reshard_after_forward={self.reshard_after_forward}")
+            f"reshard_after_forward={self.reshard_after_forward}, "
+            f"sharding_groups={self.sharding_groups}")
     return repr
 
   def __getattr__(self, name: str) -> Any:
@@ -579,7 +692,7 @@ class XlaFullyShardedDataParallel(nn.Module):
       self._set_is_root()
       self._setup_output_hook_and_backward_opt_barrier_lists()
 
-    if self._is_root:
+    if self._is_root and self.disable_reshard_on_root:
       # Don't free the full params for the outer-most (root) instance,
       # since those params will be needed immediately after for the
       # backward pass.
@@ -640,6 +753,10 @@ class XlaFullyShardedDataParallel(nn.Module):
 
     # Start of a forward pass.
     self.training_state = TrainingState.FORWARD
+
+    if self.compute_dtype != torch.float32:
+      # Cast the input float tensors to the specified compute_dtype
+      args, kwargs = _cast_floats_tensors(self.compute_dtype, *args, **kwargs)
 
     # All-gather full parameters.
     input_opt_barrier_tensors = []
@@ -938,12 +1055,17 @@ class XlaFullyShardedDataParallel(nn.Module):
         grad, self.world_size * self._shard_size_multiple)
     if self.optimization_barrier_in_backward:
       self.optimization_barrier_op([grad_flat])
+    if grad_flat.dtype != torch.float32 and self.fp32_reduce_scatter:
+      grad_flat = grad_flat.to(torch.float32)
     reduced_grad = self.reduce_scatter_op(
         xm.REDUCE_SUM,
         grad_flat.detach(),
         scale=1.0,
         scatter_dim=0,
-        shard_count=self.world_size)
+        shard_count=self.world_size,
+        groups=self.sharding_groups)
+    if reduced_grad.dtype != torch.float32:
+      reduced_grad = reduced_grad.to(torch.float32)
     if self.optimization_barrier_in_backward:
       self.optimization_barrier_op([reduced_grad])
     if self.gradient_postdivide_factor > 1:
@@ -1117,11 +1239,14 @@ class XlaFullyShardedDataParallel(nn.Module):
         p_shard_data = p_shard.detach()
         if apply_opt_barrier:
           self.optimization_barrier_op([p_shard_data])
+        if p_shard_data.dtype != self.compute_dtype:
+          p_shard_data = p_shard_data.to(self.compute_dtype)
         # gather full parameter from shards
         # reshape sharded parameters to 2d tensors for efficient gathering on
         # TPUs (see https://github.com/pytorch/xla/issues/3510 for details).
         p_shard_2d = p_shard_data.view(-1, self._shard_size_multiple)
-        p_padded = self.all_gather_op(p_shard_2d).flatten()
+        p_padded = self.all_gather_op(
+            p_shard_2d, groups=self.sharding_groups).flatten()
         if apply_opt_barrier:
           self.optimization_barrier_op([p_padded])
         p.data = p_padded[:p_shard._orig_size.numel()].view(p_shard._orig_size)
@@ -1235,6 +1360,7 @@ class XlaFullyShardedDataParallel(nn.Module):
     """
     shard_info = {}
     flatten_info = {}
+    buffer_info = {}
     for module_name, m in self.named_modules():  # includes self
       # remove "_fpw_module." from module names since it is also removed in
       # XlaFullyShardedDataParallel's state_dict()
@@ -1256,9 +1382,14 @@ class XlaFullyShardedDataParallel(nn.Module):
             param_name = module_name + "." + param_name
           flatten_info[param_name] = m.metadata(i)
 
+    for name, buf in self.named_buffers():
+      if buf is not None and hasattr(buf, "_orig_dtype"):
+        buffer_info[name] = {"_orig_dtype": buf._orig_dtype}
+
     metadata = {
         "shard_info": shard_info,
         "flatten_info": flatten_info,
+        "buffer_info": buffer_info,
         "world_size": self.world_size,
         "rank": self.rank,
     }
@@ -1360,3 +1491,17 @@ def _calc_grad_norm(parameters: List[torch.nn.Parameter],
         torch.stack([torch.norm(par.grad.detach(), p) for par in parameters]),
         p)
   return local_norm
+
+
+def _cast_floats_tensors(dtype: torch.dtype, *args: Any,
+                         **kwargs: Any) -> Tuple[Any, Any]:
+  """
+  Cast floating point Tensors in *args or **kwargs to dtype if they are not.
+  """
+
+  def fn(t):
+    if t.dtype != dtype and torch.is_floating_point(t):
+      t = t.to(dtype)
+    return t
+
+  return apply_to_tensors(fn, args), apply_to_tensors(fn, kwargs)
