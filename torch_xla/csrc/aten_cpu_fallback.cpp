@@ -3,7 +3,6 @@
 #include <tensorflow/compiler/xla/xla_client/debug_macros.h>
 #include <tensorflow/compiler/xla/xla_client/metrics.h>
 #include <tensorflow/compiler/xla/xla_client/tf_logging.h>
-#include <torch/csrc/jit/runtime/decomposition_registry.h>
 #include <torch_xla/csrc/function_call_tracker.h>
 
 #include <unordered_map>
@@ -44,19 +43,6 @@ void xla_cpu_fallback(const c10::OperatorHandle& op, torch::jit::Stack* stack) {
 
 TORCH_LIBRARY_IMPL(_, XLA, m) {
   m.fallback(torch::CppFunction::makeFromBoxedFunction<&xla_cpu_fallback>());
-}
-
-void run_jit_decomposition(const c10::OperatorHandle& op,
-                           torch::jit::Stack* stack) {
-  const auto& schema = op.schema();
-  auto* trace_exec = torch::jit::GetDecompositionExecutor(schema);
-  trace_exec->run((*stack));
-}
-
-TORCH_LIBRARY_IMPL(aten, XLA, m) {
-  // See Note [native_layer_norm_backward decomposition]
-  m.impl("native_layer_norm_backward",
-         torch::CppFunction::makeFromBoxedFunction<&run_jit_decomposition>());
 }
 
 }  // namespace torch_xla

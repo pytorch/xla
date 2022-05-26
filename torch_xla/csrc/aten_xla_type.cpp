@@ -1,4 +1,5 @@
 #include <ATen/ExpandUtils.h>
+#include <ATen/NativeFunctions.h>
 #include <ATen/Operators.h>
 #include <ATen/native/BinaryOps.h>
 #include <ATen/native/CPUFallback.h>
@@ -3512,6 +3513,30 @@ at::Scalar XLANativeFunctions::_local_scalar_dense(const at::Tensor& self) {
   }
   return at::native::call_fallback_fn<&xla_cpu_fallback,
                                       ATEN_OP(_local_scalar_dense)>::call(self);
+}
+
+// re-use the composite kernel from core, that way we don't need to provide a
+// backwards formula for native_layer_norm
+std::tuple<at::Tensor, at::Tensor, at::Tensor>
+XLANativeFunctions::native_layer_norm(const at::Tensor& input,
+                                      at::IntArrayRef normalized_shape,
+                                      const c10::optional<at::Tensor>& weight,
+                                      const c10::optional<at::Tensor>& bias,
+                                      double eps) {
+  return at::native::math_native_layer_norm(input, normalized_shape, weight,
+                                            bias, eps);
+}
+
+// re-use the composite kernel from core, that way we don't need to provide a
+// backwards formula for native_group_norm
+std::tuple<at::Tensor, at::Tensor, at::Tensor>
+XLANativeFunctions::native_group_norm(const at::Tensor& input,
+                                      const c10::optional<at::Tensor>& weight,
+                                      const c10::optional<at::Tensor>& bias,
+                                      int64_t N, int64_t C, int64_t HxW,
+                                      int64_t group, double eps) {
+  return at::native::math_group_norm(input, weight, bias, N, C, HxW, group,
+                                     eps);
 }
 
 }  // namespace torch_xla
