@@ -89,6 +89,10 @@ xla::PrimitiveType GetDevicePrimitiveType(
 xla::PrimitiveType MakeXlaPrimitiveType(
     at::ScalarType scalar_type, const torch::lazy::BackendDevice* device);
 
+// Convert a lazy shape to device dependent xla shape.
+xla::Shape MakeXlaShapeFromLazyShape(torch::lazy::Shape shape,
+                                     const torch::lazy::BackendDevice& device);
+
 bool RequiresRawTypeCasting(at::ScalarType scalar_type,
                             const torch::lazy::BackendDevice* device);
 

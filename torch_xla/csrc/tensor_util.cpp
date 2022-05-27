@@ -1148,6 +1148,15 @@ xla::PrimitiveType MakeXlaPrimitiveType(
   }
 }
 
+xla::Shape MakeXlaShapeFromLazyShape(torch::lazy::Shape shape,
+                                     const torch::lazy::BackendDevice& device) {
+  return MakeArrayShapeFromDimensions(
+      XlaHelpers::I64List(shape.sizes()),
+      /*dynamic_dimensions=*/{},
+      MakeXlaPrimitiveType(shape.scalar_type(), &device),
+      static_cast<XlaDeviceType>(device.type()));
+}
+
 bool RequiresRawTypeCasting(at::ScalarType scalar_type,
                             const torch::lazy::BackendDevice* device) {
   switch (scalar_type) {
