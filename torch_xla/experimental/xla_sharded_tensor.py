@@ -123,6 +123,7 @@ class XLAShardedTensor(torch.Tensor):
 
   @staticmethod
   def __new__(cls, elem: torch.Tensor, *args, **kwargs):
+    # TODO(yeounoh) wrapper can take different arguments
     r = torch.Tensor._make_wrapper_subclass(  # type: ignore[attr-defined]
         cls,
         elem.size(),
@@ -137,8 +138,14 @@ class XLAShardedTensor(torch.Tensor):
 
   @property
   def sharding_spec(self):
-    # TODO(yeounoh) check if global_tensor is an XLA tensor
-    return torch_xla._XLAC._get_xla_sharding_spec(self.global_tensor)
+    # TODO(yeounoh) `torch_xla._XLAC._get_xla_sharding_spec(self.global_tensor)`
+    # is broken after ltc migration, needs a further investigation.
+    return NotImplemented
+
+  @property
+  def shards(self):
+    # Return a list of local shards
+    return NotImplemented
 
   def __repr__(self):
     return f"XLAShardedTensor({self.global_tensor})"
@@ -146,20 +153,10 @@ class XLAShardedTensor(torch.Tensor):
   @classmethod
   def __torch_dispatch__(cls, func, types, args=(), kwargs=None):
     """
-        This may not be an accurate use of __torch__dispatch__, but the idea is
-        to send the unwrapped tensor with sharding annotation to XLA backend, use
-        the following or similar operators to check if at::Tensor is sharded,
-        retrieve the sharding annotations, etc.
-
-        Example
-        —------------------------------
-        at::Tensor XLATensor::add(const at::Tensor& rhs) {
-          if(aten::is_sharded(rhs)) {
-            # rhs be a XLAShardedTensor
-            auto kwargs = aten::get_shards_metadata(rhs)
-          }
-        }
-        """
+      The dispatcher allows the unwrapped torch.Tensor to re-dispatched to the
+      `xla` backend as XlaTensor, and the XlaTensor with an associated sharding spec
+      to be received and wrapped as XLAShardedTensor.
+    """
 
     def unwrap(elem):
       return elem.global_tensor if isinstance(elem, XLAShardedTensor) else elem
