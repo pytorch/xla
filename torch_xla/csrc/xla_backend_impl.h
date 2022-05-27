@@ -39,4 +39,8 @@ class XLAData : public torch::lazy::BackendData {
   xla::ComputationClient::DataPtr xla_data_;
 };
 
+// torch::lazy::BackendImplInterface* GetXlaBackendImpl();
+
+void InitXlaBackend();
+
 }  // namespace torch_xla
