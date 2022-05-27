@@ -364,11 +364,6 @@ class XrtComputationClient : public ComputationClient {
       const XlaComputation& computation, absl::Span<const std::string> devices,
       const Shape* output_shape) const;
 
-  // TODO(yeounoh) remove after runtime migration to PJRT.
-  std::unique_ptr<xrt::XLAComputation> CreateXrtSpmdComputation(
-      const XlaComputation& computation, absl::Span<const std::string> devices,
-      const Shape* output_shape) const;
-
   tensorflow::Tensor GetArgumentsInputs(absl::Span<const DataPtr> arguments,
                                         const std::string& device);
 
