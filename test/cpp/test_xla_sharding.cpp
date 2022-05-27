@@ -18,11 +18,13 @@
 
 namespace torch_xla {
 namespace cpp_test {
-namespace {}  // namespace
+
+// A placeholder for future SPMD sharding tests.
 
 class XLAShardingTest : public AtenXlaTensorTestBase {};
 
 TEST_F(XLAShardingTest, TestSPMDPartitioner) {
+  // For debugging purposes only.
   const int64_t replica_count_ = 1;
   const int64_t num_partitions_ = 8;
 

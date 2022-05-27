@@ -40,6 +40,8 @@ void ShardingUtil::SetHloSharding(LoweringContext* lowering_ctx) {
   }
 }
 
+// This is called separately before xrt compilation. This is also useful
+// for debugging partitioned HLO computation and sharding propation.
 xla::HloModuleProto ShardingUtil::SpmdPartitioningPass(
     const xla::HloModuleProto& hlo_proto, bool conv_halo_exchange_always_on_lhs,
     bool choose_faster_windowed_einsum_over_mem, bool unroll_windowed_einsum,
