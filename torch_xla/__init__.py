@@ -91,7 +91,6 @@ _setup_xla_flags()
 if int(os.environ.get('PT_XLA_DEBUG', '0')):
   _fd, _tmp_fname = _setup_debug_env()
 
-
 import atexit
 import torch
 from ._patched_functions import _apply_patches
@@ -101,6 +100,7 @@ import _XLAC
 # Set path for libtpu.so. Let static initializer fail during _XLAC import.
 # libtpu should be loaded when the ComputationClient is created.
 _tpu_vm_init()
+
 
 def _prepare_to_exit():
   _XLAC._prepare_to_exit()
