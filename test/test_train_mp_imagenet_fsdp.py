@@ -44,6 +44,13 @@ MODEL_OPTS = {
     '--use_gradient_checkpointing': {
         'action': 'store_true',
     },
+    '--compute_dtype': {
+        'choices': ['float32', 'float16', 'bfloat16'],
+        'default': 'float32',
+    },
+    '--fp32_reduce_scatter': {
+        'action': 'store_true',
+    },
 }
 
 FLAGS = args_parse.parse_common_options(
@@ -209,7 +216,10 @@ def train_imagenet():
   # - you may wrap sub-modules at different granularity (e.g. at each resnet
   #   stage or each residual block or each conv layer).
   fsdp_wrap = lambda m: FSDP(
-      m.to(device), flatten_parameters=FLAGS.flatten_parameters)
+      m.to(device),
+      compute_dtype=getattr(torch, FLAGS.compute_dtype),
+      fp32_reduce_scatter=FLAGS.fp32_reduce_scatter,
+      flatten_parameters=FLAGS.flatten_parameters)
   # Apply gradient checkpointing to sub-modules if specified
   grad_ckpt_wrap = checkpoint_module if FLAGS.use_gradient_checkpointing else (
       lambda x: x)
