@@ -13,6 +13,7 @@
 #include "tensorflow/compiler/xla/client/xla_computation.h"
 #include "tensorflow/compiler/xla/literal_util.h"
 #include "tensorflow/compiler/xla/types.h"
+#include "tensorflow/compiler/xla/xla_client/debug_macros.h"
 #include "tensorflow/compiler/xla/xla_client/metrics.h"
 #include "tensorflow/compiler/xla/xla_client/types.h"
 #include "tensorflow/compiler/xla/xla_client/util.h"
@@ -67,9 +68,31 @@ class ComputationClient {
           program_shape_(std::move(program_shape)),
           devices_(std::move(devices)) {}
 
+    Computation(XlaComputation computation)
+        : computation_(std::move(computation)) {
+      program_shape_ = ConsumeValue(computation_.GetProgramShape());
+    }
+
     virtual ~Computation() {}
 
-    const XlaComputation& computation() const { return computation_; }
+    const XlaComputation& computation() const {
+      if (computation_moved_) {
+        XLA_ERROR() << "Compuation has been moved\n";
+      }
+      return computation_;
+    }
+
+    // We don't want to make a copy when passing computation_ to the runtime.
+    // Class member will be accessed as const& and `xla::XlaComputation`
+    // explictly delete its const& copy constructor so we have to const cast
+    // here.
+    xla::XlaComputation move_computation() {
+      if (computation_moved_) {
+        XLA_ERROR() << "Compuation has been moved\n";
+      }
+      computation_moved_ = true;
+      return std::move(const_cast<Computation*>(this)->computation_);
+    }
 
     const ProgramShape& program_shape() const { return program_shape_; }
 
@@ -79,6 +102,7 @@ class ComputationClient {
     XlaComputation computation_;
     ProgramShape program_shape_;
     std::vector<std::string> devices_;
+    bool computation_moved_ = false;
   };
 
   using ComputationPtr = std::shared_ptr<Computation>;

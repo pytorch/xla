@@ -118,11 +118,9 @@ class XlaBackendImpl : public torch::lazy::BackendImplInterface {
           {current_device.toString()}, &shape));
     }
     std::vector<std::shared_ptr<xla::ComputationClient::Computation>>
-        computations = xla::ComputationClient::Get()->Compile(
+        client_computations = xla::ComputationClient::Get()->Compile(
             std::move(compile_instances));
-    // TODO(JackCaoG): wrap the `xla::ComputationClient::Computation` inside
-    // `torch_xla::Computation` which inherited from `torch::lazy::Computation`
-    return {};
+    return WrapClientComputation(client_computations);
   }
 
   std::vector<torch::lazy::BackendDataPtr> ExecuteComputation(
