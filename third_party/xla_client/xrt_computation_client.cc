@@ -283,7 +283,7 @@ XrtComputationClient::XrtComputationClient(
                << "/replica:0/task:" << worker_target.first.task_no;
   }
 
-  TF_VLOG(1) << "libtpu status: " << tensorflow::tpu::FindAndLoadTpuLibrary();
+  TF_LOG(INFO) << "libtpu status: " << tensorflow::tpu::FindAndLoadTpuLibrary();
 
   TF_VLOG(1) << "XRT default device: " << options_.default_device;
   if (ShouldStartLocalService(options_.devices)) {

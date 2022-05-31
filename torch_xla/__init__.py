@@ -1,7 +1,11 @@
+import logging
 import os
 import re
 import tempfile
 import subprocess
+
+logging.basicConfig()
+logger = logging.getLogger(__name__)
 
 XRT_RUN_SERVER_PROCESS = 'torch_xla.core._xrt_run_server'
 XRT_SERVER_REGEX = '^python3 -m {} [0-9]+$'.format(XRT_RUN_SERVER_PROCESS)
@@ -91,14 +95,20 @@ _setup_xla_flags()
 if int(os.environ.get('PT_XLA_DEBUG', '0')):
   _fd, _tmp_fname = _setup_debug_env()
 
+if os.environ.get('TF_CPP_MIN_LOG_LEVEL') == '0':
+  logger.setLevel(logging.INFO)
+
 import atexit
 import torch
 from ._patched_functions import _apply_patches
 from .version import __version__
+
+logger.info(
+    'Letting libtpu.so load fail during _XLAC import. libtpu.so will be loaded '
+    'from `libtpu` Python package when the ComputationClient is created.')
+os.environ['TPU_LIBRARY_PATH'] = '/dev/null'
 import _XLAC
 
-# Set path for libtpu.so. Let static initializer fail during _XLAC import.
-# libtpu should be loaded when the ComputationClient is created.
 _tpu_vm_init()
 
 
