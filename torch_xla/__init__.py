@@ -106,6 +106,7 @@ from .version import __version__
 logger.info(
     'Letting libtpu.so load fail during _XLAC import. libtpu.so will be loaded '
     'from `libtpu` Python package when the ComputationClient is created.')
+# _tpu_vm_init() will update TPU_LIBRARY_PATH to Python package, if available
 os.environ['TPU_LIBRARY_PATH'] = '/dev/null'
 import _XLAC
 
