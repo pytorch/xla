@@ -113,6 +113,13 @@ class XlaNode : public torch::lazy::Node {
   torch::lazy::hash_t hash() const override { return dag_hash_; }
 
   torch::lazy::hash_t shapeHash() const override { return dag_hash_; }
+  // The node's outputs get assigned the same HLO sharding
+  // TODO: test multi-output example.
+  const xla::OpSharding* GetSharding() const { return output_sharding_; }
+  void SetSharding(const xla::OpSharding* sharding) {
+    output_sharding_ = sharding;
+  }
+  void ClearSharding() { output_sharding_ = nullptr; }
 
  private:
   xla::Shape GetOpShape(const std::function<xla::Shape()>& shape_fn) const;
@@ -124,8 +131,12 @@ class XlaNode : public torch::lazy::Node {
   static std::vector<torch::lazy::SourceLocation> GetFrameInfo();
 
   xla::Shape xla_shape_;
-  torch::lazy::hash_t node_hash_;
+  torch::lazy::hash_t node_hash_ = 0;
   torch::lazy::hash_t dag_hash_;
+
+  // Experimental sharding annotation attached to the IR node.
+  // TODO: make sure that view update doesn't reset this.
+  const xla::OpSharding* output_sharding_ = nullptr;
 };
 
 // RAII data structure to be used a stack variable to enter a new IR scope. IR

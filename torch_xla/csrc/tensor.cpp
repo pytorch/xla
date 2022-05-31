@@ -11,6 +11,7 @@
 #include <stdexcept>
 #include <unordered_set>
 
+#include "absl/container/flat_hash_map.h"
 #include "absl/memory/memory.h"
 #include "absl/strings/str_join.h"
 #include "tensorflow/compiler/xla/literal_util.h"
@@ -624,6 +625,31 @@ std::string XLATensor::DumpHloComputation(
                             : std::string();
 }
 
+std::shared_ptr<XLATensor::ShardingSpec> XLATensor::sharding_spec() const {
+  XLA_CHECK(data()->sharding_spec != nullptr)
+      << "Trying to access a null cursor";
+  return data()->sharding_spec;
+}
+bool XLATensor::IsShardingAnnotated() const {
+  return data()->sharding_spec != nullptr;
+}
+void XLATensor::SetShardingSpec(const xla::OpSharding& sharding,
+                                bool replicated, bool manual) {
+  auto new_sharding_spec =
+      std::make_shared<ShardingSpec>(sharding, replicated, manual);
+  data()->sharding_spec = new_sharding_spec;
+  XLA_CHECK(data()->ir_value.node != nullptr)
+      << "Tyring to access a null cursor";
+  dynamic_cast<XlaNode*>(data()->ir_value.node.get())
+      ->SetSharding(&new_sharding_spec->sharding);
+}
+void XLATensor::ClearShardingSpec() {
+  if (data()->ir_value.node != nullptr) {
+    dynamic_cast<XlaNode*>(data()->ir_value.node.get())->ClearSharding();
+  }
+  data()->sharding_spec = nullptr;
+}
+
 void XLATensor::SetXlaData(torch::lazy::BackendDataPtr xla_data) {
   SetXlaData(std::move(xla_data), /*sync=*/true);
 }
@@ -631,7 +657,8 @@ void XLATensor::SetXlaData(torch::lazy::BackendDataPtr xla_data) {
 void XLATensor::SetXlaData(torch::lazy::BackendDataPtr xla_data, bool sync) {
   data()->xla_data = std::move(xla_data);
   // Assigning a device data should always clear the IR node, to allow graph
-  // trimming. A view cannot be reset though, unless we are at a step-end sync.
+  // trimming. A view cannot be reset though, unless we are at a step-end
+  // sync.
   AssignIrValue(torch::lazy::Value());
   if (sync) {
     data()->view = nullptr;
@@ -701,8 +728,8 @@ torch::lazy::Value XLATensor::GetIrValue() const {
     // node. This because we want further calls to GetIrValue() to fetch the
     // same IR node, and not create new ones (even though the lowering context
     // will still collapse them all into a single XLA parameter op). So call
-    // which wants the XLA data will still find it, w/out having to fetch it via
-    // a computation client from-server call.
+    // which wants the XLA data will still find it, w/out having to fetch it
+    // via a computation client from-server call.
     AssignIrValue(CreateTensorNode(xla_data, /*read_only=*/false));
     return data()->ir_value;
   }
@@ -978,8 +1005,8 @@ std::vector<torch::lazy::BackendDataPtr> XLATensor::GatherTensorsXlaData(
     int64_t tensor_id = tensors[i].GetUniqueId();
     auto it = uid_index_map.find(tensor_id);
     if (it != uid_index_map.end()) {
-      // Current tensor is a duplicate of a previously processed tensor that had
-      // an IR XlaNode to sync. Get the XLA data from the tensor_data_map.
+      // Current tensor is a duplicate of a previously processed tensor that
+      // had an IR XlaNode to sync. Get the XLA data from the tensor_data_map.
       result_tensors_data.push_back(result_tensors_data[it->second]);
     } else if (indices_index < indices.size() && i == indices[indices_index]) {
       // If we are at the current index (it means that the tensor at index
@@ -1255,10 +1282,11 @@ XLATensor::SyncTensorCollection XLATensor::CollectSyncTensors(
     std::vector<torch::lazy::BackendDataPtr> handles =
         CreateTensorsData(at_tensors, devices);
     for (size_t i = 0; i < handles.size(); ++i) {
-      // If we are here, it means that the IR torch::lazy::Value for the tensor
-      // is not present. Also, we uploaded the at::Tensor data to the device,
-      // but such data is still valid so we leave it live on the XLA tensor (so
-      // that a following ToTensor() does not need to fetch it from device).
+      // If we are here, it means that the IR torch::lazy::Value for the
+      // tensor is not present. Also, we uploaded the at::Tensor data to the
+      // device, but such data is still valid so we leave it live on the XLA
+      // tensor (so that a following ToTensor() does not need to fetch it from
+      // device).
       tensors[at_tensor_index[i]].data()->xla_data = std::move(handles[i]);
     }
   }
@@ -1365,14 +1393,14 @@ std::vector<torch::lazy::BackendDataPtr> XLATensor::FetchTensorData(
   for (auto index : indices) {
     XLATensor& tensor = (*tensors)[index];
     // If the config.force_xla_data flag is true, the purpose of this tensor
-    // sync operation is to truncate the IR graph and materialize device data in
-    // place of IR graph, on selected tensors. But since operation will complete
-    // asynchronously, if a tensor does not already have device data, we need to
-    // install a placeholder. Since at this point we hold a lock on the device
-    // where the tensors reside (locks held within the coll structure, and moved
-    // into the async variable), any other operation trying to access the
-    // tensor's device data will have to wait until the asynchronous operation
-    // completes.
+    // sync operation is to truncate the IR graph and materialize device data
+    // in place of IR graph, on selected tensors. But since operation will
+    // complete asynchronously, if a tensor does not already have device data,
+    // we need to install a placeholder. Since at this point we hold a lock on
+    // the device where the tensors reside (locks held within the coll
+    // structure, and moved into the async variable), any other operation
+    // trying to access the tensor's device data will have to wait until the
+    // asynchronous operation completes.
     torch::lazy::BackendDataPtr xla_data = tensor.CurrentXlaData();
     if (xla_data == nullptr && config.force_xla_data) {
       const torch::lazy::BackendDevice& tensor_device = tensor.GetDevice();
@@ -1506,8 +1534,8 @@ void XLATensor::WaitDeviceOps(absl::Span<const std::string> devices) {
     }
   }
   // The LockDevices() API returns a vector of xla::util::ExceptionCleanup
-  // object, which is going to be freed immediately, turning this operation into
-  // a lock barrier.
+  // object, which is going to be freed immediately, turning this operation
+  // into a lock barrier.
   LockDevices(wait_devices);
 }
 
@@ -1628,6 +1656,9 @@ XLATensor::CompilationResult XLATensor::Compile(
         torch::lazy::Output(ir_value.node.get(), ir_value.index));
     lowering_ctx.AddResult(root);
   }
+  // Annotate HLO sharding selectively in the compuation.
+  ShardingUtil::SetHloSharding(&lowering_ctx);
+
   if (enable_aliasing && coll.config.sync_xla_data) {
     // We can only alias at the step barrier, when force_xla_data is true.
     // Consider the case:

@@ -75,7 +75,8 @@ class TensorAllocator : public tensorflow::Allocator {
     // to store a pointer to its AllocBlocks.
     alignment = std::max<size_t>(alignment, sizeof(void*));
     // To call aligned_alloc(), num_bytes must be multiple of alignment.
-    num_bytes = tensorflow::MathUtil::CeilOfRatio(num_bytes, alignment) * alignment;
+    num_bytes =
+        tensorflow::MathUtil::CeilOfRatio(num_bytes, alignment) * alignment;
 
     AllocKey alloc_key = {alignment, num_bytes};
     void* block = nullptr;
@@ -584,6 +585,23 @@ std::vector<ComputationClient::ComputationPtr> XrtComputationClient::Compile(
   for (size_t i = 0; i < instances.size(); ++i) {
     auto builder = [&, this, i]() {
       const CompileInstance& instance = instances[i];
+
+      // (yeounoh) check if spmd partitioning is used, non-SPMD enabled
+      // HLO module shouln't be affected by this.
+      // If is_spmd == true, then we assign multi-cores to a single
+      // replica; otherwise, all cores participate in replication.
+      bool is_spmd = false;
+      auto& module_proto = instance.computation.proto();
+      if (module_proto.has_spmd_output_sharding() ||
+          module_proto.spmd_parameters_shardings_size() > 0) {
+        std::cout << "has_spmd_output_sharding(): "
+                  << module_proto.has_spmd_output_sharding()
+                  << "spmd_parameters_shardings_size(): "
+                  << module_proto.spmd_parameters_shardings_size() << std::endl;
+        is_spmd = true;
+      }
+      XLA_CHECK(!is_spmd) << "XrtComputationClient doesn't support SPMD.";
+
       std::unique_ptr<xrt::XLAComputation> xrt_computation =
           CreateXrtComputation(instance.computation, instance.devices,
                                instance.output_shape);
@@ -1073,6 +1091,8 @@ std::unique_ptr<xrt::XLAComputation> XrtComputationClient::CreateXrtComputation(
   std::unique_ptr<xrt::XLAComputation> xrt_computation(
       new xrt::XLAComputation());
   auto config = xrt_computation->mutable_config();
+
+  // The computation here assumes that all devices participate in replication.
   config->set_num_cores_per_replica(1);
   if (devices.size() > 1) {
     auto device_assignment = config->mutable_device_assignment();
@@ -1099,6 +1119,7 @@ std::unique_ptr<xrt::XLAComputation> XrtComputationClient::CreateXrtComputation(
     }
     config->set_num_replicas(devices.size());
   }
+
   *config->mutable_program_shape() =
       computation.GetProgramShape().ValueOrDie().ToProto();
   if (output_shape != nullptr) {
@@ -1693,7 +1714,7 @@ void XrtComputationClient::InitSession(XrtSession* session) const {
   struct InitNode {
     int count;
     const XrtSession::CachedNode& (XrtComputationClient::*node_ctor)(
-        XrtSession*, const tensorflow::Scope&, const std::string&)const;
+        XrtSession*, const tensorflow::Scope&, const std::string&) const;
   } const init_nodes[] = {
       {16, &XrtComputationClient::GetCompileNode},
       {16, &XrtComputationClient::GetExecuteNode},

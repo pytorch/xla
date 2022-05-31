@@ -4,16 +4,19 @@
 #include <sstream>
 #include <unordered_map>
 
+#include "absl/container/flat_hash_map.h"
 #include "absl/types/optional.h"
 #include "tensorflow/compiler/xla/xla_client/debug_macros.h"
 #include "tensorflow/compiler/xla/xla_client/xla_util.h"
 #include "torch/csrc/lazy/core/ir_util.h"
 #include "torch_xla/csrc/ir_util.h"
 #include "torch_xla/csrc/lowering_context.h"
+#include "torch_xla/csrc/xla_sharding_util.h"
 
 namespace torch_xla {
 namespace {
 
+using xla::internal::XlaBuilderFriend;
 using NodeIdMap = std::unordered_map<const torch::lazy::Node*, size_t>;
 
 struct AttrTag {
@@ -251,6 +254,10 @@ std::string DumpUtil::ToHlo(c10::ArrayRef<torch::lazy::Value> values,
     lowering_ctx.AddResult(
         torch::lazy::Output(ir_value.node.get(), ir_value.index));
   }
+  // Annotate HLO sharding selectively in the compuation.
+  // This is no-op if an instruction doesn't have any sharding annotation.
+  ShardingUtil::SetHloSharding(&lowering_ctx);
+
   xla::XlaComputation computation = ConsumeValue(lowering_ctx.BuildXla());
   return ConsumeValue(xla::util::GetComputationHloText(computation));
 }

@@ -64,7 +64,7 @@ class LoweringContext : public torch::lazy::LoweringContext {
 
   // Build the XLA computation capturing all the operations created with the
   // embedded XLA builder (returned by the builder() API).
-  // Uses root as return value forthe computation. It is an error to use this
+  // Uses root as return value for the computation. It is an error to use this
   // API after having called the AddResult() API.
   xla::StatusOr<xla::XlaComputation> BuildXla(xla::XlaOp root);
 
@@ -88,6 +88,10 @@ class LoweringContext : public torch::lazy::LoweringContext {
                     const std::string& name) override;
 
   torch::lazy::ComputationPtr Build() override;
+
+  const OutputMap<xla::XlaOp> GetEmittedOutputs() const {
+    return emitted_outputs_;
+  }
 
  private:
   struct Parameter {
