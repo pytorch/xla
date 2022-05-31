@@ -22,6 +22,7 @@
 #include "torch_xla/csrc/ir_util.h"
 #include "torch_xla/csrc/lowering_context.h"
 #include "torch_xla/csrc/view.h"
+#include "torch_xla/csrc/xla_sharding_util.h"
 
 namespace torch_xla {
 
@@ -92,8 +93,8 @@ class XLATensor : public c10::intrusive_ptr_target {
   // is available.
   torch::lazy::Value CurrentIrValue() const;
 
-  // Retrieves the IR XlaNode representing this XLATensor. One will be created
-  // if missing. Note that although this is a const API, it actually changes the
+  // Retrieves the IR Node representing this XLATensor. One will be created if
+  // missing. Note that although this is a const API, it actually changes the
   // internal state ofthe object.
   torch::lazy::Value GetIrValue() const;
 
@@ -803,6 +804,11 @@ class XLATensor : public c10::intrusive_ptr_target {
   static XLATensor max_unpool(const XLATensor& input, const XLATensor& indices,
                               std::vector<int64_t> output_size);
 
+  static XLATensor max_unpool_backward(const XLATensor& grad_output,
+                                       const XLATensor& input,
+                                       const XLATensor& indices,
+                                       std::vector<int64_t> output_size);
+
   static XLATensor mean(const XLATensor& input, std::vector<int64_t> dimensions,
                         bool keep_reduced_dimensions,
                         c10::optional<at::ScalarType> dtype);
@@ -1198,6 +1204,23 @@ class XLATensor : public c10::intrusive_ptr_target {
   static XLATensor where(const XLATensor& condition, const XLATensor& input,
                          const XLATensor& other);
 
+  // XLA SPMD sharding spec annoation. The XLA tensor uses this to create
+  // HloSharding for replication, manual and tile shardings.
+  struct ShardingSpec {
+    ShardingSpec(const xla::OpSharding& sharding, bool replicated, bool manual)
+        : sharding(sharding), replicated(replicated), manual(manual) {}
+
+    const xla::OpSharding sharding;
+    bool replicated;
+    bool manual;
+  };
+
+  std::shared_ptr<ShardingSpec> sharding_spec() const;
+  bool IsShardingAnnotated() const;
+  void SetShardingSpec(const xla::OpSharding& sharding, bool replicated,
+                       bool manual);
+  void ClearShardingSpec();
+
  private:
   struct SyncTensorsConfig {
     // Whether we want to force XLA data on the target tensors (hence trimming
@@ -1301,6 +1324,10 @@ class XLATensor : public c10::intrusive_ptr_target {
     const torch::lazy::BackendDevice device;
     const int64_t unique_id = 0;
     size_t generation = 1;
+
+    // Sharding annotation for the tensor
+    // TODO(yeounoh) detach & clear for the unpartitioned tensor
+    std::shared_ptr<ShardingSpec> sharding_spec;
   };
 
   XLATensor(const at::Tensor& tensor, const torch::lazy::BackendDevice& device);
