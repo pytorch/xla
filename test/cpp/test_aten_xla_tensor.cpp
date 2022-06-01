@@ -7948,6 +7948,7 @@ TEST_F(AtenXlaTensorTest, TestL1LossBackward) {
           device, testfn);
     });
   }
+  ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
 }
 
 TEST_F(AtenXlaTensorTest, TestMseLoss) {

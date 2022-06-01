@@ -22,9 +22,6 @@ xla::XlaOp BuildBinaryCrossEntropyBackward(
 xla::XlaOp BuildL1Loss(xla::XlaOp input, xla::XlaOp target,
                        ReductionMode reduction);
 
-xla::XlaOp BuildL1LossBackward(xla::XlaOp grad_output, xla::XlaOp input,
-                               xla::XlaOp target, ReductionMode reduction);
-
 xla::XlaOp BuildMseLoss(xla::XlaOp input, xla::XlaOp target,
                         ReductionMode reduction);
 
