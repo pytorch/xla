@@ -172,7 +172,6 @@ cc_library(
         "//tensorflow/core/profiler/rpc:profiler_server_impl",
         "//tensorflow/core/profiler/rpc/client:profiler_client",
         "//tensorflow/core/protobuf/tpu:topology_proto_cc",
-        "//tensorflow/core/tpu:tpu_api_dlsym_initializer",
         "//tensorflow/stream_executor:stream_executor_impl",
         "@com_google_absl//absl/numeric:int128",
         "@com_google_absl//absl/strings",
