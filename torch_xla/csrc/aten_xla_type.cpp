@@ -1567,6 +1567,21 @@ at::Tensor XLANativeFunctions::index(
     const at::Tensor& self,
     const c10::List<c10::optional<at::Tensor>>& indices) {
   XLA_FN_COUNTER("xla::");
+  bool indices_on_cpu_or_xla =
+      std::all_of(indices.begin(), indices.end(),
+                  [=](const c10::optional<at::Tensor>& opt) {
+                    return opt.has_value() && opt->defined()
+                               ? (opt->is_cpu() || opt->is_xla())
+                               : true;
+                  });
+  XLA_CHECK(self.is_xla())
+      << "1 indices should be either on cpu or on the same"
+      << " device as the indexed tensor (XLA)."
+      << " When using XLA, the indexed tensor must be an XLA tensor.";
+  XLA_CHECK(indices_on_cpu_or_xla)
+      << "2 indices should be either on cpu or on the same"
+      << " device as the indexed tensor (XLA)."
+      << " When using XLA, the indexed tensor must be an XLA tensor.";
   CanonicalIndexInfo canonical_index_info =
       GetCanonicalIndexInfo(self, indices);
   c10::optional<torch::lazy::BackendDevice> device =
