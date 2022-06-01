@@ -1447,11 +1447,10 @@ at::Tensor XLANativeFunctions::frac(const at::Tensor& self) {
 
 at::Tensor XLANativeFunctions::gather(const at::Tensor& self, int64_t dim,
                                       const at::Tensor& index,
-                                      bool sparse_grad) {
+                                      bool /* sparse_grad */) {
   XLA_FN_COUNTER("xla::");
-  return bridge::AtenFromXlaTensor(
-      XLATensor::gather(bridge::GetXlaTensor(self), dim,
-                        bridge::GetXlaTensor(index), sparse_grad));
+  return bridge::AtenFromXlaTensor(XLATensor::gather(
+      bridge::GetXlaTensor(self), dim, bridge::GetXlaTensor(index)));
 }
 
 at::Tensor XLANativeFunctions::ge(const at::Tensor& self,
