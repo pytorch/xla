@@ -1621,6 +1621,14 @@ class TestAtenXlaTensor(XlaTestCase):
       x_loaded = torch.load(tf.name)
       self.assertEqual(x, x_loaded)
 
+  def test_save_bf16(self):
+    xla_device = xm.xla_device()
+    x = torch.randn(5, dtype=torch.bfloat16, device=xla_device)
+    with tempfile.NamedTemporaryFile() as tf:
+      torch.save(x, tf)
+      x_loaded = torch.load(tf.name)
+      self.assertEqual(x, x_loaded)
+
   def test_save_tuple(self):
     xla_device = xm.xla_device()
     x = torch.randn(5, device=xla_device)
