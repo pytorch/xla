@@ -203,6 +203,15 @@ function install_torchvision_from_source() {
   popd
 }
 
+function install_torchaudio_from_source() {
+  torchaudio_repo_version="main"
+  git clone -b "${torchaudio_repo_version}" https://github.com/pytorch/audio.git
+  pushd audio
+  python setup.py bdist_wheel
+  pip install dist/*.whl
+  popd
+}
+
 function main() {
   setup_system
   maybe_install_sources
@@ -214,6 +223,7 @@ function main() {
   build_and_install_torch_xla
   popd
   install_torchvision_from_source
+  install_torchaudio_from_source
   install_gcloud
 }
 
