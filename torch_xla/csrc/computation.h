@@ -40,6 +40,10 @@ class Computation : public torch::lazy::Computation {
 
   const std::string& name() const { return name_; }
 
+  std::shared_ptr<xla::ComputationClient::Computation> client_computation() const {
+    return xla_client_computation_;
+  }
+
   const xla::XlaComputation& computation() const {
     return xla_client_computation_->computation();
   }
@@ -97,5 +101,8 @@ using ComputationPtr = std::shared_ptr<Computation>;
 std::vector<torch::lazy::ComputationPtr> WrapClientComputation(
     std::vector<std::shared_ptr<xla::ComputationClient::Computation>>
         computations);
+
+std::shared_ptr<xla::ComputationClient::Computation> UnwrapClientComputation(
+    torch::lazy::ComputationPtr computations);
 
 }  // namespace torch_xla

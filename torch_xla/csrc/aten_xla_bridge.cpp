@@ -29,6 +29,10 @@ class AtenXlaDeviceMapper {
     return devices_.at(ordinal);
   }
 
+  std::vector<torch::lazy::BackendDevice> GetAllDevices() const {
+    return devices_;
+  }
+
  private:
   AtenXlaDeviceMapper() {
     for (auto& device_str : xla::ComputationClient::Get()->GetLocalDevices()) {
@@ -261,6 +265,10 @@ c10::optional<torch::lazy::BackendDevice> GetXlaDevice(
     return c10::nullopt;
   }
   return GetXlaDevice(*device);
+}
+
+std::vector<torch::lazy::BackendDevice> GetBackendDevices() {
+  return AtenXlaDeviceMapper::Get()->GetAllDevices();
 }
 
 torch::lazy::BackendDevice AtenDeviceToXlaDevice(const c10::Device& device) {
