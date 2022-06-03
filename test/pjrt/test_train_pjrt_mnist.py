@@ -1,4 +1,5 @@
 import args_parse
+import common
 
 FLAGS = args_parse.parse_common_options(
     datadir='/tmp/mnist-data',
@@ -9,6 +10,7 @@ FLAGS = args_parse.parse_common_options(
     num_epochs=18)
 
 import os
+import pprint
 import shutil
 import sys
 import numpy as np
@@ -58,7 +60,7 @@ def _train_update(device, x, loss, tracker, writer):
       summary_writer=writer)
 
 
-def train_mnist(flags, index, state_dict, **kwargs):
+def train_mnist(flags, state_dict, *, index):
   rank = int(os.getenv('CLOUD_TPU_TASK_ID', 0)) + index
 
   if flags.fake_data:
@@ -176,27 +178,22 @@ def train_mnist(flags, index, state_dict, **kwargs):
   return max_accuracy
 
 
-def _mt_fn(index, flags, model):
+if __name__ == '__main__':
   torch.set_default_tensor_type('torch.FloatTensor')
   torch.manual_seed(1)
-  accuracy = train_mnist(flags, index, model.state_dict())
-  if flags.tidy and os.path.isdir(flags.datadir):
-    shutil.rmtree(flags.datadir)
-  if accuracy < flags.target_accuracy:
-    print('Accuracy {} is below target {}'.format(accuracy,
-                                                  flags.target_accuracy))
-
-
-import concurrent.futures
-
-xm.set_replication(xm.xla_device(), xm.get_xla_supported_devices())
-
-with concurrent.futures.ThreadPoolExecutor(
-    max_workers=len(xm.get_xla_supported_devices())) as executor:
   model = MNIST()
-  futures = [
-      executor.submit(_mt_fn, i, FLAGS, model)
-      for i in range(len(xm.get_xla_supported_devices()))
-  ]
-  for f in concurrent.futures.as_completed(futures):
-    f.result()
+
+  results = common.run_pjrt_multiprocess(train_mnist, FLAGS, model.state_dict())
+  print('Replica max_accuracy:', pprint.pformat(results))
+  accuracy = np.mean([
+      np.mean(list(thread_results.values()))
+      for thread_results in results.values()
+  ])
+  print('Average max_accuracy:', accuracy)
+
+  if FLAGS.tidy and os.path.isdir(FLAGS.datadir):
+    shutil.rmtree(FLAGS.datadir)
+  if accuracy < FLAGS.target_accuracy:
+    print('Accuracy {} is below target {}'.format(accuracy,
+                                                  FLAGS.target_accuracy))
+    sys.exit(21)

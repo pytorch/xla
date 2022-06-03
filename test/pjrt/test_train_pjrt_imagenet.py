@@ -1,4 +1,5 @@
 import args_parse
+import common
 
 SUPPORTED_MODELS = [
     'alexnet', 'densenet121', 'densenet161', 'densenet169', 'densenet201',
@@ -41,6 +42,7 @@ FLAGS = args_parse.parse_common_options(
 )
 
 import os
+import pprint
 import schedulers
 import numpy as np
 import torch
@@ -111,7 +113,7 @@ def _train_update(device, step, loss, tracker, epoch, writer):
       summary_writer=writer)
 
 
-def train_imagenet(index, state_dict):
+def train_imagenet(state_dict, *, index):
   print('==> Preparing data..')
   img_dim = get_model_property('img_dim')
   rank = int(os.getenv('CLOUD_TPU_TASK_ID', 0)) + index
@@ -258,28 +260,20 @@ def train_imagenet(index, state_dict):
   return max_accuracy
 
 
-def _mt_fn(index, flags, model):
-  global FLAGS
-  FLAGS = flags
+if __name__ == '__main__':
   torch.set_default_tensor_type('torch.FloatTensor')
-  accuracy = train_imagenet(index, model.state_dict())
+  torch.manual_seed(42)
+  model = get_model_property('model_fn')()
+
+  results = common.run_pjrt_multiprocess(train_imagenet, model.state_dict())
+  print('Replica max_accuracy:', pprint.pformat(results))
+  accuracy = np.mean([
+      np.mean(list(thread_results.values()))
+      for thread_results in results.values()
+  ])
+  print('Average max_accuracy:', accuracy)
+
   if accuracy < FLAGS.target_accuracy:
     print('Accuracy {} is below target {}'.format(accuracy,
                                                   FLAGS.target_accuracy))
     sys.exit(21)
-
-
-import concurrent.futures
-
-xm.set_replication(xm.xla_device(), xm.get_xla_supported_devices())
-
-with concurrent.futures.ThreadPoolExecutor(
-    max_workers=len(xm.get_xla_supported_devices())) as executor:
-  torch.manual_seed(42)
-  model = get_model_property('model_fn')()
-  futures = [
-      executor.submit(_mt_fn, i, FLAGS, model)
-      for i in range(len(xm.get_xla_supported_devices()))
-  ]
-  for f in concurrent.futures.as_completed(futures):
-    f.result()
