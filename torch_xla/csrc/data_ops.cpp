@@ -33,7 +33,9 @@ bool IsSparseGather(const xla::Shape& input_shape,
     static int dense_gather_factor =
         xla::sys_util::GetEnvInt("XLA_DENSE_GATHER_FACTOR", 8192);
     int64_t input_elements = input_shape.dimensions()[dim];
-    return input_elements > dense_gather_factor * 2;
+    // Use a very conservative check so that we run dense gather
+    // most of the time on TPU.
+    return input_elements > dense_gather_factor * 10;
   }
   // Use sparse gather for non-TPU platforms.
   return true;
