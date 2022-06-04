@@ -308,18 +308,31 @@ We also have pre-built docker images to run on Cloud compute instances with GPUs
 
 To run on [compute instances with GPUs](https://cloud.google.com/compute/docs/gpus/create-vm-with-gpus).
 
-The following pre-built wheels are avaialble for Cloud TPUs:
+The following pre-built wheels are avaialble for Cloud TPU Node:
 
 * `https://storage.googleapis.com/tpu-pytorch/wheels/torch_xla-nightly-cp37-cp37m-linux_x86_64.whl`
 * `https://storage.googleapis.com/tpu-pytorch/wheels/torch_xla-1.11-cp37-cp37m-linux_x86_64.whl`
 * `https://storage.googleapis.com/tpu-pytorch/wheels/torch_xla-1.10-cp37-cp37m-linux_x86_64.whl`
 * `https://storage.googleapis.com/tpu-pytorch/wheels/torch_xla-1.9-cp37-cp37m-linux_x86_64.whl`
 
+Cloud TPU VM:
+
+* `https://storage.googleapis.com/tpu-pytorch/wheels/tpuvm/torch_xla-nightly-cp38-cp38-linux_x86_64.whl`
+* `https://storage.googleapis.com/tpu-pytorch/wheels/tpuvm/torch_xla-1.11-cp38-cp38-linux_x86_64.whl`
+* `https://storage.googleapis.com/tpu-pytorch/wheels/tpuvm/torch_xla-1.10-cp38-cp38-linux_x86_64.whl`
+* `https://storage.googleapis.com/tpu-pytorch/wheels/tpuvm/torch_xla-1.9-cp38-cp38-linux_x86_64.whl`
+
 and for Colab:
 
 * `https://storage.googleapis.com/tpu-pytorch/wheels/colab/torch_xla-1.11-cp37-cp37m-linux_x86_64.whl (TPU runtime)`
 * `https://storage.googleapis.com/tpu-pytorch/wheels/cuda/112/torch_xla-1.11-cp37-cp37m-linux_x86_64.whl (GPU runtime)`
 
+Note that for Cloud TPU VM, you can update the libtpu after the torch_xla wheel by 
+
+```
+sudo rm -rf /usr/local/lib/python3.8/dist-packages/libtpu*
+sudo pip3 install torch_xla[tpuvm]
+```
 
 ## <a name="API"></a> API & Best Practices
 
