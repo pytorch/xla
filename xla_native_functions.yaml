@@ -82,11 +82,11 @@ supported:
   - binary_cross_entropy_with_logits
   - bitwise_and.Scalar
   - bitwise_and.Tensor
-  - bitwise_not.out
-  - bitwise_or.Scalar_out
-  - bitwise_or.Tensor_out
-  - bitwise_xor.Scalar_out
-  - bitwise_xor.Tensor_out
+  - bitwise_not
+  - bitwise_or.Scalar
+  - bitwise_or.Tensor
+  - bitwise_xor.Scalar
+  - bitwise_xor.Tensor
   - bmm
   - cat
   - ceil
@@ -96,9 +96,9 @@ supported:
   - clamp
   - clamp.Tensor
   - clamp_max
-  - clamp_max.Tensor_out
+  - clamp_max.Tensor
   - clamp_min
-  - clamp_min.Tensor_out
+  - clamp_min.Tensor
   - clone
   - constant_pad_nd
   - convolution_backward_overrideable
@@ -271,7 +271,7 @@ supported:
   - selu_
   - sigmoid
   - sigmoid_backward
-  - silu.out
+  - silu
   - silu_backward
   - slice.Tensor
   - slogdet

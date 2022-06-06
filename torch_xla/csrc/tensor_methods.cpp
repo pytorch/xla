@@ -933,36 +933,36 @@ XLATensor XLATensor::bitwise_and(const XLATensor& input,
   return input.CreateFrom(BitwiseAnd(input.GetIrValue(), other.GetIrValue()));
 }
 
-void XLATensor::bitwise_not_out(XLATensor& out, const XLATensor& input) {
-  out.SetIrValue(Not(input.GetIrValue()));
+XLATensor XLATensor::bitwise_not(const XLATensor& input) {
+  return input.CreateFrom(Not(input.GetIrValue()));
 }
 
-void XLATensor::bitwise_or_out(XLATensor& out, const XLATensor& input,
-                               const at::Scalar& other) {
-  CheckIsIntegralOrPred(input.shape(), "__or__");
-  torch::lazy::Value constant =
-      GetIrValueForScalar(other, input.shape(), input.GetDevice());
-  out.SetIrValue(BitwiseOr(input.GetIrValue(), constant));
-}
-
-void XLATensor::bitwise_or_out(XLATensor& out, const XLATensor& input,
-                               const XLATensor& other) {
-  CheckIsIntegralOrPred(input.shape(), "__or__");
-  out.SetIrValue(BitwiseOr(input.GetIrValue(), other.GetIrValue()));
-}
-
-void XLATensor::bitwise_xor_out(XLATensor& out, const XLATensor& input,
+XLATensor XLATensor::bitwise_or(const XLATensor& input,
                                 const at::Scalar& other) {
+  CheckIsIntegralOrPred(input.shape(), "__or__");
+  torch::lazy::Value constant =
+      GetIrValueForScalar(other, input.shape(), input.GetDevice());
+  return input.CreateFrom(BitwiseOr(input.GetIrValue(), constant));
+}
+
+XLATensor XLATensor::bitwise_or(const XLATensor& input,
+                                const XLATensor& other) {
+  CheckIsIntegralOrPred(input.shape(), "__or__");
+  return input.CreateFrom(BitwiseOr(input.GetIrValue(), other.GetIrValue()));
+}
+
+XLATensor XLATensor::bitwise_xor(const XLATensor& input,
+                                 const at::Scalar& other) {
   CheckIsIntegralOrPred(input.shape(), "__xor__");
   torch::lazy::Value constant =
       GetIrValueForScalar(other, input.shape(), input.GetDevice());
-  out.SetIrValue(BitwiseXor(input.GetIrValue(), constant));
+  return input.CreateFrom(BitwiseXor(input.GetIrValue(), constant));
 }
 
-void XLATensor::bitwise_xor_out(XLATensor& out, const XLATensor& input,
-                                const XLATensor& other) {
+XLATensor XLATensor::bitwise_xor(const XLATensor& input,
+                                 const XLATensor& other) {
   CheckIsIntegralOrPred(input.shape(), "__xor__");
-  out.SetIrValue(BitwiseXor(input.GetIrValue(), other.GetIrValue()));
+  return input.CreateFrom(BitwiseXor(input.GetIrValue(), other.GetIrValue()));
 }
 
 XLATensor XLATensor::bmm(const XLATensor& batch1, const XLATensor& batch2) {
@@ -1055,23 +1055,6 @@ XLATensor XLATensor::clamp(const XLATensor& input,
     res = Min(res, bridge::GetXlaTensor(*max).GetIrValue());
   }
   return input.CreateFrom(res);
-}
-
-void XLATensor::clamp_out(XLATensor& out, const XLATensor& input,
-                          const c10::optional<at::Tensor>& min,
-                          const c10::optional<at::Tensor>& max) {
-  XLA_CHECK(min || max)
-      << "At least one of \'min\' or \'max\' must not be None";
-  torch::lazy::Value res = input.GetIrValue();
-  if (min) {
-    res = torch::lazy::MakeNode<Maximum>(
-        res, bridge::GetXlaTensor(*min).GetIrValue(),
-        std::vector<torch::lazy::Shape>());
-  }
-  if (max) {
-    res = Min(res, bridge::GetXlaTensor(*max).GetIrValue());
-  }
-  out.SetInPlaceIrValue(res);
 }
 
 XLATensor XLATensor::clone(const XLATensor& input) {
@@ -2482,8 +2465,8 @@ void XLATensor::selu_(XLATensor& input) {
   input.SetInPlaceIrValue(Selu(input.GetIrValue()));
 }
 
-void XLATensor::silu_out(XLATensor& input, XLATensor& out) {
-  out.SetInPlaceIrValue(SiLU(input.GetIrValue()));
+XLATensor XLATensor::silu(const XLATensor& input) {
+  return input.CreateFrom(SiLU(input.GetIrValue()));
 }
 
 XLATensor XLATensor::silu_backward(XLATensor& grad_output, XLATensor& input) {
