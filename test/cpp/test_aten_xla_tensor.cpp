@@ -2884,7 +2884,7 @@ TEST_F(AtenXlaTensorTest, TestClampMinTensorExplicit) {
     AllClose(b, xla_b);
   });
   ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
-  ExpectCounterChanged("xla::clamp_min_out", cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::clamp_min", cpp_test::GetIgnoredCounters());
 }
 
 TEST_F(AtenXlaTensorTest, TestClampMaxExplicit) {
@@ -2912,7 +2912,7 @@ TEST_F(AtenXlaTensorTest, TestClampMaxTensorExplicit) {
     AllClose(b, xla_b);
   });
   ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
-  ExpectCounterChanged("xla::clamp_max_out", cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::clamp_max", cpp_test::GetIgnoredCounters());
 }
 
 TEST_F(AtenXlaTensorTest, TestClampMinExplicitInPlace) {
@@ -3460,7 +3460,7 @@ TEST_F(AtenXlaTensorTest, TestSiLU) {
     AllClose(b, xla_b, /*rtol=*/1e-3, /*atol=*/1e-5);
   });
   ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
-  ExpectCounterChanged("xla::silu_out", cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::silu", cpp_test::GetIgnoredCounters());
 }
 
 TEST_F(AtenXlaTensorTest, TestSiLUBackward) {
@@ -9029,7 +9029,7 @@ TEST_F(AtenXlaTensorTest, TestBitwiseOr) {
   });
 
   ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
-  ExpectCounterChanged("xla::bitwise_or_out", cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::bitwise_or", cpp_test::GetIgnoredCounters());
 }
 
 TEST_F(AtenXlaTensorTest, TestBitwiseOrInPlace) {
@@ -9047,7 +9047,7 @@ TEST_F(AtenXlaTensorTest, TestBitwiseOrInPlace) {
   });
 
   ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
-  ExpectCounterChanged("xla::bitwise_or_out", cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::bitwise_or", cpp_test::GetIgnoredCounters());
 }
 
 TEST_F(AtenXlaTensorTest, TestBitwiseOrScalar) {
@@ -9062,7 +9062,7 @@ TEST_F(AtenXlaTensorTest, TestBitwiseOrScalar) {
   });
 
   ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
-  ExpectCounterChanged("xla::bitwise_or_out", cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::bitwise_or", cpp_test::GetIgnoredCounters());
 }
 
 TEST_F(AtenXlaTensorTest, TestBitwiseOrScalarInPlace) {
@@ -9078,7 +9078,7 @@ TEST_F(AtenXlaTensorTest, TestBitwiseOrScalarInPlace) {
   });
 
   ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
-  ExpectCounterChanged("xla::bitwise_or_out", cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::bitwise_or", cpp_test::GetIgnoredCounters());
 }
 
 TEST_F(AtenXlaTensorTest, TestBitwiseXor) {
@@ -9095,7 +9095,7 @@ TEST_F(AtenXlaTensorTest, TestBitwiseXor) {
   });
 
   ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
-  ExpectCounterChanged("xla::bitwise_xor_out", cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::bitwise_xor", cpp_test::GetIgnoredCounters());
 }
 
 TEST_F(AtenXlaTensorTest, TestBitwiseXorInPlace) {
@@ -9113,7 +9113,7 @@ TEST_F(AtenXlaTensorTest, TestBitwiseXorInPlace) {
   });
 
   ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
-  ExpectCounterChanged("xla::bitwise_xor_out", cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::bitwise_xor", cpp_test::GetIgnoredCounters());
 }
 
 TEST_F(AtenXlaTensorTest, TestBitwiseXorScalar) {
@@ -9128,7 +9128,7 @@ TEST_F(AtenXlaTensorTest, TestBitwiseXorScalar) {
   });
 
   ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
-  ExpectCounterChanged("xla::bitwise_xor_out", cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::bitwise_xor", cpp_test::GetIgnoredCounters());
 }
 
 TEST_F(AtenXlaTensorTest, TestBitwiseXorScalarInPlace) {
@@ -9144,7 +9144,7 @@ TEST_F(AtenXlaTensorTest, TestBitwiseXorScalarInPlace) {
   });
 
   ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
-  ExpectCounterChanged("xla::bitwise_xor_out", cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::bitwise_xor", cpp_test::GetIgnoredCounters());
 }
 
 TEST_F(AtenXlaTensorTest, TestLshift) {

@@ -437,19 +437,15 @@ class XLATensor : public c10::intrusive_ptr_target {
 
   static XLATensor bitwise_and(const XLATensor& input, const XLATensor& other);
 
-  static void bitwise_not_out(XLATensor& out, const XLATensor& input);
+  static XLATensor bitwise_not(const XLATensor& input);
 
-  static void bitwise_or_out(XLATensor& out, const XLATensor& input,
-                             const at::Scalar& other);
+  static XLATensor bitwise_or(const XLATensor& input, const at::Scalar& other);
 
-  static void bitwise_or_out(XLATensor& out, const XLATensor& input,
-                             const XLATensor& other);
+  static XLATensor bitwise_or(const XLATensor& input, const XLATensor& other);
 
-  static void bitwise_xor_out(XLATensor& out, const XLATensor& input,
-                              const at::Scalar& other);
+  static XLATensor bitwise_xor(const XLATensor& input, const at::Scalar& other);
 
-  static void bitwise_xor_out(XLATensor& out, const XLATensor& input,
-                              const XLATensor& other);
+  static XLATensor bitwise_xor(const XLATensor& input, const XLATensor& other);
 
   // Batch matrix multiplication. Both tensors must be 3D, the batch size must
   // match and the remaining two dimensions must be compatible for matrix
@@ -476,9 +472,6 @@ class XLATensor : public c10::intrusive_ptr_target {
   static XLATensor clamp(const XLATensor& input,
                          const c10::optional<at::Tensor>& min,
                          const c10::optional<at::Tensor>& max);
-  static void clamp_out(XLATensor& out, const XLATensor& input,
-                        const c10::optional<at::Tensor>& min,
-                        const c10::optional<at::Tensor>& max);
 
   static XLATensor clone(const XLATensor& input);
 
@@ -1022,7 +1015,7 @@ class XLATensor : public c10::intrusive_ptr_target {
   static XLATensor selu(const XLATensor& input);
   static void selu_(XLATensor& input);
 
-  static void silu_out(XLATensor& input, XLATensor& out);
+  static XLATensor silu(const XLATensor& input);
   static XLATensor silu_backward(XLATensor& grad_output, XLATensor& input);
   static XLATensor sigmoid(const XLATensor& input);
   static XLATensor sigmoid_backward(const XLATensor& grad_output,
