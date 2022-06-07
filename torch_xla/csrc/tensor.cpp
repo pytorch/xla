@@ -207,14 +207,6 @@ class XlaDataCacheArena {
       device_caches_;
 };
 
-bool ShouldTransferScalarAsync() {
-  // TODO: Test the transfer_async with different models, and if it helps
-  // make it default
-  static const bool transfer_async =
-      xla::sys_util::GetEnvBool("XLA_TRANSFER_SCALAR_ASYNC", false);
-  return transfer_async;
-}
-
 XlaDataCacheArena::XlaDataCache* GetXlaDataCache(
     const torch::lazy::BackendDevice& device) {
   static const size_t kMaxCacheSize =
@@ -225,22 +217,19 @@ XlaDataCacheArena::XlaDataCache* GetXlaDataCache(
 
 torch::lazy::Value IrValueFromScalar(const at::Scalar& value,
                                      at::ScalarType scalar_type,
-                                     const torch::lazy::BackendDevice& device,
-                                     bool transfer_async) {
+                                     const torch::lazy::BackendDevice& device) {
   at::Tensor tensor = at::scalar_tensor(value, at::TensorOptions(scalar_type));
-  torch::lazy::BackendDataPtr device_data = TensorToXlaData(
-      tensor, device, transfer_async || ShouldTransferScalarAsync());
+  torch::lazy::BackendDataPtr device_data = TensorToXlaData(tensor, device);
   return torch::lazy::MakeNode<DeviceData>(std::move(device_data));
 }
 
 torch::lazy::BackendDataPtr GetDeviceData(
-    const at::Tensor& tensor, const torch::lazy::BackendDevice& device,
-    bool transfer_async = false) {
+    const at::Tensor& tensor, const torch::lazy::BackendDevice& device) {
   XlaDataCacheArena::XlaDataCache* cache = GetXlaDataCache(device);
   torch::lazy::BackendDataPtr device_data = cache->Get(tensor);
   if (device_data == nullptr) {
     at::Tensor tensor_copy = torch::lazy::CopyTensor(tensor);
-    device_data = TensorToXlaData(tensor_copy, device, transfer_async);
+    device_data = TensorToXlaData(tensor_copy, device);
     cache->Add(std::move(tensor_copy), device_data);
     XLA_COUNTER("DeviceDataCacheMiss", 1);
   }
@@ -249,14 +238,14 @@ torch::lazy::BackendDataPtr GetDeviceData(
 
 torch::lazy::BackendDataPtr GetDeviceData(
     const at::Scalar& value, at::ScalarType scalar_type,
-    const torch::lazy::BackendDevice& device, bool transfer_async = false) {
+    const torch::lazy::BackendDevice& device) {
   // Workaround since at::scalar_tensor doesn't support bfloat16 yet.
   at::Tensor t = at::scalar_tensor(
       value, at::TensorOptions(scalar_type == at::ScalarType::BFloat16
                                    ? at::ScalarType::Float
                                    : scalar_type));
   if (scalar_type == at::ScalarType::BFloat16) t = t.to(scalar_type);
-  return GetDeviceData(t, device, transfer_async);
+  return GetDeviceData(t, device);
 }
 
 // Routing values to device data maximizes the changes for compilation cache
@@ -333,13 +322,11 @@ class XLATensor::DeviceContextArena {
     static const at::ScalarType kSeedType = at::ScalarType::Long;
     static const uint64_t kSeedMul = 214013;
     static const uint64_t kSeedAdd = 2531011;
-    static bool transfer_async =
-        xla::sys_util::GetEnvBool("XLA_TRANSFER_SEED_ASYNC", false);
     DeviceContext* devctx = GetDeviceContext(device);
     std::lock_guard<std::mutex> lock(devctx->lock);
     if (!devctx->seed_ir_value) {
-      devctx->seed_ir_value = IrValueFromScalar(
-          MakeIntScalar(devctx->seed), kSeedType, device, transfer_async);
+      devctx->seed_ir_value =
+          IrValueFromScalar(MakeIntScalar(devctx->seed), kSeedType, device);
     }
     // Keep the running seed as scalar as well, so we can return it directly
     // without executing graphs.
@@ -776,8 +763,7 @@ torch::lazy::Value XLATensor::GetIrValueForTensor(
       return ScalarOp(std::move(value),
                       MakeXlaPrimitiveType(tensor.scalar_type(), &device));
     }
-    data = GetDeviceData(tensor, device,
-                         /*transfer_async=*/ShouldTransferScalarAsync());
+    data = GetDeviceData(tensor, device);
     read_only = true;
   } else {
     XLA_TIMED("IrValueTensorToXlaData");
@@ -788,9 +774,9 @@ torch::lazy::Value XLATensor::GetIrValueForTensor(
 
 torch::lazy::Value XLATensor::GetDeviceDataIrValue(
     const at::Scalar& value, xla::PrimitiveType type,
-    const torch::lazy::BackendDevice& device, bool transfer_async) {
+    const torch::lazy::BackendDevice& device) {
   torch::lazy::BackendDataPtr data =
-      GetDeviceData(value, TensorTypeFromXlaType(type), device, transfer_async);
+      GetDeviceData(value, TensorTypeFromXlaType(type), device);
   // TODO: consider using upstream info class if possible
   UnwrapXlaData(data)->SetInfo(
       std::make_shared<DeviceDataInfo>(/*tensor_id=*/-1, /*read_only=*/true));
@@ -814,8 +800,7 @@ torch::lazy::Value XLATensor::GetIrValueForScalar(
   if (IsSpecialScalar(value)) {
     return ScalarOp(std::move(value), type);
   }
-  return GetDeviceDataIrValue(value, type, device,
-                              /*transfer_async=*/ShouldTransferScalarAsync());
+  return GetDeviceDataIrValue(value, type, device);
 }
 
 torch::lazy::Value XLATensor::GetIrValueForScalar(

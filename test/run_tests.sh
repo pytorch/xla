@@ -75,11 +75,6 @@ function run_xla_backend_mp {
   MASTER_ADDR=localhost MASTER_PORT=6000 run_test "$@"
 }
 
-function run_async_rng {
-  echo "Running in Async RNG Upload mode: $@"
-  XLA_TRANSFER_SEED_ASYNC=1 run_test "$@"
-}
-
 function run_pjrt {
   echo "Running in PjRt runtime: $@"
   PJRT_DEVICE=CPU run_test "$@"
@@ -102,7 +97,6 @@ function run_op_tests {
   run_dynamic python3 "$CDIR/test_operations.py" "$@" --verbosity=$VERBOSITY
   run_opbyop python3 "$CDIR/test_operations.py" "$@" --verbosity=$VERBOSITY
   run_eager_debug python3 "$CDIR/test_operations.py" "$@" --verbosity=$VERBOSITY
-  run_async_rng python3 "$CDIR/test_operations.py" "$@" --verbosity=$VERBOSITY
   run_async_scalar python3 "$CDIR/test_operations.py" "$@" --verbosity=$VERBOSITY
   run_test python3 "$CDIR/test_grad_checkpoint.py"
   run_pjrt python3 "$CDIR/test_operations.py" "$@" --verbosity=$VERBOSITY

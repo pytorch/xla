@@ -651,9 +651,11 @@ void PopulateTensorBuffer(const at::Tensor& tensor,
 
 torch::lazy::BackendDataPtr TensorToXlaData(
     const at::Tensor& tensor, const xla::Shape& shape,
-    const torch::lazy::BackendDevice& device, bool transfer_async) {
+    const torch::lazy::BackendDevice& device) {
   XLA_TIMED("TensorToData");
-  if (transfer_async) {
+  static const bool transfer_async =
+      xla::sys_util::GetEnvBool("XLA_TRANSFER_SCALAR_ASYNC", false);
+  if (tensor.dim() == 0 && tensor.numel() == 1 && transfer_async) {
     std::shared_ptr<DataAsync> async = std::make_shared<DataAsync>();
     auto populate_mwait =
         std::make_shared<xla::util::MultiWait>(/*num_wait=*/1);
@@ -848,11 +850,9 @@ bool TensorCompare(const at::Tensor& t1, const at::Tensor& t2) {
 }
 
 torch::lazy::BackendDataPtr TensorToXlaData(
-    const at::Tensor& tensor, const torch::lazy::BackendDevice& device,
-    bool transfer_async) {
-  return TensorToXlaData(tensor,
-                         CreateComputationShapeFromTensor(tensor, &device),
-                         device, transfer_async);
+    const at::Tensor& tensor, const torch::lazy::BackendDevice& device) {
+  return TensorToXlaData(
+      tensor, CreateComputationShapeFromTensor(tensor, &device), device);
 }
 
 std::vector<torch::lazy::BackendDataPtr> CreateTensorsData(
