@@ -139,16 +139,6 @@ class XlaNode : public torch::lazy::Node {
   const xla::OpSharding* output_sharding_ = nullptr;
 };
 
-// RAII data structure to be used a stack variable to enter a new IR scope. IR
-// scope names will appear in the IR and will help identifying the source of the
-// single IR nodes.
-struct ScopePusher {
-  explicit ScopePusher(const std::string& name);
-  ~ScopePusher();
-
-  static void ResetScopes();
-};
-
 inline std::ostream& operator<<(std::ostream& stream, const XlaNode& node) {
   stream << node.ToString();
   return stream;
