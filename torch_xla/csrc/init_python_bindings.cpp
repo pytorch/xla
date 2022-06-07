@@ -808,11 +808,11 @@ void BuildProfilerSubmodule(py::module* m) {
       .def_static("is_enabled",
                   &tensorflow::profiler::TraceMeWrapper::IsEnabled);
 
-  py::class_<ScopePusher, std::unique_ptr<ScopePusher>> scope_pusher_class(
+  py::class_<torch::lazy::ScopePusher, std::unique_ptr<torch::lazy::ScopePusher>> scope_pusher_class(
       profiler, "ScopePusher");
   profiler.def("scope_pusher",
-               [](const std::string& name) -> std::unique_ptr<ScopePusher> {
-                 return absl::make_unique<ScopePusher>(name);
+               [](const std::string& name) -> std::unique_ptr<torch::lazy::ScopePusher> {
+                 return absl::make_unique<torch::lazy::ScopePusher>(name);
                });
 }
 
