@@ -110,7 +110,8 @@ at::IntArrayRef XLATensorImpl::sizes_custom() const {
 
 c10::SymIntArrayRef XLATensorImpl::sym_sizes_custom() const {
   auto sizes = sizes_custom();
-  return c10::SymIntArrayRef(reinterpret_cast<const c10::SymInt*>(sizes.data()), sizes.size());
+  return c10::SymIntArrayRef(reinterpret_cast<const c10::SymInt*>(sizes.data()),
+                             sizes.size());
 }
 
 at::IntArrayRef XLATensorImpl::strides_custom() const {
