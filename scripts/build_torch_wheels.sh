@@ -195,6 +195,9 @@ function build_and_install_torch_xla() {
   fi
   python setup.py bdist_wheel
   pip install dist/*.whl
+  if [ "$TPUVM_MODE" == "1" ]; then
+    pip install torch_xla[tpuvm]
+  fi
 }
 
 function install_torchvision_from_source() {
