@@ -655,7 +655,7 @@ torch::lazy::BackendDataPtr TensorToXlaData(
   XLA_TIMED("TensorToData");
   static const bool transfer_async =
       xla::sys_util::GetEnvBool("XLA_TRANSFER_SCALAR_ASYNC", false);
-  if (tensor.dim() == 0 && tensor.numel() == 1 && transfer_async) {
+  if (transfer_async && tensor.dim() == 0 && tensor.numel() == 1) {
     std::shared_ptr<DataAsync> async = std::make_shared<DataAsync>();
     auto populate_mwait =
         std::make_shared<xla::util::MultiWait>(/*num_wait=*/1);
