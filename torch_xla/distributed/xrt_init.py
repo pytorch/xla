@@ -73,10 +73,28 @@ def set_xrt_envs(dev_kind, world_size, rank, local_rank):
         os.environ["NEURON_USE_LOAD_COLLECTIVES"] = "1"
         os.environ['NEURON_GLOBAL_DEVICE_ID'] = rank
         os.environ['NEURON_GLOBAL_DEVICE_COUNT'] = world_size
-        os.environ['NEURON_RT_VISIBLE_CORES'] = local_rank
+        cores_to_use = os.environ.get('NEURON_RT_VISIBLE_CORES') 
+        if cores_to_use is not None:
+            # If a the cores are set by a scheduling entity (eg. SLURM) we index into 
+            # comma separated string containing numbered cores
+            cores_to_use_list = cores_to_use.split(',')
+            os.environ['NEURON_RT_VISIBLE_CORES'] = cores_to_use_list[int(local_rank)]
+        else:
+            # If no explicit visible cores are provided, local_rank is used to identify
+            # the core used by this process
+            os.environ['NEURON_RT_VISIBLE_CORES'] = local_rank
     else:
         os.environ[xenv.MP_DEVICE] = 'GPU:' + rank
-        os.environ['CUDA_VISIBLE_DEVICES'] = local_rank
+        gpus_to_use = os.environ.get('CUDA_VISIBLE_DEVICES')
+        if gpus_to_use is not None:
+            # If gpu devices are set by a scheduling entity (eg. SLURM) we index into 
+            # comma separated string containing numbered gpu devies 
+            gpus_to_use_list = gpus_to_use.split(',')
+            os.environ['CUDA_VISIBLE_DEVICES'] = gpus_to_use_list[int(local_rank)]
+        else:
+            # If no explicit visible devices are provided, local_rank is used to identify
+            # the gpu used by this process
+            os.environ['CUDA_VISIBLE_DEVICES'] = local_rank
 
 
 def _init_xrt_context(dev_kind='NEURON', master_addr=None, master_port=None, store=None):
