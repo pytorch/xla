@@ -72,12 +72,26 @@ TEST(IrTest, TestSelectUnselect) {
   });
 }
 
-TEST(IrTest, TestScopePusher) {
+TEST(IrTest, TestScopePusherWithoutDebugging) {
+  bool restore_FLAGS_torch_lazy_ir_debug = FLAGS_torch_lazy_ir_debug;
+  FLAGS_torch_lazy_ir_debug = false;
+  torch::lazy::ScopePusher scope("TestScope");
+  torch::lazy::NodePtr nodeptr = ScalarOp(1.0, xla::F32);
+  auto metaWithScope = nodeptr->metadata();
+  EXPECT_EQ(metaWithScope.scope, "");
+  EXPECT_EQ(metaWithScope.frame_info.size(), 0);
+  FLAGS_torch_lazy_ir_debug = restore_FLAGS_torch_lazy_ir_debug;
+}
+
+TEST(IrTest, TestScopePusherWithDebugging) {
+  bool restore_FLAGS_torch_lazy_ir_debug = FLAGS_torch_lazy_ir_debug;
+  FLAGS_torch_lazy_ir_debug = true;
   torch::lazy::ScopePusher scope("TestScope");
   torch::lazy::NodePtr nodeptr = ScalarOp(1.0, xla::F32);
   auto metaWithScope = nodeptr->metadata();
   EXPECT_EQ(metaWithScope.scope, "TestScope.1");
   EXPECT_EQ(metaWithScope.frame_info.size(), 1);
+  FLAGS_torch_lazy_ir_debug = restore_FLAGS_torch_lazy_ir_debug;
 }
 
 }  // namespace cpp_test
