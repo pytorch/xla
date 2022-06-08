@@ -114,6 +114,10 @@ c10::SymIntArrayRef XLATensorImpl::sym_sizes_custom() const {
                              sizes.size());
 }
 
+c10::SymIntArrayRef XLATensorImpl::sym_sizes() const {
+  return sym_sizes_custom();
+}
+
 at::IntArrayRef XLATensorImpl::strides_custom() const {
   const_cast<XLATensorImpl*>(this)->SetupSizeProperties();
   return strides_default();
