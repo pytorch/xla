@@ -128,7 +128,6 @@ function install_req_packages() {
   sudo apt-get -y install python-pip git curl libopenblas-dev vim apt-transport-https ca-certificates wget procps
   maybe_install_cuda
   install_bazel
-  install_ninja
 }
 
 function install_gcloud() {
@@ -229,6 +228,7 @@ function main() {
   # build_and_install_torch_xla
   popd
   install_torchvision_from_source
+  install_ninja
   install_torchaudio_from_source
   install_gcloud
 }
