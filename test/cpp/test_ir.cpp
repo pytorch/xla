@@ -89,7 +89,7 @@ TEST(IrTest, TestScopePusherWithDebugging) {
   torch::lazy::ScopePusher scope("TestScope");
   torch::lazy::NodePtr nodeptr = ScalarOp(1.0, xla::F32);
   auto metaWithScope = nodeptr->metadata();
-  EXPECT_EQ(metaWithScope.scope, "TestScope.1");
+  ASSERT_TRUE(metaWithScope.scope.find("TestScope") != std::string::npos);
   EXPECT_EQ(metaWithScope.frame_info.size(), 1);
   FLAGS_torch_lazy_ir_debug = restore_FLAGS_torch_lazy_ir_debug;
 }
