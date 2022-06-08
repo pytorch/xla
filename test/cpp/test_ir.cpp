@@ -72,5 +72,13 @@ TEST(IrTest, TestSelectUnselect) {
   });
 }
 
+TEST(IrTest, TestScopePusher) {
+  torch::lazy::ScopePusher scope("TestScope");
+  torch::lazy::NodePtr nodeptr = ScalarOp(1.0, xla::F32);
+  auto metaWithScope = nodeptr->metadata();
+  EXPECT_EQ(metaWithScope.scope, "TestScope.1");
+  EXPECT_EQ(metaWithScope.frame_info.size(), 1);
+}
+
 }  // namespace cpp_test
 }  // namespace torch_xla
