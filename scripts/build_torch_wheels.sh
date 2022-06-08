@@ -203,6 +203,7 @@ function install_torchvision_from_source() {
   # https://github.com/pytorch/vision/issues/967
   git clone -b "${torchvision_repo_version}" https://github.com/pytorch/vision.git
   pushd vision
+  cat torchvision/csrc/ops/quantized/cpu/qnms_kernel.cpp
   python setup.py bdist_wheel
   pip install dist/*.whl
   popd
@@ -225,7 +226,7 @@ function main() {
   install_and_setup_conda
   build_and_install_torch
   pushd xla
-  build_and_install_torch_xla
+  # build_and_install_torch_xla
   popd
   install_torchvision_from_source
   install_torchaudio_from_source
