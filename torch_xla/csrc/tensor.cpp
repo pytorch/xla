@@ -1491,7 +1491,7 @@ void XLATensor::SyncLiveTensorsGraph(const torch::lazy::BackendDevice* device,
 void XLATensor::MarkStep(const torch::lazy::BackendDevice& device) {
   XLA_COUNTER("MarkStep", 1);
   DeviceContextArena::Get()->MarkStep(device);
-  ScopePusher::ResetScopes();
+  torch::lazy::ScopePusher::ResetScopes();
   g_tls_data.Reset();
 }
 

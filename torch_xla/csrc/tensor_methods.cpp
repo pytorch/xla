@@ -1806,7 +1806,7 @@ XLATensor XLATensor::lt(const XLATensor& input, const XLATensor& other) {
 
 void XLATensor::masked_fill_(XLATensor& input, const XLATensor& mask,
                              const at::Scalar& value) {
-  ScopePusher ir_scope(at::aten::masked_fill.toQualString());
+  torch::lazy::ScopePusher ir_scope(at::aten::masked_fill.toQualString());
   input.SetIrValue(torch::lazy::MakeNode<MaskedFill>(
       input.GetIrValue(), MaybeExpand(mask.GetIrValue(), input.shape()),
       value));
@@ -1814,7 +1814,7 @@ void XLATensor::masked_fill_(XLATensor& input, const XLATensor& mask,
 
 void XLATensor::masked_scatter_(XLATensor& input, const XLATensor& mask,
                                 const XLATensor& source) {
-  ScopePusher ir_scope(at::aten::masked_scatter.toQualString());
+  torch::lazy::ScopePusher ir_scope(at::aten::masked_scatter.toQualString());
   input.SetIrValue(torch::lazy::MakeNode<MaskedScatter>(
       input.GetIrValue(), MaybeExpand(mask.GetIrValue(), input.shape()),
       source.GetIrValue()));
