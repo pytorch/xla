@@ -46,7 +46,7 @@ This guide is split into two parts:
 * [Running on a single Cloud TPU](#CloudSingle)
 * [Running on a Cloud TPU Pod](#Pod)
 
-We are also introducing *new* TPU VMs for more transparent and easier access to the TPU hardware. This is our **recommedned way* of running PyTorch/XLA on Cloud TPU. Please check out our [Cloud TPU VM User Guide](https://cloud.google.com/tpu/docs/pytorch-xla-ug-tpu-vm). Cloud TPU VM is currently on general availability and provides direct access to the TPU host. To learn more about the Cloud TPU System Architecture, please check out [this doc](https://cloud.google.com/tpu/docs/system-architecture-tpu-vm#tpu_vms).
+We are also introducing *new* TPU VMs for more transparent and easier access to the TPU hardware. This is our **recommedned way** of running PyTorch/XLA on Cloud TPU. Please check out our [Cloud TPU VM User Guide](https://cloud.google.com/tpu/docs/pytorch-xla-ug-tpu-vm). Cloud TPU VM is currently on general availability and provides direct access to the TPU host. To learn more about the Cloud TPU System Architecture, please check out [this doc](https://cloud.google.com/tpu/docs/system-architecture-tpu-vm#tpu_vms).
 
 The following instructions were originally written for Cloud TPU nodes, and should be applicable to training on TPU VMs.
 
