@@ -7,7 +7,6 @@ source .circleci/common.sh
 PYTORCH_DIR=/tmp/pytorch
 XLA_DIR=$PYTORCH_DIR/xla
 clone_pytorch $PYTORCH_DIR $XLA_DIR
-source "$PYTORCH_DIR/.jenkins/pytorch/common_utils.sh"
 
 SCCACHE="$(which sccache)"
 if [ -z "${SCCACHE}" ]; then
