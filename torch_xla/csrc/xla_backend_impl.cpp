@@ -27,14 +27,14 @@ class XlaBackendImpl : public torch::lazy::BackendImplInterface {
   torch::lazy::BackendDataPtr MakeComputationDataFromTensor(
       const at::Tensor& tensor, const torch::lazy::Shape& shape,
       const torch::lazy::BackendDevice& device) const override {
-    return TensorToXlaData(tensor, device, /*transfer_async=*/false);
+    return TensorToXlaData(tensor, device);
   }
 
   torch::lazy::BackendDataPtr MakeComputationDataFromScalar(
       const at::Scalar& scalar,
       const torch::lazy::BackendDevice& device) const override {
     at::Tensor t = at::scalar_tensor(scalar);
-    return TensorToXlaData(t, device, /*transfer_async=*/false);
+    return TensorToXlaData(t, device);
   }
 
   torch::lazy::BackendDataPtr CreateDataPlaceholder(

@@ -44,8 +44,7 @@ bool TensorCompare(const at::Tensor& t1, const at::Tensor& t2);
 // device data handle.
 // TODO LTC @wonjoo - Migrate to upstream after Device -> BackendDevice
 torch::lazy::BackendDataPtr TensorToXlaData(
-    const at::Tensor& tensor, const torch::lazy::BackendDevice& device,
-    bool transfer_async = false);
+    const at::Tensor& tensor, const torch::lazy::BackendDevice& device);
 
 torch::lazy::hash_t TensorHash(const at::Tensor& tensor);
 
