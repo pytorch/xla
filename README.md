@@ -46,13 +46,13 @@ This guide is split into two parts:
 * [Running on a single Cloud TPU](#CloudSingle)
 * [Running on a Cloud TPU Pod](#Pod)
 
-We are also introducing *new* TPU VMs for more transparent and easier access to the TPU hardware. Please check out our [Cloud TPU VM User Guide](https://cloud.google.com/tpu/docs/pytorch-xla-ug-tpu-vm). Cloud TPU VM is currently on public preview and provides direct access to the TPU host. To learn more about the Cloud TPU System Architecture, please check out [this doc](https://cloud.google.com/tpu/docs/system-architecture-tpu-vm#tpu_vms).
+We are also introducing *new* TPU VMs for more transparent and easier access to the TPU hardware. This is our **recommedned way** of running PyTorch/XLA on Cloud TPU. Please check out our [Cloud TPU VM User Guide](https://cloud.google.com/tpu/docs/pytorch-xla-ug-tpu-vm). Cloud TPU VM is currently on general availability and provides direct access to the TPU host. To learn more about the Cloud TPU System Architecture, please check out [this doc](https://cloud.google.com/tpu/docs/system-architecture-tpu-vm#tpu_vms).
 
 The following instructions were originally written for Cloud TPU nodes, and should be applicable to training on TPU VMs.
 
 ---
 
-## <a name="CloudSingle"></a> Running on a Single Cloud TPU
+## <a name="CloudSingle"></a> Running on a Single Cloud TPU Node (legacy)
 
 The following tutorials are available to help you train models on a single
 Cloud TPU:
@@ -90,11 +90,11 @@ Follow these steps to train a PyTorch model with Docker on a Cloud TPU:
     To pull the dockers run one of the following commands:
 
     ```Shell
-    (vm)$ docker pull gcr.io/tpu-pytorch/xla:nightly_3.6
+    (vm)$ docker pull gcr.io/tpu-pytorch/xla:nightly_3.7
     ```
 
     ```Shell
-    (vm)$ docker pull gcr.io/tpu-pytorch/xla:nightly_3.6_YYYYMMDD
+    (vm)$ docker pull gcr.io/tpu-pytorch/xla:nightly_3.7_YYYYMMDD
     ```
 
     ```Shell
@@ -157,7 +157,7 @@ Follow these steps to train a PyTorch model with a VM Image on a Cloud TPU:
 
 ---
 
-## <a name="Pod"></a> How to Run on TPU Pods (distributed training)
+## <a name="Pod"></a> How to Run on TPU Pods (distributed training) (legacy)
 
 Whereas the previous section focused on training on a single TPU node,
 this section discusses distributed training in TPU Pods. The tutorial,
@@ -294,11 +294,17 @@ post](https://cloud.google.com/blog/products/ai-machine-learning/googles-scalabl
 
 
 ## <a name="Resource"></a> Available images and wheels
-The following pre-built docker images are available to run on Cloud TPUs (see [docker images](#DockerImage) for instructions):
+The following pre-built docker images are available to run on Cloud TPU Nodes (see [docker images](#DockerImage) for instructions):
 
     * `gcr.io/tpu-pytorch/xla:r1.11_3.7`: The current stable version.
     * `gcr.io/tpu-pytorch/xla:nightly_3.7`: Nightly version using Python 3.7.
     * `gcr.io/tpu-pytorch/xla:nightly_3.7_YYYYMMDD (e.g.: gcr.io/tpu-pytorch/xla:nightly_3.7_20220301)`.
+
+and for Cloud TPU VMs
+
+    * `gcr.io/tpu-pytorch/xla:r1.11_3.8_tpuvm`: The current stable version.
+    * `gcr.io/tpu-pytorch/xla:nightly_3.8_tpuvm`: Nightly version using Python 3.7.
+    * `gcr.io/tpu-pytorch/xla:nightly_3.8_YYYYMMDD (e.g.: gcr.io/tpu-pytorch/xla:nightly_3.7_20220301)`.
 
 We also have pre-built docker images to run on Cloud compute instances with GPUs (`CUDA 11.2`):
 
@@ -326,6 +332,8 @@ and for Colab:
 
 * `https://storage.googleapis.com/tpu-pytorch/wheels/colab/torch_xla-1.11-cp37-cp37m-linux_x86_64.whl (TPU runtime)`
 * `https://storage.googleapis.com/tpu-pytorch/wheels/cuda/112/torch_xla-1.11-cp37-cp37m-linux_x86_64.whl (GPU runtime)`
+
+You can also add `+yyyymmdd` after `torch_xla-nightly` to get the nightly wheel of a specified date. To get the companion pytorch nightly wheel, replace the `torch_xla` with `torch` on above wheel links.
 
 Note that for Cloud TPU VM, you can update the libtpu after the torch_xla wheel by 
 
