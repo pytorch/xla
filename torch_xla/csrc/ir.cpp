@@ -19,48 +19,6 @@ namespace {
 using ShapeCache =
     xla::util::Cache<torch::lazy::hash_t, xla::Shape, torch::lazy::HashReducer>;
 
-struct ScopeEntry {
-  std::string name;
-  size_t saved_next_id = 1;
-};
-
-struct ScopeContext {
-  std::vector<ScopeEntry> scopes;
-  size_t next_id = 1;
-};
-
-thread_local ScopeContext g_scope_context;
-
-void PushScope(const std::string& name) {
-  size_t id = g_scope_context.next_id;
-  g_scope_context.scopes.push_back(
-      {absl::StrCat(name, ".", id), g_scope_context.next_id + 1});
-  g_scope_context.next_id = 1;
-}
-
-void PopScope() {
-  XLA_CHECK(!g_scope_context.scopes.empty());
-  g_scope_context.next_id = g_scope_context.scopes.back().saved_next_id;
-  g_scope_context.scopes.pop_back();
-}
-
-void ResetScopeContext() {
-  XLA_CHECK_EQ(g_scope_context.scopes.size(), 0);
-  g_scope_context.next_id = 1;
-}
-
-std::string GetCurrentScope() {
-  std::string scope;
-  for (auto& scope_entry : g_scope_context.scopes) {
-    if (scope.empty()) {
-      absl::StrAppend(&scope, scope_entry.name);
-    } else {
-      absl::StrAppend(&scope, "/", scope_entry.name);
-    }
-  }
-  return scope;
-}
-
 ShapeCache* GetShapeCache() {
   static int64_t shape_cache_size =
       xla::sys_util::GetEnvInt("XLA_IR_SHAPE_CACHE_SIZE", 4096);
@@ -201,12 +159,6 @@ xla::Shape XlaNode::GetOpShape(
   }
   return *shape;
 }
-
-ScopePusher::ScopePusher(const std::string& name) { PushScope(name); }
-
-ScopePusher::~ScopePusher() { PopScope(); }
-
-void ScopePusher::ResetScopes() { ResetScopeContext(); }
 
 const xla::Shape& GetXlaShape(const torch::lazy::Value& value) {
   XlaNode* casted = dynamic_cast<XlaNode*>(value.node.get());
