@@ -659,7 +659,7 @@ torch::lazy::NodePtr Norm(const torch::lazy::Value& input,
                           const c10::optional<at::Scalar>& p,
                           c10::optional<at::ScalarType> dtype,
                           absl::Span<const int64_t> dims, bool keepdim) {
-  ScopePusher ir_scope(at::aten::norm.toQualString());
+  torch::lazy::ScopePusher ir_scope(at::aten::norm.toQualString());
   auto dimensions = torch::lazy::ToVector<int64_t>(dims);
   if (dimensions.empty()) {
     dimensions = torch::lazy::Iota<int64_t>(GetXlaShape(input).rank());
@@ -769,31 +769,31 @@ torch::lazy::NodePtr GeluBackward(const torch::lazy::Value& grad_output,
 
 torch::lazy::NodePtr Lshift(const torch::lazy::Value& input,
                             const at::Scalar& other) {
-  ScopePusher ir_scope(at::aten::__lshift__.toQualString());
+  torch::lazy::ScopePusher ir_scope(at::aten::__lshift__.toQualString());
   return input * ScalarOp(pow(2, other.to<double>()), GetXlaShape(input));
 }
 
 torch::lazy::NodePtr Lshift(const torch::lazy::Value& input,
                             const torch::lazy::Value& other) {
-  ScopePusher ir_scope(at::aten::__lshift__.toQualString());
+  torch::lazy::ScopePusher ir_scope(at::aten::__lshift__.toQualString());
   return input * Pow(ScalarOp(2, GetXlaShape(input)), other);
 }
 
 torch::lazy::NodePtr Rshift(const torch::lazy::Value& input,
                             const at::Scalar& other) {
-  ScopePusher ir_scope(at::aten::__rshift__.toQualString());
+  torch::lazy::ScopePusher ir_scope(at::aten::__rshift__.toQualString());
   return input / ScalarOp(pow(2, other.to<double>()), GetXlaShape(input));
 }
 
 torch::lazy::NodePtr Rshift(const torch::lazy::Value& input,
                             const torch::lazy::Value& other) {
-  ScopePusher ir_scope(at::aten::__rshift__.toQualString());
+  torch::lazy::ScopePusher ir_scope(at::aten::__rshift__.toQualString());
   return input / Pow(ScalarOp(2, GetXlaShape(input)), other);
 }
 
 torch::lazy::NodePtr Remainder(const torch::lazy::Value& input,
                                const torch::lazy::Value& divisor) {
-  ScopePusher ir_scope(at::aten::remainder.toQualString());
+  torch::lazy::ScopePusher ir_scope(at::aten::remainder.toQualString());
   torch::lazy::NodePtr f = Fmod(
       input,
       torch::lazy::MakeNode<Abs>(divisor, std::vector<torch::lazy::Shape>()));
@@ -865,7 +865,7 @@ torch::lazy::NodePtr Take(const torch::lazy::Value& input,
 
 torch::lazy::NodePtr TanhGelu(const torch::lazy::Value& input) {
   // TODO: add proper lowering function
-  ScopePusher ir_scope("aten::tanh_gelu");
+  torch::lazy::ScopePusher ir_scope("aten::tanh_gelu");
   const xla::Shape& shape = GetXlaShape(input);
   // inner = math.sqrt(2 / math.pi) * (x + 0.044715 * torch.pow(input, 3))
   // input * 0.5 * (1.0 + torch.tanh(inner))
@@ -882,7 +882,7 @@ torch::lazy::NodePtr TanhGelu(const torch::lazy::Value& input) {
 torch::lazy::NodePtr TanhGeluBackward(const torch::lazy::Value& grad,
                                       const torch::lazy::Value& input) {
   // TODO: add proper lowering function
-  ScopePusher ir_scope("aten::tanh_gelu_backward");
+  torch::lazy::ScopePusher ir_scope("aten::tanh_gelu_backward");
   const xla::Shape& shape = GetXlaShape(input);
   constexpr float kBeta = M_SQRT2 * M_2_SQRTPI * 0.5;
   torch::lazy::NodePtr beta = ScalarOp(kBeta, shape);
@@ -975,7 +975,7 @@ torch::lazy::NodePtr BaddBmm(const torch::lazy::Value& lhs,
 torch::lazy::NodePtr Lerp(const torch::lazy::Value& start,
                           const torch::lazy::Value& end,
                           const torch::lazy::Value& weight) {
-  ScopePusher ir_scope(at::aten::lerp.toQualString());
+  torch::lazy::ScopePusher ir_scope(at::aten::lerp.toQualString());
   return start + weight * (end - start);
 }
 
