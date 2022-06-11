@@ -9,6 +9,7 @@
 #include "tensorflow/core/protobuf/cluster.pb.h"
 #include "tensorflow/core/protobuf/tensorflow_server.pb.h"
 #include "tensorflow/core/public/session_options.h"
+#include "tensorflow/core/tpu/tpu_initializer_helper.h"
 
 namespace xla {
 namespace {
@@ -51,6 +52,7 @@ void FillServerDef(const std::string& cluster_spec, const std::string& job_name,
 
 XrtLocalService::XrtLocalService(const std::string& cluster_spec,
                                  const std::string& job_name, int task_index) {
+  TF_LOG(INFO) << "libtpu status: " << tensorflow::tpu::FindAndLoadTpuLibrary();
   tensorflow::ServerDef server_def;
   FillServerDef(cluster_spec, job_name, task_index, &server_def);
   TF_CHECK_OK(tensorflow::NewServer(server_def, &server_));
