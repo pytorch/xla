@@ -197,6 +197,7 @@ function build_and_install_torch_xla() {
   pip install dist/*.whl
   if [ "$TPUVM_MODE" == "1" ]; then
     pip install torch_xla[tpuvm]
+    sudo apt-get install -y google-perftools
   fi
 }
 
