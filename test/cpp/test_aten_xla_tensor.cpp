@@ -7930,6 +7930,7 @@ TEST_F(AtenXlaTensorTest, TestL1Loss) {
       AllClose(output, xla_output);
     });
   }
+  ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
 }
 
 TEST_F(AtenXlaTensorTest, TestL1LossBackward) {

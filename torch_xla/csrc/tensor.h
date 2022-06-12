@@ -678,9 +678,6 @@ class XLATensor : public c10::intrusive_ptr_target {
                                                    int64_t k, int64_t dim,
                                                    bool keepdim);
 
-  static XLATensor l1_loss(const XLATensor& input, const XLATensor& target,
-                           int64_t reduction);
-
   static XLATensor le(const XLATensor& input, const at::Scalar& other);
 
   static XLATensor le(const XLATensor& input, const XLATensor& other);

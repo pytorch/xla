@@ -185,22 +185,6 @@ xla::XlaOp BuildBinaryCrossEntropyBackward(
   return result;
 }
 
-xla::XlaOp BuildL1Loss(xla::XlaOp input, xla::XlaOp target,
-                       ReductionMode reduction) {
-  xla::XlaOp result = xla::Abs(input - target);
-  if (reduction == ReductionMode::kNone) {
-    return result;
-  }
-  const xla::Shape& input_shape = XlaHelpers::ShapeOfXlaOp(input);
-  result = xla::ReduceAll(
-      result, xla::Zero(input.builder(), input_shape.element_type()),
-      XlaHelpers::CreateAddComputation(input_shape.element_type()));
-  if (reduction == ReductionMode::kMean) {
-    result = AverageValue(input, result);
-  }
-  return result;
-}
-
 xla::XlaOp BuildMseLoss(xla::XlaOp input, xla::XlaOp target,
                         ReductionMode reduction) {
   xla::XlaOp diff = input - target;
