@@ -1,8 +1,6 @@
 #pragma once
 
 // #include <torch/ATen/core/symbol.h>
-#include "torch/csrc/lazy/core/dynamic_ir.h"
-
 #include <functional>
 #include <memory>
 #include <set>
@@ -12,6 +10,7 @@
 #include <utility>
 #include <vector>
 
+#include "torch/csrc/lazy/core/dynamic_ir.h"
 #include "torch_xla/csrc/ir.h"
 
 namespace torch_xla {
@@ -20,8 +19,8 @@ namespace torch_xla {
  * The goal of "dynamic" Nodes is to patch a hole in our tracing.
  * Previously, if a user called `sizes` on a Tensor, it would leak out
  * of our tracing system, as `sizes` returns a torch.Size or an int. To
- * prevent this from happening, we introduce DimensionNode, a new type
- * of XlaNode that abstracts the operation of getting the dimensions of a
+ * prevent this from happening, we introduce torch::lazy::DimensionNode, a new
+ * type of XlaNode that abstracts the operation of getting the dimensions of a
  * Tensor.
  *
  * Consider the following example:
@@ -35,17 +34,6 @@ namespace torch_xla {
  * prevent `numel` from being represented as a Python int and thus
  * burned into the Graph.
  */
-
-// class DimensionNode : public XlaNode {
-//  public:
-//   DimensionNode(torch::lazy::OpKind op, OpList operands,
-//                 torch::lazy::hash_t hash_seed = default_hash_seed);
-//   bool isDynamic() { return false; } /* NOTE: PLACEHOLDER FOR NOW */
-
-//   std::string ToString() const override;
-
-//   virtual int64_t getStaticValue() const = 0;
-// };
 
 // Represents the result of calling `size` on a Tensor
 class SizeNode : public XlaNode, public torch::lazy::DimensionNode {
