@@ -8,7 +8,7 @@
 #include "torch/csrc/lazy/core/hash.h"
 #include "torch/csrc/lazy/core/tensor.h"
 #include "torch/csrc/lazy/core/util.h"
-#include "torch_xla/csrc/ops/dynamic_ir.h"
+#include "torch/csrc/lazy/core/dynamic_ir.h"
 
 namespace torch_xla {
 

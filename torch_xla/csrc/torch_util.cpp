@@ -13,10 +13,10 @@ void SymIntElements::SetSymIntNodeElements(c10::SymInt& size) {
   auto size_node = lazySymIntNode->node_;
   size_nodes.push_back(size_node);
   upper_bounds.push_back(
-      std::dynamic_pointer_cast<torch_xla::DimensionNode>(size_node)
+      std::dynamic_pointer_cast<torch::lazy::DimensionNode>(size_node)
           ->getStaticValue());
   dynamic_dims.push_back(
-      std::dynamic_pointer_cast<torch_xla::DimensionNode>(size_node)
+      std::dynamic_pointer_cast<torch::lazy::DimensionNode>(size_node)
           ->isDynamic());
 }
 

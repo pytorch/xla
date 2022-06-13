@@ -1,6 +1,7 @@
 #pragma once
 
 // #include <torch/ATen/core/symbol.h>
+#include "torch/csrc/lazy/core/dynamic_ir.h"
 
 #include <functional>
 #include <memory>
@@ -35,19 +36,19 @@ namespace torch_xla {
  * burned into the Graph.
  */
 
-class DimensionNode : public XlaNode {
- public:
-  DimensionNode(torch::lazy::OpKind op, OpList operands,
-                torch::lazy::hash_t hash_seed = default_hash_seed);
-  bool isDynamic() { return false; } /* NOTE: PLACEHOLDER FOR NOW */
+// class DimensionNode : public XlaNode {
+//  public:
+//   DimensionNode(torch::lazy::OpKind op, OpList operands,
+//                 torch::lazy::hash_t hash_seed = default_hash_seed);
+//   bool isDynamic() { return false; } /* NOTE: PLACEHOLDER FOR NOW */
 
-  std::string ToString() const override;
+//   std::string ToString() const override;
 
-  virtual int64_t getStaticValue() const = 0;
-};
+//   virtual int64_t getStaticValue() const = 0;
+// };
 
 // Represents the result of calling `size` on a Tensor
-class SizeNode : public DimensionNode {
+class SizeNode : public XlaNode, public torch::lazy::DimensionNode {
  public:
   SizeNode(XlaValue input, size_t dim);
   int64_t getStaticValue() const override;
@@ -56,7 +57,7 @@ class SizeNode : public DimensionNode {
   virtual XlaOpVector Lower(LoweringContext* loctx) const override;
 };
 
-class SizeAdd : public DimensionNode {
+class SizeAdd : public XlaNode, public torch::lazy::DimensionNode {
  public:
   SizeAdd(XlaValue a, XlaValue b);
   int64_t getStaticValue() const override;
@@ -64,7 +65,7 @@ class SizeAdd : public DimensionNode {
   virtual XlaOpVector Lower(LoweringContext* loctx) const override;
 };
 
-class SizeMul : public DimensionNode {
+class SizeMul : public XlaNode, public torch::lazy::DimensionNode {
  public:
   SizeMul(XlaValue a, XlaValue b);
   int64_t getStaticValue() const override;
@@ -72,7 +73,7 @@ class SizeMul : public DimensionNode {
   virtual XlaOpVector Lower(LoweringContext* loctx) const override;
 };
 
-class SizeDiv : public DimensionNode {
+class SizeDiv : public XlaNode, public torch::lazy::DimensionNode {
  public:
   SizeDiv(XlaValue a, XlaValue b);
   int64_t getStaticValue() const override;
