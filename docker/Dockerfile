@@ -32,6 +32,9 @@ ENV CXXFLAGS "${CXXFLAGS} -D_GLIBCXX_USE_CXX11_ABI=${cxx_abi}"
 # Whether to build for TPUVM mode
 ENV TPUVM_MODE "${tpuvm}"
 
+# Set LD_PRELOAD to use tcmalloc if for tpuvm mode.
+ENV LD_PRELOAD=${tpuvm:+"/usr/lib/x86_64-linux-gnu/libtcmalloc.so.4"}
+
 # Maximum number of jobs to use for bazel build
 ENV BAZEL_JOBS "${bazel_jobs}"
 
