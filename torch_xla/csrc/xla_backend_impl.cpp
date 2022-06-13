@@ -3,10 +3,12 @@
 #include <ATen/ScalarOps.h>
 
 #include "third_party/xla_client/debug_macros.h"
+#include "torch_xla/csrc/aten_xla_bridge.h"
 #include "torch_xla/csrc/computation.h"
 #include "torch_xla/csrc/device.h"
 #include "torch_xla/csrc/lowering_context.h"
 #include "torch_xla/csrc/ops/device_data.h"
+#include "torch_xla/csrc/tensor.h"
 #include "torch_xla/csrc/tensor_util.h"
 
 namespace torch_xla {
@@ -15,7 +17,7 @@ class XlaBackendImpl : public torch::lazy::BackendImplInterface {
   XlaBackendImpl() {}
   void PrepareToExit() const override { XLA_ERROR() << "Not implemented yet"; }
 
-  void SetRngSeed(const BackendDevice& device, uint64_t seed) {
+  void SetRngSeed(const torch::lazy::BackendDevice& device, uint64_t seed) {
     XLATensor::SetRngSeed(device, seed);
   }
 
@@ -128,10 +130,12 @@ class XlaBackendImpl : public torch::lazy::BackendImplInterface {
       c10::ArrayRef<torch::lazy::BackendDataPtr> arguments,
       const torch::lazy::BackendDevice& device) const override {
     xla::ComputationClient::ExecuteComputationOptions options;
-    std::vector<ComputationClient::DataPtr> results =
+    // TODO(JackCaoG): remove this hack and use computation when it is a ptr
+    torch::lazy::ComputationPtr temp;
+    std::vector<xla::ComputationClient::DataPtr> results =
         xla::ComputationClient::Get()->ExecuteComputation(
-            *computation.client_computation().get(), UnwrapXlaData(arguments),
-            device, options);
+            *(UnwrapClientComputation(temp).get()), UnwrapXlaData(arguments),
+            device.toString(), options);
     return WrapXlaData(results);
   }
 
@@ -153,7 +157,7 @@ class XlaBackendImpl : public torch::lazy::BackendImplInterface {
 
   torch::lazy::BackendDevice GetBackendDevice(
       c10::Device device) const override {
-    return torch_xla::brdige::AtenDeviceToXlaDevice(device);
+    return torch_xla::bridge::AtenDeviceToXlaDevice(device);
   }
 
   std::string GetComputationBackendText(
