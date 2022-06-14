@@ -52,6 +52,7 @@
 #include "torch_xla/csrc/tensor_util.h"
 #include "torch_xla/csrc/torch_util.h"
 #include "torch_xla/csrc/version.h"
+#include "torch_xla/csrc/xla_backend_impl.h"
 #include "torch_xla/csrc/xla_op_builder.h"
 
 namespace torch_xla {
@@ -821,7 +822,6 @@ void BuildProfilerSubmodule(py::module* m) {
 void InitXlaModuleBindings(py::module m) {
   m.def("_prepare_to_exit", []() { PrepareToExit(); });
   m.def("_get_git_revs", []() { return GetRevisions(); });
-  m.def("_map_xla_env_vars_to_lazy", []() { return MapXlaEnvVarsToLazy(); });
   m.def("_get_xla_tensor_dimension_size",
         [](const at::Tensor& tensor, int dim) {
           return GetXlaTensorDimensionSize(tensor, dim);
@@ -1461,12 +1461,17 @@ void InitXlaModuleBindings(py::module m) {
           return module->ToString();
         });
 
+  m.def("_init_xla_lazy_backend", []() { InitXlaBackend(); });
+
   BuildProfilerSubmodule(&m);
 }
 
 }  // namespace
 
-void InitXlaBindings(py::module m) { InitXlaModuleBindings(m); }
+void InitXlaBindings(py::module m) {
+  MapXlaEnvVarsToLazy();
+  InitXlaModuleBindings(m);
+}
 
 }  // namespace torch_xla
 
