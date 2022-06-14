@@ -11,13 +11,19 @@
 #include "torch_xla/csrc/tensor.h"
 #include "torch_xla/csrc/tensor_util.h"
 
+namespace at {
+// This function is defined in the codegenerated RegisterDispatchKey.cpp file.
+extern TORCH_API void RegisterXLAXLANativeFunctions();
+extern TORCH_API void RegisterXLAAutogradXLANativeFunctions();
+}  // namespace at
+
 namespace torch_xla {
 class XlaBackendImpl : public torch::lazy::BackendImplInterface {
  public:
   XlaBackendImpl() {}
   void PrepareToExit() const override { XLA_ERROR() << "Not implemented yet"; }
 
-  void SetRngSeed(size_t seed) const {
+  void SetRngSeed(size_t seed) const override {
     // TODO(JackCaoG): upstream SetRngSeed should either be removed or start
     // taking device.
     // XLATensor::SetRngSeed(device, seed);
@@ -181,9 +187,10 @@ torch::lazy::BackendImplInterface* GetXlaBackendImpl() {
 }
 
 void InitXlaBackend() {
-  // XLANativeFunctions, XLAAutogradLazyNativeFunctions and xla_fallback are
-  // currently auto registered when initializing torch_xla. No need to
-  // re-register here.
+  // xla_fallback is currently auto registered when initializing torch_xla. No
+  // need to re-register here.
+  at::RegisterXLAXLANativeFunctions();
+  at::RegisterXLAAutogradXLANativeFunctions();
   static std::unique_ptr<torch::lazy::BackendRegistrar> s_registrar;
   s_registrar =
       std::make_unique<torch::lazy::BackendRegistrar>(GetXlaBackendImpl());
