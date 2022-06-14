@@ -122,6 +122,7 @@ def _prepare_to_exit():
 def _init_xla_lazy_backend():
   _XLAC._init_xla_lazy_backend()
 
+
 atexit.register(_prepare_to_exit)
 _apply_patches()
 _init_xla_lazy_backend()
