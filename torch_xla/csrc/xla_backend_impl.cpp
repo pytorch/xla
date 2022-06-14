@@ -3,10 +3,12 @@
 #include <ATen/ScalarOps.h>
 
 #include "third_party/xla_client/debug_macros.h"
+#include "torch_xla/csrc/aten_xla_bridge.h"
 #include "torch_xla/csrc/computation.h"
 #include "torch_xla/csrc/device.h"
 #include "torch_xla/csrc/lowering_context.h"
 #include "torch_xla/csrc/ops/device_data.h"
+#include "torch_xla/csrc/tensor.h"
 #include "torch_xla/csrc/tensor_util.h"
 
 namespace torch_xla {
@@ -15,8 +17,8 @@ class XlaBackendImpl : public torch::lazy::BackendImplInterface {
   XlaBackendImpl() {}
   void PrepareToExit() const override { XLA_ERROR() << "Not implemented yet"; }
 
-  void SetRngSeed(size_t seed) const override {
-    XLA_ERROR() << "Not implemented yet";
+  void SetRngSeed(const torch::lazy::BackendDevice& device, uint64_t seed) {
+    XLATensor::SetRngSeed(device, seed);
   }
 
   const torch::lazy::IrBuilder* GetIrBuilder() const override {
@@ -127,7 +129,14 @@ class XlaBackendImpl : public torch::lazy::BackendImplInterface {
       torch::lazy::Computation& computation,
       c10::ArrayRef<torch::lazy::BackendDataPtr> arguments,
       const torch::lazy::BackendDevice& device) const override {
-    return {};
+    xla::ComputationClient::ExecuteComputationOptions options;
+    // TODO(JackCaoG): remove this hack and use computation when it is a ptr
+    torch::lazy::ComputationPtr temp;
+    std::vector<xla::ComputationClient::DataPtr> results =
+        xla::ComputationClient::Get()->ExecuteComputation(
+            *(UnwrapClientComputation(temp).get()), UnwrapXlaData(arguments),
+            device.toString(), options);
+    return WrapXlaData(results);
   }
 
   std::shared_ptr<torch::lazy::BackendDeviceType> GetDefaultDeviceType()
@@ -139,21 +148,22 @@ class XlaBackendImpl : public torch::lazy::BackendImplInterface {
   }
 
   at::DeviceType EagerFallbackDeviceType() const override {
-    return at::DeviceType();
+    return at::DeviceType::CPU;
   }
 
   std::vector<torch::lazy::BackendDevice> GetBackendDevices() const override {
-    return {};
+    return torch_xla::bridge::GetBackendDevices();
   }
 
   torch::lazy::BackendDevice GetBackendDevice(
       c10::Device device) const override {
-    return torch::lazy::BackendDevice();
+    return torch_xla::bridge::AtenDeviceToXlaDevice(device);
   }
 
   std::string GetComputationBackendText(
       const torch::lazy::ComputationPtr computation) const override {
-    return "";
+    return dynamic_cast<torch_xla::Computation*>(computation.get())
+        ->to_string();
   }
 };
 
