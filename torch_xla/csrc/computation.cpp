@@ -31,4 +31,9 @@ std::vector<torch::lazy::ComputationPtr> WrapClientComputation(
   return res;
 }
 
+std::shared_ptr<xla::ComputationClient::Computation> UnwrapClientComputation(
+    torch::lazy::ComputationPtr computation) {
+  return dynamic_cast<Computation*>(computation.get())->client_computation();
+}
+
 }  // namespace torch_xla
