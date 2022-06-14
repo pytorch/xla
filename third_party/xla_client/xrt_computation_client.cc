@@ -1117,52 +1117,6 @@ std::unique_ptr<xrt::XLAComputation> XrtComputationClient::CreateXrtComputation(
   return xrt_computation;
 }
 
-std::unique_ptr<xrt::XLAComputation>
-XrtComputationClient::CreateXrtSpmdComputation(
-    const XlaComputation& computation, absl::Span<const std::string> devices,
-    const Shape* output_shape) const {
-  std::unique_ptr<xrt::XLAComputation> xrt_computation(
-      new xrt::XLAComputation());
-  auto config = xrt_computation->mutable_config();
-
-  // TODO(yeounoh) num_cores_per_replica is no longer hard-coded to 1,
-  // a single replica gets all the available cores for SPMD.
-  config->set_num_replicas(1);
-  config->set_num_cores_per_replica(devices.size());
-  // Model-parallel computation requires num_cores_per_repica
-  // computation devices
-  auto device_assignment = config->mutable_device_assignment();
-  for (int64_t i = 0; i < devices.size(); ++i) {
-    ProgramShapeProto* per_core_program_shape =
-        config->add_per_core_program_shape();
-    *per_core_program_shape =
-        computation.GetProgramShape().ValueOrDie().ToProto();
-
-    auto computation_device = device_assignment->add_computation_devices();
-    Device device(devices[i]);
-    auto replica_device = computation_device->add_replica_devices();
-    if (device.kind == "TPU") {
-      const std::string& xrt_device = TorchDeviceToXrtDevice(devices[i]);
-      const auto& core_coords = GetDeviceMeshCoords(xrt_device);
-      for (auto coord : core_coords) {
-        replica_device->add_value(coord);
-      }
-    } else {
-      XLA_ERROR() << "Unsupported PyTorch/XLA SPMD device type: "
-                  << device.kind;
-    }
-  }
-  *config->mutable_program_shape() =
-      computation.GetProgramShape().ValueOrDie().ToProto();
-  if (output_shape != nullptr) {
-    *config->mutable_program_shape()->mutable_result() =
-        output_shape->ToProto();
-  }
-  *xrt_computation->mutable_hlo_snapshot() =
-      std::move(*computation.Snapshot().value());
-  return xrt_computation;
-}
-
 tensorflow::Tensor XrtComputationClient::GetArgumentsInputs(
     absl::Span<const DataPtr> arguments, const std::string& device) {
   tensorflow::Tensor inputs_tensor(tensorflow::DT_INT64,
@@ -1747,7 +1701,7 @@ void XrtComputationClient::InitSession(XrtSession* session) const {
   struct InitNode {
     int count;
     const XrtSession::CachedNode& (XrtComputationClient::*node_ctor)(
-        XrtSession*, const tensorflow::Scope&, const std::string&) const;
+        XrtSession*, const tensorflow::Scope&, const std::string&)const;
   } const init_nodes[] = {
       {16, &XrtComputationClient::GetCompileNode},
       {16, &XrtComputationClient::GetExecuteNode},

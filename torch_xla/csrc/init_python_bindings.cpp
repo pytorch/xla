@@ -1476,13 +1476,17 @@ void InitXlaModuleBindings(py::module m) {
           }
           auto module = std::move(hlo_module_error.ValueOrDie());
 
+          auto collective_ops_creator =
+              xla::spmd::GetDefaultCollectiveOpsCreator(
+                  num_devices, /*num_replicas=*/num_replicas);
+
           xla::HloPassPipeline pass("spmd-partitioning");
           pass.AddPass<xla::HloVerifier>(/*layout_sensitive=*/false,
                                          /*allow_mixed_precision=*/false);
           pass.AddPass<xla::ShardingPropagation>(/*is_spmd=*/true);
           pass.AddPass<xla::spmd::SpmdPartitioner>(
-              /*num_partitions=*/num_devices,
-              /*num_replicas=*/num_replicas, options);
+              num_devices, /*num_replicas=*/num_replicas, options,
+              collective_ops_creator);
           pass.AddPass<xla::HloVerifier>(/*layout_sensitive=*/false,
                                          /*allow_mixed_precision=*/false);
           const auto& pass_status = pass.Run(module.get());
@@ -1491,13 +1495,6 @@ void InitXlaModuleBindings(py::module m) {
           }
           return module->ToString();
         });
-  m.def("_xla_get_sharding_spec", [](const at::Tensor& input) {
-    // TODO: fix this
-    XLATensor xtensor = bridge::GetXlaTensor(input);
-    auto sharding_spec = xtensor.sharding_spec();
-    auto hlo_sharding = xla::HloSharding::FromProto(sharding_spec->sharding);
-    return hlo_sharding->ToString();
-  });
 
   m.def("_init_xla_lazy_backend", []() {
     MapXlaEnvVarsToLazy();
