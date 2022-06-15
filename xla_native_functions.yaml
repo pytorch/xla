@@ -163,8 +163,6 @@ supported:
   - kl_div
   - kl_div_backward
   - kthvalue
-  - l1_loss
-  - l1_loss_backward
   - le.Scalar
   - le.Tensor
   - leaky_relu

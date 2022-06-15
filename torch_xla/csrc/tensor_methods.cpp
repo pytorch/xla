@@ -68,8 +68,6 @@
 #include "torch_xla/csrc/ops/index_select.h"
 #include "torch_xla/csrc/ops/infer_output_shape.h"
 #include "torch_xla/csrc/ops/kth_value.h"
-#include "torch_xla/csrc/ops/l1_loss.h"
-#include "torch_xla/csrc/ops/l1_loss_backward.h"
 #include "torch_xla/csrc/ops/leaky_relu.h"
 #include "torch_xla/csrc/ops/leaky_relu_backward.h"
 #include "torch_xla/csrc/ops/linear_interpolation.h"
@@ -1551,21 +1549,6 @@ std::tuple<XLATensor, XLATensor> XLATensor::kthvalue(const XLATensor& input,
   return std::make_tuple(
       input.CreateFrom(torch::lazy::Value(node, 0)),
       input.CreateFrom(torch::lazy::Value(node, 1), at::ScalarType::Long));
-}
-
-XLATensor XLATensor::l1_loss(const XLATensor& input, const XLATensor& target,
-                             int64_t reduction) {
-  return input.CreateFrom(torch::lazy::MakeNode<L1Loss>(
-      input.GetIrValue(), target.GetIrValue(), GetXlaReductionMode(reduction)));
-}
-
-XLATensor XLATensor::l1_loss_backward(const XLATensor& grad_output,
-                                      const XLATensor& input,
-                                      const XLATensor& target,
-                                      int64_t reduction) {
-  return input.CreateFrom(torch::lazy::MakeNode<L1LossBackward>(
-      grad_output.GetIrValue(), input.GetIrValue(), target.GetIrValue(),
-      GetXlaReductionMode(reduction)));
 }
 
 XLATensor XLATensor::le(const XLATensor& input, const at::Scalar& other) {
