@@ -1687,24 +1687,6 @@ std::tuple<at::Tensor, at::Tensor> XLANativeFunctions::kthvalue(
                          bridge::AtenFromXlaTensor(std::get<1>(results)));
 }
 
-at::Tensor XLANativeFunctions::l1_loss(const at::Tensor& self,
-                                       const at::Tensor& target,
-                                       int64_t reduction) {
-  XLA_FN_COUNTER("xla::");
-  return bridge::AtenFromXlaTensor(XLATensor::l1_loss(
-      bridge::GetXlaTensor(self), bridge::GetXlaTensor(target), reduction));
-}
-
-at::Tensor XLANativeFunctions::l1_loss_backward(const at::Tensor& grad_output,
-                                                const at::Tensor& self,
-                                                const at::Tensor& target,
-                                                int64_t reduction) {
-  XLA_FN_COUNTER("xla::");
-  return bridge::AtenFromXlaTensor(XLATensor::l1_loss_backward(
-      bridge::GetXlaTensor(grad_output), bridge::GetXlaTensor(self),
-      bridge::GetXlaTensor(target), reduction));
-}
-
 at::Tensor XLANativeFunctions::le(const at::Tensor& self,
                                   const at::Scalar& other) {
   XLA_FN_COUNTER("xla::");

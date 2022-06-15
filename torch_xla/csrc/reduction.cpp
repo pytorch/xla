@@ -185,37 +185,6 @@ xla::XlaOp BuildBinaryCrossEntropyBackward(
   return result;
 }
 
-xla::XlaOp BuildL1Loss(xla::XlaOp input, xla::XlaOp target,
-                       ReductionMode reduction) {
-  xla::XlaOp result = xla::Abs(input - target);
-  if (reduction == ReductionMode::kNone) {
-    return result;
-  }
-  const xla::Shape& input_shape = XlaHelpers::ShapeOfXlaOp(input);
-  result = xla::ReduceAll(
-      result, xla::Zero(input.builder(), input_shape.element_type()),
-      XlaHelpers::CreateAddComputation(input_shape.element_type()));
-  if (reduction == ReductionMode::kMean) {
-    result = AverageValue(input, result);
-  }
-  return result;
-}
-
-xla::XlaOp BuildL1LossBackward(xla::XlaOp grad_output, xla::XlaOp input,
-                               xla::XlaOp target, ReductionMode reduction) {
-  const xla::Shape& input_shape = XlaHelpers::ShapeOfXlaOp(input);
-  if (reduction == ReductionMode::kNone) {
-    xla::XlaOp one = xla::One(input.builder(), input_shape.element_type());
-    xla::XlaOp mask = xla::Select(xla::Ge(input, target), one, -one);
-    return mask * grad_output;
-  }
-  xla::XlaOp grad_value = grad_output;
-  if (reduction == ReductionMode::kMean) {
-    grad_value = AverageValue(input, grad_value);
-  }
-  return xla::Select(xla::Ge(input, target), grad_value, -grad_value);
-}
-
 xla::XlaOp BuildMseLoss(xla::XlaOp input, xla::XlaOp target,
                         ReductionMode reduction) {
   xla::XlaOp diff = input - target;
