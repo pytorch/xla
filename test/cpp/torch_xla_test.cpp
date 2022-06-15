@@ -14,6 +14,7 @@ namespace torch_xla {
 namespace cpp_test {
 
 void XlaTest::SetUp() {
+  at::RegisterXLAXLANativeFunctions();
   at::manual_seed(42);
   XLATensor::SetRngSeed(GetCurrentDevice(), 42);
   start_msnap_ = absl::make_unique<MetricsSnapshot>();
