@@ -5,10 +5,10 @@
 #include <c10/util/Optional.h>
 
 #include "tensorflow/compiler/xla/shape.h"
+#include "torch/csrc/lazy/core/dynamic_ir.h"
 #include "torch/csrc/lazy/core/hash.h"
 #include "torch/csrc/lazy/core/tensor.h"
 #include "torch/csrc/lazy/core/util.h"
-#include "torch/csrc/lazy/core/dynamic_ir.h"
 
 namespace torch_xla {
 

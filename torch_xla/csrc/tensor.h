@@ -21,9 +21,9 @@
 #include "torch_xla/csrc/ir.h"
 #include "torch_xla/csrc/ir_util.h"
 #include "torch_xla/csrc/lowering_context.h"
-#include "torch_xla/csrc/xla_sharding_util.h"
 #include "torch_xla/csrc/ops/dynamic_ir.h"
 #include "torch_xla/csrc/view.h"
+#include "torch_xla/csrc/xla_sharding_util.h"
 
 namespace torch_xla {
 
