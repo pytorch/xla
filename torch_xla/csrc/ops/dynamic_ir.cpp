@@ -5,6 +5,10 @@
 #include "torch_xla/csrc/lowering_context.h"
 #include "torch_xla/csrc/ops/infer_output_shape.h"
 
+static const torch::lazy::DimensionNode* DimCast(torch::lazy::Output output) {
+  return dynamic_cast<const torch::lazy::DimensionNode*>(output.node);
+}
+
 namespace torch_xla {
 
 SizeNode::SizeNode(XlaValue input, size_t dim)
@@ -22,6 +26,14 @@ int64_t SizeNode::getStaticValue() const {
   return dynamic_cast<const XlaNode*>(operand(0).node)->shape(0).size(dim_);
 }
 
+bool SizeNode::isDynamic() const {
+  auto symbolic_vec = dynamic_cast<const XlaNode*>(operand(0).node)->shape(0).is_symbolic();
+  if (!symbolic_vec.has_value()) {
+    return true;
+  }
+  return symbolic_vec->at(dim_);
+}
+
 std::string SizeNode::ToString() const { return "SizeNode"; }
 
 SizeAdd::SizeAdd(XlaValue a, XlaValue b)
@@ -33,6 +45,10 @@ int64_t SizeAdd::getStaticValue() const {
              ->getStaticValue() +
          dynamic_cast<const torch::lazy::DimensionNode*>(operand(1).node)
              ->getStaticValue();
+}
+
+bool SizeAdd::isDynamic() const {
+  return DimCast(operand(0))->isDynamic() || DimCast(operand(1))->isDynamic();
 }
 
 std::string SizeAdd::ToString() const { return "SizeAdd"; }
@@ -54,6 +70,10 @@ int64_t SizeMul::getStaticValue() const {
              ->getStaticValue() *
          dynamic_cast<const torch::lazy::DimensionNode*>(operand(1).node)
              ->getStaticValue();
+}
+
+bool SizeMul::isDynamic() const {
+  return DimCast(operand(0))->isDynamic() || DimCast(operand(1))->isDynamic();
 }
 
 std::string SizeMul::ToString() const { return "SizeMul"; }
@@ -78,6 +98,10 @@ int64_t SizeDiv::getStaticValue() const {
              ->getStaticValue() /
          dynamic_cast<const torch::lazy::DimensionNode*>(operand(1).node)
              ->getStaticValue();
+}
+
+bool SizeDiv::isDynamic() const {
+  return DimCast(operand(0))->isDynamic() || DimCast(operand(1))->isDynamic();
 }
 
 std::string SizeDiv::ToString() const { return "SizeDiv"; }
