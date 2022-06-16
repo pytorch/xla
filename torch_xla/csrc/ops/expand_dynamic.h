@@ -8,7 +8,8 @@ namespace torch_xla {
 
 class ExpandDynamic : public XlaNode {
  public:
-  ExpandDynamic(const torch::lazy::Value& input, const std::vector<torch::lazy::Value>& dimensions,
+  ExpandDynamic(const torch::lazy::Value& input,
+                const std::vector<torch::lazy::Value>& dimensions,
                 const std::vector<int64_t> upper_bounds,
                 const std::vector<bool> dynamic_dims);
 
