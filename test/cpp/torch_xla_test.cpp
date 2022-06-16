@@ -5,10 +5,14 @@
 #include "absl/memory/memory.h"
 #include "tensorflow/compiler/xla/xla_client/sys_util.h"
 #include "tensorflow/compiler/xla/xla_client/tf_logging.h"
-#include "torch_xla/csrc/XLANativeFunctions.h"
 #include "torch_xla/csrc/device.h"
 #include "torch_xla/csrc/helpers.h"
 #include "torch_xla/csrc/tensor.h"
+
+namespace at {
+// This function is defined in the codegenerated RegisterDispatchKey.cpp file.
+extern TORCH_API void RegisterXLAXLANativeFunctions();
+}  // namespace at
 
 namespace torch_xla {
 namespace cpp_test {
