@@ -11,7 +11,7 @@ static const torch::lazy::DimensionNode* DimCast(torch::lazy::Output output) {
 
 namespace torch_xla {
 
-SizeNode::SizeNode(XlaValue input, size_t dim)
+SizeNode::SizeNode(torch::lazy::Value input, size_t dim)
     : XlaNode(torch::lazy::OpKind{c10::Symbol::fromQualString("aten::size")},
               {input}, xla::ShapeUtil::MakeShape(xla::S32, {}), 1,
               torch::lazy::MHash(dim)),
@@ -37,7 +37,7 @@ bool SizeNode::isDynamic() const {
 
 std::string SizeNode::ToString() const { return "SizeNode"; }
 
-SizeAdd::SizeAdd(XlaValue a, XlaValue b)
+SizeAdd::SizeAdd(torch::lazy::Value a, torch::lazy::Value b)
     : XlaNode(torch::lazy::OpKind{c10::Symbol::fromQualString("aten::add")},
               {a, b}, xla::ShapeUtil::MakeShape(xla::S32, {}), 1){};
 
@@ -62,7 +62,7 @@ XlaOpVector SizeAdd::Lower(LoweringContext* loctx) const {
       loctx);
 }
 
-SizeMul::SizeMul(XlaValue a, XlaValue b)
+SizeMul::SizeMul(torch::lazy::Value a, torch::lazy::Value b)
     : XlaNode(torch::lazy::OpKind{c10::Symbol::fromQualString("aten::mul")},
               {a, b}, xla::ShapeUtil::MakeShape(xla::S32, {}), 1){};
 
@@ -87,7 +87,7 @@ XlaOpVector SizeMul::Lower(LoweringContext* loctx) const {
                   loctx);
 }
 
-SizeDiv::SizeDiv(XlaValue a, XlaValue b)
+SizeDiv::SizeDiv(torch::lazy::Value a, torch::lazy::Value b)
     : XlaNode(torch::lazy::OpKind{c10::Symbol::fromQualString("aten::div")},
               {a, b}, xla::ShapeUtil::MakeShape(xla::S32, {}), 1){};
 

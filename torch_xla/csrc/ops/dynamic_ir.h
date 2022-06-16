@@ -38,7 +38,7 @@ namespace torch_xla {
 // Represents the result of calling `size` on a Tensor
 class SizeNode : public XlaNode, public torch::lazy::DimensionNode {
  public:
-  SizeNode(XlaValue input, size_t dim);
+  SizeNode(torch::lazy::Value input, size_t dim);
   int64_t getStaticValue() const override;
   bool isDynamic() const override;
   std::string ToString() const override;
@@ -48,7 +48,7 @@ class SizeNode : public XlaNode, public torch::lazy::DimensionNode {
 
 class SizeAdd : public XlaNode, public torch::lazy::DimensionNode {
  public:
-  SizeAdd(XlaValue a, XlaValue b);
+  SizeAdd(torch::lazy::Value a, torch::lazy::Value b);
   int64_t getStaticValue() const override;
   bool isDynamic() const override;
   std::string ToString() const override;
@@ -57,7 +57,7 @@ class SizeAdd : public XlaNode, public torch::lazy::DimensionNode {
 
 class SizeMul : public XlaNode, public torch::lazy::DimensionNode {
  public:
-  SizeMul(XlaValue a, XlaValue b);
+  SizeMul(torch::lazy::Value a, torch::lazy::Value b);
   int64_t getStaticValue() const override;
   bool isDynamic() const override;
   std::string ToString() const override;
@@ -66,7 +66,7 @@ class SizeMul : public XlaNode, public torch::lazy::DimensionNode {
 
 class SizeDiv : public XlaNode, public torch::lazy::DimensionNode {
  public:
-  SizeDiv(XlaValue a, XlaValue b);
+  SizeDiv(torch::lazy::Value a, torch::lazy::Value b);
   int64_t getStaticValue() const override;
   bool isDynamic() const override;
   std::string ToString() const override;
