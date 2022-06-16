@@ -1,4 +1,5 @@
 #include <ATen/ExpandUtils.h>
+#include <ATen/FunctionalTensorWrapper.h>
 #include <ATen/NativeFunctions.h>
 #include <ATen/Operators.h>
 #include <ATen/native/BinaryOps.h>
@@ -3521,6 +3522,64 @@ XLANativeFunctions::native_group_norm(const at::Tensor& input,
                                       int64_t group, double eps) {
   return at::native::math_group_norm(input, weight, bias, N, C, HxW, group,
                                      eps);
+}
+
+// All of the below ops correspond to CompositeExplicitAutograd kernels from
+// core that call into view operators internally. These are all composite ops
+// that LTC can technically re-use / get for free, but we need to
+// "functionalize" them to remove the view ops before we can use them.
+at::Tensor XLANativeFunctions::block_diag(at::TensorList tensors) {
+  return at::native::block_diag(tensors);
+}
+at::Tensor XLANativeFunctions::new_empty_strided(
+    const at::Tensor& self, at::IntArrayRef size, at::IntArrayRef stride,
+    c10::optional<at::ScalarType> dtype, c10::optional<at::Layout> layout,
+    c10::optional<at::Device> device, c10::optional<bool> pin_memory) {
+  return at::native::new_empty_strided(self, size, stride, dtype, layout,
+                                       device, pin_memory);
+}
+
+at::Tensor XLANativeFunctions::narrow_copy(const at::Tensor& self, int64_t dim,
+                                           int64_t start, int64_t length) {
+  return at::native::narrow_copy_dense(self, dim, start, length);
+}
+at::Tensor XLANativeFunctions::pixel_shuffle(const at::Tensor& self,
+                                             int64_t upscale_factor) {
+  return at::native::math_pixel_shuffle(self, upscale_factor);
+}
+at::Tensor XLANativeFunctions::pixel_unshuffle(const at::Tensor& self,
+                                               int64_t downscale_factor) {
+  return at::native::math_pixel_unshuffle(self, downscale_factor);
+}
+at::Tensor XLANativeFunctions::select_backward(const at::Tensor& grad_output,
+                                               at::IntArrayRef input_sizes,
+                                               int64_t dim, int64_t index) {
+  return at::native::select_backward(grad_output, input_sizes, dim, index);
+}
+::std::tuple<at::Tensor, at::Tensor> XLANativeFunctions::linalg_inv_ex(
+    const at::Tensor& self, bool check_errors) {
+  return at::native::linalg_inv_ex(self, check_errors);
+}
+at::Tensor XLANativeFunctions::linalg_pinv(
+    const at::Tensor& self, const c10::optional<at::Tensor>& atol,
+    const c10::optional<at::Tensor>& rtol, bool hermitian) {
+  return at::native::linalg_pinv(self, atol, rtol, hermitian);
+}
+
+at::Tensor XLANativeFunctions::diagonal_backward(const at::Tensor& grad_output,
+                                                 at::IntArrayRef input_sizes,
+                                                 int64_t offset, int64_t dim1,
+                                                 int64_t dim2) {
+  return at::native::diagonal_backward(grad_output, input_sizes, offset, dim1,
+                                       dim2);
+}
+
+at::Tensor XLANativeFunctions::slice_backward(const at::Tensor& grad_output,
+                                              at::IntArrayRef input_sizes,
+                                              int64_t dim, int64_t start,
+                                              int64_t end, int64_t step) {
+  return at::native::slice_backward(grad_output, input_sizes, dim, start, end,
+                                    step);
 }
 
 }  // namespace torch_xla
