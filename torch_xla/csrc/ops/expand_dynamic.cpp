@@ -11,13 +11,13 @@
 namespace torch_xla {
 namespace {
 
-xla::Shape NodeOutputShape(const XlaValue& input,
+xla::Shape NodeOutputShape(const torch::lazy::Value& input,
                            const std::vector<int64_t> upper_bounds,
                            const std::vector<bool> dynamic_dims) {
   std::vector<xla::Shape> shapes;
-  shapes.push_back(input.xla_shape());
+  shapes.push_back(GetXlaShape(input));
   for (int i = 0; i < upper_bounds.size(); i++) {
-    shapes.push_back(xla::ShapeUtil::MakeShape(input.xla_shape().element_type(),
+    shapes.push_back(xla::ShapeUtil::MakeShape(GetXlaShape(input).element_type(),
                                                {upper_bounds[i]},
                                                {dynamic_dims[i]}));
   }
@@ -30,22 +30,22 @@ xla::Shape NodeOutputShape(const XlaValue& input,
   return InferOutputShape(shapes, lower_for_shape_fn);
 }
 
-std::vector<XlaValue> GetXlaValues(const XlaValue& input,
-                                   const std::vector<XlaValue> dimensions) {
-  std::vector<XlaValue> xla_values = dimensions;
-  xla_values.insert(xla_values.begin(), input);
-  return xla_values;
+std::vector<torch::lazy::Value> GetValues(const torch::lazy::Value& input,
+                                   const std::vector<torch::lazy::Value> dimensions) {
+  std::vector<torch::lazy::Value> values = dimensions;
+  values.insert(values.begin(), input);
+  return values;
 }
 
 }  // namespace
 
-ExpandDynamic::ExpandDynamic(const XlaValue& input,
-                             const std::vector<XlaValue>& dimensions,
+ExpandDynamic::ExpandDynamic(const torch::lazy::Value& input,
+                             const std::vector<torch::lazy::Value>& dimensions,
                              const std::vector<int64_t> upper_bounds,
                              const std::vector<bool> dynamic_dims)
     : XlaNode(
           torch::lazy::OpKind(at::aten::expand),
-          GetXlaValues(input, dimensions),
+          GetValues(input, dimensions),
           [&]() { return NodeOutputShape(input, upper_bounds, dynamic_dims); },
           /*num_outputs=*/1, torch::lazy::MHash(upper_bounds)),
       upper_bounds_(std::move(upper_bounds)),
