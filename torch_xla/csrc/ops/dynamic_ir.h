@@ -40,6 +40,7 @@ class SizeNode : public XlaNode, public torch::lazy::DimensionNode {
  public:
   SizeNode(XlaValue input, size_t dim);
   int64_t getStaticValue() const override;
+  bool isDynamic() const override;
   std::string ToString() const override;
   size_t dim_ = 0;
   virtual XlaOpVector Lower(LoweringContext* loctx) const override;
@@ -49,6 +50,7 @@ class SizeAdd : public XlaNode, public torch::lazy::DimensionNode {
  public:
   SizeAdd(XlaValue a, XlaValue b);
   int64_t getStaticValue() const override;
+  bool isDynamic() const override;
   std::string ToString() const override;
   virtual XlaOpVector Lower(LoweringContext* loctx) const override;
 };
@@ -57,6 +59,7 @@ class SizeMul : public XlaNode, public torch::lazy::DimensionNode {
  public:
   SizeMul(XlaValue a, XlaValue b);
   int64_t getStaticValue() const override;
+  bool isDynamic() const override;
   std::string ToString() const override;
   virtual XlaOpVector Lower(LoweringContext* loctx) const override;
 };
@@ -65,6 +68,7 @@ class SizeDiv : public XlaNode, public torch::lazy::DimensionNode {
  public:
   SizeDiv(XlaValue a, XlaValue b);
   int64_t getStaticValue() const override;
+  bool isDynamic() const override;
   std::string ToString() const override;
   virtual XlaOpVector Lower(LoweringContext* loctx) const override;
 };
