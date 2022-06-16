@@ -17,9 +17,9 @@ xla::Shape NodeOutputShape(const torch::lazy::Value& input,
   std::vector<xla::Shape> shapes;
   shapes.push_back(GetXlaShape(input));
   for (int i = 0; i < upper_bounds.size(); i++) {
-    shapes.push_back(xla::ShapeUtil::MakeShape(GetXlaShape(input).element_type(),
-                                               {upper_bounds[i]},
-                                               {dynamic_dims[i]}));
+    shapes.push_back(
+        xla::ShapeUtil::MakeShape(GetXlaShape(input).element_type(),
+                                  {upper_bounds[i]}, {dynamic_dims[i]}));
   }
   auto lower_for_shape_fn =
       [&](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
@@ -30,8 +30,9 @@ xla::Shape NodeOutputShape(const torch::lazy::Value& input,
   return InferOutputShape(shapes, lower_for_shape_fn);
 }
 
-std::vector<torch::lazy::Value> GetValues(const torch::lazy::Value& input,
-                                   const std::vector<torch::lazy::Value> dimensions) {
+std::vector<torch::lazy::Value> GetValues(
+    const torch::lazy::Value& input,
+    const std::vector<torch::lazy::Value> dimensions) {
   std::vector<torch::lazy::Value> values = dimensions;
   values.insert(values.begin(), input);
   return values;
@@ -44,8 +45,7 @@ ExpandDynamic::ExpandDynamic(const torch::lazy::Value& input,
                              const std::vector<int64_t> upper_bounds,
                              const std::vector<bool> dynamic_dims)
     : XlaNode(
-          torch::lazy::OpKind(at::aten::expand),
-          GetValues(input, dimensions),
+          torch::lazy::OpKind(at::aten::expand), GetValues(input, dimensions),
           [&]() { return NodeOutputShape(input, upper_bounds, dynamic_dims); },
           /*num_outputs=*/1, torch::lazy::MHash(upper_bounds)),
       upper_bounds_(std::move(upper_bounds)),
