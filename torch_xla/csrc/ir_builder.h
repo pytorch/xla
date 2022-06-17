@@ -1,3 +1,4 @@
+#include "tensorflow/compiler/xla/xla_client/debug_macros.h"
 #include "torch/csrc/lazy/core/ir.h"
 #include "torch/csrc/lazy/core/ir_builder.h"
 #include "torch_xla/csrc/ops/as_strided.h"
@@ -36,6 +37,7 @@ struct XLAIrBuilder : IrBuilder {
   }
   NodePtr MakeTensorList(const OpList& inputs) const override {
     // TODO(JackCaoG): implement tensorList IR. This is used by codegen.
+    XLA_ERROR() << "Need to implement";
     return nullptr;
   }
   // Generic needs cleanup
@@ -53,71 +55,87 @@ struct XLAIrBuilder : IrBuilder {
       const Value& input0, const Value& input1,
       const std::vector<int64_t>& size, const std::vector<int64_t>& stride,
       const int64_t& storage_offset) const override {
+    XLA_ERROR() << "Need to implement";
     return nullptr;
   }
   NodePtr MakeAsStrided(const Value& input0, const std::vector<int64_t>& size,
                         const std::vector<int64_t>& stride,
                         const int64_t& storage_offset) const override {
+    XLA_ERROR() << "Need to implement";
     return nullptr;
   }
   NodePtr MakeDiagonalViewUpdate(const Value& input0, const Value& input1,
                                  const int64_t& offset, const int64_t& dim1,
                                  const int64_t& dim2) const override {
+    XLA_ERROR() << "Need to implement";
     return nullptr;
   }
   NodePtr MakeDiagonal(const Value& input0, const int64_t& offset,
                        const int64_t& dim1,
                        const int64_t& dim2) const override {
+    XLA_ERROR() << "Need to implement";
     return nullptr;
   }
   NodePtr MakeNarrowViewUpdate(
       const Value& input0, const Value& input1,
       const std::vector<int64_t>& base_indices) const override {
+    XLA_ERROR() << "Need to implement";
     return nullptr;
   }
   NodePtr MakeNarrow(const Value& input0,
                      const std::vector<int64_t>& base_indices,
                      const std::vector<int64_t>& sizes) const override {
+    XLA_ERROR() << "Need to implement";
     return nullptr;
   }
   NodePtr MakePermute(const Value& input0,
                       const std::vector<int64_t>& dims) const override {
+    XLA_ERROR() << "Need to implement";
     return nullptr;
   }
   NodePtr MakeResize(const Value& input0,
                      const std::vector<int64_t>& size) const override {
+    XLA_ERROR() << "Need to implement";
     return nullptr;
   }
   NodePtr MakeSelectViewUpdate(const Value& input0, const Value& input1,
                                const int64_t& dim, const int64_t& start,
                                const int64_t& end,
                                const int64_t& stride) const override {
+    XLA_ERROR() << "Need to implement";
     return nullptr;
   }
   NodePtr MakeSelect(const Value& input0, const int64_t& dim,
                      const int64_t& start, const int64_t& end,
                      const int64_t& stride) const override {
+    XLA_ERROR() << "Need to implement";
     return nullptr;
   }
   NodePtr MakeSqueeze(const Value& input0, const int& dim) const override {
+    XLA_ERROR() << "Need to implement";
     return nullptr;
   }
   NodePtr MakeUnsqueeze(const Value& input0, const int& dim) const override {
+    XLA_ERROR() << "Need to implement";
     return nullptr;
   }
 
   // dynamic ir nodes
   // TODO(JackCaoG): implement these when dynamic Node Ir merged.
   NodePtr MakeSizeNode(const Value& input, size_t dim) const override {
+    XLA_ERROR() << "Need to implement";
     return nullptr;
   }
   NodePtr MakeSizeAdd(const Value& a, const Value& b) const override {
+    XLA_ERROR() << "Need to implement";
     return nullptr;
   }
   NodePtr MakeSizeMul(const Value& a, const Value& b) const override {
+    XLA_ERROR() << "Need to implement";
     return nullptr;
   }
   NodePtr MakeSizeDiv(const Value& a, const Value& b) const override {
+    XLA_ERROR() << "Need to implement";
     return nullptr;
   }
 };
