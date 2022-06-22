@@ -1322,27 +1322,6 @@ at::Tensor XLANativeFunctions::eq(const at::Tensor& self,
       XLATensor::eq(bridge::GetXlaTensor(self), bridge::GetXlaTensor(other)));
 }
 
-at::Tensor XLANativeFunctions::erf(const at::Tensor& self) {
-  XLA_FN_COUNTER("xla::");
-  return bridge::AtenFromXlaTensor(XLATensor::erf(bridge::GetXlaTensor(self)));
-}
-
-at::Tensor XLANativeFunctions::erfc(const at::Tensor& self) {
-  XLA_FN_COUNTER("xla::");
-  return bridge::AtenFromXlaTensor(XLATensor::erfc(bridge::GetXlaTensor(self)));
-}
-
-at::Tensor XLANativeFunctions::erfinv(const at::Tensor& self) {
-  XLA_FN_COUNTER("xla::");
-  return bridge::AtenFromXlaTensor(
-      XLATensor::erfinv(bridge::GetXlaTensor(self)));
-}
-
-at::Tensor XLANativeFunctions::exp(const at::Tensor& self) {
-  XLA_FN_COUNTER("xla::");
-  return bridge::AtenFromXlaTensor(XLATensor::exp(bridge::GetXlaTensor(self)));
-}
-
 at::Tensor XLANativeFunctions::expand(const at::Tensor& self,
                                       at::IntArrayRef size, bool implicit) {
   XLA_FN_COUNTER("xla::");

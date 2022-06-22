@@ -1271,18 +1271,6 @@ XLATensor XLATensor::embedding_dense_backward(const XLATensor& grad_output,
                                             padding_idx, scale_grad_by_freq);
 }
 
-XLATensor XLATensor::erf(const XLATensor& input) {
-  return input.CreateFrom(Erf(input.GetIrValue()));
-}
-
-XLATensor XLATensor::erfc(const XLATensor& input) {
-  return input.CreateFrom(Erfc(input.GetIrValue()));
-}
-
-XLATensor XLATensor::erfinv(const XLATensor& input) {
-  return input.CreateFrom(Erfinv(input.GetIrValue()));
-}
-
 XLATensor XLATensor::exp(const XLATensor& input) {
   return input.CreateFrom(Exp(input.GetIrValue()));
 }
