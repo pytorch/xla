@@ -41,6 +41,22 @@ xla::Shape CoshOutputShape(const torch::lazy::Value& input) {
   return GetXlaShape(input);
 }
 
+xla::Shape ErfOutputShape(const torch::lazy::Value& input) {
+  return GetXlaShape(input);
+}
+
+xla::Shape ErfcOutputShape(const torch::lazy::Value& input) {
+  return GetXlaShape(input);
+}
+
+xla::Shape ErfinvOutputShape(const torch::lazy::Value& input) {
+  return GetXlaShape(input);
+}
+
+xla::Shape ExpOutputShape(const torch::lazy::Value& input) {
+  return GetXlaShape(input);
+}
+
 xla::Shape FloorOutputShape(const torch::lazy::Value& input) {
   return GetXlaShape(input);
 }
