@@ -111,15 +111,6 @@ def create_version_files(base_dir, version, xla_git_sha, torch_git_sha):
     f.write('}  // namespace torch_xla\n')
 
 
-def generate_xla_aten_code(base_dir):
-  generate_code_cmd = [os.path.join(base_dir, 'scripts', 'generate_code.sh')]
-  if subprocess.call(generate_code_cmd) != 0:
-    print(
-        'Failed to generate ATEN bindings: {}'.format(generate_code_cmd),
-        file=sys.stderr)
-    sys.exit(1)
-
-
 def generate_xla_lazy_code(base_dir):
   generate_lazy_cmd = [
       'python',
@@ -253,9 +244,6 @@ build_mode = _get_build_mode()
 if build_mode not in ['clean']:
   # Generate version info (torch_xla.__version__).
   create_version_files(base_dir, version, xla_git_sha, torch_git_sha)
-
-  # Generate the code before globbing!
-  generate_xla_aten_code(base_dir)
 
   # Generate Lazy related files
   generate_xla_lazy_code(base_dir)
