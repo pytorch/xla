@@ -11,14 +11,23 @@
 #include "torch_xla/csrc/tensor.h"
 #include "torch_xla/csrc/tensor_util.h"
 
+namespace at {
+// This function is defined in the codegenerated RegisterDispatchKey.cpp file.
+extern TORCH_API void RegisterXLAXLANativeFunctions();
+extern TORCH_API void RegisterXLAAutogradXLANativeFunctions();
+}  // namespace at
+
 namespace torch_xla {
 class XlaBackendImpl : public torch::lazy::BackendImplInterface {
  public:
   XlaBackendImpl() {}
   void PrepareToExit() const override { XLA_ERROR() << "Not implemented yet"; }
 
-  void SetRngSeed(const torch::lazy::BackendDevice& device, uint64_t seed) {
-    XLATensor::SetRngSeed(device, seed);
+  void SetRngSeed(size_t seed) const override {
+    // TODO(JackCaoG): upstream SetRngSeed should either be removed or start
+    // taking device.
+    // XLATensor::SetRngSeed(device, seed);
+    return;
   }
 
   const torch::lazy::IrBuilder* GetIrBuilder() const override {
@@ -126,16 +135,14 @@ class XlaBackendImpl : public torch::lazy::BackendImplInterface {
   }
 
   std::vector<torch::lazy::BackendDataPtr> ExecuteComputation(
-      torch::lazy::Computation& computation,
+      torch::lazy::ComputationPtr computation,
       c10::ArrayRef<torch::lazy::BackendDataPtr> arguments,
       const torch::lazy::BackendDevice& device) const override {
     xla::ComputationClient::ExecuteComputationOptions options;
-    // TODO(JackCaoG): remove this hack and use computation when it is a ptr
-    torch::lazy::ComputationPtr temp;
     std::vector<xla::ComputationClient::DataPtr> results =
         xla::ComputationClient::Get()->ExecuteComputation(
-            *(UnwrapClientComputation(temp).get()), UnwrapXlaData(arguments),
-            device.toString(), options);
+            *(UnwrapClientComputation(computation).get()),
+            UnwrapXlaData(arguments), device.toString(), options);
     return WrapXlaData(results);
   }
 
@@ -149,6 +156,10 @@ class XlaBackendImpl : public torch::lazy::BackendImplInterface {
 
   at::DeviceType EagerFallbackDeviceType() const override {
     return at::DeviceType::CPU;
+  }
+
+  void SetDefaultDeviceType(std::string type) override {
+    default_device_type_ = XlaDeviceType(c10::Device(type).type());
   }
 
   std::vector<torch::lazy::BackendDevice> GetBackendDevices() const override {
@@ -165,15 +176,24 @@ class XlaBackendImpl : public torch::lazy::BackendImplInterface {
     return dynamic_cast<torch_xla::Computation*>(computation.get())
         ->to_string();
   }
+
+ private:
+  DeviceType default_device_type_;
 };
 
-// torch::lazy::BackendImplInterface* GetXlaBackendImpl() {
-//   static XlaBackendImpl* xla_backend_impl = new XlaBackendImpl();
-//   return xla_backend_impl;
-// }
+torch::lazy::BackendImplInterface* GetXlaBackendImpl() {
+  static XlaBackendImpl* xla_backend_impl = new XlaBackendImpl();
+  return xla_backend_impl;
+}
 
-void InitXlaBackend(){
-    // TODO(JackCaoG): register backend
+void InitXlaBackend() {
+  // xla_fallback is currently auto registered when initializing torch_xla. No
+  // need to re-register here.
+  at::RegisterXLAXLANativeFunctions();
+  at::RegisterXLAAutogradXLANativeFunctions();
+  static std::unique_ptr<torch::lazy::BackendRegistrar> s_registrar;
+  s_registrar =
+      std::make_unique<torch::lazy::BackendRegistrar>(GetXlaBackendImpl());
 };
 
 }  // namespace torch_xla

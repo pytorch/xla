@@ -119,10 +119,10 @@ def _prepare_to_exit():
     _summarize_fn_tracker()
 
 
-def _map_xla_env_vars_to_lazy():
-  _XLAC._map_xla_env_vars_to_lazy()
+def _init_xla_lazy_backend():
+  _XLAC._init_xla_lazy_backend()
 
 
 atexit.register(_prepare_to_exit)
 _apply_patches()
-_map_xla_env_vars_to_lazy()
+_init_xla_lazy_backend()
