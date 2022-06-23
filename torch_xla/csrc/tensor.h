@@ -555,12 +555,6 @@ class XLATensor : public c10::intrusive_ptr_target {
 
   static XLATensor eq(const XLATensor& input, const XLATensor& other);
 
-  static XLATensor erf(const XLATensor& input);
-
-  static XLATensor erfc(const XLATensor& input);
-
-  static XLATensor erfinv(const XLATensor& input);
-
   static XLATensor exp(const XLATensor& input);
 
   static XLATensor expand(const XLATensor& input, std::vector<int64_t> size);

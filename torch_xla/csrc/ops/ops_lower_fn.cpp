@@ -53,6 +53,26 @@ torch_xla::XlaOpVector Cosh::Lower(LoweringContext* loctx) const {
   return ReturnOp(xla::Cosh(xla_input), loctx);
 }
 
+torch_xla::XlaOpVector Erf::Lower(LoweringContext* loctx) const {
+  xla::XlaOp xla_input = loctx->GetOutputOp(operand(0));
+  return ReturnOp(xla::Erf(xla_input), loctx);
+}
+
+torch_xla::XlaOpVector Erfc::Lower(LoweringContext* loctx) const {
+  xla::XlaOp xla_input = loctx->GetOutputOp(operand(0));
+  return ReturnOp(xla::Erfc(xla_input), loctx);
+}
+
+torch_xla::XlaOpVector Erfinv::Lower(LoweringContext* loctx) const {
+  xla::XlaOp xla_input = loctx->GetOutputOp(operand(0));
+  return ReturnOp(xla::ErfInv(xla_input), loctx);
+}
+
+torch_xla::XlaOpVector Exp::Lower(LoweringContext* loctx) const {
+  xla::XlaOp xla_input = loctx->GetOutputOp(operand(0));
+  return ReturnOp(xla::Exp(xla_input), loctx);
+}
+
 torch_xla::XlaOpVector Floor::Lower(LoweringContext* loctx) const {
   xla::XlaOp xla_input = loctx->GetOutputOp(operand(0));
   return ReturnOp(xla::Floor(xla_input), loctx);

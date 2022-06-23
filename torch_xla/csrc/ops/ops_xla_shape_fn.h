@@ -21,6 +21,14 @@ xla::Shape CosOutputShape(const torch::lazy::Value& input);
 
 xla::Shape CoshOutputShape(const torch::lazy::Value& input);
 
+xla::Shape ErfOutputShape(const torch::lazy::Value& input);
+
+xla::Shape ErfcOutputShape(const torch::lazy::Value& input);
+
+xla::Shape ErfinvOutputShape(const torch::lazy::Value& input);
+
+xla::Shape ExpOutputShape(const torch::lazy::Value& input);
+
 xla::Shape FloorOutputShape(const torch::lazy::Value& input);
 
 xla::Shape InverseOutputShape(const torch::lazy::Value& input);

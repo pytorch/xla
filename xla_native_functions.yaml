@@ -10,6 +10,10 @@ full_codegen:
   - atanh
   - cos
   - cosh
+  - erf
+  - erfc
+  - erfinv
+  - exp
   - floor
   - inverse
   - logdet
@@ -121,10 +125,6 @@ supported:
   - empty_strided
   - eq.Scalar
   - eq.Tensor
-  - erf
-  - erfc
-  - erfinv
-  - exp
   - expand
   - expm1
   - exponential_
