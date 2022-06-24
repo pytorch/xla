@@ -51,7 +51,7 @@ RUN rm /etc/apt/sources.list.d/nvidia-ml.list
 RUN apt-key adv --fetch-keys https://developer.download.nvidia.com/compute/cuda/repos/ubuntu1804/x86_64/3bf863cc.pub
 
 # Install base system packages
-RUN apt-get update
+RUN apt-get update --fix-missing
 RUN apt-get install -y python-pip python3-pip git curl libopenblas-dev vim \
   apt-transport-https ca-certificates procps openssl sudo wget libssl-dev libc6-dbg
 
@@ -69,10 +69,15 @@ RUN useradd jenkins && \
     chown jenkins /home/jenkins
 RUN echo 'jenkins ALL=(ALL) NOPASSWD:ALL' >> /etc/sudoers
 
-RUN mkdir -p /opt/conda /opt/cargo /opt/rustup /workspace /var/lib/jenkins && \
-    chown jenkins /opt/conda /opt/cargo /opt/rustup /workspace /var/lib/jenkins
+RUN mkdir -p /opt/conda /opt/cargo /opt/rustup /opt/archive /workspace /var/lib/jenkins && \
+    chown jenkins /opt/conda /opt/cargo /opt/rustup /opt/archive /workspace /var/lib/jenkins
 USER jenkins
 WORKDIR /workspace
+
+# Download llvm-raw archive
+ADD ./download_llvm_raw.sh download_llvm_raw.sh
+RUN sudo chown jenkins ./download_llvm_raw.sh
+RUN bash ./download_llvm_raw.sh /opt/archive
 
 # Install openmpi for CUDA
 run sudo apt-get install -y ssh
