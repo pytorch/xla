@@ -18,9 +18,8 @@ launch_docker_and_build: &launch_docker_and_build
     set -ex
     eval $(aws ecr get-login --region us-east-1 --no-include-email)
     docker pull ${GCR_DOCKER_IMAGE} >/dev/null
-    # This is to stage PyTorch/XLA base image for use in the upstream. Right now,
-    # we are using PyTorch base image in the upstream test -- but, in case
-    # we also want the upstream workflow to use PyTorch/XLA build image, we
+    # This is to stage PyTorch/XLA base image for use in the upstream.
+    # To allow the upstream workflow to access PyTorch/XLA build images, we
     # need to have them in the ECR. This is not expensive, and only pushes it
     # if image layers are not present in the repo.
     #docker tag ${GCR_DOCKER_IMAGE} ${ECR_DOCKER_IMAGE_BASE}:latest >/dev/null
