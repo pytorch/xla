@@ -69,15 +69,10 @@ RUN useradd jenkins && \
     chown jenkins /home/jenkins
 RUN echo 'jenkins ALL=(ALL) NOPASSWD:ALL' >> /etc/sudoers
 
-RUN mkdir -p /opt/conda /opt/cargo /opt/rustup /opt/archive /workspace /var/lib/jenkins && \
-    chown jenkins /opt/conda /opt/cargo /opt/rustup /opt/archive /workspace /var/lib/jenkins
+RUN mkdir -p /opt/conda /opt/cargo /opt/rustup /workspace /var/lib/jenkins && \
+    chown jenkins /opt/conda /opt/cargo /opt/rustup /workspace /var/lib/jenkins
 USER jenkins
 WORKDIR /workspace
-
-# Download llvm-raw archive
-ADD ./download_llvm_raw.sh download_llvm_raw.sh
-RUN sudo chown jenkins ./download_llvm_raw.sh
-RUN bash ./download_llvm_raw.sh /opt/archive
 
 # Install openmpi for CUDA
 run sudo apt-get install -y ssh
