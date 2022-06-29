@@ -1022,7 +1022,7 @@ std::vector<torch::lazy::BackendDataPtr> XLATensor::GatherTensorsXlaData(
 
 void XLATensor::TensorCollectionBarrier(SyncTensorCollection* coll) {
   static const std::string invalid_device(
-      "Unknown0"); /* Temp solution to idetify unassigned devices */
+      "Unknown0"); /* Temp solution to identify unassigned devices */
   if (coll->device.toString().compare(invalid_device) == 0 ||
       coll->unlocker.size() > 0) {
     return;
