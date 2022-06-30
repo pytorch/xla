@@ -234,7 +234,6 @@ allowed_opinfo = set(
             AllowedOpInfoEntry('special.entr'),
             AllowedOpInfoEntry('special.ndtri'),
             AllowedOpInfoEntry('lgamma'),
-            AllowedOpInfoEntry('logdet'),
             AllowedOpInfoEntry('log_softmax'),
             AllowedOpInfoEntry('logit'),
             AllowedOpInfoEntry('where'),
@@ -339,6 +338,7 @@ allowed_opinfo = set(
             # AllowedOpInfoEntry('erfinv'),
             # AllowedOpInfoEntry('norm'),
             # AllowedOpInfoEntry('t'),
+            # AllowedOpInfoEntry('logdet'), xla::lodget does not handle empty input
 
             # Failed on CUDA CI only (investigate)
             # app.circleci.com/pipelines/github/pytorch/xla/9088/workflows/2d59c649-db2b-4384-921e-5e43eba1b51a/jobs/17875
