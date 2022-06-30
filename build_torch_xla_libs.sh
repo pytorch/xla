@@ -71,6 +71,13 @@ if [ "$CMD" == "clean" ]; then
   bazel clean
   popd
 else
+  # Overlay llvm-raw secondary cache. The remote cache should be updated
+  # nightly with the pinned llvm archive. Note, this commands will be NO-OP if there is no match.
+  sed -i '/.*github.com\/llvm.*,/a "https://storage.googleapis.com/tpu-pytorch/llvm-raw/{commit}.tar.gz".format(commit = LLVM_COMMIT),' \
+    $THIRD_PARTY_DIR/tensorflow/third_party/llvm/workspace.bzl
+  sed -i 's/LLVM_COMMIT)]/LLVM_COMMIT),"https:\/\/storage.googleapis.com\/tpu-pytorch\/llvm-raw\/{commit}.tar.gz".format(commit = LLVM_COMMIT)]/g' \
+    $THIRD_PARTY_DIR/tensorflow/tensorflow/compiler/mlir/hlo/WORKSPACE
+
   cp -r -u -p $THIRD_PARTY_DIR/xla_client $THIRD_PARTY_DIR/tensorflow/tensorflow/compiler/xla/
 
   pushd $THIRD_PARTY_DIR/tensorflow
