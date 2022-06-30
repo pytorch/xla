@@ -81,7 +81,7 @@ Follow these steps to train a PyTorch model with Docker on a Cloud TPU:
 2. SSH into the VM and pull a version of the docker image into the VM. The currently available versions are:
 
     * `gcr.io/tpu-pytorch/xla:r1.12_3.7`: The current stable version.
-    * `gcr.io/tpu-pytorch/xla:r1.11_3.7`: The previous 1.11 release version.
+    * `gcr.io/tpu-pytorch/xla:r1.11_3.7`: The 1.11 release version.
     * `gcr.io/tpu-pytorch/xla:nightly_3.7`: Nightly version using Python 3.7.
     * `gcr.io/tpu-pytorch/xla:nightly_3.7_YYYYMMDD (e.g.: gcr.io/tpu-pytorch/xla:nightly_3.7_20220301)`.
 
@@ -299,21 +299,21 @@ post](https://cloud.google.com/blog/products/ai-machine-learning/googles-scalabl
 The following pre-built docker images are available to run on Cloud TPU Nodes (see [docker images](#DockerImage) for instructions):
 
     * `gcr.io/tpu-pytorch/xla:r1.12_3.7`: The current stable version.
-    * `gcr.io/tpu-pytorch/xla:r1.11_3.7`: The previous 1.11 release version.
+    * `gcr.io/tpu-pytorch/xla:r1.11_3.7`: The 1.11 release version.
     * `gcr.io/tpu-pytorch/xla:nightly_3.7`: Nightly version using Python 3.7.
     * `gcr.io/tpu-pytorch/xla:nightly_3.7_YYYYMMDD (e.g.: gcr.io/tpu-pytorch/xla:nightly_3.7_20220301)`.
 
 and for Cloud TPU VMs
 
     * `gcr.io/tpu-pytorch/xla:r1.12_3.8_tpuvm`: The current stable version.
-    * `gcr.io/tpu-pytorch/xla:r1.11_3.8_tpuvm`: The previous 1.11 release version.
+    * `gcr.io/tpu-pytorch/xla:r1.11_3.8_tpuvm`: The 1.11 release version.
     * `gcr.io/tpu-pytorch/xla:nightly_3.8_tpuvm`: Nightly version using Python 3.7.
     * `gcr.io/tpu-pytorch/xla:nightly_3.8_YYYYMMDD (e.g.: gcr.io/tpu-pytorch/xla:nightly_3.7_20220301)`.
 
 We also have pre-built docker images to run on Cloud compute instances with GPUs (`CUDA 11.2`):
 
     * `gcr.io/tpu-pytorch/xla:r1.12_3.7_cuda_11.2`: The current stable version.
-    * `gcr.io/tpu-pytorch/xla:r1.11_3.7_cuda_11.2`: The previous 1.11 release version.
+    * `gcr.io/tpu-pytorch/xla:r1.11_3.7_cuda_11.2`: The 1.11 release version.
     * `gcr.io/tpu-pytorch/xla:nightly_3.7_cuda_11.2`: Nightly version using Python 3.7.
     * `gcr.io/tpu-pytorch/xla:nightly_3.7_cuda_11.2_YYYYMMDD`.
 
