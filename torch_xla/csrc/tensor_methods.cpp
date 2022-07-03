@@ -280,9 +280,9 @@ xla::Shape BatchNormFeaturesShape(const XLATensorPtr& input) {
 torch::lazy::Value GetIrValueOrDefault(
     const XLATensorPtr& input, const at::Scalar& default_value,
     const xla::Shape& default_shape, const torch::lazy::BackendDevice& device) {
-  return input->is_null() ? XLATensor::GetIrValueForScalar(
-                                default_value, default_shape, device)
-                          : input->GetIrValue();
+  return input ? input->GetIrValue()
+               : XLATensor::GetIrValueForScalar(default_value, default_shape,
+                                                device);
 }
 
 // Returns the IR for the given input. If the IR is not a floating point value,
@@ -308,7 +308,7 @@ torch::lazy::Value GetBooleanIrValue(torch::lazy::Value input_value) {
 absl::optional<torch::lazy::Value> GetOptionalIrValue(
     const XLATensorPtr& tensor) {
   absl::optional<torch::lazy::Value> value;
-  if (!tensor->is_null()) {
+  if (tensor) {
     value = tensor->GetIrValue();
   }
   return value;
@@ -2040,11 +2040,11 @@ XLATensor::native_batch_norm(const XLATensorPtr& input,
   if (training) {
     mean = input->CreateFrom(torch::lazy::Value(node, 1));
     variance_inverse = input->CreateFrom(torch::lazy::Value(node, 3));
-    if (!running_mean->is_null()) {
+    if (running_mean) {
       running_mean->SetIrValue(torch::lazy::MakeNode<LinearInterpolation>(
           mean->GetIrValue(), running_mean->GetIrValue(), momentum));
     }
-    if (!running_var->is_null()) {
+    if (running_var) {
       running_var->SetIrValue(torch::lazy::MakeNode<LinearInterpolation>(
           torch::lazy::Value(node, 2), running_var->GetIrValue(), momentum));
     }

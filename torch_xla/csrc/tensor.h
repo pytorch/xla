@@ -44,10 +44,13 @@ class XLATensor : public c10::intrusive_ptr_target {
       torch::lazy::Value ir_value, const torch::lazy::BackendDevice& device,
       c10::optional<at::ScalarType> logical_element_type = c10::nullopt);
 
-  // Creates an empty/null tensor.
-  XLATensor() = default;
-
-  bool is_null() const { return data_ptr() == nullptr; }
+  // The default ctor previously created a null LazyTensor (one with no 'data'
+  // obj). Creating a null XLATensor is no longer possible, since the same can
+  // be achieved by creating a null LazyTensorPtr and it is way too confusing to
+  // have to check both lazy_tensor_ptr && *lazy_tensor_ptr, so everywhere that
+  // used to rely on a LazyTensor obj with a null Data can now rely on a null
+  // LazyTensorPtr instead.
+  XLATensor() = delete;
 
   size_t generation() const { return data()->generation; }
 

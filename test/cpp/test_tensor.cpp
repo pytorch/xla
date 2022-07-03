@@ -114,7 +114,7 @@ TEST_F(TensorTest, TestSize) {
   ForEachDevice([&](const torch::lazy::BackendDevice& device) {
     XLATensorPtr dev_input = XLATensor::Create(input, device);
     for (int dim = -rank; dim < rank; ++dim) {
-      EXPECT_EQ(input.size(dim), dev_input.size(dim));
+      EXPECT_EQ(input.size(dim), dev_input->size(dim));
     }
   });
 }
@@ -418,9 +418,9 @@ TEST_F(TensorTest, TestBatchNorm1D) {
         // native_batch_norm return undefined for save_mean & save_invstd when
         // training=false.
         EXPECT_EQ(std::get<1>(output).defined(),
-                  !std::get<1>(xla_output).is_null());
+                  std::get<1>(xla_output) != nullptr);
         EXPECT_EQ(std::get<2>(output).defined(),
-                  !std::get<2>(xla_output).is_null());
+                  std::get<2>(xla_output) != nullptr);
         if (training) {
           AllClose(std::get<1>(output), std::get<1>(xla_output));
           AllClose(std::get<2>(output), std::get<2>(xla_output));

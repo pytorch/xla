@@ -237,17 +237,17 @@ void WithAllDevices(
 
 std::string GetTensorTextGraph(at::Tensor tensor) {
   XLATensorPtr xtensor = bridge::GetXlaTensor(tensor);
-  return DumpUtil::ToText({xtensor.GetIrValue().node.get()});
+  return DumpUtil::ToText({xtensor->GetIrValue().node.get()});
 }
 
 std::string GetTensorDotGraph(at::Tensor tensor) {
   XLATensorPtr xtensor = bridge::GetXlaTensor(tensor);
-  return DumpUtil::ToDot({xtensor.GetIrValue().node.get()});
+  return DumpUtil::ToDot({xtensor->GetIrValue().node.get()});
 }
 
 std::string GetTensorHloGraph(at::Tensor tensor) {
   XLATensorPtr xtensor = bridge::GetXlaTensor(tensor);
-  return DumpUtil::ToHlo({xtensor.GetIrValue()}, xtensor.GetDevice());
+  return DumpUtil::ToHlo({xtensor->GetIrValue()}, xtensor->GetDevice());
 }
 
 torch::lazy::Value GetTensorIrValue(const at::Tensor& tensor,
