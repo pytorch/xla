@@ -1330,7 +1330,8 @@ at::Tensor XLANativeFunctions::expand(const at::Tensor& self,
 }
 
 at::Tensor XLANativeFunctions::expand_symint(const at::Tensor& self,
-                                      c10::SymIntArrayRef size, bool implicit) {
+                                             c10::SymIntArrayRef size,
+                                             bool implicit) {
   XLA_FN_COUNTER("xla::");
   SymIntElements size_elements = SymIntElements(size);
   return bridge::AtenFromXlaTensor(XLATensor::expand(
