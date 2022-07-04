@@ -1329,7 +1329,7 @@ at::Tensor XLANativeFunctions::expand(const at::Tensor& self,
       bridge::GetXlaTensor(self), torch::lazy::ToVector<int64_t>(size)));
 }
 
-at::Tensor XLANativeFunctions::expand(const at::Tensor& self,
+at::Tensor XLANativeFunctions::expand_symint(const at::Tensor& self,
                                       c10::SymIntArrayRef size, bool implicit) {
   XLA_FN_COUNTER("xla::");
   SymIntElements size_elements = SymIntElements(size);

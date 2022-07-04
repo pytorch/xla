@@ -4655,7 +4655,7 @@ TEST_F(AtenXlaTensorTest, TestExpandSymInt) {
     torch::Tensor xla_y = torch::nonzero(xla_x);
     c10::SymInt xla_y0_size = xla_y.sym_sizes()[0];
     torch::Tensor xla_a = CopyToDevice(a, device);
-    torch::Tensor xla_b = xla_a.expand(
+    torch::Tensor xla_b = xla_a.expand_symint(
         c10::SymIntArrayRef({xla_y0_size, c10::SymInt(3), c10::SymInt(4)}),
         /*implicit=*/false);
     AllClose(b, xla_b);
