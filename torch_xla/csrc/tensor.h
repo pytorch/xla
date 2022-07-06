@@ -180,7 +180,7 @@ class XLATensor : public c10::intrusive_ptr_target {
   // Applies all the pending IR operations queued over the input tensors. All
   // the tensors must be on the same device. If wait is true, the sync operation
   // will be run synchronously. The devices argument, if not empty, tells the
-  // devices which should be partecipating into the replicated computation.
+  // devices which should be participating into the replicated computation.
   static void SyncTensorsGraph(std::vector<XLATensor>* tensors,
                                absl::Span<const std::string> devices, bool wait,
                                bool sync_xla_data);
@@ -188,7 +188,7 @@ class XLATensor : public c10::intrusive_ptr_target {
   // Makes sure that any outstanding IR operation accumulated over live tensors,
   // gets turned into device data. If wait is true, the sync operation will be
   // run synchronously. The devices argument, if not empty, tells the devices
-  // which should be partecipating into the replicated computation.
+  // which should be participating into the replicated computation.
   static void SyncLiveTensorsGraph(const torch::lazy::BackendDevice* device,
                                    absl::Span<const std::string> devices,
                                    bool wait);
