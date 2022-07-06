@@ -205,6 +205,5 @@ to
           norm_exp);
 ```
 
-
 ## Run the test and verify the result
 Run the C++ op test or a simple test that only involves the generated ops. As usual, two things to verify are the correctness and the xla counter being incremented correctly.
