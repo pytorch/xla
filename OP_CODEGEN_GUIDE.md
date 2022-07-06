@@ -1,4 +1,4 @@
-# OP Lowering Guide
+# OP Codegen Guide
 
 ## Background
 As PyTorch/XLA migrates to the LTC (Lazy Tensor Core), we need to clean up the existing stub code (which spans over 6+ files) that were used to do the op lowering. The complete process and file structure for the old op lowering can be found in [the op lowering guide](https://github.com/pytorch/xla/blob/master/OP_LOWERING_GUIDE.md). Replacing the supported op with the codegen SHOULD NOT introduce any new behavior, it is purely for the clean up purpose. 
