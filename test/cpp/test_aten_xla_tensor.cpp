@@ -4271,11 +4271,11 @@ TEST_F(AtenXlaTensorTest, TestCat) {
 
 TEST_F(AtenXlaTensorTest, TestCatTypePromotion) {
   for (torch::ScalarType scalar_type_1 :
-       {torch::kHalf, torch::kFloat, torch::kDouble, torch::kShort, torch::kInt,
+       {torch::kFloat, torch::kDouble, torch::kShort, torch::kInt,
         torch::kLong}) {
     for (torch::ScalarType scalar_type_2 :
-         {torch::kHalf, torch::kFloat, torch::kDouble, torch::kShort,
-          torch::kInt, torch::kLong}) {
+         {torch::kFloat, torch::kDouble, torch::kShort, torch::kInt,
+          torch::kLong}) {
       torch::Tensor a =
           torch::ones({2, 1, 3}, torch::TensorOptions(scalar_type_1));
       torch::Tensor b =
