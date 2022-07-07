@@ -102,8 +102,8 @@ TEST_F(TensorTest, TestIntegerAdd) {
       XLATensorPtr dev_b = XLATensor::Create(b, device);
       XLATensorPtr dev_c = XLATensor::add(dev_a, dev_b, one);
 
-      EXPECT_TRUE(
-          EqualValuesNoElementTypeCheck(c, dev_c.ToTensor(/*detached=*/false)));
+      EXPECT_TRUE(EqualValuesNoElementTypeCheck(
+          c, dev_c->ToTensor(/*detached=*/false)));
     }
   });
 }
@@ -404,10 +404,12 @@ TEST_F(TensorTest, TestBatchNorm1D) {
           /*training=*/training, /*momentum=*/momentum, /*eps=*/eps);
       ForEachDevice([&](const torch::lazy::BackendDevice& device) {
         XLATensorPtr xla_input = XLATensor::Create(input, device);
-        XLATensorPtr xla_weight =
-            undef_weight_bias ? XLATensor() : XLATensor::Create(weight, device);
-        XLATensorPtr xla_bias =
-            undef_weight_bias ? XLATensor() : XLATensor::Create(bias, device);
+        XLATensorPtr xla_weight = undef_weight_bias
+                                      ? XLATensorPtr()
+                                      : XLATensor::Create(weight, device);
+        XLATensorPtr xla_bias = undef_weight_bias
+                                    ? XLATensorPtr()
+                                    : XLATensor::Create(bias, device);
         XLATensorPtr xla_running_mean = XLATensor::Create(running_mean, device);
         XLATensorPtr xla_running_var = XLATensor::Create(running_var, device);
         auto xla_output = XLATensor::native_batch_norm(
