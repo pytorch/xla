@@ -73,6 +73,11 @@ class ComputationClient {
       program_shape_ = ConsumeValue(computation_.GetProgramShape());
     }
 
+    Computation(XlaComputation computation, std::vector<std::string> devices)
+        : computation_(std::move(computation)), devices_(std::move(devices)) {
+      program_shape_ = ConsumeValue(computation_.GetProgramShape());
+    }
+
     virtual ~Computation() {}
 
     const XlaComputation& computation() const {
