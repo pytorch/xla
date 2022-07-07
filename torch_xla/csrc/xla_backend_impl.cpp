@@ -125,7 +125,8 @@ class XlaBackendImpl : public torch::lazy::BackendImplInterface {
       // TODO(JackCaoG): Verify this with GPU, we might only have 1 process with
       // multiple GPU as replica.
       compile_instances.push_back(xla::ComputationClient::CompileInstance(
-          torch_xla_computation->move_computation(), current_device.toString(),
+          torch_xla_computation->move_computation(),
+          torch_xla_computation->get_device_string(),
           {current_device.toString()}, &shape));
     }
     std::vector<std::shared_ptr<xla::ComputationClient::Computation>>
