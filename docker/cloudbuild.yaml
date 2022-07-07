@@ -46,7 +46,7 @@ options:
       name: 'projects/tpu-pytorch/locations/us-central1/workerPools/wheel_build'
     dynamic_substitutions: true
     substitution_option: 'ALLOW_LOOSE'
-timeout: 18000s
+timeout: 24000s
 artifacts:
   objects:
     # CUDA wheels exported under `wheels/cuda/<cuda_version>`
