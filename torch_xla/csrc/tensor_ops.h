@@ -13,11 +13,6 @@ namespace tensor_ops {
 XLATensorPtr Cross(const XLATensorPtr& input, const XLATensorPtr& other,
                    c10::optional<int64_t> dim);
 
-XLATensorPtr KlDivBackward(const XLATensorPtr& grad_output,
-                           const XLATensorPtr& input,
-                           const XLATensorPtr& target, ReductionMode reduction,
-                           bool log_target);
-
 XLATensorPtr MakeMatrixWithDiagonal(const XLATensorPtr& input,
                                     int64_t diagonal);
 

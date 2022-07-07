@@ -10624,7 +10624,6 @@ TEST_F(AtenXlaTensorTest, TestKlDivBackward) {
     });
   }
   ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
-  ExpectCounterChanged("xla::kl_div_backward", cpp_test::GetIgnoredCounters());
 }
 
 TEST_F(AtenXlaTensorTest, TestEmbeddingBackward) {
