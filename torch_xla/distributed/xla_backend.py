@@ -23,9 +23,9 @@ _register_xla_backend()
 
 
 def _ret_work(ret):
-    fut = torch.futures.Future()
-    fut.set_result(ret)
-    return torch._C._distributed_c10d._create_work_from_future(fut)
+  fut = torch.futures.Future()
+  fut.set_result(ret)
+  return torch._C._distributed_c10d._create_work_from_future(fut)
 
 
 class ProcessGroupXla(ProcessGroup):
