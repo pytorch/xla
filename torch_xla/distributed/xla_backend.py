@@ -22,6 +22,12 @@ def _register_xla_backend():
 _register_xla_backend()
 
 
+def _ret_work(ret):
+    fut = torch.futures.Future()
+    fut.set_result(ret)
+    return torch._C._distributed_c10d._create_work_from_future(fut)
+
+
 class ProcessGroupXla(ProcessGroup):
   '''ProcessGroup for XLA devices. See ProcessGroup for doc.
 
@@ -35,6 +41,9 @@ class ProcessGroupXla(ProcessGroup):
     self.prefix_store = prefix_store  # reserved for future use.
     self.timeout = timeout
     self._mesh = []
+
+  def getBackendName(self):
+    return 'xla'
 
   def _get_reduce_type(self, reduce_op):
     if reduce_op == dist.ReduceOp.SUM:
@@ -59,7 +68,7 @@ class ProcessGroupXla(ProcessGroup):
 
     # TODO(hjm-aws): implement all_reduce_options.timeout.
     xm.all_reduce(reduce_type, tensors, groups=self._mesh, pin_layout=False)
-    return WorkXla(tensors)
+    return _ret_work(tensors)
 
   def allgather(self, output_tensors_list, input_tensors):
     for input_tensor, output_tensors in zip(input_tensors, output_tensors_list):
@@ -67,7 +76,7 @@ class ProcessGroupXla(ProcessGroup):
       for i, slice in enumerate(torch.split(result, input_tensor.shape[0])):
         output_tensors[i].copy_(slice)
 
-    return WorkXla([t for sublist in output_tensors_list for t in sublist])
+    return _ret_work([t for sublist in output_tensors_list for t in sublist])
 
   # Call site:
   # https://github.com/pytorch/pytorch/blob/release/1.10/torch/distributed/distributed_c10d.py#L1129
@@ -80,7 +89,7 @@ class ProcessGroupXla(ProcessGroup):
     xm.all_reduce(
         xm.REDUCE_SUM, [root_tensor], groups=self._mesh, pin_layout=False)
 
-    return WorkXla([root_tensor])
+    return _ret_work([root_tensor])
 
   # Call site:
   # https://github.com/pytorch/pytorch/blob/release/1.10/torch/distributed/distributed_c10d.py#L2355
@@ -106,12 +115,12 @@ class ProcessGroupXla(ProcessGroup):
           output=output_tensor,
           pin_layout=False)
 
-    return WorkXla(output_tensors)
+    return _ret_work(output_tensors)
 
   # Call site:
   # https://github.com/pytorch/pytorch/blob/70f57bcb1e45d21532bdb1c44d3aab018d1cbe88/torch/distributed/distributed_c10d.py#L2683
   def barrier(self, opts):
-    return WorkXla()
+    return _ret_work([])
 
   # Call site:
   # https://github.com/pytorch/pytorch/blob/70f57bcb1e45d21532bdb1c44d3aab018d1cbe88/torch/distributed/distributed_c10d.py#L1417
@@ -155,7 +164,7 @@ class ProcessGroupXla(ProcessGroup):
       # op can actually be built into the computation graph.
       t.data = input_as_result
       results.append(input_as_result)
-    return WorkXla(results)
+    return _ret_work(results)
 
   # Dummy channel id maker. Different backend (TPU, GPU, etc) should replace
   # the maker with their specific one. See unit test in
@@ -171,7 +180,7 @@ class ProcessGroupXla(ProcessGroup):
       channel_id = self.make_recv_channel_id(src_rank, tag)
       result = xm.recv(ot, channel_id)
       results.append(result)
-    return WorkXla(results)
+    return _ret_work(results)
 
   def recv_anysource(self, *args):
     raise NotImplementedError
@@ -181,37 +190,6 @@ class ProcessGroupXla(ProcessGroup):
 
   def Options(self, *args):
     raise NotImplementedError
-
-
-class WorkXla(Work):
-
-  def __init__(self, cc_tensors=None):
-    '''
-        Args:
-            cc_tensors (List[torch.Tensor]): List of `torch.Tensor`s that
-            have collective communication ops pending.
-            For each Tensor `t` in the list, `t.device` must be an `xla`
-            device.
-        '''
-    super().__init__()
-    self.cc_tensors = cc_tensors
-
-  def wait(self):
-    if self.cc_tensors is not None:
-      if distutils.util.strtobool(
-          os.environ.get('XLA_BACKEND_BLOCKING_CC_OPS', 'False')):
-        logging.debug("XLA Backend: Waiting for tensor CC op...")
-        torch_xla._XLAC._xla_sync_multi(self.cc_tensors, devices=[], wait=True)
-      else:
-        logging.debug("XLA Backend: Skipping tensor CC op wait.")
-    else:
-      if distutils.util.strtobool(
-          os.environ.get('XLA_BACKEND_BLOCKING_BARRIER', 'False')):
-        logging.debug("XLA Backend: Non-tensor wait...")
-        torch_xla._XLAC._xla_step_marker(
-            torch_xla._XLAC._xla_get_default_device(), devices=[], wait=True)
-      else:
-        logging.debug("XLA Backend: Skipping non-tensor wait.")
 
 
 # -------------------------------------
