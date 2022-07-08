@@ -51,8 +51,9 @@ RUN rm /etc/apt/sources.list.d/nvidia-ml.list
 RUN apt-key adv --fetch-keys https://developer.download.nvidia.com/compute/cuda/repos/ubuntu1804/x86_64/3bf863cc.pub
 
 # Install base system packages
-RUN apt-get update --fix-missing
-RUN apt-get install -y python-pip python3-pip git curl libopenblas-dev vim \
+RUN apt-get clean && apt-get update
+RUN apt-get upgrade -y
+RUN apt-get install --fix-missing -y python-pip python3-pip git curl libopenblas-dev vim jq \
   apt-transport-https ca-certificates procps openssl sudo wget libssl-dev libc6-dbg
 
 # Install clang & llvm
