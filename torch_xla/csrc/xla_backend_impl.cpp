@@ -31,8 +31,8 @@ class XlaBackendImpl : public torch::lazy::BackendImplInterface {
   }
 
   const torch::lazy::IrBuilder* GetIrBuilder() const override {
-    XLA_ERROR() << "Not implemented yet";
-    return 0;
+    static const IrBuilder* builder = new XLAIrBuilder();
+    return builder;
   }
 
   torch::lazy::BackendDataPtr MakeComputationDataFromTensor(
