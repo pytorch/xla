@@ -74,7 +74,7 @@ at::Tensor XLANativeFunctions::abs(const at::Tensor& self) {
 ```
 
 ### 2. Codegen the op and inspect the generated file
-Find the op in  `xla/xla_native_functions.yaml` and move it to the full_codegen column and run the build again. The build will fail (reason explained later in this guide) but you can still see the generated file. The code snippets below uses `abs` as an example.
+Find the op in  `xla/xla_native_functions.yaml` and move it to the full_codegen column and run `python setup.py install` under xla directory again. The build will fail (reason explained later in this guide) but you can still see the generated file. The code snippets below uses `abs` as an example.
 #### XLANativeFunctions.cpp
 ```
 at::Tensor XLANativeFunctions::abs(const at::Tensor & self) {
@@ -206,4 +206,7 @@ to
 ```
 
 ## Run the test and verify the result
-Run the C++ op test or a simple test that only involves the generated ops. As usual, two things to verify are the correctness and the xla counter being incremented correctly.
+Run the C++ op test or a simple test that only involves the generated ops. 
+- 
+
+As usual, two things to verify are the correctness and the xla counter being incremented correctly.
