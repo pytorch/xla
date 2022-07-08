@@ -127,6 +127,7 @@ supported:
   - eq.Scalar
   - eq.Tensor
   - expand
+  - expand.SymInt
   - expm1
   - exponential_
   - eye.m_out
