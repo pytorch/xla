@@ -127,21 +127,21 @@ CanonicalIndexInfo TransposeToFront(at::Tensor base, at::TensorList indices) {
 
 // Wraps index tensors once into the [0, dim_size) interval, where dim_size is
 // the size of the current indexed dimension.
-std::vector<XLATensor> WrapIndicesOnce(const XLATensor& base,
-                                       absl::Span<const XLATensor> indices,
-                                       int start_dim) {
-  std::vector<XLATensor> canonical_indices;
-  auto base_shape_ref = base.shape();
+std::vector<XLATensorPtr> WrapIndicesOnce(
+    const XLATensorPtr& base, absl::Span<const XLATensorPtr> indices,
+    int start_dim) {
+  std::vector<XLATensorPtr> canonical_indices;
+  auto base_shape_ref = base->shape();
   XLA_CHECK_LE(indices.size(), base_shape_ref.get().rank());
   for (size_t dim_idx = 0; dim_idx < indices.size(); ++dim_idx) {
-    const XLATensor& dim_index = indices[dim_idx];
+    const XLATensorPtr& dim_index = indices[dim_idx];
     int64_t dim_size = base_shape_ref.get().dimensions(dim_idx + start_dim);
-    XLATensor wrapped_dim_index = XLATensor::Create(
-        dim_index.GetIrValue() +
-            XLATensor::GetIrValueForScalar(dim_size, dim_index.shape(),
-                                           base.GetDevice()),
-        base.GetDevice());
-    XLATensor wrap_cond =
+    XLATensorPtr wrapped_dim_index = XLATensor::Create(
+        dim_index->GetIrValue() +
+            XLATensor::GetIrValueForScalar(dim_size, dim_index->shape(),
+                                           base->GetDevice()),
+        base->GetDevice());
+    XLATensorPtr wrap_cond =
         XLATensor::lt(indices[dim_idx], at::Scalar(int64_t(0)));
     canonical_indices.push_back(
         XLATensor::where(wrap_cond, wrapped_dim_index, dim_index));
@@ -250,91 +250,94 @@ torch::lazy::Value EnsureRank1(const torch::lazy::Value& index) {
              : index;
 }
 
-XLATensor IndexByTensors(const XLATensor& base,
-                         absl::Span<const XLATensor> indices,
-                         int64_t start_dim) {
+XLATensorPtr IndexByTensors(const XLATensorPtr& base,
+                            absl::Span<const XLATensorPtr> indices,
+                            int64_t start_dim) {
   if (indices.empty()) {
     return base;
   }
   auto canonical_indices = WrapIndicesOnce(base, indices, start_dim);
-  int64_t indices_rank = canonical_indices.front().shape().get().rank();
+  int64_t indices_rank = canonical_indices.front()->shape().get().rank();
   // Stack the indices to allow the whole multi-indexing to be dispatched with a
   // single gather.
-  XLATensor indices_nd = XLATensor::stack(canonical_indices, indices_rank);
+  XLATensorPtr indices_nd = XLATensor::stack(canonical_indices, indices_rank);
   return XLATensor::Create(
-      torch::lazy::MakeNode<IndexGet>(base.GetIrValue(),
-                                      indices_nd.GetIrValue(), start_dim),
-      base.GetDevice(), base.dtype());
+      torch::lazy::MakeNode<IndexGet>(base->GetIrValue(),
+                                      indices_nd->GetIrValue(), start_dim),
+      base->GetDevice(), base->dtype());
 }
 
 torch::lazy::Value IndexPutByTensors(
-    const XLATensor& base, absl::Span<const XLATensor> indices,
-    int64_t start_dim, const XLATensor& values, bool accumulate,
+    const XLATensorPtr& base, absl::Span<const XLATensorPtr> indices,
+    int64_t start_dim, const XLATensorPtr& values, bool accumulate,
     absl::Span<const int64_t> result_permutation) {
   if (indices.empty()) {
-    return base.GetIrValue();
+    return base->GetIrValue();
   }
   auto canonical_indices = WrapIndicesOnce(base, indices, start_dim);
-  int64_t indices_rank = canonical_indices.front().shape().get().rank();
+  int64_t indices_rank = canonical_indices.front()->shape().get().rank();
   // Stack the indices to allow the whole multi-indexing to be dispatched with a
   // single scatter.
-  XLATensor indices_nd = XLATensor::stack(canonical_indices, indices_rank);
+  XLATensorPtr indices_nd = XLATensor::stack(canonical_indices, indices_rank);
   return torch::lazy::MakeNode<Permute>(
-      torch::lazy::MakeNode<IndexPut>(base.GetIrValue(),
-                                      indices_nd.GetIrValue(), start_dim,
-                                      values.GetIrValue(), accumulate),
+      torch::lazy::MakeNode<IndexPut>(base->GetIrValue(),
+                                      indices_nd->GetIrValue(), start_dim,
+                                      values->GetIrValue(), accumulate),
       torch::lazy::ToVector<int64_t>(result_permutation));
 }
 
-torch::lazy::NodePtr IndexFill(const XLATensor& base, int64_t dim,
-                               const XLATensor& index,
+torch::lazy::NodePtr IndexFill(const XLATensorPtr& base, int64_t dim,
+                               const XLATensorPtr& index,
                                const at::Scalar& value) {
-  XLA_CHECK_EQ(index.dtype(), at::ScalarType::Long)
+  XLA_CHECK_EQ(index->dtype(), at::ScalarType::Long)
       << "Fill index is expected to be of scalar type Long, but it is "
-      << index.dtype();
-  XLA_CHECK_LE(index.shape().get().rank(), 1)
+      << index->dtype();
+  XLA_CHECK_LE(index->shape().get().rank(), 1)
       << "Fill index is supposed to be a vector";
   return IndexFillOp(
-      base.GetIrValue(), dim, index.GetIrValue(),
-      XLATensor::GetIrValueForScalar(value, base.shape().get().element_type(),
-                                     base.GetDevice()));
+      base->GetIrValue(), dim, index->GetIrValue(),
+      XLATensor::GetIrValueForScalar(value, base->shape().get().element_type(),
+                                     base->GetDevice()));
 }
 
-torch::lazy::NodePtr IndexFill(const XLATensor& base, int64_t dim,
-                               const XLATensor& index, const XLATensor& value) {
-  XLA_CHECK_EQ(index.dtype(), at::ScalarType::Long)
+torch::lazy::NodePtr IndexFill(const XLATensorPtr& base, int64_t dim,
+                               const XLATensorPtr& index,
+                               const XLATensorPtr& value) {
+  XLA_CHECK_EQ(index->dtype(), at::ScalarType::Long)
       << "Fill index is expected to be of scalar type Long, but it is "
-      << index.dtype();
-  XLA_CHECK_LE(index.shape().get().rank(), 1)
+      << index->dtype();
+  XLA_CHECK_LE(index->shape().get().rank(), 1)
       << "Fill index is supposed to be a vector";
-  XLA_CHECK_EQ(value.shape().get().rank(), 0)
+  XLA_CHECK_EQ(value->shape().get().rank(), 0)
       << "Fill only supports a 0-dimensional value tensor";
-  return IndexFillOp(base.GetIrValue(), dim, index.GetIrValue(),
-                     value.GetIrValue());
+  return IndexFillOp(base->GetIrValue(), dim, index->GetIrValue(),
+                     value->GetIrValue());
 }
 
-torch::lazy::Value IndexAdd(const XLATensor& base, int64_t dim,
-                            const XLATensor& index, const XLATensor& source) {
-  XLA_CHECK(index.dtype() == at::ScalarType::Long ||
-            index.dtype() == at::ScalarType::Int)
+torch::lazy::Value IndexAdd(const XLATensorPtr& base, int64_t dim,
+                            const XLATensorPtr& index,
+                            const XLATensorPtr& source) {
+  XLA_CHECK(index->dtype() == at::ScalarType::Long ||
+            index->dtype() == at::ScalarType::Int)
       << "Add index is expected to be of scalar type Long or scalar type Int, "
          "but it is "
-      << index.dtype();
-  XLA_CHECK_LE(index.shape().get().rank(), 1)
+      << index->dtype();
+  XLA_CHECK_LE(index->shape().get().rank(), 1)
       << "Add index is supposed to be a vector";
-  return IndexAddOp(base.GetIrValue(), dim, index.GetIrValue(),
-                    source.GetIrValue());
+  return IndexAddOp(base->GetIrValue(), dim, index->GetIrValue(),
+                    source->GetIrValue());
 }
 
-torch::lazy::Value IndexCopy(const XLATensor& base, int64_t dim,
-                             const XLATensor& index, const XLATensor& source) {
-  XLA_CHECK_EQ(index.dtype(), at::ScalarType::Long)
+torch::lazy::Value IndexCopy(const XLATensorPtr& base, int64_t dim,
+                             const XLATensorPtr& index,
+                             const XLATensorPtr& source) {
+  XLA_CHECK_EQ(index->dtype(), at::ScalarType::Long)
       << "Copy index is expected to be of scalar type Long, but it is "
-      << index.dtype();
-  XLA_CHECK_LE(index.shape().get().rank(), 1)
+      << index->dtype();
+  XLA_CHECK_LE(index->shape().get().rank(), 1)
       << "Copy index is supposed to be a vector";
-  return IndexCopyOp(base.GetIrValue(), dim, index.GetIrValue(),
-                     source.GetIrValue());
+  return IndexCopyOp(base->GetIrValue(), dim, index->GetIrValue(),
+                     source->GetIrValue());
 }
 
 }  // namespace torch_xla
