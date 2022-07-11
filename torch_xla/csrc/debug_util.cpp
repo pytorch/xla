@@ -51,32 +51,32 @@ DebugUtil::GraphFormat DebugUtil::GetDefaultGraphFormat() {
   return format;
 }
 
-std::string DebugUtil::GetTensorsGraphInfo(absl::Span<const XLATensor> tensors,
-                                           const std::vector<size_t>* indices,
-                                           GraphFormat format) {
+std::string DebugUtil::GetTensorsGraphInfo(
+    absl::Span<const XLATensorPtr> tensors, const std::vector<size_t>* indices,
+    GraphFormat format) {
   std::vector<const torch::lazy::Node*> root_nodes;
   std::vector<torch::lazy::Value> root_values;
   std::vector<torch::lazy::hash_t> root_hashes;
   xla::util::Unique<torch::lazy::BackendDevice> unique_device;
   if (indices != nullptr) {
     for (auto index : *indices) {
-      const XLATensor& tensor = tensors[index];
-      torch::lazy::Value ir_value = tensor.CurrentIrValue();
+      const XLATensorPtr& tensor = tensors[index];
+      torch::lazy::Value ir_value = tensor->CurrentIrValue();
       if (ir_value) {
         root_nodes.push_back(ir_value.node.get());
         root_hashes.push_back(ir_value.hash());
         root_values.push_back(std::move(ir_value));
-        unique_device.set(tensor.GetDevice());
+        unique_device.set(tensor->GetDevice());
       }
     }
   } else {
     for (auto& tensor : tensors) {
-      torch::lazy::Value ir_value = tensor.CurrentIrValue();
+      torch::lazy::Value ir_value = tensor->CurrentIrValue();
       if (ir_value) {
         root_nodes.push_back(ir_value.node.get());
         root_hashes.push_back(ir_value.hash());
         root_values.push_back(std::move(ir_value));
-        unique_device.set(tensor.GetDevice());
+        unique_device.set(tensor->GetDevice());
       }
     }
   }
@@ -113,7 +113,7 @@ std::string DebugUtil::GetTensorsGraphInfo(absl::Span<const XLATensor> tensors,
 }
 
 void DebugUtil::SaveTensorsGraphInfo(const char* name,
-                                     absl::Span<const XLATensor> tensors,
+                                     absl::Span<const XLATensorPtr> tensors,
                                      const std::vector<size_t>* indices,
                                      GraphFormat format) {
   static const std::string save_file =

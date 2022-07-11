@@ -13,33 +13,33 @@
 namespace torch_xla {
 namespace bridge {
 
-c10::optional<XLATensor> TryGetXlaTensor(const at::Tensor& tensor);
+XLATensorPtr TryGetXlaTensor(const at::Tensor& tensor);
 
 bool IsXlaTensor(const at::Tensor& tensor);
 
-// Extracts the XLATensor out of our version of at::Tensor. Throws an exception
-// if tensor is not an XLA tensor.
-XLATensor GetXlaTensor(const at::Tensor& tensor);
+// Extracts the XLATensorPtr out of our version of at::Tensor. Throws an
+// exception if tensor is not an XLA tensor.
+XLATensorPtr GetXlaTensor(const at::Tensor& tensor);
 
 // Replaces the XLA tensor embedded within the XLA TensorImpl with the new
 // version.
-void ReplaceXlaTensor(const at::Tensor& tensor, XLATensor new_xla_tensor);
+void ReplaceXlaTensor(const at::Tensor& tensor, XLATensorPtr new_xla_tensor);
 
 // Same as above, applied to a list of tensors.
-std::vector<XLATensor> GetXlaTensors(absl::Span<const at::Tensor> tensors);
+std::vector<XLATensorPtr> GetXlaTensors(absl::Span<const at::Tensor> tensors);
 
 torch_xla::XLATensorPtr GetXlaTensorOrCreateForWrappedNumber(
     const at::Tensor& tensor, const torch::lazy::BackendDevice& device);
 
-// If tensor is an XLA tensor type, returns the XLATensor embedded within it,
+// If tensor is an XLA tensor type, returns the XLATensorPtr embedded within it,
 // otherwise creates a new XLA tensor type with tensor as data.
-XLATensor GetOrCreateXlaTensor(const at::Tensor& tensor,
-                               const torch::lazy::BackendDevice& device);
+XLATensorPtr GetOrCreateXlaTensor(const at::Tensor& tensor,
+                                  const torch::lazy::BackendDevice& device);
 
-XLATensor GetOrCreateXlaTensor(const c10::optional<at::Tensor>& tensor,
-                               const torch::lazy::BackendDevice& device);
+XLATensorPtr GetOrCreateXlaTensor(const c10::optional<at::Tensor>& tensor,
+                                  const torch::lazy::BackendDevice& device);
 
-std::vector<XLATensor> GetOrCreateXlaTensors(
+std::vector<XLATensorPtr> GetOrCreateXlaTensors(
     absl::Span<const at::Tensor> tensors,
     const torch::lazy::BackendDevice& device);
 
@@ -95,14 +95,14 @@ torch::lazy::BackendDevice SetCurrentDevice(
 
 c10::Device GetCurrentAtenDevice();
 
-at::Tensor XlaToAtenTensor(XLATensor xla_tensor,
+at::Tensor XlaToAtenTensor(XLATensorPtr xla_tensor,
                            const at::TensorOptions& tensor_options);
 
-// Creates an ATen tensor with XLA type id from an XLATensor.
-at::Tensor AtenFromXlaTensor(XLATensor xla_tensor);
+// Creates an ATen tensor with XLA type id from an XLATensorPtr.
+at::Tensor AtenFromXlaTensor(XLATensorPtr xla_tensor);
 
 std::vector<at::Tensor> AtenFromXlaTensors(
-    absl::Span<const XLATensor> xla_tensors);
+    absl::Span<const XLATensorPtr> xla_tensors);
 
 // Creates an XLA tensor holding the data in tensor, on the given device.
 at::Tensor CreateXlaTensor(

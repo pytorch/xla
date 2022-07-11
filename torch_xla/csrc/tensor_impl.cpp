@@ -52,18 +52,24 @@ C10_REGISTER_GUARD_IMPL(XLA, XLAGuardImpl);
 
 }  // namespace
 
-XLATensorImpl::XLATensorImpl(XLATensor tensor)
+XLATensorImpl::XLATensorImpl(XLATensor&& tensor)
     : c10::TensorImpl(c10::DispatchKeySet{c10::DispatchKey::XLA,
                                           c10::DispatchKey::AutogradXLA},
                       GetTypeMeta(tensor),
                       bridge::XlaDeviceToAtenDevice(tensor.GetDevice())),
-      tensor_(std::move(tensor)) {
+      tensor_(c10::make_intrusive<XLATensor>(std::move(tensor))) {
   is_non_overlapping_and_dense_ = false;
   set_sizes_strides_policy(SizesStridesPolicy::CustomSizes);
 }
 
-void XLATensorImpl::set_tensor(XLATensor xla_tensor) {
-  tensor_ = std::move(xla_tensor);
+XLATensorImpl::XLATensorImpl(XLATensor& tensor)
+    : XLATensorImpl(XLATensor(tensor)) {}
+
+XLATensorImpl::XLATensorImpl(XLATensorPtr tensor)
+    : XLATensorImpl(XLATensor(*tensor)) {}
+
+void XLATensorImpl::set_tensor(XLATensorPtr xla_tensor) {
+  tensor_ = c10::make_intrusive<XLATensor>(std::move(*xla_tensor));
   generation_ = 0;
 }
 
@@ -99,7 +105,7 @@ void XLATensorImpl::shallow_copy_from(
       /*dest_impl=*/this,
       /*version_counter=*/version_counter(),
       /*allow_tensor_metadata_change=*/allow_tensor_metadata_change());
-  xla_impl->tensor_.ShallowCopyTo(&tensor_);
+  xla_impl->tensor_->ShallowCopyTo(tensor_);
   generation_ = 0;
 }
 
@@ -142,11 +148,11 @@ bool XLATensorImpl::is_contiguous_custom(at::MemoryFormat memory_format) const {
 }
 
 void XLATensorImpl::SetupSizeProperties() {
-  size_t generation = tensor_.generation();
+  size_t generation = tensor_->generation();
   if (generation != generation_) {
     // Fill up the basic dimension data members which the base class
     // implementation uses in its APIs.
-    auto shape = tensor_.shape();
+    auto shape = tensor_->shape();
     c10::SmallVector<int64_t, 5> updated_sizes;
     numel_ = 1;
     for (auto dim : shape.get().dimensions()) {
