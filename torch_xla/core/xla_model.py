@@ -31,6 +31,8 @@ _TORCH_DIST_LOCK = threading.Lock()
 _DEVICE_CONTEXTS = dict()
 _DEVICE_CONTEXTS_LOCK = threading.Lock()
 
+_PJRT_ORDINALS = threading.local()
+
 
 class DeviceContext(object):
 
@@ -112,6 +114,10 @@ def _make_interhost_group(replica_devcount, world_size):
   return _get_torch_dist_group(ranks), ranks
 
 
+def using_pjrt():
+  return xu.getenv_as(xenv.PJRT_DEVICE, str) is not None
+
+
 def is_xla_tensor(tensor):
   return tensor.device.type == 'xla'
 
@@ -156,7 +162,24 @@ def xrt_world_size(defval=1):
   Returns:
     The number of devices which is taking part of the replication.
   """
+  if using_pjrt():
+    return len(torch_xla._XLAC._xla_get_all_devices())
+
   return xu.getenv_as(xenv.WORLD_SIZE, int, defval=defval)
+
+
+def set_pjrt_global_ordinal(ordinal):
+  if not using_pjrt():
+    raise NotImplementedError("Cannot set ordinals for XRT")
+
+  _PJRT_ORDINALS.global_ordinal = ordinal
+
+
+def set_pjrt_local_ordinal(ordinal):
+  if not using_pjrt():
+    raise NotImplementedError("Cannot set ordinals for XRT")
+
+  _PJRT_ORDINALS.local_ordinal = ordinal
 
 
 def get_ordinal(defval=0):
@@ -172,6 +195,9 @@ def get_ordinal(defval=0):
   Returns:
     The replication ordinal of the current process.
   """
+  if using_pjrt():
+    return getattr(_PJRT_ORDINALS, 'global_ordinal', defval)
+
   return xu.getenv_as(xenv.ORDINAL, int, defval=defval)
 
 
@@ -188,6 +214,9 @@ def get_local_ordinal(defval=0):
   Returns:
     The replication local ordinal of the current process.
   """
+  if using_pjrt():
+    return getattr(_PJRT_ORDINALS, 'local_ordinal', defval)
+
   ordinal = xu.getenv_as(xenv.LOCAL_ORDINAL, int, defval=-1)
   if ordinal >= 0:
     return ordinal
@@ -227,9 +256,17 @@ def xla_device(n=None, devkind=None):
   Returns:
     A `torch.device` with the requested instance.
   """
+  if using_pjrt():
+    devices = get_xla_supported_devices(devkind=devkind)
+    device_index = n or get_local_ordinal()
+    if device_index > len(devices):
+      raise IndexError('Device index {} out of range in {}'.format(
+          device_index, devices))
+
+    return torch.device(devices[device_index])
+
   if n is None:
-    devices = get_xla_supported_devices(
-        devkind=devkind if devkind is not None else None)
+    devices = get_xla_supported_devices(devkind=devkind)
     assert devices, 'No devices of {} kind'.format(devkind or 'ANY')
     # This is a utility API mainly called from tests or simple code which wants
     # to just have a single device to run on. Set the default device so that

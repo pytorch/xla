@@ -60,9 +60,7 @@ def _train_update(device, x, loss, tracker, writer):
       summary_writer=writer)
 
 
-def train_mnist(flags, state_dict, *, index):
-  rank = int(os.getenv('CLOUD_TPU_TASK_ID', 0)) + index
-
+def train_mnist(flags, state_dict):
   if flags.fake_data:
     train_loader = xu.SampleGenerator(
         data=(torch.zeros(flags.batch_size, 1, 28,
@@ -76,14 +74,14 @@ def train_mnist(flags, state_dict, *, index):
         sample_count=10000 // flags.batch_size // xm.xrt_world_size())
   else:
     train_dataset = datasets.MNIST(
-        os.path.join(flags.datadir, str(rank)),
+        os.path.join(flags.datadir, str(xm.get_ordinal())),
         train=True,
         download=True,
         transform=transforms.Compose(
             [transforms.ToTensor(),
              transforms.Normalize((0.1307,), (0.3081,))]))
     test_dataset = datasets.MNIST(
-        os.path.join(flags.datadir, str(rank)),
+        os.path.join(flags.datadir, str(xm.get_ordinal())),
         train=False,
         download=True,
         transform=transforms.Compose(
@@ -94,7 +92,7 @@ def train_mnist(flags, state_dict, *, index):
       train_sampler = torch.utils.data.distributed.DistributedSampler(
           train_dataset,
           num_replicas=xm.xrt_world_size(),
-          rank=rank,
+          rank=xm.get_ordinal(),
           shuffle=True)
     train_loader = torch.utils.data.DataLoader(
         train_dataset,
@@ -113,7 +111,7 @@ def train_mnist(flags, state_dict, *, index):
   # Scale learning rate to num cores
   lr = flags.lr * xm.xrt_world_size()
 
-  device = xm.xla_device(index)
+  device = xm.xla_device()
   model = MNIST()
   model.load_state_dict(state_dict)
   model = model.to(device)

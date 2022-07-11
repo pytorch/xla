@@ -113,10 +113,9 @@ def _train_update(device, step, loss, tracker, epoch, writer):
       summary_writer=writer)
 
 
-def train_imagenet(state_dict, *, index):
+def train_imagenet(state_dict):
   print('==> Preparing data..')
   img_dim = get_model_property('img_dim')
-  rank = int(os.getenv('CLOUD_TPU_TASK_ID', 0)) + index
   if FLAGS.fake_data:
     train_dataset_len = 1200000  # Roughly the size of Imagenet dataset.
     train_loader = xu.SampleGenerator(
@@ -158,12 +157,12 @@ def train_imagenet(state_dict, *, index):
       train_sampler = torch.utils.data.distributed.DistributedSampler(
           train_dataset,
           num_replicas=xm.xrt_world_size(),
-          rank=rank,
+          rank=xm.get_ordinal(),
           shuffle=True)
       test_sampler = torch.utils.data.distributed.DistributedSampler(
           test_dataset,
           num_replicas=xm.xrt_world_size(),
-          rank=rank,
+          rank=xm.get_ordinal(),
           shuffle=False)
     train_loader = torch.utils.data.DataLoader(
         train_dataset,
@@ -180,7 +179,7 @@ def train_imagenet(state_dict, *, index):
         shuffle=False,
         num_workers=FLAGS.num_workers)
 
-  device = xm.xla_device(index)
+  device = xm.xla_device()
   model = get_model_property('model_fn')()
   model.load_state_dict(state_dict)
   model = model.to(device)

@@ -49,8 +49,20 @@ def run_thread_per_device(rank: int, processes: int,
   threads = len(xm.get_xla_supported_devices())
   os.environ['XRT_SHARD_WORLD_SIZE'] = str(processes * threads)
 
+  def _thread_fn(fn, device_index):
+
+    @functools.wraps(fn)
+    def wrapper(*args, **kwargs):
+      # Assumes same number of threads per process
+      xm.set_pjrt_global_ordinal(rank * threads + device_index)
+      xm.set_pjrt_local_ordinal(device_index)
+
+      return fn(*args, **kwargs)
+
+    return wrapper
+
   with concurrent.futures.ThreadPoolExecutor(max_workers=threads) as executor:
-    futures = {executor.submit(fn, index=i): i for i in range(threads)}
+    futures = {executor.submit(_thread_fn(fn, i)): i for i in range(threads)}
 
     results = {
         futures[f]: f.result() for f in concurrent.futures.as_completed(futures)
