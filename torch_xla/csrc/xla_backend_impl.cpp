@@ -31,7 +31,7 @@ class XlaBackendImpl : public torch::lazy::BackendImplInterface {
   }
 
   const torch::lazy::IrBuilder* GetIrBuilder() const override {
-    static const IrBuilder* builder = new XLAIrBuilder();
+    static const torch::lazy::IrBuilder* builder = new XLAIrBuilder();
     return builder;
   }
 
