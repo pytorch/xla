@@ -17,5 +17,16 @@ TEST(XLABackendTest, TestTensorTransfer) {
   });
 }
 
+TEST(XLABackendTest, TestScalarTransfer) {
+  torch::lazy::BackendImplInterface* impl = GetXlaBackendImpl();
+  at::Scalar input = at::Scalar(int64_t(1));
+  ForEachDevice([&](const torch::lazy::BackendDevice& device) {
+    torch::lazy::BackendDataPtr data = impl->MakeComputationDataFromScalar(
+        input, device);
+    at::Tensor res = impl->MakeTensorFromComputationData(data, at::kByte);
+    AllClose(at::ones({}, at::TensorOptions(at::kByte)), res);
+  });
+}
+
 }  // namespace cpp_test
 }  // namespace torch_xla
