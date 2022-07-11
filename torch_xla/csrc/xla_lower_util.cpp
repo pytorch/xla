@@ -440,9 +440,9 @@ xla::XlaOp BuildMatMul(xla::XlaOp lhs, xla::XlaOp rhs, xla::XlaOp bias) {
   xla::XlaOp dot = CreateMatMul(lhs, rhs);
   const xla::Shape& dot_shape = XlaHelpers::ShapeOfXlaOp(dot);
   const xla::Shape& bias_shape = XlaHelpers::ShapeOfXlaOp(bias);
-  //if (bias_shape.dimensions() != dot_shape.dimensions()) {
-  //  bias = BuildExpand(bias, dot_shape.dimensions());
-  //}
+  if (bias_shape.dimensions() != dot_shape.dimensions()) {
+    bias = BuildExpand(bias, dot_shape.dimensions());
+  }
   return dot + bias;
 }
 

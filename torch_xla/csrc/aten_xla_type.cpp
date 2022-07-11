@@ -74,10 +74,9 @@ void CheckSubOperandTypes(at::ScalarType type1, at::ScalarType type2) {
 
 c10::optional<at::ScalarType> PromoteIntegralType(
     at::ScalarType src_dtype, const c10::optional<at::ScalarType>& opt_dtype) {
-  return opt_dtype.has_value()
-             ? opt_dtype.value()
-             : at::isIntegralType(src_dtype, /*includeBool=*/true) ? at::kLong
-                                                                   : opt_dtype;
+  return opt_dtype.has_value() ? opt_dtype.value()
+         : at::isIntegralType(src_dtype, /*includeBool=*/true) ? at::kLong
+                                                               : opt_dtype;
 }
 
 bool IsTypeWithLargerRangeThanLong(torch::ScalarType dtype) {
@@ -3116,11 +3115,11 @@ at::Tensor XLANativeFunctions::sum(const at::Tensor& self,
                                    at::OptionalIntArrayRef dim, bool keepdim,
                                    c10::optional<at::ScalarType> dtype) {
   XLA_FN_COUNTER("xla::");
-  XLATensor self_tensor = bridge::GetXlaTensor(self);
+  XLATensorPtr self_tensor = bridge::GetXlaTensor(self);
   return bridge::AtenFromXlaTensor(XLATensor::sum(
       self_tensor,
       dim ? torch::lazy::ToVector<int64_t>(*dim)
-          : torch::lazy::Iota<int64_t>(self_tensor.shape().get().rank()),
+          : torch::lazy::Iota<int64_t>(self_tensor->shape().get().rank()),
       keepdim, dtype));
 }
 
