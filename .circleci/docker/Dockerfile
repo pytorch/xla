@@ -48,7 +48,7 @@ RUN rm /etc/apt/sources.list.d/nvidia-ml.list
 
 # Rotate nvidia repo public key (last updated: 04/27/2022)
 # Unfortunately, nvidia/cuda image is shipped with invalid public key
-RUN apt-key adv --fetch-keys https://developer.download.nvidia.com/compute/cuda/repos/ubuntu1804/x86_64/3bf863cc.pub
+RUN apt-key adv --fetch-keys https://developer.download.nvidia.com/compute/cuda/repos/ubuntu1804/x86_64/7fa2af80.pub
 
 # Install base system packages
 RUN apt-get clean && apt-get update
