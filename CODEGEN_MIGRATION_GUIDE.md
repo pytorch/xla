@@ -1,4 +1,4 @@
-# OP Codegen Guide
+# Codegen migration Guide
 
 ## Background
 As PyTorch/XLA migrates to the LTC (Lazy Tensor Core), we need to clean up the existing stub code (which spans over 6+ files) that were used to do the op lowering. The complete process and file structure for the old op lowering can be found in [the op lowering guide](https://github.com/pytorch/xla/blob/master/OP_LOWERING_GUIDE.md). Replacing the supported op with the codegen SHOULD NOT introduce any new behavior, it is purely for the clean up purpose. 
@@ -11,6 +11,8 @@ export XRT_DEVICE_MAP="CPU:0;/job:localservice/replica:0/task:0/device:XLA_CPU:0
 ```
 
 It is also recommended that you're familiar with our [op lowering process](https://github.com/pytorch/xla/blob/master/OP_LOWERING_GUIDE.md) before you work on the codegen. 
+
+PyTorch/XLA uses https://github.com/pytorch/xla/issues/3560 to track the status of codegen migration. When working on a codegen, please put your GitHub alias with the PR link on the issue to avoid duplicate work. 
 
 ## File structure
 All file mentioned below lives under the `xla/torch_xla/csrc` folder, with the exception of `xla_native_functions.yaml`
@@ -214,3 +216,9 @@ Run the C++ op test or a simple test that only involves the generated ops. To ru
 ./test_ptxla --gtest_filter=AtenXlaTensorTest.TestAbs
 ```
 As usual, two things to verify are the correctness and the xla counter being incremented correctly.
+
+## Sample PRs
+- Codegen erf, erfc, erfinv, and exp (https://github.com/pytorch/xla/pull/3659)
+- Codegen floor and reciprocal (https://github.com/pytorch/xla/pull/3600)
+- Codegen inverse (https://github.com/pytorch/xla/pull/3575)
+To see more examples, please take a look at the tracking issue (https://github.com/pytorch/xla/issues/3560).
