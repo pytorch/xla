@@ -13,26 +13,36 @@ import torch_xla.utils.utils as xu
 _PJRT_ORDINALS = threading.local()
 
 
-def set_device_type(device: str):
+def set_device_type(pjrt_device: str):
+  """Sets the current PjRt device type.
+
+  Must be run before using any XLA devices.
+
+  Args:
+    pjrt_device: 'TPU' or 'CPU'
+  """
   os.environ[xenv.PJRT_DEVICE] = pjrt_device
 
 
 def device_type() -> Optional[str]:
+  """Returns the currrent PjRt device type."""
   return xu.getenv_as(xenv.PJRT_DEVICE, str)
 
 
 def using_pjrt() -> bool:
+  """Returns whether this process is using PjRt runtime."""
   return device_type() is not None
 
 
-def num_visible_tpu_chips() -> int:
+def num_visible_tpu_chips(default: 4) -> int:
+  """Returns number of TPU chips visible to current process."""
   visible_devices = os.environ.get('TPU_VISIBLE_DEVICES')
 
-  return len(visible_devices.split(',')) if visible_devices else 4
+  return len(visible_devices.split(',')) if visible_devices else default
 
 
 def configure_tpu_topology(rank: int, processes: int, base_port=8476):
-  '''Set default TPU topology environment variables for a single TPU host.'''
+  """Sets default TPU topology environment variables for a single TPU host."""
   ports = list(range(base_port, base_port + processes))
   os.environ.setdefault('TPU_CHIPS_PER_PROCESS_BOUNDS', '1,1,1')
   os.environ.setdefault('TPU_PROCESS_BOUNDS', '2,2,1')
@@ -45,6 +55,11 @@ def configure_tpu_topology(rank: int, processes: int, base_port=8476):
 
 
 def requires_pjrt(fn: Callable) -> Callable:
+  """Wraps `fn` and checks if this process is using PjRt.
+
+  Raises:
+    NotImplementedError: Not using PjRt runtime
+  """
 
   @functools.wraps(fn)
   def wrapper(*args, **kwargs):
@@ -58,32 +73,47 @@ def requires_pjrt(fn: Callable) -> Callable:
 
 @requires_pjrt
 def global_ordinal(default: int = 0):
+  """Returns global ordinal of this thread within all processes.
+
+  Global ordinal is in range [0, world_size)."""
   return getattr(_PJRT_ORDINALS, 'global_ordinal', default)
 
 
 @requires_pjrt
-def local_ordinal(default: int = 0):
-  return getattr(_PJRT_ORDINALS, 'local_ordinal', default)
-
-
-@requires_pjrt
 def set_global_ordinal(ordinal):
+  """Sets the global ordinal of this thread."""
   _PJRT_ORDINALS.global_ordinal = ordinal
 
 
 @requires_pjrt
-def set_local_ordinal(ordinal):
-  if not using_pjrt():
-    raise NotImplementedError("Cannot set ordinals for XRT")
+def local_ordinal(default: int = 0):
+  """Returns local ordinal of this thread within this process or host.
 
+  Local ordinal is in range [0, num_visible_devices)."""
+  return getattr(_PJRT_ORDINALS, 'local_ordinal', default)
+
+
+@requires_pjrt
+def set_local_ordinal(ordinal):
+  """Sets the local ordinal of this thread."""
   _PJRT_ORDINALS.local_ordinal = ordinal
 
 
 @requires_pjrt
 def xla_device(n: Optional[int] = None,
                devkind: Optional[str] = None) -> torch.device:
+  """Returns an XLA device.
+
+  Args:
+    n: Index of XLA device within visibible devices. If not set, use local
+      ordinal (default 0) to select a device.
+    devkind: Type of device to return. Should match `device_type()`.
+
+  Returns:
+    A `torch.device` representing an XLA device.
+  """
   devices = xm.get_xla_supported_devices(devkind=devkind)
-  device_index = n or local_ordinal()
+  device_index = n or local_ordinal(default=0)
   if device_index > len(devices):
     raise IndexError('Device index {} out of range in {}'.format(
         device_index, devices))
@@ -92,14 +122,15 @@ def xla_device(n: Optional[int] = None,
 
 
 @requires_pjrt
-def world_size(default: int = 1) -> int:
+def world_size() -> int:
+  """Returns the total number of devices across all processes/hosts."""
   return len(torch_xla._XLAC._xla_get_all_devices())
 
 
 @requires_pjrt
 def run_thread_per_device(rank: int, processes: int,
                           fn: Callable) -> Dict[int, Any]:
-  '''Run `fn` in a separate thread on each visible device.
+  """Runs `fn` in a separate thread on each visible device.
 
   Args:
     rank: rank of current process
@@ -109,7 +140,7 @@ def run_thread_per_device(rank: int, processes: int,
   Returns:
     Dict of the form {thread_rank: return_value}, where return_value is the
     result of calling `fn`.
-  '''
+  """
   if device_type() == 'TPU':
     configure_tpu_topology(rank, processes)
 
@@ -141,7 +172,7 @@ def run_thread_per_device(rank: int, processes: int,
 @requires_pjrt
 def run_multiprocess(fn: Callable, *args,
                      **kwargs) -> Dict[int, Dict[int, Any]]:
-  '''Run `fn` on all devices available to PjRt.
+  """Runs `fn` on all devices available to PjRt.
 
   Args:
     fn: Function to run on all devices
@@ -151,7 +182,7 @@ def run_multiprocess(fn: Callable, *args,
   Returns:
     Dict of the form {process_rank: {thread_rank: return_value}}, where
     return_value is the result of calling `fn`.
-  '''
+  """
   if device_type() == 'TPU':
     processes = num_visible_tpu_chips()
   else:
