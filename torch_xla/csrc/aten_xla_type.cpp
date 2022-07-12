@@ -2319,7 +2319,7 @@ std::tuple<at::Tensor, at::Tensor> XLANativeFunctions::nll_loss_forward(
 
 at::Tensor XLANativeFunctions::nonzero(const at::Tensor& self) {
   XLA_FN_COUNTER("xla::");
-  XLATensor self_tensor = bridge::GetXlaTensor(self);
+  XLATensorPtr self_tensor = bridge::GetXlaTensor(self);
   /*
    * REMOVE THIS SECTION TO ENABLE CREATING DYNAMIC SHAPES FOR POC
    * TODO: REMOVE THIS SECTION AFTER POC SUCCEEDS:
