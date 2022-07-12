@@ -4643,6 +4643,27 @@ TEST_F(AtenXlaTensorTest, TestExpandAs) {
   ExpectCounterChanged("xla::expand", cpp_test::GetIgnoredCounters());
 }
 
+TEST_F(AtenXlaTensorTest, TestExpandSymInt) {
+  torch::Tensor x = torch::rand({5});
+  torch::Tensor y = torch::nonzero(x);
+  int64_t y0_size = y.sizes()[0];
+  torch::Tensor a = torch::rand({3, 4}, torch::TensorOptions(torch::kFloat));
+  torch::Tensor b = a.expand({y0_size, 3, 4}, /*implicit=*/false);
+
+  ForEachDevice([&](const torch::Device& device) {
+    torch::Tensor xla_x = CopyToDevice(x, device);
+    torch::Tensor xla_y = torch::nonzero(xla_x);
+    c10::SymInt xla_y0_size = xla_y.sym_sizes()[0];
+    torch::Tensor xla_a = CopyToDevice(a, device);
+    torch::Tensor xla_b = xla_a.expand_symint(
+        c10::SymIntArrayRef({xla_y0_size, c10::SymInt(3), c10::SymInt(4)}),
+        /*implicit=*/false);
+    AllClose(b, xla_b);
+    ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+    ExpectCounterChanged("xla::expand_symint", cpp_test::GetIgnoredCounters());
+  });
+}
+
 TEST_F(AtenXlaTensorTest, TestEye) {
   int n = 5;
   ForEachDevice([&](const torch::Device& device) {

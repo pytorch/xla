@@ -57,6 +57,7 @@
 #include "torch_xla/csrc/ops/diagonal.h"
 #include "torch_xla/csrc/ops/discrete_uniform.h"
 #include "torch_xla/csrc/ops/expand.h"
+#include "torch_xla/csrc/ops/expand_dynamic.h"
 #include "torch_xla/csrc/ops/exponential.h"
 #include "torch_xla/csrc/ops/flip.h"
 #include "torch_xla/csrc/ops/gather.h"
@@ -1309,8 +1310,21 @@ XLATensorPtr XLATensor::expand(const XLATensorPtr& input,
       GetExpandDimensions(input_shape.get(), std::move(size))));
 }
 
-XLATensorPtr XLATensor::expm1(const XLATensorPtr& input) {
-  return input->CreateFrom(Expm1(input->GetIrValue()));
+XLATensor XLATensor::expand(const XLATensor& input,
+                            std::vector<torch::lazy::NodePtr>& size_nodes,
+                            const std::vector<int64_t> upper_bounds,
+                            const std::vector<bool> dynamic_dims) {
+  std::vector<torch::lazy::Value> size_values;
+  for (auto& size_node : size_nodes) {
+    size_values.push_back(torch::lazy::Value(size_node, 0));
+  }
+  return input.CreateFrom(torch::lazy::MakeNode<ExpandDynamic>(
+      input.GetIrValue(), size_values, std::move(upper_bounds),
+      std::move(dynamic_dims)));
+}
+
+XLATensor XLATensor::expm1(const XLATensor& input) {
+  return input.CreateFrom(Expm1(input.GetIrValue()));
 }
 
 void XLATensor::exponential_(XLATensorPtr& input, double lambd) {

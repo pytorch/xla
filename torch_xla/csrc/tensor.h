@@ -21,6 +21,7 @@
 #include "torch_xla/csrc/ir.h"
 #include "torch_xla/csrc/ir_util.h"
 #include "torch_xla/csrc/lowering_context.h"
+#include "torch_xla/csrc/ops/dynamic_ir.h"
 #include "torch_xla/csrc/view.h"
 #include "torch_xla/csrc/xla_sharding_util.h"
 
@@ -592,7 +593,12 @@ class XLATensor : public c10::intrusive_ptr_target {
   static XLATensorPtr expand(const XLATensorPtr& input,
                              std::vector<int64_t> size);
 
-  static XLATensorPtr expm1(const XLATensorPtr& input);
+  static XLATensor expand(const XLATensor& input,
+                          std::vector<torch::lazy::NodePtr>& size_nodes,
+                          const std::vector<int64_t> upper_bounds,
+                          const std::vector<bool> dynamic_dims);
+
+  static XLATensor expm1(const XLATensor& input);
 
   static void exponential_(XLATensorPtr& input, double lambd);
 
