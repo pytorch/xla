@@ -1,8 +1,8 @@
 #include "torch_xla/csrc/ops/expand_dynamic.h"
 
 #include "absl/strings/str_join.h"
-#include "tensorflow/compiler/xla/xla_client/debug_macros.h"
 #include "tensorflow/compiler/xla/client/lib/constants.h"
+#include "tensorflow/compiler/xla/xla_client/debug_macros.h"
 #include "torch/csrc/lazy/core/helpers.h"
 #include "torch/csrc/lazy/core/util.h"
 #include "torch_xla/csrc/data_ops.h"
@@ -58,8 +58,8 @@ ExpandDynamic::ExpandDynamic(const torch::lazy::Value& input,
           /*num_outputs=*/1, torch::lazy::MHash(upper_bounds)),
       upper_bounds_(std::move(upper_bounds)),
       dynamic_dims_(std::move(dynamic_dims)) {
-        shapes_ = GetShapes(input, upper_bounds_, dynamic_dims_);
-      }
+  shapes_ = GetShapes(input, upper_bounds_, dynamic_dims_);
+}
 
 XlaOpVector ExpandDynamic::Lower(LoweringContext* loctx) const {
   xla::XlaOp input = loctx->GetOutputOp(operand(0));

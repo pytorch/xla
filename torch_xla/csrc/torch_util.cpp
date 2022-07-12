@@ -2,8 +2,8 @@
 
 #include "tensorflow/compiler/xla/xla_client/debug_macros.h"
 #include "tensorflow/compiler/xla/xla_client/xla_util.h"
-#include "torch_xla/csrc/ops/constant.h"
 #include "torch_xla/csrc/helpers.h"
+#include "torch_xla/csrc/ops/constant.h"
 
 namespace torch_xla {
 
@@ -13,7 +13,8 @@ void SymIntElements::SetSymIntNodeElements(c10::SymInt& size) {
     std::shared_ptr<c10::SymbolicIntNode> symbolicIntNode =
         size.toSymbolicIntNode();
     auto lazySymIntNode =
-        std::dynamic_pointer_cast<torch::lazy::SymbolicIntNode>(symbolicIntNode);
+        std::dynamic_pointer_cast<torch::lazy::SymbolicIntNode>(
+            symbolicIntNode);
     auto size_node = lazySymIntNode->node_;
     size_nodes.push_back(size_node);
     upper_bounds.push_back(
@@ -23,7 +24,8 @@ void SymIntElements::SetSymIntNodeElements(c10::SymInt& size) {
         std::dynamic_pointer_cast<torch::lazy::DimensionNode>(size_node)
             ->isDynamic());
   } else {
-    auto size_node = torch::lazy::MakeNode<Constant>(std::move(XlaHelpers::ScalarLiteral(size.expect_int(), xla::PrimitiveType::F64)));
+    auto size_node = torch::lazy::MakeNode<Constant>(std::move(
+        XlaHelpers::ScalarLiteral(size.expect_int(), xla::PrimitiveType::F64)));
     upper_bounds.push_back(size.expect_int());
     dynamic_dims.push_back(size.is_symbolic());
   }
