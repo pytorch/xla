@@ -24,6 +24,7 @@ class ExpandDynamic : public XlaNode {
  private:
   std::vector<int64_t> upper_bounds_;
   std::vector<bool> dynamic_dims_;
+  std::vector<xla::Shape> shapes_;
 };
 
 }  // namespace torch_xla
