@@ -4659,6 +4659,8 @@ TEST_F(AtenXlaTensorTest, TestExpandSymInt) {
         c10::SymIntArrayRef({xla_y0_size, c10::SymInt(3), c10::SymInt(4)}),
         /*implicit=*/false);
     AllClose(b, xla_b);
+    ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+    ExpectCounterChanged("xla::expand_symint", cpp_test::GetIgnoredCounters());
   });
 }
 
