@@ -594,9 +594,9 @@ class XLATensor : public c10::intrusive_ptr_target {
                              std::vector<int64_t> size);
 
   static XLATensorPtr expand(const XLATensorPtr& input,
-                          std::vector<torch::lazy::NodePtr>& size_nodes,
-                          const std::vector<int64_t> upper_bounds,
-                          const std::vector<bool> dynamic_dims);
+                             std::vector<torch::lazy::NodePtr>& size_nodes,
+                             const std::vector<int64_t> upper_bounds,
+                             const std::vector<bool> dynamic_dims);
 
   static XLATensorPtr expm1(const XLATensorPtr& input);
 

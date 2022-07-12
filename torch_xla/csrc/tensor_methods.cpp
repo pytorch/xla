@@ -1311,9 +1311,9 @@ XLATensorPtr XLATensor::expand(const XLATensorPtr& input,
 }
 
 XLATensorPtr XLATensor::expand(const XLATensorPtr& input,
-                            std::vector<torch::lazy::NodePtr>& size_nodes,
-                            const std::vector<int64_t> upper_bounds,
-                            const std::vector<bool> dynamic_dims) {
+                               std::vector<torch::lazy::NodePtr>& size_nodes,
+                               const std::vector<int64_t> upper_bounds,
+                               const std::vector<bool> dynamic_dims) {
   std::vector<torch::lazy::Value> size_values;
   for (auto& size_node : size_nodes) {
     size_values.push_back(torch::lazy::Value(size_node, 0));
