@@ -17,6 +17,7 @@ namespace torch_xla {
 struct SymIntElements {
  public:
   SymIntElements(c10::SymInt& size) { SetSymIntNodeElements(size); }
+
   SymIntElements(c10::SymIntArrayRef& size) {
     std::vector<c10::SymInt> _sizes = torch::lazy::ToVector<c10::SymInt>(size);
     for (auto& _size : _sizes) {

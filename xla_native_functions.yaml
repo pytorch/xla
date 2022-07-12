@@ -162,6 +162,7 @@ supported:
   - empty.SymInt
   - empty_strided
   - expand
+  - expand.SymInt
   - exponential_
   - eye.m_out
   - eye.out
