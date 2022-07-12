@@ -1,5 +1,4 @@
 import args_parse
-import common
 
 FLAGS = args_parse.parse_common_options(
     datadir='/tmp/mnist-data',
@@ -25,6 +24,7 @@ import torch_xla.distributed.parallel_loader as pl
 import torch_xla.utils.utils as xu
 import torch_xla.core.xla_model as xm
 import torch_xla.distributed.xla_multiprocessing as xmp
+from torch_xla.experimental import pjrt
 import torch_xla.test.test_utils as test_utils
 
 
@@ -181,7 +181,7 @@ if __name__ == '__main__':
   torch.manual_seed(1)
   model = MNIST()
 
-  results = common.run_pjrt_multiprocess(train_mnist, FLAGS, model.state_dict())
+  results = pjrt.run_multiprocess(train_mnist, FLAGS, model.state_dict())
   print('Replica max_accuracy:', pprint.pformat(results))
   accuracy = np.mean([
       np.mean(list(thread_results.values()))

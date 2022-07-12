@@ -1,5 +1,4 @@
 import args_parse
-import common
 
 SUPPORTED_MODELS = [
     'alexnet', 'densenet121', 'densenet161', 'densenet169', 'densenet201',
@@ -57,6 +56,7 @@ import torch_xla.distributed.parallel_loader as pl
 import torch_xla.utils.utils as xu
 import torch_xla.core.xla_model as xm
 import torch_xla.distributed.xla_multiprocessing as xmp
+from torch_xla.experimental import pjrt
 import torch_xla.test.test_utils as test_utils
 
 DEFAULT_KWARGS = dict(
@@ -264,7 +264,7 @@ if __name__ == '__main__':
   torch.manual_seed(42)
   model = get_model_property('model_fn')()
 
-  results = common.run_pjrt_multiprocess(train_imagenet, model.state_dict())
+  results = pjrt.run_multiprocess(train_imagenet, model.state_dict())
   print('Replica max_accuracy:', pprint.pformat(results))
   accuracy = np.mean([
       np.mean(list(thread_results.values()))
