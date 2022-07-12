@@ -722,8 +722,8 @@ XLATensorPtr XLATensor::addcmul(const XLATensorPtr& input,
 XLATensorPtr XLATensor::addmm(const XLATensorPtr& input,
                               const XLATensorPtr& weight,
                               const XLATensorPtr& bias) {
-  return input->CreateFrom(AddMatMulOp(
-      input->GetIrValue(), weight->GetIrValue(), bias->GetIrValue()));
+  return input->CreateFrom(XLATensor::matmul(input, weight)->GetIrValue() +
+                           bias->GetIrValue());
 }
 
 XLATensorPtr XLATensor::all(const XLATensorPtr& input,
