@@ -1323,8 +1323,8 @@ XLATensorPtr XLATensor::expand(const XLATensorPtr& input,
       std::move(dynamic_dims)));
 }
 
-XLATensor XLATensor::expm1(const XLATensor& input) {
-  return input.CreateFrom(Expm1(input.GetIrValue()));
+XLATensorPtr XLATensor::expm1(const XLATensorPtr& input) {
+  return input->CreateFrom(Expm1(input->GetIrValue()));
 }
 
 void XLATensor::exponential_(XLATensorPtr& input, double lambd) {
