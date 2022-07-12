@@ -19,7 +19,7 @@ function pip_install() {
 }
 
 function install_torchvision() {
-  pip_install --user "git+https://github.com/pytorch/vision.git@$TORCHVISION_COMMIT"
+  pip_install --user --no-use-pep517 "git+https://github.com/pytorch/vision.git@$TORCHVISION_COMMIT"
 }
 
 install_torchvision
