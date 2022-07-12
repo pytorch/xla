@@ -12,7 +12,7 @@ function download_llvm_raw_archive() {
     | grep "LLVM_COMMIT =" | awk '{print $3}' | sed 's/"//g')
 
   if [ "$(gsutil -q stat gs://tpu-pytorch/llvm-raw/${LLVM_COMMIT}.tar.gz; echo $?)" -eq "1" ]; then
-    http_code="$(curl --fail -w '%{http_code}\n' \
+    http_code="$(curl --fail -L -w '%{http_code}\n' \
       https://storage.googleapis.com/mirror.tensorflow.org/github.com/llvm/llvm-project/archive/${LLVM_COMMIT}.tar.gz \
       --output ${LLVM_COMMIT}.tar.gz)"
     if [ "${http_code}" -eq "404" ]; then
