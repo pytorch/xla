@@ -2,7 +2,7 @@ import concurrent.futures
 import functools
 import os
 import threading
-from typing import Any, Callable, Dict, Optional, TypeVar
+from typing import Callable, Dict, Optional, TypeVar
 
 import torch
 import torch_xla
@@ -12,6 +12,8 @@ import torch_xla.utils.utils as xu
 
 _PJRT_ORDINALS = threading.local()
 
+R = TypeVar('R')
+FN = TypeVar('FN')
 
 def set_device_type(pjrt_device: str) -> None:
   """Sets the current PjRt device type.
@@ -54,9 +56,7 @@ def configure_tpu_topology(rank: int, processes: int, base_port=8476) -> None:
   os.environ.setdefault(xenv.CLOUD_TPU_TASK_ID, str(rank))
 
 
-T = TypeVar('T')
-
-def requires_pjrt(fn: T) -> T:
+def requires_pjrt(fn: FN) -> FN:
   """Wraps `fn` and checks if this process is using PjRt.
 
   Raises:
@@ -131,7 +131,7 @@ def world_size() -> int:
 
 @requires_pjrt
 def run_thread_per_device(rank: int, processes: int,
-                          fn: Callable[..., T]) -> Dict[int, T]:
+                          fn: Callable[..., R]) -> Dict[int, R]:
   """Runs `fn` in a separate thread on each visible device.
 
   Args:
@@ -172,8 +172,8 @@ def run_thread_per_device(rank: int, processes: int,
 
 
 @requires_pjrt
-def run_multiprocess(fn: Callable[..., T], *args,
-                     **kwargs) -> Dict[int, Dict[int, T]]:
+def run_multiprocess(fn: Callable[..., R], *args,
+                     **kwargs) -> Dict[int, Dict[int, R]]:
   """Runs `fn` on all devices available to PjRt.
 
   Spawns one process per physical device (e.g. TPU chip).
