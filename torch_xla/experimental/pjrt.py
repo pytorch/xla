@@ -15,6 +15,7 @@ _PJRT_ORDINALS = threading.local()
 R = TypeVar('R')
 FN = TypeVar('FN')
 
+
 def set_device_type(pjrt_device: str) -> None:
   """Sets the current PjRt device type.
 
@@ -66,7 +67,8 @@ def requires_pjrt(fn: FN) -> FN:
   @functools.wraps(fn)
   def wrapper(*args, **kwargs):
     if not using_pjrt():
-      raise NotImplementedError('`{}` not implemented for XRT'.format(fn.__name__))
+      raise NotImplementedError('`{}` not implemented for XRT'.format(
+          fn.__name__))
 
     return fn(*args, **kwargs)
 
