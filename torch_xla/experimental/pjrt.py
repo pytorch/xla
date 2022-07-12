@@ -2,7 +2,7 @@ import concurrent.futures
 import functools
 import os
 import threading
-from typing import Any, Callable, Dict, Optional
+from typing import Any, Callable, Dict, Optional, TypeVar
 
 import torch
 import torch_xla
@@ -13,7 +13,7 @@ import torch_xla.utils.utils as xu
 _PJRT_ORDINALS = threading.local()
 
 
-def set_device_type(pjrt_device: str):
+def set_device_type(pjrt_device: str) -> None:
   """Sets the current PjRt device type.
 
   Must be run before using any XLA devices.
@@ -41,7 +41,7 @@ def num_visible_tpu_chips(default: int = 4) -> int:
   return len(visible_devices.split(',')) if visible_devices else default
 
 
-def configure_tpu_topology(rank: int, processes: int, base_port=8476):
+def configure_tpu_topology(rank: int, processes: int, base_port=8476) -> None:
   """Sets default TPU topology environment variables for a single TPU host."""
   ports = list(range(base_port, base_port + processes))
   os.environ.setdefault(xenv.TPU_CHIPS_PER_PROCESS_BOUNDS, '1,1,1')
@@ -54,7 +54,9 @@ def configure_tpu_topology(rank: int, processes: int, base_port=8476):
   os.environ.setdefault(xenv.CLOUD_TPU_TASK_ID, str(rank))
 
 
-def requires_pjrt(fn: Callable) -> Callable:
+T = TypeVar('T')
+
+def requires_pjrt(fn: T) -> T:
   """Wraps `fn` and checks if this process is using PjRt.
 
   Raises:
@@ -64,7 +66,7 @@ def requires_pjrt(fn: Callable) -> Callable:
   @functools.wraps(fn)
   def wrapper(*args, **kwargs):
     if not using_pjrt():
-      return NotImplementedError('{} not implemented for XRT', fn.__name__)
+      raise NotImplementedError('`{}` not implemented for XRT'.format(fn.__name__))
 
     return fn(*args, **kwargs)
 
@@ -72,7 +74,7 @@ def requires_pjrt(fn: Callable) -> Callable:
 
 
 @requires_pjrt
-def global_ordinal(default: int = 0):
+def global_ordinal(default: int = 0) -> int:
   """Returns global ordinal of this thread within all processes.
 
   Global ordinal is in range [0, world_size)."""
@@ -80,13 +82,13 @@ def global_ordinal(default: int = 0):
 
 
 @requires_pjrt
-def set_global_ordinal(ordinal):
+def set_global_ordinal(ordinal: int) -> None:
   """Sets the global ordinal of this thread."""
   _PJRT_ORDINALS.global_ordinal = ordinal
 
 
 @requires_pjrt
-def local_ordinal(default: int = 0):
+def local_ordinal(default: int = 0) -> int:
   """Returns local ordinal of this thread within this process or host.
 
   Local ordinal is in range [0, num_visible_devices)."""
@@ -94,7 +96,7 @@ def local_ordinal(default: int = 0):
 
 
 @requires_pjrt
-def set_local_ordinal(ordinal):
+def set_local_ordinal(ordinal: int) -> None:
   """Sets the local ordinal of this thread."""
   _PJRT_ORDINALS.local_ordinal = ordinal
 
@@ -129,7 +131,7 @@ def world_size() -> int:
 
 @requires_pjrt
 def run_thread_per_device(rank: int, processes: int,
-                          fn: Callable) -> Dict[int, Any]:
+                          fn: Callable[..., T]) -> Dict[int, T]:
   """Runs `fn` in a separate thread on each visible device.
 
   Args:
@@ -170,8 +172,8 @@ def run_thread_per_device(rank: int, processes: int,
 
 
 @requires_pjrt
-def run_multiprocess(fn: Callable, *args,
-                     **kwargs) -> Dict[int, Dict[int, Any]]:
+def run_multiprocess(fn: Callable[..., T], *args,
+                     **kwargs) -> Dict[int, Dict[int, T]]:
   """Runs `fn` on all devices available to PjRt.
 
   Spawns one process per physical device (e.g. TPU chip).
