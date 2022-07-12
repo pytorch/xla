@@ -34,9 +34,9 @@ def using_pjrt() -> bool:
   return device_type() is not None
 
 
-def num_visible_tpu_chips(default: 4) -> int:
+def num_visible_tpu_chips(default: int = 4) -> int:
   """Returns number of TPU chips visible to current process."""
-  visible_devices = os.environ.get('TPU_VISIBLE_DEVICES')
+  visible_devices = xu.getenv_as(xenv.TPU_VISIBLE_DEVICES, str)
 
   return len(visible_devices.split(',')) if visible_devices else default
 
@@ -44,14 +44,14 @@ def num_visible_tpu_chips(default: 4) -> int:
 def configure_tpu_topology(rank: int, processes: int, base_port=8476):
   """Sets default TPU topology environment variables for a single TPU host."""
   ports = list(range(base_port, base_port + processes))
-  os.environ.setdefault('TPU_CHIPS_PER_PROCESS_BOUNDS', '1,1,1')
-  os.environ.setdefault('TPU_PROCESS_BOUNDS', '2,2,1')
-  os.environ.setdefault('TPU_PROCESS_ADDRESSES',
+  os.environ.setdefault(xenv.TPU_CHIPS_PER_PROCESS_BOUNDS, '1,1,1')
+  os.environ.setdefault(xenv.TPU_PROCESS_BOUNDS, '2,2,1')
+  os.environ.setdefault(xenv.TPU_PROCESS_ADDRESSES,
                         ','.join(f'localhost:{port}' for port in ports))
 
-  os.environ.setdefault('TPU_VISIBLE_DEVICES', str(rank))
-  os.environ.setdefault('TPU_PROCESS_PORT', str(ports[rank]))
-  os.environ.setdefault('CLOUD_TPU_TASK_ID', str(rank))
+  os.environ.setdefault(xenv.TPU_VISIBLE_DEVICES, str(rank))
+  os.environ.setdefault(xenv.TPU_PROCESS_PORT, str(ports[rank]))
+  os.environ.setdefault(xenv.CLOUD_TPU_TASK_ID, str(rank))
 
 
 def requires_pjrt(fn: Callable) -> Callable:
@@ -173,6 +173,8 @@ def run_thread_per_device(rank: int, processes: int,
 def run_multiprocess(fn: Callable, *args,
                      **kwargs) -> Dict[int, Dict[int, Any]]:
   """Runs `fn` on all devices available to PjRt.
+
+  Spawns one process per physical device (e.g. TPU chip).
 
   Args:
     fn: Function to run on all devices
