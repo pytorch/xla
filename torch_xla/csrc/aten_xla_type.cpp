@@ -3116,11 +3116,11 @@ at::Tensor XLANativeFunctions::sum(const at::Tensor& self,
                                    at::OptionalIntArrayRef dim, bool keepdim,
                                    c10::optional<at::ScalarType> dtype) {
   XLA_FN_COUNTER("xla::");
-  XLATensor self_tensor = bridge::GetXlaTensor(self);
+  XLATensorPtr self_tensor = bridge::GetXlaTensor(self);
   return bridge::AtenFromXlaTensor(XLATensor::sum(
       self_tensor,
       dim ? torch::lazy::ToVector<int64_t>(*dim)
-          : torch::lazy::Iota<int64_t>(self_tensor.shape().get().rank()),
+          : torch::lazy::Iota<int64_t>(self_tensor->shape().get().rank()),
       keepdim, dtype));
 }
 
