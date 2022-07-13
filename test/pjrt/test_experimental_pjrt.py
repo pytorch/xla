@@ -37,10 +37,12 @@ class TestExperimentalPjrt(parameterized.TestCase):
     local_ordinal = xm.get_local_ordinal()
     self.assertEqual(local_ordinal, 0)
 
-  @parameterized.named_parameters(('single_thread', [(0, 0)]),
-                                  ('single_process', [(0, 0), (1, 1), (2, 2)]),
-                                  ('multiprocess', [(0, 0), (0, 1), (0, 2)]))
-  def test_set_ordinals(self, thread_ordinals):
+  @parameterized.named_parameters(('single_thread', [0], [0]),
+                                  ('single_process', [1, 1, 1], [2, 2, 2]),
+                                  ('multiprocess', [0, 0, 0], [0, 1, 2]))
+  def test_set_ordinals(self, local_ordinals, global_ordinals):
+    num_threads = len(local_ordinals)
+    self.assertLen(global_ordinals, num_threads)
 
     def _thread_fn(local_ordinal, global_ordinal):
       pjrt.set_local_ordinal(local_ordinal)
@@ -50,11 +52,11 @@ class TestExperimentalPjrt(parameterized.TestCase):
 
       return xm.get_local_ordinal(), xm.get_ordinal()
 
-    with concurrent.futures.ThreadPoolExecutor(
-        max_workers=len(thread_ordinals)) as e:
-      local_ordinals, global_ordinals = zip(*thread_ordinals)
+    with concurrent.futures.ThreadPoolExecutor(max_workers=num_threads) as e:
       results = e.map(_thread_fn, local_ordinals, global_ordinals)
-      for result, expected in zip(results, thread_ordinals):
+      for result, local_ordinal, global_ordinal in zip(results, local_ordinals,
+                                                       global_ordinals):
+        expected = (local_ordinal, global_ordinal)
         self.assertEqual(result, expected)
 
   def test_xla_device_default(self):
