@@ -69,6 +69,9 @@ function install_deps_pytorch_xla() {
 
   sudo apt-get -qq install npm nodejs
 
+  # Upgrade npm to the latest
+  sudo npm install -g npm
+
   # XLA build requires Bazel
   # We use bazelisk to avoid updating Bazel version manually.
   sudo npm install -g @bazel/bazelisk
