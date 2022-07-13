@@ -61,32 +61,6 @@ XLATensorPtr Cross(const XLATensorPtr& input, const XLATensorPtr& other,
   return XLATensor::stack({s1, s2, s3}, canonical_dim);
 }
 
-XLATensorPtr KlDivBackward(const XLATensorPtr& grad_output,
-                           const XLATensorPtr& input,
-                           const XLATensorPtr& target, ReductionMode reduction,
-                           bool log_target) {
-  auto input_shape_ref = input->shape();
-  XLATensorPtr expanded_grad_output = XLATensor::expand(
-      grad_output,
-      torch::lazy::ToVector<int64_t>(input_shape_ref.get().dimensions()));
-  XLATensorPtr grad_input;
-  if (!log_target) {
-    grad_input = XLATensor::where(
-        XLATensor::gt(target, 0),
-        XLATensor::neg(XLATensor::mul(target, expanded_grad_output)),
-        XLATensor::full_like(input, 0, input->GetDevice(), c10::nullopt));
-  } else {
-    grad_input = XLATensor::neg(
-        XLATensor::mul(XLATensor::exp(target), expanded_grad_output));
-  }
-  if (reduction == ReductionMode::kMean) {
-    XLATensorPtr dims_size = XLATensor::get_dimensions_size(
-        input, XlaHelpers::GetAllDimensions(input_shape_ref));
-    grad_input = XLATensor::div(grad_input, dims_size);
-  }
-  return grad_input;
-}
-
 XLATensorPtr MakeMatrixWithDiagonal(const XLATensorPtr& input,
                                     int64_t diagonal) {
   int64_t size = input->shape().get().dimensions(0);

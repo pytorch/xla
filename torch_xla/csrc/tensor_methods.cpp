@@ -1556,14 +1556,6 @@ XLATensorPtr XLATensor::isnan(const XLATensorPtr& input) {
   return input->CreateFrom(casted, at::ScalarType::Bool);
 }
 
-XLATensorPtr XLATensor::kl_div_backward(const XLATensorPtr& grad_output,
-                                        const XLATensorPtr& input,
-                                        const XLATensorPtr& target,
-                                        int64_t reduction, bool log_target) {
-  return tensor_ops::KlDivBackward(grad_output, input, target,
-                                   GetXlaReductionMode(reduction), log_target);
-}
-
 std::tuple<XLATensorPtr, XLATensorPtr> XLATensor::kthvalue(
     const XLATensorPtr& input, int64_t k, int64_t dim, bool keepdim) {
   torch::lazy::NodePtr node = torch::lazy::MakeNode<KthValue>(

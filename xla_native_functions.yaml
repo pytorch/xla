@@ -162,7 +162,6 @@ supported:
   - index_select
   - isnan
   - kl_div
-  - kl_div_backward
   - kthvalue
   - le.Scalar
   - le.Tensor
