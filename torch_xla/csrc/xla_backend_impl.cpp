@@ -105,6 +105,7 @@ class XlaBackendImpl : public torch::lazy::BackendImplInterface {
     // c10::ArrayRef<torch::lazy::Node*> instead of
     // c10::ArrayRef<const torch::lazy::Node*> since c10::ArrayRef already
     // provided const for its member.
+    XLA_ERROR() << "Need to handle post_order";
     return std::make_unique<LoweringContext>(name, device);
   }
 
@@ -131,15 +132,16 @@ class XlaBackendImpl : public torch::lazy::BackendImplInterface {
     std::vector<torch::lazy::ComputationPtr> res;
     std::vector<xla::ComputationClient::CompileInstance> compile_instances;
     torch::lazy::BackendDevice current_device = GetCurrentDevice();
+    std::vector<xla::Shape> output_shapes;
 
     for (const torch::lazy::ComputationPtr instance : instances) {
       // TODO(JackCaoG): device is missing in instance, use CurrentDevice for
       // now
       const Computation* torch_xla_computation =
           dynamic_cast<Computation*>(instance.get());
-      xla::Shape shape = MakeShapeWithDeviceLayout(
+      output_shapes.push_back(MakeShapeWithDeviceLayout(
           torch_xla_computation->program_shape().result(),
-          static_cast<XlaDeviceType>(current_device.type()));
+          static_cast<XlaDeviceType>(current_device.type())));
 
       // Call GetCompilationDevices and passes all device here if needed.
       // Currently on TPU we always have 1 replica per device and one process
@@ -152,7 +154,7 @@ class XlaBackendImpl : public torch::lazy::BackendImplInterface {
       compile_instances.push_back(xla::ComputationClient::CompileInstance(
           torch_xla_computation->move_computation(),
           torch_xla_computation->get_device_string(),
-          {current_device.toString()}, &shape));
+          {current_device.toString()}, &output_shapes.back()));
     }
     std::vector<std::shared_ptr<xla::ComputationClient::Computation>>
         client_computations = xla::ComputationClient::Get()->Compile(
