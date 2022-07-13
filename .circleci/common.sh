@@ -49,7 +49,7 @@ function checkout_torch_pin_if_available() {
 
 function install_deps_pytorch_xla() {
   XLA_DIR=$1
-  USE_CACHE="${2:-1}"
+  USE_CACHE="${2:-0}"
 
   # Install ninja to speedup the build
   pip install ninja
@@ -69,9 +69,6 @@ function install_deps_pytorch_xla() {
 
   sudo apt-get -qq install npm nodejs
 
-  # Upgrade npm to the latest
-  sudo npm install -g npm
-
   # XLA build requires Bazel
   # We use bazelisk to avoid updating Bazel version manually.
   sudo npm install -g @bazel/bazelisk
@@ -88,16 +85,19 @@ function install_deps_pytorch_xla() {
     sudo ln -s $CUBLAS_PATTERN /usr/local/cuda/include
   fi
 
-  # Install bazels3cache for cloud cache
-  sudo npm install -g bazels3cache
-  BAZELS3CACHE="$(which bazels3cache)"
-  if [ -z "${BAZELS3CACHE}" ]; then
-    echo "Unable to find bazels3cache..."
-    exit 1
-  fi
-  bazels3cache --bucket=${XLA_CLANG_CACHE_S3_BUCKET_NAME} --maxEntrySizeBytes=0 --logging.level=verbose
   # Use cloud cache to build when available.
   if [[ "$USE_CACHE" == 1 ]]; then
+    # Install bazels3cache for cloud cache
+    # TODO(yeounoh) npm install -g bazels3cache on Linux 5.11.0-1022-aws
+    # USE_CACHE is disabled for now. Upgrade npm to the latest could work:
+    #  sudo npm install -g npm
+    sudo npm install -g bazels3cache
+    BAZELS3CACHE="$(which bazels3cache)"
+    if [ -z "${BAZELS3CACHE}" ]; then
+      echo "Unable to find bazels3cache..."
+      exit 1
+    fi
+    bazels3cache --bucket=${XLA_CLANG_CACHE_S3_BUCKET_NAME} --maxEntrySizeBytes=0 --logging.level=verbose
     sed -i '/bazel build/ a --remote_http_cache=http://localhost:7777 \\' $XLA_DIR/build_torch_xla_libs.sh
   fi
 }
