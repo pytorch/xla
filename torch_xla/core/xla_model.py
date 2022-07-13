@@ -177,7 +177,7 @@ def get_ordinal(defval=0):
     The replication ordinal of the current process.
   """
   if pjrt.using_pjrt():
-    return pjrt.global_ordinal()
+    return pjrt.global_ordinal(defval)
 
   return xu.getenv_as(xenv.ORDINAL, int, defval=defval)
 
@@ -196,7 +196,7 @@ def get_local_ordinal(defval=0):
     The replication local ordinal of the current process.
   """
   if pjrt.using_pjrt():
-    return pjrt.local_ordinal()
+    return pjrt.local_ordinal(defval)
 
   ordinal = xu.getenv_as(xenv.LOCAL_ORDINAL, int, defval=-1)
   if ordinal >= 0:
@@ -238,7 +238,7 @@ def xla_device(n=None, devkind=None):
     A `torch.device` with the requested instance.
   """
   if pjrt.using_pjrt():
-    pjrt.xla_device(n, devkind)
+    return pjrt.xla_device(n, devkind)
 
   if n is None:
     devices = get_xla_supported_devices(devkind=devkind)
