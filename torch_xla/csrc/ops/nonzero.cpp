@@ -21,13 +21,15 @@ xla::Shape NodeOutputShape(const torch::lazy::Value& input) {
 
 }  // namespace
 
-NonZero::NonZero(const torch::lazy::Value& input)
+NonZero::NonZero(const torch::lazy::Value& input, const torch::lazy::Shape& dynamic_shape)
     : XlaNode(torch::lazy::OpKind(at::aten::nonzero), {input},
+              dynamic_shape,
               NodeOutputShape(input),
-              /*num_outputs=*/2) {}
+              /*num_outputs=*/2),
+      dynamic_shape_(dynamic_shape) {}
 
 torch::lazy::NodePtr NonZero::Clone(torch::lazy::OpList operands) const {
-  return torch::lazy::MakeNode<NonZero>(operands.at(0));
+  return torch::lazy::MakeNode<NonZero>(operands.at(0), dynamic_shape_);
 }
 
 XlaOpVector NonZero::Lower(LoweringContext* loctx) const {

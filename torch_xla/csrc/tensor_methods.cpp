@@ -1944,10 +1944,16 @@ std::pair<XLATensorPtr, XLATensorPtr> XLATensor::nms(
              at::ScalarType::Int));
 }
 
-XLATensorPtr XLATensor::nonzero(const XLATensorPtr& input) {
+XLATensorPtr XLATensor::nonzero(const XLATensorPtr& input, const torch::lazy::Shape& dynamic_shape) {
   torch::lazy::NodePtr node =
-      torch::lazy::MakeNode<NonZero>(input->GetIrValue());
-  return input->CreateFrom(torch::lazy::Value(node, 0), at::ScalarType::Long);
+      torch::lazy::MakeNode<NonZero>(input->GetIrValue(), dynamic_shape);
+  torch::lazy::Value ir_value = torch::lazy::Value(node, 0);
+  c10::optional<std::vector<bool>> test = ir_value.shape().is_symbolic();
+  std::cout << "node shape: " << node->shapes().size() << std::endl;
+  std::cout << "ir_value shape: " << test.value()[0] << std::endl;
+  std::cout << "ir_value shape size: " << test.value().size() << std::endl;
+  return input->CreateFrom(ir_value, at::ScalarType::Long);
+  // return input->CreateFrom(torch::lazy::Value(node, 0), at::ScalarType::Long);
 }
 
 XLATensorPtr XLATensor::norm(const XLATensorPtr& input,

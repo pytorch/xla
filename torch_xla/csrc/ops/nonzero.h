@@ -9,11 +9,14 @@ namespace torch_xla {
 // it gets its own IR node class.
 class NonZero : public XlaNode {
  public:
-  NonZero(const torch::lazy::Value& input);
+  NonZero(const torch::lazy::Value& input, const torch::lazy::Shape& dynamic_shape);
 
   torch::lazy::NodePtr Clone(torch::lazy::OpList operands) const override;
 
   XlaOpVector Lower(LoweringContext* loctx) const override;
+
+ private:
+  torch::lazy::Shape dynamic_shape_;
 };
 
 }  // namespace torch_xla

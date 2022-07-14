@@ -8,6 +8,7 @@
 namespace torch_xla {
 
 void SymIntElements::SetSymIntNodeElements(c10::SymInt& size) {
+  std::cout << "is symbolic: " << size.is_symbolic() << std::endl;
   if (size.is_symbolic()) {
     c10::SymIntNode symbolicIntNode = size.toSymIntNodeImpl();
     auto* lazySymIntNode =
