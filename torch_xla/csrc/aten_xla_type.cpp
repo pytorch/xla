@@ -2095,9 +2095,13 @@ at::Tensor XLANativeFunctions::nonzero(const at::Tensor& self) {
    * }
    */
   at::ScalarType size_type = self.scalar_type();
-  torch::lazy::Shape shape_ = torch::lazy::Shape(size_type, {xla::ShapeUtil::ElementsIn(self_tensor->shape()), self_tensor->shape().get().rank()});
-  torch::lazy::Shape dynamic_shape_ = shape_.with_symbolic_dims(std::vector<bool>{true, false});
-  return bridge::AtenFromXlaTensor(XLATensor::nonzero(self_tensor, dynamic_shape_));
+  torch::lazy::Shape shape_ = torch::lazy::Shape(
+      size_type, {xla::ShapeUtil::ElementsIn(self_tensor->shape()),
+                  self_tensor->shape().get().rank()});
+  torch::lazy::Shape dynamic_shape_ =
+      shape_.with_symbolic_dims(std::vector<bool>{true, false});
+  return bridge::AtenFromXlaTensor(
+      XLATensor::nonzero(self_tensor, dynamic_shape_));
 }
 
 at::Tensor XLANativeFunctions::norm(const at::Tensor& self,
