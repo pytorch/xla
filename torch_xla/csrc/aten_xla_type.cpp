@@ -1351,8 +1351,8 @@ at::Tensor XLANativeFunctions::expand_symint(const at::Tensor& self,
   std::vector<c10::SymInt> _sizes = torch::lazy::ToVector<c10::SymInt>(size);
   int64_t num_new_dimensions = _sizes.size() - self.dim();
   std::vector<int64_t> padded_self(num_new_dimensions, 0);
-  padded_self.insert(
-      padded_self.end(), self.sizes().begin(), self.sizes().end());
+  padded_self.insert(padded_self.end(), self.sizes().begin(),
+                     self.sizes().end());
   for (const auto idx : c10::irange(_sizes.size())) {
     if (!_sizes[idx].is_symbolic() && _sizes[idx].expect_int() == -1) {
       size_elements.upper_bounds[idx] = padded_self[idx];
