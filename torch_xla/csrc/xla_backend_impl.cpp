@@ -6,6 +6,7 @@
 #include "torch_xla/csrc/aten_xla_bridge.h"
 #include "torch_xla/csrc/computation.h"
 #include "torch_xla/csrc/device.h"
+#include "torch_xla/csrc/ir_builder.h"
 #include "torch_xla/csrc/lowering_context.h"
 #include "torch_xla/csrc/ops/device_data.h"
 #include "torch_xla/csrc/tensor.h"
@@ -31,8 +32,8 @@ class XlaBackendImpl : public torch::lazy::BackendImplInterface {
   }
 
   const torch::lazy::IrBuilder* GetIrBuilder() const override {
-    XLA_ERROR() << "Not implemented yet";
-    return 0;
+    static const torch::lazy::IrBuilder* builder = new XLAIrBuilder();
+    return builder;
   }
 
   torch::lazy::BackendDataPtr MakeComputationDataFromTensor(

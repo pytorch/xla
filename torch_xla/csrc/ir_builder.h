@@ -1,18 +1,21 @@
 #include "tensorflow/compiler/xla/xla_client/debug_macros.h"
 #include "torch/csrc/lazy/core/ir.h"
 #include "torch/csrc/lazy/core/ir_builder.h"
+#include "torch_xla/csrc/device.h"
 #include "torch_xla/csrc/ops/as_strided.h"
 #include "torch_xla/csrc/ops/cast.h"
+#include "torch_xla/csrc/ops/device_data.h"
 #include "torch_xla/csrc/ops/diagonal.h"
 #include "torch_xla/csrc/ops/expand.h"
 #include "torch_xla/csrc/ops/generic.h"
 #include "torch_xla/csrc/ops/ops.h"
+#include "torch_xla/csrc/tensor_util.h"
 
 namespace torch_xla {
 
-struct XLAIrBuilder : IrBuilder {
+struct XLAIrBuilder : torch::lazy::IrBuilder {
   torch::lazy::NodePtr MakeDeviceData(
-      const std::shared_ptr<BackendData>& data) const override {
+      const std::shared_ptr<torch::lazy::BackendData>& data) const override {
     return torch::lazy::MakeNode<DeviceData>(data);
   }
 
@@ -30,7 +33,8 @@ struct XLAIrBuilder : IrBuilder {
   torch::lazy::NodePtr MakeView(
       const torch::lazy::Value& input0,
       const std::vector<int64_t>& output_size) const override {
-    return torch::lazy::MakeNode<ViewOp>(input0, output_size);
+    // TODO(JackCAoG): use functionization pass instead
+    return nullptr;
   }
   torch::lazy::NodePtr MakeCast(const torch::lazy::Value& input0,
                                 const at::ScalarType& dtype,
@@ -38,19 +42,22 @@ struct XLAIrBuilder : IrBuilder {
                                     c10::nullopt) const override {
     return torch::lazy::MakeNode<Cast>(input0, dtype, stype);
   }
-  torch::lazy::NodePtr MakeTensorList(const OpList& inputs) const override {
+  torch::lazy::NodePtr MakeTensorList(
+      const torch::lazy::OpList& inputs) const override {
     // TODO(JackCaoG): implement tensorList IR. This is used by codegen.
     XLA_ERROR() << "Need to implement";
     return nullptr;
   }
   // Generic needs cleanup
   torch::lazy::NodePtr MakeGeneric(
-      const OpKind& op, const OpList& operands, const Shape& shape,
-      const size_t& num_outputs = 1,
-      const hash_t& hash_seed =
+      const torch::lazy::OpKind& op, const torch::lazy::OpList& operands,
+      const torch::lazy::Shape& shape, const size_t& num_outputs = 1,
+      const torch::lazy::hash_t& hash_seed =
           static_cast<uint32_t>(0x5a2d296e9)) const override {
-    return torch::lazy::MakeNode<Generic>(op, operands, shape, num_outputs,
-                                          hash_seed);
+    // TODO(JackCaoG): ltc generic op does not take lowering function
+    // return torch::lazy::MakeNode<Generic>(
+    //     op, operands, MakeXlaShapeFromLazyShape(shape, *GetDefaultDevice()),
+    //     num_outputs, hash_seed);
   }
 
   // We should use functionization pass for view ops when migrating to the LTC.
