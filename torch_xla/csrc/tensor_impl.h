@@ -6,6 +6,11 @@
 #include <c10/core/SymIntArrayRef.h>
 
 #include "torch_xla/csrc/tensor.h"
+#include "torch_xla/csrc/xla_backend_impl.h"
+#include <torch/csrc/lazy/backend/backend_interface.h>
+#include <torch/csrc/lazy/core/config.h>
+#include <torch/csrc/lazy/core/ir.h>
+#include <torch/csrc/lazy/core/trie.h>
 
 namespace torch_xla {
 
