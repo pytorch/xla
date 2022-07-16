@@ -100,8 +100,6 @@ torch::lazy::NodePtr Log1p(const torch::lazy::Value& input);
 
 torch::lazy::NodePtr Sqrt(const torch::lazy::Value& input);
 
-torch::lazy::NodePtr Rsqrt(const torch::lazy::Value& input);
-
 torch::lazy::NodePtr Prelu(const torch::lazy::Value& input,
                            const torch::lazy::Value& weight);
 

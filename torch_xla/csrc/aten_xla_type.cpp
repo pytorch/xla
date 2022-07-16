@@ -2725,12 +2725,6 @@ at::Tensor XLANativeFunctions::rrelu_with_noise_backward(
       noise_tensor, lower, upper, training));
 }
 
-at::Tensor XLANativeFunctions::rsqrt(const at::Tensor& self) {
-  XLA_FN_COUNTER("xla::");
-  return bridge::AtenFromXlaTensor(
-      XLATensor::rsqrt(bridge::GetXlaTensor(self)));
-}
-
 at::Tensor XLANativeFunctions::rsub(const at::Tensor& self,
                                     const at::Tensor& other,
                                     const at::Scalar& alpha) {
