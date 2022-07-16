@@ -126,7 +126,7 @@ at::IntArrayRef XLATensorImpl::sizes_custom() const {
 }
 
 c10::SymIntArrayRef XLATensorImpl::sym_sizes_custom() const {
-  if (false) {
+  if (true) {
     return c10::SymIntArrayRef(reinterpret_cast<const c10::SymInt*>(sym_sizes_.data()),
                                sym_sizes_.size());
   } else {
