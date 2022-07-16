@@ -8,8 +8,8 @@
 #include "tensorflow/compiler/xla/xla_client/debug_macros.h"
 #include "torch/csrc/lazy/backend/backend_interface.h"
 #include "torch/csrc/lazy/core/ir_builder.h"
-#include "torch/csrc/lazy/core/tensor_util.h"
 #include "torch/csrc/lazy/core/tensor.h"
+#include "torch/csrc/lazy/core/tensor_util.h"
 #include "torch/csrc/lazy/core/util.h"
 #include "torch_xla/csrc/aten_xla_bridge.h"
 #include "torch_xla/csrc/device.h"
@@ -67,7 +67,8 @@ XLATensorImpl::XLATensorImpl(XLATensor&& tensor)
   auto rank = tensor_->shape().get().rank();
   sym_sizes_.reserve(rank);
   for (auto i : c10::irange(rank)) {
-    auto dim_node = torch::lazy::getIrBuilder()->MakeSizeNode(this->tensor_->GetIrValue(), i);
+    auto dim_node = torch::lazy::getIrBuilder()->MakeSizeNode(
+        this->tensor_->GetIrValue(), i);
     auto sn = std::make_shared<torch::lazy::SymbolicIntNode>(dim_node);
     sym_sizes_.push_back(sn->toSymInt());
   }
@@ -127,12 +128,13 @@ at::IntArrayRef XLATensorImpl::sizes_custom() const {
 
 c10::SymIntArrayRef XLATensorImpl::sym_sizes_custom() const {
   if (true) {
-    return c10::SymIntArrayRef(reinterpret_cast<const c10::SymInt*>(sym_sizes_.data()),
-                               sym_sizes_.size());
+    return c10::SymIntArrayRef(
+        reinterpret_cast<const c10::SymInt*>(sym_sizes_.data()),
+        sym_sizes_.size());
   } else {
     auto sizes = sizes_custom();
-    return c10::SymIntArrayRef(reinterpret_cast<const c10::SymInt*>(sizes.data()),
-                               sizes.size());
+    return c10::SymIntArrayRef(
+        reinterpret_cast<const c10::SymInt*>(sizes.data()), sizes.size());
   }
 }
 

@@ -2,15 +2,15 @@
 
 #include <ATen/Tensor.h>
 #include <c10/core/Storage.h>
-#include <c10/core/TensorImpl.h>
 #include <c10/core/SymIntArrayRef.h>
-
-#include "torch_xla/csrc/tensor.h"
-#include "torch_xla/csrc/xla_backend_impl.h"
+#include <c10/core/TensorImpl.h>
 #include <torch/csrc/lazy/backend/backend_interface.h>
 #include <torch/csrc/lazy/core/config.h>
 #include <torch/csrc/lazy/core/ir.h>
 #include <torch/csrc/lazy/core/trie.h>
+
+#include "torch_xla/csrc/tensor.h"
+#include "torch_xla/csrc/xla_backend_impl.h"
 
 namespace torch_xla {
 

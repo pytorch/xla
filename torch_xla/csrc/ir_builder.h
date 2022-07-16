@@ -10,7 +10,6 @@
 #include "torch_xla/csrc/ops/expand.h"
 #include "torch_xla/csrc/ops/generic.h"
 #include "torch_xla/csrc/ops/ops.h"
-#include "torch_xla/csrc/ops/dynamic_ir.h"
 #include "torch_xla/csrc/tensor_util.h"
 
 namespace torch_xla {
