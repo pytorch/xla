@@ -2776,10 +2776,6 @@ XLATensorPtr XLATensor::take(const XLATensorPtr& input,
   return input->CreateFrom(Take(input->GetIrValue(), index->GetIrValue()));
 }
 
-XLATensorPtr XLATensor::tanh(const XLATensorPtr& input) {
-  return input->CreateFrom(Tanh(input->GetIrValue()));
-}
-
 XLATensorPtr XLATensor::tanh_backward(const XLATensorPtr& grad_output,
                                       const XLATensorPtr& output) {
   return XLATensor::mul(grad_output,

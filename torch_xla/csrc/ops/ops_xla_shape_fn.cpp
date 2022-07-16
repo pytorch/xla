@@ -131,4 +131,8 @@ xla::Shape TanOutputShape(const torch::lazy::Value& input) {
   return GetXlaShape(input);
 }
 
+xla::Shape TanhOutputShape(const torch::lazy::Value& input) {
+  return GetXlaShape(input);
+}
+
 }  // namespace torch_xla
