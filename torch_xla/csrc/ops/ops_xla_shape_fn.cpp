@@ -101,6 +101,10 @@ xla::Shape ReciprocalOutputShape(const torch::lazy::Value& input) {
   return GetXlaShape(input);
 }
 
+xla::Shape RsqrtOutputShape(const torch::lazy::Value& input) {
+  return GetXlaShape(input);
+}
+
 xla::Shape SgnOutputShape(const torch::lazy::Value& input) {
   return GetXlaShape(input);
 }
