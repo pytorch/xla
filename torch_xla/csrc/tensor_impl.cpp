@@ -60,6 +60,15 @@ XLATensorImpl::XLATensorImpl(XLATensor&& tensor)
       tensor_(c10::make_intrusive<XLATensor>(std::move(tensor))) {
   is_non_overlapping_and_dense_ = false;
   set_sizes_strides_policy(SizesStridesPolicy::CustomSizes);
+
+  auto rank = tensor_->shape().Get().sizes().size();
+  sym_sizes_.reserve(rank);
+  for (auto i : c10::irange(rank)) {
+    auto dim_node = xla::ComputationClient::Get()->GetIrBuilder()->MakeSizeNode(
+        this->tensor_->GetIrValue(), i);
+    auto sn = std::make_shared<torch::lazy::SymbolicIntNode>(dim_node);
+    sym_sizes_.push_back(sn->toSymInt());
+  }
 }
 
 XLATensorImpl::XLATensorImpl(XLATensor& tensor)
@@ -115,9 +124,13 @@ at::IntArrayRef XLATensorImpl::sizes_custom() const {
 }
 
 c10::SymIntArrayRef XLATensorImpl::sym_sizes_custom() const {
-  auto sizes = sizes_custom();
-  return c10::SymIntArrayRef(reinterpret_cast<const c10::SymInt*>(sizes.data()),
-                             sizes.size());
+  if () {
+    
+  } else {
+    auto sizes = sizes_custom();
+    return c10::SymIntArrayRef(reinterpret_cast<const c10::SymInt*>(sizes.data()),
+                               sizes.size());
+  }
 }
 
 c10::SymInt XLATensorImpl::sym_numel_custom() const {
