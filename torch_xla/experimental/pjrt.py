@@ -91,9 +91,9 @@ def set_global_ordinal(ordinal: int) -> None:
 
 @requires_pjrt
 def local_ordinal(default: int = 0) -> int:
-  """Returns local ordinal of this thread within this process or host.
+  """Returns local ordinal of this thread within this host.
 
-  Local ordinal is in range [0, num_visible_devices)."""
+  Local ordinal is in range [0, host_num_devices)."""
   return getattr(_PJRT_ORDINALS, 'local_ordinal', default)
 
 
@@ -110,7 +110,7 @@ def xla_device(n: Optional[int] = None,
 
   Args:
     n: Index of XLA device within visibible devices. If not set, use local
-      ordinal (default 0) to select a device.
+      ordinal (default 0) to select an addressable device.
     devkind: Type of device to return. Should match `device_type()`.
 
   Returns:
