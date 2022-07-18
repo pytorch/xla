@@ -11,7 +11,8 @@ class ExpandDynamic : public XlaNode {
   ExpandDynamic(const torch::lazy::Value& input,
                 const std::vector<torch::lazy::Value>& dimensions,
                 const std::vector<int64_t> upper_bounds,
-                const std::vector<bool> dynamic_dims);
+                const std::vector<bool> dynamic_dims,
+                const torch::lazy::Shape& dynamic_shapes);
 
   std::string ToString() const override;
 
@@ -22,6 +23,7 @@ class ExpandDynamic : public XlaNode {
   const bool IsDynamic(int index) const { return dynamic_dims_[index]; };
 
  private:
+  torch::lazy::Shape dynamic_shapes_;
   std::vector<int64_t> upper_bounds_;
   std::vector<bool> dynamic_dims_;
   std::vector<xla::Shape> shapes_;

@@ -114,6 +114,7 @@ xla::XlaOp SetDimensionSizes(xla::XlaOp input,
   for (int i = 0; i < output_sizes.size(); i++) {
     xla::Shape dim_shape = XlaHelpers::ShapeOfXlaOp(output_sizes[i]);
     if (dim_shape.is_dynamic()) {
+      std::cout << "xla::SetDimensionSize " << i << std::endl; 
       input = xla::SetDimensionSize(input, output_sizes[i], i);
     }
   }

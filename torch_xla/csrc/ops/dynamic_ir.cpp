@@ -13,9 +13,26 @@ namespace torch_xla {
 
 SizeNode::SizeNode(torch::lazy::Value input, size_t dim)
     : XlaNode(torch::lazy::OpKind{c10::Symbol::fromQualString("aten::size")},
-              {input}, xla::ShapeUtil::MakeShape(xla::S32, {}), 1,
+              {input}, [&]() {  if (input.node->shapes().size() > 0) {
+                                  torch::lazy::Shape sh_ = input.node->shape(0);
+                                  torch::lazy::Shape sh__ = sh_.with_symbolic_dims(sh_.is_symbolic());
+                                  std::cout << "sh_ vs. sh__" << sh_.is_symbolic().value()[0] << " " << sh__.is_symbolic().value()[0] << std::endl;
+                                  std::cout << "sh_ vs. sh__" << sh_.is_symbolic().value()[1] << " " << sh__.is_symbolic().value()[1] << std::endl;
+                                  return sh__;
+                                } else {
+                                  return torch::lazy::Shape();
+                                }
+                             },
+                  [&]() { return xla::ShapeUtil::MakeShape(xla::S32, {}); }, 1,
               torch::lazy::MHash(dim)),
-      dim_(dim){};
+      dim_(dim){
+        if (input.node->shapes().size() > 0) {
+          for (int i = 0; i < operands().size(); i++) {
+            std::cout << "operands i (is_symbolic): "  << operands()[0].node->shape(0).is_symbolic().value()[i] << std::endl;
+            // std::cout << "" << << std::endl;
+          }
+        }
+      };
 
 XlaOpVector SizeNode::Lower(LoweringContext* loctx) const {
   auto input = loctx->GetOutputOp(operand(0));

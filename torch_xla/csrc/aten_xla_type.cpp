@@ -1244,9 +1244,15 @@ at::Tensor XLANativeFunctions::expand_symint(const at::Tensor& self,
       size_elements.upper_bounds[idx] = padded_self[idx];
     }
   }
+  at::ScalarType size_type = self.scalar_type();
+  torch::lazy::Shape shape_ = torch::lazy::Shape(
+      size_type, {5, 3, 4});
+  torch::lazy::Shape dynamic_shape_ =
+      shape_.with_symbolic_dims(std::vector<bool>{true, false, false});
+  std::cout << "XLANativeFunctions::expand_symint" << std::endl;
   return bridge::AtenFromXlaTensor(XLATensor::expand(
       bridge::GetXlaTensor(self), size_elements.size_nodes,
-      size_elements.upper_bounds, size_elements.dynamic_dims));
+      size_elements.upper_bounds, size_elements.dynamic_dims, dynamic_shape_));
 }
 
 at::Tensor& XLANativeFunctions::exponential_(
@@ -2100,6 +2106,7 @@ at::Tensor XLANativeFunctions::nonzero(const at::Tensor& self) {
                   self_tensor->shape().get().rank()});
   torch::lazy::Shape dynamic_shape_ =
       shape_.with_symbolic_dims(std::vector<bool>{true, false});
+  std::cout << "XLANativeFunctions::nonzero" << std::endl;
   return bridge::AtenFromXlaTensor(
       XLATensor::nonzero(self_tensor, dynamic_shape_));
 }

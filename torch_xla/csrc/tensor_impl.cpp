@@ -7,12 +7,13 @@
 #include "tensorflow/compiler/xla/xla_client/computation_client.h"
 #include "tensorflow/compiler/xla/xla_client/debug_macros.h"
 #include "torch/csrc/lazy/backend/backend_interface.h"
-#include "torch/csrc/lazy/core/ir_builder.h"
+// #include "torch/csrc/lazy/core/ir_builder.h"
 #include "torch/csrc/lazy/core/tensor.h"
 #include "torch/csrc/lazy/core/tensor_util.h"
 #include "torch/csrc/lazy/core/util.h"
 #include "torch_xla/csrc/aten_xla_bridge.h"
 #include "torch_xla/csrc/device.h"
+#include "torch_xla/csrc/ir_builder.h"
 #include "torch_xla/csrc/layout_manager.h"
 #include "torch_xla/csrc/tensor_util.h"
 
@@ -66,11 +67,29 @@ XLATensorImpl::XLATensorImpl(XLATensor&& tensor)
 
   auto rank = tensor_->shape().get().rank();
   sym_sizes_.reserve(rank);
+  XLAIrBuilder a = XLAIrBuilder();
   for (auto i : c10::irange(rank)) {
-    auto dim_node = torch::lazy::getIrBuilder()->MakeSizeNode(
+    // std::cout << this->tensor_->GetIrValue().node->shape(i).is_symbolic() << std::endl;
+    std::cout << this->tensor_->GetIrValue().node->shapes().size() << std::endl;
+    if (tensor_->GetIrValue().node->shapes().size() > 0) {
+      std::cout << this->tensor_->GetIrValue().node->shape(0).is_symbolic().value()[i] << std::endl;
+      std::cout << this->tensor_->GetIrValue().node->shape(0).dim() << std::endl;
+      std::cout << this->tensor_->GetIrValue().node->shape(0).to_string() << std::endl;
+    }
+    auto dim_node = a.MakeSizeNode(
         this->tensor_->GetIrValue(), i);
     auto sn = std::make_shared<torch::lazy::SymbolicIntNode>(dim_node);
-    sym_sizes_.push_back(sn->toSymInt());
+    std::cout << "is_symbolic sn: " << sn->toSymInt().is_symbolic() << std::endl;
+    std::cout << "as_int_unchecked sn: " << sn->toSymInt().as_int_unchecked() << std::endl;
+    if (tensor_->GetIrValue().node->shapes().size() > 0) {
+      if (this->tensor_->GetIrValue().node->shape(0).is_symbolic().value()[i]) {
+        sym_sizes_.push_back(sn->toSymInt());
+      } else {
+        sym_sizes_.push_back(c10::SymInt(this->tensor_->GetIrValue().node->shape(0).size(i)));
+      }
+    } else {
+        sym_sizes_.push_back(c10::SymInt());
+    }
   }
 }
 
