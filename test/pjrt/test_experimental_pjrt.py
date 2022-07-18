@@ -39,10 +39,12 @@ class TestExperimentalPjrt(parameterized.TestCase):
     self.assertEqual(local_ordinal, 0)
 
   def test_num_local_devices(self):
-    self.assertLen(xm.get_xla_supported_devices(), pjrt.addressable_device_count())
+    self.assertLen(xm.get_xla_supported_devices(),
+                   pjrt.addressable_device_count())
 
   def test_num_global_devices(self):
-    self.assertLen(torch_xla._XLAC._xla_get_all_devices(), pjrt.global_device_count())
+    self.assertLen(torch_xla._XLAC._xla_get_all_devices(),
+                   pjrt.global_device_count())
 
   def test_world_size(self):
     self.assertEqual(xm.xrt_world_size(), pjrt.global_device_count())
