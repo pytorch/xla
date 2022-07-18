@@ -8,19 +8,13 @@
 #include "torch_xla/csrc/device.h"
 #include "torch_xla/csrc/helpers.h"
 #include "torch_xla/csrc/tensor.h"
-
-namespace at {
-// This function is defined in the codegenerated RegisterDispatchKey.cpp file.
-extern TORCH_API void RegisterXLAXLANativeFunctions();
-extern TORCH_API void RegisterXLAAutogradXLANativeFunctions();
-}  // namespace at
+#include "torch_xla/csrc/xla_backend_impl.h"
 
 namespace torch_xla {
 namespace cpp_test {
 
 void XlaTest::SetUp() {
-  at::RegisterXLAXLANativeFunctions();
-  at::RegisterXLAAutogradXLANativeFunctions();
+  InitXlaBackend();
   at::manual_seed(42);
   XLATensor::SetRngSeed(GetCurrentDevice(), 42);
   start_msnap_ = absl::make_unique<MetricsSnapshot>();
