@@ -22,6 +22,30 @@ namespace torch_xla {
 class XlaBackendImpl : public torch::lazy::BackendImplInterface {
  public:
   XlaBackendImpl() {}
+
+  bool InitDefaultDeviceType() {
+    if (!default_device_type_inited_) {
+      // GetDefaultDevice will trigger the runtime device init, should
+      // not do it during class init time.
+      torch::lazy::BackendDevice default_device = *GetDefaultDevice();
+      default_device_type_ = std::make_shared<DeviceType>(
+          static_cast<XlaDeviceType>(default_device.type()));
+      default_device_type_inited_ = true;
+    }
+    return true;
+  }
+
+  bool InitDefaultDeviceOrdinal() {
+    if (!default_device_ordinal_inited_) {
+      // GetDefaultDevice will trigger the runtime device init, should
+      // not do it during class init time.
+      torch::lazy::BackendDevice default_device = *GetDefaultDevice();
+      default_device_ordinal_ = default_device.ordinal();
+      default_device_ordinal_inited_ = true;
+    }
+    return true;
+  }
+
   void PrepareToExit() const override { XLA_ERROR() << "Not implemented yet"; }
 
   void SetRngSeed(size_t seed) const override {
@@ -150,18 +174,31 @@ class XlaBackendImpl : public torch::lazy::BackendImplInterface {
 
   std::shared_ptr<torch::lazy::BackendDeviceType> GetDefaultDeviceType()
       const override {
-    // want to reuse the getDefualtDeviceTypelogic
-    torch::lazy::BackendDevice default_device = *GetDefaultDevice();
-    return std::make_shared<DeviceType>(
-        static_cast<XlaDeviceType>(default_device.type()));
+    // lazily init default device type, we only need to init once.
+    static bool init =
+        const_cast<XlaBackendImpl*>(this)->InitDefaultDeviceType();
+    return default_device_type_;
+  }
+
+  void SetDefaultDeviceType(int8_t type) override {
+    default_device_type_ =
+        std::make_shared<DeviceType>(static_cast<XlaDeviceType>(type));
+    default_device_type_inited_ = true;
+  }
+
+  int64_t GetDefaultDeviceOrdinal() const override {
+    // lazily init default device ordinal, we only need to init once.
+    static bool init =
+        const_cast<XlaBackendImpl*>(this)->InitDefaultDeviceOrdinal();
+    return default_device_ordinal_;
+  }
+  void SetDefaultDeviceOrdinal(int64_t ordinal) override {
+    default_device_ordinal_ = ordinal;
+    default_device_ordinal_inited_ = true;
   }
 
   at::DeviceType EagerFallbackDeviceType() const override {
     return at::DeviceType::CPU;
-  }
-
-  void SetDefaultDeviceType(std::string type) override {
-    default_device_type_ = XlaDeviceType(c10::Device(type).type());
   }
 
   std::vector<torch::lazy::BackendDevice> GetBackendDevices() const override {
@@ -180,7 +217,10 @@ class XlaBackendImpl : public torch::lazy::BackendImplInterface {
   }
 
  private:
-  DeviceType default_device_type_;
+  bool default_device_type_inited_ = false;
+  bool default_device_ordinal_inited_ = false;
+  std::shared_ptr<torch::lazy::BackendDeviceType> default_device_type_;
+  int64_t default_device_ordinal_;
 };
 
 torch::lazy::BackendImplInterface* GetXlaBackendImpl() {
