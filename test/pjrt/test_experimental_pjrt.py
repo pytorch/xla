@@ -44,6 +44,9 @@ class TestExperimentalPjrt(parameterized.TestCase):
   def test_num_global_devices(self):
     self.assertLen(torch_xla._XLAC._xla_get_all_devices(), pjrt.global_device_count())
 
+  def test_world_size(self):
+    self.assertEqual(xm.xrt_world_size(), pjrt.global_device_count())
+
   @parameterized.named_parameters(('single_thread', [0], [0]),
                                   ('1_host_x_3_threads', [1, 1, 1], [2, 2, 2]),
                                   ('3_hosts_x_1_thread', [0, 0, 0], [0, 1, 2]))
