@@ -3,6 +3,7 @@ import os
 import time
 
 import torch
+import torch_xla
 from absl.testing import absltest, parameterized
 import torch_xla.core.xla_env_vars as xenv
 import torch_xla.core.xla_model as xm
@@ -37,9 +38,15 @@ class TestExperimentalPjrt(parameterized.TestCase):
     local_ordinal = xm.get_local_ordinal()
     self.assertEqual(local_ordinal, 0)
 
+  def test_num_local_devices(self):
+    self.assertLen(xm.get_xla_supported_devices(), pjrt.addressable_device_count())
+
+  def test_num_global_devices(self):
+    self.assertLen(torch_xla._XLAC._xla_get_all_devices(), pjrt.global_device_count())
+
   @parameterized.named_parameters(('single_thread', [0], [0]),
-                                  ('single_process', [1, 1, 1], [2, 2, 2]),
-                                  ('multiprocess', [0, 0, 0], [0, 1, 2]))
+                                  ('1_host_x_3_threads', [1, 1, 1], [2, 2, 2]),
+                                  ('3_hosts_x_1_thread', [0, 0, 0], [0, 1, 2]))
   def test_set_ordinals(self, local_ordinals, global_ordinals):
     num_threads = len(local_ordinals)
     self.assertLen(global_ordinals, num_threads)

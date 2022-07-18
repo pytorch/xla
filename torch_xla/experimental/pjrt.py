@@ -117,7 +117,7 @@ def xla_device(n: Optional[int] = None,
     A `torch.device` representing an XLA device.
   """
   devices = xm.get_xla_supported_devices(devkind=devkind)
-  device_index = n or local_ordinal(default=0)
+  device_index = n or (local_ordinal(default=0) % addressable_device_count())
   if device_index > len(devices):
     raise IndexError('Device index {} out of range in {}'.format(
         device_index, devices))
@@ -127,9 +127,15 @@ def xla_device(n: Optional[int] = None,
 
 
 @requires_pjrt
-def world_size() -> int:
+def global_device_count() -> int:
   """Returns the total number of devices across all processes/hosts."""
   return len(torch_xla._XLAC._xla_get_all_devices())
+
+
+@requires_pjrt
+def addressable_device_count() -> int:
+  """Returns the number of devices visible to this process."""
+  return torch_xla._XLAC._xla_num_devices()
 
 
 @requires_pjrt
@@ -158,7 +164,7 @@ def run_thread_per_device(rank: int, processes: int,
     def wrapper(*args, **kwargs):
       # Assumes same number of threads per process
       set_global_ordinal(rank * threads + device_index)
-      set_local_ordinal(device_index)
+      set_local_ordinal(rank * threads + device_index)
 
       return fn(*args, **kwargs)
 
