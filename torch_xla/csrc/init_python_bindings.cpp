@@ -898,6 +898,8 @@ void InitXlaModuleBindings(py::module m) {
         [](const at::Tensor& tensor) { return GetTensorId(tensor); });
   m.def("_xla_get_devices",
         []() { return xla::ComputationClient::Get()->GetLocalDevices(); });
+  m.def("_xla_num_devices",
+        []() { return xla::ComputationClient::Get()->GetNumDevices(); });
   m.def("_xla_get_all_devices",
         []() { return xla::ComputationClient::Get()->GetAllDevices(); });
   m.def("_xla_real_devices", [](const std::vector<std::string>& devices) {
