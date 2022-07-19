@@ -107,6 +107,11 @@ torch_xla::XlaOpVector Reciprocal::Lower(LoweringContext* loctx) const {
   return ReturnOp(BuildReciprocal(xla_input), loctx);
 }
 
+torch_xla::XlaOpVector Rsqrt::Lower(LoweringContext* loctx) const {
+  xla::XlaOp xla_input = loctx->GetOutputOp(operand(0));
+  return ReturnOp(xla::Rsqrt(xla_input), loctx);
+}
+
 torch_xla::XlaOpVector Sgn::Lower(LoweringContext* loctx) const {
   xla::XlaOp xla_input = loctx->GetOutputOp(operand(0));
   return ReturnOp(BuildSgn(xla_input), loctx);

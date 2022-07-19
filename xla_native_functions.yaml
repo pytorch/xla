@@ -20,6 +20,7 @@ full_codegen:
   - maximum
   - minimum
   - reciprocal
+  - rsqrt
   - sgn
   - sign
   - sin
@@ -256,7 +257,6 @@ supported:
   - round
   - rrelu_with_noise
   - rrelu_with_noise_backward
-  - rsqrt
   - rsub.Scalar
   - rsub.Tensor
   - scatter.reduce

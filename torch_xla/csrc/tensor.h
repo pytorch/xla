@@ -1038,8 +1038,6 @@ class XLATensor : public c10::intrusive_ptr_target {
                                                 const at::Scalar& upper,
                                                 bool training);
 
-  static XLATensorPtr rsqrt(const XLATensorPtr& input);
-
   static XLATensorPtr rsub(
       const XLATensorPtr& input, const XLATensorPtr& other,
       const at::Scalar& alpha,
