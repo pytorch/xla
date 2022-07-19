@@ -1533,11 +1533,6 @@ at::Tensor XLANativeFunctions::hardtanh(const at::Tensor& self,
       XLATensor::clamp(bridge::GetXlaTensor(self), min_val, max_val));
 }
 
-at::Tensor XLANativeFunctions::tanh(const at::Tensor& self) {
-  XLA_FN_COUNTER("xla::");
-  return bridge::AtenFromXlaTensor(XLATensor::tanh(bridge::GetXlaTensor(self)));
-}
-
 at::Tensor XLANativeFunctions::hardtanh_backward(const at::Tensor& grad_output,
                                                  const at::Tensor& self,
                                                  const at::Scalar& min_val,

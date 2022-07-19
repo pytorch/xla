@@ -68,7 +68,6 @@ namespace torch_xla {
                      std::move(lower_fn));                                     \
   }
 
-PTXLA_UNARY_OP(Tanh, at::aten::tanh, xla::Tanh);
 PTXLA_UNARY_OP(Neg, at::aten::neg, xla::Neg);
 PTXLA_UNARY_OP(Exp, at::aten::exp, xla::Exp);
 PTXLA_UNARY_OP(Expm1, at::aten::expm1, xla::Expm1);
@@ -866,7 +865,9 @@ torch::lazy::NodePtr TanhGelu(const torch::lazy::Value& input) {
   torch::lazy::NodePtr one = ScalarOp(1, shape);
   torch::lazy::NodePtr half = ScalarOp(0.5, shape);
   torch::lazy::NodePtr inner = beta * (input + kappa * Pow(input, three));
-  return half * input * (one + Tanh(inner));
+  return half * input *
+         (one + torch::lazy::MakeNode<Tanh>(inner,
+                                            std::vector<torch::lazy::Shape>()));
 }
 
 torch::lazy::NodePtr TanhGeluBackward(const torch::lazy::Value& grad,
@@ -882,7 +883,8 @@ torch::lazy::NodePtr TanhGeluBackward(const torch::lazy::Value& grad,
   torch::lazy::NodePtr three = ScalarOp(3, shape);
   torch::lazy::NodePtr half = ScalarOp(0.5, shape);
   torch::lazy::NodePtr inner = beta * (input + kappa * Pow(input, three));
-  torch::lazy::NodePtr tanh_inner = Tanh(inner);
+  torch::lazy::NodePtr tanh_inner =
+      torch::lazy::MakeNode<Tanh>(inner, std::vector<torch::lazy::Shape>());
 
   torch::lazy::NodePtr left = half * input;
   torch::lazy::NodePtr right = one + tanh_inner;
