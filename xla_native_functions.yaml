@@ -26,6 +26,7 @@ full_codegen:
   - sin
   - sinh
   - tan
+  - tanh
 supported:
   - __ilshift__.Scalar
   - __ilshift__.Tensor
@@ -302,7 +303,6 @@ supported:
   - t
   - t_
   - take
-  - tanh
   - tanh_backward
   - threshold
   - threshold_backward

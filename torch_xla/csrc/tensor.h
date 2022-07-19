@@ -1167,8 +1167,6 @@ class XLATensor : public c10::intrusive_ptr_target {
   static XLATensorPtr take(const XLATensorPtr& input,
                            const XLATensorPtr& index);
 
-  static XLATensorPtr tanh(const XLATensorPtr& input);
-
   static XLATensorPtr tanh_backward(const XLATensorPtr& grad_output,
                                     const XLATensorPtr& output);
 
