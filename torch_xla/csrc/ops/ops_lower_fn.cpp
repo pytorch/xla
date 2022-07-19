@@ -139,4 +139,9 @@ torch_xla::XlaOpVector Tan::Lower(LoweringContext* loctx) const {
   return ReturnOp(xla::Tan(xla_input), loctx);
 }
 
+torch_xla::XlaOpVector Tanh::Lower(LoweringContext* loctx) const {
+  xla::XlaOp xla_input = loctx->GetOutputOp(operand(0));
+  return ReturnOp(xla::Tanh(xla_input), loctx);
+}
+
 }  // namespace torch_xla

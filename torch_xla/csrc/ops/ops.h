@@ -68,8 +68,6 @@ torch::lazy::NodePtr Atan2(const torch::lazy::Value& input,
 
 torch::lazy::NodePtr Tan(const torch::lazy::Value& input);
 
-torch::lazy::NodePtr Tanh(const torch::lazy::Value& input);
-
 torch::lazy::NodePtr Neg(const torch::lazy::Value& input);
 
 torch::lazy::NodePtr SgnOp(const torch::lazy::Value& input);

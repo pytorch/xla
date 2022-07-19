@@ -1924,9 +1924,10 @@ void XLATensor::min_out(XLATensorPtr& min, XLATensorPtr& min_indices,
 }
 
 XLATensorPtr XLATensor::mish(const XLATensorPtr& input) {
-  return input->CreateFrom(
-      input->GetIrValue() *
-      Tanh(tensor_ops::Softplus(input, 1, 20)->GetIrValue()));
+  return input->CreateFrom(input->GetIrValue() *
+                           torch::lazy::MakeNode<Tanh>(
+                               tensor_ops::Softplus(input, 1, 20)->GetIrValue(),
+                               std::vector<torch::lazy::Shape>()));
 }
 
 XLATensorPtr XLATensor::mm(const XLATensorPtr& input,
@@ -2774,10 +2775,6 @@ std::tuple<XLATensorPtr, XLATensorPtr> XLATensor::symeig(
 XLATensorPtr XLATensor::take(const XLATensorPtr& input,
                              const XLATensorPtr& index) {
   return input->CreateFrom(Take(input->GetIrValue(), index->GetIrValue()));
-}
-
-XLATensorPtr XLATensor::tanh(const XLATensorPtr& input) {
-  return input->CreateFrom(Tanh(input->GetIrValue()));
 }
 
 XLATensorPtr XLATensor::tanh_backward(const XLATensorPtr& grad_output,

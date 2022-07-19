@@ -56,4 +56,6 @@ xla::Shape SinhOutputShape(const torch::lazy::Value& input);
 
 xla::Shape TanOutputShape(const torch::lazy::Value& input);
 
+xla::Shape TanhOutputShape(const torch::lazy::Value& input);
+
 }  // namespace torch_xla
