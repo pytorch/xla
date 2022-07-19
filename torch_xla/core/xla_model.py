@@ -164,7 +164,7 @@ def xrt_world_size(defval=1):
 
 
 def get_ordinal(defval=0):
-  """Retrieves the replication ordinal of the current process.
+  """Retrieves the replication ordinal of the current thread.
 
   The ordinals range from 0 to `xrt_world_size()` minus 1.
 
@@ -174,7 +174,7 @@ def get_ordinal(defval=0):
       Default: 0
 
   Returns:
-    The replication ordinal of the current process.
+    The replication ordinal of the current thread.
   """
   if pjrt.using_pjrt():
     return pjrt.global_ordinal(defval)
@@ -183,7 +183,7 @@ def get_ordinal(defval=0):
 
 
 def get_local_ordinal(defval=0):
-  """Retrieves the replication local ordinal of the current process.
+  """Retrieves the replication local ordinal of the current thread.
 
   The local ordinals range from 0 to the number of local devices minus 1.
 
@@ -193,7 +193,7 @@ def get_local_ordinal(defval=0):
       Default: 0
 
   Returns:
-    The replication local ordinal of the current process.
+    The replication local ordinal of the current thread.
   """
   if pjrt.using_pjrt():
     return pjrt.local_ordinal(defval)
