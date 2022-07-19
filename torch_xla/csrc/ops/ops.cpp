@@ -78,7 +78,6 @@ PTXLA_UNARY_OP(Erf, at::aten::erf, xla::Erf);
 PTXLA_UNARY_OP(Erfc, at::aten::erfc, xla::Erfc);
 PTXLA_UNARY_OP(Erfinv, at::aten::erfinv, xla::ErfInv);
 PTXLA_UNARY_OP(Sqrt, at::aten::sqrt, xla::Sqrt);
-PTXLA_UNARY_OP(Rsqrt, at::aten::rsqrt, xla::Rsqrt);
 PTXLA_UNARY_OP(Ceil, at::aten::ceil, xla::Ceil);
 PTXLA_UNARY_OP(Round, at::aten::round, xla::RoundToEven);
 PTXLA_UNARY_OP(Not, at::aten::bitwise_not, xla::Not);

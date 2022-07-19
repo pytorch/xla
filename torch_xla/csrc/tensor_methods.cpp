@@ -2400,10 +2400,6 @@ XLATensorPtr XLATensor::rrelu_with_noise_backward(
       lower, upper, training));
 }
 
-XLATensorPtr XLATensor::rsqrt(const XLATensorPtr& input) {
-  return input->CreateFrom(Rsqrt(input->GetIrValue()));
-}
-
 XLATensorPtr XLATensor::rsub(
     const XLATensorPtr& input, const XLATensorPtr& other,
     const at::Scalar& alpha,
