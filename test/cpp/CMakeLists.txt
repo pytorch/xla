@@ -58,6 +58,7 @@ set(TORCH_XLA_TEST_SOURCES
   test_tensor.cpp
   test_xla_util_cache.cpp
   torch_xla_test.cpp
+  test_xla_backend_intf.cpp
 )
 
 add_executable(test_ptxla ${TORCH_XLA_TEST_SOURCES})
