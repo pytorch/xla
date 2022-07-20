@@ -1342,6 +1342,27 @@ at::Tensor XLANativeFunctions::expand(const at::Tensor& self,
       bridge::GetXlaTensor(self), torch::lazy::ToVector<int64_t>(size)));
 }
 
+at::Tensor XLANativeFunctions::expand_symint(const at::Tensor& self,
+                                             c10::SymIntArrayRef size,
+                                             bool implicit) {
+  XLA_FN_COUNTER("xla::");
+  SymIntElements size_elements = SymIntElements(size);
+  // Replace -1 concrete int dim with the true shape value
+  std::vector<c10::SymInt> _sizes = torch::lazy::ToVector<c10::SymInt>(size);
+  int64_t num_new_dimensions = _sizes.size() - self.dim();
+  std::vector<int64_t> padded_self(num_new_dimensions, 0);
+  padded_self.insert(padded_self.end(), self.sizes().begin(),
+                     self.sizes().end());
+  for (const auto idx : c10::irange(_sizes.size())) {
+    if (!_sizes[idx].is_symbolic() && _sizes[idx].expect_int() == -1) {
+      size_elements.upper_bounds[idx] = padded_self[idx];
+    }
+  }
+  return bridge::AtenFromXlaTensor(XLATensor::expand(
+      bridge::GetXlaTensor(self), size_elements.size_nodes,
+      size_elements.upper_bounds, size_elements.dynamic_dims));
+}
+
 at::Tensor XLANativeFunctions::expm1(const at::Tensor& self) {
   XLA_FN_COUNTER("xla::");
   return bridge::AtenFromXlaTensor(
@@ -2305,11 +2326,17 @@ std::tuple<at::Tensor, at::Tensor> XLANativeFunctions::nll_loss_forward(
 at::Tensor XLANativeFunctions::nonzero(const at::Tensor& self) {
   XLA_FN_COUNTER("xla::");
   XLATensorPtr self_tensor = bridge::GetXlaTensor(self);
-  // Initially make XLA handled nonzero() handling experimental, and opt-in.
-  if (!DebugUtil::ExperimentEnabled("nonzero")) {
-    return at::native::call_fallback_fn<&xla_cpu_fallback,
-                                        ATEN_OP(nonzero)>::call(self);
-  }
+  /*
+   * REMOVE THIS SECTION TO ENABLE CREATING DYNAMIC SHAPES FOR POC
+   * TODO: REMOVE THIS SECTION AFTER POC SUCCEEDS:
+   * https://github.com/pytorch/xla/pull/3558
+   *
+   * // Initially make XLA handled nonzero() handling experimental, and opt-in.
+   * if (!DebugUtil::ExperimentEnabled("nonzero")) {
+   *   return at::native::call_fallback_fn<&xla_cpu_fallback,
+   *                                       ATEN_OP(nonzero)>::call(self);
+   * }
+   */
   return bridge::AtenFromXlaTensor(XLATensor::nonzero(self_tensor));
 }
 
