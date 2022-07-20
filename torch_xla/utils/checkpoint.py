@@ -8,19 +8,18 @@ from torch.utils.checkpoint import detach_variable, check_backward_validity, get
 from typing import Any, Iterable, List, Tuple, Union
 
 
-def extract_tensors_from_list(inputs):
-  tensor_inputs = []
-  if torch.is_tensor(inputs):
-    tensor_inputs.append(inputs)
-  # tensor is Iterable so we need to avoid iterating through tensor
-  elif isinstance(inputs, Iterable):
-    for input in inputs:
-      if torch.is_tensor(input):
-        tensor_inputs.append(input)
-  return tensor_inputs
-
-
 class CheckpointFunction(torch.autograd.Function):
+
+  def _extract_tensors_from_list(inputs):
+    tensor_inputs = []
+    if torch.is_tensor(inputs):
+      tensor_inputs.append(inputs)
+    # tensor is Iterable so we need to avoid iterating through tensor
+    elif isinstance(inputs, Iterable):
+      for input in inputs:
+        if torch.is_tensor(input):
+          tensor_inputs.append(input)
+    return tensor_inputs
 
   @staticmethod
   def forward(ctx, run_function, preserve_rng_state, *args):
@@ -92,7 +91,8 @@ class CheckpointFunction(torch.autograd.Function):
     rng_devices = []
     if ctx.preserve_rng_state and ctx.had_cuda_in_fwd:
       rng_devices = ctx.fwd_gpu_devices
-    xm.optimization_barrier_(extract_tensors_from_list(inputs + list(args)))
+    xm.optimization_barrier_(
+        CheckpointFunction._extract_tensors_from_list(inputs + list(args)))
     with torch.random.fork_rng(
         devices=rng_devices, enabled=ctx.preserve_rng_state):
       if ctx.preserve_rng_state:
