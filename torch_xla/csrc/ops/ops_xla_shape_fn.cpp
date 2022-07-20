@@ -139,4 +139,12 @@ xla::Shape TanhOutputShape(const torch::lazy::Value& input) {
   return GetXlaShape(input);
 }
 
+xla::Shape TrilOutputShape(const torch::lazy::Value& input) {
+  return GetXlaShape(input);
+}
+
+xla::Shape TriuOutputShape(const torch::lazy::Value& input) {
+  return GetXlaShape(input);
+}
+
 }  // namespace torch_xla

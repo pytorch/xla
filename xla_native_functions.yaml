@@ -27,6 +27,8 @@ full_codegen:
   - sinh
   - tan
   - tanh
+  - tril
+  - triu
 supported:
   - __ilshift__.Scalar
   - __ilshift__.Tensor
@@ -311,10 +313,6 @@ supported:
   - transpose.int
   - transpose_
   - triangular_solve
-  - tril
-  - tril_
-  - triu
-  - triu_
   - trunc
   - unbind.int
   - uniform_
