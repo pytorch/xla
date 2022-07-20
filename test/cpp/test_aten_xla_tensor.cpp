@@ -8551,6 +8551,7 @@ TEST_F(AtenXlaTensorTest, TestTriu) {
     });
   }
   ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::triu", cpp_test::GetIgnoredCounters());
 }
 
 TEST_F(AtenXlaTensorTest, TestTriuNonSquare) {
@@ -8567,6 +8568,7 @@ TEST_F(AtenXlaTensorTest, TestTriuNonSquare) {
     });
   }
   ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::triu", cpp_test::GetIgnoredCounters());
 }
 
 TEST_F(AtenXlaTensorTest, TestTriuBatch) {
@@ -8584,6 +8586,7 @@ TEST_F(AtenXlaTensorTest, TestTriuBatch) {
     });
   }
   ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::triu", cpp_test::GetIgnoredCounters());
 }
 
 TEST_F(AtenXlaTensorTest, TestTril) {
@@ -8600,6 +8603,7 @@ TEST_F(AtenXlaTensorTest, TestTril) {
     });
   }
   ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::tril", cpp_test::GetIgnoredCounters());
 }
 
 TEST_F(AtenXlaTensorTest, TestTrilNonSquare) {
@@ -8616,6 +8620,7 @@ TEST_F(AtenXlaTensorTest, TestTrilNonSquare) {
     });
   }
   ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::tril", cpp_test::GetIgnoredCounters());
 }
 
 TEST_F(AtenXlaTensorTest, TestTrilBatch) {
@@ -8633,6 +8638,7 @@ TEST_F(AtenXlaTensorTest, TestTrilBatch) {
     });
   }
   ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::tril", cpp_test::GetIgnoredCounters());
 }
 
 TEST_F(AtenXlaTensorTest, TestTriuInPlace) {
@@ -8650,6 +8656,7 @@ TEST_F(AtenXlaTensorTest, TestTriuInPlace) {
     });
   }
   ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::triu", cpp_test::GetIgnoredCounters());
 }
 
 TEST_F(AtenXlaTensorTest, TestTrilInPlace) {
@@ -8667,6 +8674,7 @@ TEST_F(AtenXlaTensorTest, TestTrilInPlace) {
     });
   }
   ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::tril", cpp_test::GetIgnoredCounters());
 }
 
 TEST_F(AtenXlaTensorTest, TestTrace) {
