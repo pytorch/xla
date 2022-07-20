@@ -334,11 +334,13 @@ class XLATensor : public c10::intrusive_ptr_target {
   static XLATensorPtr adaptive_avg_pool3d_backward(
       const XLATensorPtr& grad_output, const XLATensorPtr& input);
 
-  static XLATensorPtr _adaptive_avg_pool2d(const XLATensorPtr& input,
-                                           std::vector<int64_t> output_size);
+  static XLATensorPtr _adaptive_avg_pool2d(
+      const XLATensorPtr& input, std::vector<int64_t> output_size,
+      std::vector<torch::lazy::Shape>&& shapes);
 
   static XLATensorPtr _adaptive_avg_pool2d_backward(
-      const XLATensorPtr& grad_output, const XLATensorPtr& input);
+      const XLATensorPtr& grad_output, const XLATensorPtr& input,
+      std::vector<torch::lazy::Shape>&& shapes);
 
   static void _amp_foreach_non_finite_check_and_unscale_(
       std::vector<XLATensorPtr> self, XLATensorPtr& found_inf,
@@ -760,7 +762,8 @@ class XLATensor : public c10::intrusive_ptr_target {
                                            const XLATensorPtr& buffer);
 
   static XLATensorPtr log_softmax(const XLATensorPtr& input, int64_t dim,
-                                  c10::optional<at::ScalarType> dtype);
+                                  c10::optional<at::ScalarType> dtype,
+                                  std::vector<torch::lazy::Shape>&& shapes);
 
   static XLATensorPtr log_softmax_backward(const XLATensorPtr& grad_output,
                                            const XLATensorPtr& output,

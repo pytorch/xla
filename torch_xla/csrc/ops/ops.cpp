@@ -481,7 +481,8 @@ torch::lazy::NodePtr AdaptiveAvgPool3dBackward(
 }
 
 torch::lazy::NodePtr AdaptiveAvgPool2dBackward(
-    const torch::lazy::Value& grad_output, const torch::lazy::Value& input) {
+    const torch::lazy::Value& grad_output, const torch::lazy::Value& input,
+    std::vector<torch::lazy::Shape>&& shapes) {
   auto lower_fn = [](const XlaNode& node,
                      LoweringContext* loctx) -> XlaOpVector {
     xla::XlaOp grad_output = loctx->GetOutputOp(node.operand(0));
@@ -497,7 +498,7 @@ torch::lazy::NodePtr AdaptiveAvgPool2dBackward(
                                           /*input=*/operands[1]);
   };
   return GenericOp(torch::lazy::OpKind(at::aten::adaptive_avg_pool2d_backward),
-                   {grad_output, input},
+                   {grad_output, input}, std::move(shapes),
                    [&]() {
                      return InferOutputShape(
                          {GetXlaShape(grad_output), GetXlaShape(input)},

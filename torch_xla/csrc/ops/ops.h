@@ -37,6 +37,18 @@ inline torch::lazy::NodePtr GenericOp(
 
 inline torch::lazy::NodePtr GenericOp(
     torch::lazy::OpKind op, c10::ArrayRef<torch::lazy::Value> operands,
+    std::vector<torch::lazy::Shape>&& shapes,
+    const std::function<xla::Shape()>& shape_fn, Generic::LowerFn lower_fn,
+    size_t num_outputs = 1,
+    // cast to uint32_t to avoid ambiguous constructor of uint128
+    torch::lazy::hash_t hash_seed = (uint32_t)0x5a2d296e9) {
+  return torch::lazy::MakeNode<Generic>(
+      std::move(op), operands, std::move(shapes), shape_fn, std::move(lower_fn),
+      num_outputs, hash_seed);
+}
+
+inline torch::lazy::NodePtr GenericOp(
+    torch::lazy::OpKind op, c10::ArrayRef<torch::lazy::Value> operands,
     const std::function<xla::Shape()>& shape_fn, Generic::LowerFn lower_fn,
     size_t num_outputs = 1,
     // cast to uint32_t to avoid ambiguous constructor of uint128
@@ -177,7 +189,8 @@ torch::lazy::NodePtr AdaptiveMaxPool2dBackward(
     const torch::lazy::Value& grad_output, const torch::lazy::Value& input);
 
 torch::lazy::NodePtr AdaptiveAvgPool2dBackward(
-    const torch::lazy::Value& grad_output, const torch::lazy::Value& input);
+    const torch::lazy::Value& grad_output, const torch::lazy::Value& input,
+    std::vector<torch::lazy::Shape>&& shapes);
 
 torch::lazy::NodePtr AdaptiveAvgPool3dBackward(
     const torch::lazy::Value& grad_output, const torch::lazy::Value& input);
