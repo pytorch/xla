@@ -1,6 +1,7 @@
 backend: XLA
 cpp_namespace: torch_xla
 full_codegen:
+  - alex
   - acos
   - acosh
   - abs
