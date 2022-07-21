@@ -717,6 +717,16 @@ class XLATensor : public c10::intrusive_ptr_target {
                                           const XLATensorPtr& input,
                                           const at::Scalar& lambda);
 
+  static XLATensorPtr hardsigmoid(const XLATensorPtr& input);
+
+  static XLATensorPtr hardsigmoid_backward(const XLATensorPtr& grad_output,
+                                           const XLATensorPtr& input);
+
+  static XLATensorPtr hardswish(const XLATensorPtr& input);
+
+  static XLATensorPtr hardswish_backward(const XLATensorPtr& grad_output,
+                                         const XLATensorPtr& input);
+
   static XLATensorPtr hardtanh_backward(const XLATensorPtr& grad_output,
                                         const XLATensorPtr& input,
                                         const at::Scalar& min_val,

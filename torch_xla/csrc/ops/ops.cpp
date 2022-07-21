@@ -168,6 +168,54 @@ torch::lazy::NodePtr Prelu(const torch::lazy::Value& input,
                    GetXlaShape(input), std::move(lower_fn));
 }
 
+torch::lazy::NodePtr HardSigmoid(const torch::lazy::Value& input) {
+  auto lower_fn = [](const XlaNode& node,
+                     LoweringContext* loctx) -> XlaOpVector {
+    xla::XlaOp xla_input = loctx->GetOutputOp(node.operand(0));
+    return node.ReturnOp(BuildHardSigmoid(xla_input), loctx);
+  };
+  return GenericOp(torch::lazy::OpKind(at::aten::hardsigmoid), {input},
+                   GetXlaShape(input), std::move(lower_fn));
+}
+
+torch::lazy::NodePtr HardSigmoidBackward(const torch::lazy::Value& grad_output,
+                                         const torch::lazy::Value& input) {
+  auto lower_fn = [](const XlaNode& node,
+                     LoweringContext* loctx) -> XlaOpVector {
+    xla::XlaOp xla_grad_output = loctx->GetOutputOp(node.operand(0));
+    xla::XlaOp xla_input = loctx->GetOutputOp(node.operand(1));
+    return node.ReturnOp(BuildHardSigmoidBackward(xla_grad_output, xla_input),
+                         loctx);
+  };
+  return GenericOp(torch::lazy::OpKind(at::aten::hardsigmoid_backward),
+                   {grad_output, input}, GetXlaShape(input),
+                   std::move(lower_fn));
+}
+
+torch::lazy::NodePtr HardSwish(const torch::lazy::Value& input) {
+  auto lower_fn = [](const XlaNode& node,
+                     LoweringContext* loctx) -> XlaOpVector {
+    xla::XlaOp xla_input = loctx->GetOutputOp(node.operand(0));
+    return node.ReturnOp(BuildHardSwish(xla_input), loctx);
+  };
+  return GenericOp(torch::lazy::OpKind(at::aten::hardswish), {input},
+                   GetXlaShape(input), std::move(lower_fn));
+}
+
+torch::lazy::NodePtr HardSwishBackward(const torch::lazy::Value& grad_output,
+                                       const torch::lazy::Value& input) {
+  auto lower_fn = [](const XlaNode& node,
+                     LoweringContext* loctx) -> XlaOpVector {
+    xla::XlaOp xla_grad_output = loctx->GetOutputOp(node.operand(0));
+    xla::XlaOp xla_input = loctx->GetOutputOp(node.operand(1));
+    return node.ReturnOp(BuildHardSwishBackward(xla_grad_output, xla_input),
+                         loctx);
+  };
+  return GenericOp(torch::lazy::OpKind(at::aten::hardswish_backward),
+                   {grad_output, input}, GetXlaShape(input),
+                   std::move(lower_fn));
+}
+
 torch::lazy::NodePtr LogSigmoid(const torch::lazy::Value& input) {
   auto lower_fn = [](const XlaNode& node,
                      LoweringContext* loctx) -> XlaOpVector {
