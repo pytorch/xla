@@ -592,8 +592,6 @@ class XLATensor : public c10::intrusive_ptr_target {
   static XLATensorPtr expand(const XLATensorPtr& input,
                              std::vector<int64_t> size);
 
-  static XLATensorPtr expm1(const XLATensorPtr& input);
-
   static void exponential_(XLATensorPtr& input, double lambd);
 
   // Returns a 2-D tensor with ones on the diagonal and zeros elsewhere.

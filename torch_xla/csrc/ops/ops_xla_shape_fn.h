@@ -29,6 +29,8 @@ xla::Shape ErfinvOutputShape(const torch::lazy::Value& input);
 
 xla::Shape ExpOutputShape(const torch::lazy::Value& input);
 
+xla::Shape Expm1OutputShape(const torch::lazy::Value& input);
+
 xla::Shape FloorOutputShape(const torch::lazy::Value& input);
 
 xla::Shape InverseOutputShape(const torch::lazy::Value& input);
