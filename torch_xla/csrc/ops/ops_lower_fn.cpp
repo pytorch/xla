@@ -187,4 +187,14 @@ torch_xla::XlaOpVector Tanh::Lower(LoweringContext* loctx) const {
   return ReturnOp(xla::Tanh(xla_input), loctx);
 }
 
+torch_xla::XlaOpVector Tril::Lower(LoweringContext* loctx) const {
+  xla::XlaOp xla_input = loctx->GetOutputOp(operand(0));
+  return ReturnOp(BuildTril(xla_input, diagonal), loctx);
+}
+
+torch_xla::XlaOpVector Triu::Lower(LoweringContext* loctx) const {
+  xla::XlaOp xla_input = loctx->GetOutputOp(operand(0));
+  return ReturnOp(BuildTriu(xla_input, diagonal), loctx);
+}
+
 }  // namespace torch_xla

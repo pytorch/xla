@@ -3180,32 +3180,6 @@ std::tuple<at::Tensor, at::Tensor> XLANativeFunctions::triangular_solve(
                          bridge::AtenFromXlaTensor(std::get<1>(results)));
 }
 
-at::Tensor XLANativeFunctions::tril(const at::Tensor& self, int64_t diagonal) {
-  XLA_FN_COUNTER("xla::");
-  return bridge::AtenFromXlaTensor(
-      XLATensor::tril(bridge::GetXlaTensor(self), diagonal));
-}
-
-at::Tensor& XLANativeFunctions::tril_(at::Tensor& self, int64_t diagonal) {
-  XLA_FN_COUNTER("xla::");
-  XLATensorPtr self_tensor = bridge::GetXlaTensor(self);
-  XLATensor::tril_(self_tensor, diagonal);
-  return self;
-}
-
-at::Tensor XLANativeFunctions::triu(const at::Tensor& self, int64_t diagonal) {
-  XLA_FN_COUNTER("xla::");
-  return bridge::AtenFromXlaTensor(
-      XLATensor::triu(bridge::GetXlaTensor(self), diagonal));
-}
-
-at::Tensor& XLANativeFunctions::triu_(at::Tensor& self, int64_t diagonal) {
-  XLA_FN_COUNTER("xla::");
-  XLATensorPtr self_tensor = bridge::GetXlaTensor(self);
-  XLATensor::triu_(self_tensor, diagonal);
-  return self;
-}
-
 at::Tensor XLANativeFunctions::trunc(const at::Tensor& self) {
   XLA_FN_COUNTER("xla::");
   return bridge::AtenFromXlaTensor(
