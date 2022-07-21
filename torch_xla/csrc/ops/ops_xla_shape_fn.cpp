@@ -33,6 +33,10 @@ xla::Shape AtanhOutputShape(const torch::lazy::Value& input) {
   return GetXlaShape(input);
 }
 
+xla::Shape CeilOutputShape(const torch::lazy::Value& input) {
+  return GetXlaShape(input);
+}
+
 xla::Shape CosOutputShape(const torch::lazy::Value& input) {
   return GetXlaShape(input);
 }

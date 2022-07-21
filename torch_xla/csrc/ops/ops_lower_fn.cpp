@@ -43,6 +43,11 @@ torch_xla::XlaOpVector Atanh::Lower(LoweringContext* loctx) const {
   return ReturnOp(xla::Atanh(xla_input), loctx);
 }
 
+torch_xla::XlaOpVector Ceil::Lower(LoweringContext* loctx) const {
+  xla::XlaOp xla_input = loctx->GetOutputOp(operand(0));
+  return ReturnOp(xla::Ceil(xla_input), loctx);
+}
+
 torch_xla::XlaOpVector Cos::Lower(LoweringContext* loctx) const {
   xla::XlaOp xla_input = loctx->GetOutputOp(operand(0));
   return ReturnOp(xla::Cos(xla_input), loctx);

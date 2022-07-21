@@ -147,8 +147,6 @@ torch::lazy::NodePtr Clamp(const torch::lazy::Value& input,
                            const torch::lazy::Value& min,
                            const torch::lazy::Value& max);
 
-torch::lazy::NodePtr Ceil(const torch::lazy::Value& input);
-
 torch::lazy::NodePtr Celu(const torch::lazy::Value& input,
                           const at::Scalar& alpha);
 

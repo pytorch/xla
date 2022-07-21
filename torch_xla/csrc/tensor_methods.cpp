@@ -1032,10 +1032,6 @@ XLATensorPtr XLATensor::cat(absl::Span<const XLATensorPtr> tensors, int64_t dim,
                                 dtype);
 }
 
-XLATensorPtr XLATensor::ceil(const XLATensorPtr& input) {
-  return input->CreateFrom(Ceil(input->GetIrValue()));
-}
-
 XLATensorPtr XLATensor::celu(const XLATensorPtr& input,
                              const at::Scalar& alpha) {
   return input->CreateFrom(Celu(input->GetIrValue(), alpha));
