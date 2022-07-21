@@ -1730,29 +1730,6 @@ void XLATensor::log1p_(XLATensorPtr& input) {
   input->SetInPlaceIrValue(Log1p(input->GetIrValue()));
 }
 
-XLATensorPtr XLATensor::logical_not(const XLATensorPtr& input) {
-  return input->CreateFrom(LogicalNot(input->GetIrValue()),
-                           at::ScalarType::Bool);
-}
-
-XLATensorPtr XLATensor::logical_xor(const XLATensorPtr& input,
-                                    const XLATensorPtr& other) {
-  return input->CreateFrom(LogicalXor(input->GetIrValue(), other->GetIrValue()),
-                           at::ScalarType::Bool);
-}
-
-XLATensorPtr XLATensor::logical_and(const XLATensorPtr& input,
-                                    const XLATensorPtr& other) {
-  return input->CreateFrom(LogicalAnd(input->GetIrValue(), other->GetIrValue()),
-                           at::ScalarType::Bool);
-}
-
-XLATensorPtr XLATensor::logical_or(const XLATensorPtr& input,
-                                   const XLATensorPtr& other) {
-  return input->CreateFrom(LogicalOr(input->GetIrValue(), other->GetIrValue()),
-                           at::ScalarType::Bool);
-}
-
 XLATensorPtr XLATensor::logsumexp(const XLATensorPtr& input,
                                   std::vector<int64_t> dimensions,
                                   bool keep_reduced_dimensions) {

@@ -88,6 +88,44 @@ torch_xla::XlaOpVector Logdet::Lower(LoweringContext* loctx) const {
   return ReturnOp(xla::LogDet(xla_input), loctx);
 }
 
+torch_xla::XlaOpVector LogicalAnd::Lower(LoweringContext* loctx) const {
+  xla::XlaOp xla_input = loctx->GetOutputOp(operand(0));
+  xla::XlaOp xla_other = loctx->GetOutputOp(operand(1));
+
+  return ReturnOp(
+      XlaHelpers::PromotedLogicalBinaryOp(
+          xla_input, xla_other,
+          [](xla::XlaOp lhs, xla::XlaOp rhs) { return xla::And(lhs, rhs); }),
+      loctx);
+}
+
+torch_xla::XlaOpVector LogicalNot::Lower(LoweringContext* loctx) const {
+  xla::XlaOp xla_input = loctx->GetOutputOp(operand(0));
+  return ReturnOp(XlaHelpers::PromotedLogicalUnaryOp(
+                      xla_input, [](xla::XlaOp lhs) { return xla::Not(lhs); }),
+                  loctx);
+}
+
+torch_xla::XlaOpVector LogicalOr::Lower(LoweringContext* loctx) const {
+  xla::XlaOp xla_input = loctx->GetOutputOp(operand(0));
+  xla::XlaOp xla_other = loctx->GetOutputOp(operand(1));
+  return ReturnOp(
+      XlaHelpers::PromotedLogicalBinaryOp(
+          xla_input, xla_other,
+          [](xla::XlaOp lhs, xla::XlaOp rhs) { return xla::Or(lhs, rhs); }),
+      loctx);
+}
+
+torch_xla::XlaOpVector LogicalXor::Lower(LoweringContext* loctx) const {
+  xla::XlaOp xla_input = loctx->GetOutputOp(operand(0));
+  xla::XlaOp xla_other = loctx->GetOutputOp(operand(1));
+  return ReturnOp(
+      XlaHelpers::PromotedLogicalBinaryOp(
+          xla_input, xla_other,
+          [](xla::XlaOp lhs, xla::XlaOp rhs) { return xla::Xor(lhs, rhs); }),
+      loctx);
+}
+
 torch_xla::XlaOpVector Maximum::Lower(LoweringContext* loctx) const {
   xla::XlaOp xla_input = loctx->GetOutputOp(operand(0));
   xla::XlaOp xla_other = loctx->GetOutputOp(operand(1));
