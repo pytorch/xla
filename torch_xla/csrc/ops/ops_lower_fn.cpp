@@ -126,6 +126,19 @@ torch_xla::XlaOpVector LogicalXor::Lower(LoweringContext* loctx) const {
       loctx);
 }
 
+torch_xla::XlaOpVector LogSigmoidForward::Lower(LoweringContext* loctx) const {
+  xla::XlaOp xla_input = loctx->GetOutputOp(operand(0));
+  return ReturnOps(BuildLogSigmoid(xla_input), loctx);
+}
+
+torch_xla::XlaOpVector LogSigmoidBackward::Lower(LoweringContext* loctx) const {
+  xla::XlaOp xla_grad_output = loctx->GetOutputOp(operand(0));
+  xla::XlaOp xla_input = loctx->GetOutputOp(operand(1));
+  xla::XlaOp xla_buffer = loctx->GetOutputOp(operand(2));
+  return ReturnOp(
+      BuildLogSigmoidBackward(xla_grad_output, xla_input, xla_buffer), loctx);
+}
+
 torch_xla::XlaOpVector Maximum::Lower(LoweringContext* loctx) const {
   xla::XlaOp xla_input = loctx->GetOutputOp(operand(0));
   xla::XlaOp xla_other = loctx->GetOutputOp(operand(1));

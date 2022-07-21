@@ -121,10 +121,6 @@ torch::lazy::NodePtr HardSwishBackward(const torch::lazy::Value& grad_output,
 
 torch::lazy::NodePtr LogSigmoid(const torch::lazy::Value& input);
 
-torch::lazy::NodePtr LogSigmoidBackward(const torch::lazy::Value& grad_output,
-                                        const torch::lazy::Value& input,
-                                        const torch::lazy::Value& buffer);
-
 torch::lazy::NodePtr Sigmoid(const torch::lazy::Value& input);
 
 torch::lazy::NodePtr SiLU(const torch::lazy::Value& input);

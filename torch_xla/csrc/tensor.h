@@ -753,11 +753,6 @@ class XLATensor : public c10::intrusive_ptr_target {
                                torch::lazy::OpKind op, double base);
 
   static XLATensorPtr log_sigmoid(const XLATensorPtr& input);
-  static std::tuple<XLATensorPtr, XLATensorPtr> log_sigmoid_forward(
-      const XLATensorPtr& input);
-  static XLATensorPtr log_sigmoid_backward(const XLATensorPtr& grad_output,
-                                           const XLATensorPtr& input,
-                                           const XLATensorPtr& buffer);
 
   static XLATensorPtr log_softmax(const XLATensorPtr& input, int64_t dim,
                                   c10::optional<at::ScalarType> dtype);

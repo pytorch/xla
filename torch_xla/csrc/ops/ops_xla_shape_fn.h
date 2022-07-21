@@ -46,6 +46,12 @@ xla::Shape LogicalOrOutputShape(const torch::lazy::Value& input,
 xla::Shape LogicalXorOutputShape(const torch::lazy::Value& input,
                                  const torch::lazy::Value& other);
 
+xla::Shape LogSigmoidForwardOutputShape(const torch::lazy::Value& input);
+
+xla::Shape LogSigmoidBackwardOutputShape(const torch::lazy::Value& grad_output,
+                                         const torch::lazy::Value& input,
+                                         const torch::lazy::Value& buffer);
+
 xla::Shape MaximumOutputShape(const torch::lazy::Value& input,
                               const torch::lazy::Value& other);
 

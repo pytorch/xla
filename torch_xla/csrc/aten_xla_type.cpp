@@ -1739,24 +1739,6 @@ at::Tensor XLANativeFunctions::log2(const at::Tensor& self) {
       bridge::GetXlaTensor(self), torch::lazy::OpKind(at::aten::log2), 2.0));
 }
 
-at::Tensor XLANativeFunctions::log_sigmoid_backward(
-    const at::Tensor& grad_output, const at::Tensor& self,
-    const at::Tensor& buffer) {
-  XLA_FN_COUNTER("xla::");
-  return bridge::AtenFromXlaTensor(XLATensor::log_sigmoid_backward(
-      bridge::GetXlaTensor(grad_output), bridge::GetXlaTensor(self),
-      bridge::GetXlaTensor(buffer)));
-}
-
-std::tuple<at::Tensor, at::Tensor> XLANativeFunctions::log_sigmoid_forward(
-    const at::Tensor& self) {
-  XLA_FN_COUNTER("xla::");
-  auto result_tuple =
-      XLATensor::log_sigmoid_forward(bridge::GetXlaTensor(self));
-  return std::make_tuple(bridge::AtenFromXlaTensor(std::get<0>(result_tuple)),
-                         bridge::AtenFromXlaTensor(std::get<1>(result_tuple)));
-}
-
 at::Tensor XLANativeFunctions::logsumexp(const at::Tensor& self,
                                          at::IntArrayRef dim, bool keepdim) {
   XLA_FN_COUNTER("xla::");

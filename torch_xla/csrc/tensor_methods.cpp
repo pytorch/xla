@@ -1681,20 +1681,6 @@ XLATensorPtr XLATensor::log_sigmoid(const XLATensorPtr& input) {
   return input->CreateFrom(torch::lazy::Value(node, 0));
 }
 
-std::tuple<XLATensorPtr, XLATensorPtr> XLATensor::log_sigmoid_forward(
-    const XLATensorPtr& input) {
-  torch::lazy::NodePtr node = LogSigmoid(input->GetIrValue());
-  return std::make_tuple(input->CreateFrom(torch::lazy::Value(node, 0)),
-                         input->CreateFrom(torch::lazy::Value(node, 1)));
-}
-
-XLATensorPtr XLATensor::log_sigmoid_backward(const XLATensorPtr& grad_output,
-                                             const XLATensorPtr& input,
-                                             const XLATensorPtr& buffer) {
-  return grad_output->CreateFrom(LogSigmoidBackward(
-      grad_output->GetIrValue(), input->GetIrValue(), buffer->GetIrValue()));
-}
-
 XLATensorPtr XLATensor::log_softmax(const XLATensorPtr& input, int64_t dim,
                                     c10::optional<at::ScalarType> dtype) {
   if (!dtype) {
