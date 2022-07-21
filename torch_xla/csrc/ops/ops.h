@@ -81,12 +81,6 @@ torch::lazy::NodePtr Min(const torch::lazy::Value& input,
 
 torch::lazy::NodePtr Exp(const torch::lazy::Value& input);
 
-torch::lazy::NodePtr Erf(const torch::lazy::Value& input);
-
-torch::lazy::NodePtr Erfc(const torch::lazy::Value& input);
-
-torch::lazy::NodePtr Erfinv(const torch::lazy::Value& input);
-
 torch::lazy::NodePtr Log(const torch::lazy::Value& input);
 
 torch::lazy::NodePtr LogBase(const torch::lazy::Value& input,
