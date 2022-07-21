@@ -15,7 +15,7 @@ SizeNode::SizeNode(torch::lazy::Value input, size_t dim)
     : XlaNode(torch::lazy::OpKind{c10::Symbol::fromQualString("aten::size")},
               {input}, xla::ShapeUtil::MakeShape(xla::S32, {}), 1,
               torch::lazy::MHash(dim)),
-      dim_(dim){};
+      dim_(dim) {};
 
 XlaOpVector SizeNode::Lower(LoweringContext* loctx) const {
   auto input = loctx->GetOutputOp(operand(0));
