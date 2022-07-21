@@ -128,10 +128,12 @@ def generate_xla_lazy_code(base_dir):
 def build_extra_libraries(base_dir, build_mode=None):
   build_libs_cmd = [os.path.join(base_dir, 'build_torch_xla_libs.sh')]
   cxx_abi = getattr(torch._C, '_GLIBCXX_USE_CXX11_ABI', None)
+  print("milad: ", cxx_abi, dir(torch._C))
   if cxx_abi is not None:
     build_libs_cmd += ['-O', '-D_GLIBCXX_USE_CXX11_ABI={}'.format(int(cxx_abi))]
   if build_mode is not None:
     build_libs_cmd += [build_mode]
+  print("Milad: build command: ", build_libs_cmd)
   if subprocess.call(build_libs_cmd) != 0:
     print(
         'Failed to build external libraries: {}'.format(build_libs_cmd),
@@ -320,6 +322,10 @@ if DEBUG:
   extra_link_args += ['-O0', '-g']
 else:
   extra_compile_args += ['-DNDEBUG']
+
+print("milad2: ", extra_compile_args)
+print("milad2: ", extra_link_args)
+print("milad2: ", make_relative_rpath('torch_xla/lib'))
 
 extra_link_args += ['-lxla_computation_client']
 
