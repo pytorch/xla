@@ -31,16 +31,6 @@ xla::Shape ExpOutputShape(const torch::lazy::Value& input);
 
 xla::Shape FloorOutputShape(const torch::lazy::Value& input);
 
-xla::Shape HardsigmoidOutputShape(const torch::lazy::Value& input);
-
-xla::Shape HardsigmoidBackwardOutputShape(const torch::lazy::Value& grad_output,
-                                          const torch::lazy::Value& input);
-
-xla::Shape HardswishOutputShape(const torch::lazy::Value& input);
-
-xla::Shape HardswishBackwardOutputShape(const torch::lazy::Value& grad_output,
-                                        const torch::lazy::Value& input);
-
 xla::Shape InverseOutputShape(const torch::lazy::Value& input);
 
 xla::Shape LogdetOutputShape(const torch::lazy::Value& input);
