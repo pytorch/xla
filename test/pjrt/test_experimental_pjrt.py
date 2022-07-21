@@ -50,11 +50,15 @@ class TestExperimentalPjrt(parameterized.TestCase):
     self.assertEqual(xm.xrt_world_size(), pjrt.global_device_count())
 
   @parameterized.named_parameters(('single_thread', [0], [0]),
-                                  ('1_host_x_3_threads', [1, 1, 1], [2, 2, 2]),
+                                  ('1_host_x_3_threads', [0, 1, 2], [0, 1, 2]),
                                   ('3_hosts_x_1_thread', [0, 0, 0], [0, 1, 2]))
   def test_set_ordinals(self, local_ordinals, global_ordinals):
-    num_threads = len(local_ordinals)
-    self.assertLen(global_ordinals, num_threads)
+    """Takes a list of n local and global ordinals and set ordinals in n threads
+
+    `local_ordinals` and `global_ordinals` must be the same length. Length
+    corresponds to the number of threads to spawn.
+    """
+    self.assertEqual(len(global_ordinals), len(local_ordinals))
 
     def _thread_fn(local_ordinal, global_ordinal):
       pjrt.set_local_ordinal(local_ordinal)
@@ -64,6 +68,7 @@ class TestExperimentalPjrt(parameterized.TestCase):
 
       return xm.get_local_ordinal(), xm.get_ordinal()
 
+    num_threads = len(local_ordinals)
     with concurrent.futures.ThreadPoolExecutor(max_workers=num_threads) as e:
       results = e.map(_thread_fn, local_ordinals, global_ordinals)
       for result, local_ordinal, global_ordinal in zip(results, local_ordinals,
@@ -71,6 +76,7 @@ class TestExperimentalPjrt(parameterized.TestCase):
         expected = (local_ordinal, global_ordinal)
         self.assertEqual(result, expected)
 
+  # TODO(will-cromar): add a multi-device version of this test.
   def test_xla_device_default(self):
     device = xm.xla_device()
     self.assertEqual(device, torch.device('xla:0'))
