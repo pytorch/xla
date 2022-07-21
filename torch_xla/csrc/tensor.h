@@ -1189,20 +1189,6 @@ class XLATensor : public c10::intrusive_ptr_target {
       const XLATensorPtr& rhs, const XLATensorPtr& lhs, bool left_side,
       bool upper, bool transpose, bool unitriangular);
 
-  // Returns the lower triangular part of a matrix (2-D tensor) or batch of
-  // matrices input, the other elements of the result tensor out are set to 0.
-  static XLATensorPtr tril(const XLATensorPtr& input, int64_t diagonal);
-
-  // In-place version of the method above.
-  static void tril_(XLATensorPtr& input, int64_t diagonal);
-
-  // Returns the upper triangular part of a matrix (2-D tensor) or batch of
-  // matrices input, the other elements of the result tensor out are set to 0.
-  static XLATensorPtr triu(const XLATensorPtr& input, int64_t diagonal);
-
-  // In-place version of the method above.
-  static void triu_(XLATensorPtr& input, int64_t diagonal);
-
   static XLATensorPtr trunc(const XLATensorPtr& input);
 
   // Returns a tuple of all slices along a given dimension with that dimension

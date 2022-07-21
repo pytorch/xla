@@ -132,8 +132,6 @@
 #include "torch_xla/csrc/ops/threshold_backward.h"
 #include "torch_xla/csrc/ops/topk.h"
 #include "torch_xla/csrc/ops/triangular_solve.h"
-#include "torch_xla/csrc/ops/tril.h"
-#include "torch_xla/csrc/ops/triu.h"
 #include "torch_xla/csrc/ops/uniform.h"
 #include "torch_xla/csrc/ops/unsqueeze.h"
 #include "torch_xla/csrc/ops/upsample_bilinear2d.h"
@@ -2839,24 +2837,6 @@ std::tuple<XLATensorPtr, XLATensorPtr> XLATensor::triangular_solve(
       unitriangular);
   return std::make_tuple(rhs->CreateFrom(torch::lazy::Value(node, 0)),
                          rhs->CreateFrom(torch::lazy::Value(node, 1)));
-}
-
-XLATensorPtr XLATensor::tril(const XLATensorPtr& input, int64_t diagonal) {
-  return input->CreateFrom(
-      torch::lazy::MakeNode<Tril>(input->GetIrValue(), diagonal));
-}
-
-void XLATensor::tril_(XLATensorPtr& input, int64_t diagonal) {
-  input->SetIrValue(torch::lazy::MakeNode<Tril>(input->GetIrValue(), diagonal));
-}
-
-XLATensorPtr XLATensor::triu(const XLATensorPtr& input, int64_t diagonal) {
-  return input->CreateFrom(
-      torch::lazy::MakeNode<Triu>(input->GetIrValue(), diagonal));
-}
-
-void XLATensor::triu_(XLATensorPtr& input, int64_t diagonal) {
-  input->SetIrValue(torch::lazy::MakeNode<Triu>(input->GetIrValue(), diagonal));
 }
 
 XLATensorPtr XLATensor::trunc(const XLATensorPtr& input) {
