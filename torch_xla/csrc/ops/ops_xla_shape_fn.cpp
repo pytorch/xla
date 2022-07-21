@@ -75,6 +75,44 @@ xla::Shape LogdetOutputShape(const torch::lazy::Value& input) {
   return logdet_shape;
 }
 
+xla::Shape LogicalAndOutputShape(const torch::lazy::Value& input,
+                                 const torch::lazy::Value& other) {
+  auto shape_fn = [](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
+    return XlaHelpers::PromotedLogicalBinaryOp(
+        operands[0], operands[1],
+        [](xla::XlaOp lhs, xla::XlaOp rhs) { return xla::And(lhs, rhs); });
+  };
+  return InferOutputShape({GetXlaShape(input), GetXlaShape(other)}, shape_fn);
+}
+
+xla::Shape LogicalNotOutputShape(const torch::lazy::Value& input) {
+  auto shape_fn = [](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
+    return XlaHelpers::PromotedLogicalUnaryOp(
+        operands[0], [](xla::XlaOp lhs) { return xla::Not(lhs); });
+  };
+  return InferOutputShape({GetXlaShape(input)}, shape_fn);
+}
+
+xla::Shape LogicalOrOutputShape(const torch::lazy::Value& input,
+                                const torch::lazy::Value& other) {
+  auto shape_fn = [](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
+    return XlaHelpers::PromotedLogicalBinaryOp(
+        operands[0], operands[1],
+        [](xla::XlaOp lhs, xla::XlaOp rhs) { return xla::Or(lhs, rhs); });
+  };
+  return InferOutputShape({GetXlaShape(input), GetXlaShape(other)}, shape_fn);
+}
+
+xla::Shape LogicalXorOutputShape(const torch::lazy::Value& input,
+                                 const torch::lazy::Value& other) {
+  auto shape_fn = [](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
+    return XlaHelpers::PromotedLogicalBinaryOp(
+        operands[0], operands[1],
+        [](xla::XlaOp lhs, xla::XlaOp rhs) { return xla::Xor(lhs, rhs); });
+  };
+  return InferOutputShape({GetXlaShape(input), GetXlaShape(other)}, shape_fn);
+}
+
 xla::Shape MaximumOutputShape(const torch::lazy::Value& input,
                               const torch::lazy::Value& other) {
   auto lower_for_shape_fn =

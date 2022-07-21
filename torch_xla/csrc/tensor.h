@@ -769,17 +769,6 @@ class XLATensor : public c10::intrusive_ptr_target {
   static XLATensorPtr log1p(const XLATensorPtr& input);
   static void log1p_(XLATensorPtr& input);
 
-  static XLATensorPtr logical_not(const XLATensorPtr& input);
-
-  static XLATensorPtr logical_xor(const XLATensorPtr& input,
-                                  const XLATensorPtr& other);
-
-  static XLATensorPtr logical_and(const XLATensorPtr& input,
-                                  const XLATensorPtr& other);
-
-  static XLATensorPtr logical_or(const XLATensorPtr& input,
-                                 const XLATensorPtr& other);
-
   static XLATensorPtr logsumexp(const XLATensorPtr& input,
                                 std::vector<int64_t> dimensions,
                                 bool keep_reduced_dimensions);

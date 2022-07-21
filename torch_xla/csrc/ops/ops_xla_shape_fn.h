@@ -35,6 +35,17 @@ xla::Shape InverseOutputShape(const torch::lazy::Value& input);
 
 xla::Shape LogdetOutputShape(const torch::lazy::Value& input);
 
+xla::Shape LogicalAndOutputShape(const torch::lazy::Value& input,
+                                 const torch::lazy::Value& other);
+
+xla::Shape LogicalNotOutputShape(const torch::lazy::Value& input);
+
+xla::Shape LogicalOrOutputShape(const torch::lazy::Value& input,
+                                const torch::lazy::Value& other);
+
+xla::Shape LogicalXorOutputShape(const torch::lazy::Value& input,
+                                 const torch::lazy::Value& other);
+
 xla::Shape MaximumOutputShape(const torch::lazy::Value& input,
                               const torch::lazy::Value& other);
 

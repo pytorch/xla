@@ -17,6 +17,10 @@ full_codegen:
   - floor
   - inverse
   - logdet
+  - logical_and
+  - logical_not
+  - logical_or
+  - logical_xor
   - maximum
   - minimum
   - reciprocal
@@ -178,10 +182,6 @@ supported:
   - log10
   - log_sigmoid_backward
   - log_sigmoid_forward
-  - logical_and
-  - logical_not
-  - logical_or
-  - logical_xor
   - logsumexp
   - lt.Scalar
   - lt.Tensor
