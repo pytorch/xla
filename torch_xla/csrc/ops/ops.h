@@ -109,6 +109,16 @@ torch::lazy::NodePtr Fmod(const torch::lazy::Value& dividend,
 
 torch::lazy::NodePtr Not(const torch::lazy::Value& input);
 
+torch::lazy::NodePtr HardSigmoid(const torch::lazy::Value& input);
+
+torch::lazy::NodePtr HardSigmoidBackward(const torch::lazy::Value& grad_output,
+                                         const torch::lazy::Value& input);
+
+torch::lazy::NodePtr HardSwish(const torch::lazy::Value& input);
+
+torch::lazy::NodePtr HardSwishBackward(const torch::lazy::Value& grad_output,
+                                       const torch::lazy::Value& input);
+
 torch::lazy::NodePtr LogSigmoid(const torch::lazy::Value& input);
 
 torch::lazy::NodePtr LogSigmoidBackward(const torch::lazy::Value& grad_output,

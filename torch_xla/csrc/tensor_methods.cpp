@@ -1588,6 +1588,26 @@ XLATensorPtr XLATensor::hardshrink_backward(const XLATensorPtr& grad_out,
       grad_out->GetIrValue(), input->GetIrValue(), lambda));
 }
 
+XLATensorPtr XLATensor::hardsigmoid(const XLATensorPtr& input) {
+  return input->CreateFrom(HardSigmoid(input->GetIrValue()));
+}
+
+XLATensorPtr XLATensor::hardsigmoid_backward(const XLATensorPtr& grad_output,
+                                             const XLATensorPtr& input) {
+  return input->CreateFrom(
+      HardSigmoidBackward(grad_output->GetIrValue(), input->GetIrValue()));
+}
+
+XLATensorPtr XLATensor::hardswish(const XLATensorPtr& input) {
+  return input->CreateFrom(HardSwish(input->GetIrValue()));
+}
+
+XLATensorPtr XLATensor::hardswish_backward(const XLATensorPtr& grad_output,
+                                           const XLATensorPtr& input) {
+  return input->CreateFrom(
+      HardSwishBackward(grad_output->GetIrValue(), input->GetIrValue()));
+}
+
 XLATensorPtr XLATensor::hardtanh_backward(const XLATensorPtr& grad_output,
                                           const XLATensorPtr& input,
                                           const at::Scalar& min_val,

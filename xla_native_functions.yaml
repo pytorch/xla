@@ -16,10 +16,6 @@ full_codegen:
   - exp
   - floor
   - inverse
-  - hardsigmoid
-  - hardsigmoid_backward
-  - hardswish
-  - hardswish_backward
   - logdet
   - logical_and
   - logical_not
@@ -159,6 +155,10 @@ supported:
   - gt.Tensor
   - hardshrink
   - hardshrink_backward
+  - hardsigmoid
+  - hardsigmoid_backward
+  - hardswish
+  - hardswish_backward
   - hardtanh
   - hardtanh_backward
   - index.Tensor

@@ -78,29 +78,6 @@ torch_xla::XlaOpVector Floor::Lower(LoweringContext* loctx) const {
   return ReturnOp(xla::Floor(xla_input), loctx);
 }
 
-torch_xla::XlaOpVector Hardsigmoid::Lower(LoweringContext* loctx) const {
-  xla::XlaOp xla_input = loctx->GetOutputOp(operand(0));
-  return ReturnOp(BuildHardSigmoid(xla_input), loctx);
-}
-
-torch_xla::XlaOpVector HardsigmoidBackward::Lower(
-    LoweringContext* loctx) const {
-  xla::XlaOp xla_grad_output = loctx->GetOutputOp(operand(0));
-  xla::XlaOp xla_input = loctx->GetOutputOp(operand(1));
-  return ReturnOp(BuildHardSigmoidBackward(xla_grad_output, xla_input), loctx);
-}
-
-torch_xla::XlaOpVector Hardswish::Lower(LoweringContext* loctx) const {
-  xla::XlaOp xla_input = loctx->GetOutputOp(operand(0));
-  return ReturnOp(BuildHardSwish(xla_input), loctx);
-}
-
-torch_xla::XlaOpVector HardswishBackward::Lower(LoweringContext* loctx) const {
-  xla::XlaOp xla_grad_output = loctx->GetOutputOp(operand(0));
-  xla::XlaOp xla_input = loctx->GetOutputOp(operand(1));
-  return ReturnOp(BuildHardSwishBackward(xla_grad_output, xla_input), loctx);
-}
-
 torch_xla::XlaOpVector Inverse::Lower(LoweringContext* loctx) const {
   xla::XlaOp xla_input = loctx->GetOutputOp(operand(0));
   return ReturnOp(BuildInverse(xla_input), loctx);
