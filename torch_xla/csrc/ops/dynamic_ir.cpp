@@ -23,12 +23,11 @@ XlaOpVector SizeNode::Lower(LoweringContext* loctx) const {
 }
 
 int64_t SizeNode::getStaticValue() const {
-  return dynamic_cast<const XlaNode*>(operand(0).node)->shape(0).size(dim_);
+  return operand(0).node->shape(0).size(dim_);
 }
 
 bool SizeNode::isDynamic() const {
-  auto symbolic_vec =
-      dynamic_cast<const XlaNode*>(operand(0).node)->shape(0).is_symbolic();
+  auto symbolic_vec = operand(0).node->shape(0).is_symbolic();
   if (!symbolic_vec.has_value()) {
     return true;
   }
