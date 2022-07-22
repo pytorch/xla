@@ -78,6 +78,6 @@ if __name__ == '__main__':
       metrics_counter='XLA_FN_COUNTER("xla::")',
       create_tensor="XLATensor::Create",
       create_aten_from_ltc_tensor="torch_xla::bridge::AtenFromXlaTensor",
-      tuple_aten_from_ltc_tensors="torch::lazy::TupleAtenFromLtcTensors",
+      tuple_aten_from_ltc_tensors="torch_xla::bridge::TupleAtenFromXlaTensors",
       lazy_tensor_ptr="torch_xla::XLATensorPtr",
       get_device_fn="torch_xla::bridge::GetXlaDevice")

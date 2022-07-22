@@ -1,6 +1,7 @@
 #include "torch_xla/csrc/ops/ops_xla_shape_fn.h"
 
 #include "tensorflow/compiler/xla/client/lib/logdet.h"
+#include "tensorflow/compiler/xla/shape_util.h"
 #include "torch_xla/csrc/helpers.h"
 
 namespace torch_xla {
@@ -137,6 +138,17 @@ xla::Shape LogicalXorOutputShape(const torch::lazy::Value& input,
         [](xla::XlaOp lhs, xla::XlaOp rhs) { return xla::Xor(lhs, rhs); });
   };
   return InferOutputShape({GetXlaShape(input), GetXlaShape(other)}, shape_fn);
+}
+
+xla::Shape LogSigmoidForwardOutputShape(const torch::lazy::Value& input) {
+  return xla::ShapeUtil::MakeTupleShape(
+      {GetXlaShape(input), GetXlaShape(input)});
+}
+
+xla::Shape LogSigmoidBackwardOutputShape(const torch::lazy::Value& grad_output,
+                                         const torch::lazy::Value& input,
+                                         const torch::lazy::Value& buffer) {
+  return GetXlaShape(grad_output);
 }
 
 xla::Shape MaximumOutputShape(const torch::lazy::Value& input,

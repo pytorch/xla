@@ -124,5 +124,16 @@ c10::optional<torch::lazy::BackendDevice> GetXlaDevice(
   return GetXlaDevice(forward_tensors...);
 }
 
+template <size_t... Indices>
+auto TupleAtenFromXlaTensorsImpl(const std::vector<XLATensorPtr>& tensors,
+                                 std::index_sequence<Indices...>) {
+  return std::make_tuple(AtenFromXlaTensor(tensors[Indices])...);
+}
+
+template <size_t N>
+auto TupleAtenFromXlaTensors(const std::vector<XLATensorPtr>& tensors) {
+  return TupleAtenFromXlaTensorsImpl(tensors, std::make_index_sequence<N>{});
+}
+
 }  // namespace bridge
 }  // namespace torch_xla
