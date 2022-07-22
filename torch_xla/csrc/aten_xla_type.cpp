@@ -1464,32 +1464,6 @@ at::Tensor XLANativeFunctions::hardshrink(const at::Tensor& self,
       XLATensor::hardshrink(bridge::GetXlaTensor(self), lambda));
 }
 
-at::Tensor XLANativeFunctions::hardsigmoid(const at::Tensor& self) {
-  XLA_FN_COUNTER("xla::");
-  return bridge::AtenFromXlaTensor(
-      XLATensor::hardsigmoid(bridge::GetXlaTensor(self)));
-}
-
-at::Tensor XLANativeFunctions::hardsigmoid_backward(
-    const at::Tensor& grad_output, const at::Tensor& self) {
-  XLA_FN_COUNTER("xla::");
-  return bridge::AtenFromXlaTensor(XLATensor::hardsigmoid_backward(
-      bridge::GetXlaTensor(grad_output), bridge::GetXlaTensor(self)));
-}
-
-at::Tensor XLANativeFunctions::hardswish(const at::Tensor& self) {
-  XLA_FN_COUNTER("xla::");
-  return bridge::AtenFromXlaTensor(
-      XLATensor::hardswish(bridge::GetXlaTensor(self)));
-}
-
-at::Tensor XLANativeFunctions::hardswish_backward(const at::Tensor& grad_output,
-                                                  const at::Tensor& self) {
-  XLA_FN_COUNTER("xla::");
-  return bridge::AtenFromXlaTensor(XLATensor::hardswish_backward(
-      bridge::GetXlaTensor(grad_output), bridge::GetXlaTensor(self)));
-}
-
 at::Tensor XLANativeFunctions::hardshrink_backward(const at::Tensor& grad_out,
                                                    const at::Tensor& self,
                                                    const at::Scalar& lambda) {
