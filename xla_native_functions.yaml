@@ -30,6 +30,7 @@ full_codegen:
   - maximum
   - minimum
   - reciprocal
+  - round
   - rsqrt
   - sgn
   - sign
@@ -257,7 +258,6 @@ supported:
   - replication_pad2d_backward
   - resize_
   - roll
-  - round
   - rrelu_with_noise
   - rrelu_with_noise_backward
   - rsub.Scalar

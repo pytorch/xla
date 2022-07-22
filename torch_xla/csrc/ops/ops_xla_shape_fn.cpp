@@ -165,6 +165,10 @@ xla::Shape ReciprocalOutputShape(const torch::lazy::Value& input) {
   return GetXlaShape(input);
 }
 
+xla::Shape RoundOutputShape(const torch::lazy::Value& input) {
+  return GetXlaShape(input);
+}
+
 xla::Shape RsqrtOutputShape(const torch::lazy::Value& input) {
   return GetXlaShape(input);
 }

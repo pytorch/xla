@@ -999,8 +999,6 @@ class XLATensor : public c10::intrusive_ptr_target {
                            absl::Span<const int64_t> shifts,
                            absl::Span<const int64_t> dims);
 
-  static XLATensorPtr round(const XLATensorPtr& input);
-
   static XLATensorPtr rrelu_with_noise(const XLATensorPtr& input,
                                        XLATensorPtr& noise,
                                        const at::Scalar& lower,
