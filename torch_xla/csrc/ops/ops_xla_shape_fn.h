@@ -68,6 +68,8 @@ xla::Shape MinimumOutputShape(const torch::lazy::Value& input,
 
 xla::Shape ReciprocalOutputShape(const torch::lazy::Value& input);
 
+xla::Shape RoundOutputShape(const torch::lazy::Value& input);
+
 xla::Shape RsqrtOutputShape(const torch::lazy::Value& input);
 
 xla::Shape SgnOutputShape(const torch::lazy::Value& input);
