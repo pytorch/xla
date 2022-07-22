@@ -73,7 +73,6 @@ PTXLA_UNARY_OP(Exp, at::aten::exp, xla::Exp);
 PTXLA_UNARY_OP(Log, at::aten::log, xla::Log);
 PTXLA_UNARY_OP(Log1p, at::aten::log1p, xla::Log1p);
 PTXLA_UNARY_OP(Sqrt, at::aten::sqrt, xla::Sqrt);
-PTXLA_UNARY_OP(Round, at::aten::round, xla::RoundToEven);
 PTXLA_UNARY_OP(Not, at::aten::bitwise_not, xla::Not);
 PTXLA_UNARY_OP(IsNan, at::aten::isnan, xla::IsNan);
 

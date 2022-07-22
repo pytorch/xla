@@ -2323,10 +2323,6 @@ XLATensorPtr XLATensor::roll(const XLATensorPtr& input,
       canonical_dims));
 }
 
-XLATensorPtr XLATensor::round(const XLATensorPtr& input) {
-  return input->CreateFrom(Round(input->GetIrValue()));
-}
-
 XLATensorPtr XLATensor::rrelu_with_noise(const XLATensorPtr& input,
                                          XLATensorPtr& noise,
                                          const at::Scalar& lower,

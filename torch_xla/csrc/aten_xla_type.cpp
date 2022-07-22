@@ -2619,12 +2619,6 @@ at::Tensor XLANativeFunctions::roll(const at::Tensor& self,
                                                    XlaHelpers::I64List(dims)));
 }
 
-at::Tensor XLANativeFunctions::round(const at::Tensor& self) {
-  XLA_FN_COUNTER("xla::");
-  return bridge::AtenFromXlaTensor(
-      XLATensor::round(bridge::GetXlaTensor(self)));
-}
-
 at::Tensor XLANativeFunctions::rrelu_with_noise(
     const at::Tensor& self, const at::Tensor& noise, const at::Scalar& lower,
     const at::Scalar& upper, bool training,
