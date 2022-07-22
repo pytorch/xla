@@ -1,5 +1,4 @@
 import args_parse
-import common
 
 SUPPORTED_MODELS = [
     'alexnet', 'densenet121', 'densenet161', 'densenet169', 'densenet201',
@@ -45,6 +44,7 @@ import os
 import pprint
 import schedulers
 import numpy as np
+import sys
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -57,6 +57,7 @@ import torch_xla.distributed.parallel_loader as pl
 import torch_xla.utils.utils as xu
 import torch_xla.core.xla_model as xm
 import torch_xla.distributed.xla_multiprocessing as xmp
+from torch_xla.experimental import pjrt
 import torch_xla.test.test_utils as test_utils
 
 DEFAULT_KWARGS = dict(
@@ -113,10 +114,9 @@ def _train_update(device, step, loss, tracker, epoch, writer):
       summary_writer=writer)
 
 
-def train_imagenet(state_dict, *, index):
+def train_imagenet(state_dict):
   print('==> Preparing data..')
   img_dim = get_model_property('img_dim')
-  rank = int(os.getenv('CLOUD_TPU_TASK_ID', 0)) + index
   if FLAGS.fake_data:
     train_dataset_len = 1200000  # Roughly the size of Imagenet dataset.
     train_loader = xu.SampleGenerator(
@@ -158,12 +158,12 @@ def train_imagenet(state_dict, *, index):
       train_sampler = torch.utils.data.distributed.DistributedSampler(
           train_dataset,
           num_replicas=xm.xrt_world_size(),
-          rank=rank,
+          rank=xm.get_ordinal(),
           shuffle=True)
       test_sampler = torch.utils.data.distributed.DistributedSampler(
           test_dataset,
           num_replicas=xm.xrt_world_size(),
-          rank=rank,
+          rank=xm.get_ordinal(),
           shuffle=False)
     train_loader = torch.utils.data.DataLoader(
         train_dataset,
@@ -180,7 +180,7 @@ def train_imagenet(state_dict, *, index):
         shuffle=False,
         num_workers=FLAGS.num_workers)
 
-  device = xm.xla_device(index)
+  device = xm.xla_device()
   model = get_model_property('model_fn')()
   model.load_state_dict(state_dict)
   model = model.to(device)
@@ -265,7 +265,7 @@ if __name__ == '__main__':
   torch.manual_seed(42)
   model = get_model_property('model_fn')()
 
-  results = common.run_pjrt_multiprocess(train_imagenet, model.state_dict())
+  results = pjrt.run_multiprocess(train_imagenet, model.state_dict())
   print('Replica max_accuracy:', pprint.pformat(results))
   accuracy = np.mean([
       np.mean(list(thread_results.values()))

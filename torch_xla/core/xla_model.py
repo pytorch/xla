@@ -10,6 +10,7 @@ import time
 import torch
 import torch.nn.functional as F
 import torch_xla
+from torch_xla.experimental import pjrt
 import torch_xla.core.xla_env_vars as xenv
 import torch_xla.debug.metrics_saver as ms
 import torch_xla.utils.utils as xu
@@ -156,11 +157,14 @@ def xrt_world_size(defval=1):
   Returns:
     The number of devices which is taking part of the replication.
   """
+  if pjrt.using_pjrt():
+    return pjrt.global_device_count()
+
   return xu.getenv_as(xenv.WORLD_SIZE, int, defval=defval)
 
 
 def get_ordinal(defval=0):
-  """Retrieves the replication ordinal of the current process.
+  """Retrieves the replication ordinal of the current thread.
 
   The ordinals range from 0 to `xrt_world_size()` minus 1.
 
@@ -170,13 +174,16 @@ def get_ordinal(defval=0):
       Default: 0
 
   Returns:
-    The replication ordinal of the current process.
+    The replication ordinal of the current thread.
   """
+  if pjrt.using_pjrt():
+    return pjrt.global_ordinal(defval)
+
   return xu.getenv_as(xenv.ORDINAL, int, defval=defval)
 
 
 def get_local_ordinal(defval=0):
-  """Retrieves the replication local ordinal of the current process.
+  """Retrieves the replication local ordinal of the current thread.
 
   The local ordinals range from 0 to the number of local devices minus 1.
 
@@ -186,8 +193,11 @@ def get_local_ordinal(defval=0):
       Default: 0
 
   Returns:
-    The replication local ordinal of the current process.
+    The replication local ordinal of the current thread.
   """
+  if pjrt.using_pjrt():
+    return pjrt.local_ordinal(defval)
+
   ordinal = xu.getenv_as(xenv.LOCAL_ORDINAL, int, defval=-1)
   if ordinal >= 0:
     return ordinal
@@ -227,9 +237,11 @@ def xla_device(n=None, devkind=None):
   Returns:
     A `torch.device` with the requested instance.
   """
+  if pjrt.using_pjrt():
+    return pjrt.xla_device(n, devkind)
+
   if n is None:
-    devices = get_xla_supported_devices(
-        devkind=devkind if devkind is not None else None)
+    devices = get_xla_supported_devices(devkind=devkind)
     assert devices, 'No devices of {} kind'.format(devkind or 'ANY')
     # This is a utility API mainly called from tests or simple code which wants
     # to just have a single device to run on. Set the default device so that
