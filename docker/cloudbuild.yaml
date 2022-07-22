@@ -24,7 +24,7 @@ steps:
   entrypoint: bash
   args: ['-c', 'source /pytorch/xla/docker/common.sh && run_deployment_tests']
 - name: 'gcr.io/cloud-builders/docker'
-  args: ['push', 'gcr.io/tpu-pytorch/xla']
+  args: ['push', '--all-tags', 'gcr.io/tpu-pytorch/xla']
   timeout: 1800s
 - name: 'gcr.io/tpu-pytorch/xla:${_IMAGE_NAME}'
   entrypoint: 'bash'
