@@ -652,7 +652,7 @@ given device.</p>
 <dl class="function">
 <dt id="torch_xla.core.xla_model.get_ordinal">
 <code class="sig-prename descclassname">torch_xla.core.xla_model.</code><code class="sig-name descname">get_ordinal</code><span class="sig-paren">(</span><em class="sig-param">defval=0</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/torch_xla/core/xla_model.html#get_ordinal"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#torch_xla.core.xla_model.get_ordinal" title="Permalink to this definition">¶</a></dt>
-<dd><p>Retrieves the replication ordinal of the current process.</p>
+<dd><p>Retrieves the replication ordinal of the current thread.</p>
 <p>The ordinals range from 0 to <cite>xrt_world_size()</cite> minus 1.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
@@ -661,7 +661,7 @@ replication information available.
 Default: 0</p>
 </dd>
 <dt class="field-even">Returns</dt>
-<dd class="field-even"><p>The replication ordinal of the current process.</p>
+<dd class="field-even"><p>The replication ordinal of the current thread.</p>
 </dd>
 </dl>
 </dd></dl>
@@ -669,7 +669,7 @@ Default: 0</p>
 <dl class="function">
 <dt id="torch_xla.core.xla_model.get_local_ordinal">
 <code class="sig-prename descclassname">torch_xla.core.xla_model.</code><code class="sig-name descname">get_local_ordinal</code><span class="sig-paren">(</span><em class="sig-param">defval=0</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/torch_xla/core/xla_model.html#get_local_ordinal"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#torch_xla.core.xla_model.get_local_ordinal" title="Permalink to this definition">¶</a></dt>
-<dd><p>Retrieves the replication local ordinal of the current process.</p>
+<dd><p>Retrieves the replication local ordinal of the current thread.</p>
 <p>The local ordinals range from 0 to the number of local devices minus 1.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
@@ -678,7 +678,7 @@ replication information available.
 Default: 0</p>
 </dd>
 <dt class="field-even">Returns</dt>
-<dd class="field-even"><p>The replication local ordinal of the current process.</p>
+<dd class="field-even"><p>The replication local ordinal of the current thread.</p>
 </dd>
 </dl>
 </dd></dl>

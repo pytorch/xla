@@ -304,6 +304,7 @@
 <span class="kn">import</span> <span class="nn">torch</span>
 <span class="kn">import</span> <span class="nn">torch.nn.functional</span> <span class="k">as</span> <span class="nn">F</span>
 <span class="kn">import</span> <span class="nn">torch_xla</span>
+<span class="kn">from</span> <span class="nn">torch_xla.experimental</span> <span class="kn">import</span> <span class="n">pjrt</span>
 <span class="kn">import</span> <span class="nn">torch_xla.core.xla_env_vars</span> <span class="k">as</span> <span class="nn">xenv</span>
 <span class="kn">import</span> <span class="nn">torch_xla.debug.metrics_saver</span> <span class="k">as</span> <span class="nn">ms</span>
 <span class="kn">import</span> <span class="nn">torch_xla.utils.utils</span> <span class="k">as</span> <span class="nn">xu</span>
@@ -450,11 +451,14 @@
 <span class="sd">  Returns:</span>
 <span class="sd">    The number of devices which is taking part of the replication.</span>
 <span class="sd">  &quot;&quot;&quot;</span>
+  <span class="k">if</span> <span class="n">pjrt</span><span class="o">.</span><span class="n">using_pjrt</span><span class="p">():</span>
+    <span class="k">return</span> <span class="n">pjrt</span><span class="o">.</span><span class="n">global_device_count</span><span class="p">()</span>
+
   <span class="k">return</span> <span class="n">xu</span><span class="o">.</span><span class="n">getenv_as</span><span class="p">(</span><span class="n">xenv</span><span class="o">.</span><span class="n">WORLD_SIZE</span><span class="p">,</span> <span class="nb">int</span><span class="p">,</span> <span class="n">defval</span><span class="o">=</span><span class="n">defval</span><span class="p">)</span></div>
 
 
 <div class="viewcode-block" id="get_ordinal"><a class="viewcode-back" href="../../../index.html#torch_xla.core.xla_model.get_ordinal">[docs]</a><span class="k">def</span> <span class="nf">get_ordinal</span><span class="p">(</span><span class="n">defval</span><span class="o">=</span><span class="mi">0</span><span class="p">):</span>
-  <span class="sd">&quot;&quot;&quot;Retrieves the replication ordinal of the current process.</span>
+  <span class="sd">&quot;&quot;&quot;Retrieves the replication ordinal of the current thread.</span>
 
 <span class="sd">  The ordinals range from 0 to `xrt_world_size()` minus 1.</span>
 
@@ -464,13 +468,16 @@
 <span class="sd">      Default: 0</span>
 
 <span class="sd">  Returns:</span>
-<span class="sd">    The replication ordinal of the current process.</span>
+<span class="sd">    The replication ordinal of the current thread.</span>
 <span class="sd">  &quot;&quot;&quot;</span>
+  <span class="k">if</span> <span class="n">pjrt</span><span class="o">.</span><span class="n">using_pjrt</span><span class="p">():</span>
+    <span class="k">return</span> <span class="n">pjrt</span><span class="o">.</span><span class="n">global_ordinal</span><span class="p">(</span><span class="n">defval</span><span class="p">)</span>
+
   <span class="k">return</span> <span class="n">xu</span><span class="o">.</span><span class="n">getenv_as</span><span class="p">(</span><span class="n">xenv</span><span class="o">.</span><span class="n">ORDINAL</span><span class="p">,</span> <span class="nb">int</span><span class="p">,</span> <span class="n">defval</span><span class="o">=</span><span class="n">defval</span><span class="p">)</span></div>
 
 
 <div class="viewcode-block" id="get_local_ordinal"><a class="viewcode-back" href="../../../index.html#torch_xla.core.xla_model.get_local_ordinal">[docs]</a><span class="k">def</span> <span class="nf">get_local_ordinal</span><span class="p">(</span><span class="n">defval</span><span class="o">=</span><span class="mi">0</span><span class="p">):</span>
-  <span class="sd">&quot;&quot;&quot;Retrieves the replication local ordinal of the current process.</span>
+  <span class="sd">&quot;&quot;&quot;Retrieves the replication local ordinal of the current thread.</span>
 
 <span class="sd">  The local ordinals range from 0 to the number of local devices minus 1.</span>
 
@@ -480,8 +487,11 @@
 <span class="sd">      Default: 0</span>
 
 <span class="sd">  Returns:</span>
-<span class="sd">    The replication local ordinal of the current process.</span>
+<span class="sd">    The replication local ordinal of the current thread.</span>
 <span class="sd">  &quot;&quot;&quot;</span>
+  <span class="k">if</span> <span class="n">pjrt</span><span class="o">.</span><span class="n">using_pjrt</span><span class="p">():</span>
+    <span class="k">return</span> <span class="n">pjrt</span><span class="o">.</span><span class="n">local_ordinal</span><span class="p">(</span><span class="n">defval</span><span class="p">)</span>
+
   <span class="n">ordinal</span> <span class="o">=</span> <span class="n">xu</span><span class="o">.</span><span class="n">getenv_as</span><span class="p">(</span><span class="n">xenv</span><span class="o">.</span><span class="n">LOCAL_ORDINAL</span><span class="p">,</span> <span class="nb">int</span><span class="p">,</span> <span class="n">defval</span><span class="o">=-</span><span class="mi">1</span><span class="p">)</span>
   <span class="k">if</span> <span class="n">ordinal</span> <span class="o">&gt;=</span> <span class="mi">0</span><span class="p">:</span>
     <span class="k">return</span> <span class="n">ordinal</span>
@@ -521,9 +531,11 @@
 <span class="sd">  Returns:</span>
 <span class="sd">    A `torch.device` with the requested instance.</span>
 <span class="sd">  &quot;&quot;&quot;</span>
+  <span class="k">if</span> <span class="n">pjrt</span><span class="o">.</span><span class="n">using_pjrt</span><span class="p">():</span>
+    <span class="k">return</span> <span class="n">pjrt</span><span class="o">.</span><span class="n">xla_device</span><span class="p">(</span><span class="n">n</span><span class="p">,</span> <span class="n">devkind</span><span class="p">)</span>
+
   <span class="k">if</span> <span class="n">n</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-    <span class="n">devices</span> <span class="o">=</span> <span class="n">get_xla_supported_devices</span><span class="p">(</span>
-        <span class="n">devkind</span><span class="o">=</span><span class="n">devkind</span> <span class="k">if</span> <span class="n">devkind</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span class="kc">None</span><span class="p">)</span>
+    <span class="n">devices</span> <span class="o">=</span> <span class="n">get_xla_supported_devices</span><span class="p">(</span><span class="n">devkind</span><span class="o">=</span><span class="n">devkind</span><span class="p">)</span>
     <span class="k">assert</span> <span class="n">devices</span><span class="p">,</span> <span class="s1">&#39;No devices of </span><span class="si">{}</span><span class="s1"> kind&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">devkind</span> <span class="ow">or</span> <span class="s1">&#39;ANY&#39;</span><span class="p">)</span>
     <span class="c1"># This is a utility API mainly called from tests or simple code which wants</span>
     <span class="c1"># to just have a single device to run on. Set the default device so that</span>
