@@ -17,6 +17,8 @@ xla::Shape AtanOutputShape(const torch::lazy::Value& input);
 
 xla::Shape AtanhOutputShape(const torch::lazy::Value& input);
 
+xla::Shape CeilOutputShape(const torch::lazy::Value& input);
+
 xla::Shape CosOutputShape(const torch::lazy::Value& input);
 
 xla::Shape CoshOutputShape(const torch::lazy::Value& input);
