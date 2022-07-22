@@ -22,15 +22,9 @@ struct SymIntElements {
       SetSymIntNodeElements(_size);
     }
   }
-  std::vector<torch::lazy::NodePtr> GetNodes() {
-    return size_nodes_;
-  }
-  std::vector<int64_t> GetUpperBounds() {
-    return upper_bounds_;
-  }
-  std::vector<bool> GetDynamicDims() {
-    return dynamic_dims_;
-  }
+  std::vector<torch::lazy::NodePtr> GetNodes() { return size_nodes_; }
+  std::vector<int64_t> GetUpperBounds() { return upper_bounds_; }
+  std::vector<bool> GetDynamicDims() { return dynamic_dims_; }
 
  private:
   void SetSymIntNodeElements(c10::SymInt& size);
