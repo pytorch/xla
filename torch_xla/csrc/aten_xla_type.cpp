@@ -983,11 +983,6 @@ at::Tensor XLANativeFunctions::cat(at::TensorList tensors, int64_t dim) {
       bridge::GetXlaTensors(tensors), dim, at::native::result_type(tensors)));
 }
 
-at::Tensor XLANativeFunctions::ceil(const at::Tensor& self) {
-  XLA_FN_COUNTER("xla::");
-  return bridge::AtenFromXlaTensor(XLATensor::ceil(bridge::GetXlaTensor(self)));
-}
-
 at::Tensor XLANativeFunctions::celu(const at::Tensor& self,
                                     const at::Scalar& alpha) {
   XLA_FN_COUNTER("xla::");
