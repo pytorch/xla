@@ -15,18 +15,19 @@ void SymIntElements::SetSymIntNodeElements(c10::SymInt& size) {
         std::dynamic_pointer_cast<torch::lazy::SymbolicIntNode>(
             symbolicIntNode);
     auto size_node = lazySymIntNode->node_;
-    size_nodes.push_back(size_node);
-    upper_bounds.push_back(
+    size_nodes_.push_back(size_node);
+    upper_bounds_.push_back(
         std::dynamic_pointer_cast<torch::lazy::DimensionNode>(size_node)
             ->getStaticValue());
-    dynamic_dims.push_back(
+    dynamic_dims_.push_back(
         std::dynamic_pointer_cast<torch::lazy::DimensionNode>(size_node)
             ->isDynamic());
   } else {
     auto size_node = torch::lazy::MakeNode<Constant>(std::move(
-        XlaHelpers::ScalarLiteral(size.expect_int(), xla::PrimitiveType::F64)));
-    upper_bounds.push_back(size.expect_int());
-    dynamic_dims.push_back(size.is_symbolic());
+        XlaHelpers::ScalarLiteral(size.expect_int(), xla::PrimitiveType::S32)));
+    size_nodes_.push_back(size_node);
+    upper_bounds_.push_back(size.expect_int());
+    dynamic_dims_.push_back(size.is_symbolic());
   }
 }
 
