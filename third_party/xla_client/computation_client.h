@@ -211,9 +211,13 @@ class ComputationClient {
   virtual std::vector<xla::util::ExceptionCleanup> LockAsyncDatas(
       absl::Span<const DataPtr> datas) = 0;
 
+<<<<<<< HEAD
   // Returns data shards. We expect this to be called on PjRtShardedData to
   // retrieve the shards. If other data type is passed, it returns the input
   // wrapped inside a vector.
+=======
+  // Returns data shards. Input `data` should be an instance of PjRtShardedData.
+>>>>>>> 7fcceb34 (* Add ShardingUtil::InputHandler for input sharding)
   virtual std::vector<DataPtr> GetDataShards(DataPtr data) = 0;
 
   // Transfers local tensor values to the TPU servers and fetches the handles.
@@ -223,8 +227,12 @@ class ComputationClient {
   // Transfers local sharded tensor values to the TPU servers and returns a
   // `PjRtShardedData`.
   virtual DataPtr TransferShardsToServer(
+<<<<<<< HEAD
       absl::Span<const TensorSource> tensor_shards, std::string device,
       xla::Shape shape) = 0;
+=======
+      absl::Span<const TensorSource> tensor_shards) = 0;
+>>>>>>> 7fcceb34 (* Add ShardingUtil::InputHandler for input sharding)
 
   // Transfers local tensor values to the TPU servers and fetches the handles.
   // Update the handles associated with DataPtrs passed instead of creating new

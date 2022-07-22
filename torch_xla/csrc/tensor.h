@@ -24,7 +24,6 @@
 #include "torch_xla/csrc/lowering_context.h"
 #include "torch_xla/csrc/torch_util.h"
 #include "torch_xla/csrc/view.h"
-#include "torch_xla/csrc/xla_sharding_util.h"
 
 namespace torch_xla {
 
@@ -118,7 +117,7 @@ class XLATensor : public c10::intrusive_ptr_target {
 
   // Retrieves the IR Node representing this XLATensor. One will be created if
   // missing. Note that although this is a const API, it actually changes the
-  // internal state ofthe object.
+  // internal state of the object.
   torch::lazy::Value GetIrValue() const;
 
   c10::optional<at::Tensor> CurrentTensorData() const;

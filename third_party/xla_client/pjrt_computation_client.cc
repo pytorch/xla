@@ -233,6 +233,7 @@ std::vector<ComputationClient::ComputationPtr> PjRtComputationClient::Compile(
       xla::ProgramShape program_shape =
           xla::ProgramShape(hlo_computation->ToProto().program_shape());
 
+<<<<<<< HEAD
       std::shared_ptr<PjRtComputation> pjrt_computation =
           std::make_shared<PjRtComputation>(
               std::move(xla::XlaComputation(hlo_modules[0]->ToProto())),
@@ -250,6 +251,12 @@ std::vector<ComputationClient::ComputationPtr> PjRtComputationClient::Compile(
 
       computations.push_back(pjrt_computation);
     }
+=======
+    std::shared_ptr<PjRtComputation> pjrt_computation =
+        std::make_shared<PjRtComputation>(
+            std::move(xla::XlaComputation(hlo_modules[0]->ToProto())),
+            program_shape, instance.devices, std::move(executable));
+>>>>>>> 790b6afa (* Add ShardingUtil::InputHandler for input sharding)
 
     CreateCompileHandlesCounter()->AddValue(1);
   }
@@ -270,24 +277,6 @@ PjRtComputationClient::ExecuteComputation(
   const PjRtComputation& pjrt_computation =
       dynamic_cast<const PjRtComputation&>(computation);
 
-  // TODO(yeounoh) temporary test flag; replace with a cheker.
-  if (sys_util::GetEnvString(env::kEnvSpmdTest, "0") == "1") {
-    TF_VLOG(1) << "Executing PjRt computation in replication mode.";
-
-    // TODO(yeounoh):
-    // - Avoid the data pre-loading in case of SPMD
-    // - Shard input (input handler)
-    // - Execute replicated mode
-    // - Return outputs (output handler)
-    std::vector<std::string> devices = GetAllDevices();
-    std::vector<std::vector<DataPtr>> device_arguments;
-
-    ComputationClient::ExecuteReplicatedOptions execute_options;
-    execute_options.explode_tuple = options.explode_tuple;
-    std::vector<std::vector<DataPtr>> datas = ExecuteReplicated(
-        computation, device_arguments, devices, execute_options);
-    return datas[0];
-  }
   TF_VLOG(1) << "Executing PjRt computation on " << device;
 
   xla::PjRtDevice* pjrt_device = StringToPjRtDevice(device);

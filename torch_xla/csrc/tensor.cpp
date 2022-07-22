@@ -18,6 +18,7 @@
 #include "tensorflow/compiler/xla/shape_util.h"
 #include "tensorflow/compiler/xla/xla_client/cache.h"
 #include "tensorflow/compiler/xla/xla_client/debug_macros.h"
+#include "tensorflow/compiler/xla/xla_client/env_vars.h"
 #include "tensorflow/compiler/xla/xla_client/metrics.h"
 #include "tensorflow/compiler/xla/xla_client/sys_util.h"
 #include "tensorflow/compiler/xla/xla_client/thread_pool.h"
@@ -46,6 +47,7 @@
 #include "torch_xla/csrc/ops/xla_ops.h"
 #include "torch_xla/csrc/tensor_util.h"
 #include "torch_xla/csrc/torch_util.h"
+#include "torch_xla/csrc/xla_sharding_util.h"
 
 namespace torch_xla {
 namespace {
@@ -1250,6 +1252,7 @@ XLATensor::SyncTensorCollection XLATensor::CollectSyncTensors(
 
   std::vector<at::Tensor> at_tensors;
   std::vector<std::string> devices;
+  std::vector<ShardingSpecPtr> shardings;
   std::vector<size_t> at_tensor_index;
   std::unordered_set<int64_t> tensor_ids;
   // The force_xla_data controls aliasing compilation, so effectively the same
@@ -1274,6 +1277,7 @@ XLATensor::SyncTensorCollection XLATensor::CollectSyncTensors(
         c10::optional<at::Tensor> tensor_data = tensors[i]->CurrentTensorData();
         XLA_CHECK(tensor_data);
         at_tensors.push_back(*tensor_data);
+        shardings.push_back(tensors[i]->data_ptr()->sharding_spec);
         devices.push_back(tensors[i]->GetDevice().toString());
         at_tensor_index.push_back(i);
       }
@@ -1286,8 +1290,12 @@ XLATensor::SyncTensorCollection XLATensor::CollectSyncTensors(
       xla::ComputationClient::Get()->GetResourceDomain(coll.device.toString()));
   if (!at_tensors.empty()) {
     XLA_COUNTER("SyncTensorsToData", at_tensors.size());
+    // TODO(yeounoh) create data handles with shardings.
+    bool is_spmd =
+        xla::sys_util::GetEnvString(xla::env::kEnvSpmdTest, "0") == "1";
     std::vector<torch::lazy::BackendDataPtr> handles =
-        CreateTensorsData(at_tensors, devices);
+        is_spmd ? CreateTensorsData(at_tensors, shardings, devices)
+                : CreateTensorsData(at_tensors, devices);
     for (size_t i = 0; i < handles.size(); ++i) {
       // If we are here, it means that the IR torch::lazy::Value for the
       // tensor is not present. Also, we uploaded the at::Tensor data to the
@@ -1439,16 +1447,39 @@ std::shared_ptr<XLATensor::Async> XLATensor::ScheduleSyncTensorsGraph(
   auto syncfn = [async, hash = coll->hash]() {
     xla::ComputationClient::ExecuteComputationOptions options;
     try {
-      TF_VLOG(3) << "Executing IR graph hash "
-                 << torch::lazy::HashToString(hash) << " on device "
-                 << async->device << " ...";
-      auto results = xla::ComputationClient::Get()->ExecuteComputation(
-          *async->cached_computation->computation,
-          UnwrapXlaData(async->parameters_data), async->device, options);
-      TF_VLOG(3) << "Executing IR graph hash "
-                 << torch::lazy::HashToString(hash) << " on device "
-                 << async->device << " done!";
+      std::vector<xla::ComputationClient::DataPtr> results;
+      if (xla::sys_util::GetEnvString(xla::env::kEnvSpmdTest, "0") == "1") {
+        // TODO(yeounoh):
+        // - Shard input (input handler) -> device_arguments
+        // - Execute replicated mode
+        // - Return outputs (output handler)
+        std::vector<std::string> devices =
+            xla::ComputationClient::Get()->GetAllDevices();
+        std::vector<std::vector<xla::ComputationClient::DataPtr>>
+            device_arguments = torch_xla::ShardingUtil::InputHandler(
+                UnwrapXlaData(async->parameters_data), devices);
+        xla::ComputationClient::ExecuteReplicatedOptions execute_options;
+        execute_options.explode_tuple = options.explode_tuple;
 
+        TF_VLOG(3) << "Executing IR graph hash "
+                   << torch::lazy::HashToString(hash) << " on all devices.";
+        results = xla::ComputationClient::Get()->ExecuteReplicated(
+            *async->cached_computation->computation, device_arguments, devices,
+            execute_options)[0];  // TODO(yeounoh) assumes replicated outputs
+        TF_VLOG(3) << "Executing IR graph hash "
+                   << torch::lazy::HashToString(hash)
+                   << " on all devices, done!";
+      } else {
+        TF_VLOG(3) << "Executing IR graph hash "
+                   << torch::lazy::HashToString(hash) << " on device "
+                   << async->device << " ...";
+        results = xla::ComputationClient::Get()->ExecuteComputation(
+            *async->cached_computation->computation,
+            UnwrapXlaData(async->parameters_data), async->device, options);
+        TF_VLOG(3) << "Executing IR graph hash "
+                   << torch::lazy::HashToString(hash) << " on device "
+                   << async->device << " done!";
+      }
       for (size_t i = 0; i < results.size(); ++i) {
         if (async->tensors_data[i] != nullptr) {
           UnwrapXlaData(async->tensors_data[i])->Assign(*results[i]);
@@ -1456,6 +1487,7 @@ std::shared_ptr<XLATensor::Async> XLATensor::ScheduleSyncTensorsGraph(
           async->tensors_data[i] = WrapXlaData(std::move(results[i]));
         }
       }
+
     } catch (...) {
       // There are two paths of discovery of an exception happening on an
       // asynchronous task. One happens if the creator of the asynchronous task

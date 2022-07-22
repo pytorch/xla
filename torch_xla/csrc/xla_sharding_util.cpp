@@ -86,12 +86,6 @@ xla::HloModuleProto ShardingUtil::SpmdPartitioningPass(
     XLA_ERROR() << "spmd-partitioning pass failed";
   }
 
-  std::cout << "Module proto after partitioning, has_spmd_output_sharding(): "
-            << module.get()->ToProto().has_spmd_output_sharding() << std::endl;
-  std::cout
-      << "Module proto after partitioning, spmd_parameters_shardings_size(): "
-      << module.get()->ToProto().spmd_parameters_shardings_size() << std::endl;
-
   return module.get()->ToProto();
 }
 

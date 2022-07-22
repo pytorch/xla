@@ -26,8 +26,13 @@ class PjRtComputationClient : public ComputationClient {
   std::vector<DataPtr> TransferToServer(
       absl::Span<const TensorSource> tensors) override;
 
+<<<<<<< HEAD
   DataPtr TransferShardsToServer(absl::Span<const TensorSource> tensor_shards,
                                  std::string device, xla::Shape shape) override;
+=======
+  DataPtr TransferShardsToServer(
+      absl::Span<const TensorSource> tensor_shards) override;
+>>>>>>> 7fcceb34 (* Add ShardingUtil::InputHandler for input sharding)
 
   std::vector<Literal> TransferFromServer(
       absl::Span<const DataPtr> handles) override;

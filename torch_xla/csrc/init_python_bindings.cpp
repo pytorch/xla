@@ -1429,6 +1429,9 @@ void InitXlaModuleBindings(py::module m) {
       }
     }
 
+    // TODO(yeounoh) XLATensor may not have the device data (xla_data).
+    // If it does, delete and uploads the sharded tensor to the devices.
+    // Initiating the data transfer here before tracing is more efficieint.
     XLATensorPtr xtensor = bridge::GetXlaTensor(input);
     auto sharding_spec = std::make_shared<XLATensor::ShardingSpec>(sharding);
     xtensor->SetShardingSpec(*sharding_spec);
@@ -1444,7 +1447,7 @@ void InitXlaModuleBindings(py::module m) {
       auto hlo_sharding = xla::HloSharding::FromProto(sharding_spec->sharding);
       return hlo_sharding->ToString();
     }
-    return std::string();
+    return "";
   });
   m.def("_xla_partitioning_pass",
         [](const std::vector<at::Tensor>& tensors, int64_t num_replicas,
