@@ -172,22 +172,6 @@ torch::lazy::NodePtr LogSigmoid(const torch::lazy::Value& input) {
                    GetXlaShape(input), std::move(lower_fn), /*num_outputs=*/2);
 }
 
-torch::lazy::NodePtr LogSigmoidBackward(const torch::lazy::Value& grad_output,
-                                        const torch::lazy::Value& input,
-                                        const torch::lazy::Value& buffer) {
-  auto lower_fn = [](const XlaNode& node,
-                     LoweringContext* loctx) -> XlaOpVector {
-    xla::XlaOp xla_grad_output = loctx->GetOutputOp(node.operand(0));
-    xla::XlaOp xla_input = loctx->GetOutputOp(node.operand(1));
-    xla::XlaOp xla_buffer = loctx->GetOutputOp(node.operand(2));
-    return node.ReturnOp(
-        BuildLogSigmoidBackward(xla_grad_output, xla_input, xla_buffer), loctx);
-  };
-  return GenericOp(torch::lazy::OpKind(at::aten::log_sigmoid_backward),
-                   {grad_output, input, buffer}, GetXlaShape(input),
-                   std::move(lower_fn));
-}
-
 torch::lazy::NodePtr SiLU(const torch::lazy::Value& input) {
   auto lower_fn = [](const XlaNode& node,
                      LoweringContext* loctx) -> XlaOpVector {

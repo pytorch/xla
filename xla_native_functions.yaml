@@ -27,6 +27,8 @@ full_codegen:
   - logical_not
   - logical_or
   - logical_xor
+  - log_sigmoid_backward
+  - log_sigmoid_forward
   - maximum
   - minimum
   - reciprocal
@@ -183,8 +185,6 @@ supported:
   - log1p
   - log2
   - log10
-  - log_sigmoid_backward
-  - log_sigmoid_forward
   - logsumexp
   - lt.Scalar
   - lt.Tensor
