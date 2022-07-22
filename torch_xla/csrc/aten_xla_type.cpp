@@ -1310,12 +1310,6 @@ at::Tensor XLANativeFunctions::expand(const at::Tensor& self,
       bridge::GetXlaTensor(self), torch::lazy::ToVector<int64_t>(size)));
 }
 
-at::Tensor XLANativeFunctions::expm1(const at::Tensor& self) {
-  XLA_FN_COUNTER("xla::");
-  return bridge::AtenFromXlaTensor(
-      XLATensor::expm1(bridge::GetXlaTensor(self)));
-}
-
 at::Tensor& XLANativeFunctions::exponential_(
     at::Tensor& self, double lambd, c10::optional<at::Generator> generator) {
   XLA_FN_COUNTER("xla::");

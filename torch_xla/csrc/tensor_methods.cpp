@@ -1303,10 +1303,6 @@ XLATensorPtr XLATensor::expand(const XLATensorPtr& input,
       GetExpandDimensions(input_shape.get(), std::move(size))));
 }
 
-XLATensorPtr XLATensor::expm1(const XLATensorPtr& input) {
-  return input->CreateFrom(Expm1(input->GetIrValue()));
-}
-
 void XLATensor::exponential_(XLATensorPtr& input, double lambd) {
   auto input_shape = input->shape();
   input->SetInPlaceIrValue(torch::lazy::MakeNode<Exponential>(

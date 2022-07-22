@@ -15,6 +15,7 @@ full_codegen:
   - erfc
   - erfinv
   - exp
+  - expm1
   - floor
   - inverse
   - hardsigmoid
@@ -139,7 +140,6 @@ supported:
   - eq.Scalar
   - eq.Tensor
   - expand
-  - expm1
   - exponential_
   - eye.m_out
   - eye.out

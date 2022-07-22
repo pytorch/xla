@@ -78,6 +78,11 @@ torch_xla::XlaOpVector Exp::Lower(LoweringContext* loctx) const {
   return ReturnOp(xla::Exp(xla_input), loctx);
 }
 
+torch_xla::XlaOpVector Expm1::Lower(LoweringContext* loctx) const {
+  xla::XlaOp xla_input = loctx->GetOutputOp(operand(0));
+  return ReturnOp(xla::Expm1(xla_input), loctx);
+}
+
 torch_xla::XlaOpVector Floor::Lower(LoweringContext* loctx) const {
   xla::XlaOp xla_input = loctx->GetOutputOp(operand(0));
   return ReturnOp(xla::Floor(xla_input), loctx);
