@@ -21,6 +21,16 @@ Generic::Generic(torch::lazy::OpKind op,
       lower_fn_(std::move(lower_fn)),
       hash_seed_(hash_seed) {}
 
+Generic::Generic(torch::lazy::OpKind op,
+                 c10::ArrayRef<torch::lazy::Value> operands,
+                 std::vector<torch::lazy::Shape>&& shapes,
+                 const std::function<xla::Shape()>& shape_fn, LowerFn lower_fn,
+                 size_t num_outputs, torch::lazy::hash_t hash_seed)
+    : XlaNode(std::move(op), operands, std::move(shapes), shape_fn, num_outputs,
+              hash_seed),
+      lower_fn_(std::move(lower_fn)),
+      hash_seed_(hash_seed) {}
+
 Generic::Generic(torch::lazy::OpKind op, xla::Shape shape, LowerFn lower_fn,
                  size_t num_outputs, torch::lazy::hash_t hash_seed)
     : XlaNode(std::move(op), std::move(shape), num_outputs, hash_seed),
