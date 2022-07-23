@@ -263,19 +263,6 @@ TEST_F(TensorTest, TestViewOfViewMod) {
   });
 }
 
-TEST_F(TensorTest, TestLogSoftmax) {
-  at::Tensor input = at::rand({5, 3, 4, 2}, at::TensorOptions(at::kFloat));
-  ForEachDevice([&](const torch::lazy::BackendDevice& device) {
-    XLATensorPtr dev_input = XLATensor::Create(input, device);
-    for (int dim = 0; dim < input.dim(); ++dim) {
-      at::Tensor output = input.log_softmax(dim);
-      XLATensorPtr dev_output =
-          XLATensor::log_softmax(dev_input, dim, c10::nullopt);
-      AllClose(output, dev_output, /*rtol=*/1e-3);
-    }
-  });
-}
-
 TEST_F(TensorTest, TestMaxPool2D) {
   at::Tensor input = at::rand({1, 64, 112, 112}, at::TensorOptions(at::kFloat));
   int kernel_size = 3;

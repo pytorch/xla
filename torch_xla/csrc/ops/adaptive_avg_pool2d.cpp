@@ -21,16 +21,13 @@ xla::Shape NodeOutputShape(const torch::lazy::Value& input,
 }  // namespace
 
 AdaptiveAvgPool2d::AdaptiveAvgPool2d(const torch::lazy::Value& input,
-                                     std::vector<int64_t> output_size)
+                                     std::vector<int64_t> output_size,
+                                     std::vector<torch::lazy::Shape>&& shapes)
     : XlaNode(torch::lazy::OpKind(at::aten::adaptive_avg_pool2d), {input},
+              std::move(shapes),
               [&]() { return NodeOutputShape(input, output_size); },
               /*num_outputs=*/1, torch::lazy::MHash(output_size)),
       output_size_(std::move(output_size)) {}
-
-torch::lazy::NodePtr AdaptiveAvgPool2d::Clone(
-    torch::lazy::OpList operands) const {
-  return torch::lazy::MakeNode<AdaptiveAvgPool2d>(operands.at(0), output_size_);
-}
 
 XlaOpVector AdaptiveAvgPool2d::Lower(LoweringContext* loctx) const {
   xla::XlaOp input = loctx->GetOutputOp(operand(0));

@@ -1,5 +1,6 @@
 #include <ATen/ExpandUtils.h>
 #include <ATen/FunctionalTensorWrapper.h>
+#include <ATen/MetaFunctions.h>
 #include <ATen/NativeFunctions.h>
 #include <ATen/Operators.h>
 #include <ATen/native/BinaryOps.h>
@@ -12,6 +13,7 @@
 #include "tensorflow/compiler/xla/xla_client/metrics.h"
 #include "tensorflow/compiler/xla/xla_client/sys_util.h"
 #include "tensorflow/compiler/xla/xla_client/util.h"
+#include "torch/csrc/lazy/core/shape_inference.h"
 #include "torch/csrc/lazy/core/tensor_util.h"
 #include "torch/csrc/lazy/core/util.h"
 #include "torch_xla/csrc/aten_autograd_ops.h"
@@ -43,6 +45,38 @@
 
 namespace torch_xla {
 namespace {
+
+at::Tensor to_meta(const at::Tensor& tensor) {
+  // undefined tensors can't be converted to the meta device, since they don't
+  // have sizes/strides
+  if (!tensor.defined()) return tensor;
+  auto out = at::native::empty_strided_meta(
+      tensor.sizes(), tensor.strides(),
+      /*dtype=*/c10::make_optional(tensor.scalar_type()),
+      /*layout=*/c10::make_optional(tensor.layout()),
+      /*device=*/c10::make_optional(c10::Device(c10::kMeta)),
+      /*pin_memory=*/c10::nullopt);
+  // needs to handle wrapped numbers, so dtype promotion works properly.
+  if (tensor.unsafeGetTensorImpl()->is_wrapped_number()) {
+    out.unsafeGetTensorImpl()->set_wrapped_number(true);
+  }
+  return out;
+}
+c10::optional<at::Tensor> to_meta(const c10::optional<at::Tensor>& tensor) {
+  if (tensor.has_value()) {
+    return to_meta(*tensor);
+  }
+  return c10::nullopt;
+}
+
+std::vector<at::Tensor> to_meta(const at::TensorList& t_list) {
+  std::vector<at::Tensor> outs;
+  outs.reserve(t_list.size());
+  for (const auto& i : c10::irange(t_list.size())) {
+    outs.push_back(to_meta(t_list[i]));
+  }
+  return outs;
+}
 
 torch::lazy::BackendDevice GetXlaDeviceOrCurrent(
     const c10::optional<c10::Device>& device) {
@@ -331,8 +365,10 @@ at::Tensor XLANativeFunctions::_adaptive_avg_pool2d(
         &xla_cpu_fallback, ATEN_OP(_adaptive_avg_pool2d)>::call(self,
                                                                 output_size);
   }
+  auto shapes =
+      torch::lazy::compute_shape__adaptive_avg_pool2d(self, output_size);
   return bridge::AtenFromXlaTensor(XLATensor::_adaptive_avg_pool2d(
-      bridge::GetXlaTensor(self), output_size_list));
+      bridge::GetXlaTensor(self), output_size_list, std::move(shapes)));
 }
 
 at::Tensor XLANativeFunctions::_adaptive_avg_pool2d_backward(
@@ -347,8 +383,11 @@ at::Tensor XLANativeFunctions::_adaptive_avg_pool2d_backward(
         &xla_cpu_fallback,
         ATEN_OP(_adaptive_avg_pool2d_backward)>::call(grad_output, self);
   }
+  auto shapes = torch::lazy::compute_shape__adaptive_avg_pool2d_backward(
+      grad_output, self);
   return bridge::AtenFromXlaTensor(XLATensor::_adaptive_avg_pool2d_backward(
-      bridge::GetXlaTensor(grad_output), bridge::GetXlaTensor(self)));
+      bridge::GetXlaTensor(grad_output), bridge::GetXlaTensor(self),
+      std::move(shapes)));
 }
 
 std::tuple<at::Tensor, at::Tensor> XLANativeFunctions::adaptive_max_pool2d(
@@ -478,10 +517,15 @@ at::Tensor& XLANativeFunctions::_index_put_impl_(
 }
 
 at::Tensor XLANativeFunctions::_log_softmax(const at::Tensor& self, int64_t dim,
-                                            bool /* half_to_float */) {
+                                            bool half_to_float) {
   XLA_FN_COUNTER("xla::");
-  return bridge::AtenFromXlaTensor(
-      XLATensor::log_softmax(bridge::GetXlaTensor(self), dim, c10::nullopt));
+  auto self_meta = to_meta(self);
+  auto out_meta = at::meta::_log_softmax(self_meta, dim, half_to_float);
+
+  std::vector<torch::lazy::Shape> shapes{
+      torch::lazy::Shape(out_meta.scalar_type(), out_meta.sizes().vec())};
+  return bridge::AtenFromXlaTensor(XLATensor::log_softmax(
+      bridge::GetXlaTensor(self), dim, c10::nullopt, std::move(shapes)));
 }
 
 at::Tensor XLANativeFunctions::_log_softmax_backward_data(

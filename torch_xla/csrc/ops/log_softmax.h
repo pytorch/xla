@@ -11,9 +11,8 @@ namespace torch_xla {
 class LogSoftmax : public XlaNode {
  public:
   LogSoftmax(const torch::lazy::Value& input, int64_t dim,
-             c10::optional<at::ScalarType> dtype);
-
-  torch::lazy::NodePtr Clone(torch::lazy::OpList operands) const override;
+             c10::optional<at::ScalarType> dtype,
+             std::vector<torch::lazy::Shape>&& shapes);
 
   XlaOpVector Lower(LoweringContext* loctx) const override;
 
