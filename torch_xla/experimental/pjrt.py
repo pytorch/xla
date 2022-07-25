@@ -11,6 +11,7 @@ import torch_xla
 import torch_xla.core.xla_env_vars as xenv
 import torch_xla.core.xla_model as xm
 import torch_xla.utils.utils as xu
+from torch_xla.experimental import tpu
 
 _PJRT_ORDINALS = threading.local()
 
@@ -44,19 +45,6 @@ def num_visible_tpu_chips(default: int = 4) -> int:
   visible_devices = xu.getenv_as(xenv.TPU_VISIBLE_DEVICES, str)
 
   return len(visible_devices.split(',')) if visible_devices else default
-
-
-def configure_tpu_topology(rank: int, processes: int, base_port=8476) -> None:
-  """Sets default TPU topology environment variables for a single TPU host."""
-  ports = list(range(base_port, base_port + processes))
-  os.environ.setdefault(xenv.TPU_CHIPS_PER_PROCESS_BOUNDS, '1,1,1')
-  os.environ.setdefault(xenv.TPU_PROCESS_BOUNDS, '2,2,1')
-  os.environ.setdefault(xenv.TPU_PROCESS_ADDRESSES,
-                        ','.join(f'localhost:{port}' for port in ports))
-
-  os.environ.setdefault(xenv.TPU_VISIBLE_DEVICES, str(rank))
-  os.environ.setdefault(xenv.TPU_PROCESS_PORT, str(ports[rank]))
-  os.environ.setdefault(xenv.CLOUD_TPU_TASK_ID, str(rank))
 
 
 def requires_pjrt(fn: FN) -> FN:
@@ -141,13 +129,13 @@ def addressable_device_count() -> int:
 
 
 @requires_pjrt
-def run_thread_per_device(rank: int, processes: int,
+def run_thread_per_device(process: int, local_processes: int,
                           fn: Callable[..., R]) -> Dict[int, R]:
   """Runs `fn` in a separate thread on each visible device.
 
   Args:
-    rank: rank of current process
-    processes: number of processes on this host
+    process: rank of current process
+    local_processes: number of processes on this host
     fn: Function to run on all devices
 
   Returns:
@@ -155,7 +143,7 @@ def run_thread_per_device(rank: int, processes: int,
     result of calling `fn`.
   """
   if device_type() == 'TPU':
-    configure_tpu_topology(rank, processes)
+    tpu.configure_topology(process, local_processes)
 
   xm.set_replication(xm.xla_device(), xm.get_xla_supported_devices())
   threads = len(xm.get_xla_supported_devices())
@@ -165,8 +153,8 @@ def run_thread_per_device(rank: int, processes: int,
     @functools.wraps(fn)
     def wrapper(*args, **kwargs):
       # Assumes same number of threads per process
-      set_global_ordinal(rank * threads + device_index)
-      set_local_ordinal(rank * threads + device_index)
+      set_global_ordinal(tpu.task_id() * threads + device_index)
+      set_local_ordinal(process * threads + device_index)
 
       return fn(*args, **kwargs)
 
