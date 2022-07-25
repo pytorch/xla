@@ -54,7 +54,7 @@ if [[ ! -z "$BAZEL_JOBS" ]]; then
   MAX_JOBS="--jobs=$BAZEL_JOBS"
 fi
 
-OPTS+=(--action_env=BAZEL_CXXOPTS="-std=c++17") #(--cxxopt="-std=c++17")
+OPTS+=(--action_env=BAZEL_CXXOPTS="-std=c++17")
 if [[ $(basename -- $CC) =~ ^clang ]]; then
   OPTS+=(--cxxopt="-Wno-c++14-narrowing")
 fi
