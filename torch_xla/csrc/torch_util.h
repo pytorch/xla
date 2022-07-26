@@ -5,8 +5,33 @@
 #include <c10/util/Optional.h>
 
 #include "tensorflow/compiler/xla/shape.h"
+#include "torch/csrc/lazy/core/dynamic_ir.h"
 #include "torch/csrc/lazy/core/hash.h"
+#include "torch/csrc/lazy/core/tensor.h"
+#include "torch/csrc/lazy/core/util.h"
+
 namespace torch_xla {
+
+// Unpack SymInt objects into their building blocks
+struct SymIntElements {
+ public:
+  SymIntElements(c10::SymInt& size) { SetSymIntNodeElements(size); }
+  SymIntElements(c10::SymIntArrayRef& size) {
+    std::vector<c10::SymInt> _sizes = torch::lazy::ToVector<c10::SymInt>(size);
+    for (auto& _size : _sizes) {
+      SetSymIntNodeElements(_size);
+    }
+  }
+  std::vector<torch::lazy::NodePtr> GetNodes() { return size_nodes_; }
+  std::vector<int64_t> GetUpperBounds() { return upper_bounds_; }
+  std::vector<bool> GetDynamicDims() { return dynamic_dims_; }
+
+ private:
+  void SetSymIntNodeElements(c10::SymInt& size);
+  std::vector<torch::lazy::NodePtr> size_nodes_;
+  std::vector<int64_t> upper_bounds_;
+  std::vector<bool> dynamic_dims_;
+};
 
 // Return at::ScalarType from at::Scalar
 at::ScalarType GetScalarType(const at::Scalar& scalar);
