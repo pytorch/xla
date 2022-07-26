@@ -29,6 +29,16 @@ xla::Shape AminOutputShape(const torch::lazy::Value& input,
 
 xla::Shape AllOutputShape(const torch::lazy::Value& input);
 
+xla::Shape AddcdivOutputShape(const torch::lazy::Value& input,
+                              const torch::lazy::Value& t1,
+                              const torch::lazy::Value& t2,
+                              const torch::lazy::Value& value);
+
+xla::Shape AddcmulOutputShape(const torch::lazy::Value& input,
+                              const torch::lazy::Value& t1,
+                              const torch::lazy::Value& t2,
+                              const torch::lazy::Value& value);
+
 xla::Shape AsinOutputShape(const torch::lazy::Value& input);
 
 xla::Shape AsinhOutputShape(const torch::lazy::Value& input);

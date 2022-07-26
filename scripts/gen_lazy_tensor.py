@@ -7,6 +7,7 @@ from torchgen.model import NativeFunction, NativeFunctionsGroup
 from torchgen.api.types import (
     BaseCType,
     OptionalCType,
+    scalarT,
     VectorCType,
     boolT,
     kernel_signature,
@@ -50,7 +51,7 @@ class GenXlaLazyIR(GenLazyIR):
     base_ctor_value_args = ", ".join(base_ctor_value_args_list)
 
     shape_fn_inputs_list = [
-        f"{a.name}" for a in schema.positional_args
+        f"{a.name}" for a in (schema.positional_args + schema.keyword_args)
         if (a.is_lazy_value or isinstance(a.lazy_type, VectorCType) or
             is_boolean_dtype(a.lazy_type) or a.name == 'reduction')
     ]
