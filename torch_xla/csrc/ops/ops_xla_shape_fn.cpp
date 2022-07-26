@@ -42,6 +42,13 @@ xla::Shape AdaptiveAvgPool2dOutputShape(const torch::lazy::Value& input,
       [output_size](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
     XLA_CHECK_EQ(operands.size(), 1);
     return BuildAdaptiveAvgPool2d(operands[0], output_size);
+  }
+}
+xla::Shape AmaxOutputShape(const torch::lazy::Value& input,
+                           absl::Span<const int64_t> dim, bool keepdim) {
+  auto lower_for_shape_fn =
+      [&](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
+    return BuildMaxInDims(operands[0], dim, keepdim);
   };
   return InferOutputShape({GetXlaShape(input)}, lower_for_shape_fn);
 }
@@ -64,6 +71,14 @@ xla::Shape AdaptiveAvgPool3dOutputShape(const torch::lazy::Value& input,
       [output_size](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
     XLA_CHECK_EQ(operands.size(), 1);
     return BuildAdaptiveAvgPool3d(operands[0], output_size);
+  }
+}
+
+xla::Shape AminOutputShape(const torch::lazy::Value& input,
+                           absl::Span<const int64_t> dim, bool keepdim) {
+  auto lower_for_shape_fn =
+      [&](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
+    return BuildMinInDims(operands[0], dim, keepdim);
   };
   return InferOutputShape({GetXlaShape(input)}, lower_for_shape_fn);
 }

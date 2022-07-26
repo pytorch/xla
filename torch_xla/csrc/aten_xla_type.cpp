@@ -676,22 +676,6 @@ at::Tensor XLANativeFunctions::all(const at::Tensor& self, int64_t dim,
       XLATensor::all_dim(bridge::GetXlaTensor(self), {dim}, keepdim));
 }
 
-at::Tensor XLANativeFunctions::amax(const at::Tensor& self, at::IntArrayRef dim,
-                                    bool keepdim) {
-  XLA_FN_COUNTER("xla::");
-  auto xdim = XlaHelpers::I64List(dim);
-  return bridge::AtenFromXlaTensor(
-      XLATensor::amax(bridge::GetXlaTensor(self), std::move(xdim), keepdim));
-}
-
-at::Tensor XLANativeFunctions::amin(const at::Tensor& self, at::IntArrayRef dim,
-                                    bool keepdim) {
-  XLA_FN_COUNTER("xla::");
-  auto xdim = XlaHelpers::I64List(dim);
-  return bridge::AtenFromXlaTensor(
-      XLATensor::amin(bridge::GetXlaTensor(self), std::move(xdim), keepdim));
-}
-
 at::Tensor XLANativeFunctions::any(const at::Tensor& self) {
   XLA_FN_COUNTER("xla::");
   XLATensorPtr self_tensor = bridge::GetXlaTensor(self);

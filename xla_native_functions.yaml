@@ -5,6 +5,8 @@ full_codegen:
   - acosh
   - abs
   - all
+  - amax
+  - amin
   - asin
   - asinh
   - atan
@@ -93,8 +95,6 @@ supported:
   - addmm
   - alias
   - all.dim
-  - amax
-  - amin
   - any
   - any.dim
   - arange.start_out
