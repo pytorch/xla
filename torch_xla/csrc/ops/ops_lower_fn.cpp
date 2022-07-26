@@ -5,6 +5,7 @@
 #include "torch_xla/csrc/elementwise.h"
 #include "torch_xla/csrc/helpers.h"
 #include "torch_xla/csrc/matrix.h"
+#include "torch_xla/csrc/pooling.h"
 
 namespace torch_xla {
 
@@ -21,6 +22,20 @@ torch_xla::XlaOpVector Acos::Lower(LoweringContext* loctx) const {
 torch_xla::XlaOpVector Acosh::Lower(LoweringContext* loctx) const {
   xla::XlaOp xla_input = loctx->GetOutputOp(operand(0));
   return ReturnOp(xla::Acosh(xla_input), loctx);
+}
+
+torch_xla::XlaOpVector AdaptiveAvgPool2d::Lower(LoweringContext* loctx) const {
+  xla::XlaOp input = loctx->GetOutputOp(operand(0));
+  return ReturnOp(BuildAdaptiveAvgPool2d(input, output_size), loctx);
+}
+
+torch_xla::XlaOpVector AdaptiveAvgPool2dBackward::Lower(
+    LoweringContext* loctx) const {
+  xla::XlaOp grad_output = loctx->GetOutputOp(operand(0));
+  xla::XlaOp input = loctx->GetOutputOp(operand(1));
+  return ReturnOp(BuildAdaptiveAvgPool2dBackward(
+                      /*out_backprop=*/grad_output, /*input=*/input),
+                  loctx);
 }
 
 torch_xla::XlaOpVector Asin::Lower(LoweringContext* loctx) const {

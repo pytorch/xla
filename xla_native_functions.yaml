@@ -42,6 +42,9 @@ full_codegen:
   - tanh
   - tril
   - triu
+ir_gen:
+  - _adaptive_avg_pool2d
+  - _adaptive_avg_pool2d_backward
 supported:
   - __ilshift__.Scalar
   - __ilshift__.Tensor

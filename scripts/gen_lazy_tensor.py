@@ -44,12 +44,18 @@ class GenXlaLazyIR(GenLazyIR):
             f"Unsupported type ({arg.lazy_type}) - add support if necessary")
     base_ctor_value_args = ", ".join(base_ctor_value_args_list)
 
+    shape_fn_inputs_list = [
+        f"{a.name}" for a in schema.positional_args
+        if (a.is_lazy_value or isinstance(a.lazy_type, VectorCType))
+    ]
+    shape_fn_inputs = ", ".join(shape_fn_inputs_list)
+
     scalar_args = schema.filtered_args(values=False, scalars=True)
     scalar_hashes = ", ".join([f"{a.name}" for a in scalar_args])
 
     return f"""{self.node_base}(torch::lazy::OpKind({aten_symbol(schema)}),
               {{{base_ctor_value_args}}}, std::move(shapes),
-              [&]() {{ return {schema.node_name}OutputShape({base_ctor_value_args}); }},
+              [&]() {{ return {schema.node_name}OutputShape({shape_fn_inputs}); }},
               /* num_outputs */ {len(schema.returns)},
               torch::lazy::MHash({scalar_hashes}))"""
 
