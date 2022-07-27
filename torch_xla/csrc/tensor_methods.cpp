@@ -21,7 +21,6 @@
 #include "torch_xla/csrc/layout_manager.h"
 #include "torch_xla/csrc/lowering_context.h"
 #include "torch_xla/csrc/ops/adam_optimizer_step.h"
-#include "torch_xla/csrc/ops/adaptive_avg_pool2d.h"
 #include "torch_xla/csrc/ops/adaptive_avg_pool3d.h"
 #include "torch_xla/csrc/ops/adaptive_max_pool2d.h"
 #include "torch_xla/csrc/ops/all.h"
@@ -628,7 +627,7 @@ XLATensorPtr XLATensor::_adaptive_avg_pool2d(
 XLATensorPtr XLATensor::_adaptive_avg_pool2d_backward(
     const XLATensorPtr& grad_output, const XLATensorPtr& input,
     std::vector<torch::lazy::Shape>&& shapes) {
-  return input->CreateFrom(AdaptiveAvgPool2dBackward(
+  return input->CreateFrom(torch::lazy::MakeNode<AdaptiveAvgPool2dBackward>(
       grad_output->GetIrValue(), input->GetIrValue(), std::move(shapes)));
 }
 
