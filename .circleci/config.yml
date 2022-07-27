@@ -27,7 +27,8 @@ launch_docker_and_build: &launch_docker_and_build
     docker push ${ECR_DOCKER_IMAGE_BASE}:v0.4 >/dev/null
     sudo pkill -SIGHUP dockerd
     # To enable remote caching, use SCCACHE_BUCKET=${SCCACHE_BUCKET}
-    echo "declare -x SCCACHE_BUCKET=${LOCAL_BUCKET}" >> /home/circleci/project/env
+    # To disable remote caching, use SCCACHE_BUCKET=${LOCAL_BUCKET}
+    echo "declare -x SCCACHE_BUCKET=${SCCACHE_BUCKET}" >> /home/circleci/project/env
     echo "declare -x SCCACHE_CACHE_SIZE=${SCCACHE_CACHE_SIZE}" >> /home/circleci/project/env
     echo "declare -x AWS_ACCESS_KEY_ID=${CIRCLECI_AWS_ACCESS_KEY_FOR_SCCACHE_AND_XLA_BAZEL_S3_BUCKET_V1}" >> /home/circleci/project/env
     echo "declare -x AWS_SECRET_ACCESS_KEY=${CIRCLECI_AWS_SECRET_KEY_FOR_SCCACHE_AND_XLA_BAZEL_S3_BUCKET_V1}" >> /home/circleci/project/env

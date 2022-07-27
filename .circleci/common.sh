@@ -64,7 +64,6 @@ function install_deps_pytorch_xla() {
   # Using the Ninja generator requires CMake version 3.13 or greater
   pip install cmake>=3.13 --upgrade
 
-  # Bazel doesn't work with sccache gcc. https://github.com/bazelbuild/bazel/issues/3642
   sudo apt-get -qq update
 
   sudo apt-get -qq install npm nodejs
@@ -88,16 +87,15 @@ function install_deps_pytorch_xla() {
   # Use cloud cache to build when available.
   if [[ "$USE_CACHE" == 1 ]]; then
     # Install bazels3cache for cloud cache
-    # TODO(yeounoh) npm install -g bazels3cache on Linux 5.11.0-1022-aws
-    # USE_CACHE is disabled for now. Upgrade npm to the latest could work:
-    #  sudo npm install -g npm
+    sudo npm install -g n
+    sudo n lts
     sudo npm install -g bazels3cache
-    BAZELS3CACHE="$(which bazels3cache)"
+    BAZELS3CACHE="$(which /usr/local/bin/bazels3cache)"
     if [ -z "${BAZELS3CACHE}" ]; then
       echo "Unable to find bazels3cache..."
       exit 1
     fi
-    bazels3cache --bucket=${XLA_CLANG_CACHE_S3_BUCKET_NAME} --maxEntrySizeBytes=0 --logging.level=verbose
+    /usr/local/bin/bazels3cache --bucket=${XLA_CLANG_CACHE_S3_BUCKET_NAME} --maxEntrySizeBytes=0 --logging.level=verbose
     sed -i '/bazel build/ a --remote_http_cache=http://localhost:7777 \\' $XLA_DIR/build_torch_xla_libs.sh
   fi
 }
