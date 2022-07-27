@@ -160,10 +160,6 @@ torch::lazy::NodePtr MatMul(const torch::lazy::Value& lhs,
 torch::lazy::NodePtr AdaptiveMaxPool2dBackward(
     const torch::lazy::Value& grad_output, const torch::lazy::Value& input);
 
-torch::lazy::NodePtr AdaptiveAvgPool2dBackward(
-    const torch::lazy::Value& grad_output, const torch::lazy::Value& input,
-    std::vector<torch::lazy::Shape>&& shapes);
-
 torch::lazy::NodePtr AdaptiveAvgPool3dBackward(
     const torch::lazy::Value& grad_output, const torch::lazy::Value& input);
 
