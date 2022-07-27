@@ -2420,24 +2420,6 @@ XLATensorPtr XLATensor::select(const XLATensorPtr& input, int64_t dim,
   return tensor_ops::Select(input, dim, index);
 }
 
-XLATensorPtr XLATensor::selu(const XLATensorPtr& input) {
-  return input->CreateFrom(Selu(input->GetIrValue()));
-}
-
-void XLATensor::selu_(XLATensorPtr& input) {
-  input->SetInPlaceIrValue(Selu(input->GetIrValue()));
-}
-
-XLATensorPtr XLATensor::silu(const XLATensorPtr& input) {
-  return input->CreateFrom(SiLU(input->GetIrValue()));
-}
-
-XLATensorPtr XLATensor::silu_backward(XLATensorPtr& grad_output,
-                                      XLATensorPtr& input) {
-  return input->CreateFrom(
-      SiLUBackward(grad_output->GetIrValue(), input->GetIrValue()));
-}
-
 XLATensorPtr XLATensor::sigmoid(const XLATensorPtr& input) {
   return input->CreateFrom(Sigmoid(input->GetIrValue()));
 }

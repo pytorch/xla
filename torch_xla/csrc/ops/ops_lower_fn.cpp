@@ -216,6 +216,11 @@ torch_xla::XlaOpVector Rsqrt::Lower(LoweringContext* loctx) const {
   return ReturnOp(xla::Rsqrt(xla_input), loctx);
 }
 
+torch_xla::XlaOpVector Selu::Lower(LoweringContext* loctx) const {
+  xla::XlaOp xla_input = loctx->GetOutputOp(operand(0));
+  return ReturnOp(BuildSelu(xla_input), loctx);
+}
+
 torch_xla::XlaOpVector Sgn::Lower(LoweringContext* loctx) const {
   xla::XlaOp xla_input = loctx->GetOutputOp(operand(0));
   return ReturnOp(BuildSgn(xla_input), loctx);
@@ -224,6 +229,17 @@ torch_xla::XlaOpVector Sgn::Lower(LoweringContext* loctx) const {
 torch_xla::XlaOpVector Sign::Lower(LoweringContext* loctx) const {
   xla::XlaOp xla_input = loctx->GetOutputOp(operand(0));
   return ReturnOp(BuildSign(xla_input), loctx);
+}
+
+torch_xla::XlaOpVector Silu::Lower(LoweringContext* loctx) const {
+  xla::XlaOp xla_input = loctx->GetOutputOp(operand(0));
+  return ReturnOp(xla_input * BuildSigmoid(xla_input), loctx);
+}
+
+torch_xla::XlaOpVector SiluBackward::Lower(LoweringContext* loctx) const {
+  xla::XlaOp xla_grad_output = loctx->GetOutputOp(operand(0));
+  xla::XlaOp xla_input = loctx->GetOutputOp(operand(1));
+  return ReturnOp(BuildSiLUBackward(xla_grad_output, xla_input), loctx);
 }
 
 torch_xla::XlaOpVector Sin::Lower(LoweringContext* loctx) const {

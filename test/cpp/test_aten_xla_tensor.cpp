@@ -6386,8 +6386,8 @@ TEST_F(AtenXlaTensorTest, TestSeluInPlace) {
     AllClose(input, xla_input);
   });
 
+  // selu_ uses elu_ instead of selu
   ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
-  ExpectCounterChanged("xla::selu_", cpp_test::GetIgnoredCounters());
 }
 
 TEST_F(AtenXlaTensorTest, TestCelu) {

@@ -34,8 +34,11 @@ full_codegen:
   - reciprocal
   - round
   - rsqrt
+  - selu
   - sgn
   - sign
+  - silu
+  - silu_backward
   - sin
   - sinh
   - tan
@@ -271,12 +274,8 @@ supported:
   - scatter.value_reduce
   - scatter_add
   - select.int
-  - selu
-  - selu_
   - sigmoid
   - sigmoid_backward
-  - silu
-  - silu_backward
   - slice.Tensor
   - slogdet
   - smooth_l1_loss
