@@ -8,6 +8,9 @@ PYTORCH_DIR=/tmp/pytorch
 XLA_DIR=$PYTORCH_DIR/xla
 clone_pytorch $PYTORCH_DIR $XLA_DIR
 
+# Use bazel cache
+USE_CACHE=1
+
 SCCACHE="$(which sccache)"
 if [ -z "${SCCACHE}" ]; then
   echo "Unable to find sccache..."
@@ -30,7 +33,7 @@ pushd $PYTORCH_DIR
 
 checkout_torch_pin_if_available
 
-install_deps_pytorch_xla $XLA_DIR
+install_deps_pytorch_xla $XLA_DIR $USE_CACHE
 
 apply_patches
 
