@@ -17,9 +17,14 @@ function download_llvm_raw_archive() {
         https://github.com/llvm/llvm-project/archive/${LLVM_COMMIT}.tar.gz \
         --output ${LLVM_COMMIT}.tar.gz)"
     fi
-    if [ "${http_code}" -eq "200" ]; then
-      gsutil cp "${LLVM_COMMIT}.tar.gz" "gs://tpu-pytorch/llvm-raw/${LLVM_COMMIT}.tar.gz"
+    if [ "${http_code}" -ne "200" ]; then
+      # This means that the upstream will likely fail to connect to the existing mirrors
+      # as well as the secondary cache. Should block here, so we can manually address the problem.
+      echo "mirror.tensorflow.org/github.com/llvm/ is not available."
+      echo "If the issue persists, plesase report at github.com/pytorch/xla"
+      exit 1
     fi
+    gsutil cp "${LLVM_COMMIT}.tar.gz" "gs://tpu-pytorch/llvm-raw/${LLVM_COMMIT}.tar.gz"
   fi
   rm -rf xla
 }
