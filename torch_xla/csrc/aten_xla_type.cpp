@@ -1975,13 +1975,16 @@ at::Tensor XLANativeFunctions::mean(const at::Tensor& self,
       /*keep_reduced_dimensions=*/false, dtype));
 }
 
-at::Tensor XLANativeFunctions::mean(const at::Tensor& self, at::IntArrayRef dim,
-                                    bool keepdim,
+at::Tensor XLANativeFunctions::mean(const at::Tensor& self,
+                                    at::OptionalIntArrayRef dim, bool keepdim,
                                     c10::optional<at::ScalarType> dtype) {
   XLA_FN_COUNTER("xla::");
+  XLATensorPtr self_tensor = bridge::GetXlaTensor(self);
   return bridge::AtenFromXlaTensor(XLATensor::mean(
-      bridge::GetXlaTensor(self), torch::lazy::ToVector<int64_t>(dim),
-      /*keep_reduced_dimensions=*/keepdim, dtype));
+      self_tensor,
+      dim ? torch::lazy::ToVector<int64_t>(*dim)
+          : torch::lazy::Iota<int64_t>(self_tensor->shape().get().rank()),
+      keepdim, dtype));
 }
 
 at::Tensor XLANativeFunctions::min(const at::Tensor& self) {
