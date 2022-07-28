@@ -1,8 +1,5 @@
 #!/bin/bash
 
-set -e
-set -x
-
 # Local llvm cache in case the tensorflow mirror becomes unavailable
 function download_llvm_raw_archive() {
   # Extract the xla pinned tensorflow/third_party/llvm version,
@@ -15,7 +12,14 @@ function download_llvm_raw_archive() {
     http_code="$(curl --fail -L -w '%{http_code}\n' \
       https://storage.googleapis.com/mirror.tensorflow.org/github.com/llvm/llvm-project/archive/${LLVM_COMMIT}.tar.gz \
       --output ${LLVM_COMMIT}.tar.gz)"
-    if [ "${http_code}" -eq "404" ]; then
+    if [ "${http_code}" -ne "200" ]; then
+      http_code="$(curl --fail -L -w '%{http_code}\n' \
+        https://github.com/llvm/llvm-project/archive/${LLVM_COMMIT}.tar.gz \
+        --output ${LLVM_COMMIT}.tar.gz)"
+    fi
+    if [ "${http_code}" -ne "200" ]; then
+      # This means that the upstream will likely fail to connect to the existing mirrors
+      # as well as the secondary cache. Should block here, so we can manually address the problem.
       echo "mirror.tensorflow.org/github.com/llvm/ is not available."
       echo "If the issue persists, plesase report at github.com/pytorch/xla"
       exit 1
