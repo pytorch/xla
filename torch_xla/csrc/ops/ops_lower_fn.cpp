@@ -38,6 +38,20 @@ torch_xla::XlaOpVector AdaptiveAvgPool2dBackward::Lower(
                   loctx);
 }
 
+torch_xla::XlaOpVector AdaptiveAvgPool3d::Lower(LoweringContext* loctx) const {
+  xla::XlaOp input = loctx->GetOutputOp(operand(0));
+  return ReturnOp(BuildAdaptiveAvgPool3d(input, output_size), loctx);
+}
+
+torch_xla::XlaOpVector AdaptiveAvgPool3dBackward::Lower(
+    LoweringContext* loctx) const {
+  xla::XlaOp grad_output = loctx->GetOutputOp(operand(0));
+  xla::XlaOp input = loctx->GetOutputOp(operand(1));
+  xla::XlaOp xla_output = BuildAdaptiveAvgPool3dBackward(
+      /*out_backprop=*/grad_output, /*input=*/input);
+  return ReturnOp(xla_output, loctx);
+}
+
 torch_xla::XlaOpVector Asin::Lower(LoweringContext* loctx) const {
   xla::XlaOp xla_input = loctx->GetOutputOp(operand(0));
   return ReturnOp(xla::Asin(xla_input), loctx);

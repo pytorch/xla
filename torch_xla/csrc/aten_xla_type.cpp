@@ -21,6 +21,7 @@
 #include "torch_xla/csrc/aten_xla_bridge.h"
 #include "torch_xla/csrc/debug_util.h"
 #include "torch_xla/csrc/device.h"
+#include "torch_xla/csrc/generated/LazyIr.h"
 #include "torch_xla/csrc/generated/XLANativeFunctions.h"
 #include "torch_xla/csrc/helpers.h"
 #include "torch_xla/csrc/ops/as_strided.h"
@@ -334,8 +335,17 @@ at::Tensor XLANativeFunctions::_adaptive_avg_pool3d(
         &xla_cpu_fallback, ATEN_OP(_adaptive_avg_pool3d)>::call(self,
                                                                 output_size);
   }
-  return bridge::AtenFromXlaTensor(XLATensor::adaptive_avg_pool3d(
-      bridge::GetXlaTensor(self), output_size_list));
+  auto common_device = torch_xla::bridge::GetXlaDevice(self);
+  XLA_CHECK(common_device);
+  auto shapes =
+      torch::lazy::compute_shape__adaptive_avg_pool3d(self, output_size);
+  XLA_CHECK(shapes.size() == 1);
+  torch::lazy::NodePtr node = torch::lazy::MakeNode<AdaptiveAvgPool3d>(
+      bridge::GetXlaTensor(self)->GetIrValue(),
+      std::vector<int64_t>(output_size.begin(), output_size.end()),
+      std::move(shapes));
+  return torch_xla::bridge::AtenFromXlaTensor(
+      torch_xla::XLATensor::Create(std::move(node), *common_device));
 }
 
 at::Tensor XLANativeFunctions::_adaptive_avg_pool3d_backward(
@@ -351,8 +361,17 @@ at::Tensor XLANativeFunctions::_adaptive_avg_pool3d_backward(
         &xla_cpu_fallback,
         ATEN_OP(_adaptive_avg_pool3d_backward)>::call(grad_output, self);
   }
-  return bridge::AtenFromXlaTensor(XLATensor::adaptive_avg_pool3d_backward(
-      bridge::GetXlaTensor(grad_output), bridge::GetXlaTensor(self)));
+  auto common_device = torch_xla::bridge::GetXlaDevice(grad_output, self);
+  XLA_CHECK(common_device);
+  auto shapes = torch::lazy::compute_shape__adaptive_avg_pool3d_backward(
+      grad_output, self);
+  XLA_CHECK(shapes.size() == 1);
+  torch::lazy::NodePtr node = torch::lazy::MakeNode<AdaptiveAvgPool3dBackward>(
+      bridge::GetXlaTensor(grad_output)->GetIrValue(),
+      bridge::GetXlaTensor(self)->GetIrValue(), std::move(shapes));
+
+  return torch_xla::bridge::AtenFromXlaTensor(
+      torch_xla::XLATensor::Create(std::move(node), *common_device));
 }
 
 at::Tensor XLANativeFunctions::_adaptive_avg_pool2d(

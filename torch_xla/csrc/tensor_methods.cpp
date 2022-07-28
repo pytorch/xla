@@ -21,7 +21,6 @@
 #include "torch_xla/csrc/layout_manager.h"
 #include "torch_xla/csrc/lowering_context.h"
 #include "torch_xla/csrc/ops/adam_optimizer_step.h"
-#include "torch_xla/csrc/ops/adaptive_avg_pool3d.h"
 #include "torch_xla/csrc/ops/adaptive_max_pool2d.h"
 #include "torch_xla/csrc/ops/all.h"
 #include "torch_xla/csrc/ops/all_gather.h"
@@ -602,18 +601,6 @@ std::tuple<XLATensorPtr, XLATensorPtr> XLATensor::adaptive_max_pool2d(
 XLATensorPtr XLATensor::adaptive_max_pool2d_backward(
     const XLATensorPtr& grad_output, const XLATensorPtr& input) {
   return input->CreateFrom(AdaptiveMaxPool2dBackward(grad_output->GetIrValue(),
-                                                     input->GetIrValue()));
-}
-
-XLATensorPtr XLATensor::adaptive_avg_pool3d(const XLATensorPtr& input,
-                                            std::vector<int64_t> output_size) {
-  return input->CreateFrom(torch::lazy::MakeNode<AdaptiveAvgPool3d>(
-      input->GetIrValue(), std::move(output_size)));
-}
-
-XLATensorPtr XLATensor::adaptive_avg_pool3d_backward(
-    const XLATensorPtr& grad_output, const XLATensorPtr& input) {
-  return input->CreateFrom(AdaptiveAvgPool3dBackward(grad_output->GetIrValue(),
                                                      input->GetIrValue()));
 }
 
