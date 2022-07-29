@@ -1,3 +1,8 @@
+import functools
+
+
+import functools
+import operator
 import os
 from typing import Optional, List, Tuple
 import requests
@@ -20,12 +25,23 @@ def _parse_mesh_shape(mesh: str) -> MeshShape:
 def _multiply_mesh_shapes(mesh1: MeshShape, mesh2: MeshShape) -> MeshShape:
   return tuple(d1 * d2 for d1, d2 in zip(mesh1, mesh2))
 
+def _mesh_size(mesh: MeshShape) -> int:
+  return functools.reduce(operator.mul, mesh)
+
 def _get_metadata(key: str) -> str:
   path = os.path.join(_GCE_METADATA_ROOT_URL, 'instance/attributes', key)
   resp = requests.get(path, headers={'Metadata-Flavor': 'Google'})
   resp.raise_for_status()
 
   return resp.text
+
+def num_processes(default: int = 4) -> Optional[int]:
+  process_bounds = xu.getenv_as(xenv.TPU_PROCESS_BOUNDS, str)
+
+  return _mesh_size(_parse_mesh_shape(process_bounds)) if process_bounds else default
+
+def num_local_processes() -> Optional[int]:
+  return min(4, num_processes())
 
 def task_id() -> Optional[int]:
   return xu.getenv_as(xenv.CLOUD_TPU_TASK_ID, int)

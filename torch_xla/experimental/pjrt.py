@@ -40,13 +40,6 @@ def using_pjrt() -> bool:
   return device_type() is not None
 
 
-def num_visible_tpu_chips(default: int = 4) -> int:
-  """Returns number of TPU chips visible to current process."""
-  visible_devices = xu.getenv_as(xenv.TPU_VISIBLE_DEVICES, str)
-
-  return len(visible_devices.split(',')) if visible_devices else default
-
-
 def requires_pjrt(fn: FN) -> FN:
   """Wraps `fn` and checks if this process is using PjRt.
 
@@ -187,7 +180,7 @@ def run_multiprocess(fn: Callable[..., R], *args,
     return_value is the result of calling `fn`.
   """
   if device_type() == 'TPU':
-    processes = num_visible_tpu_chips()
+    processes = tpu.num_local_processes()
   else:
     processes = 1
 

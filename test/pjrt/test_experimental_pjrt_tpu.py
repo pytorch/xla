@@ -24,7 +24,6 @@ def _get_all_real_devices():
 
 class TestExperimentalPjrtTpu(parameterized.TestCase):
   def setUp(self):
-    time.sleep(1)
     pjrt.set_device_type('TPU')
 
     os.environ.pop(xenv.TPU_VISIBLE_DEVICES, None)
@@ -120,10 +119,31 @@ class TestExperimentalPjrtTpu(parameterized.TestCase):
     all_devices_per_process = pjrt.run_multiprocess(_get_all_real_devices)
     self.assertDictEqual(all_devices_per_process, expected_all_devices)
 
-  def test_single_process_all_chips(self):
-    pass
+  def test_xla_devices_single_process_all_chips(self):
+    accelerator_devices = {
+      'v3-8': {
+        0: {
+          i: torch.device(f'xla:{i}') for i in range(8)
+        },
+      },
+      'v4-8': {
+        0: {
+          i: torch.device(f'xla:{i}') for i in range(4)
+        },
+      },
+    }
 
-  def test_single_process_one_chip(self):
+    if self.accelerator_type not in accelerator_devices:
+      raise NotImplementedError('Test not implemented for {}'.format(self.accelerator_type))
+    expected = accelerator_devices[self.accelerator_type]
+
+    os.environ[xenv.TPU_VISIBLE_DEVICES] = '0,1,2,3'
+    os.environ[xenv.TPU_PROCESS_BOUNDS] = '1,1,1'
+
+    devices = pjrt.run_multiprocess(xm.xla_device)
+    self.assertDictEqual(devices, expected)
+
+  def test_xla_devices_single_process_one_chip(self):
     accelerator_devices = {
       'v3-8': {
         0: {
@@ -146,6 +166,21 @@ class TestExperimentalPjrtTpu(parameterized.TestCase):
     devices = pjrt.run_multiprocess(xm.xla_device)
     self.assertDictEqual(devices, expected)
 
+  def test_default_xla_devices(self):
+    accelerator_num_devices = {
+      'v3-8': 8,
+      'v4-8': 4,
+    }
+
+    if self.accelerator_type not in accelerator_num_devices:
+      raise NotImplementedError('Test not implemented for {}'.format(self.accelerator_type))
+    expected_num_devices = accelerator_num_devices[self.accelerator_type]
+
+    with concurrent.futures.ProcessPoolExecutor(max_workers=1) as e:
+      f = e.submit(xm.get_xla_supported_devices, 'TPU')
+      devices = [torch.device(d) for d in f.result()]
+
+    self.assertListEqual(devices, [torch.device(f'xla:{i}') for i in range(expected_num_devices)])
 
 if __name__ == '__main__':
   absltest.main()
