@@ -9,9 +9,10 @@ namespace torch_xla {
 
 void SymIntElements::SetSymIntNodeElements(c10::SymInt& size) {
   if (size.is_symbolic()) {
-    c10::SymIntNode symbolicIntNode = size.toSymIntNodeImpl();
-    auto* lazySymIntNode =
-        dynamic_cast<torch::lazy::SymIntNodeImpl*>(symbolicIntNode.get());
+    std::shared_ptr<c10::SymIntNodeImpl> symbolicIntNode =
+        size.toSymIntNodeImpl();
+    auto lazySymIntNode =
+        std::dynamic_pointer_cast<torch::lazy::SymIntNodeImpl>(symbolicIntNode);
     auto size_node = lazySymIntNode->node_;
     size_nodes_.push_back(size_node);
     upper_bounds_.push_back(
