@@ -116,6 +116,12 @@ xla::Shape InverseOutputShape(const torch::lazy::Value& input) {
   return GetXlaShape(input);
 }
 
+xla::Shape IsnanOutputShape(const torch::lazy::Value& input) {
+  xla::Shape isnan_shape(GetXlaShape(input));
+  isnan_shape.set_element_type(xla::PRED);
+  return isnan_shape;
+}
+
 xla::Shape LogdetOutputShape(const torch::lazy::Value& input) {
   const xla::Shape& input_shape = GetXlaShape(input);
   XLA_CHECK_GE(input_shape.rank(), 2) << input_shape;
