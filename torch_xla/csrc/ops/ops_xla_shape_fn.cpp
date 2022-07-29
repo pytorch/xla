@@ -207,6 +207,15 @@ xla::Shape ReciprocalOutputShape(const torch::lazy::Value& input) {
   return GetXlaShape(input);
 }
 
+xla::Shape ReluOutputShape(const torch::lazy::Value& input) {
+  auto lower_for_shape_fn =
+      [](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
+    XLA_CHECK_EQ(operands.size(), 1) << "Unexpected number of operands";
+    return BuildRelu(operands[0]);
+  };
+  return InferOutputShape({GetXlaShape(input)}, lower_for_shape_fn);
+}
+
 xla::Shape RoundOutputShape(const torch::lazy::Value& input) {
   return GetXlaShape(input);
 }

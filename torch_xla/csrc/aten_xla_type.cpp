@@ -2559,18 +2559,6 @@ at::Tensor XLANativeFunctions::reflection_pad2d_backward(
       torch::lazy::ToVector<int64_t>(padding)));
 }
 
-at::Tensor XLANativeFunctions::relu(const at::Tensor& self) {
-  XLA_FN_COUNTER("xla::");
-  return bridge::AtenFromXlaTensor(XLATensor::relu(bridge::GetXlaTensor(self)));
-}
-
-at::Tensor& XLANativeFunctions::relu_(at::Tensor& self) {
-  XLA_FN_COUNTER("xla::");
-  XLATensorPtr self_tensor = bridge::GetXlaTensor(self);
-  XLATensor::relu_(self_tensor);
-  return self;
-}
-
 at::Tensor XLANativeFunctions::remainder(const at::Tensor& self,
                                          const at::Tensor& other) {
   XLA_FN_COUNTER("xla::");

@@ -211,6 +211,12 @@ torch_xla::XlaOpVector Reciprocal::Lower(LoweringContext* loctx) const {
   return ReturnOp(BuildReciprocal(xla_input), loctx);
 }
 
+torch_xla::XlaOpVector Relu::Lower(LoweringContext* loctx) const {
+    xla::XlaOp xla_input = loctx->GetOutputOp(operand(0));
+    xla::XlaOp xla_output = BuildRelu(xla_input);
+    return ReturnOp(xla_output, loctx);
+}
+
 torch_xla::XlaOpVector Round::Lower(LoweringContext* loctx) const {
   xla::XlaOp xla_input = loctx->GetOutputOp(operand(0));
   return ReturnOp(xla::RoundToEven(xla_input), loctx);
