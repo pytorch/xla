@@ -131,6 +131,11 @@ torch_xla::XlaOpVector Inverse::Lower(LoweringContext* loctx) const {
   return ReturnOp(BuildInverse(xla_input), loctx);
 }
 
+torch_xla::XlaOpVector Isnan::Lower(LoweringContext* loctx) const {
+  xla::XlaOp xla_input = loctx->GetOutputOp(operand(0));
+  return ReturnOp(xla::IsNan(xla_input), loctx);
+}
+
 torch_xla::XlaOpVector Logdet::Lower(LoweringContext* loctx) const {
   xla::XlaOp xla_input = loctx->GetOutputOp(operand(0));
   return ReturnOp(xla::LogDet(xla_input), loctx);
