@@ -84,9 +84,16 @@ xla::Shape RoundOutputShape(const torch::lazy::Value& input);
 
 xla::Shape RsqrtOutputShape(const torch::lazy::Value& input);
 
+xla::Shape SeluOutputShape(const torch::lazy::Value& input);
+
 xla::Shape SgnOutputShape(const torch::lazy::Value& input);
 
 xla::Shape SignOutputShape(const torch::lazy::Value& input);
+
+xla::Shape SiluOutputShape(const torch::lazy::Value& input);
+
+xla::Shape SiluBackwardOutputShape(const torch::lazy::Value& grad_output,
+                                   const torch::lazy::Value& input);
 
 xla::Shape SinOutputShape(const torch::lazy::Value& input);
 
