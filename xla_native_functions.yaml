@@ -46,6 +46,7 @@ full_codegen:
   - tanh
   - tril
   - triu
+  - trunc
 ir_gen:
   - _adaptive_avg_pool2d
   - _adaptive_avg_pool2d_backward
@@ -316,7 +317,6 @@ supported:
   - transpose.int
   - transpose_
   - triangular_solve
-  - trunc
   - unbind.int
   - uniform_
   - unsqueeze

@@ -1210,7 +1210,8 @@ XLATensorPtr XLATensor::div(
 
   if (rounding_mode.has_value()) {
     if (*rounding_mode == "trunc") {
-      res = Trunc(res);
+      res =
+          torch::lazy::MakeNode<Trunc>(res, std::vector<torch::lazy::Shape>());
     } else if (*rounding_mode == "floor") {
       res =
           torch::lazy::MakeNode<Floor>(res, std::vector<torch::lazy::Shape>());
@@ -2780,10 +2781,6 @@ std::tuple<XLATensorPtr, XLATensorPtr> XLATensor::triangular_solve(
       unitriangular);
   return std::make_tuple(rhs->CreateFrom(torch::lazy::Value(node, 0)),
                          rhs->CreateFrom(torch::lazy::Value(node, 1)));
-}
-
-XLATensorPtr XLATensor::trunc(const XLATensorPtr& input) {
-  return input->CreateFrom(Trunc(input->GetIrValue()));
 }
 
 std::vector<XLATensorPtr> XLATensor::unbind(const XLATensorPtr& input,
