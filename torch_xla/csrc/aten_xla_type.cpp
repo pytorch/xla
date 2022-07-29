@@ -2785,30 +2785,12 @@ at::Tensor XLANativeFunctions::select(const at::Tensor& self, int64_t dim,
       XLATensor::select(bridge::GetXlaTensor(self), dim, index));
 }
 
-at::Tensor XLANativeFunctions::selu(const at::Tensor& self) {
-  XLA_FN_COUNTER("xla::");
-  return bridge::AtenFromXlaTensor(XLATensor::selu(bridge::GetXlaTensor(self)));
-}
-
+// TODO(JackCaoG): Remove after elu being codegened
 at::Tensor& XLANativeFunctions::selu_(at::Tensor& self) {
   XLA_FN_COUNTER("xla::");
   XLATensorPtr self_tensor = bridge::GetXlaTensor(self);
   XLATensor::selu_(self_tensor);
   return self;
-}
-
-at::Tensor XLANativeFunctions::silu(const at::Tensor& self) {
-  XLA_FN_COUNTER("xla::");
-  return bridge::AtenFromXlaTensor(XLATensor::silu(bridge::GetXlaTensor(self)));
-}
-
-at::Tensor XLANativeFunctions::silu_backward(const at::Tensor& grad_output,
-                                             const at::Tensor& self) {
-  XLA_FN_COUNTER("xla::");
-  XLATensorPtr grad_output_tensor = bridge::GetXlaTensor(grad_output);
-  XLATensorPtr self_tensor = bridge::GetXlaTensor(self);
-  return bridge::AtenFromXlaTensor(
-      XLATensor::silu_backward(grad_output_tensor, self_tensor));
 }
 
 at::Tensor XLANativeFunctions::sigmoid(const at::Tensor& self) {

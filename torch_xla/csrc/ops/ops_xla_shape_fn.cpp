@@ -2,6 +2,7 @@
 
 #include "tensorflow/compiler/xla/client/lib/logdet.h"
 #include "tensorflow/compiler/xla/shape_util.h"
+#include "torch_xla/csrc/elementwise.h"
 #include "torch_xla/csrc/helpers.h"
 #include "torch_xla/csrc/pooling.h"
 
@@ -208,12 +209,30 @@ xla::Shape RsqrtOutputShape(const torch::lazy::Value& input) {
   return GetXlaShape(input);
 }
 
+xla::Shape SeluOutputShape(const torch::lazy::Value& input) {
+  return GetXlaShape(input);
+}
+
 xla::Shape SgnOutputShape(const torch::lazy::Value& input) {
   return GetXlaShape(input);
 }
 
 xla::Shape SignOutputShape(const torch::lazy::Value& input) {
   return GetXlaShape(input);
+}
+
+xla::Shape SiluOutputShape(const torch::lazy::Value& input) {
+  return GetXlaShape(input);
+}
+
+xla::Shape SiluBackwardOutputShape(const torch::lazy::Value& grad_output,
+                                   const torch::lazy::Value& input) {
+  auto lower_for_shape_fn =
+      [](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
+    return BuildSiLUBackward(operands[0], operands[1]);
+  };
+  return InferOutputShape({GetXlaShape(grad_output), GetXlaShape(input)},
+                          lower_for_shape_fn);
 }
 
 xla::Shape SinOutputShape(const torch::lazy::Value& input) {

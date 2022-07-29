@@ -1037,7 +1037,6 @@ class XLATensor : public c10::intrusive_ptr_target {
   static XLATensorPtr select(const XLATensorPtr& input, int64_t dim,
                              int64_t index);
 
-  static XLATensorPtr selu(const XLATensorPtr& input);
   static void selu_(XLATensorPtr& input);
 
   static XLATensorPtr silu(const XLATensorPtr& input);
