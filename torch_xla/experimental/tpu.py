@@ -1,8 +1,5 @@
-import cloud_tpu_client
 import os
-from typing import Optional, Iterable, Tuple
-import numpy as np
-import numpy.typing as npt
+from typing import Optional, List, Tuple
 import requests
 import yaml
 
@@ -20,7 +17,7 @@ def _parse_mesh_shape(mesh: str) -> MeshShape:
 
   return dims
 
-def _multiple_mesh_shapes(mesh1: MeshShape, mesh2: MeshShape) -> MeshShape:
+def _multiply_mesh_shapes(mesh1: MeshShape, mesh2: MeshShape) -> MeshShape:
   return tuple(d1 * d2 for d1, d2 in zip(mesh1, mesh2))
 
 def _get_metadata(key: str) -> str:
@@ -38,6 +35,15 @@ def get_tpu_env():
 
   return yaml.load(metadata, yaml.Loader)
 
+def get_worker_ips() -> List[str]:
+  metadata = _get_metadata('worker-network-endpoints')
+
+  # Workers have format 'hostname:uid:ip,hostname:uid:ip,...'
+  workers = metadata.split(',')
+  ips = [worker.split(':')[2] for worker in workers]
+
+  return ips if len(ips) > 1 else ['localhost']
+
 def configure_topology(local_rank: int, local_world_size: int, base_port: int = 8476):
   tpu_env = get_tpu_env()
 
@@ -46,7 +52,7 @@ def configure_topology(local_rank: int, local_world_size: int, base_port: int = 
   chips_per_process = _parse_mesh_shape(tpu_env[xenv.TPU_CHIPS_PER_PROCESS_BOUNDS])
 
   # Process bounds with 1 chip per process
-  process_bounds = _multiple_mesh_shapes(default_process_bounds, chips_per_process)
+  process_bounds = _multiply_mesh_shapes(default_process_bounds, chips_per_process)
 
   os.environ.setdefault(xenv.TPU_CHIPS_PER_PROCESS_BOUNDS, '1,1,1')
   os.environ.setdefault(xenv.TPU_PROCESS_BOUNDS, ','.join(str(dim) for dim in process_bounds))
@@ -55,11 +61,10 @@ def configure_topology(local_rank: int, local_world_size: int, base_port: int = 
   worker_id = int(tpu_env['WORKER_ID'])
   os.environ.setdefault(xenv.CLOUD_TPU_TASK_ID, str(worker_id * local_world_size + local_rank))
 
-  client = cloud_tpu_client.Client(tpu=tpu_env['NODE_ID'])
-  host_ips = [e['ipAddress'] for e in client.network_endpoints()]
+  worker_ips = get_worker_ips()
 
   ports = list(range(base_port, base_port + local_world_size))
-  process_endpoints = [','.join(f'{ip}:{port}' for port in ports) for ip in host_ips]
+  process_endpoints = [','.join(f'{ip}:{port}' for port in ports) for ip in worker_ips]
   os.environ.setdefault(xenv.TPU_PROCESS_ADDRESSES, ','.join(process_endpoints))
 
   os.environ.setdefault(xenv.TPU_VISIBLE_DEVICES, str(local_rank))
