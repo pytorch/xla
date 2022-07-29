@@ -17,11 +17,12 @@ full_codegen:
   - exp
   - expm1
   - floor
-  - inverse
   - hardsigmoid
   - hardsigmoid_backward
   - hardswish
   - hardswish_backward
+  - inverse
+  - isnan
   - logdet
   - logical_and
   - logical_not
@@ -177,7 +178,6 @@ supported:
   - index_fill_.int_Tensor
   - index_put_
   - index_select
-  - isnan
   - kl_div
   - kthvalue
   - le.Scalar

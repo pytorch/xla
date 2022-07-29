@@ -53,6 +53,8 @@ xla::Shape HardswishBackwardOutputShape(const torch::lazy::Value& grad_output,
 
 xla::Shape InverseOutputShape(const torch::lazy::Value& input);
 
+xla::Shape IsnanOutputShape(const torch::lazy::Value& input);
+
 xla::Shape LogdetOutputShape(const torch::lazy::Value& input);
 
 xla::Shape LogicalAndOutputShape(const torch::lazy::Value& input,

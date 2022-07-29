@@ -1542,7 +1542,8 @@ XLATensorPtr XLATensor::index_select(const XLATensorPtr& input, int64_t dim,
 }
 
 XLATensorPtr XLATensor::isnan(const XLATensorPtr& input) {
-  torch::lazy::Value result = IsNan(input->GetIrValue());
+  torch::lazy::Value result = torch::lazy::MakeNode<Isnan>(
+      input->GetIrValue(), std::vector<torch::lazy::Shape>());
   torch::lazy::Value casted = GetBooleanIrValue(result);
   return input->CreateFrom(casted, at::ScalarType::Bool);
 }
