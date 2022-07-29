@@ -2420,6 +2420,10 @@ XLATensorPtr XLATensor::select(const XLATensorPtr& input, int64_t dim,
   return tensor_ops::Select(input, dim, index);
 }
 
+void XLATensor::selu_(XLATensorPtr& input) {
+  input->SetInPlaceIrValue(Selu(input->GetIrValue()));
+}
+
 XLATensorPtr XLATensor::sigmoid(const XLATensorPtr& input) {
   return input->CreateFrom(Sigmoid(input->GetIrValue()));
 }

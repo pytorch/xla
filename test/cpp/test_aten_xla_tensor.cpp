@@ -6382,14 +6382,12 @@ TEST_F(AtenXlaTensorTest, TestSeluInPlace) {
     torch::Tensor xla_input = CopyToDevice(input, device);
     torch::Tensor output = torch::selu_(input);
     torch::Tensor xla_output = torch::selu_(xla_input);
-    std::cerr << output << "\n";
-    std::cerr << xla_output << "\n";
     AllClose(output, xla_output);
     AllClose(input, xla_input);
   });
 
-  // selu_ uses elu_ instead of selu
   ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::selu_", cpp_test::GetIgnoredCounters());
 }
 
 TEST_F(AtenXlaTensorTest, TestCelu) {

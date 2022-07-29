@@ -274,6 +274,7 @@ supported:
   - scatter.value_reduce
   - scatter_add
   - select.int
+  - selu_
   - sigmoid
   - sigmoid_backward
   - slice.Tensor

@@ -2785,6 +2785,14 @@ at::Tensor XLANativeFunctions::select(const at::Tensor& self, int64_t dim,
       XLATensor::select(bridge::GetXlaTensor(self), dim, index));
 }
 
+// TODO(JackCaoG): Remove after elu being codegened
+at::Tensor& XLANativeFunctions::selu_(at::Tensor& self) {
+  XLA_FN_COUNTER("xla::");
+  XLATensorPtr self_tensor = bridge::GetXlaTensor(self);
+  XLATensor::selu_(self_tensor);
+  return self;
+}
+
 at::Tensor XLANativeFunctions::sigmoid(const at::Tensor& self) {
   XLA_FN_COUNTER("xla::");
   return bridge::AtenFromXlaTensor(
