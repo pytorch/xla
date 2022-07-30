@@ -1,5 +1,7 @@
 #include "torch_xla/csrc/reduction.h"
 
+#include <ATen/core/Reduction.h>
+
 #include <cmath>
 #include <unordered_set>
 
@@ -125,6 +127,18 @@ xla::XlaOp CreateProduct(xla::XlaOp input, absl::Span<const int64_t> dimensions,
 }
 
 }  // namespace
+
+ReductionMode GetXlaReductionMode(int64_t reduction) {
+  switch (reduction) {
+    case at::Reduction::Mean:
+      return ReductionMode::kMean;
+    case at::Reduction::None:
+      return ReductionMode::kNone;
+    case at::Reduction::Sum:
+      return ReductionMode::kSum;
+  }
+  XLA_ERROR() << "Unknown reduction mode: " << reduction;
+}
 
 xla::XlaOp BuildBinaryCrossEntropy(xla::XlaOp input, xla::XlaOp target,
                                    const absl::optional<xla::XlaOp>& weight,

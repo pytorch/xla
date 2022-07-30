@@ -46,7 +46,8 @@ class GenXlaLazyIR(GenLazyIR):
 
     shape_fn_inputs_list = [
         f"{a.name}" for a in schema.positional_args
-        if (a.is_lazy_value or isinstance(a.lazy_type, VectorCType))
+        if (a.is_lazy_value or isinstance(a.lazy_type, VectorCType) or
+            a.name == 'reduction')
     ]
     shape_fn_inputs = ", ".join(shape_fn_inputs_list)
 
@@ -80,7 +81,7 @@ if __name__ == '__main__':
       backend_namespace="torch_xla",
       get_tensorlist="GetTensorList",
       get_tensor_or_wrap_number="bridge::GetXlaTensorOrCreateForWrappedNumber",
-      try_get_tensor="TryGetXlaTensor",
+      try_get_tensor="bridge::TryGetXlaTensor",
       metrics_counter='XLA_FN_COUNTER("xla::")',
       create_tensor="XLATensor::Create",
       create_aten_from_ltc_tensor="torch_xla::bridge::AtenFromXlaTensor",
