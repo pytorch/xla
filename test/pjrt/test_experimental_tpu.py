@@ -1,4 +1,3 @@
-from cmath import exp
 import os
 import textwrap
 
@@ -9,7 +8,7 @@ from torch_xla.experimental import tpu
 from unittest import mock
 
 
-class TestExperimentalPjrtTpu(parameterized.TestCase):
+class TestExperimentalTpu(parameterized.TestCase):
 
   @parameterized.named_parameters(
       ('default_one_host', None, 4),
@@ -87,6 +86,7 @@ class TestExperimentalPjrtTpu(parameterized.TestCase):
 
   @parameterized.named_parameters(
       ('v4-8_process_0', {
+          'ACCELERATOR_TYPE': 'v4-8',
           xenv.TPU_PROCESS_BOUNDS: '1,1,1',
           xenv.TPU_CHIPS_PER_PROCESS_BOUNDS: '2,2,1',
           'WORKER_ID': '0'
@@ -105,6 +105,7 @@ class TestExperimentalPjrtTpu(parameterized.TestCase):
               '0',
       }),
       ('v4-8_process_3', {
+          'ACCELERATOR_TYPE': 'v4-8',
           xenv.TPU_PROCESS_BOUNDS: '1,1,1',
           xenv.TPU_CHIPS_PER_PROCESS_BOUNDS: '2,2,1',
           'WORKER_ID': '0'
@@ -123,6 +124,7 @@ class TestExperimentalPjrtTpu(parameterized.TestCase):
               '3',
       }),
       ('v4-16_worker_1_process_0', {
+          'ACCELERATOR_TYPE': 'v4-16',
           xenv.TPU_PROCESS_BOUNDS: '1,1,2',
           xenv.TPU_CHIPS_PER_PROCESS_BOUNDS: '2,2,1',
           'WORKER_ID': '1'
@@ -140,7 +142,24 @@ class TestExperimentalPjrtTpu(parameterized.TestCase):
           xenv.TPU_VISIBLE_DEVICES:
               '0',
       }),
-  )
+      # TODO: remove this case when process bounds are added to metadata
+      ('v3-8_process_0', {
+          'ACCELERATOR_TYPE': 'v3-8',
+          'WORKER_ID': '0'
+      }, ['localhost'], 0, 4, {
+          xenv.TPU_CHIPS_PER_PROCESS_BOUNDS:
+              '1,1,1',
+          xenv.TPU_PROCESS_BOUNDS:
+              '2,2,1',
+          xenv.CLOUD_TPU_TASK_ID:
+              '0',
+          xenv.TPU_PROCESS_PORT:
+              '8476',
+          xenv.TPU_PROCESS_ADDRESSES:
+              'localhost:8476,localhost:8477,localhost:8478,localhost:8479',
+          xenv.TPU_VISIBLE_DEVICES:
+              '0',
+      }))
   def test_configure_tpu_topology(self, tpu_env, worker_ips, local_rank,
                                   local_world_size, expected):
     with mock.patch.object(tpu, 'get_tpu_env', return_value=tpu_env), \

@@ -9,6 +9,23 @@ import torch_xla.utils.utils as xu
 import torch_xla.core.xla_env_vars as xenv
 
 _GCE_METADATA_ROOT_URL = 'http://metadata.google.internal/computeMetadata/v1'
+_ACCELERATOR_TYPE_TO_HOST_BOUNDS = {
+    # v2
+    'v2-8': '1,1,1',
+    'v2-32': '2,2,1',
+    'v2-128': '4,4,1',
+    'v2-256': '4,8,1',
+    'v2-512': '8,8,1',
+    # v3
+    'v3-8': '1,1,1',
+    'v3-32': '2,2,1',
+    'v3-64': '2,4,1',
+    'v3-128': '4,4,1',
+    'v3-256': '4,8,1',
+    'v3-512': '8,8,1',
+    'v3-1024': '8,16,1',
+    'v3-2048': '16,16,1',
+}
 
 MeshShape = Tuple[int, int, int]
 
@@ -74,10 +91,17 @@ def configure_topology(local_rank: int,
                        base_port: int = 8476):
   tpu_env = get_tpu_env()
 
-  # Process bounds with 4 chips per process
-  default_process_bounds = _parse_mesh_shape(tpu_env[xenv.TPU_PROCESS_BOUNDS])
-  chips_per_process = _parse_mesh_shape(
-      tpu_env[xenv.TPU_CHIPS_PER_PROCESS_BOUNDS])
+  accelerator_type = tpu_env['ACCELERATOR_TYPE']
+  if tpu_env['ACCELERATOR_TYPE'].startswith('v4'):
+    # Process bounds with 4 chips per process
+    default_process_bounds = _parse_mesh_shape(tpu_env[xenv.TPU_PROCESS_BOUNDS])
+    chips_per_process = _parse_mesh_shape(
+        tpu_env[xenv.TPU_CHIPS_PER_PROCESS_BOUNDS])
+  else:
+    # TODO: merge with TPU v4 case when bounds are added to metadata
+    default_process_bounds = _parse_mesh_shape(
+        _ACCELERATOR_TYPE_TO_HOST_BOUNDS[accelerator_type])
+    chips_per_process = _parse_mesh_shape('2,2,1')
 
   # Process bounds with 1 chip per process
   process_bounds = _multiply_mesh_shapes(default_process_bounds,
