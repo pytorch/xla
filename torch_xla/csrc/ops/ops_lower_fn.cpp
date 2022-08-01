@@ -284,4 +284,9 @@ torch_xla::XlaOpVector Triu::Lower(LoweringContext* loctx) const {
   return ReturnOp(BuildTriu(xla_input, diagonal), loctx);
 }
 
+torch_xla::XlaOpVector Trunc::Lower(LoweringContext* loctx) const {
+  xla::XlaOp xla_input = loctx->GetOutputOp(operand(0));
+  return ReturnOp(xla::Floor(BuildAbs(xla_input)) * BuildSgn(xla_input), loctx);
+}
+
 }  // namespace torch_xla

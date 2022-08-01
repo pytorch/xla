@@ -112,4 +112,6 @@ xla::Shape TrilOutputShape(const torch::lazy::Value& input);
 
 xla::Shape TriuOutputShape(const torch::lazy::Value& input);
 
+xla::Shape TruncOutputShape(const torch::lazy::Value& input);
+
 }  // namespace torch_xla

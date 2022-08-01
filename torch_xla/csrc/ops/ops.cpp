@@ -80,16 +80,9 @@ PTXLA_BINARY_OP(Pow, at::aten::pow, xla::Pow);
 PTXLA_BINARY_OP(Fmod, at::aten::fmod, xla::Rem);
 PTXLA_BINARY_OP(Atan2, at::aten::atan2, xla::Atan2);
 
-torch::lazy::NodePtr Trunc(const torch::lazy::Value& input) {
-  std::vector<torch::lazy::Shape> shapes;
-  return torch::lazy::MakeNode<Floor>(
-             torch::lazy::MakeNode<Abs>(input, std::move(shapes)),
-             std::vector<torch::lazy::Shape>()) *
-         torch::lazy::MakeNode<Sign>(input, std::vector<torch::lazy::Shape>());
-}
-
 torch::lazy::NodePtr FracOp(const torch::lazy::Value& input) {
-  return input - Trunc(input);
+  return input -
+         torch::lazy::MakeNode<Trunc>(input, std::vector<torch::lazy::Shape>());
 }
 
 torch::lazy::NodePtr LogBase(const torch::lazy::Value& input,

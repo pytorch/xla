@@ -3142,12 +3142,6 @@ std::tuple<at::Tensor, at::Tensor> XLANativeFunctions::triangular_solve(
                          bridge::AtenFromXlaTensor(std::get<1>(results)));
 }
 
-at::Tensor XLANativeFunctions::trunc(const at::Tensor& self) {
-  XLA_FN_COUNTER("xla::");
-  return bridge::AtenFromXlaTensor(
-      XLATensor::trunc(bridge::GetXlaTensor(self)));
-}
-
 std::vector<at::Tensor> XLANativeFunctions::unbind(const at::Tensor& self,
                                                    int64_t dim) {
   XLA_FN_COUNTER("xla::");
