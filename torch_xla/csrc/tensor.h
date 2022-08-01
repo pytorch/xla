@@ -1170,8 +1170,6 @@ class XLATensor : public c10::intrusive_ptr_target {
       const XLATensorPtr& rhs, const XLATensorPtr& lhs, bool left_side,
       bool upper, bool transpose, bool unitriangular);
 
-  static XLATensorPtr trunc(const XLATensorPtr& input);
-
   // Returns a tuple of all slices along a given dimension with that dimension
   // removed.
   static std::vector<XLATensorPtr> unbind(const XLATensorPtr& input,
