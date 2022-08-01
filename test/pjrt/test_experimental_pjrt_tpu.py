@@ -87,6 +87,7 @@ class TestExperimentalPjrtTpu(parameterized.TestCase):
     self.assertDictEqual(devices_per_process, expected)
 
   def test_real_devices_multiprocess(self):
+    # Real devices unfortunately don't correspond to indices in TPU_VISIBLE_DEVICES
     accelerator_devices = {
         'v3-8': {
             0: {
@@ -94,12 +95,12 @@ class TestExperimentalPjrtTpu(parameterized.TestCase):
                 1: ['TPU:0', 'TPU:1'],
             },
             1: {
-                0: ['TPU:2', 'TPU:3'],
-                1: ['TPU:2', 'TPU:3'],
+                0: ['TPU:4', 'TPU:5'],
+                1: ['TPU:4', 'TPU:5']
             },
             2: {
-                0: ['TPU:4', 'TPU:5'],
-                1: ['TPU:4', 'TPU:5'],
+                0: ['TPU:2', 'TPU:3'],
+                1: ['TPU:2', 'TPU:3']
             },
             3: {
                 0: ['TPU:6', 'TPU:7'],
