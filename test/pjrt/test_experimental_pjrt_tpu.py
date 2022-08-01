@@ -1,8 +1,6 @@
 import concurrent.futures
-import functools
 import itertools
 import os
-import time
 import requests
 
 import torch
