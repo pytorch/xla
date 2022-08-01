@@ -204,6 +204,25 @@ xla::Shape BinaryCrossEntropyBackwardOutputShape(
   return InferOutputShape(shapes, lower_for_shape_fn);
 }
 
+xla::Shape BitwiseAndScalarOutputShape(const torch::lazy::Value& input,
+                                       const torch::lazy::Value& other) {
+  return GetXlaShape(input);
+}
+
+xla::Shape BitwiseNotOutputShape(const torch::lazy::Value& input) {
+  return GetXlaShape(input);
+}
+
+xla::Shape BitwiseOrScalarOutputShape(const torch::lazy::Value& input,
+                                      const torch::lazy::Value& other) {
+  return GetXlaShape(input);
+}
+
+xla::Shape BitwiseXorScalarOutputShape(const torch::lazy::Value& input,
+                                       const torch::lazy::Value& other) {
+  return GetXlaShape(input);
+}
+
 xla::Shape CeilOutputShape(const torch::lazy::Value& input) {
   return GetXlaShape(input);
 }

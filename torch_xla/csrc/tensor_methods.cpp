@@ -835,7 +835,9 @@ XLATensorPtr XLATensor::bitwise_and(const XLATensorPtr& input,
 }
 
 XLATensorPtr XLATensor::bitwise_not(const XLATensorPtr& input) {
-  return input->CreateFrom(Not(input->GetIrValue()));
+  torch::lazy::Value result = torch::lazy::MakeNode<BitwiseNot>(
+      input->GetIrValue(), std::vector<torch::lazy::Shape>());
+  return input->CreateFrom(result);
 }
 
 XLATensorPtr XLATensor::bitwise_or(const XLATensorPtr& input,

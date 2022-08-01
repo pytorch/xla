@@ -878,34 +878,11 @@ at::Tensor XLANativeFunctions::binary_cross_entropy_with_logits(
 }
 
 at::Tensor XLANativeFunctions::bitwise_and(const at::Tensor& self,
-                                           const at::Scalar& other) {
-  XLA_FN_COUNTER("xla::");
-  CheckBinaryOpTypePromotion(self, self, other);
-  return bridge::AtenFromXlaTensor(
-      XLATensor::bitwise_and(bridge::GetXlaTensor(self), other));
-}
-
-at::Tensor XLANativeFunctions::bitwise_and(const at::Tensor& self,
                                            const at::Tensor& other) {
   XLA_FN_COUNTER("xla::");
   return DoBinaryOpWithoutPromo(
       self, other, [&](const XLATensorPtr& xself, const XLATensorPtr& other) {
         return XLATensor::bitwise_and(xself, other);
-      });
-}
-
-at::Tensor XLANativeFunctions::bitwise_not(const at::Tensor& self) {
-  XLA_FN_COUNTER("xla::");
-  XLATensorPtr self_tensor = bridge::GetXlaTensor(self);
-  return bridge::AtenFromXlaTensor(XLATensor::bitwise_not(self_tensor));
-}
-
-at::Tensor XLANativeFunctions::bitwise_or(const at::Tensor& self,
-                                          const at::Scalar& other) {
-  XLA_FN_COUNTER("xla::");
-  return DoBinaryOpWithoutPromo(
-      self, other, [&](const XLATensorPtr& xself, const at::Scalar& xother) {
-        return XLATensor::bitwise_or(xself, xother);
       });
 }
 
@@ -915,15 +892,6 @@ at::Tensor XLANativeFunctions::bitwise_or(const at::Tensor& self,
   return DoBinaryOpWithoutPromo(
       self, other, [&](const XLATensorPtr& xself, const XLATensorPtr& xother) {
         return XLATensor::bitwise_or(xself, xother);
-      });
-}
-
-at::Tensor XLANativeFunctions::bitwise_xor(const at::Tensor& self,
-                                           const at::Scalar& other) {
-  XLA_FN_COUNTER("xla::");
-  return DoBinaryOpWithoutPromo(
-      self, other, [&](const XLATensorPtr& xself, const at::Scalar& xother) {
-        return XLATensor::bitwise_xor(xself, xother);
       });
 }
 
