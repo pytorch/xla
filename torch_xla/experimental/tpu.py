@@ -1,10 +1,7 @@
 import functools
-
-
-import functools
 import operator
 import os
-from typing import Optional, List, Tuple
+from typing import Dict, Optional, List, Tuple
 import requests
 import yaml
 
@@ -41,12 +38,13 @@ def num_processes(default: int = 4) -> Optional[int]:
   return _mesh_size(_parse_mesh_shape(process_bounds)) if process_bounds else default
 
 def num_local_processes() -> Optional[int]:
+  # Don't create more processes than local chips (4)
   return min(4, num_processes())
 
 def task_id() -> Optional[int]:
   return xu.getenv_as(xenv.CLOUD_TPU_TASK_ID, int)
 
-def get_tpu_env():
+def get_tpu_env() -> Dict[str, str]:
   metadata = _get_metadata('tpu-env')
 
   return yaml.load(metadata, yaml.Loader)
