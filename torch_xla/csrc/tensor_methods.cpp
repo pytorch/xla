@@ -2231,14 +2231,6 @@ XLATensorPtr XLATensor::reflection_pad2d_backward(
       grad_output->GetIrValue(), input->GetIrValue(), std::move(padding)));
 }
 
-XLATensorPtr XLATensor::relu(const XLATensorPtr& input) {
-  return input->CreateFrom(ReluOp(input->GetIrValue()));
-}
-
-void XLATensor::relu_(XLATensorPtr& input) {
-  input->SetInPlaceIrValue(ReluOp(input->GetIrValue()));
-}
-
 XLATensorPtr XLATensor::remainder(const XLATensorPtr& input,
                                   const XLATensorPtr& other) {
   return input->CreateFrom(Remainder(input->GetIrValue(), other->GetIrValue()));

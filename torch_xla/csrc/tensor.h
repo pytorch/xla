@@ -966,9 +966,6 @@ class XLATensor : public c10::intrusive_ptr_target {
                                                 const XLATensorPtr& input,
                                                 std::vector<int64_t> padding);
 
-  static XLATensorPtr relu(const XLATensorPtr& input);
-  static void relu_(XLATensorPtr& input);
-
   static XLATensorPtr remainder(const XLATensorPtr& input,
                                 const XLATensorPtr& other);
   static XLATensorPtr remainder(const XLATensorPtr& input,

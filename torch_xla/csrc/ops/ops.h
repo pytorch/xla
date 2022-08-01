@@ -86,8 +86,6 @@ torch::lazy::NodePtr SgnOp(const torch::lazy::Value& input);
 
 torch::lazy::NodePtr SignOp(const torch::lazy::Value& input);
 
-torch::lazy::NodePtr ReluOp(const torch::lazy::Value& input);
-
 torch::lazy::NodePtr Min(const torch::lazy::Value& input,
                          const torch::lazy::Value& other);
 
