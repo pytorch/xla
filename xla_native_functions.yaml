@@ -45,6 +45,7 @@ full_codegen:
   - silu_backward
   - sin
   - sinh
+  - take
   - tan
   - tanh
   - tril
@@ -307,7 +308,6 @@ supported:
   - symeig
   - t
   - t_
-  - take
   - tanh_backward
   - threshold
   - threshold_backward

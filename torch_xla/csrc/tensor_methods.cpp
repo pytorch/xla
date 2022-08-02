@@ -2648,11 +2648,6 @@ std::tuple<XLATensorPtr, XLATensorPtr> XLATensor::symeig(
                          input->CreateFrom(torch::lazy::Value(node, 1)));
 }
 
-XLATensorPtr XLATensor::take(const XLATensorPtr& input,
-                             const XLATensorPtr& index) {
-  return input->CreateFrom(Take(input->GetIrValue(), index->GetIrValue()));
-}
-
 XLATensorPtr XLATensor::tanh_backward(const XLATensorPtr& grad_output,
                                       const XLATensorPtr& output) {
   return XLATensor::mul(grad_output,

@@ -215,9 +215,6 @@ torch::lazy::NodePtr MaxUnary(const torch::lazy::Value& input);
 
 torch::lazy::NodePtr MinUnary(const torch::lazy::Value& input);
 
-torch::lazy::NodePtr Take(const torch::lazy::Value& input,
-                          const torch::lazy::Value& index);
-
 torch::lazy::NodePtr TanhGelu(const torch::lazy::Value& input);
 
 torch::lazy::NodePtr TanhGeluBackward(const torch::lazy::Value& grad,
