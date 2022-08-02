@@ -1,7 +1,7 @@
 import functools
 import operator
 import os
-from typing import Dict, Optional, List, Tuple
+from typing import Dict, NamedTuple, Optional, List, Tuple
 import requests
 import yaml
 
@@ -27,23 +27,27 @@ _ACCELERATOR_TYPE_TO_HOST_BOUNDS = {
     'v3-2048': '16,16,1',
 }
 
-MeshShape = Tuple[int, int, int]
 
+class MeshShape(NamedTuple):
+  """Represents a TPU mesh shape (e.g. '2,2,1' or '1,1,1')"""
+  x: int
+  y: int
+  z: int
 
-def _parse_mesh_shape(mesh: str) -> MeshShape:
-  dims = tuple(int(d) for d in mesh.split(','))
-  if len(dims) != 3:
-    raise ValueError("Mesh shape '{}' should be length 3".format(mesh))
+  @classmethod
+  def from_string(cls, mesh: str):
+    dims = tuple(int(d) for d in mesh.split(','))
+    if len(dims) != 3:
+      raise ValueError("Mesh shape '{}' should be length 3".format(mesh))
 
-  return dims
+    return MeshShape(*dims)
 
+  @property
+  def size(self) -> int:
+    return functools.reduce(operator.mul, self)
 
-def _multiply_mesh_shapes(mesh1: MeshShape, mesh2: MeshShape) -> MeshShape:
-  return tuple(d1 * d2 for d1, d2 in zip(mesh1, mesh2))
-
-
-def _mesh_size(mesh: MeshShape) -> int:
-  return functools.reduce(operator.mul, mesh)
+  def __mul__(self, other):
+    return MeshShape(*(d1 * d2 for d1, d2 in zip(self, other)))
 
 
 def _get_metadata(key: str) -> str:
@@ -58,8 +62,8 @@ def num_processes(default: int = 1) -> int:
   """Returns number of processes across all TPU hosts."""
   process_bounds = xu.getenv_as(xenv.TPU_PROCESS_BOUNDS, str)
 
-  return _mesh_size(
-      _parse_mesh_shape(process_bounds)) if process_bounds else default
+  return MeshShape.from_string(
+      process_bounds).size if process_bounds else default
 
 
 def num_local_processes(local_chips: int = 4) -> int:
@@ -109,18 +113,18 @@ def configure_topology(local_rank: int,
   accelerator_type = tpu_env['ACCELERATOR_TYPE']
   if tpu_env['ACCELERATOR_TYPE'].startswith('v4'):
     # Process bounds with 4 chips per process
-    default_process_bounds = _parse_mesh_shape(tpu_env[xenv.TPU_PROCESS_BOUNDS])
-    chips_per_process = _parse_mesh_shape(
+    default_process_bounds = MeshShape.from_string(
+        tpu_env[xenv.TPU_PROCESS_BOUNDS])
+    chips_per_process = MeshShape.from_string(
         tpu_env[xenv.TPU_CHIPS_PER_PROCESS_BOUNDS])
   else:
     # TODO: merge with TPU v4 case when bounds are added to metadata
-    default_process_bounds = _parse_mesh_shape(
+    default_process_bounds = MeshShape.from_string(
         _ACCELERATOR_TYPE_TO_HOST_BOUNDS[accelerator_type])
-    chips_per_process = _parse_mesh_shape('2,2,1')
+    chips_per_process = MeshShape.from_string('2,2,1')
 
   # Process bounds with 1 chip per process
-  process_bounds = _multiply_mesh_shapes(default_process_bounds,
-                                         chips_per_process)
+  process_bounds = default_process_bounds * chips_per_process
 
   os.environ.setdefault(xenv.TPU_CHIPS_PER_PROCESS_BOUNDS, '1,1,1')
   os.environ.setdefault(xenv.TPU_PROCESS_BOUNDS,
