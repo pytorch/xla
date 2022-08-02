@@ -11,6 +11,8 @@ enum class ReductionMode {
   kSum,
 };
 
+ReductionMode GetXlaReductionMode(int64_t reduction);
+
 xla::XlaOp BuildBinaryCrossEntropy(xla::XlaOp input, xla::XlaOp target,
                                    const absl::optional<xla::XlaOp>& weight,
                                    ReductionMode reduction);

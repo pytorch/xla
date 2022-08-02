@@ -2,11 +2,27 @@
 
 #include "tensorflow/compiler/xla/client/lib/logdet.h"
 #include "tensorflow/compiler/xla/shape_util.h"
+#include "tensorflow/compiler/xla/xla_client/util.h"
 #include "torch_xla/csrc/elementwise.h"
 #include "torch_xla/csrc/helpers.h"
 #include "torch_xla/csrc/pooling.h"
+#include "torch_xla/csrc/reduction.h"
 
 namespace torch_xla {
+namespace {
+template <typename T>
+std::vector<T> GetValuesVectorWithOptional(
+    absl::Span<const T> values,
+    absl::Span<const c10::optional<T>* const> opt_values) {
+  std::vector<T> result(values.begin(), values.end());
+  for (auto opt : opt_values) {
+    if (*opt) {
+      result.push_back(*(*opt));
+    }
+  }
+  return result;
+}
+}  // namespace
 
 xla::Shape AbsOutputShape(const torch::lazy::Value& input) {
   return GetXlaShape(input);
@@ -56,6 +72,48 @@ xla::Shape AtanOutputShape(const torch::lazy::Value& input) {
 
 xla::Shape AtanhOutputShape(const torch::lazy::Value& input) {
   return GetXlaShape(input);
+}
+
+xla::Shape BinaryCrossEntropyOutputShape(
+    const torch::lazy::Value& input, const torch::lazy::Value& target,
+    const c10::optional<torch::lazy::Value>& weight, int64_t reduction) {
+  auto lower_for_shape_fn =
+      [&](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
+    absl::optional<xla::XlaOp> weight;
+    if (operands.size() > 2) {
+      weight = operands[2];
+    }
+    return BuildBinaryCrossEntropy(operands[0], operands[1], weight,
+                                   GetXlaReductionMode(reduction));
+  };
+  std::vector<xla::Shape> shapes;
+  for (auto& i : GetValuesVectorWithOptional<torch::lazy::Value>(
+           {input, target}, {&weight})) {
+    shapes.push_back(GetXlaShape(i));
+  }
+  return InferOutputShape(shapes, lower_for_shape_fn);
+}
+
+xla::Shape BinaryCrossEntropyBackwardOutputShape(
+    const torch::lazy::Value& grad_output, const torch::lazy::Value& input,
+    const torch::lazy::Value& target,
+    const c10::optional<torch::lazy::Value>& weight, int64_t reduction) {
+  auto lower_for_shape_fn =
+      [&](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
+    absl::optional<xla::XlaOp> weight;
+    if (operands.size() > 3) {
+      weight = operands[3];
+    }
+    return BuildBinaryCrossEntropyBackward(operands[0], operands[1],
+                                           operands[2], weight,
+                                           GetXlaReductionMode(reduction));
+  };
+  std::vector<xla::Shape> shapes;
+  for (auto& i : GetValuesVectorWithOptional<torch::lazy::Value>(
+           {grad_output, input, target}, {&weight})) {
+    shapes.push_back(GetXlaShape(i));
+  }
+  return InferOutputShape(shapes, lower_for_shape_fn);
 }
 
 xla::Shape CeilOutputShape(const torch::lazy::Value& input) {

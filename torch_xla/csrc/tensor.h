@@ -448,16 +448,6 @@ class XLATensor : public c10::intrusive_ptr_target {
   static void bernoulli_(XLATensorPtr& input, double probability);
   static void bernoulli_(XLATensorPtr& input, const XLATensorPtr& probability);
 
-  static XLATensorPtr binary_cross_entropy(const XLATensorPtr& input,
-                                           const XLATensorPtr& target,
-                                           const XLATensorPtr& weight,
-                                           int64_t reduction);
-
-  static XLATensorPtr binary_cross_entropy_backward(
-      const XLATensorPtr& grad_output, const XLATensorPtr& input,
-      const XLATensorPtr& target, const XLATensorPtr& weight,
-      int64_t reduction);
-
   static XLATensorPtr bitwise_and(const XLATensorPtr& input,
                                   const at::Scalar& other);
 
