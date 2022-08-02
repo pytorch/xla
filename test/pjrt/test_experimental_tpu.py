@@ -17,10 +17,10 @@ class TestExperimentalTpu(parameterized.TestCase):
       ('multi_process_v4-16', '2,2,2', 8),
       ('multi_process_v4-32', '2,2,4', 16),
   )
-  def test_num_processes(self, process_bounds, expected):
+  def test_process_bounds_size(self, process_bounds, expected):
     envs = {xenv.TPU_PROCESS_BOUNDS: process_bounds} if process_bounds else {}
     with mock.patch.dict(os.environ, envs, clear=True):
-      n = tpu.num_processes()
+      n = tpu.process_bounds_size()
 
     self.assertEqual(n, expected)
 
