@@ -39,8 +39,6 @@
 #include "torch_xla/csrc/ops/avg_pool_nd.h"
 #include "torch_xla/csrc/ops/avg_pool_nd_backward.h"
 #include "torch_xla/csrc/ops/bernoulli.h"
-#include "torch_xla/csrc/ops/binary_cross_entropy.h"
-#include "torch_xla/csrc/ops/binary_cross_entropy_backward.h"
 #include "torch_xla/csrc/ops/bitwise_ir_ops.h"
 #include "torch_xla/csrc/ops/cast.h"
 #include "torch_xla/csrc/ops/cat.h"
@@ -229,18 +227,6 @@ std::vector<int64_t> GetExpandDimensions(const xla::Shape& shape,
     }
   }
   return dimensions;
-}
-
-ReductionMode GetXlaReductionMode(int64_t reduction) {
-  switch (reduction) {
-    case at::Reduction::Mean:
-      return ReductionMode::kMean;
-    case at::Reduction::None:
-      return ReductionMode::kNone;
-    case at::Reduction::Sum:
-      return ReductionMode::kSum;
-  }
-  XLA_ERROR() << "Unknown reduction mode: " << reduction;
 }
 
 // Resizes and / or checks whether a list is of the given size. The list is only
@@ -913,23 +899,6 @@ void XLATensor::bernoulli_(XLATensorPtr& input,
   input->SetInPlaceIrValue(torch::lazy::MakeNode<Bernoulli>(
       probability->GetIrValue(), GetRngSeed(input->GetDevice()),
       input->shape().get()));
-}
-
-XLATensorPtr XLATensor::binary_cross_entropy(const XLATensorPtr& input,
-                                             const XLATensorPtr& target,
-                                             const XLATensorPtr& weight,
-                                             int64_t reduction) {
-  return input->CreateFrom(torch::lazy::MakeNode<BinaryCrossEntropy>(
-      input->GetIrValue(), target->GetIrValue(), GetOptionalIrValue(weight),
-      GetXlaReductionMode(reduction)));
-}
-
-XLATensorPtr XLATensor::binary_cross_entropy_backward(
-    const XLATensorPtr& grad_output, const XLATensorPtr& input,
-    const XLATensorPtr& target, const XLATensorPtr& weight, int64_t reduction) {
-  return input->CreateFrom(torch::lazy::MakeNode<BinaryCrossEntropyBackward>(
-      grad_output->GetIrValue(), input->GetIrValue(), target->GetIrValue(),
-      GetOptionalIrValue(weight), GetXlaReductionMode(reduction)));
 }
 
 XLATensorPtr XLATensor::bitwise_and(const XLATensorPtr& input,

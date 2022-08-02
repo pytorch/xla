@@ -8,6 +8,8 @@ full_codegen:
   - asinh
   - atan
   - atanh
+  - binary_cross_entropy
+  - binary_cross_entropy_backward
   - ceil
   - cos
   - cosh
@@ -107,8 +109,6 @@ supported:
   - bernoulli
   - bernoulli_.float
   - bernoulli_.Tensor
-  - binary_cross_entropy
-  - binary_cross_entropy_backward
   - binary_cross_entropy_with_logits
   - bitwise_and.Scalar
   - bitwise_and.Tensor

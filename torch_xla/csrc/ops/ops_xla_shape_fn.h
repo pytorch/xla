@@ -23,6 +23,15 @@ xla::Shape AtanOutputShape(const torch::lazy::Value& input);
 
 xla::Shape AtanhOutputShape(const torch::lazy::Value& input);
 
+xla::Shape BinaryCrossEntropyOutputShape(
+    const torch::lazy::Value& input, const torch::lazy::Value& target,
+    const c10::optional<torch::lazy::Value>& weight, int64_t reduction);
+
+xla::Shape BinaryCrossEntropyBackwardOutputShape(
+    const torch::lazy::Value& grad_output, const torch::lazy::Value& input,
+    const torch::lazy::Value& target,
+    const c10::optional<torch::lazy::Value>& weight, int64_t reduction);
+
 xla::Shape CeilOutputShape(const torch::lazy::Value& input);
 
 xla::Shape CosOutputShape(const torch::lazy::Value& input);

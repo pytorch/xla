@@ -6,6 +6,7 @@
 #include "torch_xla/csrc/helpers.h"
 #include "torch_xla/csrc/matrix.h"
 #include "torch_xla/csrc/pooling.h"
+#include "torch_xla/csrc/reduction.h"
 
 namespace torch_xla {
 
@@ -56,6 +57,33 @@ torch_xla::XlaOpVector Atan::Lower(LoweringContext* loctx) const {
 torch_xla::XlaOpVector Atanh::Lower(LoweringContext* loctx) const {
   xla::XlaOp xla_input = loctx->GetOutputOp(operand(0));
   return ReturnOp(xla::Atanh(xla_input), loctx);
+}
+
+torch_xla::XlaOpVector BinaryCrossEntropy::Lower(LoweringContext* loctx) const {
+  xla::XlaOp logits = loctx->GetOutputOp(operand(0));
+  xla::XlaOp labels = loctx->GetOutputOp(operand(1));
+  absl::optional<xla::XlaOp> weight;
+  if (has_weight) {
+    weight = loctx->GetOutputOp(operand(2));
+  }
+  return ReturnOp(BuildBinaryCrossEntropy(logits, labels, weight,
+                                          GetXlaReductionMode(reduction)),
+                  loctx);
+}
+
+torch_xla::XlaOpVector BinaryCrossEntropyBackward::Lower(
+    LoweringContext* loctx) const {
+  xla::XlaOp grad_output = loctx->GetOutputOp(operand(0));
+  xla::XlaOp logits = loctx->GetOutputOp(operand(1));
+  xla::XlaOp labels = loctx->GetOutputOp(operand(2));
+  absl::optional<xla::XlaOp> weight;
+  if (has_weight) {
+    weight = loctx->GetOutputOp(operand(3));
+  }
+  return ReturnOp(
+      BuildBinaryCrossEntropyBackward(grad_output, logits, labels, weight,
+                                      GetXlaReductionMode(reduction)),
+      loctx);
 }
 
 torch_xla::XlaOpVector Ceil::Lower(LoweringContext* loctx) const {
