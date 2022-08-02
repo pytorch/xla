@@ -54,7 +54,7 @@ def _get_metadata(key: str) -> str:
   return resp.text
 
 
-def num_processes(default: int = 4) -> Optional[int]:
+def num_processes(default: int = 1) -> int:
   """Returns number of processes across all TPU hosts."""
   process_bounds = xu.getenv_as(xenv.TPU_PROCESS_BOUNDS, str)
 
@@ -62,10 +62,10 @@ def num_processes(default: int = 4) -> Optional[int]:
       _parse_mesh_shape(process_bounds)) if process_bounds else default
 
 
-def num_local_processes() -> Optional[int]:
+def num_local_processes(local_chips: int = 4) -> int:
   """Returns number of processes to create on this host."""
-  # Don't create more processes than local chips (4)
-  return min(4, num_processes())
+  # Don't create more processes than local chips
+  return min(local_chips, num_processes(default=local_chips))
 
 
 def task_id() -> Optional[int]:

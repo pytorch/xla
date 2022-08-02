@@ -11,7 +11,7 @@ from unittest import mock
 class TestExperimentalTpu(parameterized.TestCase):
 
   @parameterized.named_parameters(
-      ('default_one_host', None, 4),
+      ('default_one_host', None, 1),
       ('one_process_one_host', '1,1,1', 1),
       ('multi_process_one_host', '2,2,1', 4),
       ('multi_process_v4-16', '2,2,2', 8),
