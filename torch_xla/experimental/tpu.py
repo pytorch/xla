@@ -55,6 +55,7 @@ def _get_metadata(key: str) -> str:
 
 
 def num_processes(default: int = 4) -> Optional[int]:
+  """Returns number of processes across all TPU hosts."""
   process_bounds = xu.getenv_as(xenv.TPU_PROCESS_BOUNDS, str)
 
   return _mesh_size(
@@ -62,21 +63,25 @@ def num_processes(default: int = 4) -> Optional[int]:
 
 
 def num_local_processes() -> Optional[int]:
+  """Returns number of processes to create on this host."""
   # Don't create more processes than local chips (4)
   return min(4, num_processes())
 
 
 def task_id() -> Optional[int]:
+  """Returns index of this process within all TPU worker processes, if any."""
   return xu.getenv_as(xenv.CLOUD_TPU_TASK_ID, int)
 
 
 def get_tpu_env() -> Dict[str, str]:
+  """Fetches and parses `tpu-env` metadata field."""
   metadata = _get_metadata('tpu-env')
 
   return yaml.load(metadata, yaml.Loader)
 
 
 def get_worker_ips() -> List[str]:
+  """Returns ordered list of TPU worker IPs from TPU metadata."""
   metadata = _get_metadata('worker-network-endpoints')
 
   # Workers have format 'hostname:uid:ip,hostname:uid:ip,...'
@@ -88,7 +93,17 @@ def get_worker_ips() -> List[str]:
 
 def configure_topology(local_rank: int,
                        local_world_size: int,
-                       base_port: int = 8476):
+                       base_port: int = 8476) -> None:
+  """Configures TPU topology environment variables based on TPU metadata.
+
+  Must be run before using any XLA devices.
+
+  Args:
+    local_rank: rank of this process within this host.
+    local_world_size: number of processes on this host.
+    base_port: starting port for TPU clients on each host. Ports in the range
+      [base_port, base_port + local_world_size) must be free on each host.
+  """
   tpu_env = get_tpu_env()
 
   accelerator_type = tpu_env['ACCELERATOR_TYPE']
