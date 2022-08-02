@@ -122,13 +122,13 @@ def addressable_device_count() -> int:
 
 
 @requires_pjrt
-def run_thread_per_device(process: int, local_processes: int,
+def run_thread_per_device(local_process: int, local_world_size: int,
                           fn: Callable[..., R]) -> Dict[int, R]:
   """Runs `fn` in a separate thread on each visible device.
 
   Args:
-    process: rank of current process
-    local_processes: number of processes on this host
+    local_process: rank of current process within this host
+    local_world_size: number of processes on this host
     fn: Function to run on all devices
 
   Returns:
@@ -136,7 +136,7 @@ def run_thread_per_device(process: int, local_processes: int,
     result of calling `fn`.
   """
   if device_type() == 'TPU':
-    tpu.configure_topology(process, local_processes)
+    tpu.configure_topology(local_process, local_world_size)
 
   xm.set_replication(xm.xla_device(), xm.get_xla_supported_devices())
   threads = len(xm.get_xla_supported_devices())
@@ -146,8 +146,13 @@ def run_thread_per_device(process: int, local_processes: int,
     @functools.wraps(fn)
     def wrapper(*args, **kwargs):
       # Assumes same number of threads per process
-      set_global_ordinal(tpu.task_id() * threads + device_index)
-      set_local_ordinal(process * threads + device_index)
+      if device_type() == 'TPU':
+        set_global_ordinal(tpu.task_id() * threads + device_index)
+      else:
+        # TODO: support multiple hosts with CPU/GPU
+        set_global_ordinal(local_process * threads + device_index)
+
+      set_local_ordinal(local_process * threads + device_index)
 
       return fn(*args, **kwargs)
 
