@@ -959,6 +959,8 @@ class XLATensor : public c10::intrusive_ptr_target {
                                const torch::lazy::BackendDevice& device,
                                at::ScalarType scalar_type);
 
+  static void randperm_out(XLATensorPtr& input, int64_t n);
+
   static XLATensorPtr reflection_pad2d(const XLATensorPtr& input,
                                        std::vector<int64_t> padding);
 

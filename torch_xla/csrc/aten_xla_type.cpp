@@ -2543,6 +2543,19 @@ at::Tensor& XLANativeFunctions::random_(
   return self;
 }
 
+at::Tensor& XLANativeFunctions::randperm_out(int64_t n, c10::optional<at::Generator> generator, at::Tensor & out) {
+  XLA_FN_COUNTER("xla::");
+  if (generator.has_value() && generator->defined()) {
+    return at::native::call_fallback_fn<&xla_cpu_fallback,
+                                        ATEN_OP(randperm_generator_out)>::call( // xw32: how can find the thing inside `ATEN_OP`.
+                                                                n, generator, out);
+  }
+
+  XLATensorPtr out_tensor = bridge::GetXlaTensor(out);
+  XLATensor::randperm_out(out_tensor, n);
+  return out;
+}
+
 at::Tensor XLANativeFunctions::reflection_pad2d(const at::Tensor& self,
                                                 at::IntArrayRef padding) {
   XLA_FN_COUNTER("xla::");
