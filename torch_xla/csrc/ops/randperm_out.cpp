@@ -10,9 +10,10 @@
 namespace torch_xla {
 
 // xw32: should I include a xla::Shape param in the constructor?
-// xw32: what opkind should I use?
-// xw32: what does the shape param in the constructor mean?
-RandpermOut::RandpermOut(int64_t n, const xla::Shape& shape)
+// xw32: what opkind should I use? randperm or randperm_out? randperm_out doesn't seem to exist.
+// xw32: what does the shape param in the constructor mean? The output shape?
+// xw32: what does the hash in the constructor mean?
+RandpermOut::RandpermOut(int64_t n)
     : XlaNode(torch::lazy::OpKind(at::aten::randperm), torch::lazy::OpList(),
               xla::ShapeUtil::MakeShape(xla::U64, {n}),
               /*num_outputs=*/1, torch::lazy::MHash(n)),
@@ -20,7 +21,7 @@ RandpermOut::RandpermOut(int64_t n, const xla::Shape& shape)
 
 torch::lazy::NodePtr RandpermOut::Clone(
     torch::lazy::OpList operands) const {
-        return torch::lazy::MakeNode<RandpermOut>(n_, xla_shape());
+        return torch::lazy::MakeNode<RandpermOut>(n_);
 }
 
 XlaOpVector RandpermOut::Lower(LoweringContext* loctx) const {

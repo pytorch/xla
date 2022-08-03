@@ -203,7 +203,6 @@ xla::XlaOp RngNormal(xla::XlaOp seed, const xla::Shape& shape, xla::XlaOp mean,
 
 xla::XlaOp BuildRandpermOut(int64_t n, xla::XlaBuilder* builder) {
   const xla::Shape key_shape = xla::ShapeUtil::MakeShape(xla::U32, {n});
-  xla::PrimitiveType element_type = xla::U64;
   xla::XlaOp input = xla::Iota(builder, key_shape, 0);
 
   // Ensure that the key space is greater than or equal to the cube of the
@@ -217,10 +216,11 @@ xla::XlaOp BuildRandpermOut(int64_t n, xla::XlaBuilder* builder) {
   xla::XlaOp max_value = xla::ConstantR0(builder, tensorflow::kuint32max);
 
   xla::XlaOp curr = input;
+  xla::PrimitiveType element_type = xla::U64;
   for (int i = 0; i < rounds; ++i) {
     xla::XlaOp keys = xla::RngUniform(zero, max_value, key_shape);
     xla::XlaOp sorted = xla::Sort({keys, curr},
-    xla::CreateScalarLtComputation({xla::U32, element_type}, builder));
+      xla::CreateScalarLtComputation({xla::U32, element_type}, builder));
     curr = xla::GetTupleElement(sorted, 1);
   }
   return curr;

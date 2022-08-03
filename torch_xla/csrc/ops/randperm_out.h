@@ -6,8 +6,8 @@ namespace torch_xla {
 
 class RandpermOut : public XlaNode {
   public:
-  // xw32: what does the shape mean here?
-  RandpermOut(int64_t n, const xla::Shape& shape);
+  
+  RandpermOut(int64_t n);
 
   torch::lazy::NodePtr Clone(torch::lazy::OpList operands) const override;
 

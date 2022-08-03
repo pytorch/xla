@@ -2219,8 +2219,7 @@ void XLATensor::random_(XLATensorPtr& input, int64_t from, int64_t to) {
 }
 
 void XLATensor::randperm_out(XLATensorPtr& input, int64_t n) {
-  auto input_shape = input->shape();
-  input->SetInPlaceIrValue(torch::lazy::MakeNode<RandpermOut>(n, input_shape));
+  input->SetInPlaceIrValue(torch::lazy::MakeNode<RandpermOut>(n));
 }
 
 XLATensorPtr XLATensor::reflection_pad2d(const XLATensorPtr& input,
