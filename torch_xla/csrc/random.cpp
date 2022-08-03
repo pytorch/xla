@@ -1,10 +1,13 @@
 #include "torch_xla/csrc/random.h"
 
+#include <cmath>
 #include <string>
 #include <tuple>
 
 #include "tensorflow/compiler/xla/client/lib/constants.h"
+#include "tensorflow/compiler/xla/client/lib/comparators.h"
 #include "tensorflow/compiler/xla/client/lib/prng.h"
+#include "tensorflow/compiler/xla/shape_util.h"
 #include "tensorflow/compiler/xla/xla_client/debug_macros.h"
 #include "tensorflow/compiler/xla/xla_client/sys_util.h"
 #include "torch_xla/csrc/convert_ops.h"
@@ -196,6 +199,31 @@ xla::XlaOp RngNormal(xla::XlaOp seed, const xla::Shape& shape, xla::XlaOp mean,
                   << xla::primitive_util::LowercasePrimitiveTypeName(
                          shape.element_type());
   }
+}
+
+xla::XlaOp BuildRandpermOut(int64_t n, xla::XlaBuilder* builder) {
+  const xla::Shape key_shape = xla::ShapeUtil::MakeShape(xla::U32, {n});
+  xla::PrimitiveType element_type = xla::U64;
+  xla::XlaOp input = xla::Iota(builder, key_shape, 0);
+
+  // Ensure that the key space is greater than or equal to the cube of the
+  // number of values to manage the number of collisions. Inspired by
+  // RandomShuffleOp in tf2xla, where the full rationale for picking the
+  // exponent value is described.
+  const int kExponent = 3;
+  const int rounds = static_cast<int>(
+      std::ceil(kExponent * std::log(n) / std::log(tensorflow::kuint32max)));
+  xla::XlaOp zero = xla::ConstantR0(builder, 0U);
+  xla::XlaOp max_value = xla::ConstantR0(builder, tensorflow::kuint32max);
+
+  xla::XlaOp curr = input;
+  for (int i = 0; i < rounds; ++i) {
+    xla::XlaOp keys = xla::RngUniform(zero, max_value, key_shape);
+    xla::XlaOp sorted = xla::Sort({keys, curr},
+    xla::CreateScalarLtComputation({xla::U32, element_type}, builder));
+    curr = xla::GetTupleElement(sorted, 1);
+  }
+  return curr;
 }
 
 }  // namespace torch_xla

@@ -13,4 +13,6 @@ xla::XlaOp RngDiscreteUniform(xla::XlaOp seed, const xla::Shape& shape,
 xla::XlaOp RngNormal(xla::XlaOp seed, const xla::Shape& shape, xla::XlaOp mean,
                      xla::XlaOp std);
 
+xla::XlaOp BuildRandpermOut(int64_t n, xla::XlaBuilder* builder);
+
 }  // namespace torch_xla
