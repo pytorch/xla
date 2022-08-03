@@ -3,6 +3,7 @@
 
 #include <iostream>
 
+#include "ATen/ops/randperm.h"
 #include "cpp_test_util.h"
 #include "tensorflow/compiler/xla/permutation_util.h"
 #include "tensorflow/compiler/xla/util.h"
@@ -4192,6 +4193,20 @@ TEST_F(AtenXlaTensorTest, TestRandperm) {
                                     shuffle_cpu.data_ptr<int64_t>() + n);
   EXPECT_TRUE(shuffle_data.size() == n && xla::IsPermutation(shuffle_data));
   ExpectCounterNotChanged("aten::(?!randperm.generator_out).*",
+                          cpp_test::GetIgnoredCounters());
+}
+
+TEST_F(AtenXlaTensorTest, TestRandpermOut) {
+  int n = 5;
+  torch::Tensor shuffle;
+  torch::randperm_out(shuffle, n);
+  // xw32: why do we need to copy to CPU?
+  torch::Tensor shuffle_cpu = CopyToDevice(shuffle, torch::kCPU);
+  // Create a new vector for a given tensor.
+  std::vector<int64_t> shuffle_data(shuffle_cpu.data_ptr<int64_t>(),
+                                    shuffle_cpu.data_ptr<int64_t>() + n);
+  EXPECT_TRUE(shuffle_data.size() == n && xla::IsPermutation(shuffle_data)); 
+  ExpectCounterChanged("aten::randperm.generator_out.*",
                           cpp_test::GetIgnoredCounters());
 }
 
