@@ -139,9 +139,13 @@ torch_xla::XlaOpVector BinaryCrossEntropyBackward::Lower(
       loctx);
 }
 
-torch_xla::XlaOpVector BitwiseAndScalar::Lower(LoweringContext* loctx) const {
+torch_xla::XlaOpVector BitwiseAndTensor::Lower(LoweringContext* loctx) const {
   xla::XlaOp xla_input = loctx->GetOutputOp(operand(0));
-  return ReturnOp(xla::Not(xla_input), loctx);
+  xla::XlaOp xla_other_input = loctx->GetOutputOp(operand(1));
+  return ReturnOp(XlaHelpers::PromotedBinaryOp(
+                      xla_input, xla_other_input,
+                      [](xla::XlaOp one, xla::XlaOp two) { return one & two; }),
+                  loctx);
 }
 
 torch_xla::XlaOpVector BitwiseNot::Lower(LoweringContext* loctx) const {
@@ -149,14 +153,22 @@ torch_xla::XlaOpVector BitwiseNot::Lower(LoweringContext* loctx) const {
   return ReturnOp(xla::Not(xla_input), loctx);
 }
 
-torch_xla::XlaOpVector BitwiseOrScalar::Lower(LoweringContext* loctx) const {
+torch_xla::XlaOpVector BitwiseOrTensor::Lower(LoweringContext* loctx) const {
   xla::XlaOp xla_input = loctx->GetOutputOp(operand(0));
-  return ReturnOp(xla::Not(xla_input), loctx);
+  xla::XlaOp xla_other_input = loctx->GetOutputOp(operand(1));
+  return ReturnOp(XlaHelpers::PromotedBinaryOp(
+                      xla_input, xla_other_input,
+                      [](xla::XlaOp one, xla::XlaOp two) { return one | two; }),
+                  loctx);
 }
 
-torch_xla::XlaOpVector BitwiseXorScalar::Lower(LoweringContext* loctx) const {
+torch_xla::XlaOpVector BitwiseXorTensor::Lower(LoweringContext* loctx) const {
   xla::XlaOp xla_input = loctx->GetOutputOp(operand(0));
-  return ReturnOp(xla::Not(xla_input), loctx);
+  xla::XlaOp xla_other_input = loctx->GetOutputOp(operand(1));
+  return ReturnOp(XlaHelpers::PromotedBinaryOp(
+                      xla_input, xla_other_input,
+                      [](xla::XlaOp one, xla::XlaOp two) { return one ^ two; }),
+                  loctx);
 }
 
 torch_xla::XlaOpVector Ceil::Lower(LoweringContext* loctx) const {

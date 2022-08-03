@@ -35,7 +35,6 @@
 #include "torch_xla/csrc/ops/avg_pool_nd.h"
 #include "torch_xla/csrc/ops/avg_pool_nd_backward.h"
 #include "torch_xla/csrc/ops/bernoulli.h"
-#include "torch_xla/csrc/ops/bitwise_ir_ops.h"
 #include "torch_xla/csrc/ops/cast.h"
 #include "torch_xla/csrc/ops/cat.h"
 #include "torch_xla/csrc/ops/cholesky.h"
@@ -817,56 +816,6 @@ void XLATensor::bernoulli_(XLATensorPtr& input,
   input->SetInPlaceIrValue(torch::lazy::MakeNode<Bernoulli>(
       probability->GetIrValue(), GetRngSeed(input->GetDevice()),
       input->shape().get()));
-}
-
-XLATensorPtr XLATensor::bitwise_and(const XLATensorPtr& input,
-                                    const at::Scalar& other) {
-  CheckIsIntegralOrPred(input->shape(), "__and__");
-  torch::lazy::Value constant =
-      GetIrValueForScalar(other, input->shape(), input->GetDevice());
-  return input->CreateFrom(BitwiseAnd(input->GetIrValue(), constant));
-}
-
-XLATensorPtr XLATensor::bitwise_and(const XLATensorPtr& input,
-                                    const XLATensorPtr& other) {
-  CheckIsIntegralOrPred(input->shape(), "__and__");
-  return input->CreateFrom(
-      BitwiseAnd(input->GetIrValue(), other->GetIrValue()));
-}
-
-XLATensorPtr XLATensor::bitwise_not(const XLATensorPtr& input) {
-  torch::lazy::Value result = torch::lazy::MakeNode<BitwiseNot>(
-      input->GetIrValue(), std::vector<torch::lazy::Shape>());
-  return input->CreateFrom(result);
-}
-
-XLATensorPtr XLATensor::bitwise_or(const XLATensorPtr& input,
-                                   const at::Scalar& other) {
-  CheckIsIntegralOrPred(input->shape(), "__or__");
-  torch::lazy::Value constant =
-      GetIrValueForScalar(other, input->shape(), input->GetDevice());
-  return input->CreateFrom(BitwiseOr(input->GetIrValue(), constant));
-}
-
-XLATensorPtr XLATensor::bitwise_or(const XLATensorPtr& input,
-                                   const XLATensorPtr& other) {
-  CheckIsIntegralOrPred(input->shape(), "__or__");
-  return input->CreateFrom(BitwiseOr(input->GetIrValue(), other->GetIrValue()));
-}
-
-XLATensorPtr XLATensor::bitwise_xor(const XLATensorPtr& input,
-                                    const at::Scalar& other) {
-  CheckIsIntegralOrPred(input->shape(), "__xor__");
-  torch::lazy::Value constant =
-      GetIrValueForScalar(other, input->shape(), input->GetDevice());
-  return input->CreateFrom(BitwiseXor(input->GetIrValue(), constant));
-}
-
-XLATensorPtr XLATensor::bitwise_xor(const XLATensorPtr& input,
-                                    const XLATensorPtr& other) {
-  CheckIsIntegralOrPred(input->shape(), "__xor__");
-  return input->CreateFrom(
-      BitwiseXor(input->GetIrValue(), other->GetIrValue()));
 }
 
 XLATensorPtr XLATensor::bmm(const XLATensorPtr& batch1,

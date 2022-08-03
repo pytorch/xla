@@ -59,15 +59,15 @@ xla::Shape BinaryCrossEntropyBackwardOutputShape(
     const torch::lazy::Value& target,
     const c10::optional<torch::lazy::Value>& weight, int64_t reduction);
 
-xla::Shape BitwiseAndScalarOutputShape(const torch::lazy::Value& input,
+xla::Shape BitwiseAndTensorOutputShape(const torch::lazy::Value& input,
                                        const torch::lazy::Value& other);
 
 xla::Shape BitwiseNotOutputShape(const torch::lazy::Value& input);
 
-xla::Shape BitwiseOrScalarOutputShape(const torch::lazy::Value& input,
+xla::Shape BitwiseOrTensorOutputShape(const torch::lazy::Value& input,
                                       const torch::lazy::Value& other);
 
-xla::Shape BitwiseXorScalarOutputShape(const torch::lazy::Value& input,
+xla::Shape BitwiseXorTensorOutputShape(const torch::lazy::Value& input,
                                        const torch::lazy::Value& other);
 
 xla::Shape CeilOutputShape(const torch::lazy::Value& input);
