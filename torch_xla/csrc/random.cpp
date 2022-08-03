@@ -219,6 +219,7 @@ xla::XlaOp BuildRandpermOut(int64_t n, xla::XlaBuilder* builder) {
   xla::PrimitiveType element_type = xla::U64;
   for (int i = 0; i < rounds; ++i) {
     xla::XlaOp keys = xla::RngUniform(zero, max_value, key_shape);
+    // xw32: why do we need to generate a key and sort for "rounds" times?
     xla::XlaOp sorted = xla::Sort({keys, curr},
       xla::CreateScalarLtComputation({xla::U32, element_type}, builder));
     curr = xla::GetTupleElement(sorted, 1);
