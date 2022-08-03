@@ -164,11 +164,11 @@ class TestExperimentalTpu(parameterized.TestCase):
                                   local_world_size, expected):
     with mock.patch.object(tpu, 'get_tpu_env', return_value=tpu_env), \
         mock.patch.object(tpu, 'get_worker_ips', return_value=worker_ips), \
-        mock.patch.dict(os.environ, clear=True) as mock_env:
+        mock.patch.dict(os.environ, clear=True):
 
       tpu.configure_topology(local_rank, local_world_size)
 
-      self.assertDictContainsSubset(expected, mock_env)
+      self.assertDictContainsSubset(expected, os.environ)
 
 
 if __name__ == '__main__':
