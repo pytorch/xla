@@ -2547,12 +2547,15 @@ at::Tensor& XLANativeFunctions::randperm_out(int64_t n, c10::optional<at::Genera
   XLA_FN_COUNTER("xla::");
   if (generator.has_value() && generator->defined()) {
     return at::native::call_fallback_fn<&xla_cpu_fallback,
-                                        ATEN_OP(randperm_generator_out)>::call( // xw32: how can find the thing inside `ATEN_OP`.
+    // xw32: what argument should I use for the below "ATEN_OP" function? How can I find it?
+                                        ATEN_OP(randperm_generator_out)>::call(
                                                                 n, generator, out);
   }
 
   XLATensorPtr out_tensor = bridge::GetXlaTensor(out);
   XLATensor::randperm_out(out_tensor, n);
+  // xw32: why do we need to return an original tensor, as one of the arguments is "at::Tensor & out"
+  // and we can assign the random permutation output to it?
   return out;
 }
 

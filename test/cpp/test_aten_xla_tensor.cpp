@@ -4200,7 +4200,7 @@ TEST_F(AtenXlaTensorTest, TestRandpermOut) {
   int n = 5;
   torch::Tensor shuffle;
   torch::randperm_out(shuffle, n);
-  // xw32: why do we need to copy to CPU?
+  // xw32: why do we need to copy tensor "shuffle" to CPU?
   torch::Tensor shuffle_cpu = CopyToDevice(shuffle, torch::kCPU);
   // Create a new vector for a given tensor.
   std::vector<int64_t> shuffle_data(shuffle_cpu.data_ptr<int64_t>(),
