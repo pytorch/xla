@@ -85,8 +85,7 @@ std::vector<ComputationClient::DataPtr> PjRtComputationClient::TransferToServer(
 
     auto literal = std::make_shared<xla::Literal>(tensor.shape);
     tensor.populate_fn(tensor, literal->untyped_data(), literal->size_bytes());
-    absl::InlinedVector<int64_t, 4> byte_strides(
-        literal->shape().dimensions_size());
+    std::vector<int64_t> byte_strides(literal->shape().dimensions_size());
     ShapeUtil::ByteStrides(literal->shape(), absl::MakeSpan(byte_strides));
 
     // Avoid use-after-free on `literal` due to unsequenced move and use.
@@ -101,6 +100,7 @@ std::vector<ComputationClient::DataPtr> PjRtComputationClient::TransferToServer(
                 [literal{std::move(literal)}]() { /* frees literal */ },
                 pjrt_device)
             .ValueOrDie());
+
     ComputationClient::DataPtr data =
         std::make_shared<PjRtData>(tensor.device, tensor.shape, buffer);
     datas.push_back(data);
