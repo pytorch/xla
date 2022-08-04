@@ -64,6 +64,19 @@ XLATensorImpl::XLATensorImpl(XLATensor&& tensor)
       tensor_(c10::make_intrusive<XLATensor>(std::move(tensor))) {
   is_non_overlapping_and_dense_ = false;
   set_sizes_strides_policy(SizesStridesPolicy::CustomSizes);
+
+  auto rank = tensor_->shape().get().rank();
+  sym_sizes_.reserve(rank);
+  for (auto i : c10::irange(rank)) {
+    if (tensor_->shape().get().is_dynamic_dimension(i)) {
+      XLAIrBuilder a = XLAIrBuilder();
+      auto dim_node = a.MakeSizeNode(tensor_->GetIrValue(), i);
+      auto* sn = dynamic_cast<torch::lazy::SymIntNodeImpl*>(dim_node.get());
+      sym_sizes_.push_back(sn->toSymInt());
+    } else {
+      sym_sizes_.push_back(c10::SymInt(tensor_->shape().get().dimensions(i)));
+    }
+  }
 }
 
 XLATensorImpl::XLATensorImpl(XLATensor& tensor)
@@ -123,9 +136,15 @@ at::IntArrayRef XLATensorImpl::sizes_custom() const {
 }
 
 c10::SymIntArrayRef XLATensorImpl::sym_sizes_custom() const {
-  auto sizes = sizes_custom();
-  return c10::SymIntArrayRef(reinterpret_cast<const c10::SymInt*>(sizes.data()),
-                             sizes.size());
+  if (true) { /* TODO(@miladm): replace this with a flag */
+    return c10::SymIntArrayRef(
+        reinterpret_cast<const c10::SymInt*>(sym_sizes_.data()),
+        sym_sizes_.size());
+  } else {
+    auto sizes = sizes_custom();
+    return c10::SymIntArrayRef(
+        reinterpret_cast<const c10::SymInt*>(sizes.data()), sizes.size());
+  }
 }
 
 c10::SymInt XLATensorImpl::sym_numel_custom() const {
