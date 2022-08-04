@@ -1,4 +1,3 @@
-from contextlib import contextmanager
 from types import MethodType
 
 import torch
@@ -119,23 +118,40 @@ class XLAPatchedLinear(torch.autograd.Function):
     return grad_input, grad_weight, grad_bias
 
 
-@contextmanager
-def xla_patched_linear(enabled=True):
-  """
-  A context manager to enable using `XLAPatchedLinear.apply` as
-  `torch.nn.functional.linear` (in all `nn.Linear` layers), so that the
-  backward pass will explicitly use the weight parameter of a `nn.Linear`
-  layer as a workaround to https://github.com/pytorch/xla/issues/3811.
+def _xla_patched_nn_linear_forward(m, input):
+  return XLAPatchedLinear.apply(input, m.weight, m.bias)
 
-  Without this context, an `nn.Linear` module in PyTorch/XLA holds and uses
+
+def apply_xla_patch_to_nn_linear(module):
+  """
+  Recursively apply a patch to the forward pass of `nn.Linear` layers
+  to enable using `XLAPatchedLinear.apply` as `torch.nn.functional.linear`,
+  so that the backward pass will explicitly use the weight parameter of an
+  `nn.Linear` layer to resolve https://github.com/pytorch/xla/issues/3811.
+
+  Without this patch, an `nn.Linear` module in PyTorch/XLA holds and uses
   an intermediate result (rather than the weight parameter) in its backward
   computation, which may break the FSDP's full parameter freeing on it.
   """
-  if enabled:
-    original_linear = torch.nn.functional.linear
-    torch.nn.functional.linear = XLAPatchedLinear.apply
-  try:
-    yield
-  finally:
-    if enabled:
-      torch.nn.functional.linear = original_linear
+
+  def _try_patching_forward_method(m, foward_method_name="forward"):
+    # Check if the module's forward signature is same as in `nn.Linear`
+    # (if it has already been modified through other means, we will skip the
+    # patch to its forward method here).
+    forward_method = getattr(m, foward_method_name, None)
+    if forward_method is None:
+      return
+    if getattr(forward_method, "__func__", None) != torch.nn.Linear.forward:
+      return
+
+    patched_forward_method = MethodType(_xla_patched_nn_linear_forward, m)
+    m._nn_linear_forward_original = forward_method
+    setattr(m, foward_method_name, patched_forward_method)
+
+  for m in module.modules():  # includes self
+    if isinstance(m, torch.nn.Linear):
+      _try_patching_forward_method(m, "forward")
+      # also handle the case of gradient checkpointing via `checkpoint_module`
+      _try_patching_forward_method(m, "_xla_checkpointed_forward_original")
+
+  return module

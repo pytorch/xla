@@ -34,7 +34,7 @@ from torch.nn.utils.rnn import PackedSequence
 import torch_xla.core.xla_model as xm
 
 from .xla_flatten_params_wrapper import XlaFlattenParamsWrapper
-from .utils import dummy_all_gather, dummy_all_reduce, dummy_reduce_scatter, xla_patched_linear
+from .utils import dummy_all_gather, dummy_all_reduce, dummy_reduce_scatter, apply_xla_patch_to_nn_linear
 
 FLOAT_DTYPES = [torch.float32, torch.float16, torch.bfloat16]
 
@@ -319,6 +319,12 @@ class XlaFullyShardedDataParallel(nn.Module):
     self.gradient_postdivide_factor: float = self.world_size / self.gradient_predivide_factor
 
     self._tstart = time.time()
+
+    if self._use_xla_patched_linear:
+      # Use a patch to `nn.Linear` (`torch.nn.functional.linear`) in XLA so that its
+      # backward pass will use its weight parameter rather than an intermediate result.
+      # (see https://github.com/pytorch/xla/issues/3811 for details)
+      module = apply_xla_patch_to_nn_linear(module)
 
     # Only handle params which are not already sharded. This enables
     # sharding individual layers of a Module, with an outer wrapper to
@@ -782,11 +788,7 @@ class XlaFullyShardedDataParallel(nn.Module):
     self._register_post_backward_hooks()
 
     if not self._debug_dummy_forward_pass:
-      # Use a patch to `nn.Linear` (`torch.nn.functional.linear`) in XLA so that its
-      # backward pass will use its weight parameter rather than an intermediate result.
-      # (see https://github.com/pytorch/xla/issues/3811 for details)
-      with xla_patched_linear(enabled=self._use_xla_patched_linear):
-        outputs = self.module(*args, **kwargs)
+      outputs = self.module(*args, **kwargs)
     else:
       # Run a dummy forward pass by summing the inputs and full parameter.
       # This can be used to debug FSDP parameter memory consumption.
