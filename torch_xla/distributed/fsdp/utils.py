@@ -1,3 +1,4 @@
+from contextlib import contextmanager
 from types import MethodType
 
 import torch
@@ -74,3 +75,67 @@ def dummy_reduce_scatter(reduce_type,
   slices = [None] * input.dim()
   slices[scatter_dim] = slice(begin, end)
   return input[tuple(slices)] * scale
+
+
+class XLAPatchedLinear(torch.autograd.Function):
+  """
+  A patched version of `torch.nn.functional.linear` with explicitly-defined backward
+  as a workaround to https://github.com/pytorch/xla/issues/3811.
+
+  Modified from https://pytorch.org/docs/stable/notes/extending.html#example
+  """
+
+  @staticmethod
+  def forward(ctx, input, weight, bias=None):
+    # bias is an optional argument
+    ctx.save_for_backward(input, weight, bias)
+    with torch.no_grad():
+      return torch._C._nn.linear(input, weight, bias)
+
+  @staticmethod
+  def backward(ctx, grad_output):
+    input, weight, bias = ctx.saved_tensors
+    grad_input = grad_weight = grad_bias = None
+
+    input_dim = input.dim()
+    if input_dim > 2:
+      input_flat = input.flatten(start_dim=0, end_dim=-2)
+      grad_output_flat = grad_output.flatten(start_dim=0, end_dim=-2)
+    else:
+      input_flat = input
+      grad_output_flat = grad_output
+
+    if ctx.needs_input_grad[0]:
+      grad_input_flat = grad_output_flat.mm(weight)
+      if input_dim > 2:
+        grad_input = grad_input_flat.view(*input.size())
+      else:
+        grad_input = grad_input_flat
+    if ctx.needs_input_grad[1]:
+      grad_weight = grad_output_flat.t().mm(input_flat)
+    if bias is not None and ctx.needs_input_grad[2]:
+      grad_bias = grad_output_flat.sum(0)
+
+    return grad_input, grad_weight, grad_bias
+
+
+@contextmanager
+def xla_patched_linear(enabled=True):
+  """
+  A context manager to enable using `XLAPatchedLinear.apply` as
+  `torch.nn.functional.linear` (in all `nn.Linear` layers), so that the
+  backward pass will explicitly use the weight parameter of a `nn.Linear`
+  layer as a workaround to https://github.com/pytorch/xla/issues/3811.
+
+  Without this context, an `nn.Linear` module in PyTorch/XLA holds and uses
+  an intermediate result (rather than the weight parameter) in its backward
+  computation, which may break the FSDP's full parameter freeing on it.
+  """
+  if enabled:
+    original_linear = torch.nn.functional.linear
+    torch.nn.functional.linear = XLAPatchedLinear.apply
+  try:
+    yield
+  finally:
+    if enabled:
+      torch.nn.functional.linear = original_linear

@@ -34,7 +34,7 @@ from torch.nn.utils.rnn import PackedSequence
 import torch_xla.core.xla_model as xm
 
 from .xla_flatten_params_wrapper import XlaFlattenParamsWrapper
-from .utils import dummy_all_gather, dummy_all_reduce, dummy_reduce_scatter
+from .utils import dummy_all_gather, dummy_all_reduce, dummy_reduce_scatter, xla_patched_linear
 
 FLOAT_DTYPES = [torch.float32, torch.float16, torch.bfloat16]
 
@@ -190,6 +190,14 @@ class XlaFullyShardedDataParallel(nn.Module):
           The world_size of this sharding instance. This must be specified if
           ``sharding_groups`` is provided. Otherwise it defaults to
           ``xm.xrt_world_size()``.
+      use_padding_in_all_gather (bool, Optional):
+          if ``True``, then pad the sharded parameters to a multiple of 128
+          and reshape it to (-1, 128) for all_gather, which is usually more
+          efficient than direct all_gather on 1D tensors on TPUs.
+      pin_layout_in_collective_ops (bool, Optional):
+          if ``True``, then pin the layout in the collective ops (all_reduce,
+          all_gather, and reduce_scatter) in FSDP. See `xm.all_reduce` for
+          details on pinning layout.
   """
 
   def __init__(
@@ -208,10 +216,10 @@ class XlaFullyShardedDataParallel(nn.Module):
       sharding_groups: Optional[List[List[int]]] = None,
       sharding_rank: Optional[int] = None,
       sharding_world_size: Optional[int] = None,
+      use_padding_in_all_gather: bool = True,
+      pin_layout_in_collective_ops: bool = False,
       _shard_size_multiple: int = 128,
-      _pin_layout_in_all_reduce: bool = False,
-      _pin_layout_in_all_gather: bool = False,
-      _pin_layout_in_reduce_scatter: bool = False,
+      _use_xla_patched_linear: bool = True,
       _debug_dummy_forward_pass: bool = False,
       _debug_msg: str = "xla_fsdp",
       _debug_print: bool = False,
@@ -258,8 +266,10 @@ class XlaFullyShardedDataParallel(nn.Module):
 
     # Make sharded parameter sizes a multiple of 128 for efficient all_gather ops on TPUs
     # (see https://github.com/pytorch/xla/issues/3510#issuecomment-1101739677 for details)
-    # TODO (ronghanghu): change the default to 1 after https://github.com/pytorch/xla/issues/3510 is resolved
-    self._shard_size_multiple = _shard_size_multiple
+    self._shard_size_multiple = _shard_size_multiple if use_padding_in_all_gather else 1
+    # Use a patched version of `torch.nn.functional.linear` with explicitly-defined backward in XLA
+    # (see https://github.com/pytorch/xla/issues/3811 for details)
+    self._use_xla_patched_linear = _use_xla_patched_linear
     # Set layout pinning to False in all_gather, all_reduce, and reduce_scatter so that they can work together
     # TODO (ronghanghu): change the default layout pinning to True after it's supported simultaneously
     # on all collective ops (see https://github.com/pytorch/xla/pull/3511 for details)
@@ -267,17 +277,17 @@ class XlaFullyShardedDataParallel(nn.Module):
       self.all_gather_op = dummy_all_gather
     else:
       self.all_gather_op = functools.partial(
-          xm.all_gather, pin_layout=_pin_layout_in_all_gather)
+          xm.all_gather, pin_layout=pin_layout_in_collective_ops)
     if _debug_dummy_all_reduce_op:
       self.all_reduce_op = dummy_all_reduce
     else:
       self.all_reduce_op = functools.partial(
-          xm.all_reduce, pin_layout=_pin_layout_in_all_reduce)
+          xm.all_reduce, pin_layout=pin_layout_in_collective_ops)
     if _debug_dummy_reduce_scatter_op:
       self.reduce_scatter_op = dummy_reduce_scatter
     else:
       self.reduce_scatter_op = functools.partial(
-          xm.reduce_scatter, pin_layout=_pin_layout_in_reduce_scatter)
+          xm.reduce_scatter, pin_layout=pin_layout_in_collective_ops)
     if _debug_dummy_optimization_barrier_op:
       self.optimization_barrier_op = lambda *args: None
     else:
@@ -378,8 +388,6 @@ class XlaFullyShardedDataParallel(nn.Module):
       # Execute the parameter sharding immediately and free up the memory
       gc.collect()
       xm.mark_step()
-      xm.wait_device_ops()
-      xm.rendezvous("XlaFullyShardedDataParallel::execute_sharding_on_init")
 
   def _get_gradient_predivide_factor(self, world_size: int) -> float:
     factor: int = 1
@@ -774,7 +782,11 @@ class XlaFullyShardedDataParallel(nn.Module):
     self._register_post_backward_hooks()
 
     if not self._debug_dummy_forward_pass:
-      outputs = self.module(*args, **kwargs)
+      # Use a patch to `nn.Linear` (`torch.nn.functional.linear`) in XLA so that its
+      # backward pass will use its weight parameter rather than an intermediate result.
+      # (see https://github.com/pytorch/xla/issues/3811 for details)
+      with xla_patched_linear(enabled=self._use_xla_patched_linear):
+        outputs = self.module(*args, **kwargs)
     else:
       # Run a dummy forward pass by summing the inputs and full parameter.
       # This can be used to debug FSDP parameter memory consumption.
@@ -1241,12 +1253,16 @@ class XlaFullyShardedDataParallel(nn.Module):
           self.optimization_barrier_op([p_shard_data])
         if p_shard_data.dtype != self.compute_dtype:
           p_shard_data = p_shard_data.to(self.compute_dtype)
-        # gather full parameter from shards
-        # reshape sharded parameters to 2d tensors for efficient gathering on
-        # TPUs (see https://github.com/pytorch/xla/issues/3510 for details).
-        p_shard_2d = p_shard_data.view(-1, self._shard_size_multiple)
-        p_padded = self.all_gather_op(
-            p_shard_2d, groups=self.sharding_groups).flatten()
+        if self._shard_size_multiple == 1:
+          p_padded = self.all_gather_op(
+              p_shard_data, groups=self.sharding_groups)
+        else:
+          # gather full parameter from shards
+          # reshape sharded parameters to 2d tensors for efficient gathering on
+          # TPUs (see https://github.com/pytorch/xla/issues/3510 for details).
+          p_shard_2d = p_shard_data.view(-1, self._shard_size_multiple)
+          p_padded = self.all_gather_op(
+              p_shard_2d, groups=self.sharding_groups).flatten()
         if apply_opt_barrier:
           self.optimization_barrier_op([p_padded])
         p.data = p_padded[:p_shard._orig_size.numel()].view(p_shard._orig_size)
