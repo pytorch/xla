@@ -135,6 +135,7 @@ std::vector<ComputationClient::DataPtr> PjRtComputationClient::TransferToServer(
                 [literal{std::move(literal)}]() { /* frees literal */ },
                 pjrt_device)
             .ValueOrDie());
+
     ComputationClient::DataPtr data =
         std::make_shared<PjRtData>(tensor.device, tensor.shape, buffer);
     datas.push_back(data);
