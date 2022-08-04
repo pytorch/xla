@@ -140,9 +140,15 @@ at::IntArrayRef XLATensorImpl::sizes_custom() const {
 }
 
 c10::SymIntArrayRef XLATensorImpl::sym_sizes_custom() const {
-  auto sizes = sizes_custom();
-  return c10::SymIntArrayRef(reinterpret_cast<const c10::SymInt*>(sizes.data()),
-                             sizes.size());
+  if (true) { /* TODO(@miladm): replace this with a flag */
+    return c10::SymIntArrayRef(
+        reinterpret_cast<const c10::SymInt*>(sym_sizes_.data()),
+        sym_sizes_.size());
+  } else {
+    auto sizes = sizes_custom();
+    return c10::SymIntArrayRef(
+        reinterpret_cast<const c10::SymInt*>(sizes.data()), sizes.size());
+  }
 }
 
 c10::SymInt XLATensorImpl::sym_numel_custom() const {
