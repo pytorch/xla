@@ -2919,12 +2919,16 @@ at::Tensor XLANativeFunctions::std(const at::Tensor& self, bool unbiased) {
       /*keep_reduced_dimensions=*/false, /*correction=*/unbiased ? 1 : 0));
 }
 
-at::Tensor XLANativeFunctions::std(const at::Tensor& self, at::IntArrayRef dim,
-                                   bool unbiased, bool keepdim) {
+at::Tensor XLANativeFunctions::std(const at::Tensor& self,
+                                   at::OptionalIntArrayRef dim, bool unbiased,
+                                   bool keepdim) {
   XLA_FN_COUNTER("xla::");
+  XLATensorPtr self_tensor = bridge::GetXlaTensor(self);
   return bridge::AtenFromXlaTensor(XLATensor::std(
-      bridge::GetXlaTensor(self), torch::lazy::ToVector<int64_t>(dim), keepdim,
-      /*correction=*/unbiased ? 1 : 0));
+      self_tensor,
+      dim ? torch::lazy::ToVector<int64_t>(*dim)
+          : torch::lazy::Iota<int64_t>(self_tensor->shape().get().rank()),
+      keepdim, /*correction=*/unbiased ? 1 : 0));
 }
 
 at::Tensor XLANativeFunctions::std(const at::Tensor& self,
