@@ -8,6 +8,8 @@ full_codegen:
   - asinh
   - atan
   - atanh
+  - binary_cross_entropy
+  - binary_cross_entropy_backward
   - ceil
   - cos
   - cosh
@@ -33,6 +35,7 @@ full_codegen:
   - maximum
   - minimum
   - reciprocal
+  - relu
   - round
   - rsqrt
   - selu
@@ -46,6 +49,7 @@ full_codegen:
   - tanh
   - tril
   - triu
+  - trunc
 ir_gen:
   - _adaptive_avg_pool2d
   - _adaptive_avg_pool2d_backward
@@ -105,8 +109,6 @@ supported:
   - bernoulli
   - bernoulli_.float
   - bernoulli_.Tensor
-  - binary_cross_entropy
-  - binary_cross_entropy_backward
   - binary_cross_entropy_with_logits
   - bitwise_and.Scalar
   - bitwise_and.Tensor
@@ -253,8 +255,6 @@ supported:
   - random_.to
   - reflection_pad2d
   - reflection_pad2d_backward
-  - relu
-  - relu_
   - remainder.Scalar
   - remainder.Tensor
   - repeat
@@ -316,7 +316,6 @@ supported:
   - transpose.int
   - transpose_
   - triangular_solve
-  - trunc
   - unbind.int
   - uniform_
   - unsqueeze

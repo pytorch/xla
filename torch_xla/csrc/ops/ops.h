@@ -86,8 +86,6 @@ torch::lazy::NodePtr SgnOp(const torch::lazy::Value& input);
 
 torch::lazy::NodePtr SignOp(const torch::lazy::Value& input);
 
-torch::lazy::NodePtr ReluOp(const torch::lazy::Value& input);
-
 torch::lazy::NodePtr Min(const torch::lazy::Value& input,
                          const torch::lazy::Value& other);
 
@@ -139,8 +137,6 @@ torch::lazy::NodePtr Clamp(const torch::lazy::Value& input,
 
 torch::lazy::NodePtr Celu(const torch::lazy::Value& input,
                           const at::Scalar& alpha);
-
-torch::lazy::NodePtr Trunc(const torch::lazy::Value& input);
 
 torch::lazy::NodePtr FracOp(const torch::lazy::Value& input);
 

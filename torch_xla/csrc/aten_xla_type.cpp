@@ -915,30 +915,6 @@ at::Tensor& XLANativeFunctions::bernoulli_(
   return self;
 }
 
-at::Tensor XLANativeFunctions::binary_cross_entropy(
-    const at::Tensor& self, const at::Tensor& target,
-    const c10::optional<at::Tensor>& weight, int64_t reduction) {
-  XLA_FN_COUNTER("xla::");
-  XLATensorPtr self_tensor = bridge::GetXlaTensor(self);
-  XLATensorPtr weight_tensor =
-      bridge::GetOrCreateXlaTensor(weight, self_tensor->GetDevice());
-  return bridge::AtenFromXlaTensor(XLATensor::binary_cross_entropy(
-      self_tensor, bridge::GetXlaTensor(target), weight_tensor, reduction));
-}
-
-at::Tensor XLANativeFunctions::binary_cross_entropy_backward(
-    const at::Tensor& grad_output, const at::Tensor& self,
-    const at::Tensor& target, const c10::optional<at::Tensor>& weight,
-    int64_t reduction) {
-  XLA_FN_COUNTER("xla::");
-  XLATensorPtr self_tensor = bridge::GetXlaTensor(self);
-  XLATensorPtr weight_tensor =
-      bridge::GetOrCreateXlaTensor(weight, self_tensor->GetDevice());
-  return bridge::AtenFromXlaTensor(XLATensor::binary_cross_entropy_backward(
-      bridge::GetXlaTensor(grad_output), self_tensor,
-      bridge::GetXlaTensor(target), weight_tensor, reduction));
-}
-
 at::Tensor XLANativeFunctions::binary_cross_entropy_with_logits(
     const at::Tensor& self, const at::Tensor& target,
     const c10::optional<at::Tensor>& weight,
@@ -2559,18 +2535,6 @@ at::Tensor XLANativeFunctions::reflection_pad2d_backward(
       torch::lazy::ToVector<int64_t>(padding)));
 }
 
-at::Tensor XLANativeFunctions::relu(const at::Tensor& self) {
-  XLA_FN_COUNTER("xla::");
-  return bridge::AtenFromXlaTensor(XLATensor::relu(bridge::GetXlaTensor(self)));
-}
-
-at::Tensor& XLANativeFunctions::relu_(at::Tensor& self) {
-  XLA_FN_COUNTER("xla::");
-  XLATensorPtr self_tensor = bridge::GetXlaTensor(self);
-  XLATensor::relu_(self_tensor);
-  return self;
-}
-
 at::Tensor XLANativeFunctions::remainder(const at::Tensor& self,
                                          const at::Tensor& other) {
   XLA_FN_COUNTER("xla::");
@@ -2955,12 +2919,16 @@ at::Tensor XLANativeFunctions::std(const at::Tensor& self, bool unbiased) {
       /*keep_reduced_dimensions=*/false, /*correction=*/unbiased ? 1 : 0));
 }
 
-at::Tensor XLANativeFunctions::std(const at::Tensor& self, at::IntArrayRef dim,
-                                   bool unbiased, bool keepdim) {
+at::Tensor XLANativeFunctions::std(const at::Tensor& self,
+                                   at::OptionalIntArrayRef dim, bool unbiased,
+                                   bool keepdim) {
   XLA_FN_COUNTER("xla::");
+  XLATensorPtr self_tensor = bridge::GetXlaTensor(self);
   return bridge::AtenFromXlaTensor(XLATensor::std(
-      bridge::GetXlaTensor(self), torch::lazy::ToVector<int64_t>(dim), keepdim,
-      /*correction=*/unbiased ? 1 : 0));
+      self_tensor,
+      dim ? torch::lazy::ToVector<int64_t>(*dim)
+          : torch::lazy::Iota<int64_t>(self_tensor->shape().get().rank()),
+      keepdim, /*correction=*/unbiased ? 1 : 0));
 }
 
 at::Tensor XLANativeFunctions::std(const at::Tensor& self,
@@ -3140,12 +3108,6 @@ std::tuple<at::Tensor, at::Tensor> XLANativeFunctions::triangular_solve(
       upper, transpose, unitriangular);
   return std::make_tuple(bridge::AtenFromXlaTensor(std::get<0>(results)),
                          bridge::AtenFromXlaTensor(std::get<1>(results)));
-}
-
-at::Tensor XLANativeFunctions::trunc(const at::Tensor& self) {
-  XLA_FN_COUNTER("xla::");
-  return bridge::AtenFromXlaTensor(
-      XLATensor::trunc(bridge::GetXlaTensor(self)));
 }
 
 std::vector<at::Tensor> XLANativeFunctions::unbind(const at::Tensor& self,

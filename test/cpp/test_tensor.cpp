@@ -119,16 +119,6 @@ TEST_F(TensorTest, TestSize) {
   });
 }
 
-TEST_F(TensorTest, TestRelu) {
-  at::Tensor input = at::rand({2, 1, 4, 6}, at::TensorOptions(at::kFloat));
-  at::Tensor output = input.relu();
-  ForEachDevice([&](const torch::lazy::BackendDevice& device) {
-    XLATensorPtr dev_input = XLATensor::Create(input, device);
-    XLATensorPtr dev_output = XLATensor::relu(dev_input);
-    AllClose(output, dev_output);
-  });
-}
-
 TEST_F(TensorTest, TestRrelu) {
   at::Tensor input = at::rand({2, 1, 4, 6}, at::TensorOptions(at::kFloat));
   float lower = 0.125;
