@@ -120,15 +120,6 @@ c10::SymIntArrayRef XLATensorImpl::sym_sizes_custom() const {
                              sizes.size());
 }
 
-c10::SymInt XLATensorImpl::sym_numel_custom() const {
-  auto sym_sizes = sym_sizes_custom();
-  c10::SymInt prod{1};
-  for (auto s : sym_sizes) {
-    prod *= s;
-  }
-  return prod;
-}
-
 c10::SymIntArrayRef XLATensorImpl::sym_sizes() const {
   // it isn't strictly necessary to delegate to `sym_sizes_custom`
   // however, it's consistent with pytorch core
