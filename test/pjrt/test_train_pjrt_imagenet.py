@@ -183,7 +183,7 @@ def train_imagenet():
   device = xm.xla_device()
   model = get_model_property('model_fn')()
   model = model.to(device)
-  pjrt.broadcast_xla_master_model_param(model)
+  pjrt.broadcast_master_param(model)
   writer = None
   if xm.is_master_ordinal():
     writer = test_utils.get_summary_writer(FLAGS.logdir)

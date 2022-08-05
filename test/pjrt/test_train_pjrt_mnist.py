@@ -113,7 +113,7 @@ def train_mnist(flags):
   device = xm.xla_device()
   model = MNIST()
   model = model.to(device)
-  pjrt.broadcast_xla_master_model_param(model)
+  pjrt.broadcast_master_param(model)
   writer = None
   if xm.is_master_ordinal():
     writer = test_utils.get_summary_writer(flags.logdir)
@@ -177,7 +177,7 @@ def train_mnist(flags):
 
 if __name__ == '__main__':
   torch.set_default_tensor_type('torch.FloatTensor')
-  
+
   results = pjrt.run_multiprocess(train_mnist, FLAGS)
   print('Replica max_accuracy:', pprint.pformat(results))
   accuracy = np.mean([

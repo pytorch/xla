@@ -6,6 +6,7 @@ from itertools import chain
 from typing import Callable, Dict, Optional, TypeVar
 
 import torch
+import torch.nn as nn
 import torch_xla
 import torch_xla.core.xla_env_vars as xenv
 import torch_xla.core.xla_model as xm
@@ -216,8 +217,8 @@ def run_multiprocess(fn: Callable[..., R], *args,
 
   return results
 
-@requires_pjrt
-def broadcast_xla_master_model_param(model: xm) -> None:
+
+def broadcast_master_param(model: nn.Module) -> None:
   """
   Broadcast the model parameters from master process to other processes
   """
