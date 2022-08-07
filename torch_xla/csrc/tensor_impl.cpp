@@ -141,11 +141,22 @@ at::IntArrayRef XLATensorImpl::sizes_custom() const {
 
 c10::SymIntArrayRef XLATensorImpl::sym_sizes_custom() const {
   if (true) { /* TODO(@miladm): replace this with a flag */
+    const_cast<XLATensorImpl*>(this)->SetupSymSizeProperties();
+    auto size = sizes_default();
+    // std::cout << "sym_sizes_.data(): " << sym_sizes_.data() << std::endl;
+    // std::cout << "sym_sizes_.size(): " << sym_sizes_.size() << std::endl;
+    // std::cout << "size.data(): " << size.data() << std::endl;
+    // std::cout << "size.size(): " << size.size() << std::endl;
     return c10::SymIntArrayRef(
-        reinterpret_cast<const c10::SymInt*>(sym_sizes_.data()),
-        sym_sizes_.size());
+        reinterpret_cast<const c10::SymInt*>(size.data()),
+        size.size());
+    // return c10::SymIntArrayRef(
+    //     reinterpret_cast<const c10::SymInt*>(sym_sizes_.data()),
+    //     sym_sizes_.size());
   } else {
     auto sizes = sizes_custom();
+    // std::cout << "sym_sizes_.data(): " << sizes.data() << std::endl;
+    // std::cout << "sym_sizes_.size(): " << sizes.size() << std::endl;
     return c10::SymIntArrayRef(
         reinterpret_cast<const c10::SymInt*>(sizes.data()), sizes.size());
   }
