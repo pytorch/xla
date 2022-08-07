@@ -570,11 +570,11 @@ class XLATestBase(DeviceTypeTestBase):
     if type(x) == torch.Tensor:
       x = tx.to(device='cpu')
       if print_tensors:
-        print('Tensor X ({}):\n{}{}'.format(tx.device, x, x.shape), file=sys.stderr)
+        print('Tensor X ({}):\n{}'.format(tx.device, x), file=sys.stderr)
     if type(y) == torch.Tensor:
       y = ty.to(device='cpu')
       if print_tensors:
-        print('Tensor Y ({}):\n{}{}'.format(ty.device, y, y.shape), file=sys.stderr)
+        print('Tensor Y ({}):\n{}'.format(ty.device, y), file=sys.stderr)
     return x, y
 
   def _override_prec(self, args, name):
