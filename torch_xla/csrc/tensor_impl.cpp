@@ -17,6 +17,7 @@
 #include "torch_xla/csrc/ops/dynamic_ir.h"
 #include "torch_xla/csrc/tensor_util.h"
 #include "torch_xla/csrc/ops/dynamic_ir.h"
+#include "torch_xla/csrc/tensor_util.h"
 
 namespace torch_xla {
 namespace {
@@ -134,9 +135,8 @@ c10::SymIntArrayRef XLATensorImpl::sym_sizes_custom() const {
 
 c10::SymIntArrayRef XLATensorImpl::sym_sizes_custom() const {
   auto sizes = sizes_default();
-  return c10::SymIntArrayRef(
-      reinterpret_cast<const c10::SymInt*>(sizes.data()),
-      sizes.size());
+  return c10::SymIntArrayRef(reinterpret_cast<const c10::SymInt*>(sizes.data()),
+                             sizes.size());
 }
 
 c10::SymInt XLATensorImpl::sym_numel_custom() const {
@@ -213,7 +213,7 @@ void XLATensorImpl::SetupSymSizeProperties() {
         auto* sn = dynamic_cast<torch::lazy::SymIntNodeImpl*>(dim_node.get());
         sym_sizes.push_back(sn->toSymInt());
         /*TODO(miladm): verify numel_ calculation after adding a dynamic op */
-        numel_ *= dynamic_cast<SizeNode*>(dim_node.get())->getStaticValue(); 
+        numel_ *= dynamic_cast<SizeNode*>(dim_node.get())->getStaticValue();
       } else {
         sym_sizes.push_back(c10::SymInt(tensor_->shape().get().dimensions(i)));
         numel_ *= tensor_->shape().get().dimensions(i);
