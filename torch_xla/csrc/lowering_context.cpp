@@ -160,7 +160,6 @@ xla::XlaOp LoweringContext::GetOutputOp(const torch::lazy::Output& output) {
 XlaOpVector LoweringContext::LowerNode(const torch::lazy::Node* node) {
   XlaOpVector result_ops;
   try {
-    // std::cout << "Lowering: " << node->ToString() << std::endl;
     HloMetadataSetter meta_setter(this, node);
 
     const XlaNode* casted = dynamic_cast<const XlaNode*>(node);
