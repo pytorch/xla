@@ -626,7 +626,6 @@ class XLATestBase(DeviceTypeTestBase):
     elif gmode:
       raise RuntimeError('Invalid TEST_PRINT_GRAPH value: {}'.format(gmode))
     x, y = self.prepare_for_compare(x, y)
-    # print("assertEqual", x, y)
     return DeviceTypeTestBase.assertEqual(self, x, y, *args, **kwargs)
 
 
