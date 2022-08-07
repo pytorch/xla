@@ -67,18 +67,22 @@ XLATensorImpl::XLATensorImpl(XLATensor&& tensor)
   is_non_overlapping_and_dense_ = false;
   set_sizes_strides_policy(SizesStridesPolicy::CustomSizes);
 
-  auto rank = tensor_->shape().get().rank();
-  sym_sizes_.reserve(rank);
-  for (auto i : c10::irange(rank)) {
-    if (tensor_->shape().get().is_dynamic_dimension(i)) {
-      XLAIrBuilder a = XLAIrBuilder();
-      auto dim_node = a.MakeSizeNode(tensor_->GetIrValue(), i);
-      auto* sn = dynamic_cast<torch::lazy::SymIntNodeImpl*>(dim_node.get());
-      sym_sizes_.push_back(sn->toSymInt());
-    } else {
-      sym_sizes_.push_back(c10::SymInt(tensor_->shape().get().dimensions(i)));
-    }
-  }
+  // auto rank = tensor_->shape().get().rank();
+  // sym_sizes_.reserve(rank);
+  // std::cout << "rank: " << rank << std::endl;
+  // std::cout << "op is: " << tensor_->GetIrValue().node->ToString() << std::endl;
+  // for (auto i : c10::irange(rank)) {
+  //   if (tensor_->shape().get().is_dynamic_dimension(i)) {
+  //     XLAIrBuilder a = XLAIrBuilder();
+  //     auto dim_node = a.MakeSizeNode(tensor_->GetIrValue(), i);
+  //     auto* sn = dynamic_cast<torch::lazy::SymIntNodeImpl*>(dim_node.get());
+  //     sym_sizes_.push_back(sn->toSymInt());
+  //   } else {
+  //     std::cout << "dim: " << tensor_->shape().get().dimensions(i) << std::endl;
+  //     std::cout << "i: " << i << std::endl;
+  //     sym_sizes_.push_back(c10::SymInt(tensor_->shape().get().dimensions(i)));
+  //   }
+  // }
 }
 
 XLATensorImpl::XLATensorImpl(XLATensor& tensor)
@@ -152,11 +156,22 @@ c10::SymIntArrayRef XLATensorImpl::sym_sizes_custom() const {
 
 c10::SymIntArrayRef XLATensorImpl::sym_sizes_custom() const {
   if (true) { /* TODO(@miladm): replace this with a flag */
+    const_cast<XLATensorImpl*>(this)->SetupSymSizeProperties();
+    auto size = sizes_default();
+    // std::cout << "sym_sizes_.data(): " << sym_sizes_.data() << std::endl;
+    // std::cout << "sym_sizes_.size(): " << sym_sizes_.size() << std::endl;
+    // std::cout << "size.data(): " << size.data() << std::endl;
+    // std::cout << "size.size(): " << size.size() << std::endl;
     return c10::SymIntArrayRef(
-        reinterpret_cast<const c10::SymInt*>(sym_sizes_.data()),
-        sym_sizes_.size());
+        reinterpret_cast<const c10::SymInt*>(size.data()),
+        size.size());
+    // return c10::SymIntArrayRef(
+    //     reinterpret_cast<const c10::SymInt*>(sym_sizes_.data()),
+    //     sym_sizes_.size());
   } else {
     auto sizes = sizes_custom();
+    // std::cout << "sym_sizes_.data(): " << sizes.data() << std::endl;
+    // std::cout << "sym_sizes_.size(): " << sizes.size() << std::endl;
     return c10::SymIntArrayRef(
         reinterpret_cast<const c10::SymInt*>(sizes.data()), sizes.size());
   }
