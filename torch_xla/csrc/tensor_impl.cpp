@@ -16,6 +16,7 @@
 #include "torch_xla/csrc/layout_manager.h"
 #include "torch_xla/csrc/ops/dynamic_ir.h"
 #include "torch_xla/csrc/tensor_util.h"
+#include "torch_xla/csrc/ops/dynamic_ir.h"
 
 namespace torch_xla {
 namespace {
@@ -64,19 +65,6 @@ XLATensorImpl::XLATensorImpl(XLATensor&& tensor)
       tensor_(c10::make_intrusive<XLATensor>(std::move(tensor))) {
   is_non_overlapping_and_dense_ = false;
   set_sizes_strides_policy(SizesStridesPolicy::CustomSizes);
-
-  auto rank = tensor_->shape().get().rank();
-  sym_sizes_.reserve(rank);
-  for (auto i : c10::irange(rank)) {
-    if (tensor_->shape().get().is_dynamic_dimension(i)) {
-      XLAIrBuilder a = XLAIrBuilder();
-      auto dim_node = a.MakeSizeNode(tensor_->GetIrValue(), i);
-      auto* sn = dynamic_cast<torch::lazy::SymIntNodeImpl*>(dim_node.get());
-      sym_sizes_.push_back(sn->toSymInt());
-    } else {
-      sym_sizes_.push_back(c10::SymInt(tensor_->shape().get().dimensions(i)));
-    }
-  }
 }
 
 XLATensorImpl::XLATensorImpl(XLATensor& tensor)
@@ -145,6 +133,14 @@ c10::SymIntArrayRef XLATensorImpl::sym_sizes_custom() const {
     return c10::SymIntArrayRef(
         reinterpret_cast<const c10::SymInt*>(sizes.data()), sizes.size());
   }
+  return sizes_default();
+}
+
+c10::SymIntArrayRef XLATensorImpl::sym_sizes_custom() const {
+  auto sizes = sizes_default();
+  return c10::SymIntArrayRef(
+      reinterpret_cast<const c10::SymInt*>(sizes.data()),
+      sizes.size());
 }
 
 c10::SymInt XLATensorImpl::sym_numel_custom() const {
