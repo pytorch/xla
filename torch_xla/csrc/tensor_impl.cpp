@@ -16,9 +16,6 @@
 #include "torch_xla/csrc/layout_manager.h"
 #include "torch_xla/csrc/ops/dynamic_ir.h"
 #include "torch_xla/csrc/tensor_util.h"
-#include "torch_xla/csrc/ops/dynamic_ir.h"
-#include "torch_xla/csrc/tensor_util.h"
-#include "torch_xla/csrc/ops/dynamic_ir.h"
 
 namespace torch_xla {
 namespace {
@@ -127,9 +124,8 @@ at::IntArrayRef XLATensorImpl::sizes_custom() const {
 
 c10::SymIntArrayRef XLATensorImpl::sym_sizes_custom() const {
   auto sizes = sizes_default();
-  return c10::SymIntArrayRef(
-      reinterpret_cast<const c10::SymInt*>(sizes.data()),
-      sizes.size());
+  return c10::SymIntArrayRef(reinterpret_cast<const c10::SymInt*>(sizes.data()),
+                             sizes.size());
 }
 
 c10::SymInt XLATensorImpl::sym_numel_custom() const {
