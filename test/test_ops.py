@@ -396,9 +396,13 @@ class TestOpInfo(TestCase):
     t_inp, t_args, t_kwargs = sample_input.input, sample_input.args, sample_input.kwargs
     cpu_inp, cpu_args, cpu_kwargs = cpu(sample_input)
 
+    # print ("marjan", t_inp, t_inp.shape, t_args, t_kwargs)
+    # print ("marjan", cpu_inp, cpu_inp.shape,  cpu_args, cpu_kwargs)
     actual = torch_fn(t_inp, *t_args, **t_kwargs)
     expected = torch_fn(cpu_inp, *cpu_args, **cpu_kwargs)
 
+    # import torch_xla
+    # print(torch_xla._XLAC._get_xla_tensors_text([t_inp]))
     self.assertEqual(actual, expected, exact_dtype=True, exact_device=False)
 
   @ops(ops_to_test, allowed_dtypes=(torch.float32, torch.long))
@@ -407,7 +411,13 @@ class TestOpInfo(TestCase):
       self.skipTest("This test runs only on XLA")
 
     sample_inputs = op.sample_inputs(device, dtype)
+    # print("sample_inputs", sample_inputs)
+    # i = 0
     for sample_input in sample_inputs:
+      # print("hello", sample_input)
+      # if (i == 0):
+      #   i = 1
+      #   continue
       self.compare_with_eager_reference(op, sample_input)
 
 
