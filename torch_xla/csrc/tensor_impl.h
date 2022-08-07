@@ -57,6 +57,7 @@ class XLATensorImpl : public c10::TensorImpl {
 
  private:
   void SetupSizeProperties();
+  void SetupSymSizeProperties();
 
   static caffe2::TypeMeta GetTypeMeta(const XLATensor& tensor);
 
