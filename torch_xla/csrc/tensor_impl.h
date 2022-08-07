@@ -62,7 +62,6 @@ class XLATensorImpl : public c10::TensorImpl {
   static caffe2::TypeMeta GetTypeMeta(const XLATensor& tensor);
 
   XLATensorPtr tensor_;
-  std::vector<c10::SymInt> sym_sizes_;
   size_t generation_ = 0;
 };
 
