@@ -328,12 +328,6 @@ class XLATensor : public c10::intrusive_ptr_target {
   static XLATensorPtr adaptive_max_pool2d_backward(
       const XLATensorPtr& grad_output, const XLATensorPtr& input);
 
-  static XLATensorPtr adaptive_avg_pool3d(const XLATensorPtr& input,
-                                          std::vector<int64_t> output_size);
-
-  static XLATensorPtr adaptive_avg_pool3d_backward(
-      const XLATensorPtr& grad_output, const XLATensorPtr& input);
-
   static XLATensorPtr _adaptive_avg_pool2d(
       const XLATensorPtr& input, std::vector<int64_t> output_size,
       std::vector<torch::lazy::Shape>&& shapes);
