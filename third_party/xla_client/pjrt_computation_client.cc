@@ -96,7 +96,8 @@ std::vector<ComputationClient::DataPtr> PjRtComputationClient::TransferToServer(
                 literal_pointer->untyped_data(),
                 literal_pointer->shape().element_type(),
                 literal_pointer->shape().dimensions(), byte_strides,
-                PjRtClient::HostBufferSemantics::kZeroCopy,
+                PjRtClient::HostBufferSemantics::
+                    kImmutableUntilTransferCompletes,
                 [literal{std::move(literal)}]() { /* frees literal */ },
                 pjrt_device)
             .ValueOrDie());
