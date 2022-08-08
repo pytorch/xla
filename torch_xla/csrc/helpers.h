@@ -239,6 +239,10 @@ class XlaHelpers {
   static xla::PrimitiveType PromoteType(xla::PrimitiveType type1,
                                         xla::PrimitiveType type2);
 
+  static xla::PrimitiveType PromoteType(xla::PrimitiveType type1,
+                                        xla::PrimitiveType type2,
+                                        xla::PrimitiveType type3);
+
   // Performs type promotion to make sure both operations return the same type.
   static std::pair<xla::XlaOp, xla::XlaOp> PromoteValues(xla::XlaOp op1,
                                                          xla::XlaOp op2);
