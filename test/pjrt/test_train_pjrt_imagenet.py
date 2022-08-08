@@ -114,7 +114,7 @@ def _train_update(device, step, loss, tracker, epoch, writer):
       summary_writer=writer)
 
 
-def train_imagenet(state_dict):
+def train_imagenet():
   print('==> Preparing data..')
   img_dim = get_model_property('img_dim')
   if FLAGS.fake_data:
@@ -182,8 +182,8 @@ def train_imagenet(state_dict):
 
   device = xm.xla_device()
   model = get_model_property('model_fn')()
-  model.load_state_dict(state_dict)
   model = model.to(device)
+  pjrt.broadcast_master_param(model)
   writer = None
   if xm.is_master_ordinal():
     writer = test_utils.get_summary_writer(FLAGS.logdir)
@@ -262,10 +262,8 @@ def train_imagenet(state_dict):
 
 if __name__ == '__main__':
   torch.set_default_tensor_type('torch.FloatTensor')
-  torch.manual_seed(42)
-  model = get_model_property('model_fn')()
 
-  results = pjrt.run_multiprocess(train_imagenet, model.state_dict())
+  results = pjrt.run_multiprocess(train_imagenet)
   print('Replica max_accuracy:', pprint.pformat(results))
   accuracy = np.mean([
       np.mean(list(thread_results.values()))

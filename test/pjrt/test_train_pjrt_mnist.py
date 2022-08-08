@@ -59,7 +59,7 @@ def _train_update(device, x, loss, tracker, writer):
       summary_writer=writer)
 
 
-def train_mnist(flags, state_dict):
+def train_mnist(flags):
   if flags.fake_data:
     train_loader = xu.SampleGenerator(
         data=(torch.zeros(flags.batch_size, 1, 28,
@@ -112,8 +112,8 @@ def train_mnist(flags, state_dict):
 
   device = xm.xla_device()
   model = MNIST()
-  model.load_state_dict(state_dict)
   model = model.to(device)
+  pjrt.broadcast_master_param(model)
   writer = None
   if xm.is_master_ordinal():
     writer = test_utils.get_summary_writer(flags.logdir)
@@ -177,10 +177,8 @@ def train_mnist(flags, state_dict):
 
 if __name__ == '__main__':
   torch.set_default_tensor_type('torch.FloatTensor')
-  torch.manual_seed(1)
-  model = MNIST()
 
-  results = pjrt.run_multiprocess(train_mnist, FLAGS, model.state_dict())
+  results = pjrt.run_multiprocess(train_mnist, FLAGS)
   print('Replica max_accuracy:', pprint.pformat(results))
   accuracy = np.mean([
       np.mean(list(thread_results.values()))

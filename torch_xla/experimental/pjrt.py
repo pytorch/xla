@@ -2,9 +2,11 @@ import concurrent.futures
 import functools
 import os
 import threading
+from itertools import chain
 from typing import Callable, Dict, Optional, TypeVar
 
 import torch
+import torch.nn as nn
 import torch_xla
 import torch_xla.core.xla_env_vars as xenv
 import torch_xla.core.xla_model as xm
@@ -214,3 +216,20 @@ def run_multiprocess(fn: Callable[..., R], *args,
     }
 
   return results
+
+
+def broadcast_master_param(model: nn.Module) -> None:
+  """
+  Broadcast the model parameters from master process to other processes
+  """
+  parameters_and_buffers = []
+  is_master = xm.is_master_ordinal(local=False)
+  for p in chain(model.parameters(), model.buffers()):
+    # Set all params in non-master devices to zero so that all_reduce is
+    # equivalent to broadcasting parameters from master to other devices.
+    scale = torch.tensor(1 if is_master else 0, dtype=p.data.dtype)
+    scale = scale.to(p.data.device)
+    p.data.mul_(scale)
+    parameters_and_buffers.append(p.data)
+  xm.all_reduce(xm.REDUCE_SUM, parameters_and_buffers)
+  xm.mark_step()
