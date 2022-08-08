@@ -58,6 +58,28 @@ xla::Shape AdaptiveAvgPool2dBackwardOutputShape(
                           lower_for_shape_fn);
 }
 
+xla::Shape AdaptiveAvgPool3dOutputShape(const torch::lazy::Value& input,
+                                        absl::Span<const int64_t> output_size) {
+  auto lower_for_shape_fn =
+      [output_size](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
+    XLA_CHECK_EQ(operands.size(), 1);
+    return BuildAdaptiveAvgPool3d(operands[0], output_size);
+  };
+  return InferOutputShape({GetXlaShape(input)}, lower_for_shape_fn);
+}
+
+xla::Shape AdaptiveAvgPool3dBackwardOutputShape(
+    const torch::lazy::Value& grad_output, const torch::lazy::Value& input) {
+  auto lower_for_shape_fn =
+      [](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
+    XLA_CHECK_EQ(operands.size(), 2);
+    return BuildAdaptiveAvgPool3dBackward(/*out_backprop=*/operands[0],
+                                          /*input=*/operands[1]);
+  };
+  return InferOutputShape({GetXlaShape(grad_output), GetXlaShape(input)},
+                          lower_for_shape_fn);
+}
+
 xla::Shape AsinOutputShape(const torch::lazy::Value& input) {
   return GetXlaShape(input);
 }

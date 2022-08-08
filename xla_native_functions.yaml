@@ -53,6 +53,8 @@ full_codegen:
 ir_gen:
   - _adaptive_avg_pool2d
   - _adaptive_avg_pool2d_backward
+  - _adaptive_avg_pool3d
+  - _adaptive_avg_pool3d_backward
 supported:
   - __ilshift__.Scalar
   - __ilshift__.Tensor
