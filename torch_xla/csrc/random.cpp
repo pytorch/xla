@@ -202,8 +202,20 @@ xla::XlaOp RngNormal(xla::XlaOp seed, const xla::Shape& shape, xla::XlaOp mean,
 }
 
 xla::XlaOp BuildRandpermOut(int64_t n, xla::XlaBuilder* builder) {
+  std::cout << "xw32 inside random.cpp BuildRandpermOut begins with n=" << n << std::endl;
   const xla::Shape key_shape = xla::ShapeUtil::MakeShape(xla::U32, {n});
-  xla::XlaOp input = xla::Iota(builder, key_shape, 0);
+  // xw32: why can't I see the "cout" result? Is it because they are in TPU not in CPU?
+  std::cout << "xw32 inside random.cpp BuildRandpermOut: key_shape=[" << key_shape << "]." << std::endl;
+  // XLaOp is operator.
+  // xla::XlaOp input = xla::Iota(builder, key_shape, 0); // this prints "xw32 inside random.cpp BuildRandpermOut: input=[1]"
+  xla::XlaOp input = xla::Iota(builder, xla::PrimitiveType::S32, n);
+  std::cout << "xw32 inside random.cpp BuildRandpermOut: input=[" << input << "]." << std::endl;
+  std::cout << "xw32 inside random.cpp BuildRandpermOut: input.builder()->OpToString(input)=[" << input.builder()->OpToString(input) << "]." << std::endl;
+
+
+  // The next two lines are just for testing xla::Iota
+  const xla::Shape key_shape_temp = xla::ShapeUtil::MakeShape(xla::S32, {4, 8});
+  std::cout << "xw32 inside random.cpp BuildRandpermOut: input_temp=[" << xla::Iota(builder, key_shape_temp, 0) << "]." << std::endl;
 
   // Ensure that the key space is greater than or equal to the cube of the
   // number of values to manage the number of collisions. Inspired by
@@ -212,18 +224,24 @@ xla::XlaOp BuildRandpermOut(int64_t n, xla::XlaBuilder* builder) {
   const int kExponent = 3;
   const int rounds = static_cast<int>(
       std::ceil(kExponent * std::log(n) / std::log(tensorflow::kuint32max)));
+  std::cout << "xw32 inside random.cpp BuildRandpermOut: rounds=[" << rounds << "]." << std::endl;
   xla::XlaOp zero = xla::ConstantR0(builder, 0U);
   xla::XlaOp max_value = xla::ConstantR0(builder, tensorflow::kuint32max);
 
   xla::XlaOp curr = input;
-  xla::PrimitiveType element_type = xla::U64;
+  xla::PrimitiveType element_type = xla::S32;
   for (int i = 0; i < rounds; ++i) {
+    // RngUniform Constructs an output of a given shape with random numbers
+    // generated following the uniform distribution over the interval .
     xla::XlaOp keys = xla::RngUniform(zero, max_value, key_shape);
+    std::cout << "xw32 inside random.cpp BuildRandpermOut: keys=[" << keys << "]." << std::endl;
     // xw32: why do we need to generate a key and sort for "rounds" times?
     xla::XlaOp sorted = xla::Sort({keys, curr},
       xla::CreateScalarLtComputation({xla::U32, element_type}, builder));
     curr = xla::GetTupleElement(sorted, 1);
   }
+  std::cout << "xw32 inside random.cpp BuildRandpermOut returning curr=[" << curr << "]." << std::endl;
+  std::cout << "xw32 inside random.cpp BuildRandpermOut ends" << std::endl;
   return curr;
 }
 
