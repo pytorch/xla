@@ -4225,8 +4225,10 @@ TEST_F(AtenXlaTensorTest, TestRandpermOut) {
   // why do I have to use a different signature:
   // at::Tensor & randperm_out(at::Tensor & out, int64_t n, c10::o... ?
 
-  ExpectCounterChanged("aten::randperm.generator_out.*",
+  ExpectCounterChanged("xla::randperm.generator_out",
                           cpp_test::GetIgnoredCounters());
+  std::cout<< "xw32 TestRandpermOut line4230 " << std::endl;
+  ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
   std::cout<< "xw32 TestRandpermOut ends." << std::endl;
 }
 
