@@ -6,6 +6,7 @@
 #include "torch_xla/csrc/helpers.h"
 #include "torch_xla/csrc/matrix.h"
 #include "torch_xla/csrc/pooling.h"
+#include "torch_xla/csrc/reduction.h"
 
 namespace torch_xla {
 
@@ -38,6 +39,20 @@ torch_xla::XlaOpVector AdaptiveAvgPool2dBackward::Lower(
                   loctx);
 }
 
+torch_xla::XlaOpVector AdaptiveAvgPool3d::Lower(LoweringContext* loctx) const {
+  xla::XlaOp input = loctx->GetOutputOp(operand(0));
+  return ReturnOp(BuildAdaptiveAvgPool3d(input, output_size), loctx);
+}
+
+torch_xla::XlaOpVector AdaptiveAvgPool3dBackward::Lower(
+    LoweringContext* loctx) const {
+  xla::XlaOp grad_output = loctx->GetOutputOp(operand(0));
+  xla::XlaOp input = loctx->GetOutputOp(operand(1));
+  xla::XlaOp xla_output = BuildAdaptiveAvgPool3dBackward(
+      /*out_backprop=*/grad_output, /*input=*/input);
+  return ReturnOp(xla_output, loctx);
+}
+
 torch_xla::XlaOpVector Asin::Lower(LoweringContext* loctx) const {
   xla::XlaOp xla_input = loctx->GetOutputOp(operand(0));
   return ReturnOp(xla::Asin(xla_input), loctx);
@@ -56,6 +71,33 @@ torch_xla::XlaOpVector Atan::Lower(LoweringContext* loctx) const {
 torch_xla::XlaOpVector Atanh::Lower(LoweringContext* loctx) const {
   xla::XlaOp xla_input = loctx->GetOutputOp(operand(0));
   return ReturnOp(xla::Atanh(xla_input), loctx);
+}
+
+torch_xla::XlaOpVector BinaryCrossEntropy::Lower(LoweringContext* loctx) const {
+  xla::XlaOp logits = loctx->GetOutputOp(operand(0));
+  xla::XlaOp labels = loctx->GetOutputOp(operand(1));
+  absl::optional<xla::XlaOp> weight;
+  if (has_weight) {
+    weight = loctx->GetOutputOp(operand(2));
+  }
+  return ReturnOp(BuildBinaryCrossEntropy(logits, labels, weight,
+                                          GetXlaReductionMode(reduction)),
+                  loctx);
+}
+
+torch_xla::XlaOpVector BinaryCrossEntropyBackward::Lower(
+    LoweringContext* loctx) const {
+  xla::XlaOp grad_output = loctx->GetOutputOp(operand(0));
+  xla::XlaOp logits = loctx->GetOutputOp(operand(1));
+  xla::XlaOp labels = loctx->GetOutputOp(operand(2));
+  absl::optional<xla::XlaOp> weight;
+  if (has_weight) {
+    weight = loctx->GetOutputOp(operand(3));
+  }
+  return ReturnOp(
+      BuildBinaryCrossEntropyBackward(grad_output, logits, labels, weight,
+                                      GetXlaReductionMode(reduction)),
+      loctx);
 }
 
 torch_xla::XlaOpVector Ceil::Lower(LoweringContext* loctx) const {
@@ -211,6 +253,12 @@ torch_xla::XlaOpVector Reciprocal::Lower(LoweringContext* loctx) const {
   return ReturnOp(BuildReciprocal(xla_input), loctx);
 }
 
+torch_xla::XlaOpVector Relu::Lower(LoweringContext* loctx) const {
+  xla::XlaOp xla_input = loctx->GetOutputOp(operand(0));
+  xla::XlaOp xla_output = BuildRelu(xla_input);
+  return ReturnOp(xla_output, loctx);
+}
+
 torch_xla::XlaOpVector Round::Lower(LoweringContext* loctx) const {
   xla::XlaOp xla_input = loctx->GetOutputOp(operand(0));
   return ReturnOp(xla::RoundToEven(xla_input), loctx);
@@ -282,6 +330,11 @@ torch_xla::XlaOpVector Tril::Lower(LoweringContext* loctx) const {
 torch_xla::XlaOpVector Triu::Lower(LoweringContext* loctx) const {
   xla::XlaOp xla_input = loctx->GetOutputOp(operand(0));
   return ReturnOp(BuildTriu(xla_input, diagonal), loctx);
+}
+
+torch_xla::XlaOpVector Trunc::Lower(LoweringContext* loctx) const {
+  xla::XlaOp xla_input = loctx->GetOutputOp(operand(0));
+  return ReturnOp(xla::Floor(BuildAbs(xla_input)) * BuildSgn(xla_input), loctx);
 }
 
 }  // namespace torch_xla

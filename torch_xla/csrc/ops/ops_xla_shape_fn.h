@@ -15,6 +15,12 @@ xla::Shape AdaptiveAvgPool2dOutputShape(const torch::lazy::Value& input,
 xla::Shape AdaptiveAvgPool2dBackwardOutputShape(
     const torch::lazy::Value& grad_output, const torch::lazy::Value& input);
 
+xla::Shape AdaptiveAvgPool3dOutputShape(const torch::lazy::Value& input,
+                                        absl::Span<const int64_t> output_size);
+
+xla::Shape AdaptiveAvgPool3dBackwardOutputShape(
+    const torch::lazy::Value& grad_output, const torch::lazy::Value& input);
+
 xla::Shape AsinOutputShape(const torch::lazy::Value& input);
 
 xla::Shape AsinhOutputShape(const torch::lazy::Value& input);
@@ -22,6 +28,15 @@ xla::Shape AsinhOutputShape(const torch::lazy::Value& input);
 xla::Shape AtanOutputShape(const torch::lazy::Value& input);
 
 xla::Shape AtanhOutputShape(const torch::lazy::Value& input);
+
+xla::Shape BinaryCrossEntropyOutputShape(
+    const torch::lazy::Value& input, const torch::lazy::Value& target,
+    const c10::optional<torch::lazy::Value>& weight, int64_t reduction);
+
+xla::Shape BinaryCrossEntropyBackwardOutputShape(
+    const torch::lazy::Value& grad_output, const torch::lazy::Value& input,
+    const torch::lazy::Value& target,
+    const c10::optional<torch::lazy::Value>& weight, int64_t reduction);
 
 xla::Shape CeilOutputShape(const torch::lazy::Value& input);
 
@@ -82,6 +97,8 @@ xla::Shape MinimumOutputShape(const torch::lazy::Value& input,
 
 xla::Shape ReciprocalOutputShape(const torch::lazy::Value& input);
 
+xla::Shape ReluOutputShape(const torch::lazy::Value& input);
+
 xla::Shape RoundOutputShape(const torch::lazy::Value& input);
 
 xla::Shape RsqrtOutputShape(const torch::lazy::Value& input);
@@ -111,5 +128,7 @@ xla::Shape TanhOutputShape(const torch::lazy::Value& input);
 xla::Shape TrilOutputShape(const torch::lazy::Value& input);
 
 xla::Shape TriuOutputShape(const torch::lazy::Value& input);
+
+xla::Shape TruncOutputShape(const torch::lazy::Value& input);
 
 }  // namespace torch_xla

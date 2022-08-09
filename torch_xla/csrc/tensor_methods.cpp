@@ -21,7 +21,6 @@
 #include "torch_xla/csrc/layout_manager.h"
 #include "torch_xla/csrc/lowering_context.h"
 #include "torch_xla/csrc/ops/adam_optimizer_step.h"
-#include "torch_xla/csrc/ops/adaptive_avg_pool3d.h"
 #include "torch_xla/csrc/ops/adaptive_max_pool2d.h"
 #include "torch_xla/csrc/ops/all.h"
 #include "torch_xla/csrc/ops/all_gather.h"
@@ -39,8 +38,6 @@
 #include "torch_xla/csrc/ops/avg_pool_nd.h"
 #include "torch_xla/csrc/ops/avg_pool_nd_backward.h"
 #include "torch_xla/csrc/ops/bernoulli.h"
-#include "torch_xla/csrc/ops/binary_cross_entropy.h"
-#include "torch_xla/csrc/ops/binary_cross_entropy_backward.h"
 #include "torch_xla/csrc/ops/bitwise_ir_ops.h"
 #include "torch_xla/csrc/ops/cast.h"
 #include "torch_xla/csrc/ops/cat.h"
@@ -230,18 +227,6 @@ std::vector<int64_t> GetExpandDimensions(const xla::Shape& shape,
     }
   }
   return dimensions;
-}
-
-ReductionMode GetXlaReductionMode(int64_t reduction) {
-  switch (reduction) {
-    case at::Reduction::Mean:
-      return ReductionMode::kMean;
-    case at::Reduction::None:
-      return ReductionMode::kNone;
-    case at::Reduction::Sum:
-      return ReductionMode::kSum;
-  }
-  XLA_ERROR() << "Unknown reduction mode: " << reduction;
 }
 
 // Resizes and / or checks whether a list is of the given size. The list is only
@@ -606,18 +591,6 @@ XLATensorPtr XLATensor::adaptive_max_pool2d_backward(
                                                      input->GetIrValue()));
 }
 
-XLATensorPtr XLATensor::adaptive_avg_pool3d(const XLATensorPtr& input,
-                                            std::vector<int64_t> output_size) {
-  return input->CreateFrom(torch::lazy::MakeNode<AdaptiveAvgPool3d>(
-      input->GetIrValue(), std::move(output_size)));
-}
-
-XLATensorPtr XLATensor::adaptive_avg_pool3d_backward(
-    const XLATensorPtr& grad_output, const XLATensorPtr& input) {
-  return input->CreateFrom(AdaptiveAvgPool3dBackward(grad_output->GetIrValue(),
-                                                     input->GetIrValue()));
-}
-
 XLATensorPtr XLATensor::_adaptive_avg_pool2d(
     const XLATensorPtr& input, std::vector<int64_t> output_size,
     std::vector<torch::lazy::Shape>&& shapes) {
@@ -916,23 +889,6 @@ void XLATensor::bernoulli_(XLATensorPtr& input,
       input->shape().get()));
 }
 
-XLATensorPtr XLATensor::binary_cross_entropy(const XLATensorPtr& input,
-                                             const XLATensorPtr& target,
-                                             const XLATensorPtr& weight,
-                                             int64_t reduction) {
-  return input->CreateFrom(torch::lazy::MakeNode<BinaryCrossEntropy>(
-      input->GetIrValue(), target->GetIrValue(), GetOptionalIrValue(weight),
-      GetXlaReductionMode(reduction)));
-}
-
-XLATensorPtr XLATensor::binary_cross_entropy_backward(
-    const XLATensorPtr& grad_output, const XLATensorPtr& input,
-    const XLATensorPtr& target, const XLATensorPtr& weight, int64_t reduction) {
-  return input->CreateFrom(torch::lazy::MakeNode<BinaryCrossEntropyBackward>(
-      grad_output->GetIrValue(), input->GetIrValue(), target->GetIrValue(),
-      GetOptionalIrValue(weight), GetXlaReductionMode(reduction)));
-}
-
 XLATensorPtr XLATensor::bitwise_and(const XLATensorPtr& input,
                                     const at::Scalar& other) {
   CheckIsIntegralOrPred(input->shape(), "__and__");
@@ -1211,7 +1167,8 @@ XLATensorPtr XLATensor::div(
 
   if (rounding_mode.has_value()) {
     if (*rounding_mode == "trunc") {
-      res = Trunc(res);
+      res =
+          torch::lazy::MakeNode<Trunc>(res, std::vector<torch::lazy::Shape>());
     } else if (*rounding_mode == "floor") {
       res =
           torch::lazy::MakeNode<Floor>(res, std::vector<torch::lazy::Shape>());
@@ -2242,14 +2199,6 @@ XLATensorPtr XLATensor::reflection_pad2d_backward(
       grad_output->GetIrValue(), input->GetIrValue(), std::move(padding)));
 }
 
-XLATensorPtr XLATensor::relu(const XLATensorPtr& input) {
-  return input->CreateFrom(ReluOp(input->GetIrValue()));
-}
-
-void XLATensor::relu_(XLATensorPtr& input) {
-  input->SetInPlaceIrValue(ReluOp(input->GetIrValue()));
-}
-
 XLATensorPtr XLATensor::remainder(const XLATensorPtr& input,
                                   const XLATensorPtr& other) {
   return input->CreateFrom(Remainder(input->GetIrValue(), other->GetIrValue()));
@@ -2792,10 +2741,6 @@ std::tuple<XLATensorPtr, XLATensorPtr> XLATensor::triangular_solve(
       unitriangular);
   return std::make_tuple(rhs->CreateFrom(torch::lazy::Value(node, 0)),
                          rhs->CreateFrom(torch::lazy::Value(node, 1)));
-}
-
-XLATensorPtr XLATensor::trunc(const XLATensorPtr& input) {
-  return input->CreateFrom(Trunc(input->GetIrValue()));
 }
 
 std::vector<XLATensorPtr> XLATensor::unbind(const XLATensorPtr& input,

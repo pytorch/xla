@@ -328,12 +328,6 @@ class XLATensor : public c10::intrusive_ptr_target {
   static XLATensorPtr adaptive_max_pool2d_backward(
       const XLATensorPtr& grad_output, const XLATensorPtr& input);
 
-  static XLATensorPtr adaptive_avg_pool3d(const XLATensorPtr& input,
-                                          std::vector<int64_t> output_size);
-
-  static XLATensorPtr adaptive_avg_pool3d_backward(
-      const XLATensorPtr& grad_output, const XLATensorPtr& input);
-
   static XLATensorPtr _adaptive_avg_pool2d(
       const XLATensorPtr& input, std::vector<int64_t> output_size,
       std::vector<torch::lazy::Shape>&& shapes);
@@ -447,16 +441,6 @@ class XLATensor : public c10::intrusive_ptr_target {
   static XLATensorPtr bernoulli(const XLATensorPtr& input);
   static void bernoulli_(XLATensorPtr& input, double probability);
   static void bernoulli_(XLATensorPtr& input, const XLATensorPtr& probability);
-
-  static XLATensorPtr binary_cross_entropy(const XLATensorPtr& input,
-                                           const XLATensorPtr& target,
-                                           const XLATensorPtr& weight,
-                                           int64_t reduction);
-
-  static XLATensorPtr binary_cross_entropy_backward(
-      const XLATensorPtr& grad_output, const XLATensorPtr& input,
-      const XLATensorPtr& target, const XLATensorPtr& weight,
-      int64_t reduction);
 
   static XLATensorPtr bitwise_and(const XLATensorPtr& input,
                                   const at::Scalar& other);
@@ -968,9 +952,6 @@ class XLATensor : public c10::intrusive_ptr_target {
                                                 const XLATensorPtr& input,
                                                 std::vector<int64_t> padding);
 
-  static XLATensorPtr relu(const XLATensorPtr& input);
-  static void relu_(XLATensorPtr& input);
-
   static XLATensorPtr remainder(const XLATensorPtr& input,
                                 const XLATensorPtr& other);
   static XLATensorPtr remainder(const XLATensorPtr& input,
@@ -1171,8 +1152,6 @@ class XLATensor : public c10::intrusive_ptr_target {
   static std::tuple<XLATensorPtr, XLATensorPtr> triangular_solve(
       const XLATensorPtr& rhs, const XLATensorPtr& lhs, bool left_side,
       bool upper, bool transpose, bool unitriangular);
-
-  static XLATensorPtr trunc(const XLATensorPtr& input);
 
   // Returns a tuple of all slices along a given dimension with that dimension
   // removed.

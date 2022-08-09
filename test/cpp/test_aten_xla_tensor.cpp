@@ -3531,7 +3531,7 @@ TEST_F(AtenXlaTensorTest, TestMatmul_1x2) {
   });
 
   ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
-  ExpectCounterChanged("xla::mv", cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::mm", cpp_test::GetIgnoredCounters());
 }
 
 TEST_F(AtenXlaTensorTest, TestMatmul_2x2) {

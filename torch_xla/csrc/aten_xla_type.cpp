@@ -22,6 +22,7 @@
 #include "torch_xla/csrc/aten_xla_bridge.h"
 #include "torch_xla/csrc/debug_util.h"
 #include "torch_xla/csrc/device.h"
+#include "torch_xla/csrc/generated/LazyIr.h"
 #include "torch_xla/csrc/generated/XLANativeFunctions.h"
 #include "torch_xla/csrc/helpers.h"
 #include "torch_xla/csrc/ops/as_strided.h"
@@ -83,10 +84,6 @@ torch::lazy::BackendDevice GetXlaDeviceOrCurrent(
     const c10::optional<c10::Device>& device) {
   auto xla_device_opt = bridge::GetXlaDevice(device);
   return xla_device_opt ? *xla_device_opt : GetCurrentDevice();
-}
-
-at::ScalarType GetScalarTypeOrFloat(c10::optional<at::ScalarType> scalar_type) {
-  return scalar_type ? *scalar_type : at::ScalarType::Float;
 }
 
 bool IsOperationOnType(const c10::optional<at::ScalarType>& opt_dtype,
@@ -335,8 +332,17 @@ at::Tensor XLANativeFunctions::_adaptive_avg_pool3d(
         &xla_cpu_fallback, ATEN_OP(_adaptive_avg_pool3d)>::call(self,
                                                                 output_size);
   }
-  return bridge::AtenFromXlaTensor(XLATensor::adaptive_avg_pool3d(
-      bridge::GetXlaTensor(self), output_size_list));
+  auto common_device = torch_xla::bridge::GetXlaDevice(self);
+  XLA_CHECK(common_device);
+  auto shapes =
+      torch::lazy::compute_shape__adaptive_avg_pool3d(self, output_size);
+  XLA_CHECK(shapes.size() == 1);
+  torch::lazy::NodePtr node = torch::lazy::MakeNode<AdaptiveAvgPool3d>(
+      bridge::GetXlaTensor(self)->GetIrValue(),
+      std::vector<int64_t>(output_size.begin(), output_size.end()),
+      std::move(shapes));
+  return torch_xla::bridge::AtenFromXlaTensor(
+      torch_xla::XLATensor::Create(std::move(node), *common_device));
 }
 
 at::Tensor XLANativeFunctions::_adaptive_avg_pool3d_backward(
@@ -352,8 +358,17 @@ at::Tensor XLANativeFunctions::_adaptive_avg_pool3d_backward(
         &xla_cpu_fallback,
         ATEN_OP(_adaptive_avg_pool3d_backward)>::call(grad_output, self);
   }
-  return bridge::AtenFromXlaTensor(XLATensor::adaptive_avg_pool3d_backward(
-      bridge::GetXlaTensor(grad_output), bridge::GetXlaTensor(self)));
+  auto common_device = torch_xla::bridge::GetXlaDevice(grad_output, self);
+  XLA_CHECK(common_device);
+  auto shapes = torch::lazy::compute_shape__adaptive_avg_pool3d_backward(
+      grad_output, self);
+  XLA_CHECK(shapes.size() == 1);
+  torch::lazy::NodePtr node = torch::lazy::MakeNode<AdaptiveAvgPool3dBackward>(
+      bridge::GetXlaTensor(grad_output)->GetIrValue(),
+      bridge::GetXlaTensor(self)->GetIrValue(), std::move(shapes));
+
+  return torch_xla::bridge::AtenFromXlaTensor(
+      torch_xla::XLATensor::Create(std::move(node), *common_device));
 }
 
 at::Tensor XLANativeFunctions::_adaptive_avg_pool2d(
@@ -916,30 +931,6 @@ at::Tensor& XLANativeFunctions::bernoulli_(
   return self;
 }
 
-at::Tensor XLANativeFunctions::binary_cross_entropy(
-    const at::Tensor& self, const at::Tensor& target,
-    const c10::optional<at::Tensor>& weight, int64_t reduction) {
-  XLA_FN_COUNTER("xla::");
-  XLATensorPtr self_tensor = bridge::GetXlaTensor(self);
-  XLATensorPtr weight_tensor =
-      bridge::GetOrCreateXlaTensor(weight, self_tensor->GetDevice());
-  return bridge::AtenFromXlaTensor(XLATensor::binary_cross_entropy(
-      self_tensor, bridge::GetXlaTensor(target), weight_tensor, reduction));
-}
-
-at::Tensor XLANativeFunctions::binary_cross_entropy_backward(
-    const at::Tensor& grad_output, const at::Tensor& self,
-    const at::Tensor& target, const c10::optional<at::Tensor>& weight,
-    int64_t reduction) {
-  XLA_FN_COUNTER("xla::");
-  XLATensorPtr self_tensor = bridge::GetXlaTensor(self);
-  XLATensorPtr weight_tensor =
-      bridge::GetOrCreateXlaTensor(weight, self_tensor->GetDevice());
-  return bridge::AtenFromXlaTensor(XLATensor::binary_cross_entropy_backward(
-      bridge::GetXlaTensor(grad_output), self_tensor,
-      bridge::GetXlaTensor(target), weight_tensor, reduction));
-}
-
 at::Tensor XLANativeFunctions::binary_cross_entropy_with_logits(
     const at::Tensor& self, const at::Tensor& target,
     const c10::optional<at::Tensor>& weight,
@@ -1311,7 +1302,7 @@ at::Tensor XLANativeFunctions::empty(
   // s_copy_().
   return bridge::AtenFromXlaTensor(XLATensor::full(
       XlaHelpers::I64List(size), 0, GetXlaDeviceOrCurrent(device),
-      GetScalarTypeOrFloat(dtype)));
+      at::dtype_or_default(dtype)));
 }
 
 at::Tensor XLANativeFunctions::empty_symint(
@@ -1714,7 +1705,7 @@ at::Tensor XLANativeFunctions::linspace(const at::Scalar& start,
   }
 
   return bridge::AtenFromXlaTensor(
-      XLATensor::linspace(start, end, steps, GetScalarTypeOrFloat(dtype),
+      XLATensor::linspace(start, end, steps, at::dtype_or_default(dtype),
                           GetXlaDeviceOrCurrent(device)));
 }
 
@@ -2588,18 +2579,6 @@ at::Tensor XLANativeFunctions::reflection_pad2d_backward(
       torch::lazy::ToVector<int64_t>(padding)));
 }
 
-at::Tensor XLANativeFunctions::relu(const at::Tensor& self) {
-  XLA_FN_COUNTER("xla::");
-  return bridge::AtenFromXlaTensor(XLATensor::relu(bridge::GetXlaTensor(self)));
-}
-
-at::Tensor& XLANativeFunctions::relu_(at::Tensor& self) {
-  XLA_FN_COUNTER("xla::");
-  XLATensorPtr self_tensor = bridge::GetXlaTensor(self);
-  XLATensor::relu_(self_tensor);
-  return self;
-}
-
 at::Tensor XLANativeFunctions::remainder(const at::Tensor& self,
                                          const at::Tensor& other) {
   XLA_FN_COUNTER("xla::");
@@ -2984,12 +2963,16 @@ at::Tensor XLANativeFunctions::std(const at::Tensor& self, bool unbiased) {
       /*keep_reduced_dimensions=*/false, /*correction=*/unbiased ? 1 : 0));
 }
 
-at::Tensor XLANativeFunctions::std(const at::Tensor& self, at::IntArrayRef dim,
-                                   bool unbiased, bool keepdim) {
+at::Tensor XLANativeFunctions::std(const at::Tensor& self,
+                                   at::OptionalIntArrayRef dim, bool unbiased,
+                                   bool keepdim) {
   XLA_FN_COUNTER("xla::");
+  XLATensorPtr self_tensor = bridge::GetXlaTensor(self);
   return bridge::AtenFromXlaTensor(XLATensor::std(
-      bridge::GetXlaTensor(self), torch::lazy::ToVector<int64_t>(dim), keepdim,
-      /*correction=*/unbiased ? 1 : 0));
+      self_tensor,
+      dim ? torch::lazy::ToVector<int64_t>(*dim)
+          : torch::lazy::Iota<int64_t>(self_tensor->shape().get().rank()),
+      keepdim, /*correction=*/unbiased ? 1 : 0));
 }
 
 at::Tensor XLANativeFunctions::std(const at::Tensor& self,
@@ -3169,12 +3152,6 @@ std::tuple<at::Tensor, at::Tensor> XLANativeFunctions::triangular_solve(
       upper, transpose, unitriangular);
   return std::make_tuple(bridge::AtenFromXlaTensor(std::get<0>(results)),
                          bridge::AtenFromXlaTensor(std::get<1>(results)));
-}
-
-at::Tensor XLANativeFunctions::trunc(const at::Tensor& self) {
-  XLA_FN_COUNTER("xla::");
-  return bridge::AtenFromXlaTensor(
-      XLATensor::trunc(bridge::GetXlaTensor(self)));
 }
 
 std::vector<at::Tensor> XLANativeFunctions::unbind(const at::Tensor& self,

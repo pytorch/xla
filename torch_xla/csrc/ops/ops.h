@@ -86,8 +86,6 @@ torch::lazy::NodePtr SgnOp(const torch::lazy::Value& input);
 
 torch::lazy::NodePtr SignOp(const torch::lazy::Value& input);
 
-torch::lazy::NodePtr ReluOp(const torch::lazy::Value& input);
-
 torch::lazy::NodePtr Min(const torch::lazy::Value& input,
                          const torch::lazy::Value& other);
 
@@ -140,8 +138,6 @@ torch::lazy::NodePtr Clamp(const torch::lazy::Value& input,
 torch::lazy::NodePtr Celu(const torch::lazy::Value& input,
                           const at::Scalar& alpha);
 
-torch::lazy::NodePtr Trunc(const torch::lazy::Value& input);
-
 torch::lazy::NodePtr FracOp(const torch::lazy::Value& input);
 
 torch::lazy::NodePtr Ger(const torch::lazy::Value& input,
@@ -158,9 +154,6 @@ torch::lazy::NodePtr MatMul(const torch::lazy::Value& lhs,
                             const torch::lazy::Value& rhs);
 
 torch::lazy::NodePtr AdaptiveMaxPool2dBackward(
-    const torch::lazy::Value& grad_output, const torch::lazy::Value& input);
-
-torch::lazy::NodePtr AdaptiveAvgPool3dBackward(
     const torch::lazy::Value& grad_output, const torch::lazy::Value& input);
 
 torch::lazy::NodePtr ComparisonOp(c10::Symbol kind,
