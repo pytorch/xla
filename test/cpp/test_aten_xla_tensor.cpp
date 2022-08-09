@@ -4212,8 +4212,9 @@ TEST_F(AtenXlaTensorTest, TestRandpermOut) {
     // xw32: If I print variable xla_b as above, the node's "Lower" function 
     // will be triggered. Without the above line, the "Lower" function
     // won't be triggered. Why? 
-    std::vector<int64_t> shuffle_data(xla_b.data_ptr<int64_t>(), // TODO: use b first.
-                                      xla_b.data_ptr<int64_t>() + n);
+    torch::Tensor xla_b_cpu = CopyToDevice(xla_b, torch::kCPU);
+    std::vector<int64_t> shuffle_data(xla_b_cpu.data_ptr<int64_t>(), // TODO: use b first.
+                                      xla_b_cpu.data_ptr<int64_t>() + n);
     std::cout<< "xw32 TestRandpermOut converted torch::randperm_out output to a vector." << std::endl;
     EXPECT_TRUE(shuffle_data.size() == n && xla::IsPermutation(shuffle_data)); 
   });
@@ -4225,7 +4226,7 @@ TEST_F(AtenXlaTensorTest, TestRandpermOut) {
   // why do I have to use a different signature:
   // at::Tensor & randperm_out(at::Tensor & out, int64_t n, c10::o... ?
 
-  ExpectCounterChanged("xla::randperm.generator_out",
+  ExpectCounterChanged("xla::randperm_out",
                           cpp_test::GetIgnoredCounters());
   std::cout<< "xw32 TestRandpermOut line4230 " << std::endl;
   ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());

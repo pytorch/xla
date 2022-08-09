@@ -57,6 +57,11 @@ void XlaTest::ExpectCounterChanged(
   MakeEndSnapshot();
   auto changed =
       start_msnap_->CounterChanged(counter_regex, *end_msnap_, ignore_set);
+  for (auto& change_counter : changed) {
+    TF_LOG(INFO) << "Counter '" << change_counter.name
+                 << "' changed: " << change_counter.before << " -> "
+                 << change_counter.after;
+  }
   EXPECT_TRUE(!changed.empty());
 }
 
