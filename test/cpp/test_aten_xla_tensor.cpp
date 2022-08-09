@@ -4231,6 +4231,7 @@ TEST_F(AtenXlaTensorTest, TestRandpermOut) {
   std::cout<< "xw32 TestRandpermOut line4230 " << std::endl;
   ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
   std::cout<< "xw32 TestRandpermOut ends." << std::endl;
+  // TODO: need to add a test case for randperm_out with generator.
 }
 
 TEST_F(AtenXlaTensorTest, TestSlice) {
