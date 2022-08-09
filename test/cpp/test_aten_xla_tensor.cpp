@@ -3304,7 +3304,7 @@ TEST_F(AtenXlaTensorTest, TestARangeOut) {
                                                       {0.0, -100.0, -0.5}}) {
     torch::Tensor b = torch::arange_out(a, ranges[0], ranges[1], ranges[2]);
     ForEachDevice([&](const torch::Device& device) {
-      std::cout<< "xw32 device=" << device << std::endl;// prints "xla:0"
+      std::cout << "xw32 device=" << device << std::endl;  // prints "xla:0"
       torch::Tensor xla_a = CopyToDevice(a, device);
       torch::Tensor xla_b =
           torch::arange_out(xla_a, ranges[0], ranges[1], ranges[2]);
@@ -4202,35 +4202,42 @@ TEST_F(AtenXlaTensorTest, TestRandpermOut) {
   int n = 5;
   torch::Tensor a = torch::randint(16, {5}, torch::TensorOptions(torch::kLong));
   torch::Tensor b = torch::randperm_out(a, n);
-  std::cout<< "xw32 TestRandpermOut a=[" << a << "], b=[" << b << "]." << std::endl;
+  std::cout << "xw32 TestRandpermOut a=[" << a << "], b=[" << b << "]."
+            << std::endl;
   ForEachDevice([&](const torch::Device& device) {
-    std::cout<< "xw32 device=" << device << std::endl;// prints "xla:0"
+    std::cout << "xw32 device=" << device << std::endl;  // prints "xla:0"
     torch::Tensor xla_a = CopyToDevice(a, device);
-    torch::Tensor xla_b = torch::randperm_out(xla_a, n); // TODO: comment it out first.
-    std::cout<< "xw32 TestRandpermOut torch::randperm_out finishes." << std::endl;
-    std::cout<< "xw32 TestRandpermOut torch::randperm_out finishes with xla_b=[" << xla_b << "]}." << std::endl;
-    // xw32: If I print variable xla_b as above, the node's "Lower" function 
+    torch::Tensor xla_b =
+        torch::randperm_out(xla_a, n);  // TODO: comment it out first.
+    std::cout << "xw32 TestRandpermOut torch::randperm_out finishes."
+              << std::endl;
+    std::cout
+        << "xw32 TestRandpermOut torch::randperm_out finishes with xla_b=["
+        << xla_b << "]}." << std::endl;
+    // xw32: If I print variable xla_b as above, the node's "Lower" function
     // will be triggered. Without the above line, the "Lower" function
-    // won't be triggered. Why? 
+    // won't be triggered. Why?
     torch::Tensor xla_b_cpu = CopyToDevice(xla_b, torch::kCPU);
-    std::vector<int64_t> shuffle_data(xla_b_cpu.data_ptr<int64_t>(), // TODO: use b first.
-                                      xla_b_cpu.data_ptr<int64_t>() + n);
-    std::cout<< "xw32 TestRandpermOut converted torch::randperm_out output to a vector." << std::endl;
-    EXPECT_TRUE(shuffle_data.size() == n && xla::IsPermutation(shuffle_data)); 
+    std::vector<int64_t> shuffle_data(
+        xla_b_cpu.data_ptr<int64_t>(),  // TODO: use b first.
+        xla_b_cpu.data_ptr<int64_t>() + n);
+    std::cout << "xw32 TestRandpermOut converted torch::randperm_out output to "
+                 "a vector."
+              << std::endl;
+    EXPECT_TRUE(shuffle_data.size() == n && xla::IsPermutation(shuffle_data));
   });
-  std::cout<< "xw32 TestRandpermOut ForEachDevice loop ends." << std::endl;
-   
-  // xw32: In XLANativeFunction.h, the generated function signature is 
-  // randperm_out(int64_t n, c10::optional<at::Generator> generator, at::Tensor & out);
-  // then in this test when I try to call randperm_out, 
-  // why do I have to use a different signature:
-  // at::Tensor & randperm_out(at::Tensor & out, int64_t n, c10::o... ?
+  std::cout << "xw32 TestRandpermOut ForEachDevice loop ends." << std::endl;
 
-  ExpectCounterChanged("xla::randperm_out",
-                          cpp_test::GetIgnoredCounters());
-  std::cout<< "xw32 TestRandpermOut line4230 " << std::endl;
+  // xw32: In XLANativeFunction.h, the generated function signature is
+  // randperm_out(int64_t n, c10::optional<at::Generator> generator, at::Tensor
+  // & out); then in this test when I try to call randperm_out, why do I have to
+  // use a different signature: at::Tensor & randperm_out(at::Tensor & out,
+  // int64_t n, c10::o... ?
+
+  ExpectCounterChanged("xla::randperm_out", cpp_test::GetIgnoredCounters());
+  std::cout << "xw32 TestRandpermOut line4230 " << std::endl;
   ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
-  std::cout<< "xw32 TestRandpermOut ends." << std::endl;
+  std::cout << "xw32 TestRandpermOut ends." << std::endl;
   // TODO: need to add a test case for randperm_out with generator.
 }
 

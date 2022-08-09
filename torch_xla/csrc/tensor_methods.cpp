@@ -2219,10 +2219,14 @@ void XLATensor::random_(XLATensorPtr& input, int64_t from, int64_t to) {
 }
 
 void XLATensor::randperm_out(XLATensorPtr& input, int64_t n) {
-  std::cout << "xw32 inside tensor_methods.cpp XLATensor::randperm_out begins" << std::endl;
-  std::cout << "xw32 inside tensor_methods.cpp XLATensor::randperm_out input->shape()=[" << input->shape() << "]." << std::endl;
+  std::cout << "xw32 inside tensor_methods.cpp XLATensor::randperm_out begins"
+            << std::endl;
+  std::cout << "xw32 inside tensor_methods.cpp XLATensor::randperm_out "
+               "input->shape()=["
+            << input->shape() << "]." << std::endl;
   input->SetInPlaceIrValue(torch::lazy::MakeNode<RandpermOut>(n));
-  std::cout << "xw32 inside tensor_methods.cpp XLATensor::randperm_out ends" << std::endl;
+  std::cout << "xw32 inside tensor_methods.cpp XLATensor::randperm_out ends"
+            << std::endl;
 }
 
 XLATensorPtr XLATensor::reflection_pad2d(const XLATensorPtr& input,

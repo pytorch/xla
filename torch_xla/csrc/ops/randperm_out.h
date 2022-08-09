@@ -5,8 +5,7 @@
 namespace torch_xla {
 
 class RandpermOut : public XlaNode {
-  public:
-  
+ public:
   RandpermOut(int64_t n);
 
   torch::lazy::NodePtr Clone(torch::lazy::OpList operands) const override;
@@ -15,8 +14,8 @@ class RandpermOut : public XlaNode {
 
   std::string ToString() const override;
 
-  private:
-   int64_t n_;
+ private:
+  int64_t n_;
 };
 
-} // namespace torch_xla
+}  // namespace torch_xla
