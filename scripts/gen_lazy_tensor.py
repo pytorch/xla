@@ -7,7 +7,6 @@ from torchgen.model import NativeFunction, NativeFunctionsGroup
 from torchgen.api.types import (
     BaseCType,
     OptionalCType,
-    scalarT,
     VectorCType,
     boolT,
     kernel_signature,

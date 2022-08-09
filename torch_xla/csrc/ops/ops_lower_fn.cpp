@@ -71,11 +71,6 @@ torch_xla::XlaOpVector Amin::Lower(LoweringContext* loctx) const {
 }
 
 torch_xla::XlaOpVector Addcdiv::Lower(LoweringContext* loctx) const {
-  // xla::XlaOp xla_input = loctx->GetOutputOp(operand(0));
-  // torch::lazy::Value constant = GetIrValueForScalar(
-  //     value, tensor1->shape().get().element_type(), input->GetDevice());
-  // torch::lazy::Value div = tensor1->GetIrValue() / tensor2->GetIrValue();
-  // return input->CreateFrom(input->GetIrValue() + div * constant);
   xla::XlaOp xla_input = loctx->GetOutputOp(operand(0));
   xla::XlaOp xla_t1 = loctx->GetOutputOp(operand(1));
   xla::XlaOp xla_t2 = loctx->GetOutputOp(operand(2));
@@ -84,10 +79,6 @@ torch_xla::XlaOpVector Addcdiv::Lower(LoweringContext* loctx) const {
 }
 
 torch_xla::XlaOpVector Addcmul::Lower(LoweringContext* loctx) const {
-  // torch::lazy::Value constant = GetIrValueForScalar(
-  //     value, tensor1->shape().get().element_type(), input->GetDevice());
-  // torch::lazy::Value mul = tensor1->GetIrValue() * tensor2->GetIrValue();
-  // return input->CreateFrom(input->GetIrValue() + mul * constant);
   xla::XlaOp xla_input = loctx->GetOutputOp(operand(0));
   xla::XlaOp xla_t1 = loctx->GetOutputOp(operand(1));
   xla::XlaOp xla_t2 = loctx->GetOutputOp(operand(2));
