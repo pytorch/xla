@@ -212,7 +212,7 @@ xla::XlaOp BuildRandpermOut(int64_t n, xla::XlaBuilder* builder) {
   // XLaOp is operator.
   // xla::XlaOp input = xla::Iota(builder, key_shape, 0); // this prints "xw32
   // inside random.cpp BuildRandpermOut: input=[1]"
-  xla::XlaOp input = xla::Iota(builder, xla::PrimitiveType::S32, n);
+  xla::XlaOp input = xla::Iota(builder, xla::PrimitiveType::S64, n);
   std::cout << "xw32 inside random.cpp BuildRandpermOut: input=[" << input
             << "]." << std::endl;
   std::cout << "xw32 inside random.cpp BuildRandpermOut: "
@@ -220,11 +220,6 @@ xla::XlaOp BuildRandpermOut(int64_t n, xla::XlaBuilder* builder) {
             << input.builder()->OpToString(input) << "]." << std::endl;
   // In order to debug this function, how can I print the variables in this
   // function? "cout << XlaOp" doesn't seem to work.
-
-  // The next two lines are just for testing xla::Iota
-  const xla::Shape key_shape_temp = xla::ShapeUtil::MakeShape(xla::S32, {4, 8});
-  std::cout << "xw32 inside random.cpp BuildRandpermOut: input_temp=["
-            << xla::Iota(builder, key_shape_temp, 0) << "]." << std::endl;
 
   // Ensure that the key space is greater than or equal to the cube of the
   // number of values to manage the number of collisions. Inspired by
@@ -239,7 +234,7 @@ xla::XlaOp BuildRandpermOut(int64_t n, xla::XlaBuilder* builder) {
   xla::XlaOp max_value = xla::ConstantR0(builder, tensorflow::kuint32max);
 
   xla::XlaOp curr = input;
-  xla::PrimitiveType element_type = xla::S32;
+  xla::PrimitiveType element_type = xla::S64;
   for (int i = 0; i < rounds; ++i) {
     // RngUniform Constructs an output of a given shape with random numbers
     // generated following the uniform distribution over the interval .
