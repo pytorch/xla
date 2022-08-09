@@ -4200,8 +4200,6 @@ TEST_F(AtenXlaTensorTest, TestRandperm) {
 TEST_F(AtenXlaTensorTest, TestRandpermOut) {
   std::cout << "xw32 starting the test TestRandpermOut" << std::endl;
   int n = 5;
-  // torch::Tensor shuffle;
-  //torch::Tensor a = torch::randn({5}, torch::TensorOptions(torch::kLong));
   torch::Tensor a = torch::randint(16, {5}, torch::TensorOptions(torch::kLong));
   torch::Tensor b = torch::randperm_out(a, n);
   std::cout<< "xw32 TestRandpermOut a=[" << a << "], b=[" << b << "]." << std::endl;
@@ -4209,10 +4207,11 @@ TEST_F(AtenXlaTensorTest, TestRandpermOut) {
     std::cout<< "xw32 device=" << device << std::endl;// prints "xla:0"
     torch::Tensor xla_a = CopyToDevice(a, device);
     torch::Tensor xla_b = torch::randperm_out(xla_a, n); // TODO: comment it out first.
-    // std::cout<< "xw32 TestRandpermOut torch::randperm_out finishes. xla_b=" << xla_b << std::endl;
     std::cout<< "xw32 TestRandpermOut torch::randperm_out finishes." << std::endl;
     std::cout<< "xw32 TestRandpermOut torch::randperm_out finishes with xla_b=[" << xla_b << "]}." << std::endl;
-    // xw32: how can I print out variable xla_b?
+    // xw32: If I print variable xla_b as above, the node's "Lower" function 
+    // will be triggered. Without the above line, the "Lower" function
+    // won't be triggered. Why? 
     std::vector<int64_t> shuffle_data(xla_b.data_ptr<int64_t>(), // TODO: use b first.
                                       xla_b.data_ptr<int64_t>() + n);
     std::cout<< "xw32 TestRandpermOut converted torch::randperm_out output to a vector." << std::endl;
@@ -4220,15 +4219,12 @@ TEST_F(AtenXlaTensorTest, TestRandpermOut) {
   });
   std::cout<< "xw32 TestRandpermOut ForEachDevice loop ends." << std::endl;
    
-  // xw32: In XLANativeFunction.h, the generated function signature is randperm_out(int64_t n, c10::optional<at::Generator> generator, at::Tensor & out);
-  // why I have to use at::Tensor & randperm_out(at::Tensor & out, int64_t n, c10::o...
+  // xw32: In XLANativeFunction.h, the generated function signature is 
+  // randperm_out(int64_t n, c10::optional<at::Generator> generator, at::Tensor & out);
+  // then in this test when I try to call randperm_out, 
+  // why do I have to use a different signature:
+  // at::Tensor & randperm_out(at::Tensor & out, int64_t n, c10::o... ?
 
-  // xw32: why do we need to copy tensor "shuffle" to CPU?
-  // torch::Tensor shuffle_cpu = CopyToDevice(shuffle, torch::kCPU);
-  // Create a new vector for a given tensor.
-  // std::vector<int64_t> shuffle_data(shuffle_cpu.data_ptr<int64_t>(),
-  //                                   shuffle_cpu.data_ptr<int64_t>() + n);
-  // EXPECT_TRUE(shuffle_data.size() == n && xla::IsPermutation(shuffle_data)); 
   ExpectCounterChanged("aten::randperm.generator_out.*",
                           cpp_test::GetIgnoredCounters());
   std::cout<< "xw32 TestRandpermOut ends." << std::endl;

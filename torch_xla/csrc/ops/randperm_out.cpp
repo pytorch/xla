@@ -9,8 +9,7 @@
 
 namespace torch_xla {
 
-// xw32: should I include a xla::Shape param in the constructor?
-// xw32: what does the shape param in the constructor mean? The output shape? Yes, it's output shape.
+// xw32: the shape param in the constructor mean the expected output shape.
 // xw32: what opkind should I use? randperm or randperm_out? randperm_out doesn't seem to exist.
 // xw32: what does the hash in the constructor mean?
 RandpermOut::RandpermOut(int64_t n)

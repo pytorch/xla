@@ -211,6 +211,8 @@ xla::XlaOp BuildRandpermOut(int64_t n, xla::XlaBuilder* builder) {
   xla::XlaOp input = xla::Iota(builder, xla::PrimitiveType::S32, n);
   std::cout << "xw32 inside random.cpp BuildRandpermOut: input=[" << input << "]." << std::endl;
   std::cout << "xw32 inside random.cpp BuildRandpermOut: input.builder()->OpToString(input)=[" << input.builder()->OpToString(input) << "]." << std::endl;
+  // In order to debug this function, how can I print the variables in this function?
+  // "cout << XlaOp" doesn't seem to work.
 
 
   // The next two lines are just for testing xla::Iota
