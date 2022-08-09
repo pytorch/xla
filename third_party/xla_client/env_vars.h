@@ -19,6 +19,7 @@ extern const char* const kEnvShardOrdinal;
 extern const char* const kEnvStartService;
 extern const char* const kEnvTpuvmMode;
 extern const char* const kEnvPjRtDevice;
+extern const char* const kEnvPjRtTpuMaxInflightComputations;
 
 }  // namespace env
 }  // namespace xla
