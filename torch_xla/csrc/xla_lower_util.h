@@ -119,4 +119,10 @@ xla::XlaOp BuildXLogY(xla::XlaOp input, xla::XlaOp other);
 xla::XlaOp BuildRoll(xla::XlaOp input, absl::Span<const int64_t> shifts,
                      absl::Span<const int64_t> dims);
 
+xla::XlaOp BuildAddcdiv(xla::XlaOp input, xla::XlaOp t1, xla::XlaOp t2,
+                        xla::XlaOp val);
+
+xla::XlaOp BuildAddcmul(xla::XlaOp input, xla::XlaOp t1, xla::XlaOp t2,
+                        xla::XlaOp val);
+
 }  // namespace torch_xla

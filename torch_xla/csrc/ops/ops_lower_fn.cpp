@@ -7,6 +7,7 @@
 #include "torch_xla/csrc/matrix.h"
 #include "torch_xla/csrc/pooling.h"
 #include "torch_xla/csrc/reduction.h"
+#include "torch_xla/csrc/xla_lower_util.h"
 
 namespace torch_xla {
 torch_xla::XlaOpVector Abs::Lower(LoweringContext* loctx) const {
@@ -79,7 +80,7 @@ torch_xla::XlaOpVector Addcdiv::Lower(LoweringContext* loctx) const {
   xla::XlaOp xla_t1 = loctx->GetOutputOp(operand(1));
   xla::XlaOp xla_t2 = loctx->GetOutputOp(operand(2));
   xla::XlaOp xla_val = loctx->GetOutputOp(operand(3));
-  return ReturnOp(xla_input + (xla_t1 / xla_t2) * xla_val, loctx);
+  return ReturnOp(BuildAddcdiv(xla_input, xla_t1, xla_t2, xla_val), loctx);
 }
 
 torch_xla::XlaOpVector Addcmul::Lower(LoweringContext* loctx) const {
@@ -91,7 +92,7 @@ torch_xla::XlaOpVector Addcmul::Lower(LoweringContext* loctx) const {
   xla::XlaOp xla_t1 = loctx->GetOutputOp(operand(1));
   xla::XlaOp xla_t2 = loctx->GetOutputOp(operand(2));
   xla::XlaOp xla_val = loctx->GetOutputOp(operand(3));
-  return ReturnOp(xla_input + (xla_t1 * xla_t2) * xla_val, loctx);
+  return ReturnOp(BuildAddcmul(xla_input, xla_t1, xla_t2, xla_val), loctx);
 }
 
 torch_xla::XlaOpVector Asin::Lower(LoweringContext* loctx) const {
