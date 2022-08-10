@@ -1398,11 +1398,6 @@ XLATensorPtr XLATensor::gelu_backward(const XLATensorPtr& grad,
   }
 }
 
-XLATensorPtr XLATensor::ger(const XLATensorPtr& input,
-                            const XLATensorPtr& vec2) {
-  return input->CreateFrom(Ger(input->GetIrValue(), vec2->GetIrValue()));
-}
-
 XLATensorPtr XLATensor::gt(const XLATensorPtr& input, const at::Scalar& other) {
   return DispatchComparisonOp(at::aten::gt, input, other);
 }

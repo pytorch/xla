@@ -168,7 +168,6 @@ supported:
   - ge.Tensor
   - gelu
   - gelu_backward
-  - ger
   - gt.Scalar
   - gt.Tensor
   - hardshrink
