@@ -375,9 +375,9 @@ class XLATensor : public c10::intrusive_ptr_target {
                             const XLATensorPtr& weight,
                             const XLATensorPtr& bias);
 
-  static XLATensorPtr all(const XLATensorPtr& input,
-                          std::vector<int64_t> dimensions,
-                          bool keep_reduced_dimensions);
+  static XLATensorPtr all_dim(const XLATensorPtr& input,
+                              std::vector<int64_t> dimensions,
+                              bool keep_reduced_dimensions);
 
   static XLATensorPtr amax(const XLATensorPtr& input,
                            std::vector<int64_t> dimensions,

@@ -4,6 +4,7 @@ full_codegen:
   - acos
   - acosh
   - abs
+  - all
   - asin
   - asinh
   - atan
@@ -91,7 +92,6 @@ supported:
   - addcmul
   - addmm
   - alias
-  - all
   - all.dim
   - amax
   - amin
