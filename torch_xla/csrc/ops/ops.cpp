@@ -238,27 +238,6 @@ torch::lazy::NodePtr Celu(const torch::lazy::Value& input,
                    GetXlaShape(input), std::move(lower_fn));
 }
 
-torch::lazy::NodePtr Ger(const torch::lazy::Value& input,
-                         const torch::lazy::Value& other) {
-  auto lower_fn = [](const XlaNode& node,
-                     LoweringContext* loctx) -> XlaOpVector {
-    xla::XlaOp xla_input = loctx->GetOutputOp(node.operand(0));
-    xla::XlaOp xla_other = loctx->GetOutputOp(node.operand(1));
-    return node.ReturnOp(BuildGer(xla_input, xla_other), loctx);
-  };
-  auto lower_for_shape_fn =
-      [](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
-    return BuildGer(operands[0], operands[1]);
-  };
-  return GenericOp(torch::lazy::OpKind(at::aten::ger), {input, other},
-                   [&]() {
-                     return InferOutputShape(
-                         {GetXlaShape(input), GetXlaShape(other)},
-                         lower_for_shape_fn);
-                   },
-                   std::move(lower_fn));
-}
-
 torch::lazy::NodePtr AddMatMulOp(const torch::lazy::Value& input,
                                  const torch::lazy::Value& weight,
                                  const torch::lazy::Value& bias) {

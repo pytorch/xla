@@ -624,8 +624,6 @@ class XLATensor : public c10::intrusive_ptr_target {
                                     const XLATensorPtr& input,
                                     const c10::string_view approximate);
 
-  static XLATensorPtr ger(const XLATensorPtr& input, const XLATensorPtr& vec2);
-
   static XLATensorPtr gt(const XLATensorPtr& input, const at::Scalar& other);
 
   static XLATensorPtr gt(const XLATensorPtr& input, const XLATensorPtr& other);
