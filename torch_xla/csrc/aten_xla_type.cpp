@@ -1060,13 +1060,6 @@ at::Tensor XLANativeFunctions::clamp_min(const at::Tensor& self,
       XLATensor::clamp(bridge::GetXlaTensor(self), min, c10::nullopt));
 }
 
-at::Tensor XLANativeFunctions::clamp_min(const at::Tensor& self,
-                                         const at::Tensor& min) {
-  XLA_FN_COUNTER("xla::");
-  return bridge::AtenFromXlaTensor(
-      XLATensor::clamp(bridge::GetXlaTensor(self), min, c10::nullopt));
-}
-
 at::Tensor XLANativeFunctions::clone(
     const at::Tensor& self,
     c10::optional<at::MemoryFormat> /* memory_format */) {

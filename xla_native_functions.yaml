@@ -13,6 +13,7 @@ full_codegen:
   - binary_cross_entropy_backward
   - ceil
   - clamp_max.Tensor
+  - clamp_min.Tensor
   - cos
   - cosh
   - erf
@@ -129,7 +130,6 @@ supported:
   - clamp.Tensor
   - clamp_max
   - clamp_min
-  - clamp_min.Tensor
   - clone
   - constant_pad_nd
   - convolution_backward_overrideable

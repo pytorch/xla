@@ -118,6 +118,12 @@ torch_xla::XlaOpVector ClampMaxTensor::Lower(LoweringContext* loctx) const {
   return ReturnOp(xla::Min(xla_input, xla_other), loctx);
 }
 
+torch_xla::XlaOpVector ClampMinTensor::Lower(LoweringContext* loctx) const {
+  xla::XlaOp xla_input = loctx->GetOutputOp(operand(0));
+  xla::XlaOp xla_other = loctx->GetOutputOp(operand(1));
+  return ReturnOp(xla::Max(xla_input, xla_other), loctx);
+}
+
 torch_xla::XlaOpVector Cos::Lower(LoweringContext* loctx) const {
   xla::XlaOp xla_input = loctx->GetOutputOp(operand(0));
   return ReturnOp(xla::Cos(xla_input), loctx);
