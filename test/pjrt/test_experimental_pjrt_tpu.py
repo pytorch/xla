@@ -86,62 +86,6 @@ class TestExperimentalPjrtTpu(parameterized.TestCase):
     devices_per_process = pjrt.run_multiprocess(xm.xla_device)
     self.assertDictEqual(devices_per_process, expected)
 
-  def test_real_devices_multiprocess(self):
-    # Real devices unfortunately don't correspond to indices in TPU_VISIBLE_DEVICES
-    accelerator_devices = {
-        'v3-8': {
-            0: {
-                0: ['TPU:0', 'TPU:1'],
-                1: ['TPU:0', 'TPU:1'],
-            },
-            1: {
-                0: ['TPU:4', 'TPU:5'],
-                1: ['TPU:4', 'TPU:5']
-            },
-            2: {
-                0: ['TPU:2', 'TPU:3'],
-                1: ['TPU:2', 'TPU:3']
-            },
-            3: {
-                0: ['TPU:6', 'TPU:7'],
-                1: ['TPU:6', 'TPU:7'],
-            },
-        },
-        'v4-8': {
-            0: {
-                0: ['TPU:0']
-            },
-            1: {
-                0: ['TPU:2']
-            },
-            2: {
-                0: ['TPU:3']
-            },
-            3: {
-                0: ['TPU:1']
-            },
-        },
-    }
-
-    if self.accelerator_type not in accelerator_devices:
-      raise NotImplementedError('Test not implemented for {}'.format(
-          self.accelerator_type))
-    expected = accelerator_devices[self.accelerator_type]
-
-    devices_per_process = pjrt.run_multiprocess(_get_real_devices)
-    self.assertDictEqual(devices_per_process, expected)
-
-    all_devices = sorted(
-        itertools.chain.from_iterable(
-            process_devices[0] for process_devices in expected.values()))
-    expected_all_devices = {
-        rank: {thread: all_devices for thread in expected[0].keys()
-              } for rank in expected.keys()
-    }
-
-    all_devices_per_process = pjrt.run_multiprocess(_get_all_real_devices)
-    self.assertDictEqual(all_devices_per_process, expected_all_devices)
-
   def test_xla_devices_single_process_all_chips(self):
     accelerator_devices = {
         'v3-8': {
