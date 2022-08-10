@@ -58,6 +58,18 @@ xla::Shape Expm1OutputShape(const torch::lazy::Value& input);
 
 xla::Shape FloorOutputShape(const torch::lazy::Value& input);
 
+xla::Shape GeScalarOutputShape(const torch::lazy::Value& self,
+                               const torch::lazy::Value& other);
+
+xla::Shape GeTensorOutputShape(const torch::lazy::Value& self,
+                               const torch::lazy::Value& other);
+
+xla::Shape GtScalarOutputShape(const torch::lazy::Value& self,
+                               const torch::lazy::Value& other);
+
+xla::Shape GtTensorOutputShape(const torch::lazy::Value& self,
+                               const torch::lazy::Value& other);
+
 xla::Shape HardsigmoidOutputShape(const torch::lazy::Value& input);
 
 xla::Shape HardsigmoidBackwardOutputShape(const torch::lazy::Value& grad_output,
