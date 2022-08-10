@@ -1422,20 +1422,6 @@ at::Tensor XLANativeFunctions::gather(const at::Tensor& self, int64_t dim,
       bridge::GetXlaTensor(self), dim, bridge::GetXlaTensor(index)));
 }
 
-at::Tensor XLANativeFunctions::ge(const at::Tensor& self,
-                                  const at::Scalar& other) {
-  XLA_FN_COUNTER("xla::");
-  return bridge::AtenFromXlaTensor(
-      XLATensor::ge(bridge::GetXlaTensor(self), other));
-}
-
-at::Tensor XLANativeFunctions::ge(const at::Tensor& self,
-                                  const at::Tensor& other) {
-  XLA_FN_COUNTER("xla::");
-  return bridge::AtenFromXlaTensor(
-      XLATensor::ge(bridge::GetXlaTensor(self), bridge::GetXlaTensor(other)));
-}
-
 at::Tensor XLANativeFunctions::gelu(const at::Tensor& self,
                                     c10::string_view approximate) {
   XLA_FN_COUNTER("xla::");
@@ -1449,20 +1435,6 @@ at::Tensor XLANativeFunctions::gelu_backward(const at::Tensor& grad,
   XLA_FN_COUNTER("xla::");
   return bridge::AtenFromXlaTensor(XLATensor::gelu_backward(
       bridge::GetXlaTensor(grad), bridge::GetXlaTensor(self), approximate));
-}
-
-at::Tensor XLANativeFunctions::gt(const at::Tensor& self,
-                                  const at::Scalar& other) {
-  XLA_FN_COUNTER("xla::");
-  return bridge::AtenFromXlaTensor(
-      XLATensor::gt(bridge::GetXlaTensor(self), other));
-}
-
-at::Tensor XLANativeFunctions::gt(const at::Tensor& self,
-                                  const at::Tensor& other) {
-  XLA_FN_COUNTER("xla::");
-  return bridge::AtenFromXlaTensor(
-      XLATensor::gt(bridge::GetXlaTensor(self), bridge::GetXlaTensor(other)));
 }
 
 at::Tensor XLANativeFunctions::hardshrink(const at::Tensor& self,

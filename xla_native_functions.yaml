@@ -20,6 +20,10 @@ full_codegen:
   - exp
   - expm1
   - floor
+  - ge.Scalar
+  - ge.Tensor
+  - gt.Scalar
+  - gt.Tensor
   - hardsigmoid
   - hardsigmoid_backward
   - hardswish
@@ -164,12 +168,8 @@ supported:
   - fmod.Tensor
   - frac
   - gather
-  - ge.Scalar
-  - ge.Tensor
   - gelu
   - gelu_backward
-  - gt.Scalar
-  - gt.Tensor
   - hardshrink
   - hardshrink_backward
   - hardtanh

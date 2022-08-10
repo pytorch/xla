@@ -185,6 +185,36 @@ xla::Shape FloorOutputShape(const torch::lazy::Value& input) {
   return GetXlaShape(input);
 }
 
+xla::Shape GeScalarOutputShape(const torch::lazy::Value& self,
+                               const torch::lazy::Value& other) {
+  auto lower_for_shape_fn =
+      [&](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
+    return BuildComparisonOp(at::aten::ge, operands[0], operands[1]);
+  };
+  return InferOutputShape({GetXlaShape(self), GetXlaShape(other)},
+                          lower_for_shape_fn);
+}
+
+xla::Shape GeTensorOutputShape(const torch::lazy::Value& self,
+                               const torch::lazy::Value& other) {
+  return GtScalarOutputShape(self, other);
+}
+
+xla::Shape GtScalarOutputShape(const torch::lazy::Value& self,
+                               const torch::lazy::Value& other) {
+  auto lower_for_shape_fn =
+      [&](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
+    return BuildComparisonOp(at::aten::gt, operands[0], operands[1]);
+  };
+  return InferOutputShape({GetXlaShape(self), GetXlaShape(other)},
+                          lower_for_shape_fn);
+}
+
+xla::Shape GtTensorOutputShape(const torch::lazy::Value& self,
+                               const torch::lazy::Value& other) {
+  return GtScalarOutputShape(self, other);
+}
+
 xla::Shape HardsigmoidOutputShape(const torch::lazy::Value& input) {
   return GetXlaShape(input);
 }
