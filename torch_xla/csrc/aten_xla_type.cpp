@@ -2539,14 +2539,17 @@ at::Tensor& XLANativeFunctions::randperm_out(
     int64_t n, c10::optional<at::Generator> generator, at::Tensor& out) {
   std::cout << "xw32 inside aten_xla_type.cpp XLANativeFunctions::randperm_out"
             << std::endl;
-  XLA_FN_COUNTER("xla::");
   if (generator.has_value() && generator->defined()) {
+    std::cout << "xw32 inside aten_xla_type.cpp "
+                "XLANativeFunctions::randperm_out: generator is provided."
+              << std::endl;
     return at::native::call_fallback_fn<
         &xla_cpu_fallback,
         // xw32: what argument should I use for the below "ATEN_OP" function?
         // How can I find it? suggest to search in pytorch repo.
         ATEN_OP(randperm_generator_out)>::call(n, generator, out);
   }
+  XLA_FN_COUNTER("xla::");
 
   std::cout << "xw32 inside aten_xla_type.cpp "
                "XLANativeFunctions::randperm_out: generator is not defined."
