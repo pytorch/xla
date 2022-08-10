@@ -21,6 +21,8 @@ xla::Shape AdaptiveAvgPool3dOutputShape(const torch::lazy::Value& input,
 xla::Shape AdaptiveAvgPool3dBackwardOutputShape(
     const torch::lazy::Value& grad_output, const torch::lazy::Value& input);
 
+xla::Shape AllOutputShape(const torch::lazy::Value& input);
+
 xla::Shape AsinOutputShape(const torch::lazy::Value& input);
 
 xla::Shape AsinhOutputShape(const torch::lazy::Value& input);

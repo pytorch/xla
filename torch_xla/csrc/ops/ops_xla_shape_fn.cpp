@@ -80,6 +80,17 @@ xla::Shape AdaptiveAvgPool3dBackwardOutputShape(
                           lower_for_shape_fn);
 }
 
+xla::Shape AllOutputShape(const torch::lazy::Value& input) {
+  std::vector<int64_t> dimensions =
+      torch::lazy::Iota<int64_t>(GetXlaShape(input).rank());
+  auto lower_for_shape_fn =
+      [dimensions](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
+    return BuildAll(operands[0], dimensions, false);
+  };
+
+  return InferOutputShape({GetXlaShape(input)}, lower_for_shape_fn);
+}
+
 xla::Shape AsinOutputShape(const torch::lazy::Value& input) {
   return GetXlaShape(input);
 }
