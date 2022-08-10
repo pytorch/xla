@@ -152,6 +152,30 @@ torch_xla::XlaOpVector Floor::Lower(LoweringContext* loctx) const {
   return ReturnOp(xla::Floor(xla_input), loctx);
 }
 
+torch_xla::XlaOpVector GeScalar::Lower(LoweringContext* loctx) const {
+  xla::XlaOp xla_input = loctx->GetOutputOp(operand(0));
+  xla::XlaOp xla_other = loctx->GetOutputOp(operand(1));
+  return ReturnOp(BuildComparisonOp(at::aten::ge, xla_input, xla_other), loctx);
+}
+
+torch_xla::XlaOpVector GeTensor::Lower(LoweringContext* loctx) const {
+  xla::XlaOp xla_input = loctx->GetOutputOp(operand(0));
+  xla::XlaOp xla_other = loctx->GetOutputOp(operand(1));
+  return ReturnOp(BuildComparisonOp(at::aten::ge, xla_input, xla_other), loctx);
+}
+
+torch_xla::XlaOpVector GtScalar::Lower(LoweringContext* loctx) const {
+  xla::XlaOp xla_input = loctx->GetOutputOp(operand(0));
+  xla::XlaOp xla_other = loctx->GetOutputOp(operand(1));
+  return ReturnOp(BuildComparisonOp(at::aten::gt, xla_input, xla_other), loctx);
+}
+
+torch_xla::XlaOpVector GtTensor::Lower(LoweringContext* loctx) const {
+  xla::XlaOp xla_input = loctx->GetOutputOp(operand(0));
+  xla::XlaOp xla_other = loctx->GetOutputOp(operand(1));
+  return ReturnOp(BuildComparisonOp(at::aten::gt, xla_input, xla_other), loctx);
+}
+
 torch_xla::XlaOpVector Hardsigmoid::Lower(LoweringContext* loctx) const {
   xla::XlaOp xla_input = loctx->GetOutputOp(operand(0));
   return ReturnOp(BuildHardSigmoid(xla_input), loctx);
