@@ -3604,7 +3604,6 @@ TEST_F(AtenXlaTensorTest, TestGer) {
   });
 
   ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
-  ExpectCounterChanged("xla::ger", cpp_test::GetIgnoredCounters());
 }
 
 TEST_F(AtenXlaTensorTest, TestMv) {
