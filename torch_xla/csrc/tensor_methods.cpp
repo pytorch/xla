@@ -22,7 +22,7 @@
 #include "torch_xla/csrc/lowering_context.h"
 #include "torch_xla/csrc/ops/adam_optimizer_step.h"
 #include "torch_xla/csrc/ops/adaptive_max_pool2d.h"
-#include "torch_xla/csrc/ops/all.h"
+#include "torch_xla/csrc/ops/all_dim.h"
 #include "torch_xla/csrc/ops/all_gather.h"
 #include "torch_xla/csrc/ops/all_reduce.h"
 #include "torch_xla/csrc/ops/all_to_all.h"
@@ -698,19 +698,19 @@ XLATensorPtr XLATensor::addmm(const XLATensorPtr& input,
       input->GetIrValue(), weight->GetIrValue(), bias->GetIrValue()));
 }
 
-XLATensorPtr XLATensor::all(const XLATensorPtr& input,
-                            std::vector<int64_t> dimensions,
-                            bool keep_reduced_dimensions) {
+XLATensorPtr XLATensor::all_dim(const XLATensorPtr& input,
+                                std::vector<int64_t> dimensions,
+                                bool keep_reduced_dimensions) {
   at::ScalarType result_type = input->dtype() == at::ScalarType::Byte
                                    ? at::ScalarType::Byte
                                    : at::ScalarType::Bool;
-  return input->CreateFrom(
-      torch::lazy::MakeNode<All>(input->GetIrValue(),
-                                 torch::lazy::GetCanonicalDimensionIndices(
-                                     xla::util::ToVector<int64_t>(dimensions),
-                                     input->shape().get().rank()),
-                                 keep_reduced_dimensions),
-      result_type);
+  return input->CreateFrom(torch::lazy::MakeNode<AllDim>(
+                               input->GetIrValue(),
+                               torch::lazy::GetCanonicalDimensionIndices(
+                                   xla::util::ToVector<int64_t>(dimensions),
+                                   input->shape().get().rank()),
+                               keep_reduced_dimensions),
+                           result_type);
 }
 
 XLATensorPtr XLATensor::amax(const XLATensorPtr& input,
