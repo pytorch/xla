@@ -24,7 +24,10 @@ def _profile(logdir: str, port: int = 9012):
 class TestPjRtProfiler(absltest.TestCase):
 
   def setUp(self):
-    pjrt.set_device_type('CPU')
+    assert pjrt.using_pjrt()
+
+    # HACK: ensure libtpu is loaded if using TPU
+    xm.xla_device()
 
   def test_profiler_output(self):
     tempdir = self.create_tempdir().full_path
