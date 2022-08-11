@@ -25,9 +25,11 @@ MODEL_OPTS = {
     '--fp32_reduce_scatter': {
         'action': 'store_true',
     },
-    '--no_padding_in_all_gather': {
-        'dest': 'use_padding_in_all_gather',
-        'action': 'store_false',
+    '--shard_param_on_dim_0': {
+        'action': 'store_true',
+    },
+    '--pin_layout_in_collective_ops': {
+        'action': 'store_true',
     },
 }
 
@@ -157,7 +159,8 @@ def train_mnist(flags, **kwargs):
       compute_dtype=getattr(torch, flags.compute_dtype),
       fp32_reduce_scatter=flags.fp32_reduce_scatter,
       flatten_parameters=flags.flatten_parameters,
-      use_padding_in_all_gather=flags.use_padding_in_all_gather)
+      shard_param_on_dim_0=flags.shard_param_on_dim_0,
+      pin_layout_in_collective_ops=flags.pin_layout_in_collective_ops)
   # Apply gradient checkpointing to sub-modules if specified
   grad_ckpt_wrap = checkpoint_module if flags.use_gradient_checkpointing else (
       lambda x: x)

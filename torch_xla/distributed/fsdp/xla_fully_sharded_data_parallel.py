@@ -190,14 +190,15 @@ class XlaFullyShardedDataParallel(nn.Module):
           The world_size of this sharding instance. This must be specified if
           ``sharding_groups`` is provided. Otherwise it defaults to
           ``xm.xrt_world_size()``.
-      use_padding_in_all_gather (bool, Optional):
-          if ``True``, then pad the sharded parameters to a multiple of 128
-          and reshape it to (-1, 128) for all_gather, which is usually more
-          efficient than direct all_gather on 1D tensors on TPUs.
       pin_layout_in_collective_ops (bool, Optional):
           if ``True``, then pin the layout in the collective ops (all_reduce,
           all_gather, and reduce_scatter) in FSDP. See `xm.all_reduce` for
           details on pinning layout.
+      shard_param_on_dim_0 (bool, Optional):
+          if ``True``, then shard the parameter tensors only along their first
+          dimension (dim 0) *without* flattening them. This is a workaround for
+          those compilers that may have trouble handling flattened parameters.
+          This option has no effect if ``flatten_parameters`` is ``True``.
   """
 
   def __init__(
@@ -216,7 +217,7 @@ class XlaFullyShardedDataParallel(nn.Module):
       sharding_groups: Optional[List[List[int]]] = None,
       sharding_rank: Optional[int] = None,
       sharding_world_size: Optional[int] = None,
-      use_padding_in_all_gather: bool = True,
+      shard_param_on_dim_0: bool = False,
       pin_layout_in_collective_ops: bool = False,
       _shard_size_multiple: int = 128,
       _use_xla_patched_linear: bool = True,
@@ -266,10 +267,15 @@ class XlaFullyShardedDataParallel(nn.Module):
 
     # Make sharded parameter sizes a multiple of 128 for efficient all_gather ops on TPUs
     # (see https://github.com/pytorch/xla/issues/3510#issuecomment-1101739677 for details)
-    self._shard_size_multiple = _shard_size_multiple if use_padding_in_all_gather else 1
+    self._shard_size_multiple = _shard_size_multiple if not shard_param_on_dim_0 else 1
     # Use a patched version of `torch.nn.functional.linear` with explicitly-defined backward in XLA
     # (see https://github.com/pytorch/xla/issues/3811 for details)
     self._use_xla_patched_linear = _use_xla_patched_linear
+    # A workaround for those compilers that have trouble addressing flattened parameters
+    # (see https://github.com/pytorch/xla/pull/3830#discussion_r939438914 for details)
+    # When `_shard_param_on_dim_0` is True, we shard and all-gather model parameter tensors
+    # only along their dim 0 without flattening the parameter
+    self._shard_param_on_dim_0 = shard_param_on_dim_0 and not flatten_parameters
     # Set layout pinning to False in all_gather, all_reduce, and reduce_scatter so that they can work together
     # TODO (ronghanghu): change the default layout pinning to True after it's supported simultaneously
     # on all collective ops (see https://github.com/pytorch/xla/pull/3511 for details)
@@ -589,10 +595,10 @@ class XlaFullyShardedDataParallel(nn.Module):
 
   def _get_shard(self, tensor: torch.Tensor) -> Tuple[torch.Tensor, int]:
     """Return the local shard of a full tensor."""
-    tensor = _flatten_and_pad_to_world_size(
+    tensor = self._flatten_and_pad_to_world_size(
         tensor, self.world_size * self._shard_size_multiple)
-    local_numel = tensor.numel() // self.world_size
-    begin, end = self.rank * local_numel, (self.rank + 1) * local_numel
+    local_size = tensor.size(0) // self.world_size
+    begin, end = self.rank * local_size, (self.rank + 1) * local_size
     tensor = tensor[begin:end].clone()
     return tensor
 
@@ -1065,7 +1071,7 @@ class XlaFullyShardedDataParallel(nn.Module):
     # Shard the gradients with `reduce_scatter`.
     # Clear grad on the tensor, so any repeated gradient computations do not interfere with this reduction.
     param.grad = None
-    grad_flat = _flatten_and_pad_to_world_size(
+    grad_flat = self._flatten_and_pad_to_world_size(
         grad, self.world_size * self._shard_size_multiple)
     if self.optimization_barrier_in_backward:
       self.optimization_barrier_op([grad_flat])
@@ -1255,7 +1261,7 @@ class XlaFullyShardedDataParallel(nn.Module):
           self.optimization_barrier_op([p_shard_data])
         if p_shard_data.dtype != self.compute_dtype:
           p_shard_data = p_shard_data.to(self.compute_dtype)
-        if self._shard_size_multiple == 1:
+        if self._shard_param_on_dim_0 or self._shard_size_multiple == 1:
           p_padded = self.all_gather_op(
               p_shard_data, groups=self.sharding_groups)
         else:
@@ -1267,7 +1273,11 @@ class XlaFullyShardedDataParallel(nn.Module):
               p_shard_2d, groups=self.sharding_groups).flatten()
         if apply_opt_barrier:
           self.optimization_barrier_op([p_padded])
-        p.data = p_padded[:p_shard._orig_size.numel()].view(p_shard._orig_size)
+        if self._shard_param_on_dim_0:
+          p.data = p_padded[:p_shard._orig_size[0]]
+        else:
+          p.data = p_padded[:p_shard._orig_size.numel()].view(
+              p_shard._orig_size)
         p._has_full_param = True
 
     self.has_full_params = True
@@ -1425,16 +1435,22 @@ class XlaFullyShardedDataParallel(nn.Module):
           f"{msg} free={gb_free: .4f} GB, total={gb_total: .4f} GB, t={time.time()-self._tstart: .1f}"
       )
 
+  def _flatten_and_pad_to_world_size(self, tensor: torch.Tensor,
+                                     world_size: int) -> torch.Tensor:
+    """Flatten and pad a tensor to a given world size (for reduce-scatter)."""
+    if self._shard_param_on_dim_0:
+      # shard only on dim 0 of the parameter, without flattening
+      if tensor.size(0) % world_size != 0:
+        pad_size = world_size - tensor.size(0) % world_size
+        tensor = F.pad(tensor, [0, 0] * (tensor.dim() - 1) + [0, pad_size])
+      return tensor
 
-def _flatten_and_pad_to_world_size(tensor: torch.Tensor,
-                                   world_size: int) -> torch.Tensor:
-  """Flatten and pad a tensor to a given world size (for reduce-scatter)."""
-  tensor = tensor.flatten()
-  if tensor.numel() % world_size != 0:
-    pad_size = world_size - tensor.numel() % world_size
-    tensor = F.pad(tensor, [0, pad_size])
+    tensor = tensor.flatten()
+    if tensor.numel() % world_size != 0:
+      pad_size = world_size - tensor.numel() % world_size
+      tensor = F.pad(tensor, [0, pad_size])
 
-  return tensor
+    return tensor
 
 
 def apply_to_tensors(

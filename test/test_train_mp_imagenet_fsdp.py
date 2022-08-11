@@ -51,9 +51,11 @@ MODEL_OPTS = {
     '--fp32_reduce_scatter': {
         'action': 'store_true',
     },
-    '--no_padding_in_all_gather': {
-        'dest': 'use_padding_in_all_gather',
-        'action': 'store_false',
+    '--shard_param_on_dim_0': {
+        'action': 'store_true',
+    },
+    '--pin_layout_in_collective_ops': {
+        'action': 'store_true',
     },
 }
 
@@ -224,7 +226,8 @@ def train_imagenet():
       compute_dtype=getattr(torch, FLAGS.compute_dtype),
       fp32_reduce_scatter=FLAGS.fp32_reduce_scatter,
       flatten_parameters=FLAGS.flatten_parameters,
-      use_padding_in_all_gather=FLAGS.use_padding_in_all_gather)
+      shard_param_on_dim_0=FLAGS.shard_param_on_dim_0,
+      pin_layout_in_collective_ops=FLAGS.pin_layout_in_collective_ops)
   # Apply gradient checkpointing to sub-modules if specified
   grad_ckpt_wrap = checkpoint_module if FLAGS.use_gradient_checkpointing else (
       lambda x: x)

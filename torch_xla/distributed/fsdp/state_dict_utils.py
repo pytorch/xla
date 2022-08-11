@@ -22,7 +22,11 @@ def _consolidate_param(state_dict_list, shard_metadata, name, prefix, suffix):
     orig_size = p_info["_orig_size"]
 
   full_param = torch.cat(p_shard_list, dim=0)
-  full_param = full_param[:_numel(orig_size)].view(*orig_size)
+  try:
+    full_param = full_param[:_numel(orig_size)].view(*orig_size)
+  except RuntimeError:
+    # handle those FSDP models trained with `shard_param_on_dim_0=True`
+    full_param = full_param[:orig_size[0]]
 
   full_name = orig_name
   if prefix != "":
