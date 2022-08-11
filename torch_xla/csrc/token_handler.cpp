@@ -31,15 +31,10 @@ xla::XlaOp SliceOneToken(xla::XlaOp input) {
 
 }  // namespace
 
-#ifndef PT_XLA_DISABLE_NUMERIC_CC_TOKEN_DEFAULT_VALUE
-#define PT_XLA_DISABLE_NUMERIC_CC_TOKEN_DEFAULT_VALUE false
-#endif
-
 xla::XlaOp TokenHandler::GetInput(xla::XlaOp input,
                                   const xla::Shape* input_shape) {
   static bool disable_numeric_token =
-      xla::sys_util::GetEnvBool("PT_XLA_DISABLE_NUMERIC_CC_TOKEN",
-                                PT_XLA_DISABLE_NUMERIC_CC_TOKEN_DEFAULT_VALUE);
+      xla::sys_util::GetEnvBool("DISABLE_NUMERIC_CC_TOKEN", false);
   if (disable_numeric_token) {
     return input;
   }
@@ -53,8 +48,7 @@ xla::XlaOp TokenHandler::GetInput(xla::XlaOp input,
 
 xla::XlaOp TokenHandler::GetNewToken(xla::XlaOp result) {
   static bool disable_numeric_token =
-      xla::sys_util::GetEnvBool("PT_XLA_DISABLE_NUMERIC_CC_TOKEN",
-                                PT_XLA_DISABLE_NUMERIC_CC_TOKEN_DEFAULT_VALUE);
+      xla::sys_util::GetEnvBool("DISABLE_NUMERIC_CC_TOKEN", false);
   if (disable_numeric_token) {
     return token_;
   }
