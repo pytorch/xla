@@ -153,6 +153,29 @@ xla::Shape CeilOutputShape(const torch::lazy::Value& input) {
   return GetXlaShape(input);
 }
 
+xla::Shape ClampTensorOutputShape(
+    const torch::lazy::Value& input,
+    const c10::optional<torch::lazy::Value>& min,
+    const c10::optional<torch::lazy::Value>& max) {
+  auto lower_for_shape_fn =
+      [&](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
+    xla::XlaOp res = operands[0];
+    if (operands.size() > 1) {
+      res = xla::Max(res, operands[1]);
+    }
+    if (operands.size() > 2) {
+      res = xla::Min(res, operands[2]);
+    }
+    return res;
+  };
+  std::vector<xla::Shape> shapes;
+  for (auto& i :
+       GetValuesVectorWithOptional<torch::lazy::Value>({input}, {&min, &max})) {
+    shapes.push_back(GetXlaShape(i));
+  }
+  return InferOutputShape(shapes, lower_for_shape_fn);
+}
+
 xla::Shape ClampMaxTensorOutputShape(const torch::lazy::Value& input,
                                      const torch::lazy::Value& other) {
   auto lower_for_shape_fn =

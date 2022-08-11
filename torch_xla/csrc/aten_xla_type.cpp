@@ -1038,14 +1038,6 @@ at::Tensor XLANativeFunctions::clamp(const at::Tensor& self,
       XLATensor::clamp(bridge::GetXlaTensor(self), min, max));
 }
 
-at::Tensor XLANativeFunctions::clamp(const at::Tensor& self,
-                                     const c10::optional<at::Tensor>& min,
-                                     const c10::optional<at::Tensor>& max) {
-  XLA_FN_COUNTER("xla::");
-  return bridge::AtenFromXlaTensor(
-      XLATensor::clamp(bridge::GetXlaTensor(self), min, max));
-}
-
 at::Tensor XLANativeFunctions::clamp_max(const at::Tensor& self,
                                          const at::Scalar& max) {
   XLA_FN_COUNTER("xla::");
