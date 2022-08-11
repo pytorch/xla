@@ -2537,32 +2537,15 @@ at::Tensor& XLANativeFunctions::random_(
 
 at::Tensor& XLANativeFunctions::randperm_out(
     int64_t n, c10::optional<at::Generator> generator, at::Tensor& out) {
-  std::cout << "xw32 inside aten_xla_type.cpp XLANativeFunctions::randperm_out"
-            << std::endl;
   if (generator.has_value() && generator->defined()) {
-    std::cout << "xw32 inside aten_xla_type.cpp "
-                "XLANativeFunctions::randperm_out: generator is provided."
-              << std::endl;
     return at::native::call_fallback_fn<
         &xla_cpu_fallback,
-        // xw32: what argument should I use for the below "ATEN_OP" function?
-        // How can I find it? suggest to search in pytorch repo.
         ATEN_OP(randperm_generator_out)>::call(n, generator, out);
   }
   XLA_FN_COUNTER("xla::");
 
-  std::cout << "xw32 inside aten_xla_type.cpp "
-               "XLANativeFunctions::randperm_out: generator is not defined."
-            << std::endl;
   XLATensorPtr out_tensor = bridge::GetXlaTensor(out);
   XLATensor::randperm_out(out_tensor, n);
-  // xw32: why do we need to return an original tensor, as one of the arguments
-  // is "at::Tensor & out" since we can assign the random permutation output to
-  // it? Also, it seems "out" has the same content as out_tensor. How so?
-  std::cout
-      << "xw32 inside aten_xla_type.cpp XLANativeFunctions::randperm_out: "
-         "returning the result out_tensor=["
-      << out_tensor << "]. out=[" << out << "]. line2564" << std::endl;
   return out;
 }
 

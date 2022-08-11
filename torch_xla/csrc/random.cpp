@@ -202,36 +202,19 @@ xla::XlaOp RngNormal(xla::XlaOp seed, const xla::Shape& shape, xla::XlaOp mean,
 }
 
 xla::XlaOp BuildRandpermOut(int64_t n, xla::XlaBuilder* builder) {
-  std::cout << "xw32 inside random.cpp BuildRandpermOut begins with n=" << n
-            << std::endl;
-  const xla::Shape key_shape = xla::ShapeUtil::MakeShape(xla::U32, {n});
-  // xw32: why can't I see the "cout" result? Is it because they are in TPU not
-  // in CPU?
-  std::cout << "xw32 inside random.cpp BuildRandpermOut: key_shape=["
-            << key_shape << "]." << std::endl;
-  // XLaOp is operator.
-  // xla::XlaOp input = xla::Iota(builder, key_shape, 0); // this prints "xw32
-  // inside random.cpp BuildRandpermOut: input=[1]"
   xla::XlaOp input = xla::Iota(builder, xla::PrimitiveType::S64, n);
-  std::cout << "xw32 inside random.cpp BuildRandpermOut: input=[" << input
-            << "]." << std::endl;
-  std::cout << "xw32 inside random.cpp BuildRandpermOut: "
-               "input.builder()->OpToString(input)=["
-            << input.builder()->OpToString(input) << "]." << std::endl;
-  // In order to debug this function, how can I print the variables in this
-  // function? "cout << XlaOp" doesn't seem to work.
 
   // Ensure that the key space is greater than or equal to the cube of the
   // number of values to manage the number of collisions. Inspired by
   // RandomShuffleOp in tf2xla, where the full rationale for picking the
   // exponent value is described.
+  // https://github.com/tensorflow/tensorflow/blob/6ed5af7784f3f1eaaea77cf1224b588e2521cf73/tensorflow/compiler/mlir/xla/transforms/legalize_tf.cc#L5813-L5972
   const int kExponent = 3;
   const int rounds = static_cast<int>(
       std::ceil(kExponent * std::log(n) / std::log(tensorflow::kuint32max)));
-  std::cout << "xw32 inside random.cpp BuildRandpermOut: rounds=[" << rounds
-            << "]." << std::endl;
   xla::XlaOp zero = xla::ConstantR0(builder, 0U);
   xla::XlaOp max_value = xla::ConstantR0(builder, tensorflow::kuint32max);
+  const xla::Shape key_shape = xla::ShapeUtil::MakeShape(xla::U32, {n});
 
   xla::XlaOp curr = input;
   xla::PrimitiveType element_type = xla::S64;
@@ -239,17 +222,11 @@ xla::XlaOp BuildRandpermOut(int64_t n, xla::XlaBuilder* builder) {
     // RngUniform Constructs an output of a given shape with random numbers
     // generated following the uniform distribution over the interval .
     xla::XlaOp keys = xla::RngUniform(zero, max_value, key_shape);
-    std::cout << "xw32 inside random.cpp BuildRandpermOut: keys=[" << keys
-              << "]." << std::endl;
-    // xw32: why do we need to generate a key and sort for "rounds" times?
     xla::XlaOp sorted = xla::Sort(
         {keys, curr},
         xla::CreateScalarLtComputation({xla::U32, element_type}, builder));
     curr = xla::GetTupleElement(sorted, 1);
   }
-  std::cout << "xw32 inside random.cpp BuildRandpermOut returning curr=["
-            << curr << "]." << std::endl;
-  std::cout << "xw32 inside random.cpp BuildRandpermOut ends" << std::endl;
   return curr;
 }
 
