@@ -222,9 +222,10 @@ xla::XlaOp BuildRandpermOut(int64_t n, xla::XlaBuilder* builder) {
     // RngUniform Constructs an output of a given shape with random numbers
     // generated following the uniform distribution over the interval .
     xla::XlaOp keys = xla::RngUniform(zero, max_value, key_shape);
-    xla::XlaOp sorted = xla::Sort(
-        {keys, curr},
-        xla::CreateScalarLtComputation({key_shape.element_type(), input_element_type}, builder));
+    xla::XlaOp sorted =
+        xla::Sort({keys, curr},
+                  xla::CreateScalarLtComputation(
+                      {key_shape.element_type(), input_element_type}, builder));
     curr = xla::GetTupleElement(sorted, 1);
   }
   return curr;

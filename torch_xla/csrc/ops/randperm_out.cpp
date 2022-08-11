@@ -10,11 +10,9 @@ namespace torch_xla {
 
 RandpermOut::RandpermOut(int64_t n)
     : XlaNode(torch::lazy::OpKind(at::aten::randperm), torch::lazy::OpList(),
-              xla::ShapeUtil::MakeShape(
-                  xla::S64, {n}),
+              xla::ShapeUtil::MakeShape(xla::S64, {n}),
               /*num_outputs=*/1, torch::lazy::MHash(n)),
-      n_(n) {
-}
+      n_(n) {}
 
 torch::lazy::NodePtr RandpermOut::Clone(torch::lazy::OpList operands) const {
   return torch::lazy::MakeNode<RandpermOut>(n_);

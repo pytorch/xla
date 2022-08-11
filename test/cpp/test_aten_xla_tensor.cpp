@@ -4201,13 +4201,11 @@ TEST_F(AtenXlaTensorTest, TestRandpermOutWithoutGenerator) {
   torch::Tensor a = torch::randint(16, {5}, torch::TensorOptions(torch::kLong));
   ForEachDevice([&](const torch::Device& device) {
     torch::Tensor xla_a = CopyToDevice(a, device);
-    torch::Tensor xla_b =
-        torch::randperm_out(xla_a, n);
+    torch::Tensor xla_b = torch::randperm_out(xla_a, n);
 
     torch::Tensor xla_b_cpu = CopyToDevice(xla_b, torch::kCPU);
-    std::vector<int64_t> shuffle_data(
-        xla_b_cpu.data_ptr<int64_t>(),
-        xla_b_cpu.data_ptr<int64_t>() + n);
+    std::vector<int64_t> shuffle_data(xla_b_cpu.data_ptr<int64_t>(),
+                                      xla_b_cpu.data_ptr<int64_t>() + n);
     EXPECT_TRUE(shuffle_data.size() == n && xla::IsPermutation(shuffle_data));
   });
 
@@ -4221,18 +4219,17 @@ TEST_F(AtenXlaTensorTest, TestRandpermOutWithGenerator) {
   ForEachDevice([&](const torch::Device& device) {
     torch::Tensor xla_a = CopyToDevice(a, device);
     c10::optional<at::Generator> gen = at::detail::createCPUGenerator();
-    torch::Tensor xla_b =
-        torch::randperm_out(xla_a, n, gen);
+    torch::Tensor xla_b = torch::randperm_out(xla_a, n, gen);
 
     torch::Tensor xla_b_cpu = CopyToDevice(xla_b, torch::kCPU);
-    std::vector<int64_t> shuffle_data(
-        xla_b_cpu.data_ptr<int64_t>(),
-        xla_b_cpu.data_ptr<int64_t>() + n);
+    std::vector<int64_t> shuffle_data(xla_b_cpu.data_ptr<int64_t>(),
+                                      xla_b_cpu.data_ptr<int64_t>() + n);
     EXPECT_TRUE(shuffle_data.size() == n && xla::IsPermutation(shuffle_data));
   });
 
   ExpectCounterNotChanged("xla::randperm_out", cpp_test::GetIgnoredCounters());
-  ExpectCounterChanged("aten::randperm.generator_out", cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("aten::randperm.generator_out",
+                       cpp_test::GetIgnoredCounters());
 }
 
 TEST_F(AtenXlaTensorTest, TestSlice) {

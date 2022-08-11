@@ -2539,8 +2539,8 @@ at::Tensor& XLANativeFunctions::randperm_out(
     int64_t n, c10::optional<at::Generator> generator, at::Tensor& out) {
   if (generator.has_value() && generator->defined()) {
     return at::native::call_fallback_fn<
-        &xla_cpu_fallback,
-        ATEN_OP(randperm_generator_out)>::call(n, generator, out);
+        &xla_cpu_fallback, ATEN_OP(randperm_generator_out)>::call(n, generator,
+                                                                  out);
   }
   XLA_FN_COUNTER("xla::");
 
