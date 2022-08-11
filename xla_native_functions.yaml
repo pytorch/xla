@@ -4,6 +4,7 @@ full_codegen:
   - acos
   - acosh
   - abs
+  - all
   - asin
   - asinh
   - atan
@@ -11,6 +12,8 @@ full_codegen:
   - binary_cross_entropy
   - binary_cross_entropy_backward
   - ceil
+  - clamp_max.Tensor
+  - clamp_min.Tensor
   - cos
   - cosh
   - erf
@@ -19,6 +22,10 @@ full_codegen:
   - exp
   - expm1
   - floor
+  - ge.Scalar
+  - ge.Tensor
+  - gt.Scalar
+  - gt.Tensor
   - hardsigmoid
   - hardsigmoid_backward
   - hardswish
@@ -91,7 +98,6 @@ supported:
   - addcmul
   - addmm
   - alias
-  - all
   - all.dim
   - amax
   - amin
@@ -127,9 +133,7 @@ supported:
   - clamp
   - clamp.Tensor
   - clamp_max
-  - clamp_max.Tensor
   - clamp_min
-  - clamp_min.Tensor
   - clone
   - constant_pad_nd
   - convolution_backward_overrideable
@@ -164,13 +168,8 @@ supported:
   - fmod.Tensor
   - frac
   - gather
-  - ge.Scalar
-  - ge.Tensor
   - gelu
   - gelu_backward
-  - ger
-  - gt.Scalar
-  - gt.Tensor
   - hardshrink
   - hardshrink_backward
   - hardtanh

@@ -218,7 +218,9 @@ Run the C++ op test or a simple test that only involves the generated ops. To ru
 As usual, two things to verify are the correctness and the xla counter being incremented correctly.
 
 ## Sample PRs
-- Codegen erf, erfc, erfinv, and exp (https://github.com/pytorch/xla/pull/3659)
-- Codegen floor and reciprocal (https://github.com/pytorch/xla/pull/3600)
-- Codegen inverse (https://github.com/pytorch/xla/pull/3575)
+- Unary/Binary OP -> Codegen erf, erfc, erfinv, and exp (https://github.com/pytorch/xla/pull/3659)
+- OP with optional -> Codegen binary_cross_entropy/backward (https://github.com/pytorch/xla/pull/3809)
+- OP with `at::Scalar` -> Codegen addcdiv and addcmul (https://github.com/pytorch/xla/pull/3768)
+- OP with vector that support negative index -> Codegen amin amax (https://github.com/pytorch/xla/pull/3771)
+- OP with special fallback logic -> partially codegen adaptive_avgpool3d and backward (https://github.com/pytorch/xla/pull/3790)
 To see more examples, please take a look at the tracking issue (https://github.com/pytorch/xla/issues/3560).
