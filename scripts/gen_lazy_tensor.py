@@ -8,6 +8,7 @@ from torchgen.api.types import (
     BaseCType,
     OptionalCType,
     VectorCType,
+    boolT,
     kernel_signature,
 )
 import pathlib
@@ -20,6 +21,10 @@ shape_inference_hdr = str(torch_root / "torch" / "csrc" / "lazy" / "core" /
                           "shape_inference.h")
 impl_path = str(torch_xla_root / "torch_xla" / "csrc" / "aten_xla_type.cpp")
 source_yaml = str(torch_xla_root / "xla_native_functions.yaml")
+
+
+def is_boolean_dtype(lazy_type):
+  return lazy_type == BaseCType(boolT)
 
 
 @dataclass(frozen=True)
@@ -47,7 +52,7 @@ class GenXlaLazyIR(GenLazyIR):
     shape_fn_inputs_list = [
         f"{a.name}" for a in schema.positional_args
         if (a.is_lazy_value or isinstance(a.lazy_type, VectorCType) or
-            a.name == 'reduction')
+            is_boolean_dtype(a.lazy_type) or a.name == 'reduction')
     ]
     shape_fn_inputs = ", ".join(shape_fn_inputs_list)
 

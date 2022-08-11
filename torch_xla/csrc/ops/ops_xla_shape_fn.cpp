@@ -68,6 +68,24 @@ xla::Shape AdaptiveAvgPool3dOutputShape(const torch::lazy::Value& input,
   return InferOutputShape({GetXlaShape(input)}, lower_for_shape_fn);
 }
 
+xla::Shape AmaxOutputShape(const torch::lazy::Value& input,
+                           absl::Span<const int64_t> dim, bool keepdim) {
+  auto lower_for_shape_fn =
+      [&](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
+    return BuildMaxInDims(operands[0], dim, keepdim);
+  };
+  return InferOutputShape({GetXlaShape(input)}, lower_for_shape_fn);
+}
+
+xla::Shape AminOutputShape(const torch::lazy::Value& input,
+                           absl::Span<const int64_t> dim, bool keepdim) {
+  auto lower_for_shape_fn =
+      [&](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
+    return BuildMinInDims(operands[0], dim, keepdim);
+  };
+  return InferOutputShape({GetXlaShape(input)}, lower_for_shape_fn);
+}
+
 xla::Shape AdaptiveAvgPool3dBackwardOutputShape(
     const torch::lazy::Value& grad_output, const torch::lazy::Value& input) {
   auto lower_for_shape_fn =

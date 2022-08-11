@@ -9,7 +9,6 @@
 #include "torch_xla/csrc/reduction.h"
 
 namespace torch_xla {
-
 torch_xla::XlaOpVector Abs::Lower(LoweringContext* loctx) const {
   xla::XlaOp xla_input = loctx->GetOutputOp(operand(0));
   return ReturnOp(BuildAbs(xla_input), loctx);
@@ -58,6 +57,16 @@ torch_xla::XlaOpVector All::Lower(LoweringContext* loctx) const {
   std::vector<int64_t> dimensions =
       torch::lazy::Iota<int64_t>(XlaHelpers::ShapeOfXlaOp(input).rank());
   return ReturnOp(BuildAll(input, dimensions, false), loctx);
+}
+
+torch_xla::XlaOpVector Amax::Lower(LoweringContext* loctx) const {
+  xla::XlaOp input = loctx->GetOutputOp(operand(0));
+  return ReturnOp(BuildMaxInDims(input, dim, keepdim), loctx);
+}
+
+torch_xla::XlaOpVector Amin::Lower(LoweringContext* loctx) const {
+  xla::XlaOp input = loctx->GetOutputOp(operand(0));
+  return ReturnOp(BuildMinInDims(input, dim, keepdim), loctx);
 }
 
 torch_xla::XlaOpVector Asin::Lower(LoweringContext* loctx) const {

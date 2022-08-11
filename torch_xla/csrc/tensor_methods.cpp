@@ -26,8 +26,6 @@
 #include "torch_xla/csrc/ops/all_gather.h"
 #include "torch_xla/csrc/ops/all_reduce.h"
 #include "torch_xla/csrc/ops/all_to_all.h"
-#include "torch_xla/csrc/ops/amax.h"
-#include "torch_xla/csrc/ops/amin.h"
 #include "torch_xla/csrc/ops/amp_foreach_non_finite_check_and_unscale.h"
 #include "torch_xla/csrc/ops/amp_update_scale.h"
 #include "torch_xla/csrc/ops/any.h"
@@ -711,28 +709,6 @@ XLATensorPtr XLATensor::all_dim(const XLATensorPtr& input,
                                    input->shape().get().rank()),
                                keep_reduced_dimensions),
                            result_type);
-}
-
-XLATensorPtr XLATensor::amax(const XLATensorPtr& input,
-                             std::vector<int64_t> dimensions,
-                             bool keep_reduced_dimensions) {
-  return input->CreateFrom(
-      torch::lazy::MakeNode<Amax>(input->GetIrValue(),
-                                  torch::lazy::GetCanonicalDimensionIndices(
-                                      xla::util::ToVector<int64_t>(dimensions),
-                                      input->shape().get().rank()),
-                                  keep_reduced_dimensions));
-}
-
-XLATensorPtr XLATensor::amin(const XLATensorPtr& input,
-                             std::vector<int64_t> dimensions,
-                             bool keep_reduced_dimensions) {
-  return input->CreateFrom(
-      torch::lazy::MakeNode<Amin>(input->GetIrValue(),
-                                  torch::lazy::GetCanonicalDimensionIndices(
-                                      xla::util::ToVector<int64_t>(dimensions),
-                                      input->shape().get().rank()),
-                                  keep_reduced_dimensions));
 }
 
 XLATensorPtr XLATensor::any(const XLATensorPtr& input,
