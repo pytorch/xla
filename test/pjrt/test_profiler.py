@@ -2,6 +2,7 @@ import codecs
 import contextlib
 import glob
 import os
+import time
 import threading
 
 from absl.testing import absltest
@@ -18,8 +19,13 @@ def _profile(logdir: str, port: int = 9012):
   tracer = threading.Thread(target=xp.trace, args=(f'localhost:{port}', logdir))
   tracer.setDaemon(True)
   tracer.start()
+
+  # HACK: Give tracer time to start before we return control
+  time.sleep(.5)
+
   yield
 
+  del server
 
 class TestPjRtProfiler(absltest.TestCase):
 
@@ -32,10 +38,9 @@ class TestPjRtProfiler(absltest.TestCase):
   def test_profiler_output(self):
     tempdir = self.create_tempdir().full_path
 
+    device = xm.xla_device()
+    ones = torch.ones([5])
     with _profile(tempdir):
-      device = xm.xla_device()
-      ones = torch.ones([5])
-
       xones = ones.to(device)
       xtwos = xones + xones
       xm.mark_step()
