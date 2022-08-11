@@ -27,6 +27,7 @@ def _profile(logdir: str, port: int = 9012):
 
   del server
 
+
 class TestPjRtProfiler(absltest.TestCase):
 
   def setUp(self):
