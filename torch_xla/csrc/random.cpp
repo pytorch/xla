@@ -202,7 +202,8 @@ xla::XlaOp RngNormal(xla::XlaOp seed, const xla::Shape& shape, xla::XlaOp mean,
 }
 
 xla::XlaOp BuildRandpermOut(int64_t n, xla::XlaBuilder* builder) {
-  xla::XlaOp input = xla::Iota(builder, xla::PrimitiveType::S64, n);
+  xla::PrimitiveType input_element_type = xla::S64;
+  xla::XlaOp input = xla::Iota(builder, input_element_type, n);
 
   // Ensure that the key space is greater than or equal to the cube of the
   // number of values to manage the number of collisions. Inspired by
@@ -217,14 +218,13 @@ xla::XlaOp BuildRandpermOut(int64_t n, xla::XlaBuilder* builder) {
   const xla::Shape key_shape = xla::ShapeUtil::MakeShape(xla::U32, {n});
 
   xla::XlaOp curr = input;
-  xla::PrimitiveType element_type = xla::S64;
   for (int i = 0; i < rounds; ++i) {
     // RngUniform Constructs an output of a given shape with random numbers
     // generated following the uniform distribution over the interval .
     xla::XlaOp keys = xla::RngUniform(zero, max_value, key_shape);
     xla::XlaOp sorted = xla::Sort(
         {keys, curr},
-        xla::CreateScalarLtComputation({xla::U32, element_type}, builder));
+        xla::CreateScalarLtComputation({key_shape.element_type(), input_element_type}, builder));
     curr = xla::GetTupleElement(sorted, 1);
   }
   return curr;
