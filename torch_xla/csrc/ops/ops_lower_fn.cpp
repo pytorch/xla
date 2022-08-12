@@ -9,7 +9,6 @@
 #include "torch_xla/csrc/reduction.h"
 
 namespace torch_xla {
-
 torch_xla::XlaOpVector Abs::Lower(LoweringContext* loctx) const {
   xla::XlaOp xla_input = loctx->GetOutputOp(operand(0));
   return ReturnOp(BuildAbs(xla_input), loctx);
@@ -51,6 +50,23 @@ torch_xla::XlaOpVector AdaptiveAvgPool3dBackward::Lower(
   xla::XlaOp xla_output = BuildAdaptiveAvgPool3dBackward(
       /*out_backprop=*/grad_output, /*input=*/input);
   return ReturnOp(xla_output, loctx);
+}
+
+torch_xla::XlaOpVector All::Lower(LoweringContext* loctx) const {
+  xla::XlaOp input = loctx->GetOutputOp(operand(0));
+  std::vector<int64_t> dimensions =
+      torch::lazy::Iota<int64_t>(XlaHelpers::ShapeOfXlaOp(input).rank());
+  return ReturnOp(BuildAll(input, dimensions, false), loctx);
+}
+
+torch_xla::XlaOpVector Amax::Lower(LoweringContext* loctx) const {
+  xla::XlaOp input = loctx->GetOutputOp(operand(0));
+  return ReturnOp(BuildMaxInDims(input, dim, keepdim), loctx);
+}
+
+torch_xla::XlaOpVector Amin::Lower(LoweringContext* loctx) const {
+  xla::XlaOp input = loctx->GetOutputOp(operand(0));
+  return ReturnOp(BuildMinInDims(input, dim, keepdim), loctx);
 }
 
 torch_xla::XlaOpVector Asin::Lower(LoweringContext* loctx) const {
@@ -105,6 +121,18 @@ torch_xla::XlaOpVector Ceil::Lower(LoweringContext* loctx) const {
   return ReturnOp(xla::Ceil(xla_input), loctx);
 }
 
+torch_xla::XlaOpVector ClampMaxTensor::Lower(LoweringContext* loctx) const {
+  xla::XlaOp xla_input = loctx->GetOutputOp(operand(0));
+  xla::XlaOp xla_other = loctx->GetOutputOp(operand(1));
+  return ReturnOp(xla::Min(xla_input, xla_other), loctx);
+}
+
+torch_xla::XlaOpVector ClampMinTensor::Lower(LoweringContext* loctx) const {
+  xla::XlaOp xla_input = loctx->GetOutputOp(operand(0));
+  xla::XlaOp xla_other = loctx->GetOutputOp(operand(1));
+  return ReturnOp(xla::Max(xla_input, xla_other), loctx);
+}
+
 torch_xla::XlaOpVector Cos::Lower(LoweringContext* loctx) const {
   xla::XlaOp xla_input = loctx->GetOutputOp(operand(0));
   return ReturnOp(xla::Cos(xla_input), loctx);
@@ -143,6 +171,30 @@ torch_xla::XlaOpVector Expm1::Lower(LoweringContext* loctx) const {
 torch_xla::XlaOpVector Floor::Lower(LoweringContext* loctx) const {
   xla::XlaOp xla_input = loctx->GetOutputOp(operand(0));
   return ReturnOp(xla::Floor(xla_input), loctx);
+}
+
+torch_xla::XlaOpVector GeScalar::Lower(LoweringContext* loctx) const {
+  xla::XlaOp xla_input = loctx->GetOutputOp(operand(0));
+  xla::XlaOp xla_other = loctx->GetOutputOp(operand(1));
+  return ReturnOp(BuildComparisonOp(at::aten::ge, xla_input, xla_other), loctx);
+}
+
+torch_xla::XlaOpVector GeTensor::Lower(LoweringContext* loctx) const {
+  xla::XlaOp xla_input = loctx->GetOutputOp(operand(0));
+  xla::XlaOp xla_other = loctx->GetOutputOp(operand(1));
+  return ReturnOp(BuildComparisonOp(at::aten::ge, xla_input, xla_other), loctx);
+}
+
+torch_xla::XlaOpVector GtScalar::Lower(LoweringContext* loctx) const {
+  xla::XlaOp xla_input = loctx->GetOutputOp(operand(0));
+  xla::XlaOp xla_other = loctx->GetOutputOp(operand(1));
+  return ReturnOp(BuildComparisonOp(at::aten::gt, xla_input, xla_other), loctx);
+}
+
+torch_xla::XlaOpVector GtTensor::Lower(LoweringContext* loctx) const {
+  xla::XlaOp xla_input = loctx->GetOutputOp(operand(0));
+  xla::XlaOp xla_other = loctx->GetOutputOp(operand(1));
+  return ReturnOp(BuildComparisonOp(at::aten::gt, xla_input, xla_other), loctx);
 }
 
 torch_xla::XlaOpVector Hardsigmoid::Lower(LoweringContext* loctx) const {

@@ -670,36 +670,11 @@ at::Tensor XLANativeFunctions::alias(const at::Tensor& self) {
   return self;
 }
 
-at::Tensor XLANativeFunctions::all(const at::Tensor& self) {
-  XLA_FN_COUNTER("xla::");
-  XLATensorPtr self_tensor = bridge::GetXlaTensor(self);
-  return bridge::AtenFromXlaTensor(XLATensor::all(
-      self_tensor,
-      torch::lazy::Iota<int64_t>(self_tensor->shape().get().rank()),
-      /*keep_reduced_dimensions=*/false));
-}
-
 at::Tensor XLANativeFunctions::all(const at::Tensor& self, int64_t dim,
                                    bool keepdim) {
   XLA_FN_COUNTER("xla::");
   return bridge::AtenFromXlaTensor(
-      XLATensor::all(bridge::GetXlaTensor(self), {dim}, keepdim));
-}
-
-at::Tensor XLANativeFunctions::amax(const at::Tensor& self, at::IntArrayRef dim,
-                                    bool keepdim) {
-  XLA_FN_COUNTER("xla::");
-  auto xdim = XlaHelpers::I64List(dim);
-  return bridge::AtenFromXlaTensor(
-      XLATensor::amax(bridge::GetXlaTensor(self), std::move(xdim), keepdim));
-}
-
-at::Tensor XLANativeFunctions::amin(const at::Tensor& self, at::IntArrayRef dim,
-                                    bool keepdim) {
-  XLA_FN_COUNTER("xla::");
-  auto xdim = XlaHelpers::I64List(dim);
-  return bridge::AtenFromXlaTensor(
-      XLATensor::amin(bridge::GetXlaTensor(self), std::move(xdim), keepdim));
+      XLATensor::all_dim(bridge::GetXlaTensor(self), {dim}, keepdim));
 }
 
 at::Tensor XLANativeFunctions::any(const at::Tensor& self) {
@@ -1063,22 +1038,8 @@ at::Tensor XLANativeFunctions::clamp_max(const at::Tensor& self,
       XLATensor::clamp(bridge::GetXlaTensor(self), c10::nullopt, max));
 }
 
-at::Tensor XLANativeFunctions::clamp_max(const at::Tensor& self,
-                                         const at::Tensor& max) {
-  XLA_FN_COUNTER("xla::");
-  return bridge::AtenFromXlaTensor(
-      XLATensor::clamp(bridge::GetXlaTensor(self), c10::nullopt, max));
-}
-
 at::Tensor XLANativeFunctions::clamp_min(const at::Tensor& self,
                                          const at::Scalar& min) {
-  XLA_FN_COUNTER("xla::");
-  return bridge::AtenFromXlaTensor(
-      XLATensor::clamp(bridge::GetXlaTensor(self), min, c10::nullopt));
-}
-
-at::Tensor XLANativeFunctions::clamp_min(const at::Tensor& self,
-                                         const at::Tensor& min) {
   XLA_FN_COUNTER("xla::");
   return bridge::AtenFromXlaTensor(
       XLATensor::clamp(bridge::GetXlaTensor(self), min, c10::nullopt));
@@ -1432,20 +1393,6 @@ at::Tensor XLANativeFunctions::gather(const at::Tensor& self, int64_t dim,
       bridge::GetXlaTensor(self), dim, bridge::GetXlaTensor(index)));
 }
 
-at::Tensor XLANativeFunctions::ge(const at::Tensor& self,
-                                  const at::Scalar& other) {
-  XLA_FN_COUNTER("xla::");
-  return bridge::AtenFromXlaTensor(
-      XLATensor::ge(bridge::GetXlaTensor(self), other));
-}
-
-at::Tensor XLANativeFunctions::ge(const at::Tensor& self,
-                                  const at::Tensor& other) {
-  XLA_FN_COUNTER("xla::");
-  return bridge::AtenFromXlaTensor(
-      XLATensor::ge(bridge::GetXlaTensor(self), bridge::GetXlaTensor(other)));
-}
-
 at::Tensor XLANativeFunctions::gelu(const at::Tensor& self,
                                     c10::string_view approximate) {
   XLA_FN_COUNTER("xla::");
@@ -1459,27 +1406,6 @@ at::Tensor XLANativeFunctions::gelu_backward(const at::Tensor& grad,
   XLA_FN_COUNTER("xla::");
   return bridge::AtenFromXlaTensor(XLATensor::gelu_backward(
       bridge::GetXlaTensor(grad), bridge::GetXlaTensor(self), approximate));
-}
-
-at::Tensor XLANativeFunctions::ger(const at::Tensor& self,
-                                   const at::Tensor& vec2) {
-  XLA_FN_COUNTER("xla::");
-  return bridge::AtenFromXlaTensor(
-      XLATensor::ger(bridge::GetXlaTensor(self), bridge::GetXlaTensor(vec2)));
-}
-
-at::Tensor XLANativeFunctions::gt(const at::Tensor& self,
-                                  const at::Scalar& other) {
-  XLA_FN_COUNTER("xla::");
-  return bridge::AtenFromXlaTensor(
-      XLATensor::gt(bridge::GetXlaTensor(self), other));
-}
-
-at::Tensor XLANativeFunctions::gt(const at::Tensor& self,
-                                  const at::Tensor& other) {
-  XLA_FN_COUNTER("xla::");
-  return bridge::AtenFromXlaTensor(
-      XLATensor::gt(bridge::GetXlaTensor(self), bridge::GetXlaTensor(other)));
 }
 
 at::Tensor XLANativeFunctions::hardshrink(const at::Tensor& self,

@@ -48,7 +48,9 @@ PjRtComputationClient::PjRtComputationClient() {
     client_ = std::move(xla::GetCpuClient(/*asynchronous=*/false).ValueOrDie());
   } else if (device_type == "TPU") {
     TF_VLOG(1) << "Initializing PjRt TPU client...";
-    client_ = xla::GetTpuClient(/*max_inflight_computations=*/1).ValueOrDie();
+    int64_t max_inflight_computations = sys_util::GetEnvInt(
+        env::kEnvPjRtTpuMaxInflightComputations, /*defval=*/32);
+    client_ = xla::GetTpuClient(max_inflight_computations).ValueOrDie();
   } else {
     XLA_ERROR() << absl::StrFormat("Unknown %s '%s'", env::kEnvPjRtDevice,
                                    device_type);
@@ -79,13 +81,27 @@ std::vector<ComputationClient::DataPtr> PjRtComputationClient::TransferToServer(
   std::vector<ComputationClient::DataPtr> datas;
   datas.reserve(tensors.size());
   for (auto& tensor : tensors) {
-    xla::Literal literal(tensor.shape);
-    tensor.populate_fn(tensor, literal.untyped_data(), literal.size_bytes());
-
     PjRtDevice* pjrt_device = StringToPjRtDevice(tensor.device);
-    std::shared_ptr<xla::PjRtBuffer> buffer =
-        client_->BufferFromHostLiteral(literal, pjrt_device).ValueOrDie();
-    buffer->GetReadyFuture().Await();
+
+    auto literal = std::make_shared<xla::Literal>(tensor.shape);
+    tensor.populate_fn(tensor, literal->untyped_data(), literal->size_bytes());
+    std::vector<int64_t> byte_strides(literal->shape().dimensions_size());
+    ShapeUtil::ByteStrides(literal->shape(), absl::MakeSpan(byte_strides));
+
+    // Avoid use-after-free on `literal` due to unsequenced move and use.
+    xla::Literal* literal_pointer = literal.get();
+    std::shared_ptr<xla::PjRtBuffer> buffer = std::move(
+        client_
+            ->BufferFromHostBuffer(
+                literal_pointer->untyped_data(),
+                literal_pointer->shape().element_type(),
+                literal_pointer->shape().dimensions(), byte_strides,
+                PjRtClient::HostBufferSemantics::
+                    kImmutableUntilTransferCompletes,
+                [literal{std::move(literal)}]() { /* frees literal */ },
+                pjrt_device)
+            .ValueOrDie());
+
     ComputationClient::DataPtr data =
         std::make_shared<PjRtData>(tensor.device, tensor.shape, buffer);
     datas.push_back(data);

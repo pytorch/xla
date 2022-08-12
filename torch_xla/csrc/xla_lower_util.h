@@ -20,8 +20,6 @@ std::vector<xla::XlaOp> CreateTopK(xla::XlaOp input, int64_t k, int64_t dim,
 
 xla::XlaOp CreateMatMul(xla::XlaOp lhs, xla::XlaOp rhs);
 
-xla::XlaOp BuildGer(xla::XlaOp lhs, xla::XlaOp rhs);
-
 xla::XlaOp BuildMatMul(xla::XlaOp lhs, xla::XlaOp rhs, xla::XlaOp bias);
 
 xla::XlaOp BuildMatMulWithMultiplier(xla::XlaOp lhs, xla::XlaOp rhs,

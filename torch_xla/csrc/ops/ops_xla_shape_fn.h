@@ -21,6 +21,14 @@ xla::Shape AdaptiveAvgPool3dOutputShape(const torch::lazy::Value& input,
 xla::Shape AdaptiveAvgPool3dBackwardOutputShape(
     const torch::lazy::Value& grad_output, const torch::lazy::Value& input);
 
+xla::Shape AmaxOutputShape(const torch::lazy::Value& input,
+                           absl::Span<const int64_t> dim, bool keepdim);
+
+xla::Shape AminOutputShape(const torch::lazy::Value& input,
+                           absl::Span<const int64_t> dim, bool keepdim);
+
+xla::Shape AllOutputShape(const torch::lazy::Value& input);
+
 xla::Shape AsinOutputShape(const torch::lazy::Value& input);
 
 xla::Shape AsinhOutputShape(const torch::lazy::Value& input);
@@ -40,6 +48,12 @@ xla::Shape BinaryCrossEntropyBackwardOutputShape(
 
 xla::Shape CeilOutputShape(const torch::lazy::Value& input);
 
+xla::Shape ClampMaxTensorOutputShape(const torch::lazy::Value& input,
+                                     const torch::lazy::Value& target);
+
+xla::Shape ClampMinTensorOutputShape(const torch::lazy::Value& input,
+                                     const torch::lazy::Value& target);
+
 xla::Shape CosOutputShape(const torch::lazy::Value& input);
 
 xla::Shape CoshOutputShape(const torch::lazy::Value& input);
@@ -55,6 +69,18 @@ xla::Shape ExpOutputShape(const torch::lazy::Value& input);
 xla::Shape Expm1OutputShape(const torch::lazy::Value& input);
 
 xla::Shape FloorOutputShape(const torch::lazy::Value& input);
+
+xla::Shape GeScalarOutputShape(const torch::lazy::Value& self,
+                               const torch::lazy::Value& other);
+
+xla::Shape GeTensorOutputShape(const torch::lazy::Value& self,
+                               const torch::lazy::Value& other);
+
+xla::Shape GtScalarOutputShape(const torch::lazy::Value& self,
+                               const torch::lazy::Value& other);
+
+xla::Shape GtTensorOutputShape(const torch::lazy::Value& self,
+                               const torch::lazy::Value& other);
 
 xla::Shape HardsigmoidOutputShape(const torch::lazy::Value& input);
 

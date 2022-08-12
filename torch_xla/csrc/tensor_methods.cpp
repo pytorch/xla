@@ -22,12 +22,10 @@
 #include "torch_xla/csrc/lowering_context.h"
 #include "torch_xla/csrc/ops/adam_optimizer_step.h"
 #include "torch_xla/csrc/ops/adaptive_max_pool2d.h"
-#include "torch_xla/csrc/ops/all.h"
+#include "torch_xla/csrc/ops/all_dim.h"
 #include "torch_xla/csrc/ops/all_gather.h"
 #include "torch_xla/csrc/ops/all_reduce.h"
 #include "torch_xla/csrc/ops/all_to_all.h"
-#include "torch_xla/csrc/ops/amax.h"
-#include "torch_xla/csrc/ops/amin.h"
 #include "torch_xla/csrc/ops/amp_foreach_non_finite_check_and_unscale.h"
 #include "torch_xla/csrc/ops/amp_update_scale.h"
 #include "torch_xla/csrc/ops/any.h"
@@ -699,41 +697,19 @@ XLATensorPtr XLATensor::addmm(const XLATensorPtr& input,
       input->GetIrValue(), weight->GetIrValue(), bias->GetIrValue()));
 }
 
-XLATensorPtr XLATensor::all(const XLATensorPtr& input,
-                            std::vector<int64_t> dimensions,
-                            bool keep_reduced_dimensions) {
+XLATensorPtr XLATensor::all_dim(const XLATensorPtr& input,
+                                std::vector<int64_t> dimensions,
+                                bool keep_reduced_dimensions) {
   at::ScalarType result_type = input->dtype() == at::ScalarType::Byte
                                    ? at::ScalarType::Byte
                                    : at::ScalarType::Bool;
-  return input->CreateFrom(
-      torch::lazy::MakeNode<All>(input->GetIrValue(),
-                                 torch::lazy::GetCanonicalDimensionIndices(
-                                     xla::util::ToVector<int64_t>(dimensions),
-                                     input->shape().get().rank()),
-                                 keep_reduced_dimensions),
-      result_type);
-}
-
-XLATensorPtr XLATensor::amax(const XLATensorPtr& input,
-                             std::vector<int64_t> dimensions,
-                             bool keep_reduced_dimensions) {
-  return input->CreateFrom(
-      torch::lazy::MakeNode<Amax>(input->GetIrValue(),
-                                  torch::lazy::GetCanonicalDimensionIndices(
-                                      xla::util::ToVector<int64_t>(dimensions),
-                                      input->shape().get().rank()),
-                                  keep_reduced_dimensions));
-}
-
-XLATensorPtr XLATensor::amin(const XLATensorPtr& input,
-                             std::vector<int64_t> dimensions,
-                             bool keep_reduced_dimensions) {
-  return input->CreateFrom(
-      torch::lazy::MakeNode<Amin>(input->GetIrValue(),
-                                  torch::lazy::GetCanonicalDimensionIndices(
-                                      xla::util::ToVector<int64_t>(dimensions),
-                                      input->shape().get().rank()),
-                                  keep_reduced_dimensions));
+  return input->CreateFrom(torch::lazy::MakeNode<AllDim>(
+                               input->GetIrValue(),
+                               torch::lazy::GetCanonicalDimensionIndices(
+                                   xla::util::ToVector<int64_t>(dimensions),
+                                   input->shape().get().rank()),
+                               keep_reduced_dimensions),
+                           result_type);
 }
 
 XLATensorPtr XLATensor::any(const XLATensorPtr& input,
@@ -1397,11 +1373,6 @@ XLATensorPtr XLATensor::gelu_backward(const XLATensorPtr& grad,
   } else {
     XLA_ERROR() << "Unknown gelu type: " << approximate;
   }
-}
-
-XLATensorPtr XLATensor::ger(const XLATensorPtr& input,
-                            const XLATensorPtr& vec2) {
-  return input->CreateFrom(Ger(input->GetIrValue(), vec2->GetIrValue()));
 }
 
 XLATensorPtr XLATensor::gt(const XLATensorPtr& input, const at::Scalar& other) {

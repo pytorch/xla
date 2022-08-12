@@ -1,4 +1,4 @@
-#include "torch_xla/csrc/ops/all.h"
+#include "torch_xla/csrc/ops/all_dim.h"
 
 #include "absl/strings/str_join.h"
 #include "torch_xla/csrc/helpers.h"
@@ -23,8 +23,8 @@ xla::Shape NodeOutputShape(const torch::lazy::Value& input,
 
 }  // namespace
 
-All::All(const torch::lazy::Value& input, std::vector<int64_t> dimensions,
-         bool keep_reduced_dimensions)
+AllDim::AllDim(const torch::lazy::Value& input, std::vector<int64_t> dimensions,
+               bool keep_reduced_dimensions)
     : XlaNode(torch::lazy::OpKind(at::aten::all), {input},
               NodeOutputShape(input, dimensions, keep_reduced_dimensions),
               /*num_outputs=*/1,
@@ -32,18 +32,18 @@ All::All(const torch::lazy::Value& input, std::vector<int64_t> dimensions,
       dimensions_(std::move(dimensions)),
       keep_reduced_dimensions_(keep_reduced_dimensions) {}
 
-torch::lazy::NodePtr All::Clone(torch::lazy::OpList operands) const {
-  return torch::lazy::MakeNode<All>(operands.at(0), dimensions_,
-                                    keep_reduced_dimensions_);
+torch::lazy::NodePtr AllDim::Clone(torch::lazy::OpList operands) const {
+  return torch::lazy::MakeNode<AllDim>(operands.at(0), dimensions_,
+                                       keep_reduced_dimensions_);
 }
 
-XlaOpVector All::Lower(LoweringContext* loctx) const {
+XlaOpVector AllDim::Lower(LoweringContext* loctx) const {
   xla::XlaOp input = loctx->GetOutputOp(operand(0));
   return ReturnOp(BuildAll(input, dimensions_, keep_reduced_dimensions_),
                   loctx);
 }
 
-std::string All::ToString() const {
+std::string AllDim::ToString() const {
   std::stringstream ss;
   ss << XlaNode::ToString() << ", dimensions=("
      << absl::StrJoin(dimensions_, ", ")
