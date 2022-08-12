@@ -122,7 +122,7 @@ def addressable_device_count() -> int:
 
 
 @requires_pjrt
-def run_thread_per_device(local_process: int, local_world_size: int,
+def run_thread_per_device(local_rank: int, local_world_size: int,
                           fn: Callable[..., R]) -> Dict[int, R]:
   """Runs `fn` in a separate thread on each visible device.
 
@@ -136,7 +136,7 @@ def run_thread_per_device(local_process: int, local_world_size: int,
     result of calling `fn`.
   """
   if device_type() == 'TPU':
-    tpu.configure_topology(local_process, local_world_size)
+    tpu.configure_topology(local_rank, local_world_size)
 
   xm.set_replication(xm.xla_device(), xm.get_xla_supported_devices())
   threads = len(xm.get_xla_supported_devices())
@@ -150,9 +150,9 @@ def run_thread_per_device(local_process: int, local_world_size: int,
         set_global_ordinal(tpu.task_id() * threads + device_index)
       else:
         # TODO: support multiple hosts with CPU/GPU
-        set_global_ordinal(local_process * threads + device_index)
+        set_global_ordinal(local_rank * threads + device_index)
 
-      set_local_ordinal(local_process * threads + device_index)
+      set_local_ordinal(local_rank * threads + device_index)
 
       return fn(*args, **kwargs)
 
@@ -185,16 +185,16 @@ def run_multiprocess(fn: Callable[..., R], *args,
     return_value is the result of calling `fn`.
   """
   if device_type() == 'TPU':
-    processes = tpu.num_local_processes()
+    num_processes = tpu.num_local_processes()
   else:
-    processes = 1
+    num_processes = 1
 
   with concurrent.futures.ProcessPoolExecutor(
-      max_workers=processes) as executor:
+      max_workers=num_processes) as executor:
     futures = {
-        executor.submit(run_thread_per_device, i, processes,
+        executor.submit(run_thread_per_device, i, num_processes,
                         functools.partial(fn, *args, **kwargs)): i
-        for i in range(processes)
+        for i in range(num_processes)
     }
 
     results = {
