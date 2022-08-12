@@ -133,7 +133,8 @@ xla::Shape AddcmulOutputShape(const torch::lazy::Value& input,
   return InferOutputShape({GetXlaShape(input), GetXlaShape(t1), GetXlaShape(t2),
                            GetXlaShape(value)},
                           shape_fn);
-                          
+}
+
 xla::Shape AllDimOutputShape(const torch::lazy::Value& input, const int64_t dim,
                              const bool keepdim) {
   auto lower_for_shape_fn =
