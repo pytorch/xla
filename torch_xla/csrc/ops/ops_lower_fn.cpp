@@ -113,13 +113,27 @@ torch_xla::XlaOpVector Ceil::Lower(LoweringContext* loctx) const {
 }
 
 torch_xla::XlaOpVector ClampTensor::Lower(LoweringContext* loctx) const {
+  XLA_CHECK(has_min || has_max)
+      << "At least one of \'min\' or \'max\' must not be None";
+
   xla::XlaOp res = loctx->GetOutputOp(operand(0));
-  if (has_min) {
-    res = xla::Max(res, loctx->GetOutputOp(operand(1)));
+  if (has_min && has_max) {
+    auto promoted_min =
+        XlaHelpers::Promote(res, loctx->GetOutputOp(operand(1)));
+    res = xla::Max(promoted_min.first, promoted_min.second);
+    auto promoted_max =
+        XlaHelpers::Promote(res, loctx->GetOutputOp(operand(2)));
+    res = xla::Min(promoted_max.first, promoted_max.second);
+  } else if (has_min) {
+    auto promoted_min =
+        XlaHelpers::Promote(res, loctx->GetOutputOp(operand(1)));
+    res = xla::Max(promoted_min.first, promoted_min.second);
+  } else if (has_max) {
+    auto promoted_max =
+        XlaHelpers::Promote(res, loctx->GetOutputOp(operand(1)));
+    res = xla::Min(promoted_max.first, promoted_max.second);
   }
-  if (has_max) {
-    res = xla::Min(res, loctx->GetOutputOp(operand(2)));
-  }
+
   return ReturnOp(res, loctx);
 }
 

@@ -161,10 +161,12 @@ xla::Shape ClampTensorOutputShape(
       [&](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
     xla::XlaOp res = operands[0];
     if (operands.size() > 1) {
-      res = xla::Max(res, operands[1]);
+      auto promoted = XlaHelpers::Promote(res, operands[1]);
+      res = xla::Max(promoted.first, promoted.second);
     }
     if (operands.size() > 2) {
-      res = xla::Min(res, operands[2]);
+      auto promoted = XlaHelpers::Promote(res, operands[2]);
+      res = xla::Min(promoted.first, promoted.second);
     }
     return res;
   };
