@@ -204,20 +204,20 @@ void XLATensorImpl::SetupSymSizeProperties() {
     // implementation uses in its APIs.
     auto shape = tensor_->shape();
     auto rank = tensor_->shape().get().rank();
-    std::vector<c10::SymInt> sym_sizes;
+    c10::SmallVector<c10::SymInt, 5> sym_sizes;
     numel_ = 1;
     for (auto i : c10::irange(rank)) {
-      if (tensor_->shape().get().is_dynamic_dimension(i)) {
-        XLAIrBuilder a = XLAIrBuilder();
-        auto dim_node = a.MakeSizeNode(tensor_->GetIrValue(), i);
-        auto* sn = dynamic_cast<torch::lazy::SymIntNodeImpl*>(dim_node.get());
-        sym_sizes.push_back(sn->toSymInt());
-        /*TODO(miladm): verify numel_ calculation after adding a dynamic op */
-        numel_ *= dynamic_cast<SizeNode*>(dim_node.get())->getStaticValue();
-      } else {
+      // if (tensor_->shape().get().is_dynamic_dimension(i)) {
+      //   XLAIrBuilder a = XLAIrBuilder();
+      //   auto dim_node = a.MakeSizeNode(tensor_->GetIrValue(), i);
+      //   auto* sn = dynamic_cast<torch::lazy::SymIntNodeImpl*>(dim_node.get());
+      //   sym_sizes.push_back(sn->toSymInt());
+      //   /*TODO(miladm): verify numel_ calculation after adding a dynamic op */
+      //   numel_ *= dynamic_cast<SizeNode*>(dim_node.get())->getStaticValue();
+      // } else {
         sym_sizes.push_back(c10::SymInt(tensor_->shape().get().dimensions(i)));
         numel_ *= tensor_->shape().get().dimensions(i);
-      }
+      // }
     }
     sizes_and_strides_.set_sizes(sym_sizes);
     auto updated_strides = torch::lazy::ComputeArrayStrides(
