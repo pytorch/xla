@@ -4198,7 +4198,7 @@ TEST_F(AtenXlaTensorTest, TestRandperm) {
 
 TEST_F(AtenXlaTensorTest, TestRandpermOutWithoutGenerator) {
   int n = 5;
-  torch::Tensor a = torch::randint(16, {5}, torch::TensorOptions(torch::kLong));
+  torch::Tensor a = torch::randint(16, {n}, torch::TensorOptions(torch::kLong));
   ForEachDevice([&](const torch::Device& device) {
     torch::Tensor xla_a = CopyToDevice(a, device);
     torch::Tensor xla_b = torch::randperm_out(xla_a, n);
@@ -4213,9 +4213,10 @@ TEST_F(AtenXlaTensorTest, TestRandpermOutWithoutGenerator) {
   ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
 }
 
+
 TEST_F(AtenXlaTensorTest, TestRandpermOutWithGenerator) {
   int n = 5;
-  torch::Tensor a = torch::randint(16, {5}, torch::TensorOptions(torch::kLong));
+  torch::Tensor a = torch::randint(16, {n}, torch::TensorOptions(torch::kLong));
   ForEachDevice([&](const torch::Device& device) {
     torch::Tensor xla_a = CopyToDevice(a, device);
     c10::optional<at::Generator> gen = at::detail::createCPUGenerator();
