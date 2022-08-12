@@ -16,8 +16,6 @@
 #include "torch_xla/csrc/layout_manager.h"
 #include "torch_xla/csrc/ops/dynamic_ir.h"
 #include "torch_xla/csrc/tensor_util.h"
-#include "torch_xla/csrc/ops/dynamic_ir.h"
-#include "torch_xla/csrc/tensor_util.h"
 
 namespace torch_xla {
 namespace {
