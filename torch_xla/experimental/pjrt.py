@@ -127,7 +127,7 @@ def run_thread_per_device(local_rank: int, local_world_size: int,
   """Runs `fn` in a separate thread on each visible device.
 
   Args:
-    local_process: rank of current process within this host
+    local_rank: rank of current process within this host
     local_world_size: number of processes on this host
     fn: Function to run on all devices
 
