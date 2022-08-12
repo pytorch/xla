@@ -4228,7 +4228,6 @@ TEST_F(AtenXlaTensorTest, TestRandpermOutWithoutGenerator) {
   ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
 }
 
-
 TEST_F(AtenXlaTensorTest, TestRandpermOutWithGenerator) {
   int n = 5;
   torch::Tensor a = torch::randint(16, {n}, torch::TensorOptions(torch::kLong));
