@@ -109,7 +109,6 @@ function run_op_tests {
   run_test python3 "$CDIR/test_torch_distributed_xla_backend.py"
   run_xla_ir_debug python3 "$CDIR/test_env_var_mapper.py"
   run_pjrt python3 "$CDIR/pjrt/test_experimental_pjrt.py"
-  run_pjrt python3 "$CDIR/pjrt/test_profiler.py"
 }
 
 function run_mp_op_tests {
