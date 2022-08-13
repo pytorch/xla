@@ -555,6 +555,8 @@ TEST_F(AtenXlaTensorTest, TestEq) {
     torch::Tensor xla_c = torch::eq(xla_a, xla_b);
     AllEqual(c, xla_c);
   });
+  ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::eq", cpp_test::GetIgnoredCounters());
 }
 
 TEST_F(AtenXlaTensorTest, TestEqInplace) {
@@ -569,6 +571,8 @@ TEST_F(AtenXlaTensorTest, TestEqInplace) {
     xla_a.eq_(xla_b);
     AllClose(xla_a, a);
   });
+  ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::eq", cpp_test::GetIgnoredCounters());
 }
 
 TEST_F(AtenXlaTensorTest, TestGe) {
@@ -715,6 +719,8 @@ TEST_F(AtenXlaTensorTest, TestEqScalar) {
     torch::Tensor xla_result = torch::eq(xla_input, other);
     AllEqual(result, xla_result);
   });
+  ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::eq", cpp_test::GetIgnoredCounters());
 }
 
 TEST_F(AtenXlaTensorTest, TestGeScalar) {

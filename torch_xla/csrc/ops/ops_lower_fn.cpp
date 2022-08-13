@@ -198,6 +198,18 @@ torch_xla::XlaOpVector Elu::Lower(LoweringContext* loctx) const {
                   loctx);
 }
 
+torch_xla::XlaOpVector EqScalar::Lower(LoweringContext* loctx) const {
+  xla::XlaOp xla_input = loctx->GetOutputOp(operand(0));
+  xla::XlaOp xla_other = loctx->GetOutputOp(operand(1));
+  return ReturnOp(BuildComparisonOp(at::aten::eq, xla_input, xla_other), loctx);
+}
+
+torch_xla::XlaOpVector EqTensor::Lower(LoweringContext* loctx) const {
+  xla::XlaOp xla_input = loctx->GetOutputOp(operand(0));
+  xla::XlaOp xla_other = loctx->GetOutputOp(operand(1));
+  return ReturnOp(BuildComparisonOp(at::aten::eq, xla_input, xla_other), loctx);
+}
+
 torch_xla::XlaOpVector Erf::Lower(LoweringContext* loctx) const {
   xla::XlaOp xla_input = loctx->GetOutputOp(operand(0));
   return ReturnOp(xla::Erf(xla_input), loctx);
