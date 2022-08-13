@@ -235,6 +235,30 @@ torch_xla::XlaOpVector Logdet::Lower(LoweringContext* loctx) const {
   return ReturnOp(xla::LogDet(xla_input), loctx);
 }
 
+torch_xla::XlaOpVector LeScalar::Lower(LoweringContext* loctx) const {
+  xla::XlaOp xla_input = loctx->GetOutputOp(operand(0));
+  xla::XlaOp xla_other = loctx->GetOutputOp(operand(1));
+  return ReturnOp(BuildComparisonOp(at::aten::le, xla_input, xla_other), loctx);
+}
+
+torch_xla::XlaOpVector LeTensor::Lower(LoweringContext* loctx) const {
+  xla::XlaOp xla_input = loctx->GetOutputOp(operand(0));
+  xla::XlaOp xla_other = loctx->GetOutputOp(operand(1));
+  return ReturnOp(BuildComparisonOp(at::aten::le, xla_input, xla_other), loctx);
+}
+
+torch_xla::XlaOpVector LtScalar::Lower(LoweringContext* loctx) const {
+  xla::XlaOp xla_input = loctx->GetOutputOp(operand(0));
+  xla::XlaOp xla_other = loctx->GetOutputOp(operand(1));
+  return ReturnOp(BuildComparisonOp(at::aten::lt, xla_input, xla_other), loctx);
+}
+
+torch_xla::XlaOpVector LtTensor::Lower(LoweringContext* loctx) const {
+  xla::XlaOp xla_input = loctx->GetOutputOp(operand(0));
+  xla::XlaOp xla_other = loctx->GetOutputOp(operand(1));
+  return ReturnOp(BuildComparisonOp(at::aten::lt, xla_input, xla_other), loctx);
+}
+
 torch_xla::XlaOpVector LogicalAnd::Lower(LoweringContext* loctx) const {
   xla::XlaOp xla_input = loctx->GetOutputOp(operand(0));
   xla::XlaOp xla_other = loctx->GetOutputOp(operand(1));

@@ -1555,20 +1555,6 @@ std::tuple<at::Tensor, at::Tensor> XLANativeFunctions::kthvalue(
                          bridge::AtenFromXlaTensor(std::get<1>(results)));
 }
 
-at::Tensor XLANativeFunctions::le(const at::Tensor& self,
-                                  const at::Scalar& other) {
-  XLA_FN_COUNTER("xla::");
-  return bridge::AtenFromXlaTensor(
-      XLATensor::le(bridge::GetXlaTensor(self), other));
-}
-
-at::Tensor XLANativeFunctions::le(const at::Tensor& self,
-                                  const at::Tensor& other) {
-  XLA_FN_COUNTER("xla::");
-  return bridge::AtenFromXlaTensor(
-      XLATensor::le(bridge::GetXlaTensor(self), bridge::GetXlaTensor(other)));
-}
-
 at::Tensor XLANativeFunctions::leaky_relu(const at::Tensor& self,
                                           const at::Scalar& negative_slope) {
   XLA_FN_COUNTER("xla::");
@@ -1670,20 +1656,6 @@ at::Tensor XLANativeFunctions::xlogy(const at::Tensor& self,
   XLA_FN_COUNTER("xla::");
   return bridge::AtenFromXlaTensor(XLATensor::xlogy(
       bridge::GetXlaTensor(self), bridge::GetXlaTensor(other)));
-}
-
-at::Tensor XLANativeFunctions::lt(const at::Tensor& self,
-                                  const at::Scalar& other) {
-  XLA_FN_COUNTER("xla::");
-  return bridge::AtenFromXlaTensor(
-      XLATensor::lt(bridge::GetXlaTensor(self), other));
-}
-
-at::Tensor XLANativeFunctions::lt(const at::Tensor& self,
-                                  const at::Tensor& other) {
-  XLA_FN_COUNTER("xla::");
-  return bridge::AtenFromXlaTensor(
-      XLATensor::lt(bridge::GetXlaTensor(self), bridge::GetXlaTensor(other)));
 }
 
 at::Tensor& XLANativeFunctions::masked_fill_(at::Tensor& self,

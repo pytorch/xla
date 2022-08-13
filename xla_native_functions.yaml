@@ -34,6 +34,8 @@ full_codegen:
   - hardswish_backward
   - inverse
   - isnan
+  - le.Scalar
+  - le.Tensor
   - logdet
   - logical_and
   - logical_not
@@ -41,6 +43,8 @@ full_codegen:
   - logical_xor
   - log_sigmoid_backward
   - log_sigmoid_forward
+  - lt.Scalar
+  - lt.Tensor
   - maximum
   - minimum
   - reciprocal
@@ -183,8 +187,6 @@ supported:
   - index_select
   - kl_div
   - kthvalue
-  - le.Scalar
-  - le.Tensor
   - leaky_relu
   - leaky_relu_backward
   - lerp.Scalar
@@ -195,8 +197,6 @@ supported:
   - log2
   - log10
   - logsumexp
-  - lt.Scalar
-  - lt.Tensor
   - masked_fill_.Scalar
   - masked_fill_.Tensor
   - masked_scatter_

@@ -96,6 +96,18 @@ xla::Shape InverseOutputShape(const torch::lazy::Value& input);
 
 xla::Shape IsnanOutputShape(const torch::lazy::Value& input);
 
+xla::Shape LeScalarOutputShape(const torch::lazy::Value& self,
+                               const torch::lazy::Value& other);
+
+xla::Shape LeTensorOutputShape(const torch::lazy::Value& self,
+                               const torch::lazy::Value& other);
+
+xla::Shape LtScalarOutputShape(const torch::lazy::Value& self,
+                               const torch::lazy::Value& other);
+
+xla::Shape LtTensorOutputShape(const torch::lazy::Value& self,
+                               const torch::lazy::Value& other);
+
 xla::Shape LogdetOutputShape(const torch::lazy::Value& input);
 
 xla::Shape LogicalAndOutputShape(const torch::lazy::Value& input,
