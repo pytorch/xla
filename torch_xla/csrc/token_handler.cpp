@@ -2,6 +2,7 @@
 
 #include "tensorflow/compiler/xla/client/lib/constants.h"
 #include "tensorflow/compiler/xla/shape_util.h"
+#include "tensorflow/compiler/xla/xla_client/sys_util.h"
 #include "torch_xla/csrc/convert_ops.h"
 #include "torch_xla/csrc/helpers.h"
 
@@ -32,6 +33,12 @@ xla::XlaOp SliceOneToken(xla::XlaOp input) {
 
 xla::XlaOp TokenHandler::GetInput(xla::XlaOp input,
                                   const xla::Shape* input_shape) {
+  static bool disable_numeric_token =
+      xla::sys_util::GetEnvBool("DISABLE_NUMERIC_CC_TOKEN", false);
+  if (disable_numeric_token) {
+    return input;
+  }
+
   if (input_shape == nullptr) {
     input_shape = &XlaHelpers::ShapeOfXlaOp(input);
   }
@@ -40,6 +47,12 @@ xla::XlaOp TokenHandler::GetInput(xla::XlaOp input,
 }
 
 xla::XlaOp TokenHandler::GetNewToken(xla::XlaOp result) {
+  static bool disable_numeric_token =
+      xla::sys_util::GetEnvBool("DISABLE_NUMERIC_CC_TOKEN", false);
+  if (disable_numeric_token) {
+    return token_;
+  }
+
   xla::XlaOp slice = SliceOneToken(result);
   // Token is always a numeric zero, and multiplying it for one element of the
   // result will still leave it as zero.

@@ -9,6 +9,7 @@
 #include "tensorflow/compiler/xla/client/lib/constants.h"
 #include "tensorflow/compiler/xla/literal_util.h"
 #include "tensorflow/compiler/xla/xla_client/debug_macros.h"
+#include "torch/csrc/lazy/core/helpers.h"
 #include "torch/csrc/lazy/core/util.h"
 #include "torch_xla/csrc/convert_ops.h"
 #include "torch_xla/csrc/helpers.h"
@@ -318,17 +319,20 @@ xla::XlaOp BuildMaxInDims(xla::XlaOp input,
                           bool keep_reduced_dimensions) {
   const xla::Shape& shape = XlaHelpers::ShapeOfXlaOp(input);
   XlaHelpers::MinMax min_max = XlaHelpers::MinMaxValues(shape.element_type());
+  std::vector<int64_t> canonical_dimensions =
+      torch::lazy::GetCanonicalDimensionIndices(
+          xla::util::ToVector<int64_t>(dimensions), shape.rank());
   xla::XlaOp init_value = XlaHelpers::ScalarValue(
       min_max.min, shape.element_type(), input.builder());
-  ReductionInfo rinfo =
-      GetReductionInfo(input, shape, dimensions, keep_reduced_dimensions);
+  ReductionInfo rinfo = GetReductionInfo(input, shape, canonical_dimensions,
+                                         keep_reduced_dimensions);
   if (rinfo.element_count.scalar_size) {
     // When can only assert this if dimensions are not dynamic.
     XLA_CHECK_GT(*rinfo.element_count.scalar_size, 0);
   }
   xla::XlaOp result = xla::Reduce(
       input, init_value, XlaHelpers::CreateMaxComputation(shape.element_type()),
-      dimensions);
+      canonical_dimensions);
   if (keep_reduced_dimensions) {
     result = XlaHelpers::DynamicReshape(result, rinfo.new_dimensions);
   }
@@ -345,17 +349,22 @@ xla::XlaOp BuildMinInDims(xla::XlaOp input,
                           bool keep_reduced_dimensions) {
   const xla::Shape& shape = XlaHelpers::ShapeOfXlaOp(input);
   XlaHelpers::MinMax min_max = XlaHelpers::MinMaxValues(shape.element_type());
+
+  std::vector<int64_t> canonical_dimensions =
+      torch::lazy::GetCanonicalDimensionIndices(
+          xla::util::ToVector<int64_t>(dimensions), shape.rank());
+
   xla::XlaOp init_value = XlaHelpers::ScalarValue(
       min_max.max, shape.element_type(), input.builder());
-  ReductionInfo rinfo =
-      GetReductionInfo(input, shape, dimensions, keep_reduced_dimensions);
+  ReductionInfo rinfo = GetReductionInfo(input, shape, canonical_dimensions,
+                                         keep_reduced_dimensions);
   if (rinfo.element_count.scalar_size) {
     // When can only assert this if dimensions are not dynamic.
     XLA_CHECK_GT(*rinfo.element_count.scalar_size, 0);
   }
   xla::XlaOp result = xla::Reduce(
       input, init_value, XlaHelpers::CreateMinComputation(shape.element_type()),
-      dimensions);
+      canonical_dimensions);
   if (keep_reduced_dimensions) {
     result = XlaHelpers::DynamicReshape(result, rinfo.new_dimensions);
   }
