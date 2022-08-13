@@ -362,6 +362,21 @@ xla::Shape MinimumOutputShape(const torch::lazy::Value& input,
                           lower_for_shape_fn);
 }
 
+xla::Shape NeScalarOutputShape(const torch::lazy::Value& self,
+                               const torch::lazy::Value& other) {
+  auto lower_for_shape_fn =
+      [&](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
+    return BuildComparisonOp(at::aten::ne, operands[0], operands[1]);
+  };
+  return InferOutputShape({GetXlaShape(self), GetXlaShape(other)},
+                          lower_for_shape_fn);
+}
+
+xla::Shape NeTensorOutputShape(const torch::lazy::Value& self,
+                               const torch::lazy::Value& other) {
+  return NeScalarOutputShape(self, other);
+}
+
 xla::Shape ReciprocalOutputShape(const torch::lazy::Value& input) {
   return GetXlaShape(input);
 }

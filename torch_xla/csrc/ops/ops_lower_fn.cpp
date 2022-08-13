@@ -300,6 +300,18 @@ torch_xla::XlaOpVector Minimum::Lower(LoweringContext* loctx) const {
   return ReturnOp(xla::Min(promoted.first, promoted.second), loctx);
 }
 
+torch_xla::XlaOpVector NeScalar::Lower(LoweringContext* loctx) const {
+  xla::XlaOp xla_input = loctx->GetOutputOp(operand(0));
+  xla::XlaOp xla_other = loctx->GetOutputOp(operand(1));
+  return ReturnOp(BuildComparisonOp(at::aten::ne, xla_input, xla_other), loctx);
+}
+
+torch_xla::XlaOpVector NeTensor::Lower(LoweringContext* loctx) const {
+  xla::XlaOp xla_input = loctx->GetOutputOp(operand(0));
+  xla::XlaOp xla_other = loctx->GetOutputOp(operand(1));
+  return ReturnOp(BuildComparisonOp(at::aten::ne, xla_input, xla_other), loctx);
+}
+
 torch_xla::XlaOpVector Reciprocal::Lower(LoweringContext* loctx) const {
   xla::XlaOp xla_input = loctx->GetOutputOp(operand(0));
   return ReturnOp(BuildReciprocal(xla_input), loctx);
