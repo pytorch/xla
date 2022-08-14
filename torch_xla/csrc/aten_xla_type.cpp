@@ -1241,7 +1241,7 @@ at::Tensor XLANativeFunctions::expand_symint(const at::Tensor& self,
                      self.sizes().end());
   for (const auto idx : c10::irange(_sizes.size())) {
     if (!_sizes[idx].is_symbolic() && _sizes[idx].expect_int() == -1) {
-      size_elements.GetUpperBounds()[idx] = padded_self[idx];
+      size_elements.SetUpperBounds(idx, padded_self[idx]);
     }
   }
   at::ScalarType size_type = self.scalar_type();
@@ -1250,7 +1250,7 @@ at::Tensor XLANativeFunctions::expand_symint(const at::Tensor& self,
   torch::lazy::Shape dynamic_shape_ =
       shape_.with_symbolic_dims(std::vector<bool>{true, false, false});
   std::cout << "XLANativeFunctions::expand_symint" << std::endl;
-  return bridge::AtenFromXlaTensor(XLATensor::expand(
+  return bridge::AtenFromXlaTensor(XLATensor::expand_symint(
       bridge::GetXlaTensor(self), size_elements.GetNodes(),
       size_elements.GetUpperBounds(), size_elements.GetDynamicDims(), dynamic_shape_));
 }
