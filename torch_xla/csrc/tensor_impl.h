@@ -2,7 +2,6 @@
 
 #include <ATen/Tensor.h>
 #include <c10/core/Storage.h>
-#include <c10/core/SymIntArrayRef.h>
 #include <c10/core/TensorImpl.h>
 #include <torch/csrc/lazy/backend/backend_interface.h>
 #include <torch/csrc/lazy/core/config.h>
@@ -58,11 +57,11 @@ class XLATensorImpl : public c10::TensorImpl {
 
  private:
   void SetupSizeProperties();
+  void SetupSymSizeProperties();
 
   static caffe2::TypeMeta GetTypeMeta(const XLATensor& tensor);
 
   XLATensorPtr tensor_;
-  std::vector<c10::SymInt> sym_sizes_;
   size_t generation_ = 0;
 };
 

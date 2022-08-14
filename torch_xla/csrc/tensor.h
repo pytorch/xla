@@ -569,7 +569,7 @@ class XLATensor : public c10::intrusive_ptr_target {
                              std::vector<int64_t> size);
 
   static XLATensorPtr expand_symint(const XLATensorPtr& input,
-                             std::vector<torch::lazy::NodePtr>& size_nodes,
+                             const std::vector<torch::lazy::NodePtr>& size_nodes,
                              const std::vector<int64_t> upper_bounds,
                              const std::vector<bool> dynamic_dims,
                              const torch::lazy::Shape dynamic_shapes);

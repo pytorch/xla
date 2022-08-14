@@ -7,7 +7,6 @@
 #include "tensorflow/compiler/xla/xla_client/computation_client.h"
 #include "tensorflow/compiler/xla/xla_client/debug_macros.h"
 #include "torch/csrc/lazy/backend/backend_interface.h"
-// #include "torch/csrc/lazy/core/ir_builder.h"
 #include "torch/csrc/lazy/core/tensor.h"
 #include "torch/csrc/lazy/core/tensor_util.h"
 #include "torch/csrc/lazy/core/util.h"
@@ -15,6 +14,7 @@
 #include "torch_xla/csrc/device.h"
 #include "torch_xla/csrc/ir_builder.h"
 #include "torch_xla/csrc/layout_manager.h"
+#include "torch_xla/csrc/ops/dynamic_ir.h"
 #include "torch_xla/csrc/tensor_util.h"
 
 namespace torch_xla {
@@ -64,33 +64,6 @@ XLATensorImpl::XLATensorImpl(XLATensor&& tensor)
       tensor_(c10::make_intrusive<XLATensor>(std::move(tensor))) {
   is_non_overlapping_and_dense_ = false;
   set_sizes_strides_policy(SizesStridesPolicy::CustomSizes);
-
-  auto rank = tensor_->shape().get().rank();
-  sym_sizes_.reserve(rank);
-  XLAIrBuilder a = XLAIrBuilder();
-  for (auto i : c10::irange(rank)) {
-    // std::cout << this->tensor_->GetIrValue().node->shape(i).is_symbolic() << std::endl;
-    std::cout << this->tensor_->GetIrValue().node->shapes().size() << std::endl;
-    if (tensor_->GetIrValue().node->shapes().size() > 0) {
-      std::cout << this->tensor_->GetIrValue().node->shape(0).is_symbolic().value()[i] << std::endl;
-      std::cout << this->tensor_->GetIrValue().node->shape(0).dim() << std::endl;
-      std::cout << this->tensor_->GetIrValue().node->shape(0).to_string() << std::endl;
-    }
-    auto dim_node = a.MakeSizeNode(
-        this->tensor_->GetIrValue(), i);
-    auto sn = std::make_shared<torch::lazy::SymbolicIntNode>(dim_node);
-    std::cout << "is_symbolic sn: " << sn->toSymInt().is_symbolic() << std::endl;
-    std::cout << "as_int_unchecked sn: " << sn->toSymInt().as_int_unchecked() << std::endl;
-    if (tensor_->GetIrValue().node->shapes().size() > 0) {
-      if (this->tensor_->GetIrValue().node->shape(0).is_symbolic().value()[i]) {
-        sym_sizes_.push_back(sn->toSymInt());
-      } else {
-        sym_sizes_.push_back(c10::SymInt(this->tensor_->GetIrValue().node->shape(0).size(i)));
-      }
-    } else {
-        sym_sizes_.push_back(c10::SymInt());
-    }
-  }
 }
 
 XLATensorImpl::XLATensorImpl(XLATensor& tensor)
@@ -141,20 +114,18 @@ void XLATensorImpl::shallow_copy_from(
 }
 
 at::IntArrayRef XLATensorImpl::sizes_custom() const {
-  const_cast<XLATensorImpl*>(this)->SetupSizeProperties();
+  if (true) { /* TODO(@miladm): replace this with a flag */
+    const_cast<XLATensorImpl*>(this)->SetupSymSizeProperties();
+  } else {
+    const_cast<XLATensorImpl*>(this)->SetupSizeProperties();
+  }
   return sizes_default();
 }
 
 c10::SymIntArrayRef XLATensorImpl::sym_sizes_custom() const {
-  if (true) {
-    return c10::SymIntArrayRef(
-        reinterpret_cast<const c10::SymInt*>(sym_sizes_.data()),
-        sym_sizes_.size());
-  } else {
-    auto sizes = sizes_custom();
-    return c10::SymIntArrayRef(
-        reinterpret_cast<const c10::SymInt*>(sizes.data()), sizes.size());
-  }
+  auto sizes = sizes_custom();
+  return c10::SymIntArrayRef(reinterpret_cast<const c10::SymInt*>(sizes.data()),
+                             sizes.size());
 }
 
 c10::SymInt XLATensorImpl::sym_numel_custom() const {
@@ -206,6 +177,40 @@ void XLATensorImpl::SetupSizeProperties() {
       numel_ *= dim;
     }
     sizes_and_strides_.set_sizes(updated_sizes);
+    auto updated_strides = torch::lazy::ComputeArrayStrides(
+        torch::lazy::ToVector<int64_t>(shape.get().dimensions()));
+    for (int i = 0; i < updated_strides.size(); i++) {
+      sizes_and_strides_.stride_at_unchecked(i) = updated_strides[i];
+    }
+    generation_ = generation;
+  }
+}
+
+void XLATensorImpl::SetupSymSizeProperties() {
+  size_t generation = tensor_->generation();
+  if (generation != generation_) {
+    // Fill up the basic dimension data members which the base class
+    // implementation uses in its APIs.
+    auto shape = tensor_->shape();
+    auto rank = tensor_->shape().get().rank();
+    c10::SmallVector<c10::SymInt, 5> sym_sizes;
+    numel_ = 1;
+    for (auto i : c10::irange(rank)) {
+      // if (tensor_->shape().get().is_dynamic_dimension(i)) {
+      //   XLAIrBuilder a = XLAIrBuilder();
+      //   auto dim_node = a.MakeSizeNode(tensor_->GetIrValue(), i);
+      //   auto* sn =
+      //   dynamic_cast<torch::lazy::SymIntNodeImpl*>(dim_node.get());
+      //   sym_sizes.push_back(sn->toSymInt());
+      //   /*TODO(miladm): verify numel_ calculation after adding a dynamic op
+      //   */ numel_ *=
+      //   dynamic_cast<SizeNode*>(dim_node.get())->getStaticValue();
+      // } else {
+      sym_sizes.push_back(c10::SymInt(tensor_->shape().get().dimensions(i)));
+      numel_ *= tensor_->shape().get().dimensions(i);
+      // }
+    }
+    sizes_and_strides_.set_sizes(sym_sizes);
     auto updated_strides = torch::lazy::ComputeArrayStrides(
         torch::lazy::ToVector<int64_t>(shape.get().dimensions()));
     for (int i = 0; i < updated_strides.size(); i++) {
