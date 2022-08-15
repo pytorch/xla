@@ -21,7 +21,8 @@ xla::Shape NodeOutputShape(const torch::lazy::Value& input) {
 
 }  // namespace
 
-NonZero::NonZero(const torch::lazy::Value& input, const torch::lazy::Shape& dynamic_shape)
+NonZero::NonZero(const torch::lazy::Value& input,
+                 const torch::lazy::Shape& dynamic_shape)
     : XlaNode(torch::lazy::OpKind(at::aten::nonzero), {input}, dynamic_shape,
               NodeOutputShape(input),
               /*num_outputs=*/2),
