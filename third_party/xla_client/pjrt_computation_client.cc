@@ -15,6 +15,7 @@
 #include "tensorflow/compiler/xla/xla_client/debug_macros.h"
 #include "tensorflow/compiler/xla/xla_client/env_vars.h"
 #include "tensorflow/compiler/xla/xla_client/tf_logging.h"
+#include "tensorflow/core/profiler/lib/traceme.h"
 
 namespace xla {
 
@@ -78,6 +79,8 @@ ComputationClient::DataPtr PjRtComputationClient::CreateDataPlaceholder(
 
 std::vector<ComputationClient::DataPtr> PjRtComputationClient::TransferToServer(
     absl::Span<const TensorSource> tensors) {
+  tensorflow::profiler::TraceMe activity(
+    "PjRtComputationClient::TransferToServer", tensorflow::profiler::TraceMeLevel::kInfo);
   std::vector<ComputationClient::DataPtr> datas;
   datas.reserve(tensors.size());
   for (auto& tensor : tensors) {
@@ -112,6 +115,8 @@ std::vector<ComputationClient::DataPtr> PjRtComputationClient::TransferToServer(
 
 std::vector<xla::Literal> PjRtComputationClient::TransferFromServer(
     absl::Span<const DataPtr> handles) {
+  tensorflow::profiler::TraceMe activity(
+    "PjRtComputationClient::TransferFromServer", tensorflow::profiler::TraceMeLevel::kInfo);
   std::vector<xla::Literal> literals;
   literals.reserve(handles.size());
 
@@ -128,6 +133,8 @@ std::vector<xla::Literal> PjRtComputationClient::TransferFromServer(
 
 std::vector<ComputationClient::ComputationPtr> PjRtComputationClient::Compile(
     std::vector<ComputationClient::CompileInstance> instances) {
+  tensorflow::profiler::TraceMe activity(
+    "PjRtComputationClient::Compile", tensorflow::profiler::TraceMeLevel::kInfo);
   std::vector<ComputationClient::ComputationPtr> computations;
 
   for (auto& instance : instances) {
@@ -157,6 +164,8 @@ PjRtComputationClient::ExecuteComputation(
     const ComputationClient::Computation& computation,
     absl::Span<const ComputationClient::DataPtr> arguments,
     const std::string& device, const ExecuteComputationOptions& options) {
+  tensorflow::profiler::TraceMe activity(
+    "PjRtComputationClient::ExecuteComputation", tensorflow::profiler::TraceMeLevel::kInfo);
   TF_VLOG(1) << "Executing PjRt computation on " << device;
   const PjRtComputation& pjrt_computation =
       dynamic_cast<const PjRtComputation&>(computation);
