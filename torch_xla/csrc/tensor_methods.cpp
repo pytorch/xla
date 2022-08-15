@@ -49,6 +49,7 @@
 #include "torch_xla/csrc/ops/einsum.h"
 #include "torch_xla/csrc/ops/einsum_backward.h"
 #include "torch_xla/csrc/ops/expand.h"
+#include "torch_xla/csrc/ops/expand_dynamic.h"
 #include "torch_xla/csrc/ops/exponential.h"
 #include "torch_xla/csrc/ops/flip.h"
 #include "torch_xla/csrc/ops/gather.h"
@@ -1124,6 +1125,20 @@ void XLATensor::exponential_(XLATensorPtr& input, double lambd) {
       GetIrValueForScalar(lambd, input_shape.get().element_type(),
                           input->GetDevice()),
       GetRngSeed(input->GetDevice()), input_shape.get()));
+}
+
+XLATensorPtr XLATensor::expand_symint(const XLATensorPtr& input,
+                               const std::vector<torch::lazy::NodePtr>& size_nodes,
+                               const std::vector<int64_t> upper_bounds,
+                               const std::vector<bool> dynamic_dims,
+                               const torch::lazy::Shape dynamic_shapes) {
+  std::vector<torch::lazy::Value> size_values;
+  for (auto& size_node : size_nodes) {
+    size_values.push_back(torch::lazy::Value(size_node, 0));
+  }
+  return input->CreateFrom(torch::lazy::MakeNode<ExpandDynamic>(
+      input->GetIrValue(), size_values, std::move(upper_bounds),
+      std::move(dynamic_dims), dynamic_shapes));
 }
 
 XLATensorPtr XLATensor::eye(int64_t lines, int64_t cols,
