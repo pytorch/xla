@@ -1984,7 +1984,7 @@ XLATensorPtr XLATensor::nll_loss_backward(const XLATensorPtr& grad_output,
                                           int64_t reduction, int ignore_index,
                                           const XLATensorPtr& total_weight) {
   return input->CreateFrom(torch::lazy::MakeNode<NllLossBackward>(
-      m grad_output->GetIrValue(), input->GetIrValue(), target->GetIrValue(),
+      grad_output->GetIrValue(), input->GetIrValue(), target->GetIrValue(),
       GetOptionalIrValue(weight), GetOptionalIrValue(total_weight),
       GetXlaReductionMode(reduction), ignore_index));
 }
