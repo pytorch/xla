@@ -5,6 +5,7 @@
 #include <c10/util/Optional.h>
 
 #include "tensorflow/compiler/xla/shape.h"
+#include "tensorflow/compiler/xla/xla_client/debug_macros.h"
 #include "torch/csrc/lazy/core/dynamic_ir.h"
 #include "torch/csrc/lazy/core/hash.h"
 #include "torch/csrc/lazy/core/tensor.h"
@@ -25,6 +26,10 @@ struct SymIntElements {
   std::vector<torch::lazy::NodePtr> GetNodes() { return size_nodes_; }
   std::vector<int64_t> GetUpperBounds() { return upper_bounds_; }
   std::vector<bool> GetDynamicDims() { return dynamic_dims_; }
+  void SetUpperBound(int64_t index, int64_t upper_bound) {
+    XLA_CHECK_GT(upper_bounds_.size(), index);
+    return upper_bounds_[index] = upper_bound;
+  }
 
  private:
   void SetSymIntNodeElements(c10::SymInt& size);
