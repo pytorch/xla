@@ -77,7 +77,7 @@ struct IndexAdjacencyInfo {
 // not permute the base and instead treat the null tensors prefix as a no-op.
 // Replicates the behavior of at::native::hasContiguousSubspace and also returns
 // the position of the first non-null index.
-IndexAdjacencyInfo GetIndexAdjacencyInfo(at::TensorList indices) {
+IndexAdjacencyInfo GetIndexAdjacencyInfo(at::ITensorListRef indices) {
   auto is_defined = [](const at::Tensor& tensor) { return tensor.defined(); };
   auto is_null = [](const at::Tensor& tensor) { return !tensor.defined(); };
   auto start = std::find_if(indices.begin(), indices.end(), is_defined);
@@ -96,7 +96,7 @@ IndexAdjacencyInfo GetIndexAdjacencyInfo(at::TensorList indices) {
 //
 // This is a simplified version of at::native::transposeToFront which better
 // fits our requirements.
-CanonicalIndexInfo TransposeToFront(at::Tensor base, at::TensorList indices) {
+CanonicalIndexInfo TransposeToFront(at::Tensor base, at::ITensorListRef indices) {
   std::vector<int64_t> dims;
   std::vector<at::Tensor> transposed_indices;
   size_t base_rank = base.dim();

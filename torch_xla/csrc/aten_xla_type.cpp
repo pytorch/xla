@@ -70,7 +70,7 @@ c10::optional<at::Tensor> to_meta(const c10::optional<at::Tensor>& tensor) {
   return c10::nullopt;
 }
 
-std::vector<at::Tensor> to_meta(const at::TensorList& t_list) {
+std::vector<at::Tensor> to_meta(const at::ITensorListRef& t_list) {
   std::vector<at::Tensor> outs;
   outs.reserve(t_list.size());
   for (const auto& i : c10::irange(t_list.size())) {
@@ -440,7 +440,7 @@ at::Tensor XLANativeFunctions::adaptive_max_pool2d_backward(
 }
 
 void XLANativeFunctions::_amp_foreach_non_finite_check_and_unscale_(
-    at::TensorList self, at::Tensor& found_inf, const at::Tensor& inv_scale) {
+    at::ITensorListRef self, at::Tensor& found_inf, const at::Tensor& inv_scale) {
   XLA_FN_COUNTER("xla::");
   XLATensorPtr found_inf_tensor = bridge::GetXlaTensor(found_inf);
   XlaDeviceType hw_type =
@@ -518,7 +518,7 @@ at::Tensor XLANativeFunctions::_copy_from_and_resize(const at::Tensor& self,
   return dst;
 }
 
-std::vector<at::Tensor> XLANativeFunctions::_to_cpu(at::TensorList tensors) {
+std::vector<at::Tensor> XLANativeFunctions::_to_cpu(at::ITensorListRef tensors) {
   XLA_FN_COUNTER("xla::");
   return bridge::XlaCreateTensorList(tensors);
 }
@@ -987,7 +987,7 @@ at::Tensor XLANativeFunctions::bmm(const at::Tensor& self,
       XLATensor::bmm(bridge::GetXlaTensor(self), bridge::GetXlaTensor(mat2)));
 }
 
-at::Tensor XLANativeFunctions::cat(at::TensorList tensors, int64_t dim) {
+at::Tensor XLANativeFunctions::cat(at::ITensorListRef tensors, int64_t dim) {
   XLA_FN_COUNTER("xla::");
   return bridge::AtenFromXlaTensor(XLATensor::cat(
       bridge::GetXlaTensors(tensors), dim, at::native::result_type(tensors)));
@@ -2845,7 +2845,7 @@ at::Tensor& XLANativeFunctions::squeeze_(at::Tensor& self, int64_t dim) {
   return self;
 }
 
-at::Tensor XLANativeFunctions::stack(at::TensorList tensors, int64_t dim) {
+at::Tensor XLANativeFunctions::stack(at::ITensorListRef tensors, int64_t dim) {
   XLA_FN_COUNTER("xla::");
   return bridge::AtenFromXlaTensor(
       XLATensor::stack(bridge::GetXlaTensors(tensors), dim));
@@ -3314,7 +3314,7 @@ XLANativeFunctions::native_group_norm(const at::Tensor& input,
 // core that call into view operators internally. These are all composite ops
 // that LTC can technically re-use / get for free, but we need to
 // "functionalize" them to remove the view ops before we can use them.
-at::Tensor XLANativeFunctions::block_diag(at::TensorList tensors) {
+at::Tensor XLANativeFunctions::block_diag(at::ITensorListRef tensors) {
   return at::native::block_diag(tensors);
 }
 at::Tensor XLANativeFunctions::new_empty_strided(
