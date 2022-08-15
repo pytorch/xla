@@ -1983,7 +1983,7 @@ XLATensorPtr XLATensor::nll_loss_backward(const XLATensorPtr& grad_output,
                                           const XLATensorPtr& weight,
                                           int64_t reduction, int ignore_index,
                                           const XLATensorPtr& total_weight) {
-  return input->CreateFrom(torch::lazy::MakeNode<NllLossBackward>(
+  return input->CreateFrom(torch::lazy::MakeNode<NllLossBackward>(m
       grad_output->GetIrValue(), input->GetIrValue(), target->GetIrValue(),
       GetOptionalIrValue(weight), GetOptionalIrValue(total_weight),
       GetXlaReductionMode(reduction), ignore_index));
@@ -2003,9 +2003,9 @@ std::pair<XLATensorPtr, XLATensorPtr> XLATensor::nms(
              at::ScalarType::Int));
 }
 
-XLATensorPtr XLATensor::nonzero(const XLATensorPtr& input) {
+XLATensorPtr XLATensor::nonzero(const XLATensorPtr& input, const torch::lazy::Shape& dynamic_shape) {
   torch::lazy::NodePtr node =
-      torch::lazy::MakeNode<NonZero>(input->GetIrValue());
+      torch::lazy::MakeNode<NonZero>(input->GetIrValue(), dynamic_shape);
   return input->CreateFrom(torch::lazy::Value(node, 0), at::ScalarType::Long);
 }
 
