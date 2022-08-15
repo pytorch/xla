@@ -29,7 +29,7 @@ xla::Shape NodeOutputShape(const torch::lazy::Value& input,
                            const std::vector<int64_t> upper_bounds,
                            const std::vector<bool> dynamic_dims) {
   return xla::ShapeUtil::MakeShape(GetXlaShape(input).element_type(),
-                                  {upper_bounds}, {dynamic_dims});
+                                   {upper_bounds}, {dynamic_dims});
 }
 
 std::vector<torch::lazy::Value> GetValues(

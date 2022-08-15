@@ -1166,10 +1166,12 @@ at::Tensor XLANativeFunctions::expand_symint(const at::Tensor& self,
       size_elements.SetUpperBound(idx, padded_self[idx]);
     }
   }
-  std::vector<torch::lazy::Shape> dynamic_shapes_ = torch::lazy::compute_shape_expand(self, size, implicit);
+  std::vector<torch::lazy::Shape> dynamic_shapes_ =
+      torch::lazy::compute_shape_expand(self, size, implicit);
   return bridge::AtenFromXlaTensor(XLATensor::expand_symint(
       bridge::GetXlaTensor(self), size_elements.GetNodes(),
-      size_elements.GetUpperBounds(), size_elements.GetDynamicDims(), dynamic_shapes_[0]));
+      size_elements.GetUpperBounds(), size_elements.GetDynamicDims(),
+      dynamic_shapes_[0]));
 }
 
 at::Tensor& XLANativeFunctions::exponential_(
