@@ -4229,6 +4229,32 @@ TEST_F(AtenXlaTensorTest, TestRandpermOutWithoutGenerator) {
   ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
 }
 
+TEST_F(AtenXlaTensorTest, TestRandpermOutWithoutGeneratorTrulyRandom) {
+  // int n = tensorflow::kuint32max; // TODO: xw32 use a large n by uncomment this line.
+  int n = 5;
+  std::cout << "xw32 line4218 n=" << n << std::endl;
+  torch::Tensor a = torch::randint(16, {n}, torch::TensorOptions(torch::kLong));
+  ForEachDevice([&](const torch::Device& device) {
+    torch::Tensor xla_a = CopyToDevice(a, device);
+    torch::Tensor xla_b = torch::randperm_out(xla_a, n);
+    // n=3, [0,2,1]
+    torch::Tensor xla_b_cpu = ToCpuTensor(xla_b);
+    std::cout << "xw32 line4222 xla_a=" << xla_a << ", xla_b=" << xla_b << std::endl;
+ 
+    for (int i = 0; i < n; i++) {
+      torch::Tensor xla_c = torch::randperm_out(xla_a, n);
+      // [1,0,2]
+      torch::Tensor xla_c_cpu = ToCpuTensor(xla_c);
+      std::cout << "xw32 line4230 xla_a=" << xla_a << ", xla_b_cpu=" << xla_b_cpu << ", xla_c_cpu=" << xla_c_cpu << std::endl;
+      
+      bool equal = xla_b_cpu.equal(xla_c_cpu);
+      if (!equal) {
+        return;
+      }
+    }
+  });
+}
+
 TEST_F(AtenXlaTensorTest, TestRandpermOutWithGenerator) {
   int n = 5;
   torch::Tensor a = torch::randint(16, {n}, torch::TensorOptions(torch::kLong));
