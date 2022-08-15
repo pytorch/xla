@@ -94,6 +94,7 @@ xla::XlaOp BuildView(xla::XlaOp input, absl::Span<const int64_t> output_sizes) {
 
 xla::XlaOp SetDimensionSizes(xla::XlaOp input,
                              absl::Span<const xla::XlaOp> output_sizes) {
+  XLA_CHECK_EQ(output_sizes.size(), XlaHelpers::ShapeOfXlaOp(input).rank());
   for (int i = 0; i < output_sizes.size(); i++) {
     xla::Shape dim_shape = XlaHelpers::ShapeOfXlaOp(output_sizes[i]);
     if (dim_shape.is_dynamic()) {
