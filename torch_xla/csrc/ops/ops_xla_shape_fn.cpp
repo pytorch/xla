@@ -307,6 +307,36 @@ xla::Shape IsnanOutputShape(const torch::lazy::Value& input) {
   return isnan_shape;
 }
 
+xla::Shape LeScalarOutputShape(const torch::lazy::Value& self,
+                               const torch::lazy::Value& other) {
+  auto lower_for_shape_fn =
+      [&](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
+    return BuildComparisonOp(at::aten::le, operands[0], operands[1]);
+  };
+  return InferOutputShape({GetXlaShape(self), GetXlaShape(other)},
+                          lower_for_shape_fn);
+}
+
+xla::Shape LeTensorOutputShape(const torch::lazy::Value& self,
+                               const torch::lazy::Value& other) {
+  return LeScalarOutputShape(self, other);
+}
+
+xla::Shape LtScalarOutputShape(const torch::lazy::Value& self,
+                               const torch::lazy::Value& other) {
+  auto lower_for_shape_fn =
+      [&](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
+    return BuildComparisonOp(at::aten::lt, operands[0], operands[1]);
+  };
+  return InferOutputShape({GetXlaShape(self), GetXlaShape(other)},
+                          lower_for_shape_fn);
+}
+
+xla::Shape LtTensorOutputShape(const torch::lazy::Value& self,
+                               const torch::lazy::Value& other) {
+  return LtScalarOutputShape(self, other);
+}
+
 xla::Shape LogdetOutputShape(const torch::lazy::Value& input) {
   const xla::Shape& input_shape = GetXlaShape(input);
   XLA_CHECK_GE(input_shape.rank(), 2) << input_shape;
