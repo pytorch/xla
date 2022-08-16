@@ -28,7 +28,7 @@ struct SymIntElements {
   std::vector<bool> GetDynamicDims() { return dynamic_dims_; }
   void SetUpperBound(int64_t index, int64_t upper_bound) {
     XLA_CHECK_GT(upper_bounds_.size(), index);
-    return upper_bounds_[index] = upper_bound;
+    upper_bounds_[index] = upper_bound;
   }
 
  private:
