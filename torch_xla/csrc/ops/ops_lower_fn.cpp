@@ -116,6 +116,10 @@ torch_xla::XlaOpVector ClampTensor::Lower(LoweringContext* loctx) const {
   XLA_CHECK(has_min || has_max)
       << "At least one of \'min\' or \'max\' must not be None";
 
+  // This is little bit ugly due to min and max tensors being optional,
+  // and operand[1] can be either min or max:
+  // if !has_min and has_max -> operand[1] is max
+  // if has_min and !has_max -> operand[1] is min
   xla::XlaOp res = loctx->GetOutputOp(operand(0));
   if (has_min && has_max) {
     auto promoted_min =
