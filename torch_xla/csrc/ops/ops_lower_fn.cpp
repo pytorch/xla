@@ -189,6 +189,15 @@ torch_xla::XlaOpVector Cosh::Lower(LoweringContext* loctx) const {
   return ReturnOp(xla::Cosh(xla_input), loctx);
 }
 
+torch_xla::XlaOpVector Elu::Lower(LoweringContext* loctx) const {
+  xla::XlaOp xla_input = loctx->GetOutputOp(operand(0));
+  xla::XlaOp xla_alpha = loctx->GetOutputOp(operand(1));
+  xla::XlaOp xla_scale = loctx->GetOutputOp(operand(2));
+  xla::XlaOp xla_input_scale = loctx->GetOutputOp(operand(3));
+  return ReturnOp(BuildElu(xla_input, xla_alpha, xla_scale, xla_input_scale),
+                  loctx);
+}
+
 torch_xla::XlaOpVector Erf::Lower(LoweringContext* loctx) const {
   xla::XlaOp xla_input = loctx->GetOutputOp(operand(0));
   return ReturnOp(xla::Erf(xla_input), loctx);

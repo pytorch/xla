@@ -532,18 +532,6 @@ torch::lazy::NodePtr Identity(int64_t lines, int64_t cols,
                    torch::lazy::MHash(lines, cols));
 }
 
-torch::lazy::NodePtr Elu(const torch::lazy::Value& input,
-                         const at::Scalar& alpha, const at::Scalar& scale,
-                         const at::Scalar& input_scale) {
-  auto lower_fn = [=](const XlaNode& node,
-                      LoweringContext* loctx) -> XlaOpVector {
-    xla::XlaOp xla_input = loctx->GetOutputOp(node.operand(0));
-    return node.ReturnOp(BuildElu(xla_input, alpha, scale, input_scale), loctx);
-  };
-  return GenericOp(torch::lazy::OpKind(at::aten::elu), {input},
-                   GetXlaShape(input), std::move(lower_fn));
-}
-
 torch::lazy::NodePtr EluBackward(const torch::lazy::Value& grad_output,
                                  const torch::lazy::Value& output,
                                  const at::Scalar& alpha,
