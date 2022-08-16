@@ -7,6 +7,8 @@ full_codegen:
   - all
   - amax
   - amin
+  - addcdiv
+  - addcmul
   - asin
   - asinh
   - atan
@@ -95,9 +97,6 @@ supported:
   - adaptive_max_pool2d_backward
   - add.Scalar
   - add.Tensor
-  - addcdiv
-  - addcdiv_
-  - addcmul
   - addmm
   - alias
   - all.dim
