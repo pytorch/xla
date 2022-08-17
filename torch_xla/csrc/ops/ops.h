@@ -175,10 +175,6 @@ torch::lazy::NodePtr Norm(const torch::lazy::Value& input,
 torch::lazy::NodePtr Identity(int64_t lines, int64_t cols,
                               xla::PrimitiveType element_type);
 
-torch::lazy::NodePtr Elu(const torch::lazy::Value& input,
-                         const at::Scalar& alpha, const at::Scalar& scale,
-                         const at::Scalar& input_scale);
-
 torch::lazy::NodePtr EluBackward(const torch::lazy::Value& grad_output,
                                  const torch::lazy::Value& output,
                                  const at::Scalar& alpha,

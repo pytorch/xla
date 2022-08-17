@@ -256,6 +256,13 @@ xla::Shape CoshOutputShape(const torch::lazy::Value& input) {
   return GetXlaShape(input);
 }
 
+xla::Shape EluOutputShape(const torch::lazy::Value& input,
+                          const torch::lazy::Value& alpha,
+                          const torch::lazy::Value& scale,
+                          const torch::lazy::Value& input_scale) {
+  return GetXlaShape(input);
+}
+
 xla::Shape ErfOutputShape(const torch::lazy::Value& input) {
   return GetXlaShape(input);
 }

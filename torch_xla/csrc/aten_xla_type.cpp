@@ -1157,24 +1157,6 @@ at::Tensor XLANativeFunctions::dot(const at::Tensor& self,
       bridge::GetXlaTensor(self), bridge::GetXlaTensor(tensor)));
 }
 
-at::Tensor XLANativeFunctions::elu(const at::Tensor& self,
-                                   const at::Scalar& alpha,
-                                   const at::Scalar& scale,
-                                   const at::Scalar& input_scale) {
-  XLA_FN_COUNTER("xla::");
-  return bridge::AtenFromXlaTensor(
-      XLATensor::elu(bridge::GetXlaTensor(self), alpha, scale, input_scale));
-}
-
-at::Tensor& XLANativeFunctions::elu_(at::Tensor& self, const at::Scalar& alpha,
-                                     const at::Scalar& scale,
-                                     const at::Scalar& input_scale) {
-  XLA_FN_COUNTER("xla::");
-  XLATensorPtr self_tensor = bridge::GetXlaTensor(self);
-  XLATensor::elu_(self_tensor, alpha, scale, input_scale);
-  return self;
-}
-
 at::Tensor XLANativeFunctions::elu_backward(const at::Tensor& grad_output,
                                             const at::Scalar& alpha,
                                             const at::Scalar& scale,
