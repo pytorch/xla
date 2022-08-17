@@ -201,6 +201,28 @@ xla::XlaOp RngNormal(xla::XlaOp seed, const xla::Shape& shape, xla::XlaOp mean,
   }
 }
 
+/**
+ * @brief Returns a random permutation of integers from 0 to n - 1.
+ * 
+ * The random permutation is implemented by assigning each value a random key
+ * and sorting the keys. After keys are sorted, the values are shuffled
+ * accordingly.
+ *
+ * We shuffle values by sorting instead of the obvious
+ * Fisher-Yates algorithm. Fisher-Yates is simple to implement and correct,
+ * but not easily parallelizable. For a sufficiently parallel architecture,
+ * it is faster to sort many times, than Fisher-Yates shuffle once.
+ *
+ * Keys can collide causing detectable patterns in the shuffled
+ * output. Collisions translates into more ascending sub-sequences in the
+ * shuffled output than would be expected by chance. To avoid collisions,
+ * the number of possible key values must be sufficiently large.
+ *
+ * The expected number of collisions is n - d + d(1 - 1/d)^n, where d is
+ * the number of possible keys and n is the number of values. If d = n^2,
+ * then the limit as n goes to infinity is 1/2. If d = n^3, then the limit
+ * as n goes to infinity is zero.
+*/
 xla::XlaOp BuildRandpermOut(int64_t n, xla::XlaBuilder* builder) {
   xla::PrimitiveType input_element_type = xla::S64;
   xla::XlaOp input = xla::Iota(builder, input_element_type, n);
@@ -223,6 +245,8 @@ xla::XlaOp BuildRandpermOut(int64_t n, xla::XlaBuilder* builder) {
     // generated following the uniform distribution over the interval .
     xla::XlaOp keys = xla::RngUniform(zero, max_value, key_shape);
     // std::cout << "xw32 inside random.cpp BuildRandpermOut: key_shape.element_type()=[" << key_shape.element_type() << "]." << std::endl;
+    // xla::Sort only sort the first operand "keys" per
+    // http://google3/third_party/tensorflow/compiler/xla/client/xla_builder.cc;l=4836;rcl=466955165 
     xla::XlaOp sorted =
         xla::Sort({keys, curr},
                   xla::CreateScalarLtComputation(
