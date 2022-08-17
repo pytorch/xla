@@ -1151,17 +1151,6 @@ XLATensorPtr XLATensor::eq(const XLATensorPtr& input,
   return DispatchComparisonOp(at::aten::eq, input, other);
 }
 
-XLATensorPtr XLATensor::elu(const XLATensorPtr& input, const at::Scalar& alpha,
-                            const at::Scalar& scale,
-                            const at::Scalar& input_scale) {
-  return input->CreateFrom(Elu(input->GetIrValue(), alpha, scale, input_scale));
-}
-
-void XLATensor::elu_(XLATensorPtr& input, const at::Scalar& alpha,
-                     const at::Scalar& scale, const at::Scalar& input_scale) {
-  input->SetInPlaceIrValue(Elu(input->GetIrValue(), alpha, scale, input_scale));
-}
-
 XLATensorPtr XLATensor::elu_backward(const XLATensorPtr& grad_output,
                                      const at::Scalar& alpha,
                                      const at::Scalar& scale,

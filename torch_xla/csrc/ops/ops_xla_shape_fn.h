@@ -72,6 +72,11 @@ xla::Shape CosOutputShape(const torch::lazy::Value& input);
 
 xla::Shape CoshOutputShape(const torch::lazy::Value& input);
 
+xla::Shape EluOutputShape(const torch::lazy::Value& input,
+                          const torch::lazy::Value& alpha,
+                          const torch::lazy::Value& scale,
+                          const torch::lazy::Value& input_scale);
+
 xla::Shape ErfOutputShape(const torch::lazy::Value& input);
 
 xla::Shape ErfcOutputShape(const torch::lazy::Value& input);

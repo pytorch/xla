@@ -21,6 +21,7 @@ full_codegen:
   - clamp_min.Tensor
   - cos
   - cosh
+  - elu
   - erf
   - erfc
   - erfinv
@@ -150,8 +151,6 @@ supported:
   - div.Tensor
   - div.Tensor_mode
   - dot
-  - elu
-  - elu_
   - elu_backward
   - embedding
   - embedding_dense_backward
