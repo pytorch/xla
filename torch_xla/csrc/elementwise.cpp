@@ -373,6 +373,9 @@ xla::XlaOp BuildLogSigmoidBackward(xla::XlaOp grad_output, xla::XlaOp input,
 xla::XlaOp BuildElu(xla::XlaOp input, xla::XlaOp alpha, xla::XlaOp scale,
                     xla::XlaOp input_scale) {
   const xla::Shape& shape = XlaHelpers::ShapeOfXlaOp(input);
+  alpha = MaybeConvertTo(alpha, shape.element_type());
+  scale = MaybeConvertTo(scale, shape.element_type());
+  input_scale = MaybeConvertTo(input_scale, shape.element_type());
   xla::XlaOp scaled_input = input * input_scale;
   xla::XlaOp zero = xla::Zero(input.builder(), shape.element_type());
   xla::XlaOp one = XlaHelpers::ScalarValue<float>(1.0, shape.element_type(),
