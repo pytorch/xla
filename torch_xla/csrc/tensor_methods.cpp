@@ -957,23 +957,6 @@ XLATensorPtr XLATensor::clamp(const XLATensorPtr& input,
       Clamp(input->GetIrValue(), min_max.min, min_max.max));
 }
 
-XLATensorPtr XLATensor::clamp(const XLATensorPtr& input,
-                              const c10::optional<at::Tensor>& min,
-                              const c10::optional<at::Tensor>& max) {
-  XLA_CHECK(min || max)
-      << "At least one of \'min\' or \'max\' must not be None";
-  torch::lazy::Value res = input->GetIrValue();
-  if (min) {
-    res = torch::lazy::MakeNode<Maximum>(
-        res, bridge::GetXlaTensor(*min)->GetIrValue(),
-        std::vector<torch::lazy::Shape>());
-  }
-  if (max) {
-    res = Min(res, bridge::GetXlaTensor(*max)->GetIrValue());
-  }
-  return input->CreateFrom(res);
-}
-
 XLATensorPtr XLATensor::clone(const XLATensorPtr& input) {
   return input->CreateFrom(input->GetIrValue());
 }

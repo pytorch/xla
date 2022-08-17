@@ -58,6 +58,10 @@ xla::Shape BinaryCrossEntropyBackwardOutputShape(
 
 xla::Shape CeilOutputShape(const torch::lazy::Value& input);
 
+xla::Shape ClampTensorOutputShape(const torch::lazy::Value& input,
+                                  const c10::optional<torch::lazy::Value>& min,
+                                  const c10::optional<torch::lazy::Value>& max);
+
 xla::Shape ClampMaxTensorOutputShape(const torch::lazy::Value& input,
                                      const torch::lazy::Value& target);
 

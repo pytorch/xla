@@ -197,6 +197,37 @@ xla::Shape CeilOutputShape(const torch::lazy::Value& input) {
   return GetXlaShape(input);
 }
 
+xla::Shape ClampTensorOutputShape(
+    const torch::lazy::Value& input,
+    const c10::optional<torch::lazy::Value>& min,
+    const c10::optional<torch::lazy::Value>& max) {
+  // This shape function works in a bit of an odd/hacky way.
+  // If operands.size() > 1, operands[1] can be either min or
+  // max since they are both optional values. But in this code,
+  // we are always assuming operands[1] to be min if
+  // operands.size() > 1. This code works because xla::Min and
+  // xla::Max produce the same output shapes.
+  auto lower_for_shape_fn =
+      [&](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
+    xla::XlaOp res = operands[0];
+    if (operands.size() > 1) {
+      auto promoted = XlaHelpers::Promote(res, operands[1]);
+      res = xla::Max(promoted.first, promoted.second);
+    }
+    if (operands.size() > 2) {
+      auto promoted = XlaHelpers::Promote(res, operands[2]);
+      res = xla::Min(promoted.first, promoted.second);
+    }
+    return res;
+  };
+  std::vector<xla::Shape> shapes;
+  for (auto& i :
+       GetValuesVectorWithOptional<torch::lazy::Value>({input}, {&min, &max})) {
+    shapes.push_back(GetXlaShape(i));
+  }
+  return InferOutputShape(shapes, lower_for_shape_fn);
+}
+
 xla::Shape ClampMaxTensorOutputShape(const torch::lazy::Value& input,
                                      const torch::lazy::Value& other) {
   auto lower_for_shape_fn =
