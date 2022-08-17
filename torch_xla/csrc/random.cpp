@@ -222,6 +222,7 @@ xla::XlaOp BuildRandpermOut(int64_t n, xla::XlaBuilder* builder) {
     // RngUniform Constructs an output of a given shape with random numbers
     // generated following the uniform distribution over the interval .
     xla::XlaOp keys = xla::RngUniform(zero, max_value, key_shape);
+    // std::cout << "xw32 inside random.cpp BuildRandpermOut: key_shape.element_type()=[" << key_shape.element_type() << "]." << std::endl;
     xla::XlaOp sorted =
         xla::Sort({keys, curr},
                   xla::CreateScalarLtComputation(

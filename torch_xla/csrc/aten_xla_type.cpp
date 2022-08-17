@@ -2472,6 +2472,7 @@ at::Tensor& XLANativeFunctions::randperm_out(
 
   XLATensorPtr out_tensor = bridge::GetXlaTensor(out);
   XLATensor::randperm_out(out_tensor, n);
+  // std::cout << "xw32 inside aten_xla_type.cpp randperm_out: out=[" << out << "]." << std::endl;
   return out;
 }
 
