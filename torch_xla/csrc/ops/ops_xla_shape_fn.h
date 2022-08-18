@@ -39,6 +39,9 @@ xla::Shape AddcmulOutputShape(const torch::lazy::Value& input,
                               const torch::lazy::Value& t2,
                               const torch::lazy::Value& value);
 
+xla::Shape AllDimOutputShape(const torch::lazy::Value& input, const int64_t dim,
+                             const bool keepdim);
+
 xla::Shape AsinOutputShape(const torch::lazy::Value& input);
 
 xla::Shape AsinhOutputShape(const torch::lazy::Value& input);
