@@ -1165,11 +1165,12 @@ XLATensorPtr XLATensor::expand(const XLATensorPtr& input,
       GetExpandDimensions(input_shape.get(), std::move(size))));
 }
 
-XLATensorPtr XLATensor::expand_symint(const XLATensorPtr& input,
-                               const std::vector<torch::lazy::NodePtr>& size_nodes,
-                               const std::vector<int64_t> upper_bounds,
-                               const std::vector<bool> dynamic_dims,
-                               const torch::lazy::Shape dynamic_shapes) {
+XLATensorPtr XLATensor::expand_symint(
+    const XLATensorPtr& input,
+    const std::vector<torch::lazy::NodePtr>& size_nodes,
+    const std::vector<int64_t> upper_bounds,
+    const std::vector<bool> dynamic_dims,
+    const torch::lazy::Shape dynamic_shapes) {
   std::vector<torch::lazy::Value> size_values;
   for (auto& size_node : size_nodes) {
     size_values.push_back(torch::lazy::Value(size_node, 0));

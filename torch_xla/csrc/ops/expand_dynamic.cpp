@@ -15,7 +15,7 @@ xla::Shape NodeOutputShape(const torch::lazy::Value& input,
                            const std::vector<int64_t> upper_bounds,
                            const std::vector<bool> dynamic_dims) {
   return xla::ShapeUtil::MakeShape(GetXlaShape(input).element_type(),
-                                  {upper_bounds}, {dynamic_dims});
+                                   {upper_bounds}, {dynamic_dims});
 }
 
 std::vector<torch::lazy::Value> GetValues(
@@ -39,8 +39,7 @@ ExpandDynamic::ExpandDynamic(const torch::lazy::Value& input,
           [&]() { return NodeOutputShape(input, upper_bounds, dynamic_dims); },
           /*num_outputs=*/1, torch::lazy::MHash(upper_bounds)),
       upper_bounds_(std::move(upper_bounds)),
-      dynamic_dims_(std::move(dynamic_dims)) {
-}
+      dynamic_dims_(std::move(dynamic_dims)) {}
 
 XlaOpVector ExpandDynamic::Lower(LoweringContext* loctx) const {
   xla::XlaOp input = loctx->GetOutputOp(operand(0));
