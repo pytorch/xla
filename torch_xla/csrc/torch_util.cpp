@@ -19,7 +19,7 @@ void SymIntElements::SetSymIntNodeElements(c10::SymInt& size) {
             ->getStaticValue());
     dynamic_dims_.push_back(
         std::dynamic_pointer_cast<torch::lazy::DimensionNode>(size_node)
-            ->isDynamic());
+            ->isSymbolic());
   } else {
     auto size_node = torch::lazy::MakeNode<Constant>(std::move(
         XlaHelpers::ScalarLiteral(size.expect_int(), xla::PrimitiveType::S32)));

@@ -26,7 +26,7 @@ int64_t SizeNode::getStaticValue() const {
   return operand(0).node->shape(0).size(dim_);
 }
 
-bool SizeNode::isDynamic() const {
+bool SizeNode::isSymbolic() const {
   auto symbolic_vec = operand(0).node->shape(0).is_symbolic();
   if (!symbolic_vec.has_value()) {
     return true;
@@ -47,8 +47,8 @@ int64_t SizeAdd::getStaticValue() const {
              ->getStaticValue();
 }
 
-bool SizeAdd::isDynamic() const {
-  return DimCast(operand(0))->isDynamic() || DimCast(operand(1))->isDynamic();
+bool SizeAdd::isSymbolic() const {
+  return DimCast(operand(0))->isSymbolic() || DimCast(operand(1))->isSymbolic();
 }
 
 std::string SizeAdd::ToString() const { return "SizeAdd"; }
@@ -72,8 +72,8 @@ int64_t SizeMul::getStaticValue() const {
              ->getStaticValue();
 }
 
-bool SizeMul::isDynamic() const {
-  return DimCast(operand(0))->isDynamic() || DimCast(operand(1))->isDynamic();
+bool SizeMul::isSymbolic() const {
+  return DimCast(operand(0))->isSymbolic() || DimCast(operand(1))->isSymbolic();
 }
 
 std::string SizeMul::ToString() const { return "SizeMul"; }
@@ -100,8 +100,8 @@ int64_t SizeDiv::getStaticValue() const {
              ->getStaticValue();
 }
 
-bool SizeDiv::isDynamic() const {
-  return DimCast(operand(0))->isDynamic() || DimCast(operand(1))->isDynamic();
+bool SizeDiv::isSymbolic() const {
+  return DimCast(operand(0))->isSymbolic() || DimCast(operand(1))->isSymbolic();
 }
 
 std::string SizeDiv::ToString() const { return "SizeDiv"; }
