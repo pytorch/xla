@@ -70,9 +70,10 @@ ExpandDynamic::ExpandDynamic(const torch::lazy::Value& input,
 XlaOpVector ExpandDynamic::Lower(LoweringContext* loctx) const {
   xla::XlaOp input = loctx->GetOutputOp(operand(0));
   std::vector<xla::XlaOp> size_ops;
-  for (int i = 1; i < shapes_.size(); i++) {
-    std::cout << "shape dyanmic? " << shapes_[i].is_dynamic_dimension(0) << std::endl;
-    xla::XlaOp size_op = xla::Zeros(loctx->builder(), shapes_[i]);
+  for (int i = 1; i < operands().size(); i++) {
+    // std::cout << "shape dyanmic? " << shapes_[i].is_dynamic_dimension(0) << std::endl;
+    // xla::XlaOp size_op = xla::Zeros(loctx->builder(), shapes_[i]);
+    xla::XlaOp size_op = loctx->GetOutputOp(operand(i));
     size_ops.push_back(size_op);
   }
   xla::XlaOp output =

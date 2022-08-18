@@ -235,9 +235,8 @@ void XLATensorImpl::SetupSymSizeProperties() {
 
     std::cout << "BEFORE DEBUG BLOCK" << std::endl;
     for (auto i : c10::irange(rank)) {
-      at::IntArrayRef siz = sizes_default();
       c10::SymIntArrayRef s = c10::SymIntArrayRef(
-          reinterpret_cast<const c10::SymInt*>(siz.data()), siz.size());
+          reinterpret_cast<const c10::SymInt*>(sym_sizes_.data()), sym_sizes_.size());
       std::cout << "size of symints list: " << s.size() << std::endl;
       std::cout << "is_symbolic for each dime: " << s[i].is_symbolic() << " "
                 << s[1].is_symbolic() << std::endl;
@@ -259,6 +258,7 @@ void XLATensorImpl::SetupSymSizeProperties() {
         std::cout << "non dynamic dim: " << s[i].expect_int() << std::endl;
       }
     }
+    std::cout << "input size: " << rank << "output size: " << sym_sizes_.size() << std::endl;
     std::cout << "AFTER DEBUG BLOCK" << std::endl;
     generation_ = generation;
   }

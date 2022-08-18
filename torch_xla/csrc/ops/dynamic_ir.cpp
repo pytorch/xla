@@ -16,14 +16,14 @@ SizeNode::SizeNode(torch::lazy::Value input, size_t dim)
               {input}, xla::ShapeUtil::MakeShape(xla::S32, {}), 1,
               torch::lazy::MHash(dim)),
       dim_(dim) {
-  if (input.node->shapes().size() > 0) {
-    for (int i = 0; i < operands().size(); i++) {
-      std::cout << "operands i (is_symbolic): "
-                << operands()[0].node->shape(0).is_symbolic().value()[i]
-                << std::endl;
-      // std::cout << "" << << std::endl;
-    }
-  }
+  // if (input.node->shapes().size() > 0) {
+  //   for (int i = 0; i < operands().size(); i++) {
+  //     std::cout << "operands i (is_symbolic): "
+  //               << operands()[0].node->shape(0).is_symbolic().value()[i]
+  //               << std::endl;
+  //     // std::cout << "" << << std::endl;
+  //   }
+  // }
 };
 
 XlaOpVector SizeNode::Lower(LoweringContext* loctx) const {
