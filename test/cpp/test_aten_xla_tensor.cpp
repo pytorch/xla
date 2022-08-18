@@ -713,8 +713,6 @@ TEST_F(AtenXlaTensorTest, TestEqScalar) {
     torch::Tensor xla_result = torch::eq(xla_input, other);
     AllEqual(result, xla_result);
   });
-  ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
-  ExpectCounterChanged("xla::ne", cpp_test::GetIgnoredCounters());
 }
 
 TEST_F(AtenXlaTensorTest, TestGeScalar) {
