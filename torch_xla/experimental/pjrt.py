@@ -138,28 +138,29 @@ def run_thread_per_device(local_rank: int, local_world_size: int,
   if device_type() == 'TPU':
     tpu.configure_topology(local_rank, local_world_size)
 
-  xm.set_replication(xm.xla_device(), xm.get_xla_supported_devices())
-  threads = len(xm.get_xla_supported_devices())
+  devices = xm.get_xla_supported_devices()
+  xm.set_replication(xm.xla_device(), devices)
+  num_threads = len(devices)
 
-  def _thread_fn(fn, device_index):
+  def _thread_fn(fn: Callable[..., R], device: torch.device):
 
     @functools.wraps(fn)
     def wrapper(*args, **kwargs):
-      # Assumes same number of threads per process
-      if device_type() == 'TPU':
-        set_global_ordinal(tpu.task_id() * threads + device_index)
-      else:
-        # TODO: support multiple hosts with CPU/GPU
-        set_global_ordinal(local_rank * threads + device_index)
+      # "TPU:2" -> 2
+      device_id = int(
+          torch_xla._XLAC._xla_real_devices([device])[0].split(':')[1])
 
-      set_local_ordinal(local_rank * threads + device_index)
+      set_global_ordinal(device_id)
+      # Assumes same number of threads per process
+      set_local_ordinal(device_id % local_world_size)
 
       return fn(*args, **kwargs)
 
     return wrapper
 
-  with concurrent.futures.ThreadPoolExecutor(max_workers=threads) as executor:
-    futures = {executor.submit(_thread_fn(fn, i)): i for i in range(threads)}
+  with concurrent.futures.ThreadPoolExecutor(
+      max_workers=num_threads) as executor:
+    futures = {executor.submit(_thread_fn(fn, d)): d for d in devices}
 
     results = {
         futures[f]: f.result() for f in concurrent.futures.as_completed(futures)
