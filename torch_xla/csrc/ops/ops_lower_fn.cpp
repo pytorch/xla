@@ -60,6 +60,11 @@ torch_xla::XlaOpVector All::Lower(LoweringContext* loctx) const {
   return ReturnOp(BuildAll(input, dimensions, false), loctx);
 }
 
+torch_xla::XlaOpVector AllDim::Lower(LoweringContext* loctx) const {
+  xla::XlaOp input = loctx->GetOutputOp(operand(0));
+  return ReturnOp(BuildAll(input, {dim}, keepdim), loctx);
+}
+
 torch_xla::XlaOpVector Amax::Lower(LoweringContext* loctx) const {
   xla::XlaOp input = loctx->GetOutputOp(operand(0));
   return ReturnOp(BuildMaxInDims(input, dim, keepdim), loctx);
