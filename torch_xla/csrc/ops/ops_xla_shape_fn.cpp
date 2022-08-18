@@ -274,6 +274,21 @@ xla::Shape EluOutputShape(const torch::lazy::Value& input,
   return GetXlaShape(input);
 }
 
+xla::Shape EqScalarOutputShape(const torch::lazy::Value& self,
+                               const torch::lazy::Value& other) {
+  auto lower_for_shape_fn =
+      [&](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
+    return BuildComparisonOp(at::aten::eq, operands[0], operands[1]);
+  };
+  return InferOutputShape({GetXlaShape(self), GetXlaShape(other)},
+                          lower_for_shape_fn);
+}
+
+xla::Shape EqTensorOutputShape(const torch::lazy::Value& self,
+                               const torch::lazy::Value& other) {
+  return EqScalarOutputShape(self, other);
+}
+
 xla::Shape ErfOutputShape(const torch::lazy::Value& input) {
   return GetXlaShape(input);
 }
@@ -310,7 +325,7 @@ xla::Shape GeScalarOutputShape(const torch::lazy::Value& self,
 
 xla::Shape GeTensorOutputShape(const torch::lazy::Value& self,
                                const torch::lazy::Value& other) {
-  return GtScalarOutputShape(self, other);
+  return GeScalarOutputShape(self, other);
 }
 
 xla::Shape GtScalarOutputShape(const torch::lazy::Value& self,

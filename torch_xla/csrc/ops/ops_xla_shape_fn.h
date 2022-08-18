@@ -80,6 +80,12 @@ xla::Shape EluOutputShape(const torch::lazy::Value& input,
                           const torch::lazy::Value& scale,
                           const torch::lazy::Value& input_scale);
 
+xla::Shape EqScalarOutputShape(const torch::lazy::Value& self,
+                               const torch::lazy::Value& other);
+
+xla::Shape EqTensorOutputShape(const torch::lazy::Value& self,
+                               const torch::lazy::Value& other);
+
 xla::Shape ErfOutputShape(const torch::lazy::Value& input);
 
 xla::Shape ErfcOutputShape(const torch::lazy::Value& input);

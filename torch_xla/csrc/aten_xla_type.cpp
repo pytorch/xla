@@ -1221,20 +1221,6 @@ at::Tensor XLANativeFunctions::empty_strided(
                                                    /*storage_offset=*/0);
 }
 
-at::Tensor XLANativeFunctions::eq(const at::Tensor& self,
-                                  const at::Scalar& other) {
-  XLA_FN_COUNTER("xla::");
-  return bridge::AtenFromXlaTensor(
-      XLATensor::eq(bridge::GetXlaTensor(self), other));
-}
-
-at::Tensor XLANativeFunctions::eq(const at::Tensor& self,
-                                  const at::Tensor& other) {
-  XLA_FN_COUNTER("xla::");
-  return bridge::AtenFromXlaTensor(
-      XLATensor::eq(bridge::GetXlaTensor(self), bridge::GetXlaTensor(other)));
-}
-
 at::Tensor XLANativeFunctions::expand(const at::Tensor& self,
                                       at::IntArrayRef size, bool implicit) {
   XLA_FN_COUNTER("xla::");

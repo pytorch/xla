@@ -23,6 +23,8 @@ full_codegen:
   - cos
   - cosh
   - elu
+  - eq.Scalar
+  - eq.Tensor
   - erf
   - erfc
   - erfinv
@@ -157,8 +159,6 @@ supported:
   - empty.memory_format
   - empty.SymInt
   - empty_strided
-  - eq.Scalar
-  - eq.Tensor
   - expand
   - exponential_
   - eye.m_out
