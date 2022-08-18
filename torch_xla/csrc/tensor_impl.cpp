@@ -196,7 +196,8 @@ void XLATensorImpl::SetupSymSizeProperties() {
     for (auto i : c10::irange(rank)) {
       if (tensor_->shape().get().is_dynamic_dimension(i)) {
         auto dim_node = a.MakeSizeNode(tensor_->GetIrValue(), i);
-        auto symint_node = c10::make_intrusive<torch::lazy::SymIntNodeImpl>(dim_node);
+        auto symint_node =
+            c10::make_intrusive<torch::lazy::SymIntNodeImpl>(dim_node);
         auto sn = symint_node->toSymInt();
         sym_sizes_.push_back(sn);
         /*TODO(miladm): verify numel_ calculation after adding a dynamic op
