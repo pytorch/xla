@@ -54,6 +54,8 @@ full_codegen:
   - lt.Tensor
   - maximum
   - minimum
+  - ne.Scalar
+  - ne.Tensor
   - reciprocal
   - relu
   - round
@@ -224,8 +226,6 @@ supported:
   - nan_to_num
   - native_batch_norm
   - native_batch_norm_backward
-  - ne.Scalar
-  - ne.Tensor
   - neg
   - nll_loss2d_backward
   - nll_loss2d_forward

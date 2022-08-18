@@ -161,6 +161,12 @@ xla::Shape MaximumOutputShape(const torch::lazy::Value& input,
 xla::Shape MinimumOutputShape(const torch::lazy::Value& input,
                               const torch::lazy::Value& other);
 
+xla::Shape NeScalarOutputShape(const torch::lazy::Value& self,
+                               const torch::lazy::Value& other);
+
+xla::Shape NeTensorOutputShape(const torch::lazy::Value& self,
+                               const torch::lazy::Value& other);
+
 xla::Shape ReciprocalOutputShape(const torch::lazy::Value& input);
 
 xla::Shape ReluOutputShape(const torch::lazy::Value& input);

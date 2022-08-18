@@ -1979,20 +1979,6 @@ XLANativeFunctions::native_batch_norm_backward(
                      : undefined);
 }
 
-at::Tensor XLANativeFunctions::ne(const at::Tensor& self,
-                                  const at::Scalar& other) {
-  XLA_FN_COUNTER("xla::");
-  return bridge::AtenFromXlaTensor(
-      XLATensor::ne(bridge::GetXlaTensor(self), other));
-}
-
-at::Tensor XLANativeFunctions::ne(const at::Tensor& self,
-                                  const at::Tensor& other) {
-  XLA_FN_COUNTER("xla::");
-  return bridge::AtenFromXlaTensor(
-      XLATensor::ne(bridge::GetXlaTensor(self), bridge::GetXlaTensor(other)));
-}
-
 at::Tensor XLANativeFunctions::neg(const at::Tensor& self) {
   XLA_FN_COUNTER("xla::");
   XLA_CHECK(self.scalar_type() != at::kBool)
