@@ -166,8 +166,8 @@ class TestExperimentalPjrtTpu(parameterized.TestCase):
       if sync:
         np.testing.assert_array_equal(master_params, worker_params)
       elif process_key != 0:
-        np.testing.assert_raises(AssertionError, np.testing.assert_array_equal, master_params,
-                      worker_params)
+        np.testing.assert_raises(AssertionError, np.testing.assert_array_equal,
+                                 master_params, worker_params)
 
   @staticmethod
   def _all_gather(pin_layout):
@@ -178,12 +178,12 @@ class TestExperimentalPjrtTpu(parameterized.TestCase):
 
     return out.cpu().numpy()
 
-  @parameterized.named_parameters(('pinned', True),
-                                  ('unpinned', False))
+  @parameterized.named_parameters(('pinned', True), ('unpinned', False))
   def test_all_gather(self, pin_layout):
-    results = pjrt.run_multiprocess(TestExperimentalPjrtTpu._all_gather, pin_layout)
+    results = pjrt.run_multiprocess(TestExperimentalPjrtTpu._all_gather,
+                                    pin_layout)
     values = list(
-      itertools.chain.from_iterable(row.values() for row in results.values()))
+        itertools.chain.from_iterable(row.values() for row in results.values()))
 
     expected = list(range(len(values)))
     for v in values:
@@ -207,12 +207,12 @@ class TestExperimentalPjrtTpu(parameterized.TestCase):
 
     return xm.get_ordinal(), out.cpu().numpy()
 
-  @parameterized.named_parameters(('pinned', True),
-                                  ('unpinned', False))
+  @parameterized.named_parameters(('pinned', True), ('unpinned', False))
   def test_reduce_scatter(self, pin_layout):
-    results = pjrt.run_multiprocess(TestExperimentalPjrtTpu._reduce_scatter, pin_layout)
+    results = pjrt.run_multiprocess(TestExperimentalPjrtTpu._reduce_scatter,
+                                    pin_layout)
     values = list(
-      itertools.chain.from_iterable(row.values() for row in results.values()))
+        itertools.chain.from_iterable(row.values() for row in results.values()))
 
     for ordinal, value in values:
       np.testing.assert_array_equal(value, [-ordinal])
@@ -223,11 +223,11 @@ class TestExperimentalPjrtTpu(parameterized.TestCase):
     world_size = xm.xrt_world_size()
 
     tensor = torch.cat(
-      [
-        -torch.arange(world_size, dtype=torch.float32).view(-1, 1, 1),
-        torch.ones(world_size, 1, 1) * xm.get_ordinal(),
-      ],
-      dim=1,
+        [
+            -torch.arange(world_size, dtype=torch.float32).view(-1, 1, 1),
+            torch.ones(world_size, 1, 1) * xm.get_ordinal(),
+        ],
+        dim=1,
     ).to(device)
     xm.mark_step()
 
@@ -241,20 +241,16 @@ class TestExperimentalPjrtTpu(parameterized.TestCase):
 
     return xm.get_ordinal(), out.cpu().numpy()
 
-  @parameterized.named_parameters(('pinned', True),
-                                  ('unpinned', False))
+  @parameterized.named_parameters(('pinned', True), ('unpinned', False))
   def test_all_to_all(self, pin_layout):
-    results = pjrt.run_multiprocess(
-      TestExperimentalPjrtTpu._all_to_all, pin_layout)
+    results = pjrt.run_multiprocess(TestExperimentalPjrtTpu._all_to_all,
+                                    pin_layout)
     values = list(
-      itertools.chain.from_iterable(row.values() for row in results.values()))
+        itertools.chain.from_iterable(row.values() for row in results.values()))
 
     for ordinal, value in values:
-      np.testing.assert_array_equal(value, [[
-        [-ordinal] * len(values),
-        list(range(len(values)))
-      ]]
-    )
+      np.testing.assert_array_equal(value, [[[-ordinal] * len(values),
+                                             list(range(len(values)))]])
 
 
 if __name__ == '__main__':

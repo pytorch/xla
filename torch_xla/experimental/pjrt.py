@@ -104,8 +104,7 @@ def xla_device(n: Optional[int] = None,
 
   devices = xm.get_xla_supported_devices(devkind=devkind)
   if n > len(devices):
-    raise IndexError('Device index {} out of range in {}'.format(
-        n, devices))
+    raise IndexError('Device index {} out of range in {}'.format(n, devices))
 
   return torch.device(devices[n])
 
@@ -150,8 +149,7 @@ def run_thread_per_device(local_rank: int, local_world_size: int,
       torch_xla._XLAC._xla_set_default_device(device)
 
       # "TPU:2" -> 2
-      device_id = int(
-          xm.xla_real_devices([device])[0].split(':')[1])
+      device_id = int(xm.xla_real_devices([device])[0].split(':')[1])
       set_global_ordinal(device_id)
       # Assumes same number of threads per process
       set_local_ordinal(device_id % local_world_size)
@@ -162,7 +160,9 @@ def run_thread_per_device(local_rank: int, local_world_size: int,
 
   with concurrent.futures.ThreadPoolExecutor(
       max_workers=num_threads) as executor:
-    futures = {executor.submit(_thread_fn(fn, d)): i for i, d in enumerate(devices)}
+    futures = {
+        executor.submit(_thread_fn(fn, d)): i for i, d in enumerate(devices)
+    }
 
     results = {
         futures[f]: f.result() for f in concurrent.futures.as_completed(futures)
