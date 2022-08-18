@@ -1232,9 +1232,7 @@ at::Tensor XLANativeFunctions::expand_symint(const at::Tensor& self,
                                              c10::SymIntArrayRef size,
                                              bool implicit) {
   XLA_FN_COUNTER("xla::");
-  std::cout << "in expand_symint" << std::endl;
   SymIntElements size_elements = SymIntElements(size);
-  std::cout << "got size_elements" << size << std::endl;
   // Replace -1 concrete int dim with the true shape value
   std::vector<c10::SymInt> _sizes = torch::lazy::ToVector<c10::SymInt>(size);
   int64_t num_new_dimensions = _sizes.size() - self.dim();
@@ -1250,7 +1248,6 @@ at::Tensor XLANativeFunctions::expand_symint(const at::Tensor& self,
   torch::lazy::Shape shape_ = torch::lazy::Shape(size_type, {5, 3, 4});
   torch::lazy::Shape dynamic_shape_ =
       shape_.with_symbolic_dims(std::vector<bool>{true, false, false});
-  std::cout << "XLANativeFunctions::expand_symint" << std::endl;
   return bridge::AtenFromXlaTensor(XLATensor::expand_symint(
       bridge::GetXlaTensor(self), size_elements.GetNodes(),
       size_elements.GetUpperBounds(), size_elements.GetDynamicDims(),
@@ -2108,7 +2105,6 @@ at::Tensor XLANativeFunctions::nonzero(const at::Tensor& self) {
                   self_tensor->shape().get().rank()});
   torch::lazy::Shape dynamic_shape_ =
       shape_.with_symbolic_dims(std::vector<bool>{true, false});
-  std::cout << "XLANativeFunctions::nonzero" << std::endl;
   return bridge::AtenFromXlaTensor(
       XLATensor::nonzero(self_tensor, dynamic_shape_));
 }

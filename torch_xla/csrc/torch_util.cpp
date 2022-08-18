@@ -8,21 +8,15 @@
 namespace torch_xla {
 
 void SymIntElements::SetSymIntNodeElements(c10::SymInt& size) {
-  std::cout << "[torch_util] is symbolic: " << size.is_symbolic() << std::endl;
   if (size.is_symbolic()) {
     c10::SymIntNode symbolicIntNode = size.toSymIntNodeImpl();
-    std::cout << "[torch_util] lazySymIntNode" << std::endl;
     auto* lazySymIntNode =
         dynamic_cast<torch::lazy::SymIntNodeImpl*>(symbolicIntNode.get());
-    std::cout << "[torch_util] size_node" << std::endl;
     auto size_node = lazySymIntNode->node_;
-    std::cout << "[torch_util] size_node" << std::endl;
     size_nodes_.push_back(size_node);
-    std::cout << "[torch_util] upper_bounds_" << std::endl;
     upper_bounds_.push_back(
         std::dynamic_pointer_cast<torch::lazy::DimensionNode>(size_node)
             ->getStaticValue());
-    std::cout << "[torch_util] dynamic_dims_" << std::endl;
     dynamic_dims_.push_back(
         std::dynamic_pointer_cast<torch::lazy::DimensionNode>(size_node)
             ->isSymbolic());

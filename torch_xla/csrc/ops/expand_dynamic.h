@@ -23,10 +23,8 @@ class ExpandDynamic : public XlaNode {
   const bool IsDynamic(int index) const { return dynamic_dims_[index]; };
 
  private:
-  torch::lazy::Shape dynamic_shapes_;
   std::vector<int64_t> upper_bounds_;
   std::vector<bool> dynamic_dims_;
-  std::vector<xla::Shape> shapes_;
 };
 
 }  // namespace torch_xla

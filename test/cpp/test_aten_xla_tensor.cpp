@@ -4698,8 +4698,6 @@ TEST_F(AtenXlaTensorTest, TestExpandSymInt) {
     torch::Tensor xla_y = torch::nonzero(xla_x);
     std::cout << "*Ran nonzero" << std::endl;
     c10::SymInt xla_y0_size = xla_y.sym_sizes()[0];
-    std::cout << "*is test symbolic: " << xla_y0_size.is_symbolic()
-              << std::endl;
     std::cout << "*xla_y.sym_sizes()[0] " << xla_y.sym_sizes()[0] << " is_symbolic: "
               << xla_y.sym_sizes()[0].is_symbolic() << std::endl;
     std::cout << "*xla_y.sym_sizes()[1] " << xla_y.sym_sizes()[1] << " is_symbolic: "

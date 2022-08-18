@@ -195,71 +195,18 @@ void XLATensorImpl::SetupSymSizeProperties() {
     XLAIrBuilder a = XLAIrBuilder();
     for (auto i : c10::irange(rank)) {
       if (tensor_->shape().get().is_dynamic_dimension(i)) {
-        std::cout << "dynamic index: " << i << std::endl;
-
         auto dim_node = a.MakeSizeNode(tensor_->GetIrValue(), i);
-        auto symint_node =
-            c10::make_intrusive<torch::lazy::SymIntNodeImpl>(dim_node);
-        auto sn =
-            symint_node->toSymInt();  // conversion from symintnode to symint
+        auto symint_node = c10::make_intrusive<torch::lazy::SymIntNodeImpl>(dim_node);
+        auto sn = symint_node->toSymInt();
         sym_sizes_.push_back(sn);
-
-        // auto dim_node = a.MakeSizeNode(tensor_->GetIrValue(), i);
-        // auto symint_node =
-        // c10::make_intrusive<torch::lazy::SymIntNodeImpl>(dim_node);
-        // c10::SymInt sn(symint_node);
-        // // auto* sn =
-        // dynamic_cast<torch::lazy::SymIntNodeImpl*>(dim_node.get());
-        // sym_sizes_.push_back(sn);
-        std::cout << sn.as_int_unchecked() << std::endl;
         /*TODO(miladm): verify numel_ calculation after adding a dynamic op
          */
         numel_ *= dynamic_cast<SizeNode*>(dim_node.get())->getStaticValue();
-        std::cout << "getStaticValue "
-                  << dynamic_cast<SizeNode*>(dim_node.get())->getStaticValue()
-                  << std::endl;
       } else {
-        std::cout << "static dimension " << i
-                  << " has a value: " << tensor_->shape().get().dimensions(i)
-                  << std::endl;
         sym_sizes_.push_back(c10::SymInt(tensor_->shape().get().dimensions(i)));
         numel_ *= tensor_->shape().get().dimensions(i);
       }
     }
-    // sym_sizes_.set_sizes(sym_sizes);
-    // auto updated_strides = torch::lazy::ComputeArrayStrides(
-    //     torch::lazy::ToVector<int64_t>(shape.get().dimensions()));
-    // for (int i = 0; i < updated_strides.size(); i++) {
-    //   sizes_and_strides_.stride_at_unchecked(i) = updated_strides[i];
-    // }
-
-    std::cout << "BEFORE DEBUG BLOCK" << std::endl;
-    for (auto i : c10::irange(rank)) {
-      c10::SymIntArrayRef s = c10::SymIntArrayRef(
-          reinterpret_cast<const c10::SymInt*>(sym_sizes_.data()), sym_sizes_.size());
-      std::cout << "size of symints list: " << s.size() << std::endl;
-      std::cout << "is_symbolic for each dime: " << s[i].is_symbolic() << " "
-                << s[1].is_symbolic() << std::endl;
-      std::cout << "for nick: " << (void*)s[0].as_int_unchecked() << std::endl;
-      if (s[i].is_symbolic()) {
-        c10::SymIntNode symbolicIntNode = s[0].toSymIntNodeImpl();
-        std::cout << "symbolicIntNode" << std::endl;
-        auto* lazySymIntNode =
-            dynamic_cast<torch::lazy::SymIntNodeImpl*>(symbolicIntNode.get());
-        std::cout << "before node" << std::endl;
-        auto size_node = lazySymIntNode->node_;
-        std::cout << "after node" << std::endl;
-        auto upper =
-            std::dynamic_pointer_cast<torch::lazy::DimensionNode>(size_node)
-                ->getStaticValue();
-        std::cout << "getStaticValue2 " << upper << std::endl;
-        std::cout << "after debug block" << std::endl;
-      } else {
-        std::cout << "non dynamic dim: " << s[i].expect_int() << std::endl;
-      }
-    }
-    std::cout << "input size: " << rank << "output size: " << sym_sizes_.size() << std::endl;
-    std::cout << "AFTER DEBUG BLOCK" << std::endl;
     generation_ = generation;
   }
 }

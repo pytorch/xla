@@ -111,7 +111,9 @@ xla::XlaOp SqueezeAllTrivialDimensions(xla::XlaOp input) {
 
 xla::XlaOp SetDimensionSizes(xla::XlaOp input,
                              absl::Span<const xla::XlaOp> output_sizes) {
+  std::cout << "In SetDimensionSizes" << std::endl;
   for (int i = 0; i < output_sizes.size(); i++) {
+    std::cout << "In SetDimensionSizes loop " << i << std::endl;
     xla::Shape dim_shape = XlaHelpers::ShapeOfXlaOp(output_sizes[i]);
     if (dim_shape.is_dynamic()) {
       std::cout << "xla::SetDimensionSize " << i << std::endl; 
