@@ -47,7 +47,7 @@ PjRtComputationClient::PjRtComputationClient() {
   std::string device_type = sys_util::GetEnvString(env::kEnvPjRtDevice, "");
   if (device_type == "CPU") {
     TF_VLOG(1) << "Initializing PjRt CPU client...";
-    bool async = sys_util::GetEnvBool(env::kEnvAsyncCpuClient, true);
+    bool async = sys_util::GetEnvBool(env::kEnvPjrtAsyncCpuClient, true);
     int cpu_device_count = sys_util::GetEnvInt(env::kEnvNumCpu, 1);
     client_ = std::move(xla::GetTfrtCpuClient(async, cpu_device_count).ValueOrDie());
   } else if (device_type == "TPU") {

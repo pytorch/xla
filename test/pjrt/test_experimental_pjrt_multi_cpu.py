@@ -14,7 +14,7 @@ class TestExperimentalPjrtMultiCpu(parameterized.TestCase):
     pjrt.set_device_type('CPU')
 
     os.environ.pop(xenv.CPU_NUM_DEVICES, None)
-    os.environ.pop(xenv.CPU_ASYNC_CLIENT, None)
+    os.environ.pop(xenv.PJRT_CPU_ASYNC_CLIENT, None)
 
   def test_default_cpu_device(self):
     expected = {0: {0: torch.device('xla:0'),}}
@@ -31,7 +31,7 @@ class TestExperimentalPjrtMultiCpu(parameterized.TestCase):
         }
     }
     os.environ.update({
-        xenv.CPU_ASYNC_CLIENT: 'true',
+        xenv.PJRT_CPU_ASYNC_CLIENT: 'true',
         xenv.CPU_NUM_DEVICES: '4',
     })
     devices_per_process = pjrt.run_multiprocess(xm.xla_device)
