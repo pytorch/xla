@@ -1156,13 +1156,15 @@ at::Tensor XLANativeFunctions::expand_symint(const at::Tensor& self,
   XLA_FN_COUNTER("xla::");
   SymIntElements size_elements = SymIntElements(size);
   // Replace -1 concrete int dim with the true shape value
-  std::vector<c10::SymInt> _sizes = torch::lazy::ToVector<c10::SymInt>(size);
-  int64_t num_new_dimensions = _sizes.size() - self.dim();
+  std::vector<c10::SymInt> sizes_ = torch::lazy::ToVector<c10::SymInt>(size);
+  int64_t num_new_dimensions = sizes_.size() - self.dim();
   std::vector<int64_t> padded_self(num_new_dimensions, 0);
   padded_self.insert(padded_self.end(), self.sizes().begin(),
                      self.sizes().end());
-  for (const auto idx : c10::irange(_sizes.size())) {
-    if (!_sizes[idx].is_symbolic() && _sizes[idx].expect_int() == -1) {
+  for (const auto idx : c10::irange(sizes_.size())) {
+    // Passing -1 as the size for a dimension means not changing the size of
+    // that dimension.
+    if (!sizes_[idx].is_symbolic() && sizes_[idx].expect_int() == -1) {
       size_elements.SetUpperBound(idx, padded_self[idx]);
     }
   }

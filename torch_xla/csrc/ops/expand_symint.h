@@ -6,13 +6,13 @@
 
 namespace torch_xla {
 
-class ExpandDynamic : public XlaNode {
+class ExpandSymInt : public XlaNode {
  public:
-  ExpandDynamic(const torch::lazy::Value& input,
-                const std::vector<torch::lazy::Value>& dimensions,
-                const std::vector<int64_t> upper_bounds,
-                const std::vector<bool> dynamic_dims,
-                const torch::lazy::Shape& dynamic_shapes);
+  ExpandSymInt(const torch::lazy::Value& input,
+               const std::vector<torch::lazy::Value>& dimensions,
+               const std::vector<int64_t> upper_bounds,
+               const std::vector<bool> dynamic_dims,
+               const torch::lazy::Shape& dynamic_shapes);
 
   std::string ToString() const override;
 

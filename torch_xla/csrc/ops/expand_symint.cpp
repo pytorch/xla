@@ -1,4 +1,4 @@
-#include "torch_xla/csrc/ops/expand_dynamic.h"
+#include "torch_xla/csrc/ops/expand_symint.h"
 
 #include "absl/strings/str_join.h"
 #include "tensorflow/compiler/xla/client/lib/constants.h"
@@ -12,9 +12,9 @@
 namespace torch_xla {
 namespace {
 
-std::vector<xla::Shape> GetShapes(const torch::lazy::Value& input,
-                                  const std::vector<int64_t> upper_bounds,
-                                  const std::vector<bool> dynamic_dims) {
+std::vector<xla::Shape> GetOperandShapes(
+    const torch::lazy::Value& input, const std::vector<int64_t> upper_bounds,
+    const std::vector<bool> dynamic_dims) {
   std::vector<xla::Shape> shapes;
   shapes.push_back(GetXlaShape(input));
   for (int i = 0; i < upper_bounds.size(); i++) {
@@ -42,11 +42,11 @@ std::vector<torch::lazy::Value> GetValues(
 
 }  // namespace
 
-ExpandDynamic::ExpandDynamic(const torch::lazy::Value& input,
-                             const std::vector<torch::lazy::Value>& dimensions,
-                             const std::vector<int64_t> upper_bounds,
-                             const std::vector<bool> dynamic_dims,
-                             const torch::lazy::Shape& dynamic_shapes)
+ExpandSymInt::ExpandSymInt(const torch::lazy::Value& input,
+                           const std::vector<torch::lazy::Value>& dimensions,
+                           const std::vector<int64_t> upper_bounds,
+                           const std::vector<bool> dynamic_dims,
+                           const torch::lazy::Shape& dynamic_shapes)
     : XlaNode(
           torch::lazy::OpKind(at::aten::expand), GetValues(input, dimensions),
           {dynamic_shapes},
@@ -55,10 +55,10 @@ ExpandDynamic::ExpandDynamic(const torch::lazy::Value& input,
       dynamic_shapes_(dynamic_shapes),
       upper_bounds_(std::move(upper_bounds)),
       dynamic_dims_(std::move(dynamic_dims)) {
-  shapes_ = GetShapes(input, upper_bounds_, dynamic_dims_);
+  shapes_ = GetOperandShapes(input, upper_bounds_, dynamic_dims_);
 }
 
-XlaOpVector ExpandDynamic::Lower(LoweringContext* loctx) const {
+XlaOpVector ExpandSymInt::Lower(LoweringContext* loctx) const {
   xla::XlaOp input = loctx->GetOutputOp(operand(0));
   std::vector<xla::XlaOp> size_ops;
   for (int i = 1; i < shapes_.size(); i++) {
@@ -70,7 +70,7 @@ XlaOpVector ExpandDynamic::Lower(LoweringContext* loctx) const {
   return ReturnOp(output, loctx);
 }
 
-std::string ExpandDynamic::ToString() const {
+std::string ExpandSymInt::ToString() const {
   std::stringstream ss;
   ss << XlaNode::ToString() << ", size=(" << absl::StrJoin(upper_bounds_, ", ")
      << ")"

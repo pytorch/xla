@@ -25,7 +25,7 @@ std::vector<int64_t> GetCompleteShape(absl::Span<const int64_t> output_sizes,
 // output size.
 xla::XlaOp BuildView(xla::XlaOp input, absl::Span<const int64_t> output_sizes);
 
-// Update Output Dynamic Dimensions based on input size()
+// Return a new XlaOp that reflects pass in size
 xla::XlaOp SetDimensionSizes(xla::XlaOp input,
                              absl::Span<const xla::XlaOp> output_sizes);
 
