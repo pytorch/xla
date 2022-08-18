@@ -10,6 +10,7 @@
 #include "tensorflow/compiler/xla/pjrt/cpu_device.h"
 #include "tensorflow/compiler/xla/pjrt/pjrt_client.h"
 #include "tensorflow/compiler/xla/pjrt/tpu_client.h"
+#include "tensorflow/compiler/xla/pjrt/tfrt_cpu_pjrt_client.h"
 #include "tensorflow/compiler/xla/shape.h"
 #include "tensorflow/compiler/xla/xla_client/computation_client.h"
 #include "tensorflow/compiler/xla/xla_client/debug_macros.h"
@@ -46,7 +47,9 @@ PjRtComputationClient::PjRtComputationClient() {
   std::string device_type = sys_util::GetEnvString(env::kEnvPjRtDevice, "");
   if (device_type == "CPU") {
     TF_VLOG(1) << "Initializing PjRt CPU client...";
-    client_ = std::move(xla::GetCpuClient(/*asynchronous=*/false).ValueOrDie());
+    bool async = sys_util::GetEnvBool(env::kEnvPjrtAsyncCpuClient, true);
+    int cpu_device_count = sys_util::GetEnvInt(env::kEnvNumCpu, 1);
+    client_ = std::move(xla::GetTfrtCpuClient(async, cpu_device_count).ValueOrDie());
   } else if (device_type == "TPU") {
     TF_VLOG(1) << "Initializing PjRt TPU client...";
     int64_t max_inflight_computations = sys_util::GetEnvInt(
