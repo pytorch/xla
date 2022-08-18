@@ -11,13 +11,18 @@ void SymIntElements::SetSymIntNodeElements(c10::SymInt& size) {
   std::cout << "is symbolic: " << size.is_symbolic() << std::endl;
   if (size.is_symbolic()) {
     c10::SymIntNode symbolicIntNode = size.toSymIntNodeImpl();
+    std::cout << "lazySymIntNode" << std::endl;
     auto* lazySymIntNode =
         dynamic_cast<torch::lazy::SymIntNodeImpl*>(symbolicIntNode.get());
+    std::cout << "size_node" << std::endl;
     auto size_node = lazySymIntNode->node_;
+    std::cout << "size_node" << std::endl;
     size_nodes_.push_back(size_node);
+    std::cout << "upper_bounds_" << std::endl;
     upper_bounds_.push_back(
         std::dynamic_pointer_cast<torch::lazy::DimensionNode>(size_node)
             ->getStaticValue());
+    std::cout << "dynamic_dims_" << std::endl;
     dynamic_dims_.push_back(
         std::dynamic_pointer_cast<torch::lazy::DimensionNode>(size_node)
             ->isSymbolic());
