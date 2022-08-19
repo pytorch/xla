@@ -160,10 +160,7 @@ xla::Shape AnyDimOutputShape(const torch::lazy::Value& input, int64_t dim,
                              bool keepdim) {
   auto lower_for_shape_fn =
       [&](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
-    std::cout << "WONJOO AnyDimOutputShape1" << std::endl;
-    xla::XlaOp result = BuildAny(operands[0], {dim}, keepdim);
-    std::cout << "WONJOO AnyDimOutputShape2" << std::endl;
-    return result;
+    return BuildAny(operands[0], {dim}, keepdim);
   };
   return InferOutputShape({GetXlaShape(input)}, lower_for_shape_fn);
 }

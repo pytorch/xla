@@ -100,9 +100,7 @@ torch_xla::XlaOpVector Any::Lower(LoweringContext* loctx) const {
 }
 
 torch_xla::XlaOpVector AnyDim::Lower(LoweringContext* loctx) const {
-  std::cout << "WONJOO AnyDimLower1" << std::endl;
   xla::XlaOp input = loctx->GetOutputOp(operand(0));
-  std::cout << "WONJOO AnyDimLower2" << std::endl;
   return ReturnOp(BuildAny(input, {dim}, keepdim), loctx);
 }
 

@@ -438,7 +438,6 @@ xla::XlaOp BuildAll(xla::XlaOp input, absl::Span<const int64_t> dimensions,
 
 xla::XlaOp BuildAny(xla::XlaOp input, absl::Span<const int64_t> dimensions,
                     bool keep_reduced_dimensions) {
-  std::cout << "WONJOO: BuildAny1" << std::endl;
   const xla::Shape& shape = XlaHelpers::ShapeOfXlaOp(input);
   std::vector<int64_t> canonical_dimensions =
       torch::lazy::GetCanonicalDimensionIndices(
@@ -459,7 +458,6 @@ xla::XlaOp BuildAny(xla::XlaOp input, absl::Span<const int64_t> dimensions,
   if (keep_reduced_dimensions) {
     result = XlaHelpers::DynamicReshape(result, rinfo.new_dimensions);
   }
-  std::cout << "WONJOO: BuildAny2" << std::endl;
   return result;
 }
 
