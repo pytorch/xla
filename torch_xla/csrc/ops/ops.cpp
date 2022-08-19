@@ -654,21 +654,6 @@ torch::lazy::NodePtr MinUnary(const torch::lazy::Value& input) {
       std::move(lower_fn));
 }
 
-torch::lazy::NodePtr Take(const torch::lazy::Value& input,
-                          const torch::lazy::Value& index) {
-  auto lower_fn = [](const XlaNode& node,
-                     LoweringContext* loctx) -> XlaOpVector {
-    xla::XlaOp xla_input = loctx->GetOutputOp(node.operand(0));
-    xla::XlaOp xla_index = loctx->GetOutputOp(node.operand(1));
-    xla::XlaOp result = BuildTake(xla_input, xla_index);
-    return node.ReturnOp(result, loctx);
-  };
-  xla::Shape result_shape = GetXlaShape(index);
-  result_shape.set_element_type(GetXlaShape(input).element_type());
-  return GenericOp(torch::lazy::OpKind(at::aten::take), {input, index},
-                   std::move(result_shape), std::move(lower_fn));
-}
-
 torch::lazy::NodePtr TanhGelu(const torch::lazy::Value& input) {
   // TODO: add proper lowering function
   torch::lazy::ScopePusher ir_scope("aten::tanh_gelu");

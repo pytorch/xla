@@ -566,6 +566,13 @@ xla::Shape TanOutputShape(const torch::lazy::Value& input) {
   return GetXlaShape(input);
 }
 
+xla::Shape TakeOutputShape(const torch::lazy::Value& input,
+                           const torch::lazy::Value& index) {
+  xla::Shape result_shape = GetXlaShape(index);
+  result_shape.set_element_type(GetXlaShape(input).element_type());
+  return result_shape;
+}
+
 xla::Shape TanhOutputShape(const torch::lazy::Value& input) {
   return GetXlaShape(input);
 }
