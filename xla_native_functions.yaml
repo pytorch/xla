@@ -17,6 +17,7 @@ full_codegen:
   - binary_cross_entropy
   - binary_cross_entropy_backward
   - ceil
+  - cholesky
   - clamp.Tensor
   - clamp_max.Tensor
   - clamp_min.Tensor
@@ -139,7 +140,6 @@ supported:
   - cat
   - celu
   - celu_
-  - cholesky
   - clamp
   - clamp_max
   - clamp_min
