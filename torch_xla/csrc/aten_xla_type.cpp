@@ -1241,7 +1241,7 @@ at::Tensor XLANativeFunctions::expand_symint(const at::Tensor& self,
                      self.sizes().end());
   for (const auto idx : c10::irange(_sizes.size())) {
     if (!_sizes[idx].is_symbolic() && _sizes[idx].expect_int() == -1) {
-      size_elements.SetUpperBounds(idx, padded_self[idx]);
+      size_elements.SetUpperBound(idx, padded_self[idx]);
     }
   }
   at::ScalarType size_type = self.scalar_type();
