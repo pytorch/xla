@@ -279,6 +279,16 @@ TEST_F(AtenXlaTensorTest, TestSubScalarInPlace) {
   });
 }
 
+TEST_F(AtenXlaTensorTest, TestSymSizes) {
+  ForEachDevice([&](const torch::Device& device) {
+    torch::Tensor a = torch::rand({2, 3}, torch::TensorOptions(torch::kFloat));
+    torch::Tensor xla_a = CopyToDevice(a, device);
+    torch::Tensor c = a.sym_sizes(0);
+    AllClose(a.sym_sizes(0), 2);
+    AllClose(a.sym_sizes(0).is_symbolic(), false);
+  });
+}
+
 TEST_F(AtenXlaTensorTest, TestMul) {
   torch::Tensor a = torch::rand({2, 2}, torch::TensorOptions(torch::kFloat));
   torch::Tensor b = torch::rand({2, 2}, torch::TensorOptions(torch::kFloat));
