@@ -442,8 +442,8 @@ xla::XlaOp BuildAny(xla::XlaOp input, absl::Span<const int64_t> dimensions,
   std::vector<int64_t> canonical_dimensions =
       torch::lazy::GetCanonicalDimensionIndices(
           xla::util::ToVector<int64_t>(dimensions), shape.rank());
-  ReductionInfo rinfo =
-      GetReductionInfo(input, shape, canonical_dimensions, keep_reduced_dimensions);
+  ReductionInfo rinfo = GetReductionInfo(input, shape, canonical_dimensions,
+                                         keep_reduced_dimensions);
   xla::XlaOp init_value = xla::ConstantLiteral(
       input.builder(), xla::LiteralUtil::Zero(shape.element_type()));
   xla::PrimitiveType result_type =
