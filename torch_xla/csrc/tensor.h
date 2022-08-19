@@ -22,6 +22,7 @@
 #include "torch_xla/csrc/ir.h"
 #include "torch_xla/csrc/ir_util.h"
 #include "torch_xla/csrc/lowering_context.h"
+#include "torch_xla/csrc/torch_util.h"
 #include "torch_xla/csrc/view.h"
 #include "torch_xla/csrc/xla_sharding_util.h"
 
@@ -580,11 +581,9 @@ class XLATensor : public c10::intrusive_ptr_target {
                              std::vector<int64_t> size);
 
   static XLATensorPtr expand_symint(
-      const XLATensorPtr& input,
-      const std::vector<torch::lazy::NodePtr>& size_nodes,
-      const std::vector<int64_t> upper_bounds,
-      const std::vector<bool> dynamic_dims,
-      const torch::lazy::Shape dynamic_shapes);
+    const XLATensorPtr& input,
+    c10::SymIntArrayRef size,
+    const torch::lazy::Shape& shape);
 
   static void exponential_(XLATensorPtr& input, double lambd);
 

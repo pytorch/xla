@@ -3,16 +3,15 @@
 #include <vector>
 
 #include "torch_xla/csrc/ir.h"
+#include "torch_xla/csrc/torch_util.h"
 
 namespace torch_xla {
 
 class ExpandSymInt : public XlaNode {
  public:
   ExpandSymInt(const torch::lazy::Value& input,
-               const std::vector<torch::lazy::Value>& dimensions,
-               const std::vector<int64_t> upper_bounds,
-               const std::vector<bool> dynamic_dims,
-               const torch::lazy::Shape& dynamic_shapes);
+               const SymIntElements& size_elements,
+               const torch::lazy::Shape& shape);
 
   std::string ToString() const override;
 
@@ -23,10 +22,8 @@ class ExpandSymInt : public XlaNode {
   const bool IsDynamic(int index) const { return dynamic_dims_[index]; };
 
  private:
-  torch::lazy::Shape dynamic_shapes_;
   std::vector<int64_t> upper_bounds_;
   std::vector<bool> dynamic_dims_;
-  std::vector<xla::Shape> shapes_;
 };
 
 }  // namespace torch_xla
