@@ -29,17 +29,20 @@ std::vector<torch::lazy::Value> GetValues(
 
 }  // namespace
 
-ExpandSymInt::ExpandSymInt(const torch::lazy::Value& input, 
-                           const SymIntElements& size_elements, 
+ExpandSymInt::ExpandSymInt(const torch::lazy::Value& input,
+                           const SymIntElements& size_elements,
                            const torch::lazy::Shape& shape)
-    : XlaNode(
-          torch::lazy::OpKind(at::aten::expand), GetValues(input, size_elements.GetValues()),
-          {shape},
-          [&]() { return NodeOutputShape(input, size_elements.GetUpperBounds(), size_elements.GetDynamicDims()); },
-          /*num_outputs=*/1, torch::lazy::MHash(size_elements.GetUpperBounds(), size_elements.GetDynamicDims())),
+    : XlaNode(torch::lazy::OpKind(at::aten::expand),
+              GetValues(input, size_elements.GetValues()), {shape},
+              [&]() {
+                return NodeOutputShape(input, size_elements.GetUpperBounds(),
+                                       size_elements.GetDynamicDims());
+              },
+              /*num_outputs=*/1,
+              torch::lazy::MHash(size_elements.GetUpperBounds(),
+                                 size_elements.GetDynamicDims())),
       upper_bounds_(std::move(size_elements.GetUpperBounds())),
-      dynamic_dims_(std::move(size_elements.GetDynamicDims())) {
-}
+      dynamic_dims_(std::move(size_elements.GetDynamicDims())) {}
 
 XlaOpVector ExpandSymInt::Lower(LoweringContext* loctx) const {
   xla::XlaOp input = loctx->GetOutputOp(operand(0));
@@ -47,7 +50,8 @@ XlaOpVector ExpandSymInt::Lower(LoweringContext* loctx) const {
   for (int i = 1; i < operands().size(); i++) {
     size_ops.push_back(loctx->GetOutputOp(operand(i)));
   }
-  xla::XlaOp output = SetDimensionSizes(BuildExpand(input, upper_bounds_), size_ops);
+  xla::XlaOp output =
+      SetDimensionSizes(BuildExpand(input, upper_bounds_), size_ops);
   return ReturnOp(output, loctx);
 }
 

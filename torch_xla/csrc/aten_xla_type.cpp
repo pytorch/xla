@@ -1154,9 +1154,10 @@ at::Tensor XLANativeFunctions::expand_symint(const at::Tensor& self,
                                              c10::SymIntArrayRef size,
                                              bool implicit) {
   XLA_FN_COUNTER("xla::");
-  torch::lazy::Shape shape = torch::lazy::compute_shape_expand(self, size, implicit)[0];
-  return bridge::AtenFromXlaTensor(XLATensor::expand_symint(
-      bridge::GetXlaTensor(self), size, shape));
+  torch::lazy::Shape shape =
+      torch::lazy::compute_shape_expand(self, size, implicit)[0];
+  return bridge::AtenFromXlaTensor(
+      XLATensor::expand_symint(bridge::GetXlaTensor(self), size, shape));
 }
 
 at::Tensor& XLANativeFunctions::exponential_(
