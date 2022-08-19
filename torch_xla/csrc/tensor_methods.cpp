@@ -27,7 +27,6 @@
 #include "torch_xla/csrc/ops/all_to_all.h"
 #include "torch_xla/csrc/ops/amp_foreach_non_finite_check_and_unscale.h"
 #include "torch_xla/csrc/ops/amp_update_scale.h"
-#include "torch_xla/csrc/ops/any.h"
 #include "torch_xla/csrc/ops/arg_max.h"
 #include "torch_xla/csrc/ops/arg_min.h"
 #include "torch_xla/csrc/ops/arithmetic_ir_ops.h"
@@ -664,21 +663,6 @@ XLATensorPtr XLATensor::addmm(const XLATensorPtr& input,
                               const XLATensorPtr& bias) {
   return input->CreateFrom(AddMatMulOp(
       input->GetIrValue(), weight->GetIrValue(), bias->GetIrValue()));
-}
-
-XLATensorPtr XLATensor::any(const XLATensorPtr& input,
-                            std::vector<int64_t> dimensions,
-                            bool keep_reduced_dimensions) {
-  at::ScalarType result_type = input->dtype() == at::ScalarType::Byte
-                                   ? at::ScalarType::Byte
-                                   : at::ScalarType::Bool;
-  return input->CreateFrom(
-      torch::lazy::MakeNode<Any>(input->GetIrValue(),
-                                 torch::lazy::GetCanonicalDimensionIndices(
-                                     xla::util::ToVector<int64_t>(dimensions),
-                                     input->shape().get().rank()),
-                                 keep_reduced_dimensions),
-      result_type);
 }
 
 void XLATensor::arange_out(XLATensorPtr& out, const at::Scalar& start,

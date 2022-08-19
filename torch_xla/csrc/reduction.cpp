@@ -438,9 +438,13 @@ xla::XlaOp BuildAll(xla::XlaOp input, absl::Span<const int64_t> dimensions,
 
 xla::XlaOp BuildAny(xla::XlaOp input, absl::Span<const int64_t> dimensions,
                     bool keep_reduced_dimensions) {
+  std::cout << "WONJOO: BuildAny1" << std::endl;
   const xla::Shape& shape = XlaHelpers::ShapeOfXlaOp(input);
+  std::vector<int64_t> canonical_dimensions =
+      torch::lazy::GetCanonicalDimensionIndices(
+          xla::util::ToVector<int64_t>(dimensions), shape.rank());
   ReductionInfo rinfo =
-      GetReductionInfo(input, shape, dimensions, keep_reduced_dimensions);
+      GetReductionInfo(input, shape, canonical_dimensions, keep_reduced_dimensions);
   xla::XlaOp init_value = xla::ConstantLiteral(
       input.builder(), xla::LiteralUtil::Zero(shape.element_type()));
   xla::PrimitiveType result_type =
@@ -448,13 +452,14 @@ xla::XlaOp BuildAny(xla::XlaOp input, absl::Span<const int64_t> dimensions,
                                                      : xla::PrimitiveType::PRED;
   xla::XlaOp result =
       xla::Reduce(input, init_value, CreateAnyComputation(shape.element_type()),
-                  dimensions);
+                  canonical_dimensions);
   result = MaybeConvertTo(
       xla::Ne(result, xla::Zero(input.builder(), shape.element_type())),
       result_type);
   if (keep_reduced_dimensions) {
     result = XlaHelpers::DynamicReshape(result, rinfo.new_dimensions);
   }
+  std::cout << "WONJOO: BuildAny2" << std::endl;
   return result;
 }
 

@@ -6,10 +6,12 @@ full_codegen:
   - abs
   - all
   - all.dim
-  - amax
-  - amin
   - addcdiv
   - addcmul
+  - amax
+  - amin
+  - any
+  - any.dim
   - asin
   - asinh
   - atan
@@ -111,8 +113,6 @@ supported:
   - add.Tensor
   - addmm
   - alias
-  - any
-  - any.dim
   - arange.start_out
   - argmax
   - argmin
