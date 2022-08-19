@@ -2857,13 +2857,6 @@ at::Tensor& XLANativeFunctions::t_(at::Tensor& self) {
   return self;
 }
 
-at::Tensor XLANativeFunctions::take(const at::Tensor& self,
-                                    const at::Tensor& index) {
-  XLA_FN_COUNTER("xla::");
-  return bridge::AtenFromXlaTensor(
-      XLATensor::take(bridge::GetXlaTensor(self), bridge::GetXlaTensor(index)));
-}
-
 at::Tensor XLANativeFunctions::tanh_backward(const at::Tensor& grad_output,
                                              const at::Tensor& output) {
   XLA_FN_COUNTER("xla::");

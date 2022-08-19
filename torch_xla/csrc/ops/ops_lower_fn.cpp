@@ -2,6 +2,7 @@
 
 #include "tensorflow/compiler/xla/client/lib/logdet.h"
 #include "tensorflow/compiler/xla/client/lib/math.h"
+#include "torch_xla/csrc/data_ops.h"
 #include "torch_xla/csrc/elementwise.h"
 #include "torch_xla/csrc/helpers.h"
 #include "torch_xla/csrc/matrix.h"
@@ -471,6 +472,13 @@ torch_xla::XlaOpVector Sinh::Lower(LoweringContext* loctx) const {
 //   xla::SignAndLogDet result = xla::SLogDet(xla_input);
 //   return ReturnOps({result.sign, result.logdet}, loctx);
 // }
+
+torch_xla::XlaOpVector Take::Lower(LoweringContext* loctx) const {
+  xla::XlaOp xla_input = loctx->GetOutputOp(operand(0));
+  xla::XlaOp xla_index = loctx->GetOutputOp(operand(1));
+  xla::XlaOp result = BuildTake(xla_input, xla_index);
+  return ReturnOp(result, loctx);
+}
 
 torch_xla::XlaOpVector Tan::Lower(LoweringContext* loctx) const {
   xla::XlaOp xla_input = loctx->GetOutputOp(operand(0));

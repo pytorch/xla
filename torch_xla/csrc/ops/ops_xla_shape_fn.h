@@ -193,6 +193,9 @@ xla::Shape SinhOutputShape(const torch::lazy::Value& input);
 /* Blocked on https://github.com/pytorch/xla/issues/3596 */
 // xla::Shape SlogdetOutputShape(const torch::lazy::Value& input);
 
+xla::Shape TakeOutputShape(const torch::lazy::Value& input,
+                           const torch::lazy::Value& index);
+
 xla::Shape TanOutputShape(const torch::lazy::Value& input);
 
 xla::Shape TanhOutputShape(const torch::lazy::Value& input);
