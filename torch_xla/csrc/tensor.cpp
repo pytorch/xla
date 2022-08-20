@@ -940,6 +940,7 @@ at::Tensor XLATensor::ToTensor(bool detached) {
 }
 
 void XLATensor::ShallowCopyTo(XLATensorPtr dest) const {
+  dest->SetScalarType(data()->logical_element_type);
   dest->SetIrValue(GetIrValue(), /*inplace=*/false);
 }
 
