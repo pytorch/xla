@@ -387,6 +387,12 @@ class TestOpInfo(TestCase):
         elif isinstance(x, (numbers.Number, bool, str)):
           return x
 
+        # Passthrough None because some functions wrapped with type promotion
+        # wrapper might have optional args
+        if x is None:
+          return None
+        import pdb
+        pdb.set_trace()
         raise ValueError("Unknown type {0}!".format(type(x)))
 
       cpu_sample_input, cpu_args, cpu_kwargs = to_cpu(sample.input), to_cpu(
