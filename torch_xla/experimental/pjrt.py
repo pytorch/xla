@@ -106,7 +106,9 @@ def xla_device(n: Optional[int] = None,
   if n > len(devices):
     raise IndexError('Device index {} out of range in {}'.format(n, devices))
 
-  return torch.device(devices[n])
+  device = devices[n]
+  torch_xla._XLAC._xla_set_default_device(device)
+  return torch.device(device)
 
 
 @requires_pjrt
