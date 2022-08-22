@@ -1,0 +1,13 @@
+diff --git a/aten/src/ATen/core/TensorBase.h b/aten/src/ATen/core/TensorBase.h
+index e6dd7365..c80b7dc0 100644
+--- a/aten/src/ATen/core/TensorBase.h
++++ b/aten/src/ATen/core/TensorBase.h
+@@ -326,7 +326,7 @@ class TORCH_API TensorBase {
+     return impl_->storage();
+   }
+   bool is_alias_of(const at::TensorBase& other) const{
+-    return impl_->storage().is_alias_of(other.storage());
++    return is_xla() ? false : impl_->storage().is_alias_of(other.storage());
+   }
+ 
+   inline bool _is_zerotensor() const {
