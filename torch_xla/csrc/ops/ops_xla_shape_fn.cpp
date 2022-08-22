@@ -208,6 +208,11 @@ xla::Shape CeilOutputShape(const torch::lazy::Value& input) {
   return GetXlaShape(input);
 }
 
+xla::Shape CholeskyOutputShape(const torch::lazy::Value& input,
+                               const bool upper) {
+  return GetXlaShape(input);
+}
+
 xla::Shape ClampTensorOutputShape(
     const torch::lazy::Value& input,
     const c10::optional<torch::lazy::Value>& min,

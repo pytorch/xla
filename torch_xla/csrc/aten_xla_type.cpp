@@ -970,12 +970,6 @@ at::Tensor& XLANativeFunctions::celu_(at::Tensor& self,
   return self;
 }
 
-at::Tensor XLANativeFunctions::cholesky(const at::Tensor& self, bool upper) {
-  XLA_FN_COUNTER("xla::");
-  return bridge::AtenFromXlaTensor(
-      XLATensor::cholesky(bridge::GetXlaTensor(self), upper));
-}
-
 at::Tensor XLANativeFunctions::clamp(const at::Tensor& self,
                                      const c10::optional<at::Scalar>& min,
                                      const c10::optional<at::Scalar>& max) {

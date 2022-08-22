@@ -474,8 +474,6 @@ class XLATensor : public c10::intrusive_ptr_target {
   static XLATensorPtr celu(const XLATensorPtr& input, const at::Scalar& alpha);
   static void celu_(XLATensorPtr& input, const at::Scalar& alpha);
 
-  static XLATensorPtr cholesky(const XLATensorPtr& input, bool upper);
-
   static XLATensorPtr clamp(const XLATensorPtr& input,
                             const c10::optional<at::Scalar>& min,
                             const c10::optional<at::Scalar>& max);

@@ -952,6 +952,8 @@ TEST_F(AtenXlaTensorTest, TestCholesky) {
       });
     }
   }
+  ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::cholesky", cpp_test::GetIgnoredCounters());
 }
 
 TEST_F(AtenXlaTensorTest, TestLogDet) {
