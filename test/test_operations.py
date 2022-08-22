@@ -1824,6 +1824,14 @@ class TestAtenXlaTensor(XlaTestCase):
     assert 'prim::Constant' in const_hlo
     assert 'xla::device_data' not in const_hlo
 
+  def test_emb_bf16(self):
+    xla_device = xm.xla_device()
+    index = torch.ones(1, dtype=torch.long, device=xla_device)
+    emb = torch.nn.Embedding(1024, 128, device=xla_device)
+    emb = emb.to(torch.bfloat16)
+    emb_out = emb(index)
+    assert emb_out.dtype == torch.bfloat16
+
 
 class MNISTComparator(nn.Module):
 
