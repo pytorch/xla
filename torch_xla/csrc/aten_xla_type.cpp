@@ -586,7 +586,7 @@ at::Tensor XLANativeFunctions::_trilinear(
 at::Tensor XLANativeFunctions::_unsafe_view(const at::Tensor& self,
                                             at::IntArrayRef size) {
   XLA_FN_COUNTER("xla::");
-  return view(self, size);
+  return view(self, c10::SymIntArrayRef::fromIntArrayRef(size));
 }
 
 at::Tensor XLANativeFunctions::add(const at::Tensor& self,
@@ -1186,11 +1186,12 @@ at::Tensor XLANativeFunctions::embedding_dense_backward(
 }
 
 at::Tensor XLANativeFunctions::empty(
-    at::IntArrayRef size, c10::optional<at::ScalarType> dtype,
+    at::SymIntArrayRef sym_size, c10::optional<at::ScalarType> dtype,
     c10::optional<at::Layout> layout, c10::optional<at::Device> device,
     c10::optional<bool> pin_memory,
     c10::optional<at::MemoryFormat> /* memory_format */) {
   XLA_FN_COUNTER("xla::");
+  auto size = c10::asIntArrayRefSlow(sym_size);
   // PT empty*() are optimizations to avoid initializing the data when it is
   // known it will be completely rewritten. But since for us doing a zero*()
   // does not actually end up doing any memory initialization, we use that and
@@ -1201,29 +1202,20 @@ at::Tensor XLANativeFunctions::empty(
       at::dtype_or_default(dtype)));
 }
 
-at::Tensor XLANativeFunctions::empty_symint(
-    c10::SymIntArrayRef size, c10::optional<at::ScalarType> dtype,
-    c10::optional<at::Layout> layout, c10::optional<at::Device> device,
-    c10::optional<bool> pin_memory,
-    c10::optional<at::MemoryFormat> memory_format) {
-  // TODO: support SymIntNodes as well
-  return empty(c10::asIntArrayRefSlow(size), dtype, layout, device, pin_memory,
-               memory_format);
-}
-
 at::Tensor XLANativeFunctions::empty_strided(
     at::IntArrayRef size, at::IntArrayRef stride,
     c10::optional<at::ScalarType> dtype, c10::optional<at::Layout> layout,
     c10::optional<at::Device> device, c10::optional<bool> pin_memory) {
   XLA_FN_COUNTER("xla::");
-  at::Tensor t = empty(size, dtype, layout, device, pin_memory, c10::nullopt);
+  at::Tensor t = empty(c10::SymIntArrayRef::fromIntArrayRef(size), dtype, layout, device, pin_memory, c10::nullopt);
   return torch_xla::XLANativeFunctions::as_strided(t, size, stride,
                                                    /*storage_offset=*/0);
 }
 
 at::Tensor XLANativeFunctions::expand(const at::Tensor& self,
-                                      at::IntArrayRef size, bool implicit) {
+                                      at::SymIntArrayRef sym_size, bool implicit) {
   XLA_FN_COUNTER("xla::");
+  auto size = c10::asIntArrayRefSlow(sym_size);
   return bridge::AtenFromXlaTensor(XLATensor::expand(
       bridge::GetXlaTensor(self), torch::lazy::ToVector<int64_t>(size)));
 }
@@ -3122,7 +3114,9 @@ std::tuple<at::Tensor, at::Tensor> XLANativeFunctions::var_mean(
 }
 
 at::Tensor XLANativeFunctions::view(const at::Tensor& self,
-                                    at::IntArrayRef size) {
+                                    at::SymIntArrayRef sym_size) {
+  // TODO: support symbolic sizes
+  auto size = c10::asIntArrayRefSlow(sym_size);
   XLA_FN_COUNTER("xla::");
   return bridge::AtenFromXlaTensor(
       XLATensor::view(bridge::GetXlaTensor(self), XlaHelpers::I64List(size)));
@@ -3199,7 +3193,7 @@ at::Tensor XLANativeFunctions::new_empty_strided(
 }
 
 at::Tensor XLANativeFunctions::narrow_copy(const at::Tensor& self, int64_t dim,
-                                           int64_t start, int64_t length) {
+                                           c10::SymInt start, c10::SymInt length) {
   return at::native::narrow_copy_dense(self, dim, start, length);
 }
 at::Tensor XLANativeFunctions::pixel_shuffle(const at::Tensor& self,
