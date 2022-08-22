@@ -1207,13 +1207,15 @@ at::Tensor XLANativeFunctions::empty_strided(
     c10::optional<at::ScalarType> dtype, c10::optional<at::Layout> layout,
     c10::optional<at::Device> device, c10::optional<bool> pin_memory) {
   XLA_FN_COUNTER("xla::");
-  at::Tensor t = empty(c10::SymIntArrayRef::fromIntArrayRef(size), dtype, layout, device, pin_memory, c10::nullopt);
+  at::Tensor t = empty(c10::SymIntArrayRef::fromIntArrayRef(size), dtype,
+                       layout, device, pin_memory, c10::nullopt);
   return torch_xla::XLANativeFunctions::as_strided(t, size, stride,
                                                    /*storage_offset=*/0);
 }
 
 at::Tensor XLANativeFunctions::expand(const at::Tensor& self,
-                                      at::SymIntArrayRef sym_size, bool implicit) {
+                                      at::SymIntArrayRef sym_size,
+                                      bool implicit) {
   XLA_FN_COUNTER("xla::");
   auto size = c10::asIntArrayRefSlow(sym_size);
   return bridge::AtenFromXlaTensor(XLATensor::expand(
@@ -3193,7 +3195,8 @@ at::Tensor XLANativeFunctions::new_empty_strided(
 }
 
 at::Tensor XLANativeFunctions::narrow_copy(const at::Tensor& self, int64_t dim,
-                                           c10::SymInt start, c10::SymInt length) {
+                                           c10::SymInt start,
+                                           c10::SymInt length) {
   return at::native::narrow_copy_dense(self, dim, start, length);
 }
 at::Tensor XLANativeFunctions::pixel_shuffle(const at::Tensor& self,
