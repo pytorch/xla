@@ -16,6 +16,10 @@ full_codegen:
   - atanh
   - binary_cross_entropy
   - binary_cross_entropy_backward
+  - bitwise_and.Tensor
+  - bitwise_not
+  - bitwise_or.Tensor
+  - bitwise_xor.Tensor
   - ceil
   - cholesky
   - clamp.Tensor
@@ -129,13 +133,6 @@ supported:
   - bernoulli_.float
   - bernoulli_.Tensor
   - binary_cross_entropy_with_logits
-  - bitwise_and.Scalar
-  - bitwise_and.Tensor
-  - bitwise_not
-  - bitwise_or.Scalar
-  - bitwise_or.Tensor
-  - bitwise_xor.Scalar
-  - bitwise_xor.Tensor
   - bmm
   - cat
   - celu

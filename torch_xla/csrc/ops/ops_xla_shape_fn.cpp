@@ -23,6 +23,22 @@ std::vector<T> GetValuesVectorWithOptional(
   }
   return result;
 }
+
+xla::Shape InferBinaryOpShape(const torch::lazy::Value& first,
+                              const torch::lazy::Value& second,
+                              const torch_xla::XlaOpCombiner& bin_op) {
+  auto lower_for_shape_fn =
+      [&](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
+    return XlaHelpers::PromotedBinaryOp(operands[0], operands[1], bin_op);
+  };
+
+  std::vector<xla::Shape> shapes;
+  for (auto& i : {first, second}) {
+    shapes.push_back(GetXlaShape(i));
+  }
+
+  return InferOutputShape(shapes, lower_for_shape_fn);
+}
 }  // namespace
 
 xla::Shape AbsOutputShape(const torch::lazy::Value& input) {
@@ -202,6 +218,28 @@ xla::Shape BinaryCrossEntropyBackwardOutputShape(
     shapes.push_back(GetXlaShape(i));
   }
   return InferOutputShape(shapes, lower_for_shape_fn);
+}
+
+xla::Shape BitwiseAndTensorOutputShape(const torch::lazy::Value& input,
+                                       const torch::lazy::Value& other) {
+  return InferBinaryOpShape(
+      input, other, [](xla::XlaOp one, xla::XlaOp two) { return one & two; });
+}
+
+xla::Shape BitwiseNotOutputShape(const torch::lazy::Value& input) {
+  return GetXlaShape(input);
+}
+
+xla::Shape BitwiseOrTensorOutputShape(const torch::lazy::Value& input,
+                                      const torch::lazy::Value& other) {
+  return InferBinaryOpShape(
+      input, other, [](xla::XlaOp one, xla::XlaOp two) { return one | two; });
+}
+
+xla::Shape BitwiseXorTensorOutputShape(const torch::lazy::Value& input,
+                                       const torch::lazy::Value& other) {
+  return InferBinaryOpShape(
+      input, other, [](xla::XlaOp one, xla::XlaOp two) { return one ^ two; });
 }
 
 xla::Shape CeilOutputShape(const torch::lazy::Value& input) {
