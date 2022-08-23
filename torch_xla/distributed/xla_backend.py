@@ -78,6 +78,10 @@ class ProcessGroupXla(ProcessGroup):
 
     return _ret_work([t for sublist in output_tensors_list for t in sublist])
 
+  def _allgather_base(self, output, input):
+    xm.all_gather(input, output=output, groups=self._mesh)
+    return _ret_work([output])
+
   # Call site:
   # https://github.com/pytorch/pytorch/blob/release/1.10/torch/distributed/distributed_c10d.py#L1129
   def broadcast(self, tensors, opts):
@@ -116,6 +120,21 @@ class ProcessGroupXla(ProcessGroup):
           pin_layout=False)
 
     return _ret_work(output_tensors)
+
+  def _reduce_scatter_base(self, output, input, opts):
+    reduce_type = self._get_reduce_type(opts.reduceOp)
+    groups = self._mesh
+    shard_count = len(groups[0]) if groups else self.size()
+    xm.reduce_scatter(
+        reduce_type,
+        input,
+        scatter_dim=0,
+        shard_count=shard_count,
+        scale=1,
+        groups=groups,
+        output=output,
+        pin_layout=False)
+    return _ret_work(output)
 
   # Call site:
   # https://github.com/pytorch/pytorch/blob/70f57bcb1e45d21532bdb1c44d3aab018d1cbe88/torch/distributed/distributed_c10d.py#L2683
