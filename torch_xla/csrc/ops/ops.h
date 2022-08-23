@@ -109,8 +109,6 @@ torch::lazy::NodePtr Pow(const torch::lazy::Value& input,
 torch::lazy::NodePtr Fmod(const torch::lazy::Value& dividend,
                           const torch::lazy::Value& divisor);
 
-torch::lazy::NodePtr Not(const torch::lazy::Value& input);
-
 torch::lazy::NodePtr LogSigmoid(const torch::lazy::Value& input);
 
 torch::lazy::NodePtr Sigmoid(const torch::lazy::Value& input);
