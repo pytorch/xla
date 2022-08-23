@@ -8,7 +8,7 @@ import torch_xla.distributed.xla_backend
 import torch.distributed as dist
 
 
-def test_allgather(index):
+def _test_allgather():
   device = xm.xla_device()
   if xm.xla_device_hw(device) in ('TPU', 'GPU'):
     world_size = xm.xrt_world_size()
@@ -33,7 +33,7 @@ def test_allgather(index):
         file=sys.stderr)
 
 
-def test__allgather_base(index):
+def _test__allgather_base():
   device = xm.xla_device()
   if xm.xla_device_hw(device) in ('TPU', 'GPU'):
     world_size = xm.xrt_world_size()
@@ -56,6 +56,10 @@ def test__allgather_base(index):
         file=sys.stderr)
 
 
+def _mp_fn(index):
+  _test_allgather()
+  _test__allgather_base()
+
+
 if __name__ == '__main__':
-  xmp.spawn(test_allgather, args=())
-  xmp.spawn(test__allgather_base, args=())
+  xmp.spawn(_mp_fn, args=())

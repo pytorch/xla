@@ -8,7 +8,7 @@ import torch_xla.distributed.xla_backend
 import torch.distributed as dist
 
 
-def test_reduce_scatter(index):
+def _test_reduce_scatter():
   device = xm.xla_device()
   if xm.xla_device_hw(device) in ('TPU', 'GPU'):
     world_size = xm.xrt_world_size()
@@ -30,7 +30,7 @@ def test_reduce_scatter(index):
         file=sys.stderr)
 
 
-def test__reduce_scatter_base(index):
+def _test__reduce_scatter_base():
   device = xm.xla_device()
   if xm.xla_device_hw(device) in ('TPU', 'GPU'):
     world_size = xm.xrt_world_size()
@@ -52,6 +52,10 @@ def test__reduce_scatter_base(index):
         file=sys.stderr)
 
 
+def _mp_fn(index):
+  _test_reduce_scatter()
+  _test__reduce_scatter_base()
+
+
 if __name__ == '__main__':
-  xmp.spawn(test_reduce_scatter, args=())
-  xmp.spawn(test__reduce_scatter_base, args=())
+  xmp.spawn(_mp_fn, args=())
