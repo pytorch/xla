@@ -25,7 +25,7 @@
 template <typename T>
 T ConsumeValue(xla::StatusOr<T>&& status) {
   XLA_CHECK_OK(status.status());
-  return status.ConsumeValueOrDie();
+  return status.value();
 }
 
 #endif  // XLA_CLIENT_DEBUG_MACROS_H_
