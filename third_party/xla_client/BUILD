@@ -10,14 +10,14 @@ load(
     "if_with_tpu_support",
 )
 load(
-    "//tensorflow/core/platform/default:build_config.bzl",
+    "//tensorflow/tsl/platform/default:build_config.bzl",
     "tf_additional_all_protos",
     "tf_proto_library",
     "tf_proto_library_cc",
     "tf_proto_library_py",
 )
 load(
-    "//tensorflow/core/platform/default:cuda_build_defs.bzl",
+    "//tensorflow/tsl/platform/default:cuda_build_defs.bzl",
     "if_cuda_is_configured",
 )
 
