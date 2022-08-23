@@ -38,7 +38,6 @@
 #include "torch_xla/csrc/ops/bitwise_ir_ops.h"
 #include "torch_xla/csrc/ops/cast.h"
 #include "torch_xla/csrc/ops/cat.h"
-#include "torch_xla/csrc/ops/cholesky.h"
 #include "torch_xla/csrc/ops/collective_permute.h"
 #include "torch_xla/csrc/ops/constant.h"
 #include "torch_xla/csrc/ops/constant_pad_nd.h"
@@ -925,12 +924,6 @@ XLATensorPtr XLATensor::celu(const XLATensorPtr& input,
 
 void XLATensor::celu_(XLATensorPtr& input, const at::Scalar& alpha) {
   input->SetInPlaceIrValue(Celu(input->GetIrValue(), alpha));
-}
-
-XLATensorPtr XLATensor::cholesky(const XLATensorPtr& input, bool upper) {
-  // Cholesky takes lower instead of upper, hence the negation.
-  return input->CreateFrom(
-      torch::lazy::MakeNode<Cholesky>(input->GetIrValue(), !upper));
 }
 
 XLATensorPtr XLATensor::clamp(const XLATensorPtr& input,

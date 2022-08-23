@@ -2,6 +2,7 @@
 
 #include "tensorflow/compiler/xla/client/lib/logdet.h"
 #include "tensorflow/compiler/xla/client/lib/math.h"
+#include "tensorflow/compiler/xla/client/lib/matrix.h"
 #include "torch_xla/csrc/data_ops.h"
 #include "torch_xla/csrc/elementwise.h"
 #include "torch_xla/csrc/helpers.h"
@@ -142,6 +143,14 @@ torch_xla::XlaOpVector BinaryCrossEntropyBackward::Lower(
 torch_xla::XlaOpVector Ceil::Lower(LoweringContext* loctx) const {
   xla::XlaOp xla_input = loctx->GetOutputOp(operand(0));
   return ReturnOp(xla::Ceil(xla_input), loctx);
+}
+
+torch_xla::XlaOpVector Cholesky::Lower(LoweringContext* loctx) const {
+  xla::XlaOp xla_input = loctx->GetOutputOp(operand(0));
+  // Cholesky takes lower instead of upper, hence the negation.
+  xla::XlaOp output = xla::Triangle(xla::Cholesky(xla_input, /*lower=*/!upper),
+                                    /*lower=*/!upper);
+  return ReturnOp(output, loctx);
 }
 
 torch_xla::XlaOpVector ClampTensor::Lower(LoweringContext* loctx) const {
