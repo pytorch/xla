@@ -8,7 +8,7 @@ import torch_xla.distributed.xla_backend
 import torch.distributed as dist
 
 
-def _mp_fn(index):
+def test_allgather(index):
   device = xm.xla_device()
   if xm.xla_device_hw(device) in ('TPU', 'GPU'):
     world_size = xm.xrt_world_size()
@@ -33,5 +33,29 @@ def _mp_fn(index):
         file=sys.stderr)
 
 
+def test__allgather_base(index):
+  device = xm.xla_device()
+  if xm.xla_device_hw(device) in ('TPU', 'GPU'):
+    world_size = xm.xrt_world_size()
+    rank = xm.get_ordinal()
+
+    dist.init_process_group('xla', world_size=world_size, rank=rank)
+
+    input = torch.ones((2, 3)) * rank
+    output = torch.zeros((2 * world_size, 3))
+    xinput = input.to(device)
+    xoutput = output.to(device)
+    dist._all_gather_base(xoutput, xinput)
+    xoutputs = torch.split(xoutput, world_size)
+    for i, o in enumerate(xoutputs):
+      expected = torch.ones((2, 3)) * i
+      assert torch.all(o.cpu() == expected), f'{o} != {expected}'
+  else:
+    print(
+        'Default device {} is not a TPU or GPU device'.format(device),
+        file=sys.stderr)
+
+
 if __name__ == '__main__':
-  xmp.spawn(_mp_fn, args=())
+  xmp.spawn(test_allgather, args=())
+  xmp.spawn(test__allgather_base, args=())
