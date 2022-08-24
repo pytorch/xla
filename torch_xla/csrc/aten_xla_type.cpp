@@ -1203,13 +1203,6 @@ at::Tensor& XLANativeFunctions::fill_(at::Tensor& self,
   return torch_xla::XLANativeFunctions::fill_(self, value.item());
 }
 
-at::Tensor XLANativeFunctions::flip(const at::Tensor& self,
-                                    at::IntArrayRef dims) {
-  XLA_FN_COUNTER("xla::");
-  return bridge::AtenFromXlaTensor(
-      XLATensor::flip(bridge::GetXlaTensor(self), XlaHelpers::I64List(dims)));
-}
-
 at::Tensor XLANativeFunctions::fmod(const at::Tensor& self,
                                     const at::Tensor& other) {
   XLA_FN_COUNTER("xla::");

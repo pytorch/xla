@@ -49,7 +49,6 @@
 #include "torch_xla/csrc/ops/discrete_uniform.h"
 #include "torch_xla/csrc/ops/expand.h"
 #include "torch_xla/csrc/ops/exponential.h"
-#include "torch_xla/csrc/ops/flip.h"
 #include "torch_xla/csrc/ops/gather.h"
 #include "torch_xla/csrc/ops/generic.h"
 #include "torch_xla/csrc/ops/get_dimensions_size.h"
@@ -1135,16 +1134,6 @@ void XLATensor::fill_(XLATensorPtr& input, const at::Scalar& value) {
   torch::lazy::Value constant =
       GetIrValueForScalar(value, input->shape(), input->GetDevice());
   input->SetInPlaceIrValue(std::move(constant));
-}
-
-XLATensorPtr XLATensor::flip(const XLATensorPtr& input,
-                             absl::Span<const int64_t> dims) {
-  auto dimensions = torch::lazy::GetCanonicalDimensionIndices(
-      xla::util::ToVector<int64_t>(dims), input->shape().get().rank());
-  std::set<int64_t> unique_dims(dimensions.begin(), dimensions.end());
-  XLA_CHECK_EQ(unique_dims.size(), dimensions.size());
-  return input->CreateFrom(
-      torch::lazy::MakeNode<Flip>(input->GetIrValue(), dimensions));
 }
 
 XLATensorPtr XLATensor::fmod(

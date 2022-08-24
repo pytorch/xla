@@ -352,6 +352,11 @@ xla::Shape Expm1OutputShape(const torch::lazy::Value& input) {
   return GetXlaShape(input);
 }
 
+xla::Shape FlipOutputShape(const torch::lazy::Value& input,
+                           absl::Span<const int64_t> dims) {
+  return GetXlaShape(input);
+}
+
 xla::Shape FloorOutputShape(const torch::lazy::Value& input) {
   return GetXlaShape(input);
 }

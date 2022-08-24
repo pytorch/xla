@@ -577,10 +577,6 @@ class XLATensor : public c10::intrusive_ptr_target {
   // Fills the input with the given value.
   static void fill_(XLATensorPtr& input, const at::Scalar& value);
 
-  // Flips (reverses) the values in the dimensions of the input tensor.
-  static XLATensorPtr flip(const XLATensorPtr& input,
-                           absl::Span<const int64_t> dims);
-
   static XLATensorPtr fmod(
       const XLATensorPtr& input, const XLATensorPtr& other,
       c10::optional<at::ScalarType> logical_element_type = c10::nullopt);

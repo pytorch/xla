@@ -3,6 +3,7 @@
 #include "tensorflow/compiler/xla/client/lib/logdet.h"
 #include "tensorflow/compiler/xla/client/lib/math.h"
 #include "tensorflow/compiler/xla/client/lib/matrix.h"
+#include "torch/csrc/lazy/core/helpers.h"
 #include "torch_xla/csrc/data_ops.h"
 #include "torch_xla/csrc/elementwise.h"
 #include "torch_xla/csrc/helpers.h"
@@ -280,6 +281,17 @@ torch_xla::XlaOpVector Exp::Lower(LoweringContext* loctx) const {
 torch_xla::XlaOpVector Expm1::Lower(LoweringContext* loctx) const {
   xla::XlaOp xla_input = loctx->GetOutputOp(operand(0));
   return ReturnOp(xla::Expm1(xla_input), loctx);
+}
+
+torch_xla::XlaOpVector Flip::Lower(LoweringContext* loctx) const {
+  xla::XlaOp xla_input = loctx->GetOutputOp(operand(0));
+  auto dimensions = torch::lazy::GetCanonicalDimensionIndices(
+      xla::util::ToVector<int64_t>(dims),
+      XlaHelpers::ShapeOfXlaOp(xla_input).rank());
+  std::set<int64_t> unique_dims(dimensions.begin(), dimensions.end());
+  XLA_CHECK_EQ(unique_dims.size(), dimensions.size());
+  xla::XlaOp output = xla::Rev(xla_input, dimensions);
+  return ReturnOp(output, loctx);
 }
 
 torch_xla::XlaOpVector Floor::Lower(LoweringContext* loctx) const {
