@@ -99,14 +99,16 @@ def xla_device(n: Optional[int] = None,
   Returns:
     A `torch.device` representing an XLA device.
   """
-  devices = xm.get_xla_supported_devices(devkind=devkind)
-  device_index = n or (local_ordinal(default=0) % addressable_device_count())
-  if device_index > len(devices):
-    raise IndexError('Device index {} out of range in {}'.format(
-        device_index, devices))
+  if n is None:
+    return torch.device(torch_xla._XLAC._xla_get_default_device())
 
-  torch_xla._XLAC._xla_set_default_device(devices[device_index])
-  return torch.device(devices[device_index])
+  devices = xm.get_xla_supported_devices(devkind=devkind)
+  if n > len(devices):
+    raise IndexError('Device index {} out of range in {}'.format(n, devices))
+
+  device = devices[n]
+  torch_xla._XLAC._xla_set_default_device(device)
+  return torch.device(device)
 
 
 @requires_pjrt
@@ -138,28 +140,31 @@ def run_thread_per_device(local_rank: int, local_world_size: int,
   if device_type() == 'TPU':
     tpu.configure_topology(local_rank, local_world_size)
 
-  xm.set_replication(xm.xla_device(), xm.get_xla_supported_devices())
-  threads = len(xm.get_xla_supported_devices())
+  devices = xm.get_xla_supported_devices()
+  xm.set_replication(xm.xla_device(), devices)
+  num_threads = len(devices)
 
-  def _thread_fn(fn, device_index):
+  def _thread_fn(fn: Callable[..., R], device: torch.device):
 
     @functools.wraps(fn)
     def wrapper(*args, **kwargs):
-      # Assumes same number of threads per process
-      if device_type() == 'TPU':
-        set_global_ordinal(tpu.task_id() * threads + device_index)
-      else:
-        # TODO: support multiple hosts with CPU/GPU
-        set_global_ordinal(local_rank * threads + device_index)
+      torch_xla._XLAC._xla_set_default_device(device)
 
-      set_local_ordinal(local_rank * threads + device_index)
+      # "TPU:2" -> 2
+      device_id = int(xm.xla_real_devices([device])[0].split(':')[1])
+      set_global_ordinal(device_id)
+      # Assumes same number of threads per process
+      set_local_ordinal(device_id % local_world_size)
 
       return fn(*args, **kwargs)
 
     return wrapper
 
-  with concurrent.futures.ThreadPoolExecutor(max_workers=threads) as executor:
-    futures = {executor.submit(_thread_fn(fn, i)): i for i in range(threads)}
+  with concurrent.futures.ThreadPoolExecutor(
+      max_workers=num_threads) as executor:
+    futures = {
+        executor.submit(_thread_fn(fn, d)): i for i, d in enumerate(devices)
+    }
 
     results = {
         futures[f]: f.result() for f in concurrent.futures.as_completed(futures)

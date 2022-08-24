@@ -145,6 +145,10 @@ std::vector<ComputationClient::ComputationPtr> PjRtComputationClient::Compile(
     xla::ProgramShape program_shape =
         instance.computation.GetProgramShape().ValueOrDie();
     xla::CompileOptions compile_options;
+    xla::DeviceAssignment device_assignment(client_->device_count(), 1);
+    device_assignment.FillIota(0);
+    compile_options.executable_build_options.set_device_assignment(
+        device_assignment);
     // TODO(wcromar): set compile_options.argument_layouts, enable strict shapes
     compile_options.executable_build_options.set_num_partitions(1);
     compile_options.executable_build_options.set_num_replicas(
