@@ -38,7 +38,6 @@ struct DataAsync {
 void TransferToServerAsync(std::shared_ptr<DataAsync> async,
                            const std::vector<std::string>& devices) {
   XLA_TIMED("TransferToServerAsync");
-
   std::vector<xla::ComputationClient::DataPtr> async_xla_datas =
       xla::ComputationClient::Get()->CreateAsyncDatas(async->source_tensors);
   async->handle_unlockers =
@@ -904,6 +903,11 @@ std::vector<torch::lazy::BackendDataPtr> CreateTensorsData(
   }
 }
 
+<<<<<<< HEAD
+=======
+// TODO(yeounoh) support `transfer_async`. This may require locking devices
+// more carefully.
+>>>>>>> 78b42e95 (* Remove kEnvSpmdTest flag)
 std::vector<torch::lazy::BackendDataPtr> CreateTensorsData(
     const std::vector<at::Tensor>& tensors,
     const std::vector<XLATensor::ShardingSpecPtr>& shardings,

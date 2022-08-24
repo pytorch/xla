@@ -1250,14 +1250,20 @@ class XLATensor : public c10::intrusive_ptr_target {
     size_t emitted_nodes = 0;
     std::shared_ptr<xla::ComputationClient::Computation> computation;
     std::vector<torch::lazy::BackendDataPtr> parameters_data;
+    bool is_sharded = false;
   };
 
   struct CachedComputation {
     CachedComputation(
         std::shared_ptr<xla::ComputationClient::Computation> computation)
         : computation(std::move(computation)) {}
+    CachedComputation(
+        std::shared_ptr<xla::ComputationClient::Computation> computation,
+        bool is_sharded)
+        : computation(std::move(computation)), is_sharded(is_sharded) {}
 
     std::shared_ptr<xla::ComputationClient::Computation> computation;
+    bool is_sharded = false;
   };
 
   using ComputationCache =

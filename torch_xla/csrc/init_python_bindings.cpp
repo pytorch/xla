@@ -1378,62 +1378,20 @@ void InitXlaModuleBindings(py::module m) {
   m.def("_xla_mark_sharding", [](const at::Tensor& input,
                                  const py::list& tile_assignment,
                                  bool replicated = false, bool manual = false) {
-    XLA_CHECK(!(replicated && manual))
-        << "Invalid input sharding spec: "
-        << "replicated=" << replicated << " manual=" << manual;
+    xla::OpSharding sharding =
+        ShardingUtil::CreateOpSharding(tile_assignment, replicated, manual);
 
-    // Support {REPLICATED, OTHER, MANUAL} sharding types
-    xla::OpSharding sharding;
-    if (replicated && !manual) {
-      xla::HloSharding hlo_sharding = xla::HloSharding::Replicate();
-      sharding = hlo_sharding.ToProto();
-    } else if (!replicated && manual) {
-      xla::HloSharding hlo_sharding = xla::HloSharding::Manual();
-      sharding = hlo_sharding.ToProto();
-    } else {
-      size_t rank0 = tile_assignment.size();
-      XLA_CHECK(rank0 > 0) << "Invalid input sharding spec: "
-                           << "empty tile_assignment";
-
-      // Support chunk (1-D) and mesh (2-D) shardings
-      std::string type = GetPyTypeString(tile_assignment[0]);
-      if (type.compare("list") == 0) {
-        py::list row = tile_assignment[0].cast<py::list>();
-        size_t rank1 = row.size();
-        XLA_CHECK(rank1 > 0) << "Invalid input sharding spec: "
-                             << "empty or irregular tile_assignment";
-        XLA_CHECK(GetPyTypeString(row[0]).compare("list") != 0)
-            << "Invalid input sharding spec: "
-            << "tile_assignment (ndarray) rank > 2";
-
-        std::vector<int64_t> tile_shape{static_cast<long>(rank0),
-                                        static_cast<long>(rank1)};
-        xla::Array<int64_t> tile_array(tile_shape);
-        tile_array.Each([&](absl::Span<const int64_t> indices, int64_t* v) {
-          auto r = tile_assignment[indices[0]].cast<py::list>();
-          *v = r[indices[1]].cast<int64_t>();
-        });
-        xla::HloSharding hlo_sharding = xla::HloSharding::Tile(tile_array);
-        sharding = hlo_sharding.ToProto();
-      } else if (type.compare("int") == 0 || type.compare("float") == 0) {
-        std::vector<int64_t> tile_shape{static_cast<long>(rank0)};
-        xla::Array<int64_t> tile_array(tile_shape);
-        tile_array.Each([&](absl::Span<const int64_t> indices, int64_t* v) {
-          *v = tile_assignment[indices[0]].cast<int64_t>();
-        });
-        xla::HloSharding hlo_sharding = xla::HloSharding::Tile(tile_array);
-        sharding = hlo_sharding.ToProto();
-      } else {
-        LOG(ERROR) << "Unsupported tile_assignment (ndarray) element type: "
-                   << type;
-      }
-    }
-
-    // TODO(yeounoh) XLATensor may not have the device data (xla_data).
-    // If it does, delete and uploads the sharded tensor to the devices.
-    // Initiating the data transfer here before tracing is more efficieint.
+    // TODO(yeounoh) use `SPMD` device to avoid input at::Tensor uploading.
+    // For now, we move the pre-uploaded data back to cpu_tensor for sharding.
     XLATensorPtr xtensor = bridge::GetXlaTensor(input);
+    std::vector<XLATensorPtr> xla_tensors{xtensor};
+    at::Tensor cpu_tensor = XLATensor::GetTensors(&xla_tensors)[0];
     auto sharding_spec = std::make_shared<XLATensor::ShardingSpec>(sharding);
+    auto xla_data = CreateTensorsData(
+        std::vector<at::Tensor>{cpu_tensor},
+        std::vector<XLATensor::ShardingSpecPtr>{sharding_spec},
+        std::vector<std::string>{GetVirtualDevice().toString()})[0];
+    xtensor->SetXlaData(xla_data);
     xtensor->SetShardingSpec(*sharding_spec);
   });
   m.def("_xla_clear_sharding", [](const at::Tensor& input) {

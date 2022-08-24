@@ -32,6 +32,7 @@
 #include "torch/csrc/lazy/core/ir_util.h"
 #include "torch/csrc/lazy/core/tensor_util.h"
 #include "torch/csrc/lazy/core/util.h"
+#include "torch_xla/csrc/computation.h"
 #include "torch_xla/csrc/debug_util.h"
 #include "torch_xla/csrc/helpers.h"
 #include "torch_xla/csrc/ir_dump_util.h"
@@ -1041,6 +1042,7 @@ void XLATensor::TensorCollectionBarrier(SyncTensorCollection* coll) {
   TF_VLOG(4) << "Waiting on device barrier for device " << coll->device
              << " ...";
   {
+    // TODO(yeounoh) lock SPMD device
     XLA_TIMED("DeviceLockWait");
     coll->unlocker = LockDevices({coll->device});
   }
@@ -1290,12 +1292,12 @@ XLATensor::SyncTensorCollection XLATensor::CollectSyncTensors(
       xla::ComputationClient::Get()->GetResourceDomain(coll.device.toString()));
   if (!at_tensors.empty()) {
     XLA_COUNTER("SyncTensorsToData", at_tensors.size());
-    // TODO(yeounoh) create data handles with shardings.
-    bool is_spmd =
-        xla::sys_util::GetEnvString(xla::env::kEnvSpmdTest, "0") == "1";
+    // TODO(yeounoh) create data handles with shardings. If a tensor has a
+    // sharding annotation, then a BackendDataPtr with PjRtShardedData is
+    // returned; if there is no sharding annotation, then a BackendDataPtr with
+    // PjRtData is returned.
     std::vector<torch::lazy::BackendDataPtr> handles =
-        is_spmd ? CreateTensorsData(at_tensors, shardings, devices)
-                : CreateTensorsData(at_tensors, devices);
+        CreateTensorsData(at_tensors, shardings, devices);
     for (size_t i = 0; i < handles.size(); ++i) {
       // If we are here, it means that the IR torch::lazy::Value for the
       // tensor is not present. Also, we uploaded the at::Tensor data to the
@@ -1439,20 +1441,23 @@ std::shared_ptr<XLATensor::Async> XLATensor::ScheduleSyncTensorsGraph(
     ComputationCache::TypePtr cached_computation) {
   tensorflow::profiler::TraceMe activity(
       "ScheduleSyncTensorsGraph", tensorflow::profiler::TraceMeLevel::kInfo);
+  bool is_sharded = cached_computation->is_sharded;
+  std::cout << "ScheduleSyncTensorsGraph, is_sharded: " << is_sharded
+            << std::endl;
+  auto computation = Computation(cached_computation->computation);
+  std::cout << "- " << computation.to_string() << std::endl;
   TensorCollectionBarrier(coll);
   std::shared_ptr<Async> async = std::make_shared<Async>(
       coll, std::move(parameters_data), std::move(tensors_data),
       std::move(cached_computation));
 
-  auto syncfn = [async, hash = coll->hash]() {
+  auto syncfn = [async, is_sharded, hash = coll->hash]() {
     xla::ComputationClient::ExecuteComputationOptions options;
     try {
       std::vector<xla::ComputationClient::DataPtr> results;
-      if (xla::sys_util::GetEnvString(xla::env::kEnvSpmdTest, "0") == "1") {
-        // TODO(yeounoh):
-        // - Shard input (input handler) -> device_arguments
-        // - Execute replicated mode
-        // - Return outputs (output handler)
+      // TODO(yeounoh) Execute replicated if the compiled computation
+      // is partitioned.
+      if (is_sharded) {
         std::vector<std::string> devices =
             xla::ComputationClient::Get()->GetAllDevices();
         std::vector<std::vector<xla::ComputationClient::DataPtr>>
@@ -1706,7 +1711,7 @@ XLATensor::CompilationResult XLATensor::Compile(
     lowering_ctx.AddResult(root);
   }
   // Annotate HLO sharding selectively in the compuation.
-  ShardingUtil::SetHloSharding(&lowering_ctx);
+  bool is_sharded = ShardingUtil::SetHloSharding(&lowering_ctx);
 
   std::vector<std::pair<int64_t, int64_t>> input_output_alias_pair;
   if (enable_aliasing && coll.config.sync_xla_data) {
@@ -1759,7 +1764,7 @@ XLATensor::CompilationResult XLATensor::Compile(
   instances.push_back({std::move(computation), coll.device.toString(),
                        xla::ComputationClient::Get()->GetCompilationDevices(
                            coll.device.toString(), devices),
-                       &shape, should_wrap_parameter});
+                       &shape, should_wrap_parameter, is_sharded});
 
   TF_VLOG(3) << "Compiling IR graph hash "
              << torch::lazy::HashToString(coll.hash) << " on device "
@@ -1787,7 +1792,8 @@ XLATensor::CompilationResult XLATensor::Compile(
   return {/*device=*/coll.device,
           /*emitted_nodes=*/lowering_ctx.GetEmittedNodeCount(),
           /*computation=*/std::move(computations.front()),
-          /*parameters_data=*/std::move(po_data->parameters_data)};
+          /*parameters_data=*/std::move(po_data->parameters_data),
+          /*is_sharded=*/is_sharded};
 }
 
 std::shared_ptr<XLATensor::Async> XLATensor::SyncTensorsGraphInternal(
@@ -1821,7 +1827,7 @@ std::shared_ptr<XLATensor::Async> XLATensor::SyncTensorsGraphInternal(
   TF_VLOG(5) << "TensorsGraphSize=" << compile_result.emitted_nodes;
 
   auto cached_computation = std::make_shared<CachedComputation>(
-      std::move(compile_result.computation));
+      std::move(compile_result.computation), compile_result.is_sharded);
   GetComputationCache()->Add(coll.hash, cached_computation);
 
   return ScheduleSyncTensorsGraph(

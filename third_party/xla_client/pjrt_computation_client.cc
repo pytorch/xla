@@ -115,7 +115,6 @@ std::vector<ComputationClient::DataPtr> PjRtComputationClient::TransferToServer(
   int64_t total_size = 0;
   for (auto& tensor : tensors) {
     PjRtDevice* pjrt_device = StringToPjRtDevice(tensor.device);
-
     auto literal = std::make_shared<xla::Literal>(tensor.shape);
     tensor.populate_fn(tensor, literal->untyped_data(), literal->size_bytes());
     std::vector<int64_t> byte_strides(literal->shape().dimensions_size());
