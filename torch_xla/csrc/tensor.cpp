@@ -6,10 +6,12 @@
 #include <condition_variable>
 #include <exception>
 #include <functional>
+#include <iostream>
 #include <mutex>
 #include <set>
 #include <stdexcept>
 #include <unordered_set>
+using std::cerr;
 
 #include "absl/container/flat_hash_map.h"
 #include "absl/memory/memory.h"
@@ -1639,6 +1641,63 @@ void XLATensor::BuildInputOutputAliases(
   XLA_VALUE_METRIC("InputOutputAliasCount", alias_map.size());
 }
 
+xla::StatusOr<xla::XlaComputation> WrapComputation(
+    const xla::XlaComputation& computation,
+    const std::vector<xla::Shape>& parameter_shapes) {
+  xla::XlaBuilder builder(computation.proto().name());
+
+  // Construct a single tuple parameter.
+  const xla::XlaOp input_tuple = [&builder, &parameter_shapes]() {
+    xla::Shape input_tuple;
+    input_tuple.set_element_type(xla::PrimitiveType::TUPLE);
+    input_tuple.mutable_tuple_shapes()->reserve(parameter_shapes.size());
+    for (int i = 0; i < parameter_shapes.size(); ++i) {
+      *input_tuple.add_tuple_shapes() = parameter_shapes[i];
+    }
+    return xla::Parameter(&builder, 0, input_tuple, "in");
+  }();
+
+  // Handle the results of the original computation.
+  const std::vector<xla::XlaOp> inner_params = [&input_tuple,
+                                                &parameter_shapes]() {
+    std::vector<xla::XlaOp> parameters;
+    parameters.reserve(parameter_shapes.size());
+    for (int i = 0; i < parameter_shapes.size(); ++i) {
+      parameters.push_back(xla::GetTupleElement(input_tuple, i));
+    }
+    return parameters;
+  }();
+
+  // Call the original computation.
+  xla::XlaOp orig_result;
+  orig_result = xla::Call(&builder, computation, inner_params);
+
+  // Construct a single tuple result.
+  const std::vector<xla::XlaOp> results = [&orig_result]() {
+    std::vector<xla::XlaOp> results;
+    results.push_back(orig_result);
+    return results;
+  }();
+
+  xla::XlaOp result_tuple;
+  { result_tuple = xla::Tuple(&builder, results); }
+
+  // // Preserve aliases.
+  // if (io_info.use_dummy_input()) {
+  //   for (const auto& [input_index, output_index] : io_info.io_aliases) {
+  //     Skip the dummy input at index 0.
+  //     builder.SetUpAlias(xla::ShapeIndex({output_index}), 0,
+  //                        xla::ShapeIndex({input_index + 1}));
+  //   }
+  // } else {
+  //   for (const auto& [input_index, output_index] : io_info.io_aliases) {
+  //     builder.SetUpAlias(xla::ShapeIndex({output_index}), 0,
+  //                        xla::ShapeIndex({input_index}));
+  //   }
+  // }
+  return builder.Build(result_tuple);
+}
+
 XLATensor::CompilationResult XLATensor::Compile(
     const std::vector<XLATensorPtr>& tensors,
     absl::Span<const std::string> devices, const SyncTensorCollection& coll,
@@ -1693,7 +1752,13 @@ XLATensor::CompilationResult XLATensor::Compile(
   }
 
   xla::XlaComputation computation = ConsumeValue(lowering_ctx.BuildXla());
+  cerr << "hlo built = \n"
+       << ConsumeValue(xla::util::GetComputationHloText(computation)) << "\n";
   xla::ProgramShape program_shape = ConsumeValue(computation.GetProgramShape());
+  xla::XlaComputation wrapped_computation =
+      ConsumeValue(WrapComputation(computation, program_shape.parameters()));
+  cerr << "wrapped hlo built = \n"
+       << ConsumeValue(xla::util::GetComputationHloText(wrapped_computation)) << "\n";
   xla::Shape shape = MakeShapeWithDeviceLayout(
       program_shape.result(), static_cast<XlaDeviceType>(coll.device.type()));
 

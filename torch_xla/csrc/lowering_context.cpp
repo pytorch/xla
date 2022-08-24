@@ -14,6 +14,9 @@
 #include "torch_xla/csrc/helpers.h"
 #include "torch_xla/csrc/tensor_util.h"
 
+#include <iostream>
+using std::cerr;
+
 namespace torch_xla {
 namespace {
 
