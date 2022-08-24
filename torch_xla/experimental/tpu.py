@@ -98,7 +98,8 @@ def get_worker_ips() -> List[str]:
 
 def configure_topology(local_rank: int,
                        local_world_size: int,
-                       base_port: int = 8476) -> None:
+                       base_port: int = 8476,
+                       mesh_port: int = 12355) -> None:
   """Configures TPU topology environment variables based on TPU metadata.
 
   Must be run before using any XLA devices.
@@ -108,6 +109,7 @@ def configure_topology(local_rank: int,
     local_world_size: number of processes on this host.
     base_port: starting port for TPU clients on each host. Ports in the range
       [base_port, base_port + local_world_size) must be free on each host.
+    mesh_port: port to use for rendezvous operations. Must be free in process 0.
   """
   tpu_env = get_tpu_env()
 
@@ -146,3 +148,6 @@ def configure_topology(local_rank: int,
 
   os.environ.setdefault(xenv.TPU_VISIBLE_DEVICES, str(local_rank))
   os.environ.setdefault(xenv.TPU_PROCESS_PORT, str(ports[local_rank]))
+
+  # Set XRT_MESH_SERVICE_ADDRESS for compatibility.
+  os.environ.setdefault(xenv.SERVICE_ADDRESS, f'{worker_ips[0]}:{mesh_port}')
