@@ -153,6 +153,7 @@ std::vector<ComputationClient::ComputationPtr> PjRtComputationClient::Compile(
     compile_options.executable_build_options.set_num_partitions(1);
     compile_options.executable_build_options.set_num_replicas(
         client_->device_count());
+    compile_options.parameter_is_tupled_arguments = true;
     std::unique_ptr<xla::PjRtExecutable> executable =
         client_->Compile(instance.computation, compile_options).ValueOrDie();
     std::shared_ptr<PjRtComputation> pjrt_computation =
