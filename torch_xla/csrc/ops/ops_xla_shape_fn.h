@@ -112,6 +112,8 @@ xla::Shape Expm1OutputShape(const torch::lazy::Value& input);
 
 xla::Shape FloorOutputShape(const torch::lazy::Value& input);
 
+xla::Shape FracOutputShape(const torch::lazy::Value& input);
+
 xla::Shape GeScalarOutputShape(const torch::lazy::Value& self,
                                const torch::lazy::Value& other);
 

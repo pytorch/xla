@@ -36,6 +36,7 @@ full_codegen:
   - exp
   - expm1
   - floor
+  - frac
   - ge.Scalar
   - ge.Tensor
   - gt.Scalar
@@ -167,7 +168,6 @@ supported:
   - flip
   - fmod.Scalar
   - fmod.Tensor
-  - frac
   - gather
   - gelu
   - gelu_backward

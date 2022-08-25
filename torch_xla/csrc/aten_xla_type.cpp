@@ -1230,11 +1230,6 @@ at::Tensor XLANativeFunctions::fmod(const at::Tensor& self,
                     });
 }
 
-at::Tensor XLANativeFunctions::frac(const at::Tensor& self) {
-  XLA_FN_COUNTER("xla::");
-  return bridge::AtenFromXlaTensor(XLATensor::frac(bridge::GetXlaTensor(self)));
-}
-
 at::Tensor XLANativeFunctions::gather(const at::Tensor& self, int64_t dim,
                                       const at::Tensor& index,
                                       bool /* sparse_grad */) {
