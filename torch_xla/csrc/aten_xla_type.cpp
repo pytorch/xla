@@ -1219,7 +1219,7 @@ at::Tensor XLANativeFunctions::flip(const at::Tensor& self,
 at::Tensor XLANativeFunctions::floor_divide(const at::Tensor& self,
                                             const at::Tensor& other) {
   return torch_xla::XLANativeFunctions::div(self, other,
-                                            /*rounding_mode=*/"trunc");
+                                            /*rounding_mode=*/"floor");
 }
 
 at::Tensor XLANativeFunctions::fmod(const at::Tensor& self,

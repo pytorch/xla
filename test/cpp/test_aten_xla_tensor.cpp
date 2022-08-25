@@ -3015,13 +3015,13 @@ TEST_F(AtenXlaTensorTest, TestFloorDivide) {
   for (torch::ScalarType scalar_type1 : {torch::kFloat, torch::kInt}) {
     torch::Tensor a =
         isFloatingType(scalar_type1)
-            ? torch::rand({3, 4}, torch::TensorOptions(scalar_type1))
+            ? torch::rand({3, 4}, torch::TensorOptions(scalar_type1)) - 0.5f
             : torch::randint(0, 100, {3, 4},
                              torch::TensorOptions(scalar_type1));
     for (torch::ScalarType scalar_type2 : {torch::kFloat, torch::kInt}) {
       torch::Tensor b =
           isFloatingType(scalar_type2)
-              ? torch::rand({3, 4}, torch::TensorOptions(scalar_type2))
+              ? torch::rand({3, 4}, torch::TensorOptions(scalar_type2)) + 0.5f
               : torch::randint(1, 100, {3, 4},
                                torch::TensorOptions(scalar_type2));
       torch::Tensor c = torch::floor_divide(a, b);
