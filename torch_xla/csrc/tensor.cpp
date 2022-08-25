@@ -6,12 +6,10 @@
 #include <condition_variable>
 #include <exception>
 #include <functional>
-#include <iostream>
 #include <mutex>
 #include <set>
 #include <stdexcept>
 #include <unordered_set>
-using std::cerr;
 
 #include "absl/container/flat_hash_map.h"
 #include "absl/memory/memory.h"
@@ -1762,12 +1760,6 @@ XLATensor::CompilationResult XLATensor::Compile(
   xla::Shape shape =
       MakeShapeWithDeviceLayout(wrapped_program_shape.result(),
                                 static_cast<XlaDeviceType>(coll.device.type()));
-
-  cerr << "hlo built = \n"
-       << ConsumeValue(xla::util::GetComputationHloText(computation)) << "\n";
-  cerr << "wrapped hlo built = \n"
-       << ConsumeValue(xla::util::GetComputationHloText(wrapped_computation))
-       << "\n";
 
   std::vector<xla::ComputationClient::CompileInstance> instances;
   instances.push_back({std::move(wrapped_computation), coll.device.toString(),
