@@ -1602,10 +1602,11 @@ XLATensor::OpByOpAsync XLATensor::SyncTensorsGraphOpByOp(
   return async_op.Schedule();
 }
 
-void XLATensor::BuildInputOutputAliases(
+std::vector<std::pair<int64_t, int64_t>> XLATensor::BuildInputOutputAliases(
     const std::vector<XLATensorPtr>& tensors, absl::Span<const size_t> indices,
     LoweringContext* lowering_ctx) {
   std::unordered_map<int64_t, size_t> output_tensor_id_map;
+  std::vector<std::pair<int64_t, int64_t>> input_output_alias_pair;
   for (size_t i = 0; i < indices.size(); ++i) {
     size_t tensor_index = indices[i];
     int64_t tensor_id = tensors[tensor_index]->GetUniqueId();
@@ -1626,9 +1627,12 @@ void XLATensor::BuildInputOutputAliases(
         const xla::Shape& root_shape = XlaHelpers::ShapeOfXlaOp(root);
         if (parameters_data[i]->shape() == root_shape &&
             alias_map[output_index] < 0) {
+          // parameter is not a tuple so param_index will always be {}
           lowering_ctx->builder()->SetUpAlias(
-              {static_cast<int64_t>(output_index)}, i, {});
+              {/*output_index=*/static_cast<int64_t>(output_index)},
+              /*param_number=*/i, /*param_index=*/{});
           alias_map[output_index] = i;
+          input_output_alias_pair.push_back(std::make_pair(i, output_index));
 
           TF_VLOG(6) << "Aliased paramter " << i << " with output "
                      << output_index << ": " << parameters_data[i]->shape();
@@ -1637,11 +1641,13 @@ void XLATensor::BuildInputOutputAliases(
     }
   }
   XLA_VALUE_METRIC("InputOutputAliasCount", alias_map.size());
+  return input_output_alias_pair;
 }
 
 xla::StatusOr<xla::XlaComputation> WrapComputation(
     const xla::XlaComputation& computation,
-    const std::vector<xla::Shape>& parameter_shapes) {
+    const std::vector<xla::Shape>& parameter_shapes,
+    std::vector<std::pair<int64_t, int64_t>> input_output_alias_pair) {
   xla::XlaBuilder builder(computation.proto().name());
 
   // Construct a single tuple parameter.
@@ -1680,21 +1686,14 @@ xla::StatusOr<xla::XlaComputation> WrapComputation(
   xla::XlaOp result_tuple;
   { result_tuple = xla::Tuple(&builder, results); }
 
-  // // Preserve aliases.
-  // if (io_info.use_dummy_input()) {
-  //   for (const auto& [input_index, output_index] : io_info.io_aliases) {
-  //     Skip the dummy input at index 0.
-  //     builder.SetUpAlias(xla::ShapeIndex({output_index}), 0,
-  //                        xla::ShapeIndex({input_index + 1}));
-  //   }
-  // } else {
-  //   for (const auto& [input_index, output_index] : io_info.io_aliases) {
-  //     builder.SetUpAlias(xla::ShapeIndex({output_index}), 0,
-  //                        xla::ShapeIndex({input_index}));
-  //   }
-  // }
+  for (const auto& [input_index, output_index] : input_output_alias_pair) {
+    // Both input and output will be a tuple so parameter_number will always be
+    // 0
+    builder.SetUpAlias(/*output_index=*/xla::ShapeIndex({output_index}),
+                       /*param_number=*/0,
+                       /*param_index=*/xla::ShapeIndex({input_index}));
+  }
 
-  // return builder.Build(result_tuple);
   return builder.Build(orig_result);
 }
 
@@ -1723,6 +1722,7 @@ XLATensor::CompilationResult XLATensor::Compile(
   // Annotate HLO sharding selectively in the compuation.
   ShardingUtil::SetHloSharding(&lowering_ctx);
 
+  std::vector<std::pair<int64_t, int64_t>> input_output_alias_pair;
   if (enable_aliasing && coll.config.sync_xla_data) {
     // We can only alias at the step barrier, when force_xla_data is true.
     // Consider the case:
@@ -1748,13 +1748,14 @@ XLATensor::CompilationResult XLATensor::Compile(
     // will later fetch the new value of A, which is incorrect.
     // But, when we issue a step barrier (force_xla_data == true) we have to
     // turn everything into DEVICE_DATA, so we can activate aliasing.
-    BuildInputOutputAliases(tensors, coll.indices, &lowering_ctx);
+    input_output_alias_pair =
+        BuildInputOutputAliases(tensors, coll.indices, &lowering_ctx);
   }
 
   xla::XlaComputation computation = ConsumeValue(lowering_ctx.BuildXla());
   xla::ProgramShape program_shape = ConsumeValue(computation.GetProgramShape());
-  xla::XlaComputation wrapped_computation =
-      ConsumeValue(WrapComputation(computation, program_shape.parameters()));
+  xla::XlaComputation wrapped_computation = ConsumeValue(WrapComputation(
+      computation, program_shape.parameters(), input_output_alias_pair));
   xla::ProgramShape wrapped_program_shape =
       ConsumeValue(wrapped_computation.GetProgramShape());
   xla::Shape shape =
