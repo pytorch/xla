@@ -1,5 +1,6 @@
 #include "torch_xla/csrc/lowering_context.h"
 
+#include <iostream>
 #include <sstream>
 #include <stdexcept>
 
@@ -13,8 +14,6 @@
 #include "torch_xla/csrc/computation.h"
 #include "torch_xla/csrc/helpers.h"
 #include "torch_xla/csrc/tensor_util.h"
-
-#include <iostream>
 using std::cerr;
 
 namespace torch_xla {

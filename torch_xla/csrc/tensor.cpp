@@ -1695,7 +1695,9 @@ xla::StatusOr<xla::XlaComputation> WrapComputation(
   //                        xla::ShapeIndex({input_index}));
   //   }
   // }
-  return builder.Build(result_tuple);
+
+  // return builder.Build(result_tuple);
+  return builder.Build(orig_result);
 }
 
 XLATensor::CompilationResult XLATensor::Compile(
@@ -1755,14 +1757,17 @@ XLATensor::CompilationResult XLATensor::Compile(
   xla::ProgramShape program_shape = ConsumeValue(computation.GetProgramShape());
   xla::XlaComputation wrapped_computation =
       ConsumeValue(WrapComputation(computation, program_shape.parameters()));
-  xla::ProgramShape wrapped_program_shape = ConsumeValue(wrapped_computation.GetProgramShape());
-  xla::Shape shape = MakeShapeWithDeviceLayout(
-      wrapped_program_shape.result(), static_cast<XlaDeviceType>(coll.device.type()));
+  xla::ProgramShape wrapped_program_shape =
+      ConsumeValue(wrapped_computation.GetProgramShape());
+  xla::Shape shape =
+      MakeShapeWithDeviceLayout(wrapped_program_shape.result(),
+                                static_cast<XlaDeviceType>(coll.device.type()));
 
   cerr << "hlo built = \n"
        << ConsumeValue(xla::util::GetComputationHloText(computation)) << "\n";
   cerr << "wrapped hlo built = \n"
-       << ConsumeValue(xla::util::GetComputationHloText(wrapped_computation)) << "\n";
+       << ConsumeValue(xla::util::GetComputationHloText(wrapped_computation))
+       << "\n";
 
   std::vector<xla::ComputationClient::CompileInstance> instances;
   instances.push_back({std::move(wrapped_computation), coll.device.toString(),
