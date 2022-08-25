@@ -29,10 +29,6 @@ bool ShardingUtil::SetHloSharding(LoweringContext* lowering_ctx) {
        lowering_ctx->GetEmittedOutputs()) {
     const torch::lazy::Node* node = elem.first.node;
     const XlaNode* xla_node = dynamic_cast<const XlaNode*>(node);
-    std::cout << "-node shape: " << xla_node->xla_shape().ToString()
-              << std::endl;
-    std::cout << "-sharded? " << (xla_node->GetSharding() != nullptr)
-              << std::endl;
     auto instruction = XlaBuilderFriend::GetInstruction(elem.second);
     if (xla_node->GetSharding() != nullptr) {
       *instruction->mutable_sharding() = *xla_node->GetSharding();

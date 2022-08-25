@@ -1333,6 +1333,12 @@ class XLATensor : public c10::intrusive_ptr_target {
     const torch::lazy::BackendDevice device;
     const int64_t unique_id = 0;
     size_t generation = 1;
+<<<<<<< HEAD
+=======
+
+    // Sharding annotation for the tensor, set to null if unpartitioned.
+    ShardingSpecPtr sharding_spec = nullptr;
+>>>>>>> dab88450 (Use unpartitioned tensor shape and device for PjRtShardedData.)
   };
 
   XLATensor(const at::Tensor& tensor, const torch::lazy::BackendDevice& device);
