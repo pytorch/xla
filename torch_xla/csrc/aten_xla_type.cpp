@@ -3150,10 +3150,6 @@ at::Tensor XLANativeFunctions::select_backward(const at::Tensor& grad_output,
                                                int64_t dim, int64_t index) {
   return at::native::select_backward(grad_output, input_sizes, dim, index);
 }
-::std::tuple<at::Tensor, at::Tensor> XLANativeFunctions::linalg_inv_ex(
-    const at::Tensor& self, bool check_errors) {
-  return at::native::linalg_inv_ex(self, check_errors);
-}
 at::Tensor XLANativeFunctions::linalg_pinv(
     const at::Tensor& self, const c10::optional<at::Tensor>& atol,
     const c10::optional<at::Tensor>& rtol, bool hermitian) {
