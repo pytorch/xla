@@ -287,6 +287,13 @@ torch_xla::XlaOpVector Floor::Lower(LoweringContext* loctx) const {
   return ReturnOp(xla::Floor(xla_input), loctx);
 }
 
+torch_xla::XlaOpVector Frac::Lower(LoweringContext* loctx) const {
+  xla::XlaOp xla_input = loctx->GetOutputOp(operand(0));
+  xla::XlaOp result =
+      xla_input - xla::Floor(BuildAbs(xla_input)) * BuildSgn(xla_input);
+  return ReturnOp(result, loctx);
+}
+
 torch_xla::XlaOpVector GeScalar::Lower(LoweringContext* loctx) const {
   xla::XlaOp xla_input = loctx->GetOutputOp(operand(0));
   xla::XlaOp xla_other = loctx->GetOutputOp(operand(1));

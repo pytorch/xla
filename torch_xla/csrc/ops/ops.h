@@ -136,8 +136,6 @@ torch::lazy::NodePtr Clamp(const torch::lazy::Value& input,
 torch::lazy::NodePtr Celu(const torch::lazy::Value& input,
                           const at::Scalar& alpha);
 
-torch::lazy::NodePtr FracOp(const torch::lazy::Value& input);
-
 torch::lazy::NodePtr AddMatMulOp(const torch::lazy::Value& input,
                                  const torch::lazy::Value& weight,
                                  const torch::lazy::Value& bias);

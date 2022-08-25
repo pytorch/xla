@@ -356,6 +356,10 @@ xla::Shape FloorOutputShape(const torch::lazy::Value& input) {
   return GetXlaShape(input);
 }
 
+xla::Shape FracOutputShape(const torch::lazy::Value& input) {
+  return GetXlaShape(input);
+}
+
 xla::Shape GeScalarOutputShape(const torch::lazy::Value& self,
                                const torch::lazy::Value& other) {
   auto lower_for_shape_fn =

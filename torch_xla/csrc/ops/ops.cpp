@@ -79,11 +79,6 @@ PTXLA_BINARY_OP(Pow, at::aten::pow, xla::Pow);
 PTXLA_BINARY_OP(Fmod, at::aten::fmod, xla::Rem);
 PTXLA_BINARY_OP(Atan2, at::aten::atan2, xla::Atan2);
 
-torch::lazy::NodePtr FracOp(const torch::lazy::Value& input) {
-  return input -
-         torch::lazy::MakeNode<Trunc>(input, std::vector<torch::lazy::Shape>());
-}
-
 torch::lazy::NodePtr LogBase(const torch::lazy::Value& input,
                              torch::lazy::OpKind op, double base) {
   auto lower_fn = [base](const XlaNode& node,
