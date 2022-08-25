@@ -383,10 +383,6 @@ class XLATensor : public c10::intrusive_ptr_target {
                            std::vector<int64_t> dimensions,
                            bool keep_reduced_dimensions);
 
-  static XLATensorPtr any(const XLATensorPtr& input,
-                          std::vector<int64_t> dimensions,
-                          bool keep_reduced_dimensions);
-
   static void arange_out(XLATensorPtr& out, const at::Scalar& start,
                          const at::Scalar& end, const at::Scalar& step,
                          at::ScalarType scalar_type);

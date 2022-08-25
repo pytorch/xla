@@ -85,24 +85,6 @@ xla::Shape AdaptiveAvgPool3dOutputShape(const torch::lazy::Value& input,
   return InferOutputShape({GetXlaShape(input)}, lower_for_shape_fn);
 }
 
-xla::Shape AmaxOutputShape(const torch::lazy::Value& input,
-                           absl::Span<const int64_t> dim, bool keepdim) {
-  auto lower_for_shape_fn =
-      [&](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
-    return BuildMaxInDims(operands[0], dim, keepdim);
-  };
-  return InferOutputShape({GetXlaShape(input)}, lower_for_shape_fn);
-}
-
-xla::Shape AminOutputShape(const torch::lazy::Value& input,
-                           absl::Span<const int64_t> dim, bool keepdim) {
-  auto lower_for_shape_fn =
-      [&](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
-    return BuildMinInDims(operands[0], dim, keepdim);
-  };
-  return InferOutputShape({GetXlaShape(input)}, lower_for_shape_fn);
-}
-
 xla::Shape AdaptiveAvgPool3dBackwardOutputShape(
     const torch::lazy::Value& grad_output, const torch::lazy::Value& input) {
   auto lower_for_shape_fn =
@@ -113,17 +95,6 @@ xla::Shape AdaptiveAvgPool3dBackwardOutputShape(
   };
   return InferOutputShape({GetXlaShape(grad_output), GetXlaShape(input)},
                           lower_for_shape_fn);
-}
-
-xla::Shape AllOutputShape(const torch::lazy::Value& input) {
-  std::vector<int64_t> dimensions =
-      torch::lazy::Iota<int64_t>(GetXlaShape(input).rank());
-  auto lower_for_shape_fn =
-      [dimensions](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
-    return BuildAll(operands[0], dimensions, false);
-  };
-
-  return InferOutputShape({GetXlaShape(input)}, lower_for_shape_fn);
 }
 
 xla::Shape AddcdivOutputShape(const torch::lazy::Value& input,
@@ -151,6 +122,17 @@ xla::Shape AddcmulOutputShape(const torch::lazy::Value& input,
                           shape_fn);
 }
 
+xla::Shape AllOutputShape(const torch::lazy::Value& input) {
+  std::vector<int64_t> dimensions =
+      torch::lazy::Iota<int64_t>(GetXlaShape(input).rank());
+  auto lower_for_shape_fn =
+      [dimensions](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
+    return BuildAll(operands[0], dimensions, false);
+  };
+
+  return InferOutputShape({GetXlaShape(input)}, lower_for_shape_fn);
+}
+
 xla::Shape AllDimOutputShape(const torch::lazy::Value& input, const int64_t dim,
                              const bool keepdim) {
   auto lower_for_shape_fn =
@@ -159,6 +141,43 @@ xla::Shape AllDimOutputShape(const torch::lazy::Value& input, const int64_t dim,
     return ret;
   };
 
+  return InferOutputShape({GetXlaShape(input)}, lower_for_shape_fn);
+}
+
+xla::Shape AmaxOutputShape(const torch::lazy::Value& input,
+                           absl::Span<const int64_t> dim, bool keepdim) {
+  auto lower_for_shape_fn =
+      [&](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
+    return BuildMaxInDims(operands[0], dim, keepdim);
+  };
+  return InferOutputShape({GetXlaShape(input)}, lower_for_shape_fn);
+}
+
+xla::Shape AminOutputShape(const torch::lazy::Value& input,
+                           absl::Span<const int64_t> dim, bool keepdim) {
+  auto lower_for_shape_fn =
+      [&](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
+    return BuildMinInDims(operands[0], dim, keepdim);
+  };
+  return InferOutputShape({GetXlaShape(input)}, lower_for_shape_fn);
+}
+
+xla::Shape AnyOutputShape(const torch::lazy::Value& input) {
+  std::vector<int64_t> dimensions =
+      torch::lazy::Iota<int64_t>(GetXlaShape(input).rank());
+  auto lower_for_shape_fn =
+      [dimensions](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
+    return BuildAny(operands[0], dimensions, false);
+  };
+  return InferOutputShape({GetXlaShape(input)}, lower_for_shape_fn);
+}
+
+xla::Shape AnyDimOutputShape(const torch::lazy::Value& input, int64_t dim,
+                             bool keepdim) {
+  auto lower_for_shape_fn =
+      [&](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
+    return BuildAny(operands[0], {dim}, keepdim);
+  };
   return InferOutputShape({GetXlaShape(input)}, lower_for_shape_fn);
 }
 
