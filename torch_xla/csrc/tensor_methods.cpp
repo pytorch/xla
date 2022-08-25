@@ -1163,10 +1163,6 @@ XLATensorPtr XLATensor::fmod(
                            logical_element_type);
 }
 
-XLATensorPtr XLATensor::frac(const XLATensorPtr& input) {
-  return input->CreateFrom(FracOp(input->GetIrValue()));
-}
-
 XLATensorPtr XLATensor::full(absl::Span<const int64_t> size,
                              const at::Scalar& fill_value,
                              const torch::lazy::BackendDevice& device,

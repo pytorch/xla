@@ -588,8 +588,6 @@ class XLATensor : public c10::intrusive_ptr_target {
       const XLATensorPtr& input, const at::Scalar& other,
       c10::optional<at::ScalarType> logical_element_type = c10::nullopt);
 
-  static XLATensorPtr frac(const XLATensorPtr& input);
-
   static XLATensorPtr full(absl::Span<const int64_t> size,
                            const at::Scalar& fill_value,
                            const torch::lazy::BackendDevice& device,
