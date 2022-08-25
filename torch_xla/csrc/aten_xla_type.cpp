@@ -638,22 +638,6 @@ at::Tensor XLANativeFunctions::alias(const at::Tensor& self) {
   return self;
 }
 
-at::Tensor XLANativeFunctions::any(const at::Tensor& self) {
-  XLA_FN_COUNTER("xla::");
-  XLATensorPtr self_tensor = bridge::GetXlaTensor(self);
-  return bridge::AtenFromXlaTensor(XLATensor::any(
-      self_tensor,
-      torch::lazy::Iota<int64_t>(self_tensor->shape().get().rank()),
-      /*keep_reduced_dimensions=*/false));
-}
-
-at::Tensor XLANativeFunctions::any(const at::Tensor& self, int64_t dim,
-                                   bool keepdim) {
-  XLA_FN_COUNTER("xla::");
-  return bridge::AtenFromXlaTensor(
-      XLATensor::any(bridge::GetXlaTensor(self), {dim}, keepdim));
-}
-
 at::Tensor& XLANativeFunctions::arange_out(const at::Scalar& start,
                                            const at::Scalar& end,
                                            const at::Scalar& step,

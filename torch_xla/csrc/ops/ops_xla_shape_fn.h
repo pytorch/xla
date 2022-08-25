@@ -21,14 +21,6 @@ xla::Shape AdaptiveAvgPool3dOutputShape(const torch::lazy::Value& input,
 xla::Shape AdaptiveAvgPool3dBackwardOutputShape(
     const torch::lazy::Value& grad_output, const torch::lazy::Value& input);
 
-xla::Shape AmaxOutputShape(const torch::lazy::Value& input,
-                           absl::Span<const int64_t> dim, bool keepdim);
-
-xla::Shape AminOutputShape(const torch::lazy::Value& input,
-                           absl::Span<const int64_t> dim, bool keepdim);
-
-xla::Shape AllOutputShape(const torch::lazy::Value& input);
-
 xla::Shape AddcdivOutputShape(const torch::lazy::Value& input,
                               const torch::lazy::Value& t1,
                               const torch::lazy::Value& t2,
@@ -39,8 +31,21 @@ xla::Shape AddcmulOutputShape(const torch::lazy::Value& input,
                               const torch::lazy::Value& t2,
                               const torch::lazy::Value& value);
 
+xla::Shape AllOutputShape(const torch::lazy::Value& input);
+
 xla::Shape AllDimOutputShape(const torch::lazy::Value& input, const int64_t dim,
                              const bool keepdim);
+
+xla::Shape AmaxOutputShape(const torch::lazy::Value& input,
+                           absl::Span<const int64_t> dim, bool keepdim);
+
+xla::Shape AminOutputShape(const torch::lazy::Value& input,
+                           absl::Span<const int64_t> dim, bool keepdim);
+
+xla::Shape AnyOutputShape(const torch::lazy::Value& input);
+
+xla::Shape AnyDimOutputShape(const torch::lazy::Value& input, int64_t dim,
+                             bool keepdim);
 
 xla::Shape AsinOutputShape(const torch::lazy::Value& input);
 
