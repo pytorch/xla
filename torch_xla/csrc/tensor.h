@@ -1211,8 +1211,14 @@ class XLATensor : public c10::intrusive_ptr_target {
   };
   using ShardingSpecPtr = std::shared_ptr<ShardingSpec>;
 
+<<<<<<< HEAD
   // Annotate the IR value with ShardingSpec.
   void SetShardingSpec(const ShardingSpec& sharding_spec);
+=======
+  std::shared_ptr<ShardingSpec> sharding_spec() const;
+  bool IsShardingAnnotated() const;
+  void SetShardingSpec(std::shared_ptr<ShardingSpec> sharding_spec);
+>>>>>>> 498d7ef1 (Allow XLATensor::SetShardingSpec to receive ShardingSpecPtr)
   void ClearShardingSpec();
   ShardingSpecPtr sharding_spec() const;
 
