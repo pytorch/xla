@@ -1710,6 +1710,9 @@ XLATensor::CompilationResult XLATensor::Compile(
       (program_shape.parameters_size() >= parameter_wrapping_threadshold) &&
       using_pjrt;
   if (should_wrap_parameter) {
+    TF_VLOG(3) << "Wrapping graph with " << program_shape.parameters_size()
+               << " parameters. Threadshold = "
+               << parameter_wrapping_threadshold;
     computation = ConsumeValue(XlaHelpers::WrapXlaComputation(
         computation, program_shape.parameters(), input_output_alias_pair));
     program_shape = ConsumeValue(computation.GetProgramShape());
