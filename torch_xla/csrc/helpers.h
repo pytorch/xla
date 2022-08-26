@@ -330,6 +330,11 @@ class XlaHelpers {
     s_mat_mul_precision = precision;
   }
 
+  static xla::StatusOr<xla::XlaComputation> WrapXlaComputation(
+      const xla::XlaComputation& computation,
+      const std::vector<xla::Shape>& parameter_shapes,
+      std::vector<std::pair<int64_t, int64_t>> input_output_alias_pair);
+
  private:
   static xla::PrecisionConfig::Precision s_mat_mul_precision;
 };
