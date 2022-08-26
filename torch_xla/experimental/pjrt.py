@@ -1,11 +1,14 @@
 import concurrent.futures
 import functools
+import logging
 import os
+import tempfile
 import threading
 from itertools import chain
-from typing import Callable, Dict, Optional, TypeVar
+from typing import Callable, Dict, List, Optional, TypeVar
 
 import torch
+import torch.distributed as dist
 import torch.nn as nn
 import torch_xla
 import torch_xla.core.xla_env_vars as xenv
@@ -224,3 +227,53 @@ def broadcast_master_param(model: nn.Module) -> None:
     parameters_and_buffers.append(p.data)
   xm.all_reduce(xm.REDUCE_SUM, parameters_and_buffers)
   xm.mark_step()
+
+
+def rendezvous(tag: str, payload: bytes,
+               ordinals: Optional[List[int]]) -> List[bytes]:
+  """Share `payload` with all replicas in `ordinals`.
+
+  All of PjRt is experimental right now, but consider `rendezvous` to be _very_
+  experimental. Only tested on TPU v4.
+
+  `tag` is ignored except for logging.
+
+  If `torch.distributed group` is not created already, `rendezvous` will
+  initialize it using `XRT_MESH_SERVICE_ADDRESS` or `MASTER_ADDR`. If world size
+  is 1, initialize the process group automatically.
+
+  Args:
+    tag: Name of this rendezvous operation.
+    payload: Payload to share with other replicas.
+    ordinals: List of replicas participating in rendezvous.
+  Returns:
+    List of bytes from other replicas.
+  """
+  if not dist.is_initialized():
+    logging.warning(
+        'Default process group not initialized. Creating XLA process group...')
+    mesh_master = xu.getenv_as("XRT_MESH_SERVICE_ADDRESS", str)
+
+    if mesh_master:
+      init_method = f'tcp://{mesh_master}'
+    elif global_device_count() == 1:
+      init_method = f'file://{tempfile.mktemp()}'
+    else:
+      init_method = None
+
+    import torch_xla.distributed.xla_backend
+    dist.init_process_group(
+        "xla",
+        init_method=init_method,
+        world_size=global_device_count(),
+        rank=global_ordinal())
+
+  logging.info(f"Joining rendezvous '{tag}'...")
+  group = dist.new_group(ordinals, backend="gloo")
+
+  num_outputs = len(ordinals) if ordinals else global_device_count()
+  output = [None] * num_outputs
+  dist.all_gather_object(output, payload, group)
+  logging.info(f"Completed rendezvous '{tag}'.")
+
+  return output
