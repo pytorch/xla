@@ -2,6 +2,7 @@ import concurrent.futures
 import functools
 import logging
 import os
+import tempfile
 import threading
 from itertools import chain
 from typing import Callable, Dict, List, Optional, TypeVar
@@ -237,6 +238,10 @@ def rendezvous(tag: str, payload: bytes,
 
   `tag` is ignored except for logging.
 
+  If `torch.distributed group` is not created already, `rendezvous` will
+  initialize it using `XRT_MESH_SERVICE_ADDRESS` or `MASTER_ADDR`. If world size
+  is 1, initialize the process group automatically.
+
   Args:
     tag: Name of this rendezvous operation.
     payload: Payload to share with other replicas.
@@ -249,10 +254,17 @@ def rendezvous(tag: str, payload: bytes,
         'Default process group not initialized. Creating XLA process group...')
     mesh_master = xu.getenv_as("XRT_MESH_SERVICE_ADDRESS", str)
 
+    if mesh_master:
+      init_method = f'tcp://{mesh_master}'
+    elif global_device_count() == 1:
+      init_method = f'file://{tempfile.mktemp()}'
+    else:
+      init_method = None
+
     import torch_xla.distributed.xla_backend
     dist.init_process_group(
         "xla",
-        init_method=f'tcp://{mesh_master}' if mesh_master else None,
+        init_method=init_method,
         world_size=global_device_count(),
         rank=global_ordinal())
 
