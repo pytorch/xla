@@ -1710,6 +1710,10 @@ XLATensor::CompilationResult XLATensor::Compile(
       tensorflow::profiler::TraceMeLevel::kInfo);
   static const bool enable_aliasing =
       xla::sys_util::GetEnvBool("XLA_ENABLE_PARAM_ALIASING", true);
+  static const size_t parameter_wrapping_threadshold =
+      xla::sys_util::GetEnvInt("XLA_PARAMETER_WRAPPING_THREADSHOLD", 3200);
+  static const bool using_pjrt =
+      xla::sys_util::GetEnvString("PJRT_DEVICE", "").size() > 0;
   LoweringContext lowering_ctx("SyncTensorsGraph", coll.device,
                                po_data->post_order,
                                std::move(po_data->emission_map));
@@ -1754,19 +1758,23 @@ XLATensor::CompilationResult XLATensor::Compile(
 
   xla::XlaComputation computation = ConsumeValue(lowering_ctx.BuildXla());
   xla::ProgramShape program_shape = ConsumeValue(computation.GetProgramShape());
-  xla::XlaComputation wrapped_computation = ConsumeValue(WrapComputation(
-      computation, program_shape.parameters(), input_output_alias_pair));
-  xla::ProgramShape wrapped_program_shape =
-      ConsumeValue(wrapped_computation.GetProgramShape());
-  xla::Shape shape =
-      MakeShapeWithDeviceLayout(wrapped_program_shape.result(),
-                                static_cast<XlaDeviceType>(coll.device.type()));
+
+  bool should_wrap_parameter =
+      (program_shape.parameters_size() >= parameter_wrapping_threadshold) &&
+      using_pjrt;
+  if (should_wrap_parameter) {
+    computation = ConsumeValue(WrapComputation(
+        computation, program_shape.parameters(), input_output_alias_pair));
+    program_shape = ConsumeValue(computation.GetProgramShape());
+  }
+  xla::Shape shape = MakeShapeWithDeviceLayout(
+      program_shape.result(), static_cast<XlaDeviceType>(coll.device.type()));
 
   std::vector<xla::ComputationClient::CompileInstance> instances;
-  instances.push_back({std::move(wrapped_computation), coll.device.toString(),
+  instances.push_back({std::move(computation), coll.device.toString(),
                        xla::ComputationClient::Get()->GetCompilationDevices(
                            coll.device.toString(), devices),
-                       &shape});
+                       &shape, should_wrap_parameter});
 
   TF_VLOG(3) << "Compiling IR graph hash "
              << torch::lazy::HashToString(coll.hash) << " on device "
@@ -1782,8 +1790,14 @@ XLATensor::CompilationResult XLATensor::Compile(
       << " is computation hash "
       << torch::lazy::HashToString(torch::lazy::Hash(
              computations.front()->computation().proto().SerializeAsString()));
-  XLA_CHECK_EQ(program_shape.parameters_size(),
-               po_data->parameters_data.size());
+  if (should_wrap_parameter) {
+    XLA_CHECK_EQ(program_shape.parameters_size(), 1);
+    XLA_CHECK_EQ(program_shape.parameters()[0].tuple_shapes_size(),
+                 po_data->parameters_data.size());
+  } else {
+    XLA_CHECK_EQ(program_shape.parameters_size(),
+                 po_data->parameters_data.size());
+  }
 
   return {/*device=*/coll.device,
           /*emitted_nodes=*/lowering_ctx.GetEmittedNodeCount(),

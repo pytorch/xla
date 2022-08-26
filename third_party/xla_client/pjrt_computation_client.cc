@@ -9,8 +9,8 @@
 #include "tensorflow/compiler/xla/literal.h"
 #include "tensorflow/compiler/xla/pjrt/cpu_device.h"
 #include "tensorflow/compiler/xla/pjrt/pjrt_client.h"
-#include "tensorflow/compiler/xla/pjrt/tpu_client.h"
 #include "tensorflow/compiler/xla/pjrt/tfrt_cpu_pjrt_client.h"
+#include "tensorflow/compiler/xla/pjrt/tpu_client.h"
 #include "tensorflow/compiler/xla/shape.h"
 #include "tensorflow/compiler/xla/xla_client/computation_client.h"
 #include "tensorflow/compiler/xla/xla_client/debug_macros.h"
@@ -49,7 +49,8 @@ PjRtComputationClient::PjRtComputationClient() {
     TF_VLOG(1) << "Initializing PjRt CPU client...";
     bool async = sys_util::GetEnvBool(env::kEnvPjrtAsyncCpuClient, true);
     int cpu_device_count = sys_util::GetEnvInt(env::kEnvNumCpu, 1);
-    client_ = std::move(xla::GetTfrtCpuClient(async, cpu_device_count).ValueOrDie());
+    client_ =
+        std::move(xla::GetTfrtCpuClient(async, cpu_device_count).ValueOrDie());
   } else if (device_type == "TPU") {
     TF_VLOG(1) << "Initializing PjRt TPU client...";
     int64_t max_inflight_computations = sys_util::GetEnvInt(
@@ -83,7 +84,8 @@ ComputationClient::DataPtr PjRtComputationClient::CreateDataPlaceholder(
 std::vector<ComputationClient::DataPtr> PjRtComputationClient::TransferToServer(
     absl::Span<const TensorSource> tensors) {
   tensorflow::profiler::TraceMe activity(
-    "PjRtComputationClient::TransferToServer", tensorflow::profiler::TraceMeLevel::kInfo);
+      "PjRtComputationClient::TransferToServer",
+      tensorflow::profiler::TraceMeLevel::kInfo);
   std::vector<ComputationClient::DataPtr> datas;
   datas.reserve(tensors.size());
   for (auto& tensor : tensors) {
@@ -119,7 +121,8 @@ std::vector<ComputationClient::DataPtr> PjRtComputationClient::TransferToServer(
 std::vector<xla::Literal> PjRtComputationClient::TransferFromServer(
     absl::Span<const DataPtr> handles) {
   tensorflow::profiler::TraceMe activity(
-    "PjRtComputationClient::TransferFromServer", tensorflow::profiler::TraceMeLevel::kInfo);
+      "PjRtComputationClient::TransferFromServer",
+      tensorflow::profiler::TraceMeLevel::kInfo);
   std::vector<xla::Literal> literals;
   literals.reserve(handles.size());
 
@@ -137,7 +140,8 @@ std::vector<xla::Literal> PjRtComputationClient::TransferFromServer(
 std::vector<ComputationClient::ComputationPtr> PjRtComputationClient::Compile(
     std::vector<ComputationClient::CompileInstance> instances) {
   tensorflow::profiler::TraceMe activity(
-    "PjRtComputationClient::Compile", tensorflow::profiler::TraceMeLevel::kInfo);
+      "PjRtComputationClient::Compile",
+      tensorflow::profiler::TraceMeLevel::kInfo);
   std::vector<ComputationClient::ComputationPtr> computations;
 
   for (auto& instance : instances) {
@@ -153,7 +157,8 @@ std::vector<ComputationClient::ComputationPtr> PjRtComputationClient::Compile(
     compile_options.executable_build_options.set_num_partitions(1);
     compile_options.executable_build_options.set_num_replicas(
         client_->device_count());
-    compile_options.parameter_is_tupled_arguments = true;
+    compile_options.parameter_is_tupled_arguments =
+        instance.parameter_is_tupled_arguments;
     std::unique_ptr<xla::PjRtExecutable> executable =
         client_->Compile(instance.computation, compile_options).ValueOrDie();
     std::shared_ptr<PjRtComputation> pjrt_computation =
@@ -173,7 +178,8 @@ PjRtComputationClient::ExecuteComputation(
     absl::Span<const ComputationClient::DataPtr> arguments,
     const std::string& device, const ExecuteComputationOptions& options) {
   tensorflow::profiler::TraceMe activity(
-    "PjRtComputationClient::ExecuteComputation", tensorflow::profiler::TraceMeLevel::kInfo);
+      "PjRtComputationClient::ExecuteComputation",
+      tensorflow::profiler::TraceMeLevel::kInfo);
   TF_VLOG(1) << "Executing PjRt computation on " << device;
   const PjRtComputation& pjrt_computation =
       dynamic_cast<const PjRtComputation&>(computation);
