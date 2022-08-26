@@ -616,9 +616,6 @@ xla::StatusOr<xla::XlaComputation> XlaHelpers::WrapXlaComputation(
     return results;
   }();
 
-  xla::XlaOp result_tuple;
-  { result_tuple = xla::Tuple(&builder, results); }
-
   for (const auto& [input_index, output_index] : input_output_alias_pair) {
     // Both input and output will be a tuple so parameter_number will always be
     // 0
