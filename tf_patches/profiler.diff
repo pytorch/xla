@@ -1,0 +1,79 @@
+diff --git a/tensorflow/core/profiler/convert/xplane_to_tools_data.cc b/tensorflow/core/profiler/convert/xplane_to_tools_data.cc
+index 6487b9fb8e3..3cac0b53abc 100644
+--- a/tensorflow/core/profiler/convert/xplane_to_tools_data.cc
++++ b/tensorflow/core/profiler/convert/xplane_to_tools_data.cc
+@@ -23,6 +23,8 @@ limitations under the License.
+ #include "tensorflow/core/platform/errors.h"
+ #include "tensorflow/core/platform/logging.h"
+ #include "tensorflow/core/platform/statusor.h"
++#include "tensorflow/core/profiler/convert/hlo_proto_to_graph_view.h"
++#include "tensorflow/core/profiler/convert/hlo_proto_to_memory_visualization_utils.h"
+ #include "tensorflow/core/profiler/convert/hlo_to_tools_data.h"
+ #include "tensorflow/core/profiler/convert/op_stats_to_input_pipeline_analysis.h"
+ #include "tensorflow/core/profiler/convert/op_stats_to_op_profile.h"
+@@ -55,6 +57,49 @@ namespace profiler {
+ 
+ namespace {
+ 
++StatusOr<std::string> ConvertHloProtoToMemoryViewer(
++    const xla::HloProto& hlo_proto) {
++  static constexpr int kSmallBufferSize = 16 * 1024;  // 16KB
++  static constexpr int kMemorySpaceColor = 0;         // HBM
++
++  auto result_or = ConvertHloProtoToPreprocessResult(
++      hlo_proto, kSmallBufferSize,
++      GetHeapSimulatorTraceId(hlo_proto, kMemorySpaceColor), kMemorySpaceColor);
++  if (!result_or.ok()) {
++    return errors::Internal(
++        "Failed to convert HLO proto to memory viewer result: ",
++        result_or.status().message());
++  }
++
++  std::string json_output;
++  tensorflow::protobuf::util::JsonPrintOptions options;
++  options.always_print_primitive_fields = true;
++  auto encoded_status = tensorflow::protobuf::util::MessageToJsonString(
++      result_or.value(), &json_output, options);
++  if (!encoded_status.ok()) {
++    const auto& error_message = encoded_status.message();
++    return errors::Internal(
++        "Failed to convert memory viewer result to JSON format: ",
++        absl::string_view(error_message.data(), error_message.length()));
++  }
++
++  return json_output;
++}
++
++StatusOr<std::string> ConvertHloProtoToGraphViewer(
++    const xla::HloProto& hlo_proto, const ToolOptions& options) {
++  TF_ASSIGN_OR_RETURN(GraphViewerParams params,
++                      ParseGraphViewerParams(options));
++  if (params.type == "graph") {
++    return ConvertHloProtoToGraph(hlo_proto, params.node_name,
++                                  params.graph_width, params.render_options,
++                                  params.format);
++  } else {
++    return ConvertHloProtoToStringView(hlo_proto, params.verbose,
++                                       params.show_metadata);
++  }
++}
++
+ StatusOr<std::string> ConvertXSpaceToTraceEvents(
+     const SessionSnapshot& session_snapshot) {
+   if (session_snapshot.XSpaceSize() != 1) {
+@@ -196,8 +241,6 @@ StatusOr<std::string> ConvertMultiXSpacesToOpProfileViewer(
+   return profile.SerializeAsString();
+ }
+ 
+-}  // namespace
+-
+ StatusOr<std::string> ConvertMultiXSpacesToToolData(
+     const SessionSnapshot& session_snapshot, const absl::string_view tool_name,
+     const ToolOptions& options) {
+@@ -235,5 +278,6 @@ StatusOr<std::string> ConvertMultiXSpacesToToolData(
+   }
+ }
+ 
++}  // namespace
+ }  // namespace profiler
+ }  // namespace tensorflow
