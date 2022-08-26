@@ -609,13 +609,7 @@ xla::StatusOr<xla::XlaComputation> XlaHelpers::WrapXlaComputation(
   xla::XlaOp orig_result;
   orig_result = xla::Call(&builder, computation, inner_params);
 
-  // Construct a single tuple result.
-  const std::vector<xla::XlaOp> results = [&orig_result]() {
-    std::vector<xla::XlaOp> results;
-    results.push_back(orig_result);
-    return results;
-  }();
-
+  // Rebuild aliasing.
   for (const auto& [input_index, output_index] : input_output_alias_pair) {
     // Both input and output will be a tuple so parameter_number will always be
     // 0
