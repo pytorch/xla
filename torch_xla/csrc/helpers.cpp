@@ -584,30 +584,23 @@ xla::StatusOr<xla::XlaComputation> XlaHelpers::WrapXlaComputation(
   xla::XlaBuilder builder(computation.proto().name());
 
   // Construct a single tuple parameter.
-  const xla::XlaOp input_tuple = [&builder, &parameter_shapes]() {
-    xla::Shape input_tuple;
-    input_tuple.set_element_type(xla::PrimitiveType::TUPLE);
-    input_tuple.mutable_tuple_shapes()->reserve(parameter_shapes.size());
-    for (int i = 0; i < parameter_shapes.size(); ++i) {
-      *input_tuple.add_tuple_shapes() = parameter_shapes[i];
-    }
-    return xla::Parameter(&builder, 0, input_tuple, "in");
-  }();
+  xla::Shape input_tuple_shape;
+  input_tuple_shape.set_element_type(xla::PrimitiveType::TUPLE);
+  input_tuple_shape.mutable_tuple_shapes()->reserve(parameter_shapes.size());
+  for (int i = 0; i < parameter_shapes.size(); ++i) {
+    *input_tuple_shape.add_tuple_shapes() = parameter_shapes[i];
+  }
+  xla::XlaOp input_tuple = xla::Parameter(&builder, 0, input_tuple_shape, "in");
 
   // Handle the results of the original computation.
-  const std::vector<xla::XlaOp> inner_params = [&input_tuple,
-                                                &parameter_shapes]() {
-    std::vector<xla::XlaOp> parameters;
-    parameters.reserve(parameter_shapes.size());
-    for (int i = 0; i < parameter_shapes.size(); ++i) {
-      parameters.push_back(xla::GetTupleElement(input_tuple, i));
-    }
-    return parameters;
-  }();
+  std::vector<xla::XlaOp> inner_params;
+  inner_params.reserve(parameter_shapes.size());
+  for (int i = 0; i < parameter_shapes.size(); ++i) {
+    inner_params.push_back(xla::GetTupleElement(input_tuple, i));
+  }
 
   // Call the original computation.
-  xla::XlaOp orig_result;
-  orig_result = xla::Call(&builder, computation, inner_params);
+  xla::XlaOp orig_result = xla::Call(&builder, computation, inner_params);
 
   // Rebuild aliasing.
   for (const auto& [input_index, output_index] : input_output_alias_pair) {
