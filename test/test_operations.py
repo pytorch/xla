@@ -1800,6 +1800,16 @@ class TestAtenXlaTensor(XlaTestCase):
 
     self.runAtenTest([torch.randint(1, 4, (7, 7), dtype=torch.uint8)], test_fn)
 
+  def test_too_many_parameter(self):
+
+    def test_fn(t):
+      # TPU can handle ~3500 parameters on v3 without parameter tupling.
+      for i in range(4000):
+        t += torch.tensor(i, dtype=torch.float, device=t.device)
+      return t
+
+    self.runAtenTest([torch.tensor(20.0)], test_fn)
+
   def test_view_and_copy_(self):
     xla_device = xm.xla_device()
     x = torch.tensor([1.5, 2.5, 3.5, 4.5, 5.5, 6.5], device='cpu')
