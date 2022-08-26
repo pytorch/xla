@@ -61,10 +61,7 @@ set(TORCH_XLA_TEST_SOURCES
   test_xla_util_cache.cpp
   torch_xla_test.cpp
   test_xla_backend_intf.cpp
-<<<<<<< HEAD
   test_symint.cpp
-=======
->>>>>>> 2d782677 (* Add ShardingUtil::InputHandler for input sharding)
   test_xla_sharding.cpp
 )
 

@@ -1453,10 +1453,7 @@ std::shared_ptr<XLATensor::Async> XLATensor::ScheduleSyncTensorsGraph(
   tensorflow::profiler::TraceMe activity(
       "ScheduleSyncTensorsGraph", tensorflow::profiler::TraceMeLevel::kInfo);
   bool is_sharded = cached_computation->is_sharded;
-  std::cout << "ScheduleSyncTensorsGraph, is_sharded: " << is_sharded
-            << std::endl;
   auto computation = Computation(cached_computation->computation);
-  std::cout << "- " << computation.to_string() << std::endl;
   TensorCollectionBarrier(coll);
   std::shared_ptr<Async> async = std::make_shared<Async>(
       coll, std::move(parameters_data), std::move(tensors_data),

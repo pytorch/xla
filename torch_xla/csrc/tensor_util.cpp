@@ -904,10 +904,13 @@ std::vector<torch::lazy::BackendDataPtr> CreateTensorsData(
 }
 
 <<<<<<< HEAD
+<<<<<<< HEAD
 =======
 // TODO(yeounoh) support `transfer_async`. This may require locking devices
 // more carefully.
 >>>>>>> 78b42e95 (* Remove kEnvSpmdTest flag)
+=======
+>>>>>>> d5b95e8b (Disable partial sharding in mark_sharding)
 std::vector<torch::lazy::BackendDataPtr> CreateTensorsData(
     const std::vector<at::Tensor>& tensors,
     const std::vector<XLATensor::ShardingSpecPtr>& shardings,
