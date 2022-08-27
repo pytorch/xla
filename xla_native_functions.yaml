@@ -158,6 +158,7 @@ supported:
   - embedding
   - embedding_dense_backward
   - empty.memory_format
+  - empty.SymInt
   - empty_strided
   - expand
   - exponential_
