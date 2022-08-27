@@ -1445,9 +1445,9 @@ class XLATensor : public c10::intrusive_ptr_target {
       std::vector<XLATensorPtr>* tensors, SyncTensorCollection* coll,
       PostOrderData* po_data);
 
-  static void BuildInputOutputAliases(const std::vector<XLATensorPtr>& tensors,
-                                      absl::Span<const size_t> indices,
-                                      LoweringContext* lowering_ctx);
+  static std::vector<std::pair<int64_t, int64_t>> BuildInputOutputAliases(
+      const std::vector<XLATensorPtr>& tensors,
+      absl::Span<const size_t> indices, LoweringContext* lowering_ctx);
 
   static CompilationResult Compile(const std::vector<XLATensorPtr>& tensors,
                                    absl::Span<const std::string> devices,

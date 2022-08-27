@@ -577,4 +577,41 @@ xla::XlaOp XlaHelpers::PromotedLogicalUnaryOp(
   return unary_op(op);
 }
 
+xla::StatusOr<xla::XlaComputation> XlaHelpers::WrapXlaComputation(
+    const xla::XlaComputation& computation,
+    const std::vector<xla::Shape>& parameter_shapes,
+    std::vector<std::pair<int64_t, int64_t>> input_output_alias_pair) {
+  xla::XlaBuilder builder(computation.proto().name());
+
+  // Construct a single tuple parameter.
+  xla::Shape input_tuple_shape;
+  input_tuple_shape.set_element_type(xla::PrimitiveType::TUPLE);
+  input_tuple_shape.mutable_tuple_shapes()->reserve(parameter_shapes.size());
+  for (int i = 0; i < parameter_shapes.size(); ++i) {
+    *input_tuple_shape.add_tuple_shapes() = parameter_shapes[i];
+  }
+  xla::XlaOp input_tuple = xla::Parameter(&builder, 0, input_tuple_shape, "in");
+
+  // Handle the results of the original computation.
+  std::vector<xla::XlaOp> inner_params;
+  inner_params.reserve(parameter_shapes.size());
+  for (int i = 0; i < parameter_shapes.size(); ++i) {
+    inner_params.push_back(xla::GetTupleElement(input_tuple, i));
+  }
+
+  // Call the original computation.
+  xla::XlaOp orig_result = xla::Call(&builder, computation, inner_params);
+
+  // Rebuild aliasing.
+  for (const auto& [input_index, output_index] : input_output_alias_pair) {
+    // Both input and output will be a tuple so parameter_number will always be
+    // 0
+    builder.SetUpAlias(/*output_index=*/xla::ShapeIndex({output_index}),
+                       /*param_number=*/0,
+                       /*param_index=*/xla::ShapeIndex({input_index}));
+  }
+
+  return builder.Build(orig_result);
+}
+
 }  // namespace torch_xla
