@@ -268,7 +268,8 @@ std::string DumpUtil::ToHlo(c10::ArrayRef<torch::lazy::Value> values,
     instances.push_back({std::move(computation), device.toString(),
                          xla::ComputationClient::Get()->GetCompilationDevices(
                              device.toString(), {}),
-                         &shape, is_sharded});
+                         &shape, /*parameter_is_tupled_arguments=*/false,
+                         is_sharded});
     std::vector<std::shared_ptr<xla::ComputationClient::Computation>>
         computations =
             xla::ComputationClient::Get()->Compile(std::move(instances));
