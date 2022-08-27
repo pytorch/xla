@@ -23,9 +23,12 @@ struct SymIntElements {
       SetSymIntNodeElements(_size);
     }
   }
-  std::vector<torch::lazy::NodePtr> GetNodes() { return size_nodes_; }
+  std::unordered_map<size_t, torch::lazy::NodePtr> GetNodeMap() {
+    return size_node_map_;
+  }
   std::vector<int64_t> GetUpperBounds() { return upper_bounds_; }
   std::vector<bool> GetDynamicDims() { return dynamic_dims_; }
+  torch::lazy::NodePtr GetNode(size_t index);
   void SetUpperBound(int64_t index, int64_t upper_bound) {
     XLA_CHECK_GT(upper_bounds_.size(), index);
     upper_bounds_[index] = upper_bound;
@@ -33,7 +36,7 @@ struct SymIntElements {
 
  private:
   void SetSymIntNodeElements(c10::SymInt& size);
-  std::vector<torch::lazy::NodePtr> size_nodes_;
+  std::unordered_map<size_t, torch::lazy::NodePtr> size_node_map_;
   std::vector<int64_t> upper_bounds_;
   std::vector<bool> dynamic_dims_;
 };
