@@ -770,14 +770,14 @@ void BuildProfilerSubmodule(py::module* m) {
   py::class_<xla::profiler::ProfilerServer,
              std::unique_ptr<xla::profiler::ProfilerServer>>
       profiler_server_class(profiler, "ProfilerServer");
-  profiler.def(
-      "start_server",
-      [](int port) -> std::unique_ptr<xla::profiler::ProfilerServer> {
-        auto server = absl::make_unique<xla::profiler::ProfilerServer>();
-        server->Start(port);
-        return server;
-      },
-      py::arg("port"));
+  profiler.def("start_server",
+               [](int port) -> std::unique_ptr<xla::profiler::ProfilerServer> {
+                 auto server =
+                     absl::make_unique<xla::profiler::ProfilerServer>();
+                 server->Start(port);
+                 return server;
+               },
+               py::arg("port"));
 
   profiler.def(
       "trace",
@@ -1191,35 +1191,32 @@ void InitXlaModuleBindings(py::module m) {
   });
   m.def("_xla_metrics_report",
         []() { return xla::metrics_reader::CreateMetricReport(); });
-  m.def(
-      "_xla_tensors_report",
-      [](size_t nodes_threshold, const std::string& device) {
-        return GetLiveTensorsReport(nodes_threshold, device);
-      },
-      py::arg("nodes_threshold") = 100, py::arg("device") = "");
+  m.def("_xla_tensors_report",
+        [](size_t nodes_threshold, const std::string& device) {
+          return GetLiveTensorsReport(nodes_threshold, device);
+        },
+        py::arg("nodes_threshold") = 100, py::arg("device") = "");
   m.def("_xla_memory_info", [](const std::string& device) -> py::object {
     return GetMemoryInfo(device);
   });
-  m.def(
-      "_xla_set_use_full_mat_mul_precision",
-      [](bool use_full_mat_mul_precision) {
-        XlaHelpers::set_mat_mul_precision(use_full_mat_mul_precision
-                                              ? xla::PrecisionConfig::HIGHEST
-                                              : xla::PrecisionConfig::DEFAULT);
-      },
-      py::arg("use_full_mat_mul_precision") = true);
+  m.def("_xla_set_use_full_mat_mul_precision",
+        [](bool use_full_mat_mul_precision) {
+          XlaHelpers::set_mat_mul_precision(
+              use_full_mat_mul_precision ? xla::PrecisionConfig::HIGHEST
+                                         : xla::PrecisionConfig::DEFAULT);
+        },
+        py::arg("use_full_mat_mul_precision") = true);
 
   py::class_<xla::util::RecordReader, std::shared_ptr<xla::util::RecordReader>>(
       m, "RecordReader");
-  m.def(
-      "_xla_create_tfrecord_reader",
-      [](const std::string& path, const std::string& compression,
-         int64_t buffer_size) {
-        NoGilSection nogil;
-        return CreateRecordReader(path, compression, buffer_size);
-      },
-      py::arg("path"), py::arg("compression") = "",
-      py::arg("buffer_size") = 16 * 1024 * 1024);
+  m.def("_xla_create_tfrecord_reader",
+        [](const std::string& path, const std::string& compression,
+           int64_t buffer_size) {
+          NoGilSection nogil;
+          return CreateRecordReader(path, compression, buffer_size);
+        },
+        py::arg("path"), py::arg("compression") = "",
+        py::arg("buffer_size") = 16 * 1024 * 1024);
   m.def(
       "_xla_tfrecord_read",
       [](const std::shared_ptr<xla::util::RecordReader>& reader) -> py::object {
@@ -1405,7 +1402,7 @@ void InitXlaModuleBindings(py::module m) {
       auto hlo_sharding = xla::HloSharding::FromProto(sharding_spec->sharding);
       return hlo_sharding->ToString();
     }
-    return "";
+    return std::string();
   });
   m.def("_xla_partitioning_pass",
         [](const std::vector<at::Tensor>& tensors, int64_t num_replicas,
