@@ -134,16 +134,19 @@ class ComputationClient {
   struct CompileInstance {
     CompileInstance() = default;
     CompileInstance(XlaComputation computation, std::string compilation_device,
-                    std::vector<std::string> devices, const Shape* output_shape)
+                    std::vector<std::string> devices, const Shape* output_shape,
+                    bool parameter_is_tupled_arguments = false)
         : computation(std::move(computation)),
           compilation_device(std::move(compilation_device)),
           devices(std::move(devices)),
-          output_shape(output_shape) {}
+          output_shape(output_shape),
+          parameter_is_tupled_arguments(parameter_is_tupled_arguments) {}
 
     XlaComputation computation;
     std::string compilation_device;
     std::vector<std::string> devices;
     const Shape* output_shape = nullptr;
+    bool parameter_is_tupled_arguments;
   };
 
   struct ExecuteOptions {

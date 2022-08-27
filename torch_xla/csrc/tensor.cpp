@@ -1602,10 +1602,11 @@ XLATensor::OpByOpAsync XLATensor::SyncTensorsGraphOpByOp(
   return async_op.Schedule();
 }
 
-void XLATensor::BuildInputOutputAliases(
+std::vector<std::pair<int64_t, int64_t>> XLATensor::BuildInputOutputAliases(
     const std::vector<XLATensorPtr>& tensors, absl::Span<const size_t> indices,
     LoweringContext* lowering_ctx) {
   std::unordered_map<int64_t, size_t> output_tensor_id_map;
+  std::vector<std::pair<int64_t, int64_t>> input_output_alias_pair;
   for (size_t i = 0; i < indices.size(); ++i) {
     size_t tensor_index = indices[i];
     int64_t tensor_id = tensors[tensor_index]->GetUniqueId();
@@ -1626,9 +1627,12 @@ void XLATensor::BuildInputOutputAliases(
         const xla::Shape& root_shape = XlaHelpers::ShapeOfXlaOp(root);
         if (parameters_data[i]->shape() == root_shape &&
             alias_map[output_index] < 0) {
+          // parameter is not a tuple so param_index will always be {}
           lowering_ctx->builder()->SetUpAlias(
-              {static_cast<int64_t>(output_index)}, i, {});
+              {/*output_index=*/static_cast<int64_t>(output_index)},
+              /*param_number=*/i, /*param_index=*/{});
           alias_map[output_index] = i;
+          input_output_alias_pair.push_back(std::make_pair(i, output_index));
 
           TF_VLOG(6) << "Aliased paramter " << i << " with output "
                      << output_index << ": " << parameters_data[i]->shape();
@@ -1637,6 +1641,7 @@ void XLATensor::BuildInputOutputAliases(
     }
   }
   XLA_VALUE_METRIC("InputOutputAliasCount", alias_map.size());
+  return input_output_alias_pair;
 }
 
 XLATensor::CompilationResult XLATensor::Compile(
@@ -1652,6 +1657,10 @@ XLATensor::CompilationResult XLATensor::Compile(
       tensorflow::profiler::TraceMeLevel::kInfo);
   static const bool enable_aliasing =
       xla::sys_util::GetEnvBool("XLA_ENABLE_PARAM_ALIASING", true);
+  static const size_t parameter_wrapping_threadshold =
+      xla::sys_util::GetEnvInt("XLA_PARAMETER_WRAPPING_THREADSHOLD", 3200);
+  static const bool using_pjrt =
+      xla::sys_util::GetEnvString("PJRT_DEVICE", "").size() > 0;
   LoweringContext lowering_ctx("SyncTensorsGraph", coll.device,
                                po_data->post_order,
                                std::move(po_data->emission_map));
@@ -1664,6 +1673,7 @@ XLATensor::CompilationResult XLATensor::Compile(
   // Annotate HLO sharding selectively in the compuation.
   ShardingUtil::SetHloSharding(&lowering_ctx);
 
+  std::vector<std::pair<int64_t, int64_t>> input_output_alias_pair;
   if (enable_aliasing && coll.config.sync_xla_data) {
     // We can only alias at the step barrier, when force_xla_data is true.
     // Consider the case:
@@ -1689,11 +1699,24 @@ XLATensor::CompilationResult XLATensor::Compile(
     // will later fetch the new value of A, which is incorrect.
     // But, when we issue a step barrier (force_xla_data == true) we have to
     // turn everything into DEVICE_DATA, so we can activate aliasing.
-    BuildInputOutputAliases(tensors, coll.indices, &lowering_ctx);
+    input_output_alias_pair =
+        BuildInputOutputAliases(tensors, coll.indices, &lowering_ctx);
   }
 
   xla::XlaComputation computation = ConsumeValue(lowering_ctx.BuildXla());
   xla::ProgramShape program_shape = ConsumeValue(computation.GetProgramShape());
+
+  bool should_wrap_parameter =
+      (program_shape.parameters_size() >= parameter_wrapping_threadshold) &&
+      using_pjrt;
+  if (should_wrap_parameter) {
+    TF_VLOG(3) << "Wrapping graph with " << program_shape.parameters_size()
+               << " parameters. Threadshold = "
+               << parameter_wrapping_threadshold;
+    computation = ConsumeValue(XlaHelpers::WrapXlaComputation(
+        computation, program_shape.parameters(), input_output_alias_pair));
+    program_shape = ConsumeValue(computation.GetProgramShape());
+  }
   xla::Shape shape = MakeShapeWithDeviceLayout(
       program_shape.result(), static_cast<XlaDeviceType>(coll.device.type()));
 
@@ -1701,7 +1724,7 @@ XLATensor::CompilationResult XLATensor::Compile(
   instances.push_back({std::move(computation), coll.device.toString(),
                        xla::ComputationClient::Get()->GetCompilationDevices(
                            coll.device.toString(), devices),
-                       &shape});
+                       &shape, should_wrap_parameter});
 
   TF_VLOG(3) << "Compiling IR graph hash "
              << torch::lazy::HashToString(coll.hash) << " on device "
@@ -1717,8 +1740,14 @@ XLATensor::CompilationResult XLATensor::Compile(
       << " is computation hash "
       << torch::lazy::HashToString(torch::lazy::Hash(
              computations.front()->computation().proto().SerializeAsString()));
-  XLA_CHECK_EQ(program_shape.parameters_size(),
-               po_data->parameters_data.size());
+  if (should_wrap_parameter) {
+    XLA_CHECK_EQ(program_shape.parameters_size(), 1);
+    XLA_CHECK_EQ(program_shape.parameters()[0].tuple_shapes_size(),
+                 po_data->parameters_data.size());
+  } else {
+    XLA_CHECK_EQ(program_shape.parameters_size(),
+                 po_data->parameters_data.size());
+  }
 
   return {/*device=*/coll.device,
           /*emitted_nodes=*/lowering_ctx.GetEmittedNodeCount(),
