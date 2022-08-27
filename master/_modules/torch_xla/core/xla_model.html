@@ -1361,6 +1361,9 @@
 <span class="sd">    The payloads exchanged by all the other cores, with the payload of core</span>
 <span class="sd">    ordinal `i` at position `i` in the returned tuple.</span>
 <span class="sd">  &quot;&quot;&quot;</span>
+  <span class="k">if</span> <span class="n">pjrt</span><span class="o">.</span><span class="n">using_pjrt</span><span class="p">():</span>
+    <span class="k">return</span> <span class="n">pjrt</span><span class="o">.</span><span class="n">rendezvous</span><span class="p">(</span><span class="n">tag</span><span class="p">,</span> <span class="n">payload</span><span class="p">,</span> <span class="n">replicas</span> <span class="ow">or</span> <span class="kc">None</span><span class="p">)</span>
+
   <span class="k">return</span> <span class="n">torch_xla</span><span class="o">.</span><span class="n">_XLAC</span><span class="o">.</span><span class="n">_xla_rendezvous</span><span class="p">(</span><span class="n">get_ordinal</span><span class="p">(),</span> <span class="n">tag</span><span class="p">,</span> <span class="n">payload</span><span class="p">,</span> <span class="n">replicas</span><span class="p">)</span></div>
 
 
