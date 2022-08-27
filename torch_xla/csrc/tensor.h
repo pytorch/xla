@@ -1211,14 +1211,8 @@ class XLATensor : public c10::intrusive_ptr_target {
   };
   using ShardingSpecPtr = std::shared_ptr<ShardingSpec>;
 
-<<<<<<< HEAD
   // Annotate the IR value with ShardingSpec.
   void SetShardingSpec(const ShardingSpec& sharding_spec);
-=======
-  std::shared_ptr<ShardingSpec> sharding_spec() const;
-  bool IsShardingAnnotated() const;
-  void SetShardingSpec(std::shared_ptr<ShardingSpec> sharding_spec);
->>>>>>> 498d7ef1 (Allow XLATensor::SetShardingSpec to receive ShardingSpecPtr)
   void ClearShardingSpec();
   ShardingSpecPtr sharding_spec() const;
 
@@ -1333,12 +1327,6 @@ class XLATensor : public c10::intrusive_ptr_target {
     const torch::lazy::BackendDevice device;
     const int64_t unique_id = 0;
     size_t generation = 1;
-<<<<<<< HEAD
-=======
-
-    // Sharding annotation for the tensor, set to null if unpartitioned.
-    ShardingSpecPtr sharding_spec = nullptr;
->>>>>>> dab88450 (Use unpartitioned tensor shape and device for PjRtShardedData.)
   };
 
   XLATensor(const at::Tensor& tensor, const torch::lazy::BackendDevice& device);

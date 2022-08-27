@@ -643,22 +643,11 @@ XLATensor::ShardingSpecPtr XLATensor::sharding_spec() const {
   }
   return std::make_shared<ShardingSpec>(*sharding);
 }
-<<<<<<< HEAD
 
 void XLATensor::SetShardingSpec(const ShardingSpec& sharding_spec) {
   XLA_CHECK(GetIrValue().node != nullptr) << "Tyring to access a null cursor";
   dynamic_cast<XlaNode*>(data()->ir_value.node.get())
       ->SetSharding(sharding_spec.sharding);
-=======
-bool XLATensor::IsShardingAnnotated() const {
-  return data()->sharding_spec != nullptr;
-}
-void XLATensor::SetShardingSpec(std::shared_ptr<ShardingSpec> sharding_spec) {
-  data()->sharding_spec = sharding_spec;
-  XLA_CHECK(GetIrValue().node != nullptr) << "Tyring to access a null cursor";
-  dynamic_cast<XlaNode*>(data()->ir_value.node.get())
-      ->SetSharding(&sharding_spec->sharding);
->>>>>>> 498d7ef1 (Allow XLATensor::SetShardingSpec to receive ShardingSpecPtr)
 }
 void XLATensor::ClearShardingSpec() {
   if (GetIrValue().node != nullptr) {
@@ -1303,7 +1292,7 @@ XLATensor::SyncTensorCollection XLATensor::CollectSyncTensors(
       xla::ComputationClient::Get()->GetResourceDomain(coll.device.toString()));
   if (!at_tensors.empty()) {
     XLA_COUNTER("SyncTensorsToData", at_tensors.size());
-    // TODO(yeounoh) create data handles with shardings. If a tensor has a
+    // Create data handles with shardings. If a tensor has a
     // sharding annotation, then a BackendDataPtr with PjRtShardedData is
     // returned; if there is no sharding annotation, then a BackendDataPtr with
     // PjRtData is returned.
@@ -1453,7 +1442,10 @@ std::shared_ptr<XLATensor::Async> XLATensor::ScheduleSyncTensorsGraph(
   tensorflow::profiler::TraceMe activity(
       "ScheduleSyncTensorsGraph", tensorflow::profiler::TraceMeLevel::kInfo);
   bool is_sharded = cached_computation->is_sharded;
+  std::cout << "ScheduleSyncTensorsGraph, is_sharded: " << is_sharded
+            << std::endl;
   auto computation = Computation(cached_computation->computation);
+  std::cout << "- " << computation.to_string() << std::endl;
   TensorCollectionBarrier(coll);
   std::shared_ptr<Async> async = std::make_shared<Async>(
       coll, std::move(parameters_data), std::move(tensors_data),

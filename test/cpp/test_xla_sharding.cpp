@@ -28,6 +28,8 @@ bool TwoEqualXlaData(torch::lazy::BackendDataPtr a,
 
 class XLAShardingTest : public AtenXlaTensorTestBase {};
 
+TEST_F(XLAShardingTest, ShardingSpec) {}
+
 TEST_F(XLAShardingTest, ShardTensor) {
   std::vector<std::string> devices = {"TPU:0", "TPU:1", "TPU:2", "TPU:3",
                                       "TPU:4", "TPU:5", "TPU:6", "TPU:7"};
