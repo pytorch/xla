@@ -731,7 +731,8 @@ py::dict GetMemoryInfo(const std::string& device_str) {
 
 // Must be called holding GIL as it reads Python objects. Also, Python objects
 // are reference counted; reading py::dict will increase its reference count.
-tensorflow::profiler::ToolOptions ToolOptionsFromPythonDict(const py::dict& dictionary) {
+tensorflow::profiler::ToolOptions ToolOptionsFromPythonDict(
+    const py::dict& dictionary) {
   tensorflow::profiler::ToolOptions map;
   for (const auto& item : dictionary) {
     std::variant<int, std::string> value;
@@ -783,7 +784,8 @@ void BuildProfilerSubmodule(py::module* m) {
                [](const char* service_addr, const char* logdir, int duration_ms,
                   int num_tracing_attempts, int timeout_s, int interval_s,
                   py::dict options) {
-                 tensorflow::profiler::ToolOptions opts = ToolOptionsFromPythonDict(options);
+                 tensorflow::profiler::ToolOptions opts =
+                     ToolOptionsFromPythonDict(options);
                  std::chrono::seconds sleep_s(interval_s);
                  tensorflow::Status status;
                  {
