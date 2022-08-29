@@ -21,7 +21,7 @@ bool CheckBidirectionalConversion(
   xla::Literal literal =
       GetTensorLiteral(input, /*shape=*/nullptr, /*device=*/nullptr);
   if (xla_type) {
-    literal = literal.Convert(*xla_type).ConsumeValueOrDie();
+    literal = std::move(literal.Convert(*xla_type)).value();
   }
   at::Tensor converted = MakeTensorFromXlaLiteral(literal, dest_element_type);
   return EqualValuesNoElementTypeCheck(converted, input);
