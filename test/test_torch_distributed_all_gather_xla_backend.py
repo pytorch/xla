@@ -14,8 +14,6 @@ def _test_allgather():
     world_size = xm.xrt_world_size()
     rank = xm.get_ordinal()
 
-    dist.init_process_group('xla', world_size=world_size, rank=rank)
-
     input = torch.ones((2, 3)) * rank
     outputs = [torch.zeros_like(input)] * world_size
     xinput = input.to(device)
@@ -39,8 +37,6 @@ def _test__allgather_base():
     world_size = xm.xrt_world_size()
     rank = xm.get_ordinal()
 
-    dist.init_process_group('xla', world_size=world_size, rank=rank)
-
     input = torch.ones((2, 3)) * rank
     output = torch.zeros((2 * world_size, 3))
     xinput = input.to(device)
@@ -57,6 +53,11 @@ def _test__allgather_base():
 
 
 def _mp_fn(index):
+  device = xm.xla_device()
+  if xm.xla_device_hw(device) in ('TPU', 'GPU'):
+    world_size = xm.xrt_world_size()
+    rank = xm.get_ordinal()
+    dist.init_process_group('xla', world_size=world_size, rank=rank)
   _test_allgather()
   _test__allgather_base()
 

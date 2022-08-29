@@ -14,8 +14,6 @@ def _test_reduce_scatter():
     world_size = xm.xrt_world_size()
     rank = xm.get_ordinal()
 
-    dist.init_process_group('xla', world_size=world_size, rank=rank)
-
     input_size = (32, 3)
     inputs = torch.ones(input_size).split(input_size[0] // world_size)
     output = torch.zeros_like(inputs[0])
@@ -36,8 +34,6 @@ def _test__reduce_scatter_base():
     world_size = xm.xrt_world_size()
     rank = xm.get_ordinal()
 
-    dist.init_process_group('xla', world_size=world_size, rank=rank)
-
     input_size = (32, 3)
     input = torch.ones(input_size)
     output = torch.zeros((input_size[0] // world_size, input_size[1]))
@@ -53,6 +49,11 @@ def _test__reduce_scatter_base():
 
 
 def _mp_fn(index):
+  device = xm.xla_device()
+  if xm.xla_device_hw(device) in ('TPU', 'GPU'):
+    world_size = xm.xrt_world_size()
+    rank = xm.get_ordinal()
+    dist.init_process_group('xla', world_size=world_size, rank=rank)
   _test_reduce_scatter()
   _test__reduce_scatter_base()
 
