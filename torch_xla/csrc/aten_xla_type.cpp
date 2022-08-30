@@ -8,6 +8,7 @@
 #include <ATen/native/TypeProperties.h>
 
 #include <mutex>
+#include <ostream>
 
 #include "tensorflow/compiler/xla/xla_client/debug_macros.h"
 #include "tensorflow/compiler/xla/xla_client/metrics.h"
@@ -2252,6 +2253,21 @@ at::Tensor& XLANativeFunctions::random_(
   int64_t inc = (dtype == at::ScalarType::Long) ? 0 : 1;
   XLATensor::random_(self_tensor, 0, GetIntegerUpperLimitForType(dtype) + inc);
   return self;
+}
+
+at::Tensor& XLANativeFunctions::randperm_out(
+    int64_t n, c10::optional<at::Generator> generator, at::Tensor& out) {
+  if (generator.has_value() && generator->defined()) {
+    return at::native::call_fallback_fn<
+        &xla_cpu_fallback, ATEN_OP(randperm_generator_out)>::call(n, generator,
+                                                                  out);
+  }
+  XLA_FN_COUNTER("xla::");
+
+  XLATensorPtr out_tensor = bridge::GetXlaTensor(out);
+  XLATensor::randperm_out(out_tensor, n);
+  // std::cout << "xw32 inside aten_xla_type.cpp randperm_out: out=[" << out << "]." << std::endl;
+  return out;
 }
 
 at::Tensor XLANativeFunctions::reflection_pad2d(const at::Tensor& self,

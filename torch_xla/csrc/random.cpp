@@ -1,10 +1,13 @@
 #include "torch_xla/csrc/random.h"
 
+#include <cmath>
 #include <string>
 #include <tuple>
 
+#include "tensorflow/compiler/xla/client/lib/comparators.h"
 #include "tensorflow/compiler/xla/client/lib/constants.h"
 #include "tensorflow/compiler/xla/client/lib/prng.h"
+#include "tensorflow/compiler/xla/shape_util.h"
 #include "tensorflow/compiler/xla/xla_client/debug_macros.h"
 #include "tensorflow/compiler/xla/xla_client/sys_util.h"
 #include "torch_xla/csrc/convert_ops.h"
@@ -196,6 +199,61 @@ xla::XlaOp RngNormal(xla::XlaOp seed, const xla::Shape& shape, xla::XlaOp mean,
                   << xla::primitive_util::LowercasePrimitiveTypeName(
                          shape.element_type());
   }
+}
+
+/**
+ * @brief Returns a random permutation of integers from 0 to n - 1.
+ * 
+ * The random permutation is implemented by assigning each value a random key
+ * and sorting the keys. After keys are sorted, the values are shuffled
+ * accordingly.
+ *
+ * We shuffle values by sorting instead of the obvious
+ * Fisher-Yates algorithm. Fisher-Yates is simple to implement and correct,
+ * but not easily parallelizable. For a sufficiently parallel architecture,
+ * it is faster to sort many times, than Fisher-Yates shuffle once.
+ *
+ * Keys can collide causing detectable patterns in the shuffled
+ * output. Collisions translates into more ascending sub-sequences in the
+ * shuffled output than would be expected by chance. To avoid collisions,
+ * the number of possible key values must be sufficiently large.
+ *
+ * The expected number of collisions is n - d + d(1 - 1/d)^n, where d is
+ * the number of possible keys and n is the number of values. If d = n^2,
+ * then the limit as n goes to infinity is 1/2. If d = n^3, then the limit
+ * as n goes to infinity is zero.
+*/
+xla::XlaOp BuildRandpermOut(int64_t n, xla::XlaBuilder* builder) {
+  xla::PrimitiveType input_element_type = xla::S64;
+  xla::XlaOp input = xla::Iota(builder, input_element_type, n);
+
+  // Ensure that the key space is greater than or equal to the cube of the
+  // number of values to manage the number of collisions. Inspired by
+  // RandomShuffleOp in tf2xla, where the full rationale for picking the
+  // exponent value is described.
+  // https://github.com/tensorflow/tensorflow/blob/6ed5af7784f3f1eaaea77cf1224b588e2521cf73/tensorflow/compiler/mlir/xla/transforms/legalize_tf.cc#L5813-L5972
+  const int kExponent = 3;
+  const int rounds = static_cast<int>(
+      std::ceil(kExponent * std::log(n) / std::log(tensorflow::kuint32max)));
+  xla::XlaOp zero = xla::ConstantR0(builder, 0U);
+  xla::XlaOp max_value = xla::ConstantR0(builder, tensorflow::kuint32max);
+  const xla::Shape key_shape = xla::ShapeUtil::MakeShape(xla::U32, {n});
+
+  xla::XlaOp curr = input;
+  for (int i = 0; i < rounds; ++i) {
+    // RngUniform Constructs an output of a given shape with random numbers
+    // generated following the uniform distribution over the interval .
+    xla::XlaOp keys = xla::RngUniform(zero, max_value, key_shape);
+    // std::cout << "xw32 inside random.cpp BuildRandpermOut: key_shape.element_type()=[" << key_shape.element_type() << "]." << std::endl;
+    // xla::Sort only sort the first operand "keys" per
+    // http://google3/third_party/tensorflow/compiler/xla/client/xla_builder.cc;l=4836;rcl=466955165 
+    xla::XlaOp sorted =
+        xla::Sort({keys, curr},
+                  xla::CreateScalarLtComputation(
+                      {key_shape.element_type(), input_element_type}, builder));
+    curr = xla::GetTupleElement(sorted, 1);
+  }
+  return curr;
 }
 
 }  // namespace torch_xla

@@ -91,6 +91,7 @@
 #include "torch_xla/csrc/ops/prod.h"
 #include "torch_xla/csrc/ops/put.h"
 #include "torch_xla/csrc/ops/qr.h"
+#include "torch_xla/csrc/ops/randperm_out.h"
 #include "torch_xla/csrc/ops/recv.h"
 #include "torch_xla/csrc/ops/reduce_scatter.h"
 #include "torch_xla/csrc/ops/reflection_pad2d.h"
@@ -1994,6 +1995,10 @@ void XLATensor::random_(XLATensorPtr& input, int64_t from, int64_t to) {
       GetIrValueForScalar(from, xla::PrimitiveType::S64, input->GetDevice()),
       GetIrValueForScalar(to, xla::PrimitiveType::S64, input->GetDevice()),
       GetRngSeed(input->GetDevice()), input_shape));
+}
+
+void XLATensor::randperm_out(XLATensorPtr& input, int64_t n) {
+  input->SetInPlaceIrValue(torch::lazy::MakeNode<RandpermOut>(n));
 }
 
 XLATensorPtr XLATensor::reflection_pad2d(const XLATensorPtr& input,
