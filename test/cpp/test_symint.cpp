@@ -89,5 +89,46 @@ TEST(SymintTest, TestDynamicSymint) {
   EXPECT_TRUE(si_element.GetNode(0) != nullptr);
 }
 
+TEST(SymintTest, TestDynamicSymints) {
+  torch::lazy::Value scalar_value =
+      torch::lazy::Value(ScalarOp(1.0, xla::F32), 0);
+  // Assign a incorrect 3d shape for the test purpose
+  std::vector<torch::lazy::Shape> abs_lazy_shapes = {
+      torch::lazy::Shape(torch::kFloat, {10, 20, 30})};
+  torch::lazy::NodePtr abs_node =
+      torch::lazy::MakeNode<Abs>(scalar_value, std::move(abs_lazy_shapes));
+
+  std::vector<c10::SymInt> dynamic_symints;
+  for (int i = 0; i < 3; i++) {
+    torch::lazy::Value abs_value = torch::lazy::Value(abs_node, 0);
+    torch::lazy::NodePtr size_node =
+        torch::lazy::MakeNode<SizeNode>(abs_value, /*dim=*/i);
+    auto symint_node =
+        c10::make_intrusive<torch::lazy::SymIntNodeImpl>(size_node);
+    // This is not really a dynamic size per say but it is a symint that wraps
+    // around a SizeNode instead of a scalar.
+    dynamic_symints.push_back(symint_node->toSymInt());
+  }
+
+  c10::SymIntArrayRef ref(dynamic_symints);
+  SymIntElements si_element(ref);
+
+  std::vector<int64_t> upper_bound = si_element.GetUpperBounds();
+  EXPECT_EQ(upper_bound.size(), 3);
+  EXPECT_EQ(upper_bound, std::vector<int64_t>({10, 20, 30}));
+
+  std::vector<bool> dynamic_dims = si_element.GetDynamicDims();
+  EXPECT_EQ(dynamic_dims.size(), 3);
+  EXPECT_EQ(dynamic_dims, std::vector<bool>({true, true, true}));
+
+  std::unordered_map<size_t, torch::lazy::NodePtr> size_node_map =
+      si_element.GetNodeMap();
+  EXPECT_EQ(size_node_map.size(), 3);
+  // look up the SizeNode for dimension 0
+  EXPECT_TRUE(si_element.GetNode(0) != nullptr);
+  EXPECT_TRUE(si_element.GetNode(1) != nullptr);
+  EXPECT_TRUE(si_element.GetNode(2) != nullptr);
+}
+
 }  // namespace cpp_test
 }  // namespace torch_xla
