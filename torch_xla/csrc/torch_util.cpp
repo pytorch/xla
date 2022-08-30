@@ -7,7 +7,7 @@
 
 namespace torch_xla {
 
-void SymIntElements::SetSymIntNodeElements(c10::SymInt& size) {
+void SymIntElements::AddSymIntNodeElements(c10::SymInt& size) {
   if (size.is_symbolic()) {
     size_t current_index = upper_bounds_.size();
     // c10::SymInt --(convert)--> c10::SymIntNode --(cast)-->
@@ -28,9 +28,10 @@ void SymIntElements::SetSymIntNodeElements(c10::SymInt& size) {
   }
 }
 
-torch::lazy::NodePtr SymIntElements::GetNode(size_t index) {
-  if (size_node_map_.find(index) != size_node_map_.end()) {
-    return size_node_map_[index];
+torch::lazy::NodePtr SymIntElements::GetNode(size_t index) const {
+  auto iter = size_node_map_.find(index);
+  if (iter != size_node_map_.end()) {
+    return iter->second;
   }
   return nullptr;
 }
