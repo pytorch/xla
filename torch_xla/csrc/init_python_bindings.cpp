@@ -741,6 +741,10 @@ absl::flat_hash_map<std::string, absl::variant<int>> ConvertDictToMap(
   return map;
 }
 
+// Override some upstream torch::lazy env vars for better performance.
+// Upstream lazy env vars defined in torch/csrc/lazy/core/config.h.
+void SetDefaultLazyEnvVars() { FLAGS_torch_lazy_handle_special_scalars = true; }
+
 // Maps PT/XLA env vars to upstream torch::lazy env vars.
 // Upstream lazy env vars defined in torch/csrc/lazy/core/config.h.
 void MapXlaEnvVarsToLazy() {
@@ -1469,6 +1473,7 @@ void InitXlaModuleBindings(py::module m) {
         });
 
   m.def("_init_xla_lazy_backend", []() {
+    SetDefaultLazyEnvVars();
     MapXlaEnvVarsToLazy();
     InitXlaBackend();
   });
