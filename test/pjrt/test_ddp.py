@@ -12,10 +12,11 @@ def _init_xla_backend(init_file: str):
   world_size = xm.xrt_world_size()
 
   dist.init_process_group(
-    "xla",
-    init_method=f"file://{init_file}",
-    rank=rank,
-    world_size=world_size)
+      "xla",
+      init_method=f"file://{init_file}",
+      rank=rank,
+      world_size=world_size)
+
 
 class TestPjRtDistributedDataParallel(parameterized.TestCase):
 
@@ -28,9 +29,7 @@ class TestPjRtDistributedDataParallel(parameterized.TestCase):
     ddp_model = DDP(model)
 
   def test_ddp_init(self):
-    pjrt.run_multiprocess(
-      self._ddp_step,
-      self.create_tempfile().full_path)
+    pjrt.run_multiprocess(self._ddp_init, self.create_tempfile().full_path)
 
 
 if __name__ == "__main__":
