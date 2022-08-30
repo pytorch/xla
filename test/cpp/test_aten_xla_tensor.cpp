@@ -4714,6 +4714,48 @@ TEST_F(AtenXlaTensorTest, TestExpandAs) {
   ExpectCounterChanged("xla::expand", cpp_test::GetIgnoredCounters());
 }
 
+TEST_F(AtenXlaTensorTest, TestExpandSymInt) {
+  torch::Tensor x = torch::rand({5});
+  torch::Tensor y = torch::nonzero(x);
+  int64_t y0_size = y.sizes()[0];
+  torch::Tensor a = torch::rand({3, 4}, torch::TensorOptions(torch::kFloat));
+  torch::Tensor b = a.expand({y0_size, 3, 4}, /*implicit=*/false);
+
+  ForEachDevice([&](const torch::Device& device) {
+    torch::Tensor xla_x = CopyToDevice(x, device);
+    torch::Tensor xla_y = torch::nonzero(xla_x);
+    std::cout << "*Ran nonzero" << std::endl;
+    c10::SymInt xla_y0_size = xla_y.sym_sizes()[0];
+    std::cout << "*xla_y.sym_sizes()[0] " << xla_y.sym_sizes()[0]
+              << " is_symbolic: " << xla_y.sym_sizes()[0].is_symbolic()
+              << std::endl;
+    std::cout << "*xla_y.sym_sizes()[1] " << xla_y.sym_sizes()[1]
+              << " is_symbolic: " << xla_y.sym_sizes()[1].is_symbolic()
+              << std::endl;
+    torch::Tensor xla_a = CopyToDevice(a, device);
+    std::cout << "*xla_a" << std::endl;
+    torch::Tensor xla_b = xla_a.expand_symint(
+        c10::SymIntArrayRef({xla_y0_size, c10::SymInt(3), c10::SymInt(4)}),
+        /*implicit=*/false);
+    std::cout << "*Ran expand_symint" << std::endl;
+    std::cout << "*xla_b.sym_sizes()[0]: " << xla_b.sym_sizes()[0]
+              << " is_symbolic: " << xla_b.sym_sizes()[0].is_symbolic()
+              << std::endl;
+    std::cout << "*xla_b.sym_sizes()[1]: " << xla_b.sym_sizes()[1]
+              << " is_symbolic: " << xla_b.sym_sizes()[1].is_symbolic()
+              << std::endl;
+    std::cout << "*xla_b.sym_sizes()[2]: " << xla_b.sym_sizes()[2]
+              << " is_symbolic: " << xla_b.sym_sizes()[2].is_symbolic()
+              << std::endl;
+    AllClose(b, xla_b);
+    std::cout << "*Ran allclose" << std::endl;
+    ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+    std::cout << "*Ran ExpectCounterNotChanged" << std::endl;
+    ExpectCounterChanged("xla::expand_symint", cpp_test::GetIgnoredCounters());
+    std::cout << "*Ran ExpectCounterChanged" << std::endl;
+  });
+}
+
 TEST_F(AtenXlaTensorTest, TestEye) {
   int n = 5;
   ForEachDevice([&](const torch::Device& device) {

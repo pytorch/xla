@@ -1141,6 +1141,32 @@ at::Tensor XLANativeFunctions::expand(const at::Tensor& self,
       bridge::GetXlaTensor(self), torch::lazy::ToVector<int64_t>(size)));
 }
 
+at::Tensor XLANativeFunctions::expand_symint(const at::Tensor& self,
+                                             c10::SymIntArrayRef size,
+                                             bool implicit) {
+  XLA_FN_COUNTER("xla::");
+  SymIntElements size_elements = SymIntElements(size);
+  // Replace -1 concrete int dim with the true shape value
+  std::vector<c10::SymInt> _sizes = torch::lazy::ToVector<c10::SymInt>(size);
+  int64_t num_new_dimensions = _sizes.size() - self.dim();
+  std::vector<int64_t> padded_self(num_new_dimensions, 0);
+  padded_self.insert(padded_self.end(), self.sizes().begin(),
+                     self.sizes().end());
+  for (const auto idx : c10::irange(_sizes.size())) {
+    if (!_sizes[idx].is_symbolic() && _sizes[idx].expect_int() == -1) {
+      size_elements.SetUpperBound(idx, padded_self[idx]);
+    }
+  }
+  at::ScalarType size_type = self.scalar_type();
+  torch::lazy::Shape shape_ = torch::lazy::Shape(size_type, {5, 3, 4});
+  torch::lazy::Shape dynamic_shape_ =
+      shape_.with_symbolic_dims(std::vector<bool>{true, false, false});
+  return bridge::AtenFromXlaTensor(XLATensor::expand_symint(
+      bridge::GetXlaTensor(self), size_elements.GetNodes(),
+      size_elements.GetUpperBounds(), size_elements.GetDynamicDims(),
+      dynamic_shape_));
+}
+
 at::Tensor& XLANativeFunctions::exponential_(
     at::Tensor& self, double lambd, c10::optional<at::Generator> generator) {
   XLA_FN_COUNTER("xla::");
@@ -1975,12 +2001,26 @@ std::tuple<at::Tensor, at::Tensor> XLANativeFunctions::nll_loss_forward(
 at::Tensor XLANativeFunctions::nonzero(const at::Tensor& self) {
   XLA_FN_COUNTER("xla::");
   XLATensorPtr self_tensor = bridge::GetXlaTensor(self);
-  // Initially make XLA handled nonzero() handling experimental, and opt-in.
-  if (!DebugUtil::ExperimentEnabled("nonzero")) {
-    return at::native::call_fallback_fn<&xla_cpu_fallback,
-                                        ATEN_OP(nonzero)>::call(self);
-  }
-  return bridge::AtenFromXlaTensor(XLATensor::nonzero(self_tensor));
+
+  /*
+   * REMOVE THIS SECTION TO ENABLE CREATING DYNAMIC SHAPES FOR POC
+   * TODO: REMOVE THIS SECTION AFTER POC SUCCEEDS:
+   * https://github.com/pytorch/xla/pull/3558
+   *
+   * // Initially make XLA handled nonzero() handling experimental, and opt-in.
+   * if (!DebugUtil::ExperimentEnabled("nonzero")) {
+   *   return at::native::call_fallback_fn<&xla_cpu_fallback,
+   *                                       ATEN_OP(nonzero)>::call(self);
+   * }
+   */
+  at::ScalarType size_type = self.scalar_type();
+  torch::lazy::Shape shape_ = torch::lazy::Shape(
+      size_type, {xla::ShapeUtil::ElementsIn(self_tensor->shape()),
+                  self_tensor->shape().get().rank()});
+  torch::lazy::Shape dynamic_shape_ =
+      shape_.with_symbolic_dims(std::vector<bool>{true, false});
+  return bridge::AtenFromXlaTensor(
+      XLATensor::nonzero(self_tensor, dynamic_shape_));
 }
 
 at::Tensor XLANativeFunctions::norm(const at::Tensor& self,

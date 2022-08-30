@@ -21,6 +21,7 @@
 #include "torch_xla/csrc/ir.h"
 #include "torch_xla/csrc/ir_util.h"
 #include "torch_xla/csrc/lowering_context.h"
+#include "torch_xla/csrc/ops/dynamic_ir.h"
 #include "torch_xla/csrc/view.h"
 #include "torch_xla/csrc/xla_sharding_util.h"
 
@@ -561,6 +562,13 @@ class XLATensor : public c10::intrusive_ptr_target {
   static XLATensorPtr expand(const XLATensorPtr& input,
                              std::vector<int64_t> size);
 
+  static XLATensorPtr expand_symint(
+      const XLATensorPtr& input,
+      const std::vector<torch::lazy::NodePtr>& size_nodes,
+      const std::vector<int64_t> upper_bounds,
+      const std::vector<bool> dynamic_dims,
+      const torch::lazy::Shape dynamic_shapes);
+
   static void exponential_(XLATensorPtr& input, double lambd);
 
   // Returns a 2-D tensor with ones on the diagonal and zeros elsewhere.
@@ -873,7 +881,8 @@ class XLATensor : public c10::intrusive_ptr_target {
       const XLATensorPtr& score_threshold, const XLATensorPtr& iou_threshold,
       int64_t output_size);
 
-  static XLATensorPtr nonzero(const XLATensorPtr& input);
+  static XLATensorPtr nonzero(const XLATensorPtr& input,
+                              const torch::lazy::Shape& dynamic_shape);
 
   static XLATensorPtr norm(const XLATensorPtr& input,
                            const c10::optional<at::Scalar>& p,
