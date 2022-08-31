@@ -67,13 +67,15 @@ XlaOpVector SizeAdd::Lower(LoweringContext* loctx) const {
 
 SizeMul::SizeMul(torch::lazy::Value a, torch::lazy::Value b)
     : XlaNode(torch::lazy::OpKind{c10::Symbol::fromQualString("aten::mul")},
-              {a, b}, xla::ShapeUtil::MakeShape(xla::S32, {}), 1){};
+              {a, b}, xla::ShapeUtil::MakeShape(xla::S32, {}), 1) {
+  // SizeMul can only be perfomed between two DimensionNode
+  XLA_CHECK(DimCast(operand(0)));
+  XLA_CHECK(DimCast(operand(1)));
+};
 
 int64_t SizeMul::getStaticValue() const {
-  return dynamic_cast<const torch::lazy::DimensionNode*>(operand(0).node)
-             ->getStaticValue() *
-         dynamic_cast<const torch::lazy::DimensionNode*>(operand(1).node)
-             ->getStaticValue();
+  return DimCast(operand(0))->getStaticValue() *
+         DimCast(operand(1))->getStaticValue();
 }
 
 bool SizeMul::isSymbolic() const {
@@ -85,23 +87,22 @@ std::string SizeMul::ToString() const { return "SizeMul"; }
 XlaOpVector SizeMul::Lower(LoweringContext* loctx) const {
   auto input1 = loctx->GetOutputOp(operand(0));
   auto input2 = loctx->GetOutputOp(operand(1));
-  return ReturnOp(xla::Mul(xla::GetDimensionSize(input1, 0),
-                           xla::GetDimensionSize(input2, 0)),
-                  loctx);
+  return ReturnOp(input1 * input2, loctx);
 }
 
 SizeDiv::SizeDiv(torch::lazy::Value a, torch::lazy::Value b)
     : XlaNode(torch::lazy::OpKind{c10::Symbol::fromQualString("aten::div")},
-              {a, b}, xla::ShapeUtil::MakeShape(xla::S32, {}), 1){};
+              {a, b}, xla::ShapeUtil::MakeShape(xla::S32, {}), 1) {
+  // SizeDiv can only be perfomed between two DimensionNode
+  XLA_CHECK(DimCast(operand(0)));
+  XLA_CHECK(DimCast(operand(1)));
+};
 
 int64_t SizeDiv::getStaticValue() const {
-  XLA_CHECK(dynamic_cast<const torch::lazy::DimensionNode*>(operand(1).node)
-                ->getStaticValue() != 0)
+  XLA_CHECK(DimCast(operand(1))->getStaticValue() != 0)
       << "Can't divide a dimension by zero";
-  return dynamic_cast<const torch::lazy::DimensionNode*>(operand(0).node)
-             ->getStaticValue() /
-         dynamic_cast<const torch::lazy::DimensionNode*>(operand(1).node)
-             ->getStaticValue();
+  return DimCast(operand(0))->getStaticValue() /
+         DimCast(operand(1))->getStaticValue();
 }
 
 bool SizeDiv::isSymbolic() const {
@@ -113,9 +114,7 @@ std::string SizeDiv::ToString() const { return "SizeDiv"; }
 XlaOpVector SizeDiv::Lower(LoweringContext* loctx) const {
   auto input1 = loctx->GetOutputOp(operand(0));
   auto input2 = loctx->GetOutputOp(operand(1));
-  return ReturnOp(xla::Div(xla::GetDimensionSize(input1, 0),
-                           xla::GetDimensionSize(input2, 0)),
-                  loctx);
+  return ReturnOp(xla::Div(input1, input2), loctx);
 }
 
 }  // namespace torch_xla
