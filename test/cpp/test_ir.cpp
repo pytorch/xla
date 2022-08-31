@@ -4,6 +4,7 @@
 #include "torch_xla/csrc/ir.h"
 #include "torch_xla/csrc/lowering_context.h"
 #include "torch_xla/csrc/ops/arithmetic_ir_ops.h"
+#include "torch_xla/csrc/ops/dynamic_ir.h"
 #include "torch_xla/csrc/ops/ops.h"
 #include "torch_xla/csrc/ops/scalar.h"
 #include "torch_xla/csrc/ops/select.h"
@@ -92,6 +93,30 @@ TEST(IrTest, TestScopePusherWithDebugging) {
   ASSERT_TRUE(metaWithScope.scope.find("TestScope") != std::string::npos);
   EXPECT_EQ(metaWithScope.frame_info.size(), 1);
   FLAGS_torch_lazy_ir_debug = restore_FLAGS_torch_lazy_ir_debug;
+}
+
+TEST(IrTest, TestSizeNode) {
+  torch::lazy::NodePtr scalar_node =
+      ScalarOp(1.0, xla::ShapeUtil::MakeShape(xla::F32, {3, 4}));
+  torch::lazy::NodePtr size_node_0 =
+      torch::lazy::MakeNode<SizeNode>(scalar_node, 0);
+  torch::lazy::NodePtr size_node_1 =
+      torch::lazy::MakeNode<SizeNode>(scalar_node, 1);
+  std::shared_ptr<torch::lazy::DimensionNode> dim_node_0 =
+      std::dynamic_pointer_cast<torch::lazy::DimensionNode>(size_node_0);
+  std::shared_ptr<torch::lazy::DimensionNode> dim_node_1 =
+      std::dynamic_pointer_cast<torch::lazy::DimensionNode>(size_node_1);
+  EXPECT_EQ(dim_node_0->getStaticValue(), 3);
+  EXPECT_EQ(dim_node_1->getStaticValue(), 4);
+  EXPECT_FALSE(dim_node_0->isSymbolic());
+  EXPECT_FALSE(dim_node_1->isSymbolic());
+
+  ForEachDevice([&](const torch::lazy::BackendDevice& device) {
+    // Lower the SizeNode and execute the GetDimensionSize.
+    auto results = ExecuteAndFetch({size_node_0, size_node_1}, device);
+    EXPECT_EQ(results[0].sum().item().toInt(), 3);
+    EXPECT_EQ(results[1].sum().item().toInt(), 4);
+  });
 }
 
 }  // namespace cpp_test

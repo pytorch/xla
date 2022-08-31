@@ -23,15 +23,19 @@ XlaOpVector SizeNode::Lower(LoweringContext* loctx) const {
 }
 
 int64_t SizeNode::getStaticValue() const {
-  return operand(0).node->shape(0).size(dim_);
+  // Not all IR has torch::lazy::shape now, use xla::shape to unblock
+  // the development.
+  return dynamic_cast<const XlaNode*>(operand(0).node)
+      ->xla_shape(operand(0).index)
+      .dimensions(dim_);
 }
 
 bool SizeNode::isSymbolic() const {
-  auto symbolic_vec = operand(0).node->shape(0).is_symbolic();
-  if (!symbolic_vec.has_value()) {
-    return true;
-  }
-  return symbolic_vec->at(dim_);
+  // Not all IR has torch::lazy::shape now, use xla::shape to unblock
+  // the development.
+  return dynamic_cast<const XlaNode*>(operand(0).node)
+      ->xla_shape(operand(0).index)
+      .is_dynamic_dimension(dim_);
 }
 
 std::string SizeNode::ToString() const { return "SizeNode"; }
