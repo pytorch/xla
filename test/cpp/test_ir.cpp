@@ -106,6 +106,7 @@ TEST(IrTest, TestSizeNode) {
       std::dynamic_pointer_cast<torch::lazy::DimensionNode>(size_node_0);
   std::shared_ptr<torch::lazy::DimensionNode> dim_node_1 =
       std::dynamic_pointer_cast<torch::lazy::DimensionNode>(size_node_1);
+
   EXPECT_EQ(dim_node_0->getStaticValue(), 3);
   EXPECT_EQ(dim_node_1->getStaticValue(), 4);
   EXPECT_FALSE(dim_node_0->isSymbolic());
@@ -118,6 +119,28 @@ TEST(IrTest, TestSizeNode) {
     EXPECT_EQ(results[1].sum().item().toInt(), 4);
   });
 }
+
+// TEST(IrTest, TestSizeAddNode) {
+//   torch::lazy::NodePtr scalar_node =
+//       ScalarOp(1.0, xla::ShapeUtil::MakeShape(xla::F32, {3, 4}));
+//   torch::lazy::NodePtr size_node_0 =
+//       torch::lazy::MakeNode<SizeNode>(scalar_node, 0);
+//   torch::lazy::NodePtr size_node_1 =
+//       torch::lazy::MakeNode<SizeNode>(scalar_node, 1);
+//   torch::lazy::NodePtr size_node_add =
+//       torch::lazy::MakeNode<SizeAdd>(size_node_0, size_node_1);
+//   std::shared_ptr<torch::lazy::DimensionNode> dim_node_add =
+//       std::dynamic_pointer_cast<torch::lazy::DimensionNode>(size_node_add);
+
+//   EXPECT_EQ(dim_node_add->getStaticValue(), 7);
+//   EXPECT_FALSE(dim_node_add->isSymbolic());
+
+//   ForEachDevice([&](const torch::lazy::BackendDevice& device) {
+//     // Lower the SizeNode and execute the GetDimensionSize.
+//     auto results = ExecuteAndFetch({size_node_add}, device);
+//     EXPECT_EQ(results[0].sum().item().toInt(), 7);
+//   });
+// }
 
 }  // namespace cpp_test
 }  // namespace torch_xla
