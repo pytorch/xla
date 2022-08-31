@@ -42,13 +42,15 @@ std::string SizeNode::ToString() const { return "SizeNode"; }
 
 SizeAdd::SizeAdd(torch::lazy::Value a, torch::lazy::Value b)
     : XlaNode(torch::lazy::OpKind{c10::Symbol::fromQualString("aten::add")},
-              {a, b}, xla::ShapeUtil::MakeShape(xla::S32, {}), 1){};
+              {a, b}, xla::ShapeUtil::MakeShape(xla::S32, {}), 1) {
+  // SizeAdd can only be perfomed between two DimensionNode
+  XLA_CHECK(DimCast(operand(0)));
+  XLA_CHECK(DimCast(operand(1)));
+};
 
 int64_t SizeAdd::getStaticValue() const {
-  return dynamic_cast<const torch::lazy::DimensionNode*>(operand(0).node)
-             ->getStaticValue() +
-         dynamic_cast<const torch::lazy::DimensionNode*>(operand(1).node)
-             ->getStaticValue();
+  return DimCast(operand(0))->getStaticValue() +
+         DimCast(operand(1))->getStaticValue();
 }
 
 bool SizeAdd::isSymbolic() const {
@@ -60,9 +62,7 @@ std::string SizeAdd::ToString() const { return "SizeAdd"; }
 XlaOpVector SizeAdd::Lower(LoweringContext* loctx) const {
   auto input1 = loctx->GetOutputOp(operand(0));
   auto input2 = loctx->GetOutputOp(operand(1));
-  return ReturnOp(
-      (xla::GetDimensionSize(input1, 0) + xla::GetDimensionSize(input2, 0)),
-      loctx);
+  return ReturnOp((input1 + input2), loctx);
 }
 
 SizeMul::SizeMul(torch::lazy::Value a, torch::lazy::Value b)
