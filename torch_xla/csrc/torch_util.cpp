@@ -9,7 +9,6 @@ namespace torch_xla {
 
 void SymIntElements::AddSymIntNodeElements(c10::SymInt& size) {
   if (size.is_symbolic()) {
-    size_t current_index = upper_bounds_.size();
     // c10::SymInt --(convert)--> c10::SymIntNode --(cast)-->
     // lazy::SymIntNodeImpl
     // --(get)--> lazy::NodePtr --(cast)--> lazy::DimensionNode
@@ -19,21 +18,14 @@ void SymIntElements::AddSymIntNodeElements(c10::SymInt& size) {
     torch::lazy::NodePtr size_node = lazySymIntNode->node_;
     std::shared_ptr<torch::lazy::DimensionNode> dimension_node =
         std::dynamic_pointer_cast<torch::lazy::DimensionNode>(size_node);
-    size_node_map_[current_index] = size_node;
+    size_nodes_.push_back(size_node);
     upper_bounds_.push_back(dimension_node->getStaticValue());
     dynamic_dims_.push_back(dimension_node->isSymbolic());
   } else {
+    size_nodes_.push_back(nullptr);
     upper_bounds_.push_back(size.expect_int());
     dynamic_dims_.push_back(size.is_symbolic());
   }
-}
-
-torch::lazy::NodePtr SymIntElements::GetNode(size_t index) const {
-  auto iter = size_node_map_.find(index);
-  if (iter != size_node_map_.end()) {
-    return iter->second;
-  }
-  return nullptr;
 }
 
 at::ScalarType GetScalarType(const at::Scalar& scalar) {

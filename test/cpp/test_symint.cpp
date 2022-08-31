@@ -25,10 +25,11 @@ TEST(SymintTest, TestSaticSymint) {
   EXPECT_EQ(dynamic_dims.size(), 1);
   EXPECT_EQ(dynamic_dims[0], false);
 
-  std::unordered_map<size_t, torch::lazy::NodePtr> size_node_map =
-      si_element.GetNodeMap();
+  std::vector<torch::lazy::NodePtr> size_nodes = si_element.GetSizeNodes();
   // Static SymIntElements should not have size_node
-  EXPECT_EQ(size_node_map.size(), 0);
+  EXPECT_EQ(size_nodes.size(), 1);
+  EXPECT_EQ(size_nodes[0], nullptr);
+  EXPECT_EQ(si_element.GetSizeNode(0), nullptr);
 }
 
 TEST(SymintTest, TestSaticSymints) {
@@ -47,10 +48,12 @@ TEST(SymintTest, TestSaticSymints) {
   EXPECT_EQ(dynamic_dims.size(), 3);
   EXPECT_EQ(dynamic_dims, std::vector<bool>({false, false, false}));
 
-  std::unordered_map<size_t, torch::lazy::NodePtr> size_node_map =
-      si_element.GetNodeMap();
+  std::vector<torch::lazy::NodePtr> size_nodes = si_element.GetSizeNodes();
   // Static SymIntElements should not have size_node
-  EXPECT_EQ(size_node_map.size(), 0);
+  EXPECT_EQ(size_nodes.size(), 3);
+  EXPECT_EQ(size_nodes,
+            std::vector<torch::lazy::NodePtr>({nullptr, nullptr, nullptr}));
+  EXPECT_EQ(si_element.GetSizeNode(0), nullptr);
 }
 
 TEST(SymintTest, TestDynamicSymint) {
@@ -82,11 +85,9 @@ TEST(SymintTest, TestDynamicSymint) {
   EXPECT_EQ(dynamic_dims.size(), 1);
   EXPECT_EQ(dynamic_dims[0], true);
 
-  std::unordered_map<size_t, torch::lazy::NodePtr> size_node_map =
-      si_element.GetNodeMap();
-  EXPECT_EQ(size_node_map.size(), 1);
-  // look up the SizeNode for dimension 0
-  EXPECT_TRUE(si_element.GetNode(0) != nullptr);
+  std::vector<torch::lazy::NodePtr> size_nodes = si_element.GetSizeNodes();
+  EXPECT_EQ(size_nodes.size(), 1);
+  EXPECT_TRUE(si_element.GetSizeNode(0) != nullptr);
 }
 
 TEST(SymintTest, TestDynamicSymints) {
@@ -121,13 +122,12 @@ TEST(SymintTest, TestDynamicSymints) {
   EXPECT_EQ(dynamic_dims.size(), 3);
   EXPECT_EQ(dynamic_dims, std::vector<bool>({true, true, true}));
 
-  std::unordered_map<size_t, torch::lazy::NodePtr> size_node_map =
-      si_element.GetNodeMap();
-  EXPECT_EQ(size_node_map.size(), 3);
+  std::vector<torch::lazy::NodePtr> size_nodes = si_element.GetSizeNodes();
+  EXPECT_EQ(size_nodes.size(), 3);
   // look up the SizeNode for dimension 0
-  EXPECT_TRUE(si_element.GetNode(0) != nullptr);
-  EXPECT_TRUE(si_element.GetNode(1) != nullptr);
-  EXPECT_TRUE(si_element.GetNode(2) != nullptr);
+  EXPECT_TRUE(si_element.GetSizeNode(0) != nullptr);
+  EXPECT_TRUE(si_element.GetSizeNode(1) != nullptr);
+  EXPECT_TRUE(si_element.GetSizeNode(2) != nullptr);
 }
 
 }  // namespace cpp_test

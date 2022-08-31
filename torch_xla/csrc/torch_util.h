@@ -23,12 +23,12 @@ struct SymIntElements {
       AddSymIntNodeElements(_size);
     }
   }
-  std::unordered_map<size_t, torch::lazy::NodePtr> GetNodeMap() const {
-    return size_node_map_;
-  }
+  std::vector<torch::lazy::NodePtr> GetSizeNodes() const { return size_nodes_; }
   std::vector<int64_t> GetUpperBounds() const { return upper_bounds_; }
   std::vector<bool> GetDynamicDims() const { return dynamic_dims_; }
-  torch::lazy::NodePtr GetNode(size_t index) const;
+  torch::lazy::NodePtr GetSizeNode(size_t index) const {
+    return size_nodes_[index];
+  }
   void SetUpperBound(int64_t index, int64_t upper_bound) {
     XLA_CHECK_GT(upper_bounds_.size(), index);
     upper_bounds_[index] = upper_bound;
@@ -36,7 +36,9 @@ struct SymIntElements {
 
  private:
   void AddSymIntNodeElements(c10::SymInt& size);
-  std::unordered_map<size_t, torch::lazy::NodePtr> size_node_map_;
+  // Only the symbolic symint will have a size_nodes, static symint
+  // will have a nullptr in this vector.
+  std::vector<torch::lazy::NodePtr> size_nodes_;
   std::vector<int64_t> upper_bounds_;
   std::vector<bool> dynamic_dims_;
 };
