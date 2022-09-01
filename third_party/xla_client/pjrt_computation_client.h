@@ -82,14 +82,6 @@ class PjRtComputationClient : public ComputationClient {
     XLA_ERROR() << __FUNCTION__ << " not implemented";
   };
 
-  std::vector<std::vector<DataPtr>> ExecuteReplicated(
-      const Computation& computation,
-      const std::vector<std::vector<DataPtr>>& arguments,
-      absl::Span<const std::string> devices,
-      const ExecuteReplicatedOptions& options) override {
-    XLA_ERROR() << __FUNCTION__ << " not implemented";
-  };
-
   std::vector<std::vector<DataPtr>> ExecuteParallel(
       absl::Span<const Computation* const> computations,
       const std::vector<std::vector<DataPtr>>& arguments,

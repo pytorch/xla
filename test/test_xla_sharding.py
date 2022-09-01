@@ -38,9 +38,6 @@ class XlaShardingTest(unittest.TestCase):
     # assignments.
     pass
 
-  @unittest.skipIf(
-      len(xm.get_xla_supported_devices("GPU")) > 0,
-      "SPMD is currently not supported on GPU.")
   def test_mark_sharding(self):
     t1 = torch.randn(1, 128, device='cpu')
     t2 = torch.randn(1, 128, device='cpu')

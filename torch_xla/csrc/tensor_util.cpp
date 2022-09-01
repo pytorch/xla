@@ -904,6 +904,70 @@ std::vector<torch::lazy::BackendDataPtr> CreateTensorsData(
   }
 }
 
+std::vector<torch::lazy::BackendDataPtr> CreateTensorsData(
+    const std::vector<at::Tensor>& tensors,
+    const std::vector<XLATensor::ShardingSpecPtr>& shardings,
+    const std::vector<std::string>& devices) {
+  XLA_TIMED("TensorToData");
+  XLA_CHECK_EQ(tensors.size(), shardings.size());
+  XLA_CHECK_EQ(tensors.size(), devices.size());
+
+  std::vector<xla::ComputationClient::DataPtr> handles;
+  for (size_t i = 0; i < tensors.size(); ++i) {
+    torch::lazy::BackendDevice device = ParseDeviceString(devices[i]);
+    xla::Shape shape = CreateComputationShapeFromTensor(tensors[i], &device);
+
+    std::vector<xla::ComputationClient::TensorSource> source_tensors;  // in
+    std::vector<xla::ComputationClient::DataPtr> new_handles;          // out
+    if (shardings[i] != nullptr) {
+      xla::OpSharding sharding = shardings[i]->sharding;
+      // TODO(yeounoh) PJRT runs a process per host and without cross host
+      // communications. This means that we may need to manually shard across
+      // global devices for multi-host training.
+      std::vector<std::string> local_devices =
+          xla::ComputationClient::Get()->GetLocalDevices();
+      std::vector<at::Tensor> shards =
+          ShardingUtil::ShardTensor(tensors[i], sharding, local_devices);
+
+      for (int64_t j = 0; j < shards.size(); ++j) {
+        int64_t ordinal = (sharding.type() == xla::OpSharding::OTHER)
+                              ? sharding.tile_assignment_devices()[j]
+                              : j;
+        auto shard_device = ParseDeviceString(local_devices[ordinal]);
+        auto shard_shape =
+            CreateComputationShapeFromTensor(shards[j], &shard_device);
+        auto populate_fn =
+            [&, j, shard_device](
+                const xla::ComputationClient::TensorSource& source_tensor,
+                void* dest_buffer, size_t dest_buffer_size) {
+              PopulateTensorBuffer(shards[j], source_tensor.shape, dest_buffer,
+                                   dest_buffer_size, shard_device);
+            };
+        source_tensors.emplace_back(std::move(shard_shape),
+                                    shard_device.toString(),
+                                    std::move(populate_fn));
+      }
+      new_handles.push_back(
+          xla::ComputationClient::Get()->TransferShardsToServer(
+              source_tensors, devices[i], shape));
+    } else {
+      auto populate_fn =
+          [&, i, device](
+              const xla::ComputationClient::TensorSource& source_tensor,
+              void* dest_buffer, size_t dest_buffer_size) {
+            PopulateTensorBuffer(tensors[i], source_tensor.shape, dest_buffer,
+                                 dest_buffer_size, device);
+          };
+      source_tensors.emplace_back(std::move(shape), devices[i],
+                                  std::move(populate_fn));
+      new_handles =
+          xla::ComputationClient::Get()->TransferToServer(source_tensors);
+    }
+    handles.insert(handles.end(), new_handles.begin(), new_handles.end());
+  }
+  return WrapXlaData(handles);
+}
+
 xla::Literal GetTensorLiteral(const at::Tensor& tensor, const xla::Shape* shape,
                               const torch::lazy::BackendDevice* device) {
   torch::lazy::BackendDevice xla_device = GetDeviceOrCurrent(device);

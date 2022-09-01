@@ -88,7 +88,7 @@ TEST_F(XLAShardingTest, CreateTensorsData) {
   EXPECT_TRUE(xla::Shape::Equal().IgnoreLayout()(xla_data->shape(),
                                                  shards[0]->shape()));
   EXPECT_TRUE(
-      TwoEqualXlaData(tensors_data[0], WrapXlaData(shards[0]), at::kFloat));
+      XlaDataValuesEqual(tensors_data[0], WrapXlaData(shards[0]), at::kFloat));
 
   // Returns multiple input shards, replicated
   int64_t n_devices = xla::ComputationClient::Get()->GetLocalDevices().size();
@@ -99,8 +99,8 @@ TEST_F(XLAShardingTest, CreateTensorsData) {
     EXPECT_EQ(shards.size(), n_devices);
     EXPECT_TRUE(xla::Shape::Equal().IgnoreLayout()(sharded_xla_data->shape(),
                                                    shards[0]->shape()));
-    EXPECT_TRUE(TwoEqualXlaData(WrapXlaData(shards[0]), WrapXlaData(shards[1]),
-                                at::kFloat));
+    EXPECT_TRUE(XlaDataValuesEqual(WrapXlaData(shards[0]),
+                                   WrapXlaData(shards[1]), at::kFloat));
   }
 }
 
@@ -131,13 +131,13 @@ TEST_F(XLAShardingTest, InputHandler) {
 
   auto arg0_dev0 = arguments_by_device[0][0];
   auto arg0_dev1 = arguments_by_device[1][0];
-  EXPECT_TRUE(TwoEqualXlaData(WrapXlaData(arg0_dev0), WrapXlaData(arg0_dev1),
-                              at::kFloat));
+  EXPECT_TRUE(XlaDataValuesEqual(WrapXlaData(arg0_dev0), WrapXlaData(arg0_dev1),
+                                 at::kFloat));
 
   auto arg1_dev0 = arguments_by_device[0][1];
   auto arg1_dev1 = arguments_by_device[1][1];
-  EXPECT_TRUE(TwoEqualXlaData(WrapXlaData(arg1_dev0), WrapXlaData(arg1_dev1),
-                              at::kFloat));
+  EXPECT_TRUE(XlaDataValuesEqual(WrapXlaData(arg1_dev0), WrapXlaData(arg1_dev1),
+                                 at::kFloat));
 }
 
 }  // namespace cpp_test

@@ -132,7 +132,7 @@ class ComputationClient {
   };
 
   struct CompileInstance {
-     CompileInstance() = default;
+    CompileInstance() = default;
     CompileInstance(XlaComputation computation, std::string compilation_device,
                     std::vector<std::string> devices, const Shape* output_shape,
                     bool parameter_is_tupled_arguments = false,

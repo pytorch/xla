@@ -1191,16 +1191,14 @@ class XLATensor : public c10::intrusive_ptr_target {
                             const XLATensorPtr& input,
                             const XLATensorPtr& other);
 
-  // XLA SPMD sharding spec annoation. The XLA tensor uses this to create
-  // HloSharding for replication, manual and tile shardings.
+  // XLATensor sharding annotation. ShardingSpec wraps xla::OpSharding and
+  // can be extended to hold other sharding information from the user.
   struct ShardingSpec {
-    ShardingSpec(const xla::OpSharding& sharding, bool replicated, bool manual)
-        : sharding(sharding), replicated(replicated), manual(manual) {}
+    ShardingSpec(const xla::OpSharding& sharding) : sharding(sharding) {}
 
-    const xla::OpSharding sharding;
-    bool replicated;
-    bool manual;
+    xla::OpSharding sharding;
   };
+  using ShardingSpecPtr = std::shared_ptr<ShardingSpec>;
 
   std::shared_ptr<ShardingSpec> sharding_spec() const;
   bool IsShardingAnnotated() const;
