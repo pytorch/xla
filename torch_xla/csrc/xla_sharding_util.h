@@ -25,6 +25,14 @@ class ShardingUtil {
       bool unroll_windowed_einsum = false,
       bool bidirectional_windowed_einsum = false);
 
+  // This reshuffles arguments on the devices based on the sharding specs. The
+  // size of the arguments vector must match that of the sharding_specs.
+  // TODO(yeounoh) avoiding pre-loading of the unpartitioned input arguments
+  // might improve the performance and save the bandwidth.
+  static std::vector<std::vector<xla::ComputationClient::DataPtr>> InputHandler(
+      std::vector<xla::ComputationClient::DataPtr> arguments,
+      std::vector<std::string> devices);
+
   // Shard a tensor and returns the sharded tensors based on the `sharding`
   // spec. REPLICATED sharding should result in shards identical to the input;
   // OTHERS (tiled) sharding result in shards where each data dimension is
