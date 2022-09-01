@@ -127,7 +127,7 @@ target_link_libraries(
   -Wl,--unresolved-symbols=ignore-in-shared-libs
   "${TORCH_LIBRARIES}"
   "${PTXLA_LIB}"
-  "${PTXLA_LIBDIR}/torch_xla/lib/libxla_computation_client.so"
+  "${PTXLA_DIR}/torch_xla/lib/libxla_computation_client.so"
   "${PTPY_LIB}"
   "${BINARY_DIR}/lib/${CMAKE_FIND_LIBRARY_PREFIXES}gtest.a"
   "${PYTHON_LIBRARY}"
