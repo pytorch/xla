@@ -1,59 +1,67 @@
 #include <ATen/ATen.h>
 #include <gtest/gtest.h>
+#include <stdlib.h>
 
 #include <iostream>
 
 #include "cpp_test_util.h"
-#include "tensorflow/compiler/xla/client/xla_builder.h"
-#include "tensorflow/compiler/xla/shape_util.h"
-#include "tensorflow/compiler/xla/xla_client/computation_client.h"
-#include "tensorflow/compiler/xla/xla_client/debug_macros.h"
-#include "tensorflow/compiler/xla/xla_client/multi_wait.h"
-#include "tensorflow/compiler/xla/xla_client/thread_pool.h"
+#include "tensorflow/compiler/xla/xla_client/env_vars.h"
+#include "tensorflow/compiler/xla/xla_client/sys_util.h"
+#include "tensorflow/compiler/xla/xla_data.pb.h"
 #include "torch_xla/csrc/aten_xla_bridge.h"
 #include "torch_xla/csrc/helpers.h"
+#include "torch_xla/csrc/tensor.h"
 #include "torch_xla/csrc/tensor_util.h"
-#include "torch_xla/csrc/torch_util.h"
+#include "torch_xla/csrc/xla_sharding_util.h"
 #include "torch_xla_test.h"
 
 namespace torch_xla {
 namespace cpp_test {
-
-// A placeholder for future SPMD sharding tests.
+namespace {
+bool XlaDataValuesEqual(torch::lazy::BackendDataPtr a,
+                        torch::lazy::BackendDataPtr b,
+                        at::ScalarType element_type) {
+  std::vector<at::Tensor> tensors = XlaDataToTensors({a, b}, element_type);
+  return TensorCompare(tensors[0], tensors[1]);
+}
+}  // namespace
 
 class XLAShardingTest : public AtenXlaTensorTestBase {};
 
-TEST_F(XLAShardingTest, TestSPMDPartitioner) {
-  // For debugging purposes only.
-  const int64_t replica_count_ = 1;
-  const int64_t num_partitions_ = 8;
+TEST_F(XLAShardingTest, ShardTensor) {
+  std::vector<std::string> devices = {"TPU:0", "TPU:1", "TPU:2", "TPU:3",
+                                      "TPU:4", "TPU:5", "TPU:6", "TPU:7"};
 
-  absl::string_view hlo_text = R"
-  HloModule IrToHlo.10
+  // 1D tiled
+  at::Tensor tensor = at::ones({8}, at::TensorOptions(at::kFloat));
+  xla::OpSharding sharding =
+      xla::HloSharding::Tile1D(
+          CreateComputationShapeFromTensor(tensor, GetDefaultDevice()),
+          devices.size())
+          .ToProto();
+  auto shards = ShardingUtil::ShardTensor(tensor, sharding, devices);
+  EXPECT_EQ(shards.size(), 8);
+  EXPECT_EQ(shards[0].sizes(), c10::ArrayRef<long>({1}));
+  EXPECT_EQ(shards[1].sizes(), c10::ArrayRef<long>({1}));
 
-  ENTRY %IrToHlo.10 (p0.6: f32[64,10]) -> (f32[64,10]) {
-    p0.6 = f32[64,10]{0,1} parameter(0)
-    constant.1 = f32[] constant(1)
-    reshape.2 = f32[1,1]{1,0} reshape(f32[] constant.1)
-    broadcast.3 = f32[1,1]{1,0} broadcast(f32[1,1]{1,0} %reshape.2), dimensions={0,1}
-    reshape.4 = f32[] reshape(f32[1,1]{1,0} %broadcast.3)
-    broadcast.5 = f32[64,10]{1,0} broadcast(f32[] %reshape.4), dimensions={}
-    multiply.7 = f32[64,10]{0,1} multiply(f32[64,10]{0,1} p0.6, f32[64,10]{1,0} %broadcast.5)
-    add.8 = f32[64,10]{0,1} add(f32[64,10]{0,1} p0.6, f32[64,10]{0,1} %multiply.7)
-    ROOT tuple.9 = (f32[64,10]{0,1}) tuple(f32[64,10]{0,1} add.8)
-  }
-  ";
+  // 2D tiled, the last shard size should be smaller in dim=1
+  tensor = at::ones({8, 7, 4}, at::TensorOptions(at::kFloat));
+  xla::Array2D<int64_t> mesh({
+      {0, 1, 2, 3},
+      {4, 5, 6, 7},
+  });
+  sharding = xla::HloSharding::Tile(mesh).ToProto();
+  shards = ShardingUtil::ShardTensor(tensor, sharding, devices);
+  EXPECT_EQ(shards.size(), 8);
+  EXPECT_EQ(shards[0].sizes(), c10::ArrayRef<long>({4, 2, 4}));
+  EXPECT_EQ(shards[7].sizes(), c10::ArrayRef<long>({4, 1, 4}));
 
-  HloModuleConfig config;
-  config.set_replica_count(replica_count_);
-  config.set_num_partitions(num_partitions_);
-
-  // Parse and return a verified module
-  // TODO: might need to update sharding with the given replica_count_
-  // and re-run SpmdPartitioner.
-  auto module = absl::make_unique<HloModule>("TestSPMDPartitioner", config);
-  auto parser = HloParser::CreateHloParserForTests(hlo_text);
-  parser->run(module);
+  // Replicated, all shards should be identical
+  sharding = xla::HloSharding::Replicate().ToProto();
+  shards = ShardingUtil::ShardTensor(tensor, sharding, devices);
+  EXPECT_EQ(shards.size(), 8);
+  EXPECT_EQ(shards[0].sizes(), c10::ArrayRef<long>({8, 7, 4}));
+  EXPECT_EQ(shards[7].sizes(), c10::ArrayRef<long>({8, 7, 4}));
 }
 
 }  // namespace cpp_test

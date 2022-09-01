@@ -12,9 +12,13 @@ import torch_xla.experimental.xla_sharding as xs
 from torch_xla.experimental.xla_sharded_tensor import XLAShardedTensor
 
 
+@unittest.skipIf((os.getenv('PJRT_DEVICE') == "") or (
+    xm.get_xla_supported_devices("GPU") is not None
+), "PyTorch/XLA SPMD requires PJRT_DEVICE={CPU, TPU}, GPU is currently not supported."
+                )
 class XlaShardingTest(unittest.TestCase):
 
-  @unittest.skip("Work-in-progress")
+  @unittest.skip("work-in-progress")
   def test_xla_sharded_tensor(self):
     # TODO(244003536) re-enable when new test cases are ready.
     n_devices = xm.xrt_world_size()
@@ -32,6 +36,7 @@ class XlaShardingTest(unittest.TestCase):
 
     # TODO(yeounoh) Check if the returned sharding spec holds the correct device
     # assignments.
+    pass
 
   def test_mark_sharding(self):
     t1 = torch.randn(1, 128, device='cpu')
@@ -43,7 +48,8 @@ class XlaShardingTest(unittest.TestCase):
     n_devices = xm.xrt_world_size()
     xs.mark_sharding(xt1, (1, n_devices), (0, 1))
     annotation = '{devices=[1,%d]%s}' % (n_devices, ','.join(
-        [str(i) for i in range(n_devices)]))
+        [str(i)
+         for i in range(n_devices)])) if n_devices > 1 else '{maximal device=0}'
     self.assertEqual(annotation, torch_xla._XLAC._get_xla_sharding_spec(xt1))
 
     actual = (xt1 @ xt2.T).cpu()
