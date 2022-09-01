@@ -35,6 +35,7 @@ class XLATensorImpl : public c10::TensorImpl {
   at::IntArrayRef sizes_custom() const override;
   c10::SymIntArrayRef sym_sizes() const override;
   c10::SymIntArrayRef sym_sizes_custom() const override;
+  c10::SymInt sym_numel_custom() const override;
   at::IntArrayRef strides_custom() const override;
 
   int64_t dim_custom() const override;
