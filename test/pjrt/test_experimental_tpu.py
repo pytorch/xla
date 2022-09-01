@@ -101,7 +101,7 @@ class TestExperimentalTpu(parameterized.TestCase):
               '8476',
           xenv.TPU_PROCESS_ADDRESSES:
               'localhost:8476,localhost:8477,localhost:8478,localhost:8479',
-          xenv.TPU_VISIBLE_DEVICES:
+          xenv.TPU_VISIBLE_CHIPS:
               '0',
       }),
       ('v4-8_process_3', {
@@ -120,7 +120,7 @@ class TestExperimentalTpu(parameterized.TestCase):
               '8479',
           xenv.TPU_PROCESS_ADDRESSES:
               'localhost:8476,localhost:8477,localhost:8478,localhost:8479',
-          xenv.TPU_VISIBLE_DEVICES:
+          xenv.TPU_VISIBLE_CHIPS:
               '3',
       }),
       ('v4-16_worker_1_process_0', {
@@ -139,7 +139,7 @@ class TestExperimentalTpu(parameterized.TestCase):
               '8476',
           xenv.TPU_PROCESS_ADDRESSES:
               '10.130.0.31:8476,10.130.0.31:8477,10.130.0.31:8478,10.130.0.31:8479,10.130.0.30:8476,10.130.0.30:8477,10.130.0.30:8478,10.130.0.30:8479',
-          xenv.TPU_VISIBLE_DEVICES:
+          xenv.TPU_VISIBLE_CHIPS:
               '0',
       }),
       # TODO: remove this case when process bounds are added to metadata
@@ -157,7 +157,7 @@ class TestExperimentalTpu(parameterized.TestCase):
               '8476',
           xenv.TPU_PROCESS_ADDRESSES:
               'localhost:8476,localhost:8477,localhost:8478,localhost:8479',
-          xenv.TPU_VISIBLE_DEVICES:
+          xenv.TPU_VISIBLE_CHIPS:
               '0',
       }))
   def test_configure_tpu_topology(self, tpu_env, worker_ips, local_rank,

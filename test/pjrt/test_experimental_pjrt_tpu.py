@@ -19,7 +19,7 @@ class TestExperimentalPjrtTpu(parameterized.TestCase):
   def setUp(self):
     pjrt.set_device_type('TPU')
 
-    os.environ.pop(xenv.TPU_VISIBLE_DEVICES, None)
+    os.environ.pop(xenv.TPU_VISIBLE_CHIPS, None)
     os.environ.pop(xenv.TPU_PROCESS_BOUNDS, None)
 
     try:
@@ -93,7 +93,7 @@ class TestExperimentalPjrtTpu(parameterized.TestCase):
           self.accelerator_type))
     expected = accelerator_devices[self.accelerator_type]
 
-    os.environ[xenv.TPU_VISIBLE_DEVICES] = '0,1,2,3'
+    os.environ[xenv.TPU_VISIBLE_CHIPS] = '0,1,2,3'
     os.environ[xenv.TPU_PROCESS_BOUNDS] = '1,1,1'
 
     devices = pjrt.run_multiprocess(xm.xla_device)
@@ -119,7 +119,7 @@ class TestExperimentalPjrtTpu(parameterized.TestCase):
           self.accelerator_type))
     expected = accelerator_devices[self.accelerator_type]
 
-    os.environ[xenv.TPU_VISIBLE_DEVICES] = '0'
+    os.environ[xenv.TPU_VISIBLE_CHIPS] = '0'
     os.environ[xenv.TPU_PROCESS_BOUNDS] = '1,1,1'
 
     devices = pjrt.run_multiprocess(xm.xla_device)
