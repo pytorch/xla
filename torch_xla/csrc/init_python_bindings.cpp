@@ -12,11 +12,8 @@
 #include "absl/container/flat_hash_map.h"
 #include "absl/strings/str_cat.h"
 #include "absl/types/variant.h"
+#include "tensorflow/compiler/xla/service/hlo_module.h"
 #include "tensorflow/compiler/xla/service/hlo_parser.h"
-#include "tensorflow/compiler/xla/service/hlo_pass_pipeline.h"
-#include "tensorflow/compiler/xla/service/hlo_verifier.h"
-#include "tensorflow/compiler/xla/service/sharding_propagation.h"
-#include "tensorflow/compiler/xla/service/spmd/spmd_partitioner.h"
 #include "tensorflow/compiler/xla/xla_client/computation_client.h"
 #include "tensorflow/compiler/xla/xla_client/mesh_service.h"
 #include "tensorflow/compiler/xla/xla_client/metrics.h"
@@ -54,6 +51,7 @@
 #include "torch_xla/csrc/version.h"
 #include "torch_xla/csrc/xla_backend_impl.h"
 #include "torch_xla/csrc/xla_op_builder.h"
+#include "torch_xla/csrc/xla_sharding_util.h"
 
 namespace torch_xla {
 namespace {
@@ -1410,21 +1408,12 @@ void InitXlaModuleBindings(py::module m) {
            bool choose_faster_windowed_einsum = false,
            bool unroll_windowed_einsum = false,
            bool bidirectional_windowed_einsum = false) -> std::string {
-          xla::spmd::SpmdPartitionerOptions options;
-          options.conv_halo_exchange_always_on_lhs =
-              conv_halo_exchange_always_on_lhs;
-          options.allow_module_signature_change = true;
-          options.choose_faster_windowed_einsum_over_mem =
-              choose_faster_windowed_einsum;
-          options.unroll_windowed_einsum = unroll_windowed_einsum;
-          options.bidirectional_windowed_einsum = bidirectional_windowed_einsum;
-
           xla::HloModuleConfig config;
           config.set_use_spmd_partitioning(true);
           config.set_replica_count(num_replicas);
           config.set_num_partitions(num_devices);
 
-          auto hlo_text = GetTensorsHloGraph(tensors);
+          std::string hlo_text = GetTensorsHloGraph(tensors);
           auto hlo_module_error =
               xla::ParseAndReturnUnverifiedModule(hlo_text, config);
           if (!hlo_module_error.ok()) {
@@ -1432,25 +1421,16 @@ void InitXlaModuleBindings(py::module m) {
                        << hlo_module_error.status();
             return nullptr;
           }
+
           auto module = std::move(hlo_module_error.ValueOrDie());
-
-          auto collective_ops_creator =
-              xla::spmd::GetDefaultCollectiveOpsCreator(
-                  num_devices, /*num_replicas=*/num_replicas);
-
-          xla::HloPassPipeline pass("spmd-partitioning");
-          pass.AddPass<xla::HloVerifier>(/*layout_sensitive=*/false,
-                                         /*allow_mixed_precision=*/false);
-          pass.AddPass<xla::ShardingPropagation>(/*is_spmd=*/true);
-          pass.AddPass<xla::spmd::SpmdPartitioner>(
-              num_devices, /*num_replicas=*/num_replicas, options,
-              collective_ops_creator);
-          pass.AddPass<xla::HloVerifier>(/*layout_sensitive=*/false,
-                                         /*allow_mixed_precision=*/false);
-          const auto& pass_status = pass.Run(module.get());
-          if (!pass_status.ok()) {
-            XLA_ERROR() << "spmd-partitioning pass failed";
-          }
+          xla::HloModuleProto module_proto = ShardingUtil::SpmdPartitioningPass(
+              module->ToProto(), num_replicas, num_devices,
+              conv_halo_exchange_always_on_lhs,
+              choose_faster_windowed_einsum_over_mem, unroll_windowed_einsum,
+              bidirectional_windowed_einsum);
+          module = std::move(
+              xla::HloModule::CreateFromProto(module_proto, const config)
+                  .ValueOrDie());
           return module->ToString();
         });
 
