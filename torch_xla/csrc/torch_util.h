@@ -16,23 +16,28 @@ namespace torch_xla {
 // Unpack SymInt objects into their building blocks
 struct SymIntElements {
  public:
-  SymIntElements(c10::SymInt& size) { SetSymIntNodeElements(size); }
+  SymIntElements(c10::SymInt& size) { AddSymIntNodeElements(size); }
   SymIntElements(c10::SymIntArrayRef& size) {
     std::vector<c10::SymInt> _sizes = torch::lazy::ToVector<c10::SymInt>(size);
     for (auto& _size : _sizes) {
-      SetSymIntNodeElements(_size);
+      AddSymIntNodeElements(_size);
     }
   }
-  std::vector<torch::lazy::NodePtr> GetNodes() { return size_nodes_; }
-  std::vector<int64_t> GetUpperBounds() { return upper_bounds_; }
-  std::vector<bool> GetDynamicDims() { return dynamic_dims_; }
+  std::vector<torch::lazy::NodePtr> GetSizeNodes() const { return size_nodes_; }
+  std::vector<int64_t> GetUpperBounds() const { return upper_bounds_; }
+  std::vector<bool> GetDynamicDims() const { return dynamic_dims_; }
+  torch::lazy::NodePtr GetSizeNode(size_t index) const {
+    return size_nodes_[index];
+  }
   void SetUpperBound(int64_t index, int64_t upper_bound) {
     XLA_CHECK_GT(upper_bounds_.size(), index);
     upper_bounds_[index] = upper_bound;
   }
 
  private:
-  void SetSymIntNodeElements(c10::SymInt& size);
+  void AddSymIntNodeElements(c10::SymInt& size);
+  // Only the symbolic symint will have a size_nodes, static symint
+  // will have a nullptr in this vector.
   std::vector<torch::lazy::NodePtr> size_nodes_;
   std::vector<int64_t> upper_bounds_;
   std::vector<bool> dynamic_dims_;
