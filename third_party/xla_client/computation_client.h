@@ -132,21 +132,24 @@ class ComputationClient {
   };
 
   struct CompileInstance {
-    CompileInstance() = default;
+     CompileInstance() = default;
     CompileInstance(XlaComputation computation, std::string compilation_device,
                     std::vector<std::string> devices, const Shape* output_shape,
-                    bool parameter_is_tupled_arguments = false)
+                    bool parameter_is_tupled_arguments = false,
+                    bool is_sharded = false)
         : computation(std::move(computation)),
           compilation_device(std::move(compilation_device)),
           devices(std::move(devices)),
           output_shape(output_shape),
-          parameter_is_tupled_arguments(parameter_is_tupled_arguments) {}
+          parameter_is_tupled_arguments(parameter_is_tupled_arguments),
+          is_sharded(is_sharded) {}
 
     XlaComputation computation;
     std::string compilation_device;
     std::vector<std::string> devices;
     const Shape* output_shape = nullptr;
     bool parameter_is_tupled_arguments;
+    bool is_sharded;
   };
 
   struct ExecuteOptions {
@@ -208,9 +211,20 @@ class ComputationClient {
   virtual std::vector<xla::util::ExceptionCleanup> LockAsyncDatas(
       absl::Span<const DataPtr> datas) = 0;
 
+  // Returns data shards. We expect this to be called on PjRtShardedData to
+  // retrieve the shards. If other data type is passed, it returns the input
+  // wrapped inside a vector.
+  virtual std::vector<DataPtr> GetDataShards(DataPtr data) = 0;
+
   // Transfers local tensor values to the TPU servers and fetches the handles.
   virtual std::vector<DataPtr> TransferToServer(
       absl::Span<const TensorSource> tensors) = 0;
+
+  // Transfers local sharded tensor values to the TPU servers and returns a
+  // `PjRtShardedData`.
+  virtual DataPtr TransferShardsToServer(
+      absl::Span<const TensorSource> tensor_shards, std::string device,
+      xla::Shape shape) = 0;
 
   // Transfers local tensor values to the TPU servers and fetches the handles.
   // Update the handles associated with DataPtrs passed instead of creating new
