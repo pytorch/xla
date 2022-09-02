@@ -82,12 +82,10 @@ class ProcessGroupXla(ProcessGroup):
   # https://github.com/pytorch/pytorch/blob/release/1.10/torch/distributed/distributed_c10d.py#L1129
   def broadcast(self, tensors, opts):
     root_tensor = tensors[opts.rootTensor]
-    with torch.no_grad():
-      scale = 1 if opts.rootRank != self.rank() else 0
-      root_tensor = root_tensor * scale
-
-    xm.all_reduce(
-        xm.REDUCE_SUM, [root_tensor], groups=self._mesh, pin_layout=False)
+    xm.collective_broadcast([root_tensor],
+                            opts.rootRank,
+                            groups=self._mesh,
+                            pin_layout=False)
 
     return _ret_work([root_tensor])
 
