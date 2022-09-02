@@ -492,28 +492,32 @@ XLATensorPtr XLATensor::Create(
 
 XLATensor::XLATensor(const at::Tensor& tensor,
                      const torch::lazy::BackendDevice& device)
-    : data_(std::make_shared<Data>(tensor, device)) {}
+    : XLATensor(std::make_shared<Data>(tensor, device)) {}
 
 XLATensor::XLATensor(torch::lazy::BackendDataPtr xla_data,
                      c10::optional<at::ScalarType> logical_element_type)
-    : data_(std::make_shared<Data>(xla_data, xla_data->device(),
-                                   logical_element_type)) {}
+    : XLATensor(std::make_shared<Data>(xla_data, xla_data->device(),
+                                       logical_element_type)) {}
 
 XLATensor::XLATensor(torch::lazy::Value ir_value,
                      const torch::lazy::BackendDevice& device,
                      c10::optional<at::ScalarType> logical_element_type)
-    : data_(std::make_shared<Data>(std::move(ir_value), device,
-                                   logical_element_type)) {
+    : XLATensor(std::make_shared<Data>(std::move(ir_value), device,
+                                       logical_element_type)) {
   TryLimitGraphSize();
 }
 
 XLATensor::XLATensor(std::shared_ptr<View> view,
                      const torch::lazy::BackendDevice& device,
                      c10::optional<at::ScalarType> logical_element_type)
-    : data_(std::make_shared<Data>(std::move(view), device,
-                                   logical_element_type)) {}
+    : XLATensor(std::make_shared<Data>(std::move(view), device,
+                                       logical_element_type)) {}
 
-XLATensor::XLATensor(std::shared_ptr<Data> data) : data_(std::move(data)) {}
+XLATensor::XLATensor(std::shared_ptr<Data> data)
+    : data_(std::move(data)),
+      storage_(c10::Storage(
+          {}, 0,
+          c10::DataPtr(nullptr, backendDeviceToAtenDevice(data_->device)))) {}
 
 XLATensor::Data* XLATensor::data() const {
   XLA_CHECK(data_ != nullptr) << "Trying to access a null cursor";
@@ -905,8 +909,10 @@ std::shared_ptr<View> XLATensor::CreateView(ViewInfo view_info) const {
 }
 
 XLATensorPtr XLATensor::CreateViewTensor(ViewInfo view_info) const {
-  return Create(CreateView(std::move(view_info)), GetDevice(),
-                dtype_optional());
+  auto new_tensor =
+      Create(CreateView(std::move(view_info)), GetDevice(), dtype_optional());
+  new_tensor->storage_ = Storage();
+  return new_tensor;
 }
 
 at::Tensor XLATensor::ToTensor(bool detached) {
