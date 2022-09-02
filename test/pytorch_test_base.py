@@ -272,7 +272,7 @@ DISABLED_TORCH_TESTS_ANY = {
 
     # test/nn/test_dropout.py
     'TestDropoutNNDeviceTypeXLA': {
-      'test_Dropout2d_xla',  # Started to pass
+        'test_Dropout2d_xla',  # Started to pass
     },
 
     # test_type_promotion.py
