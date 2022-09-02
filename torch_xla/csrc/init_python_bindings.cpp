@@ -1402,6 +1402,9 @@ void InitXlaModuleBindings(py::module m) {
     }
     return std::string();
   });
+  // This is useful for debugging and generating a partitioned HLO separately
+  // outside the actual compilation & execution. This allows testing with
+  // different partitioning configurations.
   m.def("_xla_partitioning_pass",
         [](const std::vector<at::Tensor>& tensors, int64_t num_replicas,
            int64_t num_devices, bool conv_halo_exchange_always_on_lhs = true,
