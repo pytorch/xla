@@ -783,12 +783,13 @@ def collective_broadcast(tensors: List[torch.Tensor],
       cause some xla compiation to fail. Unpin the layout when you see error message
       like "HloModule has a mix of layout constrained".
   """
-  for tensor in tensors:
-    with torch.no_grad():
+  with torch.no_grad():
+    # We must produce the exact same graph in each replica to prevent hanging,
+    # so each replica must have the same multiply op with the same parameters.
+    for tensor in tensors:
       scale = torch.tensor(
           1 if get_ordinal() == root_ordinal else 0, dtype=tensor.dtype)
-      # Transfer scale tensor as device data instead of constant 1 or 0 to
-      # prevent differences between replicas' graphs
+      # Transfer scale tensor as device data instead of constant 1 or 0.
       xscale = send_cpu_data_to_device(scale, tensor.device)
       tensor.mul_(xscale)
 
