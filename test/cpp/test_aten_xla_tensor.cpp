@@ -11212,5 +11212,25 @@ TEST_F(AtenXlaTensorTest, TestRoll) {
   ExpectCounterChanged("xla::roll", cpp_test::GetIgnoredCounters());
 }
 
+TEST_F(AtenXlaTensorTest, TestViewIsAliasOf) {
+  torch::Tensor a = torch::empty(4, torch::TensorOptions(torch::kFloat));
+  torch::Tensor b = torch::empty(4, torch::TensorOptions(torch::kFloat));
+
+  ForEachDevice([&](const torch::Device& device) {
+    torch::Tensor xla_a = CopyToDevice(a, device);
+    torch::Tensor xla_b = CopyToDevice(b, device);
+    EXPECT_EQ(!a.is_alias_of(b), !xla_a.is_alias_of(xla_b));
+
+    torch::Tensor c = a.view({2, 2});
+    torch::Tensor xla_c = xla_a.view({2, 2});
+    EXPECT_EQ(a.is_alias_of(c), xla_a.is_alias_of(xla_c));
+
+    torch::Tensor d = c.view({1, 4});
+    torch::Tensor lazy_d = xla_c.view({1, 4});
+    EXPECT_EQ(d.is_alias_of(c), lazy_d.is_alias_of(xla_c));
+    EXPECT_EQ(d.is_alias_of(a), lazy_d.is_alias_of(xla_a));
+  });
+}
+
 }  // namespace cpp_test
 }  // namespace torch_xla
