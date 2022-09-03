@@ -77,8 +77,7 @@ function run_xla_backend_mp {
 
 function run_pjrt {
   echo "Running in PjRt runtime: $@"
-  # TODO(darisoy): run these tests with multiple CPU devices, this fails due to TF issue.
-  PJRT_DEVICE=CPU CPU_NUM_DEVICES=1 run_test "$@"
+  PJRT_DEVICE=CPU run_test "$@"
 }
 
 function run_async_scalar {
