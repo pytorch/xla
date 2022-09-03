@@ -1195,6 +1195,8 @@ class XLATensor : public c10::intrusive_ptr_target {
                        bool manual);
   void ClearShardingSpec();
 
+  const c10::Storage& Storage() const { return storage_; }
+
  private:
   struct SyncTensorsConfig {
     // Whether we want to force XLA data on the target tensors (hence trimming
@@ -1465,6 +1467,12 @@ class XLATensor : public c10::intrusive_ptr_target {
   bool ShouldSyncIrNode();
 
   std::shared_ptr<Data> data_;
+  // Temporarily used to suport Tensor.is_alias_of().
+  // This is a fake storage that doesn't store anything.
+  // Instead it serves as a marker to mark LazyTensors that
+  // points to the same storage, and thus alias of each other.
+  // FIXME(alanwaketan): Remove this once we have functionalization (bdhirsh).
+  c10::Storage storage_;
 };
 
 }  // namespace torch_xla
