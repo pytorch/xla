@@ -77,3 +77,15 @@ index 6487b9fb8e3..3cac0b53abc 100644
 +}  // namespace
  }  // namespace profiler
  }  // namespace tensorflow
+
+--- a/tensorflow/core/platform/macros.h
++++ b/tensorflow/core/platform/macros.h
+@@ -21,7 +21,7 @@ limitations under the License.
+ // Compiler supports GCC-style attributes
+ #define TF_ATTRIBUTE_NORETURN __attribute__((noreturn))
+ #define TF_ATTRIBUTE_ALWAYS_INLINE __attribute__((always_inline))
+-#define TF_ATTRIBUTE_NOINLINE __attribute__((noinline))
++#define TF_ATTRIBUTE_NOINLINE [[noinline]]
+ #define TF_ATTRIBUTE_UNUSED __attribute__((unused))
+ #define TF_ATTRIBUTE_COLD __attribute__((cold))
+ #define TF_ATTRIBUTE_WEAK __attribute__((weak))
