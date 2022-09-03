@@ -303,7 +303,7 @@ def make_relative_rpath(path):
 
 
 extra_compile_args = [
-    '-std=c++17',
+    '-std=c++14',
     '-Wno-sign-compare',
     '-Wno-deprecated-declarations',
     '-Wno-return-type',

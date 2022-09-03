@@ -43,8 +43,6 @@ ExternalProject_Add(
   CMAKE_ARGS
     "-DCMAKE_CXX_FLAGS=-D_GLIBCXX_USE_CXX11_ABI=${PT_CXX_ABI}")
 
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++17")
-
 ExternalProject_Get_Property(googletest SOURCE_DIR)
 
 set(TORCH_XLA_TEST_SOURCES

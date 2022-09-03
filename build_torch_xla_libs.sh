@@ -54,10 +54,9 @@ if [[ ! -z "$BAZEL_JOBS" ]]; then
   MAX_JOBS="--jobs=$BAZEL_JOBS"
 fi
 
-OPTS+=(--cxxopt="-std=c++17")
+OPTS+=(--cxxopt="-std=c++14")
 if [[ $(basename -- $CC) =~ ^clang ]]; then
   OPTS+=(--cxxopt="-Wno-c++11-narrowing")
-  OPTS+=(--cxxopt="-Wno-c++14-narrowing")
 fi
 
 if [[ "$XLA_CUDA" == "1" ]]; then
