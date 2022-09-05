@@ -270,11 +270,6 @@ DISABLED_TORCH_TESTS_ANY = {
         'test_CTCLoss_no_batch_dim_xla',  # Value out of range
     },
 
-    # test/nn/test_dropout.py
-    'TestDropoutNNDeviceTypeXLA': {
-        'test_Dropout2d_xla',  # Started to pass
-    },
-
     # test_type_promotion.py
     'TestTypePromotionXLA': {
         'test_many_promotions',  # stride
