@@ -916,6 +916,13 @@ at::Tensor XLANativeFunctions::cdist(const at::Tensor& x1, const at::Tensor& x2,
       bridge::GetXlaTensor(x1), bridge::GetXlaTensor(x2), p , compute_mode_val));
 }
 
+at::Tensor XLANativeFunctions::floor_divide(const at::Tensor& self,
+                                            const at::Tensor& other) {
+  return torch_xla::XLANativeFunctions::div(self, other,
+                                            /*rounding_mode=*/"floo");
+}
+
+
 at::Tensor XLANativeFunctions::celu(const at::Tensor& self,
                                     const at::Scalar& alpha) {
   XLA_FN_COUNTER("xla::");

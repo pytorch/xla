@@ -114,6 +114,9 @@ std::vector<xla::XlaOp> BuildAdamOptimizerStep(
     const xla::XlaOp& weight_decay, const xla::XlaOp& eps,
     bool use_weight_decay, bool use_amsgrad, bool use_adamw);
 
+xla::XlaOp BuildCdistForward(xla::XlaOp x1, xla::XlaOp x2,
+                         xla::XlaOp p, xla::XlaOp compute_mode);
+                         
 xla::XlaOp BuildXLogY(xla::XlaOp input, xla::XlaOp other);
 
 xla::XlaOp BuildRoll(xla::XlaOp input, absl::Span<const int64_t> shifts,

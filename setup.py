@@ -249,7 +249,7 @@ if build_mode not in ['clean']:
   generate_xla_lazy_code(base_dir)
 
   # Build the support libraries (ie, TF).
-  # build_extra_libraries(base_dir, build_mode=build_mode)
+  build_extra_libraries(base_dir, build_mode=build_mode)
 
   # Generate the proto C++/python files only after third_party has built.
   generate_protos(base_dir, third_party_path)

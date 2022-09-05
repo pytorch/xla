@@ -950,6 +950,11 @@ std::vector<xla::XlaOp> BuildAdamOptimizerStep(
   return results;
 }
 
+xla::XlaOp BuildCdistForward(xla::XlaOp x1, xla::XlaOp x2,
+                         xla::XlaOp p, xla::XlaOp compute_mode) {
+  return x1 - x2;
+}
+
 xla::XlaOp BuildXLogY(xla::XlaOp input, xla::XlaOp other) {
   // input and xla::Log(other) can have different types, need to promote
   // the multiply.

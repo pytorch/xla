@@ -167,6 +167,7 @@ supported:
   - fill_.Scalar
   - fill_.Tensor
   - flip
+  - floor_divide
   - fmod.Scalar
   - fmod.Tensor
   - frac
