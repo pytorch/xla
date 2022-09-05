@@ -275,6 +275,11 @@ DISABLED_TORCH_TESTS_ANY = {
         'test_Dropout2d_xla',  # Started to pass
     },
 
+    # test/nn/test_pooling.py
+    'TestPoolingNNDeviceTypeXLA': {
+        'test_pool_invalid_size',  # expecting a different runtime error
+    },
+
     # test_type_promotion.py
     'TestTypePromotionXLA': {
         'test_many_promotions',  # stride
