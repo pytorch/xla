@@ -896,6 +896,26 @@ at::Tensor XLANativeFunctions::cat(at::TensorList tensors, int64_t dim) {
       bridge::GetXlaTensors(tensors), dim, at::native::result_type(tensors)));
 }
 
+at::Tensor XLANativeFunctions::_cdist_forward(const at::Tensor& x1, const at::Tensor& x2, double p, c10::optional<int64_t> compute_mode) {
+  XLA_FN_COUNTER("xla::");
+//   XLA_CHECK_EQ(x1.dtype(), x2.dtype())
+//       << "expected dtype " << x1.dtype() << " for `end` but got dtype "
+//       << x2.dtype();
+  int64_t compute_mode_val = compute_mode.has_value() ? compute_mode.value() : 0;
+  return bridge::AtenFromXlaTensor(XLATensor::cdist_forward(
+      bridge::GetXlaTensor(x1), bridge::GetXlaTensor(x2), p , compute_mode_val));
+}
+
+at::Tensor XLANativeFunctions::cdist(const at::Tensor& x1, const at::Tensor& x2, double p, c10::optional<int64_t> compute_mode) {
+  XLA_FN_COUNTER("xla::");
+//   XLA_CHECK_EQ(x1.dtype(), x2.dtype())
+//       << "expected dtype " << x1.dtype() << " for `end` but got dtype "
+//       << x2.dtype();
+  int64_t compute_mode_val = compute_mode.has_value() ? compute_mode.value() : 0;
+  return bridge::AtenFromXlaTensor(XLATensor::cdist_forward(
+      bridge::GetXlaTensor(x1), bridge::GetXlaTensor(x2), p , compute_mode_val));
+}
+
 at::Tensor XLANativeFunctions::celu(const at::Tensor& self,
                                     const at::Scalar& alpha) {
   XLA_FN_COUNTER("xla::");

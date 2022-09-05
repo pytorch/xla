@@ -737,6 +737,14 @@ torch::lazy::NodePtr BaddBmm(const torch::lazy::Value& lhs,
       std::move(lower_fn));
 }
 
+torch::lazy::NodePtr Cdist_forward(const torch::lazy::Value& x1, 
+                                   const torch::lazy::Value& x2,
+                                   const torch::lazy::Value& p, 
+                                   const torch::lazy::Value& compute_mode) {
+  torch::lazy::ScopePusher ir_scope(at::aten::_cdist_forward.toQualString());
+  return x1 + x2;
+}
+
 torch::lazy::NodePtr Lerp(const torch::lazy::Value& start,
                           const torch::lazy::Value& end,
                           const torch::lazy::Value& weight) {

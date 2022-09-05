@@ -135,6 +135,8 @@ supported:
   - binary_cross_entropy_with_logits
   - bmm
   - cat
+  - cdist
+  - _cdist_forward
   - celu
   - celu_
   - clamp
