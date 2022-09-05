@@ -1868,19 +1868,6 @@ TEST_F(AtenXlaTensorTest, TestNormNuclear) {
   });
 }
 
-TEST_F(AtenXlaTensorTest, TestFrobeniusNorm) {
-  torch::Tensor a = torch::rand({4, 3, 4}, torch::TensorOptions(torch::kFloat));
-  torch::Tensor b = torch::frobenius_norm(a);
-  ForEachDevice([&](const torch::Device& device) {
-    torch::Tensor xla_a = CopyToDevice(a, device);
-    torch::Tensor xla_b = torch::frobenius_norm(xla_a);
-    AllClose(b, xla_b);
-  });
-
-  ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
-  ExpectCounterChanged("xla::norm", cpp_test::GetIgnoredCounters());
-}
-
 TEST_F(AtenXlaTensorTest, TestFrobeniusNormInDim) {
   torch::Tensor a = torch::rand({4, 3, 4}, torch::TensorOptions(torch::kFloat));
   for (int dim : {1, -2}) {
