@@ -47,11 +47,6 @@ if [[ "$TPUVM_MODE" != "1" ]]; then
   export XLA_EXPERIMENTAL
 fi
 
-# We need to configure the libtpu path to test on TPUVM
-if python -c "import libtpu" &> /dev/null; then
-  export TPU_LIBRARY_PATH=$(dirname $(python -c "import libtpu; print(libtpu.__file__)"))/libtpu.so
-fi
-
 rm -rf "$BUILDDIR"
 mkdir "$BUILDDIR" 2>/dev/null
 pushd "$BUILDDIR"
