@@ -3,7 +3,6 @@ import functools
 import logging
 import os
 import tempfile
-import threading
 from itertools import chain
 from typing import Callable, Dict, List, Optional, TypeVar
 
@@ -16,7 +15,6 @@ import torch_xla.core.xla_model as xm
 import torch_xla.utils.utils as xu
 from torch_xla.experimental import tpu
 
-_PJRT_ORDINALS = threading.local()
 
 R = TypeVar('R')
 FN = TypeVar('FN')
@@ -62,34 +60,6 @@ def requires_pjrt(fn: FN) -> FN:
 
 
 @requires_pjrt
-def global_ordinal(default: int = 0) -> int:
-  """Returns global ordinal of this thread within all processes.
-
-  Global ordinal is in range [0, world_size)."""
-  return getattr(_PJRT_ORDINALS, 'global_ordinal', default)
-
-
-@requires_pjrt
-def set_global_ordinal(ordinal: int) -> None:
-  """Sets the global ordinal of this thread."""
-  _PJRT_ORDINALS.global_ordinal = ordinal
-
-
-@requires_pjrt
-def local_ordinal(default: int = 0) -> int:
-  """Returns local ordinal of this thread within this host.
-
-  Local ordinal is in range [0, host_num_devices)."""
-  return getattr(_PJRT_ORDINALS, 'local_ordinal', default)
-
-
-@requires_pjrt
-def set_local_ordinal(ordinal: int) -> None:
-  """Sets the local ordinal of this thread."""
-  _PJRT_ORDINALS.local_ordinal = ordinal
-
-
-@requires_pjrt
 def xla_device(n: Optional[int] = None,
                devkind: Optional[str] = None) -> torch.device:
   """Returns an XLA device.
@@ -115,15 +85,46 @@ def xla_device(n: Optional[int] = None,
 
 
 @requires_pjrt
+def local_process_count() -> int:
+  """Returns the number of processes running on this host."""
+  return xu.getenv_as('LOCAL_WORLD_SIZE', int, defval=1)
+
+
+@requires_pjrt
 def global_device_count() -> int:
   """Returns the total number of devices across all processes/hosts."""
   return len(torch_xla._XLAC._xla_get_all_devices())
 
 
 @requires_pjrt
+def local_device_count() -> int:
+  """Returns the total number of devices on this host.
+
+  Assumes each process has the same number of addressable devices.
+  """
+  return local_process_count() * addressable_device_count()
+
+
+@requires_pjrt
 def addressable_device_count() -> int:
   """Returns the number of devices visible to this process."""
   return torch_xla._XLAC._xla_num_devices()
+
+
+@requires_pjrt
+def global_ordinal() -> int:
+  """Returns global ordinal of this thread within all processes.
+
+  Global ordinal is in range [0, global_device_count)."""
+  return torch_xla._XLAC._xla_get_default_device_ordinal()
+
+
+@requires_pjrt
+def local_ordinal() -> int:
+  """Returns local ordinal of this thread within this host.
+
+  Local ordinal is in range [0, local_device_count)."""
+  return global_ordinal() % local_device_count()
 
 
 @requires_pjrt
@@ -152,12 +153,6 @@ def run_thread_per_device(local_rank: int, local_world_size: int,
     @functools.wraps(fn)
     def wrapper(*args, **kwargs):
       torch_xla._XLAC._xla_set_default_device(device)
-
-      # "TPU:2" -> 2
-      device_id = int(xm.xla_real_devices([device])[0].split(':')[1])
-      set_global_ordinal(device_id)
-      # Assumes same number of threads per process
-      set_local_ordinal(device_id % local_world_size)
 
       return fn(*args, **kwargs)
 
@@ -196,6 +191,8 @@ def run_multiprocess(fn: Callable[..., R], *args,
     num_processes = tpu.num_local_processes()
   else:
     num_processes = 1
+
+  os.environ.setdefault('LOCAL_WORLD_SIZE', str(num_processes))
 
   with concurrent.futures.ProcessPoolExecutor(
       max_workers=num_processes) as executor:
