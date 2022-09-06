@@ -1124,7 +1124,8 @@ void InitXlaModuleBindings(py::module m) {
   m.def("_xla_get_default_device", []() { return GetCurrentThreadDevice(); });
   m.def("_xla_get_default_device_ordinal", []() {
     std::string device_str = GetCurrentThreadDevice();
-    torch::lazy::BackendDevice device = bridge::AtenDeviceToXlaDevice(device_str);
+    torch::lazy::BackendDevice device =
+        bridge::AtenDeviceToXlaDevice(device_str);
     return device.ordinal();
   });
   m.def("_xla_set_rng_seed",
