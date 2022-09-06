@@ -233,7 +233,6 @@ DISABLED_TORCH_TESTS_ANY = {
         'test_embedding_backward',  # sparse
         'test_embedding_dense_grad',  # slow
         'test_batchnorm_grad',  # FIXME! UndefinedTensorImpl::_singleton
-        'test_pool_invalid_size',  # expecting a different runtime error
         'test_nonlinearity_propagate_nan',  # relu6 with a nan tensor returns a tensor([0.]) instead of a nan tensor
         'test_InstanceNorm3d_general',  # precision (1e-2)
         'test_InstanceNorm2d_general',  # precision (1e-2)
