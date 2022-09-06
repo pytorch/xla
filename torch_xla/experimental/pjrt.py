@@ -15,7 +15,6 @@ import torch_xla.core.xla_model as xm
 import torch_xla.utils.utils as xu
 from torch_xla.experimental import tpu
 
-
 R = TypeVar('R')
 FN = TypeVar('FN')
 

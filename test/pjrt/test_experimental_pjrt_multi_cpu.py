@@ -40,7 +40,6 @@ class TestExperimentalPjrtMultiCpu(parameterized.TestCase):
     devices_per_process = pjrt.run_multiprocess(xm.xla_device)
     self.assertDictEqual(devices_per_process, expected)
 
-
   @parameterized.named_parameters(('xla_model', xm.get_ordinal),
                                   ('pjrt', pjrt.global_ordinal))
   def test_global_ordinal(self, ordinal_func):
@@ -48,7 +47,6 @@ class TestExperimentalPjrtMultiCpu(parameterized.TestCase):
     values = list(
         itertools.chain.from_iterable(row.values() for row in results.values()))
     self.assertListEqual(sorted(values), [0, 1, 2, 3])
-
 
   @parameterized.named_parameters(('xla_model', xm.get_local_ordinal),
                                   ('pjrt', pjrt.local_ordinal))
@@ -59,12 +57,12 @@ class TestExperimentalPjrtMultiCpu(parameterized.TestCase):
         itertools.chain.from_iterable(row.values() for row in results.values()))
     self.assertListEqual(sorted(values), [0, 1, 2, 3])
 
-
   @staticmethod
   def _multi_cpu_backwards():
     results = {}
 
     class _CustomBackwards(torch.autograd.Function):
+
       @staticmethod
       def forward(ctx, x):
         rank = xm.get_ordinal()
@@ -92,7 +90,13 @@ class TestExperimentalPjrtMultiCpu(parameterized.TestCase):
     })
 
     expected = {
-      0: {i: {'forward_ordinal': i, 'backward_ordinal': i, 'device': f'xla:{i}'} for i in range(4)}
+        0: {
+            i: {
+                'forward_ordinal': i,
+                'backward_ordinal': i,
+                'device': f'xla:{i}'
+            } for i in range(4)
+        }
     }
     results = pjrt.run_multiprocess(self._multi_cpu_backwards)
 
