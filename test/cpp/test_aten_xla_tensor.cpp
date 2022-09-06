@@ -11232,5 +11232,17 @@ TEST_F(AtenXlaTensorTest, TestViewIsAliasOf) {
   });
 }
 
+TEST_F(AtenXlaTensorTest, TestExpandIsAliasOf) {
+  torch::Tensor a = torch::empty(4, torch::TensorOptions(torch::kFloat));
+  torch::Tensor b = a.expand(4, 3);
+  EXPECT_TRUE(a.is_alias_of(b));
+
+  ForEachDevice([&](const torch::Device& device) {
+    torch::Tensor xla_a = CopyToDevice(a, device);
+    torch::Tensor xla_b = xla_a.expand(4, 3);
+    EXPECT_EQ(a.is_alias_of(b), xla_a.is_alias_of(xla_b));
+  });
+}
+
 }  // namespace cpp_test
 }  // namespace torch_xla
