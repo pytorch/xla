@@ -65,13 +65,13 @@ class TestExperimentalPjrtMultiCpu(parameterized.TestCase):
 
       @staticmethod
       def forward(ctx, x):
-        rank = xm.get_ordinal()
-        ctx.forward_rank = rank
+        ordinal = xm.get_ordinal()
+        ctx.forward_ordinal = ordinal
         return x
 
       @staticmethod
       def backward(ctx, grad_output):
-        results['forward_ordinal'] = ctx.forward_rank
+        results['forward_ordinal'] = ctx.forward_ordinal
         results['backward_ordinal'] = xm.get_ordinal()
         results['device'] = str(xm.xla_device())
         return grad_output
