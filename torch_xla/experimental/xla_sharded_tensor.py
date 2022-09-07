@@ -76,8 +76,8 @@ class XLAShardedTensor(torch.Tensor):
         dtype=elem.dtype,
         layout=elem.layout,
         device=elem.device,
-        requires_grad=kwargs.get("requires_grad", False))
-    r.global_tensor = elem.detach() if r.requires_grad else elem
+        requires_grad=elem.requires_grad)
+    r.global_tensor = elem
     return r
 
   @property
