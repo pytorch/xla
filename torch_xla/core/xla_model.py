@@ -7,6 +7,7 @@ import os
 import re
 import threading
 import time
+from typing import List, Optional
 import torch
 import torch.nn.functional as F
 import torch_xla
@@ -760,6 +761,39 @@ def collective_permute(value, pairs):
   result = torch_xla._XLAC._xla_collective_permute(value, token, pairs)
   devctx.all_reduce_token = result[1]
   return result[0]
+
+
+def collective_broadcast(tensors: List[torch.Tensor],
+                         root_ordinal: int = 0,
+                         groups: Optional[List[int]] = None,
+                         pin_layout: bool = True) -> None:
+  """Broadcast values of `tensors` from root replica to other replicas in-place.
+
+  Args:
+    tensors (list): List of `torch.Tensor`s to broadcast.
+    root_ordinal (int): Ordinal of replica with values to broadcast.
+    groups (list, optional): A list of list, representing the replica groups for
+      the `all_reduce()` operation. Example: `[[0, 1, 2, 3], [4, 5, 6, 7]]`
+        defines two groups, one with the `[0, 1, 2, 3]` replicas and one with
+        the `[4, 5, 6, 7]` replicas. If `None` there will be only one group with
+        all the replicas in it.
+    pin_layout (bool, optional): whether to pin the layout for this communication op.
+      Layout pining can prevent potential data corruption when each process that
+      participate in the communication has slightly different program, but it might
+      cause some xla compiation to fail. Unpin the layout when you see error message
+      like "HloModule has a mix of layout constrained".
+  """
+  with torch.no_grad():
+    # We must produce the exact same graph in each replica to prevent hanging,
+    # so each replica must have the same multiply op with the same parameters.
+    for tensor in tensors:
+      scale = torch.tensor(
+          1 if get_ordinal() == root_ordinal else 0, dtype=tensor.dtype)
+      # Transfer scale tensor as device data instead of constant 1 or 0.
+      xscale = send_cpu_data_to_device(scale, tensor.device)
+      tensor.mul_(xscale)
+
+  all_reduce(REDUCE_SUM, tensors, groups=groups, pin_layout=pin_layout)
 
 
 def send(value, channel_id):

@@ -70,7 +70,7 @@ class ProcessGroupXla(ProcessGroup):
     xm.all_reduce(reduce_type, tensors, groups=self._mesh, pin_layout=False)
     return _ret_work(tensors)
 
-  def allgather(self, output_tensors_list, input_tensors):
+  def allgather(self, output_tensors_list, input_tensors, opts=None):
     for input_tensor, output_tensors in zip(input_tensors, output_tensors_list):
       result = xm.all_gather(input_tensor, groups=self._mesh, pin_layout=False)
       for i, slice in enumerate(torch.split(result, input_tensor.shape[0])):
@@ -82,12 +82,10 @@ class ProcessGroupXla(ProcessGroup):
   # https://github.com/pytorch/pytorch/blob/release/1.10/torch/distributed/distributed_c10d.py#L1129
   def broadcast(self, tensors, opts):
     root_tensor = tensors[opts.rootTensor]
-    root_rank = opts.rootRank
-    if root_rank != self.rank():
-      with torch.no_grad():
-        root_tensor.zero_()
-    xm.all_reduce(
-        xm.REDUCE_SUM, [root_tensor], groups=self._mesh, pin_layout=False)
+    xm.collective_broadcast([root_tensor],
+                            opts.rootRank,
+                            groups=self._mesh,
+                            pin_layout=False)
 
     return _ret_work([root_tensor])
 
