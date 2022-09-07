@@ -1109,7 +1109,7 @@ at::Tensor XLANativeFunctions::empty_symint(
     c10::optional<at::Layout> layout, c10::optional<at::Device> device,
     c10::optional<bool> pin_memory,
     c10::optional<at::MemoryFormat> /* memory_format */) {
-  XLA_COUNTER("xla::empty", 1);
+  XLA_FN_COUNTER("xla::");
   auto size = c10::asIntArrayRefSlow(sym_size);
   // PT empty*() are optimizations to avoid initializing the data when it is
   // known it will be completely rewritten. But since for us doing a zero*()
@@ -1135,7 +1135,7 @@ at::Tensor XLANativeFunctions::empty_strided(
 at::Tensor XLANativeFunctions::expand_symint(const at::Tensor& self,
                                              at::SymIntArrayRef sym_size,
                                              bool implicit) {
-  XLA_COUNTER("xla::expand", 1);
+  XLA_FN_COUNTER("xla::");
   auto size = c10::asIntArrayRefSlow(sym_size);
   return bridge::AtenFromXlaTensor(XLATensor::expand(
       bridge::GetXlaTensor(self), torch::lazy::ToVector<int64_t>(size)));
@@ -3039,7 +3039,7 @@ at::Tensor XLANativeFunctions::view_symint(const at::Tensor& self,
                                            at::SymIntArrayRef sym_size) {
   // TODO: support symbolic sizes
   auto size = c10::asIntArrayRefSlow(sym_size);
-  XLA_COUNTER("xla::view", 1);
+  XLA_FN_COUNTER("xla::");
   return bridge::AtenFromXlaTensor(
       XLATensor::view(bridge::GetXlaTensor(self), XlaHelpers::I64List(size)));
 }
