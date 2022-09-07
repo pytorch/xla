@@ -768,14 +768,14 @@ void BuildProfilerSubmodule(py::module* m) {
   py::class_<xla::profiler::ProfilerServer,
              std::unique_ptr<xla::profiler::ProfilerServer>>
       profiler_server_class(profiler, "ProfilerServer");
-  profiler.def("start_server",
-               [](int port) -> std::unique_ptr<xla::profiler::ProfilerServer> {
-                 auto server =
-                     absl::make_unique<xla::profiler::ProfilerServer>();
-                 server->Start(port);
-                 return server;
-               },
-               py::arg("port"));
+  profiler.def(
+      "start_server",
+      [](int port) -> std::unique_ptr<xla::profiler::ProfilerServer> {
+        auto server = absl::make_unique<xla::profiler::ProfilerServer>();
+        server->Start(port);
+        return server;
+      },
+      py::arg("port"));
 
   profiler.def(
       "trace",
@@ -1189,32 +1189,35 @@ void InitXlaModuleBindings(py::module m) {
   });
   m.def("_xla_metrics_report",
         []() { return xla::metrics_reader::CreateMetricReport(); });
-  m.def("_xla_tensors_report",
-        [](size_t nodes_threshold, const std::string& device) {
-          return GetLiveTensorsReport(nodes_threshold, device);
-        },
-        py::arg("nodes_threshold") = 100, py::arg("device") = "");
+  m.def(
+      "_xla_tensors_report",
+      [](size_t nodes_threshold, const std::string& device) {
+        return GetLiveTensorsReport(nodes_threshold, device);
+      },
+      py::arg("nodes_threshold") = 100, py::arg("device") = "");
   m.def("_xla_memory_info", [](const std::string& device) -> py::object {
     return GetMemoryInfo(device);
   });
-  m.def("_xla_set_use_full_mat_mul_precision",
-        [](bool use_full_mat_mul_precision) {
-          XlaHelpers::set_mat_mul_precision(
-              use_full_mat_mul_precision ? xla::PrecisionConfig::HIGHEST
-                                         : xla::PrecisionConfig::DEFAULT);
-        },
-        py::arg("use_full_mat_mul_precision") = true);
+  m.def(
+      "_xla_set_use_full_mat_mul_precision",
+      [](bool use_full_mat_mul_precision) {
+        XlaHelpers::set_mat_mul_precision(use_full_mat_mul_precision
+                                              ? xla::PrecisionConfig::HIGHEST
+                                              : xla::PrecisionConfig::DEFAULT);
+      },
+      py::arg("use_full_mat_mul_precision") = true);
 
   py::class_<xla::util::RecordReader, std::shared_ptr<xla::util::RecordReader>>(
       m, "RecordReader");
-  m.def("_xla_create_tfrecord_reader",
-        [](const std::string& path, const std::string& compression,
-           int64_t buffer_size) {
-          NoGilSection nogil;
-          return CreateRecordReader(path, compression, buffer_size);
-        },
-        py::arg("path"), py::arg("compression") = "",
-        py::arg("buffer_size") = 16 * 1024 * 1024);
+  m.def(
+      "_xla_create_tfrecord_reader",
+      [](const std::string& path, const std::string& compression,
+         int64_t buffer_size) {
+        NoGilSection nogil;
+        return CreateRecordReader(path, compression, buffer_size);
+      },
+      py::arg("path"), py::arg("compression") = "",
+      py::arg("buffer_size") = 16 * 1024 * 1024);
   m.def(
       "_xla_tfrecord_read",
       [](const std::shared_ptr<xla::util::RecordReader>& reader) -> py::object {
@@ -1405,37 +1408,36 @@ void InitXlaModuleBindings(py::module m) {
   // This is useful for debugging and generating a partitioned HLO separately
   // outside the actual compilation & execution. This allows testing with
   // different partitioning configurations.
-  m.def("_xla_partitioning_pass",
-        [](const std::vector<at::Tensor>& tensors, int64_t num_replicas,
-           int64_t num_devices, bool conv_halo_exchange_always_on_lhs = true,
-           bool choose_faster_windowed_einsum = false,
-           bool unroll_windowed_einsum = false,
-           bool bidirectional_windowed_einsum = false) -> std::string {
-          xla::HloModuleConfig config;
-          config.set_use_spmd_partitioning(true);
-          config.set_replica_count(num_replicas);
-          config.set_num_partitions(num_devices);
+  m.def(
+      "_xla_partitioning_pass",
+      [](const std::vector<at::Tensor>& tensors, int64_t num_replicas,
+         int64_t num_devices, bool conv_halo_exchange_always_on_lhs = true,
+         bool choose_faster_windowed_einsum = false,
+         bool unroll_windowed_einsum = false,
+         bool bidirectional_windowed_einsum = false) -> std::string {
+        xla::HloModuleConfig config;
+        config.set_use_spmd_partitioning(true);
+        config.set_replica_count(num_replicas);
+        config.set_num_partitions(num_devices);
 
-          std::string hlo_text = GetTensorsHloGraph(tensors);
-          auto hlo_module_error =
-              xla::ParseAndReturnUnverifiedModule(hlo_text, config);
-          if (!hlo_module_error.ok()) {
-            LOG(ERROR) << "HLO Module loading failed: "
-                       << hlo_module_error.status();
-            return nullptr;
-          }
+        std::string hlo_text = GetTensorsHloGraph(tensors);
+        auto hlo_module_error =
+            xla::ParseAndReturnUnverifiedModule(hlo_text, config);
+        if (!hlo_module_error.ok()) {
+          LOG(ERROR) << "HLO Module loading failed: "
+                     << hlo_module_error.status();
+          return nullptr;
+        }
 
-          auto module = std::move(hlo_module_error.ValueOrDie());
-          xla::HloModuleProto module_proto = ShardingUtil::SpmdPartitioningPass(
-              module->ToProto(), num_replicas, num_devices,
-              conv_halo_exchange_always_on_lhs,
-              choose_faster_windowed_einsum_over_mem, unroll_windowed_einsum,
-              bidirectional_windowed_einsum);
-          module = std::move(
-              xla::HloModule::CreateFromProto(module_proto, const config)
-                  .ValueOrDie());
-          return module->ToString();
-        });
+        auto module = std::move(hlo_module_error.ValueOrDie());
+        xla::HloModuleProto module_proto = ShardingUtil::SpmdPartitioningPass(
+            module->ToProto(), num_replicas, num_devices,
+            conv_halo_exchange_always_on_lhs, choose_faster_windowed_einsum,
+            unroll_windowed_einsum, bidirectional_windowed_einsum);
+        module = std::move(
+            xla::HloModule::CreateFromProto(module_proto, config).ValueOrDie());
+        return module->ToString();
+      });
 
   m.def("_init_xla_lazy_backend", []() {
     MapXlaEnvVarsToLazy();

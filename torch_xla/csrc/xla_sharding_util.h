@@ -40,7 +40,6 @@ class ShardingUtil {
       std::vector<xla::ComputationClient::DataPtr> arguments,
       std::vector<std::string> devices);
 
-<<<<<<< HEAD
   // Shard a tensor and returns the sharded tensors based on the `sharding`
   // spec. REPLICATED sharding should result in shards identical to the input;
   // OTHERS (tiled) sharding result in shards where each data dimension is
@@ -48,10 +47,6 @@ class ShardingUtil {
   // the returned tensor shards vector is indexed by the device IDs. There is no
   // data duplication. Shards are not padded in case the input tensor is not
   // evenly partitionable.
-=======
-  // Shards at::Tensor and returns shards as a vector of at::Tensor. This
-  // currently supports REPLICATED and OTHERS (tiled) sharding types.
->>>>>>> 8ec7be5a ([SPMD] Refactor `_xla_mark_sharding`.)
   static std::vector<at::Tensor> ShardTensor(
       const at::Tensor& tensor, const xla::OpSharding sharding,
       const std::vector<std::string>& devices);
