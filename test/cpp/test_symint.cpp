@@ -122,5 +122,40 @@ TEST(SymintTest, TestDynamicSymints) {
   EXPECT_EQ(si_element_size_nodes, size_nodes);
 }
 
+TEST(SymintTest, TestDynamicSymintArithmetic) {
+  torch::lazy::Value scalar_value =
+      torch::lazy::Value(ScalarOp(1.0, xla::F32), 0);
+  // Assign a incorrect 3d shape for the test purpose
+  std::vector<torch::lazy::Shape> abs_lazy_shapes = {
+      torch::lazy::Shape(torch::kFloat, {10, 20, 30})};
+  torch::lazy::NodePtr abs_node =
+      torch::lazy::MakeNode<Abs>(scalar_value, std::move(abs_lazy_shapes));
+  torch::lazy::NodePtr relu_node =
+      torch::lazy::MakeNode<Relu>(scalar_value, std::move(abs_lazy_shapes));
+
+  torch::lazy::NodePtr size_abs_node = torch::lazy::MakeNode<SizeNode>(
+      torch::lazy::Value{abs_node, 0}, /*dim=*/0);
+  torch::lazy::NodePtr size_relu_node = torch::lazy::MakeNode<SizeNode>(
+      torch::lazy::Value{relu_node, 0}, /*dim=*/0);
+
+  c10::SymInt a =
+      c10::make_intrusive<XLASymIntNodeImpl>(size_abs_node)->toSymInt();
+
+  c10::SymInt b =
+      c10::make_intrusive<XLASymIntNodeImpl>(size_relu_node)->toSymInt();
+
+  c10::SymInt c = a * b;
+
+  auto size_mul_symnode =
+      dynamic_cast<XLASymIntNodeImpl*>(c.toSymIntNodeImpl().get());
+  ASSERT_TRUE(size_mul_symnode);
+
+  auto size_mul =
+      std::dynamic_pointer_cast<torch_xla::SizeMul>(size_mul_symnode->node_);
+  ASSERT_TRUE(size_mul);
+  ASSERT_EQ(size_mul->operands().at(0).node, size_abs_node.get());
+  ASSERT_EQ(size_mul->operands().at(1).node, size_relu_node.get());
+}
+
 }  // namespace cpp_test
 }  // namespace torch_xla

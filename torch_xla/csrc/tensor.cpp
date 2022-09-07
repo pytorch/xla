@@ -39,6 +39,7 @@
 #include "torch_xla/csrc/ops/arithmetic_ir_ops.h"
 #include "torch_xla/csrc/ops/cast.h"
 #include "torch_xla/csrc/ops/device_data.h"
+#include "torch_xla/csrc/ops/dynamic_ir.h"
 #include "torch_xla/csrc/ops/expand.h"
 #include "torch_xla/csrc/ops/ops.h"
 #include "torch_xla/csrc/ops/view.h"
@@ -1830,6 +1831,12 @@ bool XLATensor::ShouldSyncIrNode() {
     return false;
   }
   return this->data()->ir_value->op() != xla_device_data;
+}
+
+c10::SymIntNode XLASymIntNodeImpl::mul(const c10::SymIntNode& other) {
+  auto pother = dynamic_cast<XLASymIntNodeImpl*>(other.get());
+  auto nmul = torch::lazy::MakeNode<torch_xla::SizeMul>(node_, pother->node_);
+  return c10::make_intrusive<XLASymIntNodeImpl>(nmul);
 }
 
 }  // namespace torch_xla
