@@ -301,6 +301,7 @@
 <span class="kn">import</span> <span class="nn">re</span>
 <span class="kn">import</span> <span class="nn">threading</span>
 <span class="kn">import</span> <span class="nn">time</span>
+<span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">List</span><span class="p">,</span> <span class="n">Optional</span>
 <span class="kn">import</span> <span class="nn">torch</span>
 <span class="kn">import</span> <span class="nn">torch.nn.functional</span> <span class="k">as</span> <span class="nn">F</span>
 <span class="kn">import</span> <span class="nn">torch_xla</span>
@@ -1054,6 +1055,39 @@
   <span class="n">result</span> <span class="o">=</span> <span class="n">torch_xla</span><span class="o">.</span><span class="n">_XLAC</span><span class="o">.</span><span class="n">_xla_collective_permute</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="n">token</span><span class="p">,</span> <span class="n">pairs</span><span class="p">)</span>
   <span class="n">devctx</span><span class="o">.</span><span class="n">all_reduce_token</span> <span class="o">=</span> <span class="n">result</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
   <span class="k">return</span> <span class="n">result</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+
+
+<span class="k">def</span> <span class="nf">collective_broadcast</span><span class="p">(</span><span class="n">tensors</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">],</span>
+                         <span class="n">root_ordinal</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span>
+                         <span class="n">groups</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">List</span><span class="p">[</span><span class="nb">int</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+                         <span class="n">pin_layout</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+  <span class="sd">&quot;&quot;&quot;Broadcast values of `tensors` from root replica to other replicas in-place.</span>
+
+<span class="sd">  Args:</span>
+<span class="sd">    tensors (list): List of `torch.Tensor`s to broadcast.</span>
+<span class="sd">    root_ordinal (int): Ordinal of replica with values to broadcast.</span>
+<span class="sd">    groups (list, optional): A list of list, representing the replica groups for</span>
+<span class="sd">      the `all_reduce()` operation. Example: `[[0, 1, 2, 3], [4, 5, 6, 7]]`</span>
+<span class="sd">        defines two groups, one with the `[0, 1, 2, 3]` replicas and one with</span>
+<span class="sd">        the `[4, 5, 6, 7]` replicas. If `None` there will be only one group with</span>
+<span class="sd">        all the replicas in it.</span>
+<span class="sd">    pin_layout (bool, optional): whether to pin the layout for this communication op.</span>
+<span class="sd">      Layout pining can prevent potential data corruption when each process that</span>
+<span class="sd">      participate in the communication has slightly different program, but it might</span>
+<span class="sd">      cause some xla compiation to fail. Unpin the layout when you see error message</span>
+<span class="sd">      like &quot;HloModule has a mix of layout constrained&quot;.</span>
+<span class="sd">  &quot;&quot;&quot;</span>
+  <span class="k">with</span> <span class="n">torch</span><span class="o">.</span><span class="n">no_grad</span><span class="p">():</span>
+    <span class="c1"># We must produce the exact same graph in each replica to prevent hanging,</span>
+    <span class="c1"># so each replica must have the same multiply op with the same parameters.</span>
+    <span class="k">for</span> <span class="n">tensor</span> <span class="ow">in</span> <span class="n">tensors</span><span class="p">:</span>
+      <span class="n">scale</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">tensor</span><span class="p">(</span>
+          <span class="mi">1</span> <span class="k">if</span> <span class="n">get_ordinal</span><span class="p">()</span> <span class="o">==</span> <span class="n">root_ordinal</span> <span class="k">else</span> <span class="mi">0</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">tensor</span><span class="o">.</span><span class="n">dtype</span><span class="p">)</span>
+      <span class="c1"># Transfer scale tensor as device data instead of constant 1 or 0.</span>
+      <span class="n">xscale</span> <span class="o">=</span> <span class="n">send_cpu_data_to_device</span><span class="p">(</span><span class="n">scale</span><span class="p">,</span> <span class="n">tensor</span><span class="o">.</span><span class="n">device</span><span class="p">)</span>
+      <span class="n">tensor</span><span class="o">.</span><span class="n">mul_</span><span class="p">(</span><span class="n">xscale</span><span class="p">)</span>
+
+  <span class="n">all_reduce</span><span class="p">(</span><span class="n">REDUCE_SUM</span><span class="p">,</span> <span class="n">tensors</span><span class="p">,</span> <span class="n">groups</span><span class="o">=</span><span class="n">groups</span><span class="p">,</span> <span class="n">pin_layout</span><span class="o">=</span><span class="n">pin_layout</span><span class="p">)</span>
 
 
 <span class="k">def</span> <span class="nf">send</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="n">channel_id</span><span class="p">):</span>
