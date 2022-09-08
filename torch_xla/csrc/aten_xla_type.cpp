@@ -3088,4 +3088,15 @@ at::Tensor XLANativeFunctions::slice_backward(const at::Tensor& grad_output,
                                     step);
 }
 
+at::Tensor XLANativeFunctions::_cdist_forward(
+    const at::Tensor& x1, const at::Tensor& x2, double p,
+    c10::optional<int64_t> compute_mode) {
+  // compute_mode is ignored because the use_mm_for_euclid_dist lowering
+  // (compute_mode is 0 or 1) is achieved through composite ops from
+  // native pytorch.
+  XLA_CHECK(p >= 0) << "p value for the p-norm distance must be >= 0";
+  return bridge::AtenFromXlaTensor(tensor_methods::_cdist_forward(
+      bridge::GetXlaTensor(x1), bridge::GetXlaTensor(x2), p));
+}
+
 }  // namespace torch_xla

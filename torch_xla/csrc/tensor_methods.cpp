@@ -38,6 +38,7 @@
 #include "torch_xla/csrc/ops/bernoulli.h"
 #include "torch_xla/csrc/ops/cast.h"
 #include "torch_xla/csrc/ops/cat.h"
+#include "torch_xla/csrc/ops/cdist.h"
 #include "torch_xla/csrc/ops/collective_permute.h"
 #include "torch_xla/csrc/ops/constant.h"
 #include "torch_xla/csrc/ops/constant_pad_nd.h"
@@ -853,6 +854,17 @@ XLATensorPtr cat(absl::Span<const XLATensorPtr> tensors, int64_t dim,
   }
   return tensors[0]->CreateFrom(torch::lazy::MakeNode<Cat>(values, dim, dtype),
                                 dtype);
+}
+
+XLATensorPtr _cdist_forward(const XLATensorPtr& x1, const XLATensorPtr& x2,
+                            double p) {
+  torch::lazy::Value exponent_node =
+      XLATensor::GetIrValueForScalar(p, x1->GetDevice());
+  torch::lazy::NodePtr node = torch::lazy::MakeNode<CdistForward>(
+      x1->GetIrValue(), x2->GetIrValue(), exponent_node,
+      /*use_hamming=*/p == 0.0,
+      /*use_chebyshev=*/std::isinf(p));
+  return x1->CreateFrom(node);
 }
 
 XLATensorPtr celu(const XLATensorPtr& input, const at::Scalar& alpha) {
