@@ -129,12 +129,6 @@ c10::SymInt XLATensorImpl::sym_numel_custom() const {
   return prod;
 }
 
-c10::SymIntArrayRef XLATensorImpl::sym_sizes() const {
-  // it isn't strictly necessary to delegate to `sym_sizes_custom`
-  // however, it's consistent with pytorch core
-  return sym_sizes_custom();
-}
-
 at::IntArrayRef XLATensorImpl::strides_custom() const {
   const_cast<XLATensorImpl*>(this)->SetupSizeProperties();
   return strides_default();
