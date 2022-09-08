@@ -465,14 +465,14 @@
 
 <span class="sd">  Args:</span>
 <span class="sd">    defval (int, optional): The default value to be returned in case there is no</span>
-<span class="sd">      replication information available.</span>
+<span class="sd">      replication information available. Ignored for PjRt.</span>
 <span class="sd">      Default: 0</span>
 
 <span class="sd">  Returns:</span>
 <span class="sd">    The replication ordinal of the current thread.</span>
 <span class="sd">  &quot;&quot;&quot;</span>
   <span class="k">if</span> <span class="n">pjrt</span><span class="o">.</span><span class="n">using_pjrt</span><span class="p">():</span>
-    <span class="k">return</span> <span class="n">pjrt</span><span class="o">.</span><span class="n">global_ordinal</span><span class="p">(</span><span class="n">defval</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">pjrt</span><span class="o">.</span><span class="n">global_ordinal</span><span class="p">()</span>
 
   <span class="k">return</span> <span class="n">xu</span><span class="o">.</span><span class="n">getenv_as</span><span class="p">(</span><span class="n">xenv</span><span class="o">.</span><span class="n">ORDINAL</span><span class="p">,</span> <span class="nb">int</span><span class="p">,</span> <span class="n">defval</span><span class="o">=</span><span class="n">defval</span><span class="p">)</span></div>
 
@@ -484,14 +484,14 @@
 
 <span class="sd">  Args:</span>
 <span class="sd">    defval (int, optional): The default value to be returned in case there is no</span>
-<span class="sd">      replication information available.</span>
+<span class="sd">      replication information available. Ignored for PjRt.</span>
 <span class="sd">      Default: 0</span>
 
 <span class="sd">  Returns:</span>
 <span class="sd">    The replication local ordinal of the current thread.</span>
 <span class="sd">  &quot;&quot;&quot;</span>
   <span class="k">if</span> <span class="n">pjrt</span><span class="o">.</span><span class="n">using_pjrt</span><span class="p">():</span>
-    <span class="k">return</span> <span class="n">pjrt</span><span class="o">.</span><span class="n">local_ordinal</span><span class="p">(</span><span class="n">defval</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">pjrt</span><span class="o">.</span><span class="n">local_ordinal</span><span class="p">()</span>
 
   <span class="n">ordinal</span> <span class="o">=</span> <span class="n">xu</span><span class="o">.</span><span class="n">getenv_as</span><span class="p">(</span><span class="n">xenv</span><span class="o">.</span><span class="n">LOCAL_ORDINAL</span><span class="p">,</span> <span class="nb">int</span><span class="p">,</span> <span class="n">defval</span><span class="o">=-</span><span class="mi">1</span><span class="p">)</span>
   <span class="k">if</span> <span class="n">ordinal</span> <span class="o">&gt;=</span> <span class="mi">0</span><span class="p">:</span>
