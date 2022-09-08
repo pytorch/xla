@@ -171,14 +171,14 @@ def get_ordinal(defval=0):
 
   Args:
     defval (int, optional): The default value to be returned in case there is no
-      replication information available.
+      replication information available. Ignored for PjRt.
       Default: 0
 
   Returns:
     The replication ordinal of the current thread.
   """
   if pjrt.using_pjrt():
-    return pjrt.global_ordinal(defval)
+    return pjrt.global_ordinal()
 
   return xu.getenv_as(xenv.ORDINAL, int, defval=defval)
 
@@ -190,14 +190,14 @@ def get_local_ordinal(defval=0):
 
   Args:
     defval (int, optional): The default value to be returned in case there is no
-      replication information available.
+      replication information available. Ignored for PjRt.
       Default: 0
 
   Returns:
     The replication local ordinal of the current thread.
   """
   if pjrt.using_pjrt():
-    return pjrt.local_ordinal(defval)
+    return pjrt.local_ordinal()
 
   ordinal = xu.getenv_as(xenv.LOCAL_ORDINAL, int, defval=-1)
   if ordinal >= 0:
