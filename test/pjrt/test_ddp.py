@@ -1,4 +1,5 @@
 from absl.testing import absltest, parameterized
+from absl import logging
 import copy
 import torch
 import torch.distributed as dist
@@ -94,9 +95,10 @@ class TestPjRtDistributedDataParallel(parameterized.TestCase):
       # TODO(@alanwaketan): Investigate why the atol here is this low.
       assert torch.allclose(cpu_loss, ddp_loss, atol=1e-02)
       _assert_all_close(cpu_model.parameters(), ddp_model.parameters())
-      print(
-          f"iteration {step}: cpu_loss = {cpu_loss}, ddp_loss = {ddp_loss}, cpu_model.parameters() ~= ddp_model.parameters()"
-      )
+      # To display the below messages, set '--verbosity=1'.
+      logging.debug(
+          "iteration %d: cpu_loss = %f, ddp_loss = %f, cpu_model.parameters() ~= ddp_model.parameters()",
+          step, cpu_loss, ddp_loss)
 
   def test_ddp_correctness(self):
     pjrt.run_multiprocess(self._ddp_correctness,
