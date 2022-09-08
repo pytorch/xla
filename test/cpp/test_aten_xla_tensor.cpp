@@ -3992,6 +3992,7 @@ TEST_F(AtenXlaTensorTest, TestUpsampleNearest2D) {
     torch::Tensor xla_result = torch::upsample_nearest2d(xla_input, {uh, uw});
     AllClose(result, xla_result);
   });
+  ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
   ExpectCounterChanged("xla::upsample_nearest2d",
                        cpp_test::GetIgnoredCounters());
 }
@@ -4033,6 +4034,7 @@ TEST_F(AtenXlaTensorTest, TestUpsampleNearest2DWithScale) {
         xla_input, c10::nullopt, at::ArrayRef<double>{scale_h, scale_w});
     AllClose(result, xla_result);
   });
+  ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
   ExpectCounterChanged("xla::upsample_nearest2d",
                        cpp_test::GetIgnoredCounters());
 }
@@ -4077,6 +4079,9 @@ TEST_F(AtenXlaTensorTest, TestUpsampleBilinear2D) {
       AllClose(result, xla_result);
     });
   }
+  ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::upsample_bilinear2d",
+                       cpp_test::GetIgnoredCounters());
 }
 
 TEST_F(AtenXlaTensorTest, TestUpsampleBilinear2DBackward) {
