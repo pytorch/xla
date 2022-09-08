@@ -62,6 +62,7 @@ set(TORCH_XLA_TEST_SOURCES
   torch_xla_test.cpp
   test_xla_backend_intf.cpp
   test_symint.cpp
+  test_xla_sharding.cpp
 )
 
 add_executable(test_ptxla ${TORCH_XLA_TEST_SOURCES})
