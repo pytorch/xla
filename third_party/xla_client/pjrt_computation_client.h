@@ -101,9 +101,7 @@ class PjRtComputationClient : public ComputationClient {
     XLA_ERROR() << __FUNCTION__ << " not implemented";
   };
 
-  std::map<std::string, Metric> GetMetrics() const override {
-    XLA_ERROR() << __FUNCTION__ << " not implemented";
-  };
+  std::map<std::string, Metric> GetMetrics() const override;
 
   MemoryInfo GetMemoryInfo(const std::string& device) override {
     XLA_ERROR() << __FUNCTION__ << " not implemented";

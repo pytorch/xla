@@ -83,11 +83,13 @@ ComputationClient::DataPtr PjRtComputationClient::CreateDataPlaceholder(
 
 std::vector<ComputationClient::DataPtr> PjRtComputationClient::TransferToServer(
     absl::Span<const TensorSource> tensors) {
+  metrics::TimedSection timed(TransferToServerMetric());
   tensorflow::profiler::TraceMe activity(
       "PjRtComputationClient::TransferToServer",
       tensorflow::profiler::TraceMeLevel::kInfo);
   std::vector<ComputationClient::DataPtr> datas;
   datas.reserve(tensors.size());
+  int64_t total_size = 0;
   for (auto& tensor : tensors) {
     PjRtDevice* pjrt_device = StringToPjRtDevice(tensor.device);
 
@@ -95,6 +97,7 @@ std::vector<ComputationClient::DataPtr> PjRtComputationClient::TransferToServer(
     tensor.populate_fn(tensor, literal->untyped_data(), literal->size_bytes());
     std::vector<int64_t> byte_strides(literal->shape().dimensions_size());
     ShapeUtil::ByteStrides(literal->shape(), absl::MakeSpan(byte_strides));
+    total_size += literal->size_bytes();
 
     // Avoid use-after-free on `literal` due to unsequenced move and use.
     xla::Literal* literal_pointer = literal.get();
@@ -114,31 +117,38 @@ std::vector<ComputationClient::DataPtr> PjRtComputationClient::TransferToServer(
         std::make_shared<PjRtData>(tensor.device, tensor.shape, buffer);
     datas.push_back(data);
   }
+  OutboundDataMetric()->AddSample(total_size);
+  CreateDataHandlesCounter()->AddValue(datas.size());
 
   return datas;
 }
 
 std::vector<xla::Literal> PjRtComputationClient::TransferFromServer(
     absl::Span<const DataPtr> handles) {
+  metrics::TimedSection timed(TransferFromServerMetric());
   tensorflow::profiler::TraceMe activity(
       "PjRtComputationClient::TransferFromServer",
       tensorflow::profiler::TraceMeLevel::kInfo);
   std::vector<xla::Literal> literals;
   literals.reserve(handles.size());
 
+  int64_t total_size = 0;
   for (auto handle : handles) {
     const PjRtData& pjrt_data = dynamic_cast<const PjRtData&>(*handle);
 
     std::shared_ptr<xla::Literal> literal =
         pjrt_data.buffer->ToLiteralSync().ValueOrDie();
+    total_size += literal->size_bytes();
     literals.push_back(std::move(*literal));
   }
+  InboundDataMetric()->AddSample(total_size);
 
   return literals;
 }
 
 std::vector<ComputationClient::ComputationPtr> PjRtComputationClient::Compile(
     std::vector<ComputationClient::CompileInstance> instances) {
+  metrics::TimedSection timed(CompileMetric());
   tensorflow::profiler::TraceMe activity(
       "PjRtComputationClient::Compile",
       tensorflow::profiler::TraceMeLevel::kInfo);
@@ -167,6 +177,7 @@ std::vector<ComputationClient::ComputationPtr> PjRtComputationClient::Compile(
                                           std::move(executable));
 
     computations.push_back(pjrt_computation);
+    CreateCompileHandlesCounter()->AddValue(1);
   }
 
   return computations;
@@ -177,6 +188,7 @@ PjRtComputationClient::ExecuteComputation(
     const ComputationClient::Computation& computation,
     absl::Span<const ComputationClient::DataPtr> arguments,
     const std::string& device, const ExecuteComputationOptions& options) {
+  metrics::TimedSection timed(ExecuteMetric());
   tensorflow::profiler::TraceMe activity(
       "PjRtComputationClient::ExecuteComputation",
       tensorflow::profiler::TraceMeLevel::kInfo);
@@ -217,6 +229,7 @@ PjRtComputationClient::ExecuteComputation(
 
     datas.push_back(data);
   }
+  CreateDataHandlesCounter()->AddValue(datas.size());
 
   TF_VLOG(1) << "Returning " << datas.size() << " results";
   return datas;
@@ -254,6 +267,11 @@ xla::PjRtDevice* PjRtComputationClient::StringToPjRtDevice(
       << "Unknown device " << device;
   xla::PjRtDevice* pjrt_device = string_to_device_[device];
   return pjrt_device;
+}
+
+std::map<std::string, Metric> PjRtComputationClient::GetMetrics() const {
+  // TODO(jonbolin): Add any PJRt-client-specific metrics here
+  return {};
 }
 
 }  // namespace xla
