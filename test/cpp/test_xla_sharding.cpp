@@ -18,9 +18,9 @@
 namespace torch_xla {
 namespace cpp_test {
 namespace {
-bool TwoEqualXlaData(torch::lazy::BackendDataPtr a,
-                     torch::lazy::BackendDataPtr b,
-                     at::ScalarType element_type) {
+bool XlaDataValuesEqual(torch::lazy::BackendDataPtr a,
+                        torch::lazy::BackendDataPtr b,
+                        at::ScalarType element_type) {
   std::vector<at::Tensor> tensors = XlaDataToTensors({a, b}, element_type);
   return TensorCompare(tensors[0], tensors[1]);
 }

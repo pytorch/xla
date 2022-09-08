@@ -18,7 +18,7 @@ from torch_xla.experimental.xla_sharded_tensor import XLAShardedTensor
                 )
 class XlaShardingTest(unittest.TestCase):
 
-  @unittest.skip("Work-in-progress")
+  @unittest.skip("work-in-progress")
   def test_xla_sharded_tensor(self):
     # TODO(244003536) re-enable when new test cases are ready.
     n_devices = xm.xrt_world_size()

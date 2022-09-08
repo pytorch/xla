@@ -1714,7 +1714,10 @@ XLATensor::CompilationResult XLATensor::Compile(
   bool is_sharded = ShardingUtil::SetHloSharding(&lowering_ctx);
 
   std::vector<std::pair<int64_t, int64_t>> input_output_alias_pair;
-  if (enable_aliasing && coll.config.sync_xla_data) {
+  // TODO(yeounoh) aliasing is disabled for partitioned computation,
+  // since the current aliasing compares the unpartitioned input and output
+  // shapes which can lead to an incorrect aliasing pairs if sharded.
+  if (enable_aliasing && coll.config.sync_xla_data && !is_sharded) {
     // We can only alias at the step barrier, when force_xla_data is true.
     // Consider the case:
     //   1. Tensor A(DEVICE_DATA)

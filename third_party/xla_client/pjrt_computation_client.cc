@@ -202,7 +202,6 @@ std::vector<ComputationClient::ComputationPtr> PjRtComputationClient::Compile(
       compile_options.parameter_is_tupled_arguments =
           instance.parameter_is_tupled_arguments;
 
-      // TODO(244391366) verify this is correct for the collectives ops
       xla::DeviceAssignment device_assignment(1, client_->device_count());
       device_assignment.FillIota(0);
       compile_options.executable_build_options.set_device_assignment(
