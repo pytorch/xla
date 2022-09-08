@@ -59,7 +59,7 @@ XLATensorImpl::XLATensorImpl(XLATensor&& tensor)
                       bridge::XlaDeviceToAtenDevice(tensor.GetDevice())),
       tensor_(c10::make_intrusive<XLATensor>(std::move(tensor))) {
   is_non_overlapping_and_dense_ = false;
-  set_sizes_strides_policy(SizesStridesPolicy::CustomSizes);
+  set_custom_sizes_strides(SizesStridesPolicy::CustomSizes);
 }
 
 XLATensorImpl::XLATensorImpl(XLATensor& tensor)
