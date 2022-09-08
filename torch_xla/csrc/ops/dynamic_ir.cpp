@@ -30,14 +30,6 @@ int64_t SizeNode::getStaticValue() const {
       .dimensions(dim_);
 }
 
-bool SizeNode::isSymbolic() const {
-  // Not all IR has torch::lazy::shape now, use xla::shape to unblock
-  // the development.
-  return dynamic_cast<const XlaNode*>(operand(0).node)
-      ->xla_shape(operand(0).index)
-      .is_dynamic_dimension(dim_);
-}
-
 std::string SizeNode::ToString() const { return "SizeNode"; }
 
 SizeAdd::SizeAdd(torch::lazy::Value a, torch::lazy::Value b)
@@ -51,10 +43,6 @@ SizeAdd::SizeAdd(torch::lazy::Value a, torch::lazy::Value b)
 int64_t SizeAdd::getStaticValue() const {
   return DimCast(operand(0))->getStaticValue() +
          DimCast(operand(1))->getStaticValue();
-}
-
-bool SizeAdd::isSymbolic() const {
-  return DimCast(operand(0))->isSymbolic() || DimCast(operand(1))->isSymbolic();
 }
 
 std::string SizeAdd::ToString() const { return "SizeAdd"; }
@@ -78,10 +66,6 @@ int64_t SizeMul::getStaticValue() const {
          DimCast(operand(1))->getStaticValue();
 }
 
-bool SizeMul::isSymbolic() const {
-  return DimCast(operand(0))->isSymbolic() || DimCast(operand(1))->isSymbolic();
-}
-
 std::string SizeMul::ToString() const { return "SizeMul"; }
 
 XlaOpVector SizeMul::Lower(LoweringContext* loctx) const {
@@ -103,10 +87,6 @@ int64_t SizeDiv::getStaticValue() const {
       << "Can't divide a dimension by zero";
   return DimCast(operand(0))->getStaticValue() /
          DimCast(operand(1))->getStaticValue();
-}
-
-bool SizeDiv::isSymbolic() const {
-  return DimCast(operand(0))->isSymbolic() || DimCast(operand(1))->isSymbolic();
 }
 
 std::string SizeDiv::ToString() const { return "SizeDiv"; }
