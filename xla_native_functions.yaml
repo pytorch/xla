@@ -345,6 +345,10 @@ supported:
   # The same applies to these ops, but we already have direct lowerings for them
   # - _trilinear
   # - logsumexp.out
+symint:
+  - empty.memory_format
+  - expand
+  - view
 autograd:
   - max_pool2d
   - max_pool3d
