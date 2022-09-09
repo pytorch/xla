@@ -59,7 +59,7 @@ XLATensorImpl::XLATensorImpl(XLATensor&& tensor)
                       bridge::XlaDeviceToAtenDevice(tensor.GetDevice())),
       tensor_(c10::make_intrusive<XLATensor>(std::move(tensor))) {
   is_non_overlapping_and_dense_ = false;
-  set_sizes_strides_policy(SizesStridesPolicy::CustomSizes);
+  set_custom_sizes_strides(SizesStridesPolicy::CustomSizes);
 }
 
 XLATensorImpl::XLATensorImpl(XLATensor& tensor)
@@ -127,12 +127,6 @@ c10::SymInt XLATensorImpl::sym_numel_custom() const {
     prod *= s;
   }
   return prod;
-}
-
-c10::SymIntArrayRef XLATensorImpl::sym_sizes() const {
-  // it isn't strictly necessary to delegate to `sym_sizes_custom`
-  // however, it's consistent with pytorch core
-  return sym_sizes_custom();
 }
 
 at::IntArrayRef XLATensorImpl::strides_custom() const {
