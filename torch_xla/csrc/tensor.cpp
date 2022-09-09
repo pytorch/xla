@@ -1835,7 +1835,7 @@ bool XLATensor::ShouldSyncIrNode() {
 
 c10::SymIntNode XLASymIntNodeImpl::mul(const c10::SymIntNode& other) {
   auto pother = dynamic_cast<XLASymIntNodeImpl*>(other.get());
-  auto nmul = torch::lazy::MakeNode<torch_xla::SizeMul>(node_, pother->node_);
+  auto nmul = torch::lazy::MakeNode<torch_xla::SizeMul>(node(), pother->node());
   return c10::make_intrusive<XLASymIntNodeImpl>(nmul);
 }
 

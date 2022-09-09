@@ -151,7 +151,7 @@ TEST(SymintTest, TestDynamicSymintArithmetic) {
   ASSERT_TRUE(size_mul_symnode);
 
   auto size_mul =
-      std::dynamic_pointer_cast<torch_xla::SizeMul>(size_mul_symnode->node_);
+      std::dynamic_pointer_cast<torch_xla::SizeMul>(size_mul_symnode->node());
   ASSERT_TRUE(size_mul);
   ASSERT_EQ(size_mul->operands().at(0).node, size_abs_node.get());
   ASSERT_EQ(size_mul->operands().at(1).node, size_relu_node.get());
