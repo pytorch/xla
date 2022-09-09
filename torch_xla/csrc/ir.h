@@ -123,6 +123,7 @@ class XlaNode : public torch::lazy::Node {
   }
   void SetSharding(const xla::OpSharding& sharding) {
     output_sharding_ = std::make_shared<xla::OpSharding>(sharding);
+  }
   void ClearSharding() { output_sharding_ = nullptr; }
 
  private:
@@ -138,6 +139,7 @@ class XlaNode : public torch::lazy::Node {
   torch::lazy::hash_t node_hash_ = 0;
   torch::lazy::hash_t dag_hash_;
 
+  // Experimental sharding annotation attached to the IR node.
   // TODO(yeounoh): make sure that view update doesn't reset this.
   std::shared_ptr<xla::OpSharding> output_sharding_ = nullptr;
 };

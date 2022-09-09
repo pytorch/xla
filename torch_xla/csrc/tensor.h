@@ -1200,11 +1200,10 @@ class XLATensor : public c10::intrusive_ptr_target {
   };
   using ShardingSpecPtr = std::shared_ptr<ShardingSpec>;
 
-  std::shared_ptr<ShardingSpec> sharding_spec() const;
-  bool IsShardingAnnotated() const;
-  void SetShardingSpec(const xla::OpSharding& sharding, bool replicated,
-                       bool manual);
+  // Annotate the IR value with ShardingSpec.
+  void SetShardingSpec(const ShardingSpec& sharding_spec);
   void ClearShardingSpec();
+  ShardingSpecPtr sharding_spec() const;
 
   const c10::Storage& Storage() const { return storage_; }
 
@@ -1311,10 +1310,6 @@ class XLATensor : public c10::intrusive_ptr_target {
     const torch::lazy::BackendDevice device;
     const int64_t unique_id = 0;
     size_t generation = 1;
-
-    // Sharding annotation for the tensor
-    // TODO(yeounoh) detach & clear for the unpartitioned tensor
-    std::shared_ptr<ShardingSpec> sharding_spec;
   };
 
   XLATensor(const at::Tensor& tensor, const torch::lazy::BackendDevice& device);

@@ -631,26 +631,24 @@ std::string XLATensor::DumpHloComputation(
                             : std::string();
 }
 
-std::shared_ptr<XLATensor::ShardingSpec> XLATensor::sharding_spec() const {
-  XLA_CHECK(data()->sharding_spec != nullptr)
-      << "Trying to access a null cursor";
-  return data()->sharding_spec;
+XLATensor::ShardingSpecPtr XLATensor::sharding_spec() const {
+  XLA_CHECK(GetIrValue().node != nullptr) << "Tyring to access a null cursor";
+  auto* sharding =
+      dynamic_cast<XlaNode*>(data()->ir_value.node.get())->GetSharding();
+  if (sharding == nullptr) {
+    return nullptr;
+  }
+  return std::make_shared<ShardingSpec>(*sharding);
 }
-bool XLATensor::IsShardingAnnotated() const {
-  return data()->sharding_spec != nullptr;
-}
-void XLATensor::SetShardingSpec(const xla::OpSharding& sharding,
-                                bool replicated, bool manual) {
-  data()->sharding_spec = std::make_shared<ShardingSpec>(sharding);
-  XLA_CHECK(data()->ir_value.node != nullptr)
-      << "Tyring to access a null cursor";
-  dynamic_cast<XlaNode*>(data()->ir_value.node.get())->SetSharding(sharding);
+void XLATensor::SetShardingSpec(const ShardingSpec& sharding_spec) {
+  XLA_CHECK(GetIrValue().node != nullptr) << "Tyring to access a null cursor";
+  dynamic_cast<XlaNode*>(data()->ir_value.node.get())
+      ->SetSharding(sharding_spec.sharding);
 }
 void XLATensor::ClearShardingSpec() {
-  if (data()->ir_value.node != nullptr) {
+  if (GetIrValue().node != nullptr) {
     dynamic_cast<XlaNode*>(data()->ir_value.node.get())->ClearSharding();
   }
-  data()->sharding_spec = nullptr;
 }
 
 void XLATensor::SetXlaData(torch::lazy::BackendDataPtr xla_data) {
