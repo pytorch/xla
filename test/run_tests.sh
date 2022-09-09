@@ -56,6 +56,11 @@ function run_xla_ir_debug {
   XLA_IR_DEBUG=1 run_test "$@"
 }
 
+function run_xla_hlo_debug {
+  echo "Running with XLA_IR_DEBUG: $@"
+  XLA_HLO_DEBUG=1 run_test "$@"
+}
+
 function run_dynamic {
   if [[ "$TPUVM_MODE" == "1" ]]; then
     run_test "$@"
@@ -111,6 +116,7 @@ function run_op_tests {
   run_use_bf16 python3 "$CDIR/test_data_type.py"
   run_test python3 "$CDIR/test_torch_distributed_xla_backend.py"
   run_xla_ir_debug python3 "$CDIR/test_env_var_mapper.py"
+  run_xla_hlo_debug python3 "$CDIR/test_env_var_mapper.py"
   run_pjrt python3 "$CDIR/pjrt/test_experimental_pjrt.py"
   run_pjrt python3 "$CDIR/pjrt/test_experimental_tpu.py"
   run_pjrt python3 "$CDIR/pjrt/test_ddp.py"
