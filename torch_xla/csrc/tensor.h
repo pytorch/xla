@@ -1213,6 +1213,8 @@ class XLATensor : public c10::intrusive_ptr_target {
 
   // Annotate the IR value with ShardingSpec.
   void SetShardingSpec(const ShardingSpec& sharding_spec);
+  // Clear sharding annotation attached to the IR value and transfer sharded
+  // data back to host.
   void ClearShardingSpec();
   ShardingSpecPtr sharding_spec() const;
 
