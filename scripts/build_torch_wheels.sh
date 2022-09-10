@@ -188,7 +188,8 @@ function build_and_install_torch_xla() {
   else
     export TORCH_XLA_VERSION=${RELEASE_VERSION:1}  # r0.5 -> 0.5
   fi
-  python setup.py bdist_wheel
+  # TODO: reenable after fixing the cpp test build
+  BUILD_CPP_TESTS=0 python setup.py bdist_wheel
   pip install dist/*.whl
 }
 
