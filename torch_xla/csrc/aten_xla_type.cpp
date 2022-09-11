@@ -1126,8 +1126,8 @@ at::Tensor XLANativeFunctions::empty_strided(
     c10::optional<at::ScalarType> dtype, c10::optional<at::Layout> layout,
     c10::optional<at::Device> device, c10::optional<bool> pin_memory) {
   XLA_FN_COUNTER("xla::");
-  at::Tensor t = empty_symint(c10::fromIntArrayRef(size), dtype,
-                              layout, device, pin_memory, c10::nullopt);
+  at::Tensor t = empty_symint(c10::fromIntArrayRef(size), dtype, layout, device,
+                              pin_memory, c10::nullopt);
   return torch_xla::XLANativeFunctions::as_strided(t, size, stride,
                                                    /*storage_offset=*/0);
 }
