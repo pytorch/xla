@@ -283,9 +283,8 @@ TEST_F(AtenXlaTensorTest, TestSymSizes) {
   ForEachDevice([&](const torch::Device& device) {
     torch::Tensor a = torch::rand({2, 3}, torch::TensorOptions(torch::kFloat));
     torch::Tensor xla_a = CopyToDevice(a, device);
-    torch::Tensor c = a.sym_sizes(0);
-    AllClose(a.sym_sizes(0), 2);
-    AllClose(a.sym_sizes(0).is_symbolic(), false);
+    ASSERT_EQ(a.sym_sizes().at(0).expect_int(), 2);
+    ASSERT_EQ(a.sym_sizes().at(0).is_symbolic(), false);
   });
 }
 
