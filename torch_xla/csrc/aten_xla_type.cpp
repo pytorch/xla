@@ -586,7 +586,7 @@ at::Tensor XLANativeFunctions::_trilinear(
 at::Tensor XLANativeFunctions::_unsafe_view(const at::Tensor& self,
                                             at::IntArrayRef size) {
   XLA_FN_COUNTER("xla::");
-  return view_symint(self, c10::SymIntArrayRef::fromIntArrayRef(size));
+  return view_symint(self, c10::fromIntArrayRef(size));
 }
 
 at::Tensor XLANativeFunctions::add(const at::Tensor& self,
@@ -1126,8 +1126,8 @@ at::Tensor XLANativeFunctions::empty_strided(
     c10::optional<at::ScalarType> dtype, c10::optional<at::Layout> layout,
     c10::optional<at::Device> device, c10::optional<bool> pin_memory) {
   XLA_FN_COUNTER("xla::");
-  at::Tensor t = empty_symint(c10::SymIntArrayRef::fromIntArrayRef(size), dtype,
-                              layout, device, pin_memory, c10::nullopt);
+  at::Tensor t = empty_symint(c10::fromIntArrayRef(size), dtype, layout, device,
+                              pin_memory, c10::nullopt);
   return torch_xla::XLANativeFunctions::as_strided(t, size, stride,
                                                    /*storage_offset=*/0);
 }
