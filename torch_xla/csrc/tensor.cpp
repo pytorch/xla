@@ -703,6 +703,13 @@ void XLATensor::SetInPlaceIrValue(torch::lazy::Value ir_value) {
 }
 
 void XLATensor::AssignIrValue(torch::lazy::Value ir_value) const {
+  // Sharding annotation should be persisted, since the xla_data() is sharded.
+  // Sharding annotation must be removed by explicit call to ClearSharding.
+  ShardingSpecPtr sharding = sharding_spec();
+  if (sharding != nullptr) {
+    dynamic_cast<XlaNode*>(ir_value.node.get())
+        ->SetSharding(sharding->sharding);
+  }
   data()->ir_value = std::move(ir_value);
   data()->generation += 1;
 }
