@@ -6,7 +6,13 @@ import logging
 import os
 import tempfile
 from itertools import chain
-from typing import Callable, Dict, List, Optional, Tuple, TypeVar
+from typing import Callable, Dict, Generic, List, Optional, Tuple, TypeVar
+
+import sys
+if sys.version_info < (3, 10):
+    from typing_extensions import ParamSpec, Concatenate
+else:
+    from typing import ParamSpec, Concatenate
 
 import torch
 import torch.distributed as dist
@@ -17,6 +23,7 @@ import torch_xla.core.xla_model as xm
 import torch_xla.utils.utils as xu
 from torch_xla.experimental import tpu
 
+P = ParamSpec('P')
 R = TypeVar('R')
 FN = TypeVar('FN')
 
@@ -161,6 +168,8 @@ def run_thread_per_device(local_rank: int, local_world_size: int,
     Dict of the form {thread_rank: return_value}, where return_value is the
     result of calling `fn`.
   """
+  os.environ.setdefault('LOCAL_WORLD_SIZE', str(local_world_size))
+
   if device_type() == 'TPU':
     tpu.configure_topology(local_rank, local_world_size)
 
@@ -184,7 +193,7 @@ def run_thread_per_device(local_rank: int, local_world_size: int,
 
 
 @requires_pjrt
-def run_multiprocess(fn: Callable[..., R], *args,**kwargs) -> Dict[int, R]:
+def run_multiprocess(fn: Callable[P, R], /, *args: P.args, **kwargs: P.kwargs) -> Dict[int, R]:
   """Runs `fn` on all devices available to PjRt.
 
   Spawns one process per physical device (e.g. TPU chip).
@@ -198,14 +207,10 @@ def run_multiprocess(fn: Callable[..., R], *args,**kwargs) -> Dict[int, R]:
     Dict of the form {device_ordinal: return_value}, where
     return_value is the result of calling `fn`.
   """
-  num_processes = xu.getenv_as('LOCAL_WORLD_SIZE', int)
-  if num_processes is None:
-    if device_type() == 'TPU':
-      num_processes = tpu.num_local_processes()
-    else:
-      num_processes = 1
-
-    os.environ.setdefault('LOCAL_WORLD_SIZE', str(num_processes))
+  if device_type() == 'TPU':
+    num_processes = tpu.num_local_processes()
+  else:
+    num_processes = 1
 
   with concurrent.futures.ProcessPoolExecutor(
       max_workers=num_processes,
@@ -221,6 +226,30 @@ def run_multiprocess(fn: Callable[..., R], *args,**kwargs) -> Dict[int, R]:
     )
 
   return _merge_replica_results(replica_results)
+
+
+class _SpawnFn:
+  """Pickle-able wrapper around `fn` that passes the ordinal before `args`"""
+
+  def __init__(self, fn: Callable[Concatenate[int, P], R], *args: P.args, **kwargs: P.kwargs):
+    self.fn = fn
+    self.args = args
+    self.kwargs = kwargs
+
+  def __call__(self) -> None:
+    self.fn(global_ordinal(), *self.args, **self.kwargs)
+
+
+def spawn(fn: Callable, args: Tuple = ()):
+  """Run functions compatible with xmp.spawn.
+
+  Args:
+    fn: Callable that takes the process index as the first argument.
+    args: args to pass to `fn`
+    nprocs: number of processes to spawn
+  """
+  spawn_fn = _SpawnFn(fn, args)
+  run_multiprocess(spawn_fn)
 
 
 def broadcast_master_param(model: nn.Module) -> None:
