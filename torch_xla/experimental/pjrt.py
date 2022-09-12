@@ -240,15 +240,14 @@ class _SpawnFn:
     self.fn(global_ordinal(), *self.args, **self.kwargs)
 
 
-def spawn(fn: Callable, args: Tuple = ()):
+def spawn(fn: Callable, args: Tuple = ()) -> None:
   """Run functions compatible with xmp.spawn.
 
   Args:
     fn: Callable that takes the process index as the first argument.
     args: args to pass to `fn`
-    nprocs: number of processes to spawn
   """
-  spawn_fn = _SpawnFn(fn, args)
+  spawn_fn = _SpawnFn(fn, *args)
   run_multiprocess(spawn_fn)
 
 
