@@ -13,7 +13,7 @@ namespace torch_xla {
 
 SizeNode::SizeNode(torch::lazy::Value input, size_t dim)
     : XlaNode(torch::lazy::OpKind{c10::Symbol::fromQualString("aten::size")},
-              {input}, xla::ShapeUtil::MakeShape(xla::S32, {}), 1,
+              {input}, xla::ShapeUtil::MakeShape(xla::S64, {}), 1,
               torch::lazy::MHash(dim)),
       dim_(dim){};
 
@@ -34,7 +34,7 @@ std::string SizeNode::ToString() const { return "SizeNode"; }
 
 SizeAdd::SizeAdd(torch::lazy::Value a, torch::lazy::Value b)
     : XlaNode(torch::lazy::OpKind{c10::Symbol::fromQualString("aten::add")},
-              {a, b}, xla::ShapeUtil::MakeShape(xla::S32, {}), 1) {
+              {a, b}, xla::ShapeUtil::MakeShape(xla::S64, {}), 1) {
   // SizeAdd can only be perfomed between two DimensionNode
   XLA_CHECK(DimCast(operand(0)));
   XLA_CHECK(DimCast(operand(1)));
@@ -55,7 +55,7 @@ XlaOpVector SizeAdd::Lower(LoweringContext* loctx) const {
 
 SizeMul::SizeMul(torch::lazy::Value a, torch::lazy::Value b)
     : XlaNode(torch::lazy::OpKind{c10::Symbol::fromQualString("aten::mul")},
-              {a, b}, xla::ShapeUtil::MakeShape(xla::S32, {}), 1) {
+              {a, b}, xla::ShapeUtil::MakeShape(xla::S64, {}), 1) {
   // SizeMul can only be perfomed between two DimensionNode
   XLA_CHECK(DimCast(operand(0)));
   XLA_CHECK(DimCast(operand(1)));
@@ -76,7 +76,7 @@ XlaOpVector SizeMul::Lower(LoweringContext* loctx) const {
 
 SizeDiv::SizeDiv(torch::lazy::Value a, torch::lazy::Value b)
     : XlaNode(torch::lazy::OpKind{c10::Symbol::fromQualString("aten::div")},
-              {a, b}, xla::ShapeUtil::MakeShape(xla::S32, {}), 1) {
+              {a, b}, xla::ShapeUtil::MakeShape(xla::S64, {}), 1) {
   // SizeDiv can only be perfomed between two DimensionNode
   XLA_CHECK(DimCast(operand(0)));
   XLA_CHECK(DimCast(operand(1)));
