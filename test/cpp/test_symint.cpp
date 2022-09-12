@@ -6,6 +6,7 @@
 #include "torch_xla/csrc/generated/LazyIr.h"
 #include "torch_xla/csrc/ir.h"
 #include "torch_xla/csrc/ops/dynamic_ir.h"
+#include "torch_xla/csrc/ops/expand.h"
 #include "torch_xla/csrc/ops/ops.h"
 #include "torch_xla/csrc/torch_util.h"
 using std::cerr;
@@ -58,27 +59,22 @@ TEST(SymintTest, TestSaticSymints) {
 TEST(SymintTest, TestDynamicSymint) {
   torch::lazy::Value scalar_value =
       torch::lazy::Value(ScalarOp(1.0, xla::F32), 0);
-  // Manully assign the torch::lazy::shape to avoid calling shape fn in this
-  // test. Note that we have to use one of those codegen ops so they take
-  // lazy::shape in constructor.
-  std::vector<torch::lazy::Shape> abs_lazy_shapes = {
-      torch::lazy::Shape(torch::kFloat, {1})};
-  torch::lazy::NodePtr abs_node =
-      torch::lazy::MakeNode<Abs>(scalar_value, std::move(abs_lazy_shapes));
-  torch::lazy::Value abs_value = torch::lazy::Value(abs_node, 0);
+  std::vector<int64_t> target_size = {2, 3, 5};
+  torch::lazy::NodePtr expand_node =
+      torch::lazy::MakeNode<Expand>(scalar_value, target_size);
+  torch::lazy::Value expand_value = torch::lazy::Value(expand_node, 0);
   torch::lazy::NodePtr size_node =
-      torch::lazy::MakeNode<SizeNode>(abs_value, /*dim=*/0);
+      torch::lazy::MakeNode<SizeNode>(expand_value, /*dim=*/0);
   auto symint_node =
       c10::make_intrusive<torch::lazy::SymIntNodeImpl>(size_node);
-  // This is not really a dynamic size per say but it is a symint that wraps
-  // around a SizeNode instead of a scalar.
+  // This is not a dynamic size from xla perspective but it is a symint that
+  // wraps around a SizeNode instead of a scalar.
   c10::SymInt dynamic_symint = symint_node->toSymInt();
-
   SymIntElements si_element(dynamic_symint);
 
   std::vector<int64_t> upper_bound = si_element.GetUpperBounds();
   EXPECT_EQ(upper_bound.size(), 1);
-  EXPECT_EQ(upper_bound[0], 1);
+  EXPECT_EQ(upper_bound[0], 2);
 
   std::vector<bool> dynamic_dims = si_element.GetDynamicDims();
   EXPECT_EQ(dynamic_dims.size(), 1);
@@ -92,21 +88,18 @@ TEST(SymintTest, TestDynamicSymint) {
 TEST(SymintTest, TestDynamicSymints) {
   torch::lazy::Value scalar_value =
       torch::lazy::Value(ScalarOp(1.0, xla::F32), 0);
-  // Assign a incorrect 3d shape for the test purpose
-  std::vector<torch::lazy::Shape> abs_lazy_shapes = {
-      torch::lazy::Shape(torch::kFloat, {10, 20, 30})};
-  torch::lazy::NodePtr abs_node =
-      torch::lazy::MakeNode<Abs>(scalar_value, std::move(abs_lazy_shapes));
-
+  std::vector<int64_t> target_size = {2, 3, 5};
+  torch::lazy::NodePtr expand_node =
+      torch::lazy::MakeNode<Expand>(scalar_value, target_size);
+  torch::lazy::Value expand_value = torch::lazy::Value(expand_node, 0);
   std::vector<c10::SymInt> dynamic_symints;
   for (int i = 0; i < 3; i++) {
-    torch::lazy::Value abs_value = torch::lazy::Value(abs_node, 0);
     torch::lazy::NodePtr size_node =
-        torch::lazy::MakeNode<SizeNode>(abs_value, /*dim=*/i);
+        torch::lazy::MakeNode<SizeNode>(expand_value, /*dim=*/i);
     auto symint_node =
         c10::make_intrusive<torch::lazy::SymIntNodeImpl>(size_node);
-    // This is not really a dynamic size per say but it is a symint that wraps
-    // around a SizeNode instead of a scalar.
+    // This is not a dynamic size from xla perspective but it is a symint that
+    // wraps around a SizeNode instead of a scalar.
     dynamic_symints.push_back(symint_node->toSymInt());
   }
 
@@ -115,7 +108,7 @@ TEST(SymintTest, TestDynamicSymints) {
 
   std::vector<int64_t> upper_bound = si_element.GetUpperBounds();
   EXPECT_EQ(upper_bound.size(), 3);
-  EXPECT_EQ(upper_bound, std::vector<int64_t>({10, 20, 30}));
+  EXPECT_EQ(upper_bound, std::vector<int64_t>({2, 3, 5}));
 
   std::vector<bool> dynamic_dims = si_element.GetDynamicDims();
   EXPECT_EQ(dynamic_dims.size(), 3);
