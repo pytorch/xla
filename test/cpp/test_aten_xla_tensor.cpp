@@ -3978,20 +3978,38 @@ TEST_F(AtenXlaTensorTest, TestBilinear) {
 }
 
 TEST_F(AtenXlaTensorTest, TestUpsampleNearest2D) {
-  int batch_size = 2;
-  int h = 5;
-  int w = 5;
-  int uh = 8;
-  int uw = 8;
-  int chans = 2;
-  torch::Tensor input = torch::rand({batch_size, chans, h, w},
-                                    torch::TensorOptions(torch::kFloat));
-  ForEachDevice([&](const torch::Device& device) {
-    torch::Tensor xla_input = CopyToDevice(input, device);
-    torch::Tensor result = torch::upsample_nearest2d(input, {uh, uw});
-    torch::Tensor xla_result = torch::upsample_nearest2d(xla_input, {uh, uw});
-    AllClose(result, xla_result);
-  });
+  struct ImageInfo {
+    int batch_size;
+    int h;
+    int w;
+    int uh;
+    int uw;
+    int chans;
+  };
+
+  /* clang-format off */
+  std::vector<ImageInfo> inputs = {
+    {/*batch_size=*/2, /*h=*/5, /*w=*/5, /*uh=*/8, /*uw=*/8, /*chans=*/2},
+    {/*batch_size=*/2, /*h=*/1335, /*w=*/1335, /*uh=*/255, /*uw=*/255, /*chans=*/3},
+    {/*batch_size=*/2, /*h=*/255, /*w=*/255, /*uh=*/1335, /*uw=*/1335, /*chans=*/3},
+    {/*batch_size=*/2, /*h=*/254, /*w=*/243, /*uh=*/784, /*uw=*/214, /*chans=*/3}
+  };
+  /* clang-format on */
+
+  for (const auto& img_info : inputs) {
+    torch::Tensor input = torch::rand(
+        {img_info.batch_size, img_info.chans, img_info.h, img_info.w},
+        torch::TensorOptions(torch::kFloat));
+    ForEachDevice([&](const torch::Device& device) {
+      torch::Tensor xla_input = CopyToDevice(input, device);
+      torch::Tensor result =
+          torch::upsample_nearest2d(input, {img_info.uh, img_info.uw});
+      torch::Tensor xla_result =
+          torch::upsample_nearest2d(xla_input, {img_info.uh, img_info.uw});
+      AllClose(result, xla_result);
+    });
+  }
+
   ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
   ExpectCounterChanged("xla::upsample_nearest2d",
                        cpp_test::GetIgnoredCounters());
@@ -4018,22 +4036,38 @@ TEST_F(AtenXlaTensorTest, TestUpsampleNearest2DBackward) {
 }
 
 TEST_F(AtenXlaTensorTest, TestUpsampleNearest2DWithScale) {
-  int batch_size = 2;
-  int h = 5;
-  int w = 5;
-  int chans = 2;
-  double scale_h = 2.5;
-  double scale_w = 3.4;
-  torch::Tensor input = torch::rand({batch_size, chans, h, w},
-                                    torch::TensorOptions(torch::kFloat));
-  ForEachDevice([&](const torch::Device& device) {
-    torch::Tensor xla_input = CopyToDevice(input, device);
-    torch::Tensor result = torch::upsample_nearest2d(
-        input, c10::nullopt, at::ArrayRef<double>{scale_h, scale_w});
-    torch::Tensor xla_result = torch::upsample_nearest2d(
-        xla_input, c10::nullopt, at::ArrayRef<double>{scale_h, scale_w});
-    AllClose(result, xla_result);
-  });
+  struct ImageInfo {
+    int batch_size;
+    int h;
+    int w;
+    int chans;
+    double scale_h;
+    double scale_w;
+  };
+
+  /* clang-format off */
+  std::vector<ImageInfo> inputs = {
+    {/*batch_size=*/2, /*h=*/5, /*w=*/5, /*chans=*/2, /*scale_h*/2.5, /*scale_w*/3.4},
+    {/*batch_size=*/2, /*h=*/1335, /*w=*/1335, /*chans=*/3, /*scale_h*/2.5, /*scale_w*/3.4},
+    {/*batch_size=*/2, /*h=*/1335, /*w=*/1335, /*chans=*/3, /*scale_h*/0.5, /*scale_w*/0.5},
+  };
+  /* clang-format on */
+
+  for (const auto& img_info : inputs) {
+    torch::Tensor input = torch::rand(
+        {img_info.batch_size, img_info.chans, img_info.h, img_info.w},
+        torch::TensorOptions(torch::kFloat));
+    ForEachDevice([&](const torch::Device& device) {
+      torch::Tensor xla_input = CopyToDevice(input, device);
+      torch::Tensor result = torch::upsample_nearest2d(
+          input, c10::nullopt,
+          at::ArrayRef<double>{img_info.scale_h, img_info.scale_w});
+      torch::Tensor xla_result = torch::upsample_nearest2d(
+          xla_input, c10::nullopt,
+          at::ArrayRef<double>{img_info.scale_h, img_info.scale_w});
+      AllClose(result, xla_result);
+    });
+  }
   ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
   ExpectCounterChanged("xla::upsample_nearest2d",
                        cpp_test::GetIgnoredCounters());
@@ -4061,23 +4095,38 @@ TEST_F(AtenXlaTensorTest, TestUpsampleNearest2DBackwardWithScale) {
 }
 
 TEST_F(AtenXlaTensorTest, TestUpsampleBilinear2D) {
-  int batch_size = 2;
-  int h = 5;
-  int w = 5;
-  int uh = 8;
-  int uw = 8;
-  int chans = 2;
-  for (bool align_corners : {true, false}) {
-    torch::Tensor input = torch::rand({batch_size, chans, h, w},
-                                      torch::TensorOptions(torch::kFloat));
-    ForEachDevice([&](const torch::Device& device) {
-      torch::Tensor xla_input = CopyToDevice(input, device);
-      torch::Tensor result =
-          torch::upsample_bilinear2d(input, {uh, uw}, align_corners);
-      torch::Tensor xla_result =
-          torch::upsample_bilinear2d(xla_input, {uh, uw}, align_corners);
-      AllClose(result, xla_result);
-    });
+  struct ImageInfo {
+    int batch_size;
+    int h;
+    int w;
+    int uh;
+    int uw;
+    int chans;
+  };
+
+  /* clang-format off */
+  std::vector<ImageInfo> inputs = {
+    {/*batch_size=*/2, /*h=*/5, /*w=*/5, /*uh=*/8, /*uw=*/8, /*chans=*/2},
+    {/*batch_size=*/2, /*h=*/1335, /*w=*/1335, /*uh=*/255, /*uw=*/255, /*chans=*/3},
+    {/*batch_size=*/2, /*h=*/255, /*w=*/255, /*uh=*/1335, /*uw=*/1335, /*chans=*/3},
+    {/*batch_size=*/2, /*h=*/254, /*w=*/243, /*uh=*/784, /*uw=*/214, /*chans=*/3}
+  };
+  /* clang-format on */
+
+  for (const auto& img_info : inputs) {
+    for (bool align_corners : {true, false}) {
+      torch::Tensor input = torch::rand(
+          {img_info.batch_size, img_info.chans, img_info.h, img_info.w},
+          torch::TensorOptions(torch::kFloat));
+      ForEachDevice([&](const torch::Device& device) {
+        torch::Tensor xla_input = CopyToDevice(input, device);
+        torch::Tensor result = torch::upsample_bilinear2d(
+            input, {img_info.uh, img_info.uw}, align_corners);
+        torch::Tensor xla_result = torch::upsample_bilinear2d(
+            xla_input, {img_info.uh, img_info.uw}, align_corners);
+        AllClose(result, xla_result, /*rtol=*/1e-4, /*atol=*/1e-4);
+      });
+    }
   }
   ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
   ExpectCounterChanged("xla::upsample_bilinear2d",

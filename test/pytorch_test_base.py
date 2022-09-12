@@ -372,8 +372,8 @@ DISABLED_TORCH_TESTS_TPU_ONLY = {
         'test_Dropout',  # too slow
         'test_EmbeddingBag_per_sample_weights_and_new_offsets_xla',  # server side crash
         'test_EmbeddingBag_per_sample_weights_and_offsets_xla',  # server side crash
-        # 'test_upsamplingBilinear2d_xla',  # precision
-        # 'test_upsamplingNearest2d_xla',  # precision
+        'test_upsamplingBilinear2d_xla',  # precision
+        'test_upsamplingNearest2d_xla',  # precision
         'test_GRU_grad_and_gradgrad_xla_float64',  # grad check failure
         'test_LSTM_grad_and_gradgrad_xla_float64',  # grad check failure
         'test_conv3d_valid_padding_backward_xla',  # grad check failure
