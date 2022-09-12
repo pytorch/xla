@@ -120,9 +120,7 @@ at::IntArrayRef XLATensorImpl::sizes_custom() const {
 
 c10::SymIntArrayRef XLATensorImpl::sym_sizes_custom() const {
   const_cast<XLATensorImpl*>(this)->SetupSymSizeProperties();
-  return c10::SymIntArrayRef(
-      reinterpret_cast<const c10::SymInt*>(sym_sizes_.data()),
-      sym_sizes_.size());
+  return c10::SymIntArrayRef(sym_sizes_.data(), sym_sizes_.size());
 }
 
 c10::SymInt XLATensorImpl::sym_numel_custom() const {
