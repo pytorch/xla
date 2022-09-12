@@ -82,7 +82,7 @@ TEST(SymintTest, TestDynamicSymint) {
 
   std::vector<torch::lazy::NodePtr> size_nodes = si_element.GetSizeNodes();
   EXPECT_EQ(size_nodes.size(), 1);
-  EXPECT_TRUE(si_element.GetSizeNode(0) != nullptr);
+  EXPECT_EQ(si_element.GetSizeNode(0), size_node);
 }
 
 TEST(SymintTest, TestDynamicSymints) {
@@ -93,9 +93,11 @@ TEST(SymintTest, TestDynamicSymints) {
       torch::lazy::MakeNode<Expand>(scalar_value, target_size);
   torch::lazy::Value expand_value = torch::lazy::Value(expand_node, 0);
   std::vector<c10::SymInt> dynamic_symints;
+  std::vector<torch::lazy::NodePtr> size_nodes;
   for (int i = 0; i < 3; i++) {
     torch::lazy::NodePtr size_node =
         torch::lazy::MakeNode<SizeNode>(expand_value, /*dim=*/i);
+    size_nodes.push_back(size_node);
     auto symint_node =
         c10::make_intrusive<torch::lazy::SymIntNodeImpl>(size_node);
     // This is not a dynamic size from xla perspective but it is a symint that
@@ -114,12 +116,10 @@ TEST(SymintTest, TestDynamicSymints) {
   EXPECT_EQ(dynamic_dims.size(), 3);
   EXPECT_EQ(dynamic_dims, std::vector<bool>({true, true, true}));
 
-  std::vector<torch::lazy::NodePtr> size_nodes = si_element.GetSizeNodes();
-  EXPECT_EQ(size_nodes.size(), 3);
-  // look up the SizeNode for dimension 0
-  EXPECT_TRUE(si_element.GetSizeNode(0) != nullptr);
-  EXPECT_TRUE(si_element.GetSizeNode(1) != nullptr);
-  EXPECT_TRUE(si_element.GetSizeNode(2) != nullptr);
+  std::vector<torch::lazy::NodePtr> si_element_size_nodes =
+      si_element.GetSizeNodes();
+  EXPECT_EQ(si_element_size_nodes.size(), 3);
+  EXPECT_EQ(si_element_size_nodes, size_nodes);
 }
 
 }  // namespace cpp_test
