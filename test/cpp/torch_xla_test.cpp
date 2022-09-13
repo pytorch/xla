@@ -37,12 +37,8 @@ void XlaTest::TearDown() {
   }
 }
 
-void XlaTest::ExpectCounterNotChanged(
-    const std::string& counter_regex,
-    const std::unordered_set<std::string>* ignore_set) {
-  MakeEndSnapshot();
-  auto changed =
-      start_msnap_->CounterChanged(counter_regex, *end_msnap_, ignore_set);
+static void ExpectCounterNotChanged_(
+    const std::vector<MetricsSnapshot::ChangedCounter>& changed) {
   for (auto& change_counter : changed) {
     TF_LOG(INFO) << "Counter '" << change_counter.name
                  << "' changed: " << change_counter.before << " -> "
@@ -51,13 +47,43 @@ void XlaTest::ExpectCounterNotChanged(
   EXPECT_TRUE(changed.empty());
 }
 
+void XlaTest::ExpectCounterNotChanged(
+    const std::string& counter_regex,
+    const std::unordered_set<std::string>* ignore_set) {
+  MakeEndSnapshot();
+  auto changed =
+      start_msnap_->CounterChanged(counter_regex, *end_msnap_, ignore_set);
+
+  ExpectCounterNotChanged_(changed);
+
+  // Some operators could've been renamed to `opName_symint`, yet the tests are
+  // using the old names. We modify `ExpectCounterNotChanged` to also check
+  // `opName_symint` counters. When we finish migrating the ops to symints, we
+  // would remove this logic and fix all the tests
+  auto changed_symint =
+      start_msnap_->CounterChanged(counter_regex, *end_msnap_, ignore_set);
+
+  ExpectCounterNotChanged_(changed_symint);
+}
+
 void XlaTest::ExpectCounterChanged(
     const std::string& counter_regex,
     const std::unordered_set<std::string>* ignore_set) {
   MakeEndSnapshot();
   auto changed =
       start_msnap_->CounterChanged(counter_regex, *end_msnap_, ignore_set);
-  EXPECT_TRUE(!changed.empty());
+
+  // Some operators could've been renamed to `opName_symint`, yet the tests are
+  // using the old names. We modify `ExpectCounterChanged` to also check
+  // `opName_symint` counters. When we finish migrating the ops to symints, we
+  // would remove this logic and fix all the tests
+  auto changed_symint = start_msnap_->CounterChanged(counter_regex + "_symint",
+                                                     *end_msnap_, ignore_set);
+  EXPECT_TRUE(!changed.empty() || !changed_symint.empty());
+  // We expect *either* changed or changed_symint to contain changed counters
+  // but not *both*. Likewise, if both are empty, the assertion above should
+  // fail
+  EXPECT_TRUE(changed.empty() != changed_symint.empty());
 }
 
 void XlaTest::ResetCounters() {

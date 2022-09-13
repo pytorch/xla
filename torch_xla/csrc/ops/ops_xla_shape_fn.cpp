@@ -7,6 +7,7 @@
 #include "torch_xla/csrc/helpers.h"
 #include "torch_xla/csrc/pooling.h"
 #include "torch_xla/csrc/reduction.h"
+#include "torch_xla/csrc/xla_lower_util.h"
 
 namespace torch_xla {
 namespace {
@@ -21,6 +22,22 @@ std::vector<T> GetValuesVectorWithOptional(
     }
   }
   return result;
+}
+
+xla::Shape InferBinaryOpShape(const torch::lazy::Value& first,
+                              const torch::lazy::Value& second,
+                              const torch_xla::XlaOpCombiner& bin_op) {
+  auto lower_for_shape_fn =
+      [&](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
+    return XlaHelpers::PromotedBinaryOp(operands[0], operands[1], bin_op);
+  };
+
+  std::vector<xla::Shape> shapes;
+  for (auto& i : {first, second}) {
+    shapes.push_back(GetXlaShape(i));
+  }
+
+  return InferOutputShape(shapes, lower_for_shape_fn);
 }
 }  // namespace
 
@@ -68,6 +85,65 @@ xla::Shape AdaptiveAvgPool3dOutputShape(const torch::lazy::Value& input,
   return InferOutputShape({GetXlaShape(input)}, lower_for_shape_fn);
 }
 
+xla::Shape AdaptiveAvgPool3dBackwardOutputShape(
+    const torch::lazy::Value& grad_output, const torch::lazy::Value& input) {
+  auto lower_for_shape_fn =
+      [](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
+    XLA_CHECK_EQ(operands.size(), 2);
+    return BuildAdaptiveAvgPool3dBackward(/*out_backprop=*/operands[0],
+                                          /*input=*/operands[1]);
+  };
+  return InferOutputShape({GetXlaShape(grad_output), GetXlaShape(input)},
+                          lower_for_shape_fn);
+}
+
+xla::Shape AddcdivOutputShape(const torch::lazy::Value& input,
+                              const torch::lazy::Value& t1,
+                              const torch::lazy::Value& t2,
+                              const torch::lazy::Value& value) {
+  auto shape_fn = [](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
+    return BuildAddcdiv(operands[0], operands[1], operands[2], operands[3]);
+  };
+  return InferOutputShape({GetXlaShape(input), GetXlaShape(t1), GetXlaShape(t2),
+                           GetXlaShape(value)},
+                          shape_fn);
+}
+
+xla::Shape AddcmulOutputShape(const torch::lazy::Value& input,
+                              const torch::lazy::Value& t1,
+                              const torch::lazy::Value& t2,
+                              const torch::lazy::Value& value) {
+  auto shape_fn = [](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
+    return BuildAddcmul(operands[0], operands[1], operands[2], operands[3]);
+  };
+
+  return InferOutputShape({GetXlaShape(input), GetXlaShape(t1), GetXlaShape(t2),
+                           GetXlaShape(value)},
+                          shape_fn);
+}
+
+xla::Shape AllOutputShape(const torch::lazy::Value& input) {
+  std::vector<int64_t> dimensions =
+      torch::lazy::Iota<int64_t>(GetXlaShape(input).rank());
+  auto lower_for_shape_fn =
+      [dimensions](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
+    return BuildAll(operands[0], dimensions, false);
+  };
+
+  return InferOutputShape({GetXlaShape(input)}, lower_for_shape_fn);
+}
+
+xla::Shape AllDimOutputShape(const torch::lazy::Value& input, const int64_t dim,
+                             const bool keepdim) {
+  auto lower_for_shape_fn =
+      [&](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
+    xla::XlaOp ret = BuildAll(operands[0], {dim}, keepdim);
+    return ret;
+  };
+
+  return InferOutputShape({GetXlaShape(input)}, lower_for_shape_fn);
+}
+
 xla::Shape AmaxOutputShape(const torch::lazy::Value& input,
                            absl::Span<const int64_t> dim, bool keepdim) {
   auto lower_for_shape_fn =
@@ -86,26 +162,22 @@ xla::Shape AminOutputShape(const torch::lazy::Value& input,
   return InferOutputShape({GetXlaShape(input)}, lower_for_shape_fn);
 }
 
-xla::Shape AdaptiveAvgPool3dBackwardOutputShape(
-    const torch::lazy::Value& grad_output, const torch::lazy::Value& input) {
-  auto lower_for_shape_fn =
-      [](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
-    XLA_CHECK_EQ(operands.size(), 2);
-    return BuildAdaptiveAvgPool3dBackward(/*out_backprop=*/operands[0],
-                                          /*input=*/operands[1]);
-  };
-  return InferOutputShape({GetXlaShape(grad_output), GetXlaShape(input)},
-                          lower_for_shape_fn);
-}
-
-xla::Shape AllOutputShape(const torch::lazy::Value& input) {
+xla::Shape AnyOutputShape(const torch::lazy::Value& input) {
   std::vector<int64_t> dimensions =
       torch::lazy::Iota<int64_t>(GetXlaShape(input).rank());
   auto lower_for_shape_fn =
       [dimensions](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
-    return BuildAll(operands[0], dimensions, false);
+    return BuildAny(operands[0], dimensions, false);
   };
+  return InferOutputShape({GetXlaShape(input)}, lower_for_shape_fn);
+}
 
+xla::Shape AnyDimOutputShape(const torch::lazy::Value& input, int64_t dim,
+                             bool keepdim) {
+  auto lower_for_shape_fn =
+      [&](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
+    return BuildAny(operands[0], {dim}, keepdim);
+  };
   return InferOutputShape({GetXlaShape(input)}, lower_for_shape_fn);
 }
 
@@ -167,8 +239,66 @@ xla::Shape BinaryCrossEntropyBackwardOutputShape(
   return InferOutputShape(shapes, lower_for_shape_fn);
 }
 
+xla::Shape BitwiseAndTensorOutputShape(const torch::lazy::Value& input,
+                                       const torch::lazy::Value& other) {
+  return InferBinaryOpShape(
+      input, other, [](xla::XlaOp one, xla::XlaOp two) { return one & two; });
+}
+
+xla::Shape BitwiseNotOutputShape(const torch::lazy::Value& input) {
+  return GetXlaShape(input);
+}
+
+xla::Shape BitwiseOrTensorOutputShape(const torch::lazy::Value& input,
+                                      const torch::lazy::Value& other) {
+  return InferBinaryOpShape(
+      input, other, [](xla::XlaOp one, xla::XlaOp two) { return one | two; });
+}
+
+xla::Shape BitwiseXorTensorOutputShape(const torch::lazy::Value& input,
+                                       const torch::lazy::Value& other) {
+  return InferBinaryOpShape(
+      input, other, [](xla::XlaOp one, xla::XlaOp two) { return one ^ two; });
+}
+
 xla::Shape CeilOutputShape(const torch::lazy::Value& input) {
   return GetXlaShape(input);
+}
+
+xla::Shape CholeskyOutputShape(const torch::lazy::Value& input,
+                               const bool upper) {
+  return GetXlaShape(input);
+}
+
+xla::Shape ClampTensorOutputShape(
+    const torch::lazy::Value& input,
+    const c10::optional<torch::lazy::Value>& min,
+    const c10::optional<torch::lazy::Value>& max) {
+  // This shape function works in a bit of an odd/hacky way.
+  // If operands.size() > 1, operands[1] can be either min or
+  // max since they are both optional values. But in this code,
+  // we are always assuming operands[1] to be min if
+  // operands.size() > 1. This code works because xla::Min and
+  // xla::Max produce the same output shapes.
+  auto lower_for_shape_fn =
+      [&](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
+    xla::XlaOp res = operands[0];
+    if (operands.size() > 1) {
+      auto promoted = XlaHelpers::Promote(res, operands[1]);
+      res = xla::Max(promoted.first, promoted.second);
+    }
+    if (operands.size() > 2) {
+      auto promoted = XlaHelpers::Promote(res, operands[2]);
+      res = xla::Min(promoted.first, promoted.second);
+    }
+    return res;
+  };
+  std::vector<xla::Shape> shapes;
+  for (auto& i :
+       GetValuesVectorWithOptional<torch::lazy::Value>({input}, {&min, &max})) {
+    shapes.push_back(GetXlaShape(i));
+  }
+  return InferOutputShape(shapes, lower_for_shape_fn);
 }
 
 xla::Shape ClampMaxTensorOutputShape(const torch::lazy::Value& input,
@@ -199,6 +329,28 @@ xla::Shape CoshOutputShape(const torch::lazy::Value& input) {
   return GetXlaShape(input);
 }
 
+xla::Shape EluOutputShape(const torch::lazy::Value& input,
+                          const torch::lazy::Value& alpha,
+                          const torch::lazy::Value& scale,
+                          const torch::lazy::Value& input_scale) {
+  return GetXlaShape(input);
+}
+
+xla::Shape EqScalarOutputShape(const torch::lazy::Value& self,
+                               const torch::lazy::Value& other) {
+  auto lower_for_shape_fn =
+      [&](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
+    return BuildComparisonOp(at::aten::eq, operands[0], operands[1]);
+  };
+  return InferOutputShape({GetXlaShape(self), GetXlaShape(other)},
+                          lower_for_shape_fn);
+}
+
+xla::Shape EqTensorOutputShape(const torch::lazy::Value& self,
+                               const torch::lazy::Value& other) {
+  return EqScalarOutputShape(self, other);
+}
+
 xla::Shape ErfOutputShape(const torch::lazy::Value& input) {
   return GetXlaShape(input);
 }
@@ -223,6 +375,10 @@ xla::Shape FloorOutputShape(const torch::lazy::Value& input) {
   return GetXlaShape(input);
 }
 
+xla::Shape FracOutputShape(const torch::lazy::Value& input) {
+  return GetXlaShape(input);
+}
+
 xla::Shape GeScalarOutputShape(const torch::lazy::Value& self,
                                const torch::lazy::Value& other) {
   auto lower_for_shape_fn =
@@ -235,7 +391,7 @@ xla::Shape GeScalarOutputShape(const torch::lazy::Value& self,
 
 xla::Shape GeTensorOutputShape(const torch::lazy::Value& self,
                                const torch::lazy::Value& other) {
-  return GtScalarOutputShape(self, other);
+  return GeScalarOutputShape(self, other);
 }
 
 xla::Shape GtScalarOutputShape(const torch::lazy::Value& self,
@@ -279,6 +435,36 @@ xla::Shape IsnanOutputShape(const torch::lazy::Value& input) {
   xla::Shape isnan_shape(GetXlaShape(input));
   isnan_shape.set_element_type(xla::PRED);
   return isnan_shape;
+}
+
+xla::Shape LeScalarOutputShape(const torch::lazy::Value& self,
+                               const torch::lazy::Value& other) {
+  auto lower_for_shape_fn =
+      [&](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
+    return BuildComparisonOp(at::aten::le, operands[0], operands[1]);
+  };
+  return InferOutputShape({GetXlaShape(self), GetXlaShape(other)},
+                          lower_for_shape_fn);
+}
+
+xla::Shape LeTensorOutputShape(const torch::lazy::Value& self,
+                               const torch::lazy::Value& other) {
+  return LeScalarOutputShape(self, other);
+}
+
+xla::Shape LtScalarOutputShape(const torch::lazy::Value& self,
+                               const torch::lazy::Value& other) {
+  auto lower_for_shape_fn =
+      [&](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
+    return BuildComparisonOp(at::aten::lt, operands[0], operands[1]);
+  };
+  return InferOutputShape({GetXlaShape(self), GetXlaShape(other)},
+                          lower_for_shape_fn);
+}
+
+xla::Shape LtTensorOutputShape(const torch::lazy::Value& self,
+                               const torch::lazy::Value& other) {
+  return LtScalarOutputShape(self, other);
 }
 
 xla::Shape LogdetOutputShape(const torch::lazy::Value& input) {
@@ -362,6 +548,21 @@ xla::Shape MinimumOutputShape(const torch::lazy::Value& input,
                           lower_for_shape_fn);
 }
 
+xla::Shape NeScalarOutputShape(const torch::lazy::Value& self,
+                               const torch::lazy::Value& other) {
+  auto lower_for_shape_fn =
+      [&](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
+    return BuildComparisonOp(at::aten::ne, operands[0], operands[1]);
+  };
+  return InferOutputShape({GetXlaShape(self), GetXlaShape(other)},
+                          lower_for_shape_fn);
+}
+
+xla::Shape NeTensorOutputShape(const torch::lazy::Value& self,
+                               const torch::lazy::Value& other) {
+  return NeScalarOutputShape(self, other);
+}
+
 xla::Shape ReciprocalOutputShape(const torch::lazy::Value& input) {
   return GetXlaShape(input);
 }
@@ -429,6 +630,13 @@ xla::Shape SinhOutputShape(const torch::lazy::Value& input) {
 
 xla::Shape TanOutputShape(const torch::lazy::Value& input) {
   return GetXlaShape(input);
+}
+
+xla::Shape TakeOutputShape(const torch::lazy::Value& input,
+                           const torch::lazy::Value& index) {
+  xla::Shape result_shape = GetXlaShape(index);
+  result_shape.set_element_type(GetXlaShape(input).element_type());
+  return result_shape;
 }
 
 xla::Shape TanhOutputShape(const torch::lazy::Value& input) {

@@ -22,13 +22,11 @@
 #include "torch_xla/csrc/lowering_context.h"
 #include "torch_xla/csrc/ops/adam_optimizer_step.h"
 #include "torch_xla/csrc/ops/adaptive_max_pool2d.h"
-#include "torch_xla/csrc/ops/all_dim.h"
 #include "torch_xla/csrc/ops/all_gather.h"
 #include "torch_xla/csrc/ops/all_reduce.h"
 #include "torch_xla/csrc/ops/all_to_all.h"
 #include "torch_xla/csrc/ops/amp_foreach_non_finite_check_and_unscale.h"
 #include "torch_xla/csrc/ops/amp_update_scale.h"
-#include "torch_xla/csrc/ops/any.h"
 #include "torch_xla/csrc/ops/arg_max.h"
 #include "torch_xla/csrc/ops/arg_min.h"
 #include "torch_xla/csrc/ops/arithmetic_ir_ops.h"
@@ -36,10 +34,8 @@
 #include "torch_xla/csrc/ops/avg_pool_nd.h"
 #include "torch_xla/csrc/ops/avg_pool_nd_backward.h"
 #include "torch_xla/csrc/ops/bernoulli.h"
-#include "torch_xla/csrc/ops/bitwise_ir_ops.h"
 #include "torch_xla/csrc/ops/cast.h"
 #include "torch_xla/csrc/ops/cat.h"
-#include "torch_xla/csrc/ops/cholesky.h"
 #include "torch_xla/csrc/ops/collective_permute.h"
 #include "torch_xla/csrc/ops/constant.h"
 #include "torch_xla/csrc/ops/constant_pad_nd.h"
@@ -660,70 +656,11 @@ XLATensorPtr XLATensor::add(
       logical_element_type);
 }
 
-XLATensorPtr XLATensor::addcdiv(const XLATensorPtr& input,
-                                const at::Scalar& value,
-                                const XLATensorPtr& tensor1,
-                                const XLATensorPtr& tensor2) {
-  torch::lazy::Value constant = GetIrValueForScalar(
-      value, tensor1->shape().get().element_type(), input->GetDevice());
-  torch::lazy::Value div = tensor1->GetIrValue() / tensor2->GetIrValue();
-  return input->CreateFrom(input->GetIrValue() + div * constant);
-}
-
-void XLATensor::addcdiv_(XLATensorPtr& input, const at::Scalar& value,
-                         const XLATensorPtr& tensor1,
-                         const XLATensorPtr& tensor2) {
-  torch::lazy::Value constant = GetIrValueForScalar(
-      value, tensor1->shape().get().element_type(), input->GetDevice());
-  torch::lazy::Value div = tensor1->GetIrValue() / tensor2->GetIrValue();
-  input->SetInPlaceIrValue(input->GetIrValue() + div * constant);
-}
-
-XLATensorPtr XLATensor::addcmul(const XLATensorPtr& input,
-                                const at::Scalar& value,
-                                const XLATensorPtr& tensor1,
-                                const XLATensorPtr& tensor2) {
-  torch::lazy::Value constant = GetIrValueForScalar(
-      value, tensor1->shape().get().element_type(), input->GetDevice());
-  torch::lazy::Value mul = tensor1->GetIrValue() * tensor2->GetIrValue();
-  return input->CreateFrom(input->GetIrValue() + mul * constant);
-}
-
 XLATensorPtr XLATensor::addmm(const XLATensorPtr& input,
                               const XLATensorPtr& weight,
                               const XLATensorPtr& bias) {
   return input->CreateFrom(AddMatMulOp(
       input->GetIrValue(), weight->GetIrValue(), bias->GetIrValue()));
-}
-
-XLATensorPtr XLATensor::all_dim(const XLATensorPtr& input,
-                                std::vector<int64_t> dimensions,
-                                bool keep_reduced_dimensions) {
-  at::ScalarType result_type = input->dtype() == at::ScalarType::Byte
-                                   ? at::ScalarType::Byte
-                                   : at::ScalarType::Bool;
-  return input->CreateFrom(torch::lazy::MakeNode<AllDim>(
-                               input->GetIrValue(),
-                               torch::lazy::GetCanonicalDimensionIndices(
-                                   xla::util::ToVector<int64_t>(dimensions),
-                                   input->shape().get().rank()),
-                               keep_reduced_dimensions),
-                           result_type);
-}
-
-XLATensorPtr XLATensor::any(const XLATensorPtr& input,
-                            std::vector<int64_t> dimensions,
-                            bool keep_reduced_dimensions) {
-  at::ScalarType result_type = input->dtype() == at::ScalarType::Byte
-                                   ? at::ScalarType::Byte
-                                   : at::ScalarType::Bool;
-  return input->CreateFrom(
-      torch::lazy::MakeNode<Any>(input->GetIrValue(),
-                                 torch::lazy::GetCanonicalDimensionIndices(
-                                     xla::util::ToVector<int64_t>(dimensions),
-                                     input->shape().get().rank()),
-                                 keep_reduced_dimensions),
-      result_type);
 }
 
 void XLATensor::arange_out(XLATensorPtr& out, const at::Scalar& start,
@@ -864,54 +801,6 @@ void XLATensor::bernoulli_(XLATensorPtr& input,
       input->shape().get()));
 }
 
-XLATensorPtr XLATensor::bitwise_and(const XLATensorPtr& input,
-                                    const at::Scalar& other) {
-  CheckIsIntegralOrPred(input->shape(), "__and__");
-  torch::lazy::Value constant =
-      GetIrValueForScalar(other, input->shape(), input->GetDevice());
-  return input->CreateFrom(BitwiseAnd(input->GetIrValue(), constant));
-}
-
-XLATensorPtr XLATensor::bitwise_and(const XLATensorPtr& input,
-                                    const XLATensorPtr& other) {
-  CheckIsIntegralOrPred(input->shape(), "__and__");
-  return input->CreateFrom(
-      BitwiseAnd(input->GetIrValue(), other->GetIrValue()));
-}
-
-XLATensorPtr XLATensor::bitwise_not(const XLATensorPtr& input) {
-  return input->CreateFrom(Not(input->GetIrValue()));
-}
-
-XLATensorPtr XLATensor::bitwise_or(const XLATensorPtr& input,
-                                   const at::Scalar& other) {
-  CheckIsIntegralOrPred(input->shape(), "__or__");
-  torch::lazy::Value constant =
-      GetIrValueForScalar(other, input->shape(), input->GetDevice());
-  return input->CreateFrom(BitwiseOr(input->GetIrValue(), constant));
-}
-
-XLATensorPtr XLATensor::bitwise_or(const XLATensorPtr& input,
-                                   const XLATensorPtr& other) {
-  CheckIsIntegralOrPred(input->shape(), "__or__");
-  return input->CreateFrom(BitwiseOr(input->GetIrValue(), other->GetIrValue()));
-}
-
-XLATensorPtr XLATensor::bitwise_xor(const XLATensorPtr& input,
-                                    const at::Scalar& other) {
-  CheckIsIntegralOrPred(input->shape(), "__xor__");
-  torch::lazy::Value constant =
-      GetIrValueForScalar(other, input->shape(), input->GetDevice());
-  return input->CreateFrom(BitwiseXor(input->GetIrValue(), constant));
-}
-
-XLATensorPtr XLATensor::bitwise_xor(const XLATensorPtr& input,
-                                    const XLATensorPtr& other) {
-  CheckIsIntegralOrPred(input->shape(), "__xor__");
-  return input->CreateFrom(
-      BitwiseXor(input->GetIrValue(), other->GetIrValue()));
-}
-
 XLATensorPtr XLATensor::bmm(const XLATensorPtr& batch1,
                             const XLATensorPtr& batch2) {
   CheckBmmDimension(/*tag=*/"bmm", batch1, batch2);
@@ -972,35 +861,12 @@ void XLATensor::celu_(XLATensorPtr& input, const at::Scalar& alpha) {
   input->SetInPlaceIrValue(Celu(input->GetIrValue(), alpha));
 }
 
-XLATensorPtr XLATensor::cholesky(const XLATensorPtr& input, bool upper) {
-  // Cholesky takes lower instead of upper, hence the negation.
-  return input->CreateFrom(
-      torch::lazy::MakeNode<Cholesky>(input->GetIrValue(), !upper));
-}
-
 XLATensorPtr XLATensor::clamp(const XLATensorPtr& input,
                               const c10::optional<at::Scalar>& min,
                               const c10::optional<at::Scalar>& max) {
   MinMaxValues min_max = GetMinMaxValues(input, min, max);
   return input->CreateFrom(
       Clamp(input->GetIrValue(), min_max.min, min_max.max));
-}
-
-XLATensorPtr XLATensor::clamp(const XLATensorPtr& input,
-                              const c10::optional<at::Tensor>& min,
-                              const c10::optional<at::Tensor>& max) {
-  XLA_CHECK(min || max)
-      << "At least one of \'min\' or \'max\' must not be None";
-  torch::lazy::Value res = input->GetIrValue();
-  if (min) {
-    res = torch::lazy::MakeNode<Maximum>(
-        res, bridge::GetXlaTensor(*min)->GetIrValue(),
-        std::vector<torch::lazy::Shape>());
-  }
-  if (max) {
-    res = Min(res, bridge::GetXlaTensor(*max)->GetIrValue());
-  }
-  return input->CreateFrom(res);
 }
 
 XLATensorPtr XLATensor::clone(const XLATensorPtr& input) {
@@ -1197,17 +1063,6 @@ XLATensorPtr XLATensor::eq(const XLATensorPtr& input,
   return DispatchComparisonOp(at::aten::eq, input, other);
 }
 
-XLATensorPtr XLATensor::elu(const XLATensorPtr& input, const at::Scalar& alpha,
-                            const at::Scalar& scale,
-                            const at::Scalar& input_scale) {
-  return input->CreateFrom(Elu(input->GetIrValue(), alpha, scale, input_scale));
-}
-
-void XLATensor::elu_(XLATensorPtr& input, const at::Scalar& alpha,
-                     const at::Scalar& scale, const at::Scalar& input_scale) {
-  input->SetInPlaceIrValue(Elu(input->GetIrValue(), alpha, scale, input_scale));
-}
-
 XLATensorPtr XLATensor::elu_backward(const XLATensorPtr& grad_output,
                                      const at::Scalar& alpha,
                                      const at::Scalar& scale,
@@ -1232,9 +1087,11 @@ XLATensorPtr XLATensor::exp(const XLATensorPtr& input) {
 XLATensorPtr XLATensor::expand(const XLATensorPtr& input,
                                std::vector<int64_t> size) {
   auto input_shape = input->shape();
-  return input->CreateFrom(torch::lazy::MakeNode<Expand>(
+  auto output = input->CreateFrom(torch::lazy::MakeNode<Expand>(
       input->GetIrValue(),
       GetExpandDimensions(input_shape.get(), std::move(size))));
+  output->storage_ = input->Storage();
+  return output;
 }
 
 void XLATensor::exponential_(XLATensorPtr& input, double lambd) {
@@ -1290,10 +1147,6 @@ XLATensorPtr XLATensor::fmod(
       other, input->shape(), logical_element_type, input->GetDevice());
   return input->CreateFrom(Fmod(input->GetIrValue(), constant),
                            logical_element_type);
-}
-
-XLATensorPtr XLATensor::frac(const XLATensorPtr& input) {
-  return input->CreateFrom(FracOp(input->GetIrValue()));
 }
 
 XLATensorPtr XLATensor::full(absl::Span<const int64_t> size,
@@ -2604,11 +2457,6 @@ std::tuple<XLATensorPtr, XLATensorPtr> XLATensor::symeig(
       torch::lazy::MakeNode<SymEig>(input->GetIrValue(), eigenvectors, !upper);
   return std::make_tuple(input->CreateFrom(torch::lazy::Value(node, 0)),
                          input->CreateFrom(torch::lazy::Value(node, 1)));
-}
-
-XLATensorPtr XLATensor::take(const XLATensorPtr& input,
-                             const XLATensorPtr& index) {
-  return input->CreateFrom(Take(input->GetIrValue(), index->GetIrValue()));
 }
 
 XLATensorPtr XLATensor::tanh_backward(const XLATensorPtr& grad_output,

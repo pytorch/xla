@@ -5,25 +5,40 @@ full_codegen:
   - acosh
   - abs
   - all
+  - all.dim
+  - addcdiv
+  - addcmul
   - amax
   - amin
+  - any
+  - any.dim
   - asin
   - asinh
   - atan
   - atanh
   - binary_cross_entropy
   - binary_cross_entropy_backward
+  - bitwise_and.Tensor
+  - bitwise_not
+  - bitwise_or.Tensor
+  - bitwise_xor.Tensor
   - ceil
+  - cholesky
+  - clamp.Tensor
   - clamp_max.Tensor
   - clamp_min.Tensor
   - cos
   - cosh
+  - elu
+  - eq.Scalar
+  - eq.Tensor
   - erf
   - erfc
   - erfinv
   - exp
   - expm1
   - floor
+  - frac
   - ge.Scalar
   - ge.Tensor
   - gt.Scalar
@@ -34,6 +49,8 @@ full_codegen:
   - hardswish_backward
   - inverse
   - isnan
+  - le.Scalar
+  - le.Tensor
   - logdet
   - logical_and
   - logical_not
@@ -41,8 +58,12 @@ full_codegen:
   - logical_xor
   - log_sigmoid_backward
   - log_sigmoid_forward
+  - lt.Scalar
+  - lt.Tensor
   - maximum
   - minimum
+  - ne.Scalar
+  - ne.Tensor
   - reciprocal
   - relu
   - round
@@ -54,6 +75,7 @@ full_codegen:
   - silu_backward
   - sin
   - sinh
+  - take
   - tan
   - tanh
   - tril
@@ -95,14 +117,8 @@ supported:
   - adaptive_max_pool2d_backward
   - add.Scalar
   - add.Tensor
-  - addcdiv
-  - addcdiv_
-  - addcmul
   - addmm
   - alias
-  - all.dim
-  - any
-  - any.dim
   - arange.start_out
   - argmax
   - argmin
@@ -118,20 +134,11 @@ supported:
   - bernoulli_.float
   - bernoulli_.Tensor
   - binary_cross_entropy_with_logits
-  - bitwise_and.Scalar
-  - bitwise_and.Tensor
-  - bitwise_not
-  - bitwise_or.Scalar
-  - bitwise_or.Tensor
-  - bitwise_xor.Scalar
-  - bitwise_xor.Tensor
   - bmm
   - cat
   - celu
   - celu_
-  - cholesky
   - clamp
-  - clamp.Tensor
   - clamp_max
   - clamp_min
   - clone
@@ -147,16 +154,11 @@ supported:
   - div.Tensor
   - div.Tensor_mode
   - dot
-  - elu
-  - elu_
   - elu_backward
   - embedding
   - embedding_dense_backward
   - empty.memory_format
-  - empty.SymInt
   - empty_strided
-  - eq.Scalar
-  - eq.Tensor
   - expand
   - exponential_
   - eye.m_out
@@ -164,9 +166,9 @@ supported:
   - fill_.Scalar
   - fill_.Tensor
   - flip
+  - floor_divide
   - fmod.Scalar
   - fmod.Tensor
-  - frac
   - gather
   - gelu
   - gelu_backward
@@ -183,8 +185,6 @@ supported:
   - index_select
   - kl_div
   - kthvalue
-  - le.Scalar
-  - le.Tensor
   - leaky_relu
   - leaky_relu_backward
   - lerp.Scalar
@@ -195,8 +195,6 @@ supported:
   - log2
   - log10
   - logsumexp
-  - lt.Scalar
-  - lt.Tensor
   - masked_fill_.Scalar
   - masked_fill_.Tensor
   - masked_scatter_
@@ -226,8 +224,6 @@ supported:
   - nan_to_num
   - native_batch_norm
   - native_batch_norm_backward
-  - ne.Scalar
-  - ne.Tensor
   - neg
   - nll_loss2d_backward
   - nll_loss2d_forward
@@ -308,7 +304,6 @@ supported:
   - symeig
   - t
   - t_
-  - take
   - tanh_backward
   - threshold
   - threshold_backward
@@ -346,11 +341,14 @@ supported:
   - pixel_shuffle
   - pixel_unshuffle
   - select_backward
-  - linalg_inv_ex
   - linalg_pinv.atol_rtol_tensor
   # The same applies to these ops, but we already have direct lowerings for them
   # - _trilinear
   # - logsumexp.out
+symint:
+  - empty.memory_format
+  - expand
+  - view
 autograd:
   - max_pool2d
   - max_pool3d

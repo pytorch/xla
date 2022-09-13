@@ -1800,6 +1800,16 @@ class TestAtenXlaTensor(XlaTestCase):
 
     self.runAtenTest([torch.randint(1, 4, (7, 7), dtype=torch.uint8)], test_fn)
 
+  def test_too_many_parameter(self):
+
+    def test_fn(t):
+      # TPU can handle ~3500 parameters on v3 without parameter tupling.
+      for i in range(4000):
+        t += torch.tensor(i, dtype=torch.float, device=t.device)
+      return t
+
+    self.runAtenTest([torch.tensor(20.0)], test_fn)
+
   def test_view_and_copy_(self):
     xla_device = xm.xla_device()
     x = torch.tensor([1.5, 2.5, 3.5, 4.5, 5.5, 6.5], device='cpu')
@@ -1823,6 +1833,14 @@ class TestAtenXlaTensor(XlaTestCase):
     const_hlo = hlo_text.split('\n')[1]
     assert 'prim::Constant' in const_hlo
     assert 'xla::device_data' not in const_hlo
+
+  def test_emb_bf16(self):
+    xla_device = xm.xla_device()
+    index = torch.ones(1, dtype=torch.long, device=xla_device)
+    emb = torch.nn.Embedding(1024, 128, device=xla_device)
+    emb = emb.to(torch.bfloat16)
+    emb_out = emb(index)
+    assert emb_out.dtype == torch.bfloat16
 
 
 class MNISTComparator(nn.Module):

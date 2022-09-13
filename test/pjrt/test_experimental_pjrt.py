@@ -10,11 +10,6 @@ import torch_xla.core.xla_model as xm
 from torch_xla.experimental import pjrt
 
 
-def _mp_fn():
-  """Pickle-able function to run multiprocess."""
-  return xm.xla_device()
-
-
 class TestExperimentalPjrt(parameterized.TestCase):
 
   def setUp(self):
@@ -49,33 +44,6 @@ class TestExperimentalPjrt(parameterized.TestCase):
   def test_world_size(self):
     self.assertEqual(xm.xrt_world_size(), pjrt.global_device_count())
 
-  @parameterized.named_parameters(('single_thread', [0], [0]),
-                                  ('1_host_x_3_threads', [0, 1, 2], [0, 1, 2]),
-                                  ('3_hosts_x_1_thread', [0, 0, 0], [0, 1, 2]))
-  def test_set_ordinals(self, local_ordinals, global_ordinals):
-    """Takes a list of n local and global ordinals and set ordinals in n threads
-
-    `local_ordinals` and `global_ordinals` must be the same length. Length
-    corresponds to the number of threads to spawn.
-    """
-    self.assertEqual(len(global_ordinals), len(local_ordinals))
-
-    def _thread_fn(local_ordinal, global_ordinal):
-      pjrt.set_local_ordinal(local_ordinal)
-      pjrt.set_global_ordinal(global_ordinal)
-
-      time.sleep(1)
-
-      return xm.get_local_ordinal(), xm.get_ordinal()
-
-    num_threads = len(local_ordinals)
-    with concurrent.futures.ThreadPoolExecutor(max_workers=num_threads) as e:
-      results = e.map(_thread_fn, local_ordinals, global_ordinals)
-      for result, local_ordinal, global_ordinal in zip(results, local_ordinals,
-                                                       global_ordinals):
-        expected = (local_ordinal, global_ordinal)
-        self.assertEqual(result, expected)
-
   # TODO(will-cromar): add a multi-device version of this test.
   def test_xla_device_default(self):
     device = xm.xla_device()
@@ -86,7 +54,7 @@ class TestExperimentalPjrt(parameterized.TestCase):
       xm.xla_device(10)
 
   def test_run_multiprocess_one_device(self):
-    results = pjrt.run_multiprocess(_mp_fn)
+    results = pjrt.run_multiprocess(xm.xla_device)
     self.assertDictEqual(results, {0: {0: torch.device('xla:0')}})
 
 

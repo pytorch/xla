@@ -5,9 +5,11 @@ function run_deployment_tests() {
   export XRT_WORKERS="localservice:0;grpc://localhost:40934"
   export CC=clang-8 CXX=clang++-8
 
-  time python /pytorch/xla/test/test_train_mp_mnist.py --fake_data
-  time bash /pytorch/xla/test/run_tests.sh
-  time bash /pytorch/xla/test/cpp/run_tests.sh
+  # We don't need to load libtpu since test is being done on CPU.
+  TPU_LOAD_LIBRARY=0 time python /pytorch/xla/test/test_train_mp_mnist.py --fake_data
+  TPU_LOAD_LIBRARY=0 time bash /pytorch/xla/test/run_tests.sh
+  # TODO(JackCaoG): reenable after fixing the cpp test build
+  # time bash /pytorch/xla/test/cpp/run_tests.sh
 }
 
 function collect_wheels() {
@@ -36,11 +38,11 @@ function collect_wheels() {
   rename -v "s/^torchvision-(.*?)-cp/torchvision-${wheel_version}-cp/" *.whl
   popd
   mv /tmp/staging-wheels/* .
-  pushd /tmp/staging-wheels
-  cp /pytorch/audio/dist/*.whl .
-  rename -v "s/^torchaudio-(.*?)-cp/torchaudio-${wheel_version}-cp/" *.whl
-  popd
-  mv /tmp/staging-wheels/* .
+  # pushd /tmp/staging-wheels
+  # cp /pytorch/audio/dist/*.whl .
+  # rename -v "s/^torchaudio-(.*?)-cp/torchaudio-${wheel_version}-cp/" *.whl
+  # popd
+  # mv /tmp/staging-wheels/* .
 
   rm -rf /tmp/staging-wheels
 
@@ -53,9 +55,10 @@ function collect_wheels() {
   pushd /pytorch/vision/dist
   rename -v "s/^torchvision-(.*?)-cp/torchvision-${wheel_version}+$(date -u +%Y%m%d)-cp/" *.whl
   popd
-  pushd /pytorch/audio/dist
-  rename -v "s/^torchaudio-(.*?)-cp/torchaudio-${wheel_version}+$(date -u +%Y%m%d)-cp/" *.whl
-  popd
+  # pushd /pytorch/audio/dist
+  # rename -v "s/^torchaudio-(.*?)-cp/torchaudio-${wheel_version}+$(date -u +%Y%m%d)-cp/" *.whl
+  # popd
 
-  cp /pytorch/dist/*.whl ./ && cp /pytorch/xla/dist/*.whl ./ && cp /pytorch/vision/dist/*.whl ./ && cp /pytorch/audio/dist/*.whl ./
+  cp /pytorch/dist/*.whl ./ && cp /pytorch/xla/dist/*.whl ./ && cp /pytorch/vision/dist/*.whl ./
+  # && cp /pytorch/audio/dist/*.whl ./
 }

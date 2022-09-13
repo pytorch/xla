@@ -8,14 +8,26 @@
 #include "tensorflow/compiler/xla/xla_client/debug_macros.h"
 #include "tensorflow/compiler/xla/xla_client/sys_util.h"
 #include "torch_xla/csrc/convert_ops.h"
+#include "torch_xla/csrc/device.h"
 #include "torch_xla/csrc/helpers.h"
 
 namespace torch_xla {
 namespace {
 
+std::string GetDefaultGitGeneratorName() {
+  XlaDeviceType hw_type = static_cast<XlaDeviceType>(GetCurrentDevice().type());
+  switch (hw_type) {
+    case XlaDeviceType::GPU:
+      return "three_fry";
+    default:
+      return "default";
+  }
+}
+
 xla::BitGeneratorTy GetBitGenerator() {
-  static const std::string* bit_generator = new std::string(
-      xla::sys_util::GetEnvString("XLA_RNG_BIT_GENERATOR", "default"));
+  static const std::string* bit_generator =
+      new std::string(xla::sys_util::GetEnvString(
+          "XLA_RNG_BIT_GENERATOR", GetDefaultGitGeneratorName()));
   if (*bit_generator == "default") {
     return [](xla::XlaOp key, xla::XlaOp state, const xla::Shape& shape) {
       state = xla::ConcatScalars(key.builder(), {key, state});

@@ -370,22 +370,19 @@ xla::XlaOp BuildLogSigmoidBackward(xla::XlaOp grad_output, xla::XlaOp input,
   return grad_output * (xla::Neg(max_deriv) - sign * (buffer - one) / buffer);
 }
 
-xla::XlaOp BuildElu(xla::XlaOp input, const at::Scalar& alpha,
-                    const at::Scalar& scale, const at::Scalar& input_scale) {
+xla::XlaOp BuildElu(xla::XlaOp input, xla::XlaOp alpha, xla::XlaOp scale,
+                    xla::XlaOp input_scale) {
   const xla::Shape& shape = XlaHelpers::ShapeOfXlaOp(input);
-  xla::XlaOp scaled_input =
-      input * XlaHelpers::ScalarValue(input_scale, shape.element_type(),
-                                      input.builder());
+  alpha = MaybeConvertTo(alpha, shape.element_type());
+  scale = MaybeConvertTo(scale, shape.element_type());
+  input_scale = MaybeConvertTo(input_scale, shape.element_type());
+  xla::XlaOp scaled_input = input * input_scale;
   xla::XlaOp zero = xla::Zero(input.builder(), shape.element_type());
   xla::XlaOp one = XlaHelpers::ScalarValue<float>(1.0, shape.element_type(),
                                                   input.builder());
-  xla::XlaOp alpha_scalar =
-      XlaHelpers::ScalarValue(alpha, shape.element_type(), input.builder());
-  xla::XlaOp scale_scalar =
-      XlaHelpers::ScalarValue(scale, shape.element_type(), input.builder());
   return xla::Select(xla::Le(input, zero),
-                     alpha_scalar * (xla::Exp(scaled_input) - one), input) *
-         scale_scalar;
+                     alpha * (xla::Exp(scaled_input) - one), input) *
+         scale;
 }
 
 xla::XlaOp BuildEluBackward(xla::XlaOp grad_output, xla::XlaOp output,

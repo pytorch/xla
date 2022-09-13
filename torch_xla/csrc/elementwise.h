@@ -97,8 +97,8 @@ xla::XlaOp BuildLogSigmoidBackward(xla::XlaOp grad_output, xla::XlaOp input,
                                    xla::XlaOp buffer);
 
 // Computes the Elu function of input.
-xla::XlaOp BuildElu(xla::XlaOp input, const at::Scalar& alpha,
-                    const at::Scalar& scale, const at::Scalar& input_scale);
+xla::XlaOp BuildElu(xla::XlaOp input, xla::XlaOp alpha, xla::XlaOp scale,
+                    xla::XlaOp input_scale);
 
 // Computes the backward of Elu.
 xla::XlaOp BuildEluBackward(xla::XlaOp grad_output, xla::XlaOp output,
