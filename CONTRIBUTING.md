@@ -43,12 +43,6 @@ To build from source:
 
 ### Build From Source
 
-* Apply PyTorch patches:
-
-  ```Shell
-  xla/scripts/apply_patches.sh
-  ```
-
 * Install the Lark parser used for automatic code generation:
 
   ```Shell
