@@ -330,6 +330,33 @@ torch_xla::XlaOpVector GtTensor::Lower(LoweringContext* loctx) const {
   return ReturnOp(BuildComparisonOp(at::aten::gt, xla_input, xla_other), loctx);
 }
 
+torch_xla::XlaOpVector Hardshrink::Lower(LoweringContext* loctx) const {
+  xla::XlaOp xla_input = loctx->GetOutputOp(operand(0));
+  xla::XlaOp lambd = loctx->GetOutputOp(operand(1));
+  // ReturnOp(BuildHardshrink(input, lambda_), loctx);
+  return ReturnOp(BuildHardshrink(xla_input, lambd), loctx);
+}
+
+// xla::XlaOp BuildHardshrink(xla::XlaOp input, const at::Scalar& lambda) {
+  // const xla::Shape& shape = XlaHelpers::ShapeOfXlaOp(input);
+  // xla::XlaOp zero = xla::Zero(input.builder(), shape.element_type());
+  // return xla::Select(Between(input, -lambda, lambda), zero, input);
+// }
+
+// xla::XlaOp Between(xla::XlaOp input, const at::Scalar& min_val,
+//                    const at::Scalar& max_val) {
+//   const xla::Shape& shape = XlaHelpers::ShapeOfXlaOp(input);
+//   xla::PrimitiveType element_type = shape.element_type();
+//   xla::XlaBuilder* builder = input.builder();
+//   xla::XlaOp check_low = BuildComparisonOp(
+//       at::aten::ge, input,
+//       XlaHelpers::ScalarValue(min_val, element_type, builder));
+//   xla::XlaOp check_high = BuildComparisonOp(
+//       at::aten::le, input,
+//       XlaHelpers::ScalarValue(max_val, element_type, builder));
+//   return xla::And(check_low, check_high);
+// }
+
 torch_xla::XlaOpVector Hardsigmoid::Lower(LoweringContext* loctx) const {
   xla::XlaOp xla_input = loctx->GetOutputOp(operand(0));
   return ReturnOp(BuildHardSigmoid(xla_input), loctx);

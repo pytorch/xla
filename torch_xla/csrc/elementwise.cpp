@@ -69,10 +69,24 @@ xla::XlaOp BuildRelu(xla::XlaOp input) {
                              0, input_shape.element_type(), input.builder()));
 }
 
-xla::XlaOp BuildHardshrink(xla::XlaOp input, const at::Scalar& lambda) {
+// xla::XlaOp BuildHardshrink(xla::XlaOp input, const at::Scalar& lambda) {
+//   const xla::Shape& shape = XlaHelpers::ShapeOfXlaOp(input);
+//   xla::XlaOp zero = xla::Zero(input.builder(), shape.element_type());
+//   return xla::Select(Between(input, -lambda, lambda), zero, input);
+// }
+
+xla::XlaOp BuildHardshrink(xla::XlaOp input, xla::XlaOp lambda) {
   const xla::Shape& shape = XlaHelpers::ShapeOfXlaOp(input);
-  xla::XlaOp zero = xla::Zero(input.builder(), shape.element_type());
-  return xla::Select(Between(input, -lambda, lambda), zero, input);
+  xla::PrimitiveType element_type = shape.element_type();
+  xla::XlaOp zero = xla::Zero(input.builder(), element_type);
+
+  xla::XlaOp check_low = BuildComparisonOp(
+      at::aten::ge, zero-input, lambda);
+  xla::XlaOp check_high = BuildComparisonOp(
+    at::aten::le, input, lambda);
+
+  xla::XlaOp between = xla::And(check_low, check_high);
+  return xla::Select(between, zero, input);
 }
 
 xla::XlaOp BuildHardSigmoid(xla::XlaOp input) {

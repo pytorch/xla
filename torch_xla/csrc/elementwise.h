@@ -28,11 +28,12 @@ xla::XlaOp BuildRreluBackward(xla::XlaOp grad_output, xla::XlaOp input,
                               xla::XlaOp noise, const at::Scalar& lower,
                               const at::Scalar& upper, bool training);
 
-xla::XlaOp BuildHardshrink(xla::XlaOp input, const at::Scalar& lambda);
+xla::XlaOp BuildHardshrink(xla::XlaOp input, xla::XlaOp lambda);
 xla::XlaOp BuildHardSigmoid(xla::XlaOp input);
 xla::XlaOp BuildHardSigmoidBackward(xla::XlaOp grad_output, xla::XlaOp input);
 xla::XlaOp BuildHardSwish(xla::XlaOp input);
 xla::XlaOp BuildHardSwishBackward(xla::XlaOp grad_output, xla::XlaOp input);
+xla::XlaOp BuildSoftshrink(xla::XlaOp input, const at::Scalar& lambda);
 xla::XlaOp BuildSoftshrink(xla::XlaOp input, const at::Scalar& lambda);
 xla::XlaOp BuildShrinkBackward(xla::XlaOp grad_output, xla::XlaOp input,
                                const at::Scalar& lambda);
