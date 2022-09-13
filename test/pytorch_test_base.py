@@ -87,6 +87,7 @@ DISABLED_TORCH_TESTS_ANY = {
         'test_cdist_large_batch',
         'test_cdist_non_contiguous',
         'test_cdist_non_contiguous_batch',
+        'test_cov',  # XLA generates inf while nan is expected
         'test_broadcast_batched_matmul',  # incorrect Size
         'test_bincount',
         'test_view_all_dtypes_and_devices',  # uses half
