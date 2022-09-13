@@ -1,11 +1,12 @@
-import itertools
 import os
+import queue
 
 from absl.testing import absltest, parameterized
 
 import torch
 import torch_xla.core.xla_model as xm
 import torch_xla.core.xla_env_vars as xenv
+import torch_xla.distributed.xla_multiprocessing as xmp
 from torch_xla.experimental import pjrt
 
 
@@ -93,6 +94,19 @@ class TestExperimentalPjrtMultiCpu(parameterized.TestCase):
     results = pjrt.run_multiprocess(self._multi_cpu_backwards)
 
     self.assertDictEqual(results, expected)
+
+  @staticmethod
+  def _spawn(index: int, queue: queue.Queue):
+    queue.put(index)
+
+  @parameterized.named_parameters(('xmp', xmp.spawn), ('pjrt', pjrt.spawn))
+  def test_spawn(self, spawn):
+    manager = torch.multiprocessing.Manager()
+    queue = manager.Queue(4)
+    spawn(self._spawn, args=(queue,))
+
+    indices = sorted(queue.get(block=False) for _ in range(queue.qsize()))
+    self.assertListEqual(indices, list(range(4)))
 
 
 if __name__ == '__main__':
