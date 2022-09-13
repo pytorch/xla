@@ -87,6 +87,7 @@ DISABLED_TORCH_TESTS_ANY = {
         'test_cdist_large_batch',
         'test_cdist_non_contiguous',
         'test_cdist_non_contiguous_batch',
+        'test_cov',  # XLA generates inf while nan is expected
         'test_broadcast_batched_matmul',  # incorrect Size
         'test_bincount',
         'test_view_all_dtypes_and_devices',  # uses half
@@ -233,7 +234,6 @@ DISABLED_TORCH_TESTS_ANY = {
         'test_embedding_backward',  # sparse
         'test_embedding_dense_grad',  # slow
         'test_batchnorm_grad',  # FIXME! UndefinedTensorImpl::_singleton
-        'test_pool_invalid_size',  # expecting a different runtime error
         'test_nonlinearity_propagate_nan',  # relu6 with a nan tensor returns a tensor([0.]) instead of a nan tensor
         'test_InstanceNorm3d_general',  # precision (1e-2)
         'test_InstanceNorm2d_general',  # precision (1e-2)
@@ -268,7 +268,16 @@ DISABLED_TORCH_TESTS_ANY = {
         'test_upsamplingBicubic2d_correctness_xla',  # FIXME! Got dtypes torch.float32 and torch.float64
         'test_conv3d_same_padding_backward_xla',  # XLA tensors do not have storage,
         'test_CTCLoss_no_batch_dim_xla',  # Value out of range
+    },
+
+    # test/nn/test_dropout.py
+    'TestDropoutNNDeviceTypeXLA': {
         'test_Dropout2d_xla',  # Started to pass
+    },
+
+    # test/nn/test_pooling.py
+    'TestPoolingNNDeviceTypeXLA': {
+        'test_pool_invalid_size',  # expecting a different runtime error
     },
 
     # test_type_promotion.py

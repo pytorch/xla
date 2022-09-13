@@ -61,6 +61,8 @@ set(TORCH_XLA_TEST_SOURCES
   test_xla_util_cache.cpp
   torch_xla_test.cpp
   test_xla_backend_intf.cpp
+  test_symint.cpp
+  test_xla_sharding.cpp
 )
 
 add_executable(test_ptxla ${TORCH_XLA_TEST_SOURCES})
@@ -127,7 +129,7 @@ target_link_libraries(
   -Wl,--unresolved-symbols=ignore-in-shared-libs
   "${TORCH_LIBRARIES}"
   "${PTXLA_LIB}"
-  "${PTXLA_LIBDIR}/torch_xla/lib/libxla_computation_client.so"
+  "${PTXLA_DIR}/torch_xla/lib/libxla_computation_client.so"
   "${PTPY_LIB}"
   "${BINARY_DIR}/lib/${CMAKE_FIND_LIBRARY_PREFIXES}gtest.a"
   "${PYTHON_LIBRARY}"

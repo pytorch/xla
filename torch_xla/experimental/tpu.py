@@ -146,7 +146,7 @@ def configure_topology(local_rank: int,
   ]
   os.environ.setdefault(xenv.TPU_PROCESS_ADDRESSES, ','.join(process_endpoints))
 
-  os.environ.setdefault(xenv.TPU_VISIBLE_DEVICES, str(local_rank))
+  os.environ.setdefault(xenv.TPU_VISIBLE_CHIPS, str(local_rank))
   os.environ.setdefault(xenv.TPU_PROCESS_PORT, str(ports[local_rank]))
 
   # Set XRT_MESH_SERVICE_ADDRESS for compatibility.

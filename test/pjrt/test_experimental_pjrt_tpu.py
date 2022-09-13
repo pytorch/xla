@@ -19,7 +19,7 @@ class TestExperimentalPjrtTpu(parameterized.TestCase):
   def setUp(self):
     pjrt.set_device_type('TPU')
 
-    os.environ.pop(xenv.TPU_VISIBLE_DEVICES, None)
+    os.environ.pop(xenv.TPU_VISIBLE_CHIPS, None)
     os.environ.pop(xenv.TPU_PROCESS_BOUNDS, None)
 
     try:
@@ -93,7 +93,7 @@ class TestExperimentalPjrtTpu(parameterized.TestCase):
           self.accelerator_type))
     expected = accelerator_devices[self.accelerator_type]
 
-    os.environ[xenv.TPU_VISIBLE_DEVICES] = '0,1,2,3'
+    os.environ[xenv.TPU_VISIBLE_CHIPS] = '0,1,2,3'
     os.environ[xenv.TPU_PROCESS_BOUNDS] = '1,1,1'
 
     devices = pjrt.run_multiprocess(xm.xla_device)
@@ -119,7 +119,7 @@ class TestExperimentalPjrtTpu(parameterized.TestCase):
           self.accelerator_type))
     expected = accelerator_devices[self.accelerator_type]
 
-    os.environ[xenv.TPU_VISIBLE_DEVICES] = '0'
+    os.environ[xenv.TPU_VISIBLE_CHIPS] = '0'
     os.environ[xenv.TPU_PROCESS_BOUNDS] = '1,1,1'
 
     devices = pjrt.run_multiprocess(xm.xla_device)
@@ -143,6 +143,42 @@ class TestExperimentalPjrtTpu(parameterized.TestCase):
     self.assertListEqual(
         devices,
         [torch.device(f'xla:{i}') for i in range(expected_num_devices)])
+
+  @parameterized.named_parameters(('xla_model', xm.get_ordinal),
+                                  ('pjrt', pjrt.global_ordinal))
+  def test_global_ordinal(self, ordinal_func):
+    accelerator_num_devices = {
+        'v3-8': 8,
+        'v4-8': 4,
+    }
+
+    if self.accelerator_type not in accelerator_num_devices:
+      raise NotImplementedError('Test not implemented for {}'.format(
+          self.accelerator_type))
+    expected_num_devices = accelerator_num_devices[self.accelerator_type]
+
+    results = pjrt.run_multiprocess(ordinal_func)
+    values = list(
+        itertools.chain.from_iterable(row.values() for row in results.values()))
+    self.assertListEqual(sorted(values), list(range(expected_num_devices)))
+
+  @parameterized.named_parameters(('xla_model', xm.get_local_ordinal),
+                                  ('pjrt', pjrt.local_ordinal))
+  def test_local_ordinal(self, ordinal_func):
+    accelerator_num_devices = {
+        'v3-8': 8,
+        'v4-8': 4,
+    }
+
+    if self.accelerator_type not in accelerator_num_devices:
+      raise NotImplementedError('Test not implemented for {}'.format(
+          self.accelerator_type))
+    expected_num_devices = accelerator_num_devices[self.accelerator_type]
+
+    results = pjrt.run_multiprocess(ordinal_func)
+    values = list(
+        itertools.chain.from_iterable(row.values() for row in results.values()))
+    self.assertListEqual(sorted(values), list(range(expected_num_devices)))
 
   @staticmethod
   def _broadcast(sync):

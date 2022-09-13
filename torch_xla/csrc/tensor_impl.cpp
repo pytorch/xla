@@ -59,7 +59,7 @@ XLATensorImpl::XLATensorImpl(XLATensor&& tensor)
                       bridge::XlaDeviceToAtenDevice(tensor.GetDevice())),
       tensor_(c10::make_intrusive<XLATensor>(std::move(tensor))) {
   is_non_overlapping_and_dense_ = false;
-  set_sizes_strides_policy(SizesStridesPolicy::CustomSizes);
+  set_custom_sizes_strides(SizesStridesPolicy::CustomSizes);
 }
 
 XLATensorImpl::XLATensorImpl(XLATensor& tensor)
@@ -129,12 +129,6 @@ c10::SymInt XLATensorImpl::sym_numel_custom() const {
   return prod;
 }
 
-c10::SymIntArrayRef XLATensorImpl::sym_sizes() const {
-  // it isn't strictly necessary to delegate to `sym_sizes_custom`
-  // however, it's consistent with pytorch core
-  return sym_sizes_custom();
-}
-
 at::IntArrayRef XLATensorImpl::strides_custom() const {
   const_cast<XLATensorImpl*>(this)->SetupSizeProperties();
   return strides_default();
@@ -186,10 +180,8 @@ void XLATensorImpl::AtenInitialize() {
   // ATEN specific initialization calls placed below.
 }
 
-const at::Storage& XLATensorImpl::storage() const {
-  XLA_ERROR() << "XLA tensors do not have storage";
-}
+const at::Storage& XLATensorImpl::storage() const { return tensor_->Storage(); }
 
-bool XLATensorImpl::has_storage() const { return false; }
+bool XLATensorImpl::has_storage() const { return tensor_->Storage(); }
 
 }  // namespace torch_xla
