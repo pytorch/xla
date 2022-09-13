@@ -5,9 +5,10 @@ function run_deployment_tests() {
   export XRT_WORKERS="localservice:0;grpc://localhost:40934"
   export CC=clang-8 CXX=clang++-8
 
-  time python /pytorch/xla/test/test_train_mp_mnist.py --fake_data
-  time bash /pytorch/xla/test/run_tests.sh
-  # TODO: reenable after fixing the cpp test build
+  # We don't need to load libtpu since test is being done on CPU.
+  TPU_LOAD_LIBRARY=0 time python /pytorch/xla/test/test_train_mp_mnist.py --fake_data
+  TPU_LOAD_LIBRARY=0 time bash /pytorch/xla/test/run_tests.sh
+  # TODO(JackCaoG): reenable after fixing the cpp test build
   # time bash /pytorch/xla/test/cpp/run_tests.sh
 }
 
