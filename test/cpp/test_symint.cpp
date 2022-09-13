@@ -84,6 +84,31 @@ TEST(SymintTest, TestDynamicSymint) {
   EXPECT_EQ(si_element.GetSizeNode(0), size_node);
 }
 
+TEST(SymintTest, TestSizeConstant) {
+  torch::lazy::NodePtr sc10 = torch::lazy::MakeNode<SizeConstant>(10);
+  EXPECT_EQ(sc10->getStaticValue(), 10);
+  torch::lazy::NodePtr sc15 = torch::lazy::MakeNode<SizeConstant>(15);
+  EXPECT_EQ(sc15->getStaticValue(), 15);
+  torch::lazy::NodePtr add25 = torch::lazy::MakeNode<SizeAdd>(sc10, sc15);
+  EXPECT_EQ(add25->getStaticValue(), 25);
+  // TODO: test getDynamicValue()
+  torch::lazy::Value scalar_value =
+      torch::lazy::Value(ScalarOp(1.0, xla::F32), 0);
+  // Manully assign the torch::lazy::shape to avoid calling shape fn in this
+  // test. Note that we have to use one of those codegen ops so they take
+  // lazy::shape in constructor.
+  std::vector<torch::lazy::Shape> abs_lazy_shapes = {
+      torch::lazy::Shape(torch::kFloat, {9})};
+  torch::lazy::NodePtr abs_node =
+      torch::lazy::MakeNode<Abs>(scalar_value, std::move(abs_lazy_shapes));
+  torch::lazy::Value abs_value = torch::lazy::Value(abs_node, 0);
+  torch::lazy::NodePtr size_node =
+      torch::lazy::MakeNode<SizeNode>(abs_value, /*dim=*/0);
+
+  torch::lazy::NodePtr add19 = torch::lazy::MakeNode<SizeAdd>(sc10, size_node);
+  EXPECT_EQ(add25->getStaticValue(), 19);
+}
+
 TEST(SymintTest, TestDynamicSymints) {
   torch::lazy::Value scalar_value =
       torch::lazy::Value(ScalarOp(1.0, xla::F32), 0);

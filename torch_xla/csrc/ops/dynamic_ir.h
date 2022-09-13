@@ -11,6 +11,7 @@
 
 #include "torch/csrc/lazy/core/dynamic_ir.h"
 #include "torch_xla/csrc/ir.h"
+#include "torch_xla/csrc/ops/scalar.h"
 
 namespace torch_xla {
 
@@ -95,5 +96,19 @@ const torch::lazy::DimensionNode* DimCast(torch::lazy::Output output);
 const torch::lazy::DimensionNode* DimCast(const torch::lazy::Node* node);
 const std::shared_ptr<torch::lazy::DimensionNode> DimCast(
     const torch::lazy::NodePtr& node);
+
+class SizeConstant : public torch_xla::Scalar,
+                     public torch::lazy::DimensionNode {
+ public:
+  SizeConstant(int64_t val);
+  int64_t getStaticValue() const override { return value().to<int64_t>(); };
+  bool isSymbolic() const override { return false; };
+  std::string ToString() const override {
+    this->torch_xla::Scalar::ToString();
+  };
+  virtual XlaOpVector Lower(LoweringContext* loctx) const override {
+    TORCH_CHECK(false, "NYI");
+  };
+};
 
 }  // namespace torch_xla
