@@ -199,7 +199,7 @@ def run_thread_per_device(local_rank: int, local_world_size: int,
 
 
 @requires_pjrt
-def run_multiprocess(fn: Callable[P, R], /, *args: P.args,
+def run_multiprocess(fn: Callable[P, R], *args: P.args,
                      **kwargs: P.kwargs) -> Dict[int, R]:
   """Runs `fn` on all devices available to PjRt.
 
