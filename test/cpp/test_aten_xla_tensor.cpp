@@ -5839,6 +5839,17 @@ TEST_F(AtenXlaTensorTest, TestHardshrink) {
   });
 }
 
+TEST_F(AtenXlaTensorTest, TestHardshrinkWithNegativeLambda) {
+  torch::Tensor input = torch::randn({10}, torch::TensorOptions(torch::kFloat));
+  torch::Scalar lambd = -0.5;
+  torch::Tensor output = torch::hardshrink(input, lambd);
+  ForEachDevice([&](const torch::Device& device) {
+    torch::Tensor xla_input = CopyToDevice(input, device);
+    torch::Tensor xla_output = torch::hardshrink(xla_input, lambd);
+    AllClose(output, xla_output);
+  });
+}
+
 TEST_F(AtenXlaTensorTest, TestHardSigmoid) {
   torch::Tensor input = torch::randn({10}, torch::TensorOptions(torch::kFloat));
   torch::Tensor output = torch::hardsigmoid(input);

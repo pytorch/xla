@@ -1243,13 +1243,6 @@ at::Tensor XLANativeFunctions::gelu_backward(const at::Tensor& grad,
       bridge::GetXlaTensor(grad), bridge::GetXlaTensor(self), approximate));
 }
 
-// at::Tensor XLANativeFunctions::hardshrink(const at::Tensor& self,
-//                                           const at::Scalar& lambda) {
-//   XLA_FN_COUNTER("xla::");
-//   return bridge::AtenFromXlaTensor(
-//       XLATensor::hardshrink(bridge::GetXlaTensor(self), lambda));
-// }
-
 at::Tensor XLANativeFunctions::hardshrink_backward(const at::Tensor& grad_out,
                                                    const at::Tensor& self,
                                                    const at::Scalar& lambda) {

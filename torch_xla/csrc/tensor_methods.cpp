@@ -1346,12 +1346,6 @@ XLATensorPtr XLATensor::le(const XLATensorPtr& input,
   return DispatchComparisonOp(at::aten::le, input, other);
 }
 
-// XLATensorPtr XLATensor::hardshrink(const XLATensorPtr& input,
-//                                    const at::Scalar& lambda) {
-//   return input->CreateFrom(
-//       torch::lazy::MakeNode<Hardshrink>(input->GetIrValue(), lambda));
-// }
-
 XLATensorPtr XLATensor::hardshrink_backward(const XLATensorPtr& grad_out,
                                             const XLATensorPtr& input,
                                             const at::Scalar& lambda) {
