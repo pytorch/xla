@@ -5,6 +5,7 @@
 #include <string>
 #include <unordered_map>
 
+#include "c10/core/SymIntNodeImpl.h"
 #include "tensorflow/compiler/xla/client/xla_builder.h"
 #include "tensorflow/compiler/xla/status.h"
 #include "tensorflow/compiler/xla/types.h"
@@ -25,6 +26,16 @@
 #include "torch_xla/csrc/xla_sharding_util.h"
 
 namespace torch_xla {
+
+class TORCH_API XLASymIntNodeImpl : public c10::SymIntNodeImpl {
+ public:
+  XLASymIntNodeImpl(torch::lazy::NodePtr ptr) : node_(std::move(ptr)) {}
+  c10::SymIntNode mul(const c10::SymIntNode& other) override;
+  torch::lazy::NodePtr node() { return node_; }
+
+ private:
+  torch::lazy::NodePtr node_;
+};
 
 class XLATensor;
 using XLATensorPtr = c10::intrusive_ptr<XLATensor>;
