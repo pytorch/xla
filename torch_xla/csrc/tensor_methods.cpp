@@ -108,7 +108,6 @@
 #include "torch_xla/csrc/ops/scatter_add.h"
 #include "torch_xla/csrc/ops/send.h"
 #include "torch_xla/csrc/ops/sgd_optimizer_step.h"
-#include "torch_xla/csrc/ops/shrink_backward.h"
 #include "torch_xla/csrc/ops/softmax.h"
 #include "torch_xla/csrc/ops/softshrink.h"
 #include "torch_xla/csrc/ops/split.h"
@@ -1383,14 +1382,6 @@ XLATensorPtr XLATensor::le(const XLATensorPtr& input,
   return DispatchComparisonOp(at::aten::le, input, other);
 }
 
-XLATensorPtr XLATensor::hardshrink_backward(const XLATensorPtr& grad_out,
-                                            const XLATensorPtr& input,
-                                            const at::Scalar& lambda) {
-  return input->CreateFrom(torch::lazy::MakeNode<ShrinkBackward>(
-      torch::lazy::OpKind(at::aten::hardshrink_backward),
-      grad_out->GetIrValue(), input->GetIrValue(), lambda));
-}
-
 XLATensorPtr XLATensor::hardtanh_backward(const XLATensorPtr& grad_output,
                                           const XLATensorPtr& input,
                                           const at::Scalar& min_val,
@@ -2320,14 +2311,6 @@ XLATensorPtr XLATensor::softshrink(const XLATensorPtr& input,
                                    const at::Scalar& lambda) {
   return input->CreateFrom(
       torch::lazy::MakeNode<Softshrink>(input->GetIrValue(), lambda));
-}
-
-XLATensorPtr XLATensor::softshrink_backward(const XLATensorPtr& grad_out,
-                                            const XLATensorPtr& input,
-                                            const at::Scalar& lambda) {
-  return input->CreateFrom(torch::lazy::MakeNode<ShrinkBackward>(
-      torch::lazy::OpKind(at::aten::softshrink_backward),
-      grad_out->GetIrValue(), input->GetIrValue(), lambda));
 }
 
 std::vector<XLATensorPtr> XLATensor::split(const XLATensorPtr& input,

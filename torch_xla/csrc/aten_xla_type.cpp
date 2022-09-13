@@ -1259,14 +1259,6 @@ at::Tensor XLANativeFunctions::gelu_backward(const at::Tensor& grad,
       bridge::GetXlaTensor(grad), bridge::GetXlaTensor(self), approximate));
 }
 
-at::Tensor XLANativeFunctions::hardshrink_backward(const at::Tensor& grad_out,
-                                                   const at::Tensor& self,
-                                                   const at::Scalar& lambda) {
-  XLA_FN_COUNTER("xla::");
-  return bridge::AtenFromXlaTensor(XLATensor::hardshrink_backward(
-      bridge::GetXlaTensor(grad_out), bridge::GetXlaTensor(self), lambda));
-}
-
 at::Tensor XLANativeFunctions::hardtanh(const at::Tensor& self,
                                         const at::Scalar& min_val,
                                         const at::Scalar& max_val) {
@@ -2568,14 +2560,6 @@ at::Tensor XLANativeFunctions::softshrink(const at::Tensor& self,
   XLA_FN_COUNTER("xla::");
   return bridge::AtenFromXlaTensor(
       XLATensor::softshrink(bridge::GetXlaTensor(self), lambda));
-}
-
-at::Tensor XLANativeFunctions::softshrink_backward(const at::Tensor& grad_out,
-                                                   const at::Tensor& self,
-                                                   const at::Scalar& lambda) {
-  XLA_FN_COUNTER("xla::");
-  return bridge::AtenFromXlaTensor(XLATensor::softshrink_backward(
-      bridge::GetXlaTensor(grad_out), bridge::GetXlaTensor(self), lambda));
 }
 
 std::tuple<at::Tensor, at::Tensor> XLANativeFunctions::sort(

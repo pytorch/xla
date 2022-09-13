@@ -336,6 +336,20 @@ torch_xla::XlaOpVector Hardshrink::Lower(LoweringContext* loctx) const {
   return ReturnOp(BuildHardshrink(xla_input, lambd), loctx);
 }
 
+torch_xla::XlaOpVector HardshrinkBackward::Lower(LoweringContext* loctx) const {
+  xla::XlaOp grad_output = loctx->GetOutputOp(operand(0));
+  xla::XlaOp input = loctx->GetOutputOp(operand(1));
+  xla::XlaOp lambda = loctx->GetOutputOp(operand(2));
+  return ReturnOp(BuildShrinkBackward(grad_output, input, lambda), loctx);
+}
+
+torch_xla::XlaOpVector SoftshrinkBackward::Lower(LoweringContext* loctx) const {
+  xla::XlaOp grad_output = loctx->GetOutputOp(operand(0));
+  xla::XlaOp input = loctx->GetOutputOp(operand(1));
+  xla::XlaOp lambda = loctx->GetOutputOp(operand(2));
+  return ReturnOp(BuildShrinkBackward(grad_output, input, lambda), loctx);
+}
+
 torch_xla::XlaOpVector Hardsigmoid::Lower(LoweringContext* loctx) const {
   xla::XlaOp xla_input = loctx->GetOutputOp(operand(0));
   return ReturnOp(BuildHardSigmoid(xla_input), loctx);

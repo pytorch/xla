@@ -141,10 +141,16 @@ xla::XlaOp BuildSoftshrink(xla::XlaOp input, const at::Scalar& lambda) {
 }
 
 xla::XlaOp BuildShrinkBackward(xla::XlaOp grad_output, xla::XlaOp input,
-                               const at::Scalar& lambda) {
+                               xla::XlaOp lambda) {
   const xla::Shape& shape = XlaHelpers::ShapeOfXlaOp(input);
-  xla::XlaOp zero = xla::Zero(input.builder(), shape.element_type());
-  return xla::Select(Between(input, -lambda, lambda), zero, grad_output);
+  xla::PrimitiveType element_type = shape.element_type();
+  xla::XlaOp zero = xla::Zero(input.builder(), element_type);
+
+  xla::XlaOp check_low = BuildComparisonOp(at::aten::ge, input, zero-lambda);
+  xla::XlaOp check_high = BuildComparisonOp(at::aten::le, input, lambda);
+  xla::XlaOp between = xla::And(check_low, check_high);
+
+  return xla::Select(between, zero, grad_output);
 }
 
 xla::XlaOp BuildHardtanhBackward(xla::XlaOp grad_output, xla::XlaOp input,
