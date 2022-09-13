@@ -35,8 +35,6 @@ xla::XlaOp BuildHardSwish(xla::XlaOp input);
 xla::XlaOp BuildHardSwishBackward(xla::XlaOp grad_output, xla::XlaOp input);
 xla::XlaOp BuildSoftshrink(xla::XlaOp input, const at::Scalar& lambda);
 xla::XlaOp BuildShrinkBackward(xla::XlaOp grad_output, xla::XlaOp input,
-                               const at::Scalar& lambda);
-xla::XlaOp BuildShrinkBackward(xla::XlaOp grad_output, xla::XlaOp input,
                                xla::XlaOp lambda);
 
 xla::XlaOp BuildHardtanhBackward(xla::XlaOp grad_output, xla::XlaOp input,
