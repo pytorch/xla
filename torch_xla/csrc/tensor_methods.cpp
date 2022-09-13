@@ -2622,7 +2622,8 @@ XLATensorPtr XLATensor::upsample_nearest2d_backward(
 
 XLATensorPtr XLATensor::alias(const XLATensorPtr& input) {
   torch::lazy::Value ir_value = input->GetIrValue();
-  ViewInfo view_info(ViewInfo::Type::kNoOp, GetXlaShape(ir_value), GetXlaShape(ir_value));
+  ViewInfo view_info(ViewInfo::Type::kNoOp, GetXlaShape(ir_value),
+                     GetXlaShape(ir_value));
   return input->CreateViewTensor(std::move(view_info));
 }
 
