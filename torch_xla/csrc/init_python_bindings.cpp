@@ -744,7 +744,8 @@ absl::flat_hash_map<std::string, absl::variant<int>> ConvertDictToMap(
 // Maps PT/XLA env vars to upstream torch::lazy env vars.
 // Upstream lazy env vars defined in torch/csrc/lazy/core/config.h.
 void MapXlaEnvVarsToLazy() {
-  static bool wants_frames = xla::sys_util::GetEnvBool("XLA_IR_DEBUG", false);
+  static bool wants_frames = xla::sys_util::GetEnvBool("XLA_IR_DEBUG", false) |
+                             xla::sys_util::GetEnvBool("XLA_HLO_DEBUG", false);
   FLAGS_torch_lazy_ir_debug = wants_frames;
   static bool no_scalars =
       xla::sys_util::GetEnvBool("XLA_NO_SPECIAL_SCALARS", false);
