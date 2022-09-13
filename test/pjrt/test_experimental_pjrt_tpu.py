@@ -64,12 +64,8 @@ class TestExperimentalPjrtTpu(parameterized.TestCase):
 
   def test_xla_devices_single_process_all_chips(self):
     accelerator_devices = {
-        'v3-8': {
-            i: torch.device(f'xla:{i}') for i in range(8)
-        },
-        'v4-8': {
-            i: torch.device(f'xla:{i}') for i in range(4)
-        },
+        'v3-8': {i: torch.device(f'xla:{i}') for i in range(8)},
+        'v4-8': {i: torch.device(f'xla:{i}') for i in range(4)},
     }
 
     if self.accelerator_type not in accelerator_devices:

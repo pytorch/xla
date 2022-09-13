@@ -10,9 +10,9 @@ from typing import Callable, Dict, Generic, List, Optional, Tuple, TypeVar
 
 import sys
 if sys.version_info < (3, 10):
-    from typing_extensions import ParamSpec, Concatenate
+  from typing_extensions import ParamSpec, Concatenate
 else:
-    from typing import ParamSpec, Concatenate
+  from typing import ParamSpec, Concatenate
 
 import torch
 import torch.distributed as dist
@@ -135,7 +135,8 @@ def local_ordinal() -> int:
   return global_ordinal() % local_device_count()
 
 
-def _merge_replica_results(replica_results: List[Tuple[int, R]]) -> Dict[int, R]:
+def _merge_replica_results(
+    replica_results: List[Tuple[int, R]]) -> Dict[int, R]:
   """Merges list of results from multiple replicas
 
   Args:
@@ -147,7 +148,8 @@ def _merge_replica_results(replica_results: List[Tuple[int, R]]) -> Dict[int, R]
   Raises:
     AssertionError: if there are duplicate results for the same replica.
   """
-  replica_counts = collections.Counter(ordinal for ordinal, _ in replica_results)
+  replica_counts = collections.Counter(
+      ordinal for ordinal, _ in replica_results)
   replica, num_results = replica_counts.most_common(1)[0]
   assert num_results == 1, f'{num_results} results for replica {replica}'
 
@@ -186,14 +188,19 @@ def run_thread_per_device(local_rank: int, local_world_size: int,
   with concurrent.futures.ThreadPoolExecutor(
       max_workers=num_threads) as executor:
     # TODO: clean up this statement
-    device_ordinals = [int(torch_xla._XLAC._xla_real_devices([d])[0].split(':')[1]) for d in devices]
-    replica_results = list(zip(device_ordinals, executor.map(_thread_fn, devices)))
+    device_ordinals = [
+        int(torch_xla._XLAC._xla_real_devices([d])[0].split(':')[1])
+        for d in devices
+    ]
+    replica_results = list(
+        zip(device_ordinals, executor.map(_thread_fn, devices)))
 
   return _merge_replica_results(replica_results)
 
 
 @requires_pjrt
-def run_multiprocess(fn: Callable[P, R], /, *args: P.args, **kwargs: P.kwargs) -> Dict[int, R]:
+def run_multiprocess(fn: Callable[P, R], /, *args: P.args,
+                     **kwargs: P.kwargs) -> Dict[int, R]:
   """Runs `fn` on all devices available to PjRt.
 
   Spawns one process per physical device (e.g. TPU chip).
@@ -222,8 +229,8 @@ def run_multiprocess(fn: Callable[P, R], /, *args: P.args, **kwargs: P.kwargs) -
         fn=functools.partial(fn, *args, **kwargs))
     process_results = executor.map(mp_fn, range(num_processes))
     replica_results = list(
-      itertools.chain.from_iterable(result.items() for result in process_results)
-    )
+        itertools.chain.from_iterable(
+            result.items() for result in process_results))
 
   return _merge_replica_results(replica_results)
 
@@ -231,7 +238,8 @@ def run_multiprocess(fn: Callable[P, R], /, *args: P.args, **kwargs: P.kwargs) -
 class _SpawnFn:
   """Pickle-able wrapper around `fn` that passes the ordinal before `args`"""
 
-  def __init__(self, fn: Callable[Concatenate[int, P], R], *args: P.args, **kwargs: P.kwargs):
+  def __init__(self, fn: Callable[Concatenate[int, P], R], *args: P.args,
+               **kwargs: P.kwargs):
     self.fn = fn
     self.args = args
     self.kwargs = kwargs
