@@ -921,9 +921,9 @@ std::vector<torch::lazy::BackendDataPtr> CreateTensorsData(
     std::vector<xla::ComputationClient::DataPtr> new_handles;          // out
     if (shardings[i] != nullptr) {
       xla::OpSharding sharding = shardings[i]->sharding;
-      // TODO(yeounoh) PJRT runs a process per host and without cross host
-      // communications. This means that we may need to manually shard across
-      // global devices for multi-host training.
+      // TODO(yeounoh) PJRT runs a process per host for SPMD and without cross
+      // host communications. This means that we may need to manually shard
+      // across global devices for multi-host training.
       std::vector<std::string> local_devices =
           xla::ComputationClient::Get()->GetLocalDevices();
       std::vector<at::Tensor> shards =
@@ -951,6 +951,9 @@ std::vector<torch::lazy::BackendDataPtr> CreateTensorsData(
           xla::ComputationClient::Get()->TransferShardsToServer(
               source_tensors, devices[i], shape));
     } else {
+      // If data is not explicilty marked for sharding, then it is replicated to
+      // the rest of the available devices. This implicit replication is needed
+      // for XLA SPMD execution.
       auto populate_fn =
           [&, i, device](
               const xla::ComputationClient::TensorSource& source_tensor,

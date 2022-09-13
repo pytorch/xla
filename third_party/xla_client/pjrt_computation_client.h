@@ -144,8 +144,7 @@ class PjRtComputationClient : public ComputationClient {
   };
 
   struct PjRtShardedData : public Data {
-    PjRtShardedData(std::string device, Shape shape)
-        : Data(std::move(device), std::move(shape)) {}
+    PjRtShardedData(std::string device, Shape shape) = delete;
 
     PjRtShardedData(std::string device, Shape shape,
                     std::vector<std::shared_ptr<PjRtData>> shards)

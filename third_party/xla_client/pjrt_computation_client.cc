@@ -313,9 +313,10 @@ PjRtComputationClient::ExecuteReplicated(
       pjrt_computation.executable->Execute(argument_handles, execute_options)
           .ValueOrDie();
 
-  std::vector<std::vector<ComputationClient::DataPtr>> data_handles;
+  std::vector<std::vector<ComputationClient::DataPtr>> data_handles(
+      results.size());
   for (auto& result : results) {
-    std::vector<ComputationClient::DataPtr> datas;
+    std::vector<ComputationClient::DataPtr> datas(result.size());
     for (int32_t i = 0; i < result.size(); ++i) {
       std::unique_ptr<xla::PjRtBuffer> buffer = std::move(result[i]);
 
