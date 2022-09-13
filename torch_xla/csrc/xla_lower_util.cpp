@@ -1014,6 +1014,7 @@ xla::XlaOp BuildRoll(xla::XlaOp input, absl::Span<const int64_t> shifts,
 
 xla::XlaOp BuildAddcdiv(xla::XlaOp input, xla::XlaOp t1, xla::XlaOp t2,
                         xla::XlaOp val) {
+  val = MaybeConvertTo(val, XlaHelpers::ShapeOfXlaOp(t1).element_type());
   return XlaHelpers::PromotedAdd(
       input, XlaHelpers::PromotedMul(XlaHelpers::PromotedDiv(t1, t2), val));
 }
