@@ -96,7 +96,8 @@ IndexAdjacencyInfo GetIndexAdjacencyInfo(at::ITensorListRef indices) {
 //
 // This is a simplified version of at::native::transposeToFront which better
 // fits our requirements.
-CanonicalIndexInfo TransposeToFront(at::Tensor base, at::ITensorListRef indices) {
+CanonicalIndexInfo TransposeToFront(at::Tensor base,
+                                    at::ITensorListRef indices) {
   std::vector<int64_t> dims;
   std::vector<at::Tensor> transposed_indices;
   size_t base_rank = base.dim();

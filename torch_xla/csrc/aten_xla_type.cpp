@@ -440,7 +440,8 @@ at::Tensor XLANativeFunctions::adaptive_max_pool2d_backward(
 }
 
 void XLANativeFunctions::_amp_foreach_non_finite_check_and_unscale_(
-    at::ITensorListRef self, at::Tensor& found_inf, const at::Tensor& inv_scale) {
+    at::ITensorListRef self, at::Tensor& found_inf,
+    const at::Tensor& inv_scale) {
   XLA_FN_COUNTER("xla::");
   XLATensorPtr found_inf_tensor = bridge::GetXlaTensor(found_inf);
   XlaDeviceType hw_type =
@@ -518,7 +519,8 @@ at::Tensor XLANativeFunctions::_copy_from_and_resize(const at::Tensor& self,
   return dst;
 }
 
-std::vector<at::Tensor> XLANativeFunctions::_to_cpu(at::ITensorListRef tensors) {
+std::vector<at::Tensor> XLANativeFunctions::_to_cpu(
+    at::ITensorListRef tensors) {
   XLA_FN_COUNTER("xla::");
   return bridge::XlaCreateTensorList(tensors);
 }
