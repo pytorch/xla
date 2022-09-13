@@ -109,8 +109,6 @@ torch::lazy::NodePtr Pow(const torch::lazy::Value& input,
 torch::lazy::NodePtr Fmod(const torch::lazy::Value& dividend,
                           const torch::lazy::Value& divisor);
 
-torch::lazy::NodePtr Not(const torch::lazy::Value& input);
-
 torch::lazy::NodePtr LogSigmoid(const torch::lazy::Value& input);
 
 torch::lazy::NodePtr Sigmoid(const torch::lazy::Value& input);
@@ -137,8 +135,6 @@ torch::lazy::NodePtr Clamp(const torch::lazy::Value& input,
 
 torch::lazy::NodePtr Celu(const torch::lazy::Value& input,
                           const at::Scalar& alpha);
-
-torch::lazy::NodePtr FracOp(const torch::lazy::Value& input);
 
 torch::lazy::NodePtr AddMatMulOp(const torch::lazy::Value& input,
                                  const torch::lazy::Value& weight,
@@ -175,10 +171,6 @@ torch::lazy::NodePtr Norm(const torch::lazy::Value& input,
 torch::lazy::NodePtr Identity(int64_t lines, int64_t cols,
                               xla::PrimitiveType element_type);
 
-torch::lazy::NodePtr Elu(const torch::lazy::Value& input,
-                         const at::Scalar& alpha, const at::Scalar& scale,
-                         const at::Scalar& input_scale);
-
 torch::lazy::NodePtr EluBackward(const torch::lazy::Value& grad_output,
                                  const torch::lazy::Value& output,
                                  const at::Scalar& alpha,
@@ -208,9 +200,6 @@ torch::lazy::NodePtr Remainder(const torch::lazy::Value& input,
 torch::lazy::NodePtr MaxUnary(const torch::lazy::Value& input);
 
 torch::lazy::NodePtr MinUnary(const torch::lazy::Value& input);
-
-torch::lazy::NodePtr Take(const torch::lazy::Value& input,
-                          const torch::lazy::Value& index);
 
 torch::lazy::NodePtr TanhGelu(const torch::lazy::Value& input);
 

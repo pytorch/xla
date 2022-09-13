@@ -9,12 +9,14 @@
 #include "tensorflow/compiler/xla/literal.h"
 #include "tensorflow/compiler/xla/pjrt/cpu_device.h"
 #include "tensorflow/compiler/xla/pjrt/pjrt_client.h"
+#include "tensorflow/compiler/xla/pjrt/tfrt_cpu_pjrt_client.h"
 #include "tensorflow/compiler/xla/pjrt/tpu_client.h"
 #include "tensorflow/compiler/xla/shape.h"
 #include "tensorflow/compiler/xla/xla_client/computation_client.h"
 #include "tensorflow/compiler/xla/xla_client/debug_macros.h"
 #include "tensorflow/compiler/xla/xla_client/env_vars.h"
 #include "tensorflow/compiler/xla/xla_client/tf_logging.h"
+#include "tensorflow/core/profiler/lib/traceme.h"
 
 namespace xla {
 
@@ -45,7 +47,10 @@ PjRtComputationClient::PjRtComputationClient() {
   std::string device_type = sys_util::GetEnvString(env::kEnvPjRtDevice, "");
   if (device_type == "CPU") {
     TF_VLOG(1) << "Initializing PjRt CPU client...";
-    client_ = std::move(xla::GetCpuClient(/*asynchronous=*/false).ValueOrDie());
+    bool async = sys_util::GetEnvBool(env::kEnvPjrtAsyncCpuClient, true);
+    int cpu_device_count = sys_util::GetEnvInt(env::kEnvNumCpu, 1);
+    client_ =
+        std::move(xla::GetTfrtCpuClient(async, cpu_device_count).ValueOrDie());
   } else if (device_type == "TPU") {
     TF_VLOG(1) << "Initializing PjRt TPU client...";
     int64_t max_inflight_computations = sys_util::GetEnvInt(
@@ -78,6 +83,9 @@ ComputationClient::DataPtr PjRtComputationClient::CreateDataPlaceholder(
 
 std::vector<ComputationClient::DataPtr> PjRtComputationClient::TransferToServer(
     absl::Span<const TensorSource> tensors) {
+  tensorflow::profiler::TraceMe activity(
+      "PjRtComputationClient::TransferToServer",
+      tensorflow::profiler::TraceMeLevel::kInfo);
   std::vector<ComputationClient::DataPtr> datas;
   datas.reserve(tensors.size());
   for (auto& tensor : tensors) {
@@ -112,6 +120,9 @@ std::vector<ComputationClient::DataPtr> PjRtComputationClient::TransferToServer(
 
 std::vector<xla::Literal> PjRtComputationClient::TransferFromServer(
     absl::Span<const DataPtr> handles) {
+  tensorflow::profiler::TraceMe activity(
+      "PjRtComputationClient::TransferFromServer",
+      tensorflow::profiler::TraceMeLevel::kInfo);
   std::vector<xla::Literal> literals;
   literals.reserve(handles.size());
 
@@ -128,6 +139,9 @@ std::vector<xla::Literal> PjRtComputationClient::TransferFromServer(
 
 std::vector<ComputationClient::ComputationPtr> PjRtComputationClient::Compile(
     std::vector<ComputationClient::CompileInstance> instances) {
+  tensorflow::profiler::TraceMe activity(
+      "PjRtComputationClient::Compile",
+      tensorflow::profiler::TraceMeLevel::kInfo);
   std::vector<ComputationClient::ComputationPtr> computations;
 
   for (auto& instance : instances) {
@@ -135,10 +149,16 @@ std::vector<ComputationClient::ComputationPtr> PjRtComputationClient::Compile(
     xla::ProgramShape program_shape =
         instance.computation.GetProgramShape().ValueOrDie();
     xla::CompileOptions compile_options;
+    xla::DeviceAssignment device_assignment(client_->device_count(), 1);
+    device_assignment.FillIota(0);
+    compile_options.executable_build_options.set_device_assignment(
+        device_assignment);
     // TODO(wcromar): set compile_options.argument_layouts, enable strict shapes
     compile_options.executable_build_options.set_num_partitions(1);
     compile_options.executable_build_options.set_num_replicas(
         client_->device_count());
+    compile_options.parameter_is_tupled_arguments =
+        instance.parameter_is_tupled_arguments;
     std::unique_ptr<xla::PjRtExecutable> executable =
         client_->Compile(instance.computation, compile_options).ValueOrDie();
     std::shared_ptr<PjRtComputation> pjrt_computation =
@@ -157,6 +177,9 @@ PjRtComputationClient::ExecuteComputation(
     const ComputationClient::Computation& computation,
     absl::Span<const ComputationClient::DataPtr> arguments,
     const std::string& device, const ExecuteComputationOptions& options) {
+  tensorflow::profiler::TraceMe activity(
+      "PjRtComputationClient::ExecuteComputation",
+      tensorflow::profiler::TraceMeLevel::kInfo);
   TF_VLOG(1) << "Executing PjRt computation on " << device;
   const PjRtComputation& pjrt_computation =
       dynamic_cast<const PjRtComputation&>(computation);

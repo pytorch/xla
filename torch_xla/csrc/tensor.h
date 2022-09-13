@@ -375,10 +375,6 @@ class XLATensor : public c10::intrusive_ptr_target {
                             const XLATensorPtr& weight,
                             const XLATensorPtr& bias);
 
-  static XLATensorPtr all_dim(const XLATensorPtr& input,
-                              std::vector<int64_t> dimensions,
-                              bool keep_reduced_dimensions);
-
   static XLATensorPtr amax(const XLATensorPtr& input,
                            std::vector<int64_t> dimensions,
                            bool keep_reduced_dimensions);
@@ -386,10 +382,6 @@ class XLATensor : public c10::intrusive_ptr_target {
   static XLATensorPtr amin(const XLATensorPtr& input,
                            std::vector<int64_t> dimensions,
                            bool keep_reduced_dimensions);
-
-  static XLATensorPtr any(const XLATensorPtr& input,
-                          std::vector<int64_t> dimensions,
-                          bool keep_reduced_dimensions);
 
   static void arange_out(XLATensorPtr& out, const at::Scalar& start,
                          const at::Scalar& end, const at::Scalar& step,
@@ -478,8 +470,6 @@ class XLATensor : public c10::intrusive_ptr_target {
   static XLATensorPtr celu(const XLATensorPtr& input, const at::Scalar& alpha);
   static void celu_(XLATensorPtr& input, const at::Scalar& alpha);
 
-  static XLATensorPtr cholesky(const XLATensorPtr& input, bool upper);
-
   static XLATensorPtr clamp(const XLATensorPtr& input,
                             const c10::optional<at::Scalar>& min,
                             const c10::optional<at::Scalar>& max);
@@ -550,11 +540,6 @@ class XLATensor : public c10::intrusive_ptr_target {
   static XLATensorPtr einsum(const std::string& equation,
                              absl::Span<const XLATensorPtr> tensors);
 
-  static XLATensorPtr elu(const XLATensorPtr& input, const at::Scalar& alpha,
-                          const at::Scalar& scale,
-                          const at::Scalar& input_scale);
-  static void elu_(XLATensorPtr& input, const at::Scalar& alpha,
-                   const at::Scalar& scale, const at::Scalar& input_scale);
   static XLATensorPtr elu_backward(const XLATensorPtr& grad_output,
                                    const at::Scalar& alpha,
                                    const at::Scalar& scale,
@@ -598,8 +583,6 @@ class XLATensor : public c10::intrusive_ptr_target {
   static XLATensorPtr fmod(
       const XLATensorPtr& input, const at::Scalar& other,
       c10::optional<at::ScalarType> logical_element_type = c10::nullopt);
-
-  static XLATensorPtr frac(const XLATensorPtr& input);
 
   static XLATensorPtr full(absl::Span<const int64_t> size,
                            const at::Scalar& fill_value,
@@ -1212,6 +1195,8 @@ class XLATensor : public c10::intrusive_ptr_target {
                        bool manual);
   void ClearShardingSpec();
 
+  const c10::Storage& Storage() const { return storage_; }
+
  private:
   struct SyncTensorsConfig {
     // Whether we want to force XLA data on the target tensors (hence trimming
@@ -1462,9 +1447,9 @@ class XLATensor : public c10::intrusive_ptr_target {
       std::vector<XLATensorPtr>* tensors, SyncTensorCollection* coll,
       PostOrderData* po_data);
 
-  static void BuildInputOutputAliases(const std::vector<XLATensorPtr>& tensors,
-                                      absl::Span<const size_t> indices,
-                                      LoweringContext* lowering_ctx);
+  static std::vector<std::pair<int64_t, int64_t>> BuildInputOutputAliases(
+      const std::vector<XLATensorPtr>& tensors,
+      absl::Span<const size_t> indices, LoweringContext* lowering_ctx);
 
   static CompilationResult Compile(const std::vector<XLATensorPtr>& tensors,
                                    absl::Span<const std::string> devices,
@@ -1482,6 +1467,12 @@ class XLATensor : public c10::intrusive_ptr_target {
   bool ShouldSyncIrNode();
 
   std::shared_ptr<Data> data_;
+  // Temporarily used to suport Tensor.is_alias_of().
+  // This is a fake storage that doesn't store anything.
+  // Instead it serves as a marker to mark LazyTensors that
+  // points to the same storage, and thus alias of each other.
+  // FIXME(alanwaketan): Remove this once we have functionalization (bdhirsh).
+  c10::Storage storage_;
 };
 
 }  // namespace torch_xla

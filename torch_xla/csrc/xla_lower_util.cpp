@@ -1012,4 +1012,18 @@ xla::XlaOp BuildRoll(xla::XlaOp input, absl::Span<const int64_t> shifts,
   return need_flatten ? xla::Reshape(input, input_shape.dimensions()) : input;
 }
 
+xla::XlaOp BuildAddcdiv(xla::XlaOp input, xla::XlaOp t1, xla::XlaOp t2,
+                        xla::XlaOp val) {
+  val = MaybeConvertTo(val, XlaHelpers::ShapeOfXlaOp(t1).element_type());
+  return XlaHelpers::PromotedAdd(
+      input, XlaHelpers::PromotedMul(XlaHelpers::PromotedDiv(t1, t2), val));
+}
+
+xla::XlaOp BuildAddcmul(xla::XlaOp input, xla::XlaOp t1, xla::XlaOp t2,
+                        xla::XlaOp val) {
+  val = MaybeConvertTo(val, XlaHelpers::ShapeOfXlaOp(t1).element_type());
+  return XlaHelpers::PromotedAdd(
+      input, XlaHelpers::PromotedMul(XlaHelpers::PromotedMul(t1, t2), val));
+}
+
 }  // namespace torch_xla

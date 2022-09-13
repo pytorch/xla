@@ -1,18 +1,19 @@
 import concurrent.futures
 import functools
+import logging
 import os
-import threading
+import tempfile
 from itertools import chain
-from typing import Callable, Dict, Optional, TypeVar
+from typing import Callable, Dict, List, Optional, TypeVar
 
 import torch
+import torch.distributed as dist
 import torch.nn as nn
 import torch_xla
 import torch_xla.core.xla_env_vars as xenv
 import torch_xla.core.xla_model as xm
 import torch_xla.utils.utils as xu
-
-_PJRT_ORDINALS = threading.local()
+from torch_xla.experimental import tpu
 
 R = TypeVar('R')
 FN = TypeVar('FN')
@@ -39,26 +40,6 @@ def using_pjrt() -> bool:
   return device_type() is not None
 
 
-def num_visible_tpu_chips(default: int = 4) -> int:
-  """Returns number of TPU chips visible to current process."""
-  visible_devices = xu.getenv_as(xenv.TPU_VISIBLE_DEVICES, str)
-
-  return len(visible_devices.split(',')) if visible_devices else default
-
-
-def configure_tpu_topology(rank: int, processes: int, base_port=8476) -> None:
-  """Sets default TPU topology environment variables for a single TPU host."""
-  ports = list(range(base_port, base_port + processes))
-  os.environ.setdefault(xenv.TPU_CHIPS_PER_PROCESS_BOUNDS, '1,1,1')
-  os.environ.setdefault(xenv.TPU_PROCESS_BOUNDS, '2,2,1')
-  os.environ.setdefault(xenv.TPU_PROCESS_ADDRESSES,
-                        ','.join(f'localhost:{port}' for port in ports))
-
-  os.environ.setdefault(xenv.TPU_VISIBLE_DEVICES, str(rank))
-  os.environ.setdefault(xenv.TPU_PROCESS_PORT, str(ports[rank]))
-  os.environ.setdefault(xenv.CLOUD_TPU_TASK_ID, str(rank))
-
-
 def requires_pjrt(fn: FN) -> FN:
   """Wraps `fn` and checks if this process is using PjRt.
 
@@ -78,34 +59,6 @@ def requires_pjrt(fn: FN) -> FN:
 
 
 @requires_pjrt
-def global_ordinal(default: int = 0) -> int:
-  """Returns global ordinal of this thread within all processes.
-
-  Global ordinal is in range [0, world_size)."""
-  return getattr(_PJRT_ORDINALS, 'global_ordinal', default)
-
-
-@requires_pjrt
-def set_global_ordinal(ordinal: int) -> None:
-  """Sets the global ordinal of this thread."""
-  _PJRT_ORDINALS.global_ordinal = ordinal
-
-
-@requires_pjrt
-def local_ordinal(default: int = 0) -> int:
-  """Returns local ordinal of this thread within this host.
-
-  Local ordinal is in range [0, host_num_devices)."""
-  return getattr(_PJRT_ORDINALS, 'local_ordinal', default)
-
-
-@requires_pjrt
-def set_local_ordinal(ordinal: int) -> None:
-  """Sets the local ordinal of this thread."""
-  _PJRT_ORDINALS.local_ordinal = ordinal
-
-
-@requires_pjrt
 def xla_device(n: Optional[int] = None,
                devkind: Optional[str] = None) -> torch.device:
   """Returns an XLA device.
@@ -118,14 +71,22 @@ def xla_device(n: Optional[int] = None,
   Returns:
     A `torch.device` representing an XLA device.
   """
-  devices = xm.get_xla_supported_devices(devkind=devkind)
-  device_index = n or (local_ordinal(default=0) % addressable_device_count())
-  if device_index > len(devices):
-    raise IndexError('Device index {} out of range in {}'.format(
-        device_index, devices))
+  if n is None:
+    return torch.device(torch_xla._XLAC._xla_get_default_device())
 
-  torch_xla._XLAC._xla_set_default_device(devices[device_index])
-  return torch.device(devices[device_index])
+  devices = xm.get_xla_supported_devices(devkind=devkind)
+  if n > len(devices):
+    raise IndexError('Device index {} out of range in {}'.format(n, devices))
+
+  device = devices[n]
+  torch_xla._XLAC._xla_set_default_device(device)
+  return torch.device(device)
+
+
+@requires_pjrt
+def local_process_count() -> int:
+  """Returns the number of processes running on this host."""
+  return xu.getenv_as('LOCAL_WORLD_SIZE', int, defval=1)
 
 
 @requires_pjrt
@@ -135,19 +96,44 @@ def global_device_count() -> int:
 
 
 @requires_pjrt
+def local_device_count() -> int:
+  """Returns the total number of devices on this host.
+
+  Assumes each process has the same number of addressable devices.
+  """
+  return local_process_count() * addressable_device_count()
+
+
+@requires_pjrt
 def addressable_device_count() -> int:
   """Returns the number of devices visible to this process."""
   return torch_xla._XLAC._xla_num_devices()
 
 
 @requires_pjrt
-def run_thread_per_device(rank: int, processes: int,
+def global_ordinal() -> int:
+  """Returns global ordinal of this thread within all processes.
+
+  Global ordinal is in range [0, global_device_count)."""
+  return torch_xla._XLAC._xla_get_default_device_ordinal()
+
+
+@requires_pjrt
+def local_ordinal() -> int:
+  """Returns local ordinal of this thread within this host.
+
+  Local ordinal is in range [0, local_device_count)."""
+  return global_ordinal() % local_device_count()
+
+
+@requires_pjrt
+def run_thread_per_device(local_rank: int, local_world_size: int,
                           fn: Callable[..., R]) -> Dict[int, R]:
   """Runs `fn` in a separate thread on each visible device.
 
   Args:
-    rank: rank of current process
-    processes: number of processes on this host
+    local_rank: rank of current process within this host
+    local_world_size: number of processes on this host
     fn: Function to run on all devices
 
   Returns:
@@ -155,25 +141,27 @@ def run_thread_per_device(rank: int, processes: int,
     result of calling `fn`.
   """
   if device_type() == 'TPU':
-    configure_tpu_topology(rank, processes)
+    tpu.configure_topology(local_rank, local_world_size)
 
-  xm.set_replication(xm.xla_device(), xm.get_xla_supported_devices())
-  threads = len(xm.get_xla_supported_devices())
+  devices = xm.get_xla_supported_devices()
+  xm.set_replication(xm.xla_device(), devices)
+  num_threads = len(devices)
 
-  def _thread_fn(fn, device_index):
+  def _thread_fn(fn: Callable[..., R], device: torch.device):
 
     @functools.wraps(fn)
     def wrapper(*args, **kwargs):
-      # Assumes same number of threads per process
-      set_global_ordinal(rank * threads + device_index)
-      set_local_ordinal(rank * threads + device_index)
+      torch_xla._XLAC._xla_set_default_device(device)
 
       return fn(*args, **kwargs)
 
     return wrapper
 
-  with concurrent.futures.ThreadPoolExecutor(max_workers=threads) as executor:
-    futures = {executor.submit(_thread_fn(fn, i)): i for i in range(threads)}
+  with concurrent.futures.ThreadPoolExecutor(
+      max_workers=num_threads) as executor:
+    futures = {
+        executor.submit(_thread_fn(fn, d)): i for i, d in enumerate(devices)
+    }
 
     results = {
         futures[f]: f.result() for f in concurrent.futures.as_completed(futures)
@@ -199,16 +187,18 @@ def run_multiprocess(fn: Callable[..., R], *args,
     return_value is the result of calling `fn`.
   """
   if device_type() == 'TPU':
-    processes = num_visible_tpu_chips()
+    num_processes = tpu.num_local_processes()
   else:
-    processes = 1
+    num_processes = 1
+
+  os.environ.setdefault('LOCAL_WORLD_SIZE', str(num_processes))
 
   with concurrent.futures.ProcessPoolExecutor(
-      max_workers=processes) as executor:
+      max_workers=num_processes) as executor:
     futures = {
-        executor.submit(run_thread_per_device, i, processes,
+        executor.submit(run_thread_per_device, i, num_processes,
                         functools.partial(fn, *args, **kwargs)): i
-        for i in range(processes)
+        for i in range(num_processes)
     }
 
     results = {
@@ -222,14 +212,56 @@ def broadcast_master_param(model: nn.Module) -> None:
   """
   Broadcast the model parameters from master process to other processes
   """
-  parameters_and_buffers = []
-  is_master = xm.is_master_ordinal(local=False)
-  for p in chain(model.parameters(), model.buffers()):
-    # Set all params in non-master devices to zero so that all_reduce is
-    # equivalent to broadcasting parameters from master to other devices.
-    scale = torch.tensor(1 if is_master else 0, dtype=p.data.dtype)
-    scale = scale.to(p.data.device)
-    p.data.mul_(scale)
-    parameters_and_buffers.append(p.data)
-  xm.all_reduce(xm.REDUCE_SUM, parameters_and_buffers)
+  parameters_and_buffers = list(chain(model.parameters(), model.buffers()))
+  xm.collective_broadcast(parameters_and_buffers)
   xm.mark_step()
+
+
+def rendezvous(tag: str, payload: bytes,
+               ordinals: Optional[List[int]]) -> List[bytes]:
+  """Share `payload` with all replicas in `ordinals`.
+
+  All of PjRt is experimental right now, but consider `rendezvous` to be _very_
+  experimental. Only tested on TPU v4.
+
+  `tag` is ignored except for logging.
+
+  If `torch.distributed group` is not created already, `rendezvous` will
+  initialize it using `XRT_MESH_SERVICE_ADDRESS` or `MASTER_ADDR`. If world size
+  is 1, initialize the process group automatically.
+
+  Args:
+    tag: Name of this rendezvous operation.
+    payload: Payload to share with other replicas.
+    ordinals: List of replicas participating in rendezvous.
+  Returns:
+    List of bytes from other replicas.
+  """
+  if not dist.is_initialized():
+    logging.warning(
+        'Default process group not initialized. Creating XLA process group...')
+    mesh_master = xu.getenv_as("XRT_MESH_SERVICE_ADDRESS", str)
+
+    if mesh_master:
+      init_method = f'tcp://{mesh_master}'
+    elif global_device_count() == 1:
+      init_method = f'file://{tempfile.mktemp()}'
+    else:
+      init_method = None
+
+    import torch_xla.distributed.xla_backend
+    dist.init_process_group(
+        "xla",
+        init_method=init_method,
+        world_size=global_device_count(),
+        rank=global_ordinal())
+
+  logging.info(f"Joining rendezvous '{tag}'...")
+  group = dist.new_group(ordinals, backend="gloo")
+
+  num_outputs = len(ordinals) if ordinals else global_device_count()
+  output = [None] * num_outputs
+  dist.all_gather_object(output, payload, group)
+  logging.info(f"Completed rendezvous '{tag}'.")
+
+  return output
