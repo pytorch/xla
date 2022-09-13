@@ -35,6 +35,21 @@ class TestOperationsHlo(unittest.TestCase):
     hlo_text = torch_xla._XLAC._get_xla_tensors_text([b])
     assert 'aten::expand' in hlo_text
 
+  def test_special_scalars_addcdiv_addcmul(self):
+    a = torch.rand(5, 5).to(xm.xla_device())
+    b = torch.rand(5, 5).to(xm.xla_device())
+    c = torch.rand(5, 5).to(xm.xla_device())
+    for op in [torch.addcdiv, torch.addcmul]:
+      out = op(a, b, c, value=1.0)
+      hlo_text = torch_xla._XLAC._get_xla_tensors_text([out])
+      instructions = hlo_text.split('\n')
+      const_hlo = instructions[1]
+      root_hlo = instructions[5]
+      assert 'prim::Constant()' in const_hlo
+      assert 'xla::device_data()' not in const_hlo
+      assert 'f32' in root_hlo
+      assert 'f64' not in root_hlo
+
 
 if __name__ == '__main__':
   torch.set_default_tensor_type('torch.FloatTensor')

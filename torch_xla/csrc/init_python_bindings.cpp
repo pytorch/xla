@@ -746,6 +746,9 @@ absl::flat_hash_map<std::string, absl::variant<int>> ConvertDictToMap(
 void MapXlaEnvVarsToLazy() {
   static bool wants_frames = xla::sys_util::GetEnvBool("XLA_IR_DEBUG", false);
   FLAGS_torch_lazy_ir_debug = wants_frames;
+  static bool no_scalars =
+      xla::sys_util::GetEnvBool("XLA_NO_SPECIAL_SCALARS", false);
+  FLAGS_torch_lazy_handle_special_scalars = !no_scalars;
 }
 
 std::string GetPyTypeString(py::handle obj) {
