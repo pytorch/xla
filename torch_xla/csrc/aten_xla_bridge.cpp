@@ -130,7 +130,7 @@ std::vector<XLATensorPtr> GetOrCreateXlaTensors(
   return xla_tensors;
 }
 
-std::vector<at::Tensor> XlaCreateTensorList(const at::TensorList& tensors) {
+std::vector<at::Tensor> XlaCreateTensorList(const at::ITensorListRef& tensors) {
   std::vector<at::Tensor> aten_xla_tensors(tensors.size());
   std::vector<XLATensorPtr> xla_tensors;
   // We need to separate out the defined tensors first, GetXlaTensor() doesn't
