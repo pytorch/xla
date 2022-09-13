@@ -108,7 +108,9 @@ TEST(IrTest, TestSizeNode) {
       std::dynamic_pointer_cast<torch::lazy::DimensionNode>(size_node_1);
 
   EXPECT_EQ(dim_node_0->getStaticValue(), 3);
+  EXPECT_EQ(dim_node_0->getDynamicValue(), 3);
   EXPECT_EQ(dim_node_1->getStaticValue(), 4);
+  EXPECT_EQ(dim_node_1->getDynamicValue(), 4);
 
   ForEachDevice([&](const torch::lazy::BackendDevice& device) {
     // Lower the SizeNode and execute the GetDimensionSize.
