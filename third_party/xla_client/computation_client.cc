@@ -291,6 +291,7 @@ std::unique_ptr<ComputationClient> ComputationClient::Create() {
 std::shared_ptr<ComputationClient::Computation> ComputationClient::Compile(
     XlaComputation computation, std::string compilation_device,
     std::vector<std::string> devices, const Shape* output_shape) {
+  std::cout << "WONJOO: at ComputationClient::Compile1" << std::endl;
   std::vector<CompileInstance> instances;
   instances.emplace_back(std::move(computation), std::move(compilation_device),
                          std::move(devices), output_shape);

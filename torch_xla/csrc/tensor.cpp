@@ -1397,6 +1397,7 @@ std::vector<torch::lazy::BackendDataPtr> XLATensor::FetchTensorData(
     absl::Span<const size_t> indices) {
   std::vector<torch::lazy::BackendDataPtr> tensors_data;
   tensors_data.reserve(indices.size());
+  std::cout << "WONJOO: at XLATensor::FetchTensorData1, indices.size()=" << indices.size() << std::endl;
   for (auto index : indices) {
     XLATensorPtr& tensor = (*tensors)[index];
     // If the config.force_xla_data flag is true, the purpose of this tensor
@@ -1413,6 +1414,8 @@ std::vector<torch::lazy::BackendDataPtr> XLATensor::FetchTensorData(
       const torch::lazy::BackendDevice& tensor_device = tensor->GetDevice();
       xla::Shape shape = MakeShapeWithDeviceLayout(
           tensor->shape(), static_cast<XlaDeviceType>(tensor_device.type()));
+      std::cout << "WONJOO: at XLATensor::FetchTensorData, shape.ToString(true)=" << shape.ToString(true) << std::endl;
+      std::cout << "WONJOO: at XLATensor::FetchTensorData, shape.has_layout()=" << shape.has_layout() << std::endl;
       xla_data =
           WrapXlaData(xla::ComputationClient::Get()->CreateDataPlaceholder(
               tensor_device.toString(), std::move(shape)));
@@ -1650,6 +1653,7 @@ XLATensor::CompilationResult XLATensor::Compile(
     const std::vector<XLATensorPtr>& tensors,
     absl::Span<const std::string> devices, const SyncTensorCollection& coll,
     PostOrderData* po_data) {
+  std::cout << "WONJOO: at XLATensor::Compile1" << std::endl;
   tensorflow::profiler::TraceMe activity(
       [&] {
         return tensorflow::profiler::TraceMeEncode(
@@ -1666,10 +1670,15 @@ XLATensor::CompilationResult XLATensor::Compile(
   LoweringContext lowering_ctx("SyncTensorsGraph", coll.device,
                                po_data->post_order,
                                std::move(po_data->emission_map));
+  std::cout << "WONJOO: at XLATensor::Compile2" << std::endl;
   for (auto index : coll.indices) {
     torch::lazy::Value ir_value = tensors[index]->CurrentIrValue();
     xla::XlaOp root = lowering_ctx.GetOutputOp(
         torch::lazy::Output(ir_value.node.get(), ir_value.index));
+    const xla::Shape& root_xla_shape = XlaHelpers::ShapeOfXlaOp(root);
+    std::cout << "WONJOO: at XLATensor::Compile2-2, root_xla_shape.ToString(true)=" << root_xla_shape.ToString(true) << std::endl;
+    std::cout << "WONJOO: at XLATensor::Compile2-3, root_xla_shape.has_layout()=" << root_xla_shape.has_layout() << std::endl;
+
     lowering_ctx.AddResult(root);
   }
   // Annotate HLO sharding selectively in the compuation.
@@ -1705,9 +1714,21 @@ XLATensor::CompilationResult XLATensor::Compile(
         BuildInputOutputAliases(tensors, coll.indices, &lowering_ctx);
   }
 
+  std::cout << "WONJOO: at XLATensor::Compile3" << std::endl;
   xla::XlaComputation computation = ConsumeValue(lowering_ctx.BuildXla());
   xla::ProgramShape program_shape = ConsumeValue(computation.GetProgramShape());
+  const std::vector<xla::Shape>& xla_shapes = program_shape.parameters();
+  std::cout << "WONJOO: at XLATensor::Compile3-1, program_shape.ToString()=" << program_shape.ToString() << std::endl;
+  std::cout << "WONJOO: at XLATensor::Compile3-2, xla_shapes.size()=" << xla_shapes.size() << std::endl;
+  for (auto xla_shape : xla_shapes) {
+    std::cout << "WONJOO: at XLATensor::Compile3-2-1, xla_shape.ToString(true)=" << xla_shape.ToString(true) << std::endl;
+    std::cout << "WONJOO: at XLATensor::Compile3-2-2, xla_shape.has_layout=" << xla_shape.has_layout() << std::endl;
+  }
+  std::cout << "WONJOO: at XLATensor::Compile3-3, program_shape.result().ToString(true)=" << program_shape.result().ToString(true) << std::endl;
+  std::cout << "WONJOO: at XLATensor::Compile3-4, program_shape.result().has_layout=" << program_shape.result().has_layout() << std::endl;
+  std::cout << "WONJOO: at XLATensor::Compile3-5, program_shape.result().element_type()=" << program_shape.result().element_type() << std::endl;
 
+  std::cout << "WONJOO: at XLATensor::Compile4" << std::endl;
   bool should_wrap_parameter =
       (program_shape.parameters_size() >= parameter_wrapping_threadshold) &&
       using_pjrt;
@@ -1719,8 +1740,25 @@ XLATensor::CompilationResult XLATensor::Compile(
         computation, program_shape.parameters(), input_output_alias_pair));
     program_shape = ConsumeValue(computation.GetProgramShape());
   }
+  std::cout << "WONJOO: at XLATensor::Compile5" << std::endl;
   xla::Shape shape = MakeShapeWithDeviceLayout(
       program_shape.result(), static_cast<XlaDeviceType>(coll.device.type()));
+  std::cout << "WONJOO: at XLATensor::Compile6" << std::endl;
+  std::cout << "WONJOO: at XLATensor::Compile6-2, shape.has_layout()=" << shape.has_layout() << std::endl;
+  //
+  // WONJOO testing
+
+  //const std::vector<xla::Shape>& xla_shapes = program_shape.parameters();
+  //std::cout << "WONJOO: at XLATensor::Compile6-3, program_shape.ToString()=" << program_shape.ToString() << std::endl;
+  //std::cout << "WONJOO: at XLATensor::Compile6-3, xla_shapes.size()=" << xla_shapes.size() << std::endl;
+  //for (auto xla_shape : xla_shapes) {
+  //  std::cout << "WONJOO: at XLATensor::Compile6-4, xla_shape.ToString(true)=" << xla_shape.ToString(true) << std::endl;
+  //  std::cout << "WONJOO: at XLATensor::Compile6-5, xla_shape.has_layout=" << xla_shape.has_layout() << std::endl;
+  //}
+
+  // WONJOO testing
+  //
+  std::cout << "WONJOO: at XLATensor::Compile7" << std::endl;
 
   std::vector<xla::ComputationClient::CompileInstance> instances;
   instances.push_back({std::move(computation), coll.device.toString(),
@@ -1728,12 +1766,27 @@ XLATensor::CompilationResult XLATensor::Compile(
                            coll.device.toString(), devices),
                        &shape, should_wrap_parameter});
 
+  std::cout << "WONJOO: at XLATensor::Complie7-2, instances.size()=" << instances.size() << std::endl;
+  std::cout << "WONJOO: at XLATensor::Compile7-3, instances[0]->output_shape=" << instances[0].output_shape->ToString(true) << std::endl;
+  std::cout << "WONJOO: at XLATensor::Compile7-4, instances[0]->has_layout()=" << instances[0].output_shape->has_layout() << std::endl;
+  xla::ProgramShape xla_program_shape = ConsumeValue(instances[0].computation.GetProgramShape());
+  const std::vector<xla::Shape>& xla_program_shape_parameters = xla_program_shape.parameters();
+  std::cout << "WONJOO: at XLATensor::Compile7-5, xla_program_shape_parameters.size()=" << xla_program_shape_parameters.size() << std::endl;
+  for (auto xla_program_shape_parameter : xla_program_shape_parameters) {
+    std::cout << "WONJOO: at xla_program_shape_parameter.ToString(true)=" << xla_program_shape_parameter.ToString(true) << std::endl;
+    std::cout << "WONJOO: at xla_program_shape_parameter.has_layout()=" << xla_program_shape_parameter.has_layout() << std::endl;
+  }  
+  std::cout << "WONJOO: at XLATensor::Compile7-6, xla_program_shape.result().ToString(true)=" << xla_program_shape.result().ToString(true) << std::endl;
+  std::cout << "WONJOO: at XLATensor::Compile7-7, xla_program_shape.result().has_layout=" << xla_program_shape.result().has_layout() << std::endl;
+  std::cout << "WONJOO: at XLATensor::Compile8" << std::endl;
   TF_VLOG(3) << "Compiling IR graph hash "
              << torch::lazy::HashToString(coll.hash) << " on device "
              << coll.device << " ...";
+  std::cout << "WONJOO: at XLATensor::Compile8-2" << std::endl;
   std::vector<std::shared_ptr<xla::ComputationClient::Computation>>
       computations =
           xla::ComputationClient::Get()->Compile(std::move(instances));
+  std::cout << "WONJOO: at XLATensor::Compile9" << std::endl;
   TF_VLOG(3) << "Compiling IR graph hash "
              << torch::lazy::HashToString(coll.hash) << " on device "
              << coll.device << " done!";
@@ -1742,15 +1795,18 @@ XLATensor::CompilationResult XLATensor::Compile(
       << " is computation hash "
       << torch::lazy::HashToString(torch::lazy::Hash(
              computations.front()->computation().proto().SerializeAsString()));
+  std::cout << "WONJOO: at XLATensor::Compile10" << std::endl;
   if (should_wrap_parameter) {
+    std::cout << "WONJOO: at XLATensor::Compile11-if" << std::endl;
     XLA_CHECK_EQ(program_shape.parameters_size(), 1);
     XLA_CHECK_EQ(program_shape.parameters()[0].tuple_shapes_size(),
                  po_data->parameters_data.size());
   } else {
+    std::cout << "WONJOO: at XLATensor::Compile11-else" << std::endl;
     XLA_CHECK_EQ(program_shape.parameters_size(),
                  po_data->parameters_data.size());
   }
-
+  std::cout << "WONJOO: at XLATensor::Compile done" << std::endl;
   return {/*device=*/coll.device,
           /*emitted_nodes=*/lowering_ctx.GetEmittedNodeCount(),
           /*computation=*/std::move(computations.front()),
