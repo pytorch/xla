@@ -53,15 +53,20 @@ DebugUtil::GraphFormat DebugUtil::GetDefaultGraphFormat() {
 
 std::string DebugUtil::GetTensorsGraphInfo(
     absl::Span<const XLATensorPtr> tensors, const std::vector<size_t>* indices,
-    GraphFormat format) {
+    std::vector<torch::lazy::Value>* ir_values, GraphFormat format) {
   std::vector<const torch::lazy::Node*> root_nodes;
   std::vector<torch::lazy::Value> root_values;
   std::vector<torch::lazy::hash_t> root_hashes;
   xla::util::Unique<torch::lazy::BackendDevice> unique_device;
   if (indices != nullptr) {
-    for (auto index : *indices) {
-      const XLATensorPtr& tensor = tensors[index];
-      torch::lazy::Value ir_value = tensor->CurrentIrValue();
+    for (int i = 0; i < indices->size(); i++) {
+      const XLATensorPtr& tensor = tensors[(*indices)[i]];
+      torch::lazy::Value ir_value;
+      if (ir_values == nullptr) {
+        ir_value = tensor.CurrentIrValue();
+      } else {
+        ir_value = (*ir_values)[i];
+      }
       if (ir_value) {
         root_nodes.push_back(ir_value.node.get());
         root_hashes.push_back(ir_value.hash());
@@ -115,12 +120,13 @@ std::string DebugUtil::GetTensorsGraphInfo(
 void DebugUtil::SaveTensorsGraphInfo(const char* name,
                                      absl::Span<const XLATensorPtr> tensors,
                                      const std::vector<size_t>* indices,
+                                     std::vector<torch::lazy::Value>* ir_values,
                                      GraphFormat format) {
   static const std::string save_file =
       xla::sys_util::GetEnvOrdinalPath("XLA_SAVE_TENSORS_FILE", "");
   if (!save_file.empty()) {
     static std::mutex lock;
-    std::string info = GetTensorsGraphInfo(tensors, indices, format);
+    std::string info = GetTensorsGraphInfo(tensors, indices, ir_values, format);
     std::lock_guard<std::mutex> guard(lock);
     std::ofstream graph_file(save_file, std::ios_base::app);
     graph_file << "[" << name << "]\n" << info << "\n";
