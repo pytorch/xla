@@ -1122,13 +1122,15 @@ at::Tensor XLANativeFunctions::empty_symint(
       at::dtype_or_default(dtype)));
 }
 
-at::Tensor XLANativeFunctions::empty_strided(
-    at::IntArrayRef size, at::IntArrayRef stride,
+at::Tensor XLANativeFunctions::empty_strided_symint(
+    at::SymIntArrayRef sym_size, at::SymIntArrayRef sym_stride,
     c10::optional<at::ScalarType> dtype, c10::optional<at::Layout> layout,
     c10::optional<at::Device> device, c10::optional<bool> pin_memory) {
   XLA_FN_COUNTER("xla::");
-  at::Tensor t = empty_symint(c10::fromIntArrayRef(size), dtype, layout, device,
-                              pin_memory, c10::nullopt);
+  auto size = c10::fromIntArrayRef(sym_size);
+  auto stride = c10::fromIntArrayRef(sym_stride);
+  at::Tensor t =
+      empty_symint(sym_size, dtype, layout, device, pin_memory, c10::nullopt);
   return torch_xla::XLANativeFunctions::as_strided(t, size, stride,
                                                    /*storage_offset=*/0);
 }
@@ -3107,7 +3109,7 @@ XLANativeFunctions::native_group_norm(const at::Tensor& input,
 at::Tensor XLANativeFunctions::block_diag(at::TensorList tensors) {
   return at::native::block_diag(tensors);
 }
-at::Tensor XLANativeFunctions::new_empty_strided(
+at::Tensor XLANativeFunctions::new_empty_strided_symint(
     const at::Tensor& self, at::SymIntArrayRef size, at::SymIntArrayRef stride,
     c10::optional<at::ScalarType> dtype, c10::optional<at::Layout> layout,
     c10::optional<at::Device> device, c10::optional<bool> pin_memory) {
