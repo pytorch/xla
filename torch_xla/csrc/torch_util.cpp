@@ -4,6 +4,7 @@
 #include "tensorflow/compiler/xla/xla_client/xla_util.h"
 #include "torch_xla/csrc/helpers.h"
 #include "torch_xla/csrc/ops/constant.h"
+#include "torch_xla/csrc/tensor.h"
 
 namespace torch_xla {
 
@@ -14,8 +15,8 @@ void SymIntElements::AddSymIntNodeElements(c10::SymInt& size) {
     // --(get)--> lazy::NodePtr --(cast)--> lazy::DimensionNode
     c10::SymIntNode symbolicIntNode = size.toSymIntNodeImpl();
     auto* lazySymIntNode =
-        dynamic_cast<torch::lazy::SymIntNodeImpl*>(symbolicIntNode.get());
-    torch::lazy::NodePtr size_node = lazySymIntNode->node_;
+        dynamic_cast<XLASymIntNodeImpl*>(symbolicIntNode.get());
+    torch::lazy::NodePtr size_node = lazySymIntNode->node();
     std::shared_ptr<torch::lazy::DimensionNode> dimension_node =
         std::dynamic_pointer_cast<torch::lazy::DimensionNode>(size_node);
     size_nodes_.push_back(size_node);
