@@ -39,9 +39,10 @@ def _rewrite_data(path, data, save_tensors):
   def select_fn(v):
     return type(v) == torch.Tensor and xm.is_xla_tensor(v)
 
-  if os.path.isdir(path):
-    shutil.rmtree(path)
-  os.mkdir(path)
+  if save_tensors:
+    if os.path.isdir(path):
+      shutil.rmtree(path)
+    os.mkdir(path)
   return xm.ToXlaTensorArena(convert_fn, select_fn).transform(data)
 
 
