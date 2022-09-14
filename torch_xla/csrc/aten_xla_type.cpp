@@ -635,7 +635,8 @@ at::Tensor XLANativeFunctions::addmm(const at::Tensor& self,
 
 at::Tensor XLANativeFunctions::alias(const at::Tensor& self) {
   XLA_FN_COUNTER("xla::");
-  return self;
+  return bridge::AtenFromXlaTensor(
+      XLATensor::alias(bridge::GetXlaTensor(self)));
 }
 
 at::Tensor& XLANativeFunctions::arange_out(const at::Scalar& start,
