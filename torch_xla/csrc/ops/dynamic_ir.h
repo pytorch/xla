@@ -58,6 +58,7 @@ class SizeAdd : public XlaNode, public torch::lazy::DimensionNode {
   SizeAdd(torch::lazy::Value a, torch::lazy::Value b);
   int64_t getDynamicValue() const override;
   int64_t getStaticValue() const override { return upper_bound_; }
+  int64_t getDynamicValue() const override;
   bool isSymbolic() const override { return true; }
   std::string ToString() const override;
   virtual XlaOpVector Lower(LoweringContext* loctx) const override;
@@ -102,6 +103,7 @@ class SizeConstant : public torch_xla::Scalar,
  public:
   SizeConstant(int64_t val);
   int64_t getStaticValue() const override { return value().to<int64_t>(); };
+  int64_t getDynamicValue() const override { return getStaticValue(); };
   bool isSymbolic() const override { return false; };
   std::string ToString() const override {
     this->torch_xla::Scalar::ToString();
@@ -110,5 +112,11 @@ class SizeConstant : public torch_xla::Scalar,
     TORCH_CHECK(false, "NYI");
   };
 };
+
+
+const torch::lazy::DimensionNode* DimCast(torch::lazy::Output output);
+const torch::lazy::DimensionNode* DimCast(const torch::lazy::Node* node);
+const std::shared_ptr<torch::lazy::DimensionNode> DimCast(const torch::lazy::NodePtr& node);
+
 
 }  // namespace torch_xla

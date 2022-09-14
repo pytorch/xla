@@ -88,6 +88,17 @@ XlaOpVector SizeAdd::Lower(LoweringContext* loctx) const {
   return ReturnOp((input1 + input2), loctx);
 }
 
+int64_t SizeAdd::getDynamicValue() const {
+  const torch::lazy::DimensionNode* dim_node_0 = DimCast(operand(0));
+  const torch::lazy::DimensionNode* dim_node_1 = DimCast(operand(1));
+
+  XLA_CHECK(dim_node_0);
+  XLA_CHECK(dim_node_1);
+
+  // TODO: implement caching
+  return dim_node_0->getDynamicValue() + dim_node_1->getDynamicValue();
+}
+
 SizeConstant::SizeConstant(int64_t val) : Scalar(c10::Scalar{val}, xla::S64){};
 
 SizeMul::SizeMul(torch::lazy::Value a, torch::lazy::Value b)

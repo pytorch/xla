@@ -86,12 +86,17 @@ TEST(SymintTest, TestDynamicSymint) {
 
 TEST(SymintTest, TestSizeConstant) {
   torch::lazy::NodePtr sc10 = torch::lazy::MakeNode<SizeConstant>(10);
-  EXPECT_EQ(sc10->getStaticValue(), 10);
+  EXPECT_EQ(torch_xla::DimCast(sc10)->getStaticValue(), 10);
+  std::cout << " SizeConstant DynamicValue 10\n";
+  EXPECT_EQ(torch_xla::DimCast(sc10)->getDynamicValue(), 10);
   torch::lazy::NodePtr sc15 = torch::lazy::MakeNode<SizeConstant>(15);
-  EXPECT_EQ(sc15->getStaticValue(), 15);
+  EXPECT_EQ(torch_xla::DimCast(sc15)->getStaticValue(), 15);
+  std::cout << " SizeConstant DynamicValue 15\n";
+  EXPECT_EQ(torch_xla::DimCast(sc15)->getDynamicValue(), 15);
   torch::lazy::NodePtr add25 = torch::lazy::MakeNode<SizeAdd>(sc10, sc15);
-  EXPECT_EQ(add25->getStaticValue(), 25);
-  EXPECT_EQ(add25->getDynamicValue(), add25->getStaticValue());
+  EXPECT_EQ(torch_xla::DimCast(add25)->getStaticValue(), 25);
+  std::cout << " SizeConstant DynamicValue 25\n";
+  EXPECT_EQ(torch_xla::DimCast(add25)->getDynamicValue(), torch_xla::DimCast(add25)->getStaticValue());
 
   torch::lazy::Value scalar_value =
       torch::lazy::Value(ScalarOp(1.0, xla::F32), 0);
@@ -105,8 +110,8 @@ TEST(SymintTest, TestSizeConstant) {
       torch::lazy::MakeNode<SizeNode>(expand_value, /*dim=*/0);
 
   torch::lazy::NodePtr add19 = torch::lazy::MakeNode<SizeAdd>(sc10, size_node);
-  EXPECT_EQ(add19->getStaticValue(), 19);
-  EXPECT_EQ(add19->getDynamicValue(), add19->getStaticValue());
+  EXPECT_EQ(torch_xla::DimCast(add19)->getStaticValue(), 19);
+  EXPECT_EQ(torch_xla::DimCast(add19)->getDynamicValue(), torch_xla::DimCast(add19)->getStaticValue());
 }
 
 TEST(SymintTest, TestDynamicSymints) {
