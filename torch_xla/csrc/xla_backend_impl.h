@@ -41,6 +41,6 @@ class XLAData : public torch::lazy::BackendData {
 
 torch::lazy::BackendImplInterface* GetXlaBackendImpl();
 
-void InitXlaBackend();
+bool InitXlaBackend();
 
 }  // namespace torch_xla
