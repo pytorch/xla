@@ -3106,7 +3106,7 @@ XLANativeFunctions::native_group_norm(const at::Tensor& input,
 at::Tensor XLANativeFunctions::block_diag(at::TensorList tensors) {
   return at::native::block_diag(tensors);
 }
-at::Tensor XLANativeFunctions::new_empty_strided_symint(
+at::Tensor XLANativeFunctions::new_empty_strided(
     const at::Tensor& self, at::SymIntArrayRef size, at::SymIntArrayRef stride,
     c10::optional<at::ScalarType> dtype, c10::optional<at::Layout> layout,
     c10::optional<at::Device> device, c10::optional<bool> pin_memory) {
