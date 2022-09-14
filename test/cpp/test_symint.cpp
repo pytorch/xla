@@ -65,8 +65,7 @@ TEST(SymintTest, TestDynamicSymint) {
   torch::lazy::Value expand_value = torch::lazy::Value(expand_node, 0);
   torch::lazy::NodePtr size_node =
       torch::lazy::MakeNode<SizeNode>(expand_value, /*dim=*/0);
-  auto symint_node =
-      c10::make_intrusive<torch::lazy::SymIntNodeImpl>(size_node);
+  auto symint_node = c10::make_intrusive<XLASymIntNodeImpl>(size_node);
   // This is not a dynamic size from xla perspective but it is a symint that
   // wraps around a SizeNode instead of a scalar.
   c10::SymInt dynamic_symint = symint_node->toSymInt();
@@ -98,8 +97,7 @@ TEST(SymintTest, TestDynamicSymints) {
     torch::lazy::NodePtr size_node =
         torch::lazy::MakeNode<SizeNode>(expand_value, /*dim=*/i);
     size_nodes.push_back(size_node);
-    auto symint_node =
-        c10::make_intrusive<torch::lazy::SymIntNodeImpl>(size_node);
+    auto symint_node = c10::make_intrusive<XLASymIntNodeImpl>(size_node);
     // This is not a dynamic size from xla perspective but it is a symint that
     // wraps around a SizeNode instead of a scalar.
     dynamic_symints.push_back(symint_node->toSymInt());
