@@ -71,9 +71,13 @@ xla::XlaOp BuildRelu(xla::XlaOp input) {
 
 xla::XlaOp BuildHardshrink(xla::XlaOp input, xla::XlaOp lambda) {
   const xla::Shape& shape = XlaHelpers::ShapeOfXlaOp(input);
-  xla::PrimitiveType element_type = shape.element_type();
-  xla::XlaOp zero = xla::Zero(input.builder(), element_type);
+  xla::PrimitiveType input_element_type = shape.element_type();
+  xla::XlaOp zero = xla::Zero(input.builder(), input_element_type);
 
+  // The conversion here is needed because when we do computation such as
+  // broadcast or subtraction for input and lambda, XLA disallows mixed
+  // precision for float point types.
+  lambda = MaybeConvertTo(lambda, input_element_type);
   xla::XlaOp check_low = BuildComparisonOp(at::aten::ge, input, zero - lambda);
   xla::XlaOp check_high = BuildComparisonOp(at::aten::le, input, lambda);
   xla::XlaOp between = xla::And(check_low, check_high);
