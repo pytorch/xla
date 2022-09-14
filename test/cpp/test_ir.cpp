@@ -5,6 +5,8 @@
 #include "torch_xla/csrc/lowering_context.h"
 #include "torch_xla/csrc/ops/arithmetic_ir_ops.h"
 #include "torch_xla/csrc/ops/dynamic_ir.h"
+#include "torch_xla/csrc/ops/expand.h"
+#include "torch_xla/csrc/ops/nonzero.h"
 #include "torch_xla/csrc/ops/ops.h"
 #include "torch_xla/csrc/ops/scalar.h"
 #include "torch_xla/csrc/ops/select.h"
@@ -118,6 +120,33 @@ TEST(IrTest, TestSizeNode) {
     EXPECT_EQ(results[0].sum().item().toInt(), 3);
     EXPECT_EQ(results[1].sum().item().toInt(), 4);
   });
+}
+
+TEST(IrTest, TestSizeNodeDynamic) {
+  torch::lazy::Value scalar_value =
+      torch::lazy::Value(ScalarOp(0.0, xla::F32), 0);
+  std::vector<int64_t> target_size = {10, 10};
+  torch::lazy::NodePtr expand_node =
+      torch::lazy::MakeNode<Expand>(scalar_value, target_size);
+  torch::lazy::Value expand_value = torch::lazy::Value(expand_node, 0);
+  torch::lazy::NodePtr nonzero_node =
+      torch::lazy::MakeNode<NonZero>(expand_value);
+
+  torch::lazy::NodePtr size_node_nonzero_0 =
+      torch::lazy::MakeNode<SizeNode>(nonzero_node, 0);
+  torch::lazy::NodePtr size_node_nonzero_1 =
+      torch::lazy::MakeNode<SizeNode>(nonzero_node, 1);
+  std::shared_ptr<torch::lazy::DimensionNode> dim_node_0 =
+      std::dynamic_pointer_cast<torch::lazy::DimensionNode>(
+          size_node_nonzero_0);
+  std::shared_ptr<torch::lazy::DimensionNode> dim_node_1 =
+      std::dynamic_pointer_cast<torch::lazy::DimensionNode>(
+          size_node_nonzero_1);
+
+  EXPECT_EQ(dim_node_0->getStaticValue(), 100);
+  EXPECT_EQ(dim_node_0->getDynamicValue(), 0);
+  EXPECT_EQ(dim_node_1->getStaticValue(), 2);
+  EXPECT_EQ(dim_node_1->getDynamicValue(), 2);
 }
 
 TEST(IrTest, TestSizeAddNode) {

@@ -31,7 +31,6 @@ int64_t SizeNode::getDynamicValue() const {
   std::vector<XLATensorPtr> dummy_size_tensors = {
       XLATensor::Create(cloned, *GetDefaultDevice(), at::ScalarType::Long)};
   // TODO: cache the result
-  // TODO: add real dynamic test
   std::vector<at::Tensor> res = XLATensor::GetTensors(&dummy_size_tensors);
   return res[0].sum().item().toInt();
 }
