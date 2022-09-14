@@ -6,6 +6,8 @@
 #include "torch_xla/csrc/ops/infer_output_shape.h"
 #include "torch_xla/csrc/tensor.h"
 
+namespace torch_xla {
+
 const torch::lazy::DimensionNode* DimCast(const torch::lazy::Node* node) {
   return dynamic_cast<const torch::lazy::DimensionNode*>(node);
 }
@@ -18,8 +20,6 @@ const std::shared_ptr<torch::lazy::DimensionNode> DimCast(
     const torch::lazy::NodePtr& node) {
   return std::dynamic_pointer_cast<torch::lazy::DimensionNode>(node);
 }
-
-namespace torch_xla {
 
 SizeNode::SizeNode(torch::lazy::Value input, size_t dim)
     : XlaNode(torch::lazy::OpKind{c10::Symbol::fromQualString("aten::size")},
