@@ -4,6 +4,7 @@
 #include "tensorflow/compiler/xla/xla_client/debug_macros.h"
 #include "torch_xla/csrc/lowering_context.h"
 #include "torch_xla/csrc/ops/infer_output_shape.h"
+#include "torch_xla/csrc/tensor.h"
 
 static const torch::lazy::DimensionNode* DimCast(torch::lazy::Output output) {
   return dynamic_cast<const torch::lazy::DimensionNode*>(output.node);
@@ -23,6 +24,16 @@ SizeNode::SizeNode(torch::lazy::Value input, size_t dim)
   // from input shapes and input Node already hash its shape.
   upper_bound_ = xla_node->xla_shape(operand(0).index).dimensions(dim_);
 };
+
+int64_t SizeNode::getDynamicValue() const {
+  torch::lazy::NodePtr cloned =
+      torch::lazy::MakeNode<SizeNode>(operands_[0], dim_);
+  std::vector<XLATensorPtr> dummy_size_tensors = {
+      XLATensor::Create(cloned, *GetDefaultDevice(), at::ScalarType::Long)};
+  // TODO: cache the result
+  std::vector<at::Tensor> res = XLATensor::GetTensors(&dummy_size_tensors);
+  return res[0].sum().item().toInt();
+}
 
 XlaOpVector SizeNode::Lower(LoweringContext* loctx) const {
   auto input = loctx->GetOutputOp(operand(0));
