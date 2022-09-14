@@ -51,7 +51,7 @@ tf_cc_shared_object(
     }),
     visibility = ["//visibility:public"],
     deps = [
-        "computation_client_impl",
+        ":computation_client_impl",
         "//tensorflow/compiler/xla:literal_util",
         "//tensorflow/compiler/xla/client",
         "//tensorflow/compiler/xla/client:global_data",
