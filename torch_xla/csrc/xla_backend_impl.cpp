@@ -230,7 +230,7 @@ torch::lazy::BackendImplInterface* GetXlaBackendImpl() {
   return xla_backend_impl;
 }
 
-void InitXlaBackend() {
+bool InitXlaBackend() {
   // xla_fallback is currently auto registered when initializing torch_xla. No
   // need to re-register here.
   at::RegisterXLAXLANativeFunctions();
@@ -238,6 +238,7 @@ void InitXlaBackend() {
   static std::unique_ptr<torch::lazy::BackendRegistrar> s_registrar;
   s_registrar =
       std::make_unique<torch::lazy::BackendRegistrar>(GetXlaBackendImpl());
+  return true;
 };
 
 }  // namespace torch_xla
