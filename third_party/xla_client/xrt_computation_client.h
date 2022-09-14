@@ -245,11 +245,21 @@ class XrtComputationClient : public ComputationClient {
   std::vector<xla::util::ExceptionCleanup> LockAsyncDatas(
       absl::Span<const DataPtr> datas) override;
 
+  std::vector<DataPtr> GetDataShards(DataPtr data) override {
+    XLA_ERROR() << __FUNCTION__ << " not implemented";
+  }
+
   std::vector<DataPtr> TransferToServer(
       absl::Span<const TensorSource> tensors) override;
 
   void TransferToServer(absl::Span<const TensorSource> tensors,
                         absl::Span<const DataPtr> datas) override;
+
+  DataPtr TransferShardsToServer(absl::Span<const TensorSource> tensor_shards,
+                                 std::string device,
+                                 xla::Shape shape) override {
+    XLA_ERROR() << __FUNCTION__ << " not implemented";
+  }
 
   std::vector<Literal> TransferFromServer(
       absl::Span<const DataPtr> handles) override;

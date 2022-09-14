@@ -1416,7 +1416,8 @@ void InitXlaModuleBindings(py::module m) {
     }
 
     XLATensorPtr xtensor = bridge::GetXlaTensor(input);
-    xtensor->SetShardingSpec(sharding, replicated, manual);
+    auto sharding_spec = std::make_shared<XLATensor::ShardingSpec>(sharding);
+    xtensor->SetShardingSpec(*sharding_spec);
   });
   m.def("_xla_clear_sharding", [](const at::Tensor& input) {
     XLATensorPtr xtensor = bridge::GetXlaTensor(input);

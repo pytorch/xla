@@ -86,6 +86,65 @@ xla::HloModuleProto ShardingUtil::SpmdPartitioningPass(
   return module.get()->ToProto();
 }
 
+std::vector<std::vector<xla::ComputationClient::DataPtr>>
+ShardingUtil::InputHandler(
+    std::vector<xla::ComputationClient::DataPtr> arguments,
+    std::vector<std::string> devices) {
+  std::vector<std::vector<xla::ComputationClient::DataPtr>> arguments_by_device(
+      devices.size(),
+      std::vector<xla::ComputationClient::DataPtr>(arguments.size()));
+  for (int64_t argument_i = 0; argument_i < arguments.size(); ++argument_i) {
+    auto shards =
+        xla::ComputationClient::Get()->GetDataShards(arguments[argument_i]);
+    if (shards.size() > 1) {
+      // Input is sharded across addressable devices
+      for (auto shard : shards) {
+        int64_t device_i = ParseDeviceString(shard->device()).ordinal();
+        arguments_by_device[device_i][argument_i] = shard;
+      }
+    } else {
+      // Input is replicated across addressable devices
+      int64_t source_device_i =
+          ParseDeviceString(shards[0]->device()).ordinal();
+      arguments_by_device[source_device_i][argument_i] = shards[0];
+
+      auto literal = std::make_shared<xla::Literal>(std::move(
+          xla::ComputationClient::Get()->TransferFromServer(shards)[0]));
+      std::vector<xla::ComputationClient::TensorSource> source_tensors;
+      for (int64_t device_i = 0; device_i < devices.size(); ++device_i) {
+        if (device_i != source_device_i) {
+          auto populate_fn =
+              [&](const xla::ComputationClient::TensorSource& source_tensor,
+                  void* dest_buffer, size_t dest_buffer_size) {
+                std::memcpy(dest_buffer, literal->untyped_data(),
+                            dest_buffer_size);
+              };
+          source_tensors.emplace_back(
+              xla::Shape(shards[0]->shape().ToProto()),
+              ParseDeviceString(absl::StrFormat(":%d", device_i)).toString(),
+              std::move(populate_fn));
+        }
+      }
+
+      std::vector<xla::ComputationClient::DataPtr> replicated_shards =
+          xla::ComputationClient::Get()->TransferToServer(source_tensors);
+      auto itr = replicated_shards.begin();
+      for (int64_t device_i = 0; device_i < devices.size(); ++device_i) {
+        if (device_i != source_device_i) {
+          arguments_by_device[device_i][argument_i] = *itr;
+          ++itr;
+        }
+      }
+      XLA_CHECK(itr == replicated_shards.end())
+          << "Replicated arguments[" << argument_i << "] on "
+          << shards[0]->device() << " " << replicated_shards.size()
+          << " times (expected " << (devices.size() - 1) << ").";
+    }
+  }
+
+  return arguments_by_device;
+}
+
 std::vector<at::Tensor> ShardingUtil::ShardTensor(
     const at::Tensor& tensor, const xla::OpSharding sharding,
     const std::vector<std::string>& devices) {

@@ -115,9 +115,14 @@ class XlaNode : public torch::lazy::Node {
   torch::lazy::hash_t shapeHash() const override { return dag_hash_; }
   // The node's outputs get assigned the same HLO sharding
   // TODO: test multi-output example.
-  const xla::OpSharding* GetSharding() const { return output_sharding_; }
-  void SetSharding(const xla::OpSharding* sharding) {
-    output_sharding_ = sharding;
+  const xla::OpSharding* GetSharding() const {
+    if (output_sharding_ == nullptr) {
+      return nullptr;
+    }
+    return output_sharding_.get();
+  }
+  void SetSharding(const xla::OpSharding& sharding) {
+    output_sharding_ = std::make_shared<xla::OpSharding>(sharding);
   }
   void ClearSharding() { output_sharding_ = nullptr; }
 
@@ -135,8 +140,8 @@ class XlaNode : public torch::lazy::Node {
   torch::lazy::hash_t dag_hash_;
 
   // Experimental sharding annotation attached to the IR node.
-  // TODO: make sure that view update doesn't reset this.
-  const xla::OpSharding* output_sharding_ = nullptr;
+  // TODO(yeounoh): make sure that view update doesn't reset this.
+  std::shared_ptr<xla::OpSharding> output_sharding_ = nullptr;
 };
 
 inline std::ostream& operator<<(std::ostream& stream, const XlaNode& node) {

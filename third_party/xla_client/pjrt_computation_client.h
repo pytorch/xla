@@ -20,8 +20,13 @@ class PjRtComputationClient : public ComputationClient {
 
   DataPtr CreateDataPlaceholder(std::string device, Shape shape) override;
 
+  std::vector<DataPtr> GetDataShards(DataPtr data) override;
+
   std::vector<DataPtr> TransferToServer(
       absl::Span<const TensorSource> tensors) override;
+
+  DataPtr TransferShardsToServer(absl::Span<const TensorSource> tensor_shards,
+                                 std::string device, xla::Shape shape) override;
 
   std::vector<Literal> TransferFromServer(
       absl::Span<const DataPtr> handles) override;
@@ -33,6 +38,12 @@ class PjRtComputationClient : public ComputationClient {
       const Computation& computation, absl::Span<const DataPtr> arguments,
       const std::string& device,
       const ExecuteComputationOptions& options) override;
+
+  std::vector<std::vector<DataPtr>> ExecuteReplicated(
+      const Computation& computation,
+      const std::vector<std::vector<DataPtr>>& arguments,
+      absl::Span<const std::string> devices,
+      const ExecuteReplicatedOptions& options) override;
 
   size_t GetNumDevices() const override;
 
@@ -68,14 +79,6 @@ class PjRtComputationClient : public ComputationClient {
 
   std::vector<std::vector<DataPtr>> DeconstructTuple(
       absl::Span<const DataPtr> tuples) override {
-    XLA_ERROR() << __FUNCTION__ << " not implemented";
-  };
-
-  std::vector<std::vector<DataPtr>> ExecuteReplicated(
-      const Computation& computation,
-      const std::vector<std::vector<DataPtr>>& arguments,
-      absl::Span<const std::string> devices,
-      const ExecuteReplicatedOptions& options) override {
     XLA_ERROR() << __FUNCTION__ << " not implemented";
   };
 
@@ -138,6 +141,34 @@ class PjRtComputationClient : public ComputationClient {
     };
 
     std::shared_ptr<PjRtBuffer> buffer;
+  };
+
+  struct PjRtShardedData : public Data {
+    PjRtShardedData(std::string device, Shape shape) = delete;
+
+    PjRtShardedData(std::string device, Shape shape,
+                    std::vector<std::shared_ptr<PjRtData>> shards)
+        : Data(std::move(device), std::move(shape)), shards(shards) {}
+
+    OpaqueHandle GetOpaqueHandle() override {
+      // Always returns `OpaqueHandle` of the first shard.
+      return shards[0]->GetOpaqueHandle();
+    }
+    void Assign(const Data& data) override {
+      XLA_ERROR() << __FUNCTION__ << " not supported.";
+    }
+    bool HasValue() const override {
+      if (!shards.empty()) {
+        for (auto& shard : shards) {
+          if (!shard->HasValue()) {
+            return false;
+          }
+        }
+      }
+      return true;
+    }
+
+    std::vector<std::shared_ptr<PjRtData>> shards;
   };
 
   struct PjRtComputation : public Computation {
