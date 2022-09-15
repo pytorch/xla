@@ -585,22 +585,8 @@ std::vector<ComputationClient::ComputationPtr> XrtComputationClient::Compile(
   for (size_t i = 0; i < instances.size(); ++i) {
     auto builder = [&, this, i]() {
       const CompileInstance& instance = instances[i];
-
-      // (yeounoh) check if spmd partitioning is used, non-SPMD enabled
-      // HLO module shouln't be affected by this.
-      // If is_spmd == true, then we assign multi-cores to a single
-      // replica; otherwise, all cores participate in replication.
-      bool is_spmd = false;
-      auto& module_proto = instance.computation.proto();
-      if (module_proto.has_spmd_output_sharding() ||
-          module_proto.spmd_parameters_shardings_size() > 0) {
-        std::cout << "has_spmd_output_sharding(): "
-                  << module_proto.has_spmd_output_sharding()
-                  << "spmd_parameters_shardings_size(): "
-                  << module_proto.spmd_parameters_shardings_size() << std::endl;
-        is_spmd = true;
-      }
-      XLA_CHECK(!is_spmd) << "XrtComputationClient doesn't support SPMD.";
+      XLA_CHECK(!instance.is_sharded)
+          << "XrtComputationClient doesn't support SPMD.";
 
       std::unique_ptr<xrt::XLAComputation> xrt_computation =
           CreateXrtComputation(instance.computation, instance.devices,
