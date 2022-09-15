@@ -155,7 +155,7 @@ def train_mnist(flags, **kwargs):
   model = MNIST()
   # Wrap the model with FSDP
   fsdp_wrap = lambda m: FSDP(
-      m.to(device),
+      m,
       compute_dtype=getattr(torch, flags.compute_dtype),
       fp32_reduce_scatter=flags.fp32_reduce_scatter,
       flatten_parameters=flags.flatten_parameters,

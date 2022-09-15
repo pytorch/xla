@@ -222,7 +222,7 @@ def train_imagenet():
   # - you may wrap sub-modules at different granularity (e.g. at each resnet
   #   stage or each residual block or each conv layer).
   fsdp_wrap = lambda m: FSDP(
-      m.to(device),
+      m,
       compute_dtype=getattr(torch, FLAGS.compute_dtype),
       fp32_reduce_scatter=FLAGS.fp32_reduce_scatter,
       flatten_parameters=FLAGS.flatten_parameters,

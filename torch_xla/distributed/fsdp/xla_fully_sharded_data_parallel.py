@@ -69,7 +69,6 @@ class XlaFullyShardedDataParallel(nn.Module):
 
   Pseudo-code usage::
 
-      my_module = my_module.to(xm.xla_device())
       sharded_module = XlaFullyShardedDataParallel(my_module)
       optim = torch.optim.Adam(sharded_module.parameters(), lr=0.0001)
       output = sharded_module(x, y)
@@ -82,12 +81,6 @@ class XlaFullyShardedDataParallel(nn.Module):
   reduce XLA device memory usage and CPU memory usage when initializing large
   models and to improve training speed by overlapping the all-gather step
   across the forward pass.
-
-  .. warning::
-
-      The module should be moved to XLA device *before* wrapping it with
-      FSDP. For nested FSDP, the inner FSDP modules also need to be on XLA
-      device before wrapping.
 
   .. warning::
 
@@ -126,7 +119,9 @@ class XlaFullyShardedDataParallel(nn.Module):
 
   Args:
       module (nn.Module):
-          module to be wrapped with FSDP.
+          module to be wrapped with FSDP. If the input module's parameters
+          and buffers are not already on XLA device, they will be cast to
+          ``xm.xla_device()`` (after sharding) during FSDP initialization.
       reshard_after_forward (bool, Optional):
           if ``True``, reshard parameters after the forward pass. This saves
           memory but slows training. This is only relevant when resharding
@@ -370,6 +365,7 @@ class XlaFullyShardedDataParallel(nn.Module):
         List[Parameter],
         self._fsdp_wrapped_module.flat_params) + non_flatten_params
 
+    self.xla_device = xm.xla_device()
     # Shard module parameters in place
     self._shard_parameters_(params_to_shard)
     # Cast the module buffers to the specified buffer_dtype
@@ -526,7 +522,7 @@ class XlaFullyShardedDataParallel(nn.Module):
       # When freeing the full parameters, we point their `.data` to this placeholder
       # (so that the XLA compiler can reuse the memory storage).
       self._dummy_data_placeholder = torch.zeros(
-          1, dtype=self.compute_dtype, device=params_to_shard[0].device)
+          1, dtype=self.compute_dtype, device=self.xla_device)
 
     # get the module names of each full parameter to shard
     params_to_shard_set = set(params_to_shard)
@@ -538,9 +534,6 @@ class XlaFullyShardedDataParallel(nn.Module):
     full_params = []
     for module_name, m in self.named_modules():
       for n, p in m.named_parameters(recurse=False):
-        if "xla" not in str(p.device):
-          raise ValueError(
-              "please moved the module to XLA device before wrapping with FSDP")
         if p.dtype != torch.float32:
           raise TypeError("only fp32 parameters are supported")
         if p in params_to_shard_set:
@@ -559,24 +552,16 @@ class XlaFullyShardedDataParallel(nn.Module):
     self.full_param_infos = full_param_infos
     self.shared_full_param_infos = shared_full_param_infos
 
-    # deregister the full parameter tensors from their modules (so that they won't
-    # appear in the FSDP model's `parameters()` or `named_parameters()` outputs;
-    # only the sharded parameters should appear in the FSDP model's `parameters()`)
-    for _, m, n in self.full_param_infos:
-      assert n in m._parameters
-      p = m._parameters.pop(n)
-      object.__setattr__(m, n, p)
-    for _, _, m, n, shared_m, shared_n in self.shared_full_param_infos:
-      assert n in m._parameters
-      p = m._parameters.pop(n)
-      object.__setattr__(m, n, p)
-
     # allocate and register new sharded parameters
     self.sharded_params = []
-    for p, (module_name, _, n) in zip(self.full_params, self.full_param_infos):
+    for idx, (module_name, m, n) in enumerate(self.full_param_infos):
+      p = self.full_params[idx]
       assert not hasattr(p, "_is_sharded")
 
       shard_data = self._get_shard(p.data)
+      if shard_data.device != self.xla_device:
+        # cast to XLA device if not already on XLA
+        shard_data = shard_data.to(self.xla_device)
       p_shard = nn.Parameter(shard_data, requires_grad=p.requires_grad)
       p_shard._is_sharded = True
       p_shard._orig_size = p.data.size()
@@ -585,11 +570,29 @@ class XlaFullyShardedDataParallel(nn.Module):
           ".", "_FSDP_SHARD_SEPARATOR_")
       self.register_parameter(p_shard._name, p_shard)
       self.sharded_params.append(p_shard)
-      p._sharded_param = p_shard  # add a handle to the sharded parameter
       # Free the full parameter storage (here we free its `.data`) but keep the tensor itself
       # for auto-grad tracing (like `torch.autograd.Variable` before the tensor-variable merge).
-      p.data = self._dummy_data_placeholder
+      p.data = p.data.new_zeros(1)
+      if p.device != self.xla_device:
+        # cast to XLA device if not already on XLA
+        p = p.to(self.xla_device).requires_grad_(p.requires_grad)
+        # update p in full_params since id(p) changed after the casting
+        self.full_params[idx] = p
+      p._sharded_param = p_shard  # add a handle to the sharded parameter
       p._has_full_param = False
+      # deregister the full parameter tensors from their modules (so that they won't
+      # appear in the FSDP model's `parameters()` or `named_parameters()` outputs;
+      # only the sharded parameters should appear in the FSDP model's `parameters()`)
+      assert n in m._parameters
+      m._parameters.pop(n)
+      object.__setattr__(m, n, p)
+
+    # also deregister the shared parameters
+    for _, _, m, n, shared_m, shared_n in self.shared_full_param_infos:
+      assert n in m._parameters
+      m._parameters.pop(n)
+      shared_p = getattr(shared_m, shared_n)
+      object.__setattr__(m, n, shared_p)
 
     assert len(self.sharded_params) == len(self.full_params)
 
@@ -635,6 +638,8 @@ class XlaFullyShardedDataParallel(nn.Module):
             if orig_dtype != cast_dtype:
               buf = buf.to(cast_dtype)
               buf._orig_dtype = orig_dtype
+          if buf.device != self.xla_device:
+            buf = buf.to(self.xla_device)
           setattr(module, name, buf)
 
   def extra_repr(self) -> str:

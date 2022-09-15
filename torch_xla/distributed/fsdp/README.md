@@ -8,9 +8,7 @@ import torch
 import torch_xla.core.xla_model as xm
 from torch_xla.distributed.fsdp import XlaFullyShardedDataParallel as FSDP
 
-model = model.to(xm.xla_device())
 model = FSDP(my_module)
-
 optim = torch.optim.Adam(model.parameters(), lr=0.0001)
 output = model(x, y)
 loss = output.sum()
@@ -44,7 +42,7 @@ python3 -m torch_xla.distributed.fsdp.consolidate_sharded_ckpts \
   --ckpt_suffix "_rank-*-of-*.pth"
 ```
 
-The implementation of this class is largely inspired by and mostly follows the structure of `fairscale.nn.FullyShardedDataParallel` in https://fairscale.readthedocs.io/en/stable/api/nn/fsdp.html. One of the biggest difference from `fairscale.nn.FullyShardedDataParallel` is that in XLA we don't have explicit parameter storage, so here we resort to a different approach to free full parameters for ZeRO-3.
+The implementation of this class is largely inspired by and mostly follows the structure of `fairscale.nn.FullyShardedDataParallel` in https://fairscale.readthedocs.io/en/stable/api/nn/fsdp.html. One of the biggest differences from `fairscale.nn.FullyShardedDataParallel` is that in XLA we don't have explicit parameter storage, so here we resort to a different approach to free full parameters for ZeRO-3.
 
 ---
 
@@ -54,7 +52,7 @@ The implementation of this class is largely inspired by and mostly follows the s
 * ImageNet: [`test/test_train_mp_imagenet_fsdp.py`](https://github.com/pytorch/xla/blob/master/test/test_train_mp_imagenet_fsdp.py)
 
 #### Installation
-FSDP is availiabe on PyTorch/XLA 1.12 release and newer nightly. Please refer to https://github.com/pytorch/xla#-available-images-and-wheels for installtion guide.
+FSDP is available on PyTorch/XLA 1.12 release and newer nightly. Please refer to https://github.com/pytorch/xla#-available-images-and-wheels for installation guide.
 
 #### Clone PyTorch/XLA repo
 ```bash
