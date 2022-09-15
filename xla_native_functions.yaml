@@ -347,7 +347,9 @@ supported:
   # - logsumexp.out
 symint:
   - empty.memory_format
+  - empty_strided
   - expand
+  - new_empty_strided
   - view
 autograd:
   - max_pool2d
