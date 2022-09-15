@@ -38,6 +38,7 @@ namespace torch_xla {
 class SizeNode : public XlaNode, public torch::lazy::DimensionNode {
  public:
   SizeNode(torch::lazy::Value input, size_t dim);
+  int64_t getDynamicValue() const override;
   int64_t getStaticValue() const override { return upper_bound_; }
   bool isSymbolic() const override { return true; }
   std::string ToString() const override;
@@ -83,5 +84,10 @@ class SizeDiv : public XlaNode, public torch::lazy::DimensionNode {
  private:
   int64_t upper_bound_;
 };
+
+const torch::lazy::DimensionNode* DimCast(torch::lazy::Output output);
+const torch::lazy::DimensionNode* DimCast(const torch::lazy::Node* node);
+const std::shared_ptr<torch::lazy::DimensionNode> DimCast(
+    const torch::lazy::NodePtr& node);
 
 }  // namespace torch_xla
