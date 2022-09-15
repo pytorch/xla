@@ -861,8 +861,12 @@ xla::Shape PyShapeToShape(py::object shape) {
     return xla::ShapeUtil::MakeShape(xla_type, dimensions, dynamic_dimensions);
   }
   xla::Shape ret = xla::ShapeUtil::MakeShape(xla_type, dimensions);
-  std::cout << "WONJOO: at xla_op_builder.cpp::PyShapeToShape, shape.ToString(true)=" << ret.ToString(true) << std::endl;
-  std::cout << "WONJOO: at xla_op_builder.cpp::PyShapeToShape, shape.has_layout()=" << ret.has_layout() << std::endl;
+  std::cout
+      << "WONJOO: at xla_op_builder.cpp::PyShapeToShape, shape.ToString(true)="
+      << ret.ToString(true) << std::endl;
+  std::cout
+      << "WONJOO: at xla_op_builder.cpp::PyShapeToShape, shape.has_layout()="
+      << ret.has_layout() << std::endl;
   return ret;
 }
 

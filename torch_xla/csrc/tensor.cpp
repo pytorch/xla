@@ -1397,7 +1397,8 @@ std::vector<torch::lazy::BackendDataPtr> XLATensor::FetchTensorData(
     absl::Span<const size_t> indices) {
   std::vector<torch::lazy::BackendDataPtr> tensors_data;
   tensors_data.reserve(indices.size());
-  std::cout << "WONJOO: at XLATensor::FetchTensorData1, indices.size()=" << indices.size() << std::endl;
+  std::cout << "WONJOO: at XLATensor::FetchTensorData1, indices.size()="
+            << indices.size() << std::endl;
   for (auto index : indices) {
     XLATensorPtr& tensor = (*tensors)[index];
     // If the config.force_xla_data flag is true, the purpose of this tensor
@@ -1414,8 +1415,11 @@ std::vector<torch::lazy::BackendDataPtr> XLATensor::FetchTensorData(
       const torch::lazy::BackendDevice& tensor_device = tensor->GetDevice();
       xla::Shape shape = MakeShapeWithDeviceLayout(
           tensor->shape(), static_cast<XlaDeviceType>(tensor_device.type()));
-      std::cout << "WONJOO: at XLATensor::FetchTensorData, shape.ToString(true)=" << shape.ToString(true) << std::endl;
-      std::cout << "WONJOO: at XLATensor::FetchTensorData, shape.has_layout()=" << shape.has_layout() << std::endl;
+      std::cout
+          << "WONJOO: at XLATensor::FetchTensorData, shape.ToString(true)="
+          << shape.ToString(true) << std::endl;
+      std::cout << "WONJOO: at XLATensor::FetchTensorData, shape.has_layout()="
+                << shape.has_layout() << std::endl;
       xla_data =
           WrapXlaData(xla::ComputationClient::Get()->CreateDataPlaceholder(
               tensor_device.toString(), std::move(shape)));
@@ -1676,8 +1680,12 @@ XLATensor::CompilationResult XLATensor::Compile(
     xla::XlaOp root = lowering_ctx.GetOutputOp(
         torch::lazy::Output(ir_value.node.get(), ir_value.index));
     const xla::Shape& root_xla_shape = XlaHelpers::ShapeOfXlaOp(root);
-    std::cout << "WONJOO: at XLATensor::Compile2-2, root_xla_shape.ToString(true)=" << root_xla_shape.ToString(true) << std::endl;
-    std::cout << "WONJOO: at XLATensor::Compile2-3, root_xla_shape.has_layout()=" << root_xla_shape.has_layout() << std::endl;
+    std::cout
+        << "WONJOO: at XLATensor::Compile2-2, root_xla_shape.ToString(true)="
+        << root_xla_shape.ToString(true) << std::endl;
+    std::cout
+        << "WONJOO: at XLATensor::Compile2-3, root_xla_shape.has_layout()="
+        << root_xla_shape.has_layout() << std::endl;
 
     lowering_ctx.AddResult(root);
   }
@@ -1718,15 +1726,25 @@ XLATensor::CompilationResult XLATensor::Compile(
   xla::XlaComputation computation = ConsumeValue(lowering_ctx.BuildXla());
   xla::ProgramShape program_shape = ConsumeValue(computation.GetProgramShape());
   const std::vector<xla::Shape>& xla_shapes = program_shape.parameters();
-  std::cout << "WONJOO: at XLATensor::Compile3-1, program_shape.ToString()=" << program_shape.ToString() << std::endl;
-  std::cout << "WONJOO: at XLATensor::Compile3-2, xla_shapes.size()=" << xla_shapes.size() << std::endl;
+  std::cout << "WONJOO: at XLATensor::Compile3-1, program_shape.ToString()="
+            << program_shape.ToString() << std::endl;
+  std::cout << "WONJOO: at XLATensor::Compile3-2, xla_shapes.size()="
+            << xla_shapes.size() << std::endl;
   for (auto xla_shape : xla_shapes) {
-    std::cout << "WONJOO: at XLATensor::Compile3-2-1, xla_shape.ToString(true)=" << xla_shape.ToString(true) << std::endl;
-    std::cout << "WONJOO: at XLATensor::Compile3-2-2, xla_shape.has_layout=" << xla_shape.has_layout() << std::endl;
+    std::cout << "WONJOO: at XLATensor::Compile3-2-1, xla_shape.ToString(true)="
+              << xla_shape.ToString(true) << std::endl;
+    std::cout << "WONJOO: at XLATensor::Compile3-2-2, xla_shape.has_layout="
+              << xla_shape.has_layout() << std::endl;
   }
-  std::cout << "WONJOO: at XLATensor::Compile3-3, program_shape.result().ToString(true)=" << program_shape.result().ToString(true) << std::endl;
-  std::cout << "WONJOO: at XLATensor::Compile3-4, program_shape.result().has_layout=" << program_shape.result().has_layout() << std::endl;
-  std::cout << "WONJOO: at XLATensor::Compile3-5, program_shape.result().element_type()=" << program_shape.result().element_type() << std::endl;
+  std::cout << "WONJOO: at XLATensor::Compile3-3, "
+               "program_shape.result().ToString(true)="
+            << program_shape.result().ToString(true) << std::endl;
+  std::cout
+      << "WONJOO: at XLATensor::Compile3-4, program_shape.result().has_layout="
+      << program_shape.result().has_layout() << std::endl;
+  std::cout << "WONJOO: at XLATensor::Compile3-5, "
+               "program_shape.result().element_type()="
+            << program_shape.result().element_type() << std::endl;
 
   std::cout << "WONJOO: at XLATensor::Compile4" << std::endl;
   bool should_wrap_parameter =
@@ -1744,16 +1762,20 @@ XLATensor::CompilationResult XLATensor::Compile(
   xla::Shape shape = MakeShapeWithDeviceLayout(
       program_shape.result(), static_cast<XlaDeviceType>(coll.device.type()));
   std::cout << "WONJOO: at XLATensor::Compile6" << std::endl;
-  std::cout << "WONJOO: at XLATensor::Compile6-2, shape.has_layout()=" << shape.has_layout() << std::endl;
+  std::cout << "WONJOO: at XLATensor::Compile6-2, shape.has_layout()="
+            << shape.has_layout() << std::endl;
   //
   // WONJOO testing
 
-  //const std::vector<xla::Shape>& xla_shapes = program_shape.parameters();
-  //std::cout << "WONJOO: at XLATensor::Compile6-3, program_shape.ToString()=" << program_shape.ToString() << std::endl;
-  //std::cout << "WONJOO: at XLATensor::Compile6-3, xla_shapes.size()=" << xla_shapes.size() << std::endl;
-  //for (auto xla_shape : xla_shapes) {
-  //  std::cout << "WONJOO: at XLATensor::Compile6-4, xla_shape.ToString(true)=" << xla_shape.ToString(true) << std::endl;
-  //  std::cout << "WONJOO: at XLATensor::Compile6-5, xla_shape.has_layout=" << xla_shape.has_layout() << std::endl;
+  // const std::vector<xla::Shape>& xla_shapes = program_shape.parameters();
+  // std::cout << "WONJOO: at XLATensor::Compile6-3, program_shape.ToString()="
+  // << program_shape.ToString() << std::endl; std::cout << "WONJOO: at
+  // XLATensor::Compile6-3, xla_shapes.size()=" << xla_shapes.size() <<
+  // std::endl; for (auto xla_shape : xla_shapes) {
+  //  std::cout << "WONJOO: at XLATensor::Compile6-4, xla_shape.ToString(true)="
+  //  << xla_shape.ToString(true) << std::endl; std::cout << "WONJOO: at
+  //  XLATensor::Compile6-5, xla_shape.has_layout=" << xla_shape.has_layout() <<
+  //  std::endl;
   //}
 
   // WONJOO testing
@@ -1766,18 +1788,31 @@ XLATensor::CompilationResult XLATensor::Compile(
                            coll.device.toString(), devices),
                        &shape, should_wrap_parameter});
 
-  std::cout << "WONJOO: at XLATensor::Complie7-2, instances.size()=" << instances.size() << std::endl;
-  std::cout << "WONJOO: at XLATensor::Compile7-3, instances[0]->output_shape=" << instances[0].output_shape->ToString(true) << std::endl;
-  std::cout << "WONJOO: at XLATensor::Compile7-4, instances[0]->has_layout()=" << instances[0].output_shape->has_layout() << std::endl;
-  xla::ProgramShape xla_program_shape = ConsumeValue(instances[0].computation.GetProgramShape());
-  const std::vector<xla::Shape>& xla_program_shape_parameters = xla_program_shape.parameters();
-  std::cout << "WONJOO: at XLATensor::Compile7-5, xla_program_shape_parameters.size()=" << xla_program_shape_parameters.size() << std::endl;
+  std::cout << "WONJOO: at XLATensor::Complie7-2, instances.size()="
+            << instances.size() << std::endl;
+  std::cout << "WONJOO: at XLATensor::Compile7-3, instances[0]->output_shape="
+            << instances[0].output_shape->ToString(true) << std::endl;
+  std::cout << "WONJOO: at XLATensor::Compile7-4, instances[0]->has_layout()="
+            << instances[0].output_shape->has_layout() << std::endl;
+  xla::ProgramShape xla_program_shape =
+      ConsumeValue(instances[0].computation.GetProgramShape());
+  const std::vector<xla::Shape>& xla_program_shape_parameters =
+      xla_program_shape.parameters();
+  std::cout << "WONJOO: at XLATensor::Compile7-5, "
+               "xla_program_shape_parameters.size()="
+            << xla_program_shape_parameters.size() << std::endl;
   for (auto xla_program_shape_parameter : xla_program_shape_parameters) {
-    std::cout << "WONJOO: at xla_program_shape_parameter.ToString(true)=" << xla_program_shape_parameter.ToString(true) << std::endl;
-    std::cout << "WONJOO: at xla_program_shape_parameter.has_layout()=" << xla_program_shape_parameter.has_layout() << std::endl;
-  }  
-  std::cout << "WONJOO: at XLATensor::Compile7-6, xla_program_shape.result().ToString(true)=" << xla_program_shape.result().ToString(true) << std::endl;
-  std::cout << "WONJOO: at XLATensor::Compile7-7, xla_program_shape.result().has_layout=" << xla_program_shape.result().has_layout() << std::endl;
+    std::cout << "WONJOO: at xla_program_shape_parameter.ToString(true)="
+              << xla_program_shape_parameter.ToString(true) << std::endl;
+    std::cout << "WONJOO: at xla_program_shape_parameter.has_layout()="
+              << xla_program_shape_parameter.has_layout() << std::endl;
+  }
+  std::cout << "WONJOO: at XLATensor::Compile7-6, "
+               "xla_program_shape.result().ToString(true)="
+            << xla_program_shape.result().ToString(true) << std::endl;
+  std::cout << "WONJOO: at XLATensor::Compile7-7, "
+               "xla_program_shape.result().has_layout="
+            << xla_program_shape.result().has_layout() << std::endl;
   std::cout << "WONJOO: at XLATensor::Compile8" << std::endl;
   TF_VLOG(3) << "Compiling IR graph hash "
              << torch::lazy::HashToString(coll.hash) << " on device "

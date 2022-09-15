@@ -992,7 +992,8 @@ xla::Literal GetTensorLiteral(const at::Tensor& tensor, const xla::Shape* shape,
   xla::Literal literal(*shape);
   PopulateTensorBuffer(tensor, *shape, literal.untyped_data(),
                        literal.size_bytes(), xla_device);
-  std::cout << "WONJOO: shape->has_layout()" << shape->has_layout() << std::endl;
+  std::cout << "WONJOO: shape->has_layout()" << shape->has_layout()
+            << std::endl;
   return literal;
 }
 
@@ -1060,17 +1061,24 @@ std::vector<xla::Shape> GetComponentShapes(const xla::Shape& shape) {
 
 xla::Shape MakeShapeWithDeviceLayout(const xla::Shape& shape,
                                      XlaDeviceType hw_type) {
-  std::cout << "WONJOO: at TensorUtil::MakeShapeWithDeviceLayout, shape.has_layout()=" << shape.has_layout() << std::endl;
+  std::cout
+      << "WONJOO: at TensorUtil::MakeShapeWithDeviceLayout, shape.has_layout()="
+      << shape.has_layout() << std::endl;
   xla::Shape device_shape(shape);
-  std::cout << "WONJOO: at TensorUtil::MakeShapeWithDeviceLayout2, shape.ToString(true)=" << shape.ToString(true) << std::endl;
-  std::cout << "WONJOO: at TensorUtil::MakeShapeWithDeviceLayout3, shape.element_type()=" << shape.element_type() << std::endl;
-  //xla::Shape device_shape = MakeArrayShapeFromDimensions(
-  //    shape.dimensions(), 
-  //    shape.dynamic_dimensions(), 
-  //    shape.element_type(), 
+  std::cout << "WONJOO: at TensorUtil::MakeShapeWithDeviceLayout2, "
+               "shape.ToString(true)="
+            << shape.ToString(true) << std::endl;
+  std::cout << "WONJOO: at TensorUtil::MakeShapeWithDeviceLayout3, "
+               "shape.element_type()="
+            << shape.element_type() << std::endl;
+  // xla::Shape device_shape = MakeArrayShapeFromDimensions(
+  //    shape.dimensions(),
+  //    shape.dynamic_dimensions(),
+  //    shape.element_type(),
   //    hw_type
   //);
-  //std::cout << "WONJOO: at TensorUtil::MakeShapeWithDeviceLayout, device_shape.has_layout()=" << device_shape.has_layout() << std::endl;
+  // std::cout << "WONJOO: at TensorUtil::MakeShapeWithDeviceLayout,
+  // device_shape.has_layout()=" << device_shape.has_layout() << std::endl;
 
   xla::ShapeUtil::ForEachMutableSubshape(
       &device_shape, [&](xla::Shape* subshape, const xla::ShapeIndex&) {
