@@ -51,8 +51,8 @@ at::Tensor to_meta(const at::Tensor& tensor) {
   // undefined tensors can't be converted to the meta device, since they don't
   // have sizes/strides
   if (!tensor.defined()) return tensor;
-  auto out = at::native::empty_strided_meta(
-      tensor.sizes(), tensor.strides(),
+  auto out = at::native::empty_strided_meta_symint(
+      tensor.sym_sizes(), tensor.sym_strides(),
       /*dtype=*/c10::make_optional(tensor.scalar_type()),
       /*layout=*/c10::make_optional(tensor.layout()),
       /*device=*/c10::make_optional(c10::Device(c10::kMeta)),
@@ -1122,13 +1122,15 @@ at::Tensor XLANativeFunctions::empty_symint(
       at::dtype_or_default(dtype)));
 }
 
-at::Tensor XLANativeFunctions::empty_strided(
-    at::IntArrayRef size, at::IntArrayRef stride,
+at::Tensor XLANativeFunctions::empty_strided_symint(
+    at::SymIntArrayRef sym_size, at::SymIntArrayRef sym_stride,
     c10::optional<at::ScalarType> dtype, c10::optional<at::Layout> layout,
     c10::optional<at::Device> device, c10::optional<bool> pin_memory) {
   XLA_FN_COUNTER("xla::");
-  at::Tensor t = empty_symint(c10::fromIntArrayRef(size), dtype, layout, device,
-                              pin_memory, c10::nullopt);
+  auto size = c10::asIntArrayRefSlow(sym_size);
+  auto stride = c10::asIntArrayRefSlow(sym_stride);
+  at::Tensor t =
+      empty_symint(sym_size, dtype, layout, device, pin_memory, c10::nullopt);
   return torch_xla::XLANativeFunctions::as_strided(t, size, stride,
                                                    /*storage_offset=*/0);
 }
@@ -3107,12 +3109,12 @@ XLANativeFunctions::native_group_norm(const at::Tensor& input,
 at::Tensor XLANativeFunctions::block_diag(at::TensorList tensors) {
   return at::native::block_diag(tensors);
 }
-at::Tensor XLANativeFunctions::new_empty_strided(
-    const at::Tensor& self, at::IntArrayRef size, at::IntArrayRef stride,
+at::Tensor XLANativeFunctions::new_empty_strided_symint(
+    const at::Tensor& self, at::SymIntArrayRef size, at::SymIntArrayRef stride,
     c10::optional<at::ScalarType> dtype, c10::optional<at::Layout> layout,
     c10::optional<at::Device> device, c10::optional<bool> pin_memory) {
-  return at::native::new_empty_strided(self, size, stride, dtype, layout,
-                                       device, pin_memory);
+  return at::native::new_empty_strided_symint(self, size, stride, dtype, layout,
+                                              device, pin_memory);
 }
 
 at::Tensor XLANativeFunctions::narrow_copy(const at::Tensor& self, int64_t dim,
