@@ -12,16 +12,19 @@
 #include "torch_xla/csrc/ops/select.h"
 #include "torch_xla/csrc/ops/unselect.h"
 #include "torch_xla/csrc/ops/update_slice.h"
+#include "torch_xla_test.h"
 
 namespace torch_xla {
 namespace cpp_test {
 
-TEST(IrTest, TestScalarCreate) {
+class IrTest : public TorchXlaTest {};
+
+TEST_F(IrTest, TestScalarCreate) {
   torch::lazy::NodePtr scalar = ScalarOp(1.0, xla::F32);
   ASSERT_TRUE(scalar != nullptr);
 }
 
-TEST(IrTest, TestHash) {
+TEST_F(IrTest, TestHash) {
   torch::lazy::NodePtr scalar1 = ScalarOp(1.0, xla::F32);
   torch::lazy::NodePtr scalar2 = ScalarOp(2.0, xla::F32);
   torch::lazy::Value add1 =
@@ -46,7 +49,7 @@ TEST(IrTest, TestHash) {
   EXPECT_NE(add1->hash(), sub->hash());
 }
 
-TEST(IrTest, TestSelectUnselect) {
+TEST_F(IrTest, TestSelectUnselect) {
   ForEachDevice([&](const torch::lazy::BackendDevice& device) {
     at::Tensor a =
         at::rand({4, 16, 3}, at::TensorOptions(at::kFloat)).abs() + 1.0;
@@ -76,7 +79,7 @@ TEST(IrTest, TestSelectUnselect) {
   });
 }
 
-TEST(IrTest, TestScopePusherWithoutDebugging) {
+TEST_F(IrTest, TestScopePusherWithoutDebugging) {
   bool restore_FLAGS_torch_lazy_ir_debug = FLAGS_torch_lazy_ir_debug;
   FLAGS_torch_lazy_ir_debug = false;
   torch::lazy::ScopePusher scope("TestScope");
@@ -87,7 +90,7 @@ TEST(IrTest, TestScopePusherWithoutDebugging) {
   FLAGS_torch_lazy_ir_debug = restore_FLAGS_torch_lazy_ir_debug;
 }
 
-TEST(IrTest, TestScopePusherWithDebugging) {
+TEST_F(IrTest, TestScopePusherWithDebugging) {
   bool restore_FLAGS_torch_lazy_ir_debug = FLAGS_torch_lazy_ir_debug;
   FLAGS_torch_lazy_ir_debug = true;
   torch::lazy::ScopePusher scope("TestScope");
@@ -98,7 +101,7 @@ TEST(IrTest, TestScopePusherWithDebugging) {
   FLAGS_torch_lazy_ir_debug = restore_FLAGS_torch_lazy_ir_debug;
 }
 
-TEST(IrTest, TestSizeNode) {
+TEST_F(IrTest, TestSizeNode) {
   torch::lazy::NodePtr scalar_node =
       ScalarOp(1.0, xla::ShapeUtil::MakeShape(xla::F32, {3, 4}));
   torch::lazy::NodePtr size_node_0 =
@@ -114,6 +117,13 @@ TEST(IrTest, TestSizeNode) {
   EXPECT_EQ(dim_node_0->getDynamicValue(), 3);
   EXPECT_EQ(dim_node_1->getStaticValue(), 4);
   EXPECT_EQ(dim_node_1->getDynamicValue(), 4);
+  ExpectCounterChanged("UncachedCompile", cpp_test::GetIgnoredCounters());
+
+  // calling getDynamicValue the second time should not trigger additional
+  // compilation and execution
+  EXPECT_EQ(dim_node_0->getDynamicValue(), 3);
+  EXPECT_EQ(dim_node_1->getDynamicValue(), 4);
+  ExpectCounterNotChanged("CachedCompile", cpp_test::GetIgnoredCounters());
 
   ForEachDevice([&](const torch::lazy::BackendDevice& device) {
     // Lower the SizeNode and execute the GetDimensionSize.
@@ -123,7 +133,7 @@ TEST(IrTest, TestSizeNode) {
   });
 }
 
-TEST(IrTest, TestSizeNodeDynamic) {
+TEST_F(IrTest, TestSizeNodeDynamic) {
   // t1 = torch.tensor(0).expand(10,10)
   // t1[0][0] = 1
   // res = t1.non_zero()
@@ -157,9 +167,16 @@ TEST(IrTest, TestSizeNodeDynamic) {
   EXPECT_EQ(dim_node_0->getDynamicValue(), 1);
   EXPECT_EQ(dim_node_1->getStaticValue(), 2);
   EXPECT_EQ(dim_node_1->getDynamicValue(), 2);
+  ExpectCounterChanged("UncachedCompile", cpp_test::GetIgnoredCounters());
+
+  // calling getDynamicValue the second time should not trigger additional
+  // compilation and execution
+  EXPECT_EQ(dim_node_0->getDynamicValue(), 1);
+  EXPECT_EQ(dim_node_1->getDynamicValue(), 2);
+  ExpectCounterNotChanged("CachedCompile", cpp_test::GetIgnoredCounters());
 }
 
-TEST(IrTest, TestSizeAddNode) {
+TEST_F(IrTest, TestSizeAddNode) {
   torch::lazy::NodePtr scalar_node =
       ScalarOp(1.0, xla::ShapeUtil::MakeShape(xla::F32, {3, 4}));
   torch::lazy::NodePtr size_node_0 =
@@ -180,7 +197,7 @@ TEST(IrTest, TestSizeAddNode) {
   });
 }
 
-TEST(IrTest, TestSizeMulNode) {
+TEST_F(IrTest, TestSizeMulNode) {
   torch::lazy::NodePtr scalar_node =
       ScalarOp(1.0, xla::ShapeUtil::MakeShape(xla::F32, {3, 4}));
   torch::lazy::NodePtr size_node_0 =
@@ -201,7 +218,7 @@ TEST(IrTest, TestSizeMulNode) {
   });
 }
 
-TEST(IrTest, TestSizeDivNode) {
+TEST_F(IrTest, TestSizeDivNode) {
   torch::lazy::NodePtr scalar_node =
       ScalarOp(1.0, xla::ShapeUtil::MakeShape(xla::F32, {12, 5}));
   torch::lazy::NodePtr size_node_0 =
