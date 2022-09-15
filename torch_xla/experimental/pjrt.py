@@ -189,7 +189,7 @@ def run_thread_per_device(local_rank: int, local_world_size: int,
       max_workers=num_threads) as executor:
     # TODO: clean up this statement
     device_ordinals = [
-        int(torch_xla._XLAC._xla_real_devices([d])[0].split(':')[1])
+        torch_xla._XLAC._xla_get_device_ordinal(d)
         for d in devices
     ]
     replica_results = list(
