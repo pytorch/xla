@@ -119,6 +119,15 @@ class FlatParameter(nn.Parameter):
          self._shared_param_infos),
     )
 
+  def to(self, *args, **kwargs) -> nn.Parameter:
+    """Make a copy of the flat parameter onto the specified device and dtype"""
+    out = FlatParameter([self.data.to(*args, **kwargs)], self.requires_grad)
+    out._param_numels = self._param_numels.copy()
+    out._param_shapes = self._param_shapes.copy()
+    out._param_infos = self._param_infos.copy()
+    out._shared_param_infos = self._shared_param_infos.copy()
+    return out
+
 
 # Static types.
 FlatTypes = FlatParameter
@@ -206,7 +215,7 @@ class XlaFlattenParamsWrapper(nn.Module):
           f"Incorrect param groups {len(overall_param_set)} vs {self.num_param_managed}"
       )
 
-    self.flat_params: List[FlatTypes] = []
+    flat_params: List[FlatTypes] = []
 
     # Prepare flat param names.
     if flat_param_names is None:
@@ -225,9 +234,9 @@ class XlaFlattenParamsWrapper(nn.Module):
       flat_param = FlatParameter(params, params[0].requires_grad)
       flat_param._param_infos = param_infos
       flat_param._shared_param_infos = shared_param_infos
-      self.flat_params.append(flat_param)
+      flat_params.append(flat_param)
 
-    self._flatten_params(self.flat_params)
+    self._flatten_params(flat_params)
 
     # Register hook to be called after state_dict() to remove the
     # "_fpw_module." prefix and before load_state_dict() to add it back.
@@ -246,6 +255,17 @@ class XlaFlattenParamsWrapper(nn.Module):
     property to the underlying module.
     """
     return self._fpw_module
+
+  @property
+  def flat_params(self) -> List[FlatTypes]:
+    """
+    Get the flattened parameters if this module is already flattened. Otherwise
+    returns an empty list.
+    """
+    if not self.is_flattened:
+      return []
+
+    return [getattr(self, n) for n in self.flat_param_names]
 
   @property
   def flat_param(self) -> nn.Parameter:
@@ -327,7 +347,6 @@ class XlaFlattenParamsWrapper(nn.Module):
         flat_params), f"{len(self.flat_param_names)} vs. {len(flat_params)}"
     for n, flat_param in zip(self.flat_param_names, flat_params):
       self.register_parameter(n, flat_param)
-    self.flat_params = flat_params
 
     # deregister the names as parameters
     for _, m, n in self._param_infos:
@@ -366,7 +385,6 @@ class XlaFlattenParamsWrapper(nn.Module):
     for n in self.flat_param_names:
       # This ensures the flat params are removed from the module.
       delattr(self, n)
-    self.flat_params = []
 
   def _unflatten_params_as_views(self) -> None:
     """
