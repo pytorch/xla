@@ -133,7 +133,7 @@ To run the tests, follow __one__ of the options below:
 * Run on Cloud TPU using the XRT client, set the XRT_TPU_CONFIG environment variable:
 
   ```Shell
-  export XRT_TPU_CONFIG="tpu_worker;0;<Internal IP of the TPU node>:8470"
+  export XRT_TPU_CONFIG="localservice;0;localhost:51011"
   ```
 
 Note that the IP of the TPU node can change if the TPU node is reset. If _PyTorch_
