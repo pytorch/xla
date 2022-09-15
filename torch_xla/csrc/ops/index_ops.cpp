@@ -103,19 +103,23 @@ CanonicalIndexInfo TransposeToFront(at::Tensor base,
   size_t base_rank = base.dim();
   dims.reserve(base_rank);
   XLA_CHECK_LE(indices.size(), base_rank);
-  for (size_t i = 0; i < indices.size(); i++) {
-    if (indices[i].defined()) {
+  size_t i = 0;
+  for (const auto& index : indices) {
+    if (index.defined()) {
       dims.push_back(i);
-      transposed_indices.emplace_back(indices[i]);
+      transposed_indices.emplace_back(index);
     }
+    ++i;
   }
-  for (size_t i = 0; i < indices.size(); i++) {
-    if (!indices[i].defined()) {
+  i = 0;
+  for (const auto& index : indices) {
+    if (!index.defined()) {
       dims.push_back(i);
     }
+    ++i;
   }
-  for (size_t i = indices.size(); i < base_rank; ++i) {
-    dims.push_back(i);
+  for (size_t idx = indices.size(); idx < base_rank; ++idx) {
+    dims.push_back(idx);
   }
   IndexAdjacencyInfo adjacency_info = GetIndexAdjacencyInfo(indices);
   if (adjacency_info.contiguous_non_null) {
