@@ -409,6 +409,11 @@ xla::Shape GtTensorOutputShape(const torch::lazy::Value& self,
   return GtScalarOutputShape(self, other);
 }
 
+xla::Shape HardshrinkOutputShape(const torch::lazy::Value& self,
+                                 const torch::lazy::Value& lambd) {
+  return GetXlaShape(self);
+}
+
 xla::Shape HardsigmoidOutputShape(const torch::lazy::Value& input) {
   return GetXlaShape(input);
 }

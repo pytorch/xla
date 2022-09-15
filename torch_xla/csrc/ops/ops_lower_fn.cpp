@@ -330,6 +330,12 @@ torch_xla::XlaOpVector GtTensor::Lower(LoweringContext* loctx) const {
   return ReturnOp(BuildComparisonOp(at::aten::gt, xla_input, xla_other), loctx);
 }
 
+torch_xla::XlaOpVector Hardshrink::Lower(LoweringContext* loctx) const {
+  xla::XlaOp xla_input = loctx->GetOutputOp(operand(0));
+  xla::XlaOp lambd = loctx->GetOutputOp(operand(1));
+  return ReturnOp(BuildHardshrink(xla_input, lambd), loctx);
+}
+
 torch_xla::XlaOpVector Hardsigmoid::Lower(LoweringContext* loctx) const {
   xla::XlaOp xla_input = loctx->GetOutputOp(operand(0));
   return ReturnOp(BuildHardSigmoid(xla_input), loctx);

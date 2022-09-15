@@ -43,6 +43,7 @@ full_codegen:
   - ge.Tensor
   - gt.Scalar
   - gt.Tensor
+  - hardshrink
   - hardsigmoid
   - hardsigmoid_backward
   - hardswish
@@ -172,7 +173,6 @@ supported:
   - gather
   - gelu
   - gelu_backward
-  - hardshrink
   - hardshrink_backward
   - hardtanh
   - hardtanh_backward
