@@ -85,4 +85,9 @@ class SizeDiv : public XlaNode, public torch::lazy::DimensionNode {
   int64_t upper_bound_;
 };
 
+const torch::lazy::DimensionNode* DimCast(torch::lazy::Output output);
+const torch::lazy::DimensionNode* DimCast(const torch::lazy::Node* node);
+const std::shared_ptr<torch::lazy::DimensionNode> DimCast(
+    const torch::lazy::NodePtr& node);
+
 }  // namespace torch_xla
