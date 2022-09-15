@@ -63,7 +63,7 @@ std::string DebugUtil::GetTensorsGraphInfo(
       const XLATensorPtr& tensor = tensors[(*indices)[i]];
       torch::lazy::Value ir_value;
       if (ir_values == nullptr) {
-        ir_value = tensor.CurrentIrValue();
+        ir_value = tensor->CurrentIrValue();
       } else {
         ir_value = (*ir_values)[i];
       }

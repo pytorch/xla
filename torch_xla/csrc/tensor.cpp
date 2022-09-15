@@ -1428,17 +1428,17 @@ void XLATensor::FetchTensorData(
   tensor_data_vec.reserve(indices.size());
   for (auto index : indices) {
     XLATensorPtr& tensor = (*tensors)[index];
-    ir::Value ir_value = tensor.CurrentIrValue();
+    torch::lazy::Value ir_value = tensor->CurrentIrValue();
     ir_values.push_back(ir_value);
-    const torch::lazy::BackendDevice& tensor_device = tensor.GetDevice();
-    xla::Shape shape =
-        MakeShapeWithDeviceLayout(tensor.shape(), tensor_device.hw_type);
+    const torch::lazy::BackendDevice& tensor_device = tensor->GetDevice();
+    xla::Shape shape = MakeShapeWithDeviceLayout(
+        tensor->shape(), static_cast<XlaDeviceType>(tensor_device.type()));
     torch::lazy::BackendDataPtr xla_data =
         WrapXlaData(xla::ComputationClient::Get()->CreateDataPlaceholder(
             tensor_device.toString(), std::move(shape)));
     tensor_data_vec.push_back(xla_data);
-    if (tensor.CurrentXlaData() == nullptr && config.force_xla_data) {
-      tensor.AssignIrValue(ir::Value());
+    if (tensor->CurrentXlaData() == nullptr && config.force_xla_data) {
+      tensor->AssignIrValue(torch::lazy::Value());
     }
   }
 }
@@ -1466,9 +1466,9 @@ std::vector<torch::lazy::BackendDataPtr> XLATensor::SetTensorData(
     torch::lazy::BackendDataPtr xla_data = tensor->CurrentXlaData();
     if (xla_data == nullptr && config.force_xla_data) {
       xla_data = tensor_data_vec[i];
-      tensor.data()->xla_data = xla_data;
-      tensor.data()->view = nullptr;
-      tensor.data()->tensor_data = c10::nullopt;
+      tensor->data()->xla_data = xla_data;
+      tensor->data()->view = nullptr;
+      tensor->data()->tensor_data = c10::nullopt;
     }
     tensors_data.emplace_back(std::move(xla_data));
   }
@@ -1553,7 +1553,7 @@ std::shared_ptr<XLATensor::Async> XLATensor::ScheduleSyncTensorsGraph(
     std::vector<XLATensorPtr>* tensors, SyncTensorCollection* coll,
     std::vector<torch::lazy::BackendDataPtr> parameters_data,
     std::string device, ComputationCache::TypePtr cached_computation,
-    std::vector<torch::lazy::BackendDataPtr>& tensor_data_vec) {
+    const std::vector<torch::lazy::BackendDataPtr>& tensor_data_vec) {
   auto tensors_data =
       SetTensorData(tensors, coll->config, coll->indices, tensor_data_vec);
   return ScheduleSyncTensorsGraph(coll, std::move(parameters_data),
