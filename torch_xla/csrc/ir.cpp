@@ -48,9 +48,7 @@ XlaNode::XlaNode(torch::lazy::OpKind op, torch::lazy::OpList operands,
     : torch::lazy::Node(op, operands, std::move(shapes), num_outputs),
       xla_shape_(std::move(xla_shape)),
       node_hash_(torch::lazy::HashCombine(op.hash(), hash_seed)),
-      dag_hash_(GetOperandHashes(operands, node_hash_)) {
-  std::cout << "WONJOO: XlaNode::XlaNode1" << std::endl;
-}
+      dag_hash_(GetOperandHashes(operands, node_hash_)) {}
 
 XlaNode::XlaNode(torch::lazy::OpKind op, torch::lazy::OpList operands,
                  std::vector<torch::lazy::Shape>&& shapes,
@@ -60,7 +58,6 @@ XlaNode::XlaNode(torch::lazy::OpKind op, torch::lazy::OpList operands,
       node_hash_(torch::lazy::HashCombine(op.hash(), hash_seed)),
       dag_hash_(GetOperandHashes(operands, node_hash_)) {
   xla_shape_ = GetOpShape(xla_shape_fn);
-  std::cout << "WONJOO: XlaNode::XlaNode2" << std::endl;
 }
 
 XlaNode::XlaNode(torch::lazy::OpKind op, torch::lazy::OpList operands,
@@ -70,17 +67,13 @@ XlaNode::XlaNode(torch::lazy::OpKind op, torch::lazy::OpList operands,
                         num_outputs),
       xla_shape_(std::move(xla_shape)),
       node_hash_(torch::lazy::HashCombine(op.hash(), hash_seed)),
-      dag_hash_(GetOperandHashes(operands, node_hash_)) {
-  std::cout << "WONJOO: XlaNode::XlaNode3" << std::endl;
-}
+      dag_hash_(GetOperandHashes(operands, node_hash_)) {}
 
 XlaNode::XlaNode(torch::lazy::OpKind op, torch::lazy::OpList operands,
                  xla::Shape xla_shape, size_t num_outputs,
                  torch::lazy::hash_t hash_seed)
     : XlaNode(op, operands, std::vector<torch::lazy::Shape>{}, xla_shape,
-              num_outputs, hash_seed) {
-  std::cout << "WONJOO: XlaNode::XlaNode4" << std::endl;
-}
+              num_outputs, hash_seed) {}
 
 XlaNode::XlaNode(torch::lazy::OpKind op, torch::lazy::OpList operands,
                  const std::function<torch::lazy::Shape()>& shape_fn,
@@ -91,7 +84,6 @@ XlaNode::XlaNode(torch::lazy::OpKind op, torch::lazy::OpList operands,
   // full hash information, then fetch/compute the real shape.
   addComputedShape(shape_fn);
   xla_shape_ = GetOpShape(xla_shape_fn);
-  std::cout << "WONJOO: XlaNode::XlaNode5" << std::endl;
 }
 
 XlaNode::XlaNode(torch::lazy::OpKind op, torch::lazy::OpList operands,
@@ -101,7 +93,6 @@ XlaNode::XlaNode(torch::lazy::OpKind op, torch::lazy::OpList operands,
   // Forward the constructor to the one above (with empty shape), so we have the
   // full hash information, then fetch/compute the real shape.
   xla_shape_ = GetOpShape(xla_shape_fn);
-  std::cout << "WONJOO: XlaNode::XlaNode6" << std::endl;
 }
 
 XlaNode::XlaNode(torch::lazy::OpKind op, torch::lazy::Shape shape,
@@ -110,23 +101,11 @@ XlaNode::XlaNode(torch::lazy::OpKind op, torch::lazy::Shape shape,
     : torch::lazy::Node(op, shape, num_outputs),
       xla_shape_(std::move(xla_shape)),
       node_hash_(GetOpHash(op, xla_shape_, hash_seed)),
-      dag_hash_(node_hash_) {
-  std::cout << "WONJOO: XlaNode::XlaNode7" << std::endl;
-  std::cout << "WONJOO: XlaNode::XlaNode7-2, xla_shape_.ToString(true)="
-            << xla_shape_.ToString(true) << std::endl;
-  std::cout << "WONJOO: XlaNode::XlaNode7-3, xla_shape_.has_layout()="
-            << xla_shape_.has_layout() << std::endl;
-}
+      dag_hash_(node_hash_) {}
 
 XlaNode::XlaNode(torch::lazy::OpKind op, xla::Shape xla_shape,
                  size_t num_outputs, torch::lazy::hash_t hash_seed)
-    : XlaNode(op, torch::lazy::Shape(), xla_shape, num_outputs, hash_seed) {
-  std::cout << "WONJOO: XlaNode::XlaNode8" << std::endl;
-  std::cout << "WONJOO: XlaNode::XlaNode8-2, xla_shape_.ToString(true)="
-            << xla_shape_.ToString(true) << std::endl;
-  std::cout << "WONJOO: XlaNode::XlaNode8-3, xla_shape_.has_layout()="
-            << xla_shape_.has_layout() << std::endl;
-}
+    : XlaNode(op, torch::lazy::Shape(), xla_shape, num_outputs, hash_seed) {}
 
 XlaNode::~XlaNode() {}
 
@@ -178,21 +157,12 @@ xla::Shape XlaNode::GetOpShape(
   if (shape == nullptr) {
     shape = shape_cache->Add(hash(), std::make_shared<xla::Shape>(shape_fn()));
   }
-  std::cout << "WONJOO: XlaNode::GetOpShape, shape->ToString(true)="
-            << shape->ToString(true) << std::endl;
-  std::cout << "WONJOO: XlaNode::GetOpShape, shape->has_layout()="
-            << shape->has_layout() << std::endl;
   return *shape;
 }
 
 const xla::Shape& GetXlaShape(const torch::lazy::Value& value) {
   XlaNode* casted = dynamic_cast<XlaNode*>(value.node.get());
-  const xla::Shape& ret = casted->xla_shape(value.index);
-  std::cout << "WONJOO: at ir.cpp::GetXlaShape, shape.ToString(true)="
-            << ret.ToString(true) << std::endl;
-  std::cout << "WONJOO: at ir.cpp::GetXlaShape, shape.has_layout()="
-            << ret.has_layout() << std::endl;
-  return ret;
+  return casted->xla_shape(value.index);
 }
 
 }  // namespace torch_xla

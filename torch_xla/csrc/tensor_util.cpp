@@ -39,7 +39,6 @@ void TransferToServerAsync(std::shared_ptr<DataAsync> async,
                            const std::vector<std::string>& devices) {
   XLA_TIMED("TransferToServerAsync");
 
-  std::cout << "WONJOO: at tensor_util.cpp::TransferToServerAsync" << std::endl;
   std::vector<xla::ComputationClient::DataPtr> async_xla_datas =
       xla::ComputationClient::Get()->CreateAsyncDatas(async->source_tensors);
   async->handle_unlockers =
@@ -654,7 +653,6 @@ torch::lazy::BackendDataPtr TensorToXlaData(
     const at::Tensor& tensor, const xla::Shape& shape,
     const torch::lazy::BackendDevice& device) {
   XLA_TIMED("TensorToData");
-  std::cout << "WONJOO: at tensor_util.cpp::TensorToXlaData" << std::endl;
   static const bool transfer_async =
       xla::sys_util::GetEnvBool("XLA_TRANSFER_SCALAR_ASYNC", false);
   if (transfer_async && tensor.dim() == 0 && tensor.numel() == 1) {
@@ -700,7 +698,6 @@ torch::lazy::BackendDataPtr TensorToXlaData(
 template <typename SType, typename DType>
 at::Tensor XlaLiteralToTensor(const xla::Literal& literal,
                               at::ScalarType atype) {
-  std::cout << "WONJOO: at tensor_util.cpp, XlaLiteralToTensor" << std::endl;
   std::vector<int64_t> dimensions =
       torch::lazy::ToVector<int64_t>(literal.shape().dimensions());
   xla::Shape torch_shape = MakeTorchTensorLayout(
@@ -757,14 +754,12 @@ at::Tensor XlaLiteralToTensorHelper(const xla::Literal& literal,
 xla::ComputationClient::DataPtr UnwrapXlaData(
     const torch::lazy::BackendDataPtr& data) {
   XLA_TIMED("UnwrapXlaData");
-  std::cout << "WONJOO: at tensor_util.cpp::UnwrapXlaData" << std::endl;
   return dynamic_cast<XLAData*>(data.get())->xla_data();
 }
 
 std::vector<xla::ComputationClient::DataPtr> UnwrapXlaData(
     absl::Span<const torch::lazy::BackendDataPtr> datas) {
   XLA_TIMED("UnwrapXlaData");
-  std::cout << "WONJOO: at tensor_util.cpp::UnwrapXlaData vector" << std::endl;
   std::vector<xla::ComputationClient::DataPtr> xla_datas;
   xla_datas.reserve(datas.size());
   for (const auto& data : datas) {
@@ -864,7 +859,6 @@ std::vector<torch::lazy::BackendDataPtr> CreateTensorsData(
     const std::vector<at::Tensor>& tensors,
     const std::vector<std::string>& devices, bool transfer_async) {
   XLA_TIMED("TensorToData");
-  std::cout << "WONJOO: at tensor_util.cpp::CreateTensorsData" << std::endl;
   XLA_CHECK_EQ(tensors.size(), devices.size());
   if (transfer_async) {
     std::shared_ptr<DataAsync> async = std::make_shared<DataAsync>();
@@ -979,7 +973,6 @@ std::vector<torch::lazy::BackendDataPtr> CreateTensorsData(
 
 xla::Literal GetTensorLiteral(const at::Tensor& tensor, const xla::Shape* shape,
                               const torch::lazy::BackendDevice* device) {
-  std::cout << "WONJOO: at tensor_util.cpp::GetTensorLiteral" << std::endl;
   torch::lazy::BackendDevice xla_device = GetDeviceOrCurrent(device);
   xla::Shape computed_shape;
   if (shape == nullptr) {
@@ -992,8 +985,6 @@ xla::Literal GetTensorLiteral(const at::Tensor& tensor, const xla::Shape* shape,
   xla::Literal literal(*shape);
   PopulateTensorBuffer(tensor, *shape, literal.untyped_data(),
                        literal.size_bytes(), xla_device);
-  std::cout << "WONJOO: shape->has_layout()" << shape->has_layout()
-            << std::endl;
   return literal;
 }
 
@@ -1061,25 +1052,7 @@ std::vector<xla::Shape> GetComponentShapes(const xla::Shape& shape) {
 
 xla::Shape MakeShapeWithDeviceLayout(const xla::Shape& shape,
                                      XlaDeviceType hw_type) {
-  std::cout
-      << "WONJOO: at TensorUtil::MakeShapeWithDeviceLayout, shape.has_layout()="
-      << shape.has_layout() << std::endl;
   xla::Shape device_shape(shape);
-  std::cout << "WONJOO: at TensorUtil::MakeShapeWithDeviceLayout2, "
-               "shape.ToString(true)="
-            << shape.ToString(true) << std::endl;
-  std::cout << "WONJOO: at TensorUtil::MakeShapeWithDeviceLayout3, "
-               "shape.element_type()="
-            << shape.element_type() << std::endl;
-  // xla::Shape device_shape = MakeArrayShapeFromDimensions(
-  //    shape.dimensions(),
-  //    shape.dynamic_dimensions(),
-  //    shape.element_type(),
-  //    hw_type
-  //);
-  // std::cout << "WONJOO: at TensorUtil::MakeShapeWithDeviceLayout,
-  // device_shape.has_layout()=" << device_shape.has_layout() << std::endl;
-
   xla::ShapeUtil::ForEachMutableSubshape(
       &device_shape, [&](xla::Shape* subshape, const xla::ShapeIndex&) {
         if (subshape->IsArray()) {

@@ -11,9 +11,7 @@ namespace torch_xla {
 DeviceData::DeviceData(std::shared_ptr<torch::lazy::BackendData> data)
     : XlaNode(xla_device_data, UnwrapXlaData(data)->shape(), /*num_outputs=*/1,
               /*hash_seed=*/(uint32_t)101),
-      data_(std::move(data)) {
-  std::cout << "WONJOO: at DeviceData::DeviceData()" << std::endl;
-}
+      data_(std::move(data)) {}
 
 std::string DeviceData::ToString() const {
   std::stringstream ss;

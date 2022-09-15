@@ -860,14 +860,7 @@ xla::Shape PyShapeToShape(py::object shape) {
         GetTupleVector<bool>(py_shape["dynamic_dimensions"]);
     return xla::ShapeUtil::MakeShape(xla_type, dimensions, dynamic_dimensions);
   }
-  xla::Shape ret = xla::ShapeUtil::MakeShape(xla_type, dimensions);
-  std::cout
-      << "WONJOO: at xla_op_builder.cpp::PyShapeToShape, shape.ToString(true)="
-      << ret.ToString(true) << std::endl;
-  std::cout
-      << "WONJOO: at xla_op_builder.cpp::PyShapeToShape, shape.has_layout()="
-      << ret.has_layout() << std::endl;
-  return ret;
+  return xla::ShapeUtil::MakeShape(xla_type, dimensions);
 }
 
 OpPtr CreateOp(BuilderPtr builder, const std::string& opname,

@@ -350,13 +350,11 @@ std::vector<size_t> XrtComputationClient::PartitionTransferToServer(
 
 std::vector<ComputationClient::DataPtr> XrtComputationClient::TransferToServer(
     absl::Span<const TensorSource> tensors) {
-  std::cout << "WONJOO: at XrtComputationClient::TransferToServer1" << std::endl;
   return TransferToServerHelper(tensors, {});
 }
 
 void XrtComputationClient::TransferToServer(
     absl::Span<const TensorSource> tensors, absl::Span<const DataPtr> datas) {
-  std::cout << "WONJOO: at XrtComputationClient::TransferToServer2" << std::endl;
   XLA_CHECK_EQ(tensors.size(), datas.size());
   TransferToServerHelper(tensors, datas);
   return;
@@ -365,7 +363,6 @@ void XrtComputationClient::TransferToServer(
 std::vector<ComputationClient::DataPtr>
 XrtComputationClient::TransferToServerHelper(
     absl::Span<const TensorSource> tensors, absl::Span<const DataPtr> datas) {
-  std::cout << "WONJOO: at XrtComputationClient::TransferToServerHelper" << std::endl;
   auto partitions = PartitionTransferToServer(tensors);
   if (partitions.size() == 1) {
     // Fast path in case of single partition. Avoid creating threads and
@@ -406,7 +403,6 @@ XrtComputationClient::TransferToServerHelper(
 std::vector<ComputationClient::DataPtr>
 XrtComputationClient::TransferToServerInternal(
     absl::Span<const TensorSource> tensors, absl::Span<const DataPtr> datas) {
-  std::cout << "WONJOO: at XrtComputationClient::TransferToServerInternal" << std::endl;
   metrics::TimedSection timed(TransferToServerMetric());
   tensorflow::profiler::TraceMe activity(
       "TransferToServerInternal", tensorflow::profiler::TraceMeLevel::kInfo);
@@ -575,8 +571,6 @@ std::vector<Literal> XrtComputationClient::TransferFromServer(
 
 std::vector<ComputationClient::ComputationPtr> XrtComputationClient::Compile(
     std::vector<CompileInstance> instances) {
-  std::cout << "WONJOO: at XrtComputationClient::Compile1" << std::endl;
-  std::cout << "WONJOO: at XrtComputationClient::Compile2, instances.size()=" << instances.size() << std::endl;
   metrics::TimedSection timed(CompileMetric());
   tensorflow::profiler::TraceMe activity(
       "Compile", tensorflow::profiler::TraceMeLevel::kInfo);

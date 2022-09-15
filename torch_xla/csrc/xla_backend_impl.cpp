@@ -129,7 +129,6 @@ class XlaBackendImpl : public torch::lazy::BackendImplInterface {
 
   std::vector<torch::lazy::ComputationPtr> Compile(
       std::vector<torch::lazy::ComputationPtr> instances) const override {
-    std::cout << "WONJOO: at xla_backend_impl.cpp::Compile" << std::endl;
     std::vector<torch::lazy::ComputationPtr> res;
     std::vector<xla::ComputationClient::CompileInstance> compile_instances;
     torch::lazy::BackendDevice current_device = GetCurrentDevice();
