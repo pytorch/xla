@@ -83,15 +83,6 @@ void ReplaceXlaTensor(const at::Tensor& tensor, XLATensorPtr new_xla_tensor) {
   impl->set_tensor(std::move(new_xla_tensor));
 }
 
-std::vector<XLATensorPtr> GetXlaTensors(absl::Span<const at::Tensor> tensors) {
-  std::vector<XLATensorPtr> xla_tensors;
-  xla_tensors.reserve(tensors.size());
-  for (const auto& tensor : tensors) {
-    xla_tensors.push_back(bridge::GetXlaTensor(tensor));
-  }
-  return xla_tensors;
-}
-
 std::vector<XLATensorPtr> GetXlaTensors(const at::ITensorListRef& tensors) {
   std::vector<XLATensorPtr> xla_tensors;
   xla_tensors.reserve(tensors.size());

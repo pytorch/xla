@@ -26,7 +26,6 @@ XLATensorPtr GetXlaTensor(const at::Tensor& tensor);
 void ReplaceXlaTensor(const at::Tensor& tensor, XLATensorPtr new_xla_tensor);
 
 // Same as above, applied to a list of tensors.
-std::vector<XLATensorPtr> GetXlaTensors(absl::Span<const at::Tensor> tensors);
 std::vector<XLATensorPtr> GetXlaTensors(const at::ITensorListRef& tensors);
 
 torch_xla::XLATensorPtr GetXlaTensorOrCreateForWrappedNumber(
