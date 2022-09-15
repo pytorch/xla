@@ -52,7 +52,6 @@
 #include "torch_xla/csrc/ops/gather.h"
 #include "torch_xla/csrc/ops/generic.h"
 #include "torch_xla/csrc/ops/get_dimensions_size.h"
-#include "torch_xla/csrc/ops/hardshrink.h"
 #include "torch_xla/csrc/ops/hardtanh_backward.h"
 #include "torch_xla/csrc/ops/index_ops.h"
 #include "torch_xla/csrc/ops/index_select.h"
@@ -1347,12 +1346,6 @@ XLATensorPtr XLATensor::le(const XLATensorPtr& input, const at::Scalar& other) {
 XLATensorPtr XLATensor::le(const XLATensorPtr& input,
                            const XLATensorPtr& other) {
   return DispatchComparisonOp(at::aten::le, input, other);
-}
-
-XLATensorPtr XLATensor::hardshrink(const XLATensorPtr& input,
-                                   const at::Scalar& lambda) {
-  return input->CreateFrom(
-      torch::lazy::MakeNode<Hardshrink>(input->GetIrValue(), lambda));
 }
 
 XLATensorPtr XLATensor::hardshrink_backward(const XLATensorPtr& grad_out,
