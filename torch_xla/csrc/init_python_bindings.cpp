@@ -32,7 +32,6 @@
 #include "tensorflow/core/example/example.pb.h"
 #include "tensorflow/core/example/feature.pb.h"
 #include "tensorflow/core/platform/env.h"
-#include "tensorflow/core/profiler/convert/tool_options.h"
 #include "tensorflow/core/profiler/lib/traceme.h"
 #include "tensorflow/python/profiler/internal/profiler_pywrap_impl.h"
 #include "tensorflow/python/profiler/internal/traceme_wrapper.h"
@@ -731,9 +730,9 @@ py::dict GetMemoryInfo(const std::string& device_str) {
 
 // Must be called holding GIL as it reads Python objects. Also, Python objects
 // are reference counted; reading py::dict will increase its reference count.
-tensorflow::profiler::ToolOptions ToolOptionsFromPythonDict(
+absl::flat_hash_map<std::string, std::variant<int, std::string>> ConvertDictToMap(
     const py::dict& dictionary) {
-  tensorflow::profiler::ToolOptions map;
+  absl::flat_hash_map<std::string, std::variant<int, std::string>> map;
   for (const auto& item : dictionary) {
     std::variant<int, std::string> value;
     try {
@@ -784,8 +783,8 @@ void BuildProfilerSubmodule(py::module* m) {
                [](const char* service_addr, const char* logdir, int duration_ms,
                   int num_tracing_attempts, int timeout_s, int interval_s,
                   py::dict options) {
-                 tensorflow::profiler::ToolOptions opts =
-                     ToolOptionsFromPythonDict(options);
+                 absl::flat_hash_map<std::string, std::variant<int, std::string>> opts =
+                     ConvertDictToMap(options);
                  std::chrono::seconds sleep_s(interval_s);
                  tensorflow::Status status;
                  {
