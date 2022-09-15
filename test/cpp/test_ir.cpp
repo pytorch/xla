@@ -118,12 +118,14 @@ TEST_F(IrTest, TestSizeNode) {
   EXPECT_EQ(dim_node_1->getStaticValue(), 4);
   EXPECT_EQ(dim_node_1->getDynamicValue(), 4);
   ExpectCounterChanged("UncachedCompile", cpp_test::GetIgnoredCounters());
+  ExpectCounterNotChanged("CachedSizeNodeValue",
+                          cpp_test::GetIgnoredCounters());
 
-  // calling getDynamicValue the second time should not trigger additional
-  // compilation and execution
+  // calling getDynamicValue the second time should use the cached value.
+
   EXPECT_EQ(dim_node_0->getDynamicValue(), 3);
   EXPECT_EQ(dim_node_1->getDynamicValue(), 4);
-  ExpectCounterNotChanged("CachedCompile", cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("CachedSizeNodeValue", cpp_test::GetIgnoredCounters());
 
   ForEachDevice([&](const torch::lazy::BackendDevice& device) {
     // Lower the SizeNode and execute the GetDimensionSize.
@@ -148,6 +150,7 @@ TEST_F(IrTest, TestSizeNodeDynamic) {
   std::vector<int64_t> base_indeies = {0, 0};
   torch::lazy::NodePtr slice_node = torch::lazy::MakeNode<UpdateSlice>(
       expand_value, scalar_value_1, base_indeies);
+  // Use Slice to update value at [0][0]
   torch::lazy::Value slice_value = torch::lazy::Value(slice_node, 0);
   torch::lazy::NodePtr nonzero_node =
       torch::lazy::MakeNode<NonZero>(slice_value);
@@ -168,12 +171,13 @@ TEST_F(IrTest, TestSizeNodeDynamic) {
   EXPECT_EQ(dim_node_1->getStaticValue(), 2);
   EXPECT_EQ(dim_node_1->getDynamicValue(), 2);
   ExpectCounterChanged("UncachedCompile", cpp_test::GetIgnoredCounters());
+  ExpectCounterNotChanged("CachedSizeNodeValue",
+                          cpp_test::GetIgnoredCounters());
 
-  // calling getDynamicValue the second time should not trigger additional
-  // compilation and execution
+  // calling getDynamicValue the second time should use the cached value.
   EXPECT_EQ(dim_node_0->getDynamicValue(), 1);
   EXPECT_EQ(dim_node_1->getDynamicValue(), 2);
-  ExpectCounterNotChanged("CachedCompile", cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("CachedSizeNodeValue", cpp_test::GetIgnoredCounters());
 }
 
 TEST_F(IrTest, TestSizeAddNode) {
