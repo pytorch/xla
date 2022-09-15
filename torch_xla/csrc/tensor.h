@@ -5,6 +5,7 @@
 #include <string>
 #include <unordered_map>
 
+#include "c10/core/SymIntNodeImpl.h"
 #include "tensorflow/compiler/xla/client/xla_builder.h"
 #include "tensorflow/compiler/xla/status.h"
 #include "tensorflow/compiler/xla/types.h"
@@ -25,6 +26,16 @@
 #include "torch_xla/csrc/xla_sharding_util.h"
 
 namespace torch_xla {
+
+class TORCH_API XLASymIntNodeImpl : public c10::SymIntNodeImpl {
+ public:
+  XLASymIntNodeImpl(torch::lazy::NodePtr ptr) : node_(std::move(ptr)) {}
+  c10::SymIntNode mul(const c10::SymIntNode& other) override;
+  torch::lazy::NodePtr node() { return node_; }
+
+ private:
+  torch::lazy::NodePtr node_;
+};
 
 class XLATensor;
 using XLATensorPtr = c10::intrusive_ptr<XLATensor>;
@@ -374,6 +385,8 @@ class XLATensor : public c10::intrusive_ptr_target {
   static XLATensorPtr addmm(const XLATensorPtr& input,
                             const XLATensorPtr& weight,
                             const XLATensorPtr& bias);
+
+  static XLATensorPtr alias(const XLATensorPtr& input);
 
   static XLATensorPtr amax(const XLATensorPtr& input,
                            std::vector<int64_t> dimensions,
@@ -1178,22 +1191,19 @@ class XLATensor : public c10::intrusive_ptr_target {
                             const XLATensorPtr& input,
                             const XLATensorPtr& other);
 
-  // XLA SPMD sharding spec annoation. The XLA tensor uses this to create
-  // HloSharding for replication, manual and tile shardings.
+  // XLATensor sharding annotation. ShardingSpec wraps xla::OpSharding and
+  // can be extended to hold other sharding information from the user.
   struct ShardingSpec {
-    ShardingSpec(const xla::OpSharding& sharding, bool replicated, bool manual)
-        : sharding(sharding), replicated(replicated), manual(manual) {}
+    ShardingSpec(const xla::OpSharding& sharding) : sharding(sharding) {}
 
-    const xla::OpSharding sharding;
-    bool replicated;
-    bool manual;
+    xla::OpSharding sharding;
   };
+  using ShardingSpecPtr = std::shared_ptr<ShardingSpec>;
 
-  std::shared_ptr<ShardingSpec> sharding_spec() const;
-  bool IsShardingAnnotated() const;
-  void SetShardingSpec(const xla::OpSharding& sharding, bool replicated,
-                       bool manual);
+  // Annotate the IR value with ShardingSpec.
+  void SetShardingSpec(const ShardingSpec& sharding_spec);
   void ClearShardingSpec();
+  ShardingSpecPtr sharding_spec() const;
 
   const c10::Storage& Storage() const { return storage_; }
 
@@ -1300,10 +1310,6 @@ class XLATensor : public c10::intrusive_ptr_target {
     const torch::lazy::BackendDevice device;
     const int64_t unique_id = 0;
     size_t generation = 1;
-
-    // Sharding annotation for the tensor
-    // TODO(yeounoh) detach & clear for the unpartitioned tensor
-    std::shared_ptr<ShardingSpec> sharding_spec;
   };
 
   XLATensor(const at::Tensor& tensor, const torch::lazy::BackendDevice& device);
