@@ -4,6 +4,7 @@ import pjrt.distributed_util as util
 
 
 class TestXrtDistributedDataParallel(parameterized.TestCase):
+
   @staticmethod
   def _ddp_correctness(rank):
     util.ddp_correctness(None)

@@ -39,6 +39,7 @@ def train_step(model, inputs, labels, optimizer, loss_fn):
 
   return loss
 
+
 def ddp_correctness(init_file: str):
   rank, world_size = init_xla_backend(init_file)
 
@@ -66,14 +67,14 @@ def ddp_correctness(init_file: str):
     cpu_inputs = torch.randn(global_batch_size, 10)
     cpu_labels = torch.randn(global_batch_size, 10)
     cpu_loss = train_step(cpu_model, cpu_inputs, cpu_labels, cpu_optimizer,
-                            loss_fn)
+                          loss_fn)
 
     ddp_inputs = copy.deepcopy(cpu_inputs[offset:offset +
                                           local_batch_size]).to(device)
     ddp_labels = copy.deepcopy(cpu_labels[offset:offset +
                                           local_batch_size]).to(device)
     ddp_loss = train_step(ddp_model, ddp_inputs, ddp_labels, ddp_optimizer,
-                            loss_fn)
+                          loss_fn)
     with torch.no_grad():
       ddp_loss = ddp_loss / world_size
       dist.all_reduce(ddp_loss)
