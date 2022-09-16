@@ -70,11 +70,11 @@ c10::optional<at::Tensor> to_meta(const c10::optional<at::Tensor>& tensor) {
   return c10::nullopt;
 }
 
-std::vector<at::Tensor> to_meta(const at::TensorList& t_list) {
+std::vector<at::Tensor> to_meta(const at::ITensorListRef& t_list) {
   std::vector<at::Tensor> outs;
   outs.reserve(t_list.size());
-  for (const auto& i : c10::irange(t_list.size())) {
-    outs.push_back(to_meta(t_list[i]));
+  for (const auto& tensor : t_list) {
+    outs.push_back(to_meta(tensor));
   }
   return outs;
 }
@@ -875,7 +875,8 @@ at::Tensor XLANativeFunctions::bmm(const at::Tensor& self,
       XLATensor::bmm(bridge::GetXlaTensor(self), bridge::GetXlaTensor(mat2)));
 }
 
-at::Tensor XLANativeFunctions::cat(at::TensorList tensors, int64_t dim) {
+at::Tensor XLANativeFunctions::cat(const at::ITensorListRef& tensors,
+                                   int64_t dim) {
   XLA_FN_COUNTER("xla::");
   return bridge::AtenFromXlaTensor(XLATensor::cat(
       bridge::GetXlaTensors(tensors), dim, at::native::result_type(tensors)));
