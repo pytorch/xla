@@ -421,6 +421,12 @@ xla::PrimitiveType XlaHelpers::PromoteType(xla::PrimitiveType type1,
   return type1;
 }
 
+xla::PrimitiveType XlaHelpers::PromoteType(xla::PrimitiveType type1,
+                                           xla::PrimitiveType type2,
+                                           xla::PrimitiveType type3) {
+  return PromoteType(PromoteType(type1, type2), type3);
+}
+
 std::pair<xla::XlaOp, xla::XlaOp> XlaHelpers::PromoteValues(xla::XlaOp op1,
                                                             xla::XlaOp op2) {
   xla::PrimitiveType type1 = TypeOfXlaOp(op1);
@@ -440,8 +446,7 @@ std::tuple<xla::XlaOp, xla::XlaOp, xla::XlaOp> XlaHelpers::PromoteValues(
   xla::PrimitiveType type1 = TypeOfXlaOp(op1);
   xla::PrimitiveType type2 = TypeOfXlaOp(op2);
   xla::PrimitiveType type3 = TypeOfXlaOp(op3);
-  xla::PrimitiveType result_type =
-      PromoteType(PromoteType(type1, type2), type3);
+  xla::PrimitiveType result_type = PromoteType(type1, type2, type3);
   if (type1 != result_type) {
     op1 = ConvertTo(op1, type1, result_type, /*device=*/nullptr);
   }

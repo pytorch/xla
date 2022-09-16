@@ -7,12 +7,14 @@
 
 #include "tensorflow/compiler/xla/client/lib/arithmetic.h"
 #include "tensorflow/compiler/xla/client/lib/constants.h"
+#include "tensorflow/compiler/xla/client/lib/matrix.h"
 #include "tensorflow/compiler/xla/literal_util.h"
 #include "tensorflow/compiler/xla/xla_client/debug_macros.h"
 #include "torch/csrc/lazy/core/helpers.h"
 #include "torch/csrc/lazy/core/util.h"
 #include "torch_xla/csrc/convert_ops.h"
 #include "torch_xla/csrc/helpers.h"
+#include "torch_xla/csrc/ops/einsum_utilities.h"
 #include "torch_xla/csrc/tensor_util.h"
 
 namespace torch_xla {
@@ -514,6 +516,51 @@ xla::XlaOp BuildLogsumexp(xla::XlaOp input,
             .result;
   }
   return logs + max_in_dim;
+}
+
+xla::XlaOp BuildEinsum(absl::Span<const xla::XlaOp> operands,
+                       const std::string& equation) {
+  if (operands.size() == 1) {
+    return xla::Einsum(
+        operands[0], equation,
+        xla::PrecisionConfig::Precision::PrecisionConfig_Precision_DEFAULT);
+  } else if (operands.size() == 2) {
+    return xla::Einsum(
+        operands[0], operands[1], equation,
+        xla::PrecisionConfig::Precision::PrecisionConfig_Precision_DEFAULT,
+        XlaHelpers::PromoteType(XlaHelpers::TypeOfXlaOp(operands[0]),
+                                XlaHelpers::TypeOfXlaOp(operands[1])));
+  }
+}
+
+std::vector<xla::XlaOp> BuildEinsumBackward(const xla::XlaOp& grad_output,
+                                            absl::Span<const xla::XlaOp> inputs,
+                                            const std::string& equation) {
+  std::vector<xla::XlaOp> result;
+  if (inputs.size() == 1) {
+    std::string backward_equation =
+        EinsumUtilities::BuildBackwardsEquation(equation);
+    result.push_back(xla::Einsum(grad_output, backward_equation));
+  } else if (inputs.size() == 2) {
+    std::vector<std::string> equations =
+        EinsumUtilities::BuildBackwardsEquations(equation);
+
+    xla::PrimitiveType type = XlaHelpers::PromoteType(
+        XlaHelpers::TypeOfXlaOp(grad_output),
+        XlaHelpers::TypeOfXlaOp(inputs[0]), XlaHelpers::TypeOfXlaOp(inputs[1]));
+
+    result.push_back(xla::Einsum(
+        grad_output, inputs[1], equations[0],
+        xla::PrecisionConfig::Precision::PrecisionConfig_Precision_DEFAULT,
+        type));
+
+    result.push_back(xla::Einsum(
+        inputs[0], grad_output, equations[1],
+        xla::PrecisionConfig::Precision::PrecisionConfig_Precision_DEFAULT,
+        type));
+  }
+
+  return result;
 }
 
 }  // namespace torch_xla

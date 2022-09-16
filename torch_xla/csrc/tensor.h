@@ -553,6 +553,11 @@ class XLATensor : public c10::intrusive_ptr_target {
   static XLATensorPtr einsum(const std::string& equation,
                              absl::Span<const XLATensorPtr> tensors);
 
+  static std::tuple<XLATensorPtr, XLATensorPtr> einsum_backward(
+      const XLATensorPtr& grad_output,
+      const absl::Span<const XLATensorPtr> tensors,
+      const std::string& equation);
+
   static XLATensorPtr elu_backward(const XLATensorPtr& grad_output,
                                    const at::Scalar& alpha,
                                    const at::Scalar& scale,

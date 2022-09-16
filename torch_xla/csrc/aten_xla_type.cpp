@@ -25,6 +25,7 @@
 #include "torch_xla/csrc/generated/XLANativeFunctions.h"
 #include "torch_xla/csrc/helpers.h"
 #include "torch_xla/csrc/ops/as_strided.h"
+#include "torch_xla/csrc/ops/einsum_utilities.h"
 #include "torch_xla/csrc/ops/index_ops.h"
 #include "torch_xla/csrc/pooling.h"
 #include "torch_xla/csrc/tensor_impl.h"
@@ -1068,6 +1069,18 @@ at::Tensor XLANativeFunctions::dot(const at::Tensor& self,
   }
   return bridge::AtenFromXlaTensor(XLATensor::matmul(
       bridge::GetXlaTensor(self), bridge::GetXlaTensor(tensor)));
+}
+
+at::Tensor XLANativeFunctions::einsum(c10::string_view equation,
+                                      at::TensorList tensors) {
+  XLA_FN_COUNTER("xla::");
+  // Einsum operations with more than 2 operands, like bilinear operations, are
+  // not currently supported in XLA
+  if (tensors.size() > 2 ||
+      !EinsumUtilities::EquationIsValid(std::string(equation))) {
+    return at::native::einsum(equation, tensors);
+  }
+  return aten_autograd_ops::EinsumAutogradFunction::apply(equation, tensors);
 }
 
 at::Tensor XLANativeFunctions::elu_backward(const at::Tensor& grad_output,

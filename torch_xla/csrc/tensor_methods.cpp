@@ -46,6 +46,8 @@
 #include "torch_xla/csrc/ops/device_data.h"
 #include "torch_xla/csrc/ops/diagonal.h"
 #include "torch_xla/csrc/ops/discrete_uniform.h"
+#include "torch_xla/csrc/ops/einsum.h"
+#include "torch_xla/csrc/ops/einsum_backward.h"
 #include "torch_xla/csrc/ops/expand.h"
 #include "torch_xla/csrc/ops/exponential.h"
 #include "torch_xla/csrc/ops/flip.h"
@@ -1051,6 +1053,39 @@ XLATensorPtr XLATensor::div(const XLATensorPtr& input,
   torch::lazy::Value other_value = GetIrValueForScalar(
       other, GetXlaShape(input_value).element_type(), input->GetDevice());
   return input->CreateFrom(input_value / other_value, scalar_type);
+}
+
+XLATensorPtr XLATensor::einsum(const std::string& equation,
+                               const absl::Span<const XLATensorPtr> tensors) {
+  std::vector<torch::lazy::Value> irs;
+  irs.reserve(tensors.size());
+  for (const XLATensorPtr& tensor : tensors) {
+    irs.push_back(tensor->GetIrValue());
+  }
+
+  return tensors[0]->CreateFrom(torch::lazy::MakeNode<Einsum>(irs, equation));
+}
+
+std::tuple<XLATensorPtr, XLATensorPtr> XLATensor::einsum_backward(
+    const XLATensorPtr& grad_output,
+    const absl::Span<const XLATensorPtr> tensors, const std::string& equation) {
+  std::vector<torch::lazy::Value> irs;
+  irs.reserve(tensors.size());
+  for (const XLATensorPtr& tensor : tensors) {
+    irs.push_back(tensor->GetIrValue());
+  }
+
+  torch::lazy::NodePtr node = torch::lazy::MakeNode<EinsumBackward>(
+      grad_output->GetIrValue(), irs, equation);
+
+  if (node->num_outputs() == 2) {
+    return std::make_tuple(
+        grad_output->CreateFrom(torch::lazy::Value(node, 0)),
+        grad_output->CreateFrom(torch::lazy::Value(node, 1)));
+  } else {
+    return std::make_tuple(grad_output->CreateFrom(torch::lazy::Value(node, 0)),
+                           XLATensorPtr());
+  }
 }
 
 XLATensorPtr XLATensor::eq(const XLATensorPtr& input, const at::Scalar& other) {

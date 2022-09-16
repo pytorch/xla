@@ -100,4 +100,11 @@ xla::XlaOp BuildLogsumexp(xla::XlaOp input,
                           absl::Span<const int64_t> dimensions,
                           bool keep_reduced_dimensions);
 
+xla::XlaOp BuildEinsum(absl::Span<const xla::XlaOp> operands,
+                       const std::string& equation);
+
+std::vector<xla::XlaOp> BuildEinsumBackward(const xla::XlaOp& grad_output,
+                                            absl::Span<const xla::XlaOp> inputs,
+                                            const std::string& equation);
+
 }  // namespace torch_xla
