@@ -18,6 +18,51 @@ bool IsNonTrivialDilation(at::IntArrayRef dilation) {
 
 namespace aten_autograd_ops {
 
+torch::Tensor EinsumAutogradFunction::forward(
+    torch::autograd::AutogradContext* ctx, const c10::string_view equation,
+    at::TensorList tensors) {
+  std::string eq_str = std::string(equation);
+  ctx->saved_data["equation"] = eq_str;
+
+  torch::autograd::variable_list vars;
+  for (const torch::Tensor const& tensor : tensors) {
+    vars.push_back(tensor);
+  }
+  ctx->save_for_backward(vars);
+
+  std::vector<XLATensorPtr> xla_tensors =
+      bridge::GetXlaTensors(absl::MakeSpan(tensors));
+  XLATensorPtr output = XLATensor::einsum(eq_str, xla_tensors);
+  return bridge::AtenFromXlaTensor(output);
+}
+
+torch::autograd::variable_list EinsumAutogradFunction::backward(
+    torch::autograd::AutogradContext* ctx,
+    torch::autograd::variable_list grad_output) {
+  std::string equation = ctx->saved_data["equation"].toString()->string();
+  torch::autograd::variable_list tensors = ctx->get_saved_variables();
+  std::vector<XLATensorPtr> xla_tensors =
+      bridge::GetXlaTensors(absl::MakeSpan(tensors));
+
+  std::tuple<XLATensorPtr, XLATensorPtr> outputs = XLATensor::einsum_backward(
+      bridge::GetXlaTensor(grad_output[0]), xla_tensors, equation);
+
+  // For both einsum and max pool, we use "undef" as a placeholder for the
+  // non-tensor grad inputs, in this case the equation string.
+  torch::Tensor undef;
+  torch::autograd::variable_list grad_inputs = {
+      undef, bridge::AtenFromXlaTensor(std::get<0>(outputs))};
+
+  // einsum_backward will return a tuple with either one or two tensors defined.
+  // If both tensors in the tuple are defined, then we return both tensors.
+  // Otherwise, we only return the first tensor.
+  if (std::get<1>(outputs).defined()) {
+    grad_inputs.push_back(bridge::AtenFromXlaTensor(std::get<1>(outputs)));
+  }
+
+  return grad_inputs;
+}
+
 torch::Tensor MaxPool2dAutogradFunction::forward(
     torch::autograd::AutogradContext* ctx, torch::Tensor self,
     torch::IntArrayRef kernel_size, torch::IntArrayRef stride,
