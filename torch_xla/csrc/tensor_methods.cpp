@@ -1120,25 +1120,24 @@ XLATensorPtr XLATensor::expand(const XLATensorPtr& input,
 }
 
 XLATensorPtr XLATensor::expand_symint(const XLATensorPtr& input,
-                                      c10::SymIntArrayRef size,
-                                      const torch::lazy::Shape& shape) {
-  SymIntElements size_elements = SymIntElements(size);
-  // Replace -1 concrete int dim with the true shape value
-  std::vector<c10::SymInt> sizes_ = torch::lazy::ToVector<c10::SymInt>(size);
-  int64_t num_new_dimensions = sizes_.size() - input->shape().get().rank();
-  std::vector<int64_t> padded_input(num_new_dimensions, 0);
-  padded_input.insert(padded_input.end(),
-                      input->shape().get().dimensions().begin(),
-                      input->shape().get().dimensions().end());
-  for (const auto idx : c10::irange(sizes_.size())) {
-    // Passing -1 as the size for a dimension means not changing the size of
-    // that dimension.
-    if (!sizes_[idx].is_symbolic() && sizes_[idx].expect_int() == -1) {
-      size_elements.SetUpperBound(idx, padded_input[idx]);
-    }
-  }
-  return input->CreateFrom(torch::lazy::MakeNode<ExpandSymInt>(
-      input->GetIrValue(), size_elements, shape));
+                                      c10::SymIntArrayRef sym_size) {
+  SymIntElements size_elements = SymIntElements(sym_size);
+  // // Replace -1 concrete int dim with the true shape value
+  // std::vector<c10::SymInt> sizes_ = torch::lazy::ToVector<c10::SymInt>(size);
+  // int64_t num_new_dimensions = sizes_.size() - input->shape().get().rank();
+  // std::vector<int64_t> padded_input(num_new_dimensions, 0);
+  // padded_input.insert(padded_input.end(),
+  //                     input->shape().get().dimensions().begin(),
+  //                     input->shape().get().dimensions().end());
+  // for (const auto idx : c10::irange(sizes_.size())) {
+  //   // Passing -1 as the size for a dimension means not changing the size of
+  //   // that dimension.
+  //   if (!sizes_[idx].is_symbolic() && sizes_[idx].expect_int() == -1) {
+  //     size_elements.SetUpperBound(idx, padded_input[idx]);
+  //   }
+  // }
+  return input->CreateFrom(
+      torch::lazy::MakeNode<ExpandSymInt>(input->GetIrValue(), size_elements));
 }
 
 void XLATensor::exponential_(XLATensorPtr& input, double lambd) {

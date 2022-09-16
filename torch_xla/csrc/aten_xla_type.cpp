@@ -1145,19 +1145,19 @@ at::Tensor XLANativeFunctions::expand_symint(const at::Tensor& self,
                                              at::SymIntArrayRef sym_size,
                                              bool implicit) {
   XLA_FN_COUNTER("xla::");
-  auto size = c10::asIntArrayRefSlow(sym_size);
-  return bridge::AtenFromXlaTensor(XLATensor::expand(
-      bridge::GetXlaTensor(self), torch::lazy::ToVector<int64_t>(size)));
-}
+  c10::optional<at::IntArrayRef> size = c10::asIntArrayRefSlowOpt(sym_size);
+  if (size.has_value()) {
+    return bridge::AtenFromXlaTensor(XLATensor::expand(
+        bridge::GetXlaTensor(self), torch::lazy::ToVector<int64_t>(*size)));
+  } else {
+    // at least one of the dimension is symbolic, use the sym_int version of the
+    // node
 
-at::Tensor XLANativeFunctions::expand_symint(const at::Tensor& self,
-                                             c10::SymIntArrayRef size,
-                                             bool implicit) {
-  XLA_FN_COUNTER("xla::");
-  torch::lazy::Shape shape =
-      torch::lazy::compute_shape_expand(self, size, implicit)[0];
-  return bridge::AtenFromXlaTensor(
-      XLATensor::expand_symint(bridge::GetXlaTensor(self), size, shape));
+    // torch::lazy::Shape shape =
+    //     torch::lazy::compute_shape_expand(self, size, implicit)[0];
+    return bridge::AtenFromXlaTensor(
+        XLATensor::expand_symint(bridge::GetXlaTensor(self), sym_size));
+  }
 }
 
 at::Tensor& XLANativeFunctions::exponential_(

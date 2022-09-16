@@ -581,8 +581,7 @@ class XLATensor : public c10::intrusive_ptr_target {
                              std::vector<int64_t> size);
 
   static XLATensorPtr expand_symint(const XLATensorPtr& input,
-                                    c10::SymIntArrayRef size,
-                                    const torch::lazy::Shape& shape);
+                                    c10::SymIntArrayRef sym_size);
 
   static void exponential_(XLATensorPtr& input, double lambd);
 

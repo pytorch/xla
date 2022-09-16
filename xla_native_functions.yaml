@@ -163,7 +163,6 @@ supported:
   - empty.memory_format
   - empty_strided
   - expand
-  - expand.SymInt
   - exponential_
   - eye.m_out
   - eye.out

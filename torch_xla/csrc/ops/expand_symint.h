@@ -10,8 +10,7 @@ namespace torch_xla {
 class ExpandSymInt : public XlaNode {
  public:
   ExpandSymInt(const torch::lazy::Value& input,
-               const SymIntElements& size_elements,
-               const torch::lazy::Shape& shape);
+               const SymIntElements& size_elements);
 
   std::string ToString() const override;
 
