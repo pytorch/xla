@@ -77,13 +77,14 @@ struct IndexAdjacencyInfo {
 // not permute the base and instead treat the null tensors prefix as a no-op.
 // Replicates the behavior of at::native::hasContiguousSubspace and also returns
 // the position of the first non-null index.
-IndexAdjacencyInfo GetIndexAdjacencyInfo(at::TensorList indices) {
+IndexAdjacencyInfo GetIndexAdjacencyInfo(at::ITensorListRef indices) {
+  auto indices_m = indices.materialize();
   auto is_defined = [](const at::Tensor& tensor) { return tensor.defined(); };
   auto is_null = [](const at::Tensor& tensor) { return !tensor.defined(); };
-  auto start = std::find_if(indices.begin(), indices.end(), is_defined);
-  auto stop = std::find_if(indices.rbegin(), indices.rend(), is_defined);
+  auto start = std::find_if(indices_m.begin(), indices_m.end(), is_defined);
+  auto stop = std::find_if(indices_m.rbegin(), indices_m.rend(), is_defined);
   auto it = std::find_if(start, stop.base(), is_null);
-  int64_t start_dim = std::distance(indices.begin(), start);
+  int64_t start_dim = std::distance(indices_m.begin(), start);
   return {it == stop.base(), start_dim};
 }
 
@@ -96,25 +97,30 @@ IndexAdjacencyInfo GetIndexAdjacencyInfo(at::TensorList indices) {
 //
 // This is a simplified version of at::native::transposeToFront which better
 // fits our requirements.
-CanonicalIndexInfo TransposeToFront(at::Tensor base, at::TensorList indices) {
+CanonicalIndexInfo TransposeToFront(at::Tensor base,
+                                    at::ITensorListRef indices) {
   std::vector<int64_t> dims;
   std::vector<at::Tensor> transposed_indices;
   size_t base_rank = base.dim();
   dims.reserve(base_rank);
   XLA_CHECK_LE(indices.size(), base_rank);
-  for (size_t i = 0; i < indices.size(); i++) {
-    if (indices[i].defined()) {
+  size_t i = 0;
+  for (const auto& index : indices) {
+    if (index.defined()) {
       dims.push_back(i);
-      transposed_indices.emplace_back(indices[i]);
+      transposed_indices.emplace_back(index);
     }
+    ++i;
   }
-  for (size_t i = 0; i < indices.size(); i++) {
-    if (!indices[i].defined()) {
+  i = 0;
+  for (const auto& index : indices) {
+    if (!index.defined()) {
       dims.push_back(i);
     }
+    ++i;
   }
-  for (size_t i = indices.size(); i < base_rank; ++i) {
-    dims.push_back(i);
+  for (size_t idx = indices.size(); idx < base_rank; ++idx) {
+    dims.push_back(idx);
   }
   IndexAdjacencyInfo adjacency_info = GetIndexAdjacencyInfo(indices);
   if (adjacency_info.contiguous_non_null) {

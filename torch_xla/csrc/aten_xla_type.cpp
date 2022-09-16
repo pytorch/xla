@@ -860,7 +860,8 @@ at::Tensor XLANativeFunctions::bmm(const at::Tensor& self,
       XLATensor::bmm(bridge::GetXlaTensor(self), bridge::GetXlaTensor(mat2)));
 }
 
-at::Tensor XLANativeFunctions::cat(at::TensorList tensors, int64_t dim) {
+at::Tensor XLANativeFunctions::cat(const at::ITensorListRef& tensors,
+                                   int64_t dim) {
   XLA_FN_COUNTER("xla::");
   return bridge::AtenFromXlaTensor(XLATensor::cat(
       bridge::GetXlaTensors(tensors), dim, at::native::result_type(tensors)));
