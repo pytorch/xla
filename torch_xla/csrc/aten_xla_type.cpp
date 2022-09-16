@@ -2886,12 +2886,7 @@ at::Tensor XLANativeFunctions::upsample_bilinear2d(
     c10::optional<double> scales_h, c10::optional<double> scales_w) {
   XLA_FN_COUNTER("xla::");
   XLATensorPtr self_tensor = bridge::GetXlaTensor(self);
-  // Only the XLA TPU backend for now implements the CustomCall required by
-  // our XLA lowering.
-  XlaDeviceType hw_type =
-      static_cast<XlaDeviceType>(self_tensor->GetDevice().type());
-  if (hw_type != XlaDeviceType::TPU || (scales_h && *scales_h != 1.0) ||
-      (scales_w && *scales_w != 1.0)) {
+  if ((scales_h && *scales_h != 1.0) || (scales_w && *scales_w != 1.0)) {
     return at::native::call_fallback_fn<
         &xla_cpu_fallback, ATEN_OP(upsample_bilinear2d)>::call(self,
                                                                output_size,
@@ -2931,16 +2926,6 @@ at::Tensor XLANativeFunctions::upsample_nearest2d(
     c10::optional<at::ArrayRef<double>> scale_factors) {
   XLA_FN_COUNTER("xla::");
   XLATensorPtr input_tensor = bridge::GetXlaTensor(input);
-  // Only the XLA TPU backend for now implements the CustomCall required by our
-  // XLA lowering.
-  XlaDeviceType hw_type =
-      static_cast<XlaDeviceType>(input_tensor->GetDevice().type());
-  if (hw_type != XlaDeviceType::TPU) {
-    return at::native::call_fallback_fn<&xla_cpu_fallback,
-                                        ATEN_OP2(upsample_nearest2d,
-                                                 vec)>::call(input, output_size,
-                                                             scale_factors);
-  }
   absl::Span<const int64_t> input_dims =
       input_tensor->shape().get().dimensions();
   return bridge::AtenFromXlaTensor(XLATensor::upsample_nearest2d(
@@ -2978,12 +2963,7 @@ at::Tensor XLANativeFunctions::upsample_nearest2d(
     c10::optional<double> scales_h, c10::optional<double> scales_w) {
   XLA_FN_COUNTER("xla::");
   XLATensorPtr self_tensor = bridge::GetXlaTensor(self);
-  // Only the XLA TPU backend for now implements the CustomCall required by
-  // our XLA lowering.
-  XlaDeviceType hw_type =
-      static_cast<XlaDeviceType>(self_tensor->GetDevice().type());
-  if (hw_type != XlaDeviceType::TPU || (scales_h && *scales_h != 1.0) ||
-      (scales_w && *scales_w != 1.0)) {
+  if ((scales_h && *scales_h != 1.0) || (scales_w && *scales_w != 1.0)) {
     return at::native::call_fallback_fn<
         &xla_cpu_fallback, ATEN_OP(upsample_nearest2d)>::call(self, output_size,
                                                               scales_h,

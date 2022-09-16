@@ -269,6 +269,7 @@ DISABLED_TORCH_TESTS_ANY = {
         'test_upsamplingBicubic2d_correctness_xla',  # FIXME! Got dtypes torch.float32 and torch.float64
         'test_conv3d_same_padding_backward_xla',  # XLA tensors do not have storage,
         'test_CTCLoss_no_batch_dim_xla',  # Value out of range
+        'test_upsamplingBilinear2d_xla',  # precision on GPU/TPU, slow compilation on CPU
     },
 
     # test/nn/test_dropout.py
@@ -372,7 +373,6 @@ DISABLED_TORCH_TESTS_TPU_ONLY = {
         'test_Dropout',  # too slow
         'test_EmbeddingBag_per_sample_weights_and_new_offsets_xla',  # server side crash
         'test_EmbeddingBag_per_sample_weights_and_offsets_xla',  # server side crash
-        'test_upsamplingBilinear2d_xla',  # precision
         'test_upsamplingNearest2d_xla',  # precision
         'test_GRU_grad_and_gradgrad_xla_float64',  # grad check failure
         'test_LSTM_grad_and_gradgrad_xla_float64',  # grad check failure
