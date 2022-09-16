@@ -136,18 +136,18 @@ std::vector<at::Tensor> XlaCreateTensorList(const at::ITensorListRef& tensors) {
   // We need to separate out the defined tensors first, GetXlaTensor() doesn't
   // work with undefined tensors.
   std::vector<bool> to_translate(tensors.size());
-  size_t idx = 0;
+  size_t ix = 0;
   for (const auto& tensor : tensors) {
     if (tensor.defined()) {
       auto xtensor = TryGetXlaTensor(tensor);
       if (xtensor) {
-        to_translate[idx] = true;
+        to_translate[ix] = true;
         xla_tensors.push_back(xtensor);
       } else {
-        aten_xla_tensors[idx] = tensor;
+        aten_xla_tensors[ix] = tensor;
       }
     }
-    ++idx;
+    ++ix;
   }
   auto defined_aten_xla_tensors = XLATensor::GetTensors(&xla_tensors);
   // Insert undefined tensors into the result, back into the original undefined
