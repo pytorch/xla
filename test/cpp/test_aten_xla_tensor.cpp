@@ -4924,6 +4924,7 @@ TEST_F(AtenXlaTensorTest, TestExpandSymIntSymbolic) {
         c10::SymIntArrayRef({dynamic_symint, c10::SymInt(3), c10::SymInt(4)}),
         /*implicit=*/false);
     EXPECT_EQ(ToCpuTensor(xla_b).sum().item().toInt(), 24);
+    AllClose(b, xla_b);
   });
 
   ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
