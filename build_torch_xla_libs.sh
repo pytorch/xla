@@ -58,6 +58,8 @@ OPTS+=(--cxxopt="-std=c++17")
 if [[ $(basename -- $CC) =~ ^clang ]]; then
   OPTS+=(--cxxopt="-Wno-c++11-narrowing")
   OPTS+=(--cxxopt="-Wno-c++14-narrowing")
+  OPTS+=(--cxxopt="-fnative-half-type")
+  OPTS+=(--cxxopt="-fallow-half-arguments-and-returns")
 fi
 
 if [[ "$XLA_CUDA" == "1" ]]; then
