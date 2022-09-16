@@ -81,10 +81,10 @@ IndexAdjacencyInfo GetIndexAdjacencyInfo(at::ITensorListRef indices) {
   auto indices_m = indices.materialize();
   auto is_defined = [](const at::Tensor& tensor) { return tensor.defined(); };
   auto is_null = [](const at::Tensor& tensor) { return !tensor.defined(); };
-  auto start = std::find_if(indices.begin(), indices.end(), is_defined);
-  auto stop = std::find_if(indices.rbegin(), indices.rend(), is_defined);
+  auto start = std::find_if(indices_m.begin(), indices_m.end(), is_defined);
+  auto stop = std::find_if(indices_m.rbegin(), indices_m.rend(), is_defined);
   auto it = std::find_if(start, stop.base(), is_null);
-  int64_t start_dim = std::distance(indices.begin(), start);
+  int64_t start_dim = std::distance(indices_m.begin(), start);
   return {it == stop.base(), start_dim};
 }
 
