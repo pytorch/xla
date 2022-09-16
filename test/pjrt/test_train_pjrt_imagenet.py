@@ -265,9 +265,7 @@ if __name__ == '__main__':
 
   results = pjrt.run_multiprocess(train_imagenet, FLAGS)
   print('Replica max_accuracy:', pprint.pformat(results))
-  accuracy = np.mean([
-      np.mean(list(results.values()))
-  ])
+  accuracy = np.mean([np.mean(list(results.values()))])
   print('Average max_accuracy:', accuracy)
 
   if accuracy < FLAGS.target_accuracy:
