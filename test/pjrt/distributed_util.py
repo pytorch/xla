@@ -44,6 +44,8 @@ def ddp_correctness(init_file: str):
 
   device = xm.xla_device()
 
+  # To make nn.Linear init same parameters across devices.
+  torch.manual_seed(2022)
   cpu_model = nn.Linear(10, 10)
   # TODO(@alanwaketan): Investigate whether we can omit the gradient_as_bucket_view option.
   ddp_model = DDP(
