@@ -78,6 +78,7 @@ struct IndexAdjacencyInfo {
 // Replicates the behavior of at::native::hasContiguousSubspace and also returns
 // the position of the first non-null index.
 IndexAdjacencyInfo GetIndexAdjacencyInfo(at::ITensorListRef indices) {
+  auto indices_m = indices.materialize();
   auto is_defined = [](const at::Tensor& tensor) { return tensor.defined(); };
   auto is_null = [](const at::Tensor& tensor) { return !tensor.defined(); };
   auto start = std::find_if(indices.begin(), indices.end(), is_defined);
