@@ -16,7 +16,7 @@ def init_xla_backend(init_file: str):
 
   dist.init_process_group(
       "xla",
-      init_method=f"file://{init_file}",
+      init_method=f"file://{init_file}" if init_file is not None else None,
       rank=rank,
       world_size=world_size)
   return rank, world_size
