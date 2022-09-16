@@ -117,12 +117,8 @@ TEST_F(IrTest, TestSizeNode) {
   EXPECT_EQ(dim_node_0->getDynamicValue(), 3);
   EXPECT_EQ(dim_node_1->getStaticValue(), 4);
   EXPECT_EQ(dim_node_1->getDynamicValue(), 4);
-  ExpectCounterChanged("UncachedCompile", cpp_test::GetIgnoredCounters());
-  ExpectCounterNotChanged("CachedSizeNodeValue",
-                          cpp_test::GetIgnoredCounters());
 
   // calling getDynamicValue the second time should use the cached value.
-
   EXPECT_EQ(dim_node_0->getDynamicValue(), 3);
   EXPECT_EQ(dim_node_1->getDynamicValue(), 4);
   ExpectCounterChanged("CachedSizeNodeValue", cpp_test::GetIgnoredCounters());
@@ -170,9 +166,6 @@ TEST_F(IrTest, TestSizeNodeDynamic) {
   EXPECT_EQ(dim_node_0->getDynamicValue(), 1);
   EXPECT_EQ(dim_node_1->getStaticValue(), 2);
   EXPECT_EQ(dim_node_1->getDynamicValue(), 2);
-  ExpectCounterChanged("UncachedCompile", cpp_test::GetIgnoredCounters());
-  ExpectCounterNotChanged("CachedSizeNodeValue",
-                          cpp_test::GetIgnoredCounters());
 
   // calling getDynamicValue the second time should use the cached value.
   EXPECT_EQ(dim_node_0->getDynamicValue(), 1);
