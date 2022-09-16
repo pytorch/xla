@@ -6,11 +6,25 @@ RUN apt-get update
 RUN apt-get install -y curl gnupg libomp5
 RUN pip install numpy pyyaml
 
+ARG debian_number=ubuntu1804
+
+RUN apt-key adv --fetch-keys https://developer.download.nvidia.com/compute/cuda/repos/${debian_number}/x86_64/3bf863cc.pub
+RUN echo "deb https://developer.download.nvidia.com/compute/cuda/repos/${debian_number}/x86_64/ /" >> /etc/apt/sources.list
+RUN apt-get update
+
+ARG cudnn_version="8.1.1.33"
+ARG cuda_version="11.2"
+
+RUN apt-get install -y libcudnn8=8.1.1.33-1+cuda11.2
+
 FROM common AS builder
 
 ARG debian_version=buster
+ARG cudnn_version="8.1.1.33"
+ARG cuda_version="11.2"
 
 RUN apt-get install -y libopenblas-dev
+RUN apt-get install -y libcudnn8-dev=${cudnn_version}-1+cuda${cuda_version}
 
 RUN echo "deb http://apt.llvm.org/${debian_version}/ llvm-toolchain-${debian_version}-8 main" >> /etc/apt/sources.list
 RUN echo "deb-src http://apt.llvm.org/${debian_version}/ llvm-toolchain-${debian_version}-8 main" >> /etc/apt/sources.list
@@ -41,14 +55,15 @@ COPY third_party xla/third_party
 COPY build_torch_xla_libs.sh xla/
 WORKDIR /pytorch/xla/
 
-RUN TPUVM_MODE=1 bash build_torch_xla_libs.sh -O -D_GLIBCXX_USE_CXX11_ABI=1
+RUN apt-get install -y cuda-toolkit-11-2
+RUN XLA_CUDA=1 bash build_torch_xla_libs.sh -O -D_GLIBCXX_USE_CXX11_ABI=1
 
 COPY torch_xla torch_xla
 COPY scripts scripts
 COPY setup.py .
 COPY xla_native_functions.yaml .
 
-RUN TPUVM_MODE=1 BUILD_CPP_TESTS=0 python setup.py bdist_wheel
+RUN BUILD_CPP_TESTS=0 XLA_CUDA=1 python setup.py bdist_wheel
 
 RUN pip install dist/*.whl
 
