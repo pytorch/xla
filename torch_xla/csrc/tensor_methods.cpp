@@ -1136,8 +1136,10 @@ XLATensorPtr XLATensor::expand_symint(const XLATensorPtr& input,
   //     size_elements.SetUpperBound(idx, padded_input[idx]);
   //   }
   // }
-  return input->CreateFrom(
+  XLATensorPtr output = input->CreateFrom(
       torch::lazy::MakeNode<ExpandSymInt>(input->GetIrValue(), size_elements));
+  output->storage_ = input->Storage();
+  return output;
 }
 
 void XLATensor::exponential_(XLATensorPtr& input, double lambd) {
