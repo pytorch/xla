@@ -1,24 +1,26 @@
 from absl.testing import absltest, parameterized
-import pjrt.distributed_util as util
 import sys
-import torch_xla.distributed.xla_multiprocessing as xmp
 import torch_xla.core.xla_model as xm
+import torch_xla.distributed.xla_multiprocessing as xmp
+
+import distributed_util as util
 
 
 class TestXrtDistributedDataParallel(parameterized.TestCase):
 
   @staticmethod
   def _ddp_correctness(rank):
-    util.ddp_correctness(None)
-
-  def test_ddp_correctness(self):
+    # We cannot run this guard before XMP,
+    # see API_GUIDE.md#running-on-multiple-xla-devices-with-multi-processing.
     device = xm.xla_device()
     if xm.xla_device_hw(device) not in ('TPU', 'GPU'):
       print(
           'Default device {} is not a TPU or GPU device'.format(device),
           file=sys.stderr)
       return
+    util.ddp_correctness(None)
 
+  def test_ddp_correctness(self):
     xmp.spawn(self._ddp_correctness, args=())
 
 

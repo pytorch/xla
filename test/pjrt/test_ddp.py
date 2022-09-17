@@ -3,7 +3,8 @@ import torch.nn as nn
 from torch.nn.parallel import DistributedDataParallel as DDP
 import torch_xla.core.xla_model as xm
 from torch_xla.experimental import pjrt
-import distributed_util as util
+
+import test.distributed_util as util
 
 
 class TestPjRtDistributedDataParallel(parameterized.TestCase):
