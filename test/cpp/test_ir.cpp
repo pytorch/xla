@@ -131,25 +131,12 @@ TEST_F(IrTest, TestSizeNode) {
   });
 }
 
-TEST_F(IrTest, TestSizeNodeDynamic) {
-  // t1 = torch.tensor(0).expand(10,10)
-  // t1[0][0] = 1
-  // res = t1.non_zero()
-  torch::lazy::Value scalar_value =
-      torch::lazy::Value(ScalarOp(0.0, xla::F32), 0);
-  torch::lazy::Value scalar_value_1 =
-      torch::lazy::Value(ScalarOp(1.0, xla::F32), 0);
-  std::vector<int64_t> target_size = {10, 10};
-  torch::lazy::NodePtr expand_node =
-      torch::lazy::MakeNode<Expand>(scalar_value, target_size);
-  torch::lazy::Value expand_value = torch::lazy::Value(expand_node, 0);
-  std::vector<int64_t> base_indeies = {0, 0};
-  torch::lazy::NodePtr slice_node = torch::lazy::MakeNode<UpdateSlice>(
-      expand_value, scalar_value_1, base_indeies);
-  // Use Slice to update value at [0][0]
-  torch::lazy::Value slice_value = torch::lazy::Value(slice_node, 0);
+TEST(IrTest, TestSizeNodeDynamic) {
+  int64_t num_non_zero_element = 1;
+  int64_t num_row = 10;
+  int64_t num_col = 10;
   torch::lazy::NodePtr nonzero_node =
-      torch::lazy::MakeNode<NonZero>(slice_value);
+      CreateNonZeroNode2d(num_non_zero_element, num_row, num_col);
 
   torch::lazy::NodePtr size_node_nonzero_0 =
       torch::lazy::MakeNode<SizeNode>(nonzero_node, 0);
@@ -163,7 +150,7 @@ TEST_F(IrTest, TestSizeNodeDynamic) {
           size_node_nonzero_1);
 
   EXPECT_EQ(dim_node_0->getStaticValue(), 100);
-  EXPECT_EQ(dim_node_0->getDynamicValue(), 1);
+  EXPECT_EQ(dim_node_0->getDynamicValue(), num_non_zero_element);
   EXPECT_EQ(dim_node_1->getStaticValue(), 2);
   EXPECT_EQ(dim_node_1->getDynamicValue(), 2);
 

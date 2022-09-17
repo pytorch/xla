@@ -110,5 +110,8 @@ void TestBackward(
         testfn,
     double rtol = 1e-5, double atol = 1e-8, int derivative_level = 1);
 
+torch::lazy::NodePtr CreateNonZeroNode2d(int64_t num_non_zero_element,
+                                         int64_t num_row, int64_t num_col);
+
 }  // namespace cpp_test
 }  // namespace torch_xla

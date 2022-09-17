@@ -9,6 +9,10 @@
 #include "torch_xla/csrc/ir_dump_util.h"
 #include "torch_xla/csrc/lowering_context.h"
 #include "torch_xla/csrc/ops/device_data.h"
+#include "torch_xla/csrc/ops/expand.h"
+#include "torch_xla/csrc/ops/nonzero.h"
+#include "torch_xla/csrc/ops/ops.h"
+#include "torch_xla/csrc/ops/update_slice.h"
 #include "torch_xla/csrc/tensor_impl.h"
 #include "torch_xla/csrc/tensor_util.h"
 #include "torch_xla/csrc/torch_util.h"
@@ -380,6 +384,48 @@ void TestBackward(
       }
     }
   }
+}
+
+torch::lazy::NodePtr CreateNonZeroNode2d(int64_t num_non_zero_element,
+                                         int64_t num_row, int64_t num_col) {
+  // t1 = torch.tensor(0).expand(row,col)
+  // i = 0
+  // j = 0
+  // count = 0
+  // while count < num_non_zero_element:
+  //   t1[i][j] = 1
+  //   j += 1
+  //   if j == num_col:
+  //     j = 0
+  //     i += 1
+  // res = t1.non_zero()
+  // ASSERT_TRUE(num_non_zero_element <= (num_row * num_col));
+  torch::lazy::Value scalar_value =
+      torch::lazy::Value(ScalarOp(0.0, xla::F32), 0);
+  torch::lazy::Value scalar_value_1 =
+      torch::lazy::Value(ScalarOp(1.0, xla::F32), 0);
+  std::vector<int64_t> target_size = {num_row, num_col};
+  torch::lazy::NodePtr expand_node =
+      torch::lazy::MakeNode<Expand>(scalar_value, target_size);
+  torch::lazy::Value expand_value = torch::lazy::Value(expand_node, 0);
+  int64_t count = 0;
+  int64_t i = 0;
+  int64_t j = 0;
+  torch::lazy::Value slice_value = expand_value;
+  while (count++ < num_non_zero_element) {
+    std::vector<int64_t> base_indeies = {i, j++};
+    // Use Slice to do element update
+    torch::lazy::NodePtr slice_node = torch::lazy::MakeNode<UpdateSlice>(
+        slice_value, scalar_value_1, base_indeies);
+    slice_value = torch::lazy::Value(slice_node, 0);
+    if (j == num_col) {
+      j = 0;
+      i++;
+    }
+  }
+  torch::lazy::NodePtr nonzero_node =
+      torch::lazy::MakeNode<NonZero>(slice_value);
+  return nonzero_node;
 }
 
 }  // namespace cpp_test
