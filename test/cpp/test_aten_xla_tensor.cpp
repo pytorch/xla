@@ -4945,7 +4945,8 @@ TEST_F(AtenXlaTensorTest, TestExpandSymIntDynamic) {
 
   torch::lazy::NodePtr size_node_nonzero_0 =
       torch::lazy::MakeNode<SizeNode>(nonzero_node, 0);
-  auto symint_node = c10::make_intrusive<XLASymIntNodeImpl>(size_node_nonzero_0);
+  auto symint_node =
+      c10::make_intrusive<XLASymIntNodeImpl>(size_node_nonzero_0);
   c10::SymInt dynamic_symint = symint_node->toSymInt();
 
   ForEachDevice([&](const torch::Device& device) {
