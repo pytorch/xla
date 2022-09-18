@@ -1,10 +1,15 @@
 from absl.testing import absltest, parameterized
+import os
+import sys
 import torch.nn as nn
 from torch.nn.parallel import DistributedDataParallel as DDP
 import torch_xla.core.xla_model as xm
 from torch_xla.experimental import pjrt
 
-import args_parse
+# Setup import folders.
+xla_test_folder = os.path.dirname(os.path.dirname(os.path.abspath(sys.argv[0])))
+sys.path.append(xla_test_folder)
+
 import test.distributed_util as util
 
 

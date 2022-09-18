@@ -3,7 +3,6 @@ import sys
 import torch_xla.core.xla_model as xm
 import torch_xla.distributed.xla_multiprocessing as xmp
 
-import args_parse
 import distributed_util as util
 
 
