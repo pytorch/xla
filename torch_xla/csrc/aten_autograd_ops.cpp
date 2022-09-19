@@ -25,7 +25,7 @@ torch::Tensor EinsumAutogradFunction::forward(
   ctx->saved_data["equation"] = eq_str;
 
   torch::autograd::variable_list vars;
-  for (const torch::Tensor const& tensor : tensors) {
+  for (const torch::Tensor& tensor : tensors) {
     vars.push_back(tensor);
   }
   ctx->save_for_backward(vars);
