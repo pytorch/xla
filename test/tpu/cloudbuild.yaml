@@ -13,7 +13,7 @@ steps:
   args:
   - -c
   - |
-    git submodule update --init || echo No git repository found        
+    git submodule update --init || echo No git repository found
 - name: 'docker'
   id: build-image
   args: [
@@ -24,7 +24,9 @@ steps:
     '-t',
     'gcr.io/$PROJECT_ID/pytorch-xla-test:$BUILD_ID',
     '--build-arg',
-    'tpuvm=1'
+    'tpuvm=1',
+    '--build-arg',
+    'bazel_jobs=8'
   ]
 - name: 'docker'
   id: push-image
@@ -42,21 +44,26 @@ steps:
     set -u
     set -e
     set -x
-
     apt-get update
     apt-get -y install gettext
 
-    gcloud container clusters get-credentials --zone $_CLUSTER_ZONE $_CLUSTER_NAME
+    # Try to setup kubectl credentials the new way,
+    # see https://cloud.google.com/blog/products/containers-kubernetes/kubectl-auth-changes-in-gke
+    apt-get install google-cloud-sdk-gke-gcloud-auth-plugin -o DPkg::options::="--force-overwrite"
+    export USE_GKE_GCLOUD_AUTH_PLUGIN=True
+    apt-get install kubectl
+    gcloud container clusters get-credentials $_CLUSTER_NAME --zone $_CLUSTER_ZONE
+
+    # Export variables to shell environment so that we can pass them into the
+    # k8s deployment using envsubst
     export BUILD_ID=$BUILD_ID
     export PROJECT_ID=$PROJECT_ID
     export GCS_BUCKET=$_GCS_BUCKET
-    tmp=$(envsubst < test/tpu/pjrt_test_job.yaml | kubectl create -f - -o name)
-    job_name=job.batch/${tmp#*/}
-    sleep 5
-    pod_name=$(kubectl wait --for condition=ready --timeout=10m pod -l job-name=${job_name#job.batch/} -o name)
+
+    # Launch k8s deployment, wait for completion, print logs
+    pod_name=$(envsubst < test/tpu/pjrt_test_job.yaml | kubectl create -f - -o name)
+    pod_name=$(kubectl wait --for condition=ready --timeout=10m $pod_name -o name)
     kubectl logs -f $pod_name --container=pjrt-test
-    sleep 5
-    exit $(kubectl get $pod_name -o jsonpath={.status.containerStatuses[0].state.terminated.exitCode})
-timeout: 18000s # 5 hours
+timeout: 18000s # 3 hours
 options:
  machineType: 'N1_HIGHCPU_32'

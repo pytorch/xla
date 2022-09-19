@@ -8,15 +8,10 @@ spec:
       requiredDuringSchedulingIgnoredDuringExecution:
         nodeSelectorTerms:
         - matchExpressions:
-          - key: tpu.googleapis.com/name
-            operator: In
-            values:
-            # Update with your TPU name
-            - gke-tpu
           - key: tpu.googleapis.com/type
             operator: In
             values:
-            - v3-8
+            - v2-8
   restartPolicy: Never
   volumes:
   # Increase size of tmpfs /dev/shm to avoid OOM.
@@ -32,10 +27,7 @@ spec:
     - bash
     - -c
     - |
-      ls /root/anaconda3/envs/pytorch/lib/python3.8/site-packages/ | grep libtpu
-      sudo rm -rf /usr/local/lib/python3.8/dist-packages/libtpu*
-      sudo pip3 install torch_xla[tpuvm]
-      python3 pjrt/test_experimental_pjrt_tpu.py
+      python3 pytorch/xla/test/pjrt/test_experimental_pjrt_tpu.py
     volumeMounts:
     - mountPath: /dev/shm
       name: dshm
