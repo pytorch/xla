@@ -186,9 +186,6 @@ torch_xla::XlaOpVector BitwiseXorTensor::Lower(LoweringContext* loctx) const {
 
 torch_xla::XlaOpVector Ceil::Lower(LoweringContext* loctx) const {
   xla::XlaOp xla_input = loctx->GetOutputOp(operand(0));
-  if (xla::primitive_util::IsIntegralType(XlaHelpers::TypeOfXlaOp(xla_input))) {
-    return ReturnOp(xla_input, loctx);
-  }
   return ReturnOp(xla::Ceil(xla_input), loctx);
 }
 
@@ -299,9 +296,6 @@ torch_xla::XlaOpVector Expm1::Lower(LoweringContext* loctx) const {
 
 torch_xla::XlaOpVector Floor::Lower(LoweringContext* loctx) const {
   xla::XlaOp xla_input = loctx->GetOutputOp(operand(0));
-  if (xla::primitive_util::IsIntegralType(XlaHelpers::TypeOfXlaOp(xla_input))) {
-    return ReturnOp(xla_input, loctx);
-  }
   return ReturnOp(xla::Floor(xla_input), loctx);
 }
 
@@ -494,9 +488,6 @@ torch_xla::XlaOpVector Relu::Lower(LoweringContext* loctx) const {
 
 torch_xla::XlaOpVector Round::Lower(LoweringContext* loctx) const {
   xla::XlaOp xla_input = loctx->GetOutputOp(operand(0));
-  if (xla::primitive_util::IsIntegralType(XlaHelpers::TypeOfXlaOp(xla_input))) {
-    return ReturnOp(xla_input, loctx);
-  }
   return ReturnOp(xla::RoundToEven(xla_input), loctx);
 }
 
@@ -577,9 +568,6 @@ torch_xla::XlaOpVector Triu::Lower(LoweringContext* loctx) const {
 
 torch_xla::XlaOpVector Trunc::Lower(LoweringContext* loctx) const {
   xla::XlaOp xla_input = loctx->GetOutputOp(operand(0));
-  if (xla::primitive_util::IsIntegralType(XlaHelpers::TypeOfXlaOp(xla_input))) {
-    return ReturnOp(xla_input, loctx);
-  }
   return ReturnOp(xla::Floor(BuildAbs(xla_input)) * BuildSgn(xla_input), loctx);
 }
 
