@@ -1,0 +1,62 @@
+substitutions:
+  # GCS location to write temporary checkpoints and summaries.
+  _GCS_BUCKET: 'gs://pytorch-xla-tpu-ci-tests/'
+  # Name of GKE cluster in which to run Job.
+  _CLUSTER_NAME: 'tpu-cluster'
+  # Location of GKE cluster.
+  _CLUSTER_ZONE: 'europe-west4-a'
+steps:
+# We only need to update submodules in triggers. User must update submodule
+# before local runs because .git is not present.
+- name: 'alpine/git'
+  entrypoint: sh
+  args:
+  - -c
+  - |
+    git submodule update --init || echo No git repository found        
+- name: 'docker'
+  id: build-image
+  args: [
+    'build',
+    '.',
+    '-f',
+    'docker/experimental/Dockerfile',
+    '-t',
+    'gcr.io/$PROJECT_ID/pytorch-xla-test:$BUILD_ID',
+    '--build-arg',
+    'tpuvm=1'
+  ]
+- name: 'docker'
+  id: push-image
+  waitFor:
+  - build-image
+  args: ['push', 'gcr.io/$PROJECT_ID/pytorch-xla-test:$BUILD_ID']
+- name: 'google/cloud-sdk'
+  id: create-job
+  waitFor:
+  - push-image
+  entrypoint: bash
+  args:
+  - -c
+  - |
+    set -u
+    set -e
+    set -x
+
+    apt-get update
+    apt-get -y install gettext
+
+    gcloud container clusters get-credentials --zone $_CLUSTER_ZONE $_CLUSTER_NAME
+    export BUILD_ID=$BUILD_ID
+    export PROJECT_ID=$PROJECT_ID
+    export GCS_BUCKET=$_GCS_BUCKET
+    tmp=$(envsubst < test/tpu/pjrt_test_job.yaml | kubectl create -f - -o name)
+    job_name=job.batch/${tmp#*/}
+    sleep 5
+    pod_name=$(kubectl wait --for condition=ready --timeout=10m pod -l job-name=${job_name#job.batch/} -o name)
+    kubectl logs -f $pod_name --container=pjrt-test
+    sleep 5
+    exit $(kubectl get $pod_name -o jsonpath={.status.containerStatuses[0].state.terminated.exitCode})
+timeout: 18000s # 5 hours
+options:
+ machineType: 'N1_HIGHCPU_32'

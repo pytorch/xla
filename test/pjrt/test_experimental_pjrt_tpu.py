@@ -36,6 +36,8 @@ class TestExperimentalPjrtTpu(parameterized.TestCase):
     os.environ.pop(xenv.TPU_VISIBLE_CHIPS, None)
     os.environ.pop(xenv.TPU_PROCESS_BOUNDS, None)
 
+  @absltest.skipIf(tpu.get_tpu_env()['ACCELERATOR_TYPE'] == 'v3-8',
+                   'This test is not currently supported on v3 TPUVMs.')
   def test_xla_devices_multiprocess(self):
     accelerator_devices = {
         'v3-8': {
