@@ -3764,26 +3764,6 @@ TEST_F(AtenXlaTensorTest, TestBatchMatMul) {
   ExpectCounterChanged("xla::bmm", cpp_test::GetIgnoredCounters());
 }
 
-TEST_F(AtenXlaTensorTest, TestChainMatMul) {
-  torch::Tensor a = torch::rand({5, 4}, torch::TensorOptions(torch::kFloat));
-  torch::Tensor b = torch::rand({4, 6}, torch::TensorOptions(torch::kFloat));
-  torch::Tensor c = torch::rand({6, 2}, torch::TensorOptions(torch::kFloat));
-  torch::Tensor d = torch::rand({2, 7}, torch::TensorOptions(torch::kFloat));
-  torch::Tensor result = torch::chain_matmul({a, b, c, d});
-  ForEachDevice([&](const torch::Device& device) {
-    torch::Tensor xla_a = CopyToDevice(a, device);
-    torch::Tensor xla_b = CopyToDevice(b, device);
-    torch::Tensor xla_c = CopyToDevice(c, device);
-    torch::Tensor xla_d = CopyToDevice(d, device);
-    torch::Tensor xla_result =
-        torch::chain_matmul({xla_a, xla_b, xla_c, xla_d});
-    AllClose(result, xla_result, /*rtol=*/1e-3, /*atol=*/1e-4);
-  });
-
-  ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
-  ExpectCounterChanged("xla::mm", cpp_test::GetIgnoredCounters());
-}
-
 TEST_F(AtenXlaTensorTest, TestLinear) {
   torch::Tensor input =
       torch::rand({2, 4}, torch::TensorOptions(torch::kFloat));
