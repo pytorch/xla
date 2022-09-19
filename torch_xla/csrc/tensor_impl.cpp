@@ -119,7 +119,8 @@ at::IntArrayRef XLATensorImpl::sizes_custom() const {
 }
 
 c10::SymIntArrayRef XLATensorImpl::sym_sizes_custom() const {
-  const_cast<XLATensorImpl*>(this)->SetupSymSizeProperties();
+  // N.B. SetupSizeProperties also updates sym_sizes_
+  const_cast<XLATensorImpl*>(this)->SetupSizeProperties();
   return c10::SymIntArrayRef(sym_sizes_.data(), sym_sizes_.size());
 }
 
@@ -171,37 +172,29 @@ void XLATensorImpl::SetupSizeProperties() {
     for (int i = 0; i < updated_strides.size(); i++) {
       sizes_and_strides_.stride_at_unchecked(i) = updated_strides[i];
     }
+    SetupSymSizeProperties();
     generation_ = generation;
   }
 }
 
 void XLATensorImpl::SetupSymSizeProperties() {
-  size_t generation = tensor_->generation();
-  if (generation != generation_) {
-    // Fill up the basic dimension data members which the base class
-    // implementation uses in its APIs.
-    auto shape = tensor_->shape();
-    auto rank = tensor_->shape().get().rank();
-    c10::SmallVector<c10::SymInt, 5> sym_sizes;
-    numel_ = 1;
-    XLAIrBuilder a = XLAIrBuilder();
-    for (auto i : c10::irange(rank)) {
-      if (tensor_->shape().get().is_dynamic_dimension(i)) {
-        auto dim_node = a.MakeSizeNode(tensor_->GetIrValue(), i);
-        auto symint_node =
-            c10::make_intrusive<torch::lazy::SymIntNodeImpl>(dim_node);
-        auto sn = symint_node->toSymInt();
-        sym_sizes_.push_back(sn);
-        /*TODO(miladm): verify numel_ calculation after adding a dynamic op
-         */
-        numel_ *= dynamic_cast<SizeNode*>(dim_node.get())->getStaticValue();
-      } else {
-        sym_sizes_.push_back(c10::SymInt(tensor_->shape().get().dimensions(i)));
-        numel_ *= tensor_->shape().get().dimensions(i);
-      }
+  auto shape = tensor_->shape();
+  auto rank = shape.get().rank();
+  std::vector<c10::SymInt> sym_sizes;
+  sym_sizes.reserve(rank);
+
+  XLAIrBuilder a = XLAIrBuilder();
+  for (auto i : c10::irange(rank)) {
+    if (shape.get().is_dynamic_dimension(i)) {
+      auto dim_node = a.MakeSizeNode(tensor_->GetIrValue(), i);
+      auto symint_node = c10::make_intrusive<XLASymIntNodeImpl>(dim_node);
+      auto sn = symint_node->toSymInt();
+      sym_sizes.push_back(sn);
+    } else {
+      sym_sizes.push_back(c10::SymInt(shape.get().dimensions(i)));
     }
-    generation_ = generation;
   }
+  sym_sizes_ = sym_sizes;
 }
 
 caffe2::TypeMeta XLATensorImpl::GetTypeMeta(const XLATensor& tensor) {
