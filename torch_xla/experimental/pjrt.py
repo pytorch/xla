@@ -1,10 +1,18 @@
+import collections
 import concurrent.futures
 import functools
+import itertools
 import logging
 import os
 import tempfile
 from itertools import chain
-from typing import Callable, Dict, List, Optional, TypeVar
+from typing import Callable, Dict, Generic, List, Optional, Tuple, TypeVar
+
+import sys
+if sys.version_info < (3, 10):
+  from typing_extensions import ParamSpec, Concatenate
+else:
+  from typing import ParamSpec, Concatenate
 
 import torch
 import torch.distributed as dist
@@ -15,6 +23,7 @@ import torch_xla.core.xla_model as xm
 import torch_xla.utils.utils as xu
 from torch_xla.experimental import tpu
 
+P = ParamSpec('P')
 R = TypeVar('R')
 FN = TypeVar('FN')
 
@@ -126,9 +135,30 @@ def local_ordinal() -> int:
   return global_ordinal() % local_device_count()
 
 
+def _merge_replica_results(
+    replica_results: List[Tuple[int, R]]) -> Dict[int, R]:
+  """Merges list of results from multiple replicas
+
+  Args:
+    replica_results: list of the form [(replica_ordinal, result)]
+
+  Returns:
+    Dict of the form {replica_ordinal: result}
+
+  Raises:
+    AssertionError: if there are duplicate results for the same replica.
+  """
+  replica_counts = collections.Counter(
+      ordinal for ordinal, _ in replica_results)
+  replica, num_results = replica_counts.most_common(1)[0]
+  assert num_results == 1, f'{num_results} results for replica {replica}'
+
+  return dict(replica_results)
+
+
 @requires_pjrt
 def run_thread_per_device(local_rank: int, local_world_size: int,
-                          fn: Callable[..., R]) -> Dict[int, R]:
+                          fn: Callable[[], R]) -> Dict[int, R]:
   """Runs `fn` in a separate thread on each visible device.
 
   Args:
@@ -140,6 +170,8 @@ def run_thread_per_device(local_rank: int, local_world_size: int,
     Dict of the form {thread_rank: return_value}, where return_value is the
     result of calling `fn`.
   """
+  os.environ.setdefault('LOCAL_WORLD_SIZE', str(local_world_size))
+
   if device_type() == 'TPU':
     tpu.configure_topology(local_rank, local_world_size)
 
@@ -147,32 +179,27 @@ def run_thread_per_device(local_rank: int, local_world_size: int,
   xm.set_replication(xm.xla_device(), devices)
   num_threads = len(devices)
 
-  def _thread_fn(fn: Callable[..., R], device: torch.device):
+  @functools.wraps(fn)
+  def _thread_fn(device: torch.device):
+    torch_xla._XLAC._xla_set_default_device(device)
 
-    @functools.wraps(fn)
-    def wrapper(*args, **kwargs):
-      torch_xla._XLAC._xla_set_default_device(device)
-
-      return fn(*args, **kwargs)
-
-    return wrapper
+    return fn()
 
   with concurrent.futures.ThreadPoolExecutor(
       max_workers=num_threads) as executor:
-    futures = {
-        executor.submit(_thread_fn(fn, d)): i for i, d in enumerate(devices)
-    }
+    # TODO: clean up this statement
+    device_ordinals = [
+        torch_xla._XLAC._xla_get_device_ordinal(d) for d in devices
+    ]
+    replica_results = list(
+        zip(device_ordinals, executor.map(_thread_fn, devices)))
 
-    results = {
-        futures[f]: f.result() for f in concurrent.futures.as_completed(futures)
-    }
-
-  return results
+  return _merge_replica_results(replica_results)
 
 
 @requires_pjrt
-def run_multiprocess(fn: Callable[..., R], *args,
-                     **kwargs) -> Dict[int, Dict[int, R]]:
+def run_multiprocess(fn: Callable[P, R], *args: P.args,
+                     **kwargs: P.kwargs) -> Dict[int, R]:
   """Runs `fn` on all devices available to PjRt.
 
   Spawns one process per physical device (e.g. TPU chip).
@@ -183,7 +210,7 @@ def run_multiprocess(fn: Callable[..., R], *args,
     kwargs: kwargs to pass to `fn`
 
   Returns:
-    Dict of the form {process_rank: {thread_rank: return_value}}, where
+    Dict of the form {device_ordinal: return_value}, where
     return_value is the result of calling `fn`.
   """
   if device_type() == 'TPU':
@@ -191,21 +218,44 @@ def run_multiprocess(fn: Callable[..., R], *args,
   else:
     num_processes = 1
 
-  os.environ.setdefault('LOCAL_WORLD_SIZE', str(num_processes))
-
   with concurrent.futures.ProcessPoolExecutor(
-      max_workers=num_processes) as executor:
-    futures = {
-        executor.submit(run_thread_per_device, i, num_processes,
-                        functools.partial(fn, *args, **kwargs)): i
-        for i in range(num_processes)
-    }
+      max_workers=num_processes,
+      mp_context=torch.multiprocessing.get_context('spawn')) as executor:
 
-    results = {
-        futures[f]: f.result() for f in concurrent.futures.as_completed(futures)
-    }
+    mp_fn = functools.partial(
+        run_thread_per_device,
+        local_world_size=num_processes,
+        fn=functools.partial(fn, *args, **kwargs))
+    process_results = executor.map(mp_fn, range(num_processes))
+    replica_results = list(
+        itertools.chain.from_iterable(
+            result.items() for result in process_results))
 
-  return results
+  return _merge_replica_results(replica_results)
+
+
+class _SpawnFn:
+  """Pickle-able wrapper around `fn` that passes the ordinal before `args`"""
+
+  def __init__(self, fn: Callable[Concatenate[int, P], R], *args: P.args,
+               **kwargs: P.kwargs):
+    self.fn = fn
+    self.args = args
+    self.kwargs = kwargs
+
+  def __call__(self) -> None:
+    self.fn(global_ordinal(), *self.args, **self.kwargs)
+
+
+def spawn(fn: Callable, args: Tuple = ()) -> None:
+  """Run functions compatible with xmp.spawn.
+
+  Args:
+    fn: Callable that takes the process index as the first argument.
+    args: args to pass to `fn`
+  """
+  spawn_fn = _SpawnFn(fn, *args)
+  run_multiprocess(spawn_fn)
 
 
 def broadcast_master_param(model: nn.Module) -> None:

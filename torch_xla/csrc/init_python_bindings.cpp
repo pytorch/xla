@@ -1132,6 +1132,9 @@ void InitXlaModuleBindings(py::module m) {
         bridge::AtenDeviceToXlaDevice(device_str);
     return device.ordinal();
   });
+  m.def("_xla_get_device_ordinal", [](const std::string& device_str) {
+    return bridge::AtenDeviceToXlaDevice(device_str).ordinal();
+  });
   m.def("_xla_set_rng_seed",
         [](uint64_t seed, const std::string& device) {
           SetRngSeed(seed, device);

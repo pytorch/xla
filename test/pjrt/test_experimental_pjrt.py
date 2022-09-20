@@ -44,18 +44,9 @@ class TestExperimentalPjrt(parameterized.TestCase):
   def test_world_size(self):
     self.assertEqual(xm.xrt_world_size(), pjrt.global_device_count())
 
-  # TODO(will-cromar): add a multi-device version of this test.
-  def test_xla_device_default(self):
-    device = xm.xla_device()
-    self.assertEqual(device, torch.device('xla:0'))
-
   def test_xla_device_error(self):
     with self.assertRaises(IndexError):
       xm.xla_device(10)
-
-  def test_run_multiprocess_one_device(self):
-    results = pjrt.run_multiprocess(xm.xla_device)
-    self.assertDictEqual(results, {0: {0: torch.device('xla:0')}})
 
 
 if __name__ == '__main__':

@@ -10,6 +10,7 @@ import torch.multiprocessing
 import torch_xla
 import torch_xla.core.xla_env_vars as xenv
 import torch_xla.core.xla_model as xm
+from torch_xla.experimental import pjrt
 import torch_xla.utils.utils as xu
 import traceback
 
@@ -378,6 +379,9 @@ def spawn(fn,
     `nprocs` is 1 the `fn` function will be called directly, and the API will
     not return.
   """
+  if pjrt.using_pjrt():
+    return pjrt.spawn(fn, args)
+
   if not _is_xla_config():
     # If this is not an XLA setup, jump to normal multi-processing.
     return _run_direct(fn, args, nprocs, join, daemon, start_method)

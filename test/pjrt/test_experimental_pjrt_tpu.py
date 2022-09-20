@@ -37,36 +37,20 @@ class TestExperimentalPjrtTpu(parameterized.TestCase):
   def test_xla_devices_multiprocess(self):
     accelerator_devices = {
         'v3-8': {
-            0: {
-                0: torch.device('xla:0'),
-                1: torch.device('xla:1'),
-            },
-            1: {
-                0: torch.device('xla:0'),
-                1: torch.device('xla:1'),
-            },
-            2: {
-                0: torch.device('xla:0'),
-                1: torch.device('xla:1'),
-            },
-            3: {
-                0: torch.device('xla:0'),
-                1: torch.device('xla:1'),
-            },
+            0: torch.device('xla:0'),
+            1: torch.device('xla:1'),
+            3: torch.device('xla:0'),
+            4: torch.device('xla:1'),
+            5: torch.device('xla:0'),
+            6: torch.device('xla:1'),
+            7: torch.device('xla:0'),
+            8: torch.device('xla:1'),
         },
         'v4-8': {
-            0: {
-                0: torch.device('xla:0')
-            },
-            1: {
-                0: torch.device('xla:0')
-            },
-            2: {
-                0: torch.device('xla:0')
-            },
-            3: {
-                0: torch.device('xla:0')
-            },
+            0: torch.device('xla:0'),
+            1: torch.device('xla:0'),
+            2: torch.device('xla:0'),
+            3: torch.device('xla:0'),
         },
     }
 
@@ -80,12 +64,8 @@ class TestExperimentalPjrtTpu(parameterized.TestCase):
 
   def test_xla_devices_single_process_all_chips(self):
     accelerator_devices = {
-        'v3-8': {
-            0: {i: torch.device(f'xla:{i}') for i in range(8)},
-        },
-        'v4-8': {
-            0: {i: torch.device(f'xla:{i}') for i in range(4)},
-        },
+        'v3-8': {i: torch.device(f'xla:{i}') for i in range(8)},
+        'v4-8': {i: torch.device(f'xla:{i}') for i in range(4)},
     }
 
     if self.accelerator_type not in accelerator_devices:
@@ -102,15 +82,11 @@ class TestExperimentalPjrtTpu(parameterized.TestCase):
   def test_xla_devices_single_process_one_chip(self):
     accelerator_devices = {
         'v3-8': {
-            0: {
-                0: torch.device('xla:0'),
-                1: torch.device('xla:1'),
-            },
+            0: torch.device('xla:0'),
+            1: torch.device('xla:1'),
         },
         'v4-8': {
-            0: {
-                0: torch.device('xla:0')
-            },
+            0: torch.device('xla:0')
         },
     }
 
@@ -158,8 +134,7 @@ class TestExperimentalPjrtTpu(parameterized.TestCase):
     expected_num_devices = accelerator_num_devices[self.accelerator_type]
 
     results = pjrt.run_multiprocess(ordinal_func)
-    values = list(
-        itertools.chain.from_iterable(row.values() for row in results.values()))
+    values = list(results.values())
     self.assertListEqual(sorted(values), list(range(expected_num_devices)))
 
   @parameterized.named_parameters(('xla_model', xm.get_local_ordinal),
@@ -176,8 +151,7 @@ class TestExperimentalPjrtTpu(parameterized.TestCase):
     expected_num_devices = accelerator_num_devices[self.accelerator_type]
 
     results = pjrt.run_multiprocess(ordinal_func)
-    values = list(
-        itertools.chain.from_iterable(row.values() for row in results.values()))
+    values = list(results.values())
     self.assertListEqual(sorted(values), list(range(expected_num_devices)))
 
   @staticmethod
@@ -194,14 +168,12 @@ class TestExperimentalPjrtTpu(parameterized.TestCase):
   @parameterized.named_parameters(('synchronized_parameters', True),
                                   ('unsynchronized_parameters', False))
   def test_broadcast_master_param(self, sync):
-    torch.set_default_tensor_type('torch.FloatTensor')
     results = pjrt.run_multiprocess(TestExperimentalPjrtTpu._broadcast, sync)
-    master_params = results[0][0]
-    for process_key in results:
-      worker_params = results[process_key][0]
+    master_params = results[0]
+    for ordinal, worker_params in results.items():
       if sync:
         np.testing.assert_array_equal(master_params, worker_params)
-      elif process_key != 0:
+      elif ordinal != 0:
         np.testing.assert_raises(AssertionError, np.testing.assert_array_equal,
                                  master_params, worker_params)
 
@@ -218,11 +190,9 @@ class TestExperimentalPjrtTpu(parameterized.TestCase):
   def test_all_gather(self, pin_layout):
     results = pjrt.run_multiprocess(TestExperimentalPjrtTpu._all_gather,
                                     pin_layout)
-    values = list(
-        itertools.chain.from_iterable(row.values() for row in results.values()))
 
-    expected = list(range(len(values)))
-    for v in values:
+    expected = list(range(len(results)))
+    for v in results.values():
       np.testing.assert_array_equal(v, expected)
 
   @staticmethod
@@ -241,16 +211,14 @@ class TestExperimentalPjrtTpu(parameterized.TestCase):
     )
     xm.mark_step()
 
-    return xm.get_ordinal(), out.cpu().numpy()
+    return out.cpu().numpy()
 
   @parameterized.named_parameters(('pinned', True), ('unpinned', False))
   def test_reduce_scatter(self, pin_layout):
     results = pjrt.run_multiprocess(TestExperimentalPjrtTpu._reduce_scatter,
                                     pin_layout)
-    values = list(
-        itertools.chain.from_iterable(row.values() for row in results.values()))
 
-    for ordinal, value in values:
+    for ordinal, value in results.items():
       np.testing.assert_array_equal(value, [-ordinal])
 
   @staticmethod
@@ -275,18 +243,16 @@ class TestExperimentalPjrtTpu(parameterized.TestCase):
         pin_layout=pin_layout,
     )
 
-    return xm.get_ordinal(), out.cpu().numpy()
+    return out.cpu().numpy()
 
   @parameterized.named_parameters(('pinned', True), ('unpinned', False))
   def test_all_to_all(self, pin_layout):
     results = pjrt.run_multiprocess(TestExperimentalPjrtTpu._all_to_all,
                                     pin_layout)
-    values = list(
-        itertools.chain.from_iterable(row.values() for row in results.values()))
 
-    for ordinal, value in values:
-      np.testing.assert_array_equal(value, [[[-ordinal] * len(values),
-                                             list(range(len(values)))]])
+    for ordinal, value in results.items():
+      np.testing.assert_array_equal(value, [[[-ordinal] * len(results),
+                                             list(range(len(results)))]])
 
 
 if __name__ == '__main__':

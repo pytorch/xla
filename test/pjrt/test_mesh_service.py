@@ -16,7 +16,7 @@ class PjRtMeshServiceTest(parameterized.TestCase):
       os.environ['XRT_MESH_SERVICE_ADDRESS'] = xrt_mesh_addr
 
     payload = b'message %d' % xm.get_ordinal()
-    return xm.get_ordinal(), xm.rendezvous("test rendezvous", payload, replicas)
+    return xm.rendezvous("test rendezvous", payload, replicas)
 
   @parameterized.named_parameters(
       ('defaults', None, []), ('xrt_address', 'localhost:9477', []),
@@ -24,11 +24,9 @@ class PjRtMeshServiceTest(parameterized.TestCase):
   def test_rendezvous(self, xrt_mesh_addr, replicas):
     results = pjrt.run_multiprocess(self._rendezvous_default, xrt_mesh_addr,
                                     replicas)
-    values = list(
-        itertools.chain.from_iterable(row.values() for row in results.values()))
-    replicas = replicas or list(range(len(values)))
+    replicas = replicas or list(range(len(results)))
 
-    for ordinal, value in values:
+    for ordinal, value in results.items():
       if ordinal in replicas or not replicas:
         self.assertEqual(value, [b'message %d' % r for r in replicas])
 
@@ -38,8 +36,7 @@ class PjRtMeshServiceTest(parameterized.TestCase):
 
   def test_mesh_reduce(self):
     results = pjrt.run_multiprocess(self._mesh_reduce)
-    values = list(
-        itertools.chain.from_iterable(row.values() for row in results.values()))
+    values = list(results.values())
 
     expected = sum(range(len(values)))
     for v in values:
