@@ -47,6 +47,9 @@ class SizeNode : public XlaNode, public torch::lazy::DimensionNode {
  private:
   size_t dim_ = 0;
   int64_t upper_bound_;
+  mutable bool dynamic_value_computed_ = false;
+  // represent the runtime size of the current size node.
+  mutable int64_t runtime_size_;
 };
 
 class SizeAdd : public XlaNode, public torch::lazy::DimensionNode {
