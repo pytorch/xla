@@ -302,8 +302,6 @@ xla::XlaOp BuildGelu(xla::XlaOp input) {
                                                    input.builder());
   xla::XlaOp one = XlaHelpers::ScalarValue<float>(1.0, shape.element_type(),
                                                   input.builder());
-  xla::XlaOp m_sqrt2 = XlaHelpers::ScalarValue<float>(
-      M_SQRT2, shape.element_type(), input.builder());
   xla::XlaOp m_sqrt1_2 = XlaHelpers::ScalarValue<float>(
       M_SQRT1_2, shape.element_type(), input.builder());
 
