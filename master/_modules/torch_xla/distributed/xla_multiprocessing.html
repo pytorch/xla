@@ -304,6 +304,7 @@
 <span class="kn">import</span> <span class="nn">torch_xla</span>
 <span class="kn">import</span> <span class="nn">torch_xla.core.xla_env_vars</span> <span class="k">as</span> <span class="nn">xenv</span>
 <span class="kn">import</span> <span class="nn">torch_xla.core.xla_model</span> <span class="k">as</span> <span class="nn">xm</span>
+<span class="kn">from</span> <span class="nn">torch_xla.experimental</span> <span class="kn">import</span> <span class="n">pjrt</span>
 <span class="kn">import</span> <span class="nn">torch_xla.utils.utils</span> <span class="k">as</span> <span class="nn">xu</span>
 <span class="kn">import</span> <span class="nn">traceback</span>
 
@@ -672,6 +673,9 @@
 <span class="sd">    `nprocs` is 1 the `fn` function will be called directly, and the API will</span>
 <span class="sd">    not return.</span>
 <span class="sd">  &quot;&quot;&quot;</span>
+  <span class="k">if</span> <span class="n">pjrt</span><span class="o">.</span><span class="n">using_pjrt</span><span class="p">():</span>
+    <span class="k">return</span> <span class="n">pjrt</span><span class="o">.</span><span class="n">spawn</span><span class="p">(</span><span class="n">fn</span><span class="p">,</span> <span class="n">args</span><span class="p">)</span>
+
   <span class="k">if</span> <span class="ow">not</span> <span class="n">_is_xla_config</span><span class="p">():</span>
     <span class="c1"># If this is not an XLA setup, jump to normal multi-processing.</span>
     <span class="k">return</span> <span class="n">_run_direct</span><span class="p">(</span><span class="n">fn</span><span class="p">,</span> <span class="n">args</span><span class="p">,</span> <span class="n">nprocs</span><span class="p">,</span> <span class="n">join</span><span class="p">,</span> <span class="n">daemon</span><span class="p">,</span> <span class="n">start_method</span><span class="p">)</span>
