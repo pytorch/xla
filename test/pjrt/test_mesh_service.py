@@ -22,8 +22,8 @@ class PjRtMeshServiceTest(parameterized.TestCase):
       ('defaults', None, []), ('xrt_address', 'localhost:9477', []),
       ('four_replicas', None, [0, 1, 2, 3]), ('two_replicas', None, [0, 1]))
   def test_rendezvous(self, xrt_mesh_addr, replicas):
-    results = pjrt.run_multiprocess(self._rendezvous_default, xrt_mesh_addr,
-                                    replicas)
+    results = pjrt._run_multiprocess(self._rendezvous_default, xrt_mesh_addr,
+                                     replicas)
     replicas = replicas or list(range(len(results)))
 
     for ordinal, value in results.items():
@@ -35,7 +35,7 @@ class PjRtMeshServiceTest(parameterized.TestCase):
     return xm.mesh_reduce('test mesh reduce', xm.get_ordinal(), sum)
 
   def test_mesh_reduce(self):
-    results = pjrt.run_multiprocess(self._mesh_reduce)
+    results = pjrt._run_multiprocess(self._mesh_reduce)
     values = list(results.values())
 
     expected = sum(range(len(values)))
