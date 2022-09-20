@@ -22,11 +22,9 @@ class EinsumUtilities {
     int split_index = equation.find("->");
     XLA_CHECK_NE(split_index, std::string::npos);
 
-    std::string equation_input = equation.substr(0, split_index);
-    std::string equation_output =
-        equation.substr(split_index + 2, equation.size() - split_index - 2);
+    std::vector<std::string> elements = ParseEquation(equation);
 
-    std::string backward_equation = equation_output + "->" + equation_input;
+    std::string backward_equation = elements[1] + "->" + elements[0];
     return backward_equation;
   }
 
@@ -52,9 +50,11 @@ class EinsumUtilities {
         // not all characters of "ik" or "ij" are contained in another element.
         if (std::all_of(elements.cbegin(), elements.cend(),
                         [&c, &i, &j](std::string element) {
-                          return j++ == i ||
-                                 std::find(element.begin(), element.end(), c) ==
-                                     element.end();
+                          bool elem_match = j++ == i;
+                          bool char_match =
+                              std::find(element.begin(), element.end(), c) ==
+                              element.end();
+                          return elem_match || char_match;
                         })) {
           return false;
         }
@@ -73,12 +73,12 @@ class EinsumUtilities {
 
     std::vector<std::string> elements;
 
-    elements.push_back(equation.substr(0, split_index_one));
-
     if (split_index_one == std::string::npos) {
+      elements.push_back(equation.substr(0, split_index_two));
       elements.push_back(equation.substr(
-          split_index_two + 1, equation.size() - split_index_two - 1));
+          split_index_two + 2, equation.size() - split_index_two - 2));
     } else {
+      elements.push_back(equation.substr(0, split_index_one));
       elements.push_back(equation.substr(
           split_index_one + 1, split_index_two - split_index_one - 1));
       elements.push_back(equation.substr(
