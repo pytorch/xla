@@ -19,8 +19,10 @@ namespace util {
 namespace {
 
 hash_t SingleShapeHash(const Shape& shape, hash_t seed) {
-  for (auto dim : shape.layout().minor_to_major()) {
-    seed = HashCombine(seed, dim);
+  if (shape.has_layout()) {
+    for (auto dim : shape.layout().minor_to_major()) {
+      seed = HashCombine(seed, dim);
+    }
   }
   for (auto dim : shape.dimensions()) {
     seed = HashCombine(seed, dim);

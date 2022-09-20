@@ -8,6 +8,7 @@
 #include "tensorflow/compiler/xla/layout_util.h"
 #include "tensorflow/compiler/xla/literal.h"
 #include "tensorflow/compiler/xla/pjrt/cpu_device.h"
+#include "tensorflow/compiler/xla/pjrt/pjrt_executable.h"
 #include "tensorflow/compiler/xla/pjrt/pjrt_client.h"
 #include "tensorflow/compiler/xla/pjrt/tfrt_cpu_pjrt_client.h"
 #include "tensorflow/compiler/xla/pjrt/tpu_client.h"
@@ -216,7 +217,7 @@ std::vector<ComputationClient::ComputationPtr> PjRtComputationClient::Compile(
     }
 
     PjRtDevice* pjrt_device = StringToPjRtDevice(instance.compilation_device);
-    std::unique_ptr<xla::PjRtExecutable> executable =
+    std::unique_ptr<xla::PjRtLoadedExecutable> executable =
         ConsumeValue(client_->Compile(instance.computation, compile_options));
 
     const auto& hlo_modules = ConsumeValue(executable->GetHloModules());
