@@ -1,0 +1,132 @@
+diff --git a/tensorflow/core/profiler/convert/xplane_to_tools_data.cc b/tensorflow/core/profiler/convert/xplane_to_tools_data.cc
+index 6a3c045db5c..fbb8a84786e 100644
+--- a/tensorflow/core/profiler/convert/xplane_to_tools_data.cc
++++ b/tensorflow/core/profiler/convert/xplane_to_tools_data.cc
+@@ -20,9 +20,13 @@ limitations under the License.
+ 
+ #include "absl/strings/str_format.h"
+ #include "absl/strings/string_view.h"
++#include "tensorflow/compiler/xla/service/hlo.pb.h"
++#include "tensorflow/core/lib/gtl/map_util.h"
+ #include "tensorflow/core/platform/env.h"
+ #include "tensorflow/core/platform/logging.h"
++#include "tensorflow/core/platform/path.h"
+ #include "tensorflow/core/platform/protobuf.h"
++#include "tensorflow/core/profiler/convert/hlo_proto_to_memory_visualization_utils.h"
+ #include "tensorflow/core/profiler/convert/hlo_to_tools_data.h"
+ #include "tensorflow/core/profiler/convert/op_stats_to_input_pipeline_analysis.h"
+ #include "tensorflow/core/profiler/convert/op_stats_to_op_profile.h"
+@@ -232,7 +236,77 @@ std::pair<std::string, bool> ConvertMultiXSpacesToOpProfileViewer(
+ 
+   return std::make_pair(profile.SerializeAsString(), true);
+ }
+-}  // namespace
++
++std::pair<std::string, bool> ConvertHloProtoToMemoryViewer(
++    const xla::HloProto& hlo_proto) {
++  static constexpr int kSmallBufferSize = 16 * 1024;  // 16KB
++  static constexpr int kMemorySpaceColor = 0;         // HBM
++
++  auto result_or = ConvertHloProtoToPreprocessResult(
++      hlo_proto, kSmallBufferSize,
++      GetHeapSimulatorTraceId(hlo_proto, kMemorySpaceColor), kMemorySpaceColor);
++  if (!result_or.ok()) {
++    LOG(ERROR) << "Failed to convert HLO proto to memory viewer result: "
++               << result_or.status().message();
++    return std::make_pair("", false);
++  }
++
++  std::string json_output;
++  tensorflow::protobuf::util::JsonPrintOptions options;
++  options.always_print_primitive_fields = true;
++  auto encoded_status = tensorflow::protobuf::util::MessageToJsonString(
++      result_or.value(), &json_output, options);
++  if (!encoded_status.ok()) {
++    LOG(ERROR) << "Failed to convert memory viewer result to JSON format: "
++               << encoded_status.message();
++    return std::make_pair("", false);
++  }
++
++  return std::make_pair(json_output, true);
++}
++
++std::pair<std::string, bool> ConvertHloProtoToToolData(
++    const std::vector<std::string>& xspace_paths,
++    const absl::string_view tool_name,
++    const absl::flat_hash_map<std::string, std::variant<int, std::string>>&
++        options) {
++  if (xspace_paths.empty()) {
++    return std::make_pair("", false);
++  }
++
++  // <options> must provide a hlo_module_name field to identify the HLO module.
++  auto* result = gtl::FindOrNull(options, "hlo_module_name");
++  if (!result) {
++    LOG(ERROR) << "Can not find HLO module name from options.";
++    return std::make_pair("", false);
++  }
++  const std::string* hlo_module_name = std::get_if<std::string>(result);
++  if (!hlo_module_name || hlo_module_name->empty()) {
++    LOG(ERROR) << "Can not find HLO module name from options.";
++    return std::make_pair("", false);
++  }
++
++  // Load HLO module from file.
++  absl::string_view base_dir = tensorflow::io::Dirname(xspace_paths[0]);
++  std::string hlo_proto_file_name =
++      GetHloProtoFileName(base_dir, *hlo_module_name);
++  xla::HloProto hlo_proto;
++  tensorflow::Status status = tensorflow::ReadBinaryProto(
++      tensorflow::Env::Default(), hlo_proto_file_name, &hlo_proto);
++  if (!status.ok()) {
++    LOG(ERROR) << "Failed to read HLO proto: " << status.error_message();
++    return std::make_pair("", false);
++  }
++
++  // Convert from HLO proto to tools data.
++  if (tool_name == "memory_viewer") {
++    return ConvertHloProtoToMemoryViewer(hlo_proto);
++  } else {
++    LOG(ERROR) << "Can not find tool: " << tool_name
++               << ". Please update to the latest version of Tensorflow.";
++    return std::make_pair("", false);
++  }
++}
+ 
+ std::pair<std::string, bool> ConvertMultiXSpacesToToolData(
+     const std::vector<XSpace>& xspaces,
+@@ -278,5 +352,6 @@ std::pair<std::string, bool> ConvertMultiXSpacesToToolData(
+   }
+ }
+ 
++}  // namespace
+ }  // namespace profiler
+ }  // namespace tensorflow
+--- a/tensorflow/core/platform/macros.h
++++ b/tensorflow/core/platform/macros.h
+@@ -21,7 +21,7 @@ limitations under the License.
+ // Compiler supports GCC-style attributes
+ #define TF_ATTRIBUTE_NORETURN __attribute__((noreturn))
+ #define TF_ATTRIBUTE_ALWAYS_INLINE __attribute__((always_inline))
+-#define TF_ATTRIBUTE_NOINLINE __attribute__((noinline))
++#define TF_ATTRIBUTE_NOINLINE [[noinline]]
+ #define TF_ATTRIBUTE_UNUSED __attribute__((unused))
+ #define TF_ATTRIBUTE_COLD __attribute__((cold))
+ #define TF_ATTRIBUTE_WEAK __attribute__((weak))
+--- a/tensorflow/compiler/xla/service/cpu/runtime_fp16.h
++++ b/tensorflow/compiler/xla/service/cpu/runtime_fp16.h
+@@ -18,12 +18,7 @@ limitations under the License.
+ 
+ #include <stdint.h>
+ 
+-// _Float16 always gets us the correct ABI type, so use that if available.
+-// AArch64 GCC defines __FLT16_MANT_DIG__ even when _Float16 is not available.
+-#if defined(__FLT16_MANT_DIG__) && \
+-    (defined(__clang__) || !(defined(__GNUC__) && defined(__aarch64__)))
+-using XlaF16ABIType = _Float16;
+-#elif defined(__x86_64__)
++#if defined(__x86_64__)
+ // Older versions of Clang don't have _Float16. Since both float and _Float16
+ // are passed in the same register we can use the wider type and careful casting
+ // to conform to x86_64 psABI. This only works with the assumption that we're
+ 

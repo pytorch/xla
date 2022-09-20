@@ -1113,7 +1113,7 @@ std::unique_ptr<xrt::XLAComputation> XrtComputationClient::CreateXrtComputation(
         output_shape->ToProto();
   }
   *xrt_computation->mutable_hlo_snapshot() =
-      std::move(*computation.Snapshot().ConsumeValueOrDie());
+      std::move(*computation.Snapshot().value());
   return xrt_computation;
 }
 

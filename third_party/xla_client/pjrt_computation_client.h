@@ -7,6 +7,7 @@
 #include "tensorflow/compiler/xla/client/xla_computation.h"
 #include "tensorflow/compiler/xla/literal.h"
 #include "tensorflow/compiler/xla/pjrt/pjrt_client.h"
+#include "tensorflow/compiler/xla/pjrt/pjrt_executable.h"
 #include "tensorflow/compiler/xla/shape.h"
 #include "tensorflow/compiler/xla/xla_client/computation_client.h"
 #include "tensorflow/compiler/xla/xla_client/debug_macros.h"
@@ -172,12 +173,12 @@ class PjRtComputationClient : public ComputationClient {
   struct PjRtComputation : public Computation {
     PjRtComputation(XlaComputation computation, ProgramShape program_shape,
                     std::vector<std::string> devices,
-                    std::unique_ptr<xla::PjRtExecutable> executable)
+                    std::unique_ptr<xla::PjRtLoadedExecutable> executable)
         : Computation(std::move(computation), std::move(program_shape),
                       std::move(devices)),
           executable(std::move(executable)) {}
 
-    std::unique_ptr<xla::PjRtExecutable> executable;
+    std::unique_ptr<xla::PjRtLoadedExecutable> executable;
   };
 };
 
