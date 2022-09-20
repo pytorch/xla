@@ -43,7 +43,7 @@ By default, PjRt will use all TPU chips. To use only one TPU chip, set
 `TPU_PROCESS_BOUNDS` and `TPU_VISIBLE_CHIPS`:
 
 ```
-TPU_PROCESS_BOUNDS=1,1,1 TPU_VISIBLE_CHIPS=0 PJRT_DEVICE=TPU python3 xla/test/pjrt/test_train_mp_imagenet.py --fake_data
+TPU_PROCESS_BOUNDS=1,1,1 TPU_VISIBLE_CHIPS=0 PJRT_DEVICE=TPU python3 xla/test/test_train_mp_imagenet.py --fake_data
 ```
 
 #### Pods
