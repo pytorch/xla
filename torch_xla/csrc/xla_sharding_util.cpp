@@ -81,7 +81,10 @@ xla::HloModuleProto ShardingUtil::SpmdPartitioningPass(
           /*num_replicas=*/num_replicas));
   pass.AddPass<xla::HloVerifier>(/*layout_sensitive=*/false,
                                  /*allow_mixed_precision=*/false);
-  pass.Run(module.get());
+  const auto& pass_status = pass.Run(module.get());
+  if (!pass_status.ok()) {
+    XLA_ERROR() << "spmd-partitioning pass failed";
+  }
 
   return module.get()->ToProto();
 }
