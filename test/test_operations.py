@@ -35,6 +35,7 @@ import torch_xla.distributed.data_parallel as dp
 import torch_xla.debug.metrics as met
 import torch_xla.debug.model_comparator as mc
 import torch_xla.distributed.parallel_loader as pl
+from torch_xla.experimental import pjrt
 import torch_xla.test.test_utils as xtu
 import torch_xla.utils.utils as xu
 import torch_xla.utils.serialization as xser
@@ -1808,7 +1809,9 @@ class TestAtenXlaTensor(XlaTestCase):
         t += torch.tensor(i, dtype=torch.float, device=t.device)
       return t
 
-    self.runAtenTest([torch.tensor(20.0)], test_fn)
+    # This test is for PjRT only
+    if pjrt.using_pjrt():
+      self.runAtenTest([torch.tensor(20.0)], test_fn)
 
   def test_view_and_copy_(self):
     xla_device = xm.xla_device()
