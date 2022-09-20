@@ -291,15 +291,6 @@ absl::optional<torch::lazy::Value> GetOptionalIrValue(
   return value;
 }
 
-void CheckIsIntegralOrPred(const xla::Shape& shape,
-                           const std::string& op_name) {
-  XLA_CHECK(xla::ShapeUtil::ElementIsIntegral(shape) ||
-            shape.element_type() == xla::PrimitiveType::PRED)
-      << "Operator " << op_name
-      << " is only supported for integer or boolean type tensors, got: "
-      << shape;
-}
-
 ViewInfo CreateAsStridedViewInfo(const xla::Shape& input_shape,
                                  std::vector<int64_t> size,
                                  std::vector<int64_t> stride,

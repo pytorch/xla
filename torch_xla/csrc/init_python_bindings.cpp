@@ -1475,7 +1475,10 @@ void InitXlaModuleBindings(py::module m) {
               collective_ops_creator);
           pass.AddPass<xla::HloVerifier>(/*layout_sensitive=*/false,
                                          /*allow_mixed_precision=*/false);
-          pass.Run(module.get());
+          const auto& pass_status = pass.Run(module.get());
+          if (!pass_status.ok()) {
+            XLA_ERROR() << "spmd-partitioning pass failed";
+          }
           return module->ToString();
         });
 

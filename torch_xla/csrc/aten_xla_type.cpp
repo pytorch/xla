@@ -64,21 +64,6 @@ at::Tensor to_meta(const at::Tensor& tensor) {
   }
   return out;
 }
-c10::optional<at::Tensor> to_meta(const c10::optional<at::Tensor>& tensor) {
-  if (tensor.has_value()) {
-    return to_meta(*tensor);
-  }
-  return c10::nullopt;
-}
-
-std::vector<at::Tensor> to_meta(const at::TensorList& t_list) {
-  std::vector<at::Tensor> outs;
-  outs.reserve(t_list.size());
-  for (const auto& i : c10::irange(t_list.size())) {
-    outs.push_back(to_meta(t_list[i]));
-  }
-  return outs;
-}
 
 torch::lazy::BackendDevice GetXlaDeviceOrCurrent(
     const c10::optional<c10::Device>& device) {
@@ -228,7 +213,6 @@ at::Tensor DoBinaryOpWithoutPromo(const at::Tensor& self,
 template <typename B>
 at::Tensor DoBinaryOpWithoutPromo(const at::Tensor& self,
                                   const at::Scalar& other, const B& bin_op) {
-  at::ScalarType dtype = at::result_type(self, other);
   XLATensorPtr self_tensor = bridge::GetXlaTensor(self);
   XLATensorPtr result = bin_op(self_tensor, other);
   return bridge::AtenFromXlaTensor(result);
