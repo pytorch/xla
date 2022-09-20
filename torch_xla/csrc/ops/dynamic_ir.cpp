@@ -35,7 +35,7 @@ SizeNode::SizeNode(torch::lazy::Value input, size_t dim)
 };
 
 int64_t SizeNode::getDynamicValue() const {
-  if (dyanmic_value_computed_) {
+  if (dynamic_value_computed_) {
     XLA_COUNTER("CachedSizeNodeValue", 1);
     return runtime_size_;
   }
@@ -44,8 +44,8 @@ int64_t SizeNode::getDynamicValue() const {
   std::vector<XLATensorPtr> dummy_size_tensors = {
       XLATensor::Create(cloned, *GetDefaultDevice(), at::ScalarType::Long)};
   std::vector<at::Tensor> res = XLATensor::GetTensors(&dummy_size_tensors);
-  runtime_size_ = res[0].sum().item().toInt();
-  dyanmic_value_computed_ = true;
+  runtime_size_ = res[0].item().toInt();
+  dynamic_value_computed_ = true;
   return runtime_size_;
 }
 
