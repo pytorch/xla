@@ -44,6 +44,7 @@ full_codegen:
   - gt.Scalar
   - gt.Tensor
   - hardshrink
+  - hardshrink_backward
   - hardsigmoid
   - hardsigmoid_backward
   - hardswish
@@ -76,6 +77,7 @@ full_codegen:
   - silu_backward
   - sin
   - sinh
+  - softshrink_backward
   - take
   - tan
   - tanh
@@ -173,7 +175,6 @@ supported:
   - gather
   - gelu
   - gelu_backward
-  - hardshrink_backward
   - hardtanh
   - hardtanh_backward
   - index.Tensor
@@ -281,7 +282,6 @@ supported:
   - softplus
   - softplus_backward
   - softshrink
-  - softshrink_backward
   - sort
   - sort.stable
   - split.Tensor

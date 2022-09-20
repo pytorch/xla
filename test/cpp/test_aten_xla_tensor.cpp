@@ -5967,6 +5967,24 @@ TEST_F(AtenXlaTensorTest, TestHardshrink) {
   });
 }
 
+TEST_F(AtenXlaTensorTest, TestHardshrinkWithMixedDataType) {
+  torch::Tensor lambdaTensor =
+      torch::scalar_tensor(0., torch::TensorOptions(torch::kFloat32));
+  // It seems the below .item() will convert a kFloat64 to a kFloat32 if I
+  // make the scalar tensor a kFloat32 type.
+  torch::Scalar lambda = lambdaTensor.item();
+  torch::Tensor input =
+      torch::randn({10}, torch::TensorOptions(torch::kFloat64));
+
+  torch::Tensor output = torch::hardshrink(input, lambda);
+  ForEachDevice([&](const torch::Device& device) {
+    torch::Tensor xla_input = CopyToDevice(input, device);
+    torch::Tensor xla_output = torch::hardshrink(xla_input, lambda);
+    AllClose(output, xla_output);
+  });
+}
+
+// Unlike Softshrink, a negative lambda is a valid input for Hardshrink.
 TEST_F(AtenXlaTensorTest, TestHardshrinkWithNegativeLambda) {
   torch::Tensor input = torch::randn({10}, torch::TensorOptions(torch::kFloat));
   torch::Scalar lambd = -0.5;
@@ -10433,6 +10451,22 @@ TEST_F(AtenXlaTensorTest, TestHardshrinkBackward) {
   });
 }
 
+TEST_F(AtenXlaTensorTest, TestHardshrinkBackwardWithMixedDataType) {
+  torch::Tensor lambdaTensor =
+      torch::scalar_tensor(0., torch::TensorOptions(torch::kFloat32));
+  torch::Scalar lambda = lambdaTensor.item();
+
+  auto testfn = [&](const std::vector<torch::Tensor>& inputs) -> torch::Tensor {
+    return torch::hardshrink(inputs[0], lambda);
+  };
+  ForEachDevice([&](const torch::Device& device) {
+    TestBackward(
+        {torch::randn(
+            {100}, torch::TensorOptions(torch::kFloat64).requires_grad(true))},
+        device, testfn);
+  });
+}
+
 TEST_F(AtenXlaTensorTest, TestSoftshrinkBackward) {
   auto testfn = [&](const std::vector<torch::Tensor>& inputs) -> torch::Tensor {
     return torch::softshrink(inputs[0]);
@@ -10441,6 +10475,22 @@ TEST_F(AtenXlaTensorTest, TestSoftshrinkBackward) {
     TestBackward(
         {torch::randn({100},
                       torch::TensorOptions(torch::kFloat).requires_grad(true))},
+        device, testfn);
+  });
+}
+
+TEST_F(AtenXlaTensorTest, TestSoftshrinkBackwardWithMixedDataType) {
+  torch::Tensor lambdaTensor =
+      torch::scalar_tensor(0., torch::TensorOptions(torch::kFloat32));
+  torch::Scalar lambda = lambdaTensor.item();
+
+  auto testfn = [&](const std::vector<torch::Tensor>& inputs) -> torch::Tensor {
+    return torch::softshrink(inputs[0], lambda);
+  };
+  ForEachDevice([&](const torch::Device& device) {
+    TestBackward(
+        {torch::randn(
+            {100}, torch::TensorOptions(torch::kFloat64).requires_grad(true))},
         device, testfn);
   });
 }

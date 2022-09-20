@@ -414,6 +414,12 @@ xla::Shape HardshrinkOutputShape(const torch::lazy::Value& self,
   return GetXlaShape(self);
 }
 
+xla::Shape HardshrinkBackwardOutputShape(const torch::lazy::Value& grad_out,
+                                         const torch::lazy::Value& input,
+                                         const torch::lazy::Value& lambd) {
+  return GetXlaShape(input);
+}
+
 xla::Shape HardsigmoidOutputShape(const torch::lazy::Value& input) {
   return GetXlaShape(input);
 }
@@ -620,6 +626,12 @@ xla::Shape SinOutputShape(const torch::lazy::Value& input) {
 }
 
 xla::Shape SinhOutputShape(const torch::lazy::Value& input) {
+  return GetXlaShape(input);
+}
+
+xla::Shape SoftshrinkBackwardOutputShape(const torch::lazy::Value& grad_out,
+                                         const torch::lazy::Value& input,
+                                         const torch::lazy::Value& lambd) {
   return GetXlaShape(input);
 }
 
