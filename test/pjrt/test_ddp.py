@@ -52,7 +52,7 @@ class TestPjRtDistributedDataParallel(parameterized.TestCase):
     ddp_model = DDP(model)
 
   def test_ddp_init(self):
-    pjrt.run_multiprocess(self._ddp_init, self.create_tempfile().full_path)
+    pjrt._run_multiprocess(self._ddp_init, self.create_tempfile().full_path)
 
   @staticmethod
   def _ddp_correctness(init_file: str):
@@ -101,8 +101,8 @@ class TestPjRtDistributedDataParallel(parameterized.TestCase):
           step, cpu_loss, ddp_loss)
 
   def test_ddp_correctness(self):
-    pjrt.run_multiprocess(self._ddp_correctness,
-                          self.create_tempfile().full_path)
+    pjrt._run_multiprocess(self._ddp_correctness,
+                           self.create_tempfile().full_path)
 
 
 if __name__ == "__main__":

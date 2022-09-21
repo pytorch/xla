@@ -263,9 +263,9 @@ def train_imagenet(flags):
 if __name__ == '__main__':
   torch.set_default_tensor_type('torch.FloatTensor')
 
-  results = pjrt.run_multiprocess(train_imagenet, FLAGS)
+  results = pjrt._run_multiprocess(train_imagenet, FLAGS)
   print('Replica max_accuracy:', pprint.pformat(results))
-  accuracy = np.mean([np.mean(list(results.values()))])
+  accuracy = np.mean(list(results.values()))
   print('Average max_accuracy:', accuracy)
 
   if accuracy < FLAGS.target_accuracy:

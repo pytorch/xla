@@ -59,7 +59,7 @@ class TestExperimentalPjrtTpu(parameterized.TestCase):
           self.accelerator_type))
     expected = accelerator_devices[self.accelerator_type]
 
-    devices_per_process = pjrt.run_multiprocess(xm.xla_device)
+    devices_per_process = pjrt._run_multiprocess(xm.xla_device)
     self.assertDictEqual(devices_per_process, expected)
 
   def test_xla_devices_single_process_all_chips(self):
@@ -76,7 +76,7 @@ class TestExperimentalPjrtTpu(parameterized.TestCase):
     os.environ[xenv.TPU_VISIBLE_CHIPS] = '0,1,2,3'
     os.environ[xenv.TPU_PROCESS_BOUNDS] = '1,1,1'
 
-    devices = pjrt.run_multiprocess(xm.xla_device)
+    devices = pjrt._run_multiprocess(xm.xla_device)
     self.assertDictEqual(devices, expected)
 
   def test_xla_devices_single_process_one_chip(self):
@@ -98,7 +98,7 @@ class TestExperimentalPjrtTpu(parameterized.TestCase):
     os.environ[xenv.TPU_VISIBLE_CHIPS] = '0'
     os.environ[xenv.TPU_PROCESS_BOUNDS] = '1,1,1'
 
-    devices = pjrt.run_multiprocess(xm.xla_device)
+    devices = pjrt._run_multiprocess(xm.xla_device)
     self.assertDictEqual(devices, expected)
 
   def test_default_xla_devices(self):
@@ -133,7 +133,7 @@ class TestExperimentalPjrtTpu(parameterized.TestCase):
           self.accelerator_type))
     expected_num_devices = accelerator_num_devices[self.accelerator_type]
 
-    results = pjrt.run_multiprocess(ordinal_func)
+    results = pjrt._run_multiprocess(ordinal_func)
     values = list(results.values())
     self.assertListEqual(sorted(values), list(range(expected_num_devices)))
 
@@ -150,7 +150,7 @@ class TestExperimentalPjrtTpu(parameterized.TestCase):
           self.accelerator_type))
     expected_num_devices = accelerator_num_devices[self.accelerator_type]
 
-    results = pjrt.run_multiprocess(ordinal_func)
+    results = pjrt._run_multiprocess(ordinal_func)
     values = list(results.values())
     self.assertListEqual(sorted(values), list(range(expected_num_devices)))
 
@@ -168,7 +168,7 @@ class TestExperimentalPjrtTpu(parameterized.TestCase):
   @parameterized.named_parameters(('synchronized_parameters', True),
                                   ('unsynchronized_parameters', False))
   def test_broadcast_master_param(self, sync):
-    results = pjrt.run_multiprocess(TestExperimentalPjrtTpu._broadcast, sync)
+    results = pjrt._run_multiprocess(self._broadcast, sync)
     master_params = results[0]
     for ordinal, worker_params in results.items():
       if sync:
@@ -188,8 +188,7 @@ class TestExperimentalPjrtTpu(parameterized.TestCase):
 
   @parameterized.named_parameters(('pinned', True), ('unpinned', False))
   def test_all_gather(self, pin_layout):
-    results = pjrt.run_multiprocess(TestExperimentalPjrtTpu._all_gather,
-                                    pin_layout)
+    results = pjrt._run_multiprocess(self._all_gather, pin_layout)
 
     expected = list(range(len(results)))
     for v in results.values():
@@ -215,8 +214,7 @@ class TestExperimentalPjrtTpu(parameterized.TestCase):
 
   @parameterized.named_parameters(('pinned', True), ('unpinned', False))
   def test_reduce_scatter(self, pin_layout):
-    results = pjrt.run_multiprocess(TestExperimentalPjrtTpu._reduce_scatter,
-                                    pin_layout)
+    results = pjrt._run_multiprocess(self._reduce_scatter, pin_layout)
 
     for ordinal, value in results.items():
       np.testing.assert_array_equal(value, [-ordinal])
@@ -247,8 +245,7 @@ class TestExperimentalPjrtTpu(parameterized.TestCase):
 
   @parameterized.named_parameters(('pinned', True), ('unpinned', False))
   def test_all_to_all(self, pin_layout):
-    results = pjrt.run_multiprocess(TestExperimentalPjrtTpu._all_to_all,
-                                    pin_layout)
+    results = pjrt._run_multiprocess(self._all_to_all, pin_layout)
 
     for ordinal, value in results.items():
       np.testing.assert_array_equal(value, [[[-ordinal] * len(results),
