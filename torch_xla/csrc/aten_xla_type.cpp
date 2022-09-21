@@ -1057,14 +1057,23 @@ at::Tensor XLANativeFunctions::dot(const at::Tensor& self,
 
 at::Tensor XLANativeFunctions::einsum(c10::string_view equation,
                                       at::TensorList tensors) {
+  std::string cleansed_equation = std::string(equation);
+
+  cleansed_equation.erase(
+      std::remove_if(cleansed_equation.begin(), cleansed_equation.end(),
+                     [](unsigned char x) { return std::isspace(x); }),
+      cleansed_equation.end());
+
   XLA_FN_COUNTER("xla::");
   // Einsum operations with more than 2 operands, like bilinear operations, are
   // not currently supported in XLA
   if (tensors.size() > 2 ||
-      !EinsumUtilities::EquationIsValid(std::string(equation))) {
+      !EinsumUtilities::EquationIsValid(cleansed_equation)) {
+    XLA_COUNTER("EinsumFallback", 1);
     return at::native::einsum(equation, tensors);
   }
-  return aten_autograd_ops::EinsumAutogradFunction::apply(equation, tensors);
+  return aten_autograd_ops::EinsumAutogradFunction::apply(cleansed_equation,
+                                                          tensors);
 }
 
 at::Tensor XLANativeFunctions::elu_backward(const at::Tensor& grad_output,
