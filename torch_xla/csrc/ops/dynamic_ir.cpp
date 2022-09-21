@@ -40,7 +40,7 @@ int64_t SizeNode::getDynamicValue() const {
     return runtime_size_;
   }
   torch::lazy::NodePtr cloned =
-      torch::lazy::MakeNode<SizeNode>(operands_[0]/*NodePtr*/, dim_);
+      torch::lazy::MakeNode<SizeNode>(operands_[0], dim_);
   std::vector<XLATensorPtr> dummy_size_tensors = {
       XLATensor::Create(cloned, *GetDefaultDevice(), at::ScalarType::Long)};
   std::vector<at::Tensor> res = XLATensor::GetTensors(&dummy_size_tensors);
