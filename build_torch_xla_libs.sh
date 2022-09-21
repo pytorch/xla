@@ -65,6 +65,10 @@ if [[ "$XLA_CUDA" == "1" ]]; then
   OPTS+=(--config=cuda)
 fi
 
+if [[ "$XLA_CPU_USE_ACL" == "1" ]]; then
+  OPTS+=("--define=build_with_acl=true")
+fi
+
 if [ "$CMD" == "clean" ]; then
   pushd $THIRD_PARTY_DIR/tensorflow
   bazel clean
