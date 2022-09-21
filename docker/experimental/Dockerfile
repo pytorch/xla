@@ -1,31 +1,32 @@
 ARG python_version=3.8
 ARG debian_version=buster
-FROM python:${python_version}-${debian_version} AS common
+
+ARG cuda=0
+ARG cuda_version=11.2
+ARG cudnn_version=8.1.1.33
+# Debian repo doesn't have libcudnn
+ARG cuda_repo=ubuntu1804
+ARG tf_cuda_compute_capabilities="7.0,8.0"
+
+ARG tpuvm=1
+ARG build_cpp_tests=0
+
+FROM python:${python_version}-${debian_version} AS builder
 
 RUN apt-get update
-RUN apt-get install -y curl gnupg libomp5
+RUN apt-get install -y curl gnupg libomp5 libopenblas-dev
 RUN pip install numpy pyyaml
 
-ARG debian_number=ubuntu1804
+ARG cuda
+ARG cuda_version
+ARG cudnn_version
+ARG cuda_repo
+COPY docker/experimental/maybe_install_cuda.sh .
+RUN CUDA=${cuda} CUDA_REPO=${cuda_repo} CUDA_VERSION=${cuda_version} CUDNN_VERSION=${cudnn_version} ./maybe_install_cuda.sh build
+RUN rm maybe_install_cuda.sh
+ENV LD_LIBRARY_PATH=${cuda:+"${LD_LIBRARY_PATH}:/usr/local/cuda-${cuda_version}/targets/x86_64-linux/lib:/usr/local/nvidia/lib64"}
 
-RUN apt-key adv --fetch-keys https://developer.download.nvidia.com/compute/cuda/repos/${debian_number}/x86_64/3bf863cc.pub
-RUN echo "deb https://developer.download.nvidia.com/compute/cuda/repos/${debian_number}/x86_64/ /" >> /etc/apt/sources.list
-RUN apt-get update
-
-ARG cudnn_version="8.1.1.33"
-ARG cuda_version="11.2"
-
-RUN apt-get install -y libcudnn8=8.1.1.33-1+cuda11.2
-
-FROM common AS builder
-
-ARG debian_version=buster
-ARG cudnn_version="8.1.1.33"
-ARG cuda_version="11.2"
-
-RUN apt-get install -y libopenblas-dev
-RUN apt-get install -y libcudnn8-dev=${cudnn_version}-1+cuda${cuda_version}
-
+ARG debian_version
 RUN echo "deb http://apt.llvm.org/${debian_version}/ llvm-toolchain-${debian_version}-8 main" >> /etc/apt/sources.list
 RUN echo "deb-src http://apt.llvm.org/${debian_version}/ llvm-toolchain-${debian_version}-8 main" >> /etc/apt/sources.list
 RUN curl https://apt.llvm.org/llvm-snapshot.gpg.key | apt-key add -
@@ -37,10 +38,12 @@ RUN update-alternatives --install /usr/bin/clang++ clang++ $(which clang++-8) 70
 ENV CC=clang-8
 ENV CXX=clang++-8
 
+RUN pip install mkl mkl-include setuptools typing_extensions cmake
+
 RUN git clone --recursive --depth=1 https://github.com/pytorch/pytorch.git
 WORKDIR /pytorch
-
-RUN pip install mkl mkl-include setuptools typing_extensions cmake
+COPY torch_patches/ torch_patches/
+RUN bash -c "torch_pin=$(cat torch_patches/.torch_pin &); git fetch origin ${torch_pin:-master}; git checkout origin/${torch_pin:-master}"
 
 RUN USE_CUDA=0 python setup.py bdist_wheel
 
@@ -51,23 +54,40 @@ RUN mv bazelisk-linux-amd64 /usr/local/bin/bazel
 RUN chmod +x /usr/local/bin/bazel
 
 RUN mkdir xla
-COPY third_party xla/third_party
-COPY build_torch_xla_libs.sh xla/
 WORKDIR /pytorch/xla/
+COPY third_party/ third_party/
+COPY build_torch_xla_libs.sh .
 
-RUN apt-get install -y cuda-toolkit-11-2
-RUN XLA_CUDA=1 bash build_torch_xla_libs.sh -O -D_GLIBCXX_USE_CXX11_ABI=1
+ARG tpuvm
+ARG tf_cuda_compute_capabilities
+RUN TPUVM_MODE=${tpuvm} XLA_CUDA=${cuda} TF_CUDA_COMPUTE_CAPABILITIES=${tf_cuda_compute_capabilities} bash build_torch_xla_libs.sh -O -D_GLIBCXX_USE_CXX11_ABI=1
 
-COPY torch_xla torch_xla
-COPY scripts scripts
+COPY torch_xla/ torch_xla/
+COPY scripts/ scripts/
 COPY setup.py .
 COPY xla_native_functions.yaml .
 
-RUN BUILD_CPP_TESTS=0 XLA_CUDA=1 python setup.py bdist_wheel
+ARG build_cpp_tests
+RUN BUILD_CPP_TESTS=${build_cpp_tests} TPUVM_MODE=${tpuvm} XLA_CUDA=${cuda} TF_CUDA_COMPUTE_CAPABILITIES=${tf_cuda_compute_capabilities} python setup.py bdist_wheel
 
 RUN pip install dist/*.whl
 
-FROM common AS release
+FROM python:${python_version}-slim-${debian_version} AS release
+
+RUN apt-get update
+RUN apt-get install -y libopenblas-base curl gnupg libomp5
+
+RUN pip install numpy pyyaml
+
+ARG cuda
+ARG cudnn_version
+ARG cuda_version
+ARG cuda_repo
+
+COPY docker/experimental/maybe_install_cuda.sh .
+RUN CUDA=${cuda} CUDA_REPO=${cuda_repo} CUDA_VERSION=${cuda_version} CUDNN_VERSION=${cudnn_version} ./maybe_install_cuda.sh common
+RUN rm maybe_install_cuda.sh
+ENV LD_LIBRARY_PATH=${cuda:+"${LD_LIBRARY_PATH}:/usr/local/cuda-${cuda_version}/targets/x86_64-linux/lib:/usr/local/nvidia/lib64"}
 
 RUN echo "deb [signed-by=/usr/share/keyrings/cloud.google.gpg] https://packages.cloud.google.com/apt cloud-sdk main" >> /etc/apt/sources.list.d/google-cloud-sdk.list
 RUN curl https://packages.cloud.google.com/apt/doc/apt-key.gpg | apt-key --keyring /usr/share/keyrings/cloud.google.gpg add -
@@ -79,5 +99,9 @@ COPY --from=builder /pytorch/dist/*.whl .
 COPY --from=builder /pytorch/xla/dist/*.whl .
 
 RUN pip install *.whl
-RUN pip install torch_xla[tpuvm]
 RUN rm *.whl
+
+
+ARG tpuvm
+RUN if [ "${tpuvm}" = "1" ]; then pip install torch_xla[tpuvm]; fi
+
