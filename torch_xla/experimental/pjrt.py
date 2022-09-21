@@ -157,8 +157,8 @@ def _merge_replica_results(
 
 
 @requires_pjrt
-def run_thread_per_device(local_rank: int, local_world_size: int,
-                          fn: Callable[[], R]) -> Dict[int, R]:
+def _run_thread_per_device(local_rank: int, local_world_size: int,
+                           fn: Callable[[], R]) -> Dict[int, R]:
   """Runs `fn` in a separate thread on each visible device.
 
   Args:
@@ -198,8 +198,8 @@ def run_thread_per_device(local_rank: int, local_world_size: int,
 
 
 @requires_pjrt
-def run_multiprocess(fn: Callable[P, R], *args: P.args,
-                     **kwargs: P.kwargs) -> Dict[int, R]:
+def _run_multiprocess(fn: Callable[P, R], *args: P.args,
+                      **kwargs: P.kwargs) -> Dict[int, R]:
   """Runs `fn` on all devices available to PjRt.
 
   Spawns one process per physical device (e.g. TPU chip).
@@ -223,7 +223,7 @@ def run_multiprocess(fn: Callable[P, R], *args: P.args,
       mp_context=torch.multiprocessing.get_context('spawn')) as executor:
 
     mp_fn = functools.partial(
-        run_thread_per_device,
+        _run_thread_per_device,
         local_world_size=num_processes,
         fn=functools.partial(fn, *args, **kwargs))
     process_results = executor.map(mp_fn, range(num_processes))
@@ -255,7 +255,7 @@ def spawn(fn: Callable, args: Tuple = ()) -> None:
     args: args to pass to `fn`
   """
   spawn_fn = _SpawnFn(fn, *args)
-  run_multiprocess(spawn_fn)
+  _run_multiprocess(spawn_fn)
 
 
 def broadcast_master_param(model: nn.Module) -> None:
