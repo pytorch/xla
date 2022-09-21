@@ -40,7 +40,7 @@ int64_t SizeNode::getDynamicValue() const {
     return runtime_size_;
   }
   torch::lazy::NodePtr cloned =
-      torch::lazy::MakeNode<SizeNode>(operands_[0], dim_);
+      torch::lazy::MakeNode<SizeNode>(operands_[0]/*NodePtr*/, dim_);
   std::vector<XLATensorPtr> dummy_size_tensors = {
       XLATensor::Create(cloned, *GetDefaultDevice(), at::ScalarType::Long)};
   std::vector<at::Tensor> res = XLATensor::GetTensors(&dummy_size_tensors);
@@ -68,6 +68,14 @@ SizeAdd::SizeAdd(torch::lazy::Value a, torch::lazy::Value b)
   // from input shapes and input Node already hash its shape.
   upper_bound_ = dim_node_0->getStaticValue() + dim_node_1->getStaticValue();
 };
+
+int64_t SizeAdd::getDynamicValue() const {
+  const torch::lazy::DimensionNode* dim_node_0 = DimCast(operand(0));
+  const torch::lazy::DimensionNode* dim_node_1 = DimCast(operand(1));
+  XLA_CHECK(dim_node_0);
+  XLA_CHECK(dim_node_1);
+  return dim_node_0->getDynamicValue() + dim_node_1->getDynamicValue();
+}
 
 std::string SizeAdd::ToString() const { return "SizeAdd"; }
 

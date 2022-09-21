@@ -194,7 +194,7 @@ torch::lazy::Value getNodeWithDynamism() {
     return torch::lazy::Value(torch::lazy::MakeNode<NonZero>(slice_value), 0);
 }
 
-TEST(IrTest, TestSizeAddNodeDynamic) {
+TEST_F(IrTest, TestSizeAddNodeDynamic) {
     torch::lazy::Value node_with_dynamism = getNodeWithDynamism();
     // static value = 100, dynamic value = 1
     torch::lazy::NodePtr size_node_nonzero_0 = torch::lazy::MakeNode<SizeNode>(node_with_dynamism, 0);
@@ -208,7 +208,7 @@ TEST(IrTest, TestSizeAddNodeDynamic) {
     EXPECT_EQ(dim_node_add->getDynamicValue(), 3);
 }
 
-TEST(IrTest, TestSizeMulNode) {
+TEST_F(IrTest, TestSizeMulNode) {
   torch::lazy::NodePtr scalar_node =
       ScalarOp(1.0, xla::ShapeUtil::MakeShape(xla::F32, {3, 4}));
   torch::lazy::NodePtr size_node_0 =
