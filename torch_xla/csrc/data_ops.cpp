@@ -95,13 +95,6 @@ xla::XlaOp BuildView(xla::XlaOp input, absl::Span<const int64_t> output_sizes) {
 xla::XlaOp SetDimensionSizes(xla::XlaOp input,
                              absl::Span<const xla::XlaOp> symbolic_output_sizes,
                              std::vector<bool> dynamic_dims) {
-  // XLA_CHECK_EQ(output_sizes.size(), XlaHelpers::ShapeOfXlaOp(input).rank());
-  // for (int i = 0; i < output_sizes.size(); i++) {
-  //   xla::Shape dim_shape = XlaHelpers::ShapeOfXlaOp(output_sizes[i]);
-  //   if (dim_shape.is_dynamic()) {
-  //     input = xla::SetDimensionSize(input, output_sizes[i], i);
-  //   }
-  // }
   size_t current_output_size_index = 0;
   size_t symbolic_output_sizes_len = symbolic_output_sizes.size();
   for (size_t i = 0; i < dynamic_dims.size(); i++) {
@@ -112,7 +105,8 @@ xla::XlaOp SetDimensionSizes(xla::XlaOp input,
           input, symbolic_output_sizes[current_output_size_index++], i);
     }
   }
-  // Number of symbolic_output_sizes should equal number of dynamic dimensions.
+  // Number of symbolic_output_sizes should equal to number of dynamic
+  // dimensions.
   XLA_CHECK_EQ(current_output_size_index, symbolic_output_sizes_len);
   return input;
 }

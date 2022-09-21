@@ -131,7 +131,7 @@ TEST_F(IrTest, TestSizeNode) {
   });
 }
 
-TEST(IrTest, TestSizeNodeDynamic) {
+TEST_F(IrTest, TestSizeNodeDynamic) {
   int64_t num_non_zero_element = 1;
   int64_t num_row = 10;
   int64_t num_col = 10;

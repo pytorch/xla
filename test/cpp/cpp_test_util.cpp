@@ -413,10 +413,10 @@ torch::lazy::NodePtr CreateNonZeroNode2d(int64_t num_non_zero_element,
   int64_t j = 0;
   torch::lazy::Value slice_value = expand_value;
   while (count++ < num_non_zero_element) {
-    std::vector<int64_t> base_indeies = {i, j++};
+    std::vector<int64_t> base_indices = {i, j++};
     // Use Slice to do element update
     torch::lazy::NodePtr slice_node = torch::lazy::MakeNode<UpdateSlice>(
-        slice_value, scalar_value_1, base_indeies);
+        slice_value, scalar_value_1, base_indices);
     slice_value = torch::lazy::Value(slice_node, 0);
     if (j == num_col) {
       j = 0;

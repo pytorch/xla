@@ -26,7 +26,7 @@ std::vector<torch::lazy::Value> GetValues(
   values.reserve(dimensions.size() + 1);
   values.push_back(input);
   for (torch::lazy::NodePtr dim : dimensions) {
-    if (dim != nullptr) {
+    if (dim) {
       // Dimension Node only exist for symbolic dimension.
       values.push_back(torch::lazy::Value(dim, 0));
     }
