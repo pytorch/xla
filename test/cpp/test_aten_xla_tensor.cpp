@@ -4907,7 +4907,7 @@ TEST_F(AtenXlaTensorTest, TestExpandSymIntSymbolic) {
   // symbolic(since it wraps around a sizeNode) but not really dynamic.
   torch::lazy::Value scalar_value =
       torch::lazy::Value(ScalarOp(1.0, xla::F32), 0);
-  std::vector<int64_t> target_size = {2, 3, 5};
+  std::vector<int64_t> target_size = {2, 3, 4};
   torch::lazy::NodePtr expand_node =
       torch::lazy::MakeNode<Expand>(scalar_value, target_size);
   torch::lazy::Value expand_value = torch::lazy::Value(expand_node, 0);
