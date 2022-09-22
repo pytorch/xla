@@ -28,7 +28,7 @@ class TestPjRtDistributedDataParallel(parameterized.TestCase):
 
   def test_ddp_correctness(self):
     pjrt._run_multiprocess(util.ddp_correctness,
-                          self.create_tempfile().full_path)
+                           self.create_tempfile().full_path)
 
 
 if __name__ == "__main__":
