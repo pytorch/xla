@@ -9,6 +9,9 @@
 #include "tensorflow/compiler/xla/xla_client/metrics.h"
 #include "torch_xla/csrc/aten_xla_bridge.h"
 #include "torch_xla/csrc/helpers.h"
+#include "torch_xla/csrc/ops/dynamic_ir.h"
+#include "torch_xla/csrc/ops/expand.h"
+#include "torch_xla/csrc/ops/ops.h"
 #include "torch_xla/csrc/torch_util.h"
 #include "torch_xla_test.h"
 
@@ -4889,6 +4892,69 @@ TEST_F(AtenXlaTensorTest, TestExpandSymIntStatic) {
     torch::Tensor xla_b = xla_a.expand_symint(
         c10::SymIntArrayRef({c10::SymInt(2), c10::SymInt(3), c10::SymInt(4)}),
         /*implicit=*/false);
+    AllClose(b, xla_b);
+  });
+
+  ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::expand_symint", cpp_test::GetIgnoredCounters());
+}
+
+TEST_F(AtenXlaTensorTest, TestExpandSymIntSymbolic) {
+  torch::Tensor a = torch::ones({3, 4}, torch::TensorOptions(torch::kFloat));
+  torch::Tensor b = a.expand({2, 3, 4}, /*implicit=*/false);
+
+  // create a symbolic symint with value 2 and upperbound 2. This symint is
+  // symbolic(since it wraps around a sizeNode) but not really dynamic.
+  torch::lazy::Value scalar_value =
+      torch::lazy::Value(ScalarOp(1.0, xla::F32), 0);
+  std::vector<int64_t> target_size = {2, 3, 4};
+  torch::lazy::NodePtr expand_node =
+      torch::lazy::MakeNode<Expand>(scalar_value, target_size);
+  torch::lazy::Value expand_value = torch::lazy::Value(expand_node, 0);
+  torch::lazy::NodePtr size_node =
+      torch::lazy::MakeNode<SizeNode>(expand_value, /*dim=*/0);
+  auto symint_node = c10::make_intrusive<XLASymIntNodeImpl>(size_node);
+  // This is not a dynamic size from xla perspective but it is a symint that
+  // wraps around a SizeNode instead of a scalar.
+  c10::SymInt dynamic_symint = symint_node->toSymInt();
+
+  ForEachDevice([&](const torch::Device& device) {
+    torch::Tensor xla_a = CopyToDevice(a, device);
+    torch::Tensor xla_b = xla_a.expand_symint(
+        c10::SymIntArrayRef({dynamic_symint, c10::SymInt(3), c10::SymInt(4)}),
+        /*implicit=*/false);
+    EXPECT_EQ(ToCpuTensor(xla_b).sum().item().toInt(), 24);
+    AllClose(b, xla_b);
+  });
+
+  ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::expand_symint", cpp_test::GetIgnoredCounters());
+}
+
+TEST_F(AtenXlaTensorTest, TestExpandSymIntDynamic) {
+  torch::Tensor a = torch::ones({3, 4}, torch::TensorOptions(torch::kFloat));
+  torch::Tensor b = a.expand({2, 3, 4}, /*implicit=*/false);
+
+  // use non_zero to create a symbolic symint with upper bound 100 and real
+  // value 2
+  int64_t num_non_zero_element = 2;
+  int64_t num_row = 10;
+  int64_t num_col = 10;
+  torch::lazy::NodePtr nonzero_node =
+      CreateNonZeroNode2d(num_non_zero_element, num_row, num_col);
+
+  torch::lazy::NodePtr size_node_nonzero_0 =
+      torch::lazy::MakeNode<SizeNode>(nonzero_node, 0);
+  auto symint_node =
+      c10::make_intrusive<XLASymIntNodeImpl>(size_node_nonzero_0);
+  c10::SymInt dynamic_symint = symint_node->toSymInt();
+
+  ForEachDevice([&](const torch::Device& device) {
+    torch::Tensor xla_a = CopyToDevice(a, device);
+    torch::Tensor xla_b = xla_a.expand_symint(
+        c10::SymIntArrayRef({dynamic_symint, c10::SymInt(3), c10::SymInt(4)}),
+        /*implicit=*/false);
+    EXPECT_EQ(ToCpuTensor(xla_b).sum().item().toInt(), 24);
     AllClose(b, xla_b);
   });
 

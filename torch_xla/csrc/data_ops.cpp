@@ -92,6 +92,25 @@ xla::XlaOp BuildView(xla::XlaOp input, absl::Span<const int64_t> output_sizes) {
   return XlaHelpers::DynamicReshape(input, complete_output_sizes);
 }
 
+xla::XlaOp SetDimensionSizes(xla::XlaOp input,
+                             absl::Span<const xla::XlaOp> symbolic_output_sizes,
+                             std::vector<bool> dynamic_dims) {
+  size_t current_output_size_index = 0;
+  size_t symbolic_output_sizes_len = symbolic_output_sizes.size();
+  for (size_t i = 0; i < dynamic_dims.size(); i++) {
+    if (dynamic_dims[i]) {
+      // Dimension i is dynamic
+      XLA_CHECK_LT(current_output_size_index, symbolic_output_sizes_len);
+      input = xla::SetDimensionSize(
+          input, symbolic_output_sizes[current_output_size_index++], i);
+    }
+  }
+  // Number of symbolic_output_sizes should equal to number of dynamic
+  // dimensions.
+  XLA_CHECK_EQ(current_output_size_index, symbolic_output_sizes_len);
+  return input;
+}
+
 xla::XlaOp SqueezeTrivialDimension(xla::XlaOp input, int64_t dim) {
   const xla::Shape& input_shape = XlaHelpers::ShapeOfXlaOp(input);
   XLA_CHECK_LT(dim, input_shape.rank());
