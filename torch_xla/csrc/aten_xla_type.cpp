@@ -2029,10 +2029,11 @@ at::Tensor XLANativeFunctions::norm(const at::Tensor& self,
                                                                       dtype);
   }
   XLATensorPtr self_tensor = bridge::GetXlaTensor(self);
-  return bridge::AtenFromXlaTensor(
-      XLATensor::norm(bridge::GetXlaTensor(self), p, dtype, 
-            dim ? torch::lazy::ToVector<int64_t>(*dim)
-          : torch::lazy::Iota<int64_t>(self_tensor->shape().get().rank()), keepdim));
+  return bridge::AtenFromXlaTensor(XLATensor::norm(
+      bridge::GetXlaTensor(self), p, dtype,
+      dim ? torch::lazy::ToVector<int64_t>(*dim)
+          : torch::lazy::Iota<int64_t>(self_tensor->shape().get().rank()),
+      keepdim));
 }
 
 at::Tensor XLANativeFunctions::norm(const at::Tensor& self,
@@ -2048,9 +2049,10 @@ at::Tensor XLANativeFunctions::norm(const at::Tensor& self,
   }
   XLATensorPtr self_tensor = bridge::GetXlaTensor(self);
   return bridge::AtenFromXlaTensor(XLATensor::norm(
-      bridge::GetXlaTensor(self), p, c10::nullopt, 
-            dim ? torch::lazy::ToVector<int64_t>(*dim)
-          : torch::lazy::Iota<int64_t>(self_tensor->shape().get().rank()), keepdim));
+      bridge::GetXlaTensor(self), p, c10::nullopt,
+      dim ? torch::lazy::ToVector<int64_t>(*dim)
+          : torch::lazy::Iota<int64_t>(self_tensor->shape().get().rank()),
+      keepdim));
 }
 
 at::Tensor XLANativeFunctions::normal(const at::Tensor& mean, double std,
