@@ -49,6 +49,7 @@
 #include "torch_xla/csrc/ops/einsum.h"
 #include "torch_xla/csrc/ops/einsum_backward.h"
 #include "torch_xla/csrc/ops/expand.h"
+#include "torch_xla/csrc/ops/expand_symint.h"
 #include "torch_xla/csrc/ops/exponential.h"
 #include "torch_xla/csrc/ops/flip.h"
 #include "torch_xla/csrc/ops/gather.h"
@@ -1114,6 +1115,15 @@ XLATensorPtr XLATensor::expand(const XLATensorPtr& input,
   auto output = input->CreateFrom(torch::lazy::MakeNode<Expand>(
       input->GetIrValue(),
       GetExpandDimensions(input_shape.get(), std::move(size))));
+  output->storage_ = input->Storage();
+  return output;
+}
+
+XLATensorPtr XLATensor::expand_symint(const XLATensorPtr& input,
+                                      c10::SymIntArrayRef sym_size) {
+  SymIntElements size_elements = SymIntElements(sym_size);
+  XLATensorPtr output = input->CreateFrom(
+      torch::lazy::MakeNode<ExpandSymInt>(input->GetIrValue(), size_elements));
   output->storage_ = input->Storage();
   return output;
 }
