@@ -398,8 +398,8 @@ torch::lazy::NodePtr CreateNonZeroNode2d(int64_t num_non_zero_element,
   //   if j == num_col:
   //     j = 0
   //     i += 1
+  //     count += 1
   // res = t1.non_zero()
-  // ASSERT_TRUE(num_non_zero_element <= (num_row * num_col));
   torch::lazy::Value scalar_value =
       torch::lazy::Value(ScalarOp(0.0, xla::F32), 0);
   torch::lazy::Value scalar_value_1 =
