@@ -2016,7 +2016,7 @@ at::Tensor XLANativeFunctions::norm(const at::Tensor& self,
 
 at::Tensor XLANativeFunctions::norm(const at::Tensor& self,
                                     const c10::optional<at::Scalar>& p,
-                                    at::IntArrayRef dim, bool keepdim,
+                                    at::OptionalIntArrayRef dim, bool keepdim,
                                     at::ScalarType dtype) {
   XLA_FN_COUNTER("xla::");
   // If p==0 it is a torch.nonzero(), which is not lowered to XLA due to dynamic
@@ -2028,13 +2028,16 @@ at::Tensor XLANativeFunctions::norm(const at::Tensor& self,
                                                                       keepdim,
                                                                       dtype);
   }
+  XLATensorPtr self_tensor = bridge::GetXlaTensor(self);
   return bridge::AtenFromXlaTensor(
-      XLATensor::norm(bridge::GetXlaTensor(self), p, dtype, dim, keepdim));
+      XLATensor::norm(bridge::GetXlaTensor(self), p, dtype, 
+            dim ? torch::lazy::ToVector<int64_t>(*dim)
+          : torch::lazy::Iota<int64_t>(self_tensor->shape().get().rank()), keepdim));
 }
 
 at::Tensor XLANativeFunctions::norm(const at::Tensor& self,
                                     const c10::optional<at::Scalar>& p,
-                                    at::IntArrayRef dim, bool keepdim) {
+                                    at::OptionalIntArrayRef dim, bool keepdim) {
   XLA_FN_COUNTER("xla::");
   // If p==0 it is a torch.nonzero(), which is not lowered to XLA due to dynamic
   // shapes issue.
@@ -2043,8 +2046,11 @@ at::Tensor XLANativeFunctions::norm(const at::Tensor& self,
         &xla_cpu_fallback, ATEN_OP2(norm, ScalarOpt_dim)>::call(self, p, dim,
                                                                 keepdim);
   }
+  XLATensorPtr self_tensor = bridge::GetXlaTensor(self);
   return bridge::AtenFromXlaTensor(XLATensor::norm(
-      bridge::GetXlaTensor(self), p, c10::nullopt, dim, keepdim));
+      bridge::GetXlaTensor(self), p, c10::nullopt, 
+            dim ? torch::lazy::ToVector<int64_t>(*dim)
+          : torch::lazy::Iota<int64_t>(self_tensor->shape().get().rank()), keepdim));
 }
 
 at::Tensor XLANativeFunctions::normal(const at::Tensor& mean, double std,
