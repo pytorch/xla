@@ -98,6 +98,14 @@ SizeMul::SizeMul(torch::lazy::Value a, torch::lazy::Value b)
   upper_bound_ = dim_node_0->getStaticValue() * dim_node_1->getStaticValue();
 };
 
+int64_t SizeMul::getDynamicValue() const {
+  const torch::lazy::DimensionNode* dim_node_0 = DimCast(operand(0));
+  const torch::lazy::DimensionNode* dim_node_1 = DimCast(operand(1));
+  XLA_CHECK(dim_node_0);
+  XLA_CHECK(dim_node_1);
+  return dim_node_0->getDynamicValue() * dim_node_1->getDynamicValue();
+}
+
 std::string SizeMul::ToString() const { return "SizeMul"; }
 
 XlaOpVector SizeMul::Lower(LoweringContext* loctx) const {
@@ -120,6 +128,14 @@ SizeDiv::SizeDiv(torch::lazy::Value a, torch::lazy::Value b)
       << "Can't divide a dimension by zero";
   upper_bound_ = dim_node_0->getStaticValue() / dim_node_1->getStaticValue();
 };
+
+int64_t SizeDiv::getDynamicValue() const {
+  const torch::lazy::DimensionNode* dim_node_0 = DimCast(operand(0));
+  const torch::lazy::DimensionNode* dim_node_1 = DimCast(operand(1));
+  XLA_CHECK(dim_node_0);
+  XLA_CHECK(dim_node_1);
+  return dim_node_0->getDynamicValue() / dim_node_1->getDynamicValue();
+}
 
 std::string SizeDiv::ToString() const { return "SizeDiv"; }
 
