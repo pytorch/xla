@@ -1056,7 +1056,8 @@ at::Tensor XLANativeFunctions::dot(const at::Tensor& self,
 }
 
 at::Tensor XLANativeFunctions::einsum(c10::string_view equation,
-                                      at::TensorList tensors) {
+                                      at::TensorList tensors,
+                                      at:OptionalIntArrayRef path) {
   std::string cleansed_equation = std::string(equation);
 
   cleansed_equation.erase(
@@ -1070,7 +1071,7 @@ at::Tensor XLANativeFunctions::einsum(c10::string_view equation,
   if (tensors.size() > 2 ||
       !EinsumUtilities::EquationIsValid(cleansed_equation)) {
     XLA_COUNTER("EinsumFallback", 1);
-    return at::native::einsum(equation, tensors);
+    return at::native::einsum(equation, tensors, path);
   }
   return aten_autograd_ops::EinsumAutogradFunction::apply(cleansed_equation,
                                                           tensors);
