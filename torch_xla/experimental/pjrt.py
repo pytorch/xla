@@ -267,8 +267,11 @@ def broadcast_master_param(model: nn.Module) -> None:
   xm.mark_step()
 
 
-def rendezvous(tag: str, payload: bytes,
-               ordinals: Optional[List[int]]) -> List[bytes]:
+def rendezvous(tag: str,
+               payload: bytes,
+               ordinals: Optional[List[int]],
+               *,
+               mesh_port: int = 12355) -> List[bytes]:
   """Share `payload` with all replicas in `ordinals`.
 
   All of PjRt is experimental right now, but consider `rendezvous` to be _very_
@@ -284,6 +287,7 @@ def rendezvous(tag: str, payload: bytes,
     tag: Name of this rendezvous operation.
     payload: Payload to share with other replicas.
     ordinals: List of replicas participating in rendezvous.
+    mesh_port: Port of master `torch.distributed` process.
   Returns:
     List of bytes from other replicas.
   """
@@ -291,6 +295,8 @@ def rendezvous(tag: str, payload: bytes,
     logging.warning(
         'Default process group not initialized. Creating XLA process group...')
     mesh_master = xu.getenv_as("XRT_MESH_SERVICE_ADDRESS", str)
+    if not mesh_master and device_type() == 'TPU':
+      mesh_master = f'{tpu.discover_master_worker_ip()}:{mesh_port}'
 
     if mesh_master:
       init_method = f'tcp://{mesh_master}'
