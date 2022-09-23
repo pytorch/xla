@@ -213,10 +213,12 @@ TEST_F(IrTest, TestSizeAddNodeDynamicOnDifferentTensor) {
   int64_t num_col = 10;
   torch::lazy::NodePtr nonzero_node_0 =
       CreateNonZeroNode2d(num_non_zero_element, num_row, num_col);
-  torch::lazy::Value node_with_dynamism_0 = torch::lazy::Value(nonzero_node_0, 0);
+  torch::lazy::Value node_with_dynamism_0 =
+      torch::lazy::Value(nonzero_node_0, 0);
   torch::lazy::NodePtr nonzero_node_1 =
       CreateNonZeroNode2d(num_non_zero_element, num_row, num_col);
-  torch::lazy::Value node_with_dynamism_1 = torch::lazy::Value(nonzero_node_1, 0);
+  torch::lazy::Value node_with_dynamism_1 =
+      torch::lazy::Value(nonzero_node_1, 0);
 
   // static value = 100, dynamic value = 1
   torch::lazy::NodePtr size_node_nonzero_0 =
