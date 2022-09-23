@@ -4,7 +4,7 @@
 #include <sstream>
 
 #include "tensorflow/compiler/xla/status.h"
-#include "tensorflow/core/platform/logging.h"
+#include "tensorflow/tsl/platform/logging.h"
 
 namespace xla {
 namespace internal {
@@ -18,15 +18,15 @@ namespace internal {
 #define TF_VLOG_IS_ON(lvl)                                                  \
   (([](int level, const char* fname) {                                      \
     static const bool vmodule_activated =                                   \
-        ::tensorflow::internal::LogMessage::VmoduleActivated(fname, level); \
+        ::tsl::internal::LogMessage::VmoduleActivated(fname, level); \
     return vmodule_activated;                                               \
   })(lvl, __FILE__))
 
 #define TF_VLOG(level)                                           \
   TF_PREDICT_TRUE(!TF_VLOG_IS_ON(level))                         \
   ? (void)0                                                      \
-  : ::tensorflow::internal::Voidifier() &                        \
-          ::tensorflow::internal::LogMessage(__FILE__, __LINE__, \
+  : ::tsl::internal::Voidifier() &                        \
+          ::tsl::internal::LogMessage(__FILE__, __LINE__, \
                                              tensorflow::INFO)
 
 struct ErrorSink : public std::basic_ostringstream<char> {};
@@ -55,10 +55,10 @@ class ErrorGenerator {
   TF_ERROR_STREAM() << "Check failed: " #condition " "
 
 #define TF_CHECK_OP_LOG(name, op, val1, val2)                  \
-  while (::tensorflow::internal::CheckOpString _result{        \
-      ::tensorflow::internal::name##Impl(                      \
-          ::tensorflow::internal::GetReferenceableValue(val1), \
-          ::tensorflow::internal::GetReferenceableValue(val2), \
+  while (::tsl::internal::CheckOpString _result{        \
+      ::tsl::internal::name##Impl(                      \
+          ::tsl::internal::GetReferenceableValue(val1), \
+          ::tsl::internal::GetReferenceableValue(val2), \
           #val1 " " #op " " #val2)})                           \
   TF_ERROR_STREAM() << *(_result.str_)
 
