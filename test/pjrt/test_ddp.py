@@ -1,51 +1,23 @@
 from absl.testing import absltest, parameterized
-from absl import logging
-import copy
-import torch
-import torch.distributed as dist
+import os
+import sys
 import torch.nn as nn
-import torch.optim as optim
 from torch.nn.parallel import DistributedDataParallel as DDP
 import torch_xla.core.xla_model as xm
-import torch_xla.distributed.xla_backend
 from torch_xla.experimental import pjrt
 
+# Setup import folders.
+xla_test_folder = os.path.dirname(os.path.dirname(os.path.abspath(sys.argv[0])))
+sys.path.append(xla_test_folder)
 
-def _init_xla_backend(init_file: str):
-  rank = xm.get_ordinal()
-  world_size = xm.xrt_world_size()
-
-  dist.init_process_group(
-      "xla",
-      init_method=f"file://{init_file}",
-      rank=rank,
-      world_size=world_size)
-  return rank, world_size
-
-
-def _assert_all_close(parameters_a, parameters_b):
-  for param_a, param_b in zip(parameters_a, parameters_b):
-    assert torch.allclose(param_a.cpu(), param_b.cpu())
-
-
-def _train_step(model, inputs, labels, optimizer, loss_fn):
-  optimizer.zero_grad()
-
-  outputs = model(inputs)
-  loss = loss_fn(outputs, labels)
-  loss.backward()
-  optimizer.step()
-
-  xm.mark_step()
-
-  return loss
+import distributed_util as util
 
 
 class TestPjRtDistributedDataParallel(parameterized.TestCase):
 
   @staticmethod
   def _ddp_init(init_file: str):
-    _init_xla_backend(init_file)
+    util.init_xla_backend(init_file)
 
     device = xm.xla_device()
     model = nn.Linear(10, 10).to(device)
@@ -54,54 +26,8 @@ class TestPjRtDistributedDataParallel(parameterized.TestCase):
   def test_ddp_init(self):
     pjrt._run_multiprocess(self._ddp_init, self.create_tempfile().full_path)
 
-  @staticmethod
-  def _ddp_correctness(init_file: str):
-    rank, world_size = _init_xla_backend(init_file)
-
-    device = xm.xla_device()
-
-    cpu_model = nn.Linear(10, 10)
-    # TODO(@alanwaketan): Investigate whether we can omit the gradient_as_bucket_view option.
-    ddp_model = DDP(
-        copy.deepcopy(cpu_model).to(device), gradient_as_bucket_view=True)
-
-    cpu_optimizer = optim.SGD(cpu_model.parameters(), lr=1e-100)
-    ddp_optimizer = optim.SGD(ddp_model.parameters(), lr=1e-100)
-    loss_fn = nn.MSELoss()
-
-    local_batch_size = 2
-    global_batch_size = local_batch_size * world_size
-    offset = rank * local_batch_size
-    # Lower range probably makes sense too. Anyway, stick to 100 as the original PoC.
-    for step in range(100):
-      # To make torch.randn produce same results across devices.
-      torch.manual_seed(2022 + step)
-
-      cpu_inputs = torch.randn(global_batch_size, 10)
-      cpu_labels = torch.randn(global_batch_size, 10)
-      cpu_loss = _train_step(cpu_model, cpu_inputs, cpu_labels, cpu_optimizer,
-                             loss_fn)
-
-      ddp_inputs = copy.deepcopy(cpu_inputs[offset:offset +
-                                            local_batch_size]).to(device)
-      ddp_labels = copy.deepcopy(cpu_labels[offset:offset +
-                                            local_batch_size]).to(device)
-      ddp_loss = _train_step(ddp_model, ddp_inputs, ddp_labels, ddp_optimizer,
-                             loss_fn)
-      with torch.no_grad():
-        ddp_loss = ddp_loss / world_size
-        dist.all_reduce(ddp_loss)
-
-      # TODO(@alanwaketan): Investigate why the atol here is this low.
-      assert torch.allclose(cpu_loss, ddp_loss, atol=1e-02)
-      _assert_all_close(cpu_model.parameters(), ddp_model.parameters())
-      # To display the below messages, set '--verbosity=1'.
-      logging.debug(
-          "iteration %d: cpu_loss = %f, ddp_loss = %f, cpu_model.parameters() ~= ddp_model.parameters()",
-          step, cpu_loss, ddp_loss)
-
   def test_ddp_correctness(self):
-    pjrt._run_multiprocess(self._ddp_correctness,
+    pjrt._run_multiprocess(util.ddp_correctness,
                            self.create_tempfile().full_path)
 
 
