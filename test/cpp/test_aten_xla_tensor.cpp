@@ -3888,7 +3888,27 @@ TEST_F(AtenXlaTensorTest, TestEinsumPyTorchLowerBilinear) {
     AllClose(c, xla_c);
   });
 
-  ExpectCounterNotChanged("aten::einsum", cpp_test::GetIgnoredCounters());
+  ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("EinsumFallback", cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::einsum", cpp_test::GetIgnoredCounters());
+}
+
+TEST_F(AtenXlaTensorTest, TestEinsumPyTorchLowerBilinearBackward) {
+  torch::Tensor a = torch::rand(
+      {3, 5, 4}, torch::TensorOptions(torch::kFloat).requires_grad(true));
+  torch::Tensor l = torch::rand(
+      {2, 5}, torch::TensorOptions(torch::kFloat).requires_grad(true));
+  torch::Tensor r = torch::rand(
+      {2, 4}, torch::TensorOptions(torch::kFloat).requires_grad(true));
+  std::string equation = "bn,anm,bm->ba";
+  auto testfn = [&](const std::vector<torch::Tensor>& inputs) -> torch::Tensor {
+    return torch::einsum(equation, inputs);
+  };
+  ForEachDevice([&](const torch::Device& device) {
+    TestBackward({l, a, r}, device, testfn, /*rtol=*/1e-3, /*atol=*/1e-4);
+  });
+
+  ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
   ExpectCounterChanged("EinsumFallback", cpp_test::GetIgnoredCounters());
   ExpectCounterChanged("xla::einsum", cpp_test::GetIgnoredCounters());
 }
@@ -4025,12 +4045,9 @@ TEST_F(AtenXlaTensorTest, TestEinsumPyTorchLowerRepeatedAxisBackward) {
 }
 
 TEST_F(AtenXlaTensorTest, TestEinsumThreeInputs) {
-  torch::Tensor x =
-      torch::rand({4}, torch::TensorOptions(torch::kFloat).requires_grad(true));
-  torch::Tensor y =
-      torch::rand({4}, torch::TensorOptions(torch::kFloat).requires_grad(true));
-  torch::Tensor z =
-      torch::rand({4}, torch::TensorOptions(torch::kFloat).requires_grad(true));
+  torch::Tensor x = torch::rand({4}, torch::TensorOptions(torch::kFloat));
+  torch::Tensor y = torch::rand({4}, torch::TensorOptions(torch::kFloat));
+  torch::Tensor z = torch::rand({4}, torch::TensorOptions(torch::kFloat));
   std::string equation = "i,j,k->ijk";
 
   torch::Tensor result = torch::einsum(equation, {x, y, z});
@@ -4048,16 +4065,36 @@ TEST_F(AtenXlaTensorTest, TestEinsumThreeInputs) {
 }
 
 TEST_F(AtenXlaTensorTest, TestEinsumExtraSpaces) {
-  torch::Tensor a =
-      torch::rand({5}, torch::TensorOptions(torch::kFloat).requires_grad(true));
-  torch::Tensor b =
-      torch::rand({5}, torch::TensorOptions(torch::kFloat).requires_grad(true));
+  torch::Tensor a = torch::rand({5}, torch::TensorOptions(torch::kFloat));
+  torch::Tensor b = torch::rand({5}, torch::TensorOptions(torch::kFloat));
   std::string equation = "i, j->ij";
-  auto testfn = [&](const std::vector<torch::Tensor>& inputs) -> torch::Tensor {
-    return torch::einsum(equation, inputs);
-  };
+  torch::Tensor result = torch::einsum(equation, {a, b});
   ForEachDevice([&](const torch::Device& device) {
-    TestBackward({a, b}, device, testfn, /*rtol=*/1e-3, /*atol=*/1e-4);
+    torch::Tensor xla_a = CopyToDevice(a, device);
+    torch::Tensor xla_b = CopyToDevice(b, device);
+    torch::Tensor xla_result = torch::einsum(equation, {xla_a, xla_b});
+    AllClose(result, xla_result);
+  });
+
+  ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+  ExpectCounterNotChanged("EinsumFallback", cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::einsum", cpp_test::GetIgnoredCounters());
+}
+
+TEST_F(AtenXlaTensorTest, TestEinsumLarge4D) {
+  torch::Tensor a =
+      torch::rand({8, 16, 1024, 128}, torch::TensorOptions(torch::kFloat));
+  torch::Tensor b =
+      torch::rand({8, 16, 1024, 128}, torch::TensorOptions(torch::kFloat));
+
+  std::string equation = "ijkl,ijml->ijkm";
+  torch::Tensor result = torch::einsum(equation, {a, b});
+
+  ForEachDevice([&](const torch::Device& device) {
+    torch::Tensor xla_a = CopyToDevice(a, device);
+    torch::Tensor xla_b = CopyToDevice(b, device);
+    torch::Tensor xla_result = torch::einsum(equation, {xla_a, xla_b});
+    AllClose(result, xla_result);
   });
 
   ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
