@@ -68,6 +68,7 @@ class SizeAdd : public XlaNode, public torch::lazy::DimensionNode {
 class SizeMul : public XlaNode, public torch::lazy::DimensionNode {
  public:
   SizeMul(torch::lazy::Value a, torch::lazy::Value b);
+  int64_t getDynamicValue() const override;
   int64_t getStaticValue() const override { return upper_bound_; }
   bool isSymbolic() const override { return true; }
   std::string ToString() const override;
@@ -80,6 +81,7 @@ class SizeMul : public XlaNode, public torch::lazy::DimensionNode {
 class SizeDiv : public XlaNode, public torch::lazy::DimensionNode {
  public:
   SizeDiv(torch::lazy::Value a, torch::lazy::Value b);
+  int64_t getDynamicValue() const override;
   int64_t getStaticValue() const override { return upper_bound_; }
   bool isSymbolic() const override { return true; }
   std::string ToString() const override;
