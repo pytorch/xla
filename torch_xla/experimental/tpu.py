@@ -5,8 +5,10 @@ from typing import Dict, NamedTuple, Optional, List, Tuple
 import requests
 import yaml
 
+import torch
 import torch_xla.utils.utils as xu
 import torch_xla.core.xla_env_vars as xenv
+import torch_xla.core.xla_model as xm
 
 _GCE_METADATA_ROOT_URL = 'http://metadata.google.internal/computeMetadata/v1'
 _ACCELERATOR_TYPE_TO_HOST_BOUNDS = {
@@ -98,8 +100,7 @@ def get_worker_ips() -> List[str]:
 
 def configure_topology(local_rank: int,
                        local_world_size: int,
-                       base_port: int = 8476,
-                       mesh_port: int = 12355) -> None:
+                       base_port: int = 8476) -> None:
   """Configures TPU topology environment variables based on TPU metadata.
 
   Must be run before using any XLA devices.
@@ -149,5 +150,18 @@ def configure_topology(local_rank: int,
   os.environ.setdefault(xenv.TPU_VISIBLE_CHIPS, str(local_rank))
   os.environ.setdefault(xenv.TPU_PROCESS_PORT, str(ports[local_rank]))
 
-  # Set XRT_MESH_SERVICE_ADDRESS for compatibility.
-  os.environ.setdefault(xenv.SERVICE_ADDRESS, f'{worker_ips[0]}:{mesh_port}')
+
+def discover_master_worker_ip() -> str:
+  """Find the IP of the TPU host with TPU:0.
+
+  TPU device IDs are nondeterministic and independent from Cloud TPU worker IDs.
+  """
+  tpu_env = get_tpu_env()
+  current_worker_id = int(tpu_env['WORKER_ID'])
+  t = torch.tensor([current_worker_id], device=xm.xla_device())
+  xm.collective_broadcast([t])
+  xm.mark_step()
+
+  master_worker_id = int(t.cpu())
+  worker_ips = get_worker_ips()
+  return worker_ips[master_worker_id]
