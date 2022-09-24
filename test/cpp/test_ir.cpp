@@ -250,12 +250,38 @@ TEST_F(IrTest, TestSizeMulNode) {
       std::dynamic_pointer_cast<torch::lazy::DimensionNode>(size_node_mul);
 
   EXPECT_EQ(dim_node_mul->getStaticValue(), 12);
+  EXPECT_EQ(dim_node_mul->getDynamicValue(), 12);
 
   ForEachDevice([&](const torch::lazy::BackendDevice& device) {
     // Lower the SizeAddNode and execute the GetDimensionSize.
     auto results = ExecuteAndFetch({size_node_mul}, device);
     EXPECT_EQ(results[0].sum().item().toInt(), 12);
   });
+}
+
+TEST_F(IrTest, TestSizeMulNodeDynamic) {
+  int64_t num_non_zero_element = 1;
+  int64_t num_row = 10;
+  int64_t num_col = 10;
+  torch::lazy::NodePtr nonzero_node =
+      CreateNonZeroNode2d(num_non_zero_element, num_row, num_col);
+  torch::lazy::Value node_with_dynamism = torch::lazy::Value(nonzero_node, 0);
+
+  // static value = 100, dynamic value = 1
+  torch::lazy::NodePtr size_node_nonzero_0 =
+      torch::lazy::MakeNode<SizeNode>(node_with_dynamism, 0);
+  // static value = 2, dynamic value = 2
+  torch::lazy::NodePtr size_node_nonzero_1 =
+      torch::lazy::MakeNode<SizeNode>(node_with_dynamism, 1);
+
+  torch::lazy::NodePtr node_mul = torch::lazy::MakeNode<SizeMul>(
+      torch::lazy::Value(size_node_nonzero_0, 0),
+      torch::lazy::Value(size_node_nonzero_1, 0));
+
+  std::shared_ptr<torch::lazy::DimensionNode> dim_node_mul =
+      std::dynamic_pointer_cast<torch::lazy::DimensionNode>(node_mul);
+  EXPECT_EQ(dim_node_mul->getStaticValue(), 200);
+  EXPECT_EQ(dim_node_mul->getDynamicValue(), 2);
 }
 
 TEST_F(IrTest, TestSizeDivNode) {
@@ -271,12 +297,38 @@ TEST_F(IrTest, TestSizeDivNode) {
       std::dynamic_pointer_cast<torch::lazy::DimensionNode>(size_node_div);
 
   EXPECT_EQ(dim_node_div->getStaticValue(), 2);
+  EXPECT_EQ(dim_node_div->getDynamicValue(), 2);
 
   ForEachDevice([&](const torch::lazy::BackendDevice& device) {
     // Lower the SizeAddNode and execute the GetDimensionSize.
     auto results = ExecuteAndFetch({size_node_div}, device);
     EXPECT_EQ(results[0].sum().item().toInt(), 2);
   });
+}
+
+TEST_F(IrTest, TestSizeDivNodeDynamic) {
+  int64_t num_non_zero_element = 1;
+  int64_t num_row = 10;
+  int64_t num_col = 10;
+  torch::lazy::NodePtr nonzero_node =
+      CreateNonZeroNode2d(num_non_zero_element, num_row, num_col);
+  torch::lazy::Value node_with_dynamism = torch::lazy::Value(nonzero_node, 0);
+
+  // static value = 100, dynamic value = 1
+  torch::lazy::NodePtr size_node_nonzero_0 =
+      torch::lazy::MakeNode<SizeNode>(node_with_dynamism, 0);
+  // static value = 2, dynamic value = 2
+  torch::lazy::NodePtr size_node_nonzero_1 =
+      torch::lazy::MakeNode<SizeNode>(node_with_dynamism, 1);
+
+  torch::lazy::NodePtr node_div = torch::lazy::MakeNode<SizeDiv>(
+      torch::lazy::Value(size_node_nonzero_0, 0),
+      torch::lazy::Value(size_node_nonzero_1, 0));
+
+  std::shared_ptr<torch::lazy::DimensionNode> dim_node_div =
+      std::dynamic_pointer_cast<torch::lazy::DimensionNode>(node_div);
+  EXPECT_EQ(dim_node_div->getStaticValue(), 50);
+  EXPECT_EQ(dim_node_div->getDynamicValue(), 0);
 }
 
 }  // namespace cpp_test
