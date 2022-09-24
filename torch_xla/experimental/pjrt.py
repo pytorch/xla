@@ -6,13 +6,7 @@ import logging
 import os
 import tempfile
 from itertools import chain
-from typing import Callable, Dict, Generic, List, Optional, Tuple, TypeVar
-
-import sys
-if sys.version_info < (3, 10):
-  from typing_extensions import ParamSpec, Concatenate
-else:
-  from typing import ParamSpec, Concatenate
+from typing import Callable, Dict, List, Optional, Tuple, TypeVar
 
 import torch
 import torch.distributed as dist
@@ -23,7 +17,6 @@ import torch_xla.core.xla_model as xm
 import torch_xla.utils.utils as xu
 from torch_xla.experimental import tpu
 
-P = ParamSpec('P')
 R = TypeVar('R')
 FN = TypeVar('FN')
 
@@ -198,8 +191,7 @@ def _run_thread_per_device(local_rank: int, local_world_size: int,
 
 
 @requires_pjrt
-def _run_multiprocess(fn: Callable[P, R], *args: P.args,
-                      **kwargs: P.kwargs) -> Dict[int, R]:
+def _run_multiprocess(fn: Callable[..., R], *args, **kwargs) -> Dict[int, R]:
   """Runs `fn` on all devices available to PjRt.
 
   Spawns one process per physical device (e.g. TPU chip).
@@ -237,8 +229,7 @@ def _run_multiprocess(fn: Callable[P, R], *args: P.args,
 class _SpawnFn:
   """Pickle-able wrapper around `fn` that passes the ordinal before `args`"""
 
-  def __init__(self, fn: Callable[Concatenate[int, P], R], *args: P.args,
-               **kwargs: P.kwargs):
+  def __init__(self, fn: Callable[..., R], *args, **kwargs):
     self.fn = fn
     self.args = args
     self.kwargs = kwargs
