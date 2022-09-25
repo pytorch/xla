@@ -10,10 +10,10 @@ class TestExperimentalPjrtGpu(absltest.TestCase):
   def setUp(self):
     pjrt.set_device_type('GPU')
 
-  def test_default_gpu_device(self):
-    expected = {0: torch.device('xla:0')}
-    devices_per_process = pjrt._run_multiprocess(xm.xla_device)
-    self.assertDictEqual(devices_per_process, expected)
+  def test_xla_supported_devices(self):
+    expected_devices = ['xla:0']
+    gpu_devices = xm.get_xla_supported_devices('GPU')
+    self.assertListEqual(gpu_devices, expected_devices)
 
 
 if __name__ == '__main__':

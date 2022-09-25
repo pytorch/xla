@@ -69,8 +69,11 @@ PjRtComputationClient::PjRtComputationClient() {
   } else if (device_type == "GPU") {
     TF_VLOG(1) << "Initializing PjRt GPU client...";
     bool async = sys_util::GetEnvBool(env::kEnvPjrtAsyncGpuClient, true);
+    /* TODO(jonbolin): Set allowed_devices based on local ordinal */
+    auto allowed_devices = std::make_optional<std::set<int>>(std::set{0});
     client_ = xla::GetGpuClient(/*asynchronous=*/async, GpuAllocatorConfig{},
-                           /*distributed_client=*/nullptr, /*node_id=*/0).ValueOrDie();
+                           /*distributed_client=*/nullptr, /*node_id=*/0,
+                           allowed_devices=allowed_devices).ValueOrDie();
   } else {
     XLA_ERROR() << absl::StrFormat("Unknown %s '%s'", env::kEnvPjRtDevice,
                                    device_type);
