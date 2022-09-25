@@ -109,14 +109,8 @@ class SizeConstant : public torch_xla::Scalar,
     this->torch_xla::Scalar::ToString();
   };
   virtual XlaOpVector Lower(LoweringContext* loctx) const override {
-    TORCH_CHECK(false, "NYI");
+    this->torch_xla::Scalar::Lower(loctx);
   };
 };
-
-
-const torch::lazy::DimensionNode* DimCast(torch::lazy::Output output);
-const torch::lazy::DimensionNode* DimCast(const torch::lazy::Node* node);
-const std::shared_ptr<torch::lazy::DimensionNode> DimCast(const torch::lazy::NodePtr& node);
-
 
 }  // namespace torch_xla
