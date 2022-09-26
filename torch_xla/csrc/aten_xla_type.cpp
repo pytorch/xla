@@ -1153,9 +1153,6 @@ at::Tensor XLANativeFunctions::expand_symint(const at::Tensor& self,
   } else {
     // at least one of the dimension is symbolic, use the sym_int version of the
     // node
-
-    // torch::lazy::Shape shape =
-    //     torch::lazy::compute_shape_expand(self, size, implicit)[0];
     return bridge::AtenFromXlaTensor(
         XLATensor::expand_symint(bridge::GetXlaTensor(self), sym_size));
   }
