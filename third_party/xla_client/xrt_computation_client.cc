@@ -1693,6 +1693,7 @@ void XrtComputationClient::PrepareToExit() {
     size_t run_id = triggered_task_->Activate();
     triggered_task_->WaitForRun(run_id);
     TF_VLOG(1) << "Waiting XRT handle releaser thread ... done!";
+    triggered_task_->Stop();
   }
 }
 
