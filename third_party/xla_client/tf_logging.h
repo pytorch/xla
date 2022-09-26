@@ -5,6 +5,7 @@
 
 #include "tensorflow/compiler/xla/status.h"
 #include "tensorflow/tsl/platform/logging.h"
+#include "tensorflow/tsl/platform/status.h"
 
 namespace xla {
 namespace internal {
@@ -27,7 +28,7 @@ namespace internal {
   ? (void)0                                                      \
   : ::tsl::internal::Voidifier() &                        \
           ::tsl::internal::LogMessage(__FILE__, __LINE__, \
-                                             tensorflow::INFO)
+                                             ::tsl::INFO)
 
 struct ErrorSink : public std::basic_ostringstream<char> {};
 
@@ -73,7 +74,7 @@ class ErrorGenerator {
 #define TF_CHECK_GT(val1, val2) TF_CHECK_OP(Check_GT, >, val1, val2)
 
 #undef TF_CHECK_OK
-#define TF_CHECK_OK(val) TF_CHECK_EQ(val, ::tensorflow::Status::OK())
+#define TF_CHECK_OK(val) TF_DO_CHECK_OK(val, FATAL)
 #define TF_CHECK_NOTNULL(val) TF_CHECK(val != nullptr)
 
 }  // namespace internal
