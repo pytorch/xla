@@ -110,6 +110,7 @@ logger.info(
 # _tpu_vm_init() will update TPU_LIBRARY_PATH to Python package, if available
 os.environ['TPU_LIBRARY_PATH'] = '/dev/null'
 import _XLAC
+del os.environ['TPU_LIBRARY_PATH']
 
 _tpu_vm_init()
 
