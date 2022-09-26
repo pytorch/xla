@@ -45,3 +45,21 @@ index b70ea8af5df..b54a895e306 100644
    } else if (tool_name == "tool_names") {
      return GetAvailableToolNames(session_snapshot);
    } else {
+diff --git a/tensorflow/core/tpu/tpu_execute.cc b/tensorflow/core/tpu/tpu_execute.cc
+index 999561f25f1..6d2a1a20334 100644
+--- a/tensorflow/core/tpu/tpu_execute.cc
++++ b/tensorflow/core/tpu/tpu_execute.cc
+@@ -306,8 +306,11 @@ void TPUCancelExecution(Env* env, int device_ordinal) {
+     // continue running callbacks. The new thread will call quick_exit,
+     // so we discard the returned Thread pointer because we won't have
+     // an opportunity to delete it.
+-    (void)env->StartThread(ThreadOptions(), "tpu_execute_exit_countdown",
+-                           [env]() { ExitCountdown(env); });
++    auto res = env->StartThread(ThreadOptions(), "tpu_execute_exit_countdown",
++                                [env]() { ExitCountdown(env); });
++    // workaround "ignoring return value of function declared with attribute
++    // warn_unused_result"
++    ((void)(res));
+   } else if (tpu_cancellation_closes_chips) {
+     LOG(INFO) << "TPUCancelExecution CloseTPUHost on device " << device_ordinal;
+     Status status = TpuNodeContext::CloseTpuHost();
