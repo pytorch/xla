@@ -37,10 +37,12 @@ xla::Shape AllDimOutputShape(const torch::lazy::Value& input, const int64_t dim,
                              const bool keepdim);
 
 xla::Shape AmaxOutputShape(const torch::lazy::Value& input,
-                           absl::Span<const int64_t> dim, bool keepdim);
+                           c10::optional<std::vector<int64_t>> dim,
+                           bool keepdim);
 
 xla::Shape AminOutputShape(const torch::lazy::Value& input,
-                           absl::Span<const int64_t> dim, bool keepdim);
+                           c10::optional<std::vector<int64_t>> dim,
+                           bool keepdim);
 
 xla::Shape AnyOutputShape(const torch::lazy::Value& input);
 
