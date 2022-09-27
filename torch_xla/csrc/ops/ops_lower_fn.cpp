@@ -85,24 +85,12 @@ torch_xla::XlaOpVector AllDim::Lower(LoweringContext* loctx) const {
 
 torch_xla::XlaOpVector Amax::Lower(LoweringContext* loctx) const {
   xla::XlaOp input = loctx->GetOutputOp(operand(0));
-  absl::Span<const int64_t> dims;
-  if (dim.has_value()) {
-    dims = dim.value();
-  } else {
-    dims = {XlaHelpers::ShapeOfXlaOp(input).rank()};
-  }
-  return ReturnOp(BuildMaxInDims(input, dims, keepdim), loctx);
+  return ReturnOp(BuildMaxInDims(input, dim, keepdim), loctx);
 }
 
 torch_xla::XlaOpVector Amin::Lower(LoweringContext* loctx) const {
   xla::XlaOp input = loctx->GetOutputOp(operand(0));
-  absl::Span<const int64_t> dims;
-  if (dim.has_value()) {
-    dims = dim.value();
-  } else {
-    dims = {XlaHelpers::ShapeOfXlaOp(input).rank()};
-  }
-  return ReturnOp(BuildMinInDims(input, dims, keepdim), loctx);
+  return ReturnOp(BuildMinInDims(input, dim, keepdim), loctx);
 }
 
 torch_xla::XlaOpVector Any::Lower(LoweringContext* loctx) const {
