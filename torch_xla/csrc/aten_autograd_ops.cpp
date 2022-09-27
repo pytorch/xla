@@ -30,8 +30,7 @@ torch::Tensor EinsumAutogradFunction::forward(
   }
   ctx->save_for_backward(vars);
 
-  std::vector<XLATensorPtr> xla_tensors =
-      bridge::GetXlaTensors(absl::MakeSpan(tensors));
+  std::vector<XLATensorPtr> xla_tensors = bridge::GetXlaTensors(tensors);
   XLATensorPtr output = XLATensor::einsum(eq_str, xla_tensors);
   return bridge::AtenFromXlaTensor(output);
 }
@@ -41,8 +40,7 @@ torch::autograd::variable_list EinsumAutogradFunction::backward(
     torch::autograd::variable_list grad_output) {
   std::string equation = ctx->saved_data["equation"].toString()->string();
   torch::autograd::variable_list tensors = ctx->get_saved_variables();
-  std::vector<XLATensorPtr> xla_tensors =
-      bridge::GetXlaTensors(absl::MakeSpan(tensors));
+  std::vector<XLATensorPtr> xla_tensors = bridge::GetXlaTensors(tensors);
 
   std::tuple<XLATensorPtr, XLATensorPtr> outputs = XLATensor::einsum_backward(
       bridge::GetXlaTensor(grad_output[0]), xla_tensors, equation);

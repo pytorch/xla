@@ -26,7 +26,7 @@ XLATensorPtr GetXlaTensor(const at::Tensor& tensor);
 void ReplaceXlaTensor(const at::Tensor& tensor, XLATensorPtr new_xla_tensor);
 
 // Same as above, applied to a list of tensors.
-std::vector<XLATensorPtr> GetXlaTensors(absl::Span<const at::Tensor> tensors);
+std::vector<XLATensorPtr> GetXlaTensors(const at::ITensorListRef& tensors);
 
 torch_xla::XLATensorPtr GetXlaTensorOrCreateForWrappedNumber(
     const at::Tensor& tensor, const torch::lazy::BackendDevice& device);
@@ -44,7 +44,7 @@ std::vector<XLATensorPtr> GetOrCreateXlaTensors(
     const torch::lazy::BackendDevice& device);
 
 // Creates a vector of at::Tensor objects extracted from a list of XLA tensors.
-std::vector<at::Tensor> XlaCreateTensorList(const at::TensorList& tensors);
+std::vector<at::Tensor> XlaCreateTensorList(const at::ITensorListRef& tensors);
 
 // Creates a vector of c10::optional<at::Tensor> objects extracted from a list
 // of optional XLA tensors.
@@ -64,7 +64,7 @@ c10::optional<torch::lazy::BackendDevice> GetXlaDevice(
     const c10::optional<at::Tensor>& tensor);
 
 c10::optional<torch::lazy::BackendDevice> GetXlaDevice(
-    const at::TensorList& tensors);
+    const at::ITensorListRef& tensors);
 
 c10::optional<torch::lazy::BackendDevice> GetXlaDevice(
     const std::vector<at::Tensor>& tensors);

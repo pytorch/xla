@@ -83,7 +83,7 @@ void ReplaceXlaTensor(const at::Tensor& tensor, XLATensorPtr new_xla_tensor) {
   impl->set_tensor(std::move(new_xla_tensor));
 }
 
-std::vector<XLATensorPtr> GetXlaTensors(absl::Span<const at::Tensor> tensors) {
+std::vector<XLATensorPtr> GetXlaTensors(const at::ITensorListRef& tensors) {
   std::vector<XLATensorPtr> xla_tensors;
   xla_tensors.reserve(tensors.size());
   for (const auto& tensor : tensors) {
@@ -130,23 +130,24 @@ std::vector<XLATensorPtr> GetOrCreateXlaTensors(
   return xla_tensors;
 }
 
-std::vector<at::Tensor> XlaCreateTensorList(const at::TensorList& tensors) {
+std::vector<at::Tensor> XlaCreateTensorList(const at::ITensorListRef& tensors) {
   std::vector<at::Tensor> aten_xla_tensors(tensors.size());
   std::vector<XLATensorPtr> xla_tensors;
   // We need to separate out the defined tensors first, GetXlaTensor() doesn't
   // work with undefined tensors.
   std::vector<bool> to_translate(tensors.size());
-  for (size_t i = 0; i < tensors.size(); ++i) {
-    const at::Tensor& tensor = tensors[i];
+  size_t ix = 0;
+  for (const auto& tensor : tensors) {
     if (tensor.defined()) {
       auto xtensor = TryGetXlaTensor(tensor);
       if (xtensor) {
-        to_translate[i] = true;
+        to_translate[ix] = true;
         xla_tensors.push_back(xtensor);
       } else {
-        aten_xla_tensors[i] = tensor;
+        aten_xla_tensors[ix] = tensor;
       }
     }
+    ++ix;
   }
   auto defined_aten_xla_tensors = XLATensor::GetTensors(&xla_tensors);
   // Insert undefined tensors into the result, back into the original undefined
