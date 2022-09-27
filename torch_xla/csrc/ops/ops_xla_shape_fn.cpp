@@ -149,7 +149,7 @@ xla::Shape AmaxOutputShape(const torch::lazy::Value& input,
                            bool keepdim) {
   auto lower_for_shape_fn =
       [&](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
-    absl::Span<const int64_t> dims;
+    std::vector<int64_t> dims;
     if (operands.size() > 1) {
       dims = dim.value();
     } else {
@@ -165,7 +165,7 @@ xla::Shape AminOutputShape(const torch::lazy::Value& input,
                            bool keepdim) {
   auto lower_for_shape_fn =
       [&](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
-    absl::Span<const int64_t> dims;
+    std::vector<int64_t> dims;
     if (operands.size() > 1) {
       dims = dim.value();
     } else {
