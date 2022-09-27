@@ -13,9 +13,10 @@ class TestXrtDistributedDataParallel(parameterized.TestCase):
     # We cannot run this guard before XMP,
     # see API_GUIDE.md#running-on-multiple-xla-devices-with-multi-processing.
     device = xm.xla_device()
-    if xm.xla_device_hw(device) not in ('TPU', 'GPU'):
+    # TODO(#4049): Enable this test in the GPU environment.
+    if xm.xla_device_hw(device) not in ('TPU'):
       print(
-          'Default device {} is not a TPU or GPU device'.format(device),
+          'Default device {} is not a TPU device'.format(device),
           file=sys.stderr)
       return
     util.ddp_correctness(None)
