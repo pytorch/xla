@@ -346,15 +346,9 @@ TEST_F(IrTest, TestSizeDivNodeDynamicByZero) {
   // static value = 4, dynamic value = 0
   torch::lazy::NodePtr size_node_nonzero_0 =
       torch::lazy::MakeNode<SizeNode>(nonzero_node, 0);
-  std::shared_ptr<torch::lazy::DimensionNode> dim_size_node_nonzero_0 =
-      std::dynamic_pointer_cast<torch::lazy::DimensionNode>(
-          size_node_nonzero_0);
   // static value = 2, dynamic value = 2
   torch::lazy::NodePtr size_node_nonzero_1 =
       torch::lazy::MakeNode<SizeNode>(nonzero_node, 1);
-  std::shared_ptr<torch::lazy::DimensionNode> dim_size_node_nonzero_1 =
-      std::dynamic_pointer_cast<torch::lazy::DimensionNode>(
-          size_node_nonzero_1);
 
   torch::lazy::NodePtr node_div = torch::lazy::MakeNode<SizeDiv>(
       torch::lazy::Value(size_node_nonzero_1, 0),
