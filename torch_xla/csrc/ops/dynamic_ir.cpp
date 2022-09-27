@@ -137,6 +137,8 @@ int64_t SizeDiv::getDynamicValue() const {
   const torch::lazy::DimensionNode* dim_node_1 = DimCast(operand(1));
   XLA_CHECK(dim_node_0);
   XLA_CHECK(dim_node_1);
+  XLA_CHECK(dim_node_1->getDynamicValue() != 0)
+      << "Can't divide a dynamic dimension by zero";
   return dim_node_0->getDynamicValue() / dim_node_1->getDynamicValue();
 }
 
