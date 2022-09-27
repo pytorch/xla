@@ -79,6 +79,16 @@ bool IsOperationOnType(const c10::optional<at::ScalarType>& opt_dtype,
   return tensor_type == type;
 }
 
+bool TensorsAreOfType(std::vector<XLATensorPtr> tensors, at::ScalarType type) {
+  for (const XLATensorPtr& tensor : tensors) {
+    if (IsOperationOnType(c10::optional<at::ScalarType>(c10::nullopt),
+                          tensor->dtype(), type)) {
+      return true;
+    }
+  }
+  return false;
+}
+
 void CheckSubOperandTypes(at::ScalarType type1, at::ScalarType type2) {
   XLA_CHECK(type1 != at::kBool || type2 != at::kBool)
       << "Subtraction, the `-` operator, with two bool tensors is not "
@@ -1066,11 +1076,14 @@ at::Tensor XLANativeFunctions::einsum(c10::string_view equation,
                      [](unsigned char x) { return std::isspace(x); }),
       cleansed_equation.end());
 
+  std::vector<XLATensorPtr> xla_tensors = bridge::GetXlaTensors(tensors);
+
   XLA_FN_COUNTER("xla::");
   // Einsum operations with more than 2 operands, like bilinear operations, are
   // not currently supported in XLA
-  if (tensors.size() > 2 ||
-      !EinsumUtilities::EquationIsValid(cleansed_equation)) {
+  if (tensors.size() < 1 || tensors.size() > 2 ||
+      !EinsumUtilities::EquationIsValid(cleansed_equation) ||
+      TensorsAreOfType(xla_tensors, at::ScalarType::Long)) {
     XLA_COUNTER("EinsumFallback", 1);
     return at::native::einsum(equation, tensors, path);
   }
