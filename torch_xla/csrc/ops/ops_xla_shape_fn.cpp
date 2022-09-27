@@ -145,19 +145,33 @@ xla::Shape AllDimOutputShape(const torch::lazy::Value& input, const int64_t dim,
 }
 
 xla::Shape AmaxOutputShape(const torch::lazy::Value& input,
-                           absl::Span<const int64_t> dim, bool keepdim) {
+                           c10::optional<std::vector<int64_t>> dim,
+                           bool keepdim) {
   auto lower_for_shape_fn =
       [&](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
-    return BuildMaxInDims(operands[0], dim, keepdim);
+    std::vector<int64_t> dims;
+    if (operands.size() > 1) {
+      dims = dim.value();
+    } else {
+      dims = {input.shape().dim()};
+    }
+    return BuildMaxInDims(operands[0], dims, keepdim);
   };
   return InferOutputShape({GetXlaShape(input)}, lower_for_shape_fn);
 }
 
 xla::Shape AminOutputShape(const torch::lazy::Value& input,
-                           absl::Span<const int64_t> dim, bool keepdim) {
+                           c10::optional<std::vector<int64_t>> dim,
+                           bool keepdim) {
   auto lower_for_shape_fn =
       [&](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
-    return BuildMinInDims(operands[0], dim, keepdim);
+    std::vector<int64_t> dims;
+    if (operands.size() > 1) {
+      dims = dim.value();
+    } else {
+      dims = {input.shape().dim()};
+    }
+    return BuildMinInDims(operands[0], dims, keepdim);
   };
   return InferOutputShape({GetXlaShape(input)}, lower_for_shape_fn);
 }
