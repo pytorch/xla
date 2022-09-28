@@ -157,8 +157,8 @@ TEST(SymintTest, TestDynamicSymintArithmetic) {
       dynamic_cast<XLASymIntNodeImpl*>(c.toSymIntNodeImpl().get());
   ASSERT_TRUE(size_add_symnode);
   auto size_add =
-    std::dynamic_pointer_cast<torch_xla::SizeAdd>(size_add_symnode->node());
-  ASSERT_EQ(size_add->operands().at(0).node, size_abs_node.get()); // 
+      std::dynamic_pointer_cast<torch_xla::SizeAdd>(size_add_symnode->node());
+  ASSERT_EQ(size_add->operands().at(0).node, size_abs_node.get());  //
   ASSERT_EQ(size_add->operands().at(1).node, size_relu_node.get());
 
   c = a * b;
@@ -172,10 +172,10 @@ TEST(SymintTest, TestDynamicSymintArithmetic) {
   ASSERT_EQ(size_mul->operands().at(1).node, size_relu_node.get());
 
   c = a / b;
-  auto size_floordiv_symnode = 
+  auto size_floordiv_symnode =
       dynamic_cast<XLASymIntNodeImpl*>(c.toSymIntNodeImpl().get());
   ASSERT_TRUE(size_floordiv_symnode);
-  auto size_floordiv = 
+  auto size_floordiv =
       std::dynamic_pointer_cast<SizeDiv>(size_floordiv_symnode->node());
   ASSERT_TRUE(size_floordiv);
   ASSERT_EQ(size_floordiv->operands().at(0).node, size_abs_node.get());
