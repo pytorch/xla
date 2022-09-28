@@ -2570,13 +2570,6 @@ at::Tensor XLANativeFunctions::softplus_backward(const at::Tensor& grad_output,
       threshold));
 }
 
-at::Tensor XLANativeFunctions::softshrink(const at::Tensor& self,
-                                          const at::Scalar& lambda) {
-  XLA_FN_COUNTER("xla::");
-  return bridge::AtenFromXlaTensor(
-      XLATensor::softshrink(bridge::GetXlaTensor(self), lambda));
-}
-
 std::tuple<at::Tensor, at::Tensor> XLANativeFunctions::sort(
     const at::Tensor& self, int64_t dim, bool descending) {
   XLA_FN_COUNTER("xla::");
