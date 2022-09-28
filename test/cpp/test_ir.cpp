@@ -2,8 +2,6 @@
 
 #include <stdexcept>
 
-#include <stdexcept>
-
 #include "cpp_test_util.h"
 #include "torch_xla/csrc/ir.h"
 #include "torch_xla/csrc/lowering_context.h"
