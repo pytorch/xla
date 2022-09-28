@@ -152,15 +152,17 @@ TEST(SymintTest, TestDynamicSymintArithmetic) {
   c10::SymInt b =
       c10::make_intrusive<XLASymIntNodeImpl>(size_relu_node)->toSymInt();
 
+  // Testing XLASymIntNodeImpl::add
   c10::SymInt c = a + b;
   auto size_add_symnode =
       dynamic_cast<XLASymIntNodeImpl*>(c.toSymIntNodeImpl().get());
   ASSERT_TRUE(size_add_symnode);
   auto size_add =
       std::dynamic_pointer_cast<torch_xla::SizeAdd>(size_add_symnode->node());
-  ASSERT_EQ(size_add->operands().at(0).node, size_abs_node.get());  //
+  ASSERT_EQ(size_add->operands().at(0).node, size_abs_node.get());
   ASSERT_EQ(size_add->operands().at(1).node, size_relu_node.get());
 
+  // Testing XLASymIntNodeImpl::mul
   c = a * b;
   auto size_mul_symnode =
       dynamic_cast<XLASymIntNodeImpl*>(c.toSymIntNodeImpl().get());
@@ -171,6 +173,7 @@ TEST(SymintTest, TestDynamicSymintArithmetic) {
   ASSERT_EQ(size_mul->operands().at(0).node, size_abs_node.get());
   ASSERT_EQ(size_mul->operands().at(1).node, size_relu_node.get());
 
+  // Testing XLASymIntNodeImpl::floordiv
   c = a / b;
   auto size_floordiv_symnode =
       dynamic_cast<XLASymIntNodeImpl*>(c.toSymIntNodeImpl().get());
