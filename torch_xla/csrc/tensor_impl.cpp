@@ -6,11 +6,15 @@
 
 #include "tensorflow/compiler/xla/xla_client/computation_client.h"
 #include "tensorflow/compiler/xla/xla_client/debug_macros.h"
+#include "torch/csrc/lazy/backend/backend_interface.h"
+#include "torch/csrc/lazy/core/tensor.h"
 #include "torch/csrc/lazy/core/tensor_util.h"
 #include "torch/csrc/lazy/core/util.h"
 #include "torch_xla/csrc/aten_xla_bridge.h"
 #include "torch_xla/csrc/device.h"
+#include "torch_xla/csrc/ir_builder.h"
 #include "torch_xla/csrc/layout_manager.h"
+#include "torch_xla/csrc/ops/dynamic_ir.h"
 #include "torch_xla/csrc/tensor_util.h"
 
 namespace torch_xla {
@@ -115,9 +119,9 @@ at::IntArrayRef XLATensorImpl::sizes_custom() const {
 }
 
 c10::SymIntArrayRef XLATensorImpl::sym_sizes_custom() const {
-  auto sizes = sizes_custom();
-  return c10::SymIntArrayRef(reinterpret_cast<const c10::SymInt*>(sizes.data()),
-                             sizes.size());
+  // N.B. SetupSizeProperties also updates sym_sizes_
+  const_cast<XLATensorImpl*>(this)->SetupSizeProperties();
+  return c10::SymIntArrayRef(sym_sizes_.data(), sym_sizes_.size());
 }
 
 c10::SymInt XLATensorImpl::sym_numel_custom() const {
@@ -168,8 +172,29 @@ void XLATensorImpl::SetupSizeProperties() {
     for (int i = 0; i < updated_strides.size(); i++) {
       sizes_and_strides_.stride_at_unchecked(i) = updated_strides[i];
     }
+    SetupSymSizeProperties();
     generation_ = generation;
   }
+}
+
+void XLATensorImpl::SetupSymSizeProperties() {
+  auto shape = tensor_->shape();
+  auto rank = shape.get().rank();
+  std::vector<c10::SymInt> sym_sizes;
+  sym_sizes.reserve(rank);
+
+  XLAIrBuilder a = XLAIrBuilder();
+  for (auto i : c10::irange(rank)) {
+    if (shape.get().is_dynamic_dimension(i)) {
+      auto dim_node = a.MakeSizeNode(tensor_->GetIrValue(), i);
+      auto symint_node = c10::make_intrusive<XLASymIntNodeImpl>(dim_node);
+      auto sn = symint_node->toSymInt();
+      sym_sizes.push_back(sn);
+    } else {
+      sym_sizes.push_back(c10::SymInt(shape.get().dimensions(i)));
+    }
+  }
+  sym_sizes_ = sym_sizes;
 }
 
 caffe2::TypeMeta XLATensorImpl::GetTypeMeta(const XLATensor& tensor) {
