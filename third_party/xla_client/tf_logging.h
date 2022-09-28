@@ -16,19 +16,18 @@ namespace internal {
 // implementaiton of them.
 #define TF_LOG(severity) _TF_LOG_##severity
 
-#define TF_VLOG_IS_ON(lvl)                                                  \
-  (([](int level, const char* fname) {                                      \
-    static const bool vmodule_activated =                                   \
+#define TF_VLOG_IS_ON(lvl)                                           \
+  (([](int level, const char* fname) {                               \
+    static const bool vmodule_activated =                            \
         ::tsl::internal::LogMessage::VmoduleActivated(fname, level); \
-    return vmodule_activated;                                               \
+    return vmodule_activated;                                        \
   })(lvl, __FILE__))
 
-#define TF_VLOG(level)                                           \
-  TF_PREDICT_TRUE(!TF_VLOG_IS_ON(level))                         \
-  ? (void)0                                                      \
-  : ::tsl::internal::Voidifier() &                        \
-          ::tsl::internal::LogMessage(__FILE__, __LINE__, \
-                                             ::tsl::INFO)
+#define TF_VLOG(level)                   \
+  TF_PREDICT_TRUE(!TF_VLOG_IS_ON(level)) \
+  ? (void)0                              \
+  : ::tsl::internal::Voidifier() &       \
+          ::tsl::internal::LogMessage(__FILE__, __LINE__, ::tsl::INFO)
 
 struct ErrorSink : public std::basic_ostringstream<char> {};
 
@@ -55,12 +54,10 @@ class ErrorGenerator {
   while (TF_PREDICT_FALSE(!(condition))) \
   TF_ERROR_STREAM() << "Check failed: " #condition " "
 
-#define TF_CHECK_OP_LOG(name, op, val1, val2)                  \
-  while (::tsl::internal::CheckOpString _result{        \
-      ::tsl::internal::name##Impl(                      \
-          ::tsl::internal::GetReferenceableValue(val1), \
-          ::tsl::internal::GetReferenceableValue(val2), \
-          #val1 " " #op " " #val2)})                           \
+#define TF_CHECK_OP_LOG(name, op, val1, val2)                                  \
+  while (::tsl::internal::CheckOpString _result{::tsl::internal::name##Impl(   \
+      ::tsl::internal::GetReferenceableValue(val1),                            \
+      ::tsl::internal::GetReferenceableValue(val2), #val1 " " #op " " #val2)}) \
   TF_ERROR_STREAM() << *(_result.str_)
 
 #define TF_CHECK_OP(name, op, val1, val2) TF_CHECK_OP_LOG(name, op, val1, val2)
