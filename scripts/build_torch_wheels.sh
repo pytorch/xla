@@ -125,7 +125,7 @@ function install_llvm_clang() {
 }
 
 function install_req_packages() {
-  sudo apt-get -y install python-pip git curl libopenblas-dev vim apt-transport-https ca-certificates wget procps
+  sudo apt-get -y install python3-pip git curl libopenblas-dev vim apt-transport-https ca-certificates wget procps
   maybe_install_cuda
   install_bazel
   install_ninja
@@ -143,14 +143,24 @@ function install_gcloud() {
 
 function install_and_setup_conda() {
   # Install conda if dne already.
-  if ! test -d "$HOME/anaconda3"; then
-    CONDA_VERSION="5.3.1"
-    curl -O "https://repo.anaconda.com/archive/Anaconda3-${CONDA_VERSION}-Linux-x86_64.sh"
-    sh "Anaconda3-${CONDA_VERSION}-Linux-x86_64.sh" -b
-    rm -f "Anaconda3-${CONDA_VERSION}-Linux-x86_64.sh"
+  if [[ $(uname -m) == "x86_64" ]]; then
+    if ! test -d "$HOME/anaconda3"; then
+       CONDA_VERSION="5.3.1"
+       curl -O "https://repo.anaconda.com/archive/Anaconda3-${CONDA_VERSION}-Linux-x86_64.sh"
+       sh "Anaconda3-${CONDA_VERSION}-Linux-x86_64.sh" -b
+       rm -f "Anaconda3-${CONDA_VERSION}-Linux-x86_64.sh"
+    fi
+    maybe_append ". $HOME/anaconda3/etc/profile.d/conda.sh" ~/.bashrc
+    source "$HOME/anaconda3/etc/profile.d/conda.sh"
+  elif [[ $(uname -m) == "aarch64" ]]; then
+    if ! test -d "$HOME/miniforge3"; then
+       curl -OL https://github.com/conda-forge/miniforge/releases/latest/download/Miniforge3-Linux-aarch64.sh
+       sh -f Miniforge3-Linux-aarch64.sh -b
+       rm -f Miniforge3-Linux-aarch64.sh
+    fi
+    maybe_append ". $HOME/miniforge3/etc/profile.d/conda.sh" ~/.bashrc
+    source "$HOME/miniforge3/etc/profile.d/conda.sh"
   fi
-  maybe_append ". $HOME/anaconda3/etc/profile.d/conda.sh" ~/.bashrc
-  source "$HOME/anaconda3/etc/profile.d/conda.sh"
   ENVNAME="pytorch"
   if conda env list | awk '{print $1}' | grep "^$ENVNAME$"; then
     conda remove --name "$ENVNAME" --all
@@ -158,11 +168,20 @@ function install_and_setup_conda() {
   if [ -z "$PYTHON_VERSION" ]; then
     PYTHON_VERSION=$DEFAULT_PYTHON_VERSION
   fi
-  conda create -y --name "$ENVNAME" python=${PYTHON_VERSION} anaconda
+  if [[ $(uname -m) == "x86_64" ]]; then
+    conda create -y --name "$ENVNAME" python=${PYTHON_VERSION} anaconda
+  elif [[ $(uname -m) == "aarch64" ]]; then
+    conda create -y --name "$ENVNAME" python=${PYTHON_VERSION}
+  fi
+
   conda activate "$ENVNAME"
   export CMAKE_PREFIX_PATH="$(dirname $(which conda))/../"
 
-  conda install -y numpy pyyaml mkl-include setuptools cmake cffi typing tqdm coverage tensorboard hypothesis dataclasses
+  conda install -y numpy pyyaml setuptools cmake cffi typing tqdm coverage tensorboard hypothesis dataclasses
+  if [[ $(uname -m) == "x86_64" ]]; then
+    conda install -y mkl-include
+  fi
+
   /usr/bin/yes | pip install --upgrade google-api-python-client
   /usr/bin/yes | pip install --upgrade oauth2client
   /usr/bin/yes | pip install --upgrade google-cloud-storage
@@ -193,6 +212,12 @@ function build_and_install_torch_xla() {
   else
     export TORCH_XLA_VERSION=${RELEASE_VERSION:1}  # r0.5 -> 0.5
   fi
+
+  if [[ $(uname -m) == "aarch64" ]]; then
+    # enable ACL runtime for CPU backend
+    export XLA_CPU_USE_ACL=1
+  fi
+
   # TODO: reenable after fixing the cpp test build
   BUILD_CPP_TESTS=0 python setup.py bdist_wheel
   pip install dist/*.whl
