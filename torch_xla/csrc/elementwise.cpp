@@ -133,10 +133,12 @@ xla::XlaOp BuildSoftshrink(xla::XlaOp input, xla::XlaOp lambda) {
   xla::PrimitiveType input_element_type = input_shape.element_type();
   lambda = MaybeConvertTo(lambda, input_element_type);
 
-  xla::XlaOp zero = XlaHelpers::ScalarValue<int64_t>(0, input_element_type, input.builder());
+  xla::XlaOp zero =
+      XlaHelpers::ScalarValue<int64_t>(0, input_element_type, input.builder());
   xla::XlaOp toTheLeft = xla::Lt(input, xla::Neg(lambda));
   xla::XlaOp toTheRight = xla::Gt(input, lambda);
-  return xla::Select(toTheLeft, xla::Add(input, lambda), xla::Select(toTheRight, xla::Sub(input, lambda), zero));
+  return xla::Select(toTheLeft, xla::Add(input, lambda),
+                     xla::Select(toTheRight, xla::Sub(input, lambda), zero));
 }
 
 xla::XlaOp BuildShrinkBackward(xla::XlaOp grad_output, xla::XlaOp input,
