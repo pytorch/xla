@@ -88,6 +88,8 @@ XlaOpVector SizeAdd::Lower(LoweringContext* loctx) const {
   return ReturnOp((input1 + input2), loctx);
 }
 
+SizeConstant::SizeConstant(int64_t val) : Scalar(c10::Scalar{val}, xla::S64){};
+
 SizeMul::SizeMul(torch::lazy::Value a, torch::lazy::Value b)
     : XlaNode(torch::lazy::OpKind{c10::Symbol::fromQualString("aten::mul")},
               {a, b}, xla::ShapeUtil::MakeShape(xla::S64, {}), 1) {
