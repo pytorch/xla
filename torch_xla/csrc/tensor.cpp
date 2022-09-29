@@ -1828,10 +1828,22 @@ bool XLATensor::ShouldSyncIrNode() {
   return this->data()->ir_value->op() != xla_device_data;
 }
 
+c10::SymIntNode XLASymIntNodeImpl::add(const c10::SymIntNode& other) {
+  auto pother = dynamic_cast<XLASymIntNodeImpl*>(other.get());
+  auto nadd = torch::lazy::MakeNode<SizeAdd>(node(), pother->node());
+  return c10::make_intrusive<XLASymIntNodeImpl>(nadd);
+}
+
 c10::SymIntNode XLASymIntNodeImpl::mul(const c10::SymIntNode& other) {
   auto pother = dynamic_cast<XLASymIntNodeImpl*>(other.get());
   auto nmul = torch::lazy::MakeNode<torch_xla::SizeMul>(node(), pother->node());
   return c10::make_intrusive<XLASymIntNodeImpl>(nmul);
+}
+
+c10::SymIntNode XLASymIntNodeImpl::floordiv(const c10::SymIntNode& other) {
+  auto pother = dynamic_cast<XLASymIntNodeImpl*>(other.get());
+  auto ndiv = torch::lazy::MakeNode<SizeDiv>(node(), pother->node());
+  return c10::make_intrusive<XLASymIntNodeImpl>(ndiv);
 }
 
 }  // namespace torch_xla

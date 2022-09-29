@@ -31,7 +31,9 @@ namespace torch_xla {
 class TORCH_API XLASymIntNodeImpl : public c10::SymIntNodeImpl {
  public:
   XLASymIntNodeImpl(torch::lazy::NodePtr ptr) : node_(std::move(ptr)) {}
+  c10::SymIntNode add(const c10::SymIntNode& other) override;
   c10::SymIntNode mul(const c10::SymIntNode& other) override;
+  c10::SymIntNode floordiv(const c10::SymIntNode& other) override;
   torch::lazy::NodePtr node() { return node_; }
 
  private:
