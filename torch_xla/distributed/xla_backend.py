@@ -265,7 +265,11 @@ def new_xla_process_group(ranks=None,
                           pg_options=None,
                           use_local_synchronization=False):
   pg = _orig_new_group_fn(
-      ranks=ranks, timeout=timeout, backend=backend, pg_options=pg_options, use_local_synchronization=use_local_synchronization)
+      ranks=ranks,
+      timeout=timeout,
+      backend=backend,
+      pg_options=pg_options,
+      use_local_synchronization=use_local_synchronization)
   if isinstance(pg, ProcessGroupXla) and ranks is not None:
     world_pg = dist.group.WORLD
     if not isinstance(world_pg, ProcessGroupXla):
