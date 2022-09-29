@@ -16,19 +16,6 @@ index 9fe020d5937..32774c2f3c0 100644
  // Older versions of Clang don't have _Float16. Since both float and _Float16
  // are passed in the same register we can use the wider type and careful casting
  // to conform to x86_64 psABI. This only works with the assumption that we're
-diff --git a/tensorflow/tsl/platform/macros.h b/tensorflow/tsl/platform/macros.h
-index d9e1b46576f..ef37baaed3d 100644
---- a/tensorflow/tsl/platform/macros.h
-+++ b/tensorflow/tsl/platform/macros.h
-@@ -21,7 +21,7 @@ limitations under the License.
- // Compiler supports GCC-style attributes
- #define TF_ATTRIBUTE_NORETURN __attribute__((noreturn))
- #define TF_ATTRIBUTE_ALWAYS_INLINE __attribute__((always_inline))
--#define TF_ATTRIBUTE_NOINLINE __attribute__((noinline))
-+#define TF_ATTRIBUTE_NOINLINE [[noinline]]
- #define TF_ATTRIBUTE_UNUSED __attribute__((unused))
- #define TF_ATTRIBUTE_COLD __attribute__((cold))
- #define TF_ATTRIBUTE_WEAK __attribute__((weak))
 diff --git a/tensorflow/core/profiler/convert/xplane_to_tools_data.cc b/tensorflow/core/profiler/convert/xplane_to_tools_data.cc
 index b70ea8af5df..b54a895e306 100644
 --- a/tensorflow/core/profiler/convert/xplane_to_tools_data.cc
@@ -45,21 +32,3 @@ index b70ea8af5df..b54a895e306 100644
    } else if (tool_name == "tool_names") {
      return GetAvailableToolNames(session_snapshot);
    } else {
-diff --git a/tensorflow/core/tpu/tpu_execute.cc b/tensorflow/core/tpu/tpu_execute.cc
-index 999561f25f1..6d2a1a20334 100644
---- a/tensorflow/core/tpu/tpu_execute.cc
-+++ b/tensorflow/core/tpu/tpu_execute.cc
-@@ -306,8 +306,11 @@ void TPUCancelExecution(Env* env, int device_ordinal) {
-     // continue running callbacks. The new thread will call quick_exit,
-     // so we discard the returned Thread pointer because we won't have
-     // an opportunity to delete it.
--    (void)env->StartThread(ThreadOptions(), "tpu_execute_exit_countdown",
--                           [env]() { ExitCountdown(env); });
-+    auto res = env->StartThread(ThreadOptions(), "tpu_execute_exit_countdown",
-+                                [env]() { ExitCountdown(env); });
-+    // workaround "ignoring return value of function declared with attribute
-+    // warn_unused_result"
-+    ((void)(res));
-   } else if (tpu_cancellation_closes_chips) {
-     LOG(INFO) << "TPUCancelExecution CloseTPUHost on device " << device_ordinal;
-     Status status = TpuNodeContext::CloseTpuHost();
