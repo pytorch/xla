@@ -12,7 +12,8 @@ Sometimes a PyTorch/XLA PR needs to be pinned to a specific PyTorch PR to test n
 
 ## Coodinating merges for breaking PyTorch PRs
 When PyTorch PR introduces a breaking change, its PyTorch/XLA CircleCI tests will fail. Steps for fixing and merging such breaking PyTorch change is as following: 
-1. Create a PyTorch/XLA PR to fix this issue with `.torch_pin` and rebase with master to ensure the PR is up-to-date with the latest commit on PyTorch/XLA. Once this PR is created, it'll create a commit hash that will be used in step 2. 
+1. Create a PyTorch/XLA PR to fix this issue with `.torch_pin` and rebase with master to ensure the PR is up-to-date with the latest commit on PyTorch/XLA. Once this PR is created, it'll create a commit hash that will be used in step 2. If you have multiple commits in the PR, use the last one's hash.
 2. Rebase (or ask the PR owner to rebase) the PyTorch PR with master. Update the PyTorch PR to pin the PyTorch/XLA to the commit hash created in step 1 by updating `pytorch/.github/ci_commit_pins/xla.txt`.
-3. Once CircleCI tests are green on both ends, merge PyTorch PR. 
-4. Remove the `.torch_pin` in PyTorch/XLA PR and merge.
+3. Once CircleCI tests are green on both ends, merge PyTorch PR.
+4. Remove the `.torch_pin` in PyTorch/XLA PR and merge. To be noted, `git commit --amend` should be avoided in this step as PyTorch CI will keep using the commit hash created in step 1 until other PRs update that manually or the nightly buildbot updates that automatically.
+5. Finally, don't delete your branch until 2 days later. See step 4 for explanations.
