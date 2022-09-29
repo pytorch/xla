@@ -61,8 +61,8 @@ void XlaTest::ExpectCounterNotChanged(
   // using the old names. We modify `ExpectCounterNotChanged` to also check
   // `opName_symint` counters. When we finish migrating the ops to symints, we
   // would remove this logic and fix all the tests
-  auto changed_symint =
-      start_msnap_->CounterChanged(counter_regex, *end_msnap_, ignore_set);
+  auto changed_symint = start_msnap_->CounterChanged(counter_regex + "_symint",
+                                                     *end_msnap_, ignore_set);
 
   ExpectCounterNotChanged_(changed_symint);
 }
