@@ -23,8 +23,7 @@
 namespace torch_xla {
 namespace {
 
-void CheckIndexTensorTypes(
-    const at::IOptTensorListRef& indices) {
+void CheckIndexTensorTypes(const at::IOptTensorListRef& indices) {
   for (const auto& tensor : indices) {
     if (tensor.has_value() && tensor->defined()) {
       at::ScalarType scalar_type = tensor->scalar_type();
@@ -41,8 +40,7 @@ void CheckIndexTensorTypes(
 // Expands byte tensors (masks) into the equivalent indexing by LongTensors.
 // This is a version of at::native::expandByteTensors with style adjustments.
 std::vector<at::Tensor> ExpandByteTensors(
-    const at::Tensor& self,
-    const at::IOptTensorListRef& indices) {
+    const at::Tensor& self, const at::IOptTensorListRef& indices) {
   std::vector<at::Tensor> result;
   for (const auto& index : indices) {
     if (index.has_value() && (index->scalar_type() == at::kByte ||
@@ -236,8 +234,7 @@ torch::lazy::NodePtr IndexCopyOp(const torch::lazy::Value& buffer, int64_t dim,
 }  // namespace
 
 CanonicalIndexInfo GetCanonicalIndexInfo(
-    const at::Tensor& base,
-    const at::IOptTensorListRef& orig_indices) {
+    const at::Tensor& base, const at::IOptTensorListRef& orig_indices) {
   CheckIndexTensorTypes(orig_indices);
   // First expand ByteTensor (boolean masks) into 1 or more LongTensors, then
   // broadcast all index tensors together.
