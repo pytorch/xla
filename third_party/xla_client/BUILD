@@ -174,8 +174,6 @@ cc_library(
         "//tensorflow/core/profiler/rpc/client:profiler_client",
         "//tensorflow/core/protobuf/tpu:topology_proto_cc",
         "//tensorflow/stream_executor:stream_executor_impl",
-        "//tensorflow/tsl/platform:logging",
-        "//tensorflow/tsl/platform:env",
         "@com_google_absl//absl/numeric:int128",
         "@com_google_absl//absl/strings",
     ] + if_cuda_is_configured([
