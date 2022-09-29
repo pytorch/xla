@@ -1281,7 +1281,7 @@ at::Tensor XLANativeFunctions::hardtanh_backward(const at::Tensor& grad_output,
 
 at::Tensor XLANativeFunctions::index(
     const at::Tensor& self,
-    const c10::List<c10::optional<at::Tensor>>& indices) {
+    const at::IOptTensorListRef& indices) {
   XLA_FN_COUNTER("xla::");
   bool indices_on_cpu_or_xla =
       std::all_of(indices.begin(), indices.end(),
