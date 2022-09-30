@@ -192,7 +192,6 @@ allowed_opinfo = set(
             AllowedOpInfoEntry('angle'),
             AllowedOpInfoEntry('linalg.solve'),
             AllowedOpInfoEntry('linalg.matrix_rank'),
-            AllowedOpInfoEntry('einsum'),
             AllowedOpInfoEntry('linalg.svd'),
             AllowedOpInfoEntry('linalg.svdvals'),
             AllowedOpInfoEntry('polar'),
@@ -250,6 +249,7 @@ allowed_opinfo = set(
 
             # Failing Ops
             # Refer for more info : https://github.com/pytorch/xla/pull/3019#issuecomment-877132385
+            # AllowedOpInfoEntry('einsum'), https://github.com/pytorch/xla/issues/4052
             # AllowedOpInfoEntry('cdist'),  // precision issue on TPU
             # AllowedOpInfoEntry('linalg.multi_dot'),  // failing on CPU
             # AllowedOpInfoEntry('matmul'),            // failing on CPU
