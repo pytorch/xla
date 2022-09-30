@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+c#!/usr/bin/env bash
 
 set -ex
 
@@ -87,7 +87,7 @@ else
   # TensorFlow and its dependencies may introduce warning flags from newer compilers 
   # that PyTorch and PyTorch/XLA's default compilers don't recognize. They become error
   # while '-Werror' is used. Therefore, surpress the warnings.
-  TF_EXTRA_FLAGS="--cxxopt=-Wno-unknown-warning-option"
+  TF_EXTRA_FLAGS="--copt=-Wno-unknown-warning-option"
   bazel build $MAX_JOBS $VERBOSE $TPUVM_FLAG $TF_EXTRA_FLAGS --spawn_strategy=$BUILD_STRATEGY --show_progress_rate_limit=20 \
     --define framework_shared_object=false -c "$MODE" "${OPTS[@]}" \
     $XLA_CUDA_CFG //tensorflow/compiler/xla/xla_client:libxla_computation_client.so
