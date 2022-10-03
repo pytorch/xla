@@ -218,6 +218,9 @@ xla::Shape SinOutputShape(const torch::lazy::Value& input);
 
 xla::Shape SinhOutputShape(const torch::lazy::Value& input);
 
+xla::Shape SoftshrinkOutputShape(const torch::lazy::Value& self,
+                                 const torch::lazy::Value& lambd);
+
 xla::Shape SoftshrinkBackwardOutputShape(const torch::lazy::Value& grad_out,
                                          const torch::lazy::Value& input,
                                          const torch::lazy::Value& lambd);
