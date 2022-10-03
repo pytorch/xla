@@ -351,6 +351,7 @@ symint:
   - expand
   - new_empty_strided
   - view
+  - diagonal_backward
 autograd:
   - einsum
   - max_pool2d

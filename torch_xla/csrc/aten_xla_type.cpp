@@ -3125,11 +3125,11 @@ at::Tensor XLANativeFunctions::linalg_pinv(
   return at::native::linalg_pinv(self, atol, rtol, hermitian);
 }
 
-at::Tensor XLANativeFunctions::diagonal_backward(const at::Tensor& grad_output,
-                                                 at::IntArrayRef input_sizes,
+at::Tensor XLANativeFunctions::diagonal_backward_symint(const at::Tensor& grad_output,
+                                                 at::SymIntArrayRef input_sizes,
                                                  int64_t offset, int64_t dim1,
                                                  int64_t dim2) {
-  return at::native::diagonal_backward(grad_output, input_sizes, offset, dim1,
+  return at::native::diagonal_backward_symint(grad_output, input_sizes, offset, dim1,
                                        dim2);
 }
 
