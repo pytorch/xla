@@ -1066,7 +1066,7 @@ at::Tensor XLANativeFunctions::dot(const at::Tensor& self,
       bridge::GetXlaTensor(self), bridge::GetXlaTensor(tensor)));
 }
 
-at::Tensor XLANativeFunctions::einsum(c10::string_view equation,
+at::Tensor XLANativeFunctions::_einsum(c10::string_view equation,
                                       at::TensorList tensors,
                                       at::OptionalIntArrayRef path) {
   std::string cleansed_equation = std::string(equation);
@@ -1085,7 +1085,7 @@ at::Tensor XLANativeFunctions::einsum(c10::string_view equation,
       !EinsumUtilities::EquationIsValid(cleansed_equation) ||
       TensorsAreOfType(xla_tensors, at::ScalarType::Long)) {
     XLA_COUNTER("EinsumFallback", 1);
-    return at::native::einsum(equation, tensors, path);
+    return at::native::_einsum(equation, tensors, path);
   }
   return aten_autograd_ops::EinsumAutogradFunction::apply(cleansed_equation,
                                                           tensors);

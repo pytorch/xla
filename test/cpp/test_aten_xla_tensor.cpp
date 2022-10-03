@@ -3831,11 +3831,11 @@ TEST_F(AtenXlaTensorTest, TestEinsumOuter) {
   torch::Tensor a = torch::rand({5}, torch::TensorOptions(torch::kFloat));
   torch::Tensor b = torch::rand({5}, torch::TensorOptions(torch::kFloat));
   std::string equation = "i,j->ij";
-  torch::Tensor c = torch::einsum(equation, {a, b});
+  torch::Tensor c = torch::_einsum(equation, {a, b});
   ForEachDevice([&](const torch::Device& device) {
     torch::Tensor xla_a = CopyToDevice(a, device);
     torch::Tensor xla_b = CopyToDevice(b, device);
-    torch::Tensor xla_c = torch::einsum(equation, {xla_a, xla_b});
+    torch::Tensor xla_c = torch::_einsum(equation, {xla_a, xla_b});
     AllClose(c, xla_c);
   });
 
@@ -3851,7 +3851,7 @@ TEST_F(AtenXlaTensorTest, TestEinsumOuterBackward) {
       torch::rand({5}, torch::TensorOptions(torch::kFloat).requires_grad(true));
   std::string equation = "i,j->ij";
   auto testfn = [&](const std::vector<torch::Tensor>& inputs) -> torch::Tensor {
-    return torch::einsum(equation, inputs);
+    return torch::_einsum(equation, inputs);
   };
   ForEachDevice([&](const torch::Device& device) {
     TestBackward({a, b}, device, testfn, /*rtol=*/1e-3, /*atol=*/1e-4);
@@ -3866,11 +3866,11 @@ TEST_F(AtenXlaTensorTest, TestEinsumBatchMatMul) {
   torch::Tensor a = torch::rand({3, 2, 5}, torch::TensorOptions(torch::kFloat));
   torch::Tensor b = torch::rand({3, 5, 4}, torch::TensorOptions(torch::kFloat));
   std::string equation = "bij,bjk->bik";
-  torch::Tensor c = torch::einsum(equation, {a, b});
+  torch::Tensor c = torch::_einsum(equation, {a, b});
   ForEachDevice([&](const torch::Device& device) {
     torch::Tensor xla_a = CopyToDevice(a, device);
     torch::Tensor xla_b = CopyToDevice(b, device);
-    torch::Tensor xla_c = torch::einsum(equation, {xla_a, xla_b});
+    torch::Tensor xla_c = torch::_einsum(equation, {xla_a, xla_b});
     AllClose(c, xla_c);
   });
 
@@ -3886,7 +3886,7 @@ TEST_F(AtenXlaTensorTest, TestEinsumBatchMatMulBackward) {
       {3, 5, 4}, torch::TensorOptions(torch::kFloat).requires_grad(true));
   std::string equation = "bij,bjk->bik";
   auto testfn = [&](const std::vector<torch::Tensor>& inputs) -> torch::Tensor {
-    return torch::einsum(equation, inputs);
+    return torch::_einsum(equation, inputs);
   };
   ForEachDevice([&](const torch::Device& device) {
     TestBackward({a, b}, device, testfn, /*rtol=*/1e-3, /*atol=*/1e-4);
@@ -3902,12 +3902,12 @@ TEST_F(AtenXlaTensorTest, TestEinsumPyTorchLowerBilinear) {
   torch::Tensor l = torch::rand({2, 5}, torch::TensorOptions(torch::kFloat));
   torch::Tensor r = torch::rand({2, 4}, torch::TensorOptions(torch::kFloat));
   std::string equation = "bn,anm,bm->ba";
-  torch::Tensor c = torch::einsum(equation, {l, a, r});
+  torch::Tensor c = torch::_einsum(equation, {l, a, r});
   ForEachDevice([&](const torch::Device& device) {
     torch::Tensor xla_l = CopyToDevice(l, device);
     torch::Tensor xla_a = CopyToDevice(a, device);
     torch::Tensor xla_r = CopyToDevice(r, device);
-    torch::Tensor xla_c = torch::einsum(equation, {xla_l, xla_a, xla_r});
+    torch::Tensor xla_c = torch::_einsum(equation, {xla_l, xla_a, xla_r});
     AllClose(c, xla_c);
   });
 
@@ -3925,7 +3925,7 @@ TEST_F(AtenXlaTensorTest, TestEinsumPyTorchLowerBilinearBackward) {
       {2, 4}, torch::TensorOptions(torch::kFloat).requires_grad(true));
   std::string equation = "bn,anm,bm->ba";
   auto testfn = [&](const std::vector<torch::Tensor>& inputs) -> torch::Tensor {
-    return torch::einsum(equation, inputs);
+    return torch::_einsum(equation, inputs);
   };
   ForEachDevice([&](const torch::Device& device) {
     TestBackward({l, a, r}, device, testfn, /*rtol=*/1e-3, /*atol=*/1e-4);
@@ -3940,10 +3940,10 @@ TEST_F(AtenXlaTensorTest, TestEinsumPyTorchLowerDiagonal) {
   torch::Tensor input =
       torch::rand({3, 3}, torch::TensorOptions(torch::kFloat));
   std::string equation = "ii->i";
-  torch::Tensor result = torch::einsum(equation, {input});
+  torch::Tensor result = torch::_einsum(equation, {input});
   ForEachDevice([&](const torch::Device& device) {
     torch::Tensor xla_input = CopyToDevice(input, device);
-    torch::Tensor xla_result = torch::einsum(equation, {xla_input});
+    torch::Tensor xla_result = torch::_einsum(equation, {xla_input});
     AllClose(result, xla_result);
   });
 
@@ -3957,7 +3957,7 @@ TEST_F(AtenXlaTensorTest, TestEinsumPyTorchLowerDiagonalBackward) {
       {3, 3}, torch::TensorOptions(torch::kFloat).requires_grad(true));
   std::string equation = "ii->i";
   auto testfn = [&](const std::vector<torch::Tensor>& inputs) -> torch::Tensor {
-    return torch::einsum(equation, inputs);
+    return torch::_einsum(equation, inputs);
   };
   ForEachDevice([&](const torch::Device& device) {
     TestBackward({input}, device, testfn, /*rtol=*/1e-3, /*atol=*/1e-4);
@@ -3972,10 +3972,10 @@ TEST_F(AtenXlaTensorTest, TestEinsumPyTorchLowerBatchDiagonal) {
   torch::Tensor input =
       torch::rand({4, 3, 3}, torch::TensorOptions(torch::kFloat));
   std::string equation = "...ii->...i";
-  torch::Tensor result = torch::einsum(equation, {input});
+  torch::Tensor result = torch::_einsum(equation, {input});
   ForEachDevice([&](const torch::Device& device) {
     torch::Tensor xla_input = CopyToDevice(input, device);
-    torch::Tensor xla_result = torch::einsum(equation, {xla_input});
+    torch::Tensor xla_result = torch::_einsum(equation, {xla_input});
     AllClose(result, xla_result);
   });
 
@@ -3989,7 +3989,7 @@ TEST_F(AtenXlaTensorTest, TestEinsumPyTorchLowerBatchDiagonalBackward) {
       {4, 3, 3}, torch::TensorOptions(torch::kFloat).requires_grad(true));
   std::string equation = "...ii->...i";
   auto testfn = [&](const std::vector<torch::Tensor>& inputs) -> torch::Tensor {
-    return torch::einsum(equation, inputs);
+    return torch::_einsum(equation, inputs);
   };
   ForEachDevice([&](const torch::Device& device) {
     TestBackward({input}, device, testfn, /*rtol=*/1e-3, /*atol=*/1e-4);
@@ -4004,10 +4004,10 @@ TEST_F(AtenXlaTensorTest, TestEinsumPyTorchLowerBatchPermute) {
   torch::Tensor input =
       torch::rand({2, 3, 4, 5}, torch::TensorOptions(torch::kFloat));
   std::string equation = "...ij->...ji";
-  torch::Tensor result = torch::einsum(equation, {input});
+  torch::Tensor result = torch::_einsum(equation, {input});
   ForEachDevice([&](const torch::Device& device) {
     torch::Tensor xla_input = CopyToDevice(input, device);
-    torch::Tensor xla_result = torch::einsum(equation, {xla_input});
+    torch::Tensor xla_result = torch::_einsum(equation, {xla_input});
     AllClose(result, xla_result);
   });
 
@@ -4021,7 +4021,7 @@ TEST_F(AtenXlaTensorTest, TestEinsumPyTorchLowerBatchPermuteBackward) {
       {2, 3, 4, 5}, torch::TensorOptions(torch::kFloat).requires_grad(true));
   std::string equation = "...ij->...ji";
   auto testfn = [&](const std::vector<torch::Tensor>& inputs) -> torch::Tensor {
-    return torch::einsum(equation, inputs);
+    return torch::_einsum(equation, inputs);
   };
   ForEachDevice([&](const torch::Device& device) {
     TestBackward({input}, device, testfn, /*rtol=*/1e-3, /*atol=*/1e-4);
@@ -4036,11 +4036,11 @@ TEST_F(AtenXlaTensorTest, TestEinsumPyTorchLowerRepeatedAxis) {
   torch::Tensor x = torch::rand({2, 3, 3}, torch::TensorOptions(torch::kFloat));
   torch::Tensor y = torch::rand({4}, torch::TensorOptions(torch::kFloat));
   std::string equation = "ijj,k->ik";
-  torch::Tensor result = torch::einsum(equation, {x, y});
+  torch::Tensor result = torch::_einsum(equation, {x, y});
   ForEachDevice([&](const torch::Device& device) {
     torch::Tensor xla_x = CopyToDevice(x, device);
     torch::Tensor xla_y = CopyToDevice(y, device);
-    torch::Tensor xla_result = torch::einsum(equation, {xla_x, xla_y});
+    torch::Tensor xla_result = torch::_einsum(equation, {xla_x, xla_y});
     AllClose(result, xla_result);
   });
 
@@ -4056,7 +4056,7 @@ TEST_F(AtenXlaTensorTest, TestEinsumPyTorchLowerRepeatedAxisBackward) {
       torch::rand({4}, torch::TensorOptions(torch::kFloat).requires_grad(true));
   std::string equation = "ijj,k->ik";
   auto testfn = [&](const std::vector<torch::Tensor>& inputs) -> torch::Tensor {
-    return torch::einsum(equation, inputs);
+    return torch::_einsum(equation, inputs);
   };
   ForEachDevice([&](const torch::Device& device) {
     TestBackward({x, y}, device, testfn, /*rtol=*/1e-3, /*atol=*/1e-4);
@@ -4073,12 +4073,12 @@ TEST_F(AtenXlaTensorTest, TestEinsumThreeInputs) {
   torch::Tensor z = torch::rand({4}, torch::TensorOptions(torch::kFloat));
   std::string equation = "i,j,k->ijk";
 
-  torch::Tensor result = torch::einsum(equation, {x, y, z});
+  torch::Tensor result = torch::_einsum(equation, {x, y, z});
   ForEachDevice([&](const torch::Device& device) {
     torch::Tensor xla_x = CopyToDevice(x, device);
     torch::Tensor xla_y = CopyToDevice(y, device);
     torch::Tensor xla_z = CopyToDevice(z, device);
-    torch::Tensor xla_result = torch::einsum(equation, {xla_x, xla_y, xla_z});
+    torch::Tensor xla_result = torch::_einsum(equation, {xla_x, xla_y, xla_z});
     AllClose(result, xla_result);
   });
 
@@ -4091,11 +4091,11 @@ TEST_F(AtenXlaTensorTest, TestEinsumExtraSpaces) {
   torch::Tensor a = torch::rand({5}, torch::TensorOptions(torch::kFloat));
   torch::Tensor b = torch::rand({5}, torch::TensorOptions(torch::kFloat));
   std::string equation = "i, j->ij";
-  torch::Tensor result = torch::einsum(equation, {a, b});
+  torch::Tensor result = torch::_einsum(equation, {a, b});
   ForEachDevice([&](const torch::Device& device) {
     torch::Tensor xla_a = CopyToDevice(a, device);
     torch::Tensor xla_b = CopyToDevice(b, device);
-    torch::Tensor xla_result = torch::einsum(equation, {xla_a, xla_b});
+    torch::Tensor xla_result = torch::_einsum(equation, {xla_a, xla_b});
     AllClose(result, xla_result);
   });
 
@@ -4111,12 +4111,12 @@ TEST_F(AtenXlaTensorTest, TestEinsumLarge4D) {
       torch::rand({8, 16, 1024, 128}, torch::TensorOptions(torch::kFloat));
 
   std::string equation = "ijkl,ijml->ijkm";
-  torch::Tensor result = torch::einsum(equation, {a, b});
+  torch::Tensor result = torch::_einsum(equation, {a, b});
 
   ForEachDevice([&](const torch::Device& device) {
     torch::Tensor xla_a = CopyToDevice(a, device);
     torch::Tensor xla_b = CopyToDevice(b, device);
-    torch::Tensor xla_result = torch::einsum(equation, {xla_a, xla_b});
+    torch::Tensor xla_result = torch::_einsum(equation, {xla_a, xla_b});
     AllClose(result, xla_result);
   });
 

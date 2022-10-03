@@ -353,7 +353,7 @@ symint:
   - view
   - diagonal_backward
 autograd:
-  - einsum
+  - _einsum
   - max_pool2d
   - max_pool3d
   - native_layer_norm

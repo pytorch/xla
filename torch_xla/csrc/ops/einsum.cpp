@@ -30,7 +30,7 @@ torch::lazy::NodePtr Einsum::Clone(torch::lazy::OpList operands) const {
 }
 
 Einsum::Einsum(const torch::lazy::OpList& operands, const std::string equation)
-    : XlaNode(torch::lazy::OpKind(at::aten::einsum), operands,
+    : XlaNode(torch::lazy::OpKind(at::aten::_einsum), operands,
               NodeOutputShape(operands, equation),
               /*num_outputs=*/1, torch::lazy::MHash(equation)),
       equation_(std::move(equation)) {}
