@@ -110,7 +110,6 @@
 #include "torch_xla/csrc/ops/send.h"
 #include "torch_xla/csrc/ops/sgd_optimizer_step.h"
 #include "torch_xla/csrc/ops/softmax.h"
-#include "torch_xla/csrc/ops/softshrink.h"
 #include "torch_xla/csrc/ops/split.h"
 #include "torch_xla/csrc/ops/squeeze.h"
 #include "torch_xla/csrc/ops/stack.h"
@@ -2306,12 +2305,6 @@ XLATensorPtr XLATensor::softplus_backward(const XLATensorPtr& grad_output,
                                           const at::Scalar& beta,
                                           const at::Scalar& threshold) {
   return tensor_ops::SoftplusBackward(grad_output, input, beta, threshold);
-}
-
-XLATensorPtr XLATensor::softshrink(const XLATensorPtr& input,
-                                   const at::Scalar& lambda) {
-  return input->CreateFrom(
-      torch::lazy::MakeNode<Softshrink>(input->GetIrValue(), lambda));
 }
 
 std::vector<XLATensorPtr> XLATensor::split(const XLATensorPtr& input,

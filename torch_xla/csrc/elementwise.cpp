@@ -128,16 +128,16 @@ xla::XlaOp BuildHardSwishBackward(xla::XlaOp grad_output, xla::XlaOp input) {
   return xla::Select(xla::Ge(input, three), grad_output, stepone);
 }
 
-xla::XlaOp BuildSoftshrink(xla::XlaOp input, const at::Scalar& lambda) {
-  xla::XlaBuilder* builder = input.builder();
-  const xla::Shape& shape = XlaHelpers::ShapeOfXlaOp(input);
-  xla::XlaOp zero = xla::Zero(input.builder(), shape.element_type());
-  xla::XlaOp xla_lambd =
-      XlaHelpers::ScalarBroadcast(lambda.to<double>(), shape, builder);
-  xla::XlaOp le_lambda_branch =
-      xla::Select(xla::Lt(input, Neg(xla_lambd)), input + xla_lambd, zero);
-  return xla::Select(xla::Le(input, xla_lambd), le_lambda_branch,
-                     input - xla_lambd);
+xla::XlaOp BuildSoftshrink(xla::XlaOp input, xla::XlaOp lambda) {
+  const xla::Shape& input_shape = XlaHelpers::ShapeOfXlaOp(input);
+  xla::PrimitiveType input_element_type = input_shape.element_type();
+  lambda = MaybeConvertTo(lambda, input_element_type);
+
+  xla::XlaOp zero = xla::Zero(input.builder(), input_element_type);
+  xla::XlaOp toTheLeft = xla::Lt(input, xla::Neg(lambda));
+  xla::XlaOp toTheRight = xla::Gt(input, lambda);
+  return xla::Select(toTheLeft, xla::Add(input, lambda),
+                     xla::Select(toTheRight, xla::Sub(input, lambda), zero));
 }
 
 xla::XlaOp BuildShrinkBackward(xla::XlaOp grad_output, xla::XlaOp input,

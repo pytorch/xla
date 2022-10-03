@@ -77,6 +77,7 @@ full_codegen:
   - silu_backward
   - sin
   - sinh
+  - softshrink
   - softshrink_backward
   - take
   - tan
@@ -281,7 +282,6 @@ supported:
   - smooth_l1_loss_backward
   - softplus
   - softplus_backward
-  - softshrink
   - sort
   - sort.stable
   - split.Tensor
