@@ -1067,8 +1067,8 @@ at::Tensor XLANativeFunctions::dot(const at::Tensor& self,
 }
 
 at::Tensor XLANativeFunctions::_einsum(c10::string_view equation,
-                                      at::TensorList tensors,
-                                      at::OptionalIntArrayRef path) {
+                                       at::TensorList tensors,
+                                       at::OptionalIntArrayRef path) {
   std::string cleansed_equation = std::string(equation);
 
   cleansed_equation.erase(
