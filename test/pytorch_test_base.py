@@ -232,20 +232,15 @@ DISABLED_TORCH_TESTS_ANY = {
     # test_nn.py
     'TestNNDeviceTypeXLA': {
         'test_clip_grad_norm_error_if_nonfinite_xla',  # FIXME: edge case of norm
-        'test_embedding_backward',  # sparse
-        'test_embedding_dense_grad',  # slow
         'test_batchnorm_grad',  # FIXME! UndefinedTensorImpl::_singleton
         'test_nonlinearity_propagate_nan',  # relu6 with a nan tensor returns a tensor([0.]) instead of a nan tensor
         'test_InstanceNorm3d_general',  # precision (1e-2)
         'test_InstanceNorm2d_general',  # precision (1e-2)
         'test_InstanceNorm1d_general',  # precision (1e-2)
-        'test_EmbeddingBag_per_sample_weights_failures',  # expecting a different runtime error
         'test_variable_sequence',  # PackedSequence batch_sizes.device.type should be CPU but is XLA
-        'test_embedding_bag_device',  # FIXME! Unsupported device type for sparse layout: xla
         'test_batchnorm_eval',  # FIXME! UndefinedTensorImpl::_singleton
         'test_MaxPool2d_indices',  # lowering
         'test_MaxPool1d_indices',  # lowering
-        'test_EmbeddingBag_per_sample_weights_and_no_offsets',  # FIXME! Unsupported device type for sparse layout: xla
         'test_softshrink_negative',  # runtime error
         'test_nll_loss_empty_tensor_reduction_mean',  # floating point division 0 by 0, expecting nan but get 0
         'test_nll_loss_invalid_target_dim',  # expecting a specific error message.
@@ -280,6 +275,15 @@ DISABLED_TORCH_TESTS_ANY = {
     # test/nn/test_pooling.py
     'TestPoolingNNDeviceTypeXLA': {
         'test_pool_invalid_size',  # expecting a different runtime error
+    },
+
+    # test/nn/test_embedding.py
+    'TestEmbeddingNNDeviceTypeXLA': {
+        'test_embedding_backward',  # sparse
+        'test_embedding_dense_grad',  # slow
+        'test_EmbeddingBag_per_sample_weights_failures',  # expecting a different runtime error
+        'test_embedding_bag_device',  # FIXME! Unsupported device type for sparse layout: xla
+        'test_EmbeddingBag_per_sample_weights_and_no_offsets',  # FIXME! Unsupported device type for sparse layout: xla
     },
 
     # test_type_promotion.py
