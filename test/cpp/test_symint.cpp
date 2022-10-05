@@ -37,7 +37,7 @@ TEST(SymintTest, TestSaticSymints) {
   // We have to init a std::vector<int64_t> here. Passing a temp variable to
   // fromIntArrayRef will result in unexpected behavior.
   std::vector<int64_t> sizes = {6, 19, 10};
-  c10::SymIntArrayRef static_symints = c10::fromIntArrayRef(sizes);
+  c10::SymIntArrayRef static_symints = c10::fromIntArrayRefSlow(sizes);
   SymIntElements si_element(static_symints);
 
   std::vector<int64_t> upper_bound = si_element.GetUpperBounds();
