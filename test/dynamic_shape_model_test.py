@@ -2,6 +2,7 @@ import torch, torch_xla
 import torch_xla.core.xla_model as xm
 import numpy
 
+pd = torch._C._EnablePythonDispatcher()
 dev = xm.xla_device()
 
 class Feedforward(torch.nn.Module):
@@ -54,6 +55,7 @@ before_train = criterion(y_pred.squeeze(), y_test)
 xm.mark_step()
 print('Test loss before training' , before_train.item())
 
+del pd
 
 # Simple Test #
 # a1 = torch.tensor([[1,0,0,5,0,6]], device=dev)
