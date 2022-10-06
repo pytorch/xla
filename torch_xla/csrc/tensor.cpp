@@ -1847,7 +1847,7 @@ c10::SymIntNode XLASymIntNodeImpl::floordiv(const c10::SymIntNode& other) {
 }
 
 std::string XLASymIntNodeImpl::str() {
-    return "XLASymIntNodeImpl\n";
+    return std::string("IR=") + node_->ToString() + std::string(", static=") + std::to_string(torch_xla::DimCast(node_)->getStaticValue());
 };
 
 }  // namespace torch_xla
