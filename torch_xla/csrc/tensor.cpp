@@ -1846,4 +1846,8 @@ c10::SymIntNode XLASymIntNodeImpl::floordiv(const c10::SymIntNode& other) {
   return c10::make_intrusive<XLASymIntNodeImpl>(ndiv);
 }
 
+std::string XLASymIntNodeImpl::str() {
+    return "XLASymIntNodeImpl\n";
+};
+
 }  // namespace torch_xla
