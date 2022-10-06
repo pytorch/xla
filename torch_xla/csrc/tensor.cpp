@@ -1417,13 +1417,13 @@ std::vector<torch::lazy::Value> XLATensor::CollectRoots(
   return roots;
 }
 
-void XLATensor::FetchTensorData(
+void XLATensor::ExtractIRAndPrepareXlaData(
     std::vector<XLATensorPtr>* tensors, const SyncTensorsConfig& config,
     const absl::Span<const size_t> indices,
     std::vector<torch::lazy::Value>& ir_values,
     std::vector<torch::lazy::BackendDataPtr>& tensor_data_vec) {
   tensorflow::profiler::TraceMe activity(
-      "FetchTensorData", tensorflow::profiler::TraceMeLevel::kInfo);
+      "ExtractIRAndPrepareXlaData", tensorflow::profiler::TraceMeLevel::kInfo);
   ir_values.reserve(indices.size());
   tensor_data_vec.reserve(indices.size());
   for (auto index : indices) {
@@ -1646,7 +1646,7 @@ XLATensor::OpByOpAsync XLATensor::SyncTensorsGraphOpByOp(
   std::vector<torch::lazy::Value> roots = CollectRoots(*tensors, coll.indices);
   std::vector<torch::lazy::Value> ir_values;
   std::vector<torch::lazy::BackendDataPtr> tensor_data_vec;
-  FetchTensorData(tensors, coll.config, coll.indices, ir_values,
+  ExtractIRAndPrepareXlaData(tensors, coll.config, coll.indices, ir_values,
                   tensor_data_vec);
   auto tensors_data =
       SetTensorData(tensors, coll.config, coll.indices, tensor_data_vec);
@@ -1851,13 +1851,13 @@ std::shared_ptr<XLATensor::Async> XLATensor::SyncTensorsGraphInternal(
     TensorCollectionBarrier(&coll);
     return nullptr;
   }
+  DebugUtil::SaveTensorsGraphInfo("ScheduleSyncTensorsGraph", *tensors,
+                                  &coll.indices);
   std::vector<torch::lazy::Value> ir_values;
   std::vector<torch::lazy::BackendDataPtr> tensor_data_vec;
-  FetchTensorData(tensors, coll.config, coll.indices, ir_values,
+  ExtractIRAndPrepareXlaData(tensors, coll.config, coll.indices, ir_values,
                   tensor_data_vec);
   PostOrderData po_data = RunPostOrder(ir_values, &coll);
-  DebugUtil::SaveTensorsGraphInfo("ScheduleSyncTensorsGraph", *tensors,
-                                  &coll.indices, &ir_values);
 
   coll.hash = torch::lazy::HashCombine(
       coll.hash, torch::lazy::Hash(po_data.parameter_sequence));

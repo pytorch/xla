@@ -25,7 +25,6 @@ class DebugUtil {
   static std::string GetTensorsGraphInfo(
       absl::Span<const XLATensorPtr> tensors,
       const std::vector<size_t>* indices,
-      std::vector<torch::lazy::Value>* ir_values = nullptr,
       GraphFormat format = GetDefaultGraphFormat());
 
   // If the environment variable XLA_SAVE_TENSORS_FILE is set to the proper
@@ -34,7 +33,6 @@ class DebugUtil {
   static void SaveTensorsGraphInfo(
       const char* name, absl::Span<const XLATensorPtr> tensors,
       const std::vector<size_t>* indices,
-      std::vector<torch::lazy::Value>* ir_values = nullptr,
       GraphFormat format = GetDefaultGraphFormat());
 
   static bool ExperimentEnabled(const std::string& name);
