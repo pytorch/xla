@@ -35,6 +35,8 @@ class TORCH_API XLASymIntNodeImpl : public c10::SymIntNodeImpl {
   c10::SymIntNode add(const c10::SymIntNode& other) override;
   c10::SymIntNode mul(const c10::SymIntNode& other) override;
   c10::SymIntNode floordiv(const c10::SymIntNode& other) override;
+  c10::SymIntNode wrap(int64_t num) override;
+
   torch::lazy::NodePtr node() { return node_; }
   std::string str() override;
 
