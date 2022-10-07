@@ -339,6 +339,8 @@ class XlaHelpers {
       const std::vector<xla::Shape>& parameter_shapes,
       std::vector<std::pair<int64_t, int64_t>> input_output_alias_pair);
 
+  static torch::lazy::Shape ConvertXlaShapeToLazy(const xla::Shape& shape);
+
  private:
   static xla::PrecisionConfig::Precision s_mat_mul_precision;
 };
