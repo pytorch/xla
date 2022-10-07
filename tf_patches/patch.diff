@@ -3,9 +3,9 @@ index 9fe020d5937..32774c2f3c0 100644
 --- a/tensorflow/compiler/xla/service/cpu/runtime_fp16.h
 +++ b/tensorflow/compiler/xla/service/cpu/runtime_fp16.h
 @@ -18,12 +18,7 @@ limitations under the License.
- 
+
  #include <stdint.h>
- 
+
 -// _Float16 always gets us the correct ABI type, so use that if available.
 -// AArch64 GCC defines __FLT16_MANT_DIG__ even when _Float16 is not available.
 -#if defined(__FLT16_MANT_DIG__) && \
@@ -32,3 +32,15 @@ index b70ea8af5df..b54a895e306 100644
    } else if (tool_name == "tool_names") {
      return GetAvailableToolNames(session_snapshot);
    } else {
+diff --git a/tensorflow/compiler/xla/pjrt/pjrt_c_api_client.cc b/tensorflow/compiler/xla/pjrt/pjrt_c_api_client.cc
+index e6fda37012b..5d10dc157e2 100644
+--- a/tensorflow/compiler/xla/pjrt/pjrt_c_api_client.cc
++++ b/tensorflow/compiler/xla/pjrt/pjrt_c_api_client.cc
+@@ -787,7 +787,6 @@ PjRtCApiExecutable::ExecuteSharded(
+
+   args.execute_device =
+       tensorflow::down_cast<PjRtCApiDevice*>(device)->c_device();
+-  args.execute_device->device = device;
+
+   RETURN_STATUS_IF_ERROR(pjrt_c_api()->PJRT_Executable_Execute(&args),
+                          pjrt_c_api());
