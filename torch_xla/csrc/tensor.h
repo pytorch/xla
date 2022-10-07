@@ -36,6 +36,8 @@ class TORCH_API XLASymIntNodeImpl : public c10::SymIntNodeImpl {
   c10::SymIntNode floordiv(const c10::SymIntNode& other) override;
   torch::lazy::NodePtr node() { return node_; }
 
+
+  bool bool_() override;
  private:
   torch::lazy::NodePtr node_;
 };
