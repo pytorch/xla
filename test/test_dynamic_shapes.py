@@ -5,6 +5,7 @@ import unittest
 
 dev = xm.xla_device()
 
+
 class TestDynamicShapes(unittest.TestCase):
 
   def test_wrap(self):
