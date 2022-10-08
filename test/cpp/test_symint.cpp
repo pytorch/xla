@@ -14,7 +14,7 @@ using std::cerr;
 namespace torch_xla {
 namespace cpp_test {
 
-TEST(SymintTest, TestSaticSymint) {
+TEST(SymintTest, TestStaticSymint) {
   c10::SymInt static_symint(5);
   SymIntElements si_element(static_symint);
 
@@ -33,7 +33,7 @@ TEST(SymintTest, TestSaticSymint) {
   EXPECT_EQ(si_element.GetSizeNode(0), nullptr);
 }
 
-TEST(SymintTest, TestSaticSymints) {
+TEST(SymintTest, TestStaticSymints) {
   // We have to init a std::vector<int64_t> here. Passing a temp variable to
   // fromIntArrayRef will result in unexpected behavior.
   std::vector<int64_t> sizes = {6, 19, 10};
@@ -212,6 +212,21 @@ TEST(SymintTest, TestDynamicSymintArithmetic) {
   ASSERT_TRUE(size_floordiv);
   ASSERT_EQ(size_floordiv->operands().at(0).node, size_abs_node.get());
   ASSERT_EQ(size_floordiv->operands().at(1).node, size_relu_node.get());
+}
+
+TEST(SymintTest, TestXLASymIntNodeImplStr) {
+  torch::lazy::Value scalar = torch::lazy::Value(ScalarOp(1.0, xla::F32), 0);
+  std::vector<int64_t> shape = {2,3,4};
+  torch::lazy::NodePtr expand_node = torch::lazy::MakeNode<Expand>(scalar, shape);
+  torch::lazy::Value expand_value = torch::lazy::Value(expand_node, 0);
+  torch::lazy::NodePtr size_node = torch::lazy::MakeNode<SizeNode>(expand_value, 0);
+  // using SymIntNode = c10::intrusive_ptr<SymIntNodeImpl>
+  c10::SymIntNode symint_node = c10::make_intrusive<XLASymIntNodeImpl>(size_node); // xw: hard part.
+  // std::cout << "xw32, file=" << __FILE__ << ", line=" << __LINE__ << "function=" << __FUNCTION__ << "decltype(symint_node): " << decltype(symint_node) << std::endl;
+  // c10::intrusive_ptr<SymIntNodeImpl>
+  // symint_node->get().str()
+  std::cout << "xw32, file=" << __FILE__ << ", line=" << __LINE__ << "function=" << __FUNCTION__ << "symint_node.get().str(): " << symint_node.get()->str() << std::endl;
+  ASSET_EQ(symint_node.get()->str(), "Static bound: 2")
 }
 
 }  // namespace cpp_test

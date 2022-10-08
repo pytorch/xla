@@ -1846,4 +1846,8 @@ c10::SymIntNode XLASymIntNodeImpl::floordiv(const c10::SymIntNode& other) {
   return c10::make_intrusive<XLASymIntNodeImpl>(ndiv);
 }
 
+std::string XLASymIntNodeImpl::str() {
+  return "Static bound: " + std::to_string(DimCast(node().get())->getStaticValue());
+}
+
 }  // namespace torch_xla
