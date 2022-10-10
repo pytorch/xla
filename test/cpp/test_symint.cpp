@@ -216,12 +216,15 @@ TEST(SymintTest, TestDynamicSymintArithmetic) {
 
 TEST(SymintTest, TestXLASymIntNodeImplStr) {
   torch::lazy::Value scalar = torch::lazy::Value(ScalarOp(1.0, xla::F32), 0);
-  std::vector<int64_t> shape = {2,3,4};
-  torch::lazy::NodePtr expand_node = torch::lazy::MakeNode<Expand>(scalar, shape);
+  std::vector<int64_t> shape = {2, 3, 4};
+  torch::lazy::NodePtr expand_node =
+      torch::lazy::MakeNode<Expand>(scalar, shape);
   torch::lazy::Value expand_value = torch::lazy::Value(expand_node, 0);
-  torch::lazy::NodePtr size_node = torch::lazy::MakeNode<SizeNode>(expand_value, 0);
+  torch::lazy::NodePtr size_node =
+      torch::lazy::MakeNode<SizeNode>(expand_value, 0);
   // using SymIntNode = c10::intrusive_ptr<SymIntNodeImpl>
-  c10::SymIntNode symint_node = c10::make_intrusive<XLASymIntNodeImpl>(size_node);
+  c10::SymIntNode symint_node =
+      c10::make_intrusive<XLASymIntNodeImpl>(size_node);
   ASSERT_EQ(symint_node.get()->str(), "Static bound: 2");
 }
 
