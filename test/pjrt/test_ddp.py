@@ -1,3 +1,4 @@
+from absl import flags
 from absl.testing import absltest, parameterized
 import os
 import sys
@@ -11,6 +12,8 @@ xla_test_folder = os.path.dirname(os.path.dirname(os.path.abspath(sys.argv[0])))
 sys.path.append(xla_test_folder)
 
 import distributed_util as util
+
+FLAGS = flags.FLAGS
 
 
 class TestPjRtDistributedDataParallel(parameterized.TestCase):
@@ -27,8 +30,17 @@ class TestPjRtDistributedDataParallel(parameterized.TestCase):
     pjrt._run_multiprocess(self._ddp_init, self.create_tempfile().full_path)
 
   def test_ddp_correctness(self):
-    pjrt._run_multiprocess(util.ddp_correctness,
-                           self.create_tempfile().full_path)
+    pjrt._run_multiprocess(
+        util.ddp_correctness,
+        self.create_tempfile().full_path,
+        debug=FLAGS.debug)
+
+  def test_ddp_correctness_large_net(self):
+    pjrt._run_multiprocess(
+        util.ddp_correctness,
+        self.create_tempfile().full_path,
+        use_large_net=True,
+        debug=FLAGS.debug)
 
 
 if __name__ == "__main__":
