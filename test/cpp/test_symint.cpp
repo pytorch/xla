@@ -221,12 +221,8 @@ TEST(SymintTest, TestXLASymIntNodeImplStr) {
   torch::lazy::Value expand_value = torch::lazy::Value(expand_node, 0);
   torch::lazy::NodePtr size_node = torch::lazy::MakeNode<SizeNode>(expand_value, 0);
   // using SymIntNode = c10::intrusive_ptr<SymIntNodeImpl>
-  c10::SymIntNode symint_node = c10::make_intrusive<XLASymIntNodeImpl>(size_node); // xw: hard part.
-  // std::cout << "xw32, file=" << __FILE__ << ", line=" << __LINE__ << "function=" << __FUNCTION__ << "decltype(symint_node): " << decltype(symint_node) << std::endl;
-  // c10::intrusive_ptr<SymIntNodeImpl>
-  // symint_node->get().str()
-  std::cout << "xw32, file=" << __FILE__ << ", line=" << __LINE__ << "function=" << __FUNCTION__ << "symint_node.get().str(): " << symint_node.get()->str() << std::endl;
-  ASSET_EQ(symint_node.get()->str(), "Static bound: 2")
+  c10::SymIntNode symint_node = c10::make_intrusive<XLASymIntNodeImpl>(size_node);
+  ASSERT_EQ(symint_node.get()->str(), "Static bound: 2");
 }
 
 }  // namespace cpp_test
