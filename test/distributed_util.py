@@ -117,6 +117,7 @@ def ddp_correctness(init_file: str,
   # TODO(@alanwaketan): Investigate whether we can omit the gradient_as_bucket_view option.
   # bucket_cap_mb is set to 1 mb such that we can still have multiple all_reduces while avoiding
   # using models that are too larger (25 mb).
+  # To be noted, DDP currently uses one bucket for the first iteration. See pytorch#73732.
   ddp_model = DDP(
       copy.deepcopy(cpu_model).to(device),
       gradient_as_bucket_view=True,
