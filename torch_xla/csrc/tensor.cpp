@@ -1466,6 +1466,9 @@ std::vector<torch::lazy::BackendDataPtr> XLATensor::SetTensorData(
     torch::lazy::BackendDataPtr xla_data = tensor->CurrentXlaData();
     if (xla_data == nullptr && config.force_xla_data) {
       xla_data = tensor_data_vec[i];
+      // Note: We are not using SetXlaData method here since that method 
+      // resets the ir_value. We have already done the resetting as part 
+      // of ExtractIRAndPrepareXlaData to overlap with previous execution.
       tensor->data()->xla_data = xla_data;
       tensor->data()->view = nullptr;
       tensor->data()->tensor_data = c10::nullopt;
