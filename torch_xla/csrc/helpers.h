@@ -17,6 +17,7 @@
 #include "tensorflow/compiler/xla/xla_client/util.h"
 #include "tensorflow/core/lib/bfloat16/bfloat16.h"
 #include "torch/csrc/lazy/core/util.h"
+#include "torch/csrc/lazy/core/shape.h"
 
 namespace torch_xla {
 

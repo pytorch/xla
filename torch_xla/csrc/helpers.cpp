@@ -662,12 +662,13 @@ torch::lazy::Shape XlaHelpers::ConvertXlaShapeToLazy(const xla::Shape& shape) {
       // C128 missing from at::ScalarType
       break;
     default:
-      // TODO
+      scalar_type = at::ScalarType::Undefined;
   }
-  c10::ArrayRef<int64_t> sizes = shape.dimensions();
+  c10::ArrayRef<int64_t> sizes = xla::util::ToVector<int64_t>(shape.dimensions());
   c10::optional<std::vector<bool>> is_symbolic = c10::nullopt;
   if (shape.is_dynamic()) {
-    is_symbolic = shape.dynamic_dimensions();
+    std::vector<bool> xla_dynamic_dimensions = xla::util::ToVector<bool>(shape.dynamic_dimensions());
+    is_symbolic = c10::make_optional(xla_dynamic_dimensions);
   }
   return torch::lazy::Shape(
     scalar_type,
