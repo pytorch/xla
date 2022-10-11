@@ -1,13 +1,12 @@
-from absl import flags
 from absl.testing import absltest, parameterized
 import sys
 import torch_xla.core.xla_model as xm
 import torch_xla.distributed.xla_multiprocessing as xmp
 
+import args_parse
 import distributed_util as util
 
-FLAGS = flags.FLAGS
-
+FLAGS = args_parse.parse_common_options()
 
 class TestXrtDistributedDataParallel(parameterized.TestCase):
 

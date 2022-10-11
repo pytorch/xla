@@ -1,4 +1,3 @@
-from absl import flags
 import copy
 import torch
 import torch.distributed as dist
@@ -7,9 +6,6 @@ import torch.optim as optim
 from torch.nn.parallel import DistributedDataParallel as DDP
 import torch_xla.core.xla_model as xm
 import torch_xla.distributed.xla_backend
-from torch_xla.experimental import pjrt
-
-flags.DEFINE_boolean('debug', False, 'Produces debugging output.')
 
 
 # The followings are helpers useful for debugging purpose.
@@ -153,7 +149,7 @@ def ddp_correctness(init_file: str,
     # TODO(@alanwaketan): Investigate why the atol here is this low.
     assert torch.allclose(cpu_loss, ddp_loss, atol=1e-02)
     assert_all_close(cpu_model.parameters(), ddp_model.parameters())
-    # To display the below messages, set '--debug=1'.
+    # To display the below messages, set '--debug'.
     # Here we don't use FLAGS.debug because this function is often ran in different processes than the launcher.
     if debug:
       print(

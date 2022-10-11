@@ -11,9 +11,10 @@ from torch_xla.experimental import pjrt
 xla_test_folder = os.path.dirname(os.path.dirname(os.path.abspath(sys.argv[0])))
 sys.path.append(xla_test_folder)
 
+import args_parse
 import distributed_util as util
 
-FLAGS = flags.FLAGS
+FLAGS = args_parse.parse_common_options()
 
 
 class TestPjRtDistributedDataParallel(parameterized.TestCase):
