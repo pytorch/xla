@@ -1420,11 +1420,8 @@ void InitXlaModuleBindings(py::module m) {
         std::string hlo_text = GetTensorsHloGraph(tensors);
         auto hlo_module_error =
             xla::ParseAndReturnUnverifiedModule(hlo_text, config);
-        if (!hlo_module_error.ok()) {
-          LOG(ERROR) << "HLO Module loading failed: "
-                     << hlo_module_error.status();
-          return nullptr;
-        }
+        XLA_CHECK_OK(hlo_module_error.status())
+            << "HLO Module loading failed: " << hlo_module_error.status();
 
         auto module = std::move(hlo_module_error.ValueOrDie());
         xla::HloModuleProto module_proto = ShardingUtil::SpmdPartitioningPass(

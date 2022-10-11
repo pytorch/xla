@@ -115,6 +115,7 @@ std::vector<ComputationClient::DataPtr> PjRtComputationClient::TransferToServer(
   int64_t total_size = 0;
   for (auto& tensor : tensors) {
     PjRtDevice* pjrt_device = StringToPjRtDevice(tensor.device);
+
     auto literal = std::make_shared<xla::Literal>(tensor.shape);
     tensor.populate_fn(tensor, literal->untyped_data(), literal->size_bytes());
     std::vector<int64_t> byte_strides(literal->shape().dimensions_size());
@@ -202,6 +203,7 @@ std::vector<ComputationClient::ComputationPtr> PjRtComputationClient::Compile(
       compile_options.parameter_is_tupled_arguments =
           instance.parameter_is_tupled_arguments;
 
+      // TODO(244391366) verify this is correct for the collectives ops
       xla::DeviceAssignment device_assignment(1, client_->device_count());
       device_assignment.FillIota(0);
       compile_options.executable_build_options.set_device_assignment(
@@ -231,7 +233,6 @@ std::vector<ComputationClient::ComputationPtr> PjRtComputationClient::Compile(
       xla::ProgramShape program_shape =
           xla::ProgramShape(hlo_computation->ToProto().program_shape());
 
-<<<<<<< HEAD
       std::shared_ptr<PjRtComputation> pjrt_computation =
           std::make_shared<PjRtComputation>(
               std::move(xla::XlaComputation(hlo_modules[0]->ToProto())),
@@ -249,12 +250,6 @@ std::vector<ComputationClient::ComputationPtr> PjRtComputationClient::Compile(
 
       computations.push_back(pjrt_computation);
     }
-=======
-    std::shared_ptr<PjRtComputation> pjrt_computation =
-        std::make_shared<PjRtComputation>(
-            std::move(xla::XlaComputation(hlo_modules[0]->ToProto())),
-            program_shape, instance.devices, std::move(executable));
->>>>>>> 790b6afa (* Add ShardingUtil::InputHandler for input sharding)
 
     CreateCompileHandlesCounter()->AddValue(1);
   }

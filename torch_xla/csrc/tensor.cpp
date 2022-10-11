@@ -635,23 +635,29 @@ std::string XLATensor::DumpHloComputation(
 }
 
 XLATensor::ShardingSpecPtr XLATensor::sharding_spec() const {
-  XLA_CHECK(GetIrValue().node != nullptr) << "Tyring to access a null cursor";
-  auto* sharding =
-      dynamic_cast<XlaNode*>(data()->ir_value.node.get())->GetSharding();
-  if (sharding == nullptr) {
-    return nullptr;
+  torch::lazy::Value ir_value = CurrentIrValue();
+  if (ir_value) {
+    XLA_CHECK(ir_value.node != nullptr) << "Tyring to access a null cursor";
+    auto* sharding = dynamic_cast<XlaNode*>(ir_value.node.get())->GetSharding();
+    if (sharding == nullptr) {
+      return nullptr;
+    }
+    return std::make_shared<ShardingSpec>(*sharding);
   }
-  return std::make_shared<ShardingSpec>(*sharding);
+  return nullptr;
 }
 
 void XLATensor::SetShardingSpec(const ShardingSpec& sharding_spec) {
   XLA_CHECK(GetIrValue().node != nullptr) << "Tyring to access a null cursor";
-  dynamic_cast<XlaNode*>(data()->ir_value.node.get())
+  dynamic_cast<XlaNode*>(GetIrValue().node.get())
       ->SetSharding(sharding_spec.sharding);
 }
 void XLATensor::ClearShardingSpec() {
-  if (GetIrValue().node != nullptr) {
-    dynamic_cast<XlaNode*>(data()->ir_value.node.get())->ClearSharding();
+  torch::lazy::Value ir_value = CurrentIrValue();
+  if (ir_value) {
+    if (ir_value.node != nullptr) {
+      dynamic_cast<XlaNode*>(GetIrValue().node.get())->ClearSharding();
+    }
   }
 }
 
@@ -703,8 +709,9 @@ void XLATensor::SetInPlaceIrValue(torch::lazy::Value ir_value) {
 }
 
 void XLATensor::AssignIrValue(torch::lazy::Value ir_value) const {
-  // Sharding annotation should be persisted, since the xla_data() is sharded.
-  // Sharding annotation must be removed by explicit call to ClearSharding.
+  // Sharding annotation it not null, if xla_data() is sharded.
+  // TODO(yeounoh): Sharding annotation must be removed by explicit call to
+  // ClearSharding.
   ShardingSpecPtr sharding = sharding_spec();
   if (sharding != nullptr) {
     dynamic_cast<XlaNode*>(ir_value.node.get())
@@ -1286,7 +1293,7 @@ XLATensor::SyncTensorCollection XLATensor::CollectSyncTensors(
         c10::optional<at::Tensor> tensor_data = tensors[i]->CurrentTensorData();
         XLA_CHECK(tensor_data);
         at_tensors.push_back(*tensor_data);
-        shardings.push_back(tensors[i]->data_ptr()->sharding_spec);
+        shardings.push_back(tensors[i]->sharding_spec());
         devices.push_back(tensors[i]->GetDevice().toString());
         at_tensor_index.push_back(i);
       }
@@ -1448,23 +1455,17 @@ std::shared_ptr<XLATensor::Async> XLATensor::ScheduleSyncTensorsGraph(
     ComputationCache::TypePtr cached_computation) {
   tensorflow::profiler::TraceMe activity(
       "ScheduleSyncTensorsGraph", tensorflow::profiler::TraceMeLevel::kInfo);
-  bool is_sharded = cached_computation->is_sharded;
-  std::cout << "ScheduleSyncTensorsGraph, is_sharded: " << is_sharded
-            << std::endl;
-  auto computation = Computation(cached_computation->computation);
-  std::cout << "- " << computation.to_string() << std::endl;
   TensorCollectionBarrier(coll);
   std::shared_ptr<Async> async = std::make_shared<Async>(
       coll, std::move(parameters_data), std::move(tensors_data),
       std::move(cached_computation));
 
-  auto syncfn = [async, is_sharded, hash = coll->hash]() {
+  auto syncfn = [async, hash = coll->hash]() {
     xla::ComputationClient::ExecuteComputationOptions options;
     try {
       std::vector<xla::ComputationClient::DataPtr> results;
-      // TODO(yeounoh) Execute replicated if the compiled computation
-      // is partitioned.
-      if (is_sharded) {
+      // Execute replicated if the compiled computation is partitioned.
+      if (async->cached_computation->is_sharded) {
         std::vector<std::string> devices =
             xla::ComputationClient::Get()->GetAllDevices();
         std::vector<std::vector<xla::ComputationClient::DataPtr>>
@@ -1499,7 +1500,6 @@ std::shared_ptr<XLATensor::Async> XLATensor::ScheduleSyncTensorsGraph(
           async->tensors_data[i] = WrapXlaData(std::move(results[i]));
         }
       }
-
     } catch (...) {
       // There are two paths of discovery of an exception happening on an
       // asynchronous task. One happens if the creator of the asynchronous task

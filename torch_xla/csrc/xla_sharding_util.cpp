@@ -21,6 +21,8 @@ namespace {
 
 using xla::internal::XlaBuilderFriend;
 
+// Extract dimensions of the nested input array/list. For instance, an input 2D
+// list, [[1, 2, 3], [4, 5, 6]] has [2, 3] dimensions with 2 rows and 3 columns.
 std::vector<int64_t> TileAssignmentDimensions(
     const py::list& tile_assignments) {
   std::vector<int64_t> dims;

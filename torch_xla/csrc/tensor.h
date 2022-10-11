@@ -1257,15 +1257,12 @@ class XLATensor : public c10::intrusive_ptr_target {
 
   struct CachedComputation {
     CachedComputation(
-        std::shared_ptr<xla::ComputationClient::Computation> computation)
-        : computation(std::move(computation)) {}
-    CachedComputation(
         std::shared_ptr<xla::ComputationClient::Computation> computation,
-        bool is_sharded)
+        bool is_sharded = false)
         : computation(std::move(computation)), is_sharded(is_sharded) {}
 
     std::shared_ptr<xla::ComputationClient::Computation> computation;
-    bool is_sharded = false;
+    bool is_sharded;
   };
 
   using ComputationCache =

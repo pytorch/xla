@@ -38,6 +38,7 @@ struct DataAsync {
 void TransferToServerAsync(std::shared_ptr<DataAsync> async,
                            const std::vector<std::string>& devices) {
   XLA_TIMED("TransferToServerAsync");
+
   std::vector<xla::ComputationClient::DataPtr> async_xla_datas =
       xla::ComputationClient::Get()->CreateAsyncDatas(async->source_tensors);
   async->handle_unlockers =

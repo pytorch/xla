@@ -78,7 +78,6 @@ const torch::lazy::BackendDevice* GetDefaultDevice() {
 }
 
 torch::lazy::BackendDevice GetVirtualDevice() {
-  // TODO(yeounoh) tensor.device().type() == kSPMD
   return ParseDeviceString("SPMD:0");
 }
 
