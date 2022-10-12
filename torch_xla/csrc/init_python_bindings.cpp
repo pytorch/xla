@@ -1392,18 +1392,31 @@ void InitXlaModuleBindings(py::module m) {
                                  bool replicated = false, bool manual = false) {
     xla::OpSharding sharding =
         ShardingUtil::CreateOpSharding(tile_assignment, replicated, manual);
-
-    // TODO(yeounoh) use `SPMD` device to avoid input at::Tensor uploading.
-    // For now, we move the pre-uploaded data back to cpu_tensor for sharding.
     XLATensorPtr xtensor = bridge::GetXlaTensor(input);
-    std::vector<XLATensorPtr> xla_tensors{xtensor};
-    at::Tensor cpu_tensor = XLATensor::GetTensors(&xla_tensors)[0];
 
     // Existing annotation must be cleared explicitly. We do not clear and
     // overwrite the existing sharding on user's behalf, since it could lead to
     // confusion/error.
     XLA_CHECK(xtensor->sharding_spec() == nullptr)
         << "Existing annotation must be cleared first.";
+
+    at::Tensor cpu_tensor;
+    if (xla::sys_util::GetEnvBool("XLA_USE_SPMD", false) &&
+        xtensor->CurrentTensorData().has_value()) {
+      // When virtual device is enabled for SPMD, we defer the initial data
+      // transfer to the device and retain the original data on the host, until
+      // the sharded data transfer.
+      cpu_tensor = xtensor->CurrentTensorData().value();
+    } else {
+      // If the at::Tensor data is not present, we need to re-download the
+      // tensor from the physical device to CPU. In that case, the value
+      // must be present on the backend device.
+      XLA_CHECK(xtensor->GetXlaData() != nullptr &&
+                xtensor->CurrentXlaData()->HasValue())
+          << "Cannot shard tensor. Data not present on any device.";
+      std::vector<XLATensorPtr> xla_tensors{xtensor};
+      cpu_tensor = XLATensor::GetTensors(&xla_tensors)[0];
+    }
 
     auto sharding_spec = std::make_shared<XLATensor::ShardingSpec>(sharding);
     auto xla_data = CreateTensorsData(
