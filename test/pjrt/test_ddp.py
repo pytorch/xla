@@ -1,4 +1,3 @@
-from absl import flags
 from absl.testing import absltest, parameterized
 import os
 import sys

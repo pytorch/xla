@@ -32,6 +32,10 @@ def _is_xla_config():
   return False
 
 
+# TODO: Some usages of this function are to caculate the number of hosts/worlds,
+# and some are to caculate the number of processes within a host/world. The latter
+# should really be what this function is supposed to do. It's so confusing. We
+# should improve it.
 def _get_world_size():
   # We cannot use the xla_model.py API here, as the features used in that module
   # needs the setup provided by this one.
@@ -144,11 +148,12 @@ def _get_mp_device_ordinal(index, gindex):
   # global).
   return index if xenv.HOST_ORDINAL in os.environ else gindex
 
-
-def _setup_workers(num_devices):
+# TODO: Consolidate this with _setup_gpu_worker.
+def _setup_gpu_workers(num_devices):
   world_size = _get_world_size()
   workers_env = os.environ.get(xenv.WORKERS, None)
   workers = []
+  # TODO: Is this path actually being used? This is to support multi-host GPUs.
   if workers_env is not None:
     wcfg = _parse_workers_config(workers_env)
     assert world_size == len(
@@ -209,7 +214,7 @@ def _pre_fork_setup(num_devices):
         socket.getfqdn(),
         xu.get_free_tcp_ports()[0])
   if dev_kind == 'GPU':
-    _setup_workers(num_devices)
+    _setup_gpu_workers(num_devices)
     _create_gpu_devices(num_devices)
   elif dev_kind == 'CPU':
     _pre_fork_cpu_setup(num_devices)
@@ -377,7 +382,7 @@ def spawn(fn,
   Returns:
     The same object returned by the `torch.multiprocessing.spawn` API. If
     `nprocs` is 1 the `fn` function will be called directly, and the API will
-    not return.
+    return None.
   """
   if pjrt.using_pjrt():
     return pjrt.spawn(fn, args)
@@ -387,16 +392,26 @@ def spawn(fn,
     return _run_direct(fn, args, nprocs, join, daemon, start_method)
 
   pf_cfg = _pre_fork_setup(nprocs)
+  result = None
   if pf_cfg.num_devices == 1:
     _start_fn(0, pf_cfg, fn, args)
   else:
-    return torch.multiprocessing.start_processes(
+    result = torch.multiprocessing.start_processes(
         _mp_start_fn,
         args=(pf_cfg, fn, args),
         nprocs=pf_cfg.num_devices,
         join=join,
         daemon=daemon,
         start_method=start_method)
+
+  # For GPU, xenv.WORKERS are set in the launcher and then get carried to the children.
+  # However, if the launcher is reused to do another multi-process experiment, _setup_gpu_workers
+  # would mistake the xenv.WORKERS as configured to enable multi-host experiments. Each worker then
+  # represents a host. Therefore, reset it after launching all children.
+  if pf_cfg.dev_kind == 'GPU':
+    os.environ.pop(xenv.WORKERS)
+
+  return result
 
 
 class MpModelWrapper(object):
