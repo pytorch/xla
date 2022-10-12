@@ -664,7 +664,13 @@ torch::lazy::Shape XlaHelpers::ConvertXlaShapeToLazy(const xla::Shape& shape) {
     default:
       scalar_type = at::ScalarType::Undefined;
   }
-  c10::ArrayRef<int64_t> sizes = xla::util::ToVector<int64_t>(shape.dimensions());
+  for (const auto& elem : shape.dimensions()) {
+    std::cout << "WONJOO: shape.dimensions()[i]=" << elem << std::endl;;
+  } 
+  // c10::ArrayRef<int64_t> sizes = xla::util::ToVector<int64_t>(shape.dimensions());
+  // std::cout << "WONJOO: shape.dimensions().size()=" << shape.dimensions().size() << std::endl;
+  // std::cout << "WONJOO: sizes.size()=" << sizes.size() << std::endl;
+  // std::cout << "WONJOO: sizes=" << sizes << std::endl;
   c10::optional<std::vector<bool>> is_symbolic = c10::nullopt;
   if (shape.is_dynamic()) {
     std::vector<bool> xla_dynamic_dimensions = xla::util::ToVector<bool>(shape.dynamic_dimensions());
@@ -672,7 +678,7 @@ torch::lazy::Shape XlaHelpers::ConvertXlaShapeToLazy(const xla::Shape& shape) {
   }
   return torch::lazy::Shape(
     scalar_type,
-    sizes,
+    xla::util::ToVector<int64_t>(shape.dimensions()),
     is_symbolic
   );
 }
