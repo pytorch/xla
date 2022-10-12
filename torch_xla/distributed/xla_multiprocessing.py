@@ -148,6 +148,7 @@ def _get_mp_device_ordinal(index, gindex):
   # global).
   return index if xenv.HOST_ORDINAL in os.environ else gindex
 
+
 # TODO: Consolidate this with _setup_gpu_worker.
 def _setup_gpu_workers(num_devices):
   world_size = _get_world_size()
