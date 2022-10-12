@@ -16,8 +16,8 @@
 #include "tensorflow/compiler/xla/xla_client/debug_macros.h"
 #include "tensorflow/compiler/xla/xla_client/util.h"
 #include "tensorflow/core/lib/bfloat16/bfloat16.h"
-#include "torch/csrc/lazy/core/util.h"
 #include "torch/csrc/lazy/core/shape.h"
+#include "torch/csrc/lazy/core/util.h"
 
 namespace torch_xla {
 
