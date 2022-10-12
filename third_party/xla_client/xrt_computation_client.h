@@ -161,7 +161,10 @@ class XrtComputationClient : public ComputationClient {
         : Data(std::move(device), std::move(device_shape)),
           handle_ptr(handle) {}
 
-    int64_t get_handle() const { return handle_ptr->handle(); }
+    int64_t get_handle() const {
+      XLA_CHECK(HasValue());
+      return handle_ptr->handle();
+    }
 
     OpaqueHandle GetOpaqueHandle() override { return get_handle(); }
 
