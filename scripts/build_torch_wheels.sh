@@ -8,6 +8,8 @@ RELEASE_VERSION=$2  # rX.Y or nightly
 DEFAULT_PYTHON_VERSION=3.6
 DEBIAN_FRONTEND=noninteractive
 
+ACL_VERSION=v22.05 # Arm Compute Library version
+
 function maybe_append {
   local LINE="$1"
   local FILE="$2"
@@ -76,7 +78,14 @@ function maybe_install_cuda {
 }
 
 function maybe_install_sources {
-  if [ ! -d "torch" ]; then
+  if [[ $(uname -m) == "aarch64" && ! -d "$HOME/ComputeLibrary" ]]; then
+    # install arm compute library
+    pushd $HOME
+    git clone https://review.mlplatform.org/ml/ComputeLibrary.git
+    popd
+  fi
+
+  if [ ! -d "pytorch" ]; then
     sudo apt-get install -y git
     git clone --recursive https://github.com/pytorch/pytorch.git
     cd pytorch
@@ -122,6 +131,13 @@ function install_llvm_clang() {
   maybe_append 'export CC=clang-8 CXX=clang++-8' ~/.bashrc
   export CC=clang-8 CXX=clang++-8
   sudo update-alternatives --install /usr/bin/clang++ clang++ $(which clang++-8) 70
+}
+
+function install_gcc10() {
+  sudo apt-get -y install gcc-10 g++-10
+  export CC=/usr/bin/gcc-10 export CXX=/usr/bin/g++-10
+  sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-10 100
+  sudo update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-10 100
 }
 
 function install_req_packages() {
@@ -191,6 +207,25 @@ function install_and_setup_conda() {
   /usr/bin/yes | pip install tensorboardX
 }
 
+function build_armcomputelibrary() {
+  # setup additional system config, install scons
+  sudo apt-get install -y scons
+  if ! test -d "$HOME/acl"; then
+     mkdir $HOME/acl
+  fi
+  install_dir=$HOME/acl
+
+  # Build with scons
+  scons -j16  Werror=0 debug=0 neon=1 opencl=0 embed_kernels=0 \
+     openmp=1 cppthreads=0 os=linux arch=armv8.2-a build=native multi_isa=1 \
+     build_dir=$install_dir/build
+
+  cp -r arm_compute $install_dir
+  cp -r include $install_dir
+  cp -r utils $install_dir
+  cp -r support $install_dir
+}
+
 function build_and_install_torch() {
   # Checkout the PT commit ID or branch if we have one.
   COMMITID_FILE="xla/.torch_pin"
@@ -201,6 +236,16 @@ function build_and_install_torch() {
   git submodule update --init --recursive
   # Apply patches to PT which are required by the XLA support.
   xla/scripts/apply_patches.sh
+
+  if [[ $(uname -m) == "aarch64" ]]; then
+    # use mkldnn and acl backend for aarch64
+    pushd $HOME/ComputeLibrary
+    git checkout $ACL_VERSION
+    build_armcomputelibrary
+    popd
+    export ACL_ROOT_DIR=$HOME/acl USE_OPENMP=1 USE_MKLDNN=ON USE_MKLDNN_ACL=ON
+  fi
+
   python setup.py bdist_wheel
   pip install dist/*.whl
 }
@@ -251,7 +296,11 @@ function main() {
   setup_system
   maybe_install_sources
   install_req_packages
-  install_llvm_clang
+  if [[ $(uname -m) == "x86_64" ]]; then
+    install_llvm_clang
+  elif [[ $(uname -m) == "aarch64" ]]; then
+    install_gcc10
+  fi
   install_and_setup_conda
   build_and_install_torch
   pushd xla
