@@ -32,9 +32,9 @@ def _is_xla_config():
   return False
 
 
-# TODO: Some usages of this function are to caculate the number of hosts/worlds,
-# and some are to caculate the number of processes within a host/world. The latter
-# should really be what this function is supposed to do. It's so confusing. We
+# TODO: Some usages of this function are to caculate the number of hosts (a TPU concept),
+# and some are to caculate the number of processes within a world (which can span multiple hosts).
+# The latter should really be what this function is supposed to do. It's so confusing. We
 # should improve it.
 def _get_world_size():
   # We cannot use the xla_model.py API here, as the features used in that module
@@ -154,7 +154,7 @@ def _setup_gpu_workers(num_devices):
   world_size = _get_world_size()
   workers_env = os.environ.get(xenv.WORKERS, None)
   workers = []
-  # TODO: Is this path actually being used? This is to support multi-host GPUs.
+  # TODO: Is this path actually being used? This seems to support multi-host GPUs (is this a thing at all?).
   if workers_env is not None:
     wcfg = _parse_workers_config(workers_env)
     assert world_size == len(
