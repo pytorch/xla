@@ -127,7 +127,6 @@ class PjRtComputationClient : public ComputationClient {
         : Data(std::move(device), std::move(device_shape)), buffer(buffer) {}
 
     void* get_handle() const {
-      XLA_CHECK(HasValue());
       return buffer->AcquireExternalReference()
           .ValueOrDie()
           ->OpaqueDeviceMemoryDataPointer();
