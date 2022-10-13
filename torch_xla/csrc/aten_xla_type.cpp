@@ -2897,31 +2897,6 @@ at::Tensor XLANativeFunctions::upsample_nearest2d(
       GetOutputSizeWithScale(input_dims, scale_factors, output_size)));
 }
 
-at::Tensor XLANativeFunctions::upsample_nearest2d_backward(
-    const at::Tensor& grad_output, at::OptionalIntArrayRef output_size,
-    at::IntArrayRef input_size,
-    c10::optional<at::ArrayRef<double>> scale_factors) {
-  XLA_FN_COUNTER("xla::");
-  XLATensorPtr grad_output_tensor = bridge::GetXlaTensor(grad_output);
-  // Only the XLA TPU backend for now implements the CustomCall required by our
-  // XLA lowering.
-  XlaDeviceType hw_type =
-      static_cast<XlaDeviceType>(grad_output_tensor->GetDevice().type());
-  if (hw_type != XlaDeviceType::TPU) {
-    return at::native::call_fallback_fn<&xla_cpu_fallback,
-                                        ATEN_OP2(upsample_nearest2d_backward,
-                                                 vec)>::call(grad_output,
-                                                             output_size,
-                                                             input_size,
-                                                             scale_factors);
-  }
-  std::vector<int64_t> input_dim = torch::lazy::ToVector<int64_t>(input_size);
-  return bridge::AtenFromXlaTensor(XLATensor::upsample_nearest2d_backward(
-      grad_output_tensor,
-      GetOutputSizeWithScale(input_dim, scale_factors, output_size),
-      input_dim));
-}
-
 at::Tensor XLANativeFunctions::upsample_nearest2d(
     const at::Tensor& self, at::IntArrayRef output_size,
     c10::optional<double> scales_h, c10::optional<double> scales_w) {
