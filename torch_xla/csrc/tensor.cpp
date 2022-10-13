@@ -1829,8 +1829,8 @@ bool XLATensor::ShouldSyncIrNode() {
 }
 
 bool XLASymIntNodeImpl::bool_() {
- auto dn = torch_xla::DimCast(node());
- return dn->getDynamicValue() != 0;
+  auto dn = torch_xla::DimCast(node());
+  return dn->getDynamicValue() != 0;
 }
 
 c10::SymIntNode XLASymIntNodeImpl::add(const c10::SymIntNode& other) {
