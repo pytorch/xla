@@ -1831,6 +1831,13 @@ bool XLATensor::ShouldSyncIrNode() {
 bool XLASymIntNodeImpl::bool_() {
   auto dn = torch_xla::DimCast(node());
   return dn->getDynamicValue() != 0;
+}
+
+c10::SymIntNode XLASymIntNodeImpl::eq(const c10::SymIntNode& other) {
+  auto pother = dynamic_cast<XLASymIntNodeImpl*>(other.get());
+  auto neq = torch::lazy::MakeNode<SizeEq>(node(), pother->node());
+  return c10::make_intrusive<XLASymIntNodeImpl>(neq);
+}
 
   c10::SymIntNode XLASymIntNodeImpl::eq(const c10::SymIntNode& other) {
     auto pother = dynamic_cast<XLASymIntNodeImpl*>(other.get());
