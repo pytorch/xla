@@ -33,6 +33,7 @@ def parse_common_options(datadir=None,
   parser.add_argument('--tidy', action='store_true')
   parser.add_argument('--metrics_debug', action='store_true')
   parser.add_argument('--async_closures', action='store_true')
+  parser.add_argument('--debug', action='store_true')
   if opts:
     for name, aopts in opts:
       parser.add_argument(name, **aopts)
