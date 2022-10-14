@@ -8,7 +8,9 @@
 #include "tensorflow/compiler/xla/layout_util.h"
 #include "tensorflow/compiler/xla/literal.h"
 #include "tensorflow/compiler/xla/pjrt/cpu_device.h"
+#include "tensorflow/compiler/xla/pjrt/gpu_device.h"
 #include "tensorflow/compiler/xla/pjrt/pjrt_c_api_client.h"
+#include "tensorflow/compiler/xla/pjrt/pjrt_executable.h"
 #include "tensorflow/compiler/xla/pjrt/pjrt_client.h"
 #include "tensorflow/compiler/xla/pjrt/pjrt_executable.h"
 #include "tensorflow/compiler/xla/pjrt/tfrt_cpu_pjrt_client.h"
@@ -64,6 +66,14 @@ PjRtComputationClient::PjRtComputationClient() {
     // TODO(wcromar): remove this when C API supports
     // kImmutableUntilTransferCompletes
     host_buffer_semantics_ = xla::PjRtClient::HostBufferSemantics::kZeroCopy;
+  } else if (device_type == "GPU") {
+    TF_VLOG(1) << "Initializing PjRt GPU client...";
+    bool async = sys_util::GetEnvBool(env::kEnvPjrtAsyncGpuClient, true);
+    /* TODO(jonbolin): Set allowed_devices based on local ordinal */
+    auto allowed_devices = std::make_optional<std::set<int>>(std::set{0});
+    client_ = xla::GetGpuClient(/*asynchronous=*/async, GpuAllocatorConfig{},
+                           /*distributed_client=*/nullptr, /*node_id=*/0,
+                           allowed_devices=allowed_devices).ValueOrDie();
   } else {
     XLA_ERROR() << absl::StrFormat("Unknown %s '%s'", env::kEnvPjRtDevice,
                                    device_type);
