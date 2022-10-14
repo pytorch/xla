@@ -85,7 +85,9 @@ function maybe_install_sources {
     popd
   fi
 
-  if [ ! -d "pytorch" ]; then
+  # Check if we have cloned pytorch and cd into the pytorch dir. Within the pytorch
+  # dir there is a subdir `torch`.
+  if [ ! -d "torch" ]; then
     sudo apt-get install -y git
     git clone --recursive https://github.com/pytorch/pytorch.git
     cd pytorch
