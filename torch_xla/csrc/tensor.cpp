@@ -1833,6 +1833,12 @@ bool XLASymIntNodeImpl::bool_() {
   return dn->getDynamicValue() != 0;
 }
 
+c10::SymIntNode XLASymIntNodeImpl::eq(const c10::SymIntNode& other) {
+  auto pother = dynamic_cast<XLASymIntNodeImpl*>(other.get());
+  auto neq = torch::lazy::MakeNode<SizeEq>(node(), pother->node());
+  return c10::make_intrusive<XLASymIntNodeImpl>(neq);
+}
+
 c10::SymIntNode XLASymIntNodeImpl::add(const c10::SymIntNode& other) {
   auto pother = dynamic_cast<XLASymIntNodeImpl*>(other.get());
   auto nadd = torch::lazy::MakeNode<SizeAdd>(node(), pother->node());
