@@ -620,51 +620,7 @@ xla::StatusOr<xla::XlaComputation> XlaHelpers::WrapXlaComputation(
 }
 
 torch::lazy::Shape XlaHelpers::ConvertXlaShapeToLazy(const xla::Shape& shape) {
-  at::ScalarType scalar_type;
-  switch (shape.element_type()) {
-    case xla::PrimitiveType::S16:
-      scalar_type = at::ScalarType::Short;
-      break;
-    case xla::PrimitiveType::S32:
-      scalar_type = at::ScalarType::Long;
-      break;
-    case xla::PrimitiveType::S64:
-      // S64 missing from at::ScalarType
-      break;
-    case xla::PrimitiveType::U8:
-      scalar_type = at::ScalarType::Byte;
-      break;
-    case xla::PrimitiveType::U16:
-      // U16 missing from at::ScalarType
-      break;
-    case xla::PrimitiveType::U32:
-      // U32 missing from at::ScalarType
-      break;
-    case xla::PrimitiveType::U64:
-      // U64 missing from at::ScalarType
-      break;
-    case xla::PrimitiveType::F16:
-      // F16 missing from at::ScalarType
-      break;
-    case xla::PrimitiveType::BF16:
-      scalar_type = at::ScalarType::BFloat16;
-      break;
-    case xla::PrimitiveType::F32:
-      scalar_type = at::ScalarType::Float;
-      break;
-    case xla::PrimitiveType::F64:
-      scalar_type = at::ScalarType::Double;
-      break;
-    case xla::PrimitiveType::C64:
-      // C64 missing from at::ScalarType
-      break;
-    case xla::PrimitiveType::C128:
-      // C128 missing from at::ScalarType
-      break;
-    default:
-      scalar_type = at::ScalarType::Undefined;
-  }
-
+  at::ScalarType scalar_type = TensorTypeToRawXlaType(shape.element_type());
   c10::optional<std::vector<bool>> is_symbolic = c10::nullopt;
   if (shape.is_dynamic()) {
     std::vector<bool> xla_dynamic_dimensions =
