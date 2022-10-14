@@ -131,6 +131,7 @@ class PjRtComputationClient : public ComputationClient {
         : Data(std::move(device), std::move(device_shape)), buffer(buffer) {}
 
     OpaqueHandle GetOpaqueHandle() override {
+      XLA_CHECK(HasValue());
       return reinterpret_cast<std::uintptr_t>(buffer.get());
     };
     void Assign(const Data& data) override;
