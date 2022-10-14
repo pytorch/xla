@@ -15,6 +15,7 @@ class TestDynamicShapes(unittest.TestCase):
     a3 = a2.shape[0] + 3  # tests wrap
     self.assertIsInstance(a3, torch.SymIntNode)
 
+
 if __name__ == '__main__':
   test = unittest.main()
   sys.exit(0 if test.result.wasSuccessful() else 1)
