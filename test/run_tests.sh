@@ -82,8 +82,12 @@ function run_xla_backend_mp {
 
 function run_pjrt {
   echo "Running in PjRt runtime: $@"
-  # TODO(darisoy): run these tests with multiple CPU devices, this fails due to TF issue.
-  PJRT_DEVICE=CPU CPU_NUM_DEVICES=1 run_test "$@"
+  if [ -x "$(command -v nvidia-smi)" ]; then
+    PJRT_DEVICE=GPU run_test "$@"
+  else
+    # TODO(darisoy): run these tests with multiple CPU devices, this fails due to TF issue.
+    PJRT_DEVICE=CPU CPU_NUM_DEVICES=1 run_test "$@"
+  fi
 }
 
 function run_async_scalar {
