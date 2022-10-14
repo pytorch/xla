@@ -1851,6 +1851,11 @@ c10::SymIntNode XLASymIntNodeImpl::mul(const c10::SymIntNode& other) {
   return c10::make_intrusive<XLASymIntNodeImpl>(nmul);
 }
 
+c10::SymIntNode XLASymIntNodeImpl::wrap(int64_t num) {
+  auto cnst = torch::lazy::MakeNode<SizeConstant>(num);
+  return c10::make_intrusive<XLASymIntNodeImpl>(cnst);
+}
+
 c10::SymIntNode XLASymIntNodeImpl::floordiv(const c10::SymIntNode& other) {
   auto pother = dynamic_cast<XLASymIntNodeImpl*>(other.get());
   auto ndiv = torch::lazy::MakeNode<SizeDiv>(node(), pother->node());
