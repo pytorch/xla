@@ -1839,34 +1839,33 @@ c10::SymIntNode XLASymIntNodeImpl::eq(const c10::SymIntNode& other) {
   return c10::make_intrusive<XLASymIntNodeImpl>(neq);
 }
 
-  c10::SymIntNode XLASymIntNodeImpl::eq(const c10::SymIntNode& other) {
-    auto pother = dynamic_cast<XLASymIntNodeImpl*>(other.get());
-    auto neq = torch::lazy::MakeNode<SizeEq>(node(), pother->node());
-    return c10::make_intrusiveXLASymIntNodeImpl > (neq);
-  }
+c10::SymIntNode XLASymIntNodeImpl::eq(const c10::SymIntNode& other) {
+  auto pother = dynamic_cast<XLASymIntNodeImpl*>(other.get());
+  auto neq = torch::lazy::MakeNode<SizeEq>(node(), pother->node());
+  return c10::make_intrusive<XLASymIntNodeImpl>(neq);
+}
 
-  c10::SymIntNode XLASymIntNodeImpl::add(const c10::SymIntNode& other) {
-    auto pother = dynamic_cast<XLASymIntNodeImpl*>(other.get());
-    auto nadd = torch::lazy::MakeNode<SizeAdd>(node(), pother->node());
-    return c10::make_intrusive<XLASymIntNodeImpl>(nadd);
-  }
+c10::SymIntNode XLASymIntNodeImpl::add(const c10::SymIntNode& other) {
+  auto pother = dynamic_cast<XLASymIntNodeImpl*>(other.get());
+  auto nadd = torch::lazy::MakeNode<SizeAdd>(node(), pother->node());
+  return c10::make_intrusive<XLASymIntNodeImpl>(nadd);
+}
 
-  c10::SymIntNode XLASymIntNodeImpl::mul(const c10::SymIntNode& other) {
-    auto pother = dynamic_cast<XLASymIntNodeImpl*>(other.get());
-    auto nmul =
-        torch::lazy::MakeNode<torch_xla::SizeMul>(node(), pother->node());
-    return c10::make_intrusive<XLASymIntNodeImpl>(nmul);
-  }
+c10::SymIntNode XLASymIntNodeImpl::mul(const c10::SymIntNode& other) {
+  auto pother = dynamic_cast<XLASymIntNodeImpl*>(other.get());
+  auto nmul = torch::lazy::MakeNode<torch_xla::SizeMul>(node(), pother->node());
+  return c10::make_intrusive<XLASymIntNodeImpl>(nmul);
+}
 
-  c10::SymIntNode XLASymIntNodeImpl::floordiv(const c10::SymIntNode& other) {
-    auto pother = dynamic_cast<XLASymIntNodeImpl*>(other.get());
-    auto ndiv = torch::lazy::MakeNode<SizeDiv>(node(), pother->node());
-    return c10::make_intrusive<XLASymIntNodeImpl>(ndiv);
-  }
+c10::SymIntNode XLASymIntNodeImpl::floordiv(const c10::SymIntNode& other) {
+  auto pother = dynamic_cast<XLASymIntNodeImpl*>(other.get());
+  auto ndiv = torch::lazy::MakeNode<SizeDiv>(node(), pother->node());
+  return c10::make_intrusive<XLASymIntNodeImpl>(ndiv);
+}
 
-  std::string XLASymIntNodeImpl::str() {
-    return "Static bound: " +
-           std::to_string(DimCast(node().get())->getStaticValue());
-  }
+std::string XLASymIntNodeImpl::str() {
+  return "Static bound: " +
+         std::to_string(DimCast(node().get())->getStaticValue());
+}
 
 }  // namespace torch_xla
