@@ -581,7 +581,7 @@ at::Tensor XLANativeFunctions::_trilinear(
 at::Tensor XLANativeFunctions::_unsafe_view(const at::Tensor& self,
                                             at::IntArrayRef size) {
   XLA_FN_COUNTER("xla::");
-  return view_symint(self, c10::fromIntArrayRefSlow(size));
+  return view_symint(self, c10::fromIntArrayRef(size));
 }
 
 at::Tensor XLANativeFunctions::add(const at::Tensor& self,
