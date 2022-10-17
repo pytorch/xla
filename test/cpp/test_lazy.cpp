@@ -129,7 +129,8 @@ TEST_F(LazyTest, TestXlaShapeToLazyWithUnsupportedPrimitiveType) {
   xla::Shape xla_shape = xla::Shape(xla::PrimitiveType::TUPLE, xla_dimensions,
                                     xla_dynamic_dimensions, xla_tuple_shapes);
 
-  EXPECT_THROW(XlaHelpers::ConvertXlaShapeToLazy(xla_shape), std::runtime_error);
+  EXPECT_THROW(XlaHelpers::ConvertXlaShapeToLazy(xla_shape),
+               std::runtime_error);
 }
 
 }  // namespace cpp_test
