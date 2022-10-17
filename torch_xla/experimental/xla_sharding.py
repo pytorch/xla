@@ -48,6 +48,9 @@ def mark_sharding(t: Union[torch.Tensor,
   # for replication. For now, all input rank sharding should be specified.
   assert len(t.shape) == len(partition_spec), \
     f"Partition spec length ({len(partition_spec)}) is not equal to the input rank ({len(t.shape)})."
+  dims = [d for d in partition_spec if d]
+  assert len(dims) == len(np.unique(dims)), \
+    f"Each device mesh dimension should appear at most once in partition_spec {partition_spec}."
 
   device_ids = np.array(range(num_devices))
   tile_assignment = device_ids.reshape(mesh_shape).tolist()
@@ -67,3 +70,8 @@ def mark_sharding(t: Union[torch.Tensor,
     return t
   torch_xla._XLAC._xla_mark_sharding(t, tile_assignment, replicated, manual)
   return XLAShardedTensor(t)
+
+
+def clear_sharding(t: Union[torch.Tensor, XLAShardedTensor]) -> torch.Tensdor:
+  """Clear sharding annotation from the input tensor and return a `cpu` casted tensor."""
+  return NotImplemented

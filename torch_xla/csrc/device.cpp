@@ -19,6 +19,8 @@ std::string XlaDeviceTypeToString(XlaDeviceType hw_type) {
       return "GPU";
     case XlaDeviceType::TPU:
       return "TPU";
+    case XlaDeviceType::SPMD:
+      return "SPMD";
   }
   XLA_ERROR() << "Invalid device type";
 }
@@ -50,7 +52,10 @@ torch::lazy::BackendDevice ParseDeviceString(const std::string& device_spec) {
 
   int ordinal = std::stoi(device_spec_parts[1]);
   auto device_type = std::make_shared<DeviceType>();
-  if (device_spec_parts[0] == "TPU") {
+  if (device_spec_parts[0] == "SPMD") {
+    device_type->type =
+        static_cast<std::underlying_type_t<XlaDeviceType>>(XlaDeviceType::SPMD);
+  } else if (device_spec_parts[0] == "TPU") {
     device_type->type =
         static_cast<std::underlying_type_t<XlaDeviceType>>(XlaDeviceType::TPU);
   } else if (device_spec_parts[0] == "CPU") {
@@ -70,6 +75,10 @@ const torch::lazy::BackendDevice* GetDefaultDevice() {
   static const torch::lazy::BackendDevice default_device =
       ParseDeviceString("");
   return &default_device;
+}
+
+torch::lazy::BackendDevice GetVirtualDevice() {
+  return ParseDeviceString("SPMD:0");
 }
 
 torch::lazy::BackendDevice GetCurrentDevice() {
