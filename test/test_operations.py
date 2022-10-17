@@ -41,6 +41,7 @@ import torch_xla.utils.utils as xu
 import torch_xla.utils.serialization as xser
 import torch_xla.core.xla_model as xm
 import torch_xla.core.functions as xf
+import torch_xla.debug.profiler as xp
 import torchvision
 import unittest
 
@@ -2065,6 +2066,15 @@ class MpDecoratorTest(XlaTestCase):
   def test_mp_decorator(self):
     xla_device = xm.xla_device()
     self.assertTrue(xla_device.type == 'xla')
+
+
+class XpTraceTest(XlaTestCase):
+
+  def test_non_empty_scope(self):
+    with self.assertRaisesRegex(
+        RuntimeError, r'Expecting scope to be empty but it is conv1.1'):
+      with xp.Trace('conv1'):
+        xm.mark_step()
 
 
 class TestGeneric(XlaTestCase):
