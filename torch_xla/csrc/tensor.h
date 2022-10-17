@@ -24,7 +24,6 @@
 #include "torch_xla/csrc/lowering_context.h"
 #include "torch_xla/csrc/torch_util.h"
 #include "torch_xla/csrc/view.h"
-#include "torch_xla/csrc/xla_sharding_util.h"
 
 namespace torch_xla {
 
@@ -123,7 +122,7 @@ class XLATensor : public c10::intrusive_ptr_target {
 
   // Retrieves the IR Node representing this XLATensor. One will be created if
   // missing. Note that although this is a const API, it actually changes the
-  // internal state ofthe object.
+  // internal state of the object.
   torch::lazy::Value GetIrValue() const;
 
   c10::optional<at::Tensor> CurrentTensorData() const;
@@ -1219,6 +1218,8 @@ class XLATensor : public c10::intrusive_ptr_target {
 
   // Annotate the IR value with ShardingSpec.
   void SetShardingSpec(const ShardingSpec& sharding_spec);
+  // Clear sharding annotation attached to the IR value and transfer sharded
+  // data back to host.
   void ClearShardingSpec();
   ShardingSpecPtr sharding_spec() const;
 
@@ -1256,14 +1257,17 @@ class XLATensor : public c10::intrusive_ptr_target {
     size_t emitted_nodes = 0;
     std::shared_ptr<xla::ComputationClient::Computation> computation;
     std::vector<torch::lazy::BackendDataPtr> parameters_data;
+    bool is_sharded = false;
   };
 
   struct CachedComputation {
     CachedComputation(
-        std::shared_ptr<xla::ComputationClient::Computation> computation)
-        : computation(std::move(computation)) {}
+        std::shared_ptr<xla::ComputationClient::Computation> computation,
+        bool is_sharded = false)
+        : computation(std::move(computation)), is_sharded(is_sharded) {}
 
     std::shared_ptr<xla::ComputationClient::Computation> computation;
+    bool is_sharded;
   };
 
   using ComputationCache =

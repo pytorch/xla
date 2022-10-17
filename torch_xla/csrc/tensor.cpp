@@ -18,6 +18,7 @@
 #include "tensorflow/compiler/xla/shape_util.h"
 #include "tensorflow/compiler/xla/xla_client/cache.h"
 #include "tensorflow/compiler/xla/xla_client/debug_macros.h"
+#include "tensorflow/compiler/xla/xla_client/env_vars.h"
 #include "tensorflow/compiler/xla/xla_client/metrics.h"
 #include "tensorflow/compiler/xla/xla_client/sys_util.h"
 #include "tensorflow/compiler/xla/xla_client/thread_pool.h"
@@ -31,6 +32,7 @@
 #include "torch/csrc/lazy/core/ir_util.h"
 #include "torch/csrc/lazy/core/tensor_util.h"
 #include "torch/csrc/lazy/core/util.h"
+#include "torch_xla/csrc/computation.h"
 #include "torch_xla/csrc/debug_util.h"
 #include "torch_xla/csrc/helpers.h"
 #include "torch_xla/csrc/ir_dump_util.h"
@@ -46,6 +48,7 @@
 #include "torch_xla/csrc/ops/xla_ops.h"
 #include "torch_xla/csrc/tensor_util.h"
 #include "torch_xla/csrc/torch_util.h"
+#include "torch_xla/csrc/xla_sharding_util.h"
 
 namespace torch_xla {
 namespace {
@@ -632,22 +635,29 @@ std::string XLATensor::DumpHloComputation(
 }
 
 XLATensor::ShardingSpecPtr XLATensor::sharding_spec() const {
-  XLA_CHECK(GetIrValue().node != nullptr) << "Tyring to access a null cursor";
-  auto* sharding =
-      dynamic_cast<XlaNode*>(data()->ir_value.node.get())->GetSharding();
-  if (sharding == nullptr) {
-    return nullptr;
+  torch::lazy::Value ir_value = CurrentIrValue();
+  if (ir_value) {
+    XLA_CHECK(ir_value.node != nullptr) << "Tyring to access a null cursor";
+    auto* sharding = dynamic_cast<XlaNode*>(ir_value.node.get())->GetSharding();
+    if (sharding == nullptr) {
+      return nullptr;
+    }
+    return std::make_shared<ShardingSpec>(*sharding);
   }
-  return std::make_shared<ShardingSpec>(*sharding);
+  return nullptr;
 }
+
 void XLATensor::SetShardingSpec(const ShardingSpec& sharding_spec) {
   XLA_CHECK(GetIrValue().node != nullptr) << "Tyring to access a null cursor";
-  dynamic_cast<XlaNode*>(data()->ir_value.node.get())
+  dynamic_cast<XlaNode*>(GetIrValue().node.get())
       ->SetSharding(sharding_spec.sharding);
 }
 void XLATensor::ClearShardingSpec() {
-  if (GetIrValue().node != nullptr) {
-    dynamic_cast<XlaNode*>(data()->ir_value.node.get())->ClearSharding();
+  torch::lazy::Value ir_value = CurrentIrValue();
+  if (ir_value) {
+    if (ir_value.node != nullptr) {
+      dynamic_cast<XlaNode*>(GetIrValue().node.get())->ClearSharding();
+    }
   }
 }
 
@@ -699,6 +709,14 @@ void XLATensor::SetInPlaceIrValue(torch::lazy::Value ir_value) {
 }
 
 void XLATensor::AssignIrValue(torch::lazy::Value ir_value) const {
+  // Sharding annotation it not null, if xla_data() is sharded.
+  // TODO(yeounoh): Sharding annotation must be removed by explicit call to
+  // ClearSharding.
+  ShardingSpecPtr sharding = sharding_spec();
+  if (sharding != nullptr) {
+    dynamic_cast<XlaNode*>(ir_value.node.get())
+        ->SetSharding(sharding->sharding);
+  }
   data()->ir_value = std::move(ir_value);
   data()->generation += 1;
 }
@@ -1038,6 +1056,7 @@ void XLATensor::TensorCollectionBarrier(SyncTensorCollection* coll) {
   TF_VLOG(4) << "Waiting on device barrier for device " << coll->device
              << " ...";
   {
+    // TODO(yeounoh) lock SPMD device
     XLA_TIMED("DeviceLockWait");
     coll->unlocker = LockDevices({coll->device});
   }
@@ -1249,6 +1268,7 @@ XLATensor::SyncTensorCollection XLATensor::CollectSyncTensors(
 
   std::vector<at::Tensor> at_tensors;
   std::vector<std::string> devices;
+  std::vector<ShardingSpecPtr> shardings;
   std::vector<size_t> at_tensor_index;
   std::unordered_set<int64_t> tensor_ids;
   // The force_xla_data controls aliasing compilation, so effectively the same
@@ -1273,6 +1293,7 @@ XLATensor::SyncTensorCollection XLATensor::CollectSyncTensors(
         c10::optional<at::Tensor> tensor_data = tensors[i]->CurrentTensorData();
         XLA_CHECK(tensor_data);
         at_tensors.push_back(*tensor_data);
+        shardings.push_back(tensors[i]->sharding_spec());
         devices.push_back(tensors[i]->GetDevice().toString());
         at_tensor_index.push_back(i);
       }
@@ -1285,8 +1306,12 @@ XLATensor::SyncTensorCollection XLATensor::CollectSyncTensors(
       xla::ComputationClient::Get()->GetResourceDomain(coll.device.toString()));
   if (!at_tensors.empty()) {
     XLA_COUNTER("SyncTensorsToData", at_tensors.size());
+    // Create data handles with shardings. If a tensor has a
+    // sharding annotation, then a BackendDataPtr with PjRtShardedData is
+    // returned; if there is no sharding annotation, then a BackendDataPtr with
+    // PjRtData is returned.
     std::vector<torch::lazy::BackendDataPtr> handles =
-        CreateTensorsData(at_tensors, devices);
+        CreateTensorsData(at_tensors, shardings, devices);
     for (size_t i = 0; i < handles.size(); ++i) {
       // If we are here, it means that the IR torch::lazy::Value for the
       // tensor is not present. Also, we uploaded the at::Tensor data to the
@@ -1438,16 +1463,36 @@ std::shared_ptr<XLATensor::Async> XLATensor::ScheduleSyncTensorsGraph(
   auto syncfn = [async, hash = coll->hash]() {
     xla::ComputationClient::ExecuteComputationOptions options;
     try {
-      TF_VLOG(3) << "Executing IR graph hash "
-                 << torch::lazy::HashToString(hash) << " on device "
-                 << async->device << " ...";
-      auto results = xla::ComputationClient::Get()->ExecuteComputation(
-          *async->cached_computation->computation,
-          UnwrapXlaData(async->parameters_data), async->device, options);
-      TF_VLOG(3) << "Executing IR graph hash "
-                 << torch::lazy::HashToString(hash) << " on device "
-                 << async->device << " done!";
+      std::vector<xla::ComputationClient::DataPtr> results;
+      // Execute replicated if the compiled computation is partitioned.
+      if (async->cached_computation->is_sharded) {
+        std::vector<std::string> devices =
+            xla::ComputationClient::Get()->GetAllDevices();
+        std::vector<std::vector<xla::ComputationClient::DataPtr>>
+            device_arguments = torch_xla::ShardingUtil::InputHandler(
+                UnwrapXlaData(async->parameters_data), devices);
+        xla::ComputationClient::ExecuteReplicatedOptions execute_options;
+        execute_options.explode_tuple = options.explode_tuple;
 
+        TF_VLOG(3) << "Executing IR graph hash "
+                   << torch::lazy::HashToString(hash) << " on all devices.";
+        results = xla::ComputationClient::Get()->ExecuteReplicated(
+            *async->cached_computation->computation, device_arguments, devices,
+            execute_options)[0];  // TODO(yeounoh) assumes replicated outputs
+        TF_VLOG(3) << "Executing IR graph hash "
+                   << torch::lazy::HashToString(hash)
+                   << " on all devices, done!";
+      } else {
+        TF_VLOG(3) << "Executing IR graph hash "
+                   << torch::lazy::HashToString(hash) << " on device "
+                   << async->device << " ...";
+        results = xla::ComputationClient::Get()->ExecuteComputation(
+            *async->cached_computation->computation,
+            UnwrapXlaData(async->parameters_data), async->device, options);
+        TF_VLOG(3) << "Executing IR graph hash "
+                   << torch::lazy::HashToString(hash) << " on device "
+                   << async->device << " done!";
+      }
       for (size_t i = 0; i < results.size(); ++i) {
         if (async->tensors_data[i] != nullptr) {
           UnwrapXlaData(async->tensors_data[i])->Assign(*results[i]);
@@ -1673,10 +1718,13 @@ XLATensor::CompilationResult XLATensor::Compile(
     lowering_ctx.AddResult(root);
   }
   // Annotate HLO sharding selectively in the compuation.
-  ShardingUtil::SetHloSharding(&lowering_ctx);
+  bool is_sharded = ShardingUtil::SetHloSharding(&lowering_ctx);
 
   std::vector<std::pair<int64_t, int64_t>> input_output_alias_pair;
-  if (enable_aliasing && coll.config.sync_xla_data) {
+  // TODO(yeounoh) aliasing is disabled for partitioned computation,
+  // since the current aliasing compares the unpartitioned input and output
+  // shapes which can lead to an incorrect aliasing pairs if sharded.
+  if (enable_aliasing && coll.config.sync_xla_data && !is_sharded) {
     // We can only alias at the step barrier, when force_xla_data is true.
     // Consider the case:
     //   1. Tensor A(DEVICE_DATA)
@@ -1726,7 +1774,7 @@ XLATensor::CompilationResult XLATensor::Compile(
   instances.push_back({std::move(computation), coll.device.toString(),
                        xla::ComputationClient::Get()->GetCompilationDevices(
                            coll.device.toString(), devices),
-                       &shape, should_wrap_parameter});
+                       &shape, should_wrap_parameter, is_sharded});
 
   TF_VLOG(3) << "Compiling IR graph hash "
              << torch::lazy::HashToString(coll.hash) << " on device "
@@ -1754,7 +1802,8 @@ XLATensor::CompilationResult XLATensor::Compile(
   return {/*device=*/coll.device,
           /*emitted_nodes=*/lowering_ctx.GetEmittedNodeCount(),
           /*computation=*/std::move(computations.front()),
-          /*parameters_data=*/std::move(po_data->parameters_data)};
+          /*parameters_data=*/std::move(po_data->parameters_data),
+          /*is_sharded=*/is_sharded};
 }
 
 std::shared_ptr<XLATensor::Async> XLATensor::SyncTensorsGraphInternal(
@@ -1788,7 +1837,7 @@ std::shared_ptr<XLATensor::Async> XLATensor::SyncTensorsGraphInternal(
   TF_VLOG(5) << "TensorsGraphSize=" << compile_result.emitted_nodes;
 
   auto cached_computation = std::make_shared<CachedComputation>(
-      std::move(compile_result.computation));
+      std::move(compile_result.computation), compile_result.is_sharded);
   GetComputationCache()->Add(coll.hash, cached_computation);
 
   return ScheduleSyncTensorsGraph(

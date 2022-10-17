@@ -280,6 +280,8 @@ PjRtComputationClient::ExecuteComputation(
   const PjRtComputation& pjrt_computation =
       dynamic_cast<const PjRtComputation&>(computation);
 
+  TF_VLOG(1) << "Executing PjRt computation on " << device;
+
   xla::PjRtDevice* pjrt_device = StringToPjRtDevice(device);
   XLA_CHECK(pjrt_device->IsAddressable()) << pjrt_device->DebugString();
 
@@ -297,6 +299,7 @@ PjRtComputationClient::ExecuteComputation(
   xla::ExecuteOptions execute_options;
   execute_options.untuple_result = options.explode_tuple;
   execute_options.strict_shape_checking = false;
+
   std::vector<std::unique_ptr<xla::PjRtBuffer>> results =
       pjrt_computation.executable
           ->ExecuteSharded(buffers, pjrt_device, execute_options)
