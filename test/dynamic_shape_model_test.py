@@ -3,8 +3,10 @@ import torch, torch_xla
 import torch_xla.core.xla_model as xm
 import numpy
 
+print('xw let s start')
 pd = torch._C._EnablePythonDispatcher()
 dev = xm.xla_device()
+print(dev)
 
 # CREATE RANDOM DATA POINTS
 def blob_label(y, label, loc): # assign labels
@@ -51,16 +53,12 @@ y_train = torch.Tensor(blob_label(y_train, 1, [1,2,3]))
 # CREATE FAKE TEST DATA
 x_test, y_test = make_blobs(n_samples=10, n_features=2, cluster_std=1.5, shuffle=True)
 x_test = torch.Tensor(x_test)
-num_non_zero = len(torch.nonzero(x_test.int()))
-print('xw32 num_non_zero=', num_non_zero)
 x_test = x_test.to(dev)
 print(x_test.int())
 x_test = torch.nonzero(x_test.int()).float()
 y_test = torch.Tensor(blob_label(y_test, 0, [0]))
 y_test = torch.Tensor(blob_label(y_test, 1, [1,2,3]))
 y_test = torch.cat((y_test, y_test))
-y_test = y_test[:num_non_zero]
-print('xw32 y_test.size()=', y_test.size())
 y_test = y_test.to(dev)
 
 # MODEL SETUP
@@ -71,6 +69,9 @@ optimizer = torch.optim.SGD(model.parameters(), lr = 0.01)
 # DEBUG
 print(x_test)
 print(y_test)
+
+simple_test()
+print('Finished running simple_test()')
 
 # RUN THE FWD PASS
 model.eval()
