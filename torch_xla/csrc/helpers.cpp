@@ -619,4 +619,18 @@ xla::StatusOr<xla::XlaComputation> XlaHelpers::WrapXlaComputation(
   return builder.Build(orig_result);
 }
 
+torch::lazy::Shape XlaHelpers::ConvertXlaShapeToLazy(const xla::Shape& shape) {
+  at::ScalarType scalar_type = TensorTypeFromXlaType(shape.element_type());
+  c10::optional<std::vector<bool>> is_symbolic = c10::nullopt;
+  if (shape.is_dynamic()) {
+    std::vector<bool> xla_dynamic_dimensions =
+        xla::util::ToVector<bool>(shape.dynamic_dimensions());
+    is_symbolic = c10::make_optional(xla_dynamic_dimensions);
+  }
+
+  return torch::lazy::Shape(scalar_type,
+                            xla::util::ToVector<int64_t>(shape.dimensions()),
+                            std::move(is_symbolic));
+}
+
 }  // namespace torch_xla
