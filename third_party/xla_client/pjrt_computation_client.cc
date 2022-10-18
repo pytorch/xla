@@ -8,9 +8,8 @@
 #include "tensorflow/compiler/xla/layout_util.h"
 #include "tensorflow/compiler/xla/literal.h"
 #include "tensorflow/compiler/xla/pjrt/cpu_device.h"
-#include "tensorflow/compiler/xla/pjrt/gpu_device.h"
+#include "tensorflow/compiler/xla/pjrt/gpu/se_gpu_pjrt_client.h"
 #include "tensorflow/compiler/xla/pjrt/pjrt_c_api_client.h"
-#include "tensorflow/compiler/xla/pjrt/pjrt_executable.h"
 #include "tensorflow/compiler/xla/pjrt/pjrt_client.h"
 #include "tensorflow/compiler/xla/pjrt/pjrt_executable.h"
 #include "tensorflow/compiler/xla/pjrt/tfrt_cpu_pjrt_client.h"
@@ -53,16 +52,15 @@ PjRtComputationClient::PjRtComputationClient() {
     TF_VLOG(1) << "Initializing PjRt CPU client...";
     bool async = sys_util::GetEnvBool(env::kEnvPjrtAsyncCpuClient, true);
     int cpu_device_count = sys_util::GetEnvInt(env::kEnvNumCpu, 1);
-    client_ =
-        std::move(xla::GetTfrtCpuClient(async, cpu_device_count).ValueOrDie());
+    client_ = std::move(xla::GetTfrtCpuClient(async, cpu_device_count).value());
   } else if (device_type == "TPU") {
     TF_VLOG(1) << "Initializing PjRt TPU client...";
     int64_t max_inflight_computations = sys_util::GetEnvInt(
         env::kEnvPjRtTpuMaxInflightComputations, /*defval=*/32);
-    client_ = xla::GetTpuClient(max_inflight_computations).ValueOrDie();
+    client_ = xla::GetTpuClient(max_inflight_computations).value();
   } else if (device_type == "TPU_C_API") {
     TF_VLOG(1) << "Initializing PjRt C API client...";
-    client_ = std::move(xla::GetCApiClient().ValueOrDie());
+    client_ = std::move(xla::GetCApiClient().value());
     // TODO(wcromar): remove this when C API supports
     // kImmutableUntilTransferCompletes
     host_buffer_semantics_ = xla::PjRtClient::HostBufferSemantics::kZeroCopy;
@@ -71,9 +69,11 @@ PjRtComputationClient::PjRtComputationClient() {
     bool async = sys_util::GetEnvBool(env::kEnvPjrtAsyncGpuClient, true);
     /* TODO(jonbolin): Set allowed_devices based on local ordinal */
     auto allowed_devices = std::make_optional<std::set<int>>(std::set{0});
-    client_ = xla::GetGpuClient(/*asynchronous=*/async, GpuAllocatorConfig{},
-                           /*distributed_client=*/nullptr, /*node_id=*/0,
-                           allowed_devices=allowed_devices).ValueOrDie();
+    client_ = xla::GetStreamExecutorGpuClient(
+                  /*asynchronous=*/async, GpuAllocatorConfig{},
+                  /*distributed_client=*/nullptr, /*node_id=*/0,
+                  allowed_devices = allowed_devices)
+                  .value();
   } else {
     XLA_ERROR() << absl::StrFormat("Unknown %s '%s'", env::kEnvPjRtDevice,
                                    device_type);
@@ -144,7 +144,7 @@ std::vector<ComputationClient::DataPtr> PjRtComputationClient::TransferToServer(
                 host_buffer_semantics_,
                 [literal{std::move(literal)}]() { /* frees literal */ },
                 pjrt_device)
-            .ValueOrDie());
+            .value());
 
     ComputationClient::DataPtr data =
         std::make_shared<PjRtData>(tensor.device, tensor.shape, buffer);
@@ -185,7 +185,7 @@ std::vector<xla::Literal> PjRtComputationClient::TransferFromServer(
     const PjRtData& pjrt_data = dynamic_cast<const PjRtData&>(*handle);
 
     std::shared_ptr<xla::Literal> literal =
-        pjrt_data.buffer->ToLiteralSync().ValueOrDie();
+        pjrt_data.buffer->ToLiteralSync().value();
     total_size += literal->size_bytes();
     literals.push_back(std::move(*literal));
   }
@@ -252,7 +252,7 @@ std::vector<ComputationClient::ComputationPtr> PjRtComputationClient::Compile(
     } else {
       // TODO(wcromar): Remove this case when C API supports GetHloModule
       xla::ProgramShape program_shape =
-          instance.computation.GetProgramShape().ValueOrDie();
+          instance.computation.GetProgramShape().value();
       std::shared_ptr<PjRtComputation> pjrt_computation =
           std::make_shared<PjRtComputation>(std::move(instance.computation),
                                             program_shape, instance.devices,
@@ -303,7 +303,7 @@ PjRtComputationClient::ExecuteComputation(
   std::vector<std::unique_ptr<xla::PjRtBuffer>> results =
       pjrt_computation.executable
           ->ExecuteSharded(buffers, pjrt_device, execute_options)
-          .ValueOrDie();
+          .value();
 
   std::vector<DataPtr> datas;
   datas.reserve(results.size());
@@ -316,7 +316,7 @@ PjRtComputationClient::ExecuteComputation(
         // in C API
         client_->runtime_type() == xla::PjRtRuntimeType::kTfrt
             ? buffer->on_device_shape()
-            : buffer->logical_on_device_shape().ValueOrDie(),
+            : buffer->logical_on_device_shape().value(),
         std::move(buffer));
 
     datas.push_back(data);
@@ -363,7 +363,7 @@ PjRtComputationClient::ExecuteReplicated(
   execute_options.multi_slice_config = nullptr;
   std::vector<std::vector<std::unique_ptr<PjRtBuffer>>> results =
       pjrt_computation.executable->Execute(argument_handles, execute_options)
-          .ValueOrDie();
+          .value();
 
   std::vector<std::vector<ComputationClient::DataPtr>> data_handles(
       results.size());
@@ -373,7 +373,7 @@ PjRtComputationClient::ExecuteReplicated(
       std::unique_ptr<xla::PjRtBuffer> buffer = std::move(result[i]);
 
       std::shared_ptr<PjRtData> data = std::make_shared<PjRtData>(
-          devices[i], buffer->logical_on_device_shape().ValueOrDie(),
+          devices[i], buffer->logical_on_device_shape().value(),
           std::move(buffer));
 
       datas.push_back(data);
