@@ -235,7 +235,8 @@ torch::lazy::BackendImplInterface* GetXlaBackendImpl() {
 }
 
 torch::lazy::LazyGraphExecutor* GetXlaLazyGraphExecutor() {
-  static torch::lazy::LazyGraphExecutor* executor = new torch::lazy::LazyGraphExecutor();
+  static torch::lazy::LazyGraphExecutor* executor =
+      new torch::lazy::LazyGraphExecutor();
   return executor;
 }
 
