@@ -2077,6 +2077,24 @@ class XpTraceTest(XlaTestCase):
         xm.mark_step()
 
 
+class MetricsTest(XlaTestCase):
+
+  def test_clear_counters(self):
+    xla_device = xm.xla_device()
+    t1 = torch.tensor(100, device=xla_device)
+    assert (len(met.counter_names()) > 0)
+    met.clear_counters()
+    assert (len(met.counter_names()) == 0)
+
+  def test_clear_metrics(self):
+    xla_device = xm.xla_device()
+    t1 = torch.tensor(100, device=xla_device)
+    assert (len(met.metric_names()) > 0)
+    met.clear_metrics()
+    print(met.metrics_report())
+    assert (len(met.metric_names()) == 0)
+
+
 class TestGeneric(XlaTestCase):
 
   def test_zeros_like_patch(self):
