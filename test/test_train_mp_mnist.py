@@ -48,13 +48,14 @@ class MNIST(nn.Module):
     return F.log_softmax(x, dim=1)
 
 
-def _train_update(device, x, loss, tracker, writer):
+def _train_update(device, step, loss, tracker, epoch, writer):
   test_utils.print_training_update(
       device,
-      x,
+      step,
       loss.item(),
       tracker.rate(),
       tracker.global_rate(),
+      epoch,
       summary_writer=writer)
 
 
@@ -119,7 +120,7 @@ def train_mnist(flags, **kwargs):
   optimizer = optim.SGD(model.parameters(), lr=lr, momentum=flags.momentum)
   loss_fn = nn.NLLLoss()
 
-  def train_loop_fn(loader):
+  def train_loop_fn(loader, epoch):
     tracker = xm.RateTracker()
     model.train()
     for step, (data, target) in enumerate(loader):
@@ -132,7 +133,7 @@ def train_mnist(flags, **kwargs):
       if step % flags.log_steps == 0:
         xm.add_step_closure(
             _train_update,
-            args=(device, step, loss, tracker, writer),
+            args=(device, step, loss, tracker, epoch, writer),
             run_async=FLAGS.async_closures)
 
   def test_loop_fn(loader):
@@ -154,7 +155,7 @@ def train_mnist(flags, **kwargs):
   accuracy, max_accuracy = 0.0, 0.0
   for epoch in range(1, flags.num_epochs + 1):
     xm.master_print('Epoch {} train begin {}'.format(epoch, test_utils.now()))
-    train_loop_fn(train_device_loader)
+    train_loop_fn(train_device_loader, epoch)
     xm.master_print('Epoch {} train end {}'.format(epoch, test_utils.now()))
 
     accuracy = test_loop_fn(test_device_loader)
