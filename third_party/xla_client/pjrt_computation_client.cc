@@ -92,6 +92,8 @@ void PjRtComputationClient::PjRtData::Assign(const Data& data) {
   if (&pjrt_data != this) {
     buffer = pjrt_data.buffer;
   }
+  TF_VLOG(5) << "After assign buffer PjrtData with shape " << shape().ToString() <<
+    " buffer " << (HasValue() ? "valid" : "invalid");
 }
 
 ComputationClient::DataPtr PjRtComputationClient::CreateDataPlaceholder(

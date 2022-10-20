@@ -124,11 +124,17 @@ class PjRtComputationClient : public ComputationClient {
 
   struct PjRtData : public Data {
     PjRtData(std::string device, Shape device_shape)
-        : Data(std::move(device), std::move(device_shape)) {}
+        : Data(std::move(device), std::move(device_shape)) {
+      TF_VLOG(5) << "Creating PjrtData placeholder with shape "
+                 << shape().ToString();
+    }
 
     PjRtData(std::string device, Shape device_shape,
              std::shared_ptr<PjRtBuffer> buffer)
-        : Data(std::move(device), std::move(device_shape)), buffer(buffer) {}
+        : Data(std::move(device), std::move(device_shape)), buffer(buffer) {
+      TF_VLOG(5) << "Creating PjrtData with shape " << shape().ToString()
+                 << " buffer " << (HasValue() ? "valid" : "invalid");
+    }
 
     OpaqueHandle GetOpaqueHandle() override {
       XLA_CHECK(HasValue());

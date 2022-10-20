@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <atomic>
+#include <chrono>
 #include <cmath>
 #include <condition_variable>
 #include <exception>
@@ -9,6 +10,7 @@
 #include <mutex>
 #include <set>
 #include <stdexcept>
+#include <thread>
 #include <unordered_set>
 
 #include "absl/container/flat_hash_map.h"
@@ -1374,6 +1376,7 @@ XLATensor::PostOrderData XLATensor::RunPostOrder(
   absl::Span<const size_t> indices = coll->indices;
   std::vector<const torch::lazy::Node*> roots;
   roots.reserve(indices.size());
+  TF_VLOG(5) << "RunPostOrder for device " << coll->device.toString();
   for (auto index : indices) {
     torch::lazy::Value ir_value = tensors.at(index)->CurrentIrValue();
     roots.push_back(ir_value.node.get());
@@ -1383,13 +1386,30 @@ XLATensor::PostOrderData XLATensor::RunPostOrder(
   std::unordered_map<xla::ComputationClient::Data::OpaqueHandle, size_t>
       data_handles;
 
+  bool should_throw = false;
+
   for (auto node : po_data.post_order) {
     const DeviceData* device_data = DeviceData::Cast(node);
     if (device_data != nullptr) {
       /* Acceptable race condition: HasValue may return false. This is OK
        * since the conditional barrier is a performance optimization. */
       if (!device_data->data()->HasValue()) {
+        TF_VLOG(5) << "Found device data with placeholder handler, waiting for "
+                      "previous execuetion to finish";
         TensorCollectionBarrier(coll);
+        if (!device_data->data()->HasValue()) {
+          // static int sleep_time = xla::sys_util::GetEnvInt("XLA_DEBUG_SLEEP",
+          // 3000); TF_VLOG(5) << "Going to sleep for " << sleep_time << " ms";
+          // std::this_thread::sleep_for(std::chrono::milliseconds(sleep_time));
+          TF_VLOG(5) << "device_data that missing handle has shape "
+                     << dynamic_cast<XLAData*>(device_data->data().get())
+                            ->xla_data()
+                            ->shape()
+                            .ToString();
+          // instead of fail right away, loop through all handles.
+          should_throw = true;
+          continue;
+        }
       }
       xla::ComputationClient::Data::OpaqueHandle handle =
           device_data->data()->GetHandle();
@@ -1403,6 +1423,7 @@ XLATensor::PostOrderData XLATensor::RunPostOrder(
       }
     }
   }
+  XLA_CHECK(!should_throw);
   return po_data;
 }
 
@@ -1438,6 +1459,8 @@ std::vector<torch::lazy::BackendDataPtr> XLATensor::FetchTensorData(
       const torch::lazy::BackendDevice& tensor_device = tensor->GetDevice();
       xla::Shape shape = MakeShapeWithDeviceLayout(
           tensor->shape(), static_cast<XlaDeviceType>(tensor_device.type()));
+      TF_VLOG(6) << "Creating placeholder for tensor ID "
+                 << tensor->GetUniqueId();
       xla_data =
           WrapXlaData(xla::ComputationClient::Get()->CreateDataPlaceholder(
               tensor_device.toString(), std::move(shape)));
