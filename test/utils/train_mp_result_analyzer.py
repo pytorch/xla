@@ -10,12 +10,13 @@ def analyse_rate(logs):
   threashold = np.percentile(rates, 7)  # 7% is a magic number, don't ask why.
   rates = rates[rates > threashold]
   mean = np.mean(rates)
-  std = np.std(rates)
   median = np.median(rates)
   ninetieth = np.percentile(rates, 90)
+  std = np.std(rates)
   print(
-      tabulate([['Rate', mean, std, median, ninetieth]],
-               headers=['Type', 'Mean', 'Std Dev', 'Median', '90th %']))
+      tabulate([['Rate', mean, median, ninetieth, std, std / mean]],
+               headers=['Type', 'Mean', 'Median', '90th %', 'Std Dev', 'CV'],
+               floatfmt=".2f"))
 
 
 def parse_logs(file: str):
@@ -42,8 +43,8 @@ def parse_logs(file: str):
 if __name__ == "__main__":
   parser = argparse.ArgumentParser(description="""
     This script is to print some statistical metrics out from a test_train_mp_xxx.py test. It
-    currently only prints 'Mean, Std Dev, Median, 90th%' data for 'Rate' with
-    warm up rounds results trimmed.""")
+    currently only prints 'Mean, Median, 90th%, Std Dev, Coefficient of Variation' data for
+    'Rate' with warm up rounds results trimmed.""")
   parser.add_argument(
       'file', type=str, help="The location of the result.txt file.")
   args = parser.parse_args()
