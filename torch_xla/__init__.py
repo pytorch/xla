@@ -48,6 +48,8 @@ def _setup_xla_flags():
   flags = _set_missing_flags(flags, (('xla_cpu_enable_fast_math', 'false'),))
   flags = _set_missing_flags(
       flags, (('xla_gpu_simplify_all_fp_conversions', 'false'),))
+  flags = _set_missing_flags(flags,
+                             (('xla_gpu_force_compilation_parallelism', '8'),))
   os.environ['XLA_FLAGS'] = ' '.join(flags)
 
 
