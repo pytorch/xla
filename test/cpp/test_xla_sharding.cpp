@@ -83,6 +83,17 @@ TEST_F(XLAShardingTest, ShardTensor) {
   EXPECT_EQ(shards.size(), 8);
   EXPECT_EQ(shards[0].sizes(), c10::ArrayRef<long>({1, 8, 2, 2}));
   EXPECT_EQ(shards[7].sizes(), c10::ArrayRef<long>({1, 8, 1, 2}));
+
+  // 5D tiled, the first and second dims are replicated and the last halved. The
+  // last shard size should be smaller in dim=2 because it's not evenly
+  // divisible.
+  tensor = at::ones({1, 8, 7, 4}, at::TensorOptions(at::kFloat));
+  xla::Array4D<int64_t> penteract({{{{{0, 1}, {2, 3}, {4, 5}, {6, 7}}}}});
+  sharding = xla::HloSharding::Tile(penteract).ToProto();
+  shards = ShardingUtil::ShardTensor(tensor, sharding, devices);
+  EXPECT_EQ(shards.size(), 8);
+  EXPECT_EQ(shards[0].sizes(), c10::ArrayRef<long>({1, 8, 2, 2}));
+  EXPECT_EQ(shards[7].sizes(), c10::ArrayRef<long>({1, 8, 1, 2}));
 }
 
 TEST_F(XLAShardingTest, CreateTensorsData) {
