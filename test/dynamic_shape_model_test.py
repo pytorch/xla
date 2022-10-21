@@ -23,8 +23,6 @@ def simple_test():
     a3.shape
     torch.Size([6, 1])
     a4 = a3.expand(a2.shape)
-    print('Printing a4')
-    a4
     torch_xla._XLAC._get_xla_tensor_dimension_size(a4,0) # trigger the execution.
 
 # SIMPLE NN MODEL
@@ -73,9 +71,6 @@ optimizer = torch.optim.SGD(model.parameters(), lr = 0.01)
 # DEBUG
 print(x_test)
 print(y_test)
-
-# simple_test()
-# print('Finished running simple_test()')
 
 # RUN THE FWD PASS
 model.eval()
