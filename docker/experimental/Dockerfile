@@ -6,11 +6,12 @@ ARG cuda_version=11.2
 ARG cudnn_version=8.1.1.33
 # Debian repo doesn't have libcudnn
 ARG cuda_repo=ubuntu1804
-ARG tf_cuda_compute_capabilities="7.0,8.0"
+ARG tf_cuda_compute_capabilities="7.0"
 
 ARG tpuvm=1
 ARG build_cpp_tests=0
 
+# Contains all build dependencies for PT/XLA
 FROM python:${python_version}-${debian_version} AS builder
 
 RUN apt-get update
@@ -56,12 +57,14 @@ RUN chmod +x /usr/local/bin/bazel
 RUN mkdir xla
 WORKDIR /pytorch/xla/
 
-COPY tf_patches/
-COPY third_party/ third_party/
-WORKDIR /pytorch/xla/tensorflow
-RUN git apply /pytorch/xla/tf_patches/patch.diff
+# Contains actual build artifacts
+FROM builder AS build
 
-WORKDIR /pytorch/xla
+COPY tf_patches/ tf_patches/
+COPY third_party/ third_party/
+
+RUN patch -d third_party/tensorflow -N -p1 < /pytorch/xla/tf_patches/patch.diff
+
 COPY build_torch_xla_libs.sh .
 
 ARG tpuvm
@@ -69,15 +72,17 @@ ARG tf_cuda_compute_capabilities
 RUN TPUVM_MODE=${tpuvm} XLA_CUDA=${cuda} TF_CUDA_COMPUTE_CAPABILITIES=${tf_cuda_compute_capabilities} bash build_torch_xla_libs.sh -O -D_GLIBCXX_USE_CXX11_ABI=1
 
 COPY torch_xla/ torch_xla/
-COPY scripts/ scripts/
 COPY setup.py .
 COPY xla_native_functions.yaml .
+
+COPY scripts/ scripts/
 
 ARG build_cpp_tests
 RUN BUILD_CPP_TESTS=${build_cpp_tests} TPUVM_MODE=${tpuvm} XLA_CUDA=${cuda} TF_CUDA_COMPUTE_CAPABILITIES=${tf_cuda_compute_capabilities} python setup.py bdist_wheel
 
 RUN pip install dist/*.whl
 
+# Contains only release artifacts
 FROM python:${python_version}-slim-${debian_version} AS release
 
 RUN apt-get update
@@ -102,7 +107,7 @@ RUN apt-get update
 RUN apt-get -y install google-cloud-cli
 
 COPY --from=builder /pytorch/dist/*.whl .
-COPY --from=builder /pytorch/xla/dist/*.whl .
+COPY --from=build /pytorch/xla/dist/*.whl .
 
 RUN pip install *.whl
 RUN rm *.whl
