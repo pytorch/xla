@@ -55,7 +55,13 @@ RUN chmod +x /usr/local/bin/bazel
 
 RUN mkdir xla
 WORKDIR /pytorch/xla/
+
+COPY tf_patches/
 COPY third_party/ third_party/
+WORKDIR /pytorch/xla/tensorflow
+RUN git apply /pytorch/xla/tf_patches/patch.diff
+
+WORKDIR /pytorch/xla
 COPY build_torch_xla_libs.sh .
 
 ARG tpuvm
@@ -75,7 +81,7 @@ RUN pip install dist/*.whl
 FROM python:${python_version}-slim-${debian_version} AS release
 
 RUN apt-get update
-RUN apt-get install -y libopenblas-base curl gnupg libomp5
+RUN apt-get install -y libopenblas-base curl gnupg libomp5 git
 
 RUN pip install numpy pyyaml
 
@@ -101,7 +107,11 @@ COPY --from=builder /pytorch/xla/dist/*.whl .
 RUN pip install *.whl
 RUN rm *.whl
 
-
 ARG tpuvm
 RUN if [ "${tpuvm}" = "1" ]; then pip install torch_xla[tpuvm]; fi
 
+# TODO: make this version selectable
+RUN pip install --no-deps torchvision pillow
+
+RUN mkdir -p /pytorch/xla
+COPY . /pytorch/xla
