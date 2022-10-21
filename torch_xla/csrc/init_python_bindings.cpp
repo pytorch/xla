@@ -1189,6 +1189,8 @@ void InitXlaModuleBindings(py::module m) {
   });
   m.def("_xla_metrics_report",
         []() { return xla::metrics_reader::CreateMetricReport(); });
+  m.def("_clear_xla_counters", []() { xla::metrics::ClearCounters(); });
+  m.def("_clear_xla_metrics", []() { xla::metrics::ClearMetrics(); });
   m.def("_xla_tensors_report",
         [](size_t nodes_threshold, const std::string& device) {
           return GetLiveTensorsReport(nodes_threshold, device);

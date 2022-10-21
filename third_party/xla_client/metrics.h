@@ -97,6 +97,10 @@ class MetricsArena {
 
   CounterData* GetCounter(const std::string& name);
 
+  void ClearCounters();
+
+  void ClearMetrics();
+
  private:
   std::mutex lock_;
   std::map<std::string, std::shared_ptr<MetricData>> metrics_;
@@ -205,6 +209,10 @@ std::vector<std::string> GetCounterNames();
 // Retrieves the counter data of a given counter, or nullptr if such counter
 // does not exist.
 CounterData* GetCounter(const std::string& name);
+
+void ClearCounters();
+
+void ClearMetrics();
 
 // Scope based utility class to measure the time the code takes within a given
 // C++ scope.
