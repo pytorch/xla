@@ -125,15 +125,18 @@ class PjRtComputationClient : public ComputationClient {
   struct PjRtData : public Data {
     PjRtData(std::string device, Shape device_shape)
         : Data(std::move(device), std::move(device_shape)) {
+      id = rand();
       TF_VLOG(5) << "Creating PjrtData placeholder with shape "
-                 << shape().ToString();
+                 << shape().ToString() << " and ID " << id;
     }
 
     PjRtData(std::string device, Shape device_shape,
              std::shared_ptr<PjRtBuffer> buffer)
         : Data(std::move(device), std::move(device_shape)), buffer(buffer) {
+      id = rand();
       TF_VLOG(5) << "Creating PjrtData with shape " << shape().ToString()
-                 << " buffer " << (HasValue() ? "valid" : "invalid");
+                 << " buffer " << (HasValue() ? "valid" : "invalid")
+                 << " and ID " << id;
     }
 
     OpaqueHandle GetOpaqueHandle() override {
@@ -145,7 +148,10 @@ class PjRtComputationClient : public ComputationClient {
       return buffer != nullptr && !buffer->IsDeleted();
     };
 
+    int Id() const override { return id; }
+
     std::shared_ptr<PjRtBuffer> buffer;
+    int id;
   };
 
   struct PjRtShardedData : public Data {

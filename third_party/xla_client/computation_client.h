@@ -52,6 +52,8 @@ class ComputationClient {
 
     virtual bool HasValue() const = 0;
 
+    virtual int Id() const { return -1; };
+
    private:
     std::string device_;
     Shape shape_;

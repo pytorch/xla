@@ -1401,11 +1401,11 @@ XLATensor::PostOrderData XLATensor::RunPostOrder(
           // static int sleep_time = xla::sys_util::GetEnvInt("XLA_DEBUG_SLEEP",
           // 3000); TF_VLOG(5) << "Going to sleep for " << sleep_time << " ms";
           // std::this_thread::sleep_for(std::chrono::milliseconds(sleep_time));
+          auto runtime_data =
+              dynamic_cast<XLAData*>(device_data->data().get())->xla_data();
           TF_VLOG(5) << "device_data that missing handle has shape "
-                     << dynamic_cast<XLAData*>(device_data->data().get())
-                            ->xla_data()
-                            ->shape()
-                            .ToString();
+                     << runtime_data->shape().ToString() << " and ID "
+                     << runtime_data->Id();
           // instead of fail right away, loop through all handles.
           should_throw = true;
           continue;
