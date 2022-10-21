@@ -1445,7 +1445,7 @@ class XLATensor : public c10::intrusive_ptr_target {
       absl::Span<const size_t> indices,
       const std::vector<torch::lazy::BackendDataPtr>& tensor_data_vec);
 
-  static void ExtractIRAndPrepareXlaData(
+  static void ExtractIRAndPrepareXlaData_(
       std::vector<XLATensorPtr>* tensors, const SyncTensorsConfig& config,
       const absl::Span<const size_t> indices,
       std::vector<torch::lazy::Value>& ir_values,

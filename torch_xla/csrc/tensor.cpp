@@ -1417,13 +1417,13 @@ std::vector<torch::lazy::Value> XLATensor::CollectRoots(
   return roots;
 }
 
-void XLATensor::ExtractIRAndPrepareXlaData(
+void XLATensor::ExtractIRAndPrepareXlaData_(
     std::vector<XLATensorPtr>* tensors, const SyncTensorsConfig& config,
     const absl::Span<const size_t> indices,
     std::vector<torch::lazy::Value>& ir_values,
     std::vector<torch::lazy::BackendDataPtr>& tensor_data_vec) {
   tensorflow::profiler::TraceMe activity(
-      "ExtractIRAndPrepareXlaData", tensorflow::profiler::TraceMeLevel::kInfo);
+      "ExtractIRAndPrepareXlaData_", tensorflow::profiler::TraceMeLevel::kInfo);
   ir_values.reserve(indices.size());
   tensor_data_vec.reserve(indices.size());
   for (auto index : indices) {
@@ -1468,7 +1468,7 @@ std::vector<torch::lazy::BackendDataPtr> XLATensor::SetTensorData(
       xla_data = tensor_data_vec[i];
       // Note: We are not using SetXlaData method here since that method
       // resets the ir_value. We have already done the resetting as part
-      // of ExtractIRAndPrepareXlaData to overlap with previous execution.
+      // of ExtractIRAndPrepareXlaData_ to overlap with previous execution.
       tensor->data()->xla_data = xla_data;
       tensor->data()->view = nullptr;
       tensor->data()->tensor_data = c10::nullopt;
@@ -1649,7 +1649,7 @@ XLATensor::OpByOpAsync XLATensor::SyncTensorsGraphOpByOp(
   std::vector<torch::lazy::Value> roots = CollectRoots(*tensors, coll.indices);
   std::vector<torch::lazy::Value> ir_values;
   std::vector<torch::lazy::BackendDataPtr> tensor_data_vec;
-  ExtractIRAndPrepareXlaData(tensors, coll.config, coll.indices, ir_values,
+  ExtractIRAndPrepareXlaData_(tensors, coll.config, coll.indices, ir_values,
                              tensor_data_vec);
   auto tensors_data =
       SetTensorData(tensors, coll.config, coll.indices, tensor_data_vec);
@@ -1858,7 +1858,7 @@ std::shared_ptr<XLATensor::Async> XLATensor::SyncTensorsGraphInternal(
                                   &coll.indices);
   std::vector<torch::lazy::Value> ir_values;
   std::vector<torch::lazy::BackendDataPtr> tensor_data_vec;
-  ExtractIRAndPrepareXlaData(tensors, coll.config, coll.indices, ir_values,
+  ExtractIRAndPrepareXlaData_(tensors, coll.config, coll.indices, ir_values,
                              tensor_data_vec);
   PostOrderData po_data = RunPostOrder(ir_values, &coll);
 
