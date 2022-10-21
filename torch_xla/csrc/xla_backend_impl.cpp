@@ -234,6 +234,12 @@ torch::lazy::BackendImplInterface* GetXlaBackendImpl() {
   return xla_backend_impl;
 }
 
+torch::lazy::LazyGraphExecutor* GetXlaLazyGraphExecutor() {
+  static torch::lazy::LazyGraphExecutor* executor =
+      new torch::lazy::LazyGraphExecutor();
+  return executor;
+}
+
 bool InitXlaBackend() {
   // xla_fallback is currently auto registered when initializing torch_xla. No
   // need to re-register here.
@@ -242,6 +248,7 @@ bool InitXlaBackend() {
   static std::unique_ptr<torch::lazy::BackendRegistrar> s_registrar;
   s_registrar =
       std::make_unique<torch::lazy::BackendRegistrar>(GetXlaBackendImpl());
+  torch::lazy::LazyGraphExecutor::Register(GetXlaLazyGraphExecutor());
   return true;
 };
 
