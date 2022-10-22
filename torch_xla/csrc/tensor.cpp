@@ -1650,7 +1650,7 @@ XLATensor::OpByOpAsync XLATensor::SyncTensorsGraphOpByOp(
   std::vector<torch::lazy::Value> ir_values;
   std::vector<torch::lazy::BackendDataPtr> tensor_data_vec;
   ExtractIRAndPrepareXlaData_(tensors, coll.config, coll.indices, ir_values,
-                             tensor_data_vec);
+                              tensor_data_vec);
   auto tensors_data =
       SetTensorData(tensors, coll.config, coll.indices, tensor_data_vec);
   TensorCollectionBarrier(&coll);
@@ -1859,7 +1859,7 @@ std::shared_ptr<XLATensor::Async> XLATensor::SyncTensorsGraphInternal(
   std::vector<torch::lazy::Value> ir_values;
   std::vector<torch::lazy::BackendDataPtr> tensor_data_vec;
   ExtractIRAndPrepareXlaData_(tensors, coll.config, coll.indices, ir_values,
-                             tensor_data_vec);
+                              tensor_data_vec);
   PostOrderData po_data = RunPostOrder(ir_values, &coll);
 
   coll.hash = torch::lazy::HashCombine(
