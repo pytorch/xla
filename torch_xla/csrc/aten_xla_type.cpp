@@ -613,11 +613,7 @@ at::Tensor XLANativeFunctions::addmm(const at::Tensor& self,
                                      const at::Scalar& beta,
                                      const at::Scalar& alpha) {
   XLA_FN_COUNTER("xla::");
-  // xla::dot doesn't support integer types.
-  if (beta.to<double>() != 1 || alpha.to<double>() != 1 ||
-      !at::native::is_floating_point(self) ||
-      !at::native::is_floating_point(mat1) ||
-      !at::native::is_floating_point(mat2)) {
+  if (beta.to<double>() != 1 || alpha.to<double>() != 1) {
     return at::native::call_fallback_fn<&xla_cpu_fallback,
                                         ATEN_OP(addmm)>::call(self, mat1, mat2,
                                                               beta, alpha);
@@ -795,14 +791,7 @@ at::Tensor XLANativeFunctions::baddbmm(const at::Tensor& self,
                                        const at::Scalar& beta,
                                        const at::Scalar& alpha) {
   XLA_FN_COUNTER("xla::");
-  // xla::dot doesn't support integer types.
-  if (!at::native::is_floating_point(batch1) ||
-      !at::native::is_floating_point(batch2)) {
-    return at::native::call_fallback_fn<&xla_cpu_fallback,
-                                        ATEN_OP(baddbmm)>::call(self, batch1,
-                                                                batch2, beta,
-                                                                alpha);
-  }
+
   return bridge::AtenFromXlaTensor(XLATensor::baddbmm(
       bridge::GetXlaTensor(self), bridge::GetXlaTensor(batch1),
       bridge::GetXlaTensor(batch2), beta, alpha));
@@ -860,12 +849,6 @@ at::Tensor XLANativeFunctions::binary_cross_entropy_with_logits(
 at::Tensor XLANativeFunctions::bmm(const at::Tensor& self,
                                    const at::Tensor& mat2) {
   XLA_FN_COUNTER("xla::");
-  // xla::dot doesn't support integer types.
-  if (!at::native::is_floating_point(self) ||
-      !at::native::is_floating_point(mat2)) {
-    return at::native::call_fallback_fn<&xla_cpu_fallback, ATEN_OP(bmm)>::call(
-        self, mat2);
-  }
   return bridge::AtenFromXlaTensor(
       XLATensor::bmm(bridge::GetXlaTensor(self), bridge::GetXlaTensor(mat2)));
 }
@@ -1056,12 +1039,6 @@ at::Tensor XLANativeFunctions::dot(const at::Tensor& self,
       << "dot: Expected 1-D argument self, but got " << self.dim() << "-D";
   XLA_CHECK_EQ(tensor.dim(), 1)
       << "dot: Expected 1-D argument tensor, but got " << tensor.dim() << "-D";
-  // xla::dot doesn't support integer types.
-  if (!at::native::is_floating_point(self) ||
-      !at::native::is_floating_point(tensor)) {
-    return at::native::call_fallback_fn<&xla_cpu_fallback, ATEN_OP(dot)>::call(
-        self, tensor);
-  }
   return bridge::AtenFromXlaTensor(XLATensor::matmul(
       bridge::GetXlaTensor(self), bridge::GetXlaTensor(tensor)));
 }
@@ -1754,12 +1731,6 @@ std::tuple<at::Tensor&, at::Tensor&> XLANativeFunctions::min_out(
 at::Tensor XLANativeFunctions::mm(const at::Tensor& self,
                                   const at::Tensor& mat2) {
   XLA_FN_COUNTER("xla::");
-  // xla::dot doesn't support integer types.
-  if (!at::native::is_floating_point(self) ||
-      !at::native::is_floating_point(mat2)) {
-    return at::native::call_fallback_fn<&xla_cpu_fallback, ATEN_OP(mm)>::call(
-        self, mat2);
-  }
   return bridge::AtenFromXlaTensor(
       XLATensor::mm(/*input=*/bridge::GetXlaTensor(self),
                     /*weight=*/bridge::GetXlaTensor(mat2)));
@@ -1806,12 +1777,6 @@ at::Tensor XLANativeFunctions::mul(const at::Tensor& self,
 at::Tensor XLANativeFunctions::mv(const at::Tensor& self,
                                   const at::Tensor& vec) {
   XLA_FN_COUNTER("xla::");
-  // xla::dot doesn't support integer types.
-  if (!at::native::is_floating_point(self) ||
-      !at::native::is_floating_point(vec)) {
-    return at::native::call_fallback_fn<&xla_cpu_fallback, ATEN_OP(mv)>::call(
-        self, vec);
-  }
   return bridge::AtenFromXlaTensor(
       XLATensor::mv(bridge::GetXlaTensor(self), bridge::GetXlaTensor(vec)));
 }
@@ -1819,12 +1784,6 @@ at::Tensor XLANativeFunctions::mv(const at::Tensor& self,
 at::Tensor& XLANativeFunctions::mv_out(const at::Tensor& self,
                                        const at::Tensor& vec, at::Tensor& out) {
   XLA_FN_COUNTER("xla::");
-  // xla::dot doesn't support integer types.
-  if (!at::native::is_floating_point(self) ||
-      !at::native::is_floating_point(vec)) {
-    return at::native::call_fallback_fn<&xla_cpu_fallback,
-                                        ATEN_OP(mv_out)>::call(self, vec, out);
-  }
   XLATensorPtr out_tensor = bridge::GetXlaTensor(out);
   XLATensor::mv_out(out_tensor, bridge::GetXlaTensor(self),
                     bridge::GetXlaTensor(vec));
