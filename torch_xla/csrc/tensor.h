@@ -452,7 +452,6 @@ class XLATensor : public c10::intrusive_ptr_target {
 
   static XLATensorPtr bernoulli(const XLATensorPtr& input, double probability);
   static XLATensorPtr bernoulli(const XLATensorPtr& input);
-  static void bernoulli_(XLATensorPtr& input, double probability);
   static void bernoulli_(XLATensorPtr& input, const XLATensorPtr& probability);
 
   static XLATensorPtr bitwise_and(const XLATensorPtr& input,
