@@ -4403,7 +4403,7 @@ TEST_F(AtenXlaTensorTest, TestBernoulliScalarProb) {
 
   ExpectCounterNotChanged("aten::(?!_local_scalar_dense).*",
                           cpp_test::GetIgnoredCounters());
-  ExpectCounterChanged("xla::bernoulli_", cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::bernoulli", cpp_test::GetIgnoredCounters());
 }
 
 TEST_F(AtenXlaTensorTest, TestBernoulliTensorProb) {
