@@ -778,13 +778,6 @@ XLATensorPtr XLATensor::bernoulli(const XLATensorPtr& input) {
       input->shape().get()));
 }
 
-void XLATensor::bernoulli_(XLATensorPtr& input, double probability) {
-  auto input_shape = input->shape();
-  input->SetInPlaceIrValue(torch::lazy::MakeNode<Bernoulli>(
-      GetIrValueForScalar(probability, input_shape, input->GetDevice()),
-      GetRngSeed(input->GetDevice()), input_shape.get()));
-}
-
 void XLATensor::bernoulli_(XLATensorPtr& input,
                            const XLATensorPtr& probability) {
   input->SetInPlaceIrValue(torch::lazy::MakeNode<Bernoulli>(
