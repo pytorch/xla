@@ -820,17 +820,15 @@ at::Tensor XLANativeFunctions::bernoulli(
   return bridge::AtenFromXlaTensor(XLATensor::bernoulli(self_tensor));
 }
 
-at::Tensor& XLANativeFunctions::bernoulli_(
-    at::Tensor& self, double p, c10::optional<at::Generator> generator) {
+at::Tensor XLANativeFunctions::bernoulli(
+    const at::Tensor& self, double p, c10::optional<at::Generator> generator) {
   XLA_FN_COUNTER("xla::");
   if (generator.has_value() && generator->defined()) {
     return at::native::call_fallback_fn<
-        &xla_cpu_fallback, ATEN_OP2(bernoulli_, float)>::call(self, p,
-                                                              generator);
+        &xla_cpu_fallback, ATEN_OP2(bernoulli, p)>::call(self, p, generator);
   }
   XLATensorPtr self_tensor = bridge::GetXlaTensor(self);
-  XLATensor::bernoulli_(self_tensor, p);
-  return self;
+  return bridge::AtenFromXlaTensor(XLATensor::bernoulli(self_tensor, p));
 }
 
 at::Tensor& XLANativeFunctions::bernoulli_(

@@ -4432,6 +4432,9 @@ TEST_F(AtenXlaTensorTest, TestBernoulliScalarProbInPlace) {
     EXPECT_GT(frac, 0.06);
     EXPECT_LT(frac, 0.14);
   });
+  ExpectCounterNotChanged("aten::(?!_local_scalar_dense).*",
+                          cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::bernoulli", cpp_test::GetIgnoredCounters());
 }
 
 TEST_F(AtenXlaTensorTest, TestBernoulliTensorProbInPlace) {
@@ -4446,6 +4449,9 @@ TEST_F(AtenXlaTensorTest, TestBernoulliTensorProbInPlace) {
     EXPECT_GT(frac, 0.06);
     EXPECT_LT(frac, 0.14);
   });
+  ExpectCounterNotChanged("aten::(?!_local_scalar_dense).*",
+                          cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::bernoulli_", cpp_test::GetIgnoredCounters());
 }
 
 TEST_F(AtenXlaTensorTest, TestDropout) {
@@ -4463,7 +4469,7 @@ TEST_F(AtenXlaTensorTest, TestDropout) {
   ExpectCounterNotChanged("aten::(?!_local_scalar_dense).*",
                           cpp_test::GetIgnoredCounters());
   // dropout is composed of many arithmetic ops.
-  ExpectCounterChanged("xla::bernoulli_", cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::bernoulli", cpp_test::GetIgnoredCounters());
 }
 
 TEST_F(AtenXlaTensorTest, TestDropoutInPlace) {
@@ -4481,7 +4487,7 @@ TEST_F(AtenXlaTensorTest, TestDropoutInPlace) {
   ExpectCounterNotChanged("aten::(?!_local_scalar_dense).*",
                           cpp_test::GetIgnoredCounters());
   // dropout is composed of many arithmetic ops.
-  ExpectCounterChanged("xla::bernoulli_", cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::bernoulli", cpp_test::GetIgnoredCounters());
 }
 
 TEST_F(AtenXlaTensorTest, TestRandperm) {
