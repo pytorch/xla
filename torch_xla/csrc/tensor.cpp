@@ -403,14 +403,6 @@ class XLATensor::DeviceContextArena {
   std::map<torch::lazy::BackendDevice, DeviceContext*> device_contexts_;
 };
 
-struct DeviceDataInfo : public xla::ComputationClient::Data::Info {
-  DeviceDataInfo(int64_t tensor_id, bool read_only)
-      : tensor_id(tensor_id), read_only(read_only) {}
-
-  int64_t tensor_id = 0;
-  bool read_only = false;
-};
-
 XLATensor::Data::~Data() { DeviceContextArena::Get()->UnregisterTensor(this); }
 
 XLATensor::Async::Async(
@@ -1957,6 +1949,17 @@ c10::SymIntNode XLASymIntNodeImpl::floordiv(const c10::SymIntNode& other) {
 std::string XLASymIntNodeImpl::str() {
   return "Static bound: " +
          std::to_string(DimCast(node().get())->getStaticValue());
+}
+
+torch::lazy::hash_t XLATensor::GetGraphHash(
+    const std::vector<XLATensorPtr>& tensors) {
+  SyncTensorsConfig config;
+  config.sync_xla_data = true;
+
+  auto coll = CollectSyncTensors(tensors, config);
+  auto po_data = RunPostOrder(tensors, &coll);
+  return torch::lazy::HashCombine(
+      coll.hash, torch::lazy::Hash(po_data.parameter_sequence));
 }
 
 }  // namespace torch_xla
