@@ -1440,9 +1440,16 @@ class XLATensor : public c10::intrusive_ptr_target {
       const std::vector<XLATensorPtr>& tensors,
       absl::Span<const size_t> indices);
 
-  static std::vector<torch::lazy::BackendDataPtr> FetchTensorData(
+  static std::vector<torch::lazy::BackendDataPtr> SetTensorData(
       std::vector<XLATensorPtr>* tensors, const SyncTensorsConfig& config,
-      absl::Span<const size_t> indices);
+      absl::Span<const size_t> indices,
+      const std::vector<torch::lazy::BackendDataPtr>& tensor_data_vec);
+
+  static void ExtractIRAndPrepareXlaData_(
+      std::vector<XLATensorPtr>* tensors, const SyncTensorsConfig& config,
+      const absl::Span<const size_t> indices,
+      std::vector<torch::lazy::Value>& ir_values,
+      std::vector<torch::lazy::BackendDataPtr>& tensor_data_vec);
 
   static std::vector<at::Tensor> FetchTensors(
       std::vector<XLATensorPtr>* tensors,
@@ -1461,10 +1468,12 @@ class XLATensor : public c10::intrusive_ptr_target {
   static std::shared_ptr<Async> ScheduleSyncTensorsGraph(
       std::vector<XLATensorPtr>* tensors, SyncTensorCollection* coll,
       std::vector<torch::lazy::BackendDataPtr> parameters_data,
-      std::string device, ComputationCache::TypePtr cached_computation);
+      std::string device, ComputationCache::TypePtr cached_computation,
+      const std::vector<torch::lazy::BackendDataPtr>& tensor_data_vec);
 
-  static PostOrderData RunPostOrder(const std::vector<XLATensorPtr>& tensors,
-                                    SyncTensorCollection* coll);
+  static PostOrderData RunPostOrder(
+      const std::vector<torch::lazy::Value>& ir_values,
+      SyncTensorCollection* coll);
 
   static ComputationCache::TypePtr LookupCachedCompile(
       const std::vector<XLATensorPtr>& tensors,
@@ -1472,16 +1481,17 @@ class XLATensor : public c10::intrusive_ptr_target {
 
   static std::shared_ptr<Async> TryRunCachedSync(
       std::vector<XLATensorPtr>* tensors, SyncTensorCollection* coll,
-      PostOrderData* po_data);
+      PostOrderData* po_data,
+      const std::vector<torch::lazy::BackendDataPtr>& tensor_data_vec);
 
   static std::vector<std::pair<int64_t, int64_t>> BuildInputOutputAliases(
       const std::vector<XLATensorPtr>& tensors,
       absl::Span<const size_t> indices, LoweringContext* lowering_ctx);
 
-  static CompilationResult Compile(const std::vector<XLATensorPtr>& tensors,
-                                   absl::Span<const std::string> devices,
-                                   const SyncTensorCollection& coll,
-                                   PostOrderData* po_data);
+  static CompilationResult Compile(
+      const std::vector<XLATensorPtr>& tensors,
+      absl::Span<const std::string> devices, const SyncTensorCollection& coll,
+      PostOrderData* po_data, const std::vector<torch::lazy::Value>& ir_values);
 
   static std::shared_ptr<Async> SyncTensorsGraphInternal(
       std::vector<XLATensorPtr>* tensors, absl::Span<const std::string> devices,
