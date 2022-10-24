@@ -1956,8 +1956,15 @@ torch::lazy::hash_t XLATensor::GetGraphHash(
   SyncTensorsConfig config;
   config.sync_xla_data = true;
 
-  auto coll = CollectSyncTensors(tensors, config);
-  auto po_data = RunPostOrder(tensors, &coll);
+  SyncTensorCollection coll = CollectSyncTensors(tensors, config);
+  absl::Span<const size_t> indices = coll.indices;
+  std::vector<torch::lazy::Value> ir_values;
+  ir_values.reserve(indices.size());
+  for (auto index : indices) {
+    ir_values.push_back(tensors.at(index)->CurrentIrValue());
+  }
+  PostOrderData po_data = RunPostOrder(ir_values, &coll);
+
   return torch::lazy::HashCombine(
       coll.hash, torch::lazy::Hash(po_data.parameter_sequence));
 }
