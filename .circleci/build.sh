@@ -9,7 +9,7 @@ XLA_DIR=$PYTORCH_DIR/xla
 clone_pytorch $PYTORCH_DIR $XLA_DIR
 
 # Use bazel cache
-USE_CACHE=1
+USE_CACHE=0
 
 SCCACHE="$(which sccache)"
 if [ -z "${SCCACHE}" ]; then
