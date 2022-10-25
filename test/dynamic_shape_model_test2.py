@@ -32,13 +32,13 @@ y_train = torch.Tensor(y_train)
 num_test_samples = 5
 x_test = torch.ones_like(torch.empty(num_test_samples, num_features))
 x_test[0][0] = 0
-y_test = torch.ones_like(torch.empty(num_test_samples*2-1))
+y_test = torch.ones_like(torch.empty(num_test_samples*2))
+y_test[0] = 0
 
 x_test = x_test.to(dev)
 x_test = torch.nonzero(x_test.int()).float()
 y_test = y_test.to(dev)
-print('xw32 debug line41 x_test=', x_test)
-print('xw32 debug line42 y_test=', y_test)
+y_test = torch.nonzero(y_test.int()).float().squeeze()
 
 # MODEL SETUP
 model = Feedforward(2, 10).to(dev)
