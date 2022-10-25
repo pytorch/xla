@@ -33,17 +33,24 @@ PJRT_DEVICE=CPU python3 xla/test/test_train_mp_mnist.py --fake_data
 
 ### v4 TPU
 
+To create a new TPU with PyTorch/XLA r1.13 installed:
+
+```
+gcloud alpha compute tpus tpu-vm create $USER-pjrt --accelerator-type=v4-8 --version=tpu-vm-v4-pt-1.13 --zone=us-central2-b --project=$PROJECT
+```
+
 On a v4-8, you can run our ResNet50 example like this:
 
 ```
-PJRT_DEVICE=TPU python3 xla/test/test_train_mp_imagenet.py --fake_data
+git clone --depth=1 --branch r1.13 https://github.com/pytorch/xla.git
+PJRT_DEVICE=TPU python3 xla/test/test_train_mp_imagenet.py --fake_data --batch_size=256 --num_epochs=1
 ```
 
-By default, PjRt will use all TPU chips. To use only one TPU chip, set
+By default, PjRt will use all TPU chips. To use only one TPU chip, configure
 `TPU_PROCESS_BOUNDS` and `TPU_VISIBLE_CHIPS`:
 
 ```
-TPU_PROCESS_BOUNDS=1,1,1 TPU_VISIBLE_CHIPS=0 PJRT_DEVICE=TPU python3 xla/test/test_train_mp_imagenet.py --fake_data
+TPU_PROCESS_BOUNDS=1,1,1 TPU_VISIBLE_CHIPS=0 PJRT_DEVICE=TPU python3 xla/test/test_train_mp_imagenet.py --fake_data --batch_size=256 --num_epochs=1
 ```
 
 #### Pods
@@ -51,8 +58,8 @@ TPU_PROCESS_BOUNDS=1,1,1 TPU_VISIBLE_CHIPS=0 PJRT_DEVICE=TPU python3 xla/test/te
 On TPU Pods, use `gcloud` to run your command on each TPU in parallel:
 
 ```
-gcloud alpha compute tpus tpu-vm ssh --worker=all --command="git clone --depth=1 https://github.com/pytorch/xla.git"
-gcloud alpha compute tpus tpu-vm ssh --worker=all --command="PJRT_DEVICE=TPU python3 xla/test/test_train_mp_imagenet.py --fake_data"
+gcloud alpha compute tpus tpu-vm ssh $USER-pjrt --zone=us-central2-b --project=$PROJECT --worker=all --command="git clone --depth=1 --branch r1.13 https://github.com/pytorch/xla.git"
+gcloud alpha compute tpus tpu-vm ssh $USER-pjrt --zone=us-central2-b --project=$PROJECT --worker=all --command="PJRT_DEVICE=TPU python3 xla/test/test_train_mp_imagenet.py --fake_data --batch_size=256 --num_epochs=1"
 ```
 
 ### GPU
@@ -109,7 +116,7 @@ will share global state, causing the following known issues:
   `pjrt.broadcast_master_param(model)`).
 - `torch.distributed` uses a global process group and does not support
   multi-threading, so the `xla` `torch.distributed` backend will not work with
-  PjRt v2 and v3.
+  PjRt and TPU v2 and v3 at this time.
 - Because the current implementation of `xm.rendezvous` for PjRt relies on
   `torch.distributed`, `xm.rendezvous` is not supported with PjRt on TPU v2 and
   v3.
