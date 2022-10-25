@@ -1454,17 +1454,6 @@ void InitXlaModuleBindings(py::module m) {
         });
 
   // -------------Dynamo Integration API Start-------------------------
-  m.def("_get_graph_hash", [](const std::vector<at::Tensor>& tensors) {
-    std::vector<XLATensorPtr> xtensors;
-    xtensors.reserve(tensors.size());
-    for (auto& tensor : tensors) {
-      xtensors.push_back(bridge::GetXlaTensor(tensor));
-    }
-    auto hash = XLATensor::GetGraphHash(xtensors);
-    std::string bin((const char*)&hash, sizeof(hash));
-    return py::bytes(bin);
-  });
-
   /*
    * Return tensor ids and tensors for DeviceData nodes.
    */
@@ -1517,6 +1506,7 @@ void InitXlaModuleBindings(py::module m) {
           return std::make_pair(tensor_ids, ivalues);
         });
 
+  // Return true if value of the tensor requires a computation.
   m.def("_check_tensor_need_materialization",
         [](const std::vector<at::Tensor>& tensors) -> std::vector<bool> {
           std::vector<bool> need_materialization;
@@ -1547,6 +1537,17 @@ void InitXlaModuleBindings(py::module m) {
           return need_materialization;
         });
 
+  m.def("_get_graph_hash", [](const std::vector<at::Tensor>& tensors) {
+    std::vector<XLATensorPtr> xtensors;
+    xtensors.reserve(tensors.size());
+    for (auto& tensor : tensors) {
+      xtensors.push_back(bridge::GetXlaTensor(tensor));
+    }
+    auto hash = XLATensor::GetGraphHash(xtensors);
+    std::string bin((const char*)&hash, sizeof(hash));
+    return py::bytes(bin);
+  });
+
   m.def("_run_cached_graph",
         [](const std::string& hash_str,
            const std::vector<at::IValue>& graph_inputs)
@@ -1556,9 +1557,10 @@ void InitXlaModuleBindings(py::module m) {
           auto cachedComputation = XLATensor::GetComputationCache()->Get(hash);
           // TODO implement a fallback mechanism, or make sure those entries
           // never get kicked out
-          TORCH_CHECK(cachedComputation,
-                      "Failed to get computation by hash. Maybe the entry get "
-                      "kicked out of the LRU cache");
+          XLA_CHECK(cachedComputation) << "Failed to get computation by hash "
+                                       << torch::lazy::HashToString(hash)
+                                       << ". Maybe the entry get "
+                                          "kicked out of the LRU cache";
           auto start_prep_input = std::chrono::high_resolution_clock::now();
 
           // setup the parameters_data
@@ -1589,8 +1591,6 @@ void InitXlaModuleBindings(py::module m) {
           auto elapse_ms_prep_input =
               std::chrono::duration_cast<std::chrono::milliseconds>(
                   done_prep_input - start_prep_input);
-          // LOG(ERROR) << "In _run_cached_graph: input prepared " <<
-          // elapse_ms_prep_input.count() << " ms";
 
           std::string deviceStr = device.toString();
           xla::ComputationClient::ExecuteComputationOptions options;
@@ -1601,8 +1601,6 @@ void InitXlaModuleBindings(py::module m) {
           auto elapse_ms_comp =
               std::chrono::duration_cast<std::chrono::milliseconds>(
                   done_comp - done_prep_input);
-          // LOG(ERROR) << "In _run_cached_graph: computation done " <<
-          // elapse_ms_comp.count() << " ms"; // TODO
 
           // Convert result back to tensor
           std::vector<at::Tensor> retlist;
@@ -1618,8 +1616,6 @@ void InitXlaModuleBindings(py::module m) {
           auto elapse_ms_prep_output =
               std::chrono::duration_cast<std::chrono::milliseconds>(
                   done_prep_output - done_comp);
-          // LOG(ERROR) << "Leave _run_cached_graph " <<
-          // elapse_ms_prep_output.count() << " ms"; // TODO
           return retlist;
         });
   // -------------Dynamo Integration API End-------------------------
