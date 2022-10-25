@@ -6,7 +6,7 @@ ARG cuda_version=11.2
 ARG cudnn_version=8.1.1.33
 # Debian repo doesn't have libcudnn
 ARG cuda_repo=ubuntu1804
-ARG tf_cuda_compute_capabilities="7.0"
+ARG tf_cuda_compute_capabilities="7.0,7.5,8.0"
 
 ARG tpuvm=1
 ARG build_cpp_tests=0
@@ -120,3 +120,8 @@ RUN pip install --no-deps torchvision pillow
 
 RUN mkdir -p /pytorch/xla
 COPY . /pytorch/xla
+
+WORKDIR /pytorch/xla
+RUN python setup.py clean
+
+WORKDIR /
