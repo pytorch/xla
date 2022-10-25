@@ -1253,6 +1253,8 @@ class XLATensor : public c10::intrusive_ptr_target {
 
   static ComputationCache* GetComputationCache();
 
+  int64_t GetOpaqueHandle() const;
+
  private:
   struct SyncTensorsConfig {
     // Whether we want to force XLA data on the target tensors (hence trimming

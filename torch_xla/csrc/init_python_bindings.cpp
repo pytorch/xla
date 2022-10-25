@@ -1443,7 +1443,17 @@ void InitXlaModuleBindings(py::module m) {
 
   BuildProfilerSubmodule(&m);
 
-  // APIs added for dynamo integration
+  m.def("_get_tensors_handle",
+        [](const std::vector<at::Tensor>& tensors) -> std::vector<int64_t> {
+          std::vector<int64_t> handles;
+          handles.reserve(tensors.size());
+          for (auto& tensor : tensors) {
+            handles.push_back(bridge::GetXlaTensor(tensor)->GetOpaqueHandle());
+          }
+          return handles;
+        });
+
+  // -------------Dynamo Integration API Start-------------------------
   m.def("_get_graph_hash", [](const std::vector<at::Tensor>& tensors) {
     std::vector<XLATensorPtr> xtensors;
     xtensors.reserve(tensors.size());
@@ -1496,9 +1506,9 @@ void InitXlaModuleBindings(py::module m) {
 
             // add tensor_id after we make sure the handle does not exist yet.
             tensor_ids.push_back(infoptr->tensor_id);
-            // This will create a new TensorId which is not ideal. However there
-            // is not an easy way to get the origional tensor with the
-            // tensor_id.
+            // This will create a new XLATensor with different Id which is not
+            // ideal. However there is not an easy way to get the origional
+            // tensor with the tensor_id.
             // TODO(JackCaoG): invesgate if we have idle XLATensor.
             auto tensor = bridge::AtenFromXlaTensor(
                 torch_xla::XLATensor::Create(backend_data));
@@ -1612,8 +1622,8 @@ void InitXlaModuleBindings(py::module m) {
           // elapse_ms_prep_output.count() << " ms"; // TODO
           return retlist;
         });
+  // -------------Dynamo Integration API End-------------------------
 }
-
 }  // namespace
 
 void InitXlaBindings(py::module m) { InitXlaModuleBindings(m); }

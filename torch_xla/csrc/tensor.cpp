@@ -1969,4 +1969,18 @@ torch::lazy::hash_t XLATensor::GetGraphHash(
       coll.hash, torch::lazy::Hash(po_data.parameter_sequence));
 }
 
+int64_t XLATensor::GetOpaqueHandle() const {
+  torch::lazy::BackendDataPtr xla_data = CurrentXlaData();
+  if (xla_data != nullptr) {
+    return UnwrapXlaData(xla_data)->GetOpaqueHandle();
+  }
+  const torch_xla::DeviceData* device_data =
+      torch_xla::DeviceData::Cast(GetIrValue().node.get());
+  if (device_data) {
+    return device_data->data()->GetHandle();
+  } else {
+    XLA_CHECK(false) << "XlaTensor does not have data handle";
+  }
+}
+
 }  // namespace torch_xla
