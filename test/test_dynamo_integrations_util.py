@@ -8,21 +8,12 @@ import torch.nn.functional as F
 import torch_xla.core.xla_model as xm
 import unittest
 
-
-class DummyModel(nn.Module):
-
-  def __init__(self):
-    super(DummyModel, self).__init__()
-    self.conv1 = nn.Conv2d(1, 10, kernel_size=5)
-    self.fc1 = nn.Linear(250, 50)
-    self.fc2 = nn.Linear(50, 10)
-
-  def forward(self, x):
-    x = F.relu(F.max_pool2d(self.conv1(x), 2))
-    x = x.view(-1, 250)
-    x = F.relu(self.fc1(x))
-    x = self.fc2(x)
-    return x
+dummy_model = torch.nn.Sequential(
+    torch.nn.Conv2d(256, 256, 1),
+    torch.nn.ReLU(),
+    torch.nn.Conv2d(256, 256, 1),
+    torch.nn.ReLU(),
+)
 
 
 class PybindTest(unittest.TestCase):
@@ -63,8 +54,8 @@ class PybindTest(unittest.TestCase):
 
   def test_get_graph_hash(self):
     xla_device = xm.xla_device()
-    xla_input = torch.randn(20, 1, 14, 14).to(xla_device)
-    xla_dummy_model = DummyModel().to(xla_device)
+    xla_input = torch.randn(64, 256, 14, 14).to(xla_device)
+    xla_dummy_model = dummy_model.to(xla_device)
     xla_out = xla_dummy_model(xla_input)
     hash = torch_xla._XLAC._get_graph_hash([xla_out])
     # Calling the _get_graph_hash twice should omit the same hash
@@ -82,21 +73,22 @@ class PybindTest(unittest.TestCase):
   def test_run_cached_graph(self):
     xla_device = xm.xla_device()
     xla_input = torch.randn(64, 256, 14, 14).to(xla_device)
-    xla_dummy_model = torch.nn.Sequential(
-            torch.nn.Conv2d(256, 256, 1),
-            torch.nn.ReLU(),
-            torch.nn.Conv2d(256, 256, 1),
-            torch.nn.ReLU(),
-        ).to(xla_device)
-    # xla_out = xla_dummy_model(xla_input)
+    xla_dummy_model = dummy_model.to(xla_device)
     xla_out = xla_dummy_model(xla_input)
-    import pdb
-    pdb.set_trace()
     hash = torch_xla._XLAC._get_graph_hash([xla_out])
     # Force trigger an execution to cache this computation.
     torch_xla._XLAC._xla_sync_multi([xla_out], [])
-    # TODO(JackCaoG): need to include other parameters
-    torch_xla._XLAC._run_cached_graph(hash, [xla_input])
+
+    # It is the caller of `run_cached_graph`'s job to make sure the input order
+    # matches the graph input order. Upstream dynamo has a more completed
+    # logic of tracking input orders using tensor id. In this test I am going
+    # to hack it since above model is simple.
+    expected_input = [i for i in xla_dummy_model.parameters()]
+    expected_input.reverse()
+    expected_input.append(xla_input)
+    hash_out = torch_xla._XLAC._run_cached_graph(hash, expected_input)
+    assert (len(hash_out) == 1)
+    assert (hash_out[0].equal(xla_out))
 
 
 if __name__ == '__main__':
