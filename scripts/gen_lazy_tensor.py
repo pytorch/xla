@@ -174,6 +174,7 @@ if __name__ == '__main__':
       node_base_hdr="torch_xla/csrc/generated_file_include.h",
       tensor_class="torch_xla::XLATensor",
       tensor_class_hdr="torch_xla/csrc/tensor.h",
+      shape_class="xla::Shape",
       shape_inference_hdr=shape_inference_hdr,
       lazy_ir_generator=GenXlaLazyIR,
       build_in_tree=False,
