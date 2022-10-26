@@ -66,7 +66,7 @@ function install_deps_pytorch_xla() {
 
   sudo apt-get -qq update
 
-  sudo apt-get -qq install npm nodejs=16.18
+  sudo apt-get -qq install npm nodejs
 
   # XLA build requires Bazel
   # We use bazelisk to avoid updating Bazel version manually.
@@ -88,7 +88,7 @@ function install_deps_pytorch_xla() {
   if [[ "$USE_CACHE" == 1 ]]; then
     # Install bazels3cache for cloud cache
     sudo npm install -g n
-    sudo n lts
+    sudo n 16.18.0
     sudo npm install -g bazels3cache
     BAZELS3CACHE="$(which /usr/local/bin/bazels3cache)"
     if [ -z "${BAZELS3CACHE}" ]; then
