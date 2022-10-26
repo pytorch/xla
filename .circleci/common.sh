@@ -66,7 +66,7 @@ function install_deps_pytorch_xla() {
 
   sudo apt-get -qq update
 
-  sudo apt-get -qq install npm nodejs
+  sudo apt-get -qq install npm nodejs=16.18
 
   # XLA build requires Bazel
   # We use bazelisk to avoid updating Bazel version manually.
