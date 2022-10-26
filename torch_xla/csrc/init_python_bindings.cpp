@@ -1497,10 +1497,6 @@ void InitXlaModuleBindings(py::module m) {
 
             // add tensor_id after we make sure the handle does not exist yet.
             tensor_ids.push_back(infoptr->tensor_id);
-            // This will create a new XLATensor with different Id which is not
-            // ideal. However there is not an easy way to get the origional
-            // tensor with the tensor_id.
-            // TODO(JackCaoG): invesgate if we have idle XLATensor.
             at::Tensor tensor = bridge::AtenFromXlaTensor(
                 torch_xla::XLATensor::Create(backend_data));
             ivalues.emplace_back(tensor);
@@ -1509,35 +1505,38 @@ void InitXlaModuleBindings(py::module m) {
         });
 
   // Return true if value of the tensor requires a computation.
-  m.def("_check_tensor_need_materialization",
-        [](const std::vector<at::Tensor>& tensors) -> std::vector<bool> {
-          std::vector<bool> need_materialization;
-          need_materialization.reserve(tensors.size());
-          for (auto& tensor : tensors) {
-            auto xtensor = bridge::TryGetXlaTensor(tensor);
-            if (!xtensor) {
-              // input tensor is not a xla tensor
+  m.def(
+      "_check_tensor_need_materialization",
+      [](const std::vector<at::Tensor>& tensors) -> std::vector<bool> {
+        std::vector<bool> need_materialization;
+        need_materialization.reserve(tensors.size());
+        for (auto& tensor : tensors) {
+          auto xtensor = bridge::TryGetXlaTensor(tensor);
+          if (!xtensor) {
+            // input tensor is not a xla tensor
+            need_materialization.push_back(false);
+          } else if (xtensor->CurrentXlaData() != nullptr) {
+            // input tensor has xla_data which means it is already on device
+            need_materialization.push_back(true);
+          } else if (xtensor->CurrentIrValue().node != nullptr) {
+            torch::lazy::NodePtr node = xtensor->CurrentIrValue().node;
+            if (torch_xla::DeviceData::Cast(
+                    xtensor->CurrentIrValue().node.get()) != nullptr) {
               need_materialization.push_back(false);
-            } else if (xtensor->CurrentXlaData() != nullptr) {
-              // input tensor has xla_data which means it is already on device
-              need_materialization.push_back(true);
-            } else if (xtensor->CurrentIrValue().node != nullptr) {
-              torch::lazy::NodePtr node = xtensor->CurrentIrValue().node;
-              if (torch_xla::DeviceData::Cast(
-                      xtensor->CurrentIrValue().node.get()) != nullptr) {
-                need_materialization.push_back(false);
-              } else {
-                // input tensor is an IR other than DeviceData which means a
-                // compuation is required to get the value of this tensor.
-                need_materialization.push_back(true);
-              }
             } else {
-              // TODO: maybe also handle it is a XLATensor with tensor_data case
-              XLA_CHECK(false);
+              // input tensor is an IR other than DeviceData which means a
+              // compuation is required to get the value of this tensor.
+              need_materialization.push_back(true);
             }
+          } else {
+            // TODO: maybe also handle it is a XLATensor with tensor_data case
+            XLA_CHECK(false)
+                << "_check_tensor_need_materialization "
+                   "currently does not handle XLATensor without XLAData and IR";
           }
-          return need_materialization;
-        });
+        }
+        return need_materialization;
+      });
 
   m.def("_get_graph_hash", [](const std::vector<at::Tensor>& tensors) {
     std::vector<XLATensorPtr> xtensors;
@@ -1563,36 +1562,32 @@ void InitXlaModuleBindings(py::module m) {
                                        << torch::lazy::HashToString(hash)
                                        << ". Maybe the entry get "
                                           "kicked out of the LRU cache";
-          auto start_prep_input = std::chrono::high_resolution_clock::now();
-
-          // setup the parameters_data
           std::vector<xla::ComputationClient::DataPtr> parameters_data;
           torch::lazy::BackendDevice device = torch_xla::GetCurrentDevice();
-          int idx = 0;
-          for (auto& ivalue : graph_inputs) {
-            at::Tensor tensor = ivalue.toTensor();
-            XLATensorPtr xla_tensor_ptr = bridge::TryGetXlaTensor(tensor);
-            xla::ComputationClient::DataPtr dataptr;
-            if (xla_tensor_ptr) {
-              torch::lazy::BackendDataPtr backend_data_ptr =
-                  xla_tensor_ptr->GetXlaData();
-              dataptr =
-                  dynamic_cast<torch_xla::XLAData*>(backend_data_ptr.get())
-                      ->xla_data();
-            } else {
-              torch::lazy::BackendDataPtr backend_data =
-                  torch_xla::TensorToXlaData(ivalue.toTensor(), device);
-              dataptr = ((torch_xla::XLAData*)backend_data.get())->xla_data();
+          {
+            XLA_TIMED("RunCachedGraphInputData");
+            // setup the parameters_data
+            int idx = 0;
+            for (auto& ivalue : graph_inputs) {
+              at::Tensor tensor = ivalue.toTensor();
+              XLATensorPtr xla_tensor_ptr = bridge::TryGetXlaTensor(tensor);
+              xla::ComputationClient::DataPtr dataptr;
+              if (xla_tensor_ptr) {
+                torch::lazy::BackendDataPtr backend_data_ptr =
+                    xla_tensor_ptr->GetXlaData();
+                dataptr =
+                    dynamic_cast<torch_xla::XLAData*>(backend_data_ptr.get())
+                        ->xla_data();
+              } else {
+                torch::lazy::BackendDataPtr backend_data =
+                    torch_xla::TensorToXlaData(ivalue.toTensor(), device);
+                dataptr = ((torch_xla::XLAData*)backend_data.get())->xla_data();
+              }
+
+              ++idx;
+              parameters_data.push_back(dataptr);
             }
-
-            ++idx;
-            parameters_data.push_back(dataptr);
           }
-
-          auto done_prep_input = std::chrono::high_resolution_clock::now();
-          auto elapse_ms_prep_input =
-              std::chrono::duration_cast<std::chrono::milliseconds>(
-                  done_prep_input - start_prep_input);
 
           std::string deviceStr = device.toString();
           xla::ComputationClient::ExecuteComputationOptions options;
@@ -1600,25 +1595,19 @@ void InitXlaModuleBindings(py::module m) {
               xla::ComputationClient::Get()->ExecuteComputation(
                   *cachedComputation->computation, parameters_data, deviceStr,
                   options);
-          auto done_comp = std::chrono::high_resolution_clock::now();
-          auto elapse_ms_comp =
-              std::chrono::duration_cast<std::chrono::milliseconds>(
-                  done_comp - done_prep_input);
-
-          // Convert result back to tensor
           std::vector<at::Tensor> retlist;
-          int i = 0;
-          for (auto& data : results) {
-            // TODO(JackCaoG): invesgate new tensor here.)
-            XLATensorPtr xla_tensor =
-                torch_xla::XLATensor::Create(torch_xla::WrapXlaData(data));
-            retlist.push_back(bridge::AtenFromXlaTensor(xla_tensor));
-            ++i;
+          {
+            XLA_TIMED("RunCachedGraphOutputData");
+            // Convert result back to at::tensor
+            int i = 0;
+            for (auto& data : results) {
+              XLATensorPtr xla_tensor =
+                  torch_xla::XLATensor::Create(torch_xla::WrapXlaData(data));
+              retlist.push_back(bridge::AtenFromXlaTensor(xla_tensor));
+              ++i;
+            }
           }
-          auto done_prep_output = std::chrono::high_resolution_clock::now();
-          auto elapse_ms_prep_output =
-              std::chrono::duration_cast<std::chrono::milliseconds>(
-                  done_prep_output - done_comp);
+
           return retlist;
         });
   // -------------Dynamo Integration API End-------------------------

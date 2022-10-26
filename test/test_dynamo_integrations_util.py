@@ -6,6 +6,7 @@ import torch_xla
 import torch.nn as nn
 import torch.nn.functional as F
 import torch_xla.core.xla_model as xm
+import torch_xla.debug.metrics as met
 import unittest
 
 dummy_model = torch.nn.Sequential(
@@ -94,6 +95,9 @@ class PybindTest(unittest.TestCase):
     hash_out = torch_xla._XLAC._run_cached_graph(hash, expected_input_cpu)
     assert (len(hash_out) == 1)
     assert (hash_out[0].equal(xla_out))
+
+    assert ('RunCachedGraphInputData' in met.metric_names())
+    assert ('RunCachedGraphOutputData' in met.metric_names())
 
 
 if __name__ == '__main__':
