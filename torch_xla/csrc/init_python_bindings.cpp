@@ -12,11 +12,8 @@
 #include "absl/container/flat_hash_map.h"
 #include "absl/strings/str_cat.h"
 #include "absl/types/variant.h"
+#include "tensorflow/compiler/xla/service/hlo_module.h"
 #include "tensorflow/compiler/xla/service/hlo_parser.h"
-#include "tensorflow/compiler/xla/service/hlo_pass_pipeline.h"
-#include "tensorflow/compiler/xla/service/hlo_verifier.h"
-#include "tensorflow/compiler/xla/service/sharding_propagation.h"
-#include "tensorflow/compiler/xla/service/spmd/spmd_partitioner.h"
 #include "tensorflow/compiler/xla/xla_client/computation_client.h"
 #include "tensorflow/compiler/xla/xla_client/mesh_service.h"
 #include "tensorflow/compiler/xla/xla_client/metrics.h"
@@ -54,6 +51,7 @@
 #include "torch_xla/csrc/version.h"
 #include "torch_xla/csrc/xla_backend_impl.h"
 #include "torch_xla/csrc/xla_op_builder.h"
+#include "torch_xla/csrc/xla_sharding_util.h"
 
 namespace torch_xla {
 namespace {
@@ -1191,6 +1189,8 @@ void InitXlaModuleBindings(py::module m) {
   });
   m.def("_xla_metrics_report",
         []() { return xla::metrics_reader::CreateMetricReport(); });
+  m.def("_clear_xla_counters", []() { xla::metrics::ClearCounters(); });
+  m.def("_clear_xla_metrics", []() { xla::metrics::ClearMetrics(); });
   m.def("_xla_tensors_report",
         [](size_t nodes_threshold, const std::string& device) {
           return GetLiveTensorsReport(nodes_threshold, device);
@@ -1375,59 +1375,20 @@ void InitXlaModuleBindings(py::module m) {
   m.def("_xla_mark_sharding", [](const at::Tensor& input,
                                  const py::list& tile_assignment,
                                  bool replicated = false, bool manual = false) {
-    XLA_CHECK(!(replicated && manual))
-        << "Invalid input sharding spec: "
-        << "replicated=" << replicated << " manual=" << manual;
+    xla::OpSharding sharding =
+        ShardingUtil::CreateOpSharding(tile_assignment, replicated, manual);
 
-    // Support {REPLICATED, OTHER, MANUAL} sharding types
-    xla::OpSharding sharding;
-    if (replicated && !manual) {
-      xla::HloSharding hlo_sharding = xla::HloSharding::Replicate();
-      sharding = hlo_sharding.ToProto();
-    } else if (!replicated && manual) {
-      xla::HloSharding hlo_sharding = xla::HloSharding::Manual();
-      sharding = hlo_sharding.ToProto();
-    } else {
-      size_t rank0 = tile_assignment.size();
-      XLA_CHECK(rank0 > 0) << "Invalid input sharding spec: "
-                           << "empty tile_assignment";
-
-      // Support chunk (1-D) and mesh (2-D) shardings
-      std::string type = GetPyTypeString(tile_assignment[0]);
-      if (type.compare("list") == 0) {
-        py::list row = tile_assignment[0].cast<py::list>();
-        size_t rank1 = row.size();
-        XLA_CHECK(rank1 > 0) << "Invalid input sharding spec: "
-                             << "empty or irregular tile_assignment";
-        XLA_CHECK(GetPyTypeString(row[0]).compare("list") != 0)
-            << "Invalid input sharding spec: "
-            << "tile_assignment (ndarray) rank > 2";
-
-        std::vector<int64_t> tile_shape{static_cast<long>(rank0),
-                                        static_cast<long>(rank1)};
-        xla::Array<int64_t> tile_array(tile_shape);
-        tile_array.Each([&](absl::Span<const int64_t> indices, int64_t* v) {
-          auto r = tile_assignment[indices[0]].cast<py::list>();
-          *v = r[indices[1]].cast<int64_t>();
-        });
-        xla::HloSharding hlo_sharding = xla::HloSharding::Tile(tile_array);
-        sharding = hlo_sharding.ToProto();
-      } else if (type.compare("int") == 0 || type.compare("float") == 0) {
-        std::vector<int64_t> tile_shape{static_cast<long>(rank0)};
-        xla::Array<int64_t> tile_array(tile_shape);
-        tile_array.Each([&](absl::Span<const int64_t> indices, int64_t* v) {
-          *v = tile_assignment[indices[0]].cast<int64_t>();
-        });
-        xla::HloSharding hlo_sharding = xla::HloSharding::Tile(tile_array);
-        sharding = hlo_sharding.ToProto();
-      } else {
-        LOG(ERROR) << "Unsupported tile_assignment (ndarray) element type: "
-                   << type;
-      }
-    }
-
+    // TODO(yeounoh) use `SPMD` device to avoid input at::Tensor uploading.
+    // For now, we move the pre-uploaded data back to cpu_tensor for sharding.
     XLATensorPtr xtensor = bridge::GetXlaTensor(input);
+    std::vector<XLATensorPtr> xla_tensors{xtensor};
+    at::Tensor cpu_tensor = XLATensor::GetTensors(&xla_tensors)[0];
     auto sharding_spec = std::make_shared<XLATensor::ShardingSpec>(sharding);
+    auto xla_data = CreateTensorsData(
+        std::vector<at::Tensor>{cpu_tensor},
+        std::vector<XLATensor::ShardingSpecPtr>{sharding_spec},
+        std::vector<std::string>{GetVirtualDevice().toString()})[0];
+    xtensor->SetXlaData(xla_data);
     xtensor->SetShardingSpec(*sharding_spec);
   });
   m.def("_xla_clear_sharding", [](const at::Tensor& input) {
@@ -1443,55 +1404,36 @@ void InitXlaModuleBindings(py::module m) {
     }
     return std::string();
   });
-  m.def("_xla_partitioning_pass",
-        [](const std::vector<at::Tensor>& tensors, int64_t num_replicas,
-           int64_t num_devices, bool conv_halo_exchange_always_on_lhs = true,
-           bool choose_faster_windowed_einsum = false,
-           bool unroll_windowed_einsum = false,
-           bool bidirectional_windowed_einsum = false) -> std::string {
-          xla::spmd::SpmdPartitionerOptions options;
-          options.conv_halo_exchange_always_on_lhs =
-              conv_halo_exchange_always_on_lhs;
-          options.allow_module_signature_change = true;
-          options.choose_faster_windowed_einsum_over_mem =
-              choose_faster_windowed_einsum;
-          options.unroll_windowed_einsum = unroll_windowed_einsum;
-          options.bidirectional_windowed_einsum = bidirectional_windowed_einsum;
+  // This is useful for debugging and generating a partitioned HLO separately
+  // outside the actual compilation & execution. This allows testing with
+  // different partitioning configurations.
+  m.def(
+      "_xla_partitioning_pass",
+      [](const std::vector<at::Tensor>& tensors, int64_t num_replicas,
+         int64_t num_devices, bool conv_halo_exchange_always_on_lhs = true,
+         bool choose_faster_windowed_einsum = false,
+         bool unroll_windowed_einsum = false,
+         bool bidirectional_windowed_einsum = false) -> std::string {
+        xla::HloModuleConfig config;
+        config.set_use_spmd_partitioning(true);
+        config.set_replica_count(num_replicas);
+        config.set_num_partitions(num_devices);
 
-          xla::HloModuleConfig config;
-          config.set_use_spmd_partitioning(true);
-          config.set_replica_count(num_replicas);
-          config.set_num_partitions(num_devices);
+        std::string hlo_text = GetTensorsHloGraph(tensors);
+        auto hlo_module_error =
+            xla::ParseAndReturnUnverifiedModule(hlo_text, config);
+        XLA_CHECK_OK(hlo_module_error.status())
+            << "HLO Module loading failed: " << hlo_module_error.status();
 
-          auto hlo_text = GetTensorsHloGraph(tensors);
-          auto hlo_module_error =
-              xla::ParseAndReturnUnverifiedModule(hlo_text, config);
-          if (!hlo_module_error.ok()) {
-            LOG(ERROR) << "HLO Module loading failed: "
-                       << hlo_module_error.status();
-            return nullptr;
-          }
-          auto module = std::move(hlo_module_error.ValueOrDie());
-
-          auto collective_ops_creator =
-              xla::spmd::GetDefaultCollectiveOpsCreator(
-                  num_devices, /*num_replicas=*/num_replicas);
-
-          xla::HloPassPipeline pass("spmd-partitioning");
-          pass.AddPass<xla::HloVerifier>(/*layout_sensitive=*/false,
-                                         /*allow_mixed_precision=*/false);
-          pass.AddPass<xla::ShardingPropagation>(/*is_spmd=*/true);
-          pass.AddPass<xla::spmd::SpmdPartitioner>(
-              num_devices, /*num_replicas=*/num_replicas, options,
-              collective_ops_creator);
-          pass.AddPass<xla::HloVerifier>(/*layout_sensitive=*/false,
-                                         /*allow_mixed_precision=*/false);
-          const auto& pass_status = pass.Run(module.get());
-          if (!pass_status.ok()) {
-            XLA_ERROR() << "spmd-partitioning pass failed";
-          }
-          return module->ToString();
-        });
+        auto module = std::move(hlo_module_error.ValueOrDie());
+        xla::HloModuleProto module_proto = ShardingUtil::SpmdPartitioningPass(
+            module->ToProto(), num_replicas, num_devices,
+            conv_halo_exchange_always_on_lhs, choose_faster_windowed_einsum,
+            unroll_windowed_einsum, bidirectional_windowed_einsum);
+        module = std::move(
+            xla::HloModule::CreateFromProto(module_proto, config).ValueOrDie());
+        return module->ToString();
+      });
 
   m.def("_init_xla_lazy_backend", []() {
     MapXlaEnvVarsToLazy();

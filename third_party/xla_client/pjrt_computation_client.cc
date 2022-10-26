@@ -8,8 +8,11 @@
 #include "tensorflow/compiler/xla/layout_util.h"
 #include "tensorflow/compiler/xla/literal.h"
 #include "tensorflow/compiler/xla/pjrt/cpu_device.h"
+#include "tensorflow/compiler/xla/pjrt/gpu_device.h"
+#include "tensorflow/compiler/xla/pjrt/pjrt_c_api_client.h"
 #include "tensorflow/compiler/xla/pjrt/pjrt_executable.h"
 #include "tensorflow/compiler/xla/pjrt/pjrt_client.h"
+#include "tensorflow/compiler/xla/pjrt/pjrt_executable.h"
 #include "tensorflow/compiler/xla/pjrt/tfrt_cpu_pjrt_client.h"
 #include "tensorflow/compiler/xla/pjrt/tpu_client.h"
 #include "tensorflow/compiler/xla/shape.h"
@@ -57,6 +60,20 @@ PjRtComputationClient::PjRtComputationClient() {
     int64_t max_inflight_computations = sys_util::GetEnvInt(
         env::kEnvPjRtTpuMaxInflightComputations, /*defval=*/32);
     client_ = xla::GetTpuClient(max_inflight_computations).ValueOrDie();
+  } else if (device_type == "TPU_C_API") {
+    TF_VLOG(1) << "Initializing PjRt C API client...";
+    client_ = std::move(xla::GetCApiClient().ValueOrDie());
+    // TODO(wcromar): remove this when C API supports
+    // kImmutableUntilTransferCompletes
+    host_buffer_semantics_ = xla::PjRtClient::HostBufferSemantics::kZeroCopy;
+  } else if (device_type == "GPU") {
+    TF_VLOG(1) << "Initializing PjRt GPU client...";
+    bool async = sys_util::GetEnvBool(env::kEnvPjrtAsyncGpuClient, true);
+    /* TODO(jonbolin): Set allowed_devices based on local ordinal */
+    auto allowed_devices = std::make_optional<std::set<int>>(std::set{0});
+    client_ = xla::GetGpuClient(/*asynchronous=*/async, GpuAllocatorConfig{},
+                           /*distributed_client=*/nullptr, /*node_id=*/0,
+                           allowed_devices=allowed_devices).ValueOrDie();
   } else {
     XLA_ERROR() << absl::StrFormat("Unknown %s '%s'", env::kEnvPjRtDevice,
                                    device_type);
@@ -112,7 +129,8 @@ std::vector<ComputationClient::DataPtr> PjRtComputationClient::TransferToServer(
     auto literal = std::make_shared<xla::Literal>(tensor.shape);
     tensor.populate_fn(tensor, literal->untyped_data(), literal->size_bytes());
     std::vector<int64_t> byte_strides(literal->shape().dimensions_size());
-    XLA_CHECK_OK(ShapeUtil::ByteStrides(literal->shape(), absl::MakeSpan(byte_strides)));
+    XLA_CHECK_OK(
+        ShapeUtil::ByteStrides(literal->shape(), absl::MakeSpan(byte_strides)));
     total_size += literal->size_bytes();
 
     // Avoid use-after-free on `literal` due to unsequenced move and use.
@@ -123,8 +141,7 @@ std::vector<ComputationClient::DataPtr> PjRtComputationClient::TransferToServer(
                 literal_pointer->untyped_data(),
                 literal_pointer->shape().element_type(),
                 literal_pointer->shape().dimensions(), byte_strides,
-                PjRtClient::HostBufferSemantics::
-                    kImmutableUntilTransferCompletes,
+                host_buffer_semantics_,
                 [literal{std::move(literal)}]() { /* frees literal */ },
                 pjrt_device)
             .ValueOrDie());
@@ -220,17 +237,30 @@ std::vector<ComputationClient::ComputationPtr> PjRtComputationClient::Compile(
     std::unique_ptr<xla::PjRtLoadedExecutable> executable =
         ConsumeValue(client_->Compile(instance.computation, compile_options));
 
-    const auto& hlo_modules = ConsumeValue(executable->GetHloModules());
-    HloComputation* hlo_computation = hlo_modules[0]->entry_computation();
-    xla::ProgramShape program_shape =
-        xla::ProgramShape(hlo_computation->ToProto().program_shape());
+    if (instance.is_sharded) {
+      const auto& hlo_modules = ConsumeValue(executable->GetHloModules());
+      HloComputation* hlo_computation = hlo_modules[0]->entry_computation();
+      xla::ProgramShape program_shape =
+          xla::ProgramShape(hlo_computation->ToProto().program_shape());
 
-    std::shared_ptr<PjRtComputation> pjrt_computation =
-        std::make_shared<PjRtComputation>(
-            std::move(xla::XlaComputation(hlo_modules[0]->ToProto())),
-            program_shape, instance.devices, std::move(executable));
+      std::shared_ptr<PjRtComputation> pjrt_computation =
+          std::make_shared<PjRtComputation>(
+              std::move(xla::XlaComputation(hlo_modules[0]->ToProto())),
+              program_shape, instance.devices, std::move(executable));
 
-    computations.push_back(pjrt_computation);
+      computations.push_back(pjrt_computation);
+    } else {
+      // TODO(wcromar): Remove this case when C API supports GetHloModule
+      xla::ProgramShape program_shape =
+          instance.computation.GetProgramShape().ValueOrDie();
+      std::shared_ptr<PjRtComputation> pjrt_computation =
+          std::make_shared<PjRtComputation>(std::move(instance.computation),
+                                            program_shape, instance.devices,
+                                            std::move(executable));
+
+      computations.push_back(pjrt_computation);
+    }
+
     CreateCompileHandlesCounter()->AddValue(1);
   }
 
@@ -250,6 +280,8 @@ PjRtComputationClient::ExecuteComputation(
   const PjRtComputation& pjrt_computation =
       dynamic_cast<const PjRtComputation&>(computation);
 
+  TF_VLOG(1) << "Executing PjRt computation on " << device;
+
   xla::PjRtDevice* pjrt_device = StringToPjRtDevice(device);
   XLA_CHECK(pjrt_device->IsAddressable()) << pjrt_device->DebugString();
 
@@ -267,6 +299,7 @@ PjRtComputationClient::ExecuteComputation(
   xla::ExecuteOptions execute_options;
   execute_options.untuple_result = options.explode_tuple;
   execute_options.strict_shape_checking = false;
+
   std::vector<std::unique_ptr<xla::PjRtBuffer>> results =
       pjrt_computation.executable
           ->ExecuteSharded(buffers, pjrt_device, execute_options)
@@ -278,7 +311,12 @@ PjRtComputationClient::ExecuteComputation(
     std::unique_ptr<xla::PjRtBuffer> buffer = std::move(result);
 
     std::shared_ptr<PjRtData> data = std::make_shared<PjRtData>(
-        device, buffer->logical_on_device_shape().ValueOrDie(),
+        device,
+        // TODO(wcromar): just use `logical_on_device_shape` when it's supported
+        // in C API
+        client_->runtime_type() == xla::PjRtRuntimeType::kTfrt
+            ? buffer->on_device_shape()
+            : buffer->logical_on_device_shape().ValueOrDie(),
         std::move(buffer));
 
     datas.push_back(data);

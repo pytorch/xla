@@ -135,7 +135,7 @@ supported:
   - avg_pool3d_backward
   - baddbmm
   - bernoulli
-  - bernoulli_.float
+  - bernoulli.p
   - bernoulli_.Tensor
   - binary_cross_entropy_with_logits
   - bmm

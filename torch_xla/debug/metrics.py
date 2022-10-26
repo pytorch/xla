@@ -20,6 +20,12 @@ def counter_value(name):
   return torch_xla._XLAC._xla_counter_value(name)
 
 
+def clear_counters():
+  """Clear the value of all counters.
+  """
+  return torch_xla._XLAC._clear_xla_counters()
+
+
 def metric_names():
   """Retrieves all the currently active metric names."""
   return torch_xla._XLAC._xla_metric_names()
@@ -40,6 +46,12 @@ def metric_data(name):
     The `SAMPLES` is a list of (TIME, VALUE) tuples.
   """
   return torch_xla._XLAC._xla_metric_data(name)
+
+
+def clear_metrics():
+  """Clear the value of all metrics.
+  """
+  return torch_xla._XLAC._clear_xla_metrics()
 
 
 def metrics_report():

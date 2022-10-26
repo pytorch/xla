@@ -82,8 +82,12 @@ function run_xla_backend_mp {
 
 function run_pjrt {
   echo "Running in PjRt runtime: $@"
-  # TODO(darisoy): run these tests with multiple CPU devices, this fails due to TF issue.
-  PJRT_DEVICE=CPU CPU_NUM_DEVICES=1 run_test "$@"
+  if [ -x "$(command -v nvidia-smi)" ]; then
+    PJRT_DEVICE=GPU run_test "$@"
+  else
+    # TODO(darisoy): run these tests with multiple CPU devices, this fails due to TF issue.
+    PJRT_DEVICE=CPU CPU_NUM_DEVICES=1 run_test "$@"
+  fi
 }
 
 function run_async_scalar {
@@ -114,6 +118,7 @@ function run_op_tests {
   run_test python3 "$CDIR/test_xla_dist.py"
   run_test python3 "$CDIR/test_profiler.py"
   run_test python3 "$CDIR/test_ops.py"
+  run_test python3 "$CDIR/test_metrics.py"
   run_downcast_bf16 python3 "$CDIR/test_data_type.py"
   run_use_bf16 python3 "$CDIR/test_data_type.py"
   run_test python3 "$CDIR/test_torch_distributed_xla_backend.py"

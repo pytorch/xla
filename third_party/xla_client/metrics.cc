@@ -4,6 +4,7 @@
 #include <cmath>
 #include <sstream>
 
+
 #include "absl/memory/memory.h"
 #include "absl/strings/str_split.h"
 #include "tensorflow/compiler/xla/xla_client/debug_macros.h"
@@ -152,6 +153,14 @@ CounterData* MetricsArena::GetCounter(const std::string& name) {
   std::lock_guard<std::mutex> lock(lock_);
   auto it = counters_.find(name);
   return it != counters_.end() ? it->second.get() : nullptr;
+}
+
+void MetricsArena::ClearCounters() {
+  counters_.clear();
+}
+
+void MetricsArena::ClearMetrics() {
+  metrics_.clear();
 }
 
 MetricData::MetricData(MetricReprFn repr_fn, size_t max_samples)
@@ -330,6 +339,10 @@ std::vector<std::string> GetCounterNames() {
 CounterData* GetCounter(const std::string& name) {
   return MetricsArena::Get()->GetCounter(name);
 }
+
+void ClearCounters() { MetricsArena::Get()->ClearCounters(); }
+
+void ClearMetrics() { MetricsArena::Get()->ClearMetrics(); }
 
 }  // namespace metrics
 }  // namespace xla
