@@ -83,10 +83,15 @@ class PybindTest(unittest.TestCase):
     # matches the graph input order. Upstream dynamo has a more completed
     # logic of tracking input orders using tensor id. In this test I am going
     # to hack it since above model is simple.
-    expected_input = [i for i in xla_dummy_model.parameters()]
+    expected_input = [t for t in xla_dummy_model.parameters()]
     expected_input.reverse()
     expected_input.append(xla_input)
     hash_out = torch_xla._XLAC._run_cached_graph(hash, expected_input)
+    assert (len(hash_out) == 1)
+    assert (hash_out[0].equal(xla_out))
+
+    expected_input_cpu = [t.cpu() for t in expected_input]
+    hash_out = torch_xla._XLAC._run_cached_graph(hash, expected_input_cpu)
     assert (len(hash_out) == 1)
     assert (hash_out[0].equal(xla_out))
 
