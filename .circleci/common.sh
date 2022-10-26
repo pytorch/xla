@@ -88,7 +88,7 @@ function install_deps_pytorch_xla() {
   if [[ "$USE_CACHE" == 1 ]]; then
     # Install bazels3cache for cloud cache
     sudo npm install -g n
-    sudo n lts
+    sudo n 16.18.0
     sudo npm install -g bazels3cache
     BAZELS3CACHE="$(which /usr/local/bin/bazels3cache)"
     if [ -z "${BAZELS3CACHE}" ]; then
