@@ -1463,32 +1463,34 @@ void InitXlaModuleBindings(py::module m) {
           std::vector<int64_t> tensor_ids;
           std::vector<at::IValue> ivalues;
           std::vector<torch::lazy::Node*> roots;
-          for (auto& tensor : tensors) {
+          for (const at::Tensor& tensor : tensors) {
             auto xtensor = bridge::TryGetXlaTensor(tensor);
-            roots.push_back(xtensor->GetIrValue().node.get());
+            if (xtensor) {
+              roots.push_back(xtensor->GetIrValue().node.get());
+            }
           }
-          auto post_order = Util::ComputePostOrder(roots);
+          std::vector<const torch::lazy::Node*> post_order =
+              Util::ComputePostOrder(roots);
           std::unordered_set<xla::ComputationClient::Data::OpaqueHandle>
               data_handles;
 
-          for (auto nodeptr : post_order) {
+          for (const torch::lazy::Node* nodeptr : post_order) {
             const torch_xla::DeviceData* device_data =
                 torch_xla::DeviceData::Cast(nodeptr);
             if (!device_data) {
               continue;
             }
-
             const auto backend_data = device_data->data();
-
-            // follow the implementation of XLATensor::CreateTensorNode
-            auto dataptr =
+            xla::ComputationClient::DataPtr dataptr =
                 ((torch_xla::XLAData*)backend_data.get())->xla_data();
-            TORCH_CHECK(dataptr);
-            auto infoptr = (torch_xla::DeviceDataInfo*)dataptr->info();
-            TORCH_CHECK(infoptr);
+            XLA_CHECK(dataptr);
+            torch_xla::DeviceDataInfo* infoptr =
+                (torch_xla::DeviceDataInfo*)dataptr->info();
+            XLA_CHECK(infoptr);
 
             // Dedup by handle
-            auto handle = backend_data->GetHandle();
+            xla::ComputationClient::Data::OpaqueHandle handle =
+                backend_data->GetHandle();
             if (!data_handles.insert(handle).second) {
               continue;
             }
@@ -1499,7 +1501,7 @@ void InitXlaModuleBindings(py::module m) {
             // ideal. However there is not an easy way to get the origional
             // tensor with the tensor_id.
             // TODO(JackCaoG): invesgate if we have idle XLATensor.
-            auto tensor = bridge::AtenFromXlaTensor(
+            at::Tensor tensor = bridge::AtenFromXlaTensor(
                 torch_xla::XLATensor::Create(backend_data));
             ivalues.emplace_back(tensor);
           }
@@ -1543,7 +1545,7 @@ void InitXlaModuleBindings(py::module m) {
     for (auto& tensor : tensors) {
       xtensors.push_back(bridge::GetXlaTensor(tensor));
     }
-    auto hash = XLATensor::GetGraphHash(xtensors);
+    torch::lazy::hash_t hash = XLATensor::GetGraphHash(xtensors);
     std::string bin((const char*)&hash, sizeof(hash));
     return py::bytes(bin);
   });
@@ -1552,7 +1554,7 @@ void InitXlaModuleBindings(py::module m) {
         [](const std::string& hash_str,
            const std::vector<at::IValue>& graph_inputs)
             -> std::vector<at::Tensor> {
-          TORCH_CHECK(hash_str.size() == sizeof(torch::lazy::hash_t));
+          XLA_CHECK(hash_str.size() == sizeof(torch::lazy::hash_t));
           torch::lazy::hash_t hash = *(torch::lazy::hash_t*)(hash_str.c_str());
           auto cachedComputation = XLATensor::GetComputationCache()->Get(hash);
           // TODO implement a fallback mechanism, or make sure those entries
@@ -1565,20 +1567,20 @@ void InitXlaModuleBindings(py::module m) {
 
           // setup the parameters_data
           std::vector<xla::ComputationClient::DataPtr> parameters_data;
-          auto device = torch_xla::GetCurrentDevice();
+          torch::lazy::BackendDevice device = torch_xla::GetCurrentDevice();
           int idx = 0;
           for (auto& ivalue : graph_inputs) {
-            auto tensor = ivalue.toTensor();
-            auto xlaTensorOpt = bridge::TryGetXlaTensor(tensor);
+            at::Tensor tensor = ivalue.toTensor();
+            XLATensorPtr xla_tensor_ptr = bridge::TryGetXlaTensor(tensor);
             xla::ComputationClient::DataPtr dataptr;
-            if (xlaTensorOpt) {
+            if (xla_tensor_ptr) {
               torch::lazy::BackendDataPtr backend_data_ptr =
-                  xlaTensorOpt->GetXlaData();
+                  xla_tensor_ptr->GetXlaData();
               dataptr =
                   dynamic_cast<torch_xla::XLAData*>(backend_data_ptr.get())
                       ->xla_data();
             } else {
-              auto backend_data =
+              torch::lazy::BackendDataPtr backend_data =
                   torch_xla::TensorToXlaData(ivalue.toTensor(), device);
               dataptr = ((torch_xla::XLAData*)backend_data.get())->xla_data();
             }
@@ -1594,9 +1596,10 @@ void InitXlaModuleBindings(py::module m) {
 
           std::string deviceStr = device.toString();
           xla::ComputationClient::ExecuteComputationOptions options;
-          auto results = xla::ComputationClient::Get()->ExecuteComputation(
-              *cachedComputation->computation, parameters_data, deviceStr,
-              options);
+          std::vector<std::shared_ptr<xla::ComputationClient::Data>> results =
+              xla::ComputationClient::Get()->ExecuteComputation(
+                  *cachedComputation->computation, parameters_data, deviceStr,
+                  options);
           auto done_comp = std::chrono::high_resolution_clock::now();
           auto elapse_ms_comp =
               std::chrono::duration_cast<std::chrono::milliseconds>(
@@ -1607,9 +1610,9 @@ void InitXlaModuleBindings(py::module m) {
           int i = 0;
           for (auto& data : results) {
             // TODO(JackCaoG): invesgate new tensor here.)
-            auto xlaTensor =
+            XLATensorPtr xla_tensor =
                 torch_xla::XLATensor::Create(torch_xla::WrapXlaData(data));
-            retlist.push_back(bridge::AtenFromXlaTensor(xlaTensor));
+            retlist.push_back(bridge::AtenFromXlaTensor(xla_tensor));
             ++i;
           }
           auto done_prep_output = std::chrono::high_resolution_clock::now();
