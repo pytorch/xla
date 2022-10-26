@@ -311,13 +311,7 @@ PjRtComputationClient::ExecuteComputation(
     std::unique_ptr<xla::PjRtBuffer> buffer = std::move(result);
 
     std::shared_ptr<PjRtData> data = std::make_shared<PjRtData>(
-        device,
-        // TODO(wcromar): just use `logical_on_device_shape` when it's supported
-        // in C API
-        client_->runtime_type() == xla::PjRtRuntimeType::kTfrt
-            ? buffer->on_device_shape()
-            : buffer->logical_on_device_shape().value(),
-        std::move(buffer));
+        device, buffer->on_device_shape(), std::move(buffer));
 
     datas.push_back(data);
   }
@@ -373,7 +367,7 @@ PjRtComputationClient::ExecuteReplicated(
       std::unique_ptr<xla::PjRtBuffer> buffer = std::move(result[i]);
 
       std::shared_ptr<PjRtData> data = std::make_shared<PjRtData>(
-          devices[i], buffer->logical_on_device_shape().value(),
+          devices[i], buffer->on_device_shape(),
           std::move(buffer));
 
       datas.push_back(data);
