@@ -33,10 +33,10 @@ import torch_xla.core.xla_model as xm
 import torch_xla.distributed.xla_multiprocessing as xmp
 import torch_xla.test.test_utils as test_utils
 
-
 import torch.distributed as dist
 from torch.nn.parallel import DistributedDataParallel as DDP
 import torch_xla.distributed.xla_backend
+
 
 class MNIST(nn.Module):
 
@@ -73,7 +73,8 @@ def _train_update(device, step, loss, tracker, epoch, writer):
 
 def train_mnist(flags, **kwargs):
   if flags.ddp:
-    dist.init_process_group('xla', world_size=xm.xrt_world_size(), rank=xm.get_ordinal())
+    dist.init_process_group(
+        'xla', world_size=xm.xrt_world_size(), rank=xm.get_ordinal())
 
   torch.manual_seed(1)
 

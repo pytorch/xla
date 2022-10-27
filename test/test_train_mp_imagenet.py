@@ -120,7 +120,8 @@ def _train_update(device, step, loss, tracker, epoch, writer):
 
 def train_imagenet():
   if FLAGS.ddp:
-    dist.init_process_group('xla', world_size=xm.xrt_world_size(), rank=xm.get_ordinal())
+    dist.init_process_group(
+        'xla', world_size=xm.xrt_world_size(), rank=xm.get_ordinal())
 
   print('==> Preparing data..')
   img_dim = get_model_property('img_dim')
