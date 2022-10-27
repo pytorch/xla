@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 from typing import List, Union
 from torchgen.api.lazy import LazyIrSchema
-from torchgen.dest.lazy_ir import aten_symbol, GenLazyIR
+from torchgen.dest.lazy_ir import aten_symbol, GenLazyIR, GenLazyNativeFuncDefinition
 from torchgen.gen_lazy_tensor import run_gen_lazy_tensor
 from torchgen.model import NativeFunction, NativeFunctionsGroup
 from torchgen.api.types import (
@@ -67,6 +67,12 @@ class GenXlaLazyIR(GenLazyIR):
               torch::lazy::MHash({scalar_hashes}))"""
 
 
+@dataclass(frozen=True)
+class GenXlaLazyNativeFuncDefinition(GenLazyNativeFuncDefinition):
+  def shape_inference(self, func: NativeFunction, schema: LazyIrSchema) -> str:
+      return ""
+
+
 if __name__ == '__main__':
   run_gen_lazy_tensor(
       aten_path=aten_path,
@@ -81,6 +87,7 @@ if __name__ == '__main__':
       shape_class="xla::Shape",
       shape_inference_hdr=shape_inference_hdr,
       lazy_ir_generator=GenXlaLazyIR,
+      native_func_definition_generator=GenXlaLazyNativeFuncDefinition,
       build_in_tree=False,
       per_operator_headers=True,
       backend_name="XLA",
