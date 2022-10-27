@@ -81,7 +81,7 @@ void ReportComputationError(
     absl::Span<const Shape* const> output_shapes) {
   std::stringstream ss;
   for (size_t i = 0; i < computations.size(); ++i) {
-    std::string hlo_text = GetComputationHloText(*computations[i]).ValueOrDie();
+    std::string hlo_text = GetComputationHloText(*computations[i]).value();
     MaybeSaveHloGraph(hlo_text, i);
     ss << MaybeDumpHloGraph(output_shapes, hlo_text, i);
   }
