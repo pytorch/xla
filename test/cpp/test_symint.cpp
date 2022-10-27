@@ -14,6 +14,10 @@ using std::cerr;
 namespace torch_xla {
 namespace cpp_test {
 
+static c10::SymInt make_symint(const torch::lazy::NodePtr& p) {
+  return c10::SymInt(static_cast<c10::SymNode>(c10::make_intrusive<XLASymNodeImpl>(p)));
+}
+
 TEST(SymintTest, TestStaticSymint) {
   c10::SymInt static_symint(5);
   SymIntElements si_element(static_symint);
@@ -65,10 +69,9 @@ TEST(SymintTest, TestDynamicSymint) {
   torch::lazy::Value expand_value = torch::lazy::Value(expand_node, 0);
   torch::lazy::NodePtr size_node =
       torch::lazy::MakeNode<SizeNode>(expand_value, /*dim=*/0);
-  auto symint_node = c10::make_intrusive<XLASymNodeImpl>(size_node);
   // This is not a dynamic size from xla perspective but it is a symint that
   // wraps around a SizeNode instead of a scalar.
-  c10::SymInt dynamic_symint = symint_node->toSymInt();
+  c10::SymInt dynamic_symint = make_symint(size_node);
   SymIntElements si_element(dynamic_symint);
 
   std::vector<int64_t> upper_bound = si_element.GetUpperBounds();
@@ -126,10 +129,9 @@ TEST(SymintTest, TestDynamicSymints) {
     torch::lazy::NodePtr size_node =
         torch::lazy::MakeNode<SizeNode>(expand_value, /*dim=*/i);
     size_nodes.push_back(size_node);
-    auto symint_node = c10::make_intrusive<XLASymNodeImpl>(size_node);
     // This is not a dynamic size from xla perspective but it is a symint that
     // wraps around a SizeNode instead of a scalar.
-    dynamic_symints.push_back(symint_node->toSymInt());
+    dynamic_symints.push_back(make_symint(size_node));
   }
 
   c10::SymIntArrayRef ref(dynamic_symints);
@@ -176,10 +178,8 @@ TEST(SymintTest, TestDynamicSymintArithmetic) {
   torch::lazy::NodePtr size_relu_node = torch::lazy::MakeNode<SizeNode>(
       torch::lazy::Value{relu_node, 0}, /*dim=*/0);
 
-  c10::SymInt a =
-      c10::make_intrusive<XLASymNodeImpl>(size_abs_node)->toSymInt();
-  c10::SymInt b =
-      c10::make_intrusive<XLASymNodeImpl>(size_relu_node)->toSymInt();
+  c10::SymInt a = make_symint(size_abs_node);
+  c10::SymInt b = make_symint(size_relu_node);
 
   // Testing XLASymNodeImpl::add
   c10::SymInt c = a + b;
