@@ -579,14 +579,14 @@ XLATensorPtr XLATensor::_adaptive_avg_pool2d(
     const XLATensorPtr& input, std::vector<int64_t> output_size,
     std::vector<torch::lazy::Shape>&& shapes) {
   return input->CreateFrom(torch::lazy::MakeNode<AdaptiveAvgPool2d>(
-      input->GetIrValue(), std::move(output_size), std::move(shapes)));
+      input->GetIrValue(), std::move(output_size)));
 }
 
 XLATensorPtr XLATensor::_adaptive_avg_pool2d_backward(
     const XLATensorPtr& grad_output, const XLATensorPtr& input,
     std::vector<torch::lazy::Shape>&& shapes) {
   return input->CreateFrom(torch::lazy::MakeNode<AdaptiveAvgPool2dBackward>(
-      grad_output->GetIrValue(), input->GetIrValue(), std::move(shapes)));
+      grad_output->GetIrValue(), input->GetIrValue()));
 }
 
 void XLATensor::_amp_foreach_non_finite_check_and_unscale_(

@@ -375,10 +375,8 @@ at::Tensor XLANativeFunctions::_adaptive_avg_pool2d(
         &xla_cpu_fallback, ATEN_OP(_adaptive_avg_pool2d)>::call(self,
                                                                 output_size);
   }
-  auto shapes =
-      torch::lazy::compute_shape__adaptive_avg_pool2d(self, output_size);
   return bridge::AtenFromXlaTensor(XLATensor::_adaptive_avg_pool2d(
-      bridge::GetXlaTensor(self), output_size_list, std::move(shapes)));
+      bridge::GetXlaTensor(self), output_size_list));
 }
 
 at::Tensor XLANativeFunctions::_adaptive_avg_pool2d_backward(
@@ -393,11 +391,8 @@ at::Tensor XLANativeFunctions::_adaptive_avg_pool2d_backward(
         &xla_cpu_fallback,
         ATEN_OP(_adaptive_avg_pool2d_backward)>::call(grad_output, self);
   }
-  auto shapes = torch::lazy::compute_shape__adaptive_avg_pool2d_backward(
-      grad_output, self);
   return bridge::AtenFromXlaTensor(XLATensor::_adaptive_avg_pool2d_backward(
-      bridge::GetXlaTensor(grad_output), bridge::GetXlaTensor(self),
-      std::move(shapes)));
+      bridge::GetXlaTensor(grad_output), bridge::GetXlaTensor(self)));
 }
 
 std::tuple<at::Tensor, at::Tensor> XLANativeFunctions::adaptive_max_pool2d(
