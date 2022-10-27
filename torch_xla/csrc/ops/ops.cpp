@@ -496,7 +496,7 @@ torch::lazy::NodePtr Norm(const torch::lazy::Value& input,
     //   >>> print(x.abs().sum())
     //   tensor(11.9437)
     return torch::lazy::MakeNode<Sum>(
-        torch::lazy::MakeNode<Abs>(input, std::vector<torch::lazy::Shape>()),
+        torch::lazy::MakeNode<Abs>(input),
         dimensions, keepdim, dtype);
   }
   // Generic sum(x^p)^(1/p) norms.
@@ -505,7 +505,7 @@ torch::lazy::NodePtr Norm(const torch::lazy::Value& input,
   torch::lazy::NodePtr norm_exp_inv =
       ScalarOp(1.0 / norm_value, GetXlaShape(input).element_type());
   torch::lazy::NodePtr exp =
-      Pow(torch::lazy::MakeNode<Abs>(input, std::vector<torch::lazy::Shape>()),
+      Pow(torch::lazy::MakeNode<Abs>(input),
           norm_exp);
   torch::lazy::NodePtr result =
       torch::lazy::MakeNode<Sum>(exp, dimensions, keepdim, dtype);
@@ -596,13 +596,13 @@ torch::lazy::NodePtr Remainder(const torch::lazy::Value& input,
   torch::lazy::ScopePusher ir_scope(at::aten::remainder.toQualString());
   torch::lazy::NodePtr f = Fmod(
       input,
-      torch::lazy::MakeNode<Abs>(divisor, std::vector<torch::lazy::Shape>()));
+      torch::lazy::MakeNode<Abs>(divisor));
   return f + divisor * ComparisonOp(
                            at::aten::lt,
                            torch::lazy::MakeNode<Sign>(
-                               f, std::vector<torch::lazy::Shape>()) *
+                               f) *
                                torch::lazy::MakeNode<Sign>(
-                                   divisor, std::vector<torch::lazy::Shape>()),
+                                   divisor),
                            ScalarOp(0, GetXlaShape(input)));
 }
 
@@ -662,8 +662,7 @@ torch::lazy::NodePtr TanhGelu(const torch::lazy::Value& input) {
   torch::lazy::NodePtr half = ScalarOp(0.5, shape);
   torch::lazy::NodePtr inner = beta * (input + kappa * Pow(input, three));
   return half * input *
-         (one + torch::lazy::MakeNode<Tanh>(inner,
-                                            std::vector<torch::lazy::Shape>()));
+         (one + torch::lazy::MakeNode<Tanh>(inner));
 }
 
 torch::lazy::NodePtr TanhGeluBackward(const torch::lazy::Value& grad,
@@ -680,7 +679,7 @@ torch::lazy::NodePtr TanhGeluBackward(const torch::lazy::Value& grad,
   torch::lazy::NodePtr half = ScalarOp(0.5, shape);
   torch::lazy::NodePtr inner = beta * (input + kappa * Pow(input, three));
   torch::lazy::NodePtr tanh_inner =
-      torch::lazy::MakeNode<Tanh>(inner, std::vector<torch::lazy::Shape>());
+      torch::lazy::MakeNode<Tanh>(inner);
 
   torch::lazy::NodePtr left = half * input;
   torch::lazy::NodePtr right = one + tanh_inner;
