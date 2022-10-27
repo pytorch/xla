@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 from typing import List, Union
 from torchgen.api.lazy import LazyIrSchema
-from torchgen.dest.lazy_ir import aten_symbol, GenLazyIR, GenLazyNativeFuncDefinition
+from torchgen.dest.lazy_ir import aten_symbol, node_ctor_inputs, GenLazyIR, GenLazyNativeFuncDefinition
 from torchgen.gen_lazy_tensor import run_gen_lazy_tensor
 from torchgen.model import NativeFunction, NativeFunctionsGroup
 from torchgen.api.types import (
@@ -71,6 +71,16 @@ class GenXlaLazyIR(GenLazyIR):
 class GenXlaLazyNativeFuncDefinition(GenLazyNativeFuncDefinition):
   def shape_inference(self, func: NativeFunction, schema: LazyIrSchema) -> str:
       return ""
+
+  def build_ir_node(self, func: NativeFunction, schema: LazyIrSchema) -> str:
+      node_ctor_input_str = node_ctor_inputs(schema)
+      return f"""torch::lazy::NodePtr node = torch::lazy::ReuseNode<{schema.node_name}>({node_ctor_input_str});
+      if (!node) {{
+          {self.shape_inference(func, schema)}
+          node = torch::lazy::MakeNode<{schema.node_name}>({node_ctor_input_str});
+          CacheNode(node);
+      }}
+      """
 
 
 if __name__ == '__main__':
