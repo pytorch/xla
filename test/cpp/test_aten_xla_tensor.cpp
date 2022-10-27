@@ -292,8 +292,7 @@ TEST_F(AtenXlaTensorTest, TestSymSizes) {
     xla_b = torch::nonzero(xla_b);
     auto s0 = xla_b.sym_sizes().at(0);
     ASSERT_EQ(s0.is_symbolic(), true);
-    auto sininode =
-        dynamic_cast<XLASymNodeImpl*>(s0.toSymNodeImpl().get());
+    auto sininode = dynamic_cast<XLASymNodeImpl*>(s0.toSymNodeImpl().get());
     auto snode =
         std::dynamic_pointer_cast<torch_xla::SizeNode>(sininode->node());
     ASSERT_TRUE(snode);
@@ -4966,7 +4965,8 @@ TEST_F(AtenXlaTensorTest, TestExpandSymIntStatic) {
 }
 
 static c10::SymInt make_symint(const torch::lazy::NodePtr& p) {
-  return c10::SymInt(static_cast<c10::SymNode>(c10::make_intrusive<XLASymNodeImpl>(p)));
+  return c10::SymInt(
+      static_cast<c10::SymNode>(c10::make_intrusive<XLASymNodeImpl>(p)));
 }
 
 TEST_F(AtenXlaTensorTest, TestExpandSymIntSymbolic) {

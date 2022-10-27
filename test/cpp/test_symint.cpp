@@ -15,7 +15,8 @@ namespace torch_xla {
 namespace cpp_test {
 
 static c10::SymInt make_symint(const torch::lazy::NodePtr& p) {
-  return c10::SymInt(static_cast<c10::SymNode>(c10::make_intrusive<XLASymNodeImpl>(p)));
+  return c10::SymInt(
+      static_cast<c10::SymNode>(c10::make_intrusive<XLASymNodeImpl>(p)));
 }
 
 TEST(SymintTest, TestStaticSymint) {
@@ -222,8 +223,7 @@ TEST(SymintTest, TestXLASymNodeImplStr) {
   torch::lazy::Value expand_value = torch::lazy::Value(expand_node, 0);
   torch::lazy::NodePtr size_node =
       torch::lazy::MakeNode<SizeNode>(expand_value, 0);
-  c10::SymNode symint_node =
-      c10::make_intrusive<XLASymNodeImpl>(size_node);
+  c10::SymNode symint_node = c10::make_intrusive<XLASymNodeImpl>(size_node);
   ASSERT_EQ(symint_node.get()->str(), "Static bound: 2");
 }
 
