@@ -576,15 +576,13 @@ XLATensorPtr XLATensor::adaptive_max_pool2d_backward(
 }
 
 XLATensorPtr XLATensor::_adaptive_avg_pool2d(
-    const XLATensorPtr& input, std::vector<int64_t> output_size,
-    std::vector<torch::lazy::Shape>&& shapes) {
+    const XLATensorPtr& input, std::vector<int64_t> output_size) {
   return input->CreateFrom(torch::lazy::MakeNode<AdaptiveAvgPool2d>(
       input->GetIrValue(), std::move(output_size)));
 }
 
 XLATensorPtr XLATensor::_adaptive_avg_pool2d_backward(
-    const XLATensorPtr& grad_output, const XLATensorPtr& input,
-    std::vector<torch::lazy::Shape>&& shapes) {
+    const XLATensorPtr& grad_output, const XLATensorPtr& input) {
   return input->CreateFrom(torch::lazy::MakeNode<AdaptiveAvgPool2dBackward>(
       grad_output->GetIrValue(), input->GetIrValue()));
 }

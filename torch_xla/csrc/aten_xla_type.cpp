@@ -328,13 +328,9 @@ at::Tensor XLANativeFunctions::_adaptive_avg_pool3d(
   }
   auto common_device = torch_xla::bridge::GetXlaDevice(self);
   XLA_CHECK(common_device);
-  auto shapes =
-      torch::lazy::compute_shape__adaptive_avg_pool3d(self, output_size);
-  XLA_CHECK(shapes.size() == 1);
   torch::lazy::NodePtr node = torch::lazy::MakeNode<AdaptiveAvgPool3d>(
       bridge::GetXlaTensor(self)->GetIrValue(),
-      std::vector<int64_t>(output_size.begin(), output_size.end()),
-      std::move(shapes));
+      std::vector<int64_t>(output_size.begin(), output_size.end()));
   return torch_xla::bridge::AtenFromXlaTensor(
       torch_xla::XLATensor::Create(std::move(node), *common_device));
 }
@@ -354,12 +350,9 @@ at::Tensor XLANativeFunctions::_adaptive_avg_pool3d_backward(
   }
   auto common_device = torch_xla::bridge::GetXlaDevice(grad_output, self);
   XLA_CHECK(common_device);
-  auto shapes = torch::lazy::compute_shape__adaptive_avg_pool3d_backward(
-      grad_output, self);
-  XLA_CHECK(shapes.size() == 1);
   torch::lazy::NodePtr node = torch::lazy::MakeNode<AdaptiveAvgPool3dBackward>(
       bridge::GetXlaTensor(grad_output)->GetIrValue(),
-      bridge::GetXlaTensor(self)->GetIrValue(), std::move(shapes));
+      bridge::GetXlaTensor(self)->GetIrValue());
 
   return torch_xla::bridge::AtenFromXlaTensor(
       torch_xla::XLATensor::Create(std::move(node), *common_device));
