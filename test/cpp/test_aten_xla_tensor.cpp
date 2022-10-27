@@ -293,7 +293,7 @@ TEST_F(AtenXlaTensorTest, TestSymSizes) {
     auto s0 = xla_b.sym_sizes().at(0);
     ASSERT_EQ(s0.is_symbolic(), true);
     auto sininode =
-        dynamic_cast<XLASymIntNodeImpl*>(s0.toSymIntNodeImpl().get());
+        dynamic_cast<XLASymNodeImpl*>(s0.toSymNodeImpl().get());
     auto snode =
         std::dynamic_pointer_cast<torch_xla::SizeNode>(sininode->node());
     ASSERT_TRUE(snode);
@@ -4979,7 +4979,7 @@ TEST_F(AtenXlaTensorTest, TestExpandSymIntSymbolic) {
   torch::lazy::Value expand_value = torch::lazy::Value(expand_node, 0);
   torch::lazy::NodePtr size_node =
       torch::lazy::MakeNode<SizeNode>(expand_value, /*dim=*/0);
-  auto symint_node = c10::make_intrusive<XLASymIntNodeImpl>(size_node);
+  auto symint_node = c10::make_intrusive<XLASymNodeImpl>(size_node);
   // This is not a dynamic size from xla perspective but it is a symint that
   // wraps around a SizeNode instead of a scalar.
   c10::SymInt dynamic_symint = symint_node->toSymInt();
@@ -5012,7 +5012,7 @@ TEST_F(AtenXlaTensorTest, TestExpandSymIntDynamic) {
   torch::lazy::NodePtr size_node_nonzero_0 =
       torch::lazy::MakeNode<SizeNode>(nonzero_node, 0);
   auto symint_node =
-      c10::make_intrusive<XLASymIntNodeImpl>(size_node_nonzero_0);
+      c10::make_intrusive<XLASymNodeImpl>(size_node_nonzero_0);
   c10::SymInt dynamic_symint = symint_node->toSymInt();
 
   ForEachDevice([&](const torch::Device& device) {

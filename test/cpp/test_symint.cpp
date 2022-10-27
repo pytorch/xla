@@ -65,7 +65,7 @@ TEST(SymintTest, TestDynamicSymint) {
   torch::lazy::Value expand_value = torch::lazy::Value(expand_node, 0);
   torch::lazy::NodePtr size_node =
       torch::lazy::MakeNode<SizeNode>(expand_value, /*dim=*/0);
-  auto symint_node = c10::make_intrusive<XLASymIntNodeImpl>(size_node);
+  auto symint_node = c10::make_intrusive<XLASymNodeImpl>(size_node);
   // This is not a dynamic size from xla perspective but it is a symint that
   // wraps around a SizeNode instead of a scalar.
   c10::SymInt dynamic_symint = symint_node->toSymInt();
@@ -126,7 +126,7 @@ TEST(SymintTest, TestDynamicSymints) {
     torch::lazy::NodePtr size_node =
         torch::lazy::MakeNode<SizeNode>(expand_value, /*dim=*/i);
     size_nodes.push_back(size_node);
-    auto symint_node = c10::make_intrusive<XLASymIntNodeImpl>(size_node);
+    auto symint_node = c10::make_intrusive<XLASymNodeImpl>(size_node);
     // This is not a dynamic size from xla perspective but it is a symint that
     // wraps around a SizeNode instead of a scalar.
     dynamic_symints.push_back(symint_node->toSymInt());
@@ -177,24 +177,24 @@ TEST(SymintTest, TestDynamicSymintArithmetic) {
       torch::lazy::Value{relu_node, 0}, /*dim=*/0);
 
   c10::SymInt a =
-      c10::make_intrusive<XLASymIntNodeImpl>(size_abs_node)->toSymInt();
+      c10::make_intrusive<XLASymNodeImpl>(size_abs_node)->toSymInt();
   c10::SymInt b =
-      c10::make_intrusive<XLASymIntNodeImpl>(size_relu_node)->toSymInt();
+      c10::make_intrusive<XLASymNodeImpl>(size_relu_node)->toSymInt();
 
-  // Testing XLASymIntNodeImpl::add
+  // Testing XLASymNodeImpl::add
   c10::SymInt c = a + b;
   auto size_add_symnode =
-      dynamic_cast<XLASymIntNodeImpl*>(c.toSymIntNodeImpl().get());
+      dynamic_cast<XLASymNodeImpl*>(c.toSymNodeImpl().get());
   ASSERT_TRUE(size_add_symnode);
   auto size_add =
       std::dynamic_pointer_cast<torch_xla::SizeAdd>(size_add_symnode->node());
   ASSERT_EQ(size_add->operands().at(0).node, size_abs_node.get());
   ASSERT_EQ(size_add->operands().at(1).node, size_relu_node.get());
 
-  // Testing XLASymIntNodeImpl::mul
+  // Testing XLASymNodeImpl::mul
   c = a * b;
   auto size_mul_symnode =
-      dynamic_cast<XLASymIntNodeImpl*>(c.toSymIntNodeImpl().get());
+      dynamic_cast<XLASymNodeImpl*>(c.toSymNodeImpl().get());
   ASSERT_TRUE(size_mul_symnode);
   auto size_mul =
       std::dynamic_pointer_cast<torch_xla::SizeMul>(size_mul_symnode->node());
@@ -202,10 +202,10 @@ TEST(SymintTest, TestDynamicSymintArithmetic) {
   ASSERT_EQ(size_mul->operands().at(0).node, size_abs_node.get());
   ASSERT_EQ(size_mul->operands().at(1).node, size_relu_node.get());
 
-  // Testing XLASymIntNodeImpl::floordiv
+  // Testing XLASymNodeImpl::floordiv
   c = a / b;
   auto size_floordiv_symnode =
-      dynamic_cast<XLASymIntNodeImpl*>(c.toSymIntNodeImpl().get());
+      dynamic_cast<XLASymNodeImpl*>(c.toSymNodeImpl().get());
   ASSERT_TRUE(size_floordiv_symnode);
   auto size_floordiv =
       std::dynamic_pointer_cast<SizeDiv>(size_floordiv_symnode->node());
@@ -214,7 +214,7 @@ TEST(SymintTest, TestDynamicSymintArithmetic) {
   ASSERT_EQ(size_floordiv->operands().at(1).node, size_relu_node.get());
 }
 
-TEST(SymintTest, TestXLASymIntNodeImplStr) {
+TEST(SymintTest, TestXLASymNodeImplStr) {
   torch::lazy::Value scalar = torch::lazy::Value(ScalarOp(1.0, xla::F32), 0);
   std::vector<int64_t> shape = {2, 3, 4};
   torch::lazy::NodePtr expand_node =
@@ -222,8 +222,8 @@ TEST(SymintTest, TestXLASymIntNodeImplStr) {
   torch::lazy::Value expand_value = torch::lazy::Value(expand_node, 0);
   torch::lazy::NodePtr size_node =
       torch::lazy::MakeNode<SizeNode>(expand_value, 0);
-  c10::SymIntNode symint_node =
-      c10::make_intrusive<XLASymIntNodeImpl>(size_node);
+  c10::SymNode symint_node =
+      c10::make_intrusive<XLASymNodeImpl>(size_node);
   ASSERT_EQ(symint_node.get()->str(), "Static bound: 2");
 }
 

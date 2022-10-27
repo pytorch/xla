@@ -187,7 +187,7 @@ void XLATensorImpl::SetupSymSizeProperties() {
   for (auto i : c10::irange(rank)) {
     if (shape.get().is_dynamic_dimension(i)) {
       auto dim_node = a.MakeSizeNode(tensor_->GetIrValue(), i);
-      auto symint_node = c10::make_intrusive<XLASymIntNodeImpl>(dim_node);
+      auto symint_node = c10::make_intrusive<XLASymNodeImpl>(dim_node);
       auto sn = symint_node->toSymInt();
       sym_sizes.push_back(sn);
     } else {
