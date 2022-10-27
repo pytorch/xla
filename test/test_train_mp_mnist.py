@@ -1,12 +1,20 @@
 import args_parse
 
+MODEL_OPTS = {
+    '--ddp': {
+        'action': 'store_true',
+    },
+}
+
 FLAGS = args_parse.parse_common_options(
     datadir='/tmp/mnist-data',
     batch_size=128,
     momentum=0.5,
     lr=0.01,
     target_accuracy=98.0,
-    num_epochs=18)
+    num_epochs=18,
+    opts=MODEL_OPTS.items(),
+)
 
 import os
 import shutil
@@ -25,6 +33,10 @@ import torch_xla.core.xla_model as xm
 import torch_xla.distributed.xla_multiprocessing as xmp
 import torch_xla.test.test_utils as test_utils
 
+
+import torch.distributed as dist
+from torch.nn.parallel import DistributedDataParallel as DDP
+import torch_xla.distributed.xla_backend
 
 class MNIST(nn.Module):
 
@@ -60,6 +72,9 @@ def _train_update(device, step, loss, tracker, epoch, writer):
 
 
 def train_mnist(flags, **kwargs):
+  if flags.ddp:
+    dist.init_process_group('xla', world_size=xm.xrt_world_size(), rank=xm.get_ordinal())
+
   torch.manual_seed(1)
 
   if flags.fake_data:
@@ -114,6 +129,8 @@ def train_mnist(flags, **kwargs):
 
   device = xm.xla_device()
   model = MNIST().to(device)
+  if flags.ddp:
+    model = DDP(model, gradient_as_bucket_view=True)
   writer = None
   if xm.is_master_ordinal():
     writer = test_utils.get_summary_writer(flags.logdir)
@@ -128,13 +145,16 @@ def train_mnist(flags, **kwargs):
       output = model(data)
       loss = loss_fn(output, target)
       loss.backward()
-      xm.optimizer_step(optimizer)
+      if flags.ddp:
+        optimizer.step()
+      else:
+        xm.optimizer_step(optimizer)
       tracker.add(flags.batch_size)
       if step % flags.log_steps == 0:
         xm.add_step_closure(
             _train_update,
             args=(device, step, loss, tracker, epoch, writer),
-            run_async=FLAGS.async_closures)
+            run_async=flags.async_closures)
 
   def test_loop_fn(loader):
     total_samples = 0
