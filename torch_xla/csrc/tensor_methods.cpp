@@ -575,8 +575,8 @@ XLATensorPtr XLATensor::adaptive_max_pool2d_backward(
                                                      input->GetIrValue()));
 }
 
-XLATensorPtr XLATensor::_adaptive_avg_pool2d(
-    const XLATensorPtr& input, std::vector<int64_t> output_size) {
+XLATensorPtr XLATensor::_adaptive_avg_pool2d(const XLATensorPtr& input,
+                                             std::vector<int64_t> output_size) {
   return input->CreateFrom(torch::lazy::MakeNode<AdaptiveAvgPool2d>(
       input->GetIrValue(), std::move(output_size)));
 }
@@ -619,8 +619,7 @@ void XLATensor::_amp_update_scale_(XLATensorPtr& current_scale,
 }
 
 XLATensorPtr XLATensor::abs(const XLATensorPtr& input) {
-  return input->CreateFrom(torch::lazy::MakeNode<Abs>(
-      input->GetIrValue()));
+  return input->CreateFrom(torch::lazy::MakeNode<Abs>(input->GetIrValue()));
 }
 
 XLATensorPtr XLATensor::add(
@@ -990,11 +989,9 @@ XLATensorPtr XLATensor::div(
 
   if (rounding_mode.has_value()) {
     if (*rounding_mode == "trunc") {
-      res =
-          torch::lazy::MakeNode<Trunc>(res);
+      res = torch::lazy::MakeNode<Trunc>(res);
     } else if (*rounding_mode == "floor") {
-      res =
-          torch::lazy::MakeNode<Floor>(res);
+      res = torch::lazy::MakeNode<Floor>(res);
     } else {
       XLA_CHECK(false)
           << "rounding_mode must be one of None, 'trunc', or 'floor'";
@@ -1347,8 +1344,7 @@ XLATensorPtr XLATensor::index_select(const XLATensorPtr& input, int64_t dim,
 }
 
 XLATensorPtr XLATensor::isnan(const XLATensorPtr& input) {
-  torch::lazy::Value result = torch::lazy::MakeNode<Isnan>(
-      input->GetIrValue());
+  torch::lazy::Value result = torch::lazy::MakeNode<Isnan>(input->GetIrValue());
   torch::lazy::Value casted = GetBooleanIrValue(result);
   return input->CreateFrom(casted, at::ScalarType::Bool);
 }
@@ -1651,9 +1647,10 @@ void XLATensor::min_out(XLATensorPtr& min, XLATensorPtr& min_indices,
 }
 
 XLATensorPtr XLATensor::mish(const XLATensorPtr& input) {
-  return input->CreateFrom(input->GetIrValue() *
-                           torch::lazy::MakeNode<Tanh>(
-                               tensor_ops::Softplus(input, 1, 20)->GetIrValue()));
+  return input->CreateFrom(
+      input->GetIrValue() *
+      torch::lazy::MakeNode<Tanh>(
+          tensor_ops::Softplus(input, 1, 20)->GetIrValue()));
 }
 
 XLATensorPtr XLATensor::mm(const XLATensorPtr& input,

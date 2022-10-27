@@ -495,18 +495,15 @@ torch::lazy::NodePtr Norm(const torch::lazy::Value& input,
     //   tensor(3.1235)
     //   >>> print(x.abs().sum())
     //   tensor(11.9437)
-    return torch::lazy::MakeNode<Sum>(
-        torch::lazy::MakeNode<Abs>(input),
-        dimensions, keepdim, dtype);
+    return torch::lazy::MakeNode<Sum>(torch::lazy::MakeNode<Abs>(input),
+                                      dimensions, keepdim, dtype);
   }
   // Generic sum(x^p)^(1/p) norms.
   torch::lazy::NodePtr norm_exp =
       ScalarOp(norm_value, GetXlaShape(input).element_type());
   torch::lazy::NodePtr norm_exp_inv =
       ScalarOp(1.0 / norm_value, GetXlaShape(input).element_type());
-  torch::lazy::NodePtr exp =
-      Pow(torch::lazy::MakeNode<Abs>(input),
-          norm_exp);
+  torch::lazy::NodePtr exp = Pow(torch::lazy::MakeNode<Abs>(input), norm_exp);
   torch::lazy::NodePtr result =
       torch::lazy::MakeNode<Sum>(exp, dimensions, keepdim, dtype);
   return Pow(result, norm_exp_inv);
@@ -594,16 +591,11 @@ torch::lazy::NodePtr Rshift(const torch::lazy::Value& input,
 torch::lazy::NodePtr Remainder(const torch::lazy::Value& input,
                                const torch::lazy::Value& divisor) {
   torch::lazy::ScopePusher ir_scope(at::aten::remainder.toQualString());
-  torch::lazy::NodePtr f = Fmod(
-      input,
-      torch::lazy::MakeNode<Abs>(divisor));
-  return f + divisor * ComparisonOp(
-                           at::aten::lt,
-                           torch::lazy::MakeNode<Sign>(
-                               f) *
-                               torch::lazy::MakeNode<Sign>(
-                                   divisor),
-                           ScalarOp(0, GetXlaShape(input)));
+  torch::lazy::NodePtr f = Fmod(input, torch::lazy::MakeNode<Abs>(divisor));
+  return f + divisor * ComparisonOp(at::aten::lt,
+                                    torch::lazy::MakeNode<Sign>(f) *
+                                        torch::lazy::MakeNode<Sign>(divisor),
+                                    ScalarOp(0, GetXlaShape(input)));
 }
 
 torch::lazy::NodePtr MaxUnary(const torch::lazy::Value& input) {
@@ -661,8 +653,7 @@ torch::lazy::NodePtr TanhGelu(const torch::lazy::Value& input) {
   torch::lazy::NodePtr one = ScalarOp(1, shape);
   torch::lazy::NodePtr half = ScalarOp(0.5, shape);
   torch::lazy::NodePtr inner = beta * (input + kappa * Pow(input, three));
-  return half * input *
-         (one + torch::lazy::MakeNode<Tanh>(inner));
+  return half * input * (one + torch::lazy::MakeNode<Tanh>(inner));
 }
 
 torch::lazy::NodePtr TanhGeluBackward(const torch::lazy::Value& grad,
@@ -678,8 +669,7 @@ torch::lazy::NodePtr TanhGeluBackward(const torch::lazy::Value& grad,
   torch::lazy::NodePtr three = ScalarOp(3, shape);
   torch::lazy::NodePtr half = ScalarOp(0.5, shape);
   torch::lazy::NodePtr inner = beta * (input + kappa * Pow(input, three));
-  torch::lazy::NodePtr tanh_inner =
-      torch::lazy::MakeNode<Tanh>(inner);
+  torch::lazy::NodePtr tanh_inner = torch::lazy::MakeNode<Tanh>(inner);
 
   torch::lazy::NodePtr left = half * input;
   torch::lazy::NodePtr right = one + tanh_inner;
