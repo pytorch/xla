@@ -403,14 +403,6 @@ class XLATensor::DeviceContextArena {
   std::map<torch::lazy::BackendDevice, DeviceContext*> device_contexts_;
 };
 
-struct DeviceDataInfo : public xla::ComputationClient::Data::Info {
-  DeviceDataInfo(int64_t tensor_id, bool read_only)
-      : tensor_id(tensor_id), read_only(read_only) {}
-
-  int64_t tensor_id = 0;
-  bool read_only = false;
-};
-
 XLATensor::Data::~Data() { DeviceContextArena::Get()->UnregisterTensor(this); }
 
 XLATensor::Async::Async(
@@ -1957,6 +1949,38 @@ c10::SymIntNode XLASymIntNodeImpl::floordiv(const c10::SymIntNode& other) {
 std::string XLASymIntNodeImpl::str() {
   return "Static bound: " +
          std::to_string(DimCast(node().get())->getStaticValue());
+}
+
+torch::lazy::hash_t XLATensor::GetGraphHash(
+    const std::vector<XLATensorPtr>& tensors) {
+  SyncTensorsConfig config;
+  config.sync_xla_data = true;
+
+  SyncTensorCollection coll = CollectSyncTensors(tensors, config);
+  absl::Span<const size_t> indices = coll.indices;
+  std::vector<torch::lazy::Value> ir_values;
+  ir_values.reserve(indices.size());
+  for (auto index : indices) {
+    ir_values.push_back(tensors.at(index)->CurrentIrValue());
+  }
+  PostOrderData po_data = RunPostOrder(ir_values, &coll);
+
+  return torch::lazy::HashCombine(
+      coll.hash, torch::lazy::Hash(po_data.parameter_sequence));
+}
+
+int64_t XLATensor::GetOpaqueHandle() const {
+  torch::lazy::BackendDataPtr xla_data = CurrentXlaData();
+  if (xla_data != nullptr) {
+    return UnwrapXlaData(xla_data)->GetOpaqueHandle();
+  }
+  const torch_xla::DeviceData* device_data =
+      torch_xla::DeviceData::Cast(GetIrValue().node.get());
+  if (device_data) {
+    return device_data->data()->GetHandle();
+  } else {
+    XLA_CHECK(false) << "XlaTensor does not have data handle";
+  }
 }
 
 }  // namespace torch_xla
