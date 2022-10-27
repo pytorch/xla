@@ -132,10 +132,10 @@ xla::HloModuleProto ShardingUtil::SpmdPartitioningPass(
   execution_options.set_num_partitions(num_partitions);
   auto module_config = xla::HloModule::CreateModuleConfigFromProto(
                            hlo_proto, xla::DebugOptions(), &execution_options)
-                           .ValueOrDie();
+                           .value();
   auto module = xla::HloModule::CreateFromProto(hlo_proto, module_config,
                                                 /*prohibit_empty_literal=*/true)
-                    .ValueOrDie();
+                    .value();
 
   xla::spmd::SpmdPartitionerOptions options;
   options.conv_halo_exchange_always_on_lhs = conv_halo_exchange_always_on_lhs;

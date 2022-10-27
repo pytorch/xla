@@ -14,6 +14,7 @@
 #include "absl/strings/str_split.h"
 #include "tensorflow/cc/ops/const_op.h"
 #include "tensorflow/compiler/xla/shape_util.h"
+#include "tensorflow/compiler/xla/stream_executor/lib/mathutil.h"
 #include "tensorflow/compiler/xla/util.h"
 #include "tensorflow/compiler/xla/xla_client/env_vars.h"
 #include "tensorflow/compiler/xla/xla_client/multi_wait.h"
@@ -75,7 +76,7 @@ class TensorAllocator : public tensorflow::Allocator {
     alignment = std::max<size_t>(alignment, sizeof(void*));
     // To call aligned_alloc(), num_bytes must be multiple of alignment.
     num_bytes =
-        tensorflow::MathUtil::CeilOfRatio(num_bytes, alignment) * alignment;
+        stream_executor::port::MathUtil::CeilOfRatio(num_bytes, alignment) * alignment;
 
     AllocKey alloc_key = {alignment, num_bytes};
     void* block = nullptr;
@@ -551,8 +552,7 @@ std::vector<Literal> XrtComputationClient::TransferFromServer(
       for (size_t i = 0; i < outputs.size(); ++i) {
         size_t li = session_work->index_mapping[i];
         LiteralProto response = ParseProto<LiteralProto>(outputs[i]);
-        results[li] =
-            std::move(Literal::CreateFromProto(response).ValueOrDie());
+        results[li] = std::move(Literal::CreateFromProto(response).value());
         total_size += results[li].size_bytes();
       }
     };
@@ -1107,7 +1107,7 @@ std::unique_ptr<xrt::XLAComputation> XrtComputationClient::CreateXrtComputation(
   }
 
   *config->mutable_program_shape() =
-      computation.GetProgramShape().ValueOrDie().ToProto();
+      computation.GetProgramShape().value().ToProto();
   if (output_shape != nullptr) {
     *config->mutable_program_shape()->mutable_result() =
         output_shape->ToProto();
@@ -1625,6 +1625,10 @@ std::map<std::string, Metric> XrtComputationClient::GetMetrics() const {
             break;
           case xrt::MetricValues::BYTES:
             percentile.unit_of_measure = Percentile::UnitOfMeaure::kBytes;
+            break;
+          default:
+            TF_LOG(FATAL) << "Invalid unit of measure for xrt metric: "
+                          << xrt_metric.name();
             break;
         }
         percentile.start_nstime = xrt_percentile.start_nstime();
