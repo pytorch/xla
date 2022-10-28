@@ -365,15 +365,16 @@ PjRtComputationClient::ExecuteReplicated(
       pjrt_computation.executable->Execute(argument_handles, execute_options)
           .value();
 
-  std::vector<std::vector<ComputationClient::DataPtr>> data_handles(
-      results.size());
+  std::vector<std::vector<ComputationClient::DataPtr>> data_handles;
+  data_handles.reserve(results.size());
   for (auto& result : results) {
-    std::vector<ComputationClient::DataPtr> datas(result.size());
+    std::vector<ComputationClient::DataPtr> datas;
+    datas.reserve(result.size());
     for (int32_t i = 0; i < result.size(); ++i) {
       std::unique_ptr<xla::PjRtBuffer> buffer = std::move(result[i]);
 
       std::shared_ptr<PjRtData> data = std::make_shared<PjRtData>(
-          devices[i], buffer->logical_on_device_shape().value(),
+          devices[i], buffer->on_device_shape(),
           std::move(buffer));
 
       datas.push_back(data);
