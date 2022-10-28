@@ -1,16 +1,23 @@
 # How to do `DistributedDataParallel`
 
-This document shows how to use torch.nn.parallel.DistributedDataParallel in xla, and further describes its difference against the native xla data parallel approach.
+This document shows how to use torch.nn.parallel.DistributedDataParallel in xla,
+and further describes its difference against the native xla data parallel
+approach.
 
 
 ## Background / Motivation
 
-Customers have long requested the ability to use PyTorch’s DistributedDataParallel API with xla. And here we enable it as an experimental feature.
+Customers have long requested the ability to use PyTorch’s
+DistributedDataParallel API with xla. And here we enable it as an experimental
+feature.
 
 
 ## How to use DistributedDataParallel
 
-For those who switched from the PyTorch eager mode to XLA, here are all the changes you need to do to convert your eager DDP model into XLA model. We assume that you already know how to use XLA [on a single device](../API_GUIDE.md#running-on-a-single-xla-device).
+For those who switched from the PyTorch eager mode to XLA, here are all the
+changes you need to do to convert your eager DDP model into XLA model. We assume
+that you already know how to use XLA [on a single
+device](../API_GUIDE.md#running-on-a-single-xla-device).
 
 1. Import xla specific distributed packages:
 
@@ -44,7 +51,10 @@ ddp_model = DDP(model, gradient_as_bucket_view=True)
 xmp.spawn(demo_fn)
 ```
 
-Here we have put everything together (the example is actually taken from the [DDP tutorial](https://pytorch.org/tutorials/intermediate/ddp_tutorial.html)). The way you code it is pretty similar to the eager experience. Just with xla specific touches on a single device plus the above five changes to your script.
+Here we have put everything together (the example is actually taken from the
+[DDP tutorial](https://pytorch.org/tutorials/intermediate/ddp_tutorial.html)).
+The way you code it is pretty similar to the eager experience. Just with xla
+specific touches on a single device plus the above five changes to your script.
 
 ```
 import os
@@ -124,7 +134,12 @@ if __name__ == "__main__":
 
 ### Resnet50 with fake data
 
-The following results are collected with the command: `python test/test_train_mp_imagenet.py --fake_data --model=resnet50 --num_epochs=1` on a TPU VM V3-8 environment with ToT PyTorch and PyTorch/XLA. And the statistical metrics are produced by using the script in this [pull request](https://github.com/pytorch/xla/pull/4107). The unit for the rate is images per second.
+The following results are collected with the command: `python
+test/test_train_mp_imagenet.py --fake_data --model=resnet50 --num_epochs=1` on a
+TPU VM V3-8 environment with ToT PyTorch and PyTorch/XLA. And the statistical
+metrics are produced by using the script in this [pull
+request](https://github.com/pytorch/xla/pull/4107). The unit for the rate is
+images per second.
 
 <table>
   <tr>
@@ -172,11 +187,18 @@ The following results are collected with the command: `python test/test_train_mp
 </table>
 
 
-The performance difference between our native approach for distributed data parallel and DistributedDataParallel wrapper is: 1 - 395.97 / 418.54 = 5.39%. This result seems reasonable given the DDP wrapper introduces extra overheads on tracing the DDP runtime.
+The performance difference between our native approach for distributed data
+parallel and DistributedDataParallel wrapper is: 1 - 395.97 / 418.54 = 5.39%.
+This result seems reasonable given the DDP wrapper introduces extra overheads on
+tracing the DDP runtime.
 
 ### MNIST with fake data
 
-The following results are collected with the command: `python test/test_train_mp_mnist.py --fake_data` on a TPU VM V3-8 environment with ToT PyTorch and PyTorch/XLA. And the statistical metrics are produced by using the script in this [pull request](https://github.com/pytorch/xla/pull/4107). The unit for the rate is images per second.
+The following results are collected with the command: `python
+test/test_train_mp_mnist.py --fake_data` on a TPU VM V3-8 environment with ToT
+PyTorch and PyTorch/XLA. And the statistical metrics are produced by using the
+script in this [pull request](https://github.com/pytorch/xla/pull/4107). The
+unit for the rate is images per second.
 
 <table>
   <tr>
@@ -224,19 +246,32 @@ The following results are collected with the command: `python test/test_train_mp
 </table>
 
 
-The performance difference between our native approach for distributed data parallel and DistributedDataParallel wrapper is: 1 - 14313.78 / 24351.74 = 41.22%. Here we compare 90th % instead since the dataset is small and first a few rounds are heavily impacted by data loading. This slowdown is huge but makes sense given the model is small. The additional DDP runtime tracing overhead is hard to amortize.
+The performance difference between our native approach for distributed data
+parallel and DistributedDataParallel wrapper is: 1 - 14313.78 / 24351.74 =
+41.22%. Here we compare 90th % instead since the dataset is small and first a
+few rounds are heavily impacted by data loading. This slowdown is huge but makes
+sense given the model is small. The additional DDP runtime tracing overhead is
+hard to amortize.
 
 ### MNIST with real data
 
-The following results are collected with the command: `python test/test_train_mp_mnist.py --logdir mnist/` on a TPU VM V3-8 environment with ToT PyTorch and PyTorch/XLA.
+The following results are collected with the command: `python
+test/test_train_mp_mnist.py --logdir mnist/` on a TPU VM V3-8 environment with
+ToT PyTorch and PyTorch/XLA.
 
 ![learning_curves](assets/ddp_md_mnist_with_real_data.png)
 
-And we can observe that the DDP wrapper converges slower than the native XLA approach even though it still achieves a high accuracy rate at 97.48% at the end. (The native approach achieves 99%.)
+And we can observe that the DDP wrapper converges slower than the native XLA
+approach even though it still achieves a high accuracy rate at 97.48% at the
+end. (The native approach achieves 99%.)
 
 ## Disclaimer
 
-This feature is still experimental and under active development. Use it in cautions and feel free to file any bugs to the [xla github repo](https://github.com/pytorch/xla/). For those who are interested in the native xla data parallel approach, here is the [tutorial](../API_GUIDE.md#running-on-multiple-xla-devices-with-multi-processing).
+This feature is still experimental and under active development. Use it in
+cautions and feel free to file any bugs to the [xla github
+repo](https://github.com/pytorch/xla/). For those who are interested in the
+native xla data parallel approach, here is the
+[tutorial](../API_GUIDE.md#running-on-multiple-xla-devices-with-multi-processing).
 
 Here are some of the known issues that are under investigation:
 *   `gradient_as_bucket_view=True` needs to be enforced.
