@@ -5,7 +5,7 @@
 #include <string>
 #include <unordered_map>
 
-#include "c10/core/SymIntNodeImpl.h"
+#include "c10/core/SymNodeImpl.h"
 #include "tensorflow/compiler/xla/client/xla_builder.h"
 #include "tensorflow/compiler/xla/status.h"
 #include "tensorflow/compiler/xla/types.h"
@@ -27,14 +27,16 @@
 
 namespace torch_xla {
 
-class TORCH_API XLASymIntNodeImpl : public c10::SymIntNodeImpl {
+class TORCH_API XLASymNodeImpl : public c10::SymNodeImpl {
  public:
-  XLASymIntNodeImpl(torch::lazy::NodePtr ptr) : node_(std::move(ptr)) {}
-  c10::SymIntNode eq(const c10::SymIntNode& other) override;
-  c10::SymIntNode add(const c10::SymIntNode& other) override;
-  c10::SymIntNode mul(const c10::SymIntNode& other) override;
-  c10::SymIntNode floordiv(const c10::SymIntNode& other) override;
-  c10::SymIntNode wrap(int64_t num) override;
+  XLASymNodeImpl(torch::lazy::NodePtr ptr) : node_(std::move(ptr)) {}
+  bool is_int() override;
+  bool is_float() override;
+  c10::SymNode eq(const c10::SymNode& other) override;
+  c10::SymNode add(const c10::SymNode& other) override;
+  c10::SymNode mul(const c10::SymNode& other) override;
+  c10::SymNode floordiv(const c10::SymNode& other) override;
+  c10::SymNode wrap_int(int64_t num) override;
 
   torch::lazy::NodePtr node() { return node_; }
   std::string str() override;

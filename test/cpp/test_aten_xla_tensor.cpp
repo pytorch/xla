@@ -292,8 +292,7 @@ TEST_F(AtenXlaTensorTest, TestSymSizes) {
     xla_b = torch::nonzero(xla_b);
     auto s0 = xla_b.sym_sizes().at(0);
     ASSERT_EQ(s0.is_symbolic(), true);
-    auto sininode =
-        dynamic_cast<XLASymIntNodeImpl*>(s0.toSymIntNodeImpl().get());
+    auto sininode = dynamic_cast<XLASymNodeImpl*>(s0.toSymNodeImpl().get());
     auto snode =
         std::dynamic_pointer_cast<torch_xla::SizeNode>(sininode->node());
     ASSERT_TRUE(snode);
@@ -4965,6 +4964,11 @@ TEST_F(AtenXlaTensorTest, TestExpandSymIntStatic) {
   ExpectCounterChanged("xla::expand_symint", cpp_test::GetIgnoredCounters());
 }
 
+static c10::SymInt make_symint(const torch::lazy::NodePtr& p) {
+  return c10::SymInt(
+      static_cast<c10::SymNode>(c10::make_intrusive<XLASymNodeImpl>(p)));
+}
+
 TEST_F(AtenXlaTensorTest, TestExpandSymIntSymbolic) {
   torch::Tensor a = torch::ones({3, 4}, torch::TensorOptions(torch::kFloat));
   torch::Tensor b = a.expand({2, 3, 4}, /*implicit=*/false);
@@ -4979,10 +4983,9 @@ TEST_F(AtenXlaTensorTest, TestExpandSymIntSymbolic) {
   torch::lazy::Value expand_value = torch::lazy::Value(expand_node, 0);
   torch::lazy::NodePtr size_node =
       torch::lazy::MakeNode<SizeNode>(expand_value, /*dim=*/0);
-  auto symint_node = c10::make_intrusive<XLASymIntNodeImpl>(size_node);
   // This is not a dynamic size from xla perspective but it is a symint that
   // wraps around a SizeNode instead of a scalar.
-  c10::SymInt dynamic_symint = symint_node->toSymInt();
+  c10::SymInt dynamic_symint = make_symint(size_node);
 
   ForEachDevice([&](const torch::Device& device) {
     torch::Tensor xla_a = CopyToDevice(a, device);
@@ -5011,9 +5014,7 @@ TEST_F(AtenXlaTensorTest, TestExpandSymIntDynamic) {
 
   torch::lazy::NodePtr size_node_nonzero_0 =
       torch::lazy::MakeNode<SizeNode>(nonzero_node, 0);
-  auto symint_node =
-      c10::make_intrusive<XLASymIntNodeImpl>(size_node_nonzero_0);
-  c10::SymInt dynamic_symint = symint_node->toSymInt();
+  c10::SymInt dynamic_symint = make_symint(size_node_nonzero_0);
 
   ForEachDevice([&](const torch::Device& device) {
     torch::Tensor xla_a = CopyToDevice(a, device);
