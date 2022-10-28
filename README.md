@@ -65,6 +65,7 @@ The following pre-built docker images are available to run on Cloud TPU Nodes (s
 
     * `gcr.io/tpu-pytorch/xla:r1.13_3.7`: The current stable version.
     * `gcr.io/tpu-pytorch/xla:r1.12_3.7`: The 1.12 release version.
+    * `gcr.io/tpu-pytorch/xla:r1.11_3.7`: The 1.11 release version.
     * `gcr.io/tpu-pytorch/xla:nightly_3.7`: Nightly version using Python 3.7.
     * `gcr.io/tpu-pytorch/xla:nightly_3.7_YYYYMMDD (e.g.: gcr.io/tpu-pytorch/xla:nightly_3.7_20220301)`.
 
