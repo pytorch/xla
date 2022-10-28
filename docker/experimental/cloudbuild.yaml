@@ -1,0 +1,34 @@
+steps:
+# We only need to update submodules in triggers. User must update submodule
+# before local runs because .git is not present.
+- name: 'alpine/git'
+  entrypoint: sh
+  args:
+  - -c
+  - |
+    git submodule update --init || echo No git repository found
+- name: 'gcr.io/kaniko-project/executor:latest'
+  args:
+  - --destination=gcr.io/${PROJECT_ID}/experimental/xla:${_IMAGE_NAME}
+  - --cache=${_CACHE}
+  - --cache-ttl=18h
+  - --dockerfile=docker/experimental/Dockerfile
+  - --build-arg=cuda=${_CUDA}
+  - --build-arg=python_version=${_PYTHON_VERSION}
+  - --build-arg=tpuvm=${_TPU_VM}
+  - --build-arg=bazel_jobs=${_BAZEL_JOBS}
+  timeout: 14400s
+substitutions:
+  _BAZEL_JOBS: '24'
+  _CUDA: '0'
+  _PYTHON_VERSION: '3.8'
+  _RELEASE_VERSION: 'nightly'  # or rX.Y
+  _IMAGE_NAME: '${_RELEASE_VERSION}_${_PYTHON_VERSION}'
+  _TPU_VM: '1'
+  _CUDA_COMPUTE: '7.0,7.5,8.0'
+  _CACHE: 'true'
+options:
+  machineType: E2_HIGHCPU_32
+  dynamic_substitutions: true
+  substitution_option: 'ALLOW_LOOSE'
+timeout: 24000s

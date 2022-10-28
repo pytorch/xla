@@ -11,6 +11,8 @@ ARG tf_cuda_compute_capabilities="7.0,7.5,8.0"
 ARG tpuvm=1
 ARG build_cpp_tests=0
 
+ARG bazel_jobs=
+
 # Contains all build dependencies for PT/XLA
 FROM python:${python_version}-${debian_version} AS builder
 
@@ -69,7 +71,8 @@ COPY build_torch_xla_libs.sh .
 
 ARG tpuvm
 ARG tf_cuda_compute_capabilities
-RUN TPUVM_MODE=${tpuvm} XLA_CUDA=${cuda} TF_CUDA_COMPUTE_CAPABILITIES=${tf_cuda_compute_capabilities} bash build_torch_xla_libs.sh -O -D_GLIBCXX_USE_CXX11_ABI=1
+ARG bazel_jobs
+RUN TPUVM_MODE=${tpuvm} XLA_CUDA=${cuda} BAZEL_JOBS=${bazel_jobs} TF_CUDA_COMPUTE_CAPABILITIES=${tf_cuda_compute_capabilities} bash build_torch_xla_libs.sh -O -D_GLIBCXX_USE_CXX11_ABI=1
 
 COPY torch_xla/ torch_xla/
 COPY setup.py .
