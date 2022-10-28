@@ -1,4 +1,4 @@
-# How to do DistributedDataParallel
+# How to do `DistributedDataParallel`
 
 This document shows how to use torch.nn.parallel.DistributedDataParallel in xla, and further describes its difference against the native xla data parallel approach.
 
@@ -10,7 +10,7 @@ Customers have long requested the ability to use PyTorch’s DistributedDataPara
 
 ## How to use DistributedDataParallel
 
-For those who switched from the PyTorch eager mode to XLA, here are all the changes you need to do to convert your eager DDP model into XLA model. We assume that you already know how to use XLA [on a single device](https://github.com/pytorch/xla/blob/master/API_GUIDE.md#running-on-a-single-xla-device).
+For those who switched from the PyTorch eager mode to XLA, here are all the changes you need to do to convert your eager DDP model into XLA model. We assume that you already know how to use XLA [on a single device](../API_GUIDE.md#running-on-a-single-xla-device).
 
 1. Import xla specific distributed packages:
 
@@ -44,7 +44,7 @@ ddp_model = DDP(model, gradient_as_bucket_view=True)
 xmp.spawn(demo_fn)
 ```
 
-Here we have put everything together (the example is actually taken from the[ DDP tutorial](https://pytorch.org/tutorials/intermediate/ddp_tutorial.html)). The way you code it is pretty similar to the eager experience. Just with xla specific touches on a single device plus the above five changes to your script. 
+Here we have put everything together (the example is actually taken from the [DDP tutorial](https://pytorch.org/tutorials/intermediate/ddp_tutorial.html)). The way you code it is pretty similar to the eager experience. Just with xla specific touches on a single device plus the above five changes to your script.
 
 ```
 import os
@@ -236,7 +236,7 @@ And we can observe that the DDP wrapper converges slower than the native XLA app
 
 ## Disclaimer
 
-This feature is still experimental and under active development. Use it in cautions and feel free to file any bugs to the [xla github repo](https://github.com/pytorch/xla/). For those who are interested in the native xla data parallel approach, here is the [tutorial](https://github.com/pytorch/xla/blob/master/API_GUIDE.md#running-on-multiple-xla-devices-with-multi-processing).
+This feature is still experimental and under active development. Use it in cautions and feel free to file any bugs to the [xla github repo](https://github.com/pytorch/xla/). For those who are interested in the native xla data parallel approach, here is the [tutorial](../API_GUIDE.md#running-on-multiple-xla-devices-with-multi-processing).
 
 Here are some of the known issues that are under investigation:
 *   `gradient_as_bucket_view=True` needs to be enforced.
