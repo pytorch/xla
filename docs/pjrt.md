@@ -141,4 +141,11 @@ PJRT_DEVICE=TPU python3 xla/test/pjrt/test_train_pjrt_imagenet.py --fake_data
 
 ## PjRt and DDP
 
-TODO add a link to DDP doc
+PjRt composes really well with [the new experimental
+torch.nn.parallel.DistributedDataParallel feature] (./ddp.md) on TPU V4. Just
+run the DDP script as usual but with `PJRT_DEVICE=TPU`. Here is a full example:
+```
+PJRT_DEVICE=TPU MASTER_ADDR=localhost MASTER_PORT=6000 python xla/test/test_train_mp_mnist.py --ddp --fake_data --num_epochs 1
+```
+
+Caveat: for TPU V2 and V3, however, XRT will still be needed to run DDP.
