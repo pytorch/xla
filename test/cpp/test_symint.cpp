@@ -170,9 +170,9 @@ TEST(SymintTest, TestDynamicSymintArithmetic) {
           torch::lazy::Shape(torch::kFloat, {10, 20, 30})};
 
   torch::lazy::NodePtr abs_node =
-      torch::lazy::MakeNode<Abs>(expand_value, std::move(abs_lazy_shapes));
+      torch::lazy::MakeNode<Abs>(expand_value);
   torch::lazy::NodePtr relu_node =
-      torch::lazy::MakeNode<Relu>(expand_value, std::move(relu_lazy_shapes));
+      torch::lazy::MakeNode<Relu>(expand_value);
 
   torch::lazy::NodePtr size_abs_node = torch::lazy::MakeNode<SizeNode>(
       torch::lazy::Value{abs_node, 0}, /*dim=*/0);
