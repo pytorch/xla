@@ -836,6 +836,14 @@ XLATensorPtr XLATensor::cat(absl::Span<const XLATensorPtr> tensors, int64_t dim,
                                 dtype);
 }
 
+XLATensorPtr XLATensor::cdist_forward(const XLATensorPtr& x1, const XLATensorPtr& x2, double p, int64_t compute_mode){
+    torch::lazy::Value p_value = GetIrValueForScalar(p, xla::PrimitiveType::F32, x1->GetDevice());
+    torch::lazy::Value compute_mode_value = GetIrValueForScalar(compute_mode, x1->shape().get().element_type(), x1->GetDevice());
+
+    // ir::Value compute_mode_value = GetIrValueForScalar(compute_mode, x1.xla_shape().element_type(),x1.GetDevice()); 
+    return x1->CreateFrom(Cdist_forward(x1->GetIrValue(), x2->GetIrValue(), p_value, compute_mode_value));
+}
+
 XLATensorPtr XLATensor::celu(const XLATensorPtr& input,
                              const at::Scalar& alpha) {
   return input->CreateFrom(Celu(input->GetIrValue(), alpha));

@@ -732,6 +732,41 @@ torch::lazy::NodePtr BaddBmm(const torch::lazy::Value& lhs,
       std::move(lower_fn));
 }
 
+torch::lazy::NodePtr Cdist_forward(const torch::lazy::Value& x1, 
+                                   const torch::lazy::Value& x2,
+                                   const torch::lazy::Value& p, 
+                                   const torch::lazy::Value& compute_mode) {
+//   torch::lazy::ScopePusher ir_scope(at::aten::_cdist_forward.toQualString());
+  auto lower_fn = [](const XlaNode& node,
+                     LoweringContext* loctx) -> XlaOpVector {
+    xla::XlaOp xla_x1 = loctx->GetOutputOp(node.operand(0));
+    xla::XlaOp xla_x2 = loctx->GetOutputOp(node.operand(1));
+    xla::XlaOp xla_p = loctx->GetOutputOp(node.operand(2));
+    xla::XlaOp xla_compute_mode = loctx->GetOutputOp(node.operand(3));
+    xla::XlaOp xla_output = BuildCdistForward(xla_x1, xla_x2, xla_p, xla_compute_mode);
+    return node.ReturnOp(xla_output, loctx);
+  };
+
+  auto lower_for_shape_fn =
+      [](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
+    return BuildCdistForward(operands[0], operands[1], operands[2], operands[3]);
+  };
+  return GenericOp(torch::lazy::OpKind(at::aten::_cdist_forward), {x1, x2, p, compute_mode},
+                   [&]() {
+                     return InferOutputShape(
+                         {GetXlaShape(x1), GetXlaShape(x2), GetXlaShape(p), GetXlaShape(compute_mode)},
+                         lower_for_shape_fn);
+                   },
+                   std::move(lower_fn));
+        
+
+//   return GenericOp(torch::lazy::OpKind(at::aten::_cdist_forward),
+//                    {x1, x2, p, compute_mode}, GetXlaShape(x1),
+//                    std::move(lower_fn));
+
+//   return x1 + x2;
+}
+
 torch::lazy::NodePtr Lerp(const torch::lazy::Value& start,
                           const torch::lazy::Value& end,
                           const torch::lazy::Value& weight) {

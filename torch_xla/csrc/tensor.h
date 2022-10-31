@@ -497,6 +497,11 @@ class XLATensor : public c10::intrusive_ptr_target {
   static XLATensorPtr cat(absl::Span<const XLATensorPtr> tensors, int64_t dim,
                           at::ScalarType dtype);
 
+  static XLATensorPtr cdist_forward(const XLATensorPtr& x1, 
+                                            const XLATensorPtr& x2, 
+                                            double p, 
+                                            int64_t compute_mode);
+
   static XLATensorPtr celu(const XLATensorPtr& input, const at::Scalar& alpha);
   static void celu_(XLATensorPtr& input, const at::Scalar& alpha);
 
