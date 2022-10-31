@@ -259,10 +259,8 @@ DISABLED_TORCH_TESTS_ANY = {
         'test_silu_inplace_overlap_xla',  # doesn't raise
         'test_softplus_inplace_overlap_xla',  # doesn't raise
         'test_softshrink_inplace_overlap_xla',  # doesn't raise
-        'test_Conv2d_backward_depthwise_xla_float64',  # slow compilation
         'test_leaky_relu_inplace_with_neg_slope_xla',  # expecting a specific error message
         'test_upsamplingBicubic2d_correctness_xla',  # FIXME! Got dtypes torch.float32 and torch.float64
-        'test_conv3d_same_padding_backward_xla',  # XLA tensors do not have storage,
         'test_CTCLoss_no_batch_dim_xla',  # Value out of range
         'test_upsamplingBilinear2d_xla',  # precision on GPU/TPU, slow compilation on CPU
     },
@@ -284,6 +282,12 @@ DISABLED_TORCH_TESTS_ANY = {
         'test_EmbeddingBag_per_sample_weights_failures',  # expecting a different runtime error
         'test_embedding_bag_device',  # FIXME! Unsupported device type for sparse layout: xla
         'test_EmbeddingBag_per_sample_weights_and_no_offsets',  # FIXME! Unsupported device type for sparse layout: xla
+    },
+
+    # test/nn/test_convolution.py
+    'TestConvolutionNNDeviceTypeXLA': {
+        'test_Conv2d_backward_depthwise_xla_float64',  # slow compilation
+        'test_conv3d_same_padding_backward_xla',  # XLA tensors do not have storage
     },
 
     # test_type_promotion.py
