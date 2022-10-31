@@ -47,8 +47,7 @@ struct CanonicalIndexInfo {
 // are first and the tail of null indices is dropped. The dimensions of the base
 // are reordered to be consistent with this reordering.
 CanonicalIndexInfo GetCanonicalIndexInfo(
-    const at::Tensor& base,
-    const c10::List<c10::optional<at::Tensor>>& orig_indices);
+    const at::Tensor& base, const at::IOptTensorListRef& orig_indices);
 
 // Expands a rank <= 1 tensor to rank 1, if necessary.
 torch::lazy::Value EnsureRank1(const torch::lazy::Value& index);
