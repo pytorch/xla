@@ -66,6 +66,8 @@ class GenXlaLazyIR(GenLazyIR):
               /* num_outputs */ {len(schema.returns)},
               torch::lazy::MHash({scalar_hashes}))"""
 
+  # Most of this code is copied and pasted from the upstream function at torchgen/dest/lazy_ir.py.
+  # We only remove `torch::lazy::Shape` related logic as we don't need it.
   def gen(self, schema: LazyIrSchema) -> List[str]:
     opkind = schema.opkind or aten_symbol(schema)
 
@@ -77,8 +79,6 @@ class GenXlaLazyIR(GenLazyIR):
 
     ctor_args = [f"const {i.lazy_type.cpp_type()}& {i.name}" for i in all_args]
     reuse_ctor_args = ", ".join(ctor_args)
-    # if schema.properties.ShapePrecompute:
-    #     ctor_args.append("std::vector<wonjoo>&& shapes")
     node_ctor_args = ", ".join(ctor_args)
 
     scalar_initializers = ",\n        ".join([
@@ -152,9 +152,14 @@ std::string ToString() const override {{
     ]
 
 
+# Upstream class lives at torchgen/dest/lazy_ir.py.
+# We override this class to remove torch::lazy::Shape related logic.
+# Resulting NativeFuncDefinition is generated at xla/torch_xla/csrc/generated/XlaNativeFunctions.cpp.
 @dataclass(frozen=True)
 class GenXlaLazyNativeFuncDefinition(GenLazyNativeFuncDefinition):
 
+  # This function is responsible for shape inference for `torch::lazy::Shape`.
+  # We don't need `torch::lazy::Shape` for our codegen, so returning an empty string.
   def shape_inference(self, func: NativeFunction, schema: LazyIrSchema) -> str:
     return ""
 
