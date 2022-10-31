@@ -403,14 +403,6 @@ class XLATensor::DeviceContextArena {
   std::map<torch::lazy::BackendDevice, DeviceContext*> device_contexts_;
 };
 
-struct DeviceDataInfo : public xla::ComputationClient::Data::Info {
-  DeviceDataInfo(int64_t tensor_id, bool read_only)
-      : tensor_id(tensor_id), read_only(read_only) {}
-
-  int64_t tensor_id = 0;
-  bool read_only = false;
-};
-
 XLATensor::Data::~Data() { DeviceContextArena::Get()->UnregisterTensor(this); }
 
 XLATensor::Async::Async(
@@ -1920,43 +1912,85 @@ bool XLATensor::ShouldSyncIrNode() {
   return this->data()->ir_value->op() != xla_device_data;
 }
 
-bool XLASymIntNodeImpl::bool_() {
+bool XLASymNodeImpl::is_int() {
+  // TODO: handle not is int
+  return true;
+}
+
+bool XLASymNodeImpl::is_float() {
+  // TODO: handle not is int
+  return false;
+}
+
+bool XLASymNodeImpl::bool_() {
   auto dn = torch_xla::DimCast(node());
   return dn->getDynamicValue() != 0;
 }
 
-c10::SymIntNode XLASymIntNodeImpl::eq(const c10::SymIntNode& other) {
-  auto pother = dynamic_cast<XLASymIntNodeImpl*>(other.get());
+c10::SymNode XLASymNodeImpl::eq(const c10::SymNode& other) {
+  auto pother = dynamic_cast<XLASymNodeImpl*>(other.get());
   auto neq = torch::lazy::MakeNode<SizeEq>(node(), pother->node());
-  return c10::make_intrusive<XLASymIntNodeImpl>(neq);
+  return c10::make_intrusive<XLASymNodeImpl>(neq);
 }
 
-c10::SymIntNode XLASymIntNodeImpl::add(const c10::SymIntNode& other) {
-  auto pother = dynamic_cast<XLASymIntNodeImpl*>(other.get());
+c10::SymNode XLASymNodeImpl::add(const c10::SymNode& other) {
+  auto pother = dynamic_cast<XLASymNodeImpl*>(other.get());
   auto nadd = torch::lazy::MakeNode<SizeAdd>(node(), pother->node());
-  return c10::make_intrusive<XLASymIntNodeImpl>(nadd);
+  return c10::make_intrusive<XLASymNodeImpl>(nadd);
 }
 
-c10::SymIntNode XLASymIntNodeImpl::mul(const c10::SymIntNode& other) {
-  auto pother = dynamic_cast<XLASymIntNodeImpl*>(other.get());
+c10::SymNode XLASymNodeImpl::mul(const c10::SymNode& other) {
+  auto pother = dynamic_cast<XLASymNodeImpl*>(other.get());
   auto nmul = torch::lazy::MakeNode<torch_xla::SizeMul>(node(), pother->node());
-  return c10::make_intrusive<XLASymIntNodeImpl>(nmul);
+  return c10::make_intrusive<XLASymNodeImpl>(nmul);
 }
 
-c10::SymIntNode XLASymIntNodeImpl::wrap(int64_t num) {
+c10::SymNode XLASymNodeImpl::wrap_int(int64_t num) {
   auto cnst = torch::lazy::MakeNode<SizeConstant>(num);
-  return c10::make_intrusive<XLASymIntNodeImpl>(cnst);
+  return c10::make_intrusive<XLASymNodeImpl>(cnst);
 }
 
-c10::SymIntNode XLASymIntNodeImpl::floordiv(const c10::SymIntNode& other) {
-  auto pother = dynamic_cast<XLASymIntNodeImpl*>(other.get());
+c10::SymNode XLASymNodeImpl::floordiv(const c10::SymNode& other) {
+  auto pother = dynamic_cast<XLASymNodeImpl*>(other.get());
   auto ndiv = torch::lazy::MakeNode<SizeDiv>(node(), pother->node());
-  return c10::make_intrusive<XLASymIntNodeImpl>(ndiv);
+  return c10::make_intrusive<XLASymNodeImpl>(ndiv);
 }
 
-std::string XLASymIntNodeImpl::str() {
+std::string XLASymNodeImpl::str() {
   return "Static bound: " +
          std::to_string(DimCast(node().get())->getStaticValue());
+}
+
+torch::lazy::hash_t XLATensor::GetGraphHash(
+    const std::vector<XLATensorPtr>& tensors) {
+  SyncTensorsConfig config;
+  config.sync_xla_data = true;
+
+  SyncTensorCollection coll = CollectSyncTensors(tensors, config);
+  absl::Span<const size_t> indices = coll.indices;
+  std::vector<torch::lazy::Value> ir_values;
+  ir_values.reserve(indices.size());
+  for (auto index : indices) {
+    ir_values.push_back(tensors.at(index)->CurrentIrValue());
+  }
+  PostOrderData po_data = RunPostOrder(ir_values, &coll);
+
+  return torch::lazy::HashCombine(
+      coll.hash, torch::lazy::Hash(po_data.parameter_sequence));
+}
+
+int64_t XLATensor::GetOpaqueHandle() const {
+  torch::lazy::BackendDataPtr xla_data = CurrentXlaData();
+  if (xla_data != nullptr) {
+    return UnwrapXlaData(xla_data)->GetOpaqueHandle();
+  }
+  const torch_xla::DeviceData* device_data =
+      torch_xla::DeviceData::Cast(GetIrValue().node.get());
+  if (device_data) {
+    return device_data->data()->GetHandle();
+  } else {
+    XLA_CHECK(false) << "XlaTensor does not have data handle";
+  }
 }
 
 }  // namespace torch_xla
