@@ -216,17 +216,17 @@ class ComputationClient {
   // wrapped inside a vector.
   virtual std::vector<DataPtr> GetDataShards(DataPtr data) = 0;
 
-  // Transfers local tensor values to the TPU servers and fetches the handles.
+  // Transfers local tensor values to the TPU devices and fetches the handles.
   virtual std::vector<DataPtr> TransferToServer(
       absl::Span<const TensorSource> tensors) = 0;
 
-  // Transfers local tensor values to the TPU servers and fetches the handles.
+  // Transfers local tensor values to the TPU devices and fetches the handles.
   // Update the handles associated with DataPtrs passed instead of creating new
   // datas.
   virtual void TransferToServer(absl::Span<const TensorSource> tensors,
                                 absl::Span<const DataPtr> datas) = 0;
 
-  // Transfers local sharded tensor values to the TPU servers and returns a
+  // Transfers local sharded tensor values to the TPU devices and returns a
   // `PjRtShardedData`.
   virtual DataPtr TransferShardsToServer(
       absl::Span<const TensorSource> tensor_shards, std::string device,
