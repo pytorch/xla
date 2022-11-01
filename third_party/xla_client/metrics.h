@@ -50,6 +50,8 @@ class MetricData {
 
   std::string Repr(double value) const { return repr_fn_(value); }
 
+  void Clear();
+
  private:
   mutable std::mutex lock_;
   MetricReprFn repr_fn_;

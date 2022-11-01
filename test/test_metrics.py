@@ -33,8 +33,8 @@ class MetricsTest(unittest.TestCase):
     assert (len(met.metric_names()) == 0)
     # perform the same computation and check if metrics increases again
     t2 = torch.tensor(200, device=xla_device)
-    #import pdb; pdb.set_trace()
-
+    assert ("TensorToData" in met.metrics_report())
+    assert (len(met.metric_names()) > 0)
 
 if __name__ == '__main__':
   test = unittest.main()
