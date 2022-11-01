@@ -68,6 +68,8 @@ class CounterData {
 
   int64_t Value() const { return value_; }
 
+  void Clear() { value_ = 0; }
+
  private:
   std::atomic<int64_t> value_;
 };
