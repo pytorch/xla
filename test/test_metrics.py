@@ -36,6 +36,7 @@ class MetricsTest(unittest.TestCase):
     assert ("TensorToData" in met.metrics_report())
     assert (len(met.metric_names()) > 0)
 
+
 if __name__ == '__main__':
   test = unittest.main()
   sys.exit(0 if test.result.wasSuccessful() else 1)
