@@ -7,8 +7,8 @@ namespace torch_xla {
 
 class AllGather : public XlaNode {
  public:
-  AllGather(const torch::lazy::Value& input, const torch::lazy::Value& token,
-            int64_t dim, int64_t shard_count,
+  AllGather(c10::ArrayRef<torch::lazy::Value> inputs,
+            const torch::lazy::Value& token, int64_t dim, int64_t shard_count,
             std::vector<std::vector<int64_t>> groups, bool pin_layout);
 
   std::string ToString() const override;

@@ -107,7 +107,7 @@ class XlaBackendTest(unittest.TestCase):
     pg_xla = get_process_group_xla(rank=511, size=1024)
     opts = dist.AllreduceOptions()
     opts.reduceOp = dist.ReduceOp.SUM
-    all_reduce_pattern = r'%all\-reduce\.\d+ = .+ all\-reduce\('
+    all_reduce_pattern = r'%all-reduce\.\d+ = .+ all-reduce\('
     with xm_cc_op_intercepted('all_reduce'):
       pg_xla.allreduce([tensor], opts)
     hlo = torch_xla._XLAC._get_xla_tensors_hlo([tensor])
@@ -127,8 +127,8 @@ class XlaBackendTest(unittest.TestCase):
       new_pg = dist.new_group(ranks=ranks)
     opts = dist.AllreduceOptions()
     opts.reduceOp = dist.ReduceOp.SUM
-    all_reduce_pattern = (r'%all\-reduce\.\d+ = .+ all\-reduce\(.+\), .*'
-                          r'replica_groups=\{\{0,1\},\{2,3\},\{4,5\}\}')
+    all_reduce_pattern = (r'%all-reduce\.\d+ = .+ all-reduce\(.+\), .*'
+                          r'replica_groups=\{\{0,1},\{2,3},\{4,5}}')
     with xm_cc_op_intercepted('all_reduce'):
       new_pg.allreduce([tensor], opts)
     hlo = torch_xla._XLAC._get_xla_tensors_hlo([tensor])
@@ -141,8 +141,28 @@ class XlaBackendTest(unittest.TestCase):
     tensor = torch.arange(2, device=device) + 1 + 2 * dist.get_rank()
     pg_xla = get_process_group_xla(rank=3, size=8)
     output_tensors = [torch.zeros_like(tensor)] * 8
-    all_gather_pattern = r'%all\-gather\.\d+ = .+ all\-gather\('
+    all_gather_pattern = r'%all-gather\.\d+ = .+ all-gather\('
     pg_xla.allgather([output_tensors], [tensor])
+    hlo = torch_xla._XLAC._get_xla_tensors_hlo(output_tensors)
+    hlo_matches(hlo, all_gather_pattern)
+    # purge all computations attached the device.
+    xm.mark_step()
+
+  def test_allgather_coalesced(self):
+    device = xm.xla_device()
+    tensor = torch.arange(2, device=device) + 1 + 2 * dist.get_rank()
+    tensor2 = torch.arange(5, device=device) + 1 + 2 * dist.get_rank()
+    pg_xla = get_process_group_xla(rank=3, size=8)
+    output_tensors = [torch.zeros_like(tensor)] * 8
+    output_tensors2 = [torch.zeros_like(tensor2)] * 8
+    # because we set os.environ[xenv.WORLD_SIZE] = '1', here the outputs'
+    # shapes will be same as the inputs' shapes.
+    all_gather_pattern = (
+        r'%all-gather\.\d+ = \(s64\[2]\{0}, s64\[5]\{0}, s64\[]\) '
+        r'all-gather\(s64\[2]\{0} %.+\.\d+, s64\[5]\{0} %.+\.\d+, '
+        r's64\[] %.+\.\d+\)')
+    pg_xla.allgather_coalesced([output_tensors, output_tensors2],
+                               [tensor, tensor2])
     hlo = torch_xla._XLAC._get_xla_tensors_hlo(output_tensors)
     hlo_matches(hlo, all_gather_pattern)
     # purge all computations attached the device.
@@ -160,7 +180,7 @@ class XlaBackendTest(unittest.TestCase):
     xm.mark_step()
 
     # xla doesn't have broadcast. We use all_reduce to implement broadcast.
-    all_reduce_pattern = r'%all\-reduce\.\d+ = .+ all\-reduce\('
+    all_reduce_pattern = r'%all-reduce\.\d+ = .+ all-reduce\('
     with xm_cc_op_intercepted('all_reduce'):
       pg_xla.broadcast([tensor], opts)
     hlo = torch_xla._XLAC._get_xla_tensors_hlo([tensor])
@@ -180,12 +200,41 @@ class XlaBackendTest(unittest.TestCase):
     pg_xla = get_process_group_xla(rank=0, size=len(input_list))
     opts = dist.ReduceScatterOptions()
     opts.reduceOp = dist.ReduceOp.SUM
-    reduce_scatter_pattern = r'%reduce\-scatter\.\d+ = .+ reduce\-scatter\('
-    pg_xla.reduce_scatter([output], [input_list], opts)
-    hlo = torch_xla._XLAC._get_xla_tensors_hlo([output])
-    hlo_matches(hlo, reduce_scatter_pattern)
-    # purge all computations attached the device.
-    xm.mark_step()
+    reduce_scatter_pattern = r'%reduce-scatter\.\d+ = .+ reduce-scatter\('
+    with self.assertRaises(RuntimeError) as cm:
+      pg_xla.reduce_scatter([output], [input_list], opts)
+      hlo = torch_xla._XLAC._get_xla_tensors_hlo([output])
+      hlo_matches(hlo, reduce_scatter_pattern)
+      # purge all computations attached the device.
+      xm.mark_step()
+    assert 'UNIMPLEMENTED: ReduceScatter is not implemented on CPU.' in str(
+        cm.exception), str(cm.exception)
+    # reset token to clean up the mess after the RuntimeError.
+    xm.set_replication(device, [])
+
+  def test_reduce_scatter_coalesced(self):
+    device = xm.xla_device()
+    tensor = torch.arange(2, device=device) + 1 + 2 * dist.get_rank()
+    tensor2 = torch.arange(5, device=device) + 1 + 2 * dist.get_rank()
+    input_tensors_list = [[tensor, tensor], [tensor2, tensor2]]
+    output_list = [torch.zeros_like(tensor), torch.zeros_like(tensor2)]
+    pg_xla = get_process_group_xla(rank=0, size=len(input_tensors_list[0]))
+    opts = dist.ReduceScatterOptions()
+    opts.reduceOp = dist.ReduceOp.SUM
+    reduce_scatter_pattern = (
+        r'%reduce-scatter\.\d+ = \(s64\[2]\{0}, s64\[5]\{0}, s64\[]\) '
+        r'reduce-scatter\(s64\[4]\{0} %.+\.\d+, s64\[10]\{0} %.+\.\d+, '
+        r's64\[] %.+\.\d+\)')
+    with self.assertRaises(RuntimeError) as cm:
+      pg_xla.reduce_scatter_coalesced(output_list, input_tensors_list, opts)
+      hlo = torch_xla._XLAC._get_xla_tensors_hlo(output_list)
+      hlo_matches(hlo, reduce_scatter_pattern)
+      # purge all computations attached the device.
+      xm.mark_step()
+    assert 'UNIMPLEMENTED: ReduceScatter is not implemented on CPU.' in str(
+        cm.exception), str(cm.exception)
+    # reset token to clean up the mess after the RuntimeError.
+    xm.set_replication(device, [])
 
   def test_send(self):
     device = xm.xla_device()
@@ -203,7 +252,7 @@ class XlaBackendTest(unittest.TestCase):
       pg_xla = dist.new_group(ranks=ranks)
 
     send_pattern = r'%send\.\d+ = .+ send\(.+\), channel_id=2'
-    senddone_pattern = r'%send\-done\.\d+ = .+ send\-done\(.+\), channel_id=2'
+    senddone_pattern = r'%send-done\.\d+ = .+ send-done\(.+\), channel_id=2'
     # seeing 'Send is not implemented on CPU' means we have successfully
     # generated `send` in the HLO.
     with self.assertRaises(RuntimeError) as cm:
@@ -233,7 +282,7 @@ class XlaBackendTest(unittest.TestCase):
       pg_xla = dist.new_group(ranks=ranks)
 
     recv_pattern = r'%recv\.\d+ = .+ recv\(.+\), channel_id=3'
-    recvdone_pattern = r'%recv\-done\.\d+ = .+ recv\-done\(.+\), channel_id=3'
+    recvdone_pattern = r'%recv-done\.\d+ = .+ recv-done\(.+\), channel_id=3'
     # seeing 'recv is not implemented on CPU' means we have successfully
     # generated `recv` in the HLO.
     with self.assertRaises(RuntimeError) as cm:
@@ -408,7 +457,6 @@ class XlaBackendTest(unittest.TestCase):
   def test_unimplemented_ops(self):
     unimplemented_ops = (
         'reduce',
-        'allgather_coalesced',
         'allreduce_coalesced',
         'alltoall',
         'alltoall_base',

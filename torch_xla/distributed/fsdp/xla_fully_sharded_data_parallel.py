@@ -34,7 +34,13 @@ from torch.nn.utils.rnn import PackedSequence
 import torch_xla.core.xla_model as xm
 
 from .xla_flatten_params_wrapper import XlaFlattenParamsWrapper
-from .utils import dummy_all_gather, dummy_all_reduce, dummy_reduce_scatter, apply_xla_patch_to_nn_linear
+from .utils import (
+    BucketizedReduceScatter,
+    DummyReduceScatter,
+    dummy_all_gather,
+    dummy_all_reduce,
+    apply_xla_patch_to_nn_linear,
+)
 
 FLOAT_DTYPES = [torch.float32, torch.float16, torch.bfloat16]
 
@@ -214,6 +220,8 @@ class XlaFullyShardedDataParallel(nn.Module):
       sharding_world_size: Optional[int] = None,
       shard_param_on_dim_0: bool = False,
       pin_layout_in_collective_ops: bool = False,
+      coalesce_all_gather_ops: bool = False,
+      reduce_scatter_bucket_size_mb: Optional[int] = 0,
       _shard_size_multiple: int = 128,
       _use_xla_patched_linear: bool = True,
       _debug_dummy_forward_pass: bool = False,
@@ -271,6 +279,20 @@ class XlaFullyShardedDataParallel(nn.Module):
     # When `_shard_param_on_dim_0` is True, we shard and all-gather model parameter tensors
     # only along their dim 0 without flattening the parameter
     self._shard_param_on_dim_0 = shard_param_on_dim_0 and not flatten_parameters
+    # Allow specifying groups for the sharding collective ops, useful for mixing
+    # FSDP data parallelism with model parallelism (e.g. Megatron)
+    self.sharding_groups = sharding_groups
+    if sharding_groups is None:
+      self.rank = xm.get_ordinal()
+      self.world_size = xm.xrt_world_size()
+    else:
+      if sharding_rank is None or sharding_world_size is None:
+        raise ValueError(
+            "sharding_rank and sharding_world_size must be provided when sharding_groups is specified"
+        )
+      self.rank = sharding_rank
+      self.world_size = sharding_world_size
+
     # Set layout pinning to False in all_gather, all_reduce, and reduce_scatter so that they can work together
     # TODO (ronghanghu): change the default layout pinning to True after it's supported simultaneously
     # on all collective ops (see https://github.com/pytorch/xla/pull/3511 for details)
@@ -285,28 +307,19 @@ class XlaFullyShardedDataParallel(nn.Module):
       self.all_reduce_op = functools.partial(
           xm.all_reduce, pin_layout=pin_layout_in_collective_ops)
     if _debug_dummy_reduce_scatter_op:
-      self.reduce_scatter_op = dummy_reduce_scatter
+      self.reduce_scatter_op = DummyReduceScatter(shard_count=self.world_size)
     else:
-      self.reduce_scatter_op = functools.partial(
-          xm.reduce_scatter, pin_layout=pin_layout_in_collective_ops)
+      self.reduce_scatter_op = BucketizedReduceScatter(
+          reduce_scatter_bucket_size_mb,
+          shard_count=self.world_size,
+          groups=self.sharding_groups,
+          pin_layout=pin_layout_in_collective_ops)
     if _debug_dummy_optimization_barrier_op:
       self.optimization_barrier_op = lambda *args: None
     else:
       self.optimization_barrier_op = xm.optimization_barrier_
 
-    # Allow specifying groups for the sharding collective ops, useful for mixing
-    # FSDP data parallelism with model parallelism (e.g. Megatron)
-    self.sharding_groups = sharding_groups
-    if sharding_groups is None:
-      self.rank = xm.get_ordinal()
-      self.world_size = xm.xrt_world_size()
-    else:
-      if sharding_rank is None or sharding_world_size is None:
-        raise ValueError(
-            "sharding_rank and sharding_world_size must be provided when sharding_groups is specified"
-        )
-      self.rank = sharding_rank
-      self.world_size = sharding_world_size
+    self.coalesce_all_gather_ops = coalesce_all_gather_ops
 
     # Options for debugging
     # - set _debug_dummy_forward_pass=True to check for parameter-only memory consumption
@@ -420,6 +433,10 @@ class XlaFullyShardedDataParallel(nn.Module):
           module.set_gradient_divide_factors(pre, post, False)
     self.gradient_predivide_factor = pre
     self.gradient_postdivide_factor = post
+    if (pre, post) == (1, 1):
+      self.reduce_scatter_op.scale = 1.0 / self.world_size
+    else:
+      self.reduce_scatter_op.scale = 1.0
 
   @property
   def module(self) -> XlaFlattenParamsWrapper:
@@ -1007,6 +1024,7 @@ class XlaFullyShardedDataParallel(nn.Module):
     """
     if not torch.is_grad_enabled():
       return  # don't register grad hooks if grad isn't enabled
+    self._post_backward_hooks_to_call = 0
     for p in self.full_params:
       if p.requires_grad:
         if hasattr(p, "_shard_bwd_hook"):
@@ -1020,6 +1038,7 @@ class XlaFullyShardedDataParallel(nn.Module):
         handle = grad_acc.register_hook(
             functools.partial(self._post_backward_hook, p))
         p._shard_bwd_hook = (grad_acc, handle)
+        self._post_backward_hooks_to_call += 1
 
   @torch.no_grad()
   def _post_backward_hook(self, param: Parameter, *unused: Any) -> None:
@@ -1046,7 +1065,10 @@ class XlaFullyShardedDataParallel(nn.Module):
     # then subsequent hook callbacks will see POST state.
     self.assert_state([TrainingState.BACKWARD_PRE, TrainingState.BACKWARD_POST])
     self.training_state = TrainingState.BACKWARD_POST
+    self._post_backward_hooks_to_call -= 1
     if param.grad is None:
+      if self._post_backward_hooks_to_call == 0:
+        self.reduce_scatter_op.flush()
       return
 
     assert param.grad is not None, param.shape
@@ -1067,6 +1089,8 @@ class XlaFullyShardedDataParallel(nn.Module):
           apply_opt_barrier=self.optimization_barrier_in_backward)
 
     if not self._require_backward_grad_sync:
+      if self._post_backward_hooks_to_call == 0:
+        self.reduce_scatter_op.flush()
       return
 
     if self.gradient_predivide_factor > 1:
@@ -1082,38 +1106,37 @@ class XlaFullyShardedDataParallel(nn.Module):
       self.optimization_barrier_op([grad_flat])
     if grad_flat.dtype != torch.float32 and self.fp32_reduce_scatter:
       grad_flat = grad_flat.to(torch.float32)
-    reduced_grad = self.reduce_scatter_op(
-        xm.REDUCE_SUM,
-        grad_flat.detach(),
-        scale=1.0,
-        scatter_dim=0,
-        shard_count=self.world_size,
-        groups=self.sharding_groups)
-    if reduced_grad.dtype != torch.float32:
-      reduced_grad = reduced_grad.to(torch.float32)
-    if self.optimization_barrier_in_backward:
-      self.optimization_barrier_op([reduced_grad])
-    if self.gradient_postdivide_factor > 1:
-      # Average grad by world_size for consistency with PyTorch DDP.
-      reduced_grad.data.div_(self.gradient_postdivide_factor)
 
-    grad._has_full_param = True
-    grad_flat._has_full_param = True
-    self._free_full_params(
-        [grad, grad_flat],
-        dependency_tensors=[reduced_grad],
-        apply_opt_barrier=self.optimization_barrier_in_backward)
-    self._try_adding_to_backward_opt_barrier_lists(reduced_grad)
+    def reduce_scatter_done(reduced_grad):
+      if reduced_grad.dtype != torch.float32:
+        reduced_grad = reduced_grad.to(torch.float32)
+      if self.optimization_barrier_in_backward:
+        self.optimization_barrier_op([reduced_grad])
+      if self.gradient_postdivide_factor > 1:
+        # Average grad by world_size for consistency with PyTorch DDP.
+        reduced_grad.data.div_(self.gradient_postdivide_factor)
 
-    # Accumulate into the gradient shard.
-    assert hasattr(param, "_sharded_param")
-    p_shard = param._sharded_param
-    if p_shard.grad is None:
-      p_shard.grad = reduced_grad.data
-    else:
-      assert p_shard.grad.shape == reduced_grad.shape
-      assert p_shard.grad.device == reduced_grad.device
-      p_shard.grad.data += reduced_grad.data
+      grad._has_full_param = True
+      grad_flat._has_full_param = True
+      self._free_full_params(
+          [grad, grad_flat],
+          dependency_tensors=[reduced_grad],
+          apply_opt_barrier=self.optimization_barrier_in_backward)
+      self._try_adding_to_backward_opt_barrier_lists(reduced_grad)
+
+      # Accumulate into the gradient shard.
+      assert hasattr(param, "_sharded_param")
+      p_shard = param._sharded_param
+      if p_shard.grad is None:
+        p_shard.grad = reduced_grad.data
+      else:
+        assert p_shard.grad.shape == reduced_grad.shape
+        assert p_shard.grad.device == reduced_grad.device
+        p_shard.grad.data += reduced_grad.data
+
+    self.reduce_scatter_op(grad_flat.detach(), reduce_scatter_done)
+    if self._post_backward_hooks_to_call == 0:
+      self.reduce_scatter_op.flush()
 
   def _queue_wait_for_post_backward(self) -> None:
     """
@@ -1259,6 +1282,8 @@ class XlaFullyShardedDataParallel(nn.Module):
                                                     self.sharded_params,
                                                     dependency_tensors)
 
+    if self.coalesce_all_gather_ops:
+      p_to_rebuild, shards_to_all_gather = [], []
     for p, p_shard in zip(self.full_params, self.sharded_params):
       if not p._has_full_param:
         p_shard_data = p_shard.detach()
@@ -1267,8 +1292,12 @@ class XlaFullyShardedDataParallel(nn.Module):
         if p_shard_data.dtype != self.compute_dtype:
           p_shard_data = p_shard_data.to(self.compute_dtype)
         if self._shard_param_on_dim_0 or self._shard_size_multiple == 1:
-          p_padded = self.all_gather_op(
-              p_shard_data, groups=self.sharding_groups)
+          if self.coalesce_all_gather_ops:
+            p_to_rebuild.append((p, p_shard))
+            shards_to_all_gather.append(p_shard_data)
+          else:
+            p_padded = self.all_gather_op(
+                p_shard_data, groups=self.sharding_groups)
         else:
           # gather full parameter from shards
           # reshape sharded parameters to 2d tensors for efficient gathering on
@@ -1276,14 +1305,23 @@ class XlaFullyShardedDataParallel(nn.Module):
           p_shard_2d = p_shard_data.view(-1, self._shard_size_multiple)
           p_padded = self.all_gather_op(
               p_shard_2d, groups=self.sharding_groups).flatten()
-        if apply_opt_barrier:
-          self.optimization_barrier_op([p_padded])
-        if self._shard_param_on_dim_0:
-          p.data = p_padded[:p_shard._orig_size[0]]
-        else:
-          p.data = p_padded[:p_shard._orig_size.numel()].view(
-              p_shard._orig_size)
+        if not self.coalesce_all_gather_ops:
+          if apply_opt_barrier:
+            self.optimization_barrier_op([p_padded])
+          if self._shard_param_on_dim_0:
+            p.data = p_padded[:p_shard._orig_size[0]]
+          else:
+            p.data = p_padded[:p_shard._orig_size.numel()].view(
+                p_shard._orig_size)
         p._has_full_param = True
+
+    if self.coalesce_all_gather_ops:
+      p_padded_list = self.all_gather_op(
+          shards_to_all_gather, groups=self.sharding_groups)
+      if apply_opt_barrier:
+        self.optimization_barrier_op(p_padded_list)
+      for (p, p_shard), p_padded in zip(p_to_rebuild, p_padded_list):
+        p.data = p_padded[:p_shard._orig_size[0]]
 
     self.has_full_params = True
 

@@ -21,15 +21,6 @@ xla::Shape NodeOutputShape(c10::ArrayRef<torch::lazy::Value> operands,
   return xla::ShapeUtil::MakeTupleShape(tuple_shapes);
 }
 
-std::vector<torch::lazy::Value> GetOperandList(
-    c10::ArrayRef<torch::lazy::Value> operands,
-    const torch::lazy::Value& token) {
-  std::vector<torch::lazy::Value> operand_list(operands.begin(),
-                                               operands.end());
-  operand_list.push_back(token);
-  return operand_list;
-}
-
 }  // namespace
 
 AllReduce::AllReduce(AllReduceType reduce_type,
