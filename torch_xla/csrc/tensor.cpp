@@ -630,7 +630,7 @@ XLATensor::ShardingSpecPtr XLATensor::sharding_spec() const {
   torch::lazy::Value ir_value = CurrentIrValue();
   if (ir_value) {
     XLA_CHECK(ir_value.node != nullptr) << "Tyring to access a null cursor";
-    auto* sharding = dynamic_cast<XlaNode*>(ir_value.node.get())->GetSharding();
+    auto sharding = dynamic_cast<XlaNode*>(ir_value.node.get())->GetSharding();
     if (sharding == nullptr) {
       return nullptr;
     }
@@ -701,11 +701,9 @@ void XLATensor::SetInPlaceIrValue(torch::lazy::Value ir_value) {
 }
 
 void XLATensor::AssignIrValue(torch::lazy::Value ir_value) const {
-  // Sharding annotation it not null, if xla_data() is sharded.
-  // TODO(yeounoh): Sharding annotation must be removed by explicit call to
-  // ClearSharding.
+  // Sharding annotation is not null, if xla_data() is sharded.
   ShardingSpecPtr sharding = sharding_spec();
-  if (sharding != nullptr) {
+  if (ir_value && sharding != nullptr) {
     dynamic_cast<XlaNode*>(ir_value.node.get())
         ->SetSharding(sharding->sharding);
   }

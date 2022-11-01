@@ -1384,6 +1384,13 @@ void InitXlaModuleBindings(py::module m) {
     XLATensorPtr xtensor = bridge::GetXlaTensor(input);
     std::vector<XLATensorPtr> xla_tensors{xtensor};
     at::Tensor cpu_tensor = XLATensor::GetTensors(&xla_tensors)[0];
+
+    // Existing annotation must be cleared explicitly. We do not clear and
+    // overwrite the existing sharding on user's behalf, since it could lead to
+    // confusion/error.
+    XLA_CHECK(xtensor->sharding_spec() == nullptr)
+        << "Existing annotation must be cleared first.";
+
     auto sharding_spec = std::make_shared<XLATensor::ShardingSpec>(sharding);
     auto xla_data = CreateTensorsData(
         std::vector<at::Tensor>{cpu_tensor},
@@ -1434,7 +1441,6 @@ void InitXlaModuleBindings(py::module m) {
               xla::HloModule::CreateFromProto(module_proto, config).value());
           return module->ToString();
         });
-
   m.def("_init_xla_lazy_backend", []() {
     MapXlaEnvVarsToLazy();
     InitXlaBackend();
