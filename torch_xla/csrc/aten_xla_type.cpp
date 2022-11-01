@@ -2886,18 +2886,6 @@ at::Tensor XLANativeFunctions::upsample_bilinear2d_backward(
 }
 
 at::Tensor XLANativeFunctions::upsample_nearest2d(
-    const at::Tensor& input, at::OptionalIntArrayRef output_size,
-    c10::optional<at::ArrayRef<double>> scale_factors) {
-  XLA_FN_COUNTER("xla::");
-  XLATensorPtr input_tensor = bridge::GetXlaTensor(input);
-  absl::Span<const int64_t> input_dims =
-      input_tensor->shape().get().dimensions();
-  return bridge::AtenFromXlaTensor(XLATensor::upsample_nearest2d(
-      input_tensor,
-      GetOutputSizeWithScale(input_dims, scale_factors, output_size)));
-}
-
-at::Tensor XLANativeFunctions::upsample_nearest2d(
     const at::Tensor& self, at::IntArrayRef output_size,
     c10::optional<double> scales_h, c10::optional<double> scales_w) {
   XLA_FN_COUNTER("xla::");

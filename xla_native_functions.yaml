@@ -322,7 +322,6 @@ supported:
   - upsample_bilinear2d
   - upsample_bilinear2d_backward
   - upsample_nearest2d
-  - upsample_nearest2d.vec
   - upsample_nearest2d_backward
   - var.correction
   - var_mean.correction
