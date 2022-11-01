@@ -63,22 +63,23 @@ If a single TPU VM does not suit your requirment, you can consider using TPU Pod
 ## <a name="Resource"></a> Available images and wheels
 The following pre-built docker images are available to run on Cloud TPU Nodes (see [docker images](#DockerImage) for instructions):
 
-    * `gcr.io/tpu-pytorch/xla:r1.12_3.7`: The current stable version.
+    * `gcr.io/tpu-pytorch/xla:r1.13_3.7`: The current stable version.
+    * `gcr.io/tpu-pytorch/xla:r1.12_3.7`: The 1.12 release version.
     * `gcr.io/tpu-pytorch/xla:r1.11_3.7`: The 1.11 release version.
     * `gcr.io/tpu-pytorch/xla:nightly_3.7`: Nightly version using Python 3.7.
     * `gcr.io/tpu-pytorch/xla:nightly_3.7_YYYYMMDD (e.g.: gcr.io/tpu-pytorch/xla:nightly_3.7_20220301)`.
 
 and for Cloud TPU VMs
 
-    * `gcr.io/tpu-pytorch/xla:r1.12_3.8_tpuvm`: The current stable version.
-    * `gcr.io/tpu-pytorch/xla:r1.11_3.8_tpuvm`: The 1.11 release version.
+    * `gcr.io/tpu-pytorch/xla:r1.13_3.8_tpuvm`: The current stable version.
+    * `gcr.io/tpu-pytorch/xla:r1.12_3.8_tpuvm`: The 1.12 release version.
     * `gcr.io/tpu-pytorch/xla:nightly_3.8_tpuvm`: Nightly version using Python 3.7.
     * `gcr.io/tpu-pytorch/xla:nightly_3.8_YYYYMMDD (e.g.: gcr.io/tpu-pytorch/xla:nightly_3.7_20220301)`.
 
 We also have pre-built docker images to run on Cloud compute instances with GPUs (`CUDA 11.2`):
 
-    * `gcr.io/tpu-pytorch/xla:r1.12_3.7_cuda_11.2`: The current stable version.
-    * `gcr.io/tpu-pytorch/xla:r1.11_3.7_cuda_11.2`: The 1.11 release version.
+    * `gcr.io/tpu-pytorch/xla:r1.13_3.7_cuda_11.2`: The current stable version.
+    * `gcr.io/tpu-pytorch/xla:r1.12_3.7_cuda_11.2`: The 1.12 release version.
     * `gcr.io/tpu-pytorch/xla:nightly_3.7_cuda_11.2`: Nightly version using Python 3.7.
     * `gcr.io/tpu-pytorch/xla:nightly_3.7_cuda_11.2_YYYYMMDD`.
 
@@ -87,6 +88,7 @@ To run on [compute instances with GPUs](https://cloud.google.com/compute/docs/gp
 The following pre-built wheels are avaialble for Cloud TPU Node:
 
 * `https://storage.googleapis.com/tpu-pytorch/wheels/torch_xla-nightly-cp37-cp37m-linux_x86_64.whl`
+* `https://storage.googleapis.com/tpu-pytorch/wheels/torch_xla-1.13-cp37-cp37m-linux_x86_64.whl`
 * `https://storage.googleapis.com/tpu-pytorch/wheels/torch_xla-1.12-cp37-cp37m-linux_x86_64.whl`
 * `https://storage.googleapis.com/tpu-pytorch/wheels/torch_xla-1.11-cp37-cp37m-linux_x86_64.whl`
 * `https://storage.googleapis.com/tpu-pytorch/wheels/torch_xla-1.10-cp37-cp37m-linux_x86_64.whl`
@@ -95,6 +97,7 @@ The following pre-built wheels are avaialble for Cloud TPU Node:
 Cloud TPU VM:
 
 * `https://storage.googleapis.com/tpu-pytorch/wheels/tpuvm/torch_xla-nightly-cp38-cp38-linux_x86_64.whl`
+* `https://storage.googleapis.com/tpu-pytorch/wheels/tpuvm/torch_xla-1.13-cp38-cp38-linux_x86_64.whl`
 * `https://storage.googleapis.com/tpu-pytorch/wheels/tpuvm/torch_xla-1.12-cp38-cp38-linux_x86_64.whl`
 * `https://storage.googleapis.com/tpu-pytorch/wheels/tpuvm/torch_xla-1.11-cp38-cp38-linux_x86_64.whl`
 * `https://storage.googleapis.com/tpu-pytorch/wheels/tpuvm/torch_xla-1.10-cp38-cp38-linux_x86_64.whl`
@@ -102,6 +105,8 @@ Cloud TPU VM:
 
 and for Colab:
 
+* `https://storage.googleapis.com/tpu-pytorch/wheels/colab/torch_xla-1.13-cp37-cp37m-linux_x86_64.whl (TPU runtime for 1.13 release)`
+* `https://storage.googleapis.com/tpu-pytorch/wheels/cuda/112/torch_xla-1.13-cp37-cp37m-linux_x86_64.whl (GPU runtime for 1.13 release)`
 * `https://storage.googleapis.com/tpu-pytorch/wheels/colab/torch_xla-1.12-cp37-cp37m-linux_x86_64.whl (TPU runtime for 1.12 release)`
 * `https://storage.googleapis.com/tpu-pytorch/wheels/cuda/112/torch_xla-1.12-cp37-cp37m-linux_x86_64.whl (GPU runtime for 1.12 release)`
 * `https://storage.googleapis.com/tpu-pytorch/wheels/colab/torch_xla-1.11-cp37-cp37m-linux_x86_64.whl (TPU runtime for 1.11 release)`
