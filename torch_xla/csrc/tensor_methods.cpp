@@ -782,6 +782,24 @@ void XLATensor::bernoulli_(XLATensorPtr& input,
       input->shape().get()));
 }
 
+XLATensorPtr XLATensor::bitwise_and(const XLATensorPtr& input,
+                                    const XLATensorPtr& other) {
+  return input->CreateFrom(torch::lazy::MakeNode<BitwiseAndTensor>(
+      input->GetIrValue(), other->GetIrValue()));
+}
+
+XLATensorPtr XLATensor::bitwise_or(const XLATensorPtr& input,
+                                   const XLATensorPtr& other) {
+  return input->CreateFrom(torch::lazy::MakeNode<BitwiseOrTensor>(
+      input->GetIrValue(), other->GetIrValue()));
+}
+
+XLATensorPtr XLATensor::bitwise_xor(const XLATensorPtr& input,
+                                    const XLATensorPtr& other) {
+  return input->CreateFrom(torch::lazy::MakeNode<BitwiseXorTensor>(
+      input->GetIrValue(), other->GetIrValue()));
+}
+
 XLATensorPtr XLATensor::bmm(const XLATensorPtr& batch1,
                             const XLATensorPtr& batch2) {
   CheckBmmDimension(/*tag=*/"bmm", batch1, batch2);

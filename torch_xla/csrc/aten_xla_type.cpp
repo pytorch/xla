@@ -832,6 +832,33 @@ at::Tensor XLANativeFunctions::binary_cross_entropy_with_logits(
       IsDefined(pos_weight) ? *pos_weight : at::Tensor(), reduction);
 }
 
+at::Tensor XLANativeFunctions::bitwise_and(const at::Tensor& self,
+                                           const at::Tensor& other) {
+  XLA_FN_COUNTER("xla::");
+  return DoBinaryOpWithoutPromo(
+      self, other, [&](const XLATensorPtr& xself, const XLATensorPtr& other) {
+        return XLATensor::bitwise_and(xself, other);
+      });
+}
+
+at::Tensor XLANativeFunctions::bitwise_or(const at::Tensor& self,
+                                          const at::Tensor& other) {
+  XLA_FN_COUNTER("xla::");
+  return DoBinaryOpWithoutPromo(
+      self, other, [&](const XLATensorPtr& xself, const XLATensorPtr& xother) {
+        return XLATensor::bitwise_or(xself, xother);
+      });
+}
+
+at::Tensor XLANativeFunctions::bitwise_xor(const at::Tensor& self,
+                                           const at::Tensor& other) {
+  XLA_FN_COUNTER("xla::");
+  return DoBinaryOpWithoutPromo(
+      self, other, [&](const XLATensorPtr& xself, const XLATensorPtr& xother) {
+        return XLATensor::bitwise_xor(xself, xother);
+      });
+}
+
 at::Tensor XLANativeFunctions::bmm(const at::Tensor& self,
                                    const at::Tensor& mat2) {
   XLA_FN_COUNTER("xla::");
