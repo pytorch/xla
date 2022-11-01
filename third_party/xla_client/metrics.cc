@@ -4,7 +4,6 @@
 #include <cmath>
 #include <sstream>
 
-
 #include "absl/memory/memory.h"
 #include "absl/strings/str_split.h"
 #include "tensorflow/compiler/xla/xla_client/debug_macros.h"
@@ -129,7 +128,9 @@ std::vector<std::string> MetricsArena::GetMetricNames() {
   std::vector<std::string> names;
   std::lock_guard<std::mutex> lock(lock_);
   for (auto& name_data : metrics_) {
-    names.push_back(name_data.first);
+    if (name_data.second->TotalSamples() > 0) {
+      names.push_back(name_data.first);
+    }
   }
   return names;
 }
@@ -137,14 +138,18 @@ std::vector<std::string> MetricsArena::GetMetricNames() {
 MetricData* MetricsArena::GetMetric(const std::string& name) {
   std::lock_guard<std::mutex> lock(lock_);
   auto it = metrics_.find(name);
-  return it != metrics_.end() ? it->second.get() : nullptr;
+  return (it != metrics_.end() && it->second->TotalSamples() > 0)
+             ? it->second.get()
+             : nullptr;
 }
 
 std::vector<std::string> MetricsArena::GetCounterNames() {
   std::vector<std::string> names;
   std::lock_guard<std::mutex> lock(lock_);
   for (auto& name_data : counters_) {
-    names.push_back(name_data.first);
+    if (name_data.second->Value() > 0) {
+      names.push_back(name_data.first);
+    }
   }
   return names;
 }
@@ -152,15 +157,20 @@ std::vector<std::string> MetricsArena::GetCounterNames() {
 CounterData* MetricsArena::GetCounter(const std::string& name) {
   std::lock_guard<std::mutex> lock(lock_);
   auto it = counters_.find(name);
-  return it != counters_.end() ? it->second.get() : nullptr;
+  return (it != counters_.end() && it->second->Value() > 0) ? it->second.get()
+                                                            : nullptr;
 }
 
 void MetricsArena::ClearCounters() {
-  counters_.clear();
+  for (auto& counter : counters_) {
+    counter.second->Clear();
+  }
 }
 
 void MetricsArena::ClearMetrics() {
-  metrics_.clear();
+  for (auto& metrics : metrics_) {
+    metrics.second->Clear();
+  }
 }
 
 MetricData::MetricData(MetricReprFn repr_fn, size_t max_samples)
@@ -182,6 +192,13 @@ double MetricData::Accumulator() const {
 size_t MetricData::TotalSamples() const {
   std::lock_guard<std::mutex> lock(lock_);
   return count_;
+}
+
+void MetricData::Clear() {
+  std::lock_guard<std::mutex> lock(lock_);
+  count_ = 0;
+  accumulator_ = 0.0;
+  samples_ = std::vector<Sample>(samples_.size());
 }
 
 std::vector<Sample> MetricData::Samples(double* accumulator,
@@ -316,10 +333,14 @@ std::string CreateMetricReport() {
   MetricsArena* arena = MetricsArena::Get();
   std::stringstream ss;
   arena->ForEachMetric([&ss](const std::string& name, MetricData* data) {
-    EmitMetricInfo(name, data, &ss);
+    if (data->TotalSamples() > 0) {
+      EmitMetricInfo(name, data, &ss);
+    }
   });
   arena->ForEachCounter([&ss](const std::string& name, CounterData* data) {
-    EmitCounterInfo(name, data, &ss);
+    if (data->Value() > 0) {
+      EmitCounterInfo(name, data, &ss);
+    }
   });
   return ss.str();
 }
