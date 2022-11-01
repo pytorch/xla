@@ -298,6 +298,10 @@ class ComputationClient {
 
   virtual std::vector<std::string> GetAllDevices() const = 0;
 
+  virtual int GetProcessIndex() const = 0;
+
+  virtual int GetNumProcesses() const = 0;
+
   virtual void SetReplicationDevices(
       std::shared_ptr<std::vector<std::string>> devices) = 0;
 
