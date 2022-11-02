@@ -163,20 +163,16 @@ std::pair<XLATensorPtr, XLATensorPtr> GetBinaryOperands(
 
 // The input is in format of {N, C, H, W} and the output will be {H, W}.
 std::vector<int64_t> GetOutputSizeWithScale(
-    absl::Span<const int64_t> input_size,
-    const c10::optional<at::ArrayRef<double>>& scale_factors,
-    const at::OptionalIntArrayRef& output_size) {
-  if (!output_size) {
-    XLA_CHECK(scale_factors);
-    XLA_CHECK_EQ(scale_factors->size(), 2);
-    // Calculate the output size from input_shape and scale_factors
-    XLA_CHECK_EQ(input_size.size(), 4);
-    int64_t output_h = input_size[2] * (*scale_factors)[0];
-    int64_t output_w = input_size[3] * (*scale_factors)[1];
-    return {output_h, output_w};
-  }
-  XLA_CHECK(!scale_factors);
-  return torch::lazy::ToVector<int64_t>(*output_size);
+    absl::Span<const int64_t> input_size, const c10::optional<double> scales_h,
+    const c10::optional<double> scales_w,
+    const std::vector<int64_t>& output_size) {
+  XLA_CHECK(scales_h);
+  XLA_CHECK(scales_w);
+  // Calculate the output size from input_shape and scale_factors
+  XLA_CHECK_EQ(input_size.size(), 4);
+  int64_t output_h = input_size[2] * (*scales_h);
+  int64_t output_w = input_size[3] * (*scales_w);
+  return {output_h, output_w};
 }
 
 void CheckBinaryOpTypePromotion(const at::Tensor& out, const at::Tensor& self,
@@ -2890,14 +2886,16 @@ at::Tensor XLANativeFunctions::upsample_nearest2d(
     c10::optional<double> scales_h, c10::optional<double> scales_w) {
   XLA_FN_COUNTER("xla::");
   XLATensorPtr self_tensor = bridge::GetXlaTensor(self);
+  absl::Span<const int64_t> input_dims =
+      self_tensor->shape().get().dimensions();
+  std::vector<int64_t> scaled_output_size =
+      torch::lazy::ToVector<int64_t>(output_size);
   if ((scales_h && *scales_h != 1.0) || (scales_w && *scales_w != 1.0)) {
-    return at::native::call_fallback_fn<
-        &xla_cpu_fallback, ATEN_OP(upsample_nearest2d)>::call(self, output_size,
-                                                              scales_h,
-                                                              scales_w);
+    scaled_output_size = GetOutputSizeWithScale(input_dims, scales_h, scales_w,
+                                                scaled_output_size);
   }
-  return bridge::AtenFromXlaTensor(XLATensor::upsample_nearest2d(
-      self_tensor, torch::lazy::ToVector<int64_t>(output_size)));
+  return bridge::AtenFromXlaTensor(
+      XLATensor::upsample_nearest2d(self_tensor, scaled_output_size));
 }
 
 at::Tensor XLANativeFunctions::upsample_nearest2d_backward(
