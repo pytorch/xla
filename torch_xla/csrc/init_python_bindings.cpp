@@ -1190,6 +1190,19 @@ void InitXlaModuleBindings(py::module m) {
   });
   m.def("_xla_metrics_report",
         []() { return xla::metrics_reader::CreateMetricReport(); });
+  m.def("_short_xla_metrics_report",
+        [](const py::list& counter_names, const py::list& metric_names) {
+          std::vector<std::string> counter_name_vec;
+          std::vector<std::string> metric_name_vec;
+          for (auto& counter : counter_names) {
+            counter_name_vec.push_back(counter.cast<std::string>());
+          }
+          for (auto& metric : metric_names) {
+            metric_name_vec.push_back(metric.cast<std::string>());
+          }
+          return xla::metrics_reader::CreateMetricReport(counter_name_vec,
+                                                         metric_name_vec);
+        });
   m.def("_clear_xla_counters", []() { xla::metrics::ClearCounters(); });
   m.def("_clear_xla_metrics", []() { xla::metrics::ClearMetrics(); });
   m.def("_xla_tensors_report",

@@ -345,6 +345,26 @@ std::string CreateMetricReport() {
   return ss.str();
 }
 
+std::string CreateMetricReport(const std::vector<std::string>& counter_names,
+                               const std::vector<std::string>& metric_names) {
+  MetricsArena* arena = MetricsArena::Get();
+  std::stringstream ss;
+  for (const std::string& metric_name : metric_names) {
+    MetricData* data = arena->GetMetric(metric_name);
+    if (data && data->TotalSamples() > 0) {
+      EmitMetricInfo(metric_name, data, &ss);
+    }
+  }
+  for (const std::string& counter_name : counter_names) {
+    CounterData* data = arena->GetCounter(counter_name);
+    if (data && data->Value() > 0) {
+      EmitCounterInfo(counter_name, data, &ss);
+    }
+  }
+  // TODO: always emit aten counter for fallback
+  return ss.str();
+}
+
 std::vector<std::string> GetMetricNames() {
   return MetricsArena::Get()->GetMetricNames();
 }
