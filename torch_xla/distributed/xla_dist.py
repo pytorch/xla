@@ -18,6 +18,7 @@ import torch_xla.core.xla_env_vars as xenv
 from torch_xla.distributed.cluster import ClusterResolver
 import torch_xla.utils.utils as xu
 
+
 def get_args_parser() -> argparse.ArgumentParser:
   """Helper function parsing the command line options."""
 
@@ -81,6 +82,7 @@ def get_args_parser() -> argparse.ArgumentParser:
       type=str,
       help='The python command to launch training including model parameters.')
   return parser
+
 
 def parse_args(args):
   parser = get_args_parser()
