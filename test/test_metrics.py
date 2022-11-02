@@ -13,48 +13,48 @@ class MetricsTest(unittest.TestCase):
     xla_device = xm.xla_device()
     t1 = torch.tensor(100, device=xla_device)
     t1 += 2
-    assert ("xla::add" in met.metrics_report())
+    self.assertIn("xla::add", met.metrics_report())
     assert (len(met.counter_names()) > 0)
     met.clear_counters()
-    assert ("xla::add" not in met.metrics_report())
+    self.assertNotIn("xla::add", met.metrics_report())
     assert (len(met.counter_names()) == 0)
     # perform the same computation and check if counter increases again
     t1 += 2
-    assert ("xla::add" in met.metrics_report())
+    self.assertIn("xla::add", met.metrics_report())
     assert (len(met.counter_names()) > 0)
 
   def test_clear_metrics(self):
     xla_device = xm.xla_device()
-    t1 = torch.tensor(100, device=xla_device)
-    assert ("TensorToData" in met.metrics_report())
+    t1 = torch.tensor(156, device=xla_device)
+    self.assertIn("TensorToData", met.metrics_report())
     assert (len(met.metric_names()) > 0)
     met.clear_metrics()
-    assert ("TensorToData" not in met.metrics_report())
+    self.assertNotIn("TensorToData", met.metrics_report())
     assert (len(met.metric_names()) == 0)
     # perform the same computation and check if metrics increases again
     t2 = torch.tensor(200, device=xla_device)
-    assert ("TensorToData" in met.metrics_report())
+    self.assertIn("TensorToData", met.metrics_report())
     assert (len(met.metric_names()) > 0)
 
   def test_short_metrics_report_default_list(self):
     xla_device = xm.xla_device()
-    t1 = torch.tensor(100, device=xla_device)
+    t1 = torch.tensor(1456, device=xla_device)
     t2 = t1 * 2
     xm.mark_step()
     t2_cpu = t2.cpu()
     short_report = met.short_metrics_report()
-    assert ("TensorToData" not in short_report)
-    assert ("CompileTime" in short_report)
-    assert ("ExecuteTime" in short_report)
-    assert ("TransferToServerTime" in short_report)
-    assert ("TransferFromServerTime" in short_report)
-    assert ("MarkStep" in short_report)
+    self.assertNotIn("TensorToData", short_report)
+    self.assertIn("CompileTime", short_report)
+    self.assertIn("ExecuteTime", short_report)
+    self.assertIn("TransferToServerTime", short_report)
+    self.assertIn("TransferFromServerTime", short_report)
+    self.assertIn("MarkStep", short_report)
     # repeat the same computation and expect to see the CachedCompile counter
     t3 = t1 * 2
     xm.mark_step()
     t4 = t1 * 2
     xm.mark_step()
-    assert ("CachedCompile" in short_report)
+    self.assertIn("CachedCompile", short_report)
 
   def test_short_metrics_report_custom_list(self):
     xla_device = xm.xla_device()
@@ -64,14 +64,14 @@ class MetricsTest(unittest.TestCase):
     t2_cpu = t2.cpu()
     short_report = met.short_metrics_report(
         counter_names=['CreateCompileHandles'])
-    assert ('CreateCompileHandles' in short_report)
-    assert ('MarkStep' not in short_report)
+    self.assertIn('CreateCompileHandles', short_report)
+    self.assertNotIn('MarkStep', short_report)
     # using the default metrics list in this case
-    assert ('CompileTime' in short_report)
+    self.assertIn('CompileTime', short_report)
     short_report = met.short_metrics_report(
         counter_names=['CreateCompileHandles'], metric_names=['InboundData'])
-    assert ('CompileTime' not in short_report)
-    assert ('InboundData' in short_report)
+    self.assertNotIn('CompileTime', short_report)
+    self.assertIn('InboundData', short_report)
 
   def test_short_metrics_fallback_counter(self):
     xla_device = xm.xla_device()
@@ -80,9 +80,12 @@ class MetricsTest(unittest.TestCase):
     # this will trigger a aten::_local_scalar_dense which is the same as fallback counter
     if t2:
       t2 += 1
-    assert ('aten::_local_scalar_dense' in met.short_metrics_report())
-    assert ('aten::_local_scalar_dense' in met.short_metrics_report(
-        counter_names=['CreateCompileHandles'], metric_names=['InboundData']))
+    self.assertIn('aten::_local_scalar_dense', met.short_metrics_report())
+    self.assertIn(
+        'aten::_local_scalar_dense',
+        met.short_metrics_report(
+            counter_names=['CreateCompileHandles'],
+            metric_names=['InboundData']))
 
 
 if __name__ == '__main__':

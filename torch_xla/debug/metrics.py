@@ -59,16 +59,16 @@ def metrics_report():
   return torch_xla._XLAC._xla_metrics_report()
 
 
-def short_metrics_report(counter_names=None, metric_names=None):
+def short_metrics_report(counter_names: list = None, metric_names: list = None):
   """Retrieves a string containing the full metrics and counters report.
 
   Args:
     counter_names (list): The list of counter names whose data needs to be printed.
     metric_names (list): The list of metric names whose data needs to be printed.
   """
-  if counter_names == None:
+  if not counter_names:
     counter_names = ['CachedCompile', 'MarkStep']
-  if metric_names == None:
+  if not metric_names:
     metric_names = [
         'CompileTime', 'ExecuteTime', 'TransferToServerTime',
         'TransferFromServerTime'
