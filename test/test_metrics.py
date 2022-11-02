@@ -73,6 +73,17 @@ class MetricsTest(unittest.TestCase):
     assert ('CompileTime' not in short_report)
     assert ('InboundData' in short_report)
 
+  def test_short_metrics_fallback_counter(self):
+    xla_device = xm.xla_device()
+    t1 = torch.tensor(100, device=xla_device)
+    t2 = t1 * 2
+    # this will trigger a aten::_local_scalar_dense which is the same
+    if t2:
+      t2 += 1
+    assert ('aten::_local_scalar_dense' in met.short_metrics_report())
+    assert ('aten::_local_scalar_dense' in met.short_metrics_report(
+        counter_names=['CreateCompileHandles'], metric_names=['InboundData']))
+
 
 if __name__ == '__main__':
   test = unittest.main()

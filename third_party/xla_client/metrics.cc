@@ -361,7 +361,14 @@ std::string CreateMetricReport(const std::vector<std::string>& counter_names,
       EmitCounterInfo(counter_name, data, &ss);
     }
   }
-  // TODO: always emit aten counter for fallback
+  static std::string fall_back_counter_prefix = "aten::";
+  arena->ForEachCounter([&ss](const std::string& name, CounterData* data) {
+    if (name.rfind(fall_back_counter_prefix, 0) == 0 && data->Value() > 0) {
+      // it might omit duplicated counter if user also specified exact aten
+      // counter in the `counter_names` but it should be very rare.
+      EmitCounterInfo(name, data, &ss);
+    }
+  });
   return ss.str();
 }
 
