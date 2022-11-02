@@ -151,11 +151,19 @@ def configure_topology(local_rank: int,
   os.environ.setdefault(xenv.TPU_PROCESS_PORT, str(ports[local_rank]))
 
 
-def discover_master_worker_ip() -> str:
+def discover_master_worker_ip(use_localhost: bool = True) -> str:
   """Find the IP of the TPU host with TPU:0.
 
   TPU device IDs are nondeterministic and independent from Cloud TPU worker IDs.
+
+  Args:
+    use_localhost: if there is only one TPU host, return 'localhost` instead
+      of that host's internal IP.
   """
+  worker_ips = get_worker_ips()
+  if len(worker_ips) == 1:
+    return 'localhost'
+
   tpu_env = get_tpu_env()
   current_worker_id = int(tpu_env['WORKER_ID'])
   t = torch.tensor([current_worker_id], device=xm.xla_device())
@@ -163,5 +171,4 @@ def discover_master_worker_ip() -> str:
   xm.mark_step()
 
   master_worker_id = int(t.cpu())
-  worker_ips = get_worker_ips()
   return worker_ips[master_worker_id]

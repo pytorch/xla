@@ -30,6 +30,9 @@ MODEL_OPTS = {
     '--ddp': {
         'action': 'store_true',
     },
+    '--ddp_pjrt': {
+        'action': 'store_true',
+    },
 }
 
 FLAGS = args_parse.parse_common_options(
@@ -61,7 +64,6 @@ import torch_xla.distributed.xla_multiprocessing as xmp
 import torch_xla.test.test_utils as test_utils
 
 import torch.distributed as dist
-from torch.nn.parallel import DistributedDataParallel as DDP
 import torch_xla.distributed.xla_backend
 
 DEFAULT_KWARGS = dict(
@@ -119,9 +121,14 @@ def _train_update(device, step, loss, tracker, epoch, writer):
 
 
 def train_imagenet():
-  if FLAGS.ddp:
+  if FLAGS.ddp and not dist.is_initialized():
     dist.init_process_group(
         'xla', world_size=xm.xrt_world_size(), rank=xm.get_ordinal())
+
+  if FLAGS.ddp_pjrt:
+    from torch_xla.experimental.pjrt import DistributedDataParallel as DDP
+  else:
+    from torch.nn.parallel import DistributedDataParallel as DDP
 
   print('==> Preparing data..')
   img_dim = get_model_property('img_dim')
@@ -193,7 +200,7 @@ def train_imagenet():
   device = xm.xla_device()
   model = get_model_property('model_fn')().to(device)
   if FLAGS.ddp:
-    model = DDP(model, gradient_as_bucket_view=True)
+    model = DDP(model, gradient_as_bucket_view=True, broadcast_buffers=False)
 
   writer = None
   if xm.is_master_ordinal():

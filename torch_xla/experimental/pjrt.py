@@ -201,14 +201,13 @@ def _run_thread_per_device(local_rank: int,
   with concurrent.futures.ThreadPoolExecutor(
       max_workers=num_threads) as executor:
 
-    if device_type() == 'TPU' and process_count() > 1:
+    if device_type() == 'TPU':
       # HACK: need to call with each device since it relies on an XLA collective
-      master_ip = executor.map(_discover_tpu_master_worker_ip, devices)
+      master_ip = next(executor.map(_discover_tpu_master_worker_ip, devices))
       init_method = f'tcp://{master_ip}:{master_port}'
     else:
       init_method = None
 
-    print('init', init_method)
     init_pjrt_process_group(init_method=init_method)
 
     device_ordinals = [
@@ -358,20 +357,24 @@ class DistributedDataParallel(nn.Module):
 
   @staticmethod
   def _reduce_grad(grad: torch.Tensor) -> torch.Tensor:
-    # TODO: this should be out-of-place?
-    return xm.all_reduce(xm.REDUCE_SUM, grad)
+    return xm.all_reduce(xm.REDUCE_SUM, grad, scale=1. / global_device_count())
 
-  def __init__(self, module: nn.Module):
+  def __init__(self, module: nn.Module, *, broadcast_buffers: bool=True, **kwargs):
     super().__init__()
+
+    if kwargs:
+      logging.warn('Ignoring DDP arguments: %s', str(kwargs.keys()))
 
     assert dist.is_available() and dist.get_backend() == 'xla'
     self._module = module
+    self._broadcast_buffers = broadcast_buffers
 
     for p in module.parameters():
       p.register_hook(self._reduce_grad)
 
   def forward(self, x: torch.Tensor):
-    for b in self._module.buffers():
-      dist.broadcast(b)
+    if self._broadcast_buffers:
+      for b in self._module.buffers():
+        dist.broadcast(b, src=0)
 
     return self._module(x)
