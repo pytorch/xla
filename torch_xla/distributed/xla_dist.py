@@ -95,6 +95,24 @@ def parse_args(args):
   return FLAGS
 
 
+def resolve_and_execute(flags):
+  """Resolves the command line flags and launches a distributed process"""
+  cluster_resolver = ClusterResolver(flags.tpu, vms=flags.vm)
+  cluster = cluster_resolver.get_cluster()
+  tpuvm_mode = cluster_resolver.get_tpuvm_mode()
+  executor = DistributedExecutor(
+      cluster,
+      docker_container=flags.docker_container,
+      docker_image=flags.docker_image,
+      docker_run_flags=flags.docker_run_flag,
+      conda_env=flags.conda_env,
+      env_vars=flags.env,
+      restart_server=flags.restart_tpuvm_pod_server,
+      tpuvm_mode=tpuvm_mode,
+      tpuvm_server_port=flags.tpuvm_server_port)
+  executor.run(flags.positional)
+
+
 def concat_cmd_list(cmd_list, delimiter=' ', quote='"'):
   concat = ''
   for cmd in cmd_list:
@@ -669,17 +687,4 @@ if __name__ == '__main__':
   FLAGS = parse_args(parser)
 
   # Resolve VM and TPU clusters.
-  cluster_resolver = ClusterResolver(FLAGS.tpu, vms=FLAGS.vm)
-  cluster = cluster_resolver.get_cluster()
-  tpuvm_mode = cluster_resolver.get_tpuvm_mode()
-  executor = DistributedExecutor(
-      cluster,
-      docker_container=FLAGS.docker_container,
-      docker_image=FLAGS.docker_image,
-      docker_run_flags=FLAGS.docker_run_flag,
-      conda_env=FLAGS.conda_env,
-      env_vars=FLAGS.env,
-      restart_server=FLAGS.restart_tpuvm_pod_server,
-      tpuvm_mode=tpuvm_mode,
-      tpuvm_server_port=FLAGS.tpuvm_server_port)
-  executor.run(FLAGS.positional)
+  resolve_and_execute(FLAGS)
