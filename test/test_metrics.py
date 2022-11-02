@@ -77,7 +77,7 @@ class MetricsTest(unittest.TestCase):
     xla_device = xm.xla_device()
     t1 = torch.tensor(100, device=xla_device)
     t2 = t1 * 2
-    # this will trigger a aten::_local_scalar_dense which is the same
+    # this will trigger a aten::_local_scalar_dense which is the same as fallback counter
     if t2:
       t2 += 1
     assert ('aten::_local_scalar_dense' in met.short_metrics_report())
