@@ -27,6 +27,9 @@ MODEL_OPTS = {
     '--test_only_at_end': {
         'action': 'store_true',
     },
+    '--ddp': {
+        'action': 'store_true',
+    },
 }
 
 FLAGS = args_parse.parse_common_options(
@@ -56,6 +59,10 @@ import torch_xla.utils.utils as xu
 import torch_xla.core.xla_model as xm
 import torch_xla.distributed.xla_multiprocessing as xmp
 import torch_xla.test.test_utils as test_utils
+
+import torch.distributed as dist
+from torch.nn.parallel import DistributedDataParallel as DDP
+import torch_xla.distributed.xla_backend
 
 DEFAULT_KWARGS = dict(
     batch_size=128,
@@ -112,6 +119,10 @@ def _train_update(device, step, loss, tracker, epoch, writer):
 
 
 def train_imagenet():
+  if FLAGS.ddp:
+    dist.init_process_group(
+        'xla', world_size=xm.xrt_world_size(), rank=xm.get_ordinal())
+
   print('==> Preparing data..')
   img_dim = get_model_property('img_dim')
   if FLAGS.fake_data:
@@ -181,6 +192,9 @@ def train_imagenet():
 
   device = xm.xla_device()
   model = get_model_property('model_fn')().to(device)
+  if FLAGS.ddp:
+    model = DDP(model, gradient_as_bucket_view=True)
+
   writer = None
   if xm.is_master_ordinal():
     writer = test_utils.get_summary_writer(FLAGS.logdir)
@@ -209,7 +223,10 @@ def train_imagenet():
       output = model(data)
       loss = loss_fn(output, target)
       loss.backward()
-      xm.optimizer_step(optimizer)
+      if FLAGS.ddp:
+        optimizer.step()
+      else:
+        xm.optimizer_step(optimizer)
       tracker.add(FLAGS.batch_size)
       if lr_scheduler:
         lr_scheduler.step()

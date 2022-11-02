@@ -50,6 +50,8 @@ class MetricData {
 
   std::string Repr(double value) const { return repr_fn_(value); }
 
+  void Clear();
+
  private:
   mutable std::mutex lock_;
   MetricReprFn repr_fn_;
@@ -67,6 +69,8 @@ class CounterData {
   void AddValue(int64_t value) { value_ += value; }
 
   int64_t Value() const { return value_; }
+
+  void Clear() { value_ = 0; }
 
  private:
   std::atomic<int64_t> value_;

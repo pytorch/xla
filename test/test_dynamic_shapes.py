@@ -13,7 +13,7 @@ class TestDynamicShapes(unittest.TestCase):
     a2 = torch.nonzero(a1)
     self.assertTrue(a2.shape[0] == 3)
     a3 = a2.shape[0] + 3  # tests wrap
-    self.assertIsInstance(a3, torch.SymIntNode)
+    self.assertIsInstance(a3, torch.SymInt)
 
 
 if __name__ == '__main__':

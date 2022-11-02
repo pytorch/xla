@@ -1088,6 +1088,11 @@ class TestAtenXlaTensor(XlaTestCase):
         10, (2, 3)), torch.randint(10, (3, 3))),
                      lambda x, y, z: torch.addmm(x, y, z))
 
+  def test_baddmm_integer_types(self):
+    self.runAtenTest(
+        (torch.randint(10, (10, 3, 5)), torch.randint(10, (10, 3, 4)),
+         torch.randint(10, (10, 4, 5))), lambda x, y, z: torch.baddbmm(x, y, z))
+
   def test_view_empty(self):
     # These used to throw floating point exception.
     empty = torch.empty(0, device=xm.xla_device())

@@ -72,6 +72,9 @@ def mark_sharding(t: Union[torch.Tensor,
   return XLAShardedTensor(t)
 
 
-def clear_sharding(t: Union[torch.Tensor, XLAShardedTensor]) -> torch.Tensdor:
+def clear_sharding(t: Union[torch.Tensor, XLAShardedTensor]) -> torch.Tensor:
   """Clear sharding annotation from the input tensor and return a `cpu` casted tensor."""
-  return NotImplemented
+  torch_xla._XLAC._xla_clear_sharding(t)
+  if isinstance(t, XLAShardedTensor):
+    return t.global_tensor
+  return t

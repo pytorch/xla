@@ -82,9 +82,7 @@ class XLAShardedTensor(torch.Tensor):
 
   @property
   def sharding_spec(self):
-    # TODO(yeounoh) `torch_xla._XLAC._get_xla_sharding_spec(self.global_tensor)`
-    # is broken after ltc migration, needs a further investigation.
-    return NotImplemented
+    return torch_xla._XLAC._get_xla_sharding_spec(self.global_tensor)
 
   @property
   def shards(self):
