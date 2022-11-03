@@ -86,13 +86,7 @@ def get_args_parser() -> argparse.ArgumentParser:
 
 def parse_args(args):
   parser = get_args_parser()
-  FLAGS = parser.parse_args(args)
-
-  if (FLAGS.docker_container or FLAGS.docker_image or
-      FLAGS.docker_run_flag) and FLAGS.conda_env:
-    raise ValueError('Docker Setup arguments and Conda Setup'
-                     ' arguments are mutually exclusive.')
-  return FLAGS
+  return parser.parse_args(args)
 
 
 def resolve_and_execute(flags):
@@ -682,9 +676,15 @@ class DistributedExecutor(object):
         })
 
 
-if __name__ == '__main__':
-  parser = get_args_parser()
-  FLAGS = parse_args(parser)
+def main(args=None):
+  FLAGS = parse_args(args)
+  if (FLAGS.docker_container or FLAGS.docker_image or
+      FLAGS.docker_run_flag) and FLAGS.conda_env:
+    raise ValueError('Docker Setup arguments and Conda Setup'
+                     ' arguments are mutually exclusive.')
 
   # Resolve VM and TPU clusters.
   resolve_and_execute(FLAGS)
+
+if __name__ == '__main__':
+  main()
