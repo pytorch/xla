@@ -74,5 +74,10 @@ std::string CreateMetricReport() {
   return metrics::CreateMetricReport() + CreateXrtMetricReport();
 }
 
+std::string CreateMetricReport(const std::vector<std::string>& counter_names,
+                               const std::vector<std::string>& metric_names) {
+  return metrics::CreateMetricReport(counter_names, metric_names);
+}
+
 }  // namespace metrics_reader
 }  // namespace xla
