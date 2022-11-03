@@ -1,29 +1,9 @@
 from sklearn.datasets import make_blobs
-import torch, torch_xla
+import torch
 import torch_xla.core.xla_model as xm
-import numpy
 
 pd = torch._C._EnablePythonDispatcher()
 dev = xm.xla_device()
-
-# CREATE RANDOM DATA POINTS
-def blob_label(y, label, loc): # assign labels
-    target = numpy.copy(y)
-    for l in loc:
-        target[y == l] = label
-    return target
-
-# SIMPLE OPS TEST #
-def simple_test():
-    a1 = torch.tensor([[1,0,0,5,0,6]], device=dev)
-    a2 = torch.nonzero(a1)
-    a2.shape
-    torch_xla._XLAC._get_xla_tensor_dimension_size(a2,0)
-    a3 = torch.t(torch.tensor([[1,0,0,5,0,6]], device=dev))
-    a3.shape
-    torch.Size([6, 1])
-    a4 = a3.expand(a2.shape)
-    torch_xla._XLAC._get_xla_tensor_dimension_size(a4,0) # trigger the execution.
 
 # SIMPLE NN MODEL
 class Feedforward(torch.nn.Module):
@@ -43,34 +23,27 @@ class Feedforward(torch.nn.Module):
             return output
 
 # CREATE FAKE TRAIN DATA
-x_train, y_train = make_blobs(n_samples=40, n_features=2, cluster_std=1.5, shuffle=True)
+num_features = 2
+x_train, y_train = make_blobs(n_samples=40, n_features=num_features, cluster_std=1.5, shuffle=True)
 x_train = torch.Tensor(x_train)
-y_train = torch.Tensor(blob_label(y_train, 0, [0]))
-y_train = torch.Tensor(blob_label(y_train, 1, [1,2,3]))
+y_train = torch.Tensor(y_train)
 
 # CREATE FAKE TEST DATA
-x_test, y_test = make_blobs(n_samples=10, n_features=2, cluster_std=1.5, shuffle=True)
-x_test = torch.Tensor(x_test)
-num_non_zero = len(torch.nonzero(x_test.int()))
-print('xw32 num_non_zero=', num_non_zero)
+num_test_samples = 5
+x_test = torch.ones_like(torch.empty(num_test_samples, num_features))
+x_test[0][0] = 0
+y_test = torch.ones_like(torch.empty(num_test_samples*2))
+y_test[0] = 0
+
 x_test = x_test.to(dev)
-print(x_test.int())
 x_test = torch.nonzero(x_test.int()).float()
-y_test = torch.Tensor(blob_label(y_test, 0, [0]))
-y_test = torch.Tensor(blob_label(y_test, 1, [1,2,3]))
-y_test = torch.cat((y_test, y_test))
-y_test = y_test[:num_non_zero]
-print('xw32 y_test.size()=', y_test.size())
 y_test = y_test.to(dev)
+y_test = torch.nonzero(y_test.int()).float().squeeze()
 
 # MODEL SETUP
 model = Feedforward(2, 10).to(dev)
 criterion = torch.nn.BCELoss()
 optimizer = torch.optim.SGD(model.parameters(), lr = 0.01)
-
-# DEBUG
-print(x_test)
-print(y_test)
 
 # RUN THE FWD PASS
 model.eval()
