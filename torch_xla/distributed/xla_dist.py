@@ -686,5 +686,6 @@ def main(args=None):
   # Resolve VM and TPU clusters.
   resolve_and_execute(FLAGS)
 
+
 if __name__ == '__main__':
   main()
