@@ -107,7 +107,7 @@ if __name__ == '__main__':
       per_operator_headers=True,
       backend_name="XLA",
       gen_forced_fallback_code=False,
-      use_lazy_shape = False,
+      use_lazy_shape=False,
       backend_namespace="torch_xla",
       get_tensorlist="GetTensorList",
       get_tensor_or_wrap_number="bridge::GetXlaTensorOrCreateForWrappedNumber",
