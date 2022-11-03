@@ -196,6 +196,10 @@ class Counter {
 // Creates a report with the current metrics statistics.
 std::string CreateMetricReport();
 
+// Creates a report with the selected metrics statistics.
+std::string CreateMetricReport(const std::vector<std::string>& counter_names,
+                               const std::vector<std::string>& metric_names);
+
 // Returns the currently registered metric names. Note that the list can grow
 // since metrics are usualy function intialized (they are static function
 // variables).
