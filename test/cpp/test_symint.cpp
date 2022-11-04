@@ -161,18 +161,8 @@ TEST(SymintTest, TestDynamicSymintArithmetic) {
       torch::lazy::MakeNode<Expand>(scalar_value, target_size);
   torch::lazy::Value expand_value = torch::lazy::Value(expand_node, 0);
 
-  std::vector<torch::lazy::Shape> abs_lazy_shapes =
-      std::vector<torch::lazy::Shape>{
-          torch::lazy::Shape(torch::kFloat, {10, 20, 30})};
-
-  std::vector<torch::lazy::Shape> relu_lazy_shapes =
-      std::vector<torch::lazy::Shape>{
-          torch::lazy::Shape(torch::kFloat, {10, 20, 30})};
-
-  torch::lazy::NodePtr abs_node =
-      torch::lazy::MakeNode<Abs>(expand_value, std::move(abs_lazy_shapes));
-  torch::lazy::NodePtr relu_node =
-      torch::lazy::MakeNode<Relu>(expand_value, std::move(relu_lazy_shapes));
+  torch::lazy::NodePtr abs_node = torch::lazy::MakeNode<Abs>(expand_value);
+  torch::lazy::NodePtr relu_node = torch::lazy::MakeNode<Relu>(expand_value);
 
   torch::lazy::NodePtr size_abs_node = torch::lazy::MakeNode<SizeNode>(
       torch::lazy::Value{abs_node, 0}, /*dim=*/0);
