@@ -125,12 +125,12 @@ supported:
   - addcdiv_
   - addcmul
   - addmm
-  - alias
+  - alias_copy
   - arange.start_out
   - argmax
   - argmin
-  - as_strided
-  - as_strided_
+  - as_strided_copy
+  - as_strided_scatter
   - atan2
   - avg_pool2d
   - avg_pool2d_backward
@@ -159,7 +159,8 @@ supported:
   - cumprod
   - cumsum
   - diag
-  - diagonal
+  - diagonal_copy
+  - diagonal_scatter
   - div.Scalar
   - div.Tensor
   - div.Tensor_mode
@@ -169,7 +170,7 @@ supported:
   - embedding_dense_backward
   - empty.memory_format
   - empty_strided
-  - expand
+  - expand_copy
   - exponential_
   - eye.m_out
   - eye.out
@@ -246,7 +247,7 @@ supported:
   - normal.Tensor_float
   - normal.Tensor_Tensor
   - normal_
-  - permute
+  - permute_copy
   - pow.Scalar
   - pow.Tensor_Scalar
   - pow.Tensor_Tensor
@@ -278,11 +279,13 @@ supported:
   - scatter.value
   - scatter.value_reduce
   - scatter_add
-  - select.int
+  - select_copy.int
+  - select_scatter
   - selu_
   - sigmoid
   - sigmoid_backward
-  - slice.Tensor
+  - slice_copy.Tensor
+  - slice_scatter
   - slogdet
   - smooth_l1_loss
   - smooth_l1_loss_backward
@@ -290,13 +293,11 @@ supported:
   - softplus_backward
   - sort
   - sort.stable
-  - split.Tensor
-  - split_with_sizes
+  - split_copy.Tensor
+  - split_with_sizes_copy
   - sqrt
-  - squeeze
-  - squeeze.dim
-  - squeeze_
-  - squeeze_.dim
+  - squeeze_copy
+  - squeeze_copy.dim
   - stack
   - std
   - std.correction
@@ -308,27 +309,24 @@ supported:
   - sum.dim_IntList
   - svd
   - symeig
-  - t
-  - t_
+  - t_copy
   - tanh_backward
   - threshold
   - threshold_backward
   - topk
   - trace
-  - transpose.int
-  - transpose_
+  - transpose_copy.int
   - triangular_solve
-  - unbind.int
+  - unbind_copy.int
   - uniform_
-  - unsqueeze
-  - unsqueeze_
+  - unsqueeze_copy
   - upsample_bilinear2d
   - upsample_bilinear2d_backward
   - upsample_nearest2d
   - upsample_nearest2d_backward
   - var.correction
   - var_mean.correction
-  - view
+  - view_copy
   - where.self
   - xlogy.Tensor
   - zero_
@@ -356,9 +354,9 @@ symint:
   - embedding
   - empty.memory_format
   - empty_strided
-  - expand
+  - expand_copy
   - new_empty_strided
-  - view
+  - view_copy
   - diagonal_backward
   - narrow_copy
   - select_backward
