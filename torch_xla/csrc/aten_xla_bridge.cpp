@@ -15,6 +15,9 @@
 #include "torch_xla/csrc/torch_util.h"
 #include "torch_xla/csrc/xla_graph_executor.h"
 
+#include <torch/csrc/lazy/core/tensor_util.h>
+#include <ATen/FunctionalTensorWrapper.h>
+
 namespace torch_xla {
 namespace bridge {
 namespace {
