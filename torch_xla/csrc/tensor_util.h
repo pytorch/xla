@@ -107,4 +107,5 @@ bool RequiresRawTypeCasting(at::ScalarType scalar_type,
 xla::PrimitiveType GetShapeDimensionType(
     const torch::lazy::BackendDevice* device);
 
+
 }  // namespace torch_xla
