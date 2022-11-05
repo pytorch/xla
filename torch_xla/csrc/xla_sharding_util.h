@@ -46,10 +46,10 @@ class ShardingUtil {
   // sharded across devices along the same dimension in the `tile_assignment`;
   // the returned tensor shards vector is indexed by the device IDs. There is no
   // data duplication. Shards are not padded in case the input tensor is not
-  // evenly partitionable.
+  // evenly partitionable, unless `padded` is set.
   static std::vector<at::Tensor> ShardTensor(
       const at::Tensor& tensor, const xla::OpSharding sharding,
-      const std::vector<std::string>& devices);
+      const std::vector<std::string>& devices, bool padded = true);
 };
 
 }  // namespace torch_xla
