@@ -39,7 +39,8 @@ def mark_sharding(t: Union[torch.Tensor,
     # full replication
     output = xs.mark_sharding(output, device_mesh, (None, None))
   """
-  num_devices = xm.xrt_world_size()
+  num_devices = len(xm.get_xla_supported_devices())
+  assert num_devices > 0, "This requires XLA supported device(s)."
   assert np.prod(mesh_shape) == num_devices, \
     f"{mesh_shape} is not mappable over {num_devices} devices."
   assert all((d >= 0 and d < len(mesh_shape)) for d in partition_spec if d), \
