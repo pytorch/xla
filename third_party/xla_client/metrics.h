@@ -50,6 +50,8 @@ class MetricData {
 
   std::string Repr(double value) const { return repr_fn_(value); }
 
+  void Clear();
+
  private:
   mutable std::mutex lock_;
   MetricReprFn repr_fn_;
@@ -67,6 +69,8 @@ class CounterData {
   void AddValue(int64_t value) { value_ += value; }
 
   int64_t Value() const { return value_; }
+
+  void Clear() { value_ = 0; }
 
  private:
   std::atomic<int64_t> value_;
@@ -96,6 +100,10 @@ class MetricsArena {
   std::vector<std::string> GetCounterNames();
 
   CounterData* GetCounter(const std::string& name);
+
+  void ClearCounters();
+
+  void ClearMetrics();
 
  private:
   std::mutex lock_;
@@ -188,6 +196,10 @@ class Counter {
 // Creates a report with the current metrics statistics.
 std::string CreateMetricReport();
 
+// Creates a report with the selected metrics statistics.
+std::string CreateMetricReport(const std::vector<std::string>& counter_names,
+                               const std::vector<std::string>& metric_names);
+
 // Returns the currently registered metric names. Note that the list can grow
 // since metrics are usualy function intialized (they are static function
 // variables).
@@ -205,6 +217,10 @@ std::vector<std::string> GetCounterNames();
 // Retrieves the counter data of a given counter, or nullptr if such counter
 // does not exist.
 CounterData* GetCounter(const std::string& name);
+
+void ClearCounters();
+
+void ClearMetrics();
 
 // Scope based utility class to measure the time the code takes within a given
 // C++ scope.

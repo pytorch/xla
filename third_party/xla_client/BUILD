@@ -147,10 +147,12 @@ cc_library(
         "//tensorflow/compiler/xla/client/lib:tridiagonal",
         "//tensorflow/compiler/xla/client:global_data",
         "//tensorflow/compiler/xla/client:xla_computation",
+        "//tensorflow/compiler/xla/pjrt/gpu:se_gpu_pjrt_client",
         "//tensorflow/compiler/xla/pjrt:cpu_device",
         "//tensorflow/compiler/xla/pjrt:tpu_client",
         "//tensorflow/compiler/xla/pjrt:pjrt_client",
         "//tensorflow/compiler/xla/pjrt:tfrt_cpu_pjrt_client",
+        "//tensorflow/compiler/xla/pjrt:pjrt_c_api_client",
         "//tensorflow/compiler/xla/rpc:grpc_stub",
         "//tensorflow/compiler/xla/service:cpu_plugin",
         "//tensorflow/compiler/xla/service:platform_util",
@@ -179,6 +181,7 @@ cc_library(
     ] + if_cuda_is_configured([
         "@local_config_nccl//:nccl",
         "//tensorflow/compiler/jit:xla_gpu_device",
+        "//tensorflow/compiler/xla/stream_executor:cuda_platform",
     ]) + if_with_tpu_support([
         "//tensorflow/compiler/jit:xla_tpu_device",
         "//tensorflow/compiler/jit:xla_tpu_jit",

@@ -46,6 +46,10 @@ def _set_missing_flags(flags, sets):
 def _setup_xla_flags():
   flags = os.environ.get('XLA_FLAGS', '').split(' ')
   flags = _set_missing_flags(flags, (('xla_cpu_enable_fast_math', 'false'),))
+  flags = _set_missing_flags(
+      flags, (('xla_gpu_simplify_all_fp_conversions', 'false'),))
+  flags = _set_missing_flags(flags,
+                             (('xla_gpu_force_compilation_parallelism', '8'),))
   os.environ['XLA_FLAGS'] = ' '.join(flags)
 
 
@@ -107,9 +111,9 @@ from .version import __version__
 logger.info(
     'Letting libtpu.so load fail during _XLAC import. libtpu.so will be loaded '
     'from `libtpu` Python package when the ComputationClient is created.')
-# _tpu_vm_init() will update TPU_LIBRARY_PATH to Python package, if available
-os.environ['TPU_LIBRARY_PATH'] = '/dev/null'
+os.environ['TPU_LOAD_LIBRARY'] = '0'
 import _XLAC
+del os.environ['TPU_LOAD_LIBRARY']
 
 _tpu_vm_init()
 

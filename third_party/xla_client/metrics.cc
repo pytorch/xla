@@ -128,7 +128,9 @@ std::vector<std::string> MetricsArena::GetMetricNames() {
   std::vector<std::string> names;
   std::lock_guard<std::mutex> lock(lock_);
   for (auto& name_data : metrics_) {
-    names.push_back(name_data.first);
+    if (name_data.second->TotalSamples() > 0) {
+      names.push_back(name_data.first);
+    }
   }
   return names;
 }
@@ -136,14 +138,18 @@ std::vector<std::string> MetricsArena::GetMetricNames() {
 MetricData* MetricsArena::GetMetric(const std::string& name) {
   std::lock_guard<std::mutex> lock(lock_);
   auto it = metrics_.find(name);
-  return it != metrics_.end() ? it->second.get() : nullptr;
+  return (it != metrics_.end() && it->second->TotalSamples() > 0)
+             ? it->second.get()
+             : nullptr;
 }
 
 std::vector<std::string> MetricsArena::GetCounterNames() {
   std::vector<std::string> names;
   std::lock_guard<std::mutex> lock(lock_);
   for (auto& name_data : counters_) {
-    names.push_back(name_data.first);
+    if (name_data.second->Value() > 0) {
+      names.push_back(name_data.first);
+    }
   }
   return names;
 }
@@ -151,7 +157,20 @@ std::vector<std::string> MetricsArena::GetCounterNames() {
 CounterData* MetricsArena::GetCounter(const std::string& name) {
   std::lock_guard<std::mutex> lock(lock_);
   auto it = counters_.find(name);
-  return it != counters_.end() ? it->second.get() : nullptr;
+  return (it != counters_.end() && it->second->Value() > 0) ? it->second.get()
+                                                            : nullptr;
+}
+
+void MetricsArena::ClearCounters() {
+  for (auto& counter : counters_) {
+    counter.second->Clear();
+  }
+}
+
+void MetricsArena::ClearMetrics() {
+  for (auto& metrics : metrics_) {
+    metrics.second->Clear();
+  }
 }
 
 MetricData::MetricData(MetricReprFn repr_fn, size_t max_samples)
@@ -173,6 +192,13 @@ double MetricData::Accumulator() const {
 size_t MetricData::TotalSamples() const {
   std::lock_guard<std::mutex> lock(lock_);
   return count_;
+}
+
+void MetricData::Clear() {
+  std::lock_guard<std::mutex> lock(lock_);
+  count_ = 0;
+  accumulator_ = 0.0;
+  samples_ = std::vector<Sample>(samples_.size());
 }
 
 std::vector<Sample> MetricData::Samples(double* accumulator,
@@ -307,10 +333,41 @@ std::string CreateMetricReport() {
   MetricsArena* arena = MetricsArena::Get();
   std::stringstream ss;
   arena->ForEachMetric([&ss](const std::string& name, MetricData* data) {
-    EmitMetricInfo(name, data, &ss);
+    if (data->TotalSamples() > 0) {
+      EmitMetricInfo(name, data, &ss);
+    }
   });
   arena->ForEachCounter([&ss](const std::string& name, CounterData* data) {
-    EmitCounterInfo(name, data, &ss);
+    if (data->Value() > 0) {
+      EmitCounterInfo(name, data, &ss);
+    }
+  });
+  return ss.str();
+}
+
+std::string CreateMetricReport(const std::vector<std::string>& counter_names,
+                               const std::vector<std::string>& metric_names) {
+  MetricsArena* arena = MetricsArena::Get();
+  std::stringstream ss;
+  for (const std::string& metric_name : metric_names) {
+    MetricData* data = arena->GetMetric(metric_name);
+    if (data && data->TotalSamples() > 0) {
+      EmitMetricInfo(metric_name, data, &ss);
+    }
+  }
+  for (const std::string& counter_name : counter_names) {
+    CounterData* data = arena->GetCounter(counter_name);
+    if (data && data->Value() > 0) {
+      EmitCounterInfo(counter_name, data, &ss);
+    }
+  }
+  static std::string fall_back_counter_prefix = "aten::";
+  arena->ForEachCounter([&ss](const std::string& name, CounterData* data) {
+    if (name.rfind(fall_back_counter_prefix, 0) == 0 && data->Value() > 0) {
+      // it might emit duplicated counter if user also specified exact aten
+      // counter in the `counter_names` but it should be very rare.
+      EmitCounterInfo(name, data, &ss);
+    }
   });
   return ss.str();
 }
@@ -330,6 +387,10 @@ std::vector<std::string> GetCounterNames() {
 CounterData* GetCounter(const std::string& name) {
   return MetricsArena::Get()->GetCounter(name);
 }
+
+void ClearCounters() { MetricsArena::Get()->ClearCounters(); }
+
+void ClearMetrics() { MetricsArena::Get()->ClearMetrics(); }
 
 }  // namespace metrics
 }  // namespace xla

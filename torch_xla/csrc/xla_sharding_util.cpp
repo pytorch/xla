@@ -21,6 +21,28 @@ namespace {
 
 using xla::internal::XlaBuilderFriend;
 
+// Extract dimensions of the nested input array/list. For instance, an input 2D
+// list, [[1, 2, 3], [4, 5, 6]] has [2, 3] dimensions with 2 rows and 3 columns.
+std::vector<int64_t> TileAssignmentDimensions(
+    const py::list& tile_assignments) {
+  std::vector<int64_t> dims;
+  py::list r = tile_assignments;
+  while (true) {
+    XLA_CHECK(r.size() > 0)
+        << "Invalid argument: empty list is not a valid element type.";
+    dims.push_back(r.size());
+    auto type = r[0].attr("__class__").attr("__name__").cast<std::string>();
+    if (type == "list") {
+      r = r[0];
+    } else if ((type != "int") && (type != "float")) {
+      TF_LOG(ERROR) << "Invalid arguments: element type " << type;
+    } else {
+      break;
+    }
+  }
+  return dims;
+}
+
 }  // namespace
 
 bool ShardingUtil::SetHloSharding(LoweringContext* lowering_ctx) {
@@ -38,14 +60,71 @@ bool ShardingUtil::SetHloSharding(LoweringContext* lowering_ctx) {
   return is_sharded;
 }
 
+xla::OpSharding ShardingUtil::CreateOpSharding(const py::list& tile_assignment,
+                                               bool replicated, bool manual) {
+  XLA_CHECK(!(replicated && manual))
+      << "Invalid arguments: replicated=" << replicated
+      << ", manual=" << manual;
+
+  xla::OpSharding sharding;
+  if (replicated) {
+    sharding = xla::HloSharding::Replicate().ToProto();
+  } else if (manual) {
+    sharding = xla::HloSharding::Manual().ToProto();
+  } else {
+    // Sharding type is tiled
+    auto dims = TileAssignmentDimensions(tile_assignment);
+    xla::Array<int64_t> tile_array(dims);
+    switch (dims.size()) {
+      case 1:
+        tile_array.Each([&](absl::Span<const int64_t> indices, int64_t* v) {
+          *v = tile_assignment[indices[0]].cast<int64_t>();
+        });
+        break;
+      case 2:
+        tile_array.Each([&](absl::Span<const int64_t> indices, int64_t* v) {
+          auto r = tile_assignment[indices[0]].cast<py::list>();
+          *v = r[indices[1]].cast<int64_t>();
+        });
+        break;
+      case 3:
+        tile_array.Each([&](absl::Span<const int64_t> indices, int64_t* v) {
+          auto r = tile_assignment[indices[0]].cast<py::list>();
+          r = r[indices[1]].cast<py::list>();
+          *v = r[indices[2]].cast<int64_t>();
+        });
+        break;
+      case 4:
+        tile_array.Each([&](absl::Span<const int64_t> indices, int64_t* v) {
+          auto r = tile_assignment[indices[0]].cast<py::list>();
+          r = r[indices[1]].cast<py::list>();
+          r = r[indices[2]].cast<py::list>();
+          *v = r[indices[3]].cast<int64_t>();
+        });
+        break;
+      case 5:
+        tile_array.Each([&](absl::Span<const int64_t> indices, int64_t* v) {
+          auto r = tile_assignment[indices[0]].cast<py::list>();
+          r = r[indices[1]].cast<py::list>();
+          r = r[indices[2]].cast<py::list>();
+          r = r[indices[3]].cast<py::list>();
+          *v = r[indices[4]].cast<int64_t>();
+        });
+        break;
+      default:
+        TF_LOG(ERROR) << "Invalid arguments: tile_assignment ranks > 5";
+    }
+    xla::HloSharding hlo_sharding = xla::HloSharding::Tile(tile_array);
+    sharding = hlo_sharding.ToProto();
+  }
+  return sharding;
+}
+
 xla::HloModuleProto ShardingUtil::SpmdPartitioningPass(
-    const xla::HloModuleProto& hlo_proto, bool conv_halo_exchange_always_on_lhs,
+    const xla::HloModuleProto& hlo_proto, int64_t num_replicas,
+    int64_t num_partitions, bool conv_halo_exchange_always_on_lhs,
     bool choose_faster_windowed_einsum_over_mem, bool unroll_windowed_einsum,
     bool bidirectional_windowed_einsum) {
-  // TODO(yeounoh) read available devices
-  int64_t num_replicas = 1;
-  int64_t num_partitions = 8;
-
   // TODO(yeounoh) propagate this down to the PJRT client
   auto execution_options = xla::CreateDefaultExecutionOptions();
   execution_options.set_use_spmd_partitioning(true);
@@ -53,10 +132,10 @@ xla::HloModuleProto ShardingUtil::SpmdPartitioningPass(
   execution_options.set_num_partitions(num_partitions);
   auto module_config = xla::HloModule::CreateModuleConfigFromProto(
                            hlo_proto, xla::DebugOptions(), &execution_options)
-                           .ValueOrDie();
+                           .value();
   auto module = xla::HloModule::CreateFromProto(hlo_proto, module_config,
                                                 /*prohibit_empty_literal=*/true)
-                    .ValueOrDie();
+                    .value();
 
   xla::spmd::SpmdPartitionerOptions options;
   options.conv_halo_exchange_always_on_lhs = conv_halo_exchange_always_on_lhs;
@@ -150,7 +229,7 @@ ShardingUtil::InputHandler(
 
 std::vector<at::Tensor> ShardingUtil::ShardTensor(
     const at::Tensor& tensor, const xla::OpSharding sharding,
-    const std::vector<std::string>& devices) {
+    const std::vector<std::string>& devices, bool padded) {
   TF_LOG(INFO) << "ShardTensor with sharding type(" << sharding.type() << ")..."
                << std::endl;
   std::vector<at::Tensor> shards(devices.size());
@@ -161,38 +240,119 @@ std::vector<at::Tensor> ShardingUtil::ShardTensor(
         << "Invalid sharding tile_assignment_devices.size(): expected "
         << devices.size() << ", actual "
         << sharding.tile_assignment_devices().size();
-    // TODO(yeounoh) support higher-order topology
     XLA_CHECK(sharding.tile_shape().dimensions_size() <= 2);
-    XLA_CHECK(tensor.sizes().size() >= sharding.tile_shape().dimensions_size())
-        << "Data dimensions should be at least as large as the tile shape "
-           "dimensions.";
+    XLA_CHECK(tensor.sizes().size() >= sharding.tile_shape().dimensions_size());
 
     auto tile_shape = sharding.tile_assignment_dimensions();
-    for (int64_t core : sharding.tile_assignment_devices()) {
+    for (size_t i = 0; i < shards.size(); ++i) {
       at::Tensor shard;
       if (tile_shape.size() == 1) {
         int64_t x_partition = tensor.sizes()[0] / tile_shape[0] +
                               (tensor.sizes()[0] % tile_shape[0] != 0);
         shard = tensor.index(
-            {at::indexing::Slice((core / tile_shape[1]) * x_partition,
-                                 (core / tile_shape[1] + 1) * x_partition)});
+            {at::indexing::Slice((i % tile_shape[0]) * x_partition,
+                                 (i % tile_shape[0] + 1) * x_partition)});
       } else if (tile_shape.size() == 2) {
-        // ceil or ratio
         int64_t x_partition = tensor.sizes()[0] / tile_shape[0] +
                               (tensor.sizes()[0] % tile_shape[0] != 0);
         int64_t y_partition = tensor.sizes()[1] / tile_shape[1] +
                               (tensor.sizes()[1] % tile_shape[1] != 0);
         shard = tensor.index(
-            {at::indexing::Slice((core / tile_shape[1]) * x_partition,
-                                 (core / tile_shape[1] + 1) * x_partition),
-             at::indexing::Slice((core % tile_shape[1]) * y_partition,
-                                 (core % tile_shape[1] + 1) * y_partition)});
+            {at::indexing::Slice((i / tile_shape[1]) * x_partition,
+                                 (i / tile_shape[1] + 1) * x_partition),
+             at::indexing::Slice((i % tile_shape[1]) * y_partition,
+                                 (i % tile_shape[1] + 1) * y_partition)});
+      } else if (tile_shape.size() == 3) {
+        int64_t x_partition = tensor.sizes()[0] / tile_shape[0] +
+                              (tensor.sizes()[0] % tile_shape[0] != 0);
+        int64_t y_partition = tensor.sizes()[1] / tile_shape[1] +
+                              (tensor.sizes()[1] % tile_shape[1] != 0);
+        int64_t z_partition = tensor.sizes()[2] / tile_shape[2] +
+                              (tensor.sizes()[2] % tile_shape[2] != 0);
+        shard = tensor.index(
+            {at::indexing::Slice(
+                 (i / tile_shape[1] / tile_shape[2]) * x_partition,
+                 (i / tile_shape[1] / tile_shape[2] + 1) * x_partition),
+             at::indexing::Slice((i / tile_shape[2]) * y_partition,
+                                 (i / tile_shape[2] + 1) * y_partition),
+             at::indexing::Slice((i % tile_shape[2]) * z_partition,
+                                 (i % tile_shape[2] + 1) * z_partition)});
+      } else if (tile_shape.size() == 4) {
+        int64_t x_partition = tensor.sizes()[0] / tile_shape[0] +
+                              (tensor.sizes()[0] % tile_shape[0] != 0);
+        int64_t y_partition = tensor.sizes()[1] / tile_shape[1] +
+                              (tensor.sizes()[1] % tile_shape[1] != 0);
+        int64_t z_partition = tensor.sizes()[2] / tile_shape[2] +
+                              (tensor.sizes()[2] % tile_shape[2] != 0);
+        int64_t w_partition = tensor.sizes()[3] / tile_shape[3] +
+                              (tensor.sizes()[3] % tile_shape[3] != 0);
+        shard = tensor.index(
+            {at::indexing::Slice(
+                 (i / tile_shape[1] / tile_shape[2] / tile_shape[3]) *
+                     x_partition,
+                 (i / tile_shape[1] / tile_shape[2] / tile_shape[3] + 1) *
+                     x_partition),
+             at::indexing::Slice(
+                 (i / tile_shape[2] / tile_shape[3]) * y_partition,
+                 (i / tile_shape[2] / tile_shape[3] + 1) * y_partition),
+             at::indexing::Slice((i / tile_shape[3]) * z_partition,
+                                 (i / tile_shape[3] + 1) * z_partition),
+             at::indexing::Slice((i % tile_shape[3]) * w_partition,
+                                 (i % tile_shape[3] + 1) * w_partition)});
+      } else if (tile_shape.size() == 5) {
+        int64_t x_partition = tensor.sizes()[0] / tile_shape[0] +
+                              (tensor.sizes()[0] % tile_shape[0] != 0);
+        int64_t y_partition = tensor.sizes()[1] / tile_shape[1] +
+                              (tensor.sizes()[1] % tile_shape[1] != 0);
+        int64_t z_partition = tensor.sizes()[2] / tile_shape[2] +
+                              (tensor.sizes()[2] % tile_shape[2] != 0);
+        int64_t w_partition = tensor.sizes()[3] / tile_shape[3] +
+                              (tensor.sizes()[3] % tile_shape[3] != 0);
+        int64_t v_partition = tensor.sizes()[4] / tile_shape[4] +
+                              (tensor.sizes()[4] % tile_shape[4] != 0);
+        shard = tensor.index(
+            {at::indexing::Slice((i / tile_shape[1] / tile_shape[2] /
+                                  tile_shape[3] / tile_shape[4]) *
+                                     x_partition,
+                                 (i / tile_shape[1] / tile_shape[2] /
+                                      tile_shape[3] / tile_shape[4] +
+                                  1) *
+                                     x_partition),
+             at::indexing::Slice(
+                 (i / tile_shape[2] / tile_shape[3] / tile_shape[4]) *
+                     y_partition,
+                 (i / tile_shape[2] / tile_shape[3] / tile_shape[4] + 1) *
+                     y_partition),
+             at::indexing::Slice(
+                 (i / tile_shape[3] / tile_shape[4]) * z_partition,
+                 (i / tile_shape[3] / tile_shape[4] + 1) * z_partition),
+             at::indexing::Slice((i / tile_shape[4]) * w_partition,
+                                 (i / tile_shape[4] + 1) * w_partition),
+             at::indexing::Slice((i % tile_shape[4]) * v_partition,
+                                 (i % tile_shape[4] + 1) * v_partition)});
       }
+      int64_t core = sharding.tile_assignment_devices()[i];
       shards[core] = shard.contiguous(at::MemoryFormat::Contiguous);
     }
   } else if ((sharding.type() == xla::OpSharding::MANUAL) ||
              (sharding.type() == xla::OpSharding::TUPLE)) {
     TF_LOG(ERROR) << "Unsupported OpSharidng type " << sharding.type();
+  }
+
+  // Zero-pad to the right to ensure the sizes are even
+  if (shards.size() > 0 && padded) {
+    for (size_t i = 1; i < shards.size(); ++i) {
+      std::vector<long> pads;
+      for (size_t j = 0; j < shards[i].sizes().size(); ++j) {
+        XLA_CHECK_GE(shards[0].sizes().at(j), shards[i].sizes().at(j));
+        pads.push_back(shards[0].sizes().at(j) - shards[i].sizes().at(j));
+        pads.push_back(0);  // no padding on lhs
+      }
+      // Padding starts from the last dimension
+      std::reverse(pads.begin(), pads.end());
+      shards[i] = at::constant_pad_nd(
+          shards[i], c10::IntArrayRef(pads.data(), pads.size()), 0);
+    }
   }
   return shards;
 }

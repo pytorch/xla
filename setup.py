@@ -53,7 +53,7 @@ import torch
 base_dir = os.path.dirname(os.path.abspath(__file__))
 third_party_path = os.path.join(base_dir, 'third_party')
 
-_libtpu_version = '0.1.dev20220816'
+_libtpu_version = '0.1.dev20221017'
 _libtpu_storage_path = f'https://storage.googleapis.com/cloud-tpu-tpuvm-artifacts/wheels/libtpu-nightly/libtpu_nightly-{_libtpu_version}-py3-none-any.whl'
 
 
@@ -81,7 +81,7 @@ def get_git_head_sha(base_dir):
 
 
 def get_build_version(xla_git_sha):
-  version = os.getenv('TORCH_XLA_VERSION', '1.13')
+  version = os.getenv('TORCH_XLA_VERSION', '1.14')
   if _check_env_flag('VERSIONED_XLA_BUILD', default='0'):
     try:
       version += '+' + xla_git_sha[:7]

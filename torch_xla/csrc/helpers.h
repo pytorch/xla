@@ -16,6 +16,7 @@
 #include "tensorflow/compiler/xla/xla_client/debug_macros.h"
 #include "tensorflow/compiler/xla/xla_client/util.h"
 #include "tensorflow/core/lib/bfloat16/bfloat16.h"
+#include "torch/csrc/lazy/core/shape.h"
 #include "torch/csrc/lazy/core/util.h"
 
 namespace torch_xla {
@@ -338,6 +339,8 @@ class XlaHelpers {
       const xla::XlaComputation& computation,
       const std::vector<xla::Shape>& parameter_shapes,
       std::vector<std::pair<int64_t, int64_t>> input_output_alias_pair);
+
+  static torch::lazy::Shape ConvertXlaShapeToLazy(const xla::Shape& shape);
 
  private:
   static xla::PrecisionConfig::Precision s_mat_mul_precision;

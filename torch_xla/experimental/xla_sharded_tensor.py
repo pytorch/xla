@@ -58,7 +58,7 @@ class XLAShardedTensor(torch.Tensor):
   # 4-way row-wise, and replicate column-wise.
   # >> input = torch.randn(8, 10)
   # >> mesh_shape = (4, 2)
-  # >> assert np.prod(mesh_shape) == xm.xrt_world_size()
+  # >> assert np.prod(mesh_shape) == len(xm.get_xla_supported_devices())
   # >> partition_spec = (0, None)
   # >> assert len(input.shape) == len(partition_spec)
   partition_spec: Tuple[int, None]
@@ -82,9 +82,7 @@ class XLAShardedTensor(torch.Tensor):
 
   @property
   def sharding_spec(self):
-    # TODO(yeounoh) `torch_xla._XLAC._get_xla_sharding_spec(self.global_tensor)`
-    # is broken after ltc migration, needs a further investigation.
-    return NotImplemented
+    return torch_xla._XLAC._get_xla_sharding_spec(self.global_tensor)
 
   @property
   def shards(self):

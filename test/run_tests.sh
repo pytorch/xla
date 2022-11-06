@@ -82,8 +82,12 @@ function run_xla_backend_mp {
 
 function run_pjrt {
   echo "Running in PjRt runtime: $@"
-  # TODO(darisoy): run these tests with multiple CPU devices, this fails due to TF issue.
-  PJRT_DEVICE=CPU CPU_NUM_DEVICES=1 run_test "$@"
+  if [ -x "$(command -v nvidia-smi)" ]; then
+    PJRT_DEVICE=GPU run_test "$@"
+  else
+    # TODO(darisoy): run these tests with multiple CPU devices, this fails due to TF issue.
+    PJRT_DEVICE=CPU CPU_NUM_DEVICES=1 run_test "$@"
+  fi
 }
 
 function run_async_scalar {
@@ -101,6 +105,8 @@ function run_op_tests {
   run_dynamic python3 "$CDIR/../../test/test_nn.py" "$@" -v TestNNDeviceTypeXLA
   run_dynamic python3 "$CDIR/../../test/nn/test_dropout.py" "$@" -v TestDropoutNNDeviceTypeXLA
   run_dynamic python3 "$CDIR/../../test/nn/test_pooling.py" "$@" -v TestPoolingNNDeviceTypeXLA
+  run_dynamic python3 "$CDIR/../../test/nn/test_embedding.py" "$@" -v TestEmbeddingNNDeviceTypeXLA
+  run_dynamic python3 "$CDIR/../../test/nn/test_convolution.py" "$@" -v TestConvolutionNNDeviceTypeXLA
   run_dynamic python3 "$CDIR/../../test/test_type_promotion.py" "$@" -v TestTypePromotionXLA
   run_dynamic python3 "$CDIR/test_operations.py" "$@" --verbosity=$VERBOSITY
   run_opbyop python3 "$CDIR/test_operations.py" "$@" --verbosity=$VERBOSITY
@@ -112,6 +118,8 @@ function run_op_tests {
   run_test python3 "$CDIR/test_xla_dist.py"
   run_test python3 "$CDIR/test_profiler.py"
   run_test python3 "$CDIR/test_ops.py"
+  run_test python3 "$CDIR/test_metrics.py"
+  run_test python3 "$CDIR/test_dynamo_integrations_util.py"
   run_downcast_bf16 python3 "$CDIR/test_data_type.py"
   run_use_bf16 python3 "$CDIR/test_data_type.py"
   run_test python3 "$CDIR/test_torch_distributed_xla_backend.py"
@@ -120,7 +128,7 @@ function run_op_tests {
   run_pjrt python3 "$CDIR/pjrt/test_experimental_pjrt.py"
   run_pjrt python3 "$CDIR/pjrt/test_experimental_tpu.py"
   run_pjrt python3 "$CDIR/pjrt/test_ddp.py"
-  #run_pjrt python3 "$CDIR/test_xla_sharding.py"  # TODO(yeounoh) debug
+  run_pjrt python3 "$CDIR/test_xla_sharding.py"
   run_test python3 "$CDIR/test_operations_hlo.py" "$@" --verbosity=$VERBOSITY
 }
 

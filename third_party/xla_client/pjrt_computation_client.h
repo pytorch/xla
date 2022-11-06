@@ -26,11 +26,11 @@ class PjRtComputationClient : public ComputationClient {
   std::vector<DataPtr> TransferToServer(
       absl::Span<const TensorSource> tensors) override;
 
-  DataPtr TransferShardsToServer(absl::Span<const TensorSource> tensor_shards,
-                                 std::string device, xla::Shape shape) override;
-
   std::vector<Literal> TransferFromServer(
       absl::Span<const DataPtr> handles) override;
+
+  DataPtr TransferShardsToServer(absl::Span<const TensorSource> tensor_shards,
+                                 std::string device, xla::Shape shape) override;
 
   std::vector<ComputationPtr> Compile(
       std::vector<CompileInstance> instances) override;
@@ -115,6 +115,10 @@ class PjRtComputationClient : public ComputationClient {
   std::shared_ptr<PjRtClient> client_;
   std::unordered_map<std::string, xla::PjRtDevice* const> string_to_device_;
   std::shared_ptr<std::vector<std::string>> replication_devices_;
+  // TODO(wcromar): remove this when C API supports
+  // kImmutableUntilTransferCompletes
+  xla::PjRtClient::HostBufferSemantics host_buffer_semantics_ =
+      xla::PjRtClient::HostBufferSemantics::kImmutableUntilTransferCompletes;
 
   xla::PjRtDevice* StringToPjRtDevice(const std::string& device);
 
@@ -126,13 +130,9 @@ class PjRtComputationClient : public ComputationClient {
              std::shared_ptr<PjRtBuffer> buffer)
         : Data(std::move(device), std::move(device_shape)), buffer(buffer) {}
 
-    void* get_handle() const {
-      return buffer->AcquireExternalReference()
-          .ValueOrDie()
-          ->OpaqueDeviceMemoryDataPointer();
-    };
     OpaqueHandle GetOpaqueHandle() override {
-      return reinterpret_cast<std::uintptr_t>(get_handle());
+      XLA_CHECK(HasValue());
+      return reinterpret_cast<std::uintptr_t>(buffer.get());
     };
     void Assign(const Data& data) override;
     bool HasValue() const override {

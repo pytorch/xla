@@ -5,7 +5,7 @@
 #include <string>
 #include <unordered_map>
 
-#include "c10/core/SymIntNodeImpl.h"
+#include "c10/core/SymNodeImpl.h"
 #include "tensorflow/compiler/xla/client/xla_builder.h"
 #include "tensorflow/compiler/xla/status.h"
 #include "tensorflow/compiler/xla/types.h"
@@ -24,17 +24,24 @@
 #include "torch_xla/csrc/lowering_context.h"
 #include "torch_xla/csrc/torch_util.h"
 #include "torch_xla/csrc/view.h"
-#include "torch_xla/csrc/xla_sharding_util.h"
 
 namespace torch_xla {
 
-class TORCH_API XLASymIntNodeImpl : public c10::SymIntNodeImpl {
+class TORCH_API XLASymNodeImpl : public c10::SymNodeImpl {
  public:
-  XLASymIntNodeImpl(torch::lazy::NodePtr ptr) : node_(std::move(ptr)) {}
-  c10::SymIntNode add(const c10::SymIntNode& other) override;
-  c10::SymIntNode mul(const c10::SymIntNode& other) override;
-  c10::SymIntNode floordiv(const c10::SymIntNode& other) override;
+  XLASymNodeImpl(torch::lazy::NodePtr ptr) : node_(std::move(ptr)) {}
+  bool is_int() override;
+  bool is_float() override;
+  c10::SymNode eq(const c10::SymNode& other) override;
+  c10::SymNode add(const c10::SymNode& other) override;
+  c10::SymNode mul(const c10::SymNode& other) override;
+  c10::SymNode floordiv(const c10::SymNode& other) override;
+  c10::SymNode wrap_int(int64_t num) override;
+
   torch::lazy::NodePtr node() { return node_; }
+  std::string str() override;
+
+  bool bool_() override;
 
  private:
   torch::lazy::NodePtr node_;
@@ -42,6 +49,14 @@ class TORCH_API XLASymIntNodeImpl : public c10::SymIntNodeImpl {
 
 class XLATensor;
 using XLATensorPtr = c10::intrusive_ptr<XLATensor>;
+
+struct DeviceDataInfo : public xla::ComputationClient::Data::Info {
+  DeviceDataInfo(int64_t tensor_id, bool read_only)
+      : tensor_id(tensor_id), read_only(read_only) {}
+
+  int64_t tensor_id = 0;
+  bool read_only = false;
+};
 
 class XLATensor : public c10::intrusive_ptr_target {
   class DeviceContextArena;
@@ -117,7 +132,7 @@ class XLATensor : public c10::intrusive_ptr_target {
 
   // Retrieves the IR Node representing this XLATensor. One will be created if
   // missing. Note that although this is a const API, it actually changes the
-  // internal state ofthe object.
+  // internal state of the object.
   torch::lazy::Value GetIrValue() const;
 
   c10::optional<at::Tensor> CurrentTensorData() const;
@@ -342,13 +357,11 @@ class XLATensor : public c10::intrusive_ptr_target {
   static XLATensorPtr adaptive_max_pool2d_backward(
       const XLATensorPtr& grad_output, const XLATensorPtr& input);
 
-  static XLATensorPtr _adaptive_avg_pool2d(
-      const XLATensorPtr& input, std::vector<int64_t> output_size,
-      std::vector<torch::lazy::Shape>&& shapes);
+  static XLATensorPtr _adaptive_avg_pool2d(const XLATensorPtr& input,
+                                           std::vector<int64_t> output_size);
 
   static XLATensorPtr _adaptive_avg_pool2d_backward(
-      const XLATensorPtr& grad_output, const XLATensorPtr& input,
-      std::vector<torch::lazy::Shape>&& shapes);
+      const XLATensorPtr& grad_output, const XLATensorPtr& input);
 
   static void _amp_foreach_non_finite_check_and_unscale_(
       std::vector<XLATensorPtr> self, XLATensorPtr& found_inf,
@@ -443,7 +456,6 @@ class XLATensor : public c10::intrusive_ptr_target {
 
   static XLATensorPtr bernoulli(const XLATensorPtr& input, double probability);
   static XLATensorPtr bernoulli(const XLATensorPtr& input);
-  static void bernoulli_(XLATensorPtr& input, double probability);
   static void bernoulli_(XLATensorPtr& input, const XLATensorPtr& probability);
 
   static XLATensorPtr bitwise_and(const XLATensorPtr& input,
@@ -1200,6 +1212,11 @@ class XLATensor : public c10::intrusive_ptr_target {
 
   // XLATensor sharding annotation. ShardingSpec wraps xla::OpSharding and
   // can be extended to hold other sharding information from the user.
+  static torch::lazy::hash_t GetGraphHash(
+      const std::vector<XLATensorPtr>& tensors);
+
+  // XLA SPMD sharding spec annoation. The XLA tensor uses this to create
+  // HloSharding for replication, manual and tile shardings.
   struct ShardingSpec {
     ShardingSpec(const xla::OpSharding& sharding) : sharding(sharding) {}
 
@@ -1209,10 +1226,30 @@ class XLATensor : public c10::intrusive_ptr_target {
 
   // Annotate the IR value with ShardingSpec.
   void SetShardingSpec(const ShardingSpec& sharding_spec);
+  // Clear sharding annotation attached to the IR value and transfer sharded
+  // data back to host.
   void ClearShardingSpec();
   ShardingSpecPtr sharding_spec() const;
 
   const c10::Storage& Storage() const { return storage_; }
+
+  struct CachedComputation {
+    CachedComputation(
+        std::shared_ptr<xla::ComputationClient::Computation> computation,
+        bool is_sharded = false)
+        : computation(std::move(computation)), is_sharded(is_sharded) {}
+
+    std::shared_ptr<xla::ComputationClient::Computation> computation;
+    bool is_sharded;
+  };
+
+  using ComputationCache =
+      xla::util::Cache<torch::lazy::hash_t, CachedComputation,
+                       torch::lazy::HashReducer>;
+
+  static ComputationCache* GetComputationCache();
+
+  int64_t GetOpaqueHandle() const;
 
  private:
   struct SyncTensorsConfig {
@@ -1246,19 +1283,8 @@ class XLATensor : public c10::intrusive_ptr_target {
     size_t emitted_nodes = 0;
     std::shared_ptr<xla::ComputationClient::Computation> computation;
     std::vector<torch::lazy::BackendDataPtr> parameters_data;
+    bool is_sharded = false;
   };
-
-  struct CachedComputation {
-    CachedComputation(
-        std::shared_ptr<xla::ComputationClient::Computation> computation)
-        : computation(std::move(computation)) {}
-
-    std::shared_ptr<xla::ComputationClient::Computation> computation;
-  };
-
-  using ComputationCache =
-      xla::util::Cache<torch::lazy::hash_t, CachedComputation,
-                       torch::lazy::HashReducer>;
 
   struct Async {
     Async(SyncTensorCollection* coll,
@@ -1393,8 +1419,6 @@ class XLATensor : public c10::intrusive_ptr_target {
   torch::lazy::Value GetIrValueForTensor(
       const at::Tensor& tensor, const torch::lazy::BackendDevice& device) const;
 
-  static ComputationCache* GetComputationCache();
-
   static SyncTensorCollection CollectSyncTensors(
       const std::vector<XLATensorPtr>& tensors,
       const SyncTensorsConfig& config);
@@ -1426,9 +1450,16 @@ class XLATensor : public c10::intrusive_ptr_target {
       const std::vector<XLATensorPtr>& tensors,
       absl::Span<const size_t> indices);
 
-  static std::vector<torch::lazy::BackendDataPtr> FetchTensorData(
+  static std::vector<torch::lazy::BackendDataPtr> SetTensorData(
       std::vector<XLATensorPtr>* tensors, const SyncTensorsConfig& config,
-      absl::Span<const size_t> indices);
+      absl::Span<const size_t> indices,
+      const std::vector<torch::lazy::BackendDataPtr>& tensor_data_vec);
+
+  static void ExtractIRAndPrepareXlaData_(
+      std::vector<XLATensorPtr>* tensors, const SyncTensorsConfig& config,
+      const absl::Span<const size_t> indices,
+      std::vector<torch::lazy::Value>& ir_values,
+      std::vector<torch::lazy::BackendDataPtr>& tensor_data_vec);
 
   static std::vector<at::Tensor> FetchTensors(
       std::vector<XLATensorPtr>* tensors,
@@ -1447,10 +1478,12 @@ class XLATensor : public c10::intrusive_ptr_target {
   static std::shared_ptr<Async> ScheduleSyncTensorsGraph(
       std::vector<XLATensorPtr>* tensors, SyncTensorCollection* coll,
       std::vector<torch::lazy::BackendDataPtr> parameters_data,
-      std::string device, ComputationCache::TypePtr cached_computation);
+      std::string device, ComputationCache::TypePtr cached_computation,
+      const std::vector<torch::lazy::BackendDataPtr>& tensor_data_vec);
 
-  static PostOrderData RunPostOrder(const std::vector<XLATensorPtr>& tensors,
-                                    SyncTensorCollection* coll);
+  static PostOrderData RunPostOrder(
+      const std::vector<torch::lazy::Value>& ir_values,
+      SyncTensorCollection* coll);
 
   static ComputationCache::TypePtr LookupCachedCompile(
       const std::vector<XLATensorPtr>& tensors,
@@ -1458,16 +1491,17 @@ class XLATensor : public c10::intrusive_ptr_target {
 
   static std::shared_ptr<Async> TryRunCachedSync(
       std::vector<XLATensorPtr>* tensors, SyncTensorCollection* coll,
-      PostOrderData* po_data);
+      PostOrderData* po_data,
+      const std::vector<torch::lazy::BackendDataPtr>& tensor_data_vec);
 
   static std::vector<std::pair<int64_t, int64_t>> BuildInputOutputAliases(
       const std::vector<XLATensorPtr>& tensors,
       absl::Span<const size_t> indices, LoweringContext* lowering_ctx);
 
-  static CompilationResult Compile(const std::vector<XLATensorPtr>& tensors,
-                                   absl::Span<const std::string> devices,
-                                   const SyncTensorCollection& coll,
-                                   PostOrderData* po_data);
+  static CompilationResult Compile(
+      const std::vector<XLATensorPtr>& tensors,
+      absl::Span<const std::string> devices, const SyncTensorCollection& coll,
+      PostOrderData* po_data, const std::vector<torch::lazy::Value>& ir_values);
 
   static std::shared_ptr<Async> SyncTensorsGraphInternal(
       std::vector<XLATensorPtr>* tensors, absl::Span<const std::string> devices,

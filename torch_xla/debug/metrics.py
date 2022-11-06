@@ -20,6 +20,12 @@ def counter_value(name):
   return torch_xla._XLAC._xla_counter_value(name)
 
 
+def clear_counters():
+  """Clear the value of all counters.
+  """
+  return torch_xla._XLAC._clear_xla_counters()
+
+
 def metric_names():
   """Retrieves all the currently active metric names."""
   return torch_xla._XLAC._xla_metric_names()
@@ -42,6 +48,29 @@ def metric_data(name):
   return torch_xla._XLAC._xla_metric_data(name)
 
 
+def clear_metrics():
+  """Clear the value of all metrics.
+  """
+  return torch_xla._XLAC._clear_xla_metrics()
+
+
 def metrics_report():
   """Retrieves a string containing the full metrics and counters report."""
   return torch_xla._XLAC._xla_metrics_report()
+
+
+def short_metrics_report(counter_names: list = None, metric_names: list = None):
+  """Retrieves a string containing the full metrics and counters report.
+
+  Args:
+    counter_names (list): The list of counter names whose data needs to be printed.
+    metric_names (list): The list of metric names whose data needs to be printed.
+  """
+  if not counter_names:
+    counter_names = ['CachedCompile', 'MarkStep']
+  if not metric_names:
+    metric_names = [
+        'CompileTime', 'ExecuteTime', 'TransferToServerTime',
+        'TransferFromServerTime'
+    ]
+  return torch_xla._XLAC._short_xla_metrics_report(counter_names, metric_names)

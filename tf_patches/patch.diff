@@ -1,118 +1,5 @@
-diff --git a/tensorflow/core/profiler/convert/xplane_to_tools_data.cc b/tensorflow/core/profiler/convert/xplane_to_tools_data.cc
-index 6a3c045db5c..fbb8a84786e 100644
---- a/tensorflow/core/profiler/convert/xplane_to_tools_data.cc
-+++ b/tensorflow/core/profiler/convert/xplane_to_tools_data.cc
-@@ -20,9 +20,13 @@ limitations under the License.
- 
- #include "absl/strings/str_format.h"
- #include "absl/strings/string_view.h"
-+#include "tensorflow/compiler/xla/service/hlo.pb.h"
-+#include "tensorflow/core/lib/gtl/map_util.h"
- #include "tensorflow/core/platform/env.h"
- #include "tensorflow/core/platform/logging.h"
-+#include "tensorflow/core/platform/path.h"
- #include "tensorflow/core/platform/protobuf.h"
-+#include "tensorflow/core/profiler/convert/hlo_proto_to_memory_visualization_utils.h"
- #include "tensorflow/core/profiler/convert/hlo_to_tools_data.h"
- #include "tensorflow/core/profiler/convert/op_stats_to_input_pipeline_analysis.h"
- #include "tensorflow/core/profiler/convert/op_stats_to_op_profile.h"
-@@ -232,7 +236,77 @@ std::pair<std::string, bool> ConvertMultiXSpacesToOpProfileViewer(
- 
-   return std::make_pair(profile.SerializeAsString(), true);
- }
--}  // namespace
-+
-+std::pair<std::string, bool> ConvertHloProtoToMemoryViewer(
-+    const xla::HloProto& hlo_proto) {
-+  static constexpr int kSmallBufferSize = 16 * 1024;  // 16KB
-+  static constexpr int kMemorySpaceColor = 0;         // HBM
-+
-+  auto result_or = ConvertHloProtoToPreprocessResult(
-+      hlo_proto, kSmallBufferSize,
-+      GetHeapSimulatorTraceId(hlo_proto, kMemorySpaceColor), kMemorySpaceColor);
-+  if (!result_or.ok()) {
-+    LOG(ERROR) << "Failed to convert HLO proto to memory viewer result: "
-+               << result_or.status().message();
-+    return std::make_pair("", false);
-+  }
-+
-+  std::string json_output;
-+  tensorflow::protobuf::util::JsonPrintOptions options;
-+  options.always_print_primitive_fields = true;
-+  auto encoded_status = tensorflow::protobuf::util::MessageToJsonString(
-+      result_or.value(), &json_output, options);
-+  if (!encoded_status.ok()) {
-+    LOG(ERROR) << "Failed to convert memory viewer result to JSON format: "
-+               << encoded_status.message();
-+    return std::make_pair("", false);
-+  }
-+
-+  return std::make_pair(json_output, true);
-+}
-+
-+std::pair<std::string, bool> ConvertHloProtoToToolData(
-+    const std::vector<std::string>& xspace_paths,
-+    const absl::string_view tool_name,
-+    const absl::flat_hash_map<std::string, std::variant<int, std::string>>&
-+        options) {
-+  if (xspace_paths.empty()) {
-+    return std::make_pair("", false);
-+  }
-+
-+  // <options> must provide a hlo_module_name field to identify the HLO module.
-+  auto* result = gtl::FindOrNull(options, "hlo_module_name");
-+  if (!result) {
-+    LOG(ERROR) << "Can not find HLO module name from options.";
-+    return std::make_pair("", false);
-+  }
-+  const std::string* hlo_module_name = std::get_if<std::string>(result);
-+  if (!hlo_module_name || hlo_module_name->empty()) {
-+    LOG(ERROR) << "Can not find HLO module name from options.";
-+    return std::make_pair("", false);
-+  }
-+
-+  // Load HLO module from file.
-+  absl::string_view base_dir = tensorflow::io::Dirname(xspace_paths[0]);
-+  std::string hlo_proto_file_name =
-+      GetHloProtoFileName(base_dir, *hlo_module_name);
-+  xla::HloProto hlo_proto;
-+  tensorflow::Status status = tensorflow::ReadBinaryProto(
-+      tensorflow::Env::Default(), hlo_proto_file_name, &hlo_proto);
-+  if (!status.ok()) {
-+    LOG(ERROR) << "Failed to read HLO proto: " << status.error_message();
-+    return std::make_pair("", false);
-+  }
-+
-+  // Convert from HLO proto to tools data.
-+  if (tool_name == "memory_viewer") {
-+    return ConvertHloProtoToMemoryViewer(hlo_proto);
-+  } else {
-+    LOG(ERROR) << "Can not find tool: " << tool_name
-+               << ". Please update to the latest version of Tensorflow.";
-+    return std::make_pair("", false);
-+  }
-+}
- 
- std::pair<std::string, bool> ConvertMultiXSpacesToToolData(
-     const std::vector<XSpace>& xspaces,
-@@ -278,5 +352,6 @@ std::pair<std::string, bool> ConvertMultiXSpacesToToolData(
-   }
- }
- 
-+}  // namespace
- }  // namespace profiler
- }  // namespace tensorflow
---- a/tensorflow/core/platform/macros.h
-+++ b/tensorflow/core/platform/macros.h
-@@ -21,7 +21,7 @@ limitations under the License.
- // Compiler supports GCC-style attributes
- #define TF_ATTRIBUTE_NORETURN __attribute__((noreturn))
- #define TF_ATTRIBUTE_ALWAYS_INLINE __attribute__((always_inline))
--#define TF_ATTRIBUTE_NOINLINE __attribute__((noinline))
-+#define TF_ATTRIBUTE_NOINLINE [[noinline]]
- #define TF_ATTRIBUTE_UNUSED __attribute__((unused))
- #define TF_ATTRIBUTE_COLD __attribute__((cold))
- #define TF_ATTRIBUTE_WEAK __attribute__((weak))
+diff --git a/tensorflow/compiler/xla/service/cpu/runtime_fp16.h b/tensorflow/compiler/xla/service/cpu/runtime_fp16.h
+index 9fe020d5937..32774c2f3c0 100644
 --- a/tensorflow/compiler/xla/service/cpu/runtime_fp16.h
 +++ b/tensorflow/compiler/xla/service/cpu/runtime_fp16.h
 @@ -18,12 +18,7 @@ limitations under the License.
@@ -129,4 +16,97 @@ index 6a3c045db5c..fbb8a84786e 100644
  // Older versions of Clang don't have _Float16. Since both float and _Float16
  // are passed in the same register we can use the wider type and careful casting
  // to conform to x86_64 psABI. This only works with the assumption that we're
+diff --git a/tensorflow/compiler/xla/stream_executor/BUILD b/tensorflow/compiler/xla/stream_executor/BUILD
+index 1241cfedade..03a45f27702 100644
+--- a/tensorflow/compiler/xla/stream_executor/BUILD
++++ b/tensorflow/compiler/xla/stream_executor/BUILD
+@@ -176,7 +176,6 @@ tf_proto_library(
+     name = "dnn_proto",
+     srcs = ["dnn.proto"],
+     cc_api_version = 2,
+-    make_default_target_header_only = True,
+ )
  
+ cc_library(
+diff --git a/tensorflow/core/distributed_runtime/request_id.cc b/tensorflow/core/distributed_runtime/request_id.cc
+index 24fc3004391..c7cb01d44a3 100644
+--- a/tensorflow/core/distributed_runtime/request_id.cc
++++ b/tensorflow/core/distributed_runtime/request_id.cc
+@@ -22,7 +22,7 @@ namespace tensorflow {
+ int64_t GetUniqueRequestId() {
+   int64_t request_id = 0;
+   while (request_id == 0) {
+-    request_id = tsl::random::ThreadLocalNew64();
++    request_id = random::New64();
+   }
+   return request_id;
+ }
+diff --git a/tensorflow/core/distributed_runtime/request_id.h b/tensorflow/core/distributed_runtime/request_id.h
+index 1ef60c8f47c..c597a15fcc9 100644
+--- a/tensorflow/core/distributed_runtime/request_id.h
++++ b/tensorflow/core/distributed_runtime/request_id.h
+@@ -16,8 +16,8 @@ limitations under the License.
+ #ifndef TENSORFLOW_CORE_DISTRIBUTED_RUNTIME_REQUEST_ID_H_
+ #define TENSORFLOW_CORE_DISTRIBUTED_RUNTIME_REQUEST_ID_H_
+ 
++#include "tensorflow/core/lib/random/random.h"
+ #include "tensorflow/core/platform/types.h"
+-#include "tensorflow/tsl/platform/random.h"
+ 
+ namespace tensorflow {
+ 
+diff --git a/tensorflow/core/profiler/convert/xplane_to_tools_data.cc b/tensorflow/core/profiler/convert/xplane_to_tools_data.cc
+index 787287d0107..ebc74d74802 100644
+--- a/tensorflow/core/profiler/convert/xplane_to_tools_data.cc
++++ b/tensorflow/core/profiler/convert/xplane_to_tools_data.cc
+@@ -251,8 +251,9 @@ StatusOr<std::string> ConvertMultiXSpacesToToolData(
+     return ConvertMultiXSpacesToTfDataBottleneckAnalysis(session_snapshot);
+   } else if (tool_name == "op_profile") {
+     return ConvertMultiXSpacesToOpProfileViewer(session_snapshot);
+-  } else if (tool_name == "memory_viewer" || tool_name == "graph_viewer") {
+-    return ConvertHloProtoToToolData(session_snapshot, tool_name, options);
++    // this function is not being used by xla
++    // } else if (tool_name == "memory_viewer" || tool_name == "graph_viewer") {
++    //   return ConvertHloProtoToToolData(session_snapshot, tool_name, options);
+   } else if (tool_name == "tool_names") {
+     return GetAvailableToolNames(session_snapshot);
+   } else if (tool_name == "_xplane.pb") {  // internal test only.
+diff --git a/tensorflow/tsl/platform/random.cc b/tensorflow/tsl/platform/random.cc
+index 636725ad650..02d0ecda23d 100644
+--- a/tensorflow/tsl/platform/random.cc
++++ b/tensorflow/tsl/platform/random.cc
+@@ -15,7 +15,6 @@ limitations under the License.
+ 
+ #include "tensorflow/tsl/platform/random.h"
+ 
+-#include <memory>
+ #include <random>
+ 
+ #include "tensorflow/tsl/platform/mutex.h"
+@@ -40,12 +39,6 @@ uint64 New64() {
+   return (*rng)();
+ }
+ 
+-uint64 ThreadLocalNew64() {
+-  static thread_local std::unique_ptr<std::mt19937_64> rng =
+-      std::unique_ptr<std::mt19937_64>(InitRngWithRandomSeed());
+-  return (*rng)();
+-}
+-
+ uint64 New64DefaultSeed() {
+   static std::mt19937_64 rng = InitRngWithDefaultSeed();
+   static mutex mu(LINKER_INITIALIZED);
+diff --git a/tensorflow/tsl/platform/random.h b/tensorflow/tsl/platform/random.h
+index 9e08670a2c6..e13555c5128 100644
+--- a/tensorflow/tsl/platform/random.h
++++ b/tensorflow/tsl/platform/random.h
+@@ -25,9 +25,6 @@ namespace random {
+ // in different processes.
+ uint64 New64();
+ 
+-// Same as previous method, but uses a different RNG for each thread.
+-uint64 ThreadLocalNew64();
+-
+ // Return a 64-bit random value. Uses
+ // std::mersenne_twister_engine::default_seed as seed value.
+ uint64 New64DefaultSeed();

@@ -39,7 +39,8 @@ def mark_sharding(t: Union[torch.Tensor,
     # full replication
     output = xs.mark_sharding(output, device_mesh, (None, None))
   """
-  num_devices = xm.xrt_world_size()
+  num_devices = len(xm.get_xla_supported_devices())
+  assert num_devices > 0, "This requires XLA supported device(s)."
   assert np.prod(mesh_shape) == num_devices, \
     f"{mesh_shape} is not mappable over {num_devices} devices."
   assert all((d >= 0 and d < len(mesh_shape)) for d in partition_spec if d), \
@@ -48,6 +49,9 @@ def mark_sharding(t: Union[torch.Tensor,
   # for replication. For now, all input rank sharding should be specified.
   assert len(t.shape) == len(partition_spec), \
     f"Partition spec length ({len(partition_spec)}) is not equal to the input rank ({len(t.shape)})."
+  dims = [d for d in partition_spec if d]
+  assert len(dims) == len(np.unique(dims)), \
+    f"Each device mesh dimension should appear at most once in partition_spec {partition_spec}."
 
   device_ids = np.array(range(num_devices))
   tile_assignment = device_ids.reshape(mesh_shape).tolist()
@@ -67,3 +71,11 @@ def mark_sharding(t: Union[torch.Tensor,
     return t
   torch_xla._XLAC._xla_mark_sharding(t, tile_assignment, replicated, manual)
   return XLAShardedTensor(t)
+
+
+def clear_sharding(t: Union[torch.Tensor, XLAShardedTensor]) -> torch.Tensor:
+  """Clear sharding annotation from the input tensor and return a `cpu` casted tensor."""
+  torch_xla._XLAC._xla_clear_sharding(t)
+  if isinstance(t, XLAShardedTensor):
+    return t.global_tensor
+  return t

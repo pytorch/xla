@@ -1,12 +1,20 @@
 import args_parse
 
+MODEL_OPTS = {
+    '--ddp': {
+        'action': 'store_true',
+    },
+}
+
 FLAGS = args_parse.parse_common_options(
     datadir='/tmp/mnist-data',
     batch_size=128,
     momentum=0.5,
     lr=0.01,
     target_accuracy=98.0,
-    num_epochs=18)
+    num_epochs=18,
+    opts=MODEL_OPTS.items(),
+)
 
 import os
 import shutil
@@ -24,6 +32,10 @@ import torch_xla.utils.utils as xu
 import torch_xla.core.xla_model as xm
 import torch_xla.distributed.xla_multiprocessing as xmp
 import torch_xla.test.test_utils as test_utils
+
+import torch.distributed as dist
+from torch.nn.parallel import DistributedDataParallel as DDP
+import torch_xla.distributed.xla_backend
 
 
 class MNIST(nn.Module):
@@ -48,17 +60,22 @@ class MNIST(nn.Module):
     return F.log_softmax(x, dim=1)
 
 
-def _train_update(device, x, loss, tracker, writer):
+def _train_update(device, step, loss, tracker, epoch, writer):
   test_utils.print_training_update(
       device,
-      x,
+      step,
       loss.item(),
       tracker.rate(),
       tracker.global_rate(),
+      epoch,
       summary_writer=writer)
 
 
 def train_mnist(flags, **kwargs):
+  if flags.ddp:
+    dist.init_process_group(
+        'xla', world_size=xm.xrt_world_size(), rank=xm.get_ordinal())
+
   torch.manual_seed(1)
 
   if flags.fake_data:
@@ -113,13 +130,15 @@ def train_mnist(flags, **kwargs):
 
   device = xm.xla_device()
   model = MNIST().to(device)
+  if flags.ddp:
+    model = DDP(model, gradient_as_bucket_view=True)
   writer = None
   if xm.is_master_ordinal():
     writer = test_utils.get_summary_writer(flags.logdir)
   optimizer = optim.SGD(model.parameters(), lr=lr, momentum=flags.momentum)
   loss_fn = nn.NLLLoss()
 
-  def train_loop_fn(loader):
+  def train_loop_fn(loader, epoch):
     tracker = xm.RateTracker()
     model.train()
     for step, (data, target) in enumerate(loader):
@@ -127,13 +146,16 @@ def train_mnist(flags, **kwargs):
       output = model(data)
       loss = loss_fn(output, target)
       loss.backward()
-      xm.optimizer_step(optimizer)
+      if flags.ddp:
+        optimizer.step()
+      else:
+        xm.optimizer_step(optimizer)
       tracker.add(flags.batch_size)
       if step % flags.log_steps == 0:
         xm.add_step_closure(
             _train_update,
-            args=(device, step, loss, tracker, writer),
-            run_async=FLAGS.async_closures)
+            args=(device, step, loss, tracker, epoch, writer),
+            run_async=flags.async_closures)
 
   def test_loop_fn(loader):
     total_samples = 0
@@ -154,7 +176,7 @@ def train_mnist(flags, **kwargs):
   accuracy, max_accuracy = 0.0, 0.0
   for epoch in range(1, flags.num_epochs + 1):
     xm.master_print('Epoch {} train begin {}'.format(epoch, test_utils.now()))
-    train_loop_fn(train_device_loader)
+    train_loop_fn(train_device_loader, epoch)
     xm.master_print('Epoch {} train end {}'.format(epoch, test_utils.now()))
 
     accuracy = test_loop_fn(test_device_loader)

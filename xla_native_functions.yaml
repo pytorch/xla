@@ -19,10 +19,7 @@ full_codegen:
   - atanh
   - binary_cross_entropy
   - binary_cross_entropy_backward
-  - bitwise_and.Tensor
   - bitwise_not
-  - bitwise_or.Tensor
-  - bitwise_xor.Tensor
   - ceil
   - cholesky
   - clamp.Tensor
@@ -91,6 +88,9 @@ ir_gen:
   - _adaptive_avg_pool2d_backward
   - _adaptive_avg_pool3d
   - _adaptive_avg_pool3d_backward
+  - bitwise_and.Tensor
+  - bitwise_or.Tensor
+  - bitwise_xor.Tensor
 supported:
   - __ilshift__.Scalar
   - __ilshift__.Tensor
@@ -135,9 +135,12 @@ supported:
   - avg_pool3d_backward
   - baddbmm
   - bernoulli
-  - bernoulli_.float
+  - bernoulli.p
   - bernoulli_.Tensor
   - binary_cross_entropy_with_logits
+  - bitwise_and.Tensor
+  - bitwise_or.Tensor
+  - bitwise_xor.Tensor
   - bmm
   - cat
   - celu
