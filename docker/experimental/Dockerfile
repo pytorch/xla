@@ -60,7 +60,7 @@ RUN mkdir xla
 WORKDIR /pytorch/xla/
 
 # Contains actual build artifacts
-FROM builder AS build
+FROM builder AS artifacts
 
 COPY tf_patches/ tf_patches/
 COPY third_party/ third_party/
@@ -109,8 +109,8 @@ RUN curl https://packages.cloud.google.com/apt/doc/apt-key.gpg | apt-key --keyri
 RUN apt-get update
 RUN apt-get -y install google-cloud-cli
 
-COPY --from=builder /pytorch/dist/*.whl .
-COPY --from=build /pytorch/xla/dist/*.whl .
+COPY --from=artifacts /pytorch/dist/*.whl .
+COPY --from=artifacts /pytorch/xla/dist/*.whl .
 
 RUN pip install *.whl
 RUN rm *.whl
@@ -125,6 +125,8 @@ RUN mkdir -p /pytorch/xla
 COPY . /pytorch/xla
 
 WORKDIR /pytorch/xla
-RUN python setup.py clean
+
+# TODO: this fails without a git repository initialized for some reason
+RUN python setup.py clean || exit 0
 
 WORKDIR /

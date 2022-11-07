@@ -7,19 +7,80 @@ steps:
   - -c
   - |
     git submodule update --init || echo No git repository found
-- name: 'gcr.io/kaniko-project/executor:latest'
+- id: 'build-wheels'
+  name: 'gcr.io/kaniko-project/executor:latest'
   args:
-  - --destination=gcr.io/${PROJECT_ID}/experimental/xla:${_IMAGE_NAME}
-  - --cache=${_CACHE}
-  - --cache-ttl=18h
   - --dockerfile=docker/experimental/Dockerfile
+  - --destination=gcr.io/${PROJECT_ID}/experimental/xla:${_IMAGE_NAME}_artifacts
+  - --tar-path=/image/artifacts-image.tar
+  - --target=artifacts
+  - --use-new-run
+  - --cache=${_CACHE}
+  - --cache-ttl=${_CACHE_TTL}
   - --build-arg=cuda=${_CUDA}
   - --build-arg=python_version=${_PYTHON_VERSION}
   - --build-arg=tpuvm=${_TPU_VM}
   - --build-arg=bazel_jobs=${_BAZEL_JOBS}
   timeout: 14400s
+  volumes:
+  - name: image
+    path: /image
+- id: 'import-artifacts'
+  name: gcr.io/cloud-builders/docker
+  args:
+  - load
+  - --input
+  - /image/artifacts-image.tar
+  volumes:
+  - name: image
+    path: /image
+- id: 'copy-wheels'
+  name: gcr.io/${PROJECT_ID}/experimental/xla:${_IMAGE_NAME}_artifacts
+  entrypoint: bash
+  args:
+  - -c
+  - |
+    cp /pytorch/dist/*.whl /wheels
+    cp /pytorch/xla/dist/*.whl /wheels
+  volumes:
+  - name: 'wheels'
+    path: /wheels
+- id: 'install-twine'
+  name: python
+  entrypoint: pip
+  args:
+  - install
+  - --user
+  - twine
+  - keyrings.google-artifactregistry-auth
+- id: 'export-wheels'
+  waitFor: ['copy-wheels', 'install-twine']
+  name: python
+  entrypoint: python
+  args:
+  - '-m'
+  - 'twine'
+  - 'upload'
+  - '--repository-url'
+  - 'https://${_ARTIFACT_REGISTRY_REGION}-python.pkg.dev/$PROJECT_ID/torch-xla/'
+  - '/wheels/*'
+  volumes:
+  - name: 'wheels'
+    path: /wheels
+- id: 'release-image'
+  waitFor: ['build-wheels']
+  name: 'gcr.io/kaniko-project/executor:latest'
+  args:
+  - --dockerfile=docker/experimental/Dockerfile
+  - --destination=gcr.io/${PROJECT_ID}/experimental/xla:${_IMAGE_NAME}
+  - --cache=${_CACHE}
+  - --cache-ttl=${_CACHE_TTL}
+  - --build-arg=cuda=${_CUDA}
+  - --build-arg=python_version=${_PYTHON_VERSION}
+  - --build-arg=tpuvm=${_TPU_VM}
+  - --build-arg=bazel_jobs=${_BAZEL_JOBS}
 substitutions:
-  _BAZEL_JOBS: '24'
+  _BAZEL_JOBS: '16'
   _CUDA: '0'
   _PYTHON_VERSION: '3.8'
   _RELEASE_VERSION: 'nightly'  # or rX.Y
@@ -27,6 +88,8 @@ substitutions:
   _TPU_VM: '1'
   _CUDA_COMPUTE: '7.0,7.5,8.0'
   _CACHE: 'true'
+  _CACHE_TTL: '360h'
+  _ARTIFACT_REGISTRY_REGION: us
 options:
   machineType: E2_HIGHCPU_32
   dynamic_substitutions: true
