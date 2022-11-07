@@ -684,21 +684,6 @@ const at::Tensor& XLANativeFunctions::as_strided_(
   return self;
 }
 
-at::Tensor XLANativeFunctions::atan2(const at::Tensor& self,
-                                     const at::Tensor& other) {
-  XLA_FN_COUNTER("xla::");
-  // xla::Atan2 doesn't support integer types.
-  if (!self.is_floating_point() || !other.is_floating_point()) {
-    return at::native::call_fallback_fn<&xla_cpu_fallback,
-                                        ATEN_OP(atan2)>::call(self, other);
-  }
-  return DoBinaryOp(self, other,
-                    [&](const XLATensorPtr& xself, const XLATensorPtr& xother,
-                        at::ScalarType dtype) {
-                      return XLATensor::atan2(xself, xother, dtype);
-                    });
-}
-
 at::Tensor XLANativeFunctions::avg_pool2d(
     const at::Tensor& self, at::IntArrayRef kernel_size, at::IntArrayRef stride,
     at::IntArrayRef padding, bool ceil_mode, bool count_include_pad,
