@@ -3067,9 +3067,11 @@ at::Tensor XLANativeFunctions::new_empty_strided_symint(
                                               device, pin_memory);
 }
 
-at::Tensor XLANativeFunctions::narrow_copy(const at::Tensor& self, int64_t dim,
-                                           int64_t start, int64_t length) {
-  return at::native::narrow_copy_dense(self, dim, start, length);
+at::Tensor XLANativeFunctions::narrow_copy_symint(const at::Tensor& self,
+                                                  int64_t dim,
+                                                  c10::SymInt start,
+                                                  c10::SymInt length) {
+  return at::native::narrow_copy_dense_symint(self, dim, start, length);
 }
 at::Tensor XLANativeFunctions::pixel_shuffle(const at::Tensor& self,
                                              int64_t upscale_factor) {
