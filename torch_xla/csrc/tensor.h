@@ -50,7 +50,7 @@ class TORCH_API XLASymNodeImpl : public c10::SymNodeImpl {
 class XLATensor;
 using XLATensorPtr = c10::intrusive_ptr<XLATensor>;
 
-struct DeviceDataInfo : public xla::ComputationClient::Data::Info {
+struct DeviceDataInfo : public torch::lazy::BackendData::Info {
   DeviceDataInfo(int64_t tensor_id, bool read_only)
       : tensor_id(tensor_id), read_only(read_only) {}
 

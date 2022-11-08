@@ -785,7 +785,7 @@ torch::lazy::Value XLATensor::GetDeviceDataIrValue(
   torch::lazy::BackendDataPtr data =
       GetDeviceData(value, TensorTypeFromXlaType(type), device);
   // TODO: consider using upstream info class if possible
-  UnwrapXlaData(data)->SetInfo(
+  data->SetInfo(
       std::make_shared<DeviceDataInfo>(/*tensor_id=*/-1, /*read_only=*/true));
   return torch::lazy::MakeNode<DeviceData>(std::move(data));
 }
@@ -1147,7 +1147,7 @@ std::vector<XLATensorPtr> XLATensor::CreateTensors(
 
 torch::lazy::Value XLATensor::CreateTensorNode(torch::lazy::BackendDataPtr data,
                                                bool read_only) const {
-  UnwrapXlaData(data)->SetInfo(
+  data->SetInfo(
       std::make_shared<DeviceDataInfo>(GetUniqueId(), read_only));
   return torch::lazy::MakeNode<DeviceData>(std::move(data));
 }
