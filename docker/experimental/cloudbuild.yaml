@@ -7,24 +7,41 @@ steps:
   - -c
   - |
     git submodule update --init || echo No git repository found
-- id: 'build-wheels'
-  name: 'gcr.io/kaniko-project/executor:latest'
+- id: 'common-flags'
+  name: 'bash'
   args:
-  - --dockerfile=docker/experimental/Dockerfile
-  - --destination=gcr.io/${PROJECT_ID}/experimental/xla:${_IMAGE_NAME}_artifacts
-  - --tar-path=/image/artifacts-image.tar
-  - --target=artifacts
-  - --use-new-run
-  - --cache=${_CACHE}
-  - --cache-ttl=${_CACHE_TTL}
-  - --build-arg=cuda=${_CUDA}
-  - --build-arg=python_version=${_PYTHON_VERSION}
-  - --build-arg=tpuvm=${_TPU_VM}
-  - --build-arg=bazel_jobs=${_BAZEL_JOBS}
+  - -c
+  - |
+    args=(${BUILD_ARGS//,/ })
+    flags=(
+      --cache=${_CACHE}
+      --cache-ttl=${_CACHE_TTL}
+      --use-new-run
+      --build-arg=bazel_jobs=${_BAZEL_JOBS}
+      --build-arg=python_version=${_PYTHON_VERSION}
+      # TODO: use current version in setup.py
+      --build-arg=torch_xla_version="1.14.dev$(date -u +%Y%m%d)"
+      ${args[@]/#/--build-arg})
+    echo ${flags[@]} | tee /docker/flags.txt
+  volumes:
+  - name: docker
+    path: /docker
+- id: 'build-wheels'
+  name: 'gcr.io/kaniko-project/executor:debug'
+  entrypoint: sh
+  args:
+  - -c
+  - |
+    /kaniko/executor \
+      --dockerfile=docker/experimental/Dockerfile \
+      --destination=${_IMAGE_URL}_artifacts \
+      --tar-path=/image/artifacts-image.tar \
+      --target=artifacts \
+      $(cat /docker/flags.txt)
   timeout: 14400s
   volumes:
-  - name: image
-    path: /image
+  - name: docker
+    path: /docker
 - id: 'import-artifacts'
   name: gcr.io/cloud-builders/docker
   args:
@@ -32,8 +49,8 @@ steps:
   - --input
   - /image/artifacts-image.tar
   volumes:
-  - name: image
-    path: /image
+  - name: docker
+    path: /docker
 - id: 'copy-wheels'
   name: gcr.io/${PROJECT_ID}/experimental/xla:${_IMAGE_NAME}_artifacts
   entrypoint: bash
@@ -69,27 +86,28 @@ steps:
     path: /wheels
 - id: 'release-image'
   waitFor: ['build-wheels']
-  name: 'gcr.io/kaniko-project/executor:latest'
+  name: 'gcr.io/kaniko-project/executor:debug'
+  entrypoint: sh
   args:
-  - --dockerfile=docker/experimental/Dockerfile
-  - --destination=gcr.io/${PROJECT_ID}/experimental/xla:${_IMAGE_NAME}
-  - --cache=${_CACHE}
-  - --cache-ttl=${_CACHE_TTL}
-  - --build-arg=cuda=${_CUDA}
-  - --build-arg=python_version=${_PYTHON_VERSION}
-  - --build-arg=tpuvm=${_TPU_VM}
-  - --build-arg=bazel_jobs=${_BAZEL_JOBS}
+  - -c
+  - |
+    /kaniko/executor \
+      --dockerfile=docker/experimental/Dockerfile \
+      --destination=${_IMAGE_URL} \
+      $(cat /docker/flags.txt)
+  timeout: 14400s
+  volumes:
+  - name: docker
+    path: /docker
 substitutions:
+  _ARTIFACT_REGISTRY_REGION: us
+  _IMAGE_URL: ${_ARTIFACT_REGISTRY_REGION}-docker.pkg.dev/${PROJECT_ID}/torch-xla-images/xla:${_RELEASE_VERSION}_${_PYTHON_VERSION}
   _BAZEL_JOBS: '16'
-  _CUDA: '0'
   _PYTHON_VERSION: '3.8'
   _RELEASE_VERSION: 'nightly'  # or rX.Y
-  _IMAGE_NAME: '${_RELEASE_VERSION}_${_PYTHON_VERSION}'
-  _TPU_VM: '1'
-  _CUDA_COMPUTE: '7.0,7.5,8.0'
   _CACHE: 'true'
-  _CACHE_TTL: '360h'
-  _ARTIFACT_REGISTRY_REGION: us
+  _CACHE_TTL: '18h'
+  _BUILD_ARGS: tpuvm=1,cuda=0
 options:
   machineType: E2_HIGHCPU_32
   dynamic_substitutions: true

@@ -10,6 +10,7 @@ ARG tf_cuda_compute_capabilities="7.0,7.5,8.0"
 
 ARG tpuvm=1
 ARG build_cpp_tests=0
+ARG torch_xla_version=nightly
 
 ARG bazel_jobs=
 
@@ -81,7 +82,8 @@ COPY xla_native_functions.yaml .
 COPY scripts/ scripts/
 
 ARG build_cpp_tests
-RUN BUILD_CPP_TESTS=${build_cpp_tests} TPUVM_MODE=${tpuvm} XLA_CUDA=${cuda} TF_CUDA_COMPUTE_CAPABILITIES=${tf_cuda_compute_capabilities} python setup.py bdist_wheel
+ARG torch_xla_version
+RUN TORCH_XLA_VERSION=${torch_xla_version} BUILD_CPP_TESTS=${build_cpp_tests} TPUVM_MODE=${tpuvm} XLA_CUDA=${cuda} TF_CUDA_COMPUTE_CAPABILITIES=${tf_cuda_compute_capabilities} python setup.py bdist_wheel
 
 RUN pip install dist/*.whl
 
