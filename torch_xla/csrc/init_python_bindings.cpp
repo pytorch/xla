@@ -37,6 +37,7 @@
 #include "torch/csrc/jit/python/pybind.h"
 #include "torch/csrc/lazy/core/config.h"
 #include "torch/csrc/lazy/core/ir_util.h"
+#include "torch/csrc/lazy/core/lazy_graph_executor.h"
 #include "torch_xla/csrc/aten_xla_bridge.h"
 #include "torch_xla/csrc/computation.h"
 #include "torch_xla/csrc/device.h"
@@ -1498,12 +1499,9 @@ void InitXlaModuleBindings(py::module m) {
             if (!device_data) {
               continue;
             }
-            const auto backend_data = device_data->data();
-            xla::ComputationClient::DataPtr dataptr =
-                ((torch_xla::XLAData*)backend_data.get())->xla_data();
-            XLA_CHECK(dataptr);
-            torch_xla::DeviceDataInfo* infoptr =
-                (torch_xla::DeviceDataInfo*)dataptr->info();
+            const auto& backend_data = device_data->data();
+            auto* infoptr =
+                static_cast<torch::lazy::LazyGraphExecutor::DeviceDataInfo*>(backend_data->info());
             XLA_CHECK(infoptr);
 
             // Dedup by handle

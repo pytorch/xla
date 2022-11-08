@@ -30,6 +30,7 @@
 #include "torch/csrc/lazy/core/hash.h"
 #include "torch/csrc/lazy/core/helpers.h"
 #include "torch/csrc/lazy/core/ir_util.h"
+#include "torch/csrc/lazy/core/lazy_graph_executor.h"
 #include "torch/csrc/lazy/core/tensor_util.h"
 #include "torch/csrc/lazy/core/util.h"
 #include "torch_xla/csrc/computation.h"
@@ -786,7 +787,7 @@ torch::lazy::Value XLATensor::GetDeviceDataIrValue(
       GetDeviceData(value, TensorTypeFromXlaType(type), device);
   // TODO: consider using upstream info class if possible
   data->SetInfo(
-      std::make_shared<DeviceDataInfo>(/*tensor_id=*/-1, /*read_only=*/true));
+      std::make_shared<torch::lazy::LazyGraphExecutor::DeviceDataInfo>(/*tensor_id=*/-1, /*read_only=*/true));
   return torch::lazy::MakeNode<DeviceData>(std::move(data));
 }
 
@@ -1147,7 +1148,7 @@ std::vector<XLATensorPtr> XLATensor::CreateTensors(
 
 torch::lazy::Value XLATensor::CreateTensorNode(torch::lazy::BackendDataPtr data,
                                                bool read_only) const {
-  data->SetInfo(std::make_shared<DeviceDataInfo>(GetUniqueId(), read_only));
+  data->SetInfo(std::make_shared<torch::lazy::LazyGraphExecutor::DeviceDataInfo>(GetUniqueId(), read_only));
   return torch::lazy::MakeNode<DeviceData>(std::move(data));
 }
 
@@ -1680,19 +1681,19 @@ std::vector<std::pair<int64_t, int64_t>> XLATensor::BuildInputOutputAliases(
     output_tensor_id_map[tensor_id] = i;
   }
   // TODO we need xla_shape here.
-  const std::vector<xla::ComputationClient::DataPtr>& parameters_data =
-      UnwrapXlaData(lowering_ctx->GetParametersData());
+  const auto& parameters_data = lowering_ctx->GetParametersData();
   std::vector<ssize_t> alias_map(indices.size(), -1);
   for (size_t i = 0; i < parameters_data.size(); ++i) {
-    DeviceDataInfo* data_info =
-        dynamic_cast<DeviceDataInfo*>(parameters_data[i]->info());
+    auto* data_info =
+        static_cast<torch::lazy::LazyGraphExecutor::DeviceDataInfo*>(parameters_data[i]->info());
     if (data_info != nullptr && !data_info->read_only) {
       auto it = output_tensor_id_map.find(data_info->tensor_id);
       if (it != output_tensor_id_map.end()) {
         size_t output_index = it->second;
         xla::XlaOp root = lowering_ctx->GetResult(output_index);
         const xla::Shape& root_shape = XlaHelpers::ShapeOfXlaOp(root);
-        if (parameters_data[i]->shape() == root_shape &&
+        auto parameter_data_shape = UnwrapXlaData(parameters_data[i])->shape();
+        if (parameter_data_shape == root_shape &&
             alias_map[output_index] < 0) {
           // parameter is not a tuple so param_index will always be {}
           lowering_ctx->builder()->SetUpAlias(
@@ -1702,7 +1703,7 @@ std::vector<std::pair<int64_t, int64_t>> XLATensor::BuildInputOutputAliases(
           input_output_alias_pair.push_back(std::make_pair(i, output_index));
 
           TF_VLOG(6) << "Aliased paramter " << i << " with output "
-                     << output_index << ": " << parameters_data[i]->shape();
+                     << output_index << ": " << parameter_data_shape;
         }
       }
     }
