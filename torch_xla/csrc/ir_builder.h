@@ -31,12 +31,6 @@ struct XLAIrBuilder : torch::lazy::IrBuilder {
     // TODO(JackCaoG): handle is_scalar_expand
     return torch::lazy::MakeNode<Expand>(input0, size);
   }
-  torch::lazy::NodePtr MakeView(
-      const torch::lazy::Value& input0,
-      const std::vector<int64_t>& output_size) const override {
-    // TODO(JackCAoG): use functionization pass instead
-    return nullptr;
-  }
   torch::lazy::NodePtr MakeCast(const torch::lazy::Value& input0,
                                 const at::ScalarType& dtype,
                                 const c10::optional<at::ScalarType>& stype =
