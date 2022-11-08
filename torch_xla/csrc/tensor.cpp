@@ -787,7 +787,8 @@ torch::lazy::Value XLATensor::GetDeviceDataIrValue(
       GetDeviceData(value, TensorTypeFromXlaType(type), device);
   // TODO: consider using upstream info class if possible
   data->SetInfo(
-      std::make_shared<torch::lazy::LazyGraphExecutor::DeviceDataInfo>(/*tensor_id=*/-1, /*read_only=*/true));
+      std::make_shared<torch::lazy::LazyGraphExecutor::DeviceDataInfo>(
+          /*tensor_id=*/-1, /*read_only=*/true));
   return torch::lazy::MakeNode<DeviceData>(std::move(data));
 }
 
@@ -1148,7 +1149,9 @@ std::vector<XLATensorPtr> XLATensor::CreateTensors(
 
 torch::lazy::Value XLATensor::CreateTensorNode(torch::lazy::BackendDataPtr data,
                                                bool read_only) const {
-  data->SetInfo(std::make_shared<torch::lazy::LazyGraphExecutor::DeviceDataInfo>(GetUniqueId(), read_only));
+  data->SetInfo(
+      std::make_shared<torch::lazy::LazyGraphExecutor::DeviceDataInfo>(
+          GetUniqueId(), read_only));
   return torch::lazy::MakeNode<DeviceData>(std::move(data));
 }
 
@@ -1685,7 +1688,8 @@ std::vector<std::pair<int64_t, int64_t>> XLATensor::BuildInputOutputAliases(
   std::vector<ssize_t> alias_map(indices.size(), -1);
   for (size_t i = 0; i < parameters_data.size(); ++i) {
     auto* data_info =
-        static_cast<torch::lazy::LazyGraphExecutor::DeviceDataInfo*>(parameters_data[i]->info());
+        static_cast<torch::lazy::LazyGraphExecutor::DeviceDataInfo*>(
+            parameters_data[i]->info());
     if (data_info != nullptr && !data_info->read_only) {
       auto it = output_tensor_id_map.find(data_info->tensor_id);
       if (it != output_tensor_id_map.end()) {
@@ -1693,8 +1697,7 @@ std::vector<std::pair<int64_t, int64_t>> XLATensor::BuildInputOutputAliases(
         xla::XlaOp root = lowering_ctx->GetResult(output_index);
         const xla::Shape& root_shape = XlaHelpers::ShapeOfXlaOp(root);
         auto parameter_data_shape = UnwrapXlaData(parameters_data[i])->shape();
-        if (parameter_data_shape == root_shape &&
-            alias_map[output_index] < 0) {
+        if (parameter_data_shape == root_shape && alias_map[output_index] < 0) {
           // parameter is not a tuple so param_index will always be {}
           lowering_ctx->builder()->SetUpAlias(
               {/*output_index=*/static_cast<int64_t>(output_index)},

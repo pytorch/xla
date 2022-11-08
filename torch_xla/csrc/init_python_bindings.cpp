@@ -1501,7 +1501,8 @@ void InitXlaModuleBindings(py::module m) {
             }
             const auto& backend_data = device_data->data();
             auto* infoptr =
-                static_cast<torch::lazy::LazyGraphExecutor::DeviceDataInfo*>(backend_data->info());
+                static_cast<torch::lazy::LazyGraphExecutor::DeviceDataInfo*>(
+                    backend_data->info());
             XLA_CHECK(infoptr);
 
             // Dedup by handle
