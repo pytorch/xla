@@ -334,25 +334,29 @@ std::vector<at::Tensor> ShardingUtil::ShardTensor(
       int64_t core = sharding.tile_assignment_devices()[i];
       shards[core] = shard.contiguous(at::MemoryFormat::Contiguous);
     }
+
+    // Zero-pad to the right to ensure the sizes are even
+    if (shards.size() > 0 && padded) {
+      for (size_t i = 1; i < shards.size(); ++i) {
+        std::vector<long> pads;
+        for (size_t j = 0; j < shards[i].sizes().size(); ++j) {
+          XLA_CHECK_GE(
+              shards[sharding.tile_assignment_devices()[0]].sizes().at(j),
+              shards[i].sizes().at(j));
+          pads.push_back(
+              shards[sharding.tile_assignment_devices()[0]].sizes().at(j) -
+              shards[i].sizes().at(j));
+          pads.push_back(0);  // no padding on lhs
+        }
+        // Padding starts from the last dimension
+        std::reverse(pads.begin(), pads.end());
+        shards[i] = at::constant_pad_nd(
+            shards[i], c10::IntArrayRef(pads.data(), pads.size()), 0);
+      }
+    }
   } else if ((sharding.type() == xla::OpSharding::MANUAL) ||
              (sharding.type() == xla::OpSharding::TUPLE)) {
     TF_LOG(ERROR) << "Unsupported OpSharidng type " << sharding.type();
-  }
-
-  // Zero-pad to the right to ensure the sizes are even
-  if (shards.size() > 0 && padded) {
-    for (size_t i = 1; i < shards.size(); ++i) {
-      std::vector<long> pads;
-      for (size_t j = 0; j < shards[i].sizes().size(); ++j) {
-        XLA_CHECK_GE(shards[0].sizes().at(j), shards[i].sizes().at(j));
-        pads.push_back(shards[0].sizes().at(j) - shards[i].sizes().at(j));
-        pads.push_back(0);  // no padding on lhs
-      }
-      // Padding starts from the last dimension
-      std::reverse(pads.begin(), pads.end());
-      shards[i] = at::constant_pad_nd(
-          shards[i], c10::IntArrayRef(pads.data(), pads.size()), 0);
-    }
   }
   return shards;
 }
