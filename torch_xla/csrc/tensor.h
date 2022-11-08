@@ -436,10 +436,6 @@ class XLATensor : public c10::intrusive_ptr_target {
                           std::vector<int64_t> stride,
                           c10::optional<int64_t> storage_offset);
 
-  static XLATensorPtr atan2(
-      const XLATensorPtr& input, const XLATensorPtr& other,
-      c10::optional<at::ScalarType> logical_element_type = c10::nullopt);
-
   static XLATensorPtr avg_pool_nd(const XLATensorPtr& input,
                                   int64_t spatial_dim_count,
                                   std::vector<int64_t> kernel_size,
