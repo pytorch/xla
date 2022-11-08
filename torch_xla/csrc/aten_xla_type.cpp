@@ -2707,7 +2707,12 @@ at::Tensor XLANativeFunctions::scatter_reduce(
 
 at::Tensor XLANativeFunctions::select_copy(const at::Tensor& self, int64_t dim,
                                       int64_t index) {
+<<<<<<< HEAD
   TORCH_LAZY_FN_COUNTER("xla::");
+=======
+  std::cout << "WONJOO: at XLANativeFunctions::select_copy1" << std::endl;
+  XLA_FN_COUNTER("xla::");
+>>>>>>> Add debugging print lines
   return bridge::AtenFromXlaTensor(
       tensor_methods::select(bridge::GetXlaTensor(self), dim, index));
 }
