@@ -1,5 +1,8 @@
 #include "torch_xla/csrc/aten_xla_bridge.h"
 
+#include <ATen/FunctionalTensorWrapper.h>
+#include <torch/csrc/lazy/core/tensor_util.h>
+
 #include <map>
 #include <string>
 #include <vector>
@@ -11,9 +14,6 @@
 #include "torch_xla/csrc/tensor_impl.h"
 #include "torch_xla/csrc/torch_util.h"
 #include "torch_xla/csrc/xla_graph_executor.h"
-
-#include <torch/csrc/lazy/core/tensor_util.h>
-#include <ATen/FunctionalTensorWrapper.h>
 
 namespace torch_xla {
 namespace bridge {
@@ -169,7 +169,8 @@ std::vector<at::Tensor> XlaCreateTensorList(const at::ITensorListRef& tensors) {
   for (size_t i = 0, defined_pos = 0; i < tensors.size(); ++i) {
     if (to_translate[i]) {
       auto tensor = defined_aten_xla_tensors[defined_pos++];
-      XLA_CHECK(!at::functionalization::impl::isFunctionalTensor(tensor)) << "Expected non-functional tensor!";
+      XLA_CHECK(!at::functionalization::impl::isFunctionalTensor(tensor))
+          << "Expected non-functional tensor!";
       // This function is responsible for returning CPU tensors.
       // So we do not want to wrap the outputs into FunctionalTensorWrappers.
       aten_xla_tensors[i] = tensor;
@@ -345,14 +346,14 @@ at::Tensor XlaToAtenTensor(XLATensorPtr xla_tensor,
 
 at::Tensor AtenFromXlaTensor(XLATensorPtr xla_tensor) {
   if (xla_tensor) {
-    auto out = at::Tensor(c10::make_intrusive<XLATensorImpl>(
-                          std::move(xla_tensor)));
+    auto out =
+        at::Tensor(c10::make_intrusive<XLATensorImpl>(std::move(xla_tensor)));
     // See Note [Lazy Tensor Functionalization]
     if (c10::impl::tls_local_dispatch_key_set().excluded_.has(
             c10::DispatchKey::Functionalize)) {
-      // Invariant: if the functionalization key is in the exclude set, then we're
-      // expected to return an ordinary tensor, which will be "lifted" into a
-      // functional wrapper later.
+      // Invariant: if the functionalization key is in the exclude set, then
+      // we're expected to return an ordinary tensor, which will be "lifted"
+      // into a functional wrapper later.
       return out;
     } else {
       auto wrapped = at::functionalization::impl::to_functional_tensor(out);
