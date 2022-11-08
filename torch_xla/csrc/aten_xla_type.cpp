@@ -2704,7 +2704,7 @@ at::Tensor XLANativeFunctions::scatter_reduce(
 }
 
 at::Tensor XLANativeFunctions::select_copy(const at::Tensor& self, int64_t dim,
-                                           int64_t index) {
+                                      int64_t index) {
   TORCH_LAZY_FN_COUNTER("xla::");
   return bridge::AtenFromXlaTensor(
       tensor_methods::select(bridge::GetXlaTensor(self), dim, index));
