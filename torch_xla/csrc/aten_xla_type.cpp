@@ -693,8 +693,7 @@ at::Tensor XLANativeFunctions::atan2(const at::Tensor& self,
                                         ATEN_OP(atan2)>::call(self, other);
   }
   return DoBinaryOp(self, other,
-                    [&](const XLATensorPtr& xself,
-                        const XLATensorPtr& xother,
+                    [&](const XLATensorPtr& xself, const XLATensorPtr& xother,
                         at::ScalarType dtype) {
                       return XLATensor::atan2(xself, xother, dtype);
                     });
