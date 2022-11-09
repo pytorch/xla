@@ -20,6 +20,13 @@
 
 namespace xla {
 
+// Somehow the compiler doesn't allow type that has default member being
+// used as a default parameter in a method defined in the same scope.
+// Therefore, ClientExecuteOptions is defined here instead of within ComputationClient.
+struct ClientExecuteOptions {
+  bool explode_tuple {true};
+};
+
 class ComputationClient {
  public:
   class Data {
@@ -140,15 +147,11 @@ class ComputationClient {
     bool is_sharded;
   };
 
-  struct ExecuteOptions {
-    bool explode_tuple = true;
-  };
+  struct ExecuteComputationOptions : public ClientExecuteOptions {};
 
-  struct ExecuteComputationOptions : public ExecuteOptions {};
+  struct ExecuteReplicatedOptions : public ClientExecuteOptions {};
 
-  struct ExecuteReplicatedOptions : public ExecuteOptions {};
-
-  struct ExecuteParallelOptions : public ExecuteOptions {};
+  struct ExecuteParallelOptions : public ClientExecuteOptions {};
 
   // Describes an operation to be fed to the ExecuteChained() API.
   // If the device_data member is not nullptr, this operation is a device data
@@ -235,7 +238,7 @@ class ComputationClient {
   // its single elements.
   virtual std::vector<DataPtr> ExecuteComputation(
       const Computation& computation, absl::Span<const DataPtr> arguments,
-      const std::string& device, const ExecuteComputationOptions& options) = 0;
+      const std::string& device, const ExecuteComputationOptions& options = ExecuteComputationOptions{}) = 0;
 
   // Executes the computation in replicated mode.
   // The size of the arguments vector is the number of replicas to execute,

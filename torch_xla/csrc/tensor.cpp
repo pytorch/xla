@@ -1478,7 +1478,6 @@ std::shared_ptr<XLATensor::Async> XLATensor::ScheduleSyncTensorsGraph(
       std::move(cached_computation));
 
   auto syncfn = [async, hash = coll->hash]() {
-    xla::ComputationClient::ExecuteComputationOptions options;
     try {
       std::vector<xla::ComputationClient::DataPtr> results;
       // Execute replicated if the compiled computation is partitioned.
@@ -1489,7 +1488,6 @@ std::shared_ptr<XLATensor::Async> XLATensor::ScheduleSyncTensorsGraph(
             device_arguments = torch_xla::ShardingUtil::InputHandler(
                 UnwrapXlaData(async->parameters_data), devices);
         xla::ComputationClient::ExecuteReplicatedOptions execute_options;
-        execute_options.explode_tuple = options.explode_tuple;
 
         TF_VLOG(3) << "Executing IR graph hash "
                    << torch::lazy::HashToString(hash) << " on all devices.";
@@ -1506,7 +1504,7 @@ std::shared_ptr<XLATensor::Async> XLATensor::ScheduleSyncTensorsGraph(
                    << async->device << " ...";
         results = xla::ComputationClient::Get()->ExecuteComputation(
             *async->cached_computation->computation->client_computation(),
-            UnwrapXlaData(async->parameters_data), async->device, options);
+            UnwrapXlaData(async->parameters_data), async->device);
         TF_VLOG(3) << "Executing IR graph hash "
                    << torch::lazy::HashToString(hash) << " on device "
                    << async->device << " done!";
