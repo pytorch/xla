@@ -1,8 +1,11 @@
 from absl.testing import absltest, parameterized
 import os
 import sys
+import torch.distributed as dist
 import torch.nn as nn
-from torch.nn.parallel import DistributedDataParallel as DDP
+# TODO: fix this
+# from torch.nn.parallel import DistributedDataParallel as DDP
+from torch_xla.experimental.pjrt import DistributedDataParallel as DDP
 import torch_xla.core.xla_model as xm
 from torch_xla.experimental import pjrt
 
@@ -20,7 +23,8 @@ class TestPjRtDistributedDataParallel(parameterized.TestCase):
 
   @staticmethod
   def _ddp_init(init_file: str):
-    util.init_xla_backend(init_file)
+    if not dist.is_initialized():
+      util.init_xla_backend(init_file)
 
     device = xm.xla_device()
     model = nn.Linear(10, 10).to(device)

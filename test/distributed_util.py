@@ -3,7 +3,9 @@ import torch
 import torch.distributed as dist
 import torch.nn as nn
 import torch.optim as optim
-from torch.nn.parallel import DistributedDataParallel as DDP
+# TODO: fix this
+# from torch.nn.parallel import DistributedDataParallel as DDP
+from torch_xla.experimental.pjrt import DistributedDataParallel as DDP
 import torch_xla.core.xla_model as xm
 import torch_xla.distributed.xla_backend
 
@@ -77,7 +79,7 @@ def init_xla_backend(init_file: str):
 
 def assert_all_close(parameters_a, parameters_b):
   for param_a, param_b in zip(parameters_a, parameters_b):
-    assert torch.allclose(param_a.cpu(), param_b.cpu())
+    assert torch.allclose(param_a.cpu(), param_b.cpu(), atol=1e-3)
 
 
 def train_step(model, inputs, labels, optimizer, loss_fn):
@@ -97,7 +99,10 @@ def ddp_correctness(init_file: str,
                     *,
                     use_large_net: bool = False,
                     debug: bool = False):
-  rank, world_size = init_xla_backend(init_file)
+  if not dist.is_initialized():
+    rank, world_size = init_xla_backend(init_file)
+  else:
+    rank, world_size = xm.get_ordinal(), xm.xrt_world_size()
 
   device = xm.xla_device()
 
@@ -120,8 +125,8 @@ def ddp_correctness(init_file: str,
       bucket_cap_mb=1)
   # ddp_model.register_comm_hook(state=None, hook=comp_hook)
 
-  cpu_optimizer = optim.SGD(cpu_model.parameters(), lr=1e-100)
-  ddp_optimizer = optim.SGD(ddp_model.parameters(), lr=1e-100)
+  cpu_optimizer = optim.SGD(cpu_model.parameters(), lr=1e-4)
+  ddp_optimizer = optim.SGD(ddp_model.parameters(), lr=1e-4)
   loss_fn = nn.MSELoss()
 
   local_batch_size = 2
