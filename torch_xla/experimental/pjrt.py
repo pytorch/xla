@@ -259,8 +259,7 @@ def broadcast_master_param(model: nn.Module) -> None:
   xm.mark_step()
 
 
-def rendezvous(tag: str,
-               payload: bytes,
+def rendezvous(tag: str, payload: bytes,
                ordinals: Optional[List[int]]) -> List[bytes]:
   """Share `payload` with all replicas in `ordinals`.
 
@@ -279,7 +278,8 @@ def rendezvous(tag: str,
   Returns:
     List of bytes from other replicas.
   """
-  assert not ordinals or len(ordinals) == global_device_count(), 'Only global rendezvous is supported'
+  assert not ordinals or len(
+      ordinals) == global_device_count(), 'Only global rendezvous is supported'
   assert isinstance(payload, bytes)
   data = torch.tensor(list(payload), dtype=torch.uint8)
   size = torch.tensor([data.shape[0]], dtype=torch.int, device=xm.xla_device())
@@ -289,13 +289,14 @@ def rendezvous(tag: str,
   max_size = torch.max(sizes)
   xm.mark_step()
 
-  padded_data = torch.nn.functional.pad(data, (0, max_size.item() - size.item(),)).to(xm.xla_device())
+  padded_data = torch.nn.functional.pad(data, (
+      0,
+      max_size.item() - size.item(),
+  )).to(xm.xla_device())
   raw_data = xm.all_gather(padded_data)
   data_list = torch.split(raw_data, max_size)
 
-  payloads = [
-    d[:sz] for d, sz in zip(data_list, sizes)
-  ]
+  payloads = [d[:sz] for d, sz in zip(data_list, sizes)]
   xm.mark_step()
 
   return [bytes(p.cpu().tolist()) for p in payloads]
