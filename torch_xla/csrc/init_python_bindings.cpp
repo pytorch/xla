@@ -89,8 +89,8 @@ void PrepareToExit() {
 
 std::string GetTensorsDump(
     const std::vector<at::Tensor>& tensors,
-    const std::function<
-        std::string(absl::Span<torch::lazy::Node* const>)>& coverter) {
+    const std::function<std::string(absl::Span<torch::lazy::Node* const>)>&
+        coverter) {
   std::vector<torch::lazy::Node*> nodes;
   std::vector<torch::lazy::Value> values;
   for (auto& tensor : tensors) {
@@ -1488,8 +1488,7 @@ void InitXlaModuleBindings(py::module m) {
               roots.push_back(xtensor->GetIrValue().node.get());
             }
           }
-          auto post_order =
-              torch::lazy::Util::ComputePostOrder(roots);
+          auto post_order = torch::lazy::Util::ComputePostOrder(roots);
           std::unordered_set<xla::ComputationClient::Data::OpaqueHandle>
               data_handles;
 
