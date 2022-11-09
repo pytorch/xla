@@ -88,13 +88,13 @@ OpByOpExecutor::OpByOpExecutor(size_t compile_cache_size)
 std::vector<xla::ComputationClient::ExecuteChainedOp> OpByOpExecutor::BuildOps(
     c10::ArrayRef<torch::lazy::Value> roots, const std::string& device,
     absl::Span<const std::string> devices) {
-  std::vector<const torch::lazy::Node*> root_nodes;
+  std::vector<torch::lazy::Node*> root_nodes;
   root_nodes.reserve(roots.size());
   for (auto& root : roots) {
     root_nodes.push_back(root.node.get());
   }
-  std::vector<const torch::lazy::Node*> post_order =
-      Util::ComputePostOrder(root_nodes);
+  auto post_order =
+      torch::lazy::Util::ComputePostOrder(root_nodes);
   XLA_VALUE_METRIC("OpByOpGraphSize", post_order.size());
   TF_VLOG(5) << "TensorsGraphSize=" << post_order.size();
 

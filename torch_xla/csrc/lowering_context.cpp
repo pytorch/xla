@@ -81,7 +81,7 @@ LoweringContext::LoweringContext(const std::string& name,
 
 LoweringContext::LoweringContext(
     const std::string& name, torch::lazy::BackendDevice device,
-    c10::ArrayRef<const torch::lazy::Node*> post_order,
+    c10::ArrayRef<torch::lazy::Node*> post_order,
     torch::lazy::Util::EmissionMap emit_status)
     : torch::lazy::LoweringContext(name, device, {}, emit_status),
       builder_(name) {
@@ -144,7 +144,7 @@ void LoweringContext::AssignOutputOp(const torch::lazy::Output& output,
 xla::XlaOp LoweringContext::GetOutputOp(const torch::lazy::Output& output) {
   auto it = emitted_outputs_.find(output);
   if (it == emitted_outputs_.end()) {
-    auto post_order = Util::ComputePostOrder(output.node, &emit_status_);
+    auto post_order = torch::lazy::Util::ComputePostOrder(output.node, &emit_status_);
     for (auto node : post_order) {
       LowerNode(node);
     }

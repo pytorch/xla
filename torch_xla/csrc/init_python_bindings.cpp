@@ -90,8 +90,8 @@ void PrepareToExit() {
 std::string GetTensorsDump(
     const std::vector<at::Tensor>& tensors,
     const std::function<
-        std::string(absl::Span<const torch::lazy::Node* const>)>& coverter) {
-  std::vector<const torch::lazy::Node*> nodes;
+        std::string(absl::Span<torch::lazy::Node* const>)>& coverter) {
+  std::vector<torch::lazy::Node*> nodes;
   std::vector<torch::lazy::Value> values;
   for (auto& tensor : tensors) {
     XLATensorPtr xtensor = bridge::GetXlaTensor(tensor);
@@ -377,8 +377,8 @@ std::string GetLiveTensorsReport(size_t nodes_threshold,
   for (auto& tensor : tensors) {
     torch::lazy::Value ir_value = tensor->CurrentIrValue();
     if (ir_value) {
-      std::vector<const torch::lazy::Node*> roots({ir_value.node.get()});
-      auto post_order = Util::ComputePostOrder(roots);
+      std::vector<torch::lazy::Node*> roots({ir_value.node.get()});
+      auto post_order = torch::lazy::Util::ComputePostOrder(roots);
       if (post_order.size() > nodes_threshold) {
         ss << "Tensor: id=" << tensor->GetUniqueId()
            << ", shape=" << tensor->shape().get()
@@ -859,14 +859,14 @@ void InitXlaModuleBindings(py::module m) {
         });
   m.def("_get_xla_tensors_dot",
         [](const std::vector<at::Tensor>& tensors) -> std::string {
-          auto coverter = [](absl::Span<const torch::lazy::Node* const> nodes) {
+          auto coverter = [](absl::Span<torch::lazy::Node* const> nodes) {
             return DumpUtil::ToDot(nodes);
           };
           return GetTensorsDump(tensors, coverter);
         });
   m.def("_get_xla_tensors_text",
         [](const std::vector<at::Tensor>& tensors) -> std::string {
-          auto coverter = [](absl::Span<const torch::lazy::Node* const> nodes) {
+          auto coverter = [](absl::Span<torch::lazy::Node* const> nodes) {
             return DumpUtil::ToText(nodes);
           };
           return GetTensorsDump(tensors, coverter);
@@ -1488,8 +1488,8 @@ void InitXlaModuleBindings(py::module m) {
               roots.push_back(xtensor->GetIrValue().node.get());
             }
           }
-          std::vector<const torch::lazy::Node*> post_order =
-              Util::ComputePostOrder(roots);
+          auto post_order =
+              torch::lazy::Util::ComputePostOrder(roots);
           std::unordered_set<xla::ComputationClient::Data::OpaqueHandle>
               data_handles;
 

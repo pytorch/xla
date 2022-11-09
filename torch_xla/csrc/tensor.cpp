@@ -1360,13 +1360,13 @@ XLATensor::PostOrderData XLATensor::RunPostOrder(
     SyncTensorCollection* coll) {
   tensorflow::profiler::TraceMe activity(
       "RunPostOrder", tensorflow::profiler::TraceMeLevel::kInfo);
-  std::vector<const torch::lazy::Node*> roots;
+  std::vector<torch::lazy::Node*> roots;
   roots.reserve(ir_values.size());
   for (auto ir_value : ir_values) {
     roots.push_back(ir_value.node.get());
   }
   PostOrderData po_data;
-  po_data.post_order = Util::ComputePostOrder(roots, &po_data.emission_map);
+  po_data.post_order = torch::lazy::Util::ComputePostOrder(roots, &po_data.emission_map);
   std::unordered_map<xla::ComputationClient::Data::OpaqueHandle, size_t>
       data_handles;
 

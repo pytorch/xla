@@ -25,7 +25,7 @@ class LoweringContext : public torch::lazy::LoweringContext {
   explicit LoweringContext(const std::string& name,
                            torch::lazy::BackendDevice device);
   LoweringContext(const std::string& name, torch::lazy::BackendDevice device,
-                  c10::ArrayRef<const torch::lazy::Node*> post_order,
+                  c10::ArrayRef<torch::lazy::Node*> post_order,
                   torch::lazy::Util::EmissionMap emit_status);
 
   xla::XlaBuilder* builder() { return &builder_; }
