@@ -731,7 +731,8 @@ at::Tensor XLANativeFunctions::as_strided_copy(
 }
 
 at::Tensor XLANativeFunctions::as_strided_scatter(
-    const at::Tensor& base, const at::Tensor& mutated_view, at::IntArrayRef size, at::IntArrayRef stride,
+    const at::Tensor& base, const at::Tensor& mutated_view,
+    at::IntArrayRef size, at::IntArrayRef stride,
     c10::optional<int64_t> storage_offset) {
   // std::cout << "WONJOO: at aten_xla_type.cpp, as_strided_scatter1" << std::endl;
   TORCH_LAZY_FN_COUNTER("xla::");
@@ -741,8 +742,10 @@ at::Tensor XLANativeFunctions::as_strided_scatter(
   if (!AsStrided::StrideIsSupported(base_->shape(), xsize, xstride,
                                     storage_offset.value_or(0))) {
     return at::native::call_fallback_fn<
-        &xla_cpu_fallback, ATEN_OP(as_strided_scatter)>::call(base, mutated_view, size, stride,
-                                                      storage_offset);
+        &xla_cpu_fallback, ATEN_OP(as_strided_scatter)>::call(base,
+                                                              mutated_view,
+                                                              size, stride,
+                                                              storage_offset);
   }
   auto mutated_view_ = bridge::GetXlaTensor(mutated_view);
   return bridge::AtenFromXlaTensor(
@@ -1107,15 +1110,18 @@ at::Tensor XLANativeFunctions::diag(const at::Tensor& self, int64_t diagonal) {
       tensor_methods::diag(bridge::GetXlaTensor(self), diagonal));
 }
 
-at::Tensor XLANativeFunctions::diagonal_copy(const at::Tensor& self, int64_t offset,
-                                        int64_t dim1, int64_t dim2) {
+at::Tensor XLANativeFunctions::diagonal_copy(const at::Tensor& self,
+                                             int64_t offset, int64_t dim1,
+                                             int64_t dim2) {
   TORCH_LAZY_FN_COUNTER("xla::");
   return bridge::AtenFromXlaTensor(
       tensor_methods::diagonal(bridge::GetXlaTensor(self), offset, dim1, dim2));
 }
 
-at::Tensor XLANativeFunctions::diagonal_scatter(const at::Tensor& base, const at::Tensor& mutated_view, int64_t offset,
-                                        int64_t dim1, int64_t dim2) {
+at::Tensor XLANativeFunctions::diagonal_scatter(const at::Tensor& base,
+                                                const at::Tensor& mutated_view,
+                                                int64_t offset, int64_t dim1,
+                                                int64_t dim2) {
   auto base_ = bridge::GetXlaTensor(base);
   auto mutated_view_ = bridge::GetXlaTensor(mutated_view);
   return bridge::AtenFromXlaTensor(
@@ -1241,12 +1247,12 @@ at::Tensor XLANativeFunctions::empty_strided_symint(
   at::Tensor t =
       empty_symint(sym_size, dtype, layout, device, pin_memory, c10::nullopt);
   return torch_xla::XLANativeFunctions::as_strided_copy(t, size, stride,
-                                                   /*storage_offset=*/0);
+                                                        /*storage_offset=*/0);
 }
 
 at::Tensor XLANativeFunctions::expand_copy_symint(const at::Tensor& self,
-                                             at::SymIntArrayRef sym_size,
-                                             bool implicit) {
+                                                  at::SymIntArrayRef sym_size,
+                                                  bool implicit) {
   TORCH_LAZY_FN_COUNTER("xla::");
   c10::optional<at::IntArrayRef> size = c10::asIntArrayRefSlowOpt(sym_size);
   if (size.has_value()) {
@@ -2707,12 +2713,9 @@ at::Tensor XLANativeFunctions::scatter_reduce(
 
 at::Tensor XLANativeFunctions::select_copy(const at::Tensor& self, int64_t dim,
                                       int64_t index) {
-<<<<<<< HEAD
   TORCH_LAZY_FN_COUNTER("xla::");
-=======
   std::cout << "WONJOO: at XLANativeFunctions::select_copy1" << std::endl;
   XLA_FN_COUNTER("xla::");
->>>>>>> Add debugging print lines
   return bridge::AtenFromXlaTensor(
       tensor_methods::select(bridge::GetXlaTensor(self), dim, index));
 }
