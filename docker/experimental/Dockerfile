@@ -10,7 +10,7 @@ ARG tf_cuda_compute_capabilities="7.0,7.5,8.0"
 
 ARG tpuvm=1
 ARG build_cpp_tests=0
-ARG torch_xla_version=nightly
+ARG package_version=1.14
 
 ARG bazel_jobs=
 
@@ -26,8 +26,7 @@ ARG cuda_version
 ARG cudnn_version
 ARG cuda_repo
 COPY docker/experimental/maybe_install_cuda.sh .
-RUN CUDA=${cuda} CUDA_REPO=${cuda_repo} CUDA_VERSION=${cuda_version} CUDNN_VERSION=${cudnn_version} ./maybe_install_cuda.sh build
-RUN rm maybe_install_cuda.sh
+RUN CUDA=${cuda} CUDA_REPO=${cuda_repo} CUDA_VERSION=${cuda_version} CUDNN_VERSION=${cudnn_version} ./maybe_install_cuda.sh build && rm maybe_install_cuda.sh
 ENV LD_LIBRARY_PATH=${cuda:+"${LD_LIBRARY_PATH}:/usr/local/cuda-${cuda_version}/targets/x86_64-linux/lib:/usr/local/nvidia/lib64"}
 
 ARG debian_version
@@ -49,7 +48,8 @@ WORKDIR /pytorch
 COPY torch_patches/ torch_patches/
 RUN bash -c "torch_pin=$(cat torch_patches/.torch_pin &); git fetch origin ${torch_pin:-master}; git checkout origin/${torch_pin:-master}"
 
-RUN USE_CUDA=0 python setup.py bdist_wheel
+ARG package_version
+RUN PYTORCH_BUILD_VERSION=${package_version} PYTORCH_BUILD_NUMBER=1 USE_CUDA=0 python setup.py bdist_wheel
 
 RUN pip install dist/*.whl
 
@@ -82,8 +82,8 @@ COPY xla_native_functions.yaml .
 COPY scripts/ scripts/
 
 ARG build_cpp_tests
-ARG torch_xla_version
-RUN TORCH_XLA_VERSION=${torch_xla_version} BUILD_CPP_TESTS=${build_cpp_tests} TPUVM_MODE=${tpuvm} XLA_CUDA=${cuda} TF_CUDA_COMPUTE_CAPABILITIES=${tf_cuda_compute_capabilities} python setup.py bdist_wheel
+ARG package_version
+RUN TORCH_XLA_VERSION=${package_version} BUILD_CPP_TESTS=${build_cpp_tests} TPUVM_MODE=${tpuvm} XLA_CUDA=${cuda} TF_CUDA_COMPUTE_CAPABILITIES=${tf_cuda_compute_capabilities} python setup.py bdist_wheel
 
 RUN pip install dist/*.whl
 
@@ -101,8 +101,7 @@ ARG cuda_version
 ARG cuda_repo
 
 COPY docker/experimental/maybe_install_cuda.sh .
-RUN CUDA=${cuda} CUDA_REPO=${cuda_repo} CUDA_VERSION=${cuda_version} CUDNN_VERSION=${cudnn_version} ./maybe_install_cuda.sh common
-RUN rm maybe_install_cuda.sh
+RUN CUDA=${cuda} CUDA_REPO=${cuda_repo} CUDA_VERSION=${cuda_version} CUDNN_VERSION=${cudnn_version} ./maybe_install_cuda.sh common && rm maybe_install_cuda.sh
 ENV LD_LIBRARY_PATH=${cuda:+"${LD_LIBRARY_PATH}:/usr/local/cuda-${cuda_version}/targets/x86_64-linux/lib:/usr/local/nvidia/lib64"}
 
 RUN echo "deb [signed-by=/usr/share/keyrings/cloud.google.gpg] https://packages.cloud.google.com/apt cloud-sdk main" >> /etc/apt/sources.list.d/google-cloud-sdk.list

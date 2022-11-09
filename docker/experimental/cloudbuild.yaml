@@ -10,9 +10,10 @@ steps:
 - id: 'common-flags'
   name: 'bash'
   args:
-  - -c
+  - -cx
   - |
-    args=(${BUILD_ARGS//,/ })
+    _BUILD_ARGS=${_BUILD_ARGS}
+    args=(${_BUILD_ARGS//,/ })
     flags=(
       --cache=${_CACHE}
       --cache-ttl=${_CACHE_TTL}
@@ -20,8 +21,8 @@ steps:
       --build-arg=bazel_jobs=${_BAZEL_JOBS}
       --build-arg=python_version=${_PYTHON_VERSION}
       # TODO: use current version in setup.py
-      --build-arg=torch_xla_version="1.14.dev$(date -u +%Y%m%d)"
-      ${args[@]/#/--build-arg})
+      --build-arg=package_version="1.14.0.dev$(date -u +%Y%m%d)"
+      ${args[@]/#/--build-arg=})
     echo ${flags[@]} | tee /docker/flags.txt
   volumes:
   - name: docker
@@ -30,12 +31,12 @@ steps:
   name: 'gcr.io/kaniko-project/executor:debug'
   entrypoint: sh
   args:
-  - -c
+  - -cx
   - |
     /kaniko/executor \
       --dockerfile=docker/experimental/Dockerfile \
       --destination=${_IMAGE_URL}_artifacts \
-      --tar-path=/image/artifacts-image.tar \
+      --tar-path=/docker/artifacts-image.tar \
       --target=artifacts \
       $(cat /docker/flags.txt)
   timeout: 14400s
@@ -47,12 +48,12 @@ steps:
   args:
   - load
   - --input
-  - /image/artifacts-image.tar
+  - /docker/artifacts-image.tar
   volumes:
   - name: docker
     path: /docker
 - id: 'copy-wheels'
-  name: gcr.io/${PROJECT_ID}/experimental/xla:${_IMAGE_NAME}_artifacts
+  name: ${_IMAGE_URL}_artifacts
   entrypoint: bash
   args:
   - -c
@@ -89,7 +90,7 @@ steps:
   name: 'gcr.io/kaniko-project/executor:debug'
   entrypoint: sh
   args:
-  - -c
+  - -cx
   - |
     /kaniko/executor \
       --dockerfile=docker/experimental/Dockerfile \
@@ -101,12 +102,12 @@ steps:
     path: /docker
 substitutions:
   _ARTIFACT_REGISTRY_REGION: us
-  _IMAGE_URL: ${_ARTIFACT_REGISTRY_REGION}-docker.pkg.dev/${PROJECT_ID}/torch-xla-images/xla:${_RELEASE_VERSION}_${_PYTHON_VERSION}
+  _IMAGE_URL: gcr.io/${PROJECT_ID}/experimental/xla:${_RELEASE_VERSION}_${_PYTHON_VERSION}
   _BAZEL_JOBS: '16'
   _PYTHON_VERSION: '3.8'
   _RELEASE_VERSION: 'nightly'  # or rX.Y
   _CACHE: 'true'
-  _CACHE_TTL: '18h'
+  _CACHE_TTL: '36h'
   _BUILD_ARGS: tpuvm=1,cuda=0
 options:
   machineType: E2_HIGHCPU_32
