@@ -1238,9 +1238,7 @@ class XLATensor : public c10::intrusive_ptr_target {
   const c10::Storage& Storage() const { return storage_; }
 
   struct CachedComputation {
-    CachedComputation(
-        ComputationPtr computation,
-        bool is_sharded = false)
+    CachedComputation(ComputationPtr computation, bool is_sharded = false)
         : computation(std::move(computation)), is_sharded(is_sharded) {}
 
     ComputationPtr computation;

@@ -1491,7 +1491,8 @@ std::shared_ptr<XLATensor::Async> XLATensor::ScheduleSyncTensorsGraph(
         TF_VLOG(3) << "Executing IR graph hash "
                    << torch::lazy::HashToString(hash) << " on all devices.";
         results = xla::ComputationClient::Get()->ExecuteReplicated(
-            *async->cached_computation->computation->client_computation(), device_arguments, devices,
+            *async->cached_computation->computation->client_computation(),
+            device_arguments, devices,
             execute_options)[0];  // TODO(yeounoh) assumes replicated outputs
         TF_VLOG(3) << "Executing IR graph hash "
                    << torch::lazy::HashToString(hash)
@@ -1821,7 +1822,8 @@ XLATensor::CompilationResult XLATensor::Compile(
 
   return {/*device=*/coll.device,
           /*emitted_nodes=*/lowering_ctx.GetEmittedNodeCount(),
-          /*computation=*/std::make_shared<Computation>(std::move(computations.front())),
+          /*computation=*/
+          std::make_shared<Computation>(std::move(computations.front())),
           /*parameters_data=*/std::move(po_data->parameters_data),
           /*is_sharded=*/is_sharded};
 }
