@@ -1610,8 +1610,8 @@ void InitXlaModuleBindings(py::module m) {
           xla::ComputationClient::ExecuteComputationOptions options;
           std::vector<std::shared_ptr<xla::ComputationClient::Data>> results =
               xla::ComputationClient::Get()->ExecuteComputation(
-                  *cachedComputation->computation, parameters_data, deviceStr,
-                  options);
+                  *cachedComputation->computation->client_computation(),
+                  parameters_data, deviceStr, options);
           std::vector<at::Tensor> retlist;
           {
             XLA_TIMED("RunCachedGraphOutputData");
