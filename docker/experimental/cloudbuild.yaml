@@ -17,11 +17,11 @@ steps:
     flags=(
       --cache=${_CACHE}
       --cache-ttl=${_CACHE_TTL}
-      --use-new-run
       --build-arg=bazel_jobs=${_BAZEL_JOBS}
       --build-arg=python_version=${_PYTHON_VERSION}
       # TODO: use current version in setup.py
-      --build-arg=package_version="1.14.0.dev$(date -u +%Y%m%d)"
+      --build-arg=package_version="1.14.0.dev$(date +%Y%m%d)"
+      --snapshotMode=full
       ${args[@]/#/--build-arg=})
     echo ${flags[@]} | tee /docker/flags.txt
   volumes:
@@ -107,7 +107,7 @@ substitutions:
   _PYTHON_VERSION: '3.8'
   _RELEASE_VERSION: 'nightly'  # or rX.Y
   _CACHE: 'true'
-  _CACHE_TTL: '36h'
+  _CACHE_TTL: '18h'
   _BUILD_ARGS: tpuvm=1,cuda=0
 options:
   machineType: E2_HIGHCPU_32
