@@ -38,18 +38,23 @@ class DynamoBasicTest(unittest.TestCase):
     res_xla_dynamo_2 = self.fn_simple_dynamo(x, y)
     self.assertNotIn('xla::add', met.counter_names())
     torch.allclose(res_cpu, res_xla_dynamo_2.cpu())
+    # verify that dynamo can handle different inputs
+    res_xla_dynamo_3 = self.fn_simple_dynamo(x + y, y * 3)
+    res_cpu_3 = self.fn_simple(x + y, y * 3)
+    torch.allclose(res_cpu, res_xla_dynamo_3.cpu())
 
   def test_resnet18(self):
     batch_size = xu.getenv_as('BATCH_SIZE', int, defval=4)
     sample_count = xu.getenv_as('SAMPLE_COUNT', int, defval=10)
     loader = xu.SampleGenerator(
-        data=(torch.zeros(batch_size, 3, 224,
+        data=(torch.randn(batch_size, 3, 224,
                           224), torch.zeros(batch_size, dtype=torch.int64)),
         sample_count=sample_count)
     model = torchvision.models.resnet18()
     model.eval()
     for data, _ in loader:
       output = self.resetnet_18_dynamo(model, data)
+      torch.allclose(model(data), output.cpu())
     self.assertEqual(met.metric_data('CompileTime')[0], 1)
     self.assertEqual(met.metric_data('ExecuteTime')[0], sample_count + 1)
     self.assertEqual(
