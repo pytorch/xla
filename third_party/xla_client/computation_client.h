@@ -22,9 +22,10 @@ namespace xla {
 
 // Somehow the compiler doesn't allow type that has default member being
 // used as a default parameter in a method defined in the same scope.
-// Therefore, ClientExecuteOptions is defined here instead of within ComputationClient.
+// Therefore, ClientExecuteOptions is defined here instead of within
+// ComputationClient.
 struct ClientExecuteOptions {
-  bool explode_tuple {true};
+  bool explode_tuple{true};
 };
 
 class ComputationClient {
@@ -238,7 +239,9 @@ class ComputationClient {
   // its single elements.
   virtual std::vector<DataPtr> ExecuteComputation(
       const Computation& computation, absl::Span<const DataPtr> arguments,
-      const std::string& device, const ExecuteComputationOptions& options = ExecuteComputationOptions{}) = 0;
+      const std::string& device,
+      const ExecuteComputationOptions& options =
+          ExecuteComputationOptions{}) = 0;
 
   // Executes the computation in replicated mode.
   // The size of the arguments vector is the number of replicas to execute,
