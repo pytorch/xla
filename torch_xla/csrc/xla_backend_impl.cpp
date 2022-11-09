@@ -82,7 +82,7 @@ class XlaBackendImpl : public torch::lazy::BackendImplInterface {
   }
 
   torch::lazy::BackendDataPtr GetComputationDataFromNode(
-      torch::lazy::Node* node) const override {
+      const torch::lazy::Node* node) const override {
     const DeviceData* device_data_node = DeviceData::Cast(node);
     if (!device_data_node) {
       return nullptr;
@@ -99,14 +99,9 @@ class XlaBackendImpl : public torch::lazy::BackendImplInterface {
 
   std::unique_ptr<torch::lazy::LoweringContext> CreateLoweringContext(
       const std::string& name, torch::lazy::BackendDevice device,
-      c10::ArrayRef<torch::lazy::Node*> post_order,
+      c10::ArrayRef<const torch::lazy::Node*> post_order,
       torch::lazy::Util::EmissionMap emit_status) const override {
-    // TODO(JackCaoG): change LoweringContext to take post_order as
-    // c10::ArrayRef<torch::lazy::Node*> instead of
-    // c10::ArrayRef<const torch::lazy::Node*> since c10::ArrayRef already
-    // provided const for its member.
-    XLA_ERROR() << "Need to handle post_order";
-    return std::make_unique<LoweringContext>(name, device);
+    return std::make_unique<LoweringContext>(name, device, post_order, emit_status);
   }
 
   std::unique_ptr<torch::lazy::LoweringContext> CreateLoweringContext(
