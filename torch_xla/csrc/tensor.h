@@ -1239,11 +1239,11 @@ class XLATensor : public c10::intrusive_ptr_target {
 
   struct CachedComputation {
     CachedComputation(
-        std::shared_ptr<xla::ComputationClient::Computation> computation,
+        ComputationPtr computation,
         bool is_sharded = false)
         : computation(std::move(computation)), is_sharded(is_sharded) {}
 
-    std::shared_ptr<xla::ComputationClient::Computation> computation;
+    ComputationPtr computation;
     bool is_sharded;
   };
 
@@ -1285,7 +1285,7 @@ class XLATensor : public c10::intrusive_ptr_target {
   struct CompilationResult {
     torch::lazy::BackendDevice device;
     size_t emitted_nodes = 0;
-    std::shared_ptr<xla::ComputationClient::Computation> computation;
+    ComputationPtr computation;
     std::vector<torch::lazy::BackendDataPtr> parameters_data;
     bool is_sharded = false;
   };
