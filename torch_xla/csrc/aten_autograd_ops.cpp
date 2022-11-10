@@ -24,9 +24,9 @@ torch::Tensor EinsumAutogradFunction::forward(
     at::TensorList tensors) {
   // We might get here after the autograd graph was created, but before
   // python gets a chance to run. Give python a chance to run.
-  if (self.key_set().has(c10::DispatchKey::Python)) {
-    return at::redispatch::einsum(
-        c10::DispatchKeySet(c10::DispatchKey::Python), equation, tensors);
+  if (tensors[0].key_set().has(c10::DispatchKey::Python)) {
+    return at::redispatch::einsum(c10::DispatchKeySet(c10::DispatchKey::Python),
+                                  equation, tensors);
   }
   std::string eq_str = std::string(equation);
   ctx->saved_data["equation"] = eq_str;
