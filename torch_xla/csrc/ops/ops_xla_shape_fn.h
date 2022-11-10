@@ -53,6 +53,9 @@ xla::Shape AsinhOutputShape(const torch::lazy::Value& input);
 
 xla::Shape AtanOutputShape(const torch::lazy::Value& input);
 
+xla::Shape Atan2OutputShape(const torch::lazy::Value& input,
+                            const torch::lazy::Value& other);
+
 xla::Shape AtanhOutputShape(const torch::lazy::Value& input);
 
 xla::Shape BinaryCrossEntropyOutputShape(

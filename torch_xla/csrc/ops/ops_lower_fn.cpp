@@ -120,6 +120,13 @@ torch_xla::XlaOpVector Atan::Lower(LoweringContext* loctx) const {
   return ReturnOp(xla::Atan(xla_input), loctx);
 }
 
+torch_xla::XlaOpVector Atan2::Lower(LoweringContext* loctx) const {
+  xla::XlaOp xla_input = loctx->GetOutputOp(operand(0));
+  xla::XlaOp xla_other = loctx->GetOutputOp(operand(1));
+  auto promoted = XlaHelpers::Promote(xla_input, xla_other);
+  return ReturnOp(xla::Atan2(promoted.first, promoted.second), loctx);
+}
+
 torch_xla::XlaOpVector Atanh::Lower(LoweringContext* loctx) const {
   xla::XlaOp xla_input = loctx->GetOutputOp(operand(0));
   return ReturnOp(xla::Atanh(xla_input), loctx);

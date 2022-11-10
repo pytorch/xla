@@ -688,11 +688,15 @@ at::Tensor XLANativeFunctions::atan2(const at::Tensor& self,
     return at::native::call_fallback_fn<&xla_cpu_fallback,
                                         ATEN_OP(atan2)>::call(self, other);
   }
-  return DoBinaryOp(self, other,
-                    [&](const XLATensorPtr& xself, const XLATensorPtr& xother,
-                        at::ScalarType dtype) {
-                      return XLATensor::atan2(xself, xother, dtype);
-                    });
+
+  auto common_device = torch_xla::bridge::GetXlaDevice(self, other);
+  XLA_CHECK(common_device);
+  torch::lazy::NodePtr node =
+      torch::lazy::MakeNode<Atan2>(bridge::GetXlaTensor(self)->GetIrValue(),
+                                   bridge::GetXlaTensor(other)->GetIrValue());
+
+  return torch_xla::bridge::AtenFromXlaTensor(
+      torch_xla::XLATensor::Create(std::move(node), *common_device));
 }
 
 at::Tensor XLANativeFunctions::avg_pool2d(
