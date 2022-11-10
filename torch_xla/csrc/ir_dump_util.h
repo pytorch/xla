@@ -11,13 +11,13 @@ namespace torch_xla {
 
 class DumpUtil {
  public:
-  static std::string ToDot(absl::Span<torch::lazy::Node* const> nodes);
+  static std::string ToDot(absl::Span<const torch::lazy::Node* const> nodes);
 
   static std::string PostOrderToDot(
       absl::Span<const torch::lazy::Node* const> post_order,
       absl::Span<const torch::lazy::Node* const> roots);
 
-  static std::string ToText(absl::Span<torch::lazy::Node* const> nodes);
+  static std::string ToText(absl::Span<const torch::lazy::Node* const> nodes);
 
   static std::string PostOrderToText(
       absl::Span<const torch::lazy::Node* const> post_order,

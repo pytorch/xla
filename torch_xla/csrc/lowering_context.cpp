@@ -81,7 +81,7 @@ LoweringContext::LoweringContext(const std::string& name,
 
 LoweringContext::LoweringContext(const std::string& name,
                                  torch::lazy::BackendDevice device,
-                                 c10::ArrayRef<torch::lazy::Node*> post_order,
+                                 c10::ArrayRef<const torch::lazy::Node*> post_order,
                                  torch::lazy::Util::EmissionMap emit_status)
     : torch::lazy::LoweringContext(name, device, {}, emit_status),
       builder_(name) {

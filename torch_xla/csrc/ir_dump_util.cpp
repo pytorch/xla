@@ -181,7 +181,7 @@ std::string GenerateTextNodeSpec(const torch::lazy::Node* node,
 
 }  // namespace
 
-std::string DumpUtil::ToDot(absl::Span<torch::lazy::Node* const> nodes) {
+std::string DumpUtil::ToDot(absl::Span<const torch::lazy::Node* const> nodes) {
   auto post_order = torch::lazy::Util::ComputePostOrder(
       c10::makeArrayRef(nodes.data(), nodes.size()));
   return PostOrderToDot(post_order, nodes);
@@ -223,7 +223,7 @@ std::string DumpUtil::PostOrderToDot(
   return ss.str();
 }
 
-std::string DumpUtil::ToText(absl::Span<torch::lazy::Node* const> nodes) {
+std::string DumpUtil::ToText(absl::Span<const torch::lazy::Node* const> nodes) {
   auto post_order = torch::lazy::Util::ComputePostOrder(
       c10::makeArrayRef(nodes.data(), nodes.size()));
   return PostOrderToText(post_order, nodes);

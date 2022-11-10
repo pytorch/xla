@@ -1360,7 +1360,7 @@ XLATensor::PostOrderData XLATensor::RunPostOrder(
     SyncTensorCollection* coll) {
   tensorflow::profiler::TraceMe activity(
       "RunPostOrder", tensorflow::profiler::TraceMeLevel::kInfo);
-  std::vector<torch::lazy::Node*> roots;
+  std::vector<const torch::lazy::Node*> roots;
   roots.reserve(ir_values.size());
   for (auto ir_value : ir_values) {
     roots.push_back(ir_value.node.get());

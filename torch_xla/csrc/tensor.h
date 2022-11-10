@@ -1266,7 +1266,7 @@ class XLATensor : public c10::intrusive_ptr_target {
   };
 
   struct PostOrderData {
-    std::vector<torch::lazy::Node*> post_order;
+    std::vector<const torch::lazy::Node*> post_order;
     torch::lazy::Util::EmissionMap emission_map;
     std::vector<torch::lazy::BackendDataPtr> parameters_data;
     std::vector<size_t> parameter_sequence;

@@ -34,7 +34,7 @@ std::vector<torch::lazy::Value> Util::Clone(
 
 std::vector<torch::lazy::Value> Util::Clone(
     c10::ArrayRef<torch::lazy::Value> values) {
-  std::vector<torch::lazy::Node*> nodes;
+  std::vector<const torch::lazy::Node*> nodes;
   for (auto& value : values) {
     nodes.push_back(value.node.get());
   }
