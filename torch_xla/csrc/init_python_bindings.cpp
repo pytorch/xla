@@ -1587,12 +1587,11 @@ void InitXlaModuleBindings(py::module m) {
             int idx = 0;
             for (auto& ivalue : graph_inputs) {
               torch::lazy::BackendDataPtr dataptr;
-              if (auto xla_tensor_ptr = bridge::TryGetXlaTensor(ivalue.toTensor())) {
-                dataptr =
-                    xla_tensor_ptr->GetXlaData();
+              if (auto xla_tensor_ptr =
+                      bridge::TryGetXlaTensor(ivalue.toTensor())) {
+                dataptr = xla_tensor_ptr->GetXlaData();
               } else {
-                dataptr =
-                    torch_xla::TensorToXlaData(ivalue.toTensor(), device);
+                dataptr = torch_xla::TensorToXlaData(ivalue.toTensor(), device);
               }
 
               ++idx;
@@ -1600,18 +1599,15 @@ void InitXlaModuleBindings(py::module m) {
             }
           }
 
-          auto results =
-              torch::lazy::getBackend()->ExecuteComputation(
-                  cachedComputation->computation,
-                  parameters_data, device);
+          auto results = torch::lazy::getBackend()->ExecuteComputation(
+              cachedComputation->computation, parameters_data, device);
           std::vector<at::Tensor> retlist;
           {
             XLA_TIMED("RunCachedGraphOutputData");
             // Convert result back to at::tensor
             int i = 0;
             for (auto& data : results) {
-              XLATensorPtr xla_tensor =
-                  torch_xla::XLATensor::Create(data);
+              XLATensorPtr xla_tensor = torch_xla::XLATensor::Create(data);
               retlist.push_back(bridge::AtenFromXlaTensor(xla_tensor));
               ++i;
             }

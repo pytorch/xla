@@ -1504,15 +1504,15 @@ std::shared_ptr<XLATensor::Async> XLATensor::ScheduleSyncTensorsGraph(
                    << torch::lazy::HashToString(hash) << " on device "
                    << async->device << " ...";
         results = torch::lazy::getBackend()->ExecuteComputation(
-            async->cached_computation->computation,
-            async->parameters_data, ParseDeviceString(async->device));
+            async->cached_computation->computation, async->parameters_data,
+            ParseDeviceString(async->device));
         TF_VLOG(3) << "Executing IR graph hash "
                    << torch::lazy::HashToString(hash) << " on device "
                    << async->device << " done!";
       }
       for (size_t i = 0; i < results.size(); ++i) {
         if (async->tensors_data[i] != nullptr) {
-         async->tensors_data[i]->Assign(*results[i]);
+          async->tensors_data[i]->Assign(*results[i]);
         } else {
           async->tensors_data[i] = std::move(results[i]);
         }
