@@ -1534,7 +1534,7 @@ void InitXlaModuleBindings(py::module m) {
             need_materialization.push_back(false);
           } else if (xtensor->CurrentXlaData() != nullptr) {
             // input tensor has xla_data which means it is already on device
-            need_materialization.push_back(true);
+            need_materialization.push_back(false);
           } else if (xtensor->CurrentIrValue().node != nullptr) {
             torch::lazy::NodePtr node = xtensor->CurrentIrValue().node;
             if (torch_xla::DeviceData::Cast(
