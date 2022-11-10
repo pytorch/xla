@@ -47,7 +47,8 @@ class PybindTest(unittest.TestCase):
     assert (torch_xla._XLAC._check_tensor_need_materialization([t1]) == [False])
     t1 = t1.to(xla_device)
     assert (torch_xla._XLAC._check_tensor_need_materialization([t1]) == [False])
-    # call mark_step to clear pending irs on t1. This should
+    # call mark_step to clear pending irs on t1. This should test the case where
+    # XLATensor has a `XLAData` instead of a `DeviceData` IR.
     xm.mark_step()
     assert (torch_xla._XLAC._check_tensor_need_materialization([t1]) == [False])
     t2 = t1 * 2
