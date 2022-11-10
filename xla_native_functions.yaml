@@ -129,6 +129,7 @@ supported:
   - argmin
   - as_strided
   - as_strided_
+  - atan2
   - avg_pool2d
   - avg_pool2d_backward
   - avg_pool3d
