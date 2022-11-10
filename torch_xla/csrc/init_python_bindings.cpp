@@ -1579,26 +1579,20 @@ void InitXlaModuleBindings(py::module m) {
                                        << torch::lazy::HashToString(hash)
                                        << ". Maybe the entry get "
                                           "kicked out of the LRU cache";
-          std::vector<xla::ComputationClient::DataPtr> parameters_data;
+          std::vector<torch::lazy::BackendDataPtr> parameters_data;
           torch::lazy::BackendDevice device = torch_xla::GetCurrentDevice();
           {
             XLA_TIMED("RunCachedGraphInputData");
             // setup the parameters_data
             int idx = 0;
             for (auto& ivalue : graph_inputs) {
-              at::Tensor tensor = ivalue.toTensor();
-              XLATensorPtr xla_tensor_ptr = bridge::TryGetXlaTensor(tensor);
-              xla::ComputationClient::DataPtr dataptr;
-              if (xla_tensor_ptr) {
-                torch::lazy::BackendDataPtr backend_data_ptr =
-                    xla_tensor_ptr->GetXlaData();
+              torch::lazy::BackendDataPtr dataptr;
+              if (auto xla_tensor_ptr = bridge::TryGetXlaTensor(ivalue.toTensor())) {
                 dataptr =
-                    dynamic_cast<torch_xla::XLAData*>(backend_data_ptr.get())
-                        ->xla_data();
+                    xla_tensor_ptr->GetXlaData();
               } else {
-                torch::lazy::BackendDataPtr backend_data =
+                dataptr =
                     torch_xla::TensorToXlaData(ivalue.toTensor(), device);
-                dataptr = ((torch_xla::XLAData*)backend_data.get())->xla_data();
               }
 
               ++idx;
@@ -1606,11 +1600,10 @@ void InitXlaModuleBindings(py::module m) {
             }
           }
 
-          std::string deviceStr = device.toString();
-          std::vector<std::shared_ptr<xla::ComputationClient::Data>> results =
-              xla::ComputationClient::Get()->ExecuteComputation(
-                  *cachedComputation->computation->client_computation(),
-                  parameters_data, deviceStr);
+          auto results =
+              torch::lazy::getBackend()->ExecuteComputation(
+                  cachedComputation->computation,
+                  parameters_data, device);
           std::vector<at::Tensor> retlist;
           {
             XLA_TIMED("RunCachedGraphOutputData");
@@ -1618,7 +1611,7 @@ void InitXlaModuleBindings(py::module m) {
             int i = 0;
             for (auto& data : results) {
               XLATensorPtr xla_tensor =
-                  torch_xla::XLATensor::Create(torch_xla::WrapXlaData(data));
+                  torch_xla::XLATensor::Create(data);
               retlist.push_back(bridge::AtenFromXlaTensor(xla_tensor));
               ++i;
             }
