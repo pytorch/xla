@@ -1,6 +1,7 @@
 #include "torch_xla/csrc/aten_autograd_ops.h"
 
 #include <ATen/Operators.h>
+#include <ATen/RedispatchFunctions.h>
 #include <ATen/native/CPUFallback.h>
 
 #include "torch_xla/csrc/aten_cpu_fallback.h"
@@ -21,6 +22,12 @@ namespace aten_autograd_ops {
 torch::Tensor EinsumAutogradFunction::forward(
     torch::autograd::AutogradContext* ctx, const c10::string_view equation,
     at::TensorList tensors) {
+  // We might get here after the autograd graph was created, but before
+  // python gets a chance to run. Give python a chance to run.
+  if (tensors[0].key_set().has(c10::DispatchKey::Python)) {
+    return at::redispatch::einsum(c10::DispatchKeySet(c10::DispatchKey::Python),
+                                  equation, tensors);
+  }
   std::string eq_str = std::string(equation);
   ctx->saved_data["equation"] = eq_str;
 
@@ -65,6 +72,13 @@ torch::Tensor MaxPool2dAutogradFunction::forward(
     torch::autograd::AutogradContext* ctx, torch::Tensor self,
     torch::IntArrayRef kernel_size, torch::IntArrayRef stride,
     torch::IntArrayRef padding, torch::IntArrayRef dilation, bool ceil_mode) {
+  // We might get here after the autograd graph was created, but before
+  // python gets a chance to run. Give python a chance to run.
+  if (self.key_set().has(c10::DispatchKey::Python)) {
+    return at::redispatch::max_pool2d(
+        c10::DispatchKeySet(c10::DispatchKey::Python), self, kernel_size,
+        stride, padding, dilation, ceil_mode);
+  }
   ctx->saved_data["kernel_size"] = kernel_size;
   ctx->saved_data["stride"] = stride;
   ctx->saved_data["padding"] = padding;
@@ -126,6 +140,13 @@ torch::Tensor MaxPool3dAutogradFunction::forward(
     torch::autograd::AutogradContext* ctx, torch::Tensor self,
     torch::IntArrayRef kernel_size, torch::IntArrayRef stride,
     torch::IntArrayRef padding, torch::IntArrayRef dilation, bool ceil_mode) {
+  // We might get here after the autograd graph was created, but before
+  // python gets a chance to run. Give python a chance to run.
+  if (self.key_set().has(c10::DispatchKey::Python)) {
+    return at::redispatch::max_pool3d(
+        c10::DispatchKeySet(c10::DispatchKey::Python), self, kernel_size,
+        stride, padding, dilation, ceil_mode);
+  }
   ctx->saved_data["kernel_size"] = kernel_size;
   ctx->saved_data["stride"] = stride;
   ctx->saved_data["padding"] = padding;
