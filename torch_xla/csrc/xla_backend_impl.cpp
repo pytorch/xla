@@ -101,7 +101,8 @@ class XlaBackendImpl : public torch::lazy::BackendImplInterface {
       const std::string& name, torch::lazy::BackendDevice device,
       c10::ArrayRef<const torch::lazy::Node*> post_order,
       torch::lazy::Util::EmissionMap emit_status) const override {
-    return std::make_unique<LoweringContext>(name, device, post_order, emit_status);
+    return std::make_unique<LoweringContext>(name, device, post_order,
+                                             emit_status);
   }
 
   std::unique_ptr<torch::lazy::LoweringContext> CreateLoweringContext(
