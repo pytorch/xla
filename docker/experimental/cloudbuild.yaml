@@ -17,11 +17,11 @@ steps:
     flags=(
       --cache=${_CACHE}
       --cache-ttl=${_CACHE_TTL}
+      --cache-repo=${_CACHE_IMAGE_URL}
       --build-arg=bazel_jobs=${_BAZEL_JOBS}
       --build-arg=python_version=${_PYTHON_VERSION}
       # TODO: use current version in setup.py
       --build-arg=package_version="1.14.0.dev$(date +%Y%m%d)"
-      --snapshotMode=full
       ${args[@]/#/--build-arg=})
     echo ${flags[@]} | tee /docker/flags.txt
   volumes:
@@ -35,7 +35,7 @@ steps:
   - |
     /kaniko/executor \
       --dockerfile=docker/experimental/Dockerfile \
-      --destination=${_IMAGE_URL}_artifacts \
+      --destination=${_ARTIFACTS_IMAGE_URL} \
       --tar-path=/docker/artifacts-image.tar \
       --target=artifacts \
       $(cat /docker/flags.txt)
@@ -53,7 +53,7 @@ steps:
   - name: docker
     path: /docker
 - id: 'copy-wheels'
-  name: ${_IMAGE_URL}_artifacts
+  name: ${_ARTIFACTS_IMAGE_URL}
   entrypoint: bash
   args:
   - -c
@@ -94,7 +94,7 @@ steps:
   - |
     /kaniko/executor \
       --dockerfile=docker/experimental/Dockerfile \
-      --destination=${_IMAGE_URL} \
+      --destination=${_RELEASE_IMAGE_URL} \
       $(cat /docker/flags.txt)
   timeout: 14400s
   volumes:
@@ -102,10 +102,14 @@ steps:
     path: /docker
 substitutions:
   _ARTIFACT_REGISTRY_REGION: us
-  _IMAGE_URL: gcr.io/${PROJECT_ID}/experimental/xla:${_RELEASE_VERSION}_${_PYTHON_VERSION}
-  _BAZEL_JOBS: '16'
-  _PYTHON_VERSION: '3.8'
   _RELEASE_VERSION: 'nightly'  # or rX.Y
+  _PYTHON_VERSION: '3.8'
+  _IMAGE_TAG: ${_RELEASE_VERSION}_${_PYTHON_VERSION}
+  _IMAGE_REPOSITORY: ${_ARTIFACT_REGISTRY_REGION}-docker.pkg.dev/${PROJECT_ID}/torch-xla-images
+  _RELEASE_IMAGE_URL: ${_IMAGE_REPOSITORY}/torch-xla:${_IMAGE_TAG}
+  _ARTIFACTS_IMAGE_URL: ${_IMAGE_REPOSITORY}/artifacts:${_IMAGE_TAG}
+  _CACHE_IMAGE_URL: ${_IMAGE_REPOSITORY}/cache
+  _BAZEL_JOBS: '16'
   _CACHE: 'true'
   _CACHE_TTL: '18h'
   _BUILD_ARGS: tpuvm=1,cuda=0
