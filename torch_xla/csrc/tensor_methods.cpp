@@ -711,13 +711,6 @@ void XLATensor::as_strided_(XLATensorPtr& input, std::vector<int64_t> size,
   }
 }
 
-XLATensorPtr XLATensor::atan2(
-    const XLATensorPtr& input, const XLATensorPtr& other,
-    c10::optional<at::ScalarType> logical_element_type) {
-  return input->CreateFrom(Atan2(input->GetIrValue(), other->GetIrValue()),
-                           logical_element_type);
-}
-
 XLATensorPtr XLATensor::avg_pool_nd(const XLATensorPtr& input,
                                     int64_t spatial_dim_count,
                                     std::vector<int64_t> kernel_size,

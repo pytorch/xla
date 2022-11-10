@@ -87,6 +87,7 @@ ir_gen:
   - _adaptive_avg_pool2d_backward
   - _adaptive_avg_pool3d
   - _adaptive_avg_pool3d_backward
+  - atan2
   - bitwise_and.Tensor
   - bitwise_or.Tensor
   - bitwise_xor.Tensor
