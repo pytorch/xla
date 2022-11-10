@@ -691,8 +691,9 @@ at::Tensor XLANativeFunctions::atan2(const at::Tensor& self,
 
   auto common_device = torch_xla::bridge::GetXlaDevice(self, other);
   XLA_CHECK(common_device);
-  torch::lazy::NodePtr node = torch::lazy::MakeNode<Atan2>(bridge::GetXlaTensor(self)->GetIrValue(),
-                                                           bridge::GetXlaTensor(other)->GetIrValue());
+  torch::lazy::NodePtr node =
+      torch::lazy::MakeNode<Atan2>(bridge::GetXlaTensor(self)->GetIrValue(),
+                                   bridge::GetXlaTensor(other)->GetIrValue());
 
   return torch_xla::bridge::AtenFromXlaTensor(
       torch_xla::XLATensor::Create(std::move(node), *common_device));
