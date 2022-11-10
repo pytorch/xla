@@ -48,8 +48,11 @@ WORKDIR /pytorch
 COPY torch_patches/ torch_patches/
 RUN bash -c "torch_pin=$(cat torch_patches/.torch_pin &); git fetch origin ${torch_pin:-master}; git checkout origin/${torch_pin:-master}"
 
+# Disable CUDA for PyTorch
+ENV USE_CUDA "0"
+
 ARG package_version
-RUN PYTORCH_BUILD_VERSION=${package_version} PYTORCH_BUILD_NUMBER=1 USE_CUDA=0 python setup.py bdist_wheel
+RUN PYTORCH_BUILD_VERSION=${package_version} PYTORCH_BUILD_NUMBER=1 python setup.py bdist_wheel
 
 RUN pip install dist/*.whl
 
