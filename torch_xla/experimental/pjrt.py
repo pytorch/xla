@@ -264,7 +264,7 @@ def rendezvous(tag: str, payload: bytes,
   """Share `payload` with all replicas in `ordinals`.
 
   All of PjRt is experimental right now, but consider `rendezvous` to be _very_
-  experimental. Only tested on TPU v4.
+  experimental.
 
   `tag` is ignored except for logging.
 
@@ -296,7 +296,8 @@ def rendezvous(tag: str, payload: bytes,
   sizes = xm.all_gather(size)
 
   # Pad data to at least length 1, otherwise we can't split the result
-  max_size = torch.max(torch.tensor(1, device=device, dtype=torch.int), torch.max(sizes))
+  max_size = torch.max(
+      torch.tensor(1, device=device, dtype=torch.int), torch.max(sizes))
   xm.mark_step()
 
   padded_data = torch.nn.functional.pad(data, (
