@@ -89,8 +89,8 @@ void PrepareToExit() {
 
 std::string GetTensorsDump(
     const std::vector<at::Tensor>& tensors,
-    const std::function<std::string(absl::Span<const torch::lazy::Node* const>)>&
-        coverter) {
+    const std::function<
+        std::string(absl::Span<const torch::lazy::Node* const>)>& coverter) {
   std::vector<const torch::lazy::Node*> nodes;
   std::vector<torch::lazy::Value> values;
   for (auto& tensor : tensors) {
