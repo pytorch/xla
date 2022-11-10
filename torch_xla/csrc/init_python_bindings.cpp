@@ -378,7 +378,7 @@ std::string GetLiveTensorsReport(size_t nodes_threshold,
     torch::lazy::Value ir_value = tensor->CurrentIrValue();
     if (ir_value) {
       std::vector<const torch::lazy::Node*> roots({ir_value.node.get()});
-      auto post_order = Util::ComputePostOrder(roots);
+      auto post_order = torch::lazy::Util::ComputePostOrder(roots);
       if (post_order.size() > nodes_threshold) {
         ss << "Tensor: id=" << tensor->GetUniqueId()
            << ", shape=" << tensor->shape().get()
@@ -1481,15 +1481,14 @@ void InitXlaModuleBindings(py::module m) {
             -> std::pair<std::vector<int64_t>, std::vector<at::IValue>> {
           std::vector<int64_t> tensor_ids;
           std::vector<at::IValue> ivalues;
-          std::vector<torch::lazy::Node*> roots;
+          std::vector<const torch::lazy::Node*> roots;
           for (const at::Tensor& tensor : tensors) {
             auto xtensor = bridge::TryGetXlaTensor(tensor);
             if (xtensor) {
               roots.push_back(xtensor->GetIrValue().node.get());
             }
           }
-          std::vector<const torch::lazy::Node*> post_order =
-              Util::ComputePostOrder(roots);
+          auto post_order = torch::lazy::Util::ComputePostOrder(roots);
           std::unordered_set<xla::ComputationClient::Data::OpaqueHandle>
               data_handles;
 

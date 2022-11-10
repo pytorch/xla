@@ -1366,7 +1366,8 @@ XLATensor::PostOrderData XLATensor::RunPostOrder(
     roots.push_back(ir_value.node.get());
   }
   PostOrderData po_data;
-  po_data.post_order = Util::ComputePostOrder(roots, &po_data.emission_map);
+  po_data.post_order =
+      torch::lazy::Util::ComputePostOrder(roots, &po_data.emission_map);
   std::unordered_map<xla::ComputationClient::Data::OpaqueHandle, size_t>
       data_handles;
 
