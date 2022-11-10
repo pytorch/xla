@@ -1,9 +1,6 @@
-import itertools
-import os
-from typing import List, Optional
+import functools
 from absl.testing import absltest, parameterized
 
-import torch.distributed as dist
 import torch_xla.core.xla_model as xm
 from torch_xla.experimental import pjrt
 
@@ -42,6 +39,19 @@ class PjRtMeshServiceTest(parameterized.TestCase):
 
     expected = [b'message'] * len(results)
     self.assertDictEqual(results, {r: expected for r in results})
+
+  def test_rendezvous_empty_payload(self):
+    test_fn = functools.partial(xm.rendezvous, 'test rendezvous', b'')
+    results = pjrt._run_multiprocess(test_fn)
+
+    expected = [b''] * len(results)
+    self.assertDictEqual(results, {r: expected for r in results})
+
+  def test_rendezvous_string_payload(self):
+    test_fn = functools.partial(xm.rendezvous, 'test rendezvous', "")
+
+    with self.assertRaises(TypeError):
+      pjrt._run_multiprocess(test_fn)
 
   @staticmethod
   def _mesh_reduce():

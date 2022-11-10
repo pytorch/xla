@@ -278,15 +278,25 @@ def rendezvous(tag: str, payload: bytes,
   Returns:
     List of bytes from other replicas.
   """
-  assert not ordinals or len(
-      ordinals) == global_device_count(), 'Only global rendezvous is supported'
-  assert isinstance(payload, bytes)
+  if ordinals and len(ordinals) != global_device_count():
+    raise ValueError('Only global rendezvous is supported')
+
+  if not isinstance(payload, bytes):
+    raise TypeError('`payload` must be bytes, not {}'.format(type(payload)))
+
+  # Finish all execution of previous graphs to avoid recompilation
+  xm.mark_step()
+
+  device = xm.xla_device()
+
   data = torch.tensor(list(payload), dtype=torch.uint8)
-  size = torch.tensor([data.shape[0]], dtype=torch.int, device=xm.xla_device())
+  size = torch.tensor([data.shape[0]], dtype=torch.int, device=device)
 
   logging.info(f"Joining rendezvous '{tag}'...")
   sizes = xm.all_gather(size)
-  max_size = torch.max(sizes)
+
+  # Pad data to at least length 1, otherwise we can't split the result
+  max_size = torch.max(torch.tensor(1, device=device, dtype=torch.int), torch.max(sizes))
   xm.mark_step()
 
   padded_data = torch.nn.functional.pad(data, (
