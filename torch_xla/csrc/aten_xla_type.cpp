@@ -773,18 +773,6 @@ at::Tensor XLANativeFunctions::avg_pool3d_backward(
       count_include_pad));
 }
 
-at::Tensor XLANativeFunctions::baddbmm(const at::Tensor& self,
-                                       const at::Tensor& batch1,
-                                       const at::Tensor& batch2,
-                                       const at::Scalar& beta,
-                                       const at::Scalar& alpha) {
-  XLA_FN_COUNTER("xla::");
-
-  return bridge::AtenFromXlaTensor(XLATensor::baddbmm(
-      bridge::GetXlaTensor(self), bridge::GetXlaTensor(batch1),
-      bridge::GetXlaTensor(batch2), beta, alpha));
-}
-
 at::Tensor XLANativeFunctions::bernoulli(
     const at::Tensor& self, c10::optional<at::Generator> generator) {
   XLA_FN_COUNTER("xla::");

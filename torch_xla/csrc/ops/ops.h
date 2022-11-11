@@ -203,12 +203,6 @@ torch::lazy::NodePtr TanhGelu(const torch::lazy::Value& input);
 torch::lazy::NodePtr TanhGeluBackward(const torch::lazy::Value& grad,
                                       const torch::lazy::Value& input);
 
-torch::lazy::NodePtr BaddBmm(const torch::lazy::Value& lhs,
-                             const torch::lazy::Value& rhs,
-                             const torch::lazy::Value& bias,
-                             const torch::lazy::Value& product_multiplier,
-                             const torch::lazy::Value& bias_multiplier);
-
 torch::lazy::NodePtr Lerp(const torch::lazy::Value& start,
                           const torch::lazy::Value& end,
                           const torch::lazy::Value& weight);
