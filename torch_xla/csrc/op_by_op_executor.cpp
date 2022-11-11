@@ -123,9 +123,9 @@ std::vector<xla::ComputationClient::ExecuteChainedOp> OpByOpExecutor::BuildOps(
   for (size_t i = 0; i < post_order.size(); ++i) {
     const torch::lazy::Node* node = post_order[i];
     xla::ComputationClient::ExecuteChainedOp& cxop = chained_exec_ops[i];
-    const DeviceData* device_data = DeviceData::Cast(node);
-    if (device_data != nullptr) {
-      cxop.device_data = UnwrapXlaData(device_data->data());
+    const auto backend_data = torch::lazy::getBackend()->GetComputationDataFromNode(node);
+    if (backend_data != nullptr) {
+      cxop.device_data = UnwrapXlaData(backend_data);
       ops_shapes[i] = &cxop.device_data->shape();
       device_data_ops[i] = true;
     } else {
