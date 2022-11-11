@@ -132,6 +132,20 @@ torch_xla::XlaOpVector Atanh::Lower(LoweringContext* loctx) const {
   return ReturnOp(xla::Atanh(xla_input), loctx);
 }
 
+torch_xla::XlaOpVector Baddbmm::Lower(LoweringContext* loctx) const {
+  xla::XlaOp xla_lhs = loctx->GetOutputOp(operand(0));
+  xla::XlaOp xla_rhs = loctx->GetOutputOp(operand(1));
+  xla::XlaOp xla_bias = loctx->GetOutputOp(operand(2));
+  xla::XlaOp xla_product_multiplier = loctx->GetOutputOp(operand(3));
+  xla::XlaOp xla_bias_multiplier = loctx->GetOutputOp(operand(4));
+  std::tie(xla_lhs, xla_rhs) = XlaHelpers::PromoteValues(xla_lhs, xla_rhs);
+
+  return ReturnOp(
+      BuildMatMulWithMultiplier(xla_lhs, xla_rhs, xla_bias,
+                                xla_product_multiplier, xla_bias_multiplier),
+      loctx);
+}
+
 torch_xla::XlaOpVector BinaryCrossEntropy::Lower(LoweringContext* loctx) const {
   xla::XlaOp logits = loctx->GetOutputOp(operand(0));
   xla::XlaOp labels = loctx->GetOutputOp(operand(1));
