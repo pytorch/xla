@@ -132,7 +132,7 @@ torch_xla::XlaOpVector Atanh::Lower(LoweringContext* loctx) const {
   return ReturnOp(xla::Atanh(xla_input), loctx);
 }
 
-torch_xla::XlaOpVector BaddBmm::Lower(LoweringContext* loctx) const {
+torch_xla::XlaOpVector Baddbmm::Lower(LoweringContext* loctx) const {
   xla::XlaOp xla_lhs = loctx->GetOutputOp(node.operand(0));
   xla::XlaOp xla_rhs = loctx->GetOutputOp(node.operand(1));
   xla::XlaOp xla_bias = loctx->GetOutputOp(node.operand(2));
