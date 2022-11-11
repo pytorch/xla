@@ -63,7 +63,7 @@ xla::Shape BaddbmmOutputShape(const torch::lazy::Value& self,
                               const torch::lazy::Value& batch2,
                               const torch::lazy::Value& beta,
                               const torch::lazy::Value& alpha);
-
+ 
 xla::Shape BinaryCrossEntropyOutputShape(
     const torch::lazy::Value& input, const torch::lazy::Value& target,
     const c10::optional<torch::lazy::Value>& weight, int64_t reduction);
