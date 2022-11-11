@@ -1480,7 +1480,7 @@ std::shared_ptr<XLATensor::Async> XLATensor::ScheduleSyncTensorsGraph(
 
   auto syncfn = [async, hash = coll->hash]() {
     try {
-      std::vector<xla::ComputationClient::DataPtr> results;
+      std::vector<torch::lazy::BackendDataPtr> results;
       // Execute replicated if the compiled computation is partitioned.
       if (async->cached_computation->is_sharded) {
         std::vector<std::string> devices =
@@ -1492,10 +1492,11 @@ std::shared_ptr<XLATensor::Async> XLATensor::ScheduleSyncTensorsGraph(
 
         TF_VLOG(3) << "Executing IR graph hash "
                    << torch::lazy::HashToString(hash) << " on all devices.";
-        results = xla::ComputationClient::Get()->ExecuteReplicated(
+        // TODO(jwtan): Remove the WrapXlaData when inherits LazyGraphExecutor.
+        results = WrapXlaData(xla::ComputationClient::Get()->ExecuteReplicated(
             *async->cached_computation->computation->client_computation(),
             device_arguments, devices,
-            execute_options)[0];  // TODO(yeounoh) assumes replicated outputs
+            execute_options)[0]);  // TODO(yeounoh) assumes replicated outputs
         TF_VLOG(3) << "Executing IR graph hash "
                    << torch::lazy::HashToString(hash)
                    << " on all devices, done!";
@@ -1503,18 +1504,18 @@ std::shared_ptr<XLATensor::Async> XLATensor::ScheduleSyncTensorsGraph(
         TF_VLOG(3) << "Executing IR graph hash "
                    << torch::lazy::HashToString(hash) << " on device "
                    << async->device << " ...";
-        results = xla::ComputationClient::Get()->ExecuteComputation(
-            *async->cached_computation->computation->client_computation(),
-            UnwrapXlaData(async->parameters_data), async->device);
+        results = torch::lazy::getBackend()->ExecuteComputation(
+            async->cached_computation->computation, async->parameters_data,
+            ParseDeviceString(async->device));
         TF_VLOG(3) << "Executing IR graph hash "
                    << torch::lazy::HashToString(hash) << " on device "
                    << async->device << " done!";
       }
       for (size_t i = 0; i < results.size(); ++i) {
         if (async->tensors_data[i] != nullptr) {
-          UnwrapXlaData(async->tensors_data[i])->Assign(*results[i]);
+          async->tensors_data[i]->Assign(*results[i]);
         } else {
-          async->tensors_data[i] = WrapXlaData(std::move(results[i]));
+          async->tensors_data[i] = std::move(results[i]);
         }
       }
     } catch (...) {
