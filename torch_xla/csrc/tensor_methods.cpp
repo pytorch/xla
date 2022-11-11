@@ -739,21 +739,6 @@ XLATensorPtr XLATensor::avg_pool_nd_backward(
       count_include_pad));
 }
 
-XLATensorPtr XLATensor::baddbmm(const XLATensorPtr& input,
-                                const XLATensorPtr& batch1,
-                                const XLATensorPtr& batch2,
-                                const at::Scalar& beta,
-                                const at::Scalar& alpha) {
-  CheckBmmDimension(/*tag=*/"baddbmm", batch1, batch2);
-  torch::lazy::Value product_multiplier = XLATensor::GetIrValueForScalar(
-      alpha, batch1->shape().get().element_type(), batch1->GetDevice());
-  torch::lazy::Value bias_multiplier = XLATensor::GetIrValueForScalar(
-      beta, input->shape().get().element_type(), input->GetDevice());
-  return input->CreateFrom(BaddBmm(batch1->GetIrValue(), batch2->GetIrValue(),
-                                   input->GetIrValue(), product_multiplier,
-                                   bias_multiplier));
-}
-
 XLATensorPtr XLATensor::bernoulli(const XLATensorPtr& input,
                                   double probability) {
   auto input_shape = input->shape();
