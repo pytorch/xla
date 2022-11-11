@@ -141,9 +141,9 @@ torch_xla::XlaOpVector Baddbmm::Lower(LoweringContext* loctx) const {
   std::tie(xla_lhs, xla_rhs) = XlaHelpers::PromoteValues(xla_lhs, xla_rhs);
 
   return ReturnOp(
-        BuildMatMulWithMultiplier(xla_lhs, xla_rhs, xla_bias,
-                                  xla_product_multiplier, xla_bias_multiplier),
-        loctx);
+      BuildMatMulWithMultiplier(xla_lhs, xla_rhs, xla_bias,
+                                xla_product_multiplier, xla_bias_multiplier),
+      loctx);
 }
 
 torch_xla::XlaOpVector BinaryCrossEntropy::Lower(LoweringContext* loctx) const {
