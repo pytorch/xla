@@ -1493,7 +1493,8 @@ void InitXlaModuleBindings(py::module m) {
               data_handles;
 
           for (const torch::lazy::Node* nodeptr : post_order) {
-            const auto backend_data = torch::lazy::getBackend()->GetComputationDataFromNode(nodeptr);
+            const auto backend_data =
+                torch::lazy::getBackend()->GetComputationDataFromNode(nodeptr);
             auto* infoptr =
                 static_cast<torch::lazy::LazyGraphExecutor::DeviceDataInfo*>(
                     backend_data->info());

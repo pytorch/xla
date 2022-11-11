@@ -1372,7 +1372,8 @@ XLATensor::PostOrderData XLATensor::RunPostOrder(
       data_handles;
 
   for (auto node : po_data.post_order) {
-    const auto backend_data = torch::lazy::getBackend()->GetComputationDataFromNode(node);
+    const auto backend_data =
+        torch::lazy::getBackend()->GetComputationDataFromNode(node);
     if (backend_data != nullptr) {
       /* Acceptable race condition: HasValue may return false. This is OK
        * since the conditional barrier is a performance optimization. */
@@ -1981,7 +1982,9 @@ int64_t XLATensor::GetOpaqueHandle() const {
   if (xla_data != nullptr) {
     return UnwrapXlaData(xla_data)->GetOpaqueHandle();
   }
-  const auto backend_data = torch::lazy::getBackend()->GetComputationDataFromNode(GetIrValue().node.get());
+  const auto backend_data =
+      torch::lazy::getBackend()->GetComputationDataFromNode(
+          GetIrValue().node.get());
   if (backend_data) {
     return backend_data->GetHandle();
   } else {
