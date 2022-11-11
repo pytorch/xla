@@ -354,9 +354,24 @@ def init_pjrt_process_group(init_method: Optional[str] = None, **kwargs):
 
 
 class DistributedDataParallel(nn.Module):
+  """Emulate DistributedDataParallel on TPUs.
+
+  Very experimental! There may still be correctness and performance issues to
+  work out. This class may be removed at any time.
+
+  torch.nn.parallel.DistributedDataParallel has additional overhead for gradient
+  bucketing that does not benefit TPUs. This implemenation may give better
+  performance on TPUs.
+
+  Compatible with multithreaded workloads required for multi-client execution on
+  TPU v2/v3.
+
+  Does not support model parallelism.
+  """
 
   @staticmethod
   def _reduce_grad(grad: torch.Tensor) -> torch.Tensor:
+    """Average gradients across replicas."""
     return xm.all_reduce(xm.REDUCE_SUM, grad, scale=1. / global_device_count())
 
   def __init__(self, module: nn.Module, *, broadcast_buffers: bool=True, **kwargs):

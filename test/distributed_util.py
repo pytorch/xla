@@ -1,11 +1,10 @@
 import copy
+from typing import Optional
 import torch
 import torch.distributed as dist
 import torch.nn as nn
 import torch.optim as optim
-# TODO: fix this
-# from torch.nn.parallel import DistributedDataParallel as DDP
-from torch_xla.experimental.pjrt import DistributedDataParallel as DDP
+import torch.nn.parallel
 import torch_xla.core.xla_model as xm
 import torch_xla.distributed.xla_backend
 
@@ -95,11 +94,12 @@ def train_step(model, inputs, labels, optimizer, loss_fn):
   return loss
 
 
-def ddp_correctness(init_file: str,
+def ddp_correctness(init_file: Optional[str] = None,
                     *,
+                    ddp: type = torch.nn.parallel.DistributedDataParallel,
                     use_large_net: bool = False,
                     debug: bool = False):
-  if not dist.is_initialized():
+  if init_file:
     rank, world_size = init_xla_backend(init_file)
   else:
     rank, world_size = xm.get_ordinal(), xm.xrt_world_size()
@@ -119,7 +119,7 @@ def ddp_correctness(init_file: str,
   # bucket_cap_mb is set to 1 mb such that we can still have multiple all_reduces while avoiding
   # using models that are too larger (25 mb).
   # To be noted, DDP currently uses one bucket for the first iteration. See pytorch#73732.
-  ddp_model = DDP(
+  ddp_model = ddp(
       copy.deepcopy(cpu_model).to(device),
       gradient_as_bucket_view=True,
       bucket_cap_mb=1)

@@ -3,9 +3,7 @@ import os
 import sys
 import torch.distributed as dist
 import torch.nn as nn
-# TODO: fix this
-# from torch.nn.parallel import DistributedDataParallel as DDP
-from torch_xla.experimental.pjrt import DistributedDataParallel as DDP
+import torch.nn.parallel
 import torch_xla.core.xla_model as xm
 from torch_xla.experimental import pjrt
 
@@ -22,27 +20,36 @@ FLAGS = args_parse.parse_common_options()
 class TestPjRtDistributedDataParallel(parameterized.TestCase):
 
   @staticmethod
-  def _ddp_init(init_file: str):
-    if not dist.is_initialized():
-      util.init_xla_backend(init_file)
-
+  def _ddp_init(ddp):
     device = xm.xla_device()
     model = nn.Linear(10, 10).to(device)
-    ddp_model = DDP(model)
+    ddp_model = ddp(model)
 
-  def test_ddp_init(self):
-    pjrt._run_multiprocess(self._ddp_init, self.create_tempfile().full_path)
+  @parameterized.named_parameters(
+    ('torch', torch.nn.parallel.DistributedDataParallel),
+    ('torch_xla', pjrt.DistributedDataParallel),
+  )
+  def test_ddp_init(self, ddp: type):
+    pjrt._run_multiprocess(self._ddp_init, ddp)
 
-  def test_ddp_correctness(self):
+  @parameterized.named_parameters(
+    ('torch', torch.nn.parallel.DistributedDataParallel),
+    ('torch_xla', pjrt.DistributedDataParallel),
+  )
+  def test_ddp_correctness(self, ddp: type):
     pjrt._run_multiprocess(
         util.ddp_correctness,
-        self.create_tempfile().full_path,
+        ddp=ddp,
         debug=FLAGS.debug)
 
-  def test_ddp_correctness_large_net(self):
+  @parameterized.named_parameters(
+    ('torch', torch.nn.parallel.DistributedDataParallel),
+    ('torch_xla', pjrt.DistributedDataParallel),
+  )
+  def test_ddp_correctness_large_net(self, ddp: type):
     pjrt._run_multiprocess(
         util.ddp_correctness,
-        self.create_tempfile().full_path,
+        ddp=ddp,
         use_large_net=True,
         debug=FLAGS.debug)
 
