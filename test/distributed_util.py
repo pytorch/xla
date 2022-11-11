@@ -64,13 +64,12 @@ class SmallNet(nn.Module):
     return self.net(x)
 
 
-def init_xla_backend(init_file: str):
+def init_xla_backend():
   rank = xm.get_ordinal()
   world_size = xm.xrt_world_size()
 
   dist.init_process_group(
       "xla",
-      init_method=f"file://{init_file}" if init_file is not None else None,
       rank=rank,
       world_size=world_size)
   return rank, world_size
@@ -94,13 +93,11 @@ def train_step(model, inputs, labels, optimizer, loss_fn):
   return loss
 
 
-def ddp_correctness(init_file: Optional[str] = None,
-                    *,
-                    ddp: type = torch.nn.parallel.DistributedDataParallel,
+def ddp_correctness(ddp: type = torch.nn.parallel.DistributedDataParallel,
                     use_large_net: bool = False,
                     debug: bool = False):
-  if init_file:
-    rank, world_size = init_xla_backend(init_file)
+  if not dist.is_initialized():
+    rank, world_size = init_xla_backend()
   else:
     rank, world_size = xm.get_ordinal(), xm.xrt_world_size()
 
