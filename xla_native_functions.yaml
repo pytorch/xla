@@ -16,6 +16,7 @@ full_codegen:
   - asinh
   - atan
   - atanh
+  - baddbmm
   - binary_cross_entropy
   - binary_cross_entropy_backward
   - bitwise_not
@@ -134,7 +135,6 @@ supported:
   - avg_pool2d_backward
   - avg_pool3d
   - avg_pool3d_backward
-  - baddbmm
   - bernoulli
   - bernoulli.p
   - bernoulli_.Tensor
