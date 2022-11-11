@@ -785,7 +785,6 @@ torch::lazy::Value XLATensor::GetDeviceDataIrValue(
     const torch::lazy::BackendDevice& device) {
   torch::lazy::BackendDataPtr data =
       GetDeviceData(value, TensorTypeFromXlaType(type), device);
-  // TODO: consider using upstream info class if possible
   data->SetInfo(
       std::make_shared<torch::lazy::LazyGraphExecutor::DeviceDataInfo>(
           /*tensor_id=*/-1, /*read_only=*/true));
