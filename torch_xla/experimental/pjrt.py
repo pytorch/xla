@@ -374,7 +374,11 @@ class DistributedDataParallel(nn.Module):
     """Average gradients across replicas."""
     return xm.all_reduce(xm.REDUCE_SUM, grad, scale=1. / global_device_count())
 
-  def __init__(self, module: nn.Module, *, broadcast_buffers: bool=True, **kwargs):
+  def __init__(self,
+               module: nn.Module,
+               *,
+               broadcast_buffers: bool = True,
+               **kwargs):
     super().__init__()
 
     if kwargs:

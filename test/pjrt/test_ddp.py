@@ -26,32 +26,26 @@ class TestPjRtDistributedDataParallel(parameterized.TestCase):
     ddp_model = ddp(model)
 
   @parameterized.named_parameters(
-    ('torch', torch.nn.parallel.DistributedDataParallel),
-    ('torch_xla', pjrt.DistributedDataParallel),
+      ('torch', torch.nn.parallel.DistributedDataParallel),
+      ('torch_xla', pjrt.DistributedDataParallel),
   )
   def test_ddp_init(self, ddp: type):
     pjrt._run_multiprocess(self._ddp_init, ddp)
 
   @parameterized.named_parameters(
-    ('torch', torch.nn.parallel.DistributedDataParallel),
-    ('torch_xla', pjrt.DistributedDataParallel),
+      ('torch', torch.nn.parallel.DistributedDataParallel),
+      ('torch_xla', pjrt.DistributedDataParallel),
   )
   def test_ddp_correctness(self, ddp: type):
-    pjrt._run_multiprocess(
-        util.ddp_correctness,
-        ddp=ddp,
-        debug=FLAGS.debug)
+    pjrt._run_multiprocess(util.ddp_correctness, ddp=ddp, debug=FLAGS.debug)
 
   @parameterized.named_parameters(
-    ('torch', torch.nn.parallel.DistributedDataParallel),
-    ('torch_xla', pjrt.DistributedDataParallel),
+      ('torch', torch.nn.parallel.DistributedDataParallel),
+      ('torch_xla', pjrt.DistributedDataParallel),
   )
   def test_ddp_correctness_large_net(self, ddp: type):
     pjrt._run_multiprocess(
-        util.ddp_correctness,
-        ddp=ddp,
-        use_large_net=True,
-        debug=FLAGS.debug)
+        util.ddp_correctness, ddp=ddp, use_large_net=True, debug=FLAGS.debug)
 
 
 if __name__ == "__main__":

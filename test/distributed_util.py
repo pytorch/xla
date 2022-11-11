@@ -68,10 +68,7 @@ def init_xla_backend():
   rank = xm.get_ordinal()
   world_size = xm.xrt_world_size()
 
-  dist.init_process_group(
-      "xla",
-      rank=rank,
-      world_size=world_size)
+  dist.init_process_group("xla", rank=rank, world_size=world_size)
   return rank, world_size
 
 
