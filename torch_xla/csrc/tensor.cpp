@@ -785,7 +785,6 @@ torch::lazy::Value XLATensor::GetDeviceDataIrValue(
     const torch::lazy::BackendDevice& device) {
   torch::lazy::BackendDataPtr data =
       GetDeviceData(value, TensorTypeFromXlaType(type), device);
-  // TODO: consider using upstream info class if possible
   data->SetInfo(
       std::make_shared<torch::lazy::LazyGraphExecutor::DeviceDataInfo>(
           /*tensor_id=*/-1, /*read_only=*/true));
@@ -1372,22 +1371,23 @@ XLATensor::PostOrderData XLATensor::RunPostOrder(
       data_handles;
 
   for (auto node : po_data.post_order) {
-    const DeviceData* device_data = DeviceData::Cast(node);
-    if (device_data != nullptr) {
+    const auto backend_data =
+        torch::lazy::getBackend()->GetComputationDataFromNode(node);
+    if (backend_data != nullptr) {
       /* Acceptable race condition: HasValue may return false. This is OK
        * since the conditional barrier is a performance optimization. */
-      if (!device_data->data()->HasValue()) {
+      if (!backend_data->HasValue()) {
         TensorCollectionBarrier(coll);
       }
       xla::ComputationClient::Data::OpaqueHandle handle =
-          device_data->data()->GetHandle();
+          backend_data->GetHandle();
       auto it = data_handles.find(handle);
       if (it != data_handles.end()) {
         po_data.parameter_sequence.push_back(it->second);
       } else {
         po_data.parameter_sequence.push_back(po_data.parameters_data.size());
         data_handles[handle] = po_data.parameters_data.size();
-        po_data.parameters_data.push_back(device_data->data());
+        po_data.parameters_data.push_back(backend_data);
       }
     }
   }
@@ -1981,10 +1981,11 @@ int64_t XLATensor::GetOpaqueHandle() const {
   if (xla_data != nullptr) {
     return UnwrapXlaData(xla_data)->GetOpaqueHandle();
   }
-  const torch_xla::DeviceData* device_data =
-      torch_xla::DeviceData::Cast(GetIrValue().node.get());
-  if (device_data) {
-    return device_data->data()->GetHandle();
+  const auto backend_data =
+      torch::lazy::getBackend()->GetComputationDataFromNode(
+          GetIrValue().node.get());
+  if (backend_data) {
+    return backend_data->GetHandle();
   } else {
     XLA_CHECK(false) << "XlaTensor does not have data handle";
   }
