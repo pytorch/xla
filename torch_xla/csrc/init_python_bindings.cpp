@@ -1598,7 +1598,7 @@ void InitXlaModuleBindings(py::module m) {
             }
           }
 
-          auto results = torch::lazy::getBackend()->ExecuteComputation(
+          auto results = XLATensor::ExecuteComputationWithBarrier(
               cachedComputation->computation, parameters_data, device);
           std::vector<at::Tensor> retlist;
           {
