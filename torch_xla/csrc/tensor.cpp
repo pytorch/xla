@@ -367,6 +367,21 @@ class XLATensor::DeviceContextArena {
     devctx->seed_ir_value = torch::lazy::Value();
   }
 
+  torch::lazy::BackendDataPtr ResetAndGetRngSeedData(
+      const torch::lazy::BackendDevice& device) {
+    static const at::ScalarType kSeedType = at::ScalarType::Long;
+    DeviceContext* devctx = GetDeviceContext(device);
+    std::lock_guard<std::mutex> lock(devctx->lock);
+    devctx->seed = 1012031 + devctx->seed * 7012063;
+    devctx->running_seed = devctx->seed;
+    at::Tensor tensor = at::scalar_tensor(MakeIntScalar(devctx->seed),
+                                          at::TensorOptions(kSeedType));
+    torch::lazy::BackendDataPtr device_data = TensorToXlaData(tensor, device);
+    devctx->seed_ir_value =
+        torch::lazy::MakeNode<DeviceData>(std::move(device_data));
+    return device_data;
+  }
+
   void MarkStep(const torch::lazy::BackendDevice& device) {
     DeviceContext* devctx = GetDeviceContext(device);
     std::lock_guard<std::mutex> lock(devctx->lock);
@@ -1904,6 +1919,11 @@ void XLATensor::SetRngSeed(const torch::lazy::BackendDevice& device,
 
 uint64_t XLATensor::GetRunningSeed(const torch::lazy::BackendDevice& device) {
   return DeviceContextArena::Get()->GetRunningSeed(device);
+}
+
+torch::lazy::BackendDataPtr XLATensor::ResetAndGetRngSeedData(
+    const torch::lazy::BackendDevice& device) {
+  return DeviceContextArena::Get()->ResetAndGetRngSeedData(device);
 }
 
 bool XLATensor::UseEagerDebugMode() {
