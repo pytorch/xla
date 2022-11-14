@@ -213,6 +213,20 @@ xla::Shape BaddbmmOutputShape(const torch::lazy::Value& self,
                               const torch::lazy::Value& batch2,
                               const torch::lazy::Value& beta,
                               const torch::lazy::Value& alpha) {
+
+  torch_xla::XLATensorPtr lazy_self = torch_xla::bridge::GetXlaTensorOrCreateForWrappedNumber(self, *common_device);
+  torch_xla::XLATensorPtr lazy_batch1 = torch_xla::bridge::GetXlaTensorOrCreateForWrappedNumber(batch1, *common_device);
+  torch_xla::XLATensorPtr lazy_batch2 = torch_xla::bridge::GetXlaTensorOrCreateForWrappedNumber(batch2, *common_device);
+
+  // CheckBmmDimension(/*tag=*/"baddbmm", batch1, batch2); // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+  torch::lazy::Value product_multiplier = XLATensor::GetIrValueForScalar(
+      alpha, batch1->shape().get().element_type(), batch1->GetDevice());
+  torch::lazy::Value bias_multiplier = XLATensor::GetIrValueForScalar(
+      beta, input->shape().get().element_type(), input->GetDevice());
+  return input->CreateFrom(BaddBmm(batch1->GetIrValue(), batch2->GetIrValue(),
+                                   input->GetIrValue(), product_multiplier,
+                                   bias_multiplier));
+
   auto lower_for_shape_fn =
       [](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
     return BuildMatMulWithMultiplier(operands[0], operands[1], operands[2],
@@ -220,8 +234,10 @@ xla::Shape BaddbmmOutputShape(const torch::lazy::Value& self,
   };
 
   return InferOutputShape(
-      {GetXlaShape(batch1), GetXlaShape(batch2), GetXlaShape(self),
-       GetXlaShape(alpha), GetXlaShape(beta)},
+      // {GetXlaShape(batch1), GetXlaShape(batch2), GetXlaShape(self),
+      //  GetXlaShape(alpha), GetXlaShape(beta)},
+      {GetXlaShape(lhs), GetXlaShape(rhs), GetXlaShape(bias),
+      GetXlaShape(product_multiplier), GetXlaShape(bias_multiplier)},
       lower_for_shape_fn);
 }
 
