@@ -5,7 +5,7 @@
 #include <string>
 #include <unordered_map>
 
-#include "torch/csrc/utils/python_symnode.h"
+#include "c10/core/SymNodeImpl.h"
 #include "tensorflow/compiler/xla/client/xla_builder.h"
 #include "tensorflow/compiler/xla/status.h"
 #include "tensorflow/compiler/xla/types.h"
@@ -27,7 +27,7 @@
 
 namespace torch_xla {
 
-class TORCH_API XLASymNodeImpl : public torch::impl::PythonSymNodeImpl {
+class TORCH_API XLASymNodeImpl : public c10::SymNodeImpl {
  public:
   XLASymNodeImpl(torch::lazy::NodePtr ptr) : node_(std::move(ptr)) {}
   bool is_int() override;
