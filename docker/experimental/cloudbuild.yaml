@@ -1,0 +1,120 @@
+steps:
+# We only need to update submodules in triggers. User must update submodule
+# before local runs because .git is not present.
+- name: 'alpine/git'
+  entrypoint: sh
+  args:
+  - -c
+  - |
+    git submodule update --init || echo No git repository found
+- id: 'common-flags'
+  name: 'bash'
+  args:
+  - -cx
+  - |
+    _BUILD_ARGS=${_BUILD_ARGS}
+    args=(${_BUILD_ARGS//,/ })
+    flags=(
+      --cache=${_CACHE}
+      --cache-ttl=${_CACHE_TTL}
+      --cache-repo=${_CACHE_IMAGE_URL}
+      --build-arg=bazel_jobs=${_BAZEL_JOBS}
+      --build-arg=python_version=${_PYTHON_VERSION}
+      # TODO: use current version in setup.py
+      --build-arg=package_version="1.14.0.dev$(date +%Y%m%d)"
+      ${args[@]/#/--build-arg=})
+    echo ${flags[@]} | tee /docker/flags.txt
+  volumes:
+  - name: docker
+    path: /docker
+- id: 'build-wheels'
+  name: 'gcr.io/kaniko-project/executor:debug'
+  entrypoint: sh
+  args:
+  - -cx
+  - |
+    /kaniko/executor \
+      --dockerfile=docker/experimental/Dockerfile \
+      --destination=${_ARTIFACTS_IMAGE_URL} \
+      --tar-path=/docker/artifacts-image.tar \
+      --target=artifacts \
+      $(cat /docker/flags.txt)
+  timeout: 14400s
+  volumes:
+  - name: docker
+    path: /docker
+- id: 'import-artifacts'
+  name: gcr.io/cloud-builders/docker
+  args:
+  - load
+  - --input
+  - /docker/artifacts-image.tar
+  volumes:
+  - name: docker
+    path: /docker
+- id: 'copy-wheels'
+  name: ${_ARTIFACTS_IMAGE_URL}
+  entrypoint: bash
+  args:
+  - -c
+  - |
+    cp /pytorch/dist/*.whl /wheels
+    cp /pytorch/xla/dist/*.whl /wheels
+  volumes:
+  - name: 'wheels'
+    path: /wheels
+- id: 'install-twine'
+  name: python
+  entrypoint: pip
+  args:
+  - install
+  - --user
+  - twine
+  - keyrings.google-artifactregistry-auth
+- id: 'export-wheels'
+  waitFor: ['copy-wheels', 'install-twine']
+  name: python
+  entrypoint: python
+  args:
+  - '-m'
+  - 'twine'
+  - 'upload'
+  - '--repository-url'
+  - 'https://${_ARTIFACT_REGISTRY_REGION}-python.pkg.dev/$PROJECT_ID/torch-xla/'
+  - '/wheels/*'
+  volumes:
+  - name: 'wheels'
+    path: /wheels
+- id: 'release-image'
+  waitFor: ['build-wheels']
+  name: 'gcr.io/kaniko-project/executor:debug'
+  entrypoint: sh
+  args:
+  - -cx
+  - |
+    /kaniko/executor \
+      --dockerfile=docker/experimental/Dockerfile \
+      --destination=${_RELEASE_IMAGE_URL} \
+      $(cat /docker/flags.txt)
+  timeout: 14400s
+  volumes:
+  - name: docker
+    path: /docker
+substitutions:
+  _ARTIFACT_REGISTRY_REGION: us
+  _RELEASE_VERSION: 'nightly'  # or rX.Y
+  _PYTHON_VERSION: '3.8'
+  _IMAGE_TAG: ${_RELEASE_VERSION}_${_PYTHON_VERSION}
+  _IMAGE_REPOSITORY: ${_ARTIFACT_REGISTRY_REGION}-docker.pkg.dev/${PROJECT_ID}/torch-xla-images
+  _RELEASE_IMAGE_URL: ${_IMAGE_REPOSITORY}/torch-xla:${_IMAGE_TAG}
+  _ARTIFACTS_IMAGE_URL: ${_IMAGE_REPOSITORY}/artifacts:${_IMAGE_TAG}
+  _CACHE_IMAGE_URL: ${_IMAGE_REPOSITORY}/cache
+  _BAZEL_JOBS: '16'
+  _CACHE: 'true'
+  _CACHE_TTL: '18h'
+  _BUILD_ARGS: tpuvm=1,cuda=0
+options:
+  machineType: E2_HIGHCPU_32
+  dynamic_substitutions: true
+  substitution_option: 'ALLOW_LOOSE'
+timeout: 24000s
