@@ -129,6 +129,7 @@ function run_op_tests {
   run_pjrt python3 "$CDIR/pjrt/test_experimental_pjrt.py"
   run_pjrt python3 "$CDIR/pjrt/test_experimental_tpu.py"
   run_pjrt python3 "$CDIR/pjrt/test_ddp.py"
+  run_pjrt python3 "$CDIR/pjrt/test_mesh_service.py"
   run_pjrt python3 "$CDIR/test_xla_sharding.py"
   run_test python3 "$CDIR/test_operations_hlo.py" "$@" --verbosity=$VERBOSITY
 }
