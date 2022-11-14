@@ -133,6 +133,29 @@ torch_xla::XlaOpVector Atanh::Lower(LoweringContext* loctx) const {
 }
 
 torch_xla::XlaOpVector Baddbmm::Lower(LoweringContext* loctx) const {
+
+
+  xla::XlaOp xla_self = loctx->GetOutputOp(operand(0)); // torch::lazy::Value&
+  xla::XlaOp xla_batch1 = loctx->GetOutputOp(operand(1));
+  xla::XlaOp xla_batch2 = loctx->GetOutputOp(operand(2));
+  xla::XlaOp xla_beta = loctx->GetOutputOp(operand(3));
+  xla::XlaOp xla_alpha = loctx->GetOutputOp(operand(4));
+
+  std::tie(xla_lhs, xla_rhs) = XlaHelpers::PromoteValues(xla_lhs, xla_rhs);
+
+/////////////////
+
+  CheckBmmDimension(/*tag=*/"baddbmm", batch1, batch2);
+  torch::lazy::Value product_multiplier = XLATensor::GetIrValueForScalar(
+      alpha, batch1->shape().get().element_type(), batch1->GetDevice());
+  torch::lazy::Value bias_multiplier = XLATensor::GetIrValueForScalar(
+      beta, input->shape().get().element_type(), input->GetDevice());
+  return input->CreateFrom(BaddBmm(batch1->GetIrValue(), batch2->GetIrValue(),
+                                   input->GetIrValue(), product_multiplier,
+                                   bias_multiplier));
+
+
+
   xla::XlaOp xla_lhs = loctx->GetOutputOp(operand(0));
   xla::XlaOp xla_rhs = loctx->GetOutputOp(operand(1));
   xla::XlaOp xla_bias = loctx->GetOutputOp(operand(2));
