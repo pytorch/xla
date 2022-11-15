@@ -148,8 +148,14 @@ class DeviceLockerArena {
 
 xla::util::ExceptionCleanup LockDevice(
     const torch::lazy::BackendDevice& device) {
-  auto locker = DeviceLockerArena::Get()->GetLocker(device);
-  locker->Lock();
+  TF_VLOG(4) << "Waiting on device barrier for device " << device << " ...";
+  std::shared_ptr<DeviceLocker> locker;
+  {
+    XLA_TIMED("DeviceLockWait");
+    locker = DeviceLockerArena::Get()->GetLocker(device);
+    locker->Lock();
+  }
+  TF_VLOG(4) << "Waiting on device barrier for device " << device << " done!";
   return xla::util::ExceptionCleanup(
       [locker =
            std::move(locker)](xla::util::ExceptionCleanup::StatusType status) {
@@ -1038,15 +1044,19 @@ void XLATensor::TensorCollectionBarrier(SyncTensorCollection* coll) {
       coll->unlocker.size() > 0) {
     return;
   }
-  TF_VLOG(4) << "Waiting on device barrier for device " << coll->device
-             << " ...";
-  {
-    // TODO(yeounoh) lock SPMD device
-    XLA_TIMED("DeviceLockWait");
-    coll->unlocker = LockDevices({coll->device});
-  }
-  TF_VLOG(4) << "Waiting on device barrier for device " << coll->device
-             << " done!";
+  // TODO(yeounoh) lock SPMD device
+  coll->unlocker = LockDevices({coll->device});
+}
+
+std::vector<torch::lazy::BackendDataPtr>
+XLATensor::ExecuteComputationWithBarrier(
+    torch::lazy::ComputationPtr computation,
+    c10::ArrayRef<torch::lazy::BackendDataPtr> arguments,
+    const torch::lazy::BackendDevice& device) {
+  std::vector<xla::util::ExceptionCleanup> unlocker;
+  unlocker = LockDevices({device});
+  return torch::lazy::getBackend()->ExecuteComputation(computation, arguments,
+                                                       device);
 }
 
 std::vector<at::Tensor> XLATensor::GetTensorsOpByOp(
