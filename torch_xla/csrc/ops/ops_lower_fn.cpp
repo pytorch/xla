@@ -142,40 +142,46 @@ torch_xla::XlaOpVector Baddbmm::Lower(LoweringContext* loctx) const {
   xla::XlaOp xla_alpha = loctx->GetOutputOp(operand(4));
 
   // torch::lazy::Value self = xla_self->GetIrValue();
-  torch::lazy::Value product_multiplier = XLATensor::GetIrValueForScalar(
-      alpha, batch1->shape().get().element_type(), batch1->GetDevice());
-  torch::lazy::Value bias_multiplier = XLATensor::GetIrValueForScalar(
-      beta, input->shape().get().element_type(), input->GetDevice());
+  // torch::lazy::Value product_multiplier = XLATensor::GetIrValueForScalar(
+  //     alpha, batch1->shape().get().element_type(), batch1->GetDevice());
+  // torch::lazy::Value bias_multiplier = XLATensor::GetIrValueForScalar(
+  //     beta, input->shape().get().element_type(), input->GetDevice());
 
-  std::tie(xla_batch1, xla_batch2) = XlaHelpers::PromoteValues(xla_batch1, xla_batch2);
+  // std::tie(xla_batch1, xla_batch2) = XlaHelpers::PromoteValues(xla_batch1, xla_batch2);
 
-  return input->CreateFrom(BaddBmm(xla_batch1->GetIrValue(), xla_batch2->GetIrValue(),
-                                   xla_self->GetIrValue(), product_multiplier,
-                                   bias_multiplier));
+  // return input->CreateFrom(BaddBmm(xla_batch1->GetIrValue(), xla_batch2->GetIrValue(),
+  //                                  xla_self->GetIrValue(), product_multiplier,
+  //                                  bias_multiplier));
 
 /////////////////
 
-  CheckBmmDimension(/*tag=*/"baddbmm", batch1, batch2);
-  torch::lazy::Value product_multiplier = XLATensor::GetIrValueForScalar(
-      alpha, batch1->shape().get().element_type(), batch1->GetDevice());
-  torch::lazy::Value bias_multiplier = XLATensor::GetIrValueForScalar(
-      beta, input->shape().get().element_type(), input->GetDevice());
-  return input->CreateFrom(BaddBmm(batch1->GetIrValue(), batch2->GetIrValue(),
-                                   input->GetIrValue(), product_multiplier,
-                                   bias_multiplier));
+  // CheckBmmDimension(/*tag=*/"baddbmm", batch1, batch2);
+  // torch::lazy::Value product_multiplier = XLATensor::GetIrValueForScalar(
+  //     alpha, batch1->shape().get().element_type(), batch1->GetDevice());
+  // torch::lazy::Value bias_multiplier = XLATensor::GetIrValueForScalar(
+  //     beta, input->shape().get().element_type(), input->GetDevice());
+  // return input->CreateFrom(BaddBmm(batch1->GetIrValue(), batch2->GetIrValue(),
+  //                                  input->GetIrValue(), product_multiplier,
+  //                                  bias_multiplier));
 
 
 
-  xla::XlaOp xla_lhs = loctx->GetOutputOp(operand(0));
-  xla::XlaOp xla_rhs = loctx->GetOutputOp(operand(1));
-  xla::XlaOp xla_bias = loctx->GetOutputOp(operand(2));
-  xla::XlaOp xla_product_multiplier = loctx->GetOutputOp(operand(3));
-  xla::XlaOp xla_bias_multiplier = loctx->GetOutputOp(operand(4));
-  std::tie(xla_lhs, xla_rhs) = XlaHelpers::PromoteValues(xla_lhs, xla_rhs);
+  // xla::XlaOp xla_lhs = loctx->GetOutputOp(operand(0));
+  // xla::XlaOp xla_rhs = loctx->GetOutputOp(operand(1));
+  // xla::XlaOp xla_bias = loctx->GetOutputOp(operand(2));
+  // xla::XlaOp xla_product_multiplier = loctx->GetOutputOp(operand(3));
+  // xla::XlaOp xla_bias_multiplier = loctx->GetOutputOp(operand(4));
+
+  // xla::XlaOp xla_product_multiplier = XlaHelpers::PromoteValues(xla_alpha);
+  // xla::XlaOp xla_bias_multiplier = loctx->GetOutputOp(xla_beta);
+  // std::tie(xla_lhs, xla_rhs) = XlaHelpers::PromoteValues(xla_lhs, xla_rhs);
+
+    // return XlaHelpers::PromotedAdd(
+    //   input, XlaHelpers::PromotedMul(XlaHelpers::PromotedDiv(t1, t2), val));
 
   return ReturnOp(
-      BuildMatMulWithMultiplier(xla_lhs, xla_rhs, xla_bias,
-                                xla_product_multiplier, xla_bias_multiplier),
+      BuildMatMulWithMultiplier(xla_batch1, xla_batch2, xla_self,
+                                xla_alpha, xla_beta),
       loctx);
 }
 
