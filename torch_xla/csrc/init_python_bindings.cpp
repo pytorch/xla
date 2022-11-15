@@ -1527,12 +1527,12 @@ void InitXlaModuleBindings(py::module m) {
 
   m.def("_get_seed_info_id", []() -> int64_t { return seed_info_id; });
 
-  m.def("_reset_and_get_rng_seed",
-        [](const std::string& device_str) -> at::IValue {
+  m.def("_get_rng_seed_as_tensor",
+        [](const std::string& device_str, bool reset) -> at::IValue {
           torch::lazy::BackendDevice device =
               bridge::AtenDeviceToXlaDevice(c10::Device(device_str));
           return bridge::AtenFromXlaTensor(torch_xla::XLATensor::Create(
-              XLATensor::ResetAndGetRngSeedData(device)));
+              XLATensor::GetRngSeedData(device, reset)));
         });
 
   // Return true if value of the tensor requires a computation.

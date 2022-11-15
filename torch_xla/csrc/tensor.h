@@ -184,8 +184,8 @@ class XLATensor : public c10::intrusive_ptr_target {
 
   static uint64_t GetRunningSeed(const torch::lazy::BackendDevice& device);
 
-  static torch::lazy::BackendDataPtr ResetAndGetRngSeedData(
-      const torch::lazy::BackendDevice& device);
+  static torch::lazy::BackendDataPtr GetRngSeedData(
+      const torch::lazy::BackendDevice& device, bool reset);
 
   // Dispatches a comparison operator, setting the logical type of the result
   // appropriately.
