@@ -214,18 +214,18 @@ xla::Shape BaddbmmOutputShape(const torch::lazy::Value& self,
                               const torch::lazy::Value& beta,
                               const torch::lazy::Value& alpha) {
 
-  torch_xla::XLATensorPtr lazy_self = torch_xla::bridge::GetXlaTensorOrCreateForWrappedNumber(self, *common_device);
-  torch_xla::XLATensorPtr lazy_batch1 = torch_xla::bridge::GetXlaTensorOrCreateForWrappedNumber(batch1, *common_device);
-  torch_xla::XLATensorPtr lazy_batch2 = torch_xla::bridge::GetXlaTensorOrCreateForWrappedNumber(batch2, *common_device);
+  // torch_xla::XLATensorPtr lazy_self = torch_xla::bridge::GetXlaTensorOrCreateForWrappedNumber(self, *common_device);
+  // torch_xla::XLATensorPtr lazy_batch1 = torch_xla::bridge::GetXlaTensorOrCreateForWrappedNumber(batch1, *common_device);
+  // torch_xla::XLATensorPtr lazy_batch2 = torch_xla::bridge::GetXlaTensorOrCreateForWrappedNumber(batch2, *common_device);
 
-  // CheckBmmDimension(/*tag=*/"baddbmm", batch1, batch2); // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-  torch::lazy::Value product_multiplier = XLATensor::GetIrValueForScalar(
-      alpha, batch1->shape().get().element_type(), batch1->GetDevice());
-  torch::lazy::Value bias_multiplier = XLATensor::GetIrValueForScalar(
-      beta, input->shape().get().element_type(), input->GetDevice());
-  return input->CreateFrom(BaddBmm(batch1->GetIrValue(), batch2->GetIrValue(),
-                                   input->GetIrValue(), product_multiplier,
-                                   bias_multiplier));
+  // // CheckBmmDimension(/*tag=*/"baddbmm", batch1, batch2); // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+  // torch::lazy::Value product_multiplier = XLATensor::GetIrValueForScalar(
+  //     alpha, batch1->shape().get().element_type(), batch1->GetDevice());
+  // torch::lazy::Value bias_multiplier = XLATensor::GetIrValueForScalar(
+  //     beta, input->shape().get().element_type(), input->GetDevice());
+  // return input->CreateFrom(BaddBmm(batch1->GetIrValue(), batch2->GetIrValue(),
+  //                                  input->GetIrValue(), product_multiplier,
+  //                                  bias_multiplier));
 
   auto lower_for_shape_fn =
       [](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
@@ -235,7 +235,7 @@ xla::Shape BaddbmmOutputShape(const torch::lazy::Value& self,
 
   return InferOutputShape(
       {GetXlaShape(batch1), GetXlaShape(batch2), GetXlaShape(self),
-      GetXlaShape(product_multiplier), GetXlaShape(bias_multiplier)},
+      GetXlaShape(alpha), GetXlaShape(beta)},
       lower_for_shape_fn);
 }
 
