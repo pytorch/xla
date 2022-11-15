@@ -133,8 +133,6 @@ torch_xla::XlaOpVector Atanh::Lower(LoweringContext* loctx) const {
 }
 
 torch_xla::XlaOpVector Baddbmm::Lower(LoweringContext* loctx) const {
-
-
   xla::XlaOp xla_self = loctx->GetOutputOp(operand(0));
   xla::XlaOp xla_batch1 = loctx->GetOutputOp(operand(1));
   xla::XlaOp xla_batch2 = loctx->GetOutputOp(operand(2));
