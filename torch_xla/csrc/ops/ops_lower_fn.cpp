@@ -139,6 +139,8 @@ torch_xla::XlaOpVector Baddbmm::Lower(LoweringContext* loctx) const {
   xla::XlaOp xla_beta = loctx->GetOutputOp(operand(3));
   xla::XlaOp xla_alpha = loctx->GetOutputOp(operand(4));
 
+  LOG(WARNING) << "get ther *****************************************************";
+
   return ReturnOp(BuildMatMulWithMultiplier(xla_batch1, xla_batch2, xla_self,
                                             xla_alpha, xla_beta),
                   loctx);
