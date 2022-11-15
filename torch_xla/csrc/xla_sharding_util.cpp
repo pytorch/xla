@@ -258,8 +258,8 @@ std::vector<at::Tensor> ShardingUtil::ShardTensor(
         int64_t y_partition = tensor.sizes()[1] / tile_shape[1] +
                               (tensor.sizes()[1] % tile_shape[1] != 0);
         shard = tensor.index(
-            {at::indexing::Slice((i / tile_shape[1]) * x_partition,
-                                 (i / tile_shape[1] + 1) * x_partition),
+            {at::indexing::Slice((i % tile_shape[0]) * x_partition,
+                                 (i % tile_shape[0] + 1) * x_partition),
              at::indexing::Slice((i % tile_shape[1]) * y_partition,
                                  (i % tile_shape[1] + 1) * y_partition)});
       } else if (tile_shape.size() == 3) {
@@ -270,11 +270,10 @@ std::vector<at::Tensor> ShardingUtil::ShardTensor(
         int64_t z_partition = tensor.sizes()[2] / tile_shape[2] +
                               (tensor.sizes()[2] % tile_shape[2] != 0);
         shard = tensor.index(
-            {at::indexing::Slice(
-                 (i / tile_shape[1] / tile_shape[2]) * x_partition,
-                 (i / tile_shape[1] / tile_shape[2] + 1) * x_partition),
-             at::indexing::Slice((i / tile_shape[2]) * y_partition,
-                                 (i / tile_shape[2] + 1) * y_partition),
+            {at::indexing::Slice((i % tile_shape[0]) * x_partition,
+                                 (i % tile_shape[0] + 1) * x_partition),
+             at::indexing::Slice((i % tile_shape[1]) * y_partition,
+                                 (i % tile_shape[1] + 1) * y_partition),
              at::indexing::Slice((i % tile_shape[2]) * z_partition,
                                  (i % tile_shape[2] + 1) * z_partition)});
       } else if (tile_shape.size() == 4) {
@@ -287,16 +286,12 @@ std::vector<at::Tensor> ShardingUtil::ShardTensor(
         int64_t w_partition = tensor.sizes()[3] / tile_shape[3] +
                               (tensor.sizes()[3] % tile_shape[3] != 0);
         shard = tensor.index(
-            {at::indexing::Slice(
-                 (i / tile_shape[1] / tile_shape[2] / tile_shape[3]) *
-                     x_partition,
-                 (i / tile_shape[1] / tile_shape[2] / tile_shape[3] + 1) *
-                     x_partition),
-             at::indexing::Slice(
-                 (i / tile_shape[2] / tile_shape[3]) * y_partition,
-                 (i / tile_shape[2] / tile_shape[3] + 1) * y_partition),
-             at::indexing::Slice((i / tile_shape[3]) * z_partition,
-                                 (i / tile_shape[3] + 1) * z_partition),
+            {at::indexing::Slice((i % tile_shape[0]) * x_partition,
+                                 (i % tile_shape[0] + 1) * x_partition),
+             at::indexing::Slice((i % tile_shape[1]) * y_partition,
+                                 (i % tile_shape[1] + 1) * y_partition),
+             at::indexing::Slice((i % tile_shape[2]) * z_partition,
+                                 (i % tile_shape[2] + 1) * z_partition),
              at::indexing::Slice((i % tile_shape[3]) * w_partition,
                                  (i % tile_shape[3] + 1) * w_partition)});
       } else if (tile_shape.size() == 5) {
@@ -311,23 +306,14 @@ std::vector<at::Tensor> ShardingUtil::ShardTensor(
         int64_t v_partition = tensor.sizes()[4] / tile_shape[4] +
                               (tensor.sizes()[4] % tile_shape[4] != 0);
         shard = tensor.index(
-            {at::indexing::Slice((i / tile_shape[1] / tile_shape[2] /
-                                  tile_shape[3] / tile_shape[4]) *
-                                     x_partition,
-                                 (i / tile_shape[1] / tile_shape[2] /
-                                      tile_shape[3] / tile_shape[4] +
-                                  1) *
-                                     x_partition),
-             at::indexing::Slice(
-                 (i / tile_shape[2] / tile_shape[3] / tile_shape[4]) *
-                     y_partition,
-                 (i / tile_shape[2] / tile_shape[3] / tile_shape[4] + 1) *
-                     y_partition),
-             at::indexing::Slice(
-                 (i / tile_shape[3] / tile_shape[4]) * z_partition,
-                 (i / tile_shape[3] / tile_shape[4] + 1) * z_partition),
-             at::indexing::Slice((i / tile_shape[4]) * w_partition,
-                                 (i / tile_shape[4] + 1) * w_partition),
+            {at::indexing::Slice((i % tile_shape[0]) * x_partition,
+                                 (i % tile_shape[0] + 1) * x_partition),
+             at::indexing::Slice((i % tile_shape[1]) * y_partition,
+                                 (i % tile_shape[1] + 1) * y_partition),
+             at::indexing::Slice((i % tile_shape[2]) * z_partition,
+                                 (i % tile_shape[2] + 1) * z_partition),
+             at::indexing::Slice((i % tile_shape[3]) * w_partition,
+                                 (i % tile_shape[3] + 1) * w_partition),
              at::indexing::Slice((i % tile_shape[4]) * v_partition,
                                  (i % tile_shape[4] + 1) * v_partition)});
       }
