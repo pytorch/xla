@@ -141,6 +141,8 @@ torch_xla::XlaOpVector Baddbmm::Lower(LoweringContext* loctx) const {
   std::tie(xla_batch1, xla_batch2) =
       XlaHelpers::PromoteValues(xla_batch1, xla_batch2);
 
+  LOG(WARNING) << "get ther *****************************************************";
+
   return ReturnOp(BuildMatMulWithMultiplier(xla_batch1, xla_batch2, xla_self,
                                             xla_alpha, xla_beta),
                   loctx);
