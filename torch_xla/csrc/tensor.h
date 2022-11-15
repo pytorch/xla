@@ -1241,6 +1241,11 @@ class XLATensor : public c10::intrusive_ptr_target {
 
   int64_t GetOpaqueHandle() const;
 
+  static std::vector<torch::lazy::BackendDataPtr> ExecuteComputationWithBarrier(
+      torch::lazy::ComputationPtr computation,
+      c10::ArrayRef<torch::lazy::BackendDataPtr> arguments,
+      const torch::lazy::BackendDevice& device);
+
  private:
   struct SyncTensorsConfig {
     // Whether we want to force XLA data on the target tensors (hence trimming
