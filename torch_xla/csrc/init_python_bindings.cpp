@@ -1513,6 +1513,7 @@ void InitXlaModuleBindings(py::module m) {
             if (infoptr) {
               tensor_ids.push_back(infoptr->tensor_id);
             } else {
+              // TODO(JackCaoG): Make sure this device data is actually seed.
               tensor_ids.push_back(seed_info_id);
             }
             at::Tensor tensor = bridge::AtenFromXlaTensor(
