@@ -27,34 +27,40 @@ class DynamoBasicTest(unittest.TestCase):
     return model(data)
 
   def test_simple_model(self):
+    device = xm.xla_device()
     x = torch.tensor(100.0)
     y = torch.tensor(200.0)
+    xla_x = x.to(device)
+    xla_y = y.to(device)
     res_cpu = self.fn_simple(x, y)
-    res_xla_dynamo = self.fn_simple_dynamo(x, y)
+    res_xla_dynamo = self.fn_simple_dynamo(xla_x, xla_y)
     self.assertIn('xla::add', met.counter_names())
     torch.allclose(res_cpu, res_xla_dynamo.cpu())
     # verifiy that tracing is skipped in following runs
     met.clear_counters()
-    res_xla_dynamo_2 = self.fn_simple_dynamo(x, y)
+    res_xla_dynamo_2 = self.fn_simple_dynamo(xla_x, xla_y)
     self.assertNotIn('xla::add', met.counter_names())
     torch.allclose(res_cpu, res_xla_dynamo_2.cpu())
     # verify that dynamo can handle different inputs
-    res_xla_dynamo_3 = self.fn_simple_dynamo(x + y, y * 3)
+    res_xla_dynamo_3 = self.fn_simple_dynamo(xla_x + xla_y, xla_y * 3)
     res_cpu_3 = self.fn_simple(x + y, y * 3)
     torch.allclose(res_cpu, res_xla_dynamo_3.cpu())
 
   def test_resnet18(self):
+    device = xm.xla_device()
     batch_size = xu.getenv_as('BATCH_SIZE', int, defval=4)
     sample_count = xu.getenv_as('SAMPLE_COUNT', int, defval=10)
     loader = xu.SampleGenerator(
-        data=(torch.randn(batch_size, 3, 224,
-                          224), torch.zeros(batch_size, dtype=torch.int64)),
+        data=(torch.randn(batch_size, 3, 224, 224, device=device),
+              torch.zeros(batch_size, dtype=torch.int64, device=device)),
         sample_count=sample_count)
     model = torchvision.models.resnet18()
     model.eval()
+    xla_model = torchvision.models.resnet18().to(device)
+    xla_model.eval()
     for data, _ in loader:
-      output = self.resetnet_18_dynamo(model, data)
-      torch.allclose(model(data), output.cpu())
+      output = self.resetnet_18_dynamo(xla_model, data)
+      torch.allclose(model(data.cpu()), output.cpu())
     self.assertEqual(met.metric_data('CompileTime')[0], 1)
     self.assertEqual(met.metric_data('ExecuteTime')[0], sample_count + 1)
     self.assertEqual(
