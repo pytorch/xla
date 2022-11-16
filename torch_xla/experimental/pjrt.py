@@ -259,57 +259,55 @@ def broadcast_master_param(model: nn.Module) -> None:
   xm.mark_step()
 
 
-def rendezvous(tag: str,
-               payload: bytes,
-               ordinals: Optional[List[int]],
-               *,
-               mesh_port: int = 12355) -> List[bytes]:
+def rendezvous(tag: str, payload: bytes,
+               ordinals: Optional[List[int]]) -> List[bytes]:
   """Share `payload` with all replicas in `ordinals`.
 
   All of PjRt is experimental right now, but consider `rendezvous` to be _very_
-  experimental. Only tested on TPU v4.
+  experimental.
 
   `tag` is ignored except for logging.
 
-  If `torch.distributed group` is not created already, `rendezvous` will
-  initialize it using `XRT_MESH_SERVICE_ADDRESS` or `MASTER_ADDR`. If world size
-  is 1, initialize the process group automatically.
+  Uses XLA collective communication to communicate between replicas, so this
+  will sync the graph (`xm.mark_step`).
 
   Args:
     tag: Name of this rendezvous operation.
     payload: Payload to share with other replicas.
     ordinals: List of replicas participating in rendezvous.
-    mesh_port: Port of master `torch.distributed` process.
   Returns:
     List of bytes from other replicas.
   """
-  if not dist.is_initialized():
-    logging.warning(
-        'Default process group not initialized. Creating XLA process group...')
-    mesh_master = xu.getenv_as("XRT_MESH_SERVICE_ADDRESS", str)
-    if not mesh_master and device_type() == 'TPU':
-      mesh_master = f'{tpu.discover_master_worker_ip()}:{mesh_port}'
+  if ordinals and len(ordinals) != global_device_count():
+    raise ValueError('Only global rendezvous is supported')
 
-    if mesh_master:
-      init_method = f'tcp://{mesh_master}'
-    elif global_device_count() == 1:
-      init_method = f'file://{tempfile.mktemp()}'
-    else:
-      init_method = None
+  if not isinstance(payload, bytes):
+    raise TypeError('`payload` must be bytes, not {}'.format(type(payload)))
 
-    import torch_xla.distributed.xla_backend
-    dist.init_process_group(
-        "xla",
-        init_method=init_method,
-        world_size=global_device_count(),
-        rank=global_ordinal())
+  # Finish all execution of previous graphs to avoid recompilation
+  xm.mark_step()
+
+  device = xm.xla_device()
+
+  data = torch.tensor(list(payload), dtype=torch.uint8)
+  size = torch.tensor([data.shape[0]], dtype=torch.int, device=device)
 
   logging.info(f"Joining rendezvous '{tag}'...")
-  group = dist.new_group(ordinals, backend="gloo")
+  sizes = xm.all_gather(size)
 
-  num_outputs = len(ordinals) if ordinals else global_device_count()
-  output = [None] * num_outputs
-  dist.all_gather_object(output, payload, group)
-  logging.info(f"Completed rendezvous '{tag}'.")
+  # Pad data to at least length 1, otherwise we can't split the result
+  max_size = torch.max(
+      torch.tensor(1, device=device, dtype=torch.int), torch.max(sizes))
+  xm.mark_step()
 
-  return output
+  padded_data = torch.nn.functional.pad(data, (
+      0,
+      max_size.item() - size.item(),
+  )).to(xm.xla_device())
+  raw_data = xm.all_gather(padded_data)
+  data_list = torch.split(raw_data, max_size)
+
+  payloads = [d[:sz] for d, sz in zip(data_list, sizes)]
+  xm.mark_step()
+
+  return [bytes(p.cpu().tolist()) for p in payloads]
