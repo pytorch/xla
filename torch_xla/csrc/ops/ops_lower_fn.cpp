@@ -143,7 +143,7 @@ torch_xla::XlaOpVector Baddbmm::Lower(LoweringContext* loctx) const {
 
   return ReturnOp(BuildMatMulWithMultiplier(xla_batch1, xla_batch2, xla_self,
                                             xla_alpha, xla_beta),
-      loctx);
+                  loctx);
 }
 
 torch_xla::XlaOpVector BinaryCrossEntropy::Lower(LoweringContext* loctx) const {
