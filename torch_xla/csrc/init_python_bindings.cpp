@@ -1500,6 +1500,13 @@ void InitXlaModuleBindings(py::module m) {
             if (!backend_data) {
               continue;
             }
+
+            // Dedup by handle
+            xla::ComputationClient::Data::OpaqueHandle handle =
+                backend_data->GetHandle();
+            if (!data_handles.insert(handle).second) {
+              continue;
+            }
             auto* infoptr =
                 static_cast<torch::lazy::LazyGraphExecutor::DeviceDataInfo*>(
                     backend_data->info());
@@ -1508,16 +1515,6 @@ void InitXlaModuleBindings(py::module m) {
             } else {
               tensor_ids.push_back(seed_info_id);
             }
-
-            // Dedup by handle
-            xla::ComputationClient::Data::OpaqueHandle handle =
-                backend_data->GetHandle();
-            if (!data_handles.insert(handle).second) {
-              continue;
-            }
-
-            // add tensor_id after we make sure the handle does not exist yet.
-            tensor_ids.push_back(infoptr->tensor_id);
             at::Tensor tensor = bridge::AtenFromXlaTensor(
                 torch_xla::XLATensor::Create(backend_data));
             ivalues.emplace_back(tensor);
