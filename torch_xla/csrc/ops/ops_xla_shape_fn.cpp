@@ -213,7 +213,8 @@ xla::Shape BaddbmmOutputShape(const torch::lazy::Value& self,
                               const torch::lazy::Value& batch2,
                               const torch::lazy::Value& beta,
                               const torch::lazy::Value& alpha) {
-  LOG(WARNING) << "#############################################################";
+  LOG(WARNING)
+      << "#############################################################";
 
   auto lower_for_shape_fn =
       [](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
@@ -221,7 +222,8 @@ xla::Shape BaddbmmOutputShape(const torch::lazy::Value& self,
                                      operands[3], operands[4]);
   };
 
-  LOG(WARNING) << "%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%";
+  LOG(WARNING)
+      << "%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%";
 
   return InferOutputShape(
       {GetXlaShape(batch1), GetXlaShape(batch2), GetXlaShape(self),
