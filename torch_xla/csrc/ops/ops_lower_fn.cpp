@@ -138,11 +138,11 @@ torch_xla::XlaOpVector Baddbmm::Lower(LoweringContext* loctx) const {
   xla::XlaOp xla_batch2 = loctx->GetOutputOp(operand(2));
   xla::XlaOp xla_beta = loctx->GetOutputOp(operand(3));
   xla::XlaOp xla_alpha = loctx->GetOutputOp(operand(4));
-  std::tie(xla_batch1, xla_batch2) = XlaHelpers::PromoteValues(xla_batch2, xla_batch2);
+  std::tie(xla_batch1, xla_batch2) =
+      XlaHelpers::PromoteValues(xla_batch1, xla_batch2);
 
-  return ReturnOp(
-      BuildMatMulWithMultiplier(xla_batch1, xla_batch2, xla_self,
-                                xla_alpha, xla_beta),
+  return ReturnOp(BuildMatMulWithMultiplier(xla_batch1, xla_batch2, xla_self,
+                                            xla_alpha, xla_beta),
       loctx);
 }
 
