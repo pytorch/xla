@@ -1182,13 +1182,13 @@ void InitXlaModuleBindings(py::module m) {
           XLATensor::WaitDeviceOps(devices);
         },
         py::arg("devices"));
-  m.def("_xla_counter_names", []()
-    {
-      auto counter_names = torch::lazy::GetCounterNames();
-      auto xla_counter_names = xla::metrics::GetCounterNames();
-      counter_names.insert(counter_names.end(), xla_counter_names.begin(), xla_counter_names.end());
-      return counter_names;
-    });
+  m.def("_xla_counter_names", []() {
+    auto counter_names = torch::lazy::GetCounterNames();
+    auto xla_counter_names = xla::metrics::GetCounterNames();
+    counter_names.insert(counter_names.end(), xla_counter_names.begin(),
+                         xla_counter_names.end());
+    return counter_names;
+  });
   m.def("_xla_counter_value", [](const std::string& name) -> py::object {
     auto* data = torch::lazy::GetCounter(name);
     if (data != nullptr) {
@@ -1196,43 +1196,47 @@ void InitXlaModuleBindings(py::module m) {
     }
 
     auto* xla_data = xla::metrics::GetCounter(name);
-    return xla_data != nullptr ? py::cast<int64_t>(xla_data->Value()) : py::none();
+    return xla_data != nullptr ? py::cast<int64_t>(xla_data->Value())
+                               : py::none();
   });
   m.def("_xla_metric_names", []() { return xla::metrics::GetMetricNames(); });
   m.def("_xla_metric_data", [](const std::string& name) -> py::object {
     return GetMetricData(name);
   });
-  m.def("_xla_metrics_report",
-        []() {
-          // NOTE: [TORCH_LAZY_COUNTER v.s. XLA_COUNTER]
-          // Counters and Metrics are divided into two groups: one in PyTorch/XLA and another in ComputationClient.
-          // Therefore, we need to stitch the report together. Ideally, those two sets shouldn't have any overlaps
-          // The reason why is that we cannot have ComputationClient to use the TORCH_LAZY_COUNTER as it currently
-          // cannot depend on PyTorch (as part of TensorFlow).
-          // TODO(jwtan): Unify them once ComputationClient becomes a standalone library.
-          return torch::lazy::CreateMetricReport() + xla::metrics_reader::CreateMetricReport();
-        });
-  m.def("_short_xla_metrics_report",
-        [](const py::list& counter_names, const py::list& metric_names) {
-          std::vector<std::string> counter_name_vec;
-          std::vector<std::string> metric_name_vec;
-          for (auto& counter : counter_names) {
-            counter_name_vec.push_back(counter.cast<std::string>());
-          }
-          for (auto& metric : metric_names) {
-            metric_name_vec.push_back(metric.cast<std::string>());
-          }
-          // See NOTE: [TORCH_LAZY_COUNTER v.s. XLA_COUNTER].
-          return torch::lazy::CreateMetricReport(counter_name_vec,
-                                                         metric_name_vec) + xla::metrics_reader::CreateMetricReport(counter_name_vec,
-                                                         metric_name_vec);
-        });
-  m.def("_clear_xla_counters",
-    []() {
-      // TODO(jwtan): We should probably upstream the ability to reset counters and metrics separately to upstream.
-      torch::lazy::MetricsArena::Get()->Reset();
-      xla::metrics::ClearCounters();
-    });
+  m.def("_xla_metrics_report", []() {
+    // NOTE: [TORCH_LAZY_COUNTER v.s. XLA_COUNTER]
+    // Counters and Metrics are divided into two groups: one in PyTorch/XLA and
+    // another in ComputationClient. Therefore, we need to stitch the report
+    // together. Ideally, those two sets shouldn't have any overlaps The reason
+    // why is that we cannot have ComputationClient to use the
+    // TORCH_LAZY_COUNTER as it currently cannot depend on PyTorch (as part of
+    // TensorFlow).
+    // TODO(jwtan): Unify them once ComputationClient becomes a standalone
+    // library.
+    return torch::lazy::CreateMetricReport() +
+           xla::metrics_reader::CreateMetricReport();
+  });
+  m.def("_short_xla_metrics_report", [](const py::list& counter_names,
+                                        const py::list& metric_names) {
+    std::vector<std::string> counter_name_vec;
+    std::vector<std::string> metric_name_vec;
+    for (auto& counter : counter_names) {
+      counter_name_vec.push_back(counter.cast<std::string>());
+    }
+    for (auto& metric : metric_names) {
+      metric_name_vec.push_back(metric.cast<std::string>());
+    }
+    // See NOTE: [TORCH_LAZY_COUNTER v.s. XLA_COUNTER].
+    return torch::lazy::CreateMetricReport(counter_name_vec, metric_name_vec) +
+           xla::metrics_reader::CreateMetricReport(counter_name_vec,
+                                                   metric_name_vec);
+  });
+  m.def("_clear_xla_counters", []() {
+    // TODO(jwtan): We should probably upstream the ability to reset counters
+    // and metrics separately to upstream.
+    torch::lazy::MetricsArena::Get()->Reset();
+    xla::metrics::ClearCounters();
+  });
   m.def("_clear_xla_metrics", []() { xla::metrics::ClearMetrics(); });
   m.def("_xla_tensors_report",
         [](size_t nodes_threshold, const std::string& device) {
