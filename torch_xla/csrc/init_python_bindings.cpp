@@ -1190,8 +1190,13 @@ void InitXlaModuleBindings(py::module m) {
       return counter_names;
     });
   m.def("_xla_counter_value", [](const std::string& name) -> py::object {
-    xla::metrics::CounterData* data = xla::metrics::GetCounter(name);
-    return data != nullptr ? py::cast<int64_t>(data->Value()) : py::none();
+    auto* data = torch::lazy::GetCounter(name);
+    if (data != nullptr) {
+      return py::cast<int64_t>(data->Value());
+    }
+
+    auto* xla_data = xla::metrics::GetCounter(name);
+    return xla_data != nullptr ? py::cast<int64_t>(xla_data->Value()) : py::none();
   });
   m.def("_xla_metric_names", []() { return xla::metrics::GetMetricNames(); });
   m.def("_xla_metric_data", [](const std::string& name) -> py::object {
