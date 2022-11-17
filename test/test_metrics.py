@@ -111,6 +111,9 @@ class MetricsTest(unittest.TestCase):
     self.assertEqual(met.counter_value("UncachedCompile"), 1)
     self.assertEqual(met.counter_value("MarkStep"), 1)
 
+    met.clear_counters()
+    self.assertEqual(met.counter_value("DeviceDataCacheMiss"), 0)
+
     # metrics
     self.assertIn("TensorsGraphSize", report)
     self.assertIn("InputOutputAliasCount", report)

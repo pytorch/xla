@@ -1227,7 +1227,12 @@ void InitXlaModuleBindings(py::module m) {
                                                          metric_name_vec) + xla::metrics_reader::CreateMetricReport(counter_name_vec,
                                                          metric_name_vec);
         });
-  m.def("_clear_xla_counters", []() { xla::metrics::ClearCounters(); });
+  m.def("_clear_xla_counters",
+    []() {
+      // TODO(jwtan): We should probably upstream the ability to reset counters and metrics separately to upstream.
+      torch::lazy::MetricsArena::Get()->Reset();
+      xla::metrics::ClearCounters();
+    });
   m.def("_clear_xla_metrics", []() { xla::metrics::ClearMetrics(); });
   m.def("_xla_tensors_report",
         [](size_t nodes_threshold, const std::string& device) {
