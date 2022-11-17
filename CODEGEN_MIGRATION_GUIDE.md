@@ -70,7 +70,7 @@ When you work on your first few codegens, we generally recommend you to start wi
 An good example of a "simple" op would be something like `abs`:
 ```
 at::Tensor XLANativeFunctions::abs(const at::Tensor& self) {
-  XLA_FN_COUNTER("xla::");
+  TORCH_LAZY_FN_COUNTER("xla::");
   return bridge::AtenFromXlaTensor(XLATensor::abs(bridge::GetXlaTensor(self)));
 }
 ```
@@ -80,7 +80,7 @@ Find the op in  `xla/xla_native_functions.yaml` and move it to the full_codegen 
 #### XLANativeFunctions.cpp
 ```
 at::Tensor XLANativeFunctions::abs(const at::Tensor & self) {
-  XLA_FN_COUNTER("xla::");
+  TORCH_LAZY_FN_COUNTER("xla::");
   auto common_device = torch_xla::bridge::GetXlaDevice(self);
   TORCH_INTERNAL_ASSERT(common_device);
 
