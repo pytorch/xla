@@ -1211,7 +1211,9 @@ void InitXlaModuleBindings(py::module m) {
           for (auto& metric : metric_names) {
             metric_name_vec.push_back(metric.cast<std::string>());
           }
-          return xla::metrics_reader::CreateMetricReport(counter_name_vec,
+          // See NOTE: [TORCH_LAZY_COUNTER v.s. XLA_COUNTER].
+          return torch::lazy::CreateMetricReport(counter_name_vec,
+                                                         metric_name_vec) + xla::metrics_reader::CreateMetricReport(counter_name_vec,
                                                          metric_name_vec);
         });
   m.def("_clear_xla_counters", []() { xla::metrics::ClearCounters(); });

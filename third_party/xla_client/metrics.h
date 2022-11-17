@@ -178,7 +178,8 @@ class Counter {
 };
 
 // XLA_COUNTER should only be used within xla_client. Please use
-// TORCH_LAZY_COUNTER in pytorch/xla.
+// TORCH_LAZY_COUNTER in pytorch/xla. For more information, see
+// NOTE: [TORCH_LAZY_COUNTER v.s. XLA_COUNTER].
 #define XLA_COUNTER(name, value)                \
   do {                                          \
     static ::xla::metrics::Counter* __counter = \

@@ -54,6 +54,7 @@ class MetricsTest(unittest.TestCase):
     xm.mark_step()
     t4 = t1 * 2
     xm.mark_step()
+    short_report = met.short_metrics_report()
     self.assertIn("CachedCompile", short_report)
 
   def test_short_metrics_report_custom_list(self):
@@ -69,9 +70,10 @@ class MetricsTest(unittest.TestCase):
     # using the default metrics list in this case
     self.assertIn('CompileTime', short_report)
     short_report = met.short_metrics_report(
-        counter_names=['CreateCompileHandles'], metric_names=['InboundData'])
+        counter_names=['CreateCompileHandles'], metric_names=['InboundData', 'InputOutputAliasCount'])
     self.assertNotIn('CompileTime', short_report)
     self.assertIn('InboundData', short_report)
+    self.assertIn('InputOutputAliasCount', short_report)
 
   def test_short_metrics_fallback_counter(self):
     xla_device = xm.xla_device()
