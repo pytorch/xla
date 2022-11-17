@@ -102,6 +102,33 @@ class XlaShardingTest(unittest.TestCase):
         torch_xla._XLAC._get_xla_sharding_spec(xt),
         torch_xla._XLAC._get_xla_sharding_spec(xt2))
 
+  def test_implicit_sharding(self):
+    partition_spec = (0, 1)
+    t1 = torch.tensor([[1, 2, 3, 4, 5, 6, 7, 8]],
+                      dtype=torch.float,
+                      device=xm.xla_device())
+    t2 = torch.tensor([[8, 7, 6, 5, 4, 3, 2, 1]],
+                      dtype=torch.float,
+                      device=xm.xla_device())
+    xs.mark_sharding(t1, self._get_mesh((1, self.n_devices)), partition_spec)
+    t3 = t1 + t2
+    t3expected = [9.0, 9.0, 9.0, 9.0, 9.0, 9.0, 9.0, 9.0]
+    self.assertEqual(t3.tolist()[0], t3expected)
+
+  def test_explicit_sharding(self):
+    partition_spec = (0, 1)
+    t1 = torch.tensor([[1, 2, 3, 4, 5, 6, 7, 8]],
+                      dtype=torch.float,
+                      device=xm.xla_device())
+    t2 = torch.tensor([[8, 7, 6, 5, 4, 3, 2, 1]],
+                      dtype=torch.float,
+                      device=xm.xla_device())
+    xs.mark_sharding(t1, self._get_mesh((1, self.n_devices)), partition_spec)
+    xs.mark_sharding(t2, self._get_mesh((1, self.n_devices)), partition_spec)
+    t3 = t1 + t2
+    t3expected = [9.0, 9.0, 9.0, 9.0, 9.0, 9.0, 9.0, 9.0]
+    self.assertEqual(t3.tolist()[0], t3expected)
+
 
 if __name__ == '__main__':
   test = unittest.main()
