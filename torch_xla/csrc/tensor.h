@@ -444,11 +444,6 @@ class XLATensor : public c10::intrusive_ptr_target {
       std::vector<int64_t> stride, std::vector<int64_t> padding, bool ceil_mode,
       bool count_include_pad);
 
-  static XLATensorPtr baddbmm(const XLATensorPtr& input,
-                              const XLATensorPtr& batch1,
-                              const XLATensorPtr& batch2,
-                              const at::Scalar& beta, const at::Scalar& alpha);
-
   static XLATensorPtr bernoulli(const XLATensorPtr& input, double probability);
   static XLATensorPtr bernoulli(const XLATensorPtr& input);
   static void bernoulli_(XLATensorPtr& input, const XLATensorPtr& probability);
