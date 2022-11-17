@@ -219,6 +219,8 @@ xla::Shape BaddbmmOutputShape(const torch::lazy::Value& self,
                                      operands[3], operands[4]);
   };
 
+// test
+
   return InferOutputShape(
       {GetXlaShape(batch1), GetXlaShape(batch2), GetXlaShape(self),
        GetXlaShape(alpha), GetXlaShape(beta)},
