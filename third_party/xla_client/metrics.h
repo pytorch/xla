@@ -177,6 +177,8 @@ class Counter {
   mutable std::atomic<CounterData*> data_;
 };
 
+// XLA_COUNTER should only be used within xla_client. Please use
+// TORCH_LAZY_COUNTER in pytorch/xla.
 #define XLA_COUNTER(name, value)                \
   do {                                          \
     static ::xla::metrics::Counter* __counter = \
