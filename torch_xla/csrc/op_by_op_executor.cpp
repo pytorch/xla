@@ -143,7 +143,7 @@ std::vector<xla::ComputationClient::ExecuteChainedOp> OpByOpExecutor::BuildOps(
           ComputeNodeKey(node, op_input_shapes, nodes_key_seed);
       cxop.computation = compile_cache_.Get(cache_key);
       if (cxop.computation == nullptr) {
-        XLA_COUNTER("OpByOpCompileCacheMiss", 1);
+        TORCH_LAZY_COUNTER("OpByOpCompileCacheMiss", 1);
 
         // Within a single IR graph, there can be many duplicated IR nodes, so
         // make sure we do not issue an XLA compilation for each one of those.
