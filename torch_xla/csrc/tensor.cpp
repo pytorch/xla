@@ -1990,8 +1990,7 @@ c10::SymNode XLASymNodeImpl::floordiv(const c10::SymNode& other) {
 }
 
 std::string XLASymNodeImpl::str() {
-  return "<=" +
-         std::to_string(DimCast(node().get())->getStaticValue());
+  return "<=" + std::to_string(DimCast(node().get())->getStaticValue());
 }
 
 torch::lazy::hash_t XLATensor::GetGraphHash(
