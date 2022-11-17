@@ -87,6 +87,40 @@ class MetricsTest(unittest.TestCase):
             counter_names=['CreateCompileHandles'],
             metric_names=['InboundData']))
 
+  def test_metrics_report_default_list(self):
+    # TODO(jwtan): Add test to cover TrimIrGraph, SyncTensorsToData, TransferToServerAsync, IrValueTensorToXlaData
+    xla_device = xm.xla_device()
+    t1 = torch.tensor(1456, device=xla_device)
+    t2 = t1 * 2
+    xm.mark_step()
+    t2_cpu = t2.cpu()
+    report = met.metrics_report()
+
+    # counters
+    self.assertIn("DeviceDataCacheMiss", report)
+    self.assertIn("CreateXlaTensor", report)
+    self.assertIn("DestroyXlaTensor", report)
+    self.assertIn("UncachedCompile", report)
+    self.assertIn("MarkStep", report)
+
+    # metrics
+    self.assertIn("TensorsGraphSize", report)
+    self.assertIn("InputOutputAliasCount", report)
+
+    # timed metrics
+    self.assertIn("TensorToData", report)
+    self.assertIn("UnwrapXlaData", report)
+    self.assertIn("WrapXlaData", report)
+    self.assertIn("DeviceLockWait", report)
+
+    # repeat the same computation and expect to see the CachedCompile counter
+    t3 = t1 * 2
+    xm.mark_step()
+    t4 = t1 * 2
+    xm.mark_step()
+    report = met.metrics_report()
+    self.assertIn("CachedCompile", report)
+
 
 if __name__ == '__main__':
   test = unittest.main()
