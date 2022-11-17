@@ -1207,7 +1207,7 @@ void InitXlaModuleBindings(py::module m) {
     // NOTE: [TORCH_LAZY_COUNTER v.s. XLA_COUNTER]
     // Counters and Metrics are divided into two groups: one in PyTorch/XLA and
     // another in ComputationClient. Therefore, we need to stitch the report
-    // together. Ideally, those two sets shouldn't have any overlaps The reason
+    // together. Ideally, those two sets shouldn't have any overlaps. The reason
     // why is that we cannot have ComputationClient to use the
     // TORCH_LAZY_COUNTER as it currently cannot depend on PyTorch (as part of
     // TensorFlow).
