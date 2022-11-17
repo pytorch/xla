@@ -1990,7 +1990,7 @@ c10::SymNode XLASymNodeImpl::floordiv(const c10::SymNode& other) {
 }
 
 std::string XLASymNodeImpl::str() {
-  return "Static bound: " +
+  return "<=" +
          std::to_string(DimCast(node().get())->getStaticValue());
 }
 
