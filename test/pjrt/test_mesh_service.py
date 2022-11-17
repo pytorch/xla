@@ -1,9 +1,6 @@
-import itertools
-import os
-from typing import List, Optional
+import functools
 from absl.testing import absltest, parameterized
 
-import torch.distributed as dist
 import torch_xla.core.xla_model as xm
 from torch_xla.experimental import pjrt
 
@@ -11,24 +8,50 @@ from torch_xla.experimental import pjrt
 class PjRtMeshServiceTest(parameterized.TestCase):
 
   @staticmethod
-  def _rendezvous_default(xrt_mesh_addr: Optional[str], replicas: List[int]):
-    if xrt_mesh_addr:
-      os.environ['XRT_MESH_SERVICE_ADDRESS'] = xrt_mesh_addr
-
+  def _rendezvous_static_size():
     payload = b'message %d' % xm.get_ordinal()
-    return xm.rendezvous("test rendezvous", payload, replicas)
+    return xm.rendezvous("test rendezvous", payload)
 
-  @parameterized.named_parameters(
-      ('defaults', None, []), ('xrt_address', 'localhost:9477', []),
-      ('four_replicas', None, [0, 1, 2, 3]), ('two_replicas', None, [0, 1]))
-  def test_rendezvous(self, xrt_mesh_addr, replicas):
-    results = pjrt._run_multiprocess(self._rendezvous_default, xrt_mesh_addr,
-                                     replicas)
-    replicas = replicas or list(range(len(results)))
+  def test_rendezvous_static_size(self):
+    results = pjrt._run_multiprocess(self._rendezvous_static_size)
 
-    for ordinal, value in results.items():
-      if ordinal in replicas or not replicas:
-        self.assertEqual(value, [b'message %d' % r for r in replicas])
+    expected = sorted([b'message %d' % r for r in results])
+    self.assertDictEqual(results, {r: expected for r in results})
+
+  @staticmethod
+  def _rendezvous_dynamic_size():
+    payload = b'message' * xm.get_ordinal()
+    return xm.rendezvous("test rendezvous", payload)
+
+  def test_rendezvous_dynamic_size(self):
+    results = pjrt._run_multiprocess(self._rendezvous_dynamic_size)
+
+    expected = sorted([b'message' * r for r in results])
+    self.assertDictEqual(results, {r: expected for r in results})
+
+  @staticmethod
+  def _rendezvous_replica_groups():
+    replicas = list(range(pjrt.global_device_count()))
+    return xm.rendezvous("test rendezvous", b'message', replicas)
+
+  def test_rendezvous_replica_groups(self):
+    results = pjrt._run_multiprocess(self._rendezvous_replica_groups)
+
+    expected = [b'message'] * len(results)
+    self.assertDictEqual(results, {r: expected for r in results})
+
+  def test_rendezvous_empty_payload(self):
+    test_fn = functools.partial(xm.rendezvous, 'test rendezvous', b'')
+    results = pjrt._run_multiprocess(test_fn)
+
+    expected = [b''] * len(results)
+    self.assertDictEqual(results, {r: expected for r in results})
+
+  def test_rendezvous_string_payload(self):
+    test_fn = functools.partial(xm.rendezvous, 'test rendezvous', "")
+
+    with self.assertRaises(TypeError):
+      pjrt._run_multiprocess(test_fn)
 
   @staticmethod
   def _mesh_reduce():

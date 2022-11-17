@@ -148,8 +148,14 @@ class DeviceLockerArena {
 
 xla::util::ExceptionCleanup LockDevice(
     const torch::lazy::BackendDevice& device) {
-  auto locker = DeviceLockerArena::Get()->GetLocker(device);
-  locker->Lock();
+  TF_VLOG(4) << "Waiting on device barrier for device " << device << " ...";
+  std::shared_ptr<DeviceLocker> locker;
+  {
+    XLA_TIMED("DeviceLockWait");
+    locker = DeviceLockerArena::Get()->GetLocker(device);
+    locker->Lock();
+  }
+  TF_VLOG(4) << "Waiting on device barrier for device " << device << " done!";
   return xla::util::ExceptionCleanup(
       [locker =
            std::move(locker)](xla::util::ExceptionCleanup::StatusType status) {
@@ -359,6 +365,27 @@ class XLATensor::DeviceContextArena {
     devctx->seed = seed;
     devctx->running_seed = devctx->seed;
     devctx->seed_ir_value = torch::lazy::Value();
+  }
+
+  torch::lazy::BackendDataPtr GetRngSeedData(
+      const torch::lazy::BackendDevice& device, bool reset) {
+    static const at::ScalarType kSeedType = at::ScalarType::Long;
+    DeviceContext* devctx = GetDeviceContext(device);
+    std::lock_guard<std::mutex> lock(devctx->lock);
+    if (reset) {
+      devctx->seed = 1012031 + devctx->seed * 7012063;
+      devctx->running_seed = devctx->seed;
+      at::Tensor tensor = at::scalar_tensor(MakeIntScalar(devctx->seed),
+                                            at::TensorOptions(kSeedType));
+      torch::lazy::BackendDataPtr device_data = TensorToXlaData(tensor, device);
+      devctx->seed_ir_value = torch::lazy::MakeNode<DeviceData>(device_data);
+    } else if (!devctx->seed_ir_value) {
+      devctx->seed_ir_value =
+          IrValueFromScalar(MakeIntScalar(devctx->seed), kSeedType, device);
+    }
+
+    return torch_xla::DeviceData::Cast(devctx->seed_ir_value.node.get())
+        ->data();
   }
 
   void MarkStep(const torch::lazy::BackendDevice& device) {
@@ -785,7 +812,6 @@ torch::lazy::Value XLATensor::GetDeviceDataIrValue(
     const torch::lazy::BackendDevice& device) {
   torch::lazy::BackendDataPtr data =
       GetDeviceData(value, TensorTypeFromXlaType(type), device);
-  // TODO: consider using upstream info class if possible
   data->SetInfo(
       std::make_shared<torch::lazy::LazyGraphExecutor::DeviceDataInfo>(
           /*tensor_id=*/-1, /*read_only=*/true));
@@ -1039,15 +1065,19 @@ void XLATensor::TensorCollectionBarrier(SyncTensorCollection* coll) {
       coll->unlocker.size() > 0) {
     return;
   }
-  TF_VLOG(4) << "Waiting on device barrier for device " << coll->device
-             << " ...";
-  {
-    // TODO(yeounoh) lock SPMD device
-    XLA_TIMED("DeviceLockWait");
-    coll->unlocker = LockDevices({coll->device});
-  }
-  TF_VLOG(4) << "Waiting on device barrier for device " << coll->device
-             << " done!";
+  // TODO(yeounoh) lock SPMD device
+  coll->unlocker = LockDevices({coll->device});
+}
+
+std::vector<torch::lazy::BackendDataPtr>
+XLATensor::ExecuteComputationWithBarrier(
+    torch::lazy::ComputationPtr computation,
+    c10::ArrayRef<torch::lazy::BackendDataPtr> arguments,
+    const torch::lazy::BackendDevice& device) {
+  std::vector<xla::util::ExceptionCleanup> unlocker;
+  unlocker = LockDevices({device});
+  return torch::lazy::getBackend()->ExecuteComputation(computation, arguments,
+                                                       device);
 }
 
 std::vector<at::Tensor> XLATensor::GetTensorsOpByOp(
@@ -1372,22 +1402,23 @@ XLATensor::PostOrderData XLATensor::RunPostOrder(
       data_handles;
 
   for (auto node : po_data.post_order) {
-    const DeviceData* device_data = DeviceData::Cast(node);
-    if (device_data != nullptr) {
+    const auto backend_data =
+        torch::lazy::getBackend()->GetComputationDataFromNode(node);
+    if (backend_data != nullptr) {
       /* Acceptable race condition: HasValue may return false. This is OK
        * since the conditional barrier is a performance optimization. */
-      if (!device_data->data()->HasValue()) {
+      if (!backend_data->HasValue()) {
         TensorCollectionBarrier(coll);
       }
       xla::ComputationClient::Data::OpaqueHandle handle =
-          device_data->data()->GetHandle();
+          backend_data->GetHandle();
       auto it = data_handles.find(handle);
       if (it != data_handles.end()) {
         po_data.parameter_sequence.push_back(it->second);
       } else {
         po_data.parameter_sequence.push_back(po_data.parameters_data.size());
         data_handles[handle] = po_data.parameters_data.size();
-        po_data.parameters_data.push_back(device_data->data());
+        po_data.parameters_data.push_back(backend_data);
       }
     }
   }
@@ -1896,6 +1927,11 @@ uint64_t XLATensor::GetRunningSeed(const torch::lazy::BackendDevice& device) {
   return DeviceContextArena::Get()->GetRunningSeed(device);
 }
 
+torch::lazy::BackendDataPtr XLATensor::GetRngSeedData(
+    const torch::lazy::BackendDevice& device, bool reset) {
+  return DeviceContextArena::Get()->GetRngSeedData(device, reset);
+}
+
 bool XLATensor::UseEagerDebugMode() {
   static const bool use_eager_debug_mode =
       xla::sys_util::GetEnvBool("XLA_USE_EAGER_DEBUG_MODE", false);
@@ -1981,10 +2017,11 @@ int64_t XLATensor::GetOpaqueHandle() const {
   if (xla_data != nullptr) {
     return UnwrapXlaData(xla_data)->GetOpaqueHandle();
   }
-  const torch_xla::DeviceData* device_data =
-      torch_xla::DeviceData::Cast(GetIrValue().node.get());
-  if (device_data) {
-    return device_data->data()->GetHandle();
+  const auto backend_data =
+      torch::lazy::getBackend()->GetComputationDataFromNode(
+          GetIrValue().node.get());
+  if (backend_data) {
+    return backend_data->GetHandle();
   } else {
     XLA_CHECK(false) << "XlaTensor does not have data handle";
   }

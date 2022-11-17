@@ -58,6 +58,8 @@
 namespace torch_xla {
 namespace {
 
+static int64_t seed_info_id = -127389;
+
 struct NoGilSection {
   NoGilSection() : state(PyEval_SaveThread()) {}
   ~NoGilSection() { PyEval_RestoreThread(state); }
@@ -1493,16 +1495,11 @@ void InitXlaModuleBindings(py::module m) {
               data_handles;
 
           for (const torch::lazy::Node* nodeptr : post_order) {
-            const torch_xla::DeviceData* device_data =
-                torch_xla::DeviceData::Cast(nodeptr);
-            if (!device_data) {
+            const auto backend_data =
+                torch::lazy::getBackend()->GetComputationDataFromNode(nodeptr);
+            if (!backend_data) {
               continue;
             }
-            const auto& backend_data = device_data->data();
-            auto* infoptr =
-                static_cast<torch::lazy::LazyGraphExecutor::DeviceDataInfo*>(
-                    backend_data->info());
-            XLA_CHECK(infoptr);
 
             // Dedup by handle
             xla::ComputationClient::Data::OpaqueHandle handle =
@@ -1510,14 +1507,30 @@ void InitXlaModuleBindings(py::module m) {
             if (!data_handles.insert(handle).second) {
               continue;
             }
-
-            // add tensor_id after we make sure the handle does not exist yet.
-            tensor_ids.push_back(infoptr->tensor_id);
+            auto* infoptr =
+                static_cast<torch::lazy::LazyGraphExecutor::DeviceDataInfo*>(
+                    backend_data->info());
+            if (infoptr) {
+              tensor_ids.push_back(infoptr->tensor_id);
+            } else {
+              // TODO(JackCaoG): Make sure this device data is actually seed.
+              tensor_ids.push_back(seed_info_id);
+            }
             at::Tensor tensor = bridge::AtenFromXlaTensor(
                 torch_xla::XLATensor::Create(backend_data));
             ivalues.emplace_back(tensor);
           }
           return std::make_pair(tensor_ids, ivalues);
+        });
+
+  m.def("_get_seed_info_id", []() -> int64_t { return seed_info_id; });
+
+  m.def("_get_rng_seed_as_tensor",
+        [](const std::string& device_str, bool reset) -> at::IValue {
+          torch::lazy::BackendDevice device =
+              bridge::AtenDeviceToXlaDevice(c10::Device(device_str));
+          return bridge::AtenFromXlaTensor(torch_xla::XLATensor::Create(
+              XLATensor::GetRngSeedData(device, reset)));
         });
 
   // Return true if value of the tensor requires a computation.
@@ -1598,7 +1611,7 @@ void InitXlaModuleBindings(py::module m) {
             }
           }
 
-          auto results = torch::lazy::getBackend()->ExecuteComputation(
+          auto results = XLATensor::ExecuteComputationWithBarrier(
               cachedComputation->computation, parameters_data, device);
           std::vector<at::Tensor> retlist;
           {

@@ -109,6 +109,7 @@ function run_op_tests {
   run_dynamic python3 "$CDIR/../../test/nn/test_convolution.py" "$@" -v TestConvolutionNNDeviceTypeXLA
   run_dynamic python3 "$CDIR/../../test/test_type_promotion.py" "$@" -v TestTypePromotionXLA
   run_dynamic python3 "$CDIR/test_operations.py" "$@" --verbosity=$VERBOSITY
+  run_dynamic python3 "$CDIR/test_dynamic_shapes.py" "$@"
   run_opbyop python3 "$CDIR/test_operations.py" "$@" --verbosity=$VERBOSITY
   run_eager_debug python3 "$CDIR/test_operations.py" "$@" --verbosity=$VERBOSITY
   run_async_scalar python3 "$CDIR/test_operations.py" "$@" --verbosity=$VERBOSITY
@@ -129,6 +130,7 @@ function run_op_tests {
   run_pjrt python3 "$CDIR/pjrt/test_experimental_pjrt.py"
   run_pjrt python3 "$CDIR/pjrt/test_experimental_tpu.py"
   run_pjrt python3 "$CDIR/pjrt/test_ddp.py"
+  run_pjrt python3 "$CDIR/pjrt/test_mesh_service.py"
   run_pjrt python3 "$CDIR/test_xla_sharding.py"
   run_test python3 "$CDIR/test_operations_hlo.py" "$@" --verbosity=$VERBOSITY
 }

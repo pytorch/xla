@@ -184,6 +184,9 @@ class XLATensor : public c10::intrusive_ptr_target {
 
   static uint64_t GetRunningSeed(const torch::lazy::BackendDevice& device);
 
+  static torch::lazy::BackendDataPtr GetRngSeedData(
+      const torch::lazy::BackendDevice& device, bool reset);
+
   // Dispatches a comparison operator, setting the logical type of the result
   // appropriately.
   static XLATensorPtr DispatchComparisonOp(c10::Symbol kind,
@@ -1235,6 +1238,11 @@ class XLATensor : public c10::intrusive_ptr_target {
   static ComputationCache* GetComputationCache();
 
   int64_t GetOpaqueHandle() const;
+
+  static std::vector<torch::lazy::BackendDataPtr> ExecuteComputationWithBarrier(
+      torch::lazy::ComputationPtr computation,
+      c10::ArrayRef<torch::lazy::BackendDataPtr> arguments,
+      const torch::lazy::BackendDevice& device);
 
  private:
   struct SyncTensorsConfig {
