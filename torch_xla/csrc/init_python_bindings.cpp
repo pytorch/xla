@@ -1192,7 +1192,15 @@ void InitXlaModuleBindings(py::module m) {
     return GetMetricData(name);
   });
   m.def("_xla_metrics_report",
-        []() { return xla::metrics_reader::CreateMetricReport(); });
+        []() {
+          // NOTE: [TORCH_LAZY_COUNTER v.s. XLA_COUNTER]
+          // Counters and Metrics are divided into two groups: one in PyTorch/XLA and another in ComputationClient.
+          // Therefore, we need to stitch the report together. Ideally, those two sets shouldn't have any overlaps
+          // The reason why is that we cannot have ComputationClient to use the TORCH_LAZY_COUNTER as it currently
+          // cannot depend on PyTorch (as part of TensorFlow).
+          // TODO(jwtan): Unify them once ComputationClient becomes a standalone library.
+          return torch::lazy::CreateMetricReport() + xla::metrics_reader::CreateMetricReport();
+        });
   m.def("_short_xla_metrics_report",
         [](const py::list& counter_names, const py::list& metric_names) {
           std::vector<std::string> counter_name_vec;
