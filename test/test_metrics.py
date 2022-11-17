@@ -89,7 +89,7 @@ class MetricsTest(unittest.TestCase):
             counter_names=['CreateCompileHandles'],
             metric_names=['InboundData']))
 
-  def test_metrics_report_default_list(self):
+  def test_metrics_report(self):
     # TODO(jwtan): Add test to cover TrimIrGraph, SyncTensorsToData, TransferToServerAsync, IrValueTensorToXlaData
     xla_device = xm.xla_device()
     t1 = torch.tensor(1456, device=xla_device)
@@ -104,6 +104,7 @@ class MetricsTest(unittest.TestCase):
     self.assertIn("DestroyXlaTensor", report)
     self.assertIn("UncachedCompile", report)
     self.assertIn("MarkStep", report)
+    self.assertEqual(len(met.counter_names()), 20)
 
     # metrics
     self.assertIn("TensorsGraphSize", report)

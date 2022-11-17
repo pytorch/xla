@@ -1182,7 +1182,13 @@ void InitXlaModuleBindings(py::module m) {
           XLATensor::WaitDeviceOps(devices);
         },
         py::arg("devices"));
-  m.def("_xla_counter_names", []() { return xla::metrics::GetCounterNames(); });
+  m.def("_xla_counter_names", []()
+    {
+      auto counter_names = torch::lazy::GetCounterNames();
+      auto xla_counter_names = xla::metrics::GetCounterNames();
+      counter_names.insert(counter_names.end(), xla_counter_names.begin(), xla_counter_names.end());
+      return counter_names;
+    });
   m.def("_xla_counter_value", [](const std::string& name) -> py::object {
     xla::metrics::CounterData* data = xla::metrics::GetCounter(name);
     return data != nullptr ? py::cast<int64_t>(data->Value()) : py::none();
