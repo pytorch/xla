@@ -102,6 +102,15 @@ class XlaShardingTest(unittest.TestCase):
         torch_xla._XLAC._get_xla_sharding_spec(xt),
         torch_xla._XLAC._get_xla_sharding_spec(xt2))
 
+  def test_mark_step(self):
+    xt = torch.randn(2, 4, 8, 16).to(xm.xla_device())
+    xs.mark_sharding(xt, self._get_mesh((1, 1, 1, self.n_devices)),
+                     (0, 1, 2, 3))
+    sharding_spec = torch_xla._XLAC._get_xla_sharding_spec(xt)
+    xm.mark_step()  # resets IR value
+    self.assertEqual(sharding_spec, torch_xla._XLAC._get_xla_sharding_spec(xt))
+
+
 
 class VirtualDeviceTest(XlaShardingTest):
 

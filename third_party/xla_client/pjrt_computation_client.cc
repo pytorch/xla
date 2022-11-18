@@ -367,16 +367,20 @@ PjRtComputationClient::ExecuteReplicated(
 
   std::vector<std::vector<ComputationClient::DataPtr>> data_handles;
   data_handles.reserve(results.size());
-  for (auto& result : results) {
+  for (int32_t i = 0; i < results.size(); ++i) {
+    xla::PjRtDevice* pjrt_device = StringToPjRtDevice(devices[i]);
+    XLA_CHECK(pjrt_device->IsAddressable()) << pjrt_device->DebugString();
+
     std::vector<ComputationClient::DataPtr> datas;
-    datas.reserve(result.size());
-    for (int32_t i = 0; i < result.size(); ++i) {
-      std::unique_ptr<xla::PjRtBuffer> buffer = std::move(result[i]);
+    datas.reserve(results[i].size());
+    for (int32_t j = 0; j < results[i].size(); ++j) {
+      std::unique_ptr<xla::PjRtBuffer> buffer = std::move(results[i][j]);
+      XLA_CHECK(pjrt_device == buffer->device())
+          << pjrt_device->DebugString() << " vs "
+          << buffer->device()->DebugString();
 
       std::shared_ptr<PjRtData> data = std::make_shared<PjRtData>(
-          devices[i], buffer->on_device_shape(),
-          std::move(buffer));
-
+          devices[i], buffer->on_device_shape(), std::move(buffer));
       datas.push_back(data);
     }
     data_handles.push_back(datas);

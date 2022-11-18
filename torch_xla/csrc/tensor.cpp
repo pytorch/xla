@@ -670,7 +670,7 @@ void XLATensor::ClearShardingSpec() {
   torch::lazy::Value ir_value = CurrentIrValue();
   if (ir_value) {
     if (ir_value.node != nullptr) {
-      dynamic_cast<XlaNode*>(GetIrValue().node.get())->ClearSharding();
+      dynamic_cast<XlaNode*>(ir_value.node.get())->ClearSharding();
     }
   }
 }
@@ -725,7 +725,11 @@ void XLATensor::SetInPlaceIrValue(torch::lazy::Value ir_value) {
 void XLATensor::AssignIrValue(torch::lazy::Value ir_value) const {
   // Sharding annotation is not null, if xla_data() is sharded.
   ShardingSpecPtr sharding = sharding_spec();
-  if (ir_value && sharding != nullptr) {
+  if (CurrentXlaData() != nullptr && sharding != nullptr) {
+    if (!ir_value) {
+      ir_value = CreateTensorNode(CurrentXlaData(), /*read_only=*/false);
+    }
+    XLA_CHECK(ir_value.node != nullptr) << "Tyring to access a null cursor";
     dynamic_cast<XlaNode*>(ir_value.node.get())
         ->SetSharding(sharding->sharding);
   }
@@ -1543,15 +1547,16 @@ std::shared_ptr<XLATensor::Async> XLATensor::ScheduleSyncTensorsGraph(
       std::vector<torch::lazy::BackendDataPtr> results;
       // Execute replicated if the compiled computation is partitioned.
       if (async->cached_computation->is_sharded) {
+        // TODO(yeounoh) use local devices and verify with the pod execution.
         std::vector<std::string> devices =
-            xla::ComputationClient::Get()->GetAllDevices();
+            xla::ComputationClient::Get()->GetLocalDevices();
         std::vector<std::vector<xla::ComputationClient::DataPtr>>
             device_arguments = torch_xla::ShardingUtil::InputHandler(
                 UnwrapXlaData(async->parameters_data), devices);
         xla::ComputationClient::ExecuteReplicatedOptions execute_options;
-
         TF_VLOG(3) << "Executing IR graph hash "
-                   << torch::lazy::HashToString(hash) << " on all devices.";
+                   << torch::lazy::HashToString(hash)
+                   << " on devices: " << absl::StrJoin(devices, ",");
         // TODO(jwtan): Remove the WrapXlaData when inherits LazyGraphExecutor.
         results = WrapXlaData(xla::ComputationClient::Get()->ExecuteReplicated(
             *async->cached_computation->computation->client_computation(),
@@ -1559,7 +1564,8 @@ std::shared_ptr<XLATensor::Async> XLATensor::ScheduleSyncTensorsGraph(
             execute_options)[0]);  // TODO(yeounoh) assumes replicated outputs
         TF_VLOG(3) << "Executing IR graph hash "
                    << torch::lazy::HashToString(hash)
-                   << " on all devices, done!";
+                   << " on devices: " << absl::StrJoin(devices, ",")
+                   << " done!";
       } else {
         TF_VLOG(3) << "Executing IR graph hash "
                    << torch::lazy::HashToString(hash) << " on device "
@@ -1912,7 +1918,6 @@ std::shared_ptr<XLATensor::Async> XLATensor::SyncTensorsGraphInternal(
   ExtractIRAndPrepareXlaData_(tensors, coll.config, coll.indices, ir_values,
                               tensor_data_vec);
   PostOrderData po_data = RunPostOrder(ir_values, &coll);
-
   coll.hash = torch::lazy::HashCombine(
       coll.hash, torch::lazy::Hash(po_data.parameter_sequence));
   TF_VLOG(4) << "Parameter sequence graph hash "
@@ -1922,10 +1927,8 @@ std::shared_ptr<XLATensor::Async> XLATensor::SyncTensorsGraphInternal(
   if (async != nullptr) {
     return async;
   }
-
   CompilationResult compile_result =
       Compile(*tensors, devices, coll, &po_data, ir_values);
-
   XLA_VALUE_METRIC("TensorsGraphSize", compile_result.emitted_nodes);
   TF_VLOG(5) << "TensorsGraphSize=" << compile_result.emitted_nodes;
 
