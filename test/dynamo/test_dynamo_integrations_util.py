@@ -89,6 +89,25 @@ class PybindTest(unittest.TestCase):
     xla_out_2 = xla_dummy_model(xla_input)
     assert (hash == torch_xla._XLAC._get_graph_hash([xla_out_2]))
 
+  def test_clear_pending_irs(self):
+    xla_device = xm.xla_device()
+    xm.mark_step()
+    t1 = torch.randn(20, 5).to(xla_device)
+    t2 = torch.randn(20, 5).to(xla_device)
+    t3 = t2 + t1
+    t4 = t3 * t2
+    met.clear_metrics()
+    torch_xla._XLAC._xla_sync_multi([t4], devices=[], wait=True)
+    # only t4 is materialized
+    self.assertIn("aten::add", torch_xla._XLAC._get_xla_tensors_text([t3]))
+    self.assertEqual(met.metric_data('ExecuteTime')[0], 1)
+    torch_xla._XLAC._clear_pending_irs(str(xla_device))
+    self.assertNotIn("aten::add", torch_xla._XLAC._get_xla_tensors_text([t3]))
+    self.assertEqual(met.metric_data('ExecuteTime')[0], 1)
+    xm.mark_step()
+    # mark_step should not incur new execution
+    self.assertEqual(met.metric_data('ExecuteTime')[0], 1)
+
   def test_run_cached_graph(self):
     xla_device = xm.xla_device()
     xla_input = torch.randn(64, 256, 14, 14).to(xla_device)

@@ -23,7 +23,7 @@ class DynamoBasicTest(unittest.TestCase):
     return self.fn_simple(x, y)
 
   @dynamo.optimize('torchxla_trace_once')
-  def resetnet_18_dynamo(self, model, data):
+  def run_model_with_dynamo(self, model, data):
     return model(data)
 
   def test_simple_model(self):
@@ -54,15 +54,17 @@ class DynamoBasicTest(unittest.TestCase):
         data=(torch.randn(batch_size, 3, 224, 224, device=device),
               torch.zeros(batch_size, dtype=torch.int64, device=device)),
         sample_count=sample_count)
-    model = torchvision.models.resnet18()
-    model.eval()
-    xla_model = torchvision.models.resnet18().to(device)
-    xla_model.eval()
+    resnet18 = torchvision.models.resnet18()
+    resnet18.eval()
+    xla_resnet18 = torchvision.models.resnet18().to(device)
+    xla_resnet18.eval()
     for data, _ in loader:
-      output = self.resetnet_18_dynamo(xla_model, data)
-      torch.allclose(model(data.cpu()), output.cpu())
-    self.assertEqual(met.metric_data('CompileTime')[0], 1)
-    self.assertEqual(met.metric_data('ExecuteTime')[0], sample_count + 1)
+      output = self.run_model_with_dynamo(xla_resnet18, data)
+      torch.allclose(resnet18(data.cpu()), output.cpu())
+    # One graph for initial input data materialization. Another grpah for the
+    # real model code.
+    self.assertEqual(met.metric_data('CompileTime')[0], 2)
+    self.assertEqual(met.metric_data('ExecuteTime')[0], sample_count + 2)
     self.assertEqual(
         met.metric_data('RunCachedGraphInputData')[0], sample_count)
     self.assertEqual(
