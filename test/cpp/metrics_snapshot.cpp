@@ -4,6 +4,7 @@
 
 #include "tensorflow/compiler/xla/xla_client/tf_logging.h"
 #include "tensorflow/compiler/xla/xla_client/util.h"
+#include "torch/csrc/lazy/core/metrics.h"
 
 namespace torch_xla {
 namespace cpp_test {
@@ -18,6 +19,12 @@ MetricsSnapshot::MetricsSnapshot() {
   }
   for (auto& name : xla::metrics::GetCounterNames()) {
     xla::metrics::CounterData* counter = xla::metrics::GetCounter(name);
+    counters_map_.emplace(name, counter->Value());
+  }
+
+  // See NOTE: [TORCH_LAZY_COUNTER v.s. XLA_COUNTER].
+  for (auto& name : torch::lazy::GetCounterNames()) {
+    auto* counter = torch::lazy::GetCounter(name);
     counters_map_.emplace(name, counter->Value());
   }
 }
