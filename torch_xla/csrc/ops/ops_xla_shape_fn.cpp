@@ -213,11 +213,35 @@ xla::Shape BaddbmmOutputShape(const torch::lazy::Value& self,
                               const torch::lazy::Value& batch2,
                               const torch::lazy::Value& beta,
                               const torch::lazy::Value& alpha) {
+
+  LOG(WARNING) << "opes_xla_shpae_fn.cpp(((((((((((((((((((((((((((((((";
+  // LOG(WARNING) << "self" << self.Output()->ToString();
+  // LOG(WARNING) << "batch1" << batch1->Output()->ToString();
+  // LOG(WARNING) << "batch2" << batch2->Output()->ToString();
+  // LOG(WARNING) << "bate" << beta->Output()->ToString();
+  // LOG(WARNING) << "alpha" << alpha->node->op->ToString();
+
   auto lower_for_shape_fn =
       [](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
+    // LOG(WARNING) << "*****************ops 0**   " << operands[0];
+    // LOG(WARNING) << "*****************ops 1**   " << operands[1];
+    // LOG(WARNING) << "*****************ops 2**   " << operands[2];
+    // LOG(WARNING) << "*****************ops 3**   " << operands[3];
+    // LOG(WARNING) << "*****************ops 4**   " << operands[4];
+    for (const auto& memory : operands) {
+      LOG(WARNING) << "*****************ops i**   " << memory;
+    }
     return BuildMatMulWithMultiplier(operands[0], operands[1], operands[2],
                                      operands[3], operands[4]);
+                                     //xla_batch1, xla_batch2, xla_self,
+                                            // xla_alpha, xla_beta
   };
+
+  LOG(WARNING) << "***************** self **   " << GetXlaShape(self).ToString();
+  LOG(WARNING) << "***************** batch1 **   " << GetXlaShape(batch1).ToString();
+  LOG(WARNING) << "***************** batch2 **   " << GetXlaShape(batch2).ToString();
+  LOG(WARNING) << "***************** beta **   " << GetXlaShape(beta).ToString();
+  LOG(WARNING) << "***************** alpha **   " << GetXlaShape(alpha).ToString();
 
   return InferOutputShape(
       {GetXlaShape(batch1), GetXlaShape(batch2), GetXlaShape(self),
