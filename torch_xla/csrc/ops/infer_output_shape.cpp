@@ -8,22 +8,14 @@ xla::Shape InferOutputShape(absl::Span<const xla::Shape> input_shapes,
                             const LowerForShapeFn& core_lowering_fn) {
   xla::XlaBuilder b("InferOutputShape");
   std::vector<xla::XlaOp> parameters;
-  LOG(WARNING) << "enter the calculate";
   for (size_t parameter_number = 0; parameter_number < input_shapes.size();
        ++parameter_number) {
     parameters.push_back(xla::Parameter(&b, parameter_number,
                                         input_shapes[parameter_number],
                                         absl::StrCat("p", parameter_number)));
-    LOG(WARNING) << "&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&-------";
-    LOG(WARNING) << "parameters[ " << parameter_number << " ] : " << parameters[parameter_number];
   }
 
-  for (const auto& memory : parameters) {
-    LOG(WARNING) << "*****************paras i**   " << memory;
-  }
   xla::XlaOp result = core_lowering_fn(parameters);
-  LOG(WARNING) << "&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&";
-  LOG(WARNING) << result;
   return XlaHelpers::ShapeOfXlaOp(result);
 }
 
