@@ -1,6 +1,7 @@
 import functools
 import operator
 import os
+import re
 from typing import Dict, NamedTuple, Optional, List, Tuple
 import requests
 import yaml
@@ -85,6 +86,16 @@ def get_tpu_env() -> Dict[str, str]:
   metadata = _get_metadata('tpu-env')
 
   return yaml.load(metadata, yaml.Loader)
+
+
+def version() -> int:
+  try:
+    env = get_tpu_env()
+  except requests.HTTPError as e:
+    raise EnvironmentError('Failed to get TPU metadata') from e
+
+  match = re.match(r'^v(\d)-(\d+)$', env['ACCELERATOR_TYPE'])
+  return int(match.groups()[0])
 
 
 def get_worker_ips() -> List[str]:

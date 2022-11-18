@@ -201,14 +201,15 @@ def _run_thread_per_device(local_rank: int,
   with concurrent.futures.ThreadPoolExecutor(
       max_workers=num_threads) as executor:
 
-    if device_type() == 'TPU':
-      # HACK: need to call with each device since it relies on an XLA collective
-      master_ip = next(executor.map(_discover_tpu_master_worker_ip, devices))
-      init_method = f'tcp://{master_ip}:{master_port}'
-    else:
-      init_method = None
+    if os.getenv('PJRT_INIT_TORCH_DISTRIBUTED', '0') == '1':
+      if device_type() == 'TPU':
+        # HACK: need to call with each device since it relies on an XLA collective
+        master_ip = next(executor.map(_discover_tpu_master_worker_ip, devices))
+        init_method = f'tcp://{master_ip}:{master_port}'
+      else:
+        init_method = None
 
-    init_pjrt_process_group(init_method=init_method)
+      init_pjrt_process_group(init_method=init_method)
 
     device_ordinals = [
         torch_xla._XLAC._xla_get_device_ordinal(d) for d in devices
