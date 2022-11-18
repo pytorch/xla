@@ -1083,7 +1083,16 @@ std::unique_ptr<xrt::XLAComputation> XrtComputationClient::CreateXrtComputation(
   if (devices.size() > 1) {
     auto device_assignment = config->mutable_device_assignment();
     auto computation_device = device_assignment->add_computation_devices();
-    for (int64_t i = 0; i < devices.size(); ++i) {
+    auto local_device = GetLocalDevices();
+    int64_t local_tpu;
+    for (auto& device : local_device) {
+      if (device.compare(0, 4, "CPU:") == 0 && devices.size() > 1) {
+        continue;
+      }
+      local_tpu = std::stoi(device.substr(4));
+    }
+    int64_t local_ordinal_start = 32 * (local_tpu / 32);
+    for (int64_t i = local_ordinal_start; i < local_ordinal_start + 32; ++i) {
       Device device(devices[i]);
       auto replica_device = computation_device->add_replica_devices();
       if (device.kind == "TPU") {
@@ -1405,18 +1414,19 @@ void XrtComputationClient::InitializeDevices(
     // [num_tasks][devices_per_task][mesh_shape_size] coordinates, where the
     // mesh coordinates are usually [x, y, z, c] ('x', 'y' and 'z' being the
     // spatial chip coordinated and 'c' the core number).
-    int64_t base_index = parsed_device.task *
+    int64_t task_index = parsed_device.task *
                              topology_proto->num_tpu_devices_per_task() *
-                             topology_proto->mesh_shape_size() +
-                         parsed_device.id * topology_proto->mesh_shape_size();
+                             topology_proto->mesh_shape_size();
+    int64_t base_index = task_index + parsed_device.id * topology_proto->mesh_shape_size();
     std::vector<int> device_mesh_coords(topology_proto->mesh_shape_size());
     for (int i = 0; i < topology_proto->mesh_shape_size(); ++i) {
       device_mesh_coords[i] =
-          topology_proto->device_coordinates(base_index + i);
+          topology_proto->device_coordinates(base_index - task_index + i);
     }
     device_mesh_coords_.insert(
         {dev_target.second, std::move(device_mesh_coords)});
   }
+
 
   // Create the mesh service only if we have more than one worker, or if
   // multi-processing is active.
