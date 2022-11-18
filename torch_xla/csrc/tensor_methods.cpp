@@ -749,9 +749,10 @@ XLATensorPtr XLATensor::baddbmm(const XLATensorPtr& input,
       alpha, batch1->shape().get().element_type(), batch1->GetDevice());
   torch::lazy::Value bias_multiplier = XLATensor::GetIrValueForScalar(
       beta, input->shape().get().element_type(), input->GetDevice());
-  return input->CreateFrom(BaddBmm(batch1->GetIrValue(), batch2->GetIrValue(),
-                                   input->GetIrValue(), product_multiplier,
-                                   bias_multiplier));
+  return input->CreateFrom(torch::lazy::MakeNode<Baddbmm>(
+      input->GetIrValue(), batch1->GetIrValue(), batch2->GetIrValue(),
+      bias_multiplier, product_multiplier));
+  // self, batch1, batch2, beta, alpha
 }
 
 XLATensorPtr XLATensor::bernoulli(const XLATensorPtr& input,

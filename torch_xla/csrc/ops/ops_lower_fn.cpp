@@ -132,6 +132,31 @@ torch_xla::XlaOpVector Atanh::Lower(LoweringContext* loctx) const {
   return ReturnOp(xla::Atanh(xla_input), loctx);
 }
 
+torch_xla::XlaOpVector Baddbmm::Lower(LoweringContext* loctx) const {
+  // return input->CreateFrom(torch::lazy::MakeNode<Baddbmm>(
+  //     input->GetIrValue(), batch1->GetIrValue(), batch2->GetIrValue(),
+  //     bias_multiplier, product_multiplier));
+  // // self, batch1, batch2, beta, alpha
+  xla::XlaOp xla_self = loctx->GetOutputOp(operand(0));
+  xla::XlaOp xla_batch1 = loctx->GetOutputOp(operand(1));
+  xla::XlaOp xla_batch2 = loctx->GetOutputOp(operand(2));
+  xla::XlaOp xla_beta = loctx->GetOutputOp(operand(3));
+  xla::XlaOp xla_alpha = loctx->GetOutputOp(operand(4));
+  std::tie(xla_batch1, xla_batch2) =
+      XlaHelpers::PromoteValues(xla_batch1, xla_batch2);
+
+  LOG(WARNING) << "opes_lower_fn.cpp(((((((((((((((((((((((((((((((";
+  LOG(WARNING) << "xla_self      " << xla_self;
+  LOG(WARNING) << "xla_batch1    " << xla_batch1;
+  LOG(WARNING) << "xla_batch2    " << xla_batch2;
+  LOG(WARNING) << "xla_bate      " << xla_beta;
+  LOG(WARNING) << "xla_alpha     " << xla_alpha;
+
+  return ReturnOp(BuildMatMulWithMultiplier(xla_batch1, xla_batch2, xla_self,
+                                            xla_alpha, xla_beta),
+                  loctx);
+}
+
 torch_xla::XlaOpVector BinaryCrossEntropy::Lower(LoweringContext* loctx) const {
   xla::XlaOp logits = loctx->GetOutputOp(operand(0));
   xla::XlaOp labels = loctx->GetOutputOp(operand(1));
