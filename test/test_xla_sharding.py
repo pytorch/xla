@@ -103,6 +103,27 @@ class XlaShardingTest(unittest.TestCase):
         torch_xla._XLAC._get_xla_sharding_spec(xt2))
 
 
+class VirtualDeviceTest(XlaShardingTest):
+
+  @classmethod
+  def setUpClass(cls):
+    os.environ["XLA_USE_SPMD"] = "1"
+    super().setUpClass()
+
+  def test_mark_sharding(self):
+    partition_spec = (0, 1)
+    xt1 = torch.tensor([[1, 2, 3, 4, 5, 6, 7, 8]],
+                       dtype=torch.float,
+                       device=xm.xla_device())
+    xs.mark_sharding(xt1, self._get_mesh((1, self.n_devices)), partition_spec)
+    self.assertTrue(
+        torch.allclose(
+            xt1 + 0,
+            torch.tensor([1, 2, 3, 4, 5, 6, 7, 8],
+                         dtype=torch.float,
+                         device=xm.xla_device())))
+
+
 if __name__ == '__main__':
   test = unittest.main()
   sys.exit(0 if test.result.wasSuccessful() else 1)

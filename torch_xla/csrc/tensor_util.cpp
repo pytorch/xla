@@ -653,6 +653,16 @@ torch::lazy::BackendDataPtr TensorToXlaData(
     const at::Tensor& tensor, const xla::Shape& shape,
     const torch::lazy::BackendDevice& device) {
   XLA_TIMED("TensorToData");
+  if (device.type() == (int8_t)XlaDeviceType::SPMD) {
+    // When SPMD is enabled, we want to delay the data transfer for XLA
+    // tensors until the data is sharded. So, we skip the data transfer
+    // here and simply return a placeholder for the backend data ptr.
+    // Data will only be transferred via CreateTensorsData, when users
+    // call the mark_sharding API.
+    return WrapXlaData(
+        xla::ComputationClient::Get()->CreateDataPlaceholder("SPMD:0", shape));
+  }
+
   static const bool transfer_async =
       xla::sys_util::GetEnvBool("XLA_TRANSFER_SCALAR_ASYNC", false);
   if (transfer_async && tensor.dim() == 0 && tensor.numel() == 1) {

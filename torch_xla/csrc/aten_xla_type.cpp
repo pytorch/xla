@@ -459,7 +459,8 @@ at::Tensor XLANativeFunctions::_copy_from(const at::Tensor& self,
   auto self_tensor = bridge::TryGetXlaTensor(self);
   if (!self_tensor) {
     static bool sync_update =
-        xla::sys_util::GetEnvBool("XLA_TENSOR_UPDATE_SYNC", true);
+        xla::sys_util::GetEnvBool("XLA_TENSOR_UPDATE_SYNC", true) &&
+        !xla::sys_util::GetEnvBool("XLA_USE_SPMD", false);
     XLA_CHECK(dst_tensor);
     dst_tensor->UpdateFromTensor(self, /*sync=*/sync_update);
   } else if (!dst_tensor) {
