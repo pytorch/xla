@@ -313,3 +313,8 @@ class TimedScope(object):
 
   def set_error(self, error):
     self._error = error
+
+
+def check_env_flag(name, default=''):
+  flag = os.getenv(name, default)
+  return flag == 'true' or (flag.isdigit() and int(flag) > 0)
