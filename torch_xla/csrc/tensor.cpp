@@ -1960,6 +1960,11 @@ bool XLASymNodeImpl::bool_() {
   return dn->getDynamicValue() != 0;
 }
 
+int64_t XLASymNodeImpl::int_() {
+  std::shared_ptr<torch::lazy::DimensionNode> dn = torch_xla::DimCast(node());
+  return dn->getDynamicValue();
+}
+
 c10::SymNode XLASymNodeImpl::eq(const c10::SymNode& other) {
   auto pother = dynamic_cast<XLASymNodeImpl*>(other.get());
   auto neq = torch::lazy::MakeNode<SizeEq>(node(), pother->node());

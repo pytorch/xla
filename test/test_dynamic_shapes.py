@@ -21,13 +21,9 @@ class TestDynamicShapes(unittest.TestCase):
     t1[3][0] = 1
     # t2 has size [<=10, 2]
     t2 = torch.nonzero(t1)
-    t4 = t2.shape[0] + t2.shape[1]
-    print(t4)
-    int(t4)
-    print(int(t4))
-    print(t4.cpu())
-    xm.mark_step()
-    print('done')    
+    t4 = t2.shape[0] + t2.shape[1] # Creates a SizeAdd node.
+    dynamic_size = int(t4)
+    self.assertEqual(dynamic_size, 3)
 
 
 if __name__ == '__main__':
