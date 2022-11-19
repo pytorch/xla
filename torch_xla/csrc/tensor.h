@@ -42,6 +42,7 @@ class TORCH_API XLASymNodeImpl : public c10::SymNodeImpl {
   std::string str() override;
 
   bool bool_() override;
+  int64_t int_() override;
 
  private:
   torch::lazy::NodePtr node_;
