@@ -22,8 +22,9 @@ class TestDynamicShapes(unittest.TestCase):
     # t2 has size [<=10, 2]
     t2 = torch.nonzero(t1)
     t4 = t2.shape[0] + t2.shape[1] # Creates a SizeAdd node.
-    dynamic_size = int(t4)
+    dynamic_size = int(t4) # Exercises SizeAdd::getDynamicValue
     self.assertEqual(dynamic_size, 3)
+    self.assertEqual(str(t4), '<=12') # Exercise SizeAdd::getStaticValue
 
 
 if __name__ == '__main__':
