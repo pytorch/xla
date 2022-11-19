@@ -83,8 +83,6 @@ int64_t SizeAdd::getDynamicValue() const {
 std::string SizeAdd::ToString() const { return "SizeAdd"; }
 
 XlaOpVector SizeAdd::Lower(LoweringContext* loctx) const {
-  std::cout << "xw32, file=" << __FILE__ << ", line=" << __LINE__
-            << "function=" << __FUNCTION__ << ": " << std::endl;
   auto input1 = loctx->GetOutputOp(operand(0));
   auto input2 = loctx->GetOutputOp(operand(1));
   return ReturnOp((input1 + input2), loctx);
