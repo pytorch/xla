@@ -1,0 +1,16 @@
+diff --git a/tensorflow/core/distributed_runtime/master.cc b/tensorflow/core/distributed_runtime/master.cc
+index a54b1c0d660..0801160227e 100644
+--- a/tensorflow/core/distributed_runtime/master.cc
++++ b/tensorflow/core/distributed_runtime/master.cc
+@@ -382,7 +382,10 @@ void Master::CreateSession(const CreateSessionRequest* req,
+       worker_cache_factory_options.cluster_def = &cluster_def;
+       // If the target starts with gRPC protocol prefix, remove the prefix
+       string normalized_string(req->target());
+-      RE2::Replace(&normalized_string, kGrpcPrefixRegex, "");
++      static string grpc_prefxi = "grpc://";
++      if (normalized_string.rfind(grpc_prefxi, 0) == 0) {
++       normalized_string = normalized_string.substr(grpc_prefxi.size());
++      }
+ 
+       // Set the server_def's job_name and task_index fields.
+       for (auto&& job : cluster_def.job()) {
