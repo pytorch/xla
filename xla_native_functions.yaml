@@ -355,6 +355,7 @@ symint:
   - view
   - diagonal_backward
   - narrow_copy
+  - select_backward
 autograd:
   - einsum
   - max_pool2d

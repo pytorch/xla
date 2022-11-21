@@ -3046,10 +3046,11 @@ at::Tensor XLANativeFunctions::pixel_unshuffle(const at::Tensor& self,
                                                int64_t downscale_factor) {
   return at::native::math_pixel_unshuffle(self, downscale_factor);
 }
-at::Tensor XLANativeFunctions::select_backward(const at::Tensor& grad_output,
-                                               at::IntArrayRef input_sizes,
-                                               int64_t dim, int64_t index) {
-  return at::native::select_backward(grad_output, input_sizes, dim, index);
+at::Tensor XLANativeFunctions::select_backward_symint(
+    const at::Tensor& grad_output, c10::SymIntArrayRef input_sizes, int64_t dim,
+    c10::SymInt index) {
+  return at::native::select_backward_symint(grad_output, input_sizes, dim,
+                                            index);
 }
 at::Tensor XLANativeFunctions::linalg_pinv(
     const at::Tensor& self, const c10::optional<at::Tensor>& atol,
