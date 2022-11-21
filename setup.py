@@ -39,6 +39,7 @@ from __future__ import print_function
 
 from setuptools import setup, find_packages, distutils
 from torch.utils.cpp_extension import BuildExtension, CppExtension
+import contextlib
 import distutils.ccompiler
 import distutils.command.clean
 import glob
@@ -147,7 +148,9 @@ def build_extra_libraries(base_dir, build_mode=None):
 
 def maybe_bundle_libtpu(base_dir):
   libtpu_path = os.path.join(base_dir, 'torch_xla', 'lib', 'libtpu.so')
-  os.remove(libtpu_path)
+  with contextlib.suppress(FileNotFoundError):
+    os.remove(libtpu_path)
+
   if not _check_env_flag('BUNDLE_LIBTPU', '0'):
     return
 
