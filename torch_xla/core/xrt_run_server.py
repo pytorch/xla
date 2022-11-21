@@ -6,6 +6,7 @@ import subprocess
 import sys
 
 from pathlib import Path
+os.environ['INIT_LAZY_BACKEND'] = '0'
 from torch_xla.__init__ import server_is_alive, XRT_RUN_SERVER_PROCESS, XRT_SERVER_REGEX
 
 
