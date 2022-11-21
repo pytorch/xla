@@ -531,11 +531,7 @@ XLATensor::XLATensor(std::shared_ptr<View> view,
     : XLATensor(std::make_shared<Data>(std::move(view), device,
                                        logical_element_type)) {}
 
-XLATensor::XLATensor(std::shared_ptr<Data> data)
-    : data_(std::move(data)),
-      storage_(c10::Storage(
-          {}, 0,
-          c10::DataPtr(nullptr, backendDeviceToAtenDevice(data_->device)))) {}
+XLATensor::XLATensor(std::shared_ptr<Data> data) : data_(std::move(data)) {}
 
 XLATensor::Data* XLATensor::data() const {
   XLA_CHECK(data_ != nullptr) << "Trying to access a null cursor";
@@ -935,10 +931,8 @@ std::shared_ptr<View> XLATensor::CreateView(ViewInfo view_info) const {
 }
 
 XLATensorPtr XLATensor::CreateViewTensor(ViewInfo view_info) const {
-  auto new_tensor =
-      Create(CreateView(std::move(view_info)), GetDevice(), dtype_optional());
-  new_tensor->storage_ = Storage();
-  return new_tensor;
+  return Create(CreateView(std::move(view_info)), GetDevice(),
+                dtype_optional());
 }
 
 at::Tensor XLATensor::ToTensor(bool detached) {

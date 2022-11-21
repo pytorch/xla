@@ -1227,8 +1227,6 @@ class XLATensor : public c10::intrusive_ptr_target {
   void ClearShardingSpec();
   ShardingSpecPtr sharding_spec() const;
 
-  const c10::Storage& Storage() const { return storage_; }
-
   struct CachedComputation {
     CachedComputation(ComputationPtr computation, bool is_sharded = false)
         : computation(std::move(computation)), is_sharded(is_sharded) {}
@@ -1513,12 +1511,6 @@ class XLATensor : public c10::intrusive_ptr_target {
   bool ShouldSyncIrNode();
 
   std::shared_ptr<Data> data_;
-  // Temporarily used to suport Tensor.is_alias_of().
-  // This is a fake storage that doesn't store anything.
-  // Instead it serves as a marker to mark LazyTensors that
-  // points to the same storage, and thus alias of each other.
-  // FIXME(alanwaketan): Remove this once we have functionalization (bdhirsh).
-  c10::Storage storage_;
 };
 
 }  // namespace torch_xla

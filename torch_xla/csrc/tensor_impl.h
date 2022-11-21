@@ -1,7 +1,6 @@
 #pragma once
 
 #include <ATen/Tensor.h>
-#include <c10/core/Storage.h>
 #include <c10/core/TensorImpl.h>
 
 #include "torch_xla/csrc/tensor.h"
@@ -42,10 +41,6 @@ class XLATensorImpl : public c10::TensorImpl {
   int64_t numel_custom() const override;
 
   bool is_contiguous_custom(at::MemoryFormat memory_format) const override;
-
-  const at::Storage& storage() const override;
-
-  bool has_storage() const override;
 
   static void AtenInitialize();
 
