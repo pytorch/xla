@@ -348,6 +348,7 @@ supported:
   # - _trilinear
   # - logsumexp.out
 symint:
+  - embedding
   - empty.memory_format
   - empty_strided
   - expand
@@ -355,6 +356,7 @@ symint:
   - view
   - diagonal_backward
   - narrow_copy
+  - select_backward
 autograd:
   - einsum
   - max_pool2d
