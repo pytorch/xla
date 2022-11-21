@@ -129,5 +129,6 @@ def _init_xla_lazy_backend():
 
 atexit.register(_prepare_to_exit)
 _apply_patches()
+# _init_xla_lazy_backend should not be called more than once.
 if os.environ.get('INIT_LAZY_BACKEND', '1') != '0':
   _init_xla_lazy_backend()
