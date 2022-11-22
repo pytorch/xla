@@ -192,13 +192,15 @@ def _run_thread_per_device(local_rank: int, local_world_size: int,
 
 
 @requires_pjrt
-def _run_multiprocess(fn: Callable[..., R], *args, **kwargs) -> Dict[int, R]:
+def _run_multiprocess(fn: Callable[..., R], start_method: str = 'spawn', *args, **kwargs) -> Dict[int, R]:
   """Runs `fn` on all devices available to PjRt.
 
   Spawns one process per physical device (e.g. TPU chip).
 
   Args:
     fn: Function to run on all devices
+    start_method: The Python `multiprocessing` process creation method.
+      Default: `spawn`
     args: args to pass to `fn`
     kwargs: kwargs to pass to `fn`
 
@@ -213,7 +215,7 @@ def _run_multiprocess(fn: Callable[..., R], *args, **kwargs) -> Dict[int, R]:
 
   with concurrent.futures.ProcessPoolExecutor(
       max_workers=num_processes,
-      mp_context=torch.multiprocessing.get_context('spawn')) as executor:
+      mp_context=torch.multiprocessing.get_context(start_method)) as executor:
 
     mp_fn = functools.partial(
         _run_thread_per_device,
@@ -239,15 +241,17 @@ class _SpawnFn:
     self.fn(global_ordinal(), *self.args, **self.kwargs)
 
 
-def spawn(fn: Callable, args: Tuple = ()) -> None:
+def spawn(fn: Callable, start_method: str = 'spawn', args: Tuple = ()) -> None:
   """Run functions compatible with xmp.spawn.
 
   Args:
     fn: Callable that takes the process index as the first argument.
     args: args to pass to `fn`
+    start_method: The Python `multiprocessing` process creation method.
+      Default: `spawn`
   """
   spawn_fn = _SpawnFn(fn, *args)
-  _run_multiprocess(spawn_fn)
+  _run_multiprocess(spawn_fn, start_method)
 
 
 def broadcast_master_param(model: nn.Module) -> None:
