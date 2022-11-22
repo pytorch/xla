@@ -192,7 +192,10 @@ def _run_thread_per_device(local_rank: int, local_world_size: int,
 
 
 @requires_pjrt
-def _run_multiprocess(fn: Callable[..., R], start_method: str = 'spawn', *args, **kwargs) -> Dict[int, R]:
+def _run_multiprocess(fn: Callable[..., R],
+                      start_method: str = 'spawn',
+                      *args,
+                      **kwargs) -> Dict[int, R]:
   """Runs `fn` on all devices available to PjRt.
 
   Spawns one process per physical device (e.g. TPU chip).
