@@ -1083,6 +1083,28 @@ XLATensor::ExecuteComputationWithBarrier(
                                                        device);
 }
 
+void XLATensor::ClearPendingIrs(std::vector<XLATensorPtr> tensors,
+                                const torch::lazy::BackendDevice& device) {
+  std::unordered_set<int64_t> tensor_ids;
+  for (size_t i = 0; i < tensors.size(); ++i) {
+    if (tensor_ids.insert(tensors[i]->GetUniqueId()).second &&
+        tensors[i]->CurrentXlaData() == nullptr) {
+      torch::lazy::Value ir_value = tensors[i]->CurrentIrValue();
+      if (ir_value) {
+        xla::Shape shape = MakeShapeWithDeviceLayout(
+            tensors[i]->shape(), static_cast<XlaDeviceType>(device.type()));
+        torch::lazy::BackendDataPtr xla_data =
+            WrapXlaData(xla::ComputationClient::Get()->CreateDataPlaceholder(
+                device.toString(), std::move(shape)));
+        tensors[i]->AssignIrValue(torch::lazy::Value());
+        tensors[i]->data()->xla_data = xla_data;
+        tensors[i]->data()->view = nullptr;
+        tensors[i]->data()->tensor_data = c10::nullopt;
+      }
+    }
+  }
+}
+
 std::vector<at::Tensor> XLATensor::GetTensorsOpByOp(
     std::vector<XLATensorPtr>* tensors) {
   SyncTensorsConfig config;

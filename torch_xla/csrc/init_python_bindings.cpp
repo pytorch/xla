@@ -400,6 +400,13 @@ std::string GetLiveTensorsReport(size_t nodes_threshold,
   return ss.str();
 }
 
+void ClearPendingIrs(const std::string& device_str) {
+  auto opt_device = GetOptionalDevice(device_str);
+  XLA_CHECK(opt_device);
+  auto tensors = XLATensor::GetLiveTensors(&opt_device.value());
+  XLATensor::ClearPendingIrs(tensors, opt_device.value());
+}
+
 std::ptrdiff_t GetTensorViewAliasId(const at::Tensor& tensor) {
   XLATensorPtr xtensor = bridge::GetXlaTensor(tensor);
   return xtensor->GetViewAliasId();
@@ -1619,6 +1626,12 @@ void InitXlaModuleBindings(py::module m) {
     torch::lazy::hash_t hash = XLATensor::GetGraphHash(xtensors);
     std::string bin((const char*)&hash, sizeof(hash));
     return py::bytes(bin);
+  });
+
+  m.def("_clear_pending_irs", [](const std::string& device) {
+    // Use with caution. Those tensor whole ir was cleared with be replaced
+    // with a placeholder XLAData and SHOULD NOT be accessed.
+    ClearPendingIrs(device);
   });
 
   m.def("_run_cached_graph",
