@@ -1321,7 +1321,10 @@ XLATensor::SyncTensorCollection XLATensor::CollectSyncTensors(
   coll.indices.reserve(tensors.size());
   for (size_t i = 0; i < tensors.size(); ++i) {
     if (tensor_ids.insert(tensors[i]->GetUniqueId()).second &&
-        tensors[i]->CurrentXlaData() == nullptr) {
+        // A tensor's xla_data might not be up to date if there is a view
+        // associated with it. Make sure to sync those tensors here too.
+        (tensors[i]->CurrentXlaData() == nullptr ||
+         tensors[i]->data()->view != nullptr)) {
       torch::lazy::Value ir_value = tensors[i]->CurrentIrValue();
       if (ir_value) {
         if (ShouldSyncIrValue(ir_value)) {
