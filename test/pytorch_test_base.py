@@ -366,6 +366,8 @@ DISABLED_TORCH_TESTS_TPU_ONLY = {
         'test_diff_xla_float64',  # expected instruction to have shape equal
         'test_nullary_op_mem_overlap_xla',  # core dumped
         'test_index_reduce',  # takes too long
+        'test_take_xla_float64',  # 'dtype' do not match: torch.float32 != torch.float64
+        'test_take_xla_int16',  # 'dtype' do not match: torch.int32 != torch.int16
     },
 
     # test_indexing.py
