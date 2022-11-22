@@ -31,7 +31,7 @@
 #   XLA_CUDA=0
 #     build the xla/xrt client with CUDA enabled
 #
-#   BUNDLE_LIBTPU=1
+#   BUNDLE_LIBTPU=0
 #     include libtpu in final wheel
 #
 
