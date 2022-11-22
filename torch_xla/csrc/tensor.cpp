@@ -1324,7 +1324,8 @@ XLATensor::SyncTensorCollection XLATensor::CollectSyncTensors(
         // A tensor's xla_data might not be up to date if there is a view
         // associated with it. Make sure to sync those tensors here too.
         (tensors[i]->CurrentXlaData() == nullptr ||
-         tensors[i]->data()->view != nullptr)) {
+         (tensors[i]->data()->view != nullptr &&
+          !tensors[i]->data()->view->IsUpToDate()))) {
       torch::lazy::Value ir_value = tensors[i]->CurrentIrValue();
       if (ir_value) {
         if (ShouldSyncIrValue(ir_value)) {
