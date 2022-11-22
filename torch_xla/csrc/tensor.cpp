@@ -723,13 +723,14 @@ void XLATensor::SetInPlaceIrValue(torch::lazy::Value ir_value) {
 }
 
 void XLATensor::AssignIrValue(torch::lazy::Value ir_value) const {
-  // Sharding annotation is not null, if xla_data() is sharded.
   ShardingSpecPtr sharding = sharding_spec();
-  if (CurrentXlaData() != nullptr && sharding != nullptr) {
+  if (sharding != nullptr) {
+    // Sharded xla_data is accompanied by sharding annotation.
+    // Use unsynced ir_value or xla_data to hold the annotation.
+    // TODO(yeounoh): This does not propagate sharding to views.
     if (!ir_value) {
-      ir_value = CreateTensorNode(CurrentXlaData(), /*read_only=*/false);
+      ir_value = GetIrValue();
     }
-    XLA_CHECK(ir_value.node != nullptr) << "Tyring to access a null cursor";
     dynamic_cast<XlaNode*>(ir_value.node.get())
         ->SetSharding(sharding->sharding);
   }

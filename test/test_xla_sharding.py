@@ -102,12 +102,18 @@ class XlaShardingTest(unittest.TestCase):
         torch_xla._XLAC._get_xla_sharding_spec(xt),
         torch_xla._XLAC._get_xla_sharding_spec(xt2))
 
-  def test_mark_step(self):
-    xt = torch.randn(2, 4, 8, 16).to(xm.xla_device())
-    xs.mark_sharding(xt, self._get_mesh((1, 1, 1, self.n_devices)),
-                     (0, 1, 2, 3))
+  def test_mark_step_with_sharding(self):
+    xt = torch.ones(2, 2).to(xm.xla_device())
+    xs.mark_sharding(xt, self._get_mesh((1, self.n_devices)), (0, 1))
     sharding_spec = torch_xla._XLAC._get_xla_sharding_spec(xt)
-    xm.mark_step()  # resets IR value
+    xm.mark_step()  # mark_step should preserve the sharding
+    self.assertEqual(sharding_spec, torch_xla._XLAC._get_xla_sharding_spec(xt))
+
+  def test_inplace_add_with_sharding(self):
+    xt = torch.ones(2, 2).to(xm.xla_device())
+    xs.mark_sharding(xt, self._get_mesh((1, self.n_devices)), (0, 1))
+    sharding_spec = torch_xla._XLAC._get_xla_sharding_spec(xt)
+    xt.add_(1)  # inplace update should preserve the sharding
     self.assertEqual(sharding_spec, torch_xla._XLAC._get_xla_sharding_spec(xt))
 
 
