@@ -31,6 +31,7 @@ ENV CXXFLAGS "${CXXFLAGS} -D_GLIBCXX_USE_CXX11_ABI=${cxx_abi}"
 
 # Whether to build for TPUVM mode
 ENV TPUVM_MODE "${tpuvm}"
+ENV BUNDLE_LIBTPU "${tpuvm}"
 
 # Maximum number of jobs to use for bazel build
 ENV BAZEL_JOBS "${bazel_jobs}"
