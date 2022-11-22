@@ -752,7 +752,6 @@ XLATensorPtr XLATensor::baddbmm(const XLATensorPtr& input,
   return input->CreateFrom(torch::lazy::MakeNode<Baddbmm>(
       input->GetIrValue(), batch1->GetIrValue(), batch2->GetIrValue(),
       bias_multiplier, product_multiplier));
-  // self, batch1, batch2, beta, alpha
 }
 
 XLATensorPtr XLATensor::bernoulli(const XLATensorPtr& input,
