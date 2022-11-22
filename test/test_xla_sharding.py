@@ -116,7 +116,6 @@ class XlaShardingTest(unittest.TestCase):
     xt.add_(1)  # inplace update should preserve the sharding
     self.assertEqual(sharding_spec, torch_xla._XLAC._get_xla_sharding_spec(xt))
 
-
 class VirtualDeviceTest(XlaShardingTest):
 
   @classmethod
