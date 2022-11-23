@@ -6,6 +6,7 @@ dev = xm.xla_device()
 
 
 class TestDynamicShapes(unittest.TestCase):
+
   def test_simple_expand(self):
     size1 = 5
     size2 = 2
@@ -17,7 +18,7 @@ class TestDynamicShapes(unittest.TestCase):
     t5.expand(t2.size(0))
     t5_cpu = t5.cpu()
     self.assertEqual(t5_cpu.shape[0], 1)
-  
+
   def test_wrap(self):
     a1 = torch.tensor([[1, 0, 0, 5, 0, 6]], device=dev)
     a2 = torch.nonzero(a1)
