@@ -459,7 +459,8 @@ at::Tensor XLANativeFunctions::_copy_from(const at::Tensor& self,
   auto self_tensor = bridge::TryGetXlaTensor(self);
   if (!self_tensor) {
     static bool sync_update =
-        xla::sys_util::GetEnvBool("XLA_TENSOR_UPDATE_SYNC", true);
+        xla::sys_util::GetEnvBool("XLA_TENSOR_UPDATE_SYNC", true) &&
+        !xla::sys_util::GetEnvBool("XLA_USE_SPMD", false);
     XLA_CHECK(dst_tensor);
     dst_tensor->UpdateFromTensor(self, /*sync=*/sync_update);
   } else if (!dst_tensor) {
@@ -1074,7 +1075,7 @@ at::Tensor XLANativeFunctions::einsum(c10::string_view equation,
   if (tensors.size() < 1 || tensors.size() > 2 ||
       !EinsumUtilities::EquationIsValid(cleansed_equation) ||
       TensorsAreOfType(xla_tensors, at::ScalarType::Long)) {
-    XLA_COUNTER("EinsumFallback", 1);
+    TORCH_LAZY_COUNTER("EinsumFallback", 1);
     return at::native::einsum(equation, tensors, path);
   }
   return aten_autograd_ops::EinsumAutogradFunction::apply(cleansed_equation,
@@ -2987,7 +2988,7 @@ at::Scalar XLANativeFunctions::_local_scalar_dense(const at::Tensor& self) {
     XLATensorPtr self_tensor = bridge::GetXlaTensor(self);
     XLATensor::SyncLiveTensorsGraph(&self_tensor->GetDevice(), /*devices=*/{},
                                     /*wait=*/true);
-    XLA_COUNTER("EarlySyncLiveTensorsCount", 1);
+    TORCH_LAZY_COUNTER("EarlySyncLiveTensorsCount", 1);
   }
   return at::native::call_fallback_fn<&xla_cpu_fallback,
                                       ATEN_OP(_local_scalar_dense)>::call(self);
@@ -3046,10 +3047,11 @@ at::Tensor XLANativeFunctions::pixel_unshuffle(const at::Tensor& self,
                                                int64_t downscale_factor) {
   return at::native::math_pixel_unshuffle(self, downscale_factor);
 }
-at::Tensor XLANativeFunctions::select_backward(const at::Tensor& grad_output,
-                                               at::IntArrayRef input_sizes,
-                                               int64_t dim, int64_t index) {
-  return at::native::select_backward(grad_output, input_sizes, dim, index);
+at::Tensor XLANativeFunctions::select_backward_symint(
+    const at::Tensor& grad_output, c10::SymIntArrayRef input_sizes, int64_t dim,
+    c10::SymInt index) {
+  return at::native::select_backward_symint(grad_output, input_sizes, dim,
+                                            index);
 }
 at::Tensor XLANativeFunctions::linalg_pinv(
     const at::Tensor& self, const c10::optional<at::Tensor>& atol,

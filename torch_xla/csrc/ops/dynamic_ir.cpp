@@ -36,7 +36,7 @@ SizeNode::SizeNode(torch::lazy::Value input, size_t dim)
 
 int64_t SizeNode::getDynamicValue() const {
   if (dynamic_value_computed_) {
-    XLA_COUNTER("CachedSizeNodeValue", 1);
+    TORCH_LAZY_COUNTER("CachedSizeNodeValue", 1);
     return runtime_size_;
   }
   torch::lazy::NodePtr cloned =

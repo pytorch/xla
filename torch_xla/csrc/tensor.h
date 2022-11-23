@@ -42,6 +42,7 @@ class TORCH_API XLASymNodeImpl : public c10::SymNodeImpl {
   std::string str() override;
 
   bool bool_() override;
+  int64_t int_() override;
 
  private:
   torch::lazy::NodePtr node_;
@@ -1248,6 +1249,9 @@ class XLATensor : public c10::intrusive_ptr_target {
       torch::lazy::ComputationPtr computation,
       c10::ArrayRef<torch::lazy::BackendDataPtr> arguments,
       const torch::lazy::BackendDevice& device);
+
+  static void ClearPendingIrs(std::vector<XLATensorPtr> tensors,
+                              const torch::lazy::BackendDevice& device);
 
  private:
   struct SyncTensorsConfig {

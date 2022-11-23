@@ -400,6 +400,13 @@ std::string GetLiveTensorsReport(size_t nodes_threshold,
   return ss.str();
 }
 
+void ClearPendingIrs(const std::string& device_str) {
+  auto opt_device = GetOptionalDevice(device_str);
+  XLA_CHECK(opt_device);
+  auto tensors = XLATensor::GetLiveTensors(&opt_device.value());
+  XLATensor::ClearPendingIrs(tensors, opt_device.value());
+}
+
 std::ptrdiff_t GetTensorViewAliasId(const at::Tensor& tensor) {
   XLATensorPtr xtensor = bridge::GetXlaTensor(tensor);
   return xtensor->GetViewAliasId();
@@ -1182,31 +1189,61 @@ void InitXlaModuleBindings(py::module m) {
           XLATensor::WaitDeviceOps(devices);
         },
         py::arg("devices"));
-  m.def("_xla_counter_names", []() { return xla::metrics::GetCounterNames(); });
+  m.def("_xla_counter_names", []() {
+    auto counter_names = torch::lazy::GetCounterNames();
+    auto xla_counter_names = xla::metrics::GetCounterNames();
+    counter_names.insert(counter_names.end(), xla_counter_names.begin(),
+                         xla_counter_names.end());
+    return counter_names;
+  });
   m.def("_xla_counter_value", [](const std::string& name) -> py::object {
-    xla::metrics::CounterData* data = xla::metrics::GetCounter(name);
-    return data != nullptr ? py::cast<int64_t>(data->Value()) : py::none();
+    auto* data = torch::lazy::GetCounter(name);
+    if (data != nullptr) {
+      return py::cast<int64_t>(data->Value());
+    }
+
+    auto* xla_data = xla::metrics::GetCounter(name);
+    return xla_data != nullptr ? py::cast<int64_t>(xla_data->Value())
+                               : py::none();
   });
   m.def("_xla_metric_names", []() { return xla::metrics::GetMetricNames(); });
   m.def("_xla_metric_data", [](const std::string& name) -> py::object {
     return GetMetricData(name);
   });
-  m.def("_xla_metrics_report",
-        []() { return xla::metrics_reader::CreateMetricReport(); });
-  m.def("_short_xla_metrics_report",
-        [](const py::list& counter_names, const py::list& metric_names) {
-          std::vector<std::string> counter_name_vec;
-          std::vector<std::string> metric_name_vec;
-          for (auto& counter : counter_names) {
-            counter_name_vec.push_back(counter.cast<std::string>());
-          }
-          for (auto& metric : metric_names) {
-            metric_name_vec.push_back(metric.cast<std::string>());
-          }
-          return xla::metrics_reader::CreateMetricReport(counter_name_vec,
-                                                         metric_name_vec);
-        });
-  m.def("_clear_xla_counters", []() { xla::metrics::ClearCounters(); });
+  m.def("_xla_metrics_report", []() {
+    // NOTE: [TORCH_LAZY_COUNTER v.s. XLA_COUNTER]
+    // Counters and Metrics are divided into two groups: one in PyTorch/XLA and
+    // another in ComputationClient. Therefore, we need to stitch the report
+    // together. Ideally, those two sets shouldn't have any overlaps. The reason
+    // why is that we cannot have ComputationClient to use the
+    // TORCH_LAZY_COUNTER as it currently cannot depend on PyTorch (as part of
+    // TensorFlow).
+    // TODO(jwtan): Unify them once ComputationClient becomes a standalone
+    // library.
+    return torch::lazy::CreateMetricReport() +
+           xla::metrics_reader::CreateMetricReport();
+  });
+  m.def("_short_xla_metrics_report", [](const py::list& counter_names,
+                                        const py::list& metric_names) {
+    std::vector<std::string> counter_name_vec;
+    std::vector<std::string> metric_name_vec;
+    for (auto& counter : counter_names) {
+      counter_name_vec.push_back(counter.cast<std::string>());
+    }
+    for (auto& metric : metric_names) {
+      metric_name_vec.push_back(metric.cast<std::string>());
+    }
+    // See NOTE: [TORCH_LAZY_COUNTER v.s. XLA_COUNTER].
+    return torch::lazy::CreateMetricReport(counter_name_vec, metric_name_vec) +
+           xla::metrics_reader::CreateMetricReport(counter_name_vec,
+                                                   metric_name_vec);
+  });
+  m.def("_clear_xla_counters", []() {
+    // TODO(jwtan): We should probably upstream the ability to reset counters
+    // and metrics separately to upstream.
+    torch::lazy::MetricsArena::Get()->Reset();
+    xla::metrics::ClearCounters();
+  });
   m.def("_clear_xla_metrics", []() { xla::metrics::ClearMetrics(); });
   m.def("_xla_tensors_report",
         [](size_t nodes_threshold, const std::string& device) {
@@ -1394,18 +1431,31 @@ void InitXlaModuleBindings(py::module m) {
                                  bool replicated = false, bool manual = false) {
     xla::OpSharding sharding =
         ShardingUtil::CreateOpSharding(tile_assignment, replicated, manual);
-
-    // TODO(yeounoh) use `SPMD` device to avoid input at::Tensor uploading.
-    // For now, we move the pre-uploaded data back to cpu_tensor for sharding.
     XLATensorPtr xtensor = bridge::GetXlaTensor(input);
-    std::vector<XLATensorPtr> xla_tensors{xtensor};
-    at::Tensor cpu_tensor = XLATensor::GetTensors(&xla_tensors)[0];
 
     // Existing annotation must be cleared explicitly. We do not clear and
     // overwrite the existing sharding on user's behalf, since it could lead to
     // confusion/error.
     XLA_CHECK(xtensor->sharding_spec() == nullptr)
         << "Existing annotation must be cleared first.";
+
+    at::Tensor cpu_tensor;
+    if (xla::sys_util::GetEnvBool("XLA_USE_SPMD", false) &&
+        xtensor->CurrentTensorData().has_value()) {
+      // When virtual device is enabled for SPMD, we defer the initial data
+      // transfer to the device and retain the original data on the host, until
+      // the sharded data transfer.
+      cpu_tensor = xtensor->CurrentTensorData().value();
+    } else {
+      // If the at::Tensor data is not present, we need to re-download the
+      // tensor from the physical device to CPU. In that case, the value
+      // must be present on the backend device.
+      XLA_CHECK(xtensor->GetXlaData() != nullptr &&
+                xtensor->CurrentXlaData()->HasValue())
+          << "Cannot shard tensor. Data not present on any device.";
+      std::vector<XLATensorPtr> xla_tensors{xtensor};
+      cpu_tensor = XLATensor::GetTensors(&xla_tensors)[0];
+    }
 
     auto sharding_spec = std::make_shared<XLATensor::ShardingSpec>(sharding);
     auto xla_data = CreateTensorsData(
@@ -1576,6 +1626,12 @@ void InitXlaModuleBindings(py::module m) {
     torch::lazy::hash_t hash = XLATensor::GetGraphHash(xtensors);
     std::string bin((const char*)&hash, sizeof(hash));
     return py::bytes(bin);
+  });
+
+  m.def("_clear_pending_irs", [](const std::string& device) {
+    // Use with caution. Those tensor whole ir was cleared with be replaced
+    // with a placeholder XLAData and SHOULD NOT be accessed.
+    ClearPendingIrs(device);
   });
 
   m.def("_run_cached_graph",

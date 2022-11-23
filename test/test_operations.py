@@ -2082,6 +2082,14 @@ class XpTraceTest(XlaTestCase):
         xm.mark_step()
 
 
+class RegisterXLAKeyTest(XlaTestCase):
+
+  def test_multi_init_xla_backend(self):
+    torch_xla._XLAC._init_xla_lazy_backend()
+    torch_xla._XLAC._init_xla_lazy_backend()
+    self.assertEqual(met.counter_value("RegisterXLAFunctions"), 1)
+
+
 class TestGeneric(XlaTestCase):
 
   def test_zeros_like_patch(self):

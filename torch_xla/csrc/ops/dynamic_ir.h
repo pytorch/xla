@@ -57,7 +57,7 @@ class SizeEq : public XlaNode, public torch::lazy::DimensionNode {
  public:
   SizeEq(torch::lazy::Value a, torch::lazy::Value b);
   int64_t getDynamicValue() const override;
-  int64_t getStaticValue() {
+  int64_t getStaticValue() const override {
     TORCH_CHECK(false, "Comparison operators should be using getDynamicValue");
   }
   bool isSymbolic() const override { return true; }

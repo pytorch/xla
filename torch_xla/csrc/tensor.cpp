@@ -19,7 +19,6 @@
 #include "tensorflow/compiler/xla/xla_client/cache.h"
 #include "tensorflow/compiler/xla/xla_client/debug_macros.h"
 #include "tensorflow/compiler/xla/xla_client/env_vars.h"
-#include "tensorflow/compiler/xla/xla_client/metrics.h"
 #include "tensorflow/compiler/xla/xla_client/sys_util.h"
 #include "tensorflow/compiler/xla/xla_client/thread_pool.h"
 #include "tensorflow/compiler/xla/xla_client/unique.h"
@@ -31,6 +30,7 @@
 #include "torch/csrc/lazy/core/helpers.h"
 #include "torch/csrc/lazy/core/ir_util.h"
 #include "torch/csrc/lazy/core/lazy_graph_executor.h"
+#include "torch/csrc/lazy/core/metrics.h"
 #include "torch/csrc/lazy/core/tensor_util.h"
 #include "torch/csrc/lazy/core/util.h"
 #include "torch_xla/csrc/computation.h"
@@ -242,7 +242,7 @@ torch::lazy::BackendDataPtr GetDeviceData(
     at::Tensor tensor_copy = torch::lazy::CopyTensor(tensor);
     device_data = TensorToXlaData(tensor_copy, device);
     cache->Add(std::move(tensor_copy), device_data);
-    XLA_COUNTER("DeviceDataCacheMiss", 1);
+    TORCH_LAZY_COUNTER("DeviceDataCacheMiss", 1);
   }
   return device_data;
 }
@@ -303,14 +303,14 @@ class XLATensor::DeviceContextArena {
     DeviceContext* devctx = GetDeviceContext(data->device);
     std::lock_guard<std::mutex> lock(devctx->lock);
     devctx->tensors_data.emplace(data->unique_id, data);
-    XLA_COUNTER("CreateXlaTensor", 1);
+    TORCH_LAZY_COUNTER("CreateXlaTensor", 1);
   }
 
   void UnregisterTensor(Data* data) {
     DeviceContext* devctx = GetDeviceContext(data->device);
     std::lock_guard<std::mutex> lock(devctx->lock);
     devctx->tensors_data.erase(data->unique_id);
-    XLA_COUNTER("DestroyXlaTensor", 1);
+    TORCH_LAZY_COUNTER("DestroyXlaTensor", 1);
   }
 
   std::vector<XLATensorPtr> GetLiveTensors(
@@ -742,7 +742,7 @@ void XLATensor::TryLimitGraphSize() {
     size_t graph_size =
         torch::lazy::Util::GetGraphSize({data()->ir_value.node.get()});
     if (graph_size > kMaxPendingGraphSize) {
-      XLA_COUNTER("TrimIrGraph", 1);
+      TORCH_LAZY_COUNTER("TrimIrGraph", 1);
       ApplyPendingGraph();
     }
   }
@@ -989,10 +989,14 @@ void XLATensor::SetTensor(at::Tensor tensor) {
 }
 
 void XLATensor::UpdateFromTensor(at::Tensor tensor, bool sync) {
+  torch::lazy::BackendDevice device =
+      xla::sys_util::GetEnvBool("XLA_USE_SPMD", false)
+          ? ParseDeviceString("SPMD:0")
+          : GetDevice();
   if (sync) {
     at::Tensor typed_tensor =
         torch::lazy::CopyTensor(tensor, dtype(), /*copy=*/false);
-    SetIrValue(GetIrValueForTensor(typed_tensor, GetDevice()),
+    SetIrValue(GetIrValueForTensor(typed_tensor, device),
                /*inplace=*/true);
   } else {
     at::Tensor coyped_tensor = torch::lazy::CopyTensor(tensor, dtype());
@@ -1000,8 +1004,7 @@ void XLATensor::UpdateFromTensor(at::Tensor tensor, bool sync) {
     data()->xla_data = nullptr;
     AssignIrValue(torch::lazy::Value());
     if (data()->view != nullptr) {
-      torch::lazy::Value ir_value =
-          GetIrValueForTensor(coyped_tensor, GetDevice());
+      torch::lazy::Value ir_value = GetIrValueForTensor(coyped_tensor, device);
       data()->view = UpdateView(data()->view, std::move(ir_value));
     }
   }
@@ -1078,6 +1081,28 @@ XLATensor::ExecuteComputationWithBarrier(
   unlocker = LockDevices({device});
   return torch::lazy::getBackend()->ExecuteComputation(computation, arguments,
                                                        device);
+}
+
+void XLATensor::ClearPendingIrs(std::vector<XLATensorPtr> tensors,
+                                const torch::lazy::BackendDevice& device) {
+  std::unordered_set<int64_t> tensor_ids;
+  for (size_t i = 0; i < tensors.size(); ++i) {
+    if (tensor_ids.insert(tensors[i]->GetUniqueId()).second &&
+        tensors[i]->CurrentXlaData() == nullptr) {
+      torch::lazy::Value ir_value = tensors[i]->CurrentIrValue();
+      if (ir_value) {
+        xla::Shape shape = MakeShapeWithDeviceLayout(
+            tensors[i]->shape(), static_cast<XlaDeviceType>(device.type()));
+        torch::lazy::BackendDataPtr xla_data =
+            WrapXlaData(xla::ComputationClient::Get()->CreateDataPlaceholder(
+                device.toString(), std::move(shape)));
+        tensors[i]->AssignIrValue(torch::lazy::Value());
+        tensors[i]->data()->xla_data = xla_data;
+        tensors[i]->data()->view = nullptr;
+        tensors[i]->data()->tensor_data = c10::nullopt;
+      }
+    }
+  }
 }
 
 std::vector<at::Tensor> XLATensor::GetTensorsOpByOp(
@@ -1322,7 +1347,7 @@ XLATensor::SyncTensorCollection XLATensor::CollectSyncTensors(
       coll.hash,
       xla::ComputationClient::Get()->GetResourceDomain(coll.device.toString()));
   if (!at_tensors.empty()) {
-    XLA_COUNTER("SyncTensorsToData", at_tensors.size());
+    TORCH_LAZY_COUNTER("SyncTensorsToData", at_tensors.size());
     // Create data handles with shardings. If a tensor has a
     // sharding annotation, then a BackendDataPtr with PjRtShardedData is
     // returned; if there is no sharding annotation, then a BackendDataPtr with
@@ -1348,7 +1373,7 @@ XLATensor::ComputationCache::TypePtr XLATensor::LookupCachedCompile(
   ComputationCache::TypePtr cached_computation =
       GetComputationCache()->Get(hash);
   if (cached_computation == nullptr) {
-    XLA_COUNTER("UncachedCompile", 1);
+    TORCH_LAZY_COUNTER("UncachedCompile", 1);
     return nullptr;
   }
   TF_VLOG(5) << "Graph hash " << torch::lazy::HashToString(hash)
@@ -1357,7 +1382,7 @@ XLATensor::ComputationCache::TypePtr XLATensor::LookupCachedCompile(
                     cached_computation->computation->computation()
                         .proto()
                         .SerializeAsString()));
-  XLA_COUNTER("CachedCompile", 1);
+  TORCH_LAZY_COUNTER("CachedCompile", 1);
   return cached_computation;
 }
 
@@ -1619,6 +1644,8 @@ void XLATensor::SyncLiveTensorsGraph(const torch::lazy::BackendDevice* device,
 }
 
 void XLATensor::MarkStep(const torch::lazy::BackendDevice& device) {
+  // TODO(jwtan): Replace this with TORCH_LAZY_COUNTER. We need MarkStep to
+  // remain as XLA_COUNTER to support xla::metrics::CreatePerformanceReport().
   XLA_COUNTER("MarkStep", 1);
   DeviceContextArena::Get()->MarkStep(device);
   torch::lazy::ScopePusher::ResetScopes();
@@ -1958,6 +1985,11 @@ bool XLASymNodeImpl::is_float() {
 bool XLASymNodeImpl::bool_() {
   auto dn = torch_xla::DimCast(node());
   return dn->getDynamicValue() != 0;
+}
+
+int64_t XLASymNodeImpl::int_() {
+  std::shared_ptr<torch::lazy::DimensionNode> dn = torch_xla::DimCast(node());
+  return dn->getDynamicValue();
 }
 
 c10::SymNode XLASymNodeImpl::eq(const c10::SymNode& other) {
