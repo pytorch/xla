@@ -109,11 +109,15 @@ and for Colab:
 
 You can also add `+yyyymmdd` after `torch_xla-nightly` to get the nightly wheel of a specified date. To get the companion pytorch nightly wheel, replace the `torch_xla` with `torch` on above wheel links.
 
-Note that for Cloud TPU VM, you can update the libtpu after the torch_xla wheel by 
+### Installing libtpu
+
+For PyTorch/XLA release r1.13 and older and when developing PyTorch/XLA, install the `libtpu` pip package with the following command:
 
 ```
 pip3 install torch_xla[tpuvm]
 ```
+
+This is only required on Cloud TPU VMs.
 
 ## <a name="API"></a> API & Best Practices
 

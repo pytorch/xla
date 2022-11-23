@@ -2,6 +2,7 @@ import logging
 import os
 import re
 import socket
+import shutil
 import tempfile
 import subprocess
 import time
@@ -135,11 +136,18 @@ def _summarize_fn_tracker():
 
 
 def _tpu_vm_init():
+  module_path = os.path.dirname(__file__)
+  bundled_libtpu_path = os.path.join(module_path, 'lib/libtpu.so')
+  if os.path.isfile(bundled_libtpu_path) and not os.getenv('TPU_LIBRARY_PATH'):
+    logger.info('Using bundled libtpu.so (%s)', bundled_libtpu_path)
+    os.environ['TPU_LIBRARY_PATH'] = bundled_libtpu_path
+    return
+
   try:
     import libtpu
     libtpu.configure_library_path()
   except ImportError:
-    return
+    pass
 
 
 # These needs to be called before the _XLAC module is loaded.
