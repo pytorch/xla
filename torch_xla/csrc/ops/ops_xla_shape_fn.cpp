@@ -208,6 +208,22 @@ xla::Shape AtanhOutputShape(const torch::lazy::Value& input) {
   return GetXlaShape(input);
 }
 
+xla::Shape BaddbmmOutputShape(const torch::lazy::Value& self,
+                              const torch::lazy::Value& batch1,
+                              const torch::lazy::Value& batch2,
+                              const torch::lazy::Value& beta,
+                              const torch::lazy::Value& alpha) {
+  auto lower_for_shape_fn =
+      [](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
+    return BuildMatMulWithMultiplier(operands[0], operands[1], operands[2],
+                                     operands[3], operands[4]);
+  };
+  return InferOutputShape(
+      {GetXlaShape(batch1), GetXlaShape(batch2), GetXlaShape(self),
+       GetXlaShape(alpha), GetXlaShape(beta)},
+      lower_for_shape_fn);
+}
+
 xla::Shape BinaryCrossEntropyOutputShape(
     const torch::lazy::Value& input, const torch::lazy::Value& target,
     const c10::optional<torch::lazy::Value>& weight, int64_t reduction) {
