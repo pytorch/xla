@@ -10,7 +10,7 @@ ARG tf_cuda_compute_capabilities="7.0,7.5,8.0"
 
 ARG tpuvm=1
 ARG build_cpp_tests=0
-ARG package_version=1.14
+ARG package_version=1.14.0
 
 ARG bazel_jobs=
 

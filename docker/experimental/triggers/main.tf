@@ -23,17 +23,18 @@ resource "google_cloudbuild_trigger" "tpu-vm-build" {
   source_to_build {
     uri = "https://github.com/pytorch/xla"
     repo_type = "GITHUB"
-    ref = "refs/heads/master"
+    ref = "refs/heads/wcromar/terraform-triggers"
   }
 
   git_file_source {
     path = "docker/experimental/cloudbuild.yaml"
     repo_type = "GITHUB"
-    revision = "refs/heads/master"
+    revision = "refs/heads/wcromar/terraform-triggers"
     uri = "https://github.com/pytorch/xla"
   }
 
   substitutions = {
+    _PLATFORM = "tpuvm"
     _BUILD_ARGS = "tpuvm=1,cuda=0"
   }
 }
