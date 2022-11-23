@@ -193,8 +193,8 @@ def _run_thread_per_device(local_rank: int, local_world_size: int,
 
 @requires_pjrt
 def _run_multiprocess(fn: Callable[..., R],
-                      start_method: str = 'spawn',
                       *args,
+                      start_method: str = 'spawn',
                       **kwargs) -> Dict[int, R]:
   """Runs `fn` on all devices available to PjRt.
 
@@ -202,9 +202,9 @@ def _run_multiprocess(fn: Callable[..., R],
 
   Args:
     fn: Function to run on all devices
+    args: args to pass to `fn`
     start_method: The Python `multiprocessing` process creation method.
       Default: `spawn`
-    args: args to pass to `fn`
     kwargs: kwargs to pass to `fn`
 
   Returns:
@@ -254,7 +254,7 @@ def spawn(fn: Callable, start_method: str = 'spawn', args: Tuple = ()) -> None:
       Default: `spawn`
   """
   spawn_fn = _SpawnFn(fn, *args)
-  _run_multiprocess(spawn_fn, start_method)
+  _run_multiprocess(spawn_fn, start_method=start_method)
 
 
 def broadcast_master_param(model: nn.Module) -> None:
