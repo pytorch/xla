@@ -1826,6 +1826,16 @@ class TestAtenXlaTensor(XlaTestCase):
     y[::2].copy_(x[::2])
     self.assertEqual(y, [1, 0, 3, 0, 5, 0])
 
+  def test_view_and_multi_mark_step(self):
+    xla_device = xm.xla_device()
+    t1 = torch.zeros(100, device=xla_device)
+    t1[10] = 113
+    xm.mark_step()
+    t1[12] = 1123
+    xm.mark_step()
+    self.assertNotIn('update_slice',
+                     torch_xla._XLAC._get_xla_tensors_text([t1]))
+
   def test_binaryop_order(self):
     xla_device = xm.xla_device()
     x = torch.rand(5, device=xla_device)
