@@ -69,7 +69,7 @@ FROM builder AS artifacts
 COPY tf_patches/ tf_patches/
 COPY third_party/ third_party/
 
-RUN patch -d third_party/tensorflow -N -p1 < /pytorch/xla/tf_patches/patch.diff
+RUN for p in tf_patches/*.diff; do patch -d third_party/tensorflow -N -p1 < $p; done
 
 COPY build_torch_xla_libs.sh .
 
