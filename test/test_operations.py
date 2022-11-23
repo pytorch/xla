@@ -749,6 +749,12 @@ class TestDynamicShape(XlaTestCase):
         torch.masked_select(x, mask), 0)
     self.assertEqual(x_dim0_shape.item(), 3)
 
+  def test_nonzero_cast(self):
+    t1 = torch.ones(5, 2, device=xm.xla_device())
+    # this cast should not fail
+    t2 = torch.nonzero(t1.int()).float()
+    xm.mark_step()
+
 
 class TestOptimizationBarrier(XlaTestCase):
 

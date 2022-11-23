@@ -1876,7 +1876,7 @@ std::pair<XLATensorPtr, XLATensorPtr> XLATensor::nms(
 XLATensorPtr XLATensor::nonzero(const XLATensorPtr& input) {
   torch::lazy::NodePtr node =
       torch::lazy::MakeNode<NonZero>(input->GetIrValue());
-  return input->CreateFrom(torch::lazy::Value(node, 0), at::ScalarType::Long);
+  return input->CreateFrom(torch::lazy::Value(node, 0));
 }
 
 XLATensorPtr XLATensor::norm(const XLATensorPtr& input,
