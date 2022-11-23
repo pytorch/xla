@@ -19,7 +19,7 @@ import distributed_util as util
 FLAGS = args_parse.parse_common_options()
 
 ddp_parameters = [('torch_xla', pjrt.DistributedDataParallel)]
-if tpu.version() >= 4:
+if pjrt.device_type() == 'TPU' and tpu.version() >= 4:
   ddp_parameters.append(('torch', torch.nn.parallel.DistributedDataParallel))
 
 
