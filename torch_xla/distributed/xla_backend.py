@@ -79,6 +79,14 @@ class ProcessGroupXla(ProcessGroup):
 
     return _ret_work([t for sublist in output_tensors_list for t in sublist])
 
+  def allgather_coalesced(self, output_tensors_list, input_tensors, opts=None):
+    results = xm.all_gather(input_tensors, groups=self._mesh, pin_layout=False)
+    for i, result in enumerate(results):
+      for j, slice in enumerate(torch.split(result, input_tensors[i].shape[0])):
+        output_tensors_list[i][j].copy_(slice)
+
+    return _ret_work([t for sublist in output_tensors_list for t in sublist])
+
   # Call site:
   # https://github.com/pytorch/pytorch/blob/release/1.10/torch/distributed/distributed_c10d.py#L1129
   def broadcast(self, tensors, opts):
@@ -116,6 +124,33 @@ class ProcessGroupXla(ProcessGroup):
 
     return _ret_work(output_tensors)
 
+  def reduce_scatter_coalesced(self, output_tensors, input_tensors_list, opts):
+    input_tensor_list = []
+    for input_tensors in input_tensors_list:
+      # Ensure all inputs have the same shape.
+      first_shape = input_tensors[0].shape
+      for i, t in enumerate(input_tensors[1:]):
+        if first_shape != t.shape:
+          raise ValueError(f"Input {i+1}'s shape is different from input 0: "
+                           f"{t.shape} vs {first_shape}")
+      input_tensor = torch.cat(input_tensors)
+      input_tensor_list.append(input_tensor)
+
+    reduce_type = self._get_reduce_type(opts.reduceOp)
+    groups = self._mesh
+    shard_count = len(groups[0]) if groups else self.size()
+    xm.reduce_scatter(
+        reduce_type,
+        input_tensor_list,
+        scatter_dim=0,
+        shard_count=shard_count,
+        scale=1,
+        groups=groups,
+        output=output_tensors,
+        pin_layout=False)
+
+    return _ret_work(output_tensors)
+
   # Call site:
   # https://github.com/pytorch/pytorch/blob/70f57bcb1e45d21532bdb1c44d3aab018d1cbe88/torch/distributed/distributed_c10d.py#L2683
   def barrier(self, opts):
@@ -125,9 +160,6 @@ class ProcessGroupXla(ProcessGroup):
   # https://github.com/pytorch/pytorch/blob/70f57bcb1e45d21532bdb1c44d3aab018d1cbe88/torch/distributed/distributed_c10d.py#L1417
   # `reduce` is not needed by DeepSpeed for now.
   def reduce(self, *args):
-    raise NotImplementedError
-
-  def allgather_coalesced(self, *args):
     raise NotImplementedError
 
   def allreduce_coalesced(self, *args):

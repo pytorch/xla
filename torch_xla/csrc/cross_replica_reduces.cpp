@@ -21,11 +21,11 @@ struct PerTypeContext {
   std::vector<xla::Shape> operand_shapes;
 };
 
-struct ReduceContext {
+struct CollectiveCommContext {
   std::map<xla::PrimitiveType, PerTypeContext> contexts;
 };
 
-xla::Shape MakeReduceShape(absl::Span<const xla::Shape> operand_shapes) {
+xla::Shape MakeShapeWithLayout(absl::Span<const xla::Shape> operand_shapes) {
   torch::lazy::BackendDevice xla_device = GetCurrentDevice();
   std::vector<xla::Shape> shapes_and_layouts;
   shapes_and_layouts.reserve(operand_shapes.size());
@@ -37,20 +37,21 @@ xla::Shape MakeReduceShape(absl::Span<const xla::Shape> operand_shapes) {
   return xla::ShapeUtil::MakeTupleShape(shapes_and_layouts);
 }
 
-ReduceContext GetReduceContext(absl::Span<const xla::XlaOp> operands) {
-  ReduceContext redux;
+CollectiveCommContext GetCollectiveCommContext(
+    absl::Span<const xla::XlaOp> operands) {
+  CollectiveCommContext cc_ctx;
   for (size_t i = 0; i < operands.size(); ++i) {
     xla::Shape operand_shape = XlaHelpers::ShapeOfXlaOp(operands[i]);
-    PerTypeContext& ctx = redux.contexts[operand_shape.element_type()];
+    PerTypeContext& ctx = cc_ctx.contexts[operand_shape.element_type()];
     ctx.ops.push_back(operands[i]);
     ctx.indices.push_back(i);
     ctx.operand_shapes.push_back(std::move(operand_shape));
   }
-  return redux;
+  return cc_ctx;
 }
 
-xla::XlaComputation GetReduceComutation(AllReduceType reduce_type,
-                                        xla::PrimitiveType type) {
+xla::XlaComputation GetReduceComputation(AllReduceType reduce_type,
+                                         xla::PrimitiveType type) {
   switch (reduce_type) {
     case AllReduceType::kSum:
       return XlaHelpers::CreateAddComputation(type);
@@ -69,17 +70,17 @@ xla::XlaComputation GetReduceComutation(AllReduceType reduce_type,
               << torch::lazy::GetEnumValue(reduce_type);
 }
 
-std::vector<xla::ReplicaGroup> CreateReduceGroups(
+std::vector<xla::ReplicaGroup> CreateCollectiveCommGroups(
     const std::vector<std::vector<int64_t>>& groups) {
-  std::vector<xla::ReplicaGroup> reduce_groups;
+  std::vector<xla::ReplicaGroup> cc_groups;
   for (auto& group : groups) {
     xla::ReplicaGroup rgroup;
     for (auto replica_id : group) {
       rgroup.add_replica_ids(replica_id);
     }
-    reduce_groups.push_back(std::move(rgroup));
+    cc_groups.push_back(std::move(rgroup));
   }
-  return reduce_groups;
+  return cc_groups;
 }
 
 }  // namespace
@@ -88,14 +89,14 @@ std::vector<xla::XlaOp> BuildAllReduce(
     AllReduceType reduce_type, absl::Span<const xla::XlaOp> operands,
     xla::XlaOp token, double scale,
     const std::vector<std::vector<int64_t>>& groups, bool pin_layout) {
-  std::vector<xla::ReplicaGroup> reduce_groups = CreateReduceGroups(groups);
+  std::vector<xla::ReplicaGroup> cc_groups = CreateCollectiveCommGroups(groups);
   // TODO: We use pseudo-tokens ATM, which are real values. This need to be
   // switched to use the real XLA Token once support has been added to XLA
   // AllReduce().
   xla::XlaOp chained_token = token;
-  ReduceContext redux = GetReduceContext(operands);
+  CollectiveCommContext cc_ctx = GetCollectiveCommContext(operands);
   std::vector<xla::XlaOp> result(operands.size());
-  for (auto& type_ctx : redux.contexts) {
+  for (auto& type_ctx : cc_ctx.contexts) {
     xla::XlaOp token_op = MaybeConvertTo(chained_token, type_ctx.first);
     type_ctx.second.ops.push_back(token_op);
     type_ctx.second.operand_shapes.push_back(
@@ -105,14 +106,14 @@ std::vector<xla::XlaOp> BuildAllReduce(
     if (pin_layout) {
       reduce = xla::AllReduce(
           xla::Tuple(operands[0].builder(), type_ctx.second.ops),
-          GetReduceComutation(reduce_type, type_ctx.first), reduce_groups,
+          GetReduceComputation(reduce_type, type_ctx.first), cc_groups,
           /*channel_id=*/absl::nullopt,
           /*shape_with_layout=*/
-          MakeReduceShape(type_ctx.second.operand_shapes));
+          MakeShapeWithLayout(type_ctx.second.operand_shapes));
     } else {
       reduce = xla::AllReduce(
           xla::Tuple(operands[0].builder(), type_ctx.second.ops),
-          GetReduceComutation(reduce_type, type_ctx.first), reduce_groups);
+          GetReduceComputation(reduce_type, type_ctx.first), cc_groups);
     }
     for (size_t i = 0; i < type_ctx.second.indices.size(); ++i) {
       size_t op_idx = type_ctx.second.indices[i];
@@ -138,7 +139,7 @@ AllToAllResult BuildAllToAll(xla::XlaOp input, xla::XlaOp token,
                              int64_t split_count,
                              const std::vector<std::vector<int64_t>>& groups,
                              bool pin_layout) {
-  std::vector<xla::ReplicaGroup> reduce_groups = CreateReduceGroups(groups);
+  std::vector<xla::ReplicaGroup> cc_groups = CreateCollectiveCommGroups(groups);
   const xla::Shape& input_shape = XlaHelpers::ShapeOfXlaOp(input);
   TokenHandler token_handler(token);
   xla::XlaOp reduce_result;
@@ -148,42 +149,57 @@ AllToAllResult BuildAllToAll(xla::XlaOp input, xla::XlaOp token,
         input_shape.dimensions(), input_shape.dynamic_dimensions(),
         input_shape.element_type(),
         static_cast<XlaDeviceType>(xla_device.type()));
-    reduce_result = xla::AllToAll(token_handler.GetInput(input, &input_shape),
-                                  split_dimension, concat_dimension,
-                                  split_count, reduce_groups,
-                                  /*layout=*/reduce_shape.layout());
+    reduce_result =
+        xla::AllToAll(token_handler.GetInput(input, &input_shape),
+                      split_dimension, concat_dimension, split_count, cc_groups,
+                      /*layout=*/reduce_shape.layout());
   } else {
     reduce_result = xla::AllToAll(token_handler.GetInput(input, &input_shape),
                                   split_dimension, concat_dimension,
-                                  split_count, reduce_groups);
+                                  split_count, cc_groups);
   }
   return {reduce_result, token_handler.GetNewToken(reduce_result)};
 }
 
-AllGatherResult BuildAllGather(xla::XlaOp input, xla::XlaOp token, int64_t dim,
-                               int64_t shard_count,
-                               const std::vector<std::vector<int64_t>>& groups,
-                               bool pin_layout) {
-  std::vector<xla::ReplicaGroup> reduce_groups = CreateReduceGroups(groups);
-  const xla::Shape& input_shape = XlaHelpers::ShapeOfXlaOp(input);
-  TokenHandler token_handler(token);
-  xla::XlaOp all_gather_result;
-  if (pin_layout) {
-    torch::lazy::BackendDevice xla_device = GetCurrentDevice();
-    xla::Shape reduce_shape = MakeArrayShapeFromDimensions(
-        input_shape.dimensions(), input_shape.dynamic_dimensions(),
-        input_shape.element_type(),
-        static_cast<XlaDeviceType>(xla_device.type()));
-    all_gather_result =
-        xla::AllGather(token_handler.GetInput(input, &input_shape), dim,
-                       shard_count, reduce_groups, /*channel_id=*/absl::nullopt,
-                       /*layout=*/reduce_shape.layout());
-  } else {
-    all_gather_result =
-        xla::AllGather(token_handler.GetInput(input, &input_shape), dim,
-                       shard_count, reduce_groups);
+std::vector<xla::XlaOp> BuildAllGather(
+    absl::Span<const xla::XlaOp> inputs, xla::XlaOp token, int64_t dim,
+    int64_t shard_count, const std::vector<std::vector<int64_t>>& groups,
+    bool pin_layout) {
+  std::vector<xla::ReplicaGroup> cc_groups = CreateCollectiveCommGroups(groups);
+  // TODO: We use pseudo-tokens ATM, which are real values. This need to be
+  // switched to use the real XLA Token once support has been added to XLA
+  // AllGather().
+  xla::XlaOp chained_token = token;
+  CollectiveCommContext cc_ctx = GetCollectiveCommContext(inputs);
+  std::vector<xla::XlaOp> result(inputs.size());
+  for (auto& type_ctx : cc_ctx.contexts) {
+    xla::XlaOp token_op = MaybeConvertTo(chained_token, type_ctx.first);
+    type_ctx.second.ops.push_back(token_op);
+    type_ctx.second.operand_shapes.push_back(
+        XlaHelpers::ShapeOfXlaOp(token_op));
+
+    xla::XlaOp all_gather_result;
+    if (pin_layout) {
+      all_gather_result = xla::AllGather(
+          xla::Tuple(inputs[0].builder(), type_ctx.second.ops), dim,
+          shard_count, cc_groups, /*channel_id=*/absl::nullopt,
+          /*layout=*/
+          MakeShapeWithLayout(type_ctx.second.operand_shapes).layout());
+    } else {
+      all_gather_result =
+          xla::AllGather(xla::Tuple(inputs[0].builder(), type_ctx.second.ops),
+                         dim, shard_count, cc_groups);
+    }
+    for (size_t i = 0; i < type_ctx.second.indices.size(); ++i) {
+      size_t op_idx = type_ctx.second.indices[i];
+      result[op_idx] = xla::GetTupleElement(all_gather_result, i);
+    }
+    chained_token =
+        xla::GetTupleElement(all_gather_result, type_ctx.second.indices.size());
   }
-  return {all_gather_result, token_handler.GetNewToken(all_gather_result)};
+  result.push_back(
+      MaybeConvertTo(chained_token, XlaHelpers::TypeOfXlaOp(token)));
+  return result;
 }
 
 CollectivePermuteResult BuildCollectivePermute(
@@ -224,39 +240,63 @@ RecvResult BuildRecvWithToken(xla::XlaOp token, const xla::Shape& recv_shape,
   return {result, new_token};
 }
 
-ReduceScatterResult BuildReduceScatter(
-    AllReduceType reduce_type, xla::XlaOp input, xla::XlaOp token, double scale,
-    int64_t scatter_dim, int64_t shard_count,
+std::vector<xla::XlaOp> BuildReduceScatter(
+    AllReduceType reduce_type, absl::Span<const xla::XlaOp> inputs,
+    xla::XlaOp token, double scale, int64_t scatter_dim, int64_t shard_count,
     const std::vector<std::vector<int64_t>>& groups, bool pin_layout) {
-  std::vector<xla::ReplicaGroup> reduce_groups = CreateReduceGroups(groups);
-  TokenHandler token_handler(token);
-  const xla::Shape& input_shape = XlaHelpers::ShapeOfXlaOp(input);
-  xla::XlaOp reduce_result;
-  if (pin_layout) {
-    torch::lazy::BackendDevice xla_device = GetCurrentDevice();
-    xla::Shape reduce_shape = MakeArrayShapeFromDimensions(
-        input_shape.dimensions(), input_shape.dynamic_dimensions(),
-        input_shape.element_type(),
-        static_cast<XlaDeviceType>(xla_device.type()));
-    reduce_result = xla::ReduceScatter(
-        token_handler.GetInput(input, &input_shape),
-        GetReduceComutation(reduce_type, input_shape.element_type()),
-        scatter_dim, shard_count, reduce_groups, /*channel_id=*/absl::nullopt,
-        /*layout=*/reduce_shape.layout());
-  } else {
-    reduce_result = xla::ReduceScatter(
-        token_handler.GetInput(input, &input_shape),
-        GetReduceComutation(reduce_type, input_shape.element_type()),
-        scatter_dim, shard_count, reduce_groups);
-  }
+  std::vector<xla::ReplicaGroup> cc_groups = CreateCollectiveCommGroups(groups);
+  // TODO: We use pseudo-tokens ATM, which are real values. This need to be
+  // switched to use the real XLA Token once support has been added to XLA
+  // ReduceScatter().
+  xla::XlaOp chained_token = token;
+  CollectiveCommContext cc_ctx = GetCollectiveCommContext(inputs);
+  std::vector<xla::XlaOp> result(inputs.size());
+  for (auto& type_ctx : cc_ctx.contexts) {
+    xla::XlaOp token_op = MaybeConvertTo(chained_token, type_ctx.first);
+    type_ctx.second.ops.push_back(token_op);
+    type_ctx.second.operand_shapes.push_back(
+        XlaHelpers::ShapeOfXlaOp(token_op));
+    xla::XlaOp reduce_result;
+    if (pin_layout) {
+      reduce_result = xla::ReduceScatter(
+          xla::Tuple(inputs[0].builder(), type_ctx.second.ops),
+          GetReduceComputation(reduce_type, type_ctx.first), scatter_dim,
+          shard_count, cc_groups, /*channel_id=*/absl::nullopt,
+          /*layout=*/
+          MakeShapeWithLayout(type_ctx.second.operand_shapes).layout());
+    } else {
+      reduce_result = xla::ReduceScatter(
+          xla::Tuple(inputs[0].builder(), type_ctx.second.ops),
+          GetReduceComputation(reduce_type, type_ctx.first), scatter_dim,
+          shard_count, cc_groups);
+    }
 
-  if (scale != 1.0) {
-    xla::XlaOp scaling_value = XlaHelpers::ScalarValue<float>(
-        scale, input_shape.element_type(), input.builder());
-    reduce_result = reduce_result * scaling_value;
+    for (size_t i = 0; i < type_ctx.second.indices.size(); ++i) {
+      size_t op_idx = type_ctx.second.indices[i];
+      xla::XlaOp gte = xla::GetTupleElement(reduce_result, i);
+      if (scale != 1.0) {
+        xla::XlaOp scaling_value = XlaHelpers::ScalarValue<float>(
+            scale, type_ctx.second.operand_shapes[i].element_type(),
+            gte.builder());
+        gte = gte * scaling_value;
+      }
+      result[op_idx] = gte;
+    }
+    chained_token =
+        xla::GetTupleElement(reduce_result, type_ctx.second.indices.size());
   }
+  result.push_back(
+      MaybeConvertTo(chained_token, XlaHelpers::TypeOfXlaOp(token)));
+  return result;
+}
 
-  return {reduce_result, token_handler.GetNewToken(reduce_result)};
+std::vector<torch::lazy::Value> GetOperandList(
+    c10::ArrayRef<torch::lazy::Value> operands,
+    const torch::lazy::Value& token) {
+  std::vector<torch::lazy::Value> operand_list(operands.begin(),
+                                               operands.end());
+  operand_list.push_back(token);
+  return operand_list;
 }
 
 }  // namespace torch_xla

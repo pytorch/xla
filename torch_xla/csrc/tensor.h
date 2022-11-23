@@ -276,6 +276,15 @@ class XLATensor : public c10::intrusive_ptr_target {
       int64_t scatter_dim, int64_t shard_count,
       std::vector<std::vector<int64_t>> groups, bool pin_layout);
 
+  static std::pair<std::vector<XLATensorPtr>, torch::lazy::Value>
+  reduce_scatter_coalesced(const std::vector<XLATensorPtr>& outputs,
+                           const std::vector<XLATensorPtr>& inputs,
+                           const torch::lazy::Value& token,
+                           AllReduceType reduce_type, double scale,
+                           int64_t scatter_dim, int64_t shard_count,
+                           std::vector<std::vector<int64_t>> groups,
+                           bool pin_layout);
+
   static std::pair<XLATensorPtr, torch::lazy::Value> all_to_all(
       const XLATensorPtr& input, const torch::lazy::Value& token,
       int64_t split_dimension, int64_t concat_dimension, int64_t split_count,
@@ -285,6 +294,11 @@ class XLATensor : public c10::intrusive_ptr_target {
       const XLATensorPtr& input, const torch::lazy::Value& token, int64_t dim,
       int64_t shard_count, std::vector<std::vector<int64_t>> groups,
       bool pin_layout);
+
+  static std::pair<std::vector<XLATensorPtr>, torch::lazy::Value> all_gather(
+      const std::vector<XLATensorPtr>& inputs, const torch::lazy::Value& token,
+      int64_t dim, int64_t shard_count,
+      std::vector<std::vector<int64_t>> groups, bool pin_layout);
 
   static torch::lazy::Value all_gather_out(
       XLATensorPtr& output, const XLATensorPtr& input,

@@ -10,31 +10,37 @@
 namespace torch_xla {
 namespace {
 
-xla::Shape NodeOutputShape(const torch::lazy::Value& input,
+xla::Shape NodeOutputShape(c10::ArrayRef<torch::lazy::Value> inputs,
                            const torch::lazy::Value& token, int64_t dim,
                            int64_t shard_count,
                            const std::vector<std::vector<int64_t>>& groups,
                            bool pin_layout) {
   auto shape_fn = [&](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
-    AllGatherResult result = BuildAllGather(operands[0], operands[1], dim,
-                                            shard_count, groups, pin_layout);
-    return xla::Tuple(operands[0].builder(), {result.result, result.token});
+    std::vector<xla::XlaOp> result =
+        BuildAllGather(operands.subspan(0, operands.size() - 1),
+                       operands.back(), dim, shard_count, groups, pin_layout);
+    return xla::Tuple(operands[0].builder(), result);
   };
-  return InferOutputShape({GetXlaShape(input), GetXlaShape(token)}, shape_fn);
+  std::vector<xla::Shape> input_shapes;
+  for (const auto& input : inputs) {
+    input_shapes.emplace_back(GetXlaShape(input));
+  }
+  input_shapes.emplace_back(GetXlaShape(token));
+  return InferOutputShape(input_shapes, shape_fn);
 }
 
 }  // namespace
 
-AllGather::AllGather(const torch::lazy::Value& input,
+AllGather::AllGather(c10::ArrayRef<torch::lazy::Value> inputs,
                      const torch::lazy::Value& token, int64_t dim,
                      int64_t shard_count,
                      std::vector<std::vector<int64_t>> groups, bool pin_layout)
-    : XlaNode(xla_all_gather, {input, token},
+    : XlaNode(xla_all_gather, GetOperandList(inputs, token),
               [&]() {
-                return NodeOutputShape(input, token, dim, shard_count, groups,
+                return NodeOutputShape(inputs, token, dim, shard_count, groups,
                                        pin_layout);
               },
-              /*num_outputs=*/2,
+              /*num_outputs=*/inputs.size() + 1,
               torch::lazy::MHash(dim, shard_count, groups, pin_layout)),
       dim_(dim),
       shard_count_(shard_count),
@@ -42,16 +48,22 @@ AllGather::AllGather(const torch::lazy::Value& input,
       pin_layout_(pin_layout) {}
 
 torch::lazy::NodePtr AllGather::Clone(torch::lazy::OpList operands) const {
-  return torch::lazy::MakeNode<AllGather>(operands.at(0), operands.at(1), dim_,
+  std::vector<torch::lazy::Value> inputs(operands.begin(), operands.end() - 1);
+  return torch::lazy::MakeNode<AllGather>(inputs, operands.back(), dim_,
                                           shard_count_, groups_, pin_layout_);
 }
 
 XlaOpVector AllGather::Lower(LoweringContext* loctx) const {
-  xla::XlaOp input = loctx->GetOutputOp(operand(0));
-  xla::XlaOp token = loctx->GetOutputOp(operand(1));
-  AllGatherResult result =
-      BuildAllGather(input, token, dim_, shard_count_, groups_, pin_layout_);
-  return ReturnOps({result.result, result.token}, loctx);
+  auto& operand_list = operands();
+  std::vector<xla::XlaOp> inputs;
+  inputs.reserve(operand_list.size());
+  for (size_t i = 0; i + 1 < operand_list.size(); ++i) {
+    inputs.push_back(loctx->GetOutputOp(operand_list[i]));
+  }
+  xla::XlaOp token = loctx->GetOutputOp(operand_list.back());
+  return ReturnOps(
+      BuildAllGather(inputs, token, dim_, shard_count_, groups_, pin_layout_),
+      loctx);
 }
 
 std::string AllGather::ToString() const {
