@@ -57,7 +57,7 @@ class XlaShardingTest(unittest.TestCase):
   def test_mark_sharding_2d(self):
     t1 = torch.randn(1, 128, device='cpu')
     t2 = torch.randn(1, 128, device='cpu')
-    expected = t1 @ t2.T
+    expected = t1 + t2
 
     xt1 = t1.to(xm.xla_device())
     xt2 = t2.to(xm.xla_device())
@@ -67,7 +67,7 @@ class XlaShardingTest(unittest.TestCase):
     ])) if self.n_devices > 1 else '{maximal device=0}'
     self.assertEqual(annotation, torch_xla._XLAC._get_xla_sharding_spec(xt1))
 
-    actual = (xt1 @ xt2.T).cpu()
+    actual = (xt1 + xt2).cpu()
     self.assertTrue(torch.allclose(expected, actual))
 
   def test_mark_sharding_4d(self):
