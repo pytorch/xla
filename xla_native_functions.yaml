@@ -349,6 +349,7 @@ supported:
   # - _trilinear
   # - logsumexp.out
 symint:
+  - embedding
   - empty.memory_format
   - empty_strided
   - expand
