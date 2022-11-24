@@ -9,6 +9,10 @@
 
 namespace torch_xla {
 
+// TODO(jwtan): Replace this with torch::lazy::Counter. We need
+// _cpu_fallback_counters to remain as xla::metrics::Counter to support
+// xla::metrics::CreatePerformanceReport(). For more information, see NOTE:
+// [TORCH_LAZY_COUNTER v.s. XLA_COUNTER].
 static std::unordered_map<std::string, ::xla::metrics::Counter*>
     _cpu_fallback_counters;
 

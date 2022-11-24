@@ -17,6 +17,7 @@ class MetricsTest(unittest.TestCase):
     assert (len(met.counter_names()) > 0)
     met.clear_counters()
     self.assertNotIn("xla::add", met.metrics_report())
+    self.assertEqual(met.counter_value("xla::add"), None)
     assert (len(met.counter_names()) == 0)
     # perform the same computation and check if counter increases again
     t1 += 2
@@ -116,7 +117,8 @@ class MetricsTest(unittest.TestCase):
     self.assertNotEqual(met.counter_value("MarkStep"), 0)
 
     met.clear_counters()
-    self.assertEqual(met.counter_value("DeviceDataCacheMiss"), 0)
+    self.assertEqual(met.counter_value("DeviceDataCacheMiss"), None)
+    self.assertNotIn("DeviceDataCacheMiss", met.metrics_report())
 
     # metrics
     self.assertIn("TensorsGraphSize", report)

@@ -112,7 +112,7 @@ if __name__ == '__main__':
       get_tensorlist="GetTensorList",
       get_tensor_or_wrap_number="bridge::GetXlaTensorOrCreateForWrappedNumber",
       try_get_tensor="bridge::TryGetXlaTensor",
-      metrics_counter='XLA_FN_COUNTER("xla::")',
+      metrics_counter='TORCH_LAZY_FN_COUNTER("xla::")',
       create_tensor="XLATensor::Create",
       create_aten_from_ltc_tensor="torch_xla::bridge::AtenFromXlaTensor",
       tuple_aten_from_ltc_tensors="torch_xla::bridge::TupleAtenFromXlaTensors",

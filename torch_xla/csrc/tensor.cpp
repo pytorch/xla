@@ -1657,6 +1657,7 @@ void XLATensor::SyncLiveTensorsGraph(const torch::lazy::BackendDevice* device,
 void XLATensor::MarkStep(const torch::lazy::BackendDevice& device) {
   // TODO(jwtan): Replace this with TORCH_LAZY_COUNTER. We need MarkStep to
   // remain as XLA_COUNTER to support xla::metrics::CreatePerformanceReport().
+  // For more information, see NOTE: [TORCH_LAZY_COUNTER v.s. XLA_COUNTER].
   XLA_COUNTER("MarkStep", 1);
   DeviceContextArena::Get()->MarkStep(device);
   torch::lazy::ScopePusher::ResetScopes();
