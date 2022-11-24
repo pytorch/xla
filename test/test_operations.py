@@ -1861,6 +1861,14 @@ class TestAtenXlaTensor(XlaTestCase):
     emb_out = emb(index)
     assert emb_out.dtype == torch.bfloat16
 
+  def test_transpose_1d(self):
+
+    def test_fn(t1):
+      t1.t_()
+      return t1.t()
+
+    self.runAtenTest([torch.arange(15, dtype=torch.int32)], test_fn)
+
 
 class MNISTComparator(nn.Module):
 
