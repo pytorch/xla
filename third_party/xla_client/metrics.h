@@ -187,8 +187,6 @@ class Counter {
     __counter->AddValue(value);                 \
   } while (0)
 
-#define XLA_FN_COUNTER(ns) XLA_COUNTER(absl::StrCat(ns, __FUNCTION__), 1)
-
 #define XLA_VALUE_METRIC(name, value)                                    \
   do {                                                                   \
     static ::xla::metrics::Metric* __metric =                            \
