@@ -773,7 +773,8 @@ void MapXlaEnvVarsToLazy() {
   static bool no_scalars =
       xla::sys_util::GetEnvBool("XLA_NO_SPECIAL_SCALARS", false);
   FLAGS_torch_lazy_handle_special_scalars = !no_scalars;
-  FLAGS_torch_lazy_metrics_samples = xla::sys_util::GetEnvInt("XLA_METRICS_SAMPLES", 1024);
+  FLAGS_torch_lazy_metrics_samples =
+      xla::sys_util::GetEnvInt("XLA_METRICS_SAMPLES", 1024);
   FLAGS_torch_lazy_metrics_percentiles = xla::sys_util::GetEnvString(
       "XLA_METRICS_PERCENTILES", "0.01:0.05:0.1:0.2:0.5:0.8:0.9:0.95:0.99");
 }
@@ -1219,7 +1220,7 @@ void InitXlaModuleBindings(py::module m) {
     auto metric_names = torch::lazy::GetMetricNames();
     auto xla_metric_names = xla::metrics::GetMetricNames();
     metric_names.insert(metric_names.end(), xla_metric_names.begin(),
-                         xla_metric_names.end());
+                        xla_metric_names.end());
     return metric_names;
   });
   m.def("_xla_metric_data", [](const std::string& name) -> py::object {
