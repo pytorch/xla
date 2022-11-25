@@ -901,7 +901,8 @@ class XLATensor : public c10::intrusive_ptr_target {
       const XLATensorPtr& score_threshold, const XLATensorPtr& iou_threshold,
       int64_t output_size);
 
-  static XLATensorPtr nonzero(const XLATensorPtr& input);
+  static XLATensorPtr nonzero(const XLATensorPtr& input,
+                              const torch::lazy::Shape& dynamic_shape);
 
   static XLATensorPtr norm(const XLATensorPtr& input,
                            const c10::optional<at::Scalar>& p,

@@ -1970,7 +1970,10 @@ at::Tensor XLANativeFunctions::nonzero(const at::Tensor& self) {
     return at::native::call_fallback_fn<&xla_cpu_fallback,
                                         ATEN_OP(nonzero)>::call(self);
   }
-  return bridge::AtenFromXlaTensor(XLATensor::nonzero(self_tensor));
+  std::vector<torch::lazy::Shape> dynamic_shapes_ =
+      torch::lazy::compute_shape_nonzero(self);
+  return bridge::AtenFromXlaTensor(
+      XLATensor::nonzero(self_tensor, dynamic_shapes_[0]));
 }
 
 at::Tensor XLANativeFunctions::norm(const at::Tensor& self,
