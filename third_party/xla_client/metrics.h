@@ -187,6 +187,8 @@ class Counter {
     __counter->AddValue(value);                 \
   } while (0)
 
+// Please use this within xla_client. Fore more information,
+// see the above comment.
 #define XLA_VALUE_METRIC(name, value)                                    \
   do {                                                                   \
     static ::xla::metrics::Metric* __metric =                            \

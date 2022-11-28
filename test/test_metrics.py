@@ -94,7 +94,7 @@ class MetricsTest(unittest.TestCase):
   def test_metrics_report(self):
     # TODO(jwtan): Add test to cover TrimIrGraph, SyncTensorsToData, TransferToServerAsync, IrValueTensorToXlaData
     xla_device = xm.xla_device()
-    t1 = torch.tensor(1456, device=xla_device)
+    t1 = torch.tensor(2077, device=xla_device)
     t2 = t1 * 2
     xm.mark_step()
     t2_cpu = t2.cpu()
@@ -109,20 +109,34 @@ class MetricsTest(unittest.TestCase):
     # If test_metrics_report is ran together with other tests,
     # the number could be different. So we simply assert them
     # to be none-zero.
-    self.assertNotEqual(len(met.counter_names()), 0)
+    counter_names = met.counter_names()
     self.assertNotEqual(met.counter_value("DeviceDataCacheMiss"), 0)
+    self.assertIn("CreateXlaTensor", counter_names)
     self.assertNotEqual(met.counter_value("CreateXlaTensor"), 0)
+    self.assertIn("DestroyXlaTensor", counter_names)
     self.assertNotEqual(met.counter_value("DestroyXlaTensor"), 0)
+    self.assertIn("UncachedCompile", counter_names)
     self.assertNotEqual(met.counter_value("UncachedCompile"), 0)
+    self.assertIn("MarkStep", counter_names)
     self.assertNotEqual(met.counter_value("MarkStep"), 0)
 
     met.clear_counters()
     self.assertEqual(met.counter_value("DeviceDataCacheMiss"), None)
     self.assertNotIn("DeviceDataCacheMiss", met.metrics_report())
+    self.assertNotIn("DeviceDataCacheMiss", met.counter_names())
 
     # metrics
     self.assertIn("TensorsGraphSize", report)
     self.assertIn("InputOutputAliasCount", report)
+    metric_names = met.metric_names()
+    self.assertIn("TensorsGraphSize", metric_names)
+    self.assertNotEqual(met.metric_data("TensorsGraphSize"), None)
+    self.assertIn("InputOutputAliasCount", metric_names)
+    self.assertNotEqual(met.metric_data("InputOutputAliasCount"), None)
+
+    met.clear_metrics()
+    self.assertNotIn("InputOutputAliasCount", met.metric_names())
+    self.assertEqual(met.metric_data("InputOutputAliasCount"), None)
 
     # timed metrics
     self.assertIn("TensorToData", report)

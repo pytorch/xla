@@ -94,7 +94,7 @@ std::vector<xla::ComputationClient::ExecuteChainedOp> OpByOpExecutor::BuildOps(
     root_nodes.push_back(root.node.get());
   }
   auto post_order = torch::lazy::Util::ComputePostOrder(root_nodes);
-  XLA_VALUE_METRIC("OpByOpGraphSize", post_order.size());
+  TORCH_LAZY_VALUE_METRIC("OpByOpGraphSize", post_order.size());
   TF_VLOG(5) << "TensorsGraphSize=" << post_order.size();
 
   std::unordered_map<const torch::lazy::Node*, size_t> node_to_index;
