@@ -450,12 +450,8 @@ at::Tensor GetXlaTensorDimensionSize(const at::Tensor& tensor, int64_t dim) {
       XLATensor::get_dimensions_size(xtensor, {dim}));
 }
 
-py::object GetMetricData(const std::string& name) {
-  xla::metrics::MetricData* data = xla::metrics::GetMetric(name);
-  if (data == nullptr) {
-    return py::none();
-  }
-
+template <class T>
+py::object GetMetricData(const T* data) {
   double accumulator = 0.0;
   size_t total_samples = 0;
   auto samples = data->Samples(&accumulator, &total_samples);
@@ -472,6 +468,16 @@ py::object GetMetricData(const std::string& name) {
   result[1] = accumulator;
   result[2] = py_samples;
   return result;
+}
+
+py::object GetMetricData(const std::string& name) {
+  if (auto* data = torch::lazy::GetMetric(name)) {
+    return GetMetricData<torch::lazy::MetricData>(data);
+  }
+  if (auto* data = xla::metrics::GetMetric(name)) {
+    return GetMetricData<xla::metrics::MetricData>(data);
+  }
+  return py::none();
 }
 
 py::object GetRevisions() {
@@ -767,6 +773,10 @@ void MapXlaEnvVarsToLazy() {
   static bool no_scalars =
       xla::sys_util::GetEnvBool("XLA_NO_SPECIAL_SCALARS", false);
   FLAGS_torch_lazy_handle_special_scalars = !no_scalars;
+  FLAGS_torch_lazy_metrics_samples =
+      xla::sys_util::GetEnvInt("XLA_METRICS_SAMPLES", 1024);
+  FLAGS_torch_lazy_metrics_percentiles = xla::sys_util::GetEnvString(
+      "XLA_METRICS_PERCENTILES", "0.01:0.05:0.1:0.2:0.5:0.8:0.9:0.95:0.99");
 }
 
 std::string GetPyTypeString(py::handle obj) {
@@ -1206,7 +1216,13 @@ void InitXlaModuleBindings(py::module m) {
     return xla_data != nullptr ? py::cast<int64_t>(xla_data->Value())
                                : py::none();
   });
-  m.def("_xla_metric_names", []() { return xla::metrics::GetMetricNames(); });
+  m.def("_xla_metric_names", []() {
+    auto metric_names = torch::lazy::GetMetricNames();
+    auto xla_metric_names = xla::metrics::GetMetricNames();
+    metric_names.insert(metric_names.end(), xla_metric_names.begin(),
+                        xla_metric_names.end());
+    return metric_names;
+  });
   m.def("_xla_metric_data", [](const std::string& name) -> py::object {
     return GetMetricData(name);
   });
@@ -1239,12 +1255,13 @@ void InitXlaModuleBindings(py::module m) {
                                                    metric_name_vec);
   });
   m.def("_clear_xla_counters", []() {
-    // TODO(jwtan): We should probably upstream the ability to reset counters
-    // and metrics separately to upstream.
-    torch::lazy::MetricsArena::Get()->Reset();
+    torch::lazy::MetricsArena::Get()->ResetCounters();
     xla::metrics::ClearCounters();
   });
-  m.def("_clear_xla_metrics", []() { xla::metrics::ClearMetrics(); });
+  m.def("_clear_xla_metrics", []() {
+    torch::lazy::MetricsArena::Get()->ResetMetrics();
+    xla::metrics::ClearMetrics();
+  });
   m.def("_xla_tensors_report",
         [](size_t nodes_threshold, const std::string& device) {
           return GetLiveTensorsReport(nodes_threshold, device);

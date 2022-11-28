@@ -1404,7 +1404,7 @@ std::shared_ptr<XLATensor::Async> XLATensor::TryRunCachedSync(
   if (cached_computation == nullptr) {
     return nullptr;
   }
-  XLA_VALUE_METRIC("TensorsGraphSize", po_data->post_order.size());
+  TORCH_LAZY_VALUE_METRIC("TensorsGraphSize", po_data->post_order.size());
   TF_VLOG(5) << "TensorsGraphSize=" << po_data->post_order.size();
 
   return ScheduleSyncTensorsGraph(
@@ -1782,7 +1782,7 @@ std::vector<std::pair<int64_t, int64_t>> XLATensor::BuildInputOutputAliases(
       }
     }
   }
-  XLA_VALUE_METRIC("InputOutputAliasCount", alias_map.size());
+  TORCH_LAZY_VALUE_METRIC("InputOutputAliasCount", alias_map.size());
   return input_output_alias_pair;
 }
 
@@ -1931,7 +1931,7 @@ std::shared_ptr<XLATensor::Async> XLATensor::SyncTensorsGraphInternal(
   }
   CompilationResult compile_result =
       Compile(*tensors, devices, coll, &po_data, ir_values);
-  XLA_VALUE_METRIC("TensorsGraphSize", compile_result.emitted_nodes);
+  TORCH_LAZY_VALUE_METRIC("TensorsGraphSize", compile_result.emitted_nodes);
   TF_VLOG(5) << "TensorsGraphSize=" << compile_result.emitted_nodes;
 
   auto cached_computation = std::make_shared<CachedComputation>(
