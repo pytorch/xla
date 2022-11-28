@@ -148,7 +148,6 @@ class MetricsTest(unittest.TestCase):
     self.assertIn("DeviceLockWait", metric_names)
     self.assertNotEqual(met.metric_data("DeviceLockWait"), None)
 
-
     met.clear_metrics()
     self.assertNotIn("InputOutputAliasCount", met.metric_names())
     self.assertEqual(met.metric_data("InputOutputAliasCount"), None)
