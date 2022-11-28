@@ -246,6 +246,9 @@ class TimedSection {
   int64_t start_;
 };
 
+// XLA_TIMED should only be used within xla_client. Please use
+// TORCH_LAZY_TIMED in pytorch/xla. For more information, see
+// NOTE: [TORCH_LAZY_COUNTER v.s. XLA_COUNTER].
 #define XLA_TIMED(name)                                           \
   static xla::metrics::Metric* timed_metric =                     \
       new xla::metrics::Metric(name, xla::metrics::MetricFnTime); \

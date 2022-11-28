@@ -151,7 +151,7 @@ xla::util::ExceptionCleanup LockDevice(
   TF_VLOG(4) << "Waiting on device barrier for device " << device << " ...";
   std::shared_ptr<DeviceLocker> locker;
   {
-    XLA_TIMED("DeviceLockWait");
+    TORCH_LAZY_TIMED("DeviceLockWait");
     locker = DeviceLockerArena::Get()->GetLocker(device);
     locker->Lock();
   }
@@ -806,7 +806,7 @@ torch::lazy::Value XLATensor::GetIrValueForTensor(
     data = GetDeviceData(tensor, device);
     read_only = true;
   } else {
-    XLA_TIMED("IrValueTensorToXlaData");
+    TORCH_LAZY_TIMED("IrValueTensorToXlaData");
     data = TensorToXlaData(tensor, device);
   }
   return CreateTensorNode(std::move(data), read_only);
