@@ -751,7 +751,9 @@ class TestDynamicShape(XlaTestCase):
 
   def test_nonzero_cast(self):
     t1 = torch.ones(5, 2, device=xm.xla_device())
-    # this cast should not fail
+    # Result of the nonzero should be the index type. Currently
+    # index type is s64 on cpu and gpu, but s32 on TPU. We should be
+    # able to cast it to any other type without error.
     t2 = torch.nonzero(t1.int()).float()
     xm.mark_step()
 

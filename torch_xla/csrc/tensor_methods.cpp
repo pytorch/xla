@@ -1876,7 +1876,9 @@ std::pair<XLATensorPtr, XLATensorPtr> XLATensor::nms(
 XLATensorPtr XLATensor::nonzero(const XLATensorPtr& input) {
   torch::lazy::NodePtr node =
       torch::lazy::MakeNode<NonZero>(input->GetIrValue());
-  return input->CreateFrom(torch::lazy::Value(node, 0));
+  // Nonzero result type should not depend on input type, hence we shouldn't
+  // use input->CreateFrom which will inherit the logical_element_type.
+  return Create(torch::lazy::Value(node, 0), input->GetDevice());
 }
 
 XLATensorPtr XLATensor::norm(const XLATensorPtr& input,
