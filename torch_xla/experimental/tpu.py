@@ -1,6 +1,7 @@
 import functools
 import operator
 import os
+import re
 from typing import Dict, NamedTuple, Optional, List, Tuple
 import requests
 import yaml
@@ -87,6 +88,16 @@ def get_tpu_env() -> Dict[str, str]:
   return yaml.load(metadata, yaml.Loader)
 
 
+def version() -> int:
+  try:
+    env = get_tpu_env()
+  except requests.HTTPError as e:
+    raise EnvironmentError('Failed to get TPU metadata') from e
+
+  match = re.match(r'^v(\d)-(\d+)$', env['ACCELERATOR_TYPE'])
+  return int(match.groups()[0])
+
+
 def get_worker_ips() -> List[str]:
   """Returns ordered list of TPU worker IPs from TPU metadata."""
   metadata = _get_metadata('worker-network-endpoints')
@@ -151,11 +162,19 @@ def configure_topology(local_rank: int,
   os.environ.setdefault(xenv.TPU_PROCESS_PORT, str(ports[local_rank]))
 
 
-def discover_master_worker_ip() -> str:
+def discover_master_worker_ip(use_localhost: bool = True) -> str:
   """Find the IP of the TPU host with TPU:0.
 
   TPU device IDs are nondeterministic and independent from Cloud TPU worker IDs.
+
+  Args:
+    use_localhost: if there is only one TPU host, return 'localhost` instead
+      of that host's internal IP.
   """
+  worker_ips = get_worker_ips()
+  if len(worker_ips) == 1:
+    return 'localhost'
+
   tpu_env = get_tpu_env()
   current_worker_id = int(tpu_env['WORKER_ID'])
   t = torch.tensor([current_worker_id], device=xm.xla_device())
@@ -163,5 +182,4 @@ def discover_master_worker_ip() -> str:
   xm.mark_step()
 
   master_worker_id = int(t.cpu())
-  worker_ips = get_worker_ips()
   return worker_ips[master_worker_id]
