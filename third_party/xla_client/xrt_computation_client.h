@@ -303,6 +303,14 @@ class XrtComputationClient : public ComputationClient {
 
   std::vector<std::string> GetAllDevices() const override;
 
+  int GetProcessIndex() const override {
+    XLA_ERROR() << __FUNCTION__ << " not implemented";
+  }
+
+  int GetNumProcesses() const override {
+    XLA_ERROR() << __FUNCTION__ << " not implemented";
+  }
+
   void SetReplicationDevices(
       std::shared_ptr<std::vector<std::string>> devices) override;
 

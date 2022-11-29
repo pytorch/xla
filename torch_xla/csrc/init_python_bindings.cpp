@@ -1159,6 +1159,10 @@ void InitXlaModuleBindings(py::module m) {
         bridge::AtenDeviceToXlaDevice(device_str);
     return device.ordinal();
   });
+  m.def("_xla_get_process_index",
+        []() { return xla::ComputationClient::Get()->GetProcessIndex(); });
+  m.def("_xla_get_num_processes",
+        []() { return xla::ComputationClient::Get()->GetNumProcesses(); });
   m.def("_xla_get_device_ordinal", [](const std::string& device_str) {
     return bridge::AtenDeviceToXlaDevice(device_str).ordinal();
   });
