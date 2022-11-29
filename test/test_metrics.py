@@ -134,15 +134,25 @@ class MetricsTest(unittest.TestCase):
     self.assertIn("InputOutputAliasCount", metric_names)
     self.assertNotEqual(met.metric_data("InputOutputAliasCount"), None)
 
-    met.clear_metrics()
-    self.assertNotIn("InputOutputAliasCount", met.metric_names())
-    self.assertEqual(met.metric_data("InputOutputAliasCount"), None)
-
     # timed metrics
     self.assertIn("TensorToData", report)
     self.assertIn("UnwrapXlaData", report)
     self.assertIn("WrapXlaData", report)
     self.assertIn("DeviceLockWait", report)
+    self.assertIn("TensorToData", metric_names)
+    self.assertNotEqual(met.metric_data("TensorToData"), None)
+    self.assertIn("UnwrapXlaData", metric_names)
+    self.assertNotEqual(met.metric_data("UnwrapXlaData"), None)
+    self.assertIn("WrapXlaData", metric_names)
+    self.assertNotEqual(met.metric_data("WrapXlaData"), None)
+    self.assertIn("DeviceLockWait", metric_names)
+    self.assertNotEqual(met.metric_data("DeviceLockWait"), None)
+
+    met.clear_metrics()
+    self.assertNotIn("InputOutputAliasCount", met.metric_names())
+    self.assertEqual(met.metric_data("InputOutputAliasCount"), None)
+    self.assertNotIn("TensorToData", met.metric_names())
+    self.assertEqual(met.metric_data("TensorToData"), None)
 
     # repeat the same computation and expect to see the CachedCompile counter
     t3 = t1 * 2

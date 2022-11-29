@@ -1667,7 +1667,7 @@ void InitXlaModuleBindings(py::module m) {
           std::vector<torch::lazy::BackendDataPtr> parameters_data;
           torch::lazy::BackendDevice device = torch_xla::GetCurrentDevice();
           {
-            XLA_TIMED("RunCachedGraphInputData");
+            TORCH_LAZY_TIMED("RunCachedGraphInputData");
             // setup the parameters_data
             int idx = 0;
             for (auto& ivalue : graph_inputs) {
@@ -1688,7 +1688,7 @@ void InitXlaModuleBindings(py::module m) {
               cachedComputation->computation, parameters_data, device);
           std::vector<at::Tensor> retlist;
           {
-            XLA_TIMED("RunCachedGraphOutputData");
+            TORCH_LAZY_TIMED("RunCachedGraphOutputData");
             // Convert result back to at::tensor
             int i = 0;
             for (auto& data : results) {
