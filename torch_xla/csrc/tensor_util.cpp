@@ -37,7 +37,7 @@ struct DataAsync {
 
 void TransferToServerAsync(std::shared_ptr<DataAsync> async,
                            const std::vector<std::string>& devices) {
-  XLA_TIMED("TransferToServerAsync");
+  TORCH_LAZY_TIMED("TransferToServerAsync");
 
   std::vector<xla::ComputationClient::DataPtr> async_xla_datas =
       xla::ComputationClient::Get()->CreateAsyncDatas(async->source_tensors);
@@ -652,7 +652,7 @@ void PopulateTensorBuffer(const at::Tensor& tensor,
 torch::lazy::BackendDataPtr TensorToXlaData(
     const at::Tensor& tensor, const xla::Shape& shape,
     const torch::lazy::BackendDevice& device) {
-  XLA_TIMED("TensorToData");
+  TORCH_LAZY_TIMED("TensorToData");
   if (device.type() == (int8_t)XlaDeviceType::SPMD) {
     // When SPMD is enabled, we want to delay the data transfer for XLA
     // tensors until the data is sharded. So, we skip the data transfer
@@ -763,13 +763,13 @@ at::Tensor XlaLiteralToTensorHelper(const xla::Literal& literal,
 
 xla::ComputationClient::DataPtr UnwrapXlaData(
     const torch::lazy::BackendDataPtr& data) {
-  XLA_TIMED("UnwrapXlaData");
+  TORCH_LAZY_TIMED("UnwrapXlaData");
   return dynamic_cast<XLAData*>(data.get())->xla_data();
 }
 
 std::vector<xla::ComputationClient::DataPtr> UnwrapXlaData(
     absl::Span<const torch::lazy::BackendDataPtr> datas) {
-  XLA_TIMED("UnwrapXlaData");
+  TORCH_LAZY_TIMED("UnwrapXlaData");
   std::vector<xla::ComputationClient::DataPtr> xla_datas;
   xla_datas.reserve(datas.size());
   for (const auto& data : datas) {
@@ -780,13 +780,13 @@ std::vector<xla::ComputationClient::DataPtr> UnwrapXlaData(
 
 torch::lazy::BackendDataPtr WrapXlaData(
     const xla::ComputationClient::DataPtr& xla_data) {
-  XLA_TIMED("WrapXlaData");
+  TORCH_LAZY_TIMED("WrapXlaData");
   return std::make_shared<XLAData>(xla_data);
 }
 
 std::vector<torch::lazy::BackendDataPtr> WrapXlaData(
     absl::Span<const xla::ComputationClient::DataPtr> xla_datas) {
-  XLA_TIMED("WrapXlaData");
+  TORCH_LAZY_TIMED("WrapXlaData");
   std::vector<torch::lazy::BackendDataPtr> datas;
   datas.reserve(xla_datas.size());
   for (const auto& xla_data : xla_datas) {
@@ -868,7 +868,7 @@ torch::lazy::BackendDataPtr TensorToXlaData(
 std::vector<torch::lazy::BackendDataPtr> CreateTensorsData(
     const std::vector<at::Tensor>& tensors,
     const std::vector<std::string>& devices, bool transfer_async) {
-  XLA_TIMED("TensorToData");
+  TORCH_LAZY_TIMED("TensorToData");
   XLA_CHECK_EQ(tensors.size(), devices.size());
   if (transfer_async) {
     std::shared_ptr<DataAsync> async = std::make_shared<DataAsync>();
@@ -918,7 +918,7 @@ std::vector<torch::lazy::BackendDataPtr> CreateTensorsData(
     const std::vector<at::Tensor>& tensors,
     const std::vector<XLATensor::ShardingSpecPtr>& shardings,
     const std::vector<std::string>& devices) {
-  XLA_TIMED("TensorToData");
+  TORCH_LAZY_TIMED("TensorToData");
   XLA_CHECK_EQ(tensors.size(), shardings.size());
   XLA_CHECK_EQ(tensors.size(), devices.size());
 
