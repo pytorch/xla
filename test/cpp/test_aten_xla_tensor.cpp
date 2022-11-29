@@ -5140,7 +5140,7 @@ TEST_F(AtenXlaTensorTest, TestNonzero) {
   ForEachDevice([&](const torch::Device& device) {
     torch::Tensor xla_a = CopyToDevice(a, device);
     torch::Tensor xla_b = torch::nonzero(xla_a);
-    AllClose(b, xla_b);
+    AllClose(b, torch::_cast_Long(xla_b));
 
     if (DebugUtil::ExperimentEnabled("nonzero")) {
       // If the nonzero support is enabled, we must not see any aten:: calls.
