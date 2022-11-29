@@ -1,5 +1,5 @@
 diff --git a/tensorflow/core/distributed_runtime/request_id.cc b/tensorflow/core/distributed_runtime/request_id.cc
-index 24fc3004391..c7cb01d44a3 100644
+index 24fc3004391..4a8954072c8 100644
 --- a/tensorflow/core/distributed_runtime/request_id.cc
 +++ b/tensorflow/core/distributed_runtime/request_id.cc
 @@ -22,7 +22,7 @@ namespace tensorflow {
@@ -7,7 +7,7 @@ index 24fc3004391..c7cb01d44a3 100644
    int64_t request_id = 0;
    while (request_id == 0) {
 -    request_id = tsl::random::ThreadLocalNew64();
-+    request_id = random::New64();
++    request_id = tsl::random::New64();
    }
    return request_id;
  }
