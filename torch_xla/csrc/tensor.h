@@ -50,14 +50,6 @@ class TORCH_API XLASymNodeImpl : public c10::SymNodeImpl {
 class XLATensor;
 using XLATensorPtr = c10::intrusive_ptr<XLATensor>;
 
-struct DeviceDataInfo : public xla::ComputationClient::Data::Info {
-  DeviceDataInfo(int64_t tensor_id, bool read_only)
-      : tensor_id(tensor_id), read_only(read_only) {}
-
-  int64_t tensor_id = 0;
-  bool read_only = false;
-};
-
 class XLATensor : public c10::intrusive_ptr_target {
   class DeviceContextArena;
   struct Data;
@@ -191,6 +183,9 @@ class XLATensor : public c10::intrusive_ptr_target {
                          uint64_t seed);
 
   static uint64_t GetRunningSeed(const torch::lazy::BackendDevice& device);
+
+  static torch::lazy::BackendDataPtr GetRngSeedData(
+      const torch::lazy::BackendDevice& device, bool reset);
 
   // Dispatches a comparison operator, setting the logical type of the result
   // appropriately.
@@ -357,13 +352,11 @@ class XLATensor : public c10::intrusive_ptr_target {
   static XLATensorPtr adaptive_max_pool2d_backward(
       const XLATensorPtr& grad_output, const XLATensorPtr& input);
 
-  static XLATensorPtr _adaptive_avg_pool2d(
-      const XLATensorPtr& input, std::vector<int64_t> output_size,
-      std::vector<torch::lazy::Shape>&& shapes);
+  static XLATensorPtr _adaptive_avg_pool2d(const XLATensorPtr& input,
+                                           std::vector<int64_t> output_size);
 
   static XLATensorPtr _adaptive_avg_pool2d_backward(
-      const XLATensorPtr& grad_output, const XLATensorPtr& input,
-      std::vector<torch::lazy::Shape>&& shapes);
+      const XLATensorPtr& grad_output, const XLATensorPtr& input);
 
   static void _amp_foreach_non_finite_check_and_unscale_(
       std::vector<XLATensorPtr> self, XLATensorPtr& found_inf,
@@ -437,10 +430,6 @@ class XLATensor : public c10::intrusive_ptr_target {
   static void as_strided_(XLATensorPtr& input, std::vector<int64_t> size,
                           std::vector<int64_t> stride,
                           c10::optional<int64_t> storage_offset);
-
-  static XLATensorPtr atan2(
-      const XLATensorPtr& input, const XLATensorPtr& other,
-      c10::optional<at::ScalarType> logical_element_type = c10::nullopt);
 
   static XLATensorPtr avg_pool_nd(const XLATensorPtr& input,
                                   int64_t spatial_dim_count,
@@ -1240,12 +1229,10 @@ class XLATensor : public c10::intrusive_ptr_target {
   const c10::Storage& Storage() const { return storage_; }
 
   struct CachedComputation {
-    CachedComputation(
-        std::shared_ptr<xla::ComputationClient::Computation> computation,
-        bool is_sharded = false)
+    CachedComputation(ComputationPtr computation, bool is_sharded = false)
         : computation(std::move(computation)), is_sharded(is_sharded) {}
 
-    std::shared_ptr<xla::ComputationClient::Computation> computation;
+    ComputationPtr computation;
     bool is_sharded;
   };
 
@@ -1256,6 +1243,11 @@ class XLATensor : public c10::intrusive_ptr_target {
   static ComputationCache* GetComputationCache();
 
   int64_t GetOpaqueHandle() const;
+
+  static std::vector<torch::lazy::BackendDataPtr> ExecuteComputationWithBarrier(
+      torch::lazy::ComputationPtr computation,
+      c10::ArrayRef<torch::lazy::BackendDataPtr> arguments,
+      const torch::lazy::BackendDevice& device);
 
  private:
   struct SyncTensorsConfig {
@@ -1287,7 +1279,7 @@ class XLATensor : public c10::intrusive_ptr_target {
   struct CompilationResult {
     torch::lazy::BackendDevice device;
     size_t emitted_nodes = 0;
-    std::shared_ptr<xla::ComputationClient::Computation> computation;
+    ComputationPtr computation;
     std::vector<torch::lazy::BackendDataPtr> parameters_data;
     bool is_sharded = false;
   };

@@ -163,20 +163,16 @@ std::pair<XLATensorPtr, XLATensorPtr> GetBinaryOperands(
 
 // The input is in format of {N, C, H, W} and the output will be {H, W}.
 std::vector<int64_t> GetOutputSizeWithScale(
-    absl::Span<const int64_t> input_size,
-    const c10::optional<at::ArrayRef<double>>& scale_factors,
-    const at::OptionalIntArrayRef& output_size) {
-  if (!output_size) {
-    XLA_CHECK(scale_factors);
-    XLA_CHECK_EQ(scale_factors->size(), 2);
-    // Calculate the output size from input_shape and scale_factors
-    XLA_CHECK_EQ(input_size.size(), 4);
-    int64_t output_h = input_size[2] * (*scale_factors)[0];
-    int64_t output_w = input_size[3] * (*scale_factors)[1];
-    return {output_h, output_w};
-  }
-  XLA_CHECK(!scale_factors);
-  return torch::lazy::ToVector<int64_t>(*output_size);
+    absl::Span<const int64_t> input_size, const c10::optional<double> scales_h,
+    const c10::optional<double> scales_w,
+    const std::vector<int64_t>& output_size) {
+  XLA_CHECK(scales_h);
+  XLA_CHECK(scales_w);
+  // Calculate the output size from input_shape and scale_factors
+  XLA_CHECK_EQ(input_size.size(), 4);
+  int64_t output_h = input_size[2] * (*scales_h);
+  int64_t output_w = input_size[3] * (*scales_w);
+  return {output_h, output_w};
 }
 
 void CheckBinaryOpTypePromotion(const at::Tensor& out, const at::Tensor& self,
@@ -328,13 +324,9 @@ at::Tensor XLANativeFunctions::_adaptive_avg_pool3d(
   }
   auto common_device = torch_xla::bridge::GetXlaDevice(self);
   XLA_CHECK(common_device);
-  auto shapes =
-      torch::lazy::compute_shape__adaptive_avg_pool3d(self, output_size);
-  XLA_CHECK(shapes.size() == 1);
   torch::lazy::NodePtr node = torch::lazy::MakeNode<AdaptiveAvgPool3d>(
       bridge::GetXlaTensor(self)->GetIrValue(),
-      std::vector<int64_t>(output_size.begin(), output_size.end()),
-      std::move(shapes));
+      std::vector<int64_t>(output_size.begin(), output_size.end()));
   return torch_xla::bridge::AtenFromXlaTensor(
       torch_xla::XLATensor::Create(std::move(node), *common_device));
 }
@@ -354,12 +346,9 @@ at::Tensor XLANativeFunctions::_adaptive_avg_pool3d_backward(
   }
   auto common_device = torch_xla::bridge::GetXlaDevice(grad_output, self);
   XLA_CHECK(common_device);
-  auto shapes = torch::lazy::compute_shape__adaptive_avg_pool3d_backward(
-      grad_output, self);
-  XLA_CHECK(shapes.size() == 1);
   torch::lazy::NodePtr node = torch::lazy::MakeNode<AdaptiveAvgPool3dBackward>(
       bridge::GetXlaTensor(grad_output)->GetIrValue(),
-      bridge::GetXlaTensor(self)->GetIrValue(), std::move(shapes));
+      bridge::GetXlaTensor(self)->GetIrValue());
 
   return torch_xla::bridge::AtenFromXlaTensor(
       torch_xla::XLATensor::Create(std::move(node), *common_device));
@@ -375,10 +364,8 @@ at::Tensor XLANativeFunctions::_adaptive_avg_pool2d(
         &xla_cpu_fallback, ATEN_OP(_adaptive_avg_pool2d)>::call(self,
                                                                 output_size);
   }
-  auto shapes =
-      torch::lazy::compute_shape__adaptive_avg_pool2d(self, output_size);
   return bridge::AtenFromXlaTensor(XLATensor::_adaptive_avg_pool2d(
-      bridge::GetXlaTensor(self), output_size_list, std::move(shapes)));
+      bridge::GetXlaTensor(self), output_size_list));
 }
 
 at::Tensor XLANativeFunctions::_adaptive_avg_pool2d_backward(
@@ -393,11 +380,8 @@ at::Tensor XLANativeFunctions::_adaptive_avg_pool2d_backward(
         &xla_cpu_fallback,
         ATEN_OP(_adaptive_avg_pool2d_backward)>::call(grad_output, self);
   }
-  auto shapes = torch::lazy::compute_shape__adaptive_avg_pool2d_backward(
-      grad_output, self);
   return bridge::AtenFromXlaTensor(XLATensor::_adaptive_avg_pool2d_backward(
-      bridge::GetXlaTensor(grad_output), bridge::GetXlaTensor(self),
-      std::move(shapes)));
+      bridge::GetXlaTensor(grad_output), bridge::GetXlaTensor(self)));
 }
 
 std::tuple<at::Tensor, at::Tensor> XLANativeFunctions::adaptive_max_pool2d(
@@ -704,11 +688,15 @@ at::Tensor XLANativeFunctions::atan2(const at::Tensor& self,
     return at::native::call_fallback_fn<&xla_cpu_fallback,
                                         ATEN_OP(atan2)>::call(self, other);
   }
-  return DoBinaryOp(self, other,
-                    [&](const XLATensorPtr& xself, const XLATensorPtr& xother,
-                        at::ScalarType dtype) {
-                      return XLATensor::atan2(xself, xother, dtype);
-                    });
+
+  auto common_device = torch_xla::bridge::GetXlaDevice(self, other);
+  XLA_CHECK(common_device);
+  torch::lazy::NodePtr node =
+      torch::lazy::MakeNode<Atan2>(bridge::GetXlaTensor(self)->GetIrValue(),
+                                   bridge::GetXlaTensor(other)->GetIrValue());
+
+  return torch_xla::bridge::AtenFromXlaTensor(
+      torch_xla::XLATensor::Create(std::move(node), *common_device));
 }
 
 at::Tensor XLANativeFunctions::avg_pool2d(
@@ -842,6 +830,33 @@ at::Tensor XLANativeFunctions::binary_cross_entropy_with_logits(
   return at::native::binary_cross_entropy_with_logits(
       self, target, IsDefined(weight) ? *weight : at::Tensor(),
       IsDefined(pos_weight) ? *pos_weight : at::Tensor(), reduction);
+}
+
+at::Tensor XLANativeFunctions::bitwise_and(const at::Tensor& self,
+                                           const at::Tensor& other) {
+  XLA_FN_COUNTER("xla::");
+  return DoBinaryOpWithoutPromo(
+      self, other, [&](const XLATensorPtr& xself, const XLATensorPtr& other) {
+        return XLATensor::bitwise_and(xself, other);
+      });
+}
+
+at::Tensor XLANativeFunctions::bitwise_or(const at::Tensor& self,
+                                          const at::Tensor& other) {
+  XLA_FN_COUNTER("xla::");
+  return DoBinaryOpWithoutPromo(
+      self, other, [&](const XLATensorPtr& xself, const XLATensorPtr& xother) {
+        return XLATensor::bitwise_or(xself, xother);
+      });
+}
+
+at::Tensor XLANativeFunctions::bitwise_xor(const at::Tensor& self,
+                                           const at::Tensor& other) {
+  XLA_FN_COUNTER("xla::");
+  return DoBinaryOpWithoutPromo(
+      self, other, [&](const XLATensorPtr& xself, const XLATensorPtr& xother) {
+        return XLATensor::bitwise_xor(xself, xother);
+      });
 }
 
 at::Tensor XLANativeFunctions::bmm(const at::Tensor& self,
@@ -2871,55 +2886,20 @@ at::Tensor XLANativeFunctions::upsample_bilinear2d_backward(
 }
 
 at::Tensor XLANativeFunctions::upsample_nearest2d(
-    const at::Tensor& input, at::OptionalIntArrayRef output_size,
-    c10::optional<at::ArrayRef<double>> scale_factors) {
-  XLA_FN_COUNTER("xla::");
-  XLATensorPtr input_tensor = bridge::GetXlaTensor(input);
-  absl::Span<const int64_t> input_dims =
-      input_tensor->shape().get().dimensions();
-  return bridge::AtenFromXlaTensor(XLATensor::upsample_nearest2d(
-      input_tensor,
-      GetOutputSizeWithScale(input_dims, scale_factors, output_size)));
-}
-
-at::Tensor XLANativeFunctions::upsample_nearest2d_backward(
-    const at::Tensor& grad_output, at::OptionalIntArrayRef output_size,
-    at::IntArrayRef input_size,
-    c10::optional<at::ArrayRef<double>> scale_factors) {
-  XLA_FN_COUNTER("xla::");
-  XLATensorPtr grad_output_tensor = bridge::GetXlaTensor(grad_output);
-  // Only the XLA TPU backend for now implements the CustomCall required by our
-  // XLA lowering.
-  XlaDeviceType hw_type =
-      static_cast<XlaDeviceType>(grad_output_tensor->GetDevice().type());
-  if (hw_type != XlaDeviceType::TPU) {
-    return at::native::call_fallback_fn<&xla_cpu_fallback,
-                                        ATEN_OP2(upsample_nearest2d_backward,
-                                                 vec)>::call(grad_output,
-                                                             output_size,
-                                                             input_size,
-                                                             scale_factors);
-  }
-  std::vector<int64_t> input_dim = torch::lazy::ToVector<int64_t>(input_size);
-  return bridge::AtenFromXlaTensor(XLATensor::upsample_nearest2d_backward(
-      grad_output_tensor,
-      GetOutputSizeWithScale(input_dim, scale_factors, output_size),
-      input_dim));
-}
-
-at::Tensor XLANativeFunctions::upsample_nearest2d(
     const at::Tensor& self, at::IntArrayRef output_size,
     c10::optional<double> scales_h, c10::optional<double> scales_w) {
   XLA_FN_COUNTER("xla::");
   XLATensorPtr self_tensor = bridge::GetXlaTensor(self);
+  absl::Span<const int64_t> input_dims =
+      self_tensor->shape().get().dimensions();
+  std::vector<int64_t> scaled_output_size =
+      torch::lazy::ToVector<int64_t>(output_size);
   if ((scales_h && *scales_h != 1.0) || (scales_w && *scales_w != 1.0)) {
-    return at::native::call_fallback_fn<
-        &xla_cpu_fallback, ATEN_OP(upsample_nearest2d)>::call(self, output_size,
-                                                              scales_h,
-                                                              scales_w);
+    scaled_output_size = GetOutputSizeWithScale(input_dims, scales_h, scales_w,
+                                                scaled_output_size);
   }
-  return bridge::AtenFromXlaTensor(XLATensor::upsample_nearest2d(
-      self_tensor, torch::lazy::ToVector<int64_t>(output_size)));
+  return bridge::AtenFromXlaTensor(
+      XLATensor::upsample_nearest2d(self_tensor, scaled_output_size));
 }
 
 at::Tensor XLANativeFunctions::upsample_nearest2d_backward(
@@ -3052,9 +3032,11 @@ at::Tensor XLANativeFunctions::new_empty_strided_symint(
                                               device, pin_memory);
 }
 
-at::Tensor XLANativeFunctions::narrow_copy(const at::Tensor& self, int64_t dim,
-                                           int64_t start, int64_t length) {
-  return at::native::narrow_copy_dense(self, dim, start, length);
+at::Tensor XLANativeFunctions::narrow_copy_symint(const at::Tensor& self,
+                                                  int64_t dim,
+                                                  c10::SymInt start,
+                                                  c10::SymInt length) {
+  return at::native::narrow_copy_dense_symint(self, dim, start, length);
 }
 at::Tensor XLANativeFunctions::pixel_shuffle(const at::Tensor& self,
                                              int64_t upscale_factor) {

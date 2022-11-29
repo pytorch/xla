@@ -20,14 +20,18 @@
 
 namespace xla {
 
+// Somehow the compiler doesn't allow type that has default member being
+// used as a default parameter in a method defined in the same scope.
+// Therefore, ClientExecuteOptions is defined here instead of within
+// ComputationClient.
+struct ClientExecuteOptions {
+  bool explode_tuple{true};
+};
+
 class ComputationClient {
  public:
   class Data {
    public:
-    struct Info {
-      virtual ~Info() {}
-    };
-
     using OpaqueHandle = int64_t;
 
     Data(std::string device, Shape shape)
@@ -39,13 +43,6 @@ class ComputationClient {
 
     const Shape& shape() const { return shape_; }
 
-    Info* info() const { return info_.get(); }
-
-    std::shared_ptr<Info> SetInfo(std::shared_ptr<Info> info) {
-      std::swap(info, info_);
-      return info;
-    }
-
     virtual OpaqueHandle GetOpaqueHandle() = 0;
 
     virtual void Assign(const Data& data) = 0;
@@ -55,7 +52,6 @@ class ComputationClient {
    private:
     std::string device_;
     Shape shape_;
-    std::shared_ptr<Info> info_;
   };
 
   using DataPtr = std::shared_ptr<Data>;
@@ -152,15 +148,11 @@ class ComputationClient {
     bool is_sharded;
   };
 
-  struct ExecuteOptions {
-    bool explode_tuple = true;
-  };
+  struct ExecuteComputationOptions : public ClientExecuteOptions {};
 
-  struct ExecuteComputationOptions : public ExecuteOptions {};
+  struct ExecuteReplicatedOptions : public ClientExecuteOptions {};
 
-  struct ExecuteReplicatedOptions : public ExecuteOptions {};
-
-  struct ExecuteParallelOptions : public ExecuteOptions {};
+  struct ExecuteParallelOptions : public ClientExecuteOptions {};
 
   // Describes an operation to be fed to the ExecuteChained() API.
   // If the device_data member is not nullptr, this operation is a device data
@@ -247,7 +239,9 @@ class ComputationClient {
   // its single elements.
   virtual std::vector<DataPtr> ExecuteComputation(
       const Computation& computation, absl::Span<const DataPtr> arguments,
-      const std::string& device, const ExecuteComputationOptions& options) = 0;
+      const std::string& device,
+      const ExecuteComputationOptions& options =
+          ExecuteComputationOptions{}) = 0;
 
   // Executes the computation in replicated mode.
   // The size of the arguments vector is the number of replicas to execute,

@@ -39,7 +39,8 @@ TEST_F(XLAShardingTest, ShardTensor) {
           CreateComputationShapeFromTensor(tensor, GetDefaultDevice()),
           devices.size())
           .ToProto();
-  auto shards = ShardingUtil::ShardTensor(tensor, sharding, devices);
+  auto shards =
+      ShardingUtil::ShardTensor(tensor, sharding, devices, /*padded=*/false);
   EXPECT_EQ(shards.size(), 8);
   EXPECT_EQ(shards[0].sizes(), c10::ArrayRef<long>({1}));
   EXPECT_EQ(shards[1].sizes(), c10::ArrayRef<long>({1}));
@@ -52,7 +53,8 @@ TEST_F(XLAShardingTest, ShardTensor) {
       {4, 5, 6, 7},
   });
   sharding = xla::HloSharding::Tile(mesh).ToProto();
-  shards = ShardingUtil::ShardTensor(tensor, sharding, devices);
+  shards =
+      ShardingUtil::ShardTensor(tensor, sharding, devices, /*padded=*/false);
   EXPECT_EQ(shards.size(), 8);
   EXPECT_EQ(shards[0].sizes(), c10::ArrayRef<long>({4, 2, 4}));
   EXPECT_EQ(shards[7].sizes(), c10::ArrayRef<long>({4, 1, 4}));
@@ -61,14 +63,16 @@ TEST_F(XLAShardingTest, ShardTensor) {
   // size should be smaller in dim=1 because it's not evenly divisible.
   xla::Array3D<int64_t> cube({{{0, 1}, {2, 3}, {4, 5}, {6, 7}}});
   sharding = xla::HloSharding::Tile(cube).ToProto();
-  shards = ShardingUtil::ShardTensor(tensor, sharding, devices);
+  shards =
+      ShardingUtil::ShardTensor(tensor, sharding, devices, /*padded=*/false);
   EXPECT_EQ(shards.size(), 8);
   EXPECT_EQ(shards[0].sizes(), c10::ArrayRef<long>({8, 2, 2}));
   EXPECT_EQ(shards[7].sizes(), c10::ArrayRef<long>({8, 1, 2}));
 
   // Replicated, all shards should be identical.
   sharding = xla::HloSharding::Replicate().ToProto();
-  shards = ShardingUtil::ShardTensor(tensor, sharding, devices);
+  shards =
+      ShardingUtil::ShardTensor(tensor, sharding, devices, /*padded=*/false);
   EXPECT_EQ(shards.size(), 8);
   EXPECT_EQ(shards[0].sizes(), c10::ArrayRef<long>({8, 7, 4}));
   EXPECT_EQ(shards[7].sizes(), c10::ArrayRef<long>({8, 7, 4}));
@@ -79,10 +83,38 @@ TEST_F(XLAShardingTest, ShardTensor) {
   tensor = at::ones({1, 8, 7, 4}, at::TensorOptions(at::kFloat));
   xla::Array4D<int64_t> tesseract({{{{0, 1}, {2, 3}, {4, 5}, {6, 7}}}});
   sharding = xla::HloSharding::Tile(tesseract).ToProto();
-  shards = ShardingUtil::ShardTensor(tensor, sharding, devices);
+  shards =
+      ShardingUtil::ShardTensor(tensor, sharding, devices, /*padded=*/false);
   EXPECT_EQ(shards.size(), 8);
   EXPECT_EQ(shards[0].sizes(), c10::ArrayRef<long>({1, 8, 2, 2}));
   EXPECT_EQ(shards[7].sizes(), c10::ArrayRef<long>({1, 8, 1, 2}));
+
+  // 4D tiled and padded, all shard sizes should be idential.
+  shards =
+      ShardingUtil::ShardTensor(tensor, sharding, devices, /*padded=*/true);
+  EXPECT_EQ(shards.size(), 8);
+  EXPECT_EQ(shards[0].sizes(), c10::ArrayRef<long>({1, 8, 2, 2}));
+  EXPECT_EQ(shards[7].sizes(), c10::ArrayRef<long>({1, 8, 2, 2}));
+
+  // 5D tiled, the first and second dims are replicated and the last halved. The
+  // last shard size should be smaller in dim=2 because it's not evenly
+  // divisible.
+  tensor = at::ones({10, 1, 8, 7, 4}, at::TensorOptions(at::kFloat));
+  xla::Array<int64_t> hypercube(std::vector<int64_t>{1, 1, 2, 2, 2});
+  hypercube.FillIota(0);
+  sharding = xla::HloSharding::Tile(hypercube).ToProto();
+  shards =
+      ShardingUtil::ShardTensor(tensor, sharding, devices, /*padded=*/false);
+  EXPECT_EQ(shards.size(), 8);
+  EXPECT_EQ(shards[0].sizes(), c10::ArrayRef<long>({10, 1, 4, 4, 2}));
+  EXPECT_EQ(shards[7].sizes(), c10::ArrayRef<long>({10, 1, 4, 3, 2}));
+
+  // 5D tiled and padded, all shard sizes should be identical.
+  shards =
+      ShardingUtil::ShardTensor(tensor, sharding, devices, /*padded=*/true);
+  EXPECT_EQ(shards.size(), 8);
+  EXPECT_EQ(shards[0].sizes(), c10::ArrayRef<long>({10, 1, 4, 4, 2}));
+  EXPECT_EQ(shards[7].sizes(), c10::ArrayRef<long>({10, 1, 4, 4, 2}));
 }
 
 TEST_F(XLAShardingTest, CreateTensorsData) {

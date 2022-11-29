@@ -229,39 +229,39 @@ ShardingUtil::InputHandler(
 
 std::vector<at::Tensor> ShardingUtil::ShardTensor(
     const at::Tensor& tensor, const xla::OpSharding sharding,
-    const std::vector<std::string>& devices) {
+    const std::vector<std::string>& devices, bool padded) {
   TF_LOG(INFO) << "ShardTensor with sharding type(" << sharding.type() << ")..."
                << std::endl;
   std::vector<at::Tensor> shards(devices.size());
   if (sharding.type() == xla::OpSharding::REPLICATED) {
     std::fill_n(shards.begin(), shards.size(), tensor);
   } else if (sharding.type() == xla::OpSharding::OTHER) {
-    CHECK_EQ(devices.size(), sharding.tile_assignment_devices().size())
+    XLA_CHECK_EQ(devices.size(), sharding.tile_assignment_devices().size())
         << "Invalid sharding tile_assignment_devices.size(): expected "
         << devices.size() << ", actual "
         << sharding.tile_assignment_devices().size();
-    CHECK(sharding.tile_shape().dimensions_size() <= 2);
-    CHECK(tensor.sizes().size() >= sharding.tile_shape().dimensions_size());
+    XLA_CHECK(sharding.tile_shape().dimensions_size() <= 2);
+    XLA_CHECK(tensor.sizes().size() >= sharding.tile_shape().dimensions_size());
 
     auto tile_shape = sharding.tile_assignment_dimensions();
-    for (int64_t core : sharding.tile_assignment_devices()) {
+    for (size_t i = 0; i < shards.size(); ++i) {
       at::Tensor shard;
       if (tile_shape.size() == 1) {
         int64_t x_partition = tensor.sizes()[0] / tile_shape[0] +
                               (tensor.sizes()[0] % tile_shape[0] != 0);
         shard = tensor.index(
-            {at::indexing::Slice((core % tile_shape[0]) * x_partition,
-                                 (core % tile_shape[0] + 1) * x_partition)});
+            {at::indexing::Slice((i % tile_shape[0]) * x_partition,
+                                 (i % tile_shape[0] + 1) * x_partition)});
       } else if (tile_shape.size() == 2) {
         int64_t x_partition = tensor.sizes()[0] / tile_shape[0] +
                               (tensor.sizes()[0] % tile_shape[0] != 0);
         int64_t y_partition = tensor.sizes()[1] / tile_shape[1] +
                               (tensor.sizes()[1] % tile_shape[1] != 0);
         shard = tensor.index(
-            {at::indexing::Slice((core / tile_shape[1]) * x_partition,
-                                 (core / tile_shape[1] + 1) * x_partition),
-             at::indexing::Slice((core % tile_shape[1]) * y_partition,
-                                 (core % tile_shape[1] + 1) * y_partition)});
+            {at::indexing::Slice((i % tile_shape[0]) * x_partition,
+                                 (i % tile_shape[0] + 1) * x_partition),
+             at::indexing::Slice((i % tile_shape[1]) * y_partition,
+                                 (i % tile_shape[1] + 1) * y_partition)});
       } else if (tile_shape.size() == 3) {
         int64_t x_partition = tensor.sizes()[0] / tile_shape[0] +
                               (tensor.sizes()[0] % tile_shape[0] != 0);
@@ -270,13 +270,12 @@ std::vector<at::Tensor> ShardingUtil::ShardTensor(
         int64_t z_partition = tensor.sizes()[2] / tile_shape[2] +
                               (tensor.sizes()[2] % tile_shape[2] != 0);
         shard = tensor.index(
-            {at::indexing::Slice(
-                 (core / tile_shape[1] / tile_shape[2]) * x_partition,
-                 (core / tile_shape[1] / tile_shape[2] + 1) * x_partition),
-             at::indexing::Slice((core / tile_shape[2]) * y_partition,
-                                 (core / tile_shape[2] + 1) * y_partition),
-             at::indexing::Slice((core % tile_shape[2]) * z_partition,
-                                 (core % tile_shape[2] + 1) * z_partition)});
+            {at::indexing::Slice((i % tile_shape[0]) * x_partition,
+                                 (i % tile_shape[0] + 1) * x_partition),
+             at::indexing::Slice((i % tile_shape[1]) * y_partition,
+                                 (i % tile_shape[1] + 1) * y_partition),
+             at::indexing::Slice((i % tile_shape[2]) * z_partition,
+                                 (i % tile_shape[2] + 1) * z_partition)});
       } else if (tile_shape.size() == 4) {
         int64_t x_partition = tensor.sizes()[0] / tile_shape[0] +
                               (tensor.sizes()[0] % tile_shape[0] != 0);
@@ -287,18 +286,14 @@ std::vector<at::Tensor> ShardingUtil::ShardTensor(
         int64_t w_partition = tensor.sizes()[3] / tile_shape[3] +
                               (tensor.sizes()[3] % tile_shape[3] != 0);
         shard = tensor.index(
-            {at::indexing::Slice(
-                 (core / tile_shape[1] / tile_shape[2] / tile_shape[3]) *
-                     x_partition,
-                 (core / tile_shape[1] / tile_shape[2] / tile_shape[3] + 1) *
-                     x_partition),
-             at::indexing::Slice(
-                 (core / tile_shape[2] / tile_shape[3]) * y_partition,
-                 (core / tile_shape[2] / tile_shape[3] + 1) * y_partition),
-             at::indexing::Slice((core / tile_shape[3]) * z_partition,
-                                 (core / tile_shape[3] + 1) * z_partition),
-             at::indexing::Slice((core % tile_shape[3]) * w_partition,
-                                 (core % tile_shape[3] + 1) * w_partition)});
+            {at::indexing::Slice((i % tile_shape[0]) * x_partition,
+                                 (i % tile_shape[0] + 1) * x_partition),
+             at::indexing::Slice((i % tile_shape[1]) * y_partition,
+                                 (i % tile_shape[1] + 1) * y_partition),
+             at::indexing::Slice((i % tile_shape[2]) * z_partition,
+                                 (i % tile_shape[2] + 1) * z_partition),
+             at::indexing::Slice((i % tile_shape[3]) * w_partition,
+                                 (i % tile_shape[3] + 1) * w_partition)});
       } else if (tile_shape.size() == 5) {
         int64_t x_partition = tensor.sizes()[0] / tile_shape[0] +
                               (tensor.sizes()[0] % tile_shape[0] != 0);
@@ -311,27 +306,39 @@ std::vector<at::Tensor> ShardingUtil::ShardTensor(
         int64_t v_partition = tensor.sizes()[4] / tile_shape[4] +
                               (tensor.sizes()[4] % tile_shape[4] != 0);
         shard = tensor.index(
-            {at::indexing::Slice((core / tile_shape[1] / tile_shape[2] /
-                                  tile_shape[3] / tile_shape[4]) *
-                                     x_partition,
-                                 (core / tile_shape[1] / tile_shape[2] /
-                                      tile_shape[3] / tile_shape[4] +
-                                  1) *
-                                     x_partition),
-             at::indexing::Slice(
-                 (core / tile_shape[2] / tile_shape[3] / tile_shape[4]) *
-                     y_partition,
-                 (core / tile_shape[2] / tile_shape[3] / tile_shape[4] + 1) *
-                     y_partition),
-             at::indexing::Slice(
-                 (core / tile_shape[3] / tile_shape[4]) * z_partition,
-                 (core / tile_shape[3] / tile_shape[4] + 1) * z_partition),
-             at::indexing::Slice((core / tile_shape[4]) * w_partition,
-                                 (core / tile_shape[4] + 1) * w_partition),
-             at::indexing::Slice((core % tile_shape[4]) * v_partition,
-                                 (core % tile_shape[4] + 1) * v_partition)});
+            {at::indexing::Slice((i % tile_shape[0]) * x_partition,
+                                 (i % tile_shape[0] + 1) * x_partition),
+             at::indexing::Slice((i % tile_shape[1]) * y_partition,
+                                 (i % tile_shape[1] + 1) * y_partition),
+             at::indexing::Slice((i % tile_shape[2]) * z_partition,
+                                 (i % tile_shape[2] + 1) * z_partition),
+             at::indexing::Slice((i % tile_shape[3]) * w_partition,
+                                 (i % tile_shape[3] + 1) * w_partition),
+             at::indexing::Slice((i % tile_shape[4]) * v_partition,
+                                 (i % tile_shape[4] + 1) * v_partition)});
       }
+      int64_t core = sharding.tile_assignment_devices()[i];
       shards[core] = shard.contiguous(at::MemoryFormat::Contiguous);
+    }
+
+    // Zero-pad to the right to ensure the sizes are even
+    if (shards.size() > 0 && padded) {
+      for (size_t i = 1; i < shards.size(); ++i) {
+        std::vector<long> pads;
+        for (size_t j = 0; j < shards[i].sizes().size(); ++j) {
+          XLA_CHECK_GE(
+              shards[sharding.tile_assignment_devices()[0]].sizes().at(j),
+              shards[i].sizes().at(j));
+          pads.push_back(
+              shards[sharding.tile_assignment_devices()[0]].sizes().at(j) -
+              shards[i].sizes().at(j));
+          pads.push_back(0);  // no padding on lhs
+        }
+        // Padding starts from the last dimension
+        std::reverse(pads.begin(), pads.end());
+        shards[i] = at::constant_pad_nd(
+            shards[i], c10::IntArrayRef(pads.data(), pads.size()), 0);
+      }
     }
   } else if ((sharding.type() == xla::OpSharding::MANUAL) ||
              (sharding.type() == xla::OpSharding::TUPLE)) {

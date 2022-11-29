@@ -1591,7 +1591,13 @@ std::map<std::string, Metric> XrtComputationClient::GetMetrics() const {
     tensorflow::SessionOptions session_options;
     session_options.env = tensorflow::Env::Default();
     session_options.target = worker_target.second;
-    session_options.config = session_cache_->GetConfig();
+
+    // GPU device cannot reuse ClusterSpec from session cache, otherwise
+    // tensorflow throws an error here:
+    // https://github.com/tensorflow/tensorflow/blob/1cb0c5b850657ae1362a241fabb16253336dd8c3/tensorflow/core/distributed_runtime/master.cc#L402
+    if (!absl::StartsWith(GetDefaultDevice(), "GPU")) {
+      session_options.config = session_cache_->GetConfig();
+    }
 
     tensorflow::Scope root = tensorflow::Scope::NewRootScope();
     tensorflow::ClientSession session(root, session_options);

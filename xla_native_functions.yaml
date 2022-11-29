@@ -18,10 +18,7 @@ full_codegen:
   - atanh
   - binary_cross_entropy
   - binary_cross_entropy_backward
-  - bitwise_and.Tensor
   - bitwise_not
-  - bitwise_or.Tensor
-  - bitwise_xor.Tensor
   - ceil
   - cholesky
   - clamp.Tensor
@@ -90,6 +87,10 @@ ir_gen:
   - _adaptive_avg_pool2d_backward
   - _adaptive_avg_pool3d
   - _adaptive_avg_pool3d_backward
+  - atan2
+  - bitwise_and.Tensor
+  - bitwise_or.Tensor
+  - bitwise_xor.Tensor
 supported:
   - __ilshift__.Scalar
   - __ilshift__.Tensor
@@ -138,6 +139,9 @@ supported:
   - bernoulli.p
   - bernoulli_.Tensor
   - binary_cross_entropy_with_logits
+  - bitwise_and.Tensor
+  - bitwise_or.Tensor
+  - bitwise_xor.Tensor
   - bmm
   - cat
   - celu
@@ -319,9 +323,7 @@ supported:
   - upsample_bilinear2d
   - upsample_bilinear2d_backward
   - upsample_nearest2d
-  - upsample_nearest2d.vec
   - upsample_nearest2d_backward
-  - upsample_nearest2d_backward.vec
   - var.correction
   - var_mean.correction
   - view
@@ -352,6 +354,7 @@ symint:
   - new_empty_strided
   - view
   - diagonal_backward
+  - narrow_copy
 autograd:
   - einsum
   - max_pool2d

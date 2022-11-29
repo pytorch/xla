@@ -10,6 +10,9 @@ ARG tf_cuda_compute_capabilities="7.0,7.5,8.0"
 
 ARG tpuvm=1
 ARG build_cpp_tests=0
+ARG package_version=1.14
+
+ARG bazel_jobs=
 
 # Contains all build dependencies for PT/XLA
 FROM python:${python_version}-${debian_version} AS builder
@@ -23,8 +26,7 @@ ARG cuda_version
 ARG cudnn_version
 ARG cuda_repo
 COPY docker/experimental/maybe_install_cuda.sh .
-RUN CUDA=${cuda} CUDA_REPO=${cuda_repo} CUDA_VERSION=${cuda_version} CUDNN_VERSION=${cudnn_version} ./maybe_install_cuda.sh build
-RUN rm maybe_install_cuda.sh
+RUN CUDA=${cuda} CUDA_REPO=${cuda_repo} CUDA_VERSION=${cuda_version} CUDNN_VERSION=${cudnn_version} ./maybe_install_cuda.sh build && rm maybe_install_cuda.sh
 ENV LD_LIBRARY_PATH=${cuda:+"${LD_LIBRARY_PATH}:/usr/local/cuda-${cuda_version}/targets/x86_64-linux/lib:/usr/local/nvidia/lib64"}
 
 ARG debian_version
@@ -46,7 +48,11 @@ WORKDIR /pytorch
 COPY torch_patches/ torch_patches/
 RUN bash -c "torch_pin=$(cat torch_patches/.torch_pin &); git fetch origin ${torch_pin:-master}; git checkout origin/${torch_pin:-master}"
 
-RUN USE_CUDA=0 python setup.py bdist_wheel
+# Disable CUDA for PyTorch
+ENV USE_CUDA "0"
+
+ARG package_version
+RUN PYTORCH_BUILD_VERSION=${package_version} PYTORCH_BUILD_NUMBER=1 python setup.py bdist_wheel
 
 RUN pip install dist/*.whl
 
@@ -58,7 +64,7 @@ RUN mkdir xla
 WORKDIR /pytorch/xla/
 
 # Contains actual build artifacts
-FROM builder AS build
+FROM builder AS artifacts
 
 COPY tf_patches/ tf_patches/
 COPY third_party/ third_party/
@@ -69,7 +75,8 @@ COPY build_torch_xla_libs.sh .
 
 ARG tpuvm
 ARG tf_cuda_compute_capabilities
-RUN TPUVM_MODE=${tpuvm} XLA_CUDA=${cuda} TF_CUDA_COMPUTE_CAPABILITIES=${tf_cuda_compute_capabilities} bash build_torch_xla_libs.sh -O -D_GLIBCXX_USE_CXX11_ABI=1
+ARG bazel_jobs
+RUN TPUVM_MODE=${tpuvm} XLA_CUDA=${cuda} BAZEL_JOBS=${bazel_jobs} TF_CUDA_COMPUTE_CAPABILITIES=${tf_cuda_compute_capabilities} bash build_torch_xla_libs.sh -O -D_GLIBCXX_USE_CXX11_ABI=1
 
 COPY torch_xla/ torch_xla/
 COPY setup.py .
@@ -78,7 +85,8 @@ COPY xla_native_functions.yaml .
 COPY scripts/ scripts/
 
 ARG build_cpp_tests
-RUN BUILD_CPP_TESTS=${build_cpp_tests} TPUVM_MODE=${tpuvm} XLA_CUDA=${cuda} TF_CUDA_COMPUTE_CAPABILITIES=${tf_cuda_compute_capabilities} python setup.py bdist_wheel
+ARG package_version
+RUN TORCH_XLA_VERSION=${package_version} BUILD_CPP_TESTS=${build_cpp_tests} TPUVM_MODE=${tpuvm} XLA_CUDA=${cuda} TF_CUDA_COMPUTE_CAPABILITIES=${tf_cuda_compute_capabilities} python setup.py bdist_wheel
 
 RUN pip install dist/*.whl
 
@@ -96,8 +104,7 @@ ARG cuda_version
 ARG cuda_repo
 
 COPY docker/experimental/maybe_install_cuda.sh .
-RUN CUDA=${cuda} CUDA_REPO=${cuda_repo} CUDA_VERSION=${cuda_version} CUDNN_VERSION=${cudnn_version} ./maybe_install_cuda.sh common
-RUN rm maybe_install_cuda.sh
+RUN CUDA=${cuda} CUDA_REPO=${cuda_repo} CUDA_VERSION=${cuda_version} CUDNN_VERSION=${cudnn_version} ./maybe_install_cuda.sh common && rm maybe_install_cuda.sh
 ENV LD_LIBRARY_PATH=${cuda:+"${LD_LIBRARY_PATH}:/usr/local/cuda-${cuda_version}/targets/x86_64-linux/lib:/usr/local/nvidia/lib64"}
 
 RUN echo "deb [signed-by=/usr/share/keyrings/cloud.google.gpg] https://packages.cloud.google.com/apt cloud-sdk main" >> /etc/apt/sources.list.d/google-cloud-sdk.list
@@ -106,8 +113,8 @@ RUN curl https://packages.cloud.google.com/apt/doc/apt-key.gpg | apt-key --keyri
 RUN apt-get update
 RUN apt-get -y install google-cloud-cli
 
-COPY --from=builder /pytorch/dist/*.whl .
-COPY --from=build /pytorch/xla/dist/*.whl .
+COPY --from=artifacts /pytorch/dist/*.whl .
+COPY --from=artifacts /pytorch/xla/dist/*.whl .
 
 RUN pip install *.whl
 RUN rm *.whl
@@ -122,6 +129,8 @@ RUN mkdir -p /pytorch/xla
 COPY . /pytorch/xla
 
 WORKDIR /pytorch/xla
-RUN python setup.py clean
+
+# TODO: this fails without a git repository initialized for some reason
+RUN python setup.py clean || exit 0
 
 WORKDIR /

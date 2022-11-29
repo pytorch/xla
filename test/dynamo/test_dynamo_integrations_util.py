@@ -41,11 +41,29 @@ class PybindTest(unittest.TestCase):
     ])
     assert (expected_tensor_ids == sorted(res_pair[0]))
 
+  def test_get_rng_seed_as_tensor(self):
+    device = xm.xla_device()
+    current_seed = xm.get_rng_state(device)
+    new_seed_tensor = torch_xla._XLAC._get_rng_seed_as_tensor(str(device), True)
+    self.assertNotEqual(current_seed, new_seed_tensor.item())
+    current_seed = xm.get_rng_state(device)
+    self.assertEqual(current_seed, new_seed_tensor.item())
+    new_seed_tensor_2 = torch_xla._XLAC._get_rng_seed_as_tensor(
+        str(device), False)
+    self.assertEqual(current_seed, new_seed_tensor_2.item())
+
+  def test_get_seed_info_id(self):
+    self.assertEqual(torch_xla._XLAC._get_seed_info_id(), -127389)
+
   def test_check_tensor_need_materialization(self):
     xla_device = xm.xla_device()
     t1 = torch.randn(20, 5)
     assert (torch_xla._XLAC._check_tensor_need_materialization([t1]) == [False])
     t1 = t1.to(xla_device)
+    assert (torch_xla._XLAC._check_tensor_need_materialization([t1]) == [False])
+    # call mark_step to clear pending irs on t1. This should test the case where
+    # XLATensor has a `XLAData` instead of a `DeviceData` IR.
+    xm.mark_step()
     assert (torch_xla._XLAC._check_tensor_need_materialization([t1]) == [False])
     t2 = t1 * 2
     assert (torch_xla._XLAC._check_tensor_need_materialization([t1]) == [False])

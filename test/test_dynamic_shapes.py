@@ -1,4 +1,3 @@
-from sklearn.datasets import make_blobs
 import torch, torch_xla
 import torch_xla.core.xla_model as xm
 import unittest

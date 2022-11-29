@@ -37,6 +37,7 @@
 #include "torch/csrc/jit/python/pybind.h"
 #include "torch/csrc/lazy/core/config.h"
 #include "torch/csrc/lazy/core/ir_util.h"
+#include "torch/csrc/lazy/core/lazy_graph_executor.h"
 #include "torch_xla/csrc/aten_xla_bridge.h"
 #include "torch_xla/csrc/computation.h"
 #include "torch_xla/csrc/device.h"
@@ -56,6 +57,8 @@
 
 namespace torch_xla {
 namespace {
+
+static int64_t seed_info_id = -127389;
 
 struct NoGilSection {
   NoGilSection() : state(PyEval_SaveThread()) {}
@@ -377,7 +380,7 @@ std::string GetLiveTensorsReport(size_t nodes_threshold,
     torch::lazy::Value ir_value = tensor->CurrentIrValue();
     if (ir_value) {
       std::vector<const torch::lazy::Node*> roots({ir_value.node.get()});
-      auto post_order = Util::ComputePostOrder(roots);
+      auto post_order = torch::lazy::Util::ComputePostOrder(roots);
       if (post_order.size() > nodes_threshold) {
         ss << "Tensor: id=" << tensor->GetUniqueId()
            << ", shape=" << tensor->shape().get()
@@ -1190,6 +1193,19 @@ void InitXlaModuleBindings(py::module m) {
   });
   m.def("_xla_metrics_report",
         []() { return xla::metrics_reader::CreateMetricReport(); });
+  m.def("_short_xla_metrics_report",
+        [](const py::list& counter_names, const py::list& metric_names) {
+          std::vector<std::string> counter_name_vec;
+          std::vector<std::string> metric_name_vec;
+          for (auto& counter : counter_names) {
+            counter_name_vec.push_back(counter.cast<std::string>());
+          }
+          for (auto& metric : metric_names) {
+            metric_name_vec.push_back(metric.cast<std::string>());
+          }
+          return xla::metrics_reader::CreateMetricReport(counter_name_vec,
+                                                         metric_name_vec);
+        });
   m.def("_clear_xla_counters", []() { xla::metrics::ClearCounters(); });
   m.def("_clear_xla_metrics", []() { xla::metrics::ClearMetrics(); });
   m.def("_xla_tensors_report",
@@ -1467,31 +1483,23 @@ void InitXlaModuleBindings(py::module m) {
             -> std::pair<std::vector<int64_t>, std::vector<at::IValue>> {
           std::vector<int64_t> tensor_ids;
           std::vector<at::IValue> ivalues;
-          std::vector<torch::lazy::Node*> roots;
+          std::vector<const torch::lazy::Node*> roots;
           for (const at::Tensor& tensor : tensors) {
             auto xtensor = bridge::TryGetXlaTensor(tensor);
             if (xtensor) {
               roots.push_back(xtensor->GetIrValue().node.get());
             }
           }
-          std::vector<const torch::lazy::Node*> post_order =
-              Util::ComputePostOrder(roots);
+          auto post_order = torch::lazy::Util::ComputePostOrder(roots);
           std::unordered_set<xla::ComputationClient::Data::OpaqueHandle>
               data_handles;
 
           for (const torch::lazy::Node* nodeptr : post_order) {
-            const torch_xla::DeviceData* device_data =
-                torch_xla::DeviceData::Cast(nodeptr);
-            if (!device_data) {
+            const auto backend_data =
+                torch::lazy::getBackend()->GetComputationDataFromNode(nodeptr);
+            if (!backend_data) {
               continue;
             }
-            const auto backend_data = device_data->data();
-            xla::ComputationClient::DataPtr dataptr =
-                ((torch_xla::XLAData*)backend_data.get())->xla_data();
-            XLA_CHECK(dataptr);
-            torch_xla::DeviceDataInfo* infoptr =
-                (torch_xla::DeviceDataInfo*)dataptr->info();
-            XLA_CHECK(infoptr);
 
             // Dedup by handle
             xla::ComputationClient::Data::OpaqueHandle handle =
@@ -1499,14 +1507,30 @@ void InitXlaModuleBindings(py::module m) {
             if (!data_handles.insert(handle).second) {
               continue;
             }
-
-            // add tensor_id after we make sure the handle does not exist yet.
-            tensor_ids.push_back(infoptr->tensor_id);
+            auto* infoptr =
+                static_cast<torch::lazy::LazyGraphExecutor::DeviceDataInfo*>(
+                    backend_data->info());
+            if (infoptr) {
+              tensor_ids.push_back(infoptr->tensor_id);
+            } else {
+              // TODO(JackCaoG): Make sure this device data is actually seed.
+              tensor_ids.push_back(seed_info_id);
+            }
             at::Tensor tensor = bridge::AtenFromXlaTensor(
                 torch_xla::XLATensor::Create(backend_data));
             ivalues.emplace_back(tensor);
           }
           return std::make_pair(tensor_ids, ivalues);
+        });
+
+  m.def("_get_seed_info_id", []() -> int64_t { return seed_info_id; });
+
+  m.def("_get_rng_seed_as_tensor",
+        [](const std::string& device_str, bool reset) -> at::IValue {
+          torch::lazy::BackendDevice device =
+              bridge::AtenDeviceToXlaDevice(c10::Device(device_str));
+          return bridge::AtenFromXlaTensor(torch_xla::XLATensor::Create(
+              XLATensor::GetRngSeedData(device, reset)));
         });
 
   // Return true if value of the tensor requires a computation.
@@ -1522,7 +1546,7 @@ void InitXlaModuleBindings(py::module m) {
             need_materialization.push_back(false);
           } else if (xtensor->CurrentXlaData() != nullptr) {
             // input tensor has xla_data which means it is already on device
-            need_materialization.push_back(true);
+            need_materialization.push_back(false);
           } else if (xtensor->CurrentIrValue().node != nullptr) {
             torch::lazy::NodePtr node = xtensor->CurrentIrValue().node;
             if (torch_xla::DeviceData::Cast(
@@ -1567,26 +1591,19 @@ void InitXlaModuleBindings(py::module m) {
                                        << torch::lazy::HashToString(hash)
                                        << ". Maybe the entry get "
                                           "kicked out of the LRU cache";
-          std::vector<xla::ComputationClient::DataPtr> parameters_data;
+          std::vector<torch::lazy::BackendDataPtr> parameters_data;
           torch::lazy::BackendDevice device = torch_xla::GetCurrentDevice();
           {
             XLA_TIMED("RunCachedGraphInputData");
             // setup the parameters_data
             int idx = 0;
             for (auto& ivalue : graph_inputs) {
-              at::Tensor tensor = ivalue.toTensor();
-              XLATensorPtr xla_tensor_ptr = bridge::TryGetXlaTensor(tensor);
-              xla::ComputationClient::DataPtr dataptr;
-              if (xla_tensor_ptr) {
-                torch::lazy::BackendDataPtr backend_data_ptr =
-                    xla_tensor_ptr->GetXlaData();
-                dataptr =
-                    dynamic_cast<torch_xla::XLAData*>(backend_data_ptr.get())
-                        ->xla_data();
+              torch::lazy::BackendDataPtr dataptr;
+              if (auto xla_tensor_ptr =
+                      bridge::TryGetXlaTensor(ivalue.toTensor())) {
+                dataptr = xla_tensor_ptr->GetXlaData();
               } else {
-                torch::lazy::BackendDataPtr backend_data =
-                    torch_xla::TensorToXlaData(ivalue.toTensor(), device);
-                dataptr = ((torch_xla::XLAData*)backend_data.get())->xla_data();
+                dataptr = torch_xla::TensorToXlaData(ivalue.toTensor(), device);
               }
 
               ++idx;
@@ -1594,20 +1611,15 @@ void InitXlaModuleBindings(py::module m) {
             }
           }
 
-          std::string deviceStr = device.toString();
-          xla::ComputationClient::ExecuteComputationOptions options;
-          std::vector<std::shared_ptr<xla::ComputationClient::Data>> results =
-              xla::ComputationClient::Get()->ExecuteComputation(
-                  *cachedComputation->computation, parameters_data, deviceStr,
-                  options);
+          auto results = XLATensor::ExecuteComputationWithBarrier(
+              cachedComputation->computation, parameters_data, device);
           std::vector<at::Tensor> retlist;
           {
             XLA_TIMED("RunCachedGraphOutputData");
             // Convert result back to at::tensor
             int i = 0;
             for (auto& data : results) {
-              XLATensorPtr xla_tensor =
-                  torch_xla::XLATensor::Create(torch_xla::WrapXlaData(data));
+              XLATensorPtr xla_tensor = torch_xla::XLATensor::Create(data);
               retlist.push_back(bridge::AtenFromXlaTensor(xla_tensor));
               ++i;
             }
