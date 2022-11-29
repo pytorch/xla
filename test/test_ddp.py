@@ -22,7 +22,7 @@ class TestXrtDistributedDataParallel(parameterized.TestCase):
           'Default device {} is not a TPU device'.format(device),
           file=sys.stderr)
       return
-    util.ddp_correctness(None, use_large_net=use_large_net, debug=debug)
+    util.ddp_correctness(use_large_net=use_large_net, debug=debug)
 
   def test_ddp_correctness(self):
     xmp.spawn(self._ddp_correctness, args=(False, FLAGS.debug))

@@ -54,6 +54,10 @@ class PjRtComputationClient : public ComputationClient {
 
   std::vector<std::string> GetAllDevices() const override;
 
+  int GetProcessIndex() const override { return client_->process_index(); };
+
+  int GetNumProcesses() const override;
+
   void SetReplicationDevices(
       std::shared_ptr<std::vector<std::string>> devices) override;
 

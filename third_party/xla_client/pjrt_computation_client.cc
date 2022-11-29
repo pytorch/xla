@@ -407,6 +407,15 @@ std::vector<std::string> PjRtComputationClient::GetAllDevices() const {
   return PjRtDevicesToString(client_->devices());
 }
 
+int PjRtComputationClient::GetNumProcesses() const {
+  int max_process_index = client_->process_index();
+  for (auto* device : client_->devices()) {
+    max_process_index = std::max(max_process_index, device->process_index());
+  }
+
+  return max_process_index + 1;
+};
+
 void PjRtComputationClient::SetReplicationDevices(
     std::shared_ptr<std::vector<std::string>> devices) {
   replication_devices_ = std::move(devices);
