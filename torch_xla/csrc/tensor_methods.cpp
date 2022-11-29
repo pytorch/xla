@@ -2528,14 +2528,26 @@ XLATensorPtr XLATensor::trace(const XLATensorPtr& input) {
 XLATensorPtr XLATensor::transpose(const XLATensorPtr& input, int64_t dim0,
                                   int64_t dim1) {
   auto input_shape = input->shape();
-  auto permute_dims = torch::lazy::MakeTransposePermutation(
-      /*dim0=*/dim0, /*dim1=*/dim1, /*rank=*/input_shape.get().rank());
-  ViewInfo view_info(ViewInfo::Type::kPermute, input_shape, permute_dims);
+  ViewInfo view_info;
+  if (input_shape.get().rank() <= 1) {
+    // return a view of self if input rank <=1
+    torch::lazy::Value ir_value = input->GetIrValue();
+    view_info = ViewInfo(ViewInfo::Type::kNoOp, GetXlaShape(ir_value),
+                         GetXlaShape(ir_value));
+  } else {
+    auto permute_dims = torch::lazy::MakeTransposePermutation(
+        /*dim0=*/dim0, /*dim1=*/dim1, /*rank=*/input_shape.get().rank());
+    view_info = ViewInfo(ViewInfo::Type::kPermute, input_shape, permute_dims);
+  }
   return input->CreateViewTensor(std::move(view_info));
 }
 
 void XLATensor::transpose_(XLATensorPtr& input, int64_t dim0, int64_t dim1) {
   auto input_shape = input->shape();
+  if (input_shape.get().rank() <= 1) {
+    // no op if input rank <=1
+    return;
+  }
   auto permute_dims = torch::lazy::MakeTransposePermutation(
       /*dim0=*/dim0, /*dim1=*/dim1, /*rank=*/input_shape.get().rank());
   ViewInfo view_info(ViewInfo::Type::kPermute, input_shape, permute_dims);
