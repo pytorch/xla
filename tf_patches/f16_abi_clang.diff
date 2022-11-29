@@ -1,4 +1,3 @@
-upstream CI will fail without this
 diff --git a/tensorflow/compiler/xla/service/cpu/runtime_fp16.h b/tensorflow/compiler/xla/service/cpu/runtime_fp16.h
 index 9fe020d5937..32774c2f3c0 100644
 --- a/tensorflow/compiler/xla/service/cpu/runtime_fp16.h
@@ -17,3 +16,4 @@ index 9fe020d5937..32774c2f3c0 100644
  // Older versions of Clang don't have _Float16. Since both float and _Float16
  // are passed in the same register we can use the wider type and careful casting
  // to conform to x86_64 psABI. This only works with the assumption that we're
+
