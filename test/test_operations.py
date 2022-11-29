@@ -1864,8 +1864,14 @@ class TestAtenXlaTensor(XlaTestCase):
   def test_transpose_1d(self):
 
     def test_fn(t1):
-      t1.t_()
       return t1.t()
+
+    self.runAtenTest([torch.arange(15, dtype=torch.int32)], test_fn)
+
+  def test_transpose_1d_inplace(self):
+
+    def test_fn(t1):
+      return t1.t_()
 
     self.runAtenTest([torch.arange(15, dtype=torch.int32)], test_fn)
 
