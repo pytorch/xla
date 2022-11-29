@@ -1110,20 +1110,16 @@ XLATensorPtr XLATensor::exp(const XLATensorPtr& input) {
 XLATensorPtr XLATensor::expand(const XLATensorPtr& input,
                                std::vector<int64_t> size) {
   auto input_shape = input->shape();
-  auto output = input->CreateFrom(torch::lazy::MakeNode<Expand>(
+  return input->CreateFrom(torch::lazy::MakeNode<Expand>(
       input->GetIrValue(),
       GetExpandDimensions(input_shape.get(), std::move(size))));
-  output->storage_ = input->Storage();
-  return output;
 }
 
 XLATensorPtr XLATensor::expand_symint(const XLATensorPtr& input,
                                       c10::SymIntArrayRef sym_size) {
   SymIntElements size_elements = SymIntElements(sym_size);
-  XLATensorPtr output = input->CreateFrom(
+  return input->CreateFrom(
       torch::lazy::MakeNode<ExpandSymInt>(input->GetIrValue(), size_elements));
-  output->storage_ = input->Storage();
-  return output;
 }
 
 void XLATensor::exponential_(XLATensorPtr& input, double lambd) {

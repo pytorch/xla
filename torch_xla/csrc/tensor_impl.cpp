@@ -205,8 +205,4 @@ void XLATensorImpl::AtenInitialize() {
   // ATEN specific initialization calls placed below.
 }
 
-const at::Storage& XLATensorImpl::storage() const { return tensor_->Storage(); }
-
-bool XLATensorImpl::has_storage() const { return tensor_->Storage(); }
-
 }  // namespace torch_xla
