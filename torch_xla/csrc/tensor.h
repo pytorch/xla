@@ -238,12 +238,6 @@ class XLATensor : public c10::intrusive_ptr_target {
   // All the tensors must be on the same device.
   static std::vector<at::Tensor> GetTensors(std::vector<XLATensorPtr>* tensors);
 
-  // Operation which creates XLA tensors out of PyTorch CPU tensors by batching
-  // the requests to the computation servers.
-  static std::vector<XLATensorPtr> CreateTensors(
-      const std::vector<at::Tensor>& tensors,
-      const std::vector<std::string>& devices);
-
   //////////////////////////////////////////////////////////////////////////////
   // XLA dedicated operators follows here, listed in alphabetical order.
   //////////////////////////////////////////////////////////////////////////////

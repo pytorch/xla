@@ -1186,19 +1186,6 @@ std::vector<at::Tensor> XLATensor::FetchTensors(
   return results;
 }
 
-std::vector<XLATensorPtr> XLATensor::CreateTensors(
-    const std::vector<at::Tensor>& tensors,
-    const std::vector<std::string>& devices) {
-  std::vector<torch::lazy::BackendDataPtr> handles =
-      CreateTensorsData(tensors, devices);
-  std::vector<XLATensorPtr> xla_tensors;
-  for (size_t i = 0; i < handles.size(); ++i) {
-    xla_tensors.push_back(
-        Create(std::move(handles[i]), tensors[i].scalar_type()));
-  }
-  return xla_tensors;
-}
-
 torch::lazy::Value XLATensor::CreateTensorNode(torch::lazy::BackendDataPtr data,
                                                bool read_only) const {
   data->SetInfo(
