@@ -110,8 +110,8 @@ steps:
   args:
   - -c
   - |
-    gcloud artifacts docker tags add ${_ARTIFACTS_IMAGE_URL}-$(date +%Y%m%d)
-    gcloud artifacts docker tags add ${_RELEASE_IMAGE_URL}-$(date +%Y%m%d)
+    gcloud artifacts docker tags add ${_ARTIFACTS_IMAGE_URL} ${_ARTIFACTS_IMAGE_URL}-$(date +%Y%m%d)
+    gcloud artifacts docker tags add ${_RELEASE_IMAGE_URL} ${_RELEASE_IMAGE_URL}-$(date +%Y%m%d)
 substitutions:
   _ARTIFACT_REGISTRY_REGION: us
   _RELEASE_VERSION: 'nightly'  # or rX.Y.Z
