@@ -62,10 +62,10 @@ traceme_wrapper.h "
   static int64_t seed_info_id = -127389;
 
   struct NoGilSection {
-  NoGilSection() : state(PyEval_SaveThread()) {}
-  ~NoGilSection() { PyEval_RestoreThread(state); }
-  PyThreadState* state = nullptr;
-};
+    NoGilSection() : state(PyEval_SaveThread()) {}
+    ~NoGilSection() { PyEval_RestoreThread(state); }
+    PyThreadState* state = nullptr;
+  };
 
 c10::optional<torch::lazy::BackendDevice> GetOptionalDevice(
     const std::string& device_str) {
