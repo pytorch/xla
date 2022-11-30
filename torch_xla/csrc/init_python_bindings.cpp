@@ -12,6 +12,7 @@
 #include "absl/container/flat_hash_map.h"
 #include "absl/strings/str_cat.h"
 #include "absl/types/variant.h"
+#include "tensorflow/compiler/xla/python/profiler/internal/traceme_wrapper.h"
 #include "tensorflow/compiler/xla/service/hlo_module.h"
 #include "tensorflow/compiler/xla/service/hlo_parser.h"
 #include "tensorflow/compiler/xla/xla_client/computation_client.h"
@@ -31,7 +32,6 @@
 #include "tensorflow/core/platform/env.h"
 #include "tensorflow/core/profiler/lib/traceme.h"
 #include "tensorflow/python/profiler/internal/profiler_pywrap_impl.h"
-#include "tensorflow/compiler/xla/python/profiler/internal/traceme_wrapper.h"
 #include "torch/csrc/autograd/utils/wrap_outputs.h"
 #include "torch/csrc/autograd/variable.h"
 #include "torch/csrc/jit/python/pybind.h"
@@ -55,16 +55,16 @@
 #include "torch_xla/csrc/xla_op_builder.h"
 #include "torch_xla/csrc/xla_sharding_util.h"
 
-    namespace torch_xla {
-  namespace {
+namespace torch_xla {
+namespace {
 
-  static int64_t seed_info_id = -127389;
+static int64_t seed_info_id = -127389;
 
-  struct NoGilSection {
-    NoGilSection() : state(PyEval_SaveThread()) {}
-    ~NoGilSection() { PyEval_RestoreThread(state); }
-    PyThreadState* state = nullptr;
-  };
+struct NoGilSection {
+  NoGilSection() : state(PyEval_SaveThread()) {}
+  ~NoGilSection() { PyEval_RestoreThread(state); }
+  PyThreadState* state = nullptr;
+};
 
 c10::optional<torch::lazy::BackendDevice> GetOptionalDevice(
     const std::string& device_str) {
