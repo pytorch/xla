@@ -1396,16 +1396,9 @@ class XLATensor : public c10::intrusive_ptr_target {
   // Create a new XLA tensor with the same metadata of the input tensor (with
   // possible overrides), and the new IR value.
   XLATensorPtr CreateFrom(torch::lazy::Value ir_value) const;
-  XLATensorPtr CreateFrom(torch::lazy::Value ir_value,
-                          const torch::lazy::BackendDevice& device) const;
-  XLATensorPtr CreateFrom(torch::lazy::Value ir_value,
-                          at::ScalarType logical_element_type) const;
   XLATensorPtr CreateFrom(
       torch::lazy::Value ir_value,
       c10::optional<at::ScalarType> logical_element_type_opt) const;
-  XLATensorPtr CreateFrom(torch::lazy::Value ir_value,
-                          const torch::lazy::BackendDevice& device,
-                          at::ScalarType logical_element_type) const;
 
   // We build an XLA graph accumulating XLA operations, but at a given point we
   // need to force a rendering, otherwise the graph can grow without control.
