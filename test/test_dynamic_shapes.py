@@ -63,13 +63,16 @@ class TestDynamicShapes(unittest.TestCase):
     t1[3][0] = 1
     # t2 has size [<=10, 2]
     t2 = torch.nonzero(t1)
-    # Exercise SizeAdd::getStaticValue
+    # Create a SizeAdd IR node.
     dyn_size = t2.shape[0] + t2.shape[1]
-    # Exercises SizeAdd::getDynamicValue
+    # Exercises SizeAdd::getDynamicValue.
     dynamic_size = int(dyn_size)
     self.assertEqual(dynamic_size, 3)
-    # Exercise SizeAdd::getStaticValue
+    # Exercise SizeAdd::getStaticValue.
     self.assertEqual(str(dyn_size), '<=12')
+    t3 = torch.ones(1, device=dev)
+    t4 = t3.expand(dyn_size)
+    self.assertEqual(t4.size(0), 3)
 
 
 if __name__ == '__main__':
