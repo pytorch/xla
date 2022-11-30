@@ -1,17 +1,18 @@
-link error during building
 diff --git a/tensorflow/core/profiler/convert/xplane_to_tools_data.cc b/tensorflow/core/profiler/convert/xplane_to_tools_data.cc
-index 787287d0107..ebc74d74802 100644
+index 86e4142ab15..8a72ee4af99 100644
 --- a/tensorflow/core/profiler/convert/xplane_to_tools_data.cc
 +++ b/tensorflow/core/profiler/convert/xplane_to_tools_data.cc
-@@ -251,8 +251,9 @@ StatusOr<std::string> ConvertMultiXSpacesToToolData(
+@@ -252,9 +252,9 @@ StatusOr<std::string> ConvertMultiXSpacesToToolData(
      return ConvertMultiXSpacesToTfDataBottleneckAnalysis(session_snapshot);
    } else if (tool_name == "op_profile") {
      return ConvertMultiXSpacesToOpProfileViewer(session_snapshot);
 -  } else if (tool_name == "memory_viewer" || tool_name == "graph_viewer") {
--    return ConvertHloProtoToToolData(session_snapshot, tool_name, options);
+-    return ConvertHloProtoToToolData(session_snapshot, tool_name,
+-                                     ToolOptionsToHloToolOptions(options));
 +    // this function is not being used by xla
 +    // } else if (tool_name == "memory_viewer" || tool_name == "graph_viewer") {
 +    //   return ConvertHloProtoToToolData(session_snapshot, tool_name, options);
    } else if (tool_name == "tool_names") {
      return GetAvailableToolNames(session_snapshot);
    } else if (tool_name == "_xplane.pb") {  // internal test only.
+
