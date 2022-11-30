@@ -830,7 +830,7 @@ void BuildProfilerSubmodule(py::module* m) {
       py::arg("interval_s") = 5, py::arg("options"));
 
   py::class_<xla::profiler::TraceMeWrapper> traceme_class(profiler, "TraceMe",
-		                                          py::module_local());
+		                                           py::module_local());
   traceme_class.def(py::init<py::str, py::kwargs>())
       .def("__enter__", [](py::object self) -> py::object { return self; })
       .def("__exit__",
