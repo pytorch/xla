@@ -56,12 +56,12 @@ traceme_wrapper.h "
 #include "torch_xla/csrc/xla_op_builder.h"
 #include "torch_xla/csrc/xla_sharding_util.h"
 
-namespace torch_xla {
-namespace {
+    namespace torch_xla {
+  namespace {
 
-static int64_t seed_info_id = -127389;
+  static int64_t seed_info_id = -127389;
 
-struct NoGilSection {
+  struct NoGilSection {
   NoGilSection() : state(PyEval_SaveThread()) {}
   ~NoGilSection() { PyEval_RestoreThread(state); }
   PyThreadState* state = nullptr;
