@@ -576,14 +576,6 @@ xla::util::MaybeRef<xla::Shape> XLATensor::shape() const {
       XlaHelpers::I64List(data()->tensor_data->sizes()));
 }
 
-xla::Shape XLATensor::shape_with_layout() const {
-  auto xla_shape = shape();
-  return MakeArrayShapeFromDimensions(
-      xla_shape.get().dimensions(), xla_shape.get().dynamic_dimensions(),
-      xla_shape.get().element_type(),
-      static_cast<XlaDeviceType>(GetDevice().type()));
-}
-
 const torch::lazy::BackendDevice& XLATensor::GetDevice() const {
   return data()->device;
 }
