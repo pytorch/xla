@@ -17,6 +17,7 @@ class MetricsTest(unittest.TestCase):
     assert (len(met.counter_names()) > 0)
     met.clear_counters()
     self.assertNotIn("xla::add", met.metrics_report())
+    self.assertEqual(met.counter_value("xla::add"), None)
     assert (len(met.counter_names()) == 0)
     # perform the same computation and check if counter increases again
     t1 += 2
@@ -54,6 +55,7 @@ class MetricsTest(unittest.TestCase):
     xm.mark_step()
     t4 = t1 * 2
     xm.mark_step()
+    short_report = met.short_metrics_report()
     self.assertIn("CachedCompile", short_report)
 
   def test_short_metrics_report_custom_list(self):
@@ -69,9 +71,11 @@ class MetricsTest(unittest.TestCase):
     # using the default metrics list in this case
     self.assertIn('CompileTime', short_report)
     short_report = met.short_metrics_report(
-        counter_names=['CreateCompileHandles'], metric_names=['InboundData'])
+        counter_names=['CreateCompileHandles'],
+        metric_names=['InboundData', 'InputOutputAliasCount'])
     self.assertNotIn('CompileTime', short_report)
     self.assertIn('InboundData', short_report)
+    self.assertIn('InputOutputAliasCount', short_report)
 
   def test_short_metrics_fallback_counter(self):
     xla_device = xm.xla_device()
@@ -86,6 +90,77 @@ class MetricsTest(unittest.TestCase):
         met.short_metrics_report(
             counter_names=['CreateCompileHandles'],
             metric_names=['InboundData']))
+
+  def test_metrics_report(self):
+    # TODO(jwtan): Add test to cover TrimIrGraph, SyncTensorsToData, TransferToServerAsync, IrValueTensorToXlaData
+    xla_device = xm.xla_device()
+    t1 = torch.tensor(2077, device=xla_device)
+    t2 = t1 * 2
+    xm.mark_step()
+    t2_cpu = t2.cpu()
+    report = met.metrics_report()
+
+    # counters
+    self.assertIn("DeviceDataCacheMiss", report)
+    self.assertIn("CreateXlaTensor", report)
+    self.assertIn("DestroyXlaTensor", report)
+    self.assertIn("UncachedCompile", report)
+    self.assertIn("MarkStep", report)
+    # If test_metrics_report is ran together with other tests,
+    # the number could be different. So we simply assert them
+    # to be none-zero.
+    counter_names = met.counter_names()
+    self.assertNotEqual(met.counter_value("DeviceDataCacheMiss"), 0)
+    self.assertIn("CreateXlaTensor", counter_names)
+    self.assertNotEqual(met.counter_value("CreateXlaTensor"), 0)
+    self.assertIn("DestroyXlaTensor", counter_names)
+    self.assertNotEqual(met.counter_value("DestroyXlaTensor"), 0)
+    self.assertIn("UncachedCompile", counter_names)
+    self.assertNotEqual(met.counter_value("UncachedCompile"), 0)
+    self.assertIn("MarkStep", counter_names)
+    self.assertNotEqual(met.counter_value("MarkStep"), 0)
+
+    met.clear_counters()
+    self.assertEqual(met.counter_value("DeviceDataCacheMiss"), None)
+    self.assertNotIn("DeviceDataCacheMiss", met.metrics_report())
+    self.assertNotIn("DeviceDataCacheMiss", met.counter_names())
+
+    # metrics
+    self.assertIn("TensorsGraphSize", report)
+    self.assertIn("InputOutputAliasCount", report)
+    metric_names = met.metric_names()
+    self.assertIn("TensorsGraphSize", metric_names)
+    self.assertNotEqual(met.metric_data("TensorsGraphSize"), None)
+    self.assertIn("InputOutputAliasCount", metric_names)
+    self.assertNotEqual(met.metric_data("InputOutputAliasCount"), None)
+
+    # timed metrics
+    self.assertIn("TensorToData", report)
+    self.assertIn("UnwrapXlaData", report)
+    self.assertIn("WrapXlaData", report)
+    self.assertIn("DeviceLockWait", report)
+    self.assertIn("TensorToData", metric_names)
+    self.assertNotEqual(met.metric_data("TensorToData"), None)
+    self.assertIn("UnwrapXlaData", metric_names)
+    self.assertNotEqual(met.metric_data("UnwrapXlaData"), None)
+    self.assertIn("WrapXlaData", metric_names)
+    self.assertNotEqual(met.metric_data("WrapXlaData"), None)
+    self.assertIn("DeviceLockWait", metric_names)
+    self.assertNotEqual(met.metric_data("DeviceLockWait"), None)
+
+    met.clear_metrics()
+    self.assertNotIn("InputOutputAliasCount", met.metric_names())
+    self.assertEqual(met.metric_data("InputOutputAliasCount"), None)
+    self.assertNotIn("TensorToData", met.metric_names())
+    self.assertEqual(met.metric_data("TensorToData"), None)
+
+    # repeat the same computation and expect to see the CachedCompile counter
+    t3 = t1 * 2
+    xm.mark_step()
+    t4 = t1 * 2
+    xm.mark_step()
+    report = met.metrics_report()
+    self.assertIn("CachedCompile", report)
 
 
 if __name__ == '__main__':

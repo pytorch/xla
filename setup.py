@@ -31,11 +31,15 @@
 #   XLA_CUDA=0
 #     build the xla/xrt client with CUDA enabled
 #
+#   BUNDLE_LIBTPU=0
+#     include libtpu in final wheel
+#
 
 from __future__ import print_function
 
 from setuptools import setup, find_packages, distutils
 from torch.utils.cpp_extension import BuildExtension, CppExtension
+import contextlib
 import distutils.ccompiler
 import distutils.command.clean
 import glob
@@ -45,10 +49,13 @@ import multiprocessing.pool
 import os
 import platform
 import re
+import requests
 import shutil
 import subprocess
 import sys
+import tempfile
 import torch
+import zipfile
 
 base_dir = os.path.dirname(os.path.abspath(__file__))
 third_party_path = os.path.join(base_dir, 'third_party')
@@ -137,6 +144,34 @@ def build_extra_libraries(base_dir, build_mode=None):
         'Failed to build external libraries: {}'.format(build_libs_cmd),
         file=sys.stderr)
     sys.exit(1)
+
+
+def maybe_bundle_libtpu(base_dir):
+  libtpu_path = os.path.join(base_dir, 'torch_xla', 'lib', 'libtpu.so')
+  with contextlib.suppress(FileNotFoundError):
+    os.remove(libtpu_path)
+
+  if not _check_env_flag('BUNDLE_LIBTPU', '0'):
+    return
+
+  try:
+    import libtpu
+    module_path = os.path.dirname(libtpu.__file__)
+    print('Found pre-installed libtpu at ', module_path)
+    shutil.copyfile(os.path.join(module_path, 'libtpu.so'), libtpu_path)
+  except ModuleNotFoundError:
+    print('No installed libtpu found. Downloading...')
+
+    with tempfile.NamedTemporaryFile('wb') as whl:
+      resp = requests.get(_libtpu_storage_path)
+      resp.raise_for_status()
+
+      whl.write(resp.content)
+      whl.flush()
+
+      with open(libtpu_path, 'wb') as libtpu_so:
+        z = zipfile.ZipFile(whl.name)
+        libtpu_so.write(z.read('libtpu/libtpu.so'))
 
 
 def generate_protos(base_dir, third_party_path):
@@ -250,6 +285,9 @@ if build_mode not in ['clean']:
 
   # Build the support libraries (ie, TF).
   build_extra_libraries(base_dir, build_mode=build_mode)
+
+  # Copy libtpu.so into torch_xla/lib
+  maybe_bundle_libtpu(base_dir)
 
   # Generate the proto C++/python files only after third_party has built.
   generate_protos(base_dir, third_party_path)

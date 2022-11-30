@@ -5,6 +5,7 @@
 #include "torch_xla/csrc/lowering_context.h"
 #include "torch_xla/csrc/ops/infer_output_shape.h"
 #include "torch_xla/csrc/tensor.h"
+#include "torch_xla/csrc/tensor_util.h"
 
 namespace torch_xla {
 
@@ -23,8 +24,10 @@ const std::shared_ptr<torch::lazy::DimensionNode> DimCast(
 
 SizeNode::SizeNode(torch::lazy::Value input, size_t dim)
     : XlaNode(torch::lazy::OpKind{c10::Symbol::fromQualString("aten::size")},
-              {input}, xla::ShapeUtil::MakeShape(xla::S64, {}), 1,
-              torch::lazy::MHash(dim)),
+              {input},
+              xla::ShapeUtil::MakeShape(
+                  GetShapeDimensionType(/*device=*/nullptr), {}),
+              1, torch::lazy::MHash(dim)),
       dim_(dim) {
   // Not all IR has torch::lazy::shape now, use xla::shape to unblock
   // the development.
@@ -36,7 +39,7 @@ SizeNode::SizeNode(torch::lazy::Value input, size_t dim)
 
 int64_t SizeNode::getDynamicValue() const {
   if (dynamic_value_computed_) {
-    XLA_COUNTER("CachedSizeNodeValue", 1);
+    TORCH_LAZY_COUNTER("CachedSizeNodeValue", 1);
     return runtime_size_;
   }
   torch::lazy::NodePtr cloned =

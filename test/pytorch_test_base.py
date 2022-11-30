@@ -307,6 +307,7 @@ DISABLED_TORCH_TESTS_TPU_ONLY = {
     # test_torch.py
     'TestDevicePrecisionXLA': {
         'test_digamma',  # Precision issue at the first assert, then NAN handling (both on TPU)
+        'test_clamp_xla_float64',  # 'dtype' do not match: torch.float64 != torch.float32
     },
     'TestTensorDeviceOpsXLA': {
         'test_pow_inplace_xla',  # (TPU) 0.0032 vs 0.001
@@ -366,6 +367,8 @@ DISABLED_TORCH_TESTS_TPU_ONLY = {
         'test_diff_xla_float64',  # expected instruction to have shape equal
         'test_nullary_op_mem_overlap_xla',  # core dumped
         'test_index_reduce',  # takes too long
+        'test_take_xla_float64',  # 'dtype' do not match: torch.float32 != torch.float64
+        'test_take_xla_int16',  # 'dtype' do not match: torch.int32 != torch.int16
     },
 
     # test_indexing.py
@@ -391,22 +394,33 @@ DISABLED_TORCH_TESTS_TPU_ONLY = {
         'test_upsamplingNearest3d_xla',  # grad check failure
         'test_cross_entropy_label_smoothing_consistent_index_target_and_probs_xla',  # precision
         'test_cross_entropy_loss_prob_target_all_reductions_xla',  # precision
+        'test_cross_entropy_label_smoothing_errors_xla',  # crash
+        'test_cross_entropy_label_smoothing_weight_ignore_indices_xla',  # crash
+        'test_multi_margin_loss_errors_xla',  # crash
+        'test_nll_loss_mismatched_batch_xla',  # crash
+        'test_logsigmoid_out_xla',  # 'dtype' do not match: torch.float32 != torch.float64
     },
 
     # test_type_promotion.py
     'TestTypePromotionXLA': {
         'test_bfloat16_xla',  # half support
-    }
-}
+    },
 
-DISABLED_TORCH_TESTS_TPUVM_ONLY = {
-    # test_nn.py
-    'TestNNDeviceTypeXLA': {
+    # test_drop_out.py
+    'TestDropoutNNDeviceTypeXLA': {
+        'test_Dropout_xla',  # takes too long
+    },
+
+    # test_pooling,py
+    'TestPoolingNNDeviceTypeXLA': {
         'test_AdaptiveMaxPool1d_indices_xla',  #  TODO: segfualt on TPUVM
         'test_AdaptiveMaxPool2d_indices_xla',  #  TODO: segfualt on TPUVM
         'test_AdaptiveMaxPool3d_indices_xla',  #  TODO: segfualt on TPUVM
         'test_MaxPool3d_indices_xla',  #  TODO: segfualt on TPUVM
-        'test_multi_margin_loss_errors_xla',  #  TODO: segfualt on TPUVM
+        'test_MaxPool1d_indices_xla_float32',  #  TODO: segfualt on TPUVM
+        'test_MaxPool2d_indices_xla_float32',  #  TODO: segfualt on TPUVM
+        'test_adaptive_pooling_max_nhwc',  #  TODO: segfualt on TPUVM for f32 and f64
+        'test_pooling_max_nhwc'  #  TODO: segfualt on TPUVM for f32 and f64
     },
 }
 
@@ -460,18 +474,10 @@ def union_of_disabled_tests(sets):
   return union
 
 
-def on_tpuvm():
-  config = os.getenv('XRT_TPU_CONFIG')
-  return config and re.match('^localservice;[0-9]+;localhost:[0-9]+', config)
-
-
 DISABLED_TORCH_TESTS_CPU = DISABLED_TORCH_TESTS_ANY
 DISABLED_TORCH_TESTS_GPU = union_of_disabled_tests(
     [DISABLED_TORCH_TESTS_ANY, DISABLED_TORCH_TESTS_GPU_ONLY])
-DISABLED_TORCH_TESTS_TPU = union_of_disabled_tests([
-    DISABLED_TORCH_TESTS_ANY, DISABLED_TORCH_TESTS_TPU_ONLY,
-    DISABLED_TORCH_TESTS_TPUVM_ONLY
-]) if on_tpuvm() else union_of_disabled_tests(
+DISABLED_TORCH_TESTS_TPU = union_of_disabled_tests(
     [DISABLED_TORCH_TESTS_ANY, DISABLED_TORCH_TESTS_TPU_ONLY])
 
 DISABLED_TORCH_TESTS = {

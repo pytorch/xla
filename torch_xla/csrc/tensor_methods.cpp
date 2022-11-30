@@ -749,9 +749,9 @@ XLATensorPtr XLATensor::baddbmm(const XLATensorPtr& input,
       alpha, batch1->shape().get().element_type(), batch1->GetDevice());
   torch::lazy::Value bias_multiplier = XLATensor::GetIrValueForScalar(
       beta, input->shape().get().element_type(), input->GetDevice());
-  return input->CreateFrom(BaddBmm(batch1->GetIrValue(), batch2->GetIrValue(),
-                                   input->GetIrValue(), product_multiplier,
-                                   bias_multiplier));
+  return input->CreateFrom(torch::lazy::MakeNode<Baddbmm>(
+      input->GetIrValue(), batch1->GetIrValue(), batch2->GetIrValue(),
+      bias_multiplier, product_multiplier));
 }
 
 XLATensorPtr XLATensor::bernoulli(const XLATensorPtr& input,
@@ -1876,7 +1876,9 @@ std::pair<XLATensorPtr, XLATensorPtr> XLATensor::nms(
 XLATensorPtr XLATensor::nonzero(const XLATensorPtr& input) {
   torch::lazy::NodePtr node =
       torch::lazy::MakeNode<NonZero>(input->GetIrValue());
-  return input->CreateFrom(torch::lazy::Value(node, 0), at::ScalarType::Long);
+  // Nonzero result type should not depend on input type, hence we shouldn't
+  // use input->CreateFrom which will inherit the logical_element_type.
+  return Create(torch::lazy::Value(node, 0), input->GetDevice());
 }
 
 XLATensorPtr XLATensor::norm(const XLATensorPtr& input,
@@ -2528,14 +2530,26 @@ XLATensorPtr XLATensor::trace(const XLATensorPtr& input) {
 XLATensorPtr XLATensor::transpose(const XLATensorPtr& input, int64_t dim0,
                                   int64_t dim1) {
   auto input_shape = input->shape();
-  auto permute_dims = torch::lazy::MakeTransposePermutation(
-      /*dim0=*/dim0, /*dim1=*/dim1, /*rank=*/input_shape.get().rank());
-  ViewInfo view_info(ViewInfo::Type::kPermute, input_shape, permute_dims);
+  ViewInfo view_info;
+  if (input_shape.get().rank() <= 1) {
+    // return a view of self if input rank <=1
+    torch::lazy::Value ir_value = input->GetIrValue();
+    view_info = ViewInfo(ViewInfo::Type::kNoOp, GetXlaShape(ir_value),
+                         GetXlaShape(ir_value));
+  } else {
+    auto permute_dims = torch::lazy::MakeTransposePermutation(
+        /*dim0=*/dim0, /*dim1=*/dim1, /*rank=*/input_shape.get().rank());
+    view_info = ViewInfo(ViewInfo::Type::kPermute, input_shape, permute_dims);
+  }
   return input->CreateViewTensor(std::move(view_info));
 }
 
 void XLATensor::transpose_(XLATensorPtr& input, int64_t dim0, int64_t dim1) {
   auto input_shape = input->shape();
+  if (input_shape.get().rank() <= 1) {
+    // no op if input rank <=1
+    return;
+  }
   auto permute_dims = torch::lazy::MakeTransposePermutation(
       /*dim0=*/dim0, /*dim1=*/dim1, /*rank=*/input_shape.get().rank());
   ViewInfo view_info(ViewInfo::Type::kPermute, input_shape, permute_dims);

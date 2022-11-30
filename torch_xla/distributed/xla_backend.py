@@ -74,7 +74,8 @@ class ProcessGroupXla(ProcessGroup):
     for input_tensor, output_tensors in zip(input_tensors, output_tensors_list):
       result = xm.all_gather(input_tensor, groups=self._mesh, pin_layout=False)
       for i, slice in enumerate(torch.split(result, input_tensor.shape[0])):
-        output_tensors[i].copy_(slice)
+        with torch.no_grad():
+          output_tensors[i].copy_(slice)
 
     return _ret_work([t for sublist in output_tensors_list for t in sublist])
 

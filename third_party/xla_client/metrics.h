@@ -177,6 +177,9 @@ class Counter {
   mutable std::atomic<CounterData*> data_;
 };
 
+// XLA_COUNTER should only be used within xla_client. Please use
+// TORCH_LAZY_COUNTER in pytorch/xla. For more information, see
+// NOTE: [TORCH_LAZY_COUNTER v.s. XLA_COUNTER].
 #define XLA_COUNTER(name, value)                \
   do {                                          \
     static ::xla::metrics::Counter* __counter = \
@@ -184,8 +187,8 @@ class Counter {
     __counter->AddValue(value);                 \
   } while (0)
 
-#define XLA_FN_COUNTER(ns) XLA_COUNTER(absl::StrCat(ns, __FUNCTION__), 1)
-
+// Please use this within xla_client. Fore more information,
+// see the above comment.
 #define XLA_VALUE_METRIC(name, value)                                    \
   do {                                                                   \
     static ::xla::metrics::Metric* __metric =                            \
@@ -243,6 +246,9 @@ class TimedSection {
   int64_t start_;
 };
 
+// XLA_TIMED should only be used within xla_client. Please use
+// TORCH_LAZY_TIMED in pytorch/xla. For more information, see
+// NOTE: [TORCH_LAZY_COUNTER v.s. XLA_COUNTER].
 #define XLA_TIMED(name)                                           \
   static xla::metrics::Metric* timed_metric =                     \
       new xla::metrics::Metric(name, xla::metrics::MetricFnTime); \

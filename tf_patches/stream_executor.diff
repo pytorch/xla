@@ -1,0 +1,19 @@
+diff --git a/tensorflow/compiler/xla/stream_executor/BUILD b/tensorflow/compiler/xla/stream_executor/BUILD
+index 1241cfedade..03a45f27702 100644
+--- a/tensorflow/compiler/xla/stream_executor/BUILD
++++ b/tensorflow/compiler/xla/stream_executor/BUILD
+@@ -172,11 +172,13 @@ cc_library(
+     ],
+ )
+ 
++# We need to remove make_default_target_header_only so that
++# we can build PyTorch/XLA. Otherwise, we won't have the
++# required objects linked at build time.
+ tf_proto_library(
+     name = "dnn_proto",
+     srcs = ["dnn.proto"],
+     cc_api_version = 2,
+-    make_default_target_header_only = True,
+ )
+ 
+ cc_library(

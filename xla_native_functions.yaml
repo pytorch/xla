@@ -88,6 +88,7 @@ ir_gen:
   - _adaptive_avg_pool3d
   - _adaptive_avg_pool3d_backward
   - atan2
+  - baddbmm
   - bitwise_and.Tensor
   - bitwise_or.Tensor
   - bitwise_xor.Tensor
@@ -348,6 +349,7 @@ supported:
   # - _trilinear
   # - logsumexp.out
 symint:
+  - embedding
   - empty.memory_format
   - empty_strided
   - expand
@@ -355,6 +357,7 @@ symint:
   - view
   - diagonal_backward
   - narrow_copy
+  - select_backward
 autograd:
   - einsum
   - max_pool2d

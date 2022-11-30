@@ -57,7 +57,7 @@ class XlaShardingTest(unittest.TestCase):
   def test_mark_sharding_2d(self):
     t1 = torch.randn(1, 128, device='cpu')
     t2 = torch.randn(1, 128, device='cpu')
-    expected = t1 @ t2.T
+    expected = t1 + t2
 
     xt1 = t1.to(xm.xla_device())
     xt2 = t2.to(xm.xla_device())
@@ -67,7 +67,7 @@ class XlaShardingTest(unittest.TestCase):
     ])) if self.n_devices > 1 else '{maximal device=0}'
     self.assertEqual(annotation, torch_xla._XLAC._get_xla_sharding_spec(xt1))
 
-    actual = (xt1 @ xt2.T).cpu()
+    actual = (xt1 + xt2).cpu()
     self.assertTrue(torch.allclose(expected, actual))
 
   def test_mark_sharding_4d(self):
@@ -101,6 +101,41 @@ class XlaShardingTest(unittest.TestCase):
     self.assertEqual(
         torch_xla._XLAC._get_xla_sharding_spec(xt),
         torch_xla._XLAC._get_xla_sharding_spec(xt2))
+
+  def test_mark_step_with_sharding(self):
+    xt = torch.ones(2, 2).to(xm.xla_device())
+    xs.mark_sharding(xt, self._get_mesh((1, self.n_devices)), (0, 1))
+    sharding_spec = torch_xla._XLAC._get_xla_sharding_spec(xt)
+    xm.mark_step()  # mark_step should preserve the sharding
+    self.assertEqual(sharding_spec, torch_xla._XLAC._get_xla_sharding_spec(xt))
+
+  def test_inplace_add_with_sharding(self):
+    xt = torch.ones(2, 2).to(xm.xla_device())
+    xs.mark_sharding(xt, self._get_mesh((1, self.n_devices)), (0, 1))
+    sharding_spec = torch_xla._XLAC._get_xla_sharding_spec(xt)
+    xt.add_(1)  # inplace update should preserve the sharding
+    self.assertEqual(sharding_spec, torch_xla._XLAC._get_xla_sharding_spec(xt))
+
+
+class VirtualDeviceTest(XlaShardingTest):
+
+  @classmethod
+  def setUpClass(cls):
+    os.environ["XLA_USE_SPMD"] = "1"
+    super().setUpClass()
+
+  def test_mark_sharding(self):
+    partition_spec = (0, 1)
+    xt1 = torch.tensor([[1, 2, 3, 4, 5, 6, 7, 8]],
+                       dtype=torch.float,
+                       device=xm.xla_device())
+    xs.mark_sharding(xt1, self._get_mesh((1, self.n_devices)), partition_spec)
+    self.assertTrue(
+        torch.allclose(
+            xt1 + 0,
+            torch.tensor([1, 2, 3, 4, 5, 6, 7, 8],
+                         dtype=torch.float,
+                         device=xm.xla_device())))
 
 
 if __name__ == '__main__':

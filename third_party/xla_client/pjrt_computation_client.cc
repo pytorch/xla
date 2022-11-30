@@ -367,16 +367,21 @@ PjRtComputationClient::ExecuteReplicated(
 
   std::vector<std::vector<ComputationClient::DataPtr>> data_handles;
   data_handles.reserve(results.size());
-  for (auto& result : results) {
+  for (int32_t i = 0; i < results.size(); ++i) {
+    xla::PjRtDevice* pjrt_device = StringToPjRtDevice(devices[i]);
+    XLA_CHECK(pjrt_device->IsAddressable())
+        << pjrt_device->DebugString() << " is not addressable.";
+
     std::vector<ComputationClient::DataPtr> datas;
-    datas.reserve(result.size());
-    for (int32_t i = 0; i < result.size(); ++i) {
-      std::unique_ptr<xla::PjRtBuffer> buffer = std::move(result[i]);
+    datas.reserve(results[i].size());
+    for (int32_t j = 0; j < results[i].size(); ++j) {
+      std::unique_ptr<xla::PjRtBuffer> buffer = std::move(results[i][j]);
+      XLA_CHECK(pjrt_device == buffer->device())
+          << "Exepcted device: " << pjrt_device->DebugString()
+          << " vs. actual device: " << buffer->device()->DebugString();
 
       std::shared_ptr<PjRtData> data = std::make_shared<PjRtData>(
-          devices[i], buffer->on_device_shape(),
-          std::move(buffer));
-
+          devices[i], buffer->on_device_shape(), std::move(buffer));
       datas.push_back(data);
     }
     data_handles.push_back(datas);
@@ -401,6 +406,15 @@ std::vector<std::string> PjRtComputationClient::GetLocalDevices() const {
 std::vector<std::string> PjRtComputationClient::GetAllDevices() const {
   return PjRtDevicesToString(client_->devices());
 }
+
+int PjRtComputationClient::GetNumProcesses() const {
+  int max_process_index = client_->process_index();
+  for (auto* device : client_->devices()) {
+    max_process_index = std::max(max_process_index, device->process_index());
+  }
+
+  return max_process_index + 1;
+};
 
 void PjRtComputationClient::SetReplicationDevices(
     std::shared_ptr<std::vector<std::string>> devices) {

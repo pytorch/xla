@@ -749,6 +749,14 @@ class TestDynamicShape(XlaTestCase):
         torch.masked_select(x, mask), 0)
     self.assertEqual(x_dim0_shape.item(), 3)
 
+  def test_nonzero_cast(self):
+    t1 = torch.ones(5, 2, device=xm.xla_device())
+    # Result of the nonzero should be the index type. Currently
+    # index type is s64 on cpu and gpu, but s32 on TPU. We should be
+    # able to cast it to any other type without error.
+    t2 = torch.nonzero(t1.int()).float()
+    xm.mark_step()
+
 
 class TestOptimizationBarrier(XlaTestCase):
 
@@ -1826,6 +1834,16 @@ class TestAtenXlaTensor(XlaTestCase):
     y[::2].copy_(x[::2])
     self.assertEqual(y, [1, 0, 3, 0, 5, 0])
 
+  def test_view_and_multi_mark_step(self):
+    xla_device = xm.xla_device()
+    t1 = torch.zeros(100, device=xla_device)
+    t1[10] = 113
+    xm.mark_step()
+    t1[12] = 1123
+    xm.mark_step()
+    self.assertNotIn('update_slice',
+                     torch_xla._XLAC._get_xla_tensors_text([t1]))
+
   def test_binaryop_order(self):
     xla_device = xm.xla_device()
     x = torch.rand(5, device=xla_device)
@@ -1850,6 +1868,20 @@ class TestAtenXlaTensor(XlaTestCase):
     emb = emb.to(torch.bfloat16)
     emb_out = emb(index)
     assert emb_out.dtype == torch.bfloat16
+
+  def test_transpose_1d(self):
+
+    def test_fn(t1):
+      return t1.t()
+
+    self.runAtenTest([torch.arange(15, dtype=torch.int32)], test_fn)
+
+  def test_transpose_1d_inplace(self):
+
+    def test_fn(t1):
+      return t1.t_()
+
+    self.runAtenTest([torch.arange(15, dtype=torch.int32)], test_fn)
 
 
 class MNISTComparator(nn.Module):
@@ -2080,6 +2112,14 @@ class XpTraceTest(XlaTestCase):
         RuntimeError, r'Expecting scope to be empty but it is conv1.1'):
       with xp.Trace('conv1'):
         xm.mark_step()
+
+
+class RegisterXLAKeyTest(XlaTestCase):
+
+  def test_multi_init_xla_backend(self):
+    torch_xla._XLAC._init_xla_lazy_backend()
+    torch_xla._XLAC._init_xla_lazy_backend()
+    self.assertEqual(met.counter_value("RegisterXLAFunctions"), 1)
 
 
 class TestGeneric(XlaTestCase):

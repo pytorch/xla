@@ -238,6 +238,13 @@ def xla_device(n=None, devkind=None):
   Returns:
     A `torch.device` with the requested instance.
   """
+  # When SPMD is enabled, we always return `xla:0` to the user, and
+  # under the hood we use virtual device logic for every xla tensor
+  if xu.check_env_flag('XLA_USE_SPMD'):
+    device = 'xla:0'
+    torch_xla._XLAC._xla_set_default_device(device)
+    return torch.device(device)
+
   if pjrt.using_pjrt():
     return pjrt.xla_device(n, devkind)
 
