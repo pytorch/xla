@@ -7,26 +7,28 @@ import torch_xla.debug.metrics as met
 
 xla_dev = xm.xla_device()
 
+
 class Feedforward(torch.nn.Module):
+
   def __init__(self, input_size, hidden_size):
-      super().__init__()
-      self.input_size = input_size
-      self.hidden_size  = hidden_size
-      self.fc1 = torch.nn.Linear(self.input_size, self.hidden_size)
-      self.fc1.weight.data.fill_(0.01)
-      self.fc1.bias.data.fill_(0.01)
-      self.relu = torch.nn.ReLU()
-      self.fc2 = torch.nn.Linear(self.hidden_size, 1)
-      self.fc2.weight.data.fill_(0.01)
-      self.fc2.bias.data.fill_(0.01)
-      self.sigmoid = torch.nn.Sigmoid()
+    super().__init__()
+    self.input_size = input_size
+    self.hidden_size = hidden_size
+    self.fc1 = torch.nn.Linear(self.input_size, self.hidden_size)
+    self.fc1.weight.data.fill_(0.01)
+    self.fc1.bias.data.fill_(0.01)
+    self.relu = torch.nn.ReLU()
+    self.fc2 = torch.nn.Linear(self.hidden_size, 1)
+    self.fc2.weight.data.fill_(0.01)
+    self.fc2.bias.data.fill_(0.01)
+    self.sigmoid = torch.nn.Sigmoid()
 
   def forward(self, x):
-      hidden = self.fc1(x)
-      relu = self.relu(hidden)
-      output = self.fc2(relu)
-      output = self.sigmoid(output)
-      return output
+    hidden = self.fc1(x)
+    relu = self.relu(hidden)
+    output = self.fc2(relu)
+    output = self.sigmoid(output)
+    return output
 
 
 class TestDynamicShapeModels(unittest.TestCase):
@@ -38,7 +40,7 @@ class TestDynamicShapeModels(unittest.TestCase):
       num_test_samples = 5
       x_test = torch.ones(num_test_samples, num_features)
       x_test[0][0] = 0
-      y_test = torch.ones(num_test_samples*2)
+      y_test = torch.ones(num_test_samples * 2)
       y_test[0] = 0
 
       x_test = x_test.to(dev)
@@ -59,13 +61,9 @@ class TestDynamicShapeModels(unittest.TestCase):
         before_train = criterion(y_pred.squeeze(), y_test)
         xm.mark_step()
         losses.append(before_train.item())
-        print('Test loss before training' , before_train.item())
+        print('Test loss before training', before_train.item())
 
-    np.testing.assert_allclose(
-      losses[0],
-      losses[1],
-      rtol=1e-2,
-      atol=1e-2)
+    np.testing.assert_allclose(losses[0], losses[1], rtol=1e-2, atol=1e-2)
 
   def test_forward_pass_nn_model_compile_once(self):
     met.clear_counters()
@@ -75,7 +73,7 @@ class TestDynamicShapeModels(unittest.TestCase):
       num_test_samples = 5
       x_test = torch.ones(num_test_samples, num_features)
       x_test[0][0] = 0
-      y_test = torch.ones(num_test_samples*2)
+      y_test = torch.ones(num_test_samples * 2)
       y_test[0] = 0
 
       x_test = x_test.to(xla_dev)
@@ -98,7 +96,8 @@ class TestDynamicShapeModels(unittest.TestCase):
     # TODO: figure out if met.metric_data("CompileTime") indicates
     # the number of compilations. Also figure out why the counter now is 3 instead of the expected 1.
     np.testing.assert_equal(met.metric_data('CompileTime')[0], 1)
-    print('xw32 met.metric_data("CompileTime")=', met.metric_data('CompileTime'))
+    print('xw32 met.metric_data("CompileTime")=',
+          met.metric_data('CompileTime'))
 
 
 if __name__ == '__main__':
