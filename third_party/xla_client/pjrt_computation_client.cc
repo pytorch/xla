@@ -60,7 +60,7 @@ PjRtComputationClient::PjRtComputationClient() {
     client_ = xla::GetTpuClient(max_inflight_computations).value();
   } else if (device_type == "TPU_C_API") {
     TF_VLOG(1) << "Initializing PjRt C API client...";
-    client_ = std::move(xla::GetCApiClient(device_type).value());
+    client_ = std::move(xla::GetCApiClient("TPU").value());
     // TODO(wcromar): remove this when C API supports
     // kImmutableUntilTransferCompletes
     host_buffer_semantics_ = xla::PjRtClient::HostBufferSemantics::kZeroCopy;
