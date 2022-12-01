@@ -146,7 +146,8 @@ TEST_F(TensorTest, TestThreshold) {
   at::Tensor output = at::threshold(input, threshold, value);
   ForEachDevice([&](const torch::lazy::BackendDevice& device) {
     XLATensorPtr dev_input = XLATensor::Create(input, device);
-    XLATensorPtr dev_output = tensor_methods::threshold(dev_input, threshold, value);
+    XLATensorPtr dev_output =
+        tensor_methods::threshold(dev_input, threshold, value);
     AllClose(output, dev_output);
   });
 }
@@ -165,7 +166,8 @@ TEST_F(TensorTest, TestAddMatMul) {
     XLATensorPtr dev_input = XLATensor::Create(input, device);
     XLATensorPtr dev_weight = XLATensor::Create(weight, device);
     XLATensorPtr dev_bias = XLATensor::Create(bias, device);
-    XLATensorPtr dev_output = tensor_methods::addmm(dev_input, dev_weight, dev_bias);
+    XLATensorPtr dev_output =
+        tensor_methods::addmm(dev_input, dev_weight, dev_bias);
     AllClose(output, dev_output);
   });
 }
@@ -317,13 +319,13 @@ TEST_F(TensorTest, TestAvgPool2D) {
                            /*ceil_mode=*/false, count_include_pad);
         ForEachDevice([&](const torch::lazy::BackendDevice& device) {
           XLATensorPtr dev_input = XLATensor::Create(input, device);
-          XLATensorPtr dev_output =
-              tensor_methods::avg_pool_nd(dev_input,
-                                     /*spatial_dim_count=*/2,
-                                     /*kernel_size=*/{kernel_size, kernel_size},
-                                     /*stride=*/{stride, stride},
-                                     /*padding=*/{padding, padding},
-                                     /*ceil_mode=*/false, count_include_pad);
+          XLATensorPtr dev_output = tensor_methods::avg_pool_nd(
+              dev_input,
+              /*spatial_dim_count=*/2,
+              /*kernel_size=*/{kernel_size, kernel_size},
+              /*stride=*/{stride, stride},
+              /*padding=*/{padding, padding},
+              /*ceil_mode=*/false, count_include_pad);
           AllClose(output, dev_output);
         });
       }
