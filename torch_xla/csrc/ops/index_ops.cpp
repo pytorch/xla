@@ -267,7 +267,8 @@ XLATensorPtr IndexByTensors(const XLATensorPtr& base,
   int64_t indices_rank = canonical_indices.front()->shape().get().rank();
   // Stack the indices to allow the whole multi-indexing to be dispatched with a
   // single gather.
-  XLATensorPtr indices_nd = tensor_methods::stack(canonical_indices, indices_rank);
+  XLATensorPtr indices_nd =
+      tensor_methods::stack(canonical_indices, indices_rank);
   return XLATensor::Create(
       torch::lazy::MakeNode<IndexGet>(base->GetIrValue(),
                                       indices_nd->GetIrValue(), start_dim),
@@ -285,7 +286,8 @@ torch::lazy::Value IndexPutByTensors(
   int64_t indices_rank = canonical_indices.front()->shape().get().rank();
   // Stack the indices to allow the whole multi-indexing to be dispatched with a
   // single scatter.
-  XLATensorPtr indices_nd = tensor_methods::stack(canonical_indices, indices_rank);
+  XLATensorPtr indices_nd =
+      tensor_methods::stack(canonical_indices, indices_rank);
   return torch::lazy::MakeNode<Permute>(
       torch::lazy::MakeNode<IndexPut>(base->GetIrValue(),
                                       indices_nd->GetIrValue(), start_dim,

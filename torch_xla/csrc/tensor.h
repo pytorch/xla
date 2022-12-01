@@ -116,7 +116,7 @@ class XLATensor : public c10::intrusive_ptr_target {
   // TODO: We should remove this one once MaybeCastIrValue is no longer needed.
   XLATensorPtr CreateFrom(torch::lazy::Value ir_value,
                           const torch::lazy::BackendDevice& device,
-                          at::ScalarType logical_element_type) const;  
+                          at::ScalarType logical_element_type) const;
 
   // The default ctor previously created a null LazyTensor (one with no 'data'
   // obj). Creating a null XLATensor is no longer possible, since the same can

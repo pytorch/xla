@@ -50,8 +50,9 @@ torch::autograd::variable_list EinsumAutogradFunction::backward(
   torch::autograd::variable_list tensors = ctx->get_saved_variables();
   std::vector<XLATensorPtr> xla_tensors = bridge::GetXlaTensors(tensors);
 
-  std::tuple<XLATensorPtr, XLATensorPtr> outputs = tensor_methods::einsum_backward(
-      bridge::GetXlaTensor(grad_output[0]), xla_tensors, equation);
+  std::tuple<XLATensorPtr, XLATensorPtr> outputs =
+      tensor_methods::einsum_backward(bridge::GetXlaTensor(grad_output[0]),
+                                      xla_tensors, equation);
 
   // For both einsum and max pool, we use "undef" as a placeholder for the
   // non-tensor grad inputs, in this case the equation string.

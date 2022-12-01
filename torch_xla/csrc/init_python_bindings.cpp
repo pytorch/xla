@@ -194,7 +194,7 @@ std::shared_ptr<torch::lazy::Value> AllReduceInPlace(
       GetXlaTensors(tensors, /*want_all=*/true);
   return std::make_shared<torch::lazy::Value>(
       tensor_methods::all_reduce(&xtensors, *token, GetReduceType(reduce_type),
-                            scale, replica_groups, pin_layout));
+                                 scale, replica_groups, pin_layout));
 }
 
 std::pair<at::Tensor, std::shared_ptr<torch::lazy::Value>> AllReduce(
@@ -247,7 +247,7 @@ std::pair<at::Tensor, std::shared_ptr<torch::lazy::Value>> AllGather(
   torch::lazy::Value new_token;
   std::tie(result, new_token) =
       tensor_methods::all_gather(bridge::GetXlaTensor(input), *token, dim,
-                            shard_count, replica_groups, pin_layout);
+                                 shard_count, replica_groups, pin_layout);
   return {bridge::AtenFromXlaTensor(std::move(result)),
           std::make_shared<torch::lazy::Value>(new_token)};
 }
@@ -259,9 +259,9 @@ std::shared_ptr<torch::lazy::Value> AllGatherOut(
     const std::vector<std::vector<int64_t>>& replica_groups, bool pin_layout) {
   XLATensorPtr out = bridge::GetXlaTensor(output);
   torch::lazy::Value new_token;
-  new_token =
-      tensor_methods::all_gather_out(out, bridge::GetXlaTensor(input), *token, dim,
-                                shard_count, replica_groups, pin_layout);
+  new_token = tensor_methods::all_gather_out(out, bridge::GetXlaTensor(input),
+                                             *token, dim, shard_count,
+                                             replica_groups, pin_layout);
   return std::make_shared<torch::lazy::Value>(new_token);
 }
 
