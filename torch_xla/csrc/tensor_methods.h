@@ -3,6 +3,7 @@
 #include "torch_xla/csrc/tensor.h"
 
 namespace torch_xla {
+namespace tensor_methods {
 
 //////////////////////////////////////////////////////////////////////////////
 // XLA dedicated operators follows here, listed in alphabetical order.
@@ -965,4 +966,5 @@ XLATensorPtr where(const XLATensorPtr& condition,
                         const XLATensorPtr& input,
                         const XLATensorPtr& other);
 
+}  // namespace tensor_methods
 }  // namespace torch_xla
