@@ -576,14 +576,6 @@ xla::util::MaybeRef<xla::Shape> XLATensor::shape() const {
       XlaHelpers::I64List(data()->tensor_data->sizes()));
 }
 
-xla::Shape XLATensor::shape_with_layout() const {
-  auto xla_shape = shape();
-  return MakeArrayShapeFromDimensions(
-      xla_shape.get().dimensions(), xla_shape.get().dynamic_dimensions(),
-      xla_shape.get().element_type(),
-      static_cast<XlaDeviceType>(GetDevice().type()));
-}
-
 const torch::lazy::BackendDevice& XLATensor::GetDevice() const {
   return data()->device;
 }
@@ -1194,19 +1186,6 @@ std::vector<at::Tensor> XLATensor::FetchTensors(
   return results;
 }
 
-std::vector<XLATensorPtr> XLATensor::CreateTensors(
-    const std::vector<at::Tensor>& tensors,
-    const std::vector<std::string>& devices) {
-  std::vector<torch::lazy::BackendDataPtr> handles =
-      CreateTensorsData(tensors, devices);
-  std::vector<XLATensorPtr> xla_tensors;
-  for (size_t i = 0; i < handles.size(); ++i) {
-    xla_tensors.push_back(
-        Create(std::move(handles[i]), tensors[i].scalar_type()));
-  }
-  return xla_tensors;
-}
-
 torch::lazy::Value XLATensor::CreateTensorNode(torch::lazy::BackendDataPtr data,
                                                bool read_only) const {
   data->SetInfo(
@@ -1253,21 +1232,6 @@ XLATensorPtr XLATensor::CreateFrom(torch::lazy::Value ir_value) const {
   ir_value = MaybeCastIrValue(std::move(ir_value), GetDevice(),
                               /*logical_element_type=*/c10::nullopt);
   return Create(std::move(ir_value), GetDevice(), dtype_optional());
-}
-
-XLATensorPtr XLATensor::CreateFrom(
-    torch::lazy::Value ir_value,
-    const torch::lazy::BackendDevice& device) const {
-  ir_value = MaybeCastIrValue(std::move(ir_value), device,
-                              /*logical_element_type=*/c10::nullopt);
-  return Create(std::move(ir_value), device, dtype_optional());
-}
-
-XLATensorPtr XLATensor::CreateFrom(torch::lazy::Value ir_value,
-                                   at::ScalarType logical_element_type) const {
-  ir_value =
-      MaybeCastIrValue(std::move(ir_value), GetDevice(), logical_element_type);
-  return Create(std::move(ir_value), GetDevice(), logical_element_type);
 }
 
 XLATensorPtr XLATensor::CreateFrom(
