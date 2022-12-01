@@ -100,7 +100,6 @@ class XLATensor : public c10::intrusive_ptr_target {
   void SetScalarType(c10::optional<at::ScalarType> logical_element_type);
 
   xla::util::MaybeRef<xla::Shape> shape() const;
-  xla::Shape shape_with_layout() const;
 
   const torch::lazy::BackendDevice& GetDevice() const;
   int64_t GetUniqueId() const;
@@ -238,12 +237,6 @@ class XLATensor : public c10::intrusive_ptr_target {
   // Retrieves the PyTorch CPU tensors behind the XLA tensors IR operations.
   // All the tensors must be on the same device.
   static std::vector<at::Tensor> GetTensors(std::vector<XLATensorPtr>* tensors);
-
-  // Operation which creates XLA tensors out of PyTorch CPU tensors by batching
-  // the requests to the computation servers.
-  static std::vector<XLATensorPtr> CreateTensors(
-      const std::vector<at::Tensor>& tensors,
-      const std::vector<std::string>& devices);
 
   //////////////////////////////////////////////////////////////////////////////
   // XLA dedicated operators follows here, listed in alphabetical order.
@@ -1397,13 +1390,10 @@ class XLATensor : public c10::intrusive_ptr_target {
   // Create a new XLA tensor with the same metadata of the input tensor (with
   // possible overrides), and the new IR value.
   XLATensorPtr CreateFrom(torch::lazy::Value ir_value) const;
-  XLATensorPtr CreateFrom(torch::lazy::Value ir_value,
-                          const torch::lazy::BackendDevice& device) const;
-  XLATensorPtr CreateFrom(torch::lazy::Value ir_value,
-                          at::ScalarType logical_element_type) const;
   XLATensorPtr CreateFrom(
       torch::lazy::Value ir_value,
       c10::optional<at::ScalarType> logical_element_type_opt) const;
+  // TODO: We should remove this one once MaybeCastIrValue is no longer needed.
   XLATensorPtr CreateFrom(torch::lazy::Value ir_value,
                           const torch::lazy::BackendDevice& device,
                           at::ScalarType logical_element_type) const;
