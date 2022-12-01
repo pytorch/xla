@@ -118,7 +118,10 @@ int64_t SizeEq::getDynamicValue() const {
 
 std::string SizeEq::ToString() const { return "aten::eq_size"; }
 
-SizeConstant::SizeConstant(int64_t val) : Scalar(c10::Scalar{val}, xla::ShapeUtil::MakeShape(GetShapeDimensionType(/*device=*/nullptr), {})){};
+SizeConstant::SizeConstant(int64_t val)
+    : Scalar(c10::Scalar{val},
+             xla::ShapeUtil::MakeShape(
+                 GetShapeDimensionType(/*device=*/nullptr), {})){};
 
 SizeMul::SizeMul(torch::lazy::Value a, torch::lazy::Value b)
     : XlaNode(torch::lazy::OpKind{c10::Symbol::fromQualString("aten::mul")},
