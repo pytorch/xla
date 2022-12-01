@@ -1393,6 +1393,10 @@ class XLATensor : public c10::intrusive_ptr_target {
   XLATensorPtr CreateFrom(
       torch::lazy::Value ir_value,
       c10::optional<at::ScalarType> logical_element_type_opt) const;
+  // TODO: We should remove this one once MaybeCastIrValue is no longer needed.
+  XLATensorPtr CreateFrom(torch::lazy::Value ir_value,
+                          const torch::lazy::BackendDevice& device,
+                          at::ScalarType logical_element_type) const;
 
   // We build an XLA graph accumulating XLA operations, but at a given point we
   // need to force a rendering, otherwise the graph can grow without control.

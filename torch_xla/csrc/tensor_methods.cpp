@@ -1204,7 +1204,7 @@ XLATensorPtr XLATensor::full_like(const XLATensorPtr& input,
   } else {
     scalar_type = input->dtype();
   }
-  return XLATensor::Create(
+  return input->CreateFrom(
       GetIrValueForScalar(fill_value, tensor_shape, device), device,
       *scalar_type);
 }

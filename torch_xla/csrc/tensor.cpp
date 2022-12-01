@@ -1229,13 +1229,25 @@ torch::lazy::Value XLATensor::MaybeCastIrValue(
 }
 
 XLATensorPtr XLATensor::CreateFrom(torch::lazy::Value ir_value) const {
+  ir_value = MaybeCastIrValue(std::move(ir_value), GetDevice(),
+                              /*logical_element_type=*/c10::nullopt);
   return Create(std::move(ir_value), GetDevice(), dtype_optional());
 }
 
 XLATensorPtr XLATensor::CreateFrom(
     torch::lazy::Value ir_value,
     c10::optional<at::ScalarType> logical_element_type_opt) const {
+  ir_value = MaybeCastIrValue(std::move(ir_value), GetDevice(),
+                              logical_element_type_opt);
   return Create(std::move(ir_value), GetDevice(), logical_element_type_opt);
+}
+
+XLATensorPtr XLATensor::CreateFrom(torch::lazy::Value ir_value,
+                                   const torch::lazy::BackendDevice& device,
+                                   at::ScalarType logical_element_type) const {
+  ir_value =
+      MaybeCastIrValue(std::move(ir_value), device, logical_element_type);
+  return Create(std::move(ir_value), device, logical_element_type);
 }
 
 void XLATensor::ApplyPendingGraph() {
