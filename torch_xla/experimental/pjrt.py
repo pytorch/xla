@@ -299,6 +299,7 @@ def _initialize_single_process(local_rank: int, local_world_size: int):
 
 
 def spawn_threads(fn: Callable, args: Tuple = ()) -> None:
+  """Run function in one process with one thread per addressable device."""
   spawn_fn = _SpawnFn(fn, *args)
   _run_thread_per_device(
       local_rank=0,
