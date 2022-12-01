@@ -48,6 +48,7 @@
 #include "torch_xla/csrc/ir_util.h"
 #include "torch_xla/csrc/ops/device_data.h"
 #include "torch_xla/csrc/tensor_impl.h"
+#include "torch_xla/csrc/tensor_methods.h"
 #include "torch_xla/csrc/tensor_util.h"
 #include "torch_xla/csrc/torch_util.h"
 #include "torch_xla/csrc/version.h"
@@ -192,7 +193,7 @@ std::shared_ptr<torch::lazy::Value> AllReduceInPlace(
   std::vector<XLATensorPtr> xtensors =
       GetXlaTensors(tensors, /*want_all=*/true);
   return std::make_shared<torch::lazy::Value>(
-      XLATensor::all_reduce(&xtensors, *token, GetReduceType(reduce_type),
+      tensor_methods::all_reduce(&xtensors, *token, GetReduceType(reduce_type),
                             scale, replica_groups, pin_layout));
 }
 
@@ -202,7 +203,7 @@ std::pair<at::Tensor, std::shared_ptr<torch::lazy::Value>> AllReduce(
     const std::vector<std::vector<int64_t>>& replica_groups, bool pin_layout) {
   XLATensorPtr result;
   torch::lazy::Value new_token;
-  std::tie(result, new_token) = XLATensor::all_reduce(
+  std::tie(result, new_token) = tensor_methods::all_reduce(
       bridge::GetXlaTensor(input), *token, GetReduceType(reduce_type), scale,
       replica_groups, pin_layout);
   return std::pair<at::Tensor, std::shared_ptr<torch::lazy::Value>>(
@@ -217,7 +218,7 @@ std::pair<at::Tensor, std::shared_ptr<torch::lazy::Value>> ReduceScatter(
     const std::vector<std::vector<int64_t>>& replica_groups, bool pin_layout) {
   XLATensorPtr result;
   torch::lazy::Value new_token;
-  std::tie(result, new_token) = XLATensor::reduce_scatter(
+  std::tie(result, new_token) = tensor_methods::reduce_scatter(
       bridge::GetXlaTensor(input), *token, GetReduceType(reduce_type), scale,
       scatter_dim, shard_count, replica_groups, pin_layout);
   return std::pair<at::Tensor, std::shared_ptr<torch::lazy::Value>>(
@@ -232,7 +233,7 @@ std::shared_ptr<torch::lazy::Value> ReduceScatterOut(
     const std::vector<std::vector<int64_t>>& replica_groups, bool pin_layout) {
   XLATensorPtr out = bridge::GetXlaTensor(output);
   torch::lazy::Value new_token;
-  new_token = XLATensor::reduce_scatter_out(
+  new_token = tensor_methods::reduce_scatter_out(
       out, bridge::GetXlaTensor(input), *token, GetReduceType(reduce_type),
       scale, scatter_dim, shard_count, replica_groups, pin_layout);
   return std::make_shared<torch::lazy::Value>(new_token);
@@ -245,7 +246,7 @@ std::pair<at::Tensor, std::shared_ptr<torch::lazy::Value>> AllGather(
   XLATensorPtr result;
   torch::lazy::Value new_token;
   std::tie(result, new_token) =
-      XLATensor::all_gather(bridge::GetXlaTensor(input), *token, dim,
+      tensor_methods::all_gather(bridge::GetXlaTensor(input), *token, dim,
                             shard_count, replica_groups, pin_layout);
   return {bridge::AtenFromXlaTensor(std::move(result)),
           std::make_shared<torch::lazy::Value>(new_token)};
@@ -259,7 +260,7 @@ std::shared_ptr<torch::lazy::Value> AllGatherOut(
   XLATensorPtr out = bridge::GetXlaTensor(output);
   torch::lazy::Value new_token;
   new_token =
-      XLATensor::all_gather_out(out, bridge::GetXlaTensor(input), *token, dim,
+      tensor_methods::all_gather_out(out, bridge::GetXlaTensor(input), *token, dim,
                                 shard_count, replica_groups, pin_layout);
   return std::make_shared<torch::lazy::Value>(new_token);
 }
@@ -270,7 +271,7 @@ std::pair<at::Tensor, std::shared_ptr<torch::lazy::Value>> AllToAll(
     const std::vector<std::vector<int64_t>>& replica_groups, bool pin_layout) {
   XLATensorPtr result;
   torch::lazy::Value new_token;
-  std::tie(result, new_token) = XLATensor::all_to_all(
+  std::tie(result, new_token) = tensor_methods::all_to_all(
       bridge::GetXlaTensor(input), *token, split_dimension, concat_dimension,
       split_count, replica_groups, pin_layout);
   return std::pair<at::Tensor, std::shared_ptr<torch::lazy::Value>>(
@@ -283,7 +284,7 @@ std::pair<at::Tensor, std::shared_ptr<torch::lazy::Value>> CollectivePermute(
     const std::vector<std::pair<int64_t, int64_t>>& source_target_pairs) {
   XLATensorPtr result;
   torch::lazy::Value new_token;
-  std::tie(result, new_token) = XLATensor::collective_permute(
+  std::tie(result, new_token) = tensor_methods::collective_permute(
       bridge::GetXlaTensor(input), *token, source_target_pairs);
   return std::pair<at::Tensor, std::shared_ptr<torch::lazy::Value>>(
       bridge::AtenFromXlaTensor(std::move(result)),
@@ -293,7 +294,7 @@ std::pair<at::Tensor, std::shared_ptr<torch::lazy::Value>> CollectivePermute(
 void OptimizationBarrier_(std::vector<at::Tensor>& tensors) {
   std::vector<XLATensorPtr> xtensors =
       GetXlaTensors(tensors, /*want_all=*/false);
-  XLATensor::optimization_barrier_(xtensors);
+  tensor_methods::optimization_barrier_(xtensors);
 }
 
 std::pair<at::Tensor, std::shared_ptr<torch::lazy::Value>> Send(
@@ -302,7 +303,7 @@ std::pair<at::Tensor, std::shared_ptr<torch::lazy::Value>> Send(
   XLATensorPtr result;
   torch::lazy::Value new_token;
   std::tie(result, new_token) =
-      XLATensor::send(bridge::GetXlaTensor(input), *token, channel_id);
+      tensor_methods::send(bridge::GetXlaTensor(input), *token, channel_id);
   return {bridge::AtenFromXlaTensor(std::move(result)),
           std::make_shared<torch::lazy::Value>(new_token)};
 }
@@ -313,7 +314,7 @@ std::pair<at::Tensor, std::shared_ptr<torch::lazy::Value>> Recv(
   XLATensorPtr out = bridge::GetXlaTensor(output);
   XLATensorPtr result;
   torch::lazy::Value new_token;
-  std::tie(result, new_token) = XLATensor::recv(out, *token, channel_id);
+  std::tie(result, new_token) = tensor_methods::recv(out, *token, channel_id);
   return {bridge::AtenFromXlaTensor(std::move(result)),
           std::make_shared<torch::lazy::Value>(new_token)};
 }
@@ -447,7 +448,7 @@ std::shared_ptr<torch::lazy::Value> CreateToken(const std::string& device_str) {
 at::Tensor GetXlaTensorDimensionSize(const at::Tensor& tensor, int64_t dim) {
   XLATensorPtr xtensor = bridge::GetXlaTensor(tensor);
   return bridge::AtenFromXlaTensor(
-      XLATensor::get_dimensions_size(xtensor, {dim}));
+      tensor_methods::get_dimensions_size(xtensor, {dim}));
 }
 
 template <class T>
@@ -677,7 +678,7 @@ py::object XlaNms(const at::Tensor& boxes, const at::Tensor& scores,
   at::Tensor num_valid;
   {
     NoGilSection nogil;
-    auto nms_result = XLATensor::nms(
+    auto nms_result = tensor_methods::nms(
         bridge::GetXlaTensor(boxes), bridge::GetXlaTensor(scores),
         bridge::GetXlaTensor(score_threshold),
         bridge::GetXlaTensor(iou_threshold), output_size);
@@ -697,7 +698,7 @@ std::vector<at::Tensor> XlaUserComputation(
     ComputationPtr computation) {
   std::vector<XLATensorPtr> xinputs = GetXlaTensors(inputs, /*want_all=*/true);
   std::vector<XLATensorPtr> xresults =
-      XLATensor::user_computation(opname, xinputs, std::move(computation));
+      tensor_methods::user_computation(opname, xinputs, std::move(computation));
   std::vector<at::Tensor> results;
   for (auto& xresult : xresults) {
     at::Tensor tensor = bridge::AtenFromXlaTensor(std::move(xresult));
@@ -1420,7 +1421,7 @@ void InitXlaModuleBindings(py::module m) {
             XLATensorPtr param_xla = bridge::GetXlaTensor(param);
             XLATensorPtr d_p_xla = bridge::GetXlaTensor(d_p);
             XLATensorPtr buf_xla = bridge::GetXlaTensor(buf);
-            XLATensor::sgd_optimizer_step_(
+            tensor_methods::sgd_optimizer_step_(
                 found_inf_xla, step_xla, param_xla, buf_xla, d_p_xla,
                 weight_decay, momentum, lr, dampening, nesterov, maximize);
           }
@@ -1441,7 +1442,7 @@ void InitXlaModuleBindings(py::module m) {
             XLATensorPtr exp_avg_sq_xla = bridge::GetXlaTensor(exp_avg_sq);
             XLATensorPtr max_exp_avg_sq_xla =
                 bridge::GetXlaTensor(max_exp_avg_sq);
-            XLATensor::adam_optimizer_step_(
+            tensor_methods::adam_optimizer_step_(
                 found_inf_xla, step_xla, param_xla, grad_xla, exp_avg_xla,
                 exp_avg_sq_xla, max_exp_avg_sq_xla, beta1, beta2, lr,
                 weight_decay, eps, amsgrad, maximize, use_adamw);
