@@ -1,3 +1,4 @@
+upstream CI will fail without this
 diff --git a/tensorflow/compiler/xla/service/cpu/runtime_fp16.h b/tensorflow/compiler/xla/service/cpu/runtime_fp16.h
 index 9fe020d5937..32774c2f3c0 100644
 --- a/tensorflow/compiler/xla/service/cpu/runtime_fp16.h
