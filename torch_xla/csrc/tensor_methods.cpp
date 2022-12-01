@@ -305,6 +305,26 @@ ViewInfo CreateAsStridedViewInfo(const xla::Shape& input_shape,
                   input_shape, std::move(as_strided_info));
 }
 
+// Dispatches a comparison operator, setting the logical type of the result
+// appropriately.
+XLATensorPtr DispatchComparisonOp(c10::Symbol kind,
+                                  const XLATensorPtr& input,
+                                  const at::Scalar& other) {
+  torch::lazy::NodePtr node =
+      ComparisonOp(kind, input->GetIrValue(),
+                   GetIrValueForScalar(other, input->GetDevice()));
+  return Create(node, input->GetDevice(), at::ScalarType::Bool);
+}
+
+// Same as above, with the second input a tensor as well.
+XLATensorPtr DispatchComparisonOp(c10::Symbol kind,
+                                  const XLATensorPtr& input,
+                                  const XLATensorPtr& other) {
+  torch::lazy::NodePtr node =
+      ComparisonOp(kind, input->GetIrValue(), other->GetIrValue());
+  return Create(node, input->GetDevice(), at::ScalarType::Bool);
+}
+
 }  // namespace
 
 //////////////////////////////////////////////////////////////////////////////
@@ -2691,23 +2711,6 @@ XLATensorPtr where(const XLATensorPtr& condition,
                               const XLATensorPtr& other) {
   return input->CreateFrom(
       Where(condition->GetIrValue(), input->GetIrValue(), other->GetIrValue()));
-}
-
-XLATensorPtr DispatchComparisonOp(c10::Symbol kind,
-                                             const XLATensorPtr& input,
-                                             const at::Scalar& other) {
-  torch::lazy::NodePtr node =
-      ComparisonOp(kind, input->GetIrValue(),
-                   GetIrValueForScalar(other, input->GetDevice()));
-  return Create(node, input->GetDevice(), at::ScalarType::Bool);
-}
-
-XLATensorPtr DispatchComparisonOp(c10::Symbol kind,
-                                             const XLATensorPtr& input,
-                                             const XLATensorPtr& other) {
-  torch::lazy::NodePtr node =
-      ComparisonOp(kind, input->GetIrValue(), other->GetIrValue());
-  return Create(node, input->GetDevice(), at::ScalarType::Bool);
 }
 
 }  // namespace tensor_methods

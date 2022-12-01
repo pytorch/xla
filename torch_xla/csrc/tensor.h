@@ -187,17 +187,6 @@ class XLATensor : public c10::intrusive_ptr_target {
   static torch::lazy::BackendDataPtr GetRngSeedData(
       const torch::lazy::BackendDevice& device, bool reset);
 
-  // Dispatches a comparison operator, setting the logical type of the result
-  // appropriately.
-  static XLATensorPtr DispatchComparisonOp(c10::Symbol kind,
-                                           const XLATensorPtr& input,
-                                           const at::Scalar& other);
-
-  // Same as above, with the second input a tensor as well.
-  static XLATensorPtr DispatchComparisonOp(c10::Symbol kind,
-                                           const XLATensorPtr& input,
-                                           const XLATensorPtr& other);
-
   // Dumps the XLA HLO text of the computation accumulated in the graph which is
   // attached the tensors.
   static std::string DumpHloComputation(
