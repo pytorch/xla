@@ -49,6 +49,7 @@
 #include "torch_xla/csrc/ops/xla_ops.h"
 #include "torch_xla/csrc/tensor_util.h"
 #include "torch_xla/csrc/torch_util.h"
+#include "torch_xla/csrc/xla_graph_executor.h"
 #include "torch_xla/csrc/xla_sharding_util.h"
 
 namespace torch_xla {
@@ -494,7 +495,7 @@ XLATensorPtr XLATensor::Create(
   DeviceContextArena::Get()->RegisterTensor(xtensor->data_ptr());
   if (UseEagerDebugMode()) {
     std::vector<XLATensorPtr> xtensors({xtensor});
-    ApplyEagerSync(xtensors);
+    XLAGraphExecutor::Get()->ApplyEagerSync(xtensors);
   }
   return xtensor;
 }
@@ -701,7 +702,7 @@ void XLATensor::SetIrValue(torch::lazy::Value ir_value, bool inplace) {
   }
   if (UseEagerDebugMode() && ShouldSyncIrNode()) {
     std::vector<XLATensorPtr> xtensors({c10::make_intrusive<XLATensor>(*this)});
-    ApplyEagerSync(xtensors);
+    XLAGraphExecutor::Get()->ApplyEagerSync(xtensors);
   }
 }
 

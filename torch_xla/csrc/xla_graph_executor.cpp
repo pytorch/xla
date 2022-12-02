@@ -466,6 +466,11 @@ void XLAGraphExecutor::Async::Wait() {
   }
 }
 
+XLAGraphExecutor* XLAGraphExecutor::Get() {
+    static XLAGraphExecutor arena = XLAGraphExecutor();
+    return &arena;
+}
+
 void XLAGraphExecutor::ApplyEagerSync(std::vector<XLATensorPtr>& tensors) {
   SyncTensorsGraph(&tensors, {}, /*wait=*/false, /*sync_xla_data=*/false);
 }

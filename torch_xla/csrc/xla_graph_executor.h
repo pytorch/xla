@@ -203,6 +203,8 @@ class XLAGraphExecutor {
     std::vector<torch::lazy::BackendDataPtr> tensors_data;
   };
 
+  XLAGraphExecutor() = default;
+
   SyncTensorCollection CollectSyncTensors(
       const std::vector<XLATensorPtr>& tensors,
       const SyncTensorsConfig& config);
