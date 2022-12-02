@@ -53,6 +53,7 @@
 #include "torch_xla/csrc/torch_util.h"
 #include "torch_xla/csrc/version.h"
 #include "torch_xla/csrc/xla_backend_impl.h"
+#include "torch_xla/csrc/xla_graph_executor.h"
 #include "torch_xla/csrc/xla_op_builder.h"
 #include "torch_xla/csrc/xla_sharding_util.h"
 
@@ -441,7 +442,7 @@ std::shared_ptr<torch::lazy::Value> CreateToken(const std::string& device_str) {
   // sequencing effects.
   torch::lazy::BackendDevice device = GetDeviceOrCurrent(device_str);
   torch::lazy::Value ir_value =
-      XLATensor::GetDeviceDataIrValue(0.0, xla::PrimitiveType::F32, device);
+      XLAGraphExecutor::Get()->GetDeviceDataIrValue(0.0, xla::PrimitiveType::F32, device);
   return std::make_shared<torch::lazy::Value>(std::move(ir_value));
 }
 
