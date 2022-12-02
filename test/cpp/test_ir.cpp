@@ -171,6 +171,7 @@ TEST_F(IrTest, TestSizeAddNode) {
       torch::lazy::MakeNode<SizeNode>(scalar_node, 1);
   torch::lazy::NodePtr size_node_add =
       torch::lazy::MakeNode<SizeAdd>(size_node_0, size_node_1);
+  EXPECT_EQ(size_node_add->ToString(), "SizeAdd for op aten::add");
   std::shared_ptr<torch::lazy::DimensionNode> dim_node_add =
       std::dynamic_pointer_cast<torch::lazy::DimensionNode>(size_node_add);
 
