@@ -62,12 +62,8 @@ function run_xla_hlo_debug {
 }
 
 function run_dynamic {
-  if [[ "$TPUVM_MODE" == "1" ]]; then
-    run_test "$@"
-  else
-    echo "Running in DynamicShape mode: $@"
-    XLA_EXPERIMENTAL="nonzero:masked_select:masked_scatter" run_test "$@"
-  fi
+  echo "Running in DynamicShape mode: $@"
+  XLA_EXPERIMENTAL="nonzero:masked_select:masked_scatter" run_test "$@"
 }
 
 function run_eager_debug {
