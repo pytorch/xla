@@ -1,3 +1,4 @@
+from torch_xla.experimental import pjrt
 import args_parse
 
 SUPPORTED_MODELS = [
@@ -199,6 +200,9 @@ def train_imagenet():
 
   device = xm.xla_device()
   model = get_model_property('model_fn')().to(device)
+  if pjrt.using_pjrt():
+    pjrt.broadcast_master_param(model)
+
   if FLAGS.ddp:
     model = DDP(model, gradient_as_bucket_view=True, broadcast_buffers=False)
 
