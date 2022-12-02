@@ -9,6 +9,7 @@
 #include "torch_xla/csrc/helpers.h"
 #include "torch_xla/csrc/tensor.h"
 #include "torch_xla/csrc/xla_backend_impl.h"
+#include "torch_xla/csrc/xla_graph_executor.h"
 
 namespace torch_xla {
 namespace cpp_test {
@@ -17,7 +18,7 @@ static bool xla_backend_inited = InitXlaBackend();
 
 void XlaTest::SetUp() {
   at::manual_seed(42);
-  XLATensor::SetRngSeed(GetCurrentDevice(), 42);
+  XLAGraphExecutor::Get()->SetRngSeed(GetCurrentDevice(), 42);
   start_msnap_ = absl::make_unique<MetricsSnapshot>();
 }
 
