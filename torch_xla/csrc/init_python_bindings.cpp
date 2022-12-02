@@ -369,7 +369,7 @@ uint64_t GetRngSeed(const std::string& device_str) {
 std::string GetTensorsHloGraph(const std::vector<at::Tensor>& tensors) {
   std::vector<XLATensorPtr> xtensors =
       GetXlaTensors(tensors, /*want_all=*/false);
-  return XLATensor::DumpHloComputation(xtensors);
+  return XLAGraphExecutor::Get()->DumpHloComputation(xtensors);
 }
 
 std::string GetLiveTensorsReport(size_t nodes_threshold,
