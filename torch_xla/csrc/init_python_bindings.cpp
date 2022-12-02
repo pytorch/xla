@@ -1603,7 +1603,7 @@ void InitXlaModuleBindings(py::module m) {
           torch::lazy::BackendDevice device =
               bridge::AtenDeviceToXlaDevice(c10::Device(device_str));
           return bridge::AtenFromXlaTensor(torch_xla::XLATensor::Create(
-              XLATensor::GetRngSeedData(device, reset)));
+              XLAGraphExecutor::Get()->GetRngSeedData(device, reset)));
         });
 
   // Return true if value of the tensor requires a computation.

@@ -259,20 +259,6 @@ torch::lazy::Value IrValueFromScalar(const at::Scalar& value,
   return torch::lazy::MakeNode<DeviceData>(std::move(device_data));
 }
 
-// Routing values to device data maximizes the changes for compilation cache
-// hits, but it can prevent the compiler to perform optimizations. So tensor
-// values which are within a given set, are routed to constant scalars if this
-// API returns true.
-bool IsSpecialScalar(const at::Scalar& value) {
-  static bool no_scalars =
-      xla::sys_util::GetEnvBool("XLA_NO_SPECIAL_SCALARS", false);
-  if (!no_scalars && (value.isIntegral() || value.isFloatingPoint())) {
-    double scalar_value = value.toDouble();
-    return scalar_value == 0.0 || std::fabs(scalar_value) == 1.0;
-  }
-  return false;
-}
-
 bool ShouldSyncIrValue(const torch::lazy::Value& ir_value) {
   return ir_value->op() != xla_not_supported;
 }
@@ -508,7 +494,7 @@ torch::lazy::Value XLAGraphExecutor::GetIrValueForConstant(const at::Scalar& val
 torch::lazy::Value XLAGraphExecutor::GetIrValueForScalar(
     const at::Scalar& value, xla::PrimitiveType type,
     const torch::lazy::BackendDevice& device) {
-  if (IsSpecialScalar(value)) {
+  if (torch::lazy::IsSpecialScalar(value)) {
     return ScalarOp(std::move(value), type);
   }
   return GetDeviceDataIrValue(value, type, device);
