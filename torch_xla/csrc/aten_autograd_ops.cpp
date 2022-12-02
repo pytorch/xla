@@ -7,6 +7,7 @@
 #include "torch_xla/csrc/aten_cpu_fallback.h"
 #include "torch_xla/csrc/aten_xla_bridge.h"
 #include "torch_xla/csrc/helpers.h"
+#include "torch_xla/csrc/tensor_methods.h"
 #include "torch_xla/csrc/torch_util.h"
 
 namespace torch_xla {
@@ -38,7 +39,7 @@ torch::Tensor EinsumAutogradFunction::forward(
   ctx->save_for_backward(vars);
 
   std::vector<XLATensorPtr> xla_tensors = bridge::GetXlaTensors(tensors);
-  XLATensorPtr output = XLATensor::einsum(eq_str, xla_tensors);
+  XLATensorPtr output = tensor_methods::einsum(eq_str, xla_tensors);
   return bridge::AtenFromXlaTensor(output);
 }
 
@@ -49,8 +50,9 @@ torch::autograd::variable_list EinsumAutogradFunction::backward(
   torch::autograd::variable_list tensors = ctx->get_saved_variables();
   std::vector<XLATensorPtr> xla_tensors = bridge::GetXlaTensors(tensors);
 
-  std::tuple<XLATensorPtr, XLATensorPtr> outputs = XLATensor::einsum_backward(
-      bridge::GetXlaTensor(grad_output[0]), xla_tensors, equation);
+  std::tuple<XLATensorPtr, XLATensorPtr> outputs =
+      tensor_methods::einsum_backward(bridge::GetXlaTensor(grad_output[0]),
+                                      xla_tensors, equation);
 
   // For both einsum and max pool, we use "undef" as a placeholder for the
   // non-tensor grad inputs, in this case the equation string.
@@ -97,7 +99,7 @@ torch::Tensor MaxPool2dAutogradFunction::forward(
     return std::get<0>(results);
   }
   ctx->save_for_backward({self});
-  auto outputs = XLATensor::max_pool_nd(
+  auto outputs = tensor_methods::max_pool_nd(
       bridge::GetXlaTensor(self), /*spatial_dim_count=*/2,
       XlaHelpers::I64List(kernel_size), XlaHelpers::I64List(stride),
       XlaHelpers::I64List(padding), ceil_mode);
@@ -125,7 +127,7 @@ torch::autograd::variable_list MaxPool2dAutogradFunction::backward(
                                                          padding, dilation,
                                                          ceil_mode, indices);
   }
-  grad = bridge::AtenFromXlaTensor(XLATensor::max_pool_nd_backward(
+  grad = bridge::AtenFromXlaTensor(tensor_methods::max_pool_nd_backward(
       bridge::GetXlaTensor(grad_output[0]), bridge::GetXlaTensor(self),
       /*spatial_dim_count=*/2, XlaHelpers::I64List(kernel_size),
       XlaHelpers::I64List(stride), XlaHelpers::I64List(padding), ceil_mode));
@@ -165,7 +167,7 @@ torch::Tensor MaxPool3dAutogradFunction::forward(
     return std::get<0>(results);
   }
   ctx->save_for_backward({self});
-  auto outputs = XLATensor::max_pool_nd(
+  auto outputs = tensor_methods::max_pool_nd(
       bridge::GetXlaTensor(self), /*spatial_dim_count=*/3,
       XlaHelpers::I64List(kernel_size), XlaHelpers::I64List(stride),
       XlaHelpers::I64List(padding), ceil_mode);
@@ -193,7 +195,7 @@ torch::autograd::variable_list MaxPool3dAutogradFunction::backward(
                                                          padding, dilation,
                                                          ceil_mode, indices);
   }
-  grad = bridge::AtenFromXlaTensor(XLATensor::max_pool_nd_backward(
+  grad = bridge::AtenFromXlaTensor(tensor_methods::max_pool_nd_backward(
       bridge::GetXlaTensor(grad_output[0]), bridge::GetXlaTensor(self),
       /*spatial_dim_count=*/3, XlaHelpers::I64List(kernel_size),
       XlaHelpers::I64List(stride), XlaHelpers::I64List(padding), ceil_mode));
