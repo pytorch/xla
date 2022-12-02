@@ -290,10 +290,6 @@ class XLAGraphExecutor {
   static std::shared_ptr<Async> SyncTensorsGraphInternal(
       std::vector<XLATensorPtr>* tensors, absl::Span<const std::string> devices,
       const SyncTensorsConfig& config);
-
-  static int64_t GetNextTensorId();
-
-  static bool UseEagerDebugMode();
 };
 
 }  // namespace torch_xla
