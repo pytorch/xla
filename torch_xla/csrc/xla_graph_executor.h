@@ -32,6 +32,9 @@ class XLAGraphExecutor {
  public:
   static XLAGraphExecutor* Get();
 
+  virtual void RegisterTensor(std::shared_ptr<XLATensor::Data> data);
+  virtual void UnregisterTensor(XLATensor::Data* data);
+
   // This method just syncs the tensors passed as argument. This method is
   // called at two places:
   // 1. Creating tensor from IR value. This is where an output tensor is created
@@ -83,6 +86,19 @@ class XLAGraphExecutor {
   uint64_t GetRunningSeed(const torch::lazy::BackendDevice& device);
   torch::lazy::BackendDataPtr GetRngSeedData(
       const torch::lazy::BackendDevice& device, bool reset);
+
+  void DeviceBarrier(const torch::lazy::BackendDevice& device);
+
+  torch::lazy::BackendDataPtr GetDeviceData(
+      const at::Tensor& tensor,
+      const torch::lazy::BackendDevice& device);
+
+  torch::lazy::BackendDataPtr GetDeviceData(
+      const at::Scalar& value,
+      at::ScalarType scalar_type,
+      const torch::lazy::BackendDevice& device);
+
+  size_t IncTrimCounter();
 
   // Dumps the XLA HLO text of the computation accumulated in the graph which is
   // attached the tensors.
