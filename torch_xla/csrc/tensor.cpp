@@ -257,7 +257,7 @@ torch::lazy::BackendDataPtr GetDeviceData(
                                    ? at::ScalarType::Float
                                    : scalar_type));
   if (scalar_type == at::ScalarType::BFloat16) t = t.to(scalar_type);
-  return GetDeviceData(t, device);
+  return XLAGraphExecutor::Get()->GetDeviceData(t, device);
 }
 
 // Routing values to device data maximizes the changes for compilation cache
@@ -432,7 +432,7 @@ class XLATensor::DeviceContextArena {
   std::map<torch::lazy::BackendDevice, DeviceContext*> device_contexts_;
 };
 
-XLATensor::Data::~Data() { DeviceContextArena::Get()->UnregisterTensor(this); }
+XLATensor::Data::~Data() { XLAGraphExecutor::Get()->UnregisterTensor(this); }
 
 XLATensor::Async::Async(
     SyncTensorCollection* coll,
@@ -474,7 +474,7 @@ XLATensorPtr XLATensor::Create(const at::Tensor& tensor,
   XLA_CHECK_EQ(tensor.device().type(), at::kCPU);
   XLATensorPtr xtensor =
       c10::make_intrusive<XLATensor>(XLATensor(tensor, device));
-  DeviceContextArena::Get()->RegisterTensor(xtensor->data_ptr());
+  XLAGraphExecutor::Get()->RegisterTensor(xtensor->data_ptr());
   return xtensor;
 }
 
@@ -483,7 +483,7 @@ XLATensorPtr XLATensor::Create(
     c10::optional<at::ScalarType> logical_element_type) {
   XLATensorPtr xtensor = c10::make_intrusive<XLATensor>(
       XLATensor(std::move(xla_data), logical_element_type));
-  DeviceContextArena::Get()->RegisterTensor(xtensor->data_ptr());
+  XLAGraphExecutor::Get()->RegisterTensor(xtensor->data_ptr());
   return xtensor;
 }
 
@@ -492,7 +492,7 @@ XLATensorPtr XLATensor::Create(
     c10::optional<at::ScalarType> logical_element_type) {
   XLATensorPtr xtensor = c10::make_intrusive<XLATensor>(
       XLATensor(std::move(ir_value), device, logical_element_type));
-  DeviceContextArena::Get()->RegisterTensor(xtensor->data_ptr());
+  XLAGraphExecutor::Get()->RegisterTensor(xtensor->data_ptr());
   if (UseEagerDebugMode()) {
     std::vector<XLATensorPtr> xtensors({xtensor});
     XLAGraphExecutor::Get()->ApplyEagerSync(xtensors);
@@ -505,7 +505,7 @@ XLATensorPtr XLATensor::Create(
     c10::optional<at::ScalarType> logical_element_type) {
   XLATensorPtr xtensor = c10::make_intrusive<XLATensor>(
       XLATensor(std::move(view), device, logical_element_type));
-  DeviceContextArena::Get()->RegisterTensor(xtensor->data_ptr());
+  XLAGraphExecutor::Get()->RegisterTensor(xtensor->data_ptr());
   return xtensor;
 }
 
@@ -736,7 +736,7 @@ void XLATensor::TryLimitGraphSize() {
       xla::sys_util::GetEnvInt("XLA_TRIM_GRAPH_CHECK_FREQUENCY", 5000);
   static const size_t kMaxPendingGraphSize =
       xla::sys_util::GetEnvInt("XLA_TRIM_GRAPH_SIZE", 100000);
-  if (data()->ir_value && ++g_tls_data.trim_counter % kCheckFrequency == 0) {
+  if (data()->ir_value && XLAGraphExecutor::Get()->IncTrimCounter() % kCheckFrequency == 0) {
     size_t graph_size =
         torch::lazy::Util::GetGraphSize({data()->ir_value.node.get()});
     if (graph_size > kMaxPendingGraphSize) {
@@ -796,7 +796,7 @@ torch::lazy::Value XLATensor::GetIrValueForTensor(
       return ScalarOp(std::move(value),
                       MakeXlaPrimitiveType(tensor.scalar_type(), &device));
     }
-    data = GetDeviceData(tensor, device);
+    data = XLAGraphExecutor::Get()->GetDeviceData(tensor, device);
     read_only = true;
   } else {
     TORCH_LAZY_TIMED("IrValueTensorToXlaData");
@@ -809,7 +809,7 @@ torch::lazy::Value XLATensor::GetDeviceDataIrValue(
     const at::Scalar& value, xla::PrimitiveType type,
     const torch::lazy::BackendDevice& device) {
   torch::lazy::BackendDataPtr data =
-      GetDeviceData(value, TensorTypeFromXlaType(type), device);
+      XLAGraphExecutor::Get()->GetDeviceData(value, TensorTypeFromXlaType(type), device);
   data->SetInfo(
       std::make_shared<torch::lazy::LazyGraphExecutor::DeviceDataInfo>(
           /*tensor_id=*/-1, /*read_only=*/true));
@@ -943,7 +943,7 @@ at::Tensor XLATensor::ToTensor(bool detached) {
   at::Tensor tensor;
   c10::optional<at::Tensor> tensor_data = CurrentTensorData();
   if (!tensor_data) {
-    DeviceBarrier(GetDevice());
+    XLAGraphExecutor::Get()->DeviceBarrier(GetDevice());
     // The GetXlaData() call will trigger an ApplyPendingGraph() if an IR
     // XlaNode is available on the tensor.
     std::vector<at::Tensor> tensors = XlaDataToTensors({GetXlaData()}, dtype());
@@ -1252,7 +1252,7 @@ XLATensorPtr XLATensor::CreateFrom(torch::lazy::Value ir_value,
 }
 
 void XLATensor::ApplyPendingGraph() {
-  DeviceBarrier(GetDevice());
+  XLAGraphExecutor::Get()->DeviceBarrier(GetDevice());
   // This method is called to ensure that the tensor data is available on
   // device, so that a call to CurrentXlaData() returns a valid pointer.
   if (CurrentXlaData() == nullptr) {

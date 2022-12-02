@@ -32,6 +32,7 @@
 #include "torch_xla/csrc/tensor_methods.h"
 #include "torch_xla/csrc/tensor_util.h"
 #include "torch_xla/csrc/torch_util.h"
+#include "torch_xla/csrc/xla_graph_executor.h"
 
 // [Implementation Guidelines]
 // - If you want to call a at::func which doesn't have a kernel registered
@@ -3000,7 +3001,7 @@ at::Scalar XLANativeFunctions::_local_scalar_dense(const at::Tensor& self) {
   if (DebugUtil::ExperimentEnabled("early_sync")) {
     // sync tensors in order to save computation when step is marked later.
     XLATensorPtr self_tensor = bridge::GetXlaTensor(self);
-    XLATensor::SyncLiveTensorsGraph(&self_tensor->GetDevice(), /*devices=*/{},
+    XLAGraphExecutor::Get()->SyncLiveTensorsGraph(&self_tensor->GetDevice(), /*devices=*/{},
                                     /*wait=*/true);
     TORCH_LAZY_COUNTER("EarlySyncLiveTensorsCount", 1);
   }

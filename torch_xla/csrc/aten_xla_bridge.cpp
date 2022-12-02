@@ -10,6 +10,7 @@
 #include "torch_xla/csrc/device.h"
 #include "torch_xla/csrc/tensor_impl.h"
 #include "torch_xla/csrc/torch_util.h"
+#include "torch_xla/csrc/xla_graph_executor.h"
 
 namespace torch_xla {
 namespace bridge {
@@ -149,7 +150,7 @@ std::vector<at::Tensor> XlaCreateTensorList(const at::ITensorListRef& tensors) {
     }
     ++ix;
   }
-  auto defined_aten_xla_tensors = XLATensor::GetTensors(&xla_tensors);
+  auto defined_aten_xla_tensors = XLAGraphExecutor::Get()->GetTensors(&xla_tensors);
   // Insert undefined tensors into the result, back into the original undefined
   // positions.
   for (size_t i = 0, defined_pos = 0; i < tensors.size(); ++i) {
