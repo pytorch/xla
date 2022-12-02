@@ -310,7 +310,8 @@ void XLATensor::TryLimitGraphSize() {
       xla::sys_util::GetEnvInt("XLA_TRIM_GRAPH_CHECK_FREQUENCY", 5000);
   static const size_t kMaxPendingGraphSize =
       xla::sys_util::GetEnvInt("XLA_TRIM_GRAPH_SIZE", 100000);
-  if (data()->ir_value && XLAGraphExecutor::Get()->IncTrimCounter() % kCheckFrequency == 0) {
+  if (data()->ir_value &&
+      XLAGraphExecutor::Get()->IncTrimCounter() % kCheckFrequency == 0) {
     size_t graph_size =
         torch::lazy::Util::GetGraphSize({data()->ir_value.node.get()});
     if (graph_size > kMaxPendingGraphSize) {
@@ -602,7 +603,8 @@ void XLATensor::ApplyPendingGraph() {
   // device, so that a call to CurrentXlaData() returns a valid pointer.
   if (CurrentXlaData() == nullptr) {
     std::vector<XLATensorPtr> tensors({c10::make_intrusive<XLATensor>(*this)});
-    XLAGraphExecutor::Get()->SyncTensorsGraph(&tensors, {}, /*wait=*/true, /*sync_xla_data=*/false);
+    XLAGraphExecutor::Get()->SyncTensorsGraph(&tensors, {}, /*wait=*/true,
+                                              /*sync_xla_data=*/false);
   }
 }
 

@@ -228,12 +228,12 @@ class XLATensor : public torch::lazy::LazyTensor {
             const torch::lazy::BackendDevice& device,
             c10::optional<at::ScalarType> logical_element_type = c10::nullopt);
 
-// TODO: This is temporarily until we fully inherit LazyTensor and LazyGraphExecutor.
+  // TODO: This is temporarily until we fully inherit LazyTensor and
+  // LazyGraphExecutor.
  public:
   XLATensor(std::shared_ptr<Data> data);
 
  private:
-
   static XLATensorPtr Create(
       std::shared_ptr<View> view, const torch::lazy::BackendDevice& device,
       c10::optional<at::ScalarType> logical_element_type = c10::nullopt);
@@ -284,7 +284,8 @@ class XLATensor : public torch::lazy::LazyTensor {
   // FIXME(alanwaketan): Remove this once we have functionalization (bdhirsh).
   c10::Storage storage_;
 
-  // TODO: This is temporarily until we fully inherit LazyTensor and LazyGraphExecutor.
+  // TODO: This is temporarily until we fully inherit LazyTensor and
+  // LazyGraphExecutor.
   friend class XLAGraphExecutor;
 };
 

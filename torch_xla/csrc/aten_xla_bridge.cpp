@@ -150,7 +150,8 @@ std::vector<at::Tensor> XlaCreateTensorList(const at::ITensorListRef& tensors) {
     }
     ++ix;
   }
-  auto defined_aten_xla_tensors = XLAGraphExecutor::Get()->GetTensors(&xla_tensors);
+  auto defined_aten_xla_tensors =
+      XLAGraphExecutor::Get()->GetTensors(&xla_tensors);
   // Insert undefined tensors into the result, back into the original undefined
   // positions.
   for (size_t i = 0, defined_pos = 0; i < tensors.size(); ++i) {

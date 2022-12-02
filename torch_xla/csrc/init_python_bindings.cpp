@@ -325,14 +325,15 @@ void SyncTensors(const std::vector<at::Tensor>& tensors,
                  bool sync_xla_data) {
   std::vector<XLATensorPtr> xtensors =
       GetXlaTensors(tensors, /*want_all=*/false);
-  XLAGraphExecutor::Get()->SyncTensorsGraph(&xtensors, devices, wait, sync_xla_data);
+  XLAGraphExecutor::Get()->SyncTensorsGraph(&xtensors, devices, wait,
+                                            sync_xla_data);
 }
 
 void SyncLiveTensors(const std::string& device_str,
                      const std::vector<std::string>& devices, bool wait) {
   auto opt_device = GetOptionalDevice(device_str);
-  XLAGraphExecutor::Get()->SyncLiveTensorsGraph(opt_device ? &opt_device.value() : nullptr,
-                                  devices, wait);
+  XLAGraphExecutor::Get()->SyncLiveTensorsGraph(
+      opt_device ? &opt_device.value() : nullptr, devices, wait);
 }
 
 void StepMarker(const std::string& device_str,
@@ -363,7 +364,8 @@ void SetRngSeed(uint64_t seed, const std::string& device_str) {
 }
 
 uint64_t GetRngSeed(const std::string& device_str) {
-  return XLAGraphExecutor::Get()->GetRunningSeed(GetDeviceOrCurrent(device_str));
+  return XLAGraphExecutor::Get()->GetRunningSeed(
+      GetDeviceOrCurrent(device_str));
 }
 
 std::string GetTensorsHloGraph(const std::vector<at::Tensor>& tensors) {
@@ -375,8 +377,8 @@ std::string GetTensorsHloGraph(const std::vector<at::Tensor>& tensors) {
 std::string GetLiveTensorsReport(size_t nodes_threshold,
                                  const std::string& device_str) {
   auto opt_device = GetOptionalDevice(device_str);
-  auto tensors =
-      XLAGraphExecutor::Get()->GetLiveTensors(opt_device ? &opt_device.value() : nullptr);
+  auto tensors = XLAGraphExecutor::Get()->GetLiveTensors(
+      opt_device ? &opt_device.value() : nullptr);
   std::stringstream ss;
   for (auto& tensor : tensors) {
     torch::lazy::Value ir_value = tensor->CurrentIrValue();
@@ -441,8 +443,8 @@ std::shared_ptr<torch::lazy::Value> CreateToken(const std::string& device_str) {
   // as otherwise the XLA compiler passes will remove it, vanishing its
   // sequencing effects.
   torch::lazy::BackendDevice device = GetDeviceOrCurrent(device_str);
-  torch::lazy::Value ir_value =
-      XLAGraphExecutor::Get()->GetDeviceDataIrValue(0.0, xla::PrimitiveType::F32, device);
+  torch::lazy::Value ir_value = XLAGraphExecutor::Get()->GetDeviceDataIrValue(
+      0.0, xla::PrimitiveType::F32, device);
   return std::make_shared<torch::lazy::Value>(std::move(ir_value));
 }
 
@@ -1663,7 +1665,8 @@ void InitXlaModuleBindings(py::module m) {
             -> std::vector<at::Tensor> {
           XLA_CHECK(hash_str.size() == sizeof(torch::lazy::hash_t));
           torch::lazy::hash_t hash = *(torch::lazy::hash_t*)(hash_str.c_str());
-          auto cachedComputation = XLAGraphExecutor::Get()->GetComputationCache()->Get(hash);
+          auto cachedComputation =
+              XLAGraphExecutor::Get()->GetComputationCache()->Get(hash);
           // TODO implement a fallback mechanism, or make sure those entries
           // never get kicked out
           XLA_CHECK(cachedComputation) << "Failed to get computation by hash "

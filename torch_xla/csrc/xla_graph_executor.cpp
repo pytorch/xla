@@ -193,7 +193,7 @@ class XlaDataCacheArena {
       : max_cache_size_(max_cache_size) {}
 
   torch::lazy::BackendDataPtr GetDeviceData(
-    const at::Tensor& tensor, const torch::lazy::BackendDevice& device) {
+      const at::Tensor& tensor, const torch::lazy::BackendDevice& device) {
     XlaDataCacheArena::XlaDataCache* cache = Get()->GetDataCache(device);
     torch::lazy::BackendDataPtr device_data = cache->Get(tensor);
     if (device_data == nullptr) {
@@ -211,8 +211,8 @@ class XlaDataCacheArena {
     // Workaround since at::scalar_tensor doesn't support bfloat16 yet.
     at::Tensor t = at::scalar_tensor(
         value, at::TensorOptions(scalar_type == at::ScalarType::BFloat16
-                                    ? at::ScalarType::Float
-                                    : scalar_type));
+                                     ? at::ScalarType::Float
+                                     : scalar_type));
     if (scalar_type == at::ScalarType::BFloat16) t = t.to(scalar_type);
     return GetDeviceData(t, device);
   }
@@ -233,7 +233,7 @@ class XlaDataCacheArena {
   };
 
   using XlaDataCache = xla::util::Cache<at::Tensor, torch::lazy::BackendData,
-                                      TensorHasher, TensorComparer>;
+                                        TensorHasher, TensorComparer>;
 
   XlaDataCache* GetDataCache(const torch::lazy::BackendDevice& device) {
     std::lock_guard<std::mutex> lock(mutex_);
@@ -453,8 +453,8 @@ void XLAGraphExecutor::Async::Wait() {
 }
 
 XLAGraphExecutor* XLAGraphExecutor::Get() {
-    static XLAGraphExecutor arena = XLAGraphExecutor();
-    return &arena;
+  static XLAGraphExecutor arena = XLAGraphExecutor();
+  return &arena;
 }
 
 void XLAGraphExecutor::RegisterTensor(std::shared_ptr<XLATensor::Data> data) {
@@ -480,8 +480,8 @@ torch::lazy::Value XLAGraphExecutor::GetDeviceDataIrValue(
   return torch::lazy::MakeNode<DeviceData>(std::move(data));
 }
 
-torch::lazy::Value XLAGraphExecutor::GetIrValueForConstant(const at::Scalar& value,
-                                                    const xla::Shape& shape) {
+torch::lazy::Value XLAGraphExecutor::GetIrValueForConstant(
+    const at::Scalar& value, const xla::Shape& shape) {
   torch::lazy::Value ir_value =
       ScalarOp(std::move(value), shape.element_type());
   if (!shape.dimensions().empty()) {
@@ -542,11 +542,12 @@ torch::lazy::Value XLAGraphExecutor::GetRngSeed(
 }
 
 void XLAGraphExecutor::SetRngSeed(const torch::lazy::BackendDevice& device,
-                           uint64_t seed) {
+                                  uint64_t seed) {
   DeviceContextArena::Get()->SetRngSeed(device, seed);
 }
 
-uint64_t XLAGraphExecutor::GetRunningSeed(const torch::lazy::BackendDevice& device) {
+uint64_t XLAGraphExecutor::GetRunningSeed(
+    const torch::lazy::BackendDevice& device) {
   return DeviceContextArena::Get()->GetRunningSeed(device);
 }
 
@@ -560,14 +561,12 @@ void XLAGraphExecutor::DeviceBarrier(const torch::lazy::BackendDevice& device) {
 }
 
 torch::lazy::BackendDataPtr XLAGraphExecutor::GetDeviceData(
-    const at::Tensor& tensor,
-    const torch::lazy::BackendDevice& device) {
+    const at::Tensor& tensor, const torch::lazy::BackendDevice& device) {
   return XlaDataCacheArena::Get()->GetDeviceData(tensor, device);
 }
 
 torch::lazy::BackendDataPtr XLAGraphExecutor::GetDeviceData(
-    const at::Scalar& value,
-    at::ScalarType scalar_type,
+    const at::Scalar& value, at::ScalarType scalar_type,
     const torch::lazy::BackendDevice& device) {
   return XlaDataCacheArena::Get()->GetDeviceData(value, scalar_type, device);
 }
@@ -591,8 +590,8 @@ std::vector<XLATensorPtr> XLAGraphExecutor::GetLiveTensors(
 }
 
 void XLAGraphExecutor::SyncTensorsGraph(std::vector<XLATensorPtr>* tensors,
-                                 absl::Span<const std::string> devices,
-                                 bool wait, bool sync_xla_data) {
+                                        absl::Span<const std::string> devices,
+                                        bool wait, bool sync_xla_data) {
   TF_VLOG(4) << "Trying to sync the value of " << tensors->size()
              << " tensor(s)";
   tensorflow::profiler::TraceMe activity(
@@ -614,9 +613,9 @@ void XLAGraphExecutor::SyncTensorsGraph(std::vector<XLATensorPtr>* tensors,
   }
 }
 
-void XLAGraphExecutor::SyncLiveTensorsGraph(const torch::lazy::BackendDevice* device,
-                                     absl::Span<const std::string> devices,
-                                     bool wait) {
+void XLAGraphExecutor::SyncLiveTensorsGraph(
+    const torch::lazy::BackendDevice* device,
+    absl::Span<const std::string> devices, bool wait) {
   tensorflow::profiler::TraceMe activity(
       "SyncLiveTensorsGraph", tensorflow::profiler::TraceMeLevel::kInfo);
   auto tensors = GetLiveTensors(device);
@@ -686,8 +685,9 @@ XLAGraphExecutor::ComputationCache* XLAGraphExecutor::GetComputationCache() {
   return cache;
 }
 
-void XLAGraphExecutor::ClearPendingIrs(std::vector<XLATensorPtr> tensors,
-                                const torch::lazy::BackendDevice& device) {
+void XLAGraphExecutor::ClearPendingIrs(
+    std::vector<XLATensorPtr> tensors,
+    const torch::lazy::BackendDevice& device) {
   std::unordered_set<int64_t> tensor_ids;
   for (size_t i = 0; i < tensors.size(); ++i) {
     if (tensor_ids.insert(tensors[i]->GetUniqueId()).second &&
@@ -708,9 +708,7 @@ void XLAGraphExecutor::ClearPendingIrs(std::vector<XLATensorPtr> tensors,
   }
 }
 
-size_t XLAGraphExecutor::IncTrimCounter() {
-  return ++g_tls_data.trim_counter;
-}
+size_t XLAGraphExecutor::IncTrimCounter() { return ++g_tls_data.trim_counter; }
 
 XLAGraphExecutor::SyncTensorCollection XLAGraphExecutor::CollectSyncTensors(
     const std::vector<XLATensorPtr>& tensors, const SyncTensorsConfig& config) {
@@ -1050,7 +1048,8 @@ std::vector<at::Tensor> XLAGraphExecutor::FetchTensors(
   return results;
 }
 
-std::shared_ptr<XLAGraphExecutor::Async> XLAGraphExecutor::ScheduleSyncTensorsGraph(
+std::shared_ptr<XLAGraphExecutor::Async>
+XLAGraphExecutor::ScheduleSyncTensorsGraph(
     SyncTensorCollection* coll,
     std::vector<torch::lazy::BackendDataPtr> parameters_data,
     std::vector<torch::lazy::BackendDataPtr> tensors_data,
@@ -1126,7 +1125,8 @@ std::shared_ptr<XLAGraphExecutor::Async> XLAGraphExecutor::ScheduleSyncTensorsGr
   return async;
 }
 
-std::shared_ptr<XLAGraphExecutor::Async> XLAGraphExecutor::ScheduleSyncTensorsGraph(
+std::shared_ptr<XLAGraphExecutor::Async>
+XLAGraphExecutor::ScheduleSyncTensorsGraph(
     std::vector<XLATensorPtr>* tensors, SyncTensorCollection* coll,
     std::vector<torch::lazy::BackendDataPtr> parameters_data,
     std::string device, ComputationCache::TypePtr cached_computation,
@@ -1178,8 +1178,9 @@ XLAGraphExecutor::PostOrderData XLAGraphExecutor::RunPostOrder(
   return po_data;
 }
 
-XLAGraphExecutor::ComputationCache::TypePtr XLAGraphExecutor::LookupCachedCompile(
-    const std::vector<XLATensorPtr>& tensors, const torch::lazy::hash_t& hash) {
+XLAGraphExecutor::ComputationCache::TypePtr
+XLAGraphExecutor::LookupCachedCompile(const std::vector<XLATensorPtr>& tensors,
+                                      const torch::lazy::hash_t& hash) {
   ComputationCache::TypePtr cached_computation =
       GetComputationCache()->Get(hash);
   if (cached_computation == nullptr) {
@@ -1213,7 +1214,8 @@ std::shared_ptr<XLAGraphExecutor::Async> XLAGraphExecutor::TryRunCachedSync(
       coll->device.toString(), std::move(cached_computation), tensor_data_vec);
 }
 
-std::vector<std::pair<int64_t, int64_t>> XLAGraphExecutor::BuildInputOutputAliases(
+std::vector<std::pair<int64_t, int64_t>>
+XLAGraphExecutor::BuildInputOutputAliases(
     const std::vector<XLATensorPtr>& tensors, absl::Span<const size_t> indices,
     LoweringContext* lowering_ctx) {
   std::unordered_map<int64_t, size_t> output_tensor_id_map;
@@ -1370,7 +1372,8 @@ XLAGraphExecutor::CompilationResult XLAGraphExecutor::Compile(
           /*is_sharded=*/is_sharded};
 }
 
-std::shared_ptr<XLAGraphExecutor::Async> XLAGraphExecutor::SyncTensorsGraphInternal(
+std::shared_ptr<XLAGraphExecutor::Async>
+XLAGraphExecutor::SyncTensorsGraphInternal(
     std::vector<XLATensorPtr>* tensors, absl::Span<const std::string> devices,
     const SyncTensorsConfig& config) {
   tensorflow::profiler::TraceMe activity(
