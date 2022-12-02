@@ -359,11 +359,11 @@ void StepMarker(const std::string& device_str,
 
 void SetRngSeed(uint64_t seed, const std::string& device_str) {
   torch::lazy::BackendDevice device = GetDeviceOrCurrent(device_str);
-  XLATensor::SetRngSeed(device, seed);
+  XLAGraphExecutor::Get()->SetRngSeed(device, seed);
 }
 
 uint64_t GetRngSeed(const std::string& device_str) {
-  return XLATensor::GetRunningSeed(GetDeviceOrCurrent(device_str));
+  return XLAGraphExecutor::Get()->GetRunningSeed(GetDeviceOrCurrent(device_str));
 }
 
 std::string GetTensorsHloGraph(const std::vector<at::Tensor>& tensors) {

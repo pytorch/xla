@@ -776,18 +776,18 @@ XLATensorPtr bernoulli(const XLATensorPtr& input, double probability) {
   return input->CreateFrom(torch::lazy::MakeNode<Bernoulli>(
       XLAGraphExecutor::Get()->GetIrValueForScalar(probability, input_shape,
                                      input->GetDevice()),
-      XLATensor::GetRngSeed(input->GetDevice()), input_shape.get()));
+      XLAGraphExecutor::Get()->GetRngSeed(input->GetDevice()), input_shape.get()));
 }
 
 XLATensorPtr bernoulli(const XLATensorPtr& input) {
   return input->CreateFrom(torch::lazy::MakeNode<Bernoulli>(
-      input->GetIrValue(), XLATensor::GetRngSeed(input->GetDevice()),
+      input->GetIrValue(), XLAGraphExecutor::Get()->GetRngSeed(input->GetDevice()),
       input->shape().get()));
 }
 
 void bernoulli_(XLATensorPtr& input, const XLATensorPtr& probability) {
   input->SetInPlaceIrValue(torch::lazy::MakeNode<Bernoulli>(
-      probability->GetIrValue(), XLATensor::GetRngSeed(input->GetDevice()),
+      probability->GetIrValue(), XLAGraphExecutor::Get()->GetRngSeed(input->GetDevice()),
       input->shape().get()));
 }
 
@@ -1137,7 +1137,7 @@ void exponential_(XLATensorPtr& input, double lambd) {
   input->SetInPlaceIrValue(torch::lazy::MakeNode<Exponential>(
       XLAGraphExecutor::Get()->GetIrValueForScalar(lambd, input_shape.get().element_type(),
                                      input->GetDevice()),
-      XLATensor::GetRngSeed(input->GetDevice()), input_shape.get()));
+      XLAGraphExecutor::Get()->GetRngSeed(input->GetDevice()), input_shape.get()));
 }
 
 XLATensorPtr eye(int64_t lines, int64_t cols,
@@ -1861,27 +1861,27 @@ XLATensorPtr norm(const XLATensorPtr& input, const c10::optional<at::Scalar>& p,
 XLATensorPtr normal(double mean, const XLATensorPtr& std) {
   return std->CreateFrom(torch::lazy::MakeNode<Normal>(
       XLAGraphExecutor::Get()->GetIrValueForScalar(mean, std->shape(), std->GetDevice()),
-      std->GetIrValue(), XLATensor::GetRngSeed(std->GetDevice())));
+      std->GetIrValue(), XLAGraphExecutor::Get()->GetRngSeed(std->GetDevice())));
 }
 
 XLATensorPtr normal(const XLATensorPtr& mean, double std) {
   return mean->CreateFrom(torch::lazy::MakeNode<Normal>(
       mean->GetIrValue(),
       XLAGraphExecutor::Get()->GetIrValueForScalar(std, mean->shape(), mean->GetDevice()),
-      XLATensor::GetRngSeed(mean->GetDevice())));
+      XLAGraphExecutor::Get()->GetRngSeed(mean->GetDevice())));
 }
 
 XLATensorPtr normal(const XLATensorPtr& mean, const XLATensorPtr& std) {
   return mean->CreateFrom(torch::lazy::MakeNode<Normal>(
       mean->GetIrValue(), MaybeExpand(std->GetIrValue(), mean->shape()),
-      XLATensor::GetRngSeed(mean->GetDevice())));
+      XLAGraphExecutor::Get()->GetRngSeed(mean->GetDevice())));
 }
 
 void normal_(XLATensorPtr& input, double mean, double std) {
   input->SetInPlaceIrValue(torch::lazy::MakeNode<Normal>(
       XLAGraphExecutor::Get()->GetIrValueForScalar(mean, input->shape(), input->GetDevice()),
       XLAGraphExecutor::Get()->GetIrValueForScalar(std, input->shape(), input->GetDevice()),
-      XLATensor::GetRngSeed(input->GetDevice())));
+      XLAGraphExecutor::Get()->GetRngSeed(input->GetDevice())));
 }
 
 XLATensorPtr not_supported(std::string description, xla::Shape shape,
@@ -1973,7 +1973,7 @@ void random_(XLATensorPtr& input, int64_t from, int64_t to) {
                                      input->GetDevice()),
       XLAGraphExecutor::Get()->GetIrValueForScalar(to, xla::PrimitiveType::S64,
                                      input->GetDevice()),
-      XLATensor::GetRngSeed(input->GetDevice()), input_shape));
+      XLAGraphExecutor::Get()->GetRngSeed(input->GetDevice()), input_shape));
 }
 
 XLATensorPtr reflection_pad2d(const XLATensorPtr& input,
@@ -2063,7 +2063,7 @@ XLATensorPtr rrelu_with_noise(const XLATensorPtr& input, XLATensorPtr& noise,
                               const at::Scalar& lower, const at::Scalar& upper,
                               bool training) {
   torch::lazy::NodePtr output_node = torch::lazy::MakeNode<RreluWithNoise>(
-      input->GetIrValue(), XLATensor::GetRngSeed(input->GetDevice()), lower,
+      input->GetIrValue(), XLAGraphExecutor::Get()->GetRngSeed(input->GetDevice()), lower,
       upper, training);
   noise->SetIrValue(torch::lazy::Value(output_node, 1));
   return input->CreateFrom(torch::lazy::Value(output_node, 0));
@@ -2527,7 +2527,7 @@ void uniform_(XLATensorPtr& input, double from, double to) {
                                      input->GetDevice()),
       XLAGraphExecutor::Get()->GetIrValueForScalar(to, input_shape.get().element_type(),
                                      input->GetDevice()),
-      XLATensor::GetRngSeed(input->GetDevice()), input_shape));
+      XLAGraphExecutor::Get()->GetRngSeed(input->GetDevice()), input_shape));
 }
 
 XLATensorPtr unsqueeze(const XLATensorPtr& input, int64_t dim) {
