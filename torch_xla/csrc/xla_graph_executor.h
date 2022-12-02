@@ -1,5 +1,31 @@
 #pragma once
 
+#include <iostream>
+#include <memory>
+#include <string>
+#include <unordered_map>
+
+#include "c10/core/SymNodeImpl.h"
+#include "tensorflow/compiler/xla/client/xla_builder.h"
+#include "tensorflow/compiler/xla/status.h"
+#include "tensorflow/compiler/xla/types.h"
+#include "tensorflow/compiler/xla/xla_client/async_task.h"
+#include "tensorflow/compiler/xla/xla_client/cache.h"
+#include "tensorflow/compiler/xla/xla_client/computation_client.h"
+#include "tensorflow/compiler/xla/xla_client/multi_wait.h"
+#include "tensorflow/compiler/xla/xla_client/util.h"
+#include "torch/csrc/autograd/variable.h"
+#include "torch/csrc/lazy/core/ir_util.h"
+#include "torch_xla/csrc/computation.h"
+#include "torch_xla/csrc/cross_replica_reduces.h"
+#include "torch_xla/csrc/device.h"
+#include "torch_xla/csrc/ir.h"
+#include "torch_xla/csrc/ir_util.h"
+#include "torch_xla/csrc/lowering_context.h"
+#include "torch_xla/csrc/tensor.h"
+#include "torch_xla/csrc/torch_util.h"
+#include "torch_xla/csrc/view.h"
+
 namespace torch_xla {
 
 class XLAGraphExecutor {
@@ -101,7 +127,7 @@ class XLAGraphExecutor {
   // XLATensor sharding annotation. ShardingSpec wraps xla::OpSharding and
   // can be extended to hold other sharding information from the user.
   static torch::lazy::hash_t GetGraphHash(
-      const std::vector<XLATensorPtr>& tensors)
+      const std::vector<XLATensorPtr>& tensors);
 
   struct CachedComputation {
     CachedComputation(ComputationPtr computation, bool is_sharded = false)
@@ -117,10 +143,15 @@ class XLAGraphExecutor {
 
   static ComputationCache* GetComputationCache();
 
+  static std::vector<torch::lazy::BackendDataPtr> ExecuteComputationWithBarrier(
+    torch::lazy::ComputationPtr computation,
+    c10::ArrayRef<torch::lazy::BackendDataPtr> arguments,
+    const torch::lazy::BackendDevice& device);
+
   static void ClearPendingIrs(std::vector<XLATensorPtr> tensors,
                               const torch::lazy::BackendDevice& device);
 
- prviate:
+ private:
   struct SyncTensorsConfig {
     // Whether we want to force XLA data on the target tensors (hence trimming
     // the IR graph above them).
@@ -222,7 +253,7 @@ class XLAGraphExecutor {
   // Schedules the execution of a sync tensors operation in background. The
   // asynchronous operation will hold the device locks by capturing the ones
   // present within the coll structure.
-  static std::shared_ptr<XLATensor::Async> ScheduleSyncTensorsGraph(
+  static std::shared_ptr<Async> ScheduleSyncTensorsGraph(
       SyncTensorCollection* coll,
       std::vector<torch::lazy::BackendDataPtr> parameters_data,
       std::vector<torch::lazy::BackendDataPtr> tensors_data,
