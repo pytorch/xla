@@ -108,6 +108,15 @@ def get_worker_ips() -> List[str]:
 
   return ips if len(ips) > 1 else ['localhost']
 
+def configure_one_chip_topology() -> None:
+  """Configures TPU topology environment variables for one process and chip.
+
+  Must be run before using any XLA devices.
+  """
+  os.environ.setdefault(xenv.TPU_VISIBLE_CHIPS, '0')
+  os.environ.setdefault(xenv.TPU_CHIPS_PER_PROCESS_BOUNDS, '1,1,1')
+  os.environ.setdefault(xenv.TPU_PROCESS_BOUNDS, '1,1,1')
+
 
 def configure_topology(local_rank: int,
                        local_world_size: int,

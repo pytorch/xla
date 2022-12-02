@@ -4,6 +4,7 @@ import functools
 import itertools
 import logging
 import os
+import sys
 import tempfile
 from itertools import chain
 from typing import Callable, Dict, List, Optional, Tuple, TypeVar
@@ -98,6 +99,12 @@ def global_device_count() -> int:
   """Returns the total number of devices across all processes/hosts."""
   return len(torch_xla._XLAC._xla_get_all_devices())
 
+@requires_pjrt
+def world_size() -> int:
+  """Returns the total number of configured logical devices."""
+  if not torch_xla._XLAC._xla_get_replication_devices_count():
+    return 1
+  return len(torch_xla._XLAC._xla_get_all_devices())
 
 @requires_pjrt
 def local_device_count() -> int:
@@ -160,6 +167,22 @@ def _merge_replica_results(
 
   return dict(replica_results)
 
+# TODO(wcromar): remove this when the TPU master IP becomes predictable
+def _discover_tpu_master_worker_ip(device: torch.device):
+  torch_xla._XLAC._xla_set_default_device(device)
+
+  return tpu.discover_master_worker_ip()
+
+def _maybe_init_distributed_torch(executor, devices, master_port):
+ if os.getenv('PJRT_INIT_TORCH_DISTRIBUTED', '0') == '1':
+   if device_type() == 'TPU':
+     # HACK: need to call with each device since it relies on an XLA collective
+     master_ip = next(executor.map(_discover_tpu_master_worker_ip, devices))
+     init_method = f'tcp://{master_ip}:{master_port}'
+   else:
+     init_method = None
+
+   init_pjrt_process_group(init_method=init_method)
 
 @requires_pjrt
 def _run_thread_per_device(local_rank: int,
@@ -190,24 +213,9 @@ def _run_thread_per_device(local_rank: int,
 
     return fn()
 
-  # TODO(wcromar): remove this when the TPU master IP becomes predictable
-  def _discover_tpu_master_worker_ip(device: torch.device):
-    torch_xla._XLAC._xla_set_default_device(device)
-
-    return tpu.discover_master_worker_ip()
-
   with concurrent.futures.ThreadPoolExecutor(
       max_workers=num_threads) as executor:
-
-    if os.getenv('PJRT_INIT_TORCH_DISTRIBUTED', '0') == '1':
-      if device_type() == 'TPU':
-        # HACK: need to call with each device since it relies on an XLA collective
-        master_ip = next(executor.map(_discover_tpu_master_worker_ip, devices))
-        init_method = f'tcp://{master_ip}:{master_port}'
-      else:
-        init_method = None
-
-      init_pjrt_process_group(init_method=init_method)
+    _maybe_init_distributed_torch(executor, devices, master_port)
 
     device_ordinals = [
         torch_xla._XLAC._xla_get_device_ordinal(d) for d in devices
@@ -217,6 +225,48 @@ def _run_thread_per_device(local_rank: int,
 
   return _merge_replica_results(replica_results)
 
+@requires_pjrt
+def _run_singleprocess(fn: Callable[..., R],
+                      *args,
+                      start_method: str = 'spawn',
+                      master_port: int = 12355,
+                      **kwargs) -> Dict[int, R]:
+  """Runs `fn` on a single device core.
+
+  Spawns one process on a single physical device (e.g. TPU chip).
+
+  Args:
+    fn: Function to run on the device devices
+    args: args to pass to `fn`
+    start_method: The Python `multiprocessing` process creation method.
+      Default: `spawn`
+    kwargs: kwargs to pass to `fn`
+
+  Returns:
+    the result of calling `fn`.
+  """
+  with concurrent.futures.ProcessPoolExecutor(
+      max_workers=1,
+      mp_context=torch.multiprocessing.get_context(start_method)) as executor:
+    os.environ.setdefault('LOCAL_WORLD_SIZE', '1')
+
+    if device_type() == 'TPU':
+      tpu.configure_topology(0, 1)
+
+    devices = xm.get_xla_supported_devices()[:1]
+    xm.set_replication(xm.xla_device(), [])
+
+    @functools.wraps(fn)
+    def _thread_fn(device: torch.device):
+      torch_xla._XLAC._xla_set_default_device(devices[0])
+
+      return fn()
+
+    with concurrent.futures.ThreadPoolExecutor(
+        max_workers=1) as executor:
+      _maybe_init_distributed_torch(executor, devices, master_port)
+
+      return executor.submit(_thread_fn, xm.xla_device()).result()
 
 @requires_pjrt
 def _initialize_multiprocess(local_rank: int, local_world_size: int):
@@ -280,16 +330,28 @@ class _SpawnFn:
     self.fn(global_ordinal(), *self.args, **self.kwargs)
 
 
-def spawn(fn: Callable, start_method: str = 'spawn', args: Tuple = ()) -> None:
+def spawn(fn: Callable,
+          nprocs: int = None,
+          start_method: str = 'spawn',
+          args: Tuple = ()) -> None:
   """Run functions compatible with xmp.spawn.
 
   Args:
     fn: Callable that takes the process index as the first argument.
+    nprocs (int): The number of processes/devices for the replication. At the
+      moment, if specified, can be either 1 or the maximum number of devices.
     args: args to pass to `fn`
     start_method: The Python `multiprocessing` process creation method.
       Default: `spawn`
   """
   spawn_fn = _SpawnFn(fn, *args)
+
+  if nprocs == 1:
+    tpu.configure_one_chip_topology()
+    return _run_singleprocess(spawn_fn, start_method=start_method)
+  elif nprocs is not None:
+    print('Unsupported nprocs (%d), ignoring...' % nprocs, file=sys.stderr)
+
   _run_multiprocess(spawn_fn, start_method=start_method)
 
 
