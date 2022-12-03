@@ -4,9 +4,9 @@ index 9fe020d5937..32774c2f3c0 100644
 --- a/tensorflow/compiler/xla/service/cpu/runtime_fp16.h
 +++ b/tensorflow/compiler/xla/service/cpu/runtime_fp16.h
 @@ -18,12 +18,7 @@ limitations under the License.
- 
+
  #include <stdint.h>
- 
+
 -// _Float16 always gets us the correct ABI type, so use that if available.
 -// AArch64 GCC defines __FLT16_MANT_DIG__ even when _Float16 is not available.
 -#if defined(__FLT16_MANT_DIG__) && \
@@ -17,3 +17,4 @@ index 9fe020d5937..32774c2f3c0 100644
  // Older versions of Clang don't have _Float16. Since both float and _Float16
  // are passed in the same register we can use the wider type and careful casting
  // to conform to x86_64 psABI. This only works with the assumption that we're
+
