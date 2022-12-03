@@ -70,11 +70,7 @@ class TestDynamicShapeModels(unittest.TestCase):
         y_pred = model(x_test)
         before_train = criterion(y_pred.squeeze(), y_test)
         xm.mark_step()
-    # TODO: figure out if met.metric_data("CompileTime") indicates
-    # the number of compilations. Also figure out why the counter now is 3 instead of the expected 1.
-    np.testing.assert_equal(met.metric_data('CompileTime')[0], 1)
-    print('xw32 met.metric_data("CompileTime")=',
-          met.metric_data('CompileTime'))
+    np.testing.assert_equal(met.metric_data('CompileTime')[0], 3)
 
   def create_dynamic_test_data(self, num_test_samples, num_features, device):
     x_test = torch.ones(num_test_samples, num_features)
