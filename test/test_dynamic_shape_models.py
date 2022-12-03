@@ -50,10 +50,16 @@ class TestDynamicShapeModels(unittest.TestCase):
     for _ in range(2):
       num_features = 2
       num_test_samples = 5
+<<<<<<< HEAD
       x_test, y_test = self.create_dynamic_test_data(num_test_samples,
                                                      num_features, xla_dev)
 
       model = Feedforward(num_features, hidden_size=10).to(xla_dev)
+=======
+      x_test, y_test = self.create_dynamic_test_data(num_test_samples, num_features, dev)
+
+      model = Feedforward(num_features, hidden_size=10).to(dev)
+>>>>>>> fix pr comments
       criterion = torch.nn.BCELoss()
 
       model.eval()
@@ -68,11 +74,19 @@ class TestDynamicShapeModels(unittest.TestCase):
 
   def test_forward_pass_dynamic_input_compile_once(self):
     met.clear_metrics()
+<<<<<<< HEAD
     for _ in range(10):
       num_features = 2
       num_test_samples = 5
       x_test, y_test = self.create_dynamic_test_data(num_test_samples,
                                                      num_features, xla_dev)
+=======
+    losses = []
+    for _ in range(10):
+      num_features = 2
+      num_test_samples = 5
+      x_test, y_test = self.create_dynamic_test_data(num_test_samples, num_features, xla_dev)
+>>>>>>> fix pr comments
 
       model = Feedforward(num_features, hidden_size=10).to(xla_dev)
       criterion = torch.nn.BCELoss()
@@ -95,6 +109,18 @@ class TestDynamicShapeModels(unittest.TestCase):
     x_test_nonzero_dev = torch.nonzero(x_test_xla.int()).float()
     y_test_xla = y_test.to(device)
     y_test_nonzero_dev = torch.nonzero(y_test_xla.int()).float().squeeze()
+    return x_test_nonzero_dev, y_test_nonzero_dev
+
+  def create_dynamic_test_data(self, num_test_samples, num_features, device):
+    x_test = torch.ones(num_test_samples, num_features)
+    x_test[0][0] = 0
+    y_test = torch.ones(num_test_samples * 2)
+    y_test[0] = 0
+
+    x_test_xla = x_test.to(device)
+    x_test_nonzero_dev = torch.nonzero(x_test_xla.int()).float()
+    y_test_xla = y_test.to(device)
+    y_test_nonzero_dev = torch.nonzero(y_test_xla.int()).float().squeeze() 
     return x_test_nonzero_dev, y_test_nonzero_dev
 
 
