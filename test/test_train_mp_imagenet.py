@@ -200,6 +200,9 @@ def train_imagenet():
 
   device = xm.xla_device()
   model = get_model_property('model_fn')().to(device)
+
+  # Initialization is nondeterministic with multiple threads in PjRt.
+  # Synchronize model parameters across replicas manually.
   if pjrt.using_pjrt():
     pjrt.broadcast_master_param(model)
 
