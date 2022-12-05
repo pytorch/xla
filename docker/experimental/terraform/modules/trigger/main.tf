@@ -50,6 +50,7 @@ resource "google_cloud_scheduler_job" "trigger-schedule" {
   name = format("%s-schedule", local.trigger_name)
   region = "us-central1"
 
+  # Format: https://cloud.google.com/scheduler/docs/configuring/cron-job-schedules
   schedule = "0 0 * * *"
   time_zone = "America/Los_Angeles"
 
