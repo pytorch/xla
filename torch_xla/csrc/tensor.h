@@ -51,7 +51,7 @@ class TORCH_API XLASymNodeImpl : public c10::SymNodeImpl {
 class XLATensor;
 using XLATensorPtr = c10::intrusive_ptr<XLATensor>;
 
-class XLATensor : public c10::intrusive_ptr_target {
+class XLATensor : public torch::lazy::LazyTensor {
   class DeviceContextArena;
 
  public:
