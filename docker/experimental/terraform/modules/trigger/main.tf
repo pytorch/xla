@@ -59,8 +59,8 @@ resource "google_cloud_scheduler_job" "trigger-schedule" {
     uri = "https://cloudbuild.googleapis.com/v1/projects/${google_cloudbuild_trigger.build-trigger.project}/triggers/${google_cloudbuild_trigger.build-trigger.trigger_id}:run"
 
     oauth_token {
-      # TODO: Use a better service account
-      service_account_email = "164006649440-compute@developer.gserviceaccount.com"
+      # TODO: Include this SA in config
+      service_account_email = "cloud-build-trigger-scheduler@tpu-pytorch.iam.gserviceaccount.com"
     }
   }
 }
