@@ -25,6 +25,12 @@ struct MaxPool2dAutogradFunction
                                torch::IntArrayRef stride,
                                torch::IntArrayRef padding,
                                torch::IntArrayRef dilation, bool ceil_mode);
+  static torch::Tensor forward_kernel(torch::Tensor self,
+                                      torch::IntArrayRef kernel_size,
+                                      torch::IntArrayRef stride,
+                                      torch::IntArrayRef padding,
+                                      torch::IntArrayRef dilation,
+                                      bool ceil_mode);
   static torch::autograd::variable_list backward(
       torch::autograd::AutogradContext* ctx,
       torch::autograd::variable_list grad_output);

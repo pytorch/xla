@@ -69,6 +69,16 @@ torch::autograd::variable_list EinsumAutogradFunction::backward(
 
   return grad_inputs;
 }
+torch::Tensor MaxPool2dAutogradFunction::forward_kernel(
+    torch::Tensor self, torch::IntArrayRef kernel_size,
+    torch::IntArrayRef stride, torch::IntArrayRef padding,
+    torch::IntArrayRef dilation, bool ceil_mode) {
+  auto outputs = tensor_methods::max_pool_nd(
+      bridge::GetXlaTensor(self), /*spatial_dim_count=*/2,
+      XlaHelpers::I64List(kernel_size), XlaHelpers::I64List(stride),
+      XlaHelpers::I64List(padding), ceil_mode);
+  return bridge::AtenFromXlaTensor(std::get<0>(outputs));
+}
 
 torch::Tensor MaxPool2dAutogradFunction::forward(
     torch::autograd::AutogradContext* ctx, torch::Tensor self,
@@ -99,11 +109,11 @@ torch::Tensor MaxPool2dAutogradFunction::forward(
     return std::get<0>(results);
   }
   ctx->save_for_backward({self});
-  auto outputs = tensor_methods::max_pool_nd(
-      bridge::GetXlaTensor(self), /*spatial_dim_count=*/2,
-      XlaHelpers::I64List(kernel_size), XlaHelpers::I64List(stride),
-      XlaHelpers::I64List(padding), ceil_mode);
-  return bridge::AtenFromXlaTensor(std::get<0>(outputs));
+  auto self_keyset = self.key_set();
+  auto mask = c10::DispatchKeySet(c10::DispatchKeySet::FULL_AFTER, c10::DispatchKey::AutogradFunctionality);
+  auto ks = self_keyset & mask;
+  return at::redispatch::max_pool2d(
+      ks, kernel_size, stride, padding, dilation, ceil_mode);
 }
 
 torch::autograd::variable_list MaxPool2dAutogradFunction::backward(

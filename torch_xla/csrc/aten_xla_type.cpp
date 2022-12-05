@@ -1062,9 +1062,9 @@ at::Tensor XLANativeFunctions::dot(const at::Tensor& self,
       bridge::GetXlaTensor(self), bridge::GetXlaTensor(tensor)));
 }
 
-at::Tensor XLANativeFunctions::einsum(c10::string_view equation,
-                                      at::TensorList tensors,
-                                      at::OptionalIntArrayRef path) {
+at::Tensor AutogradXLANativeFunctions::einsum(c10::string_view equation,
+                                              at::TensorList tensors,
+                                              at::OptionalIntArrayRef path) {
   std::string cleansed_equation = std::string(equation);
 
   cleansed_equation.erase(
@@ -1578,12 +1578,19 @@ std::tuple<at::Tensor&, at::Tensor&> XLANativeFunctions::max_out(
   return std::forward_as_tuple(max, max_values);
 }
 
-at::Tensor XLANativeFunctions::max_pool2d(
+at::Tensor AutogradXLANativeFunctions::max_pool2d(
     const at::Tensor& self, at::IntArrayRef kernel_size, at::IntArrayRef stride,
     at::IntArrayRef padding, at::IntArrayRef dilation, bool ceil_mode) {
   TORCH_LAZY_FN_COUNTER("xla::");
   return aten_autograd_ops::MaxPool2dAutogradFunction::apply(
       self, kernel_size, stride, padding, dilation, ceil_mode);
+}
+
+at::Tensor XLANativeFunctions::max_pool2d(
+    const at::Tensor& self, at::IntArrayRef kernel_size, at::IntArrayRef stride,
+    at::IntArrayRef padding, at::IntArrayRef dilation, bool ceil_mode) {
+  return aten_autograd_ops::MaxPool2dAutogradFunction::forward_kernel(
+      kernel_size, stride, padding, dilation, ceil_mode);
 }
 
 std::tuple<at::Tensor, at::Tensor> XLANativeFunctions::max_pool2d_with_indices(
@@ -3051,11 +3058,11 @@ at::Scalar XLANativeFunctions::_local_scalar_dense(const at::Tensor& self) {
 // re-use the composite kernel from core, that way we don't need to provide a
 // backwards formula for native_layer_norm
 std::tuple<at::Tensor, at::Tensor, at::Tensor>
-XLANativeFunctions::native_layer_norm(const at::Tensor& input,
-                                      at::IntArrayRef normalized_shape,
-                                      const c10::optional<at::Tensor>& weight,
-                                      const c10::optional<at::Tensor>& bias,
-                                      double eps) {
+AutogradXLANativeFunctions::native_layer_norm(const at::Tensor& input,
+                                              at::IntArrayRef normalized_shape,
+                                              const c10::optional<at::Tensor>& weight,
+                                              const c10::optional<at::Tensor>& bias,
+                                              double eps) {
   return at::native::math_native_layer_norm(input, normalized_shape, weight,
                                             bias, eps);
 }
@@ -3063,11 +3070,11 @@ XLANativeFunctions::native_layer_norm(const at::Tensor& input,
 // re-use the composite kernel from core, that way we don't need to provide a
 // backwards formula for native_group_norm
 std::tuple<at::Tensor, at::Tensor, at::Tensor>
-XLANativeFunctions::native_group_norm(const at::Tensor& input,
-                                      const c10::optional<at::Tensor>& weight,
-                                      const c10::optional<at::Tensor>& bias,
-                                      int64_t N, int64_t C, int64_t HxW,
-                                      int64_t group, double eps) {
+AutogradXLANativeFunctions::native_group_norm(const at::Tensor& input,
+                                              const c10::optional<at::Tensor>& weight,
+                                              const c10::optional<at::Tensor>& bias,
+                                              int64_t N, int64_t C, int64_t HxW,
+                                              int64_t group, double eps) {
   return at::native::math_group_norm(input, weight, bias, N, C, HxW, group,
                                      eps);
 }
