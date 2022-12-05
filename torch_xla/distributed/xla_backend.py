@@ -9,7 +9,7 @@ from torch._C._distributed_c10d import (
     ProcessGroup,
     Work,
 )
-from .xrt_init import _init_xrt_context
+from .xrt_init import init_xrt_context
 
 
 def _create_xla_process_group(prefix_store, rank, size, timeout):
@@ -48,7 +48,7 @@ class ProcessGroupXla(ProcessGroup):
     # when the user is using torchrun and not xmp.spawn()
     # or some other flow.
     if os.getenv('TORCHELASTIC_RUN_ID') != None:
-      _init_xrt_context(store=prefix_store)
+      init_xrt_context(store=prefix_store)
 
 
   def getBackendName(self):
