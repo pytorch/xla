@@ -56,43 +56,30 @@ class XLATensor : public torch::lazy::LazyTensor {
   // This is the core XLA tensor data structure where all the tensor data is
   // held. The XLA tensor is nothing more than a shared pointer to a Data
   // object.
-  struct Data {
+  struct Data : public torch::lazy::LazyTensor::Data {
     Data(torch::lazy::BackendDataPtr handle,
          const torch::lazy::BackendDevice& device,
          c10::optional<at::ScalarType> logical_element_type)
-        : handle(std::move(handle)),
-          logical_element_type(logical_element_type),
-          device(device),
-          unique_id(GetNextTensorId()) {}
+        : torch::lazy::LazyTensor::Data(handle, device),
+          logical_element_type(logical_element_type) {}
     Data(torch::lazy::Value ir_value, const torch::lazy::BackendDevice& device,
          c10::optional<at::ScalarType> logical_element_type)
-        : ir_value(std::move(ir_value)),
-          logical_element_type(logical_element_type),
-          device(device),
-          unique_id(GetNextTensorId()) {}
+        : torch::lazy::LazyTensor::Data(ir_value, device),
+          logical_element_type(logical_element_type) {}
+    Data(at::Tensor tensor_data, const torch::lazy::BackendDevice& device)
+        : torch::lazy::LazyTensor::Data(tensor_data, device),
+          logical_element_type(tensor_data.scalar_type()) {}
     Data(std::shared_ptr<View> view, const torch::lazy::BackendDevice& device,
          c10::optional<at::ScalarType> logical_element_type)
-        : view(std::move(view)),
+        : torch::lazy::LazyTensor::Data(device),
           logical_element_type(logical_element_type),
-          device(device),
-          unique_id(GetNextTensorId()) {}
-    Data(at::Tensor tensor_data, const torch::lazy::BackendDevice& device)
-        : logical_element_type(tensor_data.scalar_type()),
-          tensor_data(std::move(tensor_data)),
-          device(device),
-          unique_id(GetNextTensorId()) {}
+          view(std::move(view)) {}
 
     ~Data();
 
-    torch::lazy::BackendDataPtr handle;
-    torch::lazy::Value ir_value;
     std::shared_ptr<View> view;
     // TODO: remove this in favor of torch::lazy::Shape within ir_value.
     c10::optional<at::ScalarType> logical_element_type;
-    c10::optional<at::Tensor> tensor_data;
-    const torch::lazy::BackendDevice device;
-    const int64_t unique_id = 0;
-    size_t generation = 1;
   };
 
   static XLATensorPtr Create(const at::Tensor& tensor,
