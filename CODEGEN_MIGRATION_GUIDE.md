@@ -41,7 +41,7 @@ All file mentioned below lives under the `xla/torch_xla/csrc` folder, with the e
 - xla/torch_xla/csrc/generated/tensor.h
   - Defines XLATensor class and XLATensor method declarations. These declarations are usually a one to one mapping of the at::Tensor nodes we declared in XLANativeFunctions.h. XLATensor method will be removed for full_codegen ops
 - xla/torch_xla/csrc/generated/tensor_method.cpp
-  - Implements tensor methods defined in tensor_methods.h. This file will be removed for full_codegen ops
+  - Implements tensor methods defined in tensor.h. This file will be removed for full_codegen ops
 - xla/torch_xla/csrc/generated/ops/…
   - Defines IR class for “most” ops. It is possible that multiple ops share the same IR.
 
@@ -86,18 +86,14 @@ at::Tensor XLANativeFunctions::abs(const at::Tensor & self) {
 
   torch_xla::XLATensorPtr lazy_self = torch_xla::bridge::GetXlaTensorOrCreateForWrappedNumber(self, *common_device);
 
-  auto shapes = torch::lazy::compute_shape_abs(self);
-  TORCH_INTERNAL_ASSERT(shapes.size() == 1);
-  if(torch::lazy::symbolicShapeEnabled()){
-    std::vector<torch::jit::IValue> inputs = { self };
-    char* schema_str = "aten::abs(Tensor self) -> Tensor";
-    applySymbolicShapesOnLT(schema_str, inputs, shapes);
+  torch::lazy::NodePtr node = torch::lazy::ReuseNode<Abs>(lazy_self->GetIrValue());
+  if (!node) {
+    node = torch::lazy::MakeNode<Abs>(lazy_self->GetIrValue());
+    CacheNode(node);
   }
 
-  auto node = torch::lazy::MakeNode<Abs>(lazy_self->GetIrValue(),
-                                         std::move(shapes));
   auto result = torch_xla::bridge::AtenFromXlaTensor(
-      torch_xla::XLATensor::Create(std::move(node), *common_device));
+        torch_xla::XLATensor::Create(std::move(node), *common_device));
   return result;
 };
 ```
@@ -107,26 +103,18 @@ Describing the generated code line by line:
   auto common_device = torch_xla::bridge::GetXlaDevice(self);
   TORCH_INTERNAL_ASSERT(common_device);
 ```
-- Compute and output shape and verify the size count
+- Check if we can reuse the node from previous creation. If not, create corresponding IR node and cache it. 
 ```
-auto shapes = torch::lazy::compute_shape_abs(self);
-TORCH_INTERNAL_ASSERT(shapes.size() == 1);
-```
-- Dynamic shape related logic (safe to ignore for now)
-```
-  if(torch::lazy::symbolicShapeEnabled()){
-    std::vector<torch::jit::IValue> inputs = { self };
-    char* schema_str = "aten::abs(Tensor self) -> Tensor";
-    applySymbolicShapesOnLT(schema_str, inputs, shapes);
+  torch::lazy::NodePtr node = torch::lazy::ReuseNode<Abs>(lazy_self->GetIrValue());
+  if (!node) {
+    node = torch::lazy::MakeNode<Abs>(lazy_self->GetIrValue());
+    CacheNode(node);
   }
 ```
-
-- Create corresponding IR node and wrap it in a XLATensor. Wrap the XLATensor within the at::Tensor and return it as a result. Note that this part used to be manually done in tensor_method.cpp.
+- Wrap the newly created IR node in a XLATensor. And wrap the XLATensor within the at::Tensor and return it as a result. Note that this part used to be manually done in tensor_method.cpp.
 ```
-  auto node = torch::lazy::MakeNode<Abs>(lazy_self->GetIrValue(),
-                                         std::move(shapes));
   auto result = torch_xla::bridge::AtenFromXlaTensor(
-      torch_xla::XLATensor::Create(std::move(node), *common_device));
+        torch_xla::XLATensor::Create(std::move(node), *common_device));
   return result;
 ```
 
@@ -134,8 +122,8 @@ TORCH_INTERNAL_ASSERT(shapes.size() == 1);
 ```
 class Abs : public XlaNode {
  public:
-  Abs(const torch_xla::XlaValue& self, std::vector<torch::lazy::Shape>&& shapes)
-      : XlaNode(torch::lazy::OpKind(at::aten::abs), {self}, std::move(shapes),
+  Abs(const torch_xla::XlaValue& self)
+      : XlaNode(torch::lazy::OpKind(at::aten::abs), {self},
                 [&]() { return AbsOutputShape(self); },
                 /* num_outputs */ 1, torch::lazy::MHash())
   {}
