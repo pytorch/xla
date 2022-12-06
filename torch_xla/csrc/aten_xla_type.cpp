@@ -1867,6 +1867,44 @@ XLANativeFunctions::native_batch_norm(
 }
 
 std::tuple<at::Tensor, at::Tensor, at::Tensor>
+XLANativeFunctions::_native_batch_norm_legit(
+    const at::Tensor& input, const c10::optional<at::Tensor>& weight,
+    const c10::optional<at::Tensor>& bias, at::Tensor& running_mean,
+    at::Tensor& running_var, bool training, double momentum, double eps) {
+  TORCH_LAZY_FN_COUNTER("xla::");
+  XLATensorPtr input_tensor = bridge::GetXlaTensor(input);
+  const torch::lazy::BackendDevice& device = input_tensor->GetDevice();
+  XLATensorPtr running_mean_tensor = bridge::GetXlaTensor(running_mean);
+  XLATensorPtr running_var_tensor = bridge::GetXlaTensor(running_var);
+  auto outputs = tensor_methods::native_batch_norm(
+      bridge::GetXlaTensor(input), bridge::GetOrCreateXlaTensor(weight, device),
+      bridge::GetOrCreateXlaTensor(bias, device), running_mean_tensor,
+      running_var_tensor, training, momentum, eps);
+  return std::make_tuple(bridge::AtenFromXlaTensor(std::get<0>(outputs)),
+                         bridge::AtenFromXlaTensor(std::get<1>(outputs)),
+                         bridge::AtenFromXlaTensor(std::get<2>(outputs)));
+}
+
+std::tuple<at::Tensor, at::Tensor, at::Tensor>
+XLANativeFunctions::_native_batch_norm_legit(
+    const at::Tensor& input, const c10::optional<at::Tensor>& weight,
+    const c10::optional<at::Tensor>& bias, bool training, double momentum,
+    double eps) {
+  TORCH_LAZY_FN_COUNTER("xla::");
+  XLATensorPtr input_tensor = bridge::GetXlaTensor(input);
+  const torch::lazy::BackendDevice& device = input_tensor->GetDevice();
+  XLATensorPtr null_running_mean_tensor = XLATensorPtr();
+  XLATensorPtr null_running_var_tensor = XLATensorPtr();
+  auto outputs = tensor_methods::native_batch_norm(
+      bridge::GetXlaTensor(input), bridge::GetOrCreateXlaTensor(weight, device),
+      bridge::GetOrCreateXlaTensor(bias, device), null_running_mean_tensor,
+      null_running_var_tensor, training, momentum, eps);
+  return std::make_tuple(bridge::AtenFromXlaTensor(std::get<0>(outputs)),
+                         bridge::AtenFromXlaTensor(std::get<1>(outputs)),
+                         bridge::AtenFromXlaTensor(std::get<2>(outputs)));
+}
+
+std::tuple<at::Tensor, at::Tensor, at::Tensor>
 XLANativeFunctions::native_batch_norm_backward(
     const at::Tensor& grad_out, const at::Tensor& input,
     const c10::optional<at::Tensor>& weight,
