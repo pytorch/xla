@@ -1498,6 +1498,19 @@ at::Tensor XLANativeFunctions::lerp(const at::Tensor& self,
       bridge::GetXlaTensor(self), bridge::GetXlaTensor(end), weight));
 }
 
+at::Tensor XLANativeFunctions::lift_fresh(const at::Tensor& self) {
+  std::cout << "WONJOO: at aten_xla_type.cpp, lift_fresh" << std::endl;
+  return at::functionalization::impl::to_functional_tensor(self);
+  // return at::functionalization::functionalize_aten_op<ATEN_OP(
+  //     lift_fresh)>::call(self);
+}
+
+at::Tensor XLANativeFunctions::lift_fresh_copy(const at::Tensor& self) {
+  std::cout << "WONJOO: at aten_xla_type.cpp, lift_fresh_copy" << std::endl;
+  return at::functionalization::functionalize_aten_op<ATEN_OP(
+      lift_fresh_copy)>::call(self);
+}
+
 at::Tensor XLANativeFunctions::linspace(const at::Scalar& start,
                                         const at::Scalar& end, int64_t steps,
                                         c10::optional<at::ScalarType> dtype,
