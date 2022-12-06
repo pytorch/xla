@@ -19,6 +19,7 @@
 #include "torch_xla/csrc/ops/permute.h"
 #include "torch_xla/csrc/ops/scalar.h"
 #include "torch_xla/csrc/tensor_methods.h"
+#include "torch_xla/csrc/xla_graph_executor.h"
 #include "torch_xla/csrc/xla_lower_util.h"
 
 namespace torch_xla {
@@ -145,8 +146,8 @@ std::vector<XLATensorPtr> WrapIndicesOnce(
     int64_t dim_size = base_shape_ref.get().dimensions(dim_idx + start_dim);
     XLATensorPtr wrapped_dim_index = XLATensor::Create(
         dim_index->GetIrValue() +
-            XLATensor::GetIrValueForScalar(dim_size, dim_index->shape(),
-                                           base->GetDevice()),
+            XLAGraphExecutor::Get()->GetIrValueForScalar(
+                dim_size, dim_index->shape(), base->GetDevice()),
         base->GetDevice());
     XLATensorPtr wrap_cond =
         tensor_methods::lt(indices[dim_idx], at::Scalar(int64_t(0)));
@@ -305,8 +306,8 @@ torch::lazy::NodePtr IndexFill(const XLATensorPtr& base, int64_t dim,
       << "Fill index is supposed to be a vector";
   return IndexFillOp(
       base->GetIrValue(), dim, index->GetIrValue(),
-      XLATensor::GetIrValueForScalar(value, base->shape().get().element_type(),
-                                     base->GetDevice()));
+      XLAGraphExecutor::Get()->GetIrValueForScalar(
+          value, base->shape().get().element_type(), base->GetDevice()));
 }
 
 torch::lazy::NodePtr IndexFill(const XLATensorPtr& base, int64_t dim,
