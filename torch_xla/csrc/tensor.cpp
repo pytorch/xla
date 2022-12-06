@@ -220,22 +220,14 @@ XLATensor::ShardingSpecPtr XLATensor::sharding_spec() const {
 }
 
 void XLATensor::SetShardingSpec(const ShardingSpec& sharding) {
-  // Existing annotation must be cleared explicitly. We do not clear and
-  // overwrite the existing sharding on the user's behalf. This is a no-op if
-  // the same sharding already applied.
-  if (sharding_spec() == nullptr ||
-      !ShardingUtil::EqualShardingSpecs(sharding, *sharding_spec())) {
-    TORCH_LAZY_COUNTER("SetShardingSpec", 1);
-    XLA_CHECK(GetIrValue().node != nullptr) << "Tyring to access a null cursor";
-    dynamic_cast<XlaNode*>(GetIrValue().node.get())
-        ->SetSharding(sharding.sharding);
-  }
+  TORCH_LAZY_COUNTER("SetShardingSpec", 1);
+  CreateShardedIrValue(sharding);
 }
+
 void XLATensor::ClearShardingSpec() {
   torch::lazy::Value ir_value = CurrentIrValue();
   if (ir_value) {
-    // This should be a no-op if there is no sharding.
-    dynamic_cast<XlaNode*>(ir_value.node.get())->ClearSharding();
+    CreateUnshardedIrValue();
   }
 }
 
@@ -253,6 +245,32 @@ void XLATensor::SetXlaData(torch::lazy::BackendDataPtr handle, bool sync) {
     data()->view = nullptr;
     data()->tensor_data = c10::nullopt;
   }
+}
+
+void XLATensor::CreateShardedIrValue(const ShardingSpec& sharding_spec) const {
+  torch::lazy::Value old_value = CurrentIrValue();
+  XLA_CHECK(old_value && old_value.node != nullptr)
+      << "Cannot create a sharded IR value if an IR value does not already "
+         "exist";
+  torch::lazy::Value new_ir =
+      XlaNode(old_value.node->op(), old_value.node->operands(),
+              old_value.node->shapes(), GetXlaShape(old_value),
+              sharding_spec.sharding, old_value.node->num_outputs());
+  data()->ir_value = std::move(new_ir);
+  data()->generation += 1;
+}
+
+void XLATensor::CreateUnshardedIrValue() {
+  torch::lazy::Value old_value = CurrentIrValue();
+  XLA_CHECK(old_value && old_value.node != nullptr)
+      << "Cannot create a unsharded IR value if an IR value does not already "
+         "exist";
+  torch::lazy::Value new_ir =
+      XlaNode(old_value.node->op(), old_value.node->operands(),
+              old_value.node->shapes(), GetXlaShape(old_value),
+              old_value.node->num_outputs());
+  data()->ir_value = std::move(new_ir);
+  data()->generation += 1;
 }
 
 void XLATensor::SetIrValue(torch::lazy::Value ir_value, bool inplace) {
@@ -288,17 +306,21 @@ void XLATensor::SetInPlaceIrValue(torch::lazy::Value ir_value) {
 
 void XLATensor::AssignIrValue(torch::lazy::Value ir_value) const {
   ShardingSpecPtr sharding = sharding_spec();
-  if (sharding != nullptr) {
-    if (!ir_value) {
-      // Create a tensor node if applicable, re-use the current IR otherwise.
-      // TODO(yeounoh) this has some performance implications for convolution.
-      ir_value = GetIrValue();
-    }
-    dynamic_cast<XlaNode*>(ir_value.node.get())
-        ->SetSharding(sharding->sharding);
+  if (sharding != nullptr && !ir_value) {
+    // Create a tensor node if applicable, re-use the current IR otherwise.
+    // TODO(yeounoh) this has some performance implications for convolution.
+    ir_value = GetIrValue();
   }
+
   data()->ir_value = std::move(ir_value);
-  data()->generation += 1;
+
+  // Apply the existing sharding if it exists. When we do this, we increment the
+  // generation within the method call. Otherwise, we need to increment it here.
+  if (sharding != nullptr) {
+    CreateShardedIrValue(sharding);
+  } else {
+    data()->generation += 1;
+  }
 }
 
 torch::lazy::Value XLATensor::GetIrValue() const {

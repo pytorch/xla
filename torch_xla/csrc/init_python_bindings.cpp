@@ -1501,7 +1501,7 @@ void InitXlaModuleBindings(py::module m) {
         std::vector<XLATensor::ShardingSpecPtr>{new_sharding_spec},
         std::vector<std::string>{GetVirtualDevice().toString()})[0];
     xtensor->SetXlaData(xla_data);
-    xtensor->SetShardingSpec(*new_sharding_spec);
+    xtensor->CreateShardedIrValue(sharding);
   });
   m.def("_xla_clear_sharding", [](const at::Tensor& input) {
     XLATensorPtr xtensor = bridge::GetXlaTensor(input);

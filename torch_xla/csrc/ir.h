@@ -51,6 +51,11 @@ class XlaNode : public torch::lazy::Node {
           torch::lazy::hash_t hash_seed = default_hash_seed);
 
   XlaNode(torch::lazy::OpKind op, torch::lazy::OpList operands,
+          std::vector<torch::lazy::Shape>&& shapes, xla::Shape xla_shape,
+          xla::OpSharding sharding, size_t num_outputs = 1,
+          torch::lazy::hash_t hash_seed = default_hash_seed);
+
+  XlaNode(torch::lazy::OpKind op, torch::lazy::OpList operands,
           std::vector<torch::lazy::Shape>&& shapes,
           const std::function<xla::Shape()>& xla_shape_fn,
           size_t num_outputs = 1,
@@ -127,13 +132,6 @@ class XlaNode : public torch::lazy::Node {
     return output_sharding_;
   }
 
-  void SetSharding(const xla::OpSharding& sharding);
-
-  void ClearSharding() {
-    output_sharding_ = nullptr;
-    sharding_hash_ = 0;
-  }
-
  private:
   xla::Shape GetOpShape(const std::function<xla::Shape()>& shape_fn) const;
 
@@ -149,7 +147,6 @@ class XlaNode : public torch::lazy::Node {
   xla::Shape xla_shape_;
   torch::lazy::hash_t node_hash_ = 0;
   torch::lazy::hash_t dag_hash_;
-  torch::lazy::hash_t sharding_hash_ = 0;
 
   // Experimental sharding annotation attached to the IR node.
   // TODO(yeounoh): make sure that view update doesn't reset this.
