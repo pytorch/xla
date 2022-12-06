@@ -108,6 +108,7 @@ def get_worker_ips() -> List[str]:
 
   return ips if len(ips) > 1 else ['localhost']
 
+
 def configure_one_chip_topology() -> None:
   """Configures TPU topology environment variables for one process and chip.
 
