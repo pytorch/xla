@@ -72,8 +72,8 @@ class XLATensor : public torch::lazy::LazyTensor {
     Data(std::shared_ptr<View> view, const torch::lazy::BackendDevice& device,
          c10::optional<at::ScalarType> logical_element_type)
         : torch::lazy::LazyTensor::Data(device),
-          logical_element_type(logical_element_type),
-          view(std::move(view)) {}
+          view(std::move(view)),
+          logical_element_type(logical_element_type) {}
 
     ~Data();
 
@@ -111,12 +111,6 @@ class XLATensor : public torch::lazy::LazyTensor {
   // LazyTensorPtr instead.
   XLATensor() = delete;
 
-  size_t generation() const { return data()->generation; }
-
-  XLATensorPtr alias() const {
-    return c10::make_intrusive<XLATensor>(XLATensor(data_ptr()));
-  }
-
   int64_t size(int64_t dim) const;
 
   at::Tensor ToTensor(bool detached);
@@ -138,7 +132,6 @@ class XLATensor : public torch::lazy::LazyTensor {
 
   xla::util::MaybeRef<xla::Shape> shape() const;
 
-  const torch::lazy::BackendDevice& GetDevice() const;
   int64_t GetUniqueId() const;
 
   // Retrieves an opaque ID of the alias object upon which the tensor's view is
@@ -230,8 +223,6 @@ class XLATensor : public torch::lazy::LazyTensor {
   void SetXlaData(torch::lazy::BackendDataPtr handle, bool sync);
 
   void AssignIrValue(torch::lazy::Value ir_value) const;
-
-  void SetTensorData(at::Tensor tensor_data);
 
   torch::lazy::Value CreateTensorNode(torch::lazy::BackendDataPtr data,
                                       bool read_only) const;

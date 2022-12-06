@@ -164,10 +164,6 @@ xla::util::MaybeRef<xla::Shape> XLATensor::shape() const {
       XlaHelpers::I64List(data()->tensor_data->sizes()));
 }
 
-const torch::lazy::BackendDevice& XLATensor::GetDevice() const {
-  return data()->device;
-}
-
 int64_t XLATensor::GetUniqueId() const { return data()->unique_id; }
 
 std::ptrdiff_t XLATensor::GetViewAliasId() const {
@@ -353,10 +349,6 @@ torch::lazy::Value XLATensor::CurrentIrValue() const {
     return GetViewUpdate(data()->view).ir_value;
   }
   return data()->ir_value;
-}
-
-void XLATensor::SetTensorData(at::Tensor tensor_data) {
-  data()->tensor_data = std::move(tensor_data);
 }
 
 c10::optional<at::Tensor> XLATensor::CurrentTensorData() const {
