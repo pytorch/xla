@@ -183,7 +183,7 @@ torch::lazy::BackendDataPtr XLATensor::GetXlaData() {
     ir_value = std::move(ir_value_updated.ir_value);
   }
   if (up_to_date) {
-    torch::lazy::BackendDataPtr handle = CurrentXlaData();
+    torch::lazy::BackendDataPtr handle = CurrentDataHandle();
     if (handle != nullptr) {
       XLA_CHECK(handle->HasValue())
           << "Trying to access XLA data while an async operation is in flight: "
@@ -207,7 +207,7 @@ torch::lazy::BackendDataPtr XLATensor::GetXlaData() {
   return data()->handle;
 }
 
-torch::lazy::BackendDataPtr XLATensor::CurrentXlaData() const {
+torch::lazy::BackendDataPtr XLATensor::CurrentDataHandle() const {
   return data()->handle;
 }
 
@@ -327,7 +327,7 @@ torch::lazy::Value XLATensor::GetIrValue() const {
   if (ir_value) {
     return ir_value;
   }
-  torch::lazy::BackendDataPtr handle = CurrentXlaData();
+  torch::lazy::BackendDataPtr handle = CurrentDataHandle();
   if (handle != nullptr) {
     // In case of tensor node, we do not clear the XLA data when we set the IR
     // node. This because we want further calls to GetIrValue() to fetch the
@@ -597,8 +597,8 @@ XLATensorPtr XLATensor::CreateFrom(torch::lazy::Value ir_value,
 void XLATensor::ApplyPendingGraph() {
   XLAGraphExecutor::Get()->DeviceBarrier(GetDevice());
   // This method is called to ensure that the tensor data is available on
-  // device, so that a call to CurrentXlaData() returns a valid pointer.
-  if (CurrentXlaData() == nullptr) {
+  // device, so that a call to CurrentDataHandle() returns a valid pointer.
+  if (CurrentDataHandle() == nullptr) {
     std::vector<XLATensorPtr> tensors({c10::make_intrusive<XLATensor>(*this)});
     XLAGraphExecutor::Get()->SyncTensorsGraph(&tensors, {}, /*wait=*/true,
                                               /*sync_xla_data=*/false);
@@ -677,7 +677,7 @@ std::string XLASymNodeImpl::str() {
 }
 
 int64_t XLATensor::GetOpaqueHandle() const {
-  torch::lazy::BackendDataPtr handle = CurrentXlaData();
+  torch::lazy::BackendDataPtr handle = CurrentDataHandle();
   if (handle != nullptr) {
     return UnwrapXlaData(handle)->GetOpaqueHandle();
   }

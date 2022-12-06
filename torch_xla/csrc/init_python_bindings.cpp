@@ -1487,7 +1487,7 @@ void InitXlaModuleBindings(py::module m) {
       // tensor from the physical device to CPU. In that case, the value
       // must be present on the backend device.
       XLA_CHECK(xtensor->GetXlaData() != nullptr &&
-                xtensor->CurrentXlaData()->HasValue())
+                xtensor->CurrentDataHandle()->HasValue())
           << "Cannot shard tensor. Data not present on any device.";
       std::vector<XLATensorPtr> xla_tensors{xtensor};
       cpu_tensor = XLAGraphExecutor::Get()->GetTensors(&xla_tensors)[0];
@@ -1628,7 +1628,7 @@ void InitXlaModuleBindings(py::module m) {
           if (!xtensor) {
             // input tensor is not a xla tensor
             need_materialization.push_back(false);
-          } else if (xtensor->CurrentXlaData() != nullptr) {
+          } else if (xtensor->CurrentDataHandle() != nullptr) {
             // input tensor has xla_data which means it is already on device
             need_materialization.push_back(false);
           } else if (xtensor->CurrentIrValue().node != nullptr) {
