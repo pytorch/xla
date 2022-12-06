@@ -118,6 +118,18 @@ class XlaShardingTest(unittest.TestCase):
     xt.add_(1)  # inplace update should preserve the sharding
     self.assertEqual(sharding_spec, torch_xla._XLAC._get_xla_sharding_spec(xt))
 
+  def test_shard_hashing(self):
+    xt1 = torch.ones(2, 2).to(xm.xla_device())
+    xt2 = torch.ones(2, 2).to(xm.xla_device())
+
+    # Add sharding to xt1, this should result in the hashes being different for
+    # xt1 and xt2
+    xs.mark_sharding(xt1, self._get_mesh((1, self.n_devices)), (0, 1))
+
+    # Adding 0 to the tensor force graph compilation, which would catch IR hashi
+    # collisions
+    self.assertTrue(torch.allclose(xt1 + 0, xt2 + 0))
+
 
 class VirtualDeviceTest(XlaShardingTest):
 

@@ -198,16 +198,15 @@ torch::lazy::hash_t XlaNode::CreateShardingHash(
 
   xla::ShapeProto shape_proto = sharding->tile_shape();
   sharding_hash = torch::lazy::HashCombine(
-      sharding_hash, (uint32_t)shape_proto.element_type()); 
+      sharding_hash, (uint32_t)shape_proto.element_type());
   for (const auto& dim : shape_proto.dimensions()) {
-    sharding_hash = torch::lazy::HashCombine(
-        sharding_hash, (uint32_t)dim);
+    sharding_hash = torch::lazy::HashCombine(sharding_hash, (uint32_t)dim);
   }
   for (const auto& is_dyn_dim : shape_proto.is_dynamic_dimension()) {
-    sharding_hash = torch::lazy::HashCombine(
-        sharding_hash, (uint32_t)is_dyn_dim);
+    sharding_hash =
+        torch::lazy::HashCombine(sharding_hash, (uint32_t)is_dyn_dim);
   }
-  
+
   return sharding_hash;
 }
 
