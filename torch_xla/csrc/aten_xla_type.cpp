@@ -1591,7 +1591,7 @@ at::Tensor XLANativeFunctions::max_pool2d(
     const at::Tensor& self, at::IntArrayRef kernel_size, at::IntArrayRef stride,
     at::IntArrayRef padding, at::IntArrayRef dilation, bool ceil_mode) {
   return aten_autograd_ops::MaxPool2dAutogradFunction::forward_kernel(
-      kernel_size, stride, padding, dilation, ceil_mode);
+      self, kernel_size, stride, padding, dilation, ceil_mode);
 }
 
 std::tuple<at::Tensor, at::Tensor> XLANativeFunctions::max_pool2d_with_indices(
@@ -1852,7 +1852,7 @@ at::Tensor XLANativeFunctions::nan_to_num(const at::Tensor& self,
 }
 
 std::tuple<at::Tensor, at::Tensor, at::Tensor>
-AutogradXLANativeFunctions::native_batch_norm(
+XLANativeFunctions::native_batch_norm(
     const at::Tensor& input, const c10::optional<at::Tensor>& weight,
     const c10::optional<at::Tensor>& bias,
     const c10::optional<at::Tensor>& running_mean,
