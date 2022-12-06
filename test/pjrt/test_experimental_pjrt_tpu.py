@@ -1,12 +1,11 @@
 import concurrent.futures
-import itertools
 import os
+from typing import Dict
 import requests
 
 import numpy as np
 import torch
 import torch.nn as nn
-import torch_xla
 from absl.testing import absltest, parameterized
 import torch_xla.core.xla_env_vars as xenv
 import torch_xla.core.xla_model as xm
@@ -153,6 +152,34 @@ class TestExperimentalPjrtTpu(parameterized.TestCase):
     results = pjrt._run_multiprocess(ordinal_func)
     values = list(results.values())
     self.assertListEqual(sorted(values), list(range(expected_num_devices)))
+
+  @staticmethod
+  def _spawn_threads() -> Dict[int, torch.device]:
+    results = {}
+    pjrt.spawn_threads(lambda i: results.setdefault(i, xm.xla_device()))
+
+    return results
+
+  def test_spawn_threads(self):
+    accelerator_num_devices = {
+        'v3-8': 8,
+        'v4-8': 4,
+    }
+
+    if self.accelerator_type not in accelerator_num_devices:
+      raise NotImplementedError('Test not implemented for {}'.format(
+          self.accelerator_type))
+    expected_num_devices = accelerator_num_devices[self.accelerator_type]
+
+    with concurrent.futures.ProcessPoolExecutor(max_workers=1) as e:
+      results = e.submit(self._spawn_threads).result()
+
+      self.assertDictEqual(
+          results,
+          {i: torch.device(f'xla:{i}') for i in range(expected_num_devices)})
+
+
+class TestTpuCollectiveOps(parameterized.TestCase):
 
   @staticmethod
   def _broadcast(sync):

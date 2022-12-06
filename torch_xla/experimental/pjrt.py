@@ -165,8 +165,9 @@ def _merge_replica_results(
 def _run_thread_per_device(local_rank: int,
                            local_world_size: int,
                            fn: Callable[[], R],
+                           initializer_fn: Callable[[int, int], None],
                            master_port: int = 12355) -> Dict[int, R]:
-  """Runs `fn` in a separate thread on each visible device.
+  """Runs `fn` in a separate thread on each addressable device.
 
   Args:
     local_rank: rank of current process within this host
@@ -177,10 +178,7 @@ def _run_thread_per_device(local_rank: int,
     Dict of the form {thread_rank: return_value}, where return_value is the
     result of calling `fn`.
   """
-  os.environ.setdefault('LOCAL_WORLD_SIZE', str(local_world_size))
-
-  if device_type() == 'TPU':
-    tpu.configure_topology(local_rank, local_world_size)
+  initializer_fn(local_rank, local_world_size)
 
   devices = xm.get_xla_supported_devices()
   xm.set_replication(xm.xla_device(), devices)
@@ -221,6 +219,14 @@ def _run_thread_per_device(local_rank: int,
 
 
 @requires_pjrt
+def _initialize_multiprocess(local_rank: int, local_world_size: int):
+  os.environ.setdefault('LOCAL_WORLD_SIZE', str(local_world_size))
+
+  if device_type() == 'TPU':
+    tpu.configure_topology(local_rank, local_world_size)
+
+
+@requires_pjrt
 def _run_multiprocess(fn: Callable[..., R],
                       *args,
                       start_method: str = 'spawn',
@@ -252,7 +258,8 @@ def _run_multiprocess(fn: Callable[..., R],
     mp_fn = functools.partial(
         _run_thread_per_device,
         local_world_size=num_processes,
-        fn=functools.partial(fn, *args, **kwargs))
+        fn=functools.partial(fn, *args, **kwargs),
+        initializer_fn=_initialize_multiprocess)
     process_results = executor.map(mp_fn, range(num_processes))
     replica_results = list(
         itertools.chain.from_iterable(
@@ -284,6 +291,21 @@ def spawn(fn: Callable, start_method: str = 'spawn', args: Tuple = ()) -> None:
   """
   spawn_fn = _SpawnFn(fn, *args)
   _run_multiprocess(spawn_fn, start_method=start_method)
+
+
+@requires_pjrt
+def _initialize_single_process(local_rank: int, local_world_size: int):
+  os.environ.setdefault('LOCAL_WORLD_SIZE', str(local_world_size))
+
+
+def spawn_threads(fn: Callable, args: Tuple = ()) -> None:
+  """Run function in one process with one thread per addressable device."""
+  spawn_fn = _SpawnFn(fn, *args)
+  _run_thread_per_device(
+      local_rank=0,
+      local_world_size=1,
+      fn=spawn_fn,
+      initializer_fn=_initialize_single_process)
 
 
 def broadcast_master_param(model: nn.Module) -> None:
