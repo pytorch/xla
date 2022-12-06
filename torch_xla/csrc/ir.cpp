@@ -175,7 +175,6 @@ const xla::Shape& GetXlaShape(const torch::lazy::Value& value) {
 torch::lazy::hash_t XlaNode::CreateShardingHash(
     std::shared_ptr<xla::OpSharding> sharding, torch::lazy::hash_t hash_seed) {
   torch::lazy::hash_t sharding_hash = hash_seed;
-<<<<<<< HEAD
   for (const auto& tile_assignment_dimension :
        sharding->tile_assignment_dimensions()) {
     sharding_hash = torch::lazy::HashCombine(
@@ -189,19 +188,6 @@ torch::lazy::hash_t XlaNode::CreateShardingHash(
   for (const auto& last_tile_dim : sharding->last_tile_dims()) {
     sharding_hash =
         torch::lazy::HashCombine(sharding_hash, (uint32_t)last_tile_dim);
-=======
-  for (const auto& tile_assignment_dimension : sharding->tile_assignment_dimensions()) {
-    sharding_hash = torch::lazy::HashCombine(
-        sharding_hash, (uint32_t)tile_assignment_dimension);
-  }
-  for (const auto& tile_assignment_device : sharding->tile_assignment_devices()) {
-    sharding_hash = torch::lazy::HashCombine(
-        sharding_hash, (uint32_t)tile_assignment_device);
-  }
-  for (const auto& last_tile_dim : sharding->last_tile_dims()) {
-    sharding_hash = torch::lazy::HashCombine(
-        sharding_hash, (uint32_t)last_tile_dim);
->>>>>>> Add sharding hash to IR nodes
   }
   sharding_hash =
       torch::lazy::HashCombine(sharding_hash, (uint32_t)sharding->type());
@@ -210,15 +196,6 @@ torch::lazy::hash_t XlaNode::CreateShardingHash(
 
   xla::ShapeProto shape_proto = sharding->tile_shape();
   sharding_hash = torch::lazy::HashCombine(
-<<<<<<< HEAD
-      sharding_hash, (uint32_t)shape_proto.element_type());
-  for (const auto& dim : shape_proto.dimensions()) {
-    sharding_hash = torch::lazy::HashCombine(sharding_hash, (uint32_t)dim);
-  }
-  for (const auto& is_dyn_dim : shape_proto.is_dynamic_dimension()) {
-    sharding_hash =
-        torch::lazy::HashCombine(sharding_hash, (uint32_t)is_dyn_dim);
-=======
       sharding_hash, (uint32_t)shape_proto.element_type()); 
   for (const auto& dim : shape_proto.dimensions()) {
     sharding_hash = torch::lazy::HashCombine(
@@ -227,9 +204,8 @@ torch::lazy::hash_t XlaNode::CreateShardingHash(
   for (const auto& is_dyn_dim : shape_proto.is_dynamic_dimension()) {
     sharding_hash = torch::lazy::HashCombine(
         sharding_hash, (uint32_t)is_dyn_dim);
->>>>>>> Add sharding hash to IR nodes
   }
-
+  
   return sharding_hash;
 }
 
