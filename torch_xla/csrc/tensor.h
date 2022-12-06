@@ -174,7 +174,7 @@ class XLATensor : public torch::lazy::LazyTensor {
   // Applies the queue of operations in preparation for using the data.
   void ApplyPendingGraph();
 
-  Data* data() const;
+  Data* data() const final;
 
   // XLA SPMD sharding spec annoation. The XLA tensor uses this to create
   // HloSharding for replication, manual and tile shardings.
