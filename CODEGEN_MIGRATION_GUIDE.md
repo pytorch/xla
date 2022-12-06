@@ -86,18 +86,14 @@ at::Tensor XLANativeFunctions::abs(const at::Tensor & self) {
 
   torch_xla::XLATensorPtr lazy_self = torch_xla::bridge::GetXlaTensorOrCreateForWrappedNumber(self, *common_device);
 
-  auto shapes = torch::lazy::compute_shape_abs(self);
-  TORCH_INTERNAL_ASSERT(shapes.size() == 1);
-  if(torch::lazy::symbolicShapeEnabled()){
-    std::vector<torch::jit::IValue> inputs = { self };
-    char* schema_str = "aten::abs(Tensor self) -> Tensor";
-    applySymbolicShapesOnLT(schema_str, inputs, shapes);
+  torch::lazy::NodePtr node = torch::lazy::ReuseNode<Abs>(lazy_self->GetIrValue());
+  if (!node) {
+    node = torch::lazy::MakeNode<Abs>(lazy_self->GetIrValue());
+    CacheNode(node);
   }
 
-  auto node = torch::lazy::MakeNode<Abs>(lazy_self->GetIrValue(),
-                                         std::move(shapes));
   auto result = torch_xla::bridge::AtenFromXlaTensor(
-      torch_xla::XLATensor::Create(std::move(node), *common_device));
+        torch_xla::XLATensor::Create(std::move(node), *common_device));
   return result;
 };
 ```
@@ -107,26 +103,18 @@ Describing the generated code line by line:
   auto common_device = torch_xla::bridge::GetXlaDevice(self);
   TORCH_INTERNAL_ASSERT(common_device);
 ```
-- Compute and output shape and verify the size count
+- Check if we can reuse the node from previous creation. If not, create corresponding IR node and cache it. 
 ```
-auto shapes = torch::lazy::compute_shape_abs(self);
-TORCH_INTERNAL_ASSERT(shapes.size() == 1);
-```
-- Dynamic shape related logic (safe to ignore for now)
-```
-  if(torch::lazy::symbolicShapeEnabled()){
-    std::vector<torch::jit::IValue> inputs = { self };
-    char* schema_str = "aten::abs(Tensor self) -> Tensor";
-    applySymbolicShapesOnLT(schema_str, inputs, shapes);
+  torch::lazy::NodePtr node = torch::lazy::ReuseNode<Abs>(lazy_self->GetIrValue());
+  if (!node) {
+    node = torch::lazy::MakeNode<Abs>(lazy_self->GetIrValue());
+    CacheNode(node);
   }
 ```
-
-- Create corresponding IR node and wrap it in a XLATensor. Wrap the XLATensor within the at::Tensor and return it as a result. Note that this part used to be manually done in tensor_method.cpp.
+- Wrap the newly created IR node in a XLATensor. And wrap the XLATensor within the at::Tensor and return it as a result. Note that this part used to be manually done in tensor_method.cpp.
 ```
-  auto node = torch::lazy::MakeNode<Abs>(lazy_self->GetIrValue(),
-                                         std::move(shapes));
   auto result = torch_xla::bridge::AtenFromXlaTensor(
-      torch_xla::XLATensor::Create(std::move(node), *common_device));
+        torch_xla::XLATensor::Create(std::move(node), *common_device));
   return result;
 ```
 
@@ -134,8 +122,8 @@ TORCH_INTERNAL_ASSERT(shapes.size() == 1);
 ```
 class Abs : public XlaNode {
  public:
-  Abs(const torch_xla::XlaValue& self, std::vector<torch::lazy::Shape>&& shapes)
-      : XlaNode(torch::lazy::OpKind(at::aten::abs), {self}, std::move(shapes),
+  Abs(const torch_xla::XlaValue& self)
+      : XlaNode(torch::lazy::OpKind(at::aten::abs), {self},
                 [&]() { return AbsOutputShape(self); },
                 /* num_outputs */ 1, torch::lazy::MHash())
   {}
@@ -192,7 +180,7 @@ torch_xla::XlaOpVector Abs::Lower(LoweringContext* loctx) const {
 Note that this function should be directly moved from the existing lowering. Some Ops that were originally implemented in `torch_xla/csrc/ops/ops.cpp` use `GenericOp`. You will need to slightly modify their lowering implementation to fit the implementation provided above.
 
 ### 5. Cleanup
-Delete the existing op from aten_xla_type.cpp, tensor.h, tensor_methods.cpp, and ops/…. Note that sometimes you have to keep the tensor_method, because it is being used in tensor_ops like. So, before removing the op, cross reference it with `tensor_ops.cpp`.
+Delete the existing op from aten_xla_type.cpp, tensor_methods.h, tensor_methods.cpp, and ops/…. Note that sometimes you have to keep the tensor_method, because it is being used in tensor_ops like. So, before removing the op, cross reference it with `tensor_ops.cpp`.
 ```
   XLATensor s1 = XLATensor::sub(XLATensor::mul(u2, v3), XLATensor::mul(u3, v2), one);
 ```
