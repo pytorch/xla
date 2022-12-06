@@ -29,10 +29,10 @@ class Feedforward(torch.nn.Module):
       output = self.sigmoid(output)
       return output
 
-def create_dynamic_test_data(num_test_samples, num_features, device):
-  x_test = torch.ones(num_test_samples, num_features)
+def create_dynamic_test_data(num_samples, num_features, device):
+  x_test = torch.ones(num_samples, num_features)
   x_test[0][0] = 0
-  y_test = torch.ones(num_test_samples * 2)
+  y_test = torch.ones(num_samples * 2)
   y_test[0] = 0
 
   x_test_xla = x_test.to(device)
@@ -50,11 +50,12 @@ optimizer = torch.optim.SGD(model.parameters(), lr=1e-3)
 
 def train(model, loss_fn, optimizer):
   model.train()
-  x_train, y_train = make_blobs(n_samples=40, n_features=num_features, cluster_std=1.5, shuffle=True)
-  x_train = torch.Tensor(x_train)
-  y_train = torch.Tensor(y_train)
-  x_train_xla = x_train.to(xla_dev)
-  y_train_xla = y_train.to(xla_dev)
+  # x_train, y_train = make_blobs(n_samples=40, n_features=num_features, cluster_std=1.5, shuffle=True)
+  # x_train = torch.Tensor(x_train)
+  # y_train = torch.Tensor(y_train)
+  # x_train_xla = x_train.to(xla_dev)
+  # y_train_xla = y_train.to(xla_dev)
+  x_train_xla, y_train_xla = create_dynamic_test_data(num_samples=40, num_features=2, device=xla_dev)
   # Compute prediction error
   pred = model(x_train_xla)
   loss = loss_fn(pred.squeeze(), y_train_xla)
