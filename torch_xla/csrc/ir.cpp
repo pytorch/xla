@@ -204,7 +204,7 @@ torch::lazy::hash_t XlaNode::CreateShardingHash(
     sharding_hash =
         torch::lazy::HashCombine(sharding_hash, (uint32_t)is_dyn_dim);
   }
-
+  
   sharding_hash = torch::lazy::HashCombine(sharding_hash,
                                            (uint32_t)shape_proto.dimensions());
   sharding_hash = torch::lazy::HashCombine(
