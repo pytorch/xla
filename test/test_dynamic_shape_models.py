@@ -1,3 +1,4 @@
+from sklearn.datasets import make_blobs
 import sys
 import numpy as np
 import unittest
@@ -42,17 +43,43 @@ def create_dynamic_test_data(num_test_samples, num_features, device):
 
 num_features = 2
 num_test_samples = 5
-x_test, y_test = create_dynamic_test_data(num_test_samples, num_features, xla_dev)
 
 model = Feedforward(num_features, hidden_size=10).to(xla_dev)
 criterion = torch.nn.BCELoss()
+optimizer = torch.optim.SGD(model.parameters(), lr=1e-3)
 
-model.eval()
-with torch.no_grad():
-  y_pred = model(x_test)
-  before_train = criterion(y_pred.squeeze(), y_test)
-  xm.mark_step()
-  print('Finished, loss=', before_train.item())
+def train(model, loss_fn, optimizer):
+  model.train()
+  x_train, y_train = make_blobs(n_samples=40, n_features=num_features, cluster_std=1.5, shuffle=True)
+  x_train = torch.Tensor(x_train)
+  y_train = torch.Tensor(y_train)
+  x_train_xla = x_train.to(xla_dev)
+  y_train_xla = y_train.to(xla_dev)
+  # Compute prediction error
+  pred = model(x_train_xla)
+  loss = loss_fn(pred, y_train_xla)
 
+  # Backpropagation
+  optimizer.zero_grad()
+  loss.backward()
+  optimizer.step()
+  print('Finished training. Got loss:', loss.item())
+
+def test(model, loss_fn):
+  model.eval()
+  with torch.no_grad():
+    x_test, y_test = create_dynamic_test_data(num_test_samples, num_features, xla_dev)
+    y_pred = model(x_test)
+    test_loss = loss_fn(y_pred.squeeze(), y_test).item()
+    xm.mark_step()
+  print('Finished testing, loss=', test_loss)
+
+train(model, loss_fn=criterion, optimizer=optimizer)
+test(model, loss_fn=criterion)
+
+
+if __name__ == '__main__':
+  test = unittest.main()
+  sys.exit(0 if test.result.wasSuccessful() else 1)
 
 
