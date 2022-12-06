@@ -2304,7 +2304,7 @@ at::Tensor& XLANativeFunctions::normal_(
 }
 
 at::Tensor XLANativeFunctions::permute_copy(const at::Tensor& self,
-                                       at::IntArrayRef dims) {
+                                            at::IntArrayRef dims) {
   TORCH_LAZY_FN_COUNTER("xla::");
   return bridge::AtenFromXlaTensor(tensor_methods::permute(
       bridge::GetXlaTensor(self), XlaHelpers::I64List(dims)));
@@ -2712,10 +2712,10 @@ at::Tensor XLANativeFunctions::scatter_reduce(
 }
 
 at::Tensor XLANativeFunctions::select_copy(const at::Tensor& self, int64_t dim,
-                                      int64_t index) {
+                                           int64_t index) {
   TORCH_LAZY_FN_COUNTER("xla::");
   std::cout << "WONJOO: at XLANativeFunctions::select_copy1" << std::endl;
-  XLA_FN_COUNTER("xla::");
+  TORCH_LAZY_FN_COUNTER("xla::");
   return bridge::AtenFromXlaTensor(
       tensor_methods::select(bridge::GetXlaTensor(self), dim, index));
 }
@@ -2779,8 +2779,9 @@ at::Tensor XLANativeFunctions::sigmoid_backward(const at::Tensor& grad_output,
 }
 
 at::Tensor XLANativeFunctions::slice_copy(const at::Tensor& self, int64_t dim,
-                                     c10::optional<int64_t> start,
-                                     c10::optional<int64_t> end, int64_t step) {
+                                          c10::optional<int64_t> start,
+                                          c10::optional<int64_t> end,
+                                          int64_t step) {
   TORCH_LAZY_FN_COUNTER("xla::");
   int64_t start_val = start.has_value() ? start.value() : 0;
   int64_t end_val = end.has_value() ? end.value() : INT64_MAX;
@@ -2876,8 +2877,8 @@ std::tuple<at::Tensor, at::Tensor> XLANativeFunctions::sort(
 }
 
 std::vector<at::Tensor> XLANativeFunctions::split_copy(const at::Tensor& self,
-                                                  int64_t split_size,
-                                                  int64_t dim) {
+                                                       int64_t split_size,
+                                                       int64_t dim) {
   TORCH_LAZY_FN_COUNTER("xla::");
   auto xla_tensors =
       tensor_methods::split(bridge::GetXlaTensor(self), split_size, dim);
@@ -2904,7 +2905,8 @@ at::Tensor XLANativeFunctions::squeeze_copy(const at::Tensor& self) {
       tensor_methods::squeeze(bridge::GetXlaTensor(self)));
 }
 
-at::Tensor XLANativeFunctions::squeeze_copy(const at::Tensor& self, int64_t dim) {
+at::Tensor XLANativeFunctions::squeeze_copy(const at::Tensor& self,
+                                            int64_t dim) {
   TORCH_LAZY_FN_COUNTER("xla::");
   return bridge::AtenFromXlaTensor(
       tensor_methods::squeeze(bridge::GetXlaTensor(self), dim));
@@ -3073,8 +3075,8 @@ at::Tensor XLANativeFunctions::trace(const at::Tensor& self) {
       tensor_methods::trace(bridge::GetXlaTensor(self)));
 }
 
-at::Tensor XLANativeFunctions::transpose_copy(const at::Tensor& self, int64_t dim0,
-                                         int64_t dim1) {
+at::Tensor XLANativeFunctions::transpose_copy(const at::Tensor& self,
+                                              int64_t dim0, int64_t dim1) {
   TORCH_LAZY_FN_COUNTER("xla::");
   return bridge::AtenFromXlaTensor(
       tensor_methods::transpose(bridge::GetXlaTensor(self), dim0, dim1));
@@ -3094,7 +3096,7 @@ std::tuple<at::Tensor, at::Tensor> XLANativeFunctions::triangular_solve(
 }
 
 std::vector<at::Tensor> XLANativeFunctions::unbind_copy(const at::Tensor& self,
-                                                   int64_t dim) {
+                                                        int64_t dim) {
   TORCH_LAZY_FN_COUNTER("xla::");
   return bridge::AtenFromXlaTensors(
       tensor_methods::unbind(bridge::GetXlaTensor(self), dim));
@@ -3114,7 +3116,8 @@ at::Tensor& XLANativeFunctions::uniform_(
   return self;
 }
 
-at::Tensor XLANativeFunctions::unsqueeze_copy(const at::Tensor& self, int64_t dim) {
+at::Tensor XLANativeFunctions::unsqueeze_copy(const at::Tensor& self,
+                                              int64_t dim) {
   TORCH_LAZY_FN_COUNTER("xla::");
   return bridge::AtenFromXlaTensor(
       tensor_methods::unsqueeze(bridge::GetXlaTensor(self), dim));
