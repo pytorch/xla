@@ -57,7 +57,7 @@ def train(model, loss_fn, optimizer):
   y_train_xla = y_train.to(xla_dev)
   # Compute prediction error
   pred = model(x_train_xla)
-  loss = loss_fn(pred, y_train_xla)
+  loss = loss_fn(pred.squeeze(), y_train_xla)
 
   # Backpropagation
   optimizer.zero_grad()
