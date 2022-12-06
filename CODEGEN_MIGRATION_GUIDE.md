@@ -41,7 +41,7 @@ All file mentioned below lives under the `xla/torch_xla/csrc` folder, with the e
 - xla/torch_xla/csrc/generated/tensor.h
   - Defines XLATensor class and XLATensor method declarations. These declarations are usually a one to one mapping of the at::Tensor nodes we declared in XLANativeFunctions.h. XLATensor method will be removed for full_codegen ops
 - xla/torch_xla/csrc/generated/tensor_method.cpp
-  - Implements tensor methods defined in tensor.h. This file will be removed for full_codegen ops
+  - Implements tensor methods defined in tensor_methods.h. This file will be removed for full_codegen ops
 - xla/torch_xla/csrc/generated/ops/…
   - Defines IR class for “most” ops. It is possible that multiple ops share the same IR.
 
@@ -192,7 +192,7 @@ torch_xla::XlaOpVector Abs::Lower(LoweringContext* loctx) const {
 Note that this function should be directly moved from the existing lowering. Some Ops that were originally implemented in `torch_xla/csrc/ops/ops.cpp` use `GenericOp`. You will need to slightly modify their lowering implementation to fit the implementation provided above.
 
 ### 5. Cleanup
-Delete the existing op from aten_xla_type.cpp, tensor.h, tensor_methods.cpp, and ops/…. Note that sometimes you have to keep the tensor_method, because it is being used in tensor_ops like. So, before removing the op, cross reference it with `tensor_ops.cpp`.
+Delete the existing op from aten_xla_type.cpp, tensor_methods.h, tensor_methods.cpp, and ops/…. Note that sometimes you have to keep the tensor_method, because it is being used in tensor_ops like. So, before removing the op, cross reference it with `tensor_ops.cpp`.
 ```
   XLATensor s1 = XLATensor::sub(XLATensor::mul(u2, v3), XLATensor::mul(u3, v2), one);
 ```
