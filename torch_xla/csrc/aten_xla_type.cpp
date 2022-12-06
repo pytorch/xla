@@ -22,6 +22,7 @@
 #include "torch_xla/csrc/debug_util.h"
 #include "torch_xla/csrc/device.h"
 #include "torch_xla/csrc/generated/LazyIr.h"
+#include "torch_xla/csrc/generated/AutogradXLANativeFunctions.h"
 #include "torch_xla/csrc/generated/XLANativeFunctions.h"
 #include "torch_xla/csrc/helpers.h"
 #include "torch_xla/csrc/ops/as_strided.h"
@@ -1636,7 +1637,7 @@ at::Tensor XLANativeFunctions::max_pool2d_with_indices_backward(
       XlaHelpers::I64List(stride), XlaHelpers::I64List(padding), ceil_mode));
 }
 
-at::Tensor XLANativeFunctions::max_pool3d(
+at::Tensor AutogradXLANativeFunctions::max_pool3d(
     const at::Tensor& self, at::IntArrayRef kernel_size, at::IntArrayRef stride,
     at::IntArrayRef padding, at::IntArrayRef dilation, bool ceil_mode) {
   TORCH_LAZY_FN_COUNTER("xla::");
@@ -1851,7 +1852,7 @@ at::Tensor XLANativeFunctions::nan_to_num(const at::Tensor& self,
 }
 
 std::tuple<at::Tensor, at::Tensor, at::Tensor>
-XLANativeFunctions::native_batch_norm(
+AutogradXLANativeFunctions::native_batch_norm(
     const at::Tensor& input, const c10::optional<at::Tensor>& weight,
     const c10::optional<at::Tensor>& bias,
     const c10::optional<at::Tensor>& running_mean,
