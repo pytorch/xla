@@ -113,7 +113,7 @@ torch::Tensor MaxPool2dAutogradFunction::forward(
   auto mask = c10::DispatchKeySet(c10::DispatchKeySet::FULL_AFTER, c10::DispatchKey::AutogradFunctionality);
   auto ks = self_keyset & mask;
   return at::redispatch::max_pool2d(
-      ks, kernel_size, stride, padding, dilation, ceil_mode);
+      ks, self, kernel_size, stride, padding, dilation, ceil_mode);
 }
 
 torch::autograd::variable_list MaxPool2dAutogradFunction::backward(
