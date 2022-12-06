@@ -66,10 +66,10 @@ XLATensorPtr XLATensor::Create(const at::Tensor& tensor,
 }
 
 XLATensorPtr XLATensor::Create(
-    torch::lazy::BackendDataPtr xla_data,
+    torch::lazy::BackendDataPtr handle,
     c10::optional<at::ScalarType> logical_element_type) {
   XLATensorPtr xtensor = c10::make_intrusive<XLATensor>(
-      XLATensor(std::move(xla_data), logical_element_type));
+      XLATensor(std::move(handle), logical_element_type));
   XLAGraphExecutor::Get()->RegisterTensor(xtensor->data_ptr());
   return xtensor;
 }
@@ -100,9 +100,9 @@ XLATensor::XLATensor(const at::Tensor& tensor,
                      const torch::lazy::BackendDevice& device)
     : XLATensor(std::make_shared<Data>(tensor, device)) {}
 
-XLATensor::XLATensor(torch::lazy::BackendDataPtr xla_data,
+XLATensor::XLATensor(torch::lazy::BackendDataPtr handle,
                      c10::optional<at::ScalarType> logical_element_type)
-    : XLATensor(std::make_shared<Data>(xla_data, xla_data->device(),
+    : XLATensor(std::make_shared<Data>(handle, handle->device(),
                                        logical_element_type)) {}
 
 XLATensor::XLATensor(torch::lazy::Value ir_value,
@@ -151,8 +151,8 @@ xla::util::MaybeRef<xla::Shape> XLATensor::shape() const {
   if (data()->view != nullptr) {
     return data()->view->shape();
   }
-  if (data()->xla_data != nullptr) {
-    return UnwrapXlaData(data()->xla_data)->shape();
+  if (data()->handle != nullptr) {
+    return UnwrapXlaData(data()->handle)->shape();
   }
   if (data()->ir_value) {
     return GetXlaShape(data()->ir_value);
@@ -187,12 +187,12 @@ torch::lazy::BackendDataPtr XLATensor::GetXlaData() {
     ir_value = std::move(ir_value_updated.ir_value);
   }
   if (up_to_date) {
-    torch::lazy::BackendDataPtr xla_data = CurrentXlaData();
-    if (xla_data != nullptr) {
-      XLA_CHECK(xla_data->HasValue())
+    torch::lazy::BackendDataPtr handle = CurrentXlaData();
+    if (handle != nullptr) {
+      XLA_CHECK(handle->HasValue())
           << "Trying to access XLA data while an async operation is in flight: "
-          << xla_data->shape();
-      return xla_data;
+          << handle->shape();
+      return handle;
     }
   }
   if (ir_value) {
@@ -206,13 +206,13 @@ torch::lazy::BackendDataPtr XLATensor::GetXlaData() {
     ApplyPendingGraph();
   } else {
     XLA_CHECK(data()->tensor_data);
-    data()->xla_data = TensorToXlaData(*data()->tensor_data, GetDevice());
+    data()->handle = TensorToXlaData(*data()->tensor_data, GetDevice());
   }
-  return data()->xla_data;
+  return data()->handle;
 }
 
 torch::lazy::BackendDataPtr XLATensor::CurrentXlaData() const {
-  return data()->xla_data;
+  return data()->handle;
 }
 
 XLATensor::ShardingSpecPtr XLATensor::sharding_spec() const {
@@ -248,12 +248,12 @@ void XLATensor::ClearShardingSpec() {
   }
 }
 
-void XLATensor::SetXlaData(torch::lazy::BackendDataPtr xla_data) {
-  SetXlaData(std::move(xla_data), /*sync=*/true);
+void XLATensor::SetXlaData(torch::lazy::BackendDataPtr handle) {
+  SetXlaData(std::move(handle), /*sync=*/true);
 }
 
-void XLATensor::SetXlaData(torch::lazy::BackendDataPtr xla_data, bool sync) {
-  data()->xla_data = std::move(xla_data);
+void XLATensor::SetXlaData(torch::lazy::BackendDataPtr handle, bool sync) {
+  data()->handle = std::move(handle);
   // Assigning a device data should always clear the IR node, to allow graph
   // trimming. A view cannot be reset though, unless we are at a step-end
   // sync.
@@ -265,7 +265,7 @@ void XLATensor::SetXlaData(torch::lazy::BackendDataPtr xla_data, bool sync) {
 }
 
 void XLATensor::SetIrValue(torch::lazy::Value ir_value, bool inplace) {
-  data()->xla_data = nullptr;
+  data()->handle = nullptr;
   data()->tensor_data = c10::nullopt;
   if (data()->view != nullptr && inplace) {
     // If we have an active view, SetIrValue() happens, and we are
@@ -331,15 +331,15 @@ torch::lazy::Value XLATensor::GetIrValue() const {
   if (ir_value) {
     return ir_value;
   }
-  torch::lazy::BackendDataPtr xla_data = CurrentXlaData();
-  if (xla_data != nullptr) {
+  torch::lazy::BackendDataPtr handle = CurrentXlaData();
+  if (handle != nullptr) {
     // In case of tensor node, we do not clear the XLA data when we set the IR
     // node. This because we want further calls to GetIrValue() to fetch the
     // same IR node, and not create new ones (even though the lowering context
     // will still collapse them all into a single XLA parameter op). So call
     // which wants the XLA data will still find it, w/out having to fetch it
     // via a computation client from-server call.
-    AssignIrValue(CreateTensorNode(xla_data, /*read_only=*/false));
+    AssignIrValue(CreateTensorNode(handle, /*read_only=*/false));
     return data()->ir_value;
   }
   c10::optional<at::Tensor> tensor_data = CurrentTensorData();
@@ -388,7 +388,7 @@ torch::lazy::Value XLATensor::GetIrValueForTensor(
 View::IrNode XLATensor::GetViewUpdate(const std::shared_ptr<View>& view) const {
   View::IrNode ir_value_updated = view->GetViewIrNode();
   if (ir_value_updated.updated) {
-    data()->xla_data = nullptr;
+    data()->handle = nullptr;
     data()->tensor_data = c10::nullopt;
   }
   return ir_value_updated;
@@ -467,7 +467,7 @@ at::Tensor XLATensor::ToTensor(bool detached) {
   } else {
     tensor = *tensor_data;
     if (detached) {
-      if (data()->ir_value || data()->xla_data != nullptr ||
+      if (data()->ir_value || data()->handle != nullptr ||
           data()->view != nullptr) {
         // If we have other authoritive sources, just drop our reference and
         // transfer it to the caller.
@@ -495,7 +495,7 @@ void XLATensor::SetScalarType(
 void XLATensor::SetTensor(at::Tensor tensor) {
   SetTensorData(tensor);
   data()->view = nullptr;
-  data()->xla_data = nullptr;
+  data()->handle = nullptr;
   AssignIrValue(torch::lazy::Value());
 }
 
@@ -512,7 +512,7 @@ void XLATensor::UpdateFromTensor(at::Tensor tensor, bool sync) {
   } else {
     at::Tensor coyped_tensor = torch::lazy::CopyTensor(tensor, dtype());
     SetTensorData(coyped_tensor);
-    data()->xla_data = nullptr;
+    data()->handle = nullptr;
     AssignIrValue(torch::lazy::Value());
     if (data()->view != nullptr) {
       torch::lazy::Value ir_value = GetIrValueForTensor(coyped_tensor, device);
@@ -685,9 +685,9 @@ std::string XLASymNodeImpl::str() {
 }
 
 int64_t XLATensor::GetOpaqueHandle() const {
-  torch::lazy::BackendDataPtr xla_data = CurrentXlaData();
-  if (xla_data != nullptr) {
-    return UnwrapXlaData(xla_data)->GetOpaqueHandle();
+  torch::lazy::BackendDataPtr handle = CurrentXlaData();
+  if (handle != nullptr) {
+    return UnwrapXlaData(handle)->GetOpaqueHandle();
   }
   const auto backend_data =
       torch::lazy::getBackend()->GetComputationDataFromNode(

@@ -57,10 +57,10 @@ class XLATensor : public torch::lazy::LazyTensor {
   // held. The XLA tensor is nothing more than a shared pointer to a Data
   // object.
   struct Data {
-    Data(torch::lazy::BackendDataPtr xla_data,
+    Data(torch::lazy::BackendDataPtr handle,
          const torch::lazy::BackendDevice& device,
          c10::optional<at::ScalarType> logical_element_type)
-        : xla_data(std::move(xla_data)),
+        : handle(std::move(handle)),
           logical_element_type(logical_element_type),
           device(device),
           unique_id(GetNextTensorId()) {}
@@ -84,7 +84,7 @@ class XLATensor : public torch::lazy::LazyTensor {
 
     ~Data();
 
-    torch::lazy::BackendDataPtr xla_data;
+    torch::lazy::BackendDataPtr handle;
     torch::lazy::Value ir_value;
     std::shared_ptr<View> view;
     // TODO: remove this in favor of torch::lazy::Shape within ir_value.
@@ -98,7 +98,7 @@ class XLATensor : public torch::lazy::LazyTensor {
   static XLATensorPtr Create(const at::Tensor& tensor,
                              const torch::lazy::BackendDevice& device);
   static XLATensorPtr Create(
-      torch::lazy::BackendDataPtr xla_data,
+      torch::lazy::BackendDataPtr handle,
       c10::optional<at::ScalarType> logical_element_type = c10::nullopt);
 
   static XLATensorPtr Create(
@@ -166,7 +166,7 @@ class XLATensor : public torch::lazy::LazyTensor {
   // in case the tensor has a graph defining its current value,
   torch::lazy::BackendDataPtr CurrentXlaData() const;
 
-  void SetXlaData(torch::lazy::BackendDataPtr xla_data);
+  void SetXlaData(torch::lazy::BackendDataPtr handle);
 
   // Retrieves the current IR XlaNode, or nullptr in case no active IR XlaNode
   // is available.
@@ -219,7 +219,7 @@ class XLATensor : public torch::lazy::LazyTensor {
 
  private:
   XLATensor(const at::Tensor& tensor, const torch::lazy::BackendDevice& device);
-  XLATensor(torch::lazy::BackendDataPtr xla_data,
+  XLATensor(torch::lazy::BackendDataPtr handle,
             c10::optional<at::ScalarType> logical_element_type = c10::nullopt);
   XLATensor(torch::lazy::Value ir_value,
             const torch::lazy::BackendDevice& device,
@@ -240,7 +240,7 @@ class XLATensor : public torch::lazy::LazyTensor {
 
   std::shared_ptr<Data> data_ptr() const { return data_; }
 
-  void SetXlaData(torch::lazy::BackendDataPtr xla_data, bool sync);
+  void SetXlaData(torch::lazy::BackendDataPtr handle, bool sync);
 
   void AssignIrValue(torch::lazy::Value ir_value) const;
 
