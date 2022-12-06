@@ -1456,13 +1456,9 @@ void InitXlaModuleBindings(py::module m) {
                                  bool replicated = false, bool manual = false) {
     xla::OpSharding sharding =
         ShardingUtil::CreateOpSharding(tile_assignment, replicated, manual);
+    auto new_sharding_spec =
+        std::make_shared<XLATensor::ShardingSpec>(sharding);
     XLATensorPtr xtensor = bridge::GetXlaTensor(input);
-
-    // Existing annotation must be cleared explicitly. We do not clear and
-    // overwrite the existing sharding on user's behalf, since it could lead to
-    // confusion/error.
-    XLA_CHECK(xtensor->sharding_spec() == nullptr)
-        << "Existing annotation must be cleared first.";
 
     at::Tensor cpu_tensor;
     if (xla::sys_util::GetEnvBool("XLA_USE_SPMD", false) &&
@@ -1472,6 +1468,19 @@ void InitXlaModuleBindings(py::module m) {
       // the sharded data transfer.
       cpu_tensor = xtensor->CurrentTensorData().value();
     } else {
+      // A new input tensor is not expected to be sharded. But sometimes, the
+      // same input is used sharding annotation, in which case we can skip if
+      // it's the same sharding; however, if it's the same input with a
+      // different sharding then we block & ask the user to clear the existing
+      // sharding first.
+      auto current_sharding_spec = xtensor->sharding_spec();
+      if (current_sharding_spec) {
+        XLA_CHECK(ShardingUtil::EqualShardingSpecs(*new_sharding_spec,
+                                                   *current_sharding_spec))
+            << "Existing annotation must be cleared first.";
+        return;
+      }
+
       // If the at::Tensor data is not present, we need to re-download the
       // tensor from the physical device to CPU. In that case, the value
       // must be present on the backend device.
@@ -1481,14 +1490,12 @@ void InitXlaModuleBindings(py::module m) {
       std::vector<XLATensorPtr> xla_tensors{xtensor};
       cpu_tensor = XLAGraphExecutor::Get()->GetTensors(&xla_tensors)[0];
     }
-
-    auto sharding_spec = std::make_shared<XLATensor::ShardingSpec>(sharding);
     auto xla_data = CreateTensorsData(
         std::vector<at::Tensor>{cpu_tensor},
-        std::vector<XLATensor::ShardingSpecPtr>{sharding_spec},
+        std::vector<XLATensor::ShardingSpecPtr>{new_sharding_spec},
         std::vector<std::string>{GetVirtualDevice().toString()})[0];
     xtensor->SetXlaData(xla_data);
-    xtensor->SetShardingSpec(*sharding_spec);
+    xtensor->SetShardingSpec(*new_sharding_spec);
   });
   m.def("_xla_clear_sharding", [](const at::Tensor& input) {
     XLATensorPtr xtensor = bridge::GetXlaTensor(input);

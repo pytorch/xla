@@ -18,6 +18,10 @@ class ShardingUtil {
   // building the computation; otherwise, this is a no-op.
   static bool SetHloSharding(LoweringContext* lowering_ctx);
 
+  // Returns true if two sharding specs are the same.
+  static bool EqualShardingSpecs(const XLATensor::ShardingSpec& a,
+                                 const XLATensor::ShardingSpec& b);
+
   // Create an xla::OpSharding from `tile_assignment` (ndarray).
   static xla::OpSharding CreateOpSharding(const py::list& tile_assignment,
                                           bool replicated = false,
