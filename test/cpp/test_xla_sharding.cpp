@@ -117,6 +117,21 @@ TEST_F(XLAShardingTest, ShardTensor) {
   EXPECT_EQ(shards[7].sizes(), c10::ArrayRef<long>({10, 1, 4, 4, 2}));
 }
 
+TEST_F(XLAShardingTest, EqualShardingSpecs) {
+  XLATensor::ShardingSpec tiled_2d(xla::HloSharding::Tile({
+                                                              {0, 1, 2, 3},
+                                                              {4, 5, 6, 7},
+                                                          })
+                                       .ToProto());
+  XLATensor::ShardingSpec tiled_3d(
+      xla::HloSharding::Tile({{{0, 1}, {2, 3}, {4, 5}, {6, 7}}}).ToProto());
+  XLATensor::ShardingSpec replicated(xla::HloSharding::Replicate().ToProto());
+  EXPECT_TRUE(ShardingUtil::EqualShardingSpecs(tiled_2d, tiled_2d));
+  EXPECT_TRUE(!ShardingUtil::EqualShardingSpecs(tiled_2d, tiled_3d));
+  EXPECT_TRUE(ShardingUtil::EqualShardingSpecs(replicated, replicated));
+  EXPECT_TRUE(!ShardingUtil::EqualShardingSpecs(tiled_2d, replicated));
+}
+
 TEST_F(XLAShardingTest, CreateTensorsData) {
   if (xla::sys_util::GetEnvString(xla::env::kEnvPjRtDevice, "") == "") {
     GTEST_SKIP() << "`PJRT_DEVICE` is not set.";
