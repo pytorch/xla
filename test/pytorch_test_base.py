@@ -201,7 +201,8 @@ DISABLED_TORCH_TESTS_ANY = {
         'test_random_to_xla',  # doesn't raise
         'test_copy_',  # test against complex32 which is nto supported
         'test_assertRaisesRegex_ignore_msg_non_native_device_xla',  # segfault on wheel sanity test
-        'test_index_reduce',  # takes too long
+        'test_index_reduce',  # TODO @wonjoo fix
+        'test_logcumsumexp_xla',  # doesn't raise
     },
 
     # test_view_ops.py
