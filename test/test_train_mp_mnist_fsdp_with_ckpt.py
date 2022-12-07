@@ -1,8 +1,13 @@
 import args_parse
+from functools import partial
 
 MODEL_OPTS = {
     '--flatten_parameters': {
         'action': 'store_true',
+    },
+    '--auto_wrap_policy': {
+        'choices': ['none', 'size_based', 'type_based'],
+        'default': 'none',
     },
     '--use_nested_fsdp': {
         'action': 'store_true',
@@ -64,6 +69,8 @@ from torch_xla.distributed.fsdp import (
     consolidate_sharded_model_checkpoints,
     checkpoint_module,
 )
+from torch_xla.distributed.fsdp.wrap import (size_based_auto_wrap_policy,
+                                             transformer_auto_wrap_policy)
 
 
 class MNIST(nn.Module):
@@ -153,19 +160,47 @@ def train_mnist(flags, **kwargs):
 
   device = xm.xla_device()
   model = MNIST()
-  # Wrap the model with FSDP
+  # Automatic wrapping sub-modules with inner FSDP
+  auto_wrap_policy = None
+  auto_wrapper_callable = None
+  if flags.auto_wrap_policy != "none":
+    if flags.auto_wrap_policy == "size_based":
+      # auto-wrap all sub-modules with more than 1000 parameters as an example
+      # (in practice, one should set a larger min_num_params such as 1e8)
+      auto_wrap_policy = partial(
+          size_based_auto_wrap_policy, min_num_params=1e3)
+    elif flags.auto_wrap_policy == "type_based":
+      # auto-wrap all nn.Conv2d and nn.Linear sub-modules as an example
+      # (transformer_auto_wrap_policy wraps all sub-modules in transformer_layer_cls)
+      auto_wrap_policy = partial(
+          transformer_auto_wrap_policy,
+          transformer_layer_cls={nn.Conv2d, nn.Linear})
+    else:
+      raise Exception(f"Invalid auto-wrap policy: {flags.auto_wrap_policy}")
+    if flags.use_gradient_checkpointing:
+      # Apply gradient checkpointing to auto-wrapped sub-modules if specified
+      auto_wrapper_callable = lambda m, *args, **kwargs: FSDP(
+          checkpoint_module(m), *args, **kwargs)
+
   fsdp_wrap = lambda m: FSDP(
       m,
       compute_dtype=getattr(torch, flags.compute_dtype),
       fp32_reduce_scatter=flags.fp32_reduce_scatter,
       flatten_parameters=flags.flatten_parameters,
       shard_param_on_dim_0=flags.shard_param_on_dim_0,
-      pin_layout_in_collective_ops=flags.pin_layout_in_collective_ops)
-  # Apply gradient checkpointing to sub-modules if specified
-  grad_ckpt_wrap = checkpoint_module if flags.use_gradient_checkpointing else (
-      lambda x: x)
+      pin_layout_in_collective_ops=flags.pin_layout_in_collective_ops,
+      auto_wrap_policy=auto_wrap_policy,
+      auto_wrapper_callable=auto_wrapper_callable)
+  # Manually wrapping sub-modules with inner FSDP (if not using auto-wrap)
+  # (in this case, the sub-modules should be wrapped before the base model)
   if flags.use_nested_fsdp:
+    assert flags.auto_wrap_policy == "none", \
+        "--use_nested_fsdp is for manual nested wrapping should only be used" \
+        " without auto-wrapping"
     # Wrap a few sub-modules with inner FSDP (to implement ZeRO-3)
+    # Apply gradient checkpointing to nested-wrapped sub-modules if specified
+    grad_ckpt_wrap = checkpoint_module if flags.use_gradient_checkpointing else (
+        lambda x: x)
     # Note: wrap with `checkpoint_module` first BEFORE wrapping with FSDP
     model.conv1 = fsdp_wrap(grad_ckpt_wrap(model.conv1))
     model.conv2 = fsdp_wrap(grad_ckpt_wrap(model.conv2))
