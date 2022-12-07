@@ -1055,8 +1055,7 @@ xla::XlaOp BuildCdistForward(xla::XlaOp x1, xla::XlaOp x2, xla::XlaOp p,
   xla::XlaOp x2_bcast =
       xla::BroadcastInDim(BuildUnsqueeze(x2, rank - 2), bcast_shape,
                           torch::lazy::Iota<int64_t>(rank + 1));
-  xla::XlaOp init_value =
-      xla::Zero(x1.builder(), x1_shape.element_type());
+  xla::XlaOp init_value = xla::Zero(x1.builder(), x1_shape.element_type());
 
   if (use_hamming) {
     // handle p == 0
