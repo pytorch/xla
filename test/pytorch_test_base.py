@@ -436,6 +436,14 @@ DISABLED_TORCH_TESTS_GPU_ONLY = {
     },
 }
 
+DISABLED_TORCH_TESTS_CPU_ONLY = {
+    # xla/test/test_dynamic_shape_models.py
+    'TestDynamicShapeModels': {
+        # For failure, see https://github.com/pytorch/xla/pull/4256.
+        'test_forward_pass_dynamic_input_correctness',
+        'test_forward_pass_dynamic_input_compile_once',
+    },
+}
 
 class MatchSet(object):
 
@@ -474,7 +482,8 @@ def union_of_disabled_tests(sets):
   return union
 
 
-DISABLED_TORCH_TESTS_CPU = DISABLED_TORCH_TESTS_ANY
+DISABLED_TORCH_TESTS_CPU = union_of_disabled_tests( 
+    [DISABLED_TORCH_TESTS_ANY, DISABLED_TORCH_TESTS_CPU_ONLY])
 DISABLED_TORCH_TESTS_GPU = union_of_disabled_tests(
     [DISABLED_TORCH_TESTS_ANY, DISABLED_TORCH_TESTS_GPU_ONLY])
 DISABLED_TORCH_TESTS_TPU = union_of_disabled_tests(
