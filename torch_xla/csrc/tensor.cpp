@@ -600,11 +600,6 @@ void XLATensor::ApplyPendingGraph() {
   }
 }
 
-int64_t XLATensor::GetNextTensorId() {
-  static std::atomic<int64_t>* id_generator = new std::atomic<int64_t>(1);
-  return id_generator->fetch_add(1);
-}
-
 bool XLATensor::UseEagerDebugMode() {
   static const bool use_eager_debug_mode =
       xla::sys_util::GetEnvBool("XLA_USE_EAGER_DEBUG_MODE", false);

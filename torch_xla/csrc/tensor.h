@@ -242,8 +242,6 @@ class XLATensor : public torch::lazy::LazyTensor {
   torch::lazy::Value GetIrValueForTensor(
       const at::Tensor& tensor, const torch::lazy::BackendDevice& device) const;
 
-  static int64_t GetNextTensorId();
-
   static bool UseEagerDebugMode();
 
   bool ShouldSyncIrNode();
