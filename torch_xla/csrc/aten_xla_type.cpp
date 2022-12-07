@@ -3094,8 +3094,9 @@ at::Tensor XLANativeFunctions::_cdist_forward(
   // compute_mode is ignored because the use_mm_for_euclid_dist lowering
   // (compute_mode is 0 or 1) is achieved through composite ops from
   // native pytorch.
+  TORCH_LAZY_FN_COUNTER("xla::");
   XLA_CHECK(p >= 0) << "p value for the p-norm distance must be >= 0";
-  return bridge::AtenFromXlaTensor(tensor_methods::_cdist_forward(
+  return bridge::AtenFromXlaTensor(tensor_methods::cdist_forward(
       bridge::GetXlaTensor(x1), bridge::GetXlaTensor(x2), p));
 }
 

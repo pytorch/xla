@@ -51,7 +51,8 @@ XlaOpVector CdistForward::Lower(LoweringContext* loctx) const {
 
 std::string CdistForward::ToString() const {
   std::stringstream ss;
-  ss << XlaNode::ToString();
+  ss << XlaNode::ToString() << ", use_hamming=" << use_hamming_
+     << ", use_chebyshev=" << use_chebyshev_;
   return ss.str();
 }
 

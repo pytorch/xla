@@ -11637,6 +11637,7 @@ TEST_F(AtenXlaTensorTest, TestCdistForward) {
     });
   }
   ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::_cdist_forward", cpp_test::GetIgnoredCounters());
 }
 
 }  // namespace cpp_test

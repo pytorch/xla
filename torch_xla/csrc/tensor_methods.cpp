@@ -856,7 +856,7 @@ XLATensorPtr cat(absl::Span<const XLATensorPtr> tensors, int64_t dim,
                                 dtype);
 }
 
-XLATensorPtr _cdist_forward(const XLATensorPtr& x1, const XLATensorPtr& x2,
+XLATensorPtr cdist_forward(const XLATensorPtr& x1, const XLATensorPtr& x2,
                             double p) {
   torch::lazy::Value exponent_node =
       XLATensor::GetIrValueForScalar(p, x1->GetDevice());

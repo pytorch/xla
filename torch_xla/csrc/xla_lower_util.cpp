@@ -1035,7 +1035,7 @@ xla::XlaOp BuildCdistForward(xla::XlaOp x1, xla::XlaOp x2, xla::XlaOp p,
   XLA_CHECK(x1_shape.rank() == x2_shape.rank() && x1_shape.rank() >= 2)
       << "x1 and x2 must have the same rank with >= 2 dimensions";
 
-  int rank = x1_shape.rank();
+  int64_t rank = x1_shape.rank();
 
   XLA_CHECK(x1_shape.dimensions(rank - 1) == x2_shape.dimensions(rank - 1))
       << "The last dimension of x1 and x2 must match";
@@ -1055,12 +1055,13 @@ xla::XlaOp BuildCdistForward(xla::XlaOp x1, xla::XlaOp x2, xla::XlaOp p,
   xla::XlaOp x2_bcast =
       xla::BroadcastInDim(BuildUnsqueeze(x2, rank - 2), bcast_shape,
                           torch::lazy::Iota<int64_t>(rank + 1));
+  xla::XlaOp init_value =
+      xla::Zero(x1.builder(), x1_shape.element_type());
 
   if (use_hamming) {
     // handle p == 0
     xla::XlaOp diff = xla::ConvertElementType(xla::Ne(x1_bcast, x2_bcast),
                                               x1_shape.element_type());
-    xla::XlaOp init_value = xla::Zero(x1.builder(), x1_shape.element_type());
     xla::XlaOp reduced = xla::Reduce(
         diff, init_value,
         XlaHelpers::CreateAddComputation(x1_shape.element_type()), {rank});
@@ -1068,7 +1069,6 @@ xla::XlaOp BuildCdistForward(xla::XlaOp x1, xla::XlaOp x2, xla::XlaOp p,
   } else if (use_chebyshev) {
     // handle p == +inf
     xla::XlaOp diff = xla::Abs(x1_bcast - x2_bcast);
-    xla::XlaOp init_value = xla::Zero(x1.builder(), x1_shape.element_type());
     xla::XlaOp reduced = xla::Reduce(
         diff, init_value,
         XlaHelpers::CreateMaxComputation(x1_shape.element_type()), {rank});
@@ -1076,7 +1076,6 @@ xla::XlaOp BuildCdistForward(xla::XlaOp x1, xla::XlaOp x2, xla::XlaOp p,
   } else {
     // handle general case
     xla::XlaOp diff = xla::Pow(xla::Abs(x1_bcast - x2_bcast), p);
-    xla::XlaOp init_value = xla::Zero(x1.builder(), x1_shape.element_type());
     xla::XlaOp reduced = xla::Reduce(
         diff, init_value,
         XlaHelpers::CreateAddComputation(x1_shape.element_type()), {rank});

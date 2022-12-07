@@ -231,7 +231,7 @@ std::vector<XLATensorPtr> broadcast_tensors(
 XLATensorPtr cat(absl::Span<const XLATensorPtr> tensors, int64_t dim,
                  at::ScalarType dtype);
 
-XLATensorPtr _cdist_forward(const XLATensorPtr& x1, const XLATensorPtr& x2,
+XLATensorPtr cdist_forward(const XLATensorPtr& x1, const XLATensorPtr& x2,
                             double p);
 
 XLATensorPtr celu(const XLATensorPtr& input, const at::Scalar& alpha);
