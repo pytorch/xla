@@ -113,7 +113,7 @@ class XLAGraphExecutor : public torch::lazy::LazyGraphExecutor {
   // devices which should be participating into the replicated computation.
   void SyncTensorsGraph(std::vector<XLATensorPtr>* tensors,
                         absl::Span<const std::string> devices, bool wait,
-                        bool sync_xla_data);
+                        bool sync_ltc_data);
 
   // Makes sure that any outstanding IR operation accumulated over live tensors,
   // gets turned into device data. If wait is true, the sync operation will be
@@ -164,10 +164,10 @@ class XLAGraphExecutor : public torch::lazy::LazyGraphExecutor {
   struct SyncTensorsConfig {
     // Whether we want to force XLA data on the target tensors (hence trimming
     // the IR graph above them).
-    bool force_xla_data = true;
+    bool force_ltc_data = true;
     // Whether when setting the XLA data, the other properties of the tensor
     // state should be reset.
-    bool sync_xla_data = true;
+    bool sync_ltc_data = true;
   };
 
   struct SyncTensorCollection {
