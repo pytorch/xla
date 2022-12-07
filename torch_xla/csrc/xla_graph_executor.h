@@ -161,16 +161,6 @@ class XLAGraphExecutor : public torch::lazy::LazyGraphExecutor {
                        const torch::lazy::BackendDevice& device);
 
  private:
-  struct SyncTensorCollection {
-    SyncTensorCollection() : hash(0) {}
-
-    SyncTensorsConfig config;
-    std::vector<size_t> indices;
-    torch::lazy::hash_t hash;
-    std::vector<torch::lazy::ExceptionCleanup> unlocker;
-    torch::lazy::BackendDevice device;
-  };
-
   struct PostOrderData {
     std::vector<const torch::lazy::Node*> post_order;
     torch::lazy::Util::EmissionMap emission_map;
