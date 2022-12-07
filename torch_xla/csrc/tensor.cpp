@@ -228,17 +228,23 @@ XLATensor::ShardingSpecPtr XLATensor::sharding_spec() const {
   return nullptr;
 }
 
-void XLATensor::SetShardingSpec(const ShardingSpec& sharding_spec) {
-  XLA_CHECK(GetIrValue().node != nullptr) << "Tyring to access a null cursor";
-  dynamic_cast<XlaNode*>(GetIrValue().node.get())
-      ->SetSharding(sharding_spec.sharding);
+void XLATensor::SetShardingSpec(const ShardingSpec& sharding) {
+  // Existing annotation must be cleared explicitly. We do not clear and
+  // overwrite the existing sharding on the user's behalf. This is a no-op if
+  // the same sharding already applied.
+  if (sharding_spec() == nullptr ||
+      !ShardingUtil::EqualShardingSpecs(sharding, *sharding_spec())) {
+    TORCH_LAZY_COUNTER("SetShardingSpec", 1);
+    XLA_CHECK(GetIrValue().node != nullptr) << "Tyring to access a null cursor";
+    dynamic_cast<XlaNode*>(GetIrValue().node.get())
+        ->SetSharding(sharding.sharding);
+  }
 }
 void XLATensor::ClearShardingSpec() {
   torch::lazy::Value ir_value = CurrentIrValue();
   if (ir_value) {
-    if (ir_value.node != nullptr) {
-      dynamic_cast<XlaNode*>(ir_value.node.get())->ClearSharding();
-    }
+    // This should be a no-op if there is no sharding.
+    dynamic_cast<XlaNode*>(ir_value.node.get())->ClearSharding();
   }
 }
 
@@ -292,10 +298,9 @@ void XLATensor::SetInPlaceIrValue(torch::lazy::Value ir_value) {
 void XLATensor::AssignIrValue(torch::lazy::Value ir_value) const {
   ShardingSpecPtr sharding = sharding_spec();
   if (sharding != nullptr) {
-    // Sharded xla_data is accompanied by sharding annotation.
-    // Use unsynced ir_value or xla_data to hold the annotation.
-    // TODO(yeounoh): This does not propagate sharding to views.
     if (!ir_value) {
+      // Create a tensor node if applicable, re-use the current IR otherwise.
+      // TODO(yeounoh) this has some performance implications for convolution.
       ir_value = GetIrValue();
     }
     dynamic_cast<XlaNode*>(ir_value.node.get())
