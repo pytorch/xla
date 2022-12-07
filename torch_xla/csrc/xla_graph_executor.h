@@ -161,13 +161,6 @@ class XLAGraphExecutor : public torch::lazy::LazyGraphExecutor {
                        const torch::lazy::BackendDevice& device);
 
  private:
-  struct PostOrderData {
-    std::vector<const torch::lazy::Node*> post_order;
-    torch::lazy::Util::EmissionMap emission_map;
-    std::vector<torch::lazy::BackendDataPtr> parameters_data;
-    std::vector<size_t> parameter_sequence;
-  };
-
   struct CompilationResult {
     torch::lazy::BackendDevice device;
     size_t emitted_nodes = 0;
