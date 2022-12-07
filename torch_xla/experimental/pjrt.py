@@ -103,9 +103,9 @@ def global_device_count() -> int:
 @requires_pjrt
 def world_size() -> int:
   """Returns the total number of configured logical devices."""
-  if not torch_xla._XLAC._xla_get_replication_devices_count():
+  if torch_xla._XLAC._xla_get_replication_devices_count() == 0:
     return 1
-  return len(torch_xla._XLAC._xla_get_all_devices())
+  return global_device_count()
 
 
 @requires_pjrt
@@ -170,25 +170,6 @@ def _merge_replica_results(
   return dict(replica_results)
 
 
-# TODO(wcromar): remove this when the TPU master IP becomes predictable
-def _discover_tpu_master_worker_ip(device: torch.device):
-  torch_xla._XLAC._xla_set_default_device(device)
-
-  return tpu.discover_master_worker_ip()
-
-
-def _maybe_init_distributed_torch(executor, devices, master_port):
-  if os.getenv('PJRT_INIT_TORCH_DISTRIBUTED', '0') == '1':
-    if device_type() == 'TPU':
-      # HACK: need to call with each device since it relies on an XLA collective
-      master_ip = next(executor.map(_discover_tpu_master_worker_ip, devices))
-      init_method = f'tcp://{master_ip}:{master_port}'
-    else:
-      init_method = None
-
-    init_pjrt_process_group(init_method=init_method)
-
-
 @requires_pjrt
 def _run_thread_per_device(local_rank: int,
                            local_world_size: int,
@@ -218,9 +199,23 @@ def _run_thread_per_device(local_rank: int,
 
     return fn()
 
+  # TODO(wcromar): remove this when the TPU master IP becomes predictable
+  def _discover_tpu_master_worker_ip(device: torch.device):
+    torch_xla._XLAC._xla_set_default_device(device)
+
+    return tpu.discover_master_worker_ip()
+
   with concurrent.futures.ThreadPoolExecutor(
       max_workers=num_threads) as executor:
-    _maybe_init_distributed_torch(executor, devices, master_port)
+    if os.getenv('PJRT_INIT_TORCH_DISTRIBUTED', '0') == '1':
+      if device_type() == 'TPU':
+        # HACK: need to call with each device since it relies on an XLA collective
+        master_ip = next(executor.map(_discover_tpu_master_worker_ip, devices))
+        init_method = f'tcp://{master_ip}:{master_port}'
+      else:
+        init_method = None
+
+      init_pjrt_process_group(init_method=init_method)
 
     device_ordinals = [
         torch_xla._XLAC._xla_get_device_ordinal(d) for d in devices
@@ -257,7 +252,7 @@ def _run_singleprocess(fn: Callable[..., R],
     os.environ.setdefault('LOCAL_WORLD_SIZE', '1')
 
     if device_type() == 'TPU':
-      tpu.configure_topology(0, 1)
+      tpu.configure_one_chip_topology()
 
     devices = xm.get_xla_supported_devices()[:1]
     xm.set_replication(xm.xla_device(), [])
@@ -268,10 +263,8 @@ def _run_singleprocess(fn: Callable[..., R],
 
       return fn()
 
-    with concurrent.futures.ThreadPoolExecutor(max_workers=1) as executor:
-      _maybe_init_distributed_torch(executor, devices, master_port)
-
-      return executor.submit(_thread_fn, xm.xla_device()).result()
+    init_pjrt_process_group()
+    return executor.submit(_thread_fn, xm.xla_device()).result()
 
 
 @requires_pjrt
