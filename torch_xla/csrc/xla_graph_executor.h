@@ -28,7 +28,7 @@
 
 namespace torch_xla {
 
-class XLAGraphExecutor {
+class XLAGraphExecutor : public torch::lazy::LazyGraphExecutor {
  public:
   static XLAGraphExecutor* Get();
 
