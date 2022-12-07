@@ -10,7 +10,7 @@ ARG tf_cuda_compute_capabilities="7.0,7.5,8.0"
 
 ARG tpuvm=1
 ARG build_cpp_tests=0
-ARG package_version=1.14
+ARG package_version=1.14.0
 
 ARG bazel_jobs=
 
@@ -41,7 +41,7 @@ RUN update-alternatives --install /usr/bin/clang++ clang++ $(which clang++-8) 70
 ENV CC=clang-8
 ENV CXX=clang++-8
 
-RUN pip install mkl mkl-include setuptools typing_extensions cmake
+RUN pip install mkl mkl-include setuptools typing_extensions cmake requests
 
 RUN git clone --recursive --depth=1 https://github.com/pytorch/pytorch.git
 WORKDIR /pytorch
@@ -69,7 +69,7 @@ FROM builder AS artifacts
 COPY tf_patches/ tf_patches/
 COPY third_party/ third_party/
 
-RUN patch -d third_party/tensorflow -N -p1 < /pytorch/xla/tf_patches/patch.diff
+RUN for p in tf_patches/*.diff; do patch -d third_party/tensorflow -N -p1 < $p; done
 
 COPY build_torch_xla_libs.sh .
 
