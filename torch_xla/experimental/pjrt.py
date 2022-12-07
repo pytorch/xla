@@ -263,8 +263,10 @@ def _run_singleprocess(fn: Callable[..., R],
 
       return fn()
 
-    init_pjrt_process_group()
-    return executor.submit(_thread_fn, xm.xla_device()).result()
+    with concurrent.futures.ThreadPoolExecutor(max_workers=1) as executor:
+      init_pjrt_process_group()
+
+      return executor.submit(_thread_fn, xm.xla_device()).result()
 
 
 @requires_pjrt
