@@ -120,14 +120,15 @@ XLATensor::XLATensor(std::shared_ptr<View> view,
                                        logical_element_type)) {}
 
 XLATensor::XLATensor(std::shared_ptr<Data> data)
-    : data_(std::move(data)),
+    : torch::lazy::LazyTensor(data),
+      data_(std::move(data)),
       storage_(c10::Storage(
           {}, 0,
           c10::DataPtr(nullptr, backendDeviceToAtenDevice(data_->device)))) {}
 
-XLATensor::Data* XLATensor::data() const {
-  XLA_CHECK(data_ != nullptr) << "Trying to access a null cursor";
-  return data_.get();
+auto XLATensor::data() const -> const std::shared_ptr<Data>& {
+  TORCH_CHECK(data_ != nullptr, "Trying to access a null cursor");
+  return data_;
 }
 
 int64_t XLATensor::size(int64_t dim) const {
@@ -163,8 +164,6 @@ xla::util::MaybeRef<xla::Shape> XLATensor::shape() const {
       MakeXlaPrimitiveType(data()->tensor_data->type().scalarType(), &device),
       XlaHelpers::I64List(data()->tensor_data->sizes()));
 }
-
-int64_t XLATensor::GetUniqueId() const { return data()->unique_id; }
 
 std::ptrdiff_t XLATensor::GetViewAliasId() const {
   return data()->view != nullptr
@@ -204,10 +203,6 @@ torch::lazy::BackendDataPtr XLATensor::GetXlaData() {
     XLA_CHECK(data()->tensor_data);
     data()->handle = TensorToXlaData(*data()->tensor_data, GetDevice());
   }
-  return data()->handle;
-}
-
-torch::lazy::BackendDataPtr XLATensor::CurrentDataHandle() const {
   return data()->handle;
 }
 
