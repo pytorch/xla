@@ -152,8 +152,6 @@ torch::lazy::hash_t XlaNode::GetOpHash(torch::lazy::OpKind op,
 
 void XlaNode::SetSharding(const xla::OpSharding& sharding) {
   output_sharding_ = std::make_shared<xla::OpSharding>(sharding);
-  // TODO(steventk) Once we move this into the cosntructor, we can use the
-  // hash seed. For now, we'll use node_hash_ as a seed.
   sharding_hash_ = CreateShardingHash(output_sharding_, node_hash_);
 }
 

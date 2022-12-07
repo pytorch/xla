@@ -126,9 +126,14 @@ class XlaShardingTest(unittest.TestCase):
     # xt1 and xt2
     xs.mark_sharding(xt1, self._get_mesh((1, self.n_devices)), (0, 1))
 
-    # Adding 0 to the tensor force graph compilation, which would catch IR hashi
+    # Adding 0 to the tensor force graph compilation, which would catch IR hash
     # collisions
     self.assertTrue(torch.allclose(xt1 + 0, xt2 + 0))
+
+    # Check that hashes are different for the sharded and non-sharded tensors
+    hash1 = torch_xla._XLAC._get_graph_hash([xt1])
+    hash2 = torch_xla._XLAC._get_graph_hash([xt2])
+    self.assertNotEqual(hash1, hash2)
 
 
 class VirtualDeviceTest(XlaShardingTest):
