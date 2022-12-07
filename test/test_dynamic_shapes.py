@@ -20,10 +20,9 @@ class TestDynamicShapes(unittest.TestCase):
     t2 = torch.nonzero(t1)
     t5 = torch.ones(1, device=dev)
     t6 = t5.expand(t2.size(0))
-    print(torch_xla._XLAC._get_xla_tensors_text([t6]))
+    self.assertIn('<=10', torch_xla._XLAC._get_xla_tensors_text([t6]))
     t6_cpu = t6.cpu()
     self.assertEqual(t6_cpu.shape[0], 2)
-    print(torch_xla._XLAC._get_xla_tensors_text([t6]))
 
   def test_simple_expand_on_2d_tensor(self):
     size1 = 5
@@ -83,6 +82,7 @@ class TestDynamicShapes(unittest.TestCase):
     # Exercise SizeAdd::Lower.
     t4 = t3.expand(dyn_size)
     self.assertEqual(t4.size(0), 3)
+    self.assertIn()
     print(torch_xla._XLAC._get_xla_tensors_text([t4]))
 
 
