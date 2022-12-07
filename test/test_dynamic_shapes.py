@@ -81,8 +81,8 @@ class TestDynamicShapes(unittest.TestCase):
     t3 = torch.ones(1, device=dev)
     # Exercise SizeAdd::Lower.
     t4 = t3.expand(dyn_size)
+    print(torch_xla._XLAC._get_xla_tensors_text([t4]))
     self.assertEqual(t4.size(0), 3)
-    self.assertIn()
     print(torch_xla._XLAC._get_xla_tensors_text([t4]))
 
 
