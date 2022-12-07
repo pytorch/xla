@@ -445,6 +445,7 @@ DISABLED_TORCH_TESTS_CPU_ONLY = {
     },
 }
 
+
 class MatchSet(object):
 
   def __init__(self):
@@ -482,7 +483,7 @@ def union_of_disabled_tests(sets):
   return union
 
 
-DISABLED_TORCH_TESTS_CPU = union_of_disabled_tests( 
+DISABLED_TORCH_TESTS_CPU = union_of_disabled_tests(
     [DISABLED_TORCH_TESTS_ANY, DISABLED_TORCH_TESTS_CPU_ONLY])
 DISABLED_TORCH_TESTS_GPU = union_of_disabled_tests(
     [DISABLED_TORCH_TESTS_ANY, DISABLED_TORCH_TESTS_GPU_ONLY])
