@@ -151,7 +151,7 @@ class DeviceLockerArena {
   std::map<torch::lazy::BackendDevice, std::shared_ptr<DeviceLocker>> lockers_;
 };
 
-xla::util::ExceptionCleanup LockDevice(
+torch::lazy::ExceptionCleanup LockDevice(
     const torch::lazy::BackendDevice& device) {
   TF_VLOG(4) << "Waiting on device barrier for device " << device << " ...";
   std::shared_ptr<DeviceLocker> locker;
@@ -161,18 +161,18 @@ xla::util::ExceptionCleanup LockDevice(
     locker->Lock();
   }
   TF_VLOG(4) << "Waiting on device barrier for device " << device << " done!";
-  return xla::util::ExceptionCleanup(
+  return torch::lazy::ExceptionCleanup(
       [locker =
-           std::move(locker)](xla::util::ExceptionCleanup::StatusType status) {
+           std::move(locker)](torch::lazy::ExceptionCleanup::StatusType status) {
         locker->Unlock(std::move(status));
       });
 }
 
 // Use a set to impose an order on the device locking sequence (ABBA
 // prevention).
-std::vector<xla::util::ExceptionCleanup> LockDevices(
+std::vector<torch::lazy::ExceptionCleanup> LockDevices(
     const std::set<torch::lazy::BackendDevice>& devices) {
-  std::vector<xla::util::ExceptionCleanup> unlocker;
+  std::vector<torch::lazy::ExceptionCleanup> unlocker;
   unlocker.reserve(devices.size());
   for (auto& device : devices) {
     unlocker.emplace_back(LockDevice(device));
@@ -434,9 +434,9 @@ void XLAGraphExecutor::Async::Wait() {
   mwait.Wait();
   // Accessing other Async members is safe only after MultiWait::Wait()
   // completes.
-  xla::util::ExceptionCleanup::StatusType status;
+  torch::lazy::ExceptionCleanup::StatusType status;
   for (auto& cleanup : unlocker) {
-    const xla::util::ExceptionCleanup::StatusType& cleanup_status =
+    const torch::lazy::ExceptionCleanup::StatusType& cleanup_status =
         cleanup.GetStatus();
     if (cleanup_status != nullptr) {
       if (status == nullptr) {
@@ -645,7 +645,7 @@ void XLAGraphExecutor::WaitDeviceOps(absl::Span<const std::string> devices) {
       wait_devices.insert(ParseDeviceString(device_str));
     }
   }
-  // The LockDevices() API returns a vector of xla::util::ExceptionCleanup
+  // The LockDevices() API returns a vector of torch::lazy::ExceptionCleanup
   // object, which is going to be freed immediately, turning this operation
   // into a lock barrier.
   LockDevices(wait_devices);
@@ -803,7 +803,7 @@ XLAGraphExecutor::ExecuteComputationWithBarrier(
     torch::lazy::ComputationPtr computation,
     c10::ArrayRef<torch::lazy::BackendDataPtr> arguments,
     const torch::lazy::BackendDevice& device) {
-  std::vector<xla::util::ExceptionCleanup> unlocker;
+  std::vector<torch::lazy::ExceptionCleanup> unlocker;
   unlocker = LockDevices({device});
   return torch::lazy::getBackend()->ExecuteComputation(computation, arguments,
                                                        device);
@@ -905,9 +905,8 @@ XLAGraphExecutor::OpByOpAsync XLAGraphExecutor::SyncTensorsGraphOpByOp(
         }
       }
     } catch (...) {
-      std::exception_ptr exptr = std::current_exception();
       for (auto& unlocker : async->coll.unlocker) {
-        unlocker.SetStatus(exptr);
+        unlocker.SetStatus(std::current_exception());
       }
       throw;
     }
@@ -1113,9 +1112,8 @@ XLAGraphExecutor::ScheduleSyncTensorsGraph(
       // even in case the caller does not wait, and that is accomplished by
       // setting the unlockers status. In that case the exception will be
       // surfaced when the user tries to acquire the device locks the next time.
-      std::exception_ptr exptr = std::current_exception();
       for (auto& unlocker : async->unlocker) {
-        unlocker.SetStatus(exptr);
+        unlocker.SetStatus(std::current_exception());
       }
       throw;
     }

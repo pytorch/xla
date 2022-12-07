@@ -167,7 +167,7 @@ class XLAGraphExecutor : public torch::lazy::LazyGraphExecutor {
     SyncTensorsConfig config;
     std::vector<size_t> indices;
     torch::lazy::hash_t hash;
-    std::vector<xla::util::ExceptionCleanup> unlocker;
+    std::vector<torch::lazy::ExceptionCleanup> unlocker;
     torch::lazy::BackendDevice device;
   };
 
@@ -196,7 +196,7 @@ class XLAGraphExecutor : public torch::lazy::LazyGraphExecutor {
 
     xla::util::MultiWait mwait;
     std::vector<size_t> indices;
-    std::vector<xla::util::ExceptionCleanup> unlocker;
+    std::vector<torch::lazy::ExceptionCleanup> unlocker;
     std::vector<torch::lazy::BackendDataPtr> parameters_data;
     std::string device;
     ComputationCache::TypePtr cached_computation;
