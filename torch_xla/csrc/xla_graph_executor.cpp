@@ -162,8 +162,8 @@ torch::lazy::ExceptionCleanup LockDevice(
   }
   TF_VLOG(4) << "Waiting on device barrier for device " << device << " done!";
   return torch::lazy::ExceptionCleanup(
-      [locker =
-           std::move(locker)](torch::lazy::ExceptionCleanup::StatusType status) {
+      [locker = std::move(locker)](
+          torch::lazy::ExceptionCleanup::StatusType status) {
         locker->Unlock(std::move(status));
       });
 }
