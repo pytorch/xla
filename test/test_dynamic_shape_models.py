@@ -48,6 +48,7 @@ model = Feedforward(num_features, hidden_size=10).to(xla_dev)
 criterion = torch.nn.BCELoss()
 optimizer = torch.optim.SGD(model.parameters(), lr=1e-3)
 
+# ref: https://colab.sandbox.google.com/github/pytorch/xla/blob/master/contrib/colab/resnet18-training.ipynb
 def train(model, loss_fn, optimizer):
   model.train()
   # x_train, y_train = make_blobs(n_samples=40, n_features=num_features, cluster_std=1.5, shuffle=True)
@@ -56,14 +57,15 @@ def train(model, loss_fn, optimizer):
   # x_train_xla = x_train.to(xla_dev)
   # y_train_xla = y_train.to(xla_dev)
   x_train_xla, y_train_xla = create_dynamic_test_data(num_samples=40, num_features=2, device=xla_dev)
+  optimizer.zero_grad()
+
   # Compute prediction error
   pred = model(x_train_xla)
   loss = loss_fn(pred.squeeze(), y_train_xla)
 
   # Backpropagation
-  optimizer.zero_grad()
   loss.backward()
-  optimizer.step()
+  xm.optimizer_step(optimizer)
   print('Finished training. Got loss:', loss.item())
 
 def test(model, loss_fn):
