@@ -161,15 +161,6 @@ class XLAGraphExecutor : public torch::lazy::LazyGraphExecutor {
                        const torch::lazy::BackendDevice& device);
 
  private:
-  struct SyncTensorsConfig {
-    // Whether we want to force XLA data on the target tensors (hence trimming
-    // the IR graph above them).
-    bool force_ltc_data = true;
-    // Whether when setting the XLA data, the other properties of the tensor
-    // state should be reset.
-    bool sync_ltc_data = true;
-  };
-
   struct SyncTensorCollection {
     SyncTensorCollection() : hash(0) {}
 
