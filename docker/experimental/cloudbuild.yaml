@@ -12,7 +12,10 @@ steps:
   args:
   - -cx
   - |
+    # Create shell variables from arguments for parameter expansion
     _BUILD_ARGS=${_BUILD_ARGS}
+    _PLATFORM=${_PLATFORM}
+
     args=(${_BUILD_ARGS//,/ })
     flags=(
       --cache=${_CACHE}
@@ -21,7 +24,7 @@ steps:
       --build-arg=bazel_jobs=${_BAZEL_JOBS}
       --build-arg=python_version=${_PYTHON_VERSION}
       # TODO: use current version in setup.py
-      --build-arg=package_version="1.14.0.dev$(date +%Y%m%d)"
+      --build-arg=package_version="1.14.0.dev$(date +%Y%m%d)${_PLATFORM:++$_PLATFORM}"
       ${args[@]/#/--build-arg=})
     echo ${flags[@]} | tee /docker/flags.txt
   volumes:
@@ -100,11 +103,21 @@ steps:
   volumes:
   - name: docker
     path: /docker
+- id: 'tag-image'
+  waitFor: ['release-image']
+  name: 'google/cloud-sdk'
+  entrypoint: bash
+  args:
+  - -c
+  - |
+    gcloud artifacts docker tags add ${_ARTIFACTS_IMAGE_URL} ${_ARTIFACTS_IMAGE_URL}-$(date +%Y%m%d)
+    gcloud artifacts docker tags add ${_RELEASE_IMAGE_URL} ${_RELEASE_IMAGE_URL}-$(date +%Y%m%d)
 substitutions:
   _ARTIFACT_REGISTRY_REGION: us
-  _RELEASE_VERSION: 'nightly'  # or rX.Y
+  _RELEASE_VERSION: 'nightly'  # or rX.Y.Z
   _PYTHON_VERSION: '3.8'
-  _IMAGE_TAG: ${_RELEASE_VERSION}_${_PYTHON_VERSION}
+  _PLATFORM: ''
+  _IMAGE_TAG: ${_RELEASE_VERSION}-${_PYTHON_VERSION}-${_PLATFORM}
   _IMAGE_REPOSITORY: ${_ARTIFACT_REGISTRY_REGION}-docker.pkg.dev/${PROJECT_ID}/torch-xla-images
   _RELEASE_IMAGE_URL: ${_IMAGE_REPOSITORY}/torch-xla:${_IMAGE_TAG}
   _ARTIFACTS_IMAGE_URL: ${_IMAGE_REPOSITORY}/artifacts:${_IMAGE_TAG}
