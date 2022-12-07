@@ -61,7 +61,7 @@ XLATensorPtr XLATensor::Create(const at::Tensor& tensor,
   XLA_CHECK_EQ(tensor.device().type(), at::kCPU);
   XLATensorPtr xtensor =
       c10::make_intrusive<XLATensor>(XLATensor(tensor, device));
-  XLAGraphExecutor::Get()->RegisterTensor(xtensor->data_ptr());
+  XLAGraphExecutor::Get()->RegisterTensor(xtensor->data());
   return xtensor;
 }
 
@@ -70,7 +70,7 @@ XLATensorPtr XLATensor::Create(
     c10::optional<at::ScalarType> logical_element_type) {
   XLATensorPtr xtensor = c10::make_intrusive<XLATensor>(
       XLATensor(std::move(handle), logical_element_type));
-  XLAGraphExecutor::Get()->RegisterTensor(xtensor->data_ptr());
+  XLAGraphExecutor::Get()->RegisterTensor(xtensor->data());
   return xtensor;
 }
 
@@ -79,7 +79,7 @@ XLATensorPtr XLATensor::Create(
     c10::optional<at::ScalarType> logical_element_type) {
   XLATensorPtr xtensor = c10::make_intrusive<XLATensor>(
       XLATensor(std::move(ir_value), device, logical_element_type));
-  XLAGraphExecutor::Get()->RegisterTensor(xtensor->data_ptr());
+  XLAGraphExecutor::Get()->RegisterTensor(xtensor->data());
   if (UseEagerDebugMode()) {
     std::vector<XLATensorPtr> xtensors({xtensor});
     XLAGraphExecutor::Get()->ApplyEagerSync(xtensors);
@@ -92,7 +92,7 @@ XLATensorPtr XLATensor::Create(
     c10::optional<at::ScalarType> logical_element_type) {
   XLATensorPtr xtensor = c10::make_intrusive<XLATensor>(
       XLATensor(std::move(view), device, logical_element_type));
-  XLAGraphExecutor::Get()->RegisterTensor(xtensor->data_ptr());
+  XLAGraphExecutor::Get()->RegisterTensor(xtensor->data());
   return xtensor;
 }
 

@@ -214,8 +214,6 @@ class XLATensor : public torch::lazy::LazyTensor {
       std::shared_ptr<View> view, const torch::lazy::BackendDevice& device,
       c10::optional<at::ScalarType> logical_element_type = c10::nullopt);
 
-  std::shared_ptr<Data> data_ptr() const { return data_; }
-
   void SetXlaData(torch::lazy::BackendDataPtr handle, bool sync);
 
   void AssignIrValue(torch::lazy::Value ir_value) const;
@@ -250,6 +248,11 @@ class XLATensor : public torch::lazy::LazyTensor {
 
   bool ShouldSyncIrNode();
 
+  // We store two shared_ptr of Data in a XLATensor.
+  // One in the LazyTensor class as the LazyTensor::Data type
+  // for base class method to access. One here as the derived
+  // XLATensor::Data type such that it's easier to access XLA
+  // extra fields.
   std::shared_ptr<Data> data_;
   // Temporarily used to suport Tensor.is_alias_of().
   // This is a fake storage that doesn't store anything.
