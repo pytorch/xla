@@ -19,6 +19,18 @@ class XLATensorImpl : public torch::lazy::LTCTensorImpl {
 
   void set_tensor(XLATensorPtr xla_tensor);
 
+  void force_refresh_sizes() { generation_ = 0; }
+
+  c10::intrusive_ptr<TensorImpl> shallow_copy_and_detach(
+      const c10::VariableVersion& version_counter,
+      bool allow_tensor_metadata_change) const override;
+
+  c10::intrusive_ptr<TensorImpl> shallow_copy_and_detach(
+      c10::VariableVersion&& version_counter,
+      bool allow_tensor_metadata_change) const override;
+
+  void shallow_copy_from(const c10::intrusive_ptr<TensorImpl>& impl) override;
+
   at::IntArrayRef sizes_custom() const override;
   c10::SymIntArrayRef sym_sizes_custom() const override;
   c10::SymInt sym_numel_custom() const override;
@@ -27,6 +39,12 @@ class XLATensorImpl : public torch::lazy::LTCTensorImpl {
   int64_t dim_custom() const override;
 
   int64_t numel_custom() const override;
+
+  bool is_contiguous_custom(at::MemoryFormat memory_format) const override;
+
+  const at::Storage& storage() const override;
+
+  bool has_storage() const override;
 
   static void AtenInitialize();
 

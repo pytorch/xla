@@ -71,6 +71,42 @@ void XLATensorImpl::set_tensor(XLATensorPtr xla_tensor) {
   generation_ = 0;
 }
 
+c10::intrusive_ptr<c10::TensorImpl> XLATensorImpl::shallow_copy_and_detach(
+    const c10::VariableVersion& version_counter,
+    bool allow_tensor_metadata_change) const {
+  auto impl = c10::make_intrusive<XLATensorImpl>(tensor_);
+  copy_tensor_metadata(
+      /*src_impl=*/this,
+      /*dest_impl=*/impl.get(),
+      /*version_counter=*/version_counter,
+      /*allow_tensor_metadata_change=*/allow_tensor_metadata_change);
+  return impl;
+}
+
+c10::intrusive_ptr<c10::TensorImpl> XLATensorImpl::shallow_copy_and_detach(
+    c10::VariableVersion&& version_counter,
+    bool allow_tensor_metadata_change) const {
+  auto impl = c10::make_intrusive<XLATensorImpl>(tensor_);
+  copy_tensor_metadata(
+      /*src_impl=*/this,
+      /*dest_impl=*/impl.get(),
+      /*version_counter=*/std::move(version_counter),
+      /*allow_tensor_metadata_change=*/allow_tensor_metadata_change);
+  return impl;
+}
+
+void XLATensorImpl::shallow_copy_from(
+    const c10::intrusive_ptr<TensorImpl>& impl) {
+  XLATensorImpl* xla_impl = dynamic_cast<XLATensorImpl*>(impl.get());
+  copy_tensor_metadata(
+      /*src_impl=*/xla_impl,
+      /*dest_impl=*/this,
+      /*version_counter=*/version_counter(),
+      /*allow_tensor_metadata_change=*/allow_tensor_metadata_change());
+  xla_impl->tensor_->ShallowCopyTo(tensor_);
+  generation_ = 0;
+}
+
 at::IntArrayRef XLATensorImpl::sizes_custom() const {
   const_cast<XLATensorImpl*>(this)->SetupSizeProperties();
   return sizes_default();
@@ -104,6 +140,12 @@ int64_t XLATensorImpl::dim_custom() const {
 int64_t XLATensorImpl::numel_custom() const {
   const_cast<XLATensorImpl*>(this)->SetupSizeProperties();
   return numel_default();
+}
+
+bool XLATensorImpl::is_contiguous_custom(at::MemoryFormat memory_format) const {
+  // Only check that the storage is already contiguous.
+  XLA_CHECK(is_contiguous_) << "Non-contiguous storage for XLA tensor";
+  return true;
 }
 
 void XLATensorImpl::SetupSizeProperties() {
@@ -156,5 +198,9 @@ caffe2::TypeMeta XLATensorImpl::GetTypeMeta(const XLATensor& tensor) {
 void XLATensorImpl::AtenInitialize() {
   // ATEN specific initialization calls placed below.
 }
+
+const at::Storage& XLATensorImpl::storage() const { return tensor_->Storage(); }
+
+bool XLATensorImpl::has_storage() const { return tensor_->Storage(); }
 
 }  // namespace torch_xla
