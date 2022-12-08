@@ -54,14 +54,6 @@
 namespace torch_xla {
 namespace {
 
-struct TlsData {
-  void Reset() { trim_counter = 0; }
-
-  size_t trim_counter = 0;
-};
-
-thread_local TlsData g_tls_data;
-
 // Locking:
 // We perform two kinds of operations of tensors, synchronous and asynchronous.
 // The ApplyPendingGraph() are synchronous, as we need the device data result
@@ -624,7 +616,7 @@ void XLAGraphExecutor::MarkStep(const torch::lazy::BackendDevice& device) {
   XLA_COUNTER("MarkStep", 1);
   DeviceContextArena::Get()->MarkStep(device);
   torch::lazy::ScopePusher::ResetScopes();
-  g_tls_data.Reset();
+  ResetTrimCounter();
 }
 
 void XLAGraphExecutor::WaitDeviceOps(absl::Span<const std::string> devices) {
@@ -700,8 +692,6 @@ void XLAGraphExecutor::ClearPendingIrs(
     }
   }
 }
-
-size_t XLAGraphExecutor::IncTrimCounter() { return ++g_tls_data.trim_counter; }
 
 XLAGraphExecutor::SyncTensorCollection XLAGraphExecutor::CollectSyncTensors(
     const std::vector<XLATensorPtr>& tensors, const SyncTensorsConfig& config) {
