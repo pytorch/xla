@@ -3,7 +3,7 @@
 PyTorch/XLA enables PyTorch users to utilize the XLA compiler which supports accelerators including TPU, GPU, CPU and … This doc will go over the basic steps to run PyTorch/XLA on a nvidia gpu instance
 
 ## Create a GPU instance
-Pytorch/XLA currently publish prebuilt docker images and wheels with cuda11.2 and python 3.7/3.8. We recommend users to create a GPU instance with corresponding config. For a full list of docker images and wheels, please refer to this doc.
+Pytorch/XLA currently publish prebuilt docker images and wheels with cuda11.2 and python 3.7/3.8. We recommend users to create a GPU instance with corresponding config. For a full list of docker images and wheels, please refer to [this doc](https://github.com/pytorch/xla/tree/jackcao/gpu_doc#-available-images-and-wheels).
 
 ## Environment Setup
 ### Docker
