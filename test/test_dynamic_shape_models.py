@@ -1,4 +1,11 @@
+import argparse
 import sys
+
+parser = argparse.ArgumentParser(add_help=False)
+parser.add_argument('--verbosity', type=int, default=2)
+FLAGS, leftovers = parser.parse_known_args()
+sys.argv = [sys.argv[0]] + leftovers
+
 import numpy as np
 import unittest
 import torch
@@ -73,7 +80,7 @@ class TestDynamicShapeModels(unittest.TestCase):
         y_pred = model(x_test)
         criterion(y_pred.squeeze(), y_test)
         xm.mark_step()
-    np.testing.assert_equal(met.metric_data('CompileTime')[0], 1)
+    np.testing.assert_equal(met.metric_data('CompileTime')[0], 1) # TODO: change to 3 later before merge.
 
   def create_dynamic_test_data(self, num_test_samples, num_features, device):
     x_test = torch.ones(num_test_samples, num_features)
@@ -89,5 +96,5 @@ class TestDynamicShapeModels(unittest.TestCase):
 
 
 if __name__ == '__main__':
-  test = unittest.main()
+  test = unittest.main(verbosity=FLAGS.verbosity, exit=False)
   sys.exit(0 if test.result.wasSuccessful() else 1)
