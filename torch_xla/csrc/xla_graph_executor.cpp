@@ -684,16 +684,16 @@ void XLAGraphExecutor::ClearPendingIrs(
   std::unordered_set<int64_t> tensor_ids;
   for (size_t i = 0; i < tensors.size(); ++i) {
     if (tensor_ids.insert(tensors[i]->GetUniqueId()).second &&
-        tensors[i]->CurrentXlaData() == nullptr) {
+        tensors[i]->CurrentDataHandle() == nullptr) {
       torch::lazy::Value ir_value = tensors[i]->CurrentIrValue();
       if (ir_value) {
         xla::Shape shape = MakeShapeWithDeviceLayout(
             tensors[i]->shape(), static_cast<XlaDeviceType>(device.type()));
-        torch::lazy::BackendDataPtr xla_data =
+        torch::lazy::BackendDataPtr handle =
             WrapXlaData(xla::ComputationClient::Get()->CreateDataPlaceholder(
                 device.toString(), std::move(shape)));
         tensors[i]->AssignIrValue(torch::lazy::Value());
-        tensors[i]->data()->xla_data = xla_data;
+        tensors[i]->data()->handle = handle;
         tensors[i]->data()->view = nullptr;
         tensors[i]->data()->tensor_data = c10::nullopt;
       }
@@ -731,7 +731,7 @@ XLAGraphExecutor::SyncTensorCollection XLAGraphExecutor::CollectSyncTensors(
     if (tensor_ids.insert(tensors[i]->GetUniqueId()).second &&
         // A tensor's xla_data might not be up to date if there is a view
         // associated with it. Make sure to sync those tensors here too.
-        (tensors[i]->CurrentXlaData() == nullptr ||
+        (tensors[i]->CurrentDataHandle() == nullptr ||
          (tensors[i]->data()->view != nullptr &&
           !tensors[i]->data()->view->IsUpToDate()))) {
       torch::lazy::Value ir_value = tensors[i]->CurrentIrValue();
@@ -772,7 +772,7 @@ XLAGraphExecutor::SyncTensorCollection XLAGraphExecutor::CollectSyncTensors(
       // device, but such data is still valid so we leave it live on the XLA
       // tensor (so that a following ToTensor() does not need to fetch it from
       // device).
-      tensors[at_tensor_index[i]]->data()->xla_data = std::move(handles[i]);
+      tensors[at_tensor_index[i]]->data()->handle = std::move(handles[i]);
     }
   }
   TF_VLOG(4) << "Tensors graph hash " << torch::lazy::HashToString(coll.hash)
@@ -930,9 +930,9 @@ std::vector<torch::lazy::BackendDataPtr> XLAGraphExecutor::GatherTensorsXlaData(
       result_tensors_data.push_back(tensors_data[indices_index]);
       ++indices_index;
     } else if (!tensors[i]->CurrentTensorData()) {
-      torch::lazy::BackendDataPtr xla_data = tensors[i]->CurrentXlaData();
-      XLA_CHECK(xla_data != nullptr);
-      result_tensors_data.push_back(std::move(xla_data));
+      torch::lazy::BackendDataPtr handle = tensors[i]->CurrentDataHandle();
+      XLA_CHECK(handle != nullptr);
+      result_tensors_data.push_back(std::move(handle));
     }
   }
   return result_tensors_data;
@@ -969,17 +969,17 @@ std::vector<torch::lazy::BackendDataPtr> XLAGraphExecutor::SetTensorData(
     // structure, and moved into the async variable), any other operation
     // trying to access the tensor's device data will have to wait until the
     // asynchronous operation completes.
-    torch::lazy::BackendDataPtr xla_data = tensor->CurrentXlaData();
-    if (xla_data == nullptr && config.force_ltc_data) {
-      xla_data = tensor_data_vec[i];
+    torch::lazy::BackendDataPtr handle = tensor->CurrentDataHandle();
+    if (handle == nullptr && config.force_ltc_data) {
+      handle = tensor_data_vec[i];
       // Note: We are not using SetXlaData method here since that method
       // resets the ir_value. We have already done the resetting as part
       // of ExtractIRAndPrepareXlaData_ to overlap with previous execution.
-      tensor->data()->xla_data = xla_data;
+      tensor->data()->handle = handle;
       tensor->data()->view = nullptr;
       tensor->data()->tensor_data = c10::nullopt;
     }
-    tensors_data.emplace_back(std::move(xla_data));
+    tensors_data.emplace_back(std::move(handle));
   }
   return tensors_data;
 }
@@ -1000,11 +1000,11 @@ void XLAGraphExecutor::ExtractIRAndPrepareXlaData_(
     const torch::lazy::BackendDevice& tensor_device = tensor->GetDevice();
     xla::Shape shape = MakeShapeWithDeviceLayout(
         tensor->shape(), static_cast<XlaDeviceType>(tensor_device.type()));
-    torch::lazy::BackendDataPtr xla_data =
+    torch::lazy::BackendDataPtr handle =
         WrapXlaData(xla::ComputationClient::Get()->CreateDataPlaceholder(
             tensor_device.toString(), std::move(shape)));
-    tensor_data_vec.push_back(xla_data);
-    if (tensor->CurrentXlaData() == nullptr && config.force_ltc_data) {
+    tensor_data_vec.push_back(handle);
+    if (tensor->CurrentDataHandle() == nullptr && config.force_ltc_data) {
       tensor->AssignIrValue(torch::lazy::Value());
     }
   }
