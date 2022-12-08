@@ -96,4 +96,8 @@ test
 .. autofunction:: print_training_update
 .. autofunction:: print_test_update
 
+.. mdinclude:: ../../TROUBLESHOOTING.md
+.. mdinclude:: ../pjrt.md
+.. mdinclude:: ../ddp.md
+.. mdinclude:: ../fsdp.md
 .. mdinclude:: ../../OP_LOWERING_GUIDE.md

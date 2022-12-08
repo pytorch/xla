@@ -342,10 +342,6 @@
   <span class="k">return</span> <span class="kc">False</span>
 
 
-<span class="c1"># TODO: Some usages of this function are to caculate the number of hosts (a TPU concept),</span>
-<span class="c1"># and some are to caculate the number of processes within a world (which can span multiple hosts).</span>
-<span class="c1"># The latter should really be what this function is supposed to do. It&#39;s so confusing. We</span>
-<span class="c1"># should improve it.</span>
 <span class="k">def</span> <span class="nf">_get_world_size</span><span class="p">():</span>
   <span class="c1"># We cannot use the xla_model.py API here, as the features used in that module</span>
   <span class="c1"># needs the setup provided by this one.</span>
@@ -459,12 +455,10 @@
   <span class="k">return</span> <span class="n">index</span> <span class="k">if</span> <span class="n">xenv</span><span class="o">.</span><span class="n">HOST_ORDINAL</span> <span class="ow">in</span> <span class="n">os</span><span class="o">.</span><span class="n">environ</span> <span class="k">else</span> <span class="n">gindex</span>
 
 
-<span class="c1"># TODO: Consolidate this with _setup_gpu_worker.</span>
-<span class="k">def</span> <span class="nf">_setup_gpu_workers</span><span class="p">(</span><span class="n">num_devices</span><span class="p">):</span>
+<span class="k">def</span> <span class="nf">_setup_workers</span><span class="p">(</span><span class="n">num_devices</span><span class="p">):</span>
   <span class="n">world_size</span> <span class="o">=</span> <span class="n">_get_world_size</span><span class="p">()</span>
   <span class="n">workers_env</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">xenv</span><span class="o">.</span><span class="n">WORKERS</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
   <span class="n">workers</span> <span class="o">=</span> <span class="p">[]</span>
-  <span class="c1"># TODO: Is this path actually being used? This seems to support multi-host GPUs (is this a thing at all?).</span>
   <span class="k">if</span> <span class="n">workers_env</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
     <span class="n">wcfg</span> <span class="o">=</span> <span class="n">_parse_workers_config</span><span class="p">(</span><span class="n">workers_env</span><span class="p">)</span>
     <span class="k">assert</span> <span class="n">world_size</span> <span class="o">==</span> <span class="nb">len</span><span class="p">(</span>
@@ -525,7 +519,7 @@
         <span class="n">socket</span><span class="o">.</span><span class="n">getfqdn</span><span class="p">(),</span>
         <span class="n">xu</span><span class="o">.</span><span class="n">get_free_tcp_ports</span><span class="p">()[</span><span class="mi">0</span><span class="p">])</span>
   <span class="k">if</span> <span class="n">dev_kind</span> <span class="o">==</span> <span class="s1">&#39;GPU&#39;</span><span class="p">:</span>
-    <span class="n">_setup_gpu_workers</span><span class="p">(</span><span class="n">num_devices</span><span class="p">)</span>
+    <span class="n">_setup_workers</span><span class="p">(</span><span class="n">num_devices</span><span class="p">)</span>
     <span class="n">_create_gpu_devices</span><span class="p">(</span><span class="n">num_devices</span><span class="p">)</span>
   <span class="k">elif</span> <span class="n">dev_kind</span> <span class="o">==</span> <span class="s1">&#39;CPU&#39;</span><span class="p">:</span>
     <span class="n">_pre_fork_cpu_setup</span><span class="p">(</span><span class="n">num_devices</span><span class="p">)</span>
@@ -693,7 +687,7 @@
 <span class="sd">  Returns:</span>
 <span class="sd">    The same object returned by the `torch.multiprocessing.spawn` API. If</span>
 <span class="sd">    `nprocs` is 1 the `fn` function will be called directly, and the API will</span>
-<span class="sd">    return None.</span>
+<span class="sd">    not return.</span>
 <span class="sd">  &quot;&quot;&quot;</span>
   <span class="k">if</span> <span class="n">pjrt</span><span class="o">.</span><span class="n">using_pjrt</span><span class="p">():</span>
     <span class="k">return</span> <span class="n">pjrt</span><span class="o">.</span><span class="n">spawn</span><span class="p">(</span><span class="n">fn</span><span class="p">,</span> <span class="n">args</span><span class="p">)</span>
@@ -703,26 +697,16 @@
     <span class="k">return</span> <span class="n">_run_direct</span><span class="p">(</span><span class="n">fn</span><span class="p">,</span> <span class="n">args</span><span class="p">,</span> <span class="n">nprocs</span><span class="p">,</span> <span class="n">join</span><span class="p">,</span> <span class="n">daemon</span><span class="p">,</span> <span class="n">start_method</span><span class="p">)</span>
 
   <span class="n">pf_cfg</span> <span class="o">=</span> <span class="n">_pre_fork_setup</span><span class="p">(</span><span class="n">nprocs</span><span class="p">)</span>
-  <span class="n">result</span> <span class="o">=</span> <span class="kc">None</span>
   <span class="k">if</span> <span class="n">pf_cfg</span><span class="o">.</span><span class="n">num_devices</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
     <span class="n">_start_fn</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">pf_cfg</span><span class="p">,</span> <span class="n">fn</span><span class="p">,</span> <span class="n">args</span><span class="p">)</span>
   <span class="k">else</span><span class="p">:</span>
-    <span class="n">result</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">multiprocessing</span><span class="o">.</span><span class="n">start_processes</span><span class="p">(</span>
+    <span class="k">return</span> <span class="n">torch</span><span class="o">.</span><span class="n">multiprocessing</span><span class="o">.</span><span class="n">start_processes</span><span class="p">(</span>
         <span class="n">_mp_start_fn</span><span class="p">,</span>
         <span class="n">args</span><span class="o">=</span><span class="p">(</span><span class="n">pf_cfg</span><span class="p">,</span> <span class="n">fn</span><span class="p">,</span> <span class="n">args</span><span class="p">),</span>
         <span class="n">nprocs</span><span class="o">=</span><span class="n">pf_cfg</span><span class="o">.</span><span class="n">num_devices</span><span class="p">,</span>
         <span class="n">join</span><span class="o">=</span><span class="n">join</span><span class="p">,</span>
         <span class="n">daemon</span><span class="o">=</span><span class="n">daemon</span><span class="p">,</span>
-        <span class="n">start_method</span><span class="o">=</span><span class="n">start_method</span><span class="p">)</span>
-
-  <span class="c1"># For GPU, xenv.WORKERS are set in the launcher and then get carried to the children.</span>
-  <span class="c1"># However, if the launcher is reused to do another multi-process experiment, _setup_gpu_workers</span>
-  <span class="c1"># would mistake the xenv.WORKERS as configured to enable multi-host experiments. Each worker then</span>
-  <span class="c1"># represents a host. Therefore, reset it after launching all children.</span>
-  <span class="k">if</span> <span class="n">pf_cfg</span><span class="o">.</span><span class="n">dev_kind</span> <span class="o">==</span> <span class="s1">&#39;GPU&#39;</span><span class="p">:</span>
-    <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="n">xenv</span><span class="o">.</span><span class="n">WORKERS</span><span class="p">)</span>
-
-  <span class="k">return</span> <span class="n">result</span></div>
+        <span class="n">start_method</span><span class="o">=</span><span class="n">start_method</span><span class="p">)</span></div>
 
 
 <div class="viewcode-block" id="MpModelWrapper"><a class="viewcode-back" href="../../../index.html#torch_xla.distributed.xla_multiprocessing.MpModelWrapper">[docs]</a><span class="k">class</span> <span class="nc">MpModelWrapper</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>

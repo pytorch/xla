@@ -352,21 +352,21 @@
 <li><p>by bounded dynamic shape it means we can pad the tensor to a theoretical max, trading more memory usage for less recompilation/faster speed.</p></li>
 </ul>
 <p>Well, sort of. Let’s see the following example:</p>
-<div class="highlight-guess notranslate"><div class="highlight"><pre><span></span>a = torch.tensor([1, 2, 0, 1, 3], device=&#39;xla&#39;)
-b = torch.nonzero(a)
-c = b * 2
-d = c + 1
-print(torch_xla._XLAC._get_xla_tensors_text([d]))
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">a</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">tensor</span><span class="p">([</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">3</span><span class="p">],</span> <span class="n">device</span><span class="o">=</span><span class="s1">&#39;xla&#39;</span><span class="p">)</span>
+<span class="n">b</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">nonzero</span><span class="p">(</span><span class="n">a</span><span class="p">)</span>
+<span class="n">c</span> <span class="o">=</span> <span class="n">b</span> <span class="o">*</span> <span class="mi">2</span>
+<span class="n">d</span> <span class="o">=</span> <span class="n">c</span> <span class="o">+</span> <span class="mi">1</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">torch_xla</span><span class="o">.</span><span class="n">_XLAC</span><span class="o">.</span><span class="n">_get_xla_tensors_text</span><span class="p">([</span><span class="n">d</span><span class="p">]))</span>
 </pre></div>
 </div>
 <p>In the example above every node below <code class="docutils literal notranslate"><span class="pre">b</span></code> in the graph (namely <code class="docutils literal notranslate"><span class="pre">c,</span> <span class="pre">d</span></code> and everything depend on them) will have dynamic shape, it’s pretty obvious that <code class="docutils literal notranslate"><span class="pre">b</span></code> has dynamic shape in dimension 0 as shown below:</p>
-<div class="highlight-guess notranslate"><div class="highlight"><pre><span></span>%9 = (s64[&lt;=5,1]{1,0}, s64[]) aten::nonzero(%8), num_outputs=2 # b
-%10 = s64[5,1]{1,0} aten::mul(%9.0, %3) # c
-%11 = s64[5,1]{1,0} aten::add(%10, %2), ROOT=0 # d
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="o">%</span><span class="mi">9</span> <span class="o">=</span> <span class="p">(</span><span class="n">s64</span><span class="p">[</span><span class="o">&lt;=</span><span class="mi">5</span><span class="p">,</span><span class="mi">1</span><span class="p">]{</span><span class="mi">1</span><span class="p">,</span><span class="mi">0</span><span class="p">},</span> <span class="n">s64</span><span class="p">[])</span> <span class="n">aten</span><span class="p">::</span><span class="n">nonzero</span><span class="p">(</span><span class="o">%</span><span class="mi">8</span><span class="p">),</span> <span class="n">num_outputs</span><span class="o">=</span><span class="mi">2</span> <span class="c1"># b</span>
+<span class="o">%</span><span class="mi">10</span> <span class="o">=</span> <span class="n">s64</span><span class="p">[</span><span class="mi">5</span><span class="p">,</span><span class="mi">1</span><span class="p">]{</span><span class="mi">1</span><span class="p">,</span><span class="mi">0</span><span class="p">}</span> <span class="n">aten</span><span class="p">::</span><span class="n">mul</span><span class="p">(</span><span class="o">%</span><span class="mf">9.0</span><span class="p">,</span> <span class="o">%</span><span class="mi">3</span><span class="p">)</span> <span class="c1"># c</span>
+<span class="o">%</span><span class="mi">11</span> <span class="o">=</span> <span class="n">s64</span><span class="p">[</span><span class="mi">5</span><span class="p">,</span><span class="mi">1</span><span class="p">]{</span><span class="mi">1</span><span class="p">,</span><span class="mi">0</span><span class="p">}</span> <span class="n">aten</span><span class="p">::</span><span class="n">add</span><span class="p">(</span><span class="o">%</span><span class="mi">10</span><span class="p">,</span> <span class="o">%</span><span class="mi">2</span><span class="p">),</span> <span class="n">ROOT</span><span class="o">=</span><span class="mi">0</span> <span class="c1"># d</span>
 </pre></div>
 </div>
 <p>Although it’s not shown directly in the graph, <code class="docutils literal notranslate"><span class="pre">c</span> <span class="pre">&amp;</span> <span class="pre">d</span></code> indeed also have dynamic shape (in other words, [5, 1] is just padded shape and it’s masked).</p>
-<div class="highlight-guess notranslate"><div class="highlight"><pre><span></span>print(torch_xla._XLAC._get_xla_tensor_dimension_size(d, 0)) # prints 4 instead of 5
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="nb">print</span><span class="p">(</span><span class="n">torch_xla</span><span class="o">.</span><span class="n">_XLAC</span><span class="o">.</span><span class="n">_get_xla_tensor_dimension_size</span><span class="p">(</span><span class="n">d</span><span class="p">,</span> <span class="mi">0</span><span class="p">))</span> <span class="c1"># prints 4 instead of 5</span>
 </pre></div>
 </div>
 <p>You can see that in this case as long as the input tensor <code class="docutils literal notranslate"><span class="pre">a</span></code> has shape <code class="docutils literal notranslate"><span class="pre">[5]</span></code> we only compile the graph once. Bounded dynamic shape support helped!</p>
@@ -376,11 +376,11 @@ print(torch_xla._XLAC._get_xla_tensors_text([d]))
 <p>This is actually pretty commonly used since not all PyTorch computation are done in the form of Tensors.</p>
 <p>For example, <code class="docutils literal notranslate"><span class="pre">tensor.size()</span></code> in PyTorch returns a tuple of ints instead of a Tensor of dtype=int. When <code class="docutils literal notranslate"><span class="pre">tensor</span></code> is a dynamic shape tensor, this op basically forces XLA to cut the graph and evaluate so that we can return the correct scalar (otherwise it’ll just return the padded shape which is wrong).</p>
 <p>What’s made it worse is that many PyTorch takes scalar inputs as well. After you do <code class="docutils literal notranslate"><span class="pre">s</span> <span class="pre">=</span> <span class="pre">tensor.size(0)</span></code> and use <code class="docutils literal notranslate"><span class="pre">s</span></code> in other operators it also becomes a dynamic source. In this case we probably know how to pad it and its upper bound, but we cannot do it since it’s not even a Tensor!</p>
-<div class="highlight-guess notranslate"><div class="highlight"><pre><span></span>a = torch.tensor([1, 2, 0, 1, 3], device=&#39;xla&#39;)
-b = torch.nonzero(a)
-s = a.size(0) # evaluation happens! nit: we use size() for simplicity, the actual API is _get_xla_tensor_dimension_size.
-c = torch.rand(s, device=&#39;xla&#39;) # c can be of any shape between [0, 5] which causes more recompilations!
-d = c + 1
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">a</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">tensor</span><span class="p">([</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">3</span><span class="p">],</span> <span class="n">device</span><span class="o">=</span><span class="s1">&#39;xla&#39;</span><span class="p">)</span>
+<span class="n">b</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">nonzero</span><span class="p">(</span><span class="n">a</span><span class="p">)</span>
+<span class="n">s</span> <span class="o">=</span> <span class="n">a</span><span class="o">.</span><span class="n">size</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span> <span class="c1"># evaluation happens! nit: we use size() for simplicity, the actual API is _get_xla_tensor_dimension_size.</span>
+<span class="n">c</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">rand</span><span class="p">(</span><span class="n">s</span><span class="p">,</span> <span class="n">device</span><span class="o">=</span><span class="s1">&#39;xla&#39;</span><span class="p">)</span> <span class="c1"># c can be of any shape between [0, 5] which causes more recompilations!</span>
+<span class="n">d</span> <span class="o">=</span> <span class="n">c</span> <span class="o">+</span> <span class="mi">1</span>
 </pre></div>
 </div>
 <p>So this one is actually hard to solve without PyTorch frontend’s help. What do we need?</p>
@@ -404,10 +404,10 @@ d = c + 1
 <h2>#3. From control flow<a class="headerlink" href="#from-control-flow" title="Permalink to this headline">¶</a></h2>
 <p>No! We actually only solved the problem without data dependent control flow…</p>
 <p>See the example below:</p>
-<div class="highlight-guess notranslate"><div class="highlight"><pre><span></span>if x[0][0] == 3:
-  bla
-else:
-  blabla
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="k">if</span> <span class="n">x</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span> <span class="o">==</span> <span class="mi">3</span><span class="p">:</span>
+  <span class="n">bla</span>
+<span class="k">else</span><span class="p">:</span>
+  <span class="n">blabla</span>
 </pre></div>
 </div>
 <p>Even if <code class="docutils literal notranslate"><span class="pre">x[0][0]</span></code> was a Tensor, we need to execute/materialize its value for python interpreter to proceed. And different branch choices in multiple control flows combined means we have a lot of graph to compile as well!</p>
@@ -432,11 +432,11 @@ else:
 <p>Yes but partially. By having symbolic shape, your compilation optimization no longer requires concrete shape values. In other words your generated kernel are more general than XLA’s static shape ones.</p>
 <p>And which exactly problem does it help?</p>
 <p>It helps with cases like #1 and #2.1.</p>
-<div class="highlight-guess notranslate"><div class="highlight"><pre><span></span>shape [3, 5] -&gt; add -&gt; transpose -&gt; ... -&gt; mul
-shape [6, 2] -&gt; add -&gt; transpose -&gt; ... -&gt; mul
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">shape</span> <span class="p">[</span><span class="mi">3</span><span class="p">,</span> <span class="mi">5</span><span class="p">]</span> <span class="o">-&gt;</span> <span class="n">add</span> <span class="o">-&gt;</span> <span class="n">transpose</span> <span class="o">-&gt;</span> <span class="o">...</span> <span class="o">-&gt;</span> <span class="n">mul</span>
+<span class="n">shape</span> <span class="p">[</span><span class="mi">6</span><span class="p">,</span> <span class="mi">2</span><span class="p">]</span> <span class="o">-&gt;</span> <span class="n">add</span> <span class="o">-&gt;</span> <span class="n">transpose</span> <span class="o">-&gt;</span> <span class="o">...</span> <span class="o">-&gt;</span> <span class="n">mul</span>
 
-# with symbolic shape
-shape [x, y] -&gt; add -&gt; transpose -&gt; ... -&gt; mul
+<span class="c1"># with symbolic shape</span>
+<span class="n">shape</span> <span class="p">[</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">]</span> <span class="o">-&gt;</span> <span class="n">add</span> <span class="o">-&gt;</span> <span class="n">transpose</span> <span class="o">-&gt;</span> <span class="o">...</span> <span class="o">-&gt;</span> <span class="n">mul</span>
 </pre></div>
 </div>
 <p>With symbolic shape your generated kernel doesn’t recompile as XLA does with static shapes.</p>
@@ -459,12 +459,12 @@ shape [x, y] -&gt; add -&gt; transpose -&gt; ... -&gt; mul
 <li><p>Would an alternative of making control flow available in the graph be just to come up with a way to ensure that XLA graphs don’t include control flow? i.e. if we have a model with a single conditional in the middle, then get XLA to produce 3 graphs: 1 for everything before the conditional, 1 for the if branch, and 1 for the else branch. That would mean you don’t get the exponential blowup of new graphs for every combination of paths taken, but (a) the graphs are smaller and provide fewer optimization opportunities, and (b) it would probably be pretty non-trivial to get XLA to recognize where a conditional path is taken.</p></li>
 </ol>
 <p>Great point! So if we could break them up into smaller graphs it’s indeed feasible. But in practice this pattern is annoying:</p>
-<div class="highlight-guess notranslate"><div class="highlight"><pre><span></span>y = &lt;some computation&gt;
-x = y + 2
-if x[0] == 2 :
-  z = y +1
-else:
-  z = y - 1
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">y</span> <span class="o">=</span> <span class="o">&lt;</span><span class="n">some</span> <span class="n">computation</span><span class="o">&gt;</span>
+<span class="n">x</span> <span class="o">=</span> <span class="n">y</span> <span class="o">+</span> <span class="mi">2</span>
+<span class="k">if</span> <span class="n">x</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">==</span> <span class="mi">2</span> <span class="p">:</span>
+  <span class="n">z</span> <span class="o">=</span> <span class="n">y</span> <span class="o">+</span><span class="mi">1</span>
+<span class="k">else</span><span class="p">:</span>
+  <span class="n">z</span> <span class="o">=</span> <span class="n">y</span> <span class="o">-</span> <span class="mi">1</span>
 </pre></div>
 </div>
 <p>Note you’ll evaluate x using a subgraph when you hit control flow, but there might be previous variable included in the branch computation as well (like<code class="docutils literal notranslate"><span class="pre">y</span></code> is just one node smaller than x, but it wasn’t materizalized when you evaluate <code class="docutils literal notranslate"><span class="pre">x</span></code>). So you’re actually evaluating 1 small graph and two big graphs for this example. And with more control flow involved, y could get updated in multiple branches which still produces different combo of large graphs.</p>
