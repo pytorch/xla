@@ -1,0 +1,499 @@
+---
+variables:
+  xrt_variables:
+    XRT_MESH_SERVICE_ADDRESS:
+      description:
+        - The mesh service address used to create the XRT mesh client.
+      type: string
+      default_value: ""
+    XRT_GRPC_COMPRESSION:
+      description:
+        - Configures compression for rpc options on the XRT client.
+      type: string
+      default_value: ""
+    XRT_TPU_CONFIG:
+      description:
+        - Addresses for the TPU services to be used by the XRT client. ";"
+          separated list of addresses, e.g. localservice;0;localhost:51011.
+      type: string
+    XRT_WORKERS:
+      description:
+        - Addresses for the XRT workers to be used by the XRT client, for
+          example localservice:0;grpc://localhost:51011
+      type: string
+    XRT_DEVICE_MAP:
+      description:
+        - Maps devices to metadata about the job, replica, task that the device
+          is responsible for. e.g.
+          CPU:0;/job:localservice/replica:0/task:0/device:XLA_CPU:0
+      type: string
+    XRT_GRPC_MULTISTREAM:
+      description:
+        - Used to disable session conneciton sharing for XRT.
+      type: bool
+      default_value: true
+    XRT_START_LOCAL_SERVER:
+      description:
+        - Whether or not XRT should start the local service. If true, and if
+          the devices are CPU or GPU, XRT will try to start the local server.
+      type: bool
+      default_value: false
+    XRT_SHARD_LOCAL_ORDINAL:
+      description:
+        - Ordinal to be appended to the paths used by this thread of the xla
+          client.
+      type: int
+    XRT_GRPC_COMPRESSION_LEVEL:
+      description:
+        - Configures compression level for rpc options on the XRT client.
+      type: int
+      default_value: 3
+    XRT_MESH_MAX_MSGSIZE:
+      description:
+        - Max size of the mesh used by the XRT mesh service, product of
+          dimensions e.g. 1024 * 1024 * 1024
+      type: int
+      default_value: 1073741824  # (1024^3)
+    XRT_MESH_CONNECT_WAIT:
+      description:
+        - Number of seconds to wait for a connection to the XRT mesh service,
+          particularly the client mesh master
+      type: int
+      default_value: 300
+    XRT_LOCAL_WORKER:
+      description:
+        - Local service address for XRT local worker, e.g. localhost:8000.
+      type: string
+      default_value: ""
+    XRT_SHARD_WORLD_SIZE:
+      description:
+        - Total number of XRT shards to consider in this client instance. Does
+          not have a default because there's special behavior when the flag is
+          not set.
+      type: int
+    XRT_MULTI_PROCESSING_DEVICE:
+      description:
+        - Service address of the XRT device to be used as a multi processing
+          device.
+      type: string
+      default_value: ""
+    XRT_HOST_ORDINAL:
+      description:
+        - Sets the host ordinal for the XRT computation client. Used to
+          identify the rank of current device. Does not have a default because
+          there's special behavior when the flag is not set.
+      type: int
+    XRT_SHARD_ORDINAL:
+      description:
+        - Sets the shard ordinal for the XRT computation client.
+      type: int
+      default_value: -1
+  pjrt_variables:
+    PJRT_DEVICE:
+      description:
+        - Indicates which device is being used with PJRT. It can be either CPU,
+          TPU, or GPU
+      type: string
+    PJRT_CPU_ASYNC_CLIENT:
+      description:
+        - Whether or not to create an async PJRT client for the CPU device(s).
+      type: bool
+      default_value: false
+    PJRT_GPU_ASYNC_CLIENT:
+      description:
+        - Whether or not to create an async PJRT client for the GPU device(s).
+      type: bool
+      default_value: false
+    PJRT_TPU_MAX_INFLIGHT_COMPUTATIONS:
+      description:
+        - Max inflight computations that the PJRT client can handle for TPU.
+      type: int
+      default_value: 32
+  build_variables:
+    DEBUG:
+      description:
+        - Whether or not to build pytorch/xla in the debug mode.
+      type: bool
+      default_value: false
+    GRPC_VERBOSITY:
+      description:
+        - Verbosity level for GRPC, e.g. INFO, ERROR, etc.
+      type: string
+      default_value: "ERROR"
+    XLA_CUDA:
+      description:
+        - Build the xla client with CUDA enabled.
+      type: bool
+      default_value: false
+    VERSIONED_XLA_BUILD:
+      description:
+        - Creates a versioned build. In particular, appends a git sha to the
+          version number string
+      type: bool
+      default_value: false
+    COMPILE_PARALLEL:
+      description:
+        - Enabled parallel compile for PyTorch/XLA build.
+      type: bool
+      default_value: true
+    BUILD_CPP_TESTS:
+      description:
+        - Whether or not to build the cpp tests.
+      type: bool
+      default_value: true
+    BUNDLE_LIBTPU:
+      description:
+        - Whether or not to include libtpu in the final wheel.
+      type: bool
+      default_value: false
+    ALLOW_MULTIPLE_LIBTPU_LOAD:
+      description:
+        - Allow for multiple processes to load libtpu at the same time.
+      type: bool
+      default_value: true
+    PT_XLA_DEBUG:
+      description:
+        - Used to automatically analyze the metrics report and provide a
+          summary.
+      type: bool
+      default_value: false
+    TPUVM_MODE:
+      description:
+        - Include some additional TPUVM features and code when building the
+          third party tensorflow.
+      type: bool
+      default_value: false
+    TORCH_XLA_VERSION:
+      description:
+        - Specifies the version of PyTorch/XLA, rather than the hard-coded
+          version in setup.py; used when we're building binaries for
+          distribution. Should be parseable as a version number, e.g. 1.14
+      type: string
+      default_value: "1.14"
+    TORCH_XLA_PACKAGE_NAME:
+      description:
+        - Allows the developer to change the package name to something other
+          than torch_xla.
+      type: string
+      default_value: "torch_xla"
+    TPU_ML_PLATFORM:
+      description:
+        - Name of the ML platform being used on TPU, e.g. PyTorch/XLA,
+          Tensorflow, or JAX.
+      type: string
+      default_value: "PyTorch/XLA"
+    XLA_DEBUG:
+      description:
+        - Whether or not to build xla and the xrt client in debug mode.
+      type: bool
+      default_value: false
+    XLA_BAZEL_VERBOSE:
+      description:
+        - Turn on verbose messages during the bazel build of the xla/xrt client.
+      type: bool
+      default_value: false
+  feature_variables:
+    XLA_GET_TENSORS_OPBYOP:
+      description:
+        - Enables pure OpByOp dispatch. The PyTorch/XLA software tries to fuse
+          together many PyTorch operations into a single computation graph, but
+          sometimes, either for debugging, or in case the PyTorch code have a
+          very dynamic nature (in shapes or graph terms), it is better to force
+          the execution in OpByOp mode (every IR node is lowered into a
+          separate XLA computation, and chain-executed). This environment
+          variable, if set to true, enables OpByOp during the "get tensors"
+          operation (the operation used by PyTorch/XLA to fetch intermediate
+          values back from the TPU device into PyTorch CPU tensors).
+      type: bool
+      default_value: false
+    XLA_SYNC_TENSORS_OPBYOP:
+      description:
+        - The same as XLA_GET_TENSORS_OPBYOP but for "sync tensors" operation
+          (the operation used at the end of a step, to flush pending IR
+          computations and materialize them into TPU device data).
+      type: bool
+      default_value: false
+    XLA_SYNC_WAIT:
+      description:
+        - Forces the XLA tensor sync operation to wait for its completion,
+          before moving to the next step.
+      type: bool
+      default_value: false
+    XLA_NO_SPECIAL_SCALARS:
+      description:
+        - When set to false, this will route some tensor values to constant
+          scalars.
+      type: bool
+      default_value: false
+    XLA_TENSOR_UPDATE_SYNC:
+      description:
+        - Used to decide whether or not to sync update in
+          XLANativeFunctions::_copy_from.
+      type: bool
+      default_value: true
+    XLA_USE_BF16:
+      description:
+        - Tensor arithmetic will be done in reduced precision and so tensors
+          will not be accurate if accumulated over time.
+      type: bool
+      default_value: false
+    XLA_USE_F16:
+      description:
+        - If set to true, tranforms all the PyTorch Float values into Float16
+          (PyTorch Half type) when sending to devices which supports them.
+      type: bool
+      default_value: false
+    XLA_USE_32BIT_LONG:
+      description:
+        - If set to true, maps PyTorch Long types to XLA 32bit type. On the
+          versions of the TPU HW at the time of writing, 64bit integer
+          computations are expensive, so setting this flag might help. It
+          should be verified by the user that truncating to 32bit values is a
+          valid operation according to the use of PyTorch Long values in it.
+      type: bool
+      default_value: false
+    XLA_IO_THREAD_POOL_SIZE:
+      description:
+        - Number of threads for the IO thread pool in the XLA client. Defaults
+          to std::thread::hardware_concurrency().
+      type: int
+    XLA_TENSOR_ALLOCATOR_MAXSIZE:
+      description:
+        - Max cache size to be used by TensorAllocator in XRT. We only cache
+          blocks smaller than this number, measured in bytes.
+      type: int
+      default_value: 1000000000
+    XLA_IR_SHAPE_CACHE_SIZE:
+      description:
+        - Size for the shape cache used by XLA.
+      type: int
+      default_value: 4096
+    XLA_DEVDATA_CACHE_SIZE:
+      description:
+        - Max cache size for XLA Data cache.
+      type: int
+      default_value: 128
+    XLA_TRIM_GRAPH_CHECK_FREQUENCY:
+      description:
+        - Frequency to check and, if applicable, trim the IR graph.
+      type: int
+      default_value: 5000
+    XLA_DENSE_GATHER_FACTOR:
+      description:
+        - Used as a threshold for when we should use dense gather. We multiply
+          the factor by 10, and compare it to the number of input elements. If
+          there are more input elements, we'll use sparse gather.
+      type: int
+      default_value: 8192
+    XLA_DENSE_SCATTER_FACTOR:
+      description:
+        - Used as a threshold to determine when to use dense scatter. If the
+          dense scatter factor times the number of index elements is greater
+          than or equal to the number of input elements, we use dense scatter
+      type: int
+      default_value: 100
+    XLA_RESIZE_SPLIT_FACTOR:
+      description:
+        - Used as a threshold to determine when the resize is too large to be
+          done all at once, in which case we do one dimension at a time.
+      type: float
+      default_value: 3.0
+    XLA_MAX_PADDING_FACTOR:
+      description:
+        - Used as a threshold to determine whether to use a sorted or
+          descending layout for shape.
+      type: float
+      default_value: 1.25
+    XLA_LAYOUTS:
+      description:
+        - A list of key/value pairs of the format "k1=v1;k2=v2". Keys are
+          Shapes and values are layouts.
+      type: string
+      default_value: ""
+    XLA_RNG_BIT_GENERATOR:
+      description:
+        - String name of the bit generator type, which can be either default,
+          philox, or three_fry. No default value because in that case there's
+          special behavior.
+      type: string
+    XLA_EXPERIMENTAL:
+      description:
+        - Used to enable experimental features. Representing a list separated
+          by ":".
+      type: string
+      default_value: ""
+    XLA_FLAGS:
+      description:
+        - List of flags used by XLA, separated by " ". This is only referenced
+          in PyTorch/XLA to add flags to the list.
+      type: string
+      default_value: ""
+    DISABLE_NUMERIC_CC_TOKEN:
+      description:
+        - Whether or not to skip modifying the existing token based on the
+          XlaOp when creating a new token. When disabled, the same token is
+          used for every XlaOp.
+      type: bool
+      default_value: false
+    XLA_USE_SPMD:
+      description:
+        - Whether or not to use the SPMD virtual device optimization.
+      type: bool
+      default_value: false
+    SPLIT_EXECUTOR_CACHE_SIZE:
+      description:
+        - Compiler cache size for the op by op executor.
+      type: int
+      default_value: 2048
+  device_variables:
+    TPU_NUM_DEVICES:
+      description:
+        - Number of TPU devices being used by this instance of XRT.
+      type: int
+      default_value: 8
+    CPU_NUM_DEVICES:
+      description:
+        - Number of CPU devices being used by this instance of XRT.
+      type: int
+    GPU_NUM_DEVICES:
+      description:
+        - Number of GPU devices being used by this instance of XRT.
+      type: int
+  debug_variables:
+    XLA_FNTRACKER_FILE:
+      description:
+        - If set, the path to a file where output from the function tracker
+          should be written.
+      type: string
+      default_value: ""
+    XLA_FNTRACKER_LIST:
+      description:
+        - Tags for the tracker context, which tell the function tracker which
+          functions to track.
+      type: string
+      default_value: ""
+    XLA_METRICS_SAMPLES:
+      description:
+        - Max samples to use for any metric.
+      type: int
+      default_value: 1024
+    XLA_COMPILE_TIME_THRESHOLD:
+      description:
+        - Threshold that determines when we log a slow compilation to the hlo
+          folder. Defaults to std::numeric_limits<double>::max().
+      type: int
+    XLA_FNTRACKER_LEVEL:
+      description:
+        - Level for the tracker context. When tracking functions, only
+          functions with a level less than or equal to this level will get
+          tracked. Defaults to std::numeric_limits<int>::max().
+      type: int
+    XLA_SAVE_TENSORS_FILE:
+      description:
+        - The path to a file which will be used to dump the IR graphs during
+          execution. Note that the file can become really big if the option is
+          left enabled and the PyTorch program let run for long time. The
+          graphs are appended to the file, so to have a clean sheet from run to
+          run, the file should be explicitly removed.
+      type: string
+      default_value: ""
+    XLA_SAVE_TENSORS_FMT:
+      description:
+        - The format of the graphs stored within the XLA_SAVE_TENSORS_FILE
+          file. Can be text (the default), dot (the Graphviz format) or hlo.
+      type: string
+      default_value: "text"
+    XLA_METRICS_FILE:
+      description:
+        - If set, the path to a local file where the internal metrics will be
+          saved at every step. Metrics will be appended to the file, if already
+          existing. Internally defaults to "None".
+      type: string
+    XLA_SAVE_HLO_FILE:
+      description:
+        - If set, the path to a local file where, in case of
+          compilation/execution error, the offending HLO graph will be saved.
+      type: string
+      default_value: ""
+    XLA_SLOW_COMPILE_HLO_FOLDER:
+      description:
+        - Folder name to save HLO files to, when the compile time is above a
+          certain threshold.
+      type: string
+      default_value: ""
+    XLA_TEST_DUMP_GRAPHS:
+      description:
+        - Type of graph to print to std::cerr. It can be empty, text, hlo, or
+          dot.
+      type: string
+      default_value: ""
+    PT_XLA_DEBUG_FILE:
+      description:
+        - If set, filepath used for printing out reports.
+      type: string
+      default_value: ""
+    TF_CPP_VMODULE:
+      description:
+        - Environment variable used for TF VLOGs and takes the form of
+          TF_CPP_VMODULE=name=value,.... Note that for VLOGs you must set
+          TF_CPP_MIN_LOG_LEVEL=0. For PyTorch/XLA using a configuration like
+          TF_CPP_VMODULE=tensor=5 would enable logging.
+      type: string
+    TF_CPP_MIN_LOG_LEVEL:
+      description:
+        - Level to print messages for. TF_CPP_MIN_LOG_LEVEL=0 will turn on INFO
+          logging, TF_CPP_MIN_LOG_LEVEL=1 WARNING and so on. Our PyTorch/XLA
+          TF_VLOG uses tensorflow::INFO level by default so to see VLOGs set
+          TF_CPP_MIN_LOG_LEVEL=0.
+      type: int
+      default_value: 1
+    TF_CPP_LOG_THREAD_ID:
+      description:
+        - If set to true, the TF logs will show the thread ID helping with
+          debugging multithreaded processes.
+      type: bool
+      default_value: false
+    TORCH_TEST_DEVICES:
+      description:
+        - Provided by the upstream and used to test new device types.
+      type: string
+    XLA_IR_DEBUG:
+      description:
+        - Enables the Python stack trace to be captured where creating IR
+          nodes, hence allowing to understand which PyTorch operation was
+          responsible for generating the IR.
+      type: bool
+      default_value: false
+    XLA_HLO_DEBUG:
+      description:
+        - Enables the Python stack frame captured when XLA_IR_DEBUG is active,
+          to be propagated to the XLA HLO metadata.
+      type: bool
+      default_value: false
+    XLA_TEST_DUMP_METRICS:
+      description:
+        - Controls whether or not metrics are dumped in cpp test tear down.
+      type: bool
+      default_value: false
+    XLA_TEST_DUMP_TENSORS:
+      description:
+        - Whether or not to print tensors to std::cerr in CPP tests.
+      type: bool
+      default_value: false
+    XLA_DUMP_HLO_GRAPH:
+      description:
+        - If set to true in case of a compilation or execution error the
+          offending HLO graph will be dumped as part of the runtime error
+          raised by xla_util.cc.
+      type: bool
+      default_value: false
+    XLA_DUMP_FATAL_STACK:
+      description:
+        - Installs the stack trace handler upon XLA client creation.
+      type: bool
+      default_value: false
+    XLA_METRICS_PERCENTILES:
+      description:
+        - List of metrics percentiles to record.
+      type: string
+      default_value: "0.01:0.05:0.1:0.2:0.5:0.8:0.9:0.95:0.99"
