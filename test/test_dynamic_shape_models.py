@@ -73,7 +73,7 @@ class TestDynamicShapeModels(unittest.TestCase):
         y_pred = model(x_test)
         criterion(y_pred.squeeze(), y_test)
         xm.mark_step()
-    np.testing.assert_equal(met.metric_data('CompileTime')[0], 3)
+    np.testing.assert_equal(met.metric_data('CompileTime')[0], 1)
 
   def create_dynamic_test_data(self, num_test_samples, num_features, device):
     x_test = torch.ones(num_test_samples, num_features)
