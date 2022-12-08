@@ -57,9 +57,10 @@ C10_REGISTER_GUARD_IMPL(XLA, XLAGuardImpl);
 }  // namespace
 
 XLATensorImpl::XLATensorImpl(XLATensorPtr tensor)
-    : torch::lazy::LTCTensorImpl(tensor, c10::DispatchKey::XLA, 
-        c10::DispatchKey::AutogradXLA, GetTypeMeta(*tensor), 
-        bridge::XlaDeviceToAtenDevice(tensor->GetDevice())) {
+    : torch::lazy::LTCTensorImpl(
+          tensor, c10::DispatchKey::XLA, c10::DispatchKey::AutogradXLA,
+          GetTypeMeta(*tensor),
+          bridge::XlaDeviceToAtenDevice(tensor->GetDevice())) {
   tensor_ = c10::make_intrusive<XLATensor>(std::move(*tensor));
   is_non_overlapping_and_dense_ = false;
   set_custom_sizes_strides(SizesStridesPolicy::CustomSizes);
