@@ -352,17 +352,6 @@ torch::lazy::BackendDataPtr XLAGraphExecutor::GetBaseSeedData(
   return DeviceContextArena::Get()->GetBaseSeedData(device);
 }
 
-torch::lazy::BackendDataPtr XLAGraphExecutor::GetDeviceData(
-    const at::Tensor& tensor, const torch::lazy::BackendDevice& device) {
-  return DataCacheArena::Get()->GetDeviceData(tensor, device);
-}
-
-torch::lazy::BackendDataPtr XLAGraphExecutor::GetDeviceData(
-    const at::Scalar& value, at::ScalarType scalar_type,
-    const torch::lazy::BackendDevice& device) {
-  return DataCacheArena::Get()->GetDeviceData(value, scalar_type, device);
-}
-
 std::string XLAGraphExecutor::DumpHloComputation(
     const std::vector<XLATensorPtr>& tensors) {
   std::vector<torch::lazy::Value> ir_values;
