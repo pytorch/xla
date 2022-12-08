@@ -85,8 +85,6 @@ class XLAGraphExecutor : public torch::lazy::LazyGraphExecutor {
   torch::lazy::BackendDataPtr GetBaseSeedData(
       const torch::lazy::BackendDevice& device);
 
-  void DeviceBarrier(const torch::lazy::BackendDevice& device);
-
   torch::lazy::BackendDataPtr GetDeviceData(
       const at::Tensor& tensor, const torch::lazy::BackendDevice& device);
 

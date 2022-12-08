@@ -423,10 +423,6 @@ torch::lazy::BackendDataPtr XLAGraphExecutor::GetBaseSeedData(
   return DeviceContextArena::Get()->GetBaseSeedData(device);
 }
 
-void XLAGraphExecutor::DeviceBarrier(const torch::lazy::BackendDevice& device) {
-  DeviceLockerArena::Get()->DeviceBarrier(device);
-}
-
 torch::lazy::BackendDataPtr XLAGraphExecutor::GetDeviceData(
     const at::Tensor& tensor, const torch::lazy::BackendDevice& device) {
   return XlaDataCacheArena::Get()->GetDeviceData(tensor, device);
