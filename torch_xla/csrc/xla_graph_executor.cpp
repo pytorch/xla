@@ -426,9 +426,9 @@ void XLAGraphExecutor::WaitDeviceOps(absl::Span<const std::string> devices) {
       wait_devices.insert(ParseDeviceString(device_str));
     }
   }
-  // The DeviceLockerArena::Get()->LockDevices() API returns a vector of torch::lazy::ExceptionCleanup
-  // object, which is going to be freed immediately, turning this operation
-  // into a lock barrier.
+  // The DeviceLockerArena::Get()->LockDevices() API returns a vector of
+  // torch::lazy::ExceptionCleanup object, which is going to be freed
+  // immediately, turning this operation into a lock barrier.
   DeviceLockerArena::Get()->LockDevices(wait_devices);
 }
 
