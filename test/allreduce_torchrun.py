@@ -21,7 +21,7 @@ def _mp_fn_xrt_init():
   result = xm.all_reduce('sum', xones)
 
   result_cpu = result.cpu()
-  expected = torch.ones((2,3))*size
+  expected = torch.ones((2,3)) * size
   assert torch.all(result_cpu == expected), f'{result_cpu} != {expected}'
 
 
@@ -37,7 +37,7 @@ def _mp_fn_xla_backend():
   dist.all_reduce(xones, op=torch.distributed.ReduceOp.SUM)
 
   result_cpu = xones.cpu()
-  expected = torch.ones((2,3))*size
+  expected = torch.ones((2,3)) * size
   assert torch.all(xones.cpu() == expected), f'{xones} != {expected}'
 
 
