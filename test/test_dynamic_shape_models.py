@@ -31,11 +31,15 @@ class Feedforward(torch.nn.Module):
     return output
 
 
+@unittest.skipIf(
+    xm.get_xla_supported_devices("CPU"),
+    f"The tests fail on CPU. See https://github.com/pytorch/xla/issues/4298 for more detail."
+)
 class TestDynamicShapeModels(unittest.TestCase):
 
   def test_forward_pass_dynamic_input_correctness(self):
     losses = []
-    for dev in [torch.device('cpu'), xla_dev]:
+    for dev in [torch.device('gpu'), xla_dev]:
       num_features = 2
       num_test_samples = 5
       x_test, y_test = self.create_dynamic_test_data(num_test_samples,
@@ -55,7 +59,6 @@ class TestDynamicShapeModels(unittest.TestCase):
 
   def test_forward_pass_dynamic_input_compile_once(self):
     met.clear_metrics()
-    losses = []
     for _ in range(10):
       num_features = 2
       num_test_samples = 5
@@ -68,7 +71,7 @@ class TestDynamicShapeModels(unittest.TestCase):
       model.eval()
       with torch.no_grad():
         y_pred = model(x_test)
-        before_train = criterion(y_pred.squeeze(), y_test)
+        criterion(y_pred.squeeze(), y_test)
         xm.mark_step()
     np.testing.assert_equal(met.metric_data('CompileTime')[0], 3)
 
