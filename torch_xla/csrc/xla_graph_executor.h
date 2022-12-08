@@ -28,7 +28,7 @@
 
 namespace torch_xla {
 
-class XLAGraphExecutor {
+class XLAGraphExecutor : public torch::lazy::LazyGraphExecutor {
  public:
   static XLAGraphExecutor* Get();
 
@@ -113,7 +113,7 @@ class XLAGraphExecutor {
   // devices which should be participating into the replicated computation.
   void SyncTensorsGraph(std::vector<XLATensorPtr>* tensors,
                         absl::Span<const std::string> devices, bool wait,
-                        bool sync_xla_data);
+                        bool sync_ltc_data);
 
   // Makes sure that any outstanding IR operation accumulated over live tensors,
   // gets turned into device data. If wait is true, the sync operation will be
@@ -161,32 +161,6 @@ class XLAGraphExecutor {
                        const torch::lazy::BackendDevice& device);
 
  private:
-  struct SyncTensorsConfig {
-    // Whether we want to force XLA data on the target tensors (hence trimming
-    // the IR graph above them).
-    bool force_xla_data = true;
-    // Whether when setting the XLA data, the other properties of the tensor
-    // state should be reset.
-    bool sync_xla_data = true;
-  };
-
-  struct SyncTensorCollection {
-    SyncTensorCollection() : hash(0) {}
-
-    SyncTensorsConfig config;
-    std::vector<size_t> indices;
-    torch::lazy::hash_t hash;
-    std::vector<xla::util::ExceptionCleanup> unlocker;
-    torch::lazy::BackendDevice device;
-  };
-
-  struct PostOrderData {
-    std::vector<const torch::lazy::Node*> post_order;
-    torch::lazy::Util::EmissionMap emission_map;
-    std::vector<torch::lazy::BackendDataPtr> parameters_data;
-    std::vector<size_t> parameter_sequence;
-  };
-
   struct CompilationResult {
     torch::lazy::BackendDevice device;
     size_t emitted_nodes = 0;
@@ -205,7 +179,7 @@ class XLAGraphExecutor {
 
     xla::util::MultiWait mwait;
     std::vector<size_t> indices;
-    std::vector<xla::util::ExceptionCleanup> unlocker;
+    std::vector<torch::lazy::ExceptionCleanup> unlocker;
     std::vector<torch::lazy::BackendDataPtr> parameters_data;
     std::string device;
     ComputationCache::TypePtr cached_computation;
