@@ -54,124 +54,6 @@
 namespace torch_xla {
 namespace {
 
-// Locking:
-// We perform two kinds of operations of tensors, synchronous and asynchronous.
-// The ApplyPendingGraph() are synchronous, as we need the device data result
-// immediately. Before the synchronous operations can start, they need to wait
-// that the pending asynchronous operations have completed.
-// Synchronous operations do not hold device locks, since they are strictly
-// sequential, dictated by the PyTorch execution order.
-// The SyncTensorsGraph() is asynchronous, and returns immediately after having
-// scheduled the asynchronous operation. While executing, the asynchronous
-// operations will hold locks on all the participating devices (in most common
-// cases there will be only one device).
-// Since asynchronous operations capture device locks, only one asynchronous
-// operation can execute at the same time, on a given device. Tensor operations
-// which send data to device do not need to hold any device locks while doing
-// so. Only operations which _use_ device data (computations, and transfer from
-// server) need to wait for asynchronous operations to complete (barrier).
-
-class DeviceLocker {
- public:
-  explicit DeviceLocker(torch::lazy::BackendDevice device)
-      : device_(std::move(device)) {}
-
-  const torch::lazy::BackendDevice& device() const { return device_; }
-
-  void Lock() {
-    std::unique_lock<std::mutex> lock(mutex_);
-    cv_.wait(lock, [this] { return !locked_; });
-    CheckResetException();
-    locked_ = true;
-  }
-
-  void Unlock(std::exception_ptr exptr) {
-    std::lock_guard<std::mutex> lock(mutex_);
-    locked_ = false;
-    exptr_ = std::move(exptr);
-    cv_.notify_all();
-  }
-
-  void Barrier() {
-    std::unique_lock<std::mutex> lock(mutex_);
-    cv_.wait(lock, [this] { return !locked_; });
-    cv_.notify_all();
-    CheckResetException();
-  }
-
- private:
-  void CheckResetException() {
-    std::exception_ptr exptr = std::move(exptr_);
-    exptr_ = nullptr;
-    if (exptr != nullptr) {
-      std::rethrow_exception(exptr);
-    }
-  }
-
-  torch::lazy::BackendDevice device_;
-  std::mutex mutex_;
-  std::condition_variable cv_;
-  bool locked_ = false;
-  std::exception_ptr exptr_;
-};
-
-class DeviceLockerArena {
- public:
-  static DeviceLockerArena* Get() {
-    static DeviceLockerArena* arena = new DeviceLockerArena();
-    return arena;
-  }
-
-  std::shared_ptr<DeviceLocker> GetLocker(
-      const torch::lazy::BackendDevice& device) {
-    std::lock_guard<std::mutex> lock(mutex_);
-    auto it = lockers_.find(device);
-    if (it == lockers_.end()) {
-      it = lockers_.emplace(device, std::make_shared<DeviceLocker>(device))
-               .first;
-    }
-    return it->second;
-  }
-
-  void DeviceBarrier(const torch::lazy::BackendDevice& device) {
-    auto locker = DeviceLockerArena::Get()->GetLocker(device);
-    locker->Barrier();
-  }
-
- private:
-  std::mutex mutex_;
-  std::map<torch::lazy::BackendDevice, std::shared_ptr<DeviceLocker>> lockers_;
-};
-
-torch::lazy::ExceptionCleanup LockDevice(
-    const torch::lazy::BackendDevice& device) {
-  TF_VLOG(4) << "Waiting on device barrier for device " << device << " ...";
-  std::shared_ptr<DeviceLocker> locker;
-  {
-    TORCH_LAZY_TIMED("DeviceLockWait");
-    locker = DeviceLockerArena::Get()->GetLocker(device);
-    locker->Lock();
-  }
-  TF_VLOG(4) << "Waiting on device barrier for device " << device << " done!";
-  return torch::lazy::ExceptionCleanup(
-      [locker = std::move(locker)](
-          torch::lazy::ExceptionCleanup::StatusType status) {
-        locker->Unlock(std::move(status));
-      });
-}
-
-// Use a set to impose an order on the device locking sequence (ABBA
-// prevention).
-std::vector<torch::lazy::ExceptionCleanup> LockDevices(
-    const std::set<torch::lazy::BackendDevice>& devices) {
-  std::vector<torch::lazy::ExceptionCleanup> unlocker;
-  unlocker.reserve(devices.size());
-  for (auto& device : devices) {
-    unlocker.emplace_back(LockDevice(device));
-  }
-  return unlocker;
-}
-
 class XlaDataCacheArena {
  public:
   static XlaDataCacheArena* Get() {
@@ -630,10 +512,10 @@ void XLAGraphExecutor::WaitDeviceOps(absl::Span<const std::string> devices) {
       wait_devices.insert(ParseDeviceString(device_str));
     }
   }
-  // The LockDevices() API returns a vector of torch::lazy::ExceptionCleanup
+  // The DeviceLockerArena::Get()->LockDevices() API returns a vector of torch::lazy::ExceptionCleanup
   // object, which is going to be freed immediately, turning this operation
   // into a lock barrier.
-  LockDevices(wait_devices);
+  DeviceLockerArena::Get()->LockDevices(wait_devices);
 }
 
 std::vector<at::Tensor> XLAGraphExecutor::GetTensors(
@@ -778,7 +660,7 @@ void XLAGraphExecutor::TensorCollectionBarrier(SyncTensorCollection* coll) {
     return;
   }
   // TODO(yeounoh) lock SPMD device
-  coll->unlocker = LockDevices({coll->device});
+  coll->unlocker = DeviceLockerArena::Get()->LockDevices({coll->device});
 }
 
 std::vector<torch::lazy::BackendDataPtr>
@@ -787,7 +669,7 @@ XLAGraphExecutor::ExecuteComputationWithBarrier(
     c10::ArrayRef<torch::lazy::BackendDataPtr> arguments,
     const torch::lazy::BackendDevice& device) {
   std::vector<torch::lazy::ExceptionCleanup> unlocker;
-  unlocker = LockDevices({device});
+  unlocker = DeviceLockerArena::Get()->LockDevices({device});
   return torch::lazy::getBackend()->ExecuteComputation(computation, arguments,
                                                        device);
 }
