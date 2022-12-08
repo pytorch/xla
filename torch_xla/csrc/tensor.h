@@ -56,49 +56,36 @@ class XLATensor : public torch::lazy::LazyTensor {
   // This is the core XLA tensor data structure where all the tensor data is
   // held. The XLA tensor is nothing more than a shared pointer to a Data
   // object.
-  struct Data {
-    Data(torch::lazy::BackendDataPtr xla_data,
+  struct Data : public torch::lazy::LazyTensor::Data {
+    Data(torch::lazy::BackendDataPtr handle,
          const torch::lazy::BackendDevice& device,
          c10::optional<at::ScalarType> logical_element_type)
-        : xla_data(std::move(xla_data)),
-          logical_element_type(logical_element_type),
-          device(device),
-          unique_id(GetNextTensorId()) {}
+        : torch::lazy::LazyTensor::Data(handle, device),
+          logical_element_type(logical_element_type) {}
     Data(torch::lazy::Value ir_value, const torch::lazy::BackendDevice& device,
          c10::optional<at::ScalarType> logical_element_type)
-        : ir_value(std::move(ir_value)),
-          logical_element_type(logical_element_type),
-          device(device),
-          unique_id(GetNextTensorId()) {}
+        : torch::lazy::LazyTensor::Data(ir_value, device),
+          logical_element_type(logical_element_type) {}
+    Data(at::Tensor tensor_data, const torch::lazy::BackendDevice& device)
+        : torch::lazy::LazyTensor::Data(tensor_data, device),
+          logical_element_type(tensor_data.scalar_type()) {}
     Data(std::shared_ptr<View> view, const torch::lazy::BackendDevice& device,
          c10::optional<at::ScalarType> logical_element_type)
-        : view(std::move(view)),
-          logical_element_type(logical_element_type),
-          device(device),
-          unique_id(GetNextTensorId()) {}
-    Data(at::Tensor tensor_data, const torch::lazy::BackendDevice& device)
-        : logical_element_type(tensor_data.scalar_type()),
-          tensor_data(std::move(tensor_data)),
-          device(device),
-          unique_id(GetNextTensorId()) {}
+        : torch::lazy::LazyTensor::Data(device),
+          view(std::move(view)),
+          logical_element_type(logical_element_type) {}
 
     ~Data();
 
-    torch::lazy::BackendDataPtr xla_data;
-    torch::lazy::Value ir_value;
     std::shared_ptr<View> view;
     // TODO: remove this in favor of torch::lazy::Shape within ir_value.
     c10::optional<at::ScalarType> logical_element_type;
-    c10::optional<at::Tensor> tensor_data;
-    const torch::lazy::BackendDevice device;
-    const int64_t unique_id = 0;
-    size_t generation = 1;
   };
 
   static XLATensorPtr Create(const at::Tensor& tensor,
                              const torch::lazy::BackendDevice& device);
   static XLATensorPtr Create(
-      torch::lazy::BackendDataPtr xla_data,
+      torch::lazy::BackendDataPtr handle,
       c10::optional<at::ScalarType> logical_element_type = c10::nullopt);
 
   static XLATensorPtr Create(
@@ -124,12 +111,6 @@ class XLATensor : public torch::lazy::LazyTensor {
   // LazyTensorPtr instead.
   XLATensor() = delete;
 
-  size_t generation() const { return data()->generation; }
-
-  XLATensorPtr alias() const {
-    return c10::make_intrusive<XLATensor>(XLATensor(data_ptr()));
-  }
-
   int64_t size(int64_t dim) const;
 
   at::Tensor ToTensor(bool detached);
@@ -151,9 +132,6 @@ class XLATensor : public torch::lazy::LazyTensor {
 
   xla::util::MaybeRef<xla::Shape> shape() const;
 
-  const torch::lazy::BackendDevice& GetDevice() const;
-  int64_t GetUniqueId() const;
-
   // Retrieves an opaque ID of the alias object upon which the tensor's view is
   // rooted, or 0 if this tensor is not a view.
   std::ptrdiff_t GetViewAliasId() const;
@@ -162,11 +140,7 @@ class XLATensor : public torch::lazy::LazyTensor {
   // its current value, executes the graph and fetches the XLA data result.
   torch::lazy::BackendDataPtr GetXlaData();
 
-  // Fetches the current value of the XLA data, which can be missing (nullptr)
-  // in case the tensor has a graph defining its current value,
-  torch::lazy::BackendDataPtr CurrentXlaData() const;
-
-  void SetXlaData(torch::lazy::BackendDataPtr xla_data);
+  void SetXlaData(torch::lazy::BackendDataPtr handle);
 
   // Retrieves the current IR XlaNode, or nullptr in case no active IR XlaNode
   // is available.
@@ -194,7 +168,9 @@ class XLATensor : public torch::lazy::LazyTensor {
   // Applies the queue of operations in preparation for using the data.
   void ApplyPendingGraph();
 
-  Data* data() const;
+  // To be noted, this returns XLATensor::Data instead of
+  // torch::lazy::LazyTensor::Data.
+  const std::shared_ptr<Data>& data() const;
 
   // XLA SPMD sharding spec annoation. The XLA tensor uses this to create
   // HloSharding for replication, manual and tile shardings.
@@ -219,7 +195,7 @@ class XLATensor : public torch::lazy::LazyTensor {
 
  private:
   XLATensor(const at::Tensor& tensor, const torch::lazy::BackendDevice& device);
-  XLATensor(torch::lazy::BackendDataPtr xla_data,
+  XLATensor(torch::lazy::BackendDataPtr handle,
             c10::optional<at::ScalarType> logical_element_type = c10::nullopt);
   XLATensor(torch::lazy::Value ir_value,
             const torch::lazy::BackendDevice& device,
@@ -238,13 +214,9 @@ class XLATensor : public torch::lazy::LazyTensor {
       std::shared_ptr<View> view, const torch::lazy::BackendDevice& device,
       c10::optional<at::ScalarType> logical_element_type = c10::nullopt);
 
-  std::shared_ptr<Data> data_ptr() const { return data_; }
-
-  void SetXlaData(torch::lazy::BackendDataPtr xla_data, bool sync);
+  void SetXlaData(torch::lazy::BackendDataPtr handle, bool sync);
 
   void AssignIrValue(torch::lazy::Value ir_value) const;
-
-  void SetTensorData(at::Tensor tensor_data);
 
   torch::lazy::Value CreateTensorNode(torch::lazy::BackendDataPtr data,
                                       bool read_only) const;
@@ -270,12 +242,15 @@ class XLATensor : public torch::lazy::LazyTensor {
   torch::lazy::Value GetIrValueForTensor(
       const at::Tensor& tensor, const torch::lazy::BackendDevice& device) const;
 
-  static int64_t GetNextTensorId();
-
   static bool UseEagerDebugMode();
 
   bool ShouldSyncIrNode();
 
+  // We store two shared_ptr of Data in a XLATensor.
+  // One in the LazyTensor class as the LazyTensor::Data type
+  // for base class method to access. One here as the derived
+  // XLATensor::Data type such that it's easier to access XLA
+  // extra fields.
   std::shared_ptr<Data> data_;
   // Temporarily used to suport Tensor.is_alias_of().
   // This is a fake storage that doesn't store anything.
