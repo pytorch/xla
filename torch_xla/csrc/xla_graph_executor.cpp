@@ -970,7 +970,7 @@ std::vector<torch::lazy::BackendDataPtr> XLAGraphExecutor::SetTensorData(
     // trying to access the tensor's device data will have to wait until the
     // asynchronous operation completes.
     torch::lazy::BackendDataPtr handle = tensor->CurrentDataHandle();
-    if (handle == nullptr && config.force_xla_data) {
+    if (handle == nullptr && config.force_ltc_data) {
       handle = tensor_data_vec[i];
       // Note: We are not using SetXlaData method here since that method
       // resets the ir_value. We have already done the resetting as part
@@ -1004,7 +1004,7 @@ void XLAGraphExecutor::ExtractIRAndPrepareXlaData_(
         WrapXlaData(xla::ComputationClient::Get()->CreateDataPlaceholder(
             tensor_device.toString(), std::move(shape)));
     tensor_data_vec.push_back(handle);
-    if (tensor->CurrentDataHandle() == nullptr && config.force_xla_data) {
+    if (tensor->CurrentDataHandle() == nullptr && config.force_ltc_data) {
       tensor->AssignIrValue(torch::lazy::Value());
     }
   }
