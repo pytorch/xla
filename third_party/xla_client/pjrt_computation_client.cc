@@ -116,6 +116,7 @@ std::vector<ComputationClient::DataPtr> PjRtComputationClient::GetDataShards(
 
 std::vector<ComputationClient::DataPtr> PjRtComputationClient::TransferToServer(
     absl::Span<const TensorSource> tensors) {
+  XLA_COUNTER("TransferToServer", 1);
   metrics::TimedSection timed(TransferToServerMetric());
   tensorflow::profiler::TraceMe activity(
       "PjRtComputationClient::TransferToServer",
@@ -173,6 +174,7 @@ ComputationClient::DataPtr PjRtComputationClient::TransferShardsToServer(
 
 std::vector<xla::Literal> PjRtComputationClient::TransferFromServer(
     absl::Span<const DataPtr> handles) {
+  XLA_COUNTER("TransferFromServer", 1);
   metrics::TimedSection timed(TransferFromServerMetric());
   tensorflow::profiler::TraceMe activity(
       "PjRtComputationClient::TransferFromServer",
