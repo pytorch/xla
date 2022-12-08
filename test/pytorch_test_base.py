@@ -37,19 +37,19 @@ DISABLED_TORCH_TESTS_ANY = {
         'test_addcmul',  # FIXME: complex dtype
         'test_clamp',  # slow
         'test_clamp_propagates_nans_xla',  # XLA min/max ignores Nans.
-        'test_cummax_cummin', # at::_ops::cummax_out::call(at::Tensor const&, long, at::Tensor&, at::Tensor&)
+        'test_cummax_cummin',  # at::_ops::cummax_out::call(at::Tensor const&, long, at::Tensor&, at::Tensor&)
         'test_cummax_discontiguous',  # Checking contiguity
         'test_cummin_discontiguous',  # Checking contiguity
-        'test_diff_xla_bool', # Received signal 6 & 11
-        'test_diff_xla_float32', # Received signal 6 & 11
-        'test_diff_xla_float64', # Received signal 6 & 11
-        'test_diff_xla_int16', # Received signal 6 & 11
-        'test_diff_xla_int32', # Received signal 6 & 11
-        'test_diff_xla_int64', # Received signal 6 & 11
-        'test_diff_xla_int8', # Received signal 6 & 11
-        'test_diff_xla_uint8', # Received signal 6 & 11
+        'test_diff_xla_bool',  # Received signal 6 & 11
+        'test_diff_xla_float32',  # Received signal 6 & 11
+        'test_diff_xla_float64',  # Received signal 6 & 11
+        'test_diff_xla_int16',  # Received signal 6 & 11
+        'test_diff_xla_int32',  # Received signal 6 & 11
+        'test_diff_xla_int64',  # Received signal 6 & 11
+        'test_diff_xla_int8',  # Received signal 6 & 11
+        'test_diff_xla_uint8',  # Received signal 6 & 11
         'test_discontiguous_out_cumsum',  # Checking contiguity
-        'test_invalid_shapes_grid_sampler_xla', # tsl::CurrentStackTrace[abi:cxx11]()
+        'test_invalid_shapes_grid_sampler_xla',  # tsl::CurrentStackTrace[abi:cxx11]()
         'test_lu_unpack',  # very slow compile
         'test_view',  # doesn't raise
         'test_sub_typing',  # doesn't raise
@@ -216,7 +216,7 @@ DISABLED_TORCH_TESTS_ANY = {
     # test_indexing.py
     'TestIndexingXLA': {
         'test_setitem_expansion_error',  # expecting a different runtime error
-        'test_setitem_scalars', # Received signal 6 & 11
+        'test_setitem_scalars',  # Received signal 6 & 11
         'test_multiple_byte_mask',  # expecting a different runtime error
         'test_empty_slice',  # stride
         'test_byte_tensor_assignment',  # expecting a different runtime error
@@ -224,7 +224,7 @@ DISABLED_TORCH_TESTS_ANY = {
         'test_byte_mask_accumulate',  # expecting a different runtime error
         'test_bool_indices',  # expecting a different runtime error
         'test_index_getitem_copy_bools_slices',  # storage
-        'test_index_setitem_bools_slices', # torch::autograd::dispatch_set_item
+        'test_index_setitem_bools_slices',  # torch::autograd::dispatch_set_item
         'test_getitem_scalars',  # storage
         'test_empty_ndim_index',  # expecting a different runtime error
         'test_index_put_byte_indices_xla',  # expecting a different runtime error
@@ -243,7 +243,7 @@ DISABLED_TORCH_TESTS_ANY = {
 
     # test_nn.py
     'TestNNDeviceTypeXLA': {
-        'test_cross_entropy_label_smoothing_errors_xla', # Received signal 6 & 11
+        'test_cross_entropy_label_smoothing_errors_xla',  # Received signal 6 & 11
         'test_clip_grad_norm_error_if_nonfinite_xla',  # FIXME: edge case of norm
         'test_batchnorm_grad',  # FIXME! UndefinedTensorImpl::_singleton
         'test_nonlinearity_propagate_nan',  # relu6 with a nan tensor returns a tensor([0.]) instead of a nan tensor
@@ -254,12 +254,12 @@ DISABLED_TORCH_TESTS_ANY = {
         'test_batchnorm_eval',  # FIXME! UndefinedTensorImpl::_singleton
         'test_MaxPool2d_indices',  # lowering
         'test_MaxPool1d_indices',  # lowering
-        'test_multi_margin_loss_errors_xla', # Received signal 6 & 11
+        'test_multi_margin_loss_errors_xla',  # Received signal 6 & 11
         'test_softshrink_negative',  # runtime error
         'test_nll_loss_empty_tensor_reduction_mean',  # floating point division 0 by 0, expecting nan but get 0
         'test_nll_loss_invalid_target_dim',  # expecting a specific error message.
         'test_nll_loss_invalid_weights',  # expecting a specific error message.
-        'test_nll_loss_mismatched_batch_xla', # Received signal 6 & 11
+        'test_nll_loss_mismatched_batch_xla',  # Received signal 6 & 11
         'test_fold',  # The gradient check code errors out on type() call, and code is slow on XLA
         'test_unfold',  # The gradient check code errors out on type() call, and code is slow on XLA
         'test_hardsigmoid_grad_xla',  # gradient check is slow
@@ -287,12 +287,12 @@ DISABLED_TORCH_TESTS_ANY = {
 
     # test/nn/test_pooling.py
     'TestPoolingNNDeviceTypeXLA': {
-        'test_AdaptiveMaxPool1d_indices_xla_float32', # THPEngine_run_backward
-        'test_AdaptiveMaxPool2d_indices_xla_float32', # THPEngine_run_backward
-        'test_AdaptiveMaxPool3d_indices_xla_float32', # THPEngine_run_backward
-        'test_MaxPool1d_indices_xla_float32', # THPEngine_run_backward
-        'test_MaxPool2d_indices_xla_float32', # THPEngine_run_backward
-        'test_MaxPool3d_indices_xla_float32', # THPEngine_run_backward
+        'test_AdaptiveMaxPool1d_indices_xla_float32',  # THPEngine_run_backward
+        'test_AdaptiveMaxPool2d_indices_xla_float32',  # THPEngine_run_backward
+        'test_AdaptiveMaxPool3d_indices_xla_float32',  # THPEngine_run_backward
+        'test_MaxPool1d_indices_xla_float32',  # THPEngine_run_backward
+        'test_MaxPool2d_indices_xla_float32',  # THPEngine_run_backward
+        'test_MaxPool3d_indices_xla_float32',  # THPEngine_run_backward
         'test_pool_invalid_size',  # expecting a different runtime error
     },
 
@@ -312,7 +312,7 @@ DISABLED_TORCH_TESTS_ANY = {
         'test_Conv2d_backward_depthwise_xla_float64',  # slow compilation
         'test_conv3d_same_padding_backward_xla',  # XLA tensors do not have storage
         'test_conv3d_valid_padding_backward_xla_float64',  # Jacobian
-        'test_noncontig_conv_grad_xla_float64', # Jacobian
+        'test_noncontig_conv_grad_xla_float64',  # Jacobian
     },
 
     # test/nn/test_multihead_attention.py
