@@ -54,77 +54,6 @@
 namespace torch_xla {
 namespace {
 
-class XlaDataCacheArena {
- public:
-  static XlaDataCacheArena* Get() {
-    static const size_t kMaxCacheSize =
-        xla::sys_util::GetEnvInt("XLA_DEVDATA_CACHE_SIZE", 128);
-    static XlaDataCacheArena* arena = new XlaDataCacheArena(kMaxCacheSize);
-    return arena;
-  }
-
-  explicit XlaDataCacheArena(size_t max_cache_size)
-      : max_cache_size_(max_cache_size) {}
-
-  torch::lazy::BackendDataPtr GetDeviceData(
-      const at::Tensor& tensor, const torch::lazy::BackendDevice& device) {
-    XlaDataCacheArena::XlaDataCache* cache = Get()->GetDataCache(device);
-    torch::lazy::BackendDataPtr device_data = cache->Get(tensor);
-    if (device_data == nullptr) {
-      at::Tensor tensor_copy = torch::lazy::CopyTensor(tensor);
-      device_data = TensorToXlaData(tensor_copy, device);
-      cache->Add(std::move(tensor_copy), device_data);
-      TORCH_LAZY_COUNTER("DeviceDataCacheMiss", 1);
-    }
-    return device_data;
-  }
-
-  torch::lazy::BackendDataPtr GetDeviceData(
-      const at::Scalar& value, at::ScalarType scalar_type,
-      const torch::lazy::BackendDevice& device) {
-    // Workaround since at::scalar_tensor doesn't support bfloat16 yet.
-    at::Tensor t = at::scalar_tensor(
-        value, at::TensorOptions(scalar_type == at::ScalarType::BFloat16
-                                     ? at::ScalarType::Float
-                                     : scalar_type));
-    if (scalar_type == at::ScalarType::BFloat16) t = t.to(scalar_type);
-    return GetDeviceData(t, device);
-  }
-
- private:
-  struct TensorHasher {
-    size_t operator()(const at::Tensor& tensor) const {
-      return torch::lazy::HashReduce(torch::lazy::HashCombine(
-          torch::lazy::GetEnumValue(tensor.scalar_type()), TensorHash(tensor)));
-    };
-  };
-
-  struct TensorComparer {
-    bool operator()(const at::Tensor& tensor1,
-                    const at::Tensor& tensor2) const {
-      return TensorCompare(tensor1, tensor2);
-    }
-  };
-
-  using XlaDataCache = xla::util::Cache<at::Tensor, torch::lazy::BackendData,
-                                        TensorHasher, TensorComparer>;
-
-  XlaDataCache* GetDataCache(const torch::lazy::BackendDevice& device) {
-    std::lock_guard<std::mutex> lock(mutex_);
-    auto it = device_caches_.find(device);
-    if (it == device_caches_.end()) {
-      std::unique_ptr<XlaDataCache> cache(new XlaDataCache(max_cache_size_));
-      it = device_caches_.emplace(device, std::move(cache)).first;
-    }
-    return it->second.get();
-  }
-
-  size_t max_cache_size_ = 0;
-  std::mutex mutex_;
-  std::map<torch::lazy::BackendDevice, std::unique_ptr<XlaDataCache>>
-      device_caches_;
-};
-
 torch::lazy::Value IrValueFromScalar(const at::Scalar& value,
                                      at::ScalarType scalar_type,
                                      const torch::lazy::BackendDevice& device) {
@@ -425,13 +354,13 @@ torch::lazy::BackendDataPtr XLAGraphExecutor::GetBaseSeedData(
 
 torch::lazy::BackendDataPtr XLAGraphExecutor::GetDeviceData(
     const at::Tensor& tensor, const torch::lazy::BackendDevice& device) {
-  return XlaDataCacheArena::Get()->GetDeviceData(tensor, device);
+  return DataCacheArena::Get()->GetDeviceData(tensor, device);
 }
 
 torch::lazy::BackendDataPtr XLAGraphExecutor::GetDeviceData(
     const at::Scalar& value, at::ScalarType scalar_type,
     const torch::lazy::BackendDevice& device) {
-  return XlaDataCacheArena::Get()->GetDeviceData(value, scalar_type, device);
+  return DataCacheArena::Get()->GetDeviceData(value, scalar_type, device);
 }
 
 std::string XLAGraphExecutor::DumpHloComputation(
