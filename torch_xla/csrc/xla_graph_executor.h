@@ -82,8 +82,8 @@ class XLAGraphExecutor {
   torch::lazy::Value GetRngSeed(const torch::lazy::BackendDevice& device);
   void SetRngSeed(const torch::lazy::BackendDevice& device, uint64_t seed);
   uint64_t GetRunningSeed(const torch::lazy::BackendDevice& device);
-  torch::lazy::BackendDataPtr GetRngSeedData(
-      const torch::lazy::BackendDevice& device, bool reset);
+  torch::lazy::BackendDataPtr GetBaseSeedData(
+      const torch::lazy::BackendDevice& device);
 
   void DeviceBarrier(const torch::lazy::BackendDevice& device);
 
