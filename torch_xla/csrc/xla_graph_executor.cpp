@@ -151,7 +151,7 @@ class DeviceLockerArena {
   std::map<torch::lazy::BackendDevice, std::shared_ptr<DeviceLocker>> lockers_;
 };
 
-xla::util::ExceptionCleanup LockDevice(
+torch::lazy::ExceptionCleanup LockDevice(
     const torch::lazy::BackendDevice& device) {
   TF_VLOG(4) << "Waiting on device barrier for device " << device << " ...";
   std::shared_ptr<DeviceLocker> locker;
@@ -161,18 +161,18 @@ xla::util::ExceptionCleanup LockDevice(
     locker->Lock();
   }
   TF_VLOG(4) << "Waiting on device barrier for device " << device << " done!";
-  return xla::util::ExceptionCleanup(
-      [locker =
-           std::move(locker)](xla::util::ExceptionCleanup::StatusType status) {
+  return torch::lazy::ExceptionCleanup(
+      [locker = std::move(locker)](
+          torch::lazy::ExceptionCleanup::StatusType status) {
         locker->Unlock(std::move(status));
       });
 }
 
 // Use a set to impose an order on the device locking sequence (ABBA
 // prevention).
-std::vector<xla::util::ExceptionCleanup> LockDevices(
+std::vector<torch::lazy::ExceptionCleanup> LockDevices(
     const std::set<torch::lazy::BackendDevice>& devices) {
-  std::vector<xla::util::ExceptionCleanup> unlocker;
+  std::vector<torch::lazy::ExceptionCleanup> unlocker;
   unlocker.reserve(devices.size());
   for (auto& device : devices) {
     unlocker.emplace_back(LockDevice(device));
@@ -427,9 +427,9 @@ void XLAGraphExecutor::Async::Wait() {
   mwait.Wait();
   // Accessing other Async members is safe only after MultiWait::Wait()
   // completes.
-  xla::util::ExceptionCleanup::StatusType status;
+  torch::lazy::ExceptionCleanup::StatusType status;
   for (auto& cleanup : unlocker) {
-    const xla::util::ExceptionCleanup::StatusType& cleanup_status =
+    const torch::lazy::ExceptionCleanup::StatusType& cleanup_status =
         cleanup.GetStatus();
     if (cleanup_status != nullptr) {
       if (status == nullptr) {
@@ -459,7 +459,7 @@ void XLAGraphExecutor::UnregisterTensor(XLATensor::Data* data) {
 }
 
 void XLAGraphExecutor::ApplyEagerSync(std::vector<XLATensorPtr>& tensors) {
-  SyncTensorsGraph(&tensors, {}, /*wait=*/false, /*sync_xla_data=*/false);
+  SyncTensorsGraph(&tensors, {}, /*wait=*/false, /*sync_ltc_data=*/false);
 }
 
 torch::lazy::Value XLAGraphExecutor::GetDeviceDataIrValue(
@@ -584,7 +584,7 @@ std::vector<XLATensorPtr> XLAGraphExecutor::GetLiveTensors(
 
 void XLAGraphExecutor::SyncTensorsGraph(std::vector<XLATensorPtr>* tensors,
                                         absl::Span<const std::string> devices,
-                                        bool wait, bool sync_xla_data) {
+                                        bool wait, bool sync_ltc_data) {
   TF_VLOG(4) << "Trying to sync the value of " << tensors->size()
              << " tensor(s)";
   tensorflow::profiler::TraceMe activity(
@@ -592,7 +592,7 @@ void XLAGraphExecutor::SyncTensorsGraph(std::vector<XLATensorPtr>* tensors,
   static const bool op_by_op =
       xla::sys_util::GetEnvBool("XLA_SYNC_TENSORS_OPBYOP", false);
   SyncTensorsConfig config;
-  config.sync_xla_data = sync_xla_data;
+  config.sync_ltc_data = sync_ltc_data;
   if (op_by_op) {
     OpByOpAsync async = SyncTensorsGraphOpByOp(tensors, devices, config);
     if (wait) {
@@ -614,7 +614,7 @@ void XLAGraphExecutor::SyncLiveTensorsGraph(
   auto tensors = GetLiveTensors(device);
   TF_VLOG(4) << tensors.size() << " live tensors: devices=("
              << absl::StrJoin(devices, ",") << ")";
-  SyncTensorsGraph(&tensors, devices, wait, /*sync_xla_data=*/true);
+  SyncTensorsGraph(&tensors, devices, wait, /*sync_ltc_data=*/true);
 }
 
 void XLAGraphExecutor::MarkStep(const torch::lazy::BackendDevice& device) {
@@ -638,7 +638,7 @@ void XLAGraphExecutor::WaitDeviceOps(absl::Span<const std::string> devices) {
       wait_devices.insert(ParseDeviceString(device_str));
     }
   }
-  // The LockDevices() API returns a vector of xla::util::ExceptionCleanup
+  // The LockDevices() API returns a vector of torch::lazy::ExceptionCleanup
   // object, which is going to be freed immediately, turning this operation
   // into a lock barrier.
   LockDevices(wait_devices);
@@ -656,7 +656,7 @@ std::vector<at::Tensor> XLAGraphExecutor::GetTensors(
 torch::lazy::hash_t XLAGraphExecutor::GetGraphHash(
     const std::vector<XLATensorPtr>& tensors) {
   SyncTensorsConfig config;
-  config.sync_xla_data = true;
+  config.sync_ltc_data = true;
 
   SyncTensorCollection coll = CollectSyncTensors(tensors, config);
   absl::Span<const size_t> indices = coll.indices;
@@ -721,9 +721,9 @@ XLAGraphExecutor::SyncTensorCollection XLAGraphExecutor::CollectSyncTensors(
   std::vector<XLATensor::ShardingSpecPtr> shardings;
   std::vector<size_t> at_tensor_index;
   std::unordered_set<int64_t> tensor_ids;
-  // The force_xla_data controls aliasing compilation, so effectively the same
-  // graph with on/off force_xla_data should not match, hash wise.
-  coll.hash = torch::lazy::MHash(config.force_xla_data);
+  // The force_ltc_data controls aliasing compilation, so effectively the same
+  // graph with on/off force_ltc_data should not match, hash wise.
+  coll.hash = torch::lazy::MHash(config.force_ltc_data);
   coll.config = config;
   coll.device = *unique_device;
   coll.indices.reserve(tensors.size());
@@ -741,7 +741,7 @@ XLAGraphExecutor::SyncTensorCollection XLAGraphExecutor::CollectSyncTensors(
           coll.hash = torch::lazy::HashCombine(coll.hash, ir_value.hash());
           coll.indices.push_back(i);
         }
-      } else if (config.force_xla_data) {
+      } else if (config.force_ltc_data) {
         // The tensor only has at::Tensor data. We need to queue it for a
         // device upload.
         c10::optional<at::Tensor> tensor_data = tensors[i]->CurrentTensorData();
@@ -796,7 +796,7 @@ XLAGraphExecutor::ExecuteComputationWithBarrier(
     torch::lazy::ComputationPtr computation,
     c10::ArrayRef<torch::lazy::BackendDataPtr> arguments,
     const torch::lazy::BackendDevice& device) {
-  std::vector<xla::util::ExceptionCleanup> unlocker;
+  std::vector<torch::lazy::ExceptionCleanup> unlocker;
   unlocker = LockDevices({device});
   return torch::lazy::getBackend()->ExecuteComputation(computation, arguments,
                                                        device);
@@ -805,7 +805,7 @@ XLAGraphExecutor::ExecuteComputationWithBarrier(
 std::vector<at::Tensor> XLAGraphExecutor::GetTensorsOpByOp(
     std::vector<XLATensorPtr>* tensors) {
   SyncTensorsConfig config;
-  config.force_xla_data = false;
+  config.force_ltc_data = false;
   SyncTensorCollection coll = CollectSyncTensors(*tensors, config);
   std::vector<torch::lazy::BackendDataPtr> async_tensors_data;
   if (!coll.indices.empty()) {
@@ -831,7 +831,7 @@ std::vector<at::Tensor> XLAGraphExecutor::GetTensorsOpByOp(
 std::vector<at::Tensor> XLAGraphExecutor::GetTensorsFused(
     std::vector<XLATensorPtr>* tensors) {
   SyncTensorsConfig config;
-  config.force_xla_data = false;
+  config.force_ltc_data = false;
   auto async = SyncTensorsGraphInternal(tensors, {}, config);
   if (async != nullptr) {
     async->mwait.Wait();
@@ -898,9 +898,8 @@ XLAGraphExecutor::OpByOpAsync XLAGraphExecutor::SyncTensorsGraphOpByOp(
         }
       }
     } catch (...) {
-      std::exception_ptr exptr = std::current_exception();
       for (auto& unlocker : async->coll.unlocker) {
-        unlocker.SetStatus(exptr);
+        unlocker.SetStatus(std::current_exception());
       }
       throw;
     }
@@ -961,7 +960,7 @@ std::vector<torch::lazy::BackendDataPtr> XLAGraphExecutor::SetTensorData(
   for (int i = 0; i < indices.size(); i++) {
     auto index = indices[i];
     XLATensorPtr& tensor = (*tensors)[index];
-    // If the config.force_xla_data flag is true, the purpose of this tensor
+    // If the config.force_ltc_data flag is true, the purpose of this tensor
     // sync operation is to truncate the IR graph and materialize device data
     // in place of IR graph, on selected tensors. But since operation will
     // complete asynchronously, if a tensor does not already have device data,
@@ -971,7 +970,7 @@ std::vector<torch::lazy::BackendDataPtr> XLAGraphExecutor::SetTensorData(
     // trying to access the tensor's device data will have to wait until the
     // asynchronous operation completes.
     torch::lazy::BackendDataPtr xla_data = tensor->CurrentXlaData();
-    if (xla_data == nullptr && config.force_xla_data) {
+    if (xla_data == nullptr && config.force_ltc_data) {
       xla_data = tensor_data_vec[i];
       // Note: We are not using SetXlaData method here since that method
       // resets the ir_value. We have already done the resetting as part
@@ -1005,7 +1004,7 @@ void XLAGraphExecutor::ExtractIRAndPrepareXlaData_(
         WrapXlaData(xla::ComputationClient::Get()->CreateDataPlaceholder(
             tensor_device.toString(), std::move(shape)));
     tensor_data_vec.push_back(xla_data);
-    if (tensor->CurrentXlaData() == nullptr && config.force_xla_data) {
+    if (tensor->CurrentXlaData() == nullptr && config.force_ltc_data) {
       tensor->AssignIrValue(torch::lazy::Value());
     }
   }
@@ -1106,9 +1105,8 @@ XLAGraphExecutor::ScheduleSyncTensorsGraph(
       // even in case the caller does not wait, and that is accomplished by
       // setting the unlockers status. In that case the exception will be
       // surfaced when the user tries to acquire the device locks the next time.
-      std::exception_ptr exptr = std::current_exception();
       for (auto& unlocker : async->unlocker) {
-        unlocker.SetStatus(exptr);
+        unlocker.SetStatus(std::current_exception());
       }
       throw;
     }
@@ -1282,8 +1280,8 @@ XLAGraphExecutor::CompilationResult XLAGraphExecutor::Compile(
   // TODO(yeounoh) aliasing is disabled for partitioned computation,
   // since the current aliasing compares the unpartitioned input and output
   // shapes which can lead to an incorrect aliasing pairs if sharded.
-  if (enable_aliasing && coll.config.sync_xla_data && !is_sharded) {
-    // We can only alias at the step barrier, when force_xla_data is true.
+  if (enable_aliasing && coll.config.sync_ltc_data && !is_sharded) {
+    // We can only alias at the step barrier, when force_ltc_data is true.
     // Consider the case:
     //   1. Tensor A(DEVICE_DATA)
     //   2. Tensor B = A + 0.9
@@ -1305,7 +1303,7 @@ XLAGraphExecutor::CompilationResult XLAGraphExecutor::Compile(
     // Also in the first example, unless we are doing a step barrier and hence
     // include all live tensors, if the B value is not part of the graph, it
     // will later fetch the new value of A, which is incorrect.
-    // But, when we issue a step barrier (force_xla_data == true) we have to
+    // But, when we issue a step barrier (force_ltc_data == true) we have to
     // turn everything into DEVICE_DATA, so we can activate aliasing.
     input_output_alias_pair =
         BuildInputOutputAliases(tensors, coll.indices, &lowering_ctx);
