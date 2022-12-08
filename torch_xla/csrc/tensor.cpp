@@ -127,7 +127,7 @@ XLATensor::XLATensor(std::shared_ptr<Data> data)
           c10::DataPtr(nullptr, backendDeviceToAtenDevice(data_->device)))) {}
 
 auto XLATensor::data() const -> const std::shared_ptr<Data>& {
-  XLA_CHECK(data_ != nullptr, "Trying to access a null cursor");
+  XLA_CHECK(data_ != nullptr) << "Trying to access a null cursor";
   return data_;
 }
 
