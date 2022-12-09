@@ -175,11 +175,11 @@ XLAGraphExecutor* XLAGraphExecutor::Get() {
   return &arena;
 }
 
-void XLAGraphExecutor::RegisterTensor(std::shared_ptr<XLATensor::Data> data) {
+void XLAGraphExecutor::RegisterTensor(std::shared_ptr<torch::lazy::LazyTensor::Data> data) {
   DeviceContextArena::Get()->RegisterTensor(data);
 }
 
-void XLAGraphExecutor::UnregisterTensor(XLATensor::Data* data) {
+void XLAGraphExecutor::UnregisterTensor(torch::lazy::LazyTensor::Data* data) {
   DeviceContextArena::Get()->UnregisterTensor(data);
 }
 
