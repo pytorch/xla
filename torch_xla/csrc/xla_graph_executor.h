@@ -175,6 +175,52 @@ class XLAGraphExecutor : public torch::lazy::LazyGraphExecutor {
     std::vector<torch::lazy::BackendDataPtr> tensors_data;
   };
 
+  // The DeviceContextArena holds per device live information and statistics,
+  // among which the XLA tensors which are currently alive in the system. This is
+  // used to create XLA computation "barriers" in order to flush pending
+  // operations and ensure the same XLA computations are created during the
+  // training loops.
+  class DeviceContextArena {
+    struct DeviceContext {
+      std::mutex lock;
+      std::map<int64_t, std::weak_ptr<torch::lazy::LazyTensor::Data>> tensors_data;
+      uint64_t seed = 101;
+      uint64_t running_seed = 101;
+      torch::lazy::Value seed_ir_value;
+    };
+
+  public:
+    static DeviceContextArena* Get();
+
+    void RegisterTensor(std::shared_ptr<torch::lazy::LazyTensor::Data> data);
+    void UnregisterTensor(torch::lazy::LazyTensor::Data* data);
+
+    std::vector<XLATensorPtr> GetLiveTensors(
+        const torch::lazy::BackendDevice* device);
+
+    torch::lazy::Value GetRngSeed(const torch::lazy::BackendDevice& device);
+
+    torch::lazy::BackendDataPtr GetBaseSeedData(
+        const torch::lazy::BackendDevice& device);
+
+    uint64_t GetRunningSeed(const torch::lazy::BackendDevice& device);
+
+    void SetRngSeed(const torch::lazy::BackendDevice& device, uint64_t seed);
+
+    void MarkStep(const torch::lazy::BackendDevice& device);
+
+  private:
+    std::vector<DeviceContext*> GetAllDeviceContexts();
+
+    void ForAllDeviceContexts(const std::function<void(DeviceContext*)>& fn,
+                              const torch::lazy::BackendDevice* device);
+
+    DeviceContext* GetDeviceContext(const torch::lazy::BackendDevice& device);
+
+    std::mutex lock_;
+    std::map<torch::lazy::BackendDevice, DeviceContext*> device_contexts_;
+  };
+
   XLAGraphExecutor() = default;
 
   SyncTensorCollection CollectSyncTensors(

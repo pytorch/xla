@@ -68,41 +68,26 @@ bool ShouldSyncIrValue(const torch::lazy::Value& ir_value) {
 
 }  // namespace
 
-// The DeviceContextArena holds per device live information and statistics,
-// among which the XLA tensors which are currently alive in the system. This is
-// used to create XLA computation "barriers" in order to flush pending
-// operations and ensure the same XLA computations are created during the
-// training loops.
-class DeviceContextArena {
-  struct DeviceContext {
-    std::mutex lock;
-    std::map<int64_t, std::weak_ptr<torch::lazy::LazyTensor::Data>> tensors_data;
-    uint64_t seed = 101;
-    uint64_t running_seed = 101;
-    torch::lazy::Value seed_ir_value;
-  };
-
- public:
-  static DeviceContextArena* Get() {
+  auto XLAGraphExecutor::DeviceContextArena::Get() -> DeviceContextArena* {
     static DeviceContextArena* arena = new DeviceContextArena();
     return arena;
   }
 
-  void RegisterTensor(std::shared_ptr<torch::lazy::LazyTensor::Data> data) {
+  void XLAGraphExecutor::DeviceContextArena::RegisterTensor(std::shared_ptr<torch::lazy::LazyTensor::Data> data) {
     DeviceContext* devctx = GetDeviceContext(data->device);
     std::lock_guard<std::mutex> lock(devctx->lock);
     devctx->tensors_data.emplace(data->unique_id, data);
     TORCH_LAZY_COUNTER("CreateXlaTensor", 1);
   }
 
-  void UnregisterTensor(torch::lazy::LazyTensor::Data* data) {
+  void XLAGraphExecutor::DeviceContextArena::UnregisterTensor(torch::lazy::LazyTensor::Data* data) {
     DeviceContext* devctx = GetDeviceContext(data->device);
     std::lock_guard<std::mutex> lock(devctx->lock);
     devctx->tensors_data.erase(data->unique_id);
     TORCH_LAZY_COUNTER("DestroyXlaTensor", 1);
   }
 
-  std::vector<XLATensorPtr> GetLiveTensors(
+  std::vector<XLATensorPtr> XLAGraphExecutor::DeviceContextArena::GetLiveTensors(
       const torch::lazy::BackendDevice* device) {
     std::vector<XLATensorPtr> tensors;
     auto fn = [&](DeviceContext* devctx) {
@@ -119,7 +104,7 @@ class DeviceContextArena {
     return tensors;
   }
 
-  torch::lazy::Value GetRngSeed(const torch::lazy::BackendDevice& device) {
+  torch::lazy::Value XLAGraphExecutor::DeviceContextArena::GetRngSeed(const torch::lazy::BackendDevice& device) {
     static const at::ScalarType kSeedType = at::ScalarType::Long;
     static const uint64_t kSeedMul = 214013;
     static const uint64_t kSeedAdd = 2531011;
@@ -142,7 +127,7 @@ class DeviceContextArena {
     return devctx->seed_ir_value;
   }
 
-  torch::lazy::BackendDataPtr GetBaseSeedData(
+  torch::lazy::BackendDataPtr XLAGraphExecutor::DeviceContextArena::GetBaseSeedData(
       const torch::lazy::BackendDevice& device) {
     static const at::ScalarType kSeedType = at::ScalarType::Long;
     DeviceContext* devctx = GetDeviceContext(device);
@@ -156,13 +141,13 @@ class DeviceContextArena {
         ->data();
   }
 
-  uint64_t GetRunningSeed(const torch::lazy::BackendDevice& device) {
+  uint64_t XLAGraphExecutor::DeviceContextArena::GetRunningSeed(const torch::lazy::BackendDevice& device) {
     DeviceContext* devctx = GetDeviceContext(device);
     std::lock_guard<std::mutex> lock(devctx->lock);
     return devctx->running_seed;
   }
 
-  void SetRngSeed(const torch::lazy::BackendDevice& device, uint64_t seed) {
+  void XLAGraphExecutor::DeviceContextArena::SetRngSeed(const torch::lazy::BackendDevice& device, uint64_t seed) {
     DeviceContext* devctx = GetDeviceContext(device);
     std::lock_guard<std::mutex> lock(devctx->lock);
     devctx->seed = seed;
@@ -170,7 +155,7 @@ class DeviceContextArena {
     devctx->seed_ir_value = torch::lazy::Value();
   }
 
-  void MarkStep(const torch::lazy::BackendDevice& device) {
+  void XLAGraphExecutor::DeviceContextArena::MarkStep(const torch::lazy::BackendDevice& device) {
     DeviceContext* devctx = GetDeviceContext(device);
     std::lock_guard<std::mutex> lock(devctx->lock);
     devctx->seed = 1012031 + devctx->seed * 7012063;
@@ -178,8 +163,7 @@ class DeviceContextArena {
     devctx->seed_ir_value = torch::lazy::Value();
   }
 
- private:
-  std::vector<DeviceContext*> GetAllDeviceContexts() {
+  auto XLAGraphExecutor::DeviceContextArena::GetAllDeviceContexts() -> std::vector<DeviceContext*> {
     std::vector<DeviceContext*> all_device_contexts;
     std::lock_guard<std::mutex> lock(lock_);
     all_device_contexts.reserve(device_contexts_.size());
@@ -189,7 +173,7 @@ class DeviceContextArena {
     return all_device_contexts;
   }
 
-  void ForAllDeviceContexts(const std::function<void(DeviceContext*)>& fn,
+  void XLAGraphExecutor::DeviceContextArena::ForAllDeviceContexts(const std::function<void(DeviceContext*)>& fn,
                             const torch::lazy::BackendDevice* device) {
     if (device == nullptr) {
       for (auto devctx : GetAllDeviceContexts()) {
@@ -200,7 +184,7 @@ class DeviceContextArena {
     }
   }
 
-  DeviceContext* GetDeviceContext(const torch::lazy::BackendDevice& device) {
+  auto XLAGraphExecutor::DeviceContextArena::GetDeviceContext(const torch::lazy::BackendDevice& device) -> DeviceContext* {
     std::lock_guard<std::mutex> lock(lock_);
     auto it = device_contexts_.find(device);
     if (it == device_contexts_.end()) {
@@ -208,10 +192,6 @@ class DeviceContextArena {
     }
     return it->second;
   }
-
-  std::mutex lock_;
-  std::map<torch::lazy::BackendDevice, DeviceContext*> device_contexts_;
-};
 
 XLAGraphExecutor::Async::Async(
     SyncTensorCollection* coll,
