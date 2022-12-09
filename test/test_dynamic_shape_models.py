@@ -39,10 +39,31 @@ class Feedforward(torch.nn.Module):
 
 
 @unittest.skipIf(
-    xm.get_xla_supported_devices("CPU"),
+    not xm.get_xla_supported_devices("GPU") and not xm.get_xla_supported_devices("TPU"),
     f"The tests fail on CPU. See https://github.com/pytorch/xla/issues/4298 for more detail."
 )
 class TestDynamicShapeModels(unittest.TestCase):
+
+  def test_forward_pass_dynamic_input_correctness(self):
+    losses = []
+    for _ in range(2):
+      num_features = 2
+      num_test_samples = 5
+      x_test, y_test = self.create_dynamic_test_data(num_test_samples,
+                                                     num_features, xla_dev)
+
+      model = Feedforward(num_features, hidden_size=10).to(xla_dev)
+      criterion = torch.nn.BCELoss()
+
+      model.eval()
+      with torch.no_grad():
+        y_pred = model(x_test)
+        before_train = criterion(y_pred.squeeze(), y_test)
+        xm.mark_step()
+        losses.append(before_train.item())
+
+    np.testing.assert_allclose(losses[0], losses[1], rtol=1e-2, atol=1e-2)
+    print('Test passed.')
 
   def test_forward_pass_dynamic_input_compile_once(self):
     met.clear_metrics()
@@ -61,6 +82,7 @@ class TestDynamicShapeModels(unittest.TestCase):
         criterion(y_pred.squeeze(), y_test)
         xm.mark_step()
     np.testing.assert_equal(met.metric_data('CompileTime')[0], 1) # TODO(xw32): change to 3 later before merge.
+    print('Test passed.')
 
   def create_dynamic_test_data(self, num_test_samples, num_features, device):
     x_test = torch.ones(num_test_samples, num_features)
