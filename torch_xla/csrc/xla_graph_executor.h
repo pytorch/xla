@@ -85,6 +85,17 @@ class XLAGraphExecutor : public torch::lazy::LazyGraphExecutor {
   torch::lazy::BackendDataPtr GetBaseSeedData(
       const torch::lazy::BackendDevice& device);
 
+  void DeviceBarrier(const torch::lazy::BackendDevice& device);
+
+  torch::lazy::BackendDataPtr GetDeviceData(
+      const at::Tensor& tensor, const torch::lazy::BackendDevice& device);
+
+  torch::lazy::BackendDataPtr GetDeviceData(
+      const at::Scalar& value, at::ScalarType scalar_type,
+      const torch::lazy::BackendDevice& device);
+
+  size_t IncTrimCounter();
+
   // Dumps the XLA HLO text of the computation accumulated in the graph which is
   // attached the tensors.
   std::string DumpHloComputation(const std::vector<XLATensorPtr>& tensors);
