@@ -243,6 +243,8 @@ xla::XlaOp BuildSigmoid(xla::XlaOp input) {
   xla::XlaOp half = XlaHelpers::ScalarValue<float>(0.5, shape.element_type(),
                                                    input.builder());
   return half + half * xla::Tanh(half * input);
+  // xla::XlaOp one = xla::One(input.builder(), shape.element_type());
+  // return one / (one + xla::Exp(-input));
 }
 
 xla::XlaOp BuildSiLUBackward(xla::XlaOp grad_output, xla::XlaOp input) {
