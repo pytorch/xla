@@ -76,7 +76,7 @@ bool ShouldSyncIrValue(const torch::lazy::Value& ir_value) {
 class DeviceContextArena {
   struct DeviceContext {
     std::mutex lock;
-    std::map<int64_t, std::weak_ptr<XLATensor::Data>> tensors_data;
+    std::map<int64_t, std::weak_ptr<torch::lazy::LazyTensor::Data>> tensors_data;
     uint64_t seed = 101;
     uint64_t running_seed = 101;
     torch::lazy::Value seed_ir_value;
@@ -88,14 +88,14 @@ class DeviceContextArena {
     return arena;
   }
 
-  void RegisterTensor(std::shared_ptr<XLATensor::Data> data) {
+  void RegisterTensor(std::shared_ptr<torch::lazy::LazyTensor::Data> data) {
     DeviceContext* devctx = GetDeviceContext(data->device);
     std::lock_guard<std::mutex> lock(devctx->lock);
     devctx->tensors_data.emplace(data->unique_id, data);
     TORCH_LAZY_COUNTER("CreateXlaTensor", 1);
   }
 
-  void UnregisterTensor(XLATensor::Data* data) {
+  void UnregisterTensor(torch::lazy::LazyTensor::Data* data) {
     DeviceContext* devctx = GetDeviceContext(data->device);
     std::lock_guard<std::mutex> lock(devctx->lock);
     devctx->tensors_data.erase(data->unique_id);
@@ -108,7 +108,7 @@ class DeviceContextArena {
     auto fn = [&](DeviceContext* devctx) {
       std::lock_guard<std::mutex> lock(devctx->lock);
       for (auto& uid_wptr : devctx->tensors_data) {
-        std::shared_ptr<XLATensor::Data> data = uid_wptr.second.lock();
+        auto data = std::dynamic_pointer_cast<XLATensor::Data>(uid_wptr.second.lock());
         if (data != nullptr) {
           tensors.push_back(
               c10::make_intrusive<XLATensor>(XLATensor(std::move(data))));
