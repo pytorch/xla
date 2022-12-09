@@ -8,6 +8,14 @@
 
 namespace torch_xla {
 
+// [Note: Re-using upstream TensorImpl] As part of the LTC migration effort,
+// we tried to re-use the upstream LTCTensorImpl (torch/csrc/lazy/core/tensor_impl.h) 
+// instead of having our own version of XLATensorImpl. However, LTCTensorImpl defines
+// its own set of hard-coded dispatch keys in its constructor and has functions that
+// call this constructor. In addition, updating XLATensorImpl to extend LTCTensorImpl
+// does not produce much benefit since that wouldn't remove much duplicate code. 
+// As a result, we decided to keep and use XLATensorImpl. 
+
 // Tensor implementation class used to be fed to the at::Tensor.
 // Its scope is just to handle an XLATensor.
 class XLATensorImpl : public c10::TensorImpl {
