@@ -68,130 +68,72 @@ bool ShouldSyncIrValue(const torch::lazy::Value& ir_value) {
 
 }  // namespace
 
-  auto XLAGraphExecutor::DeviceContextArena::Get() -> DeviceContextArena* {
-    static DeviceContextArena* arena = new DeviceContextArena();
-    return arena;
-  }
+auto XLAGraphExecutor::DeviceContextArena::Get() -> DeviceContextArena* {
+  static DeviceContextArena* arena = new DeviceContextArena();
+  return arena;
+}
 
-  void XLAGraphExecutor::DeviceContextArena::RegisterTensor(std::shared_ptr<torch::lazy::LazyTensor::Data> data) {
-    DeviceContext* devctx = GetDeviceContext(data->device);
+std::vector<XLATensorPtr> XLAGraphExecutor::DeviceContextArena::GetLiveTensors(
+    const torch::lazy::BackendDevice* device) {
+  std::vector<XLATensorPtr> tensors;
+  auto fn = [&](DeviceContext* devctx) {
     std::lock_guard<std::mutex> lock(devctx->lock);
-    devctx->tensors_data.emplace(data->unique_id, data);
-    TORCH_LAZY_COUNTER("CreateXlaTensor", 1);
-  }
-
-  void XLAGraphExecutor::DeviceContextArena::UnregisterTensor(torch::lazy::LazyTensor::Data* data) {
-    DeviceContext* devctx = GetDeviceContext(data->device);
-    std::lock_guard<std::mutex> lock(devctx->lock);
-    devctx->tensors_data.erase(data->unique_id);
-    TORCH_LAZY_COUNTER("DestroyXlaTensor", 1);
-  }
-
-  std::vector<XLATensorPtr> XLAGraphExecutor::DeviceContextArena::GetLiveTensors(
-      const torch::lazy::BackendDevice* device) {
-    std::vector<XLATensorPtr> tensors;
-    auto fn = [&](DeviceContext* devctx) {
-      std::lock_guard<std::mutex> lock(devctx->lock);
-      for (auto& uid_wptr : devctx->tensors_data) {
-        auto data = std::dynamic_pointer_cast<XLATensor::Data>(uid_wptr.second.lock());
-        if (data != nullptr) {
-          tensors.push_back(
-              c10::make_intrusive<XLATensor>(XLATensor(std::move(data))));
-        }
+    for (auto& uid_wptr : devctx->tensors_data) {
+      auto data = std::dynamic_pointer_cast<XLATensor::Data>(uid_wptr.second.lock());
+      if (data != nullptr) {
+        tensors.push_back(
+            c10::make_intrusive<XLATensor>(XLATensor(std::move(data))));
       }
-    };
-    ForAllDeviceContexts(fn, device);
-    return tensors;
-  }
-
-  torch::lazy::Value XLAGraphExecutor::DeviceContextArena::GetRngSeed(const torch::lazy::BackendDevice& device) {
-    static const at::ScalarType kSeedType = at::ScalarType::Long;
-    static const uint64_t kSeedMul = 214013;
-    static const uint64_t kSeedAdd = 2531011;
-    DeviceContext* devctx = GetDeviceContext(device);
-    std::lock_guard<std::mutex> lock(devctx->lock);
-    if (!devctx->seed_ir_value) {
-      devctx->seed_ir_value =
-          IrValueFromScalar(MakeIntScalar(devctx->seed), kSeedType, device);
     }
-    // Keep the running seed as scalar as well, so we can return it directly
-    // without executing graphs.
-    devctx->running_seed = kSeedAdd + kSeedMul * devctx->running_seed;
-    // Compose new seeds from the root seed, to avoid creating too many XLA
-    // computation parameters which might overflow the TPU capacity.
-    torch::lazy::Value k = ScalarOp(MakeIntScalar(kSeedMul),
-                                    MakeXlaPrimitiveType(kSeedType, &device));
-    torch::lazy::Value b = ScalarOp(MakeIntScalar(kSeedAdd),
-                                    MakeXlaPrimitiveType(kSeedType, &device));
-    devctx->seed_ir_value = b + k * devctx->seed_ir_value;
-    return devctx->seed_ir_value;
-  }
+  };
+  ForAllDeviceContexts(fn, device);
+  return tensors;
+}
 
-  torch::lazy::BackendDataPtr XLAGraphExecutor::DeviceContextArena::GetBaseSeedData(
-      const torch::lazy::BackendDevice& device) {
-    static const at::ScalarType kSeedType = at::ScalarType::Long;
-    DeviceContext* devctx = GetDeviceContext(device);
-    std::lock_guard<std::mutex> lock(devctx->lock);
-    at::Tensor tensor = at::scalar_tensor(MakeIntScalar(devctx->seed),
-                                          at::TensorOptions(kSeedType));
-    torch::lazy::BackendDataPtr device_data = TensorToXlaData(tensor, device);
-    devctx->seed_ir_value = torch::lazy::MakeNode<DeviceData>(device_data);
-    devctx->running_seed = devctx->seed;
-    return torch_xla::DeviceData::Cast(devctx->seed_ir_value.node.get())
-        ->data();
+torch::lazy::Value XLAGraphExecutor::DeviceContextArena::GetRngSeed(const torch::lazy::BackendDevice& device) {
+  static const at::ScalarType kSeedType = at::ScalarType::Long;
+  static const uint64_t kSeedMul = 214013;
+  static const uint64_t kSeedAdd = 2531011;
+  DeviceContext* devctx = GetDeviceContext(device);
+  std::lock_guard<std::mutex> lock(devctx->lock);
+  if (!devctx->seed_ir_value) {
+    devctx->seed_ir_value =
+        IrValueFromScalar(MakeIntScalar(devctx->seed), kSeedType, device);
   }
+  // Keep the running seed as scalar as well, so we can return it directly
+  // without executing graphs.
+  devctx->running_seed = kSeedAdd + kSeedMul * devctx->running_seed;
+  // Compose new seeds from the root seed, to avoid creating too many XLA
+  // computation parameters which might overflow the TPU capacity.
+  torch::lazy::Value k = ScalarOp(MakeIntScalar(kSeedMul),
+                                  MakeXlaPrimitiveType(kSeedType, &device));
+  torch::lazy::Value b = ScalarOp(MakeIntScalar(kSeedAdd),
+                                  MakeXlaPrimitiveType(kSeedType, &device));
+  devctx->seed_ir_value = b + k * devctx->seed_ir_value;
+  return devctx->seed_ir_value;
+}
 
-  uint64_t XLAGraphExecutor::DeviceContextArena::GetRunningSeed(const torch::lazy::BackendDevice& device) {
-    DeviceContext* devctx = GetDeviceContext(device);
-    std::lock_guard<std::mutex> lock(devctx->lock);
-    return devctx->running_seed;
-  }
+torch::lazy::BackendDataPtr XLAGraphExecutor::DeviceContextArena::GetBaseSeedData(
+    const torch::lazy::BackendDevice& device) {
+  static const at::ScalarType kSeedType = at::ScalarType::Long;
+  DeviceContext* devctx = GetDeviceContext(device);
+  std::lock_guard<std::mutex> lock(devctx->lock);
+  at::Tensor tensor = at::scalar_tensor(MakeIntScalar(devctx->seed),
+                                        at::TensorOptions(kSeedType));
+  torch::lazy::BackendDataPtr device_data = TensorToXlaData(tensor, device);
+  devctx->seed_ir_value = torch::lazy::MakeNode<DeviceData>(device_data);
+  devctx->running_seed = devctx->seed;
+  return torch_xla::DeviceData::Cast(devctx->seed_ir_value.node.get())
+      ->data();
+}
 
-  void XLAGraphExecutor::DeviceContextArena::SetRngSeed(const torch::lazy::BackendDevice& device, uint64_t seed) {
-    DeviceContext* devctx = GetDeviceContext(device);
-    std::lock_guard<std::mutex> lock(devctx->lock);
-    devctx->seed = seed;
-    devctx->running_seed = devctx->seed;
-    devctx->seed_ir_value = torch::lazy::Value();
-  }
-
-  void XLAGraphExecutor::DeviceContextArena::MarkStep(const torch::lazy::BackendDevice& device) {
-    DeviceContext* devctx = GetDeviceContext(device);
-    std::lock_guard<std::mutex> lock(devctx->lock);
-    devctx->seed = 1012031 + devctx->seed * 7012063;
-    devctx->running_seed = devctx->seed;
-    devctx->seed_ir_value = torch::lazy::Value();
-  }
-
-  auto XLAGraphExecutor::DeviceContextArena::GetAllDeviceContexts() -> std::vector<DeviceContext*> {
-    std::vector<DeviceContext*> all_device_contexts;
-    std::lock_guard<std::mutex> lock(lock_);
-    all_device_contexts.reserve(device_contexts_.size());
-    for (auto& device_contexts : device_contexts_) {
-      all_device_contexts.push_back(device_contexts.second);
-    }
-    return all_device_contexts;
-  }
-
-  void XLAGraphExecutor::DeviceContextArena::ForAllDeviceContexts(const std::function<void(DeviceContext*)>& fn,
-                            const torch::lazy::BackendDevice* device) {
-    if (device == nullptr) {
-      for (auto devctx : GetAllDeviceContexts()) {
-        fn(devctx);
-      }
-    } else {
-      fn(GetDeviceContext(*device));
-    }
-  }
-
-  auto XLAGraphExecutor::DeviceContextArena::GetDeviceContext(const torch::lazy::BackendDevice& device) -> DeviceContext* {
-    std::lock_guard<std::mutex> lock(lock_);
-    auto it = device_contexts_.find(device);
-    if (it == device_contexts_.end()) {
-      it = device_contexts_.emplace(device, new DeviceContext()).first;
-    }
-    return it->second;
-  }
+torch::lazy::Value XLAGraphExecutor::DeviceContextArena::IrValueFromScalar(const at::Scalar& value,
+                                     at::ScalarType scalar_type,
+                                     const torch::lazy::BackendDevice& device) {
+  at::Tensor tensor = at::scalar_tensor(value, at::TensorOptions(scalar_type));
+  torch::lazy::BackendDataPtr device_data = TensorToXlaData(tensor, device);
+  return torch::lazy::MakeNode<DeviceData>(std::move(device_data));
+}
 
 XLAGraphExecutor::Async::Async(
     SyncTensorCollection* coll,
