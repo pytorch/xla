@@ -44,26 +44,6 @@ class Feedforward(torch.nn.Module):
 )
 class TestDynamicShapeModels(unittest.TestCase):
 
-  def test_forward_pass_dynamic_input_correctness(self):
-    losses = []
-    for dev in [torch.device('gpu'), xla_dev]:
-      num_features = 2
-      num_test_samples = 5
-      x_test, y_test = self.create_dynamic_test_data(num_test_samples,
-                                                     num_features, dev)
-
-      model = Feedforward(num_features, hidden_size=10).to(dev)
-      criterion = torch.nn.BCELoss()
-
-      model.eval()
-      with torch.no_grad():
-        y_pred = model(x_test)
-        before_train = criterion(y_pred.squeeze(), y_test)
-        xm.mark_step()
-        losses.append(before_train.item())
-
-    np.testing.assert_allclose(losses[0], losses[1], rtol=1e-2, atol=1e-2)
-
   def test_forward_pass_dynamic_input_compile_once(self):
     met.clear_metrics()
     for _ in range(10):
@@ -80,7 +60,7 @@ class TestDynamicShapeModels(unittest.TestCase):
         y_pred = model(x_test)
         criterion(y_pred.squeeze(), y_test)
         xm.mark_step()
-    np.testing.assert_equal(met.metric_data('CompileTime')[0], 1) # TODO: change to 3 later before merge.
+    np.testing.assert_equal(met.metric_data('CompileTime')[0], 1) # TODO(xw32): change to 3 later before merge.
 
   def create_dynamic_test_data(self, num_test_samples, num_features, device):
     x_test = torch.ones(num_test_samples, num_features)
