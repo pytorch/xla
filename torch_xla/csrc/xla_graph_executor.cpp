@@ -180,10 +180,12 @@ XLAGraphExecutor* XLAGraphExecutor::Get() {
 void XLAGraphExecutor::RegisterTensor(
     std::shared_ptr<torch::lazy::LazyTensor::Data> data) {
   DeviceContextArena::Get()->RegisterTensor(data);
+  TORCH_LAZY_COUNTER("CreateXlaTensor", 1);
 }
 
 void XLAGraphExecutor::UnregisterTensor(torch::lazy::LazyTensor::Data* data) {
   DeviceContextArena::Get()->UnregisterTensor(data);
+  TORCH_LAZY_COUNTER("DestroyXlaTensor", 1);
 }
 
 void XLAGraphExecutor::ApplyEagerSync(std::vector<XLATensorPtr>& tensors) {
