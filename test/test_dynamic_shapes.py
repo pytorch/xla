@@ -27,9 +27,27 @@ class TestDynamicShapes(unittest.TestCase):
     t1[3][1] = 1
     # t2 has size [<=10, 2]
     t2 = torch.nonzero(t1)
-    t3 = torch.ones(1, size1, size2)
-    t4 = t3.expand(t2.shape[0], size1, size2)
-    print(t4.cpu())
+    t3 = torch.ones(1, size2, device=dev)
+
+    # varargs
+    t4 = t3.expand(t2.shape[0], t2.shape[1])
+    self.assertEqual(t4.shape[0], 2)
+    self.assertEqual(t4.shape[1], size2)
+
+    # shape list
+    t4 = t3.expand((t2.shape[0], t2.shape[1]))
+    self.assertEqual(t4.shape[0], 2)
+    self.assertEqual(t4.shape[1], size2)
+
+    # mixed python symints and ints
+    t4 = t3.expand(t2.shape[0], size2)
+    self.assertEqual(t4.shape[0], 2)
+    self.assertEqual(t4.shape[1], size2)
+
+    # mixed python symints and ints in a list
+    t4 = t3.expand((t2.shape[0], size2))
+    self.assertEqual(t4.shape[0], 2)
+    self.assertEqual(t4.shape[1], size2)
 
   def test_wrap(self):
     a1 = torch.tensor([[1, 0, 0, 5, 0, 6]], device=dev)
