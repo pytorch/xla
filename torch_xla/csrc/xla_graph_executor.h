@@ -32,7 +32,8 @@ class XLAGraphExecutor : public torch::lazy::LazyGraphExecutor {
  public:
   static XLAGraphExecutor* Get();
 
-  void RegisterTensor(std::shared_ptr<torch::lazy::LazyTensor::Data> data) final;
+  void RegisterTensor(
+      std::shared_ptr<torch::lazy::LazyTensor::Data> data) final;
   void UnregisterTensor(torch::lazy::LazyTensor::Data* data) final;
 
   // This method just syncs the tensors passed as argument. This method is
@@ -80,7 +81,8 @@ class XLAGraphExecutor : public torch::lazy::LazyGraphExecutor {
       const torch::lazy::BackendDevice& device);
 
   torch::lazy::Value GetRngSeed(const torch::lazy::BackendDevice& device) final;
-  void SetRngSeed(const torch::lazy::BackendDevice& device, uint64_t seed) final;
+  void SetRngSeed(const torch::lazy::BackendDevice& device,
+                  uint64_t seed) final;
   uint64_t GetRunningSeed(const torch::lazy::BackendDevice& device) final;
   torch::lazy::BackendDataPtr GetBaseSeedData(
       const torch::lazy::BackendDevice& device);
@@ -176,8 +178,9 @@ class XLAGraphExecutor : public torch::lazy::LazyGraphExecutor {
     std::vector<torch::lazy::BackendDataPtr> tensors_data;
   };
 
-  class DeviceContextArena : public torch::lazy::LazyGraphExecutor::DeviceContextArena {
-  public:
+  class DeviceContextArena
+      : public torch::lazy::LazyGraphExecutor::DeviceContextArena {
+   public:
     static DeviceContextArena* Get();
 
     // This method returns XLATensorPtrs instead of LazyTensorPtrs.
@@ -185,16 +188,16 @@ class XLAGraphExecutor : public torch::lazy::LazyGraphExecutor {
         const torch::lazy::BackendDevice* device);
 
     // We override this to use our own + and * for torch::lazy::Value.
-    torch::lazy::Value GetRngSeed(const torch::lazy::BackendDevice& device) final;
+    torch::lazy::Value GetRngSeed(
+        const torch::lazy::BackendDevice& device) final;
 
     torch::lazy::BackendDataPtr GetBaseSeedData(
         const torch::lazy::BackendDevice& device);
 
-  private:
-  // We override this to use TensorToXlaData().
+   private:
+    // We override this to use TensorToXlaData().
     torch::lazy::Value IrValueFromScalar(
-        const at::Scalar& value,
-        at::ScalarType scalar_type,
+        const at::Scalar& value, at::ScalarType scalar_type,
         const torch::lazy::BackendDevice& device) final;
   };
 
