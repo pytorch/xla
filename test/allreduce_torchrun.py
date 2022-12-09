@@ -21,7 +21,7 @@ def _mp_fn_xrt_init():
   result = xm.all_reduce('sum', xones)
 
   result_cpu = result.cpu()
-  expected = torch.ones((2,3)) * size
+  expected = torch.ones((2, 3)) * size
   assert torch.all(result_cpu == expected), f'{result_cpu} != {expected}'
 
 
@@ -37,14 +37,16 @@ def _mp_fn_xla_backend():
   dist.all_reduce(xones, op=torch.distributed.ReduceOp.SUM)
 
   result_cpu = xones.cpu()
-  expected = torch.ones((2,3)) * size
+  expected = torch.ones((2, 3)) * size
   assert torch.all(xones.cpu() == expected), f'{xones} != {expected}'
 
 
 if __name__ == '__main__':
-  print('master_port:{}, master_addr:{}, rank:{}, local_rank:{}, size:{}'
-        .format(os.environ['MASTER_PORT'], os.environ['MASTER_ADDR'], os.environ['RANK'],
-                os.environ['LOCAL_RANK'], os.environ['WORLD_SIZE']))
+  print(
+      'master_port:{}, master_addr:{}, rank:{}, local_rank:{}, size:{}'.format(
+          os.environ['MASTER_PORT'], os.environ['MASTER_ADDR'],
+          os.environ['RANK'], os.environ['LOCAL_RANK'],
+          os.environ['WORLD_SIZE']))
   parser = argparse.ArgumentParser()
   parser.add_argument('--use_xla_backend', action="store_true")
   args = parser.parse_args()
