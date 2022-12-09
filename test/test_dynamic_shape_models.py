@@ -39,7 +39,8 @@ class Feedforward(torch.nn.Module):
 
 
 @unittest.skipIf(
-    not xm.get_xla_supported_devices("GPU") and not xm.get_xla_supported_devices("TPU"),
+    not xm.get_xla_supported_devices("GPU") and
+    not xm.get_xla_supported_devices("TPU"),
     f"The tests fail on CPU. See https://github.com/pytorch/xla/issues/4298 for more detail."
 )
 class TestDynamicShapeModels(unittest.TestCase):
@@ -81,7 +82,7 @@ class TestDynamicShapeModels(unittest.TestCase):
         y_pred = model(x_test)
         criterion(y_pred.squeeze(), y_test)
         xm.mark_step()
-    np.testing.assert_equal(met.metric_data('CompileTime')[0], 1) # TODO(xw32): change to 3 later before merge.
+    np.testing.assert_equal(met.metric_data('CompileTime')[0], 3)
     print('Test passed.')
 
   def create_dynamic_test_data(self, num_test_samples, num_features, device):
