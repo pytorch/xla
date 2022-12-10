@@ -50,7 +50,6 @@ class ProcessGroupXla(ProcessGroup):
     if os.getenv('TORCHELASTIC_RUN_ID') != None:
       init_xrt_context(store=prefix_store)
 
-
   def getBackendName(self):
     return 'xla'
 

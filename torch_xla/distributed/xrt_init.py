@@ -73,7 +73,7 @@ def _set_mesh_config(rank):
 
 
 def _set_tpu_xrt_envs(local_rank, rank, group_rank, local_world_size,
-                    world_size):
+                      world_size):
   total_nodes = world_size // local_world_size
 
   xrt_tpu_config = []
@@ -97,8 +97,8 @@ def _set_tpu_xrt_envs(local_rank, rank, group_rank, local_world_size,
       os.environ[xenv.TPU_NUM_DEVICES] = str(local_world_size)
 
   os.environ[
-    xenv.
-    LOCAL_WORKER] = f'localservice:{group_rank}' if total_nodes == 1 else f'c_localservice:{group_rank}'
+      xenv.
+      LOCAL_WORKER] = f'localservice:{group_rank}' if total_nodes == 1 else f'c_localservice:{group_rank}'
   os.environ[xenv.WORLD_SIZE] = str(world_size)
   os.environ[xenv.HOST_WORLD_SIZE] = str(total_nodes)
   os.environ[xenv.ORDINAL] = str(rank)
@@ -135,7 +135,7 @@ def _setup_nccl_service(dev_kind, rank):
     os.environ['XRT_MESH_SERVICE_ADDRESS'] = address
   else:
     raise RuntimeError('NCCL service setup failed!')
-    
+
 
 def set_xrt_envs(world_size, rank, local_rank):
   # Set up all the XRT specific env variables, adapted from xmp.spawn()
@@ -197,7 +197,7 @@ def init_xrt_context(master_addr=None, master_port=None, store=None):
     dev_kind = 'NEURON'
   else:
     dev_kind = 'GPU'
-	
+
   os.environ.pop(xenv.TPU_CONFIG, None)
   os.environ.pop(xenv.TPU_NUM_DEVICES, None)
   os.environ.pop(xenv.GPU_NUM_DEVICES, None)
@@ -216,7 +216,7 @@ def init_xrt_context(master_addr=None, master_port=None, store=None):
 
   node_list = None
 
-  if dev_kind == 'NEURON': #similar check for TPU..
+  if dev_kind == 'NEURON':  #similar check for TPU..
     tpu_config_port = _set_tpu_xrt_envs(local_rank, rank, group_rank,
                                         local_world_size, world_size)
   elif dev_kind == 'GPU':
@@ -227,18 +227,20 @@ def init_xrt_context(master_addr=None, master_port=None, store=None):
 
   _set_mesh_config(rank)
 
-  if dev_kind == 'NEURON': #similar check for TPU..
+  if dev_kind == 'NEURON':  #similar check for TPU..
     _setup_nccl_service(dev_kind, rank)
     _set_neuron_envs(rank, world_size, local_world_size)
 
     total_nodes = world_size // local_world_size
     if local_rank == 0:
       local_env = os.environ.copy()
-      subprocess.Popen(['python3', '-m', XRT_SERVER_REGEX, '--port',
-                        str(tpu_config_port), '--pid_to_track',
-                        str(os.getppid())],
-                        env=local_env,
-                        start_new_session=True)
+      subprocess.Popen([
+          'python3', '-m', XRT_SERVER_REGEX, '--port',
+          str(tpu_config_port), '--pid_to_track',
+          str(os.getppid())
+      ],
+                       env=local_env,
+                       start_new_session=True)
 
   dev = xm.xla_device()
   xm.set_replication(dev, [dev])
