@@ -850,7 +850,7 @@ XLAGraphExecutor::PostOrderData XLAGraphExecutor::RunPostOrder(
 }
 
 XLAGraphExecutor::ComputationCache::TypePtr
-XLAGraphExecutor::LookupCachedCompile(const std::vector<XLATensorPtr>& tensors,
+XLAGraphExecutor::LookupCachedCompile(
                                       const torch::lazy::hash_t& hash) {
   ComputationCache::TypePtr cached_computation =
       GetComputationCache()->Get(hash);
@@ -873,7 +873,7 @@ std::shared_ptr<XLAGraphExecutor::Async> XLAGraphExecutor::TryRunCachedSync(
     PostOrderData* po_data,
     const std::vector<torch::lazy::BackendDataPtr>& tensor_data_vec) {
   ComputationCache::TypePtr cached_computation =
-      LookupCachedCompile(*tensors, coll->hash);
+      LookupCachedCompile(coll->hash);
   if (cached_computation == nullptr) {
     return nullptr;
   }

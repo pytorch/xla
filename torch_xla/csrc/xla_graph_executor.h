@@ -261,13 +261,12 @@ class XLAGraphExecutor : public torch::lazy::LazyGraphExecutor {
   PostOrderData RunPostOrder(const std::vector<torch::lazy::Value>& ir_values,
                              SyncTensorCollection* coll);
 
-  // We don't use the upstream LookupCachedCompile since we need XLATensorPtr and
+  // We don't use the upstream LookupCachedCompile since
   // our CachedComputation is different from upstream.
   ComputationCache::TypePtr LookupCachedCompile(
-      const std::vector<XLATensorPtr>& tensors,
       const torch::lazy::hash_t& hash);
 
-  // We don't use the upstream TryRunCachedSync since we need XLATensorPtr and
+  // We don't use the upstream TryRunCachedSync since
   // our CachedComputation is different from upstream.
   std::shared_ptr<Async> TryRunCachedSync(
       std::vector<XLATensorPtr>* tensors, SyncTensorCollection* coll,
