@@ -130,6 +130,7 @@ class XLAGraphExecutor : public torch::lazy::LazyGraphExecutor {
   // can be extended to hold other sharding information from the user.
   torch::lazy::hash_t GetGraphHash(const std::vector<XLATensorPtr>& tensors);
 
+  // We don't use the upstream CachedComputation type given all fields are different.
   struct CachedComputation {
     CachedComputation(ComputationPtr computation, bool is_sharded = false)
         : computation(std::move(computation)), is_sharded(is_sharded) {}
@@ -153,6 +154,8 @@ class XLAGraphExecutor : public torch::lazy::LazyGraphExecutor {
                        const torch::lazy::BackendDevice& device);
 
  private:
+  // This is just to group results from compile(). Since our computation is different,
+  // we don't reuse the upstream CompilationResult.
   struct CompilationResult {
     torch::lazy::BackendDevice device;
     size_t emitted_nodes = 0;
@@ -265,10 +268,14 @@ class XLAGraphExecutor : public torch::lazy::LazyGraphExecutor {
   PostOrderData RunPostOrder(const std::vector<torch::lazy::Value>& ir_values,
                              SyncTensorCollection* coll);
 
+  // We don't use the upstream LookupCachedCompile since we need XLATensorPtr and
+  // our CachedComputation is different from upstream.
   ComputationCache::TypePtr LookupCachedCompile(
       const std::vector<XLATensorPtr>& tensors,
       const torch::lazy::hash_t& hash);
 
+   // We don't use the upstream TryRunCachedSync since we need XLATensorPtr and
+  // our CachedComputation is different from upstream.
   std::shared_ptr<Async> TryRunCachedSync(
       std::vector<XLATensorPtr>* tensors, SyncTensorCollection* coll,
       PostOrderData* po_data,
