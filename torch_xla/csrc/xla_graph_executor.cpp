@@ -142,7 +142,8 @@ XLAGraphExecutor::Async::Async(
     std::vector<torch::lazy::BackendDataPtr> parameters_data,
     std::vector<torch::lazy::BackendDataPtr> tensors_data,
     ComputationCache::TypePtr cached_computation)
-    : torch::lazy::LazyGraphExecutor::Async(coll, parameters_data, tensors_data, nullptr),
+    : torch::lazy::LazyGraphExecutor::Async(coll, parameters_data, tensors_data,
+                                            nullptr),
       cached_computation(std::move(cached_computation)) {}
 
 XLAGraphExecutor* XLAGraphExecutor::Get() {
@@ -850,8 +851,7 @@ XLAGraphExecutor::PostOrderData XLAGraphExecutor::RunPostOrder(
 }
 
 XLAGraphExecutor::ComputationCache::TypePtr
-XLAGraphExecutor::LookupCachedCompile(
-                                      const torch::lazy::hash_t& hash) {
+XLAGraphExecutor::LookupCachedCompile(const torch::lazy::hash_t& hash) {
   ComputationCache::TypePtr cached_computation =
       GetComputationCache()->Get(hash);
   if (cached_computation == nullptr) {

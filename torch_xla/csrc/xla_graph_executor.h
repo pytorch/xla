@@ -115,7 +115,8 @@ class XLAGraphExecutor : public torch::lazy::LazyGraphExecutor {
   // which should be participating into the replicated computation.
   // Override to enable profiling.
   void SyncLiveTensorsGraph(const torch::lazy::BackendDevice* device,
-                            c10::ArrayRef<std::string> devices, bool wait) final;
+                            c10::ArrayRef<std::string> devices,
+                            bool wait) final;
 
   // Marks an execution step, which allows the tensor framework to understand
   // the computation boundaries.
@@ -136,7 +137,8 @@ class XLAGraphExecutor : public torch::lazy::LazyGraphExecutor {
   // can be extended to hold other sharding information from the user.
   torch::lazy::hash_t GetGraphHash(const std::vector<XLATensorPtr>& tensors);
 
-  // We don't use the upstream CachedComputation type given all fields are different.
+  // We don't use the upstream CachedComputation type given all fields are
+  // different.
   struct CachedComputation {
     CachedComputation(ComputationPtr computation, bool is_sharded = false)
         : computation(std::move(computation)), is_sharded(is_sharded) {}
@@ -160,8 +162,8 @@ class XLAGraphExecutor : public torch::lazy::LazyGraphExecutor {
                        const torch::lazy::BackendDevice& device);
 
  private:
-  // This is just to group results from compile(). Since our computation is different,
-  // we don't reuse the upstream CompilationResult.
+  // This is just to group results from compile(). Since our computation is
+  // different, we don't reuse the upstream CompilationResult.
   struct CompilationResult {
     torch::lazy::BackendDevice device;
     size_t emitted_nodes = 0;
