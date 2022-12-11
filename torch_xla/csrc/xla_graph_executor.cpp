@@ -142,35 +142,8 @@ XLAGraphExecutor::Async::Async(
     std::vector<torch::lazy::BackendDataPtr> parameters_data,
     std::vector<torch::lazy::BackendDataPtr> tensors_data,
     ComputationCache::TypePtr cached_computation)
-    : mwait(1),
-      indices(std::move(coll->indices)),
-      unlocker(std::move(coll->unlocker)),
-      parameters_data(std::move(parameters_data)),
-      device(coll->device.toString()),
-      cached_computation(std::move(cached_computation)),
-      tensors_data(std::move(tensors_data)) {}
-
-void XLAGraphExecutor::Async::Wait() {
-  mwait.Wait();
-  // Accessing other Async members is safe only after MultiWait::Wait()
-  // completes.
-  torch::lazy::ExceptionCleanup::StatusType status;
-  for (auto& cleanup : unlocker) {
-    const torch::lazy::ExceptionCleanup::StatusType& cleanup_status =
-        cleanup.GetStatus();
-    if (cleanup_status != nullptr) {
-      if (status == nullptr) {
-        status = cleanup_status;
-      }
-      // If we observe the status here, no need to let it propagate to the next
-      // device lock operation.
-      cleanup.SetStatus(nullptr);
-    }
-  }
-  if (status != nullptr) {
-    std::rethrow_exception(status);
-  }
-}
+    : torch::lazy::LazyGraphExecutor::Async(coll, parameters_data, tensors_data, nullptr),
+      cached_computation(std::move(cached_computation)) {}
 
 XLAGraphExecutor* XLAGraphExecutor::Get() {
   static XLAGraphExecutor arena = XLAGraphExecutor();
@@ -796,7 +769,7 @@ XLAGraphExecutor::ScheduleSyncTensorsGraph(
                    << async->device << " ...";
         results = torch::lazy::getBackend()->ExecuteComputation(
             async->cached_computation->computation, async->parameters_data,
-            ParseDeviceString(async->device));
+            async->device);
         TF_VLOG(3) << "Executing IR graph hash "
                    << torch::lazy::HashToString(hash) << " on device "
                    << async->device << " done!";

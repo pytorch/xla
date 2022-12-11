@@ -164,21 +164,13 @@ class XLAGraphExecutor : public torch::lazy::LazyGraphExecutor {
     bool is_sharded = false;
   };
 
-  struct Async {
+  struct Async : public torch::lazy::LazyGraphExecutor::Async {
     Async(SyncTensorCollection* coll,
           std::vector<torch::lazy::BackendDataPtr> parameters_data,
           std::vector<torch::lazy::BackendDataPtr> tensors_data,
           ComputationCache::TypePtr cached_computation);
 
-    void Wait();
-
-    xla::util::MultiWait mwait;
-    std::vector<size_t> indices;
-    std::vector<torch::lazy::ExceptionCleanup> unlocker;
-    std::vector<torch::lazy::BackendDataPtr> parameters_data;
-    std::string device;
     ComputationCache::TypePtr cached_computation;
-    std::vector<torch::lazy::BackendDataPtr> tensors_data;
   };
 
   class DeviceContextArena
