@@ -203,7 +203,8 @@ class XLAGraphExecutor : public torch::lazy::LazyGraphExecutor {
       const SyncTensorsConfig& config);
 
   // Waits for this SyncTensorCollection's device barrier and acuire the lock.
-  void TensorCollectionBarrier(SyncTensorCollection* coll);
+  // Override to enable SPMD.
+  void TensorCollectionBarrier(SyncTensorCollection* coll) final;
 
   // Implementation of the GetTensors() API using the op-by-op executor.
   std::vector<at::Tensor> GetTensorsOpByOp(std::vector<XLATensorPtr>* tensors);
@@ -266,7 +267,7 @@ class XLAGraphExecutor : public torch::lazy::LazyGraphExecutor {
       const std::vector<XLATensorPtr>& tensors,
       const torch::lazy::hash_t& hash);
 
-   // We don't use the upstream TryRunCachedSync since we need XLATensorPtr and
+  // We don't use the upstream TryRunCachedSync since we need XLATensorPtr and
   // our CachedComputation is different from upstream.
   std::shared_ptr<Async> TryRunCachedSync(
       std::vector<XLATensorPtr>* tensors, SyncTensorCollection* coll,

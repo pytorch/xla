@@ -467,14 +467,8 @@ XLAGraphExecutor::SyncTensorCollection XLAGraphExecutor::CollectSyncTensors(
 }
 
 void XLAGraphExecutor::TensorCollectionBarrier(SyncTensorCollection* coll) {
-  static const std::string invalid_device(
-      "Unknown0"); /* Temp solution to identify unassigned devices */
-  if (coll->device.toString().compare(invalid_device) == 0 ||
-      coll->unlocker.size() > 0) {
-    return;
-  }
+  torch::lazy::LazyGraphExecutor::TensorCollectionBarrier(coll);
   // TODO(yeounoh) lock SPMD device
-  coll->unlocker = DeviceLockerArena::Get()->LockDevices({coll->device});
 }
 
 std::vector<torch::lazy::BackendDataPtr>
