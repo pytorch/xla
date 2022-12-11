@@ -89,6 +89,7 @@ class XLAGraphExecutor : public torch::lazy::LazyGraphExecutor {
 
   // Dumps the XLA HLO text of the computation accumulated in the graph which is
   // attached the tensors.
+  // We don't use upstream DumpBackendComputation given we have our own format.
   std::string DumpHloComputation(const std::vector<XLATensorPtr>& tensors);
 
   // Retrieves the set of XLA tensors which are currently live in the system,
