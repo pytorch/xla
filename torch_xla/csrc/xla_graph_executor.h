@@ -104,6 +104,7 @@ class XLAGraphExecutor : public torch::lazy::LazyGraphExecutor {
   // the tensors must be on the same device. If wait is true, the sync operation
   // will be run synchronously. The devices argument, if not empty, tells the
   // devices which should be participating into the replicated computation.
+  // We don't use the upstream one given we have OpbyOp mode.
   void SyncTensorsGraph(std::vector<XLATensorPtr>* tensors,
                         absl::Span<const std::string> devices, bool wait,
                         bool sync_ltc_data);
@@ -112,8 +113,9 @@ class XLAGraphExecutor : public torch::lazy::LazyGraphExecutor {
   // gets turned into device data. If wait is true, the sync operation will be
   // run synchronously. The devices argument, if not empty, tells the devices
   // which should be participating into the replicated computation.
+  // Override to enable profiling.
   void SyncLiveTensorsGraph(const torch::lazy::BackendDevice* device,
-                            absl::Span<const std::string> devices, bool wait);
+                            c10::ArrayRef<std::string> devices, bool wait) final;
 
   // Marks an execution step, which allows the tensor framework to understand
   // the computation boundaries.
