@@ -271,8 +271,9 @@ class XLAGraphExecutor : public torch::lazy::LazyGraphExecutor {
       std::string device, ComputationCache::TypePtr cached_computation,
       const std::vector<torch::lazy::BackendDataPtr>& tensor_data_vec);
 
+  // Override to enable profiler.
   PostOrderData RunPostOrder(const std::vector<torch::lazy::Value>& ir_values,
-                             SyncTensorCollection* coll);
+                             SyncTensorCollection* coll) final;
 
   // We don't use the upstream LookupCachedCompile since
   // our CachedComputation is different from upstream.
