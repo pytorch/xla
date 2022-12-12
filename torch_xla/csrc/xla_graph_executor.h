@@ -244,6 +244,7 @@ class XLAGraphExecutor : public torch::lazy::LazyGraphExecutor {
       absl::Span<const size_t> indices,
       const std::vector<torch::lazy::BackendDataPtr>& tensor_data_vec);
 
+  // We don't use upstream ExtractIRAndPrepareTensorData as we need to instantiate xla::shape.
   void ExtractIRAndPrepareXlaData_(
       std::vector<XLATensorPtr>* tensors, const SyncTensorsConfig& config,
       const absl::Span<const size_t> indices,
