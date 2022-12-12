@@ -56,6 +56,7 @@ class XLAGraphExecutor : public torch::lazy::LazyGraphExecutor {
   // that is affected by the view tensor.
   void ApplyEagerSync(std::vector<XLATensorPtr>& tensors);
 
+  // We don't use the upstream GetDeviceDataIrValue to have the xla::PrimitiveType.
   torch::lazy::Value GetDeviceDataIrValue(
       const at::Scalar& value, xla::PrimitiveType type,
       const torch::lazy::BackendDevice& device);
@@ -291,6 +292,7 @@ class XLAGraphExecutor : public torch::lazy::LazyGraphExecutor {
       const std::vector<XLATensorPtr>& tensors,
       absl::Span<const size_t> indices, LoweringContext* lowering_ctx);
 
+  // We don't use upstream Compile to have BuildInputOutputAliases.
   CompilationResult Compile(const std::vector<XLATensorPtr>& tensors,
                             absl::Span<const std::string> devices,
                             const SyncTensorCollection& coll,
