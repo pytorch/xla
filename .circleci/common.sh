@@ -51,6 +51,9 @@ function install_deps_pytorch_xla() {
   XLA_DIR=$1
   USE_CACHE="${2:-0}"
 
+  # Install pytorch deps
+  pip install sympy
+
   # Install ninja to speedup the build
   pip install ninja
 
