@@ -251,18 +251,10 @@ def _run_singleprocess(fn: Callable[..., R],
   if device_type() == 'TPU':
     tpu.configure_one_chip_topology()
 
-  device = xm.get_xla_supported_devices()[0]
   xm.set_replication(xm.xla_device(), [])
-
-  @functools.wraps(fn)
-  def _thread_fn(device: torch.device):
-    torch_xla._XLAC._xla_set_default_device(device)
-
-    return fn()
-
   init_pjrt_process_group()
 
-  return _thread_fn(device)
+  return fn()
 
 
 @requires_pjrt
@@ -344,10 +336,9 @@ def spawn(fn: Callable,
   spawn_fn = _SpawnFn(fn, *args)
 
   if nprocs == 1:
-    tpu.configure_one_chip_topology()
     return _run_singleprocess(spawn_fn, start_method=start_method)
   elif nprocs is not None:
-    print('Unsupported nprocs (%d), ignoring...' % nprocs, file=sys.stderr)
+    logging.warning('Unsupported nprocs (%d), ignoring...' % nprocs)
 
   _run_multiprocess(spawn_fn, start_method=start_method)
 
