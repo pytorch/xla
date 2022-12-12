@@ -113,7 +113,8 @@ class XLATensor : public torch::lazy::LazyTensor {
 
   int64_t size(int64_t dim) const;
 
-  at::Tensor ToTensor(bool detached);
+  // Override to use XLAGraphExecutor.
+  at::Tensor ToTensor(bool detached) final;
 
   void ShallowCopyTo(XLATensorPtr dest) const;
 
@@ -166,7 +167,8 @@ class XLATensor : public torch::lazy::LazyTensor {
   XLATensorPtr CopyTensorToDevice(const torch::lazy::BackendDevice& device);
 
   // Applies the queue of operations in preparation for using the data.
-  void ApplyPendingGraph();
+  // Override to use XLAGraphExecutor.
+  void ApplyPendingGraph() final;
 
   // To be noted, this returns XLATensor::Data instead of
   // torch::lazy::LazyTensor::Data.
