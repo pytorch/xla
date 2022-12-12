@@ -246,27 +246,23 @@ def _run_singleprocess(fn: Callable[..., R],
   Returns:
     the result of calling `fn`.
   """
-  with concurrent.futures.ProcessPoolExecutor(
-      max_workers=1,
-      mp_context=torch.multiprocessing.get_context(start_method)) as executor:
-    os.environ.setdefault('LOCAL_WORLD_SIZE', '1')
+  os.environ.setdefault('LOCAL_WORLD_SIZE', '1')
 
-    if device_type() == 'TPU':
-      tpu.configure_one_chip_topology()
+  if device_type() == 'TPU':
+    tpu.configure_one_chip_topology()
 
-    devices = xm.get_xla_supported_devices()[:1]
-    xm.set_replication(xm.xla_device(), [])
+  device = xm.get_xla_supported_devices()[0]
+  xm.set_replication(xm.xla_device(), [])
 
-    @functools.wraps(fn)
-    def _thread_fn(device: torch.device):
-      torch_xla._XLAC._xla_set_default_device(devices[0])
+  @functools.wraps(fn)
+  def _thread_fn(device: torch.device):
+    torch_xla._XLAC._xla_set_default_device(device)
 
-      return fn()
+    return fn()
 
-    with concurrent.futures.ThreadPoolExecutor(max_workers=1) as executor:
-      init_pjrt_process_group()
+  init_pjrt_process_group()
 
-      return executor.submit(_thread_fn, xm.xla_device()).result()
+  return _thread_fn(device)
 
 
 @requires_pjrt
