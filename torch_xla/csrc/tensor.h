@@ -127,7 +127,8 @@ class XLATensor : public torch::lazy::LazyTensor {
   void UpdateFromTensorOut(at::Tensor tensor);
   void UpdateFromTensorOut(const XLATensorPtr& tensor);
 
-  at::ScalarType dtype() const;
+  // Override to use logical_element_type.
+  at::ScalarType dtype() const final;
   c10::optional<at::ScalarType> dtype_optional() const;
 
   // Set logical_element_type which is visible to upstream PyTorch.
@@ -167,6 +168,7 @@ class XLATensor : public torch::lazy::LazyTensor {
   void ModifyCurrentView(ViewInfo view_info) const;
   XLATensorPtr CreateViewTensor(ViewInfo view_info) const;
 
+  // We don't use the upstream CopyTensorToDevice in order to return XLATensorPtr.
   XLATensorPtr CopyTensorToDevice(const torch::lazy::BackendDevice& device);
 
   // Applies the queue of operations in preparation for using the data.
@@ -198,6 +200,9 @@ class XLATensor : public torch::lazy::LazyTensor {
 
   int64_t GetOpaqueHandle() const;
 
+  // Override to enable SPMD.
+  void AssignIrValue(torch::lazy::Value ir_value) const final;
+
  private:
   XLATensor(const at::Tensor& tensor, const torch::lazy::BackendDevice& device);
   XLATensor(torch::lazy::BackendDataPtr handle,
@@ -220,8 +225,6 @@ class XLATensor : public torch::lazy::LazyTensor {
       c10::optional<at::ScalarType> logical_element_type = c10::nullopt);
 
   void SetXlaData(torch::lazy::BackendDataPtr handle, bool sync);
-
-  void AssignIrValue(torch::lazy::Value ir_value) const;
 
   View::IrNode GetViewUpdate(const std::shared_ptr<View>& view) const;
 
