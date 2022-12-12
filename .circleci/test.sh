@@ -7,6 +7,7 @@ source .circleci/common.sh
 
 PYTORCH_DIR=/tmp/pytorch
 XLA_DIR=$PYTORCH_DIR/xla
+USE_COVERAGE="${USE_COVERAGE:-0}"
 
 # Needs to be kept in sync with .jenkins/pytorch/common_utils.sh in pytorch/pytorch.
 TORCHVISION_COMMIT="$(cat $PYTORCH_DIR/.github/ci_commit_pins/vision.txt)"
@@ -24,4 +25,4 @@ function install_torchvision() {
 
 install_torchvision
 
-run_torch_xla_tests $PYTORCH_DIR $XLA_DIR
+run_torch_xla_tests $PYTORCH_DIR $XLA_DIR $USE_COVERAGE
