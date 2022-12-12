@@ -54,6 +54,13 @@ def clear_metrics():
   return torch_xla._XLAC._clear_xla_metrics()
 
 
+def clear_all():
+  """Clear the value of all metrics and all counters.
+  """
+  clear_metrics()
+  clear_counters()
+
+
 def metrics_report():
   """Retrieves a string containing the full metrics and counters report."""
   return torch_xla._XLAC._xla_metrics_report()
