@@ -139,3 +139,21 @@ def _init_xla_lazy_backend():
 atexit.register(_prepare_to_exit)
 _apply_patches()
 _init_xla_lazy_backend()
+
+def _max_pool2d_forward(self, kernel_size, stride=None, padding=0, dilation=1, ceil_mode=False):
+    return torch.ops.aten.max_pool2d(self, kernel_size, stride if stride else None, padding, dilation, ceil_mode)
+
+def _max_pool2d_backward(grad_output, self, kernel_size, stride=None, padding=0, dilation=1, ceil_mode=False):
+    from functorch import vjp
+
+    def f(x):
+        return torch.ops.aten.max_pool2d(x, kernel_size, stride if stride else None, padding, dilation, ceil_mode)
+
+    _, vjp_func = vjp(f, self)
+    out = vjp_func(grad_output)
+    assert len(out) == 1
+    return out[0]
+
+xla_meta_lib = torch.library.Library("xla", "IMPL", "Meta")
+xla_meta_lib.impl("max_pool2d_forward", _max_pool2d_forward)
+xla_meta_lib.impl("max_pool2d_backward", _max_pool2d_backward)

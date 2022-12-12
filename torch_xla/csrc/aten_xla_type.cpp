@@ -22,7 +22,6 @@
 #include "torch_xla/csrc/debug_util.h"
 #include "torch_xla/csrc/device.h"
 #include "torch_xla/csrc/generated/LazyIr.h"
-#include "torch_xla/csrc/generated/AutogradXLANativeFunctions.h"
 #include "torch_xla/csrc/generated/XLANativeFunctions.h"
 #include "torch_xla/csrc/helpers.h"
 #include "torch_xla/csrc/ops/as_strided.h"
@@ -1063,7 +1062,7 @@ at::Tensor XLANativeFunctions::dot(const at::Tensor& self,
       bridge::GetXlaTensor(self), bridge::GetXlaTensor(tensor)));
 }
 
-at::Tensor AutogradXLANativeFunctions::einsum(c10::string_view equation,
+at::Tensor XLANativeFunctions::einsum(c10::string_view equation,
                                               at::TensorList tensors,
                                               at::OptionalIntArrayRef path) {
   std::string cleansed_equation = std::string(equation);
@@ -1579,18 +1578,11 @@ std::tuple<at::Tensor&, at::Tensor&> XLANativeFunctions::max_out(
   return std::forward_as_tuple(max, max_values);
 }
 
-at::Tensor AutogradXLANativeFunctions::max_pool2d(
+at::Tensor XLANativeFunctions::max_pool2d(
     const at::Tensor& self, at::IntArrayRef kernel_size, at::IntArrayRef stride,
     at::IntArrayRef padding, at::IntArrayRef dilation, bool ceil_mode) {
   TORCH_LAZY_FN_COUNTER("xla::");
   return aten_autograd_ops::MaxPool2dAutogradFunction::apply(
-      self, kernel_size, stride, padding, dilation, ceil_mode);
-}
-
-at::Tensor XLANativeFunctions::max_pool2d(
-    const at::Tensor& self, at::IntArrayRef kernel_size, at::IntArrayRef stride,
-    at::IntArrayRef padding, at::IntArrayRef dilation, bool ceil_mode) {
-  return aten_autograd_ops::MaxPool2dAutogradFunction::forward_kernel(
       self, kernel_size, stride, padding, dilation, ceil_mode);
 }
 
@@ -1637,7 +1629,7 @@ at::Tensor XLANativeFunctions::max_pool2d_with_indices_backward(
       XlaHelpers::I64List(stride), XlaHelpers::I64List(padding), ceil_mode));
 }
 
-at::Tensor AutogradXLANativeFunctions::max_pool3d(
+at::Tensor XLANativeFunctions::max_pool3d(
     const at::Tensor& self, at::IntArrayRef kernel_size, at::IntArrayRef stride,
     at::IntArrayRef padding, at::IntArrayRef dilation, bool ceil_mode) {
   TORCH_LAZY_FN_COUNTER("xla::");
@@ -3059,7 +3051,7 @@ at::Scalar XLANativeFunctions::_local_scalar_dense(const at::Tensor& self) {
 // re-use the composite kernel from core, that way we don't need to provide a
 // backwards formula for native_layer_norm
 std::tuple<at::Tensor, at::Tensor, at::Tensor>
-AutogradXLANativeFunctions::native_layer_norm(const at::Tensor& input,
+XLANativeFunctions::native_layer_norm(const at::Tensor& input,
                                               at::IntArrayRef normalized_shape,
                                               const c10::optional<at::Tensor>& weight,
                                               const c10::optional<at::Tensor>& bias,
@@ -3071,7 +3063,7 @@ AutogradXLANativeFunctions::native_layer_norm(const at::Tensor& input,
 // re-use the composite kernel from core, that way we don't need to provide a
 // backwards formula for native_group_norm
 std::tuple<at::Tensor, at::Tensor, at::Tensor>
-AutogradXLANativeFunctions::native_group_norm(const at::Tensor& input,
+XLANativeFunctions::native_group_norm(const at::Tensor& input,
                                               const c10::optional<at::Tensor>& weight,
                                               const c10::optional<at::Tensor>& bias,
                                               int64_t N, int64_t C, int64_t HxW,
