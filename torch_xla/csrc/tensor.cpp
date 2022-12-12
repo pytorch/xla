@@ -509,14 +509,6 @@ void XLATensor::UpdateFromTensorOut(const XLATensorPtr& tensor) {
   SetIrValue(tensor->GetIrValue(), /*inplace=*/true);
 }
 
-torch::lazy::Value XLATensor::CreateTensorNode(torch::lazy::BackendDataPtr data,
-                                               bool read_only) const {
-  data->SetInfo(
-      std::make_shared<torch::lazy::LazyGraphExecutor::DeviceDataInfo>(
-          GetUniqueId(), read_only));
-  return torch::lazy::MakeNode<DeviceData>(std::move(data));
-}
-
 std::vector<XLATensorPtr> XLATensor::MakeOutputTensors(
     torch::lazy::NodePtr node, bool inherit_logical_type) const {
   std::vector<XLATensorPtr> tensors;

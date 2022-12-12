@@ -223,9 +223,6 @@ class XLATensor : public torch::lazy::LazyTensor {
 
   void AssignIrValue(torch::lazy::Value ir_value) const;
 
-  torch::lazy::Value CreateTensorNode(torch::lazy::BackendDataPtr data,
-                                      bool read_only) const;
-
   View::IrNode GetViewUpdate(const std::shared_ptr<View>& view) const;
 
   std::shared_ptr<View> UpdateView(std::shared_ptr<View> view,
