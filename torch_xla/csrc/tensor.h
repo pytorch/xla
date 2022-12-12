@@ -168,7 +168,8 @@ class XLATensor : public torch::lazy::LazyTensor {
   void ModifyCurrentView(ViewInfo view_info) const;
   XLATensorPtr CreateViewTensor(ViewInfo view_info) const;
 
-  // We don't use the upstream CopyTensorToDevice in order to return XLATensorPtr.
+  // We don't use the upstream CopyTensorToDevice in order to return
+  // XLATensorPtr.
   XLATensorPtr CopyTensorToDevice(const torch::lazy::BackendDevice& device);
 
   // Applies the queue of operations in preparation for using the data.
@@ -239,7 +240,8 @@ class XLATensor : public torch::lazy::LazyTensor {
 
   // Override to instantiate our own xla data.
   torch::lazy::Value GetIrValueForTensor(
-      const at::Tensor& tensor, const torch::lazy::BackendDevice& device) const final;
+      const at::Tensor& tensor,
+      const torch::lazy::BackendDevice& device) const final;
 
   static bool UseEagerDebugMode();
 
