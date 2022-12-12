@@ -234,13 +234,6 @@ class XLATensor : public torch::lazy::LazyTensor {
       torch::lazy::Value ir_value, const torch::lazy::BackendDevice& device,
       c10::optional<at::ScalarType> logical_element_type) const;
 
-  // We build an XLA graph accumulating XLA operations, but at a given point we
-  // need to force a rendering, otherwise the graph can grow without control.
-  // Think:
-  //   for i in range(0, 100000):
-  //     a = a + b
-  void TryLimitGraphSize();
-
   torch::lazy::Value GetIrValueForTensor(
       const at::Tensor& tensor, const torch::lazy::BackendDevice& device) const;
 
