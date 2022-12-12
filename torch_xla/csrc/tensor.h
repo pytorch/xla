@@ -111,11 +111,13 @@ class XLATensor : public torch::lazy::LazyTensor {
   // LazyTensorPtr instead.
   XLATensor() = delete;
 
-  int64_t size(int64_t dim) const;
+  // Override to use xla::shape.
+  int64_t size(int64_t dim) const final;
 
   // Override to use XLAGraphExecutor.
   at::Tensor ToTensor(bool detached) final;
 
+  // We don't use the upsteram ShallowCopyTo because of logical_element_type.
   void ShallowCopyTo(XLATensorPtr dest) const;
 
   // Assigns the tensor value to the XLA tensor.
@@ -131,6 +133,7 @@ class XLATensor : public torch::lazy::LazyTensor {
   // Set logical_element_type which is visible to upstream PyTorch.
   void SetScalarType(c10::optional<at::ScalarType> logical_element_type);
 
+  // We don't use the upstream shape to provide xla::shape.
   xla::util::MaybeRef<xla::Shape> shape() const;
 
   // Retrieves an opaque ID of the alias object upon which the tensor's view is
@@ -234,8 +237,9 @@ class XLATensor : public torch::lazy::LazyTensor {
       torch::lazy::Value ir_value, const torch::lazy::BackendDevice& device,
       c10::optional<at::ScalarType> logical_element_type) const;
 
+  // Override to instantiate our own xla data.
   torch::lazy::Value GetIrValueForTensor(
-      const at::Tensor& tensor, const torch::lazy::BackendDevice& device) const;
+      const at::Tensor& tensor, const torch::lazy::BackendDevice& device) const final;
 
   static bool UseEagerDebugMode();
 
