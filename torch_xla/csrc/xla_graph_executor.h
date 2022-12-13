@@ -56,6 +56,8 @@ class XLAGraphExecutor : public torch::lazy::LazyGraphExecutor {
   // that is affected by the view tensor.
   void ApplyEagerSync(std::vector<XLATensorPtr>& tensors);
 
+  // We don't use the upstream GetDeviceDataIrValue to have the
+  // xla::PrimitiveType.
   torch::lazy::Value GetDeviceDataIrValue(
       const at::Scalar& value, xla::PrimitiveType type,
       const torch::lazy::BackendDevice& device);
@@ -243,6 +245,8 @@ class XLAGraphExecutor : public torch::lazy::LazyGraphExecutor {
       absl::Span<const size_t> indices,
       const std::vector<torch::lazy::BackendDataPtr>& tensor_data_vec);
 
+  // We don't use upstream ExtractIRAndPrepareTensorData as we need to
+  // instantiate xla::shape.
   void ExtractIRAndPrepareXlaData_(
       std::vector<XLATensorPtr>* tensors, const SyncTensorsConfig& config,
       const absl::Span<const size_t> indices,
@@ -271,8 +275,9 @@ class XLAGraphExecutor : public torch::lazy::LazyGraphExecutor {
       std::string device, ComputationCache::TypePtr cached_computation,
       const std::vector<torch::lazy::BackendDataPtr>& tensor_data_vec);
 
+  // Override to enable profiler.
   PostOrderData RunPostOrder(const std::vector<torch::lazy::Value>& ir_values,
-                             SyncTensorCollection* coll);
+                             SyncTensorCollection* coll) final;
 
   // We don't use the upstream LookupCachedCompile since
   // our CachedComputation is different from upstream.
@@ -290,6 +295,7 @@ class XLAGraphExecutor : public torch::lazy::LazyGraphExecutor {
       const std::vector<XLATensorPtr>& tensors,
       absl::Span<const size_t> indices, LoweringContext* lowering_ctx);
 
+  // We don't use upstream Compile to have BuildInputOutputAliases.
   CompilationResult Compile(const std::vector<XLATensorPtr>& tensors,
                             absl::Span<const std::string> devices,
                             const SyncTensorCollection& coll,

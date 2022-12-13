@@ -815,39 +815,7 @@ XLAGraphExecutor::PostOrderData XLAGraphExecutor::RunPostOrder(
     SyncTensorCollection* coll) {
   tensorflow::profiler::TraceMe activity(
       "RunPostOrder", tensorflow::profiler::TraceMeLevel::kInfo);
-  std::vector<const torch::lazy::Node*> roots;
-  roots.reserve(ir_values.size());
-  for (auto ir_value : ir_values) {
-    roots.push_back(ir_value.node.get());
-  }
-  PostOrderData po_data;
-  po_data.post_order =
-      torch::lazy::Util::ComputePostOrder(roots, &po_data.emission_map);
-  std::unordered_map<xla::ComputationClient::Data::OpaqueHandle, size_t>
-      data_handles;
-
-  for (auto node : po_data.post_order) {
-    const auto backend_data =
-        torch::lazy::getBackend()->GetComputationDataFromNode(node);
-    if (backend_data != nullptr) {
-      /* Acceptable race condition: HasValue may return false. This is OK
-       * since the conditional barrier is a performance optimization. */
-      if (!backend_data->HasValue()) {
-        TensorCollectionBarrier(coll);
-      }
-      xla::ComputationClient::Data::OpaqueHandle handle =
-          backend_data->GetHandle();
-      auto it = data_handles.find(handle);
-      if (it != data_handles.end()) {
-        po_data.parameter_sequence.push_back(it->second);
-      } else {
-        po_data.parameter_sequence.push_back(po_data.parameters_data.size());
-        data_handles[handle] = po_data.parameters_data.size();
-        po_data.parameters_data.push_back(backend_data);
-      }
-    }
-  }
-  return po_data;
+  return torch::lazy::LazyGraphExecutor::RunPostOrder(ir_values, coll);
 }
 
 XLAGraphExecutor::ComputationCache::TypePtr
