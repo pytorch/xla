@@ -32,8 +32,9 @@ class XLAGraphExecutor : public torch::lazy::LazyGraphExecutor {
  public:
   static XLAGraphExecutor* Get();
 
-  virtual void RegisterTensor(std::shared_ptr<XLATensor::Data> data);
-  virtual void UnregisterTensor(XLATensor::Data* data);
+  void RegisterTensor(
+      std::shared_ptr<torch::lazy::LazyTensor::Data> data) final;
+  void UnregisterTensor(torch::lazy::LazyTensor::Data* data) final;
 
   // This method just syncs the tensors passed as argument. This method is
   // called at two places:
@@ -79,9 +80,10 @@ class XLAGraphExecutor : public torch::lazy::LazyGraphExecutor {
       c10::optional<at::ScalarType> logical_element_type,
       const torch::lazy::BackendDevice& device);
 
-  torch::lazy::Value GetRngSeed(const torch::lazy::BackendDevice& device);
-  void SetRngSeed(const torch::lazy::BackendDevice& device, uint64_t seed);
-  uint64_t GetRunningSeed(const torch::lazy::BackendDevice& device);
+  torch::lazy::Value GetRngSeed(const torch::lazy::BackendDevice& device) final;
+  void SetRngSeed(const torch::lazy::BackendDevice& device,
+                  uint64_t seed) final;
+  uint64_t GetRunningSeed(const torch::lazy::BackendDevice& device) final;
   torch::lazy::BackendDataPtr GetBaseSeedData(
       const torch::lazy::BackendDevice& device);
 
@@ -93,6 +95,7 @@ class XLAGraphExecutor : public torch::lazy::LazyGraphExecutor {
   // for the given device. If device is nullptr, the live tensors for all
   // devices will be returned. Returned tensors are sorted by device as primary
   // key, and by unique ID as secondary key.
+  // Unlike the base class, here we return XLATensorPtrs.
   std::vector<XLATensorPtr> GetLiveTensors(
       const torch::lazy::BackendDevice* device);
 
@@ -113,7 +116,7 @@ class XLAGraphExecutor : public torch::lazy::LazyGraphExecutor {
 
   // Marks an execution step, which allows the tensor framework to understand
   // the computation boundaries.
-  void MarkStep(const torch::lazy::BackendDevice& device);
+  void MarkStep(const torch::lazy::BackendDevice& device) final;
 
   // Waits for all the outstanding operations on all the supplied devices.
   // If devices is empty, the wait will happen for all local devices.
@@ -173,6 +176,29 @@ class XLAGraphExecutor : public torch::lazy::LazyGraphExecutor {
     std::string device;
     ComputationCache::TypePtr cached_computation;
     std::vector<torch::lazy::BackendDataPtr> tensors_data;
+  };
+
+  class DeviceContextArena
+      : public torch::lazy::LazyGraphExecutor::DeviceContextArena {
+   public:
+    static DeviceContextArena* Get();
+
+    // This method returns XLATensorPtrs instead of LazyTensorPtrs.
+    std::vector<XLATensorPtr> GetLiveTensors(
+        const torch::lazy::BackendDevice* device);
+
+    // We override this to use our own + and * for torch::lazy::Value.
+    torch::lazy::Value GetRngSeed(
+        const torch::lazy::BackendDevice& device) final;
+
+    torch::lazy::BackendDataPtr GetBaseSeedData(
+        const torch::lazy::BackendDevice& device);
+
+   private:
+    // We override this to use TensorToXlaData().
+    torch::lazy::Value IrValueFromScalar(
+        const at::Scalar& value, at::ScalarType scalar_type,
+        const torch::lazy::BackendDevice& device) final;
   };
 
   XLAGraphExecutor() = default;
