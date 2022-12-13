@@ -7,7 +7,6 @@
 #include "tensorflow/compiler/xla/client/xla_computation.h"
 #include "tensorflow/compiler/xla/layout_util.h"
 #include "tensorflow/compiler/xla/literal.h"
-#include "tensorflow/compiler/xla/pjrt/cpu_device.h"
 #include "tensorflow/compiler/xla/pjrt/gpu/se_gpu_pjrt_client.h"
 #include "tensorflow/compiler/xla/pjrt/pjrt_c_api_client.h"
 #include "tensorflow/compiler/xla/pjrt/pjrt_client.h"
@@ -60,7 +59,7 @@ PjRtComputationClient::PjRtComputationClient() {
     client_ = xla::GetTpuClient(max_inflight_computations).value();
   } else if (device_type == "TPU_C_API") {
     TF_VLOG(1) << "Initializing PjRt C API client...";
-    client_ = std::move(xla::GetCApiClient().value());
+    client_ = std::move(xla::GetCApiClient("TPU").value());
     // TODO(wcromar): remove this when C API supports
     // kImmutableUntilTransferCompletes
     host_buffer_semantics_ = xla::PjRtClient::HostBufferSemantics::kZeroCopy;

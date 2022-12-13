@@ -1,8 +1,8 @@
 diff --git a/tensorflow/compiler/xla/stream_executor/BUILD b/tensorflow/compiler/xla/stream_executor/BUILD
-index 1241cfedade..03a45f27702 100644
+index bd39d1f8edd..fc4848c6a50 100644
 --- a/tensorflow/compiler/xla/stream_executor/BUILD
 +++ b/tensorflow/compiler/xla/stream_executor/BUILD
-@@ -172,11 +172,13 @@ cc_library(
+@@ -197,10 +197,12 @@ cc_library(
      ],
  )
  
@@ -12,8 +12,23 @@ index 1241cfedade..03a45f27702 100644
  tf_proto_library(
      name = "dnn_proto",
      srcs = ["dnn.proto"],
-     cc_api_version = 2,
+-    make_default_target_header_only = True,
+     protodeps = ["//tensorflow/tsl/protobuf:dnn_proto"],
+     exports = ["//tensorflow/tsl/protobuf:dnn_proto"],
+ )
+diff --git a/tensorflow/tsl/protobuf/BUILD b/tensorflow/tsl/protobuf/BUILD
+index 722fa93147b..16790810d1f 100644
+--- a/tensorflow/tsl/protobuf/BUILD
++++ b/tensorflow/tsl/protobuf/BUILD
+@@ -34,7 +34,6 @@ tf_proto_library(
+ tf_proto_library(
+     name = "dnn_proto",
+     srcs = ["dnn.proto"],
 -    make_default_target_header_only = True,
  )
  
- cc_library(
+ tf_proto_library(
+
+
+
+
