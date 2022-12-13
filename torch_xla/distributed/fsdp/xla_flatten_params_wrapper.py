@@ -27,7 +27,9 @@ from torch import Tensor
 import torch.nn as nn
 
 # Static type.
-State = namedtuple('State', ['param_numels', 'param_shapes', 'param_infos', 'shared_param_infos'])
+State = namedtuple(
+    'State',
+    ['param_numels', 'param_shapes', 'param_infos', 'shared_param_infos'])
 
 class FlatParameter(nn.Parameter):
   """
@@ -110,7 +112,7 @@ class FlatParameter(nn.Parameter):
         self._param_numels
     ), f"Incorrect pickling {self.numel()} vs. {sum(self._param_numels)}"
 
-  def __reduce_ex__(self, proto: int) -> Tuple[FlatParameter, Tuple[[Tensor], bool], State]:
+  def __reduce_ex__(self, proto: int) -> Tuple["FlatParameter", Tuple[Sequence[nn.Parameter], bool], State]:
     """Support pickling between ranks."""
     return (
         FlatParameter,  # Callable
