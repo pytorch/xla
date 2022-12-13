@@ -89,6 +89,7 @@ class XLAGraphExecutor : public torch::lazy::LazyGraphExecutor {
 
   // Dumps the XLA HLO text of the computation accumulated in the graph which is
   // attached the tensors.
+  // We don't use upstream DumpBackendComputation given we have our own format.
   std::string DumpHloComputation(const std::vector<XLATensorPtr>& tensors);
 
   // Retrieves the set of XLA tensors which are currently live in the system,
@@ -103,6 +104,7 @@ class XLAGraphExecutor : public torch::lazy::LazyGraphExecutor {
   // the tensors must be on the same device. If wait is true, the sync operation
   // will be run synchronously. The devices argument, if not empty, tells the
   // devices which should be participating into the replicated computation.
+  // We don't use the upstream one given we have OpbyOp mode.
   void SyncTensorsGraph(std::vector<XLATensorPtr>* tensors,
                         absl::Span<const std::string> devices, bool wait,
                         bool sync_ltc_data);
@@ -111,8 +113,10 @@ class XLAGraphExecutor : public torch::lazy::LazyGraphExecutor {
   // gets turned into device data. If wait is true, the sync operation will be
   // run synchronously. The devices argument, if not empty, tells the devices
   // which should be participating into the replicated computation.
+  // Override to enable profiling.
   void SyncLiveTensorsGraph(const torch::lazy::BackendDevice* device,
-                            absl::Span<const std::string> devices, bool wait);
+                            c10::ArrayRef<std::string> devices,
+                            bool wait) final;
 
   // Marks an execution step, which allows the tensor framework to understand
   // the computation boundaries.
@@ -120,16 +124,21 @@ class XLAGraphExecutor : public torch::lazy::LazyGraphExecutor {
 
   // Waits for all the outstanding operations on all the supplied devices.
   // If devices is empty, the wait will happen for all local devices.
+  // We don't use the WaitDeviceOps given we use local devices instead of
+  // active devices.
   void WaitDeviceOps(absl::Span<const std::string> devices);
 
   // Retrieves the PyTorch CPU tensors behind the XLA tensors IR operations.
   // All the tensors must be on the same device.
+  // We don't use the GetTensors given we have OpByOp mode.
   std::vector<at::Tensor> GetTensors(std::vector<XLATensorPtr>* tensors);
 
   // XLATensor sharding annotation. ShardingSpec wraps xla::OpSharding and
   // can be extended to hold other sharding information from the user.
   torch::lazy::hash_t GetGraphHash(const std::vector<XLATensorPtr>& tensors);
 
+  // We don't use the upstream CachedComputation type given all fields are
+  // different.
   struct CachedComputation {
     CachedComputation(ComputationPtr computation, bool is_sharded = false)
         : computation(std::move(computation)), is_sharded(is_sharded) {}
@@ -153,6 +162,8 @@ class XLAGraphExecutor : public torch::lazy::LazyGraphExecutor {
                        const torch::lazy::BackendDevice& device);
 
  private:
+  // This is just to group results from compile(). Since our computation is
+  // different, we don't reuse the upstream CompilationResult.
   struct CompilationResult {
     torch::lazy::BackendDevice device;
     size_t emitted_nodes = 0;
@@ -161,21 +172,13 @@ class XLAGraphExecutor : public torch::lazy::LazyGraphExecutor {
     bool is_sharded = false;
   };
 
-  struct Async {
+  struct Async : public torch::lazy::LazyGraphExecutor::Async {
     Async(SyncTensorCollection* coll,
           std::vector<torch::lazy::BackendDataPtr> parameters_data,
           std::vector<torch::lazy::BackendDataPtr> tensors_data,
           ComputationCache::TypePtr cached_computation);
 
-    void Wait();
-
-    xla::util::MultiWait mwait;
-    std::vector<size_t> indices;
-    std::vector<torch::lazy::ExceptionCleanup> unlocker;
-    std::vector<torch::lazy::BackendDataPtr> parameters_data;
-    std::string device;
     ComputationCache::TypePtr cached_computation;
-    std::vector<torch::lazy::BackendDataPtr> tensors_data;
   };
 
   class DeviceContextArena
@@ -203,16 +206,19 @@ class XLAGraphExecutor : public torch::lazy::LazyGraphExecutor {
 
   XLAGraphExecutor() = default;
 
+  // We don't use upstream CollectSyncTensors as we need to enable GSPMD.
   SyncTensorCollection CollectSyncTensors(
       const std::vector<XLATensorPtr>& tensors,
       const SyncTensorsConfig& config);
 
   // Waits for this SyncTensorCollection's device barrier and acuire the lock.
-  void TensorCollectionBarrier(SyncTensorCollection* coll);
+  // Override to enable SPMD.
+  void TensorCollectionBarrier(SyncTensorCollection* coll) final;
 
   // Implementation of the GetTensors() API using the op-by-op executor.
   std::vector<at::Tensor> GetTensorsOpByOp(std::vector<XLATensorPtr>* tensors);
 
+  // We don't use upstream GetTensorsFused as we have xla::Literal.
   std::vector<at::Tensor> GetTensorsFused(std::vector<XLATensorPtr>* tensors);
 
   // Runs an asynchronous syn operation using the op-by-op executor.
@@ -243,6 +249,7 @@ class XLAGraphExecutor : public torch::lazy::LazyGraphExecutor {
       std::vector<torch::lazy::Value>& ir_values,
       std::vector<torch::lazy::BackendDataPtr>& tensor_data_vec);
 
+  // We don't use upstream FetchTensors as we have xla::Literal.
   std::vector<at::Tensor> FetchTensors(std::vector<XLATensorPtr>* tensors,
                                        absl::Span<const xla::Literal> literals,
                                        const std::vector<size_t>* indices);
@@ -250,6 +257,8 @@ class XLAGraphExecutor : public torch::lazy::LazyGraphExecutor {
   // Schedules the execution of a sync tensors operation in background. The
   // asynchronous operation will hold the device locks by capturing the ones
   // present within the coll structure.
+  // We don't use the upstream ScheduleSyncTensorsGraph since
+  // our CachedComputation is different from upstream.
   std::shared_ptr<Async> ScheduleSyncTensorsGraph(
       SyncTensorCollection* coll,
       std::vector<torch::lazy::BackendDataPtr> parameters_data,
@@ -265,10 +274,13 @@ class XLAGraphExecutor : public torch::lazy::LazyGraphExecutor {
   PostOrderData RunPostOrder(const std::vector<torch::lazy::Value>& ir_values,
                              SyncTensorCollection* coll);
 
+  // We don't use the upstream LookupCachedCompile since
+  // our CachedComputation is different from upstream.
   ComputationCache::TypePtr LookupCachedCompile(
-      const std::vector<XLATensorPtr>& tensors,
       const torch::lazy::hash_t& hash);
 
+  // We don't use the upstream TryRunCachedSync since
+  // our CachedComputation is different from upstream.
   std::shared_ptr<Async> TryRunCachedSync(
       std::vector<XLATensorPtr>* tensors, SyncTensorCollection* coll,
       PostOrderData* po_data,
@@ -284,6 +296,8 @@ class XLAGraphExecutor : public torch::lazy::LazyGraphExecutor {
                             PostOrderData* po_data,
                             const std::vector<torch::lazy::Value>& ir_values);
 
+  // We don't use the upstream SyncTensorsGraphInternal since
+  // our CachedComputation is different from upstream.
   std::shared_ptr<Async> SyncTensorsGraphInternal(
       std::vector<XLATensorPtr>* tensors, absl::Span<const std::string> devices,
       const SyncTensorsConfig& config);

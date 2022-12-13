@@ -142,35 +142,9 @@ XLAGraphExecutor::Async::Async(
     std::vector<torch::lazy::BackendDataPtr> parameters_data,
     std::vector<torch::lazy::BackendDataPtr> tensors_data,
     ComputationCache::TypePtr cached_computation)
-    : mwait(1),
-      indices(std::move(coll->indices)),
-      unlocker(std::move(coll->unlocker)),
-      parameters_data(std::move(parameters_data)),
-      device(coll->device.toString()),
-      cached_computation(std::move(cached_computation)),
-      tensors_data(std::move(tensors_data)) {}
-
-void XLAGraphExecutor::Async::Wait() {
-  mwait.Wait();
-  // Accessing other Async members is safe only after MultiWait::Wait()
-  // completes.
-  torch::lazy::ExceptionCleanup::StatusType status;
-  for (auto& cleanup : unlocker) {
-    const torch::lazy::ExceptionCleanup::StatusType& cleanup_status =
-        cleanup.GetStatus();
-    if (cleanup_status != nullptr) {
-      if (status == nullptr) {
-        status = cleanup_status;
-      }
-      // If we observe the status here, no need to let it propagate to the next
-      // device lock operation.
-      cleanup.SetStatus(nullptr);
-    }
-  }
-  if (status != nullptr) {
-    std::rethrow_exception(status);
-  }
-}
+    : torch::lazy::LazyGraphExecutor::Async(coll, parameters_data, tensors_data,
+                                            nullptr),
+      cached_computation(std::move(cached_computation)) {}
 
 XLAGraphExecutor* XLAGraphExecutor::Get() {
   static XLAGraphExecutor arena = XLAGraphExecutor();
@@ -323,12 +297,12 @@ void XLAGraphExecutor::SyncTensorsGraph(std::vector<XLATensorPtr>* tensors,
 
 void XLAGraphExecutor::SyncLiveTensorsGraph(
     const torch::lazy::BackendDevice* device,
-    absl::Span<const std::string> devices, bool wait) {
+    c10::ArrayRef<std::string> devices, bool wait) {
   tensorflow::profiler::TraceMe activity(
       "SyncLiveTensorsGraph", tensorflow::profiler::TraceMeLevel::kInfo);
   auto tensors = GetLiveTensors(device);
   TF_VLOG(4) << tensors.size() << " live tensors: devices=("
-             << absl::StrJoin(devices, ",") << ")";
+             << c10::Join(",", devices) << ")";
   SyncTensorsGraph(&tensors, devices, wait, /*sync_ltc_data=*/true);
 }
 
@@ -494,14 +468,8 @@ XLAGraphExecutor::SyncTensorCollection XLAGraphExecutor::CollectSyncTensors(
 }
 
 void XLAGraphExecutor::TensorCollectionBarrier(SyncTensorCollection* coll) {
-  static const std::string invalid_device(
-      "Unknown0"); /* Temp solution to identify unassigned devices */
-  if (coll->device.toString().compare(invalid_device) == 0 ||
-      coll->unlocker.size() > 0) {
-    return;
-  }
+  torch::lazy::LazyGraphExecutor::TensorCollectionBarrier(coll);
   // TODO(yeounoh) lock SPMD device
-  coll->unlocker = DeviceLockerArena::Get()->LockDevices({coll->device});
 }
 
 std::vector<torch::lazy::BackendDataPtr>
@@ -796,7 +764,7 @@ XLAGraphExecutor::ScheduleSyncTensorsGraph(
                    << async->device << " ...";
         results = torch::lazy::getBackend()->ExecuteComputation(
             async->cached_computation->computation, async->parameters_data,
-            ParseDeviceString(async->device));
+            async->device);
         TF_VLOG(3) << "Executing IR graph hash "
                    << torch::lazy::HashToString(hash) << " on device "
                    << async->device << " done!";
@@ -883,8 +851,7 @@ XLAGraphExecutor::PostOrderData XLAGraphExecutor::RunPostOrder(
 }
 
 XLAGraphExecutor::ComputationCache::TypePtr
-XLAGraphExecutor::LookupCachedCompile(const std::vector<XLATensorPtr>& tensors,
-                                      const torch::lazy::hash_t& hash) {
+XLAGraphExecutor::LookupCachedCompile(const torch::lazy::hash_t& hash) {
   ComputationCache::TypePtr cached_computation =
       GetComputationCache()->Get(hash);
   if (cached_computation == nullptr) {
@@ -906,7 +873,7 @@ std::shared_ptr<XLAGraphExecutor::Async> XLAGraphExecutor::TryRunCachedSync(
     PostOrderData* po_data,
     const std::vector<torch::lazy::BackendDataPtr>& tensor_data_vec) {
   ComputationCache::TypePtr cached_computation =
-      LookupCachedCompile(*tensors, coll->hash);
+      LookupCachedCompile(coll->hash);
   if (cached_computation == nullptr) {
     return nullptr;
   }
