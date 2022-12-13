@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 import argparse
 import sys
 
@@ -7,10 +6,6 @@ parser.add_argument('--verbosity', type=int, default=2)
 FLAGS, leftovers = parser.parse_known_args()
 sys.argv = [sys.argv[0]] + leftovers
 
-=======
-from sklearn.datasets import make_blobs
-import sys
->>>>>>> 708873e2edfa3935e7bb24cfbe6914907388ef88
 import numpy as np
 import unittest
 import torch
