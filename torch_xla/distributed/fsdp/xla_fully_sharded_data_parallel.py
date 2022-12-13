@@ -652,14 +652,15 @@ class XlaFullyShardedDataParallel(nn.Module):
             f"sharding_groups={self.sharding_groups}")
     return repr
 
-  def __getattr__(self, name: str) -> Any:
+  def __getattr__(self, name: str) -> Union[Tensor, nn.Module]:
     """Forward missing attributes to wrapped module."""
     try:
       return super().__getattr__(name)  # defer to nn.Module's logic
     except AttributeError:
       return getattr(self.module, name)
 
-  def __getitem__(self, key: int) -> Any:
+  T = TypeVar('T', bound=Module)
+  def __getitem__(self, key: int) -> Union[nn.Sequential, T]:
     """Forward indexing calls in case the module is a nn.Sequential."""
     return self.module.__getitem__(key)
 
@@ -1460,10 +1461,10 @@ class XlaFullyShardedDataParallel(nn.Module):
 
 def apply_to_tensors(
     fn: Callable, container: Union[torch.Tensor, Dict, List, Tuple,
-                                   Set]) -> Any:
+                                   Set]) -> Union[torch.Tensor, Dict, List, Tuple, Set]:
   """Recursively apply to all tensor in different kinds of container types."""
 
-  def _apply(x: Union[torch.Tensor, Dict, List, Tuple, Set]) -> Any:
+  def _apply(x: Union[torch.Tensor, Dict, List, Tuple, Set]) -> Union[torch.Tensor, Dict, List, Tuple, Set]:
     if torch.is_tensor(x):
       return fn(x)
     elif isinstance(x, OrderedDict):

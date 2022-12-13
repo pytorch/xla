@@ -2,7 +2,7 @@
 # ``fairscale.nn.misc.FlattenParamsWrapper`` in
 # https://github.com/facebookresearch/fairscale/blob/main/fairscale/nn/misc/flatten_params_wrapper.py
 
-from collections import OrderedDict
+from collections import OrderedDict, namedtuple
 from contextlib import contextmanager
 from itertools import chain
 import typing
@@ -26,6 +26,10 @@ import torch
 from torch import Tensor
 import torch.nn as nn
 
+# Static type.
+State = namedtuple(
+    'State',
+    ['param_numels', 'param_shapes', 'param_infos', 'shared_param_infos'])
 
 class FlatParameter(nn.Parameter):
   """
@@ -100,7 +104,7 @@ class FlatParameter(nn.Parameter):
     names = [".".join([m, n]) if m else n for (m, _, n) in self._param_infos]
     return names, self._param_shapes, self._param_numels
 
-  def __setstate__(self, state: Tuple[Any, Any, Any, Any]) -> None:
+  def __setstate__(self, state: State) -> None:
     """Use by pickle to set the internal states."""
     (self._param_numels, self._param_shapes, self._param_infos,
      self._shared_param_infos) = state
@@ -108,7 +112,7 @@ class FlatParameter(nn.Parameter):
         self._param_numels
     ), f"Incorrect pickling {self.numel()} vs. {sum(self._param_numels)}"
 
-  def __reduce_ex__(self, proto: int) -> Tuple[Any, Any, Any]:
+  def __reduce_ex__(self, proto: int) -> Tuple["FlatParameter", Tuple[Sequence[nn.Parameter], bool], State]:
     """Support pickling between ranks."""
     return (
         FlatParameter,  # Callable
@@ -249,7 +253,7 @@ class XlaFlattenParamsWrapper(nn.Module):
     self._auto_unflatten_state_dict = auto_unflatten_state_dict
 
   @property
-  def module(self) -> Any:
+  def module(self) -> nn.Module:
     """
     Support fpw.module in case we are immitating DDP, which has .module
     property to the underlying module.
@@ -440,14 +444,15 @@ class XlaFlattenParamsWrapper(nn.Module):
       if orig_flattened:
         self._flatten_params(orig_flat_params)
 
-  def __getattr__(self, name: str) -> Any:
+  def __getattr__(self, name: str) -> Union[Tensor, nn.Module]:
     """Forward missing attributes to wrapped module."""
     try:
       return super().__getattr__(name)  # defer to nn.Module's logic
     except AttributeError:
       return getattr(self.module, name)  # fallback to wrapped module
-
-  def __getitem__(self, key: int) -> Any:
+      
+  T = TypeVar('T', bound=Module)
+  def __getitem__(self, key: int) -> Union[nn.Sequential, T]:
     """Forward indexing calls in case the module is a nn.Sequential."""
     return self.module.__getitem__(key)
 
@@ -465,7 +470,7 @@ class XlaFlattenParamsWrapper(nn.Module):
     ...
 
   # Since we have overloads above, we can use Any here.
-  def state_dict(self, *args: Any, **kwargs: Any) -> Any:
+  def state_dict(self, *args: Any, **kwargs: Any) -> Dict[str, Any]:
     """Return the wrapped module's state_dict."""
     if self.is_flattened and self._auto_unflatten_state_dict:
       # Returns the original version.
