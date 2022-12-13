@@ -159,7 +159,7 @@ def xrt_world_size(defval=1):
     The number of devices which is taking part of the replication.
   """
   if pjrt.using_pjrt():
-    return pjrt.global_device_count()
+    return pjrt.world_size()
 
   return xu.getenv_as(xenv.WORLD_SIZE, int, defval=defval)
 

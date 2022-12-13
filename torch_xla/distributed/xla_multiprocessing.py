@@ -386,7 +386,7 @@ def spawn(fn,
     return None.
   """
   if pjrt.using_pjrt():
-    return pjrt.spawn(fn, start_method, args)
+    return pjrt.spawn(fn, nprocs, start_method, args)
 
   if not _is_xla_config():
     # If this is not an XLA setup, jump to normal multi-processing.

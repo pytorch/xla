@@ -42,7 +42,7 @@ class TestExperimentalPjrt(parameterized.TestCase):
                    pjrt.global_device_count())
 
   def test_world_size(self):
-    self.assertEqual(xm.xrt_world_size(), pjrt.global_device_count())
+    self.assertEqual(xm.xrt_world_size(), pjrt.world_size())
 
   def test_xla_device_error(self):
     with self.assertRaises(IndexError):
