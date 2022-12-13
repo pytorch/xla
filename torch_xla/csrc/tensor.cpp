@@ -301,22 +301,6 @@ void XLATensor::AssignIrValue(torch::lazy::Value ir_value) const {
   data()->generation += 1;
 }
 
-void XLATensor::TryLimitGraphSize() {
-  static const size_t kCheckFrequency =
-      xla::sys_util::GetEnvInt("XLA_TRIM_GRAPH_CHECK_FREQUENCY", 5000);
-  static const size_t kMaxPendingGraphSize =
-      xla::sys_util::GetEnvInt("XLA_TRIM_GRAPH_SIZE", 100000);
-  if (data()->ir_value &&
-      XLAGraphExecutor::Get()->IncTrimCounter() % kCheckFrequency == 0) {
-    size_t graph_size =
-        torch::lazy::Util::GetGraphSize({data()->ir_value.node.get()});
-    if (graph_size > kMaxPendingGraphSize) {
-      TORCH_LAZY_COUNTER("TrimIrGraph", 1);
-      ApplyPendingGraph();
-    }
-  }
-}
-
 torch::lazy::Value XLATensor::GetIrValue() const {
   torch::lazy::Value ir_value = CurrentIrValue();
   if (ir_value) {
@@ -523,14 +507,6 @@ void XLATensor::UpdateFromTensorOut(const XLATensorPtr& tensor) {
     data()->view = nullptr;
   }
   SetIrValue(tensor->GetIrValue(), /*inplace=*/true);
-}
-
-torch::lazy::Value XLATensor::CreateTensorNode(torch::lazy::BackendDataPtr data,
-                                               bool read_only) const {
-  data->SetInfo(
-      std::make_shared<torch::lazy::LazyGraphExecutor::DeviceDataInfo>(
-          GetUniqueId(), read_only));
-  return torch::lazy::MakeNode<DeviceData>(std::move(data));
 }
 
 std::vector<XLATensorPtr> XLATensor::MakeOutputTensors(
