@@ -781,6 +781,10 @@ void MapXlaEnvVarsToLazy() {
       xla::sys_util::GetEnvInt("XLA_METRICS_SAMPLES", 1024);
   FLAGS_torch_lazy_metrics_percentiles = xla::sys_util::GetEnvString(
       "XLA_METRICS_PERCENTILES", "0.01:0.05:0.1:0.2:0.5:0.8:0.9:0.95:0.99");
+  FLAGS_torch_lazy_trim_graph_check_frequency =
+      xla::sys_util::GetEnvInt("XLA_TRIM_GRAPH_CHECK_FREQUENCY", 5000);
+  FLAGS_torch_lazy_trim_graph_size =
+      xla::sys_util::GetEnvInt("XLA_TRIM_GRAPH_SIZE", 100000);
 }
 
 std::string GetPyTypeString(py::handle obj) {

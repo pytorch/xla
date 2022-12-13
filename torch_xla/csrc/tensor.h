@@ -111,10 +111,13 @@ class XLATensor : public torch::lazy::LazyTensor {
   // LazyTensorPtr instead.
   XLATensor() = delete;
 
-  int64_t size(int64_t dim) const;
+  // Override to use xla::shape.
+  int64_t size(int64_t dim) const final;
 
-  at::Tensor ToTensor(bool detached);
+  // Override to use XLAGraphExecutor.
+  at::Tensor ToTensor(bool detached) final;
 
+  // We don't use the upsteram ShallowCopyTo because of logical_element_type.
   void ShallowCopyTo(XLATensorPtr dest) const;
 
   // Assigns the tensor value to the XLA tensor.
@@ -124,12 +127,14 @@ class XLATensor : public torch::lazy::LazyTensor {
   void UpdateFromTensorOut(at::Tensor tensor);
   void UpdateFromTensorOut(const XLATensorPtr& tensor);
 
-  at::ScalarType dtype() const;
+  // Override to use logical_element_type.
+  at::ScalarType dtype() const final;
   c10::optional<at::ScalarType> dtype_optional() const;
 
   // Set logical_element_type which is visible to upstream PyTorch.
   void SetScalarType(c10::optional<at::ScalarType> logical_element_type);
 
+  // We don't use the upstream shape to provide xla::shape.
   xla::util::MaybeRef<xla::Shape> shape() const;
 
   // Retrieves an opaque ID of the alias object upon which the tensor's view is
@@ -163,10 +168,13 @@ class XLATensor : public torch::lazy::LazyTensor {
   void ModifyCurrentView(ViewInfo view_info) const;
   XLATensorPtr CreateViewTensor(ViewInfo view_info) const;
 
+  // We don't use the upstream CopyTensorToDevice in order to return
+  // XLATensorPtr.
   XLATensorPtr CopyTensorToDevice(const torch::lazy::BackendDevice& device);
 
   // Applies the queue of operations in preparation for using the data.
-  void ApplyPendingGraph();
+  // Override to use XLAGraphExecutor.
+  void ApplyPendingGraph() final;
 
   // To be noted, this returns XLATensor::Data instead of
   // torch::lazy::LazyTensor::Data.
@@ -193,6 +201,9 @@ class XLATensor : public torch::lazy::LazyTensor {
 
   int64_t GetOpaqueHandle() const;
 
+  // Override to enable SPMD.
+  void AssignIrValue(torch::lazy::Value ir_value) const final;
+
  private:
   XLATensor(const at::Tensor& tensor, const torch::lazy::BackendDevice& device);
   XLATensor(torch::lazy::BackendDataPtr handle,
@@ -216,11 +227,6 @@ class XLATensor : public torch::lazy::LazyTensor {
 
   void SetXlaData(torch::lazy::BackendDataPtr handle, bool sync);
 
-  void AssignIrValue(torch::lazy::Value ir_value) const;
-
-  torch::lazy::Value CreateTensorNode(torch::lazy::BackendDataPtr data,
-                                      bool read_only) const;
-
   View::IrNode GetViewUpdate(const std::shared_ptr<View>& view) const;
 
   std::shared_ptr<View> UpdateView(std::shared_ptr<View> view,
@@ -232,15 +238,10 @@ class XLATensor : public torch::lazy::LazyTensor {
       torch::lazy::Value ir_value, const torch::lazy::BackendDevice& device,
       c10::optional<at::ScalarType> logical_element_type) const;
 
-  // We build an XLA graph accumulating XLA operations, but at a given point we
-  // need to force a rendering, otherwise the graph can grow without control.
-  // Think:
-  //   for i in range(0, 100000):
-  //     a = a + b
-  void TryLimitGraphSize();
-
+  // Override to instantiate our own xla data.
   torch::lazy::Value GetIrValueForTensor(
-      const at::Tensor& tensor, const torch::lazy::BackendDevice& device) const;
+      const at::Tensor& tensor,
+      const torch::lazy::BackendDevice& device) const final;
 
   static bool UseEagerDebugMode();
 
