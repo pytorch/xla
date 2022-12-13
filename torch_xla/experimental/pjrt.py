@@ -4,6 +4,7 @@ import functools
 import itertools
 import logging
 import os
+import sys
 import tempfile
 from itertools import chain
 from typing import Callable, Dict, List, Optional, Tuple, TypeVar
@@ -97,6 +98,14 @@ def local_process_count() -> int:
 def global_device_count() -> int:
   """Returns the total number of devices across all processes/hosts."""
   return len(torch_xla._XLAC._xla_get_all_devices())
+
+
+@requires_pjrt
+def world_size() -> int:
+  """Returns the total number of configured logical devices."""
+  if torch_xla._XLAC._xla_get_replication_devices_count() == 0:
+    return 1
+  return global_device_count()
 
 
 @requires_pjrt
@@ -198,7 +207,6 @@ def _run_thread_per_device(local_rank: int,
 
   with concurrent.futures.ThreadPoolExecutor(
       max_workers=num_threads) as executor:
-
     if os.getenv('PJRT_INIT_TORCH_DISTRIBUTED', '0') == '1':
       if device_type() == 'TPU':
         # HACK: need to call with each device since it relies on an XLA collective
@@ -216,6 +224,37 @@ def _run_thread_per_device(local_rank: int,
         zip(device_ordinals, executor.map(_thread_fn, devices)))
 
   return _merge_replica_results(replica_results)
+
+
+@requires_pjrt
+def _run_singleprocess(fn: Callable[..., R],
+                       *args,
+                       start_method: str = 'spawn',
+                       master_port: int = 12355,
+                       **kwargs) -> Dict[int, R]:
+  """Runs `fn` on a single device core.
+
+  Spawns one process on a single physical device (e.g. TPU chip).
+
+  Args:
+    fn: Function to run on the device devices
+    args: args to pass to `fn`
+    start_method: The Python `multiprocessing` process creation method.
+      Default: `spawn`
+    kwargs: kwargs to pass to `fn`
+
+  Returns:
+    the result of calling `fn`.
+  """
+  os.environ.setdefault('LOCAL_WORLD_SIZE', '1')
+
+  if device_type() == 'TPU':
+    tpu.configure_one_chip_topology()
+
+  xm.set_replication(xm.xla_device(), [])
+  init_pjrt_process_group()
+
+  return fn()
 
 
 @requires_pjrt
@@ -280,16 +319,27 @@ class _SpawnFn:
     self.fn(global_ordinal(), *self.args, **self.kwargs)
 
 
-def spawn(fn: Callable, start_method: str = 'spawn', args: Tuple = ()) -> None:
+def spawn(fn: Callable,
+          nprocs: int = None,
+          start_method: str = 'spawn',
+          args: Tuple = ()) -> None:
   """Run functions compatible with xmp.spawn.
 
   Args:
     fn: Callable that takes the process index as the first argument.
+    nprocs (int): The number of processes/devices for the replication. At the
+      moment, if specified, can be either 1 or the maximum number of devices.
     args: args to pass to `fn`
     start_method: The Python `multiprocessing` process creation method.
       Default: `spawn`
   """
   spawn_fn = _SpawnFn(fn, *args)
+
+  if nprocs == 1:
+    return _run_singleprocess(spawn_fn, start_method=start_method)
+  elif nprocs is not None:
+    logging.warning('Unsupported nprocs (%d), ignoring...' % nprocs)
+
   _run_multiprocess(spawn_fn, start_method=start_method)
 
 

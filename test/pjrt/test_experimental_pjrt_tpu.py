@@ -11,6 +11,7 @@ import torch_xla.core.xla_env_vars as xenv
 import torch_xla.core.xla_model as xm
 from torch_xla.experimental import pjrt
 from torch_xla.experimental import tpu
+import torch_xla.distributed.xla_multiprocessing as xmp
 
 
 class TestExperimentalPjrtTpu(parameterized.TestCase):
@@ -99,6 +100,18 @@ class TestExperimentalPjrtTpu(parameterized.TestCase):
 
     devices = pjrt._run_multiprocess(xm.xla_device)
     self.assertDictEqual(devices, expected)
+
+  @staticmethod
+  def _fail_on_nonfirst_device(i):
+    assert i == 0, f"the device index {i} must be 0 in nprocs=1"
+
+  def test_xla_devices_single_process_one_chip_one_device_spawn(self):
+    accelerators = ['v3-8', 'v4-8']
+
+    if self.accelerator_type not in accelerators:
+      raise NotImplementedError('Test not implemented for {}'.format(
+          self.accelerator_type))
+    xmp.spawn(self._fail_on_nonfirst_device, nprocs=1)
 
   def test_default_xla_devices(self):
     accelerator_num_devices = {
