@@ -892,7 +892,7 @@ XLAGraphExecutor::BuildInputOutputAliases(
       }
     }
   }
-  TORCH_LAZY_VALUE_METRIC("InputOutputAliasCount", alias_map.size());
+  TORCH_LAZY_VALUE_METRIC("InputOutputAliasCount", input_output_alias_pair.size());
   return input_output_alias_pair;
 }
 
