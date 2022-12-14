@@ -18,6 +18,7 @@ from typing import (
     Sequence,
     Set,
     Tuple,
+    TypeVar,
     Union,
     cast,
 )
@@ -451,8 +452,7 @@ class XlaFlattenParamsWrapper(nn.Module):
     except AttributeError:
       return getattr(self.module, name)  # fallback to wrapped module
       
-  T = TypeVar('T', bound=Module)
-  def __getitem__(self, key: int) -> Union[nn.Sequential, T]:
+  def __getitem__(self, key: int) -> nn.Module:
     """Forward indexing calls in case the module is a nn.Sequential."""
     return self.module.__getitem__(key)
 
