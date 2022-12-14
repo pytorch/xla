@@ -1129,7 +1129,7 @@ at::Tensor XLANativeFunctions::empty_symint(
     c10::optional<bool> pin_memory,
     c10::optional<at::MemoryFormat> /* memory_format */) {
   TORCH_LAZY_FN_COUNTER("xla::");
-  auto size = c10::asIntArrayRefSlow(sym_size);
+  auto size = C10_AS_INTARRAYREF_SLOW(sym_size);
   // PT empty*() are optimizations to avoid initializing the data when it is
   // known it will be completely rewritten. But since for us doing a zero*()
   // does not actually end up doing any memory initialization, we use that and
@@ -1145,8 +1145,8 @@ at::Tensor XLANativeFunctions::empty_strided_symint(
     c10::optional<at::ScalarType> dtype, c10::optional<at::Layout> layout,
     c10::optional<at::Device> device, c10::optional<bool> pin_memory) {
   TORCH_LAZY_FN_COUNTER("xla::");
-  auto size = c10::asIntArrayRefSlow(sym_size);
-  auto stride = c10::asIntArrayRefSlow(sym_stride);
+  auto size = C10_AS_INTARRAYREF_SLOW(sym_size);
+  auto stride = C10_AS_INTARRAYREF_SLOW(sym_stride);
   at::Tensor t =
       empty_symint(sym_size, dtype, layout, device, pin_memory, c10::nullopt);
   return torch_xla::XLANativeFunctions::as_strided(t, size, stride,
@@ -3010,7 +3010,7 @@ std::tuple<at::Tensor, at::Tensor> XLANativeFunctions::var_mean(
 at::Tensor XLANativeFunctions::view_symint(const at::Tensor& self,
                                            at::SymIntArrayRef sym_size) {
   // TODO: support symbolic sizes
-  auto size = c10::asIntArrayRefSlow(sym_size);
+  auto size = C10_AS_INTARRAYREF_SLOW(sym_size);
   TORCH_LAZY_FN_COUNTER("xla::");
   return bridge::AtenFromXlaTensor(tensor_methods::view(
       bridge::GetXlaTensor(self), XlaHelpers::I64List(size)));
