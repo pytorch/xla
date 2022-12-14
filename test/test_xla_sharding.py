@@ -158,6 +158,27 @@ class VirtualDeviceTest(XlaShardingTest):
     self.assertIn("VirtualDeviceUsage", met.counter_names())
     self.assertNotEqual(met.counter_value("VirtualDeviceUsage"), 0)
 
+  def test_outbound_data_metrics(self):
+    baseline_outbound_data = met.counter_value("OutboundData")
+    partition_spec = (0, 1)
+    xt1 = torch.tensor([[1, 2, 3, 4, 5, 6, 7, 8]],
+                       dtype=torch.float,
+                       device=xm.xla_device())
+    xs.mark_sharding(xt1, self._get_mesh((1, self.n_devices)), partition_spec)
+    outbound_with_virtual_device = met.counter_value(
+        "OutboundData") - baseline_outbound_data
+
+    os.environ["XLA_USE_SPMD"] = "0"
+    xt2 = torch.tensor([[1, 2, 3, 4, 5, 6, 7, 8]],
+                       dtype=torch.float,
+                       device=xm.xla_device())
+    xs.mark_sharding(xt2, self._get_mesh((1, self.n_devices)), partition_spec)
+    outbound_without_virtual_device = met.counter_value(
+        "OutboundData") - outbound_with_virtual_device
+
+    self.assertLess(outbound_with_virtual_device,
+                    outbound_without_virtual_device)
+
 
 if __name__ == '__main__':
   test = unittest.main()
