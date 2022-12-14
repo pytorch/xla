@@ -127,7 +127,10 @@ substitutions:
   _CACHE_TTL: '18h'
   _BUILD_ARGS: tpuvm=1,cuda=0
 options:
-  machineType: E2_HIGHCPU_32
+  # To run in a test project, either point to your pool or replace this with
+  # `machineType`. You may have to reduce _BAZEL_JOBS.
+  workerPool: projects/tpu-pytorch/locations/us-central1/wheel_build
+  # machineType: E2_HIGHCPU_32
   dynamic_substitutions: true
   substitution_option: 'ALLOW_LOOSE'
 timeout: 24000s
