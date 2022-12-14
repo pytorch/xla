@@ -27,6 +27,8 @@ DISABLED_TORCH_TESTS_ANY = {
         'test_min_max_nan',  # XLA min/max ignores Nans.
         'test_min_max_binary_op_nan',  # XLA min/max ignores Nans.
         'test_copy_broadcast',
+        # 'test_advancedindex_mixed_cpu_devices_xla',  # TODO @wonjoo fails with functionalization
+        'test_copy_noncontig_xla', # TODO @wonjoo fails with functionalization
     },
     'TestTensorDeviceOpsXLA': {
         'test_block_diag_scipy',  #FIXME: RuntimeError: Error while lowering: f32[1,6]{1,0} xla::unselect, dim=1, start=2, end=2, stride=0
@@ -201,8 +203,8 @@ DISABLED_TORCH_TESTS_ANY = {
         'test_random_to_xla',  # doesn't raise
         'test_copy_',  # test against complex32 which is nto supported
         'test_assertRaisesRegex_ignore_msg_non_native_device_xla',  # segfault on wheel sanity test
-        'test_index_reduce',  # TODO @wonjoo fix
-        'test_logcumsumexp_xla',  # doesn't raise
+        'test_index_reduce',  # TODO @wonjoo fails with functionalization
+        'test_logcumsumexp_xla',  # TODO @wonjoo fails with functionalization
     },
 
     # test_view_ops.py
@@ -229,7 +231,9 @@ DISABLED_TORCH_TESTS_ANY = {
         'test_getitem_scalars',  # storage
         'test_empty_ndim_index',  # expecting a different runtime error
         'test_index_put_byte_indices_xla',  # expecting a different runtime error
+        'test_basic_advanced_combined_xla',  # TODO @wonjoo fails with functionalization
     },
+
     'NumpyTestsXLA': {
         'test_trivial_fancy_out_of_bounds',  # expecting a different runtime error
         'test_boolean_assignment_value_mismatch',  # expecting a different runtime error
