@@ -200,8 +200,8 @@ supported:
   - leaky_relu_backward
   - lerp.Scalar
   - lerp.Tensor
+  - lift
   - lift_fresh
-  - lift_fresh_copy
   - linspace
   - log
   - log1p
