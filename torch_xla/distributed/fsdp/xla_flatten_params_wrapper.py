@@ -32,6 +32,7 @@ State = namedtuple(
     'State',
     ['param_numels', 'param_shapes', 'param_infos', 'shared_param_infos'])
 
+
 class FlatParameter(nn.Parameter):
   """
   A parameter that is initialized from a list of parameters and can be
@@ -113,7 +114,9 @@ class FlatParameter(nn.Parameter):
         self._param_numels
     ), f"Incorrect pickling {self.numel()} vs. {sum(self._param_numels)}"
 
-  def __reduce_ex__(self, proto: int) -> Tuple["FlatParameter", Tuple[Sequence[nn.Parameter], bool], State]:
+  def __reduce_ex__(
+      self, proto: int
+  ) -> Tuple["FlatParameter", Tuple[Sequence[nn.Parameter], bool], State]:
     """Support pickling between ranks."""
     return (
         FlatParameter,  # Callable
@@ -451,7 +454,7 @@ class XlaFlattenParamsWrapper(nn.Module):
       return super().__getattr__(name)  # defer to nn.Module's logic
     except AttributeError:
       return getattr(self.module, name)  # fallback to wrapped module
-      
+
   def __getitem__(self, key: int) -> nn.Module:
     """Forward indexing calls in case the module is a nn.Sequential."""
     return self.module.__getitem__(key)

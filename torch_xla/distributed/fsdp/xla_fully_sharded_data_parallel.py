@@ -1459,11 +1459,13 @@ class XlaFullyShardedDataParallel(nn.Module):
 
 
 def apply_to_tensors(
-    fn: Callable, container: Union[torch.Tensor, Dict, List, Tuple,
-                                   Set]) -> Union[torch.Tensor, Dict, List, Tuple, Set]:
+    fn: Callable, container: Union[torch.Tensor, Dict, List, Tuple, Set]
+) -> Union[torch.Tensor, Dict, List, Tuple, Set]:
   """Recursively apply to all tensor in different kinds of container types."""
 
-  def _apply(x: Union[torch.Tensor, Dict, List, Tuple, Set]) -> Union[torch.Tensor, Dict, List, Tuple, Set]:
+  def _apply(
+      x: Union[torch.Tensor, Dict, List, Tuple, Set]
+  ) -> Union[torch.Tensor, Dict, List, Tuple, Set]:
     if torch.is_tensor(x):
       return fn(x)
     elif isinstance(x, OrderedDict):
