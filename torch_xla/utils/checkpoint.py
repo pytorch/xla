@@ -5,7 +5,7 @@ import torch
 import warnings
 import torch_xla.core.xla_model as xm
 from torch.utils.checkpoint import detach_variable, check_backward_validity, get_device_states, set_device_states
-from typing import Any, Iterable, List, Tuple, Union
+from typing import Iterable, List, Tuple, Union
 
 
 class CheckpointFunction(torch.autograd.Function):
