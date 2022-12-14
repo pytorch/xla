@@ -34,7 +34,10 @@ class TORCH_API XLASymNodeImpl : public c10::SymNodeImpl {
   bool is_float() override;
   c10::SymNode add(const c10::SymNode& other) override;
   c10::SymNode sub(const c10::SymNode& other) override;
+  c10::SymNode sub(const c10::SymNode& other) override;
   c10::SymNode mul(const c10::SymNode& other) override;
+  c10::SymNode truediv(const c10::SymNode& other) override;
+  c10::SymNode pow(const c10::SymNode& other) override;
   c10::SymNode truediv(const c10::SymNode& other) override;
   c10::SymNode pow(const c10::SymNode& other) override;
   c10::SymNode floordiv(const c10::SymNode& other) override;
@@ -51,16 +54,14 @@ class TORCH_API XLASymNodeImpl : public c10::SymNodeImpl {
   c10::SymNode min(const c10::SymNode& other) override;
   c10::SymNode max(const c10::SymNode& other) override;
   c10::SymNode clone() override;
-  c10::SymNode sym_float() override;
+  c10::SymNode sym_float()  override;
   c10::SymNode wrap_int(int64_t num) override;
-  c10::SymNode wrap_float(double num) override;
-  int64_t guard_int(const char* file, int64_t line) override;
-  double guard_float(const char* file, int64_t line) override;
-  int64_t int_() override;
-  bool bool_() override;
-  std::string str() override;
 
   torch::lazy::NodePtr node() { return node_; }
+  std::string str() override;
+
+  bool bool_() override;
+  int64_t int_() override;
 
  private:
   torch::lazy::NodePtr node_;
