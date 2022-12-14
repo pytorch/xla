@@ -319,7 +319,7 @@ PjRtComputationClient::ExecuteComputation(
   execute_options.untuple_result = options.explode_tuple;
   execute_options.strict_shape_checking = false;
 
-  // Stop the timer as when `ExecuteSharded` signals completion.
+  // Stop the timer when `ExecuteSharded` signals completion.
   std::optional<PjRtFuture<Status>> returned_future;
   returned_future->OnReady(
       [timed = std::move(timed)](Status unused) mutable { timed.reset(nullptr); });
