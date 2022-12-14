@@ -12,8 +12,8 @@
 #include "absl/container/flat_hash_map.h"
 #include "absl/strings/str_cat.h"
 #include "absl/types/variant.h"
-#include "tensorflow/compiler/xla/python/profiler/internal/traceme_wrapper.h"
 #include "tensorflow/compiler/xla/hlo/ir/hlo_module.h"
+#include "tensorflow/compiler/xla/python/profiler/internal/traceme_wrapper.h"
 #include "tensorflow/compiler/xla/service/hlo_parser.h"
 #include "tensorflow/compiler/xla/xla_client/computation_client.h"
 #include "tensorflow/compiler/xla/xla_client/mesh_service.h"
@@ -834,7 +834,7 @@ void BuildProfilerSubmodule(py::module* m) {
       py::arg("interval_s") = 5, py::arg("options"));
 
   py::class_<xla::profiler::TraceMeWrapper> traceme_class(profiler, "TraceMe",
-py::module_local());
+                                                          py::module_local());
   traceme_class.def(py::init<py::str, py::kwargs>())
       .def("__enter__", [](py::object self) -> py::object { return self; })
       .def("__exit__",
