@@ -55,8 +55,6 @@ By default, PjRt will use all TPU chips. To use only one TPU chip, configure
 TPU_PROCESS_BOUNDS=1,1,1 TPU_VISIBLE_CHIPS=0 PJRT_DEVICE=TPU python3 xla/test/test_train_mp_imagenet.py --fake_data --batch_size=256 --num_epochs=1
 ```
 
-Note: `xmp.spawn`'s `nprocs` argument is not implemented for PjRt.
-
 #### Pods
 
 On TPU Pods, use `gcloud` to run your command on each TPU in parallel:
