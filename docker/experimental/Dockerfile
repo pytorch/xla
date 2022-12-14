@@ -47,6 +47,7 @@ RUN git clone --recursive --depth=1 https://github.com/pytorch/pytorch.git
 WORKDIR /pytorch
 COPY torch_patches/ torch_patches/
 RUN bash -c "torch_pin=$(cat torch_patches/.torch_pin &); git fetch origin ${torch_pin:-master}; git checkout origin/${torch_pin:-master}"
+RUN patch -d third_party/tensorflow -N -p1 < torch_patches/81058.diff
 
 # Disable CUDA for PyTorch
 ENV USE_CUDA "0"
