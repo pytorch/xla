@@ -293,7 +293,7 @@ PjRtComputationClient::ExecuteComputation(
     const ComputationClient::Computation& computation,
     absl::Span<const ComputationClient::DataPtr> arguments,
     const std::string& device, const ExecuteComputationOptions& options) {
-  metrics::TimedSection timed(ExecuteMetric());
+  auto timed = std::make_unique<metrics::TimedSection>(ExecuteMetric());
   tensorflow::profiler::TraceMe activity(
       "PjRtComputationClient::ExecuteComputation",
       tensorflow::profiler::TraceMeLevel::kInfo);
@@ -319,9 +319,14 @@ PjRtComputationClient::ExecuteComputation(
   execute_options.untuple_result = options.explode_tuple;
   execute_options.strict_shape_checking = false;
 
+  // Stop the timer as when `ExecuteSharded` signals completion.
+  std::optional<PjRtFuture<Status>> returned_future;
+  returned_future->OnReady(
+      [timed = std::move(timed)](Status unused) mutable { timed.reset(nullptr); });
   std::vector<std::unique_ptr<xla::PjRtBuffer>> results =
       pjrt_computation.executable
-          ->ExecuteSharded(buffers, pjrt_device, execute_options)
+          ->ExecuteSharded(buffers, pjrt_device, execute_options,
+                           returned_future, /*fill_future=*/true)
           .value();
 
   std::vector<DataPtr> datas;
