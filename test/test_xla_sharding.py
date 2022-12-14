@@ -160,6 +160,7 @@ class VirtualDeviceTest(XlaShardingTest):
 
   def test_outbound_data_metrics(self):
     baseline_outbound_data = met.counter_value("OutboundData")
+    os.environ["XLA_USE_SPMD"] = "1"
     partition_spec = (0, 1)
     xt1 = torch.tensor([[1, 2, 3, 4, 5, 6, 7, 8]],
                        dtype=torch.float,
@@ -176,6 +177,7 @@ class VirtualDeviceTest(XlaShardingTest):
     outbound_without_virtual_device = met.counter_value(
         "OutboundData") - outbound_with_virtual_device
 
+    os.environ["XLA_USE_SPMD"] = "1"
     self.assertLess(outbound_with_virtual_device,
                     outbound_without_virtual_device)
 
