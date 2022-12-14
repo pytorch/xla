@@ -278,6 +278,7 @@ DISABLED_TORCH_TESTS_ANY = {
         'test_upsamplingBicubic2d_correctness_xla',  # FIXME! Got dtypes torch.float32 and torch.float64
         'test_CTCLoss_no_batch_dim_xla',  # Value out of range
         'test_upsamplingBilinear2d_xla',  # precision on GPU/TPU, slow compilation on CPU
+        'test_upsamplingBiMode2d_xla',  # slow compilation on CPU/GPU
     },
 
     # test/nn/test_dropout.py
