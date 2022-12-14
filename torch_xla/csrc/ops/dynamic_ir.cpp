@@ -62,7 +62,7 @@ XlaOpVector SizeNode::Lower(LoweringContext* loctx) const {
   return ReturnOp(xla::GetDimensionSize(input, this->dim_), loctx);
 }
 
-std::string SizeNode::ToString() const { return "SizeNode"; }
+std::string SizeNode::ToString() const { return "aten::size"; }
 
 SizeAdd::SizeAdd(torch::lazy::Value a, torch::lazy::Value b)
     : XlaNode(torch::lazy::OpKind{c10::Symbol::fromQualString("aten::add")},

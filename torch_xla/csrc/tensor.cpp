@@ -623,26 +623,15 @@ bool XLASymNodeImpl::is_float() {
   return false;
 }
 
-bool XLASymNodeImpl::bool_() {
-  auto dn = torch_xla::DimCast(node());
-  return dn->getDynamicValue() != 0;
-}
-
-int64_t XLASymNodeImpl::int_() {
-  std::shared_ptr<torch::lazy::DimensionNode> dn = torch_xla::DimCast(node());
-  return dn->getDynamicValue();
-}
-
-c10::SymNode XLASymNodeImpl::eq(const c10::SymNode& other) {
-  auto pother = dynamic_cast<XLASymNodeImpl*>(other.get());
-  auto neq = torch::lazy::MakeNode<SizeEq>(node(), pother->node());
-  return c10::make_intrusive<XLASymNodeImpl>(neq);
-}
-
 c10::SymNode XLASymNodeImpl::add(const c10::SymNode& other) {
   auto pother = dynamic_cast<XLASymNodeImpl*>(other.get());
   auto nadd = torch::lazy::MakeNode<SizeAdd>(node(), pother->node());
   return c10::make_intrusive<XLASymNodeImpl>(nadd);
+}
+
+c10::SymNode XLASymNodeImpl::sub(const c10::SymNode& other) {
+  std::cerr << "xw32, file=" << __FILE__ << ", line=" << __LINE__ << "function=" << __FUNCTION__ << ": " << std::endl;
+  TORCH_INTERNAL_ASSERT(false);
 }
 
 c10::SymNode XLASymNodeImpl::mul(const c10::SymNode& other) {
@@ -651,15 +640,123 @@ c10::SymNode XLASymNodeImpl::mul(const c10::SymNode& other) {
   return c10::make_intrusive<XLASymNodeImpl>(nmul);
 }
 
-c10::SymNode XLASymNodeImpl::wrap_int(int64_t num) {
-  auto cnst = torch::lazy::MakeNode<SizeConstant>(num);
-  return c10::make_intrusive<XLASymNodeImpl>(cnst);
+c10::SymNode XLASymNodeImpl::truediv(const c10::SymNode& other) {
+  std::cerr << "xw32, file=" << __FILE__ << ", line=" << __LINE__ << "function=" << __FUNCTION__ << ": " << std::endl;
+  TORCH_INTERNAL_ASSERT(false);
+}
+
+c10::SymNode XLASymNodeImpl::pow(const c10::SymNode& other) {
+  std::cerr << "xw32, file=" << __FILE__ << ", line=" << __LINE__ << "function=" << __FUNCTION__ << ": " << std::endl;
+  TORCH_INTERNAL_ASSERT(false);
 }
 
 c10::SymNode XLASymNodeImpl::floordiv(const c10::SymNode& other) {
   auto pother = dynamic_cast<XLASymNodeImpl*>(other.get());
   auto ndiv = torch::lazy::MakeNode<SizeDiv>(node(), pother->node());
   return c10::make_intrusive<XLASymNodeImpl>(ndiv);
+}
+
+c10::SymNode XLASymNodeImpl::mod(const c10::SymNode& other) {
+  std::cerr << "xw32, file=" << __FILE__ << ", line=" << __LINE__ << "function=" << __FUNCTION__ << ": " << std::endl;
+  TORCH_INTERNAL_ASSERT(false);
+}
+
+c10::SymNode XLASymNodeImpl::eq(const c10::SymNode& other) {
+  std::cerr << "xw32, file=" << __FILE__ << ", line=" << __LINE__ << "function=" << __FUNCTION__ << ": " << std::endl;
+  auto pother = dynamic_cast<XLASymNodeImpl*>(other.get());
+  auto neq = torch::lazy::MakeNode<SizeEq>(node(), pother->node());
+  return c10::make_intrusive<XLASymNodeImpl>(neq);
+}
+
+c10::SymNode XLASymNodeImpl::ne(const c10::SymNode& other) {
+  std::cerr << "xw32, file=" << __FILE__ << ", line=" << __LINE__ << "function=" << __FUNCTION__ << ": " << std::endl;
+  TORCH_INTERNAL_ASSERT(false);
+}
+
+c10::SymNode XLASymNodeImpl::gt(const c10::SymNode& other) {
+  std::cerr << "xw32, file=" << __FILE__ << ", line=" << __LINE__ << "function=" << __FUNCTION__ << ": " << std::endl;
+  TORCH_INTERNAL_ASSERT(false);
+}
+
+c10::SymNode XLASymNodeImpl::lt(const c10::SymNode& other){
+  std::cerr << "xw32, file=" << __FILE__ << ", line=" << __LINE__ << "function=" << __FUNCTION__ << ": " << std::endl;
+  TORCH_INTERNAL_ASSERT(false);
+}
+
+c10::SymNode XLASymNodeImpl::le(const c10::SymNode& other){
+  std::cerr << "xw32, file=" << __FILE__ << ", line=" << __LINE__ << "function=" << __FUNCTION__ << ": " << std::endl;
+  TORCH_INTERNAL_ASSERT(false);
+}
+
+c10::SymNode XLASymNodeImpl::ge(const c10::SymNode& other){
+  std::cerr << "xw32, file=" << __FILE__ << ", line=" << __LINE__ << "function=" << __FUNCTION__ << ": " << std::endl;
+  TORCH_INTERNAL_ASSERT(false);
+}
+
+c10::SymNode XLASymNodeImpl::ceil(){
+  std::cerr << "xw32, file=" << __FILE__ << ", line=" << __LINE__ << "function=" << __FUNCTION__ << ": " << std::endl;
+  TORCH_INTERNAL_ASSERT(false);
+}
+
+c10::SymNode XLASymNodeImpl::floor() {
+  std::cerr << "xw32, file=" << __FILE__ << ", line=" << __LINE__ << "function=" << __FUNCTION__ << ": " << std::endl;
+  TORCH_INTERNAL_ASSERT(false);
+}
+
+c10::SymNode XLASymNodeImpl::neg() {
+  std::cerr << "xw32, file=" << __FILE__ << ", line=" << __LINE__ << "function=" << __FUNCTION__ << ": " << std::endl;
+  TORCH_INTERNAL_ASSERT(false);
+}
+
+c10::SymNode XLASymNodeImpl::min(const c10::SymNode& other) {
+  std::cerr << "xw32, file=" << __FILE__ << ", line=" << __LINE__ << "function=" << __FUNCTION__ << ": " << std::endl;
+  TORCH_INTERNAL_ASSERT(false);
+}
+
+c10::SymNode XLASymNodeImpl::max(const c10::SymNode& other) {
+  std::cerr << "xw32, file=" << __FILE__ << ", line=" << __LINE__ << "function=" << __FUNCTION__ << ": " << std::endl;
+  TORCH_INTERNAL_ASSERT(false);
+}
+
+c10::SymNode XLASymNodeImpl::clone() {
+  std::cerr << "xw32, file=" << __FILE__ << ", line=" << __LINE__ << "function=" << __FUNCTION__ << ": " << std::endl;
+  TORCH_INTERNAL_ASSERT(false);
+}
+
+c10::SymNode XLASymNodeImpl::sym_float() {
+  std::cerr << "xw32, file=" << __FILE__ << ", line=" << __LINE__ << "function=" << __FUNCTION__ << ": " << std::endl;
+  TORCH_INTERNAL_ASSERT(false);
+}
+
+c10::SymNode XLASymNodeImpl::wrap_int(int64_t num) {
+  auto cnst = torch::lazy::MakeNode<SizeConstant>(num);
+  return c10::make_intrusive<XLASymNodeImpl>(cnst);
+}
+
+c10::SymNode XLASymNodeImpl::wrap_float(double num) {
+  std::cerr << "xw32, file=" << __FILE__ << ", line=" << __LINE__ << "function=" << __FUNCTION__ << ": " << std::endl;
+  TORCH_INTERNAL_ASSERT(false);
+}
+
+int64_t XLASymNodeImpl::guard_int(const char* file, int64_t line) {
+  std::cerr << "xw32, file=" << __FILE__ << ", line=" << __LINE__ << "function=" << __FUNCTION__ << ": " << std::endl;
+  TORCH_INTERNAL_ASSERT(false);
+}
+
+double XLASymNodeImpl::guard_float(const char* file, int64_t line) {
+  std::cerr << "xw32, file=" << __FILE__ << ", line=" << __LINE__ << "function=" << __FUNCTION__ << ": " << std::endl;
+  TORCH_INTERNAL_ASSERT(false);
+}
+
+int64_t XLASymNodeImpl::int_() {
+  std::shared_ptr<torch::lazy::DimensionNode> dn = torch_xla::DimCast(node());
+  return dn->getDynamicValue();
+}
+
+bool XLASymNodeImpl::bool_() {
+  std::cerr << "xw32, file=" << __FILE__ << ", line=" << __LINE__ << "function=" << __FUNCTION__ << ": " << std::endl;
+  auto dn = torch_xla::DimCast(node());
+  return dn->getDynamicValue() != 0;
 }
 
 std::string XLASymNodeImpl::str() {
