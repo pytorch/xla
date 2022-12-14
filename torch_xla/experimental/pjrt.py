@@ -127,7 +127,9 @@ def addressable_device_count() -> int:
 def global_ordinal() -> int:
   """Returns global ordinal of this thread within all processes.
 
-  Global ordinal is in range [0, global_device_count)."""
+  Global ordinal is in range [0, global_device_count). Global ordinals are not
+  guaranteed to have any predictable relationship to the TPU worker ID nor are
+  they guaranteed to be contiguous on each host."""
   return torch_xla._XLAC._xla_get_default_device_ordinal()
 
 
@@ -136,7 +138,9 @@ def local_ordinal() -> int:
   """Returns local ordinal of this thread within this host.
 
   Local ordinal is in range [0, local_device_count)."""
-  return global_ordinal() % local_device_count()
+  local_rank = xu.getenv_as('LOCAL_RANK', int, 0)
+  devices_per_process = addressable_device_count()
+  return local_rank * devices_per_process + xla_device().index
 
 
 @requires_pjrt
@@ -259,6 +263,7 @@ def _run_singleprocess(fn: Callable[..., R],
 
 @requires_pjrt
 def _initialize_multiprocess(local_rank: int, local_world_size: int):
+  os.environ.setdefault('LOCAL_RANK', str(local_rank))
   os.environ.setdefault('LOCAL_WORLD_SIZE', str(local_world_size))
 
   if device_type() == 'TPU':
@@ -345,6 +350,7 @@ def spawn(fn: Callable,
 
 @requires_pjrt
 def _initialize_single_process(local_rank: int, local_world_size: int):
+  os.environ.setdefault('LOCAL_RANK', str(local_rank))
   os.environ.setdefault('LOCAL_WORLD_SIZE', str(local_world_size))
 
 
