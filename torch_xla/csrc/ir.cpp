@@ -150,6 +150,13 @@ torch::lazy::hash_t XlaNode::GetOpHash(torch::lazy::OpKind op,
   return torch::lazy::HashCombine(h, hash_seed);
 }
 
+void XlaNode::SetSharding(const xla::OpSharding& sharding) {
+  output_sharding_ = std::make_shared<xla::OpSharding>(sharding);
+  // TODO(steventk) Once we move this into the cosntructor, we can use the
+  // hash seed. For now, we'll use node_hash_ as a seed.
+  sharding_hash_ = CreateShardingHash(output_sharding_, node_hash_);
+}
+
 xla::Shape XlaNode::GetOpShape(
     const std::function<xla::Shape()>& shape_fn) const {
   ShapeCache* shape_cache = GetShapeCache();
@@ -163,6 +170,44 @@ xla::Shape XlaNode::GetOpShape(
 const xla::Shape& GetXlaShape(const torch::lazy::Value& value) {
   XlaNode* casted = dynamic_cast<XlaNode*>(value.node.get());
   return casted->xla_shape(value.index);
+}
+
+// The sharding hash is only based on relevant fields from the xla::OpSharding
+// object. We skip the field that's irrelevant, which is the layout.
+torch::lazy::hash_t XlaNode::CreateShardingHash(
+    std::shared_ptr<xla::OpSharding> sharding, torch::lazy::hash_t hash_seed) {
+  torch::lazy::hash_t sharding_hash = hash_seed;
+  for (const auto& tile_assignment_dimension :
+       sharding->tile_assignment_dimensions()) {
+    sharding_hash = torch::lazy::HashCombine(
+        sharding_hash, (uint32_t)tile_assignment_dimension);
+  }
+  for (const auto& tile_assignment_device :
+       sharding->tile_assignment_devices()) {
+    sharding_hash = torch::lazy::HashCombine(sharding_hash,
+                                             (uint32_t)tile_assignment_device);
+  }
+  for (const auto& last_tile_dim : sharding->last_tile_dims()) {
+    sharding_hash =
+        torch::lazy::HashCombine(sharding_hash, (uint32_t)last_tile_dim);
+  }
+  sharding_hash =
+      torch::lazy::HashCombine(sharding_hash, (uint32_t)sharding->type());
+  sharding_hash = torch::lazy::HashCombine(
+      sharding_hash, (uint32_t)sharding->replicate_on_last_tile_dim());
+
+  xla::ShapeProto shape_proto = sharding->tile_shape();
+  sharding_hash = torch::lazy::HashCombine(
+      sharding_hash, (uint32_t)shape_proto.element_type());
+  for (const auto& dim : shape_proto.dimensions()) {
+    sharding_hash = torch::lazy::HashCombine(sharding_hash, (uint32_t)dim);
+  }
+  for (const auto& is_dyn_dim : shape_proto.is_dynamic_dimension()) {
+    sharding_hash =
+        torch::lazy::HashCombine(sharding_hash, (uint32_t)is_dyn_dim);
+  }
+
+  return sharding_hash;
 }
 
 }  // namespace torch_xla
