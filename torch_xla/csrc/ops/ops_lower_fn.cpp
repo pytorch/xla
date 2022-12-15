@@ -3,6 +3,7 @@
 #include "tensorflow/compiler/xla/client/lib/logdet.h"
 #include "tensorflow/compiler/xla/client/lib/math.h"
 #include "tensorflow/compiler/xla/client/lib/matrix.h"
+#include "torch_xla/csrc/convert_ops.h"
 #include "torch_xla/csrc/data_ops.h"
 #include "torch_xla/csrc/elementwise.h"
 #include "torch_xla/csrc/helpers.h"
@@ -598,6 +599,11 @@ torch_xla::XlaOpVector Take::Lower(LoweringContext* loctx) const {
 
 torch_xla::XlaOpVector Tan::Lower(LoweringContext* loctx) const {
   xla::XlaOp xla_input = loctx->GetOutputOp(operand(0));
+  if (xla::primitive_util::IsIntegralType(XlaHelpers::TypeOfXlaOp(xla_input))) {
+    xla::PrimitiveType input_type = XlaHelpers::TypeOfXlaOp(xla_input);
+    xla_input = ConvertTo(xla_input, input_type, xla::PrimitiveType::F32,
+                          /*device=*/nullptr);
+  }
   return ReturnOp(xla::Tan(xla_input), loctx);
 }
 
