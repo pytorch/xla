@@ -30,8 +30,11 @@ function install_and_setup_conda() {
   conda update -y -n base conda
   conda install -y python=$PYTHON_VERSION
 
-  conda install -y numpy=1.18.5 pyyaml mkl-include setuptools cmake cffi typing \
-    tqdm coverage hypothesis dataclasses cython
+  conda install -y nomkl numpy=1.18.5 pyyaml setuptools cmake \
+    cffi typing tqdm coverage hypothesis dataclasses cython
+
+  /usr/bin/yes | pip install mkl==2022.2.1
+  /usr/bin/yes | pip install mkl-include==2022.2.1
   /usr/bin/yes | pip install typing_extensions  # Required for Python<=3.9
   /usr/bin/yes | pip install --upgrade oauth2client
   /usr/bin/yes | pip install lark-parser
