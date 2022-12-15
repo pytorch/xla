@@ -2831,6 +2831,22 @@ TEST_F(AtenXlaTensorTest, TestTan) {
     torch::Tensor xla_b = torch::tan(xla_a);
     AllClose(b, xla_b, /*rtol=*/1e-3, /*atol=*/1e-5);
   });
+  ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::tan", cpp_test::GetIgnoredCounters());
+}
+
+// In torch, tan works with integer inputs. The same should be true for
+// torch_xla
+TEST_F(AtenXlaTensorTest, TestTanWithInt) {
+  torch::Tensor a = torch::rand({2, 2});
+  torch::Tensor b = torch::tan(a);
+  ForEachDevice([&](const torch::Device& device) {
+    torch::Tensor xla_a = CopyToDevice(a, device);
+    torch::Tensor xla_b = torch::tan(xla_a);
+    AllClose(b, xla_b, /*rtol=*/1e-3, /*atol=*/1e-5);
+  });
+  ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::tan", cpp_test::GetIgnoredCounters());
 }
 
 TEST_F(AtenXlaTensorTest, TestTanh) {
