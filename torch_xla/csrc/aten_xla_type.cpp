@@ -1063,8 +1063,8 @@ at::Tensor XLANativeFunctions::dot(const at::Tensor& self,
 }
 
 at::Tensor XLANativeFunctions::einsum(c10::string_view equation,
-                                              at::TensorList tensors,
-                                              at::OptionalIntArrayRef path) {
+                                      at::TensorList tensors,
+                                      at::OptionalIntArrayRef path) {
   std::string cleansed_equation = std::string(equation);
 
   cleansed_equation.erase(
@@ -3052,10 +3052,10 @@ at::Scalar XLANativeFunctions::_local_scalar_dense(const at::Tensor& self) {
 // backwards formula for native_layer_norm
 std::tuple<at::Tensor, at::Tensor, at::Tensor>
 XLANativeFunctions::native_layer_norm(const at::Tensor& input,
-                                              at::IntArrayRef normalized_shape,
-                                              const c10::optional<at::Tensor>& weight,
-                                              const c10::optional<at::Tensor>& bias,
-                                              double eps) {
+                                      at::IntArrayRef normalized_shape,
+                                      const c10::optional<at::Tensor>& weight,
+                                      const c10::optional<at::Tensor>& bias,
+                                      double eps) {
   return at::native::math_native_layer_norm(input, normalized_shape, weight,
                                             bias, eps);
 }
@@ -3064,10 +3064,10 @@ XLANativeFunctions::native_layer_norm(const at::Tensor& input,
 // backwards formula for native_group_norm
 std::tuple<at::Tensor, at::Tensor, at::Tensor>
 XLANativeFunctions::native_group_norm(const at::Tensor& input,
-                                              const c10::optional<at::Tensor>& weight,
-                                              const c10::optional<at::Tensor>& bias,
-                                              int64_t N, int64_t C, int64_t HxW,
-                                              int64_t group, double eps) {
+                                      const c10::optional<at::Tensor>& weight,
+                                      const c10::optional<at::Tensor>& bias,
+                                      int64_t N, int64_t C, int64_t HxW,
+                                      int64_t group, double eps) {
   return at::native::math_group_norm(input, weight, bias, N, C, HxW, group,
                                      eps);
 }
