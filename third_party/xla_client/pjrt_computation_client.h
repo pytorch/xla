@@ -32,6 +32,8 @@ class PjRtComputationClient : public ComputationClient {
   DataPtr TransferShardsToServer(absl::Span<const TensorSource> tensor_shards,
                                  std::string device, xla::Shape shape) override;
 
+  DataPtr CopyToDevice(DataPtr data, std::string dst) override;
+
   std::vector<ComputationPtr> Compile(
       std::vector<CompileInstance> instances) override;
 
