@@ -6,8 +6,10 @@ import unittest
 import numpy as np
 
 import torch
+from torch import nn
 import torch_xla
 import torch_xla.core.xla_model as xm
+import torch_xla.debug.metrics as met
 import torch_xla.utils.utils as xu
 import torch_xla.experimental.xla_sharding as xs
 from torch_xla.experimental.xla_sharded_tensor import XLAShardedTensor
@@ -136,6 +138,25 @@ class VirtualDeviceTest(XlaShardingTest):
             torch.tensor([1, 2, 3, 4, 5, 6, 7, 8],
                          dtype=torch.float,
                          device=xm.xla_device())))
+
+  def test_metrics_recorded(self):
+    met.clear_counters()
+    partition_spec = (0, 1)
+    xt1 = torch.tensor([[1, 2, 3, 4, 5, 6, 7, 8]],
+                       dtype=torch.float,
+                       device=xm.xla_device())
+    xs.mark_sharding(xt1, self._get_mesh((1, self.n_devices)), partition_spec)
+    self.assertIn("VirtualDeviceUsage", met.counter_names())
+    self.assertNotEqual(met.counter_value("VirtualDeviceUsage"), 0)
+
+  def test_model_weight_metrics(self):
+    met.clear_counters()
+    partition_spec = (0, 1)
+    model = nn.Linear(128, 64).to(xm.xla_device())
+    xs.mark_sharding(model.weight, self._get_mesh((1, self.n_devices)),
+                     partition_spec)
+    self.assertIn("VirtualDeviceUsage", met.counter_names())
+    self.assertNotEqual(met.counter_value("VirtualDeviceUsage"), 0)
 
 
 if __name__ == '__main__':
