@@ -49,6 +49,7 @@ function install_and_setup_conda() {
   /usr/bin/yes | pip install psutil
   /usr/bin/yes | pip install unittest-xml-reporting
   /usr/bin/yes | pip install pytest
+  /usr/bin/yes | pip install sympy
 
 }
 
