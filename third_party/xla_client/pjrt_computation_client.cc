@@ -4,6 +4,7 @@
 
 #include "absl/strings/ascii.h"
 #include "absl/types/span.h"
+#include "pjrt_computation_client.h"
 #include "tensorflow/compiler/xla/client/xla_computation.h"
 #include "tensorflow/compiler/xla/layout_util.h"
 #include "tensorflow/compiler/xla/literal.h"
@@ -169,6 +170,27 @@ ComputationClient::DataPtr PjRtComputationClient::TransferShardsToServer(
         pjrt_shard->device(), pjrt_shard->shape(), pjrt_shard->buffer));
   }
   return std::make_shared<PjRtShardedData>(device, shape, pjrt_data_shards);
+}
+
+ComputationClient::DataPtr PjRtComputationClient::CopyToDevice(
+    ComputationClient::DataPtr data, std::string dst) {
+  tensorflow::profiler::TraceMe activity(
+      "PjRtComputationClient::CopyToDevice",
+      tensorflow::profiler::TraceMeLevel::kInfo);
+  const PjRtData* pjrt_data = dynamic_cast<PjRtData*>(data.get());
+  XLA_CHECK(pjrt_data->HasValue()) << "Can't copy invalid device data.";
+
+  PjRtDevice* dst_device = StringToPjRtDevice(dst);
+  XLA_CHECK(dst_device->IsAddressable()) << dst << "is not addressable.";
+
+  // Returns error if the buffer is already on `dst_device`.
+  StatusOr<std::unique_ptr<PjRtBuffer>> status_or =
+      pjrt_data->buffer->CopyToDevice(dst_device);
+  XLA_CHECK(status_or.ok())
+      << pjrt_data->device() << " buffer already exists on " << dst;
+
+  return std::make_shared<PjRtData>(dst, pjrt_data->shape(),
+                                    std::move(status_or.value()));
 }
 
 std::vector<xla::Literal> PjRtComputationClient::TransferFromServer(

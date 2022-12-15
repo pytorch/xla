@@ -224,6 +224,9 @@ class ComputationClient {
       absl::Span<const TensorSource> tensor_shards, std::string device,
       xla::Shape shape) = 0;
 
+  // Copies `data->buffer` to `dst` device buffer.
+  virtual DataPtr CopyToDevice(DataPtr data, std::string dst) = 0;
+
   // Reads the tensor literal values stored at TPU server sites, behind the
   // supplied handles.
   virtual std::vector<Literal> TransferFromServer(
