@@ -615,6 +615,12 @@ c10::SymNode XLASymNodeImpl::eq(const c10::SymNode& other) {
   return c10::make_intrusive<XLASymNodeImpl>(neq);
 }
 
+c10::SymNode XLASymNodeImpl::ne(const c10::SymNode& other) {
+  auto pother = dynamic_cast<XLASymNodeImpl*>(other.get());
+  auto nne = torch::lazy::MakeNode<SizeNe>(node(), pother->node());
+  return c10::make_intrusive<XLASymNodeImpl>(nne);
+}
+
 c10::SymNode XLASymNodeImpl::add(const c10::SymNode& other) {
   auto pother = dynamic_cast<XLASymNodeImpl*>(other.get());
   auto nadd = torch::lazy::MakeNode<SizeAdd>(node(), pother->node());
