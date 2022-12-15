@@ -264,6 +264,10 @@ class XrtComputationClient : public ComputationClient {
     XLA_ERROR() << __FUNCTION__ << " not implemented";
   }
 
+  DataPtr CopyToDevice(DataPtr data, std::string dst) override {
+    XLA_ERROR() << __FUNCTION__ << " not implemented";
+  }
+
   std::vector<Literal> TransferFromServer(
       absl::Span<const DataPtr> handles) override;
 
