@@ -147,14 +147,14 @@ function run_torch_xla_tests() {
       fi
     fi
 
-    # pushd test/cpp
-    # echo "Running C++ Tests"
-    # ./run_tests.sh
+    pushd test/cpp
+    echo "Running C++ Tests"
+    ./run_tests.sh
 
-    # if ! [ -x "$(command -v nvidia-smi)"  ]
-    # then
-    #   ./run_tests.sh -X early_sync -F AtenXlaTensorTest.TestEarlySyncLiveTensors -L""
-    # fi
+    if ! [ -x "$(command -v nvidia-smi)"  ]
+    then
+      ./run_tests.sh -X early_sync -F AtenXlaTensorTest.TestEarlySyncLiveTensors -L""
+    fi
     popd
   popd
 }

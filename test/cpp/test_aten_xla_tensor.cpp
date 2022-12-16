@@ -889,83 +889,77 @@ TEST_F(AtenXlaTensorTest, TestIntegerAdd) {
   });
 }
 
-// We are temporarily disabling the following tests, due to a problem with MKL
-// TEST_F(AtenXlaTensorTest, TestSVD) {
-//   static const int dims[] = {4, 7};
-//   for (auto m : dims) {
-//     for (auto n : dims) {
-//       torch::Tensor a =
-//           torch::rand({m, n}, torch::TensorOptions(torch::kFloat));
-//       auto b = torch::svd(a, /*some=*/true, /*compute_uv=*/true);
-//       ForEachDevice([&](const torch::Device& device) {
-//         torch::Tensor xla_a = CopyToDevice(a, device);
-//         auto xla_b = torch::svd(xla_a, /*some=*/true, /*compute_uv=*/true);
-//         // The U and V matrices might have different sign for column vectors,
-//         so
-//         // cannot be compared if not by absolute value.
-//         AllClose(std::get<0>(b).abs(), std::get<0>(xla_b).abs(),
-//         /*rtol=*/1e-3,
-//                  /*atol=*/1e-4);
-//         torch::Tensor diag = std::get<1>(b);
-//         torch::Tensor xla_diag = std::get<1>(xla_b);
-//         ASSERT_EQ(diag.sizes(), xla_diag.sizes());
-//         AllClose(diag, xla_diag, /*rtol=*/1e-3,
-//                  /*atol=*/1e-4);
-//         AllClose(std::get<2>(b).abs(), std::get<2>(xla_b).abs(),
-//         /*rtol=*/1e-3,
-//                  /*atol=*/1e-4);
-//       });
-//     }
-//   }
-// }
+TEST_F(AtenXlaTensorTest, TestSVD) {
+  static const int dims[] = {4, 7};
+  for (auto m : dims) {
+    for (auto n : dims) {
+      torch::Tensor a =
+          torch::rand({m, n}, torch::TensorOptions(torch::kFloat));
+      auto b = torch::svd(a, /*some=*/true, /*compute_uv=*/true);
+      ForEachDevice([&](const torch::Device& device) {
+        torch::Tensor xla_a = CopyToDevice(a, device);
+        auto xla_b = torch::svd(xla_a, /*some=*/true, /*compute_uv=*/true);
+        // The U and V matrices might have different sign for column vectors, so
+        // cannot be compared if not by absolute value.
+        AllClose(std::get<0>(b).abs(), std::get<0>(xla_b).abs(), /*rtol=*/1e-3,
+                 /*atol=*/1e-4);
+        torch::Tensor diag = std::get<1>(b);
+        torch::Tensor xla_diag = std::get<1>(xla_b);
+        ASSERT_EQ(diag.sizes(), xla_diag.sizes());
+        AllClose(diag, xla_diag, /*rtol=*/1e-3,
+                 /*atol=*/1e-4);
+        AllClose(std::get<2>(b).abs(), std::get<2>(xla_b).abs(), /*rtol=*/1e-3,
+                 /*atol=*/1e-4);
+      });
+    }
+  }
+}
 
-// TEST_F(AtenXlaTensorTest, TestQR) {
-//   static const int dims[] = {4, 7};
-//   for (auto m : dims) {
-//     for (auto n : dims) {
-//       torch::Tensor a =
-//           torch::rand({m, n}, torch::TensorOptions(torch::kFloat));
-//       auto b = torch::qr(a);
-//       ForEachDevice([&](const torch::Device& device) {
-//         torch::Tensor xla_a = CopyToDevice(a, device);
-//         auto xla_b = torch::qr(xla_a);
-//         AllClose(std::get<0>(b).abs(), std::get<0>(xla_b).abs(),
-//         /*rtol=*/1e-3,
-//                  /*atol=*/1e-4);
-//         AllClose(std::get<1>(b).abs(), std::get<1>(xla_b).abs(),
-//         /*rtol=*/1e-3,
-//                  /*atol=*/1e-4);
-//       });
-//     }
-//   }
-// }
+TEST_F(AtenXlaTensorTest, TestQR) {
+  static const int dims[] = {4, 7};
+  for (auto m : dims) {
+    for (auto n : dims) {
+      torch::Tensor a =
+          torch::rand({m, n}, torch::TensorOptions(torch::kFloat));
+      auto b = torch::qr(a);
+      ForEachDevice([&](const torch::Device& device) {
+        torch::Tensor xla_a = CopyToDevice(a, device);
+        auto xla_b = torch::qr(xla_a);
+        AllClose(std::get<0>(b).abs(), std::get<0>(xla_b).abs(), /*rtol=*/1e-3,
+                 /*atol=*/1e-4);
+        AllClose(std::get<1>(b).abs(), std::get<1>(xla_b).abs(), /*rtol=*/1e-3,
+                 /*atol=*/1e-4);
+      });
+    }
+  }
+}
 
-// TEST_F(AtenXlaTensorTest, TestSymEig) {
-//   static const int dims[] = {4, 7};
-//   for (auto m : dims) {
-//     for (bool eigenvectors : {true, false}) {
-//       for (bool upper : {true, false}) {
-//         torch::Tensor a =
-//             torch::rand({m, m}, torch::TensorOptions(torch::kFloat));
-//         torch::Tensor sym_a = a.mm(a.t());
-//         auto b = torch::symeig(sym_a, eigenvectors, upper);
-//         ForEachDevice([&](const torch::Device& device) {
-//           torch::Tensor xla_a = CopyToDevice(sym_a, device);
-//           auto xla_b = torch::symeig(xla_a, eigenvectors, upper);
-//           AllClose(std::get<0>(b), std::get<0>(xla_b), /*rtol=*/3e-2,
-//                    /*atol=*/1e-2);
-//           if (eigenvectors) {
-//             AllClose(std::get<1>(b).abs(), std::get<1>(xla_b).abs(),
-//                      /*rtol=*/3e-2,
-//                      /*atol=*/1e-2);
-//           } else {
-//             EXPECT_EQ(std::get<1>(b).sizes(), std::get<1>(xla_b).sizes());
-//           }
-//         });
-//       }
-//     }
-//   }
-// }
+TEST_F(AtenXlaTensorTest, TestSymEig) {
+  static const int dims[] = {4, 7};
+  for (auto m : dims) {
+    for (bool eigenvectors : {true, false}) {
+      for (bool upper : {true, false}) {
+        torch::Tensor a =
+            torch::rand({m, m}, torch::TensorOptions(torch::kFloat));
+        torch::Tensor sym_a = a.mm(a.t());
+        auto b = torch::symeig(sym_a, eigenvectors, upper);
+        ForEachDevice([&](const torch::Device& device) {
+          torch::Tensor xla_a = CopyToDevice(sym_a, device);
+          auto xla_b = torch::symeig(xla_a, eigenvectors, upper);
+          AllClose(std::get<0>(b), std::get<0>(xla_b), /*rtol=*/3e-2,
+                   /*atol=*/1e-2);
+          if (eigenvectors) {
+            AllClose(std::get<1>(b).abs(), std::get<1>(xla_b).abs(),
+                     /*rtol=*/3e-2,
+                     /*atol=*/1e-2);
+          } else {
+            EXPECT_EQ(std::get<1>(b).sizes(), std::get<1>(xla_b).sizes());
+          }
+        });
+      }
+    }
+  }
+}
 
 TEST_F(AtenXlaTensorTest, TestCholesky) {
   static const int dims[] = {4, 7};
