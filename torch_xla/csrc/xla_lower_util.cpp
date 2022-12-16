@@ -12,7 +12,7 @@
 #include "tensorflow/compiler/xla/util.h"
 #include "tensorflow/compiler/xla/xla_client/debug_macros.h"
 #include "tensorflow/compiler/xla/xla_client/util.h"
-#include "tensorflow/stream_executor/dnn.h"
+#include "tensorflow/compiler/xla/stream_executor/dnn.h"
 #include "torch/csrc/lazy/core/helpers.h"
 #include "torch/csrc/lazy/core/util.h"
 #include "torch_xla/csrc/convert_ops.h"
