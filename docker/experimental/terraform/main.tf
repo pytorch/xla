@@ -16,6 +16,21 @@ resource "google_artifact_registry_repository" "torch-xla-docker-repo" {
   format        = "DOCKER"
 }
 
+resource "google_cloudbuild_trigger" "tpu-test-trigger" {
+  location = "global"
+  name = "ci-tpu-test-trigger"
+
+  github {
+    owner = "pytorch"
+    name  = "xla"
+    push {
+      branch = "^master$"
+    }
+  }
+
+  filename = "test/tpu/cloudbuild.yaml"
+}
+
 module "nightly-py37-tpuvm" {
   source = "./modules/trigger"
 
