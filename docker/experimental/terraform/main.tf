@@ -2,6 +2,27 @@ provider "google" {
   project = "tpu-pytorch"
 }
 
+resource "random_id" "bucket_prefix" {
+  byte_length = 8
+}
+
+resource "google_storage_bucket" "default" {
+  name          = "${random_id.bucket_prefix.hex}-bucket-tfstate"
+  force_destroy = false
+  location      = "US"
+  storage_class = "STANDARD"
+  versioning {
+    enabled = true
+  }
+}
+
+terraform {
+ backend "gcs" {
+   bucket  = "426a09baf5992b6a-bucket-tfstate"
+   prefix  = "terraform/state"
+ }
+}
+
 resource "google_artifact_registry_repository" "torch-xla-python-repo" {
   location      = "us"
   repository_id = "torch-xla"
