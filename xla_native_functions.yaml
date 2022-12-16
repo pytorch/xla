@@ -157,6 +157,7 @@ supported:
   - cross
   - cumprod
   - cumsum
+  - detach_copy
   - diag
   - diagonal_copy
   - diagonal_scatter
