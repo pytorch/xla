@@ -1057,6 +1057,13 @@ at::Tensor XLANativeFunctions::cumsum(const at::Tensor& self, int64_t dim,
       tensor_methods::cumsum(self_tensor, dim, dtype));
 }
 
+// Let's rewrite a without reusing other native functions.
+at::Tensor XLANativeFunctions::detach_copy(const at::Tensor& self) {
+  TORCH_LAZY_FN_COUNTER("xla::");
+  auto new_tensor = empty_symint(self.sym_sizes(), c10::nullopt, c10::nullopt, c10::nullopt, c10::nullopt, c10::nullopt);
+  return _copy_from(self, new_tensor, true);
+}
+
 at::Tensor XLANativeFunctions::diag(const at::Tensor& self, int64_t diagonal) {
   TORCH_LAZY_FN_COUNTER("xla::");
   return bridge::AtenFromXlaTensor(
@@ -2588,7 +2595,7 @@ at::Tensor XLANativeFunctions::scatter_add(const at::Tensor& self, int64_t dim,
 at::Tensor XLANativeFunctions::select_copy(const at::Tensor& self, int64_t dim,
                                            int64_t index) {
   TORCH_LAZY_FN_COUNTER("xla::");
-  std::cout << "WONJOO: at XLANativeFunctions::select_copy1" << std::endl;
+  // std::cout << "WONJOO: at XLANativeFunctions::select_copy1" << std::endl;
   TORCH_LAZY_FN_COUNTER("xla::");
   return bridge::AtenFromXlaTensor(
       tensor_methods::select(bridge::GetXlaTensor(self), dim, index));
@@ -2597,13 +2604,13 @@ at::Tensor XLANativeFunctions::select_copy(const at::Tensor& self, int64_t dim,
 at::Tensor XLANativeFunctions::select_scatter(const at::Tensor& base,
                                               const at::Tensor& mutated_view,
                                               int64_t dim, int64_t index) {
-  std::cout << "WONJOO: at XLANativeFunctions::select_scatter1" << std::endl;
-  std::cout << "WONJOO: at XLANativeFunctions::select_scatter2, base=" << base
-            << std::endl;
-  std::cout << "WONJOO: at XLANativeFunctions::select_scatter3, mutated_view="
-            << mutated_view << std::endl;
-  std::cout << "WONJOO: at XLANativeFunctions::select_scatter4, dim=" << dim
-            << std::endl;
+  // std::cout << "WONJOO: at XLANativeFunctions::select_scatter1" << std::endl;
+  // std::cout << "WONJOO: at XLANativeFunctions::select_scatter2, base=" << base
+  //           << std::endl;
+  // std::cout << "WONJOO: at XLANativeFunctions::select_scatter3, mutated_view="
+  //           << mutated_view << std::endl;
+  // std::cout << "WONJOO: at XLANativeFunctions::select_scatter4, dim=" << dim
+  //           << std::endl;
   auto base_ = bridge::GetXlaTensor(base);
   auto mutated_view_ = bridge::GetXlaTensor(mutated_view);
   auto base_clone = tensor_methods::clone(base_);
@@ -3188,7 +3195,7 @@ at::Tensor XLANativeFunctions::pixel_unshuffle(const at::Tensor& self,
 at::Tensor XLANativeFunctions::select_backward_symint(
     const at::Tensor& grad_output, c10::SymIntArrayRef input_sizes, int64_t dim,
     c10::SymInt index) {
-  std::cout << "WONJOO: at XLANativeFunctions::select_backward" << std::endl;
+  // std::cout << "WONJOO: at XLANativeFunctions::select_backward" << std::endl;
   return at::functionalization::functionalize_aten_op_symint<ATEN_OP(
       select_backward)>::call(grad_output, input_sizes, dim, index);
 }
