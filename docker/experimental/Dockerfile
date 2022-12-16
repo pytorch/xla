@@ -71,11 +71,7 @@ FROM builder AS artifacts
 
 COPY tf_patches/ tf_patches/
 COPY third_party/ third_party/
-<<<<<<< HEAD
 RUN cd third_party/tensorflow && find ../../tf_patches -name '*.diff' | xargs -t -r -n 1 patch -N -p1 -i
-=======
-RUN find -wholename 'tf_patches/*.diff' | xargs -r patch -d third_party/tensorflow -N -p1 -i
->>>>>>> Fix for empty patches
 
 COPY build_torch_xla_libs.sh .
 
