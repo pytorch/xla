@@ -213,7 +213,7 @@ class XlaFullyShardedDataParallel(nn.Module):
       sharding_rank: Optional[int] = None,
       sharding_world_size: Optional[int] = None,
       shard_param_on_dim_0: bool = False,
-      pin_layout_in_collective_ops: bool = False,
+      pin_layout_in_collective_ops: bool = True,
       _shard_size_multiple: int = 128,
       _use_xla_patched_linear: bool = True,
       _debug_dummy_forward_pass: bool = False,
