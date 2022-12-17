@@ -28,7 +28,7 @@ DISABLED_TORCH_TESTS_ANY = {
         'test_min_max_binary_op_nan',  # XLA min/max ignores Nans.
         'test_copy_broadcast',
         'test_advancedindex_mixed_cpu_devices_xla',  # TODO @wonjoo fails with functionalization
-        'test_copy_noncontig_xla', # TODO @wonjoo fails with functionalization
+        'test_copy_noncontig_xla',  # TODO @wonjoo fails with functionalization
     },
     'TestTensorDeviceOpsXLA': {
         'test_block_diag_scipy',  #FIXME: RuntimeError: Error while lowering: f32[1,6]{1,0} xla::unselect, dim=1, start=2, end=2, stride=0
@@ -234,6 +234,7 @@ DISABLED_TORCH_TESTS_ANY = {
         'test_basic_advanced_combined_xla',  # TODO @wonjoo fails with functionalization
     },
 
+    # test_indexing.py
     'NumpyTestsXLA': {
         'test_trivial_fancy_out_of_bounds',  # expecting a different runtime error
         'test_boolean_assignment_value_mismatch',  # expecting a different runtime error
@@ -295,6 +296,14 @@ DISABLED_TORCH_TESTS_ANY = {
         'test_affine_2d_rotate90_xla',  # TODO @wonjoo fails with functionalization
         'test_affine_2d_rotateRandom_xla',  # TODO @wonjoo fails with functionalization
         'test_affine_3d_rotateRandom_xla',  # TODO @wonjoo fails with functionalization
+        'test_batchnorm_affine_xla_float32',  # TODO @wonjoo fails with functionalization
+        'test_batchnorm_simple_average_xla_float32',  # TODO @wonjoo fails with functionalization
+        'test_batchnorm_update_stats_xla',  # TODO @wonjoo fails with functionalization
+        'test_conv_empty_input_xla_bfloat16',  # TODO @wonjoo fails with functionalization
+        'test_conv_empty_input_xla_float32',  # TODO @wonjoo fails with functionalization
+        'test_upsamplingNearestExact1d_correctness_xla',  # TODO @wonjoo fails with functionalization
+        'test_transformerencoderlayer_gelu_xla_float32',  # TODO @wonjoo fails with functionalization
+        'test_transformerencoderlayer_xla_float32',  # TODO @wonjoo fails with functionalization
     },
 
     # test/nn/test_dropout.py
@@ -311,6 +320,8 @@ DISABLED_TORCH_TESTS_ANY = {
         'test_MaxPool2d_indices_xla_float32',  # THPEngine_run_backward
         'test_MaxPool3d_indices_xla_float32',  # THPEngine_run_backward
         'test_pool_invalid_size',  # expecting a different runtime error
+        'test_adaptive_pooling_max_nhwc_xla_float64',  # TODO @wonjoo fails with functionalization
+        'test_pooling_max_nhwc_xla_float64',  # TODO @wonjoo fails with functionalization
     },
 
     # test/nn/test_embedding.py
@@ -322,6 +333,9 @@ DISABLED_TORCH_TESTS_ANY = {
         'test_embedding_bag_device',  # FIXME! Unsupported device type for sparse layout: xla
         'test_embedding_scalar_weight_error_xla',  # tsl::CurrentStackTrace[abi:cxx11]
         'test_EmbeddingBag_per_sample_weights_and_no_offsets',  # FIXME! Unsupported device type for sparse layout: xla
+        'test_EmbeddingBag_per_sample_weights_and_new_offsets_xla',  # TODO @wonjoo fails with functionalization
+        'test_EmbeddingBag_per_sample_weights_and_offsets_xla',  # TODO @wonjoo fails with functionalization
+        'test_EmbeddingBag_empty_per_sample_weights_and_offsets_xla',  # TODO @wonjoo fails with functionalization
     },
 
     # test/nn/test_convolution.py
