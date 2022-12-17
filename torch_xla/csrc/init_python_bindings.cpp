@@ -837,8 +837,8 @@ void BuildProfilerSubmodule(py::module* m) {
       py::arg("num_tracing_attempts") = 3, py::arg("timeout_s") = 120,
       py::arg("interval_s") = 5, py::arg("options"));
 
-  py::class_<xla::profiler::TraceMeWrapper> traceme_class(
-      profiler, "TraceMe", py::module_local());
+  py::class_<xla::profiler::TraceMeWrapper> traceme_class(profiler, "TraceMe",
+                                                          py::module_local());
   traceme_class.def(py::init<py::str, py::kwargs>())
       .def("__enter__", [](py::object self) -> py::object { return self; })
       .def("__exit__",
@@ -849,8 +849,7 @@ void BuildProfilerSubmodule(py::module* m) {
              return py::none();
            })
       .def("set_metadata", &xla::profiler::TraceMeWrapper::SetMetadata)
-      .def_static("is_enabled",
-                  &xla::profiler::TraceMeWrapper::IsEnabled);
+      .def_static("is_enabled", &xla::profiler::TraceMeWrapper::IsEnabled);
 
   py::class_<torch::lazy::ScopePusher,
              std::unique_ptr<torch::lazy::ScopePusher>>

@@ -50,7 +50,7 @@ Status CheckedCall(const F& fn) {
   } catch (const std::exception& ex) {
     return tensorflow::errors::Internal(ex.what());
   }
-  return OKStatus();
+  return OkStatus();
 }
 
 template <typename T>
