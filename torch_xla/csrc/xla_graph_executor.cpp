@@ -859,12 +859,14 @@ XLAGraphExecutor::BuildInputOutputAliases(
     LoweringContext* lowering_ctx) {
   std::unordered_map<int64_t, size_t> output_tensor_id_map;
   std::vector<std::pair<int64_t, int64_t>> input_output_alias_pair;
+  // tensors[indices] represent all tensors that needs to be updated after
+  // the execution. We can only alias the current buffer of these tensors since
+  // those buffers are no longer needed after execution.
   for (size_t i = 0; i < indices.size(); ++i) {
     size_t tensor_index = indices[i];
     int64_t tensor_id = tensors[tensor_index]->GetUniqueId();
     output_tensor_id_map[tensor_id] = i;
   }
-  // TODO we need xla_shape here.
   const auto& parameters_data = lowering_ctx->GetParametersData();
   std::vector<ssize_t> alias_map(indices.size(), -1);
   for (size_t i = 0; i < parameters_data.size(); ++i) {
@@ -873,11 +875,17 @@ XLAGraphExecutor::BuildInputOutputAliases(
             parameters_data[i]->info());
     if (data_info != nullptr && !data_info->read_only) {
       auto it = output_tensor_id_map.find(data_info->tensor_id);
+      // Parameter buffer's TensorId in output_tensor_id_map means
+      // this buffer is not needed after execution since XLATensor will get a
+      // new buffer.
       if (it != output_tensor_id_map.end()) {
         size_t output_index = it->second;
         xla::XlaOp root = lowering_ctx->GetResult(output_index);
         const xla::Shape& root_shape = XlaHelpers::ShapeOfXlaOp(root);
         auto parameter_data_shape = UnwrapXlaData(parameters_data[i])->shape();
+        // Need to check whether existing buffer and the new value has the same
+        // shape and the existing buffer has not been aliased before aliasing
+        // the existing and new buffer.
         if (parameter_data_shape == root_shape && alias_map[output_index] < 0) {
           // parameter is not a tuple so param_index will always be {}
           lowering_ctx->builder()->SetUpAlias(
@@ -892,7 +900,8 @@ XLAGraphExecutor::BuildInputOutputAliases(
       }
     }
   }
-  TORCH_LAZY_VALUE_METRIC("InputOutputAliasCount", input_output_alias_pair.size());
+  TORCH_LAZY_VALUE_METRIC("InputOutputAliasCount",
+                          input_output_alias_pair.size());
   return input_output_alias_pair;
 }
 
