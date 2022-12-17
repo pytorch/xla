@@ -28,7 +28,7 @@ DISABLED_TORCH_TESTS_ANY = {
         'test_min_max_binary_op_nan',  # XLA min/max ignores Nans.
         'test_copy_broadcast',
         'test_advancedindex_mixed_cpu_devices_xla',  # TODO @wonjoo fails with functionalization
-        'test_copy_noncontig_xla', # TODO @wonjoo fails with functionalization
+        'test_copy_noncontig_xla',  # TODO @wonjoo fails with functionalization
     },
     'TestTensorDeviceOpsXLA': {
         'test_block_diag_scipy',  #FIXME: RuntimeError: Error while lowering: f32[1,6]{1,0} xla::unselect, dim=1, start=2, end=2, stride=0
@@ -305,6 +305,8 @@ DISABLED_TORCH_TESTS_ANY = {
         'test_MaxPool2d_indices_xla_float32',  # THPEngine_run_backward
         'test_MaxPool3d_indices_xla_float32',  # THPEngine_run_backward
         'test_pool_invalid_size',  # expecting a different runtime error
+        'test_adaptive_pooling_max_nhwc_xla_float64',  # TODO @wonjoo fails with functionalization
+        'test_pooling_max_nhwc_xla_float64',  # TODO @wonjoo fails with functionalization
     },
 
     # test/nn/test_embedding.py
@@ -316,6 +318,9 @@ DISABLED_TORCH_TESTS_ANY = {
         'test_embedding_bag_device',  # FIXME! Unsupported device type for sparse layout: xla
         'test_embedding_scalar_weight_error_xla',  # tsl::CurrentStackTrace[abi:cxx11]
         'test_EmbeddingBag_per_sample_weights_and_no_offsets',  # FIXME! Unsupported device type for sparse layout: xla
+        'test_EmbeddingBag_per_sample_weights_and_new_offsets_xla',  # TODO @wonjoo fails with functionalization
+        'test_EmbeddingBag_per_sample_weights_and_offsets_xla',  # TODO @wonjoo fails with functionalization
+        'test_EmbeddingBag_empty_per_sample_weights_and_offsets_xla',  # TODO @wonjoo fails with functionalization
     },
 
     # test/nn/test_convolution.py
