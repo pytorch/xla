@@ -85,7 +85,8 @@ XLATensorPtr GetXlaTensor(const at::Tensor& tensor) {
 }
 
 void ReplaceXlaTensor(const at::Tensor& tensor, XLATensorPtr new_xla_tensor) {
-  std::cout << "WONJOO: at aten_xla_bridge.cpp, ReplaceXlaTensor" << std::endl;
+  // std::cout << "WONJOO: at aten_xla_bridge.cpp, ReplaceXlaTensor" <<
+  // std::endl;
   auto inner_tensor = torch::lazy::maybe_unwrap_functional(tensor);
   XLATensorImpl* impl =
       dynamic_cast<XLATensorImpl*>(inner_tensor.unsafeGetTensorImpl());
@@ -369,7 +370,8 @@ at::Tensor XlaToAtenTensor(XLATensorPtr xla_tensor,
 }
 
 at::Tensor AtenFromXlaTensor(XLATensorPtr xla_tensor) {
-  std::cout << "WONJOO: at aten_xla_bridge.cpp, AtenFromXlaTensor" << std::endl;
+  // std::cout << "WONJOO: at aten_xla_bridge.cpp, AtenFromXlaTensor" <<
+  // std::endl;
   if (xla_tensor) {
     auto out =
         at::Tensor(c10::make_intrusive<XLATensorImpl>(std::move(xla_tensor)));
