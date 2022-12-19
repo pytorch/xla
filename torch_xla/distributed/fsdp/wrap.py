@@ -187,7 +187,6 @@ def recursive_wrap(module: nn.Module,
   num_params = sum(
       p.numel() for p in module.parameters() if p not in ignored_params)
 
-  assert auto_wrap_policy is not None
   if auto_wrap_policy(module=module, recurse=True, unwrapped_params=num_params):
     total_wrapped_params = 0
     # Iterate through the children, recursively wrap if necessary

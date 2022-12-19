@@ -43,6 +43,10 @@ MODEL_OPTS = {
         'choices': ['none', 'size_based', 'type_based'],
         'default': 'none',
     },
+    '--auto_wrap_min_num_params': {
+        'type': int,
+        'default': 1e6,
+    },
     '--use_nested_fsdp': {
         'action': 'store_true',
     },
@@ -227,9 +231,10 @@ def train_imagenet():
   auto_wrapper_callable = None
   if FLAGS.auto_wrap_policy != "none":
     if FLAGS.auto_wrap_policy == "size_based":
-      # auto-wrap all sub-modules with more than 1e6 parameters as an example
+      # auto-wrap all sub-modules with a certain number of parameters (default 1e6)
       auto_wrap_policy = partial(
-          size_based_auto_wrap_policy, min_num_params=1e6)
+          size_based_auto_wrap_policy,
+          min_num_params=FLAGS.auto_wrap_min_num_params)
     elif FLAGS.auto_wrap_policy == "type_based":
       # auto-wrap all sub-modules in torchvision ResNet's BasicBlock or Bottleneck
       # or torchvision transformer's EncoderBlock as an example

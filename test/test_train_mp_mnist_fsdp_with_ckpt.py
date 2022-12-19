@@ -9,6 +9,10 @@ MODEL_OPTS = {
         'choices': ['none', 'size_based', 'type_based'],
         'default': 'none',
     },
+    '--auto_wrap_min_num_params': {
+        'type': int,
+        'default': 1000,
+    },
     '--use_nested_fsdp': {
         'action': 'store_true',
     },
@@ -165,10 +169,11 @@ def train_mnist(flags, **kwargs):
   auto_wrapper_callable = None
   if flags.auto_wrap_policy != "none":
     if flags.auto_wrap_policy == "size_based":
-      # auto-wrap all sub-modules with more than 1000 parameters as an example
+      # auto-wrap all sub-modules with a certain number of parameters (default 1000)
       # (in practice, one should set a larger min_num_params such as 1e8)
       auto_wrap_policy = partial(
-          size_based_auto_wrap_policy, min_num_params=1e3)
+          size_based_auto_wrap_policy,
+          min_num_params=flags.auto_wrap_min_num_params)
     elif flags.auto_wrap_policy == "type_based":
       # auto-wrap all nn.Conv2d and nn.Linear sub-modules as an example
       # (transformer_auto_wrap_policy wraps all sub-modules in transformer_layer_cls)
