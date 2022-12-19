@@ -175,7 +175,6 @@ class VirtualDeviceTest(XlaShardingTest):
     self.assertIn("VirtualDeviceUsage", met.counter_names())
     self.assertNotEqual(met.counter_value("VirtualDeviceUsage"), 0)
 
-
   def test_no_sharding(self):
     t1 = torch.tensor([[1, 2, 3, 4, 5, 6, 7, 8]],
                       dtype=torch.float,
