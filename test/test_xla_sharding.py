@@ -175,6 +175,18 @@ class VirtualDeviceTest(XlaShardingTest):
     self.assertIn("VirtualDeviceUsage", met.counter_names())
     self.assertNotEqual(met.counter_value("VirtualDeviceUsage"), 0)
 
+
+  def test_no_sharding(self):
+    t1 = torch.tensor([[1, 2, 3, 4, 5, 6, 7, 8]],
+                      dtype=torch.float,
+                      device=xm.xla_device())
+    t2 = torch.tensor([[8, 7, 6, 5, 4, 3, 2, 1]],
+                      dtype=torch.float,
+                      device=xm.xla_device())
+    t3 = t1 + t2
+    t3_expected = [9.0, 9.0, 9.0, 9.0, 9.0, 9.0, 9.0, 9.0]
+    self.assertEqual(t3.tolist()[0], t3_expected)
+
   def test_outbound_data_metrics(self):
     partition_spec = (0, 1)
 

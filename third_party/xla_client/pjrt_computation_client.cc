@@ -302,8 +302,6 @@ PjRtComputationClient::ExecuteComputation(
   const PjRtComputation& pjrt_computation =
       dynamic_cast<const PjRtComputation&>(computation);
 
-  TF_VLOG(1) << "Executing PjRt computation on " << device;
-
   xla::PjRtDevice* pjrt_device = StringToPjRtDevice(device);
   XLA_CHECK(pjrt_device->IsAddressable()) << pjrt_device->DebugString();
 
