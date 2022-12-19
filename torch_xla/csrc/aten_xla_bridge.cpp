@@ -62,8 +62,6 @@ XLATensorImpl* GetXlaTensorImpl(const at::Tensor& tensor) {
 }  // namespace
 
 XLATensorPtr TryGetXlaTensor(const at::Tensor& tensor) {
-  // std::cout << "WONJOO: at aten_xla_bridge.cpp, TryGetXlaTensor" <<
-  // std::endl;
   XLATensorImpl* impl = GetXlaTensorImpl(tensor);
   if (impl == nullptr) {
     return XLATensorPtr();
@@ -72,12 +70,10 @@ XLATensorPtr TryGetXlaTensor(const at::Tensor& tensor) {
 }
 
 bool IsXlaTensor(const at::Tensor& tensor) {
-  // std::cout << "WONJOO: at aten_xla_bridge.cpp, IsXlaTensor" << std::endl;
   return GetXlaTensorImpl(tensor) != nullptr;
 }
 
 XLATensorPtr GetXlaTensor(const at::Tensor& tensor) {
-  // std::cout << "WONJOO: at aten_xla_bridge.cpp, GetXlaTensor" << std::endl;
   auto xtensor = TryGetXlaTensor(tensor);
   XLA_CHECK(xtensor) << "Input tensor is not an XLA tensor: "
                      << tensor.toString();
@@ -85,7 +81,6 @@ XLATensorPtr GetXlaTensor(const at::Tensor& tensor) {
 }
 
 void ReplaceXlaTensor(const at::Tensor& tensor, XLATensorPtr new_xla_tensor) {
-  // std::cout << "WONJOO: at aten_xla_bridge.cpp, ReplaceXlaTensor" << std::endl;
   auto inner_tensor = torch::lazy::maybe_unwrap_functional(tensor);
   XLATensorImpl* impl =
       dynamic_cast<XLATensorImpl*>(inner_tensor.unsafeGetTensorImpl());
@@ -95,7 +90,6 @@ void ReplaceXlaTensor(const at::Tensor& tensor, XLATensorPtr new_xla_tensor) {
 }
 
 std::vector<XLATensorPtr> GetXlaTensors(const at::ITensorListRef& tensors) {
-  // std::cout << "WONJOO: at aten_xla_bridge.cpp, GetXlaTensors" << std::endl;
   std::vector<XLATensorPtr> xla_tensors;
   xla_tensors.reserve(tensors.size());
   for (const auto& tensor : tensors) {
@@ -106,10 +100,6 @@ std::vector<XLATensorPtr> GetXlaTensors(const at::ITensorListRef& tensors) {
 
 torch_xla::XLATensorPtr GetXlaTensorOrCreateForWrappedNumber(
     const at::Tensor& tensor, const torch::lazy::BackendDevice& device) {
-  // std::cout
-  //     << "WONJOO: at aten_xla_bridge.cpp,
-  //     GetXlaTensorOrCreateForWrappedNumber"
-  //     << std::endl;
   if (tensor.unsafeGetTensorImpl()->is_wrapped_number() ||
       (tensor.dim() == 0 && tensor.numel() == 1)) {
     return torch_xla::bridge::GetOrCreateXlaTensor(tensor, device);
@@ -120,8 +110,6 @@ torch_xla::XLATensorPtr GetXlaTensorOrCreateForWrappedNumber(
 
 XLATensorPtr GetOrCreateXlaTensor(const at::Tensor& tensor,
                                   const torch::lazy::BackendDevice& device) {
-  // std::cout << "WONJOO: at aten_xla_bridge.cpp, GetOrCreateXlaTensor"
-  // << std::endl;
   if (!tensor.defined()) {
     return XLATensorPtr();
   }
@@ -135,8 +123,6 @@ XLATensorPtr GetOrCreateXlaTensor(const at::Tensor& tensor,
 
 XLATensorPtr GetOrCreateXlaTensor(const c10::optional<at::Tensor>& tensor,
                                   const torch::lazy::BackendDevice& device) {
-  // std::cout << "WONJOO: at aten_xla_bridge.cpp, GetOrCreateXlaTensor"
-  //           << std::endl;
   if (!IsDefined(tensor)) {
     return XLATensorPtr();
   }
@@ -148,8 +134,6 @@ XLATensorPtr GetOrCreateXlaTensor(const c10::optional<at::Tensor>& tensor,
 std::vector<XLATensorPtr> GetOrCreateXlaTensors(
     absl::Span<const at::Tensor> tensors,
     const torch::lazy::BackendDevice& device) {
-  // std::cout << "WONJOO: at aten_xla_bridge.cpp, GetOrCreateXlaTensors"
-  //           << std::endl;
   std::vector<XLATensorPtr> xla_tensors;
   for (const at::Tensor& tensor : tensors) {
     xla_tensors.push_back(bridge::GetOrCreateXlaTensor(tensor, device));
@@ -158,8 +142,6 @@ std::vector<XLATensorPtr> GetOrCreateXlaTensors(
 }
 
 std::vector<at::Tensor> XlaCreateTensorList(const at::ITensorListRef& tensors) {
-  // std::cout << "WONJOO: at aten_xla_bridge.cpp, XlaCreateTensorList"
-  //           << std::endl;
   std::vector<at::Tensor> aten_xla_tensors(tensors.size());
   std::vector<XLATensorPtr> xla_tensors;
   // We need to separate out the defined tensors first, GetXlaTensor() doesn't
@@ -199,8 +181,6 @@ std::vector<at::Tensor> XlaCreateTensorList(const at::ITensorListRef& tensors) {
 
 std::vector<c10::optional<at::Tensor>> XlaCreateOptTensorList(
     const std::vector<c10::optional<at::Tensor>>& tensors) {
-  // std::cout << "WONJOO: at aten_xla_bridge.cpp, XlaCreateOptTensorList"
-  //           << std::endl;
   std::vector<c10::optional<at::Tensor>> opt_aten_xla_tensors(tensors.size());
   std::vector<at::Tensor> materialized_tensors;
   std::vector<bool> to_translate(tensors.size());
@@ -224,8 +204,6 @@ std::vector<c10::optional<at::Tensor>> XlaCreateOptTensorList(
 void XlaUpdateTensors(absl::Span<const at::Tensor> dest_xla_tensors,
                       absl::Span<const at::Tensor> source_cpu_tensors,
                       absl::Span<const size_t> indices) {
-  // std::cout << "WONJOO: at aten_xla_bridge.cpp, XlaUpdateTensors" <<
-  // std::endl;
   for (auto index : indices) {
     at::Tensor dest = dest_xla_tensors.at(index);
     at::Tensor source = source_cpu_tensors.at(index);
@@ -356,8 +334,6 @@ c10::Device GetCurrentAtenDevice() {
 
 at::Tensor XlaToAtenTensor(XLATensorPtr xla_tensor,
                            const at::TensorOptions& tensor_options) {
-  // std::cout << "WONJOO: at aten_xla_bridge.cpp, XlaToAtenTensor" <<
-  // std::endl;
   if (tensor_options.has_device()) {
     XLA_CHECK_NE(tensor_options.device().type(), at::kXLA);
   }
@@ -369,7 +345,6 @@ at::Tensor XlaToAtenTensor(XLATensorPtr xla_tensor,
 }
 
 at::Tensor AtenFromXlaTensor(XLATensorPtr xla_tensor) {
-  // std::cout << "WONJOO: at aten_xla_bridge.cpp, AtenFromXlaTensor" << std::endl;
   if (xla_tensor) {
     auto out =
         at::Tensor(c10::make_intrusive<XLATensorImpl>(std::move(xla_tensor)));
@@ -391,8 +366,6 @@ at::Tensor AtenFromXlaTensor(XLATensorPtr xla_tensor) {
 
 std::vector<at::Tensor> AtenFromXlaTensors(
     absl::Span<const XLATensorPtr> xla_tensors) {
-  // std::cout << "WONJOO: at aten_xla_bridge.cpp, AtenFromXlaTensors"
-  // << std::endl;
   std::vector<at::Tensor> tensors;
   tensors.reserve(xla_tensors.size());
   for (auto& tensor : xla_tensors) {
@@ -404,8 +377,6 @@ std::vector<at::Tensor> AtenFromXlaTensors(
 at::Tensor CreateXlaTensor(
     at::Tensor tensor,
     const c10::optional<torch::lazy::BackendDevice>& device) {
-  // std::cout << "WONJOO: at aten_xla_bridge.cpp, CreateXlaTensor" <<
-  // std::endl;
   if (tensor.defined() && device) {
     XLATensorPtr xla_tensor = XLATensor::Create(std::move(tensor), *device);
     tensor = AtenFromXlaTensor(xla_tensor);
@@ -416,8 +387,6 @@ at::Tensor CreateXlaTensor(
 std::vector<at::Tensor> CreateXlaTensors(
     const std::vector<at::Tensor>& tensors,
     const c10::optional<torch::lazy::BackendDevice>& device) {
-  // std::cout << "WONJOO: at aten_xla_bridge.cpp, CreateXlaTensors" <<
-  // std::endl;
   std::vector<at::Tensor> xtensors;
   for (auto& tensor : tensors) {
     xtensors.push_back(CreateXlaTensor(tensor, device));
