@@ -230,7 +230,6 @@ DISABLED_TORCH_TESTS_ANY = {
         'test_getitem_scalars',  # storage
         'test_empty_ndim_index',  # expecting a different runtime error
         'test_index_put_byte_indices_xla',  # expecting a different runtime error
-        'test_basic_advanced_combined_xla',  # TODO @wonjoo fails with functionalization
     },
 
     # test_indexing.py
