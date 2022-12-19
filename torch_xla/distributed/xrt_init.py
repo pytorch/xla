@@ -6,7 +6,6 @@ import torch.distributed as dist
 import torch_xla.core.xla_model as xm
 import torch_xla.core.xla_env_vars as xenv
 from torch_xla.utils.utils import get_free_tcp_ports
-from torch_xla.distributed.xla_multiprocessing import _get_devices_per_worker
 
 XRT_SERVER_REGEX = 'torch_xla.distributed._xrt_run_server'
 _TCP_STORE = None
@@ -164,7 +163,7 @@ def init_xrt_context(master_addr=None, master_port=None, store=None):
   Args:
     master_addr (string): This is used to set up the TCPStore. If none is provided, it is obtained
     from the environment variable. Also not required/used if store argument is passed in.
-  	
+
     master_port (int): This is used to set up the TCPStore. If none is provided, it is obtained from
     environment variable. Also not required/used if store argument is passed in.
 
@@ -204,7 +203,7 @@ def init_xrt_context(master_addr=None, master_port=None, store=None):
 
   # This is required if we want to dynamically grab free ports.
   # Useful in shared settings when we cannot predetermine what ports are taken.
-  is_server = True if rank is '0' else False
+  is_server = True if rank == '0' else False
   global _TCP_STORE
   if store is None:
     assert master_addr is not None
