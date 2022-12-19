@@ -582,7 +582,6 @@ class XlaMNIST(nn.Module):
     return F.log_softmax(x, dim=1)
 
 
-@unittest.skip("crash")
 class TestParallelTensorMNIST(XlaTestCase):
 
   def test(self):
@@ -613,7 +612,6 @@ class TestParallelTensorMNIST(XlaTestCase):
     model_parallel(loop_fn, train_loader)
 
 
-@unittest.skip("crash")
 class TestParallelTensorResnet18(XlaTestCase):
 
   def test(self):
@@ -975,7 +973,7 @@ class TestAtenXlaTensor(XlaTestCase):
     xla_result = xla_base[:, torch.empty(0, 6, dtype=torch.int64)]
     self.assertEqual(result, xla_result)
 
-  @unittest.skip("Conv1d is not supported. xla_cpu_fallback seems broken after functionalization.")
+  @unittest.skip("Conv1d hits an internal assertion, but seems producing correct results in release build.")
   def test_empty_strided(self):
     xla_device = xm.xla_device()
     m = nn.Conv1d(4, 6, kernel_size=3, groups=2)
@@ -1266,6 +1264,7 @@ class TestAtenXlaTensor(XlaTestCase):
     x.sum().backward()
     self.assertEqual(root.grad.tolist(), [[1, 2], [1, 1], [1, 1]])
 
+  @unittest.skip("functorch.functionalize doesn't seem to support updating .data directly")
   def test_view_data_update(self):
     a = torch.zeros(4, device=xm.xla_device())
     v = a.view(2, 2)
@@ -1285,6 +1284,7 @@ class TestAtenXlaTensor(XlaTestCase):
     b = torch.ones([2, 2])
     self.runAtenTest((a, b), func)
 
+  @unittest.skip("functorch.functionalize doesn't seem to support updating .data directly")
   def test_view_data_slice(self):
     t1 = torch.zeros(50, device=xm.xla_device())
     t1_slice = t1.data[:5]
@@ -1292,7 +1292,6 @@ class TestAtenXlaTensor(XlaTestCase):
     t1.data = t1_slice
     self.assertEqual(t1.tolist(), [0, 0, 0, 0, 0])
 
-  @unittest.skip("Crash")
   def test_pred_type(self):
     xla_device = xm.xla_device()
     a = torch.rand(4)
@@ -1527,7 +1526,6 @@ class TestAtenXlaTensor(XlaTestCase):
         torch.rand(4, 3, 4, 2),
         lambda x: torch.mean(x, (-1, -3, -2), keepdim=True))
 
-  @unittest.skip("Crash")
   def test_index_select_0dim(self):
 
     def test_fn(s, i):
@@ -1575,7 +1573,6 @@ class TestAtenXlaTensor(XlaTestCase):
 
     self.runAtenTest([torch.randn(5, 8, 7)], test_fn)
 
-  @unittest.skip("Crash")
   def test_writeable_tensors_updates(self):
 
     def test_fn(s, i):
@@ -1586,7 +1583,6 @@ class TestAtenXlaTensor(XlaTestCase):
         [torch.randn(3, 4),
          torch.tensor([2, 1], dtype=torch.long)], test_fn)
 
-  @unittest.skip("Crash")
   def test_index_select_out(self):
 
     def test_fn(s, i):
