@@ -27,7 +27,6 @@ DISABLED_TORCH_TESTS_ANY = {
         'test_min_max_nan',  # XLA min/max ignores Nans.
         'test_min_max_binary_op_nan',  # XLA min/max ignores Nans.
         'test_copy_broadcast',
-        'test_advancedindex_mixed_cpu_devices_xla',  # TODO @wonjoo fails with functionalization
         'test_copy_noncontig_xla',  # TODO @wonjoo fails with functionalization
     },
     'TestTensorDeviceOpsXLA': {
