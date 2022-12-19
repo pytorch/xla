@@ -1,21 +1,17 @@
 link error during building
 diff --git a/tensorflow/core/profiler/convert/xplane_to_tools_data.cc b/tensorflow/core/profiler/convert/xplane_to_tools_data.cc
-index 86e4142ab15..eeb9b67ff68 100644
+index 2b317304d07..c14adb1a4b7 100644
 --- a/tensorflow/core/profiler/convert/xplane_to_tools_data.cc
 +++ b/tensorflow/core/profiler/convert/xplane_to_tools_data.cc
-@@ -252,9 +252,10 @@ StatusOr<std::string> ConvertMultiXSpacesToToolData(
+@@ -252,8 +252,8 @@ StatusOr<std::string> ConvertMultiXSpacesToToolData(
      return ConvertMultiXSpacesToTfDataBottleneckAnalysis(session_snapshot);
    } else if (tool_name == "op_profile") {
      return ConvertMultiXSpacesToOpProfileViewer(session_snapshot);
 -  } else if (tool_name == "memory_viewer" || tool_name == "graph_viewer") {
--    return ConvertHloProtoToToolData(session_snapshot, tool_name,
--                                     ToolOptionsToHloToolOptions(options));
-+  // this function is not being used by xla
+-    return ConvertHloProtoToToolData(session_snapshot, tool_name, options);
 +  // } else if (tool_name == "memory_viewer" || tool_name == "graph_viewer") {
-+  //   return ConvertHloProtoToToolData(session_snapshot, tool_name,
-+  //                                    ToolOptionsToHloToolOptions(options));
++  //   return ConvertHloProtoToToolData(session_snapshot, tool_name, options);
    } else if (tool_name == "tool_names") {
      return GetAvailableToolNames(session_snapshot);
    } else if (tool_name == "_xplane.pb") {  // internal test only.
-
 
