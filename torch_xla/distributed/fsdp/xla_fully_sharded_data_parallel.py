@@ -652,7 +652,7 @@ class XlaFullyShardedDataParallel(nn.Module):
             f"sharding_groups={self.sharding_groups}")
     return repr
 
-  def __getattr__(self, name: str) -> Union[Tensor, nn.Module]:
+  def __getattr__(self, name: str) -> Union[torch.Tensor, nn.Module]:
     """Forward missing attributes to wrapped module."""
     try:
       return super().__getattr__(name)  # defer to nn.Module's logic
