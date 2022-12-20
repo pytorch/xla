@@ -508,6 +508,7 @@ at::Tensor XLANativeFunctions::_copy_from_and_resize(const at::Tensor& self,
 }
 
 std::vector<at::Tensor> XLANativeFunctions::_to_cpu(at::TensorList tensors) {
+  // std::cout << "WONJOO: at aten_xla_type.cpp, _to_cpu" << std::endl;
   TORCH_LAZY_FN_COUNTER("xla::");
   return bridge::XlaCreateTensorList(tensors);
 }
@@ -951,6 +952,7 @@ at::Tensor XLANativeFunctions::convolution_overrideable(
     const c10::optional<at::Tensor>& bias, at::IntArrayRef stride,
     at::IntArrayRef padding, at::IntArrayRef dilation, bool transposed,
     at::IntArrayRef output_padding, int64_t groups) {
+  // std::cout << "WONJOO: at aten_xla_type.cpp, convolution_overrideable" << std::endl;
   TORCH_LAZY_FN_COUNTER("xla::");
   if (IsDefined(bias)) {
     return bridge::AtenFromXlaTensor(tensor_methods::convolution_overrideable(
@@ -1031,6 +1033,7 @@ at::Tensor XLANativeFunctions::cumsum(const at::Tensor& self, int64_t dim,
 
 // TODO(alanwaketan): Let's rewrite a without reusing other native functions.
 at::Tensor XLANativeFunctions::detach_copy(const at::Tensor& self) {
+  // std::cout << "WONJOO: at aten_xla_type.cpp, detach_copy" << std::endl;
   TORCH_LAZY_FN_COUNTER("xla::");
   auto new_tensor = empty_symint(self.sym_sizes(), at::typeMetaToScalarType(self.dtype()), c10::nullopt, self.device(), c10::nullopt, c10::nullopt);
   return _copy_from(self, new_tensor, true);
@@ -3160,6 +3163,16 @@ XLANativeFunctions::native_group_norm(const at::Tensor& input,
 at::Tensor XLANativeFunctions::block_diag(at::TensorList tensors) {
   return at::functionalization::functionalize_aten_op<ATEN_OP(
       block_diag)>::call(tensors);
+}
+
+at::Tensor XLANativeFunctions::_convolution(const at::Tensor & input, const at::Tensor & weight, const c10::optional<at::Tensor> & bias, at::IntArrayRef stride, at::IntArrayRef padding, at::IntArrayRef dilation, bool transposed, at::IntArrayRef output_padding, int64_t groups, bool benchmark, bool deterministic, bool cudnn_enabled, bool allow_tf32) {
+  return at::functionalization::functionalize_aten_op<ATEN_OP(
+      _convolution)>::call(input, weight, bias, stride, padding, dilation, transposed, output_padding, groups, benchmark, deterministic, cudnn_enabled, allow_tf32);
+}
+
+::std::tuple<at::Tensor,at::Tensor,at::Tensor> XLANativeFunctions::convolution_backward(const at::Tensor & grad_output, const at::Tensor & input, const at::Tensor & weight, at::OptionalIntArrayRef bias_sizes, at::IntArrayRef stride, at::IntArrayRef padding, at::IntArrayRef dilation, bool transposed, at::IntArrayRef output_padding, int64_t groups, ::std::array<bool,3> output_mask) {
+  return at::functionalization::functionalize_aten_op<ATEN_OP(
+      convolution_backward)>::call(grad_output, input, weight, bias_sizes, stride, padding, dilation, transposed, output_padding, groups, output_mask);
 }
 
 at::Tensor XLANativeFunctions::new_empty_strided_symint(
