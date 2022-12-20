@@ -53,10 +53,6 @@ namespace {
 at::Tensor to_meta(const at::Tensor& tensor) {
   // undefined tensors can't be converted to the meta device, since they don't
   // have sizes/strides
-  // std::cout << "WONJOO: at aten_xla_type.cpp, to_meta1" << std::endl;
-  // std::cout << "WONJOO: at aten_xla_type.cpp, to_meta2,
-  // tensor_is_functional=" <<
-  // at::functionalization::impl::isFunctionalTensor(tensor) << std::endl;
   if (!tensor.defined()) return tensor;
   auto out = at::native::empty_strided_meta_symint(
       tensor.sym_sizes(), tensor.sym_strides(),
@@ -462,7 +458,6 @@ at::Tensor& XLANativeFunctions::_amp_update_scale_(at::Tensor& current_scale,
 at::Tensor XLANativeFunctions::_copy_from(const at::Tensor& self,
                                           const at::Tensor& dst,
                                           bool non_blocking) {
-  // std::cout << "WONJOO: at aten_xla_type.cpp, _copy_from" << std::endl;
   TORCH_LAZY_FN_COUNTER("xla::");
   auto dst_tensor = bridge::TryGetXlaTensor(dst);
   auto self_tensor = bridge::TryGetXlaTensor(self);
@@ -508,7 +503,6 @@ at::Tensor XLANativeFunctions::_copy_from_and_resize(const at::Tensor& self,
 }
 
 std::vector<at::Tensor> XLANativeFunctions::_to_cpu(at::TensorList tensors) {
-  // std::cout << "WONJOO: at aten_xla_type.cpp, _to_cpu" << std::endl;
   TORCH_LAZY_FN_COUNTER("xla::");
   return bridge::XlaCreateTensorList(tensors);
 }
@@ -703,7 +697,6 @@ at::Tensor XLANativeFunctions::argmin(const at::Tensor& self,
 at::Tensor XLANativeFunctions::as_strided_copy(
     const at::Tensor& self, at::IntArrayRef size, at::IntArrayRef stride,
     c10::optional<int64_t> storage_offset) {
-  // std::cout << "WONJOO: at aten_xla_type.cpp, as_strided_copy1" << std::endl;
   TORCH_LAZY_FN_COUNTER("xla::");
   XLATensorPtr self_tensor = bridge::GetXlaTensor(self);
   auto xsize = XlaHelpers::I64List(size);
@@ -723,8 +716,6 @@ at::Tensor XLANativeFunctions::as_strided_scatter(
     const at::Tensor& base, const at::Tensor& mutated_view,
     at::IntArrayRef size, at::IntArrayRef stride,
     c10::optional<int64_t> storage_offset) {
-  // std::cout << "WONJOO: at aten_xla_type.cpp, as_strided_scatter1" <<
-  // std::endl;
   TORCH_LAZY_FN_COUNTER("xla::");
   auto base_ = bridge::GetXlaTensor(base);
   auto xsize = XlaHelpers::I64List(size);
@@ -997,7 +988,6 @@ at::Tensor XLANativeFunctions::convolution_overrideable(
     const c10::optional<at::Tensor>& bias, at::IntArrayRef stride,
     at::IntArrayRef padding, at::IntArrayRef dilation, bool transposed,
     at::IntArrayRef output_padding, int64_t groups) {
-  // std::cout << "WONJOO: at aten_xla_type.cpp, convolution_overrideable" << std::endl;
   TORCH_LAZY_FN_COUNTER("xla::");
   if (IsDefined(bias)) {
     return bridge::AtenFromXlaTensor(tensor_methods::convolution_overrideable(
@@ -1078,7 +1068,6 @@ at::Tensor XLANativeFunctions::cumsum(const at::Tensor& self, int64_t dim,
 
 // TODO(alanwaketan): Let's rewrite a without reusing other native functions.
 at::Tensor XLANativeFunctions::detach_copy(const at::Tensor& self) {
-  // std::cout << "WONJOO: at aten_xla_type.cpp, detach_copy" << std::endl;
   TORCH_LAZY_FN_COUNTER("xla::");
   auto new_tensor = empty_symint(self.sym_sizes(), at::typeMetaToScalarType(self.dtype()), c10::nullopt, self.device(), c10::nullopt, c10::nullopt);
   return _copy_from(self, new_tensor, true);
@@ -1211,7 +1200,6 @@ at::Tensor XLANativeFunctions::empty_symint(
     c10::optional<at::Layout> layout, c10::optional<at::Device> device,
     c10::optional<bool> pin_memory,
     c10::optional<at::MemoryFormat> /* memory_format */) {
-  // std::cout << "WONJOO: at XLANativeFunctions::empty_symint" << std::endl;
   TORCH_LAZY_FN_COUNTER("xla::");
   auto size = C10_AS_INTARRAYREF_SLOW(sym_size);
   // PT empty*() are optimizations to avoid initializing the data when it is
@@ -1474,9 +1462,6 @@ at::Tensor& XLANativeFunctions::index_put_(
       canonical_index_info.start_dim,
       bridge::GetOrCreateXlaTensor(values, *device), accumulate,
       canonical_index_info.result_permutation);
-  // std::cout << "WONJOO: at aten_xla_type.cpp, input_put_3,
-  // self.is_functional=" <<
-  // at::functionalization::impl::isFunctionalTensor(self) << std::endl;
   return self;
 }
 
@@ -1548,14 +1533,12 @@ at::Tensor XLANativeFunctions::lerp(const at::Tensor& self,
 }
 
 at::Tensor XLANativeFunctions::lift(const at::Tensor& tensor) {
-  // std::cout << "WONJOO: at XLANativeFunctions::lift" << std::endl;
   TORCH_INTERNAL_ASSERT(
       !at::functionalization::impl::isFunctionalTensor(tensor));
   return at::functionalization::impl::to_functional_tensor(tensor);
 }
 
 at::Tensor XLANativeFunctions::lift_fresh(const at::Tensor& tensor) {
-  // std::cout << "WONJOO: at XLANativeFunctions::lift_fresh" << std::endl;
   TORCH_INTERNAL_ASSERT(
       !at::functionalization::impl::isFunctionalTensor(tensor));
   return at::functionalization::impl::to_functional_tensor(tensor);
@@ -2627,7 +2610,6 @@ at::Tensor XLANativeFunctions::scatter_add(const at::Tensor& self, int64_t dim,
 at::Tensor XLANativeFunctions::select_copy(const at::Tensor& self, int64_t dim,
                                            int64_t index) {
   TORCH_LAZY_FN_COUNTER("xla::");
-  // std::cout << "WONJOO: at XLANativeFunctions::select_copy1" << std::endl;
   TORCH_LAZY_FN_COUNTER("xla::");
   return bridge::AtenFromXlaTensor(
       tensor_methods::select(bridge::GetXlaTensor(self), dim, index));
@@ -2636,13 +2618,6 @@ at::Tensor XLANativeFunctions::select_copy(const at::Tensor& self, int64_t dim,
 at::Tensor XLANativeFunctions::select_scatter(const at::Tensor& base,
                                               const at::Tensor& mutated_view,
                                               int64_t dim, int64_t index) {
-  // std::cout << "WONJOO: at XLANativeFunctions::select_scatter1" << std::endl;
-  // std::cout << "WONJOO: at XLANativeFunctions::select_scatter2, base=" << base
-  //           << std::endl;
-  // std::cout << "WONJOO: at XLANativeFunctions::select_scatter3, mutated_view="
-  //           << mutated_view << std::endl;
-  // std::cout << "WONJOO: at XLANativeFunctions::select_scatter4, dim=" << dim
-  //           << std::endl;
   auto base_ = bridge::GetXlaTensor(base);
   auto mutated_view_ = bridge::GetXlaTensor(mutated_view);
   auto base_clone = tensor_methods::clone(base_);
@@ -3233,7 +3208,6 @@ at::Tensor XLANativeFunctions::pixel_unshuffle(const at::Tensor& self,
 at::Tensor XLANativeFunctions::select_backward_symint(
     const at::Tensor& grad_output, c10::SymIntArrayRef input_sizes, int64_t dim,
     c10::SymInt index) {
-  // std::cout << "WONJOO: at XLANativeFunctions::select_backward" << std::endl;
   return at::functionalization::functionalize_aten_op_symint<ATEN_OP(
       select_backward)>::call(grad_output, input_sizes, dim, index);
 }
