@@ -114,6 +114,7 @@ function run_op_tests {
   run_dynamic python3 "$CDIR/../../test/nn/test_convolution.py" "$@" -v TestConvolutionNNDeviceTypeXLA
   run_dynamic python3 "$CDIR/../../test/nn/test_multihead_attention.py" "$@" -v TestMultiheadAttentionNNDeviceTypeXLA
   run_dynamic python3 "$CDIR/../../test/test_type_promotion.py" "$@" -v TestTypePromotionXLA
+  run_test python3 "$CDIR/../../test/dynamo/test_torchxla_integration.py"
   run_dynamic python3 "$CDIR/test_operations.py" "$@" --verbosity=$VERBOSITY
   run_dynamic python3 "$CDIR/test_dynamic_shapes.py"
   run_dynamic python3 "$CDIR/test_dynamic_shape_models.py" "$@" --verbosity=$VERBOSITY
