@@ -127,6 +127,7 @@ supported:
   - add.Scalar
   - add.Tensor
   - addmm
+  - affine_grid_generator
   - alias_copy
   - arange.start_out
   - argmax
