@@ -7,7 +7,8 @@ function run_deployment_tests() {
 
   time python /pytorch/xla/test/test_train_mp_mnist.py --fake_data
   time bash /pytorch/xla/test/run_tests.sh
-  time bash /pytorch/xla/test/cpp/run_tests.sh
+  # TODO: reenable after fixing the cpp test build
+  # time bash /pytorch/xla/test/cpp/run_tests.sh
 }
 
 function collect_wheels() {
