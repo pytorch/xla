@@ -17,10 +17,10 @@ static std::unordered_map<std::string, ::xla::metrics::Counter*>
     _cpu_fallback_counters;
 
 void xla_cpu_fallback(const c10::OperatorHandle& op, torch::jit::Stack* stack) {
-  // std::cout << "WONJOO: at aten_cpu_fallback.cpp, xla_cpu_fallback1"
-  //           << std::endl;
   XLA_FN_TRACK(3);
   const auto name = c10::toString(op.operator_name());
+  // std::cout << "WONJOO: at aten_cpu_fallback.cpp, " << name
+  //           << std::endl;
 
   // Manually applying the XLA_COUNTER macro.
   // We need to do it ourselves and explicitly keep a mapping of counters
@@ -44,7 +44,9 @@ void xla_cpu_fallback(const c10::OperatorHandle& op, torch::jit::Stack* stack) {
   }
 
   // Call the actual boxed CPU fallback.
-  at::native::cpu_fallback(op, stack);
+  // Set error_on_views as XLA should take care
+  // of all view ops after functionalization.
+  at::native::cpu_fallback(op, stack, true);
 }
 
 TORCH_LIBRARY_IMPL(_, XLA, m) {
