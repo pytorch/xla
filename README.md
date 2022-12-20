@@ -24,43 +24,43 @@ running on Cloud TPUs and learn how to use Cloud TPUs as PyTorch devices:
 
 The rest of this README covers:
 
-* [Running PyTorch on Cloud TPUs in production on Google Cloud.](#Cloud)
+* [Running PyTorch on Cloud TPUs in production on Google Cloud.](#running-pytorch-on-cloud-tpus-with-google-cloud-platform)
 Google Cloud also runs networks faster than Google Colab.
-* [Available images and wheels](#Resource)
-* [API & Best Practices](#API)
-* [Performance Profiling and Auto-Metrics Analysis](#PerfMetrics)
-* [Troubleshooting](#Troubleshooting)
-* [Providing Feedback](#Feedback)
-* [Building and Contributing to PyTorch/XLA](#Contributing)
+* [Available images and wheels](#available-images-and-wheels)
+* [API & Best Practices](#api--best-practices)
+* [Performance Profiling and Auto-Metrics Analysis](#performance-profiling-and-auto-metrics-analysis)
+* [Troubleshooting](#troubleshooting)
+* [Providing Feedback](#providing-feedback)
+* [Building and Contributing to PyTorch/XLA](#contributing)
 
 
 
 Additional information on PyTorch/XLA, including a description of its
 semantics and functions, is available at [PyTorch.org](http://pytorch.org/xla/).
 
-## <a name="Cloud"></a> Running PyTorch on Cloud TPUs with Google Cloud Platform
+## Running PyTorch on Cloud TPUs with Google Cloud Platform
 
 Google Cloud Platform lets you deploy PyTorch networks running on Cloud TPUs.
 This guide is split into two parts:
 
-* [Running on a single Cloud TPU](#CloudSingle)
-* [Running on a Cloud TPU Pod](#Pod)
+* [Running on a single Cloud TPU](#running-on-a-single-cloud-tpu-vm)
+* [Running on a Cloud TPU Pod](#how-to-run-on-tpu-vm-pods-distributed-training)
 
 ---
 
-## <a name="CloudSingle"></a> Running on a Single Cloud TPU VM
+## Running on a Single Cloud TPU VM
 
 Google Cloud offers TPU VMs for more transparent and easier access to the TPU hardware. This is our **recommedned way** of running PyTorch/XLA on Cloud TPU. Please check out our [Cloud TPU VM User Guide](https://cloud.google.com/tpu/docs/pytorch-xla-ug-tpu-vm). To learn more about the Cloud TPU System Architecture, please check out [this doc](https://cloud.google.com/tpu/docs/system-architecture-tpu-vm#tpu_vms).
 
 
 ---
 
-## <a name="Pod"></a> How to Run on TPU VM Pods (distributed training)
+## How to Run on TPU VM Pods (distributed training)
 
 If a single TPU VM does not suit your requirment, you can consider using TPU Pod. TPU Pod is a collection of TPU devices connected by dedicated high-speed network interfaces. Please checkout our [Cloud TPU VM Pod User Guide](https://cloud.google.com/tpu/docs/pytorch-pods).
 
 
-## <a name="Resource"></a> Available images and wheels
+## Available images and wheels
 The following pre-built docker images are available to run on Cloud TPU VMs (see [docker images](#DockerImage) for instructions):
 
     * `gcr.io/tpu-pytorch/xla:r1.13_3.8_tpuvm`: The current stable version.
@@ -113,7 +113,7 @@ pip3 install torch_xla[tpuvm]
 
 This is only required on Cloud TPU VMs.
 
-## <a name="API"></a> API & Best Practices
+## API & Best Practices
 
 In general PyTorch/XLA follows PyTorch APIs, some additional torch_xla specific APIs are available at:
 
@@ -124,7 +124,7 @@ In general PyTorch/XLA follows PyTorch APIs, some additional torch_xla specific 
 See the [API Guide](API_GUIDE.md) for best practices when writing networks that
 run on Cloud TPUs and Cloud TPU Pods.
 
-## <a name="PerfMetrics"></a> Performance Profiling and Auto-Metrics Analysis
+## Performance Profiling and Auto-Metrics Analysis
 
 With PyTorch/XLA we provide a set of performance profiling tooling and auto-metrics analysis which you can check the following resources:
 * [Official tutorial](https://cloud.google.com/tpu/docs/pytorch-xla-performance-profiling-tpu-vm)
@@ -132,19 +132,19 @@ With PyTorch/XLA we provide a set of performance profiling tooling and auto-metr
 * [Sample MNIST training script with profiling](https://github.com/pytorch/xla/blob/master/test/test_profile_mp_mnist.py)
 * [Utility script for capturing performance profiles](https://github.com/pytorch/xla/blob/master/scripts/capture_profile.py)
 
-## <a name="Troubleshooting"></a> Troubleshooting
+## Troubleshooting
 
 If PyTorch/XLA isn't performing as expected, see the
 [troubleshooting guide](TROUBLESHOOTING.md), which has suggestions for
 debugging and optimizing your network(s).
 
-## <a name="Feedback"></a> Providing Feedback
+## Providing Feedback
 
 The PyTorch/XLA team is always happy to hear from users and OSS contributors!
 The best way to reach out is by filing an issue on this Github. Questions,
 bug reports, feature requests, build issues, etc. are all welcome!
 
-## <a name="Contributing"></a> Contributing
+## Contributing
 
 See the [contribution guide](CONTRIBUTING.md).
 
