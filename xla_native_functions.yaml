@@ -129,7 +129,6 @@ supported:
   - add.Scalar
   - add.Tensor
   - addmm
-  - affine_grid_generator
   - alias_copy
   - arange.start_out
   - argmax
@@ -345,6 +344,7 @@ supported:
   # Why? These operators are all CompositeExplicitAutograd, which mean that they run
   # after functionalization,
   # but their implementations call view operators (which we need to functionalize away).
+  - affine_grid_generator
   - block_diag
   - _convolution
   - convolution_backward
