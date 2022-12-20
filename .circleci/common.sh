@@ -124,9 +124,9 @@ function run_torch_xla_tests() {
 
   pushd $XLA_DIR
     echo "Running Python Tests"
-    # ./test/run_tests.sh
+    ./test/run_tests.sh
     # only run test_autocast for cpu and gpu on circleCI.
-    # python test/test_autocast.py
+    python test/test_autocast.py
 
     # GPU tests
     if [ -x "$(command -v nvidia-smi)" ]; then
