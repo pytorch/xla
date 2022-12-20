@@ -19,8 +19,6 @@ static std::unordered_map<std::string, ::xla::metrics::Counter*>
 void xla_cpu_fallback(const c10::OperatorHandle& op, torch::jit::Stack* stack) {
   XLA_FN_TRACK(3);
   const auto name = c10::toString(op.operator_name());
-  // std::cout << "WONJOO: at aten_cpu_fallback.cpp, " << name
-  //           << std::endl;
 
   // Manually applying the XLA_COUNTER macro.
   // We need to do it ourselves and explicitly keep a mapping of counters
