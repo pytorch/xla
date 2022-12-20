@@ -282,7 +282,6 @@ DISABLED_TORCH_TESTS_ANY = {
         'test_CTCLoss_no_batch_dim_xla',  # Value out of range
         'test_upsamplingBilinear2d_xla',  # precision on GPU/TPU, slow compilation on CPU
         'test_cross_entropy_label_smoothing_consistent_index_target_and_probs_xla',  # TODO @wonjoo fails with functionalization
-        'test_cross_entropy_label_smoothing_weight_ignore_indices_xla',  # TODO @wonjoo fails with functionalization
         'test_upsamplingNearest1d_correctness_xla',  # TODO @wonjoo fails with functionalization
         'test_upsamplingNearest2d_correctness_xla',  # TODO @wonjoo fails with functionalization
         'test_upsamplingNearest3d_correctness_xla',  # TODO @wonjoo fails with functionalization
