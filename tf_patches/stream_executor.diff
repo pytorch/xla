@@ -28,5 +28,17 @@ index 722fa93147b..16790810d1f 100644
  )
 
  tf_proto_library(
-
+diff --git a/tensorflow/compiler/xla/runtime/module_registry.cc b/tensorflow/compiler/xla/runtime/module_registry.cc
+index 6f7f5c1a4a8..ffe7836d85e 100644
+--- a/tensorflow/compiler/xla/runtime/module_registry.cc
++++ b/tensorflow/compiler/xla/runtime/module_registry.cc
+@@ -69,7 +69,7 @@ ModulesState::InitializeUserData(CustomCall::UserData& user_data) {
+     ref_vec.push_back(std::move(*ref));
+   }
+ 
+-  return ref_vec;
++  return {std::move(ref_vec)};
+ }
+ 
+ }  // namespace runtime
 
