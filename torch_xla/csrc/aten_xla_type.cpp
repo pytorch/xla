@@ -690,6 +690,11 @@ at::Tensor XLANativeFunctions::addmm(const at::Tensor& self,
                             /*bias=*/bridge::GetXlaTensor(self)));
 }
 
+at::Tensor XLANativeFunctions::affine_grid_generator(const at::Tensor & theta, at::IntArrayRef size, bool align_corners) {
+  return at::functionalization::functionalize_aten_op<ATEN_OP(
+      affine_grid_generator)>::call(theta, size, align_corners);
+}
+
 at::Tensor XLANativeFunctions::alias_copy(const at::Tensor& self) {
   TORCH_LAZY_FN_COUNTER("xla::");
   return bridge::AtenFromXlaTensor(

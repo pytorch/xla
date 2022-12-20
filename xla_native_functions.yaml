@@ -126,6 +126,7 @@ supported:
   - addcdiv_
   - addcmul
   - addmm
+  - affine_grid_generator
   - alias_copy
   - arange.start_out
   - argmax
