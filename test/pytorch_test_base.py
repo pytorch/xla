@@ -283,24 +283,11 @@ DISABLED_TORCH_TESTS_ANY = {
         'test_CTCLoss_no_batch_dim_xla',  # Value out of range
         'test_upsamplingBilinear2d_xla',  # precision on GPU/TPU, slow compilation on CPU
         'test_cross_entropy_label_smoothing_consistent_index_target_and_probs_xla',  # TODO @wonjoo fails with functionalization
-        'test_upsamplingNearest1d_correctness_xla',  # TODO @wonjoo fails with functionalization
-        'test_upsamplingNearest2d_correctness_xla',  # TODO @wonjoo fails with functionalization
-        'test_upsamplingNearest3d_correctness_xla',  # TODO @wonjoo fails with functionalization
-        'test_upsamplingNearestExact2d_correctness_xla',  # TODO @wonjoo fails with functionalization
-        'test_upsamplingNearestExact3d_correctness_xla',  # TODO @wonjoo fails with functionalization
         'test_affine_2d_rotate0_xla',  # TODO @wonjoo fails with functionalization
         'test_affine_2d_rotate45_xla',  # TODO @wonjoo fails with functionalization
         'test_affine_2d_rotate90_xla',  # TODO @wonjoo fails with functionalization
         'test_affine_2d_rotateRandom_xla',  # TODO @wonjoo fails with functionalization
         'test_affine_3d_rotateRandom_xla',  # TODO @wonjoo fails with functionalization
-        'test_batchnorm_affine_xla_float32',  # TODO @wonjoo fails with functionalization
-        'test_batchnorm_simple_average_xla_float32',  # TODO @wonjoo fails with functionalization
-        'test_batchnorm_update_stats_xla',  # TODO @wonjoo fails with functionalization
-        'test_conv_empty_input_xla_bfloat16',  # TODO @wonjoo fails with functionalization
-        'test_conv_empty_input_xla_float32',  # TODO @wonjoo fails with functionalization
-        'test_upsamplingNearestExact1d_correctness_xla',  # TODO @wonjoo fails with functionalization
-        'test_transformerencoderlayer_gelu_xla_float32',  # TODO @wonjoo fails with functionalization
-        'test_transformerencoderlayer_xla_float32',  # TODO @wonjoo fails with functionalization
     },
 
     # test/nn/test_dropout.py
