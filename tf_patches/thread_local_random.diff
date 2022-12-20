@@ -25,6 +25,7 @@ index 1ef60c8f47c..c597a15fcc9 100644
 -#include "tensorflow/tsl/platform/random.h"
  
  namespace tensorflow {
+ 
 diff --git a/tensorflow/tsl/platform/random.cc b/tensorflow/tsl/platform/random.cc
 index 636725ad650..02d0ecda23d 100644
 --- a/tensorflow/tsl/platform/random.cc
@@ -64,4 +65,3 @@ index 9e08670a2c6..e13555c5128 100644
  // Return a 64-bit random value. Uses
  // std::mersenne_twister_engine::default_seed as seed value.
  uint64 New64DefaultSeed();
-
