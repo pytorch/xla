@@ -509,7 +509,11 @@ std::vector<at::Tensor> XLANativeFunctions::_to_cpu(at::TensorList tensors) {
 
 // TODO(alanwaketan): Improve the error messages.
 // Let's rewrite it without reusing other native functions.
-at::Tensor XLANativeFunctions::_to_copy(const at::Tensor & self, c10::optional<at::ScalarType> dtype, c10::optional<at::Layout> layout, c10::optional<at::Device> device, c10::optional<bool> pin_memory, bool non_blocking, c10::optional<at::MemoryFormat> memory_format) {
+at::Tensor XLANativeFunctions::_to_copy(
+    const at::Tensor& self, c10::optional<at::ScalarType> dtype,
+    c10::optional<at::Layout> layout, c10::optional<at::Device> device,
+    c10::optional<bool> pin_memory, bool non_blocking,
+    c10::optional<at::MemoryFormat> memory_format) {
   TORCH_LAZY_FN_COUNTER("xla::");
 
   auto options = self.options();
@@ -534,7 +538,8 @@ at::Tensor XLANativeFunctions::_to_copy(const at::Tensor & self, c10::optional<a
 
   // Case 1: Materialize the tensor.
   if (device && device->type() != c10::kXLA) {
-    XLA_CHECK(device->type() == c10::kCPU) << "only cpu device is supported in _to_copy.";
+    XLA_CHECK(device->type() == c10::kCPU)
+        << "only cpu device is supported in _to_copy.";
     auto self_tensor = bridge::GetXlaTensor(self);
     auto eager_tensor = self_tensor->ToTensor(/*detached=*/true);
 
@@ -543,7 +548,10 @@ at::Tensor XLANativeFunctions::_to_copy(const at::Tensor & self, c10::optional<a
   }
 
   // Case 2: Create a new XLA tensor with the supplied data and options.
-  auto new_tensor = empty_symint(self.sym_sizes(), at::typeMetaToScalarType(options.dtype()), options.layout(), options.device(), options.pinned_memory(), options.memory_format_opt());
+  auto new_tensor =
+      empty_symint(self.sym_sizes(), at::typeMetaToScalarType(options.dtype()),
+                   options.layout(), options.device(), options.pinned_memory(),
+                   options.memory_format_opt());
   return _copy_from(self, new_tensor, non_blocking);
 }
 
@@ -653,7 +661,9 @@ at::Tensor XLANativeFunctions::addmm(const at::Tensor& self,
                             /*bias=*/bridge::GetXlaTensor(self)));
 }
 
-at::Tensor XLANativeFunctions::affine_grid_generator(const at::Tensor & theta, at::IntArrayRef size, bool align_corners) {
+at::Tensor XLANativeFunctions::affine_grid_generator(const at::Tensor& theta,
+                                                     at::IntArrayRef size,
+                                                     bool align_corners) {
   return at::functionalization::functionalize_aten_op<ATEN_OP(
       affine_grid_generator)>::call(theta, size, align_corners);
 }
@@ -1069,7 +1079,9 @@ at::Tensor XLANativeFunctions::cumsum(const at::Tensor& self, int64_t dim,
 // TODO(alanwaketan): Let's rewrite a without reusing other native functions.
 at::Tensor XLANativeFunctions::detach_copy(const at::Tensor& self) {
   TORCH_LAZY_FN_COUNTER("xla::");
-  auto new_tensor = empty_symint(self.sym_sizes(), at::typeMetaToScalarType(self.dtype()), c10::nullopt, self.device(), c10::nullopt, c10::nullopt);
+  auto new_tensor =
+      empty_symint(self.sym_sizes(), at::typeMetaToScalarType(self.dtype()),
+                   c10::nullopt, self.device(), c10::nullopt, c10::nullopt);
   return _copy_from(self, new_tensor, true);
 }
 
@@ -3212,14 +3224,29 @@ at::Tensor XLANativeFunctions::block_diag(at::TensorList tensors) {
       block_diag)>::call(tensors);
 }
 
-at::Tensor XLANativeFunctions::_convolution(const at::Tensor & input, const at::Tensor & weight, const c10::optional<at::Tensor> & bias, at::IntArrayRef stride, at::IntArrayRef padding, at::IntArrayRef dilation, bool transposed, at::IntArrayRef output_padding, int64_t groups, bool benchmark, bool deterministic, bool cudnn_enabled, bool allow_tf32) {
+at::Tensor XLANativeFunctions::_convolution(
+    const at::Tensor& input, const at::Tensor& weight,
+    const c10::optional<at::Tensor>& bias, at::IntArrayRef stride,
+    at::IntArrayRef padding, at::IntArrayRef dilation, bool transposed,
+    at::IntArrayRef output_padding, int64_t groups, bool benchmark,
+    bool deterministic, bool cudnn_enabled, bool allow_tf32) {
   return at::functionalization::functionalize_aten_op<ATEN_OP(
-      _convolution)>::call(input, weight, bias, stride, padding, dilation, transposed, output_padding, groups, benchmark, deterministic, cudnn_enabled, allow_tf32);
+      _convolution)>::call(input, weight, bias, stride, padding, dilation,
+                           transposed, output_padding, groups, benchmark,
+                           deterministic, cudnn_enabled, allow_tf32);
 }
 
-::std::tuple<at::Tensor,at::Tensor,at::Tensor> XLANativeFunctions::convolution_backward(const at::Tensor & grad_output, const at::Tensor & input, const at::Tensor & weight, at::OptionalIntArrayRef bias_sizes, at::IntArrayRef stride, at::IntArrayRef padding, at::IntArrayRef dilation, bool transposed, at::IntArrayRef output_padding, int64_t groups, ::std::array<bool,3> output_mask) {
+::std::tuple<at::Tensor, at::Tensor, at::Tensor>
+XLANativeFunctions::convolution_backward(
+    const at::Tensor& grad_output, const at::Tensor& input,
+    const at::Tensor& weight, at::OptionalIntArrayRef bias_sizes,
+    at::IntArrayRef stride, at::IntArrayRef padding, at::IntArrayRef dilation,
+    bool transposed, at::IntArrayRef output_padding, int64_t groups,
+    ::std::array<bool, 3> output_mask) {
   return at::functionalization::functionalize_aten_op<ATEN_OP(
-      convolution_backward)>::call(grad_output, input, weight, bias_sizes, stride, padding, dilation, transposed, output_padding, groups, output_mask);
+      convolution_backward)>::call(grad_output, input, weight, bias_sizes,
+                                   stride, padding, dilation, transposed,
+                                   output_padding, groups, output_mask);
 }
 
 at::Tensor XLANativeFunctions::new_empty_strided_symint(
