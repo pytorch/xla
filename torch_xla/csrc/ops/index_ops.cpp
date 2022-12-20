@@ -2,6 +2,7 @@
 
 #include <ATen/ExpandUtils.h>
 #include <ATen/Functions.h>
+#include <ATen/ops/select_copy.h>
 
 #include "tensorflow/compiler/xla/permutation_util.h"
 #include "tensorflow/compiler/xla/xla_client/debug_macros.h"
@@ -61,7 +62,8 @@ std::vector<at::Tensor> ExpandByteTensors(
       // Replace with nonzeros.
       auto nonzero = index->nonzero();
       for (int64_t j = 0; j < index->dim(); j++) {
-        result.emplace_back(nonzero.select(1, j));
+        // There is no tensor.select_copy. So at::select_copy is used.
+        result.emplace_back(at::select_copy(nonzero, 1, j));
       }
     } else {
       result.emplace_back(index.value_or(at::Tensor()));
