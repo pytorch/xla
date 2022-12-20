@@ -609,7 +609,7 @@ class TestAtenXlaTensor(test_utils.XlaTestCase):
     xla_result = xla_base[:, torch.empty(0, 6, dtype=torch.int64)]
     self.assertEqual(result, xla_result)
 
-  @unittest.skip("Conv1d hits an internal assertion, but seems producing correct results in release build.")
+  @unittest.skip("Produce wrong results on grad_input")
   def test_empty_strided(self):
     xla_device = xm.xla_device()
     m = nn.Conv1d(4, 6, kernel_size=3, groups=2)
@@ -633,6 +633,8 @@ class TestAtenXlaTensor(test_utils.XlaTestCase):
         xla_output.sum() + sum(map(lambda x: x.sum(), xla_grad_input)),
         (xla_a, xla_output) + tuple(xla_m.parameters()),
         retain_graph=True)
+    self.assertEqual(output, xla_output, prec=1e-4)
+    self.assertEqual(grad_input, xla_grad_input, prec=1e-4)
     self.assertEqual(grad_grad_input, xla_grad_grad_input, prec=1e-4)
 
   def test_clamp(self):

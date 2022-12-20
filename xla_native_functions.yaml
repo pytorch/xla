@@ -344,6 +344,8 @@ supported:
   # after functionalization,
   # but their implementations call view operators (which we need to functionalize away).
   - block_diag
+  - _convolution
+  - convolution_backward
   - slice_backward
   - diagonal_backward
   - new_empty_strided
