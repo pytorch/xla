@@ -510,6 +510,7 @@ at::Tensor XLANativeFunctions::_copy_from_and_resize(const at::Tensor& self,
 }
 
 std::vector<at::Tensor> XLANativeFunctions::_to_cpu(at::TensorList tensors) {
+  // std::cout << "WONJOO: at aten_xla_type.cpp, _to_cpu" << std::endl;
   TORCH_LAZY_FN_COUNTER("xla::");
   return bridge::XlaCreateTensorList(tensors);
 }
@@ -1010,6 +1011,7 @@ at::Tensor XLANativeFunctions::convolution_overrideable(
     const c10::optional<at::Tensor>& bias, at::IntArrayRef stride,
     at::IntArrayRef padding, at::IntArrayRef dilation, bool transposed,
     at::IntArrayRef output_padding, int64_t groups) {
+  // std::cout << "WONJOO: at aten_xla_type.cpp, convolution_overrideable" << std::endl;
   TORCH_LAZY_FN_COUNTER("xla::");
   if (IsDefined(bias)) {
     return bridge::AtenFromXlaTensor(tensor_methods::convolution_overrideable(
@@ -1103,6 +1105,7 @@ at::Tensor XLANativeFunctions::cumsum(const at::Tensor& self, int64_t dim,
 
 // TODO(alanwaketan): Let's rewrite a without reusing other native functions.
 at::Tensor XLANativeFunctions::detach_copy(const at::Tensor& self) {
+  // std::cout << "WONJOO: at aten_xla_type.cpp, detach_copy" << std::endl;
   TORCH_LAZY_FN_COUNTER("xla::");
   return bridge::AtenFromXlaTensor(bridge::GetXlaTensor(self));
 }
