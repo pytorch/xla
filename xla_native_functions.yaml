@@ -115,6 +115,7 @@ supported:
   - _softmax
   - _softmax_backward_data
   - _to_cpu
+  - _to_copy
   - _trilinear
   - _unsafe_view
   - adaptive_max_pool2d
