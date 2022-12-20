@@ -1446,8 +1446,6 @@ at::Tensor& XLANativeFunctions::index_fill_(at::Tensor& self, int64_t dim,
 at::Tensor& XLANativeFunctions::index_put_(
     at::Tensor& self, const c10::List<c10::optional<at::Tensor>>& indices,
     const at::Tensor& values, bool accumulate) {
-  // std::cout << "WONJOO: at aten_xla_type.cpp, input_put_1" << std::endl;
-  // std::cout << "WONJOO: at aten_xla_type.cpp, input_put_2, self.is_functional=" << at::functionalization::impl::isFunctionalTensor(self) << std::endl;
   TORCH_LAZY_FN_COUNTER("xla::");
   bool indices_on_cpu_or_xla =
       std::all_of(indices.begin(), indices.end(),
