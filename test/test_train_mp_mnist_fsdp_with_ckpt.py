@@ -37,8 +37,9 @@ MODEL_OPTS = {
     '--shard_param_on_dim_0': {
         'action': 'store_true',
     },
-    '--pin_layout_in_collective_ops': {
-        'action': 'store_true',
+    '--no_pin_layout_in_collective_ops': {
+        'action': 'store_false',
+        'dest': 'pin_layout_in_collective_ops',
     },
 }
 
