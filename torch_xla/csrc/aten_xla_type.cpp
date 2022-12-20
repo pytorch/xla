@@ -1431,11 +1431,18 @@ at::Tensor& XLANativeFunctions::index_fill_(at::Tensor& self, int64_t dim,
 at::Tensor& XLANativeFunctions::index_put_(
     at::Tensor& self, const c10::List<c10::optional<at::Tensor>>& indices,
     const at::Tensor& values, bool accumulate) {
-  // std::cout << "WONJOO: at aten_xla_type.cpp, input_put_1" << std::endl;
-  // std::cout << "WONJOO: at aten_xla_type.cpp, input_put_2,
-  // self.is_functional=" <<
-  // at::functionalization::impl::isFunctionalTensor(self) << std::endl;
   TORCH_LAZY_FN_COUNTER("xla::");
+  bool indices_on_cpu_or_xla =
+      std::all_of(indices.begin(), indices.end(),
+                  [=](const c10::optional<at::Tensor>& opt) {
+                    return opt.has_value() && opt->defined()
+                               ? (opt->is_cpu() || bridge::IsXlaTensor(*opt))
+                               : true;
+                  });
+  XLA_CHECK(bridge::IsXlaTensor(self) && indices_on_cpu_or_xla)
+      << "indices should be either on cpu or on the same"
+      << " device as the indexed tensor (XLA)."
+      << " When using XLA, the indexed tensor must be an XLA tensor.";
   XLA_CHECK(self.scalar_type() == values.scalar_type());
   CanonicalIndexInfo canonical_index_info =
       GetCanonicalIndexInfo(self, indices);
