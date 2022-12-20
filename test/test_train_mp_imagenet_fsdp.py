@@ -57,6 +57,9 @@ MODEL_OPTS = {
     '--pin_layout_in_collective_ops': {
         'action': 'store_true',
     },
+    '--use_small_fake_sample': {
+        'action': 'store_true',
+    },
 }
 
 FLAGS = args_parse.parse_common_options(
@@ -147,7 +150,8 @@ def train_imagenet():
   print('==> Preparing data..')
   img_dim = get_model_property('img_dim')
   if FLAGS.fake_data:
-    train_dataset_len = 1200000  # Roughly the size of Imagenet dataset.
+    use_small_fake_sample = FLAGS.use_small_fake_sample
+    train_dataset_len = 50000 if use_small_fake_sample else 1200000  # Roughly the size of Imagenet dataset.
     train_loader = xu.SampleGenerator(
         data=(torch.zeros(FLAGS.batch_size, 3, img_dim, img_dim),
               torch.zeros(FLAGS.batch_size, dtype=torch.int64)),
