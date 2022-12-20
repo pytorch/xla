@@ -513,6 +513,46 @@ std::vector<at::Tensor> XLANativeFunctions::_to_cpu(at::TensorList tensors) {
   return bridge::XlaCreateTensorList(tensors);
 }
 
+// TODO(alanwaketan): Improve the error messages.
+// Let's rewrite it without reusing other native functions.
+at::Tensor XLANativeFunctions::_to_copy(const at::Tensor & self, c10::optional<at::ScalarType> dtype, c10::optional<at::Layout> layout, c10::optional<at::Device> device, c10::optional<bool> pin_memory, bool non_blocking, c10::optional<at::MemoryFormat> memory_format) {
+  TORCH_LAZY_FN_COUNTER("xla::");
+
+  auto options = self.options();
+  // I put each of these setters in a conditional instead of doing
+  // `self.options().dtype(dtype).layout(layout)... because calling
+  // .dtype(nullopt) on an options() that already has dtype appears to wipe it
+  if (dtype) {
+    options = options.dtype(dtype);
+  }
+  if (layout) {
+    options = options.layout(layout);
+  }
+  if (device) {
+    options = options.device(device);
+  }
+  if (pin_memory) {
+    options = options.pinned_memory(pin_memory);
+  }
+  if (memory_format) {
+    options = options.memory_format(memory_format);
+  }
+
+  // Case 1: Materialize the tensor.
+  if (device && device->type() != c10::kXLA) {
+    XLA_CHECK(device->type() == c10::kCPU) << "only cpu device is supported in _to_copy.";
+    auto self_tensor = bridge::GetXlaTensor(self);
+    auto eager_tensor = self_tensor->ToTensor(/*detached=*/true);
+
+    // Use the eager .to on the eager tensor.
+    return eager_tensor.to(options, non_blocking, /*copy=*/true);
+  }
+
+  // Case 2: Create a new XLA tensor with the supplied data and options.
+  auto new_tensor = empty_symint(self.sym_sizes(), at::typeMetaToScalarType(options.dtype()), options.layout(), options.device(), options.pinned_memory(), options.memory_format_opt());
+  return _copy_from(self, new_tensor, non_blocking);
+}
+
 at::Tensor& XLANativeFunctions::_index_put_impl_(
     at::Tensor& self, const c10::List<c10::optional<at::Tensor>>& indices,
     const at::Tensor& values, bool accumulate, bool /* unsafe */) {
