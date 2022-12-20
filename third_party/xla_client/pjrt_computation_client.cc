@@ -319,15 +319,16 @@ PjRtComputationClient::ExecuteComputation(
   execute_options.untuple_result = options.explode_tuple;
   execute_options.strict_shape_checking = false;
 
-  // Stop the timer when `ExecuteSharded` signals completion.
   std::optional<PjRtFuture<Status>> returned_future;
-  returned_future->OnReady(
-      [timed = std::move(timed)](Status unused) mutable { timed.reset(nullptr); });
   std::vector<std::unique_ptr<xla::PjRtBuffer>> results =
       pjrt_computation.executable
           ->ExecuteSharded(buffers, pjrt_device, execute_options,
-                           returned_future, /*fill_future=*/true)
+                           returned_future, true)
           .value();
+  // Stop the timer when `ExecuteSharded` signals completion.
+  returned_future->OnReady([timed = std::move(timed)](Status unused) mutable {
+    timed.reset(nullptr);
+  });
 
   std::vector<DataPtr> datas;
   datas.reserve(results.size());
