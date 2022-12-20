@@ -35,6 +35,7 @@ import torch_xla.core.xla_model as xm
 
 from .xla_flatten_params_wrapper import XlaFlattenParamsWrapper
 from .utils import dummy_all_gather, dummy_all_reduce, dummy_reduce_scatter, apply_xla_patch_to_nn_linear
+from .wrap import recursive_wrap
 
 FLOAT_DTYPES = [torch.float32, torch.float16, torch.bfloat16]
 
@@ -194,6 +195,49 @@ class XlaFullyShardedDataParallel(nn.Module):
           dimension (dim 0) *without* flattening them. This is a workaround for
           those compilers that may have trouble handling flattened parameters.
           This option has no effect if ``flatten_parameters`` is ``True``.
+      auto_wrap_policy (Optional[Callable[[nn.Module, bool, int], bool]]):
+          A callable specifying a policy to recursively wrap layers with FSDP.
+          Note that this policy currently will only apply to child modules of
+          the passed in module. The remainder modules are always wrapped in
+          the returned FSDP root instance.
+          ``size_based_auto_wrap_policy`` in ``torch_xla.distributed.fsdp.wrap``
+          is an example of ``auto_wrap_policy`` callable, this policy wraps
+          layers with the number of parameters larger than 100M.
+          ``transformer_auto_wrap_policy`` in ``torch_xla.distributed.fsdp.wrap``
+          is an example of ``auto_wrap_policy`` callable for transformer-like
+          model architectures. Users can supply the customized
+          ``auto_wrap_policy`` callable that should accept following arguments:
+          ``module: nn.Module``, ``recurse: bool``, ``unwrapped_params: int``,
+          and return a ``bool`` specifying whether the passed in ``module``
+          should be wrapped (if ``recurse=False``) or whether we should recurse
+          down the subgraph of ``module`` children (if ``recurse=True``).
+          Extra customized arguments could be added to the customized
+          ``auto_wrap_policy`` callable as well. It is a good practice to print
+          out the sharded model and check whether the sharded model is what the
+          application wants and then adjust accordingly.
+          Example::
+
+              def custom_auto_wrap_policy(
+                  module: nn.Module,
+                  recurse: bool,
+                  unwrapped_params: int,
+                  # These are customizable for this policy function.
+                  min_num_params: int = int(1e8),
+              ) -> bool:
+                  return unwrapped_params >= min_num_params
+              # Configure a custom min_num_params
+              auto_wrap_policy = functools.partial(custom_auto_wrap_policy, min_num_params=1e5)
+
+      auto_wrapper_callable (Optional[Callable]): the wrapper class or callable
+          used in auto_wrap_policy (default is `XlaFullyShardedDataParallel`)
+          to when wrapping a submodule. One can specify a different callable
+          as wrapper. For example, activation checkpointing (rematerialization)
+          can be applied to each auto-wrapped submodule as follows:
+  
+              from torch_xla.distributed.fsdp import checkpoint_module
+              auto_wrapper_callable = lambda m, *args, **kwargs: XlaFullyShardedDataParallel(
+                  checkpoint_module(m), *args, **kwargs)
+
   """
 
   def __init__(
@@ -214,6 +258,8 @@ class XlaFullyShardedDataParallel(nn.Module):
       sharding_world_size: Optional[int] = None,
       shard_param_on_dim_0: bool = False,
       pin_layout_in_collective_ops: bool = True,
+      auto_wrap_policy: Optional[Callable] = None,
+      auto_wrapper_callable: Optional[Callable] = None,
       _shard_size_multiple: int = 128,
       _use_xla_patched_linear: bool = True,
       _debug_dummy_forward_pass: bool = False,
@@ -243,6 +289,46 @@ class XlaFullyShardedDataParallel(nn.Module):
           "instead of using any of its submodules or its weights).")
 
     super().__init__()
+
+    if auto_wrap_policy is not None:
+      auto_wrap_kwargs = {
+          "module": module,
+          "auto_wrap_policy": auto_wrap_policy,
+          "wrapper_cls": auto_wrapper_callable or XlaFullyShardedDataParallel,
+          "ignored_modules": [],
+          "ignored_params": [],
+          "only_wrap_children": True,  # avoid double wrapping the root
+      }
+      fsdp_kwargs = dict(
+          reshard_after_forward=reshard_after_forward,
+          flatten_parameters=flatten_parameters,
+          execute_sharding_on_init=execute_sharding_on_init,
+          optimization_barrier_in_forward=optimization_barrier_in_forward,
+          optimization_barrier_in_backward=optimization_barrier_in_backward,
+          mark_step_on_finalization=mark_step_on_finalization,
+          disable_reshard_on_root=disable_reshard_on_root,
+          compute_dtype=compute_dtype,
+          buffer_dtype=buffer_dtype,
+          fp32_reduce_scatter=fp32_reduce_scatter,
+          sharding_groups=sharding_groups,
+          sharding_rank=sharding_rank,
+          sharding_world_size=sharding_world_size,
+          shard_param_on_dim_0=shard_param_on_dim_0,
+          pin_layout_in_collective_ops=pin_layout_in_collective_ops,
+          # `auto_wrap_policy` doesn't need to be specified in auto-wrapping
+          # `auto_wrapper_callable`` doesn't need to be specified in auto-wrapping
+          _shard_size_multiple=_shard_size_multiple,
+          _use_xla_patched_linear=_use_xla_patched_linear,
+          _debug_dummy_forward_pass=_debug_dummy_forward_pass,
+          _debug_msg=_debug_msg,
+          _debug_print=_debug_print,
+          _debug_dummy_all_gather_op=_debug_dummy_all_gather_op,
+          _debug_dummy_all_reduce_op=_debug_dummy_all_reduce_op,
+          _debug_dummy_reduce_scatter_op=_debug_dummy_reduce_scatter_op,
+          _debug_dummy_optimization_barrier_op=_debug_dummy_optimization_barrier_op,
+      )
+      self._auto_wrap(auto_wrap_kwargs, fsdp_kwargs)
+
     self.reshard_after_forward = self._orig_reshard_after_forward = reshard_after_forward
     self.disable_reshard_on_root = disable_reshard_on_root
     self.flatten_parameters = flatten_parameters
@@ -1456,6 +1542,32 @@ class XlaFullyShardedDataParallel(nn.Module):
       tensor = F.pad(tensor, [0, pad_size])
 
     return tensor
+
+  def _auto_wrap(
+      self,
+      auto_wrap_kwargs: Dict[str, Any],
+      fsdp_kwargs: Dict[str, Any],
+  ) -> None:
+    """
+    Recursively auto wraps the root module given by the key "module" in
+    ``auto_wrap_kwargs`` with the arguments in ``auto_wrap_kwargs`` and
+    ``fsdp_kwargs``.
+    Precondition: ``auto_wrap_policy`` contains the arguments expected by
+    ``_recursive_wrap()``, where ``auto_wrap_policy`` is not ``None``.
+    ``fsdp_kwargs`` contains all FSDP arguments except ``module``.
+    """
+    auto_wrap_policy = auto_wrap_kwargs["auto_wrap_policy"]
+    root_module = auto_wrap_kwargs["module"]
+    assert auto_wrap_policy is not None
+    # For auto wrapping, submodules should not already be wrapped with FSDP
+    # since double wrapping is not supported
+    for module_name, module in root_module.named_modules():
+      if isinstance(module, XlaFullyShardedDataParallel):
+        raise ValueError(
+            f"Expected {module_name} to NOT be FullyShardedDataParallel "
+            "if using an `auto_wrap_policy`")
+
+    recursive_wrap(**auto_wrap_kwargs, **fsdp_kwargs)
 
 
 def apply_to_tensors(
