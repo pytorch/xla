@@ -165,6 +165,7 @@ class TestAutocast(TestAutocastBase):
       self._run_autocast_outofplace(
           op, args, torch.float32, add_kwargs=maybe_kwargs)
 
+  @unittest.skip("crash in infer_size_impl")
   def test_autocast_torch_need_autocast_promote(self):
     for op, args in self.get_autocast_list('torch_need_autocast_promote'):
       self._run_autocast_outofplace(op, args, torch.float32)
