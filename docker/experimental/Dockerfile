@@ -10,7 +10,7 @@ ARG tf_cuda_compute_capabilities="7.0,7.5,8.0"
 
 ARG tpuvm=1
 ARG build_cpp_tests=0
-ARG package_version=1.14.0
+ARG package_version=2.0.0
 
 ARG bazel_jobs=
 
@@ -43,10 +43,13 @@ ENV CXX=clang++-8
 
 RUN pip install mkl mkl-include setuptools typing_extensions cmake requests
 
-RUN git clone --recursive --depth=1 https://github.com/pytorch/pytorch.git
+RUN git clone --depth=1 https://github.com/pytorch/pytorch.git
 WORKDIR /pytorch
 COPY torch_patches/ torch_patches/
-RUN bash -c "torch_pin=$(cat torch_patches/.torch_pin &); git fetch origin ${torch_pin:-master}; git checkout origin/${torch_pin:-master}"
+RUN bash -c 'torch_pin=$(cat torch_patches/.torch_pin &); git fetch origin ${torch_pin:-master}; git checkout FETCH_HEAD'
+RUN git submodule update --init --recursive
+RUN for p in torch_patches/*.diff; do patch -N -p1 < $p; done
+
 
 # Disable CUDA for PyTorch
 ENV USE_CUDA "0"
