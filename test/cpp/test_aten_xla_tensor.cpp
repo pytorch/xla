@@ -11636,25 +11636,5 @@ TEST_F(AtenXlaTensorTest, TestExpandIsAliasOf) {
   });
 }
 
-TEST_F(AtenXlaTensorTest, TestCdistForward) {
-  torch::Tensor a =
-      torch::rand({2, 20, 5}, torch::TensorOptions(torch::kFloat));
-  torch::Tensor b =
-      torch::rand({2, 10, 5}, torch::TensorOptions(torch::kFloat));
-  std::vector<double> p_list = {0.0, 1.0, 2.0, 5.0,
-                                std::numeric_limits<double>::infinity()};
-  for (const auto& p : p_list) {
-    torch::Tensor c = torch::cdist(a, b, p);
-    ForEachDevice([&](const torch::Device& device) {
-      torch::Tensor xla_a = CopyToDevice(a, device);
-      torch::Tensor xla_b = CopyToDevice(b, device);
-      torch::Tensor xla_c = torch::cdist(xla_a, xla_b, p);
-      AllClose(c, xla_c);
-    });
-  }
-  ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
-  ExpectCounterChanged("xla::_cdist_forward", cpp_test::GetIgnoredCounters());
-}
-
 }  // namespace cpp_test
 }  // namespace torch_xla
