@@ -361,7 +361,6 @@ supported:
   - linalg_pinv.atol_rtol_tensor
   - masked_fill.Scalar
   - masked_fill.Tensor
-  - masked_scatter
   - mvlgamma
   - permute
   - zeros
