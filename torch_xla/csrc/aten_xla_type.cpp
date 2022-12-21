@@ -1184,18 +1184,6 @@ at::Tensor XLANativeFunctions::elu_backward(const at::Tensor& grad_output,
       bridge::GetXlaTensor(self_or_result)));
 }
 
-at::Tensor XLANativeFunctions::embedding_symint(const at::Tensor& weight,
-                                                const at::Tensor& indices,
-                                                c10::SymInt padding_idx,
-                                                bool scale_grad_by_freq,
-                                                bool sparse) {
-  TORCH_LAZY_FN_COUNTER("xla::");
-  // TODO: for now route to native, which dispatches supported XLA operations.
-  // We need to make use of the TPU embedding core here eventually.
-  return at::native::embedding_symint(weight, indices, padding_idx,
-                                      scale_grad_by_freq, sparse);
-}
-
 at::Tensor XLANativeFunctions::embedding_dense_backward(
     const at::Tensor& grad_output, const at::Tensor& indices,
     int64_t num_weights, int64_t padding_idx, bool scale_grad_by_freq) {
@@ -3259,6 +3247,19 @@ XLANativeFunctions::convolution_backward(
       convolution_backward)>::call(grad_output, input, weight, bias_sizes,
                                    stride, padding, dilation, transposed,
                                    output_padding, groups, output_mask);
+}
+
+at::Tensor XLANativeFunctions::embedding_symint(const at::Tensor& weight,
+                                                const at::Tensor& indices,
+                                                c10::SymInt padding_idx,
+                                                bool scale_grad_by_freq,
+                                                bool sparse) {
+  TORCH_LAZY_FN_COUNTER("xla::");
+  // TODO: for now route to native, which dispatches supported XLA operations.
+  // We need to make use of the TPU embedding core here eventually.
+  return at::functionalization::functionalize_aten_op_symint<ATEN_OP(
+      embedding)>::call(weight, indices, padding_idx,
+                                      scale_grad_by_freq, sparse);
 }
 
 at::Tensor XLANativeFunctions::_euclidean_dist(const at::Tensor & x1, const at::Tensor & x2) {
