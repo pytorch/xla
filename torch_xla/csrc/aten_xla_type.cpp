@@ -3823,4 +3823,9 @@ at::Tensor XLANativeFunctions::view_symint(const at::Tensor& self,
       bridge::GetXlaTensor(self), XlaHelpers::I64List(size)));
 }
 
+at::Tensor XLANativeFunctions::zeros_symint(c10::SymIntArrayRef size, c10::optional<at::ScalarType> dtype, c10::optional<at::Layout> layout, c10::optional<at::Device> device, c10::optional<bool> pin_memory) {
+  return at::functionalization::functionalize_aten_op_symint<ATEN_OP(
+      zeros)>::call(size, dtype, layout, device, pin_memory);
+}
+
 }  // namespace torch_xla
