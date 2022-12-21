@@ -356,6 +356,7 @@ supported:
   - select_backward
   - _trilinear
   - linalg_pinv.atol_rtol_tensor
+  - mvlgamma
   # The same applies to these ops, but we already have direct lowerings for them
   # - logsumexp.out
 symint:
