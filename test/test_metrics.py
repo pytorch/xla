@@ -1,4 +1,5 @@
 import os
+import time
 
 import torch
 import torch_xla
@@ -162,19 +163,21 @@ class MetricsTest(unittest.TestCase):
     report = met.metrics_report()
     self.assertIn("CachedCompile", report)
 
-
   def test_execute_time_metric(self):
+    xm.xla_device()
+
     begin = time.perf_counter_ns()
-    xla_device = xm.xla_device()
-    t1 = torch.tensor(1456, device=xla_device)
-    t2 = t1 * 2
-    t2 = t2 ** 2
+    value = torch.randn(
+        10000, 10000, device=xm.xla_device()) * torch.randn(
+            10000, 10000, device=xm.xla_device())
+    value_mean = value.mean()
     xm.mark_step()
-    t2_cpu = t2.cpu()
+    cpu_value = value_mean.cpu()
     wall_time_ns = time.perf_counter_ns() - begin
     self.assertIn("ExecuteTime", met.metric_names())
     execute_time_ns = met.metric_data('ExecuteTime')[1]
-    self.assertGreater(wall_time_ns, 2*execute_time_ns)
+    self.assertGreater(execute_time_ns, .5 * wall_time_ns)
+    print(execute_time_ns / 1e9, wall_time_ns / 1e9)
 
 
 if __name__ == '__main__':

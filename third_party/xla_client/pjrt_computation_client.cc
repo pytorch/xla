@@ -293,7 +293,10 @@ PjRtComputationClient::ExecuteComputation(
     const ComputationClient::Computation& computation,
     absl::Span<const ComputationClient::DataPtr> arguments,
     const std::string& device, const ExecuteComputationOptions& options) {
-  auto timed = std::make_unique<metrics::TimedSection>(ExecuteMetric());
+  // Shared ownership of the timed section ensures that it will only get logged
+  // once both `ExecuteComputation` and the async work in `ExecuteSharded` are
+  // complete; a copy is held from the lambda that releases it when done.
+  auto timed = std::make_shared<metrics::TimedSection>(ExecuteMetric());
   tensorflow::profiler::TraceMe activity(
       "PjRtComputationClient::ExecuteComputation",
       tensorflow::profiler::TraceMeLevel::kInfo);
@@ -323,12 +326,11 @@ PjRtComputationClient::ExecuteComputation(
   std::vector<std::unique_ptr<xla::PjRtBuffer>> results =
       pjrt_computation.executable
           ->ExecuteSharded(buffers, pjrt_device, execute_options,
-                           returned_future, true)
+                           returned_future, /*fill_future=*/true)
           .value();
-  // Stop the timer when `ExecuteSharded` signals completion.
-  returned_future->OnReady([timed = std::move(timed)](Status unused) mutable {
-    timed.reset(nullptr);
-  });
+  // Signal that `ExecuteSharded` has completed for the ExecuteTime metric.
+  // Copies the `timed` shared pointer into the lambda.
+  returned_future->OnReady([timed](Status unused) mutable { timed.reset(); });
 
   std::vector<DataPtr> datas;
   datas.reserve(results.size());
