@@ -88,6 +88,39 @@ def trace(service_addr: str,
       options=options)
 
 
+def monitor(service_addr: str,
+            duration_ms: int,
+            monitoring_level: int = 1) -> str:
+  """Performs an on-demand monitoring session on provided profiler server.
+
+  The monitoring result is a light weight performance summary of your model
+  execution. This method will block until it's done monitoring.
+  This method currently supports Cloud TPU only.
+
+  Args:
+    service_addr(str): string of addresses of the profiler service e.g. 10.0.0.2:8466.
+    duration_ms (int): duration in milliseconds for monitoring the server.
+    monitoring_level (int): Monitoring level. Values are:  1 - TPU version and TPU utilization, 
+    2 - TPU utilization, TPU idle time, and number of TPU cores used.
+
+  Returns:
+    A string of the monitoring output.
+
+  Example usage:
+  ```python
+  for query in range(100):
+    print(
+      xp.monitor('10.0.0.2:8466', 1000))
+  ```
+  """
+
+  torch_xla._XLAC.profiler.monitor(
+      service_addr,
+      duration_ms,
+      monitoring_level=monitoring_level,
+      display_timestamp=True)
+
+
 class Trace(torch_xla._XLAC.profiler.TraceMe):
   """Context manager that produces a trace event for profiling.
 

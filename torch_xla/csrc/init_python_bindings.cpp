@@ -837,6 +837,29 @@ void BuildProfilerSubmodule(py::module* m) {
       py::arg("num_tracing_attempts") = 3, py::arg("timeout_s") = 120,
       py::arg("interval_s") = 5, py::arg("options"));
 
+  profiler.def("monitor",
+               [](const char* service_addr, int duration_ms,
+                  int monitoring_level, bool display_timestamp) {
+                 tensorflow::string content;
+                 tensorflow::Status status;
+                 {
+                   NoGilSection nogil;
+                   status = tensorflow::profiler::pywrap::Monitor(
+                       service_addr, duration_ms, monitoring_level,
+                       display_timestamp, &content);
+                   if (status.ok()) {
+                     return content;
+                   }
+                 }
+                 if (!status.ok()) {
+                   PyErr_SetString(PyExc_RuntimeError, status.error_message());
+                   throw py::error_already_set();
+                 }
+               },
+               py::arg("service_addr"), py::arg("duration_ms"),
+               py::arg("monitoring_level") = 1,
+               py::arg("display_timestamp") = true);
+
   py::class_<tensorflow::profiler::TraceMeWrapper> traceme_class(
       profiler, "TraceMe", py::module_local());
   traceme_class.def(py::init<py::str, py::kwargs>())
