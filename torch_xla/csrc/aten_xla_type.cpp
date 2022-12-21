@@ -645,15 +645,6 @@ at::Tensor XLANativeFunctions::_softmax_backward_data(
       bridge::GetXlaTensor(grad_output), bridge::GetXlaTensor(output), dim));
 }
 
-at::Tensor XLANativeFunctions::_trilinear(
-    const at::Tensor& i1, const at::Tensor& i2, const at::Tensor& i3,
-    at::IntArrayRef expand1, at::IntArrayRef expand2, at::IntArrayRef expand3,
-    at::IntArrayRef sumdim, int64_t unroll_dim) {
-  TORCH_LAZY_FN_COUNTER("xla::");
-  return at::native::_trilinear(i1, i2, i3, expand1, expand2, expand3, sumdim,
-                                unroll_dim);
-}
-
 at::Tensor XLANativeFunctions::_unsafe_view(const at::Tensor& self,
                                             at::IntArrayRef size) {
   TORCH_LAZY_FN_COUNTER("xla::");
@@ -3289,7 +3280,6 @@ at::Tensor XLANativeFunctions::embedding_symint(const at::Tensor& weight,
                                                 c10::SymInt padding_idx,
                                                 bool scale_grad_by_freq,
                                                 bool sparse) {
-  TORCH_LAZY_FN_COUNTER("xla::");
   // TODO: for now route to native, which dispatches supported XLA operations.
   // We need to make use of the TPU embedding core here eventually.
   return at::functionalization::functionalize_aten_op_symint<ATEN_OP(
@@ -3341,6 +3331,14 @@ at::Tensor XLANativeFunctions::select_backward_symint(
     c10::SymInt index) {
   return at::functionalization::functionalize_aten_op_symint<ATEN_OP(
       select_backward)>::call(grad_output, input_sizes, dim, index);
+}
+
+at::Tensor XLANativeFunctions::_trilinear(
+    const at::Tensor& i1, const at::Tensor& i2, const at::Tensor& i3,
+    at::IntArrayRef expand1, at::IntArrayRef expand2, at::IntArrayRef expand3,
+    at::IntArrayRef sumdim, int64_t unroll_dim) {
+  return at::functionalization::functionalize_aten_op<ATEN_OP(_trilinear)>::call(i1, i2, i3, expand1, expand2, expand3, sumdim,
+                                unroll_dim);
 }
 
 at::Tensor XLANativeFunctions::linalg_pinv(
