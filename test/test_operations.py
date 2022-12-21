@@ -388,6 +388,7 @@ class TestDynamicShape(test_utils.XlaTestCase):
   @unittest.skip(
       "Temporarily disable test. See  https://github.com/pytorch/xla/issues/4501"
   )
+  # @unittest.skip("Crash with dynamic shape")
   def test_nonzero_cast(self):
     t1 = torch.ones(5, 2, device=xm.xla_device())
     # Result of the nonzero should be the index type. Currently
