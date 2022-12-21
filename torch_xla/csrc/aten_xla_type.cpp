@@ -3280,6 +3280,12 @@ at::Tensor XLANativeFunctions::select_backward_symint(
       select_backward)>::call(grad_output, input_sizes, dim, index);
 }
 
+at::Tensor XLANativeFunctions::select_symint(const at::Tensor & self, int64_t dim, c10::SymInt index) {
+  return at::functionalization::functionalize_aten_op_symint<ATEN_OP2(
+      select, int)>::call(self, dim, index);
+}
+
+
 at::Tensor XLANativeFunctions::slice(const at::Tensor & self, int64_t dim, c10::optional<int64_t> start, c10::optional<int64_t> end, int64_t step) {
   return at::functionalization::functionalize_aten_op<ATEN_OP2(slice, Tensor)>::call(self, dim, start, end, step);
 }
