@@ -357,6 +357,7 @@ supported:
   - pixel_unshuffle
   - reshape
   - select_backward
+  - select.int
   - slice.Tensor
   - _trilinear
   - linalg_pinv.atol_rtol_tensor
@@ -379,6 +380,7 @@ symint:
   - diagonal_backward
   - narrow_copy
   - select_backward
+  - select.int
   - zeros
   # See Note: [functionalization and CompositeExplicitAutograd]
   - reshape
