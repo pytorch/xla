@@ -243,6 +243,7 @@ DISABLED_TORCH_TESTS_ANY = {
         'test_boolean_shape_mismatch',  # expecting a different runtime error
         'test_boolean_indexing_weirdness',  # expecting a different runtime error
         'test_boolean_indexing_weirdness_tensors',  # expecting a different runtime error
+        'test_index_is_larger_xla',  # TODO @wonjoo fails with functionalization on tensor value comparison
     },
 
     # test_nn.py
