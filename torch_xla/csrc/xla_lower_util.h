@@ -125,7 +125,4 @@ xla::XlaOp BuildAddcdiv(xla::XlaOp input, xla::XlaOp t1, xla::XlaOp t2,
 xla::XlaOp BuildAddcmul(xla::XlaOp input, xla::XlaOp t1, xla::XlaOp t2,
                         xla::XlaOp val);
 
-xla::XlaOp BuildCdistForward(xla::XlaOp x1, xla::XlaOp x2, xla::XlaOp p,
-                             bool use_hamming, bool use_chebyshev);
-
 }  // namespace torch_xla
