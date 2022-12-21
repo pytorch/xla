@@ -119,7 +119,6 @@ supported:
   - _softmax_backward_data
   - _to_cpu
   - _to_copy
-  - _trilinear
   - _unsafe_view
   - adaptive_max_pool2d
   - adaptive_max_pool2d_backward
@@ -355,9 +354,9 @@ supported:
   - pixel_unshuffle
   - reshape
   - select_backward
+  - _trilinear
   - linalg_pinv.atol_rtol_tensor
   # The same applies to these ops, but we already have direct lowerings for them
-  # - _trilinear
   # - logsumexp.out
 symint:
   - embedding
