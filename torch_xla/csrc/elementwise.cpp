@@ -238,12 +238,7 @@ xla::XlaOp BuildPrelu(xla::XlaOp input, xla::XlaOp weight) {
   return xla::Select(xla::Gt(input, zero), input, product);
 }
 
-xla::XlaOp BuildSigmoid(xla::XlaOp input) {
-  const xla::Shape& shape = XlaHelpers::ShapeOfXlaOp(input);
-  xla::XlaOp half = XlaHelpers::ScalarValue<float>(0.5, shape.element_type(),
-                                                   input.builder());
-  return half + half * xla::Tanh(half * input);
-}
+xla::XlaOp BuildSigmoid(xla::XlaOp input) { return xla::Logistic(input); }
 
 xla::XlaOp BuildSiLUBackward(xla::XlaOp grad_output, xla::XlaOp input) {
   const xla::Shape& shape = XlaHelpers::ShapeOfXlaOp(input);

@@ -1883,6 +1883,16 @@ class TestAtenXlaTensor(XlaTestCase):
 
     self.runAtenTest([torch.arange(15, dtype=torch.int32)], test_fn)
 
+  def test_sigmoid_bounds(self):
+    torch.manual_seed(0)
+    xla_device = xm.xla_device()
+    for _ in range(100):
+      x = torch.rand(1000).to(xla_device)
+      lower_bound = torch.sigmoid(x * (-100.0))
+      upper_bound = torch.sigmoid(x * (100.0))
+      assert torch.all(lower_bound >= 0.0)
+      assert torch.all(upper_bound <= 1.0)
+
 
 class MNISTComparator(nn.Module):
 
