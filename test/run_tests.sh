@@ -6,6 +6,11 @@ MAX_GRAPH_SIZE=500
 GRAPH_CHECK_FREQUENCY=100
 VERBOSITY=2
 
+CONTINUE_ON_ERROR=true
+if [[ "$CONTINUE_ON_ERROR" != "1" ]]; then
+  set +e
+fi
+
 while getopts 'LM:C:V:' OPTION
 do
   case $OPTION in

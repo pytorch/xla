@@ -2,6 +2,11 @@
 
 set -ex
 
+CONTINUE_ON_ERROR=true
+if [[ "$CONTINUE_ON_ERROR" != "1" ]]; then
+  set +e
+fi
+
 # System default cmake 3.10 cannot find mkl, so point it to the right place.
 # CMAKE_PREFIX_PATH will default to (in this order):
 # 1. CMAKE_PREFIX_PATH (if it exists)
