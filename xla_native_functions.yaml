@@ -355,6 +355,7 @@ supported:
   - pixel_unshuffle
   - reshape
   - select_backward
+  - slice.Tensor
   - _trilinear
   - linalg_pinv.atol_rtol_tensor
   - _cdist_forward
