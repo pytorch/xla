@@ -673,13 +673,6 @@ at::Tensor XLANativeFunctions::addmm(const at::Tensor& self,
                             /*bias=*/bridge::GetXlaTensor(self)));
 }
 
-at::Tensor XLANativeFunctions::affine_grid_generator(const at::Tensor& theta,
-                                                     at::IntArrayRef size,
-                                                     bool align_corners) {
-  return at::functionalization::functionalize_aten_op<ATEN_OP(
-      affine_grid_generator)>::call(theta, size, align_corners);
-}
-
 at::Tensor XLANativeFunctions::alias_copy(const at::Tensor& self) {
   TORCH_LAZY_FN_COUNTER("xla::");
   return bridge::AtenFromXlaTensor(
@@ -3536,6 +3529,11 @@ at::Tensor XLANativeFunctions::_euclidean_dist(const at::Tensor& x1,
                                                const at::Tensor& x2) {
   XLA_CHECK(
       !runtime::sys_util::GetEnvBool("XLA_DISABLE_FUNCTIONALIZATION", false));
+  return at::functionalization::functionalize_aten_op<ATEN_OP(
+      _euclidean_dist)>::call(x1, x2);
+}
+
+at::Tensor XLANativeFunctions::_euclidean_dist(const at::Tensor & x1, const at::Tensor & x2) {
   return at::functionalization::functionalize_aten_op<ATEN_OP(
       _euclidean_dist)>::call(x1, x2);
 }
