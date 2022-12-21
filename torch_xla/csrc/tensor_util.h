@@ -163,7 +163,6 @@ inline std::vector<at::Tensor> xla_expand_outplace(at::TensorList to_expand) {
       result[i] = to_expand[i];
     } else {
       result[i] = at::expand_copy(to_expand[i], sizes);
-    //   result[i] = to_expand[i].expand(sizes);
     }
   }
   return result;
