@@ -20,6 +20,7 @@
 #include "torch_xla/csrc/ops/permute.h"
 #include "torch_xla/csrc/ops/scalar.h"
 #include "torch_xla/csrc/tensor_methods.h"
+#include "torch_xla/csrc/tensor_util.h"
 #include "torch_xla/csrc/xla_graph_executor.h"
 #include "torch_xla/csrc/xla_lower_util.h"
 
@@ -245,7 +246,7 @@ CanonicalIndexInfo GetCanonicalIndexInfo(
   CheckIndexTensorTypes(orig_indices);
   // First expand ByteTensor (boolean masks) into 1 or more LongTensors, then
   // broadcast all index tensors together.
-  auto indices = at::expand_outplace(ExpandByteTensors(base, orig_indices));
+  auto indices = xla_expand_outplace(ExpandByteTensors(base, orig_indices));
   // If the non-null indices are not all adjacent, transpose base and indices
   // together so that they're adjacent at the front.
   CanonicalIndexInfo canonical_index_info = TransposeToFront(base, indices);
