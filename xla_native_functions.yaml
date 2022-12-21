@@ -364,6 +364,7 @@ supported:
   - masked_fill.Tensor
   - masked_scatter
   - mvlgamma
+  - zeros
   # The same applies to these ops, but we already have direct lowerings for them
   # - logsumexp.out
 symint:
@@ -376,6 +377,7 @@ symint:
   - diagonal_backward
   - narrow_copy
   - select_backward
+  - zeros
   # See Note: [functionalization and CompositeExplicitAutograd]
   - reshape
 autograd:
