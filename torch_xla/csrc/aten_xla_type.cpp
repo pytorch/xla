@@ -3329,6 +3329,10 @@ at::Tensor XLANativeFunctions::linalg_pinv(
       linalg_pinv, atol_rtol_tensor)>::call(self, atol, rtol, hermitian);
 }
 
+at::Tensor XLANativeFunctions::mvlgamma(const at::Tensor & self, int64_t p) {
+  return at::functionalization::functionalize_aten_op<ATEN_OP(mvlgamma)>::call(self, p);
+}
+
 at::Tensor XLANativeFunctions::diagonal_backward_symint(
     const at::Tensor& grad_output, at::SymIntArrayRef input_sizes,
     int64_t offset, int64_t dim1, int64_t dim2) {
