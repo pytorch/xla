@@ -661,13 +661,6 @@ at::Tensor XLANativeFunctions::addmm(const at::Tensor& self,
                             /*bias=*/bridge::GetXlaTensor(self)));
 }
 
-at::Tensor XLANativeFunctions::affine_grid_generator(const at::Tensor& theta,
-                                                     at::IntArrayRef size,
-                                                     bool align_corners) {
-  return at::functionalization::functionalize_aten_op<ATEN_OP(
-      affine_grid_generator)>::call(theta, size, align_corners);
-}
-
 at::Tensor XLANativeFunctions::alias_copy(const at::Tensor& self) {
   TORCH_LAZY_FN_COUNTER("xla::");
   return bridge::AtenFromXlaTensor(
@@ -3199,6 +3192,13 @@ XLANativeFunctions::native_group_norm(const at::Tensor& input,
 // core that call into view operators internally. These are all composite ops
 // that LTC can technically re-use / get for free, but we need to
 // "functionalize" them to remove the view ops before we can use them.
+at::Tensor XLANativeFunctions::affine_grid_generator(const at::Tensor& theta,
+                                                     at::IntArrayRef size,
+                                                     bool align_corners) {
+  return at::functionalization::functionalize_aten_op<ATEN_OP(
+      affine_grid_generator)>::call(theta, size, align_corners);
+}
+
 at::Tensor XLANativeFunctions::block_diag(at::TensorList tensors) {
   return at::functionalization::functionalize_aten_op<ATEN_OP(
       block_diag)>::call(tensors);
@@ -3227,6 +3227,11 @@ XLANativeFunctions::convolution_backward(
       convolution_backward)>::call(grad_output, input, weight, bias_sizes,
                                    stride, padding, dilation, transposed,
                                    output_padding, groups, output_mask);
+}
+
+at::Tensor XLANativeFunctions::_euclidean_dist(const at::Tensor & x1, const at::Tensor & x2) {
+  return at::functionalization::functionalize_aten_op<ATEN_OP(
+      _euclidean_dist)>::call(x1, x2);
 }
 
 at::Tensor XLANativeFunctions::new_empty_strided_symint(
