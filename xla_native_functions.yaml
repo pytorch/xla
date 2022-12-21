@@ -363,6 +363,7 @@ supported:
   - masked_fill.Tensor
   - masked_scatter
   - mvlgamma
+  - permute
   - zeros
   # The same applies to these ops, but we already have direct lowerings for them
   # - logsumexp.out
