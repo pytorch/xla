@@ -6,6 +6,7 @@
 #include <ATen/native/BinaryOps.h>
 #include <ATen/native/CPUFallback.h>
 #include <ATen/native/TypeProperties.h>
+#include <ATen/ops/expand_copy.h>
 
 #include <mutex>
 
@@ -236,6 +237,39 @@ void DoBinaryOpOut(const at::Tensor& self, const at::Tensor& other,
   XLATensorPtr out_tensor = bridge::GetXlaTensor(out);
   bin_op_out(operands.first, operands.second, out_tensor);
 }
+
+// This is a copy from aten/src/ATen/ExpandUtils.h just to replace
+// the expand with expand_copy.
+// TODO(alanwaketan): Fix the upstream.
+inline std::tuple<
+    c10::MaybeOwned<at::Tensor>,
+    c10::MaybeOwned<at::Tensor>,
+    c10::MaybeOwned<at::Tensor>>
+xla_expand_outplace(
+    const at::Tensor& to_expand1,
+    const at::Tensor& to_expand2,
+    const at::Tensor& to_expand3,
+    const char* api_name) {
+  at::check_defined({to_expand1, to_expand2, to_expand3}, api_name);
+  if (to_expand1.sizes().equals(to_expand2.sizes()) &&
+      to_expand1.sizes().equals(to_expand3.sizes())) {
+    return std::make_tuple(
+        c10::MaybeOwned<at::Tensor>::borrowed(to_expand1),
+        c10::MaybeOwned<at::Tensor>::borrowed(to_expand2),
+        c10::MaybeOwned<at::Tensor>::borrowed(to_expand3));
+  }
+
+  auto expanded_size12 =
+      at::infer_size_dimvector(to_expand1.sizes(), to_expand2.sizes());
+  auto expanded_size =
+      at::infer_size_dimvector(expanded_size12, to_expand3.sizes());
+  return std::make_tuple(
+      c10::MaybeOwned<at::Tensor>::owned(at::expand_copy(to_expand1, expanded_size)),
+      c10::MaybeOwned<at::Tensor>::owned(at::expand_copy(to_expand2, expanded_size)),
+      c10::MaybeOwned<at::Tensor>::owned(at::expand_copy(to_expand3, expanded_size)));
+}
+
+
 
 }  // namespace
 
@@ -3132,7 +3166,7 @@ at::Tensor XLANativeFunctions::where(const at::Tensor& condition,
   TORCH_LAZY_FN_COUNTER("xla::");
   c10::MaybeOwned<at::Tensor> b_condition, b_self, b_other;
   std::tie(b_condition, b_self, b_other) =
-      expand_outplace(condition, self, other, "where");
+      xla_expand_outplace(condition, self, other, "where");
   return bridge::AtenFromXlaTensor(tensor_methods::where(
       bridge::GetXlaTensor(*b_condition), bridge::GetXlaTensor(*b_self),
       bridge::GetXlaTensor(*b_other)));
