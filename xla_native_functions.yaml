@@ -358,6 +358,7 @@ supported:
   - select_backward
   - select.int
   - slice.Tensor
+  - t
   - _trilinear
   - linalg_pinv.atol_rtol_tensor
   - _cdist_forward
