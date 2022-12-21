@@ -3337,10 +3337,6 @@ at::Tensor XLANativeFunctions::masked_fill(const at::Tensor & self, const at::Te
   return at::functionalization::functionalize_aten_op<ATEN_OP2(masked_fill, Scalar)>::call(self, mask, value);
 }
 
-at::Tensor XLANativeFunctions::masked_scatter(const at::Tensor & self, const at::Tensor & mask, const at::Tensor & source) {
-  return at::functionalization::functionalize_aten_op<ATEN_OP(masked_scatter)>::call(self, mask, source);
-}
-
 at::Tensor XLANativeFunctions::mvlgamma(const at::Tensor & self, int64_t p) {
   return at::functionalization::functionalize_aten_op<ATEN_OP(mvlgamma)>::call(self, p);
 }
