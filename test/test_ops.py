@@ -125,7 +125,6 @@ allowed_opinfo = set(
             AllowedOpInfoEntry('lu'),
             AllowedOpInfoEntry('lu_unpack'),
             AllowedOpInfoEntry('masked_fill'),
-            AllowedOpInfoEntry('masked_scatter'),
             AllowedOpInfoEntry('masked_select'),
             AllowedOpInfoEntry('matrix_exp'),
             AllowedOpInfoEntry('max', 'binary'),
@@ -347,6 +346,9 @@ allowed_opinfo = set(
             # Worked locally (but failing on CI both CPU and CUDA)
             # app.circleci.com/pipelines/github/pytorch/xla/9130/workflows/71c74f3d-1735-4328-81b5-784d6e6744da/jobs/17998
             # AllowedOpInfoEntry('var_mean'),
+
+            # Failed after functionalization
+            # AllowedOpInfoEntry('masked_scatter'), # crash
         }))
 
 
