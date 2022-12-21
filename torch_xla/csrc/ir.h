@@ -134,6 +134,8 @@ class XlaNode : public torch::lazy::Node {
     sharding_hash_ = 0;
   }
 
+  std::string ToString() const override;
+
  private:
   xla::Shape GetOpShape(const std::function<xla::Shape()>& shape_fn) const;
 

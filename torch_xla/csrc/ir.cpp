@@ -165,6 +165,12 @@ xla::Shape XlaNode::GetOpShape(
   return *shape;
 }
 
+std::string XlaNode::ToString() const {
+  std::stringstream ss;
+  ss << torch::lazy::Node::ToString() << ", xla_shape=" << xla_shape_;
+  return ss.str();
+}
+
 const xla::Shape& GetXlaShape(const torch::lazy::Value& value) {
   XlaNode* casted = dynamic_cast<XlaNode*>(value.node.get());
   return casted->xla_shape(value.index);
