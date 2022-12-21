@@ -358,6 +358,7 @@ supported:
   - _trilinear
   - linalg_pinv.atol_rtol_tensor
   - _cdist_forward
+  - mvlgamma
   # The same applies to these ops, but we already have direct lowerings for them
   # - logsumexp.out
 symint:
