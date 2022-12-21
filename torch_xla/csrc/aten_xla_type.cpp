@@ -3310,6 +3310,9 @@ at::Tensor XLANativeFunctions::slice(const at::Tensor & self, int64_t dim, c10::
   return at::functionalization::functionalize_aten_op<ATEN_OP2(slice, Tensor)>::call(self, dim, start, end, step);
 }
 
+at::Tensor XLANativeFunctions::t(const at::Tensor & self) {
+  return at::functionalization::functionalize_aten_op<ATEN_OP(t)>::call(self);
+}
 
 at::Tensor XLANativeFunctions::_trilinear(
     const at::Tensor& i1, const at::Tensor& i2, const at::Tensor& i3,
