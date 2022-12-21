@@ -346,6 +346,7 @@ supported:
   - block_diag
   - _convolution
   - convolution_backward
+  - _euclidean_dist
   - slice_backward
   - diagonal_backward
   - new_empty_strided
