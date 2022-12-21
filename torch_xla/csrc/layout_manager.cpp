@@ -120,7 +120,7 @@ xla::Shape MakeShapeWithSortedLayout(absl::Span<const int64_t> dimensions,
   std::sort(layout.begin(), layout.end(), [&](int64_t a, int64_t b) {
     return dimensions[a] > dimensions[b];
   });
-  return xla::ShapeUtil::MakeShapeWithLayout(type, dimensions, layout);
+  return xla::ShapeUtil::MakeShapeWithDenseLayout(type, dimensions, layout);
 }
 
 xla::Shape* SetDynamicDimensions(xla::Shape* shape,
@@ -156,7 +156,7 @@ xla::Shape MakeShapeWithLayout(xla::PrimitiveType type,
                                absl::Span<const bool> dynamic_dimensions,
                                absl::Span<const int64_t> layout) {
   xla::Shape shape =
-      xla::ShapeUtil::MakeShapeWithLayout(type, dimensions, layout);
+      xla::ShapeUtil::MakeShapeWithDenseLayout(type, dimensions, layout);
   SetDynamicDimensions(&shape, dynamic_dimensions);
   return shape;
 }
