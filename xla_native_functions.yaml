@@ -364,7 +364,6 @@ supported:
   - _cdist_forward
   - masked_fill.Scalar
   - masked_fill.Tensor
-  - masked_scatter
   - mvlgamma
   - permute
   - zeros
