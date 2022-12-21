@@ -171,7 +171,6 @@ supported:
   - div.Tensor_mode
   - dot
   - elu_backward
-  - embedding
   - embedding_dense_backward
   - empty.memory_format
   - empty_strided
@@ -347,6 +346,7 @@ supported:
   - block_diag
   - _convolution
   - convolution_backward
+  - embedding
   - _euclidean_dist
   - slice_backward
   - diagonal_backward
