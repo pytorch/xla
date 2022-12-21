@@ -338,6 +338,7 @@ supported:
   - zero_
   - _native_batch_norm_legit
   - _native_batch_norm_legit.no_stats
+  # Note: [functionalization and CompositeExplicitAutograd]
   # Below are all operators that are "composite" in core,
   # but require us to explicitly re-enable functionalization in order to use them.
   # Why? These operators are all CompositeExplicitAutograd, which mean that they run
@@ -355,6 +356,7 @@ supported:
   - narrow_copy
   - pixel_shuffle
   - pixel_unshuffle
+  - reshape
   - select_backward
   - linalg_pinv.atol_rtol_tensor
   - _cdist_forward
@@ -371,6 +373,8 @@ symint:
   - diagonal_backward
   - narrow_copy
   - select_backward
+  # See Note: [functionalization and CompositeExplicitAutograd]
+  - reshape
 autograd:
   - einsum
   - max_pool2d
