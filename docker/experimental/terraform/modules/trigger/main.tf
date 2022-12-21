@@ -46,6 +46,7 @@ locals {
 resource "google_cloudbuild_trigger" "build-trigger" {
   location = "global"
   name = local.trigger_name
+  filename = "docker/experimental/cloudbuild.yaml"
 
   dynamic "github" {
     # HACK: `source_to_build` is mutually exclusive with `github`
@@ -65,11 +66,6 @@ resource "google_cloudbuild_trigger" "build-trigger" {
     uri = "https://github.com/pytorch/xla"
     repo_type = "GITHUB"
     ref = "refs/heads/${var.branch}"
-  }
-
-  git_file_source {
-    path = "docker/experimental/cloudbuild.yaml"
-    repo_type = "GITHUB"
   }
 
   substitutions = {
