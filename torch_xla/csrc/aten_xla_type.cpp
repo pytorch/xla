@@ -3576,7 +3576,6 @@ at::Tensor XLANativeFunctions::embedding_symint(const at::Tensor& weight,
                                                 c10::SymInt padding_idx,
                                                 bool scale_grad_by_freq,
                                                 bool sparse) {
-  TORCH_LAZY_FN_COUNTER("xla::");
   // TODO: for now route to native, which dispatches supported XLA operations.
   // We need to make use of the TPU embedding core here eventually.
   return at::functionalization::functionalize_aten_op_symint<ATEN_OP(
