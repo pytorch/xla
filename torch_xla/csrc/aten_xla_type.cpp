@@ -3328,6 +3328,14 @@ at::Tensor XLANativeFunctions::linalg_pinv(
       linalg_pinv, atol_rtol_tensor)>::call(self, atol, rtol, hermitian);
 }
 
+at::Tensor XLANativeFunctions::masked_fill(const at::Tensor & self, const at::Tensor & mask, const at::Tensor & value) {
+  return at::functionalization::functionalize_aten_op<ATEN_OP2(masked_fill, Tensor)>::call(self, mask, value);
+}
+
+at::Tensor XLANativeFunctions::masked_fill(const at::Tensor & self, const at::Tensor & mask, const at::Scalar & value) {
+  return at::functionalization::functionalize_aten_op<ATEN_OP2(masked_fill, Scalar)>::call(self, mask, value);
+}
+
 at::Tensor XLANativeFunctions::masked_scatter(const at::Tensor & self, const at::Tensor & mask, const at::Tensor & source) {
   return at::functionalization::functionalize_aten_op<ATEN_OP(masked_scatter)>::call(self, mask, source);
 }
