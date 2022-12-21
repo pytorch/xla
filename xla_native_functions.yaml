@@ -360,6 +360,8 @@ supported:
   - _trilinear
   - linalg_pinv.atol_rtol_tensor
   - _cdist_forward
+  - masked_fill.Scalar
+  - masked_fill.Tensor
   - masked_scatter
   - mvlgamma
   # The same applies to these ops, but we already have direct lowerings for them
