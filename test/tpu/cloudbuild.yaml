@@ -1,0 +1,69 @@
+substitutions:
+  # GCS location to write temporary checkpoints and summaries.
+  _GCS_BUCKET: 'gs://pytorch-xla-tpu-ci-tests/'
+  # Name of GKE cluster in which to run Job.
+  _CLUSTER_NAME: 'tpu-cluster'
+  # Location of GKE cluster.
+  _CLUSTER_ZONE: 'europe-west4-a'
+steps:
+# We only need to update submodules in triggers. User must update submodule
+# before local runs because .git is not present.
+- name: 'alpine/git'
+  entrypoint: sh
+  args:
+  - -c
+  - |
+    git submodule update --init || echo No git repository found
+- name: 'docker'
+  id: build-image
+  args: [
+    'build',
+    '.',
+    '-f',
+    'docker/experimental/Dockerfile',
+    '-t',
+    'gcr.io/$PROJECT_ID/pytorch-xla-test:$BUILD_ID',
+    '--build-arg',
+    'tpuvm=1',
+    '--build-arg',
+    'bazel_jobs=8'
+  ]
+- name: 'docker'
+  id: push-image
+  waitFor:
+  - build-image
+  args: ['push', 'gcr.io/$PROJECT_ID/pytorch-xla-test:$BUILD_ID']
+- name: 'google/cloud-sdk'
+  id: create-job
+  waitFor:
+  - push-image
+  entrypoint: bash
+  args:
+  - -c
+  - |
+    set -u
+    set -e
+    set -x
+    apt-get update
+    apt-get -y install gettext
+
+    # Try to setup kubectl credentials the new way,
+    # see https://cloud.google.com/blog/products/containers-kubernetes/kubectl-auth-changes-in-gke
+    apt-get install google-cloud-sdk-gke-gcloud-auth-plugin -o DPkg::options::="--force-overwrite"
+    export USE_GKE_GCLOUD_AUTH_PLUGIN=True
+    apt-get install kubectl
+    gcloud container clusters get-credentials $_CLUSTER_NAME --zone $_CLUSTER_ZONE
+
+    # Export variables to shell environment so that we can pass them into the
+    # k8s deployment using envsubst
+    export BUILD_ID=$BUILD_ID
+    export PROJECT_ID=$PROJECT_ID
+    export GCS_BUCKET=$_GCS_BUCKET
+
+    # Launch k8s deployment, wait for completion, print logs
+    pod_name=$(envsubst < test/tpu/pjrt_test_job.yaml | kubectl create -f - -o name)
+    pod_name=$(kubectl wait --for condition=ready --timeout=10m $pod_name -o name)
+    kubectl logs -f $pod_name --container=pjrt-test
+timeout: 18000s # 3 hours
+options:
+ machineType: 'N1_HIGHCPU_32'

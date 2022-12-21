@@ -36,18 +36,11 @@ class TestExperimentalPjrtTpu(parameterized.TestCase):
     os.environ.pop(xenv.TPU_VISIBLE_CHIPS, None)
     os.environ.pop(xenv.TPU_PROCESS_BOUNDS, None)
 
+  @absltest.skipIf(
+      tpu.version() <= 3,
+      'This test is not currently supported on v3 TPUVMs or earlier.')
   def test_xla_devices_multiprocess(self):
     accelerator_devices = {
-        'v3-8': {
-            0: torch.device('xla:0'),
-            1: torch.device('xla:1'),
-            3: torch.device('xla:0'),
-            4: torch.device('xla:1'),
-            5: torch.device('xla:0'),
-            6: torch.device('xla:1'),
-            7: torch.device('xla:0'),
-            8: torch.device('xla:1'),
-        },
         'v4-8': {
             0: torch.device('xla:0'),
             1: torch.device('xla:0'),
@@ -64,6 +57,9 @@ class TestExperimentalPjrtTpu(parameterized.TestCase):
     devices_per_process = pjrt._run_multiprocess(xm.xla_device)
     self.assertDictEqual(devices_per_process, expected)
 
+  @absltest.skipIf(
+      tpu.version() <= 2,
+      'This test is not currently supported on v2 TPUVMs or earlier.')
   def test_xla_devices_single_process_all_chips(self):
     accelerator_devices = {
         'v3-8': {i: torch.device(f'xla:{i}') for i in range(8)},
@@ -81,6 +77,9 @@ class TestExperimentalPjrtTpu(parameterized.TestCase):
     devices = pjrt._run_multiprocess(xm.xla_device)
     self.assertDictEqual(devices, expected)
 
+  @absltest.skipIf(
+      tpu.version() <= 2,
+      'This test is not currently supported on v2 TPUVMs or earlier.')
   def test_xla_devices_single_process_one_chip(self):
     accelerator_devices = {
         'v3-8': {
@@ -111,6 +110,9 @@ class TestExperimentalPjrtTpu(parameterized.TestCase):
 
     xmp.spawn(_assert, nprocs=1)
 
+  @absltest.skipIf(
+      tpu.version() <= 2,
+      'This test is not currently supported on v2 TPUVMs or earlier.')
   def test_xla_devices_single_process_one_chip_one_device_spawn(self):
     accelerators = ['v3-8', 'v4-8']
 
@@ -122,6 +124,9 @@ class TestExperimentalPjrtTpu(parameterized.TestCase):
     with concurrent.futures.ProcessPoolExecutor(max_workers=1) as executor:
       executor.submit(self._fail_on_nonfirst_device).result()
 
+  @absltest.skipIf(
+      tpu.version() <= 2,
+      'This test is not currently supported on v2 TPUVMs or earlier.')
   def test_default_xla_devices(self):
     accelerator_num_devices = {
         'v3-8': 8,
@@ -143,6 +148,9 @@ class TestExperimentalPjrtTpu(parameterized.TestCase):
 
   @parameterized.named_parameters(('xla_model', xm.get_ordinal),
                                   ('pjrt', pjrt.global_ordinal))
+  @absltest.skipIf(
+      tpu.version() <= 2,
+      'This test is not currently supported on v2 TPUVMs or earlier.')
   def test_global_ordinal(self, ordinal_func):
     accelerator_num_devices = {
         'v3-8': 8,
@@ -160,6 +168,9 @@ class TestExperimentalPjrtTpu(parameterized.TestCase):
 
   @parameterized.named_parameters(('xla_model', xm.get_local_ordinal),
                                   ('pjrt', pjrt.local_ordinal))
+  @absltest.skipIf(
+      tpu.version() <= 2,
+      'This test is not currently supported on v2 TPUVMs or earlier.')
   def test_local_ordinal(self, ordinal_func):
     accelerator_num_devices = {
         'v3-8': 8,
@@ -207,6 +218,9 @@ class TestExperimentalPjrtTpu(parameterized.TestCase):
 
     return results
 
+  @absltest.skipIf(
+      tpu.version() <= 2,
+      'This test is not currently supported on v2 TPUVMs or earlier.')
   def test_spawn_threads(self):
     accelerator_num_devices = {
         'v3-8': 8,
