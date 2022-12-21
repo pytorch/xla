@@ -107,4 +107,17 @@ bool RequiresRawTypeCasting(at::ScalarType scalar_type,
 xla::PrimitiveType GetShapeDimensionType(
     const torch::lazy::BackendDevice* device);
 
+// This is a copy from aten/src/ATen/ExpandUtils.h just to replace
+// the expand with expand_copy.
+// TODO(alanwaketan): Fix the upstream.
+inline std::tuple<
+    c10::MaybeOwned<at::Tensor>,
+    c10::MaybeOwned<at::Tensor>,
+    c10::MaybeOwned<at::Tensor>>
+xla_expand_outplace(
+    const at::Tensor& to_expand1,
+    const at::Tensor& to_expand2,
+    const at::Tensor& to_expand3,
+    const char* api_name);
+
 }  // namespace torch_xla
