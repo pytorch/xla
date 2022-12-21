@@ -70,8 +70,6 @@ resource "google_cloudbuild_trigger" "build-trigger" {
   git_file_source {
     path = "docker/experimental/cloudbuild.yaml"
     repo_type = "GITHUB"
-    revision = "refs/heads/master"
-    uri = "https://github.com/pytorch/xla"
   }
 
   substitutions = {

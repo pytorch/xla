@@ -104,7 +104,7 @@ module "r113-py37-tpuvm" {
   source = "./modules/trigger"
 
   release = "1.13"
-  branch = "r1.13"
+  branch = "wcromar/r1.13-kaggle"
   build_on_push = true
   schedule = null
   python_version = "3.7"
