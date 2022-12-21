@@ -3348,6 +3348,10 @@ at::Tensor XLANativeFunctions::linalg_pinv(
       linalg_pinv, atol_rtol_tensor)>::call(self, atol, rtol, hermitian);
 }
 
+at::Tensor XLANativeFunctions::masked_scatter(const at::Tensor & self, const at::Tensor & mask, const at::Tensor & source) {
+  return at::functionalization::functionalize_aten_op<ATEN_OP(masked_scatter)>::call(self, mask, source);
+}
+
 at::Tensor XLANativeFunctions::mvlgamma(const at::Tensor & self, int64_t p) {
   return at::functionalization::functionalize_aten_op<ATEN_OP(mvlgamma)>::call(self, p);
 }
