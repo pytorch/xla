@@ -23,8 +23,8 @@ launch_docker_and_build: &launch_docker_and_build
     # To allow the upstream workflow to access PyTorch/XLA build images, we
     # need to have them in the ECR. This is not expensive, and only pushes it
     # if image layers are not present in the repo.
-    docker tag ${GCR_DOCKER_IMAGE} ${ECR_DOCKER_IMAGE_BASE}:v0.5 >/dev/null
-    docker push ${ECR_DOCKER_IMAGE_BASE}:v0.5 >/dev/null
+    docker tag ${GCR_DOCKER_IMAGE} ${ECR_DOCKER_IMAGE_BASE}:v0.6 >/dev/null
+    docker push ${ECR_DOCKER_IMAGE_BASE}:v0.6 >/dev/null
     sudo pkill -SIGHUP dockerd
     # To enable remote caching, use SCCACHE_BUCKET=${SCCACHE_BUCKET}
     # To disable remote caching, use SCCACHE_BUCKET=${LOCAL_BUCKET}
