@@ -34,7 +34,6 @@
 #include "torch/csrc/lazy/core/tensor_util.h"
 #include "torch/csrc/lazy/core/util.h"
 #include "torch_xla/csrc/computation.h"
-#include "torch_xla/csrc/debug_util.h"
 #include "torch_xla/csrc/helpers.h"
 #include "torch_xla/csrc/ir_dump_util.h"
 #include "torch_xla/csrc/layout_manager.h"
@@ -127,6 +126,28 @@ XLAGraphExecutor::DeviceContextArena::GetBaseSeedData(
   devctx->seed_ir_value = torch::lazy::MakeNode<DeviceData>(device_data);
   devctx->running_seed = devctx->seed;
   return torch_xla::DeviceData::Cast(devctx->seed_ir_value.node.get())->data();
+}
+
+void XLAGraphExecutor::DeviceContextArena::SaveGraphAsString(
+    torch::lazy::hash_t hash, absl::Span<const XLATensorPtr> tensors,
+    const std::vector<size_t>* indices, DebugUtil::GraphFormat format) {
+  static bool should_save_graph =
+      xla::sys_util::GetEnvOrdinalPath("XLA_SAVE_TENSORS_FILE", "") != "";
+  if (should_save_graph &&
+      hash_to_graph_map.find(hash) == hash_to_graph_map.end()) {
+    hash_to_graph_map[hash] =
+        DebugUtil::GetTensorsGraphInfo(tensors, indices, format);
+  }
+}
+
+std::string XLAGraphExecutor::DeviceContextArena::GetGraphByHash(
+    torch::lazy::hash_t hash) {
+  auto iter = hash_to_graph_map.find(hash);
+  if (iter == hash_to_graph_map.end()) {
+    TF_LOG(INFO) << "Trying to dump graph with an invalid hash";
+    return "";
+  }
+  return iter->second;
 }
 
 torch::lazy::Value XLAGraphExecutor::DeviceContextArena::IrValueFromScalar(
@@ -355,9 +376,25 @@ torch::lazy::hash_t XLAGraphExecutor::GetGraphHash(
     ir_values.push_back(tensors.at(index)->CurrentIrValue());
   }
   PostOrderData po_data = RunPostOrder(ir_values, &coll);
-
-  return torch::lazy::HashCombine(
+  torch::lazy::hash_t res_hash = torch::lazy::HashCombine(
       coll.hash, torch::lazy::Hash(po_data.parameter_sequence));
+  DeviceContextArena::Get()->SaveGraphAsString(res_hash, tensors,
+                                               &coll.indices);
+  return res_hash;
+}
+
+void XLAGraphExecutor::MaybeDumpGraph(std::string name,
+                                      torch::lazy::hash_t hash) {
+  static const std::string save_file =
+      xla::sys_util::GetEnvOrdinalPath("XLA_SAVE_TENSORS_FILE", "");
+  if (!save_file.empty()) {
+    std::string graph = DeviceContextArena::Get()->GetGraphByHash(hash);
+    if (graph.size() == 0) {
+      return;
+    }
+    std::ofstream graph_file(save_file, std::ios_base::app);
+    graph_file << "[" << name << "]\n" << graph << "\n";
+  }
 }
 
 XLAGraphExecutor::ComputationCache* XLAGraphExecutor::GetComputationCache() {
