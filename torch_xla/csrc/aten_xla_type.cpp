@@ -3540,11 +3540,12 @@ at::Tensor XLANativeFunctions::embedding_symint(const at::Tensor& weight,
   // TODO: for now route to native, which dispatches supported XLA operations.
   // We need to make use of the TPU embedding core here eventually.
   return at::functionalization::functionalize_aten_op_symint<ATEN_OP(
-      embedding)>::call(weight, indices, padding_idx,
-                                      scale_grad_by_freq, sparse);
+      embedding)>::call(weight, indices, padding_idx, scale_grad_by_freq,
+                        sparse);
 }
 
-at::Tensor XLANativeFunctions::_euclidean_dist(const at::Tensor & x1, const at::Tensor & x2) {
+at::Tensor XLANativeFunctions::_euclidean_dist(const at::Tensor& x1,
+                                               const at::Tensor& x2) {
   return at::functionalization::functionalize_aten_op<ATEN_OP(
       _euclidean_dist)>::call(x1, x2);
 }
@@ -3784,9 +3785,10 @@ at::Tensor XLANativeFunctions::view_symint(const at::Tensor& self,
       bridge::GetXlaTensor(self), XlaHelpers::I64List(size)));
 }
 
-at::Tensor XLANativeFunctions::permute(const at::Tensor & self, at::IntArrayRef dims) {
-  return at::functionalization::functionalize_aten_op<ATEN_OP(
-      permute)>::call(self, dims);
+at::Tensor XLANativeFunctions::permute(const at::Tensor& self,
+                                       at::IntArrayRef dims) {
+  return at::functionalization::functionalize_aten_op<ATEN_OP(permute)>::call(
+      self, dims);
 }
 
 }  // namespace torch_xla
