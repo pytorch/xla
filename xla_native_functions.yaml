@@ -366,7 +366,6 @@ supported:
   - masked_fill.Tensor
   - mvlgamma
   - permute
-  - zeros
   # The same applies to these ops, but we already have direct lowerings for them
   # - logsumexp.out
 symint:
@@ -380,7 +379,6 @@ symint:
   - narrow_copy
   - select_backward
   - select.int
-  - zeros
   # See Note: [functionalization and CompositeExplicitAutograd]
   - reshape
 autograd:
