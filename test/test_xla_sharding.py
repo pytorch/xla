@@ -7,6 +7,7 @@ import numpy as np
 
 import torch
 from torch import nn
+import torch.optim as optim
 import torch_xla
 import torch_xla.core.xla_model as xm
 import torch_xla.debug.metrics as met
@@ -19,6 +20,18 @@ from torch_xla.experimental.pjrt import using_pjrt
 @unittest.skipIf(not using_pjrt() or xm.get_xla_supported_devices("GPU"),
                  f"Requires PJRT_DEVICE set to `TPU` or `CPU`.")
 class XlaShardingTest(unittest.TestCase):
+
+  class SimpleLinear(nn.Module):
+    def __init__(self):
+        super(SimpleLinear, self).__init__()
+        self.fc1 = nn.Linear(128, 64)
+        self.relu = nn.ReLU()
+        self.fc2 = nn.Linear(64, 1)
+
+    def forward(self, x):
+        y = self.relu(self.fc1(x))
+        z = self.fc2(y)
+        return z
 
   n_devices = 0
   device_ids = None
@@ -110,6 +123,24 @@ class XlaShardingTest(unittest.TestCase):
     sharding_spec = torch_xla._XLAC._get_xla_sharding_spec(xt)
     xm.mark_step()  # mark_step should preserve the sharding
     self.assertEqual(sharding_spec, torch_xla._XLAC._get_xla_sharding_spec(xt))
+
+  def test_optimizer_step_with_sharding(self):
+    model = self.SimpleLinear().to(xm.xla_device())
+    xs.mark_sharding(model.fc1.weight, self._get_mesh((1, self.n_devices)), (0, 1))
+    sharding_spec = torch_xla._XLAC._get_xla_sharding_spec(model.fc1.weight)
+
+    model.train()
+    optimizer = optim.SGD(model.parameters(), lr=0.1)
+    data = torch.randn(128, 128).to(xm.xla_device())
+    target = torch.zeros(128).to(xm.xla_device())
+    for i in range(5):
+      optimizer.zero_grad()
+      output = model(data)
+      loss = nn.CrossEntropy(output, target)
+      loss.backward()
+      optimizer.step()
+      xm.mark_step()
+    self.assertEqual(sharding_spec, torch_xla._XLAC._get_xla_sharding_spec(model.fc1.weight))
 
   def test_inplace_add_with_sharding(self):
     xt = torch.ones(2, 2).to(xm.xla_device())

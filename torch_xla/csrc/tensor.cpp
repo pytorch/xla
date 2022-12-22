@@ -210,19 +210,6 @@ torch::lazy::BackendDataPtr XLATensor::GetXlaData() {
   return data()->handle;
 }
 
-XLATensor::ShardingSpecPtr XLATensor::sharding_spec() const {
-  torch::lazy::Value ir_value = CurrentIrValue();
-  if (ir_value) {
-    XLA_CHECK(ir_value.node != nullptr) << "Tyring to access a null cursor";
-    auto sharding = dynamic_cast<XlaNode*>(ir_value.node.get())->GetSharding();
-    if (sharding == nullptr) {
-      return nullptr;
-    }
-    return std::make_shared<ShardingSpec>(*sharding);
-  }
-  return nullptr;
-}
-
 void XLATensor::SetShardingSpec(const ShardingSpec& sharding) {
   // Existing annotation must be cleared explicitly. We do not clear and
   // overwrite the existing sharding on the user's behalf. This is a no-op if
@@ -230,12 +217,13 @@ void XLATensor::SetShardingSpec(const ShardingSpec& sharding) {
   if (sharding_spec() == nullptr ||
       !ShardingUtil::EqualShardingSpecs(sharding, *sharding_spec())) {
     TORCH_LAZY_COUNTER("SetShardingSpec", 1);
-    XLA_CHECK(GetIrValue().node != nullptr) << "Tyring to access a null cursor";
+    data()->sharding = std::make_shared<ShardingSpec>(sharding);
     dynamic_cast<XlaNode*>(GetIrValue().node.get())
         ->SetSharding(sharding.sharding);
   }
 }
 void XLATensor::ClearShardingSpec() {
+  data()->sharding = nullptr;
   torch::lazy::Value ir_value = CurrentIrValue();
   if (ir_value) {
     // This should be a no-op if there is no sharding.
@@ -295,8 +283,13 @@ void XLATensor::AssignIrValue(torch::lazy::Value ir_value) const {
   if (sharding != nullptr) {
     if (!ir_value) {
       // Create a tensor node if applicable, re-use the current IR otherwise.
-      // TODO(yeounoh) this has some performance implications for convolution.
-      ir_value = GetIrValue();
+      torch::lazy::BackendDataPtr handle = CurrentDataHandle();
+      if (handle != nullptr) {
+        ir_value = CreateTensorNode(handle, /*read_only=*/false);
+      } else {
+        ir_value = CurrentIrValue();
+      }
+      XLA_CHECK(ir_value);
     }
     dynamic_cast<XlaNode*>(ir_value.node.get())
         ->SetSharding(sharding->sharding);

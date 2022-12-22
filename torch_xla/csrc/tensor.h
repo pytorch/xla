@@ -53,6 +53,9 @@ using XLATensorPtr = c10::intrusive_ptr<XLATensor>;
 
 class XLATensor : public torch::lazy::LazyTensor {
  public:
+  struct ShardingSpec;
+  using ShardingSpecPtr = std::shared_ptr<ShardingSpec>;
+
   // This is the core XLA tensor data structure where all the tensor data is
   // held. The XLA tensor is nothing more than a shared pointer to a Data
   // object.
@@ -78,6 +81,7 @@ class XLATensor : public torch::lazy::LazyTensor {
     ~Data();
 
     std::shared_ptr<View> view;
+    ShardingSpecPtr sharding = nullptr;
     // TODO: remove this in favor of torch::lazy::Shape within ir_value.
     c10::optional<at::ScalarType> logical_element_type;
   };
@@ -192,14 +196,13 @@ class XLATensor : public torch::lazy::LazyTensor {
 
     xla::OpSharding sharding;
   };
-  using ShardingSpecPtr = std::shared_ptr<ShardingSpec>;
 
   // Annotate the IR value with ShardingSpec.
   void SetShardingSpec(const ShardingSpec& sharding_spec);
   // Clear sharding annotation attached to the IR value and transfer sharded
   // data back to host.
   void ClearShardingSpec();
-  ShardingSpecPtr sharding_spec() const;
+  ShardingSpecPtr sharding_spec() const { return data()->sharding; }
 
   void SetStorage(const c10::Storage& storage) { storage_ = storage; }
   const c10::Storage& Storage() const { return storage_; }
