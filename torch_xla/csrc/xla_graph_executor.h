@@ -18,6 +18,7 @@
 #include "torch/csrc/lazy/core/ir_util.h"
 #include "torch_xla/csrc/computation.h"
 #include "torch_xla/csrc/cross_replica_reduces.h"
+#include "torch_xla/csrc/debug_util.h"
 #include "torch_xla/csrc/device.h"
 #include "torch_xla/csrc/ir.h"
 #include "torch_xla/csrc/ir_util.h"
@@ -139,6 +140,8 @@ class XLAGraphExecutor : public torch::lazy::LazyGraphExecutor {
   // can be extended to hold other sharding information from the user.
   torch::lazy::hash_t GetGraphHash(const std::vector<XLATensorPtr>& tensors);
 
+  void MaybeDumpGraph(std::string name, torch::lazy::hash_t hash);
+
   // We don't use the upstream CachedComputation type given all fields are
   // different.
   struct CachedComputation {
@@ -199,7 +202,17 @@ class XLAGraphExecutor : public torch::lazy::LazyGraphExecutor {
     torch::lazy::BackendDataPtr GetBaseSeedData(
         const torch::lazy::BackendDevice& device);
 
+    void SaveGraphAsString(
+        torch::lazy::hash_t hash, absl::Span<const XLATensorPtr> tensors,
+        const std::vector<size_t>* indices,
+        DebugUtil::GraphFormat format = DebugUtil::GetDefaultGraphFormat());
+
+    std::string GetGraphByHash(torch::lazy::hash_t hash);
+
    private:
+    std::unordered_map<torch::lazy::hash_t, std::string,
+                       torch::lazy::HashReducer>
+        hash_to_graph_map;
     // We override this to use TensorToXlaData().
     torch::lazy::Value IrValueFromScalar(
         const at::Scalar& value, at::ScalarType scalar_type,

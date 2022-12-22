@@ -1705,6 +1705,7 @@ void InitXlaModuleBindings(py::module m) {
             }
           }
 
+          XLAGraphExecutor::Get()->MaybeDumpGraph("dynamo", hash);
           auto results = XLAGraphExecutor::Get()->ExecuteComputationWithBarrier(
               cachedComputation->computation, parameters_data, device);
           std::vector<at::Tensor> retlist;
