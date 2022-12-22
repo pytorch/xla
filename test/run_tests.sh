@@ -6,6 +6,19 @@ MAX_GRAPH_SIZE=500
 GRAPH_CHECK_FREQUENCY=100
 VERBOSITY=2
 
+# Note [Keep Going]
+#
+# Set the `CONTINUE_ON_ERROR` flag to `true` to make the CircleCI tests continue on error.
+# This will allow you to see all the failures on your PR, not stopping with the first
+# test failure like the default behavior.
+#
+# This flag should be set to `false`` by default. After testing your changes, make sure
+# to set this flag back to `false`` before you merge your PR. 
+CONTINUE_ON_ERROR=false
+if [[ "$CONTINUE_ON_ERROR" != "1" ]]; then
+  set +e
+fi
+
 while getopts 'LM:C:V:' OPTION
 do
   case $OPTION in
