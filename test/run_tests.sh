@@ -84,6 +84,11 @@ function run_eager_debug {
   XLA_USE_EAGER_DEBUG_MODE=1 run_test "$@"
 }
 
+function run_save_tensor_file {
+  echo "Running in save tensor file mode: $@"
+  XLA_SAVE_TENSORS_FILE="/tmp/xla_test_save_ir.txt" run_test "$@"
+}
+
 function run_xla_backend_mp {
   echo "Running XLA backend multiprocessing test: $@"
   MASTER_ADDR=localhost MASTER_PORT=6000 run_test "$@"
@@ -143,6 +148,7 @@ function run_op_tests {
   run_test python3 "$CDIR/test_metrics.py"
   run_test python3 "$CDIR/dynamo/test_dynamo_integrations_util.py"
   run_test python3 "$CDIR/dynamo/test_dynamo.py"
+  run_save_tensor_file python3 "$CDIR/dynamo/test_dynamo_graph_dump.py"
   run_downcast_bf16 python3 "$CDIR/test_data_type.py"
   run_use_bf16 python3 "$CDIR/test_data_type.py"
   run_test python3 "$CDIR/test_torch_distributed_xla_backend.py"
