@@ -41,7 +41,7 @@ RUN update-alternatives --install /usr/bin/clang++ clang++ $(which clang++-8) 70
 ENV CC=clang-8
 ENV CXX=clang++-8
 
-RUN pip install mkl mkl-include setuptools typing_extensions cmake requests
+RUN pip install mkl==2022.2.1 mkl-include=2022.2.1 setuptools typing_extensions cmake requests
 
 RUN git clone --recursive --depth=1 https://github.com/pytorch/pytorch.git
 WORKDIR /pytorch
