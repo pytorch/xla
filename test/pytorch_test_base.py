@@ -464,11 +464,6 @@ DISABLED_TORCH_TESTS_GPU_ONLY = {
     'TestIndexingXLA': {
         'test_index_put_accumulate_large_tensor_xla',  # illegal memory access was encountered
     },
-
-    # test_metrics.py
-    'MetricsTest': {
-        'test_execute_time_metric',  # timing rigged for testing on CPU
-    },
 }
 
 
