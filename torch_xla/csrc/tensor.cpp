@@ -79,6 +79,14 @@ XLATensorPtr XLATensor::Create(
     c10::optional<at::ScalarType> logical_element_type) {
   XLATensorPtr xtensor = c10::make_intrusive<XLATensor>(
       XLATensor(std::move(ir_value), device, logical_element_type));
+  // Preserve sharding if a new tensor is created from a sharded IR node.
+  if (ir_value) {
+    auto* xla_node = dynamic_cast<XlaNode*>(ir_value.node.get());
+    if (xla_node->GetSharding() != nullptr) {
+      ShardingSpec sharding = ShardingSpec{*xla_node->GetSharding()};
+      xtensor->SetShardingSpec(sharding);
+    }
+  }
   XLAGraphExecutor::Get()->RegisterTensor(xtensor->data());
   if (UseEagerDebugMode()) {
     std::vector<XLATensorPtr> xtensors({xtensor});
@@ -231,6 +239,20 @@ void XLATensor::ClearShardingSpec() {
   }
 }
 
+XLATensor::ShardingSpecPtr XLATensor::sharding_spec() const {
+  ShardingSpecPtr sharding = data()->sharding;
+  torch::lazy::Value ir_value = CurrentIrValue();
+  if (sharding && ir_value) {
+    // The copy of sharding annotation on the IR node should be the same.
+    auto* xla_node = dynamic_cast<XlaNode*>(ir_value.node.get());
+    if (xla_node->GetSharding()) {
+      XLA_CHECK(ShardingUtil::EqualShardingSpecs(
+          *sharding, ShardingSpec{*xla_node->GetSharding()}));
+    }
+  }
+  return sharding;
+}
+
 void XLATensor::SetXlaData(torch::lazy::BackendDataPtr handle) {
   SetXlaData(std::move(handle), /*sync=*/true);
 }
@@ -282,7 +304,12 @@ void XLATensor::AssignIrValue(torch::lazy::Value ir_value) const {
   ShardingSpecPtr sharding = sharding_spec();
   if (sharding != nullptr) {
     if (!ir_value) {
-      // Create a tensor node if applicable, re-use the current IR otherwise.
+      // User provided sharding annotation is accompanied with sharded data
+      // handle. If sharded, we should create a tensor node with the current
+      // data handle instead. If there is no device data (e.g., view), then use
+      // the current IR to preserve the sharding.
+      // TODO(yeounoh) this may not be needed when functionalization is fully
+      // implemented.
       torch::lazy::BackendDataPtr handle = CurrentDataHandle();
       if (handle != nullptr) {
         ir_value = CreateTensorNode(handle, /*read_only=*/false);
@@ -453,6 +480,9 @@ at::Tensor XLATensor::ToTensor(bool detached) {
 void XLATensor::ShallowCopyTo(XLATensorPtr dest) const {
   dest->SetScalarType(data()->logical_element_type);
   dest->SetIrValue(GetIrValue(), /*inplace=*/false);
+  if (sharding_spec() != nullptr) {
+    dest->SetShardingSpec(*sharding_spec());
+  }
 }
 
 void XLATensor::SetScalarType(

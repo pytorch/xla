@@ -202,7 +202,7 @@ class XLATensor : public torch::lazy::LazyTensor {
   // Clear sharding annotation attached to the IR value and transfer sharded
   // data back to host.
   void ClearShardingSpec();
-  ShardingSpecPtr sharding_spec() const { return data()->sharding; }
+  ShardingSpecPtr sharding_spec() const;
 
   void SetStorage(const c10::Storage& storage) { storage_ = storage; }
   const c10::Storage& Storage() const { return storage_; }

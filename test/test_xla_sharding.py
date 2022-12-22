@@ -22,16 +22,17 @@ from torch_xla.experimental.pjrt import using_pjrt
 class XlaShardingTest(unittest.TestCase):
 
   class SimpleLinear(nn.Module):
+
     def __init__(self):
-        super(SimpleLinear, self).__init__()
-        self.fc1 = nn.Linear(128, 64)
-        self.relu = nn.ReLU()
-        self.fc2 = nn.Linear(64, 1)
+      super(XlaShardingTest.SimpleLinear, self).__init__()
+      self.fc1 = nn.Linear(128, 64)
+      self.relu = nn.ReLU()
+      self.fc2 = nn.Linear(64, 1)
 
     def forward(self, x):
-        y = self.relu(self.fc1(x))
-        z = self.fc2(y)
-        return z
+      y = self.relu(self.fc1(x))
+      z = self.fc2(y)
+      return z
 
   n_devices = 0
   device_ids = None
@@ -46,6 +47,9 @@ class XlaShardingTest(unittest.TestCase):
       device_ids = self.device_ids
     assert len(device_ids) == self.n_devices
     return xs.Mesh(device_ids, mesh_shape)
+
+
+class BasicShardingTest(XlaShardingTest):
 
   def test_xla_sharded_tensor(self):
     partition_spec = (0, 1)
@@ -117,6 +121,15 @@ class XlaShardingTest(unittest.TestCase):
         torch_xla._XLAC._get_xla_sharding_spec(xt),
         torch_xla._XLAC._get_xla_sharding_spec(xt2))
 
+  def test_clone(self):
+    xt = torch.randn(2, 4, 8, 16).to(xm.xla_device())
+    xs.mark_sharding(xt, self._get_mesh((1, 1, 1, self.n_devices)),
+                     (0, 1, 2, 3))
+    xt2 = xt.clone()
+    self.assertEqual(
+        torch_xla._XLAC._get_xla_sharding_spec(xt),
+        torch_xla._XLAC._get_xla_sharding_spec(xt2))
+
   def test_mark_step_with_sharding(self):
     xt = torch.ones(2, 2).to(xm.xla_device())
     xs.mark_sharding(xt, self._get_mesh((1, self.n_devices)), (0, 1))
@@ -126,21 +139,24 @@ class XlaShardingTest(unittest.TestCase):
 
   def test_optimizer_step_with_sharding(self):
     model = self.SimpleLinear().to(xm.xla_device())
-    xs.mark_sharding(model.fc1.weight, self._get_mesh((1, self.n_devices)), (0, 1))
+    xs.mark_sharding(model.fc1.weight, self._get_mesh((1, self.n_devices)),
+                     (0, 1))
     sharding_spec = torch_xla._XLAC._get_xla_sharding_spec(model.fc1.weight)
 
     model.train()
     optimizer = optim.SGD(model.parameters(), lr=0.1)
     data = torch.randn(128, 128).to(xm.xla_device())
     target = torch.zeros(128).to(xm.xla_device())
+    loss_fn = nn.CrossEntropyLoss()
     for i in range(5):
       optimizer.zero_grad()
       output = model(data)
-      loss = nn.CrossEntropy(output, target)
+      loss = loss_fn(output, target)
       loss.backward()
       optimizer.step()
       xm.mark_step()
-    self.assertEqual(sharding_spec, torch_xla._XLAC._get_xla_sharding_spec(model.fc1.weight))
+    self.assertEqual(sharding_spec,
+                     torch_xla._XLAC._get_xla_sharding_spec(model.fc1.weight))
 
   def test_inplace_add_with_sharding(self):
     xt = torch.ones(2, 2).to(xm.xla_device())
