@@ -471,20 +471,30 @@ std::pair<xla::XlaOp, xla::XlaOp> XlaHelpers::PromoteSecondValue(
 
 xla::Shape XlaHelpers::GetPromotedShape(const xla::Shape& shape1,
                                         const xla::Shape& shape2) {
+  std::tuple<std::vector<int64_t>, std::vector<bool>> promotedShape = torch::lazy::GetPromotedShape(
+          xla::util::ToVector<int64_t>(shape1.dimensions()),
+          xla::util::ToVector<bool>(shape1.dynamic_dimensions()),
+          xla::util::ToVector<int64_t>(shape2.dimensions()),
+          xla::util::ToVector<bool>(shape2.dynamic_dimensions()));
+  std::vector<int64_t> dimensions = std::get<0>(promotedShape);
+  std::vector<bool> isDynamic = std::get<1>(promotedShape);
   return xla::ShapeUtil::MakeShape(
       shape1.element_type(),
-      torch::lazy::GetPromotedShape(
-          xla::util::ToVector<int64_t>(shape1.dimensions()),
-          xla::util::ToVector<int64_t>(shape2.dimensions())));
+      dimensions, isDynamic);
 }
 
 xla::Shape XlaHelpers::GetPromotedBinaryOpShape(const xla::Shape& shape1,
                                                 const xla::Shape& shape2) {
+  std::tuple<std::vector<int64_t>, std::vector<bool>> promotedShape = torch::lazy::GetPromotedShape(
+          xla::util::ToVector<int64_t>(shape1.dimensions()),
+          xla::util::ToVector<bool>(shape1.dynamic_dimensions()),
+          xla::util::ToVector<int64_t>(shape2.dimensions()),
+          xla::util::ToVector<bool>(shape2.dynamic_dimensions()));
+  std::vector<int64_t> dimensions = std::get<0>(promotedShape);
+  std::vector<bool> isDynamic = std::get<1>(promotedShape);
   return xla::ShapeUtil::MakeShape(
       PromoteType(shape1.element_type(), shape2.element_type()),
-      torch::lazy::GetPromotedShape(
-          xla::util::ToVector<int64_t>(shape1.dimensions()),
-          xla::util::ToVector<int64_t>(shape2.dimensions())));
+      dimensions, isDynamic);
 }
 
 std::pair<xla::XlaOp, xla::XlaOp> XlaHelpers::PromoteShapes(xla::XlaOp op1,
