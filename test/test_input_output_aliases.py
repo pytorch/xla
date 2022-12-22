@@ -7,7 +7,8 @@ import torch_xla.debug.metrics as met
 import unittest
 
 
-class MetricsTest(unittest.TestCase):
+# TODO(alanwaketan): add test for views.
+class InputOutputAliasesTest(unittest.TestCase):
 
   def test_non_view(self):
     xla_device = xm.xla_device()
