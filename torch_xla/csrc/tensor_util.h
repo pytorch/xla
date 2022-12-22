@@ -107,35 +107,31 @@ bool RequiresRawTypeCasting(at::ScalarType scalar_type,
 xla::PrimitiveType GetShapeDimensionType(
     const torch::lazy::BackendDevice* device);
 
-// The following functions are copied from aten/src/ATen/ExpandUtils.h just to replace
-// the expand with expand_copy.
+// The following functions are copied from aten/src/ATen/ExpandUtils.h just to
+// replace the expand with expand_copy.
 // TODO(alanwaketan): Fix the upstream.
-inline std::tuple<
-    c10::MaybeOwned<at::Tensor>,
-    c10::MaybeOwned<at::Tensor>,
-    c10::MaybeOwned<at::Tensor>>
-xla_expand_outplace(
-    const at::Tensor& to_expand1,
-    const at::Tensor& to_expand2,
-    const at::Tensor& to_expand3,
-    const char* api_name) {
+inline std::tuple<c10::MaybeOwned<at::Tensor>, c10::MaybeOwned<at::Tensor>,
+                  c10::MaybeOwned<at::Tensor>>
+xla_expand_outplace(const at::Tensor& to_expand1, const at::Tensor& to_expand2,
+                    const at::Tensor& to_expand3, const char* api_name) {
   at::check_defined({to_expand1, to_expand2, to_expand3}, api_name);
   if (to_expand1.sizes().equals(to_expand2.sizes()) &&
       to_expand1.sizes().equals(to_expand3.sizes())) {
-    return std::make_tuple(
-        c10::MaybeOwned<at::Tensor>::borrowed(to_expand1),
-        c10::MaybeOwned<at::Tensor>::borrowed(to_expand2),
-        c10::MaybeOwned<at::Tensor>::borrowed(to_expand3));
+    return std::make_tuple(c10::MaybeOwned<at::Tensor>::borrowed(to_expand1),
+                           c10::MaybeOwned<at::Tensor>::borrowed(to_expand2),
+                           c10::MaybeOwned<at::Tensor>::borrowed(to_expand3));
   }
 
   auto expanded_size12 =
       at::infer_size_dimvector(to_expand1.sizes(), to_expand2.sizes());
   auto expanded_size =
       at::infer_size_dimvector(expanded_size12, to_expand3.sizes());
-  return std::make_tuple(
-      c10::MaybeOwned<at::Tensor>::owned(at::expand_copy(to_expand1, expanded_size)),
-      c10::MaybeOwned<at::Tensor>::owned(at::expand_copy(to_expand2, expanded_size)),
-      c10::MaybeOwned<at::Tensor>::owned(at::expand_copy(to_expand3, expanded_size)));
+  return std::make_tuple(c10::MaybeOwned<at::Tensor>::owned(
+                             at::expand_copy(to_expand1, expanded_size)),
+                         c10::MaybeOwned<at::Tensor>::owned(
+                             at::expand_copy(to_expand2, expanded_size)),
+                         c10::MaybeOwned<at::Tensor>::owned(
+                             at::expand_copy(to_expand3, expanded_size)));
 }
 
 inline std::vector<at::Tensor> xla_expand_outplace(at::TensorList to_expand) {
