@@ -5,8 +5,6 @@
 #include <torch/csrc/autograd/variable.h>
 #include <torch/csrc/lazy/core/hash.h>
 
-// #include <ATen/TypeDefault.h>
-
 #include <string>
 #include <vector>
 
