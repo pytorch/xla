@@ -1524,12 +1524,14 @@ at::Tensor XLANativeFunctions::lerp(const at::Tensor& self,
 }
 
 at::Tensor XLANativeFunctions::lift(const at::Tensor& tensor) {
+  TORCH_LAZY_FN_COUNTER("xla::");
   TORCH_INTERNAL_ASSERT(
       !at::functionalization::impl::isFunctionalTensor(tensor));
   return at::functionalization::impl::to_functional_tensor(tensor);
 }
 
 at::Tensor XLANativeFunctions::lift_fresh(const at::Tensor& tensor) {
+  TORCH_LAZY_FN_COUNTER("xla::");
   TORCH_INTERNAL_ASSERT(
       !at::functionalization::impl::isFunctionalTensor(tensor));
   return at::functionalization::impl::to_functional_tensor(tensor);
@@ -2615,7 +2617,6 @@ at::Tensor XLANativeFunctions::scatter_reduce(
 at::Tensor XLANativeFunctions::select_copy(const at::Tensor& self, int64_t dim,
                                            int64_t index) {
   TORCH_LAZY_FN_COUNTER("xla::");
-  TORCH_LAZY_FN_COUNTER("xla::");
   return bridge::AtenFromXlaTensor(
       tensor_methods::select(bridge::GetXlaTensor(self), dim, index));
 }
@@ -2623,6 +2624,7 @@ at::Tensor XLANativeFunctions::select_copy(const at::Tensor& self, int64_t dim,
 at::Tensor XLANativeFunctions::select_scatter(const at::Tensor& base,
                                               const at::Tensor& mutated_view,
                                               int64_t dim, int64_t index) {
+  TORCH_LAZY_FN_COUNTER("xla::");
   auto base_ = bridge::GetXlaTensor(base);
   auto mutated_view_ = bridge::GetXlaTensor(mutated_view);
   auto base_clone = tensor_methods::clone(base_);
@@ -2674,6 +2676,7 @@ at::Tensor XLANativeFunctions::slice_copy(const at::Tensor& self, int64_t dim,
 at::Tensor XLANativeFunctions::slice_scatter(
     const at::Tensor& base, const at::Tensor& mutated_view, int64_t dim,
     c10::optional<int64_t> start, c10::optional<int64_t> end, int64_t step) {
+  TORCH_LAZY_FN_COUNTER("xla::");
   auto base_ = bridge::GetXlaTensor(base);
   auto mutated_view_ = bridge::GetXlaTensor(mutated_view);
   auto base_clone = tensor_methods::clone(base_);
