@@ -229,6 +229,22 @@ assert_no_torch_pin: &assert_no_torch_pin
         echo "No ${TORCH_PIN} found, safe to land..."
       fi
 
+assert_continue_on_error_is_false: &assert_continue_on_error_is_false
+  name: Make sure CONTINUE_ON_ERROR flags are set to false before merging
+  command: |
+      CONTINUE_ON_ERROR="CONTINUE_ON_ERROR=true"
+      if grep -Fxq "$CONTINUE_ON_ERROR" ./test/run_tests.sh
+      then
+        echo "Please set CONTINUE_ON_ERROR at test/run_tests.sh to false before landing."
+        exit 1
+      fi
+      if grep -Fxq "$CONTINUE_ON_ERROR" ./.circleci/common.sh
+      then
+        echo "Please set CONTINUE_ON_ERROR at .circleci/common.sh to false before landing."
+        exit 1
+      fi
+      echo "CONTINUE_ON_ERROR flags are set to false, safe to land..."
+
 ci_params: &ci_params
   parameters:
     resource_class:
@@ -263,6 +279,14 @@ jobs:
         <<: *run_clang_format
     - run:
         <<: *run_yapf
+
+  continue_on_error_is_false:
+    machine:
+      image: ubuntu-2004:202111-02
+    steps:
+    - checkout
+    - run:
+        <<: *assert_continue_on_error_is_false
 
   pytorch_xla_run_build:
     <<: *run_build
