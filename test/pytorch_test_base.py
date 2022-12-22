@@ -242,7 +242,6 @@ DISABLED_TORCH_TESTS_ANY = {
         'test_boolean_shape_mismatch',  # expecting a different runtime error
         'test_boolean_indexing_weirdness',  # expecting a different runtime error
         'test_boolean_indexing_weirdness_tensors',  # expecting a different runtime error
-        'test_index_is_larger_xla',  # TODO @wonjoo fails with functionalization on tensor value comparison
     },
 
     # test_nn.py
@@ -282,7 +281,7 @@ DISABLED_TORCH_TESTS_ANY = {
         'test_upsamplingBicubic2d_correctness_xla',  # FIXME! Got dtypes torch.float32 and torch.float64
         'test_CTCLoss_no_batch_dim_xla',  # Value out of range
         'test_upsamplingBilinear2d_xla',  # precision on GPU/TPU, slow compilation on CPU
-        # Check failed: total_element_count == xla::util::Multiply<int64_t>(output_sizes) (12 vs. 0). 
+        # torch.autograd.gradcheck.GradcheckError: Jacobian mismatch for output 0 with respect to input 0
         'test_GRU_grad_and_gradgrad_xla_float64',  # TODO @wonjoo fails with functionalization
         'test_LSTM_grad_and_gradgrad_xla_float64'  # TODO @wonjoo fails with functionalization
     },
