@@ -3247,11 +3247,12 @@ at::Tensor XLANativeFunctions::embedding_symint(const at::Tensor& weight,
   // TODO: for now route to native, which dispatches supported XLA operations.
   // We need to make use of the TPU embedding core here eventually.
   return at::functionalization::functionalize_aten_op_symint<ATEN_OP(
-      embedding)>::call(weight, indices, padding_idx,
-                                      scale_grad_by_freq, sparse);
+      embedding)>::call(weight, indices, padding_idx, scale_grad_by_freq,
+                        sparse);
 }
 
-at::Tensor XLANativeFunctions::_euclidean_dist(const at::Tensor & x1, const at::Tensor & x2) {
+at::Tensor XLANativeFunctions::_euclidean_dist(const at::Tensor& x1,
+                                               const at::Tensor& x2) {
   return at::functionalization::functionalize_aten_op<ATEN_OP(
       _euclidean_dist)>::call(x1, x2);
 }
@@ -3285,7 +3286,8 @@ at::Tensor XLANativeFunctions::pixel_unshuffle(const at::Tensor& self,
       pixel_unshuffle)>::call(self, downscale_factor);
 }
 
-at::Tensor XLANativeFunctions::reshape_symint(const at::Tensor & self, c10::SymIntArrayRef shape) {
+at::Tensor XLANativeFunctions::reshape_symint(const at::Tensor& self,
+                                              c10::SymIntArrayRef shape) {
   return at::functionalization::functionalize_aten_op_symint<ATEN_OP(
       reshape)>::call(self, shape);
 }
@@ -3297,17 +3299,20 @@ at::Tensor XLANativeFunctions::select_backward_symint(
       select_backward)>::call(grad_output, input_sizes, dim, index);
 }
 
-at::Tensor XLANativeFunctions::select_symint(const at::Tensor & self, int64_t dim, c10::SymInt index) {
+at::Tensor XLANativeFunctions::select_symint(const at::Tensor& self,
+                                             int64_t dim, c10::SymInt index) {
   return at::functionalization::functionalize_aten_op_symint<ATEN_OP2(
       select, int)>::call(self, dim, index);
 }
 
-
-at::Tensor XLANativeFunctions::slice(const at::Tensor & self, int64_t dim, c10::optional<int64_t> start, c10::optional<int64_t> end, int64_t step) {
-  return at::functionalization::functionalize_aten_op<ATEN_OP2(slice, Tensor)>::call(self, dim, start, end, step);
+at::Tensor XLANativeFunctions::slice(const at::Tensor& self, int64_t dim,
+                                     c10::optional<int64_t> start,
+                                     c10::optional<int64_t> end, int64_t step) {
+  return at::functionalization::functionalize_aten_op<ATEN_OP2(
+      slice, Tensor)>::call(self, dim, start, end, step);
 }
 
-at::Tensor XLANativeFunctions::t(const at::Tensor & self) {
+at::Tensor XLANativeFunctions::t(const at::Tensor& self) {
   return at::functionalization::functionalize_aten_op<ATEN_OP(t)>::call(self);
 }
 
@@ -3315,8 +3320,9 @@ at::Tensor XLANativeFunctions::_trilinear(
     const at::Tensor& i1, const at::Tensor& i2, const at::Tensor& i3,
     at::IntArrayRef expand1, at::IntArrayRef expand2, at::IntArrayRef expand3,
     at::IntArrayRef sumdim, int64_t unroll_dim) {
-  return at::functionalization::functionalize_aten_op<ATEN_OP(_trilinear)>::call(i1, i2, i3, expand1, expand2, expand3, sumdim,
-                                unroll_dim);
+  return at::functionalization::functionalize_aten_op<ATEN_OP(
+      _trilinear)>::call(i1, i2, i3, expand1, expand2, expand3, sumdim,
+                         unroll_dim);
 }
 
 at::Tensor XLANativeFunctions::linalg_pinv(
@@ -3326,16 +3332,23 @@ at::Tensor XLANativeFunctions::linalg_pinv(
       linalg_pinv, atol_rtol_tensor)>::call(self, atol, rtol, hermitian);
 }
 
-at::Tensor XLANativeFunctions::masked_fill(const at::Tensor & self, const at::Tensor & mask, const at::Tensor & value) {
-  return at::functionalization::functionalize_aten_op<ATEN_OP2(masked_fill, Tensor)>::call(self, mask, value);
+at::Tensor XLANativeFunctions::masked_fill(const at::Tensor& self,
+                                           const at::Tensor& mask,
+                                           const at::Tensor& value) {
+  return at::functionalization::functionalize_aten_op<ATEN_OP2(
+      masked_fill, Tensor)>::call(self, mask, value);
 }
 
-at::Tensor XLANativeFunctions::masked_fill(const at::Tensor & self, const at::Tensor & mask, const at::Scalar & value) {
-  return at::functionalization::functionalize_aten_op<ATEN_OP2(masked_fill, Scalar)>::call(self, mask, value);
+at::Tensor XLANativeFunctions::masked_fill(const at::Tensor& self,
+                                           const at::Tensor& mask,
+                                           const at::Scalar& value) {
+  return at::functionalization::functionalize_aten_op<ATEN_OP2(
+      masked_fill, Scalar)>::call(self, mask, value);
 }
 
-at::Tensor XLANativeFunctions::mvlgamma(const at::Tensor & self, int64_t p) {
-  return at::functionalization::functionalize_aten_op<ATEN_OP(mvlgamma)>::call(self, p);
+at::Tensor XLANativeFunctions::mvlgamma(const at::Tensor& self, int64_t p) {
+  return at::functionalization::functionalize_aten_op<ATEN_OP(mvlgamma)>::call(
+      self, p);
 }
 
 at::Tensor XLANativeFunctions::diagonal_backward_symint(
@@ -3365,9 +3378,10 @@ at::Tensor XLANativeFunctions::_cdist_forward(
       bridge::GetXlaTensor(x1), bridge::GetXlaTensor(x2), p));
 }
 
-at::Tensor XLANativeFunctions::permute(const at::Tensor & self, at::IntArrayRef dims) {
-  return at::functionalization::functionalize_aten_op<ATEN_OP(
-      permute)>::call(self, dims);
+at::Tensor XLANativeFunctions::permute(const at::Tensor& self,
+                                       at::IntArrayRef dims) {
+  return at::functionalization::functionalize_aten_op<ATEN_OP(permute)>::call(
+      self, dims);
 }
 
 }  // namespace torch_xla

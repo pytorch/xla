@@ -1267,7 +1267,8 @@ class TestAtenXlaTensor(XlaTestCase):
     x.sum().backward()
     self.assertEqual(root.grad.tolist(), [[1, 2], [1, 1], [1, 1]])
 
-  @unittest.skip("functorch.functionalize doesn't seem to support updating .data directly")
+  @unittest.skip(
+      "functorch.functionalize doesn't seem to support updating .data directly")
   def test_view_data_update(self):
     a = torch.zeros(4, device=xm.xla_device())
     v = a.view(2, 2)
@@ -1287,7 +1288,8 @@ class TestAtenXlaTensor(XlaTestCase):
     b = torch.ones([2, 2])
     self.runAtenTest((a, b), func)
 
-  @unittest.skip("functorch.functionalize doesn't seem to support updating .data directly")
+  @unittest.skip(
+      "functorch.functionalize doesn't seem to support updating .data directly")
   def test_view_data_slice(self):
     t1 = torch.zeros(50, device=xm.xla_device())
     t1_slice = t1.data[:5]
