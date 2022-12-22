@@ -69,6 +69,7 @@ resource "google_cloudbuild_trigger" "build-trigger" {
   }
 
   substitutions = {
+    _RELEASE_VERSION = var.release
     _PLATFORM = var.platform
     _BUILD_ARGS = join(",", var.docker_build_args)
     _PYTHON_VERSION = var.python_version
