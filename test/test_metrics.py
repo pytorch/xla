@@ -1,4 +1,5 @@
 import os
+import time
 
 import torch
 import torch_xla
@@ -161,6 +162,28 @@ class MetricsTest(unittest.TestCase):
     xm.mark_step()
     report = met.metrics_report()
     self.assertIn("CachedCompile", report)
+
+  @unittest.skipIf(
+      xm.get_xla_supported_devices("GPU") or
+      xm.get_xla_supported_devices("TPU"), f"This test only works on CPU.")
+  def test_execute_time_metric(self):
+    # Initialize the client before starting the timer.
+    xm.xla_device()
+
+    begin = time.perf_counter_ns()
+    value = torch.randn(
+        10000, 10000, device=xm.xla_device()) * torch.randn(
+            10000, 10000, device=xm.xla_device())
+    value_mean = value.mean()
+    xm.mark_step()
+    cpu_value = value_mean.cpu()
+    wall_time_ns = time.perf_counter_ns() - begin
+    self.assertIn("ExecuteTime", met.metric_names())
+    execute_time_ns = met.metric_data('ExecuteTime')[1]
+    # Execution time should be the bulk of the wall time.
+    # Ensures that the metric does not measure the execution
+    # of `ExecuteComputation`, but the actual async time.
+    self.assertGreater(execute_time_ns, .5 * wall_time_ns)
 
 
 if __name__ == '__main__':
