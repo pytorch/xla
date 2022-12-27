@@ -195,9 +195,9 @@ function install_and_setup_conda() {
   conda activate "$ENVNAME"
   export CMAKE_PREFIX_PATH="$(dirname $(which conda))/../"
 
-  conda install -y nomkl numpy pyyaml setuptools cmake cffi typing tqdm coverage tensorboard hypothesis dataclasses
+  conda install -y numpy pyyaml setuptools cmake cffi typing tqdm coverage tensorboard hypothesis dataclasses
   if [[ $(uname -m) == "x86_64" ]]; then
-    pip install mkl==2022.2.1 mkl-include==2022.2.1
+    conda install -y mkl-include
   fi
 
   /usr/bin/yes | pip install --upgrade google-api-python-client
