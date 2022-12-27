@@ -786,7 +786,6 @@ XLAGraphExecutor::ScheduleSyncTensorsGraph(
         TF_VLOG(3) << "Executing IR graph hash "
                    << torch::lazy::HashToString(hash)
                    << " on devices: " << absl::StrJoin(devices, ",");
-        // TODO(jwtan): Remove the WrapXlaData when inherits LazyGraphExecutor.
         results = WrapXlaData(xla::ComputationClient::Get()->ExecuteReplicated(
             *async->cached_computation->computation->client_computation(),
             device_arguments, devices,
