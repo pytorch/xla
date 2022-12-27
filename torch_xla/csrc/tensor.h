@@ -87,10 +87,10 @@ class XLATensor : public torch::lazy::LazyTensor {
   static XLATensorPtr Create(
       torch::lazy::BackendDataPtr handle,
       c10::optional<at::ScalarType> logical_element_type = c10::nullopt);
-
   static XLATensorPtr Create(
       torch::lazy::Value ir_value, const torch::lazy::BackendDevice& device,
       c10::optional<at::ScalarType> logical_element_type = c10::nullopt);
+  static XLATensorPtr Create(std::shared_ptr<Data> data);
 
   // Create a new XLA tensor with the same metadata of the input tensor (with
   // possible overrides), and the new IR value.
@@ -260,10 +260,6 @@ class XLATensor : public torch::lazy::LazyTensor {
   // points to the same storage, and thus alias of each other.
   // FIXME(alanwaketan): Remove this once we have functionalization (bdhirsh).
   c10::Storage storage_;
-
-  // TODO: This is temporarily until we fully inherit LazyTensor and
-  // LazyGraphExecutor.
-  friend class XLAGraphExecutor;
 };
 
 }  // namespace torch_xla
