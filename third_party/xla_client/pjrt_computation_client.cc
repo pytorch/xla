@@ -61,9 +61,6 @@ PjRtComputationClient::PjRtComputationClient() {
   } else if (device_type == "TPU_C_API") {
     TF_VLOG(1) << "Initializing PjRt C API client...";
     client_ = std::move(xla::GetCApiClient("TPU").value());
-    // TODO(wcromar): remove this when C API supports
-    // kImmutableUntilTransferCompletes
-    host_buffer_semantics_ = xla::PjRtClient::HostBufferSemantics::kZeroCopy;
   } else if (device_type == "GPU") {
     TF_VLOG(1) << "Initializing PjRt GPU client...";
     bool async = sys_util::GetEnvBool(env::kEnvPjrtAsyncGpuClient, true);
@@ -141,7 +138,8 @@ std::vector<ComputationClient::DataPtr> PjRtComputationClient::TransferToServer(
                 literal_pointer->untyped_data(),
                 literal_pointer->shape().element_type(),
                 literal_pointer->shape().dimensions(), byte_strides,
-                host_buffer_semantics_,
+                xla::PjRtClient::HostBufferSemantics::
+                    kImmutableUntilTransferCompletes,
                 [literal{std::move(literal)}]() { /* frees literal */ },
                 pjrt_device)
             .value());
@@ -258,29 +256,17 @@ std::vector<ComputationClient::ComputationPtr> PjRtComputationClient::Compile(
     std::unique_ptr<xla::PjRtLoadedExecutable> executable =
         ConsumeValue(client_->Compile(instance.computation, compile_options));
 
-    if (instance.is_sharded) {
-      const auto& hlo_modules = ConsumeValue(executable->GetHloModules());
-      HloComputation* hlo_computation = hlo_modules[0]->entry_computation();
-      xla::ProgramShape program_shape =
-          xla::ProgramShape(hlo_computation->ToProto().program_shape());
+    const auto& hlo_modules = ConsumeValue(executable->GetHloModules());
+    HloComputation* hlo_computation = hlo_modules[0]->entry_computation();
+    xla::ProgramShape program_shape =
+        xla::ProgramShape(hlo_computation->ToProto().program_shape());
 
-      std::shared_ptr<PjRtComputation> pjrt_computation =
-          std::make_shared<PjRtComputation>(
-              std::move(xla::XlaComputation(hlo_modules[0]->ToProto())),
-              program_shape, instance.devices, std::move(executable));
+    std::shared_ptr<PjRtComputation> pjrt_computation =
+        std::make_shared<PjRtComputation>(
+            std::move(xla::XlaComputation(hlo_modules[0]->ToProto())),
+            program_shape, instance.devices, std::move(executable));
 
-      computations.push_back(pjrt_computation);
-    } else {
-      // TODO(wcromar): Remove this case when C API supports GetHloModule
-      xla::ProgramShape program_shape =
-          instance.computation.GetProgramShape().value();
-      std::shared_ptr<PjRtComputation> pjrt_computation =
-          std::make_shared<PjRtComputation>(std::move(instance.computation),
-                                            program_shape, instance.devices,
-                                            std::move(executable));
-
-      computations.push_back(pjrt_computation);
-    }
+    computations.push_back(pjrt_computation);
 
     CreateCompileHandlesCounter()->AddValue(1);
   }
@@ -322,29 +308,25 @@ PjRtComputationClient::ExecuteComputation(
   execute_options.untuple_result = options.explode_tuple;
   execute_options.strict_shape_checking = false;
 
-  std::optional<PjRtFuture<Status>> returned_future;
   std::vector<std::unique_ptr<xla::PjRtBuffer>> results =
       pjrt_computation.executable
-          ->ExecuteSharded(buffers, pjrt_device, execute_options,
-                           returned_future, /*fill_future=*/true)
+          ->ExecuteSharded(buffers, pjrt_device, execute_options)
           .value();
-  // Signal that `ExecuteSharded` has completed for the ExecuteTime metric.
-  // Copies the `timed` shared pointer into the lambda.
-  returned_future->OnReady([timed](Status unused) mutable { timed.reset(); });
 
   std::vector<DataPtr> datas;
   datas.reserve(results.size());
   for (auto& result : results) {
     std::unique_ptr<xla::PjRtBuffer> buffer = std::move(result);
 
+    // Signal that `ExecuteSharded` has completed for the ExecuteTime metric.
+    // Copies the `timed` shared pointer into the lambda.
+    // TODO(wcromar): Use the `ExecuteSharded` future directly when it is
+    // implemented in the C API.
+    buffer->GetReadyFuture().OnReady(
+        [timed](Status unused) mutable { timed.reset(); });
+
     std::shared_ptr<PjRtData> data = std::make_shared<PjRtData>(
-        device,
-        // TODO(wcromar): just use `logical_on_device_shape` when it's supported
-        // in C API
-        client_->runtime_type() == xla::PjRtRuntimeType::kTfrt
-            ? buffer->on_device_shape()
-            : buffer->logical_on_device_shape().value(),
-        std::move(buffer));
+        device, buffer->on_device_shape(); std::move(buffer));
 
     datas.push_back(data);
   }

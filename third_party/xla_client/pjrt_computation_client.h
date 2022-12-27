@@ -125,10 +125,6 @@ class PjRtComputationClient : public ComputationClient {
   std::shared_ptr<PjRtClient> client_;
   std::unordered_map<std::string, xla::PjRtDevice* const> string_to_device_;
   std::shared_ptr<std::vector<std::string>> replication_devices_;
-  // TODO(wcromar): remove this when C API supports
-  // kImmutableUntilTransferCompletes
-  xla::PjRtClient::HostBufferSemantics host_buffer_semantics_ =
-      xla::PjRtClient::HostBufferSemantics::kImmutableUntilTransferCompletes;
 
   xla::PjRtDevice* StringToPjRtDevice(const std::string& device);
 
