@@ -47,7 +47,7 @@ RUN if [ "${git_clone}" = "true" ]; then github_branch="${release_version}" && \
   rm -rf xla && \
   git clone -b "${github_branch}" --recursive https://github.com/pytorch/xla && \
   cd / && \
-  git clone -b "${github_branch}" --recursive https://github.com/pytorch-tpu/examples tpu-examples; fi
+  git clone -b "master" --recursive https://github.com/pytorch-tpu/examples tpu-examples; fi
 
 RUN cd /pytorch && bash xla/scripts/build_torch_wheels.sh ${python_version} ${release_version}
 
