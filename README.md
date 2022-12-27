@@ -59,7 +59,7 @@ If a single TPU VM does not suit your requirment, you can consider using TPU Pod
 
 
 ## Available images and wheels
-The following pre-built docker images are available to run on Cloud TPU VMs (see [docker images](#DockerImage) for instructions):
+The following pre-built docker images are available to run on Cloud TPU VMs (see [this doc](https://cloud.google.com/tpu/docs/pytorch-xla-ug-tpu-vm#docker-tpuvm) for TPUVM and [this doc](https://github.com/pytorch/xla/blob/master/docs/gpu.md#docker) for GPU):
 
     * `gcr.io/tpu-pytorch/xla:r1.13_3.8_tpuvm`: The current stable version.
     * `gcr.io/tpu-pytorch/xla:r1.12_3.8_tpuvm`: The 1.12 release version.
