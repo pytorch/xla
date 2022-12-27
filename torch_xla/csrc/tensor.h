@@ -221,11 +221,11 @@ class XLATensor : public torch::lazy::LazyTensor {
             c10::optional<at::ScalarType> logical_element_type = c10::nullopt);
   XLATensor(std::shared_ptr<Data> data);
 
- private:
   static XLATensorPtr Create(
       std::shared_ptr<View> view, const torch::lazy::BackendDevice& device,
       c10::optional<at::ScalarType> logical_element_type = c10::nullopt);
 
+  // TODO(alanwaketan): Reuse the upstream one once Functionalization is done.
   void SetXlaData(torch::lazy::BackendDataPtr handle, bool sync);
 
   View::IrNode GetViewUpdate(const std::shared_ptr<View>& view) const;
