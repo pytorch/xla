@@ -61,19 +61,21 @@ If a single TPU VM does not suit your requirment, you can consider using TPU Pod
 ## Available images and wheels
 The following pre-built docker images are available to run on Cloud TPU VMs (see [docker images](#DockerImage) for instructions):
 
-    * `gcr.io/tpu-pytorch/xla:r1.13_3.8_tpuvm`: The current stable version.
-    * `gcr.io/tpu-pytorch/xla:r1.12_3.8_tpuvm`: The 1.12 release version.
-    * `gcr.io/tpu-pytorch/xla:nightly_3.8_tpuvm`: Nightly version using Python 3.7.
-    * `gcr.io/tpu-pytorch/xla:nightly_3.8_YYYYMMDD (e.g.: gcr.io/tpu-pytorch/xla:nightly_3.7_20220301)`.
+| Cloud TPU VMs Docker | Description |
+| --- | ----------- |
+| `gcr.io/tpu-pytorch/xla:r1.13_3.8_tpuvm` | The current stable version.
+| `gcr.io/tpu-pytorch/xla:r1.12_3.8_tpuvm` | The 1.12 release version.
+| `gcr.io/tpu-pytorch/xla:nightly_3.8_tpuvm` | Nightly version using Python 3.8.
+| `gcr.io/tpu-pytorch/xla:nightly_3.8_YYYYMMDD` | e.g.: nightly_3.8_20220301, nightly at a specified date
 
-We also have pre-built docker images to run on Cloud compute instances with GPUs (`CUDA 11.2`):
-
-    * `gcr.io/tpu-pytorch/xla:r1.13_3.7_cuda_11.2`: The current stable version.
-    * `gcr.io/tpu-pytorch/xla:r1.12_3.7_cuda_11.2`: The 1.12 release version.
-    * `gcr.io/tpu-pytorch/xla:nightly_3.7_cuda_11.2`: Nightly version using Python 3.7.
-    * `gcr.io/tpu-pytorch/xla:nightly_3.7_cuda_11.2_YYYYMMDD`.
-    * `gcr.io/tpu-pytorch/xla:nightly_3.8_cuda_11.2`: Nightly version using Python 3.7.
-    * `gcr.io/tpu-pytorch/xla:nightly_3.8_cuda_11.2_YYYYMMDD`. (only availiable after 20221128)
+| GPU CUDA 11.2 Docker | Description |
+| --- | ----------- |
+| `gcr.io/tpu-pytorch/xla:r1.13_3.7_cuda_11.2` | The current stable version.
+| `gcr.io/tpu-pytorch/xla:r1.12_3.7_cuda_11.2` | The 1.12 release version.
+| `gcr.io/tpu-pytorch/xla:nightly_3.7_cuda_11.2` | Nightly version using Python 3.7.
+| `gcr.io/tpu-pytorch/xla:nightly_3.7_cuda_11.2_YYYYMMDD`  | 
+| `gcr.io/tpu-pytorch/xla:nightly_3.8_cuda_11.2` | Nightly version using Python 3.7.
+| `gcr.io/tpu-pytorch/xla:nightly_3.8_cuda_11.2_YYYYMMDD` | (only availiable after 20221128)
 
 To run on [compute instances with GPUs](https://cloud.google.com/compute/docs/gpus/create-vm-with-gpus).
 
