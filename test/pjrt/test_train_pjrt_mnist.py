@@ -178,8 +178,6 @@ def train_mnist(flags):
 if __name__ == '__main__':
   torch.set_default_tensor_type('torch.FloatTensor')
 
-  print('TEST:', pjrt.device_attributes("xla:0"))
-  sys.exit(21)
   results = pjrt._run_multiprocess(train_mnist, FLAGS)
   print('Replica max_accuracy:', pprint.pformat(results))
   accuracy = np.mean(list(results.values()))
