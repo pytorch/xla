@@ -305,10 +305,11 @@ class ComputationClient {
 
   virtual int GetNumProcesses() const = 0;
 
-  using DeviceAttributes = std::variant<std::string, int64_t, std::vector<int64_t>, float>;
+  using DeviceAttributes =
+      std::variant<std::string, int64_t, std::vector<int64_t>, float>;
 
-  virtual std::map<std::string, DeviceAttributes>
-      GetDeviceAttributes(const std::string& device) = 0;
+  virtual std::map<std::string, DeviceAttributes> GetDeviceAttributes(
+      const std::string& device) = 0;
 
   virtual void SetReplicationDevices(
       std::shared_ptr<std::vector<std::string>> devices) = 0;

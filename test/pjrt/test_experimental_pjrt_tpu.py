@@ -250,6 +250,7 @@ class TestExperimentalPjrtTpu(parameterized.TestCase):
       self.assertIsInstance(device['coords'], list)
       self.assertIsInstance(device['core_on_chip'], int)
 
+
 class TestTpuCollectiveOps(parameterized.TestCase):
 
   @staticmethod
