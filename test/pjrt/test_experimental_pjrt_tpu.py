@@ -239,6 +239,16 @@ class TestExperimentalPjrtTpu(parameterized.TestCase):
           results,
           {i: torch.device(f'xla:{i}') for i in range(expected_num_devices)})
 
+  @staticmethod
+  def _device_attributes():
+    return pjrt.device_attributes(str(xm.xla_device()))
+
+  def test_device_attributes(self):
+    result = pjrt._run_multiprocess(self._device_attributes)
+    for device in result.values():
+      self.assertListEqual(['coords', 'core_on_chip'], list(device.keys()))
+      self.assertIsInstance(device['coords'], list)
+      self.assertIsInstance(device['core_on_chip'], int)
 
 class TestTpuCollectiveOps(parameterized.TestCase):
 
@@ -338,7 +348,6 @@ class TestTpuCollectiveOps(parameterized.TestCase):
     for ordinal, value in results.items():
       np.testing.assert_array_equal(value, [[[-ordinal] * len(results),
                                              list(range(len(results)))]])
-
 
 if __name__ == '__main__':
   absltest.main()
