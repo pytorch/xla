@@ -60,8 +60,8 @@ class PjRtComputationClient : public ComputationClient {
 
   int GetNumProcesses() const override;
 
-  std::map<std::string, DeviceAttributes>
-      GetDeviceAttributes(const std::string& device) override;
+  std::map<std::string, DeviceAttributes> GetDeviceAttributes(
+      const std::string& device) override;
 
   void SetReplicationDevices(
       std::shared_ptr<std::vector<std::string>> devices) override;
