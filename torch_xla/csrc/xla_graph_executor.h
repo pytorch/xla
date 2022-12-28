@@ -33,6 +33,7 @@ class XLAGraphExecutor : public torch::lazy::LazyGraphExecutor {
  public:
   static XLAGraphExecutor* Get();
 
+  // Override to use our own DeviceContextArena.
   void RegisterTensor(
       std::shared_ptr<torch::lazy::LazyTensor::Data> data) final;
   void UnregisterTensor(torch::lazy::LazyTensor::Data* data) final;
@@ -83,6 +84,7 @@ class XLAGraphExecutor : public torch::lazy::LazyGraphExecutor {
       c10::optional<at::ScalarType> logical_element_type,
       const torch::lazy::BackendDevice& device);
 
+  // Override to use our own DeviceContextArena.
   torch::lazy::Value GetRngSeed(const torch::lazy::BackendDevice& device) final;
   void SetRngSeed(const torch::lazy::BackendDevice& device,
                   uint64_t seed) final;
@@ -123,6 +125,7 @@ class XLAGraphExecutor : public torch::lazy::LazyGraphExecutor {
 
   // Marks an execution step, which allows the tensor framework to understand
   // the computation boundaries.
+  // Override to use our own DeviceContextArena.
   void MarkStep(const torch::lazy::BackendDevice& device) final;
 
   // Waits for all the outstanding operations on all the supplied devices.
@@ -136,8 +139,7 @@ class XLAGraphExecutor : public torch::lazy::LazyGraphExecutor {
   // We don't use the GetTensors given we have OpByOp mode.
   std::vector<at::Tensor> GetTensors(std::vector<XLATensorPtr>* tensors);
 
-  // XLATensor sharding annotation. ShardingSpec wraps xla::OpSharding and
-  // can be extended to hold other sharding information from the user.
+  // We don't use the upstream GetGraphHash as XLATensorPtr is used instead.
   torch::lazy::hash_t GetGraphHash(const std::vector<XLATensorPtr>& tensors);
 
   void MaybeDumpGraph(std::string name, torch::lazy::hash_t hash);
@@ -244,15 +246,18 @@ class XLAGraphExecutor : public torch::lazy::LazyGraphExecutor {
 
   // Gathers the XLA device data for all the input tensors, after an
   // asynchronous operation.
+  // TODO(alanwaketan): Reuse the upstream one once Functionalization is done.
   std::vector<torch::lazy::BackendDataPtr> GatherTensorsXlaData(
       const std::vector<XLATensorPtr>& tensors,
       absl::Span<const size_t> indices,
       absl::Span<const torch::lazy::BackendDataPtr> tensors_data);
 
+  // TODO(alanwaketan): Reuse the upstream one once Functionalization is done.
   std::vector<torch::lazy::Value> CollectRoots(
       const std::vector<XLATensorPtr>& tensors,
       absl::Span<const size_t> indices);
 
+  // TODO(alanwaketan): Reuse the upstream one once Functionalization is done.
   std::vector<torch::lazy::BackendDataPtr> SetTensorData(
       std::vector<XLATensorPtr>* tensors, const SyncTensorsConfig& config,
       absl::Span<const size_t> indices,
@@ -281,7 +286,6 @@ class XLAGraphExecutor : public torch::lazy::LazyGraphExecutor {
       std::vector<torch::lazy::BackendDataPtr> parameters_data,
       std::vector<torch::lazy::BackendDataPtr> tensors_data,
       ComputationCache::TypePtr cached_computation);
-
   std::shared_ptr<Async> ScheduleSyncTensorsGraph(
       std::vector<XLATensorPtr>* tensors, SyncTensorCollection* coll,
       std::vector<torch::lazy::BackendDataPtr> parameters_data,

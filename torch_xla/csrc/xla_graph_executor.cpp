@@ -81,8 +81,7 @@ std::vector<XLATensorPtr> XLAGraphExecutor::DeviceContextArena::GetLiveTensors(
       auto data =
           std::dynamic_pointer_cast<XLATensor::Data>(uid_wptr.second.lock());
       if (data != nullptr) {
-        tensors.push_back(
-            c10::make_intrusive<XLATensor>(XLATensor(std::move(data))));
+        tensors.push_back(XLATensor::Create(std::move(data)));
       }
     }
   };
@@ -786,7 +785,6 @@ XLAGraphExecutor::ScheduleSyncTensorsGraph(
         TF_VLOG(3) << "Executing IR graph hash "
                    << torch::lazy::HashToString(hash)
                    << " on devices: " << absl::StrJoin(devices, ",");
-        // TODO(jwtan): Remove the WrapXlaData when inherits LazyGraphExecutor.
         results = WrapXlaData(xla::ComputationClient::Get()->ExecuteReplicated(
             *async->cached_computation->computation->client_computation(),
             device_arguments, devices,
