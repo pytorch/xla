@@ -81,8 +81,7 @@ std::vector<XLATensorPtr> XLAGraphExecutor::DeviceContextArena::GetLiveTensors(
       auto data =
           std::dynamic_pointer_cast<XLATensor::Data>(uid_wptr.second.lock());
       if (data != nullptr) {
-        tensors.push_back(
-            XLATensor::Create(std::move(data)));
+        tensors.push_back(XLATensor::Create(std::move(data)));
       }
     }
   };
