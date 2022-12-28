@@ -315,6 +315,11 @@ class XrtComputationClient : public ComputationClient {
     XLA_ERROR() << __FUNCTION__ << " not implemented";
   }
 
+  std::map<std::string, std::variant<std::string, int64_t, std::vector<int64_t>, float>>
+  GetDeviceAttributes(const std::string& device) override {
+    XLA_ERROR() << __FUNCTION__ << " not implemented";
+  }
+
   void SetReplicationDevices(
       std::shared_ptr<std::vector<std::string>> devices) override;
 

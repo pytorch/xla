@@ -1173,6 +1173,17 @@ void InitXlaModuleBindings(py::module m) {
   m.def("_xla_get_device_ordinal", [](const std::string& device_str) {
     return bridge::AtenDeviceToXlaDevice(device_str).ordinal();
   });
+  m.def("_xla_get_device_attributes", [](const std::string& device_str) {
+    std::map<std::string, std::variant<std::string, int64_t, std::vector<int64_t>, float>> attributes =
+        xla::ComputationClient::Get()->GetDeviceAttributes(
+        bridge::AtenDeviceToXlaDevice(device_str).toString());
+
+    py::dict dict;
+    for (auto const& [name, value] : attributes) {
+      dict[py::str(name)] = py::cast(value);
+    }
+    return dict;
+  });
   m.def("_xla_set_rng_seed",
         [](uint64_t seed, const std::string& device) {
           SetRngSeed(seed, device);

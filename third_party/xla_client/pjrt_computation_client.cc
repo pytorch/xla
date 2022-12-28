@@ -443,6 +443,20 @@ int PjRtComputationClient::GetNumProcesses() const {
   return max_process_index + 1;
 };
 
+std::map<std::string, xla::PjRtDeviceAttribute>
+PjRtComputationClient::GetDeviceAttributes(const std::string& device) {
+  XLA_CHECK(string_to_device_.find(device) != string_to_device_.end())
+      << "Unknown device " << device;
+  const absl::flat_hash_map<std::string, xla::PjRtDeviceAttribute>& attributes =
+      string_to_device_[device]->Attributes();
+
+  std::map<std::string, xla::PjRtDeviceAttribute> map;
+  for (auto const& [name, value] : attributes) {
+    map[name] = value;
+  }
+  return map;
+}
+
 void PjRtComputationClient::SetReplicationDevices(
     std::shared_ptr<std::vector<std::string>> devices) {
   replication_devices_ = std::move(devices);

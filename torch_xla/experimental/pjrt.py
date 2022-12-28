@@ -152,6 +152,9 @@ def process_index() -> int:
 def process_count() -> int:
   return torch_xla._XLAC._xla_get_num_processes()
 
+@requires_pjrt
+def device_attributes(device: str) -> Dict[str, object]:
+  return torch_xla._XLAC._xla_get_device_attributes(device)
 
 def _merge_replica_results(
     replica_results: List[Tuple[int, R]]) -> Dict[int, R]:
