@@ -305,8 +305,6 @@ class ComputationClient {
 
   virtual int GetNumProcesses() const = 0;
 
-  // TODO: add a new variable for std::variant<std::string, int64_t, std::vector<int64_t>, float>
-  // maybe:
   using DeviceAttributes = std::variant<std::string, int64_t, std::vector<int64_t>, float>;
 
   virtual std::map<std::string, DeviceAttributes>
