@@ -96,6 +96,10 @@ XLATensorPtr XLATensor::Create(
   return xtensor;
 }
 
+XLATensorPtr XLATensor::Create(std::shared_ptr<Data> data) {
+  return c10::make_intrusive<XLATensor>(XLATensor(std::move(data)));
+}
+
 XLATensor::XLATensor(const at::Tensor& tensor,
                      const torch::lazy::BackendDevice& device)
     : XLATensor(std::make_shared<Data>(tensor, device)) {}

@@ -87,10 +87,10 @@ class XLATensor : public torch::lazy::LazyTensor {
   static XLATensorPtr Create(
       torch::lazy::BackendDataPtr handle,
       c10::optional<at::ScalarType> logical_element_type = c10::nullopt);
-
   static XLATensorPtr Create(
       torch::lazy::Value ir_value, const torch::lazy::BackendDevice& device,
       c10::optional<at::ScalarType> logical_element_type = c10::nullopt);
+  static XLATensorPtr Create(std::shared_ptr<Data> data);
 
   // Create a new XLA tensor with the same metadata of the input tensor (with
   // possible overrides), and the new IR value.
@@ -121,8 +121,10 @@ class XLATensor : public torch::lazy::LazyTensor {
   void ShallowCopyTo(XLATensorPtr dest) const;
 
   // Assigns the tensor value to the XLA tensor.
+  // TODO(alanwaketan): Reuse the upstream one once Functionalization is done.
   void SetTensor(at::Tensor tensor);
 
+  // TODO(alanwaketan): Reuse the upstream ones once Functionalization is done.
   void UpdateFromTensor(at::Tensor tensor, bool sync);
   void UpdateFromTensorOut(at::Tensor tensor);
   void UpdateFromTensorOut(const XLATensorPtr& tensor);
@@ -143,24 +145,27 @@ class XLATensor : public torch::lazy::LazyTensor {
 
   // Fetches the XLA data behind the tensor. If the tensor has a graph defining
   // its current value, executes the graph and fetches the XLA data result.
+  // TODO(alanwaketan): Reuse the upstream ones once Functionalization is done.
   torch::lazy::BackendDataPtr GetXlaData();
-
   void SetXlaData(torch::lazy::BackendDataPtr handle);
 
   // Retrieves the current IR XlaNode, or nullptr in case no active IR XlaNode
   // is available.
+  // TODO(alanwaketan): Reuse the upstream ones once Functionalization is done.
   torch::lazy::Value CurrentIrValue() const;
 
   // Retrieves the IR Node representing this XLATensor. One will be created if
   // missing. Note that although this is a const API, it actually changes the
   // internal state of the object.
+  // TODO(alanwaketan): Reuse the upstream ones once Functionalization is done.
   torch::lazy::Value GetIrValue() const;
-
   void SetIrValue(torch::lazy::Value ir_value, bool inplace = true);
   void SetInPlaceIrValue(torch::lazy::Value ir_value);
 
+  // TODO(alanwaketan): Reuse the upstream one once Functionalization is done.
   c10::optional<at::Tensor> CurrentTensorData() const;
 
+  // We don't use the upstream MakeOutputTensors to return XLATensorPtr instead.
   std::vector<XLATensorPtr> MakeOutputTensors(
       torch::lazy::NodePtr node, bool inherit_logical_type = true) const;
 
@@ -214,17 +219,13 @@ class XLATensor : public torch::lazy::LazyTensor {
   XLATensor(std::shared_ptr<View> view,
             const torch::lazy::BackendDevice& device,
             c10::optional<at::ScalarType> logical_element_type = c10::nullopt);
-
-  // TODO: This is temporarily until we fully inherit LazyTensor and
-  // LazyGraphExecutor.
- public:
   XLATensor(std::shared_ptr<Data> data);
 
- private:
   static XLATensorPtr Create(
       std::shared_ptr<View> view, const torch::lazy::BackendDevice& device,
       c10::optional<at::ScalarType> logical_element_type = c10::nullopt);
 
+  // TODO(alanwaketan): Reuse the upstream one once Functionalization is done.
   void SetXlaData(torch::lazy::BackendDataPtr handle, bool sync);
 
   View::IrNode GetViewUpdate(const std::shared_ptr<View>& view) const;
@@ -259,10 +260,6 @@ class XLATensor : public torch::lazy::LazyTensor {
   // points to the same storage, and thus alias of each other.
   // FIXME(alanwaketan): Remove this once we have functionalization (bdhirsh).
   c10::Storage storage_;
-
-  // TODO: This is temporarily until we fully inherit LazyTensor and
-  // LazyGraphExecutor.
-  friend class XLAGraphExecutor;
 };
 
 }  // namespace torch_xla
