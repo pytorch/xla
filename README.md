@@ -62,63 +62,63 @@ If a single TPU VM does not suit your requirment, you can consider using TPU Pod
 ### Docker
 The following pre-built docker images are available. For running dockers, check [this doc](https://cloud.google.com/tpu/docs/pytorch-xla-ug-tpu-vm#docker-tpuvm) for TPUVM and [this doc](https://github.com/pytorch/xla/blob/master/docs/gpu.md#docker) for GPU.
 
-| Cloud TPU VMs Docker | Version |
+| Version | Cloud TPU VMs Docker |
 | --- | ----------- |
-| `gcr.io/tpu-pytorch/xla:r1.13_3.8_tpuvm` | 1.13
-| `gcr.io/tpu-pytorch/xla:r1.12_3.8_tpuvm` | 1.12
-| `gcr.io/tpu-pytorch/xla:nightly_3.8_tpuvm` | nightly
-| `gcr.io/tpu-pytorch/xla:nightly_3.8_YYYYMMDD` | nightly at date
+1.13 | `gcr.io/tpu-pytorch/xla:r1.13_3.8_tpuvm` |
+1.12 | `gcr.io/tpu-pytorch/xla:r1.12_3.8_tpuvm` | 
+nightly | `gcr.io/tpu-pytorch/xla:nightly_3.8_tpuvm` |
+nightly at date | `gcr.io/tpu-pytorch/xla:nightly_3.8_YYYYMMDD` |
 
 <br/>
 
-| GPU CUDA 11.2 + Python 3.7 Docker | Version |
+| Version | GPU CUDA 11.2 + Python 3.7 Docker | 
 | --- | ----------- |
-| `gcr.io/tpu-pytorch/xla:r1.13_3.7_cuda_11.2` | 1.13
-| `gcr.io/tpu-pytorch/xla:r1.12_3.7_cuda_11.2` | 1.12
-| `gcr.io/tpu-pytorch/xla:nightly_3.7_cuda_11.2` | nightly
-| `gcr.io/tpu-pytorch/xla:nightly_3.7_cuda_11.2_YYYYMMDD`  | nightly at date
+1.13 | `gcr.io/tpu-pytorch/xla:r1.13_3.7_cuda_11.2` |
+1.12 | `gcr.io/tpu-pytorch/xla:r1.12_3.7_cuda_11.2` |
+nightly | `gcr.io/tpu-pytorch/xla:nightly_3.7_cuda_11.2` |
+nightly at date | `gcr.io/tpu-pytorch/xla:nightly_3.7_cuda_11.2_YYYYMMDD`  |
 
 <br/>
 
-| GPU CUDA 11.2 + Python 3.8 Docker | Version |
+| Version | GPU CUDA 11.2 + Python 3.8 Docker |
 | --- | ----------- |
-| `gcr.io/tpu-pytorch/xla:nightly_3.8_cuda_11.2` | nightly
-| `gcr.io/tpu-pytorch/xla:nightly_3.8_cuda_11.2_YYYYMMDD` | nightly at date(>=20221128)
+| nightly | `gcr.io/tpu-pytorch/xla:nightly_3.8_cuda_11.2` |
+| nightly at date(>=20221128) | `gcr.io/tpu-pytorch/xla:nightly_3.8_cuda_11.2_YYYYMMDD` |
 
 To run on [compute instances with GPUs](https://cloud.google.com/compute/docs/gpus/create-vm-with-gpus).
 
 ### Wheel
-| Cloud TPU VMs Wheel | Version |
+| Version | Cloud TPU VMs Wheel |
 | --- | ----------- |
-| `https://storage.googleapis.com/tpu-pytorch/wheels/tpuvm/torch_xla-1.13-cp38-cp38-linux_x86_64.whl` | 1.13
-| `https://storage.googleapis.com/tpu-pytorch/wheels/tpuvm/torch_xla-1.12-cp38-cp38-linux_x86_64.whl` | 1.12
-| `https://storage.googleapis.com/tpu-pytorch/wheels/tpuvm/torch_xla-1.11-cp38-cp38-linux_x86_64.whl` | 1.11
-| `https://storage.googleapis.com/tpu-pytorch/wheels/tpuvm/torch_xla-1.10-cp38-cp38-linux_x86_64.whl` | 1.10
-| `https://storage.googleapis.com/tpu-pytorch/wheels/tpuvm/torch_xla-1.9-cp38-cp38-linux_x86_64.whl` | 1.9
-| `https://storage.googleapis.com/tpu-pytorch/wheels/tpuvm/torch_xla-nightly-cp38-cp38-linux_x86_64.whl` | nightly
+| 1.13 | `https://storage.googleapis.com/tpu-pytorch/wheels/tpuvm/torch_xla-1.13-cp38-cp38-linux_x86_64.whl` |
+| 1.12 | `https://storage.googleapis.com/tpu-pytorch/wheels/tpuvm/torch_xla-1.12-cp38-cp38-linux_x86_64.whl` |
+| 1.11 | `https://storage.googleapis.com/tpu-pytorch/wheels/tpuvm/torch_xla-1.11-cp38-cp38-linux_x86_64.whl` |
+| 1.10 | `https://storage.googleapis.com/tpu-pytorch/wheels/tpuvm/torch_xla-1.10-cp38-cp38-linux_x86_64.whl` |
+| 1.9 | `https://storage.googleapis.com/tpu-pytorch/wheels/tpuvm/torch_xla-1.9-cp38-cp38-linux_x86_64.whl` |
+| nightly | `https://storage.googleapis.com/tpu-pytorch/wheels/tpuvm/torch_xla-nightly-cp38-cp38-linux_x86_64.whl` |
 
 <br/>
 
-| GPU Wheel + Python 3.7 | Version |
+| Version | GPU Wheel + Python 3.7 |
 | --- | ----------- |
-| `https://storage.googleapis.com/tpu-pytorch/wheels/cuda/112/torch_xla-1.13-cp37-cp37m-linux_x86_64.whl` | 1.13
-| `https://storage.googleapis.com/tpu-pytorch/wheels/cuda/112/torch_xla-1.12-cp37-cp37m-linux_x86_64.whl` | 1.12
-| `https://storage.googleapis.com/tpu-pytorch/wheels/cuda/112/torch_xla-1.11-cp37-cp37m-linux_x86_64.whl` | 1.11
-| `https://storage.googleapis.com/tpu-pytorch/wheels/cuda/112/torch_xla-nightly-cp37-cp37-linux_x86_64.whl` | nightly
+| 1.13 | `https://storage.googleapis.com/tpu-pytorch/wheels/cuda/112/torch_xla-1.13-cp37-cp37m-linux_x86_64.whl` |
+| 1.12 | `https://storage.googleapis.com/tpu-pytorch/wheels/cuda/112/torch_xla-1.12-cp37-cp37m-linux_x86_64.whl` |
+| 1.11 | `https://storage.googleapis.com/tpu-pytorch/wheels/cuda/112/torch_xla-1.11-cp37-cp37m-linux_x86_64.whl` |
+| nightly | `https://storage.googleapis.com/tpu-pytorch/wheels/cuda/112/torch_xla-nightly-cp37-cp37-linux_x86_64.whl` |
 
 <br/>
 
-| GPU Wheel + Python 3.8 | Version |
+| Version | GPU Wheel + Python 3.8 |
 | --- | ----------- |
-| `https://storage.googleapis.com/tpu-pytorch/wheels/cuda/112/torch_xla-nightly-cp38-cp38-linux_x86_64.whl` | nightly
+| nightly | `https://storage.googleapis.com/tpu-pytorch/wheels/cuda/112/torch_xla-nightly-cp38-cp38-linux_x86_64.whl` |
 
 <br/>
 
 | Colab TPU Wheel | Version |
 | --- | ----------- |
-| `https://storage.googleapis.com/tpu-pytorch/wheels/colab/torch_xla-1.13-cp37-cp37m-linux_x86_64.whl` | 1.13
-| `https://storage.googleapis.com/tpu-pytorch/wheels/colab/torch_xla-1.12-cp37-cp37m-linux_x86_64.whl` | 1.12
-| `https://storage.googleapis.com/tpu-pytorch/wheels/colab/torch_xla-1.11-cp37-cp37m-linux_x86_64.whl` | 1.11
+| 1.13 | `https://storage.googleapis.com/tpu-pytorch/wheels/colab/torch_xla-1.13-cp37-cp37m-linux_x86_64.whl` |
+| 1.12 | `https://storage.googleapis.com/tpu-pytorch/wheels/colab/torch_xla-1.12-cp37-cp37m-linux_x86_64.whl` |
+| 1.11 | `https://storage.googleapis.com/tpu-pytorch/wheels/colab/torch_xla-1.11-cp37-cp37m-linux_x86_64.whl` |
 
 You can also add `+yyyymmdd` after `torch_xla-nightly` to get the nightly wheel of a specified date. To get the companion pytorch nightly wheel, replace the `torch_xla` with `torch` on above wheel links.
 
