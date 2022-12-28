@@ -22,6 +22,7 @@ const char* const kEnvPjRtTpuMaxInflightComputations =
     "PJRT_TPU_MAX_INFLIGHT_COMPUTATIONS";
 const char* const kEnvPjrtAsyncCpuClient = "PJRT_CPU_ASYNC_CLIENT";
 const char* const kEnvPjrtAsyncGpuClient = "PJRT_GPU_ASYNC_CLIENT";
+const char* const kEnvLibtpuLibraryPath = "LIBTPU_LIBRARY_PATH";
 
 }  // namespace env
 }  // namespace xla
