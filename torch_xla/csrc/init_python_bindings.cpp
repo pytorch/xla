@@ -1174,9 +1174,10 @@ void InitXlaModuleBindings(py::module m) {
     return bridge::AtenDeviceToXlaDevice(device_str).ordinal();
   });
   m.def("_xla_get_device_attributes", [](const std::string& device_str) {
-    std::map<std::string, std::variant<std::string, int64_t, std::vector<int64_t>, float>> attributes =
-        xla::ComputationClient::Get()->GetDeviceAttributes(
-        bridge::AtenDeviceToXlaDevice(device_str).toString());
+    std::map<std::string, 
+             std::variant<std::string, int64_t, std::vector<int64_t>, float>> 
+        attributes = xla::ComputationClient::Get()->GetDeviceAttributes(
+            bridge::AtenDeviceToXlaDevice(device_str).toString());
 
     py::dict dict;
     for (auto const& [name, value] : attributes) {
