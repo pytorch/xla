@@ -307,8 +307,9 @@ class ComputationClient {
 
   // TODO: add a new variable for std::variant<std::string, int64_t, std::vector<int64_t>, float>
   // maybe:
-  // using DeviceAttributes = std::variant<std::string, int64_t, std::vector<int64_t>, float>;
-  virtual std::map<std::string, std::variant<std::string, int64_t, std::vector<int64_t>, float>>
+  using DeviceAttributes = std::variant<std::string, int64_t, std::vector<int64_t>, float>;
+
+  virtual std::map<std::string, DeviceAttributes>
       GetDeviceAttributes(const std::string& device) = 0;
 
   virtual void SetReplicationDevices(

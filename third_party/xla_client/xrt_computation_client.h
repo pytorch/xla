@@ -315,7 +315,7 @@ class XrtComputationClient : public ComputationClient {
     XLA_ERROR() << __FUNCTION__ << " not implemented";
   }
 
-  std::map<std::string, std::variant<std::string, int64_t, std::vector<int64_t>, float>>
+  std::map<std::string, DeviceAttributes>
   GetDeviceAttributes(const std::string& device) override {
     XLA_ERROR() << __FUNCTION__ << " not implemented";
   }

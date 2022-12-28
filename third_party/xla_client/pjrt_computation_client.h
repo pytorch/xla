@@ -60,7 +60,7 @@ class PjRtComputationClient : public ComputationClient {
 
   int GetNumProcesses() const override;
 
-  std::map<std::string, xla::PjRtDeviceAttribute>
+  std::map<std::string, DeviceAttributes>
       GetDeviceAttributes(const std::string& device) override;
 
   void SetReplicationDevices(
