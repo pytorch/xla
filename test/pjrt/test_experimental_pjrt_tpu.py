@@ -246,7 +246,7 @@ class TestExperimentalPjrtTpu(parameterized.TestCase):
   def test_device_attributes(self):
     result = pjrt._run_multiprocess(self._device_attributes)
     for device in result.values():
-      self.assertListEqual(['coords', 'core_on_chip'], list(device.keys()))
+      self.assertCountEqual(['coords', 'core_on_chip'], list(device.keys()))
       self.assertIsInstance(device['coords'], list)
       self.assertIsInstance(device['core_on_chip'], int)
 

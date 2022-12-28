@@ -8,6 +8,7 @@
 #include <string>
 #include <vector>
 
+#include "absl/container/flat_hash_map.h"
 #include "absl/types/optional.h"
 #include "absl/types/span.h"
 #include "tensorflow/compiler/xla/client/xla_computation.h"
@@ -305,11 +306,12 @@ class ComputationClient {
 
   virtual int GetNumProcesses() const = 0;
 
-  using DeviceAttributes =
+  using DeviceAttribute =
       std::variant<std::string, int64_t, std::vector<int64_t>, float>;
 
-  virtual std::map<std::string, DeviceAttributes> GetDeviceAttributes(
-      const std::string& device) = 0;
+  virtual const absl::flat_hash_map<std::string,
+                                    xla::ComputationClient::DeviceAttribute>&
+  GetDeviceAttributes(const std::string& device) = 0;
 
   virtual void SetReplicationDevices(
       std::shared_ptr<std::vector<std::string>> devices) = 0;
