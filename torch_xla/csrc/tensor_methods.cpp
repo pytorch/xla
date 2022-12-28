@@ -647,6 +647,35 @@ XLATensorPtr XLATensor::add(
       logical_element_type);
 }
 
+XLATensorPtr XLATensor::addcdiv(const XLATensorPtr& input,
+                                const at::Scalar& value,
+                                const XLATensorPtr& tensor1,
+                                const XLATensorPtr& tensor2) {
+  torch::lazy::Value constant = GetIrValueForScalar(
+      value, tensor1->shape().get().element_type(), input->GetDevice());
+  torch::lazy::Value div = tensor1->GetIrValue() / tensor2->GetIrValue();
+  return input->CreateFrom(input->GetIrValue() + div * constant);
+}
+
+void XLATensor::addcdiv_(XLATensorPtr& input, const at::Scalar& value,
+                         const XLATensorPtr& tensor1,
+                         const XLATensorPtr& tensor2) {
+  torch::lazy::Value constant = GetIrValueForScalar(
+      value, tensor1->shape().get().element_type(), input->GetDevice());
+  torch::lazy::Value div = tensor1->GetIrValue() / tensor2->GetIrValue();
+  input->SetInPlaceIrValue(input->GetIrValue() + div * constant);
+}
+
+XLATensorPtr XLATensor::addcmul(const XLATensorPtr& input,
+                                const at::Scalar& value,
+                                const XLATensorPtr& tensor1,
+                                const XLATensorPtr& tensor2) {
+  torch::lazy::Value constant = GetIrValueForScalar(
+      value, tensor1->shape().get().element_type(), input->GetDevice());
+  torch::lazy::Value mul = tensor1->GetIrValue() * tensor2->GetIrValue();
+  return input->CreateFrom(input->GetIrValue() + mul * constant);
+}
+
 XLATensorPtr XLATensor::addmm(const XLATensorPtr& input,
                               const XLATensorPtr& weight,
                               const XLATensorPtr& bias) {
