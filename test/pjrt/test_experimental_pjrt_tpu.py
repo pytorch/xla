@@ -349,5 +349,6 @@ class TestTpuCollectiveOps(parameterized.TestCase):
       np.testing.assert_array_equal(value, [[[-ordinal] * len(results),
                                              list(range(len(results)))]])
 
+
 if __name__ == '__main__':
   absltest.main()
