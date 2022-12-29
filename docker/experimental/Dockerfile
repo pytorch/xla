@@ -48,7 +48,7 @@ WORKDIR /pytorch
 COPY torch_patches/ torch_patches/
 RUN bash -c 'torch_pin=$(cat torch_patches/.torch_pin &); git fetch origin ${torch_pin:-master}; git checkout FETCH_HEAD'
 RUN git submodule update --init --recursive
-RUN for p in torch_patches/*.diff; do patch -N -p1 < $p; done
+RUN find -wholename 'torch_patches/*.diff' | xargs -r patch -N -p1 -i
 
 
 # Disable CUDA for PyTorch
@@ -71,8 +71,7 @@ FROM builder AS artifacts
 
 COPY tf_patches/ tf_patches/
 COPY third_party/ third_party/
-
-RUN for p in tf_patches/*.diff; do patch -d third_party/tensorflow -N -p1 < $p; done
+RUN find -wholename 'tf_patches/*.diff' | xargs -r patch -d third_party/tensorflow -N -p1 -i
 
 COPY build_torch_xla_libs.sh .
 
