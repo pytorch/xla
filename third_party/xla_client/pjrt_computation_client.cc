@@ -445,9 +445,7 @@ int PjRtComputationClient::GetNumProcesses() const {
 
 const absl::flat_hash_map<std::string, xla::ComputationClient::DeviceAttribute>&
 PjRtComputationClient::GetDeviceAttributes(const std::string& device) {
-  XLA_CHECK(string_to_device_.find(device) != string_to_device_.end())
-      << "Unknown device " << device;
-  return string_to_device_[device]->Attributes();
+  return PjRtComputationClient::StringToPjRtDevice(device)->Attributes();
 }
 
 void PjRtComputationClient::SetReplicationDevices(
