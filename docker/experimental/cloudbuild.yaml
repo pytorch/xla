@@ -15,9 +15,6 @@ steps:
     _BUILD_ARGS=${_BUILD_ARGS}
     args=(${_BUILD_ARGS//,/ })
     flags=(
-      --cache=${_CACHE}
-      --cache-ttl=${_CACHE_TTL}
-      --cache-repo=${_CACHE_IMAGE_URL}
       --build-arg=bazel_jobs=${_BAZEL_JOBS}
       --build-arg=python_version=${_PYTHON_VERSION}
       # TODO: use current version in setup.py
@@ -28,31 +25,27 @@ steps:
   - name: docker
     path: /docker
 - id: 'build-wheels'
-  name: 'gcr.io/kaniko-project/executor:debug'
+  name: 'gcr.io/cloud-builders/docker'
   entrypoint: sh
   args:
   - -cx
   - |
-    /kaniko/executor \
-      --dockerfile=docker/experimental/Dockerfile \
-      --destination=${_ARTIFACTS_IMAGE_URL} \
-      --tar-path=/docker/artifacts-image.tar \
+    docker build . \
+      --file=docker/experimental/Dockerfile \
+      --tag=${_ARTIFACTS_IMAGE_URL} \
       --target=artifacts \
       $(cat /docker/flags.txt)
   timeout: 14400s
   volumes:
   - name: docker
     path: /docker
-- id: 'import-artifacts'
-  name: gcr.io/cloud-builders/docker
+- id: 'push-artifacts'
+  name: 'gcr.io/cloud-builders/docker'
   args:
-  - load
-  - --input
-  - /docker/artifacts-image.tar
-  volumes:
-  - name: docker
-    path: /docker
+  - push
+  - ${_ARTIFACTS_IMAGE_URL}
 - id: 'copy-wheels'
+  waitFor: ['build-wheels']
   name: ${_ARTIFACTS_IMAGE_URL}
   entrypoint: bash
   args:
@@ -64,6 +57,7 @@ steps:
   - name: 'wheels'
     path: /wheels
 - id: 'install-twine'
+  waitFor: ['build-wheels']
   name: python
   entrypoint: pip
   args:
@@ -87,19 +81,33 @@ steps:
     path: /wheels
 - id: 'release-image'
   waitFor: ['build-wheels']
-  name: 'gcr.io/kaniko-project/executor:debug'
+  name: 'gcr.io/cloud-builders/docker'
   entrypoint: sh
   args:
   - -cx
   - |
-    /kaniko/executor \
-      --dockerfile=docker/experimental/Dockerfile \
-      --destination=${_RELEASE_IMAGE_URL} \
+    docker build . \
+      --file=docker/experimental/Dockerfile \
+      --tag=${_RELEASE_IMAGE_URL} \
       $(cat /docker/flags.txt)
   timeout: 14400s
   volumes:
   - name: docker
     path: /docker
+- id: 'push-release'
+  name: 'gcr.io/cloud-builders/docker'
+  args:
+  - push
+  - ${_RELEASE_IMAGE_URL}
+- id: 'tag-image'
+  waitFor: ['push-artifacts', 'push-release']
+  name: 'google/cloud-sdk'
+  entrypoint: bash
+  args:
+  - -c
+  - |
+    gcloud artifacts docker tags add ${_ARTIFACTS_IMAGE_URL} ${_ARTIFACTS_IMAGE_URL}-$(date +%Y%m%d)
+    gcloud artifacts docker tags add ${_RELEASE_IMAGE_URL} ${_RELEASE_IMAGE_URL}-$(date +%Y%m%d)
 substitutions:
   _ARTIFACT_REGISTRY_REGION: us
   _RELEASE_VERSION: 'nightly'  # or rX.Y
