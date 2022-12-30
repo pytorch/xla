@@ -443,6 +443,11 @@ int PjRtComputationClient::GetNumProcesses() const {
   return max_process_index + 1;
 };
 
+const absl::flat_hash_map<std::string, xla::ComputationClient::DeviceAttribute>&
+PjRtComputationClient::GetDeviceAttributes(const std::string& device) {
+  return PjRtComputationClient::StringToPjRtDevice(device)->Attributes();
+}
+
 void PjRtComputationClient::SetReplicationDevices(
     std::shared_ptr<std::vector<std::string>> devices) {
   replication_devices_ = std::move(devices);
