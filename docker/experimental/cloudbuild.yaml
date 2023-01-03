@@ -121,15 +121,15 @@ substitutions:
   _RELEASE_IMAGE_URL: ${_IMAGE_REPOSITORY}/torch-xla:${_IMAGE_TAG}
   _ARTIFACTS_IMAGE_URL: ${_IMAGE_REPOSITORY}/artifacts:${_IMAGE_TAG}
   _CACHE_IMAGE_URL: ${_IMAGE_REPOSITORY}/cache
-  _BAZEL_JOBS: '16'
+  _BAZEL_JOBS: '32'
   _CACHE: 'true'
   _CACHE_TTL: '18h'
   _BUILD_ARGS: tpuvm=1,cuda=0
 options:
   # To run in a test project, either point to your pool or replace this with
   # `machineType`. You may have to reduce _BAZEL_JOBS.
-  # workerPool: projects/tpu-pytorch/locations/us-central1/wheel_build
-  machineType: E2_HIGHCPU_32
+  workerPool: projects/tpu-pytorch/locations/us-central1/wheel_build
+  # machineType: E2_HIGHCPU_32
   dynamic_substitutions: true
   substitution_option: 'ALLOW_LOOSE'
 timeout: 24000s
