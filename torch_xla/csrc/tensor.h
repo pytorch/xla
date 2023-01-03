@@ -62,26 +62,34 @@ class XLATensor : public torch::lazy::LazyTensor {
   struct Data : public torch::lazy::LazyTensor::Data {
     Data(torch::lazy::BackendDataPtr handle,
          const torch::lazy::BackendDevice& device,
-         c10::optional<at::ScalarType> logical_element_type)
+         c10::optional<at::ScalarType> logical_element_type,
+         ShardingSpecPtr sharding = nullptr)
         : torch::lazy::LazyTensor::Data(handle, device),
-          logical_element_type(logical_element_type) {}
+          logical_element_type(logical_element_type),
+          sharding(sharding) {}
     Data(torch::lazy::Value ir_value, const torch::lazy::BackendDevice& device,
-         c10::optional<at::ScalarType> logical_element_type)
+         c10::optional<at::ScalarType> logical_element_type,
+         ShardingSpecPtr sharding = nullptr)
         : torch::lazy::LazyTensor::Data(ir_value, device),
-          logical_element_type(logical_element_type) {}
-    Data(at::Tensor tensor_data, const torch::lazy::BackendDevice& device)
+          logical_element_type(logical_element_type),
+          sharding(sharding) {}
+    Data(at::Tensor tensor_data, const torch::lazy::BackendDevice& device,
+         ShardingSpecPtr sharding = nullptr)
         : torch::lazy::LazyTensor::Data(tensor_data, device),
-          logical_element_type(tensor_data.scalar_type()) {}
+          logical_element_type(tensor_data.scalar_type()),
+          sharding(sharding) {}
     Data(std::shared_ptr<View> view, const torch::lazy::BackendDevice& device,
-         c10::optional<at::ScalarType> logical_element_type)
+         c10::optional<at::ScalarType> logical_element_type,
+         ShardingSpecPtr sharding = nullptr)
         : torch::lazy::LazyTensor::Data(device),
           view(std::move(view)),
-          logical_element_type(logical_element_type) {}
+          logical_element_type(logical_element_type),
+          sharding(sharding) {}
 
     ~Data();
 
     std::shared_ptr<View> view;
-    ShardingSpecPtr sharding = nullptr;
+    ShardingSpecPtr sharding;
     // TODO: remove this in favor of torch::lazy::Shape within ir_value.
     c10::optional<at::ScalarType> logical_element_type;
   };
