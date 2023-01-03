@@ -321,7 +321,8 @@ PjRtComputationClient::ExecuteComputation(
 
   // Signal that `ExecuteSharded` has completed for the ExecuteTime metric.
   // Copies the `timed` shared pointer into the lambda.
-  // TODO(wcromar): Uncomment this when we update past TF commit TODO
+  // TODO(wcromar): Uncomment this when we update past TF commit
+  // b8f59020ea0e9e6fba0e9c5e7be88271703eaf9e
   // returned_future->OnReady([timed](Status unused) mutable { timed.reset();
   // });
 
