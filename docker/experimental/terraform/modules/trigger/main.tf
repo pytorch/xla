@@ -49,7 +49,7 @@ resource "google_cloudbuild_trigger" "build-trigger" {
   filename = "docker/experimental/cloudbuild.yaml"
 
   dynamic "github" {
-    # HACK: `source_to_build` is mutually exclusive with `github`
+    # HACK: only add `github` section at all when building on push
     for_each = var.build_on_push ? [1] : []
 
     content {
