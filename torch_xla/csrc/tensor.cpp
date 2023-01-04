@@ -226,8 +226,6 @@ void XLATensor::SetShardingSpec(const ShardingSpec& sharding) {
       !ShardingUtil::EqualShardingSpecs(sharding, *sharding_spec())) {
     TORCH_LAZY_COUNTER("SetShardingSpec", 1);
     data()->sharding = std::make_shared<ShardingSpec>(sharding);
-    // dynamic_cast<XlaNode*>(GetIrValue().node.get())
-    //     ->SetSharding(sharding.sharding);
   }
 }
 void XLATensor::ClearShardingSpec() {

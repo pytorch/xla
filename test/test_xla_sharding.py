@@ -129,8 +129,7 @@ class BasicShardingTest(XlaShardingTest):
     xt2 = xt.clone()
 
     # check the original sharding spec is preserved after clone()
-    self.assertEqual(sharding_spec,
-        torch_xla._XLAC._get_xla_sharding_spec(xt))
+    self.assertEqual(sharding_spec, torch_xla._XLAC._get_xla_sharding_spec(xt))
 
     # check the cloned sharding spec is the same
     self.assertEqual(
