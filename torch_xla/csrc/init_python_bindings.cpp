@@ -1716,7 +1716,6 @@ void InitXlaModuleBindings(py::module m) {
               parameters_data.push_back(dataptr);
             }
           }
-
           XLAGraphExecutor::Get()->MaybeDumpGraph("dynamo", hash);
           auto results = XLAGraphExecutor::Get()->ExecuteComputationWithBarrier(
               cachedComputation->computation, parameters_data, device);

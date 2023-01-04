@@ -209,12 +209,21 @@ class XLAGraphExecutor : public torch::lazy::LazyGraphExecutor {
         const std::vector<size_t>* indices,
         DebugUtil::GraphFormat format = DebugUtil::GetDefaultGraphFormat());
 
+    void SaveOutputShapes(torch::lazy::hash_t hash,
+                          std::vector<xla::Shape> outptu_shapes);
+
     std::string GetGraphByHash(torch::lazy::hash_t hash);
 
+    std::vector<xla::Shape>* GetOutputShapesByHash(torch::lazy::hash_t hash);
+
    private:
+    // Below two maps are used for dynamo integration.
     std::unordered_map<torch::lazy::hash_t, std::string,
                        torch::lazy::HashReducer>
         hash_to_graph_map;
+    std::unordered_map<torch::lazy::hash_t, std::vector<xla::Shape>,
+                       torch::lazy::HashReducer>
+        hash_to_output_shape_map;
     // We override this to use TensorToXlaData().
     torch::lazy::Value IrValueFromScalar(
         const at::Scalar& value, at::ScalarType scalar_type,
