@@ -62,7 +62,6 @@ class TORCH_API XLASymNodeImpl : public c10::SymNodeImpl {
 
   torch::lazy::NodePtr node() { return node_; }
 
-
  private:
   torch::lazy::NodePtr node_;
 };

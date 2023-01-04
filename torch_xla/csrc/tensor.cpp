@@ -631,7 +631,7 @@ c10::SymNode XLASymNodeImpl::add(const c10::SymNode& other) {
 
 c10::SymNode XLASymNodeImpl::sub(const c10::SymNode& other) {
   std::cerr << "xw32, file=" << __FILE__ << ", line=" << __LINE__ << "function=" << __FUNCTION__ << ": " << std::endl;
-  TORCH_INTERNAL_ASSERT(false);
+  XLA_CHECK(false) << "XLASymNodeImpl::" << __FUNCTION << " has not been implemented.";
 }
 
 c10::SymNode XLASymNodeImpl::mul(const c10::SymNode& other) {
@@ -642,12 +642,12 @@ c10::SymNode XLASymNodeImpl::mul(const c10::SymNode& other) {
 
 c10::SymNode XLASymNodeImpl::truediv(const c10::SymNode& other) {
   std::cerr << "xw32, file=" << __FILE__ << ", line=" << __LINE__ << "function=" << __FUNCTION__ << ": " << std::endl;
-  TORCH_INTERNAL_ASSERT(false);
+  XLA_CHECK(false) << "XLASymNodeImpl::" << __FUNCTION << " has not been implemented.";
 }
 
 c10::SymNode XLASymNodeImpl::pow(const c10::SymNode& other) {
   std::cerr << "xw32, file=" << __FILE__ << ", line=" << __LINE__ << "function=" << __FUNCTION__ << ": " << std::endl;
-  TORCH_INTERNAL_ASSERT(false);
+  XLA_CHECK(false) << "XLASymNodeImpl::" << __FUNCTION << " has not been implemented.";
 }
 
 c10::SymNode XLASymNodeImpl::floordiv(const c10::SymNode& other) {
@@ -658,7 +658,7 @@ c10::SymNode XLASymNodeImpl::floordiv(const c10::SymNode& other) {
 
 c10::SymNode XLASymNodeImpl::mod(const c10::SymNode& other) {
   std::cerr << "xw32, file=" << __FILE__ << ", line=" << __LINE__ << "function=" << __FUNCTION__ << ": " << std::endl;
-  TORCH_INTERNAL_ASSERT(false);
+  XLA_CHECK(false) << "XLASymNodeImpl::" << __FUNCTION << " has not been implemented.";
 }
 
 c10::SymNode XLASymNodeImpl::eq(const c10::SymNode& other) {
@@ -670,62 +670,62 @@ c10::SymNode XLASymNodeImpl::eq(const c10::SymNode& other) {
 
 c10::SymNode XLASymNodeImpl::ne(const c10::SymNode& other) {
   std::cerr << "xw32, file=" << __FILE__ << ", line=" << __LINE__ << "function=" << __FUNCTION__ << ": " << std::endl;
-  TORCH_INTERNAL_ASSERT(false);
+  XLA_CHECK(false) << "XLASymNodeImpl::" << __FUNCTION << " has not been implemented.";
 }
 
 c10::SymNode XLASymNodeImpl::gt(const c10::SymNode& other) {
   std::cerr << "xw32, file=" << __FILE__ << ", line=" << __LINE__ << "function=" << __FUNCTION__ << ": " << std::endl;
-  TORCH_INTERNAL_ASSERT(false);
+  XLA_CHECK(false) << "XLASymNodeImpl::" << __FUNCTION << " has not been implemented.";
 }
 
 c10::SymNode XLASymNodeImpl::lt(const c10::SymNode& other){
   std::cerr << "xw32, file=" << __FILE__ << ", line=" << __LINE__ << "function=" << __FUNCTION__ << ": " << std::endl;
-  TORCH_INTERNAL_ASSERT(false);
+  XLA_CHECK(false) << "XLASymNodeImpl::" << __FUNCTION << " has not been implemented.";
 }
 
 c10::SymNode XLASymNodeImpl::le(const c10::SymNode& other){
   std::cerr << "xw32, file=" << __FILE__ << ", line=" << __LINE__ << "function=" << __FUNCTION__ << ": " << std::endl;
-  TORCH_INTERNAL_ASSERT(false);
+  XLA_CHECK(false) << "XLASymNodeImpl::" << __FUNCTION << " has not been implemented.";
 }
 
 c10::SymNode XLASymNodeImpl::ge(const c10::SymNode& other){
   std::cerr << "xw32, file=" << __FILE__ << ", line=" << __LINE__ << "function=" << __FUNCTION__ << ": " << std::endl;
-  TORCH_INTERNAL_ASSERT(false);
+  XLA_CHECK(false) << "XLASymNodeImpl::" << __FUNCTION << " has not been implemented.";
 }
 
 c10::SymNode XLASymNodeImpl::ceil(){
   std::cerr << "xw32, file=" << __FILE__ << ", line=" << __LINE__ << "function=" << __FUNCTION__ << ": " << std::endl;
-  TORCH_INTERNAL_ASSERT(false);
+  XLA_CHECK(false) << "XLASymNodeImpl::" << __FUNCTION << " has not been implemented.";
 }
 
 c10::SymNode XLASymNodeImpl::floor() {
   std::cerr << "xw32, file=" << __FILE__ << ", line=" << __LINE__ << "function=" << __FUNCTION__ << ": " << std::endl;
-  TORCH_INTERNAL_ASSERT(false);
+  XLA_CHECK(false) << "XLASymNodeImpl::" << __FUNCTION << " has not been implemented.";
 }
 
 c10::SymNode XLASymNodeImpl::neg() {
   std::cerr << "xw32, file=" << __FILE__ << ", line=" << __LINE__ << "function=" << __FUNCTION__ << ": " << std::endl;
-  TORCH_INTERNAL_ASSERT(false);
+  XLA_CHECK(false) << "XLASymNodeImpl::" << __FUNCTION << " has not been implemented.";
 }
 
 c10::SymNode XLASymNodeImpl::min(const c10::SymNode& other) {
   std::cerr << "xw32, file=" << __FILE__ << ", line=" << __LINE__ << "function=" << __FUNCTION__ << ": " << std::endl;
-  TORCH_INTERNAL_ASSERT(false);
+  XLA_CHECK(false) << "XLASymNodeImpl::" << __FUNCTION << " has not been implemented.";
 }
 
 c10::SymNode XLASymNodeImpl::max(const c10::SymNode& other) {
   std::cerr << "xw32, file=" << __FILE__ << ", line=" << __LINE__ << "function=" << __FUNCTION__ << ": " << std::endl;
-  TORCH_INTERNAL_ASSERT(false);
+  XLA_CHECK(false) << "XLASymNodeImpl::" << __FUNCTION << " has not been implemented.";
 }
 
 c10::SymNode XLASymNodeImpl::clone() {
   std::cerr << "xw32, file=" << __FILE__ << ", line=" << __LINE__ << "function=" << __FUNCTION__ << ": " << std::endl;
-  TORCH_INTERNAL_ASSERT(false);
+  XLA_CHECK(false) << "XLASymNodeImpl::" << __FUNCTION << " has not been implemented.";
 }
 
 c10::SymNode XLASymNodeImpl::sym_float() {
   std::cerr << "xw32, file=" << __FILE__ << ", line=" << __LINE__ << "function=" << __FUNCTION__ << ": " << std::endl;
-  TORCH_INTERNAL_ASSERT(false);
+  XLA_CHECK(false) << "XLASymNodeImpl::" << __FUNCTION << " has not been implemented.";
 }
 
 c10::SymNode XLASymNodeImpl::wrap_int(int64_t num) {
@@ -735,17 +735,17 @@ c10::SymNode XLASymNodeImpl::wrap_int(int64_t num) {
 
 c10::SymNode XLASymNodeImpl::wrap_float(double num) {
   std::cerr << "xw32, file=" << __FILE__ << ", line=" << __LINE__ << "function=" << __FUNCTION__ << ": " << std::endl;
-  TORCH_INTERNAL_ASSERT(false);
+  XLA_CHECK(false) << "XLASymNodeImpl::" << __FUNCTION << " has not been implemented.";
 }
 
 int64_t XLASymNodeImpl::guard_int(const char* file, int64_t line) {
   std::cerr << "xw32, file=" << __FILE__ << ", line=" << __LINE__ << "function=" << __FUNCTION__ << ": " << std::endl;
-  TORCH_INTERNAL_ASSERT(false);
+  XLA_CHECK(false) << "XLASymNodeImpl::" << __FUNCTION << " has not been implemented.";
 }
 
 double XLASymNodeImpl::guard_float(const char* file, int64_t line) {
   std::cerr << "xw32, file=" << __FILE__ << ", line=" << __LINE__ << "function=" << __FUNCTION__ << ": " << std::endl;
-  TORCH_INTERNAL_ASSERT(false);
+  XLA_CHECK(false) << "XLASymNodeImpl::" << __FUNCTION << " has not been implemented.";
 }
 
 int64_t XLASymNodeImpl::int_() {

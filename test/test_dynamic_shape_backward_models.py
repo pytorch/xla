@@ -5,29 +5,30 @@ import unittest
 import torch
 import torch_xla.core.xla_model as xm
 import torch_xla.debug.metrics as met
+import torch.nn as nn
+import torch.nn.functional as F
 
 xla_dev = xm.xla_device()
+# self.assertNotEqual(os.environ['XLA_EXPERIMENTAL'], '')
 
 class Feedforward(torch.nn.Module):
   def __init__(self, input_size, hidden_size):
       super().__init__()
-      self.input_size = input_size
-      self.hidden_size  = hidden_size
-      self.fc1 = torch.nn.Linear(self.input_size, self.hidden_size)
-      self.fc1.weight.data.fill_(0.01)
-      self.fc1.bias.data.fill_(0.01)
-      self.relu = torch.nn.ReLU()
-      self.fc2 = torch.nn.Linear(self.hidden_size, 1)
-      self.fc2.weight.data.fill_(0.01)
-      self.fc2.bias.data.fill_(0.01)
-      self.sigmoid = torch.nn.Sigmoid()
+      self.conv1 = nn.Conv2d(3, 6, 5)
+      self.pool = nn.MaxPool2d(2, 2)
+      self.conv2 = nn.Conv2d(6, 16, 5)
+      self.fc1 = nn.Linear(16 * 5 * 5, 120)
+      self.fc2 = nn.Linear(120, 84)
+      self.fc3 = nn.Linear(84, 10)
 
   def forward(self, x):
-      hidden = self.fc1(x)
-      relu = self.relu(hidden)
-      output = self.fc2(relu)
-      output = self.sigmoid(output)
-      return output
+      x = self.pool(F.relu(self.conv1(x)))
+      x = self.pool(F.relu(self.conv2(x)))
+      x = torch.flatten(x, 1) # flatten all dimensions except batch
+      x = F.relu(self.fc1(x))
+      x = F.relu(self.fc2(x))
+      x = self.fc3(x)
+      return x
 
 def create_dynamic_test_data(num_samples, num_features, device):
   x_test = torch.ones(num_samples, num_features)
@@ -37,9 +38,12 @@ def create_dynamic_test_data(num_samples, num_features, device):
 
   x_test_xla = x_test.to(device)
   x_test_nonzero_dev = torch.nonzero(x_test_xla.int()).float()
+  x_train = torch.ones(3, 32, 32, device=device).expand(x_test_nonzero_dev.shape[0], 3, 32, 32)
+  print('x_test_nonzero_dev.shape=', x_test_nonzero_dev.shape)
   y_test_xla = y_test.to(device)
   y_test_nonzero_dev = torch.nonzero(y_test_xla.int()).float().squeeze()
-  return x_test_nonzero_dev, y_test_nonzero_dev
+  print('y_test_nonzero_dev.shape=', y_test_nonzero_dev.shape)
+  return x_train, y_test_nonzero_dev
 
 num_features = 2
 num_test_samples = 5
@@ -80,6 +84,8 @@ def test(model, loss_fn):
 train(model, loss_fn=criterion, optimizer=optimizer)
 test(model, loss_fn=criterion)
 
+print('Test passed.')
+print(met.metrics_report())
 
 if __name__ == '__main__':
   test = unittest.main()

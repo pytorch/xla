@@ -110,6 +110,7 @@ absl::optional<size_t> GetRootNodeId(
 std::vector<AttrTag> GetNodeTags(const torch::lazy::Node* node) {
   std::string node_string = node->ToString();
   std::string op_string = node->op().ToString();
+  std::cout << "xw32, file=" << __FILE__ << ", line=" << __LINE__ << "function=" << __FUNCTION__ << ": node_string=" << node_string << ", op_string=" << op_string << std::endl;
   std::string::size_type pos = node_string.find(op_string);
   XLA_CHECK_NE(pos, std::string::npos) << node_string << " : " << op_string;
   pos += op_string.size();

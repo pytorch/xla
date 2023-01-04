@@ -7,6 +7,7 @@
 #include "torch_xla/csrc/tensor.h"
 #include "torch_xla/csrc/tensor_util.h"
 #include "torch_xla/csrc/xla_graph_executor.h"
+#include <iostream>
 
 namespace torch_xla {
 
@@ -107,7 +108,10 @@ int64_t SizeEq::getDynamicValue() const {
   const torch::lazy::DimensionNode* dim_node_1 = DimCast(operand(1));
   XLA_CHECK(dim_node_0);
   XLA_CHECK(dim_node_1);
-  return dim_node_0->getDynamicValue() == dim_node_1->getDynamicValue() ? 1 : 0;
+  auto dim_node_0_dv = dim_node_0->getDynamicValue();
+  auto dim_node_1_dv = dim_node_1->getDynamicValue();
+  std::cout << "xw32, file=" << __FILE__ << ", line=" << __LINE__ << "function=" << __FUNCTION__ << ": dim_node_0->getDynamicValue()=" << dim_node_0_dv << ", dim_node_1->getDynamicValue()=" << dim_node_1_dv << std::endl;
+  return dim_node_0_dv == dim_node_1_dv ? 1 : 0;
 }
 
 std::string SizeEq::ToString() const { return "SizeEq"; }

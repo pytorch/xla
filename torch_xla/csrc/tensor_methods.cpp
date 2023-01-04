@@ -2191,6 +2191,7 @@ XLATensorPtr sigmoid(const XLATensorPtr& input) {
 
 XLATensorPtr sigmoid_backward(const XLATensorPtr& grad_output,
                               const XLATensorPtr& output) {
+  std::cout << "xw32, file=" << __FILE__ << ", line=" << __LINE__ << "function=" << __FUNCTION__ << ": grad_output->shape()=" << grad_output->shape() << ", output->shape()=" << output->shape() << std::endl;                           
   return grad_output->CreateFrom(
       SigmoidBackward(grad_output->GetIrValue(), output->GetIrValue()));
 }
