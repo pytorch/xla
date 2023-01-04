@@ -604,9 +604,9 @@ bool XLASymNodeImpl::is_float() {
 }
 
 c10::SymNode XLASymNodeImpl::add(const c10::SymNode& other) {
-  auto pother = dynamic_cast<XLASymNodeImpl*>(other.get());
-  auto nadd = torch::lazy::MakeNode<SizeAdd>(node(), pother->node());
-  return c10::make_intrusive<XLASymNodeImpl>(nadd);
+  auto p_other = dynamic_cast<XLASymNodeImpl*>(other.get());
+  auto n_add = torch::lazy::MakeNode<SizeAdd>(node(), p_other->node());
+  return c10::make_intrusive<XLASymNodeImpl>(n_add);
 }
 
 c10::SymNode XLASymNodeImpl::sub(const c10::SymNode& other) {
@@ -615,9 +615,9 @@ c10::SymNode XLASymNodeImpl::sub(const c10::SymNode& other) {
 }
 
 c10::SymNode XLASymNodeImpl::mul(const c10::SymNode& other) {
-  auto pother = dynamic_cast<XLASymNodeImpl*>(other.get());
-  auto nmul = torch::lazy::MakeNode<torch_xla::SizeMul>(node(), pother->node());
-  return c10::make_intrusive<XLASymNodeImpl>(nmul);
+  auto p_other = dynamic_cast<XLASymNodeImpl*>(other.get());
+  auto n_mul = torch::lazy::MakeNode<torch_xla::SizeMul>(node(), p_other->node());
+  return c10::make_intrusive<XLASymNodeImpl>(n_mul);
 }
 
 c10::SymNode XLASymNodeImpl::truediv(const c10::SymNode& other) {
@@ -631,9 +631,9 @@ c10::SymNode XLASymNodeImpl::pow(const c10::SymNode& other) {
 }
 
 c10::SymNode XLASymNodeImpl::floordiv(const c10::SymNode& other) {
-  auto pother = dynamic_cast<XLASymNodeImpl*>(other.get());
-  auto ndiv = torch::lazy::MakeNode<SizeDiv>(node(), pother->node());
-  return c10::make_intrusive<XLASymNodeImpl>(ndiv);
+  auto p_other = dynamic_cast<XLASymNodeImpl*>(other.get());
+  auto n_div = torch::lazy::MakeNode<SizeDiv>(node(), p_other->node());
+  return c10::make_intrusive<XLASymNodeImpl>(n_div);
 }
 
 c10::SymNode XLASymNodeImpl::mod(const c10::SymNode& other) {
@@ -642,9 +642,9 @@ c10::SymNode XLASymNodeImpl::mod(const c10::SymNode& other) {
 }
 
 c10::SymNode XLASymNodeImpl::eq(const c10::SymNode& other) {
-  auto pother = dynamic_cast<XLASymNodeImpl*>(other.get());
-  auto neq = torch::lazy::MakeNode<SizeEq>(node(), pother->node());
-  return c10::make_intrusive<XLASymNodeImpl>(neq);
+  auto p_other = dynamic_cast<XLASymNodeImpl*>(other.get());
+  auto n_eq = torch::lazy::MakeNode<SizeEq>(node(), p_other->node());
+  return c10::make_intrusive<XLASymNodeImpl>(n_eq);
 }
 
 c10::SymNode XLASymNodeImpl::ne(const c10::SymNode& other) {
