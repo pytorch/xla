@@ -2535,6 +2535,8 @@ at::Tensor XLANativeFunctions::sigmoid(const at::Tensor& self) {
 at::Tensor XLANativeFunctions::sigmoid_backward(const at::Tensor& grad_output,
                                                 const at::Tensor& output) {
   TORCH_LAZY_FN_COUNTER("xla::");
+  std::cout << "xw32, file=" << __FILE__ << ", line=" << __LINE__ << "function=" << __FUNCTION__ << ": grad_output.sizes()=" << grad_output.sizes() << ", output.sym_sizes()=" << output.sym_sizes() << std::endl;
+  // std::cout << "xw32, file=" << __FILE__ << ", line=" << __LINE__ << "function=" << __FUNCTION__ << ": grad_output=" << grad_output << ", output=" << output << std::endl;
   return bridge::AtenFromXlaTensor(tensor_methods::sigmoid_backward(
       bridge::GetXlaTensor(grad_output), bridge::GetXlaTensor(output)));
 }
