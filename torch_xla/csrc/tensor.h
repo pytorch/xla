@@ -89,6 +89,10 @@ class XLATensor : public torch::lazy::LazyTensor {
     ~Data();
 
     std::shared_ptr<View> view;
+    // The user provided sharding spec is attached to `XLATensor::Data`
+    // and all sharding look-up should refer to it as source of truth.
+    // A copy of the sharding spec is attached to the IR node via
+    // `SetShardingSpec` and also during the sync tensor collection.
     ShardingSpecPtr sharding;
     // TODO: remove this in favor of torch::lazy::Shape within ir_value.
     c10::optional<at::ScalarType> logical_element_type;
