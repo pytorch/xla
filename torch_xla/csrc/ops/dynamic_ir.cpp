@@ -112,6 +112,25 @@ int64_t SizeEq::getDynamicValue() const {
 
 std::string SizeEq::ToString() const { return "SizeEq"; }
 
+SizeNe::SizeNe(torch::lazy::Value a, torch::lazy::Value b)
+    : XlaNode(torch::lazy::OpKind{c10::Symbol::fromQualString("aten::ne")},
+              {a, b}, xla::ShapeUtil::MakeShape(xla::S64, {}), 1) {
+  const torch::lazy::DimensionNode* dim_node_0 = DimCast(operand(0));
+  const torch::lazy::DimensionNode* dim_node_1 = DimCast(operand(1));
+  XLA_CHECK(dim_node_0);
+  XLA_CHECK(dim_node_1);
+};
+
+int64_t SizeNe::getDynamicValue() const {
+  const torch::lazy::DimensionNode* dim_node_0 = DimCast(operand(0));
+  const torch::lazy::DimensionNode* dim_node_1 = DimCast(operand(1));
+  XLA_CHECK(dim_node_0);
+  XLA_CHECK(dim_node_1);
+  return dim_node_0->getDynamicValue() != dim_node_1->getDynamicValue() ? 1 : 0;
+}
+
+std::string SizeNe::ToString() const { return "SizeNe"; }
+
 SizeConstant::SizeConstant(int64_t val) : Scalar(c10::Scalar{val}, xla::S64){};
 
 SizeMul::SizeMul(torch::lazy::Value a, torch::lazy::Value b)

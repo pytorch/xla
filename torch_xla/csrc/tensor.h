@@ -33,6 +33,7 @@ class TORCH_API XLASymNodeImpl : public c10::SymNodeImpl {
   bool is_int() override;
   bool is_float() override;
   c10::SymNode eq(const c10::SymNode& other) override;
+  c10::SymNode ne(const c10::SymNode& other) override;
   c10::SymNode add(const c10::SymNode& other) override;
   c10::SymNode mul(const c10::SymNode& other) override;
   c10::SymNode floordiv(const c10::SymNode& other) override;
