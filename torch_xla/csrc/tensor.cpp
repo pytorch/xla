@@ -616,7 +616,8 @@ c10::SymNode XLASymNodeImpl::sub(const c10::SymNode& other) {
 
 c10::SymNode XLASymNodeImpl::mul(const c10::SymNode& other) {
   auto p_other = dynamic_cast<XLASymNodeImpl*>(other.get());
-  auto n_mul = torch::lazy::MakeNode<torch_xla::SizeMul>(node(), p_other->node());
+  auto n_mul =
+      torch::lazy::MakeNode<torch_xla::SizeMul>(node(), p_other->node());
   return c10::make_intrusive<XLASymNodeImpl>(n_mul);
 }
 
