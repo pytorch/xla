@@ -81,7 +81,8 @@ XLATensorPtr XLATensor::Create(
   ShardingSpecPtr sharding = nullptr;
   if (ir_value) {
     auto* xla_node = dynamic_cast<XlaNode*>(ir_value.node.get());
-    sharding = xla_node->GetSharding();
+    sharding =
+        std::make_shared<XLATensor::ShardingSpec>(*xla_node->GetSharding());
   }
   XLATensorPtr xtensor = c10::make_intrusive<XLATensor>(
       XLATensor(std::move(ir_value), device, logical_element_type, sharding));
