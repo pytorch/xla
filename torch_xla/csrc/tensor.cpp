@@ -226,8 +226,6 @@ void XLATensor::SetShardingSpec(const ShardingSpec& sharding) {
       !ShardingUtil::EqualShardingSpecs(sharding, *sharding_spec())) {
     TORCH_LAZY_COUNTER("SetShardingSpec", 1);
     data()->sharding = std::make_shared<ShardingSpec>(sharding);
-    dynamic_cast<XlaNode*>(GetIrValue().node.get())
-        ->SetSharding(sharding.sharding);
   }
 }
 void XLATensor::ClearShardingSpec() {
@@ -301,26 +299,6 @@ void XLATensor::SetInPlaceIrValue(torch::lazy::Value ir_value) {
 }
 
 void XLATensor::AssignIrValue(torch::lazy::Value ir_value) const {
-  ShardingSpecPtr sharding = sharding_spec();
-  if (sharding != nullptr) {
-    if (!ir_value) {
-      // User provided sharding annotation is accompanied with sharded data
-      // handle. If sharded, we should create a tensor node with the current
-      // data handle instead. If there is no device data (e.g., view), then use
-      // the current IR to preserve the sharding.
-      // TODO(yeounoh) this may not be needed when functionalization is fully
-      // implemented.
-      torch::lazy::BackendDataPtr handle = CurrentDataHandle();
-      if (handle != nullptr) {
-        ir_value = CreateTensorNode(handle, /*read_only=*/false);
-      } else {
-        ir_value = CurrentIrValue();
-      }
-      XLA_CHECK(ir_value);
-    }
-    dynamic_cast<XlaNode*>(ir_value.node.get())
-        ->SetSharding(sharding->sharding);
-  }
   data()->ir_value = std::move(ir_value);
   data()->generation += 1;
 }
