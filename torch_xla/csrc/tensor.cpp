@@ -77,16 +77,14 @@ XLATensorPtr XLATensor::Create(
 XLATensorPtr XLATensor::Create(
     torch::lazy::Value ir_value, const torch::lazy::BackendDevice& device,
     c10::optional<at::ScalarType> logical_element_type) {
-  XLATensorPtr xtensor = c10::make_intrusive<XLATensor>(
-      XLATensor(std::move(ir_value), device, logical_element_type));
   // Preserve sharding if a new tensor is created from a sharded IR node.
+  ShardingSpecPtr sharding = nullptr;
   if (ir_value) {
     auto* xla_node = dynamic_cast<XlaNode*>(ir_value.node.get());
-    if (xla_node->GetSharding() != nullptr) {
-      ShardingSpec sharding = ShardingSpec{*xla_node->GetSharding()};
-      xtensor->SetShardingSpec(sharding);
-    }
+    sharding = xla_node->GetSharding();
   }
+  XLATensorPtr xtensor = c10::make_intrusive<XLATensor>(
+      XLATensor(std::move(ir_value), device, logical_element_type, sharding));
   XLAGraphExecutor::Get()->RegisterTensor(xtensor->data());
   if (UseEagerDebugMode()) {
     std::vector<XLATensorPtr> xtensors({xtensor});
