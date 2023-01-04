@@ -114,6 +114,14 @@ XLATensor::XLATensor(torch::lazy::Value ir_value,
                      c10::optional<at::ScalarType> logical_element_type)
     : XLATensor(std::make_shared<Data>(std::move(ir_value), device,
                                        logical_element_type)) {
+  // Preserve sharding if a new tensor is created from a sharded IR node.
+  if (CurrentIrValue()) {
+    auto* xla_node = dynamic_cast<XlaNode*>(CurrentIrValue().node.get());
+    if (xla_node->GetSharding()) {
+      ShardingSpec sharding = ShardingSpec{*xla_node->GetSharding()};
+      SetShardingSpec(sharding);
+    }
+  }
   TryLimitGraphSize();
 }
 
@@ -210,19 +218,6 @@ torch::lazy::BackendDataPtr XLATensor::GetXlaData() {
   return data()->handle;
 }
 
-XLATensor::ShardingSpecPtr XLATensor::sharding_spec() const {
-  torch::lazy::Value ir_value = CurrentIrValue();
-  if (ir_value) {
-    XLA_CHECK(ir_value.node != nullptr) << "Tyring to access a null cursor";
-    auto sharding = dynamic_cast<XlaNode*>(ir_value.node.get())->GetSharding();
-    if (sharding == nullptr) {
-      return nullptr;
-    }
-    return std::make_shared<ShardingSpec>(*sharding);
-  }
-  return nullptr;
-}
-
 void XLATensor::SetShardingSpec(const ShardingSpec& sharding) {
   // Existing annotation must be cleared explicitly. We do not clear and
   // overwrite the existing sharding on the user's behalf. This is a no-op if
@@ -230,17 +225,32 @@ void XLATensor::SetShardingSpec(const ShardingSpec& sharding) {
   if (sharding_spec() == nullptr ||
       !ShardingUtil::EqualShardingSpecs(sharding, *sharding_spec())) {
     TORCH_LAZY_COUNTER("SetShardingSpec", 1);
-    XLA_CHECK(GetIrValue().node != nullptr) << "Tyring to access a null cursor";
+    data()->sharding = std::make_shared<ShardingSpec>(sharding);
     dynamic_cast<XlaNode*>(GetIrValue().node.get())
         ->SetSharding(sharding.sharding);
   }
 }
 void XLATensor::ClearShardingSpec() {
+  data()->sharding = nullptr;
   torch::lazy::Value ir_value = CurrentIrValue();
   if (ir_value) {
     // This should be a no-op if there is no sharding.
     dynamic_cast<XlaNode*>(ir_value.node.get())->ClearSharding();
   }
+}
+
+XLATensor::ShardingSpecPtr XLATensor::sharding_spec() const {
+  ShardingSpecPtr sharding = data()->sharding;
+  torch::lazy::Value ir_value = CurrentIrValue();
+  if (sharding && ir_value) {
+    // The copy of sharding annotation on the IR node should be the same.
+    auto* xla_node = dynamic_cast<XlaNode*>(ir_value.node.get());
+    if (xla_node->GetSharding()) {
+      XLA_CHECK(ShardingUtil::EqualShardingSpecs(
+          *sharding, ShardingSpec{*xla_node->GetSharding()}));
+    }
+  }
+  return sharding;
 }
 
 void XLATensor::SetXlaData(torch::lazy::BackendDataPtr handle) {
@@ -291,16 +301,17 @@ void XLATensor::SetInPlaceIrValue(torch::lazy::Value ir_value) {
 }
 
 void XLATensor::AssignIrValue(torch::lazy::Value ir_value) const {
-  ShardingSpecPtr sharding = sharding_spec();
-  if (sharding != nullptr) {
-    if (!ir_value) {
-      // Create a tensor node if applicable, re-use the current IR otherwise.
-      // TODO(yeounoh) this has some performance implications for convolution.
-      ir_value = GetIrValue();
+  if (ir_value) {
+    std::string debug_str = ir_value->ToString();
+    auto sharding = dynamic_cast<XlaNode*>(ir_value.node.get())->GetSharding();
+    if (sharding) {
+      debug_str += " with sharding " + sharding->DebugString();
     }
-    dynamic_cast<XlaNode*>(ir_value.node.get())
-        ->SetSharding(sharding->sharding);
+    TF_VLOG(5) << "Assign IR value " << debug_str;
+  } else {
+    TF_VLOG(5) << "Assign empty IR value";
   }
+
   data()->ir_value = std::move(ir_value);
   data()->generation += 1;
 }
@@ -460,6 +471,9 @@ at::Tensor XLATensor::ToTensor(bool detached) {
 void XLATensor::ShallowCopyTo(XLATensorPtr dest) const {
   dest->SetScalarType(data()->logical_element_type);
   dest->SetIrValue(GetIrValue(), /*inplace=*/false);
+  if (sharding_spec() != nullptr) {
+    dest->SetShardingSpec(*sharding_spec());
+  }
 }
 
 void XLATensor::SetScalarType(
