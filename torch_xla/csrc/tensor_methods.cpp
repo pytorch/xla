@@ -896,7 +896,11 @@ XLATensorPtr clamp(const XLATensorPtr& input,
 }
 
 XLATensorPtr clone(const XLATensorPtr& input) {
-  return input->CreateFrom(input->GetIrValue());
+  XLATensorPtr cloned = input->CreateFrom(input->GetIrValue());
+  if (input->sharding_spec() != nullptr) {
+    cloned->SetShardingSpec(*input->sharding_spec());
+  }
+  return cloned;
 }
 
 XLATensorPtr constant_pad_nd(const XLATensorPtr& input,
@@ -2150,6 +2154,11 @@ void copy_(XLATensorPtr& input, XLATensorPtr& src) {
           torch::lazy::ToVector<int64_t>(input_shape.get().dimensions()));
     }
     input->UpdateFromTensor(std::move(src_tensor), /*sync=*/false);
+  }
+
+  // Preserves sharding when copying.
+  if (src->sharding_spec() != nullptr) {
+    input->SetShardingSpec(*src->sharding_spec());
   }
 }
 

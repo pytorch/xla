@@ -463,6 +463,15 @@ XLAGraphExecutor::SyncTensorCollection XLAGraphExecutor::CollectSyncTensors(
           // Add only tensors which need to be synced.
           coll.hash = torch::lazy::HashCombine(coll.hash, ir_value.hash());
           coll.indices.push_back(i);
+
+          // `sharding_spec()` checks sharding equality. If IR node has no
+          // sharding, then sync XLATensor sharding to the IR node. XLATensor's
+          // sharding takes the precedence as the source of the truth.
+          XLATensor::ShardingSpecPtr sharding = tensors[i]->sharding_spec();
+          if (sharding) {
+            dynamic_cast<XlaNode*>(ir_value.node.get())
+                ->SetSharding(sharding->sharding);
+          }
         }
       } else if (config.force_ltc_data) {
         // The tensor only has at::Tensor data. We need to queue it for a
