@@ -197,7 +197,8 @@ function install_and_setup_conda() {
 
   conda install -y numpy pyyaml setuptools cmake cffi typing tqdm coverage tensorboard hypothesis dataclasses
   if [[ $(uname -m) == "x86_64" ]]; then
-    conda install -y mkl-include
+    # Overwrite mkl packages here, since nomkl conflicts with the anaconda env setup.
+    pip install mkl==2022.2.1 mkl_include==2022.2.1
   fi
 
   /usr/bin/yes | pip install --upgrade google-api-python-client
