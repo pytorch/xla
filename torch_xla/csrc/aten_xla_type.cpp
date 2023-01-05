@@ -8,6 +8,7 @@
 #include <ATen/native/TypeProperties.h>
 
 #include <mutex>
+#include <iostream>
 
 #include "tensorflow/compiler/xla/xla_client/debug_macros.h"
 #include "tensorflow/compiler/xla/xla_client/metrics.h"
@@ -2527,6 +2528,7 @@ at::Tensor& XLANativeFunctions::selu_(at::Tensor& self) {
 }
 
 at::Tensor XLANativeFunctions::sigmoid(const at::Tensor& self) {
+  std::cerr << "xw32, file=" << __FILE__ << ", line=" << __LINE__ << "function=" << __FUNCTION__ << ": " << std::endl;
   TORCH_LAZY_FN_COUNTER("xla::");
   return bridge::AtenFromXlaTensor(
       tensor_methods::sigmoid(bridge::GetXlaTensor(self)));
