@@ -21,7 +21,7 @@ steps:
       --build-arg=bazel_jobs=${_BAZEL_JOBS}
       --build-arg=python_version=${_PYTHON_VERSION}
       # TODO: use current version in setup.py
-      --build-arg=package_version="1.14.0.dev$(date +%Y%m%d)${_PLATFORM:++$_PLATFORM}"
+      --build-arg=package_version="2.0.0.dev$(date +%Y%m%d)${_PLATFORM:++$_PLATFORM}"
       ${args[@]/#/--build-arg=})
     echo ${flags[@]} | tee /docker/flags.txt
   volumes:
@@ -128,7 +128,8 @@ substitutions:
 options:
   # To run in a test project, either point to your pool or replace this with
   # `machineType`. You may have to reduce _BAZEL_JOBS.
-  workerPool: projects/tpu-pytorch/locations/us-central1/wheel_build
+  pool:
+    name: projects/tpu-pytorch/locations/us-central1/wheel_build
   # machineType: E2_HIGHCPU_32
   dynamic_substitutions: true
   substitution_option: 'ALLOW_LOOSE'
