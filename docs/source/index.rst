@@ -100,4 +100,3 @@ test
 .. mdinclude:: ../pjrt.md
 .. mdinclude:: ../ddp.md
 .. mdinclude:: ../fsdp.md
-.. mdinclude:: ../../OP_LOWERING_GUIDE.md
