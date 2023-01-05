@@ -98,8 +98,10 @@ XlaOpVector SizeAdd::Lower(LoweringContext* loctx) const {
 
 SizeEq::SizeEq(torch::lazy::Value a, torch::lazy::Value b)
     : XlaNode(torch::lazy::OpKind{c10::Symbol::fromQualString("aten::eq")},
-              {a, b}, xla::ShapeUtil::MakeShape(
-                  GetShapeDimensionType(/*device=*/nullptr), {}), 1) {
+              {a, b},
+              xla::ShapeUtil::MakeShape(
+                  GetShapeDimensionType(/*device=*/nullptr), {}),
+              1) {
   const torch::lazy::DimensionNode* dim_node_0 = DimCast(operand(0));
   const torch::lazy::DimensionNode* dim_node_1 = DimCast(operand(1));
   XLA_CHECK(dim_node_0);
@@ -120,8 +122,10 @@ SizeConstant::SizeConstant(int64_t val) : Scalar(c10::Scalar{val}, xla::S64){};
 
 SizeMul::SizeMul(torch::lazy::Value a, torch::lazy::Value b)
     : XlaNode(torch::lazy::OpKind{c10::Symbol::fromQualString("aten::mul")},
-              {a, b}, xla::ShapeUtil::MakeShape(
-                  GetShapeDimensionType(/*device=*/nullptr), {}), 1) {
+              {a, b},
+              xla::ShapeUtil::MakeShape(
+                  GetShapeDimensionType(/*device=*/nullptr), {}),
+              1) {
   const torch::lazy::DimensionNode* dim_node_0 = DimCast(operand(0));
   const torch::lazy::DimensionNode* dim_node_1 = DimCast(operand(1));
   // SizeMul can only be perfomed between two DimensionNode
@@ -150,8 +154,10 @@ XlaOpVector SizeMul::Lower(LoweringContext* loctx) const {
 
 SizeDiv::SizeDiv(torch::lazy::Value a, torch::lazy::Value b)
     : XlaNode(torch::lazy::OpKind{c10::Symbol::fromQualString("aten::div")},
-              {a, b}, xla::ShapeUtil::MakeShape(
-                  GetShapeDimensionType(/*device=*/nullptr), {}), 1) {
+              {a, b},
+              xla::ShapeUtil::MakeShape(
+                  GetShapeDimensionType(/*device=*/nullptr), {}),
+              1) {
   const torch::lazy::DimensionNode* dim_node_0 = DimCast(operand(0));
   const torch::lazy::DimensionNode* dim_node_1 = DimCast(operand(1));
   // SizeDiv can only be perfomed between two DimensionNode
