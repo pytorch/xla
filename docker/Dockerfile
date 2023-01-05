@@ -6,6 +6,8 @@ FROM "${base_image}"
 
 ARG python_version="3.7"
 ARG release_version="nightly"
+ARG xla_branch=""
+ARG example_branch="master"
 ARG cuda="0"
 ARG cuda_compute="3.7,7.0,7.5,8.0"
 ARG cxx_abi="1"
@@ -41,15 +43,17 @@ ENV BAZEL_JOBS "${bazel_jobs}"
 # cloud build. Otherwise, just use local.
 # https://github.com/GoogleCloudPlatform/cloud-builders/issues/435
 COPY . /pytorch/xla
-RUN if [ "${git_clone}" = "true" ]; then github_branch="${release_version}" && \
-  if [ "${release_version}" = "nightly" ]; then github_branch="master"; fi && \
+RUN if [ "${git_clone}" = "true" ]; then \
+  if [ -z "${xla_branch}" ]; then xla_branch="${release_version}" && example_branch="${release_version}"; fi && \
+  if [ "${xla_branch}" = "nightly" ]; then xla_branch="master" && example_branch="master"; fi && \
+  echo "\n ${xla_branch} \n" && \
   cd /pytorch && \
   rm -rf xla && \
-  git clone -b "${github_branch}" --recursive https://github.com/pytorch/xla && \
+  git clone -b "${xla_branch}" --recursive https://github.com/pytorch/xla && \
   cd / && \
-  git clone -b "${github_branch}" --recursive https://github.com/pytorch-tpu/examples tpu-examples; fi
+  git clone -b "${example_branch}" --recursive https://github.com/pytorch-tpu/examples tpu-examples; fi
 
-RUN cd /pytorch && bash xla/scripts/build_torch_wheels.sh ${python_version} ${release_version}
+RUN cd /pytorch && bash xla/scripts/build_torch_wheels.sh ${python_version} ${release_version} ${xla_branch}
 
 # Set LD_PRELOAD to use tcmalloc if for tpuvm mode.
 ENV LD_PRELOAD=${tpuvm:+"/usr/lib/x86_64-linux-gnu/libtcmalloc.so.4"}
