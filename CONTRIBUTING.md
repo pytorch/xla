@@ -144,3 +144,7 @@ If you are planning to be building from source and hence using the latest _PyTor
 it is suggested for you to select the _Nightly_ builds when you create a Cloud TPU instance.
 
 Then run `test/run_tests.sh` and `test/cpp/run_tests.sh` to verify the setup is working.
+
+### Useful materials
+1. [OP Lowering Guide](https://github.com/pytorch/xla/blob/master/OP_LOWERING_GUIDE.md)
+2. [CODEGEN MIGRATION GUIDE](https://github.com/pytorch/xla/blob/master/CODEGEN_MIGRATION_GUIDE.md)
