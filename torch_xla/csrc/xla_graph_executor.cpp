@@ -543,16 +543,39 @@ void XLAGraphExecutor::TensorCollectionBarrier(SyncTensorCollection* coll) {
 
 std::vector<torch::lazy::BackendDataPtr>
 XLAGraphExecutor::ExecuteComputationWithBarrier(
-    torch::lazy::ComputationPtr computation,
+    torch::lazy::hash_t hash,
     c10::ArrayRef<torch::lazy::BackendDataPtr> arguments,
     const torch::lazy::BackendDevice& device) {
+  MaybeDumpGraph("dynamo", hash);
+  auto cachedComputation =
+      XLAGraphExecutor::Get()->GetComputationCache()->Get(hash);
+  // TODO implement a fallback mechanism, or make sure those entries
+  // never get kicked out
+  XLA_CHECK(cachedComputation)
+      << "Failed to get computation by hash " << torch::lazy::HashToString(hash)
+      << ". Maybe the entry get "
+         "kicked out of the LRU cache";
   std::vector<torch::lazy::ExceptionCleanup> unlocker;
   unlocker = DeviceLockerArena::Get()->LockDevices({device});
+
   // Create DataPlaceHolder that will get filled in async executions.
-  // vector<xla::Shape>* output_shapes =
-  // DeviceContextArena::Get()->GetOutputShapesByHash();
-  return torch::lazy::getBackend()->ExecuteComputation(computation, arguments,
-                                                       device);
+  std::vector<xla::Shape>* output_shapes =
+      DeviceContextArena::Get()->GetOutputShapesByHash(hash);
+  std::vector<torch::lazy::BackendDataPtr> placeholders;
+  placeholders.reserve(output_shapes->size());
+  for (const xla::Shape& shape : *output_shapes) {
+    torch::lazy::BackendDataPtr handle =
+        WrapXlaData(xla::ComputationClient::Get()->CreateDataPlaceholder(
+            device.toString(), std::move(shape)));
+    placeholders.push_back(handle);
+  }
+
+  // std::shared_ptr<XLAGraphExecutor::Async> async = std::make_shared<Async>(
+  //   coll, std::move(parameters_data), std::move(tensors_data),
+  //   std::move(cached_computation));
+
+  return torch::lazy::getBackend()->ExecuteComputation(
+      cachedComputation->computation, arguments, device);
 }
 
 std::vector<at::Tensor> XLAGraphExecutor::GetTensorsOpByOp(

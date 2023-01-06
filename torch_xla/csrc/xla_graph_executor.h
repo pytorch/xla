@@ -161,7 +161,7 @@ class XLAGraphExecutor : public torch::lazy::LazyGraphExecutor {
   ComputationCache* GetComputationCache();
 
   std::vector<torch::lazy::BackendDataPtr> ExecuteComputationWithBarrier(
-      torch::lazy::ComputationPtr computation,
+      torch::lazy::hash_t hash,
       c10::ArrayRef<torch::lazy::BackendDataPtr> arguments,
       const torch::lazy::BackendDevice& device);
 

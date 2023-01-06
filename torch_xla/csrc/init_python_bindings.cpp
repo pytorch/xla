@@ -1689,14 +1689,6 @@ void InitXlaModuleBindings(py::module m) {
             -> std::vector<at::Tensor> {
           XLA_CHECK(hash_str.size() == sizeof(torch::lazy::hash_t));
           torch::lazy::hash_t hash = *(torch::lazy::hash_t*)(hash_str.c_str());
-          auto cachedComputation =
-              XLAGraphExecutor::Get()->GetComputationCache()->Get(hash);
-          // TODO implement a fallback mechanism, or make sure those entries
-          // never get kicked out
-          XLA_CHECK(cachedComputation) << "Failed to get computation by hash "
-                                       << torch::lazy::HashToString(hash)
-                                       << ". Maybe the entry get "
-                                          "kicked out of the LRU cache";
           std::vector<torch::lazy::BackendDataPtr> parameters_data;
           torch::lazy::BackendDevice device = torch_xla::GetCurrentDevice();
           {
@@ -1716,9 +1708,8 @@ void InitXlaModuleBindings(py::module m) {
               parameters_data.push_back(dataptr);
             }
           }
-          XLAGraphExecutor::Get()->MaybeDumpGraph("dynamo", hash);
           auto results = XLAGraphExecutor::Get()->ExecuteComputationWithBarrier(
-              cachedComputation->computation, parameters_data, device);
+              hash, parameters_data, device);
           std::vector<at::Tensor> retlist;
           {
             TORCH_LAZY_TIMED("RunCachedGraphOutputData");
