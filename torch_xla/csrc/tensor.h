@@ -32,17 +32,35 @@ class TORCH_API XLASymNodeImpl : public c10::SymNodeImpl {
   XLASymNodeImpl(torch::lazy::NodePtr ptr) : node_(std::move(ptr)) {}
   bool is_int() override;
   bool is_float() override;
-  c10::SymNode eq(const c10::SymNode& other) override;
   c10::SymNode add(const c10::SymNode& other) override;
+  c10::SymNode sub(const c10::SymNode& other) override;
   c10::SymNode mul(const c10::SymNode& other) override;
+  c10::SymNode truediv(const c10::SymNode& other) override;
+  c10::SymNode pow(const c10::SymNode& other) override;
   c10::SymNode floordiv(const c10::SymNode& other) override;
+  c10::SymNode mod(const c10::SymNode& other) override;
+  c10::SymNode eq(const c10::SymNode& other) override;
+  c10::SymNode ne(const c10::SymNode& other) override;
+  c10::SymNode gt(const c10::SymNode& other) override;
+  c10::SymNode lt(const c10::SymNode& other) override;
+  c10::SymNode le(const c10::SymNode& other) override;
+  c10::SymNode ge(const c10::SymNode& other) override;
+  c10::SymNode ceil() override;
+  c10::SymNode floor() override;
+  c10::SymNode neg() override;
+  c10::SymNode min(const c10::SymNode& other) override;
+  c10::SymNode max(const c10::SymNode& other) override;
+  c10::SymNode clone() override;
+  c10::SymNode sym_float() override;
   c10::SymNode wrap_int(int64_t num) override;
-
-  torch::lazy::NodePtr node() { return node_; }
+  c10::SymNode wrap_float(double num) override;
+  int64_t guard_int(const char* file, int64_t line) override;
+  double guard_float(const char* file, int64_t line) override;
+  int64_t int_() override;
+  bool bool_() override;
   std::string str() override;
 
-  bool bool_() override;
-  int64_t int_() override;
+  torch::lazy::NodePtr node() { return node_; }
 
  private:
   torch::lazy::NodePtr node_;
@@ -53,33 +71,49 @@ using XLATensorPtr = c10::intrusive_ptr<XLATensor>;
 
 class XLATensor : public torch::lazy::LazyTensor {
  public:
+  struct ShardingSpec;
+  using ShardingSpecPtr = std::shared_ptr<ShardingSpec>;
+
   // This is the core XLA tensor data structure where all the tensor data is
   // held. The XLA tensor is nothing more than a shared pointer to a Data
   // object.
   struct Data : public torch::lazy::LazyTensor::Data {
     Data(torch::lazy::BackendDataPtr handle,
          const torch::lazy::BackendDevice& device,
-         c10::optional<at::ScalarType> logical_element_type)
+         c10::optional<at::ScalarType> logical_element_type,
+         ShardingSpecPtr sharding = nullptr)
         : torch::lazy::LazyTensor::Data(handle, device),
-          logical_element_type(logical_element_type) {}
+          logical_element_type(logical_element_type),
+          sharding(sharding) {}
     Data(torch::lazy::Value ir_value, const torch::lazy::BackendDevice& device,
-         c10::optional<at::ScalarType> logical_element_type)
+         c10::optional<at::ScalarType> logical_element_type,
+         ShardingSpecPtr sharding = nullptr)
         : torch::lazy::LazyTensor::Data(ir_value, device),
-          logical_element_type(logical_element_type) {}
-    Data(at::Tensor tensor_data, const torch::lazy::BackendDevice& device)
+          logical_element_type(logical_element_type),
+          sharding(sharding) {}
+    Data(at::Tensor tensor_data, const torch::lazy::BackendDevice& device,
+         ShardingSpecPtr sharding = nullptr)
         : torch::lazy::LazyTensor::Data(tensor_data, device),
-          logical_element_type(tensor_data.scalar_type()) {}
+          logical_element_type(tensor_data.scalar_type()),
+          sharding(sharding) {}
     Data(std::shared_ptr<View> view, const torch::lazy::BackendDevice& device,
-         c10::optional<at::ScalarType> logical_element_type)
+         c10::optional<at::ScalarType> logical_element_type,
+         ShardingSpecPtr sharding = nullptr)
         : torch::lazy::LazyTensor::Data(device),
           view(std::move(view)),
-          logical_element_type(logical_element_type) {}
+          logical_element_type(logical_element_type),
+          sharding(sharding) {}
 
     ~Data();
 
     std::shared_ptr<View> view;
     // TODO: remove this in favor of torch::lazy::Shape within ir_value.
     c10::optional<at::ScalarType> logical_element_type;
+    // The user provided sharding spec is attached to `XLATensor::Data`
+    // and all sharding look-up should refer to it as source of truth.
+    // A copy of the sharding spec is attached to the IR node via
+    // `SetShardingSpec` and also during the sync tensor collection.
+    ShardingSpecPtr sharding;
   };
 
   static XLATensorPtr Create(const at::Tensor& tensor,
@@ -192,7 +226,6 @@ class XLATensor : public torch::lazy::LazyTensor {
 
     xla::OpSharding sharding;
   };
-  using ShardingSpecPtr = std::shared_ptr<ShardingSpec>;
 
   // Annotate the IR value with ShardingSpec.
   void SetShardingSpec(const ShardingSpec& sharding_spec);

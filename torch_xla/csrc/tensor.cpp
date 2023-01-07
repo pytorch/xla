@@ -114,6 +114,14 @@ XLATensor::XLATensor(torch::lazy::Value ir_value,
                      c10::optional<at::ScalarType> logical_element_type)
     : XLATensor(std::make_shared<Data>(std::move(ir_value), device,
                                        logical_element_type)) {
+  // Preserve sharding if a new tensor is created from a sharded IR node.
+  if (CurrentIrValue()) {
+    auto* xla_node = dynamic_cast<XlaNode*>(CurrentIrValue().node.get());
+    if (xla_node->GetSharding()) {
+      ShardingSpec sharding = ShardingSpec{*xla_node->GetSharding()};
+      SetShardingSpec(sharding);
+    }
+  }
   TryLimitGraphSize();
 }
 
@@ -210,19 +218,6 @@ torch::lazy::BackendDataPtr XLATensor::GetXlaData() {
   return data()->handle;
 }
 
-XLATensor::ShardingSpecPtr XLATensor::sharding_spec() const {
-  torch::lazy::Value ir_value = CurrentIrValue();
-  if (ir_value) {
-    XLA_CHECK(ir_value.node != nullptr) << "Tyring to access a null cursor";
-    auto sharding = dynamic_cast<XlaNode*>(ir_value.node.get())->GetSharding();
-    if (sharding == nullptr) {
-      return nullptr;
-    }
-    return std::make_shared<ShardingSpec>(*sharding);
-  }
-  return nullptr;
-}
-
 void XLATensor::SetShardingSpec(const ShardingSpec& sharding) {
   // Existing annotation must be cleared explicitly. We do not clear and
   // overwrite the existing sharding on the user's behalf. This is a no-op if
@@ -230,17 +225,32 @@ void XLATensor::SetShardingSpec(const ShardingSpec& sharding) {
   if (sharding_spec() == nullptr ||
       !ShardingUtil::EqualShardingSpecs(sharding, *sharding_spec())) {
     TORCH_LAZY_COUNTER("SetShardingSpec", 1);
-    XLA_CHECK(GetIrValue().node != nullptr) << "Tyring to access a null cursor";
+    data()->sharding = std::make_shared<ShardingSpec>(sharding);
     dynamic_cast<XlaNode*>(GetIrValue().node.get())
         ->SetSharding(sharding.sharding);
   }
 }
 void XLATensor::ClearShardingSpec() {
+  data()->sharding = nullptr;
   torch::lazy::Value ir_value = CurrentIrValue();
   if (ir_value) {
     // This should be a no-op if there is no sharding.
     dynamic_cast<XlaNode*>(ir_value.node.get())->ClearSharding();
   }
+}
+
+XLATensor::ShardingSpecPtr XLATensor::sharding_spec() const {
+  ShardingSpecPtr sharding = data()->sharding;
+  torch::lazy::Value ir_value = CurrentIrValue();
+  if (sharding && ir_value) {
+    // The copy of sharding annotation on the IR node should be the same.
+    auto* xla_node = dynamic_cast<XlaNode*>(ir_value.node.get());
+    if (xla_node->GetSharding()) {
+      XLA_CHECK(ShardingUtil::EqualShardingSpecs(
+          *sharding, ShardingSpec{*xla_node->GetSharding()}));
+    }
+  }
+  return sharding;
 }
 
 void XLATensor::SetXlaData(torch::lazy::BackendDataPtr handle) {
@@ -291,16 +301,17 @@ void XLATensor::SetInPlaceIrValue(torch::lazy::Value ir_value) {
 }
 
 void XLATensor::AssignIrValue(torch::lazy::Value ir_value) const {
-  ShardingSpecPtr sharding = sharding_spec();
-  if (sharding != nullptr) {
-    if (!ir_value) {
-      // Create a tensor node if applicable, re-use the current IR otherwise.
-      // TODO(yeounoh) this has some performance implications for convolution.
-      ir_value = GetIrValue();
+  if (ir_value) {
+    std::string debug_str = ir_value->ToString();
+    auto sharding = dynamic_cast<XlaNode*>(ir_value.node.get())->GetSharding();
+    if (sharding) {
+      debug_str += " with sharding " + sharding->DebugString();
     }
-    dynamic_cast<XlaNode*>(ir_value.node.get())
-        ->SetSharding(sharding->sharding);
+    TF_VLOG(5) << "Assign IR value " << debug_str;
+  } else {
+    TF_VLOG(5) << "Assign empty IR value";
   }
+
   data()->ir_value = std::move(ir_value);
   data()->generation += 1;
 }
@@ -460,6 +471,9 @@ at::Tensor XLATensor::ToTensor(bool detached) {
 void XLATensor::ShallowCopyTo(XLATensorPtr dest) const {
   dest->SetScalarType(data()->logical_element_type);
   dest->SetIrValue(GetIrValue(), /*inplace=*/false);
+  if (sharding_spec() != nullptr) {
+    dest->SetShardingSpec(*sharding_spec());
+  }
 }
 
 void XLATensor::SetScalarType(
@@ -603,32 +617,109 @@ bool XLASymNodeImpl::is_float() {
   return false;
 }
 
-bool XLASymNodeImpl::bool_() {
-  auto dn = torch_xla::DimCast(node());
-  return dn->getDynamicValue() != 0;
-}
-
-int64_t XLASymNodeImpl::int_() {
-  std::shared_ptr<torch::lazy::DimensionNode> dn = torch_xla::DimCast(node());
-  return dn->getDynamicValue();
-}
-
-c10::SymNode XLASymNodeImpl::eq(const c10::SymNode& other) {
-  auto pother = dynamic_cast<XLASymNodeImpl*>(other.get());
-  auto neq = torch::lazy::MakeNode<SizeEq>(node(), pother->node());
-  return c10::make_intrusive<XLASymNodeImpl>(neq);
-}
-
 c10::SymNode XLASymNodeImpl::add(const c10::SymNode& other) {
-  auto pother = dynamic_cast<XLASymNodeImpl*>(other.get());
-  auto nadd = torch::lazy::MakeNode<SizeAdd>(node(), pother->node());
-  return c10::make_intrusive<XLASymNodeImpl>(nadd);
+  auto p_other = dynamic_cast<XLASymNodeImpl*>(other.get());
+  auto n_add = torch::lazy::MakeNode<SizeAdd>(node(), p_other->node());
+  return c10::make_intrusive<XLASymNodeImpl>(n_add);
+}
+
+c10::SymNode XLASymNodeImpl::sub(const c10::SymNode& other) {
+  XLA_CHECK(false) << "XLASymNodeImpl::" << __FUNCTION__
+                   << " has not been implemented.";
 }
 
 c10::SymNode XLASymNodeImpl::mul(const c10::SymNode& other) {
-  auto pother = dynamic_cast<XLASymNodeImpl*>(other.get());
-  auto nmul = torch::lazy::MakeNode<torch_xla::SizeMul>(node(), pother->node());
-  return c10::make_intrusive<XLASymNodeImpl>(nmul);
+  auto p_other = dynamic_cast<XLASymNodeImpl*>(other.get());
+  auto n_mul =
+      torch::lazy::MakeNode<torch_xla::SizeMul>(node(), p_other->node());
+  return c10::make_intrusive<XLASymNodeImpl>(n_mul);
+}
+
+c10::SymNode XLASymNodeImpl::truediv(const c10::SymNode& other) {
+  XLA_CHECK(false) << "XLASymNodeImpl::" << __FUNCTION__
+                   << " has not been implemented.";
+}
+
+c10::SymNode XLASymNodeImpl::pow(const c10::SymNode& other) {
+  XLA_CHECK(false) << "XLASymNodeImpl::" << __FUNCTION__
+                   << " has not been implemented.";
+}
+
+c10::SymNode XLASymNodeImpl::floordiv(const c10::SymNode& other) {
+  auto p_other = dynamic_cast<XLASymNodeImpl*>(other.get());
+  auto n_div = torch::lazy::MakeNode<SizeDiv>(node(), p_other->node());
+  return c10::make_intrusive<XLASymNodeImpl>(n_div);
+}
+
+c10::SymNode XLASymNodeImpl::mod(const c10::SymNode& other) {
+  XLA_CHECK(false) << "XLASymNodeImpl::" << __FUNCTION__
+                   << " has not been implemented.";
+}
+
+c10::SymNode XLASymNodeImpl::eq(const c10::SymNode& other) {
+  auto p_other = dynamic_cast<XLASymNodeImpl*>(other.get());
+  auto n_eq = torch::lazy::MakeNode<SizeEq>(node(), p_other->node());
+  return c10::make_intrusive<XLASymNodeImpl>(n_eq);
+}
+
+c10::SymNode XLASymNodeImpl::ne(const c10::SymNode& other) {
+  XLA_CHECK(false) << "XLASymNodeImpl::" << __FUNCTION__
+                   << " has not been implemented.";
+}
+
+c10::SymNode XLASymNodeImpl::gt(const c10::SymNode& other) {
+  XLA_CHECK(false) << "XLASymNodeImpl::" << __FUNCTION__
+                   << " has not been implemented.";
+}
+
+c10::SymNode XLASymNodeImpl::lt(const c10::SymNode& other) {
+  XLA_CHECK(false) << "XLASymNodeImpl::" << __FUNCTION__
+                   << " has not been implemented.";
+}
+
+c10::SymNode XLASymNodeImpl::le(const c10::SymNode& other) {
+  XLA_CHECK(false) << "XLASymNodeImpl::" << __FUNCTION__
+                   << " has not been implemented.";
+}
+
+c10::SymNode XLASymNodeImpl::ge(const c10::SymNode& other) {
+  XLA_CHECK(false) << "XLASymNodeImpl::" << __FUNCTION__
+                   << " has not been implemented.";
+}
+
+c10::SymNode XLASymNodeImpl::ceil() {
+  XLA_CHECK(false) << "XLASymNodeImpl::" << __FUNCTION__
+                   << " has not been implemented.";
+}
+
+c10::SymNode XLASymNodeImpl::floor() {
+  XLA_CHECK(false) << "XLASymNodeImpl::" << __FUNCTION__
+                   << " has not been implemented.";
+}
+
+c10::SymNode XLASymNodeImpl::neg() {
+  XLA_CHECK(false) << "XLASymNodeImpl::" << __FUNCTION__
+                   << " has not been implemented.";
+}
+
+c10::SymNode XLASymNodeImpl::min(const c10::SymNode& other) {
+  XLA_CHECK(false) << "XLASymNodeImpl::" << __FUNCTION__
+                   << " has not been implemented.";
+}
+
+c10::SymNode XLASymNodeImpl::max(const c10::SymNode& other) {
+  XLA_CHECK(false) << "XLASymNodeImpl::" << __FUNCTION__
+                   << " has not been implemented.";
+}
+
+c10::SymNode XLASymNodeImpl::clone() {
+  XLA_CHECK(false) << "XLASymNodeImpl::" << __FUNCTION__
+                   << " has not been implemented.";
+}
+
+c10::SymNode XLASymNodeImpl::sym_float() {
+  XLA_CHECK(false) << "XLASymNodeImpl::" << __FUNCTION__
+                   << " has not been implemented.";
 }
 
 c10::SymNode XLASymNodeImpl::wrap_int(int64_t num) {
@@ -636,10 +727,29 @@ c10::SymNode XLASymNodeImpl::wrap_int(int64_t num) {
   return c10::make_intrusive<XLASymNodeImpl>(cnst);
 }
 
-c10::SymNode XLASymNodeImpl::floordiv(const c10::SymNode& other) {
-  auto pother = dynamic_cast<XLASymNodeImpl*>(other.get());
-  auto ndiv = torch::lazy::MakeNode<SizeDiv>(node(), pother->node());
-  return c10::make_intrusive<XLASymNodeImpl>(ndiv);
+c10::SymNode XLASymNodeImpl::wrap_float(double num) {
+  XLA_CHECK(false) << "XLASymNodeImpl::" << __FUNCTION__
+                   << " has not been implemented.";
+}
+
+int64_t XLASymNodeImpl::guard_int(const char* file, int64_t line) {
+  XLA_CHECK(false) << "XLASymNodeImpl::" << __FUNCTION__
+                   << " has not been implemented.";
+}
+
+double XLASymNodeImpl::guard_float(const char* file, int64_t line) {
+  XLA_CHECK(false) << "XLASymNodeImpl::" << __FUNCTION__
+                   << " has not been implemented.";
+}
+
+int64_t XLASymNodeImpl::int_() {
+  std::shared_ptr<torch::lazy::DimensionNode> dn = torch_xla::DimCast(node());
+  return dn->getDynamicValue();
+}
+
+bool XLASymNodeImpl::bool_() {
+  auto dn = torch_xla::DimCast(node());
+  return dn->getDynamicValue() != 0;
 }
 
 std::string XLASymNodeImpl::str() {
