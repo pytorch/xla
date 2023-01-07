@@ -37,7 +37,7 @@ DISABLED_TORCH_TESTS_ANY = {
         'test_addcmul',  # FIXME: complex dtype
         'test_clamp',  # slow
         'test_clamp_propagates_nans_xla',  # XLA min/max ignores Nans.
-        'test_cummax_cummin',  # at::_ops::cummax_out::call(at::Tensor const&, long, at::Tensor&, at::Tensor&)
+        # 'test_cummax_cummin',  # at::_ops::cummax_out::call(at::Tensor const&, long, at::Tensor&, at::Tensor&)
         'test_cummax_discontiguous',  # Checking contiguity
         'test_cummin_discontiguous',  # Checking contiguity
         'test_diff_xla_bool',  # Received signal 6 & 11

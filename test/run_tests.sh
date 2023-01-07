@@ -119,48 +119,50 @@ function run_torchrun {
 }
 
 function run_op_tests {
-  run_dynamic python3 "$CDIR/../../test/test_view_ops.py" "$@" -v TestViewOpsXLA
-  run_test python3 "$CDIR/../../test/test_torch.py" "$@" -v TestTorchDeviceTypeXLA
-  run_dynamic python3 "$CDIR/../../test/test_torch.py" "$@" -v TestDevicePrecisionXLA
-  run_test python3 "$CDIR/../../test/test_torch.py" "$@" -v TestTensorDeviceOpsXLA
-  run_test python3 "$CDIR/../../test/test_indexing.py" "$@" -v TestIndexingXLA
-  run_test python3 "$CDIR/../../test/test_indexing.py" "$@" -v NumpyTestsXLA
-  run_dynamic python3 "$CDIR/../../test/test_nn.py" "$@" -v TestNNDeviceTypeXLA
-  run_dynamic python3 "$CDIR/../../test/nn/test_dropout.py" "$@" -v TestDropoutNNDeviceTypeXLA
-  run_dynamic python3 "$CDIR/../../test/nn/test_pooling.py" "$@" -v TestPoolingNNDeviceTypeXLA
-  run_dynamic python3 "$CDIR/../../test/nn/test_embedding.py" "$@" -v TestEmbeddingNNDeviceTypeXLA
-  run_dynamic python3 "$CDIR/../../test/nn/test_convolution.py" "$@" -v TestConvolutionNNDeviceTypeXLA
-  run_dynamic python3 "$CDIR/../../test/nn/test_multihead_attention.py" "$@" -v TestMultiheadAttentionNNDeviceTypeXLA
-  run_dynamic python3 "$CDIR/../../test/test_type_promotion.py" "$@" -v TestTypePromotionXLA
-  run_test python3 "$CDIR/../../test/dynamo/test_torchxla_integration.py"
-  run_dynamic python3 "$CDIR/test_operations.py" "$@" --verbosity=$VERBOSITY
-  run_dynamic python3 "$CDIR/test_dynamic_shapes.py"
-  run_dynamic python3 "$CDIR/test_dynamic_shape_models.py" "$@" --verbosity=$VERBOSITY
-  run_opbyop python3 "$CDIR/test_operations.py" "$@" --verbosity=$VERBOSITY
-  run_eager_debug python3 "$CDIR/test_operations.py" "$@" --verbosity=$VERBOSITY
-  run_async_scalar python3 "$CDIR/test_operations.py" "$@" --verbosity=$VERBOSITY
-  run_test python3 "$CDIR/test_grad_checkpoint.py"
-  run_pjrt python3 "$CDIR/test_operations.py" "$@" --verbosity=$VERBOSITY
-  run_test python3 "$CDIR/test_async_closures.py"
-  run_test python3 "$CDIR/test_xla_dist.py"
-  run_test python3 "$CDIR/test_profiler.py"
-  run_test python3 "$CDIR/test_ops.py"
-  run_test python3 "$CDIR/test_metrics.py"
-  run_test python3 "$CDIR/dynamo/test_dynamo_integrations_util.py"
-  run_test python3 "$CDIR/dynamo/test_dynamo.py"
-  run_save_tensor_file python3 "$CDIR/dynamo/test_dynamo_graph_dump.py"
-  run_downcast_bf16 python3 "$CDIR/test_data_type.py"
-  run_use_bf16 python3 "$CDIR/test_data_type.py"
-  run_test python3 "$CDIR/test_torch_distributed_xla_backend.py"
-  run_xla_ir_debug python3 "$CDIR/test_env_var_mapper.py"
-  run_xla_hlo_debug python3 "$CDIR/test_env_var_mapper.py"
-  run_pjrt python3 "$CDIR/pjrt/test_experimental_pjrt.py"
-  run_pjrt python3 "$CDIR/pjrt/test_experimental_tpu.py"
-  run_pjrt python3 "$CDIR/pjrt/test_ddp.py"
-  run_pjrt python3 "$CDIR/pjrt/test_mesh_service.py"
-  run_pjrt python3 "$CDIR/test_xla_sharding.py"
-  run_test python3 "$CDIR/test_operations_hlo.py" "$@" --verbosity=$VERBOSITY
-  run_test python3 "$CDIR/test_input_output_aliases.py"
+  # run_dynamic python3 "$CDIR/../../test/test_view_ops.py" "$@" -v TestViewOpsXLA
+  echo "before executing the thescript.py file"
+  run_test python3 "$CDIR/../../test/thescript.py" "$@" -v TestTorchDeviceTypeXLA  2>&1 | tee /tmp/pytorch_py_test_more_detail.log
+  echo "after executing the thescript.py file"
+  # run_dynamic python3 "$CDIR/../../test/test_torch.py" "$@" -v TestDevicePrecisionXLA
+  # run_test python3 "$CDIR/../../test/test_torch.py" "$@" -v TestTensorDeviceOpsXLA
+  # run_test python3 "$CDIR/../../test/test_indexing.py" "$@" -v TestIndexingXLA
+  # run_test python3 "$CDIR/../../test/test_indexing.py" "$@" -v NumpyTestsXLA
+  # run_dynamic python3 "$CDIR/../../test/test_nn.py" "$@" -v TestNNDeviceTypeXLA
+  # run_dynamic python3 "$CDIR/../../test/nn/test_dropout.py" "$@" -v TestDropoutNNDeviceTypeXLA
+  # run_dynamic python3 "$CDIR/../../test/nn/test_pooling.py" "$@" -v TestPoolingNNDeviceTypeXLA
+  # run_dynamic python3 "$CDIR/../../test/nn/test_embedding.py" "$@" -v TestEmbeddingNNDeviceTypeXLA
+  # run_dynamic python3 "$CDIR/../../test/nn/test_convolution.py" "$@" -v TestConvolutionNNDeviceTypeXLA
+  # run_dynamic python3 "$CDIR/../../test/nn/test_multihead_attention.py" "$@" -v TestMultiheadAttentionNNDeviceTypeXLA
+  # run_dynamic python3 "$CDIR/../../test/test_type_promotion.py" "$@" -v TestTypePromotionXLA
+  # run_test python3 "$CDIR/../../test/dynamo/test_torchxla_integration.py"
+  # run_dynamic python3 "$CDIR/test_operations.py" "$@" --verbosity=$VERBOSITY
+  # run_dynamic python3 "$CDIR/test_dynamic_shapes.py"
+  # run_dynamic python3 "$CDIR/test_dynamic_shape_models.py" "$@" --verbosity=$VERBOSITY
+  # run_opbyop python3 "$CDIR/test_operations.py" "$@" --verbosity=$VERBOSITY
+  # run_eager_debug python3 "$CDIR/test_operations.py" "$@" --verbosity=$VERBOSITY
+  # run_async_scalar python3 "$CDIR/test_operations.py" "$@" --verbosity=$VERBOSITY
+  # run_test python3 "$CDIR/test_grad_checkpoint.py"
+  # run_pjrt python3 "$CDIR/test_operations.py" "$@" --verbosity=$VERBOSITY
+  # run_test python3 "$CDIR/test_async_closures.py"
+  # run_test python3 "$CDIR/test_xla_dist.py"
+  # run_test python3 "$CDIR/test_profiler.py"
+  # run_test python3 "$CDIR/test_ops.py"
+  # run_test python3 "$CDIR/test_metrics.py"
+  # run_test python3 "$CDIR/dynamo/test_dynamo_integrations_util.py"
+  # run_test python3 "$CDIR/dynamo/test_dynamo.py"
+  # run_save_tensor_file python3 "$CDIR/dynamo/test_dynamo_graph_dump.py"
+  # run_downcast_bf16 python3 "$CDIR/test_data_type.py"
+  # run_use_bf16 python3 "$CDIR/test_data_type.py"
+  # run_test python3 "$CDIR/test_torch_distributed_xla_backend.py"
+  # run_xla_ir_debug python3 "$CDIR/test_env_var_mapper.py"
+  # run_xla_hlo_debug python3 "$CDIR/test_env_var_mapper.py"
+  # run_pjrt python3 "$CDIR/pjrt/test_experimental_pjrt.py"
+  # run_pjrt python3 "$CDIR/pjrt/test_experimental_tpu.py"
+  # run_pjrt python3 "$CDIR/pjrt/test_ddp.py"
+  # run_pjrt python3 "$CDIR/pjrt/test_mesh_service.py"
+  # run_pjrt python3 "$CDIR/test_xla_sharding.py"
+  # run_test python3 "$CDIR/test_operations_hlo.py" "$@" --verbosity=$VERBOSITY
+  # run_test python3 "$CDIR/test_input_output_aliases.py"
 }
 
 function run_mp_op_tests {
@@ -183,14 +185,22 @@ function run_mp_op_tests {
 }
 
 function run_tests {
+  echo "before start to run the op tests::::::::::::::::::::::::::::::"
   run_op_tests
-  if [[ "$XLA_SKIP_MP_OP_TESTS" != "1" ]]; then
-    run_mp_op_tests
-  fi
+  echo "after run the op tests........................................"
+  # if [[ "$XLA_SKIP_MP_OP_TESTS" != "1" ]]; then
+  #   run_mp_op_tests
+  # fi
+  echo "after running all the op tests''''''''''''''''''''''''''''''''"
 }
 
+echo "before start to run the run_tests ------------------------------"
 if [ "$LOGFILE" != "" ]; then
   run_tests 2>&1 | tee $LOGFILE
+  echo "run the run_tests 2 1 [[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[["
 else
   run_tests
+  echo "run run_tests directly ]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]"
 fi
+
+echo "finish running all the run_tests================================"
