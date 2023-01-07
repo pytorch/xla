@@ -544,7 +544,7 @@ void XLAGraphExecutor::TensorCollectionBarrier(SyncTensorCollection* coll) {
 std::vector<torch::lazy::BackendDataPtr>
 XLAGraphExecutor::ExecuteComputationWithBarrier(
     torch::lazy::hash_t hash,
-    c10::ArrayRef<torch::lazy::BackendDataPtr> arguments,
+    std::vector<torch::lazy::BackendDataPtr> arguments,
     const torch::lazy::BackendDevice& device) {
   MaybeDumpGraph("dynamo", hash);
   auto cachedComputation =
@@ -555,8 +555,6 @@ XLAGraphExecutor::ExecuteComputationWithBarrier(
       << "Failed to get computation by hash " << torch::lazy::HashToString(hash)
       << ". Maybe the entry get "
          "kicked out of the LRU cache";
-  std::vector<torch::lazy::ExceptionCleanup> unlocker;
-  unlocker = DeviceLockerArena::Get()->LockDevices({device});
 
   // Create DataPlaceHolder that will get filled in async executions.
   std::vector<xla::Shape>* output_shapes =
@@ -570,12 +568,33 @@ XLAGraphExecutor::ExecuteComputationWithBarrier(
     placeholders.push_back(handle);
   }
 
-  // std::shared_ptr<XLAGraphExecutor::Async> async = std::make_shared<Async>(
-  //   coll, std::move(parameters_data), std::move(tensors_data),
-  //   std::move(cached_computation));
+  SyncTensorCollection coll;
+  coll.device = device;
+  coll.unlocker = DeviceLockerArena::Get()->LockDevices({device});
+  std::shared_ptr<XLAGraphExecutor::Async> async = std::make_shared<Async>(
+      &coll, std::move(arguments), placeholders, std::move(cachedComputation));
 
-  return torch::lazy::getBackend()->ExecuteComputation(
-      cachedComputation->computation, arguments, device);
+  auto syncfn = [async, hash]() {
+    TF_VLOG(3) << "Executing Dynamo IR graph hash "
+               << torch::lazy::HashToString(hash) << " on device "
+               << async->device << " ...";
+    std::vector<torch::lazy::BackendDataPtr> results =
+        torch::lazy::getBackend()->ExecuteComputation(
+            async->cached_computation->computation, async->parameters_data,
+            async->device);
+    TF_VLOG(3) << "Executing Dynamo IR graph hash "
+               << torch::lazy::HashToString(hash) << " on device "
+               << async->device << " done!";
+    // Updating placeholder with actual output handle.
+    for (size_t i = 0; i < results.size(); ++i) {
+      XLA_CHECK(async->tensors_data[i] != nullptr);
+      async->tensors_data[i]->Assign(*results[i]);
+    }
+  };
+
+  xla::env::ScheduleIoClosure(async->mwait.Completer(std::move(syncfn)));
+
+  return placeholders;
 }
 
 std::vector<at::Tensor> XLAGraphExecutor::GetTensorsOpByOp(

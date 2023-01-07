@@ -1709,7 +1709,7 @@ void InitXlaModuleBindings(py::module m) {
             }
           }
           auto results = XLAGraphExecutor::Get()->ExecuteComputationWithBarrier(
-              hash, parameters_data, device);
+              hash, std::move(parameters_data), device);
           std::vector<at::Tensor> retlist;
           {
             TORCH_LAZY_TIMED("RunCachedGraphOutputData");
