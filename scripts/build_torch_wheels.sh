@@ -5,6 +5,7 @@ set -x  # Display commands being run.
 
 PYTHON_VERSION=$1
 RELEASE_VERSION=$2  # rX.Y or nightly
+BUILD_CPP_TESTS="${3:-0}"
 DEFAULT_PYTHON_VERSION=3.6
 DEBIAN_FRONTEND=noninteractive
 
@@ -266,8 +267,7 @@ function build_and_install_torch_xla() {
     export XLA_CPU_USE_ACL=1
   fi
 
-  # TODO: reenable after fixing the cpp test build
-  BUILD_CPP_TESTS=0 python setup.py bdist_wheel
+  python setup.py bdist_wheel
   pip install dist/*.whl
   if [ "$TPUVM_MODE" == "1" ]; then
     pip install torch_xla[tpuvm]
