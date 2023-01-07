@@ -341,4 +341,3 @@ workflows:
               only:
                 - master
                 - /release\/.*/
-                - test_new_token  # TODO(yeounoh) remove before merging
