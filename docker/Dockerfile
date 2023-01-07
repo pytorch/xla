@@ -46,7 +46,7 @@ COPY . /pytorch/xla
 RUN if [ "${git_clone}" = "true" ]; then \
   if [ -z "${xla_branch}" ]; then xla_branch="${release_version}" && example_branch="${release_version}"; fi && \
   if [ "${xla_branch}" = "nightly" ]; then xla_branch="master" && example_branch="master"; fi && \
-  echo "\n ${xla_branch} \n" && \
+  echo "\nxla_branch: ${xla_branch} example_branch: ${example_branch} \n" && \
   cd /pytorch && \
   rm -rf xla && \
   git clone -b "${xla_branch}" --recursive https://github.com/pytorch/xla && \
