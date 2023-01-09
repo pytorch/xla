@@ -49,9 +49,9 @@ class XlaBackendImpl : public torch::lazy::BackendImplInterface {
   void PrepareToExit() const override { XLA_ERROR() << "Not implemented yet"; }
 
   void SetRngSeed(size_t seed) const override {
-    // TODO(JackCaoG): upstream SetRngSeed should either be removed or start
-    // taking device.
-    // XLATensor::SetRngSeed(device, seed);
+    // TODO(alanwaketan): This interface is not useful. We probably should
+    // remove the base one.
+    XLA_ERROR() << "Not implemented yet";
     return;
   }
 
