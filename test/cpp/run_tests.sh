@@ -49,7 +49,6 @@ done
 shift $(($OPTIND - 1))
 
 if [[ "$TPUVM_MODE" != "1" ]]; then
-  # Dynamic shape is not supported on the tpuvm.
   export XLA_EXPERIMENTAL
 fi
 
