@@ -37,7 +37,8 @@ xla::XlaOp BuildExponential(xla::XlaOp lambda, xla::XlaOp seed,
 
 xla::XlaOp BuildDropout(xla::XlaOp input, float probability, xla::XlaOp seed);
 
-xla::XlaOp BuildSigmoidBackward(xla::XlaOp grad_output, xla::XlaOp output, xla::XlaOp scalar_1);
+xla::XlaOp BuildSigmoidBackward(xla::XlaOp grad_output, xla::XlaOp output,
+                                xla::XlaOp scalar_1);
 
 std::vector<xla::XlaOp> CreateBroadcastTensors(
     absl::Span<const xla::XlaOp> operands);

@@ -459,7 +459,8 @@ xla::XlaOp BuildDot(xla::XlaOp lhs, xla::XlaOp rhs) {
   return xla::Dot(lhs, rhs, &precision_config);
 }
 
-xla::XlaOp BuildSigmoidBackward(xla::XlaOp grad_output, xla::XlaOp output, xla::XlaOp scalar_1) {
+xla::XlaOp BuildSigmoidBackward(xla::XlaOp grad_output, xla::XlaOp output,
+                                xla::XlaOp scalar_1) {
   return grad_output * (scalar_1 - output) * output;
 }
 

@@ -8,26 +8,29 @@ import torch_xla.debug.metrics as met
 
 xla_dev = xm.xla_device()
 
+
 class Feedforward(torch.nn.Module):
+
   def __init__(self, input_size, hidden_size):
-      super().__init__()
-      self.input_size = input_size
-      self.hidden_size  = hidden_size
-      self.fc1 = torch.nn.Linear(self.input_size, self.hidden_size)
-      self.fc1.weight.data.fill_(0.01)
-      self.fc1.bias.data.fill_(0.01)
-      self.relu = torch.nn.ReLU()
-      self.fc2 = torch.nn.Linear(self.hidden_size, 1)
-      self.fc2.weight.data.fill_(0.01)
-      self.fc2.bias.data.fill_(0.01)
-      self.sigmoid = torch.nn.Sigmoid()
+    super().__init__()
+    self.input_size = input_size
+    self.hidden_size = hidden_size
+    self.fc1 = torch.nn.Linear(self.input_size, self.hidden_size)
+    self.fc1.weight.data.fill_(0.01)
+    self.fc1.bias.data.fill_(0.01)
+    self.relu = torch.nn.ReLU()
+    self.fc2 = torch.nn.Linear(self.hidden_size, 1)
+    self.fc2.weight.data.fill_(0.01)
+    self.fc2.bias.data.fill_(0.01)
+    self.sigmoid = torch.nn.Sigmoid()
 
   def forward(self, x):
-      hidden = self.fc1(x)
-      relu = self.relu(hidden)
-      output = self.fc2(relu)
-      output = self.sigmoid(output)
-      return output
+    hidden = self.fc1(x)
+    relu = self.relu(hidden)
+    output = self.fc2(relu)
+    output = self.sigmoid(output)
+    return output
+
 
 def create_dynamic_test_data(num_samples, num_features, device):
   x_test = torch.ones(num_samples, num_features)
@@ -41,12 +44,14 @@ def create_dynamic_test_data(num_samples, num_features, device):
   y_test_nonzero_dev = torch.nonzero(y_test_xla.int()).float().squeeze()
   return x_test_nonzero_dev, y_test_nonzero_dev
 
+
 num_features = 2
 num_test_samples = 5
 
 model = Feedforward(num_features, hidden_size=10).to(xla_dev)
 criterion = torch.nn.BCELoss()
 optimizer = torch.optim.SGD(model.parameters(), lr=1e-3)
+
 
 # ref: https://colab.sandbox.google.com/github/pytorch/xla/blob/master/contrib/colab/resnet18-training.ipynb
 def train(model, loss_fn, optimizer):
@@ -56,7 +61,8 @@ def train(model, loss_fn, optimizer):
   # y_train = torch.Tensor(y_train)
   # x_train_xla = x_train.to(xla_dev)
   # y_train_xla = y_train.to(xla_dev)
-  x_train_xla, y_train_xla = create_dynamic_test_data(num_samples=40, num_features=2, device=xla_dev)
+  x_train_xla, y_train_xla = create_dynamic_test_data(
+      num_samples=40, num_features=2, device=xla_dev)
   optimizer.zero_grad()
 
   # Compute prediction error
@@ -68,18 +74,20 @@ def train(model, loss_fn, optimizer):
   xm.optimizer_step(optimizer)
   print('Finished training. Got loss:', loss.item())
 
+
 def test(model, loss_fn):
   model.eval()
   with torch.no_grad():
-    x_test, y_test = create_dynamic_test_data(num_test_samples, num_features, xla_dev)
+    x_test, y_test = create_dynamic_test_data(num_test_samples, num_features,
+                                              xla_dev)
     y_pred = model(x_test)
     test_loss = loss_fn(y_pred.squeeze(), y_test).item()
     xm.mark_step()
   print('Finished testing, loss=', test_loss)
 
+
 train(model, loss_fn=criterion, optimizer=optimizer)
 test(model, loss_fn=criterion)
-
 
 if __name__ == '__main__':
   test = unittest.main()

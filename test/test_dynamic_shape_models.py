@@ -85,7 +85,9 @@ class TestDynamicShapeModels(unittest.TestCase):
     np.testing.assert_equal(met.metric_data('CompileTime')[0], 3)
     print('Test passed.')
 
-  @unittest.skip("disable it due to https://github.com/pytorch/xla/pull/4322#issuecomment-1374312614.")
+  @unittest.skip(
+      "disable it due to https://github.com/pytorch/xla/pull/4322#issuecomment-1374312614."
+  )
   def test_backward_pass_with_dynamic_input(self):
     num_features = 2
     num_test_samples = 5
@@ -96,8 +98,8 @@ class TestDynamicShapeModels(unittest.TestCase):
 
     # training
     model.train()
-    x_training, y_training = self.create_dynamic_test_data(num_test_samples,
-                                                   num_features, xla_dev)
+    x_training, y_training = self.create_dynamic_test_data(
+        num_test_samples, num_features, xla_dev)
     y_pred = model(x_training)
     loss = criterion(y_pred.squeeze(), y_training)
     # Backpropagation.
@@ -108,14 +110,15 @@ class TestDynamicShapeModels(unittest.TestCase):
     # testing
     model.eval()
     with torch.no_grad():
-      x_test, y_test = self.create_dynamic_test_data(num_test_samples, num_features, xla_dev)
+      x_test, y_test = self.create_dynamic_test_data(num_test_samples,
+                                                     num_features, xla_dev)
       y_pred = model(x_test)
       criterion(y_pred.squeeze(), y_test).item()
       xm.mark_step()
     print('Test passed.')
 
   def test_backward_pass_with_dynamic_input_simple(self):
-    t1 = torch.ones(2,5, requires_grad=True, device=xla_dev)
+    t1 = torch.ones(2, 5, requires_grad=True, device=xla_dev)
     # t1[0][0] = 0
     t2 = torch.nonzero(t1)
     m = torch.nn.Sigmoid()
