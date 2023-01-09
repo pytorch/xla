@@ -21,7 +21,6 @@ class TestTorchDistributedPjrt(parameterized.TestCase):
     output_tensor = torch.concat(output)
     xm.mark_step()
 
-    # print(output)
     torch.testing.assert_close(output_tensor.cpu(), torch.arange(0, dist.get_world_size(), 1, dtype=torch.int32))
 
   def test_all_gather_spawn(self):
