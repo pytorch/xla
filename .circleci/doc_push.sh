@@ -13,7 +13,7 @@ popd
 
 echo "Pushing to public"
 git config --global user.email "torchxla@gmail.com"
-git config --global user.name "torchxlabot"
+git config --global user.name "torchxlabot2"
 GH_PAGES_BRANCH=gh-pages
 GH_PAGES_DIR=gh-pages-tmp
 CURRENT_COMMIT=`git rev-parse HEAD`
@@ -47,7 +47,7 @@ if [[ $git_status ]]; then
 /usr/bin/expect <<DONE
 spawn git push origin "$GH_PAGES_BRANCH"
 expect "Username*"
-send "torchxlabot\n"
+send "torchxlabot2\n"
 expect "Password*"
 send "$::env(GITHUB_TORCH_XLA_BOT_TOKEN)\n"
 expect eof
