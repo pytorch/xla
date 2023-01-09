@@ -39,7 +39,7 @@ launch_docker_and_build: &launch_docker_and_build
     echo "declare -x XLA_USE_XRT=1" >> /home/circleci/project/xla_env
     echo "declare -x XLA_CUDA=1" >> /home/circleci/project/xla_env
     echo "declare -x USE_CUDA=0" >> /home/circleci/project/env
-    echo "declare -x GITHUB_TORCH_XLA_BOT_TOKEN=${GITHUB_TORCH_XLA_BOT_TOKEN}" >> /home/circleci/project/xla_env
+    echo "declare -x GITHUB_TORCH_XLA_BOT_TOKEN=${GITHUB_TORCH_XLA_BOT_2_TOKEN}" >> /home/circleci/project/xla_env
     echo "declare -x CIRCLE_PULL_REQUEST=${CIRCLE_PULL_REQUEST}" >> /home/circleci/project/env
     echo "declare -x CIRCLE_PROJECT_USERNAME=${CIRCLE_PROJECT_USERNAME}" >> /home/circleci/project/env
     echo "declare -x CIRCLE_PROJECT_REPONAME=${CIRCLE_PROJECT_REPONAME}" >> /home/circleci/project/env
