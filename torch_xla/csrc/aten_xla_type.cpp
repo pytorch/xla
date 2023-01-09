@@ -7,7 +7,6 @@
 #include <ATen/native/CPUFallback.h>
 #include <ATen/native/TypeProperties.h>
 
-#include <iostream>
 #include <mutex>
 
 #include "tensorflow/compiler/xla/xla_client/debug_macros.h"

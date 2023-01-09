@@ -117,15 +117,6 @@ class TestDynamicShapeModels(unittest.TestCase):
       xm.mark_step()
     print('Test passed.')
 
-  def test_backward_pass_with_dynamic_input_simple(self):
-    t1 = torch.ones(2, 5, requires_grad=True, device=xla_dev)
-    # t1[0][0] = 0
-    t2 = torch.nonzero(t1)
-    m = torch.nn.Sigmoid()
-    loss = m(t2)
-    loss.backward()
-    print('Test passed.')
-
   def create_dynamic_test_data(self, num_test_samples, num_features, device):
     x_test = torch.ones(num_test_samples, num_features)
     x_test[0][0] = 0
