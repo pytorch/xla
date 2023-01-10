@@ -252,6 +252,12 @@ function build_and_install_torch() {
 
   python setup.py bdist_wheel
   pip install dist/*.whl
+
+  # collect_wheels expects this
+  if [ ! -d "/pytorch/dist" ]; then
+    mkdir -p /pytorch/dist
+    cp dist/*.whl /pytorch/dist/
+  fi
 }
 
 function build_and_install_torch_xla() {
@@ -273,6 +279,12 @@ function build_and_install_torch_xla() {
     pip install torch_xla[tpuvm]
     sudo apt-get install -y google-perftools
   fi
+
+  # collect_wheels expects this
+  if [ ! -d "/pytorch/xla/dist" ]; then
+    mkdir -p /pytorch/xla/dist
+    cp dist/*.whl /pytorch/xla/dist/
+  fi
 }
 
 function install_torchvision_from_source() {
@@ -284,6 +296,12 @@ function install_torchvision_from_source() {
   python setup.py bdist_wheel
   pip install dist/*.whl
   popd
+
+  # collect_wheels expects this
+  if [ ! -d "/pytorch/vision/dist" ]; then
+    mkdir -p /pytorch/vision/dist
+    cp vision/dist/*.whl /pytorch/vision/dist/
+  fi
 }
 
 function install_torchaudio_from_source() {
@@ -293,6 +311,12 @@ function install_torchaudio_from_source() {
   python setup.py bdist_wheel
   pip install dist/*.whl
   popd
+
+  # collect_wheels expects this
+  if [ ! -d "/pytorch/audio/dist" ]; then
+    mkdir -p /pytorch/audio/dist
+    cp audio/dist/*.whl /pytorch/audio/dist/
+  fi
 }
 
 function main() {
