@@ -13,11 +13,11 @@ import types
 try:
   from .benchmark_model import TorchBenchModelLoader, ModelLoader
   from .benchmark_experiment import ExperimentLoader
-  from .utils import patch_torch_manual_seed ,reset_rng_state
+  from .utils import patch_torch_manual_seed, reset_rng_state, move_to_device
 except ImportError:
   from benchmark_model import TorchBenchModelLoader, ModelLoader
   from benchmark_experiment import ExperimentLoader
-  from utils import patch_torch_manual_seed ,reset_rng_state
+  from utils import patch_torch_manual_seed, reset_rng_state, move_to_device
 
 logger = logging.getLogger(__name__)
 
@@ -93,6 +93,7 @@ class ExperimentRunner:
       timing, result = self.timed_iteration(
           benchmark_experiment, benchmark_model
       )
+      result = move_to_device(result, 'cpu')
       results.append(result)
       for key, val in timing.items():
         if i == 0:
@@ -102,7 +103,7 @@ class ExperimentRunner:
     # save the config, timings and results to proper files in self.output_dir
     # self.save_results(timings, results)
 
-  def _maybe_mark_step(self, benchmark_experiment):
+  def _mark_step(self, benchmark_experiment):
     if benchmark_experiment.xla:
       xm.mark_step()
 
@@ -117,24 +118,27 @@ class ExperimentRunner:
   def timed_iteration(self, benchmark_experiment, benchmark_model):
     reset_rng_state()
 
-    self._maybe_mark_step(benchmark_experiment)
+    self._mark_step(benchmark_experiment)
     self._synchronize(benchmark_experiment)
 
     timing = OrderedDict()
     t_start = time.perf_counter()
 
-    result = benchmark_model.model_iter_fn()
+    for i in range(self._args.repeat_inner):
+      result = benchmark_model.model_iter_fn()
 
-    if benchmark_experiment.xla:
-      t_trace = time.perf_counter()
+      if benchmark_experiment.xla and self._args.repeat_inner == 1:
+        t_trace = time.perf_counter()
 
-    self._maybe_mark_step(benchmark_experiment)
+      self._mark_step(benchmark_experiment)
+
     self._synchronize(benchmark_experiment)
 
     t_end = time.perf_counter()
 
     timing["total"] = t_end - t_start
-    if benchmark_experiment.xla:
+    timing["average"] = timing["total"] / self._args.repeat_inner
+    if benchmark_experiment.xla and self._args.repeat_inner == 1:
       timing["trace"] = t_trace - t_start
 
     return timing, result
@@ -154,7 +158,14 @@ def parse_args(args=None):
         "--repeat",
         type=int,
         default=10,
-        help="Number of times to repeat the iteration.",
+        help="Number of times to repeat the timed iteration.",
+    )
+
+    parser.add_argument(
+        "--repeat-inner",
+        type=int,
+        default=1,
+        help="Number of times to repeat the model function inside the timed iteration.",
     )
 
     parser.add_argument(

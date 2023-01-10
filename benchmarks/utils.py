@@ -23,10 +23,12 @@ def patch_torch_manual_seed():
 
   torch.manual_seed = deterministic_torch_manual_seed
 
+
 def reset_rng_state():
   torch.manual_seed(1337)
   random.seed(1337)
   np.random.seed(1337)
+
 
 @functools.lru_cache(maxsize=1)
 def is_tpu_available():
@@ -52,3 +54,16 @@ def is_tpu_available():
   except queue.Empty:
     traceback.print_exc()
     return False
+
+
+def move_to_device(item, device):
+  if isinstance(item, torch.Tensor):
+    return item.to(device=device)
+  elif isinstance(item, list):
+    return [move_to_device(t, device) for t in item]
+  elif isinstance(item, tuple):
+    return tuple(move_to_device(t, device) for t in item)
+  elif isinstance(item, dict):
+    return dict((k, move_to_device(t, device)) for k, t in item.items())
+  else:
+    return item
