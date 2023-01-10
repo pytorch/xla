@@ -120,6 +120,10 @@ class TestDynamicShapes(unittest.TestCase):
     self.assertIsInstance(t2.shape[1], torch.SymInt)
 
 
+  def test_xla_view_symint(self):
+    # t1.shape= torch.Size([<=6, 2])
+    t1 = self.get_dynamic_tensor()  
+    
   
 
 
