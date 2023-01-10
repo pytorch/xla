@@ -182,7 +182,7 @@ function install_and_setup_conda() {
   fi
   ENVNAME="pytorch"
   if conda env list | awk '{print $1}' | grep "^$ENVNAME$"; then
-    conda remove --name "$ENVNAME" --all
+    conda remove -y --name "$ENVNAME" --all
   fi
   if [ -z "$PYTHON_VERSION" ]; then
     PYTHON_VERSION=$DEFAULT_PYTHON_VERSION
