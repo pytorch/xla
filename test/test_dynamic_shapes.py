@@ -105,6 +105,24 @@ class TestDynamicShapes(unittest.TestCase):
     self.assertIsInstance(t2.shape[0], torch.SymInt)
 >>>>>>> add test for add and fill_
 
+  def test_xla_mm(self):
+    # t1.shape= torch.Size([<=6, 2])
+    t1 = self.get_dynamic_tensor() 
+    t2 = torch.ones((2, 2), device=dev)
+    t3= torch.mm(t1, t2)
+    self.assertIsInstance(t3.shape[0], torch.SymInt)
+
+  def test_xla_unsqueeze(self):
+    # t1.shape= torch.Size([<=6, 2])
+    t1 = self.get_dynamic_tensor() 
+    t2 = t1.unsqueeze(dim=0)
+    self.assertIsInstance(t2.shape[0], int)
+    self.assertIsInstance(t2.shape[1], torch.SymInt)
+
+
+  
+
+
 
 if __name__ == '__main__':
   assert os.environ['XLA_EXPERIMENTAL'] != ''
