@@ -89,6 +89,7 @@ class TestDynamicShapes(unittest.TestCase):
     return a2
 
   def test_xla_add(self):
+    # t1.shape= torch.Size([<=6, 2])
     t1 = self.get_dynamic_tensor()
     t2 = self.get_dynamic_tensor()
     self.assertIsInstance(t1.shape[0], torch.SymInt)
@@ -97,8 +98,8 @@ class TestDynamicShapes(unittest.TestCase):
     self.assertIsInstance(t3.shape[0], torch.SymInt)
 
   def test_xla_fill_(self):
+    # t1.shape= torch.Size([<=6, 2])
     t1 = self.get_dynamic_tensor()
-    print('t1=', t1)
     self.assertIsInstance(t1.shape[0], torch.SymInt)
     t2 = t1.fill_(10)
     self.assertIsInstance(t2.shape[0], torch.SymInt)
