@@ -140,9 +140,9 @@ void XLAGraphExecutor::DeviceContextArena::SaveGraphAsString(
 }
 
 void XLAGraphExecutor::DeviceContextArena::SaveOutputShapes(
-    torch::lazy::hash_t hash, std::vector<xla::Shape> outptu_shapes) {
+    torch::lazy::hash_t hash, std::vector<xla::Shape> output_shapes) {
   if (hash_to_output_shape_map.find(hash) == hash_to_output_shape_map.end()) {
-    hash_to_output_shape_map[hash] = std::move(outptu_shapes);
+    hash_to_output_shape_map[hash] = std::move(output_shapes);
   }
 }
 
@@ -386,13 +386,13 @@ torch::lazy::hash_t XLAGraphExecutor::GetGraphHash(
   SyncTensorCollection coll = CollectSyncTensors(tensors, config);
   absl::Span<const size_t> indices = coll.indices;
   std::vector<torch::lazy::Value> ir_values;
-  std::vector<xla::Shape> outptu_shapes;
+  std::vector<xla::Shape> output_shapes;
   ir_values.reserve(indices.size());
-  outptu_shapes.reserve(indices.size());
+  output_shapes.reserve(indices.size());
   for (auto index : indices) {
     XLATensorPtr tensor = tensors[index];
     ir_values.push_back(tensor->CurrentIrValue());
-    outptu_shapes.push_back(MakeShapeWithDeviceLayout(
+    output_shapes.push_back(MakeShapeWithDeviceLayout(
         tensor->shape(),
         static_cast<XlaDeviceType>(tensor->GetDevice().type())));
   }
@@ -400,7 +400,7 @@ torch::lazy::hash_t XLAGraphExecutor::GetGraphHash(
   torch::lazy::hash_t res_hash = torch::lazy::HashCombine(
       coll.hash, torch::lazy::Hash(po_data.parameter_sequence));
   DeviceContextArena::Get()->SaveOutputShapes(res_hash,
-                                              std::move(outptu_shapes));
+                                              std::move(output_shapes));
   DeviceContextArena::Get()->SaveGraphAsString(res_hash, tensors,
                                                &coll.indices);
   return res_hash;

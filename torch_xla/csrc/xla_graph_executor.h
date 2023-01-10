@@ -214,6 +214,10 @@ class XLAGraphExecutor : public torch::lazy::LazyGraphExecutor {
 
     std::string GetGraphByHash(torch::lazy::hash_t hash);
 
+    // Return shapes is a pointer to the saved vector. Caller should be careful
+    // if this pointer will be saved and access later since the value might be
+    // changed. This should be fine in most cases since PyTorch/XLA tracing is
+    // signle threaded.
     std::vector<xla::Shape>* GetOutputShapesByHash(torch::lazy::hash_t hash);
 
    private:
