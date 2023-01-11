@@ -56,22 +56,6 @@ torch_xla::XlaOpVector AdaptiveAvgPool3dBackward::Lower(
   return ReturnOp(xla_output, loctx);
 }
 
-torch_xla::XlaOpVector Addcdiv::Lower(LoweringContext* loctx) const {
-  xla::XlaOp xla_input = loctx->GetOutputOp(operand(0));
-  xla::XlaOp xla_t1 = loctx->GetOutputOp(operand(1));
-  xla::XlaOp xla_t2 = loctx->GetOutputOp(operand(2));
-  xla::XlaOp xla_val = loctx->GetOutputOp(operand(3));
-  return ReturnOp(BuildAddcdiv(xla_input, xla_t1, xla_t2, xla_val), loctx);
-}
-
-torch_xla::XlaOpVector Addcmul::Lower(LoweringContext* loctx) const {
-  xla::XlaOp xla_input = loctx->GetOutputOp(operand(0));
-  xla::XlaOp xla_t1 = loctx->GetOutputOp(operand(1));
-  xla::XlaOp xla_t2 = loctx->GetOutputOp(operand(2));
-  xla::XlaOp xla_val = loctx->GetOutputOp(operand(3));
-  return ReturnOp(BuildAddcmul(xla_input, xla_t1, xla_t2, xla_val), loctx);
-}
-
 torch_xla::XlaOpVector All::Lower(LoweringContext* loctx) const {
   xla::XlaOp input = loctx->GetOutputOp(operand(0));
   std::vector<int64_t> dimensions =

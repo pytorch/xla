@@ -6,8 +6,6 @@ full_codegen:
   - abs
   - all
   - all.dim
-  - addcdiv
-  - addcmul
   - amax
   - amin
   - any
@@ -123,6 +121,9 @@ supported:
   - adaptive_max_pool2d_backward
   - add.Scalar
   - add.Tensor
+  - addcdiv
+  - addcdiv_
+  - addcmul
   - addmm
   - alias
   - arange.start_out

@@ -21,16 +21,6 @@ xla::Shape AdaptiveAvgPool3dOutputShape(const torch::lazy::Value& input,
 xla::Shape AdaptiveAvgPool3dBackwardOutputShape(
     const torch::lazy::Value& grad_output, const torch::lazy::Value& input);
 
-xla::Shape AddcdivOutputShape(const torch::lazy::Value& input,
-                              const torch::lazy::Value& t1,
-                              const torch::lazy::Value& t2,
-                              const torch::lazy::Value& value);
-
-xla::Shape AddcmulOutputShape(const torch::lazy::Value& input,
-                              const torch::lazy::Value& t1,
-                              const torch::lazy::Value& t2,
-                              const torch::lazy::Value& value);
-
 xla::Shape AllOutputShape(const torch::lazy::Value& input);
 
 xla::Shape AllDimOutputShape(const torch::lazy::Value& input, const int64_t dim,

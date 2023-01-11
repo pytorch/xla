@@ -97,31 +97,6 @@ xla::Shape AdaptiveAvgPool3dBackwardOutputShape(
                           lower_for_shape_fn);
 }
 
-xla::Shape AddcdivOutputShape(const torch::lazy::Value& input,
-                              const torch::lazy::Value& t1,
-                              const torch::lazy::Value& t2,
-                              const torch::lazy::Value& value) {
-  auto shape_fn = [](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
-    return BuildAddcdiv(operands[0], operands[1], operands[2], operands[3]);
-  };
-  return InferOutputShape({GetXlaShape(input), GetXlaShape(t1), GetXlaShape(t2),
-                           GetXlaShape(value)},
-                          shape_fn);
-}
-
-xla::Shape AddcmulOutputShape(const torch::lazy::Value& input,
-                              const torch::lazy::Value& t1,
-                              const torch::lazy::Value& t2,
-                              const torch::lazy::Value& value) {
-  auto shape_fn = [](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
-    return BuildAddcmul(operands[0], operands[1], operands[2], operands[3]);
-  };
-
-  return InferOutputShape({GetXlaShape(input), GetXlaShape(t1), GetXlaShape(t2),
-                           GetXlaShape(value)},
-                          shape_fn);
-}
-
 xla::Shape AllOutputShape(const torch::lazy::Value& input) {
   std::vector<int64_t> dimensions =
       torch::lazy::Iota<int64_t>(GetXlaShape(input).rank());
