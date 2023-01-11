@@ -10,7 +10,6 @@ dev = xm.xla_device()
 class TestDynamicShapes(unittest.TestCase):
 
   def test_simple_expand(self):
-    self.assertNotEqual(os.environ['XLA_EXPERIMENTAL'], '')
     size1 = 5
     size2 = 2
     t1 = torch.zeros([size1, size2], device=dev)
@@ -55,7 +54,6 @@ class TestDynamicShapes(unittest.TestCase):
     self.assertEqual(t4.shape[1], size2)
 
   def test_wrap(self):
-    self.assertNotEqual(os.environ['XLA_EXPERIMENTAL'], '')
     a1 = torch.tensor([[1, 0, 0, 5, 0, 6]], device=dev)
     a2 = torch.nonzero(a1)
     self.assertTrue(a2.shape[0] == 3)
@@ -63,7 +61,6 @@ class TestDynamicShapes(unittest.TestCase):
     self.assertIsInstance(a3, torch.SymInt)
 
   def test_sizeAdd(self):
-    self.assertNotEqual(os.environ['XLA_EXPERIMENTAL'], '')
     size1 = 5
     size2 = 2
     t1 = torch.zeros([size1, size2], device=dev)
@@ -85,5 +82,6 @@ class TestDynamicShapes(unittest.TestCase):
 
 
 if __name__ == '__main__':
+  assert os.environ['XLA_EXPERIMENTAL'] != ''
   test = unittest.main()
   sys.exit(0 if test.result.wasSuccessful() else 1)
