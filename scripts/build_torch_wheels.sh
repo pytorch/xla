@@ -5,6 +5,7 @@ set -x  # Display commands being run.
 
 PYTHON_VERSION=$1
 RELEASE_VERSION=$2  # rX.Y or nightly
+BUILD_CPP_TESTS="${3:-0}"
 DEFAULT_PYTHON_VERSION=3.6
 DEBIAN_FRONTEND=noninteractive
 
@@ -197,7 +198,8 @@ function install_and_setup_conda() {
 
   conda install -y numpy pyyaml setuptools cmake cffi typing tqdm coverage tensorboard hypothesis dataclasses
   if [[ $(uname -m) == "x86_64" ]]; then
-    conda install -y mkl-include
+    # Overwrite mkl packages here, since nomkl conflicts with the anaconda env setup.
+    pip install mkl==2022.2.1 mkl_include==2022.2.1
   fi
 
   /usr/bin/yes | pip install --upgrade google-api-python-client
@@ -265,8 +267,7 @@ function build_and_install_torch_xla() {
     export XLA_CPU_USE_ACL=1
   fi
 
-  # TODO: reenable after fixing the cpp test build
-  BUILD_CPP_TESTS=0 python setup.py bdist_wheel
+  python setup.py bdist_wheel
   pip install dist/*.whl
   if [ "$TPUVM_MODE" == "1" ]; then
     pip install torch_xla[tpuvm]
