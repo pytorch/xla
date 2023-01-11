@@ -596,6 +596,37 @@ at::Tensor XLANativeFunctions::add(const at::Tensor& self,
                     });
 }
 
+at::Tensor XLANativeFunctions::addcdiv(const at::Tensor& self,
+                                       const at::Tensor& tensor1,
+                                       const at::Tensor& tensor2,
+                                       const at::Scalar& value) {
+  TORCH_LAZY_FN_COUNTER("xla::");
+  return bridge::AtenFromXlaTensor(tensor_methods::addcdiv(
+      bridge::GetXlaTensor(self), value, bridge::GetXlaTensor(tensor1),
+      bridge::GetXlaTensor(tensor2)));
+}
+
+at::Tensor& XLANativeFunctions::addcdiv_(at::Tensor& self,
+                                         const at::Tensor& tensor1,
+                                         const at::Tensor& tensor2,
+                                         const at::Scalar& value) {
+  TORCH_LAZY_FN_COUNTER("xla::");
+  XLATensorPtr self_tensor = bridge::GetXlaTensor(self);
+  tensor_methods::addcdiv_(self_tensor, value, bridge::GetXlaTensor(tensor1),
+                           bridge::GetXlaTensor(tensor2));
+  return self;
+}
+
+at::Tensor XLANativeFunctions::addcmul(const at::Tensor& self,
+                                       const at::Tensor& tensor1,
+                                       const at::Tensor& tensor2,
+                                       const at::Scalar& value) {
+  TORCH_LAZY_FN_COUNTER("xla::");
+  return bridge::AtenFromXlaTensor(tensor_methods::addcmul(
+      bridge::GetXlaTensor(self), value, bridge::GetXlaTensor(tensor1),
+      bridge::GetXlaTensor(tensor2)));
+}
+
 at::Tensor XLANativeFunctions::addmm(const at::Tensor& self,
                                      const at::Tensor& mat1,
                                      const at::Tensor& mat2,
