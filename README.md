@@ -82,6 +82,7 @@ nightly at date | `gcr.io/tpu-pytorch/xla:nightly_3.7_cuda_11.2_YYYYMMDD`  |
 
 | Version | GPU CUDA 11.2 + Python 3.8 Docker |
 | --- | ----------- |
+| 1.13 | `gcr.io/tpu-pytorch/xla:r1.13_3.8_cuda_11.2` |
 | nightly | `gcr.io/tpu-pytorch/xla:nightly_3.8_cuda_11.2` |
 | nightly at date(>=20221128) | `gcr.io/tpu-pytorch/xla:nightly_3.8_cuda_11.2_YYYYMMDD` |
 
@@ -110,6 +111,7 @@ To run on [compute instances with GPUs](https://cloud.google.com/compute/docs/gp
 
 | Version | GPU Wheel + Python 3.8 |
 | --- | ----------- |
+| 1.13 | `https://storage.googleapis.com/tpu-pytorch/wheels/cuda/112/torch_xla-1.13-cp38-cp38-linux_x86_64.whl` |
 | nightly | `https://storage.googleapis.com/tpu-pytorch/wheels/cuda/112/torch_xla-nightly-cp38-cp38-linux_x86_64.whl` |
 
 <br/>
