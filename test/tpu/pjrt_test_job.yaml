@@ -28,6 +28,7 @@ spec:
     - -c
     - |
       python3 pytorch/xla/test/pjrt/test_experimental_pjrt_tpu.py
+      bash pytorch/xla/test/run_tests.sh
     volumeMounts:
     - mountPath: /dev/shm
       name: dshm
