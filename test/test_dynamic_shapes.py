@@ -75,12 +75,10 @@ class TestDynamicShapes(unittest.TestCase):
     self.assertEqual(dynamic_size, 3)
     # Exercise SizeAdd::getStaticValue.
     self.assertEqual(str(dyn_size), '<=12')
-<<<<<<< HEAD
     t3 = torch.ones(1, device=dev)
     # Exercise SizeAdd::Lower.
     t4 = t3.expand(dyn_size)
     self.assertEqual(t4.size(0), 3)
-=======
   
   def get_dynamic_tensor(self):
     a1 = torch.tensor([[1, 0, 0, 5, 0, 6]], device=dev)
@@ -100,10 +98,10 @@ class TestDynamicShapes(unittest.TestCase):
   def test_xla_fill_(self):
     # t1.shape= torch.Size([<=6, 2])
     t1 = self.get_dynamic_tensor()
+    print('t1=', t1)
     self.assertIsInstance(t1.shape[0], torch.SymInt)
     t2 = t1.fill_(10)
     self.assertIsInstance(t2.shape[0], torch.SymInt)
->>>>>>> add test for add and fill_
 
   def test_xla_mm(self):
     # t1.shape= torch.Size([<=6, 2])
