@@ -100,6 +100,8 @@ import torch_xla.utils.utils as xu
 import torch_xla.core.xla_model as xm
 import torch_xla.distributed.xla_multiprocessing as xmp
 import torch_xla.test.test_utils as test_utils
+from subprocess import Popen
+import torch_xla.debug.profiler as xp
 
 from torch_xla.distributed.fsdp import XlaFullyShardedDataParallel as FSDP, checkpoint_module
 from torch_xla.distributed.fsdp.wrap import (size_based_auto_wrap_policy,
@@ -312,21 +314,32 @@ def train_imagenet():
       summary_writer=writer)
   loss_fn = nn.CrossEntropyLoss()
 
+  server = xp.start_server(FLAGS.profiler_port)
+
   def train_loop_fn(loader, epoch):
     tracker = xm.RateTracker()
     model.train()
+
+    profiled = False
     for step, (data, target) in enumerate(loader):
-      optimizer.zero_grad()
-      output = model(data)
-      loss = loss_fn(output, target)
-      loss.backward()
-      optimizer.step()  # do not reduce gradients on sharded params
-      tracker.add(FLAGS.batch_size)
-      if lr_scheduler:
-        lr_scheduler.step()
-      if step % FLAGS.log_steps == 0:
-        xm.add_step_closure(
-            _train_update, args=(device, step, loss, tracker, epoch, writer))
+      with xp.StepTrace('train_imagenet'):
+        with xp.Trace('build_graph'):
+          optimizer.zero_grad()
+          output = model(data)
+          loss = loss_fn(output, target)
+          loss.backward()
+          optimizer.step()  # do not reduce gradients on sharded params
+          tracker.add(FLAGS.batch_size)
+          if lr_scheduler:
+            lr_scheduler.step()
+          if step % FLAGS.log_steps == 0:
+            xm.add_step_closure(
+                _train_update, args=(device, step, loss, tracker, epoch, writer))
+          if step == 100 and not profiled:
+            profiled = True
+            label = 'FSDP_' + str(FLAGS.batch_size)
+            Popen(f"python scripts/capture_profile.py --service_addr 127.0.0.1:9012 --logdir {os.environ['HOME']}/autoprof/{label} --duration_ms 10000".split())
+
 
   def test_loop_fn(loader, epoch):
     total_samples, correct = 0, 0
