@@ -139,6 +139,13 @@ void XLAGraphExecutor::DeviceContextArena::SaveGraphAsString(
   }
 }
 
+void XLAGraphExecutor::DeviceContextArena::SaveOutputShapes(
+    torch::lazy::hash_t hash, std::vector<xla::Shape> output_shapes) {
+  if (hash_to_output_shape_map.find(hash) == hash_to_output_shape_map.end()) {
+    hash_to_output_shape_map[hash] = std::move(output_shapes);
+  }
+}
+
 std::string XLAGraphExecutor::DeviceContextArena::GetGraphByHash(
     torch::lazy::hash_t hash) {
   auto iter = hash_to_graph_map.find(hash);
@@ -147,6 +154,15 @@ std::string XLAGraphExecutor::DeviceContextArena::GetGraphByHash(
     return "";
   }
   return iter->second;
+}
+
+std::vector<xla::Shape>*
+XLAGraphExecutor::DeviceContextArena::GetOutputShapesByHash(
+    torch::lazy::hash_t hash) {
+  auto iter = hash_to_output_shape_map.find(hash);
+  XLA_CHECK(iter != hash_to_output_shape_map.end())
+      << "Hash not found, can't retrive output shape";
+  return &(iter->second);
 }
 
 torch::lazy::Value XLAGraphExecutor::DeviceContextArena::IrValueFromScalar(
@@ -370,13 +386,21 @@ torch::lazy::hash_t XLAGraphExecutor::GetGraphHash(
   SyncTensorCollection coll = CollectSyncTensors(tensors, config);
   absl::Span<const size_t> indices = coll.indices;
   std::vector<torch::lazy::Value> ir_values;
+  std::vector<xla::Shape> output_shapes;
   ir_values.reserve(indices.size());
+  output_shapes.reserve(indices.size());
   for (auto index : indices) {
-    ir_values.push_back(tensors.at(index)->CurrentIrValue());
+    XLATensorPtr tensor = tensors[index];
+    ir_values.push_back(tensor->CurrentIrValue());
+    output_shapes.push_back(MakeShapeWithDeviceLayout(
+        tensor->shape(),
+        static_cast<XlaDeviceType>(tensor->GetDevice().type())));
   }
   PostOrderData po_data = RunPostOrder(ir_values, &coll);
   torch::lazy::hash_t res_hash = torch::lazy::HashCombine(
       coll.hash, torch::lazy::Hash(po_data.parameter_sequence));
+  DeviceContextArena::Get()->SaveOutputShapes(res_hash,
+                                              std::move(output_shapes));
   DeviceContextArena::Get()->SaveGraphAsString(res_hash, tensors,
                                                &coll.indices);
   return res_hash;
@@ -519,13 +543,58 @@ void XLAGraphExecutor::TensorCollectionBarrier(SyncTensorCollection* coll) {
 
 std::vector<torch::lazy::BackendDataPtr>
 XLAGraphExecutor::ExecuteComputationWithBarrier(
-    torch::lazy::ComputationPtr computation,
-    c10::ArrayRef<torch::lazy::BackendDataPtr> arguments,
+    torch::lazy::hash_t hash,
+    std::vector<torch::lazy::BackendDataPtr> arguments,
     const torch::lazy::BackendDevice& device) {
-  std::vector<torch::lazy::ExceptionCleanup> unlocker;
-  unlocker = DeviceLockerArena::Get()->LockDevices({device});
-  return torch::lazy::getBackend()->ExecuteComputation(computation, arguments,
-                                                       device);
+  MaybeDumpGraph("dynamo", hash);
+  auto cachedComputation =
+      XLAGraphExecutor::Get()->GetComputationCache()->Get(hash);
+  // TODO implement a fallback mechanism, or make sure those entries
+  // never get kicked out
+  XLA_CHECK(cachedComputation)
+      << "Failed to get computation by hash " << torch::lazy::HashToString(hash)
+      << ". Maybe the entry get "
+         "kicked out of the LRU cache";
+
+  // Create DataPlaceHolder that will get filled in async executions.
+  std::vector<xla::Shape>* output_shapes =
+      DeviceContextArena::Get()->GetOutputShapesByHash(hash);
+  std::vector<torch::lazy::BackendDataPtr> placeholders;
+  placeholders.reserve(output_shapes->size());
+  for (const xla::Shape& shape : *output_shapes) {
+    torch::lazy::BackendDataPtr handle =
+        WrapXlaData(xla::ComputationClient::Get()->CreateDataPlaceholder(
+            device.toString(), std::move(shape)));
+    placeholders.push_back(handle);
+  }
+
+  SyncTensorCollection coll;
+  coll.device = device;
+  coll.unlocker = DeviceLockerArena::Get()->LockDevices({device});
+  std::shared_ptr<XLAGraphExecutor::Async> async = std::make_shared<Async>(
+      &coll, std::move(arguments), placeholders, std::move(cachedComputation));
+
+  auto syncfn = [async, hash]() {
+    TF_VLOG(3) << "Executing Dynamo IR graph hash "
+               << torch::lazy::HashToString(hash) << " on device "
+               << async->device << " ...";
+    std::vector<torch::lazy::BackendDataPtr> results =
+        torch::lazy::getBackend()->ExecuteComputation(
+            async->cached_computation->computation, async->parameters_data,
+            async->device);
+    TF_VLOG(3) << "Executing Dynamo IR graph hash "
+               << torch::lazy::HashToString(hash) << " on device "
+               << async->device << " done!";
+    // Updating placeholder with actual output handle.
+    for (size_t i = 0; i < results.size(); ++i) {
+      XLA_CHECK(async->tensors_data[i] != nullptr);
+      async->tensors_data[i]->Assign(*results[i]);
+    }
+  };
+
+  xla::env::ScheduleIoClosure(async->mwait.Completer(std::move(syncfn)));
+
+  return placeholders;
 }
 
 std::vector<at::Tensor> XLAGraphExecutor::GetTensorsOpByOp(

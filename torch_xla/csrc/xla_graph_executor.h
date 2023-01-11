@@ -161,8 +161,8 @@ class XLAGraphExecutor : public torch::lazy::LazyGraphExecutor {
   ComputationCache* GetComputationCache();
 
   std::vector<torch::lazy::BackendDataPtr> ExecuteComputationWithBarrier(
-      torch::lazy::ComputationPtr computation,
-      c10::ArrayRef<torch::lazy::BackendDataPtr> arguments,
+      torch::lazy::hash_t hash,
+      std::vector<torch::lazy::BackendDataPtr> arguments,
       const torch::lazy::BackendDevice& device);
 
   void ClearPendingIrs(std::vector<XLATensorPtr> tensors,
@@ -209,12 +209,25 @@ class XLAGraphExecutor : public torch::lazy::LazyGraphExecutor {
         const std::vector<size_t>* indices,
         DebugUtil::GraphFormat format = DebugUtil::GetDefaultGraphFormat());
 
+    void SaveOutputShapes(torch::lazy::hash_t hash,
+                          std::vector<xla::Shape> outptu_shapes);
+
     std::string GetGraphByHash(torch::lazy::hash_t hash);
 
+    // Return shapes is a pointer to the saved vector. Caller should be careful
+    // if this pointer will be saved and access later since the value might be
+    // changed. This should be fine in most cases since PyTorch/XLA tracing is
+    // signle threaded.
+    std::vector<xla::Shape>* GetOutputShapesByHash(torch::lazy::hash_t hash);
+
    private:
+    // Below two maps are used for dynamo integration.
     std::unordered_map<torch::lazy::hash_t, std::string,
                        torch::lazy::HashReducer>
         hash_to_graph_map;
+    std::unordered_map<torch::lazy::hash_t, std::vector<xla::Shape>,
+                       torch::lazy::HashReducer>
+        hash_to_output_shape_map;
     // We override this to use TensorToXlaData().
     torch::lazy::Value IrValueFromScalar(
         const at::Scalar& value, at::ScalarType scalar_type,
