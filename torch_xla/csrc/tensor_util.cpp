@@ -1252,10 +1252,10 @@ bool RequiresRawTypeCasting(at::ScalarType scalar_type,
 
 xla::PrimitiveType GetShapeDimensionType(
     const torch::lazy::BackendDevice* device) {
-  torch::lazy::BackendDevice xla_device = GetDeviceOrCurrent(device);
-  XlaDeviceType hw_type = static_cast<XlaDeviceType>(xla_device.type());
-  return hw_type == XlaDeviceType::CPU ? xla::PrimitiveType::S64
-                                       : xla::PrimitiveType::S32;
+  // The shape dimension type is always s32 on TPU or CPU.
+  // In case in the future the type start depending on the underlying
+  // hardware, we leave the `device` in the function argument.
+  return xla::PrimitiveType::S32;
 }
 
 }  // namespace torch_xla
