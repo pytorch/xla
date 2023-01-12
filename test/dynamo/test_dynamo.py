@@ -70,29 +70,37 @@ class DynamoInferenceBasicTest(unittest.TestCase):
     self.assertEqual(
         met.metric_data('RunCachedGraphOutputData')[0], sample_count)
 
+
 class DynamoTrainingBasicTest(unittest.TestCase):
 
   def fn_simple(self, input):
-    loss = torch.nn.CrossEntropyLoss()
-    target = torch.tensor([1,2,3], dtype=torch.long).to(input.device)
-    output = loss(input, target)
-    output.backward()
-    return output
+    loss_fn = torch.nn.CrossEntropyLoss()
+    target = torch.tensor([1, 2, 3], dtype=torch.long).to(input.device)
+    loss = loss_fn(input, target)
+    loss.backward()
+    return loss
 
   @dynamo.optimize('aot_torchxla_trace_once')
   def fn_simple_dynamo(self, input):
     return self.fn_simple(input)
 
+  def train_model(self, model, data, target):
+    loss_fn = torch.nn.CrossEntropyLoss()
+    pred = model(data)
+    loss = loss_fn(pred, target)
+    loss.backward()
+    return pred
+
   @dynamo.optimize('aot_torchxla_trace_once')
-  def run_model_with_dynamo(self, model, data):
-    return model(data)
+  def run_model_with_dynamo(self, model, data, target):
+    return self.train_model(model, data, target)
 
   def test_simple_model(self):
     torch._dynamo.reset()
     device = xm.xla_device()
     input = torch.randn(3, 5, requires_grad=True)
     xla_input = input.detach().to(device)
-    xla_input.requires_grad=True
+    xla_input.requires_grad = True
     res_cpu = self.fn_simple(input)
     res_xla_dynamo = self.fn_simple_dynamo(xla_input)
     self.assertIn('xla::nll_loss_backward', met.counter_names())
@@ -113,29 +121,40 @@ class DynamoTrainingBasicTest(unittest.TestCase):
     torch.allclose(res_cpu, res_xla_dynamo.cpu())
     torch.allclose(input.grad, xla_input.grad.cpu())
 
-  # def test_resnet18(self):
-  #   device = xm.xla_device()
-  #   batch_size = xu.getenv_as('BATCH_SIZE', int, defval=4)
-  #   sample_count = xu.getenv_as('SAMPLE_COUNT', int, defval=10)
-  #   loader = xu.SampleGenerator(
-  #       data=(torch.randn(batch_size, 3, 224, 224, device=device),
-  #             torch.zeros(batch_size, dtype=torch.int64, device=device)),
-  #       sample_count=sample_count)
-  #   resnet18 = torchvision.models.resnet18()
-  #   resnet18.train()
-  #   xla_resnet18 = torchvision.models.resnet18().to(device)
-  #   xla_resnet18.train()
-  #   for data, _ in loader:
-  #     output = self.run_model_with_dynamo(xla_resnet18, data)
-  #     torch.allclose(resnet18(data.cpu()), output.cpu())
-  #   # One graph for initial input data materialization. Another grpah for the
-  #   # real model code.
-  #   self.assertEqual(met.metric_data('CompileTime')[0], 2)
-  #   self.assertEqual(met.metric_data('ExecuteTime')[0], sample_count + 2)
-  #   self.assertEqual(
-  #       met.metric_data('RunCachedGraphInputData')[0], sample_count)
-  #   self.assertEqual(
-  #       met.metric_data('RunCachedGraphOutputData')[0], sample_count)
+  def test_resnet18(self):
+    torch._dynamo.reset()
+    met.clear_counters()
+    device = xm.xla_device()
+    batch_size = xu.getenv_as('BATCH_SIZE', int, defval=4)
+    sample_count = xu.getenv_as('SAMPLE_COUNT', int, defval=10)
+    loader = xu.SampleGenerator(
+        data=(torch.randn(
+            batch_size, 3, 224, 224, device=device, requires_grad=True),
+              torch.zeros(batch_size, dtype=torch.int64, device=device)),
+        sample_count=sample_count)
+    resnet18 = torchvision.models.resnet18()
+    resnet18.train()
+    xla_resnet18 = torchvision.models.resnet18()
+    xla_resnet18.load_state_dict(resnet18.state_dict())
+    xla_resnet18.to(device)
+    xla_resnet18.train()
+    for data, target in loader:
+      xla_output = self.run_model_with_dynamo(xla_resnet18, data, target)
+      cpu_data = data.detach().cpu()
+      cpu_data.requires_grad = True
+      cpu_target = target.detach().cpu()
+      cpu_output = self.train_model(resnet18, cpu_data, cpu_target)
+      torch.allclose(xla_output.cpu(), cpu_output.cpu())
+      torch.allclose(data.grad.cpu(), cpu_data.grad)
+    # TODO(JackCaoG): Invesgate the CompileTime and ExecuteTime
+    # self.assertEqual(met.metric_data('CompileTime')[0], 12)
+    # self.assertEqual(met.metric_data('ExecuteTime')[0], 77)
+    # one for each forward and one for each backward
+    # self.assertEqual(
+    #     met.metric_data('RunCachedGraphInputData')[0], sample_count * 2)
+    # self.assertEqual(
+    #     met.metric_data('RunCachedGraphOutputData')[0], sample_count * 2)
+
 
 if __name__ == '__main__':
   test = unittest.main()
