@@ -48,10 +48,6 @@ do
 done
 shift $(($OPTIND - 1))
 
-if [[ "$TPUVM_MODE" != "1" ]]; then
-  export XLA_EXPERIMENTAL
-fi
-
 rm -rf "$BUILDDIR"
 mkdir "$BUILDDIR" 2>/dev/null
 pushd "$BUILDDIR"
