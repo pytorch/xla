@@ -3,7 +3,6 @@ import re
 import torch
 import torch.nn as nn
 from torch._dynamo.testing import collect_results, reduce_to_scalar_loss
-from torch._dynamo.utils import clone_inputs
 import types
 
 try:
@@ -47,12 +46,10 @@ class ModelLoader:
   def load_model(self, model_config, benchmark_experiment):
     suite_name = self.suite_name
     model_name = model_config["model_name"]
-    optimizer_name = model_config.get("optimizer_name", "Adam")
     batch_size = self._args.batch_size
     benchmark_model = BenchmarkModel(
         suite_name=suite_name,
         model_name=model_name,
-        optimizer_name=optimizer_name,
         batch_size=batch_size,
         benchmark_experiment=benchmark_experiment,
     )
@@ -65,11 +62,9 @@ class ModelLoader:
 
 class BenchmarkModel:
 
-  def __init__(self, suite_name, model_name, optimizer_name, batch_size,
-               benchmark_experiment):
+  def __init__(self, suite_name, model_name, batch_size, benchmark_experiment):
     self.suite_name = suite_name
     self.model_name = model_name
-    self.optimizer_name = optimizer_name
     self.batch_size = batch_size
     self.benchmark_experiment = benchmark_experiment
 
@@ -82,16 +77,16 @@ class BenchmarkModel:
       raise NotImplementedError
 
     self.module = nn.Sequential(
-        nn.Linear(3, 5),
+        nn.Linear(32, 512),
         nn.ReLU(),
-        nn.Linear(5, 5),
+        nn.Linear(512, 512),
         nn.ReLU(),
-        nn.Linear(5, 3),
+        nn.Linear(512, 32),
         nn.Softmax(dim=1),
     )
 
-    self.batch_size = 10
-    self.example_inputs = (torch.rand(self.batch_size, 3),)
+    self.batch_size = 16
+    self.example_inputs = (torch.rand(self.batch_size, 32),)
     self.optimizer_class = torch.optim.Adam
 
   def prepare_for_experiment(self):
@@ -123,20 +118,19 @@ class BenchmarkModel:
   def compute_loss(self, pred):
     return reduce_to_scalar_loss(pred)
 
-  def train(self, collect_outputs=True):
-    cloned_inputs = clone_inputs(self.example_inputs)
+  def train(self, inputs, collect_outputs=True):
     self.optimizer_zero_grad()
-    pred = self.module(*cloned_inputs)
+    pred = self.module(*inputs)
     loss = self.compute_loss(pred)
     loss.backward()
     self.optimizer_step()
     if collect_outputs:
-        return collect_results(self.module, pred, loss, cloned_inputs)
+        return collect_results(self.module, pred, loss, inputs)
     return None
 
-  def eval(self, collect_outputs=True):
-    return self.module(*self.example_inputs)
+  def eval(self, inputs, collect_outputs=True):
+    return self.module(*inputs)
 
   @property
   def filename_str(self):
-    return f"{self.suite_name}-{self.model_name}-{self.optimizer_name}-{self.batch_size}"
+    return f"{self.suite_name}-{self.model_name}-{self.batch_size}"

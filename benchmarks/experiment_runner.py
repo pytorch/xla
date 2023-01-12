@@ -1,5 +1,6 @@
 import argparse
 from collections import OrderedDict
+import copy
 import json
 import logging
 import numpy as np
@@ -13,12 +14,12 @@ try:
   from .benchmark_model import ModelLoader
   from .torchbench_model import TorchBenchModelLoader
   from .benchmark_experiment import ExperimentLoader
-  from .util import patch_torch_manual_seed, reset_rng_state, move_to_device
+  from .util import patch_torch_manual_seed, reset_rng_state, move_to_device, randomize_input
 except ImportError:
   from benchmark_model import ModelLoader
   from torchbench_model import TorchBenchModelLoader
   from benchmark_experiment import ExperimentLoader
-  from util import patch_torch_manual_seed, reset_rng_state, move_to_device
+  from util import patch_torch_manual_seed, reset_rng_state, move_to_device, randomize_input
 
 logger = logging.getLogger(__name__)
 
@@ -82,6 +83,7 @@ class ExperimentRunner:
             logger.warning("SKIP because of incompatible configs.")
 
   def run_single_experiment(self, experiment_config, model_config):
+    reset_rng_state()
     benchmark_experiment = self.experiment_loader.load_experiment(
         experiment_config
     )
@@ -121,8 +123,19 @@ class ExperimentRunner:
     else:
       pass
 
+  def prepare_inputs(self, example_inputs, should_randomize_input):
+    inputs_list = []
+    for i in range(self._args.repeat_inner):
+      inputs = copy.deepcopy(example_inputs)
+      if should_randomize_input:
+        inputs = randomize_input(inputs)
+      inputs_list.append(inputs)
+    return inputs_list
+
   def timed_iteration(self, benchmark_experiment, benchmark_model):
     reset_rng_state()
+
+    inputs_list = self.prepare_inputs(benchmark_model.example_inputs, self._args.randomize_input)
 
     self._mark_step(benchmark_experiment)
     self._synchronize(benchmark_experiment)
@@ -131,7 +144,7 @@ class ExperimentRunner:
     t_start = time.perf_counter()
 
     for i in range(self._args.repeat_inner):
-      result = benchmark_model.model_iter_fn(collect_outputs=False)
+      result = benchmark_model.model_iter_fn(inputs_list[i], collect_outputs=False)
 
       if benchmark_experiment.xla and self._args.repeat_inner == 1:
         t_trace = time.perf_counter()
@@ -205,6 +218,12 @@ def parse_args(args=None):
         "--dry-run",
         action="store_true",
         help="Do a dry run to only print the benchmark commands.",
+    )
+
+    parser.add_argument(
+        "--randomize-input",
+        action="store_true",
+        help="Whether to randomize the input values. Dimensions will be kept the same.",
     )
 
     parser.add_argument(

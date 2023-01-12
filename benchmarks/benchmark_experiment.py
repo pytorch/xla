@@ -32,9 +32,12 @@ class ExperimentLoader:
       for xla in xla_options:
         for test in tests:
           experiment_config = {"accelerator": accelerator, "xla": xla, "test": test}
-          if self._is_valid(experiment_config):
-            self._add_experiment_env(experiment_config, accelerators)
-            experiment_configs.append(experiment_config)
+
+          if not self._is_valid(experiment_config):
+            continue
+
+          self._add_experiment_env(experiment_config, accelerators)
+          experiment_configs.append(experiment_config)
     return experiment_configs
 
   def _is_valid(self, experiment_config):

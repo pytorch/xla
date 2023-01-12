@@ -1,5 +1,6 @@
 from contextlib import contextmanager
 import functools
+import logging
 from multiprocessing import Process, Queue
 import numpy as np
 import os
@@ -8,6 +9,8 @@ import queue
 import random
 import torch
 import traceback
+
+logger = logging.getLogger(__name__)
 
 
 @functools.lru_cache(None)
@@ -70,6 +73,33 @@ def move_to_device(item, device):
     return dict((k, move_to_device(t, device)) for k, t in item.items())
   else:
     return item
+
+
+def randomize_input(inputs):
+  if isinstance(inputs, torch.Tensor):
+    if inputs.dtype in (torch.float32, torch.float64):
+      torch._dynamo.utils.counters["randomize_input"]["times"] += 1
+      return torch.randn_like(inputs)
+    elif inputs.dtype == torch.int64:
+      # Note: we can not simply tune integer tensors as follows
+      #   `return torch.randint_like(inputs, high=inputs.max().item())`
+      # This may break some invariants between tensors.
+      # E.g. in embedding lookup case, one tensor is the length
+      # and another is an indices tensor.
+      return inputs
+    else:
+      raise RuntimeError(
+          f"randomize_input need support tensor of type {inputs.dtype}"
+      )
+  elif isinstance(inputs, (list, tuple)):
+    return type(inputs)([randomize_input(x) for x in inputs])
+  elif isinstance(inputs, dict):
+    return dict((k, randomize_input(x)) for k, x in inputs.items())
+  else:
+    logger.warning(
+        f"randomize_input can not handle input of type {type(inputs)}"
+    )
+    return inputs
 
 
 @contextmanager
