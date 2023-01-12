@@ -8,8 +8,7 @@ function run_deployment_tests() {
   # We don't need to load libtpu since test is being done on CPU.
   time TPU_LOAD_LIBRARY=0 python /pytorch/xla/test/test_train_mp_mnist.py --fake_data
   # time TPU_LOAD_LIBRARY=0 bash /pytorch/xla/test/run_tests.sh
-  # TODO(JackCaoG): reenable after fixing the cpp test build
-  # time bash /pytorch/xla/test/cpp/run_tests.sh
+  time bash /pytorch/xla/test/cpp/run_tests.sh
 }
 
 function collect_wheels() {
