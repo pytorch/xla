@@ -1895,6 +1895,7 @@ class TestAtenXlaTensor(XlaTestCase):
 
   def test_cached_addcdiv(self):
     xla_device = xm.xla_device()
+    met.clear_all()
 
     t1 = torch.randn(1, 3).to(xla_device)
     t2 = torch.randn(1, 3).to(xla_device)
