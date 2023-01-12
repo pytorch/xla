@@ -414,9 +414,9 @@ torch_xla::XlaOpVector LeakyReluBackward::Lower(LoweringContext* loctx) const {
   xla::XlaOp xla_grad_output = loctx->GetOutputOp(operand(0));
   xla::XlaOp xla_input = loctx->GetOutputOp(operand(1));
   xla::XlaOp negative_slope = loctx->GetOutputOp(operand(2));
-  return ReturnOp(BuildLeakyReluBackward(xla_grad_output, xla_input,
-                                         negative_slope),
-                  loctx);
+  return ReturnOp(
+      BuildLeakyReluBackward(xla_grad_output, xla_input, negative_slope),
+      loctx);
 }
 
 torch_xla::XlaOpVector Logdet::Lower(LoweringContext* loctx) const {
