@@ -7,17 +7,18 @@ import subprocess
 import sys
 import time
 import torch
-import torch_xla.core.xla_model as xm
 import types
 
 try:
-  from .benchmark_model import TorchBenchModelLoader, ModelLoader
+  from .benchmark_model import ModelLoader
+  from .torchbench_model import TorchBenchModelLoader
   from .benchmark_experiment import ExperimentLoader
-  from .utils import patch_torch_manual_seed, reset_rng_state, move_to_device
+  from .util import patch_torch_manual_seed, reset_rng_state, move_to_device
 except ImportError:
-  from benchmark_model import TorchBenchModelLoader, ModelLoader
+  from benchmark_model import ModelLoader
+  from torchbench_model import TorchBenchModelLoader
   from benchmark_experiment import ExperimentLoader
-  from utils import patch_torch_manual_seed, reset_rng_state, move_to_device
+  from util import patch_torch_manual_seed, reset_rng_state, move_to_device
 
 logger = logging.getLogger(__name__)
 
@@ -37,11 +38,14 @@ class ExperimentRunner:
     else:
       raise NotImplementedError
 
-    # initialize output directory from args
+    # TODO: initialize output directory from args
     # self.output_dir
 
   def run(self):
     if self._args.experiment_config and self._args.model_config:
+      if self._args.dry_run:
+        logger.info(f"Dry run with {[sys.executable] + sys.argv}")
+        return
       experiment_config = json.loads(self._args.experiment_config)
       model_config = json.loads(self._args.model_config)
       self.run_single_experiment(experiment_config, model_config)
@@ -56,11 +60,16 @@ class ExperimentRunner:
             process_env = experiment_config.pop("process_env")
             experiment_config_str = json.dumps(experiment_config)
             model_config_str = json.dumps(model_config)
+            experiment_config["process_env"] = process_env
+            command = ([sys.executable] + sys.argv +
+                       [f"--experiment-config={experiment_config_str}"] +
+                       [f"--model-config={model_config_str}"])
+            if self._args.dry_run:
+              logger.info(f"Dry run with {command}")
+              continue
             try:
               subprocess.check_call(
-                  [sys.executable] + sys.argv +
-                  [f"--experiment-config={experiment_config_str}"] +
-                  [f"--model-config={model_config_str}"],
+                  command,
                   timeout=60 * 20,
                   env=process_env,
               )
@@ -80,13 +89,6 @@ class ExperimentRunner:
         model_config, benchmark_experiment
     )
 
-    if benchmark_experiment.test == "train":
-      benchmark_model.model_iter_fn = benchmark_model.train
-    elif benchmark_experiment.test == "eval":
-      benchmark_model.model_iter_fn = benchmark_model.eval
-    else:
-      raise NotImplementedError
-
     timings = OrderedDict()
     results = []
     for i in range(self._args.repeat):
@@ -100,15 +102,19 @@ class ExperimentRunner:
           timings[key] = np.zeros(self._args.repeat, np.float64)
         timings[key][i] = val
 
-    # save the config, timings and results to proper files in self.output_dir
+    # TODO: save the config, timings and results to proper files in self.output_dir
+    logger.info(f"{benchmark_model.filename_str}-{benchmark_experiment.filename_str}")
+    print(timings)
     # self.save_results(timings, results)
 
   def _mark_step(self, benchmark_experiment):
     if benchmark_experiment.xla:
+      import torch_xla.core.xla_model as xm
       xm.mark_step()
 
   def _synchronize(self, benchmark_experiment):
     if benchmark_experiment.xla:
+      import torch_xla.core.xla_model as xm
       xm.wait_device_ops()
     elif benchmark_experiment.accelerator == "gpu":
       torch.cuda.synchronize()
@@ -125,7 +131,7 @@ class ExperimentRunner:
     t_start = time.perf_counter()
 
     for i in range(self._args.repeat_inner):
-      result = benchmark_model.model_iter_fn()
+      result = benchmark_model.model_iter_fn(collect_outputs=False)
 
       if benchmark_experiment.xla and self._args.repeat_inner == 1:
         t_trace = time.perf_counter()
@@ -155,6 +161,13 @@ def parse_args(args=None):
     )
 
     parser.add_argument(
+        "--filter", "-k", action="append", help="filter benchmarks with regexp"
+    )
+    parser.add_argument(
+        "--exclude", "-x", action="append", help="filter benchmarks with regexp"
+    )
+
+    parser.add_argument(
         "--repeat",
         type=int,
         default=10,
@@ -166,6 +179,32 @@ def parse_args(args=None):
         type=int,
         default=1,
         help="Number of times to repeat the model function inside the timed iteration.",
+    )
+
+    parser.add_argument(
+        "--batch_size",
+        type=int,
+        help="Batch size to be used. If not provided, it depends on the model suites to determine it.",
+    )
+
+    parser.add_argument(
+        "--total-partitions",
+        type=int,
+        default=1,
+        choices=range(1, 10),
+        help="Total number of partitions we want to divide the benchmark suite into",
+    )
+    parser.add_argument(
+        "--partition-id",
+        type=int,
+        default=0,
+        help="ID of the benchmark suite partition to be run. Used to divide CI tasks",
+    )
+
+    parser.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="Do a dry run to only print the benchmark commands.",
     )
 
     parser.add_argument(
@@ -185,10 +224,15 @@ def parse_args(args=None):
 
 def main():
   args = parse_args()
-  print(args)
+
+  args.filter = args.filter or [r"."]
+  args.exclude = args.exclude or [r"^$"]
+
+  logger.info(args)
   runner = ExperimentRunner(args)
   runner.run()
 
 
 if __name__ == "__main__":
-    main()
+  logging.basicConfig(level=logging.INFO, force=True)
+  main()

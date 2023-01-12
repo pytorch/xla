@@ -1,12 +1,11 @@
 import logging
 import os
 import torch
-import torch_xla.core.xla_model as xm
 
 try:
-  from .utils import is_tpu_available
+  from .util import is_tpu_available
 except ImportError:
-  from utils import is_tpu_available
+  from util import is_tpu_available
 
 logger = logging.getLogger(__name__)
 
@@ -78,6 +77,7 @@ class BenchmarkExperiment:
 
   def get_device(self):
     if self.xla:
+      import torch_xla.core.xla_model as xm
       device = xm.xla_device(devkind=self.accelerator.upper())
     elif self.accelerator == "cpu":
       device = torch.device("cpu")
@@ -87,3 +87,7 @@ class BenchmarkExperiment:
       raise NotImplementedError
 
     return device
+
+  @property
+  def filename_str(self):
+    return f"{self.accelerator}-{self.xla}-{self.test}"

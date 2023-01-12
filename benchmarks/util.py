@@ -1,6 +1,9 @@
+from contextlib import contextmanager
 import functools
 from multiprocessing import Process, Queue
 import numpy as np
+import os
+from os.path import abspath
 import queue
 import random
 import torch
@@ -67,3 +70,13 @@ def move_to_device(item, device):
     return dict((k, move_to_device(t, device)) for k, t in item.items())
   else:
     return item
+
+
+@contextmanager
+def set_cwd(path):
+  original_dir = abspath(os.getcwd())
+  os.chdir(path)
+  try:
+    yield
+  finally:
+    os.chdir(original_dir)
