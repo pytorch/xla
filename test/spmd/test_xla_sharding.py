@@ -1,5 +1,3 @@
-import os
-import sys
 import copy
 
 import unittest
@@ -10,46 +8,12 @@ from torch import nn
 import torch.optim as optim
 import torch_xla
 import torch_xla.core.xla_model as xm
-import torch_xla.debug.metrics as met
-import torch_xla.utils.utils as xu
 import torch_xla.experimental.xla_sharding as xs
 from torch_xla.experimental.xla_sharded_tensor import XLAShardedTensor
-from torch_xla.experimental.pjrt import using_pjrt
+import test_xla_sharding_base
 
 
-@unittest.skipIf(not using_pjrt() or xm.get_xla_supported_devices("GPU"),
-                 f"Requires PJRT_DEVICE set to `TPU` or `CPU`.")
-class XlaShardingTest(unittest.TestCase):
-
-  class SimpleLinear(nn.Module):
-
-    def __init__(self):
-      super(XlaShardingTest.SimpleLinear, self).__init__()
-      self.fc1 = nn.Linear(128, 64)
-      self.relu = nn.ReLU()
-      self.fc2 = nn.Linear(64, 1)
-
-    def forward(self, x):
-      y = self.relu(self.fc1(x))
-      z = self.fc2(y)
-      return z
-
-  n_devices = 0
-  device_ids = None
-
-  @classmethod
-  def setUpClass(cls):
-    cls.n_devices = len(xm.get_xla_supported_devices())
-    cls.device_ids = np.array(range(cls.n_devices))
-
-  def _get_mesh(self, mesh_shape, device_ids=None):
-    if device_ids is None:
-      device_ids = self.device_ids
-    assert len(device_ids) == self.n_devices
-    return xs.Mesh(device_ids, mesh_shape)
-
-
-class BasicShardingTest(XlaShardingTest):
+class BasicShardingTest(test_xla_sharding_base.XlaShardingTest):
 
   def test_xla_sharded_tensor(self):
     partition_spec = (0, 1)
@@ -187,84 +151,6 @@ class BasicShardingTest(XlaShardingTest):
     hash1 = torch_xla._XLAC._get_graph_hash([xt1])
     hash2 = torch_xla._XLAC._get_graph_hash([xt2])
     self.assertNotEqual(hash1, hash2)
-
-
-class VirtualDeviceTest(XlaShardingTest):
-
-  @classmethod
-  def setUpClass(cls):
-    os.environ["XLA_USE_SPMD"] = "1"
-    super().setUpClass()
-
-  @unittest.skip("disable due to CI test failures")
-  def test_mark_sharding(self):
-    partition_spec = (0, 1)
-    xt1 = torch.tensor([[1, 2, 3, 4, 5, 6, 7, 8]],
-                       dtype=torch.float,
-                       device=xm.xla_device())
-    xs.mark_sharding(xt1, self._get_mesh((1, self.n_devices)), partition_spec)
-    self.assertTrue(
-        torch.allclose(
-            xt1 + 0,
-            torch.tensor([1, 2, 3, 4, 5, 6, 7, 8],
-                         dtype=torch.float,
-                         device=xm.xla_device())))
-
-  @unittest.skip("disable due to CI test failures")
-  def test_metrics_recorded(self):
-    met.clear_counters()
-    partition_spec = (0, 1)
-    xt1 = torch.tensor([[1, 2, 3, 4, 5, 6, 7, 8]],
-                       dtype=torch.float,
-                       device=xm.xla_device())
-    xs.mark_sharding(xt1, self._get_mesh((1, self.n_devices)), partition_spec)
-    self.assertIn("VirtualDeviceUsage", met.counter_names())
-    self.assertNotEqual(met.counter_value("VirtualDeviceUsage"), 0)
-
-  @unittest.skip("disable due to CI test failures")
-  def test_model_weight_metrics(self):
-    met.clear_counters()
-    partition_spec = (0, 1)
-    model = nn.Linear(128, 64).to(xm.xla_device())
-    xs.mark_sharding(model.weight, self._get_mesh((1, self.n_devices)),
-                     partition_spec)
-    self.assertIn("VirtualDeviceUsage", met.counter_names())
-    self.assertNotEqual(met.counter_value("VirtualDeviceUsage"), 0)
-
-  @unittest.skip("disable due to CI test failures")
-  def test_no_sharding(self):
-    t1 = torch.tensor([[1, 2, 3, 4, 5, 6, 7, 8]],
-                      dtype=torch.float,
-                      device=xm.xla_device())
-    t2 = torch.tensor([[8, 7, 6, 5, 4, 3, 2, 1]],
-                      dtype=torch.float,
-                      device=xm.xla_device())
-    t3 = t1 + t2
-    t3_expected = [9.0, 9.0, 9.0, 9.0, 9.0, 9.0, 9.0, 9.0]
-    self.assertEqual(t3.tolist()[0], t3_expected)
-
-  @unittest.skip("disable due to CI test failures")
-  def test_outbound_data_metrics(self):
-    partition_spec = (0, 1)
-
-    met.clear_all()
-    xt1 = torch.tensor([[1, 2, 3, 4, 5, 6, 7, 8]],
-                       dtype=torch.float,
-                       device=xm.xla_device())
-    xs.mark_sharding(xt1, self._get_mesh((1, self.n_devices)), partition_spec)
-    outbound_with_virtual_device = met.metric_data("OutboundData")[1]
-
-    os.environ["XLA_USE_SPMD"] = "0"
-
-    met.clear_all()
-    xt2 = torch.tensor([[1, 2, 3, 4, 5, 6, 7, 8]],
-                       dtype=torch.float,
-                       device=xm.xla_device())
-    xs.mark_sharding(xt2, self._get_mesh((1, self.n_devices)), partition_spec)
-    outbound_without_virtual_device = met.metric_data("OutboundData")[1]
-
-    self.assertLess(outbound_with_virtual_device,
-                    outbound_without_virtual_device)
 
 
 if __name__ == '__main__':
