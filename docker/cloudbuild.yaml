@@ -5,6 +5,7 @@ steps:
 - name: 'gcr.io/cloud-builders/docker'
   args: [
           'build',
+          '--shm-size', '16gb',
           '--build-arg', 'base_image=${_DOCKER_BASE_IMAGE}',
           '--build-arg', 'cuda=${_CUDA}',
           '--build-arg', 'python_version=${_PYTHON_VERSION}',
