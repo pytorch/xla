@@ -204,7 +204,7 @@ DISABLED_TORCH_TESTS_ANY = {
         'test_assertRaisesRegex_ignore_msg_non_native_device_xla',  # segfault on wheel sanity test
         'test_index_reduce',  # TODO @wonjoo fails with functionalization
         'test_logcumsumexp_xla',  # TODO @wonjoo fails with functionalization
-        'test_narrow_copy_non_contiguous', # New test, fails with functionalization
+        'test_narrow_copy_non_contiguous',  # New test, fails with functionalization
     },
 
     # test_view_ops.py
