@@ -75,6 +75,9 @@ RUN cd third_party/tensorflow && find ../../tf_patches -name '*.diff' | xargs -t
 
 COPY build_torch_xla_libs.sh .
 
+# TODO: Remove this when it's not required anymore
+ENV XLA_SANDBOX_BUILD=1
+
 ARG tpuvm
 ARG tf_cuda_compute_capabilities
 ARG bazel_jobs

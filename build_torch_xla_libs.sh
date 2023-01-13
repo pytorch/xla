@@ -36,7 +36,7 @@ fi
 
 BUILD_STRATEGY="standalone"
 if [[ "$XLA_SANDBOX_BUILD" == "1" ]]; then
-  BUILD_STRATEGY="sandboxed --sandbox_tmpfs_path=/tmp"
+  BUILD_STRATEGY="sandboxed --sandbox_base=/dev/shm"
 else
   # We can remove this after https://github.com/bazelbuild/bazel/issues/15359 is resolved
   unset CC
