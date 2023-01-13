@@ -94,7 +94,7 @@ class ExperimentRunner:
     timings = OrderedDict()
     results = []
     for i in range(self._args.repeat):
-      timing, result = self.timed_iteration(
+      timing, result = self.timed_run(
           benchmark_experiment, benchmark_model
       )
       result = move_to_device(result, 'cpu')
@@ -125,28 +125,29 @@ class ExperimentRunner:
 
   def prepare_inputs(self, example_inputs, should_randomize_input):
     inputs_list = []
-    for i in range(self._args.repeat_inner):
+    for i in range(self._args.iterations_per_run):
       inputs = copy.deepcopy(example_inputs)
       if should_randomize_input:
         inputs = randomize_input(inputs)
       inputs_list.append(inputs)
     return inputs_list
 
-  def timed_iteration(self, benchmark_experiment, benchmark_model):
+  def timed_run(self, benchmark_experiment, benchmark_model):
     reset_rng_state()
 
     inputs_list = self.prepare_inputs(benchmark_model.example_inputs, self._args.randomize_input)
 
+    reset_rng_state()
     self._mark_step(benchmark_experiment)
     self._synchronize(benchmark_experiment)
 
     timing = OrderedDict()
     t_start = time.perf_counter()
 
-    for i in range(self._args.repeat_inner):
+    for i in range(self._args.iterations_per_run):
       result = benchmark_model.model_iter_fn(inputs_list[i], collect_outputs=False)
 
-      if benchmark_experiment.xla and self._args.repeat_inner == 1:
+      if benchmark_experiment.xla and self._args.iterations_per_run == 1:
         t_trace = time.perf_counter()
 
       self._mark_step(benchmark_experiment)
@@ -156,8 +157,8 @@ class ExperimentRunner:
     t_end = time.perf_counter()
 
     timing["total"] = t_end - t_start
-    timing["average"] = timing["total"] / self._args.repeat_inner
-    if benchmark_experiment.xla and self._args.repeat_inner == 1:
+    timing["average"] = timing["total"] / self._args.iterations_per_run
+    if benchmark_experiment.xla and self._args.iterations_per_run == 1:
       timing["trace"] = t_trace - t_start
 
     return timing, result
@@ -184,18 +185,18 @@ def parse_args(args=None):
         "--repeat",
         type=int,
         default=10,
-        help="Number of times to repeat the timed iteration.",
+        help="Number of times to repeat the timed run in a single experiment.",
     )
 
     parser.add_argument(
-        "--repeat-inner",
+        "--iterations-per-run",
         type=int,
         default=1,
-        help="Number of times to repeat the model function inside the timed iteration.",
+        help="Number of times to repeat the model iteration inside a timed run.",
     )
 
     parser.add_argument(
-        "--batch_size",
+        "--batch-size",
         type=int,
         help="Batch size to be used. If not provided, it depends on the model suites to determine it.",
     )
