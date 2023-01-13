@@ -62,8 +62,7 @@ PjRtComputationClient::PjRtComputationClient() {
   } else if (device_type == "TPU_C_API") {
     TF_VLOG(1) << "Initializing PjRt C API client...";
     XLA_CHECK_OK(stream_executor::tpu::LoadPjrtPlugin(
-        "tpu",
-        sys_util::GetEnvString(env::kEnvTpuLibraryPath, "libtpu.so")));
+        "tpu", sys_util::GetEnvString(env::kEnvTpuLibraryPath, "libtpu.so")));
     client_ = std::move(xla::GetCApiClient("TPU").value());
   } else if (device_type == "GPU") {
     TF_VLOG(1) << "Initializing PjRt GPU client...";
