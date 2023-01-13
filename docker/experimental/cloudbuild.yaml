@@ -18,6 +18,7 @@ steps:
 
     args=(${_BUILD_ARGS//,/ })
     flags=(
+      --shm-size=${_SHM_SIZE}
       --build-arg=bazel_jobs=${_BAZEL_JOBS}
       --build-arg=python_version=${_PYTHON_VERSION}
       # TODO: use current version in setup.py
@@ -125,6 +126,7 @@ substitutions:
   _CACHE: 'true'
   _CACHE_TTL: '18h'
   _BUILD_ARGS: tpuvm=1,cuda=0
+  _SHM_SIZE: '16gb'
 options:
   # To run in a test project, either point to your pool or replace this with
   # `machineType`. You may have to reduce _BAZEL_JOBS.
