@@ -683,8 +683,9 @@ c10::SymNode XLASymNodeImpl::le(const c10::SymNode& other) {
 }
 
 c10::SymNode XLASymNodeImpl::ge(const c10::SymNode& other) {
-  XLA_CHECK(false) << "XLASymNodeImpl::" << __FUNCTION__
-                   << " has not been implemented.";
+  auto p_other = dynamic_cast<XLASymNodeImpl*>(other.get());
+  auto n_ge = torch::lazy::MakeNode<SizeGe>(node(), p_other->node());
+  return c10::make_intrusive<XLASymNodeImpl>(n_ge);
 }
 
 c10::SymNode XLASymNodeImpl::ceil() {
@@ -713,8 +714,7 @@ c10::SymNode XLASymNodeImpl::max(const c10::SymNode& other) {
 }
 
 c10::SymNode XLASymNodeImpl::clone() {
-  XLA_CHECK(false) << "XLASymNodeImpl::" << __FUNCTION__
-                   << " has not been implemented.";
+  return c10::make_intrusive<XLASymNodeImpl>(node());
 }
 
 c10::SymNode XLASymNodeImpl::sym_float() {

@@ -118,6 +118,28 @@ int64_t SizeEq::getDynamicValue() const {
 
 std::string SizeEq::ToString() const { return "aten::eq_size"; }
 
+SizeGe::SizeGe(torch::lazy::Value a, torch::lazy::Value b)
+    : XlaNode(torch::lazy::OpKind{c10::Symbol::fromQualString("aten::ge")},
+              {a, b},
+              xla::ShapeUtil::MakeShape(
+                  GetShapeDimensionType(/*device=*/nullptr), {}),
+              1) {
+  const torch::lazy::DimensionNode* dim_node_0 = DimCast(operand(0));
+  const torch::lazy::DimensionNode* dim_node_1 = DimCast(operand(1));
+  XLA_CHECK(dim_node_0);
+  XLA_CHECK(dim_node_1);
+};
+
+int64_t SizeGe::getDynamicValue() const {
+  const torch::lazy::DimensionNode* dim_node_0 = DimCast(operand(0));
+  const torch::lazy::DimensionNode* dim_node_1 = DimCast(operand(1));
+  XLA_CHECK(dim_node_0);
+  XLA_CHECK(dim_node_1);
+  return dim_node_0->getDynamicValue() >= dim_node_1->getDynamicValue() ? 1 : 0;
+}
+
+std::string SizeGe::ToString() const { return "aten::ge_size"; }
+
 SizeConstant::SizeConstant(int64_t val)
     : Scalar(c10::Scalar{val},
              xla::ShapeUtil::MakeShape(
