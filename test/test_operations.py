@@ -1901,11 +1901,13 @@ class TestAtenXlaTensor(XlaTestCase):
     t2 = torch.randn(1, 3).to(xla_device)
     t3 = torch.randn(1, 3).to(xla_device)
     t1.addcdiv_(t2, t3, value=0.1)
+    xm.mark_step()
+    self.assertEqual(met.metric_data("TransferToServerTime")[0], 4)
+
     # The following two scalars shouldn't trigger TransferToServerTime.
     t1.addcdiv_(t2, t3, value=0.1)
     t1.addcdiv_(t2, t3, value=0.1)
     xm.mark_step()
-
     self.assertEqual(met.metric_data("TransferToServerTime")[0], 4)
 
 
