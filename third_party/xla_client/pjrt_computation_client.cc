@@ -63,7 +63,7 @@ PjRtComputationClient::PjRtComputationClient() {
     TF_VLOG(1) << "Initializing PjRt C API client...";
     XLA_CHECK_OK(stream_executor::tpu::LoadPjrtPlugin(
         "tpu",
-        sys_util::GetEnvString(env::kEnvLibtpuLibraryPath, "libtpu.so")));
+        sys_util::GetEnvString(env::kEnvTpuLibraryPath, "libtpu.so")));
     client_ = std::move(xla::GetCApiClient("TPU").value());
   } else if (device_type == "GPU") {
     TF_VLOG(1) << "Initializing PjRt GPU client...";
@@ -312,11 +312,10 @@ PjRtComputationClient::ExecuteComputation(
   execute_options.untuple_result = options.explode_tuple;
   execute_options.strict_shape_checking = false;
 
-  std::optional<PjRtFuture<Status>> returned_future;
+  // std::optional<PjRtFuture<Status>> returned_future;
   std::vector<std::unique_ptr<xla::PjRtBuffer>> results =
       pjrt_computation.executable
-          ->ExecuteSharded(buffers, pjrt_device, execute_options,
-                           returned_future)
+          ->ExecuteSharded(buffers, pjrt_device, execute_options)
           .value();
 
   // Signal that `ExecuteSharded` has completed for the ExecuteTime metric.
