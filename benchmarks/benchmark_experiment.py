@@ -3,9 +3,9 @@ import os
 import torch
 
 try:
-  from .util import is_tpu_available
+  from .util import is_xla_device_available
 except ImportError:
-  from util import is_tpu_available
+  from util import is_xla_device_available
 
 logger = logging.getLogger(__name__)
 
@@ -18,14 +18,7 @@ class ExperimentLoader:
   def list_experiment_configs(self):
     experiment_configs = []
 
-    accelerators = ["cpu"]
-
-    if torch.cuda.is_available():
-      accelerators.append("gpu")
-
-    if is_tpu_available():
-      accelerators.append("tpu")
-
+    accelerators = ["cpu", "gpu", "tpu"]
     xla_options = [None, "PJRT", "XRT"]
     tests = ["eval", "train"]
     for accelerator in accelerators:
@@ -33,31 +26,40 @@ class ExperimentLoader:
         for test in tests:
           experiment_config = {"accelerator": accelerator, "xla": xla, "test": test}
 
-          if not self._is_valid(experiment_config):
+          if not self.is_available(experiment_config):
             continue
 
-          self._add_experiment_env(experiment_config, accelerators)
+          self._add_experiment_env(experiment_config)
           experiment_configs.append(experiment_config)
     return experiment_configs
 
-  def _is_valid(self, experiment_config):
-    if experiment_config["accelerator"] == "tpu" and not experiment_config["xla"]:
+  def is_available(self, experiment_config):
+    if (experiment_config["xla"] and
+        not is_xla_device_available(experiment_config["accelerator"].upper())):
       return False
-    if experiment_config["accelerator"] == "gpu" and experiment_config["xla"] == "PJRT":
+    if (experiment_config["accelerator"] == "tpu" and
+        not experiment_config["xla"]):
+      return False
+    if (experiment_config["accelerator"] == "gpu" and
+        experiment_config["xla"] == "PJRT"):
+      return False
+    if (experiment_config["accelerator"] == "gpu" and
+        not experiment_config["xla"] and
+        not torch.cuda.is_available()):
       return False
     return True
 
-  def _add_experiment_env(self, experiment_config, accelerators):
+  def _add_experiment_env(self, experiment_config):
     process_env = None
     if experiment_config["xla"] == "PJRT":
       process_env = os.environ.copy()
       process_env["PJRT_DEVICE"] = experiment_config["accelerator"].upper()
     elif experiment_config["xla"] == "XRT":
       process_env = os.environ.copy()
-      if "tpu" in accelerators:
+      if is_xla_device_available("TPU"):
         process_env["TPU_NUM_DEVICES"] = "1"
         process_env["XRT_TPU_CONFIG"] = "localservice;0;localhost:51011"
-      elif "gpu" in accelerators:
+      elif is_xla_device_available("GPU"):
         process_env["GPU_NUM_DEVICES"] = "1"
 
     experiment_config["process_env"] = process_env

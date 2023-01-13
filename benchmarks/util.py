@@ -36,23 +36,31 @@ def reset_rng_state():
   np.random.seed(1337)
 
 
-@functools.lru_cache(maxsize=1)
-def is_tpu_available():
+@functools.lru_cache(maxsize=3)
+def is_xla_device_available(devkind):
+  if devkind not in ["CPU", "GPU", "TPU"]:
+    raise ValueError, devkind
 
-  def _check_tpu(q):
+  def _check_xla_device(q, devkind):
     try:
       import os
-      os.environ["PJRT_DEVICE"] = "TPU"
+      if devkind == "TPU":
+        os.environ["PJRT_DEVICE"] = "TPU"
+      elif devkind == "GPU":
+        os.environ["GPU_NUM_DEVICES"] = "1"
 
       import torch_xla.core.xla_model as xm
 
-      q.put((xm.xrt_world_size() > 1) or bool(xm.get_xla_supported_devices("TPU")))
+      if devkind == "CPU":
+        q.put(True)
+      else:
+        q.put(bool(xm.get_xla_supported_devices(devkind)))
     except Exception:
       traceback.print_exc()
       q.put(None)
 
   q = Queue()
-  process = Process(target=_check_tpu, args=(q,))
+  process = Process(target=_check_xla_device, args=(q, devkind))
   process.start()
   process.join(60)
   try:

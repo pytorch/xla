@@ -121,7 +121,7 @@ class TorchBenchModel(BenchmarkModel):
 
     if self.benchmark_experiment.accelerator == "cpu":
       device = "cpu"
-    elif self.benchmark_experiment.accelerator == "gpu":
+    elif self.benchmark_experiment.accelerator == "gpu" and not self.benchmark_experiment.xla:
       device = "cuda"
     else:
       device = str(self.benchmark_experiment.get_device())
