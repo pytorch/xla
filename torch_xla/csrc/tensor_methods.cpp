@@ -63,8 +63,6 @@
 #include "torch_xla/csrc/ops/index_select.h"
 #include "torch_xla/csrc/ops/infer_output_shape.h"
 #include "torch_xla/csrc/ops/kth_value.h"
-#include "torch_xla/csrc/ops/leaky_relu.h"
-#include "torch_xla/csrc/ops/leaky_relu_backward.h"
 #include "torch_xla/csrc/ops/linear_interpolation.h"
 #include "torch_xla/csrc/ops/linspace.h"
 #include "torch_xla/csrc/ops/log_softmax.h"
@@ -1429,18 +1427,6 @@ XLATensorPtr hardtanh_backward(const XLATensorPtr& grad_output,
                                const at::Scalar& max_val) {
   return grad_output->CreateFrom(torch::lazy::MakeNode<HardtanhBackward>(
       grad_output->GetIrValue(), input->GetIrValue(), min_val, max_val));
-}
-
-XLATensorPtr leaky_relu(const XLATensorPtr& input, double negative_slope) {
-  return input->CreateFrom(
-      torch::lazy::MakeNode<LeakyRelu>(input->GetIrValue(), negative_slope));
-}
-
-XLATensorPtr leaky_relu_backward(const XLATensorPtr& grad_output,
-                                 const XLATensorPtr& input,
-                                 double negative_slope) {
-  return grad_output->CreateFrom(torch::lazy::MakeNode<LeakyReluBackward>(
-      grad_output->GetIrValue(), input->GetIrValue(), negative_slope));
 }
 
 XLATensorPtr lerp(const XLATensorPtr& input, const XLATensorPtr& end,

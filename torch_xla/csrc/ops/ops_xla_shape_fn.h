@@ -151,6 +151,13 @@ xla::Shape InverseOutputShape(const torch::lazy::Value& input);
 
 xla::Shape IsnanOutputShape(const torch::lazy::Value& input);
 
+xla::Shape LeakyReluOutputShape(const torch::lazy::Value& input,
+                                const torch::lazy::Value& negative_slope);
+
+xla::Shape LeakyReluBackwardOutputShape(
+    const torch::lazy::Value& grad_output, const torch::lazy::Value& input,
+    const torch::lazy::Value& negative_slope, bool self_is_result);
+
 xla::Shape LeScalarOutputShape(const torch::lazy::Value& self,
                                const torch::lazy::Value& other);
 
