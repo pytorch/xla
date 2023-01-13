@@ -58,6 +58,20 @@ resource "google_project_iam_member" "cloud-build-scheduler-permission" {
   project = google_service_account.cloud-build-trigger-scheduler.project
   role    = "roles/cloudbuild.builds.editor"
   member  = "serviceAccount:${google_service_account.cloud-build-trigger-scheduler.email}"
+
+resource "google_cloudbuild_trigger" "tpu-test-trigger" {
+  location = "global"
+  name = "ci-tpu-test-trigger"
+
+  github {
+    owner = "pytorch"
+    name  = "xla"
+    push {
+      branch = "^master$"
+    }
+  }
+
+  filename = "test/tpu/cloudbuild.yaml"
 }
 
 module "nightly-py37-tpuvm" {
