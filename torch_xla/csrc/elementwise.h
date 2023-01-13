@@ -43,10 +43,10 @@ xla::XlaOp BuildHardtanhBackward(xla::XlaOp grad_output, xla::XlaOp input,
 
 // Computes the leaky rectified linear unit:
 // LeakyReLU(x) = max(0, input) + negative_slope ∗ min(0, input).
-xla::XlaOp BuildLeakyRelu(xla::XlaOp input, double negative_slope);
+xla::XlaOp BuildLeakyRelu(xla::XlaOp input, xla::XlaOp negative_slope);
 
 xla::XlaOp BuildLeakyReluBackward(xla::XlaOp grad_output, xla::XlaOp input,
-                                  double negative_slope_value);
+                                  xla::XlaOp negative_slope);
 
 // Computes the sigmoid function using Tanh
 // Sigmoid(x) = (tanh(x ∗ 0.5) + 1) ∗ 0.5

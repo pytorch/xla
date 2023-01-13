@@ -450,6 +450,30 @@ xla::Shape IsnanOutputShape(const torch::lazy::Value& input) {
   return isnan_shape;
 }
 
+xla::Shape LeakyReluOutputShape(const torch::lazy::Value& input,
+                                const torch::lazy::Value& negative_slope) {
+  auto lower_for_shape_fn =
+      [](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
+    XLA_CHECK_EQ(operands.size(), 2) << "Unexpected number of operands";
+    return BuildLeakyRelu(operands[0], operands[1]);
+  };
+  return InferOutputShape({GetXlaShape(input), GetXlaShape(negative_slope)},
+                          lower_for_shape_fn);
+}
+
+xla::Shape LeakyReluBackwardOutputShape(
+    const torch::lazy::Value& grad_output, const torch::lazy::Value& input,
+    const torch::lazy::Value& negative_slope, bool self_is_result) {
+  auto lower_for_shape_fn =
+      [](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
+    XLA_CHECK_EQ(operands.size(), 3) << "Unexpected number of operands";
+    return BuildLeakyReluBackward(operands[0], operands[1], operands[2]);
+  };
+  return InferOutputShape({GetXlaShape(grad_output), GetXlaShape(input),
+                           GetXlaShape(negative_slope)},
+                          lower_for_shape_fn);
+}
+
 xla::Shape LeScalarOutputShape(const torch::lazy::Value& self,
                                const torch::lazy::Value& other) {
   auto lower_for_shape_fn =

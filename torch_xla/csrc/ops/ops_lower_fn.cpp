@@ -388,6 +388,21 @@ torch_xla::XlaOpVector Isnan::Lower(LoweringContext* loctx) const {
   return ReturnOp(xla::IsNan(xla_input), loctx);
 }
 
+torch_xla::XlaOpVector LeakyRelu::Lower(LoweringContext* loctx) const {
+  xla::XlaOp xla_input = loctx->GetOutputOp(operand(0));
+  xla::XlaOp negative_slope = loctx->GetOutputOp(operand(1));
+  return ReturnOp(BuildLeakyRelu(xla_input, negative_slope), loctx);
+}
+
+torch_xla::XlaOpVector LeakyReluBackward::Lower(LoweringContext* loctx) const {
+  xla::XlaOp xla_grad_output = loctx->GetOutputOp(operand(0));
+  xla::XlaOp xla_input = loctx->GetOutputOp(operand(1));
+  xla::XlaOp negative_slope = loctx->GetOutputOp(operand(2));
+  return ReturnOp(
+      BuildLeakyReluBackward(xla_grad_output, xla_input, negative_slope),
+      loctx);
+}
+
 torch_xla::XlaOpVector Logdet::Lower(LoweringContext* loctx) const {
   xla::XlaOp xla_input = loctx->GetOutputOp(operand(0));
   return ReturnOp(xla::LogDet(xla_input), loctx);
