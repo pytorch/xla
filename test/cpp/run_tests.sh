@@ -63,13 +63,13 @@ cmake "$RUNDIR" \
 make -j $VERB
 
 # Disable CPP tests for functionalizatoin until we fix all the python tests.
-# if [ $BUILD_ONLY -eq 0 ]; then
-#   if [ "$LOGFILE" != "" ]; then
-#     ./test_ptxla ${FILTER:+"$FILTER"} 2> $LOGFILE
-#   else
-#     ./test_ptxla ${FILTER:+"$FILTER"}
-#   fi
-# fi
+if [ $BUILD_ONLY -eq 0 ]; then
+  if [ "$LOGFILE" != "" ]; then
+    ./test_ptxla ${FILTER:+"$FILTER"} 2> $LOGFILE
+  else
+    ./test_ptxla ${FILTER:+"$FILTER"}
+  fi
+fi
 popd
 if [ $RMBUILD -eq 1 -a $BUILD_ONLY -eq 0 ]; then
   rm -rf "$BUILDDIR"
