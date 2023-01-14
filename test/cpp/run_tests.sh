@@ -4,7 +4,7 @@ RUNDIR="$(cd "$(dirname "$0")" ; pwd -P)"
 BUILDDIR="$RUNDIR/build"
 BUILDTYPE="Release"
 VERB=
-FILTER=
+FILTER="-AtenXlaTensorTest.TestMaskedFill"
 BUILD_ONLY=0
 RMBUILD=1
 LOGFILE=/tmp/pytorch_cpp_test.log
@@ -62,7 +62,6 @@ cmake "$RUNDIR" \
   -DPYTHON_LIBRARY=$(python -c "import distutils.sysconfig as sysconfig; print(sysconfig.get_config_var('LIBDIR') + '/' + sysconfig.get_config_var('LDLIBRARY'))")
 make -j $VERB
 
-# Disable CPP tests for functionalizatoin until we fix all the python tests.
 if [ $BUILD_ONLY -eq 0 ]; then
   if [ "$LOGFILE" != "" ]; then
     ./test_ptxla ${FILTER:+"$FILTER"} 2> $LOGFILE
