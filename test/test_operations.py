@@ -1893,6 +1893,23 @@ class TestAtenXlaTensor(XlaTestCase):
       assert torch.all(lower_bound >= 0.0)
       assert torch.all(upper_bound <= 1.0)
 
+  def test_cached_addcdiv(self):
+    xla_device = xm.xla_device()
+    met.clear_all()
+
+    t1 = torch.randn(1, 3).to(xla_device)
+    t2 = torch.randn(1, 3).to(xla_device)
+    t3 = torch.randn(1, 3).to(xla_device)
+    t1.addcdiv_(t2, t3, value=0.1)
+    xm.mark_step()
+    self.assertEqual(met.metric_data("TransferToServerTime")[0], 4)
+
+    # The following two scalars shouldn't trigger TransferToServerTime.
+    t1.addcdiv_(t2, t3, value=0.1)
+    t1.addcdiv_(t2, t3, value=0.1)
+    xm.mark_step()
+    self.assertEqual(met.metric_data("TransferToServerTime")[0], 4)
+
 
 class MNISTComparator(nn.Module):
 
