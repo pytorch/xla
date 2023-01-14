@@ -35,8 +35,12 @@ if [[ "$XLA_BAZEL_VERBOSE" == "1" ]]; then
 fi
 
 BUILD_STRATEGY="standalone"
+SANDBOX_BASE="${XLA_SANDBOX_BASE}"
+if [ -z "$XLA_SANDBOX_BASE" ]; then
+  SANDBOX_BASE="/tmp"
+fi
 if [[ "$XLA_SANDBOX_BUILD" == "1" ]]; then
-  BUILD_STRATEGY="sandboxed --sandbox_base=/dev/shm"
+  BUILD_STRATEGY="sandboxed --sandbox_base=${SANDBOX_BASE}"
 else
   # We can remove this after https://github.com/bazelbuild/bazel/issues/15359 is resolved
   unset CC
@@ -84,7 +88,7 @@ else
   cp -r -u -p $THIRD_PARTY_DIR/xla_client $THIRD_PARTY_DIR/tensorflow/tensorflow/compiler/xla/
 
   pushd $THIRD_PARTY_DIR/tensorflow
-  # TensorFlow and its dependencies may introduce warning flags from newer compilers 
+  # TensorFlow and its dependencies may introduce warning flags from newer compilers
   # that PyTorch and PyTorch/XLA's default compilers don't recognize. They become error
   # while '-Werror' is used. Therefore, surpress the warnings.
   TF_EXTRA_FLAGS="--copt=-Wno-unknown-warning-option"

@@ -39,8 +39,9 @@ ENV BUNDLE_LIBTPU "${tpuvm}"
 # Maximum number of jobs to use for bazel build
 ENV BAZEL_JOBS "${bazel_jobs}"
 
-# This makes the bazel build behave more consistently, but it may slower.
+# This makes the bazel build behave more consistently, but runs slower.
 ENV XLA_SANDBOX_BUILD "1"
+ENV XLA_SANDBOX_BASE "/dev/shm"
 
 # To get around issue of Cloud Build with recursive submodule update
 # clone recursively from pytorch/xla if building docker image with
