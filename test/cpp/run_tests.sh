@@ -4,7 +4,7 @@ RUNDIR="$(cd "$(dirname "$0")" ; pwd -P)"
 BUILDDIR="$RUNDIR/build"
 BUILDTYPE="Release"
 VERB=
-FILTER="--gtest_filter=-AtenXlaTensorTest.TestMaskedFill"
+FILTER="--gtest_filter=-AtenXlaTensorTest.TestMaskedFill*"
 BUILD_ONLY=0
 RMBUILD=1
 LOGFILE=/tmp/pytorch_cpp_test.log
