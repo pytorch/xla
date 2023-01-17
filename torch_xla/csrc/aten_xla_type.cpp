@@ -2905,16 +2905,16 @@ at::Tensor XLANativeFunctions::upsample_bilinear2d(
     c10::optional<double> scales_h, c10::optional<double> scales_w) {
   TORCH_LAZY_FN_COUNTER("xla::");
   XLATensorPtr self_tensor = bridge::GetXlaTensor(self);
+  absl::Span<const int64_t> input_dims =
+      self_tensor->shape().get().dimensions();
+  std::vector<int64_t> scaled_output_size =
+      torch::lazy::ToVector<int64_t>(output_size);
   if ((scales_h && *scales_h != 1.0) || (scales_w && *scales_w != 1.0)) {
-    return at::native::call_fallback_fn<
-        &xla_cpu_fallback, ATEN_OP(upsample_bilinear2d)>::call(self,
-                                                               output_size,
-                                                               align_corners,
-                                                               scales_h,
-                                                               scales_w);
+    scaled_output_size = GetOutputSizeWithScale(input_dims, scales_h, scales_w,
+                                            scaled_output_size);
   }
   return bridge::AtenFromXlaTensor(tensor_methods::upsample_bilinear2d(
-      self_tensor, torch::lazy::ToVector<int64_t>(output_size), align_corners));
+      self_tensor, scaled_output_size, align_corners));
 }
 
 at::Tensor XLANativeFunctions::upsample_bilinear2d_backward(
