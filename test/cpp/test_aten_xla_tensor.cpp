@@ -4969,7 +4969,8 @@ TEST_F(AtenXlaTensorTest, TestExpandSymIntStatic) {
   });
 
   ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
-  ExpectCounterChanged("xla::expand_copy_symint", cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::expand_copy_symint",
+                       cpp_test::GetIgnoredCounters());
 }
 
 static c10::SymInt make_symint(const torch::lazy::NodePtr& p) {
@@ -5006,7 +5007,8 @@ TEST_F(AtenXlaTensorTest, TestExpandSymIntSymbolic) {
   });
 
   ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
-  ExpectCounterChanged("xla::expand_copy_symint", cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::expand_copy_symint",
+                       cpp_test::GetIgnoredCounters());
 }
 
 TEST_F(AtenXlaTensorTest, TestExpandSymIntDynamic) {
@@ -5036,7 +5038,8 @@ TEST_F(AtenXlaTensorTest, TestExpandSymIntDynamic) {
   });
 
   ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
-  ExpectCounterChanged("xla::expand_copy_symint", cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::expand_copy_symint",
+                       cpp_test::GetIgnoredCounters());
 }
 
 TEST_F(AtenXlaTensorTest, TestEye) {
@@ -11130,7 +11133,8 @@ TEST_F(AtenXlaTensorTest, TestEmbeddingBackward) {
 }
 
 TEST_F(AtenXlaTensorTest, TestAmpForeachNonFiniteCheckAndUnscale) {
-  GTEST_SKIP() << "Needs additional meta tensor support after functionalization";
+  GTEST_SKIP()
+      << "Needs additional meta tensor support after functionalization";
   XlaDeviceType hw_type =
       static_cast<XlaDeviceType>(GetDefaultDevice()->type());
   if (hw_type != XlaDeviceType::GPU && hw_type != XlaDeviceType::CPU) {
@@ -11478,7 +11482,8 @@ TEST_F(AtenXlaTensorTest, TestNanToNum) {
 }
 
 TEST_F(AtenXlaTensorTest, TestNanToNumInplace) {
-  GTEST_SKIP() << "Needs additional meta tensor support after functionalization";
+  GTEST_SKIP()
+      << "Needs additional meta tensor support after functionalization";
   for (torch::ScalarType scalar_type :
        {torch::kHalf, torch::kFloat, torch::kDouble, torch::kShort, torch::kInt,
         torch::kLong}) {
