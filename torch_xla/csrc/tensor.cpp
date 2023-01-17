@@ -673,8 +673,9 @@ c10::SymNode XLASymNodeImpl::gt(const c10::SymNode& other) {
 }
 
 c10::SymNode XLASymNodeImpl::lt(const c10::SymNode& other) {
-  XLA_CHECK(false) << "XLASymNodeImpl::" << __FUNCTION__
-                   << " has not been implemented.";
+  auto p_other = dynamic_cast<XLASymNodeImpl*>(other.get());
+  auto n_lt = torch::lazy::MakeNode<SizeLt>(node(), p_other->node());
+  return c10::make_intrusive<XLASymNodeImpl>(n_lt);
 }
 
 c10::SymNode XLASymNodeImpl::le(const c10::SymNode& other) {
