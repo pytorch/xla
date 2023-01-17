@@ -2911,7 +2911,7 @@ at::Tensor XLANativeFunctions::upsample_bilinear2d(
       torch::lazy::ToVector<int64_t>(output_size);
   if ((scales_h && *scales_h != 1.0) || (scales_w && *scales_w != 1.0)) {
     scaled_output_size = GetOutputSizeWithScale(input_dims, scales_h, scales_w,
-                                            scaled_output_size);
+                                                scaled_output_size);
   }
   return bridge::AtenFromXlaTensor(tensor_methods::upsample_bilinear2d(
       self_tensor, scaled_output_size, align_corners));
