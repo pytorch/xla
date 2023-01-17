@@ -4,25 +4,25 @@ import unittest
 import torch, torch_xla
 import torch_xla.core.xla_model as xm
 
-from torch._dispatch.python import enable_python_dispatcher
+pd = torch._C._EnablePythonDispatcher()
 
 dev = xm.xla_device()
-
 
 class TestDynamicShapes(unittest.TestCase):
 
   def test_simple_expand(self):
-    with enable_python_dispatcher():
-      size1 = 5
-      size2 = 2
-      t1 = torch.zeros([size1, size2], device=dev)
-      t1[3][0] = 1
-      # t2 has size [<=10, 2]
-      t2 = torch.nonzero(t1)
-      t5 = torch.ones(1, device=dev)
-      t5.expand(t2.size(0))
-      t5_cpu = t5.cpu()
-      self.assertEqual(t5_cpu.shape[0], 1)
+    size1 = 5
+    size2 = 2
+    t1 = torch.zeros([size1, size2], device=dev)
+    t1[3][0] = 1
+    t1[3][1] = 1
+    # t2 has size [<=10, 2]
+    t2 = torch.nonzero(t1)
+    t5 = torch.ones(1, device=dev)
+    t6 = t5.expand(t2.size(0))
+    self.assertIn('<=10', torch_xla._XLAC._get_xla_tensors_text([t6]))
+    t6_cpu = t6.cpu()
+    self.assertEqual(t6_cpu.shape[0], 2)
 
   @unittest.skip("fails with functionalization")
   def test_simple_expand_on_2d_tensor(self):
