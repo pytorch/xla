@@ -1405,22 +1405,21 @@ std::tuple<at::Tensor, at::Tensor> XLANativeFunctions::kthvalue(
                          bridge::AtenFromXlaTensor(std::get<1>(results)));
 }
 
+at::Tensor XLANativeFunctions::leaky_relu(const at::Tensor& self,
+                                          const at::Scalar& negative_slope) {
+  TORCH_LAZY_FN_COUNTER("xla::");
+  return bridge::AtenFromXlaTensor(tensor_methods::leaky_relu(
+      bridge::GetXlaTensor(self), negative_slope.to<double>()));
+}
+
 at::Tensor XLANativeFunctions::leaky_relu_backward(
     const at::Tensor& grad_output, const at::Tensor& self,
     const at::Scalar& negative_slope, bool self_is_result) {
   TORCH_LAZY_FN_COUNTER("xla::");
   XLA_CHECK(!self_is_result || negative_slope.to<double>() >= 0.0);
-  auto common_device = torch_xla::bridge::GetXlaDevice(self);
-  XLA_CHECK(common_device);
-  auto node_negative_slope =
-      torch::lazy::LazyGraphExecutor::Get()->GetIrValueForScalarFromCodegen(
-          negative_slope, *common_device);
-  torch::lazy::NodePtr node = torch::lazy::MakeNode<LeakyReluBackward>(
-      bridge::GetXlaTensor(grad_output)->GetIrValue(),
-      bridge::GetXlaTensor(self)->GetIrValue(), node_negative_slope,
-      self_is_result);
-  return torch_xla::bridge::AtenFromXlaTensor(
-      torch_xla::XLATensor::Create(std::move(node), *common_device));
+  return bridge::AtenFromXlaTensor(tensor_methods::leaky_relu_backward(
+      bridge::GetXlaTensor(grad_output), bridge::GetXlaTensor(self),
+      negative_slope.to<double>()));
 }
 
 at::Tensor XLANativeFunctions::lerp(const at::Tensor& self,
