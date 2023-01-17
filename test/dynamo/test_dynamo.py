@@ -23,6 +23,13 @@ class DynamoInferenceBasicTest(unittest.TestCase):
   def fn_simple_dynamo(self, x, y):
     return self.fn_simple(x, y)
 
+<<<<<<< HEAD
+=======
+  @dynamo.optimize('torchxla_trace_once')
+  def run_model_with_dynamo(self, model, data):
+    return model(data)
+
+>>>>>>> 03d5c493 (Re-enable dynamo tests (#4454))
   def test_simple_model(self):
     device = xm.xla_device()
     x = torch.tensor(100.0)
@@ -43,7 +50,6 @@ class DynamoInferenceBasicTest(unittest.TestCase):
     res_cpu_3 = self.fn_simple(x + y, y * 3)
     assert torch.allclose(res_cpu_3, res_xla_dynamo_3.cpu())
 
-  @unittest.skip("fails with functionalization")
   def test_resnet18(self):
     device = xm.xla_device()
     batch_size = xu.getenv_as('BATCH_SIZE', int, defval=4)
@@ -97,6 +103,13 @@ class DynamoTrainingBasicTest(unittest.TestCase):
     loss.backward()
     return pred
 
+<<<<<<< HEAD
+=======
+  @dynamo.optimize('aot_torchxla_trace_once')
+  def run_model_with_dynamo(self, model, data, target):
+    return self.train_model(model, data, target)
+
+>>>>>>> 03d5c493 (Re-enable dynamo tests (#4454))
   def test_simple_model(self):
     torch._dynamo.reset()
     device = xm.xla_device()
