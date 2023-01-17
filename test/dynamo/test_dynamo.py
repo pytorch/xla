@@ -26,7 +26,6 @@ class DynamoInferenceBasicTest(unittest.TestCase):
   def run_model_with_dynamo(self, model, data):
     return model(data)
 
-  @unittest.skip("fails with functionalization")
   def test_simple_model(self):
     device = xm.xla_device()
     x = torch.tensor(100.0)
@@ -47,7 +46,6 @@ class DynamoInferenceBasicTest(unittest.TestCase):
     res_cpu_3 = self.fn_simple(x + y, y * 3)
     torch.allclose(res_cpu, res_xla_dynamo_3.cpu())
 
-  @unittest.skip("fails with functionalization")
   def test_resnet18(self):
     device = xm.xla_device()
     batch_size = xu.getenv_as('BATCH_SIZE', int, defval=4)
@@ -97,7 +95,6 @@ class DynamoTrainingBasicTest(unittest.TestCase):
   def run_model_with_dynamo(self, model, data, target):
     return self.train_model(model, data, target)
 
-  @unittest.skip("fails with functionalization")
   def test_simple_model(self):
     torch._dynamo.reset()
     device = xm.xla_device()
@@ -124,7 +121,6 @@ class DynamoTrainingBasicTest(unittest.TestCase):
     torch.allclose(res_cpu, res_xla_dynamo.cpu())
     torch.allclose(input.grad, xla_input.grad.cpu())
 
-  @unittest.skip("fails with functionalization")
   def test_resnet18(self):
     torch._dynamo.reset()
     met.clear_counters()
