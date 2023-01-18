@@ -48,6 +48,7 @@ full_codegen:
   - hardswish_backward
   - inverse
   - isnan
+  - leaky_relu
   - le.Scalar
   - le.Tensor
   - logdet
@@ -92,6 +93,7 @@ ir_gen:
   - bitwise_and.Tensor
   - bitwise_or.Tensor
   - bitwise_xor.Tensor
+  - leaky_relu_backward
 supported:
   - __ilshift__.Scalar
   - __ilshift__.Tensor
@@ -192,7 +194,6 @@ supported:
   - index_select
   - kl_div
   - kthvalue
-  - leaky_relu
   - leaky_relu_backward
   - lerp.Scalar
   - lerp.Tensor
