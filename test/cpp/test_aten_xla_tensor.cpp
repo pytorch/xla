@@ -6384,7 +6384,6 @@ TEST_F(AtenXlaTensorTest, TestReluInPlace) {
 }
 
 TEST_F(AtenXlaTensorTest, TestPrelu) {
-  GTEST_SKIP() << "Needs additional lowering after functionalization";
   int channel_size = 3;
   torch::Tensor input =
       torch::rand({2, channel_size, 4}, torch::TensorOptions(torch::kFloat));
@@ -6399,7 +6398,7 @@ TEST_F(AtenXlaTensorTest, TestPrelu) {
   });
 
   ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
-  ExpectCounterChanged("xla::prelu", cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::_prelu_kernel", cpp_test::GetIgnoredCounters());
 }
 
 TEST_F(AtenXlaTensorTest, TestHardshrink) {
@@ -9422,7 +9421,6 @@ TEST_F(AtenXlaTensorTest, TestDiagRank2) {
 }
 
 TEST_F(AtenXlaTensorTest, TestDiagFlat) {
-  GTEST_SKIP() << "Needs additional lowering after functionalization";
   torch::Tensor input =
       torch::rand({4, 3, 6, 7}, torch::TensorOptions(torch::kFloat));
   for (int diagonal = -10; diagonal < 10; ++diagonal) {
