@@ -12,8 +12,7 @@ from torch_xla.experimental import pjrt
 
 def parse_args():
   parser = argparse.ArgumentParser(
-      description="Test collective communication bandwidth."
-  )
+      description="Test collective communication bandwidth.")
 
   parser.add_argument(
       "--name",
@@ -21,48 +20,42 @@ def parse_args():
       type=str,
       required=True,
       choices=["all_reduce", "all_gather"],
-      help="Name of the op to be tested."
-  )
+      help="Name of the op to be tested.")
 
   parser.add_argument(
       "--size",
       dest="size",
       type=int,
       default=4096,
-      help="Size of the tensor to be used in MB."
-  )
+      help="Size of the tensor to be used in MB.")
 
   parser.add_argument(
       "--group_size",
       dest="group_size",
       type=int,
       default=0,
-      help="Number of ranks in a group."
-  )
+      help="Number of ranks in a group.")
 
   parser.add_argument(
       "--repeat",
       dest="repeat",
       type=int,
       default=100,
-      help="Number of times to repeat the test."
-  )
+      help="Number of times to repeat the test.")
 
   parser.add_argument(
       "--warmup",
       dest="warmup",
       type=int,
       default=50,
-      help="Number of times to warmup the test."
-  )
+      help="Number of times to warmup the test.")
 
   parser.add_argument(
       "--num_cores",
       dest="num_cores",
       type=int,
       default=8,
-      help="Number of processes on one host."
-  )
+      help="Number of processes on one host.")
 
   parser.add_argument(
       "--kwargs",
@@ -104,12 +97,12 @@ def test_all_reduce(size, repeat, warmup, group_size, **kwargs):
 
   times = []
   for _ in range(warmup + repeat):
-    tensor = xm.all_reduce(xm.REDUCE_SUM, tensor, scale=scale, groups=groups,
-                           **kwargs)
-    t0 = time.time_ns() / (10 ** 9)
+    tensor = xm.all_reduce(
+        xm.REDUCE_SUM, tensor, scale=scale, groups=groups, **kwargs)
+    t0 = time.time_ns() / (10**9)
     xm.mark_step()
     xm.wait_device_ops()
-    t1 = time.time_ns() / (10 ** 9)
+    t1 = time.time_ns() / (10**9)
     times.append(t1 - t0)
 
   avg_time = sum(times[warmup:]) / repeat
@@ -130,10 +123,10 @@ def test_all_gather(size, repeat, warmup, group_size, **kwargs):
   times = []
   for _ in range(warmup + repeat):
     gathered_tensor = xm.all_gather(tensor, groups=groups, **kwargs)
-    t0 = time.time_ns() / (10 ** 9)
+    t0 = time.time_ns() / (10**9)
     xm.mark_step()
     xm.wait_device_ops()
-    t1 = time.time_ns() / (10 ** 9)
+    t1 = time.time_ns() / (10**9)
     times.append(t1 - t0)
 
   avg_time = sum(times[warmup:]) / repeat
@@ -153,13 +146,13 @@ def fn(index, args):
 
   device_info = {
       "local_ordinal": xm.get_local_ordinal(),
-      "global_ordinal": xm.get_ordinal(), 
+      "global_ordinal": xm.get_ordinal(),
   }
 
   if pjrt.using_pjrt():
     device = xm.xla_device()
     device_info.update(pjrt.device_attributes(str(device)))
-    
+
   print(device_info)
 
   print(f"Testing collective communication op {name} for {repeat} times...")
@@ -168,6 +161,7 @@ def fn(index, args):
   print(f"Bus bandwidth per process: {bus_bandwidth} MB/s.")
 
   xm.rendezvous("end")
+
 
 if __name__ == '__main__':
   args = parse_args()
