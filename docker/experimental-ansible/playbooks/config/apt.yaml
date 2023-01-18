@@ -1,9 +1,18 @@
-apt_packages:
-  build_amd64:
-    - clang-11
-    - vim
+apt:
+  pkgs:
+    common:
 
-  build_aarch64:
-    - scons
-    - gcc-10
-    - g++-10
+    build_amd64:
+      - clang-11
+
+    build_aarch64:
+      - scons
+      - gcc-10
+      - g++-10
+
+  signing_keys:
+    - https://apt.llvm.org/llvm-snapshot.gpg.key
+
+  repos:
+    - "deb http://apt.llvm.org/{{ debian_version }}/ llvm-toolchain-{{ debian_version }}-{{ clang_version }} main"
+    - "deb-src http://apt.llvm.org/{{ debian_version }}/ llvm-toolchain-{{ debian_version }}-{{ clang_version }} main"
