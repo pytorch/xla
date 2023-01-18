@@ -4311,6 +4311,47 @@ TEST_F(AtenXlaTensorTest, TestUpsampleBilinear2D) {
                        cpp_test::GetIgnoredCounters());
 }
 
+TEST_F(AtenXlaTensorTest, TestUpsampleBilinear2DWithScale) {
+  struct ImageInfo {
+    int batch_size;
+    int h;
+    int w;
+    int chans;
+    double scale_h;
+    double scale_w;
+  };
+
+  /* clang-format off */
+  std::vector<ImageInfo> inputs = {
+    {/*batch_size=*/2, /*h=*/5, /*w=*/5, /*chans=*/2, /*scale_h*/8.0/5, /*scale_w*/8.0/5},
+    {/*batch_size=*/2, /*h=*/1335, /*w=*/1335, /*chans=*/3, /*scale_h*/255.0/1335, /*scale_w*/255.0/1335},
+    {/*batch_size=*/2, /*h=*/255, /*w=*/255, /*chans=*/3, /*scale_h*/1335.0/255, /*scale_w*/1335.0/255},
+    {/*batch_size=*/2, /*h=*/254, /*w=*/243, /*chans=*/3, /*scale_h*/784.0/254, /*scale_w*/214.0/243}
+  };
+  /* clang-format on */
+
+  for (const auto& img_info : inputs) {
+    for (bool align_corners : {true, false}) {
+      torch::Tensor input = torch::rand(
+          {img_info.batch_size, img_info.chans, img_info.h, img_info.w},
+          torch::TensorOptions(torch::kFloat));
+      ForEachDevice([&](const torch::Device& device) {
+        torch::Tensor xla_input = CopyToDevice(input, device);
+        torch::Tensor result = torch::upsample_bilinear2d(
+            input, c10::nullopt, align_corners,
+            at::ArrayRef<double>{img_info.scale_h, img_info.scale_w});
+        torch::Tensor xla_result = torch::upsample_bilinear2d(
+            xla_input, c10::nullopt, align_corners,
+            at::ArrayRef<double>{img_info.scale_h, img_info.scale_w});
+        AllClose(result, xla_result, /*rtol=*/1e-4, /*atol=*/1e-4);
+      });
+    }
+  }
+  ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::upsample_bilinear2d",
+                       cpp_test::GetIgnoredCounters());
+}
+
 TEST_F(AtenXlaTensorTest, TestUpsampleBilinear2DBackward) {
   int batch_size = 2;
   int h = 5;
