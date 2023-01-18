@@ -13,7 +13,7 @@ VERBOSITY=2
 # test failure like the default behavior.
 #
 # This flag should be set to `false`` by default. After testing your changes, make sure
-# to set this flag back to `false`` before you merge your PR. 
+# to set this flag back to `false`` before you merge your PR.
 CONTINUE_ON_ERROR=false
 if [[ "$CONTINUE_ON_ERROR" == "1" ]]; then
   set +e
@@ -158,7 +158,8 @@ function run_op_tests {
   run_pjrt python3 "$CDIR/pjrt/test_experimental_tpu.py"
   run_pjrt python3 "$CDIR/pjrt/test_ddp.py"
   run_pjrt python3 "$CDIR/pjrt/test_mesh_service.py"
-  # run_pjrt python3 "$CDIR/test_xla_sharding.py"
+  run_pjrt python3 "$CDIR/spmd/test_xla_sharding.py"
+  run_pjrt python3 "$CDIR/spmd/test_xla_virtual_device.py"
   run_test python3 "$CDIR/test_operations_hlo.py" "$@" --verbosity=$VERBOSITY
   run_test python3 "$CDIR/test_input_output_aliases.py"
 }

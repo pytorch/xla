@@ -120,10 +120,10 @@ class SizeConstant : public torch_xla::Scalar,
   int64_t getDynamicValue() const override { return getStaticValue(); };
   bool isSymbolic() const override { return false; };
   std::string ToString() const override {
-    this->torch_xla::Scalar::ToString();
+    return this->torch_xla::Scalar::ToString();
   };
   virtual XlaOpVector Lower(LoweringContext* loctx) const override {
-    this->torch_xla::Scalar::Lower(loctx);
+    return torch_xla::Scalar::Lower(loctx);
   };
 };
 

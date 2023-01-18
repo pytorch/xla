@@ -180,7 +180,30 @@ torch::lazy::NodePtr Sigmoid(const torch::lazy::Value& input) {
 
 torch::lazy::NodePtr SigmoidBackward(const torch::lazy::Value& grad_output,
                                      const torch::lazy::Value& output) {
-  return grad_output * (ScalarOp(1, GetXlaShape(output)) - output) * output;
+  torch::lazy::Value scalar_1 = ScalarOp(1, GetXlaShape(output));
+  auto lower_fn = [](const XlaNode& node,
+                     LoweringContext* loctx) -> XlaOpVector {
+    xla::XlaOp grad_output = loctx->GetOutputOp(node.operand(0));
+    xla::XlaOp output = loctx->GetOutputOp(node.operand(1));
+    xla::XlaOp scalar_1 = loctx->GetOutputOp(node.operand(2));
+    xla::XlaOp ret = BuildSigmoidBackward(grad_output, output, scalar_1);
+    return node.ReturnOp(ret, loctx);
+  };
+  auto shape_fn = [](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
+    xla::XlaOp grad_output = operands[0];
+    xla::XlaOp output = operands[1];
+    xla::XlaOp scalar_1 = operands[2];
+    xla::XlaOp ret = BuildSigmoidBackward(grad_output, output, scalar_1);
+    return ret;
+  };
+  return GenericOp(
+      torch::lazy::OpKind(at::aten::sigmoid), {grad_output, output, scalar_1},
+      [&]() {
+        return InferOutputShape({GetXlaShape(grad_output), GetXlaShape(output),
+                                 GetXlaShape(scalar_1)},
+                                shape_fn);
+      },
+      std::move(lower_fn));
 }
 
 torch::lazy::NodePtr LogSoftmaxBackwardOp(const torch::lazy::Value& grad_output,

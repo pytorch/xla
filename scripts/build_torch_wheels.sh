@@ -5,6 +5,7 @@ set -x  # Display commands being run.
 
 PYTHON_VERSION=$1
 RELEASE_VERSION=$2  # rX.Y or nightly
+BUILD_CPP_TESTS="${3:-0}"
 DEFAULT_PYTHON_VERSION=3.6
 DEBIAN_FRONTEND=noninteractive
 
@@ -181,7 +182,7 @@ function install_and_setup_conda() {
   fi
   ENVNAME="pytorch"
   if conda env list | awk '{print $1}' | grep "^$ENVNAME$"; then
-    conda remove --name "$ENVNAME" --all
+    conda remove -y --name "$ENVNAME" --all
   fi
   if [ -z "$PYTHON_VERSION" ]; then
     PYTHON_VERSION=$DEFAULT_PYTHON_VERSION
@@ -197,7 +198,8 @@ function install_and_setup_conda() {
 
   conda install -y numpy pyyaml setuptools cmake cffi typing tqdm coverage tensorboard hypothesis dataclasses
   if [[ $(uname -m) == "x86_64" ]]; then
-    conda install -y mkl-include
+    # Overwrite mkl packages here, since nomkl conflicts with the anaconda env setup.
+    pip install mkl==2022.2.1 mkl_include==2022.2.1
   fi
 
   /usr/bin/yes | pip install --upgrade google-api-python-client
@@ -250,6 +252,12 @@ function build_and_install_torch() {
 
   python setup.py bdist_wheel
   pip install dist/*.whl
+
+  # collect_wheels expects this
+  if [ ! -d "/pytorch/dist" ]; then
+    mkdir -p /pytorch/dist
+    cp dist/*.whl /pytorch/dist/
+  fi
 }
 
 function build_and_install_torch_xla() {
@@ -265,12 +273,17 @@ function build_and_install_torch_xla() {
     export XLA_CPU_USE_ACL=1
   fi
 
-  # TODO: reenable after fixing the cpp test build
-  BUILD_CPP_TESTS=0 python setup.py bdist_wheel
+  python setup.py bdist_wheel
   pip install dist/*.whl
   if [ "$TPUVM_MODE" == "1" ]; then
     pip install torch_xla[tpuvm]
     sudo apt-get install -y google-perftools
+  fi
+
+  # collect_wheels expects this
+  if [ ! -d "/pytorch/xla/dist" ]; then
+    mkdir -p /pytorch/xla/dist
+    cp dist/*.whl /pytorch/xla/dist/
   fi
 }
 
@@ -283,6 +296,12 @@ function install_torchvision_from_source() {
   python setup.py bdist_wheel
   pip install dist/*.whl
   popd
+
+  # collect_wheels expects this
+  if [ ! -d "/pytorch/vision/dist" ]; then
+    mkdir -p /pytorch/vision/dist
+    cp vision/dist/*.whl /pytorch/vision/dist/
+  fi
 }
 
 function install_torchaudio_from_source() {
@@ -292,6 +311,12 @@ function install_torchaudio_from_source() {
   python setup.py bdist_wheel
   pip install dist/*.whl
   popd
+
+  # collect_wheels expects this
+  if [ ! -d "/pytorch/audio/dist" ]; then
+    mkdir -p /pytorch/audio/dist
+    cp audio/dist/*.whl /pytorch/audio/dist/
+  fi
 }
 
 function main() {
