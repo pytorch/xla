@@ -204,7 +204,7 @@ class ExperimentRunner:
     t_start = time.perf_counter()
 
     for i in range(self._args.iterations_per_run):
-      result = benchmark_model.model_iter_fn(inputs_list[i], collect_outputs=self._args.collect_outputs)
+      result = benchmark_model.model_iter_fn(inputs_list[i], collect_full_result=self._args.collect_full_result)
 
       if benchmark_experiment.xla and self._args.iterations_per_run == 1:
         t_trace = time.perf_counter()
@@ -287,9 +287,9 @@ def parse_args(args=None):
     )
 
     parser.add_argument(
-        "--collect-outputs",
+        "--collect-full-result",
         action="store_true",
-        help="""Whether to collect outputs for training. Set this to true if we
+        help="""Whether to collect full result for training. Set this to true if we
         want to verify the numerical correctness of graidents. But that may
         cause time measurement not accurate""",
     )

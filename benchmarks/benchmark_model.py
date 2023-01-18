@@ -115,18 +115,19 @@ class BenchmarkModel:
   def compute_loss(self, pred):
     return reduce_to_scalar_loss(pred)
 
-  def train(self, inputs, collect_outputs=True):
+  def train(self, inputs, collect_full_result=False):
     self.optimizer_zero_grad()
     pred = self.module(*inputs)
     loss = self.compute_loss(pred)
     loss.backward()
     self.optimizer_step()
-    if collect_outputs:
+    if collect_full_result:
         return collect_results(self.module, pred, loss, inputs)
-    return None
+    return pred
 
-  def eval(self, inputs, collect_outputs=True):
-    return self.module(*inputs)
+  def eval(self, inputs, collect_full_result=False):
+    pred = self.module(*inputs)
+    return pred
 
   @property
   def filename_str(self):
