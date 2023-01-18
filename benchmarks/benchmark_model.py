@@ -46,11 +46,9 @@ class ModelLoader:
   def load_model(self, model_config, benchmark_experiment):
     suite_name = self.suite_name
     model_name = model_config["model_name"]
-    batch_size = self._args.batch_size
     benchmark_model = BenchmarkModel(
         suite_name=suite_name,
         model_name=model_name,
-        batch_size=batch_size,
         benchmark_experiment=benchmark_experiment,
     )
 
@@ -62,10 +60,9 @@ class ModelLoader:
 
 class BenchmarkModel:
 
-  def __init__(self, suite_name, model_name, batch_size, benchmark_experiment):
+  def __init__(self, suite_name, model_name, benchmark_experiment):
     self.suite_name = suite_name
     self.model_name = model_name
-    self.batch_size = batch_size
     self.benchmark_experiment = benchmark_experiment
 
   def set_up(self):
@@ -85,8 +82,8 @@ class BenchmarkModel:
         nn.Softmax(dim=1),
     )
 
-    self.batch_size = 16
-    self.example_inputs = (torch.rand(self.batch_size, 32),)
+    self.benchmark_experiment.batch_size = 16
+    self.example_inputs = (torch.rand(self.benchmark_experiment.batch_size, 32),)
     self.optimizer_class = torch.optim.Adam
 
   def prepare_for_experiment(self):
@@ -133,4 +130,4 @@ class BenchmarkModel:
 
   @property
   def filename_str(self):
-    return f"{self.suite_name}-{self.model_name}-{self.batch_size}"
+    return f"{self.suite_name}-{self.model_name}"

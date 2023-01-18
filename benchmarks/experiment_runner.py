@@ -1,9 +1,12 @@
 import argparse
 from collections import OrderedDict
 import copy
+import csv
+import io
 import json
 import logging
 import numpy as np
+import os
 import subprocess
 import sys
 import time
@@ -39,8 +42,9 @@ class ExperimentRunner:
     else:
       raise NotImplementedError
 
-    # TODO: initialize output directory from args
-    # self.output_dir
+    self.output_dir = os.path.abspath(self._args.output_dirname)
+    os.makedirs(self.output_dir, exist_ok=True)
+    self.output_file = os.path.join(self.output_dir, self._args.output_basename)
 
   def run(self):
     if self._args.experiment_config and self._args.model_config:
@@ -52,6 +56,8 @@ class ExperimentRunner:
       self.run_single_experiment(experiment_config, model_config)
     else:
       assert not self._args.experiment_config and not self._args.model_config
+      if os.path.exists(self.output_file):
+        os.unlink(self.output_file)
 
       experiment_configs = self.experiment_loader.list_experiment_configs()
       model_configs = self.model_loader.list_model_configs()
@@ -74,19 +80,21 @@ class ExperimentRunner:
                   timeout=60 * 20,
                   env=process_env,
               )
-            except subprocess.TimeoutExpired:
+            except subprocess.TimeoutExpired as e:
               logger.error("TIMEOUT")
-            except subprocess.SubprocessError:
+              self.record_failed_experiment(model_config_str, experiment_config_str, e)
+            except subprocess.SubprocessError as e:
               logger.error("ERROR")
+              self.record_failed_experiment(model_config_str, experiment_config_str, e)
 
           else:
             logger.warning("SKIP because of incompatible configs.")
 
   def run_single_experiment(self, experiment_config, model_config):
-    reset_rng_state()
     benchmark_experiment = self.experiment_loader.load_experiment(
         experiment_config
     )
+    reset_rng_state(benchmark_experiment)
     benchmark_model = self.model_loader.load_model(
         model_config, benchmark_experiment
     )
@@ -103,11 +111,62 @@ class ExperimentRunner:
         if i == 0:
           timings[key] = np.zeros(self._args.repeat, np.float64)
         timings[key][i] = val
+    # print(timings)
 
-    # TODO: save the config, timings and results to proper files in self.output_dir
-    logger.info(f"{benchmark_model.filename_str}-{benchmark_experiment.filename_str}")
-    print(timings)
-    # self.save_results(timings, results)
+    self.save_results(benchmark_experiment, benchmark_model, timings, results)
+
+  def save_results(self, benchmark_experiment, benchmark_model, timings, results):
+    detail_file_name = f"{benchmark_model.filename_str}-{benchmark_experiment.filename_str}.pt"
+    csv_headers = [
+        "suite_name",
+        "model_name",
+        "accelerator",
+        "xla",
+        "test",
+        "batch_size",
+        "median_total",
+        "median_average",
+        "detail_results",
+    ]
+
+    csv_row = [
+        benchmark_model.suite_name,
+        benchmark_model.model_name,
+        benchmark_experiment.accelerator,
+        benchmark_experiment.xla,
+        benchmark_experiment.test,
+        benchmark_experiment.batch_size,
+        np.median(timings["total"]).item(),
+        np.median(timings["average"]).item(),
+        detail_file_name,
+    ]
+
+    self.output_csv(csv_headers, csv_row)
+
+    torch.save({"timings": timings, "results": results},
+               os.path.join(self.output_dir, detail_file_name))
+
+  def record_failed_experiment(self, model_config_str, experiment_config_str, e):
+    headers = ["model_config", "experiment_config", "failure"]
+    row = [model_config_str, experiment_config_str, e]
+    file_path = os.path.join(self.output_dir, "failed_experiments.csv")
+    self.output_csv(headers, row, file_path)
+
+  def output_csv(self, headers, row, file_path=None):
+    if not file_path:
+      file_path = self.output_file
+    existed = os.path.exists(file_path)
+    output = csv.writer(
+        io.TextIOWrapper(
+            open(file_path, "ab", buffering=0),
+            "utf-8",
+            write_through=True,
+        ),
+        lineterminator="\n",
+    )
+    if not existed:
+      output.writerow(headers)
+    output.writerow([(f"{x:.8e}" if isinstance(x, float) else x) for x in row])
 
   def _mark_step(self, benchmark_experiment):
     if benchmark_experiment.xla:
@@ -133,11 +192,11 @@ class ExperimentRunner:
     return inputs_list
 
   def timed_run(self, benchmark_experiment, benchmark_model):
-    reset_rng_state()
+    reset_rng_state(benchmark_experiment)
 
     inputs_list = self.prepare_inputs(benchmark_model.example_inputs, self._args.randomize_input)
 
-    reset_rng_state()
+    reset_rng_state(benchmark_experiment)
     self._mark_step(benchmark_experiment)
     self._synchronize(benchmark_experiment)
 
@@ -145,7 +204,7 @@ class ExperimentRunner:
     t_start = time.perf_counter()
 
     for i in range(self._args.iterations_per_run):
-      result = benchmark_model.model_iter_fn(inputs_list[i], collect_outputs=False)
+      result = benchmark_model.model_iter_fn(inputs_list[i], collect_outputs=self._args.collect_outputs)
 
       if benchmark_experiment.xla and self._args.iterations_per_run == 1:
         t_trace = time.perf_counter()
@@ -225,6 +284,28 @@ def parse_args(args=None):
         "--randomize-input",
         action="store_true",
         help="Whether to randomize the input values. Dimensions will be kept the same.",
+    )
+
+    parser.add_argument(
+        "--collect-outputs",
+        action="store_true",
+        help="""Whether to collect outputs for training. Set this to true if we
+        want to verify the numerical correctness of graidents. But that may
+        cause time measurement not accurate""",
+    )
+
+    parser.add_argument(
+        "--output-dirname",
+        type=str,
+        default="./output/",
+        help="Overrides the directory to place output files.",
+    )
+
+    parser.add_argument(
+        "--output-basename",
+        type=str,
+        default="results.csv",
+        help="Overrides the basename of output files.",
     )
 
     parser.add_argument(

@@ -30,34 +30,32 @@ def patch_torch_manual_seed():
   torch.manual_seed = deterministic_torch_manual_seed
 
 
-def reset_rng_state():
+def reset_rng_state(benchmark_experiment=None):
   torch.manual_seed(1337)
   random.seed(1337)
   np.random.seed(1337)
+  if benchmark_experiment and benchmark_experiment.xla:
+    import torch_xla.core.xla_model as xm
+    device = benchmark_experiment.get_device()
+    xm.set_rng_state(1337, str(device))
 
 
 @functools.lru_cache(maxsize=3)
 def is_xla_device_available(devkind):
   if devkind not in ["CPU", "GPU", "TPU"]:
-    raise ValueError, devkind
+    raise ValueError(devkind)
 
   def _check_xla_device(q, devkind):
     try:
       import os
-      if devkind == "TPU":
-        os.environ["PJRT_DEVICE"] = "TPU"
-      elif devkind == "GPU":
-        os.environ["GPU_NUM_DEVICES"] = "1"
+      os.environ["PJRT_DEVICE"] = devkind
 
       import torch_xla.core.xla_model as xm
 
-      if devkind == "CPU":
-        q.put(True)
-      else:
-        q.put(bool(xm.get_xla_supported_devices(devkind)))
+      q.put(bool(xm.get_xla_supported_devices(devkind=devkind)))
     except Exception:
       traceback.print_exc()
-      q.put(None)
+      q.put(False)
 
   q = Queue()
   process = Process(target=_check_xla_device, args=(q, devkind))

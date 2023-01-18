@@ -28,7 +28,7 @@ class TorchBenchModelLoader(ModelLoader):
 
     self.torchbench_dir = self.add_torchbench_dir()
 
-  def add_torchbench_dir():
+  def add_torchbench_dir(self):
     os.environ["KALDI_ROOT"] = "/tmp"  # avoids some spam
     for torchbench_dir in (
         "./torchbenchmark",
@@ -78,11 +78,9 @@ class TorchBenchModelLoader(ModelLoader):
   def load_model(self, model_config, benchmark_experiment):
     suite_name = self.suite_name
     model_name = model_config["model_name"]
-    batch_size = self._args.batch_size
     benchmark_model = TorchBenchModel(
         suite_name=suite_name,
         model_name=model_name,
-        batch_size=batch_size,
         benchmark_experiment=benchmark_experiment,
     )
 
@@ -94,8 +92,8 @@ class TorchBenchModelLoader(ModelLoader):
 
 class TorchBenchModel(BenchmarkModel):
 
-  def __init__(self, suite_name, model_name, batch_size, benchmark_experiment):
-    super().__init__(suite_name, model_name, batch_size, benchmark_experiment)
+  def __init__(self, suite_name, model_name, benchmark_experiment):
+    super().__init__(suite_name, model_name, benchmark_experiment)
 
   def set_up(self):
     """Set up module, actual batch_size, example_inputs, and optimizer_class
@@ -114,7 +112,7 @@ class TorchBenchModel(BenchmarkModel):
         not getattr(benchmark_cls, "ALLOW_CUSTOMIZE_BSIZE", True)
     )
     if cant_change_batch_size:
-        self.batch_size = None
+        self.benchmark_experiment.batch_size = None
 
     # workaround "RuntimeError: not allowed to set torch.backends.cudnn flags"
     # torch.backends.__allow_nonbracketed_mutation_flag = True
@@ -130,17 +128,17 @@ class TorchBenchModel(BenchmarkModel):
         test=self.benchmark_experiment.test,
         device=device,
         jit=False,
-        batch_size=self.batch_size,
+        batch_size=self.benchmark_experiment.batch_size,
     )
 
     self.module, self.example_inputs = benchmark.get_module()
 
-    self.batch_size = benchmark.batch_size
+    self.benchmark_experiment.batch_size = benchmark.batch_size
 
     # Torchbench has quite different setup for yolov3, so directly passing
     # the right example_inputs
     if self.model_name == "yolov3":
-        self.example_inputs = (torch.rand(self.batch_size, 3, 384, 512),)
+        self.example_inputs = (torch.rand(self.benchmark_experiment.batch_size, 3, 384, 512),)
 
     del benchmark
     gc.collect()

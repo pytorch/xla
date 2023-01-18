@@ -41,9 +41,6 @@ class ExperimentLoader:
         not experiment_config["xla"]):
       return False
     if (experiment_config["accelerator"] == "gpu" and
-        experiment_config["xla"] == "PJRT"):
-      return False
-    if (experiment_config["accelerator"] == "gpu" and
         not experiment_config["xla"] and
         not torch.cuda.is_available()):
       return False
@@ -68,17 +65,19 @@ class ExperimentLoader:
     accelerator = experiment_config.get("accelerator", "cpu")
     xla = experiment_config.get("xla", None)
     test = experiment_config.get("test", "eval")
-    benchmark_experiment = BenchmarkExperiment(accelerator=accelerator, xla=xla, test=test)
+    batch_size = experiment_config.get("batch_size", self._args.batch_size)
+    benchmark_experiment = BenchmarkExperiment(accelerator=accelerator, xla=xla, test=test, batch_size=batch_size)
 
     return benchmark_experiment
 
 
 class BenchmarkExperiment:
 
-  def __init__(self, accelerator, xla, test):
+  def __init__(self, accelerator, xla, test, batch_size):
     self.accelerator = accelerator
     self.xla = xla
     self.test = test
+    self.batch_size = batch_size
 
   def get_device(self):
     if self.xla:
@@ -95,4 +94,4 @@ class BenchmarkExperiment:
 
   @property
   def filename_str(self):
-    return f"{self.accelerator}-{self.xla}-{self.test}"
+    return f"{self.accelerator}-{self.xla}-{self.test}-{self.batch_size}"
