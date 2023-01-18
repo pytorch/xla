@@ -2911,6 +2911,11 @@ at::Tensor XLANativeFunctions::upsample_bilinear2d(
   if ((scales_h && *scales_h != 1.0) || (scales_w && *scales_w != 1.0)) {
     scaled_output_size = GetOutputSizeWithScale(input_dims, scales_h, scales_w,
                                                 scaled_output_size);
+    if (!output_size.empty()) {
+      XLA_CHECK(scaled_output_size.at(0) == output_size.at(0) &&
+                scaled_output_size.at(1) == output_size.at(1))
+          << "Inferred output size and output_size from upstream are different";
+    }
   }
   return bridge::AtenFromXlaTensor(tensor_methods::upsample_bilinear2d(
       self_tensor, scaled_output_size, align_corners));
