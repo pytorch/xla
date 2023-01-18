@@ -82,29 +82,27 @@ class ExperimentRunner:
               )
             except subprocess.TimeoutExpired as e:
               logger.error("TIMEOUT")
-              self.record_failed_experiment(model_config_str, experiment_config_str, e)
+              self.record_failed_experiment(model_config_str,
+                                            experiment_config_str, e)
             except subprocess.SubprocessError as e:
               logger.error("ERROR")
-              self.record_failed_experiment(model_config_str, experiment_config_str, e)
+              self.record_failed_experiment(model_config_str,
+                                            experiment_config_str, e)
 
           else:
             logger.warning("SKIP because of incompatible configs.")
 
   def run_single_experiment(self, experiment_config, model_config):
     benchmark_experiment = self.experiment_loader.load_experiment(
-        experiment_config
-    )
+        experiment_config)
     reset_rng_state(benchmark_experiment)
-    benchmark_model = self.model_loader.load_model(
-        model_config, benchmark_experiment
-    )
+    benchmark_model = self.model_loader.load_model(model_config,
+                                                   benchmark_experiment)
 
     timings = OrderedDict()
     results = []
     for i in range(self._args.repeat):
-      timing, result = self.timed_run(
-          benchmark_experiment, benchmark_model
-      )
+      timing, result = self.timed_run(benchmark_experiment, benchmark_model)
       result = move_to_device(result, 'cpu')
       results.append(result)
       for key, val in timing.items():
@@ -115,7 +113,8 @@ class ExperimentRunner:
 
     self.save_results(benchmark_experiment, benchmark_model, timings, results)
 
-  def save_results(self, benchmark_experiment, benchmark_model, timings, results):
+  def save_results(self, benchmark_experiment, benchmark_model, timings,
+                   results):
     detail_file_name = f"{benchmark_model.filename_str}-{benchmark_experiment.filename_str}.pt"
     csv_headers = [
         "suite_name",
@@ -143,10 +142,13 @@ class ExperimentRunner:
 
     self.output_csv(csv_headers, csv_row)
 
-    torch.save({"timings": timings, "results": results},
-               os.path.join(self.output_dir, detail_file_name))
+    torch.save({
+        "timings": timings,
+        "results": results
+    }, os.path.join(self.output_dir, detail_file_name))
 
-  def record_failed_experiment(self, model_config_str, experiment_config_str, e):
+  def record_failed_experiment(self, model_config_str, experiment_config_str,
+                               e):
     headers = ["model_config", "experiment_config", "failure"]
     row = [model_config_str, experiment_config_str, e]
     file_path = os.path.join(self.output_dir, "failed_experiments.csv")
@@ -194,7 +196,8 @@ class ExperimentRunner:
   def timed_run(self, benchmark_experiment, benchmark_model):
     reset_rng_state(benchmark_experiment)
 
-    inputs_list = self.prepare_inputs(benchmark_model.example_inputs, self._args.randomize_input)
+    inputs_list = self.prepare_inputs(benchmark_model.example_inputs,
+                                      self._args.randomize_input)
 
     reset_rng_state(benchmark_experiment)
     self._mark_step(benchmark_experiment)
@@ -204,7 +207,8 @@ class ExperimentRunner:
     t_start = time.perf_counter()
 
     for i in range(self._args.iterations_per_run):
-      result = benchmark_model.model_iter_fn(inputs_list[i], collect_full_result=self._args.collect_full_result)
+      result = benchmark_model.model_iter_fn(
+          inputs_list[i], collect_full_result=self._args.collect_full_result)
 
       if benchmark_experiment.xla and self._args.iterations_per_run == 1:
         t_trace = time.perf_counter()
@@ -224,103 +228,101 @@ class ExperimentRunner:
 
 
 def parse_args(args=None):
-    parser = argparse.ArgumentParser()
+  parser = argparse.ArgumentParser()
 
-    parser.add_argument(
-        "--suite-name",
-        required=True,
-        choices=["dummy", "torchbench"],
-        help="Suite name for the model garden.",
-    )
+  parser.add_argument(
+      "--suite-name",
+      required=True,
+      choices=["dummy", "torchbench"],
+      help="Suite name for the model garden.",
+  )
 
-    parser.add_argument(
-        "--filter", "-k", action="append", help="filter benchmarks with regexp"
-    )
-    parser.add_argument(
-        "--exclude", "-x", action="append", help="filter benchmarks with regexp"
-    )
+  parser.add_argument(
+      "--filter", "-k", action="append", help="filter benchmarks with regexp")
+  parser.add_argument(
+      "--exclude", "-x", action="append", help="filter benchmarks with regexp")
 
-    parser.add_argument(
-        "--repeat",
-        type=int,
-        default=10,
-        help="Number of times to repeat the timed run in a single experiment.",
-    )
+  parser.add_argument(
+      "--repeat",
+      type=int,
+      default=10,
+      help="Number of times to repeat the timed run in a single experiment.",
+  )
 
-    parser.add_argument(
-        "--iterations-per-run",
-        type=int,
-        default=1,
-        help="Number of times to repeat the model iteration inside a timed run.",
-    )
+  parser.add_argument(
+      "--iterations-per-run",
+      type=int,
+      default=1,
+      help="Number of times to repeat the model iteration inside a timed run.",
+  )
 
-    parser.add_argument(
-        "--batch-size",
-        type=int,
-        help="Batch size to be used. If not provided, it depends on the model suites to determine it.",
-    )
+  parser.add_argument(
+      "--batch-size",
+      type=int,
+      help="Batch size to be used. If not provided, it depends on the model suites to determine it.",
+  )
 
-    parser.add_argument(
-        "--total-partitions",
-        type=int,
-        default=1,
-        choices=range(1, 10),
-        help="Total number of partitions we want to divide the benchmark suite into",
-    )
-    parser.add_argument(
-        "--partition-id",
-        type=int,
-        default=0,
-        help="ID of the benchmark suite partition to be run. Used to divide CI tasks",
-    )
+  parser.add_argument(
+      "--total-partitions",
+      type=int,
+      default=1,
+      choices=range(1, 10),
+      help="Total number of partitions we want to divide the benchmark suite into",
+  )
+  parser.add_argument(
+      "--partition-id",
+      type=int,
+      default=0,
+      help="ID of the benchmark suite partition to be run. Used to divide CI tasks",
+  )
 
-    parser.add_argument(
-        "--dry-run",
-        action="store_true",
-        help="Do a dry run to only print the benchmark commands.",
-    )
+  parser.add_argument(
+      "--dry-run",
+      action="store_true",
+      help="Do a dry run to only print the benchmark commands.",
+  )
 
-    parser.add_argument(
-        "--randomize-input",
-        action="store_true",
-        help="Whether to randomize the input values. Dimensions will be kept the same.",
-    )
+  parser.add_argument(
+      "--randomize-input",
+      action="store_true",
+      help="Whether to randomize the input values. Dimensions will be kept the same.",
+  )
 
-    parser.add_argument(
-        "--collect-full-result",
-        action="store_true",
-        help="""Whether to collect full result for training. Set this to true if we
+  parser.add_argument(
+      "--collect-full-result",
+      action="store_true",
+      help="""Whether to collect full result for training. Set this to true if we
         want to verify the numerical correctness of graidents. But that may
         cause time measurement not accurate""",
-    )
+  )
 
-    parser.add_argument(
-        "--output-dirname",
-        type=str,
-        default="./output/",
-        help="Overrides the directory to place output files.",
-    )
+  parser.add_argument(
+      "--output-dirname",
+      type=str,
+      default="./output/",
+      help="Overrides the directory to place output files.",
+  )
 
-    parser.add_argument(
-        "--output-basename",
-        type=str,
-        default="results.csv",
-        help="Overrides the basename of output files.",
-    )
+  parser.add_argument(
+      "--output-basename",
+      type=str,
+      default="results.csv",
+      help="Overrides the basename of output files.",
+  )
 
-    parser.add_argument(
-        "--experiment-config",
-        type=str,
-        help="JSON string of the experiment config dict.",
-    )
+  parser.add_argument(
+      "--experiment-config",
+      type=str,
+      help="JSON string of the experiment config dict.",
+  )
 
-    parser.add_argument(
-        "--model-config",
-        type=str,
-        help="JSON string of the model config dict.",
-    )
+  parser.add_argument(
+      "--model-config",
+      type=str,
+      help="JSON string of the model config dict.",
+  )
 
-    return parser.parse_args(args)
+  return parser.parse_args(args)
 
 
 def main():

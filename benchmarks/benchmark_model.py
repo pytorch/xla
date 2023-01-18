@@ -10,7 +10,6 @@ try:
 except ImportError:
   from util import move_to_device
 
-
 logger = logging.getLogger(__name__)
 
 
@@ -22,7 +21,9 @@ class ModelLoader:
 
   def list_model_configs(self):
     model_configs = [
-        {"model_name": "dummy"},
+        {
+            "model_name": "dummy"
+        },
     ]
 
     return model_configs
@@ -32,11 +33,10 @@ class ModelLoader:
 
   def get_benchmark_indices(self, length):
     start = self._args.partition_id * (length // self._args.total_partitions)
-    end = (
-        (self._args.partition_id + 1) * (length // self._args.total_partitions)
-        if self._args.partition_id < self._args.total_partitions - 1
-        else length
-    )
+    end = ((self._args.partition_id + 1) *
+           (length // self._args.total_partitions)
+           if self._args.partition_id < self._args.total_partitions - 1 else
+           length)
     return start, end
 
   def skip_model(self, model_name):
@@ -83,7 +83,8 @@ class BenchmarkModel:
     )
 
     self.benchmark_experiment.batch_size = 16
-    self.example_inputs = (torch.rand(self.benchmark_experiment.batch_size, 32),)
+    self.example_inputs = (torch.rand(self.benchmark_experiment.batch_size,
+                                      32),)
     self.optimizer_class = torch.optim.Adam
 
   def prepare_for_experiment(self):
@@ -122,7 +123,7 @@ class BenchmarkModel:
     loss.backward()
     self.optimizer_step()
     if collect_full_result:
-        return collect_results(self.module, pred, loss, inputs)
+      return collect_results(self.module, pred, loss, inputs)
     return pred
 
   def eval(self, inputs, collect_full_result=False):

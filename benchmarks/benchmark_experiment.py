@@ -24,7 +24,11 @@ class ExperimentLoader:
     for accelerator in accelerators:
       for xla in xla_options:
         for test in tests:
-          experiment_config = {"accelerator": accelerator, "xla": xla, "test": test}
+          experiment_config = {
+              "accelerator": accelerator,
+              "xla": xla,
+              "test": test
+          }
 
           if not self.is_available(experiment_config):
             continue
@@ -41,8 +45,7 @@ class ExperimentLoader:
         not experiment_config["xla"]):
       return False
     if (experiment_config["accelerator"] == "gpu" and
-        not experiment_config["xla"] and
-        not torch.cuda.is_available()):
+        not experiment_config["xla"] and not torch.cuda.is_available()):
       return False
     return True
 
@@ -66,7 +69,8 @@ class ExperimentLoader:
     xla = experiment_config.get("xla", None)
     test = experiment_config.get("test", "eval")
     batch_size = experiment_config.get("batch_size", self._args.batch_size)
-    benchmark_experiment = BenchmarkExperiment(accelerator=accelerator, xla=xla, test=test, batch_size=batch_size)
+    benchmark_experiment = BenchmarkExperiment(
+        accelerator=accelerator, xla=xla, test=test, batch_size=batch_size)
 
     return benchmark_experiment
 

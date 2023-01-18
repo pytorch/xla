@@ -95,16 +95,14 @@ def randomize_input(inputs):
       return inputs
     else:
       raise RuntimeError(
-          f"randomize_input need support tensor of type {inputs.dtype}"
-      )
+          f"randomize_input need support tensor of type {inputs.dtype}")
   elif isinstance(inputs, (list, tuple)):
     return type(inputs)([randomize_input(x) for x in inputs])
   elif isinstance(inputs, dict):
     return dict((k, randomize_input(x)) for k, x in inputs.items())
   else:
     logger.warning(
-        f"randomize_input can not handle input of type {type(inputs)}"
-    )
+        f"randomize_input can not handle input of type {type(inputs)}")
     return inputs
 
 

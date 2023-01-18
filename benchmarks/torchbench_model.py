@@ -17,7 +17,6 @@ except ImportError:
   from util import move_to_device, set_cwd
   from benchmark_model import ModelLoader, BenchmarkModel
 
-
 logger = logging.getLogger(__name__)
 
 
@@ -61,7 +60,7 @@ class TorchBenchModelLoader(ModelLoader):
     models = _list_model_paths()
 
     start, end = self.get_benchmark_indices(len(models))
-    models = models[start: end]
+    models = models[start:end]
     for model_path in models:
       model_name = os.path.basename(model_path)
 
@@ -103,16 +102,17 @@ class TorchBenchModel(BenchmarkModel):
     self.optimizer_class = torch.optim.Adam
 
     try:
-        module = importlib.import_module(f"torchbenchmark.models.{self.model_name}")
+      module = importlib.import_module(
+          f"torchbenchmark.models.{self.model_name}")
     except ModuleNotFoundError:
-        module = importlib.import_module(f"torchbenchmark.models.fb.{self.model_name}")
+      module = importlib.import_module(
+          f"torchbenchmark.models.fb.{self.model_name}")
     benchmark_cls = getattr(module, "Model", None)
 
-    cant_change_batch_size = (
-        not getattr(benchmark_cls, "ALLOW_CUSTOMIZE_BSIZE", True)
-    )
+    cant_change_batch_size = (not getattr(benchmark_cls,
+                                          "ALLOW_CUSTOMIZE_BSIZE", True))
     if cant_change_batch_size:
-        self.benchmark_experiment.batch_size = None
+      self.benchmark_experiment.batch_size = None
 
     # workaround "RuntimeError: not allowed to set torch.backends.cudnn flags"
     # torch.backends.__allow_nonbracketed_mutation_flag = True
@@ -138,7 +138,8 @@ class TorchBenchModel(BenchmarkModel):
     # Torchbench has quite different setup for yolov3, so directly passing
     # the right example_inputs
     if self.model_name == "yolov3":
-        self.example_inputs = (torch.rand(self.benchmark_experiment.batch_size, 3, 384, 512),)
+      self.example_inputs = (torch.rand(self.benchmark_experiment.batch_size, 3,
+                                        384, 512),)
 
     del benchmark
     gc.collect()
