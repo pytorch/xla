@@ -1,0 +1,22 @@
+- name: "Install build dependencies"
+  hosts: 127.0.0.1
+  connection: local
+  vars_prompt:
+    - name: stage_env
+      prompt: "Stage and env type (possible options: build_aarch64, build_amd64)"
+      private: false
+
+  pre_tasks:
+    - name: Include vars of config/apt.yaml
+      ansible.builtin.include_vars:
+        file: config/apt.yaml
+        name: apt
+
+  roles:
+    - role: bazel
+      vars:
+        some_var: "123"
+
+    - role: build_deps
+      vars:
+        apt_packages: "{{ apt.apt_packages[stage_env] }}"

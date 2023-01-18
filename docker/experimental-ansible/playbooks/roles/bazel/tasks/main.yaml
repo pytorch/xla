@@ -1,0 +1,5 @@
+- name: "Download bazelisk"
+  ansible.builtin.get_url:
+    url: "https://github.com/bazelbuild/bazelisk/releases/download/v{{ bazelisk_version }}/bazelisk-linux-amd64"
+    dest: /usr/local/bin/bazel
+    mode: 'u=rxw,g=rw,o=r'
