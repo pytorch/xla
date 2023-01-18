@@ -1,0 +1,9 @@
+apt_packages:
+  build_amd64:
+    - clang-11
+    - vim
+
+  build_aarch64:
+    - scons
+    - gcc-10
+    - g++-10
