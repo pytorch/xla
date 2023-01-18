@@ -254,6 +254,7 @@ supported:
   - pow.Tensor_Scalar
   - pow.Tensor_Tensor
   - prelu
+  - _prelu_kernel
   - prod
   - prod.dim_int
   - put_
