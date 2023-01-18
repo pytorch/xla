@@ -121,6 +121,7 @@ class TestDynamicShapes(unittest.TestCase):
   def test_xla_view_symint(self):
     # t1.shape= torch.Size([<=6, 2])
     t1 = self.get_dynamic_tensor()  
+    # TODO: xiowei continue from here.
     
   
 

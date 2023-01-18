@@ -1,0 +1,217 @@
++ OPTS=()
++ getopts O: OPTION
++ case $OPTION in
++ for i in ${OPTARG}
++ OPTS+=("--cxxopt=${i}")
++ getopts O: OPTION
++ shift 2
++ CMD=develop
+++ dirname /workspaces/work/pytorch/xla/build_torch_xla_libs.sh
++ cd /workspaces/work/pytorch/xla
++++ pwd
+++ printf '%q\n' /workspaces/work/pytorch/xla
++ PWD=/workspaces/work/pytorch/xla
++ BASE_DIR=/workspaces/work/pytorch/xla
++ echo /workspaces/work/pytorch/xla
+/workspaces/work/pytorch/xla
++ THIRD_PARTY_DIR=/workspaces/work/pytorch/xla/third_party
++ MODE=opt
++ [[ '' == \1 ]]
++ VERBOSE=
++ [[ '' == \1 ]]
++ BUILD_STRATEGY=standalone
++ [[ '' == \1 ]]
++ unset CC
++ unset CXX
++ BUILD_STRATEGY=local
++ TPUVM_FLAG=
++ [[ 1 == \1 ]]
++ TPUVM_FLAG=--define=with_tpu_support=true
++ MAX_JOBS=
++ [[ ! -z '' ]]
++ OPTS+=(--cxxopt="-std=c++17")
+++ basename --
+basename: missing operand
+Try 'basename --help' for more information.
++ [[ '' =~ ^clang ]]
++ [[ '' == \1 ]]
++ [[ '' == \1 ]]
++ '[' develop == clean ']'
++ sed -i '/.*github.com\/llvm.*,/a "https://storage.googleapis.com/tpu-pytorch/llvm-raw/{commit}.tar.gz".format(commit = LLVM_COMMIT),' /workspaces/work/pytorch/xla/third_party/tensorflow/third_party/llvm/workspace.bzl
++ sed -i 's/LLVM_COMMIT)]/LLVM_COMMIT),"https:\/\/storage.googleapis.com\/tpu-pytorch\/llvm-raw\/{commit}.tar.gz".format(commit = LLVM_COMMIT)]/g' /workspaces/work/pytorch/xla/third_party/tensorflow/tensorflow/compiler/xla/mlir_hlo/WORKSPACE
++ cp -r -u -p /workspaces/work/pytorch/xla/third_party/xla_client /workspaces/work/pytorch/xla/third_party/tensorflow/tensorflow/compiler/xla/
++ pushd /workspaces/work/pytorch/xla/third_party/tensorflow
+/workspaces/work/pytorch/xla/third_party/tensorflow /workspaces/work/pytorch/xla
++ TF_EXTRA_FLAGS=--copt=-Wno-unknown-warning-option
++ bazel build --define=with_tpu_support=true --copt=-Wno-unknown-warning-option --spawn_strategy=local --show_progress_rate_limit=20 --define framework_shared_object=false -c opt --cxxopt=-D_GLIBCXX_USE_CXX11_ABI=1 --cxxopt=-std=c++17 //tensorflow/compiler/xla/xla_client:libxla_computation_client.so
+INFO: Options provided by the client:
+  Inherited 'common' options: --isatty=0 --terminal_columns=80
+INFO: Reading rc options for 'build' from /workspaces/work/pytorch/xla/third_party/tensorflow/.bazelrc:
+  Inherited 'common' options: --experimental_repo_remote_exec
+INFO: Reading rc options for 'build' from /workspaces/work/pytorch/xla/third_party/tensorflow/.bazelrc:
+  'build' options: --define framework_shared_object=true --define tsl_protobuf_header_only=true --define=use_fast_cpp_protos=true --define=allow_oversize_protos=true --spawn_strategy=standalone -c opt --announce_rc --define=grpc_no_ares=true --noincompatible_remove_legacy_whole_archive --enable_platform_specific_config --define=with_xla_support=true --config=short_logs --config=v2 --define=no_aws_support=true --define=no_hdfs_support=true --experimental_cc_shared_library --experimental_link_static_libraries_once=false --incompatible_enforce_config_setting_visibility --deleted_packages=tensorflow/compiler/mlir/tfrt,tensorflow/compiler/mlir/tfrt/benchmarks,tensorflow/compiler/mlir/tfrt/jit/python_binding,tensorflow/compiler/mlir/tfrt/jit/transforms,tensorflow/compiler/mlir/tfrt/python_tests,tensorflow/compiler/mlir/tfrt/tests,tensorflow/compiler/mlir/tfrt/tests/ir,tensorflow/compiler/mlir/tfrt/tests/analysis,tensorflow/compiler/mlir/tfrt/tests/jit,tensorflow/compiler/mlir/tfrt/tests/lhlo_to_tfrt,tensorflow/compiler/mlir/tfrt/tests/lhlo_to_jitrt,tensorflow/compiler/mlir/tfrt/tests/tf_to_corert,tensorflow/compiler/mlir/tfrt/tests/tf_to_tfrt_data,tensorflow/compiler/mlir/tfrt/tests/saved_model,tensorflow/compiler/mlir/tfrt/transforms/lhlo_gpu_to_tfrt_gpu,tensorflow/core/runtime_fallback,tensorflow/core/runtime_fallback/conversion,tensorflow/core/runtime_fallback/kernel,tensorflow/core/runtime_fallback/opdefs,tensorflow/core/runtime_fallback/runtime,tensorflow/core/runtime_fallback/util,tensorflow/core/tfrt/common,tensorflow/core/tfrt/eager,tensorflow/core/tfrt/eager/backends/cpu,tensorflow/core/tfrt/eager/backends/gpu,tensorflow/core/tfrt/eager/core_runtime,tensorflow/core/tfrt/eager/cpp_tests/core_runtime,tensorflow/core/tfrt/gpu,tensorflow/core/tfrt/run_handler_thread_pool,tensorflow/core/tfrt/runtime,tensorflow/core/tfrt/saved_model,tensorflow/core/tfrt/graph_executor,tensorflow/core/tfrt/saved_model/tests,tensorflow/core/tfrt/tpu,tensorflow/core/tfrt/utils
+INFO: Found applicable config definition build:short_logs in file /workspaces/work/pytorch/xla/third_party/tensorflow/.bazelrc: --output_filter=DONT_MATCH_ANYTHING
+INFO: Found applicable config definition build:v2 in file /workspaces/work/pytorch/xla/third_party/tensorflow/.bazelrc: --define=tf_api_version=2 --action_env=TF2_BEHAVIOR=1
+INFO: Found applicable config definition build:linux in file /workspaces/work/pytorch/xla/third_party/tensorflow/.bazelrc: --host_copt=-w --copt=-Wno-all --copt=-Wno-extra --copt=-Wno-deprecated --copt=-Wno-deprecated-declarations --copt=-Wno-ignored-attributes --copt=-Wno-array-bounds --copt=-Wunused-result --copt=-Werror=unused-result --copt=-Wswitch --copt=-Werror=switch --copt=-Wno-error=unused-but-set-variable --define=PREFIX=/usr --define=LIBDIR=$(PREFIX)/lib --define=INCLUDEDIR=$(PREFIX)/include --define=PROTOBUF_INCLUDE_PATH=$(PREFIX)/include --cxxopt=-std=c++17 --host_cxxopt=-std=c++17 --config=dynamic_kernels --distinct_host_configuration=false --experimental_guard_against_concurrent_changes
+INFO: Found applicable config definition build:dynamic_kernels in file /workspaces/work/pytorch/xla/third_party/tensorflow/.bazelrc: --define=dynamic_loaded_kernels=true --copt=-DAUTOLOAD_DYNAMIC_KERNELS
+Loading: 
+Loading: 0 packages loaded
+Analyzing: target //tensorflow/compiler/xla/xla_client:libxla_computation_client.so (0 packages loaded, 0 targets configured)
+INFO: Analyzed target //tensorflow/compiler/xla/xla_client:libxla_computation_client.so (22 packages loaded, 9215 targets configured).
+INFO: Found 1 target...
+[0 / 1] [Prepa] BazelWorkspaceStatusAction stable-status.txt
+Target //tensorflow/compiler/xla/xla_client:libxla_computation_client.so up-to-date:
+  bazel-bin/tensorflow/compiler/xla/xla_client/libxla_computation_client.so
+INFO: Elapsed time: 18.423s, Critical Path: 0.05s
+INFO: 1 process: 1 internal.
+INFO: Build completed successfully, 1 total action
+INFO: Build completed successfully, 1 total action
++ popd
+/workspaces/work/pytorch/xla
++ mkdir -p torch_xla/lib
++ chmod 0644 /workspaces/work/pytorch/xla/third_party/tensorflow/bazel-bin/tensorflow/compiler/xla/xla_client/libxla_computation_client.so
++ cp /workspaces/work/pytorch/xla/third_party/tensorflow/bazel-bin/tensorflow/compiler/xla/xla_client/libxla_computation_client.so torch_xla/lib
+Building torch_xla version: 2.0.0
+XLA Commit ID: a9e4b3d6bbcb5edd9fc4c1eec7d787bdf82de197
+PyTorch Commit ID: 83e6e9dde316dc59d7bdba50e00115141ac83d0b
+running develop
+running egg_info
+writing torch_xla.egg-info/PKG-INFO
+writing dependency_links to torch_xla.egg-info/dependency_links.txt
+writing requirements to torch_xla.egg-info/requires.txt
+writing top-level names to torch_xla.egg-info/top_level.txt
+reading manifest file 'torch_xla.egg-info/SOURCES.txt'
+adding license file 'LICENSE'
+writing manifest file 'torch_xla.egg-info/SOURCES.txt'
+running build_ext
+building '_XLAC' extension
+Emitting ninja build file /workspaces/work/pytorch/xla/build/temp.linux-x86_64-3.8/build.ninja...
+Compiling objects...
+Allowing ninja to set a default number of workers... (overridable by setting the environment variable MAX_JOBS=N)
+[1/1] clang++-8 -MMD -MF /workspaces/work/pytorch/xla/build/temp.linux-x86_64-3.8/torch_xla/csrc/version.o.d -Wno-unused-result -Wsign-compare -DNDEBUG -g -fwrapv -O3 -Wall -fPIC -I/workspaces/work/pytorch/xla -I/workspaces/work/pytorch/xla/third_party/tensorflow/bazel-bin -I/workspaces/work/pytorch/xla/third_party/tensorflow/bazel-tensorflow -I/workspaces/work/pytorch/xla/third_party/tensorflow/bazel-tensorflow/external/protobuf_archive/src -I/workspaces/work/pytorch/xla/third_party/tensorflow/bazel-tensorflow/external/com_google_protobuf/src -I/workspaces/work/pytorch/xla/third_party/tensorflow/bazel-tensorflow/external/eigen_archive -I/workspaces/work/pytorch/xla/third_party/tensorflow/bazel-tensorflow/external/com_google_absl -I/workspaces/work/pytorch/xla/third_party/tensorflow/bazel-tensorflow/external/com_googlesource_code_re2 -I/workspaces/work/pytorch -I/workspaces/work/pytorch/torch/csrc -I/workspaces/work/pytorch/torch/lib/tmp_install/include -I/home/ptxla/.local/lib/python3.8/site-packages/torch/include -I/home/ptxla/.local/lib/python3.8/site-packages/torch/include/torch/csrc/api/include -I/home/ptxla/.local/lib/python3.8/site-packages/torch/include/TH -I/home/ptxla/.local/lib/python3.8/site-packages/torch/include/THC -I/usr/local/include/python3.8 -c -c /workspaces/work/pytorch/xla/torch_xla/csrc/version.cpp -o /workspaces/work/pytorch/xla/build/temp.linux-x86_64-3.8/torch_xla/csrc/version.o -std=c++17 -Wno-sign-compare -Wno-deprecated-declarations -Wno-return-type -Wno-macro-redefined -Wno-return-std-move -DNDEBUG -DTORCH_API_INCLUDE_EXTENSION_H '-DPYBIND11_COMPILER_TYPE="_clang"' '-DPYBIND11_STDLIB="_libstdcpp"' '-DPYBIND11_BUILD_ABI="_cxxabi1002"' -DTORCH_EXTENSION_NAME=_XLAC -D_GLIBCXX_USE_CXX11_ABI=1
+clang++-8 -pthread -shared /workspaces/work/pytorch/xla/build/temp.linux-x86_64-3.8/torch_xla/csrc/torch_util.o /workspaces/work/pytorch/xla/build/temp.linux-x86_64-3.8/torch_xla/csrc/xla_lower_util.o /workspaces/work/pytorch/xla/build/temp.linux-x86_64-3.8/torch_xla/csrc/version.o /workspaces/work/pytorch/xla/build/temp.linux-x86_64-3.8/torch_xla/csrc/reduction.o /workspaces/work/pytorch/xla/build/temp.linux-x86_64-3.8/torch_xla/csrc/nll_loss.o /workspaces/work/pytorch/xla/build/temp.linux-x86_64-3.8/torch_xla/csrc/token_handler.o /workspaces/work/pytorch/xla/build/temp.linux-x86_64-3.8/torch_xla/csrc/lowering_context.o /workspaces/work/pytorch/xla/build/temp.linux-x86_64-3.8/torch_xla/csrc/xla_backend_impl.o /workspaces/work/pytorch/xla/build/temp.linux-x86_64-3.8/torch_xla/csrc/shape_builder.o /workspaces/work/pytorch/xla/build/temp.linux-x86_64-3.8/torch_xla/csrc/xla_op_builder.o /workspaces/work/pytorch/xla/build/temp.linux-x86_64-3.8/torch_xla/csrc/tensor_util.o /workspaces/work/pytorch/xla/build/temp.linux-x86_64-3.8/torch_xla/csrc/cross_replica_reduces.o /workspaces/work/pytorch/xla/build/temp.linux-x86_64-3.8/torch_xla/csrc/aten_xla_type.o /workspaces/work/pytorch/xla/build/temp.linux-x86_64-3.8/torch_xla/csrc/view.o /workspaces/work/pytorch/xla/build/temp.linux-x86_64-3.8/torch_xla/csrc/init_python_bindings.o /workspaces/work/pytorch/xla/build/temp.linux-x86_64-3.8/torch_xla/csrc/op_by_op_executor.o /workspaces/work/pytorch/xla/build/temp.linux-x86_64-3.8/torch_xla/csrc/ir_dump_util.o /workspaces/work/pytorch/xla/build/temp.linux-x86_64-3.8/torch_xla/csrc/batch_norm.o /workspaces/work/pytorch/xla/build/temp.linux-x86_64-3.8/torch_xla/csrc/device.o /workspaces/work/pytorch/xla/build/temp.linux-x86_64-3.8/torch_xla/csrc/ir.o /workspaces/work/pytorch/xla/build/temp.linux-x86_64-3.8/torch_xla/csrc/matrix.o /workspaces/work/pytorch/xla/build/temp.linux-x86_64-3.8/torch_xla/csrc/random.o /workspaces/work/pytorch/xla/build/temp.linux-x86_64-3.8/torch_xla/csrc/tensor.o /workspaces/work/pytorch/xla/build/temp.linux-x86_64-3.8/torch_xla/csrc/nms_op.o /workspaces/work/pytorch/xla/build/temp.linux-x86_64-3.8/torch_xla/csrc/xla_sharding_util.o /workspaces/work/pytorch/xla/build/temp.linux-x86_64-3.8/torch_xla/csrc/tensor_impl.o /workspaces/work/pytorch/xla/build/temp.linux-x86_64-3.8/torch_xla/csrc/softmax_builder.o /workspaces/work/pytorch/xla/build/temp.linux-x86_64-3.8/torch_xla/csrc/aten_cpu_fallback.o /workspaces/work/pytorch/xla/build/temp.linux-x86_64-3.8/torch_xla/csrc/ir_util.o /workspaces/work/pytorch/xla/build/temp.linux-x86_64-3.8/torch_xla/csrc/convolution.o /workspaces/work/pytorch/xla/build/temp.linux-x86_64-3.8/torch_xla/csrc/pooling.o /workspaces/work/pytorch/xla/build/temp.linux-x86_64-3.8/torch_xla/csrc/aten_xla_bridge.o /workspaces/work/pytorch/xla/build/temp.linux-x86_64-3.8/torch_xla/csrc/elementwise.o /workspaces/work/pytorch/xla/build/temp.linux-x86_64-3.8/torch_xla/csrc/resize_ops.o /workspaces/work/pytorch/xla/build/temp.linux-x86_64-3.8/torch_xla/csrc/xla_graph_executor.o /workspaces/work/pytorch/xla/build/temp.linux-x86_64-3.8/torch_xla/csrc/computation.o /workspaces/work/pytorch/xla/build/temp.linux-x86_64-3.8/torch_xla/csrc/aten_autograd_ops.o /workspaces/work/pytorch/xla/build/temp.linux-x86_64-3.8/torch_xla/csrc/convert_ops.o /workspaces/work/pytorch/xla/build/temp.linux-x86_64-3.8/torch_xla/csrc/data_ops.o /workspaces/work/pytorch/xla/build/temp.linux-x86_64-3.8/torch_xla/csrc/function_call_tracker.o /workspaces/work/pytorch/xla/build/temp.linux-x86_64-3.8/torch_xla/csrc/debug_util.o /workspaces/work/pytorch/xla/build/temp.linux-x86_64-3.8/torch_xla/csrc/helpers.o /workspaces/work/pytorch/xla/build/temp.linux-x86_64-3.8/torch_xla/csrc/layout_manager.o /workspaces/work/pytorch/xla/build/temp.linux-x86_64-3.8/torch_xla/csrc/tensor_ops.o /workspaces/work/pytorch/xla/build/temp.linux-x86_64-3.8/torch_xla/csrc/tensor_methods.o /workspaces/work/pytorch/xla/build/temp.linux-x86_64-3.8/torch_xla/csrc/ops/as_strided.o /workspaces/work/pytorch/xla/build/temp.linux-x86_64-3.8/torch_xla/csrc/ops/symeig.o /workspaces/work/pytorch/xla/build/temp.linux-x86_64-3.8/torch_xla/csrc/ops/avg_pool_nd_backward.o /workspaces/work/pytorch/xla/build/temp.linux-x86_64-3.8/torch_xla/csrc/ops/diagonal.o /workspaces/work/pytorch/xla/build/temp.linux-x86_64-3.8/torch_xla/csrc/ops/nll_loss.o /workspaces/work/pytorch/xla/build/temp.linux-x86_64-3.8/torch_xla/csrc/ops/send.o /workspaces/work/pytorch/xla/build/temp.linux-x86_64-3.8/torch_xla/csrc/ops/var.o /workspaces/work/pytorch/xla/build/temp.linux-x86_64-3.8/torch_xla/csrc/ops/upsample_nearest2d.o /workspaces/work/pytorch/xla/build/temp.linux-x86_64-3.8/torch_xla/csrc/ops/masked_scatter.o /workspaces/work/pytorch/xla/build/temp.linux-x86_64-3.8/torch_xla/csrc/ops/convolution_backward_overrideable.o /workspaces/work/pytorch/xla/build/temp.linux-x86_64-3.8/torch_xla/csrc/ops/generic_slice.o /workspaces/work/pytorch/xla/build/temp.linux-x86_64-3.8/torch_xla/csrc/ops/qr.o /workspaces/work/pytorch/xla/build/temp.linux-x86_64-3.8/torch_xla/csrc/ops/cast.o /workspaces/work/pytorch/xla/build/temp.linux-x86_64-3.8/torch_xla/csrc/ops/max_pool_nd.o /workspaces/work/pytorch/xla/build/temp.linux-x86_64-3.8/torch_xla/csrc/ops/einsum_backward.o /workspaces/work/pytorch/xla/build/temp.linux-x86_64-3.8/torch_xla/csrc/ops/amp_update_scale.o /workspaces/work/pytorch/xla/build/temp.linux-x86_64-3.8/torch_xla/csrc/ops/nll_loss2d.o /workspaces/work/pytorch/xla/build/temp.linux-x86_64-3.8/torch_xla/csrc/ops/scalar.o /workspaces/work/pytorch/xla/build/temp.linux-x86_64-3.8/torch_xla/csrc/ops/reflection_pad2d.o /workspaces/work/pytorch/xla/build/temp.linux-x86_64-3.8/torch_xla/csrc/ops/einsum.o /workspaces/work/pytorch/xla/build/temp.linux-x86_64-3.8/torch_xla/csrc/ops/uniform.o /workspaces/work/pytorch/xla/build/temp.linux-x86_64-3.8/torch_xla/csrc/ops/exponential.o /workspaces/work/pytorch/xla/build/temp.linux-x86_64-3.8/torch_xla/csrc/ops/amp_foreach_non_finite_check_and_unscale.o /workspaces/work/pytorch/xla/build/temp.linux-x86_64-3.8/torch_xla/csrc/ops/svd.o /workspaces/work/pytorch/xla/build/temp.linux-x86_64-3.8/torch_xla/csrc/ops/linear_interpolation.o /workspaces/work/pytorch/xla/build/temp.linux-x86_64-3.8/torch_xla/csrc/ops/expand_symint.o /workspaces/work/pytorch/xla/build/temp.linux-x86_64-3.8/torch_xla/csrc/ops/flip.o /workspaces/work/pytorch/xla/build/temp.linux-x86_64-3.8/torch_xla/csrc/ops/nll_loss_backward.o /workspaces/work/pytorch/xla/build/temp.linux-x86_64-3.8/torch_xla/csrc/ops/squeeze.o /workspaces/work/pytorch/xla/build/temp.linux-x86_64-3.8/torch_xla/csrc/ops/softmax_backward.o /workspaces/work/pytorch/xla/build/temp.linux-x86_64-3.8/torch_xla/csrc/ops/mse_loss.o /workspaces/work/pytorch/xla/build/temp.linux-x86_64-3.8/torch_xla/csrc/ops/hardtanh_backward.o /workspaces/work/pytorch/xla/build/temp.linux-x86_64-3.8/torch_xla/csrc/ops/scatter_add.o /workspaces/work/pytorch/xla/build/temp.linux-x86_64-3.8/torch_xla/csrc/ops/as_strided_view_update.o /workspaces/work/pytorch/xla/build/temp.linux-x86_64-3.8/torch_xla/csrc/ops/constant.o /workspaces/work/pytorch/xla/build/temp.linux-x86_64-3.8/torch_xla/csrc/ops/convolution_overrideable.o /workspaces/work/pytorch/xla/build/temp.linux-x86_64-3.8/torch_xla/csrc/ops/generic.o /workspaces/work/pytorch/xla/build/temp.linux-x86_64-3.8/torch_xla/csrc/ops/rrelu_with_noise_backward.o /workspaces/work/pytorch/xla/build/temp.linux-x86_64-3.8/torch_xla/csrc/ops/all_reduce.o /workspaces/work/pytorch/xla/build/temp.linux-x86_64-3.8/torch_xla/csrc/ops/nll_loss2d_backward.o /workspaces/work/pytorch/xla/build/temp.linux-x86_64-3.8/torch_xla/csrc/ops/ops_lower_fn.o /workspaces/work/pytorch/xla/build/temp.linux-x86_64-3.8/torch_xla/csrc/ops/index_ops.o /workspaces/work/pytorch/xla/build/temp.linux-x86_64-3.8/torch_xla/csrc/ops/view.o /workspaces/work/pytorch/xla/build/temp.linux-x86_64-3.8/torch_xla/csrc/ops/native_batch_norm_forward.o /workspaces/work/pytorch/xla/build/temp.linux-x86_64-3.8/torch_xla/csrc/ops/std.o /workspaces/work/pytorch/xla/build/temp.linux-x86_64-3.8/torch_xla/csrc/ops/adam_optimizer_step.o /workspaces/work/pytorch/xla/build/temp.linux-x86_64-3.8/torch_xla/csrc/ops/select.o /workspaces/work/pytorch/xla/build/temp.linux-x86_64-3.8/torch_xla/csrc/ops/var_mean.o /workspaces/work/pytorch/xla/build/temp.linux-x86_64-3.8/torch_xla/csrc/ops/native_batch_norm_backward.o /workspaces/work/pytorch/xla/build/temp.linux-x86_64-3.8/torch_xla/csrc/ops/resize.o /workspaces/work/pytorch/xla/build/temp.linux-x86_64-3.8/torch_xla/csrc/ops/user_computation.o /workspaces/work/pytorch/xla/build/temp.linux-x86_64-3.8/torch_xla/csrc/ops/replication_pad_backward.o /workspaces/work/pytorch/xla/build/temp.linux-x86_64-3.8/torch_xla/csrc/ops/triangular_solve.o /workspaces/work/pytorch/xla/build/temp.linux-x86_64-3.8/torch_xla/csrc/ops/sum.o /workspaces/work/pytorch/xla/build/temp.linux-x86_64-3.8/torch_xla/csrc/ops/sgd_optimizer_step.o /workspaces/work/pytorch/xla/build/temp.linux-x86_64-3.8/torch_xla/csrc/ops/cdist.o /workspaces/work/pytorch/xla/build/temp.linux-x86_64-3.8/torch_xla/csrc/ops/bernoulli.o /workspaces/work/pytorch/xla/build/temp.linux-x86_64-3.8/torch_xla/csrc/ops/log_softmax_backward.o /workspaces/work/pytorch/xla/build/temp.linux-x86_64-3.8/torch_xla/csrc/ops/leaky_relu.o /workspaces/work/pytorch/xla/build/temp.linux-x86_64-3.8/torch_xla/csrc/ops/normal.o /workspaces/work/pytorch/xla/build/temp.linux-x86_64-3.8/torch_xla/csrc/ops/arg_min.o /workspaces/work/pytorch/xla/build/temp.linux-x86_64-3.8/torch_xla/csrc/ops/mean.o /workspaces/work/pytorch/xla/build/temp.linux-x86_64-3.8/torch_xla/csrc/ops/max_in_dim.o /workspaces/work/pytorch/xla/build/temp.linux-x86_64-3.8/torch_xla/csrc/ops/min_in_dim.o /workspaces/work/pytorch/xla/build/temp.linux-x86_64-3.8/torch_xla/csrc/ops/reduce_scatter.o /workspaces/work/pytorch/xla/build/temp.linux-x86_64-3.8/torch_xla/csrc/ops/infer_output_shape.o /workspaces/work/pytorch/xla/build/temp.linux-x86_64-3.8/torch_xla/csrc/ops/cat.o /workspaces/work/pytorch/xla/build/temp.linux-x86_64-3.8/torch_xla/csrc/ops/masked_fill.o /workspaces/work/pytorch/xla/build/temp.linux-x86_64-3.8/torch_xla/csrc/ops/roll.o /workspaces/work/pytorch/xla/build/temp.linux-x86_64-3.8/torch_xla/csrc/ops/index_get.o /workspaces/work/pytorch/xla/build/temp.linux-x86_64-3.8/torch_xla/csrc/ops/index_put.o /workspaces/work/pytorch/xla/build/temp.linux-x86_64-3.8/torch_xla/csrc/ops/discrete_uniform.o /workspaces/work/pytorch/xla/build/temp.linux-x86_64-3.8/torch_xla/csrc/ops/ops_xla_shape_fn.o /workspaces/work/pytorch/xla/build/temp.linux-x86_64-3.8/torch_xla/csrc/ops/prod.o /workspaces/work/pytorch/xla/build/temp.linux-x86_64-3.8/torch_xla/csrc/ops/leaky_relu_backward.o /workspaces/work/pytorch/xla/build/temp.linux-x86_64-3.8/torch_xla/csrc/ops/max_pool_nd_backward.o /workspaces/work/pytorch/xla/build/temp.linux-x86_64-3.8/torch_xla/csrc/ops/linspace.o /workspaces/work/pytorch/xla/build/temp.linux-x86_64-3.8/torch_xla/csrc/ops/threshold.o /workspaces/work/pytorch/xla/build/temp.linux-x86_64-3.8/torch_xla/csrc/ops/threshold_backward.o /workspaces/work/pytorch/xla/build/temp.linux-x86_64-3.8/torch_xla/csrc/ops/arg_max.o /workspaces/work/pytorch/xla/build/temp.linux-x86_64-3.8/torch_xla/csrc/ops/std_mean.o /workspaces/work/pytorch/xla/build/temp.linux-x86_64-3.8/torch_xla/csrc/ops/optimization_barrier.o /workspaces/work/pytorch/xla/build/temp.linux-x86_64-3.8/torch_xla/csrc/ops/expand.o /workspaces/work/pytorch/xla/build/temp.linux-x86_64-3.8/torch_xla/csrc/ops/cumprod.o /workspaces/work/pytorch/xla/build/temp.linux-x86_64-3.8/torch_xla/csrc/ops/upsample_nearest2d_backward.o /workspaces/work/pytorch/xla/build/temp.linux-x86_64-3.8/torch_xla/csrc/ops/unselect.o /workspaces/work/pytorch/xla/build/temp.linux-x86_64-3.8/torch_xla/csrc/ops/split.o /workspaces/work/pytorch/xla/build/temp.linux-x86_64-3.8/torch_xla/csrc/ops/permute.o /workspaces/work/pytorch/xla/build/temp.linux-x86_64-3.8/torch_xla/csrc/ops/rrelu_with_noise.o /workspaces/work/pytorch/xla/build/temp.linux-x86_64-3.8/torch_xla/csrc/ops/replication_pad.o /workspaces/work/pytorch/xla/build/temp.linux-x86_64-3.8/torch_xla/csrc/ops/nms.o /workspaces/work/pytorch/xla/build/temp.linux-x86_64-3.8/torch_xla/csrc/ops/repeat.o /workspaces/work/pytorch/xla/build/temp.linux-x86_64-3.8/torch_xla/csrc/ops/update_slice.o /workspaces/work/pytorch/xla/build/temp.linux-x86_64-3.8/torch_xla/csrc/ops/all_to_all.o /workspaces/work/pytorch/xla/build/temp.linux-x86_64-3.8/torch_xla/csrc/ops/masked_select.o /workspaces/work/pytorch/xla/build/temp.linux-x86_64-3.8/torch_xla/csrc/ops/topk.o /workspaces/work/pytorch/xla/build/temp.linux-x86_64-3.8/torch_xla/csrc/ops/recv.o /workspaces/work/pytorch/xla/build/temp.linux-x86_64-3.8/torch_xla/csrc/ops/softmax.o /workspaces/work/pytorch/xla/build/temp.linux-x86_64-3.8/torch_xla/csrc/ops/max_unpool_nd.o /workspaces/work/pytorch/xla/build/temp.linux-x86_64-3.8/torch_xla/csrc/ops/all_gather.o /workspaces/work/pytorch/xla/build/temp.linux-x86_64-3.8/torch_xla/csrc/ops/gather.o /workspaces/work/pytorch/xla/build/temp.linux-x86_64-3.8/torch_xla/csrc/ops/upsample_bilinear2d.o /workspaces/work/pytorch/xla/build/temp.linux-x86_64-3.8/torch_xla/csrc/ops/arithmetic_ir_ops.o /workspaces/work/pytorch/xla/build/temp.linux-x86_64-3.8/torch_xla/csrc/ops/put.o /workspaces/work/pytorch/xla/build/temp.linux-x86_64-3.8/torch_xla/csrc/ops/dynamic_ir.o /workspaces/work/pytorch/xla/build/temp.linux-x86_64-3.8/torch_xla/csrc/ops/reflection_pad2d_backward.o /workspaces/work/pytorch/xla/build/temp.linux-x86_64-3.8/torch_xla/csrc/ops/logsumexp.o /workspaces/work/pytorch/xla/build/temp.linux-x86_64-3.8/torch_xla/csrc/ops/avg_pool_nd.o /workspaces/work/pytorch/xla/build/temp.linux-x86_64-3.8/torch_xla/csrc/ops/kth_value.o /workspaces/work/pytorch/xla/build/temp.linux-x86_64-3.8/torch_xla/csrc/ops/ops.o /workspaces/work/pytorch/xla/build/temp.linux-x86_64-3.8/torch_xla/csrc/ops/scatter.o /workspaces/work/pytorch/xla/build/temp.linux-x86_64-3.8/torch_xla/csrc/ops/stack.o /workspaces/work/pytorch/xla/build/temp.linux-x86_64-3.8/torch_xla/csrc/ops/get_dimensions_size.o /workspaces/work/pytorch/xla/build/temp.linux-x86_64-3.8/torch_xla/csrc/ops/constant_pad_nd.o /workspaces/work/pytorch/xla/build/temp.linux-x86_64-3.8/torch_xla/csrc/ops/collective_permute.o /workspaces/work/pytorch/xla/build/temp.linux-x86_64-3.8/torch_xla/csrc/ops/device_data.o /workspaces/work/pytorch/xla/build/temp.linux-x86_64-3.8/torch_xla/csrc/ops/adaptive_max_pool2d.o /workspaces/work/pytorch/xla/build/temp.linux-x86_64-3.8/torch_xla/csrc/ops/index_select.o /workspaces/work/pytorch/xla/build/temp.linux-x86_64-3.8/torch_xla/csrc/ops/nonzero.o /workspaces/work/pytorch/xla/build/temp.linux-x86_64-3.8/torch_xla/csrc/ops/cumsum.o /workspaces/work/pytorch/xla/build/temp.linux-x86_64-3.8/torch_xla/csrc/ops/diagonal_view_update.o /workspaces/work/pytorch/xla/build/temp.linux-x86_64-3.8/torch_xla/csrc/ops/upsample_bilinear2d_backward.o /workspaces/work/pytorch/xla/build/temp.linux-x86_64-3.8/torch_xla/csrc/ops/log_softmax.o /workspaces/work/pytorch/xla/build/temp.linux-x86_64-3.8/torch_xla/csrc/ops/mse_loss_backward.o /workspaces/work/pytorch/xla/build/temp.linux-x86_64-3.8/torch_xla/csrc/ops/not_supported.o /workspaces/work/pytorch/xla/build/temp.linux-x86_64-3.8/torch_xla/csrc/ops/unsqueeze.o /workspaces/work/pytorch/xla/build/temp.linux-x86_64-3.8/torch_xla/csrc/ops/xla_ops.o /workspaces/work/pytorch/xla/build/temp.linux-x86_64-3.8/torch_xla/csrc/generated/RegisterXLA.o /workspaces/work/pytorch/xla/build/temp.linux-x86_64-3.8/torch_xla/csrc/generated/RegisterAutogradXLA.o /workspaces/work/pytorch/xla/build/temp.linux-x86_64-3.8/torch_xla/csrc/generated/XLANativeFunctions.o -L/workspaces/work/pytorch/xla/torch_xla/lib -L/home/ptxla/.local/lib/python3.8/site-packages/torch/lib -L/usr/local/lib -lc10 -ltorch -ltorch_cpu -ltorch_python -o build/lib.linux-x86_64-3.8/_XLAC.cpython-38-x86_64-linux-gnu.so -lxla_computation_client -Wl,-rpath,$ORIGIN/torch_xla/lib
+copying build/lib.linux-x86_64-3.8/_XLAC.cpython-38-x86_64-linux-gnu.so -> 
+Creating /home/ptxla/.local/lib/python3.8/site-packages/torch-xla.egg-link (link to .)
+torch-xla 2.0.0 is already the active version in easy-install.pth
+
+Installed /workspaces/work/pytorch/xla
+Processing dependencies for torch-xla==2.0.0
+Searching for cloud-tpu-client==0.10
+Best match: cloud-tpu-client 0.10
+Adding cloud-tpu-client 0.10 to easy-install.pth file
+
+Using /home/ptxla/.local/lib/python3.8/site-packages
+Searching for absl-py==1.3.0
+Best match: absl-py 1.3.0
+Adding absl-py 1.3.0 to easy-install.pth file
+
+Using /home/ptxla/.local/lib/python3.8/site-packages
+Searching for oauth2client==4.1.3
+Best match: oauth2client 4.1.3
+Adding oauth2client 4.1.3 to easy-install.pth file
+
+Using /home/ptxla/.local/lib/python3.8/site-packages
+Searching for google-api-python-client==1.8.0
+Best match: google-api-python-client 1.8.0
+Processing google_api_python_client-1.8.0-py3.8.egg
+google-api-python-client 1.8.0 is already the active version in easy-install.pth
+
+Using /home/ptxla/.local/lib/python3.8/site-packages/google_api_python_client-1.8.0-py3.8.egg
+Searching for rsa==4.9
+Best match: rsa 4.9
+Adding rsa 4.9 to easy-install.pth file
+Installing pyrsa-decrypt script to /home/ptxla/.local/bin
+Installing pyrsa-encrypt script to /home/ptxla/.local/bin
+Installing pyrsa-keygen script to /home/ptxla/.local/bin
+Installing pyrsa-priv2pub script to /home/ptxla/.local/bin
+Installing pyrsa-sign script to /home/ptxla/.local/bin
+Installing pyrsa-verify script to /home/ptxla/.local/bin
+
+Using /home/ptxla/.local/lib/python3.8/site-packages
+Searching for pyasn1==0.4.8
+Best match: pyasn1 0.4.8
+Adding pyasn1 0.4.8 to easy-install.pth file
+
+Using /home/ptxla/.local/lib/python3.8/site-packages
+Searching for pyasn1-modules==0.2.8
+Best match: pyasn1-modules 0.2.8
+Adding pyasn1-modules 0.2.8 to easy-install.pth file
+
+Using /home/ptxla/.local/lib/python3.8/site-packages
+Searching for httplib2==0.21.0
+Best match: httplib2 0.21.0
+Adding httplib2 0.21.0 to easy-install.pth file
+
+Using /home/ptxla/.local/lib/python3.8/site-packages
+Searching for six==1.16.0
+Best match: six 1.16.0
+Adding six 1.16.0 to easy-install.pth file
+
+Using /home/ptxla/.local/lib/python3.8/site-packages
+Searching for uritemplate==3.0.1
+Best match: uritemplate 3.0.1
+Adding uritemplate 3.0.1 to easy-install.pth file
+
+Using /home/ptxla/.local/lib/python3.8/site-packages
+Searching for google-auth==2.14.1
+Best match: google-auth 2.14.1
+Adding google-auth 2.14.1 to easy-install.pth file
+
+Using /home/ptxla/.local/lib/python3.8/site-packages
+Searching for google-auth-httplib2==0.1.0
+Best match: google-auth-httplib2 0.1.0
+Adding google-auth-httplib2 0.1.0 to easy-install.pth file
+
+Using /home/ptxla/.local/lib/python3.8/site-packages
+Searching for google-api-core==1.33.2
+Best match: google-api-core 1.33.2
+Adding google-api-core 1.33.2 to easy-install.pth file
+
+Using /home/ptxla/.local/lib/python3.8/site-packages
+Searching for pyparsing==3.0.9
+Best match: pyparsing 3.0.9
+Adding pyparsing 3.0.9 to easy-install.pth file
+
+Using /home/ptxla/.local/lib/python3.8/site-packages
+Searching for cachetools==5.2.0
+Best match: cachetools 5.2.0
+Adding cachetools 5.2.0 to easy-install.pth file
+
+Using /home/ptxla/.local/lib/python3.8/site-packages
+Searching for requests==2.28.1
+Best match: requests 2.28.1
+Adding requests 2.28.1 to easy-install.pth file
+
+Using /home/ptxla/.local/lib/python3.8/site-packages
+Searching for googleapis-common-protos==1.57.0
+Best match: googleapis-common-protos 1.57.0
+Adding googleapis-common-protos 1.57.0 to easy-install.pth file
+
+Using /home/ptxla/.local/lib/python3.8/site-packages
+Searching for protobuf==3.19.6
+Best match: protobuf 3.19.6
+Adding protobuf 3.19.6 to easy-install.pth file
+
+Using /home/ptxla/.local/lib/python3.8/site-packages
+Searching for idna==3.4
+Best match: idna 3.4
+Adding idna 3.4 to easy-install.pth file
+
+Using /home/ptxla/.local/lib/python3.8/site-packages
+Searching for urllib3==1.26.13
+Best match: urllib3 1.26.13
+Adding urllib3 1.26.13 to easy-install.pth file
+
+Using /home/ptxla/.local/lib/python3.8/site-packages
+Searching for certifi==2022.9.24
+Best match: certifi 2022.9.24
+Adding certifi 2022.9.24 to easy-install.pth file
+
+Using /home/ptxla/.local/lib/python3.8/site-packages
+Searching for charset-normalizer==2.1.1
+Best match: charset-normalizer 2.1.1
+Adding charset-normalizer 2.1.1 to easy-install.pth file
+Installing normalizer script to /home/ptxla/.local/bin
+
+Using /home/ptxla/.local/lib/python3.8/site-packages
+Finished processing dependencies for torch-xla==2.0.0
