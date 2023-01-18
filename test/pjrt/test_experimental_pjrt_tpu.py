@@ -1,5 +1,6 @@
 import concurrent.futures
 import os
+import time
 from typing import Dict
 from unittest import mock
 import requests
@@ -10,6 +11,7 @@ import torch.nn as nn
 from absl.testing import absltest, parameterized
 import torch_xla.core.xla_env_vars as xenv
 import torch_xla.core.xla_model as xm
+import torch_xla.debug.metrics as met
 from torch_xla.experimental import pjrt
 from torch_xla.experimental import tpu
 import torch_xla.distributed.xla_multiprocessing as xmp
@@ -249,6 +251,33 @@ class TestExperimentalPjrtTpu(parameterized.TestCase):
       self.assertCountEqual(['coords', 'core_on_chip'], list(device.keys()))
       self.assertIsInstance(device['coords'], list)
       self.assertIsInstance(device['core_on_chip'], int)
+
+  @staticmethod
+  def _execute_time_metric():
+    # Initialize the client before starting the timer.
+    xm.xla_device()
+
+    begin = time.perf_counter_ns()
+    value = (
+        torch.randn(10000, 10000, device=xm.xla_device()) *
+        torch.randn(10000, 10000, device=xm.xla_device()))
+    value_mean = value.mean()
+    xm.mark_step()
+    cpu_value = value_mean.cpu()
+    wall_time_ns = time.perf_counter_ns() - begin
+    _, execute_time_ns, _ = met.metric_data('ExecuteTime')
+
+    return execute_time_ns
+
+  def test_execute_time_metric(self):
+    results = pjrt._run_multiprocess(self._execute_time_metric)
+
+    for i, v in results.items():
+      expected_time_seconds = .1
+      self.assertGreater(
+          v, expected_time_seconds * 1e-9,
+          f"Expected exectue time of {i} to take more than "
+          f"{expected_time_seconds} seconds, got {v / 1e9} seconds")
 
 
 class TestTpuCollectiveOps(parameterized.TestCase):
