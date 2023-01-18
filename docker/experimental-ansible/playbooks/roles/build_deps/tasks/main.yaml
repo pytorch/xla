@@ -2,5 +2,4 @@
   ansible.builtin.apt:
     name: "{{ item }}"
     update_cache: true
-    cache_valid_time: "{{ 60 * 60 * 12 }}" # 12h, set in seconds
-  loop: "{{ apt_packages }}"
+  loop: "{{ apt_pkgs }}"

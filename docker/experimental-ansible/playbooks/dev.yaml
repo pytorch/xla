@@ -7,16 +7,22 @@
       private: false
 
   pre_tasks:
-    - name: Include vars of config/apt.yaml
+    - name: Include vars from config/common.yaml
+      ansible.builtin.include_vars:
+        file: config/common.yaml
+
+    - name: Include vars from config/apt.yaml
       ansible.builtin.include_vars:
         file: config/apt.yaml
-        name: apt
 
   roles:
-    - role: bazel
+    - bazel
+
+    - role: init_repos
       vars:
-        some_var: "123"
+        apt_keys: "{{ apt.signing_keys }}"
 
     - role: build_deps
       vars:
-        apt_packages: "{{ apt.apt_packages[stage_env] }}"
+        apt_pkgs: "{{ apt.pkgs[stage_env] }}"
+        apt_repos: "{{ apt.repos }}"

@@ -1,0 +1,3 @@
+cuda_repo: ubuntu1804
+debian_version: buster
+clang_version: 11
