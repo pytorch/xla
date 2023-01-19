@@ -7,13 +7,14 @@
       private: false
 
   pre_tasks:
-    - name: Include vars from config/common.yaml
+    - name: "Include vars from config/{{ item }}"
       ansible.builtin.include_vars:
-        file: config/common.yaml
-
-    - name: Include vars from config/apt.yaml
-      ansible.builtin.include_vars:
-        file: config/apt.yaml
+        file: "config/{{ item }}"
+      loop:
+        # common.yaml should be the first as other config files depend on it.
+        - common.yaml
+        - apt.yaml
+        - pip.yaml
 
   roles:
     - bazel
@@ -24,5 +25,21 @@
 
     - role: build_deps
       vars:
-        apt_pkgs: "{{ apt.pkgs[stage_env] }}"
+        # If apt.pkgs.common is defined, but not set to anything
+        # it cannot be concatenated with a list. Use default(v, [], true) to
+        # set `v` to an empty array if it evaluates to false.
+        # See https://jinja.palletsprojects.com/en/2.11.x/templates/#default
+
+        apt_pkgs: "{{
+            apt.pkgs.common | default([], true) + apt.pkgs[stage_env] | default([], true)
+          }}"
+
         apt_repos: "{{ apt.repos }}"
+
+        pip_pkgs: "{{
+            pip.pkgs.common | default([], true) + pip.pkgs[stage_env] | default([], true)
+          }}"
+
+        pip_pkgs_nodeps: "{{
+            pip.pkgs_nodeps.common | default([], true) + pip.pkgs_nodeps[stage_env] | default([], true)
+          }}"
