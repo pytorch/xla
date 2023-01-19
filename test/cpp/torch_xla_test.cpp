@@ -42,7 +42,6 @@ void XlaTest::TearDown() {
 static void ExpectCounterNotChanged_(
     const std::vector<MetricsSnapshot::ChangedCounter>& changed) {
   for (auto& change_counter : changed) {
-    std::cout << "WONJOO: change_counter=" << std::endl;
     TF_LOG(INFO) << "Counter '" << change_counter.name
                  << "' changed: " << change_counter.before << " -> "
                  << change_counter.after;
