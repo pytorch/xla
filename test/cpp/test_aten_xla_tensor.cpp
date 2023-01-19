@@ -998,7 +998,7 @@ TEST_F(AtenXlaTensorTest, TestLogDet) {
 }
 
 TEST_F(AtenXlaTensorTest, TestSLogDet) {
-  GTEST_SKIP() << "Needs additional lowering after functionalization";
+  // GTEST_SKIP() << "Needs additional lowering after functionalization";
   static const int dims[] = {4, 7};
   for (auto m : dims) {
     torch::Tensor a =
@@ -3818,7 +3818,7 @@ TEST_F(AtenXlaTensorTest, TestLinear) {
 }
 
 TEST_F(AtenXlaTensorTest, TestPinverse) {
-  GTEST_SKIP() << "Needs additional lowering after functionalization";
+  // GTEST_SKIP() << "Needs additional lowering after functionalization";
   torch::Tensor input =
       torch::rand({4, 6}, torch::TensorOptions(torch::kFloat));
   torch::Tensor result = torch::pinverse(input);
@@ -4055,7 +4055,7 @@ TEST_F(AtenXlaTensorTest, TestEinsumPyTorchLowerRepeatedAxis) {
 }
 
 TEST_F(AtenXlaTensorTest, TestEinsumPyTorchLowerRepeatedAxisBackward) {
-  GTEST_SKIP() << "Needs additional lowering after functionalization";
+  // GTEST_SKIP() << "Needs additional lowering after functionalization";
   torch::Tensor x = torch::rand(
       {2, 3, 3}, torch::TensorOptions(torch::kFloat).requires_grad(true));
   torch::Tensor y =
@@ -4896,7 +4896,7 @@ TEST_F(AtenXlaTensorTest, TestIndexSelectRank0) {
 }
 
 TEST_F(AtenXlaTensorTest, TestInverse) {
-  GTEST_SKIP() << "Needs additional lowering after functionalization";
+  // GTEST_SKIP() << "Needs additional lowering after functionalization";
   torch::Tensor a = torch::randn({5, 5}, torch::TensorOptions(torch::kFloat));
   torch::Tensor b = torch::inverse(a);
   ForEachDevice([&](const torch::Device& device) {
@@ -9188,7 +9188,10 @@ TEST_F(AtenXlaTensorTest, TestDiagFlat) {
     });
 
     ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
-    ExpectCounterChanged("xla::diag_embed", cpp_test::GetIgnoredCounters());
+    ExpectCounterChanged("xla::zero_", cpp_test::GetIgnoredCounters());
+    ExpectCounterChanged("xla::view_copy_symint", cpp_test::GetIgnoredCounters());
+    ExpectCounterChanged("xla::_to_copy", cpp_test::GetIgnoredCounters());
+    ExpectCounterChanged("xla::_copy_from", cpp_test::GetIgnoredCounters());
   }
 }
 
