@@ -4053,7 +4053,6 @@ TEST_F(AtenXlaTensorTest, TestEinsumPyTorchLowerRepeatedAxis) {
 }
 
 TEST_F(AtenXlaTensorTest, TestEinsumPyTorchLowerRepeatedAxisBackward) {
-  GTEST_SKIP() << "Needs additional lowering after functionalization";
   torch::Tensor x = torch::rand(
       {2, 3, 3}, torch::TensorOptions(torch::kFloat).requires_grad(true));
   torch::Tensor y =
