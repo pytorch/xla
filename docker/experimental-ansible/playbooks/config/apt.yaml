@@ -10,9 +10,19 @@ apt:
       - gcc-10
       - g++-10
 
+  # Specify objects with string fields `url` and `keyring`.
+  # The keyring path should start with /usr/share/keyrings/ for debian and ubuntu.
   signing_keys:
-    - https://apt.llvm.org/llvm-snapshot.gpg.key
+    - url: https://apt.llvm.org/llvm-snapshot.gpg.key
+      keyring: /usr/share/keyrings/llvm.pgp
+    - url: https://packages.cloud.google.com/apt/doc/apt-key.gpg
+      keyring: /usr/share/keyrings/cloud.google.gpg
+    - url: "https://developer.download.nvidia.com/compute/cuda/repos/{{ cuda_repo }}/x86_64/3bf863cc.pub"
+      keyring: /usr/share/keyrings/cuda.pgp
 
   repos:
     - "deb http://apt.llvm.org/{{ debian_version }}/ llvm-toolchain-{{ debian_version }}-{{ clang_version }} main"
     - "deb-src http://apt.llvm.org/{{ debian_version }}/ llvm-toolchain-{{ debian_version }}-{{ clang_version }} main"
+    # signed-by path should match the Google Cloud keyring path above.
+    - "deb [signed-by=/usr/share/keyrings/cloud.google.gpg] https://packages.cloud.google.com/apt cloud-sdk main"
+    - "deb https://developer.download.nvidia.com/compute/cuda/repos/{{ cuda_repo }}/x86_64/ /"

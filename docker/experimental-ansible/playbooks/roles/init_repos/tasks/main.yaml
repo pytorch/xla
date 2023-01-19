@@ -1,11 +1,23 @@
 - name: Add apt keys
-  ansible.builtin.apt_key:
-    url: "{{ item }}"
-    state: present
+  ansible.builtin.get_url:
+    url: "{{ item.url }}"
+    dest: "{{ item.keyring }}"
+    mode: 'u=rw,g=r,o=r'
+  # ansible.builtin.apt_key:
+    # url: "{{ item if item is string else item.url }}"
+    # keyring: "{{ None if item is string else item.keyring }}"
+    # state: present
   loop: "{{ apt_keys }}"
+  register: apt_key
 
 - name: Add apt repositories into sources list
   ansible.builtin.apt_repository:
     repo: "{{ item }}"
     state: present
   loop: "{{ apt_repos }}"
+  register: apt_repo
+
+- name: Update apt cache
+  apt:
+    update_cache: true
+  when: apt_key.changed or apt_repo.changed
