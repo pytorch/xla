@@ -673,6 +673,7 @@ c10::SymNode XLASymNodeImpl::gt(const c10::SymNode& other) {
 }
 
 c10::SymNode XLASymNodeImpl::lt(const c10::SymNode& other) {
+  TORCH_LAZY_FN_COUNTER("xla::size_");
   auto p_other = dynamic_cast<XLASymNodeImpl*>(other.get());
   auto n_lt = torch::lazy::MakeNode<SizeLt>(node(), p_other->node());
   return c10::make_intrusive<XLASymNodeImpl>(n_lt);
@@ -716,6 +717,7 @@ c10::SymNode XLASymNodeImpl::max(const c10::SymNode& other) {
 }
 
 c10::SymNode XLASymNodeImpl::clone() {
+  TORCH_LAZY_FN_COUNTER("xla::size_");
   return c10::make_intrusive<XLASymNodeImpl>(node());
 }
 
