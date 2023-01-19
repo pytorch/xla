@@ -9231,7 +9231,7 @@ TEST_F(AtenXlaTensorTest, TestDiagFlat) {
     });
 
     ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
-    ExpectCounterChanged("xla::diag", cpp_test::GetIgnoredCounters());
+    ExpectCounterChanged("xla::diag_embed", cpp_test::GetIgnoredCounters());
   }
 }
 
