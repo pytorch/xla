@@ -1107,6 +1107,34 @@ at::Tensor XLANativeFunctions::diag(const at::Tensor& self, int64_t diagonal) {
       tensor_methods::diag(bridge::GetXlaTensor(self), diagonal));
 }
 
+at::Tensor XLANativeFunctions::diag_embed(const at::Tensor& self,
+                                          int64_t offset, int64_t dim1,
+                                          int64_t dim2) {
+  TORCH_LAZY_FN_COUNTER("xla::");
+  XLATensorPtr self_tensor = bridge::TryGetXlaTensor(self);
+
+  auto input_shape = self_tensor->shape();
+  int64_t nDims = input_shape.get().rank() + 1;
+  int64_t dim1_wrapped = at::maybe_wrap_dim(dim1, nDims);
+  int64_t dim2_wrapped = at::maybe_wrap_dim(dim2, nDims);
+  XLA_CHECK(dim1_wrapped != dim2_wrapped)
+      << "diagonal dimensions cannot be identical " << dim1 << ", " << dim2;
+
+  int64_t new_dim_len = std::abs(offset) + self_tensor->size(-1);
+  auto sizes = xla::util::ToVector<int64_t>(input_shape.get().dimensions());
+  sizes.pop_back();
+  sizes.insert(sizes.begin() + std::min(dim1_wrapped, dim2_wrapped),
+               new_dim_len);
+  sizes.insert(sizes.begin() + std::max(dim1_wrapped, dim2_wrapped),
+               new_dim_len);
+  XLATensorPtr result = tensor_methods::full(sizes, 0, self_tensor->GetDevice(),
+                                             self_tensor->dtype());
+  auto diag =
+      tensor_methods::diagonal(result, offset, dim1_wrapped, dim2_wrapped);
+  tensor_methods::copy_(diag, self_tensor);
+  return bridge::AtenFromXlaTensor(result);
+}
+
 at::Tensor XLANativeFunctions::diagonal_copy(const at::Tensor& self,
                                              int64_t offset, int64_t dim1,
                                              int64_t dim2) {
