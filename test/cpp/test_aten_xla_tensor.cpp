@@ -9231,7 +9231,8 @@ TEST_F(AtenXlaTensorTest, TestDiagFlat) {
 
     ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
     ExpectCounterChanged("xla::zero_", cpp_test::GetIgnoredCounters());
-    ExpectCounterChanged("xla::view_copy_symint", cpp_test::GetIgnoredCounters());
+    ExpectCounterChanged("xla::view_copy_symint",
+                         cpp_test::GetIgnoredCounters());
     ExpectCounterChanged("xla::_to_copy", cpp_test::GetIgnoredCounters());
     ExpectCounterChanged("xla::_copy_from", cpp_test::GetIgnoredCounters());
   }
