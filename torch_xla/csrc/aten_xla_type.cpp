@@ -2280,29 +2280,6 @@ at::Tensor XLANativeFunctions::pow(const at::Scalar& self,
       tensor_methods::pow(self, bridge::GetXlaTensor(exponent)));
 }
 
-// at::Tensor XLANativeFunctions::prelu(const at::Tensor& self,
-//                                      const at::Tensor& weight) {
-//   TORCH_LAZY_FN_COUNTER("xla::");
-//   // If multiple weights, check channel size == number of weights.
-//   int64_t weight_num = weight.numel();
-//   if (weight.numel() > 1) {
-//     int64_t input_dim = self.dim();
-//     XLA_CHECK_GT(input_dim, 0) << "Input tensor dimension cannot be 0";
-
-//     int64_t channel_size = input_dim > 1 ? self.size(1) : 1;
-//     XLA_CHECK_EQ(channel_size, weight_num)
-//         << "Mismatch of parameter numbers and input channel size. Found "
-//            "parameter numbers = "
-//         << weight_num << " and channel size = " << channel_size;
-//   }
-
-//   XLATensorPtr self_tensor = bridge::GetXlaTensor(self);
-//   XLATensorPtr weight_tensor = bridge::GetXlaTensor(weight);
-
-//   return bridge::AtenFromXlaTensor(
-//       tensor_methods::prelu(self_tensor, weight_tensor));
-// }
-
 at::Tensor XLANativeFunctions::_prelu_kernel(const at::Tensor& self,
                                              const at::Tensor& weight) {
   TORCH_LAZY_FN_COUNTER("xla::");
