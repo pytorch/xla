@@ -23,13 +23,6 @@ class DynamoInferenceBasicTest(unittest.TestCase):
   def fn_simple_dynamo(self, x, y):
     return self.fn_simple(x, y)
 
-<<<<<<< HEAD
-=======
-  @dynamo.optimize('torchxla_trace_once')
-  def run_model_with_dynamo(self, model, data):
-    return model(data)
-
->>>>>>> 03d5c493 (Re-enable dynamo tests (#4454))
   def test_simple_model(self):
     device = xm.xla_device()
     x = torch.tensor(100.0)
@@ -103,13 +96,6 @@ class DynamoTrainingBasicTest(unittest.TestCase):
     loss.backward()
     return pred
 
-<<<<<<< HEAD
-=======
-  @dynamo.optimize('aot_torchxla_trace_once')
-  def run_model_with_dynamo(self, model, data, target):
-    return self.train_model(model, data, target)
-
->>>>>>> 03d5c493 (Re-enable dynamo tests (#4454))
   def test_simple_model(self):
     torch._dynamo.reset()
     device = xm.xla_device()
