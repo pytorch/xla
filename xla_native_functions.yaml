@@ -163,7 +163,6 @@ supported:
   - cumsum
   - detach_copy
   - diag
-  - diag_embed
   - diagonal_copy
   - diagonal_scatter
   - div.Scalar
@@ -256,7 +255,6 @@ supported:
   - pow.Scalar
   - pow.Tensor_Scalar
   - pow.Tensor_Tensor
-  - prelu
   - _prelu_kernel
   - prod
   - prod.dim_int
@@ -345,6 +343,7 @@ supported:
   # but their implementations call view operators (which we need to functionalize away).
   - affine_grid_generator
   - block_diag
+  - diag_embed
   - _convolution
   - convolution_backward
   - embedding
