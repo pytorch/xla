@@ -156,6 +156,8 @@ supported:
   - constant_pad_nd
   - convolution_backward_overrideable
   - convolution_overrideable
+  - copy
+  - copy_
   - cross
   - cumprod
   - cumsum
