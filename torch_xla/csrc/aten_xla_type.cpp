@@ -1030,8 +1030,8 @@ at::Tensor XLANativeFunctions::copy(const at::Tensor& self,
 at::Tensor& XLANativeFunctions::copy_(at::Tensor& self, const at::Tensor& src,
                                       bool non_blocking) {
   TORCH_LAZY_FN_COUNTER("xla::");
-  at::Tensor result = _copy_from(self, src, non_blocking);
-  return result;
+  _copy_from(src, self, non_blocking);
+  return self;
 }
 
 at::Tensor XLANativeFunctions::cross(const at::Tensor& self,
