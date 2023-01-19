@@ -169,7 +169,7 @@ class ProcessGroupXla(ProcessGroup):
       input_as_result = xm.send(t, channel_id)
       # Make the sent tensor depend on the token, such that the `send`
       # op can actually be built into the computation graph.
-      t.data = input_as_result
+      t.copy_(input_as_result)
       results.append(input_as_result)
     return _ret_work(results)
 
