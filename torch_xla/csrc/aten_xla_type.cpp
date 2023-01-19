@@ -456,8 +456,8 @@ at::Tensor& XLANativeFunctions::_amp_update_scale_(at::Tensor& current_scale,
   return current_scale;
 }
 
-at::Tensor& XLANativeFunctions::copy_(at::Tensor& self,
-                                    const at::Tensor& src, bool non_blocking) {
+at::Tensor& XLANativeFunctions::copy_(at::Tensor& self, const at::Tensor& src,
+                                      bool non_blocking) {
   TORCH_LAZY_FN_COUNTER("xla::");
   _copy_from(src, self, non_blocking);
   return self;
