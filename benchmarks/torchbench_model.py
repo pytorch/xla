@@ -117,12 +117,10 @@ class TorchBenchModel(BenchmarkModel):
     # workaround "RuntimeError: not allowed to set torch.backends.cudnn flags"
     # torch.backends.__allow_nonbracketed_mutation_flag = True
 
-    if self.benchmark_experiment.accelerator == "cpu":
-      device = "cpu"
-    elif self.benchmark_experiment.accelerator == "gpu" and not self.benchmark_experiment.xla:
+    if self.benchmark_experiment.accelerator == "gpu" and not self.benchmark_experiment.xla:
       device = "cuda"
     else:
-      device = str(self.benchmark_experiment.get_device())
+      device = "cpu"
 
     benchmark = benchmark_cls(
         test=self.benchmark_experiment.test,

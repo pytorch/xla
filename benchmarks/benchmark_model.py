@@ -103,6 +103,12 @@ class BenchmarkModel:
     else:
       raise NotImplementedError
 
+  def pick_grad(self):
+    if self.benchmark_experiment.test == "eval":
+      return torch.no_grad()
+    elif self.benchmark_experiment.test == "train":
+      return torch.enable_grad()
+
   def optimizer_zero_grad(self):
     if self.optimizer is not None:
       self.optimizer.zero_grad(True)

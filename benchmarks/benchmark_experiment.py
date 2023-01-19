@@ -7,6 +7,12 @@ try:
 except ImportError:
   from util import is_xla_device_available
 
+try:
+  import torch_xla.core.xla_model as xm
+except ImportError:
+  # ignore the error if torch_xla is not installed
+  pass
+
 logger = logging.getLogger(__name__)
 
 
@@ -73,6 +79,12 @@ class ExperimentLoader:
         process_env["XRT_TPU_CONFIG"] = "localservice;0;localhost:51011"
       elif is_xla_device_available("GPU"):
         process_env["GPU_NUM_DEVICES"] = "1"
+    elif not experiment_config["xla"] and is_xla_device_available(
+        experiment_config["accelerator"].upper()):
+      # In non-xla CPU training experiments, an env var is still needed if an
+      # xla device exists, or there will be "Missing XLA configuration" error.
+      process_env = os.environ.copy()
+      process_env["PJRT_DEVICE"] = experiment_config["accelerator"].upper()
 
     experiment_config["process_env"] = process_env
 
@@ -103,7 +115,6 @@ class BenchmarkExperiment:
 
   def get_device(self):
     if self.xla:
-      import torch_xla.core.xla_model as xm
       device = xm.xla_device(devkind=self.accelerator.upper())
     elif self.accelerator == "cpu":
       device = torch.device("cpu")

@@ -10,6 +10,12 @@ import random
 import torch
 import traceback
 
+try:
+  import torch_xla.core.xla_model as xm
+except ImportError:
+  # ignore the error if torch_xla is not installed
+  pass
+
 logger = logging.getLogger(__name__)
 
 
@@ -35,7 +41,6 @@ def reset_rng_state(benchmark_experiment=None):
   random.seed(1337)
   np.random.seed(1337)
   if benchmark_experiment and benchmark_experiment.xla:
-    import torch_xla.core.xla_model as xm
     device = benchmark_experiment.get_device()
     xm.set_rng_state(1337, str(device))
 

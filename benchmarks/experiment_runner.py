@@ -24,6 +24,12 @@ except ImportError:
   from benchmark_experiment import ExperimentLoader
   from util import patch_torch_manual_seed, reset_rng_state, move_to_device, randomize_input
 
+try:
+  import torch_xla.core.xla_model as xm
+except ImportError:
+  # ignore the error if torch_xla is not installed
+  pass
+
 logger = logging.getLogger(__name__)
 
 
@@ -99,16 +105,17 @@ class ExperimentRunner:
     benchmark_model = self.model_loader.load_model(model_config,
                                                    benchmark_experiment)
 
-    timings = OrderedDict()
-    results = []
-    for i in range(self._args.repeat):
-      timing, result = self.timed_run(benchmark_experiment, benchmark_model)
-      result = move_to_device(result, 'cpu')
-      results.append(result)
-      for key, val in timing.items():
-        if i == 0:
-          timings[key] = np.zeros(self._args.repeat, np.float64)
-        timings[key][i] = val
+    with benchmark_model.pick_grad():
+      timings = OrderedDict()
+      results = []
+      for i in range(self._args.repeat):
+        timing, result = self.timed_run(benchmark_experiment, benchmark_model)
+        result = move_to_device(result, 'cpu')
+        results.append(result)
+        for key, val in timing.items():
+          if i == 0:
+            timings[key] = np.zeros(self._args.repeat, np.float64)
+          timings[key][i] = val
     # print(timings)
 
     self.save_results(benchmark_experiment, benchmark_model, timings, results)
@@ -172,12 +179,10 @@ class ExperimentRunner:
 
   def _mark_step(self, benchmark_experiment):
     if benchmark_experiment.xla:
-      import torch_xla.core.xla_model as xm
       xm.mark_step()
 
   def _synchronize(self, benchmark_experiment):
     if benchmark_experiment.xla:
-      import torch_xla.core.xla_model as xm
       xm.wait_device_ops()
     elif benchmark_experiment.accelerator == "gpu":
       torch.cuda.synchronize()
