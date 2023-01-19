@@ -243,6 +243,13 @@ def parse_args(args=None):
       "--exclude", "-x", action="append", help="filter benchmarks with regexp")
 
   parser.add_argument(
+      "--experiment-name",
+      default="run_all",
+      choices=["run_all"],
+      help="Experiment name to run.",
+  )
+
+  parser.add_argument(
       "--repeat",
       type=int,
       default=10,

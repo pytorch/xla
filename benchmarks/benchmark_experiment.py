@@ -14,27 +14,39 @@ class ExperimentLoader:
 
   def __init__(self, args):
     self._args = args
+    self.experiment_name = self._args.experiment_name
+
+  def expand_config_choices(self, config_choices):
+    configs = [{}]
+
+    for key, choices in config_choices.items():
+      tmp_configs = []
+      for config in configs:
+        for choice in choices:
+          tmp_config = config.copy()
+          tmp_config[key] = choice
+          tmp_configs.append(tmp_config)
+      configs = tmp_configs
+
+    return configs
 
   def list_experiment_configs(self):
+    if self.experiment_name == "run_all":
+      config_choices = {
+          "accelerator": ["cpu", "gpu", "tpu"],
+          "xla": [None, "PJRT", "XRT"],
+          "test": ["eval", "train"],
+      }
+    else:
+      raise NotImplementedError
+
     experiment_configs = []
+    for experiment_config in self.expand_config_choices(config_choices):
+      if not self.is_available(experiment_config):
+        continue
 
-    accelerators = ["cpu", "gpu", "tpu"]
-    xla_options = [None, "PJRT", "XRT"]
-    tests = ["eval", "train"]
-    for accelerator in accelerators:
-      for xla in xla_options:
-        for test in tests:
-          experiment_config = {
-              "accelerator": accelerator,
-              "xla": xla,
-              "test": test
-          }
-
-          if not self.is_available(experiment_config):
-            continue
-
-          self._add_experiment_env(experiment_config)
-          experiment_configs.append(experiment_config)
+      self._add_experiment_env(experiment_config)
+      experiment_configs.append(experiment_config)
     return experiment_configs
 
   def is_available(self, experiment_config):
@@ -65,19 +77,25 @@ class ExperimentLoader:
     experiment_config["process_env"] = process_env
 
   def load_experiment(self, experiment_config):
+    experiment_name = self.experiment_name
     accelerator = experiment_config.get("accelerator", "cpu")
     xla = experiment_config.get("xla", None)
     test = experiment_config.get("test", "eval")
     batch_size = experiment_config.get("batch_size", self._args.batch_size)
     benchmark_experiment = BenchmarkExperiment(
-        accelerator=accelerator, xla=xla, test=test, batch_size=batch_size)
+        experiment_name=experiment_name,
+        accelerator=accelerator,
+        xla=xla,
+        test=test,
+        batch_size=batch_size)
 
     return benchmark_experiment
 
 
 class BenchmarkExperiment:
 
-  def __init__(self, accelerator, xla, test, batch_size):
+  def __init__(self, experiment_name, accelerator, xla, test, batch_size):
+    self.experiment_name = experiment_name
     self.accelerator = accelerator
     self.xla = xla
     self.test = test
