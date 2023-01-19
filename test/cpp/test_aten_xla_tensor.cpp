@@ -1968,7 +1968,6 @@ TEST_F(AtenXlaTensorTest, TestGroupNormBackward) {
 }
 
 TEST_F(AtenXlaTensorTest, TestInstanceNorm) {
-  GTEST_SKIP() << "Needs additional lowering after functionalization";
   int batch = 5;
   int num_channels = 20;
   torch::Tensor input = torch::rand({batch, num_channels, 10, 10},
