@@ -25,9 +25,8 @@ class TestDynamicShapes(test_utils.XlaTestCase):
     t6 = t5.expand(t2.size(0))
     self.assertIn('<=10', torch_xla._XLAC._get_xla_tensors_text([t6]))
     t6_cpu = t6.cpu()
-    self.assertEqual(t6_cpu.shape[0], 2)
+    self.assertEqual(t6_cpu.shape[0], 2)  # 10 instead of 2
 
-  @unittest.skip("fails with functionalization")
   def test_simple_expand_on_2d_tensor(self):
     size1 = 5
     size2 = 2
@@ -58,6 +57,10 @@ class TestDynamicShapes(test_utils.XlaTestCase):
     self.assertEqual(t4.shape[0], 2)
     self.assertEqual(t4.shape[1], size2)
 
+    # size_clone should be called as part of decomposition from
+    # the python dispatcher.
+    self.assertGreater(met.counter_value("xla::size_clone"), 0)
+
   def test_simple_expand_add_dimension(self):
     size1 = 5
     size2 = 2
@@ -83,7 +86,6 @@ class TestDynamicShapes(test_utils.XlaTestCase):
     a3 = a2.shape[0] + 3  # tests wrap
     self.assertIsInstance(a3, torch.SymInt)
 
-  @unittest.skip("fails with functionalization")
   def test_sizeAdd(self):
     size1 = 5
     size2 = 2
@@ -180,6 +182,40 @@ class TestDynamicShapes(test_utils.XlaTestCase):
     expand_out_xla = t4.expand(t3.shape[0], size1, size2)
     self.assertEqual(t3.shape[0], 2)
     self.assertEqual(expand_out_aten.cpu(), expand_out_xla.cpu())
+
+  def test_sizeGe(self):
+    met.clear_all()
+
+    size1 = 5
+    size2 = 2
+    t1 = torch.zeros([size1, size2], device=dev)
+    t1[3][0] = 1
+    # t2 has size [<=10, 2]
+    t2 = torch.nonzero(t1)
+    # Create a SizeAdd IR node.
+    # t2.shape[1] generates a SizeConstant node.
+    dyn_size = t2.shape[0] >= t2.shape[1]
+    self.assertGreater(met.counter_value("xla::size_ge"), 0)
+    # Exercises SizeGe::getDynamicValue.
+    dynamic_size = int(dyn_size)
+    self.assertEqual(dynamic_size, 0)
+
+  def test_sizeLt(self):
+    met.clear_all()
+
+    size1 = 5
+    size2 = 2
+    t1 = torch.zeros([size1, size2], device=dev)
+    t1[3][0] = 1
+    # t2 has size [<=10, 2]
+    t2 = torch.nonzero(t1)
+    # Create a SizeAdd IR node.
+    # t2.shape[1] generates a SizeConstant node.
+    dyn_size = t2.shape[0] < t2.shape[1]
+    self.assertGreater(met.counter_value("xla::size_lt"), 0)
+    # Exercises SizeLt::getDynamicValue.
+    dynamic_size = int(dyn_size)
+    self.assertEqual(dynamic_size, 1)
 
 
 if __name__ == '__main__':
