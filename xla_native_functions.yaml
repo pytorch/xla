@@ -163,6 +163,7 @@ supported:
   - cumsum
   - detach_copy
   - diag
+  - diag_embed
   - diagonal_copy
   - diagonal_scatter
   - div.Scalar
