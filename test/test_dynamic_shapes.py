@@ -56,6 +56,8 @@ class TestDynamicShapes(unittest.TestCase):
     self.assertEqual(t4.shape[0], 2)
     self.assertEqual(t4.shape[1], size2)
 
+    self.assertGreater(met.counter_value("xla::size_clone"), 0)
+
   def test_wrap(self):
     a1 = torch.tensor([[1, 0, 0, 5, 0, 6]], device=dev)
     a2 = torch.nonzero(a1)
