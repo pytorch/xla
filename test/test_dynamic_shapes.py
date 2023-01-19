@@ -56,6 +56,8 @@ class TestDynamicShapes(unittest.TestCase):
     self.assertEqual(t4.shape[0], 2)
     self.assertEqual(t4.shape[1], size2)
 
+    # size_clone should be called as part of decomposition from
+    # the python dispatcher.
     self.assertGreater(met.counter_value("xla::size_clone"), 0)
 
   def test_wrap(self):
