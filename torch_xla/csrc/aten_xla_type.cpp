@@ -1089,34 +1089,6 @@ at::Tensor XLANativeFunctions::diag(const at::Tensor& self, int64_t diagonal) {
       tensor_methods::diag(bridge::GetXlaTensor(self), diagonal));
 }
 
-at::Tensor XLANativeFunctions::diag_embed(const at::Tensor& self,
-                                          int64_t offset, int64_t dim1,
-                                          int64_t dim2) {
-  TORCH_LAZY_FN_COUNTER("xla::");
-  XLATensorPtr self_tensor = bridge::TryGetXlaTensor(self);
-
-  auto input_shape = self_tensor->shape();
-  int64_t nDims = input_shape.get().rank() + 1;
-  int64_t dim1_wrapped = at::maybe_wrap_dim(dim1, nDims);
-  int64_t dim2_wrapped = at::maybe_wrap_dim(dim2, nDims);
-  XLA_CHECK(dim1_wrapped != dim2_wrapped)
-      << "diagonal dimensions cannot be identical " << dim1 << ", " << dim2;
-
-  int64_t new_dim_len = std::abs(offset) + self_tensor->size(-1);
-  auto sizes = xla::util::ToVector<int64_t>(input_shape.get().dimensions());
-  sizes.pop_back();
-  sizes.insert(sizes.begin() + std::min(dim1_wrapped, dim2_wrapped),
-               new_dim_len);
-  sizes.insert(sizes.begin() + std::max(dim1_wrapped, dim2_wrapped),
-               new_dim_len);
-  XLATensorPtr result = tensor_methods::full(sizes, 0, self_tensor->GetDevice(),
-                                             self_tensor->dtype());
-  auto diag =
-      tensor_methods::diagonal(result, offset, dim1_wrapped, dim2_wrapped);
-  tensor_methods::copy_(diag, self_tensor);
-  return bridge::AtenFromXlaTensor(result);
-}
-
 at::Tensor XLANativeFunctions::diagonal_copy(const at::Tensor& self,
                                              int64_t offset, int64_t dim1,
                                              int64_t dim2) {
@@ -2308,28 +2280,28 @@ at::Tensor XLANativeFunctions::pow(const at::Scalar& self,
       tensor_methods::pow(self, bridge::GetXlaTensor(exponent)));
 }
 
-at::Tensor XLANativeFunctions::prelu(const at::Tensor& self,
-                                     const at::Tensor& weight) {
-  TORCH_LAZY_FN_COUNTER("xla::");
-  // If multiple weights, check channel size == number of weights.
-  int64_t weight_num = weight.numel();
-  if (weight.numel() > 1) {
-    int64_t input_dim = self.dim();
-    XLA_CHECK_GT(input_dim, 0) << "Input tensor dimension cannot be 0";
+// at::Tensor XLANativeFunctions::prelu(const at::Tensor& self,
+//                                      const at::Tensor& weight) {
+//   TORCH_LAZY_FN_COUNTER("xla::");
+//   // If multiple weights, check channel size == number of weights.
+//   int64_t weight_num = weight.numel();
+//   if (weight.numel() > 1) {
+//     int64_t input_dim = self.dim();
+//     XLA_CHECK_GT(input_dim, 0) << "Input tensor dimension cannot be 0";
 
-    int64_t channel_size = input_dim > 1 ? self.size(1) : 1;
-    XLA_CHECK_EQ(channel_size, weight_num)
-        << "Mismatch of parameter numbers and input channel size. Found "
-           "parameter numbers = "
-        << weight_num << " and channel size = " << channel_size;
-  }
+//     int64_t channel_size = input_dim > 1 ? self.size(1) : 1;
+//     XLA_CHECK_EQ(channel_size, weight_num)
+//         << "Mismatch of parameter numbers and input channel size. Found "
+//            "parameter numbers = "
+//         << weight_num << " and channel size = " << channel_size;
+//   }
 
-  XLATensorPtr self_tensor = bridge::GetXlaTensor(self);
-  XLATensorPtr weight_tensor = bridge::GetXlaTensor(weight);
+//   XLATensorPtr self_tensor = bridge::GetXlaTensor(self);
+//   XLATensorPtr weight_tensor = bridge::GetXlaTensor(weight);
 
-  return bridge::AtenFromXlaTensor(
-      tensor_methods::prelu(self_tensor, weight_tensor));
-}
+//   return bridge::AtenFromXlaTensor(
+//       tensor_methods::prelu(self_tensor, weight_tensor));
+// }
 
 at::Tensor XLANativeFunctions::_prelu_kernel(const at::Tensor& self,
                                              const at::Tensor& weight) {
@@ -3293,6 +3265,13 @@ XLANativeFunctions::convolution_backward(
       convolution_backward)>::call(grad_output, input, weight, bias_sizes,
                                    stride, padding, dilation, transposed,
                                    output_padding, groups, output_mask);
+}
+
+at::Tensor XLANativeFunctions::diag_embed(const at::Tensor& self,
+                                          int64_t offset, int64_t dim1,
+                                          int64_t dim2) {
+  return at::functionalization::functionalize_aten_op<ATEN_OP(
+      diag_embed)>::call(self, offset, dim1, dim2);
 }
 
 at::Tensor XLANativeFunctions::embedding_symint(const at::Tensor& weight,
