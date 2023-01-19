@@ -48,8 +48,8 @@ class TORCH_API XLASymNodeImpl : public c10::SymNodeImpl {
   c10::SymNode ceil() override;
   c10::SymNode floor() override;
   c10::SymNode neg() override;
-  c10::SymNode min(const c10::SymNode& other) override;
-  c10::SymNode max(const c10::SymNode& other) override;
+  c10::SymNode sym_min(const c10::SymNode& other) override;
+  c10::SymNode sym_max(const c10::SymNode& other) override;
   c10::SymNode clone() override;
   c10::SymNode sym_float() override;
   c10::SymNode wrap_int(int64_t num) override;
