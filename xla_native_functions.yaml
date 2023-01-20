@@ -107,8 +107,6 @@ supported:
   - _adaptive_avg_pool3d_backward
   - _amp_foreach_non_finite_check_and_unscale_
   - _amp_update_scale_
-  - copy
-  - copy_
   - _copy_from
   - _copy_from_and_resize
   - _index_put_impl_
