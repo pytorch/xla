@@ -130,7 +130,7 @@ class BenchmarkModel:
     self.optimizer_step()
     if collect_full_result:
       return collect_results(self.module, pred, loss, inputs)
-    return pred
+    return loss.detach()
 
   def eval(self, inputs, collect_full_result=False):
     pred = self.module(*inputs)
