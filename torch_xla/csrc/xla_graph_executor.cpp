@@ -1152,6 +1152,8 @@ XLAGraphExecutor::CompilationResult XLAGraphExecutor::Compile(
   TF_VLOG(3) << "Compiling IR graph hash "
              << torch::lazy::HashToString(coll.hash) << " on device "
              << coll.device << " done!";
+  TF_VLOG(5) << "Compiled program shape "
+             << computations.front()->program_shape().ToString() << std::endl;
   TF_VLOG(5)
       << "Graph hash " << torch::lazy::HashToString(coll.hash)
       << " is computation hash "
