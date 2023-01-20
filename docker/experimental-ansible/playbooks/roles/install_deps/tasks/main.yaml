@@ -22,18 +22,14 @@
 
 - name: Install apt packages
   ansible.builtin.apt:
-    name: "{{ item }}"
+    name: "{{ apt_pkgs }}"
     update_cache: true
-  loop: "{{ apt_pkgs }}"
 
 - name: Install pip packages
   ansible.builtin.pip:
-    name: "{{ item }}"
-  loop: "{{ pip_pkgs }}"
-
+    name: "{{ pip_pkgs }}"
 
 - name: Install pip packages without deps (--no-deps)
   ansible.builtin.pip:
-    name: "{{ item }}"
+    name: "{{ pip_pkgs_nodeps }}"
     extra_args: "--no-deps"
-  loop: "{{ pip_pkgs_nodeps }}"
