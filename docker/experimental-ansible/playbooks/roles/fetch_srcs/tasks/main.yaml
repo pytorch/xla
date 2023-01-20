@@ -1,0 +1,21 @@
+- name: "Create source root directory at {{ src_root }}"
+  ansible.builtin.file:
+    path: "{{ src_root }}"
+    state: directory
+    mode: '0755'
+
+- name: Clone PyTorch and XLA repos
+  ansible.builtin.git:
+    repo: "{{ item.repo }}"
+    dest: "{{ item.dest }}"
+    version: "{{ item.version }}"
+    depth: 1
+    bare: true
+  loop:
+    - repo: https://github.com/pytorch/pytorch
+      dest: "{{ (src_root, 'pytorch') | path_join }}"
+      version: "{{ pytorch_git_rev }}"
+
+    - repo: https://github.com/pytorch/xla
+      dest: "{{ (src_root, 'pytorch/xla') | path_join }}"
+      version: "{{ xla_git_rev }}"

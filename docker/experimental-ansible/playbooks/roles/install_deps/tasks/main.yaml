@@ -19,3 +19,21 @@
   apt:
     update_cache: true
   when: add_apt_key.changed or add_apt_repo.changed
+
+- name: Install apt packages
+  ansible.builtin.apt:
+    name: "{{ item }}"
+    update_cache: true
+  loop: "{{ apt_pkgs }}"
+
+- name: Install pip packages
+  ansible.builtin.pip:
+    name: "{{ item }}"
+  loop: "{{ pip_pkgs }}"
+
+
+- name: Install pip packages without deps (--no-deps)
+  ansible.builtin.pip:
+    name: "{{ item }}"
+    extra_args: "--no-deps"
+  loop: "{{ pip_pkgs_nodeps }}"
