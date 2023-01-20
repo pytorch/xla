@@ -2,7 +2,7 @@ import inspect
 import torch
 import torch.nn as nn
 from torch._six import inf
-from typing import Iterable, Union, Optional
+from typing import Iterable, Union
 
 _tensor_or_tensors = Union[torch.Tensor, Iterable[torch.Tensor]]
 
@@ -21,11 +21,7 @@ def _patch(fn, newfn):
 def clip_grad_norm_(parameters: _tensor_or_tensors,
                     max_norm: float,
                     norm_type: float = 2.0,
-                    error_if_nonfinite: bool = False,
-                    foreach: Optional[bool] = None) -> torch.Tensor:
-  if foreach:
-    raise RuntimeError('foreach=True is not supported with XLA')
-
+                    error_if_nonfinite: bool = False) -> torch.Tensor:
   if isinstance(parameters, torch.Tensor):
     parameters = [parameters]
   parameters = list(filter(lambda p: p.grad is not None, parameters))
