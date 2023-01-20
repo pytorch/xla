@@ -233,7 +233,7 @@ class XlaFullyShardedDataParallel(nn.Module):
           to when wrapping a submodule. One can specify a different callable
           as wrapper. For example, activation checkpointing (rematerialization)
           can be applied to each auto-wrapped submodule as follows:
-  
+
               from torch_xla.distributed.fsdp import checkpoint_module
               auto_wrapper_callable = lambda m, *args, **kwargs: XlaFullyShardedDataParallel(
                   checkpoint_module(m), *args, **kwargs)
@@ -658,7 +658,7 @@ class XlaFullyShardedDataParallel(nn.Module):
       self.sharded_params.append(p_shard)
       # Free the full parameter storage (here we free its `.data`) but keep the tensor itself
       # for auto-grad tracing (like `torch.autograd.Variable` before the tensor-variable merge).
-      p.data = p.data.new_zeros(1)
+      p.copy_(p.data.new_zeros(1))
       if p.device != self.xla_device:
         # cast to XLA device if not already on XLA
         p = p.to(self.xla_device).requires_grad_(p.requires_grad)
@@ -1305,8 +1305,8 @@ class XlaFullyShardedDataParallel(nn.Module):
             self.optimization_barrier_op(dependency_tensors)
             for p, p_data, g_data in zip(params_with_grad, params_data,
                                          grad_data):
-              p.data = p_data
-              p.grad.data = g_data
+              p.copy_(p_data)
+              p.grad.copy_(g_data)
           self._clear_backward_opt_barrier_lists()
 
     if self.mark_step_on_finalization:
@@ -1365,8 +1365,9 @@ class XlaFullyShardedDataParallel(nn.Module):
         if apply_opt_barrier:
           self.optimization_barrier_op([p_padded])
         if self._shard_param_on_dim_0:
-          p.data = p_padded[:p_shard._orig_size[0]]
+          p.copy_(p_padded[:p_shard._orig_size[0]])
         else:
+          # RuntimeError: /workspaces/work/pytorch/xla/torch_xla/csrc/data_ops.cpp:135 : Check failed: input_sizes.size() <= output_sizes.size() (4 vs. 1)
           p.data = p_padded[:p_shard._orig_size.numel()].view(
               p_shard._orig_size)
         p._has_full_param = True
@@ -1398,6 +1399,7 @@ class XlaFullyShardedDataParallel(nn.Module):
     for p in full_params:
       if p._has_full_param:
         # free the original full parameter
+        # RuntimeError: one of the variables needed for gradient computation has been modified by an inplace operation: [XLAFloatType [1000, 2048]] is at version 1; expected version 0 instead. Hint: enable anomaly detection to find the operation that failed to compute its gradient, with torch.autograd.set_detect_anomaly(True).
         p.data = self._dummy_data_placeholder
         p._has_full_param = False
 
@@ -1433,9 +1435,11 @@ class XlaFullyShardedDataParallel(nn.Module):
                                  dependency_tensors)
 
     for p, p_data in zip(p_list, p_data_list):
+      # RuntimeError: one of the variables needed for gradient computation has been modified by an inplace operation: [XLAFloatType [1000, 2048]] is at version 3; expected version 1 instead. Hint: enable anomaly detection to find the operation that failed to compute its gradient, with torch.autograd.set_detect_anomaly(True).
       p.data = p_data
     for p_shard, p_shard_data in zip(p_shard_list, p_shared_data_list):
-      p_shard.data = p_shard_data
+      with torch.no_grad():
+        p_shard.copy_(p_shard_data)
 
   def assert_state(self, state: Union[TrainingState,
                                       List[TrainingState]]) -> None:
