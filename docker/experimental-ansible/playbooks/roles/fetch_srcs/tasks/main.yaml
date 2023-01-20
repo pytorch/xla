@@ -4,7 +4,7 @@
     state: directory
     mode: '0755'
 
-- name: "Clone git repo {{ item.repo }}"
+- name: "Clone git PyTorch and XLA git repos"
   ansible.builtin.git:
     repo: "{{ item.repo }}"
     dest: "{{ item.dest }}"
