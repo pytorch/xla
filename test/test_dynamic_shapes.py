@@ -121,8 +121,30 @@ class TestDynamicShapes(unittest.TestCase):
     dynamic_size = int(dyn_size)
     self.assertEqual(dynamic_size, 1)
 
+  def get_dynamic_tensor(self):
+    a1 = torch.tensor([[1, 0, 0, 5, 0, 6]], device=dev)
+    a2 = torch.nonzero(a1)
+    print('a2=', a2)
+    return a2
+
+  def test_empty_symint(self):
+    # t1.shape= torch.Size([<=6, 2]) with real size [3, 2]
+    t1 = self.get_dynamic_tensor()
+    print('t1=', t1)
+    self.assertIsInstance(t1.shape[0], torch.SymInt)
+    t2 = torch.empty(t1.shape, dtype=torch.int32, device=dev)
+    self.assertIsInstance(t2.shape[0], torch.SymInt)
+    self.assertEqual(str(t2.shape[0]), '<=6')
+    self.assertEqual(t2.shape[0], 3)
+    self.assertIsInstance(t2.shape[1], int)
+    self.assertEqual(t2.shape[1], 2)
+    
+
+
 
 if __name__ == '__main__':
   assert os.environ['XLA_EXPERIMENTAL'] != ''
   test = unittest.main()
+  # DISABLE PYTHON DISPATCHER FLAG
+  del pd
   sys.exit(0 if test.result.wasSuccessful() else 1)

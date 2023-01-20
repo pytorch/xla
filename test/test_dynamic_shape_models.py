@@ -1,4 +1,5 @@
 import argparse
+import os
 import sys
 
 parser = argparse.ArgumentParser(add_help=False)
@@ -11,6 +12,8 @@ import unittest
 import torch
 import torch_xla.core.xla_model as xm
 import torch_xla.debug.metrics as met
+
+pd = torch._C._EnablePythonDispatcher()
 
 xla_dev = xm.xla_device()
 
@@ -45,7 +48,6 @@ class Feedforward(torch.nn.Module):
 )
 class TestDynamicShapeModels(unittest.TestCase):
 
-  @unittest.skip("Broke by functionalization")
   def test_forward_pass_dynamic_input_correctness(self):
     losses = []
     for _ in range(2):
@@ -133,5 +135,8 @@ class TestDynamicShapeModels(unittest.TestCase):
 
 
 if __name__ == '__main__':
+  assert os.environ['XLA_EXPERIMENTAL'] != ''
   test = unittest.main(verbosity=FLAGS.verbosity, exit=False)
+  # DISABLE PYTHON DISPATCHER FLAG
+  del pd
   sys.exit(0 if test.result.wasSuccessful() else 1)
