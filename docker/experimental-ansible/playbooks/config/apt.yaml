@@ -1,6 +1,26 @@
 apt:
   pkgs:
     common:
+      - ccache
+      - curl
+      - git
+      - gnupg
+      - libomp5
+      - libopenblas-dev
+      - ninja-build
+      - procps
+      - python3-pip
+      - rename
+      - vim
+      - wget
+
+    accelerator:
+      build_cuda:
+        - cuda-libraries-11-2
+        - cuda-toolkit-11-2
+        - cuda-minimal-build-11-2
+        - libcudnn8=8.1.1.33-1+cuda11.2
+        - libcudnn8-dev=8.1.1.33-1+cuda11.2
 
     build_amd64:
       - clang-11

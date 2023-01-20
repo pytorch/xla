@@ -11,25 +11,22 @@
       ansible.builtin.include_vars:
         file: "config/{{ item }}"
       loop:
-        # common.yaml should be the first as other config files depend on it.
-        - common.yaml
+        # vars.yaml should be the first as other config files depend on it.
+        - vars.yaml
         - apt.yaml
         - pip.yaml
 
   roles:
     - bazel
 
-    - role: init_repos
+    - role: install_deps
       vars:
         apt_keys: "{{ apt.signing_keys }}"
 
-    - role: build_deps
-      vars:
-        # If apt.pkgs.common is defined, but not set to anything
-        # it cannot be concatenated with a list. Use default(v, [], true) to
-        # set `v` to an empty array if it evaluates to false.
-        # See https://jinja.palletsprojects.com/en/2.11.x/templates/#default
-
+        # If a variable (like `apt.pkgs.common`) is defined, but not set to
+        # anything it cannot be concatenated with a list.
+        # Use `v | default([], true)` to set `v` to an empty array if it evaluates to false.
+        # See https://jinja.palletsprojects.com/en/3.0.x/templates/#jinja-filters.default.
         apt_pkgs: "{{
             apt.pkgs.common | default([], true) + apt.pkgs[stage_env] | default([], true)
           }}"
@@ -43,3 +40,7 @@
         pip_pkgs_nodeps: "{{
             pip.pkgs_nodeps.common | default([], true) + pip.pkgs_nodeps[stage_env] | default([], true)
           }}"
+
+    - role: fetch_srcs
+      vars:
+        src_root: "/src"
