@@ -43,6 +43,16 @@ class ExperimentLoader:
           "xla": [None, "PJRT", "XRT"],
           "test": ["eval", "train"],
       }
+
+      if self._args.accelerator:
+        config_choices["accelerator"] = [self._args.accelerator]
+      if self._args.xla:
+        if self._args.xla == "None":
+          config_choices["xla"] = [None]
+        else:
+          config_choices["xla"] = [self._args.xla]
+      if self._args.test:
+        config_choices["test"] = [self._args.test]
     else:
       raise NotImplementedError
 
@@ -90,9 +100,9 @@ class ExperimentLoader:
 
   def load_experiment(self, experiment_config):
     experiment_name = self.experiment_name
-    accelerator = experiment_config.get("accelerator", "cpu")
-    xla = experiment_config.get("xla", None)
-    test = experiment_config.get("test", "eval")
+    accelerator = experiment_config["accelerator"]
+    xla = experiment_config["xla"]
+    test = experiment_config["test"]
     batch_size = experiment_config.get("batch_size", self._args.batch_size)
     benchmark_experiment = BenchmarkExperiment(
         experiment_name=experiment_name,

@@ -131,7 +131,7 @@ class ExperimentRunner:
         "test",
         "batch_size",
         "median_total",
-        "median_average",
+        "median_per_iter",
         "detail_results",
     ]
 
@@ -143,7 +143,7 @@ class ExperimentRunner:
         benchmark_experiment.test,
         benchmark_experiment.batch_size,
         np.median(timings["total"]).item(),
-        np.median(timings["average"]).item(),
+        np.median(timings["per_iter"]).item(),
         detail_file_name,
     ]
 
@@ -210,13 +210,18 @@ class ExperimentRunner:
 
     timing = OrderedDict()
     t_start = time.perf_counter()
+    if benchmark_experiment.xla:
+      t_trace = 0
 
     for i in range(self._args.iterations_per_run):
+      if benchmark_experiment.xla:
+        t_trace_start = time.perf_counter()
+
       result = benchmark_model.model_iter_fn(
           inputs_list[i], collect_full_result=self._args.collect_full_result)
 
-      if benchmark_experiment.xla and self._args.iterations_per_run == 1:
-        t_trace = time.perf_counter()
+      if benchmark_experiment.xla:
+        t_trace += time.perf_counter() - t_trace_start
 
       self._mark_step(benchmark_experiment)
 
@@ -225,9 +230,9 @@ class ExperimentRunner:
     t_end = time.perf_counter()
 
     timing["total"] = t_end - t_start
-    timing["average"] = timing["total"] / self._args.iterations_per_run
-    if benchmark_experiment.xla and self._args.iterations_per_run == 1:
-      timing["trace"] = t_trace - t_start
+    timing["per_iter"] = timing["total"] / self._args.iterations_per_run
+    if benchmark_experiment.xla:
+      timing["trace_per_iter"] = t_trace / self._args.iterations_per_run
 
     return timing, result
 
@@ -252,6 +257,24 @@ def parse_args(args=None):
       default="run_all",
       choices=["run_all"],
       help="Experiment name to run.",
+  )
+
+  parser.add_argument(
+      "--accelerator",
+      choices=["cpu", "gpu", "tpu"],
+      help="Specify an accelerator to use.",
+  )
+
+  parser.add_argument(
+      "--xla",
+      choices=["None", "PJRT", "XRT"],
+      help="Specify an xla option to use.",
+  )
+
+  parser.add_argument(
+      "--test",
+      choices=["eval", "train"],
+      help="Specify a test to run.",
   )
 
   parser.add_argument(
