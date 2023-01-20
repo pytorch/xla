@@ -12,7 +12,6 @@ dev = xm.xla_device()
 
 class TestDynamicShapes(test_utils.XlaTestCase):
 
-  @unittest.skip("fails with functionalization")
   def test_simple_expand(self):
     size1 = 5
     size2 = 2
@@ -25,7 +24,7 @@ class TestDynamicShapes(test_utils.XlaTestCase):
     t6 = t5.expand(t2.size(0))
     self.assertIn('<=10', torch_xla._XLAC._get_xla_tensors_text([t6]))
     t6_cpu = t6.cpu()
-    self.assertEqual(t6_cpu.shape[0], 2)  # 10 instead of 2
+    self.assertEqual(t6_cpu.shape[0], 2)
 
   def test_simple_expand_on_2d_tensor(self):
     size1 = 5
