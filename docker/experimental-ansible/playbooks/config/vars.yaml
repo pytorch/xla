@@ -1,3 +1,9 @@
 cuda_repo: ubuntu1804
 debian_version: buster
 clang_version: 11
+# PyTorch and PyTorch/XLA wheel version.
+package_version: 1.14
+tpu_vm:
+cuda: 1
+tf_cuda_compute_capabilities: 7.0,7.5,8.0
+build_cpp_tests: 0

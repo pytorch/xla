@@ -44,3 +44,7 @@
     - role: fetch_srcs
       vars:
         src_root: "/src"
+
+    - role: build_srcs
+      vars:
+        src_root: "/src"
