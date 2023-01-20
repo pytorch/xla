@@ -1,11 +1,36 @@
+- name: Build PyTorch
+  ansible.builtin.command:
+    cmd: python setup.py bdist_wheel
+    chdir: "{{ (src_root, 'pytorch') | path_join }}"
+    creates: "{{ (src_root, 'pytorch/dist/*.whl') | path_join }}"
+  environment:
+    TPUVM_MODE: "{{ tpu_vm }}"
+    XLA_CUDA: "{{ cuda }}"
+    USE_CUDA: 0
+    TF_CUDA_COMPUTE_CAPABILITIES: "{{ tf_cuda_compute_capabilities }}"
+    BUILD_CPP_TESTS: "{{ build_cpp_tests }}"
+    CC: "clang-{{ clang_version }}"
+    CXX: "clang++-{{ clang_version }}"
+    PYTORCH_BUILD_NUMBER: 1
+    PYTORCH_BUILD_VERSION: "{{ package_version }}"
+    # TODO: make this env dependent
+    ARCH: amd64
+    ACCELERATOR: "tpu"
+    LD_LIBRARY_PATH: "$LD_LIBRARY_PATH:/usr/local/lib"
+
+- name: Find *.whl files in pytorch/dist
+  ansible.builtin.find:
+    path: "{{ (src_root, 'pytorch/dist') | path_join }}"
+    pattern: "*.whl"
+  register: pytorch_wheels
+
+- name: Install PyTorch wheels
+  ansible.builtin.pip:
+    name: "{{ pytorch_wheels.files | map(attribute='path') }}"
+
 - name: Build XLA computation client library
   ansible.builtin.command:
     cmd: bash build_torch_xla_libs.sh -O -D_GLIBCXX_USE_CXX11_ABI=1
-    chdir: "{{ (src_root, 'pytorch/xla') | path_join }}"
-
-- name: Build PyTorch/XLA
-  ansible.builtin.command:
-    cmd: python setup.py bdist_wheel
     chdir: "{{ (src_root, 'pytorch/xla') | path_join }}"
   environment:
     PYTORCH_BUILD_VERSION: "{{ package_version }}"
@@ -13,3 +38,26 @@
     XLA_CUDA: "{{ cuda }}"
     TF_CUDA_COMPUTE_CAPABILITIES: "{{ tf_cuda_compute_capabilities }}"
     BUILD_CPP_TESTS: "{{ build_cpp_tests }}"
+    CC: "clang-{{ clang_version }}"
+    CXX: "clang++-{{ clang_version }}"
+    # TODO: make this env dependent
+    ARCH: amd64
+    ACCELERATOR: "tpu"
+    LD_LIBRARY_PATH: "$LD_LIBRARY_PATH:/usr/local/lib"
+
+# - name: Build PyTorch/XLA
+#   ansible.builtin.command:
+#     cmd: python setup.py bdist_wheel
+#     chdir: "{{ (src_root, 'pytorch/xla') | path_join }}"
+#   environment:
+#     PYTORCH_BUILD_VERSION: "{{ package_version }}"
+#     TPUVM_MODE: "{{ tpu_vm }}"
+#     XLA_CUDA: "{{ cuda }}"
+#     TF_CUDA_COMPUTE_CAPABILITIES: "{{ tf_cuda_compute_capabilities }}"
+#     BUILD_CPP_TESTS: "{{ build_cpp_tests }}"
+#     CC: "clang-{{ clang_version }}"
+#     CXX: "clang++-{{ clang_version }}"
+#     # TODO: make this env dependent
+#     ARCH: amd64
+#     ACCELERATOR: "tpu"
+#     LD_LIBRARY_PATH: "$LD_LIBRARY_PATH:/usr/local/lib"
