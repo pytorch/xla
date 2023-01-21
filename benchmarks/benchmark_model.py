@@ -18,6 +18,7 @@ class ModelLoader:
   def __init__(self, args):
     self._args = args
     self.suite_name = self._args.suite_name
+    self.benchmark_model_class = BenchmarkModel
 
   def list_model_configs(self):
     model_configs = [
@@ -46,7 +47,7 @@ class ModelLoader:
   def load_model(self, model_config, benchmark_experiment):
     suite_name = self.suite_name
     model_name = model_config["model_name"]
-    benchmark_model = BenchmarkModel(
+    benchmark_model = self.benchmark_model_class(
         suite_name=suite_name,
         model_name=model_name,
         benchmark_experiment=benchmark_experiment,

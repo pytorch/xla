@@ -24,7 +24,7 @@ class TorchBenchModelLoader(ModelLoader):
 
   def __init__(self, args):
     super().__init__(args)
-
+    self.benchmark_model_class = TorchBenchModel
     self.torchbench_dir = self.add_torchbench_dir()
 
   def add_torchbench_dir(self):
@@ -73,20 +73,6 @@ class TorchBenchModelLoader(ModelLoader):
 
   def is_compatible(self, model_config, experiment_config):
     return True
-
-  def load_model(self, model_config, benchmark_experiment):
-    suite_name = self.suite_name
-    model_name = model_config["model_name"]
-    benchmark_model = TorchBenchModel(
-        suite_name=suite_name,
-        model_name=model_name,
-        benchmark_experiment=benchmark_experiment,
-    )
-
-    benchmark_model.set_up()
-    benchmark_model.prepare_for_experiment()
-
-    return benchmark_model
 
 
 class TorchBenchModel(BenchmarkModel):
