@@ -1234,12 +1234,38 @@ XLATensorPtr fmod(const XLATensorPtr& input, const at::Scalar& other,
                            logical_element_type);
 }
 
+// tensor_methods::full(
+//      XlaHelpers::I64List(size), 0, GetXlaDeviceOrCurrent(device),
+//      at::dtype_or_default(dtype)));
 XLATensorPtr full(absl::Span<const int64_t> size, const at::Scalar& fill_value,
                   const torch::lazy::BackendDevice& device,
                   at::ScalarType scalar_type) {
   CheckShapeDimensions(size);
   xla::Shape shape =
       MakeArrayShapeFromDimensions(size, /*dynamic_dimensions=*/{},
+                                   MakeXlaPrimitiveType(scalar_type, &device),
+                                   static_cast<XlaDeviceType>(device.type()));
+  return XLATensor::Create(
+      XLAGraphExecutor::Get()->GetIrValueForScalar(fill_value, shape, device),
+      device, scalar_type);
+}
+
+XLATensorPtr empty(at::SymIntArrayRef sym_size, const at::Scalar& fill_value,
+                  const torch::lazy::BackendDevice& device,
+                  at::ScalarType scalar_type) {
+  XLA_CHECK(std::all_of(sym_size.begin(), sym_size.end(), [](at::SymInt dim) {
+    if (!dim.is_symbolic()) {
+      return dim >= 0;
+    }
+    return true;
+  })) << "Dimensions cannot be negative numbers";
+
+  SymIntElements size_elements = SymIntElements(sym_size);
+  // /workspaces/work/pytorch/xla/torch_xla/csrc/layout_manager.h:20:12: note: candidate function not viable: no known conversion from 'std::vector<bool>' to 'absl::Span<const bool>' for 2nd argument
+  xla::Shape shape =
+      MakeArrayShapeFromDimensions(size_elements.GetUpperBounds(),
+                                   //absl::Span<const bool>(size_elements.GetDynamicDims().data()),
+                                   size_elements.GetDynamicDims(), // absl::Span<const bool>(size_elements.GetDynamicDims().data()) doesn't work either.
                                    MakeXlaPrimitiveType(scalar_type, &device),
                                    static_cast<XlaDeviceType>(device.type()));
   return XLATensor::Create(
