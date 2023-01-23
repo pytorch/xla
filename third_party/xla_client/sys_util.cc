@@ -18,7 +18,9 @@ std::string GetEnvOrdinalPath(const char* name, const std::string& defval,
                               const int64_t ordinal) {
   std::string path = GetEnvString(name, defval);
   if (!path.empty()) {
-    path = absl::StrCat(path, ".", ordinal);
+    if (ordinal >= 0) {
+      path = absl::StrCat(path, ".", ordinal);
+    }
   }
   return path;
 }
