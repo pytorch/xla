@@ -1,6 +1,7 @@
 import logging
 import os
 import torch
+import torch._dynamo as dynamo
 
 try:
   from .util import is_xla_device_available
@@ -41,18 +42,26 @@ class ExperimentLoader:
       config_choices = {
           "accelerator": ["cpu", "gpu", "tpu"],
           "xla": [None, "PJRT", "XRT"],
+          "dynamo": [
+              None, "inductor", "torchxla_trace_once", "aot_torchxla_trace_once"
+          ],
           "test": ["eval", "train"],
       }
 
       if self._args.accelerator:
-        config_choices["accelerator"] = [self._args.accelerator]
+        config_choices["accelerator"] = list(set(self._args.accelerator))
       if self._args.xla:
-        if self._args.xla == "None":
-          config_choices["xla"] = [None]
-        else:
-          config_choices["xla"] = [self._args.xla]
+        config_choices["xla"] = list(set(self._args.xla))
+        config_choices["xla"] = [
+            x if x != "None" else None for x in config_choices["xla"]
+        ]
+      if self._args.dynamo:
+        config_choices["dynamo"] = list(set(self._args.dynamo))
+        config_choices["dynamo"] = [
+            x if x != "None" else None for x in config_choices["dynamo"]
+        ]
       if self._args.test:
-        config_choices["test"] = [self._args.test]
+        config_choices["test"] = list(set(self._args.test))
     else:
       raise NotImplementedError
 
@@ -66,6 +75,19 @@ class ExperimentLoader:
     return experiment_configs
 
   def is_available(self, experiment_config):
+    if experiment_config["dynamo"] and experiment_config[
+        "dynamo"] not in dynamo.list_backends():
+      return False
+    if experiment_config["dynamo"] == "inductor" and not (
+        experiment_config["accelerator"] == "gpu" and
+        not experiment_config["xla"]):
+      return False
+    if experiment_config["dynamo"] == "torchxla_trace_once" and not (
+        experiment_config["xla"] and experiment_config["test"] == "eval"):
+      return False
+    if experiment_config["dynamo"] == "aot_torchxla_trace_once" and not (
+        experiment_config["xla"] and experiment_config["test"] == "train"):
+      return False
     if (experiment_config["xla"] and
         not is_xla_device_available(experiment_config["accelerator"].upper())):
       return False
@@ -102,12 +124,14 @@ class ExperimentLoader:
     experiment_name = self.experiment_name
     accelerator = experiment_config["accelerator"]
     xla = experiment_config["xla"]
+    dynamo = experiment_config["dynamo"]
     test = experiment_config["test"]
     batch_size = experiment_config.get("batch_size", self._args.batch_size)
     benchmark_experiment = BenchmarkExperiment(
         experiment_name=experiment_name,
         accelerator=accelerator,
         xla=xla,
+        dynamo=dynamo,
         test=test,
         batch_size=batch_size)
 
@@ -116,10 +140,12 @@ class ExperimentLoader:
 
 class BenchmarkExperiment:
 
-  def __init__(self, experiment_name, accelerator, xla, test, batch_size):
+  def __init__(self, experiment_name, accelerator, xla, dynamo, test,
+               batch_size):
     self.experiment_name = experiment_name
     self.accelerator = accelerator
     self.xla = xla
+    self.dynamo = dynamo
     self.test = test
     self.batch_size = batch_size
 
@@ -137,4 +163,4 @@ class BenchmarkExperiment:
 
   @property
   def filename_str(self):
-    return f"{self.accelerator}-{self.xla}-{self.test}-{self.batch_size}"
+    return f"{self.accelerator}-{self.xla}-{self.dynamo}-{self.test}-{self.batch_size}"

@@ -2,6 +2,7 @@ import logging
 import re
 import torch
 import torch.nn as nn
+import torch._dynamo as dynamo
 from torch._dynamo.testing import collect_results, reduce_to_scalar_loss
 import types
 
@@ -103,6 +104,10 @@ class BenchmarkModel:
       self.optimizer = self.optimizer_class(self.module.parameters(), lr=0.01)
     else:
       raise NotImplementedError
+
+    if self.benchmark_experiment.dynamo:
+      self.model_iter_fn = dynamo.optimize(self.benchmark_experiment.dynamo)(
+          self.model_iter_fn)
 
   def pick_grad(self):
     if self.benchmark_experiment.test == "eval":

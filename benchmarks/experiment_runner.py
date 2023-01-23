@@ -262,18 +262,30 @@ def parse_args(args=None):
   parser.add_argument(
       "--accelerator",
       choices=["cpu", "gpu", "tpu"],
+      action="append",
       help="Specify an accelerator to use.",
   )
 
   parser.add_argument(
       "--xla",
       choices=["None", "PJRT", "XRT"],
+      action="append",
+      help="Specify an xla option to use.",
+  )
+
+  parser.add_argument(
+      "--dynamo",
+      choices=[
+          "None", "inductor", "torchxla_trace_once", "aot_torchxla_trace_once"
+      ],
+      action="append",
       help="Specify an xla option to use.",
   )
 
   parser.add_argument(
       "--test",
       choices=["eval", "train"],
+      action="append",
       help="Specify a test to run.",
   )
 
