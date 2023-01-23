@@ -6,6 +6,6 @@ FROM python:${python_version}-${debian_version} AS build
 RUN pip install ansible
 
 COPY ansible /ansible
-WORKDIR /ansible 
+WORKDIR /ansible
 
-RUN ansible-playbook dev.yaml 
+RUN ansible-playbook -v playbook.yaml -e "stage=build arch=amd64 accelerator=tpu"
