@@ -294,8 +294,8 @@ def train_imagenet(flags):
     # accuracy = xm.mesh_reduce('test_accuracy', accuracy, np.mean)
     return accuracy
 
-  train_device_loader = pl.MpDeviceLoader(train_loader, device, loader_prefetch_size= flags.loader_prefetch_size, device_prefetch_size=flags.device_prefetch_size)
-  test_device_loader = pl.MpDeviceLoader(test_loader, device, loader_prefetch_size = flags.loader_prefetch_size, device_prefetch_size=flags.device_prefetch_size)
+  train_device_loader = pl.MpDeviceLoader(train_loader, device, loader_prefetch_size= flags.loader_prefetch_size, device_prefetch_size=flags.device_prefetch_size, cpu_to_device_transfer_threads=4)
+  test_device_loader = pl.MpDeviceLoader(test_loader, device, loader_prefetch_size = flags.loader_prefetch_size, device_prefetch_size=flags.device_prefetch_size, cpu_to_device_transfer_threads=4)
   accuracy, max_accuracy = 0.0, 0.0
   for epoch in range(1, flags.num_epochs + 1):
     xm.master_print('Epoch {} train begin {}'.format(epoch, test_utils.now()))
