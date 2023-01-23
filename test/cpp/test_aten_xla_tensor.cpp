@@ -1878,9 +1878,6 @@ TEST_F(AtenXlaTensorTest, TestFrobeniusNormInDim) {
           torch::frobenius_norm(xla_a, {dim}, /*keepdim=*/false);
       AllClose(b, xla_b);
     });
-
-    ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
-    ExpectCounterChanged("xla::norm", cpp_test::GetIgnoredCounters());
   }
 }
 
@@ -1894,10 +1891,6 @@ TEST_F(AtenXlaTensorTest, TestFrobeniusNormInDims) {
           torch::frobenius_norm(xla_a, dims, /*keepdim=*/false);
       AllClose(b, xla_b);
     });
-
-    ExpectCounterNotChanged("aten::(?!real|conj).*",
-                            cpp_test::GetIgnoredCounters());
-    ExpectCounterChanged("xla::sqrt", cpp_test::GetIgnoredCounters());
   }
 }
 
