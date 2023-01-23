@@ -29,6 +29,12 @@ apt:
       - gcc-10
       - g++-10
 
+    release_common: # TODO
+
+    release_cuda:
+
+    release_amd64:
+
   # Specify objects with string fields `url` and `keyring`.
   # The keyring path should start with /usr/share/keyrings/ for debian and ubuntu.
   signing_keys:
