@@ -34,7 +34,7 @@ pip:
     build_aarch64:
 
   pkgs_nodeps:
-    common:
+    build_common:
 
     build_amd64:
 
