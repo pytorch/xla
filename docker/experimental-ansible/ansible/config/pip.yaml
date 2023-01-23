@@ -33,9 +33,11 @@ pip:
 
     build_aarch64:
 
+    release_common:
+
+    release_tpu:
+
+    release_amd64:
+
   pkgs_nodeps:
-    build_common:
-
-    build_amd64:
-
-    build_aarch64:
+    release_common:
