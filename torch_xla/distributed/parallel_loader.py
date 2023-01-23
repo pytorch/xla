@@ -73,6 +73,8 @@ class ParallelLoader(object):
       where the worker threads deposit tensors which have already been sent to
       devices.
       Default: 4
+    cpu_to_device_transfer_threads (int, optional): Number of threads that run 
+      in parallel to transfer data from CPU to device.
   """
 
   def __init__(self,
@@ -81,7 +83,8 @@ class ParallelLoader(object):
                batchdim=0,
                batches_per_execution=1,
                loader_prefetch_size=8,
-               device_prefetch_size=4):
+               device_prefetch_size=4,
+               cpu_to_device_transfer_threads=1):
     self._loader = loader
     self._devices = [torch.device(x) for x in devices]
     self._batchdim = batchdim
@@ -95,9 +98,10 @@ class ParallelLoader(object):
     thread.daemon = True
     thread.start()
     for dqueue in itervalues(self._queues):
-      thread = threading.Thread(target=self._worker, args=(dqueue,))
-      thread.daemon = True
-      thread.start()
+      for i in range(cpu_to_device_transfer_threads):
+        thread = threading.Thread(target=self._worker, args=(dqueue,))
+        thread.daemon = True
+        thread.start()
 
   def per_device_loader(self, device):
     """Retrieves the loader iterator object for the given device.

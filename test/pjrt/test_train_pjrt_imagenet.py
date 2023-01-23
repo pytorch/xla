@@ -1,4 +1,5 @@
 import args_parse
+import time
 
 SUPPORTED_MODELS = [
     'alexnet', 'densenet121', 'densenet161', 'densenet169', 'densenet201',
@@ -29,6 +30,7 @@ MODEL_OPTS = {
     },
 }
 
+
 FLAGS = args_parse.parse_common_options(
     datadir='/tmp/imagenet',
     batch_size=None,
@@ -57,15 +59,16 @@ import torch_xla.distributed.parallel_loader as pl
 import torch_xla.utils.utils as xu
 import torch_xla.core.xla_model as xm
 import torch_xla.distributed.xla_multiprocessing as xmp
+import torch_xla.debug.profiler as xp
 from torch_xla.experimental import pjrt
 import torch_xla.test.test_utils as test_utils
 
 DEFAULT_KWARGS = dict(
     batch_size=128,
-    test_set_batch_size=64,
+    test_set_batch_size=128,
     num_epochs=18,
     momentum=0.9,
-    lr=0.1,
+    lr=0.01,
     target_accuracy=0.0,
 )
 MODEL_SPECIFIC_DEFAULTS = {
@@ -74,12 +77,13 @@ MODEL_SPECIFIC_DEFAULTS = {
     'resnet50':
         dict(
             DEFAULT_KWARGS, **{
-                'lr': 0.5,
+                'lr': 0.1,
                 'lr_scheduler_divide_every_n_epochs': 20,
                 'lr_scheduler_divisor': 5,
                 'lr_scheduler_type': 'WarmupAndExponentialDecayScheduler',
             })
 }
+
 
 # Set any args that were not explicitly given by the user.
 default_value_dict = MODEL_SPECIFIC_DEFAULTS.get(FLAGS.model, DEFAULT_KWARGS)
@@ -114,21 +118,48 @@ def _train_update(device, step, loss, tracker, epoch, writer):
       summary_writer=writer)
 
 
+class AverageMeter(object):
+    """Computes and stores the average and current value"""
+    def __init__(self, name, fmt=':f'):
+        self.name = name
+        self.fmt = fmt
+        self.reset()
+
+    def reset(self):
+        self.val = 0
+        self.avg = 0
+        self.sum = 0
+        self.count = 0
+
+    def update(self, val, n=1):
+        self.val = val
+        self.sum += val * n
+        self.count += n
+        self.avg = self.sum / self.count
+
+    def __str__(self):
+        fmtstr = '{name} {val' + self.fmt + '} ({avg' + self.fmt + '})'
+        return fmtstr.format(**self.__dict__)
+
 def train_imagenet(flags):
   print('==> Preparing data..')
+
+  device = xm.xla_device()
+  #torch.multiprocessing.set_start_method('spawn')
   img_dim = get_model_property('img_dim')
   if flags.fake_data:
     train_dataset_len = 1200000  # Roughly the size of Imagenet dataset.
     train_loader = xu.SampleGenerator(
-        data=(torch.zeros(flags.batch_size, 3, img_dim, img_dim),
-              torch.zeros(flags.batch_size, dtype=torch.int64)),
+        data=(torch.rand(flags.batch_size, 3, img_dim, img_dim),
+              torch.randint(0,1000,(flags.batch_size,), dtype=torch.int64)),
         sample_count=train_dataset_len // flags.batch_size //
         xm.xrt_world_size())
     test_loader = xu.SampleGenerator(
-        data=(torch.zeros(flags.test_set_batch_size, 3, img_dim, img_dim),
-              torch.zeros(flags.test_set_batch_size, dtype=torch.int64)),
+        data=(torch.rand(flags.test_set_batch_size, 3, img_dim, img_dim),
+              torch.randint(0,1000,(flags.test_set_batch_size,), dtype=torch.int64)),
         sample_count=50000 // flags.batch_size // xm.xrt_world_size())
   else:
+    print("datadir working")
     normalize = transforms.Normalize(
         mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
     train_dataset = torchvision.datasets.ImageFolder(
@@ -171,19 +202,26 @@ def train_imagenet(flags):
         sampler=train_sampler,
         drop_last=flags.drop_last,
         shuffle=False if train_sampler else True,
+        pin_memory=flags.pin_memory,
+        persistent_workers=flags.persistent_workers,
+        prefetch_factor=flags.prefetch_factor,
         num_workers=flags.num_workers)
     test_loader = torch.utils.data.DataLoader(
         test_dataset,
-        batch_size=flags.test_set_batch_size,
+        batch_size=flags.batch_size,
         sampler=test_sampler,
         drop_last=flags.drop_last,
         shuffle=False,
+        pin_memory=flags.pin_memory,
+        persistent_workers=flags.persistent_workers,
+        prefetch_factor=flags.prefetch_factor,
         num_workers=flags.num_workers)
 
-  device = xm.xla_device()
+
   model = get_model_property('model_fn')()
   model = model.to(device)
   pjrt.broadcast_master_param(model)
+  server = xp.start_server(9229)
   writer = None
   if xm.is_master_ordinal():
     writer = test_utils.get_summary_writer(flags.logdir)
@@ -203,22 +241,43 @@ def train_imagenet(flags):
       num_steps_per_epoch=num_training_steps_per_epoch,
       summary_writer=writer)
   loss_fn = nn.CrossEntropyLoss()
-
+  data_time = AverageMeter('Data_loading', ':6.3f')
+  batch_time = AverageMeter('Batch_process_time', ':6.3f')
+  
   def train_loop_fn(loader, epoch):
     tracker = xm.RateTracker()
     model.train()
+    #end = time.time()
     for step, (data, target) in enumerate(loader):
-      optimizer.zero_grad()
-      output = model(data)
-      loss = loss_fn(output, target)
-      loss.backward()
-      xm.optimizer_step(optimizer)
-      tracker.add(flags.batch_size)
-      if lr_scheduler:
-        lr_scheduler.step()
-      if step % flags.log_steps == 0:
-        xm.add_step_closure(
-            _train_update, args=(device, step, loss, tracker, epoch, writer))
+      #data_time.update(time.time()-end)
+      with xp.StepTrace('train_loop', step_num = step):
+        with xp.Trace('forward_pass'):
+          #data = xm.send_cpu_data_to_device(data, device)
+          #target = xm.send_cpu_data_to_device(target, device)
+          optimizer.zero_grad()
+          output = model(data)
+          loss = loss_fn(output, target)
+          loss.backward()
+        xm.optimizer_step(optimizer)
+        tracker.add(flags.batch_size)
+        if lr_scheduler:
+          lr_scheduler.step()
+        if step % flags.log_steps == 0:
+            xm.add_step_closure(
+                _train_update, args=(device, step, loss, tracker, epoch, writer))
+      '''
+      with xp.StepTrace('wait_device_ops', step_num=step):
+        #data = xm.send_cpu_data_to_device(data,device)
+        #target = xm.send_cpu_data_to_device(target, device)
+        xm.wait_device_ops(devices=None)
+      '''
+      #batch_time.update(time.time() - end)
+      #end = time.time()
+      #if step%flags.log_steps==0:
+      #  xm.master_print(f'End of step: {step}')
+
+    #xm.master_print(data_time.__str__() + ' seconds.')
+    #xm.master_print(batch_time.__str__() + ' seconds.')
 
   def test_loop_fn(loader, epoch):
     total_samples, correct = 0, 0
@@ -235,12 +294,13 @@ def train_imagenet(flags):
     # accuracy = xm.mesh_reduce('test_accuracy', accuracy, np.mean)
     return accuracy
 
-  train_device_loader = pl.MpDeviceLoader(train_loader, device)
-  test_device_loader = pl.MpDeviceLoader(test_loader, device)
+  train_device_loader = pl.MpDeviceLoader(train_loader, device, loader_prefetch_size= flags.loader_prefetch_size, device_prefetch_size=flags.device_prefetch_size)
+  test_device_loader = pl.MpDeviceLoader(test_loader, device, loader_prefetch_size = flags.loader_prefetch_size, device_prefetch_size=flags.device_prefetch_size)
   accuracy, max_accuracy = 0.0, 0.0
   for epoch in range(1, flags.num_epochs + 1):
     xm.master_print('Epoch {} train begin {}'.format(epoch, test_utils.now()))
     train_loop_fn(train_device_loader, epoch)
+    
     xm.master_print('Epoch {} train end {}'.format(epoch, test_utils.now()))
     if not flags.test_only_at_end or epoch == flags.num_epochs:
       accuracy = test_loop_fn(test_device_loader, epoch)
@@ -254,13 +314,13 @@ def train_imagenet(flags):
           write_xla_metrics=True)
     if flags.metrics_debug:
       xm.master_print(met.metrics_report())
-
   test_utils.close_summary_writer(writer)
   xm.master_print('Max Accuracy: {:.2f}%'.format(max_accuracy))
   return max_accuracy
 
 
-if __name__ == '__main__':
+
+if __name__ ==  '__main__':
   torch.set_default_tensor_type('torch.FloatTensor')
 
   results = pjrt._run_multiprocess(train_imagenet, FLAGS)
