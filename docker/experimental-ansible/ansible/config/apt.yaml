@@ -29,11 +29,20 @@ apt:
       - gcc-10
       - g++-10
 
-    release_common: # TODO
+    release_common:
+      - curl
+      - git
+      - gnupg
+      - google-cloud-cli
+      - libgomp1
+      - libomp5
+      - libopenblas-base
+      - patch
 
     release_cuda:
-
-    release_amd64:
+      - cuda-libraries-11-2
+      - cuda-minimal-build-11-2
+      - libcudnn8=8.1.1.33-1+cuda11.2
 
   # Specify objects with string fields `url` and `keyring`.
   # The keyring path should start with /usr/share/keyrings/ for debian and ubuntu.

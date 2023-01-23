@@ -34,10 +34,15 @@ pip:
     build_aarch64:
 
     release_common:
+      - numpy
+      - pyyaml
+      - mkl
+      - mkl-include
 
     release_tpu:
-
-    release_amd64:
+      - torch_xla[tpuvm]
 
   pkgs_nodeps:
     release_common:
+      - torchvision
+      - pillow

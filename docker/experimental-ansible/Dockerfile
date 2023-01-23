@@ -9,3 +9,8 @@ COPY ansible /ansible
 WORKDIR /ansible
 
 RUN ansible-playbook -v playbook.yaml -e "stage=build arch=amd64 accelerator=tpu"
+
+FROM build AS release
+
+WORKDIR /ansible
+RUN ansible-playbook -v playbook.yaml -e "stage=release arch=amd64 accelerator=tpu"
