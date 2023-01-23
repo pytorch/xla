@@ -1,6 +1,6 @@
 pip:
   pkgs:
-    common:
+    build_common:
       - astunparse
       - cffi
       - cloud-tpu-client
