@@ -40,24 +40,26 @@
     BUILD_CPP_TESTS: "{{ build_cpp_tests }}"
     CC: "clang-{{ clang_version }}"
     CXX: "clang++-{{ clang_version }}"
+    XLA_SANDBOX_BUILD: 1
     # TODO: make this env dependent
     ARCH: amd64
     ACCELERATOR: "tpu"
     LD_LIBRARY_PATH: "$LD_LIBRARY_PATH:/usr/local/lib"
 
-# - name: Build PyTorch/XLA
-#   ansible.builtin.command:
-#     cmd: python setup.py bdist_wheel
-#     chdir: "{{ (src_root, 'pytorch/xla') | path_join }}"
-#   environment:
-#     PYTORCH_BUILD_VERSION: "{{ package_version }}"
-#     TPUVM_MODE: "{{ tpu_vm }}"
-#     XLA_CUDA: "{{ cuda }}"
-#     TF_CUDA_COMPUTE_CAPABILITIES: "{{ tf_cuda_compute_capabilities }}"
-#     BUILD_CPP_TESTS: "{{ build_cpp_tests }}"
-#     CC: "clang-{{ clang_version }}"
-#     CXX: "clang++-{{ clang_version }}"
-#     # TODO: make this env dependent
-#     ARCH: amd64
-#     ACCELERATOR: "tpu"
-#     LD_LIBRARY_PATH: "$LD_LIBRARY_PATH:/usr/local/lib"
+- name: Build PyTorch/XLA
+  ansible.builtin.command:
+    cmd: python setup.py bdist_wheel
+    chdir: "{{ (src_root, 'pytorch/xla') | path_join }}"
+  environment:
+    PYTORCH_BUILD_VERSION: "{{ package_version }}"
+    TPUVM_MODE: "{{ tpu_vm }}"
+    XLA_CUDA: "{{ cuda }}"
+    TF_CUDA_COMPUTE_CAPABILITIES: "{{ tf_cuda_compute_capabilities }}"
+    BUILD_CPP_TESTS: "{{ build_cpp_tests }}"
+    CC: "clang-{{ clang_version }}"
+    CXX: "clang++-{{ clang_version }}"
+    XLA_SANDBOX_BUILD: 1
+    # TODO: make this env dependent
+    ARCH: amd64
+    ACCELERATOR: "tpu"
+    LD_LIBRARY_PATH: "$LD_LIBRARY_PATH:/usr/local/lib"
