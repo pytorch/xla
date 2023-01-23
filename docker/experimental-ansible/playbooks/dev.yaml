@@ -63,8 +63,8 @@
     - role: build_srcs
       vars:
         src_root: "/src"
-        env: "{{
-            env.common | default([], true) |
-            combine(env[arch] | default([], true)) |
-            combine(env[accelerator] | default([], true))
+        env_vars: "{{
+            env.common | default({}, true) |
+            combine(env[arch] | default({}, true)) |
+            combine(env[accelerator] | default({}, true))
           }}"
