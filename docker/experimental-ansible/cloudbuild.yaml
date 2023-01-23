@@ -1,0 +1,15 @@
+steps:
+- name: 'gcr.io/cloud-builders/docker'
+  args:
+    - build
+    - -t=us-central2-docker.pkg.dev/$PROJECT_ID/docker-repo/toolchain_tpu:latest
+    - '.'
+images:
+- us-central2-docker.pkg.dev/$PROJECT_ID/docker-repo/toolchain_tpu:latest
+
+options:
+  pool:
+    name: 'projects/core-ml-engprod-build-farm/locations/europe-west1/workerPools/compilerfarm'
+  dynamic_substitutions: true
+  substitution_option: 'ALLOW_LOOSE'
+timeout: 24000s
