@@ -2,8 +2,16 @@
   hosts: 127.0.0.1
   connection: local
   vars_prompt:
-    - name: stage_env
-      prompt: "Stage and env type (possible options: build_aarch64, build_amd64)"
+    - name: stage
+      prompt: "Stage (accepted values: build, release)"
+      private: false
+
+    - name: arch
+      prompt: "Complete steps for a given architecture (accepted values: aarch64, amd64)"
+      private: false
+
+    - name: accelerator
+      prompt: "Accelerator type (accepted values: tpu, cuda)"
       private: false
 
   pre_tasks:
@@ -15,6 +23,7 @@
         - vars.yaml
         - apt.yaml
         - pip.yaml
+        - env.yaml
 
   roles:
     - bazel
@@ -28,17 +37,23 @@
         # Use `v | default([], true)` to set `v` to an empty array if it evaluates to false.
         # See https://jinja.palletsprojects.com/en/3.0.x/templates/#jinja-filters.default.
         apt_pkgs: "{{
-            apt.pkgs.common | default([], true) + apt.pkgs[stage_env] | default([], true)
+            apt.pkgs[stage + '_common'] | default([], true) +
+              apt.pkgs[stage + '_' + arch] | default([], true) +
+              apt.pkgs[stage + '_' + accelerator] | default([], true)
           }}"
 
         apt_repos: "{{ apt.repos }}"
 
         pip_pkgs: "{{
-            pip.pkgs.common | default([], true) + pip.pkgs[stage_env] | default([], true)
+            pip.pkgs[stage + '_common'] | default([], true) +
+            pip.pkgs[stage + '_' + arch] | default([], true) +
+            pip.pkgs[stage + '_' + accelerator] | default([], true)
           }}"
 
         pip_pkgs_nodeps: "{{
-            pip.pkgs_nodeps.common | default([], true) + pip.pkgs_nodeps[stage_env] | default([], true)
+            pip.pkgs_nodeps[stage + '_common'] | default([], true) +
+            pip.pkgs_nodeps[stage + '_' + arch] | default([], true) +
+            pip.pkgs_nodeps[stage + '_' + accelerator] | default([], true)
           }}"
 
     - role: fetch_srcs
@@ -48,3 +63,8 @@
     - role: build_srcs
       vars:
         src_root: "/src"
+        env: "{{
+            env.common | default([], true) |
+            combine(env[arch] | default([], true)) |
+            combine(env[accelerator] | default([], true))
+          }}"
