@@ -37,3 +37,8 @@
 - name: Install XLA wheels
   ansible.builtin.pip:
     name: "{{ xla_wheels.files | map(attribute='path') }}"
+
+- name: "Tests"
+  include_tasks: tests.yaml
+  tags:
+    - tests

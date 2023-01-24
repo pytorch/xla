@@ -1,0 +1,11 @@
+- name: "Check that various import statements work"
+  ansible.builtin.command:
+    cmd: "{{ item }}"
+  loop:
+    - python -c "import torchgen"
+    - python -c "import torch"
+    # Currently doesn't work due to:
+    # ImportError: /usr/local/lib/python3.8/site-packages/_XLAC.cpython-38-x86_64-linux-gnu.so:
+    # undefined symbol: _ZNK3c1010TensorImpl18compute_contiguousENS0_8identityINS_7SymBoolEEE"
+    # - python -c "import torch_xla"
+    # - python -c "import torch_xla.core.xla_model"
