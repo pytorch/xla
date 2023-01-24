@@ -934,23 +934,29 @@ TEST_F(AtenXlaTensorTest, TestQR) {
   }
 }
 
-TEST_F(AtenXlaTensorTest, TestLinalgEigh) {
+TEST_F(AtenXlaTensorTest, TestSymEig) {
   static const int dims[] = {4, 7};
   for (auto m : dims) {
-    for (std::string uplo : {"U", "L"}) {
-      torch::Tensor a =
-          torch::rand({m, m}, torch::TensorOptions(torch::kFloat));
-      torch::Tensor sym_a = a.mm(a.t());
-      auto b = torch::linalg_eigh(sym_a, uplo);
-      ForEachDevice([&](const torch::Device& device) {
-        torch::Tensor xla_a = CopyToDevice(sym_a, device);
-        auto xla_b = torch::linalg_eigh(xla_a, uplo);
-        AllClose(std::get<0>(b), std::get<0>(xla_b), /*rtol=*/3e-2,
-                 /*atol=*/1e-2);
-        AllClose(std::get<1>(b).abs(), std::get<1>(xla_b).abs(),
-                 /*rtol=*/3e-2,
-                 /*atol=*/1e-2);
-      });
+    for (bool eigenvectors : {true, false}) {
+      for (bool upper : {true, false}) {
+        torch::Tensor a =
+            torch::rand({m, m}, torch::TensorOptions(torch::kFloat));
+        torch::Tensor sym_a = a.mm(a.t());
+        auto b = torch::symeig(sym_a, eigenvectors, upper);
+        ForEachDevice([&](const torch::Device& device) {
+          torch::Tensor xla_a = CopyToDevice(sym_a, device);
+          auto xla_b = torch::symeig(xla_a, eigenvectors, upper);
+          AllClose(std::get<0>(b), std::get<0>(xla_b), /*rtol=*/3e-2,
+                   /*atol=*/1e-2);
+          if (eigenvectors) {
+            AllClose(std::get<1>(b).abs(), std::get<1>(xla_b).abs(),
+                     /*rtol=*/3e-2,
+                     /*atol=*/1e-2);
+          } else {
+            EXPECT_EQ(std::get<1>(b).sizes(), std::get<1>(xla_b).sizes());
+          }
+        });
+      }
     }
   }
 }
