@@ -14,9 +14,9 @@ namespace {
 
 xla::Shape NodeOutputShape(const torch::lazy::Value& input,
                            const std::vector<int64_t> upper_bounds,
-                           const std::vector<bool> dynamic_dims) {
+                           const absl::InlinedVector<bool, xla::InlineRank()> dynamic_dims) {
   return xla::ShapeUtil::MakeShape(GetXlaShape(input).element_type(),
-                                   {upper_bounds}, {dynamic_dims});
+                                   {upper_bounds}, {convertToVecBool(dynamic_dims)});
 }
 
 std::vector<torch::lazy::Value> GetValues(
@@ -36,6 +36,7 @@ std::vector<torch::lazy::Value> GetValues(
 
 }  // namespace
 
+
 ExpandSymInt::ExpandSymInt(const torch::lazy::Value& input,
                            const SymIntElements& size_elements)
     : XlaNode(torch::lazy::OpKind(at::aten::expand),
@@ -46,7 +47,7 @@ ExpandSymInt::ExpandSymInt(const torch::lazy::Value& input,
               },
               /*num_outputs=*/1,
               torch::lazy::MHash(size_elements.GetUpperBounds(),
-                                 size_elements.GetDynamicDims())),
+                                 convertToVecBool(size_elements.GetDynamicDims()))),
       upper_bounds_(size_elements.GetUpperBounds()),
       dynamic_dims_(size_elements.GetDynamicDims()) {}
 

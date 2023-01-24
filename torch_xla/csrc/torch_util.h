@@ -25,7 +25,7 @@ struct SymIntElements {
   }
   std::vector<torch::lazy::NodePtr> GetSizeNodes() const { return size_nodes_; }
   std::vector<int64_t> GetUpperBounds() const { return upper_bounds_; }
-  std::vector<bool> GetDynamicDims() const { return dynamic_dims_; }
+  absl::InlinedVector<bool, xla::InlineRank()> GetDynamicDims() const { return dynamic_dims_; }
   torch::lazy::NodePtr GetSizeNode(size_t index) const {
     return size_nodes_[index];
   }
@@ -40,7 +40,7 @@ struct SymIntElements {
   // will have a nullptr in this vector.
   std::vector<torch::lazy::NodePtr> size_nodes_;
   std::vector<int64_t> upper_bounds_;
-  std::vector<bool> dynamic_dims_;
+  absl::InlinedVector<bool, xla::InlineRank()> dynamic_dims_;
 };
 
 // Return at::ScalarType from at::Scalar
@@ -62,6 +62,14 @@ at::Tensor UnwrapNumber(const at::Tensor& tensor, at::ScalarType dtype);
 // Checks whether a c10::optional<Tensor> is defined.
 inline bool IsDefined(const c10::optional<at::Tensor>& tensor) {
   return tensor.has_value() && tensor.value().defined();
+}
+
+inline std::vector<bool> convertToVecBool(absl::Span<const bool> span) {
+  std::vector<bool> dyn_dims;
+  for (const auto& dim : span) {
+    dyn_dims.push_back(dim);
+  } 
+  return dyn_dims;
 }
 
 }  // namespace torch_xla

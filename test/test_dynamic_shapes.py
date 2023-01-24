@@ -11,7 +11,6 @@ dev = xm.xla_device()
 
 class TestDynamicShapes(unittest.TestCase):
 
-  @unittest.skip("fails with functionalization")
   def test_simple_expand(self):
     size1 = 5
     size2 = 2

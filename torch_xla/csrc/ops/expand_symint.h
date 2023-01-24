@@ -22,7 +22,7 @@ class ExpandSymInt : public XlaNode {
 
  private:
   std::vector<int64_t> upper_bounds_;
-  std::vector<bool> dynamic_dims_;
+  absl::InlinedVector<bool, xla::InlineRank()> dynamic_dims_;
 };
 
 }  // namespace torch_xla

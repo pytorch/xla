@@ -1175,8 +1175,13 @@ XLATensorPtr expand(const XLATensorPtr& input, std::vector<int64_t> size) {
 XLATensorPtr expand_symint(const XLATensorPtr& input,
                            c10::SymIntArrayRef sym_size) {
   SymIntElements size_elements = SymIntElements(sym_size);
+  // auto expNode =torch::lazy::MakeNode<ExpandSymInt>(input->GetIrValue(), size_elements);
+  // XlaNode* casted = dynamic_cast<XlaNode*>(value.node.get());
+  // xla::Shape shape = casted->xla_shape(value.index)
   XLATensorPtr output = input->CreateFrom(
       torch::lazy::MakeNode<ExpandSymInt>(input->GetIrValue(), size_elements));
+  xla::Shape shape = output->shape();
+  std::cout << "xw32, file=" << __FILE__ << ", line=" << __LINE__ << "function=" << __FUNCTION__ << ": shape=" << shape << std::endl;
   output->SetStorage(input->Storage());
   return output;
 }
@@ -1261,16 +1266,24 @@ XLATensorPtr empty(at::SymIntArrayRef sym_size, const at::Scalar& fill_value,
   })) << "Dimensions cannot be negative numbers";
 
   SymIntElements size_elements = SymIntElements(sym_size);
-  // /workspaces/work/pytorch/xla/torch_xla/csrc/layout_manager.h:20:12: note: candidate function not viable: no known conversion from 'std::vector<bool>' to 'absl::Span<const bool>' for 2nd argument
-  xla::Shape shape =
-      MakeArrayShapeFromDimensions(size_elements.GetUpperBounds(),
-                                   //absl::Span<const bool>(size_elements.GetDynamicDims().data()),
-                                   size_elements.GetDynamicDims(), // absl::Span<const bool>(size_elements.GetDynamicDims().data()) doesn't work either.
-                                   MakeXlaPrimitiveType(scalar_type, &device),
-                                   static_cast<XlaDeviceType>(device.type()));
-  return XLATensor::Create(
-      XLAGraphExecutor::Get()->GetIrValueForScalar(fill_value, shape, device),
-      device, scalar_type);
+  std::cout << "xw32, file=" << __FILE__ << ", line=" << __LINE__ << "function=" << __FUNCTION__ << ": size_elements.GetDynamicDims().size()=" << size_elements.GetDynamicDims().size() << std::endl;
+   xla::Shape shape =
+       MakeArrayShapeFromDimensions(size_elements.GetUpperBounds(),
+                                    size_elements.GetDynamicDims(),
+                                    MakeXlaPrimitiveType(scalar_type, &device),
+                                    static_cast<XlaDeviceType>(device.type()));
+   std::cout << "xw32, file=" << __FILE__ << ", line=" << __LINE__ << "function=" << __FUNCTION__ << ": shape=" << shape << std::endl;
+   XLATensorPtr output = XLATensor::Create(
+       XLAGraphExecutor::Get()->GetIrValueForScalar(fill_value, shape, device),
+       device, scalar_type);
+
+  // XLATensorPtr output = inpu->CreateFrom(
+  //     torch::lazy::MakeNode<EmptySymInt>()
+  // )
+
+  xla::Shape outputshape = output->shape();
+  std::cout << "xw32, file=" << __FILE__ << ", line=" << __LINE__ << "function=" << __FUNCTION__ << ": outputshape=" << outputshape << std::endl;
+  return output;
 }
 
 XLATensorPtr full_like(const XLATensorPtr& input, const at::Scalar& fill_value,

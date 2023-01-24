@@ -94,7 +94,7 @@ xla::XlaOp BuildView(xla::XlaOp input, absl::Span<const int64_t> output_sizes) {
 
 xla::XlaOp SetDimensionSizes(xla::XlaOp input,
                              absl::Span<const xla::XlaOp> symbolic_output_sizes,
-                             std::vector<bool> dynamic_dims) {
+                             absl::Span<const bool> dynamic_dims) {
   size_t current_output_size_index = 0;
   size_t symbolic_output_sizes_len = symbolic_output_sizes.size();
   for (size_t i = 0; i < dynamic_dims.size(); i++) {
