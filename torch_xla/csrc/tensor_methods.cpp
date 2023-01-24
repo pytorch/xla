@@ -118,7 +118,6 @@
 #include "torch_xla/csrc/ops/std_mean.h"
 #include "torch_xla/csrc/ops/sum.h"
 #include "torch_xla/csrc/ops/svd.h"
-#include "torch_xla/csrc/ops/symeig.h"
 #include "torch_xla/csrc/ops/threshold.h"
 #include "torch_xla/csrc/ops/threshold_backward.h"
 #include "torch_xla/csrc/ops/topk.h"
@@ -2425,15 +2424,6 @@ std::tuple<XLATensorPtr, XLATensorPtr, XLATensorPtr> svd(
   return std::make_tuple(input->CreateFrom(torch::lazy::Value(node, 0)),
                          input->CreateFrom(torch::lazy::Value(node, 1)),
                          input->CreateFrom(torch::lazy::Value(node, 2)));
-}
-
-std::tuple<XLATensorPtr, XLATensorPtr> symeig(const XLATensorPtr& input,
-                                              bool eigenvectors, bool upper) {
-  // SymEig takes lower instead of upper, hence the negation.
-  torch::lazy::NodePtr node =
-      torch::lazy::MakeNode<SymEig>(input->GetIrValue(), eigenvectors, !upper);
-  return std::make_tuple(input->CreateFrom(torch::lazy::Value(node, 0)),
-                         input->CreateFrom(torch::lazy::Value(node, 1)));
 }
 
 XLATensorPtr tanh_backward(const XLATensorPtr& grad_output,
