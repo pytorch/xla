@@ -104,7 +104,6 @@ DISABLED_TORCH_TESTS_ANY = {
         'test_unfold_all_devices_and_dtypes',  # uses half
         'test_tensor_pow_tensor',  # lowering
         'test_tensor_factories_empty',  # uses half
-        'test_symeig',
         'test_svd',
         'test_svd_no_singularvectors',
         'test_svd_lowrank',
