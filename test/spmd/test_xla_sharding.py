@@ -156,7 +156,7 @@ class BasicShardingTest(test_xla_sharding_base.XlaShardingTest):
     xt1 = torch.ones(2, 2).to(xm.xla_device())
     xs.mark_sharding(xt1, self._get_mesh((1, self.n_devices)), (0, 1))
     t1 = xt1.cpu()
-    self.asserEqual(t1, xt1)
+    self.assertEqual(t1, xt1)
 
 
 if __name__ == '__main__':

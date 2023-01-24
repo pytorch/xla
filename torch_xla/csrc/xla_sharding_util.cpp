@@ -16,6 +16,7 @@
 #include "tensorflow/compiler/xla/xla.pb.h"
 #include "torch_xla/csrc/device.h"
 #include "torch_xla/csrc/tensor.h"
+#include "torch_xla/csrc/tensor_util.h"
 
 namespace torch_xla {
 namespace {
@@ -326,48 +327,6 @@ std::vector<at::Tensor> ShardingUtil::ShardTensor(
     TF_LOG(ERROR) << "Unsupported OpSharidng type " << sharding.type();
   }
   return shards;
-}
-
-xla::ComputationClient::DataPtr GatherShrads(
-    xla::ComputationClient::DataPtr data, std::string device) {
-  if (PjRtShardedData* sharded_data =
-          dynamic_cast<PjRtShardedData*>(data.get())) {
-    torch::lazy::Value node =
-        CreateTensorNode(WrapXlaData(sharded_data), /*read_only=*/false);
-    node->SetSharding(sharded_data->GetSharding());
-    LoweringContext lowering_ctx("GatherShards", ParseDeviceString(device));
-    xla::XlaOp root = lowering_ctx.GetOutputOp(
-        torch::lazy::Output(node.node.get(), node.index));
-    lowering_ctx.AddResult(root);
-    bool is_sharded = SetHloSharding(&lowering_ctx);
-
-    xla::XlaComputation computation = ConsumeValue(lowering_ctx.BuildXla());
-    xla::ProgramShape program_shape =
-        ConsumeValue(computation.GetProgramShape());
-    xla::Shape shape = MakeShapeWithDeviceLayout(
-        program_shape.result(),
-        static_cast<XlaDeviceType>(ParseDeviceString(device).type()));
-    XLA_CHECK(lowering_ctx.GetParametersData().size() == 1);
-
-    std::vector<xla::ComputationClient::CompileInstance> instances;
-    instances.push_back(
-        {std::move(computation), device,
-         xla::ComputationClient::Get()->GetCompilationDevices(device, {}),
-         &shape, /*should_wrap_parameter=*/false, is_sharded});
-    std::vector<std::shared_ptr<xla::ComputationClient::Computation>>
-        computations =
-            xla::ComputationClient::Get()->Compile(std::move(instances));
-
-    std::vector<std::vector<xla::ComputationClient::DataPtr>> device_arguments =
-        torch_xla::ShardingUtil::InputHandler(
-            UnwrapXlaData(lowering_ctx.GetParametersData()),
-            xla::ComputationClient::Get()->GetLocalDevices());
-    xla::ComputationClient::ExecuteReplicatedOptions execute_options;
-    return xla::ComputationClient::Get()->ExecuteReplicated(
-        *async->cached_computation->computation->client_computation(),
-        device_arguments, devices, execute_options)[0][0];
-  }
-  return data;
 }
 
 }  // namespace torch_xla

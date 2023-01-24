@@ -5,6 +5,7 @@
 #include "absl/strings/ascii.h"
 #include "absl/types/span.h"
 #include "pjrt_computation_client.h"
+#include "tensorflow/compiler/xla/client/xla_builder.h"
 #include "tensorflow/compiler/xla/client/xla_computation.h"
 #include "tensorflow/compiler/xla/layout_util.h"
 #include "tensorflow/compiler/xla/literal.h"
@@ -43,6 +44,44 @@ std::vector<std::string> PjRtDevicesToString(
   }
 
   return strs;
+}
+
+DataPtr ReplicateShardedData(const PjRtShardedData& sharded_data) {
+  xla::XlaBuilder b("ReplicateShardedData");
+  xla::Shape shape = sharded_data->shape();
+  b.SetSharding(sharded_data->GetSharding());
+  auto x = xla::Parameter(&b, 0, shape, "p0");
+  b.SetSharding(xla::HloSharding::Replicate().ToProto());
+  auto y = xla::Div(x, ConstantR0<float>(&b, 2));
+  auto z = xla::Add(y, y);
+
+  xla::XlaComputation computation =
+      ConsumeValue(b.Build(/*remove_dynamic_dimensions=*/false));
+  xla::ProgramShape program_shape = ConsumeValue(computation.GetProgramShape());
+
+  std::string device = GetDefaultDevice();
+  std::vector<xla::ComputationClient::CompileInstance> instances;
+  instances.push_back({std::move(computation), device,
+                       GetCompilationDevices(device, {}), &shape,
+                       /*should_wrap_parameter=*/false, /*is_sharded=*/true});
+  std::vector<std::shared_ptr<xla::ComputationClient::Computation>>
+      computations = Compile(std::move(instances));
+
+  auto shards = sharded_data->shards;
+  XLA_CHECK_EQ(shards.size(), GetLocalDevices().size());
+  std::vector<std::vector<xla::ComputationClient::DataPtr>> arguments_by_device(
+      GetLocalDevices().size(),
+      std::vector<xla::ComputationClient::DataPtr>(1));
+  for (auto shard : shards) {
+    std::vector<std::string> device_spec = absl::StrSplit(shard->device(), ':');
+    XLA_CHECK_EQ(device_spec.size(), 2)
+        << "Invalid device specification: " << shard->device();
+    int device_i = std::stoi(device_spec[1]);
+    arguments_by_device[device_i][0] = shard;
+  }
+  xla::ComputationClient::ExecuteReplicatedOptions execute_options;
+  return ExecuteReplicated(*computations.front(), arguments_by_device,
+                           GetLocalDevices(), execute_options)[0][0];
 }
 
 }  // namespace
@@ -205,16 +244,18 @@ std::vector<xla::Literal> PjRtComputationClient::TransferFromServer(
 
   int64_t total_size = 0;
   for (auto handle : handles) {
-    const PjRtData& pjrt_data;
-    if (GetDataShards(handle).size() > 1) {
-      // Replicate to request the unpartitioned tensor
-
+    PjRtData* pjrt_data;
+    if (PjRtShardedData* sharded_data =
+            dynamic_cast<PjRtShardedData*>(handle.get())) {
+      // Use XLA replication to reassemble the sharded data.
+      pjrt_data =
+          dynamic_cast<PjRtData&>(ReplicateShardedData(sharded_data).get());
     } else {
-      pjrt_data = dynamic_cast<const PjRtData&>(*handle);
+      pjrt_data = dynamic_cast<PjRtData*>(handle.get());
     }
 
     std::shared_ptr<xla::Literal> literal =
-        pjrt_data.buffer->ToLiteralSync().value();
+        pjrt_data->buffer->ToLiteralSync().value();
     total_size += literal->size_bytes();
     literals.push_back(std::move(*literal));
   }

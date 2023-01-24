@@ -54,10 +54,6 @@ class ShardingUtil {
   static std::vector<at::Tensor> ShardTensor(
       const at::Tensor& tensor, const xla::OpSharding sharding,
       const std::vector<std::string>& devices, bool padded = true);
-
-  // Gather and return unpartitioned data from shards.
-  static xla::ComputationClient::DataPtr GatherShrads(
-      xla::ComputationClient::DataPtr sharded_data);
 };
 
 }  // namespace torch_xla
