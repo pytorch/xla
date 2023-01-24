@@ -36,3 +36,8 @@
     strip: 1
     basedir: "{{ (src_root, 'pytorch/xla/third_party/tensorflow') | path_join }}"
   loop: "{{ tf_patches.files | map(attribute='path') }}"
+
+- name: "Tests"
+  include_tasks: tests.yaml
+  tags:
+    - tests
