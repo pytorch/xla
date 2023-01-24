@@ -159,7 +159,7 @@ std::vector<ComputationClient::DataPtr> PjRtComputationClient::TransferToServer(
 
 ComputationClient::DataPtr PjRtComputationClient::TransferShardsToServer(
     absl::Span<const TensorSource> tensor_shards, std::string device,
-    xla::Shape shape) {
+    xla::Shape shape, xla::OpSharding sharding) {
   TF_VLOG(1) << "TransferShardsToServer with " << tensor_shards.size()
              << " shards.";
   auto data_shards = TransferToServer(tensor_shards);
@@ -169,7 +169,8 @@ ComputationClient::DataPtr PjRtComputationClient::TransferShardsToServer(
     pjrt_data_shards.push_back(std::make_shared<PjRtData>(
         pjrt_shard->device(), pjrt_shard->shape(), pjrt_shard->buffer));
   }
-  return std::make_shared<PjRtShardedData>(device, shape, pjrt_data_shards);
+  return std::make_shared<PjRtShardedData>(device, shape, pjrt_data_shards,
+                                           sharding);
 }
 
 ComputationClient::DataPtr PjRtComputationClient::CopyToDevice(
@@ -204,7 +205,13 @@ std::vector<xla::Literal> PjRtComputationClient::TransferFromServer(
 
   int64_t total_size = 0;
   for (auto handle : handles) {
-    const PjRtData& pjrt_data = dynamic_cast<const PjRtData&>(*handle);
+    const PjRtData& pjrt_data;
+    if (GetDataShards(handle).size() > 1) {
+      // Replicate to request the unpartitioned tensor
+
+    } else {
+      pjrt_data = dynamic_cast<const PjRtData&>(*handle);
+    }
 
     std::shared_ptr<xla::Literal> literal =
         pjrt_data.buffer->ToLiteralSync().value();

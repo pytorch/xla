@@ -235,8 +235,7 @@ void XLATensor::SetShardingSpec(const ShardingSpec& sharding) {
   if (!sharding_spec()) {
     TORCH_LAZY_COUNTER("SetShardingSpec", 1);
     data()->sharding = std::make_shared<ShardingSpec>(sharding);
-  }
-  else {
+  } else {
     XLA_CHECK(ShardingUtil::EqualShardingSpecs(sharding, *sharding_spec()))
         << "Existing sharding annotation, "
         << sharding_spec()->sharding.DebugString()
@@ -319,11 +318,16 @@ void XLATensor::SetInPlaceIrValue(torch::lazy::Value ir_value) {
 void XLATensor::AssignIrValue(torch::lazy::Value ir_value) const {
   if (ir_value) {
     std::string debug_str = ir_value->ToString();
-    auto sharding = dynamic_cast<XlaNode*>(ir_value.node.get())->GetSharding();
+    ir_value->auto sharding =
+        dynamic_cast<XlaNode*>(ir_value.node.get())->GetSharding();
     if (sharding) {
       debug_str += " with sharding " + sharding->DebugString();
     }
     TF_VLOG(5) << "Assign IR value " << debug_str;
+
+    // DataNode requires sharding propagation during reset.
+    dynamic_cast<XlaNode*>(ir_value.node.get())
+        ->SetSharding(sharding_spec()->sharding);
   } else {
     TF_VLOG(5) << "Assign empty IR value";
   }
