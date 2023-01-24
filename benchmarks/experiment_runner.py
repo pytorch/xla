@@ -11,7 +11,7 @@ import subprocess
 import sys
 import time
 import torch
-import types
+from tqdm import tqdm
 
 try:
   from .benchmark_model import ModelLoader
@@ -55,7 +55,7 @@ class ExperimentRunner:
   def run(self):
     if self._args.experiment_config and self._args.model_config:
       if self._args.dry_run:
-        logger.info(f"Dry run with {[sys.executable] + sys.argv}")
+        logger.warning(f"Dry run with {[sys.executable] + sys.argv}")
         return
       experiment_config = json.loads(self._args.experiment_config)
       model_config = json.loads(self._args.model_config)
@@ -67,36 +67,55 @@ class ExperimentRunner:
 
       experiment_configs = self.experiment_loader.list_experiment_configs()
       model_configs = self.model_loader.list_model_configs()
-      for model_config in model_configs:
+      logger.warning(
+          f"Number of selected experiment configs: {len(experiment_configs)}")
+      logger.warning(f"Number of selected model configs: {len(model_configs)}")
+      for model_config in tqdm(
+          model_configs,
+          desc="model configs",
+          disable=not self._args.progress_bar):
         for experiment_config in experiment_configs:
+          process_env = experiment_config.pop("process_env")
+          experiment_config_str = json.dumps(experiment_config)
+          model_config_str = json.dumps(model_config)
+          experiment_config["process_env"] = process_env
           if self.model_loader.is_compatible(model_config, experiment_config):
-            process_env = experiment_config.pop("process_env")
-            experiment_config_str = json.dumps(experiment_config)
-            model_config_str = json.dumps(model_config)
-            experiment_config["process_env"] = process_env
             command = ([sys.executable] + sys.argv +
                        [f"--experiment-config={experiment_config_str}"] +
                        [f"--model-config={model_config_str}"])
             if self._args.dry_run:
-              logger.info(f"Dry run with {command}")
+              logger.warning(f"Dry run with {command}")
               continue
             try:
-              subprocess.check_call(
+              completed_process = subprocess.run(
                   command,
                   timeout=60 * 20,
                   env=process_env,
+                  check=True,
+                  capture_output=True,
               )
             except subprocess.TimeoutExpired as e:
               logger.error("TIMEOUT")
               self.record_failed_experiment(model_config_str,
                                             experiment_config_str, e)
+            except subprocess.CalledProcessError as e:
+              logger.error("ERROR")
+              self.record_failed_experiment(model_config_str,
+                                            experiment_config_str, e.stderr)
             except subprocess.SubprocessError as e:
               logger.error("ERROR")
               self.record_failed_experiment(model_config_str,
                                             experiment_config_str, e)
+            else:
+              if self._args.print_subprocess:
+                logger.info(completed_process.stdout)
+                logger.warning(completed_process.stderr)
 
           else:
-            logger.warning("SKIP because of incompatible configs.")
+            e = "SKIP because of incompatible model and experiment configs."
+            logger.warning(e)
+            self.record_failed_experiment(model_config_str,
+                                          experiment_config_str, e)
 
   def run_single_experiment(self, experiment_config, model_config):
     benchmark_experiment = self.experiment_loader.load_experiment(
@@ -332,6 +351,18 @@ def parse_args(args=None):
   )
 
   parser.add_argument(
+      "--print-subprocess",
+      action="store_true",
+      help="Print subprocess stdout.",
+  )
+
+  parser.add_argument(
+      "--progress-bar",
+      action="store_true",
+      help="Display progress bar.",
+  )
+
+  parser.add_argument(
       "--randomize-input",
       action="store_true",
       help="Whether to randomize the input values. Dimensions will be kept the same.",
@@ -386,5 +417,5 @@ def main():
 
 
 if __name__ == "__main__":
-  logging.basicConfig(level=logging.INFO, force=True)
+  logging.basicConfig(level=logging.WARNING, force=True)
   main()
