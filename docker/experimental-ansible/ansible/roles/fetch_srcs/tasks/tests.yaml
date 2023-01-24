@@ -1,0 +1,13 @@
+- name: Check that setup.py files are present in XLA and PyTorch repos
+  ansible.builtin.stat:
+    path: "{{ item }}"
+  register: _res
+  loop:
+    - "{{ (src_root, 'pytorch/setup.py') | path_join }}"
+    - "{{ (src_root, 'pytorch/xla/setup.py') | path_join }}"
+
+- name: Assert stat results
+  ansible.builtin.assert:
+    that: "{{ item.stat.exists }}"
+    fail_msg: "{{ item.item }} doesn't exist"
+  loop: "{{ _res.results }}"
