@@ -59,8 +59,8 @@
     - role: fetch_srcs
       vars:
         src_root: "/src"
-        pytorch_git_rev: "afe6ea884fa21d424d614efff6bd3a75ec4357af"
-        xla_git_rev: "aff3513234fe344bbf159af5e376e5a45792f5dc"
+        pytorch_git_rev: "44b7a0b7efff24c8110ebc4e0651b1a59e44e27b"
+        xla_git_rev: "5c54655a8d43f48d973b664c20afaa91c7278574"
 
     - role: build_srcs
       vars:
