@@ -197,6 +197,7 @@ supported:
   - leaky_relu_backward
   - lerp.Scalar
   - lerp.Tensor
+  - linalg_eigh
   - linspace
   - log
   - log1p
@@ -307,7 +308,6 @@ supported:
   - sum
   - sum.dim_IntList
   - svd
-  - symeig
   - t
   - t_
   - tanh_backward

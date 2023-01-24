@@ -3,6 +3,7 @@
 #include <ATen/core/Reduction.h>
 
 #include <algorithm>
+#include <cctype>
 #include <functional>
 
 #include "absl/strings/str_cat.h"
@@ -2387,6 +2388,17 @@ XLATensorPtr sub(const XLATensorPtr& input, const XLATensorPtr& other,
                            logical_element_type);
 }
 
+std::tuple<XLATensorPtr, XLATensorPtr> XLATensor::linalg_eigh(
+    const XLATensorPtr& input, c10::string_view uplo_str) {
+  // SymEig takes lower instead of upper, hence the negation.
+  char uplo = std::toupper(uplo_str[0]);
+  bool lower = (uplo == 'L');
+  torch::lazy::NodePtr node = torch::lazy::MakeNode<torch::lazy::ops::SymEig>(
+      input->GetIrValue(), /*eigenvectors=*/true, lower);
+  return std::make_tuple(input->CreateFrom(torch::lazy::Value(node, 0)),
+                         input->CreateFrom(torch::lazy::Value(node, 1)));
+}
+
 XLATensorPtr sub(const XLATensorPtr& input, const at::Scalar& other,
                  const at::Scalar& alpha,
                  c10::optional<at::ScalarType> logical_element_type) {
@@ -2425,15 +2437,6 @@ std::tuple<XLATensorPtr, XLATensorPtr, XLATensorPtr> svd(
   return std::make_tuple(input->CreateFrom(torch::lazy::Value(node, 0)),
                          input->CreateFrom(torch::lazy::Value(node, 1)),
                          input->CreateFrom(torch::lazy::Value(node, 2)));
-}
-
-std::tuple<XLATensorPtr, XLATensorPtr> symeig(const XLATensorPtr& input,
-                                              bool eigenvectors, bool upper) {
-  // SymEig takes lower instead of upper, hence the negation.
-  torch::lazy::NodePtr node =
-      torch::lazy::MakeNode<SymEig>(input->GetIrValue(), eigenvectors, !upper);
-  return std::make_tuple(input->CreateFrom(torch::lazy::Value(node, 0)),
-                         input->CreateFrom(torch::lazy::Value(node, 1)));
 }
 
 XLATensorPtr tanh_backward(const XLATensorPtr& grad_output,
