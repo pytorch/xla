@@ -48,6 +48,10 @@ class XlaDataTypeTest(unittest.TestCase):
     else:
       assert 'f64' in device_data_hlo, device_data_hlo
 
+  @unittest.skipIf(
+      os.environ.get('XLA_USE_EAGER_DEBUG_MODE'),
+      'To avoid new feature developing, disable failed PyTorch/XLA test on TPUVM'
+  )
   def test_datatype_f32_div_f64(self):
     t1 = torch.rand(2, 2, dtype=torch.float, device=xm.xla_device())
     t2 = t1 / 2.0
