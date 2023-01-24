@@ -1,5 +1,7 @@
 #include "torch_xla/csrc/xla_graph_executor.h"
 
+#include <Python.h>
+
 #include <algorithm>
 #include <atomic>
 #include <cmath>
@@ -635,9 +637,13 @@ std::vector<at::Tensor> XLAGraphExecutor::GetTensorsFused(
       *tensors, async != nullptr ? async->indices : absl::Span<const size_t>(),
       async != nullptr ? async->tensors_data
                        : absl::Span<const torch::lazy::BackendDataPtr>());
-  std::vector<xla::Literal> literals =
-      xla::ComputationClient::Get()->TransferFromServer(
-          UnwrapXlaData(tensors_data));
+
+  std::vector<xla::Literal> literals;
+  Py_BEGIN_ALLOW_THREADS
+  literals = xla::ComputationClient::Get()->TransferFromServer(
+        UnwrapXlaData(tensors_data));
+  Py_END_ALLOW_THREADS
+
   return FetchTensors(tensors, literals,
                       async != nullptr ? &async->indices : nullptr);
 }
