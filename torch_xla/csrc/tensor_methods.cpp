@@ -108,6 +108,7 @@
 #include "torch_xla/csrc/ops/scalar.h"
 #include "torch_xla/csrc/ops/scatter.h"
 #include "torch_xla/csrc/ops/scatter_add.h"
+#include "torch_xla/csrc/ops/scatter_reduce.h"
 #include "torch_xla/csrc/ops/send.h"
 #include "torch_xla/csrc/ops/sgd_optimizer_step.h"
 #include "torch_xla/csrc/ops/softmax.h"
@@ -2179,6 +2180,16 @@ XLATensorPtr scatter_add(const XLATensorPtr& input, int64_t dim,
       value, input->shape(), input->GetDevice());
   return input->CreateFrom(torch::lazy::MakeNode<ScatterAdd>(
       input->GetIrValue(), index->GetIrValue(), constant,
+      torch::lazy::GetCanonicalDimensionIndex(dim,
+                                              input->shape().get().rank())));
+}
+
+XLATensorPtr scatter_reduce(const XLATensorPtr& input, int64_t dim,
+                            const XLATensorPtr& index, const XLATensorPtr& src,
+                            c10::string_view reduce, bool include_self) {
+  return input->CreateFrom(torch::lazy::MakeNode<ScatterReduce>(
+      input->GetIrValue(), index->GetIrValue(), src->GetIrValue(),
+      reduce, include_self,
       torch::lazy::GetCanonicalDimensionIndex(dim,
                                               input->shape().get().rank())));
 }

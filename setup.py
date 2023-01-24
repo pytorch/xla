@@ -284,7 +284,7 @@ if build_mode not in ['clean']:
   generate_xla_lazy_code(base_dir)
 
   # Build the support libraries (ie, TF).
-  build_extra_libraries(base_dir, build_mode=build_mode)
+  #build_extra_libraries(base_dir, build_mode=build_mode)
 
   # Copy libtpu.so into torch_xla/lib
   maybe_bundle_libtpu(base_dir)

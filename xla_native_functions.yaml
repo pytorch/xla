@@ -279,6 +279,7 @@ supported:
   - scatter.value
   - scatter.value_reduce
   - scatter_add
+  - scatter_reduce.two
   - select.int
   - selu_
   - sigmoid

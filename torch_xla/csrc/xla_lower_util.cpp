@@ -634,6 +634,40 @@ XlaOpCombiner NumericAddCombiner() {
   };
 }
 
+XlaOpCombiner NumericMulCombiner() {
+  return [](xla::XlaOp x, xla::XlaOp y) -> xla::XlaOp {
+    xla::XlaOp numeric_x = ConvertToNumeric(x);
+    xla::XlaOp numeric_y = ConvertToNumeric(y);
+    xla::XlaOp numeric_sum = numeric_x * numeric_y;
+    return ConvertTo(numeric_sum, XlaHelpers::TypeOfXlaOp(numeric_sum),
+                     XlaHelpers::TypeOfXlaOp(x),
+                     /*device=*/nullptr);
+  };
+}
+
+XlaOpCombiner NumericMinCombiner() {
+  return [](xla::XlaOp x, xla::XlaOp y) -> xla::XlaOp {
+    xla::XlaOp numeric_x = ConvertToNumeric(x);
+    xla::XlaOp numeric_y = ConvertToNumeric(y);
+    xla::XlaOp numeric_sum = xla::Min(numeric_x, numeric_y);
+    //xla::XlaOp numeric_sum = xla::Min(numeric_x, numeric_y);
+    return ConvertTo(numeric_sum, XlaHelpers::TypeOfXlaOp(numeric_sum),
+                     XlaHelpers::TypeOfXlaOp(x),
+                     /*device=*/nullptr);
+  };
+}
+
+XlaOpCombiner NumericMaxCombiner() {
+  return [](xla::XlaOp x, xla::XlaOp y) -> xla::XlaOp {
+    xla::XlaOp numeric_x = ConvertToNumeric(x);
+    xla::XlaOp numeric_y = ConvertToNumeric(y);
+    xla::XlaOp numeric_sum = xla::Max(numeric_x, numeric_y);
+    return ConvertTo(numeric_sum, XlaHelpers::TypeOfXlaOp(numeric_sum),
+                     XlaHelpers::TypeOfXlaOp(x),
+                     /*device=*/nullptr);
+  };
+}
+
 xla::XlaOp CreateScatter(const torch::lazy::BackendDevice& device,
                          xla::XlaOp input, xla::XlaOp index, xla::XlaOp source,
                          int64_t dim, const ScatterOptions& options) {
