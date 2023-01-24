@@ -63,12 +63,12 @@ function run_opbyop {
 
 function run_use_bf16 {
   echo "Running with XLA_USE_BF16: $@"
-  XLA_USE_EAGER_DEBUG_MODE=1 XLA_USE_BF16=1 run_test "$@"
+  XLA_USE_BF16=1 run_test "$@"
 }
 
 function run_downcast_bf16 {
   echo "Running with XLA_DOWNCAST_BF16: $@"
-  XLA_USE_EAGER_DEBUG_MODE=1 XLA_DOWNCAST_BF16=1 run_test "$@"
+  XLA_DOWNCAST_BF16=1 run_test "$@"
 }
 
 function run_xla_ir_debug {
@@ -83,7 +83,7 @@ function run_xla_hlo_debug {
 
 function run_dynamic {
   echo "Running in DynamicShape mode: $@"
-  XLA_USE_EAGER_DEBUG_MODE=1 XLA_EXPERIMENTAL="nonzero:masked_select:masked_scatter" run_test "$@"
+  XLA_EXPERIMENTAL="nonzero:masked_select:masked_scatter" run_test "$@"
 }
 
 function run_eager_debug {
@@ -199,7 +199,9 @@ function run_tests {
   if [["$PYTORCH_XLA_TESTS_ONLY" == "false"]] ; then
     run_op_tests_pt
   fi
-  run_op_tests_ptxla
+  if [["$PYTORCH_XLA_TESTS_ONLY" == "true"]] ; then
+    PYTORCH_XLA_TESTS_SKIP=1 run_op_tests_ptxla
+  fi
   if [[ "$XLA_SKIP_MP_OP_TESTS" != "1" ]]; then
     run_mp_op_tests
   fi
