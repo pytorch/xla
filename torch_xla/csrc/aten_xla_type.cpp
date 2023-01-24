@@ -2777,11 +2777,10 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor> XLANativeFunctions::svd(
                          bridge::AtenFromXlaTensor(std::get<2>(results)));
 }
 
-std::tuple<at::Tensor, at::Tensor> XLANativeFunctions::symeig(
-    const at::Tensor& self, bool eigenvectors, bool upper) {
+std::tuple<at::Tensor, at::Tensor> XLANativeFunctions::linalg_eigh(
+    const at::Tensor& self, c10::string_view uplo) {
   TORCH_LAZY_FN_COUNTER("xla::");
-  auto results =
-      tensor_methods::symeig(bridge::GetXlaTensor(self), eigenvectors, upper);
+  auto results = tensor_methods::linalg_eigh(bridge::GetXlaTensor(self), uplo);
   return std::make_tuple(bridge::AtenFromXlaTensor(std::get<0>(results)),
                          bridge::AtenFromXlaTensor(std::get<1>(results)));
 }
