@@ -92,7 +92,7 @@ def build_tpu_env_from_vars() -> Dict[str, str]:
 def get_tpu_env() -> Dict[str, str]:
   """Fetches and parses `tpu-env` metadata field."""
   metadata = build_tpu_env_from_vars()
-  if metadata[xenv.ACCELERATOR_TYPE] is '':
+  if metadata[xenv.ACCELERATOR_TYPE] is None:
       metadata = _get_metadata('tpu-env')
       return yaml.load(metadata, yaml.Loader)
   return metadata

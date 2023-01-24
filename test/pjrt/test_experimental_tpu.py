@@ -46,7 +46,9 @@ class TestExperimentalTpu(parameterized.TestCase):
 
     self.assertEqual(i, expected)
 
-  def test_tpu_env(self):
+  def test_tpu_env_from_gce_metadata(self):
+    if xenv.TPU_ACCELERATOR_TYPE in os.environ:
+      del os.environ[xenv.TPU_ACCELERATOR_TYPE]
     tpu_env_yaml = textwrap.dedent("""
       ACCELERATOR_TYPE: 'v4-16'
       CHIPS_PER_HOST_BOUNDS: '2,2,1'
@@ -54,6 +56,7 @@ class TestExperimentalTpu(parameterized.TestCase):
       TPU_CHIPS_PER_PROCESS_BOUNDS: '2,2,1'
       TPU_PROCESS_BOUNDS: '1,1,2'
       ZONE: 'us-central2-b'
+      WORKER_ID: '0'
     """)
 
     with mock.patch.object(tpu, '_get_metadata', return_value=tpu_env_yaml):
@@ -67,7 +70,49 @@ class TestExperimentalTpu(parameterized.TestCase):
             'TPU_CHIPS_PER_PROCESS_BOUNDS': '2,2,1',
             'TPU_PROCESS_BOUNDS': '1,1,2',
             'ZONE': 'us-central2-b',
-        })
+            'WORKER_ID': '0'
+    })
+
+  def test_tpu_env_from_env_vars(self):
+    os.environ[xenv.TPU_ACCELERATOR_TYPE] = 'v4-16'
+    os.environ[xenv.TPU_PROCESS_BOUNDS] = '1,2,2'
+    os.environ[xenv.TPU_HOST_BOUNDS] = '1,1,2'
+    os.environ[xenv.TPU_CHIPS_PER_PROCESS_BOUNDS] = '2,2,1'
+    os.environ[xenv.TPU_CHIPS_PER_HOST_BOUNDS] = '2,1,1'
+    os.environ[xenv.CLOUD_TPU_TASK_ID] = '1'
+    os.environ[xenv.TPU_WORKER_ID] = '0'
+
+    tpu_env = tpu.get_tpu_env()
+
+    self.assertDictEqual(
+        tpu_env, {
+            'ACCELERATOR_TYPE': 'v4-16',
+            'TPU_CHIPS_PER_PROCESS_BOUNDS': '2,2,1',
+            'TPU_PROCESS_BOUNDS': '1,2,2',
+            'WORKER_ID': '1'
+    })
+
+  def test_tpu_env_from_defaults(self):
+    if xenv.TPU_PROCESS_BOUNDS in os.environ:
+      del os.environ[xenv.TPU_PROCESS_BOUNDS]
+    if xenv.TPU_CHIPS_PER_PROCESS_BOUNDS in os.environ:
+      del os.environ[xenv.TPU_CHIPS_PER_PROCESS_BOUNDS]
+    if xenv.CLOUD_TPU_TASK_ID in os.environ:
+      del os.environ[xenv.CLOUD_TPU_TASK_ID]
+    os.environ[xenv.TPU_ACCELERATOR_TYPE] = 'v4-16'
+    os.environ[xenv.TPU_HOST_BOUNDS] = '1,1,2'
+    os.environ[xenv.TPU_CHIPS_PER_HOST_BOUNDS] = '2,1,1'
+    os.environ[xenv.TPU_WORKER_ID] = '0'
+
+    tpu_env = tpu.get_tpu_env()
+
+    self.assertDictEqual(
+        tpu_env, {
+            'ACCELERATOR_TYPE': 'v4-16',
+            'TPU_CHIPS_PER_PROCESS_BOUNDS': '2,1,1',
+            'TPU_PROCESS_BOUNDS': '1,1,2',
+            'WORKER_ID': '0'
+    })
 
   @parameterized.named_parameters(
       ('one_host', 't1v-n-ea9d3291-w-0:12345:10.130.0.31', ['localhost']),
