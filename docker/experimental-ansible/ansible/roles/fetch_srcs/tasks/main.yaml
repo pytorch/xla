@@ -10,6 +10,7 @@
     dest: "{{ item.dest }}"
     version: "{{ item.version }}"
     depth: 1
+    force: true
   loop:
     - repo: https://github.com/pytorch/pytorch
       dest: "{{ (src_root, 'pytorch') | path_join }}"
