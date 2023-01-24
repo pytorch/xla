@@ -5,6 +5,7 @@ LOGFILE=/tmp/pytorch_py_test.log
 MAX_GRAPH_SIZE=500
 GRAPH_CHECK_FREQUENCY=100
 VERBOSITY=2
+PYTORCH_XLA_TESTS_ONLY=false
 
 # Note [Keep Going]
 #
@@ -19,8 +20,11 @@ if [[ "$CONTINUE_ON_ERROR" == "1" ]]; then
   set +e
 fi
 
-while getopts 'LM:C:V:' OPTION
+while getopts 'LM:C:V:-:' OPTION
 do
+  if [ "$OPTION" = "-" ]; then   # long option: reformulate OPT and OPTARG
+    OPTION="${OPTARG%%=*}"       # extract long option name
+  fi
   case $OPTION in
     L)
       LOGFILE=
@@ -33,6 +37,9 @@ do
       ;;
     V)
       VERBOSITY=$OPTARG
+      ;;
+    pytorch_xla_tests_only)
+      PYTORCH_XLA_TESTS_ONLY=true
       ;;
   esac
 done
@@ -56,12 +63,12 @@ function run_opbyop {
 
 function run_use_bf16 {
   echo "Running with XLA_USE_BF16: $@"
-  XLA_USE_BF16=1 run_test "$@"
+  XLA_USE_EAGER_DEBUG_MODE=1 XLA_USE_BF16=1 run_test "$@"
 }
 
 function run_downcast_bf16 {
   echo "Running with XLA_DOWNCAST_BF16: $@"
-  XLA_DOWNCAST_BF16=1 run_test "$@"
+  XLA_USE_EAGER_DEBUG_MODE=1 XLA_DOWNCAST_BF16=1 run_test "$@"
 }
 
 function run_xla_ir_debug {
@@ -76,7 +83,7 @@ function run_xla_hlo_debug {
 
 function run_dynamic {
   echo "Running in DynamicShape mode: $@"
-  XLA_EXPERIMENTAL="nonzero:masked_select:masked_scatter" run_test "$@"
+  XLA_USE_EAGER_DEBUG_MODE=1 XLA_EXPERIMENTAL="nonzero:masked_select:masked_scatter" run_test "$@"
 }
 
 function run_eager_debug {
@@ -119,7 +126,7 @@ function run_torchrun {
   fi
 }
 
-function run_op_tests {
+function run_op_tests_pt {
   run_dynamic python3 "$CDIR/../../test/test_view_ops.py" "$@" -v TestViewOpsXLA
   run_test python3 "$CDIR/../../test/test_torch.py" "$@" -v TestTorchDeviceTypeXLA
   run_dynamic python3 "$CDIR/../../test/test_torch.py" "$@" -v TestDevicePrecisionXLA
@@ -133,6 +140,9 @@ function run_op_tests {
   run_dynamic python3 "$CDIR/../../test/nn/test_convolution.py" "$@" -v TestConvolutionNNDeviceTypeXLA
   run_dynamic python3 "$CDIR/../../test/nn/test_multihead_attention.py" "$@" -v TestMultiheadAttentionNNDeviceTypeXLA
   run_dynamic python3 "$CDIR/../../test/test_type_promotion.py" "$@" -v TestTypePromotionXLA
+}
+
+function run_op_tests_ptxla {
   run_dynamic python3 "$CDIR/test_operations.py" "$@" --verbosity=$VERBOSITY
   run_dynamic python3 "$CDIR/test_dynamic_shapes.py"
   run_dynamic python3 "$CDIR/test_dynamic_shape_models.py" "$@" --verbosity=$VERBOSITY
@@ -186,7 +196,10 @@ function run_mp_op_tests {
 }
 
 function run_tests {
-  run_op_tests
+  if [["$PYTORCH_XLA_TESTS_ONLY" == "false"]] ; then
+    run_op_tests_pt
+  fi
+  run_op_tests_ptxla
   if [[ "$XLA_SKIP_MP_OP_TESTS" != "1" ]]; then
     run_mp_op_tests
   fi
