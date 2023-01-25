@@ -5,7 +5,7 @@ LOGFILE=/tmp/pytorch_py_test.log
 MAX_GRAPH_SIZE=500
 GRAPH_CHECK_FREQUENCY=100
 VERBOSITY=2
-PYTORCH_XLA_TESTS_ONLY=false
+PYTORCH_XLA_TESTS_ONLY=0
 
 # Note [Keep Going]
 #
@@ -39,7 +39,7 @@ do
       VERBOSITY=$OPTARG
       ;;
     pytorch_xla_tests_only)
-      PYTORCH_XLA_TESTS_ONLY=true
+      PYTORCH_XLA_TESTS_ONLY=1
       ;;
   esac
 done
@@ -195,10 +195,11 @@ function run_mp_op_tests {
 }
 
 function run_tests {
-  if [["$PYTORCH_XLA_TESTS_ONLY" == "false"]] ; then
+  if [[ "$PYTORCH_XLA_TESTS_ONLY" != "1"]] ; then
     run_op_tests_pt
+    run_op_tests_ptxla
   fi
-  if [["$PYTORCH_XLA_TESTS_ONLY" == "true"]] ; then
+  if [["$PYTORCH_XLA_TESTS_ONLY" != "0"]] ; then
     PYTORCH_XLA_TESTS_SKIP=1 run_op_tests_ptxla
   fi
   if [[ "$XLA_SKIP_MP_OP_TESTS" != "1" ]]; then
