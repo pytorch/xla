@@ -311,28 +311,28 @@ PjRtComputationClient::ExecuteComputation(
   execute_options.untuple_result = options.explode_tuple;
   execute_options.strict_shape_checking = false;
 
-  // std::optional<PjRtFuture<Status>> returned_future;
+  std::optional<PjRtFuture<Status>> returned_future;
+  // ExecuteSharded futures are not implemented in PJRT C API
+  // TODO(wcromar): Remove use_future when we update past TF commit
+  // b8f59020ea0e9e6fba0e9c5e7be88271703eaf9e
+  static bool use_future =
+      sys_util::GetEnvString(env::kEnvPjRtDevice, "") != "TPU_C_API";
   std::vector<std::unique_ptr<xla::PjRtBuffer>> results =
       pjrt_computation.executable
-          ->ExecuteSharded(buffers, pjrt_device, execute_options)
+          ->ExecuteSharded(buffers, pjrt_device, execute_options,
+                           returned_future, /*fill_future=*/use_future)
           .value();
 
-  // Signal that `ExecuteSharded` has completed for the ExecuteTime metric.
-  // Copies the `timed` shared pointer into the lambda.
-  // TODO(wcromar): Uncomment this when we update past TF commit
-  // b8f59020ea0e9e6fba0e9c5e7be88271703eaf9e
-  // returned_future->OnReady([timed](Status unused) mutable { timed.reset();
-  // });
+  if (use_future) {
+    // Signal that `ExecuteSharded` has completed for the ExecuteTime metric.
+    // Copies the `timed` shared pointer into the lambda.
+    returned_future->OnReady([timed](Status unused) mutable { timed.reset(); });
+  }
 
   std::vector<DataPtr> datas;
   datas.reserve(results.size());
   for (auto& result : results) {
     std::unique_ptr<xla::PjRtBuffer> buffer = std::move(result);
-
-    // TODO(wcromar): Use the `ExecuteSharded` future directly when it is
-    // implemented in the C API.
-    buffer->GetReadyFuture().OnReady(
-        [timed](Status unused) mutable { timed.reset(); });
 
     std::shared_ptr<PjRtData> data = std::make_shared<PjRtData>(
         device, buffer->on_device_shape(), std::move(buffer));
