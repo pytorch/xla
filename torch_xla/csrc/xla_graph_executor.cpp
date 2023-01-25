@@ -642,7 +642,7 @@ std::vector<at::Tensor> XLAGraphExecutor::GetTensorsFused(
   // completes. Release the GIL so other threads can proceed and unblock any
   // collective computations.
   PyThreadState* save = nullptr;
-  if (PyGILState_Check()) {
+  if (Py_IsInitialized() && PyGILState_Check()) {
     save = PyEval_SaveThread();
   }
   std::vector<xla::Literal> literals =
