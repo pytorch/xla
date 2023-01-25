@@ -805,9 +805,6 @@ XLATensorPtr sum(const XLATensorPtr& input, std::vector<int64_t> dimensions,
 std::tuple<XLATensorPtr, XLATensorPtr, XLATensorPtr> svd(
     const XLATensorPtr& input, bool some, bool compute_uv);
 
-std::tuple<XLATensorPtr, XLATensorPtr> symeig(const XLATensorPtr& input,
-                                              bool eigenvectors, bool upper);
-
 XLATensorPtr take(const XLATensorPtr& input, const XLATensorPtr& index);
 
 XLATensorPtr tanh_backward(const XLATensorPtr& grad_output,

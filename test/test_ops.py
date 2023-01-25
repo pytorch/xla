@@ -276,7 +276,6 @@ allowed_opinfo = set(
             # AllowedOpInfoEntry('asinh'),
             # AllowedOpInfoEntry('atan'),
             # AllowedOpInfoEntry('atanh'),
-            # AllowedOpInfoEntry('symeig'),
             # AllowedOpInfoEntry('cos'),
             # AllowedOpInfoEntry('cosh'),
             # AllowedOpInfoEntry('cov'),

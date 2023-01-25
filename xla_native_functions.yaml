@@ -307,7 +307,6 @@ supported:
   - sum
   - sum.dim_IntList
   - svd
-  - symeig
   - t
   - t_
   - tanh_backward
