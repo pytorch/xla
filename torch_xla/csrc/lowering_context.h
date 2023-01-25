@@ -9,7 +9,7 @@
 #include "absl/types/span.h"
 #include "tensorflow/compiler/xla/client/xla_builder.h"
 #include "tensorflow/compiler/xla/types.h"
-#include "tensorflow/compiler/xla/xla_client/computation_client.h"
+#include "third_party/xla_client/computation_client.h"
 #include "tensorflow/core/platform/macros.h"
 #include "torch/csrc/lazy/backend/backend_data.h"
 #include "torch/csrc/lazy/backend/lowering_context.h"
