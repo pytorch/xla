@@ -61,7 +61,8 @@ TEST(PjRtComputationClientTest, Init) {
       xla::LiteralUtil::CreateR2<float>({{5.0f, 6.0f}, {7.0f, 8.0f}});
 
   // Compile the graph.
-  auto cptr = client->Compile(std::move(instances));
+  std::vector<ComputationClient::ComputationPtr> computations =
+      client->Compile(std::move(instances));
 
   // Copy inputs to device.
   ComputationClient::ExecuteComputationOptions options{};
@@ -70,9 +71,9 @@ TEST(PjRtComputationClientTest, Init) {
       TensorSourceFromLiteral(device, literal_y)};
 
   // Execute the graph.
-  auto results = client->ExecuteComputation(
-      *cptr[0], client->TransferToServer(absl::MakeConstSpan(args)), device,
-      options);
+  std::vector<ComputationClient::DataPtr> results = client->ExecuteComputation(
+      *computations[0], client->TransferToServer(absl::MakeConstSpan(args)),
+      device, options);
 
   // Copy the output from device back to host and assert correctness..
   ASSERT_EQ(results.size(), 1);
