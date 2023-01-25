@@ -15,7 +15,7 @@
 #include "tensorflow/compiler/xla/pjrt/tfrt_cpu_pjrt_client.h"
 #include "tensorflow/compiler/xla/pjrt/tpu_client.h"
 #include "tensorflow/compiler/xla/shape.h"
-#include "tensorflow/compiler/xla/stream_executor/tpu/pjrt_api.h"
+#include "tensorflow/compiler/xla/pjrt/pjrt_api.h"
 #include "tensorflow/compiler/xla/xla_client/computation_client.h"
 #include "tensorflow/compiler/xla/xla_client/debug_macros.h"
 #include "tensorflow/compiler/xla/xla_client/env_vars.h"
@@ -61,7 +61,7 @@ PjRtComputationClient::PjRtComputationClient() {
     client_ = xla::GetTpuClient(max_inflight_computations).value();
   } else if (device_type == "TPU_C_API") {
     TF_VLOG(1) << "Initializing PjRt C API client...";
-    XLA_CHECK_OK(stream_executor::tpu::LoadPjrtPlugin(
+    XLA_CHECK_OK(pjrt::LoadPjrtPlugin(
         "tpu", sys_util::GetEnvString(env::kEnvTpuLibraryPath, "libtpu.so")));
     client_ = std::move(xla::GetCApiClient("TPU").value());
   } else if (device_type == "GPU") {
