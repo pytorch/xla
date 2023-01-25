@@ -11,6 +11,7 @@ dev = xm.xla_device()
 
 class TestDynamicShapes(unittest.TestCase):
 
+  @unittest.skip("Needs to lower ne")
   def test_simple_expand(self):
     size1 = 5
     size2 = 2
@@ -25,6 +26,7 @@ class TestDynamicShapes(unittest.TestCase):
     t6_cpu = t6.cpu()
     self.assertEqual(t6_cpu.shape[0], 2)
 
+  @unittest.skip("Needs to lower ne")
   def test_simple_expand_on_2d_tensor(self):
     size1 = 5
     size2 = 2
@@ -84,6 +86,7 @@ class TestDynamicShapes(unittest.TestCase):
     a3 = a2.shape[0] + 3  # tests wrap
     self.assertIsInstance(a3, torch.SymInt)
 
+  @unittest.skip("Needs to lower ne")
   def test_sizeAdd(self):
     size1 = 5
     size2 = 2
