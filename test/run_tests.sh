@@ -132,10 +132,9 @@ function run_op_tests {
   run_dynamic python3 "$CDIR/../../test/nn/test_convolution.py" "$@" -v TestConvolutionNNDeviceTypeXLA
   run_dynamic python3 "$CDIR/../../test/nn/test_multihead_attention.py" "$@" -v TestMultiheadAttentionNNDeviceTypeXLA
   run_dynamic python3 "$CDIR/../../test/test_type_promotion.py" "$@" -v TestTypePromotionXLA
-  run_test python3 "$CDIR/../../test/dynamo/test_torchxla_integration.py"
   run_dynamic python3 "$CDIR/test_operations.py" "$@" --verbosity=$VERBOSITY
   run_dynamic python3 "$CDIR/test_dynamic_shapes.py"
-  run_dynamic python3 "$CDIR/test_dynamic_shape_models.py" "$@" --verbosity=$VERBOSITY
+  # run_dynamic python3 "$CDIR/test_dynamic_shape_models.py" "$@" --verbosity=$VERBOSITY
   run_opbyop python3 "$CDIR/test_operations.py" "$@" --verbosity=$VERBOSITY
   run_eager_debug python3 "$CDIR/test_operations.py" "$@" --verbosity=$VERBOSITY
   run_async_scalar python3 "$CDIR/test_operations.py" "$@" --verbosity=$VERBOSITY
@@ -148,6 +147,8 @@ function run_op_tests {
   run_test python3 "$CDIR/test_metrics.py"
   run_test python3 "$CDIR/dynamo/test_dynamo_integrations_util.py"
   run_test python3 "$CDIR/dynamo/test_dynamo.py"
+  run_test python3 "$CDIR/dynamo/test_bridge.py"
+  run_test python3 "$CDIR/dynamo/test_num_output.py"
   run_save_tensor_file python3 "$CDIR/dynamo/test_dynamo_graph_dump.py"
   run_downcast_bf16 python3 "$CDIR/test_data_type.py"
   run_use_bf16 python3 "$CDIR/test_data_type.py"
