@@ -1,4 +1,4 @@
-#include "tensorflow/compiler/xla/xla_client/xrt_computation_client.h"
+#include "third_party/xla_client/xrt_computation_client.h"
 
 #include <cstdlib>
 #include <fstream>
@@ -15,18 +15,18 @@
 #include "tensorflow/cc/ops/const_op.h"
 #include "tensorflow/compiler/xla/shape_util.h"
 #include "tensorflow/compiler/xla/util.h"
-#include "tensorflow/compiler/xla/xla_client/env_vars.h"
-#include "tensorflow/compiler/xla/xla_client/multi_wait.h"
-#include "tensorflow/compiler/xla/xla_client/sys_util.h"
-#include "tensorflow/compiler/xla/xla_client/thread_pool.h"
-#include "tensorflow/compiler/xla/xla_client/unique.h"
-#include "tensorflow/compiler/xla/xla_client/util.h"
-#include "tensorflow/compiler/xla/xla_client/xla_util.h"
 #include "tensorflow/compiler/xrt/xrt_util.h"
 #include "tensorflow/core/framework/allocator.h"
 #include "tensorflow/core/profiler/lib/traceme.h"
 #include "tensorflow/core/util/device_name_utils.h"
 #include "tensorflow/tsl/lib/math/math_util.h"
+#include "third_party/xla_client/env_vars.h"
+#include "third_party/xla_client/multi_wait.h"
+#include "third_party/xla_client/sys_util.h"
+#include "third_party/xla_client/thread_pool.h"
+#include "third_party/xla_client/unique.h"
+#include "third_party/xla_client/util.h"
+#include "third_party/xla_client/xla_util.h"
 
 namespace xla {
 namespace {
@@ -1121,8 +1121,9 @@ std::unique_ptr<xrt::XLAComputation> XrtComputationClient::CreateXrtComputation(
 
 tensorflow::Tensor XrtComputationClient::GetArgumentsInputs(
     absl::Span<const DataPtr> arguments, const std::string& device) {
-  tensorflow::Tensor inputs_tensor(tensorflow::DT_INT64,
-                                   tensorflow::TensorShape({arguments.size()}));
+  tensorflow::Tensor inputs_tensor(
+      tensorflow::DT_INT64,
+      tensorflow::TensorShape({static_cast<long>(arguments.size())}));
   for (size_t i = 0; i < arguments.size(); ++i) {
     const XrtData& xrt_data = dynamic_cast<const XrtData&>(*arguments[i]);
     XLA_CHECK_EQ(device, xrt_data.device());
@@ -1226,7 +1227,7 @@ void XrtComputationClient::ReleaseHandles(
           session_and_handles.second;
       tensorflow::Tensor handles_tensor(
           tensorflow::DT_INT64,
-          tensorflow::TensorShape({session_handles.size()}));
+          tensorflow::TensorShape({static_cast<long>(session_handles.size())}));
       auto flat_handles_tensor = handles_tensor.flat<tensorflow::int64>();
       for (size_t i = 0; i < session_handles.size(); ++i) {
         flat_handles_tensor(i) = session_handles[i].handle;
