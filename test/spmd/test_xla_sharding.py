@@ -152,11 +152,11 @@ class BasicShardingTest(test_xla_sharding_base.XlaShardingTest):
     hash2 = torch_xla._XLAC._get_graph_hash([xt2])
     self.assertNotEqual(hash1, hash2)
 
-  def test_transfer_shards_from_server(self):
-    xt1 = torch.ones(2, 2).to(xm.xla_device())
+  def test_transfer_sharded_data_to_host(self):
+    xt1 = torch.ones(16, 16).to(xm.xla_device())
     xs.mark_sharding(xt1, self._get_mesh((1, self.n_devices)), (0, 1))
     t1 = xt1.cpu()
-    self.assertEqual(t1, xt1)
+    self.assertTrue(torch.allclose(t1, torch.ones(16, 16)))
 
 
 if __name__ == '__main__':
