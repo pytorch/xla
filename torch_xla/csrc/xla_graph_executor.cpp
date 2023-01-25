@@ -639,6 +639,9 @@ std::vector<at::Tensor> XLAGraphExecutor::GetTensorsFused(
                        : absl::Span<const torch::lazy::BackendDataPtr>());
 
 
+  // Execution is async in PJRT, so TransferFromServer may block until execution
+  // completes. Release the GIL so other threads can proceed and unblock any
+  // collective computations.
   PyThreadState *save = nullptr;
   if (PyGILState_Check()) {
     save = PyEval_SaveThread();
