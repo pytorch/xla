@@ -195,11 +195,11 @@ function run_mp_op_tests {
 }
 
 function run_tests {
-  if [[ "$PYTORCH_XLA_TESTS_ONLY" != "1"]] ; then
+  if [[ "$PYTORCH_XLA_TESTS_ONLY" != "1" ]] ; then
     run_op_tests_pt
     run_op_tests_ptxla
   fi
-  if [["$PYTORCH_XLA_TESTS_ONLY" != "0"]] ; then
+  if [[ "$PYTORCH_XLA_TESTS_ONLY" != "0" ]] ; then
     PYTORCH_XLA_TESTS_SKIP=1 run_op_tests_ptxla
   fi
   if [[ "$XLA_SKIP_MP_OP_TESTS" != "1" ]]; then
