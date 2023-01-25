@@ -709,6 +709,10 @@ class TestAtenXlaTensor(test_utils.XlaTestCase):
     self.runAtenTest(torch.randint(10, (2, 2)), lambda x: x.pow_(2))
     self.runAtenTest(torch.randint(10, (2, 2)), lambda x: x.pow_(x))
 
+  @unittest.skipIf(
+      os.environ.get('PYTORCH_XLA_TESTS_SKIP'),
+      'To avoid new feature developing, disable failed PyTorch/XLA test on TPUVM'
+  )
   def test_matmul_integer_types(self):
     # all variance of matmul: dot/mv/mm/bmm
     self.runAtenTest((torch.randint(10, (2,)), torch.randint(10, (2,))),
