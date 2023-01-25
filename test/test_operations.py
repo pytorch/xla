@@ -378,9 +378,8 @@ class TestDynamicShape(test_utils.XlaTestCase):
         torch.masked_select(x, mask), 0)
     self.assertEqual(x_dim0_shape.item(), 3)
 
-  @unittest.skipIf(
-      os.environ.get('PYTORCH_XLA_TESTS_SKIP'),
-      'To avoid new feature developing, disable failed PyTorch/XLA test on TPUVM'
+  @unittest.skip(
+      "Temporarily disable test. See  https://github.com/pytorch/xla/issues/4501"
   )
   def test_nonzero_cast(self):
     t1 = torch.ones(5, 2, device=xm.xla_device())
