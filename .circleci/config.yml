@@ -23,8 +23,8 @@ launch_docker_and_build: &launch_docker_and_build
     # To allow the upstream workflow to access PyTorch/XLA build images, we
     # need to have them in the ECR. This is not expensive, and only pushes it
     # if image layers are not present in the repo.
-    docker tag ${GCR_DOCKER_IMAGE} ${ECR_DOCKER_IMAGE_BASE}:v0.6 >/dev/null
-    docker push ${ECR_DOCKER_IMAGE_BASE}:v0.6 >/dev/null
+    docker tag ${GCR_DOCKER_IMAGE} ${ECR_DOCKER_IMAGE_BASE}:v0.8 >/dev/null
+    docker push ${ECR_DOCKER_IMAGE_BASE}:v0.8 >/dev/null
     sudo pkill -SIGHUP dockerd
     # To enable remote caching, use SCCACHE_BUCKET=${SCCACHE_BUCKET}
     # To disable remote caching, use SCCACHE_BUCKET=${LOCAL_BUCKET}
@@ -88,7 +88,7 @@ calculate_docker_image: &calculate_docker_image
     echo "declare -x ECR_DOCKER_IMAGE_BASE=308535385114.dkr.ecr.us-east-1.amazonaws.com/pytorch/xla_base" >> "${BASH_ENV}"
     # For PyTorch/XLA CI workflow, we only pull & push to gcr.io
     BASE_IMAGE_TAG="3.7-11.2.0-cudnn8-devel-ubuntu18.04-mini"
-    echo "declare -x GCR_DOCKER_IMAGE=gcr.io/tpu-pytorch/xla_base:latest" >> "${BASH_ENV}"
+    echo "declare -x GCR_DOCKER_IMAGE=gcr.io/tpu-pytorch/xla_base:v0.8" >> "${BASH_ENV}"
 
 run_build: &run_build
   resource_class: 2xlarge
