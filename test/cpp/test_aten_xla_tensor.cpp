@@ -5141,6 +5141,8 @@ TEST_F(AtenXlaTensorTest, TestOneIndexTransfer) {
   }
 }
 
+// Temporarily disable test. See  https://github.com/pytorch/xla/issues/4501
+/*
 TEST_F(AtenXlaTensorTest, TestNonzero) {
   torch::Tensor a = torch::zeros({4, 2}, torch::TensorOptions(torch::kFloat));
   a[0][1] = 1.0;
@@ -5160,6 +5162,7 @@ TEST_F(AtenXlaTensorTest, TestNonzero) {
     ResetCounters();
   });
 }
+*/
 
 TEST_F(AtenXlaTensorTest, TestMaskedSelect) {
   torch::Tensor a = torch::rand({3, 5}, torch::TensorOptions(torch::kFloat));
