@@ -71,7 +71,7 @@ class TestExperimentalTpu(parameterized.TestCase):
             'TPU_PROCESS_BOUNDS': '1,1,2',
             'ZONE': 'us-central2-b',
             'WORKER_ID': '0'
-    })
+        })
 
   def test_tpu_env_from_env_vars(self):
     os.environ[xenv.TPU_ACCELERATOR_TYPE] = 'v4-16'
@@ -90,7 +90,7 @@ class TestExperimentalTpu(parameterized.TestCase):
             'TPU_CHIPS_PER_PROCESS_BOUNDS': '2,2,1',
             'TPU_PROCESS_BOUNDS': '1,2,2',
             'WORKER_ID': '1'
-    })
+        })
 
   def test_tpu_env_from_defaults(self):
     if xenv.TPU_PROCESS_BOUNDS in os.environ:
@@ -112,7 +112,7 @@ class TestExperimentalTpu(parameterized.TestCase):
             'TPU_CHIPS_PER_PROCESS_BOUNDS': '2,1,1',
             'TPU_PROCESS_BOUNDS': '1,1,2',
             'WORKER_ID': '0'
-    })
+        })
 
   @parameterized.named_parameters(
       ('one_host', 't1v-n-ea9d3291-w-0:12345:10.130.0.31', ['localhost']),
