@@ -27,3 +27,10 @@ torch_xla/csrc/generated/
 
 # Local terraform state
 .terraform*
+
+
+# Build system temporary files
+/bazel-*
+
+# VSCode configuration
+.vscode
