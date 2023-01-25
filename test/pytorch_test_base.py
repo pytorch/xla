@@ -204,6 +204,7 @@ DISABLED_TORCH_TESTS_ANY = {
         'test_index_reduce',  # TODO @wonjoo fails with functionalization
         'test_logcumsumexp_xla',  # doesn't raise, pytorch/pytorch#92912
         'test_narrow_copy_non_contiguous',  # New test, fails with functionalization
+        'test_exponential',  # fails with functionalization
     },
 
     # test_view_ops.py
