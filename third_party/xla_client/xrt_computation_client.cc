@@ -14,7 +14,6 @@
 #include "absl/strings/str_split.h"
 #include "tensorflow/cc/ops/const_op.h"
 #include "tensorflow/compiler/xla/shape_util.h"
-#include "tensorflow/compiler/xla/stream_executor/lib/mathutil.h"
 #include "tensorflow/compiler/xla/util.h"
 #include "tensorflow/compiler/xla/xla_client/env_vars.h"
 #include "tensorflow/compiler/xla/xla_client/multi_wait.h"
@@ -27,6 +26,7 @@
 #include "tensorflow/core/framework/allocator.h"
 #include "tensorflow/core/profiler/lib/traceme.h"
 #include "tensorflow/core/util/device_name_utils.h"
+#include "tensorflow/tsl/lib/math/math_util.h"
 
 namespace xla {
 namespace {
@@ -76,7 +76,7 @@ class TensorAllocator : public tensorflow::Allocator {
     alignment = std::max<size_t>(alignment, sizeof(void*));
     // To call aligned_alloc(), num_bytes must be multiple of alignment.
     num_bytes =
-        stream_executor::port::MathUtil::CeilOfRatio(num_bytes, alignment) * alignment;
+        tsl::MathUtil::CeilOfRatio(num_bytes, alignment) * alignment;
 
     AllocKey alloc_key = {alignment, num_bytes};
     void* block = nullptr;
