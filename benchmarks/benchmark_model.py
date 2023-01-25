@@ -101,7 +101,14 @@ class BenchmarkModel:
     elif self.benchmark_experiment.test == "train":
       self.module.train()
       self.model_iter_fn = self.train
-      self.optimizer = self.optimizer_class(self.module.parameters(), lr=0.01)
+      if self.benchmark_experiment.dynamo == "aot_torchxla_trace_once":
+        # TODO: dynamo aot_torchxla_trace_once would fail if there is an
+        # optimizer.
+        # This makes the aot_torchxla_trace_once results not comparable
+        # with other training results
+        self.optimizer = None
+      else:
+        self.optimizer = self.optimizer_class(self.module.parameters(), lr=0.01)
     else:
       raise NotImplementedError
 
@@ -136,7 +143,9 @@ class BenchmarkModel:
     self.optimizer_step()
     if collect_full_result:
       return collect_results(self.module, pred, loss, inputs)
-    return loss.detach()
+    # return loss.detach()
+    # TODO: dynamo inductor would fail if .detach() is used
+    return None
 
   def eval(self, inputs, collect_full_result=False):
     pred = self.module(*inputs)
