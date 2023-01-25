@@ -638,16 +638,16 @@ std::vector<at::Tensor> XLAGraphExecutor::GetTensorsFused(
       async != nullptr ? async->tensors_data
                        : absl::Span<const torch::lazy::BackendDataPtr>());
 
-
   // Execution is async in PJRT, so TransferFromServer may block until execution
   // completes. Release the GIL so other threads can proceed and unblock any
   // collective computations.
-  PyThreadState *save = nullptr;
+  PyThreadState* save = nullptr;
   if (PyGILState_Check()) {
     save = PyEval_SaveThread();
   }
-  std::vector<xla::Literal> literals = xla::ComputationClient::Get()->TransferFromServer(
-        UnwrapXlaData(tensors_data));
+  std::vector<xla::Literal> literals =
+      xla::ComputationClient::Get()->TransferFromServer(
+          UnwrapXlaData(tensors_data));
   if (save) {
     PyEval_RestoreThread(save);
   }
