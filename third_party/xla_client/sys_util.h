@@ -10,6 +10,9 @@ namespace sys_util {
 
 std::string GetEnvString(const char* name, const std::string& defval);
 
+std::string GetEnvOrdinalPath(const char* name, const std::string& defval,
+                              const int64_t ordinal);
+
 std::string GetEnvOrdinalPath(
     const char* name, const std::string& defval,
     const char* ordinal_env = "XRT_SHARD_LOCAL_ORDINAL");

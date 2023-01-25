@@ -108,6 +108,23 @@ class TestExperimentalPjrtMultiCpu(parameterized.TestCase):
     indices = sorted(queue.get(block=False) for _ in range(queue.qsize()))
     self.assertListEqual(indices, list(range(4)))
 
+  @staticmethod
+  def _hlo_dump(tmpdir: str):
+    os.environ['XLA_SAVE_TENSORS_FMT'] = 'hlo'
+    os.environ['XLA_SAVE_TENSORS_FILE'] = os.path.join(tmpdir, 'save.hlo')
+
+    x = torch.randn((3, 3), device=xm.xla_device())
+    xm.mark_step()
+    x.cpu()
+
+  def test_hlo_dump(self):
+    tmpdir = self.create_tempdir().full_path
+    pjrt._run_multiprocess(self._hlo_dump, tmpdir)
+
+    files = os.listdir(tmpdir)
+    for i in range(4):
+      self.assertIn(f'save.hlo.{i}', files)
+
 
 if __name__ == '__main__':
   absltest.main()
