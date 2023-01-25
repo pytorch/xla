@@ -1,4 +1,4 @@
-#include "tensorflow/compiler/xla/xla_client/computation_client.h"
+#include "third_party/xla_client/computation_client.h"
 
 #include <algorithm>
 #include <cstdlib>
@@ -11,15 +11,15 @@
 #include "absl/strings/str_cat.h"
 #include "absl/strings/str_split.h"
 #include "tensorflow/compiler/xla/status_macros.h"
-#include "tensorflow/compiler/xla/xla_client/debug_macros.h"
-#include "tensorflow/compiler/xla/xla_client/env_vars.h"
-#include "tensorflow/compiler/xla/xla_client/mesh_service.h"
-#include "tensorflow/compiler/xla/xla_client/pjrt_computation_client.h"
-#include "tensorflow/compiler/xla/xla_client/sys_util.h"
-#include "tensorflow/compiler/xla/xla_client/xrt_computation_client.h"
 #include "tensorflow/core/platform/net.h"
 #include "tensorflow/core/platform/stacktrace_handler.h"
 #include "tensorflow/core/util/device_name_utils.h"
+#include "third_party/xla_client/debug_macros.h"
+#include "third_party/xla_client/env_vars.h"
+#include "third_party/xla_client/mesh_service.h"
+#include "third_party/xla_client/pjrt_computation_client.h"
+#include "third_party/xla_client/sys_util.h"
+#include "third_party/xla_client/xrt_computation_client.h"
 
 namespace xla {
 namespace {
@@ -144,7 +144,7 @@ void AddXrtHostDevices(const std::string& worker_name, int task_no,
   struct Devices {
     const char* name;
     const char* tf_name;
-    int count;
+    int64_t count;
   } const devices[] = {
       {"TPU", "TPU",
        sys_util::GetEnvInt(env::kEnvNumTpu, device_counts.num_tpus)},
@@ -269,8 +269,7 @@ std::unique_ptr<ComputationClient> ComputationClient::Create() {
   std::unique_ptr<ComputationClient> client;
 
   if (sys_util::GetEnvString(env::kEnvPjRtDevice, "") != "") {
-    client =
-        std::unique_ptr<ComputationClient>(new PjRtComputationClient());
+    client = std::unique_ptr<ComputationClient>(new PjRtComputationClient());
   } else {
     XrtComputationClient::Options options;
     std::unique_ptr<tensorflow::tpu::TopologyProto> topology_proto;

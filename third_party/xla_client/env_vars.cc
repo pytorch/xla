@@ -1,4 +1,4 @@
-#include "tensorflow/compiler/xla/xla_client/env_vars.h"
+#include "third_party/xla_client/env_vars.h"
 
 namespace xla {
 namespace env {
