@@ -5377,12 +5377,8 @@ TEST_F(AtenXlaTensorTest, TestOneIndexTransfer) {
 //
 /*
 TEST_F(AtenXlaTensorTest, TestNonzero) {
-  XlaDeviceType hw_type =
-      static_cast<XlaDeviceType>(GetDefaultDevice()->type());
   // skip this test until the related bug(b/266636840) is fixed.
-  if (hw_type == XlaDeviceType::TPU) {
-    return;
-  }
+  return;
 
   torch::Tensor a = torch::zeros({4, 2}, torch::TensorOptions(torch::kFloat));
   a[0][1] = 1.0;
