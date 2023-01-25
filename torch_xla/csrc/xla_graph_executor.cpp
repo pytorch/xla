@@ -638,11 +638,16 @@ std::vector<at::Tensor> XLAGraphExecutor::GetTensorsFused(
       async != nullptr ? async->tensors_data
                        : absl::Span<const torch::lazy::BackendDataPtr>());
 
-  std::vector<xla::Literal> literals;
-  Py_BEGIN_ALLOW_THREADS
-  literals = xla::ComputationClient::Get()->TransferFromServer(
+
+  PyThreadState *save = nullptr;
+  if (PyGILState_Check()) {
+    save = PyEval_SaveThread();
+  }
+  std::vector<xla::Literal> literals = xla::ComputationClient::Get()->TransferFromServer(
         UnwrapXlaData(tensors_data));
-  Py_END_ALLOW_THREADS
+  if (save) {
+    PyEval_RestoreThread(save);
+  }
 
   return FetchTensors(tensors, literals,
                       async != nullptr ? &async->indices : nullptr);
