@@ -149,10 +149,7 @@ class BenchmarkModel:
 
   def eval(self, inputs, collect_full_result=False):
     pred = self.module(*inputs)
-    loss = self.compute_loss(pred)
-    if collect_full_result:
-      return pred, loss
-    return loss
+    return pred
 
   @property
   def filename_str(self):
