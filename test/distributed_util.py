@@ -82,7 +82,9 @@ def train_step(model, inputs, labels, optimizer, loss_fn):
 
   return loss
 
+
 lock = threading.Lock()
+
 
 def ddp_correctness(init_method: str = 'env://',
                     use_large_net: bool = False,
