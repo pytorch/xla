@@ -3,7 +3,7 @@ import re
 import torch
 import torch.nn as nn
 import torch._dynamo as dynamo
-from torch._dynamo.testing import collect_results, reduce_to_scalar_loss
+from torch._dynamo.testing import collect_results
 import types
 
 try:
@@ -133,7 +133,7 @@ class BenchmarkModel:
       self.optimizer.step()
 
   def compute_loss(self, pred):
-    return reduce_to_scalar_loss(pred)
+    raise NotImplementedError
 
   def train(self, inputs, collect_full_result=False):
     self.optimizer_zero_grad()

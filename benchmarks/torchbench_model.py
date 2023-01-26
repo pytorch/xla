@@ -129,3 +129,24 @@ class TorchBenchModel(BenchmarkModel):
 
     del benchmark
     gc.collect()
+
+  def compute_loss(self, pred):
+    """Reduce the output of a model to get scalar loss"""
+    if isinstance(pred, torch.Tensor):
+      # Mean does not work on integer tensors
+      return pred.sum() / pred.numel()
+    elif isinstance(pred, (list, tuple)):
+      return sum([reduce_to_scalar_loss(x) for x in pred]) / len(pred)
+    elif type(pred).__name__ in (
+        "MaskedLMOutput",
+        "Seq2SeqLMOutput",
+        "CausalLMOutputWithCrossAttentions",
+    ):
+      return reduce_to_scalar_loss(pred.logits)
+    elif type(pred).__name__ == "SquashedNormal":
+      return pred.mean.sum()
+    elif isinstance(pred, dict):
+      return sum([reduce_to_scalar_loss(value) for value in pred.values()]) / len(
+          pred.keys()
+      )
+    raise NotImplementedError("Don't know how to reduce", type(pred))
