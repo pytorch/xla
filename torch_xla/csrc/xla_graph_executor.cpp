@@ -641,6 +641,10 @@ std::vector<at::Tensor> XLAGraphExecutor::GetTensorsFused(
   // Execution is async in PJRT, so TransferFromServer may block until execution
   // completes. Release the GIL so other threads can proceed and unblock any
   // collective computations.
+  // HACK: This method may be called outside of python (mainly in C++ tests) or
+  // when the GIL is already released, so we must check both cases here. If
+  // possible, prefer to release the GIL in the python bindings before copying
+  // this pattern.
   PyThreadState* save = nullptr;
   if (Py_IsInitialized() && PyGILState_Check()) {
     save = PyEval_SaveThread();
