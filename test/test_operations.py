@@ -314,6 +314,10 @@ class TestLongGraphChain(test_utils.XlaTestCase):
 
 class TestSelect(test_utils.XlaTestCase):
 
+  @unittest.skipIf(
+      os.environ.get('PYTORCH_XLA_TESTS_SKIP'),
+      'To avoid new feature developing, disable failed PyTorch/XLA test on TPUVM'
+  )
   def test_get_xla_tensor(self):
     x = _gen_tensor(14, 24, 8, device=xm.xla_device())
     t = x.data.cpu()
@@ -324,6 +328,10 @@ class TestSelect(test_utils.XlaTestCase):
 
 class TestRandom(test_utils.XlaTestCase):
 
+  @unittest.skipIf(
+      os.environ.get('PYTORCH_XLA_TESTS_SKIP'),
+      'To avoid new feature developing, disable failed PyTorch/XLA test on TPUVM'
+  )
   def test_random_from_to_bool(self):
     for from_val, to_val in [[0, 1], [0, 2], [1, 2]]:
       x = _gen_tensor(10, device=xm.xla_device())
@@ -335,6 +343,10 @@ class TestRandom(test_utils.XlaTestCase):
 
 class TestBinaryCrossEntropyLimitValue(test_utils.XlaTestCase):
 
+  @unittest.skipIf(
+      os.environ.get('PYTORCH_XLA_TESTS_SKIP'),
+      'To avoid new feature developing, disable failed PyTorch/XLA test on TPUVM'
+  )
   def test_cross_entropy_loss(self):
 
     def test_fn(pred, target):
@@ -349,6 +361,10 @@ class TestBinaryCrossEntropyLimitValue(test_utils.XlaTestCase):
 
 class TestNllLossLimitValue(test_utils.XlaTestCase):
 
+  @unittest.skipIf(
+      os.environ.get('PYTORCH_XLA_TESTS_SKIP'),
+      'To avoid new feature developing, disable failed PyTorch/XLA test on TPUVM'
+  )
   def test_nll_loss_inf(self):
 
     def test_fn(logits, target):
@@ -360,6 +376,10 @@ class TestNllLossLimitValue(test_utils.XlaTestCase):
       target_tensor = torch.tensor(target)
       self.runAtenTest([logits, target_tensor], test_fn)
 
+  @unittest.skipIf(
+      os.environ.get('PYTORCH_XLA_TESTS_SKIP'),
+      'To avoid new feature developing, disable failed PyTorch/XLA test on TPUVM'
+  )
   def test_nll_loss_nan(self):
 
     def test_fn(logits, target):
@@ -393,12 +413,20 @@ class TestInterOpSyncTensors(test_utils.XlaTestCase):
 
 class TestDynamicShape(test_utils.XlaTestCase):
 
+  @unittest.skipIf(
+      os.environ.get('PYTORCH_XLA_TESTS_SKIP'),
+      'To avoid new feature developing, disable failed PyTorch/XLA test on TPUVM'
+  )
   def test_nonzero_shape(self):
     x = torch.tensor((0, 1, 2, 0, 3, 4), device=xm.xla_device())
     x_dim0_shape = torch_xla._XLAC._get_xla_tensor_dimension_size(
         torch.nonzero(x, as_tuple=False), 0)
     self.assertEqual(x_dim0_shape.item(), 4)
 
+  @unittest.skipIf(
+      os.environ.get('PYTORCH_XLA_TESTS_SKIP'),
+      'To avoid new feature developing, disable failed PyTorch/XLA test on TPUVM'
+  )
   def test_masked_select_shape(self):
     x = torch.tensor((0, 1, 2, 0, 3, 4), device=xm.xla_device())
     mask = x.ge(2)
@@ -420,6 +448,10 @@ class TestDynamicShape(test_utils.XlaTestCase):
 
 class TestOptimizationBarrier(test_utils.XlaTestCase):
 
+  @unittest.skipIf(
+      os.environ.get('PYTORCH_XLA_TESTS_SKIP'),
+      'To avoid new feature developing, disable failed PyTorch/XLA test on TPUVM'
+  )
   def test_optimization_barrier_correctness(self):
     device = xm.xla_device()
     # only test optimization_barrier on TPU
@@ -455,6 +487,10 @@ class TestAtenXlaTensor(test_utils.XlaTestCase):
     for device, xdevice in zip(devices, xla_devices):
       self.assertTrue(re.match(r'(CPU|GPU|TPU):\d+$', xdevice) is not None)
 
+  @unittest.skipIf(
+      os.environ.get('PYTORCH_XLA_TESTS_SKIP'),
+      'To avoid new feature developing, disable failed PyTorch/XLA test on TPUVM'
+  )
   def test_negative_slice(self):
     t = _gen_tensor(32, 24, 32)
     x = t.to(xm.xla_device())
@@ -462,6 +498,10 @@ class TestAtenXlaTensor(test_utils.XlaTestCase):
     x_slice = x[:, :, -1]
     self.assertEqual(t_slice.data, x_slice.data.cpu())
 
+  @unittest.skipIf(
+      os.environ.get('PYTORCH_XLA_TESTS_SKIP'),
+      'To avoid new feature developing, disable failed PyTorch/XLA test on TPUVM'
+  )
   def test_negative_cat(self):
     t = _gen_tensor(2, 5, 3)
     x = t.to(xm.xla_device())
@@ -469,6 +509,10 @@ class TestAtenXlaTensor(test_utils.XlaTestCase):
     x_cat = torch.cat([x, x], -1)
     self.assertEqual(t_cat.data, x_cat.data.cpu())
 
+  @unittest.skipIf(
+      os.environ.get('PYTORCH_XLA_TESTS_SKIP'),
+      'To avoid new feature developing, disable failed PyTorch/XLA test on TPUVM'
+  )
   def test_cat_empty_tensor(self):
     t = _gen_tensor(2, 5, 3)
     empty_tensor = torch.Tensor()
@@ -478,6 +522,10 @@ class TestAtenXlaTensor(test_utils.XlaTestCase):
     x_cat = torch.cat([x, empty_tensor_xla], 0)
     self.assertEqual(t_cat.data, x_cat.data.cpu())
 
+  @unittest.skipIf(
+      os.environ.get('PYTORCH_XLA_TESTS_SKIP'),
+      'To avoid new feature developing, disable failed PyTorch/XLA test on TPUVM'
+  )
   def test_masked_fill_with_tensor(self):
     input = _gen_tensor(2, 5, 4, 3)
     mask = _gen_mask(input.size())
@@ -490,6 +538,10 @@ class TestAtenXlaTensor(test_utils.XlaTestCase):
     self.assertEqual(input.data, xla_input.data.cpu())
     self.assertEqual(result.data, xla_result.data.cpu())
 
+  @unittest.skipIf(
+      os.environ.get('PYTORCH_XLA_TESTS_SKIP'),
+      'To avoid new feature developing, disable failed PyTorch/XLA test on TPUVM'
+  )
   def test_masked_fill_in_out_place(self):
 
     def test_fn(a, b, m):
@@ -501,6 +553,10 @@ class TestAtenXlaTensor(test_utils.XlaTestCase):
     t2 = _gen_tensor(*t1.size())
     self.runAtenTest([t1, t2, _gen_mask(t1.size())], test_fn)
 
+  @unittest.skipIf(
+      os.environ.get('PYTORCH_XLA_TESTS_SKIP'),
+      'To avoid new feature developing, disable failed PyTorch/XLA test on TPUVM'
+  )
   def test_add_mixed_device(self):
     input = _gen_tensor(3, 800, 1066)
     xla_input = input.to(xm.xla_device())
@@ -508,6 +564,10 @@ class TestAtenXlaTensor(test_utils.XlaTestCase):
     xla_output = xla_input + 2
     self.assertEqual(output.data, xla_output.data.cpu())
 
+  @unittest.skipIf(
+      os.environ.get('PYTORCH_XLA_TESTS_SKIP'),
+      'To avoid new feature developing, disable failed PyTorch/XLA test on TPUVM'
+  )
   def test_mul_mixed_device(self):
     input = _gen_tensor(3, 800, 1066)
     xla_input = input.to(xm.xla_device())
@@ -515,6 +575,10 @@ class TestAtenXlaTensor(test_utils.XlaTestCase):
     xla_output = xla_input * 2
     self.assertEqual(output.data, xla_output.data.cpu())
 
+  @unittest.skipIf(
+      os.environ.get('PYTORCH_XLA_TESTS_SKIP'),
+      'To avoid new feature developing, disable failed PyTorch/XLA test on TPUVM'
+  )
   def test_sub_mixed_device(self):
     input = _gen_tensor(3, 800, 1066)
     xla_input = input.to(xm.xla_device())
@@ -522,6 +586,10 @@ class TestAtenXlaTensor(test_utils.XlaTestCase):
     xla_output = xla_input - 2
     self.assertEqual(output.data, xla_output.data.cpu())
 
+  @unittest.skipIf(
+      os.environ.get('PYTORCH_XLA_TESTS_SKIP'),
+      'To avoid new feature developing, disable failed PyTorch/XLA test on TPUVM'
+  )
   def test_div_mixed_device(self):
     input = _gen_tensor(3, 800, 1066)
     xla_input = input.to(xm.xla_device())
@@ -533,6 +601,10 @@ class TestAtenXlaTensor(test_utils.XlaTestCase):
     x = torch.rand(3, 5, device=xm.xla_device())
     self.assertEqual(x.device.type, 'xla')
 
+  @unittest.skipIf(
+      os.environ.get('PYTORCH_XLA_TESTS_SKIP'),
+      'To avoid new feature developing, disable failed PyTorch/XLA test on TPUVM'
+  )
   def test_randperm(self):
     x = torch.randperm(3, device=xm.xla_device())
     self.assertEqual(x.device.type, 'xla')
@@ -557,6 +629,10 @@ class TestAtenXlaTensor(test_utils.XlaTestCase):
     x = torch.randn(5, device=xm.xla_device())
     self.assertRaises(Exception, x.device)
 
+  @unittest.skipIf(
+      os.environ.get('PYTORCH_XLA_TESTS_SKIP'),
+      'To avoid new feature developing, disable failed PyTorch/XLA test on TPUVM'
+  )
   def test_slice_copy(self):
     a = torch.rand(3, 3, 3)
     xla_device = xm.xla_device()
@@ -568,6 +644,10 @@ class TestAtenXlaTensor(test_utils.XlaTestCase):
     xla_b[:a.shape[0], :a.shape[1], :a.shape[2]].copy_(xla_a)
     self.assertEqual(b.data, xla_b.data.cpu())
 
+  @unittest.skipIf(
+      os.environ.get('PYTORCH_XLA_TESTS_SKIP'),
+      'To avoid new feature developing, disable failed PyTorch/XLA test on TPUVM'
+  )
   def test_slice_assign(self):
     a = torch.rand(3, 3, 3)
     xla_device = xm.xla_device()
@@ -579,6 +659,10 @@ class TestAtenXlaTensor(test_utils.XlaTestCase):
     xla_b[0, :, :] = 1
     self.assertEqual(b.data, xla_b.data.cpu())
 
+  @unittest.skipIf(
+      os.environ.get('PYTORCH_XLA_TESTS_SKIP'),
+      'To avoid new feature developing, disable failed PyTorch/XLA test on TPUVM'
+  )
   def test_slice_stepped_assign(self):
     a = torch.ones((10, 4))
     xla_device = xm.xla_device()
@@ -587,6 +671,10 @@ class TestAtenXlaTensor(test_utils.XlaTestCase):
     xla_a[:, 0::2] = 2
     self.assertEqual(a.data, xla_a.data.cpu())
 
+  @unittest.skipIf(
+      os.environ.get('PYTORCH_XLA_TESTS_SKIP'),
+      'To avoid new feature developing, disable failed PyTorch/XLA test on TPUVM'
+  )
   def test_slice_stepped_other_assign(self):
     a = torch.ones((10, 4))
     xla_device = xm.xla_device()
@@ -595,6 +683,10 @@ class TestAtenXlaTensor(test_utils.XlaTestCase):
     xla_a[:, 1::4] = 2
     self.assertEqual(a.data, xla_a.data.cpu())
 
+  @unittest.skipIf(
+      os.environ.get('PYTORCH_XLA_TESTS_SKIP'),
+      'To avoid new feature developing, disable failed PyTorch/XLA test on TPUVM'
+  )
   def test_ailing_slice(self):
     xla_device = xm.xla_device()
     a = torch.ones((1000, 324)).to(xla_device)
@@ -605,6 +697,10 @@ class TestAtenXlaTensor(test_utils.XlaTestCase):
     xla_dw = torch.clamp(xla_w, max=3.1)
     self.assertEqual(w.data, xla_w.data.cpu())
 
+  @unittest.skipIf(
+      os.environ.get('PYTORCH_XLA_TESTS_SKIP'),
+      'To avoid new feature developing, disable failed PyTorch/XLA test on TPUVM'
+  )
   def test_slice_rnd_stepped_assign(self):
     xla_device = xm.xla_device()
     size = 10
@@ -630,6 +726,10 @@ class TestAtenXlaTensor(test_utils.XlaTestCase):
     xla_result = xla_base[:, torch.empty(0, 6, dtype=torch.int64)]
     self.assertEqual(result, xla_result)
 
+  @unittest.skipIf(
+      os.environ.get('PYTORCH_XLA_TESTS_SKIP'),
+      'To avoid new feature developing, disable failed PyTorch/XLA test on TPUVM'
+  )
   def test_empty_strided(self):
     xla_device = xm.xla_device()
     m = nn.Conv1d(4, 6, kernel_size=3, groups=2)
@@ -655,6 +755,10 @@ class TestAtenXlaTensor(test_utils.XlaTestCase):
         retain_graph=True)
     self.assertEqual(grad_grad_input, xla_grad_grad_input, prec=1e-4)
 
+  @unittest.skipIf(
+      os.environ.get('PYTORCH_XLA_TESTS_SKIP'),
+      'To avoid new feature developing, disable failed PyTorch/XLA test on TPUVM'
+  )
   def test_clamp(self):
     a = torch.randn(3, 3)
     xla_a = a.to(xm.xla_device())
@@ -662,6 +766,10 @@ class TestAtenXlaTensor(test_utils.XlaTestCase):
     xla_b = torch.clamp(xla_a, max=3.4)
     self.assertEqual(b.data, xla_b.data.cpu())
 
+  @unittest.skipIf(
+      os.environ.get('PYTORCH_XLA_TESTS_SKIP'),
+      'To avoid new feature developing, disable failed PyTorch/XLA test on TPUVM'
+  )
   def test_rrelu_module(self):
     xla_device = xm.xla_device()
     a = torch.rand(1, 2, 2, requires_grad=True)
@@ -679,6 +787,10 @@ class TestAtenXlaTensor(test_utils.XlaTestCase):
     xla_output.sum().backward()
     self.assertEqual(a.grad, xla_a.grad.cpu())
 
+  @unittest.skipIf(
+      os.environ.get('PYTORCH_XLA_TESTS_SKIP'),
+      'To avoid new feature developing, disable failed PyTorch/XLA test on TPUVM'
+  )
   def test_max_broadcast(self):
     xla_device = xm.xla_device()
     a = torch.rand(3, 1, 2)
@@ -689,6 +801,10 @@ class TestAtenXlaTensor(test_utils.XlaTestCase):
     xla_c = torch.max(xla_a, xla_b)
     self.assertEqual(c.data, xla_c.data.cpu())
 
+  @unittest.skipIf(
+      os.environ.get('PYTORCH_XLA_TESTS_SKIP'),
+      'To avoid new feature developing, disable failed PyTorch/XLA test on TPUVM'
+  )
   def test_sgn(self):
     xla_device = xm.xla_device()
     t = torch.randn(2, 3, dtype=torch.cfloat)
@@ -722,6 +838,10 @@ class TestAtenXlaTensor(test_utils.XlaTestCase):
     xla_a = t.to(xla_device).sgn()
     self.assertEqual(a.data, xla_a.data.cpu())
 
+  @unittest.skipIf(
+      os.environ.get('PYTORCH_XLA_TESTS_SKIP'),
+      'To avoid new feature developing, disable failed PyTorch/XLA test on TPUVM'
+  )
   def test_index_put(self):
     xla_device = xm.xla_device()
     a = torch.tensor([1, 1, 1, 1]).to(xla_device).to(dtype=torch.float32)
@@ -730,6 +850,10 @@ class TestAtenXlaTensor(test_utils.XlaTestCase):
     vset = b.sum().item()
     self.assertEqual(a.sum().item(), 10.0 * vset + (4.0 - vset))
 
+  @unittest.skipIf(
+      os.environ.get('PYTORCH_XLA_TESTS_SKIP'),
+      'To avoid new feature developing, disable failed PyTorch/XLA test on TPUVM'
+  )
   def test_pow_integer_types(self):
     self.runAtenTest(torch.randint(10, (2, 2)), lambda x: torch.pow(x, 2))
     self.runAtenTest(torch.randint(10, (2, 2)), lambda x: torch.pow(2, x))
@@ -783,6 +907,10 @@ class TestAtenXlaTensor(test_utils.XlaTestCase):
         RuntimeError, r'unspecified dimension size -1 can be any value'):
       empty.view(3, 0, -1, 0)
 
+  @unittest.skipIf(
+      os.environ.get('PYTORCH_XLA_TESTS_SKIP'),
+      'To avoid new feature developing, disable failed PyTorch/XLA test on TPUVM'
+  )
   def test_view_1718(self):
 
     def test_fn(device):
@@ -800,6 +928,10 @@ class TestAtenXlaTensor(test_utils.XlaTestCase):
     self.assertEqual(cpu_loss, xla_loss)
     self.assertEqual(cpu_weight_grad, xla_weight_grad)
 
+  @unittest.skipIf(
+      os.environ.get('PYTORCH_XLA_TESTS_SKIP'),
+      'To avoid new feature developing, disable failed PyTorch/XLA test on TPUVM'
+  )
   def test_inplace_view_backprop_base(self):
     root = torch.randn(2, 2, device=xm.xla_device(), requires_grad=True)
     x = root.clone()
@@ -808,6 +940,10 @@ class TestAtenXlaTensor(test_utils.XlaTestCase):
     x.sum().backward()
     self.assertEqual(root.grad.tolist(), [[2, 2], [1, 1]])
 
+  @unittest.skipIf(
+      os.environ.get('PYTORCH_XLA_TESTS_SKIP'),
+      'To avoid new feature developing, disable failed PyTorch/XLA test on TPUVM'
+  )
   def test_inplace_view_backprop_view_of_view(self):
     root = torch.randn(2, 2, device=xm.xla_device(), requires_grad=True)
     x = root.clone()
@@ -817,6 +953,10 @@ class TestAtenXlaTensor(test_utils.XlaTestCase):
     v2.sum().backward()
     self.assertEqual(root.grad.tolist(), [[2, 2], [0, 0]])
 
+  @unittest.skipIf(
+      os.environ.get('PYTORCH_XLA_TESTS_SKIP'),
+      'To avoid new feature developing, disable failed PyTorch/XLA test on TPUVM'
+  )
   def test_inplace_view_of_view(self):
     # modify view-of-view and backprop through base
     root = torch.randn(2, 2, device=xm.xla_device(), requires_grad=True)
@@ -838,6 +978,10 @@ class TestAtenXlaTensor(test_utils.XlaTestCase):
     with self.assertRaises(RuntimeError):
       v2.mul_(2)
 
+  @unittest.skipIf(
+      os.environ.get('PYTORCH_XLA_TESTS_SKIP'),
+      'To avoid new feature developing, disable failed PyTorch/XLA test on TPUVM'
+  )
   def test_inplace_view_gradcheck(self):
     # gradcheck modifications to views
     a = torch.randn(4, 4, requires_grad=True)
@@ -852,6 +996,10 @@ class TestAtenXlaTensor(test_utils.XlaTestCase):
 
     self.runAtenTest((a, b), test_fn)
 
+  @unittest.skipIf(
+      os.environ.get('PYTORCH_XLA_TESTS_SKIP'),
+      'To avoid new feature developing, disable failed PyTorch/XLA test on TPUVM'
+  )
   def test_inplace_view_makes_base_require_grad(self):
     # in-place modification to view makes base require grad
     a = torch.randn(4, 4, requires_grad=False)
@@ -878,6 +1026,10 @@ class TestAtenXlaTensor(test_utils.XlaTestCase):
     self.assertEqual(b.grad.tolist(), [5])
     self.assertIsNone(a.grad)
 
+  @unittest.skipIf(
+      os.environ.get('PYTORCH_XLA_TESTS_SKIP'),
+      'To avoid new feature developing, disable failed PyTorch/XLA test on TPUVM'
+  )
   def test_inplace_view_modify_base(self):
     # Test that an in-place operation on a base that forced it to require
     # grad also forces any previous views to require grad and backprop
@@ -896,6 +1048,10 @@ class TestAtenXlaTensor(test_utils.XlaTestCase):
 
     self.runAtenTest((r, x), fn)
 
+  @unittest.skipIf(
+      os.environ.get('PYTORCH_XLA_TESTS_SKIP'),
+      'To avoid new feature developing, disable failed PyTorch/XLA test on TPUVM'
+  )
   def test_inplace_view_python(self):
     # in-place modifications of Python-autograd created view
     a = torch.randn(4, 4, requires_grad=True)
@@ -922,6 +1078,10 @@ class TestAtenXlaTensor(test_utils.XlaTestCase):
 
     self.runAtenTest((a, b), func)
 
+  @unittest.skipIf(
+      os.environ.get('PYTORCH_XLA_TESTS_SKIP'),
+      'To avoid new feature developing, disable failed PyTorch/XLA test on TPUVM'
+  )
   def test_inplace_view_non_contig(self):
     root = torch.ones(
         2, 3, 2, device=xm.xla_device()).select(2, 1).t().requires_grad_(True)
@@ -932,6 +1092,10 @@ class TestAtenXlaTensor(test_utils.XlaTestCase):
     x.sum().backward()
     self.assertEqual(root.grad.tolist(), [[1, 2], [1, 1], [1, 1]])
 
+  @unittest.skipIf(
+      os.environ.get('PYTORCH_XLA_TESTS_SKIP'),
+      'To avoid new feature developing, disable failed PyTorch/XLA test on TPUVM'
+  )
   def test_view_data_update(self):
     a = torch.zeros(4, device=xm.xla_device())
     v = a.view(2, 2)
@@ -940,6 +1104,10 @@ class TestAtenXlaTensor(test_utils.XlaTestCase):
     # Upadting a.data should not update v's value.
     self.assertEqual(v.tolist(), [[0.0, 0.0], [0.0, 0.0]])
 
+  @unittest.skipIf(
+      os.environ.get('PYTORCH_XLA_TESTS_SKIP'),
+      'To avoid new feature developing, disable failed PyTorch/XLA test on TPUVM'
+  )
   def test_view_out_computation(self):
 
     def func(a, b):
@@ -951,6 +1119,10 @@ class TestAtenXlaTensor(test_utils.XlaTestCase):
     b = torch.ones([2, 2])
     self.runAtenTest((a, b), func)
 
+  @unittest.skipIf(
+      os.environ.get('PYTORCH_XLA_TESTS_SKIP'),
+      'To avoid new feature developing, disable failed PyTorch/XLA test on TPUVM'
+  )
   def test_view_data_slice(self):
     t1 = torch.zeros(50, device=xm.xla_device())
     t1_slice = t1.data[:5]
@@ -958,6 +1130,10 @@ class TestAtenXlaTensor(test_utils.XlaTestCase):
     t1.data = t1_slice
     self.assertEqual(t1.tolist(), [0, 0, 0, 0, 0])
 
+  @unittest.skipIf(
+      os.environ.get('PYTORCH_XLA_TESTS_SKIP'),
+      'To avoid new feature developing, disable failed PyTorch/XLA test on TPUVM'
+  )
   def test_pred_type(self):
     xla_device = xm.xla_device()
     a = torch.rand(4)
@@ -980,6 +1156,10 @@ class TestAtenXlaTensor(test_utils.XlaTestCase):
     self.runAtenTest(c, lambda x: x | x.byte())
     self.runAtenTest(c, lambda x: x ^ x.byte())
 
+  @unittest.skipIf(
+      os.environ.get('PYTORCH_XLA_TESTS_SKIP'),
+      'To avoid new feature developing, disable failed PyTorch/XLA test on TPUVM'
+  )
   def test_bitwise_and_not(self):
     xla_device = xm.xla_device()
     a = torch.randint(255, (4,), dtype=torch.long)
@@ -1010,6 +1190,10 @@ class TestAtenXlaTensor(test_utils.XlaTestCase):
     z = x + y
     self.assertEqual(z.dtype, torch.uint8)
 
+  @unittest.skipIf(
+      os.environ.get('PYTORCH_XLA_TESTS_SKIP'),
+      'To avoid new feature developing, disable failed PyTorch/XLA test on TPUVM'
+  )
   def test_frac_negative(self):
     xla_device = xm.xla_device()
     a = torch.tensor(-3.2)
@@ -1018,6 +1202,10 @@ class TestAtenXlaTensor(test_utils.XlaTestCase):
     xla_b = xla_a.frac()
     self.assertEqual(b, xla_b)
 
+  @unittest.skipIf(
+      os.environ.get('PYTORCH_XLA_TESTS_SKIP'),
+      'To avoid new feature developing, disable failed PyTorch/XLA test on TPUVM'
+  )
   def test_flip(self):
     device = xm.xla_device()
     data = torch.tensor([1, 2, 3, 4, 5, 6, 7, 8], device=device).view(2, 2, 2)
@@ -1053,6 +1241,10 @@ class TestAtenXlaTensor(test_utils.XlaTestCase):
     # not allow dim > max dim
     self.assertRaises(RuntimeError, lambda: data.flip(3))
 
+  @unittest.skipIf(
+      os.environ.get('PYTORCH_XLA_TESTS_SKIP'),
+      'To avoid new feature developing, disable failed PyTorch/XLA test on TPUVM'
+  )
   def test_flip_expand(self):
     device = xm.xla_device()
     data = torch.tensor([1, 2, 3, 4, 5, 6, 7, 8], device=device).view(2, 2, 2)
@@ -1075,6 +1267,10 @@ class TestAtenXlaTensor(test_utils.XlaTestCase):
     for ds in test_dims:
       self.assertEqual(size, list(data.flip(ds).size()))
 
+  @unittest.skipIf(
+      os.environ.get('PYTORCH_XLA_TESTS_SKIP'),
+      'To avoid new feature developing, disable failed PyTorch/XLA test on TPUVM'
+  )
   def test_flip_rectangular(self):
     device = xm.xla_device()
     data = torch.tensor([1, 2, 3, 4, 5, 6]).view(2, 3).to(device)
@@ -1089,6 +1285,10 @@ class TestAtenXlaTensor(test_utils.XlaTestCase):
     data = torch.tensor([])
     self.assertEqual(data, data.flip(0))
 
+  @unittest.skipIf(
+      os.environ.get('PYTORCH_XLA_TESTS_SKIP'),
+      'To avoid new feature developing, disable failed PyTorch/XLA test on TPUVM'
+  )
   def test_norm_p0(self):
     # p = 0 is equivalent to nonzero
     xla_device = xm.xla_device()
@@ -1098,6 +1298,10 @@ class TestAtenXlaTensor(test_utils.XlaTestCase):
     xla_norm = xla_a.norm(p=0)
     self.assertEqual(norm, xla_norm)
 
+  @unittest.skipIf(
+      os.environ.get('PYTORCH_XLA_TESTS_SKIP'),
+      'To avoid new feature developing, disable failed PyTorch/XLA test on TPUVM'
+  )
   def test_slice_start_end(self):
 
     def test_fn(x):
@@ -1105,6 +1309,10 @@ class TestAtenXlaTensor(test_utils.XlaTestCase):
 
     self.runAtenTest(torch.rand(2, 3, 5), test_fn)
 
+  @unittest.skipIf(
+      os.environ.get('PYTORCH_XLA_TESTS_SKIP'),
+      'To avoid new feature developing, disable failed PyTorch/XLA test on TPUVM'
+  )
   def test_index_bool(self):
 
     def test_fn(a):
@@ -1115,6 +1323,10 @@ class TestAtenXlaTensor(test_utils.XlaTestCase):
 
     self.runAtenTest(torch.rand(2, 3), test_fn)
 
+  @unittest.skipIf(
+      os.environ.get('PYTORCH_XLA_TESTS_SKIP'),
+      'To avoid new feature developing, disable failed PyTorch/XLA test on TPUVM'
+  )
   def test_split_empty_dim(self):
 
     def test_fn(a):
@@ -1122,6 +1334,10 @@ class TestAtenXlaTensor(test_utils.XlaTestCase):
 
     self.runAtenTest(torch.rand(0, 1, 3, 0), test_fn)
 
+  @unittest.skipIf(
+      os.environ.get('PYTORCH_XLA_TESTS_SKIP'),
+      'To avoid new feature developing, disable failed PyTorch/XLA test on TPUVM'
+  )
   def test_pred_and_u8(self):
 
     def test_fn(a):
@@ -1129,6 +1345,10 @@ class TestAtenXlaTensor(test_utils.XlaTestCase):
 
     self.runAtenTest(torch.rand(4, 3), test_fn)
 
+  @unittest.skipIf(
+      os.environ.get('PYTORCH_XLA_TESTS_SKIP'),
+      'To avoid new feature developing, disable failed PyTorch/XLA test on TPUVM'
+  )
   def test_scatter_add_bool(self):
     xla_device = xm.xla_device()
     a = torch.tensor([[True, True, True, True, True],
@@ -1154,6 +1374,10 @@ class TestAtenXlaTensor(test_utils.XlaTestCase):
 
     self.runAtenTest(torch.tensor([3, 1]), test_fn)
 
+  @unittest.skipIf(
+      os.environ.get('PYTORCH_XLA_TESTS_SKIP'),
+      'To avoid new feature developing, disable failed PyTorch/XLA test on TPUVM'
+  )
   def test_expand_default(self):
 
     def test_fn(a):
@@ -1161,6 +1385,10 @@ class TestAtenXlaTensor(test_utils.XlaTestCase):
 
     self.runAtenTest(torch.zeros([4, 4]), test_fn)
 
+  @unittest.skipIf(
+      os.environ.get('PYTORCH_XLA_TESTS_SKIP'),
+      'To avoid new feature developing, disable failed PyTorch/XLA test on TPUVM'
+  )
   def test_stack_pred(self):
 
     def test_fn(a):
@@ -1172,6 +1400,10 @@ class TestAtenXlaTensor(test_utils.XlaTestCase):
 
     self.runAtenTest(torch.randint(3, (7, 3)), test_fn)
 
+  @unittest.skipIf(
+      os.environ.get('PYTORCH_XLA_TESTS_SKIP'),
+      'To avoid new feature developing, disable failed PyTorch/XLA test on TPUVM'
+  )
   def test_reduction_0dim(self):
     self.runAtenTest(torch.rand(2, 0, 4).bool(), lambda x: torch.all(x))
     self.runAtenTest(torch.rand(2, 0, 4).bool(), lambda x: torch.any(x))
@@ -1191,11 +1423,19 @@ class TestAtenXlaTensor(test_utils.XlaTestCase):
     self.assertRaises(RuntimeError, lambda: torch.min(xla_a, dim=1))
     self.assertRaises(RuntimeError, lambda: torch.min(xla_a))
 
+  @unittest.skipIf(
+      os.environ.get('PYTORCH_XLA_TESTS_SKIP'),
+      'To avoid new feature developing, disable failed PyTorch/XLA test on TPUVM'
+  )
   def test_reduction_unordered_dim(self):
     self.runAtenTest(
         torch.rand(4, 3, 4, 2),
         lambda x: torch.mean(x, (-1, -3, -2), keepdim=True))
 
+  @unittest.skipIf(
+      os.environ.get('PYTORCH_XLA_TESTS_SKIP'),
+      'To avoid new feature developing, disable failed PyTorch/XLA test on TPUVM'
+  )
   def test_index_select_0dim(self):
 
     def test_fn(s, i):
@@ -1205,6 +1445,10 @@ class TestAtenXlaTensor(test_utils.XlaTestCase):
         [torch.randn(0, 1, 2, 0),
          torch.tensor([], dtype=torch.long)], test_fn)
 
+  @unittest.skipIf(
+      os.environ.get('PYTORCH_XLA_TESTS_SKIP'),
+      'To avoid new feature developing, disable failed PyTorch/XLA test on TPUVM'
+  )
   def test_scatter_add_small_target(self):
 
     def test_fn(t, s, i):
@@ -1216,6 +1460,10 @@ class TestAtenXlaTensor(test_utils.XlaTestCase):
          torch.randn(2, 8),
          torch.randint(0, 4, (2, 8))], test_fn)
 
+  @unittest.skipIf(
+      os.environ.get('PYTORCH_XLA_TESTS_SKIP'),
+      'To avoid new feature developing, disable failed PyTorch/XLA test on TPUVM'
+  )
   def test_diagonal_write(self):
 
     def test_fn(t):
@@ -1225,6 +1473,10 @@ class TestAtenXlaTensor(test_utils.XlaTestCase):
 
     self.runAtenTest([torch.randn(5, 8)], test_fn)
 
+  @unittest.skipIf(
+      os.environ.get('PYTORCH_XLA_TESTS_SKIP'),
+      'To avoid new feature developing, disable failed PyTorch/XLA test on TPUVM'
+  )
   def test_diagonal_write_transposed(self):
 
     def test_fn(t):
@@ -1234,6 +1486,10 @@ class TestAtenXlaTensor(test_utils.XlaTestCase):
 
     self.runAtenTest([torch.randn(5, 8)], test_fn)
 
+  @unittest.skipIf(
+      os.environ.get('PYTORCH_XLA_TESTS_SKIP'),
+      'To avoid new feature developing, disable failed PyTorch/XLA test on TPUVM'
+  )
   def test_diagonal_write_transposed_r3(self):
 
     def test_fn(t):
@@ -1243,6 +1499,10 @@ class TestAtenXlaTensor(test_utils.XlaTestCase):
 
     self.runAtenTest([torch.randn(5, 8, 7)], test_fn)
 
+  @unittest.skipIf(
+      os.environ.get('PYTORCH_XLA_TESTS_SKIP'),
+      'To avoid new feature developing, disable failed PyTorch/XLA test on TPUVM'
+  )
   def test_writeable_tensors_updates(self):
 
     def test_fn(s, i):
@@ -1253,6 +1513,10 @@ class TestAtenXlaTensor(test_utils.XlaTestCase):
         [torch.randn(3, 4),
          torch.tensor([2, 1], dtype=torch.long)], test_fn)
 
+  @unittest.skipIf(
+      os.environ.get('PYTORCH_XLA_TESTS_SKIP'),
+      'To avoid new feature developing, disable failed PyTorch/XLA test on TPUVM'
+  )
   def test_index_select_out(self):
 
     def test_fn(s, i):
@@ -1263,6 +1527,10 @@ class TestAtenXlaTensor(test_utils.XlaTestCase):
         [torch.randn(3, 4, 5),
          torch.tensor([2, 1, 0, 1, 2], dtype=torch.long)], test_fn)
 
+  @unittest.skipIf(
+      os.environ.get('PYTORCH_XLA_TESTS_SKIP'),
+      'To avoid new feature developing, disable failed PyTorch/XLA test on TPUVM'
+  )
   def test_pred_one_hot(self):
 
     def test_fn(t, c):
@@ -1304,6 +1572,10 @@ class TestAtenXlaTensor(test_utils.XlaTestCase):
     check(xm.xla_device())
     check(torch.device('cpu'))
 
+  @unittest.skipIf(
+      os.environ.get('PYTORCH_XLA_TESTS_SKIP'),
+      'To avoid new feature developing, disable failed PyTorch/XLA test on TPUVM'
+  )
   def test_save(self):
     xla_device = xm.xla_device()
     x = torch.randn(5, device=xla_device)
@@ -1312,6 +1584,10 @@ class TestAtenXlaTensor(test_utils.XlaTestCase):
       x_loaded = torch.load(tf.name)
       self.assertEqual(x, x_loaded)
 
+  @unittest.skipIf(
+      os.environ.get('PYTORCH_XLA_TESTS_SKIP'),
+      'To avoid new feature developing, disable failed PyTorch/XLA test on TPUVM'
+  )
   def test_save_bf16(self):
     xla_device = xm.xla_device()
     x = torch.randn(5, dtype=torch.bfloat16, device=xla_device)
@@ -1320,6 +1596,10 @@ class TestAtenXlaTensor(test_utils.XlaTestCase):
       x_loaded = torch.load(tf.name)
       self.assertEqual(x, x_loaded)
 
+  @unittest.skipIf(
+      os.environ.get('PYTORCH_XLA_TESTS_SKIP'),
+      'To avoid new feature developing, disable failed PyTorch/XLA test on TPUVM'
+  )
   def test_save_tuple(self):
     xla_device = xm.xla_device()
     x = torch.randn(5, device=xla_device)
@@ -1330,6 +1610,10 @@ class TestAtenXlaTensor(test_utils.XlaTestCase):
       self.assertEqual(x, x_loaded)
       self.assertEqual(number, number_loaded)
 
+  @unittest.skipIf(
+      os.environ.get('PYTORCH_XLA_TESTS_SKIP'),
+      'To avoid new feature developing, disable failed PyTorch/XLA test on TPUVM'
+  )
   def test_save_api(self):
     xla_device = xm.xla_device()
     model = XlaMNIST().to(xla_device)
@@ -1341,6 +1625,10 @@ class TestAtenXlaTensor(test_utils.XlaTestCase):
     loaded_model = cpu_model.to(xla_device)
     self.assertEqual(model.state_dict(), loaded_model.state_dict())
 
+  @unittest.skipIf(
+      os.environ.get('PYTORCH_XLA_TESTS_SKIP'),
+      'To avoid new feature developing, disable failed PyTorch/XLA test on TPUVM'
+  )
   def test_serialization_api(self):
     with tempfile.TemporaryDirectory() as tmpdir:
       path = os.path.join(tmpdir, 'data.pt')
@@ -1353,6 +1641,10 @@ class TestAtenXlaTensor(test_utils.XlaTestCase):
       loaded_model = cpu_model.to(xla_device)
       self.assertEqual(model.state_dict(), loaded_model.state_dict())
 
+  @unittest.skipIf(
+      os.environ.get('PYTORCH_XLA_TESTS_SKIP'),
+      'To avoid new feature developing, disable failed PyTorch/XLA test on TPUVM'
+  )
   def test_deepcopy(self):
     xla_device = xm.xla_device()
     x = torch.rand(5, device=xla_device)
@@ -1363,6 +1655,10 @@ class TestAtenXlaTensor(test_utils.XlaTestCase):
     # Make sure x doesn't change with y.
     self.assertEqual(x[0], x0)
 
+  @unittest.skipIf(
+      os.environ.get('PYTORCH_XLA_TESTS_SKIP'),
+      'To avoid new feature developing, disable failed PyTorch/XLA test on TPUVM'
+  )
   def test_print(self):
     xla_device = xm.xla_device()
     x = torch.tensor([5], device=xla_device)
@@ -1383,6 +1679,10 @@ class TestAtenXlaTensor(test_utils.XlaTestCase):
           torch.rand(8, 5, requires_grad=True)
       ], test_fn)
 
+  @unittest.skipIf(
+      os.environ.get('PYTORCH_XLA_TESTS_SKIP'),
+      'To avoid new feature developing, disable failed PyTorch/XLA test on TPUVM'
+  )
   def test_as_strided_r1(self):
 
     def test_fn(r):
@@ -1397,6 +1697,10 @@ class TestAtenXlaTensor(test_utils.XlaTestCase):
 
     self.runAtenTest([torch.arange(15, dtype=torch.int32)], test_fn)
 
+  @unittest.skipIf(
+      os.environ.get('PYTORCH_XLA_TESTS_SKIP'),
+      'To avoid new feature developing, disable failed PyTorch/XLA test on TPUVM'
+  )
   def test_as_strided_r1_t_off(self):
 
     def test_fn(r):
@@ -1404,6 +1708,10 @@ class TestAtenXlaTensor(test_utils.XlaTestCase):
 
     self.runAtenTest([torch.arange(35, dtype=torch.int32)], test_fn)
 
+  @unittest.skipIf(
+      os.environ.get('PYTORCH_XLA_TESTS_SKIP'),
+      'To avoid new feature developing, disable failed PyTorch/XLA test on TPUVM'
+  )
   def test_as_strided_r2_t_update(self):
 
     def test_fn(r):
@@ -1413,6 +1721,10 @@ class TestAtenXlaTensor(test_utils.XlaTestCase):
 
     self.runAtenTest([torch.arange(30, dtype=torch.int32)], test_fn)
 
+  @unittest.skipIf(
+      os.environ.get('PYTORCH_XLA_TESTS_SKIP'),
+      'To avoid new feature developing, disable failed PyTorch/XLA test on TPUVM'
+  )
   def test_as_strided_r1_slice(self):
 
     def test_fn(r):
@@ -1421,6 +1733,10 @@ class TestAtenXlaTensor(test_utils.XlaTestCase):
 
     self.runAtenTest([torch.arange(15, dtype=torch.int32)], test_fn)
 
+  @unittest.skipIf(
+      os.environ.get('PYTORCH_XLA_TESTS_SKIP'),
+      'To avoid new feature developing, disable failed PyTorch/XLA test on TPUVM'
+  )
   def test_as_strided_r1_t_slice(self):
 
     def test_fn(r):
@@ -1429,6 +1745,10 @@ class TestAtenXlaTensor(test_utils.XlaTestCase):
 
     self.runAtenTest([torch.arange(15, dtype=torch.int32)], test_fn)
 
+  @unittest.skipIf(
+      os.environ.get('PYTORCH_XLA_TESTS_SKIP'),
+      'To avoid new feature developing, disable failed PyTorch/XLA test on TPUVM'
+  )
   def test_as_strided_r1_dim1(self):
 
     def test_fn(r):
@@ -1436,6 +1756,10 @@ class TestAtenXlaTensor(test_utils.XlaTestCase):
 
     self.runAtenTest([torch.arange(144, dtype=torch.int32)], test_fn)
 
+  @unittest.skipIf(
+      os.environ.get('PYTORCH_XLA_TESTS_SKIP'),
+      'To avoid new feature developing, disable failed PyTorch/XLA test on TPUVM'
+  )
   def test_basic_bfloat16(self):
 
     def test_fn(s):
@@ -1443,6 +1767,10 @@ class TestAtenXlaTensor(test_utils.XlaTestCase):
 
     self.runAtenTest([torch.ones(2, 2, dtype=torch.bfloat16)], test_fn)
 
+  @unittest.skipIf(
+      os.environ.get('PYTORCH_XLA_TESTS_SKIP'),
+      'To avoid new feature developing, disable failed PyTorch/XLA test on TPUVM'
+  )
   def test_float32_bfloat16_cast(self):
 
     def test_fn(s, t):
@@ -1453,6 +1781,10 @@ class TestAtenXlaTensor(test_utils.XlaTestCase):
 
     self.runAtenTest([torch.ones(2, 2), torch.randn(2, 2)], test_fn)
 
+  @unittest.skipIf(
+      os.environ.get('PYTORCH_XLA_TESTS_SKIP'),
+      'To avoid new feature developing, disable failed PyTorch/XLA test on TPUVM'
+  )
   def test_bfloat16_float32_cast(self):
 
     def test_fn(s, t):
@@ -1466,6 +1798,10 @@ class TestAtenXlaTensor(test_utils.XlaTestCase):
         torch.randn(2, 2).to(torch.bfloat16)
     ], test_fn)
 
+  @unittest.skipIf(
+      os.environ.get('PYTORCH_XLA_TESTS_SKIP'),
+      'To avoid new feature developing, disable failed PyTorch/XLA test on TPUVM'
+  )
   def test_inplace_copy_different_sizes(self):
 
     def test_fn(t, r):
@@ -1474,6 +1810,10 @@ class TestAtenXlaTensor(test_utils.XlaTestCase):
 
     self.runAtenTest([torch.rand(2, 4), torch.zeros(2, 1)], test_fn)
 
+  @unittest.skipIf(
+      os.environ.get('PYTORCH_XLA_TESTS_SKIP'),
+      'To avoid new feature developing, disable failed PyTorch/XLA test on TPUVM'
+  )
   def test_spooky_ailing(self):
 
     def test_fn(m):
@@ -1491,6 +1831,10 @@ class TestAtenXlaTensor(test_utils.XlaTestCase):
 
     self.runAtenTest([torch.randint(1, 4, (7, 7), dtype=torch.uint8)], test_fn)
 
+  @unittest.skipIf(
+      os.environ.get('PYTORCH_XLA_TESTS_SKIP'),
+      'To avoid new feature developing, disable failed PyTorch/XLA test on TPUVM'
+  )
   def test_too_many_parameter(self):
 
     def test_fn(t):
@@ -1503,6 +1847,10 @@ class TestAtenXlaTensor(test_utils.XlaTestCase):
     if pjrt.using_pjrt():
       self.runAtenTest([torch.tensor(20.0)], test_fn)
 
+  @unittest.skipIf(
+      os.environ.get('PYTORCH_XLA_TESTS_SKIP'),
+      'To avoid new feature developing, disable failed PyTorch/XLA test on TPUVM'
+  )
   def test_view_and_copy_(self):
     xla_device = xm.xla_device()
     x = torch.tensor([1.5, 2.5, 3.5, 4.5, 5.5, 6.5], device='cpu')
@@ -1510,6 +1858,10 @@ class TestAtenXlaTensor(test_utils.XlaTestCase):
     y[::2].copy_(x[::2])
     self.assertEqual(y, [1, 0, 3, 0, 5, 0])
 
+  @unittest.skipIf(
+      os.environ.get('PYTORCH_XLA_TESTS_SKIP'),
+      'To avoid new feature developing, disable failed PyTorch/XLA test on TPUVM'
+  )
   def test_view_and_multi_mark_step(self):
     xla_device = xm.xla_device()
     t1 = torch.zeros(100, device=xla_device)
@@ -1520,6 +1872,10 @@ class TestAtenXlaTensor(test_utils.XlaTestCase):
     self.assertNotIn('update_slice',
                      torch_xla._XLAC._get_xla_tensors_text([t1]))
 
+  @unittest.skipIf(
+      os.environ.get('PYTORCH_XLA_TESTS_SKIP'),
+      'To avoid new feature developing, disable failed PyTorch/XLA test on TPUVM'
+  )
   def test_binaryop_order(self):
     xla_device = xm.xla_device()
     x = torch.rand(5, device=xla_device)
@@ -1545,6 +1901,10 @@ class TestAtenXlaTensor(test_utils.XlaTestCase):
     emb_out = emb(index)
     assert emb_out.dtype == torch.bfloat16
 
+  @unittest.skipIf(
+      os.environ.get('PYTORCH_XLA_TESTS_SKIP'),
+      'To avoid new feature developing, disable failed PyTorch/XLA test on TPUVM'
+  )
   def test_transpose_1d(self):
 
     def test_fn(t1):
@@ -1552,6 +1912,10 @@ class TestAtenXlaTensor(test_utils.XlaTestCase):
 
     self.runAtenTest([torch.arange(15, dtype=torch.int32)], test_fn)
 
+  @unittest.skipIf(
+      os.environ.get('PYTORCH_XLA_TESTS_SKIP'),
+      'To avoid new feature developing, disable failed PyTorch/XLA test on TPUVM'
+  )
   def test_transpose_1d_inplace(self):
 
     def test_fn(t1):
@@ -1559,6 +1923,10 @@ class TestAtenXlaTensor(test_utils.XlaTestCase):
 
     self.runAtenTest([torch.arange(15, dtype=torch.int32)], test_fn)
 
+  @unittest.skipIf(
+      os.environ.get('PYTORCH_XLA_TESTS_SKIP'),
+      'To avoid new feature developing, disable failed PyTorch/XLA test on TPUVM'
+  )
   def test_sigmoid_bounds(self):
     torch.manual_seed(0)
     xla_device = xm.xla_device()
@@ -1569,6 +1937,10 @@ class TestAtenXlaTensor(test_utils.XlaTestCase):
       assert torch.all(lower_bound >= 0.0)
       assert torch.all(upper_bound <= 1.0)
 
+  @unittest.skipIf(
+      os.environ.get('PYTORCH_XLA_TESTS_SKIP'),
+      'To avoid new feature developing, disable failed PyTorch/XLA test on TPUVM'
+  )
   def test_cached_addcdiv(self):
     xla_device = xm.xla_device()
     met.clear_all()
@@ -1655,6 +2027,10 @@ class TestModelComparator(test_utils.XlaTestCase):
 
 class TestAsyncScalar(test_utils.XlaTestCase):
 
+  @unittest.skipIf(
+      os.environ.get('PYTORCH_XLA_TESTS_SKIP'),
+      'To avoid new feature developing, disable failed PyTorch/XLA test on TPUVM'
+  )
   def test_rng_seed_transfer(self):
     xla_device = xm.xla_device()
     async_mode = xu.getenv_as('XLA_TRANSFER_SCALAR_ASYNC', bool, defval=False)
@@ -1672,6 +2048,10 @@ class TestAsyncScalar(test_utils.XlaTestCase):
     else:
       assert met.metric_data("TransferToServerAsync") == None
 
+  @unittest.skipIf(
+      os.environ.get('PYTORCH_XLA_TESTS_SKIP'),
+      'To avoid new feature developing, disable failed PyTorch/XLA test on TPUVM'
+  )
   def test_scalar_transfer(self):
     xla_device = xm.xla_device()
     async_mode = xu.getenv_as('XLA_TRANSFER_SCALAR_ASYNC', bool, defval=False)
@@ -1713,6 +2093,10 @@ class TestOpBuilder(test_utils.XlaTestCase):
     xla_results = xu.as_list(op(*xla_tensors, **kwargs))
     self.compareResults(results, xla_results, rel_err=rel_err, abs_err=abs_err)
 
+  @unittest.skipIf(
+      os.environ.get('PYTORCH_XLA_TESTS_SKIP'),
+      'To avoid new feature developing, disable failed PyTorch/XLA test on TPUVM'
+  )
   def test_add(self):
 
     def op_fn(a, b, **kwargs):
@@ -1721,6 +2105,10 @@ class TestOpBuilder(test_utils.XlaTestCase):
     self.runOpBuilderTest(
         'test_add', [torch.randn(2, 2), torch.randn(2, 2)], op_fn)
 
+  @unittest.skipIf(
+      os.environ.get('PYTORCH_XLA_TESTS_SKIP'),
+      'To avoid new feature developing, disable failed PyTorch/XLA test on TPUVM'
+  )
   def test_mul(self):
 
     def op_fn(a, b, **kwargs):
@@ -1729,6 +2117,10 @@ class TestOpBuilder(test_utils.XlaTestCase):
     self.runOpBuilderTest(
         'test_mul', [torch.randn(2, 2), torch.randn(2, 2)], op_fn)
 
+  @unittest.skipIf(
+      os.environ.get('PYTORCH_XLA_TESTS_SKIP'),
+      'To avoid new feature developing, disable failed PyTorch/XLA test on TPUVM'
+  )
   def test_conditional(self):
 
     def op_fn(k, a, b, k0=None):
@@ -1762,6 +2154,10 @@ class TestOpBuilder(test_utils.XlaTestCase):
         aten_fn=aten_fn,
         kwargs={'k0': 0.9})
 
+  @unittest.skipIf(
+      os.environ.get('PYTORCH_XLA_TESTS_SKIP'),
+      'To avoid new feature developing, disable failed PyTorch/XLA test on TPUVM'
+  )
   def test_while(self):
 
     def op_fn(a, b, limit=None):
@@ -1790,6 +2186,10 @@ class TestOpBuilder(test_utils.XlaTestCase):
         aten_fn=aten_fn,
         kwargs={'limit': 10})
 
+  @unittest.skipIf(
+      os.environ.get('PYTORCH_XLA_TESTS_SKIP'),
+      'To avoid new feature developing, disable failed PyTorch/XLA test on TPUVM'
+  )
   def test_triangular_solve(self):
 
     def op_fn(b, A, lower, unit_diagonal, transpose_a):
@@ -1825,6 +2225,10 @@ class MpDecoratorTest(test_utils.XlaTestCase):
 
 class XpTraceTest(test_utils.XlaTestCase):
 
+  @unittest.skipIf(
+      os.environ.get('PYTORCH_XLA_TESTS_SKIP'),
+      'To avoid new feature developing, disable failed PyTorch/XLA test on TPUVM'
+  )
   def test_non_empty_scope(self):
     with self.assertRaisesRegex(
         RuntimeError, r'Expecting scope to be empty but it is conv1.1'):
@@ -1860,6 +2264,10 @@ class TestGeneric(test_utils.XlaTestCase):
     dt = xm.send_cpu_data_to_device([t], xla_device)
     self.assertTrue(dt[0].requires_grad)
 
+  @unittest.skipIf(
+      os.environ.get('PYTORCH_XLA_TESTS_SKIP'),
+      'To avoid new feature developing, disable failed PyTorch/XLA test on TPUVM'
+  )
   def test_nms(self):
     BOXES = (
         (0, 0, 3, 2),
