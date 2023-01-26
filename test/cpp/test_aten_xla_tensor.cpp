@@ -4894,7 +4894,8 @@ TEST_F(AtenXlaTensorTest, TestScatterReduceSum) {
       torch::Tensor xla_a = CopyToDevice(a, device);
       torch::Tensor xla_b = CopyToDevice(b, device);
       torch::Tensor xla_c = CopyToDevice(c, device);
-      torch::Tensor xla_d = torch::scatter_reduce(xla_a, dim, xla_c, xla_b, "sum");
+      torch::Tensor xla_d =
+          torch::scatter_reduce(xla_a, dim, xla_c, xla_b, "sum");
       AllClose(d, xla_d);
     });
   }
@@ -4944,7 +4945,8 @@ TEST_F(AtenXlaTensorTest, TestScatterReduceProd) {
       torch::Tensor xla_a = CopyToDevice(a, device);
       torch::Tensor xla_b = CopyToDevice(b, device);
       torch::Tensor xla_c = CopyToDevice(c, device);
-      torch::Tensor xla_d = torch::scatter_reduce(xla_a, dim, xla_c, xla_b, "prod");
+      torch::Tensor xla_d =
+          torch::scatter_reduce(xla_a, dim, xla_c, xla_b, "prod");
       AllClose(d, xla_d);
     });
   }
@@ -4992,7 +4994,8 @@ TEST_F(AtenXlaTensorTest, TestScatterReduceMin) {
       torch::Tensor xla_a = CopyToDevice(a, device);
       torch::Tensor xla_b = CopyToDevice(b, device);
       torch::Tensor xla_c = CopyToDevice(c, device);
-      torch::Tensor xla_d = torch::scatter_reduce(xla_a, dim, xla_c, xla_b, "amin");
+      torch::Tensor xla_d =
+          torch::scatter_reduce(xla_a, dim, xla_c, xla_b, "amin");
       AllClose(d, xla_d);
     });
   }
