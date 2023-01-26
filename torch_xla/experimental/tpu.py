@@ -1,9 +1,9 @@
-from collections import defaultdict
 import functools
 import operator
 import os
 import re
 from typing import Dict, NamedTuple, Optional, List, Tuple
+from typing_extensions import TypedDict
 import requests
 import yaml
 
@@ -31,6 +31,13 @@ _ACCELERATOR_TYPE_TO_HOST_BOUNDS = {
     'v3-2048': '16,16,1',
     # Get v4 host bounds from TPU metadata
 }
+
+
+class TpuEnv(TypedDict):
+  accelerator_type: str
+  tpu_process_bounds: str
+  tpu_chips_per_process_bound: str
+  worker_id: int
 
 
 class MeshShape(NamedTuple):
@@ -81,8 +88,12 @@ def task_id() -> Optional[int]:
   return xu.getenv_as(xenv.CLOUD_TPU_TASK_ID, int)
 
 
-def build_tpu_env_from_vars() -> Dict[str, str]:
-  metadata = defaultdict(str)
+def _using_env_vars() -> bool:
+  return xu.getenv_as(xenv.TPU_SKIP_MDS_QUERY, str, False)
+
+
+def build_tpu_env_from_vars() -> TpuEnv:
+  metadata = dict()
   metadata[xenv.ACCELERATOR_TYPE] = xu.getenv_as(xenv.TPU_ACCELERATOR_TYPE, str)
   metadata[xenv.TPU_PROCESS_BOUNDS] = xu.getenv_as(
       xenv.TPU_PROCESS_BOUNDS, str, xu.getenv_as(xenv.TPU_HOST_BOUNDS, str))
@@ -94,13 +105,12 @@ def build_tpu_env_from_vars() -> Dict[str, str]:
   return metadata
 
 
-def get_tpu_env() -> Dict[str, str]:
+def get_tpu_env() -> TpuEnv:
   """Fetches and parses `tpu-env` metadata field."""
-  metadata = build_tpu_env_from_vars()
-  if metadata[xenv.ACCELERATOR_TYPE] is None:
-    metadata = _get_metadata('tpu-env')
-    return yaml.load(metadata, yaml.Loader)
-  return metadata
+  if _using_env_vars():
+    return build_tpu_env_from_vars()
+  metadata = _get_metadata('tpu-env')
+  return yaml.load(metadata, yaml.Loader)
 
 
 def version() -> int:
@@ -115,15 +125,16 @@ def version() -> int:
 
 def get_worker_ips() -> List[str]:
   """Returns ordered list of TPU worker IPs from TPU metadata."""
-  metadata = xu.getenv_as(xenv.TPU_WORKER_HOSTNAMES, str, '')
-  if metadata is '':
-    metadata = _get_metadata('worker-network-endpoints')
-    # Workers have format 'hostname:uid:ip,hostname:uid:ip,...'
-    workers = metadata.split(',')
-    ips = [worker.split(':')[2] for worker in workers]
+  if _using_env_vars():
+    hostnames_string = xu.getenv_as(xenv.TPU_WORKER_HOSTNAMES, str, '')
+    # String has the format 'host-name-1,host-name-2,...,host-name-n'
+    hostnames = hostnames_string.split(',')
   else:
-    ips = metadata.split(',')
-  return ips if len(ips) > 1 else ['localhost']
+    hostnames_string = _get_metadata('worker-network-endpoints')
+    # Workers have format 'hostname:uid:ip,hostname:uid:ip,...'
+    workers = hostnames_string.split(',')
+    hostnames = [worker.split(':')[2] for worker in workers]
+  return hostnames if len(hostnames) > 1 else ['localhost']
 
 
 def configure_one_chip_topology() -> None:
@@ -153,7 +164,7 @@ def configure_topology(local_rank: int,
   tpu_env = get_tpu_env()
 
   accelerator_type = tpu_env[xenv.ACCELERATOR_TYPE]
-  if tpu_env[xenv.ACCELERATOR_TYPE].startswith('v4'):
+  if version() == 4:
     # Process bounds with 4 chips per process
     default_process_bounds = MeshShape.from_string(
         tpu_env[xenv.TPU_PROCESS_BOUNDS])

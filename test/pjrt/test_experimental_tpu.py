@@ -73,6 +73,7 @@ class TestExperimentalTpu(parameterized.TestCase):
 
   @parameterized.named_parameters(
       ('all-vars-set', {
+          xenv.TPU_SKIP_MDS_QUERY: '1',
           xenv.TPU_ACCELERATOR_TYPE: 'v4-16',
           xenv.TPU_PROCESS_BOUNDS: '1,2,2',
           xenv.TPU_HOST_BOUNDS: '1,1,2',
@@ -87,6 +88,7 @@ class TestExperimentalTpu(parameterized.TestCase):
           xenv.WORKER_ID: '1'
       }),
       ('defaults-only', {
+          xenv.TPU_SKIP_MDS_QUERY: '1',
           xenv.TPU_ACCELERATOR_TYPE: 'v4-16',
           xenv.TPU_HOST_BOUNDS: '1,1,2',
           xenv.TPU_CHIPS_PER_HOST_BOUNDS: '2,1,1',
