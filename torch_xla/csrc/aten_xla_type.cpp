@@ -564,6 +564,41 @@ at::Tensor& XLANativeFunctions::_index_put_impl_(
                                                    accumulate);
 }
 
+std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor>
+XLANativeFunctions::_linalg_slogdet(const at::Tensor& self) {
+  TORCH_LAZY_FN_COUNTER("xla::");
+  XLATensorPtr self_tensor = bridge::GetXlaTensor(self);
+  auto outputs = tensor_methods::slogdet(self_tensor);
+  return std::make_tuple(bridge::AtenFromXlaTensor(std::get<0>(outputs)),
+                         bridge::AtenFromXlaTensor(std::get<1>(outputs)),
+                         bridge::AtenFromXlaTensor(XLATensorPtr()),
+                         bridge::AtenFromXlaTensor(XLATensorPtr()));
+}
+
+std::tuple<at::Tensor, at::Tensor, at::Tensor> XLANativeFunctions::_linalg_svd(
+    const at::Tensor& self, bool full_matrices, bool compute_uv,
+    c10::optional<c10::string_view> /* driver */) {
+  TORCH_LAZY_FN_COUNTER("xla::");
+  // As per https://pytorch.org/docs/stable/generated/torch.svd.html,
+  // The second boolean argument is exactly opposite between
+  // torch::svd and torch::_linalg_svd, hence the negation of full_matrices.
+  auto results = tensor_methods::svd(bridge::GetXlaTensor(self), !full_matrices,
+                                     compute_uv);
+  auto u = std::get<0>(results);
+  auto s = std::get<1>(results);
+  auto v = std::get<2>(results);
+  if (!compute_uv) {
+    // If not compute_uv, torch::_linalg_svd returns an empty tensor.
+    s = XLATensorPtr();
+    v = XLATensorPtr();
+  } else {
+    v = tensor_methods::transpose(v, 0, 1);
+  }
+  return std::make_tuple(bridge::AtenFromXlaTensor(u),
+                         bridge::AtenFromXlaTensor(s),
+                         bridge::AtenFromXlaTensor(v));
+}
+
 at::Tensor XLANativeFunctions::_log_softmax(const at::Tensor& self, int64_t dim,
                                             bool half_to_float) {
   TORCH_LAZY_FN_COUNTER("xla::");
@@ -1542,6 +1577,20 @@ at::Tensor XLANativeFunctions::lift_fresh(const at::Tensor& tensor) {
   TORCH_INTERNAL_ASSERT(
       !at::functionalization::impl::isFunctionalTensor(tensor));
   return at::functionalization::impl::to_functional_tensor(tensor);
+}
+
+std::tuple<at::Tensor, at::Tensor> XLANativeFunctions::linalg_inv_ex(
+    const at::Tensor& self, bool check_errors) {
+  TORCH_LAZY_FN_COUNTER("xla::");
+  auto common_device = torch_xla::bridge::GetXlaDevice(self);
+  TORCH_INTERNAL_ASSERT(common_device);
+  torch::lazy::NodePtr node =
+      torch::lazy::MakeNode<Inverse>(bridge::GetXlaTensor(self)->GetIrValue());
+  auto result = torch_xla::XLATensor::Create(std::move(node), *common_device);
+  auto info = tensor_methods::full_like(result, 0, result->GetDevice(),
+                                        at::ScalarType::Int);
+  return std::make_tuple(bridge::AtenFromXlaTensor(result),
+                         bridge::AtenFromXlaTensor(info));
 }
 
 at::Tensor XLANativeFunctions::linspace(const at::Scalar& start,
@@ -2670,15 +2719,6 @@ at::Tensor XLANativeFunctions::slice_scatter(
       tensor_methods::slice(base_clone, dim, start_val, end_val, step);
   tensor_methods::copy_(base_clone_slice, mutated_view_);
   return bridge::AtenFromXlaTensor(base_clone);
-}
-
-std::tuple<at::Tensor, at::Tensor> XLANativeFunctions::slogdet(
-    const at::Tensor& self) {
-  TORCH_LAZY_FN_COUNTER("xla::");
-  XLATensorPtr self_tensor = bridge::GetXlaTensor(self);
-  auto outputs = tensor_methods::slogdet(self_tensor);
-  return std::make_tuple(bridge::AtenFromXlaTensor(std::get<0>(outputs)),
-                         bridge::AtenFromXlaTensor(std::get<1>(outputs)));
 }
 
 at::Tensor XLANativeFunctions::smooth_l1_loss(const at::Tensor& self,

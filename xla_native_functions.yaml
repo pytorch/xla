@@ -112,6 +112,7 @@ supported:
   - _copy_from
   - _copy_from_and_resize
   - _index_put_impl_
+  - _linalg_slogdet
   - _linalg_svd
   - _local_scalar_dense
   - _log_softmax
@@ -203,6 +204,7 @@ supported:
   - lerp.Tensor
   - lift
   - lift_fresh
+  - linalg_inv_ex
   - linspace
   - log
   - log1p
@@ -291,7 +293,6 @@ supported:
   - sigmoid_backward
   - slice_copy.Tensor
   - slice_scatter
-  - slogdet
   - smooth_l1_loss
   - smooth_l1_loss_backward
   - softplus
