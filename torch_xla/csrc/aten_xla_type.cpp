@@ -2512,24 +2512,23 @@ at::Tensor XLANativeFunctions::scatter_add(const at::Tensor& self, int64_t dim,
   return scatter_reduce_helper(self, dim, index, src, "add");
 }
 
-at::Tensor XLANativeFunctions::scatter_reduce(const at::Tensor & self, 
-                                              int64_t dim, 
-                                              const at::Tensor & index, 
-                                              const at::Tensor & src, 
-                                              c10::string_view reduce, 
-                                              bool include_self) {
+// TODO(sranlatais): mean is not supported; include_self=false also not
+// supported
+at::Tensor XLANativeFunctions::scatter_reduce(
+    const at::Tensor& self, int64_t dim, const at::Tensor& index,
+    const at::Tensor& src, c10::string_view reduce, bool include_self) {
   TORCH_LAZY_FN_COUNTER("xla::");
-  if (reduce == "sum" || reduce == "prod" || reduce == "amin") {
-    return bridge::AtenFromXlaTensor(
-        tensor_methods::scatter_reduce(bridge::GetXlaTensor(self), dim,
-                                       bridge::GetXlaTensor(index),
-                                       bridge::GetXlaTensor(src), 
-                                       reduce, include_self));
+  if ((reduce == "sum" || reduce == "prod" || reduce == "amin" ||
+       reduce == "amax") &&
+      include_self) {
+    return bridge::AtenFromXlaTensor(tensor_methods::scatter_reduce(
+        bridge::GetXlaTensor(self), dim, bridge::GetXlaTensor(index),
+        bridge::GetXlaTensor(src), reduce, include_self));
   } else {
     return at::native::call_fallback_fn<
         &xla_cpu_fallback, ATEN_OP2(scatter_reduce, two)>::call(self, dim,
                                                                 index, src,
-                                                                reduce, 
+                                                                reduce,
                                                                 include_self);
   }
 }

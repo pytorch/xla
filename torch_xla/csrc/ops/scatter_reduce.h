@@ -7,9 +7,8 @@ namespace torch_xla {
 class ScatterReduce : public XlaNode {
  public:
   ScatterReduce(const torch::lazy::Value& input,
-                const torch::lazy::Value& index,
-                const torch::lazy::Value& src, c10::string_view reduce,
-                bool include_self, int64_t dim);
+                const torch::lazy::Value& index, const torch::lazy::Value& src,
+                c10::string_view reduce, bool include_self, int64_t dim);
 
   std::string ToString() const override;
 

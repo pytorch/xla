@@ -4879,6 +4879,200 @@ TEST_F(AtenXlaTensorTest, TestScatterAddInPlace) {
   }
 }
 
+TEST_F(AtenXlaTensorTest, TestScatterReduceSum) {
+  torch::Tensor a = torch::rand({3, 5}, torch::TensorOptions(torch::kFloat));
+  torch::Tensor b = torch::rand({3, 5}, torch::TensorOptions(torch::kFloat));
+  torch::Tensor c = torch::empty({3, 5}, torch::TensorOptions(torch::kLong));
+  for (int dim = 0; dim < 2; ++dim) {
+    for (int i = 0; i < 3; i++) {
+      for (int j = 0; j < 5; j++) {
+        c[i][j] = (i + j) % c.sizes()[dim];
+      }
+    }
+    torch::Tensor d = torch::scatter_reduce(a, dim, c, b, "sum");
+    ForEachDevice([&](const torch::Device& device) {
+      torch::Tensor xla_a = CopyToDevice(a, device);
+      torch::Tensor xla_b = CopyToDevice(b, device);
+      torch::Tensor xla_c = CopyToDevice(c, device);
+      torch::Tensor xla_d = torch::scatter_reduce(xla_a, dim, xla_c, xla_b, "sum");
+      AllClose(d, xla_d);
+    });
+  }
+
+  ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::scatter_reduce", cpp_test::GetIgnoredCounters());
+}
+
+TEST_F(AtenXlaTensorTest, TestScatterReduceSumInPlace) {
+  torch::Tensor b = torch::rand({4, 4}, torch::TensorOptions(torch::kFloat));
+  torch::Tensor c = torch::empty({4, 4}, torch::TensorOptions(torch::kLong));
+  for (int i = 0; i < 4; i++) {
+    for (int j = 0; j < 4; j++) {
+      c[i][j] = (i + j) % 4;
+    }
+  }
+  for (int dim = 0; dim < 2; ++dim) {
+    ForEachDevice([&](const torch::Device& device) {
+      torch::Tensor a =
+          torch::rand({4, 4}, torch::TensorOptions(torch::kFloat));
+      torch::Tensor xla_a = CopyToDevice(a, device);
+      torch::Tensor d = a.scatter_reduce_(dim, c, b, "sum");
+      torch::Tensor xla_b = CopyToDevice(b, device);
+      torch::Tensor xla_c = CopyToDevice(c, device);
+      torch::Tensor xla_d = xla_a.scatter_reduce_(dim, xla_c, xla_b, "sum");
+      AllClose(d, xla_d);
+      AllClose(a, xla_a);
+    });
+
+    ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+    ExpectCounterChanged("xla::scatter_reduce", cpp_test::GetIgnoredCounters());
+  }
+}
+
+TEST_F(AtenXlaTensorTest, TestScatterReduceProd) {
+  torch::Tensor a = torch::rand({3, 5}, torch::TensorOptions(torch::kFloat));
+  torch::Tensor b = torch::rand({3, 5}, torch::TensorOptions(torch::kFloat));
+  torch::Tensor c = torch::empty({3, 5}, torch::TensorOptions(torch::kLong));
+  for (int dim = 0; dim < 2; ++dim) {
+    for (int i = 0; i < 3; i++) {
+      for (int j = 0; j < 5; j++) {
+        c[i][j] = (i + j) % c.sizes()[dim];
+      }
+    }
+    torch::Tensor d = torch::scatter_reduce(a, dim, c, b, "prod");
+    ForEachDevice([&](const torch::Device& device) {
+      torch::Tensor xla_a = CopyToDevice(a, device);
+      torch::Tensor xla_b = CopyToDevice(b, device);
+      torch::Tensor xla_c = CopyToDevice(c, device);
+      torch::Tensor xla_d = torch::scatter_reduce(xla_a, dim, xla_c, xla_b, "prod");
+      AllClose(d, xla_d);
+    });
+  }
+
+  ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::scatter_reduce", cpp_test::GetIgnoredCounters());
+}
+
+TEST_F(AtenXlaTensorTest, TestScatterReduceProdInPlace) {
+  torch::Tensor a = torch::rand({3, 5}, torch::TensorOptions(torch::kFloat));
+  torch::Tensor b = torch::rand({3, 5}, torch::TensorOptions(torch::kFloat));
+  torch::Tensor c = torch::empty({3, 5}, torch::TensorOptions(torch::kLong));
+  for (int dim = 0; dim < 2; ++dim) {
+    for (int i = 0; i < 3; i++) {
+      for (int j = 0; j < 5; j++) {
+        c[i][j] = (i + j) % c.sizes()[dim];
+      }
+    }
+    torch::Tensor d = torch::scatter_reduce(a, dim, c, b, "prod");
+    ForEachDevice([&](const torch::Device& device) {
+      torch::Tensor xla_a = CopyToDevice(a, device);
+      torch::Tensor xla_b = CopyToDevice(b, device);
+      torch::Tensor xla_c = CopyToDevice(c, device);
+      torch::Tensor xla_d = xla_a.scatter_reduce(dim, xla_c, xla_b, "prod");
+      AllClose(d, xla_d);
+    });
+  }
+
+  ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::scatter_reduce", cpp_test::GetIgnoredCounters());
+}
+
+TEST_F(AtenXlaTensorTest, TestScatterReduceMin) {
+  torch::Tensor a = torch::rand({3, 5}, torch::TensorOptions(torch::kFloat));
+  torch::Tensor b = torch::rand({3, 5}, torch::TensorOptions(torch::kFloat));
+  torch::Tensor c = torch::empty({3, 5}, torch::TensorOptions(torch::kLong));
+  for (int dim = 0; dim < 2; ++dim) {
+    for (int i = 0; i < 3; i++) {
+      for (int j = 0; j < 5; j++) {
+        c[i][j] = (i + j) % c.sizes()[dim];
+      }
+    }
+    torch::Tensor d = torch::scatter_reduce(a, dim, c, b, "amin");
+    ForEachDevice([&](const torch::Device& device) {
+      torch::Tensor xla_a = CopyToDevice(a, device);
+      torch::Tensor xla_b = CopyToDevice(b, device);
+      torch::Tensor xla_c = CopyToDevice(c, device);
+      torch::Tensor xla_d = torch::scatter_reduce(xla_a, dim, xla_c, xla_b, "amin");
+      AllClose(d, xla_d);
+    });
+  }
+
+  ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::scatter_reduce", cpp_test::GetIgnoredCounters());
+}
+
+TEST_F(AtenXlaTensorTest, TestScatterReduceMinInPlace) {
+  torch::Tensor a = torch::rand({3, 5}, torch::TensorOptions(torch::kFloat));
+  torch::Tensor b = torch::rand({3, 5}, torch::TensorOptions(torch::kFloat));
+  torch::Tensor c = torch::empty({3, 5}, torch::TensorOptions(torch::kLong));
+  for (int dim = 0; dim < 2; ++dim) {
+    for (int i = 0; i < 3; i++) {
+      for (int j = 0; j < 5; j++) {
+        c[i][j] = (i + j) % c.sizes()[dim];
+      }
+    }
+    torch::Tensor d = torch::scatter_reduce(a, dim, c, b, "amin");
+    ForEachDevice([&](const torch::Device& device) {
+      torch::Tensor xla_a = CopyToDevice(a, device);
+      torch::Tensor xla_b = CopyToDevice(b, device);
+      torch::Tensor xla_c = CopyToDevice(c, device);
+      torch::Tensor xla_d = xla_a.scatter_reduce(dim, xla_c, xla_b, "amin");
+      AllClose(d, xla_d);
+    });
+  }
+
+  ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::scatter_reduce", cpp_test::GetIgnoredCounters());
+}
+
+TEST_F(AtenXlaTensorTest, TestScatterReduceMax) {
+  torch::Tensor a = torch::rand({3, 5}, torch::TensorOptions(torch::kFloat));
+  torch::Tensor b = torch::rand({3, 5}, torch::TensorOptions(torch::kFloat));
+  torch::Tensor c = torch::empty({3, 5}, torch::TensorOptions(torch::kLong));
+  for (int dim = 0; dim < 2; ++dim) {
+    for (int i = 0; i < 3; i++) {
+      for (int j = 0; j < 5; j++) {
+        c[i][j] = (i + j) % c.sizes()[dim];
+      }
+    }
+    torch::Tensor d = torch::scatter_reduce(a, dim, c, b, "amax");
+    ForEachDevice([&](const torch::Device& device) {
+      torch::Tensor xla_a = CopyToDevice(a, device);
+      torch::Tensor xla_b = CopyToDevice(b, device);
+      torch::Tensor xla_c = CopyToDevice(c, device);
+      torch::Tensor xla_d = scatter_reduce(xla_a, dim, xla_c, xla_b, "amax");
+      AllClose(d, xla_d);
+    });
+  }
+
+  ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::scatter_reduce", cpp_test::GetIgnoredCounters());
+}
+
+TEST_F(AtenXlaTensorTest, TestScatterReduceMaxInPlace) {
+  torch::Tensor a = torch::rand({3, 5}, torch::TensorOptions(torch::kFloat));
+  torch::Tensor b = torch::rand({3, 5}, torch::TensorOptions(torch::kFloat));
+  torch::Tensor c = torch::empty({3, 5}, torch::TensorOptions(torch::kLong));
+  for (int dim = 0; dim < 2; ++dim) {
+    for (int i = 0; i < 3; i++) {
+      for (int j = 0; j < 5; j++) {
+        c[i][j] = (i + j) % c.sizes()[dim];
+      }
+    }
+    torch::Tensor d = torch::scatter_reduce(a, dim, c, b, "amax");
+    ForEachDevice([&](const torch::Device& device) {
+      torch::Tensor xla_a = CopyToDevice(a, device);
+      torch::Tensor xla_b = CopyToDevice(b, device);
+      torch::Tensor xla_c = CopyToDevice(c, device);
+      torch::Tensor xla_d = xla_a.scatter_reduce(dim, xla_c, xla_b, "amax");
+      AllClose(d, xla_d);
+    });
+  }
+
+  ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::scatter_reduce", cpp_test::GetIgnoredCounters());
+}
+
 TEST_F(AtenXlaTensorTest, TestIndexSelect) {
   for (torch::ScalarType scalar_type :
        {torch::kFloat, torch::kByte, torch::kChar, torch::kShort, torch::kInt,

@@ -650,7 +650,7 @@ XlaOpCombiner NumericMinCombiner() {
     xla::XlaOp numeric_x = ConvertToNumeric(x);
     xla::XlaOp numeric_y = ConvertToNumeric(y);
     xla::XlaOp numeric_sum = xla::Min(numeric_x, numeric_y);
-    //xla::XlaOp numeric_sum = xla::Min(numeric_x, numeric_y);
+    // xla::XlaOp numeric_sum = xla::Min(numeric_x, numeric_y);
     return ConvertTo(numeric_sum, XlaHelpers::TypeOfXlaOp(numeric_sum),
                      XlaHelpers::TypeOfXlaOp(x),
                      /*device=*/nullptr);

@@ -2188,8 +2188,8 @@ XLATensorPtr scatter_reduce(const XLATensorPtr& input, int64_t dim,
                             const XLATensorPtr& index, const XLATensorPtr& src,
                             c10::string_view reduce, bool include_self) {
   return input->CreateFrom(torch::lazy::MakeNode<ScatterReduce>(
-      input->GetIrValue(), index->GetIrValue(), src->GetIrValue(),
-      reduce, include_self,
+      input->GetIrValue(), index->GetIrValue(), src->GetIrValue(), reduce,
+      include_self,
       torch::lazy::GetCanonicalDimensionIndex(dim,
                                               input->shape().get().rank())));
 }

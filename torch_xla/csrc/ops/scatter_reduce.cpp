@@ -9,17 +9,19 @@ namespace torch_xla {
 
 ScatterReduce::ScatterReduce(const torch::lazy::Value& input,
                              const torch::lazy::Value& index,
-                             const torch::lazy::Value& src, 
-                             c10::string_view reduce,
-                             bool include_self, int64_t dim)
-    : XlaNode(torch::lazy::OpKind(at::aten::scatter_reduce), {input, index, src},
-              GetXlaShape(input),
-              /*num_outputs=*/1, torch::lazy::MHash(dim)),
-      reduce_(reduce), include_self_(include_self), dim_(dim) {}
+                             const torch::lazy::Value& src,
+                             c10::string_view reduce, bool include_self,
+                             int64_t dim)
+    : XlaNode(torch::lazy::OpKind(at::aten::scatter_reduce),
+              {input, index, src}, GetXlaShape(input),
+              /*num_outputs=*/1, torch::lazy::MHash(dim, reduce, include_self)),
+      reduce_(reduce),
+      include_self_(include_self),
+      dim_(dim) {}
 
 torch::lazy::NodePtr ScatterReduce::Clone(torch::lazy::OpList operands) const {
   return torch::lazy::MakeNode<ScatterReduce>(operands.at(0), operands.at(1),
-                                              operands.at(2), reduce_, 
+                                              operands.at(2), reduce_,
                                               include_self_, dim_);
 }
 
@@ -28,10 +30,16 @@ XlaOpVector ScatterReduce::Lower(LoweringContext* loctx) const {
   xla::XlaOp index = loctx->GetOutputOp(operand(1));
   xla::XlaOp src = loctx->GetOutputOp(operand(2));
   XlaOpCombiner combiner;
-  if (reduce_ == "sum") combiner = NumericAddCombiner();
-  else if (reduce_ == "prod") combiner = NumericMulCombiner();
-  else if (reduce_ == "amin") combiner = NumericMinCombiner();
-  else if (reduce_ == "amax") combiner = NumericMaxCombiner();
+  if (reduce_ == "sum")
+    combiner = NumericAddCombiner();
+  else if (reduce_ == "prod")
+    combiner = NumericMulCombiner();
+  else if (reduce_ == "amin")
+    combiner = NumericMinCombiner();
+  else if (reduce_ == "amax")
+    combiner = NumericMaxCombiner();
+  else
+    XLA_ERROR() << "Reduce type " << reduce_ << " is not supported";
   ScatterOptions options(combiner);
   return ReturnOp(
       CreateScatter(loctx->device(), input, index, src, dim_, options), loctx);
@@ -40,6 +48,7 @@ XlaOpVector ScatterReduce::Lower(LoweringContext* loctx) const {
 std::string ScatterReduce::ToString() const {
   std::stringstream ss;
   ss << XlaNode::ToString() << ", dim=" << dim_;
+  ss << ", reduce=" << reduce_ << ", include_self=" << include_self_;
   return ss.str();
 }
 
