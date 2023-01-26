@@ -647,8 +647,8 @@ std::vector<at::Tensor> XLAGraphExecutor::GetTensorsFused(
   // this pattern.
   PyThreadState* save = nullptr;
   // TODO(wcromar): Remove this setting when we are more confident
-  static const bool release_gil = xla::sys_util::GetEnvBool(
-    "XLA_RELEASE_GIL_DURING_TRANSFER", true);
+  static const bool release_gil =
+      xla::sys_util::GetEnvBool("XLA_RELEASE_GIL_DURING_TRANSFER", true);
   if (release_gil && Py_IsInitialized() && PyGILState_Check()) {
     save = PyEval_SaveThread();
   }
