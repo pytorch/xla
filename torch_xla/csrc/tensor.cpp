@@ -607,6 +607,11 @@ bool XLATensor::ShouldSyncIrNode() {
   return this->data()->ir_value->op() != xla_device_data;
 }
 
+bool XLASymNodeImpl::is_bool() {
+  // TODO: handle not is int
+  return true;
+}
+
 bool XLASymNodeImpl::is_int() {
   // TODO: handle not is int
   return true;
@@ -663,8 +668,10 @@ c10::SymNode XLASymNodeImpl::eq(const c10::SymNode& other) {
 }
 
 c10::SymNode XLASymNodeImpl::ne(const c10::SymNode& other) {
-  XLA_CHECK(false) << "XLASymNodeImpl::" << __FUNCTION__
-                   << " has not been implemented.";
+  TORCH_LAZY_FN_COUNTER("xla::size_");
+  auto p_other = dynamic_cast<XLASymNodeImpl*>(other.get());
+  auto n_ne = torch::lazy::MakeNode<SizeNe>(node(), p_other->node());
+  return c10::make_intrusive<XLASymNodeImpl>(n_ne);
 }
 
 c10::SymNode XLASymNodeImpl::gt(const c10::SymNode& other) {
@@ -744,6 +751,10 @@ int64_t XLASymNodeImpl::guard_int(const char* file, int64_t line) {
 double XLASymNodeImpl::guard_float(const char* file, int64_t line) {
   XLA_CHECK(false) << "XLASymNodeImpl::" << __FUNCTION__
                    << " has not been implemented.";
+}
+
+bool XLASymNodeImpl::guard_bool(const char* file, int64_t line) {
+  return bool_();
 }
 
 int64_t XLASymNodeImpl::int_() {
