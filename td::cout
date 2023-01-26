@@ -1,0 +1,156 @@
+[1mdiff --git a/torch_xla/csrc/tensor.cpp b/torch_xla/csrc/tensor.cpp[m
+[1mindex b35b61e7..7fa3b27f 100644[m
+[1m--- a/torch_xla/csrc/tensor.cpp[m
+[1m+++ b/torch_xla/csrc/tensor.cpp[m
+[36m@@ -314,6 +314,27 @@[m [mvoid XLATensor::AssignIrValue(torch::lazy::Value ir_value) const {[m
+       debug_str += " with sharding " + sharding->DebugString();[m
+     }[m
+     TF_VLOG(5) << "Assign IR value " << debug_str;[m
+[32m+[m[32m    std::string ir_str = ir_value->ToString();[m
+[32m+[m[32m    bool is_data_node = (ir_str.find("xla::device_data") != std::string::npos);[m
+[32m+[m[32m    if (is_data_node){ //sharding_spec()) {[m
+[32m+[m[32m      std::cout << "*** Assign IR value, new ir_value: " << ir_value->ToString() << std::endl;[m
+[32m+[m[32m      if (CurrentDataHandle() != nullptr) {[m
+[32m+[m	[32mstd::cout << "*** CurrentDataHandle: " << CurrentDataHandle();[m
+[32m+[m[32m        auto device = CurrentDataHandle()->device();[m
+[32m+[m	[32m//if (device != ParseDeviceString("SPMD:0"))[m
+[32m+[m	[32m//	std::cout << sharding->DebugString() << std::endl;[m
+[32m+[m	[32mconst auto backend_data =[m
+[32m+[m[32m      torch::lazy::getBackend()->GetComputationDataFromNode([m
+[32m+[m[32m          ir_value.node.get());[m
+[32m+[m	[32mif (backend_data) {[m
+[32m+[m		[32mstd::cout <<", new data_handle: " << backend_data->GetHandle();[m
+[32m+[m	[32m} else {[m
+[32m+[m		[32mstd::cout << ", no new data_handle.";[m
+[32m+[m	[32m}[m
+[32m+[m	[32mstd::cout << std::endl;[m
+[32m+[m[32m      dynamic_cast<XlaNode*>(ir_value.node.get())->SetSharding(sharding_spec()->sharding);[m
+[32m+[m[32m    }[m
+[32m+[m[32m    }[m
+   } else {[m
+     TF_VLOG(5) << "Assign empty IR value";[m
+   }[m
+[36m@@ -328,6 +349,14 @@[m [mtorch::lazy::Value XLATensor::GetIrValue() const {[m
+     return ir_value;[m
+   }[m
+   torch::lazy::BackendDataPtr handle = CurrentDataHandle();[m
+[32m+[m[32m  std::cout << "*** GetIrValue, handle == nullptr? " << (handle == nullptr);[m
+[32m+[m[32m  if (handle != nullptr) {[m
+[32m+[m[32m  auto shards =[m
+[32m+[m[32m        xla::ComputationClient::Get()->GetDataShards(UnwrapXlaData(handle));[m
+[32m+[m[32m  std::cout << ", CurrentDataHandle shards: " << shards.size();[m
+[32m+[m[32m  std::cout << ", view? " << (data()->view != nullptr);[m
+[32m+[m[32m  }[m
+[32m+[m[32m  std::cout << std::endl;[m
+   if (handle != nullptr) {[m
+     // In case of tensor node, we do not clear the XLA data when we set the IR[m
+     // node. This because we want further calls to GetIrValue() to fetch the[m
+[1mdiff --git a/torch_xla/csrc/xla_graph_executor.cpp b/torch_xla/csrc/xla_graph_executor.cpp[m
+[1mindex 2d760135..36fb39fc 100644[m
+[1m--- a/torch_xla/csrc/xla_graph_executor.cpp[m
+[1m+++ b/torch_xla/csrc/xla_graph_executor.cpp[m
+[36m@@ -462,7 +462,7 @@[m [mXLAGraphExecutor::SyncTensorCollection XLAGraphExecutor::CollectSyncTensors([m
+   if (!unique_device) {[m
+     return coll;[m
+   }[m
+[31m-[m
+[32m+[m[32m  std::cout << "*** CollectSyncTensors..." << std::endl;[m
+   std::vector<at::Tensor> at_tensors;[m
+   std::vector<std::string> devices;[m
+   std::vector<XLATensor::ShardingSpecPtr> shardings;[m
+[36m@@ -482,6 +482,7 @@[m [mXLAGraphExecutor::SyncTensorCollection XLAGraphExecutor::CollectSyncTensors([m
+          (tensors[i]->data()->view != nullptr &&[m
+           !tensors[i]->data()->view->IsUpToDate()))) {[m
+       torch::lazy::Value ir_value = tensors[i]->CurrentIrValue();[m
+[32m+[m[41m      [m
+       if (ir_value) {[m
+         if (ShouldSyncIrValue(ir_value)) {[m
+           // Add only tensors which need to be synced.[m
+[36m@@ -492,10 +493,13 @@[m [mXLAGraphExecutor::SyncTensorCollection XLAGraphExecutor::CollectSyncTensors([m
+           // sharding, then sync XLATensor sharding to the IR node. XLATensor's[m
+           // sharding takes the precedence as the source of the truth.[m
+           XLATensor::ShardingSpecPtr sharding = tensors[i]->sharding_spec();[m
+[32m+[m[32m        std::cout << "- ir_value: " << ir_value->ToString();[m[41m [m
+           if (sharding) {[m
+             dynamic_cast<XlaNode*>(ir_value.node.get())[m
+                 ->SetSharding(sharding->sharding);[m
+[32m+[m	[32m    std::cout << ", sharding: " << sharding->sharding.DebugString();[m[41m [m
+           }[m
+[32m+[m	[32m  std::cout << std::endl;[m
+         }[m
+       } else if (config.force_ltc_data) {[m
+         // The tensor only has at::Tensor data. We need to queue it for a[m
+[36m@@ -786,13 +790,25 @@[m [mvoid XLAGraphExecutor::ExtractIRAndPrepareXlaData_([m
+     std::vector<torch::lazy::BackendDataPtr>& tensor_data_vec) {[m
+   tensorflow::profiler::TraceMe activity([m
+       "ExtractIRAndPrepareXlaData_", tensorflow::profiler::TraceMeLevel::kInfo);[m
+[32m+[m[32m  std::cout << "*** ExtractIRAndPrepareXlaData_ ... " << std::endl;[m
+   ir_values.reserve(indices.size());[m
+   tensor_data_vec.reserve(indices.size());[m
+   for (auto index : indices) {[m
+     XLATensorPtr& tensor = (*tensors)[index];[m
+     torch::lazy::Value ir_value = tensor->CurrentIrValue();[m
+[32m+[m[32m    std::cout << "- ir_value: " << ir_value->ToString();[m
+[32m+[m[32m    if (tensor->sharding_spec()) {[m
+[32m+[m[32m      std::cout << ", sharding: " << tensor->sharding_spec()->sharding.DebugString();[m
+[32m+[m[32m    }[m
+[32m+[m[32m    auto cur_handle = tensor->CurrentDataHandle();[m
+[32m+[m[32m    if (cur_handle != nullptr) {[m
+[32m+[m[32m  auto shards =[m
+[32m+[m[32m        xla::ComputationClient::Get()->GetDataShards(UnwrapXlaData(cur_handle));[m
+[32m+[m[32m  std::cout << ", CurrentDataHandle shards: " << shards.size();[m
+[32m+[m[32m  }[m
+     ir_values.push_back(ir_value);[m
+     const torch::lazy::BackendDevice& tensor_device = tensor->GetDevice();[m
+[32m+[m[32m    std::cout << ", tensor device: " << tensor_device.toString();[m
+     xla::Shape shape = MakeShapeWithDeviceLayout([m
+         tensor->shape(), static_cast<XlaDeviceType>(tensor_device.type()));[m
+     torch::lazy::BackendDataPtr handle =[m
+[36m@@ -802,6 +818,7 @@[m [mvoid XLAGraphExecutor::ExtractIRAndPrepareXlaData_([m
+     if (tensor->CurrentDataHandle() == nullptr && config.force_ltc_data) {[m
+       tensor->AssignIrValue(torch::lazy::Value());[m
+     }[m
+[32m+[m[32m    std::cout << std::endl;[m
+   }[m
+ }[m
+ [m
+[1mdiff --git a/torch_xla/csrc/xla_sharding_util.cpp b/torch_xla/csrc/xla_sharding_util.cpp[m
+[1mindex 88385c30..d7d33d3c 100644[m
+[1m--- a/torch_xla/csrc/xla_sharding_util.cpp[m
+[1m+++ b/torch_xla/csrc/xla_sharding_util.cpp[m
+[36m@@ -16,6 +16,7 @@[m
+ #include "tensorflow/compiler/xla/xla.pb.h"[m
+ #include "torch_xla/csrc/device.h"[m
+ #include "torch_xla/csrc/tensor.h"[m
+[32m+[m[32m#include "torch_xla/csrc/tensor_util.h"[m
+ [m
+ namespace torch_xla {[m
+ namespace {[m
+[36m@@ -47,16 +48,27 @@[m [mstd::vector<int64_t> TileAssignmentDimensions([m
+ }  // namespace[m
+ [m
+ bool ShardingUtil::SetHloSharding(LoweringContext* lowering_ctx) {[m
+[32m+[m	[32mstd::cout << "*** SetHloSharding... " << std::endl;[m
+   bool is_sharded = false;[m
+   for (std::pair<torch::lazy::Output, xla::XlaOp> elem :[m
+        lowering_ctx->GetEmittedOutputs()) {[m
+     const torch::lazy::Node* node = elem.first.node;[m
+[32m+[m	[32mstd::cout << "- IR node: " << node->ToString();[m
+     const XlaNode* xla_node = dynamic_cast<const XlaNode*>(node);[m
+     auto instruction = XlaBuilderFriend::GetInstruction(elem.second);[m
+     if (xla_node->GetSharding() != nullptr) {[m
+[32m+[m	[32m    std::cout << ", sharding: " << xla_node->GetSharding()->DebugString();[m
+[32m+[m	[32m    auto data_node =  torch::lazy::getBackend()->GetComputationDataFromNode(node);[m
+[32m+[m	[32m    if (data_node) {[m[41m [m
+[32m+[m		[32m    std::cout << ", data handle: " << data_node->GetHandle();[m
+[32m+[m		[32m    auto shards =[m
+[32m+[m[32m        xla::ComputationClient::Get()->GetDataShards(UnwrapXlaData(data_node));[m
+[32m+[m[32m  std::cout << ", data handle shards: " << shards.size();[m
+[32m+[m	[32m    }[m
+       *instruction->mutable_sharding() = *xla_node->GetSharding();[m
+       is_sharded = true;[m
+     }[m
+[32m+[m[32m    std::cout << std::endl;[m
+   }[m
+   return is_sharded;[m
+ }[m

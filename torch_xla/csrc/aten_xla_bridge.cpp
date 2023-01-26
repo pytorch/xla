@@ -172,12 +172,8 @@ std::vector<at::Tensor> XlaCreateTensorList(const at::ITensorListRef& tensors) {
   for (size_t i = 0, defined_pos = 0; i < tensors.size(); ++i) {
     if (to_translate[i]) {
       auto tensor = defined_aten_xla_tensors[defined_pos++];
-<<<<<<< HEAD
       XLA_CHECK(!at::functionalization::impl::isFunctionalTensor(tensor))
           << "Expected non-functional tensor!";
-=======
-      XLA_CHECK(!at::functionalization::impl::isFunctionalTensor(tensor)) << "Expected non-functional tensor!";
->>>>>>> POC of functionalization integration
       // This function is responsible for returning CPU tensors.
       // So we do not want to wrap the outputs into FunctionalTensorWrappers.
       aten_xla_tensors[i] = tensor;

@@ -48,16 +48,20 @@ std::vector<int64_t> TileAssignmentDimensions(
 }  // namespace
 
 bool ShardingUtil::SetHloSharding(LoweringContext* lowering_ctx) {
+	std::cout << "*** SetHloSharding... " << std::endl;
   bool is_sharded = false;
   for (std::pair<torch::lazy::Output, xla::XlaOp> elem :
        lowering_ctx->GetEmittedOutputs()) {
     const torch::lazy::Node* node = elem.first.node;
+    std::cout << "- IR node: " << node->ToString();
     const XlaNode* xla_node = dynamic_cast<const XlaNode*>(node);
     auto instruction = XlaBuilderFriend::GetInstruction(elem.second);
     if (xla_node->GetSharding() != nullptr) {
+	    std::cout << ", sharding: " << xla_node->GetSharding()->DebugString();
       *instruction->mutable_sharding() = *xla_node->GetSharding();
       is_sharded = true;
     }
+    std::cout << std::endl;
   }
   return is_sharded;
 }

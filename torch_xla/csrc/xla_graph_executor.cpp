@@ -482,6 +482,8 @@ XLAGraphExecutor::SyncTensorCollection XLAGraphExecutor::CollectSyncTensors(
     return coll;
   }
 
+  std::cout << "*** CollectSyncTensors..." << std::endl;
+
   std::vector<at::Tensor> at_tensors;
   std::vector<std::string> devices;
   std::vector<XLATensor::ShardingSpecPtr> shardings;
@@ -502,6 +504,7 @@ XLAGraphExecutor::SyncTensorCollection XLAGraphExecutor::CollectSyncTensors(
           !tensors[i]->data()->view->IsUpToDate()))) {
       torch::lazy::Value ir_value = tensors[i]->CurrentIrValue();
       if (ir_value) {
+	std::cout << "*** ir_value: " << ir_value->ToString() << std::endl;
         if (ShouldSyncIrValue(ir_value)) {
           // Add only tensors which need to be synced.
           coll.hash = torch::lazy::HashCombine(coll.hash, ir_value.hash());

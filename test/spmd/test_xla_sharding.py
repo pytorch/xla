@@ -131,12 +131,15 @@ class BasicShardingTest(test_xla_sharding_base.XlaShardingTest):
     self.assertEqual(sharding_spec,
                      torch_xla._XLAC._get_xla_sharding_spec(model.fc1.weight))
 
-  @unittest.skip("fails with functionalization")
+  #@unittest.skip("fails with functionalization")
   def test_inplace_add_with_sharding(self):
     xt = torch.ones(2, 2).to(xm.xla_device())
     xs.mark_sharding(xt, self._get_mesh((1, self.n_devices)), (0, 1))
     sharding_spec = torch_xla._XLAC._get_xla_sharding_spec(xt)
     xt.add_(1)  # inplace update should preserve the sharding
+    print("after in place op")
+    print(xt)
+    #self.assertTrue(torch.allclose(xt.cpu(), torch.ones(2, 2) + 1))
     self.assertEqual(sharding_spec, torch_xla._XLAC._get_xla_sharding_spec(xt))
 
   def test_shard_hashing(self):

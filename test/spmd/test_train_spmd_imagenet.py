@@ -1,3 +1,8 @@
+<<<<<<< HEAD
+=======
+from subprocess import Popen
+import time
+>>>>>>> aa6c24fb (add testing probes)
 import args_parse
 
 SUPPORTED_MODELS = [
@@ -66,6 +71,10 @@ import torch_xla.debug.profiler as xp
 import torch_xla.test.test_utils as test_utils
 import torch_xla.experimental.xla_sharding as xs
 import torch_xla.experimental.pjrt as pjrt
+<<<<<<< HEAD
+=======
+from contextlib import nullcontext
+>>>>>>> aa6c24fb (add testing probes)
 
 DEFAULT_KWARGS = dict(
     batch_size=128,
@@ -178,16 +187,29 @@ def train_imagenet():
   device = xm.xla_device()
   model = get_model_property('model_fn')().to(device)
 
+<<<<<<< HEAD
   input_mesh = None
   if FLAGS.sharding:
     num_devices = pjrt.global_device_count()
     device_ids = np.arange(num_devices)
+=======
+  mesh, partition_spec = None, None
+  if FLAGS.sharding:
+    num_devices = pjrt.global_device_count()
+    device_ids = np.arange(num_devices)
+    partition_spec = (0, 1, 2, 3)  # Apply sharding along all axes
+>>>>>>> aa6c24fb (add testing probes)
     # Model sharding
     if 'conv' in FLAGS.sharding:
       # Shard the model's convlution layers along two dimensions
       mesh_shape = (2, num_devices // 2, 1, 1)
+<<<<<<< HEAD
       mesh = xs.Mesh(device_ids, mesh_shape, ('w', 'x', 'y', 'z'))
       partition_spec = (0, 1, 2, 3)  # Apply sharding along all axes
+=======
+      print(f'num_devices={num_devices}, mesh_shape={mesh_shape}')
+      mesh = xs.Mesh(device_ids, mesh_shape, ('w', 'x', 'y', 'z'))
+>>>>>>> aa6c24fb (add testing probes)
       print(
           f'Applying sharding to convolution layers with mesh {mesh.get_logical_mesh()}'
       )
@@ -204,21 +226,37 @@ def train_imagenet():
       partition_spec = (0, 1)
       for name, layer in model.named_modules():
         if 'fc' in name:
+<<<<<<< HEAD
           xs.mark_sharding(layer.weight, mesh, partition_spec)
 
+=======
+          print(f'confirmed sharding on {name}')
+          xs.mark_sharding(layer.weight, mesh, partition_spec)
+
+    partition_spec = (0, 1, 2, 3)  # Apply sharding along all axes
+>>>>>>> aa6c24fb (add testing probes)
     # Input sharding
     if 'batch' in FLAGS.sharding and 'spatial' in FLAGS.sharding:
       # Shard along both the batch dimension and spatial dimension
       # If there are more than 4 devices, shard along the height axis as well
       width_axis, height_axis = 2, num_devices // 4
+<<<<<<< HEAD
       mesh_shape = (2, 1, width_axis, height_axis)
       input_mesh = xs.Mesh(device_ids, mesh_shape, ('B', 'C', 'W', 'H'))
       print(
           f'Sharding input along batch and spatial dimensions with mesh {input_mesh.get_logical_mesh()}'
+=======
+      mesh_shape = (num_devices // (width_axis * height_axis), 1, width_axis,
+                    height_axis)
+      mesh = xs.Mesh(device_ids, mesh_shape, ('B', 'C', 'W', 'H'))
+      print(
+          f'Sharding input along batch and spatial dimensions with mesh {mesh.get_logical_mesh()}'
+>>>>>>> aa6c24fb (add testing probes)
       )
     elif 'batch' in FLAGS.sharding:
       # Shard along batch dimension only
       mesh_shape = (num_devices, 1, 1, 1)
+<<<<<<< HEAD
       input_mesh = xs.Mesh(device_ids, mesh_shape, ('B', 'C', 'W', 'H'))
       print(
           f'Sharding input along batch dimension with mesh {input_mesh.get_logical_mesh()}'
@@ -229,6 +267,18 @@ def train_imagenet():
       input_mesh = xs.Mesh(device_ids, mesh_shape, ('B', 'C', 'W', 'H'))
       print(
           f'Sharding input images on spatial dimensions with mesh {input_mesh.get_logical_mesh()}'
+=======
+      mesh = xs.Mesh(device_ids, mesh_shape, ('B', 'C', 'W', 'H'))
+      print(
+          f'Sharding input along batch dimension with mesh {mesh.get_logical_mesh()}'
+      )
+    elif 'spatial' in FLAGS.sharding:
+      # Shard two-way along input spatial
+      mesh_shape = (1, 1, num_devices // 2, 2)
+      mesh = xs.Mesh(device_ids, mesh_shape, ('B', 'C', 'W', 'H'))
+      print(
+          f'Sharding input images on width and height dimensions with mesh {mesh.get_logical_mesh()}'
+>>>>>>> aa6c24fb (add testing probes)
       )
 
   writer = None
@@ -239,7 +289,12 @@ def train_imagenet():
       lr=FLAGS.lr,
       momentum=FLAGS.momentum,
       weight_decay=1e-4)
+<<<<<<< HEAD
   num_training_steps_per_epoch = train_dataset_len // (FLAGS.batch_size)
+=======
+  num_training_steps_per_epoch = train_dataset_len // (
+      FLAGS.batch_size)
+>>>>>>> aa6c24fb (add testing probes)
   lr_scheduler = schedulers.wrap_optimizer_with_scheduler(
       optimizer,
       scheduler_type=getattr(FLAGS, 'lr_scheduler_type', None),
@@ -256,11 +311,19 @@ def train_imagenet():
     for step, (data, target) in enumerate(loader):
       data = data.to(xm.xla_device())
       target = target.to(xm.xla_device())
+<<<<<<< HEAD
       if input_mesh:
         partition_spec = (0, 1, 2, 3)
         xs.mark_sharding(data, input_mesh, partition_spec)
       with xp.StepTrace('train_imagenet'):
         with xp.Trace('build_graph'):
+=======
+      if any(x in FLAGS.sharding for x in ['batch', 'spatial']):
+        print(partition_spec)
+        xs.mark_sharding(data, mesh, partition_spec)
+      with xp.StepTrace('train_imagenet') if FLAGS.profile else nullcontext():
+        with xp.Trace('build_graph') if FLAGS.profile else nullcontext():
+>>>>>>> aa6c24fb (add testing probes)
           optimizer.zero_grad()
           output = model(data)
           loss = loss_fn(output, target)
@@ -273,6 +336,13 @@ def train_imagenet():
       if step % FLAGS.log_steps == 0:
         xm.add_step_closure(
             _train_update, args=(device, step, loss, tracker, epoch, writer))
+<<<<<<< HEAD
+=======
+      if FLAGS.profile and step == 100:
+        label = '_'.join(FLAGS.sharding) + '_' + str(FLAGS.batch_size)
+        print(f"{os.environ['HOME']}/pytorch/xla/scripts/capture_profile.py --service_addr 127.0.0.1:9012 --logdir {os.environ['HOME']}/autoprof/{label} --duration_ms 10000")
+        Popen(f"{os.environ['HOME']}/pytorch/xla/scripts/capture_profile.py --service_addr 127.0.0.1:9012 --logdir {os.environ['HOME']}/autoprof/{label} --duration_ms 10000".split())
+>>>>>>> aa6c24fb (add testing probes)
 
   def test_loop_fn(loader, epoch):
     total_samples, correct = 0, 0
@@ -290,6 +360,7 @@ def train_imagenet():
     accuracy = 100.0 * correct.item() / total_samples
     return accuracy
 
+<<<<<<< HEAD
   accuracy, max_accuracy = 0.0, 0.0
   for epoch in range(1, FLAGS.num_epochs + 1):
     xm.master_print('Epoch {} train begin {}'.format(epoch, test_utils.now()))
@@ -305,6 +376,30 @@ def train_imagenet():
           epoch,
           dict_to_write={'Accuracy/test': accuracy},
           write_xla_metrics=True)
+=======
+  if FLAGS.profile:
+    server = xp.start_server(FLAGS.profiler_port)
+
+  accuracy, max_accuracy = 0.0, 0.0
+  for epoch in range(1, FLAGS.num_epochs + 1):
+    xm.master_print('Epoch {} train begin {}'.format(epoch, test_utils.now()))
+    start = time.time()
+    train_loop_fn(train_loader, epoch)
+    end = time.time()
+    with open(f"{os.environ['HOME']}/epoch_durations", 'a') as f:
+      f.write(f'resnet50: sharding={FLAGS.sharding} batch_size={FLAGS.batch_size} epoch_duration={end - start}s\n')
+    xm.master_print('Epoch {} train end {}'.format(epoch, test_utils.now()))
+    #if not FLAGS.test_only_at_end or epoch == FLAGS.num_epochs:
+    #  accuracy = test_loop_fn(test_loader, epoch)
+    #  xm.master_print('Epoch {} test end {}, Accuracy={:.2f}'.format(
+    #      epoch, test_utils.now(), accuracy))
+    #  max_accuracy = max(accuracy, max_accuracy)
+    #  test_utils.write_to_summary(
+    #      writer,
+    #      epoch,
+    #      dict_to_write={'Accuracy/test': accuracy},
+    #      write_xla_metrics=True)
+>>>>>>> aa6c24fb (add testing probes)
     if FLAGS.metrics_debug:
       xm.master_print(met.metrics_report())
 
@@ -314,9 +409,12 @@ def train_imagenet():
 
 
 if __name__ == '__main__':
+<<<<<<< HEAD
   if FLAGS.profile:
     server = xp.start_server(FLAGS.profiler_port)
 
+=======
+>>>>>>> aa6c24fb (add testing probes)
   torch.set_default_tensor_type('torch.FloatTensor')
   accuracy = train_imagenet()
   if accuracy < FLAGS.target_accuracy:

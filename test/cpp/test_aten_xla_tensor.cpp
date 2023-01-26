@@ -5246,73 +5246,6 @@ static c10::SymInt make_symint(const torch::lazy::NodePtr& p) {
       static_cast<c10::SymNode>(c10::make_intrusive<XLASymNodeImpl>(p)));
 }
 
-<<<<<<< HEAD
-=======
-TEST_F(AtenXlaTensorTest, TestExpandSymIntSymbolic) {
-  GTEST_SKIP() << "Needs additional DS support after functionalization";
-  torch::Tensor a = torch::ones({3, 4}, torch::TensorOptions(torch::kFloat));
-  torch::Tensor b = a.expand({2, 3, 4}, /*implicit=*/false);
-
-  // create a symbolic symint with value 2 and upperbound 2. This symint is
-  // symbolic(since it wraps around a sizeNode) but not really dynamic.
-  torch::lazy::Value scalar_value =
-      torch::lazy::Value(ScalarOp(1.0, xla::F32), 0);
-  std::vector<int64_t> target_size = {2, 3, 4};
-  torch::lazy::NodePtr expand_node =
-      torch::lazy::MakeNode<Expand>(scalar_value, target_size);
-  torch::lazy::Value expand_value = torch::lazy::Value(expand_node, 0);
-  torch::lazy::NodePtr size_node =
-      torch::lazy::MakeNode<SizeNode>(expand_value, /*dim=*/0);
-  // This is not a dynamic size from xla perspective but it is a symint that
-  // wraps around a SizeNode instead of a scalar.
-  c10::SymInt dynamic_symint = make_symint(size_node);
-
-  ForEachDevice([&](const torch::Device& device) {
-    torch::Tensor xla_a = CopyToDevice(a, device);
-    torch::Tensor xla_b = xla_a.expand_symint(
-        c10::SymIntArrayRef({dynamic_symint, c10::SymInt(3), c10::SymInt(4)}),
-        /*implicit=*/false);
-    EXPECT_EQ(ToCpuTensor(xla_b).sum().item().toInt(), 24);
-    AllClose(b, xla_b);
-  });
-
-  ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
-  ExpectCounterChanged("xla::expand_copy_symint",
-                       cpp_test::GetIgnoredCounters());
-}
-
-TEST_F(AtenXlaTensorTest, TestExpandSymIntDynamic) {
-  GTEST_SKIP() << "Needs additional DS support after functionalization";
-  torch::Tensor a = torch::ones({3, 4}, torch::TensorOptions(torch::kFloat));
-  torch::Tensor b = a.expand({2, 3, 4}, /*implicit=*/false);
-
-  // use non_zero to create a symbolic symint with upper bound 100 and real
-  // value 2
-  int64_t num_non_zero_element = 2;
-  int64_t num_row = 10;
-  int64_t num_col = 10;
-  torch::lazy::NodePtr nonzero_node =
-      CreateNonZeroNode2d(num_non_zero_element, num_row, num_col);
-
-  torch::lazy::NodePtr size_node_nonzero_0 =
-      torch::lazy::MakeNode<SizeNode>(nonzero_node, 0);
-  c10::SymInt dynamic_symint = make_symint(size_node_nonzero_0);
-
-  ForEachDevice([&](const torch::Device& device) {
-    torch::Tensor xla_a = CopyToDevice(a, device);
-    torch::Tensor xla_b = xla_a.expand_symint(
-        c10::SymIntArrayRef({dynamic_symint, c10::SymInt(3), c10::SymInt(4)}),
-        /*implicit=*/false);
-    EXPECT_EQ(ToCpuTensor(xla_b).sum().item().toInt(), 24);
-    AllClose(b, xla_b);
-  });
-
-  ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
-  ExpectCounterChanged("xla::expand_copy_symint",
-                       cpp_test::GetIgnoredCounters());
-}
-
->>>>>>> b3822f12 ([Functionalization] Enable cpp tests (#4462))
 TEST_F(AtenXlaTensorTest, TestEye) {
   int n = 5;
   ForEachDevice([&](const torch::Device& device) {
@@ -11436,49 +11369,6 @@ TEST_F(AtenXlaTensorTest, TestEmbeddingBackward) {
   }
 }
 
-<<<<<<< HEAD
-=======
-TEST_F(AtenXlaTensorTest, TestAmpForeachNonFiniteCheckAndUnscale) {
-  GTEST_SKIP()
-      << "Needs additional meta tensor support after functionalization";
-  XlaDeviceType hw_type =
-      static_cast<XlaDeviceType>(GetDefaultDevice()->type());
-  if (hw_type != XlaDeviceType::GPU && hw_type != XlaDeviceType::CPU) {
-    return;
-  }
-  torch::Tensor grads0 =
-      torch::tensor({1, 2, 3, 4}, torch::TensorOptions(torch::kFloat));
-  torch::Tensor grads1 = torch::tensor({1.0, 2.0, std::nan("1"), 4.0},
-                                       torch::TensorOptions(torch::kFloat));
-  torch::Tensor inv_scale =
-      torch::scalar_tensor(0.2, torch::TensorOptions(torch::kFloat));
-  torch::Tensor found_inf =
-      torch::scalar_tensor(0, torch::TensorOptions(torch::kFloat));
-  torch::Tensor grads_output0 = grads0 * inv_scale;
-  torch::Tensor found_inf_output0 =
-      torch::scalar_tensor(0, torch::TensorOptions(torch::kFloat));
-  torch::Tensor found_inf_output1 =
-      torch::scalar_tensor(1, torch::TensorOptions(torch::kFloat));
-  ForEachDevice([&](const torch::Device& device) {
-    torch::Tensor xla_grads0 = CopyToDevice(grads0, device);
-    torch::Tensor xla_inv_scale = CopyToDevice(inv_scale, device);
-    torch::Tensor xla_found_inf = CopyToDevice(found_inf, device);
-    torch::_amp_foreach_non_finite_check_and_unscale_(xla_grads0, xla_found_inf,
-                                                      xla_inv_scale);
-    AllClose(grads_output0, xla_grads0, /*rtol=*/1e-2, /*atol=*/1e-4);
-    AllEqual(found_inf_output0, xla_found_inf);
-
-    torch::Tensor xla_grads1 = CopyToDevice(grads1, device);
-    torch::_amp_foreach_non_finite_check_and_unscale_(xla_grads1, xla_found_inf,
-                                                      xla_inv_scale);
-    AllEqual(found_inf_output1, xla_found_inf);
-  });
-  ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
-  ExpectCounterChanged("xla::_amp_foreach_non_finite_check_and_unscale_",
-                       cpp_test::GetIgnoredCounters());
-}
-
->>>>>>> b3822f12 ([Functionalization] Enable cpp tests (#4462))
 TEST_F(AtenXlaTensorTest, TestAmpUpdateScale) {
   XlaDeviceType hw_type =
       static_cast<XlaDeviceType>(GetDefaultDevice()->type());
