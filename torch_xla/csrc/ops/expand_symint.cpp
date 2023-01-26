@@ -52,6 +52,7 @@ ExpandSymInt::ExpandSymInt(const torch::lazy::Value& input,
       dynamic_dims_(size_elements.GetDynamicDims()) {}
 
 XlaOpVector ExpandSymInt::Lower(LoweringContext* loctx) const {
+  std::cout << "xw32, file=" << __FILE__ << ", line=" << __LINE__ << "function=" << __FUNCTION__ << ": " << std::endl;
   xla::XlaOp input = loctx->GetOutputOp(operand(0));
   std::vector<xla::XlaOp> size_ops;
   for (int i = 1; i < operands().size(); i++) {

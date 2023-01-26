@@ -43,6 +43,7 @@
 #include "torch_xla/csrc/ops/device_data.h"
 #include "torch_xla/csrc/ops/dynamic_ir.h"
 #include "torch_xla/csrc/ops/expand.h"
+#include "torch_xla/csrc/ops/expand_symint.h"
 #include "torch_xla/csrc/ops/ops.h"
 #include "torch_xla/csrc/ops/view.h"
 #include "torch_xla/csrc/ops/xla_ops.h"
@@ -227,9 +228,12 @@ torch::lazy::Value XLAGraphExecutor::GetIrValueForConstant(
 torch::lazy::Value XLAGraphExecutor::GetIrValueForScalar(
     const at::Scalar& value, xla::PrimitiveType type,
     const torch::lazy::BackendDevice& device) {
+  std::cout << "xw32, file=" << __FILE__ << ", line=" << __LINE__ << "function=" << __FUNCTION__ << ": " << std::endl;
   if (torch::lazy::IsSpecialScalar(value)) {
+    std::cout << "xw32, file=" << __FILE__ << ", line=" << __LINE__ << "function=" << __FUNCTION__ << ": " << std::endl;
     return ScalarOp(std::move(value), type);
   }
+  std::cout << "xw32, file=" << __FILE__ << ", line=" << __LINE__ << "function=" << __FUNCTION__ << ": " << std::endl;
   return GetDeviceDataIrValue(value, type, device);
 }
 
@@ -249,6 +253,15 @@ torch::lazy::Value XLAGraphExecutor::GetIrValueForScalar(
         ir_value, torch::lazy::ToVector<int64_t>(dimensions));
   }
   return ir_value;
+}
+
+torch::lazy::Value XLAGraphExecutor::GetIrValueForScalar(
+    const at::Scalar& value, xla::PrimitiveType type,
+    c10::SymIntArrayRef sym_size,
+    const torch::lazy::BackendDevice& device) {
+  torch::lazy::Value ir_value = GetIrValueForScalar(value, type, device);
+  SymIntElements size_elements = SymIntElements(sym_size);
+  return torch::lazy::MakeNode<ExpandSymInt>(ir_value, size_elements);
 }
 
 torch::lazy::Value XLAGraphExecutor::GetIrValueForScalar(

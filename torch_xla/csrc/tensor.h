@@ -266,6 +266,7 @@ class XLATensor : public torch::lazy::LazyTensor {
   std::shared_ptr<View> UpdateView(std::shared_ptr<View> view,
                                    torch::lazy::Value ir_value) const;
 
+  // create a view.
   std::shared_ptr<View> CreateView(ViewInfo view_info) const;
 
   torch::lazy::Value MaybeCastIrValue(

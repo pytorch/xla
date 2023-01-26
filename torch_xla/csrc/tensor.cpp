@@ -657,6 +657,7 @@ c10::SymNode XLASymNodeImpl::mod(const c10::SymNode& other) {
 }
 
 c10::SymNode XLASymNodeImpl::eq(const c10::SymNode& other) {
+  std::cout << "xw32, file=" << __FILE__ << ", line=" << __LINE__ << "function=" << __FUNCTION__ << ": " << std::endl;
   auto p_other = dynamic_cast<XLASymNodeImpl*>(other.get());
   auto n_eq = torch::lazy::MakeNode<SizeEq>(node(), p_other->node());
   return c10::make_intrusive<XLASymNodeImpl>(n_eq);

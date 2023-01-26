@@ -51,6 +51,7 @@
 #include "torch_xla/csrc/ops/discrete_uniform.h"
 #include "torch_xla/csrc/ops/einsum.h"
 #include "torch_xla/csrc/ops/einsum_backward.h"
+// #include "torch_xla/csrc/ops/empty_symint.h"
 #include "torch_xla/csrc/ops/expand.h"
 #include "torch_xla/csrc/ops/expand_symint.h"
 #include "torch_xla/csrc/ops/exponential.h"
@@ -1182,7 +1183,10 @@ XLATensorPtr expand_symint(const XLATensorPtr& input,
       torch::lazy::MakeNode<ExpandSymInt>(input->GetIrValue(), size_elements));
   xla::Shape shape = output->shape();
   std::cout << "xw32, file=" << __FILE__ << ", line=" << __LINE__ << "function=" << __FUNCTION__ << ": shape=" << shape << std::endl;
-  output->SetStorage(input->Storage());
+  output->SetStorage(input->Storage()); // 2 views point to the same data/storage.
+  // xlatensor has fake storage.
+  // expand view op.
+  // After func, view is change to copy expand_symint_copy.
   return output;
 }
 
@@ -1265,22 +1269,38 @@ XLATensorPtr empty(at::SymIntArrayRef sym_size, const at::Scalar& fill_value,
     return true;
   })) << "Dimensions cannot be negative numbers";
 
-  SymIntElements size_elements = SymIntElements(sym_size);
-  std::cout << "xw32, file=" << __FILE__ << ", line=" << __LINE__ << "function=" << __FUNCTION__ << ": size_elements.GetDynamicDims().size()=" << size_elements.GetDynamicDims().size() << std::endl;
-   xla::Shape shape =
-       MakeArrayShapeFromDimensions(size_elements.GetUpperBounds(),
-                                    size_elements.GetDynamicDims(),
-                                    MakeXlaPrimitiveType(scalar_type, &device),
-                                    static_cast<XlaDeviceType>(device.type()));
-   std::cout << "xw32, file=" << __FILE__ << ", line=" << __LINE__ << "function=" << __FUNCTION__ << ": shape=" << shape << std::endl;
-   XLATensorPtr output = XLATensor::Create(
-       XLAGraphExecutor::Get()->GetIrValueForScalar(fill_value, shape, device),
-       device, scalar_type);
+  // SymIntElements size_elements = SymIntElements(sym_size);
+  //std::cout << "xw32, file=" << __FILE__ << ", line=" << __LINE__ << "function=" << __FUNCTION__ << ": size_elements.GetDynamicDims().size()=" << size_elements.GetDynamicDims().size() << std::endl;
 
-  // XLATensorPtr output = inpu->CreateFrom(
-  //     torch::lazy::MakeNode<EmptySymInt>()
-  // )
+  // original begins
+  // xla::Shape shape =
+  //     MakeArrayShapeFromDimensions(size_elements.GetUpperBounds(),
+  //                                  size_elements.GetDynamicDims(),
+  //                                  MakeXlaPrimitiveType(scalar_type, &device),
+  //                                  static_cast<XlaDeviceType>(device.type()));
+  // std::cout << "xw32, file=" << __FILE__ << ", line=" << __LINE__ << "function=" << __FUNCTION__ << ": shape=" << shape << std::endl;
+  // XLATensorPtr output = XLATensor::Create(
+  //     XLAGraphExecutor::Get()->GetIrValueForScalar(fill_value, shape, device),
+  //     device, scalar_type);
+  // original ends
 
+  // experiment1 begins
+  XLATensorPtr output = XLATensor::Create(
+      XLAGraphExecutor::Get()->GetIrValueForScalar(
+        fill_value, MakeXlaPrimitiveType(scalar_type, &device), sym_size, device),
+      device,
+      scalar_type); 
+  // experiment1 ends
+  
+  // experiment0 begins
+  // XLATensorPtr output = input->CreateFrom(
+  //     torch::lazy::MakeNode<EmptySymInt>(input->GetIrValue(),
+  //     size_elements));
+  // output->SetStorage(input->Storage()); // TODO: xw32 consider adding this because expand_symint has it. Not sure what it does though.
+  // experiment1 ends
+  
+
+  // this is to verify if the shape is dynamic.
   xla::Shape outputshape = output->shape();
   std::cout << "xw32, file=" << __FILE__ << ", line=" << __LINE__ << "function=" << __FUNCTION__ << ": outputshape=" << outputshape << std::endl;
   return output;

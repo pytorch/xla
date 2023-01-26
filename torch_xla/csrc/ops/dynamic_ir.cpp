@@ -109,6 +109,7 @@ SizeEq::SizeEq(torch::lazy::Value a, torch::lazy::Value b)
 };
 
 int64_t SizeEq::getDynamicValue() const {
+  std::cout << "xw32, file=" << __FILE__ << ", line=" << __LINE__ << "function=" << __FUNCTION__ << ": " << std::endl;
   const torch::lazy::DimensionNode* dim_node_0 = DimCast(operand(0));
   const torch::lazy::DimensionNode* dim_node_1 = DimCast(operand(1));
   XLA_CHECK(dim_node_0);

@@ -146,6 +146,7 @@ class TestDynamicShapes(unittest.TestCase):
 
   def test_empty_symint(self):
     # t1.shape= torch.Size([<=6, 2]) with real size [3, 2]
+    # import pdb; pdb.set_trace()
     t1 = self.get_dynamic_tensor()
     print('t1=', t1)
     self.assertIsInstance(t1.shape[0], torch.SymInt)
