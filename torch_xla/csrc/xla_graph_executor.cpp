@@ -646,7 +646,10 @@ std::vector<at::Tensor> XLAGraphExecutor::GetTensorsFused(
   // possible, prefer to release the GIL in the python bindings before copying
   // this pattern.
   PyThreadState* save = nullptr;
-  if (Py_IsInitialized() && PyGILState_Check()) {
+  // TODO(wcromar): Remove this setting when we are more confident
+  static const bool release_gil = xla::sys_util::GetEnvBool(
+    "XLA_RELEASE_GIL_DURING_TRANSFER", true);
+  if (release_gil && Py_IsInitialized() && PyGILState_Check()) {
     save = PyEval_SaveThread();
   }
   std::vector<xla::Literal> literals =
