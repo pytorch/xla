@@ -31,6 +31,8 @@ MODEL_OPTS = {
     '--ddp': {
         'action': 'store_true',
     },
+    # Use pjrt:// init_method instead of env:// for `torch.distributed`.
+    # Required for DDP on TPU v2/v3 when using PJRT.
     '--pjrt_distributed': {
         'action': 'store_true',
     },
