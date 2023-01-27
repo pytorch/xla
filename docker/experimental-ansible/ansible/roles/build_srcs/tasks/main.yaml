@@ -15,6 +15,7 @@
 - name: Install PyTorch wheels
   ansible.builtin.pip:
     name: "{{ pytorch_wheels.files | map(attribute='path') }}"
+    state: "forcereinstall"
 
 - name: Build XLA computation client library
   ansible.builtin.command:
@@ -37,6 +38,7 @@
 - name: Install XLA wheels
   ansible.builtin.pip:
     name: "{{ xla_wheels.files | map(attribute='path') }}"
+    state: "forcereinstall"
 
 - name: "Tests"
   include_tasks: tests.yaml
