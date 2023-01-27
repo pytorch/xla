@@ -58,6 +58,16 @@ def set_device_states(devices: List[torch.device],
     device_module.set_rng_state(state, device=device)
 
 
+class CheckpointStatus:
+
+  def __init__(self):
+    self.in_chkpt_bwd = False
+
+
+# chkpt_status is used for FSDP allgather reduction optimizaion
+chkpt_status = CheckpointStatus()
+
+
 class CheckpointFunction(torch.autograd.Function):
 
   def _extract_tensors_from_list(inputs):
@@ -121,6 +131,8 @@ class CheckpointFunction(torch.autograd.Function):
 
   @staticmethod
   def backward(ctx, *args):
+    chkpt_status.in_chkpt_bwd = True
+
     if not torch.autograd._is_checkpoint_valid():
       raise RuntimeError(
           "Checkpointing is not compatible with .grad() or when an `inputs` parameter"
@@ -173,6 +185,7 @@ class CheckpointFunction(torch.autograd.Function):
         inp.grad if isinstance(inp, torch.Tensor) else None
         for inp in detached_inputs)
 
+    chkpt_status.in_chkpt_bwd = False
     return (None, None) + grads
 
 
