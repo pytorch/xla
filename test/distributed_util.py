@@ -128,7 +128,8 @@ def ddp_correctness(init_method: str = 'env://',
   global_batch_size = local_batch_size * world_size
   offset = rank * local_batch_size
   for step in range(steps):
-    # To make torch.randn produce same results across devices.
+    # Use a local RNG to produce identical results across replicas, since global
+    # RNG would not be consistent across threads.
     rng = torch.Generator().manual_seed(2022 + step)
 
     cpu_inputs = torch.randn(global_batch_size, 10, generator=rng)
