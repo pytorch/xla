@@ -30,6 +30,7 @@ namespace torch_xla {
 class TORCH_API XLASymNodeImpl : public c10::SymNodeImpl {
  public:
   XLASymNodeImpl(torch::lazy::NodePtr ptr) : node_(std::move(ptr)) {}
+  bool is_bool() override;
   bool is_int() override;
   bool is_float() override;
   c10::SymNode add(const c10::SymNode& other) override;
@@ -56,6 +57,7 @@ class TORCH_API XLASymNodeImpl : public c10::SymNodeImpl {
   c10::SymNode wrap_float(double num) override;
   int64_t guard_int(const char* file, int64_t line) override;
   double guard_float(const char* file, int64_t line) override;
+  bool guard_bool(const char* file, int64_t line) override;
   int64_t int_() override;
   bool bool_() override;
   std::string str() override;

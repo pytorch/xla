@@ -12,7 +12,6 @@ dev = xm.xla_device()
 
 class TestDynamicShapes(test_utils.XlaTestCase):
 
-  @unittest.skip("Needs to lower ne")
   def test_simple_expand(self):
     size1 = 5
     size2 = 2
@@ -27,7 +26,6 @@ class TestDynamicShapes(test_utils.XlaTestCase):
     t6_cpu = t6.cpu()
     self.assertEqual(t6_cpu.shape[0], 2)
 
-  @unittest.skip("Needs to lower ne")
   def test_simple_expand_on_2d_tensor(self):
     size1 = 5
     size2 = 2
@@ -87,7 +85,6 @@ class TestDynamicShapes(test_utils.XlaTestCase):
     a3 = a2.shape[0] + 3  # tests wrap
     self.assertIsInstance(a3, torch.SymInt)
 
-  @unittest.skip("Needs to lower ne")
   def test_sizeAdd(self):
     size1 = 5
     size2 = 2
@@ -216,6 +213,23 @@ class TestDynamicShapes(test_utils.XlaTestCase):
     dyn_size = t2.shape[0] < t2.shape[1]
     self.assertGreater(met.counter_value("xla::size_lt"), 0)
     # Exercises SizeLt::getDynamicValue.
+    dynamic_size = int(dyn_size)
+    self.assertEqual(dynamic_size, 1)
+
+  def test_sizeNe(self):
+    met.clear_all()
+
+    size1 = 5
+    size2 = 2
+    t1 = torch.zeros([size1, size2], device=dev)
+    t1[3][0] = 1
+    # t2 has size [<=10, 2]
+    t2 = torch.nonzero(t1)
+    # Create a SizeAdd IR node.
+    # t2.shape[1] generates a SizeConstant node.
+    dyn_size = t2.shape[0] != t2.shape[1]
+    self.assertGreater(met.counter_value("xla::size_ne"), 0)
+    # Exercises SizeNe::getDynamicValue.
     dynamic_size = int(dyn_size)
     self.assertEqual(dynamic_size, 1)
 
