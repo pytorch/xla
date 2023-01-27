@@ -115,8 +115,10 @@ function run_pjrt {
 }
 
 function run_async_scalar {
-  echo "Running in Async Scalar Upload mode: $@"
-  XLA_TRANSFER_SCALAR_ASYNC=1 run_test "$@"
+  if [[ "$PYTORCH_XLA_TESTS_ONLY" != "1" ]] ; then
+    echo "Running in Async Scalar Upload mode: $@"
+    XLA_TRANSFER_SCALAR_ASYNC=1 run_test "$@"
+  fi
 }
 
 function run_torchrun {
