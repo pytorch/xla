@@ -9,13 +9,13 @@
 #include "tensorflow/compiler/xla/layout_util.h"
 #include "tensorflow/compiler/xla/literal.h"
 #include "tensorflow/compiler/xla/pjrt/gpu/se_gpu_pjrt_client.h"
+#include "tensorflow/compiler/xla/pjrt/pjrt_api.h"
 #include "tensorflow/compiler/xla/pjrt/pjrt_c_api_client.h"
 #include "tensorflow/compiler/xla/pjrt/pjrt_client.h"
 #include "tensorflow/compiler/xla/pjrt/pjrt_executable.h"
 #include "tensorflow/compiler/xla/pjrt/tfrt_cpu_pjrt_client.h"
 #include "tensorflow/compiler/xla/pjrt/tpu_client.h"
 #include "tensorflow/compiler/xla/shape.h"
-#include "tensorflow/compiler/xla/pjrt/pjrt_api.h"
 #include "tensorflow/compiler/xla/xla_client/computation_client.h"
 #include "tensorflow/compiler/xla/xla_client/debug_macros.h"
 #include "tensorflow/compiler/xla/xla_client/env_vars.h"
@@ -312,22 +312,15 @@ PjRtComputationClient::ExecuteComputation(
   execute_options.strict_shape_checking = false;
 
   std::optional<PjRtFuture<Status>> returned_future;
-  // ExecuteSharded futures are not implemented in PJRT C API
-  // TODO(wcromar): Remove use_future when we update past TF commit
-  // b8f59020ea0e9e6fba0e9c5e7be88271703eaf9e
-  static bool use_future =
-      sys_util::GetEnvString(env::kEnvPjRtDevice, "") != "TPU_C_API";
   std::vector<std::unique_ptr<xla::PjRtBuffer>> results =
       pjrt_computation.executable
           ->ExecuteSharded(buffers, pjrt_device, execute_options,
-                           returned_future, /*fill_future=*/use_future)
+                           returned_future)
           .value();
 
-  if (use_future) {
-    // Signal that `ExecuteSharded` has completed for the ExecuteTime metric.
-    // Copies the `timed` shared pointer into the lambda.
-    returned_future->OnReady([timed](Status unused) mutable { timed.reset(); });
-  }
+  // Signal that `ExecuteSharded` has completed for the ExecuteTime metric.
+  // Copies the `timed` shared pointer into the lambda.
+  returned_future->OnReady([timed](Status unused) mutable { timed.reset(); });
 
   std::vector<DataPtr> datas;
   datas.reserve(results.size());
