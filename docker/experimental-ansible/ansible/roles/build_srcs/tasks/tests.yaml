@@ -1,6 +1,7 @@
 - name: "Check that various import statements work"
   ansible.builtin.command:
     cmd: "{{ item }}"
+  environment: "{{ env_vars | combine({'USE_CUDA': 0}) }}"
   loop:
     - python -c "import torchgen"
     - python -c "import torch"
