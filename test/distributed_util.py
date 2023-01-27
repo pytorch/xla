@@ -83,7 +83,7 @@ def train_step(model, inputs, labels, optimizer, loss_fn):
   return loss
 
 
-lock = threading.Lock()
+init_lock = threading.Lock()
 
 
 def ddp_correctness(init_method: str = 'env://',
@@ -100,7 +100,9 @@ def ddp_correctness(init_method: str = 'env://',
   rank, world_size = dist.get_rank(), dist.get_world_size()
   device = xm.xla_device()
 
-  with lock:
+  # Module initialization is not thread safe. Force threads to initialize one
+  # at a time with the same seed
+  with init_lock:
     # To make nn.Linear init same parameters across devices.
     torch.manual_seed(2022)
     # Lower range probably makes sense too. Anyway, stick to 100 as the original PoC.
@@ -109,10 +111,6 @@ def ddp_correctness(init_method: str = 'env://',
     if use_large_net:
       steps = 5  # To save test time.
       cpu_model = LargeNet()
-
-  # xla_model = copy.deepcopy(cpu_model).to(device)
-  # if pjrt.using_pjrt():
-  #   pjrt.broadcast_master_param(xla_model)
 
   # TODO(@alanwaketan): Investigate whether we can omit the gradient_as_bucket_view option.
   # bucket_cap_mb is set to 1 mb such that we can still have multiple all_reduces while avoiding
@@ -132,12 +130,11 @@ def ddp_correctness(init_method: str = 'env://',
   global_batch_size = local_batch_size * world_size
   offset = rank * local_batch_size
   for step in range(steps):
-    with lock:
-      # To make torch.randn produce same results across devices.
-      torch.manual_seed(2022 + step)
+    # To make torch.randn produce same results across devices.
+    rng = torch.Generator().manual_seed(2022 + step)
 
-      cpu_inputs = torch.randn(global_batch_size, 10)
-      cpu_labels = torch.randn(global_batch_size, 10)
+    cpu_inputs = torch.randn(global_batch_size, 10, generator=rng)
+    cpu_labels = torch.randn(global_batch_size, 10, generator=rng)
 
     cpu_loss = train_step(cpu_model, cpu_inputs, cpu_labels, cpu_optimizer,
                           loss_fn)
