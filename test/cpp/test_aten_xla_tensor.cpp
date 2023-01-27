@@ -5149,7 +5149,12 @@ TEST_F(AtenXlaTensorTest, TestOneIndexTransfer) {
   }
 }
 
-// Temporarily disable test. See  https://github.com/pytorch/xla/issues/4501
+// Temporarily disable test. Original issue
+// https://github.com/pytorch/xla/issues/4501 has been resolved. The next error
+// is https://gist.github.com/vanbasten23/b3a79e0cc7f17edc0018eb83cdd5d738 (see
+// https://github.com/pytorch/xla/issues/4432 for more info). The next error
+// happens on TPU but not on CPU.
+//
 /*
 TEST_F(AtenXlaTensorTest, TestNonzero) {
   GTEST_SKIP() << "Needs additional DS support after functionalization";

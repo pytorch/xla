@@ -1236,6 +1236,24 @@ XLATensorPtr full_like(const XLATensorPtr& input, const at::Scalar& fill_value,
                            device, *scalar_type);
 }
 
+XLATensorPtr full_symint(at::SymIntArrayRef sym_size,
+                         const at::Scalar& fill_value,
+                         const torch::lazy::BackendDevice& device,
+                         at::ScalarType scalar_type) {
+  XLA_CHECK(std::all_of(sym_size.begin(), sym_size.end(), [](at::SymInt dim) {
+    if (!dim.is_symbolic()) {
+      return dim >= 0;
+    }
+    return true;
+  })) << "Dimensions cannot be negative numbers";
+
+  return XLATensor::Create(
+      XLAGraphExecutor::Get()->GetIrValueForScalar(
+          fill_value, MakeXlaPrimitiveType(scalar_type, &device), sym_size,
+          device),
+      device, scalar_type);
+}
+
 XLATensorPtr gather(const XLATensorPtr& input, int64_t dim,
                     const XLATensorPtr& index) {
   xla::Shape input_shape = input->shape();
