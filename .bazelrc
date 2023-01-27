@@ -34,7 +34,7 @@ build --config=short_logs
 
 ###########################################################################
 
-build:posix --copt=-fvisibility=hidden
+#build:posix --copt=-fvisibility=hidden
 build:posix --copt=-Wno-sign-compare
 build:posix --cxxopt=-std=c++17
 build:posix --host_cxxopt=-std=c++17
@@ -69,7 +69,7 @@ build:linux --copt=-Wno-unknown-warning-option
 # Suppress all warning messages.
 build:short_logs --output_filter=DONT_MATCH_ANYTHING
 
-build:tpu --@org_tensorflow//tensorflow/compiler/xla/python:enable_tpu=true
+#build:tpu --@org_tensorflow//tensorflow/compiler/xla/python:enable_tpu=true
 build:tpu --define=with_tpu_support=true
 
 #########################################################################
@@ -158,3 +158,20 @@ build --incompatible_enforce_config_setting_visibility
 
 # Disable TFRT integration for now unless --config=tfrt is specified.
 build --deleted_packages=tensorflow/compiler/mlir/tfrt,tensorflow/compiler/mlir/tfrt/benchmarks,tensorflow/compiler/mlir/tfrt/jit/python_binding,tensorflow/compiler/mlir/tfrt/jit/transforms,tensorflow/compiler/mlir/tfrt/python_tests,tensorflow/compiler/mlir/tfrt/tests,tensorflow/compiler/mlir/tfrt/tests/ir,tensorflow/compiler/mlir/tfrt/tests/analysis,tensorflow/compiler/mlir/tfrt/tests/jit,tensorflow/compiler/mlir/tfrt/tests/lhlo_to_tfrt,tensorflow/compiler/mlir/tfrt/tests/lhlo_to_jitrt,tensorflow/compiler/mlir/tfrt/tests/tf_to_corert,tensorflow/compiler/mlir/tfrt/tests/tf_to_tfrt_data,tensorflow/compiler/mlir/tfrt/tests/saved_model,tensorflow/compiler/mlir/tfrt/transforms/lhlo_gpu_to_tfrt_gpu,tensorflow/core/runtime_fallback,tensorflow/core/runtime_fallback/conversion,tensorflow/core/runtime_fallback/kernel,tensorflow/core/runtime_fallback/opdefs,tensorflow/core/runtime_fallback/runtime,tensorflow/core/runtime_fallback/util,tensorflow/core/tfrt/eager,tensorflow/core/tfrt/eager/backends/cpu,tensorflow/core/tfrt/eager/backends/gpu,tensorflow/core/tfrt/eager/core_runtime,tensorflow/core/tfrt/eager/cpp_tests/core_runtime,tensorflow/core/tfrt/gpu,tensorflow/core/tfrt/run_handler_thread_pool,tensorflow/core/tfrt/runtime,tensorflow/core/tfrt/saved_model,tensorflow/core/tfrt/graph_executor,tensorflow/core/tfrt/saved_model/tests,tensorflow/core/tfrt/tpu,tensorflow/core/tfrt/utils
+
+# Suppress most C++ complier warnings to reduce log size but allow
+# for specific warnings to still be present.
+build:linux --copt="-Wno-all"
+build:linux --copt="-Wno-extra"
+build:linux --copt="-Wno-deprecated"
+build:linux --copt="-Wno-deprecated-declarations"
+build:linux --copt="-Wno-ignored-attributes"
+build:linux --copt="-Wno-array-bounds"
+# Add unused-result as an error on Linux.
+build:linux --copt="-Wunused-result"
+build:linux --copt="-Werror=unused-result"
+# Add switch as an error on Linux.
+build:linux --copt="-Wswitch"
+build:linux --copt="-Werror=switch"
+# Required for building with clang
+build:linux --copt="-Wno-error=unused-but-set-variable"
