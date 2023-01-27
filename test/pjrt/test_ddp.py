@@ -1,3 +1,4 @@
+from unittest import mock
 from absl.testing import absltest, parameterized
 import os
 import sys
@@ -6,7 +7,7 @@ import torch.nn as nn
 from torch.nn.parallel import DistributedDataParallel as DDP
 import torch_xla.core.xla_model as xm
 import torch_xla.experimental.pjrt_backend
-from torch_xla.experimental import pjrt
+from torch_xla.experimental import pjrt, tpu
 
 # Setup import folders.
 xla_test_folder = os.path.dirname(os.path.dirname(os.path.abspath(sys.argv[0])))
@@ -40,6 +41,16 @@ class TestPjRtDistributedDataParallel(parameterized.TestCase):
         init_method='pjrt://',
         use_large_net=use_large_net,
         debug=FLAGS.debug)
+
+  @absltest.skipIf(pjrt.device_type() == 'TPU' and tpu.version() < 4,
+                   "env:// doesn't support multithreading")
+  def test_ddp_correctness_env_init(self):
+    with mock.patch.dict(os.environ, {
+        'MASTER_ADDR': 'localhost',
+        'MASTER_PORT': '12355'
+    }):
+      pjrt._run_multiprocess(
+          util.ddp_correctness, use_large_net=False, debug=FLAGS.debug)
 
 
 if __name__ == "__main__":
