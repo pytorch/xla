@@ -57,7 +57,7 @@ function run_test {
 }
 
 function run_opbyop {
-  if [[ "$PYTORCH_XLA_TESTS_ONLY" != "1" ]] ; then
+  if [ -z "$PJRT_DEVICE" ] ; then
     echo "Running in OpByOp mode: $@"
     XLA_GET_TENSORS_OPBYOP=1 XLA_SYNC_TENSORS_OPBYOP=1 run_test "$@"
   fi
@@ -114,7 +114,7 @@ function run_pjrt {
 }
 
 function run_async_scalar {
-  if [[ "$PYTORCH_XLA_TESTS_ONLY" != "1" ]] ; then
+  if [ -Z "$PJRT_DEVICE" ] ; then
     echo "Running in Async Scalar Upload mode: $@"
     XLA_TRANSFER_SCALAR_ASYNC=1 run_test "$@"
   fi
