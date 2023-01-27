@@ -57,8 +57,10 @@ function run_test {
 }
 
 function run_opbyop {
-  echo "Running in OpByOp mode: $@"
-  XLA_GET_TENSORS_OPBYOP=1 XLA_SYNC_TENSORS_OPBYOP=1 run_test "$@"
+  if [[ "$PYTORCH_XLA_TESTS_ONLY" != "1" ]] ; then
+    echo "Running in OpByOp mode: $@"
+    XLA_GET_TENSORS_OPBYOP=1 XLA_SYNC_TENSORS_OPBYOP=1 run_test "$@"
+  fi
 }
 
 function run_use_bf16 {
