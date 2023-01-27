@@ -7,8 +7,8 @@ from torch_xla.distributed import xla_backend
 from torch_xla.experimental import pjrt, tpu
 import torch_xla.utils.utils as xu
 
-store = None
-store_lock = threading.Lock()
+_store = None
+_store_lock = threading.Lock()
 
 
 def _pjrt_rendezvous_handler(url: str,
@@ -20,16 +20,16 @@ def _pjrt_rendezvous_handler(url: str,
     ) == 'TPU' else 'localhost'
 
   master_port = xu.getenv_as('MASTER_PORT', int, 12355)
-  with store_lock:
-    global store
-    if not store:
-      store = dist.TCPStore(
+  with _store_lock:
+    global _store
+    if not _store:
+      _store = dist.TCPStore(
           master_ip,
           master_port,
           pjrt.process_count(),
           is_master=pjrt.process_index() == 0)
 
-  yield (store, pjrt.global_ordinal(), pjrt.world_size())
+  yield (_store, pjrt.global_ordinal(), pjrt.world_size())
 
 
 multi_threaded_pg._install_threaded_pg()
