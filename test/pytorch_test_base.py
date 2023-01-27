@@ -203,7 +203,7 @@ DISABLED_TORCH_TESTS_ANY = {
         'test_assertRaisesRegex_ignore_msg_non_native_device_xla',  # segfault on wheel sanity test
         'test_index_reduce',  # TODO @wonjoo fails with functionalization
         'test_logcumsumexp_xla',  # doesn't raise, pytorch/pytorch#92912
-        'test_narrow_copy_non_contiguous',  # New test, fails with functionalization
+        'test_narrow_copy_non_contiguous',  # the test is added for CPU, pytorch/pytorch#91789
         'test_exponential',  # fails with functionalization
     },
 
