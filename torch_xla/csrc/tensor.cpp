@@ -608,8 +608,12 @@ bool XLATensor::ShouldSyncIrNode() {
 }
 
 bool XLASymNodeImpl::is_bool() {
-  // TODO: handle not is int
-  return true;
+  auto op = node()->op().op;
+  // Reference: https://github.com/pytorch/pytorch/blob/master/torch/fx/experimental/symbolic_shapes.py#L403
+  if (op == at::aten::eq || op == at::aten::ne || op == at::aten::ge || op == at::aten::lt) {
+    return true;
+  }
+  return false;
 }
 
 bool XLASymNodeImpl::is_int() {
@@ -754,6 +758,7 @@ double XLASymNodeImpl::guard_float(const char* file, int64_t line) {
 }
 
 bool XLASymNodeImpl::guard_bool(const char* file, int64_t line) {
+  // TODO: Take advantages of file and line.
   return bool_();
 }
 
