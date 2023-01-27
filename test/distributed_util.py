@@ -103,9 +103,7 @@ def ddp_correctness(init_method: str = 'env://',
   # Module initialization is not thread safe. Force threads to initialize one
   # at a time with the same seed
   with init_lock:
-    # To make nn.Linear init same parameters across devices.
     torch.manual_seed(2022)
-    # Lower range probably makes sense too. Anyway, stick to 100 as the original PoC.
     steps = 100
     cpu_model = SmallNet()
     if use_large_net:
