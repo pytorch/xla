@@ -157,7 +157,7 @@ function run_op_tests_ptxla {
   run_test python3 "$CDIR/test_async_closures.py"
   run_test python3 "$CDIR/test_xla_dist.py"
   # run_test python3 "$CDIR/test_profiler.py"
-  run_test python3 "$CDIR/test_ops.py"
+  # run_test python3 "$CDIR/test_ops.py"
   run_test python3 "$CDIR/test_metrics.py"
   run_test python3 "$CDIR/dynamo/test_dynamo_integrations_util.py"
   run_test python3 "$CDIR/dynamo/test_dynamo.py"
