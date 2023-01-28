@@ -74,7 +74,7 @@ class XrtLocker {
 
 class DataHandleLocker : public XrtLocker {
  public:
-  static const int64_t dummy_handle = -151235;
+  static const int64_t dummy_handle;
 };
 
 class XrtComputationClient : public ComputationClient {
