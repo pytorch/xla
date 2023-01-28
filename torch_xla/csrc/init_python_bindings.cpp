@@ -1708,27 +1708,9 @@ void InitXlaModuleBindings(py::module m) {
             -> std::vector<at::Tensor> {
           XLA_CHECK(hash_str.size() == sizeof(torch::lazy::hash_t));
           torch::lazy::hash_t hash = *(torch::lazy::hash_t*)(hash_str.c_str());
-          std::vector<torch::lazy::BackendDataPtr> parameters_data;
           torch::lazy::BackendDevice device = torch_xla::GetCurrentDevice();
-          {
-            TORCH_LAZY_TIMED("RunCachedGraphInputData");
-            // setup the parameters_data
-            int idx = 0;
-            for (auto& ivalue : graph_inputs) {
-              torch::lazy::BackendDataPtr dataptr;
-              if (auto xla_tensor_ptr =
-                      bridge::TryGetXlaTensor(ivalue.toTensor())) {
-                dataptr = xla_tensor_ptr->GetXlaData();
-              } else {
-                dataptr = torch_xla::TensorToXlaData(ivalue.toTensor(), device);
-              }
-
-              ++idx;
-              parameters_data.push_back(dataptr);
-            }
-          }
           auto results = XLAGraphExecutor::Get()->ExecuteComputationWithBarrier(
-              hash, std::move(parameters_data), device);
+              hash, graph_inputs, device);
           std::vector<at::Tensor> retlist;
           {
             TORCH_LAZY_TIMED("RunCachedGraphOutputData");
