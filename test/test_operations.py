@@ -1922,6 +1922,17 @@ class TestAtenXlaTensor(XlaTestCase):
     xm.mark_step()
     self.assertEqual(met.metric_data("TransferToServerTime")[0], 4)
 
+  def test_GRU(self):
+    hsize = 4
+    mod = torch.nn.GRU(hsize, hsize)
+
+    def test_fn(input):
+      mod_device = mod.to(input.device)
+      output = mod_device(input)
+      return output
+
+    self.runAtenTest([torch.rand(1, 3, hsize)], test_fn)
+
 
 class MNISTComparator(nn.Module):
 
