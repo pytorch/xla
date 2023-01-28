@@ -236,6 +236,8 @@ int64_t GetMaxTensorsPartitionSize() {
 
 }  // namespace
 
+const int64_t DataHandleLocker::dummy_handle = -151235;
+
 XrtComputationClient::Device::Device(const std::string& device_str) {
   std::vector<std::string> parts = absl::StrSplit(device_str, ':');
   XLA_CHECK_EQ(parts.size(), 2) << device_str;
