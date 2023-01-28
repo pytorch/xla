@@ -31,7 +31,9 @@ MODEL_OPTS = {
     '--ddp': {
         'action': 'store_true',
     },
-    '--ddp_pjrt': {
+    # Use pjrt:// init_method instead of env:// for `torch.distributed`.
+    # Required for DDP on TPU v2/v3 when using PJRT.
+    '--pjrt_distributed': {
         'action': 'store_true',
     },
 }
@@ -53,6 +55,7 @@ import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+from torch.nn.parallel import DistributedDataParallel as DDP
 import torch.optim as optim
 import torchvision
 import torchvision.transforms as transforms
@@ -122,14 +125,12 @@ def _train_update(device, step, loss, tracker, epoch, writer):
 
 
 def train_imagenet():
-  if FLAGS.ddp and not dist.is_initialized():
+  if FLAGS.pjrt_distributed:
+    import torch_xla.experimental.pjrt_backend
+    dist.init_process_group('xla', init_method='pjrt://')
+  elif FLAGS.ddp:
     dist.init_process_group(
         'xla', world_size=xm.xrt_world_size(), rank=xm.get_ordinal())
-
-  if FLAGS.ddp_pjrt:
-    from torch_xla.experimental.pjrt import DistributedDataParallel as DDP
-  else:
-    from torch.nn.parallel import DistributedDataParallel as DDP
 
   print('==> Preparing data..')
   img_dim = get_model_property('img_dim')
