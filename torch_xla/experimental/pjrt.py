@@ -4,13 +4,10 @@ import functools
 import itertools
 import logging
 import os
-import sys
-import tempfile
 from itertools import chain
 from typing import Callable, Dict, List, Optional, Tuple, TypeVar
 
 import torch
-import torch.distributed as dist
 import torch.nn as nn
 import torch_xla
 import torch_xla.core.xla_env_vars as xenv
@@ -208,24 +205,8 @@ def _run_thread_per_device(local_rank: int,
 
     return fn()
 
-  # TODO(wcromar): remove this when the TPU master IP becomes predictable
-  def _discover_tpu_master_worker_ip(device: torch.device):
-    torch_xla._XLAC._xla_set_default_device(device)
-
-    return tpu.discover_master_worker_ip()
-
   with concurrent.futures.ThreadPoolExecutor(
       max_workers=num_threads) as executor:
-    if os.getenv('PJRT_INIT_TORCH_DISTRIBUTED', '0') == '1':
-      if device_type() == 'TPU':
-        # HACK: need to call with each device since it relies on an XLA collective
-        master_ip = next(executor.map(_discover_tpu_master_worker_ip, devices))
-        init_method = f'tcp://{master_ip}:{master_port}'
-      else:
-        init_method = None
-
-      init_pjrt_process_group(init_method=init_method)
-
     device_ordinals = [
         torch_xla._XLAC._xla_get_device_ordinal(d) for d in devices
     ]
@@ -261,7 +242,6 @@ def _run_singleprocess(fn: Callable[..., R],
     tpu.configure_one_chip_topology()
 
   xm.set_replication(xm.xla_device(), [])
-  init_pjrt_process_group()
 
   return fn()
 
@@ -430,61 +410,3 @@ def rendezvous(tag: str, payload: bytes,
   xm.mark_step()
 
   return [bytes(p.cpu().tolist()) for p in payloads]
-
-
-def init_pjrt_process_group(init_method: Optional[str] = None, **kwargs):
-  if not init_method and process_count() == 1:
-    init_method = f'file://{tempfile.mktemp()}'
-
-  dist.init_process_group(
-      'xla',
-      init_method,
-      rank=process_index(),
-      world_size=process_count(),
-      **kwargs)
-
-
-class DistributedDataParallel(nn.Module):
-  """Emulate DistributedDataParallel on TPUs.
-
-  Very experimental! There may still be correctness and performance issues to
-  work out. This class may be removed at any time.
-
-  torch.nn.parallel.DistributedDataParallel has additional overhead for gradient
-  bucketing that does not benefit TPUs. This implemenation may give better
-  performance on TPUs.
-
-  Compatible with multithreaded workloads required for multi-client execution on
-  TPU v2/v3.
-
-  Does not support model parallelism.
-  """
-
-  @staticmethod
-  def _reduce_grad(grad: torch.Tensor) -> torch.Tensor:
-    """Average gradients across replicas."""
-    return xm.all_reduce(xm.REDUCE_SUM, grad, scale=1. / global_device_count())
-
-  def __init__(self,
-               module: nn.Module,
-               *,
-               broadcast_buffers: bool = True,
-               **kwargs):
-    super().__init__()
-
-    if kwargs:
-      logging.warn('Ignoring DDP arguments: %s', str(kwargs.keys()))
-
-    assert dist.is_available() and dist.get_backend() == 'xla'
-    self._module = module
-    self._broadcast_buffers = broadcast_buffers
-
-    for p in module.parameters():
-      p.register_hook(self._reduce_grad)
-
-  def forward(self, x: torch.Tensor):
-    if self._broadcast_buffers:
-      for b in self._module.buffers():
-        dist.broadcast(b, src=0)
-
-    return self._module(x)

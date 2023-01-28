@@ -1,7 +1,11 @@
 import args_parse
+from torch_xla.experimental import pjrt
 
 MODEL_OPTS = {
     '--ddp': {
+        'action': 'store_true',
+    },
+    '--pjrt_distributed': {
         'action': 'store_true',
     },
 }
@@ -72,7 +76,10 @@ def _train_update(device, step, loss, tracker, epoch, writer):
 
 
 def train_mnist(flags, **kwargs):
-  if flags.ddp:
+  if flags.pjrt_distributed:
+    import torch_xla.experimental.pjrt_backend
+    dist.init_process_group('xla', init_method='pjrt://')
+  elif flags.ddp:
     dist.init_process_group(
         'xla', world_size=xm.xrt_world_size(), rank=xm.get_ordinal())
 
@@ -130,6 +137,12 @@ def train_mnist(flags, **kwargs):
 
   device = xm.xla_device()
   model = MNIST().to(device)
+
+  # Initialization is nondeterministic with multiple threads in PjRt.
+  # Synchronize model parameters across replicas manually.
+  if pjrt.using_pjrt():
+    pjrt.broadcast_master_param(model)
+
   if flags.ddp:
     model = DDP(model, gradient_as_bucket_view=True)
   writer = None

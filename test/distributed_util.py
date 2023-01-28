@@ -1,10 +1,11 @@
 import copy
-from typing import Optional
+import threading
 import torch
 import torch.distributed as dist
 import torch.nn as nn
 import torch.optim as optim
 import torch.nn.parallel
+from torch.nn.parallel import DistributedDataParallel as DDP
 import torch_xla.core.xla_model as xm
 import torch_xla.distributed.xla_backend
 
@@ -64,14 +65,6 @@ class SmallNet(nn.Module):
     return self.net(x)
 
 
-def init_xla_backend():
-  rank = xm.get_ordinal()
-  world_size = xm.xrt_world_size()
-
-  dist.init_process_group("xla", rank=rank, world_size=world_size)
-  return rank, world_size
-
-
 def assert_all_close(parameters_a, parameters_b):
   for param_a, param_b in zip(parameters_a, parameters_b):
     assert torch.allclose(param_a.cpu(), param_b.cpu(), atol=1e-3)
@@ -90,30 +83,38 @@ def train_step(model, inputs, labels, optimizer, loss_fn):
   return loss
 
 
-def ddp_correctness(ddp: type = torch.nn.parallel.DistributedDataParallel,
+init_lock = threading.Lock()
+
+
+def ddp_correctness(init_method: str = 'env://',
                     use_large_net: bool = False,
                     debug: bool = False):
-  if not dist.is_initialized():
-    rank, world_size = init_xla_backend()
+  if init_method == 'env://':
+    rank = xm.get_ordinal()
+    world_size = xm.xrt_world_size()
+    dist.init_process_group(
+        "xla", init_method=init_method, rank=rank, world_size=world_size)
   else:
-    rank, world_size = xm.get_ordinal(), xm.xrt_world_size()
+    dist.init_process_group("xla", init_method=init_method)
 
+  rank, world_size = dist.get_rank(), dist.get_world_size()
   device = xm.xla_device()
 
-  # To make nn.Linear init same parameters across devices.
-  torch.manual_seed(2022)
-  # Lower range probably makes sense too. Anyway, stick to 100 as the original PoC.
-  steps = 100
-  cpu_model = SmallNet()
-  if use_large_net:
-    steps = 5  # To save test time.
-    cpu_model = LargeNet()
+  # Module initialization is not thread safe. Force threads to initialize one
+  # at a time with the same seed
+  with init_lock:
+    torch.manual_seed(2022)
+    steps = 100
+    cpu_model = SmallNet()
+    if use_large_net:
+      steps = 5  # To save test time.
+      cpu_model = LargeNet()
 
   # TODO(@alanwaketan): Investigate whether we can omit the gradient_as_bucket_view option.
   # bucket_cap_mb is set to 1 mb such that we can still have multiple all_reduces while avoiding
   # using models that are too larger (25 mb).
   # To be noted, DDP currently uses one bucket for the first iteration. See pytorch#73732.
-  ddp_model = ddp(
+  ddp_model = DDP(
       copy.deepcopy(cpu_model).to(device),
       gradient_as_bucket_view=True,
       bucket_cap_mb=1)
@@ -127,11 +128,13 @@ def ddp_correctness(ddp: type = torch.nn.parallel.DistributedDataParallel,
   global_batch_size = local_batch_size * world_size
   offset = rank * local_batch_size
   for step in range(steps):
-    # To make torch.randn produce same results across devices.
-    torch.manual_seed(2022 + step)
+    # Use a local RNG to produce identical results across replicas, since global
+    # RNG would not be consistent across threads.
+    rng = torch.Generator().manual_seed(2022 + step)
 
-    cpu_inputs = torch.randn(global_batch_size, 10)
-    cpu_labels = torch.randn(global_batch_size, 10)
+    cpu_inputs = torch.randn(global_batch_size, 10, generator=rng)
+    cpu_labels = torch.randn(global_batch_size, 10, generator=rng)
+
     cpu_loss = train_step(cpu_model, cpu_inputs, cpu_labels, cpu_optimizer,
                           loss_fn)
 
