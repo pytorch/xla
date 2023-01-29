@@ -199,6 +199,7 @@ function run_mp_op_tests {
 }
 
 function run_tests {
+  # TODO: enable PyTorch/XLA tests on TPUVM first and will enable PyTorch tests and MP(multi processing) tests on TPUVM too in the future
   if [[ "$PYTORCH_XLA_TESTS_ONLY" != "1" ]] ; then
     run_op_tests_pt
     run_op_tests_ptxla
