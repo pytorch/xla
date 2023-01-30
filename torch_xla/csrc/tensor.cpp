@@ -210,7 +210,17 @@ torch::lazy::BackendDataPtr XLATensor::GetXlaData() {
     AssignIrValue(std::move(ir_value));
   }
   if (data()->ir_value) {
-    ApplyPendingGraph();
+    torch::lazy::BackendDataPtr node_data =
+        torch::lazy::getBackend()->GetComputationDataFromNode(
+            data()->ir_value.node.get());
+    // Current IR is a DeviceData Node, we can retrive the data handle directly
+    // instead of triggering an additional execution.
+    if (node_data) {
+      data()->ir_value = torch::lazy::Value();
+      data()->handle = node_data;
+    } else {
+      ApplyPendingGraph();
+    }
   } else {
     XLA_CHECK(data()->tensor_data);
     data()->handle = TensorToXlaData(*data()->tensor_data, GetDevice());

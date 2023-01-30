@@ -35,6 +35,7 @@
 #include "torch/csrc/lazy/core/metrics.h"
 #include "torch/csrc/lazy/core/tensor_util.h"
 #include "torch/csrc/lazy/core/util.h"
+#include "torch_xla/csrc/aten_xla_bridge.h"
 #include "torch_xla/csrc/computation.h"
 #include "torch_xla/csrc/helpers.h"
 #include "torch_xla/csrc/ir_dump_util.h"
@@ -545,8 +546,7 @@ void XLAGraphExecutor::TensorCollectionBarrier(SyncTensorCollection* coll) {
 
 std::vector<torch::lazy::BackendDataPtr>
 XLAGraphExecutor::ExecuteComputationWithBarrier(
-    torch::lazy::hash_t hash,
-    std::vector<torch::lazy::BackendDataPtr> arguments,
+    torch::lazy::hash_t hash, const std::vector<at::IValue>& graph_inputs,
     const torch::lazy::BackendDevice& device) {
   MaybeDumpGraph("dynamo", hash);
   auto cachedComputation =
@@ -573,6 +573,26 @@ XLAGraphExecutor::ExecuteComputationWithBarrier(
   SyncTensorCollection coll;
   coll.device = device;
   coll.unlocker = DeviceLockerArena::Get()->LockDevices({device});
+  std::vector<torch::lazy::BackendDataPtr> arguments;
+  {
+    // GetXlaData must be called within a lock region, otherwise it might
+    // extract the placeholder inserted by previous execution.
+    TORCH_LAZY_TIMED("RunCachedGraphInputData");
+    // setup the arguments
+    int idx = 0;
+    for (auto& ivalue : graph_inputs) {
+      torch::lazy::BackendDataPtr dataptr;
+      if (auto xla_tensor_ptr = bridge::TryGetXlaTensor(ivalue.toTensor())) {
+        dataptr = xla_tensor_ptr->GetXlaData();
+      } else {
+        dataptr = torch_xla::TensorToXlaData(ivalue.toTensor(), device);
+      }
+
+      ++idx;
+      arguments.push_back(dataptr);
+    }
+  }
+
   std::shared_ptr<XLAGraphExecutor::Async> async = std::make_shared<Async>(
       &coll, std::move(arguments), placeholders, std::move(cachedComputation));
 

@@ -104,3 +104,8 @@ class TestNumOutput(unittest.TestCase):
   def test_direct_return_with_duplicated_inplace_update(self):
     self.do_test(
         DirectReturnWithDuplicatedInplaceUpdateModule, expected_num_output=3)
+
+
+if __name__ == '__main__':
+  test = unittest.main()
+  sys.exit(0 if test.result.wasSuccessful() else 1)
