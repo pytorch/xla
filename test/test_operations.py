@@ -500,7 +500,7 @@ class TestAtenXlaTensor(test_utils.XlaTestCase):
     t1 = _gen_tensor(5, 3)
     t2 = _gen_tensor(*t1.size())
     self.runAtenTest([t1, t2, _gen_mask(t1.size())], test_fn)
-    
+   
   def test_add_mixed_device(self):
     input = _gen_tensor(3, 800, 1066)
     xla_input = input.to(xm.xla_device())
@@ -931,7 +931,7 @@ class TestAtenXlaTensor(test_utils.XlaTestCase):
     v2.mul_(2)
     x.sum().backward()
     self.assertEqual(root.grad.tolist(), [[1, 2], [1, 1], [1, 1]])
-    
+   
   def test_view_data_update(self):
     a = torch.zeros(4, device=xm.xla_device())
     v = a.view(2, 2)
