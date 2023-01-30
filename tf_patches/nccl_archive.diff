@@ -1,0 +1,15 @@
+[NOTE] remove this diff, as necessary, when we change the tar ball version,
+poossibly during the next TF pin update.
+diff --git a/tensorflow/workspace2.bzl b/tensorflow/workspace2.bzl
+index fc75bbc9ad0..073c21ac675 100644
+--- a/tensorflow/workspace2.bzl
++++ b/tensorflow/workspace2.bzl
+@@ -611,7 +611,7 @@ def _tf_repositories():
+         name = "nccl_archive",
+         build_file = "//third_party:nccl/archive.BUILD",
+         patch_file = ["//third_party/nccl:archive.patch"],
+-        sha256 = "7f7c738511a8876403fc574d13d48e7c250d934d755598d82e14bab12236fc64",
++        sha256 = "ba93b52fb7c63d472ad0d2853e8057f1c82ae190cad7c5cac398a64194ea1e57",
+         strip_prefix = "nccl-2.16.2-1",
+         urls = tf_mirror_urls("https://github.com/nvidia/nccl/archive/v2.16.2-1.tar.gz"),
+     )
