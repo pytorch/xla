@@ -58,6 +58,7 @@ resource "google_project_iam_member" "cloud-build-scheduler-permission" {
   project = google_service_account.cloud-build-trigger-scheduler.project
   role    = "roles/cloudbuild.builds.editor"
   member  = "serviceAccount:${google_service_account.cloud-build-trigger-scheduler.email}"
+}
 
 resource "google_cloudbuild_trigger" "tpu-test-trigger" {
   location = "global"
@@ -72,16 +73,6 @@ resource "google_cloudbuild_trigger" "tpu-test-trigger" {
   }
 
   filename = "test/tpu/cloudbuild.yaml"
-}
-
-module "nightly-py37-tpuvm" {
-  source = "./modules/trigger"
-
-  release = "nightly"
-  python_version = "3.7"
-  platform = "tpuvm"
-  docker_build_args = [ "tpuvm=1" ]
-  scheduler_service_account = google_service_account.cloud-build-trigger-scheduler.email
 }
 
 module "nightly-py38-tpuvm" {
