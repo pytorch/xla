@@ -1,8 +1,5 @@
-- name: Set environment variables required during runtime in /etc/environment
+- name: Append environment variables required during runtime to /etc/environment
   ansible.builtin.lineinfile:
     path: /etc/environment
-    # Match existing entry for a given env variable and replace it with
-    # a new value.
-    regexp: "^{{ item }}="
     line: "{{ item }}={{ env_vars[item] }}"
   loop: "{{ env_vars.keys() | list }}"
