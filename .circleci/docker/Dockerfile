@@ -64,9 +64,6 @@ RUN bash ./install_llvm_clang.sh
 ADD ./install_valgrind.sh install_valgrind.sh
 RUN bash ./install_valgrind.sh
 
-# Install expecttest
-RUN apt-get install expecttest
-
 # Sets up jenkins user.
 RUN useradd jenkins && \
     mkdir /home/jenkins && \
