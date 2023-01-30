@@ -66,7 +66,16 @@
       vars:
         src_root: "/src"
         env_vars: "{{
-            env.common | default({}, true) |
-            combine(env[arch] | default({}, true)) |
-            combine(env[accelerator] | default({}, true))
+            build_env.common | default({}, true) |
+            combine(build_env[arch] | default({}, true)) |
+            combine(build_env[accelerator] | default({}, true))
           }}"
+
+    - role: configure_env
+      vars:
+        env_vars: "{{
+            runtime_env.common | default({}, true) |
+            combine(runtime_env[arch] | default({}, true)) |
+            combine(runtime_env[accelerator] | default({}, true))
+          }}"
+      when: stage == "release"
