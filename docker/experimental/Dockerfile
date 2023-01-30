@@ -102,6 +102,8 @@ FROM python:${python_version}-slim-${debian_version} AS release
 RUN apt-get update
 RUN apt-get install -y libopenblas-base curl gnupg libomp5 git
 
+RUN pip install expecttest
+
 RUN pip install numpy pyyaml
 
 ARG cuda
