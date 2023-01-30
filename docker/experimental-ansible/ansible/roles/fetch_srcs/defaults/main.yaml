@@ -1,3 +1,0 @@
-# See https://docs.ansible.com/ansible/latest/collections/ansible/builtin/git_module.html#parameter-version
-pytorch_git_rev: HEAD
-xla_git_rev: HEAD

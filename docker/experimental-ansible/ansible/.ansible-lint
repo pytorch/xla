@@ -1,6 +1,0 @@
----
-# .ansible-lint
-
-profile: moderate
-skip_list:
-  - schema[tasks]

@@ -1,5 +1,0 @@
-- name: Append environment variables required during runtime to /etc/environment
-  ansible.builtin.lineinfile:
-    path: /etc/environment
-    line: "{{ item }}={{ env_vars[item] }}"
-  loop: "{{ env_vars.keys() | list }}"
