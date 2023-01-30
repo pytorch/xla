@@ -792,6 +792,37 @@ std::string GetPyTypeString(py::handle obj) {
   return type;
 }
 
+std::vector<bool> check_materialization_helper(
+    const std::vector<XLATensorPtr>& xtensors) {
+  std::vector<bool> need_materialization;
+  need_materialization.reserve(xtensors.size());
+  for (auto& xtensor : xtensors) {
+    if (!xtensor) {
+      // input tensor is not a xla tensor
+      need_materialization.push_back(false);
+    } else if (xtensor->CurrentDataHandle() != nullptr) {
+      // input tensor has xla_data which means it is already on device
+      need_materialization.push_back(false);
+    } else if (xtensor->CurrentIrValue().node != nullptr) {
+      torch::lazy::NodePtr node = xtensor->CurrentIrValue().node;
+      if (torch_xla::DeviceData::Cast(xtensor->CurrentIrValue().node.get()) !=
+          nullptr) {
+        need_materialization.push_back(false);
+      } else {
+        // input tensor is an IR other than DeviceData which means a
+        // compuation is required to get the value of this tensor.
+        need_materialization.push_back(true);
+      }
+    } else {
+      // TODO: maybe also handle it is a XLATensor with tensor_data case
+      XLA_CHECK(false)
+          << "_check_tensor_need_materialization "
+             "currently does not handle XLATensor without XLAData and IR";
+    }
+  }
+  return need_materialization;
+}
+
 void BuildProfilerSubmodule(py::module* m) {
   py::module profiler = m->def_submodule("profiler", "Profiler integration");
   py::class_<xla::profiler::ProfilerServer,
@@ -1633,38 +1664,26 @@ void InitXlaModuleBindings(py::module m) {
         });
 
   // Return true if value of the tensor requires a computation.
-  m.def(
-      "_check_tensor_need_materialization",
-      [](const std::vector<at::Tensor>& tensors) -> std::vector<bool> {
-        std::vector<bool> need_materialization;
-        need_materialization.reserve(tensors.size());
-        for (auto& tensor : tensors) {
-          auto xtensor = bridge::TryGetXlaTensor(tensor);
-          if (!xtensor) {
-            // input tensor is not a xla tensor
-            need_materialization.push_back(false);
-          } else if (xtensor->CurrentDataHandle() != nullptr) {
-            // input tensor has xla_data which means it is already on device
-            need_materialization.push_back(false);
-          } else if (xtensor->CurrentIrValue().node != nullptr) {
-            torch::lazy::NodePtr node = xtensor->CurrentIrValue().node;
-            if (torch_xla::DeviceData::Cast(
-                    xtensor->CurrentIrValue().node.get()) != nullptr) {
-              need_materialization.push_back(false);
-            } else {
-              // input tensor is an IR other than DeviceData which means a
-              // compuation is required to get the value of this tensor.
-              need_materialization.push_back(true);
-            }
-          } else {
-            // TODO: maybe also handle it is a XLATensor with tensor_data case
-            XLA_CHECK(false)
-                << "_check_tensor_need_materialization "
-                   "currently does not handle XLATensor without XLAData and IR";
+  m.def("_check_tensor_need_materialization",
+        [](const std::vector<at::Tensor>& tensors) -> std::vector<bool> {
+          std::vector<XLATensorPtr> xtensors;
+          xtensors.reserve(tensors.size());
+          for (const at::Tensor& tensor : tensors) {
+            xtensors.push_back(bridge::TryGetXlaTensor(tensor));
           }
-        }
-        return need_materialization;
-      });
+          return check_materialization_helper(xtensors);
+        });
+
+  // Return true if value of the any tensor in this devicerequires a
+  // computation.
+  m.def("_check_device_tensor_need_materialization",
+        [](const std::string& device_str) -> std::vector<bool> {
+          auto opt_device = GetOptionalDevice(device_str);
+          std::vector<XLATensorPtr> xtensors =
+              XLAGraphExecutor::Get()->GetLiveTensors(
+                  opt_device ? &opt_device.value() : nullptr);
+          return check_materialization_helper(xtensors);
+        });
 
   m.def("_get_graph_hash", [](const std::vector<at::Tensor>& tensors) {
     std::vector<XLATensorPtr> xtensors;
@@ -1689,27 +1708,9 @@ void InitXlaModuleBindings(py::module m) {
             -> std::vector<at::Tensor> {
           XLA_CHECK(hash_str.size() == sizeof(torch::lazy::hash_t));
           torch::lazy::hash_t hash = *(torch::lazy::hash_t*)(hash_str.c_str());
-          std::vector<torch::lazy::BackendDataPtr> parameters_data;
           torch::lazy::BackendDevice device = torch_xla::GetCurrentDevice();
-          {
-            TORCH_LAZY_TIMED("RunCachedGraphInputData");
-            // setup the parameters_data
-            int idx = 0;
-            for (auto& ivalue : graph_inputs) {
-              torch::lazy::BackendDataPtr dataptr;
-              if (auto xla_tensor_ptr =
-                      bridge::TryGetXlaTensor(ivalue.toTensor())) {
-                dataptr = xla_tensor_ptr->GetXlaData();
-              } else {
-                dataptr = torch_xla::TensorToXlaData(ivalue.toTensor(), device);
-              }
-
-              ++idx;
-              parameters_data.push_back(dataptr);
-            }
-          }
           auto results = XLAGraphExecutor::Get()->ExecuteComputationWithBarrier(
-              hash, std::move(parameters_data), device);
+              hash, graph_inputs, device);
           std::vector<at::Tensor> retlist;
           {
             TORCH_LAZY_TIMED("RunCachedGraphOutputData");
