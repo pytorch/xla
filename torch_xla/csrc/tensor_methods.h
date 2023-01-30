@@ -444,11 +444,6 @@ XLATensorPtr hardtanh_backward(const XLATensorPtr& grad_output,
                                const at::Scalar& min_val,
                                const at::Scalar& max_val);
 
-XLATensorPtr leaky_relu(const XLATensorPtr& input, double negative_slope);
-XLATensorPtr leaky_relu_backward(const XLATensorPtr& grad_output,
-                                 const XLATensorPtr& input,
-                                 double negative_slope);
-
 XLATensorPtr lerp(const XLATensorPtr& input, const XLATensorPtr& end,
                   const XLATensorPtr& weight);
 XLATensorPtr lerp(const XLATensorPtr& input, const XLATensorPtr& end,
@@ -809,9 +804,6 @@ XLATensorPtr sum(const XLATensorPtr& input, std::vector<int64_t> dimensions,
 
 std::tuple<XLATensorPtr, XLATensorPtr, XLATensorPtr> svd(
     const XLATensorPtr& input, bool some, bool compute_uv);
-
-std::tuple<XLATensorPtr, XLATensorPtr> symeig(const XLATensorPtr& input,
-                                              bool eigenvectors, bool upper);
 
 XLATensorPtr take(const XLATensorPtr& input, const XLATensorPtr& index);
 

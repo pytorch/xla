@@ -1405,21 +1405,22 @@ std::tuple<at::Tensor, at::Tensor> XLANativeFunctions::kthvalue(
                          bridge::AtenFromXlaTensor(std::get<1>(results)));
 }
 
-at::Tensor XLANativeFunctions::leaky_relu(const at::Tensor& self,
-                                          const at::Scalar& negative_slope) {
-  TORCH_LAZY_FN_COUNTER("xla::");
-  return bridge::AtenFromXlaTensor(tensor_methods::leaky_relu(
-      bridge::GetXlaTensor(self), negative_slope.to<double>()));
-}
-
 at::Tensor XLANativeFunctions::leaky_relu_backward(
     const at::Tensor& grad_output, const at::Tensor& self,
     const at::Scalar& negative_slope, bool self_is_result) {
   TORCH_LAZY_FN_COUNTER("xla::");
   XLA_CHECK(!self_is_result || negative_slope.to<double>() >= 0.0);
-  return bridge::AtenFromXlaTensor(tensor_methods::leaky_relu_backward(
-      bridge::GetXlaTensor(grad_output), bridge::GetXlaTensor(self),
-      negative_slope.to<double>()));
+  auto common_device = torch_xla::bridge::GetXlaDevice(self);
+  XLA_CHECK(common_device);
+  auto node_negative_slope =
+      torch::lazy::LazyGraphExecutor::Get()->GetIrValueForScalarFromCodegen(
+          negative_slope, *common_device);
+  torch::lazy::NodePtr node = torch::lazy::MakeNode<LeakyReluBackward>(
+      bridge::GetXlaTensor(grad_output)->GetIrValue(),
+      bridge::GetXlaTensor(self)->GetIrValue(), node_negative_slope,
+      self_is_result);
+  return torch_xla::bridge::AtenFromXlaTensor(
+      torch_xla::XLATensor::Create(std::move(node), *common_device));
 }
 
 at::Tensor XLANativeFunctions::lerp(const at::Tensor& self,
@@ -2776,15 +2777,6 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor> XLANativeFunctions::svd(
                          bridge::AtenFromXlaTensor(std::get<2>(results)));
 }
 
-std::tuple<at::Tensor, at::Tensor> XLANativeFunctions::symeig(
-    const at::Tensor& self, bool eigenvectors, bool upper) {
-  TORCH_LAZY_FN_COUNTER("xla::");
-  auto results =
-      tensor_methods::symeig(bridge::GetXlaTensor(self), eigenvectors, upper);
-  return std::make_tuple(bridge::AtenFromXlaTensor(std::get<0>(results)),
-                         bridge::AtenFromXlaTensor(std::get<1>(results)));
-}
-
 at::Tensor XLANativeFunctions::t(const at::Tensor& self) {
   TORCH_LAZY_FN_COUNTER("xla::");
   return bridge::AtenFromXlaTensor(
@@ -2904,16 +2896,21 @@ at::Tensor XLANativeFunctions::upsample_bilinear2d(
     c10::optional<double> scales_h, c10::optional<double> scales_w) {
   TORCH_LAZY_FN_COUNTER("xla::");
   XLATensorPtr self_tensor = bridge::GetXlaTensor(self);
+  absl::Span<const int64_t> input_dims =
+      self_tensor->shape().get().dimensions();
+  std::vector<int64_t> scaled_output_size =
+      torch::lazy::ToVector<int64_t>(output_size);
   if ((scales_h && *scales_h != 1.0) || (scales_w && *scales_w != 1.0)) {
-    return at::native::call_fallback_fn<
-        &xla_cpu_fallback, ATEN_OP(upsample_bilinear2d)>::call(self,
-                                                               output_size,
-                                                               align_corners,
-                                                               scales_h,
-                                                               scales_w);
+    scaled_output_size = GetOutputSizeWithScale(input_dims, scales_h, scales_w,
+                                                scaled_output_size);
+    if (!output_size.empty()) {
+      XLA_CHECK(scaled_output_size.at(0) == output_size.at(0) &&
+                scaled_output_size.at(1) == output_size.at(1))
+          << "Inferred output size and output_size from upstream are different";
+    }
   }
   return bridge::AtenFromXlaTensor(tensor_methods::upsample_bilinear2d(
-      self_tensor, torch::lazy::ToVector<int64_t>(output_size), align_corners));
+      self_tensor, scaled_output_size, align_corners));
 }
 
 at::Tensor XLANativeFunctions::upsample_bilinear2d_backward(

@@ -3,7 +3,7 @@
 ARG base_image="nvidia/cuda:11.2.0-cudnn8-devel-ubuntu18.04"
 FROM "${base_image}"
 
-ARG python_version="3.7"
+ARG python_version="3.8"
 ARG cuda="1"
 ARG cuda_compute="5.2,7.5"
 ARG cc="clang-8"
@@ -88,7 +88,7 @@ ENV RUSTUP_HOME /opt/rustup
 
 RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
 RUN . $CARGO_HOME/env && \
-    git clone --recursive https://github.com/mozilla/sccache.git && \
+    git clone --recursive https://github.com/pytorch/sccache.git && \
     cd sccache && \
     cargo install sccache && \
     cd .. && \

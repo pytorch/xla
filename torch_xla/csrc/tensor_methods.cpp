@@ -63,8 +63,6 @@
 #include "torch_xla/csrc/ops/index_select.h"
 #include "torch_xla/csrc/ops/infer_output_shape.h"
 #include "torch_xla/csrc/ops/kth_value.h"
-#include "torch_xla/csrc/ops/leaky_relu.h"
-#include "torch_xla/csrc/ops/leaky_relu_backward.h"
 #include "torch_xla/csrc/ops/linear_interpolation.h"
 #include "torch_xla/csrc/ops/linspace.h"
 #include "torch_xla/csrc/ops/log_softmax.h"
@@ -120,7 +118,6 @@
 #include "torch_xla/csrc/ops/std_mean.h"
 #include "torch_xla/csrc/ops/sum.h"
 #include "torch_xla/csrc/ops/svd.h"
-#include "torch_xla/csrc/ops/symeig.h"
 #include "torch_xla/csrc/ops/threshold.h"
 #include "torch_xla/csrc/ops/threshold_backward.h"
 #include "torch_xla/csrc/ops/topk.h"
@@ -1407,18 +1404,6 @@ XLATensorPtr hardtanh_backward(const XLATensorPtr& grad_output,
       grad_output->GetIrValue(), input->GetIrValue(), min_val, max_val));
 }
 
-XLATensorPtr leaky_relu(const XLATensorPtr& input, double negative_slope) {
-  return input->CreateFrom(
-      torch::lazy::MakeNode<LeakyRelu>(input->GetIrValue(), negative_slope));
-}
-
-XLATensorPtr leaky_relu_backward(const XLATensorPtr& grad_output,
-                                 const XLATensorPtr& input,
-                                 double negative_slope) {
-  return grad_output->CreateFrom(torch::lazy::MakeNode<LeakyReluBackward>(
-      grad_output->GetIrValue(), input->GetIrValue(), negative_slope));
-}
-
 XLATensorPtr lerp(const XLATensorPtr& input, const XLATensorPtr& end,
                   const XLATensorPtr& weight) {
   return input->CreateFrom(
@@ -2439,15 +2424,6 @@ std::tuple<XLATensorPtr, XLATensorPtr, XLATensorPtr> svd(
   return std::make_tuple(input->CreateFrom(torch::lazy::Value(node, 0)),
                          input->CreateFrom(torch::lazy::Value(node, 1)),
                          input->CreateFrom(torch::lazy::Value(node, 2)));
-}
-
-std::tuple<XLATensorPtr, XLATensorPtr> symeig(const XLATensorPtr& input,
-                                              bool eigenvectors, bool upper) {
-  // SymEig takes lower instead of upper, hence the negation.
-  torch::lazy::NodePtr node =
-      torch::lazy::MakeNode<SymEig>(input->GetIrValue(), eigenvectors, !upper);
-  return std::make_tuple(input->CreateFrom(torch::lazy::Value(node, 0)),
-                         input->CreateFrom(torch::lazy::Value(node, 1)));
 }
 
 XLATensorPtr tanh_backward(const XLATensorPtr& grad_output,

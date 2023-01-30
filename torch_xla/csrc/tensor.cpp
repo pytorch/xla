@@ -702,12 +702,12 @@ c10::SymNode XLASymNodeImpl::neg() {
                    << " has not been implemented.";
 }
 
-c10::SymNode XLASymNodeImpl::min(const c10::SymNode& other) {
+c10::SymNode XLASymNodeImpl::sym_min(const c10::SymNode& other) {
   XLA_CHECK(false) << "XLASymNodeImpl::" << __FUNCTION__
                    << " has not been implemented.";
 }
 
-c10::SymNode XLASymNodeImpl::max(const c10::SymNode& other) {
+c10::SymNode XLASymNodeImpl::sym_max(const c10::SymNode& other) {
   XLA_CHECK(false) << "XLASymNodeImpl::" << __FUNCTION__
                    << " has not been implemented.";
 }
