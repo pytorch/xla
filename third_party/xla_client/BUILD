@@ -1,4 +1,3 @@
-load("@org_tensorflow//tensorflow/compiler/xla:xla.bzl", "xla_cc_test")
 load(
     "@org_tensorflow//tensorflow:tensorflow.bzl",
     "if_with_tpu_support",
@@ -84,12 +83,6 @@ cc_library(
         "triggered_task.cc",
         "util.cc",
         "xla_util.cc",
-<<<<<<< HEAD
-=======
-        "pjrt_computation_client.cc",
->>>>>>> Basic migration to bazel for xla_client.
-=======
->>>>>>> Revert to blob
         "xrt_computation_client.cc",
         "xrt_local_service.cc",
         "xrt_session.cc",
@@ -98,10 +91,6 @@ cc_library(
     hdrs = [
         "cache.h",
         "computation_client.h",
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
->>>>>>> Revert to blob
         "debug_macros.h",
         "env_vars.h",
         "mesh_service.h",
@@ -110,7 +99,6 @@ cc_library(
         "metrics_reader.h",
         "multi_wait.h",
         "nccl_distributed.h",
-<<<<<<< HEAD
         "pjrt_computation_client.h",
         "profiler.h",
         "record_reader.h",
@@ -122,22 +110,6 @@ cc_library(
         "unique.h",
         "util.h",
         "xla_util.h",
-=======
-        "pjrt_computation_client.h",
->>>>>>> Basic migration to bazel for xla_client.
-=======
-        "pjrt_computation_client.h",
-        "profiler.h",
-        "record_reader.h",
-        "sys_util.h",
-        "tf_logging.h",
-        "thread_pool.h",
-        "triggered_task.h",
-        "types.h",
-        "unique.h",
-        "util.h",
-        "xla_util.h",
->>>>>>> Revert to blob
         "xrt_computation_client.h",
         "xrt_local_service.h",
         "xrt_session.h",
@@ -210,55 +182,26 @@ cc_library(
     ]),
     alwayslink = 1,
 )
-<<<<<<< HEAD
 
-xla_cc_test(
-    name = "pjrt_computation_client_test",
-    srcs = ["pjrt_computation_client_test.cc"],
-    deps = [
-        ":computation_client_impl",
-        "//tensorflow/compiler/xla:literal",
-        "//tensorflow/compiler/xla:literal_util",
-        "//tensorflow/compiler/xla:shape_util",
-        "//tensorflow/compiler/xla:status",
-        "//tensorflow/compiler/xla:statusor",
-        "//tensorflow/compiler/xla/client:xla_builder",
-        "//tensorflow/compiler/xla/client:xla_computation",
-        "//tensorflow/compiler/xla/tests:literal_test_util",
-        "//tensorflow/compiler/xla/tools:hlo_module_loader",
-        "//tensorflow/core/platform:logging",
-        "//tensorflow/tsl/lib/core:status_test_util",
-        "//tensorflow/tsl/platform:env",
-        "//tensorflow/tsl/platform:test",
-        "//tensorflow/tsl/platform:test_main",
-)
-
-tf_proto_library_cc(
-    name = "mesh_service_proto",
-    srcs = ["mesh_service.proto"],
-    has_services = 1,
-    cc_api_version = 2,
-    cc_grpc_version = 1,
-    protodeps = [
-        "@org_tensorflow//tensorflow/core/protobuf/tpu:topology_proto",
-    ],
-)
-
-tf_cc_shared_object(
-    name = "libxla_computation_client.so",
-    linkopts = select({
-        "@org_tensorflow//tensorflow:windows": [],
-        "//conditions:default": [
-            "-z defs",
-            "-Wl,--version-script",  #  This line must be directly followed by the version_script.lds file
-            "$(location :tf_version_script.lds)",
-        ],
-    }),
-    visibility = ["//visibility:public"],
-    deps = [
-        ":computation_client",
-        ":tf_version_script.lds",
-    ],
-)
-=======
->>>>>>> Revert to blob
+# TODO(goranpetrovic): reenable when `xla_cc_test` is fixed upstream.
+# xla_cc_test(
+#     name = "pjrt_computation_client_test",
+#     srcs = ["pjrt_computation_client_test.cc"],
+#     deps = [
+#         ":computation_client_impl",
+#         "@org_tensorflow//tensorflow/compiler/xla:literal",
+#         "@org_tensorflow//tensorflow/compiler/xla:literal_util",
+#         "@org_tensorflow//tensorflow/compiler/xla:shape_util",
+#         "@org_tensorflow//tensorflow/compiler/xla:status",
+#         "@org_tensorflow//tensorflow/compiler/xla:statusor",
+#         "@org_tensorflow//tensorflow/compiler/xla/client:xla_builder",
+#         "@org_tensorflow//tensorflow/compiler/xla/client:xla_computation",
+#         "@org_tensorflow//tensorflow/compiler/xla/tests:literal_test_util",
+#         "@org_tensorflow//tensorflow/compiler/xla/tools:hlo_module_loader",
+#         "@org_tensorflow//tensorflow/core/platform:logging",
+#         "@org_tensorflow//tensorflow/tsl/lib/core:status_test_util",
+#         "@org_tensorflow//tensorflow/tsl/platform:env",
+#         "@org_tensorflow//tensorflow/tsl/platform:test",
+#         "@org_tensorflow//tensorflow/tsl/platform:test_main",
+#     ],
+# )
