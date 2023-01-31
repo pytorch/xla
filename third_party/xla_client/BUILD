@@ -1,4 +1,3 @@
-load("@org_tensorflow//tensorflow/compiler/xla:xla.bzl", "xla_cc_test")
 load(
     "@org_tensorflow//tensorflow:tensorflow.bzl",
     "if_with_tpu_support",
@@ -93,7 +92,6 @@ cc_library(
     hdrs = [
         "cache.h",
         "computation_client.h",
-<<<<<<< HEAD
         "debug_macros.h",
         "env_vars.h",
         "mesh_service.h",
@@ -251,3 +249,27 @@ tf_cc_shared_object(
         ":tf_version_script.lds",
     ],
 )
+=======
+
+# TODO(goranpetrovic): reenable when `xla_cc_test` is fixed upstream.
+# xla_cc_test(
+#     name = "pjrt_computation_client_test",
+#     srcs = ["pjrt_computation_client_test.cc"],
+#     deps = [
+#         ":computation_client_impl",
+#         "@org_tensorflow//tensorflow/compiler/xla:literal",
+#         "@org_tensorflow//tensorflow/compiler/xla:literal_util",
+#         "@org_tensorflow//tensorflow/compiler/xla:shape_util",
+#         "@org_tensorflow//tensorflow/compiler/xla:status",
+#         "@org_tensorflow//tensorflow/compiler/xla:statusor",
+#         "@org_tensorflow//tensorflow/compiler/xla/client:xla_builder",
+#         "@org_tensorflow//tensorflow/compiler/xla/client:xla_computation",
+#         "@org_tensorflow//tensorflow/compiler/xla/tests:literal_test_util",
+#         "@org_tensorflow//tensorflow/compiler/xla/tools:hlo_module_loader",
+#         "@org_tensorflow//tensorflow/core/platform:logging",
+#         "@org_tensorflow//tensorflow/tsl/lib/core:status_test_util",
+#         "@org_tensorflow//tensorflow/tsl/platform:env",
+#         "@org_tensorflow//tensorflow/tsl/platform:test",
+#         "@org_tensorflow//tensorflow/tsl/platform:test_main",
+#     ],
+# )

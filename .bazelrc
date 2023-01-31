@@ -1,6 +1,9 @@
 ############################################################################
 # All default build options below.
 
+# Enable exceptions in C++.
+common --copt=-fexceptions
+
 # Make Bazel print out all options from rc files.
 build --announce_rc
 
@@ -26,15 +29,8 @@ build -c opt
 
 build --config=short_logs
 
-# Later Bazel flag values override earlier values; if CUDA/ROCM/TPU are enabled,
-# these values are overridden.
-# build --@org_tensorflow//tensorflow/compiler/xla/python:enable_gpu=false
-# build --@org_tensorflow//tensorflow/compiler/xla/python:enable_tpu=false
-# build --@org_tensorflow//tensorflow/compiler/xla/python:enable_plugin_device=false
-
 ###########################################################################
 
-#build:posix --copt=-fvisibility=hidden
 build:posix --copt=-Wno-sign-compare
 build:posix --cxxopt=-std=c++17
 build:posix --host_cxxopt=-std=c++17
@@ -83,6 +79,9 @@ try-import %workspace%/.bazelrc.user
 
 # Compile database generation config.
 build:compdb --features=-layering_check
+
+# Test requires Java.
+test --java_runtime_version=remotejdk_11
 
 # Coverage requires Java and GCC.
 coverage --config=coverage
