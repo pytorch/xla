@@ -1,20 +1,27 @@
 - name: "Install build dependencies"
   hosts: localhost
   connection: local
-  vars_prompt:
-    - name: stage
-      prompt: "Stage (accepted values: build, release)"
-      private: false
 
-    - name: arch
-      prompt: "Complete steps for a given architecture (accepted values: aarch64, amd64)"
-      private: false
-
-    - name: accelerator
-      prompt: "Accelerator type (accepted values: tpu, cuda)"
-      private: false
-
+  # The playbook requires passing 3 variables explicitly:
+  # - stage: build or release. Different packages are installed depending on
+  #          the chosen stage.
+  # - arch: aarch64 or amd64. Architecture of the built image and wheels.
+  # - accelerator: tpu or cuda. Available accelerator.
   pre_tasks:
+    - name: "Validate required variables"
+      ansible.builtin.assert:
+        that: "{{ lookup('ansible.builtin.vars', item.name) is regex(item.pattern) }}"
+        fail_msg: |
+          "Variable '{{ item.name }}' doesn't match pattern '{{ item.pattern }}'"
+          "Pass required variables with -e option: --e \"{{ item.name }}=<value>\""
+      loop:
+        - name: stage
+          pattern: ^(build|release)$
+        - name: arch
+          pattern: ^(aarch64|amd64)$
+        - name: accelerator
+          pattern: ^(tpu|cuda)$
+
     - name: "Include vars from config/{{ item }}"
       ansible.builtin.include_vars:
         file: "config/{{ item }}"
