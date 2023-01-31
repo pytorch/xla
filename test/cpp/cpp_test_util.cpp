@@ -3,8 +3,8 @@
 #include <iostream>
 #include <string>
 
-#include "tensorflow/compiler/xla/xla_client/debug_macros.h"
-#include "tensorflow/compiler/xla/xla_client/sys_util.h"
+#include "xla/xla_client/debug_macros.h"
+#include "xla/xla_client/sys_util.h"
 #include "torch_xla/csrc/aten_xla_bridge.h"
 #include "torch_xla/csrc/ir_dump_util.h"
 #include "torch_xla/csrc/lowering_context.h"

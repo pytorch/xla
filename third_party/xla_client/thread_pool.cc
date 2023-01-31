@@ -1,12 +1,12 @@
-#include "tensorflow/compiler/xla/xla_client/thread_pool.h"
+#include "xla/xla_client/thread_pool.h"
 
 #include <condition_variable>
 #include <deque>
 #include <exception>
 #include <mutex>
 
-#include "tensorflow/compiler/xla/xla_client/metrics.h"
-#include "tensorflow/compiler/xla/xla_client/tf_logging.h"
+#include "xla/xla_client/metrics.h"
+#include "xla/xla_client/tf_logging.h"
 
 namespace xla {
 namespace env {

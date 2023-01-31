@@ -5,7 +5,7 @@
 #include <set>
 
 #include "absl/types/optional.h"
-#include "tensorflow/compiler/xla/xla_client/debug_macros.h"
+#include "xla/xla_client/debug_macros.h"
 
 namespace xla {
 namespace util {

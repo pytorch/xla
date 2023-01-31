@@ -9,11 +9,11 @@
 #include <unordered_map>
 
 #include "absl/strings/str_split.h"
-#include "tensorflow/compiler/xla/shape_util.h"
-#include "tensorflow/compiler/xla/xla_client/debug_macros.h"
-#include "tensorflow/compiler/xla/xla_client/sys_util.h"
-#include "tensorflow/compiler/xla/xla_client/tf_logging.h"
-#include "tensorflow/compiler/xla/xla_client/util.h"
+#include "xla/shape_util.h"
+#include "xla/xla_client/debug_macros.h"
+#include "xla/xla_client/sys_util.h"
+#include "xla/xla_client/tf_logging.h"
+#include "xla/xla_client/util.h"
 #include "torch/csrc/lazy/core/util.h"
 
 namespace torch_xla {

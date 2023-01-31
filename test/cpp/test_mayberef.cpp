@@ -3,7 +3,7 @@
 #include <string>
 
 #include "cpp_test_util.h"
-#include "tensorflow/compiler/xla/xla_client/util.h"
+#include "xla/xla_client/util.h"
 
 namespace torch_xla {
 namespace cpp_test {

@@ -3,7 +3,7 @@
 #include <stdexcept>
 
 #include "cpp_test_util.h"
-#include "tensorflow/compiler/xla/xla_client/async_task.h"
+#include "xla/xla_client/async_task.h"
 
 namespace torch_xla {
 namespace cpp_test {

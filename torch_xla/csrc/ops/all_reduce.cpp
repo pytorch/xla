@@ -1,8 +1,8 @@
 #include "torch_xla/csrc/ops/all_reduce.h"
 
 #include "absl/strings/str_join.h"
-#include "tensorflow/compiler/xla/shape_util.h"
-#include "tensorflow/compiler/xla/xla_client/util.h"
+#include "xla/shape_util.h"
+#include "xla/xla_client/util.h"
 #include "torch/csrc/lazy/core/util.h"
 #include "torch_xla/csrc/lowering_context.h"
 #include "torch_xla/csrc/ops/xla_ops.h"

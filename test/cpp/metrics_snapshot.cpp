@@ -2,8 +2,8 @@
 
 #include <regex>
 
-#include "tensorflow/compiler/xla/xla_client/tf_logging.h"
-#include "tensorflow/compiler/xla/xla_client/util.h"
+#include "xla/xla_client/tf_logging.h"
+#include "xla/xla_client/util.h"
 #include "torch/csrc/lazy/core/metrics.h"
 
 namespace torch_xla {

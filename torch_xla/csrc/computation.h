@@ -3,12 +3,12 @@
 #include <memory>
 #include <string>
 
-#include "tensorflow/compiler/xla/client/xla_builder.h"
-#include "tensorflow/compiler/xla/client/xla_computation.h"
-#include "tensorflow/compiler/xla/hlo/ir/hlo_module.h"
-#include "tensorflow/compiler/xla/xla_client/computation_client.h"
-#include "tensorflow/compiler/xla/xla_client/debug_macros.h"
-#include "tensorflow/compiler/xla/xla_client/types.h"
+#include "xla/client/xla_builder.h"
+#include "xla/client/xla_computation.h"
+#include "xla/hlo/ir/hlo_module.h"
+#include "xla/xla_client/computation_client.h"
+#include "xla/xla_client/debug_macros.h"
+#include "xla/xla_client/types.h"
 #include "torch/csrc/lazy/backend/lowering_context.h"
 #include "torch/csrc/lazy/core/hash.h"
 

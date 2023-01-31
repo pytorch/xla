@@ -5,7 +5,7 @@
 #include <mutex>
 #include <string>
 
-#include "tensorflow/compiler/xla/types.h"
+#include "xla/types.h"
 #include "tensorflow/core/lib/io/record_reader.h"
 
 namespace xla {

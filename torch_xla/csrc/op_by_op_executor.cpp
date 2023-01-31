@@ -4,11 +4,11 @@
 #include <unordered_map>
 
 #include "absl/strings/str_cat.h"
-#include "tensorflow/compiler/xla/client/xla_builder.h"
-#include "tensorflow/compiler/xla/xla_client/debug_macros.h"
-#include "tensorflow/compiler/xla/xla_client/metrics.h"
-#include "tensorflow/compiler/xla/xla_client/sys_util.h"
-#include "tensorflow/compiler/xla/xla_client/xla_util.h"
+#include "xla/client/xla_builder.h"
+#include "xla/xla_client/debug_macros.h"
+#include "xla/xla_client/metrics.h"
+#include "xla/xla_client/sys_util.h"
+#include "xla/xla_client/xla_util.h"
 #include "torch/csrc/lazy/core/hash.h"
 #include "torch/csrc/lazy/core/ir_util.h"
 #include "torch_xla/csrc/device.h"

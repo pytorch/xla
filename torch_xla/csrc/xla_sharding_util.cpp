@@ -5,15 +5,15 @@
 #include <cmath>
 #include <unordered_map>
 
-#include "tensorflow/compiler/xla/execution_options_util.h"
-#include "tensorflow/compiler/xla/hlo/ir/hlo_module.h"
-#include "tensorflow/compiler/xla/protobuf_util.h"
-#include "tensorflow/compiler/xla/service/hlo_parser.h"
-#include "tensorflow/compiler/xla/service/hlo_pass_pipeline.h"
-#include "tensorflow/compiler/xla/service/hlo_verifier.h"
-#include "tensorflow/compiler/xla/service/sharding_propagation.h"
-#include "tensorflow/compiler/xla/service/spmd/spmd_partitioner.h"
-#include "tensorflow/compiler/xla/xla.pb.h"
+#include "xla/execution_options_util.h"
+#include "xla/hlo/ir/hlo_module.h"
+#include "xla/protobuf_util.h"
+#include "xla/service/hlo_parser.h"
+#include "xla/service/hlo_pass_pipeline.h"
+#include "xla/service/hlo_verifier.h"
+#include "xla/service/sharding_propagation.h"
+#include "xla/service/spmd/spmd_partitioner.h"
+#include "xla/xla.pb.h"
 #include "torch_xla/csrc/device.h"
 #include "torch_xla/csrc/tensor.h"
 

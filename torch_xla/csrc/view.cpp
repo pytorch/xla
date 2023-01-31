@@ -4,10 +4,10 @@
 #include <functional>
 #include <numeric>
 
-#include "tensorflow/compiler/xla/shape_util.h"
-#include "tensorflow/compiler/xla/util.h"
-#include "tensorflow/compiler/xla/xla_client/debug_macros.h"
-#include "tensorflow/compiler/xla/xla_client/util.h"
+#include "xla/shape_util.h"
+#include "xla/util.h"
+#include "xla/xla_client/debug_macros.h"
+#include "xla/xla_client/util.h"
 #include "torch/csrc/lazy/core/util.h"
 #include "torch_xla/csrc/helpers.h"
 #include "torch_xla/csrc/ops/as_strided.h"

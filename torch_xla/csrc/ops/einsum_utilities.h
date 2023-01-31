@@ -3,7 +3,7 @@
 #include <string>
 #include <vector>
 
-#include "tensorflow/compiler/xla/xla_client/debug_macros.h"
+#include "xla/xla_client/debug_macros.h"
 
 namespace torch_xla {
 

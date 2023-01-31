@@ -5,7 +5,7 @@
 
 #include <iostream>
 
-#include "tensorflow/compiler/xla/xla_client/types.h"
+#include "xla/xla_client/types.h"
 #include "torch_xla/csrc/ir.h"
 
 namespace torch_xla {

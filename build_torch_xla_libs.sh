@@ -83,9 +83,9 @@ else
   sed -i '/.*github.com\/llvm.*,/a "https://storage.googleapis.com/tpu-pytorch/llvm-raw/{commit}.tar.gz".format(commit = LLVM_COMMIT),' \
     $THIRD_PARTY_DIR/tensorflow/third_party/llvm/workspace.bzl
   sed -i 's/LLVM_COMMIT)]/LLVM_COMMIT),"https:\/\/storage.googleapis.com\/tpu-pytorch\/llvm-raw\/{commit}.tar.gz".format(commit = LLVM_COMMIT)]/g' \
-    $THIRD_PARTY_DIR/tensorflow/tensorflow/compiler/xla/mlir_hlo/WORKSPACE
+    $THIRD_PARTY_DIR/OpenXLA/xla/mlir_hlo/WORKSPACE
 
-  cp -r -u -p $THIRD_PARTY_DIR/xla_client $THIRD_PARTY_DIR/tensorflow/tensorflow/compiler/xla/
+  cp -r -u -p $THIRD_PARTY_DIR/xla_client $THIRD_PARTY_DIR/OpenXLA/xla/
 
   pushd $THIRD_PARTY_DIR/tensorflow
   # TensorFlow and its dependencies may introduce warning flags from newer compilers
@@ -94,10 +94,10 @@ else
   TF_EXTRA_FLAGS="--copt=-Wno-unknown-warning-option"
   bazel build $MAX_JOBS $VERBOSE $TPUVM_FLAG $TF_EXTRA_FLAGS --spawn_strategy=$BUILD_STRATEGY --show_progress_rate_limit=20 \
     --define framework_shared_object=false -c "$MODE" "${OPTS[@]}" \
-    $XLA_CUDA_CFG //tensorflow/compiler/xla/xla_client:libxla_computation_client.so
+    $XLA_CUDA_CFG //xla/xla_client:libxla_computation_client.so
 
   popd
   mkdir -p torch_xla/lib
-  chmod 0644 $THIRD_PARTY_DIR/tensorflow/bazel-bin/tensorflow/compiler/xla/xla_client/libxla_computation_client.so
-  cp $THIRD_PARTY_DIR/tensorflow/bazel-bin/tensorflow/compiler/xla/xla_client/libxla_computation_client.so torch_xla/lib
+  chmod 0644 $THIRD_PARTY_DIR/tensorflow/bazel-bin/xla/xla_client/libxla_computation_client.so
+  cp $THIRD_PARTY_DIR/tensorflow/bazel-bin/xla/xla_client/libxla_computation_client.so torch_xla/lib
 fi

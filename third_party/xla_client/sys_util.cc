@@ -1,4 +1,4 @@
-#include "tensorflow/compiler/xla/xla_client/sys_util.h"
+#include "xla/xla_client/sys_util.h"
 
 #include <chrono>
 #include <cstdlib>

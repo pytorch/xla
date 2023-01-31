@@ -3,7 +3,7 @@
 #include <iostream>
 #include <string>
 
-#include "tensorflow/compiler/xla/xla_client/computation_client.h"
+#include "xla/xla_client/computation_client.h"
 #include "torch/csrc/lazy/backend/backend_interface.h"
 #include "torch_xla/csrc/device.h"
 

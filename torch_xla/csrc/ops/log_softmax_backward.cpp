@@ -1,6 +1,6 @@
 #include "torch_xla/csrc/ops/log_softmax_backward.h"
 
-#include "tensorflow/compiler/xla/xla_client/debug_macros.h"
+#include "xla/xla_client/debug_macros.h"
 #include "torch_xla/csrc/lowering_context.h"
 #include "torch_xla/csrc/ops/infer_output_shape.h"
 #include "torch_xla/csrc/softmax_builder.h"
