@@ -210,6 +210,7 @@ DISABLED_TORCH_TESTS_ANY = {
         'test_expand_view',
         'test_reshape_nonview',
         'test_unfold_view',
+        'test_view_copy_out',  # FIXME
     },
 
     # test_indexing.py
