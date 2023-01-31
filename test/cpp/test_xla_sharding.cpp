@@ -5,8 +5,8 @@
 #include <iostream>
 
 #include "cpp_test_util.h"
-#include "tensorflow/compiler/xla/xla_client/env_vars.h"
-#include "tensorflow/compiler/xla/xla_client/sys_util.h"
+#include "third_party/xla_client/env_vars.h"
+#include "third_party/xla_client/sys_util.h"
 #include "tensorflow/compiler/xla/xla_data.pb.h"
 #include "torch_xla/csrc/aten_xla_bridge.h"
 #include "torch_xla/csrc/helpers.h"
