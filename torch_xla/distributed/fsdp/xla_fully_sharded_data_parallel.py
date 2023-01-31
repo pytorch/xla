@@ -1399,8 +1399,9 @@ class XlaFullyShardedDataParallel(nn.Module):
     for p in full_params:
       if p._has_full_param:
         # free the original full parameter
-        # RuntimeError: one of the variables needed for gradient computation has been modified by an inplace operation: [XLAFloatType [1000, 2048]] is at version 1; expected version 0 instead. Hint: enable anomaly detection to find the operation that failed to compute its gradient, with torch.autograd.set_detect_anomaly(True).
-        p.data = self._dummy_data_placeholder
+        version = p._version
+        p.copy_(self._dummy_data_placeholder)
+        torch.autograd._unsafe_set_version_counter(p, version)
         p._has_full_param = False
 
     if apply_opt_barrier:
@@ -1435,8 +1436,10 @@ class XlaFullyShardedDataParallel(nn.Module):
                                  dependency_tensors)
 
     for p, p_data in zip(p_list, p_data_list):
-      # RuntimeError: one of the variables needed for gradient computation has been modified by an inplace operation: [XLAFloatType [1000, 2048]] is at version 3; expected version 1 instead. Hint: enable anomaly detection to find the operation that failed to compute its gradient, with torch.autograd.set_detect_anomaly(True).
-      p.data = p_data
+      with torch.no_grad():
+        version = p._version
+        p.copy_(p_data)
+        torch.autograd._unsafe_set_version_counter(p, version)
     for p_shard, p_shard_data in zip(p_shard_list, p_shared_data_list):
       with torch.no_grad():
         p_shard.copy_(p_shard_data)
