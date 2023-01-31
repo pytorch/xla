@@ -112,6 +112,7 @@ supported:
   - _copy_from
   - _copy_from_and_resize
   - _index_put_impl_
+  - _linalg_svd
   - _local_scalar_dense
   - _log_softmax
   - _log_softmax_backward_data

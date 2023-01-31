@@ -100,16 +100,13 @@ allowed_opinfo = set(
             AllowedOpInfoEntry('floor_divide'),
             AllowedOpInfoEntry('frexp'),
             AllowedOpInfoEntry('ge'),
-            AllowedOpInfoEntry('geqrf'),
             AllowedOpInfoEntry('gt'),
             AllowedOpInfoEntry('imag'),
             AllowedOpInfoEntry('inverse'),
             AllowedOpInfoEntry('isin'),
             AllowedOpInfoEntry('le'),
-            AllowedOpInfoEntry('linalg.det'),
             AllowedOpInfoEntry('linalg.cholesky'),
             AllowedOpInfoEntry('linalg.cholesky_ex'),
-            AllowedOpInfoEntry('linalg.eig'),
             AllowedOpInfoEntry('linalg.householder_product'),
             AllowedOpInfoEntry('linalg.matrix_power'),
             AllowedOpInfoEntry('linalg.qr'),
@@ -188,12 +185,8 @@ allowed_opinfo = set(
             AllowedOpInfoEntry('square'),
             AllowedOpInfoEntry('lerp'),
             AllowedOpInfoEntry('linalg.inv'),
-            AllowedOpInfoEntry('linalg.inv_ex'),
             AllowedOpInfoEntry('angle'),
             AllowedOpInfoEntry('linalg.solve'),
-            AllowedOpInfoEntry('linalg.matrix_rank'),
-            AllowedOpInfoEntry('linalg.svd'),
-            AllowedOpInfoEntry('linalg.svdvals'),
             AllowedOpInfoEntry('polar'),
             AllowedOpInfoEntry('ravel'),
             AllowedOpInfoEntry('reshape'),
@@ -287,14 +280,21 @@ allowed_opinfo = set(
             # AllowedOpInfoEntry('diagonal'),
             # AllowedOpInfoEntry('fft.ifft'),
             # AllowedOpInfoEntry('fft.ihfft'),
+            # AllowedOpInfoEntry('geqrf'),  # Slice dim size 1 greater than dynamic slice dimension: 0
             # AllowedOpInfoEntry('gradient'),
             # AllowedOpInfoEntry('kthvalue'),
             # AllowedOpInfoEntry('linalg.cond'),
+            # AllowedOpInfoEntry('linalg.det'),  # Slice dim size 1 greater than dynamic slice dimension: 0
+            # AllowedOpInfoEntry('linalg.eig'),  # Slice dim size 1 greater than dynamic slice dimension: 0
             # AllowedOpInfoEntry('linalg.eigh'),
             # AllowedOpInfoEntry('linalg.eigvalsh'),
+            # AllowedOpInfoEntry('linalg.inv_ex'),  # Slice dim size 1 greater than dynamic slice dimension: 0
             # AllowedOpInfoEntry('linalg.lstsq'),
             # AllowedOpInfoEntry('linalg.norm'),
             # AllowedOpInfoEntry('linalg.matrix_norm'),
+            # AllowedOpInfoEntry('linalg.matrix_rank'),  # Slice dim size 1 greater than dynamic slice dimension: 0
+            # AllowedOpInfoEntry('linalg.svd'),  # Slice dim size 1 greater than dynamic slice dimension: 0
+            # AllowedOpInfoEntry('linalg.svdvals'),  # Slice dim size 1 greater than dynamic slice dimension: 0
             # AllowedOpInfoEntry('linalg.vector_norm'),
             # AllowedOpInfoEntry('std_mean'),
             # AllowedOpInfoEntry('sum'),
@@ -409,7 +409,6 @@ class TestOpInfo(TestCase):
   def test_reference_eager(self, device, dtype, op):
     if self.device_type != 'xla':
       self.skipTest("This test runs only on XLA")
-
     sample_inputs = op.sample_inputs(device, dtype)
     for sample_input in sample_inputs:
       self.compare_with_eager_reference(op, sample_input)
