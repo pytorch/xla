@@ -8,7 +8,6 @@ set(GTEST_DIR "${CMAKE_BINARY_DIR}/gtest")
 
 get_filename_component(PTXLA_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../.." ABSOLUTE)
 get_filename_component(PT_DIR "${PTXLA_DIR}/.." ABSOLUTE)
-set(TFDIR "${PTXLA_DIR}/third_party/tensorflow")
 
 file(GLOB PTXLA_LIBDIRS "${PTXLA_DIR}/build/lib.*")
 list(GET PTXLA_LIBDIRS 0 PTXLA_LIBDIR)
@@ -96,12 +95,14 @@ target_include_directories(
   test_ptxla
   SYSTEM PUBLIC
   "${SOURCE_DIR}/googletest/include"
-  "${TFDIR}/bazel-tensorflow"
-  "${TFDIR}/bazel-bin"
-  "${TFDIR}/bazel-tensorflow/external/protobuf_archive/src"
-  "${TFDIR}/bazel-tensorflow/external/com_google_protobuf/src"
-  "${TFDIR}/bazel-tensorflow/external/eigen_archive"
-  "${TFDIR}/bazel-tensorflow/external/com_google_absl"
+  "${PTXLA_DIR}/bazel-xla"
+  "${PTXLA_DIR}/bazel-bin"
+  "${PTXLA_DIR}/bazel-bin/external/org_tensorflow",
+  "${PTXLA_DIR}/bazel-xla/external/org_tensorflow",
+  "${PTXLA_DIR}/bazel-xla/external/protobuf_archive/src"
+  "${PTXLA_DIR}/bazel-xla/external/com_google_protobuf/src"
+  "${PTXLA_DIR}/bazel-xla/external/eigen_archive"
+  "${PTXLA_DIR}/bazel-xla/external/com_google_absl"
   "${PYTHON_INCLUDE_DIR}"
 )
 
