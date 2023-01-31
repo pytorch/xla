@@ -13,7 +13,7 @@
         that: "{{ lookup('ansible.builtin.vars', item.name) is regex(item.pattern) }}"
         fail_msg: |
           "Variable '{{ item.name }}' doesn't match pattern '{{ item.pattern }}'"
-          "Pass required variables with -e option: --e \"{{ item.name }}=<value>\""
+          "Pass the required variable with: --e \"{{ item.name }}=<value>\""
       loop:
         - name: stage
           pattern: ^(build|release)$
