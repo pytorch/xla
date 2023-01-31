@@ -31,7 +31,7 @@ def parse_common_options(datadir=None,
   parser.add_argument('--num_workers', type=int, default=num_workers)
   parser.add_argument("--prefetch_factor", type=int, default=prefetch_factor)
   parser.add_argument('--pin_memory', type=bool, default=pin_memory)
-  parser.add_argument('--persistent_workers', type=int, default=persistent_workers)
+  parser.add_argument('--persistent_workers', type=bool, default=persistent_workers)
   parser.add_argument("--loader_prefetch_size", type=int, default=loader_prefetch_size)
   parser.add_argument("--device_prefetch_size", type=int, default=device_prefetch_size)
   parser.add_argument("--cpu_to_device_transfer_threads", type=int, default=cpu_to_device_transfer_threads)
