@@ -316,7 +316,6 @@ void XLATensor::SetInPlaceIrValue(torch::lazy::Value ir_value) {
 }
 
 void XLATensor::AssignIrValue(torch::lazy::Value ir_value) const {
-	std::cout << "*** AssignIrValue..." << std::endl;
   if (ir_value) {
     std::string debug_str = ir_value->ToString();
     auto sharding = dynamic_cast<XlaNode*>(ir_value.node.get())->GetSharding();
@@ -324,10 +323,6 @@ void XLATensor::AssignIrValue(torch::lazy::Value ir_value) const {
       debug_str += " with sharding " + sharding->DebugString();
     }
     TF_VLOG(5) << "Assign IR value " << debug_str;
-    std::cout << " - new ir_value: " << debug_str << std::endl;
-	if (sharding_spec()) {
-	std::cout << "- current sharding: " << sharding_spec()->sharding.DebugString() << std::endl;
-	}
   } else {
     TF_VLOG(5) << "Assign empty IR value";
   }
@@ -582,22 +577,16 @@ torch::lazy::Value XLATensor::MaybeCastIrValue(
 }
 
 XLATensorPtr XLATensor::CreateFrom(torch::lazy::Value ir_value) const {
-	std::cout << "*** CreateFrom ir_value (with only): " << ir_value->ToString() << std::endl;
-	if (sharding_spec())
-	std::cout << "- current sharding: " << sharding_spec()->sharding.DebugString() << std::endl;
-	if (CurrentIrValue())
-	std::cout << "- current ir value: " << CurrentIrValue()->ToString() << std::endl;
   ir_value = MaybeCastIrValue(std::move(ir_value), GetDevice(),
                               /*logical_element_type=*/c10::nullopt);
   bool try_propagate_sharding = ir_value && sharding_spec();
   auto xtensor = Create(std::move(ir_value), GetDevice(), dtype_optional());
   if (try_propagate_sharding) {
-    auto* node = dynamic_cast<XlaNode*>(ir_value.node.get());
-    std::cout << "- xla node shape: " << MakeXlaShapeFromLazyShape(node->shape(), GetDevice()).ToString() << std::endl;
-    std::cout << "- current shape: " << shape().get().ToString() << std::endl;
-    if (xla::ShapeUtil::Equal(node->xla_shape(), shape())) {
-      xtensor->SetShardingSpec(*sharding_spec());
-    }
+    auto* node = dynamic_cast<XlaNode*>(xtensor->CurrentIrValue().node.get());
+    // TODO(yeounoh) might want to wrap inside
+    // if (xla::ShapeUtil::Equal(node->xla_shape(), shape())) {}
+    // but not necessary.
+    xtensor->SetShardingSpec(*sharding_spec());
   }
   return xtensor;
 }
@@ -605,51 +594,36 @@ XLATensorPtr XLATensor::CreateFrom(torch::lazy::Value ir_value) const {
 XLATensorPtr XLATensor::CreateFrom(
     torch::lazy::Value ir_value,
     c10::optional<at::ScalarType> logical_element_type_opt) const {
-	std::cout << "*** CreateFrom ir_value (with elem type): " << ir_value->ToString() << std::endl;
-	if (sharding_spec())
-	std::cout << "- current sharding: " << sharding_spec()->sharding.DebugString() << std::endl;
-	if (CurrentIrValue())
-	std::cout << "- current ir value: " << CurrentIrValue()->ToString() << std::endl;
   ir_value = MaybeCastIrValue(std::move(ir_value), GetDevice(),
                               logical_element_type_opt);
   bool try_propagate_sharding = ir_value && sharding_spec();
-  auto xtensor =  Create(std::move(ir_value), GetDevice(), logical_element_type_opt);
+  auto xtensor =
+      Create(std::move(ir_value), GetDevice(), logical_element_type_opt);
   if (try_propagate_sharding) {
     auto* node = dynamic_cast<XlaNode*>(xtensor->CurrentIrValue().node.get());
-    std::cout << "- current shape: " << shape().get().ToString() << std::endl;
-//std::cout << "- checks: " << node->shape().scalar_type();
-  //std::cout << ", " << node->shape().sizes() << std::endl;
-    //std::cout << "- xla node shape: " << MakeXlaShapeFromLazyShape(node->shape(), GetDevice()).ToString() << std::endl;
-    //if (xla::ShapeUtil::Equal(node->xla_shape(), shape())) {
-      xtensor->SetShardingSpec(*sharding_spec());
-    //}
+    // TODO(yeounoh) might want to wrap inside
+    // if (xla::ShapeUtil::Equal(node->xla_shape(), shape())) {}
+    // but not necessary.
+    xtensor->SetShardingSpec(*sharding_spec());
   }
   return xtensor;
-
 }
 
 XLATensorPtr XLATensor::CreateFrom(torch::lazy::Value ir_value,
                                    const torch::lazy::BackendDevice& device,
                                    at::ScalarType logical_element_type) const {
-	std::cout << "*** CreateFrom ir_value (with device & elem type): " << ir_value->ToString() << std::endl;
-	if (sharding_spec())
-	std::cout << "- current sharding: " << sharding_spec()->sharding.DebugString() << std::endl;
-	if (CurrentIrValue())
-	std::cout << "- current ir value: " << CurrentIrValue()->ToString() << std::endl;
   ir_value =
       MaybeCastIrValue(std::move(ir_value), device, logical_element_type);
   bool try_propagate_sharding = ir_value && sharding_spec();
   auto xtensor = Create(std::move(ir_value), device, logical_element_type);
   if (try_propagate_sharding) {
-    auto* node = dynamic_cast<XlaNode*>(ir_value.node.get());
-    std::cout << "- xla node shape: " << MakeXlaShapeFromLazyShape(node->shape(), GetDevice()).ToString() << std::endl;
-    std::cout << "- current shape: " << shape().get().ToString() << std::endl;
-    if (xla::ShapeUtil::Equal(MakeXlaShapeFromLazyShape(node->shape(), GetDevice()), shape().get())) {
-      xtensor->SetShardingSpec(*sharding_spec());
-    }
+    auto* node = dynamic_cast<XlaNode*>(xtensor->CurrentIrValue().node.get());
+    // TODO(yeounoh) might want to wrap inside
+    // if (xla::ShapeUtil::Equal(node->xla_shape(), shape())) {}
+    // but not necessary.
+    xtensor->SetShardingSpec(*sharding_spec());
   }
   return xtensor;
-
 }
 
 void XLATensor::ApplyPendingGraph() {
