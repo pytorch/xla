@@ -83,7 +83,7 @@ else
   sed -i '/.*github.com\/llvm.*,/a "https://storage.googleapis.com/tpu-pytorch/llvm-raw/{commit}.tar.gz".format(commit = LLVM_COMMIT),' \
     $THIRD_PARTY_DIR/tensorflow/third_party/llvm/workspace.bzl
   sed -i 's/LLVM_COMMIT)]/LLVM_COMMIT),"https:\/\/storage.googleapis.com\/tpu-pytorch\/llvm-raw\/{commit}.tar.gz".format(commit = LLVM_COMMIT)]/g' \
-    $THIRD_PARTY_DIR/tensorflow/tensorflow/compiler/xla/mlir_hlo/WORKSPACE
+    $THIRD_PARTY_DIR/OpenXLA/xla/mlir_hlo/WORKSPACE
 
   cp -r -u -p $THIRD_PARTY_DIR/xla_client $THIRD_PARTY_DIR/tensorflow/tensorflow/compiler/xla/
 
