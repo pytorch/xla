@@ -409,6 +409,7 @@ class TestOpInfo(TestCase):
   def test_reference_eager(self, device, dtype, op):
     if self.device_type != 'xla':
       self.skipTest("This test runs only on XLA")
+
     sample_inputs = op.sample_inputs(device, dtype)
     for sample_input in sample_inputs:
       self.compare_with_eager_reference(op, sample_input)
