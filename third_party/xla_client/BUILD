@@ -170,13 +170,13 @@ cc_library(
         "//tensorflow/core/profiler/rpc:profiler_server_impl",
         "//tensorflow/core/profiler/rpc/client:profiler_client",
         "//tensorflow/core/protobuf/tpu:topology_proto_cc",
-        "//tensorflow/compiler/xla/stream_executor:stream_executor_impl",
+        "//xla/stream_executor:stream_executor_impl",
         "@com_google_absl//absl/numeric:int128",
         "@com_google_absl//absl/strings",
     ] + if_cuda_is_configured([
         "@local_config_nccl//:nccl",
         "//tensorflow/compiler/jit:xla_gpu_device",
-        "//tensorflow/compiler/xla/stream_executor:cuda_platform",
+        "//xla/stream_executor:cuda_platform",
     ]) + if_with_tpu_support([
         "//tensorflow/compiler/jit:xla_tpu_device",
         "//tensorflow/compiler/jit:xla_tpu_jit",
