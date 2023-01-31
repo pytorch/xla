@@ -7,7 +7,7 @@ index 649c8e22dcc..a85f4bc3af3 100644
      """Shorthand for select()ing whether to build API support for TPUs when building TensorFlow"""
      return select({
 -        "//tensorflow:with_tpu_support": if_true,
-+        Label("//tensorflow:with_tpu_support"): if_true,
++        clean_dep("//tensorflow:with_tpu_support"): if_true,
          "//conditions:default": if_false,
      })
  
