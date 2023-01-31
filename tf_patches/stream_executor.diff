@@ -1,7 +1,7 @@
-diff --git a/xla/stream_executor/BUILD b/xla/stream_executor/BUILD
+diff --git a/tensorflow/compiler/xla/stream_executor/BUILD b/tensorflow/compiler/xla/stream_executor/BUILD
 index bd39d1f8edd..fc4848c6a50 100644
---- a/xla/stream_executor/BUILD
-+++ b/xla/stream_executor/BUILD
+--- a/tensorflow/compiler/xla/stream_executor/BUILD
++++ b/tensorflow/compiler/xla/stream_executor/BUILD
 @@ -197,10 +197,12 @@ cc_library(
      ],
  )
