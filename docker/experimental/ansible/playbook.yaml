@@ -81,8 +81,8 @@
     - role: configure_env
       vars:
         env_vars: "{{
-            runtime_env.common | default({}, true) |
-            combine(runtime_env[arch] | default({}, true)) |
-            combine(runtime_env[accelerator] | default({}, true))
+            release_env.common | default({}, true) |
+            combine(release_env[arch] | default({}, true)) |
+            combine(release_env[accelerator] | default({}, true))
           }}"
       when: stage == "release"

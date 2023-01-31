@@ -1,5 +1,7 @@
+# Contains lists of pip packages for each stage (build|release) and arch or accelerator.
 pip:
   pkgs:
+    # Shared between all architectures and accelerators for the build stage.
     build_common:
       - astunparse
       - cffi
@@ -33,6 +35,7 @@ pip:
 
     build_aarch64:
 
+    # Shared between all architectures and accelerators for the release stage.
     release_common:
       - numpy
       - pyyaml
@@ -42,6 +45,7 @@ pip:
     release_tpu:
       - torch_xla[tpuvm]
 
+  # Packages that will be installed with the `--nodeps` flag.
   pkgs_nodeps:
     release_common:
       - torchvision

@@ -1,3 +1,4 @@
+# Contains lists of apt packages for each stage (build|release) and arch or accelerator.
 apt:
   pkgs:
     build_common:
@@ -56,7 +57,7 @@ apt:
 
   repos:
     # signed-by path should match the corresponding keyring path above.
-    - "deb [signed-by=/usr/share/keyrings/llvm.pgp] http://apt.llvm.org/{{ debian_version }}/ llvm-toolchain-{{ debian_version }}-{{ clang_version }} main"
-    - "deb-src [signed-by=/usr/share/keyrings/llvm.pgp] http://apt.llvm.org/{{ debian_version }}/ llvm-toolchain-{{ debian_version }}-{{ clang_version }} main"
+    - "deb [signed-by=/usr/share/keyrings/llvm.pgp] http://apt.llvm.org/{{ llvm_debian_repo }}/ llvm-toolchain-{{ llvm_debian_repo }}-{{ clang_version }} main"
+    - "deb-src [signed-by=/usr/share/keyrings/llvm.pgp] http://apt.llvm.org/{{ llvm_debian_repo }}/ llvm-toolchain-{{ llvm_debian_repo }}-{{ clang_version }} main"
     - "deb [signed-by=/usr/share/keyrings/cloud.google.gpg] https://packages.cloud.google.com/apt cloud-sdk main"
     - "deb [signed-by=/usr/share/keyrings/cuda.pgp] https://developer.download.nvidia.com/compute/cuda/repos/{{ cuda_repo }}/x86_64/ /"
