@@ -389,7 +389,6 @@ setup(
         # On Cloud TPU VM install with:
         # $ sudo pip3 install torch_xla[tpuvm] -f https://storage.googleapis.com/tpu-pytorch/wheels/tpuvm/torch_xla-1.11-cp38-cp38-linux_x86_64.whl
         'tpuvm': [f'libtpu-nightly @ {_libtpu_storage_path}'],
-        'test': ["expecttest"],
     },
     package_data={
         'torch_xla': [
