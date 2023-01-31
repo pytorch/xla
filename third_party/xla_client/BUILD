@@ -5,11 +5,11 @@ load(
     "tf_cc_shared_object",
 )
 load(
-    "//tensorflow/tsl/platform/default:build_config.bzl",
+    "//third_party/tsl/platform/default:build_config.bzl",
     "tf_proto_library_cc",
 )
 load(
-    "//tensorflow/tsl/platform/default:cuda_build_defs.bzl",
+    "//third_party/tsl/platform/default:cuda_build_defs.bzl",
     "if_cuda_is_configured",
 )
 
@@ -199,9 +199,9 @@ xla_cc_test(
         "//tensorflow/compiler/xla/tests:literal_test_util",
         "//tensorflow/compiler/xla/tools:hlo_module_loader",
         "//tensorflow/core/platform:logging",
-        "//tensorflow/tsl/lib/core:status_test_util",
-        "//tensorflow/tsl/platform:env",
-        "//tensorflow/tsl/platform:test",
-        "//tensorflow/tsl/platform:test_main",
+        "//third_party/tsl/lib/core:status_test_util",
+        "//third_party/tsl/platform:env",
+        "//third_party/tsl/platform:test",
+        "//third_party/tsl/platform:test_main",
     ],
 )

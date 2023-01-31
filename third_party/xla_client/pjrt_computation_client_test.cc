@@ -13,9 +13,9 @@
 #include "tensorflow/compiler/xla/tests/literal_test_util.h"
 #include "tensorflow/compiler/xla/xla_client/computation_client.h"
 #include "tensorflow/core/platform/logging.h"
-#include "tensorflow/tsl/lib/core/status_test_util.h"
-#include "tensorflow/tsl/platform/env.h"
-#include "tensorflow/tsl/platform/test.h"
+#include "third_party/tsl/lib/core/status_test_util.h"
+#include "third_party/tsl/platform/env.h"
+#include "third_party/tsl/platform/test.h"
 
 namespace xla {
 
