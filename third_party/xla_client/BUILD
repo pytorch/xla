@@ -10,14 +10,18 @@ load(
     "if_with_tpu_support",
 )
 load(
+<<<<<<< HEAD
     "//tensorflow/tsl/platform/default:build_config.bzl",
     "tf_additional_all_protos",
     "tf_proto_library",
+=======
+    "//third_party/tsl/platform/default:build_config.bzl",
+>>>>>>> d18a2891... migrate to use tsl from OpenXLA
     "tf_proto_library_cc",
     "tf_proto_library_py",
 )
 load(
-    "//tensorflow/tsl/platform/default:cuda_build_defs.bzl",
+    "//third_party/tsl/platform/default:cuda_build_defs.bzl",
     "if_cuda_is_configured",
 )
 
@@ -186,4 +190,26 @@ cc_library(
         "//tensorflow/compiler/jit:xla_tpu_jit",
     ]),
     alwayslink = 1,
+)
+
+xla_cc_test(
+    name = "pjrt_computation_client_test",
+    srcs = ["pjrt_computation_client_test.cc"],
+    deps = [
+        ":computation_client_impl",
+        "//tensorflow/compiler/xla:literal",
+        "//tensorflow/compiler/xla:literal_util",
+        "//tensorflow/compiler/xla:shape_util",
+        "//tensorflow/compiler/xla:status",
+        "//tensorflow/compiler/xla:statusor",
+        "//tensorflow/compiler/xla/client:xla_builder",
+        "//tensorflow/compiler/xla/client:xla_computation",
+        "//tensorflow/compiler/xla/tests:literal_test_util",
+        "//tensorflow/compiler/xla/tools:hlo_module_loader",
+        "//tensorflow/core/platform:logging",
+        "//third_party/tsl/lib/core:status_test_util",
+        "//third_party/tsl/platform:env",
+        "//third_party/tsl/platform:test",
+        "//third_party/tsl/platform:test_main",
+    ],
 )

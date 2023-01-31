@@ -4,8 +4,8 @@
 #include <sstream>
 
 #include "tensorflow/compiler/xla/status.h"
-#include "tensorflow/tsl/platform/logging.h"
-#include "tensorflow/tsl/platform/status.h"
+#include "third_party/tsl/platform/logging.h"
+#include "third_party/tsl/platform/status.h"
 
 namespace xla {
 namespace internal {
