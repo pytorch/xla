@@ -2,8 +2,11 @@
 
 This ansible playbook will perform the following actions on the localhost:
   * install required pip and apt packages, depending on the specified stage,
-    architecture and accelerator (see [apt.yaml](config/apt.yaml) and [pip.yaml](config/pip.yaml)).
+    architecture and accelerator (see [apt.yaml](config/apt.yaml) and
+    [pip.yaml](config/pip.yaml)).
   * fetch bazel (version configured in [vars.yaml](config/vars.yaml)),
+  * fetch PyTorch and XLA sources at master (or specific revisions,
+    see role `fetch_srcs` in [playbook.yaml]).
   * set required environment variables (see [env.yaml](config/env.yaml)),
   * build and install PyTorch and XLA wheels,
   * apply infrastructure tests (see `*/tests.yaml` files in [roles](roles)).
@@ -33,7 +36,8 @@ The configuration is simply loaded as playbook variables which are then passed
 to specific roles and tasks.
 Only variables in [config/env.yaml](config/env.yaml) are passed as env variables.
 
-* [apt.yaml](config/apt.yaml) - specifies apt packages for each stage and architecture or accelerator.
+* [apt.yaml](config/apt.yaml) - specifies apt packages for each stage and
+  architecture or accelerator.
   Packages shared between all architectures and accelerators in a given stage
   are specified in `*_common`. They are appended to any architecture specific list.
 
@@ -50,4 +54,5 @@ Only variables in [config/env.yaml](config/env.yaml) are passed as env variables
 * [vars.yaml](config/vars.yaml) - Ansible variables used in other config files and throughout the playbook.
   Not associated with any particular system.
 
-Variables from these config files are dynamically loaded (during playbook execution), see [playbook.yaml](playbook.yaml).
+Variables from these config files are dynamically loaded (during playbook execution),
+see [playbook.yaml](playbook.yaml).
