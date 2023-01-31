@@ -22,7 +22,7 @@
         - name: accelerator
           pattern: ^(tpu|cuda)$
 
-    - name: "Include vars from config/{{ item }}"
+    - name: "Include vars from config files"
       ansible.builtin.include_vars:
         file: "config/{{ item }}"
       loop:
