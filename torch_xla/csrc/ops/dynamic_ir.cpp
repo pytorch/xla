@@ -97,13 +97,12 @@ XlaOpVector SizeAdd::Lower(LoweringContext* loctx) const {
 }
 
 SizeSub::SizeSub(torch::lazy::Value a, torch::lazy::Value b)
-    : XlaNode(torch::lazy::OpKind{c10::Symbol::fromQualString(
-                  "aten::sub")},  // TODO: should it be something like
-                                  // aten::size_sub? Try it out.
-              {a, b},
-              xla::ShapeUtil::MakeShape(
-                  GetShapeDimensionType(/*device*/ nullptr), {}),
-              1) {
+    : XlaNode(
+          torch::lazy::OpKind{c10::Symbol::fromQualString("aten::size_sub")},
+          {a, b},
+          xla::ShapeUtil::MakeShape(GetShapeDimensionType(/*device*/ nullptr),
+                                    {}),
+          1) {
   const torch::lazy::DimensionNode* dim_node_0 = DimCast(operand(0));
   const torch::lazy::DimensionNode* dim_node_1 = DimCast(operand(1));
   XLA_CHECK(dim_node_0);
