@@ -164,8 +164,7 @@ class TestDynamicShapes(unittest.TestCase):
     # t1.shape= torch.Size([<=6, 2]) with real size [3, 2]
     t1 = self.get_dynamic_tensor()
     # print('t1=', t1)  # uncommenting this line would cause the test to crash.
-    self.assertIsInstance(t1.shape[0],
-                          torch.SymInt)  # TODO: uncomment this line
+    self.assertIsInstance(t1.shape[0], torch.SymInt)
     t2 = torch.empty(t1.shape, dtype=torch.int32, device=dev)
     self.assertIsInstance(t2.shape[0], torch.SymInt)
     self.assertEqual(str(t2.shape[0]), '<=6')

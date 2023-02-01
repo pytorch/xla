@@ -690,7 +690,6 @@ xla::XlaOp GetDimensionSize(const BuilderPtr& builder,
 xla::XlaOp SetDimensionSize(const BuilderPtr& builder,
                             const std::vector<OpPtr>& operands, py::dict args) {
   int64_t dimension = args["dimension"].cast<int64_t>();
-  // shouldn't `dimension` be a vector<bool> instead of int64_t?
   return xla::SetDimensionSize(operands.at(0)->op, operands.at(1)->op,
                                dimension);
 }
