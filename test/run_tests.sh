@@ -207,8 +207,7 @@ function run_tests {
     if [[ "$XLA_SKIP_MP_OP_TESTS" != "1" ]] ; then
       run_mp_op_tests
     fi
-  fi
-  if [[ "$PYTORCH_XLA_TESTS_ONLY" != "0" ]] ; then
+  else
     PYTORCH_XLA_TESTS_SKIP=1 run_op_tests_ptxla
   fi
 }
