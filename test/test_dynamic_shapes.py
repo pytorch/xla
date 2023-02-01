@@ -99,6 +99,27 @@ class TestDynamicShapes(unittest.TestCase):
     t4 = t3.expand(dyn_size)
     self.assertEqual(t4.size(0), 3)
 
+  def test_sizeSub(self):
+    size1 = 5
+    size2 = 2
+    t1 = torch.zeros([size1, size2], device=dev)
+    t1[0][0] = 1
+    t1[1][0] = 1
+    t1[2][0] = 1
+    # t2 has size [<=10, 2] with dynamic size [3, 2]
+    t2 = torch.nonzero(t1)
+    dyn_size = t2.shape[0] - t2.shape[1]
+    # Exercises SizeSub::getDynamicValue.
+    dynamic_size = int(dyn_size)
+    self.assertEqual(dynamic_size, 1)
+    # Exercise SizeAdd::getStaticValue.
+    self.assertEqual(str(dyn_size), '<=8')
+
+    t3 = torch.ones(1, device=dev)
+    # Exercise SizeAdd::Lower.
+    t4 = t3.expand(dyn_size)
+    self.assertEqual(t4.size(0), 1)
+
   def get_dynamic_tensor(self):
     a1 = torch.tensor([[1, 0, 0, 5, 0, 6]], device=dev)
     a2 = torch.nonzero(a1)

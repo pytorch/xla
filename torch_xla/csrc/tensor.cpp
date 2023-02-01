@@ -639,8 +639,9 @@ c10::SymNode XLASymNodeImpl::add(const c10::SymNode& other) {
 }
 
 c10::SymNode XLASymNodeImpl::sub(const c10::SymNode& other) {
-  XLA_CHECK(false) << "XLASymNodeImpl::" << __FUNCTION__
-                   << " has not been implemented.";
+  torch_xla::XLASymNodeImpl p_other = dynamic_case<XLASymNodeImpl*>(other.get());
+  torch::lazy::NodePtr n_sub = torch::lazy::MakeNode<SizeSub>(node(), p_other->other());
+  return c10::make_instrusive<XLASymNodeImpl>(n_sub);
 }
 
 c10::SymNode XLASymNodeImpl::mul(const c10::SymNode& other) {
