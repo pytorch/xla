@@ -35,6 +35,8 @@ checkout_torch_pin_if_available
 
 install_deps_pytorch_xla $XLA_DIR $USE_CACHE
 
+apply_patches
+
 python -c "import fcntl; fcntl.fcntl(1, fcntl.F_SETFL, 0)"
 
 python setup.py install
