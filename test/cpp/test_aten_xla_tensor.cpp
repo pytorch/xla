@@ -913,6 +913,38 @@ TEST_F(AtenXlaTensorTest, TestSVD) {
       });
     }
   }
+  ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::svd", cpp_test::GetIgnoredCounters());
+}
+
+TEST_F(AtenXlaTensorTest, TestLinalgSVD) {
+  static const int dims[] = {4, 7};
+  for (auto m : dims) {
+    for (auto n : dims) {
+      torch::Tensor a =
+          torch::rand({m, n}, torch::TensorOptions(torch::kFloat));
+      auto b =
+          torch::_linalg_svd(a, /*full_matrices=*/false, /*compute_uv=*/true);
+      ForEachDevice([&](const torch::Device& device) {
+        torch::Tensor xla_a = CopyToDevice(a, device);
+        auto xla_b = torch::_linalg_svd(xla_a, /*full_matrices=*/false,
+                                        /*compute_uv=*/true);
+        // The U and V matrices might have different sign for column vectors, so
+        // cannot be compared if not by absolute value.
+        AllClose(std::get<0>(b).abs(), std::get<0>(xla_b).abs(), /*rtol=*/1e-3,
+                 /*atol=*/1e-4);
+        torch::Tensor diag = std::get<1>(b);
+        torch::Tensor xla_diag = std::get<1>(xla_b);
+        ASSERT_EQ(diag.sizes(), xla_diag.sizes());
+        AllClose(diag, xla_diag, /*rtol=*/1e-3,
+                 /*atol=*/1e-4);
+        AllClose(std::get<2>(b).abs(), std::get<2>(xla_b).abs(), /*rtol=*/1e-3,
+                 /*atol=*/1e-4);
+      });
+    }
+  }
+  ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::_linalg_svd", cpp_test::GetIgnoredCounters());
 }
 
 TEST_F(AtenXlaTensorTest, TestQR) {

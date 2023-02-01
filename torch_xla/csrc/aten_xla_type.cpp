@@ -3032,6 +3032,32 @@ at::Tensor& XLANativeFunctions::zero_(at::Tensor& self) {
   return self;
 }
 
+std::tuple<at::Tensor, at::Tensor, at::Tensor> XLANativeFunctions::_linalg_svd(
+    const at::Tensor& self, bool full_matrices, bool compute_uv,
+    c10::optional<c10::string_view> /* driver */) {
+  // The optional driver string is only for CUDA with a cuSOLVER backend.
+  TORCH_LAZY_FN_COUNTER("xla::");
+  // As per https://pytorch.org/docs/stable/generated/torch.svd.html,
+  // The second boolean argument is exactly opposite between
+  // torch::svd and torch::_linalg_svd, hence the negation of full_matrices.
+  XLATensorPtr self_tensor = bridge::GetXlaTensor(self);
+  auto results = tensor_methods::svd(self_tensor, !full_matrices, compute_uv);
+  auto u = std::get<0>(results);
+  auto s = std::get<1>(results);
+  auto vh = tensor_methods::transpose(std::get<2>(results), 0, 1);
+  if (!compute_uv) {
+    // When compute_uv is false, torch::_linalg_svd returns an empty tensor for
+    // u and vh.
+    u = tensor_methods::full({0}, 0, self_tensor->GetDevice(),
+                             self_tensor->dtype());
+    vh = tensor_methods::full({0}, 0, self_tensor->GetDevice(),
+                              self_tensor->dtype());
+  }
+  return std::make_tuple(bridge::AtenFromXlaTensor(u),
+                         bridge::AtenFromXlaTensor(s),
+                         bridge::AtenFromXlaTensor(vh));
+}
+
 at::Scalar XLANativeFunctions::_local_scalar_dense(const at::Tensor& self) {
   if (DebugUtil::ExperimentEnabled("early_sync")) {
     // sync tensors in order to save computation when step is marked later.
