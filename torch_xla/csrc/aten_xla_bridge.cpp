@@ -66,6 +66,7 @@ XLATensorPtr TryGetXlaTensor(const at::Tensor& tensor) {
   if (impl == nullptr) {
     return XLATensorPtr();
   }
+  auto t = impl->tensor();
   return impl->tensor();
 }
 

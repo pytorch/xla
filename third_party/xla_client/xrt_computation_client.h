@@ -248,8 +248,16 @@ class XrtComputationClient : public ComputationClient {
   std::vector<xla::util::ExceptionCleanup> LockAsyncDatas(
       absl::Span<const DataPtr> datas) override;
 
-  std::vector<DataPtr> GetDataShards(DataPtr data) override {
+  std::vector<DataPtr> GetDataShards(DataPtr data) override { return {data}; }
+
+  DataPtr WrapDataShards(const std::vector<DataPtr>& shards, std::string device,
+                         xla::Shape shape, xla::OpSharding sharding) override {
     XLA_ERROR() << __FUNCTION__ << " not implemented";
+  }
+
+  std::optional<xla::OpSharding> GetDataSharding(DataPtr handle) override {
+    // Returns an empty sharding result, ad XRT does not support sharding.
+    return std::optional<xla::OpSharding>();
   }
 
   std::vector<DataPtr> TransferToServer(

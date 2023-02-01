@@ -46,6 +46,11 @@ class ShardingUtil {
       std::vector<xla::ComputationClient::DataPtr> arguments,
       std::vector<std::string> devices);
 
+  static std::vector<xla::ComputationClient::DataPtr> OutputHandler(
+      std::vector<std::vector<xla::ComputationClient::DataPtr>> sharded_results,
+      std::vector<XLATensor::ShardingSpecPtr> sharding_specs,
+      bool replicated_output = true);
+
   // Shard a tensor and returns the sharded tensors which belong on `devices`
   // based on the `sharding` spec. REPLICATED sharding should result in shards
   // identical to the input; OTHERS (tiled) sharding result in shards where

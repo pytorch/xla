@@ -171,6 +171,16 @@ class XLAGraphExecutor : public torch::lazy::LazyGraphExecutor {
                        const torch::lazy::BackendDevice& device);
 
  private:
+  struct ShardingShapeData {
+    ShardingShapeData(xla::Shape full_shape, xla::Shape sharded_shape,
+                      size_t tensor_index)
+        : full_shape(full_shape),
+          sharded_shape(sharded_shape),
+          tensor_index(tensor_index){};
+    xla::Shape full_shape;
+    xla::Shape sharded_shape;
+    size_t tensor_index;
+  };
   // This is just to group results from compile(). Since our computation is
   // different, we don't reuse the upstream CompilationResult.
   struct CompilationResult {
@@ -272,6 +282,9 @@ class XLAGraphExecutor : public torch::lazy::LazyGraphExecutor {
       const std::vector<XLATensorPtr>& tensors,
       absl::Span<const size_t> indices);
 
+  std::vector<XLATensor::ShardingSpecPtr> CollectShardingSpecs(
+      std::vector<XLATensorPtr>* tensors, absl::Span<const size_t> indices);
+
   // TODO(alanwaketan): Reuse the upstream one once Functionalization is done.
   std::vector<torch::lazy::BackendDataPtr> SetTensorData(
       std::vector<XLATensorPtr>* tensors, const SyncTensorsConfig& config,
@@ -300,6 +313,7 @@ class XLAGraphExecutor : public torch::lazy::LazyGraphExecutor {
       SyncTensorCollection* coll,
       std::vector<torch::lazy::BackendDataPtr> parameters_data,
       std::vector<torch::lazy::BackendDataPtr> tensors_data,
+      std::vector<XLATensor::ShardingSpecPtr> sharding_specs,
       ComputationCache::TypePtr cached_computation);
   std::shared_ptr<Async> ScheduleSyncTensorsGraph(
       std::vector<XLATensorPtr>* tensors, SyncTensorCollection* coll,
