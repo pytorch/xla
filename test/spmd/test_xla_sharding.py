@@ -58,11 +58,14 @@ class BasicShardingTest(test_xla_sharding_base.XlaShardingTest):
     expected = t + t
 
     xt = t.to(xm.xla_device())
-    xs.mark_sharding(xt, self._get_mesh((1, 1, 1, self.n_devices)),
+    # Shard along two axes if four or more devices are available
+    z_dim = 2 if self.n_devices >= 4 else 1
+    xs.mark_sharding(xt, self._get_mesh((1, 1, z_dim, self.n_devices // z_dim)),
                      (0, 1, 2, 3))
-    annotation = '{devices=[1,1,1,%d]%s}' % (self.n_devices, ','.join([
-        str(i) for i in range(self.n_devices)
-    ])) if self.n_devices > 1 else '{maximal device=0}'
+    annotation = '{devices=[1,1,%d,%d]%s}' % (
+        z_dim, self.n_devices // z_dim,
+        ','.join([str(i) for i in range(self.n_devices)
+                 ])) if self.n_devices > 1 else '{maximal device=0}'
     self.assertEqual(annotation, torch_xla._XLAC._get_xla_sharding_spec(xt))
 
     actual = (xt + xt).cpu()
