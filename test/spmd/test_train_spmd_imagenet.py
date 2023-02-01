@@ -1,4 +1,3 @@
-from torch_xla.experimental import pjrt
 import args_parse
 
 SUPPORTED_MODELS = [
@@ -28,17 +27,14 @@ MODEL_OPTS = {
     '--test_only_at_end': {
         'action': 'store_true',
     },
-    '--ddp': {
+    '--sharding': {
+        'choices': ['batch', 'spatial', 'conv', 'linear'],
+        'nargs': '+',
+        'default': [],
+    },
+    '--use_virtual_device': {
         'action': 'store_true',
     },
-    # Use pjrt:// init_method instead of env:// for `torch.distributed`.
-    # Required for DDP on TPU v2/v3 when using PJRT.
-    '--pjrt_distributed': {
-        'action': 'store_true',
-    },
-    '--profile': {
-        'action': 'store_true',
-    }
 }
 
 FLAGS = args_parse.parse_common_options(
@@ -58,21 +54,18 @@ import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from torch.nn.parallel import DistributedDataParallel as DDP
 import torch.optim as optim
 import torchvision
 import torchvision.transforms as transforms
 import torch_xla
 import torch_xla.debug.metrics as met
 import torch_xla.distributed.parallel_loader as pl
-import torch_xla.debug.profiler as xp
 import torch_xla.utils.utils as xu
 import torch_xla.core.xla_model as xm
-import torch_xla.distributed.xla_multiprocessing as xmp
+import torch_xla.debug.profiler as xp
 import torch_xla.test.test_utils as test_utils
-
-import torch.distributed as dist
-import torch_xla.distributed.xla_backend
+import torch_xla.experimental.xla_sharding as xs
+import torch_xla.experimental.pjrt as pjrt
 
 DEFAULT_KWARGS = dict(
     batch_size=128,
@@ -129,13 +122,6 @@ def _train_update(device, step, loss, tracker, epoch, writer):
 
 
 def train_imagenet():
-  if FLAGS.pjrt_distributed:
-    import torch_xla.experimental.pjrt_backend
-    dist.init_process_group('xla', init_method='pjrt://')
-  elif FLAGS.ddp:
-    dist.init_process_group(
-        'xla', world_size=xm.xrt_world_size(), rank=xm.get_ordinal())
-
   print('==> Preparing data..')
   img_dim = get_model_property('img_dim')
   if FLAGS.fake_data:
@@ -143,12 +129,11 @@ def train_imagenet():
     train_loader = xu.SampleGenerator(
         data=(torch.zeros(FLAGS.batch_size, 3, img_dim, img_dim),
               torch.zeros(FLAGS.batch_size, dtype=torch.int64)),
-        sample_count=train_dataset_len // FLAGS.batch_size //
-        xm.xrt_world_size())
+        sample_count=train_dataset_len // FLAGS.batch_size)
     test_loader = xu.SampleGenerator(
         data=(torch.zeros(FLAGS.test_set_batch_size, 3, img_dim, img_dim),
               torch.zeros(FLAGS.test_set_batch_size, dtype=torch.int64)),
-        sample_count=50000 // FLAGS.batch_size // xm.xrt_world_size())
+        sample_count=50000 // FLAGS.batch_size)
   else:
     normalize = transforms.Normalize(
         mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
@@ -174,45 +159,77 @@ def train_imagenet():
             normalize,
         ]))
 
-    train_sampler, test_sampler = None, None
-    if xm.xrt_world_size() > 1:
-      train_sampler = torch.utils.data.distributed.DistributedSampler(
-          train_dataset,
-          num_replicas=xm.xrt_world_size(),
-          rank=xm.get_ordinal(),
-          shuffle=True)
-      test_sampler = torch.utils.data.distributed.DistributedSampler(
-          test_dataset,
-          num_replicas=xm.xrt_world_size(),
-          rank=xm.get_ordinal(),
-          shuffle=False)
+    # For single-host SPMD, no data sampler is needed.
     train_loader = torch.utils.data.DataLoader(
         train_dataset,
         batch_size=FLAGS.batch_size,
-        sampler=train_sampler,
+        sampler=None,
         drop_last=FLAGS.drop_last,
-        shuffle=False if train_sampler else True,
-        num_workers=FLAGS.num_workers)
+        shuffle=True)
     test_loader = torch.utils.data.DataLoader(
         test_dataset,
         batch_size=FLAGS.test_set_batch_size,
-        sampler=test_sampler,
+        sampler=None,
         drop_last=FLAGS.drop_last,
-        shuffle=False,
-        num_workers=FLAGS.num_workers)
+        shuffle=False)
 
   torch.manual_seed(42)
 
   device = xm.xla_device()
   model = get_model_property('model_fn')().to(device)
 
-  # Initialization is nondeterministic with multiple threads in PjRt.
-  # Synchronize model parameters across replicas manually.
-  if pjrt.using_pjrt():
-    pjrt.broadcast_master_param(model)
+  input_mesh = None
+  if FLAGS.sharding:
+    num_devices = pjrt.global_device_count()
+    device_ids = np.arange(num_devices)
+    # Model sharding
+    if 'conv' in FLAGS.sharding:
+      # Shard the model's convlution layers along two dimensions
+      mesh_shape = (2, num_devices // 2, 1, 1)
+      mesh = xs.Mesh(device_ids, mesh_shape, ('w', 'x', 'y', 'z'))
+      partition_spec = (0, 1, 2, 3)  # Apply sharding along all axes
+      print(
+          f'Applying sharding to convolution layers with mesh {mesh.get_logical_mesh()}'
+      )
+      for name, layer in model.named_modules():
+        if 'conv' in name:
+          xs.mark_sharding(layer.weight, mesh, partition_spec)
+    elif 'linear' in FLAGS.sharding:
+      # Shard the model's fully connected layers across addressable devices
+      mesh_shape = (num_devices, 1)
+      mesh = xs.Mesh(device_ids, mesh_shape, ('x', 'y'))
+      print(
+          f'Applying sharding to linear layers with mesh {mesh.get_logical_mesh()}'
+      )
+      partition_spec = (0, 1)
+      for name, layer in model.named_modules():
+        if 'fc' in name:
+          xs.mark_sharding(layer.weight, mesh, partition_spec)
 
-  if FLAGS.ddp:
-    model = DDP(model, gradient_as_bucket_view=True, broadcast_buffers=False)
+    # Input sharding
+    if 'batch' in FLAGS.sharding and 'spatial' in FLAGS.sharding:
+      # Shard along both the batch dimension and spatial dimension
+      # If there are more than 4 devices, shard along the height axis as well
+      width_axis, height_axis = 2, num_devices // 4
+      mesh_shape = (2, 1, width_axis, height_axis)
+      input_mesh = xs.Mesh(device_ids, mesh_shape, ('B', 'C', 'W', 'H'))
+      print(
+          f'Sharding input along batch and spatial dimensions with mesh {input_mesh.get_logical_mesh()}'
+      )
+    elif 'batch' in FLAGS.sharding:
+      # Shard along batch dimension only
+      mesh_shape = (num_devices, 1, 1, 1)
+      input_mesh = xs.Mesh(device_ids, mesh_shape, ('B', 'C', 'W', 'H'))
+      print(
+          f'Sharding input along batch dimension with mesh {input_mesh.get_logical_mesh()}'
+      )
+    elif 'spatial' in FLAGS.sharding:
+      # Shard two-way along input spatial dimensions
+      mesh_shape = (1, 1, num_devices // 2, 2)
+      input_mesh = xs.Mesh(device_ids, mesh_shape, ('B', 'C', 'W', 'H'))
+      print(
+          f'Sharding input images on spatial dimensions with mesh {mesh.get_logical_mesh()}'
+      )
 
   writer = None
   if xm.is_master_ordinal():
@@ -222,8 +239,7 @@ def train_imagenet():
       lr=FLAGS.lr,
       momentum=FLAGS.momentum,
       weight_decay=1e-4)
-  num_training_steps_per_epoch = train_dataset_len // (
-      FLAGS.batch_size * xm.xrt_world_size())
+  num_training_steps_per_epoch = train_dataset_len // (FLAGS.batch_size)
   lr_scheduler = schedulers.wrap_optimizer_with_scheduler(
       optimizer,
       scheduler_type=getattr(FLAGS, 'lr_scheduler_type', None),
@@ -238,16 +254,19 @@ def train_imagenet():
     tracker = xm.RateTracker()
     model.train()
     for step, (data, target) in enumerate(loader):
+      data = data.to(xm.xla_device())
+      target = target.to(xm.xla_device())
+      if input_mesh:
+        partition_spec = (0, 1, 2, 3)
+        xs.mark_sharding(data, input_mesh, partition_spec)
       with xp.StepTrace('train_imagenet'):
         with xp.Trace('build_graph'):
           optimizer.zero_grad()
           output = model(data)
           loss = loss_fn(output, target)
           loss.backward()
-      if FLAGS.ddp:
         optimizer.step()
-      else:
-        xm.optimizer_step(optimizer)
+      xm.mark_step()
       tracker.add(FLAGS.batch_size)
       if lr_scheduler:
         lr_scheduler.step()
@@ -259,6 +278,8 @@ def train_imagenet():
     total_samples, correct = 0, 0
     model.eval()
     for step, (data, target) in enumerate(loader):
+      data = data.to(xm.xla_device())
+      target = target.to(xm.xla_device())
       output = model(data)
       pred = output.max(1, keepdim=True)[1]
       correct += pred.eq(target.view_as(pred)).sum()
@@ -267,18 +288,15 @@ def train_imagenet():
         xm.add_step_closure(
             test_utils.print_test_update, args=(device, None, epoch, step))
     accuracy = 100.0 * correct.item() / total_samples
-    accuracy = xm.mesh_reduce('test_accuracy', accuracy, np.mean)
     return accuracy
 
-  train_device_loader = pl.MpDeviceLoader(train_loader, device)
-  test_device_loader = pl.MpDeviceLoader(test_loader, device)
   accuracy, max_accuracy = 0.0, 0.0
   for epoch in range(1, FLAGS.num_epochs + 1):
     xm.master_print('Epoch {} train begin {}'.format(epoch, test_utils.now()))
-    train_loop_fn(train_device_loader, epoch)
+    train_loop_fn(train_loader, epoch)
     xm.master_print('Epoch {} train end {}'.format(epoch, test_utils.now()))
     if not FLAGS.test_only_at_end or epoch == FLAGS.num_epochs:
-      accuracy = test_loop_fn(test_device_loader, epoch)
+      accuracy = test_loop_fn(test_loader, epoch)
       xm.master_print('Epoch {} test end {}, Accuracy={:.2f}'.format(
           epoch, test_utils.now(), accuracy))
       max_accuracy = max(accuracy, max_accuracy)
@@ -295,18 +313,13 @@ def train_imagenet():
   return max_accuracy
 
 
-def _mp_fn(index, flags):
-  global FLAGS
-  FLAGS = flags
+if __name__ == '__main__':
+  if FLAGS.profile:
+    server = xp.start_server(FLAGS.profiler_port)
+
   torch.set_default_tensor_type('torch.FloatTensor')
   accuracy = train_imagenet()
   if accuracy < FLAGS.target_accuracy:
     print('Accuracy {} is below target {}'.format(accuracy,
                                                   FLAGS.target_accuracy))
     sys.exit(21)
-
-
-if __name__ == '__main__':
-  if FLAGS.profile:
-    server = xp.start_server(FLAGS.profiler_port)
-  xmp.spawn(_mp_fn, args=(FLAGS,), nprocs=FLAGS.num_cores)
