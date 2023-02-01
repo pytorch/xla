@@ -16,6 +16,7 @@
 #include "tensorflow/compiler/xla/xla.pb.h"
 #include "torch_xla/csrc/device.h"
 #include "torch_xla/csrc/tensor.h"
+#include "torch_xla/csrc/tensor_util.h"
 
 namespace torch_xla {
 namespace {

@@ -833,6 +833,7 @@ void XLAGraphExecutor::ExtractIRAndPrepareXlaData_(
   for (auto index : indices) {
     XLATensorPtr& tensor = (*tensors)[index];
     torch::lazy::Value ir_value = tensor->CurrentIrValue();
+
     ir_values.push_back(ir_value);
     const torch::lazy::BackendDevice& tensor_device = tensor->GetDevice();
     xla::Shape shape = MakeShapeWithDeviceLayout(
@@ -1153,6 +1154,8 @@ XLAGraphExecutor::CompilationResult XLAGraphExecutor::Compile(
   TF_VLOG(3) << "Compiling IR graph hash "
              << torch::lazy::HashToString(coll.hash) << " on device "
              << coll.device << " done!";
+  TF_VLOG(5) << "Compiled program shape "
+             << computations.front()->program_shape().ToString() << std::endl;
   TF_VLOG(5)
       << "Graph hash " << torch::lazy::HashToString(coll.hash)
       << " is computation hash "
