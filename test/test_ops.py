@@ -260,7 +260,7 @@ allowed_opinfo = set(
             # AllowedOpInfoEntry('asinh'),
             # AllowedOpInfoEntry('atan'),
             # AllowedOpInfoEntry('atanh'),
-            # AllowedOpInfoEntry('cholesky_inverse'),
+            # AllowedOpInfoEntry('cholesky_inverse'),  # Slice dim size 1 greater than dynamic slice dimension: 0
             # AllowedOpInfoEntry('cos'),
             # AllowedOpInfoEntry('cosh'),
             # AllowedOpInfoEntry('cov'),
@@ -288,12 +288,12 @@ allowed_opinfo = set(
             # AllowedOpInfoEntry('linalg.norm'),
             # AllowedOpInfoEntry('linalg.matrix_norm'),
             # AllowedOpInfoEntry('linalg.matrix_rank'),  # Slice dim size 1 greater than dynamic slice dimension: 0
-            # AllowedOpInfoEntry('linalg.matrix_power'),
-            # AllowedOpInfoEntry('linalg.solve'),
+            # AllowedOpInfoEntry('linalg.matrix_power'),  # Slice dim size 1 greater than dynamic slice dimension: 0
+            # AllowedOpInfoEntry('linalg.solve'),  # Slice dim size 1 greater than dynamic slice dimension: 0
             # AllowedOpInfoEntry('linalg.svd'),  # Slice dim size 1 greater than dynamic slice dimension: 0
             # AllowedOpInfoEntry('linalg.svdvals'),  # Slice dim size 1 greater than dynamic slice dimension: 0
             # AllowedOpInfoEntry('linalg.vector_norm'),
-            # AllowedOpInfoEntry('lu'),
+            # AllowedOpInfoEntry('lu'),  # Slice dim size 1 greater than dynamic slice dimension: 0
             # AllowedOpInfoEntry('std_mean'),
             # AllowedOpInfoEntry('sum'),
             # AllowedOpInfoEntry('mean'),
@@ -326,7 +326,7 @@ allowed_opinfo = set(
             # AllowedOpInfoEntry('repeat'),
             # AllowedOpInfoEntry('squeeze'),
             # AllowedOpInfoEntry('tile'),
-            # AllowedOpInfoEntry('triangular_solve'),
+            # AllowedOpInfoEntry('triangular_solve'),  # Slice dim size 1 greater than dynamic slice dimension: 0
             # AllowedOpInfoEntry('var'),
             # AllowedOpInfoEntry('logsumexp'),
             # AllowedOpInfoEntry('transpose'),
