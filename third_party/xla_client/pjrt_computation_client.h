@@ -25,6 +25,9 @@ class PjRtComputationClient : public ComputationClient {
 
   std::vector<DataPtr> GetDataShards(DataPtr data) override;
 
+  DataPtr WrapDataShards(const std::vector<DataPtr>& shards, std::string device,
+                         xla::Shape shape, xla::OpSharding sharding) override;
+
   std::vector<DataPtr> TransferToServer(
       absl::Span<const TensorSource> tensors) override;
 
@@ -179,7 +182,11 @@ class PjRtComputationClient : public ComputationClient {
     }
 
     void Assign(const Data& data) override {
-      XLA_ERROR() << __FUNCTION__ << " not supported.";
+      const PjRtShardedData& pjrt_sharded_data =
+          dynamic_cast<const PjRtShardedData&>(data);
+      if (&pjrt_sharded_data != this) {
+        shards = std::move(pjrt_sharded_data.shards);
+      }
     }
 
     bool HasValue() const override {

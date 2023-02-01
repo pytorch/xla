@@ -1139,11 +1139,16 @@ XLATensorPtr exp(const XLATensorPtr& input) {
 }
 
 XLATensorPtr expand(const XLATensorPtr& input, std::vector<int64_t> size) {
+  std::cout << "** tensor_methods::expand ... input IR:"
+            << input->GetIrValue()->ToString();
   auto input_shape = input->shape();
   auto output = input->CreateFrom(torch::lazy::MakeNode<Expand>(
       input->GetIrValue(),
       GetExpandDimensions(input_shape.get(), std::move(size))));
   output->SetStorage(input->Storage());
+  if (output->CurrentIrValue())
+    std::cout << ", output: " << output->CurrentIrValue()->ToString();
+  std::cout << std::endl;
   return output;
 }
 

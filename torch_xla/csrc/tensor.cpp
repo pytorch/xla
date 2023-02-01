@@ -68,6 +68,11 @@ XLATensorPtr XLATensor::Create(const at::Tensor& tensor,
 XLATensorPtr XLATensor::Create(
     torch::lazy::BackendDataPtr handle,
     c10::optional<at::ScalarType> logical_element_type) {
+  std::cout << "** Create with handle, num shards: "
+            << xla::ComputationClient::Get()
+                   ->GetDataShards(UnwrapXlaData(handle))
+                   .size()
+            << std::endl;
   XLATensorPtr xtensor = c10::make_intrusive<XLATensor>(
       XLATensor(std::move(handle), logical_element_type));
   XLAGraphExecutor::Get()->RegisterTensor(xtensor->data());
@@ -77,6 +82,8 @@ XLATensorPtr XLATensor::Create(
 XLATensorPtr XLATensor::Create(
     torch::lazy::Value ir_value, const torch::lazy::BackendDevice& device,
     c10::optional<at::ScalarType> logical_element_type) {
+  std::cout << "** Create with ir value: " << ir_value->ToString() << std::endl;
+
   XLATensorPtr xtensor = c10::make_intrusive<XLATensor>(
       XLATensor(std::move(ir_value), device, logical_element_type));
   XLAGraphExecutor::Get()->RegisterTensor(xtensor->data());
@@ -90,6 +97,7 @@ XLATensorPtr XLATensor::Create(
 XLATensorPtr XLATensor::Create(
     std::shared_ptr<View> view, const torch::lazy::BackendDevice& device,
     c10::optional<at::ScalarType> logical_element_type) {
+  std::cout << "** Create tensor with view... oh..." << std::endl;
   XLATensorPtr xtensor = c10::make_intrusive<XLATensor>(
       XLATensor(std::move(view), device, logical_element_type));
   XLAGraphExecutor::Get()->RegisterTensor(xtensor->data());
@@ -97,6 +105,7 @@ XLATensorPtr XLATensor::Create(
 }
 
 XLATensorPtr XLATensor::Create(std::shared_ptr<Data> data) {
+  std::cout << "** Create tensor with data.." << std::endl;
   return c10::make_intrusive<XLATensor>(XLATensor(std::move(data)));
 }
 
@@ -118,7 +127,8 @@ XLATensor::XLATensor(torch::lazy::Value ir_value,
   if (CurrentIrValue()) {
     auto* xla_node = dynamic_cast<XlaNode*>(CurrentIrValue().node.get());
     if (xla_node->GetSharding()) {
-      ShardingSpec sharding = ShardingSpec{*xla_node->GetSharding()};
+      ShardingSpec sharding =
+          ShardingSpec{*xla_node->GetSharding(), xla_node->xla_shape()};
       SetShardingSpec(sharding);
     }
   }
@@ -186,15 +196,23 @@ std::ptrdiff_t XLATensor::GetViewAliasId() const {
 torch::lazy::BackendDataPtr XLATensor::GetXlaData() {
   // XLA data can coexist with a view, but we need to check that the view did
   // not receive any updates before calling the current XLA valid.
+  std::cout << "**** GetXlaData ... ";
   bool up_to_date = true;
   torch::lazy::Value ir_value;
   if (data()->view != nullptr) {
+    std::cout << "view update? ";
     View::IrNode ir_value_updated = GetViewUpdate(data()->view);
     up_to_date = !ir_value_updated.updated;
     ir_value = std::move(ir_value_updated.ir_value);
   }
   if (up_to_date) {
+    std::cout << " up_to_date and handle? ";
     torch::lazy::BackendDataPtr handle = CurrentDataHandle();
+    if (handle)
+    std::cout << "current handle shards: "  << xla::ComputationClient::Get()
+                       ->GetDataShards(UnwrapXlaData(handle))
+                       .size() << ", sharded? " << (sharding_spec() != nullptr) << std::endl;
+
     if (handle != nullptr) {
       XLA_CHECK(handle->HasValue())
           << "Trying to access XLA data while an async operation is in flight: "
@@ -210,9 +228,13 @@ torch::lazy::BackendDataPtr XLATensor::GetXlaData() {
     AssignIrValue(std::move(ir_value));
   }
   if (data()->ir_value) {
+    std::cout << "ir value: " << data()->ir_value->ToString() << std::endl;
     torch::lazy::BackendDataPtr node_data =
         torch::lazy::getBackend()->GetComputationDataFromNode(
             data()->ir_value.node.get());
+    std::cout << "data_node shards: "  << xla::ComputationClient::Get()
+                       ->GetDataShards(UnwrapXlaData(node_data))
+                       .size() << std::endl;
     // Current IR is a DeviceData Node, we can retrive the data handle directly
     // instead of triggering an additional execution.
     if (node_data) {
@@ -222,9 +244,13 @@ torch::lazy::BackendDataPtr XLATensor::GetXlaData() {
       ApplyPendingGraph();
     }
   } else {
+    std::cout << "tensor to xla data???? ";
     XLA_CHECK(data()->tensor_data);
     data()->handle = TensorToXlaData(*data()->tensor_data, GetDevice());
   }
+  std::cout << "current handle shards: "  << xla::ComputationClient::Get()
+                       ->GetDataShards(UnwrapXlaData(data()->handle))
+                       .size() << std::endl;
   return data()->handle;
 }
 
@@ -242,8 +268,10 @@ void XLATensor::SetShardingSpec(const ShardingSpec& sharding) {
         << ", must be cleared before applying a new one, "
         << sharding.sharding.DebugString();
   }
-  dynamic_cast<XlaNode*>(GetIrValue().node.get())
-      ->SetSharding(sharding_spec()->sharding);
+  if (CurrentIrValue() || CurrentDataHandle() || CurrentTensorData()) {
+    dynamic_cast<XlaNode*>(GetIrValue().node.get())
+        ->SetSharding(sharding_spec()->sharding);
+  }
 }
 void XLATensor::ClearShardingSpec() {
   data()->sharding = nullptr;
@@ -262,7 +290,8 @@ XLATensor::ShardingSpecPtr XLATensor::sharding_spec() const {
     auto* xla_node = dynamic_cast<XlaNode*>(ir_value.node.get());
     if (xla_node->GetSharding()) {
       XLA_CHECK(ShardingUtil::EqualShardingSpecs(
-          *sharding, ShardingSpec{*xla_node->GetSharding()}));
+          *sharding,
+          ShardingSpec{*xla_node->GetSharding(), xla_node->xla_shape()}));
     }
   }
   return sharding;
@@ -345,6 +374,8 @@ torch::lazy::Value XLATensor::GetIrValue() const {
     // which wants the XLA data will still find it, w/out having to fetch it
     // via a computation client from-server call.
     AssignIrValue(CreateTensorNode(handle, /*read_only=*/false));
+    std::cout << "**** GetIrValue, current IR from handle: "
+              << CurrentIrValue()->ToString() << std::endl;
     return data()->ir_value;
   }
   c10::optional<at::Tensor> tensor_data = CurrentTensorData();
@@ -454,10 +485,16 @@ XLATensorPtr XLATensor::CreateViewTensor(ViewInfo view_info) const {
 }
 
 at::Tensor XLATensor::ToTensor(bool detached) {
+  std::cout << "*** ToTensor...";
   at::Tensor tensor;
   c10::optional<at::Tensor> tensor_data = CurrentTensorData();
   if (!tensor_data) {
+    std::cout << "no tensor_data .. ";
+    if (CurrentIrValue())
+    std::cout << "current IR: " << CurrentIrValue()->ToString() << std::endl;
     XLAGraphExecutor::Get()->DeviceBarrier(GetDevice());
+    std::cout << " DeviceBarrier locked..";
+
     // The GetXlaData() call will trigger an ApplyPendingGraph() if an IR
     // XlaNode is available on the tensor.
     std::vector<at::Tensor> tensors = XlaDataToTensors({GetXlaData()}, dtype());
@@ -466,6 +503,7 @@ at::Tensor XLATensor::ToTensor(bool detached) {
       SetTensorData(tensor);
     }
   } else {
+    std::cout << " have tensor_data?! ";
     tensor = *tensor_data;
     if (detached) {
       if (data()->ir_value || data()->handle != nullptr ||
@@ -484,6 +522,7 @@ at::Tensor XLATensor::ToTensor(bool detached) {
 }
 
 void XLATensor::ShallowCopyTo(XLATensorPtr dest) const {
+  std::cout << "*** ShallowCopyTo..." << std::endl;
   dest->SetScalarType(data()->logical_element_type);
   dest->SetIrValue(GetIrValue(), /*inplace=*/false);
   if (sharding_spec() != nullptr) {
@@ -627,6 +666,7 @@ XLATensorPtr XLATensor::CreateFrom(torch::lazy::Value ir_value,
 }
 
 void XLATensor::ApplyPendingGraph() {
+  std::cout << "*** ApplyPendingGraph() ... " << std::endl;
   XLAGraphExecutor::Get()->DeviceBarrier(GetDevice());
   // This method is called to ensure that the tensor data is available on
   // device, so that a call to CurrentDataHandle() returns a valid pointer.

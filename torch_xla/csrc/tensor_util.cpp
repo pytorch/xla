@@ -807,6 +807,7 @@ std::vector<int64_t> ComputeShapeStrides(const xla::Shape& shape) {
 
 at::Tensor MakeTensorFromXlaLiteral(const xla::Literal& literal,
                                     at::ScalarType dest_element_type) {
+            std::cout << "****MakeTensorFromXlaLiteral..." << std::endl;
   switch (literal.shape().element_type()) {
     case xla::PrimitiveType::PRED:
       return XlaLiteralToTensorHelper<bool>(literal, dest_element_type);
@@ -1000,9 +1001,11 @@ xla::Literal GetTensorLiteral(const at::Tensor& tensor, const xla::Shape* shape,
 std::vector<at::Tensor> XlaDataToTensors(
     absl::Span<const torch::lazy::BackendDataPtr> xla_data,
     at::ScalarType dest_element_type) {
+      std::cout << "***XlaDataToTensors...";
   std::vector<xla::Literal> literals =
       xla::ComputationClient::Get()->TransferFromServer(
           UnwrapXlaData(xla_data));
+      std::cout << " ... transfered to literals..." << std::endl;
   std::vector<at::Tensor> tensors;
   tensors.reserve(literals.size());
   for (auto& literal : literals) {

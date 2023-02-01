@@ -67,8 +67,10 @@ XLATensorImpl* GetXlaTensorImpl(const at::Tensor& tensor) {
 XLATensorPtr TryGetXlaTensor(const at::Tensor& tensor) {
   XLATensorImpl* impl = GetXlaTensorImpl(tensor);
   if (impl == nullptr) {
+    std::cout << "**** return dummy XLATensor?!" << std::endl;
     return XLATensorPtr();
   }
+  auto t = impl->tensor();
   return impl->tensor();
 }
 
@@ -77,6 +79,7 @@ bool IsXlaTensor(const at::Tensor& tensor) {
 }
 
 XLATensorPtr GetXlaTensor(const at::Tensor& tensor) {
+  std::cout << "**** GetXlaTensor ... ";
   auto xtensor = TryGetXlaTensor(tensor);
   XLA_CHECK(xtensor) << "Input tensor is not an XLA tensor: "
                      << tensor.toString();

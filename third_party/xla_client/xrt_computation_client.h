@@ -252,6 +252,11 @@ class XrtComputationClient : public ComputationClient {
     XLA_ERROR() << __FUNCTION__ << " not implemented";
   }
 
+  DataPtr WrapDataShards(const std::vector<DataPtr>& shards, std::string device,
+                         xla::Shape shape, xla::OpSharding sharding) override {
+    XLA_ERROR() << __FUNCTION__ << " not implemented";
+  }
+
   std::vector<DataPtr> TransferToServer(
       absl::Span<const TensorSource> tensors) override;
 

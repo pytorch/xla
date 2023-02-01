@@ -209,6 +209,11 @@ class ComputationClient {
   // wrapped inside a vector.
   virtual std::vector<DataPtr> GetDataShards(DataPtr data) = 0;
 
+  // Returns wrapped data shards as PjRtShardedData.
+  virtual DataPtr WrapDataShards(const std::vector<DataPtr>& shards,
+                                 std::string device, xla::Shape shape,
+                                 xla::OpSharding sharding) = 0;
+
   // Transfers local tensor values to the TPU devices and fetches the handles.
   virtual std::vector<DataPtr> TransferToServer(
       absl::Span<const TensorSource> tensors) = 0;

@@ -104,10 +104,9 @@ void CheckSubOperandTypes(at::ScalarType type1, at::ScalarType type2) {
 
 c10::optional<at::ScalarType> PromoteIntegralType(
     at::ScalarType src_dtype, const c10::optional<at::ScalarType>& opt_dtype) {
-  return opt_dtype.has_value()
-             ? opt_dtype.value()
-             : at::isIntegralType(src_dtype, /*includeBool=*/true) ? at::kLong
-                                                                   : opt_dtype;
+  return opt_dtype.has_value() ? opt_dtype.value()
+         : at::isIntegralType(src_dtype, /*includeBool=*/true) ? at::kLong
+                                                               : opt_dtype;
 }
 
 bool IsTypeWithLargerRangeThanLong(torch::ScalarType dtype) {
@@ -462,6 +461,8 @@ at::Tensor XLANativeFunctions::_copy_from(const at::Tensor& self,
   TORCH_LAZY_FN_COUNTER("xla::");
   auto dst_tensor = bridge::TryGetXlaTensor(dst);
   auto self_tensor = bridge::TryGetXlaTensor(self);
+  std::cout << "*** _copy_from, dst_tensor? " << (dst_tensor != nullptr)
+            << ", self_tensor? " << (self_tensor != nullptr) << std::endl;
   if (!self_tensor) {
     static bool sync_update =
         xla::sys_util::GetEnvBool("XLA_TENSOR_UPDATE_SYNC", true) &&
@@ -517,6 +518,8 @@ at::Tensor XLANativeFunctions::_to_copy(
     c10::optional<at::MemoryFormat> memory_format) {
   TORCH_LAZY_FN_COUNTER("xla::");
 
+  std::cout << "*** _to_copy ... ";
+
   auto options = self.options();
   // I put each of these setters in a conditional instead of doing
   // `self.options().dtype(dtype).layout(layout)... because calling
@@ -540,7 +543,8 @@ at::Tensor XLANativeFunctions::_to_copy(
   // Case 1: Materialize the tensor.
   if (device && device->type() != c10::kXLA) {
     XLA_CHECK(device->type() == c10::kCPU)
-        << "only cpu device is supported in _to_copy.";
+        << "only cpu device is supported in _to_copy." << std::endl;
+    std::cout << " materialize the tensor...";
     auto self_tensor = bridge::GetXlaTensor(self);
     auto eager_tensor = self_tensor->ToTensor(/*detached=*/true);
 
@@ -549,6 +553,7 @@ at::Tensor XLANativeFunctions::_to_copy(
   }
 
   // Case 2: Create a new XLA tensor with the supplied data and options.
+  std::cout << " create a new XLA tensor...";
   auto new_tensor =
       empty_symint(self.sym_sizes(), at::typeMetaToScalarType(options.dtype()),
                    options.layout(), options.device(), options.pinned_memory(),

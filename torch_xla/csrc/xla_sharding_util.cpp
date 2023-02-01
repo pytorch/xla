@@ -48,7 +48,7 @@ std::vector<int64_t> TileAssignmentDimensions(
 }  // namespace
 
 bool ShardingUtil::SetHloSharding(LoweringContext* lowering_ctx) {
-	std::cout << "*** SetHloSharding... " << std::endl;
+  std::cout << "*** SetHloSharding... " << std::endl;
   bool is_sharded = false;
   for (std::pair<torch::lazy::Output, xla::XlaOp> elem :
        lowering_ctx->GetEmittedOutputs()) {
@@ -57,7 +57,7 @@ bool ShardingUtil::SetHloSharding(LoweringContext* lowering_ctx) {
     const XlaNode* xla_node = dynamic_cast<const XlaNode*>(node);
     auto instruction = XlaBuilderFriend::GetInstruction(elem.second);
     if (xla_node->GetSharding() != nullptr) {
-	    std::cout << ", sharding: " << xla_node->GetSharding()->DebugString();
+      std::cout << ", sharding: " << xla_node->GetSharding()->DebugString();
       *instruction->mutable_sharding() = *xla_node->GetSharding();
       is_sharded = true;
     }
@@ -229,6 +229,43 @@ ShardingUtil::InputHandler(
   }
 
   return arguments_by_device;
+}
+
+std::vector<xla::ComputationClient::DataPtr> ShardingUtil::OutputHandler(
+    std::vector<std::vector<xla::ComputationClient::DataPtr>> sharded_results,
+    std::vector<XLATensor::ShardingSpecPtr> sharding_specs) {
+  std::vector<xla::ComputationClient::DataPtr> outputs;
+  outputs.reserve(sharding_specs.size());
+  std::cout << "**** OutputHandler " << sharded_results.size() << ", "
+            << sharded_results[0].size() << std::endl;
+  for (int i = 0; i < sharding_specs.size(); ++i) {
+    XLATensor::ShardingSpecPtr sharding = sharding_specs[i];
+    if (sharding &&
+        (sharding->sharding.type() != xla::OpSharding::REPLICATED)) {
+      std::cout << "- with sharding";
+      // Sharded results
+      std::vector<xla::ComputationClient::DataPtr> shards;
+      shards.reserve(sharded_results.size());
+      for (int j = 0; j < shards.size(); ++j) {
+        XLA_CHECK(sharded_results[j][i]->HasValue());
+        shards.push_back(sharded_results[j][i]);
+      }
+      std::cout << ", sharded_results[0][i] has value? "
+                << sharded_results[0][i]->HasValue();
+      outputs.push_back(xla::ComputationClient::Get()->WrapDataShards(
+          shards, GetVirtualDevice().toString(), sharding->shape,
+          sharding->sharding));
+      std::cout << ", outputs.back()->HasValue()? "
+                << outputs.back()->HasValue() << std::endl;
+    } else {
+      std::cout << "- without sharding";
+      // Replicated results
+      outputs.push_back(sharded_results[0][i]);
+      std::cout << ", outputs.back()->HasValue()? "
+                << outputs.back()->HasValue() << std::endl;
+    }
+  }
+  return outputs;
 }
 
 std::vector<at::Tensor> ShardingUtil::ShardTensor(
