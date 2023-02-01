@@ -4,6 +4,7 @@ import unittest
 import torch, torch_xla
 import torch_xla.core.xla_model as xm
 
+pd = torch._C._EnablePythonDispatcher()
 dev = xm.xla_device()
 
 
@@ -53,6 +54,24 @@ class TestDynamicShapes(unittest.TestCase):
     self.assertEqual(t4.shape[0], 2)
     self.assertEqual(t4.shape[1], size2)
 
+  def test_simple_expand_add_dimension(self):
+    size1 = 5
+    size2 = 2
+    t1 = torch.zeros([size1, size2], device=dev)
+    t1[3][0] = 1
+    t1[3][1] = 1
+    # t2 has size [<=10, 2]
+    t2 = torch.nonzero(t1)
+    t3 = torch.ones(1, device=dev)
+
+    t4 = t3.expand(t2.shape[0], t2.shape[0])
+    self.assertIsInstance(t4.shape[0], torch.SymInt)
+    self.assertEqual(str(t4.shape[0]), '<=10')
+    self.assertEqual(t4.shape[0], 2)
+    self.assertIsInstance(t4.shape[1], torch.SymInt)
+    self.assertEqual(str(t4.shape[1]), '<=10')
+    self.assertEqual(t4.shape[1], 2)
+
   def test_wrap(self):
     a1 = torch.tensor([[1, 0, 0, 5, 0, 6]], device=dev)
     a2 = torch.nonzero(a1)
@@ -80,8 +99,27 @@ class TestDynamicShapes(unittest.TestCase):
     t4 = t3.expand(dyn_size)
     self.assertEqual(t4.size(0), 3)
 
+  def get_dynamic_tensor(self):
+    a1 = torch.tensor([[1, 0, 0, 5, 0, 6]], device=dev)
+    a2 = torch.nonzero(a1)
+    return a2
+
+  def test_empty_symint(self):
+    # t1.shape= torch.Size([<=6, 2]) with real size [3, 2]
+    t1 = self.get_dynamic_tensor()
+    # Don't print t1 otherwise it would cause the test to crash.
+    self.assertIsInstance(t1.shape[0], torch.SymInt)
+    t2 = torch.empty(t1.shape, dtype=torch.int32, device=dev)
+    self.assertIsInstance(t2.shape[0], torch.SymInt)
+    self.assertEqual(str(t2.shape[0]), '<=6')
+    self.assertEqual(t2.shape[0], 3)
+    self.assertIsInstance(t2.shape[1], int)
+    self.assertEqual(t2.shape[1], 2)
+
 
 if __name__ == '__main__':
   assert os.environ['XLA_EXPERIMENTAL'] != ''
   test = unittest.main()
+  # DISABLE PYTHON DISPATCHER FLAG
+  del pd
   sys.exit(0 if test.result.wasSuccessful() else 1)
