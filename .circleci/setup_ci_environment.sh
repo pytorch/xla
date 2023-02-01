@@ -27,10 +27,9 @@ echo \
   $(lsb_release -cs) stable" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
 
 # Set up NVIDIA docker repo
+distribution=$(. /etc/os-release;echo $ID$VERSION_ID)
 curl -s -L --retry 3 https://nvidia.github.io/nvidia-docker/gpgkey | sudo apt-key add -
-echo "deb https://nvidia.github.io/nvidia-container-runtime/ubuntu20.04/amd64 /" | sudo tee -a /etc/apt/sources.list.d/nvidia-docker.list
-echo "deb https://nvidia.github.io/libnvidia-container/ubuntu20.04/amd64 /" | sudo tee -a /etc/apt/sources.list.d/nvidia-docker.list
-echo "deb https://nvidia.github.io/nvidia-docker/ubuntu20.04/amd64 /" | sudo tee -a /etc/apt/sources.list.d/nvidia-docker.list
+curl -k -L https://nvidia.github.io/nvidia-docker/$distribution/nvidia-docker.list | sudo tee /etc/apt/sources.list.d/nvidia-docker.list
 
 # Remove unnecessary sources
 sudo rm -f /etc/apt/sources.list.d/google-chrome.list
