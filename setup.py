@@ -267,7 +267,6 @@ if build_mode not in ['clean']:
   # Copy libtpu.so into torch_xla/lib
   maybe_bundle_libtpu(base_dir)
 
-
 # Fetch the sources to be built.
 torch_xla_sources = (
     glob.glob('torch_xla/csrc/*.cpp') + glob.glob('torch_xla/csrc/ops/*.cpp') +
