@@ -26,11 +26,15 @@ class PjRtComputationClient : public ComputationClient {
   std::vector<DataPtr> TransferToServer(
       absl::Span<const TensorSource> tensors) override;
 
+  // Use XLA replication to re-assemble the sharded data.
+  DataPtr ReplicateShardedData(const DataPtr& handle);
+
   std::vector<Literal> TransferFromServer(
       absl::Span<const DataPtr> handles) override;
 
   DataPtr TransferShardsToServer(absl::Span<const TensorSource> tensor_shards,
-                                 std::string device, xla::Shape shape) override;
+                                 std::string device, xla::Shape shape,
+                                 xla::OpSharding sharding) override;
 
   DataPtr CopyToDevice(DataPtr data, std::string dst) override;
 
@@ -152,16 +156,21 @@ class PjRtComputationClient : public ComputationClient {
     PjRtShardedData(std::string device, Shape shape) = delete;
 
     PjRtShardedData(std::string device, Shape shape,
-                    std::vector<std::shared_ptr<PjRtData>> shards)
-        : Data(std::move(device), std::move(shape)), shards(shards) {}
+                    std::vector<std::shared_ptr<PjRtData>> shards,
+                    xla::OpSharding sharding)
+        : Data(std::move(device), std::move(shape)),
+          shards(shards),
+          sharding(sharding) {}
 
     OpaqueHandle GetOpaqueHandle() override {
       // Always returns `OpaqueHandle` of the first shard.
       return shards[0]->GetOpaqueHandle();
     }
+
     void Assign(const Data& data) override {
       XLA_ERROR() << __FUNCTION__ << " not supported.";
     }
+
     bool HasValue() const override {
       if (!shards.empty()) {
         for (auto& shard : shards) {
@@ -173,7 +182,10 @@ class PjRtComputationClient : public ComputationClient {
       return true;
     }
 
+    xla::OpSharding GetSharding() { return sharding; }
+
     std::vector<std::shared_ptr<PjRtData>> shards;
+    xla::OpSharding sharding;
   };
 
   struct PjRtComputation : public Computation {

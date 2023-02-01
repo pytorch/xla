@@ -259,8 +259,8 @@ class XrtComputationClient : public ComputationClient {
                         absl::Span<const DataPtr> datas) override;
 
   DataPtr TransferShardsToServer(absl::Span<const TensorSource> tensor_shards,
-                                 std::string device,
-                                 xla::Shape shape) override {
+                                 std::string device, xla::Shape shape,
+                                 xla::OpSharding sharding) override {
     XLA_ERROR() << __FUNCTION__ << " not implemented";
   }
 
