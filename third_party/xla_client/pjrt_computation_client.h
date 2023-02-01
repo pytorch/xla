@@ -23,6 +23,9 @@ class PjRtComputationClient : public ComputationClient {
 
   std::vector<DataPtr> GetDataShards(DataPtr data) override;
 
+  DataPtr WrapDataShards(const std::vector<DataPtr>& shards, std::string device,
+                         xla::Shape shape, xla::OpSharding sharding) override;
+
   std::vector<DataPtr> TransferToServer(
       absl::Span<const TensorSource> tensors) override;
 
@@ -141,7 +144,10 @@ class PjRtComputationClient : public ComputationClient {
         : Data(std::move(device), std::move(device_shape)), buffer(buffer) {}
 
     OpaqueHandle GetOpaqueHandle() override {
+      std::cout << "**** GetOpaqueHandle (PjRtData)";
       XLA_CHECK(HasValue());
+      std::cout << " value check passed, buffer != nullptr: "
+                << (buffer != nullptr) << std::endl;
       return reinterpret_cast<std::uintptr_t>(buffer.get());
     };
     void Assign(const Data& data) override;
@@ -163,12 +169,18 @@ class PjRtComputationClient : public ComputationClient {
           sharding(sharding) {}
 
     OpaqueHandle GetOpaqueHandle() override {
+      std::cout << "**** GetOpaqueHandle (PjRtShardedData)";
       // Always returns `OpaqueHandle` of the first shard.
       return shards[0]->GetOpaqueHandle();
     }
 
     void Assign(const Data& data) override {
-      XLA_ERROR() << __FUNCTION__ << " not supported.";
+      std::cout << "**** Assign (PjRtShardedData)...";
+      const PjRtShardedData& pjrt_sharded_data =
+          dynamic_cast<const PjRtShardedData&>(data);
+      if (&pjrt_sharded_data != this) {
+        shards = std::move(pjrt_sharded_data.shards);
+      }
     }
 
     bool HasValue() const override {

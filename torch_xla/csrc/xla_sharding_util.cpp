@@ -209,6 +209,36 @@ ShardingUtil::InputHandler(
   return arguments_by_device;
 }
 
+std::vector<xla::ComputationClient::DataPtr> ShardingUtil::OutputHandler(
+    std::vector<std::vector<xla::ComputationClient::DataPtr>> sharded_results,
+    std::vector<XLATensor::ShardingSpecPtr> sharding_specs) {
+  std::vector<xla::ComputationClient::DataPtr> outputs;
+  outputs.reserve(sharding_specs.size());
+  std::cout << "**** OutputHandler " << sharded_results.size() << ", "
+            << sharded_results[0].size() << std::endl;
+  for (int i = 0; i < sharding_specs.size(); ++i) {
+    XLATensor::ShardingSpecPtr sharding = sharding_specs[i];
+    if (sharding &&
+        (sharding->sharding.type() != xla::OpSharding::REPLICATED)) {
+      std::cout << "- with sharding" << std::endl;
+      // Sharded results
+      std::vector<xla::ComputationClient::DataPtr> shards;
+      shards.reserve(sharded_results.size());
+      for (int j = 0; j < shards.size(); ++j) {
+        shards.push_back(sharded_results[j][i]);
+      }
+      outputs.push_back(xla::ComputationClient::Get()->WrapDataShards(
+          shards, GetVirtualDevice().toString(), sharding->shape,
+          sharding->sharding));
+    } else {
+      std::cout << "- without sharding" << std::endl;
+      // Replicated results
+      outputs.push_back(sharded_results[0][i]);
+    }
+  }
+  return outputs;
+}
+
 std::vector<at::Tensor> ShardingUtil::ShardTensor(
     const at::Tensor& tensor, const xla::OpSharding sharding,
     const std::vector<std::string>& devices, bool padded) {

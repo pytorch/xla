@@ -118,7 +118,8 @@ XLATensor::XLATensor(torch::lazy::Value ir_value,
   if (CurrentIrValue()) {
     auto* xla_node = dynamic_cast<XlaNode*>(CurrentIrValue().node.get());
     if (xla_node->GetSharding()) {
-      ShardingSpec sharding = ShardingSpec{*xla_node->GetSharding()};
+      ShardingSpec sharding =
+          ShardingSpec{*xla_node->GetSharding(), xla_node->xla_shape()};
       SetShardingSpec(sharding);
     }
   }
@@ -262,7 +263,8 @@ XLATensor::ShardingSpecPtr XLATensor::sharding_spec() const {
     auto* xla_node = dynamic_cast<XlaNode*>(ir_value.node.get());
     if (xla_node->GetSharding()) {
       XLA_CHECK(ShardingUtil::EqualShardingSpecs(
-          *sharding, ShardingSpec{*xla_node->GetSharding()}));
+          *sharding,
+          ShardingSpec{*xla_node->GetSharding(), xla_node->xla_shape()}));
     }
   }
   return sharding;

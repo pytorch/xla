@@ -7,6 +7,7 @@
 #include "absl/strings/str_join.h"
 #include "absl/strings/str_replace.h"
 #include "absl/strings/string_view.h"
+#include "tensorflow/compiler/xla/client/xla_computation.h"
 #include "tensorflow/compiler/xla/xla_client/debug_macros.h"
 #include "tensorflow/compiler/xla/xla_client/sys_util.h"
 #include "torch/csrc/lazy/core/ir_metadata.h"
@@ -92,16 +93,26 @@ LoweringContext::LoweringContext(
 
 xla::XlaOp LoweringContext::GetParameter(
     const std::shared_ptr<torch::lazy::BackendData>& data) {
+  std::cout << "** GetParameter...";
+  std::cout << " with "
+            << xla::ComputationClient::Get()
+                   ->GetDataShards(UnwrapXlaData(data))
+                   .size()
+            << " shards.";
   torch::lazy::BackendData::Handle handle = data->GetHandle();
   auto it = parameters_map_.find(handle);
   if (it == parameters_map_.end()) {
     xla::XlaOp param = xla::Parameter(builder(), parameters_.size(),
                                       UnwrapXlaData(data)->shape(),
                                       absl::StrCat("p", parameters_.size()));
+    std::cout << " adding a new param, " << param;
     it = parameters_map_.emplace(handle, Parameter{param, parameters_.size()})
              .first;
     parameters_.push_back(data);
+  } else {
+    std::cout << " found an existing param, " << it->second.param;
   }
+  std::cout << ", with key handle=" << handle << std::endl;
   parameter_sequence_.push_back(it->second.index);
   return it->second.param;
 }

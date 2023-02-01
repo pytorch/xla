@@ -222,9 +222,11 @@ class XLATensor : public torch::lazy::LazyTensor {
   // XLA SPMD sharding spec annoation. The XLA tensor uses this to create
   // HloSharding for replication, manual and tile shardings.
   struct ShardingSpec {
-    ShardingSpec(const xla::OpSharding& sharding) : sharding(sharding) {}
+    ShardingSpec(const xla::OpSharding& sharding, const xla::Shape& shape)
+        : sharding(sharding), shape(shape) {}
 
     xla::OpSharding sharding;
+    xla::Shape shape;
   };
 
   // Annotate the IR value with ShardingSpec.

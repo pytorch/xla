@@ -87,6 +87,11 @@ class XlaBackendImpl : public torch::lazy::BackendImplInterface {
     if (!device_data_node) {
       return nullptr;
     }
+    std::cout << "**** GetComputationDataFromNode, node: "
+              << device_data_node->ToString() << ", numb shards: ";
+    auto shards = xla::ComputationClient::Get()->GetDataShards(
+        UnwrapXlaData(device_data_node->data()));
+    std::cout << shards.size() << std::endl;
     return device_data_node->data();
   }
 

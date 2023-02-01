@@ -44,6 +44,13 @@ class ShardingUtil {
       std::vector<xla::ComputationClient::DataPtr> arguments,
       std::vector<std::string> devices);
 
+  // Some `results` will be sharded and some replicated. This wraps the data
+  // shards into PjRtShardedData objects and the replicated ones to a single
+  // PjRtData.
+  static std::vector<xla::ComputationClient::DataPtr> OutputHandler(
+      std::vector<std::vector<xla::ComputationClient::DataPtr>> sharded_results,
+      std::vector<XLATensor::ShardingSpecPtr> sharding_specs);
+
   // Shard a tensor and returns the sharded tensors based on the `sharding`
   // spec. REPLICATED sharding should result in shards identical to the input;
   // OTHERS (tiled) sharding result in shards where each data dimension is
