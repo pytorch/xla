@@ -92,7 +92,7 @@ class SizeSub : public XlaNode, public torch::lazy::DimensionNode {
 
   private:
    int64_t upper_bound_;
-}
+};
 
 class SizeMul : public XlaNode, public torch::lazy::DimensionNode {
  public:
