@@ -575,30 +575,6 @@ XLANativeFunctions::_linalg_slogdet(const at::Tensor& self) {
                          bridge::AtenFromXlaTensor(XLATensorPtr()));
 }
 
-std::tuple<at::Tensor, at::Tensor, at::Tensor> XLANativeFunctions::_linalg_svd(
-    const at::Tensor& self, bool full_matrices, bool compute_uv,
-    c10::optional<c10::string_view> /* driver */) {
-  TORCH_LAZY_FN_COUNTER("xla::");
-  // As per https://pytorch.org/docs/stable/generated/torch.svd.html,
-  // The second boolean argument is exactly opposite between
-  // torch::svd and torch::_linalg_svd, hence the negation of full_matrices.
-  auto results = tensor_methods::svd(bridge::GetXlaTensor(self), !full_matrices,
-                                     compute_uv);
-  auto u = std::get<0>(results);
-  auto s = std::get<1>(results);
-  auto v = std::get<2>(results);
-  if (!compute_uv) {
-    // If not compute_uv, torch::_linalg_svd returns an empty tensor.
-    s = XLATensorPtr();
-    v = XLATensorPtr();
-  } else {
-    v = tensor_methods::transpose(v, 0, 1);
-  }
-  return std::make_tuple(bridge::AtenFromXlaTensor(u),
-                         bridge::AtenFromXlaTensor(s),
-                         bridge::AtenFromXlaTensor(v));
-}
-
 at::Tensor XLANativeFunctions::_log_softmax(const at::Tensor& self, int64_t dim,
                                             bool half_to_float) {
   TORCH_LAZY_FN_COUNTER("xla::");
