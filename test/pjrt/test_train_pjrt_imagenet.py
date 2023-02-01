@@ -1,5 +1,6 @@
 import args_parse
 import time
+from lars import Lars
 
 SUPPORTED_MODELS = [
     'alexnet', 'densenet121', 'densenet161', 'densenet169', 'densenet201',
@@ -225,21 +226,29 @@ def train_imagenet(flags):
   writer = None
   if xm.is_master_ordinal():
     writer = test_utils.get_summary_writer(flags.logdir)
-  optimizer = optim.SGD(
-      model.parameters(),
-      lr=flags.lr,
-      momentum=flags.momentum,
-      weight_decay=1e-4)
-  num_training_steps_per_epoch = train_dataset_len // (
-      flags.batch_size * xm.xrt_world_size())
-  lr_scheduler = schedulers.wrap_optimizer_with_scheduler(
-      optimizer,
-      scheduler_type=getattr(flags, 'lr_scheduler_type', None),
-      scheduler_divisor=getattr(flags, 'lr_scheduler_divisor', None),
-      scheduler_divide_every_n_epochs=getattr(
-          flags, 'lr_scheduler_divide_every_n_epochs', None),
-      num_steps_per_epoch=num_training_steps_per_epoch,
-      summary_writer=writer)
+  if flags.optimizer='lars':
+    xm.master_print('LARS optimizer initialized')
+    optimizer = Lars(params = model.parameters(),
+                      lr = .1,
+                      momentum = .9,
+                      weight_decay = 5e-4 ,
+                      )
+  else:
+    optimizer = optim.SGD(
+        model.parameters(),
+        lr=flags.lr,
+        momentum=flags.momentum,
+        weight_decay=1e-4)
+    num_training_steps_per_epoch = train_dataset_len // (
+        flags.batch_size * xm.xrt_world_size())
+    lr_scheduler = schedulers.wrap_optimizer_with_scheduler(
+        optimizer,
+        scheduler_type=getattr(flags, 'lr_scheduler_type', None),
+        scheduler_divisor=getattr(flags, 'lr_scheduler_divisor', None),
+        scheduler_divide_every_n_epochs=getattr(
+            flags, 'lr_scheduler_divide_every_n_epochs', None),
+        num_steps_per_epoch=num_training_steps_per_epoch,
+        summary_writer=writer)
   loss_fn = nn.CrossEntropyLoss()
   data_time = AverageMeter('Data_loading', ':6.3f')
   batch_time = AverageMeter('Batch_process_time', ':6.3f')

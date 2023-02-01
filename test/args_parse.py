@@ -10,6 +10,7 @@ def parse_common_options(datadir=None,
                          batch_size=128,
                          num_epochs=10,
                          num_workers=4,
+                         optimizer='sgd',
                          prefetch_factor=8,
                          pin_memory=False,
                          persistent_workers=True,
@@ -29,6 +30,7 @@ def parse_common_options(datadir=None,
   parser.add_argument('--batch_size', type=int, default=batch_size)
   parser.add_argument('--num_epochs', type=int, default=num_epochs)
   parser.add_argument('--num_workers', type=int, default=num_workers)
+  parser.add_argument('--optimizer', type=str, default=optimizer)
   parser.add_argument("--prefetch_factor", type=int, default=prefetch_factor)
   parser.add_argument('--pin_memory', type=bool, default=pin_memory)
   parser.add_argument('--persistent_workers', type=bool, default=persistent_workers)
