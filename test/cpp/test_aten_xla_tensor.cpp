@@ -4924,10 +4924,9 @@ TEST_F(AtenXlaTensorTest, TestScatterReduceSumInPlace) {
       AllClose(d, xla_d);
       AllClose(a, xla_a);
     });
-
-    ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
-    ExpectCounterChanged("xla::scatter_reduce", cpp_test::GetIgnoredCounters());
   }
+  ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::scatter_reduce", cpp_test::GetIgnoredCounters());
 }
 
 TEST_F(AtenXlaTensorTest, TestScatterReduceProd) {
