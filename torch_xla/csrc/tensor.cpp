@@ -118,7 +118,8 @@ XLATensor::XLATensor(torch::lazy::Value ir_value,
   if (CurrentIrValue()) {
     auto* xla_node = dynamic_cast<XlaNode*>(CurrentIrValue().node.get());
     if (xla_node->GetSharding()) {
-      ShardingSpec sharding = ShardingSpec{*xla_node->GetSharding()};
+      ShardingSpec sharding =
+          ShardingSpec{*xla_node->GetSharding(), xla_node->xla_shape()};
       SetShardingSpec(sharding);
     }
   }
@@ -242,8 +243,10 @@ void XLATensor::SetShardingSpec(const ShardingSpec& sharding) {
         << ", must be cleared before applying a new one, "
         << sharding.sharding.DebugString();
   }
-  dynamic_cast<XlaNode*>(GetIrValue().node.get())
-      ->SetSharding(sharding_spec()->sharding);
+  if (CurrentIrValue() || CurrentDataHandle() || CurrentTensorData()) {
+    dynamic_cast<XlaNode*>(GetIrValue().node.get())
+        ->SetSharding(sharding_spec()->sharding);
+  }
 }
 void XLATensor::ClearShardingSpec() {
   data()->sharding = nullptr;
@@ -262,7 +265,8 @@ XLATensor::ShardingSpecPtr XLATensor::sharding_spec() const {
     auto* xla_node = dynamic_cast<XlaNode*>(ir_value.node.get());
     if (xla_node->GetSharding()) {
       XLA_CHECK(ShardingUtil::EqualShardingSpecs(
-          *sharding, ShardingSpec{*xla_node->GetSharding()}));
+          *sharding,
+          ShardingSpec{*xla_node->GetSharding(), xla_node->xla_shape()}));
     }
   }
   return sharding;
@@ -316,17 +320,8 @@ void XLATensor::SetInPlaceIrValue(torch::lazy::Value ir_value) {
 }
 
 void XLATensor::AssignIrValue(torch::lazy::Value ir_value) const {
-  if (ir_value) {
-    std::string debug_str = ir_value->ToString();
-    auto sharding = dynamic_cast<XlaNode*>(ir_value.node.get())->GetSharding();
-    if (sharding) {
-      debug_str += " with sharding " + sharding->DebugString();
-    }
-    TF_VLOG(5) << "Assign IR value " << debug_str;
-  } else {
-    TF_VLOG(5) << "Assign empty IR value";
-  }
-
+  TF_VLOG(5) << "Assign IR value: "
+             << (ir_value ? ir_value->ToString() : "empty node");
   data()->ir_value = std::move(ir_value);
   data()->generation += 1;
 }
@@ -457,7 +452,8 @@ at::Tensor XLATensor::ToTensor(bool detached) {
   at::Tensor tensor;
   c10::optional<at::Tensor> tensor_data = CurrentTensorData();
   if (!tensor_data) {
-    XLAGraphExecutor::Get()->DeviceBarrier(GetDevice());
+    if (CurrentIrValue()) XLAGraphExecutor::Get()->DeviceBarrier(GetDevice());
+
     // The GetXlaData() call will trigger an ApplyPendingGraph() if an IR
     // XlaNode is available on the tensor.
     std::vector<at::Tensor> tensors = XlaDataToTensors({GetXlaData()}, dtype());
@@ -579,7 +575,13 @@ torch::lazy::Value XLATensor::MaybeCastIrValue(
 XLATensorPtr XLATensor::CreateFrom(torch::lazy::Value ir_value) const {
   ir_value = MaybeCastIrValue(std::move(ir_value), GetDevice(),
                               /*logical_element_type=*/c10::nullopt);
-  return Create(std::move(ir_value), GetDevice(), dtype_optional());
+  bool try_propagate_sharding = ir_value && sharding_spec();
+  auto xtensor = Create(std::move(ir_value), GetDevice(), dtype_optional());
+  if (try_propagate_sharding) {
+    // TODO(yeounoh) remove this after functionalization fix is merged.
+    xtensor->SetShardingSpec(*sharding_spec());
+  }
+  return xtensor;
 }
 
 XLATensorPtr XLATensor::CreateFrom(
@@ -587,7 +589,14 @@ XLATensorPtr XLATensor::CreateFrom(
     c10::optional<at::ScalarType> logical_element_type_opt) const {
   ir_value = MaybeCastIrValue(std::move(ir_value), GetDevice(),
                               logical_element_type_opt);
-  return Create(std::move(ir_value), GetDevice(), logical_element_type_opt);
+  bool try_propagate_sharding = ir_value && sharding_spec();
+  auto xtensor =
+      Create(std::move(ir_value), GetDevice(), logical_element_type_opt);
+  if (try_propagate_sharding) {
+    // TODO(yeounoh) remove this after functionalization fix is merged.
+    xtensor->SetShardingSpec(*sharding_spec());
+  }
+  return xtensor;
 }
 
 XLATensorPtr XLATensor::CreateFrom(torch::lazy::Value ir_value,
@@ -595,7 +604,13 @@ XLATensorPtr XLATensor::CreateFrom(torch::lazy::Value ir_value,
                                    at::ScalarType logical_element_type) const {
   ir_value =
       MaybeCastIrValue(std::move(ir_value), device, logical_element_type);
-  return Create(std::move(ir_value), device, logical_element_type);
+  bool try_propagate_sharding = ir_value && sharding_spec();
+  auto xtensor = Create(std::move(ir_value), device, logical_element_type);
+  if (try_propagate_sharding) {
+    // TODO(yeounoh) remove this after functionalization fix is merged.
+    xtensor->SetShardingSpec(*sharding_spec());
+  }
+  return xtensor;
 }
 
 void XLATensor::ApplyPendingGraph() {

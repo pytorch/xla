@@ -143,6 +143,29 @@ std::vector<ComputationClient::DataPtr> PjRtComputationClient::GetDataShards(
   return shards;
 }
 
+ComputationClient::DataPtr PjRtComputationClient::WrapDataShards(
+    const std::vector<DataPtr>& shards, std::string device, xla::Shape shape,
+    xla::OpSharding sharding) {
+  std::vector<std::shared_ptr<PjRtData>> pjrt_data_shards;
+  pjrt_data_shards.reserve(shards.size());
+  for (auto& shard : shards) {
+    XLA_CHECK(shard != nullptr);
+    auto pjrt_shard = dynamic_cast<PjRtData*>(shard.get());
+    pjrt_data_shards.push_back(std::make_shared<PjRtData>(
+        pjrt_shard->device(), pjrt_shard->shape(), pjrt_shard->buffer));
+  }
+  return std::make_shared<PjRtShardedData>(device, shape, pjrt_data_shards,
+                                           sharding);
+}
+
+std::optional<xla::OpSharding> PjRtComputationClient::GetDataSharding(
+    DataPtr handle) {
+  if (auto sharded_data = dynamic_cast<PjRtShardedData*>(handle.get())) {
+    return sharded_data->GetSharding();
+  }
+  return std::optional<xla::OpSharding>();
+}
+
 std::vector<ComputationClient::DataPtr> PjRtComputationClient::TransferToServer(
     absl::Span<const TensorSource> tensors) {
   metrics::TimedSection timed(TransferToServerMetric());
@@ -231,7 +254,7 @@ ComputationClient::DataPtr PjRtComputationClient::ReplicateShardedData(
                << ", shape=" << handle->shape() << ")";
     xla::XlaBuilder b("ReplicateShardedData");
     xla::Shape shape = sharded_data->shape();
-    b.SetSharding(sharded_data->GetSharding());
+    b.SetSharding(sharded_data->GetSharding().value());
 
     // perform a simple identity calculation to reassemble the input as
     // replicated output.
@@ -281,7 +304,6 @@ std::vector<xla::Literal> PjRtComputationClient::TransferFromServer(
       tsl::profiler::TraceMeLevel::kInfo);
   std::vector<xla::Literal> literals;
   literals.reserve(handles.size());
-
   int64_t total_size = 0;
   for (auto handle : handles) {
     // Use XLA replication to reassemble the sharded data. If input handle
@@ -332,6 +354,8 @@ std::vector<ComputationClient::ComputationPtr> PjRtComputationClient::Compile(
     if (instance.is_sharded) {
       // TODO(yeounoh) multi-host, multi-slice configurations
       compile_options.executable_build_options.set_use_spmd_partitioning(true);
+      compile_options.executable_build_options
+          .set_allow_spmd_sharding_propagation_to_output({false});
       compile_options.executable_build_options.set_num_partitions(
           client_->device_count());
       compile_options.executable_build_options.set_num_replicas(1);
@@ -487,6 +511,7 @@ PjRtComputationClient::ExecuteReplicated(
 
   std::vector<std::vector<ComputationClient::DataPtr>> data_handles;
   data_handles.reserve(results.size());
+  std::vector<size_t> dims(results.size());
   for (int32_t i = 0; i < results.size(); ++i) {
     xla::PjRtDevice* pjrt_device = StringToPjRtDevice(devices[i]);
     XLA_CHECK(pjrt_device->IsAddressable())
@@ -494,6 +519,7 @@ PjRtComputationClient::ExecuteReplicated(
 
     std::vector<ComputationClient::DataPtr> datas;
     datas.reserve(results[i].size());
+    dims[i] = results[i].size();
     for (int32_t j = 0; j < results[i].size(); ++j) {
       std::unique_ptr<xla::PjRtBuffer> buffer = std::move(results[i][j]);
       XLA_CHECK(pjrt_device == buffer->device())
@@ -507,7 +533,8 @@ PjRtComputationClient::ExecuteReplicated(
     data_handles.push_back(datas);
   }
 
-  TF_VLOG(1) << "Returning " << data_handles.size() << " sets of results";
+  TF_VLOG(1) << "Returning " << data_handles.size() << " sets of results "
+             << "with dimensions [" << absl::StrJoin(dims, ",") << "].";
   return data_handles;
 }
 
