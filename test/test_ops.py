@@ -48,7 +48,6 @@ allowed_opinfo = set(
             AllowedOpInfoEntry('bitwise_right_shift'),
             AllowedOpInfoEntry('ceil'),
             AllowedOpInfoEntry('cholesky'),
-            AllowedOpInfoEntry('cholesky_inverse'),
             AllowedOpInfoEntry('chunk'),
             AllowedOpInfoEntry('clone'),
             AllowedOpInfoEntry('contiguous'),
@@ -108,9 +107,6 @@ allowed_opinfo = set(
             AllowedOpInfoEntry('linalg.cholesky'),
             AllowedOpInfoEntry('linalg.cholesky_ex'),
             AllowedOpInfoEntry('linalg.householder_product'),
-            AllowedOpInfoEntry('linalg.matrix_power'),
-            AllowedOpInfoEntry('linalg.qr'),
-            AllowedOpInfoEntry('linalg.slogdet'),
             AllowedOpInfoEntry('log'),
             AllowedOpInfoEntry('log10'),
             AllowedOpInfoEntry('log1p'),
@@ -119,7 +115,6 @@ allowed_opinfo = set(
             AllowedOpInfoEntry('logaddexp2'),
             AllowedOpInfoEntry('logical_not'),
             AllowedOpInfoEntry('lt'),
-            AllowedOpInfoEntry('lu'),
             AllowedOpInfoEntry('lu_unpack'),
             AllowedOpInfoEntry('masked_fill'),
             AllowedOpInfoEntry('masked_scatter'),
@@ -154,7 +149,6 @@ allowed_opinfo = set(
             AllowedOpInfoEntry('permute'),
             AllowedOpInfoEntry('pow'),
             AllowedOpInfoEntry('float_power'),
-            AllowedOpInfoEntry('qr'),
             AllowedOpInfoEntry('rad2deg'),
             AllowedOpInfoEntry('real'),
             AllowedOpInfoEntry('roll'),
@@ -178,15 +172,12 @@ allowed_opinfo = set(
             AllowedOpInfoEntry('hsplit'),
             AllowedOpInfoEntry('vsplit'),
             AllowedOpInfoEntry('dsplit'),
-            AllowedOpInfoEntry('triangular_solve'),
             AllowedOpInfoEntry('trunc'),
             AllowedOpInfoEntry('exp2'),
             AllowedOpInfoEntry('nan_to_num'),
             AllowedOpInfoEntry('square'),
             AllowedOpInfoEntry('lerp'),
-            AllowedOpInfoEntry('linalg.inv'),
             AllowedOpInfoEntry('angle'),
-            AllowedOpInfoEntry('linalg.solve'),
             AllowedOpInfoEntry('polar'),
             AllowedOpInfoEntry('ravel'),
             AllowedOpInfoEntry('reshape'),
@@ -269,6 +260,7 @@ allowed_opinfo = set(
             # AllowedOpInfoEntry('asinh'),
             # AllowedOpInfoEntry('atan'),
             # AllowedOpInfoEntry('atanh'),
+            # AllowedOpInfoEntry('cholesky_inverse'),
             # AllowedOpInfoEntry('cos'),
             # AllowedOpInfoEntry('cosh'),
             # AllowedOpInfoEntry('cov'),
@@ -288,14 +280,20 @@ allowed_opinfo = set(
             # AllowedOpInfoEntry('linalg.eig'),  # Slice dim size 1 greater than dynamic slice dimension: 0
             # AllowedOpInfoEntry('linalg.eigh'),
             # AllowedOpInfoEntry('linalg.eigvalsh'),
+            # AllowedOpInfoEntry('linalg.inv'),  # Slice dim size 1 greater than dynamic slice dimension: 0
             # AllowedOpInfoEntry('linalg.inv_ex'),  # Slice dim size 1 greater than dynamic slice dimension: 0
+            # AllowedOpInfoEntry('linalg.slogdet'),  # Slice dim size 1 greater than dynamic slice dimension: 0
+            # AllowedOpInfoEntry('linalg.qr'),  # Slice dim size 1 greater than dynamic slice dimension: 0
             # AllowedOpInfoEntry('linalg.lstsq'),
             # AllowedOpInfoEntry('linalg.norm'),
             # AllowedOpInfoEntry('linalg.matrix_norm'),
             # AllowedOpInfoEntry('linalg.matrix_rank'),  # Slice dim size 1 greater than dynamic slice dimension: 0
+            # AllowedOpInfoEntry('linalg.matrix_power'),
+            # AllowedOpInfoEntry('linalg.solve'),
             # AllowedOpInfoEntry('linalg.svd'),  # Slice dim size 1 greater than dynamic slice dimension: 0
             # AllowedOpInfoEntry('linalg.svdvals'),  # Slice dim size 1 greater than dynamic slice dimension: 0
             # AllowedOpInfoEntry('linalg.vector_norm'),
+            # AllowedOpInfoEntry('lu'),
             # AllowedOpInfoEntry('std_mean'),
             # AllowedOpInfoEntry('sum'),
             # AllowedOpInfoEntry('mean'),
@@ -328,6 +326,7 @@ allowed_opinfo = set(
             # AllowedOpInfoEntry('repeat'),
             # AllowedOpInfoEntry('squeeze'),
             # AllowedOpInfoEntry('tile'),
+            # AllowedOpInfoEntry('triangular_solve'),
             # AllowedOpInfoEntry('var'),
             # AllowedOpInfoEntry('logsumexp'),
             # AllowedOpInfoEntry('transpose'),
@@ -339,6 +338,7 @@ allowed_opinfo = set(
             # AllowedOpInfoEntry('norm'),
             # AllowedOpInfoEntry('t'),
             # AllowedOpInfoEntry('logdet'), xla::lodget does not handle empty input
+            # AllowedOpInfoEntry('qr'),  # Slice dim size 1 greater than dynamic slice dimension: 0
 
             # Failed on CUDA CI only (investigate)
             # app.circleci.com/pipelines/github/pytorch/xla/9088/workflows/2d59c649-db2b-4384-921e-5e43eba1b51a/jobs/17875
