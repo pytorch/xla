@@ -719,6 +719,10 @@ XLATensorPtr scatter_add(const XLATensorPtr& input, int64_t dim,
 XLATensorPtr scatter_add(const XLATensorPtr& input, int64_t dim,
                          const XLATensorPtr& index, const at::Scalar& value);
 
+XLATensorPtr scatter_reduce(const XLATensorPtr& input, int64_t dim,
+                            const XLATensorPtr& index, const XLATensorPtr& src,
+                            c10::string_view reduce, bool include_self);
+
 XLATensorPtr select(const XLATensorPtr& input, int64_t dim, int64_t index);
 
 void selu_(XLATensorPtr& input);

@@ -65,6 +65,12 @@ using XlaOpCombiner = std::function<xla::XlaOp(xla::XlaOp, xla::XlaOp)>;
 
 XlaOpCombiner NumericAddCombiner();
 
+XlaOpCombiner NumericMulCombiner();
+
+XlaOpCombiner NumericMinCombiner();
+
+XlaOpCombiner NumericMaxCombiner();
+
 struct ScatterOptions {
   explicit ScatterOptions(XlaOpCombiner combiner)
       : combiner(std::move(combiner)) {}
