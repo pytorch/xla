@@ -914,7 +914,7 @@ TEST_F(AtenXlaTensorTest, TestSVD) {
     }
   }
   ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
-  ExpectCounterChanged("xla::svd", cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::_linalg_svd", cpp_test::GetIgnoredCounters());
 }
 
 TEST_F(AtenXlaTensorTest, TestLinalgSVD) {
