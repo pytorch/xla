@@ -722,10 +722,6 @@ class TestNllLossLimitValue(XlaTestCase):
 
 class TestInterOpSyncTensors(XlaTestCase):
 
-  @unittest.skipIf(
-      os.environ.get('PYTORCH_XLA_TESTS_SKIP'),
-      'To avoid new feature developing, disable failed PyTorch/XLA test on TPUVM'
-  )
   def test_inter_op_sync(self):
 
     def test_fn(x):
@@ -1084,10 +1080,6 @@ class TestAtenXlaTensor(XlaTestCase):
     self.runAtenTest(torch.randint(10, (2, 2)), lambda x: x.pow_(2))
     self.runAtenTest(torch.randint(10, (2, 2)), lambda x: x.pow_(x))
 
-  @unittest.skipIf(
-      os.environ.get('PYTORCH_XLA_TESTS_SKIP'),
-      'To avoid new feature developing, disable failed PyTorch/XLA test on TPUVM'
-  )
   def test_matmul_integer_types(self):
     # all variance of matmul: dot/mv/mm/bmm
     self.runAtenTest((torch.randint(10, (2,)), torch.randint(10, (2,))),
@@ -1102,19 +1094,11 @@ class TestAtenXlaTensor(XlaTestCase):
     self.runAtenTest((torch.randint(10, (10, 3, 4)), torch.randint(10, (4, 5))),
                      lambda x, y: torch.matmul(x, y))
 
-  @unittest.skipIf(
-      os.environ.get('PYTORCH_XLA_TESTS_SKIP'),
-      'To avoid new feature developing, disable failed PyTorch/XLA test on TPUVM'
-  )
   def test_addmm_integer_types(self):
     self.runAtenTest((torch.randint(10, (2, 3)), torch.randint(
         10, (2, 3)), torch.randint(10, (3, 3))),
                      lambda x, y, z: torch.addmm(x, y, z))
 
-  @unittest.skipIf(
-      os.environ.get('PYTORCH_XLA_TESTS_SKIP'),
-      'To avoid new feature developing, disable failed PyTorch/XLA test on TPUVM'
-  )
   def test_baddmm_integer_types(self):
     self.runAtenTest(
         (torch.randint(10, (10, 3, 5)), torch.randint(10, (10, 3, 4)),
@@ -1489,10 +1473,6 @@ class TestAtenXlaTensor(XlaTestCase):
     xla_b.scatter_add_(0, xla_index, xla_a)
     self.assertEqual(b, xla_b)
 
-  @unittest.skipIf(
-      os.environ.get('PYTORCH_XLA_TESTS_SKIP'),
-      'To avoid new feature developing, disable failed PyTorch/XLA test on TPUVM'
-  )
   def test_squeeze_nonzero(self):
 
     def test_fn(a):
