@@ -65,11 +65,12 @@ XlaOpVector SizeNode::Lower(LoweringContext* loctx) const {
 std::string SizeNode::ToString() const { return "aten::size"; }
 
 SizeAdd::SizeAdd(torch::lazy::Value a, torch::lazy::Value b)
-    : XlaNode(torch::lazy::OpKind{c10::Symbol::fromQualString("aten::size_add")},
-              {a, b},
-              xla::ShapeUtil::MakeShape(
-                  GetShapeDimensionType(/*device=*/nullptr), {}),
-              1) {
+    : XlaNode(
+          torch::lazy::OpKind{c10::Symbol::fromQualString("aten::size_add")},
+          {a, b},
+          xla::ShapeUtil::MakeShape(GetShapeDimensionType(/*device=*/nullptr),
+                                    {}),
+          1) {
   const torch::lazy::DimensionNode* dim_node_0 = DimCast(operand(0));
   const torch::lazy::DimensionNode* dim_node_1 = DimCast(operand(1));
   // SizeAdd can only be perfomed between two DimensionNode
@@ -154,11 +155,12 @@ SizeConstant::SizeConstant(int64_t val)
                  GetShapeDimensionType(/*device=*/nullptr), {})){};
 
 SizeMul::SizeMul(torch::lazy::Value a, torch::lazy::Value b)
-    : XlaNode(torch::lazy::OpKind{c10::Symbol::fromQualString("aten::size_mul")},
-              {a, b},
-              xla::ShapeUtil::MakeShape(
-                  GetShapeDimensionType(/*device=*/nullptr), {}),
-              1) {
+    : XlaNode(
+          torch::lazy::OpKind{c10::Symbol::fromQualString("aten::size_mul")},
+          {a, b},
+          xla::ShapeUtil::MakeShape(GetShapeDimensionType(/*device=*/nullptr),
+                                    {}),
+          1) {
   const torch::lazy::DimensionNode* dim_node_0 = DimCast(operand(0));
   const torch::lazy::DimensionNode* dim_node_1 = DimCast(operand(1));
   // SizeMul can only be perfomed between two DimensionNode
@@ -186,11 +188,12 @@ XlaOpVector SizeMul::Lower(LoweringContext* loctx) const {
 }
 
 SizeDiv::SizeDiv(torch::lazy::Value a, torch::lazy::Value b)
-    : XlaNode(torch::lazy::OpKind{c10::Symbol::fromQualString("aten::size_div")},
-              {a, b},
-              xla::ShapeUtil::MakeShape(
-                  GetShapeDimensionType(/*device=*/nullptr), {}),
-              1) {
+    : XlaNode(
+          torch::lazy::OpKind{c10::Symbol::fromQualString("aten::size_div")},
+          {a, b},
+          xla::ShapeUtil::MakeShape(GetShapeDimensionType(/*device=*/nullptr),
+                                    {}),
+          1) {
   const torch::lazy::DimensionNode* dim_node_0 = DimCast(operand(0));
   const torch::lazy::DimensionNode* dim_node_1 = DimCast(operand(1));
   // SizeDiv can only be perfomed between two DimensionNode
