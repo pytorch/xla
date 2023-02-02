@@ -51,6 +51,18 @@ XlaNode::XlaNode(torch::lazy::OpKind op, torch::lazy::OpList operands,
       dag_hash_(GetOperandHashes(operands, node_hash_)) {}
 
 XlaNode::XlaNode(torch::lazy::OpKind op, torch::lazy::OpList operands,
+                 std::vector<torch::lazy::Shape>&& shapes, xla::Shape xla_shape,
+                 xla::OpSharding sharding, size_t num_outputs,
+                 torch::lazy::hash_t hash_seed)
+    : torch::lazy::Node(op, operands, std::move(shapes), num_outputs),
+      xla_shape_(std::move(xla_shape)),
+      output_sharding_(std::make_shared<xla::OpSharding>(sharding)) {
+  auto sharding_hash = CreateShardingHash(output_sharding_, hash_seed);
+  node_hash_ = torch::lazy::HashCombine(op.hash(), sharding_hash);
+  dag_hash_ = GetOperandHashes(operands, node_hash_);
+}
+
+XlaNode::XlaNode(torch::lazy::OpKind op, torch::lazy::OpList operands,
                  std::vector<torch::lazy::Shape>&& shapes,
                  const std::function<xla::Shape()>& xla_shape_fn,
                  size_t num_outputs, torch::lazy::hash_t hash_seed)
@@ -148,11 +160,6 @@ torch::lazy::hash_t XlaNode::GetOpHash(torch::lazy::OpKind op,
   torch::lazy::hash_t h =
       torch::lazy::HashCombine(op.hash(), torch::lazy::Hash(shape.ToString()));
   return torch::lazy::HashCombine(h, hash_seed);
-}
-
-void XlaNode::SetSharding(const xla::OpSharding& sharding) {
-  output_sharding_ = std::make_shared<xla::OpSharding>(sharding);
-  sharding_hash_ = CreateShardingHash(output_sharding_, node_hash_);
 }
 
 xla::Shape XlaNode::GetOpShape(

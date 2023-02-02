@@ -512,8 +512,7 @@ XLAGraphExecutor::SyncTensorCollection XLAGraphExecutor::CollectSyncTensors(
           // sharding takes the precedence as the source of the truth.
           XLATensor::ShardingSpecPtr sharding = tensors[i]->sharding_spec();
           if (sharding) {
-            dynamic_cast<XlaNode*>(ir_value.node.get())
-                ->SetSharding(sharding->sharding);
+	    // TODO: How to set IR to newly created value here
           }
         }
       } else if (config.force_ltc_data) {
