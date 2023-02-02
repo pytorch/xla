@@ -639,6 +639,8 @@ c10::SymNode XLASymNodeImpl::add(const c10::SymNode& other) {
 }
 
 c10::SymNode XLASymNodeImpl::sub(const c10::SymNode& other) {
+  TORCH_LAZY_FN_COUNTER("xla::size_");
+  
   torch_xla::XLASymNodeImpl* p_other =
       dynamic_cast<XLASymNodeImpl*>(other.get());
   torch::lazy::NodePtr n_sub =
