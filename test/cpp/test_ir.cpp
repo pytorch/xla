@@ -142,7 +142,7 @@ TEST_F(IrTest, TestSizeNodeDynamic) {
 
   torch::lazy::NodePtr size_node_nonzero_0 =
       torch::lazy::MakeNode<SizeNode>(nonzero_node, 0);
-  EXPECT_EQ(size_node_nonzero_0->ToString(), "aten::size_size");
+  EXPECT_EQ(size_node_nonzero_0->ToString(), "aten::size");
   torch::lazy::NodePtr size_node_nonzero_1 =
       torch::lazy::MakeNode<SizeNode>(nonzero_node, 1);
   std::shared_ptr<torch::lazy::DimensionNode> dim_node_0 =
@@ -172,7 +172,7 @@ TEST_F(IrTest, TestSizeAddNode) {
       torch::lazy::MakeNode<SizeNode>(scalar_node, 1);
   torch::lazy::NodePtr size_node_add =
       torch::lazy::MakeNode<SizeAdd>(size_node_0, size_node_1);
-  EXPECT_EQ(size_node_add->ToString(), "aten::add_size");
+  EXPECT_EQ(size_node_add->ToString(), "aten::size_add");
   std::shared_ptr<torch::lazy::DimensionNode> dim_node_add =
       std::dynamic_pointer_cast<torch::lazy::DimensionNode>(size_node_add);
 
@@ -250,7 +250,7 @@ TEST_F(IrTest, TestSizeMulNode) {
       torch::lazy::MakeNode<SizeNode>(scalar_node, 1);
   torch::lazy::NodePtr size_node_mul =
       torch::lazy::MakeNode<SizeMul>(size_node_0, size_node_1);
-  EXPECT_EQ(size_node_mul->ToString(), "aten::mul_size");
+  EXPECT_EQ(size_node_mul->ToString(), "aten::size_mul");
   std::shared_ptr<torch::lazy::DimensionNode> dim_node_mul =
       std::dynamic_pointer_cast<torch::lazy::DimensionNode>(size_node_mul);
 
@@ -298,7 +298,7 @@ TEST_F(IrTest, TestSizeDivNode) {
       torch::lazy::MakeNode<SizeNode>(scalar_node, 1);
   torch::lazy::NodePtr size_node_div =
       torch::lazy::MakeNode<SizeDiv>(size_node_0, size_node_1);
-  EXPECT_EQ(size_node_div->ToString(), "aten::div_size");
+  EXPECT_EQ(size_node_div->ToString(), "aten::size_div");
   std::shared_ptr<torch::lazy::DimensionNode> dim_node_div =
       std::dynamic_pointer_cast<torch::lazy::DimensionNode>(size_node_div);
 
