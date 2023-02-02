@@ -14,6 +14,8 @@ class DeviceData : public XlaNode {
 
   std::string ToString() const override;
 
+  torch::lazy::NodePtr Clone() const;
+
   torch::lazy::NodePtr Clone(torch::lazy::OpList operands) const override;
 
   torch::lazy::NodePtr CloneWithSharding(xla::OpSharding sharding) const;
