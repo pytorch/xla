@@ -229,14 +229,27 @@ torch::lazy::BackendDataPtr XLATensor::GetXlaData() {
 }
 
 void XLATensor::SetShardingSpec(const ShardingSpec& sharding) {
-  TORCH_LAZY_COUNTER("SetShardingSpec", 1);
-  ShardingSpecPtr sharding_ptr = std::make_shared<ShardingSpec>(sharding);
-  CreateShardedIrValue(sharding_ptr);
+  // Existing annotation must be cleared explicitly. We do not clear and
+  // overwrite the existing sharding on the user's behalf. This is a no-op if
+  // the same sharding already applied.
+  if (!sharding_spec()) {
+    TORCH_LAZY_COUNTER("SetShardingSpec", 1);
+    data()->sharding = std::make_shared<ShardingSpec>(sharding);
+  } else {
+    XLA_CHECK(ShardingUtil::EqualShardingSpecs(sharding, *sharding_spec()))
+        << "Existing sharding annotation, "
+        << sharding_spec()->sharding.DebugString()
+        << ", must be cleared before applying a new one, "
+        << sharding.sharding.DebugString();
+  }
+  CreateShardedIrValue(sharding_spec());
 }
+
 void XLATensor::ClearShardingSpec() {
   data()->sharding = nullptr;
   torch::lazy::Value ir_value = CurrentIrValue();
   if (ir_value) {
+    // This should be a no-op if there is no sharding.
     CreateUnshardedIrValue();
   }
 }
