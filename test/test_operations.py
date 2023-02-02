@@ -491,10 +491,6 @@ class XlaTestCase(unittest.TestCase):
 
 class TestToXlaTensorArena(XlaTestCase):
 
-  @unittest.skipIf(
-      os.environ.get('PYTORCH_XLA_TESTS_SKIP'),
-      'To avoid new feature developing, disable failed PyTorch/XLA test on TPUVM'
-  )
   def test(self):
     xla_device = xm.xla_device()
 
@@ -531,10 +527,6 @@ class TestToXlaTensorArena(XlaTestCase):
 
 class TestParallelLoader(XlaTestCase):
 
-  @unittest.skipIf(
-      os.environ.get('PYTORCH_XLA_TESTS_SKIP'),
-      'To avoid new feature developing, disable failed PyTorch/XLA test on TPUVM'
-  )
   def test(self):
     devices = [torch.device(x) for x in xm.get_xla_supported_devices()]
     A = 3.11
@@ -552,10 +544,6 @@ class TestParallelLoader(XlaTestCase):
 
 class TestAtenTensorTo(XlaTestCase):
 
-  @unittest.skipIf(
-      os.environ.get('PYTORCH_XLA_TESTS_SKIP'),
-      'To avoid new feature developing, disable failed PyTorch/XLA test on TPUVM'
-  )
   def test(self):
     devices = xm.get_xla_supported_devices()
     for device in reversed(devices):
@@ -596,10 +584,6 @@ class XlaMNIST(nn.Module):
 
 class TestParallelTensorMNIST(XlaTestCase):
 
-  @unittest.skipIf(
-      os.environ.get('PYTORCH_XLA_TESTS_SKIP'),
-      'To avoid new feature developing, disable failed PyTorch/XLA test on TPUVM'
-  )
   def test(self):
     devices = xm.get_xla_supported_devices()
     batch_size = xu.getenv_as('BATCH_SIZE', int, defval=8)
@@ -630,10 +614,6 @@ class TestParallelTensorMNIST(XlaTestCase):
 
 class TestParallelTensorResnet18(XlaTestCase):
 
-  @unittest.skipIf(
-      os.environ.get('PYTORCH_XLA_TESTS_SKIP'),
-      'To avoid new feature developing, disable failed PyTorch/XLA test on TPUVM'
-  )
   def test(self):
     devices = xm.get_xla_supported_devices()
     batch_size = xu.getenv_as('BATCH_SIZE', int, defval=4)
@@ -665,10 +645,6 @@ class TestParallelTensorResnet18(XlaTestCase):
 
 class TestLongGraphChain(XlaTestCase):
 
-  @unittest.skipIf(
-      os.environ.get('PYTORCH_XLA_TESTS_SKIP'),
-      'To avoid new feature developing, disable failed PyTorch/XLA test on TPUVM'
-  )
   def test(self):
     device = xm.xla_device()
     orig_x = torch.Tensor([[1, 2], [3, 4]])
@@ -1984,10 +1960,6 @@ class MNISTComparator(nn.Module):
 
 class TestModelComparator(XlaTestCase):
 
-  @unittest.skipIf(
-      os.environ.get('PYTORCH_XLA_TESTS_SKIP'),
-      'To avoid new feature developing, disable failed PyTorch/XLA test on TPUVM'
-  )
   def test(self):
     SEED = 42
 
