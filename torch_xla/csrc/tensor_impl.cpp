@@ -114,6 +114,9 @@ void XLATensorImpl::shallow_copy_from(
 }
 
 at::IntArrayRef XLATensorImpl::sizes_custom() const {
+  if (sym_sizes_) {
+    XLA_CHECK(false) << "Asking for a non symbolic size of a symbolic tensor.";
+  }
   const_cast<XLATensorImpl*>(this)->SetupSizeProperties();
   return sizes_default();
 }
