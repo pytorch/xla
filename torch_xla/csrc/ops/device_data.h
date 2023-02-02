@@ -10,7 +10,8 @@ class DeviceData : public XlaNode {
  public:
   DeviceData(std::shared_ptr<torch::lazy::BackendData> data);
 
-  DeviceData(std::shared_ptr<torch::lazy::BackendData> data, torch::lazy::OpList ops, xla::OpSharding sharding);
+  DeviceData(std::shared_ptr<torch::lazy::BackendData> data,
+             torch::lazy::OpList ops, xla::OpSharding sharding);
 
   std::string ToString() const override;
 

@@ -115,9 +115,7 @@ class XlaNode : public torch::lazy::Node {
 
   torch::lazy::hash_t node_hash() const { return node_hash_; }
 
-  torch::lazy::hash_t hash() const override {
-    return dag_hash_;
-  }
+  torch::lazy::hash_t hash() const override { return dag_hash_; }
 
   torch::lazy::hash_t shapeHash() const override { return dag_hash_; }
 

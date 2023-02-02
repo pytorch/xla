@@ -284,13 +284,16 @@ void XLATensor::SetXlaData(torch::lazy::BackendDataPtr handle, bool sync) {
   }
 }
 
-void XLATensor::CreateShardedIrValue(const ShardingSpecPtr sharding_spec) const {
+void XLATensor::CreateShardedIrValue(
+    const ShardingSpecPtr sharding_spec) const {
   torch::lazy::Value old_value = CurrentIrValue();
   XLA_CHECK(old_value && old_value.node != nullptr)
       << "Cannot create a sharded IR value if an IR value does not already "
          "exist";
-  XLA_CHECK(old_value.node->op() == xla_device_data) << "Can only set sharding for device data";
-  torch::lazy::Value new_ir = dynamic_cast<DeviceData*>(old_value.node.get())->CloneWithSharding(sharding_spec->sharding);
+  XLA_CHECK(old_value.node->op() == xla_device_data)
+      << "Can only set sharding for device data";
+  torch::lazy::Value new_ir = dynamic_cast<DeviceData*>(old_value.node.get())
+                                  ->CloneWithSharding(sharding_spec->sharding);
   data()->ir_value = std::move(new_ir);
   data()->generation += 1;
 }
@@ -300,8 +303,10 @@ void XLATensor::CreateUnshardedIrValue() {
   XLA_CHECK(old_value && old_value.node != nullptr)
       << "Cannot create a unsharded IR value if an IR value does not already "
          "exist";
-  XLA_CHECK(old_value.node->op() == xla_device_data) << "Can only clear sharding for device data";
-  torch::lazy::Value new_ir = dynamic_cast<DeviceData*>(old_value.node.get())->Clone();
+  XLA_CHECK(old_value.node->op() == xla_device_data)
+      << "Can only clear sharding for device data";
+  torch::lazy::Value new_ir =
+      dynamic_cast<DeviceData*>(old_value.node.get())->Clone();
   data()->ir_value = std::move(new_ir);
   data()->generation += 1;
 }
