@@ -343,22 +343,19 @@ void XLATensor::SetInPlaceIrValue(torch::lazy::Value ir_value) {
 }
 
 void XLATensor::AssignIrValue(torch::lazy::Value ir_value) const {
-  ShardingSpecPtr sharding = sharding_spec();
-  if (sharding != nullptr && !ir_value) {
-    // Create a tensor node if applicable, re-use the current IR otherwise.
-    // TODO(yeounoh) this has some performance implications for convolution.
-    ir_value = GetIrValue();
+  if (ir_value) {
+    std::string debug_str = ir_value->ToString();
+    auto sharding = dynamic_cast<XlaNode*>(ir_value.node.get())->GetSharding();
+    if (sharding) {
+      debug_str += " with sharding " + sharding->DebugString();
+    }
+    TF_VLOG(5) << "Assign IR value " << debug_str;
+  } else {
+    TF_VLOG(5) << "Assign empty IR value";
   }
 
   data()->ir_value = std::move(ir_value);
-
-  // Apply the existing sharding if it exists. When we do this, we increment the
-  // generation within the method call. Otherwise, we need to increment it here.
-  if (sharding != nullptr) {
-    CreateShardedIrValue(sharding);
-  } else {
-    data()->generation += 1;
-  }
+  data()->generation += 1;
 }
 
 torch::lazy::Value XLATensor::GetIrValue() const {
