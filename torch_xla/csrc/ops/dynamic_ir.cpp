@@ -62,10 +62,10 @@ XlaOpVector SizeNode::Lower(LoweringContext* loctx) const {
   return ReturnOp(xla::GetDimensionSize(input, this->dim_), loctx);
 }
 
-std::string SizeNode::ToString() const { return "aten::size_size"; }
+std::string SizeNode::ToString() const { return "aten::size"; }
 
 SizeAdd::SizeAdd(torch::lazy::Value a, torch::lazy::Value b)
-    : XlaNode(torch::lazy::OpKind{c10::Symbol::fromQualString("aten::add")},
+    : XlaNode(torch::lazy::OpKind{c10::Symbol::fromQualString("aten::size_add")},
               {a, b},
               xla::ShapeUtil::MakeShape(
                   GetShapeDimensionType(/*device=*/nullptr), {}),
@@ -88,7 +88,7 @@ int64_t SizeAdd::getDynamicValue() const {
   return dim_node_0->getDynamicValue() + dim_node_1->getDynamicValue();
 }
 
-std::string SizeAdd::ToString() const { return "aten::add_size"; }
+std::string SizeAdd::ToString() const { return "aten::size_add"; }
 
 XlaOpVector SizeAdd::Lower(LoweringContext* loctx) const {
   auto input1 = loctx->GetOutputOp(operand(0));
@@ -118,7 +118,7 @@ int64_t SizeSub::getDynamicValue() const {
   return dim_node_0->getDynamicValue() - dim_node_1->getDynamicValue();
 }
 
-std::string SizeSub::ToString() const { return "aten::sub_size"; }
+std::string SizeSub::ToString() const { return "aten::size_sub"; }
 
 XlaOpVector SizeSub::Lower(LoweringContext* loctx) const {
   xla::XlaOp input0 = loctx->GetOutputOp(operand(0));
@@ -127,7 +127,7 @@ XlaOpVector SizeSub::Lower(LoweringContext* loctx) const {
 }
 
 SizeEq::SizeEq(torch::lazy::Value a, torch::lazy::Value b)
-    : XlaNode(torch::lazy::OpKind{c10::Symbol::fromQualString("aten::eq")},
+    : XlaNode(torch::lazy::OpKind{c10::Symbol::fromQualString("aten::size_eq")},
               {a, b},
               xla::ShapeUtil::MakeShape(
                   GetShapeDimensionType(/*device=*/nullptr), {}),
@@ -146,7 +146,7 @@ int64_t SizeEq::getDynamicValue() const {
   return dim_node_0->getDynamicValue() == dim_node_1->getDynamicValue() ? 1 : 0;
 }
 
-std::string SizeEq::ToString() const { return "aten::eq_size"; }
+std::string SizeEq::ToString() const { return "aten::size_eq"; }
 
 SizeConstant::SizeConstant(int64_t val)
     : Scalar(c10::Scalar{val},
@@ -154,7 +154,7 @@ SizeConstant::SizeConstant(int64_t val)
                  GetShapeDimensionType(/*device=*/nullptr), {})){};
 
 SizeMul::SizeMul(torch::lazy::Value a, torch::lazy::Value b)
-    : XlaNode(torch::lazy::OpKind{c10::Symbol::fromQualString("aten::mul")},
+    : XlaNode(torch::lazy::OpKind{c10::Symbol::fromQualString("aten::size_mul")},
               {a, b},
               xla::ShapeUtil::MakeShape(
                   GetShapeDimensionType(/*device=*/nullptr), {}),
@@ -177,7 +177,7 @@ int64_t SizeMul::getDynamicValue() const {
   return dim_node_0->getDynamicValue() * dim_node_1->getDynamicValue();
 }
 
-std::string SizeMul::ToString() const { return "aten::mul_size"; }
+std::string SizeMul::ToString() const { return "aten::size_mul"; }
 
 XlaOpVector SizeMul::Lower(LoweringContext* loctx) const {
   auto input1 = loctx->GetOutputOp(operand(0));
@@ -186,7 +186,7 @@ XlaOpVector SizeMul::Lower(LoweringContext* loctx) const {
 }
 
 SizeDiv::SizeDiv(torch::lazy::Value a, torch::lazy::Value b)
-    : XlaNode(torch::lazy::OpKind{c10::Symbol::fromQualString("aten::div")},
+    : XlaNode(torch::lazy::OpKind{c10::Symbol::fromQualString("aten::size_div")},
               {a, b},
               xla::ShapeUtil::MakeShape(
                   GetShapeDimensionType(/*device=*/nullptr), {}),
@@ -213,7 +213,7 @@ int64_t SizeDiv::getDynamicValue() const {
   return dim_node_0->getDynamicValue() / dim_node_1->getDynamicValue();
 }
 
-std::string SizeDiv::ToString() const { return "aten::div_size"; }
+std::string SizeDiv::ToString() const { return "aten::size_div"; }
 
 XlaOpVector SizeDiv::Lower(LoweringContext* loctx) const {
   auto input1 = loctx->GetOutputOp(operand(0));
