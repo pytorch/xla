@@ -917,7 +917,7 @@ TEST_F(AtenXlaTensorTest, TestSVD) {
     }
   }
   ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
-  ExpectCounterChanged("xla::svd", cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::_linalg_svd", cpp_test::GetIgnoredCounters());
 }
 
 TEST_F(AtenXlaTensorTest, TestLinalgSVD) {
@@ -1006,7 +1006,6 @@ TEST_F(AtenXlaTensorTest, TestLogDet) {
 }
 
 TEST_F(AtenXlaTensorTest, TestSLogDet) {
-  GTEST_SKIP() << "Needs additional lowering after functionalization";
   static const int dims[] = {4, 7};
   for (auto m : dims) {
     torch::Tensor a =
@@ -1025,7 +1024,7 @@ TEST_F(AtenXlaTensorTest, TestSLogDet) {
   }
 
   ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
-  ExpectCounterChanged("xla::slogdet", cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::_linalg_slogdet", cpp_test::GetIgnoredCounters());
 }
 
 TEST_F(AtenXlaTensorTest, TestTriangularSolve) {
@@ -3823,7 +3822,6 @@ TEST_F(AtenXlaTensorTest, TestLinear) {
 }
 
 TEST_F(AtenXlaTensorTest, TestPinverse) {
-  GTEST_SKIP() << "Needs additional lowering after functionalization";
   torch::Tensor input =
       torch::rand({4, 6}, torch::TensorOptions(torch::kFloat));
   torch::Tensor result = torch::pinverse(input);
@@ -3834,7 +3832,7 @@ TEST_F(AtenXlaTensorTest, TestPinverse) {
   });
 
   ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
-  ExpectCounterChanged("xla::svd", cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::_linalg_svd", cpp_test::GetIgnoredCounters());
 }
 
 TEST_F(AtenXlaTensorTest, TestEinsumOuter) {
@@ -5158,7 +5156,6 @@ TEST_F(AtenXlaTensorTest, TestIndexSelectRank0) {
 }
 
 TEST_F(AtenXlaTensorTest, TestInverse) {
-  GTEST_SKIP() << "Needs additional lowering after functionalization";
   torch::Tensor a = torch::randn({5, 5}, torch::TensorOptions(torch::kFloat));
   torch::Tensor b = torch::inverse(a);
   ForEachDevice([&](const torch::Device& device) {
@@ -5166,8 +5163,9 @@ TEST_F(AtenXlaTensorTest, TestInverse) {
     torch::Tensor xla_b = torch::inverse(xla_a);
     AllClose(b, xla_b, /*rtol=*/1e-3, /*atol=*/1e-4);
   });
-  ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
-  ExpectCounterChanged("xla::inverse", cpp_test::GetIgnoredCounters());
+  ExpectCounterNotChanged("aten::(?!_local_scalar_dense).*",
+                          cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::linalg_inv_ex", cpp_test::GetIgnoredCounters());
 }
 
 TEST_F(AtenXlaTensorTest, TestIsnan) {
