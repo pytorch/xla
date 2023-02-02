@@ -1558,6 +1558,13 @@ at::Tensor XLANativeFunctions::lift_fresh(const at::Tensor& tensor) {
 std::tuple<at::Tensor, at::Tensor> XLANativeFunctions::linalg_inv_ex(
     const at::Tensor& self, bool check_errors) {
   TORCH_LAZY_FN_COUNTER("xla::");
+  // The default value for `check_errors` is False. And for now, we don't
+  // do anything differently based on this flag. So when it's set to True,
+  // we'll fallback to CPU.
+  if (check_errors) {
+    return at::native::call_fallback_fn<
+        &xla_cpu_fallback, ATEN_OP(linalg_inv_ex)>::call(self, check_errors);
+  }
   auto common_device = torch_xla::bridge::GetXlaDevice(self);
   TORCH_INTERNAL_ASSERT(common_device);
   torch::lazy::NodePtr node =
