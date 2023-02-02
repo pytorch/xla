@@ -77,6 +77,9 @@ class XLAGraphExecutor : public torch::lazy::LazyGraphExecutor {
       absl::Span<const int64_t> dimensions,
       const torch::lazy::BackendDevice& device);
   torch::lazy::Value GetIrValueForScalar(
+      const at::Scalar& value, xla::PrimitiveType type,
+      c10::SymIntArrayRef sym_size, const torch::lazy::BackendDevice& device);
+  torch::lazy::Value GetIrValueForScalar(
       const at::Scalar& value, const xla::Shape& shape,
       const torch::lazy::BackendDevice& device);
   torch::lazy::Value GetIrValueForScalar(
