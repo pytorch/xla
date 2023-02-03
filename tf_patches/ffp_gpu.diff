@@ -25,4 +25,16 @@ index 584d2008b11..231abca9c92 100644
  }
  
  //===----------------------------------------------------------------------===//
+ diff --git a/tensorflow/compiler/xla/runtime/executable.cc b/tensorflow/compiler/xla/runtime/executable.cc
+index 23c8fa7421e..9d715d5c61d 100644
+--- a/tensorflow/compiler/xla/runtime/executable.cc
++++ b/tensorflow/compiler/xla/runtime/executable.cc
+@@ -332,7 +332,7 @@ absl::StatusOr<ExecutionReference> Executable::Execute(
+   if (auto st = ReturnResults(ordinal, results, &call_frame); !st.ok())
+     return st;
  
+-  return exec_ref;
++  return std::move(exec_ref);
+ }
+ 
+ ExecutionReference Executable::Execute(unsigned ordinal, CallFrame& call_frame,
