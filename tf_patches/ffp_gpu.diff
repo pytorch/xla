@@ -12,3 +12,17 @@ index 5e0464e89f1..2d9cd438eb2 100644
    }
  
    // Inserts a plan into the cache as long as there is still capacity.
+diff --git a/tensorflow/compiler/xla/runtime/ffi.cc b/tensorflow/compiler/xla/runtime/ffi.cc
+index 584d2008b11..231abca9c92 100644
+--- a/tensorflow/compiler/xla/runtime/ffi.cc
++++ b/tensorflow/compiler/xla/runtime/ffi.cc
+@@ -380,7 +380,7 @@ absl::StatusOr<FfiStateVector> FfiModulesState::state_vector() const {
+ 
+     return absl::InternalError("Unsupported FFI module state");
+   }
+-  return state_vector;
++  return std::move(state_vector);
+ }
+ 
+ //===----------------------------------------------------------------------===//
+ 
