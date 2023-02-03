@@ -14,10 +14,10 @@ DeviceData::DeviceData(std::shared_ptr<torch::lazy::BackendData> data)
       data_(std::move(data)) {}
 
 DeviceData::DeviceData(std::shared_ptr<torch::lazy::BackendData> data,
-                       torch::lazy::OpList ops, xla::OpSharding sharding)
-    : XlaNode(xla_device_data, ops, {data->shape()},
-              MakeXlaShapeFromLazyShape(data->shape(), data->device()),
-              sharding, /*num_outputs=*/1,
+                       torch::lazy::OpList ops, xla::Shape xla_shape,
+                       xla::OpSharding sharding)
+    : XlaNode(xla_device_data, ops, {data->shape()}, xla_shape, sharding,
+              /*num_outputs=*/1,
               /*hash_seed=*/(uint32_t)101),
       data_(std::move(data)) {}
 
@@ -38,7 +38,7 @@ torch::lazy::NodePtr DeviceData::Clone(torch::lazy::OpList operands) const {
 torch::lazy::NodePtr DeviceData::CloneWithSharding(
     xla::OpSharding sharding) const {
   return torch::lazy::MakeNode<DeviceData>(data_, operands_as_oplist(),
-                                           sharding);
+                                           xla_shape(0), sharding);
 }
 
 XlaOpVector DeviceData::Lower(LoweringContext* loctx) const {
