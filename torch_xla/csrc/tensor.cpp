@@ -286,7 +286,7 @@ void XLATensor::SetXlaData(torch::lazy::BackendDataPtr handle, bool sync) {
 
 void XLATensor::CreateShardedIrValue(
     const ShardingSpecPtr sharding_spec) const {
-  torch::lazy::Value old_value = CurrentIrValue();
+  torch::lazy::Value old_value = GetIrValue();
   XLA_CHECK(old_value && old_value.node != nullptr)
       << "Cannot create a sharded IR value if an IR value does not already "
          "exist";
