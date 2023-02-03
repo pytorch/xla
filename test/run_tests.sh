@@ -157,8 +157,10 @@ function run_op_tests_ptxla {
   run_pjrt python3 "$CDIR/test_operations.py" "$@" --verbosity=$VERBOSITY
   run_test python3 "$CDIR/test_async_closures.py"
   run_test python3 "$CDIR/test_xla_dist.py"
-  # run_test python3 "$CDIR/test_profiler.py"
-  # run_test python3 "$CDIR/test_ops.py"
+  if [ -z "$PYTORCH_XLA_TESTS_SKIP" ] ; then
+    run_test python3 "$CDIR/test_profiler.py"
+    run_test python3 "$CDIR/test_ops.py"
+  fi
   run_test python3 "$CDIR/test_metrics.py"
   run_test python3 "$CDIR/dynamo/test_dynamo_integrations_util.py"
   run_test python3 "$CDIR/dynamo/test_dynamo.py"
@@ -167,7 +169,9 @@ function run_op_tests_ptxla {
   run_save_tensor_file python3 "$CDIR/dynamo/test_dynamo_graph_dump.py"
   run_downcast_bf16 python3 "$CDIR/test_data_type.py"
   run_use_bf16 python3 "$CDIR/test_data_type.py"
-  # run_test python3 "$CDIR/test_torch_distributed_xla_backend.py"
+  if [ -Z "$PYTORCH_XLA_TESTS_SKIP" ] ; then
+    run_test python3 "$CDIR/test_torch_distributed_xla_backend.py"
+  fi
   run_xla_ir_debug python3 "$CDIR/test_env_var_mapper.py"
   run_xla_hlo_debug python3 "$CDIR/test_env_var_mapper.py"
   run_pjrt python3 "$CDIR/pjrt/test_experimental_pjrt.py"
@@ -205,10 +209,11 @@ function run_tests {
     run_op_tests_pt
     run_op_tests_ptxla
     if [[ "$XLA_SKIP_MP_OP_TESTS" != "1" ]] ; then
+      # TODO: under PTXLA_SKIP_TESTING_DEV_FEATURES=1, disable run_mp_op_tests first and check run_mp_op_tests in a seperate PR
       run_mp_op_tests
     fi
   else
-    PYTORCH_XLA_TESTS_SKIP=1 run_op_tests_ptxla
+    PTXLA_SKIP_TESTING_DEV_FEATURES=1 run_op_tests_ptxla
   fi
 }
 

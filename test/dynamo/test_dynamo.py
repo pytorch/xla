@@ -96,7 +96,7 @@ class DynamoTrainingBasicTest(unittest.TestCase):
     return self.train_model(model, data, target)
 
   @unittest.skipIf(
-      os.environ.get('PYTORCH_XLA_TESTS_SKIP'),
+      os.environ.get('PTXLA_SKIP_TESTING_DEV_FEATURES'),
       'To avoid new feature developing, disable failed PyTorch/XLA test on TPUVM'
   )
   def test_simple_model(self):

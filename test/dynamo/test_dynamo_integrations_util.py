@@ -85,7 +85,7 @@ class PybindTest(unittest.TestCase):
     assert (hash == torch_xla._XLAC._get_graph_hash([xla_out_2]))
 
   @unittest.skipIf(
-      os.environ.get('PYTORCH_XLA_TESTS_SKIP'),
+      os.environ.get('PTXLA_SKIP_TESTING_DEV_FEATURES'),
       'To avoid new feature developing, disable failed PyTorch/XLA test on TPUVM'
   )
   def test_clear_pending_irs(self):
