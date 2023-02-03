@@ -5224,6 +5224,7 @@ TEST_F(AtenXlaTensorTest, TestExpandSymIntSymbolic) {
   // This is not a dynamic size from xla perspective but it is a symint that
   // wraps around a SizeNode instead of a scalar.
   c10::SymInt dynamic_symint = make_symint(size_node);
+  // 
 
   ForEachDevice([&](const torch::Device& device) {
     torch::Tensor xla_a = CopyToDevice(a, device);
