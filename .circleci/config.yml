@@ -83,9 +83,6 @@ calculate_docker_image: &calculate_docker_image
   command: |
     # Just a quick smoke test to see if we can actually extract the tag
     git clone --quiet https://github.com/pytorch/pytorch.git "/tmp/pytorch"
-    git -C /tmp/pytorch rev-parse HEAD:.circleci/docker
-    DOCKER_TAG=$(git -C /tmp/pytorch rev-parse HEAD:.circleci/docker)
-    echo "declare -x DOCKER_TAG=${DOCKER_TAG}" >> "${BASH_ENV}"
     # For staging our build image in ECR for upstream testing
     echo "declare -x ECR_DOCKER_IMAGE_BASE=308535385114.dkr.ecr.us-east-1.amazonaws.com/pytorch/xla_base" >> "${BASH_ENV}"
     # For PyTorch/XLA CI workflow, we only pull & push to gcr.io
