@@ -626,8 +626,8 @@ bool XLASymNodeImpl::is_bool() {
   c10::Symbol op = node()->op().op;
   // Reference:
   // https://github.com/pytorch/pytorch/blob/master/torch/fx/experimental/symbolic_shapes.py#L403
-  if (op == c10::Symbol::fromQualString("aten::size_eq") || 
-      op == c10::Symbol::fromQualString("aten::size_ne") || 
+  if (op == c10::Symbol::fromQualString("aten::size_eq") ||
+      op == c10::Symbol::fromQualString("aten::size_ne") ||
       op == c10::Symbol::fromQualString("aten::size_ge") ||
       op == c10::Symbol::fromQualString("aten::size_lt")) {
     return true;
