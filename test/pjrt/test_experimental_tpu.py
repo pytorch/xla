@@ -46,10 +46,9 @@ class TestExperimentalTpu(parameterized.TestCase):
 
     self.assertEqual(i, expected)
 
-
   @parameterized.named_parameters(
-    ('v4', 
-    textwrap.dedent("""
+      ('v4',
+       textwrap.dedent("""
         ACCELERATOR_TYPE: 'v4-16'
         CHIPS_PER_HOST_BOUNDS: '2,2,1'
         HOST_BOUNDS: '1,1,2'
@@ -57,18 +56,17 @@ class TestExperimentalTpu(parameterized.TestCase):
         TPU_PROCESS_BOUNDS: '1,1,2'
         ZONE: 'us-central2-b'
         WORKER_ID: '0'
-      """),
-    { 
-        'ACCELERATOR_TYPE': 'v4-16',
-        'CHIPS_PER_HOST_BOUNDS': '2,2,1',
-        'HOST_BOUNDS': '1,1,2',
-        'TPU_CHIPS_PER_PROCESS_BOUNDS': '2,2,1',
-        'TPU_PROCESS_BOUNDS': '1,1,2',
-        'ZONE': 'us-central2-b',
-        'WORKER_ID': '0'
-    }, 4),
-    ('v5', 
-    textwrap.dedent("""
+      """), {
+           'ACCELERATOR_TYPE': 'v4-16',
+           'CHIPS_PER_HOST_BOUNDS': '2,2,1',
+           'HOST_BOUNDS': '1,1,2',
+           'TPU_CHIPS_PER_PROCESS_BOUNDS': '2,2,1',
+           'TPU_PROCESS_BOUNDS': '1,1,2',
+           'ZONE': 'us-central2-b',
+           'WORKER_ID': '0'
+       }, 4),
+      ('v5',
+       textwrap.dedent("""
         ACCELERATOR_TYPE: 'v5abcdefg-16'
         CHIPS_PER_HOST_BOUNDS: '2,2,1'
         HOST_BOUNDS: '1,1,2'
@@ -76,18 +74,18 @@ class TestExperimentalTpu(parameterized.TestCase):
         TPU_PROCESS_BOUNDS: '1,1,2'
         ZONE: 'us-central2-b'
         WORKER_ID: '0'
-      """),
-    { 
-        'ACCELERATOR_TYPE': 'v5abcdefg-16',
-        'CHIPS_PER_HOST_BOUNDS': '2,2,1',
-        'HOST_BOUNDS': '1,1,2',
-        'TPU_CHIPS_PER_PROCESS_BOUNDS': '2,2,1',
-        'TPU_PROCESS_BOUNDS': '1,1,2',
-        'ZONE': 'us-central2-b',
-        'WORKER_ID': '0'
-    }, 5),
+      """), {
+           'ACCELERATOR_TYPE': 'v5abcdefg-16',
+           'CHIPS_PER_HOST_BOUNDS': '2,2,1',
+           'HOST_BOUNDS': '1,1,2',
+           'TPU_CHIPS_PER_PROCESS_BOUNDS': '2,2,1',
+           'TPU_PROCESS_BOUNDS': '1,1,2',
+           'ZONE': 'us-central2-b',
+           'WORKER_ID': '0'
+       }, 5),
   )
-  def test_tpu_env_from_gce_metadata(self, tpu_env_yaml, expected_env, expected_version):
+  def test_tpu_env_from_gce_metadata(self, tpu_env_yaml, expected_env,
+                                     expected_version):
     with mock.patch.object(tpu, '_get_metadata', return_value=tpu_env_yaml):
       tpu_env = tpu.get_tpu_env()
       version = tpu.version()
