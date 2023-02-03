@@ -19,9 +19,9 @@ OLDEST_VERSION = datetime.strptime('20200318', '%Y%m%d')
 NEW_VERSION = datetime.strptime('20220315', '%Y%m%d')  # 1.11 release date
 OLDEST_GPU_VERSION = datetime.strptime('20200707', '%Y%m%d')
 DIST_BUCKET = 'gs://tpu-pytorch/wheels'
-TORCH_WHEEL_TMPL = 'torch-{whl_version}-cp{py_version}-cp{py_version}m-linux_x86_64.whl'
-TORCH_XLA_WHEEL_TMPL = 'torch_xla-{whl_version}-cp{py_version}-cp{py_version}m-linux_x86_64.whl'
-TORCHVISION_WHEEL_TMPL = 'torchvision-{whl_version}-cp{py_version}-cp{py_version}m-linux_x86_64.whl'
+TORCH_WHEEL_TMPL = 'torch-{whl_version}-cp{py_version}-cp{py_version}-linux_x86_64.whl'
+TORCH_XLA_WHEEL_TMPL = 'torch_xla-{whl_version}-cp{py_version}-cp{py_version}-linux_x86_64.whl'
+TORCHVISION_WHEEL_TMPL = 'torchvision-{whl_version}-cp{py_version}-cp{py_version}-linux_x86_64.whl'
 VERSION_REGEX = re.compile(r'^(\d+\.)+\d+$')
 
 def is_gpu_runtime():
