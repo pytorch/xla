@@ -150,7 +150,7 @@ int64_t SizeEq::getDynamicValue() const {
 std::string SizeEq::ToString() const { return "aten::size_eq"; }
 
 SizeNe::SizeNe(torch::lazy::Value a, torch::lazy::Value b)
-    : XlaNode(torch::lazy::OpKind{c10::Symbol::fromQualString("aten::ne")},
+    : XlaNode(torch::lazy::OpKind{c10::Symbol::fromQualString("aten::size_ne")},
               {a, b},
               xla::ShapeUtil::MakeShape(
                   GetShapeDimensionType(/*device=*/nullptr), {}),
@@ -169,10 +169,10 @@ int64_t SizeNe::getDynamicValue() const {
   return dim_node_0->getDynamicValue() != dim_node_1->getDynamicValue() ? 1 : 0;
 }
 
-std::string SizeNe::ToString() const { return "aten::ne_size"; }
+std::string SizeNe::ToString() const { return "aten::size_ne"; }
 
 SizeGe::SizeGe(torch::lazy::Value a, torch::lazy::Value b)
-    : XlaNode(torch::lazy::OpKind{c10::Symbol::fromQualString("aten::ge")},
+    : XlaNode(torch::lazy::OpKind{c10::Symbol::fromQualString("aten::size_ge")},
               {a, b},
               xla::ShapeUtil::MakeShape(
                   GetShapeDimensionType(/*device=*/nullptr), {}),
@@ -191,10 +191,10 @@ int64_t SizeGe::getDynamicValue() const {
   return dim_node_0->getDynamicValue() >= dim_node_1->getDynamicValue() ? 1 : 0;
 }
 
-std::string SizeGe::ToString() const { return "aten::ge_size"; }
+std::string SizeGe::ToString() const { return "aten::size_ge"; }
 
 SizeLt::SizeLt(torch::lazy::Value a, torch::lazy::Value b)
-    : XlaNode(torch::lazy::OpKind{c10::Symbol::fromQualString("aten::lt")},
+    : XlaNode(torch::lazy::OpKind{c10::Symbol::fromQualString("aten::size_lt")},
               {a, b},
               xla::ShapeUtil::MakeShape(
                   GetShapeDimensionType(/*device=*/nullptr), {}),
@@ -213,7 +213,7 @@ int64_t SizeLt::getDynamicValue() const {
   return dim_node_0->getDynamicValue() < dim_node_1->getDynamicValue() ? 1 : 0;
 }
 
-std::string SizeLt::ToString() const { return "aten::lt_size"; }
+std::string SizeLt::ToString() const { return "aten::size_lt"; }
 
 SizeConstant::SizeConstant(int64_t val)
     : Scalar(c10::Scalar{val},
