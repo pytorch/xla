@@ -623,11 +623,13 @@ bool XLATensor::ShouldSyncIrNode() {
 }
 
 bool XLASymNodeImpl::is_bool() {
-  auto op = node()->op().op;
+  c10::Symbol op = node()->op().op;
   // Reference:
   // https://github.com/pytorch/pytorch/blob/master/torch/fx/experimental/symbolic_shapes.py#L403
-  if (op == at::aten::eq || op == at::aten::ne || op == at::aten::ge ||
-      op == at::aten::lt) {
+  if (op == c10::Symbol::fromQualString("aten::size_eq") ||
+      op == c10::Symbol::fromQualString("aten::size_ne") ||
+      op == c10::Symbol::fromQualString("aten::size_ge") ||
+      op == c10::Symbol::fromQualString("aten::size_lt")) {
     return true;
   }
   return false;
