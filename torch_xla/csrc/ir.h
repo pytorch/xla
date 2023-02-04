@@ -104,7 +104,12 @@ class XlaNode : public torch::lazy::Node {
   // multi-output node, output_index must be zero.
   const xla::Shape& xla_shape(size_t output_index) const;
 
+  virtual torch::lazy::NodePtr Clone() const;
+
+  // TODO(https://github.com/pytorch/xla/issues/4567) Remove this clone method 
   virtual torch::lazy::NodePtr Clone(torch::lazy::OpList operands) const;
+
+  virtual torch::lazy::NodePtr CloneWithSharding(xla::OpSharding sharding) const;
 
   virtual XlaOpVector Lower(LoweringContext* loctx) const;
 

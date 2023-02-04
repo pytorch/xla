@@ -243,9 +243,8 @@ class XLATensor : public torch::lazy::LazyTensor {
   void AssignIrValue(torch::lazy::Value ir_value) const final;
 
   // Creates a sharded IR node based on the current IR node and the given
-  // sharding. Note that this is marked as const, so that it can be called from
-  // AssignIrValue, but it does modify the object.
-  void CreateShardedIrValue(const ShardingSpecPtr sharding_spec) const;
+  // sharding.
+  void SetShardedIrValue(const ShardingSpecPtr sharding_spec);
 
  private:
   XLATensor(const at::Tensor& tensor, const torch::lazy::BackendDevice& device);
@@ -286,7 +285,7 @@ class XLATensor : public torch::lazy::LazyTensor {
 
   bool ShouldSyncIrNode();
 
-  void CreateUnshardedIrValue();
+  void SetUnshardedIrValue();
 
   // We store two shared_ptr of Data in a XLATensor.
   // One in the LazyTensor class as the LazyTensor::Data type

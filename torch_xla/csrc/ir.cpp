@@ -146,7 +146,15 @@ XlaOpVector XlaNode::ReturnOps(absl::Span<const xla::XlaOp> ops,
   return result;
 }
 
+torch::lazy::NodePtr XlaNode::Clone() const {
+  XLA_ERROR() << "Cloning not implemented for node: " << *this;
+}
+
 torch::lazy::NodePtr XlaNode::Clone(torch::lazy::OpList operands) const {
+  XLA_ERROR() << "Cloning not implemented for node: " << *this;
+}
+
+torch::lazy::NodePtr XlaNode::CloneWithSharding(xla::OpSharding sharding) const {
   XLA_ERROR() << "Cloning not implemented for node: " << *this;
 }
 

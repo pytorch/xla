@@ -28,7 +28,7 @@ std::string DeviceData::ToString() const {
 }
 
 torch::lazy::NodePtr DeviceData::Clone() const {
-  return Clone(operands_as_oplist());
+  return Clone({});
 }
 
 torch::lazy::NodePtr DeviceData::Clone(torch::lazy::OpList operands) const {
@@ -37,8 +37,7 @@ torch::lazy::NodePtr DeviceData::Clone(torch::lazy::OpList operands) const {
 
 torch::lazy::NodePtr DeviceData::CloneWithSharding(
     xla::OpSharding sharding) const {
-  return torch::lazy::MakeNode<DeviceData>(data_, operands_as_oplist(),
-                                           xla_shape(0), sharding);
+  return torch::lazy::MakeNode<DeviceData>(data_, {}, xla_shape(), sharding);
 }
 
 XlaOpVector DeviceData::Lower(LoweringContext* loctx) const {

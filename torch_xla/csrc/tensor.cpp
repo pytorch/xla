@@ -242,7 +242,7 @@ void XLATensor::SetShardingSpec(const ShardingSpec& sharding) {
         << ", must be cleared before applying a new one, "
         << sharding.sharding.DebugString();
   }
-  CreateShardedIrValue(sharding_spec());
+  SetShardedIrValue(sharding_spec());
 }
 
 void XLATensor::ClearShardingSpec() {
@@ -250,7 +250,7 @@ void XLATensor::ClearShardingSpec() {
   torch::lazy::Value ir_value = CurrentIrValue();
   if (ir_value) {
     // This should be a no-op if there is no sharding.
-    CreateUnshardedIrValue();
+    SetUnshardedIrValue();
   }
 }
 
@@ -284,31 +284,25 @@ void XLATensor::SetXlaData(torch::lazy::BackendDataPtr handle, bool sync) {
   }
 }
 
-void XLATensor::CreateShardedIrValue(
-    const ShardingSpecPtr sharding_spec) const {
+void XLATensor::SetShardedIrValue(
+    const ShardingSpecPtr sharding_spec) {
   torch::lazy::Value old_value = GetIrValue();
   XLA_CHECK(old_value && old_value.node != nullptr)
       << "Cannot create a sharded IR value if an IR value does not already "
          "exist";
-  XLA_CHECK(old_value.node->op() == xla_device_data)
-      << "Can only set sharding for device data";
-  torch::lazy::Value new_ir = dynamic_cast<DeviceData*>(old_value.node.get())
+  torch::lazy::Value new_ir = dynamic_cast<XlaNode*>(old_value.node.get())
                                   ->CloneWithSharding(sharding_spec->sharding);
   data()->ir_value = std::move(new_ir);
-  data()->generation += 1;
 }
 
-void XLATensor::CreateUnshardedIrValue() {
+void XLATensor::SetUnshardedIrValue() {
   torch::lazy::Value old_value = CurrentIrValue();
   XLA_CHECK(old_value && old_value.node != nullptr)
       << "Cannot create a unsharded IR value if an IR value does not already "
          "exist";
-  XLA_CHECK(old_value.node->op() == xla_device_data)
-      << "Can only clear sharding for device data";
   torch::lazy::Value new_ir =
-      dynamic_cast<DeviceData*>(old_value.node.get())->Clone();
+      dynamic_cast<XlaNode*>(old_value.node.get())->Clone();
   data()->ir_value = std::move(new_ir);
-  data()->generation += 1;
 }
 
 void XLATensor::SetIrValue(torch::lazy::Value ir_value, bool inplace) {

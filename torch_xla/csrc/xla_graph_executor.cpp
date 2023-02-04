@@ -512,7 +512,7 @@ XLAGraphExecutor::SyncTensorCollection XLAGraphExecutor::CollectSyncTensors(
           // sharding takes the precedence as the source of the truth.
           XLATensor::ShardingSpecPtr sharding = tensors[i]->sharding_spec();
           if (sharding) {
-            tensors[i]->CreateShardedIrValue(sharding);
+            tensors[i]->SetShardedIrValue(sharding);
           }
         }
       } else if (config.force_ltc_data) {
