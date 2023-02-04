@@ -45,7 +45,6 @@ class Feedforward(torch.nn.Module):
 )
 class TestDynamicShapeModels(unittest.TestCase):
 
-  @unittest.skip("Broke by functionalization")
   def test_forward_pass_dynamic_input_correctness(self):
     losses = []
     for _ in range(2):
