@@ -226,79 +226,30 @@ std::vector<at::Tensor> ShardingUtil::ShardTensor(
     XLA_CHECK(tensor.sizes().size() >= sharding.tile_shape().dimensions_size());
 
     auto tile_shape = sharding.tile_assignment_dimensions();
-    for (size_t i = 0; i < shards.size(); ++i) {
-      at::Tensor shard;
-      if (tile_shape.size() == 1) {
-        int64_t x_partition = tensor.sizes()[0] / tile_shape[0] +
-                              (tensor.sizes()[0] % tile_shape[0] != 0);
-        shard = tensor.index(
-            {at::indexing::Slice((i % tile_shape[0]) * x_partition,
-                                 (i % tile_shape[0] + 1) * x_partition)});
-      } else if (tile_shape.size() == 2) {
-        int64_t x_partition = tensor.sizes()[0] / tile_shape[0] +
-                              (tensor.sizes()[0] % tile_shape[0] != 0);
-        int64_t y_partition = tensor.sizes()[1] / tile_shape[1] +
-                              (tensor.sizes()[1] % tile_shape[1] != 0);
-        shard = tensor.index(
-            {at::indexing::Slice((i % tile_shape[0]) * x_partition,
-                                 (i % tile_shape[0] + 1) * x_partition),
-             at::indexing::Slice((i % tile_shape[1]) * y_partition,
-                                 (i % tile_shape[1] + 1) * y_partition)});
-      } else if (tile_shape.size() == 3) {
-        int64_t x_partition = tensor.sizes()[0] / tile_shape[0] +
-                              (tensor.sizes()[0] % tile_shape[0] != 0);
-        int64_t y_partition = tensor.sizes()[1] / tile_shape[1] +
-                              (tensor.sizes()[1] % tile_shape[1] != 0);
-        int64_t z_partition = tensor.sizes()[2] / tile_shape[2] +
-                              (tensor.sizes()[2] % tile_shape[2] != 0);
-        shard = tensor.index(
-            {at::indexing::Slice((i % tile_shape[0]) * x_partition,
-                                 (i % tile_shape[0] + 1) * x_partition),
-             at::indexing::Slice((i % tile_shape[1]) * y_partition,
-                                 (i % tile_shape[1] + 1) * y_partition),
-             at::indexing::Slice((i % tile_shape[2]) * z_partition,
-                                 (i % tile_shape[2] + 1) * z_partition)});
-      } else if (tile_shape.size() == 4) {
-        int64_t x_partition = tensor.sizes()[0] / tile_shape[0] +
-                              (tensor.sizes()[0] % tile_shape[0] != 0);
-        int64_t y_partition = tensor.sizes()[1] / tile_shape[1] +
-                              (tensor.sizes()[1] % tile_shape[1] != 0);
-        int64_t z_partition = tensor.sizes()[2] / tile_shape[2] +
-                              (tensor.sizes()[2] % tile_shape[2] != 0);
-        int64_t w_partition = tensor.sizes()[3] / tile_shape[3] +
-                              (tensor.sizes()[3] % tile_shape[3] != 0);
-        shard = tensor.index(
-            {at::indexing::Slice((i % tile_shape[0]) * x_partition,
-                                 (i % tile_shape[0] + 1) * x_partition),
-             at::indexing::Slice((i % tile_shape[1]) * y_partition,
-                                 (i % tile_shape[1] + 1) * y_partition),
-             at::indexing::Slice((i % tile_shape[2]) * z_partition,
-                                 (i % tile_shape[2] + 1) * z_partition),
-             at::indexing::Slice((i % tile_shape[3]) * w_partition,
-                                 (i % tile_shape[3] + 1) * w_partition)});
-      } else if (tile_shape.size() == 5) {
-        int64_t x_partition = tensor.sizes()[0] / tile_shape[0] +
-                              (tensor.sizes()[0] % tile_shape[0] != 0);
-        int64_t y_partition = tensor.sizes()[1] / tile_shape[1] +
-                              (tensor.sizes()[1] % tile_shape[1] != 0);
-        int64_t z_partition = tensor.sizes()[2] / tile_shape[2] +
-                              (tensor.sizes()[2] % tile_shape[2] != 0);
-        int64_t w_partition = tensor.sizes()[3] / tile_shape[3] +
-                              (tensor.sizes()[3] % tile_shape[3] != 0);
-        int64_t v_partition = tensor.sizes()[4] / tile_shape[4] +
-                              (tensor.sizes()[4] % tile_shape[4] != 0);
-        shard = tensor.index(
-            {at::indexing::Slice((i % tile_shape[0]) * x_partition,
-                                 (i % tile_shape[0] + 1) * x_partition),
-             at::indexing::Slice((i % tile_shape[1]) * y_partition,
-                                 (i % tile_shape[1] + 1) * y_partition),
-             at::indexing::Slice((i % tile_shape[2]) * z_partition,
-                                 (i % tile_shape[2] + 1) * z_partition),
-             at::indexing::Slice((i % tile_shape[3]) * w_partition,
-                                 (i % tile_shape[3] + 1) * w_partition),
-             at::indexing::Slice((i % tile_shape[4]) * v_partition,
-                                 (i % tile_shape[4] + 1) * v_partition)});
+    for (size_t i = 0; i < sharding.tile_assignment_devices().size(); i++) {
+      // Given the shard's row-major index `i`, we need to calculate shard's
+      // coordinates (n_0, ..., n_d) in the tiling to generate the index slices.
+      // Using `N_j = tile_shape[j]` and `0 <= n_j < N_j`, the following
+      // equation needs to be solved for all n_j:
+      //            `i = n_d + N_d * (n_{d-1} + N_{d-1} * (... + (N_1 * n_0)))`
+      // Let `offset_j = n_j + N_j * (n_{j-1} + N_{j-1} * (... + (N_1 * n_0)))`.
+      // Then `offset_d = i`, `n_j = offset_j % N_j`, and `offset_{j-1} =
+      // offset_j / N_j`.
+      int offset = i;
+      std::vector<at::indexing::TensorIndex> indices;
+      for (int j = tile_shape.size() - 1; j >= 0; j--) {
+        int64_t n_j = offset % tile_shape[j];
+        int64_t partition_len = tensor.sizes()[j] / tile_shape[j] +
+                                (tensor.sizes()[j] % tile_shape[j] != 0);
+        auto slice =
+            at::indexing::Slice(n_j * partition_len, (n_j + 1) * partition_len);
+        indices.push_back(at::indexing::TensorIndex(slice));
+        offset /= tile_shape[j];
       }
+      std::reverse(indices.begin(), indices.end());
+      at::Tensor shard =
+          tensor.index(c10::ArrayRef<at::indexing::TensorIndex>(indices));
+
       int64_t core = sharding.tile_assignment_devices()[i];
       shards[core] = shard.contiguous(at::MemoryFormat::Contiguous);
     }
