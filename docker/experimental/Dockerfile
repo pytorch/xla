@@ -94,6 +94,11 @@ ARG build_cpp_tests
 ARG package_version
 RUN TORCH_XLA_VERSION=${package_version} BUILD_CPP_TESTS=${build_cpp_tests} TPUVM_MODE=${tpuvm} BUNDLE_LIBTPU=${tpuvm} XLA_CUDA=${cuda} TF_CUDA_COMPUTE_CAPABILITIES=${tf_cuda_compute_capabilities} python setup.py bdist_wheel
 
+# Expunge cache to keep image size under control
+WORKDIR /pytorch/xla/third_party/tensorflow
+RUN bazel clean --expunge
+WORKDIR /pytorch/xla/
+
 RUN pip install dist/*.whl
 
 # Contains only release artifacts
