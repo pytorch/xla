@@ -385,10 +385,6 @@ class TestDynamicShape(test_utils.XlaTestCase):
         torch.masked_select(x, mask), 0)
     self.assertEqual(x_dim0_shape.item(), 3)
 
-  @unittest.skip(
-      "Temporarily disable test. See  https://github.com/pytorch/xla/issues/4501"
-  )
-  # @unittest.skip("Crash with dynamic shape")
   def test_nonzero_cast(self):
     t1 = torch.ones(5, 2, device=xm.xla_device())
     # Result of the nonzero should be the index type. Currently
@@ -1121,7 +1117,6 @@ class TestAtenXlaTensor(test_utils.XlaTestCase):
     xla_b.scatter_add_(0, xla_index, xla_a)
     self.assertEqual(b, xla_b)
 
-  @unittest.skip("Fail with run_dynamic")
   def test_squeeze_nonzero(self):
 
     def test_fn(a):
