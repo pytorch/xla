@@ -2254,7 +2254,7 @@ at::Tensor& XLANativeFunctions::random_(
   if (generator.has_value() && generator->defined()) {
     return at::native::call_fallback_fn<
         &xla_cpu_fallback, ATEN_OP2(random_, from_int)>::call(self, from, to,
-                                                          generator);
+                                                              generator);
   }
   XLATensorPtr self_tensor = bridge::GetXlaTensor(self);
   at::ScalarType dtype = self_tensor->dtype();
