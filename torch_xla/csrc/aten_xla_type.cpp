@@ -2253,7 +2253,7 @@ at::Tensor& XLANativeFunctions::random_(
   TORCH_LAZY_FN_COUNTER("xla::");
   if (generator.has_value() && generator->defined()) {
     return at::native::call_fallback_fn<
-        &xla_cpu_fallback, ATEN_OP2(random_, from)>::call(self, from, to,
+        &xla_cpu_fallback, ATEN_OP2(random_, from_int)>::call(self, from, to,
                                                           generator);
   }
   XLATensorPtr self_tensor = bridge::GetXlaTensor(self);
