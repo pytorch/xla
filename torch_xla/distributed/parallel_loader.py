@@ -74,7 +74,7 @@ class ParallelLoader(object):
       devices.
       Default: 4
     host_to_device_transfer_threads (int, optional): The number of threads that
-      work in parallel to trasnfer data from loader queue to device queue.
+      work in parallel to transfer data from loader queue to device queue.
       Default: 1
   """
 
