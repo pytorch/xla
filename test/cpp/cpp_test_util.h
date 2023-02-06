@@ -10,6 +10,7 @@
 
 #include "absl/types/span.h"
 #include "tensorflow/compiler/xla/xla_client/computation_client.h"
+#include "tensorflow/compiler/xla/xla_client/sys_util.h"
 #include "torch_xla/csrc/debug_util.h"
 #include "torch_xla/csrc/device.h"
 #include "torch_xla/csrc/ir.h"
@@ -112,6 +113,8 @@ void TestBackward(
 
 torch::lazy::NodePtr CreateNonZeroNode2d(int64_t num_non_zero_element,
                                          int64_t num_row, int64_t num_col);
+
+bool UsingPjRt();
 
 }  // namespace cpp_test
 }  // namespace torch_xla
