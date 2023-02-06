@@ -79,13 +79,13 @@ class ExperimentRunner:
           experiment_config_str = json.dumps(experiment_config)
           model_config_str = json.dumps(model_config)
           experiment_config["process_env"] = process_env
+          command = ([sys.executable] + sys.argv +
+                     [f"--experiment-config={experiment_config_str}"] +
+                     [f"--model-config={model_config_str}"])
+          if self._args.dry_run:
+            logger.warning(f"Dry run with {command}")
+            continue
           if self.model_loader.is_compatible(model_config, experiment_config):
-            command = ([sys.executable] + sys.argv +
-                       [f"--experiment-config={experiment_config_str}"] +
-                       [f"--model-config={model_config_str}"])
-            if self._args.dry_run:
-              logger.warning(f"Dry run with {command}")
-              continue
             try:
               completed_process = subprocess.run(
                   command,
