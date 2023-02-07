@@ -86,14 +86,17 @@ function maybe_install_sources {
     popd
   fi
 
-  # Check if we have cloned pytorch and cd into the pytorch dir. Within the pytorch
-  # dir there is a subdir `torch`.
-  if [ ! -d "torch" ]; then
+  # Check if we have cloned pytorch or xla and cd into the pytorch dir. 
+  # Within the pytorch dir there is a subdir `torch`, and within xla 
+  # is `torch_xla`.
+  if [ ! -d "torch" && ! -d "torch_xla" ]; then
     sudo apt-get install -y git
     git clone --recursive https://github.com/pytorch/pytorch.git
     cd pytorch
     git clone --recursive https://github.com/pytorch/xla.git
     export RELEASE_VERSION="nightly"
+  elif [ -d "torch_xla" ]; then
+    cd ..
   fi
 }
 
