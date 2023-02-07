@@ -13,6 +13,10 @@ namespace torch_xla {
 namespace cpp_test {
 
 TEST(OpByOpExecutorTest, TestSimpleAdd) {
+  if (UsingPjRt()) {
+    GTEST_SKIP();
+  }
+
   ForEachDevice([&](const torch::lazy::BackendDevice& device) {
     at::Tensor a = at::rand({4, 16, 3}, at::TensorOptions(at::kFloat));
     at::Tensor b = at::rand({4, 16, 3}, at::TensorOptions(at::kFloat));
@@ -31,6 +35,10 @@ TEST(OpByOpExecutorTest, TestSimpleAdd) {
 }
 
 TEST(OpByOpExecutorTest, TestStack) {
+  if (UsingPjRt()) {
+    GTEST_SKIP();
+  }
+
   ForEachDevice([&](const torch::lazy::BackendDevice& device) {
     at::Tensor a = at::rand({4, 8, 3}, at::TensorOptions(at::kFloat));
     at::Tensor b = at::rand({4, 8, 3}, at::TensorOptions(at::kFloat));
@@ -50,6 +58,10 @@ TEST(OpByOpExecutorTest, TestStack) {
 }
 
 TEST(OpByOpExecutorTest, TestAsyncStack) {
+  if (UsingPjRt()) {
+    GTEST_SKIP();
+  }
+
   ForEachDevice([&](const torch::lazy::BackendDevice& device) {
     at::Tensor a = at::rand({4, 8, 3}, at::TensorOptions(at::kFloat));
     at::Tensor b = at::rand({4, 8, 3}, at::TensorOptions(at::kFloat));
