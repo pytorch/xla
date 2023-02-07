@@ -213,7 +213,7 @@ supported:
   - logsumexp
   - masked_fill_.Scalar
   - masked_fill_.Tensor
-  - masked_scatter_
+  - masked_scatter
   - masked_select
   - max
   - max.dim

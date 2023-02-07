@@ -5371,8 +5371,7 @@ TEST_F(AtenXlaTensorTest, TestMaskedScatter) {
       // calls.
       ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
     }
-    ExpectCounterChanged("xla::masked_scatter_",
-                         cpp_test::GetIgnoredCounters());
+    ExpectCounterChanged("xla::masked_scatter", cpp_test::GetIgnoredCounters());
     ResetCounters();
   });
 }
