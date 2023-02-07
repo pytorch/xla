@@ -4896,10 +4896,6 @@ TEST_F(AtenXlaTensorTest, TestScatterAddInPlace) {
 }
 
 TEST_F(AtenXlaTensorTest, TestScatterReduceSum) {
-  GTEST_SKIP() << "Unrecognized `reduce` at "
-                  "https://github.com/pytorch/xla/blob/"
-                  "933dcc21c51676f72a41f2989f5bbba760a498c0/torch_xla/csrc/ops/"
-                  "scatter_reduce.cpp#L42 after functionalization";
   torch::Tensor a = torch::rand({3, 5}, torch::TensorOptions(torch::kFloat));
   torch::Tensor b = torch::rand({3, 5}, torch::TensorOptions(torch::kFloat));
   torch::Tensor c = torch::empty({3, 5}, torch::TensorOptions(torch::kLong));
@@ -4954,10 +4950,6 @@ TEST_F(AtenXlaTensorTest, TestScatterReduceProd) {
     GTEST_SKIP();
   }
 
-  GTEST_SKIP() << "Unrecognized `reduce` at "
-                  "https://github.com/pytorch/xla/blob/"
-                  "933dcc21c51676f72a41f2989f5bbba760a498c0/torch_xla/csrc/ops/"
-                  "scatter_reduce.cpp#L42 after functionalization";
   torch::Tensor a = torch::rand({3, 5}, torch::TensorOptions(torch::kFloat));
   torch::Tensor b = torch::rand({3, 5}, torch::TensorOptions(torch::kFloat));
   torch::Tensor c = torch::empty({3, 5}, torch::TensorOptions(torch::kLong));
@@ -4987,11 +4979,6 @@ TEST_F(AtenXlaTensorTest, TestScatterReduceProdInPlace) {
     GTEST_SKIP();
   }
 
-  GTEST_SKIP() << "Unrecognized `reduce` at "
-                  "https://github.com/pytorch/xla/blob/"
-                  "933dcc21c51676f72a41f2989f5bbba760a498c0/torch_xla/csrc/ops/"
-                  "scatter_reduce.cpp#L42 after functionalization";
-
   torch::Tensor a = torch::rand({3, 5}, torch::TensorOptions(torch::kFloat));
   torch::Tensor b = torch::rand({3, 5}, torch::TensorOptions(torch::kFloat));
   torch::Tensor c = torch::empty({3, 5}, torch::TensorOptions(torch::kLong));
@@ -5019,11 +5006,6 @@ TEST_F(AtenXlaTensorTest, TestScatterReduceMin) {
   if (UsingTpu()) {
     GTEST_SKIP();
   }
-
-  GTEST_SKIP() << "Unrecognized `reduce` at "
-                  "https://github.com/pytorch/xla/blob/"
-                  "933dcc21c51676f72a41f2989f5bbba760a498c0/torch_xla/csrc/ops/"
-                  "scatter_reduce.cpp#L42 after functionalization";
 
   torch::Tensor a = torch::rand({3, 5}, torch::TensorOptions(torch::kFloat));
   torch::Tensor b = torch::rand({3, 5}, torch::TensorOptions(torch::kFloat));
@@ -5054,11 +5036,6 @@ TEST_F(AtenXlaTensorTest, TestScatterReduceMinInPlace) {
     GTEST_SKIP();
   }
 
-  GTEST_SKIP() << "Unrecognized `reduce` at "
-                  "https://github.com/pytorch/xla/blob/"
-                  "933dcc21c51676f72a41f2989f5bbba760a498c0/torch_xla/csrc/ops/"
-                  "scatter_reduce.cpp#L42 after functionalization";
-
   torch::Tensor a = torch::rand({3, 5}, torch::TensorOptions(torch::kFloat));
   torch::Tensor b = torch::rand({3, 5}, torch::TensorOptions(torch::kFloat));
   torch::Tensor c = torch::empty({3, 5}, torch::TensorOptions(torch::kLong));
@@ -5083,10 +5060,6 @@ TEST_F(AtenXlaTensorTest, TestScatterReduceMinInPlace) {
 }
 
 TEST_F(AtenXlaTensorTest, TestScatterReduceMax) {
-  GTEST_SKIP() << "Unrecognized `reduce` at "
-                  "https://github.com/pytorch/xla/blob/"
-                  "933dcc21c51676f72a41f2989f5bbba760a498c0/torch_xla/csrc/ops/"
-                  "scatter_reduce.cpp#L42 after functionalization";
   torch::Tensor a = torch::rand({3, 5}, torch::TensorOptions(torch::kFloat));
   torch::Tensor b = torch::rand({3, 5}, torch::TensorOptions(torch::kFloat));
   torch::Tensor c = torch::empty({3, 5}, torch::TensorOptions(torch::kLong));
@@ -5111,10 +5084,6 @@ TEST_F(AtenXlaTensorTest, TestScatterReduceMax) {
 }
 
 TEST_F(AtenXlaTensorTest, TestScatterReduceMaxInPlace) {
-  GTEST_SKIP() << "Unrecognized `reduce` at "
-                  "https://github.com/pytorch/xla/blob/"
-                  "933dcc21c51676f72a41f2989f5bbba760a498c0/torch_xla/csrc/ops/"
-                  "scatter_reduce.cpp#L42 after functionalization";
   torch::Tensor a = torch::rand({3, 5}, torch::TensorOptions(torch::kFloat));
   torch::Tensor b = torch::rand({3, 5}, torch::TensorOptions(torch::kFloat));
   torch::Tensor c = torch::empty({3, 5}, torch::TensorOptions(torch::kLong));
