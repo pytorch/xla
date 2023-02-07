@@ -772,7 +772,6 @@ class TestDynamicShape(XlaTestCase):
     t4 = torch.ones([size1, size2], device=dev)
     expand_out_xla = t4.expand(t3.shape[0], size1, size2)
     self.assertEqual(t3.shape[0], 2)
-    print(expand_out_xla)
     self.assertEqual(expand_out_aten.cpu(), expand_out_xla.cpu())
 
 
