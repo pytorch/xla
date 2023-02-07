@@ -759,6 +759,24 @@ class TestDynamicShape(XlaTestCase):
     # able to cast it to any other type without error.
     t2 = torch.nonzero(t1.int()).float()
     xm.mark_step()
+  
+  def test_expand_symint_correctness(self):
+    dev = xm.xla_device()
+    size1 = 5
+    size2 = 2
+    t1 = torch.ones([size1, size2])
+    expand_out_aten = t1.expand(2, size1, size2)
+
+    t2 = torch.zeros([size1, size2], device=dev)
+    t2[3][0] = 1
+    t2[3][1] = 1
+    # t2 has size [<=10, 2]
+    t3 = torch.nonzero(t2)
+    t4 = torch.ones([size1, size2], device=dev)
+    expand_out_xla = t4.expand(t3.shape[0], size1, size2)
+    self.assertEqual(t3.shape[0], 2)
+    print(expand_out_xla)
+    self.assertEqual(expand_out_aten.cpu(), expand_out_xla.cpu())
 
 
 class TestOptimizationBarrier(XlaTestCase):
