@@ -19,6 +19,9 @@ import collections
 import copy
 import itertools
 import math
+from numbers import Number
+import numpy
+import random
 import re
 import torch
 import torch.autograd as ad
@@ -277,8 +280,7 @@ class TestLongGraphChain(test_utils.XlaTestCase):
     for i in range(0, 2000):
       x = x + 2 * y
       xla_x = xla_x + 2 * xla_y
-    self.assertEqualRel(
-        x, xla_x.cpu(), FLAGS.max_diff_count, rel_err=1e-3, abs_err=5)
+    self.assertEqualRel(x, xla_x.cpu(), rel_err=1e-3, abs_err=5, max_diff_count=FLAGS.max_diff_count)
 
 
 class TestSelect(test_utils.XlaTestCase):
@@ -354,6 +356,33 @@ class TestInterOpSyncTensors(test_utils.XlaTestCase):
 
     x = torch.tensor([1., 2., 3.])
     self.runAtenTest([x], test_fn)
+
+
+class TestDynamicShape(test_utils.XlaTestCase):
+
+  def test_nonzero_shape(self):
+    x = torch.tensor((0, 1, 2, 0, 3, 4), device=xm.xla_device())
+    x_dim0_shape = torch_xla._XLAC._get_xla_tensor_dimension_size(
+        torch.nonzero(x, as_tuple=False), 0)
+    self.assertEqual(x_dim0_shape.item(), 4)
+
+  def test_masked_select_shape(self):
+    x = torch.tensor((0, 1, 2, 0, 3, 4), device=xm.xla_device())
+    mask = x.ge(2)
+    x_dim0_shape = torch_xla._XLAC._get_xla_tensor_dimension_size(
+        torch.masked_select(x, mask), 0)
+    self.assertEqual(x_dim0_shape.item(), 3)
+
+  @unittest.skip(
+      "Temporarily disable test. See  https://github.com/pytorch/xla/issues/4501"
+  )
+  def test_nonzero_cast(self):
+    t1 = torch.ones(5, 2, device=xm.xla_device())
+    # Result of the nonzero should be the index type. Currently
+    # index type is s64 on cpu and gpu, but s32 on TPU. We should be
+    # able to cast it to any other type without error.
+    t2 = torch.nonzero(t1.int()).float()
+    xm.mark_step()
 
 
 class TestOptimizationBarrier(test_utils.XlaTestCase):
@@ -1542,7 +1571,7 @@ class TestModelComparator(test_utils.XlaTestCase):
     x = _gen_tensor(8, 1, 28, 28)
     xla_x = x.to(xla_device)
 
-    _set_rng_seed(SEED)
+    test_utils._set_rng_seed(SEED)
     model = MNISTComparator()
     save_dir1 = xu.TmpFolder()
     mc.configure(save_dir1.name)
@@ -1550,7 +1579,7 @@ class TestModelComparator(test_utils.XlaTestCase):
 
     save_dir2 = xu.TmpFolder()
     mc.configure(save_dir2.name)
-    _set_rng_seed(SEED)
+    test_utils._set_rng_seed(SEED)
     xla_model = MNISTComparator().to(xla_device)
     xla_model(xla_x)
 
@@ -1602,7 +1631,6 @@ class TestOpBuilder(test_utils.XlaTestCase):
                        name,
                        tensors,
                        opfn,
-                       max_diff_count=FLAGS.max_diff_count,
                        aten_fn=None,
                        device=None,
                        rel_err=1e-2,
@@ -1619,8 +1647,7 @@ class TestOpBuilder(test_utils.XlaTestCase):
     ]
     results = xu.as_list(aten_fn(*tensors, **kwargs))
     xla_results = xu.as_list(op(*xla_tensors, **kwargs))
-    self.compareResults(
-        results, xla_results, max_diff_count, rel_err=rel_err, abs_err=abs_err)
+    self.compareResults(results, xla_results, rel_err=rel_err, abs_err=abs_err)
 
   def test_add(self):
 

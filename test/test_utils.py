@@ -44,16 +44,16 @@ def _is_iterable(obj):
     return False
 
 
+class Holder(object):
+  pass
+
+
 def _iter_indices(tensor):
   if tensor.dim() == 0:
     return range(0)
   if tensor.dim() == 1:
     return range(tensor.size(0))
   return itertools.product(*(range(s) for s in tensor.size()))
-
-
-class Holder(object):
-  pass
 
 
 def _dump_differences(target, result, rtol=1e-5, atol=1e-3, max_diff_count=0):
@@ -302,12 +302,8 @@ class XlaTestCase(unittest.TestCase):
     else:
       super(XlaTestCase, self).assertEqual(x, y, message)
 
-  def assertEqualRel(self,
-                     out,
-                     expected,
-                     max_diff_count,
-                     rel_err=1e-2,
-                     abs_err=1e-5):
+
+  def assertEqualRel(self, out, expected, rel_err=1e-2, abs_err=1e-5, max_diff_count=0):
     try:
       out, expected = _prepare_tensors_for_diff(out, expected)
       nan_mask = torch.isnan(expected)
@@ -338,12 +334,17 @@ class XlaTestCase(unittest.TestCase):
           max_diff_count=max_diff_count)
       raise
 
-  def assertEqualDbg(self, out, expected, max_diff_count):
+
+  def assertEqualDbg(self, out, expected, max_diff_count=0):
     try:
       super(XlaTestCase, self).assertEqual(out, expected)
     except:
       _dump_differences(
-          expected, out, rtol=1e-8, atol=1e-8, max_diff_count=max_diff_count)
+          expected,
+          out,
+          rtol=1e-8,
+          atol=1e-8,
+          max_diff_count=max_diff_count)
       raise
 
   def makeComparable(self, value):
@@ -371,18 +372,12 @@ class XlaTestCase(unittest.TestCase):
       else:
         raise RuntimeError('Invalid TEST_PRINT_GRAPH value: {}'.format(env))
 
-  def compareResults(self,
-                     results,
-                     xla_results,
-                     max_diff_count,
-                     rel_err=1e-2,
-                     abs_err=1e-5):
+  def compareResults(self, results, xla_results, rel_err=1e-2, abs_err=1e-5):
     self.maybePrintGraph(xla_results)
     for at, xt in zip(results, xla_results):
       self.assertEqualRel(
           self.makeComparable(xt),
           self.makeComparable(at),
-          max_diff_count,
           rel_err=rel_err,
           abs_err=abs_err)
 
