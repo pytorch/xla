@@ -100,3 +100,4 @@ test
 .. mdinclude:: ../pjrt.md
 .. mdinclude:: ../ddp.md
 .. mdinclude:: ../fsdp.md
+.. mdinclude:: ../gpu.md
