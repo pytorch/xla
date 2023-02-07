@@ -47,13 +47,13 @@ MODEL_OPTS = {
     }
     'loader_prefetch_size': {
         'type': 'int',
-    }
+    },
     'device_prefetch_size': {
         'type': 'int',
-    }
+    },
     'host_to_device_transfer_threads': {
         'type': 'int',
-    }
+    },
 
 }
 
