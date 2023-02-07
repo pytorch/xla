@@ -42,16 +42,16 @@ MODEL_OPTS = {
     '--persistent_workers': {
         'action': 'store_true',
     },
-    'prefetch_factor': {
+    '--prefetch_factor': {
         'type': 'int',
     },
-    'loader_prefetch_size': {
+    '--loader_prefetch_size': {
         'type': 'int',
     },
-    'device_prefetch_size': {
+    '--device_prefetch_size': {
         'type': 'int',
     },
-    'host_to_device_transfer_threads': {
+    '--host_to_device_transfer_threads': {
         'type': 'int',
     },
 
