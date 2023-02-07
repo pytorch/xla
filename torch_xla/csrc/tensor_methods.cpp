@@ -1544,11 +1544,20 @@ void masked_fill_(XLATensorPtr& input, const XLATensorPtr& mask,
       value));
 }
 
-void masked_scatter_(XLATensorPtr& input, const XLATensorPtr& mask,
-                     const XLATensorPtr& source) {
+XLATensorPtr masked_scatter(XLATensorPtr& input, const XLATensorPtr& mask,
+                            const XLATensorPtr& source) {
   torch::lazy::ScopePusher ir_scope(at::aten::masked_scatter.toQualString());
-  input->SetIrValue(torch::lazy::MakeNode<MaskedScatter>(
-      input->GetIrValue(), MaybeExpand(mask->GetIrValue(), input->shape()),
+  auto input_value = input->GetIrValue();
+  // This ensures that input tensor is at least the same shape as mask tensor.
+  // Note that we can't use the existing MaybeExpand function since
+  // input tensor may sometimes be bigger than the mask tensor, and MaybeExpand
+  // requires the first parameter to always be less or equal to the second
+  // parameter.
+  if (input->shape().get().dimensions() < mask->shape().get().dimensions()) {
+    input_value = MaybeExpand(input->GetIrValue(), mask->shape());
+  }
+  return input->CreateFrom(torch::lazy::MakeNode<MaskedScatter>(
+      input_value, MaybeExpand(mask->GetIrValue(), GetXlaShape(input_value)),
       source->GetIrValue()));
 }
 
