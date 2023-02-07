@@ -97,6 +97,12 @@ DEFAULT_KWARGS = dict(
     momentum=0.9,
     lr=0.1,
     target_accuracy=0.0,
+    persistent_workers=True,
+    prefetch_factor=32,
+    loader_prefetch_size=128,
+    device_prefetch_size=1,
+    num_workers=16,
+    host_to_device_transfer_threads=4,
 )
 MODEL_SPECIFIC_DEFAULTS = {
     # Override some of the args in DEFAULT_KWARGS, or add them to the dict
