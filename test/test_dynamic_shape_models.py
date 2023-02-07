@@ -73,8 +73,8 @@ class TestDynamicShapeModels(unittest.TestCase):
     for i in range(10):
       num_features = 2
       num_test_samples = 5
-      x_test, y_test = self.create_dynamic_test_data(num_test_samples,
-                                                     num_features, xla_dev, num_non_zeros=i)
+      x_test, y_test = self.create_dynamic_test_data(
+          num_test_samples, num_features, xla_dev, num_non_zeros=i)
 
       model = Feedforward(num_features, hidden_size=10).to(xla_dev)
       criterion = torch.nn.BCELoss()
@@ -88,7 +88,9 @@ class TestDynamicShapeModels(unittest.TestCase):
           num_compilation = met.metric_data('CompileTime')[0]
           num_compilation_recorded = True
         else:
-          self.assertEqual(num_compilation, met.metric_data('CompileTime')[0], 'number of compilation should not increase.')
+          self.assertEqual(num_compilation,
+                           met.metric_data('CompileTime')[0],
+                           'number of compilation should not increase.')
 
   @unittest.skip(
       "disable it due to https://github.com/pytorch/xla/pull/4322#issuecomment-1374312614."
@@ -122,7 +124,11 @@ class TestDynamicShapeModels(unittest.TestCase):
       xm.mark_step()
     print('Test passed.')
 
-  def create_dynamic_test_data(self, num_test_samples, num_features, device, num_non_zeros = 1):
+  def create_dynamic_test_data(self,
+                               num_test_samples,
+                               num_features,
+                               device,
+                               num_non_zeros=1):
     x_test = torch.zeros(num_test_samples, num_features)
     num_non_zero_added = 0
     for i in range(num_test_samples):
