@@ -1102,7 +1102,8 @@ XLAGraphExecutor::CompilationResult XLAGraphExecutor::Compile(
   // TODO(yeounoh) aliasing is disabled for partitioned computation,
   // since the current aliasing compares the unpartitioned input and output
   // shapes which can lead to an incorrect aliasing pairs if sharded.
-  if (enable_aliasing && coll.config.sync_ltc_data && !is_sharded) {
+  if (enable_aliasing && coll.config.sync_ltc_data &&
+      coll.config.force_ltc_data && !is_sharded) {
     // We can only alias at the step barrier, when force_ltc_data is true.
     // Consider the case:
     //   1. Tensor A(DEVICE_DATA)
