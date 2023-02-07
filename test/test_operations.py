@@ -1602,6 +1602,7 @@ class TestOpBuilder(test_utils.XlaTestCase):
                        name,
                        tensors,
                        opfn,
+                       max_diff_count=FLAGS.max_diff_count,
                        aten_fn=None,
                        device=None,
                        rel_err=1e-2,
@@ -1618,7 +1619,7 @@ class TestOpBuilder(test_utils.XlaTestCase):
     ]
     results = xu.as_list(aten_fn(*tensors, **kwargs))
     xla_results = xu.as_list(op(*xla_tensors, **kwargs))
-    self.compareResults(results, xla_results, rel_err=rel_err, abs_err=abs_err)
+    self.compareResults(results, xla_results, max_diff_count, rel_err=rel_err, abs_err=abs_err)
 
   def test_add(self):
 
