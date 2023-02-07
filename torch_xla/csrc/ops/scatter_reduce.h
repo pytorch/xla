@@ -19,7 +19,7 @@ class ScatterReduce : public XlaNode {
   int64_t dim() const { return dim_; };
 
  private:
-  c10::string_view reduce_;
+  std::string reduce_;
   bool include_self_;
   int64_t dim_;
 };
