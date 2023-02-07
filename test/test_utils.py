@@ -1,10 +1,11 @@
-import sys
-import os
-import math
-from numbers import Number
 import collections
-import unittest
 import itertools
+import math
+import os
+import sys
+import unittest
+from numbers import Number
+
 import torch
 import numpy
 import random
