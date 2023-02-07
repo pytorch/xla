@@ -44,7 +44,7 @@ MODEL_OPTS = {
     },
     'prefetch_factor': {
         'type': 'int',
-    }
+    },
     'loader_prefetch_size': {
         'type': 'int',
     },
