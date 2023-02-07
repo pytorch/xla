@@ -43,16 +43,16 @@ MODEL_OPTS = {
         'action': 'store_true',
     },
     '--prefetch_factor': {
-        'type': 'int',
+        'type': int,
     },
     '--loader_prefetch_size': {
-        'type': 'int',
+        'type': int,
     },
     '--device_prefetch_size': {
-        'type': 'int',
+        'type': int,
     },
     '--host_to_device_transfer_threads': {
-        'type': 'int',
+        'type': int,
     },
 
 }
