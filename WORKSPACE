@@ -11,15 +11,17 @@ http_archive(
     patch_tool = "patch",
     patches = [
         "//tf_patches:f16_abi_clang.diff",
+        "//tf_patches:ffp_gpu.diff",
+        "//tf_patches:gpu_race_condition.diff",
         "//tf_patches:stream_executor.diff",
         "//tf_patches:thread_local_random.diff",
         "//tf_patches:xplane.diff",
         "//tf_patches:bazel.diff",
     ],
-    sha256 = "a056b236c032a86ea0f361d6a7f97319e43e33144d8aaf44e42f0d154fde5c0a",
-    strip_prefix = "tensorflow-29f29e5874ec25b5f26c990c3981dcd56288fd0c",
+    sha256 = "a454c502fa32d2cd7858dc623f76d0449e7891828df0199691dea9812fa40b53",
+    strip_prefix = "tensorflow-a81addf25f8c7420fe22674205e4fa410980bb5e",
     urls = [
-        "https://github.com/tensorflow/tensorflow/archive/29f29e5874ec25b5f26c990c3981dcd56288fd0c.tar.gz",
+        "https://github.com/tensorflow/tensorflow/archive/a81addf25f8c7420fe22674205e4fa410980bb5e.tar.gz",
     ],
 )
 
