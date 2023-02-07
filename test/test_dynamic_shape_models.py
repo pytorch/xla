@@ -135,9 +135,9 @@ class TestDynamicShapeModels(unittest.TestCase):
       for j in range(num_features):
         x_test[i][j] = 1
         num_non_zero_added += 1
-        if num_non_zero_added == num_non_zero_added:
+        if num_non_zero_added == num_non_zeros:
           break
-      if num_non_zero_added == num_non_zero_added:
+      if num_non_zero_added == num_non_zeros:
         break
 
     num_non_zero_added = 0
@@ -145,7 +145,7 @@ class TestDynamicShapeModels(unittest.TestCase):
     for i in range(num_test_samples * 2):
       y_test[i] = 1
       num_non_zero_added += 1
-      if num_non_zero_added == num_non_zero_added:
+      if num_non_zero_added == num_non_zeros:
         break
 
     x_test_xla = x_test.to(device)
