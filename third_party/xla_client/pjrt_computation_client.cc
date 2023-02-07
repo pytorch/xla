@@ -264,12 +264,11 @@ std::vector<xla::Literal> PjRtComputationClient::TransferFromServer(
 
     // TODO(wcromar): Only use logical_on_device_shape when PJRT C API supports
     // it.
-    xla::Shape target_shape =
+    xla::Shape target_shape = ShapeUtil::DeviceShapeToHostShape(
         supports_logical_on_device_shape_
             ? pjrt_data.buffer->logical_on_device_shape().value()
-            : pjrt_data.buffer->on_device_shape();
-    auto& literal =
-        literals.emplace_back(ShapeUtil::DeviceShapeToHostShape(target_shape));
+            : pjrt_data.buffer->on_device_shape());
+    auto& literal = literals.emplace_back(target_shape);
 
     // PJRT will always try to copy the full bounded size into our literal. If
     // the bounded size is larger than the logical output size, we have to
@@ -281,9 +280,10 @@ std::vector<xla::Literal> PjRtComputationClient::TransferFromServer(
       std::shared_ptr<xla::Literal> bounded_literal =
           pjrt_data.buffer->ToLiteralSync().value();
       XLA_CHECK_OK(literal.CopySliceFrom(
-          *bounded_literal, std::vector<int64_t>(target_shape.rank(), 0),
-          std::vector<int64_t>(target_shape.rank(), 0),
-          target_shape.dimensions()));
+          *bounded_literal,
+          /*src_base=*/std::vector<int64_t>(target_shape.rank(), 0),
+          /*dest_base=*/std::vector<int64_t>(target_shape.rank(), 0),
+          /*copy_size=*/target_shape.dimensions()));
     }
     total_size += literal.size_bytes();
   }
