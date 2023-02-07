@@ -428,5 +428,11 @@ torch::lazy::NodePtr CreateNonZeroNode2d(int64_t num_non_zero_element,
   return nonzero_node;
 }
 
+bool UsingPjRt() {
+  static bool using_pjrt =
+      !xla::sys_util::GetEnvString("PJRT_DEVICE", "").empty();
+  return using_pjrt;
+}
+
 }  // namespace cpp_test
 }  // namespace torch_xla
