@@ -756,7 +756,7 @@ class TestDynamicShape(XlaTestCase):
     # able to cast it to any other type without error.
     t2 = torch.nonzero(t1.int()).float()
     xm.mark_step()
-  
+
   def test_expand_symint_correctness(self):
     dev = xm.xla_device()
     size1 = 5
