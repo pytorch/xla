@@ -280,7 +280,12 @@ class TestLongGraphChain(test_utils.XlaTestCase):
     for i in range(0, 2000):
       x = x + 2 * y
       xla_x = xla_x + 2 * xla_y
-    self.assertEqualRel(x, xla_x.cpu(), rel_err=1e-3, abs_err=5, max_diff_count=FLAGS.max_diff_count)
+    self.assertEqualRel(
+        x,
+        xla_x.cpu(),
+        rel_err=1e-3,
+        abs_err=5,
+        max_diff_count=FLAGS.max_diff_count)
 
 
 class TestSelect(test_utils.XlaTestCase):

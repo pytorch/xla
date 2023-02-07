@@ -302,8 +302,12 @@ class XlaTestCase(unittest.TestCase):
     else:
       super(XlaTestCase, self).assertEqual(x, y, message)
 
-
-  def assertEqualRel(self, out, expected, rel_err=1e-2, abs_err=1e-5, max_diff_count=0):
+  def assertEqualRel(self,
+                     out,
+                     expected,
+                     rel_err=1e-2,
+                     abs_err=1e-5,
+                     max_diff_count=0):
     try:
       out, expected = _prepare_tensors_for_diff(out, expected)
       nan_mask = torch.isnan(expected)
@@ -334,17 +338,12 @@ class XlaTestCase(unittest.TestCase):
           max_diff_count=max_diff_count)
       raise
 
-
   def assertEqualDbg(self, out, expected, max_diff_count=0):
     try:
       super(XlaTestCase, self).assertEqual(out, expected)
     except:
       _dump_differences(
-          expected,
-          out,
-          rtol=1e-8,
-          atol=1e-8,
-          max_diff_count=max_diff_count)
+          expected, out, rtol=1e-8, atol=1e-8, max_diff_count=max_diff_count)
       raise
 
   def makeComparable(self, value):
