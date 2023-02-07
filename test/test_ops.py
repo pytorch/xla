@@ -117,7 +117,7 @@ allowed_opinfo = set(
             AllowedOpInfoEntry('lt'),
             AllowedOpInfoEntry('lu_unpack'),
             AllowedOpInfoEntry('masked_fill'),
-            AllowedOpInfoEntry('masked_scatter')
+            AllowedOpInfoEntry('masked_scatter'),
             AllowedOpInfoEntry('masked_select'),
             AllowedOpInfoEntry('matrix_exp'),
             AllowedOpInfoEntry('max', 'binary'),
