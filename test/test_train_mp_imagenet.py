@@ -54,7 +54,6 @@ MODEL_OPTS = {
     '--host_to_device_transfer_threads': {
         'type': int,
     },
-
 }
 
 FLAGS = args_parse.parse_common_options(
@@ -227,7 +226,6 @@ def train_imagenet():
         persistent_workers=FLAGS.persistent_workers,
         prefetch_factor=FLAGS.prefetch_factor)
 
-
   torch.manual_seed(42)
 
   device = xm.xla_device()
@@ -297,8 +295,16 @@ def train_imagenet():
     accuracy = xm.mesh_reduce('test_accuracy', accuracy, np.mean)
     return accuracy
 
-  train_device_loader = pl.MpDeviceLoader(train_loader, device, loader_prefetch_size=FLAGS.loader_prefetch_size, device_prefetch_size=FLAGS.device_prefetch_size, host_to_device_transfer_threads=FLAGS.host_to_device_transfer_threads)
-  test_device_loader = pl.MpDeviceLoader(test_loader, device, loader_prefetch_size=FLAGS.loader_prefetch_size, device_prefetch_size=FLAGS.device_prefetch_size, host_to_device_transfer_threads=FLAGS.host_to_device_transfer_threads)
+  train_device_loader = pl.MpDeviceLoader(train_loader,
+                                          device,
+                                          loader_prefetch_size=FLAGS.loader_prefetch_size,
+                                          device_prefetch_size=FLAGS.device_prefetch_size,
+                                          host_to_device_transfer_threads=FLAGS.host_to_device_transfer_threads)
+  test_device_loader = pl.MpDeviceLoader(test_loader,
+                                         device,
+                                         loader_prefetch_size=FLAGS.loader_prefetch_size,
+                                         device_prefetch_size=FLAGS.device_prefetch_size,
+                                         host_to_device_transfer_threads=FLAGS.host_to_device_transfer_threads)
 
   accuracy, max_accuracy = 0.0, 0.0
   for epoch in range(1, FLAGS.num_epochs + 1):
