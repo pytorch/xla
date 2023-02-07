@@ -371,7 +371,12 @@ class XlaTestCase(unittest.TestCase):
       else:
         raise RuntimeError('Invalid TEST_PRINT_GRAPH value: {}'.format(env))
 
-  def compareResults(self, results, xla_results, max_diff_count, rel_err=1e-2, abs_err=1e-5):
+  def compareResults(self,
+                     results,
+                     xla_results,
+                     max_diff_count,
+                     rel_err=1e-2,
+                     abs_err=1e-5):
     self.maybePrintGraph(xla_results)
     for at, xt in zip(results, xla_results):
       self.assertEqualRel(
