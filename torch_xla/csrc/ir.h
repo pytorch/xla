@@ -127,7 +127,7 @@ class XlaNode : public torch::lazy::Node {
     return output_sharding_;
   }
 
-  void SetSharding(const xla::OpSharding& sharding);
+  void SetSharding(xla::OpSharding sharding);
 
   void ClearSharding() {
     output_sharding_ = nullptr;
@@ -135,6 +135,16 @@ class XlaNode : public torch::lazy::Node {
   }
 
   std::string ToString() const override;
+
+  std::vector<torch::lazy::NodePtr>* operands_as_nodes() { return &operands_; }
+  torch::lazy::Node* get_operand(size_t index) {
+    return operands_[index].get();
+  }
+  void set_operand(torch::lazy::NodePtr node, size_t index) {
+    operands_[index] = node;
+    operands_as_outputs_[index] =
+        torch::lazy::Output(node.get(), operands_as_outputs_[index].index);
+  }
 
  private:
   xla::Shape GetOpShape(const std::function<xla::Shape()>& shape_fn) const;

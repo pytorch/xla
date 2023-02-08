@@ -9,9 +9,12 @@
 #include "absl/types/span.h"
 #include "torch_xla/csrc/device.h"
 #include "torch_xla/csrc/tensor.h"
+#include "torch_xla/csrc/tensor_impl.h"
 
 namespace torch_xla {
 namespace bridge {
+
+XLATensorImpl* GetXlaTensorImpl(const at::Tensor& tensor);
 
 XLATensorPtr TryGetXlaTensor(const at::Tensor& tensor);
 

@@ -138,6 +138,7 @@
 #include "torch_xla/csrc/tensor_ops.h"
 #include "torch_xla/csrc/tensor_util.h"
 #include "torch_xla/csrc/xla_graph_executor.h"
+#include "torch_xla/csrc/xla_sharding_util.h"
 
 namespace torch_xla {
 namespace tensor_methods {
@@ -895,8 +896,11 @@ XLATensorPtr clamp(const XLATensorPtr& input,
 
 XLATensorPtr clone(const XLATensorPtr& input) {
   XLATensorPtr cloned = input->CreateFrom(input->GetIrValue());
+  // Preserves sharding when cloning.
   if (input->sharding_spec() != nullptr) {
     cloned->SetShardingSpec(*input->sharding_spec());
+    cloned->SetIrValue(ShardingUtil::ShardInputDataNodes(
+        cloned->CurrentIrValue(), cloned->sharding_spec()));
   }
   return cloned;
 }
@@ -2172,6 +2176,8 @@ void copy_(XLATensorPtr& input, XLATensorPtr& src) {
   // Preserves sharding when copying.
   if (src->sharding_spec() != nullptr) {
     input->SetShardingSpec(*src->sharding_spec());
+    input->SetIrValue(ShardingUtil::ShardInputDataNodes(
+        input->CurrentIrValue(), input->sharding_spec()));
   }
 }
 

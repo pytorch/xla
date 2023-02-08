@@ -24,6 +24,7 @@
 #include "torch_xla/csrc/ir_util.h"
 #include "torch_xla/csrc/lowering_context.h"
 #include "torch_xla/csrc/tensor.h"
+#include "torch_xla/csrc/tensor_impl.h"
 #include "torch_xla/csrc/torch_util.h"
 #include "torch_xla/csrc/view.h"
 
@@ -37,6 +38,23 @@ class XLAGraphExecutor : public torch::lazy::LazyGraphExecutor {
   void RegisterTensor(
       std::shared_ptr<torch::lazy::LazyTensor::Data> data) final;
   void UnregisterTensor(torch::lazy::LazyTensor::Data* data) final;
+
+  // TODO(yeounoh)to keep track of sharding annotated at::Tensor tensors.
+  std::unordered_map<XLATensor::Data*, size_t> GetShardedTensors() {
+    return DeviceContextArena::Get()->GetShardedTensors();
+  }
+  std::vector<std::shared_ptr<XLATensorImpl>> GetShardedTensorImpls() {
+    return DeviceContextArena::Get()->GetShardedTensorImpls();
+  }
+  void RegisterShardedTensorImpl(std::shared_ptr<XLATensorImpl> tensor) {
+    DeviceContextArena::Get()->RegisterShardedTensorImpl(tensor);
+  }
+  void RegisterShardedTensor(XLATensor::Data* data) {
+    DeviceContextArena::Get()->RegisterShardedTensor(data);
+  }
+  void UnregisterShardedTensor(XLATensor::Data* data) {
+    DeviceContextArena::Get()->UnregisterShardedTensor(data);
+  }
 
   // This method just syncs the tensors passed as argument. This method is
   // called at two places:
@@ -199,6 +217,29 @@ class XLAGraphExecutor : public torch::lazy::LazyGraphExecutor {
     std::vector<XLATensorPtr> GetLiveTensors(
         const torch::lazy::BackendDevice* device);
 
+    std::unordered_map<XLATensor::Data*, size_t> GetShardedTensors() {
+      return sharded_tensors_map;
+    }
+
+    std::vector<std::shared_ptr<XLATensorImpl>> GetShardedTensorImpls() {
+      return sharded_tensor_impl_vec;
+    }
+
+    void RegisterShardedTensor(XLATensor::Data* data) {
+      if (auto it = sharded_tensors_map.find(data);
+          it == sharded_tensors_map.end()) {
+        sharded_tensors_map[data] = sharded_tensors_map.size();
+      }
+    }
+
+    void RegisterShardedTensorImpl(std::shared_ptr<XLATensorImpl> tensor) {
+      sharded_tensor_impl_vec.push_back(tensor);
+    }
+
+    void UnregisterShardedTensor(XLATensor::Data* data) {
+      sharded_tensors_map.erase(data);
+    }
+
     // We override this to use our own + and * for torch::lazy::Value.
     torch::lazy::Value GetRngSeed(
         const torch::lazy::BackendDevice& device) final;
@@ -230,6 +271,10 @@ class XLAGraphExecutor : public torch::lazy::LazyGraphExecutor {
     std::unordered_map<torch::lazy::hash_t, std::vector<xla::Shape>,
                        torch::lazy::HashReducer>
         hash_to_output_shape_map;
+    // Keep track of sharded tensors. This assumes that each XLATensor::Data
+    // element is alive throughout the lifetime of DeviceContextArena.
+    std::unordered_map<XLATensor::Data*, size_t> sharded_tensors_map;
+    std::vector<std::shared_ptr<XLATensorImpl>> sharded_tensor_impl_vec;
     // We override this to use TensorToXlaData().
     torch::lazy::Value IrValueFromScalar(
         const at::Scalar& value, at::ScalarType scalar_type,

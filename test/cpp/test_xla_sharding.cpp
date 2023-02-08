@@ -208,5 +208,71 @@ TEST_F(XLAShardingTest, InputHandler) {
                                  at::kFloat));
 }
 
+using TensorShardingStore = ShardingUtil::TensorShardingStore;
+
+TEST_F(XLAShardingTest, TensorShardingStore) {
+  TensorShardingStore::ShardingInfo info{
+      std::make_shared<XLATensor::ShardingSpec>(
+          xla::HloSharding::Replicate().ToProto()),
+      torch::lazy::Value()};
+
+  int handle = 1;
+  TensorShardingStore::RegisterShardingInfo(handle, info);
+  EXPECT_TRUE(TensorShardingStore::GetShardingInfo(0) == nullptr);
+  EXPECT_TRUE(TensorShardingStore::GetShardingInfo(handle) != nullptr);
+
+  TensorShardingStore::UnregisterShardingInfo(handle);
+  EXPECT_TRUE(TensorShardingStore::GetShardingInfo(handle) == nullptr);
+
+  TensorShardingStore::RegisterShardingInfo(handle, info);
+  TensorShardingStore::Reset();
+  EXPECT_TRUE(TensorShardingStore::GetShardingInfo(handle) == nullptr);
+}
+
+TEST_F(XLAShardingTest, ShardInputDataNodes) {
+  if ((xla::sys_util::GetEnvString(xla::env::kEnvPjRtDevice, "") == "") ||
+      (xla::ComputationClient::Get()->GetLocalDevices().size() < 2)) {
+    GTEST_SKIP()
+        << "`PJRT_DEVICE` is not set, with more than 2 local devices, ("
+        << xla::ComputationClient::Get()->GetLocalDevices().size()
+        << " local devices detected).";
+  }
+
+  at::Tensor tensor = at::ones({8}, at::TensorOptions(at::kFloat));
+  const torch::lazy::BackendDevice* device = GetDefaultDevice();
+  torch::lazy::Value data_node = torch::lazy::MakeNode<DeviceData>(
+      std::move(TensorToXlaData(tenosr, *device)));
+  EXPECT_TRUE(xla::ComputationClient::Get()
+                  ->GetDataShards(UnwrapXlaData(
+                      DeviceData::Cast(new_data_node.node.get())->data()))
+                  .size() == 1);
+
+  // Takes a data nodes returns a new node with sharded data handle.
+  XLATensor::ShardingSpecPtr sharding =
+      std::make_shared<XLATensor::ShardingSpec>(
+          xla::HloSharding::Replicate().ToProto());
+  torch::lazy::Value new_data_node =
+      ShardingUtil::ShardInputDataNodes(data_node, sharding);
+  torch::lazy::BackendDataPtr new_data =
+      DeviceData::Cast(new_data_node.node.get())->data();
+  EXPECT_NE(data->GetHandle(), new_data->GetHandle());
+  EXPECT_TRUE(xla::ComputationClient::Get()
+                  ->GetDataShards(UnwrapXlaData(new_data))
+                  .size() > 1);
+
+  // Propagate sharding to op's data node operands.
+  torch::lazy::Value multiply = data_node * 2;
+  torch::lazy::Value new_multiply =
+      ShardingUtil::ShardInputDataNodes(multiply, sharding);
+  XlaNode* xla_node = dynamic_cast<XlaNode*>(new_multiply.node.get());
+  for (int i = 0; i < xla_node->operands_as_nodes()->size(); ++i) {
+    torch::lazy::Node* node = xla_node->get_operand(i);
+    new_data = torch::lazy::getBackend()->GetComputationDataFromNode(node);
+    EXPECT_TRUE(xla::ComputationClient::Get()
+                    ->GetDataShards(UnwrapXlaData(new_data))
+                    .size() > 1);
+  }
+}
+
 }  // namespace cpp_test
 }  // namespace torch_xla
