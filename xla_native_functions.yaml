@@ -257,7 +257,7 @@ supported:
   - put_
   - qr
   - random_
-  - random_.from
+  - random_.from_int
   - random_.to
   - reflection_pad2d
   - reflection_pad2d_backward
