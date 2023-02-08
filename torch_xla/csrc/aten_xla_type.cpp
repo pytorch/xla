@@ -1129,15 +1129,21 @@ at::Tensor XLANativeFunctions::empty_symint(
     c10::optional<bool> pin_memory,
     c10::optional<at::MemoryFormat> /* memory_format */) {
   TORCH_LAZY_FN_COUNTER("xla::");
-  auto size = C10_AS_INTARRAYREF_SLOW(sym_size);
+  c10::optional<at::IntArrayRef> int_sizes =
+      c10::asIntArrayRefSlowOpt(sym_size);
+  bool all_dims_static = int_sizes.has_value();
   // PT empty*() are optimizations to avoid initializing the data when it is
   // known it will be completely rewritten. But since for us doing a zero*()
   // does not actually end up doing any memory initialization, we use that and
   // avoid going to CPU for it. A common PT pattern is indeed doing empty() plus
   // s_copy_().
-  return bridge::AtenFromXlaTensor(tensor_methods::full(
-      XlaHelpers::I64List(size), 0, GetXlaDeviceOrCurrent(device),
-      at::dtype_or_default(dtype)));
+  if (all_dims_static) {
+    return bridge::AtenFromXlaTensor(tensor_methods::full(
+        XlaHelpers::I64List(int_sizes.value()), 0,
+        GetXlaDeviceOrCurrent(device), at::dtype_or_default(dtype)));
+  }
+  return bridge::AtenFromXlaTensor(tensor_methods::full_symint(
+      sym_size, 0, GetXlaDeviceOrCurrent(device), at::dtype_or_default(dtype)));
 }
 
 at::Tensor XLANativeFunctions::empty_strided_symint(
@@ -2510,6 +2516,27 @@ at::Tensor XLANativeFunctions::scatter_add(const at::Tensor& self, int64_t dim,
                                            const at::Tensor& src) {
   TORCH_LAZY_FN_COUNTER("xla::");
   return scatter_reduce_helper(self, dim, index, src, "add");
+}
+
+// TODO(sranlatais): mean is not supported; include_self=false also not
+// supported
+at::Tensor XLANativeFunctions::scatter_reduce(
+    const at::Tensor& self, int64_t dim, const at::Tensor& index,
+    const at::Tensor& src, c10::string_view reduce, bool include_self) {
+  TORCH_LAZY_FN_COUNTER("xla::");
+  if ((reduce == "sum" || reduce == "prod" || reduce == "amin" ||
+       reduce == "amax") &&
+      include_self) {
+    return bridge::AtenFromXlaTensor(tensor_methods::scatter_reduce(
+        bridge::GetXlaTensor(self), dim, bridge::GetXlaTensor(index),
+        bridge::GetXlaTensor(src), reduce, include_self));
+  } else {
+    return at::native::call_fallback_fn<
+        &xla_cpu_fallback, ATEN_OP2(scatter_reduce, two)>::call(self, dim,
+                                                                index, src,
+                                                                reduce,
+                                                                include_self);
+  }
 }
 
 at::Tensor XLANativeFunctions::select(const at::Tensor& self, int64_t dim,

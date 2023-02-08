@@ -108,6 +108,7 @@
 #include "torch_xla/csrc/ops/scalar.h"
 #include "torch_xla/csrc/ops/scatter.h"
 #include "torch_xla/csrc/ops/scatter_add.h"
+#include "torch_xla/csrc/ops/scatter_reduce.h"
 #include "torch_xla/csrc/ops/send.h"
 #include "torch_xla/csrc/ops/sgd_optimizer_step.h"
 #include "torch_xla/csrc/ops/softmax.h"
@@ -1236,6 +1237,24 @@ XLATensorPtr full_like(const XLATensorPtr& input, const at::Scalar& fill_value,
                            device, *scalar_type);
 }
 
+XLATensorPtr full_symint(at::SymIntArrayRef sym_size,
+                         const at::Scalar& fill_value,
+                         const torch::lazy::BackendDevice& device,
+                         at::ScalarType scalar_type) {
+  XLA_CHECK(std::all_of(sym_size.begin(), sym_size.end(), [](at::SymInt dim) {
+    if (!dim.is_symbolic()) {
+      return dim >= 0;
+    }
+    return true;
+  })) << "Dimensions cannot be negative numbers";
+
+  return XLATensor::Create(
+      XLAGraphExecutor::Get()->GetIrValueForScalar(
+          fill_value, MakeXlaPrimitiveType(scalar_type, &device), sym_size,
+          device),
+      device, scalar_type);
+}
+
 XLATensorPtr gather(const XLATensorPtr& input, int64_t dim,
                     const XLATensorPtr& index) {
   xla::Shape input_shape = input->shape();
@@ -2179,6 +2198,16 @@ XLATensorPtr scatter_add(const XLATensorPtr& input, int64_t dim,
       value, input->shape(), input->GetDevice());
   return input->CreateFrom(torch::lazy::MakeNode<ScatterAdd>(
       input->GetIrValue(), index->GetIrValue(), constant,
+      torch::lazy::GetCanonicalDimensionIndex(dim,
+                                              input->shape().get().rank())));
+}
+
+XLATensorPtr scatter_reduce(const XLATensorPtr& input, int64_t dim,
+                            const XLATensorPtr& index, const XLATensorPtr& src,
+                            c10::string_view reduce, bool include_self) {
+  return input->CreateFrom(torch::lazy::MakeNode<ScatterReduce>(
+      input->GetIrValue(), index->GetIrValue(), src->GetIrValue(), reduce,
+      include_self,
       torch::lazy::GetCanonicalDimensionIndex(dim,
                                               input->shape().get().rank())));
 }

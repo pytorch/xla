@@ -46,6 +46,7 @@
 #include "torch_xla/csrc/ops/device_data.h"
 #include "torch_xla/csrc/ops/dynamic_ir.h"
 #include "torch_xla/csrc/ops/expand.h"
+#include "torch_xla/csrc/ops/expand_symint.h"
 #include "torch_xla/csrc/ops/ops.h"
 #include "torch_xla/csrc/ops/view.h"
 #include "torch_xla/csrc/ops/xla_ops.h"
@@ -253,6 +254,14 @@ torch::lazy::Value XLAGraphExecutor::GetIrValueForScalar(
         ir_value, torch::lazy::ToVector<int64_t>(dimensions));
   }
   return ir_value;
+}
+
+torch::lazy::Value XLAGraphExecutor::GetIrValueForScalar(
+    const at::Scalar& value, xla::PrimitiveType type,
+    c10::SymIntArrayRef sym_size, const torch::lazy::BackendDevice& device) {
+  torch::lazy::Value ir_value = GetIrValueForScalar(value, type, device);
+  SymIntElements size_elements = SymIntElements(sym_size);
+  return torch::lazy::MakeNode<ExpandSymInt>(ir_value, size_elements);
 }
 
 torch::lazy::Value XLAGraphExecutor::GetIrValueForScalar(
@@ -1093,7 +1102,8 @@ XLAGraphExecutor::CompilationResult XLAGraphExecutor::Compile(
   // TODO(yeounoh) aliasing is disabled for partitioned computation,
   // since the current aliasing compares the unpartitioned input and output
   // shapes which can lead to an incorrect aliasing pairs if sharded.
-  if (enable_aliasing && coll.config.sync_ltc_data && !is_sharded) {
+  if (enable_aliasing && coll.config.sync_ltc_data &&
+      coll.config.force_ltc_data && !is_sharded) {
     // We can only alias at the step barrier, when force_ltc_data is true.
     // Consider the case:
     //   1. Tensor A(DEVICE_DATA)
