@@ -197,7 +197,8 @@ std::vector<Analyzer*>* GetAnalyzers() {
 
 }  // namespace
 
-std::string CreatePerformanceReport(const std::map<std::string, xla::Metric>& xrt_metrics) {
+std::string CreatePerformanceReport(
+    const std::map<std::string, xla::Metric>& xrt_metrics) {
   std::stringstream ss;
   std::vector<Analyzer*>* analyzers = GetAnalyzers();
   for (auto const& analyzer : *analyzers) {
