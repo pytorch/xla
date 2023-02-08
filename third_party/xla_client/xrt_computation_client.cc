@@ -26,7 +26,7 @@
 #include "tensorflow/core/framework/allocator.h"
 #include "tensorflow/core/profiler/lib/traceme.h"
 #include "tensorflow/core/util/device_name_utils.h"
-#include "tensorflow/tsl/lib/math/math_util.h"
+#include "third_party/tsl/lib/math/math_util.h"
 
 namespace xla {
 namespace {
