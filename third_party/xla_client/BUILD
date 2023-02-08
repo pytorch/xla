@@ -132,14 +132,13 @@ cc_library(
         "@com_google_absl//absl/numeric:int128",
         "@com_google_absl//absl/strings",
     ] + if_cuda_is_configured([
-        "@local_config_nccl//:nccl",
         "@org_tensorflow//tensorflow/compiler/jit:xla_gpu_device",
         "@org_tensorflow//tensorflow/compiler/xla/stream_executor:cuda_platform",
     ]) + if_with_tpu_support([
         "@org_tensorflow//tensorflow/compiler/jit:xla_tpu_device",
         "@org_tensorflow//tensorflow/compiler/jit:xla_tpu_jit",
     ]),
-    alwayslink = 1,
+    alwayslink = True,
 )
 
 cc_library(
@@ -244,7 +243,9 @@ cc_library(
         "@com_google_absl//absl/strings",
         "@com_google_absl//absl/types:span",
         "@org_tensorflow//tensorflow/compiler/xla:types",
-    ],
+    ] + if_cuda_is_configured([
+        "@local_config_nccl//:nccl",
+    ]),
     alwayslink = True,
 )
 

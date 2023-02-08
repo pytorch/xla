@@ -12,8 +12,7 @@ build --nocheck_visibility
 
 #build --define open_source_build=true
 
-# We can set this to `standalone` after https://github.com/bazelbuild/bazel/issues/15359 is resolved.
-build --spawn_strategy=sandboxed
+build --spawn_strategy=standalone
 
 build --enable_platform_specific_config
 
@@ -49,11 +48,11 @@ build:mkl_open_source_only --define=tensorflow_mkldnn_contraction_kernel=1
 build:cuda --repo_env TF_NEED_CUDA=1
 # "sm" means we emit only cubin, which is forward compatible within a GPU generation.
 # "compute" means we emit both cubin and PTX, which is larger but also forward compatible to future GPU generations.
+build:cuda --action_env TF_CUDA_COMPUTE_CAPABILITIES="7.0,7.5,8.0"
 build:cuda --crosstool_top=@local_config_cuda//crosstool:toolchain
 build:cuda --@local_config_cuda//:enable_cuda
 build:cuda --@org_tensorflow//tensorflow/compiler/xla/python:enable_gpu=true
 build:cuda --define=xla_python_enable_gpu=true
-build:cuda --cxxopt=-DXLA_CUDA=1
 
 # This config refers to building CUDA op kernels with clang.
 build:cuda_clang --config=cuda

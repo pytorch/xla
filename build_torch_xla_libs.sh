@@ -45,6 +45,7 @@ else
   BUILD_STRATEGY="local"
 fi
 
+
 if [[ "$TPUVM_MODE" == "1" ]]; then
   OPTS+=(--config=tpu)
 fi
