@@ -156,8 +156,13 @@ function run_torch_xla_tests() {
     fi
 
     pushd test/cpp
-    echo "Running C++ Tests"
+    echo "Running C++ Tests on XRT"
     ./run_tests.sh
+    # TODO(wcromar): Enable PJRT C++ tests on GPU
+    if [ -z "$GPU_NUM_DEVICES" ]; then
+      echo "Running C++ Tests on PJRT"
+      PJRT_DEVICE=CPU ./run_tests.sh
+    fi
 
     if ! [ -x "$(command -v nvidia-smi)"  ]
     then

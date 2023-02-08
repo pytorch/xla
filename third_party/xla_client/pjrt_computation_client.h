@@ -129,6 +129,8 @@ class PjRtComputationClient : public ComputationClient {
   std::shared_ptr<PjRtClient> client_;
   std::unordered_map<std::string, xla::PjRtDevice* const> string_to_device_;
   std::shared_ptr<std::vector<std::string>> replication_devices_;
+  // TODO(wcromar): Remove this when PJRT C API supports logical_on_device_shape
+  bool supports_logical_on_device_shape_ = true;
 
   xla::PjRtDevice* StringToPjRtDevice(const std::string& device);
 
