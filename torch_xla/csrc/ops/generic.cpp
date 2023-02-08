@@ -47,10 +47,16 @@ Generic::Generic(torch::lazy::OpKind op, torch::lazy::OpList operands,
               lower_fn_(std::move(lower_fn)), hash_seed_(hash_seed) {}
 
 torch::lazy::NodePtr Generic::Clone() const {
+  TF_LOG(INFO) << "Cloning without sharding";
+  TF_LOG(INFO) << "num_outputs: " << num_outputs();
+  // TF_LOG(INFO) << "size of oplist: " << operands_as_oplist().size();
   return Clone(operands_as_oplist());
 }
 
 torch::lazy::NodePtr Generic::Clone(torch::lazy::OpList operands) const {
+  TF_LOG(INFO) << "Cloning with sharding";
+  TF_LOG(INFO) << "num_outputs: " << num_outputs();
+  // TF_LOG(INFO) << "size of oplist: " << operands_as_oplist().size();
   return torch::lazy::MakeNode<Generic>(op(), operands, xla_shape(), lower_fn_,
                                         num_outputs(), hash_seed_);
 }
