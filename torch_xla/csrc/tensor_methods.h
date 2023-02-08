@@ -359,6 +359,10 @@ XLATensorPtr full(absl::Span<const int64_t> size, const at::Scalar& fill_value,
 XLATensorPtr full_like(const XLATensorPtr& input, const at::Scalar& fill_value,
                        const torch::lazy::BackendDevice& device,
                        c10::optional<at::ScalarType> scalar_type);
+XLATensorPtr full_symint(at::SymIntArrayRef sym_size,
+                         const at::Scalar& fill_value,
+                         const torch::lazy::BackendDevice& device,
+                         at::ScalarType scalar_type);
 
 XLATensorPtr gather(const XLATensorPtr& input, int64_t dim,
                     const XLATensorPtr& index);
@@ -714,6 +718,10 @@ XLATensorPtr scatter_add(const XLATensorPtr& input, int64_t dim,
                          const XLATensorPtr& index, const XLATensorPtr& src);
 XLATensorPtr scatter_add(const XLATensorPtr& input, int64_t dim,
                          const XLATensorPtr& index, const at::Scalar& value);
+
+XLATensorPtr scatter_reduce(const XLATensorPtr& input, int64_t dim,
+                            const XLATensorPtr& index, const XLATensorPtr& src,
+                            c10::string_view reduce, bool include_self);
 
 XLATensorPtr select(const XLATensorPtr& input, int64_t dim, int64_t index);
 

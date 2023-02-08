@@ -232,13 +232,18 @@ void XLATensor::SetShardingSpec(const ShardingSpec& sharding) {
   // Existing annotation must be cleared explicitly. We do not clear and
   // overwrite the existing sharding on the user's behalf. This is a no-op if
   // the same sharding already applied.
-  if (sharding_spec() == nullptr ||
-      !ShardingUtil::EqualShardingSpecs(sharding, *sharding_spec())) {
+  if (!sharding_spec()) {
     TORCH_LAZY_COUNTER("SetShardingSpec", 1);
     data()->sharding = std::make_shared<ShardingSpec>(sharding);
-    dynamic_cast<XlaNode*>(GetIrValue().node.get())
-        ->SetSharding(sharding.sharding);
+  } else {
+    XLA_CHECK(ShardingUtil::EqualShardingSpecs(sharding, *sharding_spec()))
+        << "Existing sharding annotation, "
+        << sharding_spec()->sharding.DebugString()
+        << ", must be cleared before applying a new one, "
+        << sharding.sharding.DebugString();
   }
+  dynamic_cast<XlaNode*>(GetIrValue().node.get())
+      ->SetSharding(sharding_spec()->sharding);
 }
 void XLATensor::ClearShardingSpec() {
   data()->sharding = nullptr;
@@ -634,8 +639,13 @@ c10::SymNode XLASymNodeImpl::add(const c10::SymNode& other) {
 }
 
 c10::SymNode XLASymNodeImpl::sub(const c10::SymNode& other) {
-  XLA_CHECK(false) << "XLASymNodeImpl::" << __FUNCTION__
-                   << " has not been implemented.";
+  TORCH_LAZY_FN_COUNTER("xla::size_");
+
+  torch_xla::XLASymNodeImpl* p_other =
+      dynamic_cast<XLASymNodeImpl*>(other.get());
+  torch::lazy::NodePtr n_sub =
+      torch::lazy::MakeNode<SizeSub>(node(), p_other->node());
+  return c10::make_intrusive<XLASymNodeImpl>(n_sub);
 }
 
 c10::SymNode XLASymNodeImpl::mul(const c10::SymNode& other) {

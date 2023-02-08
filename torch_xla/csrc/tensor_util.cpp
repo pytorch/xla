@@ -962,7 +962,7 @@ std::vector<torch::lazy::BackendDataPtr> CreateTensorsData(
       }
       new_handles.push_back(
           xla::ComputationClient::Get()->TransferShardsToServer(
-              source_tensors, devices[i], shape));
+              source_tensors, devices[i], shape, sharding));
     } else {
       // If data is not explicilty marked for sharding, then it is replicated to
       // the rest of the available devices. This implicit replication is needed

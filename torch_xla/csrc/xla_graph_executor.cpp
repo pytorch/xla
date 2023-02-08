@@ -46,6 +46,7 @@
 #include "torch_xla/csrc/ops/device_data.h"
 #include "torch_xla/csrc/ops/dynamic_ir.h"
 #include "torch_xla/csrc/ops/expand.h"
+#include "torch_xla/csrc/ops/expand_symint.h"
 #include "torch_xla/csrc/ops/ops.h"
 #include "torch_xla/csrc/ops/view.h"
 #include "torch_xla/csrc/ops/xla_ops.h"
@@ -134,7 +135,8 @@ void XLAGraphExecutor::DeviceContextArena::SaveGraphAsString(
     torch::lazy::hash_t hash, absl::Span<const XLATensorPtr> tensors,
     const std::vector<size_t>* indices, DebugUtil::GraphFormat format) {
   static bool should_save_graph =
-      xla::sys_util::GetEnvOrdinalPath("XLA_SAVE_TENSORS_FILE", "") != "";
+      xla::sys_util::GetEnvOrdinalPath("XLA_SAVE_TENSORS_FILE", "",
+                                       GetCurrentDevice().ordinal()) != "";
   if (should_save_graph &&
       hash_to_graph_map.find(hash) == hash_to_graph_map.end()) {
     hash_to_graph_map[hash] =
@@ -252,6 +254,14 @@ torch::lazy::Value XLAGraphExecutor::GetIrValueForScalar(
         ir_value, torch::lazy::ToVector<int64_t>(dimensions));
   }
   return ir_value;
+}
+
+torch::lazy::Value XLAGraphExecutor::GetIrValueForScalar(
+    const at::Scalar& value, xla::PrimitiveType type,
+    c10::SymIntArrayRef sym_size, const torch::lazy::BackendDevice& device) {
+  torch::lazy::Value ir_value = GetIrValueForScalar(value, type, device);
+  SymIntElements size_elements = SymIntElements(sym_size);
+  return torch::lazy::MakeNode<ExpandSymInt>(ir_value, size_elements);
 }
 
 torch::lazy::Value XLAGraphExecutor::GetIrValueForScalar(
@@ -411,8 +421,8 @@ torch::lazy::hash_t XLAGraphExecutor::GetGraphHash(
 
 void XLAGraphExecutor::MaybeDumpGraph(std::string name,
                                       torch::lazy::hash_t hash) {
-  static const std::string save_file =
-      xla::sys_util::GetEnvOrdinalPath("XLA_SAVE_TENSORS_FILE", "");
+  thread_local const std::string save_file = xla::sys_util::GetEnvOrdinalPath(
+      "XLA_SAVE_TENSORS_FILE", "", GetCurrentDevice().ordinal());
   if (!save_file.empty()) {
     std::string graph = DeviceContextArena::Get()->GetGraphByHash(hash);
     if (graph.size() == 0) {
@@ -832,6 +842,7 @@ void XLAGraphExecutor::ExtractIRAndPrepareXlaData_(
   for (auto index : indices) {
     XLATensorPtr& tensor = (*tensors)[index];
     torch::lazy::Value ir_value = tensor->CurrentIrValue();
+
     ir_values.push_back(ir_value);
     const torch::lazy::BackendDevice& tensor_device = tensor->GetDevice();
     xla::Shape shape = MakeShapeWithDeviceLayout(
@@ -1091,7 +1102,8 @@ XLAGraphExecutor::CompilationResult XLAGraphExecutor::Compile(
   // TODO(yeounoh) aliasing is disabled for partitioned computation,
   // since the current aliasing compares the unpartitioned input and output
   // shapes which can lead to an incorrect aliasing pairs if sharded.
-  if (enable_aliasing && coll.config.sync_ltc_data && !is_sharded) {
+  if (enable_aliasing && coll.config.sync_ltc_data &&
+      coll.config.force_ltc_data && !is_sharded) {
     // We can only alias at the step barrier, when force_ltc_data is true.
     // Consider the case:
     //   1. Tensor A(DEVICE_DATA)
@@ -1152,6 +1164,8 @@ XLAGraphExecutor::CompilationResult XLAGraphExecutor::Compile(
   TF_VLOG(3) << "Compiling IR graph hash "
              << torch::lazy::HashToString(coll.hash) << " on device "
              << coll.device << " done!";
+  TF_VLOG(5) << "Compiled program shape "
+             << computations.front()->program_shape().ToString() << std::endl;
   TF_VLOG(5)
       << "Graph hash " << torch::lazy::HashToString(coll.hash)
       << " is computation hash "

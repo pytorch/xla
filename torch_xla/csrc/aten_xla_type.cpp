@@ -1129,15 +1129,21 @@ at::Tensor XLANativeFunctions::empty_symint(
     c10::optional<bool> pin_memory,
     c10::optional<at::MemoryFormat> /* memory_format */) {
   TORCH_LAZY_FN_COUNTER("xla::");
-  auto size = C10_AS_INTARRAYREF_SLOW(sym_size);
+  c10::optional<at::IntArrayRef> int_sizes =
+      c10::asIntArrayRefSlowOpt(sym_size);
+  bool all_dims_static = int_sizes.has_value();
   // PT empty*() are optimizations to avoid initializing the data when it is
   // known it will be completely rewritten. But since for us doing a zero*()
   // does not actually end up doing any memory initialization, we use that and
   // avoid going to CPU for it. A common PT pattern is indeed doing empty() plus
   // s_copy_().
-  return bridge::AtenFromXlaTensor(tensor_methods::full(
-      XlaHelpers::I64List(size), 0, GetXlaDeviceOrCurrent(device),
-      at::dtype_or_default(dtype)));
+  if (all_dims_static) {
+    return bridge::AtenFromXlaTensor(tensor_methods::full(
+        XlaHelpers::I64List(int_sizes.value()), 0,
+        GetXlaDeviceOrCurrent(device), at::dtype_or_default(dtype)));
+  }
+  return bridge::AtenFromXlaTensor(tensor_methods::full_symint(
+      sym_size, 0, GetXlaDeviceOrCurrent(device), at::dtype_or_default(dtype)));
 }
 
 at::Tensor XLANativeFunctions::empty_strided_symint(
@@ -2512,6 +2518,27 @@ at::Tensor XLANativeFunctions::scatter_add(const at::Tensor& self, int64_t dim,
   return scatter_reduce_helper(self, dim, index, src, "add");
 }
 
+// TODO(sranlatais): mean is not supported; include_self=false also not
+// supported
+at::Tensor XLANativeFunctions::scatter_reduce(
+    const at::Tensor& self, int64_t dim, const at::Tensor& index,
+    const at::Tensor& src, c10::string_view reduce, bool include_self) {
+  TORCH_LAZY_FN_COUNTER("xla::");
+  if ((reduce == "sum" || reduce == "prod" || reduce == "amin" ||
+       reduce == "amax") &&
+      include_self) {
+    return bridge::AtenFromXlaTensor(tensor_methods::scatter_reduce(
+        bridge::GetXlaTensor(self), dim, bridge::GetXlaTensor(index),
+        bridge::GetXlaTensor(src), reduce, include_self));
+  } else {
+    return at::native::call_fallback_fn<
+        &xla_cpu_fallback, ATEN_OP2(scatter_reduce, two)>::call(self, dim,
+                                                                index, src,
+                                                                reduce,
+                                                                include_self);
+  }
+}
+
 at::Tensor XLANativeFunctions::select(const at::Tensor& self, int64_t dim,
                                       int64_t index) {
   TORCH_LAZY_FN_COUNTER("xla::");
@@ -3030,6 +3057,32 @@ at::Tensor& XLANativeFunctions::zero_(at::Tensor& self) {
   XLATensorPtr self_tensor = bridge::GetXlaTensor(self);
   tensor_methods::zero_(self_tensor);
   return self;
+}
+
+std::tuple<at::Tensor, at::Tensor, at::Tensor> XLANativeFunctions::_linalg_svd(
+    const at::Tensor& self, bool full_matrices, bool compute_uv,
+    c10::optional<c10::string_view> /* driver */) {
+  // The optional driver string is only for CUDA with a cuSOLVER backend.
+  TORCH_LAZY_FN_COUNTER("xla::");
+  // As per https://pytorch.org/docs/stable/generated/torch.svd.html,
+  // The second boolean argument is exactly opposite between
+  // torch::svd and torch::_linalg_svd, hence the negation of full_matrices.
+  XLATensorPtr self_tensor = bridge::GetXlaTensor(self);
+  auto results = tensor_methods::svd(self_tensor, !full_matrices, compute_uv);
+  auto u = std::get<0>(results);
+  auto s = std::get<1>(results);
+  auto vh = tensor_methods::transpose(std::get<2>(results), 0, 1);
+  if (!compute_uv) {
+    // When compute_uv is false, torch::_linalg_svd returns an empty tensor for
+    // u and vh.
+    u = tensor_methods::full({0}, 0, self_tensor->GetDevice(),
+                             self_tensor->dtype());
+    vh = tensor_methods::full({0}, 0, self_tensor->GetDevice(),
+                              self_tensor->dtype());
+  }
+  return std::make_tuple(bridge::AtenFromXlaTensor(u),
+                         bridge::AtenFromXlaTensor(s),
+                         bridge::AtenFromXlaTensor(vh));
 }
 
 at::Scalar XLANativeFunctions::_local_scalar_dense(const at::Tensor& self) {

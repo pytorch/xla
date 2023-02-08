@@ -26,6 +26,7 @@ class DynamoGraphDumpTest(unittest.TestCase):
     save_file = os.getenv('XLA_SAVE_TENSORS_FILE')
     if not save_file:
       assert False, "This test should be run with XLA_SAVE_TENSORS_FILE"
+    save_file += '.0'
     device = xm.xla_device()
     xla_x = torch.tensor(100.0).to(device)
     xla_y = torch.tensor(200.0).to(device)

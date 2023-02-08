@@ -30,7 +30,10 @@ Put the following line in your program to generate a report:
 ```Python
 import torch_xla.debug.metrics as met
 
-print(met.metrics_report())
+# For short report that only contains a few key metrics.
+print(met.short_metrics_report())
+# For full report that includes all metrics.
+print(met.short_metrics_report())
 ```
 
 ## Understand The Metrics Report
@@ -72,6 +75,14 @@ Counter: aten::nonzero
 
 If you see `aten::` ops other than `nonzero` and `_local_scalar_dense`, that usually means a missing
 lowering in PyTorch/XLA. Feel free to open a feature request for it on [GitHub issues](https://github.com/pytorch/xla/issues).
+
+## Clar The Metrics Report
+If you want to clear the metrics between steps/epoches, you can use
+```Python
+import torch_xla.debug.metrics as met
+
+met.clear_all()
+```
 
 ## Performance Profiling
 To profile your workload in depth to undertand bottlenecks please check the following resources:
