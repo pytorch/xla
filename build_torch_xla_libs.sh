@@ -38,7 +38,12 @@ SANDBOX_BASE="${XLA_SANDBOX_BASE}"
 if [ -z "$XLA_SANDBOX_BASE" ]; then
   SANDBOX_BASE="/tmp"
 fi
-BUILD_STRATEGY="sandboxed --sandbox_base=${SANDBOX_BASE}"
+if [[ "$XLA_SANDBOX_BUILD" == "1" ]]; then
+  BUILD_STRATEGY="sandboxed --sandbox_base=${SANDBOX_BASE}"
+else
+  # We can remove this after https://github.com/bazelbuild/bazel/issues/15359 is resolved
+  BUILD_STRATEGY="local"
+fi
 
 if [[ "$TPUVM_MODE" == "1" ]]; then
   OPTS+=(--config=tpu)
