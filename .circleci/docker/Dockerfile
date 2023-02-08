@@ -90,7 +90,7 @@ RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
 RUN . $CARGO_HOME/env && \
     git clone --recursive https://github.com/pytorch/sccache.git && \
     cd sccache && \
-    cargo install sccache && \
+    cargo install --path . && \
     cd .. && \
     rm -rf sccache
 
