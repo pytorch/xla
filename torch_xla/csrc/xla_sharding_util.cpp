@@ -15,8 +15,10 @@
 #include "tensorflow/compiler/xla/service/spmd/spmd_partitioner.h"
 #include "tensorflow/compiler/xla/xla.pb.h"
 #include "torch_xla/csrc/device.h"
+#include "torch_xla/csrc/ops/device_data.h"
 #include "torch_xla/csrc/tensor.h"
 #include "torch_xla/csrc/tensor_util.h"
+#include "torch_xla/csrc/xla_graph_executor.h"
 
 namespace torch_xla {
 namespace {
@@ -46,6 +48,13 @@ std::vector<int64_t> TileAssignmentDimensions(
 }
 
 }  // namespace
+
+using Handle = int64_t;
+using ShardingInfo = ShardingUtil::TensorShardingStore::ShardingInfo;
+
+std::mutex ShardingUtil::TensorShardingStore::mutex_;
+std::unordered_map<Handle, ShardingInfo>
+    ShardingUtil::TensorShardingStore::tensor_sharding_map_;
 
 bool ShardingUtil::SetHloSharding(LoweringContext* lowering_ctx) {
   bool is_sharded = false;
@@ -223,8 +232,126 @@ ShardingUtil::InputHandler(
       }
     }
   }
-
   return arguments_by_device;
+}
+
+torch::lazy::Value ShardingUtil::ShardInputDataNodes(
+    torch::lazy::Value ir_value, XLATensor::ShardingSpecPtr sharding_spec) {
+  XLA_CHECK(ir_value) << "An empty IR node is passed for sharding.";
+  XLA_CHECK(sharding_spec) << "Must pass a valid sharding spec.";
+
+  if (torch::lazy::BackendDataPtr node_data =
+          torch::lazy::getBackend()->GetComputationDataFromNode(
+              ir_value.node.get())) {
+    XLAGraphExecutor::Get()->DeviceBarrier(node_data->device());
+    if (node_data->device().type() == (int8_t)XlaDeviceType::SPMD) {
+      return ir_value;
+    }
+
+    // If `ir_value` is a data node without sharding, then shard and return.
+    torch::lazy::Value new_data_node;
+    if (const ShardingInfo* sharding_info =
+            TensorShardingStore::GetShardingInfo(node_data->GetHandle())) {
+      new_data_node = sharding_info->tensor_node;
+    } else {
+      std::vector<at::Tensor> tensors =
+          XlaDataToTensors({node_data}, at::kFloat);
+      torch::lazy::BackendDataPtr handle = CreateTensorsData(
+          tensors, std::vector<XLATensor::ShardingSpecPtr>{sharding_spec},
+          std::vector<std::string>{GetVirtualDevice().toString()})[0];
+      new_data_node = torch::lazy::MakeNode<DeviceData>(handle);
+      dynamic_cast<XlaNode*>(new_data_node.node.get())
+          ->SetSharding(sharding_spec->sharding);
+
+      TensorShardingStore::RegisterShardingInfo(node_data->GetHandle(),
+                                                {sharding_spec, new_data_node});
+    }
+    TORCH_LAZY_COUNTER("ShardInputDataNodes", 1);
+    return new_data_node;
+  } else {
+    // Propagate `sharding_spec` and shard the operand data nodes.
+    XlaNode* xla_node = dynamic_cast<XlaNode*>(ir_value.node.get());
+    for (int i = 0; i < xla_node->operands_as_nodes()->size(); ++i) {
+      torch::lazy::Node* node = xla_node->get_operand(i);
+      torch::lazy::BackendDataPtr node_data =
+          torch::lazy::getBackend()->GetComputationDataFromNode(node);
+
+      if (node_data &&
+          !(dynamic_cast<XlaNode*>(node)->GetSharding() != nullptr)) {
+        XLAGraphExecutor::Get()->DeviceBarrier(node_data->device());
+        XLA_CHECK(node_data->device().type() != (int8_t)XlaDeviceType::SPMD)
+            << "SPMD virtual device data must be sharding annotated.";
+
+        torch::lazy::Value new_data_node;
+        if (const ShardingInfo* sharding_info =
+                TensorShardingStore::GetShardingInfo(node_data->GetHandle())) {
+          new_data_node = sharding_info->tensor_node;
+        } else {
+          std::vector<at::Tensor> tensors =
+              XlaDataToTensors({node_data}, at::kFloat);
+          torch::lazy::BackendDataPtr handle = CreateTensorsData(
+              tensors, std::vector<XLATensor::ShardingSpecPtr>{sharding_spec},
+              std::vector<std::string>{GetVirtualDevice().toString()})[0];
+          new_data_node = torch::lazy::MakeNode<DeviceData>(handle);
+          dynamic_cast<XlaNode*>(new_data_node.node.get())
+              ->SetSharding(sharding_spec->sharding);
+
+          TensorShardingStore::RegisterShardingInfo(
+              node_data->GetHandle(), {sharding_spec, new_data_node});
+        }
+        TORCH_LAZY_COUNTER("ShardInputDataNodes", 1);
+        xla_node->set_operand(std::move(new_data_node.node), i);
+      }
+    }
+  }
+  return ir_value;
+}
+
+void ShardingUtil::ApplyTensorShardingStore(
+    std::vector<torch::lazy::Value> roots) {
+  // Sharding & virtual device are available are only available on PJRT.
+  if (xla::sys_util::GetEnvString("PJRT_DEVICE", "").size() == 0) {
+    return;
+  }
+
+  std::vector<XlaNode*> queue;
+  for (auto& ir_value : roots) {
+    if (ir_value) {
+      queue.push_back(dynamic_cast<XlaNode*>(ir_value.node.get()));
+    }
+  }
+
+  std::unordered_map<XlaNode*, int> registry;
+  while (!queue.empty()) {
+    XlaNode* xla_node = queue.back();
+    queue.pop_back();
+
+    // Keep track of visited nodes to avoid any loops.
+    if (registry.find(xla_node) == registry.end()) {
+      registry[xla_node] = registry.size();
+    } else {
+      continue;
+    }
+
+    for (int i = 0; i < xla_node->operands_as_nodes()->size(); ++i) {
+      torch::lazy::Node* node = xla_node->get_operand(i);
+      torch::lazy::BackendDataPtr node_data =
+          torch::lazy::getBackend()->GetComputationDataFromNode(node);
+
+      if (node_data) {
+        // Replace data node operand with a sharded one if exists.
+        if (const ShardingInfo* sharding_info =
+                TensorShardingStore::GetShardingInfo(node_data->GetHandle())) {
+          xla_node->set_operand(sharding_info->tensor_node.node, i);
+        }
+      } else {
+        queue.push_back(dynamic_cast<XlaNode*>(node));
+      }
+    }
+  }
+
+  // Reset TensorShardingStore cache.
+  TensorShardingStore::Reset();
 }
 
 std::vector<at::Tensor> ShardingUtil::ShardTensor(
@@ -257,13 +384,14 @@ std::vector<at::Tensor> ShardingUtil::ShardTensor(
       }
 
       // Given the shard's row-major index `i`, we need to calculate shard's
-      // coordinates (n_0, ..., n_d) in the tiling to generate the index slices.
-      // Using `N_j = tile_shape[j]` and `0 <= n_j < N_j`, the following
-      // equation needs to be solved for all n_j:
-      //            `i = n_d + N_d * (n_{d-1} + N_{d-1} * (... + (N_1 * n_0)))`
-      // Let `offset_j = n_j + N_j * (n_{j-1} + N_{j-1} * (... + (N_1 * n_0)))`.
-      // Then `offset_d = i`, `n_j = offset_j % N_j`, and `offset_{j-1} =
-      // offset_j / N_j`.
+      // coordinates (n_0, ..., n_d) in the tiling to generate the index
+      // slices. Using `N_j = tile_shape[j]` and `0 <= n_j < N_j`, the
+      // following equation needs to be solved for all n_j:
+      //            `i = n_d + N_d * (n_{d-1} + N_{d-1} * (... + (N_1 *
+      //            n_0)))`
+      // Let `offset_j = n_j + N_j * (n_{j-1} + N_{j-1} * (... + (N_1 *
+      // n_0)))`. Then `offset_d = i`, `n_j = offset_j % N_j`, and
+      // `offset_{j-1} = offset_j / N_j`.
       int offset = i;
       std::vector<at::indexing::TensorIndex> indices;
       for (int j = tile_shape.size() - 1; j >= 0; j--) {

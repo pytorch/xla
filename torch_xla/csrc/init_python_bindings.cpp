@@ -1524,6 +1524,9 @@ void InitXlaModuleBindings(py::module m) {
     auto new_sharding_spec =
         std::make_shared<XLATensor::ShardingSpec>(sharding);
     XLATensorPtr xtensor = bridge::GetXlaTensor(input);
+    XLAGraphExecutor::Get()->RegisterShardedTensor(xtensor->data().get());
+    XLAGraphExecutor::Get()->RegisterShardedTensorImpl(
+        std::shared_ptr<XLATensorImpl>(bridge::GetXlaTensorImpl(input)));
 
     at::Tensor cpu_tensor;
     if (xla::sys_util::GetEnvBool("XLA_USE_SPMD", false) &&

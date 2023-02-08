@@ -10,6 +10,8 @@
 #include "third_party/xla_client/sys_util.h"
 #include "torch_xla/csrc/aten_xla_bridge.h"
 #include "torch_xla/csrc/helpers.h"
+#include "torch_xla/csrc/ops/device_data.h"
+#include "torch_xla/csrc/ops/ops.h"
 #include "torch_xla/csrc/tensor.h"
 #include "torch_xla/csrc/tensor_util.h"
 #include "torch_xla/csrc/xla_sharding_util.h"
@@ -237,6 +239,73 @@ TEST_F(XLAShardingTest, InputHandler) {
   auto arg1_dev1 = arguments_by_device[1][1];
   EXPECT_TRUE(XlaDataValuesEqual(WrapXlaData(arg1_dev0), WrapXlaData(arg1_dev1),
                                  at::kFloat));
+}
+
+using TensorShardingStore = ShardingUtil::TensorShardingStore;
+
+TEST_F(XLAShardingTest, TensorShardingStore) {
+  TensorShardingStore::ShardingInfo info{
+      std::make_shared<XLATensor::ShardingSpec>(
+          xla::HloSharding::Replicate().ToProto()),
+      torch::lazy::Value()};
+
+  int handle = 1;
+  TensorShardingStore::RegisterShardingInfo(handle, info);
+  EXPECT_TRUE(TensorShardingStore::GetShardingInfo(0) == nullptr);
+  EXPECT_TRUE(TensorShardingStore::GetShardingInfo(handle) != nullptr);
+
+  TensorShardingStore::UnregisterShardingInfo(handle);
+  EXPECT_TRUE(TensorShardingStore::GetShardingInfo(handle) == nullptr);
+
+  TensorShardingStore::RegisterShardingInfo(handle, info);
+  TensorShardingStore::Reset();
+  EXPECT_TRUE(TensorShardingStore::GetShardingInfo(handle) == nullptr);
+}
+
+TEST_F(XLAShardingTest, ShardInputDataNodes) {
+  if ((xla::sys_util::GetEnvString(xla::env::kEnvPjRtDevice, "") == "") ||
+      (xla::ComputationClient::Get()->GetLocalDevices().size() < 2)) {
+    GTEST_SKIP()
+        << "`PJRT_DEVICE` is not set, with more than 2 local devices, ("
+        << xla::ComputationClient::Get()->GetLocalDevices().size()
+        << " local devices detected).";
+  }
+
+  at::Tensor tensor = at::ones({8}, at::TensorOptions(at::kFloat));
+  const torch::lazy::BackendDevice* device = GetDefaultDevice();
+  torch::lazy::Value data_node = torch::lazy::MakeNode<DeviceData>(
+      std::move(TensorToXlaData(tensor, *device)));
+  EXPECT_TRUE(xla::ComputationClient::Get()
+                  ->GetDataShards(UnwrapXlaData(
+                      torch::lazy::getBackend()->GetComputationDataFromNode(
+                          data_node.node.get())))
+                  .size() == 1);
+
+  // Takes a data node and returns a new node with sharded data handle.
+  XLATensor::ShardingSpecPtr sharding =
+      std::make_shared<XLATensor::ShardingSpec>(
+          xla::HloSharding::Replicate().ToProto());
+  torch::lazy::Value new_data_node =
+      ShardingUtil::ShardInputDataNodes(data_node, sharding);
+  EXPECT_TRUE(xla::ComputationClient::Get()
+                  ->GetDataShards(UnwrapXlaData(
+                      torch::lazy::getBackend()->GetComputationDataFromNode(
+                          new_data_node.node.get())))
+                  .size() > 1);
+
+  // Takes an op and propate sharding to its data node oeprands.
+  torch::lazy::NodePtr matmul = MatMul(data_node, data_node);
+  torch::lazy::Value new_matmul = ShardingUtil::ShardInputDataNodes(
+      torch::lazy::Value(matmul, 0), sharding);
+  XlaNode* xla_node = dynamic_cast<XlaNode*>(new_matmul.node.get());
+  for (int i = 0; i < xla_node->operands_as_nodes()->size(); ++i) {
+    torch::lazy::Node* node = xla_node->get_operand(i);
+    EXPECT_TRUE(
+        xla::ComputationClient::Get()
+            ->GetDataShards(UnwrapXlaData(
+                torch::lazy::getBackend()->GetComputationDataFromNode(node)))
+            .size() > 1);
+  }
 }
 
 }  // namespace cpp_test

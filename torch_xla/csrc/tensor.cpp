@@ -579,7 +579,17 @@ torch::lazy::Value XLATensor::MaybeCastIrValue(
 XLATensorPtr XLATensor::CreateFrom(torch::lazy::Value ir_value) const {
   ir_value = MaybeCastIrValue(std::move(ir_value), GetDevice(),
                               /*logical_element_type=*/c10::nullopt);
-  return Create(std::move(ir_value), GetDevice(), dtype_optional());
+  bool try_propagate_sharding = ir_value && sharding_spec();
+  auto xtensor = Create(std::move(ir_value), GetDevice(), dtype_optional());
+  if (try_propagate_sharding) {
+    // TODO(yeounoh) remove this after functionalization fix is merged.
+    xtensor->SetShardingSpec(*sharding_spec());
+    if (torch::lazy::Value data_node = ShardingUtil::ShardInputDataNodes(
+            xtensor->CurrentIrValue(), sharding_spec())) {
+      xtensor->SetIrValue(data_node);
+    }
+  }
+  return xtensor;
 }
 
 XLATensorPtr XLATensor::CreateFrom(
@@ -587,7 +597,18 @@ XLATensorPtr XLATensor::CreateFrom(
     c10::optional<at::ScalarType> logical_element_type_opt) const {
   ir_value = MaybeCastIrValue(std::move(ir_value), GetDevice(),
                               logical_element_type_opt);
-  return Create(std::move(ir_value), GetDevice(), logical_element_type_opt);
+  bool try_propagate_sharding = ir_value && sharding_spec();
+  auto xtensor =
+      Create(std::move(ir_value), GetDevice(), logical_element_type_opt);
+  if (try_propagate_sharding) {
+    // TODO(yeounoh) remove this after functionalization fix is merged.
+    xtensor->SetShardingSpec(*sharding_spec());
+    if (torch::lazy::Value data_node = ShardingUtil::ShardInputDataNodes(
+            xtensor->CurrentIrValue(), sharding_spec())) {
+      xtensor->SetIrValue(data_node);
+    }
+  }
+  return xtensor;
 }
 
 XLATensorPtr XLATensor::CreateFrom(torch::lazy::Value ir_value,
@@ -595,7 +616,17 @@ XLATensorPtr XLATensor::CreateFrom(torch::lazy::Value ir_value,
                                    at::ScalarType logical_element_type) const {
   ir_value =
       MaybeCastIrValue(std::move(ir_value), device, logical_element_type);
-  return Create(std::move(ir_value), device, logical_element_type);
+  bool try_propagate_sharding = ir_value && sharding_spec();
+  auto xtensor = Create(std::move(ir_value), device, logical_element_type);
+  if (try_propagate_sharding) {
+    // TODO(yeounoh) remove this after functionalization fix is merged.
+    xtensor->SetShardingSpec(*sharding_spec());
+    if (torch::lazy::Value data_node = ShardingUtil::ShardInputDataNodes(
+            xtensor->CurrentIrValue(), sharding_spec())) {
+      xtensor->SetIrValue(data_node);
+    }
+  }
+  return xtensor;
 }
 
 void XLATensor::ApplyPendingGraph() {

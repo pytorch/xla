@@ -8,6 +8,7 @@ from torch import nn
 import torch.optim as optim
 import torch_xla
 import torch_xla.core.xla_model as xm
+import torch_xla.debug.metrics as met
 import torch_xla.experimental.xla_sharding as xs
 from torch_xla.experimental.xla_sharded_tensor import XLAShardedTensor
 import test_xla_sharding_base
@@ -111,7 +112,10 @@ class BasicShardingTest(test_xla_sharding_base.XlaShardingTest):
     self.assertEqual(sharding_spec, torch_xla._XLAC._get_xla_sharding_spec(xt))
 
   def test_optimizer_step_with_sharding(self):
+    met.clear_counters()
+
     model = self.SimpleLinear().to(xm.xla_device())
+    # linear model parameter sharding
     xs.mark_sharding(model.fc1.weight, self._get_mesh((1, self.n_devices)),
                      (0, 1))
     sharding_spec = torch_xla._XLAC._get_xla_sharding_spec(model.fc1.weight)
@@ -121,15 +125,19 @@ class BasicShardingTest(test_xla_sharding_base.XlaShardingTest):
     data = torch.randn(128, 128).to(xm.xla_device())
     target = torch.zeros(128).to(xm.xla_device())
     loss_fn = nn.CrossEntropyLoss()
-    for i in range(5):
+    for i in range(3):
       optimizer.zero_grad()
       output = model(data)
       loss = loss_fn(output, target)
       loss.backward()
       optimizer.step()
       xm.mark_step()
+    # Sharding annotation should be preserved
     self.assertEqual(sharding_spec,
                      torch_xla._XLAC._get_xla_sharding_spec(model.fc1.weight))
+    # Sharded model parameter should be sharded after mark_step()
+    self.assertEqual(met.counter_value("ShardInputDataNodes"), 2)
+
 
   def test_inplace_add_with_sharding(self):
     xt = torch.ones(2, 2).to(xm.xla_device())

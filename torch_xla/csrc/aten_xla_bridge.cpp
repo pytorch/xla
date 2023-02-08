@@ -8,7 +8,6 @@
 #include "third_party/xla_client/computation_client.h"
 #include "third_party/xla_client/debug_macros.h"
 #include "torch_xla/csrc/device.h"
-#include "torch_xla/csrc/tensor_impl.h"
 #include "torch_xla/csrc/torch_util.h"
 #include "torch_xla/csrc/xla_graph_executor.h"
 
@@ -51,11 +50,11 @@ AtenXlaDeviceMapper* AtenXlaDeviceMapper::Get() {
   return device_mapper;
 }
 
+}  // namespace
+
 XLATensorImpl* GetXlaTensorImpl(const at::Tensor& tensor) {
   return dynamic_cast<XLATensorImpl*>(tensor.unsafeGetTensorImpl());
 }
-
-}  // namespace
 
 XLATensorPtr TryGetXlaTensor(const at::Tensor& tensor) {
   XLATensorImpl* impl = GetXlaTensorImpl(tensor);
