@@ -46,7 +46,7 @@ class Analyzer {
   }
 };
 
-std::string CreatePerformanceReport();
+std::string CreatePerformanceReport(const std::map<std::string, xla::Metric>& metrics);
 
 }  // namespace metrics
 }  // namespace xla

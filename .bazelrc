@@ -55,6 +55,11 @@ build:cuda --@org_tensorflow//tensorflow/compiler/xla/python:enable_gpu=true
 build:cuda --define=xla_python_enable_gpu=true
 build:cuda --cxxopt=-DXLA_CUDA=1
 
+# This config refers to building CUDA op kernels with clang.
+build:cuda_clang --config=cuda
+build:cuda_clang --repo_env TF_CUDA_CLANG=1
+build:cuda_clang --@local_config_cuda//:cuda_compiler=clang
+
 build:acl --define==build_with_acl=true
 
 build:nonccl --define=no_nccl_support=true
