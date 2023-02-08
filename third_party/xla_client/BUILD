@@ -283,6 +283,15 @@ cc_library(
     alwayslink = True,
 )
 
+cc_test(
+    name = "sys_util_test",
+    srcs = ["sys_util_test.cc"],
+    deps = [
+        ":sys_util",
+        "@com_google_googletest//:gtest_main",
+    ],
+)
+
 cc_library(
     name = "tf_logging",
     srcs = ["tf_logging.cc"],
@@ -347,6 +356,15 @@ cc_library(
         "@org_tensorflow//tensorflow/core:lib",
     ],
     alwayslink = True,
+)
+
+cc_test(
+    name = "util_test",
+    srcs = ["util_test.cc"],
+    deps = [
+        ":util",
+        "@com_google_googletest//:gtest_main",
+    ],
 )
 
 cc_library(
