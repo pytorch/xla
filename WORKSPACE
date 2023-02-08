@@ -17,6 +17,7 @@ http_archive(
         "//tf_patches:thread_local_random.diff",
         "//tf_patches:xplane.diff",
         "//tf_patches:bazel.diff",
+        "//tf_patches:cache_urls.diff",
     ],
     sha256 = "a454c502fa32d2cd7858dc623f76d0449e7891828df0199691dea9812fa40b53",
     strip_prefix = "tensorflow-a81addf25f8c7420fe22674205e4fa410980bb5e",
