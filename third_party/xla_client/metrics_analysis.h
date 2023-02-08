@@ -2,8 +2,12 @@
 #define XLA_CLIENT_METRICS_ANALYSIS_H_
 
 #include <iostream>
+#include <map>
 #include <memory>
+#include <string>
 #include <vector>
+
+#include "third_party/xla_client/types.h"
 
 namespace xla {
 namespace metrics {
@@ -34,7 +38,12 @@ struct Analysis {
 
 class Analyzer {
  public:
+  virtual ~Analyzer() = default;
+
   virtual Analysis Run() = 0;
+  virtual Analysis Run(const std::map<std::string, xla::Metric>& metrics) {
+    return Run();
+  }
 };
 
 std::string CreatePerformanceReport();

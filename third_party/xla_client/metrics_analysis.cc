@@ -1,7 +1,8 @@
 #include "third_party/xla_client/metrics_analysis.h"
 
+#include "absl/strings/match.h"
+#include "absl/strings/str_format.h"
 #include "absl/types/variant.h"
-#include "third_party/xla_client/computation_client.h"
 #include "third_party/xla_client/metrics.h"
 #include "third_party/xla_client/tf_logging.h"
 #include "third_party/xla_client/types.h"
@@ -96,6 +97,10 @@ class XrtMetricFrequency : public Analyzer {
         counter_(0) {}
 
   Analysis Run() override {
+    LOG(FATAL) << "For XrtMetricFrequency, use the metrics overload";
+  }
+
+  Analysis Run(const std::map<std::string, xla::Metric>& xrt_metrics) override {
     // XRT GetMetrics call is relatively expensive.
     if (counter_++ != run_every_n_) {
       return {Analysis::Symptom::kNormal};
@@ -108,8 +113,7 @@ class XrtMetricFrequency : public Analyzer {
 
     std::stringstream ss;
     int64_t step_count = step->Value();
-    auto xrt_metrics = ComputationClient::Get()->GetMetrics();
-    for (auto const& kv : metric_name_thresholds_) {
+    for (const auto& kv : metric_name_thresholds_) {
       auto it = xrt_metrics.find(kv.first);
       if (it == xrt_metrics.end()) {
         continue;

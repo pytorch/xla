@@ -1,14 +1,18 @@
 #ifndef XLA_CLIENT_METRICS_READER_H_
 #define XLA_CLIENT_METRICS_READER_H_
 
+#include <map>
 #include <string>
 #include <vector>
+
+#include "third_party/xla_client/metrics.h"
 
 namespace xla {
 namespace metrics_reader {
 
 // Creates a report with the current metrics statistics.
-std::string CreateMetricReport();
+std::string CreateMetricReport(
+    const std::map<std::string, metrics::Metric>& xrt_metrics);
 
 // Creates a report with the selected metrics statistics.
 std::string CreateMetricReport(const std::vector<std::string>& counter_names,
