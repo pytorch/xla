@@ -114,6 +114,9 @@ void XLATensorImpl::shallow_copy_from(
 }
 
 at::IntArrayRef XLATensorImpl::sizes_custom() const {
+  XLA_CHECK(!has_symbolic_sizes_strides_)
+      << "Cannot call sizes_custom() on an XLA tensor with symbolic "
+         "sizes/strides";
   const_cast<XLATensorImpl*>(this)->SetupSizeProperties();
   return sizes_default();
 }
