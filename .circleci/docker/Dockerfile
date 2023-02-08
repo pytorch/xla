@@ -1,6 +1,6 @@
 # This requires cuda & cudnn packages pre-installed in the base image.
 # Other available cuda images are listed at https://hub.docker.com/r/nvidia/cuda
-ARG base_image="nvidia/cuda:11.7.0-cudnn8-devel-ubuntu18.04"
+ARG base_image="nvidia/cuda:11.2.0-cudnn8-devel-ubuntu18.04"
 FROM "${base_image}"
 
 ARG python_version="3.8"
@@ -41,6 +41,10 @@ ENV CXXFLAGS "${CXXFLAGS} -D_GLIBCXX_USE_CXX11_ABI=${cxx_abi}"
 
 # Whether to build for TPUVM mode
 ENV TPUVM_MODE "${tpuvm}"
+
+# Remove deprecated deb repo:
+# https://developer.download.nvidia.com/compute/machine-learning/repos/ubuntu1804/x86_64
+RUN rm /etc/apt/sources.list.d/nvidia-ml.list
 
 # Rotate nvidia repo public key (last updated: 04/27/2022)
 # Unfortunately, nvidia/cuda image is shipped with invalid public key

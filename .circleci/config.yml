@@ -25,8 +25,8 @@ launch_docker_and_build: &launch_docker_and_build
     # if image layers are not present in the repo.
     # Note: disable the following 2 lines while testing a new image, so we do not
     # push to the upstream.
-    docker tag ${GCR_DOCKER_IMAGE} ${ECR_DOCKER_IMAGE_BASE}:v1.0 >/dev/null
-    docker push ${ECR_DOCKER_IMAGE_BASE}:v1.0 >/dev/null
+    docker tag ${GCR_DOCKER_IMAGE} ${ECR_DOCKER_IMAGE_BASE}:v0.9 >/dev/null
+    docker push ${ECR_DOCKER_IMAGE_BASE}:v0.9 >/dev/null
     sudo pkill -SIGHUP dockerd
     # To enable remote caching, use SCCACHE_BUCKET=${SCCACHE_BUCKET}
     # To disable remote caching, use SCCACHE_BUCKET=${LOCAL_BUCKET}
