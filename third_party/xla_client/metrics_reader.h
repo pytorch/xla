@@ -6,6 +6,7 @@
 #include <vector>
 
 #include "third_party/xla_client/metrics.h"
+#include "third_party/xla_client/types.h"
 
 namespace xla {
 namespace metrics_reader {
