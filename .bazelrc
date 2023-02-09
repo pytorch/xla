@@ -78,7 +78,7 @@ common --experimental_repo_remote_exec
 try-import %workspace%/.bazelrc.user
 
 # Compile database generation config.
-build:compdb --features=-layering_check
+build:compdb --features=-layering_check --java_runtime_version=remotejdk_11
 
 # Test requires Java.
 test --java_runtime_version=remotejdk_11

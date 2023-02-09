@@ -364,6 +364,7 @@ cc_test(
     srcs = ["util_test.cc"],
     deps = [
         ":util",
+        "@com_google_absl//absl/types:span",
         "@com_google_googletest//:gtest_main",
     ],
 )
