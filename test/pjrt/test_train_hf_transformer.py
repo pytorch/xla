@@ -17,24 +17,20 @@ import time
 SUPPORTED_MODELS = ["facebook/wmt19-de-en"]
 
 MODEL_OPTS = {
-  '--model': {
-    'choices': SUPPORTED_MODELS,
-    'default': 'facebook/wmt19-de-en',
-  },
-  '--short_data': {
-    'action': 'store_true',
-  }
+    '--model': {
+        'choices': SUPPORTED_MODELS,
+        'default': 'facebook/wmt19-de-en',
+    },
+    '--short_data': {
+        'action': 'store_true',
+    }
 }
 
+
 def _train_update(device, step, loss, tracker, epoch, writer):
-  test_utils.print_training_update(
-      device,
-      step,
-      loss.item(),
-      tracker.rate(),
-      tracker.global_rate(),
-      epoch,
-      writer)
+  test_utils.print_training_update(device, step, loss.item(), tracker.rate(),
+                                   tracker.global_rate(), epoch, writer)
+
 
 def finetune(rank, train_dataset, test_dataset, tokenizer, flags):
   print('Starting', rank)
@@ -74,10 +70,10 @@ def finetune(rank, train_dataset, test_dataset, tokenizer, flags):
   model = FSMTForConditionalGeneration.from_pretrained(flags.model).to(device)
   optimizer = AdamW(model.parameters(), lr=flags.lr)
   lr_scheduler = get_scheduler(
-    name="linear",
-    optimizer=optimizer,
-    num_warmup_steps=0,
-    num_training_steps=flags.num_epochs * len(train_loader))
+      name="linear",
+      optimizer=optimizer,
+      num_warmup_steps=0,
+      num_training_steps=flags.num_epochs * len(train_loader))
 
   def train_loop_fn(loader, epoch):
     tracker = xm.RateTracker()
@@ -104,14 +100,21 @@ def finetune(rank, train_dataset, test_dataset, tokenizer, flags):
       logits = outputs.logits
       predictions = torch.argmax(logits, dim=-1)
 
-      decoded_preds = [pred.strip() for pred in tokenizer.batch_decode(predictions, skip_special_tokens=True)]
-      decoded_labels = [[label.strip()] for label in tokenizer.batch_decode(batch["labels"], skip_special_tokens=True)]
+      decoded_preds = [
+          pred.strip() for pred in tokenizer.batch_decode(
+              predictions, skip_special_tokens=True)
+      ]
+      decoded_labels = [[label.strip()] for label in tokenizer.batch_decode(
+          batch["labels"], skip_special_tokens=True)]
       metric.add_batch(predictions=decoded_preds, references=decoded_labels)
 
     eval_metric = metric.compute()
     xm.mark_step()
-    print('[xla:{}] Bleu={:.5f} Time={}'.format(
-            xm.get_ordinal(), eval_metric["score"], time.asctime()), flush=True)
+    print(
+        '[xla:{}] Bleu={:.5f} Time={}'.format(xm.get_ordinal(),
+                                              eval_metric["score"],
+                                              time.asctime()),
+        flush=True)
     test_utils.write_to_summary(
         writer,
         epoch,
@@ -130,14 +133,18 @@ def finetune(rank, train_dataset, test_dataset, tokenizer, flags):
     if flags.metrics_debug:
       xm.master_print(met.metrics_report(), flush=True)
 
+
 def get_dataset(tokenizer, flags):
+
   def preprocess(examples):
     inputs = [ex['de'] for ex in examples["translation"]]
     targets = [ex['en'] for ex in examples["translation"]]
 
-    return tokenizer(text=inputs, text_target=targets, padding="max_length", truncation=True)
+    return tokenizer(
+        text=inputs, text_target=targets, padding="max_length", truncation=True)
 
-  ds = load_dataset("news_commentary", "de-en", data_dir=flags.datadir, split="train")
+  ds = load_dataset(
+      "news_commentary", "de-en", data_dir=flags.datadir, split="train")
   ds = ds.map(preprocess, batched=True)
   ds = ds.remove_columns(["id", "translation"])
   ds = ds.train_test_split(test_size=0.2)
@@ -145,16 +152,22 @@ def get_dataset(tokenizer, flags):
 
   return ds["train"], ds["test"]
 
+
 if __name__ == '__main__':
   flags = args_parse.parse_common_options(
-    datadir=None,
-    batch_size=4,
-    num_epochs=3,
-    log_steps=20,
-    lr=.0002,
-    opts=MODEL_OPTS.items()
-  )
+      datadir=None,
+      batch_size=4,
+      num_epochs=3,
+      log_steps=20,
+      lr=.0002,
+      opts=MODEL_OPTS.items())
   tokenizer = FSMTTokenizer.from_pretrained(flags.model)
   # Load dataset once and share it with each process
   train_dataset, test_dataset = get_dataset(tokenizer, flags)
-  xmp.spawn(finetune, args=(train_dataset, test_dataset, tokenizer, flags,))
+  xmp.spawn(
+      finetune, args=(
+          train_dataset,
+          test_dataset,
+          tokenizer,
+          flags,
+      ))
