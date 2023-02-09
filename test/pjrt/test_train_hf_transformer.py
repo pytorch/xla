@@ -1,4 +1,3 @@
-from test.test_train_mp_imagenet import MODEL_OPTS
 import args_parse
 
 from datasets import load_dataset
