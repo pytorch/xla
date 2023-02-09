@@ -6,7 +6,7 @@ This ansible playbook will perform the following actions on the localhost:
     [pip.yaml](config/pip.yaml)).
   * fetch bazel (version configured in [vars.yaml](config/vars.yaml)),
   * fetch PyTorch and XLA sources at master (or specific revisions,
-    see role `fetch_srcs` in [playbook.yaml]).
+    see role `fetch_srcs` in [playbook.yaml](playbook.yaml)).
   * set required environment variables (see [env.yaml](config/env.yaml)),
   * build and install PyTorch and XLA wheels,
   * apply infrastructure tests (see `*/tests.yaml` files in [roles](roles)).
