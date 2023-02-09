@@ -393,6 +393,22 @@ cc_library(
     alwayslink = True,
 )
 
+cc_test(
+    name = "xla_util_test",
+    srcs = ["xla_util_test.cc"],
+    deps = [
+        ":xla_util",
+        "@com_google_absl//absl/types:span",
+        "@com_google_googletest//:gtest_main",
+        "@org_tensorflow//tensorflow/compiler/xla:shape_util",
+        "@org_tensorflow//tensorflow/compiler/xla/client:xla_builder",
+        "@org_tensorflow//tensorflow/compiler/xla/client:xla_computation",
+        "@org_tensorflow//tensorflow/tsl/lib/core:status_test_util",
+        "@org_tensorflow//tensorflow/tsl/platform:errors",
+        "@org_tensorflow//tensorflow/tsl/platform:status_matchers",
+    ],
+)
+
 cc_library(
     name = "xrt_local_service",
     srcs = ["xrt_local_service.cc"],
