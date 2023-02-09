@@ -829,14 +829,14 @@ void BuildProfilerSubmodule(py::module* m) {
   py::class_<xla::profiler::ProfilerServer,
              std::unique_ptr<xla::profiler::ProfilerServer>>
       profiler_server_class(profiler, "ProfilerServer");
-  profiler.def(
-      "start_server",
-      [](int port) -> std::unique_ptr<xla::profiler::ProfilerServer> {
-        auto server = absl::make_unique<xla::profiler::ProfilerServer>();
-        server->Start(port);
-        return server;
-      },
-      py::arg("port"));
+  profiler.def("start_server",
+               [](int port) -> std::unique_ptr<xla::profiler::ProfilerServer> {
+                 auto server =
+                     absl::make_unique<xla::profiler::ProfilerServer>();
+                 server->Start(port);
+                 return server;
+               },
+               py::arg("port"));
 
   profiler.def(
       "trace",
@@ -1217,49 +1217,43 @@ void InitXlaModuleBindings(py::module m) {
     }
     return dict;
   });
-  m.def(
-      "_xla_set_rng_seed",
-      [](uint64_t seed, const std::string& device) {
-        SetRngSeed(seed, device);
-      },
-      py::arg("seed") = 101, py::arg("device") = "");
-  m.def(
-      "_xla_get_rng_seed",
-      [](const std::string& device) { return GetRngSeed(device); },
-      py::arg("device") = "");
-  m.def(
-      "_xla_sync_multi",
-      [](const std::vector<at::Tensor>& tensors,
-         const std::vector<std::string>& devices, bool wait,
-         bool sync_xla_data) {
-        NoGilSection nogil;
-        SyncTensors(tensors, devices, wait, sync_xla_data);
-      },
-      py::arg("tensors"), py::arg("devices"), py::arg("wait") = true,
-      py::arg("sync_xla_data") = true);
-  m.def(
-      "_xla_sync_live_tensors",
-      [](const std::string& device, const std::vector<std::string>& devices,
-         bool wait) {
-        NoGilSection nogil;
-        SyncLiveTensors(device, devices, wait);
-      },
-      py::arg("device") = "", py::arg("devices"), py::arg("wait") = true);
-  m.def(
-      "_xla_step_marker",
-      [](const std::string& device, const std::vector<std::string>& devices,
-         bool wait) {
-        NoGilSection nogil;
-        StepMarker(device, devices, wait);
-      },
-      py::arg("device") = "", py::arg("devices"), py::arg("wait") = true);
-  m.def(
-      "_xla_wait_device_ops",
-      [](const std::vector<std::string>& devices) {
-        NoGilSection nogil;
-        XLAGraphExecutor::Get()->WaitDeviceOps(devices);
-      },
-      py::arg("devices"));
+  m.def("_xla_set_rng_seed",
+        [](uint64_t seed, const std::string& device) {
+          SetRngSeed(seed, device);
+        },
+        py::arg("seed") = 101, py::arg("device") = "");
+  m.def("_xla_get_rng_seed",
+        [](const std::string& device) { return GetRngSeed(device); },
+        py::arg("device") = "");
+  m.def("_xla_sync_multi",
+        [](const std::vector<at::Tensor>& tensors,
+           const std::vector<std::string>& devices, bool wait,
+           bool sync_xla_data) {
+          NoGilSection nogil;
+          SyncTensors(tensors, devices, wait, sync_xla_data);
+        },
+        py::arg("tensors"), py::arg("devices"), py::arg("wait") = true,
+        py::arg("sync_xla_data") = true);
+  m.def("_xla_sync_live_tensors",
+        [](const std::string& device, const std::vector<std::string>& devices,
+           bool wait) {
+          NoGilSection nogil;
+          SyncLiveTensors(device, devices, wait);
+        },
+        py::arg("device") = "", py::arg("devices"), py::arg("wait") = true);
+  m.def("_xla_step_marker",
+        [](const std::string& device, const std::vector<std::string>& devices,
+           bool wait) {
+          NoGilSection nogil;
+          StepMarker(device, devices, wait);
+        },
+        py::arg("device") = "", py::arg("devices"), py::arg("wait") = true);
+  m.def("_xla_wait_device_ops",
+        [](const std::vector<std::string>& devices) {
+          NoGilSection nogil;
+          XLAGraphExecutor::Get()->WaitDeviceOps(devices);
+        },
+        py::arg("devices"));
   m.def("_xla_counter_names", []() {
     auto counter_names = torch::lazy::GetCounterNames();
     auto xla_counter_names = xla::metrics::GetCounterNames();
@@ -1324,35 +1318,32 @@ void InitXlaModuleBindings(py::module m) {
     torch::lazy::MetricsArena::Get()->ResetMetrics();
     xla::metrics::ClearMetrics();
   });
-  m.def(
-      "_xla_tensors_report",
-      [](size_t nodes_threshold, const std::string& device) {
-        return GetLiveTensorsReport(nodes_threshold, device);
-      },
-      py::arg("nodes_threshold") = 100, py::arg("device") = "");
+  m.def("_xla_tensors_report",
+        [](size_t nodes_threshold, const std::string& device) {
+          return GetLiveTensorsReport(nodes_threshold, device);
+        },
+        py::arg("nodes_threshold") = 100, py::arg("device") = "");
   m.def("_xla_memory_info", [](const std::string& device) -> py::object {
     return GetMemoryInfo(device);
   });
-  m.def(
-      "_xla_set_use_full_mat_mul_precision",
-      [](bool use_full_mat_mul_precision) {
-        XlaHelpers::set_mat_mul_precision(use_full_mat_mul_precision
-                                              ? xla::PrecisionConfig::HIGHEST
-                                              : xla::PrecisionConfig::DEFAULT);
-      },
-      py::arg("use_full_mat_mul_precision") = true);
+  m.def("_xla_set_use_full_mat_mul_precision",
+        [](bool use_full_mat_mul_precision) {
+          XlaHelpers::set_mat_mul_precision(
+              use_full_mat_mul_precision ? xla::PrecisionConfig::HIGHEST
+                                         : xla::PrecisionConfig::DEFAULT);
+        },
+        py::arg("use_full_mat_mul_precision") = true);
 
   py::class_<xla::util::RecordReader, std::shared_ptr<xla::util::RecordReader>>(
       m, "RecordReader");
-  m.def(
-      "_xla_create_tfrecord_reader",
-      [](const std::string& path, const std::string& compression,
-         int64_t buffer_size) {
-        NoGilSection nogil;
-        return CreateRecordReader(path, compression, buffer_size);
-      },
-      py::arg("path"), py::arg("compression") = "",
-      py::arg("buffer_size") = 16 * 1024 * 1024);
+  m.def("_xla_create_tfrecord_reader",
+        [](const std::string& path, const std::string& compression,
+           int64_t buffer_size) {
+          NoGilSection nogil;
+          return CreateRecordReader(path, compression, buffer_size);
+        },
+        py::arg("path"), py::arg("compression") = "",
+        py::arg("buffer_size") = 16 * 1024 * 1024);
   m.def(
       "_xla_tfrecord_read",
       [](const std::shared_ptr<xla::util::RecordReader>& reader) -> py::object {
