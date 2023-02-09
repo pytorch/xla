@@ -26,10 +26,10 @@ ARG xla_git_rev=HEAD
 RUN pip install ansible
 RUN ansible-playbook playbook.yaml -e \
   "stage=release arch=${arch} \
-   accelerator=${accelerator} \
-   pytorch_git_rev=${pytorch_git_rev} \
-   xla_git_rev=${xla_git_rev} \
-   " --tags "install_deps"
+  accelerator=${accelerator} \
+  pytorch_git_rev=${pytorch_git_rev} \
+  xla_git_rev=${xla_git_rev} \
+  " --tags "install_deps"
 
 WORKDIR /wheels
 COPY --from=build /src/pytorch/dist/*.whl .
