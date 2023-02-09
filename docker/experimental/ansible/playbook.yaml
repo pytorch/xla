@@ -33,7 +33,8 @@
         - env.yaml
 
   roles:
-    - bazel
+    - role: bazel
+      tags: bazel
 
     - role: install_deps
       vars:
@@ -62,12 +63,14 @@
             pip.pkgs_nodeps[stage + '_' + arch] | default([], true) +
             pip.pkgs_nodeps[stage + '_' + accelerator] | default([], true)
           }}"
+      tags: install_deps
 
     - role: fetch_srcs
       vars:
         src_root: "/src"
         pytorch_git_rev: HEAD
         xla_git_rev: HEAD
+      tags: fetch_srcs
 
     - role: build_srcs
       vars:
@@ -77,6 +80,7 @@
             combine(build_env[arch] | default({}, true)) |
             combine(build_env[accelerator] | default({}, true))
           }}"
+      tags: build_srcs
 
     - role: configure_env
       vars:
@@ -86,3 +90,4 @@
             combine(release_env[accelerator] | default({}, true))
           }}"
       when: stage == "release"
+      tags: configure_env
