@@ -1,0 +1,51 @@
+steps:
+- id: Build TPU development image.
+  name: 'gcr.io/cloud-builders/docker'
+  args:
+    - 'build'
+    - '--build-arg=python_version=${_PYTHON_VERSION}'
+    - '-t=${_IMAGE_REPO}/development_tpu_amd64:latest'
+    - '-f=development.Dockerfile'
+    - '.'
+
+- id: Build release image and wheels.
+  name: 'gcr.io/cloud-builders/docker'
+  args:
+    - build
+    - '--build-arg=arch=amd64'
+    - '--build-arg=accelerator=tpu'
+    - '--build-arg=python_version=${_PYTHON_VERSION}'
+    - '-t=${_IMAGE_REPO}/xla:${_RELEASE_IMAGE_TAG}'
+    - '-f=Dockerfile'
+    - '.'
+
+- id: Add additional tag to the release image.
+  name: 'gcr.io/cloud-builders/docker'
+  entrypoint: bash
+  args: ['-c', 'docker tag ${_IMAGE_REPO}/xla:${_RELEASE_IMAGE_TAG} ${_IMAGE_REPO}/xla:${_RELEASE_IMAGE_TAG}_$(date -u +%Y%m%d)']
+
+- id: Push all tags of the release image.
+  name: 'gcr.io/cloud-builders/docker'
+  args: ['push', '--all-tags', '${_IMAGE_REPO}/xla']
+  timeout: 1800s
+
+images:
+- ${_IMAGE_REPO}/xla:${_RELEASE_IMAGE_TAG}
+- ${_IMAGE_REPO}/development_tpu_amd64:latest
+
+substitutions:
+  _PYTHON_VERSION: '3.8'
+  _RELEASE_VERSION: 'nightly'  # or rX.Y
+  _IMAGE_REPO: 'us-central2-docker.pkg.dev/${PROJECT_ID}/docker-repo'
+  _RELEASE_IMAGE_TAG: '${_RELEASE_VERSION}_${_PYTHON_VERSION}'
+
+options:
+  pool:
+    name: 'projects/core-ml-engprod-build-farm/locations/europe-west1/workerPools/compilerfarm'
+  dynamic_substitutions: true
+  substitution_option: 'ALLOW_LOOSE'
+timeout: 24000s
+artifacts:
+  objects:
+    location: 'gs://tpu-pytorch-core-ml-engprod/wheels'
+    paths: ['/**/dist/*.whl']

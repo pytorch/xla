@@ -12,7 +12,7 @@
       ansible.builtin.assert:
         that: "{{ lookup('ansible.builtin.vars', item.name) is regex(item.pattern) }}"
         fail_msg: |
-          "Variable '{{ item.name }}' doesn't match pattern '{{ item.pattern }}'"
+          "Variable '{{ item.name }} = '{{lookup('ansible.builtin.vars', item.name)}}' doesn't match pattern '{{ item.pattern }}'"
           "Pass the required variable with: --e \"{{ item.name }}=<value>\""
       loop:
         - name: stage
