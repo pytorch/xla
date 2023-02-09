@@ -282,7 +282,8 @@ def train_mnist(flags, **kwargs):
     ckpt_path = f'{flags.ckpt_prefix}_rank-{rank:08d}-of-{world_size:08d}.pth'
     ckpt = {
         'model': model.state_dict(),
-        'optimizer': optimizer.state_dict(),
+        'shard_metadata': model.get_shard_metadata(),
+        'optimizer': optimizer.state_dict(),  # not needed in ckpt consolidation
     }
     os.makedirs(os.path.dirname(ckpt_path), exist_ok=True)
     xm.save(ckpt, ckpt_path, master_only=False)

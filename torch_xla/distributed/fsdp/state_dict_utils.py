@@ -146,24 +146,22 @@ def consolidate_sharded_model_checkpoints(ckpt_prefix,
   for path in ckpt_paths:
     ckpt = torch.load(path, map_location="cpu")
     checkpoints_and_paths.append((ckpt, path))
-  checkpoints_and_paths.sort(key=lambda c: c[0]["model"]["shard_metadata"]["rank"])
+  checkpoints_and_paths.sort(key=lambda c: c[0]["shard_metadata"]["rank"])
   checkpoints = [c[0] for c in checkpoints_and_paths]
   for rank, (ckpt, path) in enumerate(checkpoints_and_paths):
-    assert ckpt["model"]["shard_metadata"]["world_size"] == len(checkpoints), (
-        f'Expecting {ckpt["model"]["shard_metadata"]["world_size"]} files '
+    assert ckpt["shard_metadata"]["world_size"] == len(checkpoints), (
+        f'Expecting {ckpt["shard_metadata"]["world_size"]} files '
         f"(based on metadata in {path}) but got {len(checkpoints)} files. "
         f"Please check if you have missing or unexpected files in {ckpt_path_pattern}."
     )
-    assert ckpt["model"]["shard_metadata"]["rank"] == rank, (
-        f'Expecting rank {ckpt["model"]["shard_metadata"]["rank"]} for {path} but it is '
+    assert ckpt["shard_metadata"]["rank"] == rank, (
+        f'Expecting rank {ckpt["shard_metadata"]["rank"]} for {path} but it is '
         f"ranked {rank} (out of {len(checkpoints)} files). "
         f"Please check if you have missing or unexpected files in {ckpt_path_pattern}."
     )
 
-  shard_metadata = checkpoints[0]["model"]["shard_metadata"]
   state_dict_list = [ckpt["model"] for ckpt in checkpoints]
-  for state_dict in state_dict_list:
-    state_dict.pop("shard_metadata")
+  shard_metadata = checkpoints[0]["shard_metadata"]
   full_state_dict = consolidate_sharded_state_dicts(state_dict_list,
                                                     shard_metadata)
 

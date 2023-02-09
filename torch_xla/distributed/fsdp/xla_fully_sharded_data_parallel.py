@@ -99,12 +99,13 @@ class XlaFullyShardedDataParallel(nn.Module):
 
       When saving checkpoints, the training process on each XLA device needs
       to save its own (sharded) model and optimizer state_dict to a different
-      path. *To consolidate sharded checkpoints later, please set 
-      ``save_shard_metadata`` to ``True`` when in the FSDP wrapper (which
-      is on by default) and save the checkpoint as follows:
+      path. *To consolidate sharded checkpoints later, please also save
+      ``model.get_shard_metadata()``* along with ``model.state_dict()`` and
+      ``optimizer.state_dict()`` as follows:
 
           ckpt = {
               'model': model.state_dict(),
+              'shard_metadata': model.get_shard_metadata(),
               'optimizer': optimizer.state_dict(),
           }
           ckpt_path = f'/tmp/rank-{xm.get_ordinal()}-of-{xm.xrt_world_size()}.pth'
@@ -189,9 +190,6 @@ class XlaFullyShardedDataParallel(nn.Module):
           if ``True``, then pin the layout in the collective ops (all_reduce,
           all_gather, and reduce_scatter) in FSDP. See `xm.all_reduce` for
           details on pinning layout.
-      save_shard_metadata: bool (bool, Optional):
-          if ``True``, then save the shard_metadata when calling module.state_dict.
-          The shard_metadata will be used to consolidate the full checkpoint.
       shard_param_on_dim_0 (bool, Optional):
           if ``True``, then shard the parameter tensors only along their first
           dimension (dim 0) *without* flattening them. This is a workaround for
@@ -260,7 +258,6 @@ class XlaFullyShardedDataParallel(nn.Module):
       sharding_world_size: Optional[int] = None,
       shard_param_on_dim_0: bool = False,
       pin_layout_in_collective_ops: bool = True,
-      save_shard_metadata: bool = True,
       auto_wrap_policy: Optional[Callable] = None,
       auto_wrapper_callable: Optional[Callable] = None,
       _shard_size_multiple: int = 128,
@@ -310,7 +307,6 @@ class XlaFullyShardedDataParallel(nn.Module):
           optimization_barrier_in_backward=optimization_barrier_in_backward,
           mark_step_on_finalization=mark_step_on_finalization,
           disable_reshard_on_root=disable_reshard_on_root,
-          save_shard_metadata=save_shard_metadata,
           compute_dtype=compute_dtype,
           buffer_dtype=buffer_dtype,
           fp32_reduce_scatter=fp32_reduce_scatter,
@@ -486,9 +482,6 @@ class XlaFullyShardedDataParallel(nn.Module):
       # Execute the parameter sharding immediately and free up the memory
       gc.collect()
       xm.mark_step()
-
-    if save_shard_metadata:
-      self._register_state_dict_hook(self.get_shard_metadata)
 
   def _get_gradient_predivide_factor(self, world_size: int) -> float:
     factor: int = 1
@@ -1478,58 +1471,48 @@ class XlaFullyShardedDataParallel(nn.Module):
 
     return orig_named_parameters
 
-  def load_state_dict(self, state_dict, strict=True):
-    if "shard_metadata" in state_dict:
-      state_dict.pop("shard_metadata")
-    super().load_state_dict(state_dict, strict=strict)
-
-  @staticmethod
-  def get_shard_metadata(m, destination, prefix, local_metadata):
+  def get_shard_metadata(self):
     """
     Get the shard metadata to consolidate the sharded model checkpoints.
-    The output from this method will be used in ``consolidate_sharded_model_checkpoints``.
+    The output from this method should be saved in a checkpoint file and
+    used in ``consolidate_sharded_model_checkpoints``.
     """
     shard_info = {}
     flatten_info = {}
     buffer_info = {}
-    # remove "_fpw_module." from module names since it is also removed in
-    # XlaFullyShardedDataParallel's state_dict()
-    module_name = prefix.replace("_fpw_module.", "")
-    # remove the trailing "." since state_dict will add it
-    module_name = module_name.rstrip(".")
+    for module_name, m in self.named_modules():  # includes self
+      # remove "_fpw_module." from module names since it is also removed in
+      # XlaFullyShardedDataParallel's state_dict()
+      module_name = module_name.replace("_fpw_module.", "")
 
-    if isinstance(m, XlaFullyShardedDataParallel):
-      sharded_param_info = {}
-      for p_shard in m.sharded_params:
-        sharded_param_info[p_shard._name] = {
-            "_orig_size": p_shard._orig_size,
-            "_orig_name": p_shard._orig_name,
-        }
-      shard_info[module_name] = sharded_param_info
+      if isinstance(m, XlaFullyShardedDataParallel):
+        sharded_param_info = {}
+        for p_shard in m.sharded_params:
+          sharded_param_info[p_shard._name] = {
+              "_orig_size": p_shard._orig_size,
+              "_orig_name": p_shard._orig_name,
+          }
+        shard_info[module_name] = sharded_param_info
 
-    if isinstance(m, XlaFlattenParamsWrapper):
-      for i in range(len(m.flat_params)):
-        param_name = f"flat_param_{i}"
-        if module_name != "":
-          param_name = module_name + "." + param_name
-        flatten_info[param_name] = m.metadata(i)
+      if isinstance(m, XlaFlattenParamsWrapper):
+        for i in range(len(m.flat_params)):
+          param_name = f"flat_param_{i}"
+          if module_name != "":
+            param_name = module_name + "." + param_name
+          flatten_info[param_name] = m.metadata(i)
 
-    for name, buf in m.named_buffers(recurse=False):
+    for name, buf in self.named_buffers():
       if buf is not None and hasattr(buf, "_orig_dtype"):
-        buffer_info[prefix + name] = {"_orig_dtype": buf._orig_dtype}
+        buffer_info[name] = {"_orig_dtype": buf._orig_dtype}
 
-    if "shard_metadata" not in destination:
-      destination["shard_metadata"] = {
-          "shard_info": shard_info,
-          "flatten_info": flatten_info,
-          "buffer_info": buffer_info,
-          "world_size": m.world_size,
-          "rank": m.rank,
-      }
-    else:
-      destination["shard_metadata"]["shard_info"].update(shard_info)
-      destination["shard_metadata"]["flatten_info"].update(flatten_info)
-      destination["shard_metadata"]["buffer_info"].update(buffer_info)
+    metadata = {
+        "shard_info": shard_info,
+        "flatten_info": flatten_info,
+        "buffer_info": buffer_info,
+        "world_size": self.world_size,
+        "rank": self.rank,
+    }
+    return metadata
 
   def _print_r0(self, msg: str, restart: bool = False) -> None:
     """Debugging utility to print memory usage stats nicely on rank 0"""
