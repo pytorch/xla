@@ -11,6 +11,7 @@ XRT_RUN_SERVER_PROCESS = 'torch_xla.core._xrt_run_server'
 XRT_SERVER_REGEX = '^python3 -m {} [0-9]+$'.format(XRT_RUN_SERVER_PROCESS)
 XRT_CONFIG_ENV_VARS = ['XRT_TPU_CONFIG', 'XRT_DEVICE_MAP', 'XRT_WORKERS']
 
+
 def server_is_alive():
   # pgrep returns 0 when at least one running process matches the requested name.
   # Otherwise, the exit code is 1. If pgrep is not availiable in the system, it
@@ -135,12 +136,14 @@ import _XLAC
 del os.environ['TPU_LOAD_LIBRARY']
 
 _found_libtpu = _setup_tpu_vm_library_path()
-if 'PJRT_DEVICE' not in os.environ and not any(var in os.environ for var in XRT_CONFIG_ENV_VARS):
-  logger.warning('XRT configuration not detected. Defaulting to preview PJRT '
-                 'runtime. To silence this warning and continue using PJRT, '
-                 'explicitly set PJRT_DEVICE to a supported device. To use '
-                 'XRT, set any of the following environment variables: %s',
-                 str(XRT_CONFIG_ENV_VARS))
+if 'PJRT_DEVICE' not in os.environ and not any(var in os.environ
+                                               for var in XRT_CONFIG_ENV_VARS):
+  logger.warning(
+      'XRT configuration not detected. Defaulting to preview PJRT '
+      'runtime. To silence this warning and continue using PJRT, '
+      'explicitly set PJRT_DEVICE to a supported device. To use '
+      'XRT, set any of the following environment variables: %s',
+      str(XRT_CONFIG_ENV_VARS))
   # TODO: Update this link in the release branch
   logger.warning('For more information about the status of PJRT, see '
                  'https://github.com/pytorch/xla/blob/master/docs/pjrt.md')
