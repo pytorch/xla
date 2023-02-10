@@ -97,6 +97,9 @@ class TestDynamicShapeModels(unittest.TestCase):
                            met.metric_data('CompileTime')[0],
                            'number of compilation should not increase.')
 
+  @unittest.skip(
+      "disable it due to https://github.com/pytorch/xla/pull/4322#issuecomment-1374312614."
+  )
   def test_backward_pass_with_dynamic_input(self):
     num_features = 2
     num_test_samples = 5
