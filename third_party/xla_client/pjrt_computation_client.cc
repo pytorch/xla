@@ -55,17 +55,17 @@ PjRtComputationClient::PjRtComputationClient() {
     bool async = sys_util::GetEnvBool(env::kEnvPjrtAsyncCpuClient, true);
     int cpu_device_count = sys_util::GetEnvInt(env::kEnvNumCpu, 1);
     client_ = std::move(xla::GetTfrtCpuClient(async, cpu_device_count).value());
-  } else if (device_type == "TPU_LEGACY") {
-    TF_VLOG(1) << "Initializing PjRt StreamExecutor TPU client...";
-    int64_t max_inflight_computations = sys_util::GetEnvInt(
-        env::kEnvPjRtTpuMaxInflightComputations, /*defval=*/32);
-    client_ = xla::GetTpuClient(max_inflight_computations).value();
   } else if (device_type == "TPU" || device_type == "TPU_C_API") {
     TF_VLOG(1) << "Initializing TFRT TPU client...";
     XLA_CHECK_OK(pjrt::LoadPjrtPlugin(
         "tpu", sys_util::GetEnvString(env::kEnvTpuLibraryPath, "libtpu.so")));
     supports_logical_on_device_shape_ = false;
     client_ = std::move(xla::GetCApiClient("TPU").value());
+  } else if (device_type == "TPU_LEGACY") {
+    TF_VLOG(1) << "Initializing PjRt StreamExecutor TPU client...";
+    int64_t max_inflight_computations = sys_util::GetEnvInt(
+        env::kEnvPjRtTpuMaxInflightComputations, /*defval=*/32);
+    client_ = xla::GetTpuClient(max_inflight_computations).value();
   } else if (device_type == "GPU") {
     TF_VLOG(1) << "Initializing PjRt GPU client...";
     bool async = sys_util::GetEnvBool(env::kEnvPjrtAsyncGpuClient, true);
