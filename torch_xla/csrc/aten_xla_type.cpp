@@ -2354,6 +2354,17 @@ at::Tensor XLANativeFunctions::prod(const at::Tensor& self, int64_t dim,
                            PromoteIntegralType(self.scalar_type(), dtype)));
 }
 
+void XLANativeFunctions::_propagate_xla_data(const at::Tensor& input,
+                                             const at::Tensor& output) {
+  TORCH_LAZY_FN_COUNTER("xla::");
+  // This op is only called when functionalize pass is transforming an in-place
+  // op. Therefore, we can populate some meta data to maintain any optimization
+  // for in-place ops we have in hands. 1) Aid XLA's InputOutputAlias.
+  auto input_tensor = bridge::GetXlaTensor(input);
+  auto output_tensor = bridge::GetXlaTensor(output);
+  output_tensor->data()->alias_id = input_tensor->GetUniqueId();
+}
+
 at::Tensor& XLANativeFunctions::put_(at::Tensor& self, const at::Tensor& index,
                                      const at::Tensor& source,
                                      bool accumulate) {
