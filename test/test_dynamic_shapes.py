@@ -9,7 +9,6 @@ import test_utils
 pd = torch._C._EnablePythonDispatcher()
 dev = xm.xla_device()
 
-
 class TestDynamicShapes(test_utils.XlaTestCase):
 
   def test_simple_expand(self):

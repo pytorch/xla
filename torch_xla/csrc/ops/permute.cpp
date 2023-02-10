@@ -44,9 +44,9 @@ std::string Permute::ToString() const {
 
 xla::Shape Permute::MakePermuteShape(const xla::Shape& source_shape,
                                      absl::Span<const int64_t> permutation) {
-  return XlaHelpers::GetDynamicReshape(
-      source_shape,
-      XlaHelpers::Permute(permutation, source_shape.dimensions()));
+  auto output_static_dims = XlaHelpers::Permute(permutation, source_shape.dimensions());
+  auto output_dyn_dims = XlaHelpers::Permute(permutation, source_shape.dynamic_dimensions());
+  return xla::ShapeUtil::MakeShape(source_shape.element_type(), output_static_dims, output_dyn_dims);
 }
 
 }  // namespace torch_xla

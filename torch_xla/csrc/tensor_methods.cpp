@@ -2517,7 +2517,7 @@ XLATensorPtr trace(const XLATensorPtr& input) {
 }
 
 XLATensorPtr transpose(const XLATensorPtr& input, int64_t dim0, int64_t dim1) {
-  auto input_shape = input->shape();
+  xla::util::MaybeRef<xla::Shape> input_shape = input->shape();
   ViewInfo view_info;
   if (input_shape.get().rank() <= 1) {
     // return a view of self if input rank <=1
@@ -2525,7 +2525,7 @@ XLATensorPtr transpose(const XLATensorPtr& input, int64_t dim0, int64_t dim1) {
     view_info = ViewInfo(ViewInfo::Type::kNoOp, GetXlaShape(ir_value),
                          GetXlaShape(ir_value));
   } else {
-    auto permute_dims = torch::lazy::MakeTransposePermutation(
+    std::vector<int64_t> permute_dims = torch::lazy::MakeTransposePermutation(
         /*dim0=*/dim0, /*dim1=*/dim1, /*rank=*/input_shape.get().rank());
     view_info = ViewInfo(ViewInfo::Type::kPermute, input_shape, permute_dims);
   }
