@@ -75,7 +75,7 @@ resource "google_cloudbuild_trigger" "build-trigger" {
     _PYTHON_VERSION = var.python_version
   }
 }
-
+# This trigger cloudbuild on schedule
 resource "google_cloud_scheduler_job" "trigger-schedule" {
   count = var.schedule != null ? 1 : 0
 

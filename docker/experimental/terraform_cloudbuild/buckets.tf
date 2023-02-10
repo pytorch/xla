@@ -12,3 +12,16 @@ resource "google_storage_bucket" "tfstate" {
     enabled = true
   }
 }
+
+resource "google_storage_bucket" "wheels" {
+  name          = "${var.project_id}-wheels"
+  force_destroy = false
+  location      = "US"
+  storage_class = "STANDARD"
+
+  uniform_bucket_level_access = true
+
+  versioning {
+    enabled = true
+  }
+}
