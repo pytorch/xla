@@ -2377,7 +2377,7 @@ XLATensorPtr stack(absl::Span<const XLATensorPtr> tensors, int64_t dim) {
 }
 
 XLATensorPtr std(const XLATensorPtr& input, std::vector<int64_t> dimensions,
-                 bool keep_reduced_dimensions, int64_t correction) {
+                 bool keep_reduced_dimensions, double correction) {
   return input->CreateFrom(
       torch::lazy::MakeNode<Std>(input->GetIrValue(),
                                  torch::lazy::GetCanonicalDimensionIndices(
@@ -2388,7 +2388,7 @@ XLATensorPtr std(const XLATensorPtr& input, std::vector<int64_t> dimensions,
 
 std::tuple<XLATensorPtr, XLATensorPtr> std_mean(const XLATensorPtr& input,
                                                 std::vector<int64_t> dimensions,
-                                                int64_t correction,
+                                                double correction,
                                                 bool keep_reduced_dimensions) {
   torch::lazy::NodePtr node = torch::lazy::MakeNode<StdMean>(
       input->GetIrValue(),
@@ -2639,7 +2639,7 @@ XLATensorPtr view(const XLATensorPtr& input,
 }
 
 XLATensorPtr var(const XLATensorPtr& input, std::vector<int64_t> dimensions,
-                 int64_t correction, bool keep_reduced_dimensions) {
+                 double correction, bool keep_reduced_dimensions) {
   return input->CreateFrom(
       torch::lazy::MakeNode<Var>(input->GetIrValue(),
                                  torch::lazy::GetCanonicalDimensionIndices(
@@ -2650,7 +2650,7 @@ XLATensorPtr var(const XLATensorPtr& input, std::vector<int64_t> dimensions,
 
 std::tuple<XLATensorPtr, XLATensorPtr> var_mean(const XLATensorPtr& input,
                                                 std::vector<int64_t> dimensions,
-                                                int64_t correction,
+                                                double correction,
                                                 bool keep_reduced_dimensions) {
   torch::lazy::NodePtr node = torch::lazy::MakeNode<VarMean>(
       input->GetIrValue(),
