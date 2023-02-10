@@ -2,6 +2,7 @@ import argparse
 import os
 import torch
 import torch_xla
+import torch_xla.core.xla_env_vars as xenv
 import torch_xla.core.xla_model as xm
 import torch.distributed as dist
 import torch_xla.distributed.xla_multiprocessing as xmp
@@ -45,7 +46,7 @@ if __name__ == '__main__':
   print(
       'master_port:{}, master_addr:{}, rank:{}, local_rank:{}, size:{}'.format(
           os.environ['MASTER_PORT'], os.environ['MASTER_ADDR'],
-          os.environ['RANK'], os.environ['LOCAL_RANK'],
+          os.environ['RANK'], os.environ[xenv.XLA_LOCAL_RANK],
           os.environ['WORLD_SIZE']))
   parser = argparse.ArgumentParser()
   parser.add_argument('--use_xla_backend', action="store_true")
