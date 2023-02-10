@@ -599,7 +599,7 @@ class TestAtenXlaTensor(test_utils.XlaTestCase):
     xla_result = xla_base[:, torch.empty(0, 6, dtype=torch.int64)]
     self.assertEqual(result, xla_result)
 
-  @unittest.skip("Produce wrong results on grad_input")
+  @unittest.skip("grad_input produces wrong results after functionalization. pytorch/pytorch#91199")
   def test_empty_strided(self):
     xla_device = xm.xla_device()
     m = nn.Conv1d(4, 6, kernel_size=3, groups=2)
