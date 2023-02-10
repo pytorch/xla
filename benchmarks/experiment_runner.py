@@ -78,6 +78,10 @@ class ExperimentRunner:
           process_env = experiment_config.pop("process_env")
           experiment_config_str = json.dumps(experiment_config)
           model_config_str = json.dumps(model_config)
+          dummy_benchmark_experiment = self.experiment_loader.load_experiment(
+              experiment_config, dummy=True)
+          dummy_benchmark_model = self.model_loader.load_model(model_config,
+                                                   dummy_benchmark_experiment, dummy=True)
           experiment_config["process_env"] = process_env
           command = ([sys.executable] + sys.argv +
                      [f"--experiment-config={experiment_config_str}"] +
@@ -85,7 +89,7 @@ class ExperimentRunner:
           if self._args.dry_run:
             logger.warning(f"Dry run with {command}")
             continue
-          if self.model_loader.is_compatible(model_config, experiment_config):
+          if self.model_loader.is_compatible(dummy_benchmark_model, dummy_benchmark_experiment):
             try:
               completed_process = subprocess.run(
                   command,
@@ -93,19 +97,20 @@ class ExperimentRunner:
                   env=process_env,
                   check=True,
                   capture_output=True,
+                  encoding="utf-8",
               )
             except subprocess.TimeoutExpired as e:
               logger.error("TIMEOUT")
-              self.record_failed_experiment(model_config_str,
-                                            experiment_config_str, e)
+              self.record_failed_experiment(dummy_benchmark_model,
+                                            dummy_benchmark_experiment, e)
             except subprocess.CalledProcessError as e:
               logger.error("ERROR")
-              self.record_failed_experiment(model_config_str,
-                                            experiment_config_str, e.stderr)
+              self.record_failed_experiment(dummy_benchmark_model,
+                                            dummy_benchmark_experiment, e.stderr)
             except subprocess.SubprocessError as e:
               logger.error("ERROR")
-              self.record_failed_experiment(model_config_str,
-                                            experiment_config_str, e)
+              self.record_failed_experiment(dummy_benchmark_model,
+                                            dummy_benchmark_experiment, e)
             else:
               if self._args.print_subprocess:
                 logger.info(completed_process.stdout)
@@ -114,8 +119,8 @@ class ExperimentRunner:
           else:
             e = "SKIP because of incompatible model and experiment configs."
             logger.warning(e)
-            self.record_failed_experiment(model_config_str,
-                                          experiment_config_str, e)
+            self.record_failed_experiment(dummy_benchmark_model,
+                                          dummy_benchmark_experiment, e)
 
   def run_single_experiment(self, experiment_config, model_config):
     benchmark_experiment = self.experiment_loader.load_experiment(
@@ -125,62 +130,56 @@ class ExperimentRunner:
                                                    benchmark_experiment)
 
     with benchmark_model.pick_grad():
-      timings = OrderedDict()
-      results = []
+      metrics = OrderedDict()
+      outputs = []
       for i in range(self._args.repeat):
-        timing, result = self.timed_run(benchmark_experiment, benchmark_model)
-        result = move_to_device(result, 'cpu')
-        results.append(result)
-        for key, val in timing.items():
+        run_metrics, output = self.timed_run(benchmark_experiment, benchmark_model)
+        output = move_to_device(output, 'cpu')
+        outputs.append(output)
+        for key, val in run_metrics.items():
+          # metrics from repeated runs are formed into lists in the metrics dict
           if i == 0:
-            timings[key] = np.zeros(self._args.repeat, np.float64)
-          timings[key][i] = val
-    # print(timings)
+            metrics[key] = []
+          metrics[key].append(val)
 
-    self.save_results(benchmark_experiment, benchmark_model, timings, results)
+    self.save_results(benchmark_experiment, benchmark_model, metrics, outputs)
 
-  def save_results(self, benchmark_experiment, benchmark_model, timings,
-                   results):
-    detail_file_name = f"{benchmark_model.filename_str}-{benchmark_experiment.filename_str}.pt"
-    csv_headers = [
-        "suite_name",
-        "model_name",
-        "accelerator",
-        "xla",
-        "dynamo",
-        "test",
-        "batch_size",
-        "median_total",
-        "median_per_iter",
-        "detail_results",
-    ]
+  def save_results(self, benchmark_experiment, benchmark_model, metrics,
+                   outputs):
+    if self._args.save_output and outputs is not None:
+      outputs_file_name = f"{benchmark_model.filename_str}-{benchmark_experiment.filename_str}.pt"
+      torch.save(outputs, os.path.join(self.output_dir, outputs_file_name))
+    else:
+      outputs_file_name = None
 
-    csv_row = [
-        benchmark_model.suite_name,
-        benchmark_model.model_name,
-        benchmark_experiment.accelerator,
-        benchmark_experiment.xla,
-        benchmark_experiment.dynamo,
-        benchmark_experiment.test,
-        benchmark_experiment.batch_size,
-        np.median(timings["total"]).item(),
-        np.median(timings["per_iter"]).item(),
-        detail_file_name,
-    ]
+    results = OrderedDict()
+    results.update(benchmark_model.to_dict())
+    results.update(benchmark_experiment.to_dict())
+    results["repeat"] = self._args.repeat
+    results["iterations_per_run"] = self._args.iterations_per_run
 
-    self.output_csv(csv_headers, csv_row)
+    results.update(metrics)
+    results["outputs_file"] = outputs_file_name
 
-    torch.save({
-        "timings": timings,
-        "results": results
-    }, os.path.join(self.output_dir, detail_file_name))
+    self.output_jsonl(results)
 
-  def record_failed_experiment(self, model_config_str, experiment_config_str,
-                               e):
-    headers = ["model_config", "experiment_config", "failure"]
-    row = [model_config_str, experiment_config_str, e]
-    file_path = os.path.join(self.output_dir, "failed_experiments.csv")
-    self.output_csv(headers, row, file_path)
+  def record_failed_experiment(self, dummy_benchmark_model, dummy_benchmark_experiment, e):
+    results = OrderedDict()
+    results.update(dummy_benchmark_model.to_dict())
+    results.update(dummy_benchmark_experiment.to_dict())
+    results["repeat"] = self._args.repeat
+    results["iterations_per_run"] = self._args.iterations_per_run
+
+    results["error"] = e
+
+    self.output_jsonl(results)
+
+  def output_jsonl(self, obj, file_path=None):
+    if not file_path:
+      file_path = self.output_file
+    json_str = json.dumps(obj, ensure_ascii=False)
+    with open(file_path, mode="a", encoding="utf-8") as f:
+      f.write(f"{json_str}\n")
 
   def output_csv(self, headers, row, file_path=None):
     if not file_path:
@@ -229,7 +228,7 @@ class ExperimentRunner:
     self._mark_step(benchmark_experiment)
     self._synchronize(benchmark_experiment)
 
-    timing = OrderedDict()
+    metrics = OrderedDict()
     t_start = time.perf_counter()
     if benchmark_experiment.xla:
       t_trace = 0
@@ -238,8 +237,8 @@ class ExperimentRunner:
       if benchmark_experiment.xla:
         t_trace_start = time.perf_counter()
 
-      result = benchmark_model.model_iter_fn(
-          inputs_list[i], collect_full_result=self._args.collect_full_result)
+      output = benchmark_model.model_iter_fn(
+          inputs_list[i], collect_full_output=self._args.collect_full_output)
 
       if benchmark_experiment.xla:
         t_trace += time.perf_counter() - t_trace_start
@@ -250,12 +249,12 @@ class ExperimentRunner:
 
     t_end = time.perf_counter()
 
-    timing["total"] = t_end - t_start
-    timing["per_iter"] = timing["total"] / self._args.iterations_per_run
+    metrics["total_time"] = t_end - t_start
+    metrics["per_iter_time"] = metrics["total_time"] / self._args.iterations_per_run
     if benchmark_experiment.xla:
-      timing["trace_per_iter"] = t_trace / self._args.iterations_per_run
+      metrics["trace_per_iter_time"] = t_trace / self._args.iterations_per_run
 
-    return timing, result
+    return metrics, output
 
 
 def parse_args(args=None):
@@ -272,6 +271,13 @@ def parse_args(args=None):
       "--filter", "-k", action="append", help="filter benchmarks with regexp")
   parser.add_argument(
       "--exclude", "-x", action="append", help="filter benchmarks with regexp")
+
+  parser.add_argument(
+      "--log-level",
+      default="warning",
+      choices=["info", "warning"],
+      help="Specify the logging level.",
+  )
 
   parser.add_argument(
       "--experiment-name",
@@ -369,11 +375,17 @@ def parse_args(args=None):
   )
 
   parser.add_argument(
-      "--collect-full-result",
+      "--collect-full-output",
       action="store_true",
-      help="""Whether to collect full result for training. Set this to true if we
+      help="""Whether to collect full output for training. Set this to true if we
         want to verify the numerical correctness of graidents. But that may
         cause time measurement not accurate""",
+  )
+
+  parser.add_argument(
+      "--save-output",
+      action="store_true",
+      help="Whether to save the output to disk",
   )
 
   parser.add_argument(
@@ -386,7 +398,7 @@ def parse_args(args=None):
   parser.add_argument(
       "--output-basename",
       type=str,
-      default="results.csv",
+      default="results.jsonl",
       help="Overrides the basename of output files.",
   )
 
@@ -411,11 +423,18 @@ def main():
   args.filter = args.filter or [r"."]
   args.exclude = args.exclude or [r"^$"]
 
+  if args.log_level == "info":
+    log_level = logging.INFO
+  elif args.log_level == "warning":
+    log_level = logging.WARNING
+  else:
+    log_level = None
+  logging.basicConfig(level=log_level, force=True)
+
   logger.info(args)
   runner = ExperimentRunner(args)
   runner.run()
 
 
 if __name__ == "__main__":
-  logging.basicConfig(level=logging.WARNING, force=True)
   main()

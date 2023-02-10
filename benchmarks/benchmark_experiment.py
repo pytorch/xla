@@ -1,3 +1,4 @@
+from collections import OrderedDict
 import logging
 import os
 import torch
@@ -120,7 +121,7 @@ class ExperimentLoader:
 
     experiment_config["process_env"] = process_env
 
-  def load_experiment(self, experiment_config):
+  def load_experiment(self, experiment_config, dummy=False):
     experiment_name = self.experiment_name
     accelerator = experiment_config["accelerator"]
     xla = experiment_config["xla"]
@@ -164,3 +165,13 @@ class BenchmarkExperiment:
   @property
   def filename_str(self):
     return f"{self.accelerator}-{self.xla}-{self.dynamo}-{self.test}-{self.batch_size}"
+
+  def to_dict(self):
+    d = OrderedDict()
+    d["experiment_name"] = self.experiment_name
+    d["accelerator"] = self.accelerator
+    d["xla"] = self.xla
+    d["dynamo"] = self.dynamo
+    d["test"] = self.test
+    d["batch_size"] = self.batch_size
+    return d

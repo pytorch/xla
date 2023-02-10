@@ -71,9 +71,6 @@ class TorchBenchModelLoader(ModelLoader):
 
     return model_configs
 
-  def is_compatible(self, model_config, experiment_config):
-    return True
-
 
 class TorchBenchModel(BenchmarkModel):
 

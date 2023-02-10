@@ -1,3 +1,4 @@
+from collections import OrderedDict
 import logging
 import re
 import torch
@@ -30,7 +31,7 @@ class ModelLoader:
 
     return model_configs
 
-  def is_compatible(self, model_config, experiment_config):
+  def is_compatible(self, dummy_benchmark_model, benchmark_experiment):
     return True
 
   def get_benchmark_indices(self, length):
@@ -45,7 +46,7 @@ class ModelLoader:
     return (not re.search("|".join(self._args.filter), model_name, re.I) or
             re.search("|".join(self._args.exclude), model_name, re.I))
 
-  def load_model(self, model_config, benchmark_experiment):
+  def load_model(self, model_config, benchmark_experiment, dummy=False):
     suite_name = self.suite_name
     model_name = model_config["model_name"]
     benchmark_model = self.benchmark_model_class(
@@ -54,8 +55,9 @@ class ModelLoader:
         benchmark_experiment=benchmark_experiment,
     )
 
-    benchmark_model.set_up()
-    benchmark_model.prepare_for_experiment()
+    if not dummy:
+      benchmark_model.set_up()
+      benchmark_model.prepare_for_experiment()
 
     return benchmark_model
 
@@ -135,22 +137,28 @@ class BenchmarkModel:
   def compute_loss(self, pred):
     raise NotImplementedError
 
-  def train(self, inputs, collect_full_result=False):
+  def train(self, inputs, collect_full_output=False):
     self.optimizer_zero_grad()
     pred = self.module(*inputs)
     loss = self.compute_loss(pred)
     loss.backward()
     self.optimizer_step()
-    if collect_full_result:
+    if collect_full_output:
       return collect_results(self.module, pred, loss, inputs)
     # return loss.detach()
     # TODO: dynamo inductor would fail if .detach() is used
     return None
 
-  def eval(self, inputs, collect_full_result=False):
+  def eval(self, inputs, collect_full_output=False):
     pred = self.module(*inputs)
     return pred
 
   @property
   def filename_str(self):
     return f"{self.suite_name}-{self.model_name}"
+
+  def to_dict(self):
+    d = OrderedDict()
+    d["suite_name"] = self.suite_name
+    d["model_name"] = self.model_name
+    return d
