@@ -143,7 +143,6 @@ class TorchBenchModel(BenchmarkModel):
     elif type(pred).__name__ == "SquashedNormal":
       return pred.mean.sum()
     elif isinstance(pred, dict):
-      return sum([reduce_to_scalar_loss(value) for value in pred.values()]) / len(
-          pred.keys()
-      )
+      return sum([reduce_to_scalar_loss(value) for value in pred.values()
+                 ]) / len(pred.keys())
     raise NotImplementedError("Don't know how to reduce", type(pred))

@@ -7,11 +7,13 @@ import os
 from os.path import abspath
 import queue
 import random
+import subprocess
 import torch
 import traceback
 
 try:
   import torch_xla.core.xla_model as xm
+  from torch_xla.distributed.cluster import ClusterResolver
 except ImportError:
   # ignore the error if torch_xla is not installed
   pass
@@ -119,3 +121,31 @@ def set_cwd(path):
     yield
   finally:
     os.chdir(original_dir)
+
+
+def get_accelerator_model(accelerator):
+  if accelerator == "cpu":
+    return get_cpu_name()
+  elif accelerator == "gpu":
+    return get_gpu_name()
+  elif accelerator == "tpu":
+    return get_tpu_name()
+  else:
+    raise NotImplementedError
+
+
+def get_cpu_name():
+  return subprocess.check_output(
+      ["lscpu"],
+      encoding='utf-8').split("Model name:")[1].split("\n")[0].strip()
+
+
+def get_gpu_name():
+  return subprocess.check_output(
+      ["nvidia-smi", "--query-gpu=gpu_name", "--format=csv"],
+      encoding='utf-8').split("\n")[1]
+
+
+def get_tpu_name():
+  return ClusterResolver.get_instance_metadata(
+      'instance/attributes/accelerator-type')

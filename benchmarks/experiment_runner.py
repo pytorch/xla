@@ -80,8 +80,8 @@ class ExperimentRunner:
           model_config_str = json.dumps(model_config)
           dummy_benchmark_experiment = self.experiment_loader.load_experiment(
               experiment_config, dummy=True)
-          dummy_benchmark_model = self.model_loader.load_model(model_config,
-                                                   dummy_benchmark_experiment, dummy=True)
+          dummy_benchmark_model = self.model_loader.load_model(
+              model_config, dummy_benchmark_experiment, dummy=True)
           experiment_config["process_env"] = process_env
           command = ([sys.executable] + sys.argv +
                      [f"--experiment-config={experiment_config_str}"] +
@@ -89,7 +89,8 @@ class ExperimentRunner:
           if self._args.dry_run:
             logger.warning(f"Dry run with {command}")
             continue
-          if self.model_loader.is_compatible(dummy_benchmark_model, dummy_benchmark_experiment):
+          if self.model_loader.is_compatible(dummy_benchmark_model,
+                                             dummy_benchmark_experiment):
             try:
               completed_process = subprocess.run(
                   command,
@@ -101,16 +102,17 @@ class ExperimentRunner:
               )
             except subprocess.TimeoutExpired as e:
               logger.error("TIMEOUT")
-              self.record_failed_experiment(dummy_benchmark_model,
-                                            dummy_benchmark_experiment, e)
+              self.save_results(dummy_benchmark_experiment,
+                                dummy_benchmark_model, {"error": e}, None)
             except subprocess.CalledProcessError as e:
               logger.error("ERROR")
-              self.record_failed_experiment(dummy_benchmark_model,
-                                            dummy_benchmark_experiment, e.stderr)
+              self.save_results(dummy_benchmark_experiment,
+                                dummy_benchmark_model, {"error": e.stderr},
+                                None)
             except subprocess.SubprocessError as e:
               logger.error("ERROR")
-              self.record_failed_experiment(dummy_benchmark_model,
-                                            dummy_benchmark_experiment, e)
+              self.save_results(dummy_benchmark_experiment,
+                                dummy_benchmark_model, {"error": e}, None)
             else:
               if self._args.print_subprocess:
                 logger.info(completed_process.stdout)
@@ -119,8 +121,8 @@ class ExperimentRunner:
           else:
             e = "SKIP because of incompatible model and experiment configs."
             logger.warning(e)
-            self.record_failed_experiment(dummy_benchmark_model,
-                                          dummy_benchmark_experiment, e)
+            self.save_results(dummy_benchmark_experiment, dummy_benchmark_model,
+                              {"error": e}, None)
 
   def run_single_experiment(self, experiment_config, model_config):
     benchmark_experiment = self.experiment_loader.load_experiment(
@@ -133,7 +135,8 @@ class ExperimentRunner:
       metrics = OrderedDict()
       outputs = []
       for i in range(self._args.repeat):
-        run_metrics, output = self.timed_run(benchmark_experiment, benchmark_model)
+        run_metrics, output = self.timed_run(benchmark_experiment,
+                                             benchmark_model)
         output = move_to_device(output, 'cpu')
         outputs.append(output)
         for key, val in run_metrics.items():
@@ -160,17 +163,6 @@ class ExperimentRunner:
 
     results.update(metrics)
     results["outputs_file"] = outputs_file_name
-
-    self.output_jsonl(results)
-
-  def record_failed_experiment(self, dummy_benchmark_model, dummy_benchmark_experiment, e):
-    results = OrderedDict()
-    results.update(dummy_benchmark_model.to_dict())
-    results.update(dummy_benchmark_experiment.to_dict())
-    results["repeat"] = self._args.repeat
-    results["iterations_per_run"] = self._args.iterations_per_run
-
-    results["error"] = e
 
     self.output_jsonl(results)
 
@@ -250,7 +242,8 @@ class ExperimentRunner:
     t_end = time.perf_counter()
 
     metrics["total_time"] = t_end - t_start
-    metrics["per_iter_time"] = metrics["total_time"] / self._args.iterations_per_run
+    metrics[
+        "per_iter_time"] = metrics["total_time"] / self._args.iterations_per_run
     if benchmark_experiment.xla:
       metrics["trace_per_iter_time"] = t_trace / self._args.iterations_per_run
 

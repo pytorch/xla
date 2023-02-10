@@ -5,9 +5,9 @@ import torch
 import torch._dynamo as dynamo
 
 try:
-  from .util import is_xla_device_available
+  from .util import is_xla_device_available, get_accelerator_model
 except ImportError:
-  from util import is_xla_device_available
+  from util import is_xla_device_available, get_accelerator_model
 
 try:
   import torch_xla.core.xla_model as xm
@@ -149,6 +149,7 @@ class BenchmarkExperiment:
     self.dynamo = dynamo
     self.test = test
     self.batch_size = batch_size
+    self.accelerator_model = get_accelerator_model(self.accelerator)
 
   def get_device(self):
     if self.xla:
@@ -164,12 +165,13 @@ class BenchmarkExperiment:
 
   @property
   def filename_str(self):
-    return f"{self.accelerator}-{self.xla}-{self.dynamo}-{self.test}-{self.batch_size}"
+    return f"{self.accelerator}-{self.accelerator_model}-{self.xla}-{self.dynamo}-{self.test}-{self.batch_size}"
 
   def to_dict(self):
     d = OrderedDict()
     d["experiment_name"] = self.experiment_name
     d["accelerator"] = self.accelerator
+    d["accelerator_model"] = self.accelerator_model
     d["xla"] = self.xla
     d["dynamo"] = self.dynamo
     d["test"] = self.test
