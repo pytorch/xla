@@ -5344,7 +5344,6 @@ TEST_F(AtenXlaTensorTest, TestOneIndexTransfer) {
 }
 
 TEST_F(AtenXlaTensorTest, TestNonzero) {
-  GTEST_SKIP() << "Needs additional DS support after functionalization";
   torch::Tensor a = torch::zeros({4, 2}, torch::TensorOptions(torch::kFloat));
   a[0][1] = 1.0;
   a[1][0] = 2.0;
