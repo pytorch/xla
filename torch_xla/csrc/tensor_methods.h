@@ -791,11 +791,11 @@ void squeeze_(XLATensorPtr& input, int64_t dim);
 XLATensorPtr stack(absl::Span<const XLATensorPtr> tensors, int64_t dim);
 
 XLATensorPtr std(const XLATensorPtr& input, std::vector<int64_t> dimensions,
-                 bool keep_reduced_dimensions, int64_t correction);
+                 bool keep_reduced_dimensions, double correction);
 
 std::tuple<XLATensorPtr, XLATensorPtr> std_mean(const XLATensorPtr& input,
                                                 std::vector<int64_t> dimensions,
-                                                int64_t correction,
+                                                double correction,
                                                 bool keep_reduced_dimensions);
 
 XLATensorPtr sub(
@@ -874,11 +874,11 @@ XLATensorPtr upsample_nearest2d_backward(const XLATensorPtr& grad_output,
                                          std::vector<int64_t> input_size);
 
 XLATensorPtr var(const XLATensorPtr& input, std::vector<int64_t> dimensions,
-                 int64_t correction, bool keep_reduced_dimensions);
+                 double correction, bool keep_reduced_dimensions);
 
 std::tuple<XLATensorPtr, XLATensorPtr> var_mean(const XLATensorPtr& input,
                                                 std::vector<int64_t> dimensions,
-                                                int64_t correction,
+                                                double correction,
                                                 bool keep_reduced_dimensions);
 
 // Like reshape, but it returns a view into the original tensor.
