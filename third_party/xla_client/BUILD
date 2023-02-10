@@ -1,25 +1,21 @@
-licenses(["notice"])  # Apache 2.0
-
-package(default_visibility = ["//tensorflow:internal"])
-
+load("//tensorflow/compiler/xla:xla.bzl", "xla_cc_test")
 load(
     "//tensorflow:tensorflow.bzl",
-    "tf_cc_binary",
-    "tf_cc_shared_object",
-    "tf_cc_test",
     "if_with_tpu_support",
+    "tf_cc_shared_object",
 )
 load(
     "//tensorflow/tsl/platform/default:build_config.bzl",
-    "tf_additional_all_protos",
-    "tf_proto_library",
     "tf_proto_library_cc",
-    "tf_proto_library_py",
 )
 load(
     "//tensorflow/tsl/platform/default:cuda_build_defs.bzl",
     "if_cuda_is_configured",
 )
+
+licenses(["notice"])  # Apache 2.0
+
+package(default_visibility = ["//tensorflow:internal"])
 
 exports_files(
     [
@@ -79,8 +75,8 @@ cc_library(
         "metrics_reader.cc",
         "multi_wait.cc",
         "nccl_distributed.cc",
-        "profiler.cc",
         "pjrt_computation_client.cc",
+        "profiler.cc",
         "record_reader.cc",
         "sys_util.cc",
         "tf_logging.cc",
@@ -104,8 +100,8 @@ cc_library(
         "metrics_reader.h",
         "multi_wait.h",
         "nccl_distributed.h",
-        "profiler.h",
         "pjrt_computation_client.h",
+        "profiler.h",
         "record_reader.h",
         "sys_util.h",
         "tf_logging.h",
@@ -186,4 +182,26 @@ cc_library(
         "//tensorflow/compiler/jit:xla_tpu_jit",
     ]),
     alwayslink = 1,
+)
+
+xla_cc_test(
+    name = "pjrt_computation_client_test",
+    srcs = ["pjrt_computation_client_test.cc"],
+    deps = [
+        ":computation_client_impl",
+        "//tensorflow/compiler/xla:literal",
+        "//tensorflow/compiler/xla:literal_util",
+        "//tensorflow/compiler/xla:shape_util",
+        "//tensorflow/compiler/xla:status",
+        "//tensorflow/compiler/xla:statusor",
+        "//tensorflow/compiler/xla/client:xla_builder",
+        "//tensorflow/compiler/xla/client:xla_computation",
+        "//tensorflow/compiler/xla/tests:literal_test_util",
+        "//tensorflow/compiler/xla/tools:hlo_module_loader",
+        "//tensorflow/core/platform:logging",
+        "//tensorflow/tsl/lib/core:status_test_util",
+        "//tensorflow/tsl/platform:env",
+        "//tensorflow/tsl/platform:test",
+        "//tensorflow/tsl/platform:test_main",
+    ],
 )

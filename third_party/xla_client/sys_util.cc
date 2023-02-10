@@ -15,15 +15,19 @@ std::string GetEnvString(const char* name, const std::string& defval) {
 }
 
 std::string GetEnvOrdinalPath(const char* name, const std::string& defval,
-                              const char* ordinal_env) {
+                              const int64_t ordinal) {
   std::string path = GetEnvString(name, defval);
   if (!path.empty()) {
-    int64_t ordinal = GetEnvInt(ordinal_env, -1);
     if (ordinal >= 0) {
       path = absl::StrCat(path, ".", ordinal);
     }
   }
   return path;
+}
+
+std::string GetEnvOrdinalPath(const char* name, const std::string& defval,
+                              const char* ordinal_env) {
+  return GetEnvOrdinalPath(name, defval, GetEnvInt(ordinal_env, -1));
 }
 
 int64_t GetEnvInt(const char* name, int64_t defval) {

@@ -27,6 +27,14 @@ MODEL_OPTS = {
     '--test_only_at_end': {
         'action': 'store_true',
     },
+    '--sharding': {
+        'choices': ['batch', 'spatial', 'conv', 'linear'],
+        'nargs': '+',
+        'default': [],
+    },
+    '--use_virtual_device': {
+        'action': 'store_true',
+    },
 }
 
 FLAGS = args_parse.parse_common_options(
@@ -41,10 +49,8 @@ FLAGS = args_parse.parse_common_options(
 )
 
 import os
-import pprint
 import schedulers
 import numpy as np
-import sys
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -56,9 +62,10 @@ import torch_xla.debug.metrics as met
 import torch_xla.distributed.parallel_loader as pl
 import torch_xla.utils.utils as xu
 import torch_xla.core.xla_model as xm
-import torch_xla.distributed.xla_multiprocessing as xmp
-from torch_xla.experimental import pjrt
+import torch_xla.debug.profiler as xp
 import torch_xla.test.test_utils as test_utils
+import torch_xla.experimental.xla_sharding as xs
+import torch_xla.experimental.pjrt as pjrt
 
 DEFAULT_KWARGS = dict(
     batch_size=128,
@@ -114,25 +121,24 @@ def _train_update(device, step, loss, tracker, epoch, writer):
       summary_writer=writer)
 
 
-def train_imagenet(flags):
+def train_imagenet():
   print('==> Preparing data..')
   img_dim = get_model_property('img_dim')
-  if flags.fake_data:
+  if FLAGS.fake_data:
     train_dataset_len = 1200000  # Roughly the size of Imagenet dataset.
     train_loader = xu.SampleGenerator(
-        data=(torch.zeros(flags.batch_size, 3, img_dim, img_dim),
-              torch.zeros(flags.batch_size, dtype=torch.int64)),
-        sample_count=train_dataset_len // flags.batch_size //
-        xm.xrt_world_size())
+        data=(torch.zeros(FLAGS.batch_size, 3, img_dim, img_dim),
+              torch.zeros(FLAGS.batch_size, dtype=torch.int64)),
+        sample_count=train_dataset_len // FLAGS.batch_size)
     test_loader = xu.SampleGenerator(
-        data=(torch.zeros(flags.test_set_batch_size, 3, img_dim, img_dim),
-              torch.zeros(flags.test_set_batch_size, dtype=torch.int64)),
-        sample_count=50000 // flags.batch_size // xm.xrt_world_size())
+        data=(torch.zeros(FLAGS.test_set_batch_size, 3, img_dim, img_dim),
+              torch.zeros(FLAGS.test_set_batch_size, dtype=torch.int64)),
+        sample_count=50000 // FLAGS.batch_size)
   else:
     normalize = transforms.Normalize(
         mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
     train_dataset = torchvision.datasets.ImageFolder(
-        os.path.join(flags.datadir, 'train'),
+        os.path.join(FLAGS.datadir, 'train'),
         transforms.Compose([
             transforms.RandomResizedCrop(img_dim),
             transforms.RandomHorizontalFlip(),
@@ -142,7 +148,7 @@ def train_imagenet(flags):
     train_dataset_len = len(train_dataset.imgs)
     resize_dim = max(img_dim, 256)
     test_dataset = torchvision.datasets.ImageFolder(
-        os.path.join(flags.datadir, 'val'),
+        os.path.join(FLAGS.datadir, 'val'),
         # Matches Torchvision's eval transforms except Torchvision uses size
         # 256 resize for all models both here and in the train loader. Their
         # version crashes during training on 299x299 images, e.g. inception.
@@ -153,53 +159,93 @@ def train_imagenet(flags):
             normalize,
         ]))
 
-    train_sampler, test_sampler = None, None
-    if xm.xrt_world_size() > 1:
-      train_sampler = torch.utils.data.distributed.DistributedSampler(
-          train_dataset,
-          num_replicas=xm.xrt_world_size(),
-          rank=xm.get_ordinal(),
-          shuffle=True)
-      test_sampler = torch.utils.data.distributed.DistributedSampler(
-          test_dataset,
-          num_replicas=xm.xrt_world_size(),
-          rank=xm.get_ordinal(),
-          shuffle=False)
+    # For single-host SPMD, no data sampler is needed.
     train_loader = torch.utils.data.DataLoader(
         train_dataset,
-        batch_size=flags.batch_size,
-        sampler=train_sampler,
-        drop_last=flags.drop_last,
-        shuffle=False if train_sampler else True,
-        num_workers=flags.num_workers)
+        batch_size=FLAGS.batch_size,
+        sampler=None,
+        drop_last=FLAGS.drop_last,
+        shuffle=True)
     test_loader = torch.utils.data.DataLoader(
         test_dataset,
-        batch_size=flags.test_set_batch_size,
-        sampler=test_sampler,
-        drop_last=flags.drop_last,
-        shuffle=False,
-        num_workers=flags.num_workers)
+        batch_size=FLAGS.test_set_batch_size,
+        sampler=None,
+        drop_last=FLAGS.drop_last,
+        shuffle=False)
+
+  torch.manual_seed(42)
 
   device = xm.xla_device()
-  model = get_model_property('model_fn')()
-  model = model.to(device)
-  pjrt.broadcast_master_param(model)
+  model = get_model_property('model_fn')().to(device)
+
+  input_mesh = None
+  if FLAGS.sharding:
+    num_devices = pjrt.global_device_count()
+    device_ids = np.arange(num_devices)
+    # Model sharding
+    if 'conv' in FLAGS.sharding:
+      # Shard the model's convlution layers along two dimensions
+      mesh_shape = (2, num_devices // 2, 1, 1)
+      mesh = xs.Mesh(device_ids, mesh_shape, ('w', 'x', 'y', 'z'))
+      partition_spec = (0, 1, 2, 3)  # Apply sharding along all axes
+      print(
+          f'Applying sharding to convolution layers with mesh {mesh.get_logical_mesh()}'
+      )
+      for name, layer in model.named_modules():
+        if 'conv' in name:
+          xs.mark_sharding(layer.weight, mesh, partition_spec)
+    elif 'linear' in FLAGS.sharding:
+      # Shard the model's fully connected layers across addressable devices
+      mesh_shape = (num_devices, 1)
+      mesh = xs.Mesh(device_ids, mesh_shape, ('x', 'y'))
+      print(
+          f'Applying sharding to linear layers with mesh {mesh.get_logical_mesh()}'
+      )
+      partition_spec = (0, 1)
+      for name, layer in model.named_modules():
+        if 'fc' in name:
+          xs.mark_sharding(layer.weight, mesh, partition_spec)
+
+    # Input sharding
+    if 'batch' in FLAGS.sharding and 'spatial' in FLAGS.sharding:
+      # Shard along both the batch dimension and spatial dimension
+      # If there are more than 4 devices, shard along the height axis as well
+      width_axis, height_axis = 2, num_devices // 4
+      mesh_shape = (2, 1, width_axis, height_axis)
+      input_mesh = xs.Mesh(device_ids, mesh_shape, ('B', 'C', 'W', 'H'))
+      print(
+          f'Sharding input along batch and spatial dimensions with mesh {input_mesh.get_logical_mesh()}'
+      )
+    elif 'batch' in FLAGS.sharding:
+      # Shard along batch dimension only
+      mesh_shape = (num_devices, 1, 1, 1)
+      input_mesh = xs.Mesh(device_ids, mesh_shape, ('B', 'C', 'W', 'H'))
+      print(
+          f'Sharding input along batch dimension with mesh {input_mesh.get_logical_mesh()}'
+      )
+    elif 'spatial' in FLAGS.sharding:
+      # Shard two-way along input spatial dimensions
+      mesh_shape = (1, 1, num_devices // 2, 2)
+      input_mesh = xs.Mesh(device_ids, mesh_shape, ('B', 'C', 'W', 'H'))
+      print(
+          f'Sharding input images on spatial dimensions with mesh {mesh.get_logical_mesh()}'
+      )
+
   writer = None
   if xm.is_master_ordinal():
-    writer = test_utils.get_summary_writer(flags.logdir)
+    writer = test_utils.get_summary_writer(FLAGS.logdir)
   optimizer = optim.SGD(
       model.parameters(),
-      lr=flags.lr,
-      momentum=flags.momentum,
+      lr=FLAGS.lr,
+      momentum=FLAGS.momentum,
       weight_decay=1e-4)
-  num_training_steps_per_epoch = train_dataset_len // (
-      flags.batch_size * xm.xrt_world_size())
+  num_training_steps_per_epoch = train_dataset_len // (FLAGS.batch_size)
   lr_scheduler = schedulers.wrap_optimizer_with_scheduler(
       optimizer,
-      scheduler_type=getattr(flags, 'lr_scheduler_type', None),
-      scheduler_divisor=getattr(flags, 'lr_scheduler_divisor', None),
+      scheduler_type=getattr(FLAGS, 'lr_scheduler_type', None),
+      scheduler_divisor=getattr(FLAGS, 'lr_scheduler_divisor', None),
       scheduler_divide_every_n_epochs=getattr(
-          flags, 'lr_scheduler_divide_every_n_epochs', None),
+          FLAGS, 'lr_scheduler_divide_every_n_epochs', None),
       num_steps_per_epoch=num_training_steps_per_epoch,
       summary_writer=writer)
   loss_fn = nn.CrossEntropyLoss()
@@ -208,15 +254,23 @@ def train_imagenet(flags):
     tracker = xm.RateTracker()
     model.train()
     for step, (data, target) in enumerate(loader):
-      optimizer.zero_grad()
-      output = model(data)
-      loss = loss_fn(output, target)
-      loss.backward()
-      xm.optimizer_step(optimizer)
-      tracker.add(flags.batch_size)
+      data = data.to(xm.xla_device())
+      target = target.to(xm.xla_device())
+      if input_mesh:
+        partition_spec = (0, 1, 2, 3)
+        xs.mark_sharding(data, input_mesh, partition_spec)
+      with xp.StepTrace('train_imagenet'):
+        with xp.Trace('build_graph'):
+          optimizer.zero_grad()
+          output = model(data)
+          loss = loss_fn(output, target)
+          loss.backward()
+        optimizer.step()
+      xm.mark_step()
+      tracker.add(FLAGS.batch_size)
       if lr_scheduler:
         lr_scheduler.step()
-      if step % flags.log_steps == 0:
+      if step % FLAGS.log_steps == 0:
         xm.add_step_closure(
             _train_update, args=(device, step, loss, tracker, epoch, writer))
 
@@ -224,26 +278,25 @@ def train_imagenet(flags):
     total_samples, correct = 0, 0
     model.eval()
     for step, (data, target) in enumerate(loader):
+      data = data.to(xm.xla_device())
+      target = target.to(xm.xla_device())
       output = model(data)
       pred = output.max(1, keepdim=True)[1]
       correct += pred.eq(target.view_as(pred)).sum()
       total_samples += data.size()[0]
-      if step % flags.log_steps == 0:
+      if step % FLAGS.log_steps == 0:
         xm.add_step_closure(
             test_utils.print_test_update, args=(device, None, epoch, step))
     accuracy = 100.0 * correct.item() / total_samples
-    # accuracy = xm.mesh_reduce('test_accuracy', accuracy, np.mean)
     return accuracy
 
-  train_device_loader = pl.MpDeviceLoader(train_loader, device)
-  test_device_loader = pl.MpDeviceLoader(test_loader, device)
   accuracy, max_accuracy = 0.0, 0.0
-  for epoch in range(1, flags.num_epochs + 1):
+  for epoch in range(1, FLAGS.num_epochs + 1):
     xm.master_print('Epoch {} train begin {}'.format(epoch, test_utils.now()))
-    train_loop_fn(train_device_loader, epoch)
+    train_loop_fn(train_loader, epoch)
     xm.master_print('Epoch {} train end {}'.format(epoch, test_utils.now()))
-    if not flags.test_only_at_end or epoch == flags.num_epochs:
-      accuracy = test_loop_fn(test_device_loader, epoch)
+    if not FLAGS.test_only_at_end or epoch == FLAGS.num_epochs:
+      accuracy = test_loop_fn(test_loader, epoch)
       xm.master_print('Epoch {} test end {}, Accuracy={:.2f}'.format(
           epoch, test_utils.now(), accuracy))
       max_accuracy = max(accuracy, max_accuracy)
@@ -252,7 +305,7 @@ def train_imagenet(flags):
           epoch,
           dict_to_write={'Accuracy/test': accuracy},
           write_xla_metrics=True)
-    if flags.metrics_debug:
+    if FLAGS.metrics_debug:
       xm.master_print(met.metrics_report())
 
   test_utils.close_summary_writer(writer)
@@ -261,13 +314,11 @@ def train_imagenet(flags):
 
 
 if __name__ == '__main__':
+  if FLAGS.profile:
+    server = xp.start_server(FLAGS.profiler_port)
+
   torch.set_default_tensor_type('torch.FloatTensor')
-
-  results = pjrt._run_multiprocess(train_imagenet, FLAGS)
-  print('Replica max_accuracy:', pprint.pformat(results))
-  accuracy = np.mean(list(results.values()))
-  print('Average max_accuracy:', accuracy)
-
+  accuracy = train_imagenet()
   if accuracy < FLAGS.target_accuracy:
     print('Accuracy {} is below target {}'.format(accuracy,
                                                   FLAGS.target_accuracy))

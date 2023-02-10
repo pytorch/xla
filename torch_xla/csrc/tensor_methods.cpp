@@ -108,6 +108,7 @@
 #include "torch_xla/csrc/ops/scalar.h"
 #include "torch_xla/csrc/ops/scatter.h"
 #include "torch_xla/csrc/ops/scatter_add.h"
+#include "torch_xla/csrc/ops/scatter_reduce.h"
 #include "torch_xla/csrc/ops/send.h"
 #include "torch_xla/csrc/ops/sgd_optimizer_step.h"
 #include "torch_xla/csrc/ops/softmax.h"
@@ -118,7 +119,6 @@
 #include "torch_xla/csrc/ops/std_mean.h"
 #include "torch_xla/csrc/ops/sum.h"
 #include "torch_xla/csrc/ops/svd.h"
-#include "torch_xla/csrc/ops/symeig.h"
 #include "torch_xla/csrc/ops/threshold.h"
 #include "torch_xla/csrc/ops/threshold_backward.h"
 #include "torch_xla/csrc/ops/topk.h"
@@ -1237,6 +1237,24 @@ XLATensorPtr full_like(const XLATensorPtr& input, const at::Scalar& fill_value,
                            device, *scalar_type);
 }
 
+XLATensorPtr full_symint(at::SymIntArrayRef sym_size,
+                         const at::Scalar& fill_value,
+                         const torch::lazy::BackendDevice& device,
+                         at::ScalarType scalar_type) {
+  XLA_CHECK(std::all_of(sym_size.begin(), sym_size.end(), [](at::SymInt dim) {
+    if (!dim.is_symbolic()) {
+      return dim >= 0;
+    }
+    return true;
+  })) << "Dimensions cannot be negative numbers";
+
+  return XLATensor::Create(
+      XLAGraphExecutor::Get()->GetIrValueForScalar(
+          fill_value, MakeXlaPrimitiveType(scalar_type, &device), sym_size,
+          device),
+      device, scalar_type);
+}
+
 XLATensorPtr gather(const XLATensorPtr& input, int64_t dim,
                     const XLATensorPtr& index) {
   xla::Shape input_shape = input->shape();
@@ -2184,6 +2202,16 @@ XLATensorPtr scatter_add(const XLATensorPtr& input, int64_t dim,
                                               input->shape().get().rank())));
 }
 
+XLATensorPtr scatter_reduce(const XLATensorPtr& input, int64_t dim,
+                            const XLATensorPtr& index, const XLATensorPtr& src,
+                            c10::string_view reduce, bool include_self) {
+  return input->CreateFrom(torch::lazy::MakeNode<ScatterReduce>(
+      input->GetIrValue(), index->GetIrValue(), src->GetIrValue(), reduce,
+      include_self,
+      torch::lazy::GetCanonicalDimensionIndex(dim,
+                                              input->shape().get().rank())));
+}
+
 XLATensorPtr select(const XLATensorPtr& input, int64_t dim, int64_t index) {
   return tensor_ops::Select(input, dim, index);
 }
@@ -2425,15 +2453,6 @@ std::tuple<XLATensorPtr, XLATensorPtr, XLATensorPtr> svd(
   return std::make_tuple(input->CreateFrom(torch::lazy::Value(node, 0)),
                          input->CreateFrom(torch::lazy::Value(node, 1)),
                          input->CreateFrom(torch::lazy::Value(node, 2)));
-}
-
-std::tuple<XLATensorPtr, XLATensorPtr> symeig(const XLATensorPtr& input,
-                                              bool eigenvectors, bool upper) {
-  // SymEig takes lower instead of upper, hence the negation.
-  torch::lazy::NodePtr node =
-      torch::lazy::MakeNode<SymEig>(input->GetIrValue(), eigenvectors, !upper);
-  return std::make_tuple(input->CreateFrom(torch::lazy::Value(node, 0)),
-                         input->CreateFrom(torch::lazy::Value(node, 1)));
 }
 
 XLATensorPtr tanh_backward(const XLATensorPtr& grad_output,

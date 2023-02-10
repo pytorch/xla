@@ -46,7 +46,7 @@ function install_and_setup_conda() {
   /usr/bin/yes | pip install "cmake>=3.18" --upgrade
   /usr/bin/yes | pip install absl-py
   # Additional PyTorch requirements
-  /usr/bin/yes | pip install scikit-image scipy==1.1.0  # >1.1.0 breaks PyTorch tests
+  /usr/bin/yes | pip install scikit-image scipy==1.6.3
   /usr/bin/yes | pip install boto3==1.16.34
   /usr/bin/yes | pip install mypy==0.812
   /usr/bin/yes | pip install psutil

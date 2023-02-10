@@ -1,5 +1,7 @@
 #include "torch_xla/csrc/xla_graph_executor.h"
 
+#include <Python.h>
+
 #include <algorithm>
 #include <atomic>
 #include <cmath>
@@ -33,6 +35,7 @@
 #include "torch/csrc/lazy/core/metrics.h"
 #include "torch/csrc/lazy/core/tensor_util.h"
 #include "torch/csrc/lazy/core/util.h"
+#include "torch_xla/csrc/aten_xla_bridge.h"
 #include "torch_xla/csrc/computation.h"
 #include "torch_xla/csrc/helpers.h"
 #include "torch_xla/csrc/ir_dump_util.h"
@@ -43,6 +46,7 @@
 #include "torch_xla/csrc/ops/device_data.h"
 #include "torch_xla/csrc/ops/dynamic_ir.h"
 #include "torch_xla/csrc/ops/expand.h"
+#include "torch_xla/csrc/ops/expand_symint.h"
 #include "torch_xla/csrc/ops/ops.h"
 #include "torch_xla/csrc/ops/view.h"
 #include "torch_xla/csrc/ops/xla_ops.h"
@@ -131,7 +135,8 @@ void XLAGraphExecutor::DeviceContextArena::SaveGraphAsString(
     torch::lazy::hash_t hash, absl::Span<const XLATensorPtr> tensors,
     const std::vector<size_t>* indices, DebugUtil::GraphFormat format) {
   static bool should_save_graph =
-      xla::sys_util::GetEnvOrdinalPath("XLA_SAVE_TENSORS_FILE", "") != "";
+      xla::sys_util::GetEnvOrdinalPath("XLA_SAVE_TENSORS_FILE", "",
+                                       GetCurrentDevice().ordinal()) != "";
   if (should_save_graph &&
       hash_to_graph_map.find(hash) == hash_to_graph_map.end()) {
     hash_to_graph_map[hash] =
@@ -249,6 +254,14 @@ torch::lazy::Value XLAGraphExecutor::GetIrValueForScalar(
         ir_value, torch::lazy::ToVector<int64_t>(dimensions));
   }
   return ir_value;
+}
+
+torch::lazy::Value XLAGraphExecutor::GetIrValueForScalar(
+    const at::Scalar& value, xla::PrimitiveType type,
+    c10::SymIntArrayRef sym_size, const torch::lazy::BackendDevice& device) {
+  torch::lazy::Value ir_value = GetIrValueForScalar(value, type, device);
+  SymIntElements size_elements = SymIntElements(sym_size);
+  return torch::lazy::MakeNode<ExpandSymInt>(ir_value, size_elements);
 }
 
 torch::lazy::Value XLAGraphExecutor::GetIrValueForScalar(
@@ -408,8 +421,8 @@ torch::lazy::hash_t XLAGraphExecutor::GetGraphHash(
 
 void XLAGraphExecutor::MaybeDumpGraph(std::string name,
                                       torch::lazy::hash_t hash) {
-  static const std::string save_file =
-      xla::sys_util::GetEnvOrdinalPath("XLA_SAVE_TENSORS_FILE", "");
+  thread_local const std::string save_file = xla::sys_util::GetEnvOrdinalPath(
+      "XLA_SAVE_TENSORS_FILE", "", GetCurrentDevice().ordinal());
   if (!save_file.empty()) {
     std::string graph = DeviceContextArena::Get()->GetGraphByHash(hash);
     if (graph.size() == 0) {
@@ -543,8 +556,7 @@ void XLAGraphExecutor::TensorCollectionBarrier(SyncTensorCollection* coll) {
 
 std::vector<torch::lazy::BackendDataPtr>
 XLAGraphExecutor::ExecuteComputationWithBarrier(
-    torch::lazy::hash_t hash,
-    std::vector<torch::lazy::BackendDataPtr> arguments,
+    torch::lazy::hash_t hash, const std::vector<at::IValue>& graph_inputs,
     const torch::lazy::BackendDevice& device) {
   MaybeDumpGraph("dynamo", hash);
   auto cachedComputation =
@@ -571,6 +583,26 @@ XLAGraphExecutor::ExecuteComputationWithBarrier(
   SyncTensorCollection coll;
   coll.device = device;
   coll.unlocker = DeviceLockerArena::Get()->LockDevices({device});
+  std::vector<torch::lazy::BackendDataPtr> arguments;
+  {
+    // GetXlaData must be called within a lock region, otherwise it might
+    // extract the placeholder inserted by previous execution.
+    TORCH_LAZY_TIMED("RunCachedGraphInputData");
+    // setup the arguments
+    int idx = 0;
+    for (auto& ivalue : graph_inputs) {
+      torch::lazy::BackendDataPtr dataptr;
+      if (auto xla_tensor_ptr = bridge::TryGetXlaTensor(ivalue.toTensor())) {
+        dataptr = xla_tensor_ptr->GetXlaData();
+      } else {
+        dataptr = torch_xla::TensorToXlaData(ivalue.toTensor(), device);
+      }
+
+      ++idx;
+      arguments.push_back(dataptr);
+    }
+  }
+
   std::shared_ptr<XLAGraphExecutor::Async> async = std::make_shared<Async>(
       &coll, std::move(arguments), placeholders, std::move(cachedComputation));
 
@@ -635,9 +667,28 @@ std::vector<at::Tensor> XLAGraphExecutor::GetTensorsFused(
       *tensors, async != nullptr ? async->indices : absl::Span<const size_t>(),
       async != nullptr ? async->tensors_data
                        : absl::Span<const torch::lazy::BackendDataPtr>());
+
+  // Execution is async in PJRT, so TransferFromServer may block until execution
+  // completes. Release the GIL so other threads can proceed and unblock any
+  // collective computations.
+  // HACK: This method may be called outside of python (mainly in C++ tests) or
+  // when the GIL is already released, so we must check both cases here. If
+  // possible, prefer to release the GIL in the python bindings before copying
+  // this pattern.
+  PyThreadState* save = nullptr;
+  // TODO(wcromar): Remove this setting when we are more confident
+  static const bool release_gil =
+      xla::sys_util::GetEnvBool("XLA_RELEASE_GIL_DURING_TRANSFER", true);
+  if (release_gil && Py_IsInitialized() && PyGILState_Check()) {
+    save = PyEval_SaveThread();
+  }
   std::vector<xla::Literal> literals =
       xla::ComputationClient::Get()->TransferFromServer(
           UnwrapXlaData(tensors_data));
+  if (save) {
+    PyEval_RestoreThread(save);
+  }
+
   return FetchTensors(tensors, literals,
                       async != nullptr ? &async->indices : nullptr);
 }
@@ -791,6 +842,7 @@ void XLAGraphExecutor::ExtractIRAndPrepareXlaData_(
   for (auto index : indices) {
     XLATensorPtr& tensor = (*tensors)[index];
     torch::lazy::Value ir_value = tensor->CurrentIrValue();
+
     ir_values.push_back(ir_value);
     const torch::lazy::BackendDevice& tensor_device = tensor->GetDevice();
     xla::Shape shape = MakeShapeWithDeviceLayout(
@@ -1050,7 +1102,8 @@ XLAGraphExecutor::CompilationResult XLAGraphExecutor::Compile(
   // TODO(yeounoh) aliasing is disabled for partitioned computation,
   // since the current aliasing compares the unpartitioned input and output
   // shapes which can lead to an incorrect aliasing pairs if sharded.
-  if (enable_aliasing && coll.config.sync_ltc_data && !is_sharded) {
+  if (enable_aliasing && coll.config.sync_ltc_data &&
+      coll.config.force_ltc_data && !is_sharded) {
     // We can only alias at the step barrier, when force_ltc_data is true.
     // Consider the case:
     //   1. Tensor A(DEVICE_DATA)
@@ -1111,6 +1164,8 @@ XLAGraphExecutor::CompilationResult XLAGraphExecutor::Compile(
   TF_VLOG(3) << "Compiling IR graph hash "
              << torch::lazy::HashToString(coll.hash) << " on device "
              << coll.device << " done!";
+  TF_VLOG(5) << "Compiled program shape "
+             << computations.front()->program_shape().ToString() << std::endl;
   TF_VLOG(5)
       << "Graph hash " << torch::lazy::HashToString(coll.hash)
       << " is computation hash "

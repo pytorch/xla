@@ -29,7 +29,7 @@ steps:
   args: ['-c', 'source /pytorch/xla/docker/common.sh && run_deployment_tests']
 - name: 'gcr.io/cloud-builders/docker'
   args: ['push', '--all-tags', 'gcr.io/tpu-pytorch/xla']
-  timeout: 1800s
+  timeout: 2700s
 - name: 'gcr.io/tpu-pytorch/xla:${_IMAGE_NAME}'
   entrypoint: 'bash'
   args: ['-c', 'source /pytorch/xla/docker/common.sh && collect_wheels ${_RELEASE_VERSION}']
@@ -53,7 +53,7 @@ options:
       name: 'projects/tpu-pytorch/locations/us-central1/workerPools/wheel_build'
     dynamic_substitutions: true
     substitution_option: 'ALLOW_LOOSE'
-timeout: 24000s
+timeout: 32000s
 artifacts:
   objects:
     # CUDA wheels exported under `wheels/cuda/<cuda_version>`

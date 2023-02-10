@@ -77,6 +77,9 @@ class XLAGraphExecutor : public torch::lazy::LazyGraphExecutor {
       absl::Span<const int64_t> dimensions,
       const torch::lazy::BackendDevice& device);
   torch::lazy::Value GetIrValueForScalar(
+      const at::Scalar& value, xla::PrimitiveType type,
+      c10::SymIntArrayRef sym_size, const torch::lazy::BackendDevice& device);
+  torch::lazy::Value GetIrValueForScalar(
       const at::Scalar& value, const xla::Shape& shape,
       const torch::lazy::BackendDevice& device);
   torch::lazy::Value GetIrValueForScalar(
@@ -161,8 +164,7 @@ class XLAGraphExecutor : public torch::lazy::LazyGraphExecutor {
   ComputationCache* GetComputationCache();
 
   std::vector<torch::lazy::BackendDataPtr> ExecuteComputationWithBarrier(
-      torch::lazy::hash_t hash,
-      std::vector<torch::lazy::BackendDataPtr> arguments,
+      torch::lazy::hash_t hash, const std::vector<at::IValue>& graph_inputs,
       const torch::lazy::BackendDevice& device);
 
   void ClearPendingIrs(std::vector<XLATensorPtr> tensors,

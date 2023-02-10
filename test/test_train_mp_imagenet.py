@@ -31,9 +31,14 @@ MODEL_OPTS = {
     '--ddp': {
         'action': 'store_true',
     },
-    '--ddp_pjrt': {
+    # Use pjrt:// init_method instead of env:// for `torch.distributed`.
+    # Required for DDP on TPU v2/v3 when using PJRT.
+    '--pjrt_distributed': {
         'action': 'store_true',
     },
+    '--profile': {
+        'action': 'store_true',
+    }
 }
 
 FLAGS = args_parse.parse_common_options(
@@ -53,12 +58,14 @@ import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+from torch.nn.parallel import DistributedDataParallel as DDP
 import torch.optim as optim
 import torchvision
 import torchvision.transforms as transforms
 import torch_xla
 import torch_xla.debug.metrics as met
 import torch_xla.distributed.parallel_loader as pl
+import torch_xla.debug.profiler as xp
 import torch_xla.utils.utils as xu
 import torch_xla.core.xla_model as xm
 import torch_xla.distributed.xla_multiprocessing as xmp
@@ -122,14 +129,12 @@ def _train_update(device, step, loss, tracker, epoch, writer):
 
 
 def train_imagenet():
-  if FLAGS.ddp and not dist.is_initialized():
+  if FLAGS.pjrt_distributed:
+    import torch_xla.experimental.pjrt_backend
+    dist.init_process_group('xla', init_method='pjrt://')
+  elif FLAGS.ddp:
     dist.init_process_group(
         'xla', world_size=xm.xrt_world_size(), rank=xm.get_ordinal())
-
-  if FLAGS.ddp_pjrt:
-    from torch_xla.experimental.pjrt import DistributedDataParallel as DDP
-  else:
-    from torch.nn.parallel import DistributedDataParallel as DDP
 
   print('==> Preparing data..')
   img_dim = get_model_property('img_dim')
@@ -233,10 +238,12 @@ def train_imagenet():
     tracker = xm.RateTracker()
     model.train()
     for step, (data, target) in enumerate(loader):
-      optimizer.zero_grad()
-      output = model(data)
-      loss = loss_fn(output, target)
-      loss.backward()
+      with xp.StepTrace('train_imagenet'):
+        with xp.Trace('build_graph'):
+          optimizer.zero_grad()
+          output = model(data)
+          loss = loss_fn(output, target)
+          loss.backward()
       if FLAGS.ddp:
         optimizer.step()
       else:
@@ -300,4 +307,6 @@ def _mp_fn(index, flags):
 
 
 if __name__ == '__main__':
+  if FLAGS.profile:
+    server = xp.start_server(FLAGS.profiler_port)
   xmp.spawn(_mp_fn, args=(FLAGS,), nprocs=FLAGS.num_cores)

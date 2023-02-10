@@ -116,8 +116,8 @@ void DebugUtil::SaveTensorsGraphInfo(const char* name,
                                      absl::Span<const XLATensorPtr> tensors,
                                      const std::vector<size_t>* indices,
                                      GraphFormat format) {
-  static const std::string save_file =
-      xla::sys_util::GetEnvOrdinalPath("XLA_SAVE_TENSORS_FILE", "");
+  thread_local const std::string save_file = xla::sys_util::GetEnvOrdinalPath(
+      "XLA_SAVE_TENSORS_FILE", "", GetCurrentDevice().ordinal());
   if (!save_file.empty()) {
     static std::mutex lock;
     std::string info = GetTensorsGraphInfo(tensors, indices, format);
