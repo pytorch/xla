@@ -228,7 +228,7 @@ def train_imagenet():
       mesh_shape = (1, 1, num_devices // 2, 2)
       input_mesh = xs.Mesh(device_ids, mesh_shape, ('B', 'C', 'W', 'H'))
       print(
-          f'Sharding input images on spatial dimensions with mesh {mesh.get_logical_mesh()}'
+          f'Sharding input images on spatial dimensions with mesh {input_mesh.get_logical_mesh()}'
       )
 
   writer = None
