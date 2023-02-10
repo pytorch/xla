@@ -16,6 +16,7 @@
 #include "tensorflow/compiler/xla/pjrt/pjrt_executable.h"
 #include "tensorflow/compiler/xla/pjrt/tfrt_cpu_pjrt_client.h"
 #include "tensorflow/compiler/xla/pjrt/tpu_client.h"
+#include "tensorflow/compiler/xla/pjrt/distributed/distributed.h"
 #include "tensorflow/compiler/xla/shape.h"
 #include "tensorflow/compiler/xla/xla_client/computation_client.h"
 #include "tensorflow/compiler/xla/xla_client/debug_macros.h"
@@ -46,6 +47,22 @@ std::vector<std::string> PjRtDevicesToString(
   return strs;
 }
 
+// Initializes a distributed runtime client if dist_service_addr is specified
+std::shared_ptr<DistributedRuntimeClient> MaybeInitializeDistributedRuntimeClient(
+    int local_rank, std::string dist_service_addr) {
+  std::shared_ptr<DistributedRuntimeClient> client;
+  if (!dist_service_addr.empty()) {
+    xla::DistributedRuntimeClient::Options options;
+    /* TODO(jonbolin): Use global rank for multi-host setup */
+    options.node_id = local_rank;
+    client = xla::GetDistributedRuntimeClient(dist_service_addr, options,
+        /*use_coordination_service=*/false);
+    XLA_CHECK(client->Connect().ok())
+        << "Failed to initialize distributed runtime client";
+  }
+  return std::move(client);
+}
+
 }  // namespace
 
 PjRtComputationClient::PjRtComputationClient() {
@@ -55,26 +72,31 @@ PjRtComputationClient::PjRtComputationClient() {
     bool async = sys_util::GetEnvBool(env::kEnvPjrtAsyncCpuClient, true);
     int cpu_device_count = sys_util::GetEnvInt(env::kEnvNumCpu, 1);
     client_ = std::move(xla::GetTfrtCpuClient(async, cpu_device_count).value());
-  } else if (device_type == "TPU") {
-    TF_VLOG(1) << "Initializing PjRt TPU client...";
+  } else if (device_type == "TPU" || device_type == "TPU_C_API") {
+    TF_VLOG(1) << "Initializing TFRT TPU client...";
+    XLA_CHECK_OK(pjrt::LoadPjrtPlugin(
+        "tpu", sys_util::GetEnvString(env::kEnvTpuLibraryPath, "libtpu.so")));
+    supports_logical_on_device_shape_ = false;
+    client_ = std::move(xla::GetCApiClient("TPU").value());
+  } else if (device_type == "TPU_LEGACY") {
+    TF_VLOG(1) << "Initializing PjRt StreamExecutor TPU client...";
     int64_t max_inflight_computations = sys_util::GetEnvInt(
         env::kEnvPjRtTpuMaxInflightComputations, /*defval=*/32);
     client_ = xla::GetTpuClient(max_inflight_computations).value();
-  } else if (device_type == "TPU_C_API") {
-    TF_VLOG(1) << "Initializing PjRt C API client...";
-    XLA_CHECK_OK(pjrt::LoadPjrtPlugin(
-        "tpu", sys_util::GetEnvString(env::kEnvTpuLibraryPath, "libtpu.so")));
-    client_ = std::move(xla::GetCApiClient("TPU").value());
   } else if (device_type == "GPU") {
     TF_VLOG(1) << "Initializing PjRt GPU client...";
     bool async = sys_util::GetEnvBool(env::kEnvPjrtAsyncGpuClient, true);
-    /* TODO(jonbolin): Set allowed_devices based on local ordinal */
-    auto allowed_devices = std::make_optional<std::set<int>>(std::set{0});
-    client_ = xla::GetStreamExecutorGpuClient(
+    int local_rank = sys_util::GetEnvInt(env::kEnvLocalRank, 0);
+    std::string dist_service_addr =
+        sys_util::GetEnvString(env::kEnvPjrtDistServiceAddr, "");
+    auto distributed_client = MaybeInitializeDistributedRuntimeClient(
+        local_rank, dist_service_addr);
+    auto allowed_devices = std::make_optional<std::set<int>>(std::set{local_rank});
+    client_ = std::move(xla::GetStreamExecutorGpuClient(
                   /*asynchronous=*/async, GpuAllocatorConfig{},
-                  /*distributed_client=*/nullptr, /*node_id=*/0,
+                  /*distributed_client=*/distributed_client, /*node_id=*/local_rank,
                   allowed_devices = allowed_devices)
-                  .value();
+                  .value());
   } else {
     XLA_ERROR() << absl::StrFormat("Unknown %s '%s'", env::kEnvPjRtDevice,
                                    device_type);
@@ -199,49 +221,49 @@ ComputationClient::DataPtr PjRtComputationClient::ReplicateShardedData(
     const ComputationClient::DataPtr& handle) {
   if (PjRtShardedData* sharded_data =
           dynamic_cast<PjRtShardedData*>(handle.get())) {
-      TF_VLOG(1) << "ReplicateShardedData (handle=" << handle->GetOpaqueHandle()
-                 << ", shape=" << handle->shape() << ")";
-      xla::XlaBuilder b("ReplicateShardedData");
-      xla::Shape shape = sharded_data->shape();
-      b.SetSharding(sharded_data->GetSharding());
+    TF_VLOG(1) << "ReplicateShardedData (handle=" << handle->GetOpaqueHandle()
+               << ", shape=" << handle->shape() << ")";
+    xla::XlaBuilder b("ReplicateShardedData");
+    xla::Shape shape = sharded_data->shape();
+    b.SetSharding(sharded_data->GetSharding());
 
-      // perform a simple identity calculation to reassemble the input as
-      // replicated output.
-      auto x = xla::Parameter(&b, 0, shape, "p0");
-      b.SetSharding(xla::HloSharding::Replicate().ToProto());
-      auto y = xla::Div(x, ConstantR0<float>(&b, 2));
-      auto z = xla::Add(y, y);
+    // perform a simple identity calculation to reassemble the input as
+    // replicated output.
+    auto x = xla::Parameter(&b, 0, shape, "p0");
+    b.SetSharding(xla::HloSharding::Replicate().ToProto());
+    auto y = xla::Div(x, ConstantR0<float>(&b, 2));
+    auto z = xla::Add(y, y);
 
-      xla::XlaComputation computation =
-          ConsumeValue(b.Build(/*remove_dynamic_dimensions=*/false));
-      xla::ProgramShape program_shape =
-          ConsumeValue(computation.GetProgramShape());
+    xla::XlaComputation computation =
+        ConsumeValue(b.Build(/*remove_dynamic_dimensions=*/false));
+    xla::ProgramShape program_shape =
+        ConsumeValue(computation.GetProgramShape());
 
-      std::string device = GetDefaultDevice();
-      std::vector<xla::ComputationClient::CompileInstance> instances;
-      instances.push_back({std::move(computation), device,
-                           GetCompilationDevices(device, {}), &shape,
-                           /*should_wrap_parameter=*/false,
-                           /*is_sharded=*/true});
-      std::vector<std::shared_ptr<xla::ComputationClient::Computation>>
-          computations = Compile(std::move(instances));
+    std::string device = GetDefaultDevice();
+    std::vector<xla::ComputationClient::CompileInstance> instances;
+    instances.push_back({std::move(computation), device,
+                         GetCompilationDevices(device, {}), &shape,
+                         /*should_wrap_parameter=*/false,
+                         /*is_sharded=*/true});
+    std::vector<std::shared_ptr<xla::ComputationClient::Computation>>
+        computations = Compile(std::move(instances));
 
-      auto shards = sharded_data->shards;
-      XLA_CHECK_EQ(shards.size(), GetLocalDevices().size());
-      std::vector<std::vector<ComputationClient::DataPtr>> arguments_by_device(
-          GetLocalDevices().size(), std::vector<ComputationClient::DataPtr>(1));
-      for (auto shard : shards) {
-        std::vector<std::string> device_spec =
-            absl::StrSplit(shard->device(), ':');
-        XLA_CHECK_EQ(device_spec.size(), 2)
-            << "Invalid device specification: " << shard->device();
-        int device_i = std::stoi(device_spec[1]);
-        arguments_by_device[device_i][0] = shard;
-      }
-      xla::ComputationClient::ExecuteReplicatedOptions execute_options;
-      return ExecuteReplicated(*computations.front(), arguments_by_device,
-                               GetLocalDevices(), execute_options)[0][0];
+    auto shards = sharded_data->shards;
+    XLA_CHECK_EQ(shards.size(), GetLocalDevices().size());
+    std::vector<std::vector<ComputationClient::DataPtr>> arguments_by_device(
+        GetLocalDevices().size(), std::vector<ComputationClient::DataPtr>(1));
+    for (auto shard : shards) {
+      std::vector<std::string> device_spec =
+          absl::StrSplit(shard->device(), ':');
+      XLA_CHECK_EQ(device_spec.size(), 2)
+          << "Invalid device specification: " << shard->device();
+      int device_i = std::stoi(device_spec[1]);
+      arguments_by_device[device_i][0] = shard;
     }
+    xla::ComputationClient::ExecuteReplicatedOptions execute_options;
+    return ExecuteReplicated(*computations.front(), arguments_by_device,
+                             GetLocalDevices(), execute_options)[0][0];
+  }
   return handle;
 }
 
@@ -260,10 +282,31 @@ std::vector<xla::Literal> PjRtComputationClient::TransferFromServer(
     // is not sharded, then it is a no-op.
     auto new_handle = ReplicateShardedData(handle);
     const PjRtData& pjrt_data = dynamic_cast<const PjRtData&>(*new_handle);
-    std::shared_ptr<xla::Literal> literal =
-        pjrt_data.buffer->ToLiteralSync().value();
-    total_size += literal->size_bytes();
-    literals.push_back(std::move(*literal));
+
+    // TODO(wcromar): Only use logical_on_device_shape when PJRT C API supports
+    // it.
+    xla::Shape target_shape = ShapeUtil::DeviceShapeToHostShape(
+        supports_logical_on_device_shape_
+            ? pjrt_data.buffer->logical_on_device_shape().value()
+            : pjrt_data.buffer->on_device_shape());
+    auto& literal = literals.emplace_back(target_shape);
+
+    // PJRT will always try to copy the full bounded size into our literal. If
+    // the bounded size is larger than the logical output size, we have to
+    // allocate a bounded-size literal and copy a slice of the values into our
+    // output literal.
+    if (pjrt_data.buffer->on_device_shape().is_static()) {
+      XLA_CHECK_OK(pjrt_data.buffer->ToLiteralSync(&literal));
+    } else {
+      std::shared_ptr<xla::Literal> bounded_literal =
+          pjrt_data.buffer->ToLiteralSync().value();
+      XLA_CHECK_OK(literal.CopySliceFrom(
+          *bounded_literal,
+          /*src_base=*/std::vector<int64_t>(target_shape.rank(), 0),
+          /*dest_base=*/std::vector<int64_t>(target_shape.rank(), 0),
+          /*copy_size=*/target_shape.dimensions()));
+    }
+    total_size += literal.size_bytes();
   }
   InboundDataMetric()->AddSample(total_size);
 

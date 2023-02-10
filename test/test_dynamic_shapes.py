@@ -4,12 +4,13 @@ import unittest
 import torch, torch_xla
 import torch_xla.core.xla_model as xm
 import torch_xla.debug.metrics as met
+import test_utils
 
 pd = torch._C._EnablePythonDispatcher()
 dev = xm.xla_device()
 
 
-class TestDynamicShapes(unittest.TestCase):
+class TestDynamicShapes(test_utils.XlaTestCase):
 
   def test_simple_expand(self):
     size1 = 5
@@ -138,6 +139,44 @@ class TestDynamicShapes(unittest.TestCase):
     self.assertEqual(t2.shape[0], 3)
     self.assertIsInstance(t2.shape[1], int)
     self.assertEqual(t2.shape[1], 2)
+
+  def test_nonzero_shape(self):
+    x = torch.tensor((0, 1, 2, 0, 3, 4), device=xm.xla_device())
+    x_dim0_shape = torch_xla._XLAC._get_xla_tensor_dimension_size(
+        torch.nonzero(x, as_tuple=False), 0)
+    self.assertEqual(x_dim0_shape.item(), 4)
+
+  def test_masked_select_shape(self):
+    x = torch.tensor((0, 1, 2, 0, 3, 4), device=xm.xla_device())
+    mask = x.ge(2)
+    x_dim0_shape = torch_xla._XLAC._get_xla_tensor_dimension_size(
+        torch.masked_select(x, mask), 0)
+    self.assertEqual(x_dim0_shape.item(), 3)
+
+  def test_nonzero_cast(self):
+    t1 = torch.ones(5, 2, device=xm.xla_device())
+    # Result of the nonzero should be the index type. Currently
+    # index type is s64 on cpu and gpu, but s32 on TPU. We should be
+    # able to cast it to any other type without error.
+    t2 = torch.nonzero(t1.int()).float()
+    xm.mark_step()
+
+  def test_expand_symint_correctness(self):
+    dev = xm.xla_device()
+    size1 = 5
+    size2 = 2
+    t1 = torch.ones([size1, size2])
+    expand_out_aten = t1.expand(2, size1, size2)
+
+    t2 = torch.zeros([size1, size2], device=dev)
+    t2[3][0] = 1
+    t2[3][1] = 1
+    # t2 has size [<=10, 2]
+    t3 = torch.nonzero(t2)
+    t4 = torch.ones([size1, size2], device=dev)
+    expand_out_xla = t4.expand(t3.shape[0], size1, size2)
+    self.assertEqual(t3.shape[0], 2)
+    self.assertEqual(expand_out_aten.cpu(), expand_out_xla.cpu())
 
 
 if __name__ == '__main__':

@@ -97,7 +97,8 @@ function run_xla_backend_mp {
 function run_pjrt {
   echo "Running in PjRt runtime: $@"
   if [ -x "$(command -v nvidia-smi)" ]; then
-    PJRT_DEVICE=GPU run_test "$@"
+    # TODO(jonbolin): Only run GPU tests with a single device due to collective failures.
+    PJRT_DEVICE=GPU GPU_NUM_DEVICES=1 run_test "$@"
   else
     # TODO(darisoy): run these tests with multiple CPU devices, this fails due to TF issue.
     PJRT_DEVICE=CPU CPU_NUM_DEVICES=1 run_test "$@"
@@ -134,7 +135,7 @@ function run_op_tests {
   run_dynamic python3 "$CDIR/../../test/test_type_promotion.py" "$@" -v TestTypePromotionXLA
   run_dynamic python3 "$CDIR/test_operations.py" "$@" --verbosity=$VERBOSITY
   run_dynamic python3 "$CDIR/test_dynamic_shapes.py"
-  # run_dynamic python3 "$CDIR/test_dynamic_shape_models.py" "$@" --verbosity=$VERBOSITY
+  run_dynamic python3 "$CDIR/test_dynamic_shape_models.py" "$@" --verbosity=$VERBOSITY
   run_opbyop python3 "$CDIR/test_operations.py" "$@" --verbosity=$VERBOSITY
   run_eager_debug python3 "$CDIR/test_operations.py" "$@" --verbosity=$VERBOSITY
   run_async_scalar python3 "$CDIR/test_operations.py" "$@" --verbosity=$VERBOSITY
