@@ -116,8 +116,9 @@ build:linux --define=PROTOBUF_INCLUDE_PATH=$(PREFIX)/include
 build:linux --config=dynamic_kernels
 
 # For projects which use TensorFlow as part of a Bazel build process, putting
-# nothing in a bazelrc will default to a monolithic build. The following line
-# opts in to modular op registration support by default.
+# nothing in a bazelrc will default to a monolithic build. Here we force
+# the monolitih build because otherwise there are missing dependencies and
+# linking fails.
 build --define framework_shared_object=false
 build --define tsl_protobuf_header_only=true
 
