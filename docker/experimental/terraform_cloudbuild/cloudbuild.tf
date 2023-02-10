@@ -3,6 +3,7 @@
 resource "google_cloudbuild_trigger" "build-trigger" {
   location = "global"
   name = "dev-image-trigger"
+  description = "Building docker development image"
 
   # Connect the repository in *global* region by going to
   # GCP Console > Triggers > Connect Repositiory.
@@ -11,14 +12,14 @@ resource "google_cloudbuild_trigger" "build-trigger" {
     owner = "mateuszlewko"
     name = "xla"
     push {
-      branch = "^cloudbuild$"
+      branch = "^mlewko/cloudbuild$"
     }
   }
 
   source_to_build {
     uri = "https://github.com/mateuszlewko/xla"
     repo_type = "GITHUB"
-    ref = "refs/heads/cloudbuild"
+    ref = "refs/heads/mlewko/cloudbuild"
   }
 
   included_files = [
@@ -38,12 +39,31 @@ resource "google_cloudbuild_trigger" "build-trigger" {
         "-f=development.Dockerfile",
         ".",
       ]
+      wait_for = [ "-" ] # Begin the step immediately.
       timeout = "${1 * 60 * 60}s" # 1h
+    }
+
+    # Build release image and wheels.
+    step {
+      name = "gcr.io/cloud-builders/docker"
+      dir = "docker/experimental/ansible"
+      args = [
+        "build",
+        "--build-arg=python_version=${var.python_version}",
+        "--build-arg=arch=amd64",
+        "--build-arg=accelerator=tpu",
+        "-t=${var.image_repository}/xla:latest",
+        "-f=Dockerfile",
+        ".",
+      ]
+      wait_for = [ "-" ] # Begin the step immediately.
+      timeout = "${4 * 60 * 60}s" # 4h
     }
 
     artifacts {
       images = [
         "${var.image_repository}/development_tpu_amd64:latest",
+        "${var.image_repository}/xla:latest",
       ]
     }
 
@@ -55,7 +75,7 @@ resource "google_cloudbuild_trigger" "build-trigger" {
 
     }
 
-    timeout = "${5 * 60 * 60}s" # 5h
+    timeout = "${6 * 60 * 60}s" # 6h
   }
 
   include_build_logs = "INCLUDE_BUILD_LOGS_WITH_STATUS"
