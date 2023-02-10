@@ -66,7 +66,6 @@ class TestDynamicShapeModels(unittest.TestCase):
     np.testing.assert_allclose(losses[0], losses[1], rtol=1e-2, atol=1e-2)
     print('Test passed.')
 
-  @unittest.skip("Broke by functionalization")
   def test_forward_pass_dynamic_input_compile_once(self):
     met.clear_metrics()
     num_compilation_recorded = False
