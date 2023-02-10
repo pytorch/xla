@@ -19,6 +19,7 @@ COPY . /ansible
 
 ARG arch=amd64
 ARG accelerator=tpu
+RUN pip install ansible
 RUN ansible-playbook playbook.yaml -e "stage=release arch=${arch} accelerator=${accelerator}" --tags "install_deps"
 
 WORKDIR /wheels
