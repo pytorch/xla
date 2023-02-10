@@ -9,6 +9,7 @@ import test_utils
 pd = torch._C._EnablePythonDispatcher()
 dev = xm.xla_device()
 
+
 class TestDynamicShapes(test_utils.XlaTestCase):
 
   def test_simple_expand(self):
@@ -144,7 +145,7 @@ class TestDynamicShapes(test_utils.XlaTestCase):
     self.assertEqual(t2.shape[1], 2)
 
   def test_t_copy(self):
-    t1 = torch.tensor([[1,0,0,5,0,6],[1,3,2,0,0,1]], device=dev)
+    t1 = torch.tensor([[1, 0, 0, 5, 0, 6], [1, 3, 2, 0, 0, 1]], device=dev)
     t2 = torch.nonzero(t1)
     # t2.shape=torch.Size([<=12, 2]) with real size [7, 2]
     self.assertEqual(str(t2.shape[0]), '<=12')
