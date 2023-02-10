@@ -9,7 +9,9 @@ logger = logging.getLogger(__name__)
 
 XRT_RUN_SERVER_PROCESS = 'torch_xla.core._xrt_run_server'
 XRT_SERVER_REGEX = '^python3 -m {} [0-9]+$'.format(XRT_RUN_SERVER_PROCESS)
-XRT_CONFIG_ENV_VARS = ['XRT_TPU_CONFIG', 'XRT_DEVICE_MAP', 'XRT_WORKERS']
+XRT_CONFIG_ENV_VARS = [
+    'XRT_TPU_CONFIG', 'XRT_DEVICE_MAP', 'XRT_WORKERS', 'GPU_NUM_DEVICES'
+]
 
 
 def server_is_alive():
