@@ -34,7 +34,7 @@ def set_device_type(pjrt_device: str) -> None:
 def device_type() -> Optional[str]:
   """Returns the currrent PjRt device type."""
   pjrt_device = xu.getenv_as(xenv.PJRT_DEVICE, str)
-  return 'TPU' if pjrt_device and pjrt_device.startswith('TPU') else pjrt_device
+  return pjrt_device.split('_')[0] if pjrt_device else pjrt_device
 
 
 def using_pjrt() -> bool:
