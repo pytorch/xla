@@ -12,7 +12,14 @@
 #include "absl/container/flat_hash_map.h"
 #include "absl/strings/str_cat.h"
 #include "absl/types/variant.h"
-#include "tensorflow/compiler/xla/hlo/ir/hlo_module.h"
+#include "pybind11/attr.h"
+#include "pybind11/cast.h"
+#include "pybind11/detail/common.h"
+#include "pybind11/numpy.h"
+#include "pybind11/pybind11.h"
+#include "pybind11/pytypes.h"
+#include "pybind11/stl_bind.h"
+#include "tensorflow/compiler/xla/pjrt/distributed/distributed.h"
 #include "tensorflow/compiler/xla/python/profiler/internal/traceme_wrapper.h"
 #include "tensorflow/compiler/xla/service/hlo_parser.h"
 #include "tensorflow/compiler/xla/xla_client/computation_client.h"
@@ -1591,6 +1598,31 @@ void InitXlaModuleBindings(py::module m) {
     MapXlaEnvVarsToLazy();
     InitXlaBackend();
   });
+
+  /* The distributed runtime service is used by the PjRt GPU client. */
+  py::class_<xla::DistributedRuntimeService,
+             std::unique_ptr<xla::DistributedRuntimeService>>
+      distributed_runtime_service(m, "DistributedRuntimeService");
+  distributed_runtime_service.def("shutdown",
+                                  &xla::DistributedRuntimeService::Shutdown,
+                                  py::call_guard<py::gil_scoped_release>());
+  m.def("_xla_get_distributed_runtime_service",
+        [](int num_nodes) -> std::unique_ptr<xla::DistributedRuntimeService> {
+          std::string dist_service_addr =
+              xla::sys_util::GetEnvString("PJRT_DIST_SERVICE_ADDR", "");
+          XLA_CHECK(!dist_service_addr.empty())
+              << "Must set PJRT_DIST_SERVICE_ADDR environment variable to use "
+                 "distributed runtime";
+          XLA_CHECK(num_nodes > 0)
+              << "num_nodes must be positive: " << num_nodes;
+
+          xla::DistributedRuntimeServiceImpl::Options options;
+          options.num_nodes = num_nodes;
+          return std::move(xla::GetDistributedRuntimeService(
+                               dist_service_addr, options,
+                               /*use_coordination_service=*/false)
+                               .value());
+        });
 
   BuildProfilerSubmodule(&m);
 

@@ -80,6 +80,7 @@ ENV XLA_SANDBOX_BUILD=0
 ENV XLA_SANDBOX_BASE "/dev/shm"
 
 ARG tpuvm
+ARG cuda
 ARG tf_cuda_compute_capabilities
 ARG bazel_jobs
 RUN TPUVM_MODE=${tpuvm} XLA_CUDA=${cuda} BAZEL_JOBS=${bazel_jobs} TF_CUDA_COMPUTE_CAPABILITIES=${tf_cuda_compute_capabilities} bash build_torch_xla_libs.sh -O -D_GLIBCXX_USE_CXX11_ABI=1

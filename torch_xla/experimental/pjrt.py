@@ -14,7 +14,7 @@ import torch_xla.core.xla_env_vars as xenv
 import torch_xla.core.xla_model as xm
 import torch_xla.distributed.xla_backend
 import torch_xla.utils.utils as xu
-from torch_xla.experimental import tpu
+from torch_xla.experimental import tpu, gpu
 
 R = TypeVar('R')
 FN = TypeVar('FN')
@@ -277,6 +277,9 @@ def _run_multiprocess(fn: Callable[..., R],
   """
   if device_type() == 'TPU':
     num_processes = tpu.num_local_processes()
+  elif device_type() == 'GPU':
+    num_processes = gpu.num_local_processes()
+    gpu.initialize_distributed_runtime(num_processes)
   else:
     num_processes = 1
 
@@ -293,6 +296,9 @@ def _run_multiprocess(fn: Callable[..., R],
     replica_results = list(
         itertools.chain.from_iterable(
             result.items() for result in process_results))
+
+  if device_type() == 'GPU':
+    gpu.shutdown_distributed_runtime()
 
   return _merge_replica_results(replica_results)
 

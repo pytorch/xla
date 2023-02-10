@@ -315,6 +315,7 @@ for ipath in [
     'tensorflow/bazel-tensorflow/external/eigen_archive',
     'tensorflow/bazel-tensorflow/external/com_google_absl',
     'tensorflow/bazel-tensorflow/external/com_googlesource_code_re2',
+    'tensorflow/bazel-tensorflow/external/com_github_grpc_grpc/include',
 ]:
   include_dirs.append(os.path.join(third_party_path, ipath))
 include_dirs += [
