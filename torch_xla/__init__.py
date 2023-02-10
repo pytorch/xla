@@ -1,7 +1,6 @@
 import logging
 import os
 import re
-import shutil
 import tempfile
 import subprocess
 
@@ -10,6 +9,9 @@ logger = logging.getLogger(__name__)
 
 XRT_RUN_SERVER_PROCESS = 'torch_xla.core._xrt_run_server'
 XRT_SERVER_REGEX = '^python3 -m {} [0-9]+$'.format(XRT_RUN_SERVER_PROCESS)
+XRT_CONFIG_ENV_VARS = [
+    'XRT_TPU_CONFIG', 'XRT_DEVICE_MAP', 'XRT_WORKERS', 'GPU_NUM_DEVICES'
+]
 
 
 def server_is_alive():
@@ -86,19 +88,31 @@ def _summarize_fn_tracker():
   os.remove(_tmp_fname)
 
 
-def _tpu_vm_init():
+def _setup_tpu_vm_library_path() -> bool:
+  """Returns true if $TPU_LIBRARY is set or can be inferred.
+
+  We load libtpu.so in the following order of precedence:
+
+  1. User-set $TPU_LIBRARY_PATH
+  2. libtpu.so included in torch_xla/lib
+  3. libtpu-nightly pip package
+  """
+  if 'TPU_LIBRARY_PATH' in os.environ:
+    return True
+
   module_path = os.path.dirname(__file__)
   bundled_libtpu_path = os.path.join(module_path, 'lib/libtpu.so')
   if os.path.isfile(bundled_libtpu_path) and not os.getenv('TPU_LIBRARY_PATH'):
     logger.info('Using bundled libtpu.so (%s)', bundled_libtpu_path)
     os.environ['TPU_LIBRARY_PATH'] = bundled_libtpu_path
-    return
+    return True
 
   try:
     import libtpu
     libtpu.configure_library_path()
+    return True
   except ImportError:
-    pass
+    return False
 
 
 # These needs to be called before the _XLAC module is loaded.
@@ -123,7 +137,26 @@ os.environ['TPU_LOAD_LIBRARY'] = '0'
 import _XLAC
 del os.environ['TPU_LOAD_LIBRARY']
 
-_tpu_vm_init()
+_found_libtpu = _setup_tpu_vm_library_path()
+if 'PJRT_DEVICE' not in os.environ and not any(var in os.environ
+                                               for var in XRT_CONFIG_ENV_VARS):
+  logger.warning(
+      'XRT configuration not detected. Defaulting to preview PJRT '
+      'runtime. To silence this warning and continue using PJRT, '
+      'explicitly set PJRT_DEVICE to a supported device. To use '
+      'XRT, set any of the following environment variables: %s',
+      str(XRT_CONFIG_ENV_VARS))
+  # TODO: Update this link in the release branch
+  logger.warning('For more information about the status of PJRT, see '
+                 'https://github.com/pytorch/xla/blob/master/docs/pjrt.md')
+  # Check for libtpu _and_ the TPU device
+  if _found_libtpu and os.path.exists('/dev/accel0'):
+    logger.warning('libtpu.so and TPU device found. Setting PJRT_DEVICE=TPU.')
+    os.environ['PJRT_DEVICE'] = 'TPU'
+  else:
+    logger.warning('Defaulting to PJRT_DEVICE=CPU')
+    os.environ['PJRT_DEVICE'] = 'CPU'
+  # TODO(wcromar): Detect GPU device too
 
 
 def _prepare_to_exit():
