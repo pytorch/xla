@@ -248,7 +248,7 @@ def _run_singleprocess(fn: Callable[..., R],
 
 @requires_pjrt
 def _initialize_multiprocess(local_rank: int, local_world_size: int):
-  os.environ.setdefault('LOCAL_RANK', str(local_rank))
+  os.environ.setdefault(xenv.XLA_LOCAL_RANK, str(local_rank))
   os.environ.setdefault('LOCAL_WORLD_SIZE', str(local_world_size))
 
   if device_type() == 'TPU':
@@ -341,7 +341,7 @@ def spawn(fn: Callable,
 
 @requires_pjrt
 def _initialize_single_process(local_rank: int, local_world_size: int):
-  os.environ.setdefault('LOCAL_RANK', str(local_rank))
+  os.environ.setdefault(xenv.XLA_LOCAL_RANK, str(local_rank))
   os.environ.setdefault('LOCAL_WORLD_SIZE', str(local_world_size))
 
 
