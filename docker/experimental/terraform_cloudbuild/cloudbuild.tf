@@ -1,72 +1,62 @@
+# Detailed documentation on cloudbuild parameters:
+# https://cloud.google.com/build/docs/api/reference/rest/v1/projects.builds#resource-build
 resource "google_cloudbuild_trigger" "build-trigger" {
   location = "global"
+  name = "dev-image-trigger"
 
-  build {
-    step {
-      name = "gcr.io/cloud-builders/gsutil"
-      args = ["cp", "gs://mybucket/remotefile.zip", "localfile.zip"]
-      timeout = "120s"
-      secret_env = ["MY_SECRET"]
-    }
-
-    step {
-      name   = "ubuntu"
-      script = "echo hello" # using script field
-    }
-
-    source {
-      storage_source {
-        bucket = "mybucket"
-        object = "source_code.tar.gz"
-      }
-    }
-
-    tags = ["build", "newFeature"]
-
-    substitutions = {
-      _FOO = "bar"
-      _BAZ = "qux"
-    }
-
-    queue_ttl = "20s"
-
-    logs_bucket = "gs://mybucket/logs"
-
-    secret {
-      kms_key_name = "projects/myProject/locations/global/keyRings/keyring-name/cryptoKeys/key-name"
-      secret_env = {
-        PASSWORD = "ZW5jcnlwdGVkLXBhc3N3b3JkCg=="
-      }
-    }
-    available_secrets {
-      secret_manager {
-        env          = "MY_SECRET"
-        version_name = "projects/myProject/secrets/mySecret/versions/latest"
-      }
-    }
-    artifacts {
-      images = ["gcr.io/$PROJECT_ID/$REPO_NAME:$COMMIT_SHA"]
-      objects {
-        location = "gs://bucket/path/to/somewhere/"
-        paths = ["path"]
-      }
-    }
-    options {
-      source_provenance_hash = ["MD5"]
-      requested_verify_option = "VERIFIED"
-      machine_type = "N1_HIGHCPU_8"
-      disk_size_gb = 100
-      substitution_option = "ALLOW_LOOSE"
-      dynamic_substitutions = true
-      log_streaming_option = "STREAM_OFF"
-      worker_pool = "pool"
-      logging = "LEGACY"
-      env = ["ekey = evalue"]
-      secret_env = ["secretenv = svalue"]
-      volumes {
-        name = "v1"
-        path = "v1"
-      }
+  # Connect the repository in *global* region by going to
+  # GCP Console > Triggers > Connect Repositiory.
+  # Authorize and install the GCP App for the GitHub repositiry.
+  github {
+    owner = "mateuszlewko"
+    name = "xla"
+    push {
+      branch = "^cloudbuild$"
     }
   }
+
+  source_to_build {
+    uri = "https://github.com/mateuszlewko/xla"
+    repo_type = "GITHUB"
+    ref = "refs/heads/cloudbuild"
+  }
+
+  included_files = [
+    "docker/experimental/ansible/**",
+    "docker/experimental/terraform_cloudbuild/**",
+  ]
+
+  build {
+    # Build TPU Development image.
+    step {
+      name = "gcr.io/cloud-builders/docker"
+      dir = "docker/experimental/ansible"
+      args = [
+        "build",
+        "--build-arg=python_version=${var.python_version}",
+        "-t=${var.image_repository}/development_tpu_amd64:latest",
+        "-f=development.Dockerfile",
+        ".",
+      ]
+      timeout = "${1 * 60 * 60}s" # 1h
+    }
+
+    artifacts {
+      images = [
+        "${var.image_repository}/development_tpu_amd64:latest",
+      ]
+    }
+
+    options {
+      substitution_option = "ALLOW_LOOSE"
+      dynamic_substitutions = true
+      # TODO: Variablize it
+      worker_pool = "projects/core-ml-engprod-build-farm/locations/europe-west1/workerPools/compilerfarm"
+
+    }
+
+    timeout = "${5 * 60 * 60}s" # 5h
+  }
+
+  include_build_logs = "INCLUDE_BUILD_LOGS_WITH_STATUS"
 }

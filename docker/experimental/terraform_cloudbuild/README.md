@@ -5,7 +5,8 @@ This Terraform sets up:
 - storage bucket for Terraform state.
 - TODO: sth for docker images?
 
-# Prerequisites
+# Running
 
 1. Run `gcloud auth application-default login` on your local workstation.
 2. Make sure Terraform binary is installed.
+

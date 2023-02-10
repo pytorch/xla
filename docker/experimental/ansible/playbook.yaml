@@ -12,7 +12,7 @@
       ansible.builtin.assert:
         that: "{{ lookup('ansible.builtin.vars', item.name) is regex(item.pattern) }}"
         fail_msg: |
-          "Variable '{{ item.name }} = '{{lookup('ansible.builtin.vars', item.name)}}' doesn't match pattern '{{ item.pattern }}'"
+          "Variable '{{ item.name }} = '{{ lookup('ansible.builtin.vars', item.name) }}' doesn't match pattern '{{ item.pattern }}'"
           "Pass the required variable with: --e \"{{ item.name }}=<value>\""
       loop:
         - name: stage
@@ -68,8 +68,8 @@
     - role: fetch_srcs
       vars:
         src_root: "/src"
-        pytorch_git_rev: HEAD
-        xla_git_rev: HEAD
+        pytorch_git_rev: 5e9fa0a8fc87f9a626f144bb5527da0426ac384b
+        xla_git_rev: 6acc0c9cc7aa0738ec792ddd4780d14f66d6bd8c
       tags: fetch_srcs
 
     - role: build_srcs
