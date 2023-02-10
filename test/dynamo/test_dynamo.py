@@ -138,6 +138,10 @@ class DynamoTrainingBasicTest(unittest.TestCase):
     xla_resnet18.load_state_dict(resnet18.state_dict())
     xla_resnet18.to(device)
     xla_resnet18.train()
+    # materalize the fake data
+    xm.mark_step()
+    xm.wait_device_ops()
+    met.clear_all()
     for data, target in loader:
       xla_output = self.run_model_with_dynamo(xla_resnet18, data, target)
       cpu_data = data.detach().cpu()
@@ -145,15 +149,23 @@ class DynamoTrainingBasicTest(unittest.TestCase):
       cpu_target = target.detach().cpu()
       cpu_output = self.train_model(resnet18, cpu_data, cpu_target)
       torch.allclose(xla_output.cpu(), cpu_output.cpu())
-      torch.allclose(data.grad.cpu(), cpu_data.grad)
-    # TODO(JackCaoG): Invesgate the CompileTime and ExecuteTime
-    # self.assertEqual(met.metric_data('CompileTime')[0], 12)
-    # self.assertEqual(met.metric_data('ExecuteTime')[0], 77)
+      # TODO(JackCaoG): Understand why `data.grad` is a pending IR starting
+      # from second iteration instead of a `DeviceData`
+      # torch.allclose(data.grad.cpu(), cpu_data.grad)
+    # Graph 1: forward
+    # Graph 2: backward
+    # Graph 3: sync input for backward
+    # Graph 4: sync input for backward (TODO(JackCaoG) understand why there are two graphs)
+    self.assertEqual(met.metric_data('CompileTime')[0], 4)
+    # We execute 3 grphs per step, and currently cache the graph for forward and backward
+    # will each take 1 additional execution.
+    # TODO(JackCaoG): Optimize the 2 cached execution.
+    self.assertEqual(met.metric_data('ExecuteTime')[0], sample_count * 3 + 2)
     # one for each forward and one for each backward
-    # self.assertEqual(
-    #     met.metric_data('RunCachedGraphInputData')[0], sample_count * 2)
-    # self.assertEqual(
-    #     met.metric_data('RunCachedGraphOutputData')[0], sample_count * 2)
+    self.assertEqual(
+        met.metric_data('RunCachedGraphInputData')[0], sample_count * 2)
+    self.assertEqual(
+        met.metric_data('RunCachedGraphOutputData')[0], sample_count * 2)
 
 
 if __name__ == '__main__':
