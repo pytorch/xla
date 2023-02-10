@@ -262,6 +262,7 @@ supported:
   - _prelu_kernel
   - prod
   - prod.dim_int
+  - _propagate_xla_data
   - put_
   - qr
   - random_
