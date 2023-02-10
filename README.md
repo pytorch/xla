@@ -78,12 +78,13 @@ The following pre-built docker images are available. For running dockers, check 
 | --- | ----------- |
 2.0 | `gcr.io/tpu-pytorch/xla:r2.0_3.8_tpuvm` |
 1.13 | `gcr.io/tpu-pytorch/xla:r1.13_3.8_tpuvm` |
+1.12 | `gcr.io/tpu-pytorch/xla:r1.12_3.8_tpuvm` |
 nightly | `gcr.io/tpu-pytorch/xla:nightly_3.8_tpuvm` |
 nightly at date | `gcr.io/tpu-pytorch/xla:nightly_3.8_YYYYMMDD` |
 
 <br/>
 
-| Version | GPU CUDA 11.8 + Python 3.8 Docker |
+| Version | GPU CUDA 11.2 + Python 3.7 Docker |
 | --- | ----------- |
 | 2.0 | `gcr.io/tpu-pytorch/xla:r2.0_3.8_cuda_11.8` |
 | nightly | `gcr.io/tpu-pytorch/xla:nightly_3.8_cuda_11.8` |
