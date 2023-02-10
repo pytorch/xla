@@ -1480,7 +1480,8 @@ class XlaFullyShardedDataParallel(nn.Module):
     shard_info = {}
     flatten_info = {}
     buffer_info = {}
-    for module_name, m in self.named_modules(remove_duplicate=False):  # includes self
+    for module_name, m in self.named_modules(
+        remove_duplicate=False):  # includes self
       # remove "_fpw_module." from module names since it is also removed in
       # XlaFullyShardedDataParallel's state_dict()
       module_name = module_name.replace("_fpw_module.", "")
