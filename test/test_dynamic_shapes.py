@@ -175,7 +175,7 @@ class TestDynamicShapes(test_utils.XlaTestCase):
     t2 = torch.zeros([size1, size2], device=dev)
     t2[3][0] = 1
     t2[3][1] = 1
-    # t2 has size [<=10, 2]
+    # t3 has size [<=10, 2]
     t3 = torch.nonzero(t2)
     t4 = torch.ones([size1, size2], device=dev)
     expand_out_xla = t4.expand(t3.shape[0], size1, size2)
