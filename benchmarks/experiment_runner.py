@@ -62,8 +62,22 @@ class ExperimentRunner:
       self.run_single_experiment(experiment_config, model_config)
     else:
       assert not self._args.experiment_config and not self._args.model_config
+      finished_experiments = set()
       if os.path.exists(self.output_file):
-        os.unlink(self.output_file)
+        if self._args.no_resume:
+          os.unlink(self.output_file)
+        else:
+          with open(self.output_file, mode="r", encoding="utf-8") as f:
+            jsonlines = f.read().splitlines()
+          for jsonline in jsonlines:
+            tmp = json.loads(jsonline)
+            if self._args.experiment_name == "run_all":
+              # the finished experiment batch_size may be altered by model set_up(),
+              # so the dummy experiment will not match it
+              tmp["experiment"]["batch_size"] = self._args.batch_size
+            finished_experiments.add("-".join(
+                str(item) for item in (list(tmp["model"].values()) +
+                                       list(tmp["experiment"].values()))))
 
       experiment_configs = self.experiment_loader.list_experiment_configs()
       model_configs = self.model_loader.list_model_configs()
@@ -89,6 +103,12 @@ class ExperimentRunner:
           if self._args.dry_run:
             logger.warning(f"Dry run with {command}")
             continue
+          if "-".join(
+              str(item)
+              for item in (list(dummy_benchmark_model.to_dict().values()) +
+                           list(dummy_benchmark_experiment.to_dict().values())
+                          )) in finished_experiments:
+            continue
           if self.model_loader.is_compatible(dummy_benchmark_model,
                                              dummy_benchmark_experiment):
             try:
@@ -103,7 +123,7 @@ class ExperimentRunner:
             except subprocess.TimeoutExpired as e:
               logger.error("TIMEOUT")
               self.save_results(dummy_benchmark_experiment,
-                                dummy_benchmark_model, {"error": e}, None)
+                                dummy_benchmark_model, {"error": str(e)}, None)
             except subprocess.CalledProcessError as e:
               logger.error("ERROR")
               self.save_results(dummy_benchmark_experiment,
@@ -112,7 +132,7 @@ class ExperimentRunner:
             except subprocess.SubprocessError as e:
               logger.error("ERROR")
               self.save_results(dummy_benchmark_experiment,
-                                dummy_benchmark_model, {"error": e}, None)
+                                dummy_benchmark_model, {"error": str(e)}, None)
             else:
               if self._args.print_subprocess:
                 logger.info(completed_process.stdout)
@@ -122,7 +142,7 @@ class ExperimentRunner:
             e = "SKIP because of incompatible model and experiment configs."
             logger.warning(e)
             self.save_results(dummy_benchmark_experiment, dummy_benchmark_model,
-                              {"error": e}, None)
+                              {"error": str(e)}, None)
 
   def run_single_experiment(self, experiment_config, model_config):
     benchmark_experiment = self.experiment_loader.load_experiment(
@@ -156,12 +176,12 @@ class ExperimentRunner:
       outputs_file_name = None
 
     results = OrderedDict()
-    results.update(benchmark_model.to_dict())
-    results.update(benchmark_experiment.to_dict())
+    results["model"] = benchmark_model.to_dict()
+    results["experiment"] = benchmark_experiment.to_dict()
     results["repeat"] = self._args.repeat
     results["iterations_per_run"] = self._args.iterations_per_run
 
-    results.update(metrics)
+    results["metrics"] = metrics
     results["outputs_file"] = outputs_file_name
 
     self.output_jsonl(results)
@@ -378,7 +398,7 @@ def parse_args(args=None):
   parser.add_argument(
       "--save-output",
       action="store_true",
-      help="Whether to save the output to disk",
+      help="Whether to save the model output to disk",
   )
 
   parser.add_argument(
@@ -393,6 +413,14 @@ def parse_args(args=None):
       type=str,
       default="results.jsonl",
       help="Overrides the basename of output files.",
+  )
+
+  parser.add_argument(
+      "--no-resume",
+      action="store_true",
+      help="""By default, the runner would skip the finished experiments that
+        exist in the output-basename file. If --no-resume is set, the previous
+        output-basename file will be deleted and all experiment will run""",
   )
 
   parser.add_argument(

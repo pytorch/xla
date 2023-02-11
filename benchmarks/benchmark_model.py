@@ -155,7 +155,7 @@ class BenchmarkModel:
 
   @property
   def filename_str(self):
-    return f"{self.suite_name}-{self.model_name}"
+    return "-".join(self.to_dict().values())
 
   def to_dict(self):
     d = OrderedDict()

@@ -165,7 +165,7 @@ class BenchmarkExperiment:
 
   @property
   def filename_str(self):
-    return f"{self.accelerator}-{self.accelerator_model}-{self.xla}-{self.dynamo}-{self.test}-{self.batch_size}"
+    return "-".join(self.to_dict().values())
 
   def to_dict(self):
     d = OrderedDict()
