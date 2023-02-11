@@ -198,6 +198,30 @@ class TestDynamicShapes(test_utils.XlaTestCase):
     self.assertEqual(t3.shape[0], 2)
     self.assertEqual(expand_out_aten.cpu(), expand_out_xla.cpu())
 
+  def test_unsqueeze_copy_dynamism(self):
+    t1 = torch.tensor([[1, 0, 0, 5, 0, 6], [1, 3, 2, 0, 0, 1]], device=dev)
+    t2 = torch.nonzero(t1)
+    # t2.shape=torch.Size([<=12, 2]) with real size [7, 2]
+
+    t2_unsqueeze = torch.unsqueeze(t2, 0)
+
+    self.assertEqual(len(t2_unsqueeze.size()), 3)
+    self.assertIsInstance(t2_unsqueeze.shape[0], int)
+    self.assertIsInstance(t2_unsqueeze.shape[1], torch.SymInt)
+    self.assertIsInstance(t2_unsqueeze.shape[2], int)
+    self.assertEqual(str(t2_unsqueeze.shape[0]), '1')
+    self.assertEqual(str(t2_unsqueeze.shape[1]), '<=12')
+    self.assertEqual(str(t2_unsqueeze.shape[2]), '2')
+    self.assertEqual(t2_unsqueeze.shape[0], 1)
+    self.assertEqual(t2_unsqueeze.shape[1], 7)
+    self.assertEqual(t2_unsqueeze.shape[2], 2)
+
+    # test correctness
+    t3 = torch.tensor([[1, 0, 0, 5, 0, 6], [1, 3, 2, 0, 0, 1]])
+    t4 = torch.nonzero(t3)
+    t4_unsqueeze = torch.unsqueeze(t4, 0)
+    self.assertEqual(t2_unsqueeze.cpu(), t4_unsqueeze.cpu())
+
   def test_sizeGe(self):
     met.clear_all()
 

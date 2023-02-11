@@ -2569,10 +2569,10 @@ void uniform_(XLATensorPtr& input, double from, double to) {
 }
 
 XLATensorPtr unsqueeze(const XLATensorPtr& input, int64_t dim) {
-  auto input_shape = input->shape();
+  xla::util::MaybeRef<xla::Shape> input_shape = input->shape();
   int64_t squeeze_dim = torch::lazy::GetCanonicalDimensionIndex(
       dim, input_shape.get().rank() + 1);
-  auto dimensions =
+  std::vector<int64_t> dimensions =
       BuildUnsqueezeDimensions(input_shape.get().dimensions(), squeeze_dim);
   return view(input, dimensions);
 }
