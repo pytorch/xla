@@ -905,7 +905,6 @@ XLAGraphExecutor::ScheduleSyncTensorsGraph(
       std::vector<torch::lazy::BackendDataPtr> results;
       // Execute replicated if the compiled computation is partitioned.
       if (async->cached_computation->is_sharded) {
-        // TODO(yeounoh) use local devices and verify with the pod execution.
         std::vector<std::string> devices =
             xla::ComputationClient::Get()->GetLocalDevices();
         std::vector<std::vector<xla::ComputationClient::DataPtr>>
