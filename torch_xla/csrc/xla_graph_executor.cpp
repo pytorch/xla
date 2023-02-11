@@ -332,6 +332,9 @@ void XLAGraphExecutor::SyncTensorsGraph(std::vector<XLATensorPtr>* tensors,
       xla::sys_util::GetEnvBool("XLA_SYNC_TENSORS_OPBYOP", false);
   SyncTensorsConfig config;
   config.sync_ltc_data = sync_ltc_data;
+  if (warm_up_cache_only) {
+    config.force_ltc_data = false;
+  }
   if (op_by_op) {
     OpByOpAsync async = SyncTensorsGraphOpByOp(tensors, devices, config);
     if (wait) {
@@ -397,6 +400,7 @@ torch::lazy::hash_t XLAGraphExecutor::GetGraphHash(
     const std::vector<XLATensorPtr>& tensors) {
   SyncTensorsConfig config;
   config.sync_ltc_data = true;
+  config.force_ltc_data = false;
 
   SyncTensorCollection coll = CollectSyncTensors(tensors, config);
   absl::Span<const size_t> indices = coll.indices;
