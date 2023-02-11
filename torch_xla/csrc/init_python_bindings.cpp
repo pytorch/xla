@@ -333,7 +333,7 @@ void SyncTensors(const std::vector<at::Tensor>& tensors,
   std::vector<XLATensorPtr> xtensors =
       GetXlaTensors(tensors, /*want_all=*/false);
   XLAGraphExecutor::Get()->SyncTensorsGraph(&xtensors, devices, wait,
-                                            sync_xla_data);
+                                            sync_xla_data, warm_up_cache_only);
 }
 
 void SyncLiveTensors(const std::string& device_str,
