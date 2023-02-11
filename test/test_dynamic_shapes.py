@@ -144,6 +144,22 @@ class TestDynamicShapes(test_utils.XlaTestCase):
     self.assertIsInstance(t2.shape[1], int)
     self.assertEqual(t2.shape[1], 2)
 
+  def test_t_copy(self):
+    t1 = torch.tensor([[1, 0, 0, 5, 0, 6], [1, 3, 2, 0, 0, 1]], device=dev)
+    t2 = torch.nonzero(t1)
+    # t2.shape=torch.Size([<=12, 2]) with real size [7, 2]
+    self.assertEqual(str(t2.shape[0]), '<=12')
+    self.assertEqual(str(t2.shape[1]), '2')
+
+    t2_t = torch.t(t2)
+
+    self.assertIsInstance(t2_t.shape[0], int)
+    self.assertIsInstance(t2_t.shape[1], torch.SymInt)
+    self.assertEqual(str(t2_t.shape[0]), '2')
+    self.assertEqual(str(t2_t.shape[1]), '<=12')
+    self.assertEqual(t2_t.shape[0], 2)
+    self.assertEqual(t2_t.shape[1], 7)
+
   def test_nonzero_shape(self):
     x = torch.tensor((0, 1, 2, 0, 3, 4), device=xm.xla_device())
     x_dim0_shape = torch_xla._XLAC._get_xla_tensor_dimension_size(
