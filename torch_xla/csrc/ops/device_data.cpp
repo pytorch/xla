@@ -43,7 +43,8 @@ torch::lazy::NodePtr DeviceData::CloneWithSharding(
   TF_LOG(INFO) << "Cloning with sharding";
   TF_LOG(INFO) << "num_outputs: " << num_outputs();
 //  TF_LOG(INFO) << "size of oplist: " << operands_as_oplist().size();
-  return torch::lazy::MakeNode<DeviceData>(data_, {}, xla_shape(), sharding);
+  torch::lazy::OpList ops = {};
+  return torch::lazy::MakeNode<DeviceData>(data_, ops, xla_shape(), sharding);
 }
 
 XlaOpVector DeviceData::Lower(LoweringContext* loctx) const {
