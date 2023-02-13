@@ -30,6 +30,7 @@ resource "google_cloudbuild_trigger" "build-trigger" {
   build {
     # Build TPU Development image.
     step {
+      id = "build_tpu_dev_image"
       name = "gcr.io/cloud-builders/docker"
       dir = "docker/experimental/ansible"
       args = [
@@ -45,6 +46,7 @@ resource "google_cloudbuild_trigger" "build-trigger" {
 
     # Build release image and wheels.
     step {
+      id = "build_wheels_and_release_image"
       name = "gcr.io/cloud-builders/docker"
       dir = "docker/experimental/ansible"
       args = [
