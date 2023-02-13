@@ -287,6 +287,7 @@ for ipath in [
     'bazel-xla',
     'bazel-bin/external/org_tensorflow/',
     'bazel-xla/external/org_tensorflow/',
+    'bazel-xla/external/com_github_grpc_grpc/include',
     'bazel-xla/external/com_google_protobuf/src',
     'bazel-xla/external/eigen_archive',
     'bazel-xla/external/com_google_absl',
