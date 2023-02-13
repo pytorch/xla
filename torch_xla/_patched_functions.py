@@ -1,7 +1,7 @@
 import inspect
 import torch
 import torch.nn as nn
-from torch._six import inf
+from torch import inf
 from typing import Iterable, Union, Optional
 
 _tensor_or_tensors = Union[torch.Tensor, Iterable[torch.Tensor]]

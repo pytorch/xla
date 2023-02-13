@@ -1,6 +1,3 @@
-from __future__ import division
-from __future__ import print_function
-
 import builtins
 import collections
 import glob

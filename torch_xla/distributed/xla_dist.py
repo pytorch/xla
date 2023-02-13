@@ -1,7 +1,5 @@
 #!/usr/bin/env python
 """Tool to distribute training on Cloud TPU Pods."""
-from __future__ import division
-from __future__ import print_function
 
 import argparse
 import cloud_tpu_client

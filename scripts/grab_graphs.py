@@ -2,8 +2,6 @@
 # Parses the output of XLA_SAVE_TENSORS_FILE and produces statistics about graph
 # types and Python frames.
 
-from __future__ import print_function
-
 import argparse
 import collections
 import difflib
