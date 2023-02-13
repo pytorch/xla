@@ -27,14 +27,12 @@ std::string DeviceData::ToString() const {
   return ss.str();
 }
 
-torch::lazy::NodePtr DeviceData::Clone() const {
-  return Clone({});
-}
+torch::lazy::NodePtr DeviceData::Clone() const { return Clone({}); }
 
 torch::lazy::NodePtr DeviceData::Clone(torch::lazy::OpList operands) const {
   TF_LOG(INFO) << "Cloning with sharding";
   TF_LOG(INFO) << "num_outputs: " << num_outputs();
-//  TF_LOG(INFO) << "size of oplist: " << operands_as_oplist().size();
+  //  TF_LOG(INFO) << "size of oplist: " << operands_as_oplist().size();
   return torch::lazy::MakeNode<DeviceData>(data_);
 }
 
@@ -42,7 +40,7 @@ torch::lazy::NodePtr DeviceData::CloneWithSharding(
     xla::OpSharding sharding) const {
   TF_LOG(INFO) << "Cloning with sharding";
   TF_LOG(INFO) << "num_outputs: " << num_outputs();
-//  TF_LOG(INFO) << "size of oplist: " << operands_as_oplist().size();
+  //  TF_LOG(INFO) << "size of oplist: " << operands_as_oplist().size();
   torch::lazy::OpList ops = {};
   return torch::lazy::MakeNode<DeviceData>(data_, ops, xla_shape(), sharding);
 }

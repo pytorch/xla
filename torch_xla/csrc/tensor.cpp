@@ -242,7 +242,7 @@ void XLATensor::SetShardingSpec(const ShardingSpec& sharding) {
         << ", must be cleared before applying a new one, "
         << sharding.sharding.DebugString();
   }
-  SetShardedIrValue(sharding_spec());
+  CreateShardedIrValue(sharding_spec());
 }
 
 void XLATensor::ClearShardingSpec() {
@@ -250,7 +250,7 @@ void XLATensor::ClearShardingSpec() {
   torch::lazy::Value ir_value = CurrentIrValue();
   if (ir_value) {
     // This should be a no-op if there is no sharding.
-    SetUnshardedIrValue();
+    CreateUnshardedIrValue();
   }
 }
 
@@ -284,8 +284,7 @@ void XLATensor::SetXlaData(torch::lazy::BackendDataPtr handle, bool sync) {
   }
 }
 
-void XLATensor::SetShardedIrValue(
-    const ShardingSpecPtr sharding_spec) {
+void XLATensor::CreateShardedIrValue(const ShardingSpecPtr sharding_spec) {
   torch::lazy::Value old_value = GetIrValue();
   XLA_CHECK(old_value && old_value.node != nullptr)
       << "Cannot create a sharded IR value if an IR value does not already "
@@ -295,7 +294,7 @@ void XLATensor::SetShardedIrValue(
   data()->ir_value = std::move(new_ir);
 }
 
-void XLATensor::SetUnshardedIrValue() {
+void XLATensor::CreateUnshardedIrValue() {
   torch::lazy::Value old_value = CurrentIrValue();
   XLA_CHECK(old_value && old_value.node != nullptr)
       << "Cannot create a unsharded IR value if an IR value does not already "

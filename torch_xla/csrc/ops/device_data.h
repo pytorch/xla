@@ -20,7 +20,8 @@ class DeviceData : public XlaNode {
 
   torch::lazy::NodePtr Clone(torch::lazy::OpList operands) const override;
 
-  torch::lazy::NodePtr CloneWithSharding(xla::OpSharding sharding) const override;
+  torch::lazy::NodePtr CloneWithSharding(
+      xla::OpSharding sharding) const override;
 
   XlaOpVector Lower(LoweringContext* loctx) const override;
 
