@@ -1,4 +1,4 @@
-#include "tensorflow/compiler/xla/xla_client/xrt_local_service.h"
+#include "xla/xla_client/xrt_local_service.h"
 
 #include <vector>
 
@@ -9,7 +9,7 @@
 #include "tensorflow/core/protobuf/cluster.pb.h"
 #include "tensorflow/core/protobuf/tensorflow_server.pb.h"
 #include "tensorflow/core/public/session_options.h"
-#include "tensorflow/compiler/xla/stream_executor/tpu/tpu_initializer_helper.h"
+#include "xla/stream_executor/tpu/tpu_initializer_helper.h"
 
 namespace xla {
 namespace {

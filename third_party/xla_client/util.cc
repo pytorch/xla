@@ -1,4 +1,4 @@
-#include "tensorflow/compiler/xla/xla_client/util.h"
+#include "xla/xla_client/util.h"
 
 #include <sstream>
 

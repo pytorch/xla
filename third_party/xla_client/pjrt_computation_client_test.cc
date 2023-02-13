@@ -1,17 +1,17 @@
-#include "tensorflow/compiler/xla/xla_client/pjrt_computation_client.h"
+#include "xla/xla_client/pjrt_computation_client.h"
 
 #include <memory>
 #include <string>
 #include <vector>
 
-#include "tensorflow/compiler/xla/client/xla_builder.h"
-#include "tensorflow/compiler/xla/client/xla_computation.h"
-#include "tensorflow/compiler/xla/literal.h"
-#include "tensorflow/compiler/xla/literal_util.h"
-#include "tensorflow/compiler/xla/status.h"
-#include "tensorflow/compiler/xla/statusor.h"
-#include "tensorflow/compiler/xla/tests/literal_test_util.h"
-#include "tensorflow/compiler/xla/xla_client/computation_client.h"
+#include "xla/client/xla_builder.h"
+#include "xla/client/xla_computation.h"
+#include "xla/literal.h"
+#include "xla/literal_util.h"
+#include "xla/status.h"
+#include "xla/statusor.h"
+#include "xla/tests/literal_test_util.h"
+#include "xla/xla_client/computation_client.h"
 #include "tensorflow/core/platform/logging.h"
 #include "tensorflow/tsl/lib/core/status_test_util.h"
 #include "tensorflow/tsl/platform/env.h"

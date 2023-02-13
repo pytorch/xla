@@ -1,4 +1,4 @@
-#include "tensorflow/compiler/xla/xla_client/profiler.h"
+#include "xla/xla_client/profiler.h"
 
 #include "tensorflow/core/profiler/rpc/profiler_server.h"
 
