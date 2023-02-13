@@ -1646,9 +1646,6 @@ at::Tensor XLANativeFunctions::xlogy(const at::Tensor& self,
 at::Tensor XLANativeFunctions::masked_fill(const at::Tensor& self,
                                            const at::Tensor& mask,
                                            const at::Tensor& value) {
-  // return at::functionalization::functionalize_aten_op<ATEN_OP2(
-  //     masked_fill, Tensor)>::call(self, mask, value);
-  std::cout << "WONJOO: masked_fill.Tensor" << std::endl;
   TORCH_LAZY_FN_COUNTER("xla::");
   XLA_CHECK_EQ(value.dim(), 0) << "masked_fill_ only supports a 0-dimensional "
                                << "value tensor, but got tensor "
@@ -1659,9 +1656,6 @@ at::Tensor XLANativeFunctions::masked_fill(const at::Tensor& self,
 at::Tensor XLANativeFunctions::masked_fill(const at::Tensor& self,
                                            const at::Tensor& mask,
                                            const at::Scalar& value) {
-  // return at::functionalization::functionalize_aten_op<ATEN_OP2(
-  //     masked_fill, Scalar)>::call(self, mask, value);
-  std::cout << "WONJOO: masked_fill.Scalar" << std::endl;
   TORCH_LAZY_FN_COUNTER("xla::");
   XLATensorPtr self_tensor = bridge::GetXlaTensor(self);
   return bridge::AtenFromXlaTensor(tensor_methods::masked_fill(
