@@ -31,16 +31,17 @@ class Generic : public XlaNode {
   Generic(torch::lazy::OpKind op, xla::Shape shape, LowerFn lower_fn,
           size_t num_outputs, torch::lazy::hash_t hash_seed);
 
-  Generic(torch::lazy::OpKind op, torch::lazy::OpList operands, 
-	  xla::Shape shape, LowerFn lower_fn, xla::OpSharding sharding,
+  Generic(torch::lazy::OpKind op, torch::lazy::OpList operands,
+          xla::Shape shape, LowerFn lower_fn, xla::OpSharding sharding,
           size_t num_outputs = 1,
           torch::lazy::hash_t hash_seed = (uint32_t)0x5a2d296e9);
 
   torch::lazy::NodePtr Clone() const override;
-  
+
   torch::lazy::NodePtr Clone(torch::lazy::OpList operands) const override;
 
-  torch::lazy::NodePtr CloneWithSharding(xla::OpSharding sharding) const override;
+  torch::lazy::NodePtr CloneWithSharding(
+      xla::OpSharding sharding) const override;
 
   XlaOpVector Lower(LoweringContext* loctx) const override;
 

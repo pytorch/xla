@@ -49,7 +49,13 @@ Generic::Generic(torch::lazy::OpKind op, torch::lazy::OpList operands,
       hash_seed_(hash_seed) {}
 
 torch::lazy::NodePtr Generic::Clone() const {
-  return Clone(operands_as_oplist());
+  std::optional<torch::lazy::OpList> ops = operands_as_oplist();
+  if (ops.has_value()) {
+    return Clone(ops.value());
+  } else {
+    return torch::lazy::MakeNode<Generic>(op(), xla_shape(), lower_fn_,
+                                          num_outputs(), hash_seed_);
+  }
 }
 
 torch::lazy::NodePtr Generic::Clone(torch::lazy::OpList operands) const {
@@ -59,11 +65,15 @@ torch::lazy::NodePtr Generic::Clone(torch::lazy::OpList operands) const {
 
 torch::lazy::NodePtr Generic::CloneWithSharding(
     xla::OpSharding sharding) const {
-  // TODO(steventk): Use operand list for copy when the memory is safe
-  torch::lazy::OpList ops = operands_as_oplist();
-  ops = {};
-  return torch::lazy::MakeNode<Generic>(op(), ops, xla_shape(), lower_fn_,
-                                        sharding, num_outputs(), hash_seed_);
+  std::optional<torch::lazy::OpList> ops = operands_as_oplist();
+  if (ops.has_value()) {
+    return torch::lazy::MakeNode<Generic>(op(), ops.value(), xla_shape(),
+                                          lower_fn_, sharding, num_outputs(),
+                                          hash_seed_);
+  } else {
+    return torch::lazy::MakeNode<Generic>(op(), xla_shape(), lower_fn_,
+                                          num_outputs(), hash_seed_);
+  }
 }
 
 XlaOpVector Generic::Lower(LoweringContext* loctx) const {
