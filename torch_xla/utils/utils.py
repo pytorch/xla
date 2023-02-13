@@ -1,6 +1,3 @@
-from __future__ import division
-from __future__ import print_function
-
 from concurrent import futures
 import contextlib
 import copy
