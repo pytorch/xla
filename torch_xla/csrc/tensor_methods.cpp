@@ -1537,6 +1537,14 @@ XLATensorPtr lt(const XLATensorPtr& input, const XLATensorPtr& other) {
   return DispatchComparisonOp(at::aten::lt, input, other);
 }
 
+XLATensorPtr masked_fill(XLATensorPtr& input, const XLATensorPtr& mask,
+                         const at::Scalar& value) {
+  torch::lazy::ScopePusher ir_scope(at::aten::masked_fill.toQualString());
+  return input->CreateFrom(torch::lazy::MakeNode<MaskedFill>(
+      input->GetIrValue(), MaybeExpand(mask->GetIrValue(), input->shape()),
+      value));
+}
+
 void masked_fill_(XLATensorPtr& input, const XLATensorPtr& mask,
                   const at::Scalar& value) {
   torch::lazy::ScopePusher ir_scope(at::aten::masked_fill.toQualString());

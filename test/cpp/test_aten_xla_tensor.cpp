@@ -8792,7 +8792,7 @@ TEST_F(AtenXlaTensorTest, TestUnsqueezeInPlace) {
 }
 
 TEST_F(AtenXlaTensorTest, TestMaskedFill) {
-  GTEST_SKIP() << "SegFault after functionalization";
+  // GTEST_SKIP() << "SegFault after functionalization";
   torch::Tensor input =
       torch::rand({2, 3}, torch::TensorOptions(torch::kFloat));
   torch::Tensor mask =
@@ -8807,11 +8807,11 @@ TEST_F(AtenXlaTensorTest, TestMaskedFill) {
   });
 
   ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
-  ExpectCounterChanged("xla::masked_fill_", cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::masked_fill", cpp_test::GetIgnoredCounters());
 }
 
 TEST_F(AtenXlaTensorTest, TestMaskedFillInPlace) {
-  GTEST_SKIP() << "SegFault after functionalization";
+  // GTEST_SKIP() << "SegFault after functionalization";
   torch::Scalar value(42);
   torch::Tensor mask =
       torch::randint(0, 2, {2, 3}, torch::TensorOptions(torch::kBool));
@@ -8827,11 +8827,11 @@ TEST_F(AtenXlaTensorTest, TestMaskedFillInPlace) {
   });
 
   ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
-  ExpectCounterChanged("xla::masked_fill_", cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::masked_fill", cpp_test::GetIgnoredCounters());
 }
 
 TEST_F(AtenXlaTensorTest, TestMaskedFillBroadcast) {
-  GTEST_SKIP() << "SegFault after functionalization";
+  // GTEST_SKIP() << "SegFault after functionalization";
   torch::Tensor input =
       torch::rand({2, 5, 4, 3}, torch::TensorOptions(torch::kFloat));
   torch::Tensor mask =
@@ -8846,7 +8846,7 @@ TEST_F(AtenXlaTensorTest, TestMaskedFillBroadcast) {
   });
 
   ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
-  ExpectCounterChanged("xla::masked_fill_", cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::masked_fill", cpp_test::GetIgnoredCounters());
 }
 
 TEST_F(AtenXlaTensorTest, TestFill) {
@@ -11301,8 +11301,8 @@ TEST_F(AtenXlaTensorTest, TestEmbeddingBackward) {
 }
 
 TEST_F(AtenXlaTensorTest, TestAmpForeachNonFiniteCheckAndUnscale) {
-  GTEST_SKIP()
-      << "Needs additional meta tensor support after functionalization";
+  // GTEST_SKIP()
+  //     << "Needs additional meta tensor support after functionalization";
   XlaDeviceType hw_type =
       static_cast<XlaDeviceType>(GetDefaultDevice()->type());
   if (hw_type != XlaDeviceType::GPU && hw_type != XlaDeviceType::CPU) {
@@ -11650,8 +11650,8 @@ TEST_F(AtenXlaTensorTest, TestNanToNum) {
 }
 
 TEST_F(AtenXlaTensorTest, TestNanToNumInplace) {
-  GTEST_SKIP()
-      << "Needs additional meta tensor support after functionalization";
+  // GTEST_SKIP()
+  //     << "Needs additional meta tensor support after functionalization";
   for (torch::ScalarType scalar_type :
        {torch::kHalf, torch::kFloat, torch::kDouble, torch::kShort, torch::kInt,
         torch::kLong}) {
