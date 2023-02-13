@@ -1668,27 +1668,6 @@ at::Tensor XLANativeFunctions::masked_fill(const at::Tensor& self,
       self_tensor, bridge::GetXlaTensor(mask), value));
 }
 
-at::Tensor& XLANativeFunctions::masked_fill_(at::Tensor& self,
-                                             const at::Tensor& mask,
-                                             const at::Scalar& value) {
-  std::cout << "WONJOO: masked_fill_.Scalar" << std::endl;
-  TORCH_LAZY_FN_COUNTER("xla::");
-  XLATensorPtr self_tensor = bridge::GetXlaTensor(self);
-  tensor_methods::masked_fill_(self_tensor, bridge::GetXlaTensor(mask), value);
-  return self;
-}
-
-at::Tensor& XLANativeFunctions::masked_fill_(at::Tensor& self,
-                                             const at::Tensor& mask,
-                                             const at::Tensor& value) {
-  std::cout << "WONJOO: masked_fill_.Tensor" << std::endl;
-  TORCH_LAZY_FN_COUNTER("xla::");
-  XLA_CHECK_EQ(value.dim(), 0) << "masked_fill_ only supports a 0-dimensional "
-                               << "value tensor, but got tensor "
-                               << "with " << value.dim() << " dimension(s).";
-  return masked_fill_(self, mask, value.item());
-}
-
 at::Tensor XLANativeFunctions::masked_scatter(const at::Tensor& self,
                                               const at::Tensor& mask,
                                               const at::Tensor& source) {
