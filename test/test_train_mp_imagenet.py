@@ -89,7 +89,30 @@ import torch_xla.test.test_utils as test_utils
 import torch.distributed as dist
 import torch_xla.distributed.xla_backend
 
+
 DEFAULT_KWARGS = dict(
+    batch_size=128,
+    test_set_batch_size=128,
+    num_epochs=18,
+    momentum=0.9,
+    lr=0.1,
+    target_accuracy=0.0,
+    persistent_workers=False,
+    prefetch_factor=16,
+    loader_prefetch_size=8,
+    device_prefetch_size=4,
+    num_workers=8,
+    host_to_device_transfer_threads=1,
+)
+
+
+'''
+Best config to achieve peak performance on v4-8
+
+  1. Works best if used in conjuntion with XLA_USE_BF16=1 Flag.
+  2. Hyperparameters can be tuned to further improve the accuracy.
+'''
+v4-8_KWARGS = dict(
     batch_size=128,
     test_set_batch_size=128,
     num_epochs=18,
@@ -103,6 +126,9 @@ DEFAULT_KWARGS = dict(
     num_workers=16,
     host_to_device_transfer_threads=4,
 )
+
+
+
 MODEL_SPECIFIC_DEFAULTS = {
     # Override some of the args in DEFAULT_KWARGS, or add them to the dict
     # if they don't exist.
