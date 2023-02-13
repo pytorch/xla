@@ -1,7 +1,3 @@
-from __future__ import division
-from __future__ import print_function
-
-from six import iteritems, itervalues
 import threading
 import torch
 import torch_xla
@@ -94,7 +90,7 @@ class ParallelLoader(object):
     thread = threading.Thread(target=self._loader_worker)
     thread.daemon = True
     thread.start()
-    for dqueue in itervalues(self._queues):
+    for dqueue in self._queues.values():
       thread = threading.Thread(target=self._worker, args=(dqueue,))
       thread.daemon = True
       thread.start()
@@ -122,7 +118,7 @@ class ParallelLoader(object):
 
   def close(self):
     self._done = True
-    for dqueue in itervalues(self._queues):
+    for dqueue in self._queues.values():
       dqueue.queue.close()
       dqueue.loader_queue.close()
 
