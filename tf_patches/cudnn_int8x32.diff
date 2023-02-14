@@ -1,15 +1,16 @@
+# TODO: Try removing with the next pin update. See https://github.com/pytorch/xla/pull/4615#issuecomment-1428883781
 diff --git a/tensorflow/compiler/xla/debug_options_flags.cc b/tensorflow/compiler/xla/debug_options_flags.cc
 index fac64573c54..dec0f1823c1 100644
 --- a/tensorflow/compiler/xla/debug_options_flags.cc
 +++ b/tensorflow/compiler/xla/debug_options_flags.cc
 @@ -110,7 +110,6 @@ DebugOptions DefaultDebugOptionsIgnoringFlags() {
        DebugOptions::PARTITIONING_ALGORITHM_NOOP);
- 
+
    opts.set_xla_gpu_enable_triton_gemm(false);
 -  opts.set_xla_gpu_enable_cudnn_int8x32_convolution_reordering(false);
    return opts;
  }
- 
+
 @@ -882,13 +881,6 @@ void MakeDebugOptionsFlags(std::vector<tsl::Flag>* flag_list,
                  bool_setter_for(&DebugOptions::set_xla_gpu_enable_triton_gemm),
                  debug_options->xla_gpu_enable_triton_gemm(),
@@ -22,7 +23,7 @@ index fac64573c54..dec0f1823c1 100644
 -      debug_options->xla_gpu_enable_cudnn_int8x32_convolution_reordering(),
 -      "Enable cuDNN frontend for int8x32 convolutions with reordered filter."));
  }  // NOLINT(readability/fn_size)
- 
+
  // Allocates flag_values and flag_objects; this function must not be called more
 diff --git a/tensorflow/compiler/xla/service/gpu/BUILD b/tensorflow/compiler/xla/service/gpu/BUILD
 index 7fff6bdad13..b21105a42d7 100644
@@ -46,11 +47,11 @@ index 7254e02f513..c2ab437b48e 100644
 +++ b/tensorflow/compiler/xla/service/gpu/conv_layout_normalization.cc
 @@ -16,23 +16,22 @@ limitations under the License.
  #include "tensorflow/compiler/xla/service/gpu/conv_layout_normalization.h"
- 
+
  #include <optional>
 -#include <tuple>
  #include <vector>
- 
+
  #include "tensorflow/compiler/xla/hlo/ir/hlo_casting_utils.h"
 -#include "tensorflow/compiler/xla/hlo/ir/hlo_instructions.h"
  #include "tensorflow/compiler/xla/hlo/ir/hlo_module.h"
@@ -58,11 +59,11 @@ index 7254e02f513..c2ab437b48e 100644
  #include "tensorflow/compiler/xla/service/gpu/cublas_cudnn.h"
  #include "tensorflow/compiler/xla/service/hlo_creation_utils.h"
 -#include "tensorflow/compiler/xla/shape_util.h"
- 
+
  namespace xla {
  namespace gpu {
 -namespace {
- 
+
 -StatusOr<HloInstruction*> UpdateLayoutForCudnnConvolution(
 -    HloCustomCallInstruction* hlo) {
 +StatusOr<std::optional<HloInstruction*>>
@@ -124,7 +125,7 @@ index 7254e02f513..c2ab437b48e 100644
 -}
 -
 -}  // namespace
- 
+
 -StatusOr<std::optional<HloInstruction*>> NormalizeLayoutForGpuCustomCalls(
 -    HloCustomCallInstruction* hlo) {
 -  if (IsCustomCallToDnnConvolution(*hlo)) {
@@ -138,7 +139,7 @@ index 7254e02f513..c2ab437b48e 100644
 -  return {std::nullopt};
 +  return std::make_optional(bc_to_orig);
  }
- 
+
  }  // end namespace gpu
 diff --git a/tensorflow/compiler/xla/service/gpu/conv_layout_normalization.h b/tensorflow/compiler/xla/service/gpu/conv_layout_normalization.h
 index bb38a299435..c6305784f94 100644
@@ -147,12 +148,12 @@ index bb38a299435..c6305784f94 100644
 @@ -28,8 +28,8 @@ limitations under the License.
  namespace xla {
  namespace gpu {
- 
+
 -StatusOr<std::optional<HloInstruction*>> NormalizeLayoutForGpuCustomCalls(
 -    HloCustomCallInstruction*);
 +StatusOr<std::optional<HloInstruction*>>
 +NormalizeLayoutForCustomCallConvolution(HloCustomCallInstruction*);
- 
+
  }  // end namespace gpu
  }  // end namespace xla
 diff --git a/tensorflow/compiler/xla/service/gpu/cudnn_vectorize_convolutions.cc b/tensorflow/compiler/xla/service/gpu/cudnn_vectorize_convolutions.cc
@@ -161,11 +162,11 @@ index f9af729cf36..7511e81a423 100644
 +++ b/tensorflow/compiler/xla/service/gpu/cudnn_vectorize_convolutions.cc
 @@ -16,21 +16,16 @@ limitations under the License.
  #include "tensorflow/compiler/xla/service/gpu/cudnn_vectorize_convolutions.h"
- 
+
  #include <optional>
 -#include <string>
  #include <vector>
- 
+
  #include "tensorflow/compiler/xla/client/xla_builder.h"
  #include "tensorflow/compiler/xla/hlo/ir/hlo_casting_utils.h"
  #include "tensorflow/compiler/xla/hlo/ir/hlo_instructions.h"
@@ -174,17 +175,17 @@ index f9af729cf36..7511e81a423 100644
  #include "tensorflow/compiler/xla/service/gpu/cudnn_support_utils.h"
  #include "tensorflow/compiler/xla/service/gpu/stream_executor_util.h"
 -#include "tensorflow/compiler/xla/shape_util.h"
- 
+
  namespace xla {
  namespace gpu {
 -namespace {
- 
+
  // Finds convolutions that this pass may be able to transform, namely int8_t
  // cudnn forward or forward-bias-activation convolutions
 @@ -254,37 +249,6 @@ static ConvolutionDimensionNumbers VectorizeDnums(
    return dnums;
  }
- 
+
 -// Reorders the convolution's filter and bias (if present) according to
 -// cudnnReorderFilterAndBias.  Also marks that the filter + bias are reordered
 -// in the conv's backend-config.
@@ -222,7 +223,7 @@ index f9af729cf36..7511e81a423 100644
 @@ -371,13 +335,6 @@ static StatusOr<bool> TryRevectorizeConv(
          conv->ToString());
    }
- 
+
 -  // Reorder filter and bias for the int8x32 convolutions.
 -  const auto& debug_options = conv->GetModule()->config().debug_options();
 -  if (input_shape.element_type() == xla::S8 && vect_size == 32 &&
@@ -236,7 +237,7 @@ index f9af729cf36..7511e81a423 100644
 @@ -502,13 +459,6 @@ static StatusOr<bool> TryVectorizeConv(
          conv->ToString());
    }
- 
+
 -  // Reorder filter and bias for the int8x32 convolutions.
 -  const auto& debug_options = conv->GetModule()->config().debug_options();
 -  if (input_shape.element_type() == xla::S8 && vect_size == 32 &&
@@ -250,7 +251,7 @@ index f9af729cf36..7511e81a423 100644
 @@ -545,8 +495,6 @@ static StatusOr<bool> TryVectorizeConv(
    return true;
  }
- 
+
 -}  // namespace
 -
  StatusOr<bool> CudnnVectorizeConvolutions::Run(
@@ -262,7 +263,7 @@ index 9e4d8c95bb0..9b242ce3b04 100644
 +++ b/tensorflow/compiler/xla/service/gpu/gpu_compiler.cc
 @@ -836,7 +836,8 @@ Status GpuCompiler::OptimizeHloPostLayoutAssignment(
      pipeline.AddPass<GemmBroadcastFoldingRewriter>();
- 
+
      if (debug_options.xla_gpu_normalize_layouts()) {
 -      pipeline.AddPass<LayoutNormalization>(&NormalizeLayoutForGpuCustomCalls);
 +      pipeline.AddPass<LayoutNormalization>(
@@ -296,7 +297,7 @@ index cb2aa3f2ac1..4c995b4f142 100644
 @@ -3523,6 +3520,11 @@ GetCudnnOperationGraph(dnn::ConvolutionKind kind, dnn::DataType input_type,
    std::vector<int64_t> input_strides = input_descriptor.vectorized_strides(
        dnn::DataLayout::kBatchDepthYX, vector_size, vector_dim);
- 
+
 +  if (vector_size == 32) {
 +    return tsl::errors::Internal(
 +        "cuDNN frontend doesn't support Tx32 at the moment.");
@@ -308,7 +309,7 @@ index cb2aa3f2ac1..4c995b4f142 100644
 @@ -3547,13 +3549,9 @@ GetCudnnOperationGraph(dnn::ConvolutionKind kind, dnn::DataType input_type,
    std::vector<int64_t> filter_strides = filter_descriptor.vectorized_strides(
        dnn::FilterLayout::kOutputInputYX, vector_size, vector_dim);
- 
+
 -  TF_ASSIGN_OR_RETURN(
 -      auto tensor_w,
 -      CreateCudnnTensor(
@@ -319,13 +320,13 @@ index cb2aa3f2ac1..4c995b4f142 100644
 +  TF_ASSIGN_OR_RETURN(auto tensor_w,
 +                      CreateCudnnTensor(filter_dims, filter_strides, 'w',
 +                                        input_type, vector_size, vector_dim));
- 
+
    // conv_desc.
    auto mode = convolution_descriptor.convolution_not_crosscorr()
 @@ -3657,6 +3655,11 @@ GetCudnnFusedOperationGraph(
    std::vector<int64_t> input_strides = input_descriptor.vectorized_strides(
        dnn::DataLayout::kBatchDepthYX, vector_size, vector_dim);
- 
+
 +  if (vector_size == 32) {
 +    return tsl::errors::Internal(
 +        "cuDNN frontend doesn't support Tx32 at the moment.");
@@ -348,7 +349,7 @@ index cb2aa3f2ac1..4c995b4f142 100644
 +  TF_ASSIGN_OR_RETURN(auto tensor_w,
 +                      CreateCudnnTensor(filter_dims, filter_strides, 'w',
 +                                        input_type, vector_size, vector_dim));
- 
+
    // For the purposes of the cudnn graph, say that the bias tensor has the same
    // layout as the output tensor.  It doesn't actually matter, because bias is a
 @@ -4822,20 +4821,17 @@ tsl::Status CudnnSupport::GetConvolveRunners(
@@ -363,7 +364,7 @@ index cb2aa3f2ac1..4c995b4f142 100644
    // cuDNN frontend support became sufficiently stable to use in 8.1.
    // TODO(awpr): remove this condition once support for cuDNN 8.0 is dropped.
    const bool is_pre_frontend_cudnn = CUDNN_VERSION < 8100;
- 
+
 -  // cuDNN frontend support for Tx32 convolutions added in 8.3.
 -  // If the filter is not reordered, do not use frontend (it is slow).
 -  const bool is_disabled_x32 =
@@ -375,7 +376,7 @@ index cb2aa3f2ac1..4c995b4f142 100644
    const bool actually_use_cudnn_frontend =
 -      use_cudnn_frontend && !is_pre_frontend_cudnn && !is_disabled_x32;
 +      use_cudnn_frontend && !is_pre_frontend_cudnn && !is_unsupported_x32;
- 
+
    if (use_cudnn_frontend && !actually_use_cudnn_frontend) {
      // This will happen once per unique conv configuration/shape that gets
 @@ -4847,8 +4843,8 @@ tsl::Status CudnnSupport::GetConvolveRunners(
@@ -388,11 +389,11 @@ index cb2aa3f2ac1..4c995b4f142 100644
 +                      ? "Tx32 convolutions are unsupported."
                        : "the current cuDNN version does not support it.");
    }
- 
+
 @@ -4933,12 +4929,6 @@ CudnnSupport::ConvolveRunnerFromDesc(
          ToCudnnDataType(GetConvAccumulatorType(input_type)));
      conv.set_use_tensor_op_math(algorithm_desc.tensor_ops_enabled());
- 
+
 -    if (filter_descriptor.layout() ==
 -        dnn::FilterLayout::kOutputInputYX32_CudnnReordered) {
 -      CHECK_CUDNN_OK(
@@ -405,7 +406,7 @@ index cb2aa3f2ac1..4c995b4f142 100644
 @@ -5200,12 +5190,6 @@ CudnnSupport::FusedConvolveRunnerFromDesc(
          ToCudnnDataType(GetConvAccumulatorType(input_type)));
      conv.set_use_tensor_op_math(algorithm_desc.tensor_ops_enabled());
- 
+
 -    if (filter_descriptor.layout() ==
 -        dnn::FilterLayout::kOutputInputYX32_CudnnReordered) {
 -      CHECK_CUDNN_OK(
@@ -418,7 +419,7 @@ index cb2aa3f2ac1..4c995b4f142 100644
 @@ -5275,26 +5259,23 @@ tsl::Status CudnnSupport::GetFusedConvolveRunners(
        false;
  #endif
- 
+
 +  // All current versions of the frontend API lack support for Tx32
 +  // convolutions.
 +  const bool is_unsupported_x32 =
@@ -427,7 +428,7 @@ index cb2aa3f2ac1..4c995b4f142 100644
    // cuDNN frontend support became sufficiently stable to use in 8.1.
    // TODO(awpr): remove this condition once support for cuDNN 8.0 is dropped.
    const bool is_pre_frontend_cudnn = CUDNN_VERSION < 8100;
- 
+
 -  // cuDNN frontend support for Tx32 convolutions added in 8.3.
 -  // If the filter is not reordered, do not use frontend (it is slow).
 -  const bool is_disabled_x32 =
@@ -440,7 +441,7 @@ index cb2aa3f2ac1..4c995b4f142 100644
        use_cudnn_frontend && !is_pre_frontend_cudnn &&
 -      !is_broken_identity_fused_conv && !is_disabled_x32;
 +      !is_broken_identity_fused_conv && !is_unsupported_x32;
- 
+
    if (use_cudnn_frontend && !actually_use_cudnn_frontend) {
      const char* reason = "the current cuDNN version does not support it.";
 -    if (is_disabled_x32) {
@@ -470,7 +471,7 @@ index 04b9126302d..596f2be8f77 100644
 @@ -61,60 +61,5 @@ ENTRY TestComputation {
    EXPECT_TRUE(RunAndCompare(kHlo, ErrorSpec{0, 0}));
  }
- 
+
 -XLA_TEST_F(ConvolutionHloTest, TestCudnnConvInt8x32BiasNonConst) {
 -  // Test two GPU compiled HLOs, first version with vectorization disabled,
 -  // second with vectorization enabled. The reference implementation
@@ -534,7 +535,7 @@ index a25931e6fce..33de736599c 100644
 +++ b/tensorflow/compiler/xla/translate/mhlo_to_lhlo_with_xla/mhlo_to_lhlo_with_xla.cc
 @@ -1233,10 +1233,10 @@ LhloDialectEmitter::EmitDnnConvolutionReorderVectorized(
      }
- 
+
      CHECK_EQ(shape.rank(), 5);
 -    CHECK_EQ(shape.dimensions(4), 32);
 +    CHECK_EQ(shape.dimensions_minor(0), 32);
@@ -544,20 +545,20 @@ index a25931e6fce..33de736599c 100644
 +        shape.dimensions_minor(4), shape.dimensions_minor(3) * 32,
 +        shape.dimensions_minor(2), shape.dimensions_minor(1)};
      op->setAttr("filter_dims", GetI64DenseElementsAttr(nchw));
- 
+
      return op.getOperation();
 diff --git a/tensorflow/compiler/xla/xla.proto b/tensorflow/compiler/xla/xla.proto
 index 78e4706edfe..9f5b65a5858 100644
 --- a/tensorflow/compiler/xla/xla.proto
 +++ b/tensorflow/compiler/xla/xla.proto
 @@ -462,9 +462,7 @@ message DebugOptions {
- 
+
    bool xla_gpu_enable_triton_gemm = 188;
- 
+
 -  bool xla_gpu_enable_cudnn_int8x32_convolution_reordering = 189;
 -
 -  // Next id: 190
 +  // Next id: 189
- 
+
    // Extra options to pass to the compilation backend (e.g. LLVM); specific
    // interpretation of these values is left to the backend.
