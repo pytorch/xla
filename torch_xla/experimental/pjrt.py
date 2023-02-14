@@ -341,7 +341,6 @@ def spawn(fn: Callable,
 
 @requires_pjrt
 def _initialize_single_process(local_rank: int, local_world_size: int):
-  os.environ.setdefault('LOCAL_RANK', str(local_rank))
   os.environ.setdefault('LOCAL_WORLD_SIZE', str(local_world_size))
 
 
