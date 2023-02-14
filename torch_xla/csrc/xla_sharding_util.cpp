@@ -158,7 +158,8 @@ xla::HloModuleProto ShardingUtil::SpmdPartitioningPass(
   // TODO(yeounoh) side-effecting ops gets assigned replicated sharding.
   pass.AddPass<xla::ShardingPropagation>(
       /*is_spmd=*/true, /*propagate_metadata=*/false,
-      /*allow_spmd_sharding_propagation_to_output=*/true);
+      /*allow_spmd_sharding_propagation_to_output=*/
+      absl::MakeConstSpan({true}));
   pass.AddPass<xla::spmd::SpmdPartitioner>(
       /*num_partitions=*/num_partitions,
       /*num_replicas=*/num_replicas, options,
