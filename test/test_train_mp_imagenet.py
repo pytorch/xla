@@ -1,5 +1,11 @@
 from torch_xla.experimental import pjrt
+import time
 import args_parse
+import pprint
+from lars import Lars
+from lars2 import create_optimizer_lars
+
+run_begin = time.time()
 
 SUPPORTED_MODELS = [
     'alexnet', 'densenet121', 'densenet161', 'densenet169', 'densenet201',
@@ -31,9 +37,39 @@ MODEL_OPTS = {
     '--ddp': {
         'action': 'store_true',
     },
-    '--ddp_pjrt': {
+    # Use pjrt:// init_method instead of env:// for `torch.distributed`.
+    # Required for DDP on TPU v2/v3 when using PJRT.
+    '--pjrt_distributed': {
         'action': 'store_true',
     },
+    '--profile': {
+        'action': 'store_true',
+    },
+    '--persistent_workers': {
+        'action': 'store_true',
+    },
+    '--prefetch_factor': {
+        'type': int,
+    },
+    '--loader_prefetch_size': {
+        'type': int,
+    },
+    '--device_prefetch_size': {
+        'type': int,
+    },
+    '--host_to_device_transfer_threads': {
+        'type': int,
+    },
+    '--run_eval_after_n_train_steps': {
+        'type': int,
+    },
+    '--num_train_steps': {
+        'type': int,
+    },
+    '--lars': {
+        'action': 'store_true',
+    },
+
 }
 
 FLAGS = args_parse.parse_common_options(
@@ -53,27 +89,39 @@ import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+from torch.nn.parallel import DistributedDataParallel as DDP
 import torch.optim as optim
 import torchvision
 import torchvision.transforms as transforms
 import torch_xla
 import torch_xla.debug.metrics as met
 import torch_xla.distributed.parallel_loader as pl
+import torch_xla.debug.profiler as xp
 import torch_xla.utils.utils as xu
 import torch_xla.core.xla_model as xm
 import torch_xla.distributed.xla_multiprocessing as xmp
 import torch_xla.test.test_utils as test_utils
+from itertools import islice
 
 import torch.distributed as dist
 import torch_xla.distributed.xla_backend
 
 DEFAULT_KWARGS = dict(
     batch_size=128,
-    test_set_batch_size=64,
+    test_set_batch_size=128,
     num_epochs=18,
     momentum=0.9,
     lr=0.1,
     target_accuracy=0.0,
+    persistent_workers=True,
+    prefetch_factor=32,
+    loader_prefetch_size=128,
+    device_prefetch_size=1,
+    num_workers=16,
+    host_to_device_transfer_threads=4,
+    run_eval_after_n_train_steps=2400,
+    num_train_steps=24000,
+
 )
 MODEL_SPECIFIC_DEFAULTS = {
     # Override some of the args in DEFAULT_KWARGS, or add them to the dict
@@ -121,16 +169,37 @@ def _train_update(device, step, loss, tracker, epoch, writer):
       summary_writer=writer)
 
 
-def train_imagenet():
-  if FLAGS.ddp and not dist.is_initialized():
+from torch.utils.data import DataLoader
+
+
+class InfiniteDataLoader(DataLoader):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Initialize an iterator over the dataset.
+        self.dataset_iterator = super().__iter__()
+
+    def __iter__(self):
+        return self
+
+    def __next__(self):
+        try:
+            batch = next(self.dataset_iterator)
+        except StopIteration:
+            # Dataset exhausted, use a new fresh iterator.
+            self.dataset_iterator = super().__iter__()
+            batch = next(self.dataset_iterator)
+        return batch
+
+
+def train_imagenet(FLAGS):
+  '''
+  if FLAGS.pjrt_distributed:
+    import torch_xla.experimental.pjrt_backend
+    dist.init_process_group('xla', init_method='pjrt://')
+  elif FLAGS.ddp:
     dist.init_process_group(
         'xla', world_size=xm.xrt_world_size(), rank=xm.get_ordinal())
-
-  if FLAGS.ddp_pjrt:
-    from torch_xla.experimental.pjrt import DistributedDataParallel as DDP
-  else:
-    from torch.nn.parallel import DistributedDataParallel as DDP
-
+  '''
   print('==> Preparing data..')
   img_dim = get_model_property('img_dim')
   if FLAGS.fake_data:
@@ -156,7 +225,7 @@ def train_imagenet():
             normalize,
         ]))
     train_dataset_len = len(train_dataset.imgs)
-    resize_dim = max(img_dim, 256)
+    resize_dim = max(img_dim, 224)
     test_dataset = torchvision.datasets.ImageFolder(
         os.path.join(FLAGS.datadir, 'val'),
         # Matches Torchvision's eval transforms except Torchvision uses size
@@ -181,72 +250,101 @@ def train_imagenet():
           num_replicas=xm.xrt_world_size(),
           rank=xm.get_ordinal(),
           shuffle=False)
-    train_loader = torch.utils.data.DataLoader(
+    train_loader = InfiniteDataLoader(
         train_dataset,
         batch_size=FLAGS.batch_size,
         sampler=train_sampler,
         drop_last=FLAGS.drop_last,
         shuffle=False if train_sampler else True,
-        num_workers=FLAGS.num_workers)
+        num_workers=FLAGS.num_workers,
+        persistent_workers=FLAGS.persistent_workers,
+        prefetch_factor=FLAGS.prefetch_factor)
     test_loader = torch.utils.data.DataLoader(
         test_dataset,
         batch_size=FLAGS.test_set_batch_size,
         sampler=test_sampler,
         drop_last=FLAGS.drop_last,
         shuffle=False,
-        num_workers=FLAGS.num_workers)
+        num_workers=FLAGS.num_workers,
+        persistent_workers=FLAGS.persistent_workers,
+        prefetch_factor=FLAGS.prefetch_factor)
+
 
   torch.manual_seed(42)
 
   device = xm.xla_device()
   model = get_model_property('model_fn')().to(device)
 
+  '''
   # Initialization is nondeterministic with multiple threads in PjRt.
   # Synchronize model parameters across replicas manually.
   if pjrt.using_pjrt():
     pjrt.broadcast_master_param(model)
-
+  
   if FLAGS.ddp:
     model = DDP(model, gradient_as_bucket_view=True, broadcast_buffers=False)
+  '''
+
+  pjrt.broadcast_master_param(model)
+  server = xp.start_server(9229)
 
   writer = None
   if xm.is_master_ordinal():
     writer = test_utils.get_summary_writer(FLAGS.logdir)
-  optimizer = optim.SGD(
-      model.parameters(),
-      lr=FLAGS.lr,
-      momentum=FLAGS.momentum,
-      weight_decay=1e-4)
-  num_training_steps_per_epoch = train_dataset_len // (
-      FLAGS.batch_size * xm.xrt_world_size())
-  lr_scheduler = schedulers.wrap_optimizer_with_scheduler(
-      optimizer,
-      scheduler_type=getattr(FLAGS, 'lr_scheduler_type', None),
-      scheduler_divisor=getattr(FLAGS, 'lr_scheduler_divisor', None),
-      scheduler_divide_every_n_epochs=getattr(
-          FLAGS, 'lr_scheduler_divide_every_n_epochs', None),
-      num_steps_per_epoch=num_training_steps_per_epoch,
-      summary_writer=writer)
-  loss_fn = nn.CrossEntropyLoss()
+  if FLAGS.lars:
+      param_groups = []
+      param_group_names=[]
+      for name, parameter in model.named_parameters():
+          param_groups.append({'params': [parameter]})
+          param_group_names.append(name)
 
+      optimizer = Lars(param_groups, lr=17, momentum=0.9, weight_decay=2e-4 )
+      #optimizer = create_optimizer_lars(model=model, lr=0.1, epsilon=1e-5,momentum=0.9,weight_decay=0.00005,bn_bias_separately=False)
+  else:
+      optimizer = optim.SGD(
+          model.parameters(),
+          lr=FLAGS.lr,
+          momentum=FLAGS.momentum,
+          weight_decay=1e-4)
+      num_training_steps_per_epoch = train_dataset_len // (
+          FLAGS.batch_size * xm.xrt_world_size())
+      lr_scheduler = schedulers.wrap_optimizer_with_scheduler(
+          optimizer,
+          scheduler_type=getattr(FLAGS, 'lr_scheduler_type', None),
+          scheduler_divisor=getattr(FLAGS, 'lr_scheduler_divisor', None),
+          scheduler_divide_every_n_epochs=getattr(
+              FLAGS, 'lr_scheduler_divide_every_n_epochs', None),
+          num_steps_per_epoch=num_training_steps_per_epoch,
+          summary_writer=writer)
+  loss_fn = nn.CrossEntropyLoss()
+  max_accuracy = 0.0
   def train_loop_fn(loader, epoch):
     tracker = xm.RateTracker()
     model.train()
     for step, (data, target) in enumerate(loader):
-      optimizer.zero_grad()
-      output = model(data)
-      loss = loss_fn(output, target)
-      loss.backward()
+      with xp.StepTrace('train_imagenet'):
+        with xp.Trace('build_graph'):
+          optimizer.zero_grad()
+          output = model(data)
+          loss = loss_fn(output, target)
+          loss.backward()
       if FLAGS.ddp:
         optimizer.step()
       else:
+        #b = time.time()
         xm.optimizer_step(optimizer)
+        #e = time.time()
+        #xm.master_print(f'time taken to complate optimizer step: {e - b}')
       tracker.add(FLAGS.batch_size)
-      if lr_scheduler:
+      if not FLAGS.lars and lr_scheduler:
         lr_scheduler.step()
       if step % FLAGS.log_steps == 0:
         xm.add_step_closure(
             _train_update, args=(device, step, loss, tracker, epoch, writer))
+      if (step+1)%FLAGS.run_eval_after_n_train_steps==0:
+          accuracy = test_loop_fn(test_device_loader, epoch)
+          epoch = epoch + 1
+          model.train()
 
   def test_loop_fn(loader, epoch):
     total_samples, correct = 0, 0
@@ -259,12 +357,20 @@ def train_imagenet():
       if step % FLAGS.log_steps == 0:
         xm.add_step_closure(
             test_utils.print_test_update, args=(device, None, epoch, step))
-    accuracy = 100.0 * correct.item() / total_samples
-    accuracy = xm.mesh_reduce('test_accuracy', accuracy, np.mean)
+    accuracy = 0.0
+    try:
+        accuracy = 100.0 * correct.item() / total_samples
+        accuracy = xm.mesh_reduce('test_accuracy', accuracy, np.mean)
+    except:
+        pass
+    if epoch==1:
+        print(f'startup time: {time.time()-run_begin} seconds.')
+    xm.master_print(f'accuracy: {accuracy}')
     return accuracy
 
-  train_device_loader = pl.MpDeviceLoader(train_loader, device)
-  test_device_loader = pl.MpDeviceLoader(test_loader, device)
+  train_device_loader = pl.MpDeviceLoader(islice(train_loader, FLAGS.num_train_steps), device, loader_prefetch_size=FLAGS.loader_prefetch_size, device_prefetch_size=FLAGS.device_prefetch_size, host_to_device_transfer_threads=FLAGS.host_to_device_transfer_threads)
+  test_device_loader = pl.MpDeviceLoader(test_loader, device, loader_prefetch_size=FLAGS.loader_prefetch_size, device_prefetch_size=FLAGS.device_prefetch_size, host_to_device_transfer_threads=FLAGS.host_to_device_transfer_threads)
+
   accuracy, max_accuracy = 0.0, 0.0
   for epoch in range(1, FLAGS.num_epochs + 1):
     xm.master_print('Epoch {} train begin {}'.format(epoch, test_utils.now()))
@@ -289,10 +395,11 @@ def train_imagenet():
 
 
 def _mp_fn(index, flags):
-  global FLAGS
-  FLAGS = flags
+  #global FLAGS
+  #FLAGS = flags
   torch.set_default_tensor_type('torch.FloatTensor')
   accuracy = train_imagenet()
+  xm.master_print(f'wall time: {time.time() - run_begin} seconds.')
   if accuracy < FLAGS.target_accuracy:
     print('Accuracy {} is below target {}'.format(accuracy,
                                                   FLAGS.target_accuracy))
@@ -300,4 +407,12 @@ def _mp_fn(index, flags):
 
 
 if __name__ == '__main__':
-  xmp.spawn(_mp_fn, args=(FLAGS,), nprocs=FLAGS.num_cores)
+  #if FLAGS.profile:
+  #  server = xp.start_server(FLAGS.profiler_port)
+  #xmp.spawn(_mp_fn, args=(FLAGS,), nprocs=FLAGS.num_cores)
+  #global FLAGS
+  results = pjrt._run_multiprocess(train_imagenet, FLAGS)
+  print(f'wall time: {time.time() - run_begin} seconds.')
+  print('Replica max_accuracy:', pprint.pformat(results))
+  accuracy = np.mean(list(results.values()))
+  print('Average max_accuracy:', accuracy)
