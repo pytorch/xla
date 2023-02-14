@@ -1,4 +1,3 @@
-
 load(
     "@org_tensorflow//tensorflow:tensorflow.bzl",
     "if_with_tpu_support",
@@ -102,6 +101,7 @@ cc_library(
         "@org_tensorflow//tensorflow/compiler/xla/client/lib:tridiagonal",
         "@org_tensorflow//tensorflow/compiler/xla/client:global_data",
         "@org_tensorflow//tensorflow/compiler/xla/client:xla_computation",
+        "@org_tensorflow//tensorflow/compiler/xla/pjrt/distributed",
         "@org_tensorflow//tensorflow/compiler/xla/pjrt/gpu:se_gpu_pjrt_client",
         "@org_tensorflow//tensorflow/compiler/xla/pjrt:tpu_client",
         "@org_tensorflow//tensorflow/compiler/xla/pjrt:pjrt_client",

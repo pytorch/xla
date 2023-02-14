@@ -78,15 +78,14 @@ common --experimental_repo_remote_exec
 try-import %workspace%/.bazelrc.user
 
 # Compile database generation config.
-build:compdb --features=-layering_check --java_runtime_version=remotejdk_11
+build:compdb --features=-layering_check
 
-# Test requires Java.
-test --java_runtime_version=remotejdk_11
+# Compiling tests requires Java.
+common --java_runtime_version=remotejdk_11
 
 # Coverage requires Java and GCC.
 coverage --config=coverage
 coverage --build_tests_only
-build:coverage --java_runtime_version=remotejdk_11
 build:coverage --copt=-DNDEBUG
 build:coverage --combined_report=lcov
 build:coverage --strategy=TestRunner=sandboxed,local

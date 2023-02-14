@@ -10,9 +10,13 @@
     "coverage-gutters.showLineCoverage": false,
     "coverage-gutters.showGutterCoverage": true,
     "coverage-gutters.coverageReportFileName": "./genhtml/index.html",
-    "coverage-gutters.coverageFileNames": [ "./bazel-out/_coverage/_coverage_report.dat" ],
-    "lcov.path": [ "./.bazel-out/_coverage/_coverage_report.dat"],
-
+    "coverage-gutters.coverageFileNames": [
+        "./bazel-out/_coverage/_coverage_report.dat"
+    ],
+    "lcov.path": [
+        "./.bazel-out/_coverage/_coverage_report.dat"
+    ],
     "python.formatting.provider": "yapf",
-    "editor.formatOnSave": true
+    "editor.formatOnSave": true,
+    "cmake.configureOnOpen": false
 }
