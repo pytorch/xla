@@ -1,6 +1,4 @@
 """Tests for xla_dist."""
-from __future__ import division
-from __future__ import print_function
 
 import cloud_tpu_client
 import uuid

@@ -2,6 +2,7 @@ from collections import OrderedDict
 import torch
 import torch_xla
 import torch_xla.core.xla_model as xm
+import torch_xla.experimental.pjrt as pjrt
 from torch_xla.experimental.xla_sharded_tensor import XLAShardedTensor
 from torch_xla.experimental.pjrt import requires_pjrt
 
@@ -88,7 +89,7 @@ def mark_sharding(t: Union[torch.Tensor, XLAShardedTensor], mesh: Mesh,
     Examples
     —------------------------------
     mesh_shape = (4, 2)
-    num_devices = len(xm.get_xla_supported_devices())
+    num_devices = pjrt.global_device_count()
     device_ids = np.array(range(num_devices))
     mesh = Mesh(device_ids, mesh_shape, ('x', 'y'))
 
@@ -100,7 +101,7 @@ def mark_sharding(t: Union[torch.Tensor, XLAShardedTensor], mesh: Mesh,
     linear = nn.Linear(32, 10).to(xm.xla_device())
     xs.mark_sharding(linear.weight, mesh, (None, 1))
   """
-  num_devices = len(xm.get_xla_supported_devices())
+  num_devices = pjrt.global_device_count()
   assert num_devices > 0, "This requires XLA supported device(s)."
   assert mesh.size() == num_devices, \
     f"{mesh.mesh_shape} is not mappable over {num_devices} devices."

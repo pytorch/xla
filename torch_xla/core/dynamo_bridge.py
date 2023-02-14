@@ -315,10 +315,6 @@ def extract_compiled_graph(xla_model: torch.fx.GraphModule, xla_args):
     if debug:
       print(f"optimized_mod takes {time.time() - enter_ts} seconds overall")
 
-    if any(
-        torch_xla._XLAC._check_device_tensor_need_materialization(
-            str(xm.xla_device()))):
-      xm.mark_step()
     none_remover.add_nones(result)
     return result
 

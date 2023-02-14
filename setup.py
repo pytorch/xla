@@ -315,6 +315,7 @@ for ipath in [
     'tensorflow/bazel-tensorflow/external/eigen_archive',
     'tensorflow/bazel-tensorflow/external/com_google_absl',
     'tensorflow/bazel-tensorflow/external/com_googlesource_code_re2',
+    'tensorflow/bazel-tensorflow/external/com_github_grpc_grpc/include',
 ]:
   include_dirs.append(os.path.join(third_party_path, ipath))
 include_dirs += [
@@ -389,6 +390,7 @@ setup(
         # On Cloud TPU VM install with:
         # $ sudo pip3 install torch_xla[tpuvm] -f https://storage.googleapis.com/tpu-pytorch/wheels/tpuvm/torch_xla-1.11-cp38-cp38-linux_x86_64.whl
         'tpuvm': [f'libtpu-nightly @ {_libtpu_storage_path}'],
+        'test': ["expecttest"],
     },
     package_data={
         'torch_xla': [

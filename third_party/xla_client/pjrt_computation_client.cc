@@ -16,6 +16,7 @@
 #include "tensorflow/compiler/xla/pjrt/pjrt_executable.h"
 #include "tensorflow/compiler/xla/pjrt/tfrt_cpu_pjrt_client.h"
 #include "tensorflow/compiler/xla/pjrt/tpu_client.h"
+#include "tensorflow/compiler/xla/pjrt/distributed/distributed.h"
 #include "tensorflow/compiler/xla/shape.h"
 #include "tensorflow/compiler/xla/xla_client/computation_client.h"
 #include "tensorflow/compiler/xla/xla_client/debug_macros.h"
@@ -46,6 +47,22 @@ std::vector<std::string> PjRtDevicesToString(
   return strs;
 }
 
+// Initializes a distributed runtime client if dist_service_addr is specified
+std::shared_ptr<DistributedRuntimeClient> MaybeInitializeDistributedRuntimeClient(
+    int local_rank, std::string dist_service_addr) {
+  std::shared_ptr<DistributedRuntimeClient> client;
+  if (!dist_service_addr.empty()) {
+    xla::DistributedRuntimeClient::Options options;
+    /* TODO(jonbolin): Use global rank for multi-host setup */
+    options.node_id = local_rank;
+    client = xla::GetDistributedRuntimeClient(dist_service_addr, options,
+        /*use_coordination_service=*/false);
+    XLA_CHECK(client->Connect().ok())
+        << "Failed to initialize distributed runtime client";
+  }
+  return std::move(client);
+}
+
 }  // namespace
 
 PjRtComputationClient::PjRtComputationClient() {
@@ -55,27 +72,31 @@ PjRtComputationClient::PjRtComputationClient() {
     bool async = sys_util::GetEnvBool(env::kEnvPjrtAsyncCpuClient, true);
     int cpu_device_count = sys_util::GetEnvInt(env::kEnvNumCpu, 1);
     client_ = std::move(xla::GetTfrtCpuClient(async, cpu_device_count).value());
-  } else if (device_type == "TPU") {
-    TF_VLOG(1) << "Initializing PjRt TPU client...";
-    int64_t max_inflight_computations = sys_util::GetEnvInt(
-        env::kEnvPjRtTpuMaxInflightComputations, /*defval=*/32);
-    client_ = xla::GetTpuClient(max_inflight_computations).value();
-  } else if (device_type == "TPU_C_API") {
-    TF_VLOG(1) << "Initializing PjRt C API client...";
+  } else if (device_type == "TPU" || device_type == "TPU_C_API") {
+    TF_VLOG(1) << "Initializing TFRT TPU client...";
     XLA_CHECK_OK(pjrt::LoadPjrtPlugin(
         "tpu", sys_util::GetEnvString(env::kEnvTpuLibraryPath, "libtpu.so")));
     supports_logical_on_device_shape_ = false;
     client_ = std::move(xla::GetCApiClient("TPU").value());
+  } else if (device_type == "TPU_LEGACY") {
+    TF_VLOG(1) << "Initializing PjRt StreamExecutor TPU client...";
+    int64_t max_inflight_computations = sys_util::GetEnvInt(
+        env::kEnvPjRtTpuMaxInflightComputations, /*defval=*/32);
+    client_ = xla::GetTpuClient(max_inflight_computations).value();
   } else if (device_type == "GPU") {
     TF_VLOG(1) << "Initializing PjRt GPU client...";
     bool async = sys_util::GetEnvBool(env::kEnvPjrtAsyncGpuClient, true);
-    /* TODO(jonbolin): Set allowed_devices based on local ordinal */
-    auto allowed_devices = std::make_optional<std::set<int>>(std::set{0});
-    client_ = xla::GetStreamExecutorGpuClient(
+    int local_rank = sys_util::GetEnvInt(env::kEnvLocalRank, 0);
+    std::string dist_service_addr =
+        sys_util::GetEnvString(env::kEnvPjrtDistServiceAddr, "");
+    auto distributed_client = MaybeInitializeDistributedRuntimeClient(
+        local_rank, dist_service_addr);
+    auto allowed_devices = std::make_optional<std::set<int>>(std::set{local_rank});
+    client_ = std::move(xla::GetStreamExecutorGpuClient(
                   /*asynchronous=*/async, GpuAllocatorConfig{},
-                  /*distributed_client=*/nullptr, /*node_id=*/0,
+                  /*distributed_client=*/distributed_client, /*node_id=*/local_rank,
                   allowed_devices = allowed_devices)
-                  .value();
+                  .value());
   } else {
     XLA_ERROR() << absl::StrFormat("Unknown %s '%s'", env::kEnvPjRtDevice,
                                    device_type);
