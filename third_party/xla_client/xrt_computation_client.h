@@ -14,6 +14,12 @@
 #include "tensorflow/cc/framework/ops.h"
 #include "tensorflow/cc/framework/scope.h"
 #include "tensorflow/cc/ops/standard_ops.h"
+#include "tensorflow/compiler/xrt/cc/ops/xrt_compile_ops.h"
+#include "tensorflow/compiler/xrt/cc/ops/xrt_execute_op.h"
+#include "tensorflow/compiler/xrt/cc/ops/xrt_state_ops.h"
+#include "tensorflow/compiler/xrt/xrt.pb.h"
+#include "tensorflow/core/framework/tensor.h"
+#include "tensorflow/core/protobuf/tpu/topology.pb.h"
 #include "xla/xla_client/cache.h"
 #include "xla/xla_client/computation_client.h"
 #include "xla/xla_client/debug_macros.h"
@@ -25,12 +31,6 @@
 #include "xla/xla_client/xrt_session.h"
 #include "xla/xla_client/xrt_session_cache.h"
 #include "xla/xla_data.pb.h"
-#include "tensorflow/compiler/xrt/cc/ops/xrt_compile_ops.h"
-#include "tensorflow/compiler/xrt/cc/ops/xrt_execute_op.h"
-#include "tensorflow/compiler/xrt/cc/ops/xrt_state_ops.h"
-#include "tensorflow/compiler/xrt/xrt.pb.h"
-#include "tensorflow/core/framework/tensor.h"
-#include "tensorflow/core/protobuf/tpu/topology.pb.h"
 
 namespace xla {
 

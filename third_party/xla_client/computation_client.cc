@@ -10,6 +10,9 @@
 #include "absl/memory/memory.h"
 #include "absl/strings/str_cat.h"
 #include "absl/strings/str_split.h"
+#include "tensorflow/core/platform/net.h"
+#include "tensorflow/core/platform/stacktrace_handler.h"
+#include "tensorflow/core/util/device_name_utils.h"
 #include "xla/status_macros.h"
 #include "xla/xla_client/debug_macros.h"
 #include "xla/xla_client/env_vars.h"
@@ -17,9 +20,6 @@
 #include "xla/xla_client/pjrt_computation_client.h"
 #include "xla/xla_client/sys_util.h"
 #include "xla/xla_client/xrt_computation_client.h"
-#include "tensorflow/core/platform/net.h"
-#include "tensorflow/core/platform/stacktrace_handler.h"
-#include "tensorflow/core/util/device_name_utils.h"
 
 namespace xla {
 namespace {

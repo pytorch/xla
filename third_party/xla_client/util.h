@@ -15,10 +15,10 @@
 
 #include "absl/types/optional.h"
 #include "absl/types/span.h"
-#include "xla/status.h"
-#include "xla/xla_client/types.h"
 #include "tensorflow/core/lib/core/errors.h"
 #include "tensorflow/core/lib/hash/hash.h"
+#include "xla/status.h"
+#include "xla/xla_client/types.h"
 
 namespace xla {
 namespace util {

@@ -4,6 +4,10 @@
 #include <string>
 #include <vector>
 
+#include "tensorflow/core/platform/logging.h"
+#include "tensorflow/tsl/lib/core/status_test_util.h"
+#include "tensorflow/tsl/platform/env.h"
+#include "tensorflow/tsl/platform/test.h"
 #include "xla/client/xla_builder.h"
 #include "xla/client/xla_computation.h"
 #include "xla/literal.h"
@@ -12,10 +16,6 @@
 #include "xla/statusor.h"
 #include "xla/tests/literal_test_util.h"
 #include "xla/xla_client/computation_client.h"
-#include "tensorflow/core/platform/logging.h"
-#include "tensorflow/tsl/lib/core/status_test_util.h"
-#include "tensorflow/tsl/platform/env.h"
-#include "tensorflow/tsl/platform/test.h"
 
 namespace xla {
 

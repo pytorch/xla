@@ -13,6 +13,11 @@
 #include "absl/strings/str_join.h"
 #include "absl/strings/str_split.h"
 #include "tensorflow/cc/ops/const_op.h"
+#include "tensorflow/compiler/xrt/xrt_util.h"
+#include "tensorflow/core/framework/allocator.h"
+#include "tensorflow/core/profiler/lib/traceme.h"
+#include "tensorflow/core/util/device_name_utils.h"
+#include "tensorflow/tsl/lib/math/math_util.h"
 #include "xla/shape_util.h"
 #include "xla/util.h"
 #include "xla/xla_client/env_vars.h"
@@ -22,11 +27,6 @@
 #include "xla/xla_client/unique.h"
 #include "xla/xla_client/util.h"
 #include "xla/xla_client/xla_util.h"
-#include "tensorflow/compiler/xrt/xrt_util.h"
-#include "tensorflow/core/framework/allocator.h"
-#include "tensorflow/core/profiler/lib/traceme.h"
-#include "tensorflow/core/util/device_name_utils.h"
-#include "tensorflow/tsl/lib/math/math_util.h"
 
 namespace xla {
 namespace {

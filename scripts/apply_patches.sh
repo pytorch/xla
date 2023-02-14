@@ -6,6 +6,7 @@ CDIR="$(cd "$(dirname "$0")" ; pwd -P)"
 XDIR=$CDIR/..
 PTDIR=$XDIR/..
 TFDIR=$XDIR/third_party/tensorflow
+OPENXLADIR=$XDIR/third_party/openxla
 
 TORCH_PIN="$XDIR/torch_patches/.torch_pin"
 if [ -f "$TORCH_PIN" ]; then
@@ -40,5 +41,5 @@ python $CDIR/cond_patch.py \
 
 python $CDIR/cond_patch.py \
   $XDIR/tf_patches \
-  $TFDIR
+  $OPENXLADIR
 

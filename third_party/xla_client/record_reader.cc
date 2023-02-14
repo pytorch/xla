@@ -1,9 +1,9 @@
 #include "xla/xla_client/record_reader.h"
 
-#include "xla/xla_client/debug_macros.h"
 #include "tensorflow/core/lib/core/errors.h"
 #include "tensorflow/core/lib/strings/strcat.h"
 #include "tensorflow/core/platform/env.h"
+#include "xla/xla_client/debug_macros.h"
 
 namespace xla {
 namespace util {

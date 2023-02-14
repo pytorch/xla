@@ -5,6 +5,7 @@
 #include "absl/strings/ascii.h"
 #include "absl/types/span.h"
 #include "pjrt_computation_client.h"
+#include "tensorflow/core/profiler/lib/traceme.h"
 #include "xla/client/xla_builder.h"
 #include "xla/client/xla_computation.h"
 #include "xla/layout_util.h"
@@ -22,7 +23,6 @@
 #include "xla/xla_client/debug_macros.h"
 #include "xla/xla_client/env_vars.h"
 #include "xla/xla_client/tf_logging.h"
-#include "tensorflow/core/profiler/lib/traceme.h"
 
 namespace xla {
 
