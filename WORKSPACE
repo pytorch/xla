@@ -7,7 +7,10 @@ load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
 #    and update the sha256 with the result.
 http_archive(
     name = "org_tensorflow",
-    patch_args = ["-p1"],
+    patch_args = [
+        "-l",
+        "-p1",
+    ],
     patch_tool = "patch",
     patches = [
         "//tf_patches:bazel.diff",
