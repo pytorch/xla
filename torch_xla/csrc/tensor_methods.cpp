@@ -1540,8 +1540,13 @@ XLATensorPtr lt(const XLATensorPtr& input, const XLATensorPtr& other) {
 XLATensorPtr masked_fill(XLATensorPtr& input, const XLATensorPtr& mask,
                          const at::Scalar& value) {
   torch::lazy::ScopePusher ir_scope(at::aten::masked_fill.toQualString());
+  auto input_value = input->GetIrValue();
+  // Expand input tensor to mask if needed (same as masked_scatter below).
+  if (input->shape().get().dimensions() < mask->shape().get().dimensions()) {
+    input_value = MaybeExpand(input->GetIrValue(), mask->shape());
+  }
   return input->CreateFrom(torch::lazy::MakeNode<MaskedFill>(
-      input->GetIrValue(), MaybeExpand(mask->GetIrValue(), input->shape()),
+      input_value, MaybeExpand(mask->GetIrValue(), GetXlaShape(input_value)),
       value));
 }
 
