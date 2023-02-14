@@ -6,8 +6,6 @@
 #  echo 0 > /proc/sys/kernel/yama/ptrace_scope
 #
 
-from __future__ import print_function
-
 import argparse
 import stack_trace_parse as stp
 import subprocess
