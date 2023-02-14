@@ -1544,7 +1544,7 @@ XLATensorPtr masked_fill(XLATensorPtr& input, const XLATensorPtr& mask,
   // Expand input tensor to mask if needed (same as masked_scatter below).
   // An additional check makes sure to only expand if the rank of input tensor
   // is less than that of the mask tensor.
-  if (input->shape().get().rank() < mask->shape().get().rank() &&
+  if (input->shape().get().rank() <= mask->shape().get().rank() &&
       input->shape().get().dimensions() < mask->shape().get().dimensions()) {
     input_value = MaybeExpand(input->GetIrValue(), mask->shape());
   }
