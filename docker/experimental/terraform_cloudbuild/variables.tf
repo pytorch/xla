@@ -4,9 +4,26 @@ variable "python_version" {
   description = "Python version for all docker images."
 }
 
-variable "image_repository" {
+variable "public_docker_repo" {
+  type = object({
+    id = string
+    location = optional(string, "us-central1")
+  })
+}
+
+variable "storage_bucket_suffix" {
+  type = string
+  default = ""
+}
+
+variable "build_runner_account_id_suffix" {
+  type = string
+  default = ""
+}
+
+variable "worker_pool" {
   # TODO: Variablize this.
-  default = "us-central2-docker.pkg.dev/core-ml-engprod-build-farm/docker-repo"
+  default = "projects/tpu-pytorch/locations/us-central1/workerPools/wheel_build"
 }
 
 variable "project_id" {

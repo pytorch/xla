@@ -23,10 +23,10 @@ RUN pip install ansible
 RUN ansible-playbook playbook.yaml -e "stage=release arch=${arch} accelerator=${accelerator}" --tags "install_deps"
 
 WORKDIR /wheels
-COPY --from=build /src/pytorch/dist/*.wheel .
-COPY --from=build /src/pytorch/xla/dist/*.wheel .
+COPY --from=build /src/pytorch/dist/*.whl .
+COPY --from=build /src/pytorch/xla/dist/*.whl .
 
-RUN pip install *.wheel
+RUN pip install *.whl
 
 WORKDIR /
 RUN rm -rf /ansible

@@ -36,7 +36,7 @@ images:
 substitutions:
   _PYTHON_VERSION: '3.8'
   _RELEASE_VERSION: 'nightly'  # or rX.Y
-  _IMAGE_REPO: 'us-central2-docker.pkg.dev/${PROJECT_ID}/docker-repo'
+  _IMAGE_REPO: 'us-central1-docker.pkg.dev/${PROJECT_ID}/docker-public'
   _RELEASE_IMAGE_TAG: '${_RELEASE_VERSION}_${_PYTHON_VERSION}'
 
 options:
@@ -45,7 +45,7 @@ options:
   dynamic_substitutions: true
   substitution_option: 'ALLOW_LOOSE'
 timeout: 24000s
-artifacts:
-  objects:
-    location: 'gs://tpu-pytorch-core-ml-engprod/wheels'
-    paths: ['/**/dist/*.whl']
+# artifacts:
+#   objects:
+#     location: 'gs://tpu-pytorch-core-ml-engprod/wheels'
+#     paths: ['/**/dist/*.whl']
