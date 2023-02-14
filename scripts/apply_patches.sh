@@ -41,5 +41,9 @@ python $CDIR/cond_patch.py \
 
 python $CDIR/cond_patch.py \
   $XDIR/tf_patches \
+  $TFDIR
+
+python $CDIR/cond_patch.py \
+  $XDIR/openxla_patches \
   $OPENXLADIR
 
