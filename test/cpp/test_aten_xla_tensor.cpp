@@ -11272,7 +11272,6 @@ TEST_F(AtenXlaTensorTest, TestBCEWithLogitsBackward) {
 }
 
 TEST_F(AtenXlaTensorTest, TestKlDivBackward) {
-  GTEST_SKIP() << "SegFault after functionalization";
   torch::Tensor input = torch::rand(
       {4, 3}, torch::TensorOptions(torch::kFloat).requires_grad(true));
   torch::Tensor target = torch::rand(
