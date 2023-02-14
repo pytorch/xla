@@ -102,6 +102,10 @@ class ExperimentLoader:
 
   def _add_experiment_env(self, experiment_config):
     process_env = None
+    if experiment_config["xla"]:
+      # remove env vars that would interfere with subprocess settings
+      os.environ.pop("PJRT_DEVICE", None)
+      os.environ.pop("XRT_TPU_CONFIG", None)
     if experiment_config["xla"] == "PJRT":
       process_env = os.environ.copy()
       process_env["PJRT_DEVICE"] = experiment_config["accelerator"].upper()
