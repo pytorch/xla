@@ -334,10 +334,13 @@ void XLATensor::AssignIrValue(torch::lazy::Value ir_value) const {
 torch::lazy::Value XLATensor::GetIrValue() const {
   torch::lazy::Value ir_value = CurrentIrValue();
   if (ir_value) {
+    std::cout << "xw32, file=" << __FILE__ << ", line=" << __LINE__ << "function=" << __FUNCTION__ << ": " << std::endl;
     return ir_value;
   }
+  std::cout << "xw32, file=" << __FILE__ << ", line=" << __LINE__ << "function=" << __FUNCTION__ << ": " << std::endl;
   torch::lazy::BackendDataPtr handle = CurrentDataHandle();
   if (handle != nullptr) {
+    std::cout << "xw32, file=" << __FILE__ << ", line=" << __LINE__ << "function=" << __FUNCTION__ << ": " << std::endl;
     // In case of tensor node, we do not clear the XLA data when we set the IR
     // node. This because we want further calls to GetIrValue() to fetch the
     // same IR node, and not create new ones (even though the lowering context
@@ -347,6 +350,7 @@ torch::lazy::Value XLATensor::GetIrValue() const {
     AssignIrValue(CreateTensorNode(handle, /*read_only=*/false));
     return data()->ir_value;
   }
+  std::cout << "xw32, file=" << __FILE__ << ", line=" << __LINE__ << "function=" << __FUNCTION__ << ": " << std::endl;
   c10::optional<at::Tensor> tensor_data = CurrentTensorData();
   XLA_CHECK(tensor_data);
   AssignIrValue(GetIrValueForTensor(*tensor_data, GetDevice()));
@@ -431,13 +435,16 @@ void XLATensor::ModifyCurrentView(ViewInfo view_info) const {
 
 std::shared_ptr<View> XLATensor::CreateView(ViewInfo view_info) const {
   if (data()->view != nullptr) {
+    std::cout << "xw32, file=" << __FILE__ << ", line=" << __LINE__ << "function=" << __FUNCTION__ << ": " << std::endl;
     return data()->view->CreateSubView(view_info.shape, view_info);
   }
   // This node is not a view, and creating a view forks the current node into
   // becoming one itself. This means creating an alias with the current IR
   // XlaNode, and using the same alias for the created IR XlaNode.
+  std::cout << "xw32, file=" << __FILE__ << ", line=" << __LINE__ << "function=" << __FUNCTION__ << ": " << std::endl;
   torch::lazy::Value ir_value = GetIrValue();
   std::shared_ptr<Alias> alias = std::make_shared<Alias>(ir_value);
+  std::cout << "xw32, file=" << __FILE__ << ", line=" << __LINE__ << "function=" << __FUNCTION__ << ": GetXlaShape(ir_value)=" << GetXlaShape(ir_value) << std::endl;
   ViewInfo this_view_info(ViewInfo::Type::kNoOp, GetXlaShape(ir_value),
                           GetXlaShape(ir_value));
   data()->view = std::make_shared<View>(GetXlaShape(ir_value), alias,

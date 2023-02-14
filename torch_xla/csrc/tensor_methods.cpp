@@ -2633,6 +2633,10 @@ XLATensorPtr view(const XLATensorPtr& input,
   return input->CreateViewTensor(std::move(view_info));
 }
 
+// XLATensorPtr view(const XLATensorPtr& input, at::SymIntArrayRef sym_size) {
+//   
+// }
+
 XLATensorPtr var(const XLATensorPtr& input, std::vector<int64_t> dimensions,
                  int64_t correction, bool keep_reduced_dimensions) {
   return input->CreateFrom(

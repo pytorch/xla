@@ -879,6 +879,7 @@ std::tuple<XLATensorPtr, XLATensorPtr> var_mean(const XLATensorPtr& input,
 // Like reshape, but it returns a view into the original tensor.
 XLATensorPtr view(const XLATensorPtr& input,
                   absl::Span<const int64_t> output_size);
+//XLATensorPtr view(const XLATensorPtr& input, at::SymIntArrayRef sym_size);
 
 void zero_(XLATensorPtr& input);
 

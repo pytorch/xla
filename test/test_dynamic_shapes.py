@@ -222,6 +222,37 @@ class TestDynamicShapes(test_utils.XlaTestCase):
     t4_unsqueeze = torch.unsqueeze(t4, 0)
     self.assertEqual(t2_unsqueeze.cpu(), t4_unsqueeze.cpu())
 
+  # xw32 TODO: remove this test before merging.
+  def test_view_copy_symint_with_static_input(self):
+    t3 = torch.randint(10, (2, 2), device=dev)
+    print('xw32 running view(4)')
+    # doing t3.view(5) would fail in python level with error
+    # https://paste.googleplex.com/6642485810954240
+    t4 = t3.view(5)
+
+  def test_view_copy_symint_with_dyn_input_shape(self):
+    t1 = torch.tensor([1,0,3,5,0,6], device=dev)
+    # t2.shape=torch.Size([<=6, 2]) with real size [4, 2]
+    t2 = torch.nonzero(t1)
+    t3 = torch.randint(10, (2, 2), device=dev)
+    # If the input tensor and shape are “statically” incompatible, a compilation error is raised.
+    t4 = t3.view(t2.shape[0])
+    self.assertEqual(len(t4.size()), 1)
+    self.assertIsInstance(t4.shape[0], torch.SymInt)
+    self.assertEqual(str(t4.shape[0]), '<=6')
+    self.assertEqual(t4.shape[0], 4)
+
+    t4 = torch.randint(10, (2, 3), device=dev)
+    # If their “dynamic” values are incompatible, a RuntimeError is raised. 
+    t5 = t4.view(t2.shape[0])
+
+  def test_xla_fill_(self):
+    # t1.shape= torch.Size([<=6, 2])
+    t1 = self.get_dynamic_tensor()
+    self.assertIsInstance(t1.shape[0], torch.SymInt)
+    t2 = t1.fill_(10)
+    self.assertIsInstance(t2.shape[0], torch.SymInt)
+
   def test_sizeGe(self):
     met.clear_all()
 
