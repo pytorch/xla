@@ -1,4 +1,4 @@
-#include "tensorflow/compiler/xla/xla_client/xrt_computation_client.h"
+#include "xla/xla_client/xrt_computation_client.h"
 
 #include <cstdlib>
 #include <fstream>
@@ -13,20 +13,20 @@
 #include "absl/strings/str_join.h"
 #include "absl/strings/str_split.h"
 #include "tensorflow/cc/ops/const_op.h"
-#include "tensorflow/compiler/xla/shape_util.h"
-#include "tensorflow/compiler/xla/util.h"
-#include "tensorflow/compiler/xla/xla_client/env_vars.h"
-#include "tensorflow/compiler/xla/xla_client/multi_wait.h"
-#include "tensorflow/compiler/xla/xla_client/sys_util.h"
-#include "tensorflow/compiler/xla/xla_client/thread_pool.h"
-#include "tensorflow/compiler/xla/xla_client/unique.h"
-#include "tensorflow/compiler/xla/xla_client/util.h"
-#include "tensorflow/compiler/xla/xla_client/xla_util.h"
 #include "tensorflow/compiler/xrt/xrt_util.h"
 #include "tensorflow/core/framework/allocator.h"
 #include "tensorflow/core/profiler/lib/traceme.h"
 #include "tensorflow/core/util/device_name_utils.h"
 #include "tensorflow/tsl/lib/math/math_util.h"
+#include "xla/shape_util.h"
+#include "xla/util.h"
+#include "xla/xla_client/env_vars.h"
+#include "xla/xla_client/multi_wait.h"
+#include "xla/xla_client/sys_util.h"
+#include "xla/xla_client/thread_pool.h"
+#include "xla/xla_client/unique.h"
+#include "xla/xla_client/util.h"
+#include "xla/xla_client/xla_util.h"
 
 namespace xla {
 namespace {

@@ -1,4 +1,4 @@
-#include "tensorflow/compiler/xla/xla_client/xrt_local_service.h"
+#include "xla/xla_client/xrt_local_service.h"
 
 #include <vector>
 

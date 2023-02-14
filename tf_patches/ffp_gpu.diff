@@ -12,29 +12,3 @@ index 5e0464e89f1..2d9cd438eb2 100644
    }
  
    // Inserts a plan into the cache as long as there is still capacity.
-diff --git a/tensorflow/compiler/xla/runtime/ffi.cc b/tensorflow/compiler/xla/runtime/ffi.cc
-index 584d2008b11..231abca9c92 100644
---- a/tensorflow/compiler/xla/runtime/ffi.cc
-+++ b/tensorflow/compiler/xla/runtime/ffi.cc
-@@ -380,7 +380,7 @@ absl::StatusOr<FfiStateVector> FfiModulesState::state_vector() const {
- 
-     return absl::InternalError("Unsupported FFI module state");
-   }
--  return state_vector;
-+  return std::move(state_vector);
- }
- 
- //===----------------------------------------------------------------------===//
- diff --git a/tensorflow/compiler/xla/runtime/executable.cc b/tensorflow/compiler/xla/runtime/executable.cc
-index 23c8fa7421e..9d715d5c61d 100644
---- a/tensorflow/compiler/xla/runtime/executable.cc
-+++ b/tensorflow/compiler/xla/runtime/executable.cc
-@@ -332,7 +332,7 @@ absl::StatusOr<ExecutionReference> Executable::Execute(
-   if (auto st = ReturnResults(ordinal, results, &call_frame); !st.ok())
-     return st;
- 
--  return exec_ref;
-+  return std::move(exec_ref);
- }
- 
- ExecutionReference Executable::Execute(unsigned ordinal, CallFrame& call_frame,

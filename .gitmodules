@@ -3,3 +3,7 @@
 	url = https://github.com/tensorflow/tensorflow.git
 	ignore = dirty
 
+[submodule "third_party/openxla"]
+	path = third_party/openxla
+	url = https://github.com/openxla/xla.git
+	ignore = dirty

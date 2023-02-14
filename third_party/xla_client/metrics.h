@@ -9,8 +9,8 @@
 #include <vector>
 
 #include "absl/strings/str_cat.h"
-#include "tensorflow/compiler/xla/types.h"
-#include "tensorflow/compiler/xla/xla_client/sys_util.h"
+#include "xla/types.h"
+#include "xla/xla_client/sys_util.h"
 
 namespace xla {
 namespace metrics {

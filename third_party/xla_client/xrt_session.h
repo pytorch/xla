@@ -12,8 +12,8 @@
 #include "tensorflow/cc/framework/ops.h"
 #include "tensorflow/cc/framework/scope.h"
 #include "tensorflow/cc/ops/standard_ops.h"
-#include "tensorflow/compiler/xla/types.h"
-#include "tensorflow/compiler/xla/xla_client/debug_macros.h"
+#include "xla/types.h"
+#include "xla/xla_client/debug_macros.h"
 
 namespace xla {
 

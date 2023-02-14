@@ -1,11 +1,11 @@
-#include "tensorflow/compiler/xla/xla_client/metrics_reader.h"
+#include "xla/xla_client/metrics_reader.h"
 
 #include <sstream>
 
-#include "tensorflow/compiler/xla/xla_client/computation_client.h"
-#include "tensorflow/compiler/xla/xla_client/debug_macros.h"
-#include "tensorflow/compiler/xla/xla_client/metrics.h"
-#include "tensorflow/compiler/xla/xla_client/util.h"
+#include "xla/xla_client/computation_client.h"
+#include "xla/xla_client/debug_macros.h"
+#include "xla/xla_client/metrics.h"
+#include "xla/xla_client/util.h"
 
 namespace xla {
 namespace metrics_reader {

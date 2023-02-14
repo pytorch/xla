@@ -9,8 +9,8 @@
 #include <string>
 #include <utility>
 
-#include "tensorflow/compiler/xla/types.h"
-#include "tensorflow/compiler/xla/xla_client/xrt_session.h"
+#include "xla/types.h"
+#include "xla/xla_client/xrt_session.h"
 
 namespace xla {
 

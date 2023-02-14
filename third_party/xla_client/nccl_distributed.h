@@ -4,7 +4,7 @@
 #include <string>
 
 #include "absl/types/span.h"
-#include "tensorflow/compiler/xla/types.h"
+#include "xla/types.h"
 
 namespace xla {
 namespace nccl_detail {

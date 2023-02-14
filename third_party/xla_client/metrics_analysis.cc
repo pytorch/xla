@@ -1,10 +1,10 @@
-#include "tensorflow/compiler/xla/xla_client/metrics_analysis.h"
+#include "xla/xla_client/metrics_analysis.h"
 
 #include "absl/types/variant.h"
-#include "tensorflow/compiler/xla/xla_client/computation_client.h"
-#include "tensorflow/compiler/xla/xla_client/metrics.h"
-#include "tensorflow/compiler/xla/xla_client/tf_logging.h"
-#include "tensorflow/compiler/xla/xla_client/types.h"
+#include "xla/xla_client/computation_client.h"
+#include "xla/xla_client/metrics.h"
+#include "xla/xla_client/tf_logging.h"
+#include "xla/xla_client/types.h"
 
 namespace xla {
 namespace metrics {
