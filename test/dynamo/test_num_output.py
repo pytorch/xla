@@ -82,10 +82,10 @@ class TestNumOutput(unittest.TestCase):
     graph_input_matcher = GraphInputMatcher(tensor_id_to_arg_idx,
                                             graph_input_tensor_ids,
                                             graph_input_xla_values)
-    torch_xla._XLAC._xla_sync_multi(outputs, [])
+    torch_xla._XLAC._xla_warm_up_cache(outputs, [])
 
     def run_cached_graph(*inputs):
-      torch_xla._XLAC._xla_sync_multi(inputs, [])
+      torch_xla._XLAC._xla_warm_up_cache(inputs, [])
       xla_graph_inputs = graph_input_matcher(inputs)
       xla_graph_outputs = torch_xla._XLAC._run_cached_graph(
           xla_graph_hash, xla_graph_inputs)
