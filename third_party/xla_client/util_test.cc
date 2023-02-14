@@ -3,11 +3,15 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
+<<<<<<< HEAD
 #include <set>
 #include <unordered_map>
 #include <vector>
 
 #include "absl/types/span.h"
+=======
+#include <unordered_map>
+>>>>>>> bazel
 
 namespace xla {
 namespace util {

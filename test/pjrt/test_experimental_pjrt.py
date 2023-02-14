@@ -1,8 +1,6 @@
-import concurrent.futures
 import os
-import time
+from unittest import mock
 
-import torch
 import torch_xla
 from absl.testing import absltest, parameterized
 import torch_xla.core.xla_env_vars as xenv
@@ -14,6 +12,12 @@ class TestExperimentalPjrt(parameterized.TestCase):
 
   def setUp(self):
     pjrt.set_device_type('CPU')
+
+  @parameterized.parameters(('CPU', 'CPU'), ('GPU', 'GPU'), ('TPU', 'TPU'),
+                            ('TPU_C_API', 'TPU'), ('TPU_LEGACY', 'TPU'))
+  def test_device_type(self, pjrt_device, expected):
+    with mock.patch.dict(os.environ, {'PJRT_DEVICE': pjrt_device}, clear=True):
+      self.assertEqual(pjrt.device_type(), expected)
 
   def test_using_pjrt(self):
     del os.environ[xenv.PJRT_DEVICE]

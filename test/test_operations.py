@@ -1542,6 +1542,17 @@ class TestAtenXlaTensor(test_utils.XlaTestCase):
     xm.mark_step()
     self.assertEqual(met.metric_data("TransferToServerTime")[0], 4)
 
+  def test_index_types(self):
+
+    def test_fn(*indices):
+      x = torch.arange(10).to(indices[0].device)
+      return [x[idx] for idx in indices]
+
+    self.runAtenTest([
+        torch.randint(0, 1, size=(10,), dtype=dtype)
+        for dtype in (torch.long, torch.int32, torch.bool)
+    ], test_fn)
+
 
 class MNISTComparator(nn.Module):
 

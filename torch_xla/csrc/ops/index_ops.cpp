@@ -30,11 +30,12 @@ void CheckIndexTensorTypes(
   for (const c10::optional<at::Tensor>& tensor : indices) {
     if (tensor.has_value() && tensor->defined()) {
       at::ScalarType scalar_type = tensor->scalar_type();
-      if (scalar_type != at::kLong && scalar_type != at::kByte &&
-          scalar_type != at::kBool) {
-        XLA_ERROR() << "Tensors used as indices must be long, byte or boolean "
-                       "tensors, found scalar type: "
-                    << scalar_type;
+      if (scalar_type != at::kLong && scalar_type != at::kInt &&
+          scalar_type != at::kByte && scalar_type != at::kBool) {
+        XLA_ERROR()
+            << "Tensors used as indices must be long, int, byte or boolean "
+               "tensors, found scalar type: "
+            << scalar_type;
       }
     }
   }
