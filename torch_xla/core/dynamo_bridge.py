@@ -275,8 +275,8 @@ def extract_compiled_graph(xla_model: torch.fx.GraphModule, xla_args):
                                           graph_input_tensor_ids,
                                           graph_input_xla_values)
 
-  # compiles+runs graph rooted at tensors in 'args_and_out'
-  torch_xla._XLAC._xla_sync_multi(args_and_out, [])
+  # compiles and cache graph rooted at tensors in 'args_and_out'
+  torch_xla._XLAC._xla_warm_up_cache(args_and_out, [])
   torch_xla._XLAC._clear_pending_irs(str(xm.xla_device()))
 
   def optimized_mod(*args):
