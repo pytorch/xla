@@ -1,0 +1,35 @@
+path: "tensorflow.types.experimental"
+tf_module {
+  member {
+    name: "Callable"
+    mtype: "<type \'type\'>"
+  }
+  member {
+    name: "ConcreteFunction"
+    mtype: "<type \'type\'>"
+  }
+  member {
+    name: "GenericFunction"
+    mtype: "<type \'type\'>"
+  }
+  member {
+    name: "SupportsTracingProtocol"
+    mtype: "<class \'typing._ProtocolMeta\'>"
+  }
+  member {
+    name: "TensorLike"
+    mtype: "typing.Union"
+  }
+  member {
+    name: "TraceType"
+    mtype: "<type \'type\'>"
+  }
+  member {
+    name: "TracingContext"
+    mtype: "<type \'type\'>"
+  }
+  member {
+    name: "distributed"
+    mtype: "<type \'module\'>"
+  }
+}
