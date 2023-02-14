@@ -109,8 +109,8 @@ class PybindTest(unittest.TestCase):
     xla_dummy_model = dummy_model.to(xla_device)
     xla_out = xla_dummy_model(xla_input)
     hash = torch_xla._XLAC._get_graph_hash([xla_out])
-    # Force trigger an execution to cache this computation.
-    torch_xla._XLAC._xla_sync_multi([xla_out], [])
+    # Warm up the cache.
+    torch_xla._XLAC._xla_warm_up_cache([xla_out], [])
 
     # It is the caller of `run_cached_graph`'s job to make sure the input order
     # matches the graph input order. Upstream dynamo has a more completed

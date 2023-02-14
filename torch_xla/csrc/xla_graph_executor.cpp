@@ -322,7 +322,8 @@ std::vector<XLATensorPtr> XLAGraphExecutor::GetLiveTensors(
 
 void XLAGraphExecutor::SyncTensorsGraph(std::vector<XLATensorPtr>* tensors,
                                         absl::Span<const std::string> devices,
-                                        bool wait, bool sync_ltc_data) {
+                                        bool wait, bool sync_ltc_data,
+                                        bool warm_up_cache_only) {
   TF_VLOG(4) << "Trying to sync the value of " << tensors->size()
              << " tensor(s)";
   tensorflow::profiler::TraceMe activity(
@@ -331,14 +332,18 @@ void XLAGraphExecutor::SyncTensorsGraph(std::vector<XLATensorPtr>* tensors,
       xla::sys_util::GetEnvBool("XLA_SYNC_TENSORS_OPBYOP", false);
   SyncTensorsConfig config;
   config.sync_ltc_data = sync_ltc_data;
+  if (warm_up_cache_only) {
+    config.force_ltc_data = false;
+  }
   if (op_by_op) {
     OpByOpAsync async = SyncTensorsGraphOpByOp(tensors, devices, config);
     if (wait) {
       async.Wait();
     }
   } else {
-    auto async = SyncTensorsGraphInternal(tensors, devices, config);
-    if (wait && async != nullptr) {
+    auto async =
+        SyncTensorsGraphInternal(tensors, devices, config, warm_up_cache_only);
+    if (wait && async != nullptr && !warm_up_cache_only) {
       async->mwait.Wait();
     }
   }
@@ -395,6 +400,7 @@ torch::lazy::hash_t XLAGraphExecutor::GetGraphHash(
     const std::vector<XLATensorPtr>& tensors) {
   SyncTensorsConfig config;
   config.sync_ltc_data = true;
+  config.force_ltc_data = false;
 
   SyncTensorCollection coll = CollectSyncTensors(tensors, config);
   absl::Span<const size_t> indices = coll.indices;
@@ -1190,7 +1196,7 @@ XLAGraphExecutor::CompilationResult XLAGraphExecutor::Compile(
 std::shared_ptr<XLAGraphExecutor::Async>
 XLAGraphExecutor::SyncTensorsGraphInternal(
     std::vector<XLATensorPtr>* tensors, absl::Span<const std::string> devices,
-    const SyncTensorsConfig& config) {
+    const SyncTensorsConfig& config, bool warm_up_cache_only) {
   tensorflow::profiler::TraceMe activity(
       "SyncTensorsGraphInternal", tensorflow::profiler::TraceMeLevel::kInfo);
   SyncTensorCollection coll = CollectSyncTensors(*tensors, config);
@@ -1225,10 +1231,14 @@ XLAGraphExecutor::SyncTensorsGraphInternal(
       std::move(compile_result.computation), compile_result.is_sharded);
   GetComputationCache()->Add(coll.hash, cached_computation);
 
-  return ScheduleSyncTensorsGraph(
-      tensors, &coll, std::move(compile_result.parameters_data),
-      compile_result.device.toString(), std::move(cached_computation),
-      tensor_data_vec);
+  if (warm_up_cache_only) {
+    return nullptr;
+  } else {
+    return ScheduleSyncTensorsGraph(
+        tensors, &coll, std::move(compile_result.parameters_data),
+        compile_result.device.toString(), std::move(cached_computation),
+        tensor_data_vec);
+  }
 }
 
 }  // namespace torch_xla

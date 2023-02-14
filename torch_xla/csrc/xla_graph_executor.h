@@ -115,7 +115,7 @@ class XLAGraphExecutor : public torch::lazy::LazyGraphExecutor {
   // We don't use the upstream one given we have OpbyOp mode.
   void SyncTensorsGraph(std::vector<XLATensorPtr>* tensors,
                         absl::Span<const std::string> devices, bool wait,
-                        bool sync_ltc_data);
+                        bool sync_ltc_data, bool warm_up_cache_only = false);
 
   // Makes sure that any outstanding IR operation accumulated over live tensors,
   // gets turned into device data. If wait is true, the sync operation will be
@@ -338,7 +338,7 @@ class XLAGraphExecutor : public torch::lazy::LazyGraphExecutor {
   // our CachedComputation is different from upstream.
   std::shared_ptr<Async> SyncTensorsGraphInternal(
       std::vector<XLATensorPtr>* tensors, absl::Span<const std::string> devices,
-      const SyncTensorsConfig& config);
+      const SyncTensorsConfig& config, bool warm_up_cache_only = false);
 };
 
 }  // namespace torch_xla
