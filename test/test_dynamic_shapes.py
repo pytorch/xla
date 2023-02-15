@@ -228,11 +228,13 @@ class TestDynamicShapes(test_utils.XlaTestCase):
     print('xw32 running view(4)')
     # doing t3.view(5) would fail in python level with error
     # https://paste.googleplex.com/6642485810954240
-    t4 = t3.view(5)
+    t4 = t3.view(4)
+    print(met.metrics_report())
 
-  def test_view_copy_symint_with_dyn_input_shape(self):
+  def test_view_copy_symint_with_static_input_dyn_input_shape(self):
     t1 = torch.tensor([1,0,3,5,0,6], device=dev)
-    # t2.shape=torch.Size([<=6, 2]) with real size [4, 2]
+    # t2.shape=torch.Size([<=6, 1]) with real size [4, 1]
+    # t2 = [[0], [2], [3], [5]]
     t2 = torch.nonzero(t1)
     t3 = torch.randint(10, (2, 2), device=dev)
     # If the input tensor and shape are “statically” incompatible, a compilation error is raised.
@@ -241,6 +243,74 @@ class TestDynamicShapes(test_utils.XlaTestCase):
     t4 = torch.randint(10, (2, 3), device=dev)
     # If their “dynamic” values are incompatible, a RuntimeError is raised. 
     self.assertRaises(RuntimeError, lambda: t4.view(t2.shape[0]))
+
+    t5 = torch.tensor([1,1,3,5,1,6], device=dev)
+    t6 = torch.nonzero(t5)
+    t7 = torch.randint(10, (2, 3), device=dev)
+    t8 = t7.view(t6.shape[0])
+    t5_aten = torch.tensor([1,1,3,5,1,6])
+    t6_aten = torch.nonzero(t5_aten)
+    t7_aten = torch.randint(10, (2, 3))
+    t8_aten = t7_aten.view(t6_aten.shape[0])
+    self.assertEqual(t8.cpu(), t8_aten.cpu())
+
+  def test_view_copy_symint_with_static_input_dyn_input_shape(self):
+    t1 = torch.tensor([1,0,3,5,0,6], device=dev)
+    # t2.shape=torch.Size([<=6, 1]) with real size [4, 1]
+    # t2 = [[0], [2], [3], [5]]
+    t2 = torch.nonzero(t1)
+    # If the input tensor and shape are “statically” incompatible, a compilation error is raised.
+    # static 6 is incompatible with 7
+    self.assertRaises(RuntimeError, lambda: t2.view(7))
+
+    t4 = torch.randint(10, (2, 3), device=dev)
+    # statically compatible.
+    # If their “dynamic” values are incompatible, a RuntimeError is raised. 
+    # It will fail in pytorch layer.
+    self.assertRaises(RuntimeError, lambda: t2.view(6))
+    print('line270')
+
+    t5 = torch.tensor([1,1,3,5,1,6], device=dev)
+    t6 = torch.nonzero(t5)
+    t7 = t6.view(6)
+    t5_aten = torch.tensor([1,1,3,5,1,6])
+    t6_aten = torch.nonzero(t5_aten)
+    t7_aten = t6_aten.view(6)
+    self.assertEqual(t7.cpu(), t7_aten.cpu())
+
+  def test_view_copy_symint_with_dyn_input_dyn_input_shape(self):
+    t1 = torch.tensor([1,0,3,5,0,6], device=dev)
+    # t2.shape=torch.Size([<=6, 1]) with real size [4, 1]
+    # t2 = [[0], [2], [3], [5]]
+    t2 = torch.nonzero(t1)
+    t3 = torch.tensor([1,0,3,5,0,6, 7], device=dev)
+    # t4.shape=torch.Size([<=7, 1]) with real size [5, 1]
+    t4 = torch.nonzero(t3)
+    # If the input tensor and shape are “statically” incompatible, a compilation error is raised.
+    self.assertRaises(RuntimeError, lambda: t2.view(t4.shape[0]))
+
+    t5 = torch.tensor([1,2,3,4,5,6,0], device=dev)
+    # t6.shape=torch.Size([<=7, 1]) with real size [6, 1]
+    t6 = torch.nonzero(t5)
+    # statically compatible.
+    # If their “dynamic” values are incompatible, a RuntimeError is raised. 
+    # It will fail in pytorch layer.
+    self.assertRaises(RuntimeError, lambda: t6.view(t4.shape[0]))
+    # t8 =  t6.view(t4.shape[0])
+    print('line270')
+
+    t7 = torch.tensor([1,0,3,5,0,6, 7], device=dev)
+    t8 = torch.nonzero(t7)
+    # t8.shape=torch.Size([<=7, 1]) with real size [5, 1]
+    t9 = t8.view(t4.shape[0])
+    t7_aten = torch.tensor([1,0,3,5,0,6, 7])
+    t8_aten = torch.nonzero(t7_aten)
+    # t8_aten.size=[5, 1]
+    t3_aten = torch.tensor([1,0,3,5,0,6, 7])
+    t4_aten = torch.nonzero(t3_aten)
+    # t4_aten.size=[5, 1]
+    t9_aten = t8_aten.view(t4_aten.shape[0])
+    self.assertEqual(t9.cpu(), t9_aten.cpu())
 
   def test_xla_fill_(self):
     # t1.shape= torch.Size([<=6, 2])
