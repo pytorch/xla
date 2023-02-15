@@ -16,5 +16,5 @@ resource "google_artifact_registry_repository_iam_member" "all_users_read_public
 
 locals {
   public_repo = google_artifact_registry_repository.public_docker_repo
-  public_docker_repo_url = "${local.public_repo.location}.pkg.dev/${var.project_id}/${local.public_repo.repository_id}"
+  public_docker_repo_url = "${local.public_repo.location}-docker.pkg.dev/${var.project_id}/${local.public_repo.repository_id}"
 }
