@@ -11,6 +11,15 @@ variable "public_docker_repo" {
   })
 }
 
+variable "worker_pool" {
+  type = object({
+    name = string
+    location = optional(string, "us-central1")
+    machine_type = optional(string, "e2-standard-32")
+    disk_size_gb = optional(number, 500)
+  })
+}
+
 variable "storage_bucket_suffix" {
   type = string
   default = ""
@@ -19,11 +28,6 @@ variable "storage_bucket_suffix" {
 variable "build_runner_account_id_suffix" {
   type = string
   default = ""
-}
-
-variable "worker_pool" {
-  # TODO: Variablize this.
-  default = "projects/tpu-pytorch/locations/us-central1/workerPools/wheel_build"
 }
 
 variable "project_id" {

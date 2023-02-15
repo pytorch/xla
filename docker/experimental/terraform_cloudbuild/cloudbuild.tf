@@ -44,37 +44,16 @@ resource "google_cloudbuild_trigger" "dev-image" {
       timeout = "${1 * 60 * 60}s" # 1h
     }
 
-    # # Build release image and wheels.
-    # step {
-    #   id = "build_wheels_and_release_image"
-    #   name = "gcr.io/cloud-builders/docker"
-    #   dir = "docker/experimental/ansible"
-    #   args = [
-    #     "build",
-    #     "--build-arg=python_version=${var.python_version}",
-    #     "--build-arg=arch=amd64",
-    #     "--build-arg=accelerator=tpu",
-    #     "-t=${var.image_repository}/xla:latest",
-    #     "-f=Dockerfile",
-    #     ".",
-    #   ]
-    #   wait_for = [ "-" ] # Begin the step immediately.
-    #   timeout = "${4 * 60 * 60}s" # 4h
-    # }
-
     artifacts {
       images = [
         "${local.public_docker_repo_url}/development_tpu_amd64:latest",
-        # "${local.public_docker_repo_url}/xla:latest",
       ]
     }
 
     options {
       substitution_option = "ALLOW_LOOSE"
       dynamic_substitutions = true
-      # TODO: Create worker pool instead of using existing one.
-      worker_pool = var.worker_pool
-      # "projects/core-ml-engprod-build-farm/locations/europe-west1/workerPools/compilerfarm"
+      worker_pool = local.worker_pool_id
     }
 
     timeout = "${6 * 60 * 60}s" # 6h
