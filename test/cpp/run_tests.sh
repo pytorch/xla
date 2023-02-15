@@ -57,12 +57,16 @@ cmake "$RUNDIR" \
 make -j $VERB
 
 if [ $BUILD_ONLY -eq 0 ]; then
+   BAZEL_FLAGS=
   if [ "$LOGFILE" != "" ]; then
     ./test_ptxla ${FILTER:+"$FILTER"} 2> $LOGFILE
+     bazel test --spawn_strategy=sandboxed --sandbox_base=/dev/shm --show_progress_rate_limit=20 --define framework_shared_object=false -c opt --cxxopt=-D_GLIBCXX_USE_CXX11_ABI=1 --config=tpu //third_party/xla_client/... 2> $LOGFILE
   else
-    ./test_ptxla ${FILTER:+"$FILTER"}
+    ./test_ptxla ${FILTER:+"$FILTER"} &
+     bazel test --spawn_strategy=sandboxed --sandbox_base=/dev/shm --show_progress_rate_limit=20 --define framework_shared_object=false -c opt --cxxopt=-D_GLIBCXX_USE_CXX11_ABI=1 --config=tpu //third_party/xla_client/...
   fi
 fi
+
 popd
 if [ $RMBUILD -eq 1 -a $BUILD_ONLY -eq 0 ]; then
   rm -rf "$BUILDDIR"

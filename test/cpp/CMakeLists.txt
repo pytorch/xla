@@ -50,14 +50,11 @@ set(TORCH_XLA_TEST_SOURCES
   main.cpp
   cpp_test_util.cpp
   metrics_snapshot.cpp
-  test_async_task.cpp
   test_aten_xla_tensor.cpp
   test_ir.cpp
-  test_mayberef.cpp
   test_op_by_op_executor.cpp
   test_replication.cpp
   test_tensor.cpp
-  test_xla_util_cache.cpp
   torch_xla_test.cpp
   test_xla_backend_intf.cpp
   test_symint.cpp
@@ -103,6 +100,7 @@ target_include_directories(
   "${PTXLA_DIR}/bazel-xla/external/com_google_protobuf/src"
   "${PTXLA_DIR}/bazel-xla/external/eigen_archive"
   "${PTXLA_DIR}/bazel-xla/external/com_google_absl"
+  "${PTXLA_DIR}/bazel-xla/external/com_github_grpc_grpc/include",
   "${PYTHON_INCLUDE_DIR}"
 )
 
