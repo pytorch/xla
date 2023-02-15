@@ -2,8 +2,8 @@
 #define XLA_CLIENT_DEBUG_MACROS_H_
 
 #include "tensorflow/compiler/xla/statusor.h"
+#include "tensorflow/compiler/xla/xla_client/tf_logging.h"
 #include "tensorflow/core/platform/stacktrace.h"
-#include "third_party/xla_client/tf_logging.h"
 
 #define XLA_ERROR() TF_ERROR_STREAM()
 #define XLA_CHECK(c) TF_CHECK(c) << "\n" << tensorflow::CurrentStackTrace()

@@ -1,6 +1,6 @@
 #include "torch_xla/csrc/ops/discrete_uniform.h"
 
-#include "third_party/xla_client/xla_util.h"
+#include "tensorflow/compiler/xla/xla_client/xla_util.h"
 #include "torch_xla/csrc/helpers.h"
 #include "torch_xla/csrc/lowering_context.h"
 #include "torch_xla/csrc/random.h"

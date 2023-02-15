@@ -1,0 +1,5 @@
+[submodule "third_party/tensorflow"]
+	path = third_party/tensorflow
+	url = https://github.com/tensorflow/tensorflow.git
+	ignore = dirty
+

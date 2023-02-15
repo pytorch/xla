@@ -38,9 +38,7 @@ python $CDIR/cond_patch.py \
   $XDIR/torch_patches \
   $PTDIR
 
-# Apply TF patches only if requested, since bazel handles that normally.
-if [[ -n "${APPLY_TF_PATCHES}" ]]; then
-  python $CDIR/cond_patch.py \
-    $XDIR/tf_patches \
-    $TFDIR
-fi
+python $CDIR/cond_patch.py \
+  $XDIR/tf_patches \
+  $TFDIR
+

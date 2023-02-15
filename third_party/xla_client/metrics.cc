@@ -1,4 +1,4 @@
-#include "third_party/xla_client/metrics.h"
+#include "tensorflow/compiler/xla/xla_client/metrics.h"
 
 #include <algorithm>
 #include <cmath>
@@ -6,9 +6,9 @@
 
 #include "absl/memory/memory.h"
 #include "absl/strings/str_split.h"
+#include "tensorflow/compiler/xla/xla_client/debug_macros.h"
+#include "tensorflow/compiler/xla/xla_client/util.h"
 #include "tensorflow/core/platform/macros.h"
-#include "third_party/xla_client/debug_macros.h"
-#include "third_party/xla_client/util.h"
 
 namespace xla {
 namespace metrics {
