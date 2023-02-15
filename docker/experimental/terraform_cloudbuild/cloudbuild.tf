@@ -1,7 +1,6 @@
 # Detailed documentation on cloudbuild parameters:
 # https://cloud.google.com/build/docs/api/reference/rest/v1/projects.builds#resource-build
 
-
 locals {
   docker_images_map = {
     for di in var.docker_images:
