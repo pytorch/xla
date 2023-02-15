@@ -320,9 +320,9 @@ class TestDynamicShapes(test_utils.XlaTestCase):
 
   def test_view_copy_symint_negative_input_shape(self):
     t5 = torch.tensor([1, 1, 3, 5, 1, 6], device=dev)
-    # t5.shape=torch.Size([<=6, 1]) with real size [6, 1]
-    # t2 = [[0], [1], [2], [3], [4], [5]]
     t6 = torch.nonzero(t5)
+    # t6.shape=torch.Size([<=6, 1]) with real size [6, 1]
+    # t6 = [[0], [1], [2], [3], [4], [5]]
     t7 = t6.view(2, -1)
     self.assertIsInstance(t7.shape[0], int)
     self.assertIsInstance(t7.shape[1], torch.SymInt)
@@ -336,6 +336,22 @@ class TestDynamicShapes(test_utils.XlaTestCase):
     t6_aten = torch.nonzero(t5_aten)
     t7_aten = t6_aten.view(2, -1)
     self.assertEqual(t7.cpu(), t7_aten.cpu())
+
+  def test_GetDynamicReshape(self):
+    t5 = torch.tensor([1, 2, 3, 4, 5, 6, 7, 8], device=dev)
+    t6 = torch.nonzero(t5)
+    t7 = torch.transpose(t6, 0, 1)
+    # t7.shape=torch.Size([1, <=8]) with real size [1, 8]
+    t8 = t7.view(2, 2, 2)
+    self.assertIsInstance(t8.shape[0], int)
+    self.assertIsInstance(t8.shape[1], int)
+    self.assertIsInstance(t8.shape[2], torch.SymInt)
+    self.assertEqual(str(t8.shape[0]), '2')
+    self.assertEqual(str(t8.shape[1]), '2')
+    self.assertEqual(str(t8.shape[2]), '<=2')
+    self.assertEqual(t8.shape[0], 2)
+    self.assertEqual(t8.shape[1], 2)
+    self.assertEqual(t8.shape[2], 2)
 
   def test_xla_fill_(self):
     # t1.shape= torch.Size([<=6, 2])

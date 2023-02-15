@@ -254,27 +254,23 @@ xla::XlaOp XlaHelpers::ReshapeToRank(xla::XlaOp input, int64_t expected_rank,
 absl::optional<XlaHelpers::DynamicReshapeInfo>
 XlaHelpers::GetDynamicReshapeInfo(const xla::Shape& input_shape,
                                   absl::Span<const int64_t> output_sizes) {
-  int64_t input_dynamic_dimension = GetDynamicDimension(input_shape);
-  if (input_dynamic_dimension < 0) {
+  int64_t input_dyndim_idx = GetDynamicDimension(input_shape);
+  if (input_dyndim_idx < 0) {
     return absl::nullopt;
   }
   DynamicReshapeInfo info;
   info.output_shape =
       xla::ShapeUtil::MakeShape(input_shape.element_type(), output_sizes);
   if (info.output_shape.rank() > 0) {
-    int64_t size_at_dyndim = 1;
-    for (int64_t i = 0; i <= input_dynamic_dimension; ++i) {
-      size_at_dyndim *= input_shape.dimensions(i);
+    int64_t size_prod_until_dyndim = 1;
+    for (int64_t i = 0; i <= input_dyndim_idx; ++i) {
+      size_prod_until_dyndim *= input_shape.dimensions(i);
     }
     int64_t dynamic_dimension = -1;
     int64_t out_size = 1;
     for (int64_t i = 0; i < output_sizes.size(); ++i) {
-      XLA_CHECK_LE(out_size, size_at_dyndim / input_shape.dimensions(
-                                                  input_dynamic_dimension))
-          << "Unable to map dynamic dimension of shape " << input_shape
-          << " to output sizes (" << absl::StrJoin(output_sizes, ", ") << ")";
       out_size *= output_sizes[i];
-      if (out_size >= size_at_dyndim) {
+      if (out_size >= size_prod_until_dyndim) {
         dynamic_dimension = i;
         break;
       }
