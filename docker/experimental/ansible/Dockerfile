@@ -26,6 +26,8 @@ WORKDIR /wheels
 COPY --from=build /src/pytorch/dist/*.whl .
 COPY --from=build /src/pytorch/xla/dist/*.whl .
 
+# TODO: Check if wheels need to be renamined to include "tpu" or "cuda" in the name.
+
 RUN pip install *.whl
 
 WORKDIR /
