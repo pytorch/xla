@@ -1,17 +1,16 @@
+#include "third_party/xla_client/cache.h"
+
 #include <gtest/gtest.h>
 
+#include <memory>
 #include <string>
 
-#include "cpp_test_util.h"
-#include "third_party/xla_client/cache.h"
-#include "third_party/xla_client/util.h"
+namespace xla {
+namespace util {
 
-namespace torch_xla {
-namespace cpp_test {
-
-TEST(XlaUtilCacheTest, BasicTest) {
+TEST(CacheTest, Basic) {
   static const int kMaxSize = 64;
-  xla::util::Cache<int, std::string> cache(kMaxSize);
+  Cache<int, std::string> cache(kMaxSize);
 
   for (int i = 0; i < 2 * kMaxSize; ++i) {
     std::string istr = std::to_string(i);
@@ -36,5 +35,5 @@ TEST(XlaUtilCacheTest, BasicTest) {
   EXPECT_EQ(ptr, nullptr);
 }
 
-}  // namespace cpp_test
-}  // namespace torch_xla
+}  // namespace util
+}  // namespace xla

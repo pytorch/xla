@@ -157,6 +157,15 @@ cc_library(
     alwayslink = True,
 )
 
+cc_test(
+    name = "cache_test",
+    srcs = ["cache_test.cc"],
+    deps = [
+        ":cache",
+        "@com_google_googletest//:gtest_main",
+    ],
+)
+
 cc_library(
     name = "debug_macros",
     hdrs = ["debug_macros.h"],
