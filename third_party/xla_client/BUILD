@@ -43,6 +43,15 @@ cc_library(
     alwayslink = True,
 )
 
+cc_test(
+    name = "async_task_test",
+    srcs = ["async_task_test.cc"],
+    deps = [
+        ":async_task",
+        "@com_google_googletest//:gtest_main",
+    ],
+)
+
 cc_library(
     name = "computation_client",
     srcs = [
