@@ -1137,7 +1137,6 @@ XLAGraphExecutor::CompilationResult XLAGraphExecutor::Compile(
         BuildInputOutputAliases(tensors, coll.indices, &lowering_ctx);
   }
 
-  // hlo
   xla::XlaComputation computation = ConsumeValue(lowering_ctx.BuildXla());
   xla::ProgramShape program_shape = ConsumeValue(computation.GetProgramShape());
 

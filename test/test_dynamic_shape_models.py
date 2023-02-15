@@ -69,7 +69,6 @@ class TestDynamicShapeModels(unittest.TestCase):
 
     np.testing.assert_allclose(losses[0], losses[1], rtol=1e-2, atol=1e-2)
     print('Test passed.')
-    print(met.metrics_report())
 
   def test_forward_pass_dynamic_input_compile_once(self):
     met.clear_metrics()
@@ -125,7 +124,6 @@ class TestDynamicShapeModels(unittest.TestCase):
       criterion(y_pred.squeeze(), y_test).item()
       xm.mark_step()
     print('Test passed.')
-    print(met.metrics_report())
 
   def create_dynamic_test_data(self,
                                num_test_samples,
@@ -159,7 +157,7 @@ class TestDynamicShapeModels(unittest.TestCase):
 
 
 if __name__ == '__main__':
-  #assert os.environ['XLA_EXPERIMENTAL'] != ''
+  assert os.environ['XLA_EXPERIMENTAL'] != ''
   test = unittest.main(verbosity=FLAGS.verbosity, exit=False)
   # DISABLE PYTHON DISPATCHER FLAG
   del pd

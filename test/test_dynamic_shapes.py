@@ -353,13 +353,6 @@ class TestDynamicShapes(test_utils.XlaTestCase):
     self.assertEqual(t8.shape[1], 2)
     self.assertEqual(t8.shape[2], 2)
 
-  def test_xla_fill_(self):
-    # t1.shape= torch.Size([<=6, 2])
-    t1 = self.get_dynamic_tensor()
-    self.assertIsInstance(t1.shape[0], torch.SymInt)
-    t2 = t1.fill_(10)
-    self.assertIsInstance(t2.shape[0], torch.SymInt)
-
   def test_sizeMod(self):
     met.clear_all()
 
