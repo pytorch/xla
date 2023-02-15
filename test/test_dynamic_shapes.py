@@ -222,15 +222,6 @@ class TestDynamicShapes(test_utils.XlaTestCase):
     t4_unsqueeze = torch.unsqueeze(t4, 0)
     self.assertEqual(t2_unsqueeze.cpu(), t4_unsqueeze.cpu())
 
-  # xw32 TODO: remove this test before merging.
-  def test_view_copy_symint_with_static_input(self):
-    t3 = torch.randint(10, (2, 2), device=dev)
-    print('xw32 running view(4)')
-    # doing t3.view(5) would fail in python level with error
-    # https://paste.googleplex.com/6642485810954240
-    t4 = t3.view(4)
-    print(met.metrics_report())
-
   def test_view_copy_symint_with_static_input_dyn_input_shape(self):
     # If the input tensor and shape are “statically” incompatible, a compilation error is raised.
     t1 = torch.tensor([1, 0, 3, 5, 0, 6], device=dev)
@@ -260,7 +251,7 @@ class TestDynamicShapes(test_utils.XlaTestCase):
     t8_aten = t7_aten.view(t6_aten.shape[0])
     self.assertEqual(t8.cpu(), t8_aten.cpu())
 
-  def test_view_copy_symint_with_static_input_dyn_input_shape(self):
+  def test_view_copy_symint_with_dyn_input_static_input_shape(self):
     # If the input tensor and shape are “statically” incompatible, a compilation error is raised.
     t1 = torch.tensor([1, 0, 3, 5, 0, 6], device=dev)
     # t2.shape=torch.Size([<=6, 1]) with real size [4, 1]
@@ -327,6 +318,25 @@ class TestDynamicShapes(test_utils.XlaTestCase):
     t9_aten = t8_aten.view(t4_aten.shape[0])
     self.assertEqual(t9.cpu(), t9_aten.cpu())
 
+  def test_view_copy_symint_negative_input_shape(self):
+    t5 = torch.tensor([1, 1, 3, 5, 1, 6], device=dev)
+    # t5.shape=torch.Size([<=6, 1]) with real size [6, 1]
+    # t2 = [[0], [1], [2], [3], [4], [5]]
+    t6 = torch.nonzero(t5)
+    t7 = t6.view(2, -1)
+    self.assertIsInstance(t7.shape[0], int)
+    self.assertIsInstance(t7.shape[1], torch.SymInt)
+    self.assertEqual(str(t7.shape[0]), '2')
+    self.assertEqual(str(t7.shape[1]), '<=3')
+    self.assertEqual(t7.shape[0], 2)
+    self.assertEqual(t7.shape[1], 3)
+
+    # verify correctness.
+    t5_aten = torch.tensor([1, 1, 3, 5, 1, 6])
+    t6_aten = torch.nonzero(t5_aten)
+    t7_aten = t6_aten.view(2, -1)
+    self.assertEqual(t7.cpu(), t7_aten.cpu())
+
   def test_xla_fill_(self):
     # t1.shape= torch.Size([<=6, 2])
     t1 = self.get_dynamic_tensor()
@@ -334,7 +344,6 @@ class TestDynamicShapes(test_utils.XlaTestCase):
     t2 = t1.fill_(10)
     self.assertIsInstance(t2.shape[0], torch.SymInt)
 
-  # xw32 TODO: implement this.
   def test_sizeMod(self):
     met.clear_all()
 
