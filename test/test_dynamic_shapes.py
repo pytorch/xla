@@ -261,7 +261,6 @@ class TestDynamicShapes(test_utils.XlaTestCase):
     self.assertRaises(RuntimeError, lambda: t2.view(7))
 
     # If their “dynamic” values are incompatible, a RuntimeError is raised.
-    t4 = torch.randint(10, (2, 3), device=dev)
     # statically compatible.
     # It will fail in pytorch layer.
     self.assertRaises(RuntimeError, lambda: t2.view(6))
