@@ -26,7 +26,7 @@ variable "scheduler_service_account" {
 }
 
 resource "google_cloud_scheduler_job" "trigger-schedule" {
-  name = format("%s-schedule", var.trigger.trigger_id)
+  name = format("%s-schedule", var.trigger.name)
   schedule = var.schedule
   time_zone = "America/Los_Angeles"
 
