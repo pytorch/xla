@@ -3162,7 +3162,7 @@ at::Tensor XLANativeFunctions::view_copy_symint(const at::Tensor& self,
         bridge::GetXlaTensor(self), XlaHelpers::I64List(int_sizes.value())));
   }
 
-  //return bridge::AtenFromXlaTensor(tensor_methods::view_symint(bridge::GetXlaTensor(self), sym_size));
+  return bridge::AtenFromXlaTensor(tensor_methods::view_symint(bridge::GetXlaTensor(self), sym_size));
 }
 
 at::Tensor XLANativeFunctions::where(const at::Tensor& condition,

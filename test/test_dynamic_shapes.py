@@ -253,6 +253,32 @@ class TestDynamicShapes(test_utils.XlaTestCase):
     t2 = t1.fill_(10)
     self.assertIsInstance(t2.shape[0], torch.SymInt)
 
+  # xw32 TODO: implement this.
+  def test_sizeMod(self):
+    met.clear_all()
+
+    size1 = 5
+    size2 = 2
+    t1 = torch.zeros([size1, size2], device=dev)
+    t1[3][0] = 1
+    # t2 has size [<=10, 2] with real size [1, 2]
+    t2 = torch.nonzero(t1)
+    # Create a SizeMod IR node.
+    # t2.shape[1] generates a SizeConstant node.
+    dyn_size = t2.shape[0] % t2.shape[1]
+    self.assertGreater(met.counter_value("xla::size_mod"), 0)
+    # Exercises SizeMod::getDynamicValue.
+    dynamic_size = int(dyn_size)
+    self.assertEqual(dynamic_size, 1)
+    self.assertEqual(str(dyn_size), '<=0')
+
+    # t3 has size [<=10, 2] with real size [1, 2]
+    t3 = torch.nonzero(t1)
+    dyn_size = t2.shape[0] % t3.shape[0]
+    dynamic_size = int(dyn_size)
+    self.assertEqual(dynamic_size, 0)
+    self.assertEqual(str(dyn_size), '<=0')
+
   def test_sizeGe(self):
     met.clear_all()
 

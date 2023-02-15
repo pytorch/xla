@@ -2633,9 +2633,17 @@ XLATensorPtr view(const XLATensorPtr& input,
   return input->CreateViewTensor(std::move(view_info));
 }
 
-// XLATensorPtr view(const XLATensorPtr& input, at::SymIntArrayRef sym_size) {
-//   
-// }
+XLATensorPtr view_symint(const XLATensorPtr& input, at::SymIntArrayRef sym_size) {
+  xla::util::MaybeRef<xla::Shape> input_shape = input->shape();
+  SymIntElements size_elements(sym_size);
+  std::vector<int64_t> complete_dimensions =
+      GetCompleteShape(size_elements.GetUpperBounds(), input_shape.get().dimensions());
+  xla::Shape result_shape = xla::ShapeUtil::MakeShape(input_shape.get().element_type(), complete_dimensions, size_elements.GetDynamicDims());
+  ViewInfo view_info(ViewInfo::Type::kReshape, std::move(result_shape), input_shape);
+  return input->CreateViewTensor(std::move(view_info));
+
+  
+}
 
 XLATensorPtr var(const XLATensorPtr& input, std::vector<int64_t> dimensions,
                  int64_t correction, bool keep_reduced_dimensions) {

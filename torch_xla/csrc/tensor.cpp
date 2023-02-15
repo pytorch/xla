@@ -692,8 +692,12 @@ c10::SymNode XLASymNodeImpl::floordiv(const c10::SymNode& other) {
 }
 
 c10::SymNode XLASymNodeImpl::mod(const c10::SymNode& other) {
-  XLA_CHECK(false) << "XLASymNodeImpl::" << __FUNCTION__
-                   << " has not been implemented.";
+  TORCH_LAZY_FN_COUNTER("xla::size_");
+  torch_xla::XLASymNodeImpl* p_other =
+      dynamic_cast<XLASymNodeImpl*>(other.get());
+  torch::lazy::NodePtr n_mod =
+      torch::lazy::MakeNode<SizeMod>(node(), p_other->node());
+  return c10::make_intrusive<XLASymNodeImpl>(n_mod);
 }
 
 c10::SymNode XLASymNodeImpl::eq(const c10::SymNode& other) {

@@ -165,6 +165,19 @@ class SizeDiv : public XlaNode, public torch::lazy::DimensionNode {
   int64_t upper_bound_;
 };
 
+class SizeMod : public XlaNode, public torch::lazy::DimensionNode {
+ public:
+  SizeMod(torch::lazy::Value a, torch::lazy::Value b);
+  int64_t getDynamicValue() const override;
+  int64_t getStaticValue() const override { return upper_bound_; }
+  bool isSymbolic() const override { return true; }
+  std::string ToString() const override;
+  virtual XlaOpVector Lower(LoweringContext* loctx) const override;
+
+ private:
+  int64_t upper_bound_;
+};
+
 const torch::lazy::DimensionNode* DimCast(torch::lazy::Output output);
 const torch::lazy::DimensionNode* DimCast(const torch::lazy::Node* node);
 const std::shared_ptr<torch::lazy::DimensionNode> DimCast(
