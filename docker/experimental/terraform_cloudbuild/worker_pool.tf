@@ -12,3 +12,7 @@ resource "google_cloudbuild_worker_pool" "worker-pool" {
 locals {
   worker_pool_id = google_cloudbuild_worker_pool.worker-pool.id
 }
+
+output "worker_pool_id" {
+  value = local.worker_pool_id
+}

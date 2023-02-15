@@ -137,3 +137,10 @@ module "release_images_trigger" {
   trigger = google_cloudbuild_trigger.release_images
   scheduler_service_account = google_service_account.build_runner.email
 }
+
+output "triggers" {
+  value = [
+    google_cloudbuild_trigger.dev-image.id,
+    google_cloudbuild_trigger.release_images.id,
+  ]
+}

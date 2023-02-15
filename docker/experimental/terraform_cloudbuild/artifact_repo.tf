@@ -18,3 +18,7 @@ locals {
   public_repo = google_artifact_registry_repository.public_docker_repo
   public_docker_repo_url = "${local.public_repo.location}-docker.pkg.dev/${var.project_id}/${local.public_repo.repository_id}"
 }
+
+output "public_docker_registry_url" {
+  value = local.public_docker_repo_url
+}

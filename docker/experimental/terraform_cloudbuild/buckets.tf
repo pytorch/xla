@@ -33,3 +33,11 @@ resource "google_storage_bucket_access_control" "all_users_read_public_wheels" {
   role   = "READER"
   entity = "allUsers"
 }
+
+output "public_wheels_bucket_url" {
+  value = google_storage_bucket.public_wheels.url
+}
+
+output "tfstate_bucket_url" {
+  value = google_storage_bucket.tfstate.url
+}
