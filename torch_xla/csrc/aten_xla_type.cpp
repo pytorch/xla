@@ -1643,23 +1643,23 @@ at::Tensor XLANativeFunctions::xlogy(const at::Tensor& self,
       bridge::GetXlaTensor(self), bridge::GetXlaTensor(other)));
 }
 
-at::Tensor& XLANativeFunctions::masked_fill_(at::Tensor& self,
-                                             const at::Tensor& mask,
-                                             const at::Scalar& value) {
-  TORCH_LAZY_FN_COUNTER("xla::");
-  XLATensorPtr self_tensor = bridge::GetXlaTensor(self);
-  tensor_methods::masked_fill_(self_tensor, bridge::GetXlaTensor(mask), value);
-  return self;
-}
-
-at::Tensor& XLANativeFunctions::masked_fill_(at::Tensor& self,
-                                             const at::Tensor& mask,
-                                             const at::Tensor& value) {
+at::Tensor XLANativeFunctions::masked_fill(const at::Tensor& self,
+                                           const at::Tensor& mask,
+                                           const at::Tensor& value) {
   TORCH_LAZY_FN_COUNTER("xla::");
   XLA_CHECK_EQ(value.dim(), 0) << "masked_fill_ only supports a 0-dimensional "
                                << "value tensor, but got tensor "
                                << "with " << value.dim() << " dimension(s).";
-  return masked_fill_(self, mask, value.item());
+  return masked_fill(self, mask, value.item());
+}
+
+at::Tensor XLANativeFunctions::masked_fill(const at::Tensor& self,
+                                           const at::Tensor& mask,
+                                           const at::Scalar& value) {
+  TORCH_LAZY_FN_COUNTER("xla::");
+  XLATensorPtr self_tensor = bridge::GetXlaTensor(self);
+  return bridge::AtenFromXlaTensor(tensor_methods::masked_fill(
+      self_tensor, bridge::GetXlaTensor(mask), value));
 }
 
 at::Tensor XLANativeFunctions::masked_scatter(const at::Tensor& self,
@@ -3382,20 +3382,6 @@ at::Tensor XLANativeFunctions::linalg_pinv(
     const c10::optional<at::Tensor>& rtol, bool hermitian) {
   return at::functionalization::functionalize_aten_op<ATEN_OP2(
       linalg_pinv, atol_rtol_tensor)>::call(self, atol, rtol, hermitian);
-}
-
-at::Tensor XLANativeFunctions::masked_fill(const at::Tensor& self,
-                                           const at::Tensor& mask,
-                                           const at::Tensor& value) {
-  return at::functionalization::functionalize_aten_op<ATEN_OP2(
-      masked_fill, Tensor)>::call(self, mask, value);
-}
-
-at::Tensor XLANativeFunctions::masked_fill(const at::Tensor& self,
-                                           const at::Tensor& mask,
-                                           const at::Scalar& value) {
-  return at::functionalization::functionalize_aten_op<ATEN_OP2(
-      masked_fill, Scalar)>::call(self, mask, value);
 }
 
 at::Tensor XLANativeFunctions::mvlgamma(const at::Tensor& self, int64_t p) {
