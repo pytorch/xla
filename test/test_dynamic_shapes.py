@@ -236,15 +236,11 @@ class TestDynamicShapes(test_utils.XlaTestCase):
     t2 = torch.nonzero(t1)
     t3 = torch.randint(10, (2, 2), device=dev)
     # If the input tensor and shape are “statically” incompatible, a compilation error is raised.
-    t4 = t3.view(t2.shape[0])
-    self.assertEqual(len(t4.size()), 1)
-    self.assertIsInstance(t4.shape[0], torch.SymInt)
-    self.assertEqual(str(t4.shape[0]), '<=6')
-    self.assertEqual(t4.shape[0], 4)
+    self.assertRaises(RuntimeError, lambda: t3.view(t2.shape[0]))
 
     t4 = torch.randint(10, (2, 3), device=dev)
     # If their “dynamic” values are incompatible, a RuntimeError is raised. 
-    t5 = t4.view(t2.shape[0])
+    self.assertRaises(RuntimeError, lambda: t4.view(t2.shape[0]))
 
   def test_xla_fill_(self):
     # t1.shape= torch.Size([<=6, 2])
