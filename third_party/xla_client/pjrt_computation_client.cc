@@ -456,12 +456,17 @@ PjRtComputationClient::ExecuteComputation(
           .value();
 
   std::shared_ptr<PJRTLocker> locker = GetLockerForDevice(device);
+  // This call should not be blocking because there is at most one device
+  // execution happens at the same time. This call is after current thread's
+  // `ExecuteSharded` means execution from last async thread must have finished
+  // and released the locker.
   locker->Lock();
 
   // Signal that `ExecuteSharded` has completed for the ExecuteTime metric.
   // Copies the `timed` shared pointer into the lambda.
   returned_future->OnReady([timed, locker](Status unused) mutable {
     timed.reset();
+    // Release the device lock so `WaitDeviceExections` can return.
     locker->Unlock();
     TF_VLOG(3) << "returned_future->OnReady finished";
   });
@@ -607,7 +612,8 @@ void PjRtComputationClient::WaitDeviceExections(
     }
   }
   for (const std::string& device_str : wait_devices) {
-    TF_VLOG(3) << "Waiting for device execution for " << device_str << " to finish";
+    TF_VLOG(3) << "Waiting for device execution for " << device_str
+               << " to finish";
     std::shared_ptr<PJRTLocker> locker = GetLockerForDevice(device_str);
     locker->Barrier();
     TF_VLOG(3) << "Waiting for device execution for " << device_str
