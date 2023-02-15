@@ -75,6 +75,8 @@ class PjRtComputationClient : public ComputationClient {
 
   void PrepareToExit() override { return; };
 
+  void WaitDeviceExections(const std::vector<std::string>& devices) override;
+
   // NOT IMPLEMENTED
 
   void TransferToServer(absl::Span<const TensorSource> tensors,

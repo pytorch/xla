@@ -1266,6 +1266,7 @@ void InitXlaModuleBindings(py::module m) {
         [](const std::vector<std::string>& devices) {
           NoGilSection nogil;
           XLAGraphExecutor::Get()->WaitDeviceOps(devices);
+          xla::ComputationClient::Get()->WaitDeviceExections(devices);
         },
         py::arg("devices"));
   m.def("_xla_counter_names", []() {

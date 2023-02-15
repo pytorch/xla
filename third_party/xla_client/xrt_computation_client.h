@@ -334,6 +334,12 @@ class XrtComputationClient : public ComputationClient {
 
   void PrepareToExit() override;
 
+  void WaitDeviceExections(const std::vector<std::string>& devices) override {
+    // XRT Device Computation is guranteed to finish when ExecuteComputation
+    // returns. No need to implement WaitDeviceExections.
+    return;
+  };
+
   static Worker ParseWorker(const std::string& worker);
 
   static std::string GetMultiProcessingDevice();
