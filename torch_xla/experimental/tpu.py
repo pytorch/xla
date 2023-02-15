@@ -29,6 +29,7 @@ _ACCELERATOR_TYPE_TO_HOST_BOUNDS = {
     'v3-512': '8,8,1',
     'v3-1024': '8,16,1',
     'v3-2048': '16,16,1',
+    'v5litepod-16', '2.2.1'
     # Get v4 host bounds from TPU metadata
 }
 
