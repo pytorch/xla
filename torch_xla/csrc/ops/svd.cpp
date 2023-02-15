@@ -3,7 +3,7 @@
 #include "tensorflow/compiler/xla/client/lib/constants.h"
 #include "tensorflow/compiler/xla/client/lib/matrix.h"
 #include "tensorflow/compiler/xla/client/lib/svd.h"
-#include "third_party/xla_client/util.h"
+#include "tensorflow/compiler/xla/xla_client/util.h"
 #include "torch/csrc/lazy/core/util.h"
 #include "torch_xla/csrc/data_ops.h"
 #include "torch_xla/csrc/helpers.h"

@@ -3,8 +3,8 @@
 #include <ATen/ATen.h>
 
 #include "absl/memory/memory.h"
-#include "third_party/xla_client/sys_util.h"
-#include "third_party/xla_client/tf_logging.h"
+#include "tensorflow/compiler/xla/xla_client/sys_util.h"
+#include "tensorflow/compiler/xla/xla_client/tf_logging.h"
 #include "torch_xla/csrc/device.h"
 #include "torch_xla/csrc/helpers.h"
 #include "torch_xla/csrc/tensor.h"
