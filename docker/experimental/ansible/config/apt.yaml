@@ -16,11 +16,11 @@ apt:
       - wget
 
     build_cuda:
-      - cuda-libraries-11-2
-      - cuda-toolkit-11-2
-      - cuda-minimal-build-11-2
-      - libcudnn8=8.1.1.33-1+cuda11.2
-      - libcudnn8-dev=8.1.1.33-1+cuda11.2
+      - cuda-libraries-11-8
+      - cuda-toolkit-11-8
+      - cuda-minimal-build-11-8
+      - libcudnn8=8.1.1.33-1+cuda11.8
+      - libcudnn8-dev=8.1.1.33-1+cuda11.8
 
     build_amd64:
       - clang-11
@@ -41,9 +41,9 @@ apt:
       - patch
 
     release_cuda:
-      - cuda-libraries-11-2
-      - cuda-minimal-build-11-2
-      - libcudnn8=8.1.1.33-1+cuda11.2
+      - cuda-libraries-11-8
+      - cuda-minimal-build-11-8
+      - libcudnn8=8.1.1.33-1+cuda11.8
 
   # Specify objects with string fields `url` and `keyring`.
   # The keyring path should start with /usr/share/keyrings/ for debian and ubuntu.

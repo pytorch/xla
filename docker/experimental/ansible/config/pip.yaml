@@ -28,6 +28,7 @@ pip:
       - tqdm
       - typing
       - typing_extensions
+      - sympy
 
     build_amd64:
       - mkl
