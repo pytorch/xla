@@ -7,6 +7,7 @@ apt:
       - git
       - gnupg
       - libomp5
+      - libomp5-7
       - libopenblas-dev
       - ninja-build
       - procps
@@ -23,7 +24,7 @@ apt:
       - libcudnn8-dev=8.1.1.33-1+cuda11.8
 
     build_amd64:
-      - clang-11
+      - "clang-{{ clang_version }}"
 
     build_aarch64:
       - scons
@@ -37,6 +38,7 @@ apt:
       - google-cloud-cli
       - libgomp1
       - libomp5
+      - libomp5-7
       - libopenblas-base
       - patch
 
