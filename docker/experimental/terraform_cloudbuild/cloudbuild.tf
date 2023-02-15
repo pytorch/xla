@@ -115,8 +115,13 @@ resource "google_cloudbuild_trigger" "release_images" {
         "${local.public_docker_repo_url}/xla:nightly_${var.python_version}_cuda_11.8",
         "${local.public_docker_repo_url}/xla:nightly_${var.python_version}_tpuvm",
       ]
+      objects {
+        location = "${google_storage_bucket.public_wheels.url}"
+        paths = [
+          "/wheels/*.whl"
+        ]
+      }
     }
-
     options {
       substitution_option = "ALLOW_LOOSE"
       dynamic_substitutions = true
