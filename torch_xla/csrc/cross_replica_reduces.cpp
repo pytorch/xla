@@ -3,8 +3,8 @@
 #include <map>
 
 #include "tensorflow/compiler/xla/shape_util.h"
-#include "tensorflow/compiler/xla/xla_client/debug_macros.h"
-#include "tensorflow/compiler/xla/xla_client/util.h"
+#include "third_party/xla_client/debug_macros.h"
+#include "third_party/xla_client/util.h"
 #include "torch/csrc/lazy/core/util.h"
 #include "torch_xla/csrc/convert_ops.h"
 #include "torch_xla/csrc/device.h"

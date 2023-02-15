@@ -7,9 +7,9 @@
 
 #include "absl/memory/memory.h"
 #include "absl/strings/str_split.h"
-#include "tensorflow/compiler/xla/xla_client/debug_macros.h"
-#include "tensorflow/compiler/xla/xla_client/sys_util.h"
-#include "tensorflow/compiler/xla/xla_client/unique.h"
+#include "third_party/xla_client/debug_macros.h"
+#include "third_party/xla_client/sys_util.h"
+#include "third_party/xla_client/unique.h"
 #include "torch/csrc/lazy/core/hash.h"
 #include "torch/csrc/lazy/python/python_util.h"
 #include "torch_xla/csrc/device.h"

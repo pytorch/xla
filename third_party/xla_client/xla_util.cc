@@ -1,4 +1,4 @@
-#include "tensorflow/compiler/xla/xla_client/xla_util.h"
+#include "third_party/xla_client/xla_util.h"
 
 #include <fstream>
 #include <mutex>
@@ -8,11 +8,11 @@
 
 #include "tensorflow/compiler/xla/shape_util.h"
 #include "tensorflow/compiler/xla/util.h"
-#include "tensorflow/compiler/xla/xla_client/sys_util.h"
-#include "tensorflow/compiler/xla/xla_client/tf_logging.h"
-#include "tensorflow/compiler/xla/xla_client/util.h"
 #include "tensorflow/core/lib/core/errors.h"
 #include "tensorflow/core/platform/stacktrace.h"
+#include "third_party/xla_client/sys_util.h"
+#include "third_party/xla_client/tf_logging.h"
+#include "third_party/xla_client/util.h"
 
 namespace xla {
 namespace util {
