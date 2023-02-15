@@ -1606,6 +1606,9 @@ void InitXlaModuleBindings(py::module m) {
     MapXlaEnvVarsToLazy();
     InitXlaBackend();
   });
+  m.def("_xla_maybe_configure_default_device", []() {
+    xla::ComputationClient::MaybeConfigureDefaultDevice();
+  });
 
   /* The distributed runtime service is used by the PjRt GPU client. */
   py::class_<xla::DistributedRuntimeService,

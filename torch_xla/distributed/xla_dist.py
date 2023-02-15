@@ -12,6 +12,7 @@ import subprocess
 import sys
 import time
 import threading
+from pytorch.xla.torch_xla.experimental import pjrt
 import torch_xla.core.xla_env_vars as xenv
 from torch_xla.distributed.cluster import ClusterResolver
 import torch_xla.utils.utils as xu
@@ -675,6 +676,10 @@ class DistributedExecutor(object):
 
 
 def main(args=None):
+  os.environ['PJRT_SELECT_DEFAULT_DEVICE'] = '0'
+  if pjrt.using_pjrt():
+    logging.warning('PJRT runtime detected. `xla_dist` is NOT compatible with PJRT, and you may run into unexpected errors. Unset $PJRT_DEVICE to silence this warning.')
+
   FLAGS = parse_args(args)
   if (FLAGS.docker_container or FLAGS.docker_image or
       FLAGS.docker_run_flag) and FLAGS.conda_env:

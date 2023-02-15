@@ -39,6 +39,7 @@ def device_type() -> Optional[str]:
 
 def using_pjrt() -> bool:
   """Returns whether this process is using PjRt runtime."""
+  torch_xla._XLAC._xla_maybe_configure_default_device()
   return device_type() is not None
 
 
