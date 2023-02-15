@@ -59,7 +59,7 @@ import zipfile
 
 base_dir = os.path.dirname(os.path.abspath(__file__))
 
-_libtpu_version = '0.1.dev20230202'
+_libtpu_version = '0.1.dev20230213'
 _libtpu_storage_path = f'https://storage.googleapis.com/cloud-tpu-tpuvm-artifacts/wheels/libtpu-nightly/libtpu_nightly-{_libtpu_version}-py3-none-any.whl'
 
 
@@ -292,6 +292,7 @@ for ipath in [
     'bazel-xla/external/eigen_archive',
     'bazel-xla/external/com_google_absl',
     'bazel-xla/external/com_googlesource_code_re2',
+    'bazel-xla/com_github_grpc_grpc/include',
 ]:
   include_dirs.append(os.path.join(base_dir, ipath))
 include_dirs += [

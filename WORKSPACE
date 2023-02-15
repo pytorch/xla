@@ -7,23 +7,26 @@ load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
 #    and update the sha256 with the result.
 http_archive(
     name = "org_tensorflow",
-    patch_args = ["-p1"],
+    patch_args = [
+        "-l",
+        "-p1",
+    ],
     patch_tool = "patch",
     patches = [
-        "//tf_patches:f16_abi_clang.diff",
-        "//tf_patches:ffp_gpu.diff",
-        "//tf_patches:gpu_race_condition.diff",
-        "//tf_patches:stream_executor.diff",
-        "//tf_patches:grpc_version.diff",
-        "//tf_patches:thread_local_random.diff",
-        "//tf_patches:xplane.diff",
         "//tf_patches:bazel.diff",
         "//tf_patches:cache_urls.diff",
+        "//tf_patches:cudnn_int8x32.diff",
+        "//tf_patches:f16_abi_clang.diff",
+        "//tf_patches:gpu_race_condition.diff",
+        "//tf_patches:grpc_version.diff",
+        "//tf_patches:stream_executor.diff",
+        "//tf_patches:thread_local_random.diff",
+        "//tf_patches:xplane.diff",
     ],
-    sha256 = "a454c502fa32d2cd7858dc623f76d0449e7891828df0199691dea9812fa40b53",
-    strip_prefix = "tensorflow-a81addf25f8c7420fe22674205e4fa410980bb5e",
+    sha256 = "0fdf5067cd9827be2ae14c2ac59cd482e678134b125943be278ad23ea5342181",
+    strip_prefix = "tensorflow-f7759359f8420d3ca7b9fd19493f2a01bd47b4ef",
     urls = [
-        "https://github.com/tensorflow/tensorflow/archive/a81addf25f8c7420fe22674205e4fa410980bb5e.tar.gz",
+        "https://github.com/tensorflow/tensorflow/archive/f7759359f8420d3ca7b9fd19493f2a01bd47b4ef.tar.gz",
     ],
 )
 
