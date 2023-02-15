@@ -165,6 +165,8 @@ class ExperimentRunner:
             metrics[key] = []
           metrics[key].append(val)
 
+    # additional experiment metrics can be added here
+
     self.save_results(benchmark_experiment, benchmark_model, metrics, outputs)
 
   def save_results(self, benchmark_experiment, benchmark_model, metrics,
