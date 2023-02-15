@@ -18,11 +18,15 @@ variable "trigger" {
 variable "time_zone" {
   description = "The schedule will be relative to this time zone."
   default = "America/Los_Angeles"
-  type = "string"
+  type = string
+}
+
+variable "scheduler_service_account" {
+  type = string
 }
 
 resource "google_cloud_scheduler_job" "trigger-schedule" {
-  name = format("%s-schedule", var.trigger)
+  name = format("%s-schedule", var.trigger.trigger_id)
   schedule = var.schedule
   time_zone = "America/Los_Angeles"
 

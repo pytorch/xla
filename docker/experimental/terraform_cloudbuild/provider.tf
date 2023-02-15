@@ -1,6 +1,7 @@
 # Run `gcloud auth application-default login` in your shell before
 provider "google" {
   project = var.project_id
+  region = var.region
 }
 
 terraform {

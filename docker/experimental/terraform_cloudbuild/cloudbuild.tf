@@ -69,31 +69,15 @@ resource "google_cloudbuild_trigger" "release_images" {
   name = "release-image-trigger"
   description = "Building docker release image"
 
-  # Connect the repository in *global* region by going to
-  # GCP Console > Triggers > Connect Repository.
-  # Authorize and install the GCP App for the GitHub repository.
-  github {
-    owner = "pytorch"
-    name = "xla"
-    push {
-      branch = "^mlewko/cloudbuild$"
-    }
-  }
-
   source_to_build {
     uri = "https://github.com/pytorch/xla"
     repo_type = "GITHUB"
     ref = "refs/heads/mlewko/cloudbuild"
   }
 
-  included_files = [
-    "docker/experimental/ansible/**",
-    "docker/experimental/terraform_cloudbuild/**",
-  ]
-
   build {
     step {
-      id = "build_tpu_release_image"
+      id = "build_cuda_release_image"
       name = "gcr.io/cloud-builders/docker"
       dir = "docker/experimental/ansible"
       args = [
@@ -141,8 +125,12 @@ resource "google_cloudbuild_trigger" "release_images" {
 
     timeout = "${10 * 60 * 60}s"
   }
+}
 
-  include_build_logs = "INCLUDE_BUILD_LOGS_WITH_STATUS"
+module "release_images_trigger" {
+  source = "./modules/trigger_schedule"
+  trigger = google_cloudbuild_trigger.release_images
+  scheduler_service_account = google_service_account.build_runner.email
 }
 
 # # Detailed documentation on cloudbuild parameters:
