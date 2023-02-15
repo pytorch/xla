@@ -6,8 +6,6 @@ apt:
       - curl
       - git
       - gnupg
-      - libomp5
-      - libomp5-7
       - libopenblas-dev
       - ninja-build
       - procps
@@ -37,8 +35,6 @@ apt:
       - gnupg
       - google-cloud-cli
       - libgomp1
-      - libomp5
-      - libomp5-7
       - libopenblas-base
       - patch
 
