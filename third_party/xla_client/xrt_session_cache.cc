@@ -1,7 +1,7 @@
-#include "third_party/xla_client/xrt_session_cache.h"
+#include "tensorflow/compiler/xla/xla_client/xrt_session_cache.h"
 
-#include "third_party/xla_client/metrics.h"
-#include "third_party/xla_client/sys_util.h"
+#include "tensorflow/compiler/xla/xla_client/metrics.h"
+#include "tensorflow/compiler/xla/xla_client/sys_util.h"
 
 namespace xla {
 
