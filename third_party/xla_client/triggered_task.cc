@@ -1,4 +1,4 @@
-#include "tensorflow/compiler/xla/xla_client/triggered_task.h"
+#include "third_party/xla_client/triggered_task.h"
 
 namespace xla {
 namespace util {

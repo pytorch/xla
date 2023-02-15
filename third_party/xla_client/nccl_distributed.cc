@@ -1,10 +1,10 @@
-#include "tensorflow/compiler/xla/xla_client/nccl_distributed.h"
+#include "third_party/xla_client/nccl_distributed.h"
 
 #include <map>
 #include <mutex>
 
 #include "absl/strings/str_join.h"
-#include "tensorflow/compiler/xla/xla_client/debug_macros.h"
+#include "third_party/xla_client/debug_macros.h"
 #if XLA_CUDA
 #include "third_party/nccl/nccl.h"
 #endif
