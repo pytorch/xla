@@ -136,6 +136,7 @@ del os.environ['TPU_LOAD_LIBRARY']
 
 _setup_tpu_vm_library_path()
 
+
 def _prepare_to_exit():
   _XLAC._prepare_to_exit()
   if int(os.environ.get('PT_XLA_DEBUG', '0')):

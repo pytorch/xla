@@ -678,7 +678,9 @@ class DistributedExecutor(object):
 def main(args=None):
   os.environ['PJRT_SELECT_DEFAULT_DEVICE'] = '0'
   if pjrt.using_pjrt():
-    logging.warning('PJRT runtime detected. `xla_dist` is NOT compatible with PJRT, and you may run into unexpected errors. Unset $PJRT_DEVICE to silence this warning.')
+    logging.warning(
+        'PJRT runtime detected. `xla_dist` is NOT compatible with PJRT, and you may run into unexpected errors. Unset $PJRT_DEVICE to silence this warning.'
+    )
 
   FLAGS = parse_args(args)
   if (FLAGS.docker_container or FLAGS.docker_image or
