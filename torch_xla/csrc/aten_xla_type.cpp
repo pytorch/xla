@@ -3155,14 +3155,16 @@ std::tuple<at::Tensor, at::Tensor> XLANativeFunctions::var_mean(
 at::Tensor XLANativeFunctions::view_copy_symint(const at::Tensor& self,
                                                 at::SymIntArrayRef sym_size) {
   TORCH_LAZY_FN_COUNTER("xla::");
-  c10::optional<at::IntArrayRef> int_sizes = c10::asIntArrayRefSlowOpt(sym_size);
+  c10::optional<at::IntArrayRef> int_sizes =
+      c10::asIntArrayRefSlowOpt(sym_size);
   bool all_dims_static = int_sizes.has_value();
   if (all_dims_static) {
     return bridge::AtenFromXlaTensor(tensor_methods::view(
         bridge::GetXlaTensor(self), XlaHelpers::I64List(int_sizes.value())));
   }
 
-  return bridge::AtenFromXlaTensor(tensor_methods::view_symint(bridge::GetXlaTensor(self), sym_size));
+  return bridge::AtenFromXlaTensor(
+      tensor_methods::view_symint(bridge::GetXlaTensor(self), sym_size));
 }
 
 at::Tensor XLANativeFunctions::where(const at::Tensor& condition,
