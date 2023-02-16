@@ -48,7 +48,8 @@ XlaNode::XlaNode(torch::lazy::OpKind op, torch::lazy::OpList operands,
     : torch::lazy::Node(op, operands, std::move(shapes), num_outputs),
       xla_shape_(std::move(xla_shape)),
       node_hash_(torch::lazy::HashCombine(op.hash(), hash_seed)),
-      dag_hash_(GetOperandHashes(operands, node_hash_)) {}
+      dag_hash_(GetOperandHashes(operands, node_hash_)),
+      oplist_(std::optional<torch::lazy::OpList>(operands)) {}
 
 XlaNode::XlaNode(torch::lazy::OpKind op, torch::lazy::OpList operands,
                  std::vector<torch::lazy::Shape>&& shapes, xla::Shape xla_shape,
@@ -56,7 +57,8 @@ XlaNode::XlaNode(torch::lazy::OpKind op, torch::lazy::OpList operands,
                  torch::lazy::hash_t hash_seed)
     : torch::lazy::Node(op, operands, std::move(shapes), num_outputs),
       xla_shape_(std::move(xla_shape)),
-      output_sharding_(std::make_shared<xla::OpSharding>(sharding)) {
+      output_sharding_(std::make_shared<xla::OpSharding>(sharding)),
+      oplist_(std::optional<torch::lazy::OpList>(operands)) {
   auto sharding_hash = CreateShardingHash(output_sharding_, hash_seed);
   node_hash_ = torch::lazy::HashCombine(op.hash(), sharding_hash);
   dag_hash_ = GetOperandHashes(operands, node_hash_);
@@ -68,7 +70,8 @@ XlaNode::XlaNode(torch::lazy::OpKind op, torch::lazy::OpList operands,
                  size_t num_outputs, torch::lazy::hash_t hash_seed)
     : torch::lazy::Node(op, operands, std::move(shapes), num_outputs),
       node_hash_(torch::lazy::HashCombine(op.hash(), hash_seed)),
-      dag_hash_(GetOperandHashes(operands, node_hash_)) {
+      dag_hash_(GetOperandHashes(operands, node_hash_)),
+      oplist_(std::optional<torch::lazy::OpList>(operands)) {
   xla_shape_ = GetOpShape(xla_shape_fn);
 }
 
@@ -79,13 +82,16 @@ XlaNode::XlaNode(torch::lazy::OpKind op, torch::lazy::OpList operands,
                         num_outputs),
       xla_shape_(std::move(xla_shape)),
       node_hash_(torch::lazy::HashCombine(op.hash(), hash_seed)),
-      dag_hash_(GetOperandHashes(operands, node_hash_)) {}
+      dag_hash_(GetOperandHashes(operands, node_hash_)),
+      oplist_(std::optional<torch::lazy::OpList>(operands)) {}
 
 XlaNode::XlaNode(torch::lazy::OpKind op, torch::lazy::OpList operands,
                  xla::Shape xla_shape, size_t num_outputs,
                  torch::lazy::hash_t hash_seed)
     : XlaNode(op, operands, std::vector<torch::lazy::Shape>{}, xla_shape,
-              num_outputs, hash_seed) {}
+              num_outputs, hash_seed) {
+  oplist_ = std::optional<torch::lazy::OpList>(operands);
+}
 
 XlaNode::XlaNode(torch::lazy::OpKind op, torch::lazy::OpList operands,
                  const std::function<torch::lazy::Shape()>& shape_fn,
@@ -96,6 +102,7 @@ XlaNode::XlaNode(torch::lazy::OpKind op, torch::lazy::OpList operands,
   // full hash information, then fetch/compute the real shape.
   addComputedShape(shape_fn);
   xla_shape_ = GetOpShape(xla_shape_fn);
+  oplist_ = std::optional<torch::lazy::OpList>(operands);
 }
 
 XlaNode::XlaNode(torch::lazy::OpKind op, torch::lazy::OpList operands,
@@ -105,6 +112,7 @@ XlaNode::XlaNode(torch::lazy::OpKind op, torch::lazy::OpList operands,
   // Forward the constructor to the one above (with empty shape), so we have the
   // full hash information, then fetch/compute the real shape.
   xla_shape_ = GetOpShape(xla_shape_fn);
+  oplist_ = std::optional<torch::lazy::OpList>(operands);
 }
 
 XlaNode::XlaNode(torch::lazy::OpKind op, torch::lazy::Shape shape,
@@ -113,11 +121,14 @@ XlaNode::XlaNode(torch::lazy::OpKind op, torch::lazy::Shape shape,
     : torch::lazy::Node(op, shape, num_outputs),
       xla_shape_(std::move(xla_shape)),
       node_hash_(GetOpHash(op, xla_shape_, hash_seed)),
-      dag_hash_(node_hash_) {}
+      dag_hash_(node_hash_),
+      oplist_(std::nullopt) {}
 
 XlaNode::XlaNode(torch::lazy::OpKind op, xla::Shape xla_shape,
                  size_t num_outputs, torch::lazy::hash_t hash_seed)
-    : XlaNode(op, torch::lazy::Shape(), xla_shape, num_outputs, hash_seed) {}
+    : XlaNode(op, torch::lazy::Shape(), xla_shape, num_outputs, hash_seed) {
+  oplist_ = std::nullopt;
+}
 
 XlaNode::~XlaNode() {}
 

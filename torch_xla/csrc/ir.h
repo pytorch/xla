@@ -133,6 +133,9 @@ class XlaNode : public torch::lazy::Node {
 
   std::string ToString() const override;
 
+ protected:
+  std::optional<torch::lazy::OpList> oplist() const { return oplist_; }
+
  private:
   xla::Shape GetOpShape(const std::function<xla::Shape()>& shape_fn) const;
 
@@ -152,6 +155,8 @@ class XlaNode : public torch::lazy::Node {
   // Experimental sharding annotation attached to the IR node.
   // TODO(yeounoh): make sure that view update doesn't reset this.
   std::shared_ptr<xla::OpSharding> output_sharding_ = nullptr;
+
+  std::optional<torch::lazy::OpList> oplist_;
 };
 
 inline std::ostream& operator<<(std::ostream& stream, const XlaNode& node) {
