@@ -19,7 +19,7 @@ steps:
     '--build-arg',
     'tpuvm=1',
     '--build-arg',
-    'bazel_jobs=8'
+    'bazel_jobs=16'
   ]
 - name: 'docker'
   id: push-image
@@ -59,4 +59,8 @@ steps:
     kubectl logs -f $pod_name --container=pjrt-test
 timeout: 18000s # 3 hours
 options:
- machineType: 'N1_HIGHCPU_32'
+  # To run in a test project, either point to your pool or replace this with
+  # `machineType`. You may have to reduce _BAZEL_JOBS.
+  pool:
+    name: 'projects/tpu-pytorch/locations/us-central1/workerPools/wheel_build'
+  # machineType: E2_HIGHCPU_32
