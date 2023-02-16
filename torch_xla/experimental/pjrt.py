@@ -122,7 +122,7 @@ def xla_device(n: Optional[int] = None,
 @requires_pjrt
 def local_process_count() -> int:
   """Returns the number of processes running on this host."""
-  return xu.getenv_as('LOCAL_WORLD_SIZE', int, defval=1)
+  return xu.getenv_as(xenv.PJRT_LOCAL_PROCESS_COUNT, int, defval=1)
 
 
 @requires_pjrt
@@ -214,8 +214,7 @@ def _merge_replica_results(
 def _run_thread_per_device(local_rank: int,
                            local_world_size: int,
                            fn: Callable[[], R],
-                           initializer_fn: Callable[[int, int], None],
-                           master_port: int = 12355) -> Dict[int, R]:
+                           initializer_fn: Callable[[int, int], None]) -> Dict[int, R]:
   """Runs `fn` in a separate thread on each addressable device.
 
   Args:
@@ -253,8 +252,6 @@ def _run_thread_per_device(local_rank: int,
 @requires_pjrt
 def _run_singleprocess(fn: Callable[..., R],
                        *args,
-                       start_method: str = 'spawn',
-                       master_port: int = 12355,
                        **kwargs) -> Dict[int, R]:
   """Runs `fn` on a single device core.
 
@@ -270,20 +267,20 @@ def _run_singleprocess(fn: Callable[..., R],
   Returns:
     the result of calling `fn`.
   """
-  os.environ.setdefault('LOCAL_WORLD_SIZE', '1')
+  os.environ.setdefault(xenv.PJRT_LOCAL_PROCESS_COUNT, '1')
 
   if device_type() == 'TPU':
     tpu.configure_one_chip_topology()
 
   xm.set_replication(xm.xla_device(), [])
 
-  return fn()
+  return fn(*args, **kwargs)
 
 
 @requires_pjrt
 def _initialize_multiprocess(local_rank: int, local_world_size: int):
-  os.environ.setdefault('LOCAL_RANK', str(local_rank))
-  os.environ.setdefault('LOCAL_WORLD_SIZE', str(local_world_size))
+  os.environ.setdefault(xenv.PJRT_LOCAL_PROCESS_RANK, str(local_rank))
+  os.environ.setdefault(xenv.PJRT_LOCAL_PROCESS_COUNT, str(local_world_size))
 
   if device_type() == 'TPU':
     tpu.configure_topology(local_rank, local_world_size)
@@ -375,8 +372,8 @@ def spawn(fn: Callable,
 
 @requires_pjrt
 def _initialize_single_process(local_rank: int, local_world_size: int):
-  os.environ.setdefault('LOCAL_RANK', str(local_rank))
-  os.environ.setdefault('LOCAL_WORLD_SIZE', str(local_world_size))
+  os.environ.setdefault(xenv.PJRT_LOCAL_PROCESS_RANK, str(local_rank))
+  os.environ.setdefault(xenv.PJRT_LOCAL_PROCESS_COUNT, str(local_world_size))
 
 
 def spawn_threads(fn: Callable, args: Tuple = ()) -> None:
