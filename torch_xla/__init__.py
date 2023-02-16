@@ -13,9 +13,6 @@ logger = logging.getLogger(__name__)
 
 XRT_RUN_SERVER_PROCESS = 'torch_xla.core._xrt_run_server'
 XRT_SERVER_REGEX = '^python3 -m {} [0-9]+$'.format(XRT_RUN_SERVER_PROCESS)
-XRT_CONFIG_ENV_VARS = [
-    'XRT_TPU_CONFIG', 'XRT_DEVICE_MAP', 'XRT_WORKERS', 'GPU_NUM_DEVICES'
-]
 
 
 def _maybe_select_tpu_version():
@@ -190,25 +187,6 @@ import _XLAC
 del os.environ['TPU_LOAD_LIBRARY']
 
 _found_libtpu = _setup_tpu_vm_library_path()
-if 'PJRT_DEVICE' not in os.environ and not any(var in os.environ
-                                               for var in XRT_CONFIG_ENV_VARS):
-  logger.warning(
-      'XRT configuration not detected. Defaulting to preview PJRT '
-      'runtime. To silence this warning and continue using PJRT, '
-      'explicitly set PJRT_DEVICE to a supported device. To use '
-      'XRT, set any of the following environment variables: %s',
-      str(XRT_CONFIG_ENV_VARS))
-  # TODO: Update this link in the release branch
-  logger.warning('For more information about the status of PJRT, see '
-                 'https://github.com/pytorch/xla/blob/master/docs/pjrt.md')
-  # Check for libtpu _and_ the TPU device
-  if _found_libtpu and os.path.exists('/dev/accel0'):
-    logger.warning('libtpu.so and TPU device found. Setting PJRT_DEVICE=TPU.')
-    os.environ['PJRT_DEVICE'] = 'TPU'
-  else:
-    logger.warning('Defaulting to PJRT_DEVICE=CPU')
-    os.environ['PJRT_DEVICE'] = 'CPU'
-  # TODO(wcromar): Detect GPU device too
 
 
 def _prepare_to_exit():
