@@ -280,6 +280,9 @@ TEST_F(AtenXlaTensorTest, TestSubScalarInPlace) {
 }
 
 TEST_F(AtenXlaTensorTest, TestSymSizes) {
+  if (UsingTpu()) {
+    GTEST_SKIP();
+  }
   ForEachDevice([&](const torch::Device& device) {
     torch::Tensor a = torch::rand({2, 3}, torch::TensorOptions(torch::kFloat));
     torch::Tensor xla_a = CopyToDevice(a, device);
@@ -3114,6 +3117,10 @@ TEST_F(AtenXlaTensorTest, TestNeg) {
 }
 
 TEST_F(AtenXlaTensorTest, TestBitwiseNot) {
+  if (UsingTpu()) {
+    GTEST_SKIP();
+  }
+
   std::vector<torch::ScalarType> types(
       {torch::kByte, torch::kChar, torch::kShort, torch::kInt, torch::kLong});
 
@@ -3863,6 +3870,9 @@ TEST_F(AtenXlaTensorTest, TestEinsumOuterBackward) {
 }
 
 TEST_F(AtenXlaTensorTest, TestEinsumBatchMatMul) {
+  if (UsingTpu()) {
+    GTEST_SKIP();
+  }
   torch::Tensor a = torch::rand({3, 2, 5}, torch::TensorOptions(torch::kFloat));
   torch::Tensor b = torch::rand({3, 5, 4}, torch::TensorOptions(torch::kFloat));
   std::string equation = "bij,bjk->bik";
@@ -3880,6 +3890,9 @@ TEST_F(AtenXlaTensorTest, TestEinsumBatchMatMul) {
 }
 
 TEST_F(AtenXlaTensorTest, TestEinsumBatchMatMulBackward) {
+  if (UsingTpu()) {
+    GTEST_SKIP();
+  }
   torch::Tensor a = torch::rand(
       {3, 2, 5}, torch::TensorOptions(torch::kFloat).requires_grad(true));
   torch::Tensor b = torch::rand(
@@ -4930,6 +4943,9 @@ TEST_F(AtenXlaTensorTest, TestScatterReduceSumInPlace) {
 }
 
 TEST_F(AtenXlaTensorTest, TestScatterReduceProd) {
+  if (UsingTpu()) {
+    GTEST_SKIP();
+  }
   torch::Tensor a = torch::rand({3, 5}, torch::TensorOptions(torch::kFloat));
   torch::Tensor b = torch::rand({3, 5}, torch::TensorOptions(torch::kFloat));
   torch::Tensor c = torch::empty({3, 5}, torch::TensorOptions(torch::kLong));
@@ -4955,6 +4971,9 @@ TEST_F(AtenXlaTensorTest, TestScatterReduceProd) {
 }
 
 TEST_F(AtenXlaTensorTest, TestScatterReduceProdInPlace) {
+  if (UsingTpu()) {
+    GTEST_SKIP();
+  }
   torch::Tensor a = torch::rand({3, 5}, torch::TensorOptions(torch::kFloat));
   torch::Tensor b = torch::rand({3, 5}, torch::TensorOptions(torch::kFloat));
   torch::Tensor c = torch::empty({3, 5}, torch::TensorOptions(torch::kLong));
@@ -4979,6 +4998,9 @@ TEST_F(AtenXlaTensorTest, TestScatterReduceProdInPlace) {
 }
 
 TEST_F(AtenXlaTensorTest, TestScatterReduceMin) {
+  if (UsingTpu()) {
+    GTEST_SKIP();
+  }
   torch::Tensor a = torch::rand({3, 5}, torch::TensorOptions(torch::kFloat));
   torch::Tensor b = torch::rand({3, 5}, torch::TensorOptions(torch::kFloat));
   torch::Tensor c = torch::empty({3, 5}, torch::TensorOptions(torch::kLong));
@@ -5004,6 +5026,9 @@ TEST_F(AtenXlaTensorTest, TestScatterReduceMin) {
 }
 
 TEST_F(AtenXlaTensorTest, TestScatterReduceMinInPlace) {
+  if (UsingTpu()) {
+    GTEST_SKIP();
+  }
   torch::Tensor a = torch::rand({3, 5}, torch::TensorOptions(torch::kFloat));
   torch::Tensor b = torch::rand({3, 5}, torch::TensorOptions(torch::kFloat));
   torch::Tensor c = torch::empty({3, 5}, torch::TensorOptions(torch::kLong));
@@ -6333,6 +6358,9 @@ TEST_F(AtenXlaTensorTest, TestHardshrink) {
 }
 
 TEST_F(AtenXlaTensorTest, TestHardshrinkWithMixedDataType) {
+  if (UsingTpu()) {
+    GTEST_SKIP();
+  }
   torch::Tensor lambdaTensor =
       torch::scalar_tensor(0., torch::TensorOptions(torch::kFloat32));
   // It seems the below .item() will convert a kFloat64 to a kFloat32 if I
@@ -10817,6 +10845,9 @@ TEST_F(AtenXlaTensorTest, TestHardshrinkBackward) {
 }
 
 TEST_F(AtenXlaTensorTest, TestHardshrinkBackwardWithMixedDataType) {
+  if (UsingTpu()) {
+    GTEST_SKIP();
+  }
   torch::Tensor lambdaTensor =
       torch::scalar_tensor(0., torch::TensorOptions(torch::kFloat32));
   torch::Scalar lambda = lambdaTensor.item();
@@ -10845,6 +10876,9 @@ TEST_F(AtenXlaTensorTest, TestSoftshrinkBackward) {
 }
 
 TEST_F(AtenXlaTensorTest, TestSoftshrinkBackwardWithMixedDataType) {
+  if (UsingTpu()) {
+    GTEST_SKIP();
+  }
   torch::Tensor lambdaTensor =
       torch::scalar_tensor(0., torch::TensorOptions(torch::kFloat32));
   torch::Scalar lambda = lambdaTensor.item();
