@@ -70,7 +70,9 @@ WORKDIR /pytorch/xla/
 FROM builder AS artifacts
 
 COPY third_party/ third_party/
-
+COPY .bazelrc .
+COPY .bazelversion .
+COPY WORKSPACE .
 COPY build_torch_xla_libs.sh .
 
 # TODO: Remove this when it's not required anymore
