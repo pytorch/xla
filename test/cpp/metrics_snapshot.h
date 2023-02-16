@@ -7,7 +7,7 @@
 #include <vector>
 
 #include "tensorflow/compiler/xla/types.h"
-#include "third_party/xla_client/metrics.h"
+#include "tensorflow/compiler/xla/xla_client/metrics.h"
 
 namespace torch_xla {
 namespace cpp_test {
