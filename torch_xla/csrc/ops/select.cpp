@@ -1,6 +1,6 @@
 #include "torch_xla/csrc/ops/select.h"
 
-#include "third_party/xla_client/debug_macros.h"
+#include "tensorflow/compiler/xla/xla_client/debug_macros.h"
 #include "torch_xla/csrc/lowering_context.h"
 #include "torch_xla/csrc/ops/xla_ops.h"
 

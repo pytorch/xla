@@ -1,4 +1,4 @@
-#include "third_party/xla_client/mesh_service.h"
+#include "tensorflow/compiler/xla/xla_client/mesh_service.h"
 
 #include <grpc/grpc.h>
 #include <grpcpp/channel.h>
@@ -22,13 +22,13 @@
 #include "absl/strings/str_cat.h"
 #include "absl/strings/str_join.h"
 #include "tensorflow/compiler/xla/status.h"
-#include "third_party/xla_client/debug_macros.h"
-#include "third_party/xla_client/mesh_service.grpc.pb.h"
-#include "third_party/xla_client/multi_wait.h"
-#include "third_party/xla_client/nccl_distributed.h"
-#include "third_party/xla_client/sys_util.h"
-#include "third_party/xla_client/thread_pool.h"
-#include "third_party/xla_client/util.h"
+#include "tensorflow/compiler/xla/xla_client/debug_macros.h"
+#include "tensorflow/compiler/xla/xla_client/mesh_service.grpc.pb.h"
+#include "tensorflow/compiler/xla/xla_client/multi_wait.h"
+#include "tensorflow/compiler/xla/xla_client/nccl_distributed.h"
+#include "tensorflow/compiler/xla/xla_client/sys_util.h"
+#include "tensorflow/compiler/xla/xla_client/thread_pool.h"
+#include "tensorflow/compiler/xla/xla_client/util.h"
 
 namespace xla {
 namespace service {
