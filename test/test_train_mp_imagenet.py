@@ -2,7 +2,7 @@ from torch_xla.experimental import pjrt
 import time
 import args_parse
 import pprint
-from lars2 import create_optimizer_lars
+from lars import create_optimizer_lars
 from lars_util import *
 
 run_begin = time.time()
