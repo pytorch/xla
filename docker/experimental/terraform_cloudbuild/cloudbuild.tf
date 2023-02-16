@@ -14,10 +14,7 @@ resource "google_cloudbuild_trigger" "docker_images" {
   for_each = local.docker_images_map
 
   location = "global"
-  name = coalesce(
-    each.value.name,
-     "${replace(each.value.image, "_", "-")}-trigger${var.triggers_suffix}"
-  )
+  name = each.key
   description = each.value.description
 
   dynamic "github" {
