@@ -1364,12 +1364,12 @@ class XlaFullyShardedDataParallel(nn.Module):
               p_shard_2d, groups=self.sharding_groups).flatten()
         if apply_opt_barrier:
           self.optimization_barrier_op([p_padded])
-        if self._shard_param_on_dim_0:
-          p.copy_(p_padded[:p_shard._orig_size[0]])
-        else:
-          # RuntimeError: /workspaces/work/pytorch/xla/torch_xla/csrc/data_ops.cpp:135 : Check failed: input_sizes.size() <= output_sizes.size() (4 vs. 1)
-          p.data = p_padded[:p_shard._orig_size.numel()].view(
-              p_shard._orig_size)
+        with torch.autograd._unsafe_preserve_version_counter(p):
+          if self._shard_param_on_dim_0:
+            p.copy_(p_padded[:p_shard._orig_size[0]])
+          else:
+            p.copy_(p_padded[:p_shard._orig_size.numel()].view(
+                  p_shard._orig_size))
         p._has_full_param = True
 
     self.has_full_params = True
