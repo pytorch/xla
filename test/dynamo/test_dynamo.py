@@ -22,10 +22,6 @@ class DynamoInferenceBasicTest(unittest.TestCase):
   def fn_simple_dynamo(self, x, y):
     return self.fn_simple(x, y)
 
-  @torch.compile(backend='torchxla_trace_once')
-  def run_model_with_dynamo(self, model, data):
-    return model(data)
-
   def test_simple_model(self):
     device = xm.xla_device()
     x = torch.tensor(100.0)
@@ -63,7 +59,8 @@ class DynamoInferenceBasicTest(unittest.TestCase):
     xm.wait_device_ops()
     met.clear_all()
     for data, _ in loader:
-      output = self.run_model_with_dynamo(xla_resnet18, data)
+      dynamo_resnet18 = torch.compile(xla_resnet18, backend='torchxla_trace_once')
+      output = dynamo_resnet18(data)
       torch.allclose(resnet18(data.cpu()), output.cpu())
     # We only expect one graph for the resnet18 inference.
     self.assertEqual(met.metric_data('CompileTime')[0], 1)
