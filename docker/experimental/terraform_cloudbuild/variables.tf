@@ -45,13 +45,15 @@ variable "docker_images" {
     object({
       name = optional(string, "")
       image = string
-      branch = optional(string, "")
+      # Branch to fetch Ansible setup from.
+      branch = optional(string, "mlewko/cloudbuild")
       dockerfile = optional(string, "Dockerfile")
       git_tag = optional(string, "")
       description = optional(string, "")
       trigger_files = optional(list(string), [])
       trigger_schedule = optional(string, "")
-      dir = optional(string, "")
+      # Base directory for docker context.
+      dir = optional(string, "docker/experimental/ansible")
       build_args=optional(map(any), {})
       image_tags = optional(list(string), [])
       wheels = optional(list(string), [])
