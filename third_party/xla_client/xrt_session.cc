@@ -1,4 +1,4 @@
-#include "tensorflow/compiler/xla/xla_client/xrt_session.h"
+#include "third_party/xla_client/xrt_session.h"
 
 #include "absl/strings/str_cat.h"
 
