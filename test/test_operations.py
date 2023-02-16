@@ -1656,10 +1656,13 @@ class TestWaitDeviceOps(test_utils.XlaTestCase):
 
   def test_wait_device_ops(self):
     xm.xla_device()
-    value = torch.randn(
-        10000, 10000, device=xm.xla_device()) * torch.randn(
-            10000, 10000, device=xm.xla_device())
-    value_mean = value.mean()
+    value = torch.randn(10000, 10000, device=xm.xla_device())
+    val_list = []
+    val_mean_list = []
+    for _ in range(30):
+      new_val = value * torch.randn(10000, 10000, device=xm.xla_device())
+      val_list.append(new_val)
+      val_mean_list.append(new_val.mean())
     xm.mark_step()
     self.assertNotIn("ExecuteTime", met.metric_names())
     xm.wait_device_ops()
