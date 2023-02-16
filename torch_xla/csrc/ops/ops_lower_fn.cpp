@@ -536,6 +536,12 @@ torch_xla::XlaOpVector Relu::Lower(LoweringContext* loctx) const {
   return ReturnOp(xla_output, loctx);
 }
 
+torch_xla::XlaOpVector Repeat::Lower(LoweringContext* loctx) const {
+  xla::XlaOp input = loctx->GetOutputOp(operand(0));
+  xla::XlaOp output = BuildRepeat(input, repeats);
+  return ReturnOp(output, loctx);
+}
+
 torch_xla::XlaOpVector Round::Lower(LoweringContext* loctx) const {
   xla::XlaOp xla_input = loctx->GetOutputOp(operand(0));
   if (xla::primitive_util::IsIntegralType(XlaHelpers::TypeOfXlaOp(xla_input))) {
