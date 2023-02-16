@@ -11,5 +11,8 @@ RUN pip install ansible
 COPY . /ansible
 WORKDIR /ansible
 
-RUN ansible-playbook playbook.yaml -e "stage=build arch=amd64 accelerator=tpu" --skip-tags "fetch_srcs,build_srcs"
-RUN ansible-playbook playbook.yaml -e "stage=release arch=amd64 accelerator=tpu" --skip-tags "fetch_srcs,build_srcs"
+ARG arch=amd64
+ARG accelerator=tpu
+
+RUN ansible-playbook playbook.yaml -e "stage=build arch=${arch} accelerator=${accelerator}" --skip-tags "fetch_srcs,build_srcs"
+RUN ansible-playbook playbook.yaml -e "stage=release arch=${arch} accelerator=${accelerator}" --skip-tags "fetch_srcs,build_srcs"

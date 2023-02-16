@@ -1,20 +1,36 @@
-# Docker imagess.
+# Docker images.
 docker_images = [
   {
-    image = "development_tpu"
+    image = "development"
     description = "Build development image with TPU support."
     branch = "mlewko/cloudbuild"
+    dir = "docker/experimental/ansible"
+    dockerfile = "development.Dockerfile"
     trigger_files = [
       "docker/experimental/ansible/**",
       "docker/experimental/terraform_cloudbuild/**",
     ]
-    dir = "docker/experimental/ansible"
-    dockerfile = "development.Dockerfile"
+    build_args = {
+      python_version="3.8"
+      arch="amd64"
+      accelerator="tpu"
+    }
     image_tags = [
-      "latest",
-      "$(date +%Y%m%d)",
+      "tpu_amd64",
+      "tpu_amd64_$(date +%Y%m%d)",
     ]
-  }
+  },
+  # {
+  #   image = "xla"
+  #   description = "Build release images"
+  #   branch = "mlewko/cloudbuild"
+  #   dir = "docker/experimental/ansible"
+  #   dockerfile = "development.Dockerfile"
+  #   image_tags = [
+  #     "latest",
+  #     "$(date +%Y%m%d)",
+  #   ]
+  # }
 ]
 
 # Variables for the staging environment.

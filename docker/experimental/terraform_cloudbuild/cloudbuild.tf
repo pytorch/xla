@@ -43,7 +43,7 @@ resource "google_cloudbuild_trigger" "docker_images" {
         join(" ",
           concat(
             ["docker", "build" ],
-            [ for arg in var.docker_images[count.index].build_args: "--build-arg=${arg}" ],
+            [ for arg_key, arg_val in var.docker_images[count.index].build_args: "--build-arg=${arg_key}=${arg_val}" ],
             [ for tag in var.docker_images[count.index].image_tags: "-t=\"${local.public_docker_repo_url}/${var.docker_images[count.index].image}:$(echo ${tag})\""],
             ["-f=${var.docker_images[count.index].dockerfile}", "."]
           )
