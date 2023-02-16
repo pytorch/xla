@@ -19,7 +19,7 @@ steps:
     '--build-arg',
     'tpuvm=1',
     '--build-arg',
-    'bazel_jobs=16'
+    'bazel_jobs=32'
   ]
 - name: 'docker'
   id: push-image
