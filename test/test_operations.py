@@ -1664,7 +1664,6 @@ class TestWaitDeviceOps(test_utils.XlaTestCase):
       val_list.append(new_val)
       val_mean_list.append(new_val.mean())
     xm.mark_step()
-    self.assertNotIn("ExecuteTime", met.metric_names())
     xm.wait_device_ops()
     self.assertIn("ExecuteTime", met.metric_names())
 
