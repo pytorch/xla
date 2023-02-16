@@ -28,6 +28,8 @@
       loop:
         # vars.yaml should be the first as other config files depend on it.
         - vars.yaml
+        # cuda_deps should be loaded before apt, since apt depends on it.
+        - cuda_deps.yaml
         - apt.yaml
         - pip.yaml
         - env.yaml

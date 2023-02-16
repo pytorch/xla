@@ -43,6 +43,7 @@ variable "region" {
 variable "docker_images" {
   type = list(
     object({
+      name = optional(string, "")
       image = string
       branch = optional(string, "")
       dockerfile = optional(string, "Dockerfile")
@@ -53,16 +54,17 @@ variable "docker_images" {
       dir = optional(string, "")
       build_args=optional(map(any), {})
       image_tags = optional(list(string), [])
+      wheels = optional(list(string), [])
       timeout_m = optional(number, 30)
     })
   )
 
-  # validation {
-  #   condition     = anytrue([
-  #     for di in var.docker_images: (di.branch == "" && di.git_tag == "") || (di.branch != "" && di.git_tag != "")
-  #     ])
-  #   error_message = "Specify exactly one of `branch` or `git_tag` for each docker image."
-  # }
+  validation {
+    condition     = alltrue([
+      for di in var.docker_images: (di.branch == "") != (di.git_tag == "")
+    ])
+    error_message = "Specify exactly one of `branch` or `git_tag` for each docker image."
+  }
 }
 
 variable "triggers_suffix" {

@@ -1,0 +1,6 @@
+# Versions of cuda dependencies for given cuda versions.
+cuda_deps:
+  libcudnn:
+    11.8: libcudnn8=8.8.0.121-1+cuda11.8
+  libcudnn-dev:
+    11.8: libcudnn8-dev=8.8.0.121-1+cuda11.8
