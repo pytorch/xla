@@ -1,147 +1,175 @@
-""" PyTorch LARS / LARC Optimizer
-
-An implementation of LARS (SGD) + LARC in PyTorch
-
-Based on:
-  * PyTorch SGD: https://github.com/pytorch/pytorch/blob/1.7/torch/optim/sgd.py#L100
-  * NVIDIA APEX LARC: https://github.com/NVIDIA/apex/blob/master/apex/parallel/LARC.py
-
-Additional cleanup and modifications to properly support PyTorch XLA.
-
-Copyright 2021 Ross Wightman
-"""
 import torch
 from torch.optim.optimizer import Optimizer
-import time
+from typing import Dict, Iterable, Optional, Callable, Tuple
+from torch import nn
+
+"""
+    We recommend using create_optimizer_lars and setting bn_bias_separately=True 
+    instead of using class Lars directly, which helps LARS skip parameters
+    in BatchNormalization and bias, and has better performance in general.
+    Polynomial Warmup learning rate decay is also helpful for better performance in general.
+"""
+
+
+def create_optimizer_lars(model, lr, momentum, weight_decay, bn_bias_separately, epsilon, nesterov = False):
+    if bn_bias_separately:
+        optimizer = Lars([
+            dict(params=get_common_parameters(model, exclude_func=get_norm_bias_parameters)),
+            dict(params=get_norm_bias_parameters(model), weight_decay=0, lars=False)],
+            lr=lr,
+            momentum=momentum,
+            weight_decay=weight_decay,
+            epsilon=epsilon,
+            nesterov=nesterov)
+    else:
+        optimizer = Lars(model.parameters(),
+                         lr=lr,
+                         momentum=momentum,
+                         weight_decay=weight_decay,
+                         epsilon=epsilon,
+                         nesterov = nesterov)
+    return optimizer
+
 
 class Lars(Optimizer):
-    """ LARS for PyTorch
-    
-    Paper: `Large batch training of Convolutional Networks` - https://arxiv.org/pdf/1708.03888.pdf
+    r"""Implements the LARS optimizer from `"Large batch training of convolutional networks"
+    <https://arxiv.org/pdf/1708.03888.pdf>`_.
 
     Args:
-        params (iterable): iterable of parameters to optimize or dicts defining parameter groups.
-        lr (float, optional): learning rate (default: 1.0).
+        params (iterable): iterable of parameters to optimize or dicts defining
+            parameter groups
+        lr (float, optional): learning rate
         momentum (float, optional): momentum factor (default: 0)
+        eeta (float, optional): LARS coefficient as used in the paper (default: 1e-3)
         weight_decay (float, optional): weight decay (L2 penalty) (default: 0)
-        dampening (float, optional): dampening for momentum (default: 0)
-        nesterov (bool, optional): enables Nesterov momentum (default: False)
-        trust_coeff (float): trust coefficient for computing adaptive lr / trust_ratio (default: 0.001)
-        eps (float): eps for division denominator (default: 1e-8)
-        trust_clip (bool): enable LARC trust ratio clipping (default: False)
-        always_adapt (bool): always apply LARS LR adapt, otherwise only when group weight_decay != 0 (default: False)
     """
 
     def __init__(
-        self,
-        params,
-        lr=1.0,
-        momentum=0,
-        dampening=0,
-        weight_decay=0,
-        nesterov=False,
-        trust_coeff=0.001,
-        eps=1e-8,
-        trust_clip=False,
-        always_adapt=False,
-    ):
-        if lr < 0.0:
-            raise ValueError(f"Invalid learning rate: {lr}")
+            self,
+            params: Iterable[torch.nn.Parameter],
+            lr=1e-3,
+            momentum=0,
+            eeta=1e-3,
+            weight_decay=0,
+            epsilon=0.0,
+            nesterov=False
+    ) -> None:
+        if not isinstance(lr, float) or lr < 0.0:
+            raise ValueError("Invalid learning rate: {}".format(lr))
         if momentum < 0.0:
-            raise ValueError(f"Invalid momentum value: {momentum}")
+            raise ValueError("Invalid momentum value: {}".format(momentum))
         if weight_decay < 0.0:
-            raise ValueError(f"Invalid weight_decay value: {weight_decay}")
-        if nesterov and (momentum <= 0 or dampening != 0):
-            raise ValueError("Nesterov momentum requires a momentum and zero dampening")
+            raise ValueError("Invalid weight_decay value: {}".format(weight_decay))
+        if eeta <= 0 or eeta > 1:
+            raise ValueError("Invalid eeta value: {}".format(eeta))
+        if epsilon < 0:
+            raise ValueError("Invalid epsilon value: {}".format(epsilon))
+        defaults = dict(lr=lr, momentum=momentum,
+                        weight_decay=weight_decay, eeta=eeta, epsilon=epsilon, lars=True, nesterov = nesterov)
 
-        defaults = dict(
-            lr=lr,
-            momentum=momentum,
-            dampening=dampening,
-            weight_decay=weight_decay,
-            nesterov=nesterov,
-            trust_coeff=trust_coeff,
-            eps=eps,
-            trust_clip=trust_clip,
-            always_adapt=always_adapt,
-        )
         super().__init__(params, defaults)
-
-    def __setstate__(self, state):
-        super().__setstate__(state)
-        for group in self.param_groups:
-            group.setdefault("nesterov", False)
 
     @torch.no_grad()
     def step(self, closure=None):
         """Performs a single optimization step.
-
-        Args:
-            closure (callable, optional): A closure that reevaluates the model and returns the loss.
+        Arguments:
+            closure (callable, optional): A closure that reevaluates the model
+                and returns the loss.
         """
         loss = None
         if closure is not None:
             with torch.enable_grad():
                 loss = closure()
 
-        
-        device = self.param_groups[0]['params'][0].device
-        #print(f'device: {device}')
-        one_tensor = torch.tensor(1.0, device=device)  # because torch.where doesn't handle scalars correctly
-        #update_begin = time.time()
-        #print(f'lenght of param_groups: {len(self.param_groups)}')
         for group in self.param_groups:
             weight_decay = group['weight_decay']
             momentum = group['momentum']
-            dampening = group['dampening']
-            nesterov = group['nesterov']
-            trust_coeff = group['trust_coeff']
-            eps = group['eps']
+            eeta = group['eeta']
             lr = group['lr']
+            lars = group['lars']
+            eps = group['epsilon']
+            nesterov = group['nesterov']
             for p in group['params']:
                 if p.grad is None:
                     continue
-                grad = p.grad
-                # apply LARS LR adaptation, LARC clipping, weight decay
-                # ref: https://github.com/NVIDIA/apex/blob/master/apex/parallel/LARC.py
-                if weight_decay != 0 or group['always_adapt']:
-                    w_norm = p.norm(2.0)
-                    g_norm = grad.norm(2.0)
-                    num = trust_coeff * w_norm
-                    den = (g_norm + w_norm * weight_decay + eps)
-                    #trust_ratio = trust_coeff * w_norm / (g_norm + w_norm * weight_decay + eps)
-                    '''
+                decayed_grad = p.grad
+                scaled_lr = lr
+                '''
+                if lars:
+                    w_norm = torch.norm(p)
+                    g_norm = torch.norm(p.grad)
                     trust_ratio = torch.where(
-                            w_norm > 0, torch.where(g_norm > 0,
-                            trust_coeff * w_norm / (g_norm + weight_decay * w_norm + eps),
-                            one_tensor), one_tensor
-                        )
-                    '''
-                    '''
-                    trust_ratio = torch.where(
-                        w_norm > 0,
-                        torch.where(g_norm > 0, trust_ratio, one_tensor),
-                        one_tensor,
+                        w_norm > 0 and g_norm > 0,
+                        eeta * w_norm / (g_norm + weight_decay * w_norm + eps),
+                        torch.ones_like(w_norm)
                     )
-                    '''
-                    #trust_ratio = one_tensor
-                    trust_ratio = num/den
-                    '''
-                    if w_norm > 0:
-                        if g_norm > 0:
-                            trust_ratio = trust_coeff * w_norm / (g_norm + weight_decay * w_norm + eps)
-                    '''
-                    grad.add_(p, alpha=weight_decay)
-                    lr = lr * trust_ratio 
+                    trust_ratio.clamp_(0.0, 50)
+                    scaled_lr *= trust_ratio.item()
+                    if weight_decay != 0:
+                        decayed_grad = decayed_grad.add(p, alpha=weight_decay)
+                '''
+                decayed_grad = torch.clamp(decayed_grad, -10.0, 10.0)
+                # https://github.com/mlcommons/training/blob/ebe9a7e7400f85abce88c4962fa573ff40676870/image_classification/tensorflow2/lars_optimizer.py#L179 
                 param_state = self.state[p]
                 if 'momentum_buffer' not in param_state:
-                    mom_t = param_state['momentum_buffer'] = torch.clone(grad).detach()
+                    mom_t = param_state['momentum_buffer'] = torch.clone(
+                        decayed_grad).detach()
                 else:
-                    mom_t = param_state['momentum_buffer']
-                    mom_t.mul_(momentum).add_(grad,alpha=-lr)
+                    mom = param_state['momentum_buffer']
+                    mom_t = mom.mul_(momentum).add_(decayed_grad, alpha=-scaled_lr)
+                
                 if nesterov:
-                    #grad = grad.add(buf, alpha=momentum)
-                    p.add_(mom_t, alpha=momentum).add_(grad, alpha= -lr)
+                    p.add_(mom_t, alpha=momentum).add_(decayed_grad, alpha=-scaled_lr)
                 else:
                     p.add_(mom_t)
+
         return loss
+
+
+"""
+    Functions which help to skip bias and BatchNorm
+"""
+BN_CLS = (nn.BatchNorm1d, nn.BatchNorm2d, nn.BatchNorm3d)
+
+
+def get_parameters_from_cls(module, cls_):
+    def get_members_fn(m):
+        if isinstance(m, cls_):
+            return m._parameters.items()
+        else:
+            return dict()
+
+    named_parameters = module._named_members(get_members_fn=get_members_fn)
+    for name, param in named_parameters:
+        yield param
+
+
+def get_norm_parameters(module):
+    return get_parameters_from_cls(module, (nn.LayerNorm, *BN_CLS))
+
+
+def get_bias_parameters(module, exclude_func=None):
+    excluded_parameters = set()
+    if exclude_func is not None:
+        for param in exclude_func(module):
+            excluded_parameters.add(param)
+    for name, param in module.named_parameters():
+        if param not in excluded_parameters and 'bias' in name:
+            yield param
+
+
+def get_norm_bias_parameters(module):
+    for param in get_norm_parameters(module):
+        yield param
+    for param in get_bias_parameters(module, exclude_func=get_norm_parameters):
+        yield param
+
+
+def get_common_parameters(module, exclude_func=None):
+    excluded_parameters = set()
+    if exclude_func is not None:
+        for param in exclude_func(module):
+            excluded_parameters.add(param)
+    for name, param in module.named_parameters():
+        if param not in excluded_parameters:
+            yield param

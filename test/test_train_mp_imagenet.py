@@ -2,8 +2,8 @@ from torch_xla.experimental import pjrt
 import time
 import args_parse
 import pprint
-from lars import Lars
 from lars2 import create_optimizer_lars
+from lars_util import *
 
 run_begin = time.time()
 
@@ -69,6 +69,24 @@ MODEL_OPTS = {
     '--lars': {
         'action': 'store_true',
     },
+    '--base_lr': {
+        'type': float,
+    },
+    '--epsilon': {
+        'type': float,
+    },
+    '--weight_decay': {
+        'type': float,
+    },
+    '--num_steps_per_epoch': {
+        'type': int,
+    },
+    '--warmup_epochs': {
+        'type': int,
+    },
+    '--label_smoothing': {
+        'type': float,
+    },
 
 }
 
@@ -109,7 +127,7 @@ import torch_xla.distributed.xla_backend
 DEFAULT_KWARGS = dict(
     batch_size=128,
     test_set_batch_size=128,
-    num_epochs=18,
+    num_epochs=44,
     momentum=0.9,
     lr=0.1,
     target_accuracy=0.0,
@@ -121,6 +139,13 @@ DEFAULT_KWARGS = dict(
     host_to_device_transfer_threads=4,
     run_eval_after_n_train_steps=2400,
     num_train_steps=24000,
+    num_steps_per_epoch=2400,
+    base_lr=10.0,
+    epsilon=1e-5,
+    weight_decay=0.00005,
+    warmup_epochs=5,
+    label_smoothing=0.0,
+    
 
 )
 MODEL_SPECIFIC_DEFAULTS = {
@@ -202,6 +227,7 @@ def train_imagenet(FLAGS):
   '''
   print('==> Preparing data..')
   img_dim = get_model_property('img_dim')
+  print(f'Image dimension: {img_dim}')
   if FLAGS.fake_data:
     train_dataset_len = 1200000  # Roughly the size of Imagenet dataset.
     train_loader = xu.SampleGenerator(
@@ -292,14 +318,12 @@ def train_imagenet(FLAGS):
   if xm.is_master_ordinal():
     writer = test_utils.get_summary_writer(FLAGS.logdir)
   if FLAGS.lars:
-      param_groups = []
-      param_group_names=[]
-      for name, parameter in model.named_parameters():
-          param_groups.append({'params': [parameter]})
-          param_group_names.append(name)
-
-      optimizer = Lars(param_groups, lr=17, momentum=0.9, weight_decay=2e-4 )
-      #optimizer = create_optimizer_lars(model=model, lr=0.1, epsilon=1e-5,momentum=0.9,weight_decay=0.00005,bn_bias_separately=False)
+      lr_power = 2.0 #https://github.com/tensorflow/staging/blob/31bf5a73fdeb88a1bedb02ca3ada949982a3db9f/models/resnet/lars_util.py#L101
+      FLAGS.base_lr = FLAGS.base_lr * xm.xrt_world_size() #linear scaling
+      optimizer = create_optimizer_lars(model=model, lr=FLAGS.base_lr, epsilon=FLAGS.epsilon,momentum=FLAGS.momentum,weight_decay=FLAGS.weight_decay,bn_bias_separately=True)
+      lr_scheduler = PolynomialWarmup(optimizer, decay_steps=FLAGS.num_epochs * FLAGS.num_steps_per_epoch,
+                                    warmup_steps=FLAGS.warmup_epochs * FLAGS.num_steps_per_epoch,
+                                    end_lr=0.0, power=lr_power, last_epoch=-1)
   else:
       optimizer = optim.SGD(
           model.parameters(),
@@ -316,7 +340,14 @@ def train_imagenet(FLAGS):
               FLAGS, 'lr_scheduler_divide_every_n_epochs', None),
           num_steps_per_epoch=num_training_steps_per_epoch,
           summary_writer=writer)
-  loss_fn = nn.CrossEntropyLoss()
+  if FLAGS.lars:
+      '''
+      Replicate tf.losses.softmax_cross_entropy - https://github.com/tensorflow/staging/blob/31bf5a73fdeb88a1bedb02ca3ada949982a3db9f/models/resnet/resnet_main.py#L270
+      with https://gist.github.com/tejaskhot/cf3d087ce4708c422e68b3b747494b9f
+      '''
+      loss_fn = LabelSmoothLoss(FLAGS.label_smoothing)
+  else:
+      loss_fn = nn.CrossEntropyLoss()
   max_accuracy = 0.0
   def train_loop_fn(loader, epoch):
     tracker = xm.RateTracker()
@@ -324,6 +355,7 @@ def train_imagenet(FLAGS):
     for step, (data, target) in enumerate(loader):
       with xp.StepTrace('train_imagenet'):
         with xp.Trace('build_graph'):
+          
           optimizer.zero_grad()
           output = model(data)
           loss = loss_fn(output, target)
@@ -331,12 +363,9 @@ def train_imagenet(FLAGS):
       if FLAGS.ddp:
         optimizer.step()
       else:
-        #b = time.time()
         xm.optimizer_step(optimizer)
-        #e = time.time()
-        #xm.master_print(f'time taken to complate optimizer step: {e - b}')
       tracker.add(FLAGS.batch_size)
-      if not FLAGS.lars and lr_scheduler:
+      if lr_scheduler:
         lr_scheduler.step()
       if step % FLAGS.log_steps == 0:
         xm.add_step_closure(
