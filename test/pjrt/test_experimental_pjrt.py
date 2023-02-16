@@ -50,32 +50,25 @@ class TestExperimentalPjrt(parameterized.TestCase):
     with self.assertRaises(IndexError):
       xm.xla_device(10)
 
-  @staticmethod
-  def _pjrt_default_device(env_vars: Dict[str, Optional[str]]):
-    for k, v in env_vars.items():
-      if v:
-        os.environ[k] = v
-      else:
-        os.environ.pop(v)
 
-    return pjrt.device_type()
-
-  @parameterized.named_parameters(('default', {}, True), ('no_default', {
-      'PJRT_SELECT_DEFAULT_DEVICE': '0'
-  }, False), ('pjrt_cpu', {
+  @parameterized.named_parameters(
+    ('default', {}, True),
+    ('no_default', {'PJRT_SELECT_DEFAULT_DEVICE': '0'}, False),
+    ('pjrt_cpu', {
       'PJRT_DEVICE': 'CPU',
       'PJRT_SELECT_DEFAULT_DEVICE': '0'
-  }, True), ('xrt_tpu', {
-      'XRT_TPU_CONFIG': 'localservice;0;localhost:51011'
-  }, False), ('pjrt_tpu_precedence', {
+    }, True),
+    ('xrt_tpu', {'XRT_TPU_CONFIG': 'localservice;0;localhost:51011'}, False),
+    ('pjrt_tpu_precedence', {
       'PJRT_DEVICE': 'TPU',
-      'XRT_TPU_CONFIG': 'localservice;0;localhost:51011'
-  }, True), ('xrt_gpu', {
-      'GPU_NUM_DEVICES': '4'
-  }, False), ('pjrt_gpu', {
+      'XRT_TPU_CONFIG': 'localservice;0;localhost:51011',
+    }, True),
+    ('xrt_gpu', {'GPU_NUM_DEVICES': '4'}, False),
+    ('pjrt_gpu', {
       'PJRT_DEVICE': 'GPU',
       'GPU_NUM_DEVICES': '4'
-  }, True))
+    }, True),
+    ('xla_dist_worker', {'XRT_LOCAL_WORKER': 'c_localservice:2'}, False))
   def test_pjrt_default_device(self, env_vars, expect_using_pjrt):
     with mock.patch.dict(os.environ, env_vars, clear=True):
       # Print a warningif we had to select a default runtime
