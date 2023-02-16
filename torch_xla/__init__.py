@@ -134,7 +134,7 @@ os.environ['TPU_LOAD_LIBRARY'] = '0'
 import _XLAC
 del os.environ['TPU_LOAD_LIBRARY']
 
-_setup_tpu_vm_library_path()
+_found_libtpu = _setup_tpu_vm_library_path()
 
 
 def _prepare_to_exit():

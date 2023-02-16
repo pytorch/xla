@@ -12,7 +12,7 @@ import subprocess
 import sys
 import time
 import threading
-from pytorch.xla.torch_xla.experimental import pjrt
+from torch_xla.experimental import pjrt
 import torch_xla.core.xla_env_vars as xenv
 from torch_xla.distributed.cluster import ClusterResolver
 import torch_xla.utils.utils as xu
