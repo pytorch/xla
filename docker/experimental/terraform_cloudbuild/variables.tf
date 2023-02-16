@@ -43,7 +43,7 @@ variable "region" {
 variable "docker_images" {
   type = list(
     object({
-      name = optional(string, "")
+      trigger_name = optional(string, "")
       image = string
       # Branch to fetch Ansible setup from.
       branch = optional(string, "mlewko/cloudbuild")

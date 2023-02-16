@@ -5,7 +5,7 @@ locals {
   docker_images_map = {
     for di in var.docker_images:
       # Use either provided trigger name or image name and append triggers_suffix.
-      "${coalesce(di.name, replace(di.image, "_", "-"))}${var.triggers_suffix}" => di
+      "${coalesce(di.trigger_name, replace(di.image, "_", "-"))}${var.triggers_suffix}" => di
   }
 }
 

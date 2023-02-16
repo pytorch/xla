@@ -1,4 +1,4 @@
-# Docker images.
+# Each docker images is translated into a single build trigger.
 docker_images = [
   {
     image = "development"
@@ -19,7 +19,7 @@ docker_images = [
     ]
   },
   {
-    name = "xla-nightly-38-cuda11-8"
+    trigger_name = "xla-nightly-38-cuda11-8"
     image = "xla"
     description = "Build nightly image with CUDA support"
     trigger_schedule = "0 0 * * *"
@@ -36,7 +36,7 @@ docker_images = [
     wheels = ["/wheels/*.whl"]
   },
   {
-    name = "xla-nightly-38-tpu"
+    trigger_name = "xla-nightly-38-tpu"
     image = "xla"
     description = "Build nightly image with TPU support"
     trigger_schedule = "0 0 * * *"
@@ -52,11 +52,12 @@ docker_images = [
     wheels = ["/wheels/*.whl"]
   },
   {
-    name = "xla-1-13-38-tpu"
+    trigger_name = "xla-1-13-38-tpu"
     image = "xla"
     description = "Build v1.13.0 image with TPU support"
     # Don't use this tag here, since the repositiory at version v1.13.0
-    # doesn't contain ansible setup.
+    # doesn't contain ansible setup. Instead, fetch PyTorch and XLAs sources at
+    # the desired tag.
     # git_tag = "v1.13.0"
     trigger_schedule = "0 0 * * *"
     build_args = {
@@ -73,7 +74,7 @@ docker_images = [
     wheels = ["/wheels/*.whl"]
   },
   {
-    name = "xla-1-12-38-tpu"
+    trigger_name = "xla-1-12-38-tpu"
     image = "xla"
     description = "Build v1.12.0 image with TPU support"
     # git_tag = "v1.12.0"
