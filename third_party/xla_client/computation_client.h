@@ -353,9 +353,6 @@ class ComputationClient {
 
   static ComputationClient* GetIfInitialized();
 
-  // If XRT or PJRT are not configured, select a PJRT device and print a warning
-  static void MaybeConfigureDefaultDevice();
-
  protected:
   // Metrics common to all client interfaces.
   static metrics::Metric* TransferToServerMetric();

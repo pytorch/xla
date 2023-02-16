@@ -1,10 +1,7 @@
 #include "tensorflow/compiler/xla/xla_client/computation_client.h"
 
-#include <stdlib.h>
-
 #include <algorithm>
 #include <cstdlib>
-#include <filesystem>
 #include <fstream>
 #include <map>
 #include <string>
@@ -269,12 +266,11 @@ bool ParseEnvDevices(XrtComputationClient::Options* options) {
 }  // namespace
 
 std::unique_ptr<ComputationClient> ComputationClient::Create() {
-  MaybeConfigureDefaultDevice();
-
   std::unique_ptr<ComputationClient> client;
 
   if (sys_util::GetEnvString(env::kEnvPjRtDevice, "") != "") {
-    client = std::unique_ptr<ComputationClient>(new PjRtComputationClient());
+    client =
+        std::unique_ptr<ComputationClient>(new PjRtComputationClient());
   } else {
     XrtComputationClient::Options options;
     std::unique_ptr<tensorflow::tpu::TopologyProto> topology_proto;
@@ -351,42 +347,6 @@ ComputationClient* ComputationClient::Get() {
 
 ComputationClient* ComputationClient::GetIfInitialized() {
   return g_computation_client.load();
-}
-
-void ComputationClient::MaybeConfigureDefaultDevice() {
-  static bool select_default =
-      sys_util::GetEnvBool(env::kEnvPjRtSelectDefaultDevice, true);
-  if (!select_default) {
-    return;
-  }
-
-  // If the runtime is already configured, leave the current settings
-  for (auto& env : {env::kEnvPjRtDevice, env::kEnvNumGpu, env::kEnvTpuConfig,
-                    env::kEnvDeviceMap, env::kEnvWorkers, env::kEnvMeshService,
-                    env::kEnvWorldSize, env::kEnvMpDevice, env::kEnvHostOrdinal,
-                    env::kEnvShardOrdinal, env::kEnvStartService}) {
-    if (!sys_util::GetEnvString(env, "").empty()) {
-      return;
-    }
-  }
-
-  TF_LOG(WARNING)
-      << "XRT configuration not detected. Defaulting to preview PJRT runtime. "
-         "To silence this warning and continue using PJRT, explicitly set "
-         "PJRT_DEVICE to a supported device or configure XRT.";
-  TF_LOG(WARNING) << "For more information about the status of PJRT, see "
-                     "https://github.com/pytorch/xla/blob/master/docs/pjrt.md";
-  // Check for both libtpu.so and the TPU device
-  if (!sys_util::GetEnvString(env::kEnvTpuLibraryPath, "").empty() &&
-      std::filesystem::exists("/dev/accel0")) {
-    TF_LOG(WARNING)
-        << "libtpu.so and TPU device found. Setting PJRT_DEVICE=TPU.";
-    setenv("PJRT_DEVICE", "TPU", true);
-  } else {
-    TF_LOG(WARNING) << "Defaulting to PJRT_DEVICE=CPU";
-    setenv("PJRT_DEVICE", "CPU", true);
-  }
-  // TODO(wcromar): Detect GPU device too
 }
 
 metrics::Metric* ComputationClient::TransferToServerMetric() {
