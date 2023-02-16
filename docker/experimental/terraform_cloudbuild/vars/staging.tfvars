@@ -34,6 +34,7 @@ docker_images = [
       "nightly_3.8_cuda11.8_$(date +%Y%m%d)",
     ]
     wheels = ["/wheels/*.whl"]
+    timeout_m = 60 * 6
   },
   {
     trigger_name = "xla-nightly-38-tpu"
@@ -50,6 +51,7 @@ docker_images = [
       "nightly_3.8_$(date +%Y%m%d)",
     ]
     wheels = ["/wheels/*.whl"]
+    timeout_m = 60 * 6
   },
   {
     trigger_name = "xla-1-13-38-tpu"
@@ -72,6 +74,7 @@ docker_images = [
       "r1.13_3.8_tpuvm",
     ]
     wheels = ["/wheels/*.whl"]
+    timeout_m = 60 * 6
   },
   {
     trigger_name = "xla-1-12-38-tpu"
@@ -90,6 +93,7 @@ docker_images = [
       "r1.12_3.8_tpuvm",
     ]
     wheels = ["/wheels/*.whl"]
+    timeout_m = 60 * 6
   },
 ]
 
