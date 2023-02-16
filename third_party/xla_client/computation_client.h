@@ -14,10 +14,10 @@
 #include "tensorflow/compiler/xla/client/xla_computation.h"
 #include "tensorflow/compiler/xla/literal_util.h"
 #include "tensorflow/compiler/xla/types.h"
-#include "tensorflow/compiler/xla/xla_client/debug_macros.h"
-#include "tensorflow/compiler/xla/xla_client/metrics.h"
-#include "tensorflow/compiler/xla/xla_client/types.h"
-#include "tensorflow/compiler/xla/xla_client/util.h"
+#include "third_party/xla_client/debug_macros.h"
+#include "third_party/xla_client/metrics.h"
+#include "third_party/xla_client/types.h"
+#include "third_party/xla_client/util.h"
 
 namespace xla {
 
