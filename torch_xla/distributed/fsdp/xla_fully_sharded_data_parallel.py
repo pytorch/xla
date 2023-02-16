@@ -1369,7 +1369,7 @@ class XlaFullyShardedDataParallel(nn.Module):
             p.copy_(p_padded[:p_shard._orig_size[0]])
           else:
             p.copy_(p_padded[:p_shard._orig_size.numel()].view(
-                  p_shard._orig_size))
+                p_shard._orig_size))
         p._has_full_param = True
 
     self.has_full_params = True
