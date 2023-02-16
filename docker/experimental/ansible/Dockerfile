@@ -20,11 +20,16 @@ COPY . /ansible
 ARG arch=amd64
 ARG accelerator=tpu
 ARG cuda_version=11.8
+ARG pytorch_git_rev=HEAD
+ARG xla_git_rev=HEAD
 
 RUN pip install ansible
 RUN ansible-playbook playbook.yaml -e \
-  "stage=release arch=${arch} accelerator=${accelerator} cuda_version=${cuda_version}" \
-  --tags "install_deps"
+  "stage=release arch=${arch} \
+   accelerator=${accelerator} \
+   pytorch_git_rev=${pytorch_git_rev} \
+   xla_git_rev=${xla_git_rev} \
+   " --tags "install_deps"
 
 WORKDIR /wheels
 COPY --from=build /src/pytorch/dist/*.whl .
