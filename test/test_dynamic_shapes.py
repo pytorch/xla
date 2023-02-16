@@ -238,7 +238,7 @@ class TestDynamicShapes(test_utils.XlaTestCase):
     # verify if dynamism is propagated correctly.
     t5 = torch.tensor([1, 1, 3, 5, 1, 6], device=dev)
     t6 = torch.nonzero(t5)
-    t7 = torch.randint(10, (2, 3), device=dev)
+    t7 = torch.ones((2, 3), device=dev)
     t8 = t7.view(t6.shape[0])
     self.assertIsInstance(t8.shape[0], torch.SymInt)
     self.assertEqual(str(t8.shape[0]), '<=6')
@@ -247,7 +247,7 @@ class TestDynamicShapes(test_utils.XlaTestCase):
     # verify correctness.
     t5_aten = torch.tensor([1, 1, 3, 5, 1, 6])
     t6_aten = torch.nonzero(t5_aten)
-    t7_aten = torch.randint(10, (2, 3))
+    t7_aten = torch.ones((2, 3))
     t8_aten = t7_aten.view(t6_aten.shape[0])
     self.assertEqual(t8.cpu(), t8_aten.cpu())
 
