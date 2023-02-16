@@ -39,3 +39,33 @@ variable "region" {
   type = string
   default = "us-central1"
 }
+
+variable "docker_images" {
+  type = list(
+    object({
+      image = string
+      branch = optional(string, "")
+      dockerfile = optional(string, "Dockerfile")
+      git_tag = optional(string, "")
+      description = optional(string, "")
+      trigger_files = optional(list(string), [])
+      trigger_schedule = optional(string, "")
+      dir = optional(string, "")
+      build_args=optional(map(any), {})
+      image_tags = optional(list(string), [])
+      timeout_m = optional(number, 30)
+    })
+  )
+
+  # validation {
+  #   condition     = anytrue([
+  #     for di in var.docker_images: (di.branch == "" && di.git_tag == "") || (di.branch != "" && di.git_tag != "")
+  #     ])
+  #   error_message = "Specify exactly one of `branch` or `git_tag` for each docker image."
+  # }
+}
+
+variable "triggers_suffix" {
+  type = string
+  default = ""
+}

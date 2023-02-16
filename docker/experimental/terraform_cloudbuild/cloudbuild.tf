@@ -1,53 +1,56 @@
 # Detailed documentation on cloudbuild parameters:
 # https://cloud.google.com/build/docs/api/reference/rest/v1/projects.builds#resource-build
 
-resource "google_cloudbuild_trigger" "dev-image" {
-  location = "global"
-  name = "dev-image-trigger"
-  description = "Building docker development image"
+resource "google_cloudbuild_trigger" "docker_images" {
+  count = length(var.docker_images)
 
-  # Connect the repository in *global* region by going to
-  # GCP Console > Triggers > Connect Repository.
-  # Authorize and install the GCP App for the GitHub repository.
-  github {
-    owner = "pytorch"
-    name = "xla"
-    push {
-      branch = "^mlewko/cloudbuild$"
+  location = "global"
+  name = "${replace(var.docker_images[count.index].image, "_", "-")}-trigger${var.triggers_suffix}"
+  description = var.docker_images[count.index].description
+
+  dynamic "github" {
+    # Trigger on branch push only if there is any `trigger_file` file filter.
+    # To trigger on any push in the brunch set `trigger_files = ["**"]`
+    for_each = length(var.docker_images[count.index].trigger_files) > 0 ? [1] : []
+
+    content {
+      owner = "pytorch"
+      name = "xla"
+      push {
+        # `branch` is a regex, so look for exact match.
+        branch = var.docker_images[count.index].branch != "" ? "^${var.docker_images[count.index].branch}$" : null
+        tag = var.docker_images[count.index].git_tag != "" ? "^${var.docker_images[count.index].git_tag}$" : null
+      }
     }
   }
 
   source_to_build {
     uri = "https://github.com/pytorch/xla"
     repo_type = "GITHUB"
-    ref = "refs/heads/mlewko/cloudbuild"
+    ref = var.docker_images[count.index].branch != "" ? "refs/heads/${var.docker_images[count.index].branch}" : "refs/tags/${var.docker_images[count.index].git_tag}"
   }
 
-  included_files = [
-    "docker/experimental/ansible/**",
-    "docker/experimental/terraform_cloudbuild/**",
-  ]
+  included_files = var.docker_images[count.index].trigger_files
 
   build {
-    # Build TPU Development image.
-    step {
-      id = "build_tpu_dev_image"
+     step {
+      id = "build_${var.docker_images[count.index].image}"
+      entrypoint = "bash"
       name = "gcr.io/cloud-builders/docker"
-      dir = "docker/experimental/ansible"
-      args = [
-        "build",
-        "--build-arg=python_version=${var.python_version}",
-        "-t=${local.public_docker_repo_url}/development_tpu_amd64:latest",
-        "-f=development.Dockerfile",
-        ".",
-      ]
-      wait_for = [ "-" ] # Begin the step immediately.
-      timeout = "${1 * 60 * 60}s" # 1h
+      args = concat(
+        [ "docker", "build" ],
+        [ for arg in var.docker_images[count.index].build_args: "--build-arg=${arg}" ],
+        [ for tag in var.docker_images[count.index].image_tags: "-t=\"${local.public_docker_repo_url}/${var.docker_images[count.index].image}:$(echo ${tag})\""],
+        ["-f=${var.docker_images[count.index].dockerfile}", "."]
+      )
     }
 
-    artifacts {
-      images = [
-        "${local.public_docker_repo_url}/development_tpu_amd64:latest",
+   step {
+      id = "push_${var.docker_images[count.index].image}"
+      entrypoint = "bash"
+      name = "gcr.io/cloud-builders/docker"
+      args = [
+        "docker", "push", "--all-tags", "${local.public_docker_repo_url}/${var.docker_images[count.index].image}"
       ]
     }
 
@@ -57,11 +60,71 @@ resource "google_cloudbuild_trigger" "dev-image" {
       worker_pool = local.worker_pool_id
     }
 
-    timeout = "${6 * 60 * 60}s" # 6h
+    timeout = "${var.docker_images[count.index].timeout_m * 60}s"
   }
-
-  include_build_logs = "INCLUDE_BUILD_LOGS_WITH_STATUS"
 }
+
+# resource "google_cloudbuild_trigger" "dev-image" {
+#   location = "global"
+#   name = "dev-image-trigger"
+#   description = "Building docker development image"
+
+#   # Connect the repository in *global* region by going to
+#   # GCP Console > Triggers > Connect Repository.
+#   # Authorize and install the GCP App for the GitHub repository.
+#   github {
+#     owner = "pytorch"
+#     name = "xla"
+#     push {
+#       branch = "^mlewko/cloudbuild$"
+#     }
+#   }
+
+#   source_to_build {
+#     uri = "https://github.com/pytorch/xla"
+#     repo_type = "GITHUB"
+#     ref = "refs/heads/mlewko/cloudbuild"
+#   }
+
+#   included_files = [
+#     "docker/experimental/ansible/**",
+#     "docker/experimental/terraform_cloudbuild/**",
+#   ]
+
+#   build {
+#     # Build TPU Development image.
+#     step {
+#       id = "build_tpu_dev_image"
+#       name = "gcr.io/cloud-builders/docker"
+#       dir = "docker/experimental/ansible"
+#       args = [
+#         "build",
+#         "--build-arg=python_version=${var.python_version}",
+#         "-t=${local.public_docker_repo_url}/development_tpu_amd64:latest",
+#         "-f=development.Dockerfile",
+#         ".",
+#       ]
+#       wait_for = [ "-" ] # Begin the step immediately.
+#       timeout = "${1 * 60 * 60}s" # 1h
+#     }
+
+#     artifacts {
+#       images = [
+#         "${local.public_docker_repo_url}/development_tpu_amd64:latest",
+#       ]
+#     }
+
+#     options {
+#       substitution_option = "ALLOW_LOOSE"
+#       dynamic_substitutions = true
+#       worker_pool = local.worker_pool_id
+#     }
+
+#     timeout = "${6 * 60 * 60}s" # 6h
+#   }
+
+#   include_build_logs = "INCLUDE_BUILD_LOGS_WITH_STATUS"
+# }
 
 
 resource "google_cloudbuild_trigger" "release_images" {
@@ -139,7 +202,7 @@ module "release_images_trigger" {
 
 output "triggers" {
   value = [
-    google_cloudbuild_trigger.dev-image.id,
+    # google_cloudbuild_trigger.dev-image.id,
     google_cloudbuild_trigger.release_images.id,
   ]
 }
