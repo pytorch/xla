@@ -1,4 +1,7 @@
+import contextlib
+import logging
 import os
+from typing import Dict, Optional
 from unittest import mock
 
 import torch_xla
@@ -19,16 +22,11 @@ class TestExperimentalPjrt(parameterized.TestCase):
     with mock.patch.dict(os.environ, {'PJRT_DEVICE': pjrt_device}, clear=True):
       self.assertEqual(pjrt.device_type(), expected)
 
-  def test_using_pjrt(self):
-    del os.environ[xenv.PJRT_DEVICE]
-
-    self.assertFalse(pjrt.using_pjrt())
-
   def test_requires_pjrt(self):
-    del os.environ[xenv.PJRT_DEVICE]
-
-    with self.assertRaises(NotImplementedError):
-      pjrt.xla_device()
+    with mock.patch.dict(
+        os.environ, {'PJRT_SELECT_DEFAULT_DEVICE': '0'}, clear=True):
+      with self.assertRaises(NotImplementedError):
+        pjrt.xla_device()
 
   def test_default_ordinals(self):
     global_ordinal = xm.get_ordinal()
@@ -51,6 +49,41 @@ class TestExperimentalPjrt(parameterized.TestCase):
   def test_xla_device_error(self):
     with self.assertRaises(IndexError):
       xm.xla_device(10)
+
+  @parameterized.named_parameters(('default', {}, True), ('no_default', {
+      'PJRT_SELECT_DEFAULT_DEVICE': '0'
+  }, False), ('pjrt_cpu', {
+      'PJRT_DEVICE': 'CPU',
+      'PJRT_SELECT_DEFAULT_DEVICE': '0'
+  }, True), ('xrt_tpu', {
+      'XRT_TPU_CONFIG': 'localservice;0;localhost:51011'
+  }, False), ('pjrt_tpu_precedence', {
+      'PJRT_DEVICE': 'TPU',
+      'XRT_TPU_CONFIG': 'localservice;0;localhost:51011',
+  }, True), ('xrt_gpu', {
+      'GPU_NUM_DEVICES': '4'
+  }, False), ('pjrt_gpu', {
+      'PJRT_DEVICE': 'GPU',
+      'GPU_NUM_DEVICES': '4'
+  }, True), ('xla_dist_worker', {
+      'XRT_LOCAL_WORKER': 'c_localservice:2'
+  }, False))
+  def test_pjrt_default_device(self, env_vars, expect_using_pjrt):
+    with mock.patch.dict(os.environ, env_vars, clear=True):
+      # Print a warningif we had to select a default runtime
+      if 'PJRT_DEVICE' not in os.environ and expect_using_pjrt:
+        logs_context = self.assertLogs(level=logging.WARNING)
+      else:
+        logs_context = contextlib.nullcontext()
+
+      with logs_context:
+        # Configure default device
+        pjrt.using_pjrt()
+
+      if expect_using_pjrt:
+        self.assertIn(pjrt.device_type(), ['CPU', 'GPU', 'TPU'])
+      else:
+        self.assertIsNone(pjrt.device_type())
 
 
 if __name__ == '__main__':
