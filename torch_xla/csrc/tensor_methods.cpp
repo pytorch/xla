@@ -2505,6 +2505,20 @@ std::tuple<XLATensorPtr, XLATensorPtr> topk(const XLATensorPtr& input,
       input->CreateFrom(torch::lazy::Value(node, 1), at::ScalarType::Long));
 }
 
+std::tuple<XLATensorPtr, XLATensorPtr> topk_symint(const XLATensorPtr& input,
+                                                   c10::SymInt k, int64_t dim,
+                                                   bool largest, bool sorted,
+                                                   bool stable) {
+  SymIntElements k_symint = SymIntElements(k);
+  torch::lazy::NodePtr node = torch::lazy::MakeNode<TopKSymInt>(
+      input->GetIrValue(), k_symint,
+      torch::lazy::GetCanonicalDimensionIndex(dim, input->shape().get().rank()),
+      largest, sorted, stable);
+  return std::make_tuple(
+      input->CreateFrom(torch::lazy::Value(node, 0)),
+      input->CreateFrom(torch::lazy::Value(node, 1), at::ScalarType::Long));
+}
+
 XLATensorPtr trace(const XLATensorPtr& input) {
   auto input_shape_ref = input->shape();
   XLA_CHECK_EQ((*input_shape_ref).rank(), 2)

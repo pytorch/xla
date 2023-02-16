@@ -364,6 +364,7 @@ symint:
   - diagonal_backward
   - narrow_copy
   - select_backward
+  - topk
 autograd:
   - einsum
   - max_pool2d
