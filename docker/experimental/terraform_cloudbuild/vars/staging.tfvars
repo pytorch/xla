@@ -10,7 +10,7 @@ docker_images = [
     ]
     dir = "docker/experimental/ansible"
     dockerfile = "development.Dockerfile"
-    tags = [
+    image_tags = [
       "latest",
       "$(date +%Y%m%d)",
     ]
