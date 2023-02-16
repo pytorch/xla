@@ -69,9 +69,7 @@ WORKDIR /pytorch/xla/
 # Contains actual build artifacts
 FROM builder AS artifacts
 
-COPY tf_patches/ tf_patches/
 COPY third_party/ third_party/
-RUN cd third_party/tensorflow && find ../../tf_patches -name '*.diff' | xargs -t -r -n 1 patch -N -p1 -l -i
 
 COPY build_torch_xla_libs.sh .
 
@@ -96,9 +94,7 @@ ARG package_version
 RUN TORCH_XLA_VERSION=${package_version} BUILD_CPP_TESTS=${build_cpp_tests} TPUVM_MODE=${tpuvm} BUNDLE_LIBTPU=${tpuvm} XLA_CUDA=${cuda} TF_CUDA_COMPUTE_CAPABILITIES=${tf_cuda_compute_capabilities} python setup.py bdist_wheel
 
 # Expunge cache to keep image size under control
-WORKDIR /pytorch/xla/third_party/tensorflow
 RUN bazel clean --expunge
-WORKDIR /pytorch/xla/
 
 RUN pip install dist/*.whl
 
