@@ -27,6 +27,8 @@ class ResultAnalyzer:
       raise ValueError("The output directory does not exist.")
     self.output_file = os.path.join(self.output_dir, "metric_report.csv")
 
+    self.database = os.path.abspath(self._args.database)
+
   def run(self):
     jsonl_files = []
     for file in os.listdir(self.output_dir):
@@ -51,7 +53,7 @@ class ResultAnalyzer:
                               "xla_median_trace_per_iter_time": pd.Series(dtype="float"),
                               "xla_compile_time": pd.Series(dtype="float"),
                               "dynamo_compile_time": pd.Series(dtype="float"),
-                              "output_file": pd.Series(dtype="str"),
+                              "outputs_file": pd.Series(dtype="str"),
                               })
     for file in jsonl_files:
       metric_df = self.extract_metrics(file, metric_df)
@@ -100,8 +102,12 @@ class ResultAnalyzer:
     return metric_df
 
   def export_metric_report(self, metric_df):
-    with open(self.output_file, mode="w", encoding="utf-8") as f:
-      metric_df.to_csv(f)
+    metric_df.to_csv(self.output_file, mode="w", encoding="utf-8", header=True, index=False)
+
+    if not os.path.exists(self.database):
+      metric_df.to_csv(self.database, mode="w", encoding="utf-8", header=True, index=False)
+    else:
+      metric_df.to_csv(self.database, mode="a", encoding="utf-8", header=False, index=False)
 
 def parse_args(args=None):
   parser = argparse.ArgumentParser()
@@ -125,6 +131,13 @@ def parse_args(args=None):
       type=str,
       default="./output/",
       help="Overrides the directory to place output files.",
+  )
+
+  parser.add_argument(
+      "--database",
+      type=str,
+      default="./output/database.csv",
+      help="Path to the database.",  # for POC, database is a path to a csv file.
   )
 
   parser.add_argument(
