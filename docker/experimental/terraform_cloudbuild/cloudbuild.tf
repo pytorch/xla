@@ -84,6 +84,8 @@ resource "google_cloudbuild_trigger" "docker_images" {
 
     timeout = "${each.value.timeout_m * 60}s"
   }
+
+  include_build_logs = length(each.value.trigger_files) > 0 ? "INCLUDE_BUILD_LOGS_WITH_STATUS" : null
 }
 
 # Add scheduled jobs for each cloudbuild_trigger with a schedule.
