@@ -39,7 +39,7 @@ resource "google_cloudbuild_trigger" "docker_images" {
       name = "gcr.io/cloud-builders/docker"
       dir = var.docker_images[count.index].dir
       args = concat(
-        [ "docker", "build" ],
+        [ "-c", "docker", "build" ],
         [ for arg in var.docker_images[count.index].build_args: "--build-arg=${arg}" ],
         [ for tag in var.docker_images[count.index].image_tags: "-t=\"${local.public_docker_repo_url}/${var.docker_images[count.index].image}:$(echo ${tag})\""],
         ["-f=${var.docker_images[count.index].dockerfile}", "."]
@@ -51,7 +51,7 @@ resource "google_cloudbuild_trigger" "docker_images" {
       entrypoint = "bash"
       name = "gcr.io/cloud-builders/docker"
       args = [
-        "docker", "push", "--all-tags", "${local.public_docker_repo_url}/${var.docker_images[count.index].image}"
+        "-c", "docker", "push", "--all-tags", "${local.public_docker_repo_url}/${var.docker_images[count.index].image}"
       ]
     }
 
