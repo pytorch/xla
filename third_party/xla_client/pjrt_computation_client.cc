@@ -1,6 +1,7 @@
 #include "third_party/xla_client/pjrt_computation_client.h"
 
 #include <algorithm>
+#include <unordered_set>
 
 #include "absl/strings/ascii.h"
 #include "absl/types/span.h"
@@ -420,7 +421,7 @@ PjRtComputationClient::ExecuteComputation(
                            returned_future)
           .value();
 
-  // Grab the shared lock and block the `WaitDeviceOps` untill buffer is ready.
+  // Grab the shared lock and block the `WaitDeviceOps` until buffer is ready.
   auto lock = lock_device_shared(device);
   // Signal that `ExecuteSharded` has completed for the ExecuteTime metric.
   // Copies the `timed` shared pointer into the lambda.
@@ -572,7 +573,7 @@ std::unique_lock<std::shared_mutex> PjRtComputationClient::lock_device(
 
 void PjRtComputationClient::WaitDeviceOps(
     const std::vector<std::string>& devices) {
-  std::set<std::string> wait_devices;
+  std::unordered_set<std::string> wait_devices;
   if (!devices.empty()) {
     for (auto& device_str : devices) {
       wait_devices.insert(device_str);
