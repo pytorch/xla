@@ -1,4 +1,4 @@
-#include "tensorflow/compiler/xla/xla_client/tf_logging.h"
+#include "third_party/xla_client/tf_logging.h"
 
 #include <stdexcept>
 
