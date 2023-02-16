@@ -21,7 +21,7 @@ docker_images = [
     ]
   },
   {
-    name = "xla-nightly-38-cuda11-8-trigger"
+    name = "xla-nightly-38-cuda11-8"
     image = "xla"
     description = "Build nightly image with CUDA support"
     branch = "mlewko/cloudbuild"
@@ -40,7 +40,7 @@ docker_images = [
     wheels = ["/wheels/*.whl"]
   },
   {
-    name = "xla-nightly-38-tpu-trigger"
+    name = "xla-nightly-38-tpu"
     image = "xla"
     description = "Build nightly image with TPU support"
     branch = "mlewko/cloudbuild"
@@ -58,7 +58,7 @@ docker_images = [
     wheels = ["/wheels/*.whl"]
   },
   {
-    name = "xla-1-13-38-tpu-trigger"
+    name = "xla-1-13-38-tpu"
     image = "xla"
     description = "Build v1.13.0 image with TPU support"
     branch = "mlewko/cloudbuild"
@@ -81,7 +81,7 @@ docker_images = [
     wheels = ["/wheels/*.whl"]
   },
   {
-    name = "xla-1-12-38-tpu-trigger"
+    name = "xla-1-12-38-tpu"
     image = "xla"
     description = "Build v1.12.0 image with TPU support"
     branch = "mlewko/cloudbuild"
