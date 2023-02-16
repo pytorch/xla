@@ -6,14 +6,6 @@ substitutions:
   # Location of GKE cluster.
   _CLUSTER_ZONE: 'europe-west4-a'
 steps:
-# We only need to update submodules in triggers. User must update submodule
-# before local runs because .git is not present.
-- name: 'alpine/git'
-  entrypoint: sh
-  args:
-  - -c
-  - |
-    git submodule update --init || echo No git repository found
 - name: 'docker'
   id: build-image
   args: [
