@@ -3,8 +3,8 @@
 #include <string>
 
 #include "cpp_test_util.h"
-#include "third_party/xla_client/cache.h"
-#include "third_party/xla_client/util.h"
+#include "tensorflow/compiler/xla/xla_client/cache.h"
+#include "tensorflow/compiler/xla/xla_client/util.h"
 
 namespace torch_xla {
 namespace cpp_test {
