@@ -1,4 +1,4 @@
-#include "tensorflow/compiler/xla/xla_client/multi_wait.h"
+#include "third_party/xla_client/multi_wait.h"
 
 #include <chrono>
 #include <exception>

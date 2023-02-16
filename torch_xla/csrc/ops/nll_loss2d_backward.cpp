@@ -1,7 +1,7 @@
 #include "torch_xla/csrc/ops/nll_loss2d_backward.h"
 
-#include "tensorflow/compiler/xla/xla_client/debug_macros.h"
-#include "tensorflow/compiler/xla/xla_client/util.h"
+#include "third_party/xla_client/debug_macros.h"
+#include "third_party/xla_client/util.h"
 #include "torch/csrc/lazy/core/util.h"
 #include "torch_xla/csrc/lowering_context.h"
 #include "torch_xla/csrc/nll_loss.h"

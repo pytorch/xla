@@ -9,7 +9,7 @@
 #include "tensorflow/compiler/xla/client/lib/constants.h"
 #include "tensorflow/compiler/xla/client/lib/matrix.h"
 #include "tensorflow/compiler/xla/literal_util.h"
-#include "tensorflow/compiler/xla/xla_client/debug_macros.h"
+#include "third_party/xla_client/debug_macros.h"
 #include "torch/csrc/lazy/core/helpers.h"
 #include "torch/csrc/lazy/core/util.h"
 #include "torch_xla/csrc/convert_ops.h"
