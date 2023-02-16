@@ -644,13 +644,13 @@ class XlaFullyShardedDataParallel(nn.Module):
       p = self.full_params[idx]
       assert not hasattr(p, "_is_sharded")
 
-      shard_data = self._get_shard(p.data)
+      shard_data = self._get_shard(p.detach())
       if shard_data.device != self.xla_device:
         # cast to XLA device if not already on XLA
         shard_data = shard_data.to(self.xla_device)
       p_shard = nn.Parameter(shard_data, requires_grad=p.requires_grad)
       p_shard._is_sharded = True
-      p_shard._orig_size = p.data.size()
+      p_shard._orig_size = p.size()
       p_shard._orig_name = f"{module_name}.{n}"
       p_shard._name = f"_fsdp_shard.{p_shard._orig_name}".replace(
           ".", "_FSDP_SHARD_SEPARATOR_")
@@ -658,7 +658,7 @@ class XlaFullyShardedDataParallel(nn.Module):
       self.sharded_params.append(p_shard)
       # Free the full parameter storage (here we free its `.data`) but keep the tensor itself
       # for auto-grad tracing (like `torch.autograd.Variable` before the tensor-variable merge).
-      p.copy_(p.data.new_zeros(1))
+      p.copy_(p.new_zeros(1))
       if p.device != self.xla_device:
         # cast to XLA device if not already on XLA
         p = p.to(self.xla_device).requires_grad_(p.requires_grad)
@@ -1140,7 +1140,7 @@ class XlaFullyShardedDataParallel(nn.Module):
       raise RuntimeError(
           "FSDP only works with gradients that don't require gradients")
 
-    grad = param.grad.data
+    grad = param.grad.detach()
     if self._require_backward_grad_sync or self.reshard_after_forward:
       # Free full params. As a special case, we don't free the full params
       # when in a ``no_sync`` context (as inversely indicated by
@@ -1181,7 +1181,7 @@ class XlaFullyShardedDataParallel(nn.Module):
       self.optimization_barrier_op([reduced_grad])
     if self.gradient_postdivide_factor > 1:
       # Average grad by world_size for consistency with PyTorch DDP.
-      reduced_grad.data.div_(self.gradient_postdivide_factor)
+      reduced_grad.div_(self.gradient_postdivide_factor)
 
     grad._has_full_param = True
     grad_flat._has_full_param = True
@@ -1195,11 +1195,11 @@ class XlaFullyShardedDataParallel(nn.Module):
     assert hasattr(param, "_sharded_param")
     p_shard = param._sharded_param
     if p_shard.grad is None:
-      p_shard.grad = reduced_grad.data
+      p_shard.grad = reduced_grad.detach()
     else:
       assert p_shard.grad.shape == reduced_grad.shape
       assert p_shard.grad.device == reduced_grad.device
-      p_shard.grad.data += reduced_grad.data
+      p_shard.grad += reduced_grad.detach()
 
   def _queue_wait_for_post_backward(self) -> None:
     """
@@ -1298,8 +1298,8 @@ class XlaFullyShardedDataParallel(nn.Module):
             params_with_grad = [
                 p for p in self._all_sharded_params if p.grad is not None
             ]
-            params_data = [p.data for p in params_with_grad]
-            grad_data = [p.grad.data for p in params_with_grad]
+            params_data = [p.detach() for p in params_with_grad]
+            grad_data = [p.grad.detach() for p in params_with_grad]
             dependency_tensors = params_data + grad_data
             dependency_tensors.extend(self._backward_opt_barrier_tensors)
             self.optimization_barrier_op(dependency_tensors)
@@ -1429,8 +1429,8 @@ class XlaFullyShardedDataParallel(nn.Module):
     if len(p_list) + len(p_shard_list) + len(dependency_tensors) == 0:
       return
 
-    p_data_list = [p.data for p in p_list]
-    p_shared_data_list = [p_shard.data for p_shard in p_shard_list]
+    p_data_list = [p.detach() for p in p_list]
+    p_shared_data_list = [p_shard.detach() for p_shard in p_shard_list]
     self.optimization_barrier_op(p_data_list + p_shared_data_list +
                                  dependency_tensors)
 
@@ -1592,7 +1592,7 @@ def apply_to_tensors(
         od[key] = _apply(value)
       return od
     elif isinstance(x, PackedSequence):
-      _apply(x.data)
+      _apply(x.detach())
       return x
     elif isinstance(x, dict):
       return {key: _apply(value) for key, value in x.items()}
@@ -1619,7 +1619,7 @@ def collect_tensors(
         out_ids.add(id(x))
         out.append(x)
     elif isinstance(x, PackedSequence):
-      _collect(x.data, out, out_ids)
+      _collect(x.detach(), out, out_ids)
     elif isinstance(x, dict) or isinstance(x, OrderedDict):
       for value in x.values():
         _collect(value, out, out_ids)
