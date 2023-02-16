@@ -18,11 +18,11 @@ class DynamoInferenceBasicTest(unittest.TestCase):
     b = torch.sin(y)
     return a + b
 
-  @dynamo.optimize('torchxla_trace_once')
+  @torch.compile(backend='torchxla_trace_once')
   def fn_simple_dynamo(self, x, y):
     return self.fn_simple(x, y)
 
-  @dynamo.optimize('torchxla_trace_once')
+  @torch.compile(backend='torchxla_trace_once')
   def run_model_with_dynamo(self, model, data):
     return model(data)
 
@@ -83,7 +83,7 @@ class DynamoTrainingBasicTest(unittest.TestCase):
     loss.backward()
     return loss
 
-  @dynamo.optimize('aot_torchxla_trace_once')
+  @torch.compile(backend='aot_torchxla_trace_once')
   def fn_simple_dynamo(self, input):
     return self.fn_simple(input)
 
@@ -94,7 +94,7 @@ class DynamoTrainingBasicTest(unittest.TestCase):
     loss.backward()
     return pred
 
-  @dynamo.optimize('aot_torchxla_trace_once')
+  @torch.compile(backend='aot_torchxla_trace_once')
   def run_model_with_dynamo(self, model, data, target):
     return self.train_model(model, data, target)
 
