@@ -676,7 +676,7 @@ class DistributedExecutor(object):
 
 
 def main(args=None):
-  os.environ['PJRT_SELECT_DEFAULT_DEVICE'] = '0'
+  os.environ[xenv.PJRT_SELECT_DEFAULT_DEVICE] = '0'
   if pjrt.using_pjrt():
     logging.warning(
         'PJRT runtime detected. `xla_dist` is NOT compatible with PJRT, and you may run into unexpected errors. Unset $PJRT_DEVICE to silence this warning.'

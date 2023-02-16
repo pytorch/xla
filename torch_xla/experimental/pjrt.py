@@ -34,8 +34,8 @@ def set_device_type(pjrt_device: str) -> None:
 def _maybe_select_default_device():
   # Skip if runtime is already configured
   if xu.getenv_as(
-      'PJRT_SELECT_DEFAULT_DEVICE', str, '1'
-  ) == '0' or 'PJRT_DEVICE' in os.environ or 'GPU_NUM_DEVICES' in os.environ or any(
+      xenv.PJRT_SELECT_DEFAULT_DEVICE, str, '1'
+  ) == '0' or xenv.PJRT_DEVICE in os.environ or xenv.GPU_NUM_DEVICES in os.environ or any(
       env.startswith('XRT_') for env in os.environ):
     return
 
@@ -43,18 +43,17 @@ def _maybe_select_default_device():
       'XRT configuration not detected. Defaulting to preview PJRT '
       'runtime. To silence this warning and continue using PJRT, '
       'explicitly set PJRT_DEVICE to a supported device or configure XRT. To '
-      'disable default device selection, set PJRT_SELECT_DEFAULT_DEVICE=0'
-  )
+      'disable default device selection, set PJRT_SELECT_DEFAULT_DEVICE=0')
   # TODO: Update this link in the release branch
   logging.warning('For more information about the status of PJRT, see '
                   'https://github.com/pytorch/xla/blob/master/docs/pjrt.md')
   # Check for libtpu _and_ the TPU device
   if torch_xla._found_libtpu and os.path.exists('/dev/accel0'):
     logging.warning('libtpu.so and TPU device found. Setting PJRT_DEVICE=TPU.')
-    os.environ['PJRT_DEVICE'] = 'TPU'
+    os.environ[xenv.PJRT_DEVICE] = 'TPU'
   else:
     logging.warning('Defaulting to PJRT_DEVICE=CPU')
-    os.environ['PJRT_DEVICE'] = 'CPU'
+    os.environ[xenv.PJRT_DEVICE] = 'CPU'
   # TODO(wcromar): Detect GPU device too
 
 
