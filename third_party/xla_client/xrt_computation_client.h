@@ -334,9 +334,9 @@ class XrtComputationClient : public ComputationClient {
 
   void PrepareToExit() override;
 
-  void WaitDeviceExections(const std::vector<std::string>& devices) override {
+  void WaitDeviceOps(const std::vector<std::string>& devices) override {
     // XRT Device Computation is guranteed to finish when ExecuteComputation
-    // returns. No need to implement WaitDeviceExections.
+    // returns. No need to implement WaitDeviceOps.
     return;
   };
 

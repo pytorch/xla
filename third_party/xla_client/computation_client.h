@@ -326,8 +326,8 @@ class ComputationClient {
 
   virtual void PrepareToExit() = 0;
 
-  // Block until all device computation finishes.
-  virtual void WaitDeviceExections(const std::vector<std::string>& devices) = 0;
+  // Block until all device's async operation is finished.
+  virtual void WaitDeviceOps(const std::vector<std::string>& devices) = 0;
 
   // Utility API around the vector based Compile() API to compile a single
   // computation.

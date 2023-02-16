@@ -28,42 +28,6 @@ namespace xla {
 
 namespace {
 
-class PJRTLocker {
- public:
-  void Lock() {
-    std::unique_lock<std::mutex> lock(mutex_);
-    cv_.wait(lock, [this] { return !locked_; });
-    locked_ = true;
-  }
-
-  void Unlock() {
-    std::lock_guard<std::mutex> lock(mutex_);
-    locked_ = false;
-    cv_.notify_all();
-  }
-
-  void Barrier() {
-    std::unique_lock<std::mutex> lock(mutex_);
-    cv_.wait(lock, [this] { return !locked_; });
-    cv_.notify_all();
-  }
-
- private:
-  std::mutex mutex_;
-  std::condition_variable cv_;
-  bool locked_ = false;
-  std::exception_ptr exptr_;
-};
-
-std::shared_ptr<PJRTLocker> GetLockerForDevice(std::string device) {
-  static std::unordered_map<std::string, std::shared_ptr<PJRTLocker>>
-      device_lockers;
-  if (device_lockers.find(device) == device_lockers.end()) {
-    device_lockers[device] = std::make_shared<PJRTLocker>();
-  }
-  return device_lockers[device];
-}
-
 std::string PjRtDeviceToString(PjRtDevice* const device) {
   std::string platform =
       absl::AsciiStrToUpper(device->client()->platform_name());
@@ -147,6 +111,7 @@ PjRtComputationClient::PjRtComputationClient() {
   for (auto* device : client_->devices()) {
     std::string device_str = PjRtDeviceToString(device);
     string_to_device_.emplace(device_str, device);
+    device_locks_.emplace(device_str, std::make_unique<std::shared_mutex>());
   }
 }
 
@@ -455,21 +420,15 @@ PjRtComputationClient::ExecuteComputation(
                            returned_future)
           .value();
 
-  std::shared_ptr<PJRTLocker> locker = GetLockerForDevice(device);
-  // This call should not be blocking because there is at most one device
-  // execution happens at the same time. This call is after current thread's
-  // `ExecuteSharded` means execution from last async thread must have finished
-  // and released the locker.
-  locker->Lock();
-
+  // Grab the shared lock and block the `WaitDeviceOps` untill buffer is ready.
+  auto lock = lock_device_shared(device);
   // Signal that `ExecuteSharded` has completed for the ExecuteTime metric.
   // Copies the `timed` shared pointer into the lambda.
-  returned_future->OnReady([timed, locker](Status unused) mutable {
-    timed.reset();
-    // Release the device lock so `WaitDeviceExections` can return.
-    locker->Unlock();
-    TF_VLOG(3) << "returned_future->OnReady finished";
-  });
+  returned_future->OnReady(
+      [timed, lock = std::move(lock)](Status unused) mutable {
+        timed.reset();
+        TF_VLOG(3) << "ExecuteComputation returned_future->OnReady finished";
+      });
 
   std::vector<DataPtr> datas;
   datas.reserve(results.size());
@@ -599,7 +558,19 @@ xla::PjRtDevice* PjRtComputationClient::StringToPjRtDevice(
   return pjrt_device;
 }
 
-void PjRtComputationClient::WaitDeviceExections(
+std::shared_lock<std::shared_mutex> PjRtComputationClient::lock_device_shared(
+    const std::string& device) {
+  std::shared_lock lock(*device_locks_[device]);
+  return lock;
+}
+
+std::unique_lock<std::shared_mutex> PjRtComputationClient::lock_device(
+    const std::string& device) {
+  std::unique_lock lock(*device_locks_[device]);
+  return lock;
+}
+
+void PjRtComputationClient::WaitDeviceOps(
     const std::vector<std::string>& devices) {
   std::set<std::string> wait_devices;
   if (!devices.empty()) {
@@ -614,8 +585,7 @@ void PjRtComputationClient::WaitDeviceExections(
   for (const std::string& device_str : wait_devices) {
     TF_VLOG(3) << "Waiting for device execution for " << device_str
                << " to finish";
-    std::shared_ptr<PJRTLocker> locker = GetLockerForDevice(device_str);
-    locker->Barrier();
+    lock_device(device_str);
     TF_VLOG(3) << "Waiting for device execution for " << device_str
                << " to finish.. Done";
   }
