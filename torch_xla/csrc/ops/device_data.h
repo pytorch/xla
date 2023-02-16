@@ -1,6 +1,6 @@
 #pragma once
 
-#include "third_party/xla_client/computation_client.h"
+#include "tensorflow/compiler/xla/xla_client/computation_client.h"
 #include "torch/csrc/lazy/backend/backend_data.h"
 #include "torch_xla/csrc/ir.h"
 

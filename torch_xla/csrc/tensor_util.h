@@ -7,7 +7,7 @@
 #include "tensorflow/compiler/xla/literal.h"
 #include "tensorflow/compiler/xla/shape.h"
 #include "tensorflow/compiler/xla/types.h"
-#include "third_party/xla_client/computation_client.h"
+#include "tensorflow/compiler/xla/xla_client/computation_client.h"
 #include "torch/csrc/autograd/variable.h"
 #include "torch/csrc/lazy/core/hash.h"
 #include "torch_xla/csrc/device.h"

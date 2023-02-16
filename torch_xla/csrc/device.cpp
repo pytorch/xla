@@ -3,8 +3,8 @@
 #include "absl/strings/str_cat.h"
 #include "absl/strings/str_split.h"
 #include "absl/types/optional.h"
-#include "third_party/xla_client/computation_client.h"
-#include "third_party/xla_client/debug_macros.h"
+#include "tensorflow/compiler/xla/xla_client/computation_client.h"
+#include "tensorflow/compiler/xla/xla_client/debug_macros.h"
 
 namespace torch_xla {
 namespace {

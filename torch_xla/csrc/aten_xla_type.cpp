@@ -9,10 +9,10 @@
 
 #include <mutex>
 
-#include "third_party/xla_client/debug_macros.h"
-#include "third_party/xla_client/metrics.h"
-#include "third_party/xla_client/sys_util.h"
-#include "third_party/xla_client/util.h"
+#include "tensorflow/compiler/xla/xla_client/debug_macros.h"
+#include "tensorflow/compiler/xla/xla_client/metrics.h"
+#include "tensorflow/compiler/xla/xla_client/sys_util.h"
+#include "tensorflow/compiler/xla/xla_client/util.h"
 #include "torch/csrc/lazy/core/shape_inference.h"
 #include "torch/csrc/lazy/core/tensor_util.h"
 #include "torch/csrc/lazy/core/util.h"

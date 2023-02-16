@@ -10,6 +10,7 @@ setup_base_docker: &setup_base_docker
   name: Setup Base Docker Image
   command: |
     .circleci/setup_ci_environment.sh
+    .circleci/download_llvm_raw.sh
 
 launch_docker_and_build: &launch_docker_and_build
   name: Launch Docker Container and Build

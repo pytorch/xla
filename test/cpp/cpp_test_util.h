@@ -9,7 +9,7 @@
 #include <unordered_set>
 
 #include "absl/types/span.h"
-#include "third_party/xla_client/computation_client.h"
+#include "tensorflow/compiler/xla/xla_client/computation_client.h"
 #include "torch_xla/csrc/debug_util.h"
 #include "torch_xla/csrc/device.h"
 #include "torch_xla/csrc/ir.h"
