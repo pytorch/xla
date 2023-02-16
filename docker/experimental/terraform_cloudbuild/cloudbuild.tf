@@ -111,7 +111,6 @@ resource "google_cloudbuild_trigger" "release_images" {
 
     artifacts {
       images = [
-        "${local.public_docker_repo_url}/development_tpu_amd64:latest",
         "${local.public_docker_repo_url}/xla:nightly_${var.python_version}_cuda_11.8",
         "${local.public_docker_repo_url}/xla:nightly_${var.python_version}_tpuvm",
       ]
