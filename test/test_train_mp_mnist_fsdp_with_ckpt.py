@@ -259,7 +259,8 @@ def train_mnist(flags, **kwargs):
     train_loop_fn(model, train_device_loader)
     xm.master_print('Epoch {} train end {}'.format(epoch, test_utils.now()))
 
-    accuracy = test_loop_fn(model, test_device_loader)
+    with torch.no_grad():
+      accuracy = test_loop_fn(model, test_device_loader)
     xm.master_print('Epoch {} test end {}, Accuracy={:.2f}'.format(
         epoch, test_utils.now(), accuracy))
     max_accuracy = max(accuracy, max_accuracy)
