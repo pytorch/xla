@@ -2331,13 +2331,6 @@ at::Tensor XLANativeFunctions::remainder(const at::Tensor& self,
       tensor_methods::remainder(bridge::GetXlaTensor(self), other));
 }
 
-at::Tensor XLANativeFunctions::repeat(const at::Tensor& self,
-                                      at::IntArrayRef repeats) {
-  TORCH_LAZY_FN_COUNTER("xla::");
-  return bridge::AtenFromXlaTensor(tensor_methods::repeat(
-      bridge::GetXlaTensor(self), XlaHelpers::I64List(repeats)));
-}
-
 at::Tensor XLANativeFunctions::replication_pad1d(const at::Tensor& self,
                                                  at::IntArrayRef padding) {
   TORCH_LAZY_FN_COUNTER("xla::");

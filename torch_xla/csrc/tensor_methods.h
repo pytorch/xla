@@ -668,10 +668,6 @@ XLATensorPtr reflection_pad2d_backward(const XLATensorPtr& grad_output,
 XLATensorPtr remainder(const XLATensorPtr& input, const XLATensorPtr& other);
 XLATensorPtr remainder(const XLATensorPtr& input, const at::Scalar& other);
 
-// Repeats the input tensor along each dimension by the given number of
-// repeats.
-XLATensorPtr repeat(const XLATensorPtr& input, std::vector<int64_t> repeats);
-
 XLATensorPtr replication_pad1d(const XLATensorPtr& input,
                                std::vector<int64_t> padding);
 XLATensorPtr replication_pad1d_backward(const XLATensorPtr& grad_output,

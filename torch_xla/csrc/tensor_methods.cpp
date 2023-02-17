@@ -98,7 +98,6 @@
 #include "torch_xla/csrc/ops/reduce_scatter.h"
 #include "torch_xla/csrc/ops/reflection_pad2d.h"
 #include "torch_xla/csrc/ops/reflection_pad2d_backward.h"
-#include "torch_xla/csrc/ops/repeat.h"
 #include "torch_xla/csrc/ops/replication_pad.h"
 #include "torch_xla/csrc/ops/replication_pad_backward.h"
 #include "torch_xla/csrc/ops/resize.h"
@@ -2036,11 +2035,6 @@ XLATensorPtr remainder(const XLATensorPtr& input, const at::Scalar& other) {
   torch::lazy::Value constant = XLAGraphExecutor::Get()->GetIrValueForScalar(
       other, input->shape(), input->GetDevice());
   return input->CreateFrom(Remainder(input->GetIrValue(), constant));
-}
-
-XLATensorPtr repeat(const XLATensorPtr& input, std::vector<int64_t> repeats) {
-  return input->CreateFrom(
-      torch::lazy::MakeNode<Repeat>(input->GetIrValue(), std::move(repeats)));
 }
 
 XLATensorPtr replication_pad1d(const XLATensorPtr& input,
