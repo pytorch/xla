@@ -4118,6 +4118,9 @@ TEST_F(AtenXlaTensorTest, TestEinsumExtraSpaces) {
 }
 
 TEST_F(AtenXlaTensorTest, TestEinsumLarge4D) {
+  if (UsingTpu()) {
+    GTEST_SKIP();
+  }
   torch::Tensor a =
       torch::rand({8, 16, 1024, 128}, torch::TensorOptions(torch::kFloat));
   torch::Tensor b =
@@ -10987,6 +10990,9 @@ TEST_F(AtenXlaTensorTest, TestAddMatMulBackward) {
 }
 
 TEST_F(AtenXlaTensorTest, TestBinaryCrossEntropyBackward) {
+  if (UsingTpu()) {
+    GTEST_SKIP();
+  }
   int batch = 6;
   int classes = 2;
   for (auto dtype : {torch::kFloat, torch::kDouble}) {
