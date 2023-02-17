@@ -4,7 +4,7 @@
 function download_llvm_raw_archive() {
   # Extract the xla pinned tensorflow/third_party/llvm version,
   # avoid doing this manually.
-  git clone --recursive --quiet https://github.com/pytorch/xla.git
+  git clone --recursive --quiet --branch r2.0 https://github.com/pytorch/xla.git
   local LLVM_COMMIT=$(cat xla/third_party/tensorflow/third_party/llvm/workspace.bzl \
     | grep "LLVM_COMMIT =" | awk '{print $3}' | sed 's/"//g')
 
