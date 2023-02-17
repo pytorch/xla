@@ -115,5 +115,7 @@ torch::lazy::NodePtr CreateNonZeroNode2d(int64_t num_non_zero_element,
 
 bool UsingPjRt();
 
+bool UsingTpu();
+
 }  // namespace cpp_test
 }  // namespace torch_xla

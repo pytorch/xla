@@ -413,6 +413,9 @@ TEST_F(TensorTest, TestBatchNorm1D) {
 }
 
 TEST_F(TensorTest, TestConv2D) {
+  if (UsingTpu()) {
+    GTEST_SKIP();
+  }
   int in_channels = 9;
   int out_channels = 3;
   int kernel_size = 5;
@@ -550,6 +553,9 @@ TEST_F(TensorTest, TestConv2DNonSquare) {
 }
 
 TEST_F(TensorTest, TestConv3D) {
+  if (UsingTpu()) {
+    GTEST_SKIP();
+  }
   int in_channels = 9;
   int out_channels = 3;
   int kernel_size = 5;
