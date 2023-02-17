@@ -120,7 +120,12 @@ def train_mnist(flags, **kwargs):
   writer = None
   if xm.is_master_ordinal():
     writer = test_utils.get_summary_writer(flags.logdir)
-  optimizer = ZeroRedundancyOptimizer(model.parameters(), optim.SGD, lr=lr, momentum=flags.momentum, pin_layout=False)
+  optimizer = ZeroRedundancyOptimizer(
+      model.parameters(),
+      optim.SGD,
+      lr=lr,
+      momentum=flags.momentum,
+      pin_layout=False)
   loss_fn = nn.NLLLoss()
 
   def train_loop_fn(loader, epoch):
