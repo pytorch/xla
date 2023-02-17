@@ -1652,6 +1652,24 @@ class TestAsyncScalar(test_utils.XlaTestCase):
       assert met.metric_data("TransferToServerAsync") == None
 
 
+class TestWaitDeviceOps(test_utils.XlaTestCase):
+
+  def test_wait_device_ops(self):
+    xm.xla_device()
+    value = torch.randn(10000, 10000, device=xm.xla_device())
+    val_list = []
+    val_mean_list = []
+    met.clear_all()
+    for _ in range(5):
+      new_val = value * torch.randn(10000, 10000, device=xm.xla_device())
+      val_list.append(new_val)
+      val_mean_list.append(new_val.mean())
+    xm.mark_step()
+    xm.wait_device_ops()
+    self.assertTrue("ExecuteTime" in met.metric_names() or
+                    "ExecuteChainedTime" in met.metric_names())
+
+
 class TestOpBuilder(test_utils.XlaTestCase):
 
   def runOpBuilderTest(self,
