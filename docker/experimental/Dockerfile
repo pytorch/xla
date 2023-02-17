@@ -48,7 +48,7 @@ WORKDIR /pytorch
 COPY torch_patches/ torch_patches/
 RUN bash -c 'torch_pin=$(cat torch_patches/.torch_pin &); git fetch origin ${torch_pin:-master}; git checkout FETCH_HEAD'
 RUN git submodule update --init --recursive
-RUN find torch_patches -name '*.diff' | xargs -t -r -n 1 patch -N -p1 -i
+RUN find torch_patches -name '*.diff' | xargs -t -r -n 1 patch -N -p1 -l -i
 
 
 # Disable CUDA for PyTorch
@@ -69,21 +69,16 @@ WORKDIR /pytorch/xla/
 # Contains actual build artifacts
 FROM builder AS artifacts
 
-COPY tf_patches/ tf_patches/
 COPY third_party/ third_party/
-RUN cd third_party/tensorflow && find ../../tf_patches -name '*.diff' | xargs -t -r -n 1 patch -N -p1 -i
-
+COPY tf_patches/ tf_patches/
+COPY .bazelrc .
+COPY .bazelversion .
+COPY WORKSPACE .
 COPY build_torch_xla_libs.sh .
 
 # TODO: Remove this when it's not required anymore
-ENV XLA_SANDBOX_BUILD=0
+ENV XLA_SANDBOX_BUILD=1
 ENV XLA_SANDBOX_BASE "/dev/shm"
-
-ARG tpuvm
-ARG cuda
-ARG tf_cuda_compute_capabilities
-ARG bazel_jobs
-RUN TPUVM_MODE=${tpuvm} XLA_CUDA=${cuda} BAZEL_JOBS=${bazel_jobs} TF_CUDA_COMPUTE_CAPABILITIES=${tf_cuda_compute_capabilities} bash build_torch_xla_libs.sh -O -D_GLIBCXX_USE_CXX11_ABI=1
 
 COPY torch_xla/ torch_xla/
 COPY setup.py .
@@ -91,14 +86,16 @@ COPY xla_native_functions.yaml .
 
 COPY scripts/ scripts/
 
+ARG tpuvm
+ARG cuda
+ARG tf_cuda_compute_capabilities
+ARG bazel_jobs
 ARG build_cpp_tests
 ARG package_version
-RUN TORCH_XLA_VERSION=${package_version} BUILD_CPP_TESTS=${build_cpp_tests} TPUVM_MODE=${tpuvm} BUNDLE_LIBTPU=${tpuvm} XLA_CUDA=${cuda} TF_CUDA_COMPUTE_CAPABILITIES=${tf_cuda_compute_capabilities} python setup.py bdist_wheel
+RUN --mount=type=tmpfs,target=/dev/shm,rw TORCH_XLA_VERSION=${package_version} BUILD_CPP_TESTS=${build_cpp_tests} TPUVM_MODE=${tpuvm} BUNDLE_LIBTPU=${tpuvm} XLA_CUDA=${cuda} TF_CUDA_COMPUTE_CAPABILITIES=${tf_cuda_compute_capabilities} python setup.py bdist_wheel
 
 # Expunge cache to keep image size under control
-WORKDIR /pytorch/xla/third_party/tensorflow
 RUN bazel clean --expunge
-WORKDIR /pytorch/xla/
 
 RUN pip install dist/*.whl
 

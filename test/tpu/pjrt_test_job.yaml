@@ -27,6 +27,7 @@ spec:
     - bash
     - -c
     - |
+      python3 pytorch/xla/test/pjrt/test_operations.py -v
       python3 pytorch/xla/test/pjrt/test_experimental_pjrt_tpu.py
     volumeMounts:
     - mountPath: /dev/shm

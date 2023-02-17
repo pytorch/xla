@@ -18,13 +18,9 @@ class DynamoInferenceBasicTest(unittest.TestCase):
     b = torch.sin(y)
     return a + b
 
-  @dynamo.optimize('torchxla_trace_once')
+  @torch.compile(backend='torchxla_trace_once')
   def fn_simple_dynamo(self, x, y):
     return self.fn_simple(x, y)
-
-  @dynamo.optimize('torchxla_trace_once')
-  def run_model_with_dynamo(self, model, data):
-    return model(data)
 
   def test_simple_model(self):
     device = xm.xla_device()
@@ -58,13 +54,18 @@ class DynamoInferenceBasicTest(unittest.TestCase):
     resnet18.eval()
     xla_resnet18 = torchvision.models.resnet18().to(device)
     xla_resnet18.eval()
+    # materalize the fake data for test purpose
+    xm.mark_step()
+    xm.wait_device_ops()
+    met.clear_all()
     for data, _ in loader:
-      output = self.run_model_with_dynamo(xla_resnet18, data)
+      dynamo_resnet18 = torch.compile(
+          xla_resnet18, backend='torchxla_trace_once')
+      output = dynamo_resnet18(data)
       torch.allclose(resnet18(data.cpu()), output.cpu())
-    # One graph for initial input data materialization. Another grpah for the
-    # real model code.
-    self.assertEqual(met.metric_data('CompileTime')[0], 2)
-    self.assertEqual(met.metric_data('ExecuteTime')[0], sample_count + 2)
+    # We only expect one graph for the resnet18 inference.
+    self.assertEqual(met.metric_data('CompileTime')[0], 1)
+    self.assertEqual(met.metric_data('ExecuteTime')[0], sample_count)
     self.assertEqual(
         met.metric_data('RunCachedGraphInputData')[0], sample_count)
     self.assertEqual(
@@ -80,7 +81,7 @@ class DynamoTrainingBasicTest(unittest.TestCase):
     loss.backward()
     return loss
 
-  @dynamo.optimize('aot_torchxla_trace_once')
+  @torch.compile(backend='aot_torchxla_trace_once')
   def fn_simple_dynamo(self, input):
     return self.fn_simple(input)
 
@@ -90,10 +91,6 @@ class DynamoTrainingBasicTest(unittest.TestCase):
     loss = loss_fn(pred, target)
     loss.backward()
     return pred
-
-  @dynamo.optimize('aot_torchxla_trace_once')
-  def run_model_with_dynamo(self, model, data, target):
-    return self.train_model(model, data, target)
 
   def test_simple_model(self):
     torch._dynamo.reset()
@@ -142,8 +139,11 @@ class DynamoTrainingBasicTest(unittest.TestCase):
     xm.mark_step()
     xm.wait_device_ops()
     met.clear_all()
+
+    dynamo_train_model = torch.compile(
+        self.train_model, backend='aot_torchxla_trace_once')
     for data, target in loader:
-      xla_output = self.run_model_with_dynamo(xla_resnet18, data, target)
+      xla_output = dynamo_train_model(xla_resnet18, data, target)
       cpu_data = data.detach().cpu()
       cpu_data.requires_grad = True
       cpu_target = target.detach().cpu()
@@ -157,10 +157,8 @@ class DynamoTrainingBasicTest(unittest.TestCase):
     # Graph 3: sync input for backward
     # Graph 4: sync input for backward (TODO(JackCaoG) understand why there are two graphs)
     self.assertEqual(met.metric_data('CompileTime')[0], 4)
-    # We execute 3 grphs per step, and currently cache the graph for forward and backward
-    # will each take 1 additional execution.
-    # TODO(JackCaoG): Optimize the 2 cached execution.
-    self.assertEqual(met.metric_data('ExecuteTime')[0], sample_count * 3 + 2)
+    # We execute 3 grphs per step.
+    self.assertEqual(met.metric_data('ExecuteTime')[0], sample_count * 3)
     # one for each forward and one for each backward
     self.assertEqual(
         met.metric_data('RunCachedGraphInputData')[0], sample_count * 2)

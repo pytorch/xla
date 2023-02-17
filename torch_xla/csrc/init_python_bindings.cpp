@@ -329,11 +329,11 @@ std::pair<at::Tensor, std::shared_ptr<torch::lazy::Value>> Recv(
 
 void SyncTensors(const std::vector<at::Tensor>& tensors,
                  const std::vector<std::string>& devices, bool wait,
-                 bool sync_xla_data) {
+                 bool sync_xla_data, bool warm_up_cache_only = false) {
   std::vector<XLATensorPtr> xtensors =
       GetXlaTensors(tensors, /*want_all=*/false);
   XLAGraphExecutor::Get()->SyncTensorsGraph(&xtensors, devices, wait,
-                                            sync_xla_data);
+                                            sync_xla_data, warm_up_cache_only);
 }
 
 void SyncLiveTensors(const std::string& device_str,
@@ -1241,6 +1241,14 @@ void InitXlaModuleBindings(py::module m) {
         },
         py::arg("tensors"), py::arg("devices"), py::arg("wait") = true,
         py::arg("sync_xla_data") = true);
+  m.def("_xla_warm_up_cache",
+        [](const std::vector<at::Tensor>& tensors,
+           const std::vector<std::string>& devices) {
+          NoGilSection nogil;
+          SyncTensors(tensors, devices, /*wait=*/false, /*sync_xla_data=*/false,
+                      /*warm_up_cache_only=*/true);
+        },
+        py::arg("tensors"), py::arg("devices"));
   m.def("_xla_sync_live_tensors",
         [](const std::string& device, const std::vector<std::string>& devices,
            bool wait) {
