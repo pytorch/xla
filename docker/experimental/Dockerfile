@@ -17,7 +17,6 @@ ARG bazel_jobs=
 # Contains all build dependencies for PT/XLA
 FROM python:${python_version}-${debian_version} AS builder
 
-RUN df -h
 RUN apt-get update
 RUN apt-get install -y curl gnupg libomp5 libopenblas-dev
 RUN pip install numpy pyyaml
