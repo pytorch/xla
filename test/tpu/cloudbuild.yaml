@@ -15,7 +15,7 @@ steps:
     'docker/experimental/Dockerfile',
     '-t',
     'gcr.io/$PROJECT_ID/pytorch-xla-test:$BUILD_ID',
-    '--shm-size=16G',
+    '--shm-size=7G',
     '--build-arg',
     'tpuvm=1',
   ]
