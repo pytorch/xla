@@ -3161,10 +3161,10 @@ at::Tensor XLANativeFunctions::view_copy_symint(const at::Tensor& self,
   if (all_dims_static) {
     return bridge::AtenFromXlaTensor(tensor_methods::view(
         bridge::GetXlaTensor(self), XlaHelpers::I64List(int_sizes.value())));
+  } else {
+    return bridge::AtenFromXlaTensor(
+        tensor_methods::view_symint(bridge::GetXlaTensor(self), sym_size));
   }
-
-  return bridge::AtenFromXlaTensor(
-      tensor_methods::view_symint(bridge::GetXlaTensor(self), sym_size));
 }
 
 at::Tensor XLANativeFunctions::where(const at::Tensor& condition,
