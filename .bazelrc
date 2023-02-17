@@ -10,8 +10,6 @@ build --announce_rc
 # TODO(goranpetrovic): figure out visibility of tensorflow libraries.
 build --nocheck_visibility
 
-#build --define open_source_build=true
-
 # We can set this to `standalone` after https://github.com/bazelbuild/bazel/issues/15359 is resolved.
 build --spawn_strategy=sandboxed
 
