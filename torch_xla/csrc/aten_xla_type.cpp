@@ -2547,7 +2547,8 @@ at::Tensor& XLANativeFunctions::selu_(at::Tensor& self) {
   return self;
 }
 
-at::Tensor& XLANativeFunctions::set_(at::Tensor& self, const at::Tensor& source) {
+at::Tensor& XLANativeFunctions::set_(at::Tensor& self,
+                                     const at::Tensor& source) {
   TORCH_LAZY_FN_COUNTER("xla::");
   XLATensorPtr source_tensor = bridge::GetXlaTensor(source);
   bridge::ReplaceXlaTensor(self, source_tensor);
