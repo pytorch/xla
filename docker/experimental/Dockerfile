@@ -57,7 +57,7 @@ ENV USE_CUDA "0"
 ARG package_version
 # RUN PYTORCH_BUILD_VERSION=${package_version} PYTORCH_BUILD_NUMBER=1 python setup.py bdist_wheel
 
-RUN pip install dist/*.whl
+# RUN pip install dist/*.whl
 
 RUN curl -LO https://github.com/bazelbuild/bazelisk/releases/download/v1.11.0/bazelisk-linux-amd64
 RUN mv bazelisk-linux-amd64 /usr/local/bin/bazel
