@@ -39,6 +39,9 @@ ENV BUNDLE_LIBTPU "${tpuvm}"
 # Maximum number of jobs to use for bazel build
 ENV BAZEL_JOBS "${bazel_jobs}"
 
+# This makes bazel run the build remotely on RBE.
+ENV BAZEL_REMOTE "1"
+
 # This makes the bazel build behave more consistently, but runs slower.
 ENV XLA_SANDBOX_BUILD "1"
 ENV XLA_SANDBOX_BASE "/dev/shm"

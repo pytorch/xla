@@ -114,7 +114,7 @@ substitutions:
   _RELEASE_IMAGE_URL: ${_IMAGE_REPOSITORY}/torch-xla:${_IMAGE_TAG}
   _ARTIFACTS_IMAGE_URL: ${_IMAGE_REPOSITORY}/artifacts:${_IMAGE_TAG}
   _CACHE_IMAGE_URL: ${_IMAGE_REPOSITORY}/cache
-  _BAZEL_JOBS: '32'
+  _BAZEL_JOBS: ''
   _CACHE: 'true'
   _CACHE_TTL: '18h'
   _BUILD_ARGS: tpuvm=1,cuda=0

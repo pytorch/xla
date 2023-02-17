@@ -76,6 +76,9 @@ COPY .bazelversion .
 COPY WORKSPACE .
 COPY build_torch_xla_libs.sh .
 
+# This makes bazel run the build remotely on RBE.
+ENV BAZEL_REMOTE "1"
+
 # TODO: Remove this when it's not required anymore
 ENV XLA_SANDBOX_BUILD=1
 ENV XLA_SANDBOX_BASE "/dev/shm"
