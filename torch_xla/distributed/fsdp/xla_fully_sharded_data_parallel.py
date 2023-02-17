@@ -658,7 +658,7 @@ class XlaFullyShardedDataParallel(nn.Module):
       self.sharded_params.append(p_shard)
       # Free the full parameter storage (here we free its `.data`) but keep the tensor itself
       # for auto-grad tracing (like `torch.autograd.Variable` before the tensor-variable merge).
-      p.copy_(p.new_zeros(1))
+      p.set_(p.new_zeros(1))
       if p.device != self.xla_device:
         # cast to XLA device if not already on XLA
         p = p.to(self.xla_device).requires_grad_(p.requires_grad)
@@ -1366,9 +1366,9 @@ class XlaFullyShardedDataParallel(nn.Module):
           self.optimization_barrier_op([p_padded])
         with torch.autograd._unsafe_preserve_version_counter(p):
           if self._shard_param_on_dim_0:
-            p.copy_(p_padded[:p_shard._orig_size[0]])
+            p.set_(p_padded[:p_shard._orig_size[0]])
           else:
-            p.copy_(p_padded[:p_shard._orig_size.numel()].view(
+            p.set_(p_padded[:p_shard._orig_size.numel()].view(
                 p_shard._orig_size))
         p._has_full_param = True
 
@@ -1400,7 +1400,7 @@ class XlaFullyShardedDataParallel(nn.Module):
       if p._has_full_param:
         # free the original full parameter
         with torch.autograd._unsafe_preserve_version_counter(p):
-          p.copy_(self._dummy_data_placeholder)
+          p.set_(p.new_zeros(1))
         p._has_full_param = False
 
     if apply_opt_barrier:

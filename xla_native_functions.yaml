@@ -282,6 +282,7 @@ supported:
   - scatter_reduce.two
   - select.int
   - selu_
+  - set_.source_Tensor
   - sigmoid
   - sigmoid_backward
   - slice.Tensor
