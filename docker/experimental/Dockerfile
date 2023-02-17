@@ -17,6 +17,7 @@ ARG bazel_jobs=
 # Contains all build dependencies for PT/XLA
 FROM python:${python_version}-${debian_version} AS builder
 
+RUN df -h
 RUN apt-get update
 RUN apt-get install -y curl gnupg libomp5 libopenblas-dev
 RUN pip install numpy pyyaml
@@ -55,9 +56,9 @@ RUN find torch_patches -name '*.diff' | xargs -t -r -n 1 patch -N -p1 -l -i
 ENV USE_CUDA "0"
 
 ARG package_version
-# RUN PYTORCH_BUILD_VERSION=${package_version} PYTORCH_BUILD_NUMBER=1 python setup.py bdist_wheel
+RUN PYTORCH_BUILD_VERSION=${package_version} PYTORCH_BUILD_NUMBER=1 python setup.py bdist_wheel
 
-# RUN pip install dist/*.whl
+RUN pip install dist/*.whl
 
 RUN curl -LO https://github.com/bazelbuild/bazelisk/releases/download/v1.11.0/bazelisk-linux-amd64
 RUN mv bazelisk-linux-amd64 /usr/local/bin/bazel
@@ -92,8 +93,7 @@ ARG tf_cuda_compute_capabilities
 ARG bazel_jobs
 ARG build_cpp_tests
 ARG package_version
-RUN df -h && mount -o remount,size=7G /dev/shm && df -h
-RUN TORCH_XLA_VERSION=${package_version} BUILD_CPP_TESTS=${build_cpp_tests} TPUVM_MODE=${tpuvm} BUNDLE_LIBTPU=${tpuvm} XLA_CUDA=${cuda} TF_CUDA_COMPUTE_CAPABILITIES=${tf_cuda_compute_capabilities} python setup.py bdist_wheel
+RUN --mount=type=tmpfs,target=/dev/shm,rw TORCH_XLA_VERSION=${package_version} BUILD_CPP_TESTS=${build_cpp_tests} TPUVM_MODE=${tpuvm} BUNDLE_LIBTPU=${tpuvm} XLA_CUDA=${cuda} TF_CUDA_COMPUTE_CAPABILITIES=${tf_cuda_compute_capabilities} python setup.py bdist_wheel
 
 # Expunge cache to keep image size under control
 RUN bazel clean --expunge

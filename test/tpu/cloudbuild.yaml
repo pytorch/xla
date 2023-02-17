@@ -10,12 +10,13 @@ steps:
   id: build-image
   args: [
     'build',
+    '--shm-size',
+    '7g',
     '.',
     '-f',
     'docker/experimental/Dockerfile',
     '-t',
     'gcr.io/$PROJECT_ID/pytorch-xla-test:$BUILD_ID',
-    '--shm-size=7g',
     '--build-arg',
     'tpuvm=1',
   ]
