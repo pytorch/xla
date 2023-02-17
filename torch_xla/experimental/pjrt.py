@@ -211,10 +211,9 @@ def _merge_replica_results(
 
 
 @requires_pjrt
-def _run_thread_per_device(local_rank: int,
-                           local_world_size: int,
-                           fn: Callable[[], R],
-                           initializer_fn: Callable[[int, int], None]) -> Dict[int, R]:
+def _run_thread_per_device(
+    local_rank: int, local_world_size: int, fn: Callable[[], R],
+    initializer_fn: Callable[[int, int], None]) -> Dict[int, R]:
   """Runs `fn` in a separate thread on each addressable device.
 
   Args:
@@ -250,9 +249,7 @@ def _run_thread_per_device(local_rank: int,
 
 
 @requires_pjrt
-def _run_singleprocess(fn: Callable[..., R],
-                       *args,
-                       **kwargs) -> Dict[int, R]:
+def _run_singleprocess(fn: Callable[..., R], *args, **kwargs) -> Dict[int, R]:
   """Runs `fn` on a single device core.
 
   Spawns one process on a single physical device (e.g. TPU chip).
