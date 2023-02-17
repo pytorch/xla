@@ -22,6 +22,8 @@ namespace cpp_test {
 namespace {
 
 void DumpDifferences(const at::Tensor& tensor1, const at::Tensor& tensor2) {
+  static bool dump_differences =
+      xla::sys_util::GetEnvBool("XLA_TEST_DUMP_DIFFERENCES", true);
   static bool dump_tensors =
       xla::sys_util::GetEnvBool("XLA_TEST_DUMP_TENSORS", false);
   at::Tensor dtensor1 = tensor1;
@@ -32,8 +34,10 @@ void DumpDifferences(const at::Tensor& tensor1, const at::Tensor& tensor2) {
   if (tensor2.dtype() == at::kBool) {
     dtensor2 = tensor2.toType(at::kByte);
   }
-  at::Tensor diff = dtensor1 - dtensor2;
-  std::cerr << "Difference Tensor:\n" << diff << "\n";
+  if (dump_differences) {
+    at::Tensor diff = dtensor1 - dtensor2;
+    std::cerr << "Difference Tensor:\n" << diff << "\n";
+  }
   if (dump_tensors) {
     std::cerr << "Compared Tensors:\n"
               << tensor1 << "\n-vs-\n"
@@ -432,6 +436,13 @@ bool UsingPjRt() {
   static bool using_pjrt =
       !xla::sys_util::GetEnvString("PJRT_DEVICE", "").empty();
   return using_pjrt;
+}
+
+bool UsingTpu() {
+  static bool using_tpu =
+      absl::StartsWith(xla::sys_util::GetEnvString("PJRT_DEVICE", ""), "TPU") ||
+      !xla::sys_util::GetEnvString("XRT_TPU_CONFIG", "").empty();
+  return using_tpu;
 }
 
 }  // namespace cpp_test
