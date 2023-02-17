@@ -55,7 +55,7 @@ RUN find torch_patches -name '*.diff' | xargs -t -r -n 1 patch -N -p1 -l -i
 ENV USE_CUDA "0"
 
 ARG package_version
-RUN PYTORCH_BUILD_VERSION=${package_version} PYTORCH_BUILD_NUMBER=1 python setup.py bdist_wheel
+# RUN PYTORCH_BUILD_VERSION=${package_version} PYTORCH_BUILD_NUMBER=1 python setup.py bdist_wheel
 
 RUN pip install dist/*.whl
 
