@@ -1667,7 +1667,7 @@ class TestWaitDeviceOps(test_utils.XlaTestCase):
     xm.mark_step()
     xm.wait_device_ops()
     self.assertTrue("ExecuteTime" in met.metric_names() or
-                    ExecuteChainedTime in met.metric_names())
+                    "ExecuteChainedTime" in met.metric_names())
 
 
 class TestOpBuilder(test_utils.XlaTestCase):
