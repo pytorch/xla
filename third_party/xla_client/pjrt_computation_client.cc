@@ -1,6 +1,7 @@
 #include "tensorflow/compiler/xla/xla_client/pjrt_computation_client.h"
 
 #include <algorithm>
+#include <unordered_set>
 
 #include "absl/strings/ascii.h"
 #include "absl/types/span.h"
@@ -9,6 +10,7 @@
 #include "tensorflow/compiler/xla/client/xla_computation.h"
 #include "tensorflow/compiler/xla/layout_util.h"
 #include "tensorflow/compiler/xla/literal.h"
+#include "tensorflow/compiler/xla/pjrt/distributed/distributed.h"
 #include "tensorflow/compiler/xla/pjrt/gpu/se_gpu_pjrt_client.h"
 #include "tensorflow/compiler/xla/pjrt/pjrt_api.h"
 #include "tensorflow/compiler/xla/pjrt/pjrt_c_api_client.h"
@@ -16,7 +18,6 @@
 #include "tensorflow/compiler/xla/pjrt/pjrt_executable.h"
 #include "tensorflow/compiler/xla/pjrt/tfrt_cpu_pjrt_client.h"
 #include "tensorflow/compiler/xla/pjrt/tpu_client.h"
-#include "tensorflow/compiler/xla/pjrt/distributed/distributed.h"
 #include "tensorflow/compiler/xla/shape.h"
 #include "tensorflow/compiler/xla/xla_client/computation_client.h"
 #include "tensorflow/compiler/xla/xla_client/debug_macros.h"
@@ -48,15 +49,17 @@ std::vector<std::string> PjRtDevicesToString(
 }
 
 // Initializes a distributed runtime client if dist_service_addr is specified
-std::shared_ptr<DistributedRuntimeClient> MaybeInitializeDistributedRuntimeClient(
-    int local_rank, std::string dist_service_addr) {
+std::shared_ptr<DistributedRuntimeClient>
+MaybeInitializeDistributedRuntimeClient(int local_rank,
+                                        std::string dist_service_addr) {
   std::shared_ptr<DistributedRuntimeClient> client;
   if (!dist_service_addr.empty()) {
     xla::DistributedRuntimeClient::Options options;
     /* TODO(jonbolin): Use global rank for multi-host setup */
     options.node_id = local_rank;
-    client = xla::GetDistributedRuntimeClient(dist_service_addr, options,
-        /*use_coordination_service=*/false);
+    client =
+        xla::GetDistributedRuntimeClient(dist_service_addr, options,
+                                         /*use_coordination_service=*/false);
     XLA_CHECK(client->Connect().ok())
         << "Failed to initialize distributed runtime client";
   }
@@ -89,14 +92,16 @@ PjRtComputationClient::PjRtComputationClient() {
     int local_rank = sys_util::GetEnvInt(env::kEnvLocalRank, 0);
     std::string dist_service_addr =
         sys_util::GetEnvString(env::kEnvPjrtDistServiceAddr, "");
-    auto distributed_client = MaybeInitializeDistributedRuntimeClient(
-        local_rank, dist_service_addr);
-    auto allowed_devices = std::make_optional<std::set<int>>(std::set{local_rank});
-    client_ = std::move(xla::GetStreamExecutorGpuClient(
-                  /*asynchronous=*/async, GpuAllocatorConfig{},
-                  /*distributed_client=*/distributed_client, /*node_id=*/local_rank,
-                  allowed_devices = allowed_devices)
-                  .value());
+    auto distributed_client =
+        MaybeInitializeDistributedRuntimeClient(local_rank, dist_service_addr);
+    auto allowed_devices =
+        std::make_optional<std::set<int>>(std::set{local_rank});
+    client_ =
+        std::move(xla::GetStreamExecutorGpuClient(
+                      /*asynchronous=*/async, GpuAllocatorConfig{},
+                      /*distributed_client=*/distributed_client,
+                      /*node_id=*/local_rank, allowed_devices = allowed_devices)
+                      .value());
   } else {
     XLA_ERROR() << absl::StrFormat("Unknown %s '%s'", env::kEnvPjRtDevice,
                                    device_type);
@@ -107,6 +112,7 @@ PjRtComputationClient::PjRtComputationClient() {
   for (auto* device : client_->devices()) {
     std::string device_str = PjRtDeviceToString(device);
     string_to_device_.emplace(device_str, device);
+    device_locks_.emplace(device_str, std::make_unique<std::shared_mutex>());
   }
 }
 
@@ -415,9 +421,15 @@ PjRtComputationClient::ExecuteComputation(
                            returned_future)
           .value();
 
+  // Grab the shared lock and block the `WaitDeviceOps` until buffer is ready.
+  auto lock = lock_device_shared(device);
   // Signal that `ExecuteSharded` has completed for the ExecuteTime metric.
   // Copies the `timed` shared pointer into the lambda.
-  returned_future->OnReady([timed](Status unused) mutable { timed.reset(); });
+  returned_future->OnReady(
+      [timed, lock = std::move(lock)](Status unused) mutable {
+        timed.reset();
+        TF_VLOG(3) << "ExecuteComputation returned_future->OnReady finished";
+      });
 
   std::vector<DataPtr> datas;
   datas.reserve(results.size());
@@ -545,6 +557,39 @@ xla::PjRtDevice* PjRtComputationClient::StringToPjRtDevice(
       << "Unknown device " << device;
   xla::PjRtDevice* pjrt_device = string_to_device_[device];
   return pjrt_device;
+}
+
+std::shared_lock<std::shared_mutex> PjRtComputationClient::lock_device_shared(
+    const std::string& device) {
+  std::shared_lock lock(*device_locks_[device]);
+  return lock;
+}
+
+std::unique_lock<std::shared_mutex> PjRtComputationClient::lock_device(
+    const std::string& device) {
+  std::unique_lock lock(*device_locks_[device]);
+  return lock;
+}
+
+void PjRtComputationClient::WaitDeviceOps(
+    const std::vector<std::string>& devices) {
+  std::unordered_set<std::string> wait_devices;
+  if (!devices.empty()) {
+    for (auto& device_str : devices) {
+      wait_devices.insert(device_str);
+    }
+  } else {
+    for (auto& device_str : GetLocalDevices()) {
+      wait_devices.insert(device_str);
+    }
+  }
+  for (const std::string& device_str : wait_devices) {
+    TF_VLOG(3) << "Waiting for device execution for " << device_str
+               << " to finish";
+    lock_device(device_str);
+    TF_VLOG(3) << "Waiting for device execution for " << device_str
+               << " to finish.. Done";
+  }
 }
 
 std::map<std::string, Metric> PjRtComputationClient::GetMetrics() const {
