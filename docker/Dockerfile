@@ -43,7 +43,7 @@ ENV BAZEL_JOBS "${bazel_jobs}"
 ENV BAZEL_REMOTE "1"
 
 # This makes the bazel build behave more consistently, but runs slower.
-ENV XLA_SANDBOX_BUILD "1"
+ENV XLA_SANDBOX_BUILD "0"
 ENV XLA_SANDBOX_BASE "/dev/shm"
 
 # To get around issue of Cloud Build with recursive submodule update

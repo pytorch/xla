@@ -80,7 +80,7 @@ COPY build_torch_xla_libs.sh .
 ENV BAZEL_REMOTE "1"
 
 # TODO: Remove this when it's not required anymore
-ENV XLA_SANDBOX_BUILD=1
+ENV XLA_SANDBOX_BUILD=0
 ENV XLA_SANDBOX_BASE "/dev/shm"
 
 COPY torch_xla/ torch_xla/
