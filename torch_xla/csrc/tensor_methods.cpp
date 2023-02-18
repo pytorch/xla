@@ -124,6 +124,7 @@
 #include "torch_xla/csrc/ops/topk.h"
 #include "torch_xla/csrc/ops/triangular_solve.h"
 #include "torch_xla/csrc/ops/uniform.h"
+#include "torch_xla/csrc/ops/unique2.h"
 #include "torch_xla/csrc/ops/unsqueeze.h"
 #include "torch_xla/csrc/ops/upsample_bilinear2d.h"
 #include "torch_xla/csrc/ops/upsample_bilinear2d_backward.h"
@@ -2577,6 +2578,16 @@ void uniform_(XLATensorPtr& input, double from, double to) {
       XLAGraphExecutor::Get()->GetIrValueForScalar(
           to, input_shape.get().element_type(), input->GetDevice()),
       XLAGraphExecutor::Get()->GetRngSeed(input->GetDevice()), input_shape));
+}
+
+std::tuple<XLATensorPtr, XLATensorPtr, XLATensorPtr> unique2(
+    const XLATensorPtr& input, bool sorted, bool return_inverse,
+    bool return_counts) {
+  torch::lazy::NodePtr node = torch::lazy::MakeNode<Unique2>(
+      input->GetIrValue(), sorted, return_inverse, return_counts);
+  return std::make_tuple(input->CreateFrom(torch::lazy::Value(node, 0)),
+                         input->CreateFrom(torch::lazy::Value(node, 1)),
+                         input->CreateFrom(torch::lazy::Value(node, 2)));
 }
 
 XLATensorPtr unsqueeze(const XLATensorPtr& input, int64_t dim) {

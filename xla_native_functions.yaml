@@ -321,6 +321,7 @@ supported:
   - triangular_solve
   - unbind.int
   - uniform_
+  - _unique2
   - unsqueeze
   - unsqueeze_
   - upsample_bilinear2d

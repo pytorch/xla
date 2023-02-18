@@ -3190,4 +3190,16 @@ at::Tensor XLANativeFunctions::_cdist_forward(
       bridge::GetXlaTensor(x1), bridge::GetXlaTensor(x2), p));
 }
 
+std::tuple<at::Tensor, at::Tensor, at::Tensor> XLANativeFunctions::_unique2(
+    const at::Tensor& self, bool sorted, bool return_inverse,
+    bool return_counts) {
+  TORCH_LAZY_FN_COUNTER("xla::");
+  std::tuple<XLATensorPtr, XLATensorPtr, XLATensorPtr> res =
+      tensor_methods::unique2(bridge::GetXlaTensor(self), sorted,
+                              return_inverse, return_counts);
+  return std::make_tuple(bridge::AtenFromXlaTensor(std::get<0>(res)),
+                         bridge::AtenFromXlaTensor(std::get<1>(res)),
+                         bridge::AtenFromXlaTensor(std::get<2>(res)));
+}
+
 }  // namespace torch_xla

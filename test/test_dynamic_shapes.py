@@ -178,6 +178,22 @@ class TestDynamicShapes(test_utils.XlaTestCase):
     self.assertEqual(t3.shape[0], 2)
     self.assertEqual(expand_out_aten.cpu(), expand_out_xla.cpu())
 
+  def test_unique_correctness(self):
+
+    def test_fn(*tensors):
+      results = []
+      for t in tensors:
+        results += [torch.unique(t, sorted=True)]
+        results += list(torch.unique(t, sorted=True, return_inverse=True))
+        results += list(
+            torch.unique(
+                t, sorted=True, return_inverse=True, return_counts=True))
+      return results
+
+    self.runAtenTest([torch.randint(4, 10, size=(10,)) for _ in range(2)] +
+                     [torch.randint(4, 10, size=(10, 10)) for _ in range(2)] +
+                     [torch.rand(10, 10) for _ in range(2)], test_fn)
+
 
 if __name__ == '__main__':
   assert os.environ['XLA_EXPERIMENTAL'] != ''
