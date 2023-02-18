@@ -326,6 +326,10 @@ class ComputationClient {
 
   virtual void PrepareToExit() = 0;
 
+  // Block until pass in devices' async operation are finished. If empty, all
+  // the local devices will be waited for.
+  virtual void WaitDeviceOps(const std::vector<std::string>& devices) = 0;
+
   // Utility API around the vector based Compile() API to compile a single
   // computation.
   ComputationPtr Compile(XlaComputation computation,
