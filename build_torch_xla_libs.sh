@@ -42,6 +42,9 @@ if [[ "$XLA_SANDBOX_BUILD" == "1" ]]; then
   BUILD_STRATEGY="sandboxed --sandbox_base=${SANDBOX_BASE}"
 else
   # We can remove this after https://github.com/bazelbuild/bazel/issues/15359 is resolved
+  # Use GCC locally since clang does not work except with sanboxing, and sandboxing causes pjrt crashes.
+  unset CXX
+  unset CC
   BUILD_STRATEGY="local"
 fi
 
