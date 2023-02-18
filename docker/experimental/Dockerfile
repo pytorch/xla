@@ -20,7 +20,7 @@ RUN apt-get update
 RUN apt-get install -y curl gnupg libomp5 libopenblas-dev
 RUN pip install numpy pyyaml
 
-ARG cudTPUVM_MODEa
+ARG cuda
 ARG cuda_version
 ARG cudnn_version
 ARG cuda_repo
