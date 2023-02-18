@@ -18,6 +18,8 @@ steps:
     '--shm-size=16G',
     '--build-arg',
     'tpuvm=1',
+    '--build-arg',
+    'bazel_jobs=8'
   ]
 - name: 'docker'
   id: push-image

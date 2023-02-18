@@ -8,11 +8,10 @@ ARG cudnn_version=8.1.1.33
 ARG cuda_repo=ubuntu1804
 ARG tf_cuda_compute_capabilities="7.0,7.5,8.0"
 
+ARG bazel_jobs
 ARG tpuvm=1
 ARG build_cpp_tests=0
 ARG package_version=2.0.0
-
-ARG bazel_jobs=
 
 # Contains all build dependencies for PT/XLA
 FROM python:${python_version}-${debian_version} AS builder
@@ -21,7 +20,7 @@ RUN apt-get update
 RUN apt-get install -y curl gnupg libomp5 libopenblas-dev
 RUN pip install numpy pyyaml
 
-ARG cuda
+ARG cudTPUVM_MODEa
 ARG cuda_version
 ARG cudnn_version
 ARG cuda_repo
@@ -77,7 +76,7 @@ COPY WORKSPACE .
 COPY build_torch_xla_libs.sh .
 
 # TODO: Remove this when it's not required anymore
-ENV XLA_SANDBOX_BUILD=1
+ENV XLA_SANDBOX_BUILD=0
 ENV XLA_SANDBOX_BASE "/dev/shm"
 
 COPY torch_xla/ torch_xla/
@@ -92,7 +91,7 @@ ARG tf_cuda_compute_capabilities
 ARG bazel_jobs
 ARG build_cpp_tests
 ARG package_version
-RUN --mount=type=tmpfs,target=/dev/shm,rw TORCH_XLA_VERSION=${package_version} BUILD_CPP_TESTS=${build_cpp_tests} TPUVM_MODE=${tpuvm} BUNDLE_LIBTPU=${tpuvm} XLA_CUDA=${cuda} TF_CUDA_COMPUTE_CAPABILITIES=${tf_cuda_compute_capabilities} python setup.py bdist_wheel
+RUN TORCH_XLA_VERSION=${package_version} BUILD_CPP_TESTS=${build_cpp_tests} BAZEL_JOBS=${bazel_jobs} TPUVM_MODE=${tpuvm} BUNDLE_LIBTPU=${tpuvm} XLA_CUDA=${cuda} TF_CUDA_COMPUTE_CAPABILITIES=${tf_cuda_compute_capabilities} python setup.py bdist_wheel
 
 # Expunge cache to keep image size under control
 RUN bazel clean --expunge
