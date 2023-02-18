@@ -1305,8 +1305,8 @@ class XlaFullyShardedDataParallel(nn.Module):
             self.optimization_barrier_op(dependency_tensors)
             for p, p_data, g_data in zip(params_with_grad, params_data,
                                          grad_data):
-              p.copy_(p_data)
-              p.grad.copy_(g_data)
+              p.set_(p_data)
+              p.grad.set_(g_data)
           self._clear_backward_opt_barrier_lists()
 
     if self.mark_step_on_finalization:
@@ -1437,10 +1437,10 @@ class XlaFullyShardedDataParallel(nn.Module):
     for p, p_data in zip(p_list, p_data_list):
       with torch.no_grad():
         with torch.autograd._unsafe_preserve_version_counter(p):
-          p.copy_(p_data)
+          p.set_(p_data)
     for p_shard, p_shard_data in zip(p_shard_list, p_shared_data_list):
       with torch.no_grad():
-        p_shard.copy_(p_shard_data)
+        p_shard.set_(p_shard_data)
 
   def assert_state(self, state: Union[TrainingState,
                                       List[TrainingState]]) -> None:
