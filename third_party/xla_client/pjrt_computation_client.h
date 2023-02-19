@@ -2,6 +2,8 @@
 #define XLA_CLIENT_PJRT_COMPUTATION_CLIENT_H_
 
 #include <cstdint>
+#include <mutex>
+#include <shared_mutex>
 
 #include "absl/types/span.h"
 #include "tensorflow/compiler/xla/client/xla_computation.h"
@@ -75,6 +77,8 @@ class PjRtComputationClient : public ComputationClient {
 
   void PrepareToExit() override { return; };
 
+  void WaitDeviceOps(const std::vector<std::string>& devices) override;
+
   // NOT IMPLEMENTED
 
   void TransferToServer(absl::Span<const TensorSource> tensors,
@@ -129,10 +133,15 @@ class PjRtComputationClient : public ComputationClient {
   std::shared_ptr<PjRtClient> client_;
   std::unordered_map<std::string, xla::PjRtDevice* const> string_to_device_;
   std::shared_ptr<std::vector<std::string>> replication_devices_;
+  std::unordered_map<std::string, std::unique_ptr<std::shared_mutex>>
+      device_locks_;
   // TODO(wcromar): Remove this when PJRT C API supports logical_on_device_shape
   bool supports_logical_on_device_shape_ = true;
 
   xla::PjRtDevice* StringToPjRtDevice(const std::string& device);
+  std::shared_lock<std::shared_mutex> lock_device_shared(
+      const std::string& device);
+  std::unique_lock<std::shared_mutex> lock_device(const std::string& device);
 
   struct PjRtData : public Data {
     PjRtData(std::string device, Shape device_shape)
