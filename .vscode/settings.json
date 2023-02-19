@@ -1,7 +1,6 @@
 {
     "bsv.bazel.buildFlags": [
         "--config=compdb",
-        "--sandbox_base=/dev/shm",
     ],
     "bsv.cc.compdb.targets": [
         "//third_party/xla_client/...",
@@ -10,9 +9,12 @@
     "coverage-gutters.showLineCoverage": false,
     "coverage-gutters.showGutterCoverage": true,
     "coverage-gutters.coverageReportFileName": "./genhtml/index.html",
-    "coverage-gutters.coverageFileNames": [ "./bazel-out/_coverage/_coverage_report.dat" ],
-    "lcov.path": [ "./.bazel-out/_coverage/_coverage_report.dat"],
-
+    "coverage-gutters.coverageFileNames": [
+        "./bazel-out/_coverage/_coverage_report.dat"
+    ],
+    "lcov.path": [
+        "./.bazel-out/_coverage/_coverage_report.dat"
+    ],
     "python.formatting.provider": "yapf",
     "editor.formatOnSave": true
 }

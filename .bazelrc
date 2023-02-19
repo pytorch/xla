@@ -10,9 +10,6 @@ build --announce_rc
 # TODO(goranpetrovic): figure out visibility of tensorflow libraries.
 build --nocheck_visibility
 
-# We can set this to `standalone` after https://github.com/bazelbuild/bazel/issues/15359 is resolved.
-build --spawn_strategy=sandboxed
-
 build --enable_platform_specific_config
 
 build --experimental_cc_shared_library
@@ -20,12 +17,20 @@ build --experimental_cc_shared_library
 # Disable enabled-by-default TensorFlow features that we don't care about.
 build --define=no_aws_support=true
 build --define=no_hdfs_support=true
+build --define=no_hdfs_support=true
+build --define=no_kafka_support=true
+build --define=no_ignite_support=true
 
 build --define=grpc_no_ares=true
 
 build -c opt
 
 build --config=short_logs
+
+# Force GCC because clang/bazel has issues.
+common --action_env=CC=gcc
+common --action_env=CXX=g++
+common --spawn_strategy=standalone
 
 ###########################################################################
 
@@ -92,8 +97,6 @@ build:coverage --strategy=CoverageReport=sandboxed,local
 build:coverage --experimental_use_llvm_covmap
 build:coverage --collect_code_coverage
 build:coverage --test_tag_filters=-nocoverage
-build:coverage --action_env=CC=gcc
-build:coverage --action_env=CXX=g++
 
 ############################################################################
 ############## TensorFlow .bazelrc greatest hits ###########################
