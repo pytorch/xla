@@ -75,6 +75,8 @@ COPY .bazelversion .
 COPY WORKSPACE .
 COPY build_torch_xla_libs.sh .
 
+# This makes bazel use remote build and requires GCP authentication.
+ENV BAZEL_REMOTE="1"
 COPY torch_xla/ torch_xla/
 COPY setup.py .
 COPY xla_native_functions.yaml .

@@ -39,6 +39,8 @@ ENV BUNDLE_LIBTPU "${tpuvm}"
 # Maximum number of jobs to use for bazel build
 ENV BAZEL_JOBS "${bazel_jobs}"
 
+# This makes bazel use remote build and requires GCP authentication.
+ENV BAZEL_REMOTE="1"
 # To get around issue of Cloud Build with recursive submodule update
 # clone recursively from pytorch/xla if building docker image with
 # cloud build. Otherwise, just use local.

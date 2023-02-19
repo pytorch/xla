@@ -35,7 +35,11 @@ if [[ "$XLA_BAZEL_VERBOSE" == "1" ]]; then
 fi
 
 if [[ "$TPUVM_MODE" == "1" ]]; then
-  OPTS+=(--config=tpu)
+  if [[ "$BAZEL_REMOTE" == "1" ]]; then
+    OPTS+=(--config=rbe_cpu_linux_py39)
+  else
+    OPTS+=(--config=cuda)
+  fi
 fi
 
 MAX_JOBS=
@@ -44,11 +48,20 @@ if [[ ! -z "$BAZEL_JOBS" ]]; then
 fi
 
 if [[ "$XLA_CUDA" == "1" ]]; then
-  OPTS+=(--config=cuda)
+  if [[ "$BAZEL_REMOTE" == "1" ]]; then
+    OPTS+=(--config=rbe_linux_cuda11.8_nvcc_py3.9)
+  else
+    OPTS+=(--config=cuda)
+  fi
 fi
 
 if [[ "$XLA_CPU_USE_ACL" == "1" ]]; then
   OPTS+=(--config=acl)
+fi
+
+if [[ ! -z "$GCLOUD_SERVICE_KEY" ]]; then
+  echo $GCLOUD_SERVICE_KEY > /tmp/bazelkey
+  OPTS+=(--google_credentials=/tmp/bazelkey)
 fi
 
 if [ "$CMD" == "clean" ]; then
@@ -62,6 +75,10 @@ fi
 bazel build $MAX_JOBS $VERBOSE --show_progress_rate_limit=20 \
   --define framework_shared_object=false -c "$MODE" "${OPTS[@]}" \
   $XLA_CUDA_CFG //third_party/xla_client:libxla_computation_client.so
+
+if [[ ! -z "$GCLOUD_SERVICE_KEY" ]]; then
+    rm /tmp/bazelkey
+fi
 
 mkdir -p torch_xla/lib
 chmod 0644 bazel-bin/third_party/xla_client/libxla_computation_client.so
