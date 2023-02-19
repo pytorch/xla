@@ -59,8 +59,10 @@ make -j $VERB
 if [ $BUILD_ONLY -eq 0 ]; then
   if [ "$LOGFILE" != "" ]; then
     ./test_ptxla ${FILTER:+"$FILTER"} 2> $LOGFILE
+    bazel test //third_party/xla_client/...
   else
     ./test_ptxla ${FILTER:+"$FILTER"}
+    bazel test //third_party/xla_client/...
   fi
 fi
 popd
