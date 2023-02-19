@@ -1,7 +1,7 @@
 apiVersion: v1
 kind: Pod
 metadata:
-  generateName: pjrt-test-job-
+  generateName: xla-test-job-
 spec:
   affinity:
     nodeAffinity:
@@ -19,7 +19,7 @@ spec:
     emptyDir:
       medium: Memory
   containers:
-  - name: pjrt-test
+  - name: xla-test
     securityContext:
       privileged: true
     image: gcr.io/$PROJECT_ID/pytorch-xla-test:$BUILD_ID
@@ -29,6 +29,9 @@ spec:
     - |
       python3 pytorch/xla/test/pjrt/test_operations.py -v
       python3 pytorch/xla/test/pjrt/test_experimental_pjrt_tpu.py
+      python3 pytorch/xla/test/spmd/test_xla_sharding.py
+      python3 pytorch/xla/test/spmd/test_xla_virtual_device.py
+      python3 pytorch/xla/test/spmd/test_train_spmd_linear_model.py
     volumeMounts:
     - mountPath: /dev/shm
       name: dshm
