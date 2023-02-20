@@ -59,9 +59,8 @@ if [[ "$XLA_CPU_USE_ACL" == "1" ]]; then
   OPTS+=(--config=acl)
 fi
 
-if [[ ! -z "$GCLOUD_SERVICE_KEY" ]]; then
-  echo $GCLOUD_SERVICE_KEY > /tmp/bazelkey
-  OPTS+=(--google_credentials=/tmp/bazelkey)
+if [[ ! -z "$GCLOUD_SERVICE_KEY_FILE" ]]; then
+  OPTS+=(--google_credentials=$GCLOUD_SERVICE_KEY_FILE)
 fi
 
 if [ "$CMD" == "clean" ]; then
@@ -75,10 +74,6 @@ fi
 bazel build $MAX_JOBS $VERBOSE --show_progress_rate_limit=20 \
   --define framework_shared_object=false -c "$MODE" "${OPTS[@]}" \
   $XLA_CUDA_CFG //third_party/xla_client:libxla_computation_client.so
-
-if [[ ! -z "$GCLOUD_SERVICE_KEY" ]]; then
-    rm /tmp/bazelkey
-fi
 
 mkdir -p torch_xla/lib
 chmod 0644 bazel-bin/third_party/xla_client/libxla_computation_client.so
