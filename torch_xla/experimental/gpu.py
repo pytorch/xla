@@ -40,4 +40,4 @@ def shutdown_distributed_runtime() -> None:
   global distributed_service
   if distributed_service:
     distributed_service.shutdown()
-    del distributed_service
+    distributed_service = None
