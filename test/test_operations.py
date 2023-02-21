@@ -923,6 +923,8 @@ class TestAtenXlaTensor(test_utils.XlaTestCase):
     self.runAtenTest((a, b), func)
 
   def test_data_handle_release(self):
+    met.clear_all()
+
     t1 = torch.zeros(50, device=xm.xla_device())
     t1 += 1
     xm.mark_step()
