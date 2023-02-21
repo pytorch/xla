@@ -17,7 +17,7 @@ import torch_xla.core.xla_model as xm
 
 class ZeroRedundancyOptimizer(Optimizer):
   r"""
-    ZeRO-1 wrapper. This class can wraps an arbitrary :class:`optim.Optimizer
+    ZeRO-1 wrapper. This class can wrap an arbitrary :class:`optim.Optimizer
     <torch.optim.Optimizer>` and shards its states across ranks.
 
     Arguments:
@@ -37,6 +37,11 @@ class ZeroRedundancyOptimizer(Optimizer):
             for details on pinning layout. Default: True
         **defaults: any trailing arguments, which are forwarded to the local
             optimizer.
+
+    .. note:: This runs `step` on sharded parameters. This might lead to
+        accuracy disparities compared to using original local optimizer. As
+        some optimizers (e.g. LAMB) compute global norm and norm for each
+        parameter, using sharded parameter results in different norm values.
     """
 
   def __init__(
@@ -71,16 +76,16 @@ class ZeroRedundancyOptimizer(Optimizer):
 
   def _shard_tensor(self, tensor: torch.Tensor):
     """
-        Get the shard of the input tensor.
-        """
+    Get the shard of the input tensor.
+    """
     assert tensor.shape[0] % self.world_size == 0, "Not support padding now."
     tensor = tensor.chunk(self.world_size)[self.rank]
     return tensor
 
   def _shard_parameters(self):
     """
-        Shard all parameters.
-        """
+    Shard all parameters.
+    """
     xm.unlazy(self.params)
     for param in self.params:
       shard_data = param.data.to(device="cpu")  # move to cpu
@@ -94,8 +99,8 @@ class ZeroRedundancyOptimizer(Optimizer):
   @torch.no_grad()
   def step(self, closure=None, **kwargs):
     """
-        Performs a single optimizer step and syncs parameters across all ranks.
-        """
+    Performs a single optimizer step and syncs parameters across all ranks.
+    """
     loss = None
     if closure is not None:
       with torch.enable_grad():
