@@ -77,7 +77,10 @@ build:tpu --define=with_tpu_support=true
 # Flag to enable remote config
 common --experimental_repo_remote_exec
 
-common --experimental_repo_remote_exec
+# Enforces consistent action environment variables. This is important to
+# address rebuild sensitivity on changes to the environment variables and
+# helps cache.
+build:rbe --incompatible_strict_action_env
 
 build:rbe --repo_env=BAZEL_DO_NOT_DETECT_CPP_TOOLCHAIN=1
 build:rbe --google_default_credentials

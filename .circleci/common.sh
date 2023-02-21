@@ -112,7 +112,11 @@ function install_deps_pytorch_xla() {
 function build_torch_xla() {
   XLA_DIR=$1
   pushd "$XLA_DIR"
-  python setup.py install
+
+  # Passing `--action_env=PATH=$PATH` makes bazel use the configured python version
+  # with required packages installed; otherwise it might find a system version with no packages
+  # in case of `conda` or `virtualenv`.
+  EXTRA_BAZEL_FLAGS="--action_env PATH=$PATH" python setup.py install
   popd
 }
 
