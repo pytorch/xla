@@ -3,7 +3,7 @@
 set -ex
 
 # See Note [Keep Going]
-CONTINUE_ON_ERROR=false
+CONTINUE_ON_ERROR=True
 if [[ "$CONTINUE_ON_ERROR" == "1" ]]; then
   set +e
 fi
