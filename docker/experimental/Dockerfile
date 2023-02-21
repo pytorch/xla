@@ -84,6 +84,7 @@ COPY setup.py .
 COPY xla_native_functions.yaml .
 
 COPY scripts/ scripts/
+COPY test/ test/
 
 ARG tpuvm
 ARG cuda
