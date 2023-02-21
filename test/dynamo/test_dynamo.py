@@ -92,14 +92,6 @@ class DynamoTrainingBasicTest(unittest.TestCase):
     loss.backward()
     return pred
 
-<<<<<<< HEAD
-  @unittest.skip("fails with functionalization")
-=======
-  @dynamo.optimize('aot_torchxla_trace_once')
-  def run_model_with_dynamo(self, model, data, target):
-    return self.train_model(model, data, target)
-
->>>>>>> Re-enable dynamo tests (#4454)
   def test_simple_model(self):
     torch._dynamo.reset()
     device = xm.xla_device()
