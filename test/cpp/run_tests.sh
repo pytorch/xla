@@ -8,7 +8,7 @@ FILTER=
 BUILD_ONLY=0
 RMBUILD=1
 LOGFILE=/tmp/pytorch_cpp_test.log
-XLA_EXPERIMENTAL="nonzero:masked_select"
+XLA_EXPERIMENTAL="nonzero:masked_select:unique"
 
 if [ "$DEBUG" == "1" ]; then
   BUILDTYPE="Debug"

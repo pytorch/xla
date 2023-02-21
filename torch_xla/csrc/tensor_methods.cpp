@@ -2583,8 +2583,10 @@ void uniform_(XLATensorPtr& input, double from, double to) {
 std::tuple<XLATensorPtr, XLATensorPtr, XLATensorPtr> unique2(
     const XLATensorPtr& input, bool sorted, bool return_inverse,
     bool return_counts) {
-  torch::lazy::NodePtr node = torch::lazy::MakeNode<Unique2>(
-      input->GetIrValue(), sorted, return_inverse, return_counts);
+  // Note: sorted, return_inverse, return_counts are always treated as True on
+  // XLA device.
+  torch::lazy::NodePtr node =
+      torch::lazy::MakeNode<Unique2>(input->GetIrValue());
   return std::make_tuple(input->CreateFrom(torch::lazy::Value(node, 0)),
                          input->CreateFrom(torch::lazy::Value(node, 1)),
                          input->CreateFrom(torch::lazy::Value(node, 2)));

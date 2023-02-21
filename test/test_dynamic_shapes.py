@@ -192,7 +192,8 @@ class TestDynamicShapes(test_utils.XlaTestCase):
 
     self.runAtenTest([torch.randint(4, 10, size=(10,)) for _ in range(2)] +
                      [torch.randint(4, 10, size=(10, 10)) for _ in range(2)] +
-                     [torch.rand(10, 10) for _ in range(2)], test_fn)
+                     [torch.rand(10, 10) for _ in range(2)] + [torch.ones(1)],
+                     test_fn)
 
 
 if __name__ == '__main__':

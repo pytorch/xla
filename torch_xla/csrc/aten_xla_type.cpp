@@ -3193,7 +3193,16 @@ at::Tensor XLANativeFunctions::_cdist_forward(
 std::tuple<at::Tensor, at::Tensor, at::Tensor> XLANativeFunctions::_unique2(
     const at::Tensor& self, bool sorted, bool return_inverse,
     bool return_counts) {
+  // Note: sorted, return_inverse, return_counts are always treated as True on
+  // XLA device.
   TORCH_LAZY_FN_COUNTER("xla::");
+  // Initially make XLA handled unique() handling experimental, and opt-in.
+  if (!DebugUtil::ExperimentEnabled("unique")) {
+    return at::native::call_fallback_fn<&xla_cpu_fallback,
+                                        ATEN_OP(_unique2)>::call(self, sorted,
+                                                                 return_inverse,
+                                                                 return_counts);
+  }
   std::tuple<XLATensorPtr, XLATensorPtr, XLATensorPtr> res =
       tensor_methods::unique2(bridge::GetXlaTensor(self), sorted,
                               return_inverse, return_counts);

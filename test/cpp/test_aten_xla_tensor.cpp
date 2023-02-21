@@ -11818,5 +11818,27 @@ TEST_F(AtenXlaTensorTest, TestCdistForward) {
   ExpectCounterChanged("xla::_cdist_forward", cpp_test::GetIgnoredCounters());
 }
 
+TEST_F(AtenXlaTensorTest, TestUnique) {
+  torch::Tensor a =
+      torch::randint(0, 10, {10, 10}, torch::TensorOptions(torch::kInt));
+  std::tuple<at::Tensor, at::Tensor, at::Tensor> b = torch::_unique2(
+      a, /*sorted=*/true, /*return_indices=*/true, /*return_counts=*/true);
+  ForEachDevice([&](const torch::Device& device) {
+    torch::Tensor xla_a = CopyToDevice(a, device);
+    std::tuple<at::Tensor, at::Tensor, at::Tensor> xla_b =
+        torch::_unique2(xla_a, /*sorted=*/true, /*return_indices=*/true,
+                        /*return_counts=*/true);
+    AllClose(std::get<0>(b), std::get<0>(xla_b));
+    AllClose(std::get<1>(b), std::get<1>(xla_b));
+    AllClose(std::get<2>(b), std::get<2>(xla_b));
+  });
+  if (DebugUtil::ExperimentEnabled("unique")) {
+    // If the unique support is enabled, we must not see any aten:: calls.
+    ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+  }
+  ExpectCounterChanged("xla::_unique2", cpp_test::GetIgnoredCounters());
+  ResetCounters();
+}
+
 }  // namespace cpp_test
 }  // namespace torch_xla
