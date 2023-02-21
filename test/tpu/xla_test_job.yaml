@@ -27,11 +27,14 @@ spec:
     - bash
     - -c
     - |
-      python3 pytorch/xla/test/pjrt/test_operations.py -v
+      python3 pytorch/xla/test/test_operations.py -v
       python3 pytorch/xla/test/pjrt/test_experimental_pjrt_tpu.py
       python3 pytorch/xla/test/spmd/test_xla_sharding.py
       python3 pytorch/xla/test/spmd/test_xla_virtual_device.py
       python3 pytorch/xla/test/spmd/test_train_spmd_linear_model.py
+
+      ptxla_path=$(dirname $(python -c 'import torch_xla; print(torch_xla.__file__)'))
+      TPU_LIBRARY_PATH=${ptxla_path}/lib/libtpu.so $ptxla_path/../test/test_ptxla
     volumeMounts:
     - mountPath: /dev/shm
       name: dshm
