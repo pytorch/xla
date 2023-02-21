@@ -59,6 +59,6 @@ steps:
     pod_name=$(envsubst < test/tpu/xla_test_job.yaml | kubectl create -f - -o name)
     pod_name=$(kubectl wait --for condition=ready --timeout=10m $pod_name -o name)
     kubectl logs -f $pod_name --container=xla-test
-timeout: 18000s # 3 hours
+timeout: 21600s # 6 hours
 options:
  machineType: 'N1_HIGHCPU_32'
