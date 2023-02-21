@@ -112,6 +112,8 @@ function install_deps_pytorch_xla() {
 function build_torch_xla() {
   XLA_DIR=$1
   pushd "$XLA_DIR"
+  python -c "from __future__ import print_function; import numpy; print(numpy.get_include());"
+  python3 -c "from __future__ import print_function; import numpy; print(numpy.get_include());"
   python setup.py install
   popd
 }
