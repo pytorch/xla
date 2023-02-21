@@ -11829,8 +11829,8 @@ TEST_F(AtenXlaTensorTest, TestUnique) {
         torch::_unique2(xla_a, /*sorted=*/true, /*return_indices=*/true,
                         /*return_counts=*/true);
     AllClose(std::get<0>(b), std::get<0>(xla_b));
-    AllClose(std::get<1>(b), std::get<1>(xla_b));
-    AllClose(std::get<2>(b), std::get<2>(xla_b));
+    AllClose(std::get<1>(b), torch::_cast_Long(std::get<1>(xla_b)));
+    AllClose(std::get<2>(b), torch::_cast_Long(std::get<2>(xla_b)));
   });
   if (DebugUtil::ExperimentEnabled("unique")) {
     // If the unique support is enabled, we must not see any aten:: calls.
