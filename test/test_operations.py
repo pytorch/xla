@@ -924,13 +924,15 @@ class TestAtenXlaTensor(test_utils.XlaTestCase):
 
   def test_data_handle_release(self):
     t1 = torch.zeros(50, device=xm.xla_device())
-    self.assertEqual(met.counter_value('DestroyXlaTensor'), None)
+    t1 += 1
+    xm.mark_step()
+    self.assertEqual(met.counter_value('DestroyXlaTensor'), 2)
 
     t1.data = torch.zeros(20, device=xm.xla_device())
-    self.assertEqual(met.counter_value('DestroyXlaTensor'), 1)
+    self.assertEqual(met.counter_value('DestroyXlaTensor'), 3)
 
     t1.set_(torch.zeros(10, device=xm.xla_device()))
-    self.assertEqual(met.counter_value('DestroyXlaTensor'), 2)
+    self.assertEqual(met.counter_value('DestroyXlaTensor'), 4)
 
   def test_view_data_slice(self):
     t1 = torch.zeros(50, device=xm.xla_device())
