@@ -1,14 +1,16 @@
 diff --git a/CMakeLists.txt b/CMakeLists.txt
-index c2c6fb2496..5cbd50a159 100644
+index 471fc8a8d3d..097281e9b61 100644
 --- a/CMakeLists.txt
 +++ b/CMakeLists.txt
-@@ -44,10 +44,6 @@ if(DEFINED GLIBCXX_USE_CXX11_ABI)
+@@ -48,11 +48,6 @@ if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
+   string(APPEND CMAKE_CXX_FLAGS " -D_GLIBCXX_USE_CXX11_ABI=${GLIBCXX_USE_CXX11_ABI}")
    if(${GLIBCXX_USE_CXX11_ABI} EQUAL 1)
      set(CXX_STANDARD_REQUIRED ON)
-     string(APPEND CMAKE_CXX_FLAGS " -D_GLIBCXX_USE_CXX11_ABI=1")
 -  else()
 -    # Please note this is required in order to ensure compatibility between gcc 9 and gcc 7
 -    # This could be removed when all Linux PyTorch binary builds are compiled by the same toolchain again
--    string(APPEND CMAKE_CXX_FLAGS " -fabi-version=11")
+-    include(CheckCXXCompilerFlag)
+-    append_cxx_flag_if_supported("-fabi-version=11" CMAKE_CXX_FLAGS)
    endif()
  endif()
+ 
