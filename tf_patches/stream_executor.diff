@@ -1,21 +1,3 @@
-diff --git a/tensorflow/compiler/xla/stream_executor/BUILD b/tensorflow/compiler/xla/stream_executor/BUILD
-index bd39d1f8edd..fc4848c6a50 100644
---- a/tensorflow/compiler/xla/stream_executor/BUILD
-+++ b/tensorflow/compiler/xla/stream_executor/BUILD
-@@ -197,10 +197,12 @@ cc_library(
-     ],
- )
-
-+# We need to remove make_default_target_header_only so that
-+# we can build PyTorch/XLA. Otherwise, we won't have the
-+# required objects linked at build time.
- tf_proto_library(
-     name = "dnn_proto",
-     srcs = ["dnn.proto"],
--    make_default_target_header_only = True,
-     protodeps = ["//tensorflow/tsl/protobuf:dnn_proto"],
-     exports = ["//tensorflow/tsl/protobuf:dnn_proto"],
- )
 diff --git a/tensorflow/tsl/protobuf/BUILD b/tensorflow/tsl/protobuf/BUILD
 index 722fa93147b..16790810d1f 100644
 --- a/tensorflow/tsl/protobuf/BUILD

@@ -61,6 +61,11 @@ load("@org_tensorflow//tensorflow:workspace0.bzl", "tf_workspace0")
 tf_workspace0()
 
 # OpenXLA
+# To update OpenXLA to a new revision,
+# a) update URL and strip_prefix to the new git commit hash
+# b) get the sha256 hash of the commit by running:
+#    curl -L https://github.com/tensorflow/tensorflow/archive/<git hash>.tar.gz | sha256sum
+#    and update the sha256 with the result.
 ## b200756333d3cddba095de50725c987308c626ea
 http_archive(
     name = "org_openxla",
@@ -70,11 +75,11 @@ http_archive(
     ],
     patch_tool = "patch",
     patches = [
+        "//openxla_patches:cache_urls.diff",
         "//openxla_patches:cudnn_int8x32.diff",
-        "//openxla_patches:ffp_gpu.diff",
-        "//openxla_patches:grpc_version.diff",
         "//openxla_patches:f16_abi_clang.diff",
         "//openxla_patches:gpu_race_condition.diff",
+        "//openxla_patches:grpc_version.diff",
         "//openxla_patches:stream_executor.diff",
     ],
     sha256 = "7b9c06d0c034b169f93359196a14014fb6abe35c782283dd7e602bb439a9c14b",
