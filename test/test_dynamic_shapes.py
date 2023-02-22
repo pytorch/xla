@@ -252,32 +252,13 @@ class TestDynamicShapes(test_utils.XlaTestCase):
     self.assertEqual(t8.cpu(), t8_aten.cpu())
 
   def test_view_copy_symint_with_dyn_input_static_input_shape(self):
-    # If the input tensor and shape are “statically” incompatible, a compilation error is raised.
-    t1 = torch.tensor([1, 0, 3, 5, 0, 6], device=dev)
-    # t2.shape=torch.Size([<=6, 1]) with real size [4, 1]
-    # t2 = [[0], [2], [3], [5]]
+    # If the input tensor is dynamic and input shape is static,
+    # it should fail because we will not likely have this case
+    # in reality.
+    t1 = torch.tensor([1, 1, 3, 5, 1, 6], device=dev)
+    # t2.shape=torch.Size([<=6, 1]) with real size [6, 1]
     t2 = torch.nonzero(t1)
-    # static 6 is incompatible with 7
-    self.assertRaises(RuntimeError, lambda: t2.view(7))
-
-    # If their “dynamic” values are incompatible, a RuntimeError is raised.
-    # statically compatible.
-    # It will fail in pytorch layer.
-    self.assertRaises(RuntimeError, lambda: t2.view(6))
-
-    # verify if dynamism is propagated correctly.
-    t5 = torch.tensor([1, 1, 3, 5, 1, 6], device=dev)
-    t6 = torch.nonzero(t5)
-    t7 = t6.view(6)
-    self.assertIsInstance(t7.shape[0], torch.SymInt)
-    self.assertEqual(str(t7.shape[0]), '<=6')
-    self.assertEqual(t7.shape[0], 6)
-
-    # verify correctness.
-    t5_aten = torch.tensor([1, 1, 3, 5, 1, 6])
-    t6_aten = torch.nonzero(t5_aten)
-    t7_aten = t6_aten.view(6)
-    self.assertEqual(t7.cpu(), t7_aten.cpu())
+    self.assertRaises(RuntimeError, lambda: t2.view(2, 3))
 
   def test_view_copy_symint_with_dyn_input_dyn_input_shape(self):
     # If the input tensor and shape are “statically” incompatible, a compilation error is raised.
