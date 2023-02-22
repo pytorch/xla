@@ -1,15 +1,15 @@
 load(
     "@org_tensorflow//tensorflow:tensorflow.bzl",
-    "if_with_tpu_support",
-    "tf_cc_shared_object",
+    "if_with_tpu_support", # [//tensorflow:with_tpu_support[:with_tpu_support_define["with_tpu_support": "true"],:with_tpu_support_flag[":enable_tpu_support": "True"]], //conditions:default[built-in condition]]
+    "tf_cc_shared_object", # "libxla_computation_client.so"
 )
-load(
+load( # tf tsl !!!!!!!!!!!!!!!!!!!!!!!!!!!
     "@org_tensorflow//tensorflow/tsl/platform/default:build_config.bzl",
-    "tf_proto_library_cc",
+    "tf_proto_library_cc", # [mesh_service_proto["mesh_service.proto"]]
 )
-load(
+load( # tf tsl !!!!!!!!!!!!!!!!!!!!!!!!!!! tf xla stream_executor !!!!!!!!!!!!!!!!!!!!!!!!!!!!
     "@org_tensorflow//tensorflow/tsl/platform/default:cuda_build_defs.bzl",
-    "if_cuda_is_configured",
+    "if_cuda_is_configured", # [["@local_config_nccl//:nccl", "@org_tensorflow//tensorflow/compiler/jit:xla_gpu_device", "@org_tensorflow//tensorflow/compiler/xla/stream_executor:cuda_platform",]]
 )
 
 licenses(["notice"])  # Apache 2.0
@@ -22,7 +22,7 @@ exports_files([
 ])
 
 tf_proto_library_cc(
-    name = "mesh_service_proto",
+    name = "mesh_service_proto", # used in tsl and computation_client_impl
     srcs = ["mesh_service.proto"],
     has_services = 1,
     cc_api_version = 2,
@@ -43,6 +43,7 @@ cc_library(
     alwayslink = True,
 )
 
+# used in libxla_computation_client.so
 cc_library(
     name = "computation_client",
     srcs = [
