@@ -605,7 +605,7 @@ class XlaFullyShardedDataParallel(nn.Module):
     make it easier to handle things (e.g. freeing parameters) on XLA.
     """
     if len(params_to_shard) > 0:
-      # When freeing the full parameters, we point their `.data` to this placeholder
+      # When freeing the full parameters, we point their internal XLATensor to this placeholder
       # (so that the XLA compiler can reuse the memory storage).
       self._dummy_data_placeholder = torch.zeros(
           1, dtype=self.compute_dtype, device=self.xla_device)
@@ -656,7 +656,7 @@ class XlaFullyShardedDataParallel(nn.Module):
           ".", "_FSDP_SHARD_SEPARATOR_")
       self.register_parameter(p_shard._name, p_shard)
       self.sharded_params.append(p_shard)
-      # Free the full parameter storage (here we free its `.data`) but keep the tensor itself
+      # Free the full parameter storage (here we free its internal XLATensor) but keep the tensor itself
       # for auto-grad tracing (like `torch.autograd.Variable` before the tensor-variable merge).
       p.set_(p.new_zeros(1))
       if p.device != self.xla_device:
