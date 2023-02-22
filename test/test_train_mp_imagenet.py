@@ -103,7 +103,6 @@ DEFAULT_KWARGS = dict(
     num_workers=8,
     host_to_device_transfer_threads=1,
 )
-
 '''
 Best config to achieve peak performance on v4-8
 
@@ -125,8 +124,6 @@ OPTIMIZED_KWARGS = dict(
     host_to_device_transfer_threads=4,
 )
 
-
-
 MODEL_SPECIFIC_DEFAULTS = {
     # Override some of the args in DEFAULT_KWARGS, or add them to the dict
     # if they don't exist.
@@ -139,8 +136,6 @@ MODEL_SPECIFIC_DEFAULTS = {
                 'lr_scheduler_type': 'WarmupAndExponentialDecayScheduler',
             })
 }
-
-
 '''
 Set any args that were not explicitly given by the user.
 DEFAULT_KWARGS in the below line can be replaced with OPTIMIZED_KWARGS for performance.
@@ -323,16 +318,18 @@ def train_imagenet():
     accuracy = xm.mesh_reduce('test_accuracy', accuracy, np.mean)
     return accuracy
 
-  train_device_loader = pl.MpDeviceLoader(train_loader,
-                                          device,
-                                          loader_prefetch_size=FLAGS.loader_prefetch_size,
-                                          device_prefetch_size=FLAGS.device_prefetch_size,
-                                          host_to_device_transfer_threads=FLAGS.host_to_device_transfer_threads)
-  test_device_loader = pl.MpDeviceLoader(test_loader,
-                                         device,
-                                         loader_prefetch_size=FLAGS.loader_prefetch_size,
-                                         device_prefetch_size=FLAGS.device_prefetch_size,
-                                         host_to_device_transfer_threads=FLAGS.host_to_device_transfer_threads)
+  train_device_loader = pl.MpDeviceLoader(
+      train_loader,
+      device,
+      loader_prefetch_size=FLAGS.loader_prefetch_size,
+      device_prefetch_size=FLAGS.device_prefetch_size,
+      host_to_device_transfer_threads=FLAGS.host_to_device_transfer_threads)
+  test_device_loader = pl.MpDeviceLoader(
+      test_loader,
+      device,
+      loader_prefetch_size=FLAGS.loader_prefetch_size,
+      device_prefetch_size=FLAGS.device_prefetch_size,
+      host_to_device_transfer_threads=FLAGS.host_to_device_transfer_threads)
 
   accuracy, max_accuracy = 0.0, 0.0
   for epoch in range(1, FLAGS.num_epochs + 1):
