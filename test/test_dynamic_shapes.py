@@ -178,6 +178,21 @@ class TestDynamicShapes(test_utils.XlaTestCase):
     self.assertEqual(t3.shape[0], 2)
     self.assertEqual(expand_out_aten.cpu(), expand_out_xla.cpu())
 
+  def test_unique_ir(self):
+    x = torch.zeros(10, dtype=torch.int, device=xm.xla_device())
+    x[0] = 1
+    x[1] = 2
+    unique_elements, inverse_indices, counts = torch.unique(
+        x, sorted=True, return_inverse=True, return_counts=True)
+    self.assertIsInstance(unique_elements.shape[0], torch.SymInt)
+    self.assertIsInstance(counts.shape[0], torch.SymInt)
+    self.assertIsInstance(inverse_indices.shape[0], int)
+    self.assertEqual(str(unique_elements.shape[0]), '<=10')
+    self.assertEqual(str(counts.shape[0]), '<=10')
+    self.assertEqual(inverse_indices.shape[0], 10)
+    self.assertEqual(int(unique_elements.shape[0]), 3)
+    self.assertEqual(int(counts.shape[0]), 3)
+
   def test_unique_correctness(self):
 
     def test_fn(*tensors):
