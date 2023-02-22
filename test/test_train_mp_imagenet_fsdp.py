@@ -353,6 +353,8 @@ def train_imagenet():
     run_eval = ((not FLAGS.test_only_at_end and
                  epoch % FLAGS.eval_interval == 0) or epoch == FLAGS.num_epochs)
     if run_eval:
+      # TODO(alanwaketan): Investigate why we inference would impact
+      # the next epoch's training.
       with torch.no_grad():
         accuracy = test_loop_fn(test_device_loader, epoch)
       xm.master_print('Epoch {} test end {}, Accuracy={:.2f}'.format(

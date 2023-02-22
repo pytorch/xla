@@ -260,6 +260,8 @@ def train_mnist(flags, **kwargs):
     train_loop_fn(model, train_device_loader, epoch)
     xm.master_print('Epoch {} train end {}'.format(epoch, test_utils.now()))
 
+    # TODO(alanwaketan): Investigate why we inference would impact
+    # the next epoch's training.
     with torch.no_grad():
       accuracy = test_loop_fn(model, test_device_loader)
     xm.master_print('Epoch {} test end {}, Accuracy={:.2f}'.format(
