@@ -352,7 +352,8 @@ void StepMarker(const std::string& device_str,
   XLAGraphExecutor::Get()->MarkStep(device);
   bool debug_mode = xla::sys_util::GetEnvBool("PT_XLA_DEBUG", false);
   if (TF_PREDICT_FALSE(debug_mode)) {
-    std::string report = xla::metrics::CreatePerformanceReport();
+    std::string report = xla::metrics::CreatePerformanceReport(
+        xla::ComputationClient::Get()->GetMetrics());
     if (!report.empty()) {
       std::string fout = xla::sys_util::GetEnvString("PT_XLA_DEBUG_FILE", "");
       if (TF_PREDICT_FALSE(!fout.empty())) {
@@ -1266,6 +1267,7 @@ void InitXlaModuleBindings(py::module m) {
         [](const std::vector<std::string>& devices) {
           NoGilSection nogil;
           XLAGraphExecutor::Get()->WaitDeviceOps(devices);
+          xla::ComputationClient::Get()->WaitDeviceOps(devices);
         },
         py::arg("devices"));
   m.def("_xla_counter_names", []() {
@@ -1306,7 +1308,8 @@ void InitXlaModuleBindings(py::module m) {
     // TODO(jwtan): Unify them once ComputationClient becomes a standalone
     // library.
     return torch::lazy::CreateMetricReport() +
-           xla::metrics_reader::CreateMetricReport();
+           xla::metrics_reader::CreateMetricReport(
+               xla::ComputationClient::Get()->GetMetrics());
   });
   m.def("_short_xla_metrics_report", [](const py::list& counter_names,
                                         const py::list& metric_names) {

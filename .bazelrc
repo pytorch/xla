@@ -10,11 +10,6 @@ build --announce_rc
 # TODO(goranpetrovic): figure out visibility of tensorflow libraries.
 build --nocheck_visibility
 
-#build --define open_source_build=true
-
-# We can set this to `standalone` after https://github.com/bazelbuild/bazel/issues/15359 is resolved.
-build --spawn_strategy=sandboxed
-
 build --enable_platform_specific_config
 
 build --experimental_cc_shared_library
@@ -22,12 +17,20 @@ build --experimental_cc_shared_library
 # Disable enabled-by-default TensorFlow features that we don't care about.
 build --define=no_aws_support=true
 build --define=no_hdfs_support=true
+build --define=no_hdfs_support=true
+build --define=no_kafka_support=true
+build --define=no_ignite_support=true
 
 build --define=grpc_no_ares=true
 
 build -c opt
 
 build --config=short_logs
+
+# Force GCC because clang/bazel has issues.
+common --action_env=CC=gcc
+common --action_env=CXX=g++
+common --spawn_strategy=standalone
 
 ###########################################################################
 
@@ -80,13 +83,12 @@ try-import %workspace%/.bazelrc.user
 # Compile database generation config.
 build:compdb --features=-layering_check
 
-# Test requires Java.
-test --java_runtime_version=remotejdk_11
+# Compiling tests requires Java.
+common --java_runtime_version=remotejdk_11
 
 # Coverage requires Java and GCC.
 coverage --config=coverage
 coverage --build_tests_only
-build:coverage --java_runtime_version=remotejdk_11
 build:coverage --copt=-DNDEBUG
 build:coverage --combined_report=lcov
 build:coverage --strategy=TestRunner=sandboxed,local
@@ -94,8 +96,6 @@ build:coverage --strategy=CoverageReport=sandboxed,local
 build:coverage --experimental_use_llvm_covmap
 build:coverage --collect_code_coverage
 build:coverage --test_tag_filters=-nocoverage
-build:coverage --action_env=CC=gcc
-build:coverage --action_env=CXX=g++
 
 ############################################################################
 ############## TensorFlow .bazelrc greatest hits ###########################
@@ -116,9 +116,10 @@ build:linux --define=PROTOBUF_INCLUDE_PATH=$(PREFIX)/include
 build:linux --config=dynamic_kernels
 
 # For projects which use TensorFlow as part of a Bazel build process, putting
-# nothing in a bazelrc will default to a monolithic build. The following line
-# opts in to modular op registration support by default.
-build --define framework_shared_object=true
+# nothing in a bazelrc will default to a monolithic build. Here we force
+# the monolitih build because otherwise there are missing dependencies and
+# linking fails.
+build --define framework_shared_object=false
 build --define tsl_protobuf_header_only=true
 
 build --define=use_fast_cpp_protos=true

@@ -34,17 +34,6 @@ if [[ "$XLA_BAZEL_VERBOSE" == "1" ]]; then
   VERBOSE="-s"
 fi
 
-SANDBOX_BASE="${XLA_SANDBOX_BASE}"
-if [ -z "$XLA_SANDBOX_BASE" ]; then
-  SANDBOX_BASE="/tmp"
-fi
-if [[ "$XLA_SANDBOX_BUILD" == "1" ]]; then
-  BUILD_STRATEGY="sandboxed --sandbox_base=${SANDBOX_BASE}"
-else
-  # We can remove this after https://github.com/bazelbuild/bazel/issues/15359 is resolved
-  BUILD_STRATEGY="local"
-fi
-
 if [[ "$TPUVM_MODE" == "1" ]]; then
   OPTS+=(--config=tpu)
 fi
@@ -70,7 +59,7 @@ fi
 # TensorFlow and its dependencies may introduce warning flags from newer compilers
 # that PyTorch and PyTorch/XLA's default compilers don't recognize. They become error
 # while '-Werror' is used. Therefore, surpress the warnings in .bazelrc or here.
-bazel build $MAX_JOBS $VERBOSE --spawn_strategy=$BUILD_STRATEGY --show_progress_rate_limit=20 \
+bazel build $MAX_JOBS $VERBOSE --show_progress_rate_limit=20 \
   --define framework_shared_object=false -c "$MODE" "${OPTS[@]}" \
   $XLA_CUDA_CFG //third_party/xla_client:libxla_computation_client.so
 

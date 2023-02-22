@@ -1,4 +1,6 @@
 version: 2.1
+orbs:
+  browser-tools: circleci/browser-tools@1.2.3
 
 update_submodule: &update_submodule
   name: Update Submodule
@@ -161,6 +163,35 @@ run_test_and_push_doc: &run_test_and_push_doc
       command: |
         docker exec -u jenkins $(cat .docker_pid) bash -c '. ~/.bashrc && .circleci/doc_push.sh'
 
+run_test_coverage: &run_test_coverage
+  machine:
+    image: ubuntu-2004:202111-02
+  steps:
+  - checkout
+  - browser-tools/install-browser-tools
+  - run:
+      name: "Setup custom environment variables"
+      command: |
+        pyenv install 3.7.0
+        pyenv global 3.7.0
+        echo "export CLOUDSDK_PYTHON=$(which python3)" >> $BASH_ENV
+  - run:
+      <<: *update_submodule
+  - run:
+      <<: *setup_base_docker
+  - run:
+      <<: *calculate_docker_image
+  - run:
+      <<: *download_docker
+  - run:
+      name: Test
+      no_output_timeout: "1h"
+      command: |
+        docker exec -u jenkins $(cat .docker_pid) bash -c \
+        '. ~/.bashrc && USE_COVERAGE=1 .circleci/test.sh'
+        docker cp $(cat .docker_pid):/home/jenkins/htmlcov /home/circleci/project
+  - store_artifacts:
+      path: htmlcov
 
 run_clang_format: &run_clang_format
   name: Run clang-format
@@ -294,8 +325,11 @@ jobs:
     <<: *ci_params
     <<: *run_test_and_push_doc
 
+  pytorch_xla_run_test_coverage:
+    <<: *ci_params
+    <<: *run_test_coverage
+
 workflows:
-  version: 2
   build:
     jobs:
       - linter_check:
@@ -336,3 +370,24 @@ workflows:
               only:
                 - master
                 - /release\/.*/
+      - pytorch_xla_run_test_coverage:
+          name: pytorch_xla_CPU_test_coverage
+          resource_class: 2xlarge
+          requires:
+            - pytorch_xla_run_build
+          filters:
+            branches:
+              only:
+                - master
+                - ci_test_coverage
+      - pytorch_xla_run_test_coverage:
+          name: pytorch_xla_GPU_test_coverage
+          resource_class: gpu.nvidia.small.multi
+          use_cuda_docker_runtime: "1"
+          requires:
+            - pytorch_xla_run_build
+          filters:
+            branches:
+              only:
+                - master
+                - ci_test_coverage
