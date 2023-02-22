@@ -55,18 +55,17 @@ class TORCH_API XLASymNodeImpl : public c10::SymNodeImpl {
   c10::SymNode sym_and(const c10::SymNode& other) override;
   c10::SymNode sym_not() override;
   // NB: self is ignored here, only the arguments are used
-  c10::SymNode is_contiguous(
-      at::ArrayRef<c10::SymNode> sizes,
-      at::ArrayRef<c10::SymNode> strides) override;
+  c10::SymNode is_contiguous(at::ArrayRef<c10::SymNode> sizes,
+                             at::ArrayRef<c10::SymNode> strides) override;
   c10::SymNode is_channels_last_contiguous_2d(
       at::ArrayRef<c10::SymNode> sizes,
-      at::ArrayRef<c10::SymNode> strides)  override;
+      at::ArrayRef<c10::SymNode> strides) override;
   c10::SymNode is_channels_last_contiguous_3d(
       at::ArrayRef<c10::SymNode> sizes,
       at::ArrayRef<c10::SymNode> strides) override;
   c10::SymNode is_channels_last_strides_2d(
       at::ArrayRef<c10::SymNode> sizes,
-      at::ArrayRef<c10::SymNode> strides)  override;
+      at::ArrayRef<c10::SymNode> strides) override;
   c10::SymNode is_channels_last_strides_3d(
       at::ArrayRef<c10::SymNode> sizes,
       at::ArrayRef<c10::SymNode> strides) override;
