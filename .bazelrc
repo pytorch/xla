@@ -82,9 +82,14 @@ common --experimental_repo_remote_exec
 # helps cache.
 build:rbe --incompatible_strict_action_env
 
+
+# Setup ResultStore
+common:rbe --bes_backend=buildeventservice.googleapis.com
+common:rbe --bes_instance_name=tpu-pytorch
+common:rbe --remote_instance_name="projects/tpu-pytorch/instances/default_instance"
+
 build:rbe --repo_env=BAZEL_DO_NOT_DETECT_CPP_TOOLCHAIN=1
 build:rbe --google_default_credentials
-build:rbe --bes_backend=buildeventservice.googleapis.com
 build:rbe --bes_results_url="https://source.cloud.google.com/results/invocations"
 build:rbe --bes_timeout=600s
 build:rbe --define=EXECUTOR=remote
@@ -95,9 +100,11 @@ build:rbe --remote_executor=grpcs://remotebuildexecution.googleapis.com
 build:rbe --remote_timeout=3600
 build:rbe --spawn_strategy=remote,worker,standalone,local
 test:rbe --test_env=USER=anon
+
+# TODO(stgpetrovic): Reenamble this after everything is on bazel.
 # Attempt to minimize the amount of data transfer between bazel and the remote
 # workers:
-build:rbe --remote_download_toplevel
+# build:rbe --remote_download_topleve
 
 build:rbe_linux --config=rbe
 build:rbe_linux --action_env=PATH="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/local/go/bin"
@@ -149,7 +156,6 @@ build:rbe_linux_cuda11.8_nvcc_py3.9 --config=rbe_linux_cuda11.8_nvcc_base --repo
 build:rbe_linux_cuda11.8_nvcc_py3.9 --python_path="/usr/local/bin/python3.9"
 
 build:rbe --project_id="tpu-pytorch"
-common:rbe --remote_instance_name="projects/tpu-pytorch/instances/default_instance"
 #########################################################################
 
 # Load rc file with user-specific options.

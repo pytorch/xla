@@ -292,7 +292,6 @@ for ipath in [
     'bazel-xla/external/eigen_archive',
     'bazel-xla/external/com_google_absl',
     'bazel-xla/external/com_googlesource_code_re2',
-    'bazel-xla/external/com_github_grpc_grpc/include',
 ]:
   include_dirs.append(os.path.join(base_dir, ipath))
 include_dirs += [
