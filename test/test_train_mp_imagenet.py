@@ -36,6 +36,9 @@ MODEL_OPTS = {
     '--pjrt_distributed': {
         'action': 'store_true',
     },
+    '--profile': {
+        'action': 'store_true',
+    }
 }
 
 FLAGS = args_parse.parse_common_options(
@@ -62,6 +65,7 @@ import torchvision.transforms as transforms
 import torch_xla
 import torch_xla.debug.metrics as met
 import torch_xla.distributed.parallel_loader as pl
+import torch_xla.debug.profiler as xp
 import torch_xla.utils.utils as xu
 import torch_xla.core.xla_model as xm
 import torch_xla.distributed.xla_multiprocessing as xmp
@@ -234,10 +238,12 @@ def train_imagenet():
     tracker = xm.RateTracker()
     model.train()
     for step, (data, target) in enumerate(loader):
-      optimizer.zero_grad()
-      output = model(data)
-      loss = loss_fn(output, target)
-      loss.backward()
+      with xp.StepTrace('train_imagenet'):
+        with xp.Trace('build_graph'):
+          optimizer.zero_grad()
+          output = model(data)
+          loss = loss_fn(output, target)
+          loss.backward()
       if FLAGS.ddp:
         optimizer.step()
       else:
@@ -301,4 +307,6 @@ def _mp_fn(index, flags):
 
 
 if __name__ == '__main__':
+  if FLAGS.profile:
+    server = xp.start_server(FLAGS.profiler_port)
   xmp.spawn(_mp_fn, args=(FLAGS,), nprocs=FLAGS.num_cores)

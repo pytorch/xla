@@ -275,12 +275,15 @@ def extract_compiled_graph(xla_model: torch.fx.GraphModule, xla_args):
                                           graph_input_tensor_ids,
                                           graph_input_xla_values)
 
-  # compiles+runs graph rooted at tensors in 'args_and_out'
-  torch_xla._XLAC._xla_sync_multi(args_and_out, [])
+  # compiles and cache graph rooted at tensors in 'args_and_out'
+  torch_xla._XLAC._xla_warm_up_cache(args_and_out, [])
   torch_xla._XLAC._clear_pending_irs(str(xm.xla_device()))
 
   def optimized_mod(*args):
-    torch_xla._XLAC._xla_sync_multi(args, [])
+    # mark_step needs to be blocking since we want to access args's XLADatas
+    # and they can't be placeholder.
+    if any(torch_xla._XLAC._check_tensor_need_materialization(args)):
+      xm.mark_step(wait=True)
     enter_ts = time.time()
     if len(args_and_out) == 0:
       return ()
@@ -312,7 +315,6 @@ def extract_compiled_graph(xla_model: torch.fx.GraphModule, xla_args):
     if debug:
       print(f"optimized_mod takes {time.time() - enter_ts} seconds overall")
 
-    xm.mark_step()
     none_remover.add_nones(result)
     return result
 

@@ -11,8 +11,8 @@
 #include "tensorflow/compiler/xla/shape_util.h"
 #include "tensorflow/compiler/xla/stream_executor/dnn.h"
 #include "tensorflow/compiler/xla/util.h"
-#include "tensorflow/compiler/xla/xla_client/debug_macros.h"
-#include "tensorflow/compiler/xla/xla_client/util.h"
+#include "third_party/xla_client/debug_macros.h"
+#include "third_party/xla_client/util.h"
 #include "torch/csrc/lazy/core/helpers.h"
 #include "torch/csrc/lazy/core/util.h"
 #include "torch_xla/csrc/convert_ops.h"
@@ -628,6 +628,40 @@ XlaOpCombiner NumericAddCombiner() {
     xla::XlaOp numeric_x = ConvertToNumeric(x);
     xla::XlaOp numeric_y = ConvertToNumeric(y);
     xla::XlaOp numeric_sum = numeric_x + numeric_y;
+    return ConvertTo(numeric_sum, XlaHelpers::TypeOfXlaOp(numeric_sum),
+                     XlaHelpers::TypeOfXlaOp(x),
+                     /*device=*/nullptr);
+  };
+}
+
+XlaOpCombiner NumericMulCombiner() {
+  return [](xla::XlaOp x, xla::XlaOp y) -> xla::XlaOp {
+    xla::XlaOp numeric_x = ConvertToNumeric(x);
+    xla::XlaOp numeric_y = ConvertToNumeric(y);
+    xla::XlaOp numeric_sum = numeric_x * numeric_y;
+    return ConvertTo(numeric_sum, XlaHelpers::TypeOfXlaOp(numeric_sum),
+                     XlaHelpers::TypeOfXlaOp(x),
+                     /*device=*/nullptr);
+  };
+}
+
+XlaOpCombiner NumericMinCombiner() {
+  return [](xla::XlaOp x, xla::XlaOp y) -> xla::XlaOp {
+    xla::XlaOp numeric_x = ConvertToNumeric(x);
+    xla::XlaOp numeric_y = ConvertToNumeric(y);
+    xla::XlaOp numeric_sum = xla::Min(numeric_x, numeric_y);
+    // xla::XlaOp numeric_sum = xla::Min(numeric_x, numeric_y);
+    return ConvertTo(numeric_sum, XlaHelpers::TypeOfXlaOp(numeric_sum),
+                     XlaHelpers::TypeOfXlaOp(x),
+                     /*device=*/nullptr);
+  };
+}
+
+XlaOpCombiner NumericMaxCombiner() {
+  return [](xla::XlaOp x, xla::XlaOp y) -> xla::XlaOp {
+    xla::XlaOp numeric_x = ConvertToNumeric(x);
+    xla::XlaOp numeric_y = ConvertToNumeric(y);
+    xla::XlaOp numeric_sum = xla::Max(numeric_x, numeric_y);
     return ConvertTo(numeric_sum, XlaHelpers::TypeOfXlaOp(numeric_sum),
                      XlaHelpers::TypeOfXlaOp(x),
                      /*device=*/nullptr);

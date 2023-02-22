@@ -4,8 +4,8 @@
 #include <ATen/Functions.h>
 
 #include "tensorflow/compiler/xla/permutation_util.h"
-#include "tensorflow/compiler/xla/xla_client/debug_macros.h"
-#include "tensorflow/compiler/xla/xla_client/util.h"
+#include "third_party/xla_client/debug_macros.h"
+#include "third_party/xla_client/util.h"
 #include "torch/csrc/lazy/core/util.h"
 #include "torch_xla/csrc/aten_xla_bridge.h"
 #include "torch_xla/csrc/helpers.h"
@@ -30,11 +30,12 @@ void CheckIndexTensorTypes(
   for (const c10::optional<at::Tensor>& tensor : indices) {
     if (tensor.has_value() && tensor->defined()) {
       at::ScalarType scalar_type = tensor->scalar_type();
-      if (scalar_type != at::kLong && scalar_type != at::kByte &&
-          scalar_type != at::kBool) {
-        XLA_ERROR() << "Tensors used as indices must be long, byte or boolean "
-                       "tensors, found scalar type: "
-                    << scalar_type;
+      if (scalar_type != at::kLong && scalar_type != at::kInt &&
+          scalar_type != at::kByte && scalar_type != at::kBool) {
+        XLA_ERROR()
+            << "Tensors used as indices must be long, int, byte or boolean "
+               "tensors, found scalar type: "
+            << scalar_type;
       }
     }
   }

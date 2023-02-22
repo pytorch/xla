@@ -9,11 +9,11 @@
 #include "tensorflow/compiler/xla/client/xla_builder.h"
 #include "tensorflow/compiler/xla/status.h"
 #include "tensorflow/compiler/xla/types.h"
-#include "tensorflow/compiler/xla/xla_client/async_task.h"
-#include "tensorflow/compiler/xla/xla_client/cache.h"
-#include "tensorflow/compiler/xla/xla_client/computation_client.h"
-#include "tensorflow/compiler/xla/xla_client/multi_wait.h"
-#include "tensorflow/compiler/xla/xla_client/util.h"
+#include "third_party/xla_client/async_task.h"
+#include "third_party/xla_client/cache.h"
+#include "third_party/xla_client/computation_client.h"
+#include "third_party/xla_client/multi_wait.h"
+#include "third_party/xla_client/util.h"
 #include "torch/csrc/autograd/variable.h"
 #include "torch/csrc/lazy/core/ir_util.h"
 #include "torch_xla/csrc/computation.h"
@@ -77,6 +77,9 @@ class XLAGraphExecutor : public torch::lazy::LazyGraphExecutor {
       absl::Span<const int64_t> dimensions,
       const torch::lazy::BackendDevice& device);
   torch::lazy::Value GetIrValueForScalar(
+      const at::Scalar& value, xla::PrimitiveType type,
+      c10::SymIntArrayRef sym_size, const torch::lazy::BackendDevice& device);
+  torch::lazy::Value GetIrValueForScalar(
       const at::Scalar& value, const xla::Shape& shape,
       const torch::lazy::BackendDevice& device);
   torch::lazy::Value GetIrValueForScalar(
@@ -112,7 +115,7 @@ class XLAGraphExecutor : public torch::lazy::LazyGraphExecutor {
   // We don't use the upstream one given we have OpbyOp mode.
   void SyncTensorsGraph(std::vector<XLATensorPtr>* tensors,
                         absl::Span<const std::string> devices, bool wait,
-                        bool sync_ltc_data);
+                        bool sync_ltc_data, bool warm_up_cache_only = false);
 
   // Makes sure that any outstanding IR operation accumulated over live tensors,
   // gets turned into device data. If wait is true, the sync operation will be
@@ -161,8 +164,7 @@ class XLAGraphExecutor : public torch::lazy::LazyGraphExecutor {
   ComputationCache* GetComputationCache();
 
   std::vector<torch::lazy::BackendDataPtr> ExecuteComputationWithBarrier(
-      torch::lazy::hash_t hash,
-      std::vector<torch::lazy::BackendDataPtr> arguments,
+      torch::lazy::hash_t hash, const std::vector<at::IValue>& graph_inputs,
       const torch::lazy::BackendDevice& device);
 
   void ClearPendingIrs(std::vector<XLATensorPtr> tensors,
@@ -336,7 +338,7 @@ class XLAGraphExecutor : public torch::lazy::LazyGraphExecutor {
   // our CachedComputation is different from upstream.
   std::shared_ptr<Async> SyncTensorsGraphInternal(
       std::vector<XLATensorPtr>* tensors, absl::Span<const std::string> devices,
-      const SyncTensorsConfig& config);
+      const SyncTensorsConfig& config, bool warm_up_cache_only = false);
 };
 
 }  // namespace torch_xla

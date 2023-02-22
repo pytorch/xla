@@ -16,15 +16,15 @@
 #include "absl/strings/str_join.h"
 #include "tensorflow/compiler/xla/literal_util.h"
 #include "tensorflow/compiler/xla/shape_util.h"
-#include "tensorflow/compiler/xla/xla_client/cache.h"
-#include "tensorflow/compiler/xla/xla_client/debug_macros.h"
-#include "tensorflow/compiler/xla/xla_client/env_vars.h"
-#include "tensorflow/compiler/xla/xla_client/sys_util.h"
-#include "tensorflow/compiler/xla/xla_client/thread_pool.h"
-#include "tensorflow/compiler/xla/xla_client/unique.h"
-#include "tensorflow/compiler/xla/xla_client/xla_util.h"
 #include "tensorflow/core/lib/core/errors.h"
 #include "tensorflow/core/profiler/lib/traceme.h"
+#include "third_party/xla_client/cache.h"
+#include "third_party/xla_client/debug_macros.h"
+#include "third_party/xla_client/env_vars.h"
+#include "third_party/xla_client/sys_util.h"
+#include "third_party/xla_client/thread_pool.h"
+#include "third_party/xla_client/unique.h"
+#include "third_party/xla_client/xla_util.h"
 #include "torch/csrc/autograd/variable.h"
 #include "torch/csrc/lazy/core/hash.h"
 #include "torch/csrc/lazy/core/helpers.h"
@@ -210,7 +210,17 @@ torch::lazy::BackendDataPtr XLATensor::GetXlaData() {
     AssignIrValue(std::move(ir_value));
   }
   if (data()->ir_value) {
-    ApplyPendingGraph();
+    torch::lazy::BackendDataPtr node_data =
+        torch::lazy::getBackend()->GetComputationDataFromNode(
+            data()->ir_value.node.get());
+    // Current IR is a DeviceData Node, we can retrive the data handle directly
+    // instead of triggering an additional execution.
+    if (node_data) {
+      data()->ir_value = torch::lazy::Value();
+      data()->handle = node_data;
+    } else {
+      ApplyPendingGraph();
+    }
   } else {
     XLA_CHECK(data()->tensor_data);
     data()->handle = TensorToXlaData(*data()->tensor_data, GetDevice());
@@ -222,13 +232,18 @@ void XLATensor::SetShardingSpec(const ShardingSpec& sharding) {
   // Existing annotation must be cleared explicitly. We do not clear and
   // overwrite the existing sharding on the user's behalf. This is a no-op if
   // the same sharding already applied.
-  if (sharding_spec() == nullptr ||
-      !ShardingUtil::EqualShardingSpecs(sharding, *sharding_spec())) {
+  if (!sharding_spec()) {
     TORCH_LAZY_COUNTER("SetShardingSpec", 1);
     data()->sharding = std::make_shared<ShardingSpec>(sharding);
-    dynamic_cast<XlaNode*>(GetIrValue().node.get())
-        ->SetSharding(sharding.sharding);
+  } else {
+    XLA_CHECK(ShardingUtil::EqualShardingSpecs(sharding, *sharding_spec()))
+        << "Existing sharding annotation, "
+        << sharding_spec()->sharding.DebugString()
+        << ", must be cleared before applying a new one, "
+        << sharding.sharding.DebugString();
   }
+  dynamic_cast<XlaNode*>(GetIrValue().node.get())
+      ->SetSharding(sharding_spec()->sharding);
 }
 void XLATensor::ClearShardingSpec() {
   data()->sharding = nullptr;
@@ -624,8 +639,13 @@ c10::SymNode XLASymNodeImpl::add(const c10::SymNode& other) {
 }
 
 c10::SymNode XLASymNodeImpl::sub(const c10::SymNode& other) {
-  XLA_CHECK(false) << "XLASymNodeImpl::" << __FUNCTION__
-                   << " has not been implemented.";
+  TORCH_LAZY_FN_COUNTER("xla::size_");
+
+  torch_xla::XLASymNodeImpl* p_other =
+      dynamic_cast<XLASymNodeImpl*>(other.get());
+  torch::lazy::NodePtr n_sub =
+      torch::lazy::MakeNode<SizeSub>(node(), p_other->node());
+  return c10::make_intrusive<XLASymNodeImpl>(n_sub);
 }
 
 c10::SymNode XLASymNodeImpl::mul(const c10::SymNode& other) {

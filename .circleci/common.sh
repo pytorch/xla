@@ -119,6 +119,7 @@ function build_torch_xla() {
 function run_torch_xla_tests() {
   PYTORCH_DIR=$1
   XLA_DIR=$2
+  USE_COVERAGE="${3:-0}"
   if [ -x "$(command -v nvidia-smi)" ]; then
     export GPU_NUM_DEVICES=2
   else
@@ -130,9 +131,17 @@ function run_torch_xla_tests() {
 
   pushd $XLA_DIR
     echo "Running Python Tests"
-    ./test/run_tests.sh
-    # only run test_autocast for cpu and gpu on circleCI.
-    python test/test_autocast.py
+    if [ "$USE_COVERAGE" != "0" ]; then
+      pip install coverage==6.5.0 --upgrade
+      ./test/utils/run_test_coverage.sh
+      coverage combine
+      coverage html
+      mv htmlcov ~/
+      chmod -R 755 ~/htmlcov
+    else
+      ./test/run_tests.sh
+      # only run test_autocast for cpu and gpu on circleCI.
+      python test/test_autocast.py
 
     # GPU tests
     if [ -x "$(command -v nvidia-smi)" ]; then
@@ -156,13 +165,19 @@ function run_torch_xla_tests() {
     fi
 
     pushd test/cpp
-    echo "Running C++ Tests"
+    echo "Running C++ Tests on XRT"
     ./run_tests.sh
-
-    if ! [ -x "$(command -v nvidia-smi)"  ]
-    then
-      ./run_tests.sh -X early_sync -F AtenXlaTensorTest.TestEarlySyncLiveTensors -L""
+    # TODO(wcromar): Enable PJRT C++ tests on GPU
+    if [ -z "$GPU_NUM_DEVICES" ]; then
+      echo "Running C++ Tests on PJRT"
+      PJRT_DEVICE=CPU ./run_tests.sh
     fi
-    popd
+
+      if ! [ -x "$(command -v nvidia-smi)"  ]
+      then
+        ./run_tests.sh -X early_sync -F AtenXlaTensorTest.TestEarlySyncLiveTensors -L""
+      fi
+      popd
+    fi
   popd
 }

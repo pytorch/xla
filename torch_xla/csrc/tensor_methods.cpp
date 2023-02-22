@@ -8,10 +8,10 @@
 #include "absl/strings/str_cat.h"
 #include "absl/strings/str_split.h"
 #include "tensorflow/compiler/xla/literal_util.h"
-#include "tensorflow/compiler/xla/xla_client/debug_macros.h"
-#include "tensorflow/compiler/xla/xla_client/metrics.h"
-#include "tensorflow/compiler/xla/xla_client/util.h"
-#include "tensorflow/compiler/xla/xla_client/xla_util.h"
+#include "third_party/xla_client/debug_macros.h"
+#include "third_party/xla_client/metrics.h"
+#include "third_party/xla_client/util.h"
+#include "third_party/xla_client/xla_util.h"
 #include "torch/csrc/autograd/variable.h"
 #include "torch/csrc/lazy/core/helpers.h"
 #include "torch/csrc/lazy/core/util.h"
@@ -98,7 +98,6 @@
 #include "torch_xla/csrc/ops/reduce_scatter.h"
 #include "torch_xla/csrc/ops/reflection_pad2d.h"
 #include "torch_xla/csrc/ops/reflection_pad2d_backward.h"
-#include "torch_xla/csrc/ops/repeat.h"
 #include "torch_xla/csrc/ops/replication_pad.h"
 #include "torch_xla/csrc/ops/replication_pad_backward.h"
 #include "torch_xla/csrc/ops/resize.h"
@@ -108,6 +107,7 @@
 #include "torch_xla/csrc/ops/scalar.h"
 #include "torch_xla/csrc/ops/scatter.h"
 #include "torch_xla/csrc/ops/scatter_add.h"
+#include "torch_xla/csrc/ops/scatter_reduce.h"
 #include "torch_xla/csrc/ops/send.h"
 #include "torch_xla/csrc/ops/sgd_optimizer_step.h"
 #include "torch_xla/csrc/ops/softmax.h"
@@ -1236,6 +1236,24 @@ XLATensorPtr full_like(const XLATensorPtr& input, const at::Scalar& fill_value,
                            device, *scalar_type);
 }
 
+XLATensorPtr full_symint(at::SymIntArrayRef sym_size,
+                         const at::Scalar& fill_value,
+                         const torch::lazy::BackendDevice& device,
+                         at::ScalarType scalar_type) {
+  XLA_CHECK(std::all_of(sym_size.begin(), sym_size.end(), [](at::SymInt dim) {
+    if (!dim.is_symbolic()) {
+      return dim >= 0;
+    }
+    return true;
+  })) << "Dimensions cannot be negative numbers";
+
+  return XLATensor::Create(
+      XLAGraphExecutor::Get()->GetIrValueForScalar(
+          fill_value, MakeXlaPrimitiveType(scalar_type, &device), sym_size,
+          device),
+      device, scalar_type);
+}
+
 XLATensorPtr gather(const XLATensorPtr& input, int64_t dim,
                     const XLATensorPtr& index) {
   xla::Shape input_shape = input->shape();
@@ -2019,11 +2037,6 @@ XLATensorPtr remainder(const XLATensorPtr& input, const at::Scalar& other) {
   return input->CreateFrom(Remainder(input->GetIrValue(), constant));
 }
 
-XLATensorPtr repeat(const XLATensorPtr& input, std::vector<int64_t> repeats) {
-  return input->CreateFrom(
-      torch::lazy::MakeNode<Repeat>(input->GetIrValue(), std::move(repeats)));
-}
-
 XLATensorPtr replication_pad1d(const XLATensorPtr& input,
                                std::vector<int64_t> padding) {
   return input->CreateFrom(torch::lazy::MakeNode<ReplicationPad>(
@@ -2179,6 +2192,16 @@ XLATensorPtr scatter_add(const XLATensorPtr& input, int64_t dim,
       value, input->shape(), input->GetDevice());
   return input->CreateFrom(torch::lazy::MakeNode<ScatterAdd>(
       input->GetIrValue(), index->GetIrValue(), constant,
+      torch::lazy::GetCanonicalDimensionIndex(dim,
+                                              input->shape().get().rank())));
+}
+
+XLATensorPtr scatter_reduce(const XLATensorPtr& input, int64_t dim,
+                            const XLATensorPtr& index, const XLATensorPtr& src,
+                            c10::string_view reduce, bool include_self) {
+  return input->CreateFrom(torch::lazy::MakeNode<ScatterReduce>(
+      input->GetIrValue(), index->GetIrValue(), src->GetIrValue(), reduce,
+      include_self,
       torch::lazy::GetCanonicalDimensionIndex(dim,
                                               input->shape().get().rank())));
 }

@@ -38,19 +38,23 @@ class ShardingUtil {
 
   // This reshuffles arguments (sharded or replicated) on the devices. The
   // size of the arguments vector must match that of the sharding_specs.
+  // The the returned arguments will be in 1:1 correspondence with the `devices`
+  // vector, so the `i`th result will belong on the `i`th device.
   // TODO(yeounoh) avoiding pre-loading of the unpartitioned input arguments
   // might improve the performance and save the bandwidth.
   static std::vector<std::vector<xla::ComputationClient::DataPtr>> InputHandler(
       std::vector<xla::ComputationClient::DataPtr> arguments,
       std::vector<std::string> devices);
 
-  // Shard a tensor and returns the sharded tensors based on the `sharding`
-  // spec. REPLICATED sharding should result in shards identical to the input;
-  // OTHERS (tiled) sharding result in shards where each data dimension is
-  // sharded across devices along the same dimension in the `tile_assignment`;
-  // the returned tensor shards vector is indexed by the device IDs. There is no
-  // data duplication. Shards are not padded in case the input tensor is not
-  // evenly partitionable, unless `padded` is set.
+  // Shard a tensor and returns the sharded tensors which belong on `devices`
+  // based on the `sharding` spec. REPLICATED sharding should result in shards
+  // identical to the input; OTHERS (tiled) sharding result in shards where
+  // each data dimension is sharded across devices along the same dimension in
+  // the `tile_assignment`; the returned tensor shards vector is indexed by the
+  // device IDs. There is no data duplication. Shards are not padded in case the
+  // input tensor is not evenly partitionable, unless `padded` is set.
+  // The the returned tensors will be in 1:1 correspondence with the `devices`
+  // vector, so the `i`th result will belong on the `i`th device.
   static std::vector<at::Tensor> ShardTensor(
       const at::Tensor& tensor, const xla::OpSharding sharding,
       const std::vector<std::string>& devices, bool padded = true);

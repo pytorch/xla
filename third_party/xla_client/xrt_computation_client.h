@@ -14,16 +14,6 @@
 #include "tensorflow/cc/framework/ops.h"
 #include "tensorflow/cc/framework/scope.h"
 #include "tensorflow/cc/ops/standard_ops.h"
-#include "tensorflow/compiler/xla/xla_client/cache.h"
-#include "tensorflow/compiler/xla/xla_client/computation_client.h"
-#include "tensorflow/compiler/xla/xla_client/debug_macros.h"
-#include "tensorflow/compiler/xla/xla_client/mesh_service.h"
-#include "tensorflow/compiler/xla/xla_client/metrics.h"
-#include "tensorflow/compiler/xla/xla_client/triggered_task.h"
-#include "tensorflow/compiler/xla/xla_client/util.h"
-#include "tensorflow/compiler/xla/xla_client/xrt_local_service.h"
-#include "tensorflow/compiler/xla/xla_client/xrt_session.h"
-#include "tensorflow/compiler/xla/xla_client/xrt_session_cache.h"
 #include "tensorflow/compiler/xla/xla_data.pb.h"
 #include "tensorflow/compiler/xrt/cc/ops/xrt_compile_ops.h"
 #include "tensorflow/compiler/xrt/cc/ops/xrt_execute_op.h"
@@ -31,6 +21,16 @@
 #include "tensorflow/compiler/xrt/xrt.pb.h"
 #include "tensorflow/core/framework/tensor.h"
 #include "tensorflow/core/protobuf/tpu/topology.pb.h"
+#include "third_party/xla_client/cache.h"
+#include "third_party/xla_client/computation_client.h"
+#include "third_party/xla_client/debug_macros.h"
+#include "third_party/xla_client/mesh_service.h"
+#include "third_party/xla_client/metrics.h"
+#include "third_party/xla_client/triggered_task.h"
+#include "third_party/xla_client/util.h"
+#include "third_party/xla_client/xrt_local_service.h"
+#include "third_party/xla_client/xrt_session.h"
+#include "third_party/xla_client/xrt_session_cache.h"
 
 namespace xla {
 
@@ -259,8 +259,8 @@ class XrtComputationClient : public ComputationClient {
                         absl::Span<const DataPtr> datas) override;
 
   DataPtr TransferShardsToServer(absl::Span<const TensorSource> tensor_shards,
-                                 std::string device,
-                                 xla::Shape shape) override {
+                                 std::string device, xla::Shape shape,
+                                 xla::OpSharding sharding) override {
     XLA_ERROR() << __FUNCTION__ << " not implemented";
   }
 
@@ -333,6 +333,12 @@ class XrtComputationClient : public ComputationClient {
   MemoryInfo GetMemoryInfo(const std::string& device) override;
 
   void PrepareToExit() override;
+
+  void WaitDeviceOps(const std::vector<std::string>& devices) override {
+    // XRT Device Computation is guranteed to finish when ExecuteComputation
+    // returns. No need to implement WaitDeviceOps.
+    return;
+  };
 
   static Worker ParseWorker(const std::string& worker);
 

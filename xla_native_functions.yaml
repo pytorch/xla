@@ -66,6 +66,7 @@ full_codegen:
   - ne.Tensor
   - reciprocal
   - relu
+  - repeat
   - round
   - rsqrt
   - selu
@@ -112,6 +113,7 @@ supported:
   - _copy_from
   - _copy_from_and_resize
   - _index_put_impl_
+  - _linalg_svd
   - _local_scalar_dense
   - _log_softmax
   - _log_softmax_backward_data
@@ -262,7 +264,6 @@ supported:
   - reflection_pad2d_backward
   - remainder.Scalar
   - remainder.Tensor
-  - repeat
   - replication_pad1d
   - replication_pad1d_backward
   - replication_pad2d
@@ -278,6 +279,7 @@ supported:
   - scatter.value
   - scatter.value_reduce
   - scatter_add
+  - scatter_reduce.two
   - select.int
   - selu_
   - sigmoid

@@ -12,14 +12,14 @@
 
 #include "tensorflow/compiler/xla/literal_util.h"
 #include "tensorflow/compiler/xla/shape_util.h"
-#include "tensorflow/compiler/xla/xla_client/debug_macros.h"
-#include "tensorflow/compiler/xla/xla_client/multi_wait.h"
-#include "tensorflow/compiler/xla/xla_client/sys_util.h"
-#include "tensorflow/compiler/xla/xla_client/tf_logging.h"
-#include "tensorflow/compiler/xla/xla_client/thread_pool.h"
-#include "tensorflow/compiler/xla/xla_client/util.h"
-#include "tensorflow/compiler/xla/xla_client/xrt_computation_client.h"
 #include "tensorflow/core/lib/bfloat16/bfloat16.h"
+#include "third_party/xla_client/debug_macros.h"
+#include "third_party/xla_client/multi_wait.h"
+#include "third_party/xla_client/sys_util.h"
+#include "third_party/xla_client/tf_logging.h"
+#include "third_party/xla_client/thread_pool.h"
+#include "third_party/xla_client/util.h"
+#include "third_party/xla_client/xrt_computation_client.h"
 #include "torch/csrc/lazy/core/hash.h"
 #include "torch/csrc/lazy/core/util.h"
 #include "torch_xla/csrc/helpers.h"
@@ -931,30 +931,26 @@ std::vector<torch::lazy::BackendDataPtr> CreateTensorsData(
     std::vector<xla::ComputationClient::DataPtr> new_handles;          // out
     if (shardings[i] != nullptr) {
       xla::OpSharding sharding = shardings[i]->sharding;
-      // TODO(yeounoh) PJRT runs a process per host for SPMD and without cross
-      // host communications. This means that we may need to manually shard
-      // across global devices for multi-host training.
+      // GetLocalDevices returns the list of local devices specified by their
+      // global ordinals (e.g. ["TPU:4", "TPU:5", "TPU:6", "TPU:7"]).
       std::vector<std::string> local_devices =
-          xla::ComputationClient::Get()->GetAllDevices();
+          xla::ComputationClient::Get()->GetLocalDevices();
       // Shards the input tensors with padding, to split evenly.
       // The execution requires consistent shard sizes, and the zero-padded
       // values should be ignored.
-      std::vector<at::Tensor> shards = ShardingUtil::ShardTensor(
+      std::vector<at::Tensor> local_shards = ShardingUtil::ShardTensor(
           tensors[i], sharding, local_devices, /*padded=*/true);
 
-      for (int64_t j = 0; j < shards.size(); ++j) {
-        int64_t ordinal = (sharding.type() == xla::OpSharding::OTHER)
-                              ? sharding.tile_assignment_devices()[j]
-                              : j;
-        auto shard_device = ParseDeviceString(local_devices[ordinal]);
+      for (int64_t j = 0; j < local_shards.size(); ++j) {
+        auto shard_device = ParseDeviceString(local_devices[j]);
         auto shard_shape =
-            CreateComputationShapeFromTensor(shards[j], &shard_device);
+            CreateComputationShapeFromTensor(local_shards[j], &shard_device);
         auto populate_fn =
             [&, j, shard_device](
                 const xla::ComputationClient::TensorSource& source_tensor,
                 void* dest_buffer, size_t dest_buffer_size) {
-              PopulateTensorBuffer(shards[j], source_tensor.shape, dest_buffer,
-                                   dest_buffer_size, shard_device);
+              PopulateTensorBuffer(local_shards[j], source_tensor.shape,
+                                   dest_buffer, dest_buffer_size, shard_device);
             };
         source_tensors.emplace_back(std::move(shard_shape),
                                     shard_device.toString(),
@@ -962,7 +958,7 @@ std::vector<torch::lazy::BackendDataPtr> CreateTensorsData(
       }
       new_handles.push_back(
           xla::ComputationClient::Get()->TransferShardsToServer(
-              source_tensors, devices[i], shape));
+              source_tensors, devices[i], shape, sharding));
     } else {
       // If data is not explicilty marked for sharding, then it is replicated to
       // the rest of the available devices. This implicit replication is needed

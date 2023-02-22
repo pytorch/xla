@@ -2,6 +2,8 @@
 #define XLA_CLIENT_PJRT_COMPUTATION_CLIENT_H_
 
 #include <cstdint>
+#include <mutex>
+#include <shared_mutex>
 
 #include "absl/types/span.h"
 #include "tensorflow/compiler/xla/client/xla_computation.h"
@@ -9,9 +11,9 @@
 #include "tensorflow/compiler/xla/pjrt/pjrt_client.h"
 #include "tensorflow/compiler/xla/pjrt/pjrt_executable.h"
 #include "tensorflow/compiler/xla/shape.h"
-#include "tensorflow/compiler/xla/xla_client/computation_client.h"
-#include "tensorflow/compiler/xla/xla_client/debug_macros.h"
-#include "tensorflow/compiler/xla/xla_client/util.h"
+#include "third_party/xla_client/computation_client.h"
+#include "third_party/xla_client/debug_macros.h"
+#include "third_party/xla_client/util.h"
 
 namespace xla {
 
@@ -26,11 +28,15 @@ class PjRtComputationClient : public ComputationClient {
   std::vector<DataPtr> TransferToServer(
       absl::Span<const TensorSource> tensors) override;
 
+  // Use XLA replication to re-assemble the sharded data.
+  DataPtr ReplicateShardedData(const DataPtr& handle);
+
   std::vector<Literal> TransferFromServer(
       absl::Span<const DataPtr> handles) override;
 
   DataPtr TransferShardsToServer(absl::Span<const TensorSource> tensor_shards,
-                                 std::string device, xla::Shape shape) override;
+                                 std::string device, xla::Shape shape,
+                                 xla::OpSharding sharding) override;
 
   DataPtr CopyToDevice(DataPtr data, std::string dst) override;
 
@@ -70,6 +76,8 @@ class PjRtComputationClient : public ComputationClient {
   std::shared_ptr<std::vector<std::string>> GetReplicationDevices() override;
 
   void PrepareToExit() override { return; };
+
+  void WaitDeviceOps(const std::vector<std::string>& devices) override;
 
   // NOT IMPLEMENTED
 
@@ -125,8 +133,15 @@ class PjRtComputationClient : public ComputationClient {
   std::shared_ptr<PjRtClient> client_;
   std::unordered_map<std::string, xla::PjRtDevice* const> string_to_device_;
   std::shared_ptr<std::vector<std::string>> replication_devices_;
+  std::unordered_map<std::string, std::unique_ptr<std::shared_mutex>>
+      device_locks_;
+  // TODO(wcromar): Remove this when PJRT C API supports logical_on_device_shape
+  bool supports_logical_on_device_shape_ = true;
 
   xla::PjRtDevice* StringToPjRtDevice(const std::string& device);
+  std::shared_lock<std::shared_mutex> lock_device_shared(
+      const std::string& device);
+  std::unique_lock<std::shared_mutex> lock_device(const std::string& device);
 
   struct PjRtData : public Data {
     PjRtData(std::string device, Shape device_shape)
@@ -152,16 +167,21 @@ class PjRtComputationClient : public ComputationClient {
     PjRtShardedData(std::string device, Shape shape) = delete;
 
     PjRtShardedData(std::string device, Shape shape,
-                    std::vector<std::shared_ptr<PjRtData>> shards)
-        : Data(std::move(device), std::move(shape)), shards(shards) {}
+                    std::vector<std::shared_ptr<PjRtData>> shards,
+                    xla::OpSharding sharding)
+        : Data(std::move(device), std::move(shape)),
+          shards(shards),
+          sharding(sharding) {}
 
     OpaqueHandle GetOpaqueHandle() override {
       // Always returns `OpaqueHandle` of the first shard.
       return shards[0]->GetOpaqueHandle();
     }
+
     void Assign(const Data& data) override {
       XLA_ERROR() << __FUNCTION__ << " not supported.";
     }
+
     bool HasValue() const override {
       if (!shards.empty()) {
         for (auto& shard : shards) {
@@ -173,7 +193,10 @@ class PjRtComputationClient : public ComputationClient {
       return true;
     }
 
+    xla::OpSharding GetSharding() { return sharding; }
+
     std::vector<std::shared_ptr<PjRtData>> shards;
+    xla::OpSharding sharding;
   };
 
   struct PjRtComputation : public Computation {

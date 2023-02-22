@@ -359,6 +359,10 @@ XLATensorPtr full(absl::Span<const int64_t> size, const at::Scalar& fill_value,
 XLATensorPtr full_like(const XLATensorPtr& input, const at::Scalar& fill_value,
                        const torch::lazy::BackendDevice& device,
                        c10::optional<at::ScalarType> scalar_type);
+XLATensorPtr full_symint(at::SymIntArrayRef sym_size,
+                         const at::Scalar& fill_value,
+                         const torch::lazy::BackendDevice& device,
+                         at::ScalarType scalar_type);
 
 XLATensorPtr gather(const XLATensorPtr& input, int64_t dim,
                     const XLATensorPtr& index);
@@ -664,10 +668,6 @@ XLATensorPtr reflection_pad2d_backward(const XLATensorPtr& grad_output,
 XLATensorPtr remainder(const XLATensorPtr& input, const XLATensorPtr& other);
 XLATensorPtr remainder(const XLATensorPtr& input, const at::Scalar& other);
 
-// Repeats the input tensor along each dimension by the given number of
-// repeats.
-XLATensorPtr repeat(const XLATensorPtr& input, std::vector<int64_t> repeats);
-
 XLATensorPtr replication_pad1d(const XLATensorPtr& input,
                                std::vector<int64_t> padding);
 XLATensorPtr replication_pad1d_backward(const XLATensorPtr& grad_output,
@@ -714,6 +714,10 @@ XLATensorPtr scatter_add(const XLATensorPtr& input, int64_t dim,
                          const XLATensorPtr& index, const XLATensorPtr& src);
 XLATensorPtr scatter_add(const XLATensorPtr& input, int64_t dim,
                          const XLATensorPtr& index, const at::Scalar& value);
+
+XLATensorPtr scatter_reduce(const XLATensorPtr& input, int64_t dim,
+                            const XLATensorPtr& index, const XLATensorPtr& src,
+                            c10::string_view reduce, bool include_self);
 
 XLATensorPtr select(const XLATensorPtr& input, int64_t dim, int64_t index);
 

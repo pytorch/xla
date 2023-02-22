@@ -12,26 +12,33 @@
 #include "absl/container/flat_hash_map.h"
 #include "absl/strings/str_cat.h"
 #include "absl/types/variant.h"
-#include "tensorflow/compiler/xla/hlo/ir/hlo_module.h"
+#include "pybind11/attr.h"
+#include "pybind11/cast.h"
+#include "pybind11/detail/common.h"
+#include "pybind11/numpy.h"
+#include "pybind11/pybind11.h"
+#include "pybind11/pytypes.h"
+#include "pybind11/stl_bind.h"
+#include "tensorflow/compiler/xla/pjrt/distributed/distributed.h"
 #include "tensorflow/compiler/xla/python/profiler/internal/traceme_wrapper.h"
 #include "tensorflow/compiler/xla/service/hlo_parser.h"
-#include "tensorflow/compiler/xla/xla_client/computation_client.h"
-#include "tensorflow/compiler/xla/xla_client/mesh_service.h"
-#include "tensorflow/compiler/xla/xla_client/metrics.h"
-#include "tensorflow/compiler/xla/xla_client/metrics_analysis.h"
-#include "tensorflow/compiler/xla/xla_client/metrics_reader.h"
-#include "tensorflow/compiler/xla/xla_client/multi_wait.h"
-#include "tensorflow/compiler/xla/xla_client/profiler.h"
-#include "tensorflow/compiler/xla/xla_client/record_reader.h"
-#include "tensorflow/compiler/xla/xla_client/sys_util.h"
-#include "tensorflow/compiler/xla/xla_client/thread_pool.h"
-#include "tensorflow/compiler/xla/xla_client/util.h"
-#include "tensorflow/compiler/xla/xla_client/xla_util.h"
 #include "tensorflow/core/example/example.pb.h"
 #include "tensorflow/core/example/feature.pb.h"
 #include "tensorflow/core/platform/env.h"
 #include "tensorflow/core/profiler/lib/traceme.h"
 #include "tensorflow/python/profiler/internal/profiler_pywrap_impl.h"
+#include "third_party/xla_client/computation_client.h"
+#include "third_party/xla_client/mesh_service.h"
+#include "third_party/xla_client/metrics.h"
+#include "third_party/xla_client/metrics_analysis.h"
+#include "third_party/xla_client/metrics_reader.h"
+#include "third_party/xla_client/multi_wait.h"
+#include "third_party/xla_client/profiler.h"
+#include "third_party/xla_client/record_reader.h"
+#include "third_party/xla_client/sys_util.h"
+#include "third_party/xla_client/thread_pool.h"
+#include "third_party/xla_client/util.h"
+#include "third_party/xla_client/xla_util.h"
 #include "torch/csrc/autograd/utils/wrap_outputs.h"
 #include "torch/csrc/autograd/variable.h"
 #include "torch/csrc/jit/python/pybind.h"
@@ -322,11 +329,11 @@ std::pair<at::Tensor, std::shared_ptr<torch::lazy::Value>> Recv(
 
 void SyncTensors(const std::vector<at::Tensor>& tensors,
                  const std::vector<std::string>& devices, bool wait,
-                 bool sync_xla_data) {
+                 bool sync_xla_data, bool warm_up_cache_only = false) {
   std::vector<XLATensorPtr> xtensors =
       GetXlaTensors(tensors, /*want_all=*/false);
   XLAGraphExecutor::Get()->SyncTensorsGraph(&xtensors, devices, wait,
-                                            sync_xla_data);
+                                            sync_xla_data, warm_up_cache_only);
 }
 
 void SyncLiveTensors(const std::string& device_str,
@@ -345,7 +352,8 @@ void StepMarker(const std::string& device_str,
   XLAGraphExecutor::Get()->MarkStep(device);
   bool debug_mode = xla::sys_util::GetEnvBool("PT_XLA_DEBUG", false);
   if (TF_PREDICT_FALSE(debug_mode)) {
-    std::string report = xla::metrics::CreatePerformanceReport();
+    std::string report = xla::metrics::CreatePerformanceReport(
+        xla::ComputationClient::Get()->GetMetrics());
     if (!report.empty()) {
       std::string fout = xla::sys_util::GetEnvString("PT_XLA_DEBUG_FILE", "");
       if (TF_PREDICT_FALSE(!fout.empty())) {
@@ -792,6 +800,37 @@ std::string GetPyTypeString(py::handle obj) {
   return type;
 }
 
+std::vector<bool> check_materialization_helper(
+    const std::vector<XLATensorPtr>& xtensors) {
+  std::vector<bool> need_materialization;
+  need_materialization.reserve(xtensors.size());
+  for (auto& xtensor : xtensors) {
+    if (!xtensor) {
+      // input tensor is not a xla tensor
+      need_materialization.push_back(false);
+    } else if (xtensor->CurrentDataHandle() != nullptr) {
+      // input tensor has xla_data which means it is already on device
+      need_materialization.push_back(false);
+    } else if (xtensor->CurrentIrValue().node != nullptr) {
+      torch::lazy::NodePtr node = xtensor->CurrentIrValue().node;
+      if (torch_xla::DeviceData::Cast(xtensor->CurrentIrValue().node.get()) !=
+          nullptr) {
+        need_materialization.push_back(false);
+      } else {
+        // input tensor is an IR other than DeviceData which means a
+        // compuation is required to get the value of this tensor.
+        need_materialization.push_back(true);
+      }
+    } else {
+      // TODO: maybe also handle it is a XLATensor with tensor_data case
+      XLA_CHECK(false)
+          << "_check_tensor_need_materialization "
+             "currently does not handle XLATensor without XLAData and IR";
+    }
+  }
+  return need_materialization;
+}
+
 void BuildProfilerSubmodule(py::module* m) {
   py::module profiler = m->def_submodule("profiler", "Profiler integration");
   py::class_<xla::profiler::ProfilerServer,
@@ -1202,6 +1241,14 @@ void InitXlaModuleBindings(py::module m) {
         },
         py::arg("tensors"), py::arg("devices"), py::arg("wait") = true,
         py::arg("sync_xla_data") = true);
+  m.def("_xla_warm_up_cache",
+        [](const std::vector<at::Tensor>& tensors,
+           const std::vector<std::string>& devices) {
+          NoGilSection nogil;
+          SyncTensors(tensors, devices, /*wait=*/false, /*sync_xla_data=*/false,
+                      /*warm_up_cache_only=*/true);
+        },
+        py::arg("tensors"), py::arg("devices"));
   m.def("_xla_sync_live_tensors",
         [](const std::string& device, const std::vector<std::string>& devices,
            bool wait) {
@@ -1220,6 +1267,7 @@ void InitXlaModuleBindings(py::module m) {
         [](const std::vector<std::string>& devices) {
           NoGilSection nogil;
           XLAGraphExecutor::Get()->WaitDeviceOps(devices);
+          xla::ComputationClient::Get()->WaitDeviceOps(devices);
         },
         py::arg("devices"));
   m.def("_xla_counter_names", []() {
@@ -1260,7 +1308,8 @@ void InitXlaModuleBindings(py::module m) {
     // TODO(jwtan): Unify them once ComputationClient becomes a standalone
     // library.
     return torch::lazy::CreateMetricReport() +
-           xla::metrics_reader::CreateMetricReport();
+           xla::metrics_reader::CreateMetricReport(
+               xla::ComputationClient::Get()->GetMetrics());
   });
   m.def("_short_xla_metrics_report", [](const py::list& counter_names,
                                         const py::list& metric_names) {
@@ -1561,6 +1610,31 @@ void InitXlaModuleBindings(py::module m) {
     InitXlaBackend();
   });
 
+  /* The distributed runtime service is used by the PjRt GPU client. */
+  py::class_<xla::DistributedRuntimeService,
+             std::unique_ptr<xla::DistributedRuntimeService>>
+      distributed_runtime_service(m, "DistributedRuntimeService");
+  distributed_runtime_service.def("shutdown",
+                                  &xla::DistributedRuntimeService::Shutdown,
+                                  py::call_guard<py::gil_scoped_release>());
+  m.def("_xla_get_distributed_runtime_service",
+        [](int num_nodes) -> std::unique_ptr<xla::DistributedRuntimeService> {
+          std::string dist_service_addr =
+              xla::sys_util::GetEnvString("PJRT_DIST_SERVICE_ADDR", "");
+          XLA_CHECK(!dist_service_addr.empty())
+              << "Must set PJRT_DIST_SERVICE_ADDR environment variable to use "
+                 "distributed runtime";
+          XLA_CHECK(num_nodes > 0)
+              << "num_nodes must be positive: " << num_nodes;
+
+          xla::DistributedRuntimeServiceImpl::Options options;
+          options.num_nodes = num_nodes;
+          return std::move(xla::GetDistributedRuntimeService(
+                               dist_service_addr, options,
+                               /*use_coordination_service=*/false)
+                               .value());
+        });
+
   BuildProfilerSubmodule(&m);
 
   m.def("_get_tensors_handle",
@@ -1633,38 +1707,26 @@ void InitXlaModuleBindings(py::module m) {
         });
 
   // Return true if value of the tensor requires a computation.
-  m.def(
-      "_check_tensor_need_materialization",
-      [](const std::vector<at::Tensor>& tensors) -> std::vector<bool> {
-        std::vector<bool> need_materialization;
-        need_materialization.reserve(tensors.size());
-        for (auto& tensor : tensors) {
-          auto xtensor = bridge::TryGetXlaTensor(tensor);
-          if (!xtensor) {
-            // input tensor is not a xla tensor
-            need_materialization.push_back(false);
-          } else if (xtensor->CurrentDataHandle() != nullptr) {
-            // input tensor has xla_data which means it is already on device
-            need_materialization.push_back(false);
-          } else if (xtensor->CurrentIrValue().node != nullptr) {
-            torch::lazy::NodePtr node = xtensor->CurrentIrValue().node;
-            if (torch_xla::DeviceData::Cast(
-                    xtensor->CurrentIrValue().node.get()) != nullptr) {
-              need_materialization.push_back(false);
-            } else {
-              // input tensor is an IR other than DeviceData which means a
-              // compuation is required to get the value of this tensor.
-              need_materialization.push_back(true);
-            }
-          } else {
-            // TODO: maybe also handle it is a XLATensor with tensor_data case
-            XLA_CHECK(false)
-                << "_check_tensor_need_materialization "
-                   "currently does not handle XLATensor without XLAData and IR";
+  m.def("_check_tensor_need_materialization",
+        [](const std::vector<at::Tensor>& tensors) -> std::vector<bool> {
+          std::vector<XLATensorPtr> xtensors;
+          xtensors.reserve(tensors.size());
+          for (const at::Tensor& tensor : tensors) {
+            xtensors.push_back(bridge::TryGetXlaTensor(tensor));
           }
-        }
-        return need_materialization;
-      });
+          return check_materialization_helper(xtensors);
+        });
+
+  // Return true if value of the any tensor in this devicerequires a
+  // computation.
+  m.def("_check_device_tensor_need_materialization",
+        [](const std::string& device_str) -> std::vector<bool> {
+          auto opt_device = GetOptionalDevice(device_str);
+          std::vector<XLATensorPtr> xtensors =
+              XLAGraphExecutor::Get()->GetLiveTensors(
+                  opt_device ? &opt_device.value() : nullptr);
+          return check_materialization_helper(xtensors);
+        });
 
   m.def("_get_graph_hash", [](const std::vector<at::Tensor>& tensors) {
     std::vector<XLATensorPtr> xtensors;
@@ -1689,27 +1751,9 @@ void InitXlaModuleBindings(py::module m) {
             -> std::vector<at::Tensor> {
           XLA_CHECK(hash_str.size() == sizeof(torch::lazy::hash_t));
           torch::lazy::hash_t hash = *(torch::lazy::hash_t*)(hash_str.c_str());
-          std::vector<torch::lazy::BackendDataPtr> parameters_data;
           torch::lazy::BackendDevice device = torch_xla::GetCurrentDevice();
-          {
-            TORCH_LAZY_TIMED("RunCachedGraphInputData");
-            // setup the parameters_data
-            int idx = 0;
-            for (auto& ivalue : graph_inputs) {
-              torch::lazy::BackendDataPtr dataptr;
-              if (auto xla_tensor_ptr =
-                      bridge::TryGetXlaTensor(ivalue.toTensor())) {
-                dataptr = xla_tensor_ptr->GetXlaData();
-              } else {
-                dataptr = torch_xla::TensorToXlaData(ivalue.toTensor(), device);
-              }
-
-              ++idx;
-              parameters_data.push_back(dataptr);
-            }
-          }
           auto results = XLAGraphExecutor::Get()->ExecuteComputationWithBarrier(
-              hash, std::move(parameters_data), device);
+              hash, graph_inputs, device);
           std::vector<at::Tensor> retlist;
           {
             TORCH_LAZY_TIMED("RunCachedGraphOutputData");

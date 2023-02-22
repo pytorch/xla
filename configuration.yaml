@@ -94,6 +94,10 @@ variables:
         - Indicates which device is being used with PJRT. It can be either CPU,
           TPU, or GPU
       type: string
+    PJRT_SELECT_DEFAULT_DEVICE:
+      description:
+       - Whether or not to select a default PJRT device based on the environment
+         if the runtime is not already configured.
     PJRT_CPU_ASYNC_CLIENT:
       description:
         - Whether or not to create an async PJRT client for the CPU device(s).

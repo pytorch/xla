@@ -6,14 +6,6 @@ substitutions:
   # Location of GKE cluster.
   _CLUSTER_ZONE: 'europe-west4-a'
 steps:
-# We only need to update submodules in triggers. User must update submodule
-# before local runs because .git is not present.
-- name: 'alpine/git'
-  entrypoint: sh
-  args:
-  - -c
-  - |
-    git submodule update --init || echo No git repository found
 - name: 'docker'
   id: build-image
   args: [
@@ -62,9 +54,9 @@ steps:
     export GCS_BUCKET=$_GCS_BUCKET
 
     # Launch k8s deployment, wait for completion, print logs
-    pod_name=$(envsubst < test/tpu/pjrt_test_job.yaml | kubectl create -f - -o name)
+    pod_name=$(envsubst < test/tpu/xla_test_job.yaml | kubectl create -f - -o name)
     pod_name=$(kubectl wait --for condition=ready --timeout=10m $pod_name -o name)
-    kubectl logs -f $pod_name --container=pjrt-test
+    kubectl logs -f $pod_name --container=xla-test
 timeout: 18000s # 3 hours
 options:
  machineType: 'N1_HIGHCPU_32'
