@@ -287,6 +287,7 @@ for ipath in [
     'bazel-xla',
     'bazel-bin/external/org_tensorflow/',
     'bazel-xla/external/org_tensorflow/',
+    'bazel-xla/external/llvm-project/mlir/include',
     'bazel-xla/external/com_github_grpc_grpc/include',
     'bazel-xla/external/com_google_protobuf/src',
     'bazel-xla/external/eigen_archive',
@@ -339,6 +340,7 @@ else:
 
 extra_link_args += ['-lxla_computation_client']
 
+print(include_dirs)
 setup(
     name=os.environ.get('TORCH_XLA_PACKAGE_NAME', 'torch_xla'),
     version=version,
