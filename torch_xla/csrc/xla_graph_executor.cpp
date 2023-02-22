@@ -1177,9 +1177,9 @@ XLAGraphExecutor::CompilationResult XLAGraphExecutor::Compile(
 
   xla::XlaComputation computation = ConsumeValue(lowering_ctx.BuildXla());
   mlir::MLIRContext context;
-  mlir::OwningModuleRef module = mlir::ModuleOp::create(mlir::UnknownLoc::get(&context));
-  HloModuleProto proto(computation.proto());
-  TF_RETURN_IF_ERROR(ConvertHloToMlirHlo(module.get(), &proto, /*import_all_computations=*/false));
+  mlir::ModuleOp module = mlir::ModuleOp::create(mlir::UnknownLoc::get(&context));
+  xla::HloModuleProto proto(computation.proto());
+  ConvertHloToMlirHlo(module, &proto, /*import_all_computations=*/false);
   xla::ProgramShape program_shape = ConsumeValue(computation.GetProgramShape());
 
   bool should_wrap_parameter =
