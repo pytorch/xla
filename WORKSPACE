@@ -59,3 +59,46 @@ tf_workspace1()
 load("@org_tensorflow//tensorflow:workspace0.bzl", "tf_workspace0")
 
 tf_workspace0()
+
+# OpenXLA
+## b200756333d3cddba095de50725c987308c626ea
+http_archive(
+    name = "org_openxla",
+    patch_args = [
+        "-l",
+        "-p1",
+    ],
+    patch_tool = "patch",
+    patches = [
+        "//openxla_patches:cudnn_int8x32.diff",
+        "//openxla_patches:ffp_gpu.diff",
+        "//openxla_patches:grpc_version.diff",
+        "//openxla_patches:f16_abi_clang.diff",
+        "//openxla_patches:gpu_race_condition.diff",
+        "//openxla_patches:stream_executor.diff",
+    ],
+    sha256 = "7b9c06d0c034b169f93359196a14014fb6abe35c782283dd7e602bb439a9c14b",
+    strip_prefix = "openxla-8faf3d859c0d8ca9fc8b6ce56836c705a94d4265",
+    urls = ["https://github.com/openxla/xla/archive/8faf3d859c0d8ca9fc8b6ce56836c705a94d4265.tar.gz"],
+)
+
+# Initialize OpenXLA's external dependencies.
+load("@org_openxla//openxla:workspace4.bzl", "openxla_workspace4")
+
+openxla_workspace3()
+
+load("@org_openxla//openxla:workspace3.bzl", "openxla_workspace3")
+
+openxla_workspace3()
+
+load("@org_openxla//openxla:workspace2.bzl", "openxla_workspace2")
+
+openxla_workspace2()
+
+load("@org_openxla//openxla:workspace1.bzl", "openxla_workspace1")
+
+openxla_workspace1()
+
+load("@org_openxla//openxla:workspace0.bzl", "openxla_workspace0")
+
+openxla_workspace0()
