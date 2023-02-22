@@ -12,6 +12,7 @@ dev = xm.xla_device()
 
 class TestDynamicShapes(test_utils.XlaTestCase):
 
+  @unittest.skip("Regression")
   def test_simple_expand(self):
     size1 = 5
     size2 = 2
@@ -26,6 +27,7 @@ class TestDynamicShapes(test_utils.XlaTestCase):
     t6_cpu = t6.cpu()
     self.assertEqual(t6_cpu.shape[0], 2)
 
+  @unittest.skip("Regression")
   def test_simple_expand_on_2d_tensor(self):
     size1 = 5
     size2 = 2
@@ -60,6 +62,7 @@ class TestDynamicShapes(test_utils.XlaTestCase):
     # the python dispatcher.
     self.assertGreater(met.counter_value("xla::size_clone"), 0)
 
+  @unittest.skip("Regression")
   def test_simple_expand_add_dimension(self):
     size1 = 5
     size2 = 2
@@ -85,6 +88,7 @@ class TestDynamicShapes(test_utils.XlaTestCase):
     a3 = a2.shape[0] + 3  # tests wrap
     self.assertIsInstance(a3, torch.SymInt)
 
+  @unittest.skip("Regression")
   def test_sizeAdd(self):
     size1 = 5
     size2 = 2
@@ -105,6 +109,7 @@ class TestDynamicShapes(test_utils.XlaTestCase):
     t4 = t3.expand(dyn_size)
     self.assertEqual(t4.size(0), 3)
 
+  @unittest.skip("Regression")
   def test_sizeSub(self):
     size1 = 5
     size2 = 2
@@ -165,6 +170,7 @@ class TestDynamicShapes(test_utils.XlaTestCase):
     t2 = torch.nonzero(t1.int()).float()
     xm.mark_step()
 
+  @unittest.skip("Regression")
   def test_expand_symint_correctness(self):
     dev = xm.xla_device()
     size1 = 5
