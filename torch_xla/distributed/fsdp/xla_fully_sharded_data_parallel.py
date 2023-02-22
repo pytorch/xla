@@ -1423,8 +1423,7 @@ class XlaFullyShardedDataParallel(nn.Module):
     """
     if len(p_list) + len(p_shard_list) + len(dependency_tensors) == 0:
       return
-    self.optimization_barrier_op(p_list + p_shard_list +
-                                 dependency_tensors)
+    self.optimization_barrier_op(p_list + p_shard_list + dependency_tensors)
 
   def assert_state(self, state: Union[TrainingState,
                                       List[TrainingState]]) -> None:
