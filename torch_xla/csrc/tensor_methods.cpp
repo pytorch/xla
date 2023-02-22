@@ -2622,8 +2622,6 @@ XLATensorPtr alias(const XLATensorPtr& input) {
   return input->CreateViewTensor(std::move(view_info));
 }
 
-// Here we don't know which output shape dimension is dynamic, hence we need to
-// do GetDynamicReshape.
 XLATensorPtr view(const XLATensorPtr& input,
                   absl::Span<const int64_t> output_size) {
   auto input_shape = input->shape();
@@ -2635,7 +2633,6 @@ XLATensorPtr view(const XLATensorPtr& input,
   return input->CreateViewTensor(std::move(view_info));
 }
 
-// Here we know which output shape dimension is dynamic.
 XLATensorPtr view_symint(const XLATensorPtr& input,
                          at::SymIntArrayRef sym_size) {
   xla::util::MaybeRef<xla::Shape> input_shape = input->shape();

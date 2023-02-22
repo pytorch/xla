@@ -254,7 +254,7 @@ class TestDynamicShapes(test_utils.XlaTestCase):
   def test_view_copy_symint_with_dyn_input_static_input_shape(self):
     # If the input tensor is dynamic and input shape is static,
     # it should fail because we will not likely have this case
-    # in reality.
+    # in reality so we don't support this feature.
     t1 = torch.tensor([1, 1, 3, 5, 1, 6], device=dev)
     # t2.shape=torch.Size([<=6, 1]) with real size [6, 1]
     t2 = torch.nonzero(t1)
@@ -297,41 +297,6 @@ class TestDynamicShapes(test_utils.XlaTestCase):
     # t4_aten.size=[5, 1]
     t9_aten = t8_aten.view(t4_aten.shape[0])
     self.assertEqual(t9.cpu(), t9_aten.cpu())
-
-  def test_view_copy_symint_negative_input_shape(self):
-    t1 = torch.tensor([1, 1, 3, 5, 1, 6], device=dev)
-    t2 = torch.nonzero(t1)
-    # t2.shape=torch.Size([<=6, 1]) with real size [6, 1]
-    # t2 = [[0], [1], [2], [3], [4], [5]]
-    t3 = t2.view(2, -1)
-    self.assertIsInstance(t3.shape[0], int)
-    self.assertIsInstance(t3.shape[1], torch.SymInt)
-    self.assertEqual(str(t3.shape[0]), '2')
-    self.assertEqual(str(t3.shape[1]), '<=3')
-    self.assertEqual(t3.shape[0], 2)
-    self.assertEqual(t3.shape[1], 3)
-
-    # verify correctness.
-    t1_aten = torch.tensor([1, 1, 3, 5, 1, 6])
-    t2_aten = torch.nonzero(t1_aten)
-    t3_aten = t2_aten.view(2, -1)
-    self.assertEqual(t3.cpu(), t3_aten.cpu())
-
-  def test_GetDynamicReshape(self):
-    t1 = torch.tensor([1, 2, 3, 4, 5, 6, 7, 8], device=dev)
-    t2 = torch.nonzero(t1)
-    t7 = torch.transpose(t2, 0, 1)
-    # t2.shape=torch.Size([1, <=8]) with real size [1, 8]
-    t3 = t2.view(2, 2, 2)
-    self.assertIsInstance(t3.shape[0], int)
-    self.assertIsInstance(t3.shape[1], int)
-    self.assertIsInstance(t3.shape[2], torch.SymInt)
-    self.assertEqual(str(t3.shape[0]), '2')
-    self.assertEqual(str(t3.shape[1]), '2')
-    self.assertEqual(str(t3.shape[2]), '<=2')
-    self.assertEqual(t3.shape[0], 2)
-    self.assertEqual(t3.shape[1], 2)
-    self.assertEqual(t3.shape[2], 2)
 
   def test_sizeMod(self):
     met.clear_all()
