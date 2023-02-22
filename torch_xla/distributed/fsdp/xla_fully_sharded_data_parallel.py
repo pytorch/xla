@@ -1260,7 +1260,8 @@ class XlaFullyShardedDataParallel(nn.Module):
 
     # Update root and nested FSDP's hooks and flags.
     for m in self.modules():  # includes self
-      if isinstance(m, XlaFullyShardedDataParallel):
+      if isinstance(
+          m, XlaFullyShardedDataParallel) and m._pre_backward_hook_has_run:
         _finalize_parameters(m)
         m._pre_backward_hook_has_run = False
         if any(p.requires_grad for p in m.parameters()):
