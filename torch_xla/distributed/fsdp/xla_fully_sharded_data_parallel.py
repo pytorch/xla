@@ -1336,9 +1336,9 @@ class XlaFullyShardedDataParallel(nn.Module):
       dependency_tensors = []
 
     if apply_opt_barrier:
-      self._apply_opt_barrier_to_params_and_tensors([p for p in self.full_params if p._has_full_param],
-                                                    self.sharded_params,
-                                                    dependency_tensors)
+      self._apply_opt_barrier_to_params_and_tensors(
+          [p for p in self.full_params if p._has_full_param],
+          self.sharded_params, dependency_tensors)
 
     for p, p_shard in zip(self.full_params, self.sharded_params):
       if not p._has_full_param:
@@ -1399,8 +1399,9 @@ class XlaFullyShardedDataParallel(nn.Module):
         p._has_full_param = False
 
     if apply_opt_barrier:
-      self._apply_opt_barrier_to_params_and_tensors([p for p in full_params if p._has_full_param], sharded_params,
-                                                    dependency_tensors)
+      self._apply_opt_barrier_to_params_and_tensors(
+          [p for p in full_params if p._has_full_param], sharded_params,
+          dependency_tensors)
 
   def _apply_opt_barrier_to_params_and_tensors(
       self, p_list: List[torch.Tensor], p_shard_list: List[torch.Tensor],

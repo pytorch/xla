@@ -941,7 +941,6 @@ class TestAtenXlaTensor(test_utils.XlaTestCase):
     # shouldn't crash
     t2.cpu()
 
-
   def test_view_data_slice(self):
     t1 = torch.zeros(50, device=xm.xla_device())
     t1_slice = t1.data[:5]
