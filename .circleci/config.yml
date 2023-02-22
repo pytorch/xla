@@ -304,7 +304,7 @@ workflows:
             branches:
               ignore:
                 - master
-                - /release\/.*/
+                - ^r\d*\.?\d*$
       - linter_check_no_torch_pin:
           filters:
             branches:
