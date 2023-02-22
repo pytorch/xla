@@ -33,11 +33,7 @@ spec:
       python3 pytorch/xla/test/spmd/test_xla_virtual_device.py
       python3 pytorch/xla/test/spmd/test_train_spmd_linear_model.py
 
-      # Contains libtpu.so
-      ptxla_path=$(dirname $(python -c 'import torch_xla; print(torch_xla.__file__)'))
-      # Corresponds to data_files=... in setup.py
-      data_files_path=$(python -c 'import sys; print(sys.prefix)')
-      TPU_LIBRARY_PATH=${ptxla_path}/lib/libtpu.so ${data_files_path}/test_ptxla
+      TPU_LIBRARY_PATH=$(dirname $(python -c 'import torch_xla; print(torch_xla.__file__)'))/lib/libtpu.so $(python -c 'import sys; print(sys.prefix)')/test_ptxla
     volumeMounts:
     - mountPath: /dev/shm
       name: dshm
