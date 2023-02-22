@@ -13,6 +13,7 @@
 #include <stdexcept>
 #include <unordered_set>
 
+#include "third_party/xla_client/mhlo_helper.h"
 #include "absl/container/flat_hash_map.h"
 #include "absl/memory/memory.h"
 #include "absl/strings/str_join.h"
@@ -1174,6 +1175,12 @@ XLAGraphExecutor::CompilationResult XLAGraphExecutor::Compile(
   }
 
   xla::XlaComputation computation = ConsumeValue(lowering_ctx.BuildXla());
+  // std::cout << "before convert" << std::endl;
+  // printHloModuleProto(&computation.proto());
+  // hlo_mhlo_hlo_roundtrip_helper(computation.mutable_proto());
+  hlo_stablehlo_hlo_roundtrip_helper(computation.mutable_proto());
+  // std::cout << "after convert" << std::endl;
+  // printHloModuleProto(&computation.proto());
   xla::ProgramShape program_shape = ConsumeValue(computation.GetProgramShape());
 
   bool should_wrap_parameter =
