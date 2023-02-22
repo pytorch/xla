@@ -81,6 +81,7 @@ cc_library(
         ":xrt_session",
         ":xrt_session_cache",
         "@org_tensorflow//tensorflow:grpc++",
+        ":mesh_service_proto_cc",
         "@org_tensorflow//tensorflow/cc:client_session",
         "@org_tensorflow//tensorflow/cc:scope",
         "@org_tensorflow//tensorflow/compiler/jit:xla_cpu_device",
