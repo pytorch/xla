@@ -922,7 +922,7 @@ class TestAtenXlaTensor(test_utils.XlaTestCase):
     b = torch.ones([2, 2])
     self.runAtenTest((a, b), func)
 
-  def test_data_handle_release(self):
+  def test_set(self):
     met.clear_all()
 
     t1 = torch.zeros(50, device=xm.xla_device())
@@ -935,6 +935,12 @@ class TestAtenXlaTensor(test_utils.XlaTestCase):
 
     t1.set_(torch.zeros(10, device=xm.xla_device()))
     self.assertEqual(met.counter_value('DestroyXlaTensor'), 4)
+
+    t2 = torch.zeros(10, device=xm.xla_device())
+    t1.set_(t2)
+    # shouldn't crash
+    t2.cpu()
+
 
   def test_view_data_slice(self):
     t1 = torch.zeros(50, device=xm.xla_device())

@@ -73,7 +73,7 @@ XLATensorImpl::XLATensorImpl(XLATensorPtr tensor)
     : XLATensorImpl(XLATensor(*tensor)) {}
 
 void XLATensorImpl::set_tensor(XLATensorPtr xla_tensor) {
-  tensor_ = c10::make_intrusive<XLATensor>(std::move(*xla_tensor));
+  tensor_ = xla_tensor;
   generation_ = 0;
 }
 
