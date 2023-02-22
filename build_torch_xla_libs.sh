@@ -59,10 +59,6 @@ if [[ "$XLA_CPU_USE_ACL" == "1" ]]; then
   OPTS+=(--config=acl)
 fi
 
-if [[ ! -z "$GCLOUD_SERVICE_KEY_FILE" ]]; then
-  OPTS+=(--google_credentials=$GCLOUD_SERVICE_KEY_FILE)
-fi
-
 if [ "$CMD" == "clean" ]; then
   bazel clean
   exit 0
