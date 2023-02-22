@@ -8,7 +8,7 @@ import torch.distributed as dist
 import torch_xla.distributed.xla_multiprocessing as xmp
 import torch_xla.core.xla_model as xm
 
-import traceback
+import sys
 
 _TORCHDISTX_AVAIL = True
 try:
@@ -141,14 +141,20 @@ class TestFSDPWithMetaDevice():
 
 
 def _mp_fn(index):
-  dist.init_process_group(
-      'xla', world_size=xm.xrt_world_size(), rank=xm.get_ordinal())
-  test = TestFSDPWithMetaDevice()
-  test.test_simple_model_with_meta_device_reset_params()
-  test.test_simple_model_with_meta_default_reset_params()
-  if _TORCHDISTX_AVAIL:
-    test.test_simple_model_with_torchdistX_init_fn()
-    test.test_simple_model_with_default_torchdistX()
+  device = xm.xla_device()
+  if xm.xla_device_hw(device) in ('TPU', 'GPU'):
+    dist.init_process_group(
+        'xla', world_size=xm.xrt_world_size(), rank=xm.get_ordinal())
+    test = TestFSDPWithMetaDevice()
+    test.test_simple_model_with_meta_device_reset_params()
+    test.test_simple_model_with_meta_default_reset_params()
+    if _TORCHDISTX_AVAIL:
+      test.test_simple_model_with_torchdistX_init_fn()
+      test.test_simple_model_with_default_torchdistX()
+  else:
+    print(
+        'Default device {} is not a TPU or GPU device'.format(device),
+        file=sys.stderr)
 
 
 if __name__ == '__main__':
