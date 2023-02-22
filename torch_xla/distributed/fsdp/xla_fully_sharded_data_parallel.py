@@ -644,7 +644,7 @@ class XlaFullyShardedDataParallel(nn.Module):
       p = self.full_params[idx]
       assert not hasattr(p, "_is_sharded")
 
-      shard_data = self._get_shard(p.detach())
+      shard_data = self._get_shard(p)
       if shard_data.device != self.xla_device:
         # cast to XLA device if not already on XLA
         shard_data = shard_data.to(self.xla_device)
@@ -1140,7 +1140,7 @@ class XlaFullyShardedDataParallel(nn.Module):
       raise RuntimeError(
           "FSDP only works with gradients that don't require gradients")
 
-    grad = param.grad.detach()
+    grad = param.grad
     if self._require_backward_grad_sync or self.reshard_after_forward:
       # Free full params. As a special case, we don't free the full params
       # when in a ``no_sync`` context (as inversely indicated by
@@ -1195,11 +1195,11 @@ class XlaFullyShardedDataParallel(nn.Module):
     assert hasattr(param, "_sharded_param")
     p_shard = param._sharded_param
     if p_shard.grad is None:
-      p_shard.grad = reduced_grad.detach()
+      p_shard.grad = reduced_grad
     else:
       assert p_shard.grad.shape == reduced_grad.shape
       assert p_shard.grad.device == reduced_grad.device
-      p_shard.grad += reduced_grad.detach()
+      p_shard.grad += reduced_grad
 
   def _queue_wait_for_post_backward(self) -> None:
     """
@@ -1298,15 +1298,10 @@ class XlaFullyShardedDataParallel(nn.Module):
             params_with_grad = [
                 p for p in self._all_sharded_params if p.grad is not None
             ]
-            params_data = [p.detach() for p in params_with_grad]
-            grad_data = [p.grad.detach() for p in params_with_grad]
-            dependency_tensors = params_data + grad_data
+            grad_data = [p.grad for p in params_with_grad]
+            dependency_tensors = params_with_grad + grad_data
             dependency_tensors.extend(self._backward_opt_barrier_tensors)
             self.optimization_barrier_op(dependency_tensors)
-            for p, p_data, g_data in zip(params_with_grad, params_data,
-                                         grad_data):
-              p.set_(p_data)
-              p.grad.set_(g_data)
           self._clear_backward_opt_barrier_lists()
 
     if self.mark_step_on_finalization:
@@ -1428,19 +1423,8 @@ class XlaFullyShardedDataParallel(nn.Module):
     """
     if len(p_list) + len(p_shard_list) + len(dependency_tensors) == 0:
       return
-
-    p_data_list = [p.detach() for p in p_list]
-    p_shared_data_list = [p_shard.detach() for p_shard in p_shard_list]
-    self.optimization_barrier_op(p_data_list + p_shared_data_list +
+    self.optimization_barrier_op(p_list + p_shard_list +
                                  dependency_tensors)
-
-    for p, p_data in zip(p_list, p_data_list):
-      with torch.no_grad():
-        with torch.autograd._unsafe_preserve_version_counter(p):
-          p.set_(p_data)
-    for p_shard, p_shard_data in zip(p_shard_list, p_shared_data_list):
-      with torch.no_grad():
-        p_shard.set_(p_shard_data)
 
   def assert_state(self, state: Union[TrainingState,
                                       List[TrainingState]]) -> None:
@@ -1592,7 +1576,7 @@ def apply_to_tensors(
         od[key] = _apply(value)
       return od
     elif isinstance(x, PackedSequence):
-      _apply(x.detach())
+      _apply(x)
       return x
     elif isinstance(x, dict):
       return {key: _apply(value) for key, value in x.items()}
@@ -1619,7 +1603,7 @@ def collect_tensors(
         out_ids.add(id(x))
         out.append(x)
     elif isinstance(x, PackedSequence):
-      _collect(x.detach(), out, out_ids)
+      _collect(x, out, out_ids)
     elif isinstance(x, dict) or isinstance(x, OrderedDict):
       for value in x.values():
         _collect(value, out, out_ids)
