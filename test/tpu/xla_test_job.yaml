@@ -25,7 +25,7 @@ spec:
     image: gcr.io/$PROJECT_ID/pytorch-xla-test:$BUILD_ID
     command:
     - bash
-    - -c
+    - -cxeu
     - |
       python3 pytorch/xla/test/test_operations.py -v
       python3 pytorch/xla/test/pjrt/test_experimental_pjrt_tpu.py
@@ -34,7 +34,7 @@ spec:
       python3 pytorch/xla/test/spmd/test_train_spmd_linear_model.py
 
       ptxla_path=$(dirname $(python -c 'import torch_xla; print(torch_xla.__file__)'))
-      TPU_LIBRARY_PATH=${ptxla_path}/lib/libtpu.so $ptxla_path/../test/test_ptxla
+      TPU_LIBRARY_PATH=${ptxla_path}/lib/libtpu.so ${ptxla_path}/../test/test_ptxla
     volumeMounts:
     - mountPath: /dev/shm
       name: dshm
