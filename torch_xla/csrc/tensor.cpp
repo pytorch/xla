@@ -751,6 +751,52 @@ c10::SymNode XLASymNodeImpl::sym_max(const c10::SymNode& other) {
                    << " has not been implemented.";
 }
 
+  c10::SymNode XLASymNodeImpl::sym_and(const c10::SymNode& other) {
+  XLA_CHECK(false) << "XLASymNodeImpl::" << __FUNCTION__
+                   << " has not been implemented.";
+}
+  c10::SymNode XLASymNodeImpl::sym_not() {
+  XLA_CHECK(false) << "XLASymNodeImpl::" << __FUNCTION__
+                   << " has not been implemented.";
+}
+  // NB: self is ignored here, only the arguments are used
+  c10::SymNode XLASymNodeImpl::is_contiguous(
+      at::ArrayRef<c10::SymNode> sizes,
+      at::ArrayRef<c10::SymNode> strides) {
+  XLA_CHECK(false) << "XLASymNodeImpl::" << __FUNCTION__
+                   << " has not been implemented.";
+}
+  c10::SymNode XLASymNodeImpl::is_channels_last_contiguous_2d(
+      at::ArrayRef<c10::SymNode> sizes,
+      at::ArrayRef<c10::SymNode> strides) {
+  XLA_CHECK(false) << "XLASymNodeImpl::" << __FUNCTION__
+                   << " has not been implemented.";
+}
+  c10::SymNode XLASymNodeImpl::is_channels_last_contiguous_3d(
+      at::ArrayRef<c10::SymNode> sizes,
+      at::ArrayRef<c10::SymNode> strides) {
+  XLA_CHECK(false) << "XLASymNodeImpl::" << __FUNCTION__
+                   << " has not been implemented.";
+}
+  c10::SymNode XLASymNodeImpl::is_channels_last_strides_2d(
+      at::ArrayRef<c10::SymNode> sizes,
+      at::ArrayRef<c10::SymNode> strides) {
+  XLA_CHECK(false) << "XLASymNodeImpl::" << __FUNCTION__
+                   << " has not been implemented.";
+}
+  c10::SymNode XLASymNodeImpl::is_channels_last_strides_3d(
+      at::ArrayRef<c10::SymNode> sizes,
+      at::ArrayRef<c10::SymNode> strides) {
+  XLA_CHECK(false) << "XLASymNodeImpl::" << __FUNCTION__
+                   << " has not been implemented.";
+}
+  c10::SymNode XLASymNodeImpl::is_non_overlapping_and_dense(
+      at::ArrayRef<c10::SymNode> sizes,
+      at::ArrayRef<c10::SymNode> strides) {
+  XLA_CHECK(false) << "XLASymNodeImpl::" << __FUNCTION__
+                   << " has not been implemented.";
+}
+
 c10::SymNode XLASymNodeImpl::clone() {
   TORCH_LAZY_FN_COUNTER("xla::size_");
   return c10::make_intrusive<XLASymNodeImpl>(node());
@@ -794,6 +840,10 @@ int64_t XLASymNodeImpl::int_() {
 bool XLASymNodeImpl::bool_() {
   auto dn = torch_xla::DimCast(node());
   return dn->getDynamicValue() != 0;
+}
+
+bool XLASymNodeImpl::has_hint() {
+  return true;
 }
 
 std::string XLASymNodeImpl::str() {

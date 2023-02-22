@@ -12,7 +12,6 @@ dev = xm.xla_device()
 
 class TestDynamicShapes(test_utils.XlaTestCase):
 
-  @unittest.skip("Regression")
   def test_simple_expand(self):
     size1 = 5
     size2 = 2

@@ -51,6 +51,28 @@ class TORCH_API XLASymNodeImpl : public c10::SymNodeImpl {
   c10::SymNode neg() override;
   c10::SymNode sym_min(const c10::SymNode& other) override;
   c10::SymNode sym_max(const c10::SymNode& other) override;
+  c10::SymNode sym_or(const c10::SymNode& other) override;
+  c10::SymNode sym_and(const c10::SymNode& other) override;
+  c10::SymNode sym_not() override;
+  // NB: self is ignored here, only the arguments are used
+  c10::SymNode is_contiguous(
+      at::ArrayRef<c10::SymNode> sizes,
+      at::ArrayRef<c10::SymNode> strides) override;
+  c10::SymNode is_channels_last_contiguous_2d(
+      at::ArrayRef<c10::SymNode> sizes,
+      at::ArrayRef<c10::SymNode> strides)  override;
+  c10::SymNode is_channels_last_contiguous_3d(
+      at::ArrayRef<c10::SymNode> sizes,
+      at::ArrayRef<c10::SymNode> strides) override;
+  c10::SymNode is_channels_last_strides_2d(
+      at::ArrayRef<c10::SymNode> sizes,
+      at::ArrayRef<c10::SymNode> strides)  override;
+  c10::SymNode is_channels_last_strides_3d(
+      at::ArrayRef<c10::SymNode> sizes,
+      at::ArrayRef<c10::SymNode> strides) override;
+  c10::SymNode is_non_overlapping_and_dense(
+      at::ArrayRef<c10::SymNode> sizes,
+      at::ArrayRef<c10::SymNode> strides) override;
   c10::SymNode clone() override;
   c10::SymNode sym_float() override;
   c10::SymNode wrap_int(int64_t num) override;
@@ -60,6 +82,7 @@ class TORCH_API XLASymNodeImpl : public c10::SymNodeImpl {
   bool guard_bool(const char* file, int64_t line) override;
   int64_t int_() override;
   bool bool_() override;
+  bool has_hint() override;
   std::string str() override;
 
   torch::lazy::NodePtr node() { return node_; }
