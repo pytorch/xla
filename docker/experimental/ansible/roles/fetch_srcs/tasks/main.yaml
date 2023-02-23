@@ -1,0 +1,44 @@
+- name: "Create source root directory at {{ src_root }}"
+  ansible.builtin.file:
+    path: "{{ src_root }}"
+    state: directory
+    mode: '0755'
+
+- name: "Clone git PyTorch and XLA git repos"
+  ansible.builtin.git:
+    repo: "{{ item.repo }}"
+    dest: "{{ item.dest }}"
+    version: "{{ item.version }}"
+    depth: 1
+    force: true
+  loop:
+    - repo: https://github.com/pytorch/pytorch
+      dest: "{{ (src_root, 'pytorch') | path_join }}"
+      version: "{{ pytorch_git_rev }}"
+
+    - repo: https://github.com/pytorch/xla
+      dest: "{{ (src_root, 'pytorch/xla') | path_join }}"
+      version: "{{ xla_git_rev }}"
+
+- name: Find *.diff files in pytorch/xla/tf_patches
+  ansible.builtin.find:
+    path: "{{ (src_root, 'pytorch/xla/tf_patches') | path_join }}"
+    pattern: "*.diff"
+  register: tf_patches
+
+- name: Apply patches to Tensorflow
+  ansible.posix.patch:
+    src: "{{ item }}"
+    # Use source file on the target machine instead of the one where
+    # the playbook is located. Has no effect when the target machine is
+    # localhost.
+    remote_src: true
+    strip: 1
+    basedir: "{{ (src_root, 'pytorch/xla/third_party/tensorflow') | path_join }}"
+  loop: "{{ tf_patches.files | map(attribute='path') }}"
+  ignore_errors: true
+
+- name: "Tests"
+  include_tasks: tests.yaml
+  tags:
+    - tests

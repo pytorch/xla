@@ -1,0 +1,35 @@
+- name: Add apt keys
+  # Don't use apt-key for adding repo keys since it's deprecated.
+  # Instead place gpg and pgp files in /usr/share/keyrings/ (debian, ubuntu).
+  ansible.builtin.get_url:
+    url: "{{ item.url }}"
+    dest: "{{ item.keyring }}"
+    mode: 'u=rw,g=r,o=r'
+  loop: "{{ apt_keys }}"
+  register: add_apt_key
+
+- name: Add apt repositories into sources list
+  ansible.builtin.apt_repository:
+    repo: "{{ item }}"
+    state: present
+  loop: "{{ apt_repos }}"
+  register: add_apt_repo
+
+- name: Update apt cache
+  apt:
+    update_cache: true
+  when: add_apt_key.changed or add_apt_repo.changed
+
+- name: Install apt packages
+  ansible.builtin.apt:
+    name: "{{ apt_pkgs }}"
+    update_cache: true
+
+- name: Install pip packages
+  ansible.builtin.pip:
+    name: "{{ pip_pkgs }}"
+
+- name: Install pip packages without deps (--no-deps)
+  ansible.builtin.pip:
+    name: "{{ pip_pkgs_nodeps }}"
+    extra_args: "--no-deps"
