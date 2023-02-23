@@ -8,26 +8,10 @@ from torch import Tensor
 
 __all__ = [
     "ResNet",
-    "ResNet18_Weights",
-    "ResNet34_Weights",
     "ResNet50_Weights",
-    "ResNet101_Weights",
-    "ResNet152_Weights",
     "ResNeXt50_32X4D_Weights",
-    "ResNeXt101_32X8D_Weights",
-    "ResNeXt101_64X4D_Weights",
-    "Wide_ResNet50_2_Weights",
-    "Wide_ResNet101_2_Weights",
-    "resnet18",
-    "resnet34",
     "resnet50",
-    "resnet101",
-    "resnet152",
     "resnext50_32x4d",
-    "resnext101_32x8d",
-    "resnext101_64x4d",
-    "wide_resnet50_2",
-    "wide_resnet101_2",
 ]
 
 
