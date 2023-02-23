@@ -310,7 +310,7 @@ workflows:
             branches:
               only:
                 - master
-                - /release\/.*/
+                - ^r\d*\.?\d*$
       - pytorch_xla_run_build
       - pytorch_xla_run_test:
           name: pytorch_xla_run_CPU_test
@@ -321,7 +321,7 @@ workflows:
             branches:
               ignore:
                 - master
-                - /release\/.*/
+                - ^r\d*\.?\d*$
       - pytorch_xla_run_test:
           name: pytorch_xla_run_GPU_test
           resource_class: gpu.nvidia.small.multi
@@ -336,4 +336,4 @@ workflows:
             branches:
               only:
                 - master
-                - /release\/.*/
+                - ^r\d*\.?\d*$
