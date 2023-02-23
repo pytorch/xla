@@ -1,0 +1,46 @@
+- name: Build PyTorch
+  ansible.builtin.command:
+    cmd: python setup.py bdist_wheel
+    chdir: "{{ (src_root, 'pytorch') | path_join }}"
+    creates: "{{ (src_root, 'pytorch/dist/*.whl') | path_join }}"
+  # Set `USE_CUDA=0` as PyTorch cannot be used with GPU in eager and XLA mode.
+  environment: "{{ env_vars | combine({'USE_CUDA': 0}) }}"
+
+- name: Find PyTorch *.whl files in pytorch/dist
+  ansible.builtin.find:
+    path: "{{ (src_root, 'pytorch/dist') | path_join }}"
+    pattern: "*.whl"
+  register: pytorch_wheels
+
+- name: Install PyTorch wheels
+  ansible.builtin.pip:
+    name: "{{ pytorch_wheels.files | map(attribute='path') }}"
+    state: "forcereinstall"
+
+- name: Build XLA computation client library
+  ansible.builtin.command:
+    cmd: bash build_torch_xla_libs.sh -O -D_GLIBCXX_USE_CXX11_ABI=1
+    chdir: "{{ (src_root, 'pytorch/xla') | path_join }}"
+  environment: "{{ env_vars }}"
+
+- name: Build PyTorch/XLA
+  ansible.builtin.command:
+    cmd: python setup.py bdist_wheel
+    chdir: "{{ (src_root, 'pytorch/xla') | path_join }}"
+  environment: "{{ env_vars }}"
+
+- name: Find XLA *.whl files in pytorch/xla/dist
+  ansible.builtin.find:
+    path: "{{ (src_root, 'pytorch/xla/dist') | path_join }}"
+    pattern: "*.whl"
+  register: xla_wheels
+
+- name: Install XLA wheels
+  ansible.builtin.pip:
+    name: "{{ xla_wheels.files | map(attribute='path') }}"
+    state: "forcereinstall"
+
+- name: "Tests"
+  include_tasks: tests.yaml
+  tags:
+    - tests
