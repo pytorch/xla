@@ -269,6 +269,10 @@ XlaHelpers::GetDynamicReshapeInfo(const xla::Shape& input_shape,
     int64_t dynamic_dimension = -1;
     int64_t out_size = 1;
     for (int64_t i = 0; i < output_sizes.size(); ++i) {
+      XLA_CHECK_LE(out_size, size_at_dyndim / input_shape.dimensions(
+                                                  input_dynamic_dimension))
+          << "Unable to map dynamic dimension of shape " << input_shape
+          << " to output sizes (" << absl::StrJoin(output_sizes, ", ") << ")";
       out_size *= output_sizes[i];
       if (out_size >= size_prod_until_dyndim) {
         dynamic_dimension = i;
