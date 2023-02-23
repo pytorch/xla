@@ -204,23 +204,24 @@ xla::XlaOp BuildBinaryCrossEntropyBackward(
 
 xla::XlaOp BuildMseLoss(xla::XlaOp input, xla::XlaOp target,
                         ReductionMode reduction) {
-  xla::XlaOp diff = input - target;
+  xla::XlaOp diff = XlaHelpers::PromotedSub(input, target);
   xla::XlaOp result = diff * diff;
   if (reduction == ReductionMode::kNone) {
     return result;
   }
   const xla::Shape& input_shape = XlaHelpers::ShapeOfXlaOp(input);
+  const xla::Shape& result_shape = XlaHelpers::ShapeOfXlaOp(result);
   result = xla::ReduceAll(
-      result, xla::Zero(input.builder(), input_shape.element_type()),
-      XlaHelpers::CreateAddComputation(input_shape.element_type()));
+      result, xla::Zero(result.builder(), result_shape.element_type()),
+      XlaHelpers::CreateAddComputation(result_shape.element_type()));
   if (reduction == ReductionMode::kMean) {
     int64_t num_elements = xla::ShapeUtil::ElementsIn(input_shape);
     if (num_elements == 0) {
       return xla::NanValue(input.builder(), input_shape.element_type());
     } else {
       xla::XlaOp scale_value = XlaHelpers::ScalarValue<double>(
-          1.0 / static_cast<double>(num_elements), input_shape.element_type(),
-          input.builder());
+          1.0 / static_cast<double>(num_elements), result_shape.element_type(),
+          result.builder());
       result = result * scale_value;
     }
   }
@@ -232,9 +233,10 @@ xla::XlaOp BuildMseLossBackward(xla::XlaOp grad_output, xla::XlaOp input,
   const xla::Shape& input_shape = XlaHelpers::ShapeOfXlaOp(input);
   xla::XlaOp two = XlaHelpers::ScalarValue<double>(
       2, input_shape.element_type(), input.builder());
-  xla::XlaOp d_input = two * (input - target);
+  xla::XlaOp d_input =
+      XlaHelpers::PromotedMul(two, XlaHelpers::PromotedSub(input, target));
   if (reduction == ReductionMode::kNone) {
-    return d_input * grad_output;
+    return XlaHelpers::PromotedMul(d_input, grad_output);
   }
   xla::XlaOp grad_value = grad_output;
   if (reduction == ReductionMode::kMean) {
@@ -242,9 +244,9 @@ xla::XlaOp BuildMseLossBackward(xla::XlaOp grad_output, xla::XlaOp input,
     xla::XlaOp scale_value = XlaHelpers::ScalarValue<double>(
         1.0 / static_cast<double>(num_elements), input_shape.element_type(),
         input.builder());
-    grad_value = grad_output * scale_value;
+    grad_value = XlaHelpers::PromotedMul(grad_output, scale_value);
   }
-  return d_input * grad_value;
+  return XlaHelpers::PromotedMul(d_input, grad_value);
 }
 
 xla::XlaOp BuildCumulativeComputation(xla::XlaOp input, int64_t dim,

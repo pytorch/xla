@@ -1681,9 +1681,14 @@ XLATensorPtr mm(const XLATensorPtr& input, const XLATensorPtr& weight) {
 
 XLATensorPtr mse_loss(const XLATensorPtr& input, const XLATensorPtr& target,
                       int64_t reduction) {
+  // Here we explictly pass c10::nullopt as logical_element_type because
+  // otherwise result will inherit the input's logical_element_type. In the
+  // case of mse_loss(long, float16) -> float16, we want to derive the dtype
+  // from IR value instead of input's logical_element_type.
   return input->CreateFrom(
       torch::lazy::MakeNode<MseLoss>(input->GetIrValue(), target->GetIrValue(),
-                                     GetXlaReductionMode(reduction)));
+                                     GetXlaReductionMode(reduction)),
+      c10::nullopt);
 }
 
 XLATensorPtr mse_loss_backward(const XLATensorPtr& grad_output,
