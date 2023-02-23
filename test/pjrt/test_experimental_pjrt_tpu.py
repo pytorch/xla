@@ -27,9 +27,9 @@ class TestExperimentalPjrtTpu(parameterized.TestCase):
       self.accelerator_type = tpu_env['ACCELERATOR_TYPE']
       # Number of logical devices per single-host TPU
       self.num_devices = {
-        'v2-8': 8,
-        'v3-8': 8,
-        'v4-8': 4,
+          'v2-8': 8,
+          'v3-8': 8,
+          'v4-8': 4,
       }[self.accelerator_type]
     except requests.HTTPError as e:
       raise EnvironmentError(
@@ -141,8 +141,7 @@ class TestExperimentalPjrtTpu(parameterized.TestCase):
       devices = [torch.device(d) for d in f.result()]
 
     self.assertListEqual(
-        devices,
-        [torch.device(f'xla:{i}') for i in range(self.num_devices)])
+        devices, [torch.device(f'xla:{i}') for i in range(self.num_devices)])
 
   @parameterized.named_parameters(('xla_model', xm.get_ordinal),
                                   ('pjrt', pjrt.global_ordinal))
