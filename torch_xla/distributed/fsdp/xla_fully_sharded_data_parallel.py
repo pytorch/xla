@@ -233,7 +233,7 @@ class XlaFullyShardedDataParallel(nn.Module):
           to when wrapping a submodule. One can specify a different callable
           as wrapper. For example, activation checkpointing (rematerialization)
           can be applied to each auto-wrapped submodule as follows:
-  
+
               from torch_xla.distributed.fsdp import checkpoint_module
               auto_wrapper_callable = lambda m, *args, **kwargs: XlaFullyShardedDataParallel(
                   checkpoint_module(m), *args, **kwargs)
@@ -605,7 +605,7 @@ class XlaFullyShardedDataParallel(nn.Module):
     make it easier to handle things (e.g. freeing parameters) on XLA.
     """
     if len(params_to_shard) > 0:
-      # When freeing the full parameters, we point their `.data` to this placeholder
+      # When freeing the full parameters, we point their internal XLATensor to this placeholder
       # (so that the XLA compiler can reuse the memory storage).
       self._dummy_data_placeholder = torch.zeros(
           1, dtype=self.compute_dtype, device=self.xla_device)
@@ -644,21 +644,21 @@ class XlaFullyShardedDataParallel(nn.Module):
       p = self.full_params[idx]
       assert not hasattr(p, "_is_sharded")
 
-      shard_data = self._get_shard(p.data)
+      shard_data = self._get_shard(p)
       if shard_data.device != self.xla_device:
         # cast to XLA device if not already on XLA
         shard_data = shard_data.to(self.xla_device)
       p_shard = nn.Parameter(shard_data, requires_grad=p.requires_grad)
       p_shard._is_sharded = True
-      p_shard._orig_size = p.data.size()
+      p_shard._orig_size = p.size()
       p_shard._orig_name = f"{module_name}.{n}"
       p_shard._name = f"_fsdp_shard.{p_shard._orig_name}".replace(
           ".", "_FSDP_SHARD_SEPARATOR_")
       self.register_parameter(p_shard._name, p_shard)
       self.sharded_params.append(p_shard)
-      # Free the full parameter storage (here we free its `.data`) but keep the tensor itself
+      # Free the full parameter storage (here we free its internal XLATensor) but keep the tensor itself
       # for auto-grad tracing (like `torch.autograd.Variable` before the tensor-variable merge).
-      p.data = p.data.new_zeros(1)
+      p.set_(p.new_zeros(1))
       if p.device != self.xla_device:
         # cast to XLA device if not already on XLA
         p = p.to(self.xla_device).requires_grad_(p.requires_grad)
@@ -1140,7 +1140,7 @@ class XlaFullyShardedDataParallel(nn.Module):
       raise RuntimeError(
           "FSDP only works with gradients that don't require gradients")
 
-    grad = param.grad.data
+    grad = param.grad
     if self._require_backward_grad_sync or self.reshard_after_forward:
       # Free full params. As a special case, we don't free the full params
       # when in a ``no_sync`` context (as inversely indicated by
@@ -1181,7 +1181,7 @@ class XlaFullyShardedDataParallel(nn.Module):
       self.optimization_barrier_op([reduced_grad])
     if self.gradient_postdivide_factor > 1:
       # Average grad by world_size for consistency with PyTorch DDP.
-      reduced_grad.data.div_(self.gradient_postdivide_factor)
+      reduced_grad.div_(self.gradient_postdivide_factor)
 
     grad._has_full_param = True
     grad_flat._has_full_param = True
@@ -1195,11 +1195,11 @@ class XlaFullyShardedDataParallel(nn.Module):
     assert hasattr(param, "_sharded_param")
     p_shard = param._sharded_param
     if p_shard.grad is None:
-      p_shard.grad = reduced_grad.data
+      p_shard.grad = reduced_grad
     else:
       assert p_shard.grad.shape == reduced_grad.shape
       assert p_shard.grad.device == reduced_grad.device
-      p_shard.grad.data += reduced_grad.data
+      p_shard.grad += reduced_grad
 
   def _queue_wait_for_post_backward(self) -> None:
     """
@@ -1298,15 +1298,10 @@ class XlaFullyShardedDataParallel(nn.Module):
             params_with_grad = [
                 p for p in self._all_sharded_params if p.grad is not None
             ]
-            params_data = [p.data for p in params_with_grad]
-            grad_data = [p.grad.data for p in params_with_grad]
-            dependency_tensors = params_data + grad_data
+            grad_data = [p.grad for p in params_with_grad]
+            dependency_tensors = params_with_grad + grad_data
             dependency_tensors.extend(self._backward_opt_barrier_tensors)
             self.optimization_barrier_op(dependency_tensors)
-            for p, p_data, g_data in zip(params_with_grad, params_data,
-                                         grad_data):
-              p.data = p_data
-              p.grad.data = g_data
           self._clear_backward_opt_barrier_lists()
 
     if self.mark_step_on_finalization:
@@ -1341,9 +1336,9 @@ class XlaFullyShardedDataParallel(nn.Module):
       dependency_tensors = []
 
     if apply_opt_barrier:
-      self._apply_opt_barrier_to_params_and_tensors(self.full_params,
-                                                    self.sharded_params,
-                                                    dependency_tensors)
+      self._apply_opt_barrier_to_params_and_tensors(
+          [p for p in self.full_params if p._has_full_param],
+          self.sharded_params, dependency_tensors)
 
     for p, p_shard in zip(self.full_params, self.sharded_params):
       if not p._has_full_param:
@@ -1364,11 +1359,12 @@ class XlaFullyShardedDataParallel(nn.Module):
               p_shard_2d, groups=self.sharding_groups).flatten()
         if apply_opt_barrier:
           self.optimization_barrier_op([p_padded])
-        if self._shard_param_on_dim_0:
-          p.data = p_padded[:p_shard._orig_size[0]]
-        else:
-          p.data = p_padded[:p_shard._orig_size.numel()].view(
-              p_shard._orig_size)
+        with torch.autograd._unsafe_preserve_version_counter(p):
+          if self._shard_param_on_dim_0:
+            p.set_(p_padded[:p_shard._orig_size[0]])
+          else:
+            p.set_(p_padded[:p_shard._orig_size.numel()].view(
+                p_shard._orig_size))
         p._has_full_param = True
 
     self.has_full_params = True
@@ -1398,12 +1394,14 @@ class XlaFullyShardedDataParallel(nn.Module):
     for p in full_params:
       if p._has_full_param:
         # free the original full parameter
-        p.data = self._dummy_data_placeholder
+        with torch.autograd._unsafe_preserve_version_counter(p):
+          p.set_(self._dummy_data_placeholder)
         p._has_full_param = False
 
     if apply_opt_barrier:
-      self._apply_opt_barrier_to_params_and_tensors(full_params, sharded_params,
-                                                    dependency_tensors)
+      self._apply_opt_barrier_to_params_and_tensors(
+          [p for p in full_params if p._has_full_param], sharded_params,
+          dependency_tensors)
 
   def _apply_opt_barrier_to_params_and_tensors(
       self, p_list: List[torch.Tensor], p_shard_list: List[torch.Tensor],
@@ -1426,16 +1424,7 @@ class XlaFullyShardedDataParallel(nn.Module):
     """
     if len(p_list) + len(p_shard_list) + len(dependency_tensors) == 0:
       return
-
-    p_data_list = [p.data for p in p_list]
-    p_shared_data_list = [p_shard.data for p_shard in p_shard_list]
-    self.optimization_barrier_op(p_data_list + p_shared_data_list +
-                                 dependency_tensors)
-
-    for p, p_data in zip(p_list, p_data_list):
-      p.data = p_data
-    for p_shard, p_shard_data in zip(p_shard_list, p_shared_data_list):
-      p_shard.data = p_shard_data
+    self.optimization_barrier_op(p_list + p_shard_list + dependency_tensors)
 
   def assert_state(self, state: Union[TrainingState,
                                       List[TrainingState]]) -> None:
@@ -1587,7 +1576,7 @@ def apply_to_tensors(
         od[key] = _apply(value)
       return od
     elif isinstance(x, PackedSequence):
-      _apply(x.data)
+      _apply(x)
       return x
     elif isinstance(x, dict):
       return {key: _apply(value) for key, value in x.items()}
@@ -1614,7 +1603,7 @@ def collect_tensors(
         out_ids.add(id(x))
         out.append(x)
     elif isinstance(x, PackedSequence):
-      _collect(x.data, out, out_ids)
+      _collect(x, out, out_ids)
     elif isinstance(x, dict) or isinstance(x, OrderedDict):
       for value in x.values():
         _collect(value, out, out_ids)
