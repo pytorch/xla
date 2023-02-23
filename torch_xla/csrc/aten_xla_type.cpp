@@ -2698,7 +2698,7 @@ at::Tensor XLANativeFunctions::std(const at::Tensor& self, bool unbiased) {
   return bridge::AtenFromXlaTensor(tensor_methods::std(
       self_tensor,
       torch::lazy::Iota<int64_t>(self_tensor->shape().get().rank()),
-      /*keep_reduced_dimensions=*/false, /*correction=*/unbiased ? 1 : 0));
+      /*keep_reduced_dimensions=*/false, /*correction=*/unbiased ? 1.0 : 0.0));
 }
 
 at::Tensor XLANativeFunctions::std(const at::Tensor& self,
@@ -2710,12 +2710,12 @@ at::Tensor XLANativeFunctions::std(const at::Tensor& self,
       self_tensor,
       dim ? torch::lazy::ToVector<int64_t>(*dim)
           : torch::lazy::Iota<int64_t>(self_tensor->shape().get().rank()),
-      keepdim, /*correction=*/unbiased ? 1 : 0));
+      keepdim, /*correction=*/unbiased ? 1.0 : 0.0));
 }
 
 at::Tensor XLANativeFunctions::std(const at::Tensor& self,
                                    at::OptionalIntArrayRef dim,
-                                   c10::optional<int64_t> correction,
+                                   const c10::optional<c10::Scalar>& correction,
                                    bool keepdim) {
   TORCH_LAZY_FN_COUNTER("xla::");
   XLATensorPtr self_tensor = bridge::GetXlaTensor(self);
@@ -2723,19 +2723,19 @@ at::Tensor XLANativeFunctions::std(const at::Tensor& self,
       self_tensor,
       dim ? torch::lazy::ToVector<int64_t>(*dim)
           : torch::lazy::Iota<int64_t>(self_tensor->shape().get().rank()),
-      keepdim, correction ? *correction : 1));
+      keepdim, correction ? correction->toDouble() : 1.0));
 }
 
 std::tuple<at::Tensor, at::Tensor> XLANativeFunctions::std_mean(
     const at::Tensor& self, at::OptionalIntArrayRef dim,
-    c10::optional<int64_t> correction, bool keepdim) {
+    const c10::optional<c10::Scalar>& correction, bool keepdim) {
   TORCH_LAZY_FN_COUNTER("xla::");
   XLATensorPtr self_tensor = bridge::GetXlaTensor(self);
   auto results = tensor_methods::std_mean(
       self_tensor,
       dim ? torch::lazy::ToVector<int64_t>(*dim)
           : torch::lazy::Iota<int64_t>(self_tensor->shape().get().rank()),
-      correction ? *correction : 1, keepdim);
+      correction ? correction->toDouble() : 1.0, keepdim);
   return std::make_tuple(bridge::AtenFromXlaTensor(std::get<0>(results)),
                          bridge::AtenFromXlaTensor(std::get<1>(results)));
 }
@@ -2998,7 +2998,7 @@ at::Tensor XLANativeFunctions::upsample_nearest2d_backward(
 
 at::Tensor XLANativeFunctions::var(const at::Tensor& self,
                                    at::OptionalIntArrayRef dim,
-                                   c10::optional<int64_t> correction,
+                                   const c10::optional<c10::Scalar>& correction,
                                    bool keepdim) {
   TORCH_LAZY_FN_COUNTER("xla::");
   XLATensorPtr self_tensor = bridge::GetXlaTensor(self);
@@ -3007,19 +3007,19 @@ at::Tensor XLANativeFunctions::var(const at::Tensor& self,
       dim ? XlaHelpers::I64List(*dim)
           : torch::lazy::Iota<int64_t>(
                 bridge::GetXlaTensor(self)->shape().get().rank()),
-      correction ? *correction : 1, keepdim));
+      correction ? correction->toDouble() : 1.0, keepdim));
 }
 
 std::tuple<at::Tensor, at::Tensor> XLANativeFunctions::var_mean(
     const at::Tensor& self, at::OptionalIntArrayRef dim,
-    c10::optional<int64_t> correction, bool keepdim) {
+    const c10::optional<c10::Scalar>& correction, bool keepdim) {
   TORCH_LAZY_FN_COUNTER("xla::");
   XLATensorPtr self_tensor = bridge::GetXlaTensor(self);
   auto results = tensor_methods::var_mean(
       self_tensor,
       dim ? torch::lazy::ToVector<int64_t>(*dim)
           : torch::lazy::Iota<int64_t>(self_tensor->shape().get().rank()),
-      correction ? *correction : 1, keepdim);
+      correction ? correction->toDouble() : 1.0, keepdim);
   return std::make_tuple(bridge::AtenFromXlaTensor(std::get<0>(results)),
                          bridge::AtenFromXlaTensor(std::get<1>(results)));
 }

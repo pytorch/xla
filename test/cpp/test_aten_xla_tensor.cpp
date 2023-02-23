@@ -1461,7 +1461,7 @@ TEST_F(AtenXlaTensorTest, TestStdInDim) {
 TEST_F(AtenXlaTensorTest, TestStdWithCorrection) {
   torch::Tensor a = torch::rand({4, 3, 4}, torch::TensorOptions(torch::kFloat));
   int rank = a.dim();
-  c10::optional<int64_t> corrections[] = {1, 2, c10::nullopt};
+  c10::optional<torch::Scalar> corrections[] = {1, 2, 1.3, c10::nullopt};
   for (const auto& correction : corrections) {
     for (auto keepdim : {true, false}) {
       for (const auto& dim :
@@ -1480,7 +1480,7 @@ TEST_F(AtenXlaTensorTest, TestStdWithCorrection) {
 TEST_F(AtenXlaTensorTest, TestStdMeanWithCorrection) {
   torch::Tensor a = torch::rand({4, 3, 4}, torch::TensorOptions(torch::kFloat));
   int rank = a.dim();
-  c10::optional<int64_t> corrections[] = {1, 2, c10::nullopt};
+  c10::optional<torch::Scalar> corrections[] = {1, 2, 1.3, c10::nullopt};
   for (const auto& correction : corrections) {
     for (auto keepdim : {true, false}) {
       for (const auto& dim :
@@ -1614,7 +1614,7 @@ TEST_F(AtenXlaTensorTest, TestVarWithDim) {
 
 TEST_F(AtenXlaTensorTest, TestVarWithCorrection) {
   torch::Tensor a = torch::rand({4, 3, 4}, torch::TensorOptions(torch::kFloat));
-  c10::optional<int64_t> corrections[] = {1, 2, c10::nullopt};
+  c10::optional<torch::Scalar> corrections[] = {1, 2, 1.3, c10::nullopt};
   for (const auto& dim : std::vector<std::vector<int64_t>>{{0, 1}, {-3, -2}}) {
     for (bool keepDim : {true, false}) {
       for (const auto& correction : corrections) {
@@ -1633,7 +1633,7 @@ TEST_F(AtenXlaTensorTest, TestVarWithCorrection) {
 
 TEST_F(AtenXlaTensorTest, TestVarMeanWithCorrection) {
   torch::Tensor a = torch::rand({4, 3, 4}, torch::TensorOptions(torch::kFloat));
-  c10::optional<int64_t> corrections[] = {1, 2, c10::nullopt};
+  c10::optional<torch::Scalar> corrections[] = {1, 2, 1.3, c10::nullopt};
   for (const auto& dim : std::vector<std::vector<int64_t>>{{0, 1}, {-3, -2}}) {
     for (const auto& correction : corrections) {
       for (auto keepdim : {true, false}) {
