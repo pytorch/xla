@@ -11358,46 +11358,6 @@ TEST_F(AtenXlaTensorTest, TestEmbeddingBackward) {
   }
 }
 
-TEST_F(AtenXlaTensorTest, TestAmpForeachNonFiniteCheckAndUnscale) {
-  GTEST_SKIP()
-      << "Needs additional meta tensor support after functionalization";
-  XlaDeviceType hw_type =
-      static_cast<XlaDeviceType>(GetDefaultDevice()->type());
-  if (hw_type != XlaDeviceType::GPU && hw_type != XlaDeviceType::CPU) {
-    return;
-  }
-  torch::Tensor grads0 =
-      torch::tensor({1, 2, 3, 4}, torch::TensorOptions(torch::kFloat));
-  torch::Tensor grads1 = torch::tensor({1.0, 2.0, std::nan("1"), 4.0},
-                                       torch::TensorOptions(torch::kFloat));
-  torch::Tensor inv_scale =
-      torch::scalar_tensor(0.2, torch::TensorOptions(torch::kFloat));
-  torch::Tensor found_inf =
-      torch::scalar_tensor(0, torch::TensorOptions(torch::kFloat));
-  torch::Tensor grads_output0 = grads0 * inv_scale;
-  torch::Tensor found_inf_output0 =
-      torch::scalar_tensor(0, torch::TensorOptions(torch::kFloat));
-  torch::Tensor found_inf_output1 =
-      torch::scalar_tensor(1, torch::TensorOptions(torch::kFloat));
-  ForEachDevice([&](const torch::Device& device) {
-    torch::Tensor xla_grads0 = CopyToDevice(grads0, device);
-    torch::Tensor xla_inv_scale = CopyToDevice(inv_scale, device);
-    torch::Tensor xla_found_inf = CopyToDevice(found_inf, device);
-    torch::_amp_foreach_non_finite_check_and_unscale_(xla_grads0, xla_found_inf,
-                                                      xla_inv_scale);
-    AllClose(grads_output0, xla_grads0, /*rtol=*/1e-2, /*atol=*/1e-4);
-    AllEqual(found_inf_output0, xla_found_inf);
-
-    torch::Tensor xla_grads1 = CopyToDevice(grads1, device);
-    torch::_amp_foreach_non_finite_check_and_unscale_(xla_grads1, xla_found_inf,
-                                                      xla_inv_scale);
-    AllEqual(found_inf_output1, xla_found_inf);
-  });
-  ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
-  ExpectCounterChanged("xla::_amp_foreach_non_finite_check_and_unscale_",
-                       cpp_test::GetIgnoredCounters());
-}
-
 TEST_F(AtenXlaTensorTest, TestAmpUpdateScale) {
   XlaDeviceType hw_type =
       static_cast<XlaDeviceType>(GetDefaultDevice()->type());
@@ -11701,48 +11661,6 @@ TEST_F(AtenXlaTensorTest, TestNanToNum) {
       torch::Tensor xla_output = torch::nan_to_num(
           xla_input, /*nan=*/1.0, /*posinf=*/2.0, /*neginf=*/3.0);
       AllClose(output, xla_output);
-    });
-  }
-  ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
-  ExpectCounterChanged("xla::nan_to_num", cpp_test::GetIgnoredCounters());
-}
-
-TEST_F(AtenXlaTensorTest, TestNanToNumInplace) {
-  GTEST_SKIP()
-      << "Needs additional meta tensor support after functionalization";
-  for (torch::ScalarType scalar_type :
-       {torch::kHalf, torch::kFloat, torch::kDouble, torch::kShort, torch::kInt,
-        torch::kLong}) {
-    torch::Tensor input =
-        isFloatingType(scalar_type)
-            ? torch::tensor(
-                  {1.0, std::nan("1"), std::numeric_limits<double>::infinity(),
-                   -std::numeric_limits<double>::infinity()},
-                  torch::TensorOptions(scalar_type))
-            : torch::randint(0, 100, {3, 4}, torch::TensorOptions(scalar_type));
-    torch::Tensor input_copy = input.clone();
-    input.nan_to_num_();
-    ForEachDevice([&](const torch::Device& device) {
-      torch::Tensor xla_input = CopyToDevice(input_copy, device);
-      xla_input.nan_to_num_();
-      if (static_cast<XlaDeviceType>(
-              bridge::AtenDeviceToXlaDevice(device).type()) ==
-              XlaDeviceType::TPU &&
-          scalar_type == torch::kDouble) {
-        // Since TPU converts double to float (unlike CPU), the Inf entries are
-        // expected to be different. Skipping checks for Inf entries.
-        AllEqual(input[0], xla_input[0]);
-        AllEqual(input[1], xla_input[1]);
-      } else {
-        AllClose(input, xla_input);
-      }
-    });
-    input = input_copy.clone();
-    input.nan_to_num_(/*nan=*/1.0, /*posinf=*/2.0, /*neginf=*/3.0);
-    ForEachDevice([&](const torch::Device& device) {
-      torch::Tensor xla_input = CopyToDevice(input_copy, device);
-      xla_input.nan_to_num_(/*nan=*/1.0, /*posinf=*/2.0, /*neginf=*/3.0);
-      AllClose(input, xla_input);
     });
   }
   ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());

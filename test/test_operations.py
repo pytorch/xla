@@ -454,6 +454,51 @@ class TestAtenXlaTensor(test_utils.XlaTestCase):
     x_cat = torch.cat([x, empty_tensor_xla], 0)
     self.assertEqual(t_cat.data, x_cat.data.cpu())
 
+  def test_nan_to_num_in_place(self):
+    t = torch.tensor([float('nan'), float('nan'), -float('nan'), 3.14])
+    t.nan_to_num_(1.0, 2.0, 3.0)
+    t_xla = t.to(xm.xla_device())
+    t_xla.nan_to_num_(1.0, 2.0, 3.0)
+    self.assertEqual(t.data, t_xla.data.cpu())
+
+  @skipOnTpu
+  def test_nan_to_num_in_place_with_inf(self):
+    # Since TPU converts double to float (unlike CPU), the Inf entries are
+    # expected to be different. Skipping tests for Inf entries.
+    t = torch.tensor([float('nan'), float('inf'), -float('inf'), 3.14])
+    t.nan_to_num_(1.0, 2.0, 3.0)
+    t_xla = t.to(xm.xla_device())
+    t_xla.nan_to_num_(1.0, 2.0, 3.0)
+    self.assertEqual(t.data, t_xla.data.cpu())
+
+  @skipOnTpu
+  def test_amp_foreach_non_finite_check_and_unscale_(self):
+    # Since TPU converts double to float (unlike CPU), the Inf entries are
+    # expected to be different. Skipping tests for Inf entries.
+    grads0 = torch.tensor([1, 2, 3, 4], dtype=torch.float32)
+    grads1 = torch.tensor([1.0, 2.0, float('nan'), 4.0], dtype=torch.float32)
+    inv_scale = torch.tensor(0.2, dtype=torch.float32)
+    found_inf = torch.tensor(0, dtype=torch.float32)
+    grads_output0 = grads0 * inv_scale
+    found_inf_output0 = torch.tensor(0, dtype=torch.float32)
+    found_inf_output1 = torch.tensor(1, dtype=torch.float32)
+
+    xla_device = xm.xla_device()
+    xla_grads0 = grads0.to(xla_device)
+    xla_inv_scale = inv_scale.to(xla_device)
+    xla_found_inf = found_inf.to(xla_device)
+    torch._amp_foreach_non_finite_check_and_unscale_([xla_grads0],
+                                                     xla_found_inf,
+                                                     xla_inv_scale)
+    self.assertEqual(grads_output0, xla_grads0, prec=1e-4)
+    self.assertEqual(found_inf_output0, xla_found_inf)
+
+    xla_grads1 = grads1.to(xla_device)
+    torch._amp_foreach_non_finite_check_and_unscale_([xla_grads1],
+                                                     xla_found_inf,
+                                                     xla_inv_scale)
+    self.assertEqual(found_inf_output1, xla_found_inf)
+
   def test_masked_fill_with_tensor(self):
     input = _gen_tensor(2, 5, 4, 3)
     mask = _gen_mask(input.size())
