@@ -1,6 +1,6 @@
 # This requires cuda & cudnn packages pre-installed in the base image.
 # Other available cuda images are listed at https://hub.docker.com/r/nvidia/cuda
-ARG base_image="nvidia/cuda:11.7.0-cudnn8-devel-ubuntu18.04"
+ARG base_image="nvidia/cuda:11.8.0-cudnn8-devel-ubuntu22.04"
 FROM "${base_image}"
 
 ARG python_version="3.8"
@@ -50,7 +50,7 @@ RUN apt-key adv --fetch-keys https://developer.download.nvidia.com/compute/cuda/
 RUN apt-get clean && apt-get update
 RUN apt-get upgrade -y
 RUN apt-get install --fix-missing -y python-pip python3-pip git curl libopenblas-dev vim jq \
-  apt-transport-https ca-certificates procps openssl sudo wget libssl-dev libc6-dbg
+    apt-transport-https ca-certificates procps openssl sudo wget libssl-dev libc6-dbg
 
 # Install clang & llvm
 ADD ./install_llvm_clang.sh install_llvm_clang.sh
