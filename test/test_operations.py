@@ -456,20 +456,24 @@ class TestAtenXlaTensor(test_utils.XlaTestCase):
 
   def test_nan_to_num_in_place(self):
     t = torch.tensor([float('nan'), float('nan'), -float('nan'), 3.14])
-    t.nan_to_num_(1.0, 2.0, 3.0)
-    t_xla = t.to(xm.xla_device())
-    t_xla.nan_to_num_(1.0, 2.0, 3.0)
-    self.assertEqual(t.data, t_xla.data.cpu())
+
+    def fn(x):
+      x.nan_to_num_(1.0, 2.0, 3.0)
+      return x
+
+    self.runAtenTest(t, fn)
 
   @skipOnTpu
   def test_nan_to_num_in_place_with_inf(self):
     # Since TPU converts double to float (unlike CPU), the Inf entries are
     # expected to be different. Skipping tests for Inf entries.
     t = torch.tensor([float('nan'), float('inf'), -float('inf'), 3.14])
-    t.nan_to_num_(1.0, 2.0, 3.0)
-    t_xla = t.to(xm.xla_device())
-    t_xla.nan_to_num_(1.0, 2.0, 3.0)
-    self.assertEqual(t.data, t_xla.data.cpu())
+
+    def fn(x):
+      x.nan_to_num_(1.0, 2.0, 3.0)
+      return x
+
+    self.runAtenTest(t, fn)
 
   @skipOnTpu
   def test_amp_foreach_non_finite_check_and_unscale_(self):
