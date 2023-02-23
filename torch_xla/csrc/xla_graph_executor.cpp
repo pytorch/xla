@@ -13,8 +13,7 @@
 #include <stdexcept>
 #include <unordered_set>
 
-#include "tensorflow/compiler/xla/translate/hlo_to_mhlo/hlo_to_mlir_hlo.h"
-#include "tensorflow/compiler/xla/translate/mhlo_to_hlo/mlir_hlo_to_hlo.h"
+#include "third_party/xla_client/mhlo_helper.h"
 #include "absl/container/flat_hash_map.h"
 #include "absl/memory/memory.h"
 #include "absl/strings/str_join.h"
@@ -1176,10 +1175,7 @@ XLAGraphExecutor::CompilationResult XLAGraphExecutor::Compile(
   }
 
   xla::XlaComputation computation = ConsumeValue(lowering_ctx.BuildXla());
-  mlir::MLIRContext context;
-  mlir::ModuleOp module = mlir::ModuleOp::create(mlir::UnknownLoc::get(&context));
-  xla::HloModuleProto proto(computation.proto());
-  ConvertHloToMlirHlo(module, &proto, /*import_all_computations=*/false);
+  hlo_mhlo_hlo_roundtrip_helper(computation.mutable_proto());
   xla::ProgramShape program_shape = ConsumeValue(computation.GetProgramShape());
 
   bool should_wrap_parameter =
