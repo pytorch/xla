@@ -1,4 +1,5 @@
 import collections
+import contextlib
 import io
 import sys
 import os
@@ -1191,6 +1192,28 @@ def get_rng_state(device=None):
   if device is None:
     device = torch_xla._XLAC._xla_get_default_device()
   return torch_xla._XLAC._xla_get_rng_seed(str(device) if device else '')
+
+
+@contextlib.contextmanager
+def fork_rng(device=None, enabled=True):
+  """
+  Forks the RNG, so that when you return, the RNG is reset to the state that it was previously in.
+  Args:
+    device (string, optional): The device where the RNG state needs to be set. If missing the default device seed will be set.
+    enabled (bool): if ``False``, the RNG is not forked.  This is a convenience argument for easily disabling the context manager without having to delete it and unindent your Python code under it.
+  """
+  if not enabled:
+    yield
+    return
+
+  if device is None:
+    device = torch_xla._XLAC._xla_get_default_device()
+  xla_rng_state = get_rng_state(device=device)
+
+  try:
+    yield
+  finally:
+    set_rng_state(xla_rng_state, device=device)
 
 
 def get_memory_info(device):
