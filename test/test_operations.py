@@ -1590,6 +1590,17 @@ class TestAtenXlaTensor(test_utils.XlaTestCase):
         for dtype in (torch.long, torch.int32, torch.bool)
     ], test_fn)
 
+  def test_conv2d_backward(self):
+    # Somehow eager cpu produces different results than us, and
+    # therefore we can't compare eager and xla.
+    conv = nn.Conv2d(1, 1, kernel_size=1).to('xla')
+    input = torch.tensor([[[[2077.0]]]]).to('xla')
+
+    output = conv(input)
+    loss = torch.sum(output)
+    loss.backward()
+    self.assertTrue(torch.allclose(conv.weight.grad.cpu(), torch.tensor([[[[2077.0]]]])))
+
 
 class MNISTComparator(nn.Module):
 

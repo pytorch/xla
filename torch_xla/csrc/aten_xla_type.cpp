@@ -3267,31 +3267,6 @@ at::Tensor XLANativeFunctions::block_diag(at::TensorList tensors) {
       block_diag)>::call(tensors);
 }
 
-at::Tensor XLANativeFunctions::_convolution(
-    const at::Tensor& input, const at::Tensor& weight,
-    const c10::optional<at::Tensor>& bias, at::IntArrayRef stride,
-    at::IntArrayRef padding, at::IntArrayRef dilation, bool transposed,
-    at::IntArrayRef output_padding, int64_t groups, bool benchmark,
-    bool deterministic, bool cudnn_enabled, bool allow_tf32) {
-  return at::functionalization::functionalize_aten_op<ATEN_OP(
-      _convolution)>::call(input, weight, bias, stride, padding, dilation,
-                           transposed, output_padding, groups, benchmark,
-                           deterministic, cudnn_enabled, allow_tf32);
-}
-
-::std::tuple<at::Tensor, at::Tensor, at::Tensor>
-XLANativeFunctions::convolution_backward(
-    const at::Tensor& grad_output, const at::Tensor& input,
-    const at::Tensor& weight, at::OptionalIntArrayRef bias_sizes,
-    at::IntArrayRef stride, at::IntArrayRef padding, at::IntArrayRef dilation,
-    bool transposed, at::IntArrayRef output_padding, int64_t groups,
-    ::std::array<bool, 3> output_mask) {
-  return at::functionalization::functionalize_aten_op<ATEN_OP(
-      convolution_backward)>::call(grad_output, input, weight, bias_sizes,
-                                   stride, padding, dilation, transposed,
-                                   output_padding, groups, output_mask);
-}
-
 at::Tensor XLANativeFunctions::diag_embed(const at::Tensor& self,
                                           int64_t offset, int64_t dim1,
                                           int64_t dim2) {
