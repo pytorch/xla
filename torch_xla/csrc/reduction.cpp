@@ -270,9 +270,21 @@ xla::XlaOp BuildMean(xla::XlaOp input, absl::Span<const int64_t> dimensions,
       .result;
 }
 
-xla::XlaOp BuildStdDeviation(xla::XlaOp input,
-                             absl::Span<const int64_t> dimensions,
-                             bool keep_reduced_dimensions, int64_t correction) {
+xla::XlaOp ApplyCorrectedScaling(const SummationResult& sum_result,
+                                 double correction, xla::PrimitiveType type) {
+  auto builder = sum_result.result.builder();
+  auto count_real =
+      xla::ConvertElementType(sum_result.rinfo.element_count.size, type);
+  auto correction_scalar = XlaHelpers::ScalarValue(correction, type, builder);
+  auto zero = xla::Zero(builder, type);
+  auto dof = xla::Max(zero, count_real - correction_scalar);
+  auto one = xla::One(builder, type);
+  auto scale = one / dof;
+  return sum_result.result * scale;
+}
+
+xla::XlaOp BuildVar(xla::XlaOp input, absl::Span<const int64_t> dimensions,
+                    double correction, bool keep_reduced_dimensions) {
   const xla::Shape& input_shape = XlaHelpers::ShapeOfXlaOp(input);
   xla::XlaOp mean =
       BuildMean(input, dimensions, /*keep_reduced_dimensions*/ true);
@@ -280,25 +292,26 @@ xla::XlaOp BuildStdDeviation(xla::XlaOp input,
       xla::BroadcastInDim(mean, input_shape.dimensions(),
                           torch::lazy::Iota<int64_t>(input_shape.rank()));
   xla::XlaOp input_mean_diff = input - bcast_mean;
-  xla::XlaOp squared_var = input_mean_diff * input_mean_diff;
-  xla::XlaOp squared_result;
+  xla::XlaOp diff2 = input_mean_diff * input_mean_diff;
+  xla::XlaOp var;
   if (correction != 0) {
     SummationResult sum_result = CreateSummation(
-        squared_var, dimensions, keep_reduced_dimensions, /*scale=*/false);
-    xla::XlaOp correction_scalar = XlaHelpers::ScalarValue(
-        correction,
-        XlaHelpers::TypeOfXlaOp(sum_result.rinfo.element_count.size),
-        input.builder());
-    squared_result =
-        GetScaleValue(sum_result.result,
-                      sum_result.rinfo.element_count.size - correction_scalar,
-                      input_shape.element_type());
+        diff2, dimensions, keep_reduced_dimensions, /*scale=*/false);
+    var = ApplyCorrectedScaling(sum_result, correction,
+                                input_shape.element_type());
   } else {
     SummationResult sum_result = CreateSummation(
-        squared_var, dimensions, keep_reduced_dimensions, /*scale=*/true);
-    squared_result = sum_result.result;
+        diff2, dimensions, keep_reduced_dimensions, /*scale=*/true);
+    var = sum_result.result;
   }
-  return xla::Sqrt(squared_result);
+  return var;
+}
+
+xla::XlaOp BuildStdDeviation(xla::XlaOp input,
+                             absl::Span<const int64_t> dimensions,
+                             bool keep_reduced_dimensions, double correction) {
+  auto var = BuildVar(input, dimensions, correction, keep_reduced_dimensions);
+  return xla::Sqrt(var);
 }
 
 xla::XlaOp BuildSum(xla::XlaOp input, absl::Span<const int64_t> dimensions,
@@ -463,39 +476,6 @@ xla::XlaOp BuildAny(xla::XlaOp input, absl::Span<const int64_t> dimensions,
     result = XlaHelpers::DynamicReshape(result, rinfo.new_dimensions);
   }
   return result;
-}
-
-xla::XlaOp BuildVar(xla::XlaOp input, absl::Span<const int64_t> dimensions,
-                    int64_t correction, bool keep_reduced_dimensions) {
-  const auto& input_builder = input.builder();
-  const xla::Shape& input_shape = XlaHelpers::ShapeOfXlaOp(input);
-  const xla::PrimitiveType input_type = input_shape.element_type();
-
-  // var = (input^2).sum(dim)/size(dim) - (input.sum(dim)/size(dim))^2
-  SummationResult mean_result =
-      CreateSummation(input, dimensions, keep_reduced_dimensions,
-                      /*scale=*/true);
-  SummationResult squared_mean_result =
-      CreateSummation(input * input, dimensions, keep_reduced_dimensions, true);
-
-  // Clips to zero if the result is negative, which can happen due to
-  // roundoff errors.
-  xla::XlaOp var = xla::Max(
-      squared_mean_result.result - (mean_result.result * mean_result.result),
-      XlaHelpers::ScalarValue<float>(0, input_type, input_builder));
-
-  ReductionInfo rinfo = mean_result.rinfo;
-  if (correction != 0) {
-    xla::XlaOp count = xla::ConvertElementType(rinfo.element_count.size,
-                                               xla::PrimitiveType::F32);
-    xla::XlaOp residual_count =
-        count - XlaHelpers::ScalarValue(
-                    correction, XlaHelpers::ShapeOfXlaOp(count).element_type(),
-                    input_builder);
-    xla::XlaOp scaler = residual_count / count;
-    var = GetScaleValue(var, scaler, input_type);
-  }
-  return var;
 }
 
 xla::XlaOp BuildLogsumexp(xla::XlaOp input,
