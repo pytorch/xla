@@ -204,6 +204,7 @@ DISABLED_TORCH_TESTS_ANY = {
         'test_index_reduce',  # TODO @wonjoo fails with functionalization
         'test_logcumsumexp_xla',  # doesn't raise, pytorch/pytorch#92912
         'test_narrow_copy_non_contiguous',  # the test is added for CPU, pytorch/pytorch#91789
+        'test_conv_transposed_backward_agnostic_to_memory_format_xla',  # fails with functionalization
     },
 
     # test_view_ops.py
