@@ -39,9 +39,15 @@ apt:
       - patch
 
     release_cuda:
+<<<<<<< HEAD
       - "cuda-libraries-{{ cuda_version | replace('.', '-')   }}"
       - "cuda-minimal-build-{{ cuda_version | replace('.', '-')   }}"
       - "{{ cuda_deps['libcudnn'][cuda_version] }}"
+=======
+      - cuda-libraries-11-8
+      - cuda-minimal-build-11-8
+      - libcudnn8=8.8.0.121-1+cuda11.8
+>>>>>>> 8b3fc227 (Use Ansible for building wheels and provisioning docker images. (#4531))
 
   # Specify objects with string fields `url` and `keyring`.
   # The keyring path should start with /usr/share/keyrings/ for debian and ubuntu.
