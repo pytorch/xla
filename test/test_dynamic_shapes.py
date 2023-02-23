@@ -251,6 +251,41 @@ class TestDynamicShapes(test_utils.XlaTestCase):
     t8_aten = t7_aten.view(t6_aten.shape[0])
     self.assertEqual(t8.cpu(), t8_aten.cpu())
 
+  def test_view_copy_symint_with_static_input_dyn_input_shape2(self):
+    # If the input tensor and shape are “statically” incompatible, a compilation error is raised.
+    t1 = torch.tensor([[1, 0, 3]], device=dev)
+    # t2.shape=torch.Size([<=3, 2]) with real size [2, 2]
+    # t2 = [[0, 0], [0, 2]]
+    t2 = torch.nonzero(t1)
+    t3 = torch.ones((2, 4), device=dev)
+    t3.view(t2.shape) # TODO: xw32 check where it fails.
+    self.assertRaises(RuntimeError, lambda: t3.view(t2.shape))
+
+    # If their “dynamic” values are incompatible, a RuntimeError is raised.
+    t4 = torch.ones((2, 3), device=dev)
+    t4.view(t2.shape) # TODO: xw32 check where it fails.
+    self.assertRaises(RuntimeError, lambda: t4.view(t2.shape))
+
+    # verify if dynamism is propagated correctly.
+    t5 = torch.tensor([[1, 1, 3]], device=dev)
+    t6 = torch.nonzero(t5)
+    # t6.shape=[<=3, 2] with real size [3, 2]
+    t7 = torch.ones((2, 3), device=dev)
+    t8 = t7.view(t6.shape)
+    self.assertIsInstance(t8.shape[0], torch.SymInt)
+    self.assertEqual(str(t8.shape[0]), '<=3')
+    self.assertEqual(t8.shape[0], 3)
+    self.assertIsInstance(t8.shape[1], int)
+    self.assertEqual(str(t8.shape[1]), '2')
+    self.assertEqual(t8.shape[1], 2)
+
+    # verify correctness.
+    t5_aten = torch.tensor([[1, 1, 3]])
+    t6_aten = torch.nonzero(t5_aten)
+    t7_aten = torch.ones((2, 3))
+    t8_aten = t7_aten.view(t6_aten.shape)
+    self.assertEqual(t8.cpu(), t8_aten.cpu())
+
   def test_view_copy_symint_with_dyn_input_static_input_shape(self):
     # If the input tensor is dynamic and input shape is static,
     # it should fail because we will not likely have this case
@@ -297,6 +332,19 @@ class TestDynamicShapes(test_utils.XlaTestCase):
     # t4_aten.size=[5, 1]
     t9_aten = t8_aten.view(t4_aten.shape[0])
     self.assertEqual(t9.cpu(), t9_aten.cpu())
+
+  def test_view_copy_symint(self):
+    t1 = torch.tensor([[1, 1, 3]], device=dev)
+    print('t1.shape=', t1.shape)
+
+    t3 = torch.tensor([[1, 2, 3]], device=dev)
+    # t4.shape=torch.Size([<=3, 2]) with real size [3, 2]
+    t4 = torch.nonzero(t3)
+    print('torch.t(t4).shape=',torch.t(t4).shape)
+
+    t5 = t1.view(torch.t(t4).shape)
+    print('t5.shape=', t5.shape)
+    xm.mark_step()
 
   def test_sizeMod(self):
     met.clear_all()
