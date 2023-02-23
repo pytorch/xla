@@ -258,12 +258,12 @@ class TestDynamicShapes(test_utils.XlaTestCase):
     # t2 = [[0, 0], [0, 2]]
     t2 = torch.nonzero(t1)
     t3 = torch.ones((2, 4), device=dev)
-    t3.view(t2.shape) # TODO: xw32 check where it fails.
+    # Should fail in pytorch utils.infer_size
     self.assertRaises(RuntimeError, lambda: t3.view(t2.shape))
 
     # If their “dynamic” values are incompatible, a RuntimeError is raised.
     t4 = torch.ones((2, 3), device=dev)
-    t4.view(t2.shape) # TODO: xw32 check where it fails.
+    # Also fails in pytorch utils.infer_size
     self.assertRaises(RuntimeError, lambda: t4.view(t2.shape))
 
     # verify if dynamism is propagated correctly.
