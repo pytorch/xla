@@ -190,6 +190,11 @@ run_test_coverage: &run_test_coverage
         docker exec -u jenkins $(cat .docker_pid) bash -c \
         '. ~/.bashrc && USE_COVERAGE=1 .circleci/test.sh'
         docker cp $(cat .docker_pid):/home/jenkins/htmlcov /home/circleci/project
+        if [ -n "${USE_CUDA_DOCKER_RUNTIME:-}" ]; then
+          gsutil cp /home/circleci/project/htmlcov/lcov.info gs://tpu-pytorch/coverage/gpu_lcov_$(date +%s).info
+        else
+          gsutil cp /home/circleci/project/htmlcov/lcov.info gs://tpu-pytorch/coverage/cpu_lcov_$(date +%s).info
+        fi
   - store_artifacts:
       path: htmlcov
 
