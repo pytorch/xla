@@ -340,7 +340,7 @@ class TestDynamicShapes(test_utils.XlaTestCase):
     t3 = torch.tensor([[1, 2, 3]], device=dev)
     # t4.shape=torch.Size([<=3, 2]) with real size [3, 2]
     t4 = torch.nonzero(t3)
-    print('torch.t(t4).shape=',torch.t(t4).shape)
+    print('torch.t(t4).shape=', torch.t(t4).shape)
 
     t5 = t1.view(torch.t(t4).shape)
     print('t5.shape=', t5.shape)
