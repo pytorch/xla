@@ -169,7 +169,7 @@ def local_ordinal() -> int:
   """Returns local ordinal of this thread within this host.
 
   Local ordinal is in range [0, local_device_count)."""
-  local_rank = xu.getenv_as('LOCAL_RANK', int, 0)
+  local_rank = xu.getenv_as(xenv.PJRT_LOCAL_PROCESS_RANK, int, 0)
   devices_per_process = addressable_device_count()
   return local_rank * devices_per_process + xla_device().index
 
