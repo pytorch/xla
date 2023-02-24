@@ -1362,10 +1362,12 @@ class XlaFullyShardedDataParallel(nn.Module):
           self.optimization_barrier_op([p_padded])
         with torch.autograd._unsafe_preserve_version_counter(p):
           if self._shard_param_on_dim_0:
-            torch_xla._XLAC._replace_xla_tensor(p, p_padded[:p_shard._orig_size[0]])
+            torch_xla._XLAC._replace_xla_tensor(
+                p, p_padded[:p_shard._orig_size[0]])
           else:
-            torch_xla._XLAC._replace_xla_tensor(p, p_padded[:p_shard._orig_size.numel()].view(
-                p_shard._orig_size))
+            torch_xla._XLAC._replace_xla_tensor(
+                p,
+                p_padded[:p_shard._orig_size.numel()].view(p_shard._orig_size))
         p._has_full_param = True
 
     self.has_full_params = True
