@@ -364,7 +364,6 @@ class BasicShardingTest(test_xla_sharding_base.XlaShardingTest):
     output.to('cpu')
     self.assertEqual(met.counter_value("ReplicateShardedData"), 2)
 
-  @unittest.skip("fails with functionalization")
   def test_inplace_add_with_sharding(self):
     xt = torch.ones(2, 2).to(xm.xla_device())
     xs.mark_sharding(xt, self._get_mesh((1, self.n_devices)), (0, 1))
