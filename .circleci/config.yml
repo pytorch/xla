@@ -191,10 +191,14 @@ run_test_coverage: &run_test_coverage
         '. ~/.bashrc && USE_COVERAGE=1 .circleci/test.sh'
         docker cp $(cat .docker_pid):/home/jenkins/htmlcov /home/circleci/project
         if [ -n "${USE_CUDA_DOCKER_RUNTIME:-}" ]; then
-          gsutil cp /home/circleci/project/htmlcov/lcov.info gs://tpu-pytorch/coverage/gpu_lcov_$(date +%s).info
+          gsutil cp /home/circleci/project/htmlcov/lcov.info gs://ng3-metrics/ng3-pytorchxla-coverage/absolute/pytorchxla/${CIRCLE_WORKFLOW_ID}/gpu_combined_coverage.out
         else
-          gsutil cp /home/circleci/project/htmlcov/lcov.info gs://tpu-pytorch/coverage/cpu_lcov_$(date +%s).info
+          gsutil cp /home/circleci/project/htmlcov/lcov.info gs://ng3-metrics/ng3-pytorchxla-coverage/absolute/pytorchxla/${CIRCLE_WORKFLOW_ID}/cpu_combined_coverage.out
+          METADATA='{"host": "github", "project": "pytorchxla", "trace_type": "LCOV", "commit_id": '\"${CIRCLE_SHA1}\"', "ref": "HEAD", "source": "https://github.com/pytorch/xla", "owner": "cloud-tpu-pt-dev", "bug_component": "587012"}'
+          echo $METADATA > metadata.json
+          gsutil cp metadata.json gs://ng3-metrics/ng3-pytorchxla-coverage/absolute/pytorchxla/${CIRCLE_WORKFLOW_ID}/
         fi
+
   - store_artifacts:
       path: htmlcov
 
