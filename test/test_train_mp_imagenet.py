@@ -234,6 +234,9 @@ def train_imagenet():
       summary_writer=writer)
   loss_fn = nn.CrossEntropyLoss()
 
+  if FLAGS.profile:
+    server = xp.start_server(FLAGS.profiler_port)
+
   def train_loop_fn(loader, epoch):
     tracker = xm.RateTracker()
     model.train()
@@ -307,6 +310,4 @@ def _mp_fn(index, flags):
 
 
 if __name__ == '__main__':
-  if FLAGS.profile:
-    server = xp.start_server(FLAGS.profiler_port)
   xmp.spawn(_mp_fn, args=(FLAGS,), nprocs=FLAGS.num_cores)
