@@ -286,6 +286,7 @@ DISABLED_TORCH_TESTS_ANY = {
         # torch.autograd.gradcheck.GradcheckError: Jacobian mismatch for output 0 with respect to input 0
         'test_GRU_grad_and_gradgrad_xla_float64',  # TODO @wonjoo fails with functionalization
         'test_LSTM_grad_and_gradgrad_xla_float64'  # TODO @wonjoo fails with functionalization
+        'test_conv_empty_input'  # fails with functionalization
     },
 
     # test/nn/test_dropout.py
