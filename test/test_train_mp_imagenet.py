@@ -38,7 +38,22 @@ MODEL_OPTS = {
     },
     '--profile': {
         'action': 'store_true',
-    }
+    },
+    '--persistent_workers': {
+        'action': 'store_true',
+    },
+    '--prefetch_factor': {
+        'type': int,
+    },
+    '--loader_prefetch_size': {
+        'type': int,
+    },
+    '--device_prefetch_size': {
+        'type': int,
+    },
+    '--host_to_device_transfer_threads': {
+        'type': int,
+    },
 }
 
 FLAGS = args_parse.parse_common_options(
@@ -76,12 +91,39 @@ import torch_xla.distributed.xla_backend
 
 DEFAULT_KWARGS = dict(
     batch_size=128,
-    test_set_batch_size=64,
+    test_set_batch_size=128,
     num_epochs=18,
     momentum=0.9,
     lr=0.1,
     target_accuracy=0.0,
+    persistent_workers=False,
+    prefetch_factor=16,
+    loader_prefetch_size=8,
+    device_prefetch_size=4,
+    num_workers=8,
+    host_to_device_transfer_threads=1,
 )
+'''
+Best config to achieve peak performance on v4-8
+
+  1. It is recommended to use this config in conjuntion with XLA_USE_BF16=1 Flag. 
+  2. Hyperparameters can be tuned to further improve the accuracy.
+'''
+OPTIMIZED_KWARGS = dict(
+    batch_size=128,
+    test_set_batch_size=128,
+    num_epochs=18,
+    momentum=0.9,
+    lr=0.1,
+    target_accuracy=0.0,
+    persistent_workers=True,
+    prefetch_factor=32,
+    loader_prefetch_size=128,
+    device_prefetch_size=1,
+    num_workers=16,
+    host_to_device_transfer_threads=4,
+)
+
 MODEL_SPECIFIC_DEFAULTS = {
     # Override some of the args in DEFAULT_KWARGS, or add them to the dict
     # if they don't exist.
@@ -94,8 +136,10 @@ MODEL_SPECIFIC_DEFAULTS = {
                 'lr_scheduler_type': 'WarmupAndExponentialDecayScheduler',
             })
 }
-
-# Set any args that were not explicitly given by the user.
+'''
+Set any args that were not explicitly given by the user.
+DEFAULT_KWARGS in the below line can be replaced with OPTIMIZED_KWARGS for performance.
+'''
 default_value_dict = MODEL_SPECIFIC_DEFAULTS.get(FLAGS.model, DEFAULT_KWARGS)
 for arg, value in default_value_dict.items():
   if getattr(FLAGS, arg) is None:
@@ -192,14 +236,18 @@ def train_imagenet():
         sampler=train_sampler,
         drop_last=FLAGS.drop_last,
         shuffle=False if train_sampler else True,
-        num_workers=FLAGS.num_workers)
+        num_workers=FLAGS.num_workers,
+        persistent_workers=FLAGS.persistent_workers,
+        prefetch_factor=FLAGS.prefetch_factor)
     test_loader = torch.utils.data.DataLoader(
         test_dataset,
         batch_size=FLAGS.test_set_batch_size,
         sampler=test_sampler,
         drop_last=FLAGS.drop_last,
         shuffle=False,
-        num_workers=FLAGS.num_workers)
+        num_workers=FLAGS.num_workers,
+        persistent_workers=FLAGS.persistent_workers,
+        prefetch_factor=FLAGS.prefetch_factor)
 
   torch.manual_seed(42)
 
@@ -273,8 +321,19 @@ def train_imagenet():
     accuracy = xm.mesh_reduce('test_accuracy', accuracy, np.mean)
     return accuracy
 
-  train_device_loader = pl.MpDeviceLoader(train_loader, device)
-  test_device_loader = pl.MpDeviceLoader(test_loader, device)
+  train_device_loader = pl.MpDeviceLoader(
+      train_loader,
+      device,
+      loader_prefetch_size=FLAGS.loader_prefetch_size,
+      device_prefetch_size=FLAGS.device_prefetch_size,
+      host_to_device_transfer_threads=FLAGS.host_to_device_transfer_threads)
+  test_device_loader = pl.MpDeviceLoader(
+      test_loader,
+      device,
+      loader_prefetch_size=FLAGS.loader_prefetch_size,
+      device_prefetch_size=FLAGS.device_prefetch_size,
+      host_to_device_transfer_threads=FLAGS.host_to_device_transfer_threads)
+
   accuracy, max_accuracy = 0.0, 0.0
   for epoch in range(1, FLAGS.num_epochs + 1):
     xm.master_print('Epoch {} train begin {}'.format(epoch, test_utils.now()))
