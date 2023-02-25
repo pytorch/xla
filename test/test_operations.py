@@ -954,16 +954,6 @@ class TestAtenXlaTensor(test_utils.XlaTestCase):
     x.sum().backward()
     self.assertEqual(root.grad.tolist(), [[1, 2], [1, 1], [1, 1]])
 
-  @unittest.skip(
-      "functorch.functionalize doesn't seem to support updating .data directly")
-  def test_view_data_update(self):
-    a = torch.zeros(4, device=xm.xla_device())
-    v = a.view(2, 2)
-    a.data = a.data + 1
-    self.assertEqual(a.tolist(), [1, 1, 1, 1])
-    # Upadting a.data should not update v's value.
-    self.assertEqual(v.tolist(), [[0.0, 0.0], [0.0, 0.0]])
-
   def test_view_out_computation(self):
 
     def func(a, b):
@@ -975,34 +965,38 @@ class TestAtenXlaTensor(test_utils.XlaTestCase):
     b = torch.ones([2, 2])
     self.runAtenTest((a, b), func)
 
-  @unittest.skip("Broken by functionalization")
   def test_set(self):
     met.clear_all()
 
     t1 = torch.zeros(50, device=xm.xla_device())
     t1 += 1
     xm.mark_step()
-    self.assertEqual(met.counter_value('DestroyXlaTensor'), 2)
-
-    t1.data = torch.zeros(20, device=xm.xla_device())
     self.assertEqual(met.counter_value('DestroyXlaTensor'), 3)
 
-    t1.set_(torch.zeros(10, device=xm.xla_device()))
+    t2 = torch.zeros(10, device=xm.xla_device())
     self.assertEqual(met.counter_value('DestroyXlaTensor'), 4)
 
-    t2 = torch.zeros(10, device=xm.xla_device())
     t1.set_(t2)
-    # shouldn't crash
-    t2.cpu()
+    self.assertEqual(met.counter_value('DestroyXlaTensor'), 6)
 
-  @unittest.skip(
-      "functorch.functionalize doesn't seem to support updating .data directly")
-  def test_view_data_slice(self):
+    # shouldn't crash
+    self.assertTrue(torch.allclose(t2.cpu(), torch.zeros(10)))
+
+  def test_replace_xla_tensor(self):
+    met.clear_all()
+
     t1 = torch.zeros(50, device=xm.xla_device())
-    t1_slice = t1.data[:5]
-    # Assigning the view back to origonal tensor's data should be OK.
-    t1.data = t1_slice
-    self.assertEqual(t1.tolist(), [0, 0, 0, 0, 0])
+    t1 += 1
+    xm.mark_step()
+    self.assertEqual(met.counter_value('DestroyXlaTensor'), 3)
+
+    t2 = torch.zeros(10, device=xm.xla_device())
+    self.assertEqual(met.counter_value('DestroyXlaTensor'), 4)
+    torch_xla._XLAC._replace_xla_tensor(t1, t2)
+    self.assertEqual(met.counter_value('DestroyXlaTensor'), 5)
+
+    # shouldn't crash
+    self.assertTrue(torch.allclose(t2.cpu(), torch.zeros(10)))
 
   def test_pred_type(self):
     xla_device = xm.xla_device()
