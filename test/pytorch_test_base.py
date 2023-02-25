@@ -284,7 +284,7 @@ DISABLED_TORCH_TESTS_ANY = {
         'test_upsamplingBilinear2d_xla',  # precision on GPU/TPU, slow compilation on CPU
         # torch.autograd.gradcheck.GradcheckError: Jacobian mismatch for output 0 with respect to input 0
         'test_GRU_grad_and_gradgrad_xla_float64',  # TODO @wonjoo fails with functionalization
-        'test_LSTM_grad_and_gradgrad_xla_float64'  # TODO @wonjoo fails with functionalization
+        'test_LSTM_grad_and_gradgrad_xla_float64',  # TODO @wonjoo fails with functionalization
     },
 
     # test/nn/test_dropout.py
