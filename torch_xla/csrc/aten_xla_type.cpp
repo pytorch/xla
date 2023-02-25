@@ -3289,6 +3289,8 @@ XLANativeFunctions::convolution_backward(
   // TODO (alanwaketan): Let's resuse
   // `at::functionalization::functionalize_aten_op` after upstream has solved
   // its issue.
+  // The following is adopted from aten/src/ATen/FunctionalTensorWrapper.cpp:
+  // functionalize_op_helper.
   auto func_grad_output =
       at::functionalization::impl::to_functional_tensor(grad_output);
   auto func_input = at::functionalization::impl::to_functional_tensor(input);
