@@ -349,6 +349,8 @@ supported:
   # but their implementations call view operators (which we need to functionalize away).
   - affine_grid_generator
   - block_diag
+  - _convolution
+  - convolution_backward
   - diag_embed
   - embedding
   - _euclidean_dist

@@ -3267,6 +3267,42 @@ at::Tensor XLANativeFunctions::block_diag(at::TensorList tensors) {
       block_diag)>::call(tensors);
 }
 
+at::Tensor XLANativeFunctions::_convolution(
+    const at::Tensor& input, const at::Tensor& weight,
+    const c10::optional<at::Tensor>& bias, at::IntArrayRef stride,
+    at::IntArrayRef padding, at::IntArrayRef dilation, bool transposed,
+    at::IntArrayRef output_padding, int64_t groups, bool benchmark,
+    bool deterministic, bool cudnn_enabled, bool allow_tf32) {
+  return at::functionalization::functionalize_aten_op<ATEN_OP(
+      _convolution)>::call(input, weight, bias, stride, padding, dilation,
+                           transposed, output_padding, groups, benchmark,
+                           deterministic, cudnn_enabled, allow_tf32);
+}
+
+::std::tuple<at::Tensor, at::Tensor, at::Tensor>
+XLANativeFunctions::convolution_backward(
+    const at::Tensor& grad_output, const at::Tensor& input,
+    const at::Tensor& weight, at::OptionalIntArrayRef bias_sizes,
+    at::IntArrayRef stride, at::IntArrayRef padding, at::IntArrayRef dilation,
+    bool transposed, at::IntArrayRef output_padding, int64_t groups,
+    ::std::array<bool, 3> output_mask) {
+  auto func_grad_output = at::functionalization::impl::to_functional_tensor(grad_output);
+  auto func_input = at::functionalization::impl::to_functional_tensor(input);
+  auto func_weight = at::functionalization::impl::to_functional_tensor(weight);
+
+  auto curr_tls = c10::impl::tls_local_dispatch_key_set();
+  auto tls_reenable_functionalize = c10::impl::PODLocalDispatchKeySet();
+  tls_reenable_functionalize.set_included(curr_tls.included_);
+  tls_reenable_functionalize.set_excluded(curr_tls.excluded_.remove(c10::DispatchKey::Functionalize));
+  c10::impl::ForceDispatchKeyGuard guard_(tls_reenable_functionalize);
+  auto results = at::native::convolution_backward(func_grad_output, func_input, func_weight, bias_sizes,
+                                  stride, padding, dilation, transposed,
+                                  output_padding, groups, output_mask);
+
+
+  return std::make_tuple(at::functionalization::impl::from_functional_tensor(std::get<0>(results)), at::functionalization::impl::from_functional_tensor(std::get<1>(results)), at::functionalization::impl::from_functional_tensor(std::get<2>(results)));
+}
+
 at::Tensor XLANativeFunctions::diag_embed(const at::Tensor& self,
                                           int64_t offset, int64_t dim1,
                                           int64_t dim2) {
