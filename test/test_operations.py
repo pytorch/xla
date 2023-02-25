@@ -1599,7 +1599,8 @@ class TestAtenXlaTensor(test_utils.XlaTestCase):
     output = conv(input)
     loss = torch.sum(output)
     loss.backward()
-    self.assertTrue(torch.allclose(conv.weight.grad.cpu(), torch.tensor([[[[2077.0]]]])))
+    self.assertTrue(
+        torch.allclose(conv.weight.grad.cpu(), torch.tensor([[[[2077.0]]]])))
 
 
 class MNISTComparator(nn.Module):

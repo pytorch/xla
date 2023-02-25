@@ -3286,23 +3286,29 @@ XLANativeFunctions::convolution_backward(
     at::IntArrayRef stride, at::IntArrayRef padding, at::IntArrayRef dilation,
     bool transposed, at::IntArrayRef output_padding, int64_t groups,
     ::std::array<bool, 3> output_mask) {
-  // TODO (alanwaketan): Let's resuse `at::functionalization::functionalize_aten_op`
-  // after upstream has solved its issue.
-  auto func_grad_output = at::functionalization::impl::to_functional_tensor(grad_output);
+  // TODO (alanwaketan): Let's resuse
+  // `at::functionalization::functionalize_aten_op` after upstream has solved
+  // its issue.
+  auto func_grad_output =
+      at::functionalization::impl::to_functional_tensor(grad_output);
   auto func_input = at::functionalization::impl::to_functional_tensor(input);
   auto func_weight = at::functionalization::impl::to_functional_tensor(weight);
 
   auto curr_tls = c10::impl::tls_local_dispatch_key_set();
   auto tls_reenable_functionalize = c10::impl::PODLocalDispatchKeySet();
   tls_reenable_functionalize.set_included(curr_tls.included_);
-  tls_reenable_functionalize.set_excluded(curr_tls.excluded_.remove(c10::DispatchKey::Functionalize));
+  tls_reenable_functionalize.set_excluded(
+      curr_tls.excluded_.remove(c10::DispatchKey::Functionalize));
   c10::impl::ForceDispatchKeyGuard guard_(tls_reenable_functionalize);
-  auto results = at::native::convolution_backward(func_grad_output, func_input, func_weight, bias_sizes,
-                                  stride, padding, dilation, transposed,
-                                  output_padding, groups, output_mask);
+  auto results = at::native::convolution_backward(
+      func_grad_output, func_input, func_weight, bias_sizes, stride, padding,
+      dilation, transposed, output_padding, groups, output_mask);
 
-
-  return std::make_tuple(at::functionalization::impl::from_functional_tensor(std::get<0>(results)), at::functionalization::impl::from_functional_tensor(std::get<1>(results)), at::functionalization::impl::from_functional_tensor(std::get<2>(results)));
+  return std::make_tuple(
+      at::functionalization::impl::from_functional_tensor(std::get<0>(results)),
+      at::functionalization::impl::from_functional_tensor(std::get<1>(results)),
+      at::functionalization::impl::from_functional_tensor(
+          std::get<2>(results)));
 }
 
 at::Tensor XLANativeFunctions::diag_embed(const at::Tensor& self,
