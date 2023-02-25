@@ -931,7 +931,7 @@ class TestAtenXlaTensor(test_utils.XlaTestCase):
     self.assertEqual(met.counter_value('DestroyXlaTensor'), 6)
 
     # shouldn't crash
-    t2.cpu()
+    self.assertTrue(torch.allclose(t2.cpu(), torch.zeros(10)))
 
   def test_replace_xla_tensor(self):
     met.clear_all()
@@ -947,7 +947,7 @@ class TestAtenXlaTensor(test_utils.XlaTestCase):
     self.assertEqual(met.counter_value('DestroyXlaTensor'), 5)
 
     # shouldn't crash
-    t2.cpu()
+    self.assertTrue(torch.allclose(t2.cpu(), torch.zeros(10)))
 
   def test_pred_type(self):
     xla_device = xm.xla_device()
