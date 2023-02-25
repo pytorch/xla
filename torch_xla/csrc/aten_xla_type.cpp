@@ -3286,6 +3286,8 @@ XLANativeFunctions::convolution_backward(
     at::IntArrayRef stride, at::IntArrayRef padding, at::IntArrayRef dilation,
     bool transposed, at::IntArrayRef output_padding, int64_t groups,
     ::std::array<bool, 3> output_mask) {
+  // TODO (alanwaketan): Let's resuse `at::functionalization::functionalize_aten_op`
+  // after upstream has solved its issue.
   auto func_grad_output = at::functionalization::impl::to_functional_tensor(grad_output);
   auto func_input = at::functionalization::impl::to_functional_tensor(input);
   auto func_weight = at::functionalization::impl::to_functional_tensor(weight);
