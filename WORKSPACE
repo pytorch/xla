@@ -83,7 +83,7 @@ http_archive(
         "//openxla_patches:stream_executor.diff",
     ],
     sha256 = "7b9c06d0c034b169f93359196a14014fb6abe35c782283dd7e602bb439a9c14b",
-    strip_prefix = "openxla-8faf3d859c0d8ca9fc8b6ce56836c705a94d4265",
+    strip_prefix = "xla-8faf3d859c0d8ca9fc8b6ce56836c705a94d4265",
     urls = ["https://github.com/openxla/xla/archive/8faf3d859c0d8ca9fc8b6ce56836c705a94d4265.tar.gz"],
 )
 
