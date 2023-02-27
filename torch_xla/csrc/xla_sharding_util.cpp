@@ -340,9 +340,12 @@ void ShardingUtil::ApplyTensorShardingStore(
 
       if (node_data) {
         // Replace data node operand with a sharded one if exists.
-        if (const ShardingInfo* sharding_info =
-                TensorShardingStore::GetShardingInfo(node_data->GetHandle())) {
-          xla_node->set_operand(sharding_info->tensor_node.node, i);
+        if (node_data->HasValue() &&
+            TensorShardingStore::GetShardingInfo(node_data->GetHandle())) {
+          xla_node->set_operand(
+              TensorShardingStore::GetShardingInfo(node_data->GetHandle())
+                  ->tensor_node.node,
+              i);
         }
       } else {
         queue.push_back(dynamic_cast<XlaNode*>(node));

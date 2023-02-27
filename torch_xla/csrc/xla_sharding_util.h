@@ -99,7 +99,7 @@ class ShardingUtil {
       torch::lazy::Value ir_value, XLATensor::ShardingSpecPtr sharding_spec);
 
   // Apply cached tensor data node shardings to the set of nodes and their
-  // operands. The shardings are cached during hardInputDataNodes calls. Note
+  // operands. The shardings are cached during ShardInputDataNodes calls. Note
   // that this also resets the TensorShardingStore cache.
   static void ApplyTensorShardingStore(
       std::vector<torch::lazy::Value> ir_values);

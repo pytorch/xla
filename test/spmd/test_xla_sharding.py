@@ -138,7 +138,6 @@ class BasicShardingTest(test_xla_sharding_base.XlaShardingTest):
     # Sharded model parameter should be sharded after mark_step()
     self.assertEqual(met.counter_value("ShardInputDataNodes"), 2)
 
-
   def test_inplace_add_with_sharding(self):
     xt = torch.ones(2, 2).to(xm.xla_device())
     xs.mark_sharding(xt, self._get_mesh((1, self.n_devices)), (0, 1))
