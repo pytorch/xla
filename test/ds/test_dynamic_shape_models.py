@@ -8,9 +8,11 @@ parser.add_argument('--verbosity', type=int, default=2)
 FLAGS, leftovers = parser.parse_known_args()
 sys.argv = [sys.argv[0]] + leftovers
 
+import math
 import numpy as np
 import unittest
 import torch
+import torchvision
 import torch_xla.core.xla_model as xm
 import torch_xla.debug.metrics as met
 import torchvision
@@ -129,6 +131,81 @@ class TestDynamicShapeModels(unittest.TestCase):
       criterion(y_pred.squeeze(), y_test).item()
       xm.mark_step()
     print('Test passed.')
+
+  def test_roialign_forward(self):
+    device = 'cpu'
+    aligned = True
+    # contiguous = True
+    dtype = torch.float64
+    x_dtype, rois_dtype = dtype, dtype
+    pool_size = 5
+    # n_channels % (pool_size ** 2) == 0 required for PS operations.
+    n_channels = 2 * (pool_size**2)
+    x = torch.rand(2, n_channels, 10, 10, dtype=x_dtype, device=device)
+    rois = torch.tensor(
+        [[0, 0, 0, 9, 9], [0, 0, 5, 4, 9], [0, 5, 5, 9, 9], [1, 0, 0, 9, 9]],  # format is (xyxy)
+        dtype=rois_dtype,
+        device=device,
+    )    
+
+    pool_h, pool_w = pool_size, pool_size
+    spatial_scale, sampling_ratio=1, -1
+    y = torchvision.ops.RoIAlign((pool_h, pool_w), spatial_scale=spatial_scale, sampling_ratio=sampling_ratio, aligned=aligned)(x, rois)
+
+    def expected_fn(
+        in_data,
+        rois,
+        pool_h,
+        pool_w,
+        spatial_scale=1,
+        sampling_ratio=-1,
+        aligned=False,
+        device=None,
+        dtype=torch.float64,
+    ):
+        print('xw32 expected_fn aligned=', aligned)
+        if device is None:
+            device = torch.device("cpu")
+        n_channels = in_data.size(1)
+        out_data = torch.zeros(rois.size(0), n_channels, pool_h, pool_w, dtype=dtype, device=device)
+
+        offset = 0.5 if aligned else 0.0
+
+        for r, roi in enumerate(rois):
+            batch_idx = int(roi[0])
+            j_begin, i_begin, j_end, i_end = (x.item() * spatial_scale - offset for x in roi[1:])
+
+            roi_h = i_end - i_begin
+            roi_w = j_end - j_begin
+            bin_h = roi_h / pool_h
+            bin_w = roi_w / pool_w
+
+            for i in range(0, pool_h):
+                start_h = i_begin + i * bin_h
+                grid_h = sampling_ratio if sampling_ratio > 0 else int(np.ceil(bin_h))
+                for j in range(0, pool_w):
+                    start_w = j_begin + j * bin_w
+                    grid_w = sampling_ratio if sampling_ratio > 0 else int(np.ceil(bin_w))
+
+                    for channel in range(0, n_channels):
+
+                        val = 0
+                        for iy in range(0, grid_h):
+                            y = start_h + (iy + 0.5) * bin_h / grid_h
+                            for ix in range(0, grid_w):
+                                x = start_w + (ix + 0.5) * bin_w / grid_w
+                                val += bilinear_interpolate(in_data[batch_idx, channel, :, :], y, x, snap_border=True)
+                        val /= grid_h * grid_w
+
+                        out_data[r, channel, i, j] = val
+        return out_data
+    y_expected = expected_fn(x, rois, pool_h, pool_w, spatial_scale=1, sampling_ratio=-1, device=device, dtype=x_dtype, aligned=aligned)
+    tol = 1e-3 if (x_dtype is torch.half or rois_dtype is torch.half) else 1e-5
+    torch.testing.assert_close(y_expected.to(y), y, rtol=tol, atol=tol)
+    print('test passes')
+    
+  
+
 
   def create_dynamic_test_data(self,
                                num_test_samples,
@@ -268,6 +345,36 @@ def bilinear_interpolate(data, y, x, snap_border=False):
         val += wx * wy * data[yp, xp]
   return val
 
+def bilinear_interpolate(data, y, x, snap_border=False):
+    height, width = data.shape
+
+    if snap_border:
+        if -1 < y <= 0:
+            y = 0
+        elif height - 1 <= y < height:
+            y = height - 1
+
+        if -1 < x <= 0:
+            x = 0
+        elif width - 1 <= x < width:
+            x = width - 1
+
+    y_low = int(math.floor(y))
+    x_low = int(math.floor(x))
+    y_high = y_low + 1
+    x_high = x_low + 1
+
+    wy_h = y - y_low
+    wx_h = x - x_low
+    wy_l = 1 - wy_h
+    wx_l = 1 - wx_h
+
+    val = 0
+    for wx, xp in zip((wx_l, wx_h), (x_low, x_high)):
+        for wy, yp in zip((wy_l, wy_h), (y_low, y_high)):
+            if 0 <= yp < height and 0 <= xp < width:
+                val += wx * wy * data[yp, xp]
+    return val
 
 if __name__ == '__main__':
   assert os.environ['XLA_EXPERIMENTAL'] != ''
