@@ -6,9 +6,6 @@
 #include "tensorflow/compiler/xla/client/xla_builder.h"
 #include "tensorflow/compiler/xla/client/xla_computation.h"
 #include "tensorflow/compiler/xla/hlo/ir/hlo_module.h"
-#include "third_party/xla_client/computation_client.h"
-#include "third_party/xla_client/debug_macros.h"
-#include "third_party/xla_client/types.h"
 #include "torch/csrc/lazy/backend/lowering_context.h"
 #include "torch/csrc/lazy/core/hash.h"
 

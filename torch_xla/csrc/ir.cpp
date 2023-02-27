@@ -4,9 +4,6 @@
 #include <sstream>
 
 #include "absl/strings/str_cat.h"
-#include "third_party/xla_client/cache.h"
-#include "third_party/xla_client/debug_macros.h"
-#include "third_party/xla_client/sys_util.h"
 #include "torch/csrc/lazy/core/config.h"
 #include "torch/csrc/lazy/core/hash.h"
 #include "torch/csrc/lazy/core/ir_metadata.h"

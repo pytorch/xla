@@ -1,7 +1,5 @@
 #include "torch_xla/csrc/ir_util.h"
 
-#include "third_party/xla_client/debug_macros.h"
-
 namespace torch_xla {
 
 std::vector<torch::lazy::Value> Util::Clone(

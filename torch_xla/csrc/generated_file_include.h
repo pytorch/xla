@@ -1,5 +1,3 @@
-#include "third_party/xla_client/debug_macros.h"
-#include "third_party/xla_client/metrics.h"
 #include "torch/csrc/lazy/core/shape.h"
 #include "torch_xla/csrc/aten_cpu_fallback.h"
 #include "torch_xla/csrc/aten_xla_bridge.h"

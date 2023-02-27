@@ -8,6 +8,7 @@ common --copt=-fexceptions
 build --announce_rc
 
 # TODO(goranpetrovic): figure out visibility of tensorflow libraries.
+# Required by OpenXLA
 build --nocheck_visibility
 
 build --enable_platform_specific_config
@@ -54,7 +55,7 @@ build:cuda --repo_env TF_NEED_CUDA=1
 # "compute" means we emit both cubin and PTX, which is larger but also forward compatible to future GPU generations.
 build:cuda --crosstool_top=@local_config_cuda//crosstool:toolchain
 build:cuda --@local_config_cuda//:enable_cuda
-build:cuda --@org_tensorflow//tensorflow/compiler/xla/python:enable_gpu=true
+build:cuda --@xla//xla/python:enable_gpu=true
 build:cuda --define=xla_python_enable_gpu=true
 build:cuda --cxxopt=-DXLA_CUDA=1
 
@@ -69,6 +70,7 @@ build:linux --copt=-Wno-unknown-warning-option
 build:short_logs --output_filter=DONT_MATCH_ANYTHING
 
 #build:tpu --@org_tensorflow//tensorflow/compiler/xla/python:enable_tpu=true
+# maybe change to above command here !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 build:tpu --define=with_tpu_support=true
 
 #########################################################################

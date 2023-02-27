@@ -8,8 +8,6 @@
 #include <vector>
 
 #include "absl/strings/str_cat.h"
-#include "third_party/xla_client/computation_client.h"
-#include "third_party/xla_client/debug_macros.h"
 #include "torch_xla/csrc/device.h"
 #include "torch_xla/csrc/tensor_impl.h"
 #include "torch_xla/csrc/torch_util.h"

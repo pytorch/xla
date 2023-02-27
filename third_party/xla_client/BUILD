@@ -1,15 +1,15 @@
 load(
-    "@org_tensorflow//tensorflow:tensorflow.bzl",
-    "if_with_tpu_support", # [//tensorflow:with_tpu_support[:with_tpu_support_define["with_tpu_support": "true"],:with_tpu_support_flag[":enable_tpu_support": "True"]], //conditions:default[built-in condition]]
-    "tf_cc_shared_object", # "libxla_computation_client.so"
+    -- "@xla//tensorflow:tensorflow.bzl",
+    "if_with_tpu_support",
+    "tf_cc_shared_object",
 )
-load( # tf tsl !!!!!!!!!!!!!!!!!!!!!!!!!!!
-    "@org_tensorflow//tensorflow/tsl/platform/default:build_config.bzl",
-    "tf_proto_library_cc", # [mesh_service_proto["mesh_service.proto"]]
+load(
+    "@tsl//tsl/platform/default:build_config.bzl",
+    -- "tf_proto_library_cc",
 )
-load( # tf tsl !!!!!!!!!!!!!!!!!!!!!!!!!!! tf xla stream_executor !!!!!!!!!!!!!!!!!!!!!!!!!!!!
-    "@org_tensorflow//tensorflow/tsl/platform/default:cuda_build_defs.bzl",
-    "if_cuda_is_configured", # [["@local_config_nccl//:nccl", "@org_tensorflow//tensorflow/compiler/jit:xla_gpu_device", "@org_tensorflow//tensorflow/compiler/xla/stream_executor:cuda_platform",]]
+load(
+    "@tsl//tsl/platform/default:cuda_build_defs.bzl",
+    "if_cuda_is_configured",
 )
 
 licenses(["notice"])  # Apache 2.0
@@ -21,16 +21,16 @@ exports_files([
     "tf_exported_symbols.lds",
 ])
 
-tf_proto_library_cc(
-    name = "mesh_service_proto", # used in tsl and computation_client_impl
-    srcs = ["mesh_service.proto"],
-    has_services = 1,
-    cc_api_version = 2,
-    cc_grpc_version = 1,
-    protodeps = [
-        "@org_tensorflow//tensorflow/core/protobuf/tpu:topology_proto",
-    ],
-)
+-- tf_proto_library_cc(
+--     name = "mesh_service_proto",
+--     srcs = ["mesh_service.proto"],
+--     has_services = 1,
+--     cc_api_version = 2,
+--     cc_grpc_version = 1,
+--     protodeps = [
+--         "@org_tensorflow//tensorflow/core/protobuf/tpu:topology_proto",
+--     ],
+-- )
 
 cc_library(
     name = "async_task",
@@ -60,7 +60,7 @@ cc_library(
         ":cache",
         ":debug_macros",
         ":env_vars",
-        ":mesh_service",
+        -- ":mesh_service",
         ":metrics_analysis",
         ":metrics_reader",
         ":metrics",
@@ -134,11 +134,11 @@ cc_library(
         "@com_google_absl//absl/numeric:int128",
         "@com_google_absl//absl/strings",
     ] + if_cuda_is_configured([
-        "@org_tensorflow//tensorflow/compiler/jit:xla_gpu_device",
-        "@org_tensorflow//tensorflow/compiler/xla/stream_executor:cuda_platform",
+        -- "@org_tensorflow//tensorflow/compiler/jit:xla_gpu_device",
+        "@xla//xla/stream_executor:cuda_platform",
     ]) + if_with_tpu_support([
-        "@org_tensorflow//tensorflow/compiler/jit:xla_tpu_device",
-        "@org_tensorflow//tensorflow/compiler/jit:xla_tpu_jit",
+        -- "@org_tensorflow//tensorflow/compiler/jit:xla_tpu_device",
+        -- "@org_tensorflow//tensorflow/compiler/jit:xla_tpu_jit",
     ]),
     alwayslink = True,
 )
@@ -167,23 +167,23 @@ cc_library(
     alwayslink = True,
 )
 
-cc_library(
-    name = "mesh_service",
-    srcs = ["mesh_service.cc"],
-    hdrs = ["mesh_service.h"],
-    deps = [
-        "nccl_distributed",
-        ":debug_macros",
-        ":mesh_service_proto_cc",
-        ":multi_wait",
-        ":sys_util",
-        ":thread_pool",
-        ":util",
-        "@com_google_absl//absl/strings",
-        "@org_tensorflow//tensorflow/compiler/xla:statusor",
-    ],
-    alwayslink = True,
-)
+-- cc_library(
+--     name = "mesh_service",
+--     srcs = ["mesh_service.cc"],
+--     hdrs = ["mesh_service.h"],
+--     deps = [
+--         "nccl_distributed",
+--         ":debug_macros",
+--         ":mesh_service_proto_cc",
+--         ":multi_wait",
+--         ":sys_util",
+--         ":thread_pool",
+--         ":util",
+--         "@com_google_absl//absl/strings",
+--         "@xla//xla:statusor",
+--     ],
+--     alwayslink = True,
+-- )
 
 cc_library(
     name = "metrics_analysis",
@@ -220,8 +220,8 @@ cc_library(
         ":util",
         "@com_google_absl//absl/memory",
         "@com_google_absl//absl/strings",
-        "@org_tensorflow//tensorflow/compiler/xla:types",
-        "@org_tensorflow//tensorflow/compiler/xla/service:platform_util",
+        "@xla//xla:types",
+        "@xla//xla/service:platform_util",
     ],
     alwayslink = True,
 )
@@ -231,7 +231,7 @@ cc_library(
     srcs = ["multi_wait.cc"],
     hdrs = ["multi_wait.h"],
     deps = [
-        "@org_tensorflow//tensorflow/compiler/xla:types",
+        "@xla//xla:types",
     ],
     alwayslink = True,
 )
@@ -244,7 +244,7 @@ cc_library(
         ":debug_macros",
         "@com_google_absl//absl/strings",
         "@com_google_absl//absl/types:span",
-        "@org_tensorflow//tensorflow/compiler/xla:types",
+        "@xla//xla:types",
     ] + if_cuda_is_configured([
         "@local_config_nccl//:nccl",
     ]),
@@ -281,7 +281,7 @@ cc_library(
     hdrs = ["sys_util.h"],
     deps = [
         "@com_google_absl//absl/strings",
-        "@org_tensorflow//tensorflow/compiler/xla:types",
+        "@xla//xla:types",
     ],
     alwayslink = True,
 )
@@ -300,8 +300,8 @@ cc_library(
     srcs = ["tf_logging.cc"],
     hdrs = ["tf_logging.h"],
     deps = [
-        "@org_tensorflow//tensorflow/compiler/xla:statusor",
-        "@org_tensorflow//tensorflow/compiler/xla/service:platform_util",
+        "@xla//xla:statusor",
+        "@xla//xla/service:platform_util",
     ],
     alwayslink = True,
 )
@@ -330,7 +330,7 @@ cc_library(
     deps = [
         "@com_google_absl//absl/numeric:int128",
         "@com_google_absl//absl/types:optional",
-        "@org_tensorflow//tensorflow/compiler/xla:types",
+        "@xla//xla:types",
     ],
     alwayslink = True,
 )
@@ -354,9 +354,9 @@ cc_library(
         "@com_google_absl//absl/strings",
         "@com_google_absl//absl/types:optional",
         "@com_google_absl//absl/types:span",
-        "@org_tensorflow//tensorflow/compiler/xla:statusor",
-        "@org_tensorflow//tensorflow/compiler/xla:types",
-        "@org_tensorflow//tensorflow/core:lib",
+        "@xla//xla:statusor",
+        "@xla//xla:types",
+        -- "@org_tensorflow//tensorflow/core:lib",
     ],
     alwayslink = True,
 )
@@ -402,12 +402,12 @@ cc_test(
         ":xla_util",
         "@com_google_absl//absl/types:span",
         "@com_google_googletest//:gtest_main",
-        "@org_tensorflow//tensorflow/compiler/xla:shape_util",
-        "@org_tensorflow//tensorflow/compiler/xla/client:xla_builder",
-        "@org_tensorflow//tensorflow/compiler/xla/client:xla_computation",
-        "@org_tensorflow//tensorflow/tsl/lib/core:status_test_util",
-        "@org_tensorflow//tensorflow/tsl/platform:errors",
-        "@org_tensorflow//tensorflow/tsl/platform:status_matchers",
+        "@xla//xla:shape_util",
+        "@xla//xla/client:xla_builder",
+        "@xla//xla/client:xla_computation",
+        -- "@org_tensorflow//tensorflow/tsl/lib/core:status_test_util",
+        -- "@org_tensorflow//tensorflow/tsl/platform:errors",
+        -- "@org_tensorflow//tensorflow/tsl/platform:status_matchers",
     ],
 )
 
@@ -438,7 +438,7 @@ cc_library(
         ":metrics",
         ":sys_util",
         ":xrt_session",
-        "@org_tensorflow//tensorflow/compiler/xla:types",
+        "@xla//xla:types",
     ],
     alwayslink = True,
 )
@@ -451,10 +451,10 @@ cc_library(
         ":debug_macros",
         "@com_google_absl//absl/strings",
         "@com_google_absl//absl/types:span",
-        "@org_tensorflow//tensorflow/cc:cc_ops",
-        "@org_tensorflow//tensorflow/cc:client_session",
-        "@org_tensorflow//tensorflow/cc:scope",
-        "@org_tensorflow//tensorflow/compiler/xla:types",
+        -- "@org_tensorflow//tensorflow/cc:cc_ops",
+        -- "@org_tensorflow//tensorflow/cc:client_session",
+        -- "@org_tensorflow//tensorflow/cc:scope",
+        "@xla//xla:types",
     ],
     alwayslink = True,
 )
@@ -462,7 +462,7 @@ cc_library(
 tf_cc_shared_object(
     name = "libxla_computation_client.so",
     linkopts = select({
-        "@org_tensorflow//tensorflow:windows": [],
+        -- "@org_tensorflow//tensorflow:windows": [],
         "//conditions:default": [
             "-z defs",
             "-Wl,--version-script",  #  This line must be directly followed by the version_script.lds file
@@ -494,19 +494,19 @@ tf_cc_shared_object(
 #     srcs = ["pjrt_computation_client_test.cc"],
 #     deps = [
 #         ":computation_client",
-#         "@org_tensorflow//tensorflow/compiler/xla:literal",
-#         "@org_tensorflow//tensorflow/compiler/xla:literal_util",
-#         "@org_tensorflow//tensorflow/compiler/xla:shape_util",
-#         "@org_tensorflow//tensorflow/compiler/xla:status",
-#         "@org_tensorflow//tensorflow/compiler/xla:statusor",
-#         "@org_tensorflow//tensorflow/compiler/xla/client:xla_builder",
-#         "@org_tensorflow//tensorflow/compiler/xla/client:xla_computation",
-#         "@org_tensorflow//tensorflow/compiler/xla/tests:literal_test_util",
-#         "@org_tensorflow//tensorflow/compiler/xla/tools:hlo_module_loader",
-#         "@org_tensorflow//tensorflow/core/platform:logging",
-#         "@org_tensorflow//tensorflow/tsl/lib/core:status_test_util",
-#         "@org_tensorflow//tensorflow/tsl/platform:env",
-#         "@org_tensorflow//tensorflow/tsl/platform:test",
-#         "@org_tensorflow//tensorflow/tsl/platform:test_main",
+#         "@xla//xla:literal",
+#         "@xla//xla:literal_util",
+#         "@xla//xla:shape_util",
+#         "@xla//xla:status",
+#         "@xla//xla:statusor",
+#         "@xla//xla/client:xla_builder",
+#         "@xla//xla/client:xla_computation",
+#         "@xla//xla/tests:literal_test_util",
+#         "@xla//xla/tools:hlo_module_loader",
+-- #         "@org_tensorflow//tensorflow/core/platform:logging",
+-- #         "@org_tensorflow//tensorflow/tsl/lib/core:status_test_util",
+-- #         "@org_tensorflow//tensorflow/tsl/platform:env",
+-- #         "@org_tensorflow//tensorflow/tsl/platform:test",
+-- #         "@org_tensorflow//tensorflow/tsl/platform:test_main",
 #     ],
 # )

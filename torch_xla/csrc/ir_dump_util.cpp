@@ -6,8 +6,6 @@
 
 #include "absl/container/flat_hash_map.h"
 #include "absl/types/optional.h"
-#include "third_party/xla_client/debug_macros.h"
-#include "third_party/xla_client/xla_util.h"
 #include "torch/csrc/lazy/core/ir_util.h"
 #include "torch_xla/csrc/ir_util.h"
 #include "torch_xla/csrc/lowering_context.h"
