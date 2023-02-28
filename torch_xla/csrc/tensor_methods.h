@@ -847,6 +847,10 @@ std::vector<XLATensorPtr> unbind(const XLATensorPtr& input, int64_t dim);
 
 void uniform_(XLATensorPtr& input, double from, double to);
 
+std::tuple<XLATensorPtr, XLATensorPtr, XLATensorPtr> unique2(
+    const XLATensorPtr& input, bool sorted, bool return_inverse,
+    bool return_counts);
+
 // Insert a dimension of size one at the specified position.
 XLATensorPtr unsqueeze(const XLATensorPtr& input, int64_t dim);
 

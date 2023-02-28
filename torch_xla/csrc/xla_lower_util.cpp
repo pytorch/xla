@@ -1123,4 +1123,103 @@ xla::XlaOp BuildCdistForward(xla::XlaOp x1, xla::XlaOp x2, xla::XlaOp p,
   }
 }
 
+std::vector<xla::XlaOp> BuildUnique2(xla::XlaOp input) {
+  xla::XlaBuilder* builder = input.builder();
+
+  xla::Shape input_shape = XlaHelpers::ShapeOfXlaOp(input);
+  int64_t num_elements = xla::ShapeUtil::ElementsIn(input_shape);
+
+  xla::XlaOp input_flattened = XlaHelpers::Flatten(input);
+  xla::PrimitiveType indices_type = GetShapeDimensionType(/*device=*/nullptr);
+  xla::XlaOp indices = xla::Iota(builder, indices_type, num_elements);
+
+  // sort elements and indices
+  xla::XlaOp sorted =
+      xla::Sort({input_flattened, indices},
+                xla::CreateScalarLtComputation(
+                    {input_shape.element_type(), indices_type}, builder));
+
+  xla::XlaOp sorted_elements = xla::GetTupleElement(sorted, 0);
+  xla::XlaOp sorted_indices = xla::GetTupleElement(sorted, 1);
+
+  // calculate adjacent difference
+  xla::XlaOp right = xla::Slice(sorted_elements, {1}, {num_elements}, {1});
+  xla::XlaOp left = xla::Slice(sorted_elements, {0}, {num_elements - 1}, {1});
+  xla::XlaOp diff = xla::ConvertElementType(xla::Ne(right, left), indices_type);
+  xla::XlaOp adjacent_diff = xla::Pad(diff, xla::Zero(builder, indices_type),
+                                      xla::MakeEdgePaddingConfig({{1, 0}}));
+
+  // calculate cumulative sum
+  xla::XlaOp cumsum = xla::ReduceWindowWithGeneralPadding(
+      adjacent_diff, xla::Zero(builder, indices_type),
+      XlaHelpers::CreateAddComputation(indices_type),
+      /*window_dimensions=*/{num_elements},
+      /*window_strides=*/{1},
+      /*base_dilations=*/{}, /*window_dilations=*/{},
+      /*padding=*/{{num_elements - 1, 0}});
+
+  xla::ScatterDimensionNumbers scatter_dnums;
+  scatter_dnums.set_index_vector_dim(1);
+  scatter_dnums.add_inserted_window_dims(0);
+  scatter_dnums.add_scatter_dims_to_operand_dims(0);
+  scatter_dnums.add_update_window_dims(1);
+
+  auto select_second_combiner = [](xla::XlaOp a, xla::XlaOp b) -> xla::XlaOp {
+    return b;
+  };
+
+  auto count_combiner = [](xla::XlaOp a, xla::XlaOp b) -> xla::XlaOp {
+    xla::XlaOp one =
+        xla::One(a.builder(), XlaHelpers::ShapeOfXlaOp(a).element_type());
+    return xla::Add(a, one);
+  };
+
+  // 1. calculate unique_elements
+  xla::XlaOp sorted_elements_2d =
+      xla::Reshape(sorted_elements, {num_elements, 1});
+  xla::XlaOp unique_elements_2d = xla::Scatter(
+      xla::Zeros(builder, xla::ShapeUtil::MakeShape(input_shape.element_type(),
+                                                    {num_elements, 1})),
+      cumsum, sorted_elements_2d,
+      MakeScatterComputation(select_second_combiner,
+                             input_shape.element_type()),
+      scatter_dnums,
+      /*indices_are_sorted=*/true, /*unique_indices=*/false);
+  xla::XlaOp unique_elements = XlaHelpers::Flatten(unique_elements_2d);
+
+  // 2. calculate inverse_indices
+  xla::XlaOp cumsum_2d = xla::Reshape(cumsum, {num_elements, 1});
+  xla::XlaOp inverse_indices_2d = xla::Scatter(
+      xla::Zeros(builder,
+                 xla::ShapeUtil::MakeShape(indices_type, {num_elements, 1})),
+      sorted_indices, cumsum_2d,
+      MakeScatterComputation(select_second_combiner, indices_type),
+      scatter_dnums,
+      /*indices_are_sorted=*/false, /*unique_indices=*/true);
+  xla::XlaOp inverse_indices = xla::Reshape(
+      XlaHelpers::Flatten(inverse_indices_2d), input_shape.dimensions());
+
+  // 3. calculate counts
+  xla::XlaOp counts_2d = xla::Scatter(
+      xla::Zeros(builder,
+                 xla::ShapeUtil::MakeShape(indices_type, {num_elements, 1})),
+      cumsum, cumsum_2d, MakeScatterComputation(count_combiner, indices_type),
+      scatter_dnums,
+      /*indices_are_sorted=*/true, /*unique_indices=*/false);
+  xla::XlaOp counts = XlaHelpers::Flatten(counts_2d);
+
+  // 4. calculate number of unique elements
+  xla::XlaOp num_unique_elements =
+      xla::Reduce(adjacent_diff, xla::Zero(builder, indices_type),
+                  XlaHelpers::CreateAddComputation(indices_type), {0}) +
+      xla::One(builder, indices_type);
+
+  std::vector<xla::XlaOp> results = {
+      /*unique_elements=*/xla::SetDimensionSize(unique_elements,
+                                                num_unique_elements, 0),
+      /*inverse_indices=*/inverse_indices,
+      /*counts=*/xla::SetDimensionSize(counts, num_unique_elements, 0)};
+  return results;
+}  // namespace torch_xla
+
 }  // namespace torch_xla
