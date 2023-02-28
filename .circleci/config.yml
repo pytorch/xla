@@ -192,11 +192,18 @@ run_test_coverage: &run_test_coverage
         docker cp $(cat .docker_pid):/home/jenkins/htmlcov /home/circleci/project
         if [ -n "${USE_CUDA_DOCKER_RUNTIME:-}" ]; then
           gsutil cp /home/circleci/project/htmlcov/lcov.info gs://ng3-metrics/ng3-pytorchxla-coverage/absolute/pytorchxla/${CIRCLE_WORKFLOW_ID}/gpu_combined_coverage.out
+          gsutil cp /home/circleci/project/htmlcov/lcov.info gs://ng3-metrics/ng3-pytorchxla-coverage/incremental/pytorchxla/${CIRCLE_WORKFLOW_ID}/gpu_combined_coverage.out
         else
           gsutil cp /home/circleci/project/htmlcov/lcov.info gs://ng3-metrics/ng3-pytorchxla-coverage/absolute/pytorchxla/${CIRCLE_WORKFLOW_ID}/cpu_combined_coverage.out
-          METADATA='{"host": "github", "project": "pytorchxla", "trace_type": "LCOV", "commit_id": '\"${CIRCLE_SHA1}\"', "ref": "HEAD", "source": "https://github.com/pytorch/xla", "owner": "cloud-tpu-pt-dev", "bug_component": "587012"}'
-          echo $METADATA > metadata.json
-          gsutil cp metadata.json gs://ng3-metrics/ng3-pytorchxla-coverage/absolute/pytorchxla/${CIRCLE_WORKFLOW_ID}/
+          gsutil cp /home/circleci/project/htmlcov/lcov.info gs://ng3-metrics/ng3-pytorchxla-coverage/incremental/pytorchxla/${CIRCLE_WORKFLOW_ID}/cpu_combined_coverage.out
+
+          ABS_METADATA='{"host": "github", "project": "pytorchxla", "trace_type": "LCOV", "commit_id": '\"${CIRCLE_SHA1}\"', "ref": "HEAD", "source": "https://github.com/pytorch/xla", "owner": "cloud-tpu-pt-dev", "bug_component": "587012"}'
+          echo $ABS_METADATA > abs_metadata.json
+          gsutil cp abs_metadata.json gs://ng3-metrics/ng3-pytorchxla-coverage/absolute/pytorchxla/${CIRCLE_WORKFLOW_ID}/metadata.json
+
+          INC_METADATA='{"host": "github", "project": "pytorchxla", "trace_type": "LCOV", "patchset_num": 1, "change_id": '\"${CIRCLE_BUILD_NUM}\"', "owner": "cloud-tpu-pt-dev", "bug_component": "587012"}'
+          echo $INC_METADATA > inc_metadata.json
+          gsutil cp inc_metadata.json gs://ng3-metrics/ng3-pytorchxla-coverage/incremental/pytorchxla/${CIRCLE_WORKFLOW_ID}/metadtaa.json
         fi
 
   - store_artifacts:
