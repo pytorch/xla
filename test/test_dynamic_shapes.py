@@ -178,6 +178,50 @@ class TestDynamicShapes(test_utils.XlaTestCase):
     self.assertEqual(t3.shape[0], 2)
     self.assertEqual(expand_out_aten.cpu(), expand_out_xla.cpu())
 
+  def test_topk_symint_ir_1(self):
+    t1 = torch.zeros([5, 2], device=dev)
+    t1[3][0] = 1
+    t1[3][1] = 1
+    t2 = torch.nonzero(t1)
+    t3 = torch.zeros([10, 2], device=dev)
+    values, indices = torch.topk(t3, t2.shape[0], dim=0)
+    self.assertIsInstance(t2.shape[0], torch.SymInt)
+    self.assertIsInstance(values.shape[0], torch.SymInt)
+    self.assertIsInstance(indices.shape[0], torch.SymInt)
+    self.assertEqual(str(t2.shape[0]), '<=10')
+    self.assertEqual(str(values.shape[0]), '<=10')
+    self.assertEqual(str(indices.shape[0]), '<=10')
+    self.assertEqual(t3.shape[1], 2)
+    self.assertEqual(values.shape[1], 2)
+    self.assertEqual(indices.shape[1], 2)
+
+  def test_topk_symint_ir_2(self):
+    t1 = torch.ones(20, device=dev)
+    t1[::3] = 0
+    t2 = torch.ones(10, device=dev)
+    t2[::2] = 0
+    k = torch.nonzero(t2).shape[0]
+    values, indices = torch.topk(t1, k, dim=0)
+    self.assertIsInstance(values.shape[0], torch.SymInt)
+    self.assertIsInstance(indices.shape[0], torch.SymInt)
+    self.assertEqual(str(values.shape[0]), '<=10')
+    self.assertEqual(str(indices.shape[0]), '<=10')
+
+  def test_topk_symint_correctness(self):
+
+    def test_fn(*tensors):
+      torch.manual_seed(0)
+      x = torch.rand(10, 10).to(tensors[0].device)
+      results = []
+      for tensor in tensors:
+        k = torch.nonzero(tensor).shape[0]
+        for dim in range(2):
+          results += list(torch.topk(x, k=k, dim=dim))
+      return results
+
+    self.runAtenTest([torch.randint(0, 2, size=(10,)) for _ in range(5)],
+                     test_fn)
+
 
 if __name__ == '__main__':
   assert os.environ['XLA_EXPERIMENTAL'] != ''

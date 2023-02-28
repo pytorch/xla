@@ -121,6 +121,7 @@
 #include "torch_xla/csrc/ops/threshold.h"
 #include "torch_xla/csrc/ops/threshold_backward.h"
 #include "torch_xla/csrc/ops/topk.h"
+#include "torch_xla/csrc/ops/topk_symint.h"
 #include "torch_xla/csrc/ops/triangular_solve.h"
 #include "torch_xla/csrc/ops/uniform.h"
 #include "torch_xla/csrc/ops/unsqueeze.h"
@@ -2498,6 +2499,20 @@ std::tuple<XLATensorPtr, XLATensorPtr> topk(const XLATensorPtr& input,
                                             bool stable) {
   torch::lazy::NodePtr node = torch::lazy::MakeNode<TopK>(
       input->GetIrValue(), k,
+      torch::lazy::GetCanonicalDimensionIndex(dim, input->shape().get().rank()),
+      largest, sorted, stable);
+  return std::make_tuple(
+      input->CreateFrom(torch::lazy::Value(node, 0)),
+      input->CreateFrom(torch::lazy::Value(node, 1), at::ScalarType::Long));
+}
+
+std::tuple<XLATensorPtr, XLATensorPtr> topk_symint(const XLATensorPtr& input,
+                                                   c10::SymInt k, int64_t dim,
+                                                   bool largest, bool sorted,
+                                                   bool stable) {
+  SymIntElements k_symint = SymIntElements(k);
+  torch::lazy::NodePtr node = torch::lazy::MakeNode<TopKSymInt>(
+      input->GetIrValue(), k_symint,
       torch::lazy::GetCanonicalDimensionIndex(dim, input->shape().get().rank()),
       largest, sorted, stable);
   return std::make_tuple(

@@ -1101,6 +1101,20 @@ TEST_F(AtenXlaTensorTest, TestTopK) {
   }
 }
 
+TEST_F(AtenXlaTensorTest, TestTopKSymIntStatic) {
+  torch::Tensor a = torch::rand({10, 10}, torch::TensorOptions(torch::kFloat));
+  auto results = torch::topk(a, 5);
+  ForEachDevice([&](const torch::Device& device) {
+    torch::Tensor xla_a = CopyToDevice(a, device);
+    auto xla_results = torch::topk_symint(xla_a, c10::SymInt(5));
+    AllClose(std::get<0>(results), std::get<0>(xla_results));
+    AllClose(std::get<1>(results), std::get<1>(xla_results));
+  });
+
+  ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::topk_symint", cpp_test::GetIgnoredCounters());
+}
+
 TEST_F(AtenXlaTensorTest, TestSort) {
   torch::Tensor a = torch::rand({4, 5, 3}, torch::TensorOptions(torch::kFloat));
   for (int k = 1; k <= 3; ++k) {

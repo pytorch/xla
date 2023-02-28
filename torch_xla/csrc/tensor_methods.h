@@ -828,6 +828,11 @@ std::tuple<XLATensorPtr, XLATensorPtr> topk(const XLATensorPtr& input,
                                             bool largest, bool sorted,
                                             bool stable);
 
+std::tuple<XLATensorPtr, XLATensorPtr> topk_symint(const XLATensorPtr& input,
+                                                   c10::SymInt k, int64_t dim,
+                                                   bool largest, bool sorted,
+                                                   bool stable);
+
 // Returns the sum of the elements of the diagonal of the input 2-D matrix.
 XLATensorPtr trace(const XLATensorPtr& input);
 
