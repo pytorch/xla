@@ -387,14 +387,13 @@ std::vector<at::Tensor> ShardingUtil::ShardTensor(
       }
 
       // Given the shard's row-major index `i`, we need to calculate shard's
-      // coordinates (n_0, ..., n_d) in the tiling to generate the index
-      // slices. Using `N_j = tile_shape[j]` and `0 <= n_j < N_j`, the
-      // following equation needs to be solved for all n_j:
-      //            `i = n_d + N_d * (n_{d-1} + N_{d-1} * (... + (N_1 *
-      //            n_0)))`
-      // Let `offset_j = n_j + N_j * (n_{j-1} + N_{j-1} * (... + (N_1 *
-      // n_0)))`. Then `offset_d = i`, `n_j = offset_j % N_j`, and
-      // `offset_{j-1} = offset_j / N_j`.
+      // coordinates (n_0, ..., n_d) in the tiling to generate the index slices.
+      // Using `N_j = tile_shape[j]` and `0 <= n_j < N_j`, the following
+      // equation needs to be solved for all n_j:
+      //            `i = n_d + N_d * (n_{d-1} + N_{d-1} * (... + (N_1 * n_0)))`
+      // Let `offset_j = n_j + N_j * (n_{j-1} + N_{j-1} * (... + (N_1 * n_0)))`.
+      // Then `offset_d = i`, `n_j = offset_j % N_j`, and `offset_{j-1} =
+      // offset_j / N_j`.
       int offset = i;
       std::vector<at::indexing::TensorIndex> indices;
       for (int j = tile_shape.size() - 1; j >= 0; j--) {
