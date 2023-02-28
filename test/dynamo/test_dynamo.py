@@ -31,16 +31,16 @@ class DynamoInferenceBasicTest(unittest.TestCase):
     res_cpu = self.fn_simple(x, y)
     res_xla_dynamo = self.fn_simple_dynamo(xla_x, xla_y)
     self.assertIn('xla::add', met.counter_names())
-    assert torch.allclose(res_cpu, res_xla_dynamo.cpu())
+    self.assertTrue(torch.allclose(res_cpu, res_xla_dynamo.cpu()))
     # verifiy that tracing is skipped in following runs
     met.clear_counters()
     res_xla_dynamo_2 = self.fn_simple_dynamo(xla_x, xla_y)
     self.assertNotIn('xla::add', met.counter_names())
-    assert torch.allclose(res_cpu, res_xla_dynamo_2.cpu())
+    self.assertTrue(torch.allclose(res_cpu, res_xla_dynamo_2.cpu()))
     # verify that dynamo can handle different inputs
     res_xla_dynamo_3 = self.fn_simple_dynamo(xla_x + xla_y, xla_y * 3)
     res_cpu_3 = self.fn_simple(x + y, y * 3)
-    assert torch.allclose(res_cpu_3, res_xla_dynamo_3.cpu())
+    self.assertTrue(torch.allclose(res_cpu_3, res_xla_dynamo_3.cpu()))
 
   def test_resnet18(self):
     device = xm.xla_device()
@@ -65,7 +65,8 @@ class DynamoInferenceBasicTest(unittest.TestCase):
           xla_resnet18, backend='torchxla_trace_once')
       output = dynamo_resnet18(data)
       output_cpu = resnet18(data.cpu())
-      assert torch.allclose(output_cpu, output.cpu(), rtol=1e-05, atol=1e-05)
+      self.assertTrue(
+          torch.allclose(output_cpu, output.cpu(), rtol=1e-05, atol=1e-05))
     # We only expect one graph for the resnet18 inference.
     self.assertEqual(met.metric_data('CompileTime')[0], 1)
     self.assertEqual(met.metric_data('ExecuteTime')[0], sample_count)
@@ -104,22 +105,22 @@ class DynamoTrainingBasicTest(unittest.TestCase):
     res_cpu = self.fn_simple(input)
     res_xla_dynamo = self.fn_simple_dynamo(xla_input)
     self.assertIn('xla::nll_loss_backward', met.counter_names())
-    assert torch.allclose(res_cpu, res_xla_dynamo.cpu())
-    assert torch.allclose(input.grad, xla_input.grad.cpu())
+    self.assertTrue(torch.allclose(res_cpu, res_xla_dynamo.cpu()))
+    self.assertTrue(torch.allclose(input.grad, xla_input.grad.cpu()))
     # verifiy that tracing is skipped in following runs
     xla_input.grad = None
     met.clear_counters()
     res_xla_dynamo_2 = self.fn_simple_dynamo(xla_input)
     self.assertNotIn('xla::nll_loss_backward', met.counter_names())
-    assert torch.allclose(res_cpu, res_xla_dynamo_2.cpu())
-    assert torch.allclose(input.grad, xla_input.grad.cpu())
+    self.assertTrue(torch.allclose(res_cpu, res_xla_dynamo_2.cpu()))
+    self.assertTrue(torch.allclose(input.grad, xla_input.grad.cpu()))
     # verify that dynamo can handle different inputs
     input.grad = None
     xla_input.grad = None
     res_xla_dynamo_3 = self.fn_simple_dynamo(xla_input * 2)
     res_cpu_3 = self.fn_simple(input * 2)
-    assert torch.allclose(res_cpu_3, res_xla_dynamo_3.cpu())
-    assert torch.allclose(input.grad, xla_input.grad.cpu())
+    self.assertTrue(torch.allclose(res_cpu_3, res_xla_dynamo_3.cpu()))
+    self.assertTrue(torch.allclose(input.grad, xla_input.grad.cpu()))
 
   def test_resnet18(self):
     torch._dynamo.reset()
@@ -151,8 +152,9 @@ class DynamoTrainingBasicTest(unittest.TestCase):
       cpu_data.requires_grad = True
       cpu_target = target.detach().cpu()
       cpu_output = self.train_model(resnet18, cpu_data, cpu_target)
-      assert torch.allclose(
-          xla_output.cpu(), cpu_output.cpu(), rtol=1e-05, atol=1e-05)
+      self.assertTrue(
+          torch.allclose(
+              xla_output.cpu(), cpu_output.cpu(), rtol=1e-05, atol=1e-05))
       # TODO(JackCaoG): Understand why `data.grad` is a pending IR starting
       # from second iteration instead of a `DeviceData`
       # torch.allclose(data.grad.cpu(), cpu_data.grad)
