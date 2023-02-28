@@ -208,6 +208,8 @@ class TestDynamicShapeModels(unittest.TestCase):
               out_data[r, channel, i, j] = val
       return out_data
 
+    # xw32: note to myself, don't need to do this. Just create a RoIAlign model
+    # on cpu and compare the result with the one from TPU.
     y_expected = expected_fn(
         x,
         rois,
@@ -248,7 +250,7 @@ class TestDynamicShapeModels(unittest.TestCase):
       return torchvision.ops.RoIAlign((pool_size, pool_size),
                                       spatial_scale=1,
                                       sampling_ratio=-1,
-                                      aligned=False)(z, rois)
+                                      aligned=False).to(device)(z, rois)
 
     def script_func(x):
       scripted = torch.jit.script(torchvision.ops.roi_align)
