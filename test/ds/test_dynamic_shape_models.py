@@ -151,6 +151,7 @@ class TestDynamicShapeModels(unittest.TestCase):
     pool_h, pool_w = pool_size, pool_size
     spatial_scale, sampling_ratio=1, -1
     y = torchvision.ops.RoIAlign((pool_h, pool_w), spatial_scale=spatial_scale, sampling_ratio=sampling_ratio, aligned=aligned)(x, rois)
+    xm.mark_step()
 
     def expected_fn(
         in_data,
@@ -163,7 +164,6 @@ class TestDynamicShapeModels(unittest.TestCase):
         device=None,
         dtype=torch.float64,
     ):
-        print('xw32 expected_fn aligned=', aligned)
         if device is None:
             device = torch.device("cpu")
         n_channels = in_data.size(1)
@@ -203,10 +203,12 @@ class TestDynamicShapeModels(unittest.TestCase):
     tol = 1e-3 if (x_dtype is torch.half or rois_dtype is torch.half) else 1e-5
     torch.testing.assert_close(y_expected.to(y), y, rtol=tol, atol=tol)
     print('test passes')
+    print(met.metrics_report())
     
   def test_roialign_backward(self):
     seed = 1
-    device = 'cpu'
+    #device = 'cpu'
+    device = xla_dev
     contiguous = True
     pool_size = 2
     dtype = torch.float64
@@ -223,10 +225,10 @@ class TestDynamicShapeModels(unittest.TestCase):
     
     gradcheck(func, (x,))
     gradcheck(script_func, (x,))
+    print('test passes')
+    print(met.metrics_report())
 
      
-
-
   def create_dynamic_test_data(self,
                                num_test_samples,
                                num_features,
