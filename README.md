@@ -122,7 +122,8 @@ To run on [compute instances with GPUs](https://cloud.google.com/compute/docs/gp
 | Version | GPU Wheel + Python 3.8 |
 | --- | ----------- |
 | 1.13 | `https://storage.googleapis.com/tpu-pytorch/wheels/cuda/112/torch_xla-1.13-cp38-cp38-linux_x86_64.whl` |
-| nightly | `https://storage.googleapis.com/tpu-pytorch/wheels/cuda/112/torch_xla-nightly-cp38-cp38-linux_x86_64.whl` |
+| nightly + CUDA 11.7 | `https://storage.googleapis.com/tpu-pytorch/wheels/cuda/117/torch_xla-nightly-cp38-cp38-linux_x86_64.whl` |
+| nightly + CUDA 11.8 | `https://storage.googleapis.com/tpu-pytorch/wheels/cuda/118/torch_xla-nightly-cp38-cp38-linux_x86_64.whl` |
 
 <br/>
 
@@ -132,7 +133,7 @@ To run on [compute instances with GPUs](https://cloud.google.com/compute/docs/gp
 | 1.12 | `https://storage.googleapis.com/tpu-pytorch/wheels/colab/torch_xla-1.12-cp37-cp37m-linux_x86_64.whl` |
 | 1.11 | `https://storage.googleapis.com/tpu-pytorch/wheels/colab/torch_xla-1.11-cp37-cp37m-linux_x86_64.whl` |
 
-You can also add `+yyyymmdd` after `torch_xla-nightly` to get the nightly wheel of a specified date. To get the companion pytorch nightly wheel, replace the `torch_xla` with `torch` on above wheel links.
+You can also add `+yyyymmdd` after `torch_xla-nightly` to get the nightly wheel of a specified date. To get the companion pytorch and torchvision nightly wheel, replace the `torch_xla` with `torch` or `torchvision` on above wheel links.
 
 ### Installing libtpu
 
