@@ -154,7 +154,7 @@ class TestDynamicShapeModels(unittest.TestCase):
     y = torchvision.ops.RoIAlign((pool_h, pool_w),
                                  spatial_scale=spatial_scale,
                                  sampling_ratio=sampling_ratio,
-                                 aligned=aligned)(x, rois)
+                                 aligned=aligned).to(device)(x, rois)
     xm.mark_step()
 
     def expected_fn(
