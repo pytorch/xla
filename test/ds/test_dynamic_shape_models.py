@@ -143,14 +143,18 @@ class TestDynamicShapeModels(unittest.TestCase):
     n_channels = 2 * (pool_size**2)
     x = torch.rand(2, n_channels, 10, 10, dtype=x_dtype, device=device)
     rois = torch.tensor(
-        [[0, 0, 0, 9, 9], [0, 0, 5, 4, 9], [0, 5, 5, 9, 9], [1, 0, 0, 9, 9]],  # format is (xyxy)
+        [[0, 0, 0, 9, 9], [0, 0, 5, 4, 9], [0, 5, 5, 9, 9], [1, 0, 0, 9, 9]
+        ],  # format is (xyxy)
         dtype=rois_dtype,
         device=device,
-    )    
+    )
 
     pool_h, pool_w = pool_size, pool_size
-    spatial_scale, sampling_ratio=1, -1
-    y = torchvision.ops.RoIAlign((pool_h, pool_w), spatial_scale=spatial_scale, sampling_ratio=sampling_ratio, aligned=aligned)(x, rois)
+    spatial_scale, sampling_ratio = 1, -1
+    y = torchvision.ops.RoIAlign((pool_h, pool_w),
+                                 spatial_scale=spatial_scale,
+                                 sampling_ratio=sampling_ratio,
+                                 aligned=aligned)(x, rois)
     xm.mark_step()
 
     def expected_fn(
@@ -164,47 +168,61 @@ class TestDynamicShapeModels(unittest.TestCase):
         device=None,
         dtype=torch.float64,
     ):
-        if device is None:
-            device = torch.device("cpu")
-        n_channels = in_data.size(1)
-        out_data = torch.zeros(rois.size(0), n_channels, pool_h, pool_w, dtype=dtype, device=device)
+      if device is None:
+        device = torch.device("cpu")
+      n_channels = in_data.size(1)
+      out_data = torch.zeros(
+          rois.size(0), n_channels, pool_h, pool_w, dtype=dtype, device=device)
 
-        offset = 0.5 if aligned else 0.0
+      offset = 0.5 if aligned else 0.0
 
-        for r, roi in enumerate(rois):
-            batch_idx = int(roi[0])
-            j_begin, i_begin, j_end, i_end = (x.item() * spatial_scale - offset for x in roi[1:])
+      for r, roi in enumerate(rois):
+        batch_idx = int(roi[0])
+        j_begin, i_begin, j_end, i_end = (
+            x.item() * spatial_scale - offset for x in roi[1:])
 
-            roi_h = i_end - i_begin
-            roi_w = j_end - j_begin
-            bin_h = roi_h / pool_h
-            bin_w = roi_w / pool_w
+        roi_h = i_end - i_begin
+        roi_w = j_end - j_begin
+        bin_h = roi_h / pool_h
+        bin_w = roi_w / pool_w
 
-            for i in range(0, pool_h):
-                start_h = i_begin + i * bin_h
-                grid_h = sampling_ratio if sampling_ratio > 0 else int(np.ceil(bin_h))
-                for j in range(0, pool_w):
-                    start_w = j_begin + j * bin_w
-                    grid_w = sampling_ratio if sampling_ratio > 0 else int(np.ceil(bin_w))
+        for i in range(0, pool_h):
+          start_h = i_begin + i * bin_h
+          grid_h = sampling_ratio if sampling_ratio > 0 else int(np.ceil(bin_h))
+          for j in range(0, pool_w):
+            start_w = j_begin + j * bin_w
+            grid_w = sampling_ratio if sampling_ratio > 0 else int(
+                np.ceil(bin_w))
 
-                    for channel in range(0, n_channels):
+            for channel in range(0, n_channels):
 
-                        val = 0
-                        for iy in range(0, grid_h):
-                            y = start_h + (iy + 0.5) * bin_h / grid_h
-                            for ix in range(0, grid_w):
-                                x = start_w + (ix + 0.5) * bin_w / grid_w
-                                val += bilinear_interpolate(in_data[batch_idx, channel, :, :], y, x, snap_border=True)
-                        val /= grid_h * grid_w
+              val = 0
+              for iy in range(0, grid_h):
+                y = start_h + (iy + 0.5) * bin_h / grid_h
+                for ix in range(0, grid_w):
+                  x = start_w + (ix + 0.5) * bin_w / grid_w
+                  val += bilinear_interpolate(
+                      in_data[batch_idx, channel, :, :], y, x, snap_border=True)
+              val /= grid_h * grid_w
 
-                        out_data[r, channel, i, j] = val
-        return out_data
-    y_expected = expected_fn(x, rois, pool_h, pool_w, spatial_scale=1, sampling_ratio=-1, device=device, dtype=x_dtype, aligned=aligned)
+              out_data[r, channel, i, j] = val
+      return out_data
+
+    y_expected = expected_fn(
+        x,
+        rois,
+        pool_h,
+        pool_w,
+        spatial_scale=1,
+        sampling_ratio=-1,
+        device=device,
+        dtype=x_dtype,
+        aligned=aligned)
     tol = 1e-3 if (x_dtype is torch.half or rois_dtype is torch.half) else 1e-5
     torch.testing.assert_close(y_expected.to(y), y, rtol=tol, atol=tol)
     print('test passes')
     print(met.metrics_report())
-    
+
   def test_roialign_backward(self):
     seed = 1
     #device = 'cpu'
@@ -212,23 +230,35 @@ class TestDynamicShapeModels(unittest.TestCase):
     contiguous = True
     pool_size = 2
     dtype = torch.float64
-    x = torch.rand(1, 2 * (pool_size**2), 5, 5, dtype=dtype, device=device, requires_grad=True)
+    x = torch.rand(
+        1,
+        2 * (pool_size**2),
+        5,
+        5,
+        dtype=dtype,
+        device=device,
+        requires_grad=True)
     rois = torch.tensor(
-       [[0, 0, 0, 4, 4], [0, 0, 2, 3, 4], [0, 2, 2, 4, 4]], dtype=dtype, device=device  # format is (xyxy)
+        [[0, 0, 0, 4, 4], [0, 0, 2, 3, 4], [0, 2, 2, 4, 4]],
+        dtype=dtype,
+        device=device  # format is (xyxy)
     )
 
     def func(z):
-      return torchvision.ops.RoIAlign((pool_size, pool_size), spatial_scale=1, sampling_ratio=-1, aligned=False)(z, rois)
+      return torchvision.ops.RoIAlign((pool_size, pool_size),
+                                      spatial_scale=1,
+                                      sampling_ratio=-1,
+                                      aligned=False)(z, rois)
+
     def script_func(x):
       scripted = torch.jit.script(torchvision.ops.roi_align)
       return scripted(x, rois, pool_size)
-    
+
     gradcheck(func, (x,))
     gradcheck(script_func, (x,))
     print('test passes')
     print(met.metrics_report())
 
-     
   def create_dynamic_test_data(self,
                                num_test_samples,
                                num_features,
@@ -367,36 +397,38 @@ def bilinear_interpolate(data, y, x, snap_border=False):
         val += wx * wy * data[yp, xp]
   return val
 
+
 def bilinear_interpolate(data, y, x, snap_border=False):
-    height, width = data.shape
+  height, width = data.shape
 
-    if snap_border:
-        if -1 < y <= 0:
-            y = 0
-        elif height - 1 <= y < height:
-            y = height - 1
+  if snap_border:
+    if -1 < y <= 0:
+      y = 0
+    elif height - 1 <= y < height:
+      y = height - 1
 
-        if -1 < x <= 0:
-            x = 0
-        elif width - 1 <= x < width:
-            x = width - 1
+    if -1 < x <= 0:
+      x = 0
+    elif width - 1 <= x < width:
+      x = width - 1
 
-    y_low = int(math.floor(y))
-    x_low = int(math.floor(x))
-    y_high = y_low + 1
-    x_high = x_low + 1
+  y_low = int(math.floor(y))
+  x_low = int(math.floor(x))
+  y_high = y_low + 1
+  x_high = x_low + 1
 
-    wy_h = y - y_low
-    wx_h = x - x_low
-    wy_l = 1 - wy_h
-    wx_l = 1 - wx_h
+  wy_h = y - y_low
+  wx_h = x - x_low
+  wy_l = 1 - wy_h
+  wx_l = 1 - wx_h
 
-    val = 0
-    for wx, xp in zip((wx_l, wx_h), (x_low, x_high)):
-        for wy, yp in zip((wy_l, wy_h), (y_low, y_high)):
-            if 0 <= yp < height and 0 <= xp < width:
-                val += wx * wy * data[yp, xp]
-    return val
+  val = 0
+  for wx, xp in zip((wx_l, wx_h), (x_low, x_high)):
+    for wy, yp in zip((wy_l, wy_h), (y_low, y_high)):
+      if 0 <= yp < height and 0 <= xp < width:
+        val += wx * wy * data[yp, xp]
+  return val
+
 
 if __name__ == '__main__':
   assert os.environ['XLA_EXPERIMENTAL'] != ''
