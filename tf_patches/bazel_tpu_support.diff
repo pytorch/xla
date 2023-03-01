@@ -1,0 +1,13 @@
+diff --git a/tensorflow/tensorflow.bzl b/tensorflow/tensorflow.bzl
+index 61411175eb2..6bb13cc54a1 100644
+--- a/tensorflow/tensorflow.bzl
++++ b/tensorflow/tensorflow.bzl
+@@ -321,7 +321,7 @@ def if_libtpu(if_true, if_false = []):
+ def if_with_tpu_support(if_true, if_false = []):
+     """Shorthand for select()ing whether to build API support for TPUs when building TensorFlow"""
+     return select({
+-        "//tensorflow:with_tpu_support": if_true,
++        clean_dep("//tensorflow:with_tpu_support"): if_true,
+         "//conditions:default": if_false,
+     })
+ 
