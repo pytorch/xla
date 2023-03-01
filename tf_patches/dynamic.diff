@@ -1,0 +1,102 @@
+diff --git a/tensorflow/compiler/xla/pjrt/c/pjrt_c_api.h b/tensorflow/compiler/xla/pjrt/c/pjrt_c_api.h
+index b166251338c..bb6285e2559 100644
+--- a/tensorflow/compiler/xla/pjrt/c/pjrt_c_api.h
++++ b/tensorflow/compiler/xla/pjrt/c/pjrt_c_api.h
+@@ -906,6 +906,7 @@ struct PJRT_Buffer_OnDeviceTrimmedShape_Args {
+   Int64List dimensions;         // out
+   BoolList dynamic_dimensions;  // out
+   bool has_layout;
++  bool is_logical_on_device_shape;
+   XLA_Layout layout;  // out
+ };
+ PJRT_DEFINE_STRUCT_TRAITS(PJRT_Buffer_OnDeviceTrimmedShape_Args, layout);
+diff --git a/tensorflow/compiler/xla/pjrt/c/pjrt_c_api_wrapper_impl.cc b/tensorflow/compiler/xla/pjrt/c/pjrt_c_api_wrapper_impl.cc
+index 3eb462fec32..8bea44c9231 100644
+--- a/tensorflow/compiler/xla/pjrt/c/pjrt_c_api_wrapper_impl.cc
++++ b/tensorflow/compiler/xla/pjrt/c/pjrt_c_api_wrapper_impl.cc
+@@ -850,7 +850,13 @@ PJRT_Error* PJRT_Buffer_OnDeviceTrimmedShape(
+       "PJRT_Buffer_OnDeviceTrimmedShape_Args",
+       PJRT_Buffer_OnDeviceTrimmedShape_Args_STRUCT_SIZE, args->struct_size));
+ 
+-  const xla::Shape& shape = args->buffer->buffer->on_device_shape();
++  xla::Shape shape;
++  if (args->is_logical_on_device_shape) {
++    PJRT_ASSIGN_OR_RETURN(shape,
++                          args->buffer->buffer->logical_on_device_shape());
++  } else {
++    shape = args->buffer->buffer->on_device_shape();
++  }
+   args->element_type = shape.element_type();
+   ApiConverter::CreateVector(shape.dimensions(), &args->dimensions);
+   ApiConverter::CreateVector(shape.dynamic_dimensions(),
+diff --git a/tensorflow/compiler/xla/pjrt/pjrt_c_api_client.cc b/tensorflow/compiler/xla/pjrt/pjrt_c_api_client.cc
+index 5994358307c..790ccb4643b 100644
+--- a/tensorflow/compiler/xla/pjrt/pjrt_c_api_client.cc
++++ b/tensorflow/compiler/xla/pjrt/pjrt_c_api_client.cc
+@@ -979,15 +979,15 @@ const Shape& PjRtCApiBuffer::on_device_shape() const {
+   return shape_.value();
+ }
+ 
+-void PjRtCApiBuffer::set_shape() {
++static Shape GetDeviceShape(bool is_logical_on_device_shape,
++                            PJRT_Buffer* c_buffer, const PJRT_Api* api) {
+   PJRT_Buffer_OnDeviceTrimmedShape_Args args;
+   args.struct_size = PJRT_Buffer_OnDeviceTrimmedShape_Args_STRUCT_SIZE;
+   args.priv = nullptr;
+-  args.buffer = buffer_.get();
++  args.buffer = c_buffer;
++  args.is_logical_on_device_shape = is_logical_on_device_shape;
+ 
+-  pjrt::LogFatalIfPjrtError(
+-      client_->pjrt_c_api()->PJRT_Buffer_OnDeviceTrimmedShape(&args),
+-      client_->pjrt_c_api());
++  pjrt::LogFatalIfPjrtError(api->PJRT_Buffer_OnDeviceTrimmedShape(&args), api);
+ 
+   xla::PrimitiveType element_type =
+       static_cast<xla::PrimitiveType>(args.element_type);
+@@ -1004,8 +1004,6 @@ void PjRtCApiBuffer::set_shape() {
+     *(trimmed_shape.mutable_layout()) = ApiConverter::FromC(&args.layout);
+   }
+ 
+-  shape_ = trimmed_shape;
+-
+   // TODO(amangu): Refactor the deletion.
+   if (args.dimensions.size > TPU_C_API_MAX_INLINED) {
+     delete[] args.dimensions.heap;
+@@ -1024,6 +1022,17 @@ void PjRtCApiBuffer::set_shape() {
+       delete[] args.layout.tiles.heap;
+     }
+   }
++  return trimmed_shape;
++}
++
++void PjRtCApiBuffer::set_shape() {
++  shape_ = GetDeviceShape(/*is_logical_on_device_shape=*/false, buffer_.get(),
++                          client_->pjrt_c_api());
++}
++
++StatusOr<Shape> PjRtCApiBuffer::logical_on_device_shape() {
++  return GetDeviceShape(/*is_logical_on_device_shape=*/true, buffer_.get(),
++                        client_->pjrt_c_api());
+ }
+ 
+ PjRtFuture<Status> PjRtCApiBuffer::ToLiteral(MutableLiteralBase* literal) {
+diff --git a/tensorflow/compiler/xla/pjrt/pjrt_c_api_client.h b/tensorflow/compiler/xla/pjrt/pjrt_c_api_client.h
+index 65f233c12e4..cd2e56d1be3 100644
+--- a/tensorflow/compiler/xla/pjrt/pjrt_c_api_client.h
++++ b/tensorflow/compiler/xla/pjrt/pjrt_c_api_client.h
+@@ -289,13 +289,7 @@ class PjRtCApiBuffer : public PjRtBuffer {
+ 
+   const Shape& on_device_shape() const override;
+ 
+-  StatusOr<Shape> logical_on_device_shape() override {
+-    if (kPjRtCApiBypass) {
+-      VLOG(1) << "PJRT C API BYPASS: logical_on_device_shape";
+-      return wrapped_->logical_on_device_shape();
+-    }
+-    return Unimplemented("PJRT C API does not support logical_on_device_shape");
+-  }
++  StatusOr<Shape> logical_on_device_shape() override;
+ 
+   PjRtDevice* device() const override;
+ 

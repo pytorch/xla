@@ -16,6 +16,7 @@ http_archive(
         "//tf_patches:bazel.diff",
         "//tf_patches:cache_urls.diff",
         "//tf_patches:cudnn_int8x32.diff",
+        "//tf_patches:dynamic.diff",
         "//tf_patches:f16_abi_clang.diff",
         "//tf_patches:gpu_race_condition.diff",
         "//tf_patches:grpc_version.diff",
