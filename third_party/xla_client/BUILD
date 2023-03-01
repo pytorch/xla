@@ -1,11 +1,133 @@
-load(
-    -- "@xla//tensorflow:tensorflow.bzl",
-    "if_with_tpu_support",
-    "tf_cc_shared_object",
-)
+# "@xla//tensorflow:tensorflow.bzl",
+def if_with_tpu_support(if_true, if_false = []):
+    """Shorthand for select()ing whether to build API support for TPUs when building TensorFlow"""
+    return select({
+        "//tensorflow:with_tpu_support": if_true, # 如果选tpu，就使用with_tpu_support调用一些if_true的东西 #如果选tpu，tf有一系列的tpu support， openxla应该有这样的可替代
+        "//conditions:default": if_false, # 如果不选tpu，就使用default调用if_false的东西 # 如果不选tpu，就有一个default的东西，这个是系统自带的：内置条件自动匹配
+    })
+
+# "@xla//tensorflow:tensorflow.bzl",
+def tf_cc_shared_object(
+        name,
+        srcs = [],
+        deps = [],
+        data = [],
+        linkopts = lrt_if_needed(),
+        framework_so = tf_binary_additional_srcs(),
+        soversion = None,
+        kernels = [],
+        per_os_targets = False,  # Generate targets with SHARED_LIBRARY_NAME_PATTERNS
+        visibility = None,
+        **kwargs):
+    """Configure the shared object (.so) file for TensorFlow."""
+    if soversion != None:
+        suffix = "." + str(soversion).split(".")[0]
+        longsuffix = "." + str(soversion)
+    else:
+        suffix = ""
+        longsuffix = ""
+
+    if per_os_targets:
+        names = [
+            (
+                pattern % (name, ""),
+                pattern % (name, suffix),
+                pattern % (name, longsuffix),
+            )
+            for pattern in SHARED_LIBRARY_NAME_PATTERNS
+        ]
+    else:
+        names = [(
+            name,
+            name + suffix,
+            name + longsuffix,
+        )]
+
+    testonly = kwargs.pop("testonly", False)
+
+    for name_os, name_os_major, name_os_full in names:
+        # Windows DLLs cant be versioned
+        if name_os.endswith(".dll"):
+            name_os_major = name_os
+            name_os_full = name_os
+
+        if name_os != name_os_major:
+            native.genrule(
+                name = name_os + "_sym",
+                outs = [name_os],
+                srcs = [name_os_major],
+                output_to_bindir = 1,
+                cmd = "ln -sf $$(basename $<) $@",
+            )
+            native.genrule(
+                name = name_os_major + "_sym",
+                outs = [name_os_major],
+                srcs = [name_os_full],
+                output_to_bindir = 1,
+                cmd = "ln -sf $$(basename $<) $@",
+            )
+
+        soname = name_os_major.split("/")[-1]
+
+        data_extra = []
+        if framework_so != []:
+            data_extra = tf_binary_additional_data_deps()
+
+        cc_binary(
+            exec_properties = if_google({"cpp_link.mem": "16g"}, {}),
+            name = name_os_full,
+            srcs = srcs + framework_so,
+            deps = deps,
+            linkshared = 1,
+            data = data + data_extra,
+            linkopts = linkopts + _rpath_linkopts(name_os_full) + select({
+                clean_dep("//tensorflow:ios"): [
+                    "-Wl,-install_name,@rpath/" + soname,
+                ],
+                clean_dep("//tensorflow:macos"): [
+                    "-Wl,-install_name,@rpath/" + soname,
+                ],
+                clean_dep("//tensorflow:windows"): [],
+                "//conditions:default": [
+                    "-Wl,-soname," + soname,
+                ],
+            }),
+            testonly = testonly,
+            visibility = visibility,
+            **kwargs
+        )
+
+    flat_names = [item for sublist in names for item in sublist]
+    if name not in flat_names:
+        native.filegroup(
+            name = name,
+            srcs = select({
+                clean_dep("//tensorflow:windows"): [":%s.dll" % (name)],
+                clean_dep("//tensorflow:macos"): [":lib%s%s.dylib" % (name, longsuffix)],
+                "//conditions:default": [":lib%s.so%s" % (name, longsuffix)],
+            }),
+            visibility = visibility,
+            testonly = testonly,
+        )
+
+# load(
+#     # "@xla//tensorflow:tensorflow.bzl",
+#     # tf 有一些引用，可以把用到的直接包含到这里面来， eg：if_with_tpu_support
+#     # "if_with_tpu_support", # xla_client的build中只有if_true有值，if_false没有值，所以是//tensorflow:with_tpu_support调用参数的两个包
+#     ###
+#     # （tf/tf/tf.bzl）
+#     # def if_with_tpu_support(if_true, if_false = []):
+#     # """Shorthand for select()ing whether to build API support for TPUs when building TensorFlow"""
+#     # return select({
+#     #     "//tensorflow:with_tpu_support": if_true, # 如果选tpu，就使用with_tpu_support调用一些if_true的东西 #如果选tpu，tf有一系列的tpu support， openxla应该有这样的可替代
+#     #     "//conditions:default": if_false, # 如果不选tpu，就使用default调用if_false的东西 # 如果不选tpu，就有一个default的东西，这个是系统自带的：内置条件自动匹配
+#     # })
+#     ###
+#     # "tf_cc_shared_object",
+# )
 load(
     "@tsl//tsl/platform/default:build_config.bzl",
-    -- "tf_proto_library_cc",
+    "tf_proto_library_cc",
 )
 load(
     "@tsl//tsl/platform/default:cuda_build_defs.bzl",
@@ -17,20 +139,20 @@ licenses(["notice"])  # Apache 2.0
 package(default_visibility = ["//visibility:public"])
 
 exports_files([
-    "tf_version_script.lds",
-    "tf_exported_symbols.lds",
+    "openxla_version_script.lds", # this file has been added into third_party/xla_client
+    "openxla_exported_symbols.lds", # this file has been added into third_party/xla_client
 ])
 
--- tf_proto_library_cc(
---     name = "mesh_service_proto",
---     srcs = ["mesh_service.proto"],
---     has_services = 1,
---     cc_api_version = 2,
---     cc_grpc_version = 1,
---     protodeps = [
---         "@org_tensorflow//tensorflow/core/protobuf/tpu:topology_proto",
---     ],
--- )
+tf_proto_library_cc(
+    name = "mesh_service_proto",
+    srcs = ["mesh_service.proto"],
+    has_services = 1,
+    cc_api_version = 2,
+    cc_grpc_version = 1,
+    protodeps = [
+        # "@org_tensorflow//tensorflow/core/protobuf/tpu:topology_proto",
+    ],
+)
 
 cc_library(
     name = "async_task",
@@ -60,12 +182,12 @@ cc_library(
         ":cache",
         ":debug_macros",
         ":env_vars",
-        -- ":mesh_service",
+        # ":mesh_service",
         ":metrics_analysis",
         ":metrics_reader",
         ":metrics",
         ":multi_wait",
-        ":profiler",
+        # ":profiler",
         ":record_reader",
         ":sys_util",
         ":tf_logging",
@@ -134,11 +256,11 @@ cc_library(
         "@com_google_absl//absl/numeric:int128",
         "@com_google_absl//absl/strings",
     ] + if_cuda_is_configured([
-        -- "@org_tensorflow//tensorflow/compiler/jit:xla_gpu_device",
+        # "@org_tensorflow//tensorflow/compiler/jit:xla_gpu_device",
         "@xla//xla/stream_executor:cuda_platform",
     ]) + if_with_tpu_support([
-        -- "@org_tensorflow//tensorflow/compiler/jit:xla_tpu_device",
-        -- "@org_tensorflow//tensorflow/compiler/jit:xla_tpu_jit",
+        # "@org_tensorflow//tensorflow/compiler/jit:xla_tpu_device",
+        # "@org_tensorflow//tensorflow/compiler/jit:xla_tpu_jit",
     ]),
     alwayslink = True,
 )
@@ -167,23 +289,23 @@ cc_library(
     alwayslink = True,
 )
 
--- cc_library(
---     name = "mesh_service",
---     srcs = ["mesh_service.cc"],
---     hdrs = ["mesh_service.h"],
---     deps = [
---         "nccl_distributed",
---         ":debug_macros",
---         ":mesh_service_proto_cc",
---         ":multi_wait",
---         ":sys_util",
---         ":thread_pool",
---         ":util",
---         "@com_google_absl//absl/strings",
---         "@xla//xla:statusor",
---     ],
---     alwayslink = True,
--- )
+cc_library(
+    name = "mesh_service",
+    srcs = ["mesh_service.cc"],
+    hdrs = ["mesh_service.h"],
+    deps = [
+        "nccl_distributed",
+        ":debug_macros",
+        ":mesh_service_proto_cc",
+        ":multi_wait",
+        ":sys_util",
+        ":thread_pool",
+        ":util",
+        "@com_google_absl//absl/strings",
+        "@xla//xla:statusor",
+    ],
+    alwayslink = True,
+)
 
 cc_library(
     name = "metrics_analysis",
@@ -356,7 +478,7 @@ cc_library(
         "@com_google_absl//absl/types:span",
         "@xla//xla:statusor",
         "@xla//xla:types",
-        -- "@org_tensorflow//tensorflow/core:lib",
+        # "@org_tensorflow//tensorflow/core:lib",
     ],
     alwayslink = True,
 )
@@ -405,9 +527,9 @@ cc_test(
         "@xla//xla:shape_util",
         "@xla//xla/client:xla_builder",
         "@xla//xla/client:xla_computation",
-        -- "@org_tensorflow//tensorflow/tsl/lib/core:status_test_util",
-        -- "@org_tensorflow//tensorflow/tsl/platform:errors",
-        -- "@org_tensorflow//tensorflow/tsl/platform:status_matchers",
+        "@tsl//tsl/lib/core:status_test_util",
+        "@tsl//tsl/platform:errors",
+        "@tsl//tsl/platform:status_matchers",
     ],
 )
 
@@ -451,9 +573,9 @@ cc_library(
         ":debug_macros",
         "@com_google_absl//absl/strings",
         "@com_google_absl//absl/types:span",
-        -- "@org_tensorflow//tensorflow/cc:cc_ops",
-        -- "@org_tensorflow//tensorflow/cc:client_session",
-        -- "@org_tensorflow//tensorflow/cc:scope",
+        # "@org_tensorflow//tensorflow/cc:cc_ops",
+        # "@org_tensorflow//tensorflow/cc:client_session",
+        # "@org_tensorflow//tensorflow/cc:scope",
         "@xla//xla:types",
     ],
     alwayslink = True,
@@ -462,18 +584,18 @@ cc_library(
 tf_cc_shared_object(
     name = "libxla_computation_client.so",
     linkopts = select({
-        -- "@org_tensorflow//tensorflow:windows": [],
+        # "@org_tensorflow//tensorflow:windows": [],
         "//conditions:default": [
             "-z defs",
             "-Wl,--version-script",  #  This line must be directly followed by the version_script.lds file
-            "$(location :tf_version_script.lds)",
+            "$(location :openxla_version_script.lds)",
         ],
     }),
     visibility = ["//visibility:public"],
     deps = [
         ":computation_client",
-        ":tf_exported_symbols.lds",
-        ":tf_version_script.lds",
+        ":openxla_exported_symbols.lds",
+        ":openxla_version_script.lds",
         "@com_google_absl//absl/strings",
         "@org_tensorflow//tensorflow/compiler/xla:literal_util",
         "@org_tensorflow//tensorflow/compiler/xla/client",
@@ -503,10 +625,21 @@ tf_cc_shared_object(
 #         "@xla//xla/client:xla_computation",
 #         "@xla//xla/tests:literal_test_util",
 #         "@xla//xla/tools:hlo_module_loader",
--- #         "@org_tensorflow//tensorflow/core/platform:logging",
--- #         "@org_tensorflow//tensorflow/tsl/lib/core:status_test_util",
--- #         "@org_tensorflow//tensorflow/tsl/platform:env",
--- #         "@org_tensorflow//tensorflow/tsl/platform:test",
--- #         "@org_tensorflow//tensorflow/tsl/platform:test_main",
+#         "@org_tensorflow//tensorflow/core/platform:logging",
+#         "@tsl//tsl/lib/core:status_test_util",
+#         "@tsl//tsl/platform:env",
+#         "@tsl//tsl/platform:test",
+#         "@tsl//tsl/platform:test_main",
 #     ],
 # )
+
+
+
+
+
+
+
+
+###############################
+### contain tensorflow
+# "@xla//tensorflow:tensorflow.bzl",
