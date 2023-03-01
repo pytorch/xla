@@ -257,8 +257,6 @@ def _run_singleprocess(fn: Callable[..., R], *args, **kwargs) -> Dict[int, R]:
   Args:
     fn: Function to run on the device devices
     args: args to pass to `fn`
-    start_method: The Python `multiprocessing` process creation method.
-      Default: `spawn`
     kwargs: kwargs to pass to `fn`
 
   Returns:
@@ -360,7 +358,7 @@ def spawn(fn: Callable,
   spawn_fn = _SpawnFn(fn, *args)
 
   if nprocs == 1:
-    return _run_singleprocess(spawn_fn, start_method=start_method)
+    return _run_singleprocess(spawn_fn)
   elif nprocs is not None:
     logging.warning('Unsupported nprocs (%d), ignoring...' % nprocs)
 
