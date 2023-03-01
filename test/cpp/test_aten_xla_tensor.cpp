@@ -950,6 +950,17 @@ TEST_F(AtenXlaTensorTest, TestLinalgSVD) {
   ExpectCounterChanged("xla::_linalg_svd", cpp_test::GetIgnoredCounters());
 }
 
+TEST_F(AtenXlaTensorTest, TestLinalgVectorNorm) {
+  torch::Tensor a = torch::rand({4, 3}, torch::TensorOptions(torch::kFloat));
+  torch::Tensor a_vn = torch::linalg_vector_norm(a, 2);
+  ForEachDevice([&](const torch::Device& device) {
+    torch::Tensor xla_a = CopyToDevice(a, device);
+    torch::Tensor xla_a_vn = torch::linalg_vector_norm(xla_a, 2);
+    AllClose(a_vn, xla_a_vn,  /*rtol=*/1e-3,
+                 /*atol=*/1e-4);
+  });
+}
+
 TEST_F(AtenXlaTensorTest, TestQR) {
   static const int dims[] = {4, 7};
   for (auto m : dims) {

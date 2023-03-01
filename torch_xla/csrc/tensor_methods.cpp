@@ -64,6 +64,7 @@
 #include "torch_xla/csrc/ops/infer_output_shape.h"
 #include "torch_xla/csrc/ops/kth_value.h"
 #include "torch_xla/csrc/ops/linear_interpolation.h"
+#include "torch_xla/csrc/ops/linalg_vector_norm.h"
 #include "torch_xla/csrc/ops/linspace.h"
 #include "torch_xla/csrc/ops/log_softmax.h"
 #include "torch_xla/csrc/ops/logsumexp.h"
@@ -1434,6 +1435,28 @@ XLATensorPtr lerp(const XLATensorPtr& input, const XLATensorPtr& end,
       weight, input->shape().get().element_type(), input->GetDevice());
   return input->CreateFrom(
       Lerp(input->GetIrValue(), end->GetIrValue(), weight_val));
+}
+
+XLATensorPtr linalg_vector_norm(const XLATensorPtr& input, 
+                                const at::Scalar& ord,
+                                std::vector<int64_t> dimensions,
+                                bool keep_dim,
+                                c10::optional<at::ScalarType> dtype) {
+  torch::lazy::Value ord_val = XLAGraphExecutor::Get()->GetIrValueForScalar(
+      ord, input->shape(), dtype, input->GetDevice());
+  if (at::isIntegralType(input->dtype(), /*includeBool=*/true) && !dtype) {
+    dtype = at::ScalarType::Long;
+  } else if (!dtype) {
+    dtype = input->dtype_optional();
+  }
+  
+  return input->CreateFrom(
+      torch::lazy::MakeNode<LinalgVectorNorm>(input->GetIrValue(), ord_val,
+                                 torch::lazy::GetCanonicalDimensionIndices(
+                                     xla::util::ToVector<int64_t>(dimensions),
+                                     input->shape().get().rank()),
+                                 keep_dim, dtype),
+      dtype);
 }
 
 XLATensorPtr linspace(const at::Scalar& start, const at::Scalar& end,

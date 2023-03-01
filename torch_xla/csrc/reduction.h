@@ -81,6 +81,13 @@ xla::XlaOp BuildArgMin(xla::XlaOp input, int64_t dim, bool keepdim);
 xla::XlaOp BuildProd(xla::XlaOp input, absl::Span<const int64_t> dimensions,
                      bool keep_reduced_dimensions);
 
+// Builds the linalg vector norm of all values by reducing all the dimensions 
+// listed in dimensions. If keep_reduced_dimensions is true, the reduced 
+// dimensions will be retained, with value 1.
+xla::XlaOp BuildLinalgVectorNorm(xla::XlaOp input, 
+                                 absl::Span<const int64_t> dimensions,
+                                 bool keep_reduced_dimensions);
+
 // Compute the cumulative computation specified by "reducer" and "init" in the
 // given dimension "dim".
 xla::XlaOp BuildCumulativeComputation(xla::XlaOp input, int64_t dim,
