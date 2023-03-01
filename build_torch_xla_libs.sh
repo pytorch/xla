@@ -42,14 +42,14 @@ fi
 if [[ "$TPUVM_MODE" == "1" ]]; then
   OPTS+=(--config=tpu)
   if [[ "$BAZEL_REMOTE" == "1" ]]; then
-    OPTS+=(--config=rbe_cpu_linux_py39)
+    OPTS+=(--config=rbe_cpu_linux_py38)
   fi
 fi
 
 if [[ "$XLA_CUDA" == "1" ]]; then
   OPTS+=(--config=cuda)
   if [[ "$BAZEL_REMOTE" == "1" ]]; then
-    OPTS+=(--config=rbe_linux_cuda11.8_nvcc_py3.9)
+    OPTS+=(--config=rbe_linux_cuda11.8_nvcc_py3.8)
   fi
 fi
 
