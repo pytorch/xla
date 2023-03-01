@@ -1260,11 +1260,16 @@ class XlaFullyShardedDataParallel(nn.Module):
 
     # Update root and nested FSDP's hooks and flags.
     for m in self.modules():  # includes self
-      if isinstance(
-          m, XlaFullyShardedDataParallel) and m._pre_backward_hook_has_run:
+      if isinstance(m, XlaFullyShardedDataParallel):
         _finalize_parameters(m)
-        m._pre_backward_hook_has_run = False
-        if any(p.requires_grad for p in m.parameters()):
+        if not m._pre_backward_hook_has_run:
+          m.assert_state(TrainingState.IDLE)
+          # The module won't trigger post_backward_hook, so we free the
+          # full params here.
+          self._free_full_params(
+              m.full_params,
+              apply_opt_barrier=self.optimization_barrier_in_backward)
+        elif any(p.requires_grad for p in m.parameters()):
           # Check if the module has params and if any of them has
           # the `requires_grad` field set. If `requires_grad=False` for
           # all the params, the post_backward hook will not fire and the
@@ -1281,8 +1286,9 @@ class XlaFullyShardedDataParallel(nn.Module):
           # 2. output tensors are `requires_grad==False`. In this case,
           # pre-backward hook is not registered, so it is in IDLE state.
           m.assert_state([TrainingState.BACKWARD_PRE, TrainingState.IDLE])
-        m.training_state = TrainingState.IDLE
 
+        m.training_state = TrainingState.IDLE
+        m._pre_backward_hook_has_run = False
         if m._is_root:
           # reset this flag for cases like "one forward pass + multiple backward passes"
           self._post_backward_callback_queued = False
