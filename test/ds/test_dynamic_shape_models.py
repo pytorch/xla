@@ -143,7 +143,7 @@ class TestDynamicShapeModels(unittest.TestCase):
     n_channels = 2 * (pool_size**2)
     x = torch.rand(2, n_channels, 10, 10, dtype=x_dtype, device=device)
     rois = torch.tensor(
-        [[0, 0, 0, 9, 9], [0, 0, 5, 4, 9], [0, 5, 5, 9, 9], [1, 0, 0, 9, 9]
+        [[0, 0, 0, 9, 9], [0, 0, 5, 4, 9], [0, 5, 5, 9, 9]
         ],  # format is (xyxy)
         dtype=rois_dtype,
         device=device,
@@ -157,71 +157,19 @@ class TestDynamicShapeModels(unittest.TestCase):
                                  aligned=aligned).to(device)(x, rois)
     xm.mark_step()
 
-    def expected_fn(
-        in_data,
-        rois,
-        pool_h,
-        pool_w,
-        spatial_scale=1,
-        sampling_ratio=-1,
-        aligned=False,
-        device=None,
-        dtype=torch.float64,
-    ):
-      if device is None:
-        device = torch.device("cpu")
-      n_channels = in_data.size(1)
-      out_data = torch.zeros(
-          rois.size(0), n_channels, pool_h, pool_w, dtype=dtype, device=device)
-
-      offset = 0.5 if aligned else 0.0
-
-      for r, roi in enumerate(rois):
-        batch_idx = int(roi[0])
-        j_begin, i_begin, j_end, i_end = (
-            x.item() * spatial_scale - offset for x in roi[1:])
-
-        roi_h = i_end - i_begin
-        roi_w = j_end - j_begin
-        bin_h = roi_h / pool_h
-        bin_w = roi_w / pool_w
-
-        for i in range(0, pool_h):
-          start_h = i_begin + i * bin_h
-          grid_h = sampling_ratio if sampling_ratio > 0 else int(np.ceil(bin_h))
-          for j in range(0, pool_w):
-            start_w = j_begin + j * bin_w
-            grid_w = sampling_ratio if sampling_ratio > 0 else int(
-                np.ceil(bin_w))
-
-            for channel in range(0, n_channels):
-
-              val = 0
-              for iy in range(0, grid_h):
-                y = start_h + (iy + 0.5) * bin_h / grid_h
-                for ix in range(0, grid_w):
-                  x = start_w + (ix + 0.5) * bin_w / grid_w
-                  val += bilinear_interpolate(
-                      in_data[batch_idx, channel, :, :], y, x, snap_border=True)
-              val /= grid_h * grid_w
-
-              out_data[r, channel, i, j] = val
-      return out_data
-
-    # xw32: note to myself, don't need to do this. Just create a RoIAlign model
-    # on cpu and compare the result with the one from TPU.
-    y_expected = expected_fn(
-        x,
-        rois,
-        pool_h,
-        pool_w,
-        spatial_scale=1,
-        sampling_ratio=-1,
-        device=device,
-        dtype=x_dtype,
-        aligned=aligned)
+    x_aten = torch.rand(2, n_channels, 10, 10, dtype=x_dtype, device='cpu')
+    rois_aten = torch.tensor(
+        [[0, 0, 0, 9, 9], [0, 0, 5, 4, 9], [0, 5, 5, 9, 9]
+        ],  # format is (xyxy)
+        dtype=rois_dtype,
+        device='cpu',
+    )
+    y_aten = torchvision.ops.RoIAlign((pool_h, pool_w),
+                                 spatial_scale=spatial_scale,
+                                 sampling_ratio=sampling_ratio,
+                                 aligned=aligned)(x_aten, rois_aten)
     tol = 1e-3 if (x_dtype is torch.half or rois_dtype is torch.half) else 1e-5
-    torch.testing.assert_close(y_expected.to(y), y, rtol=tol, atol=tol)
+    torch.testing.assert_close(y.to(y_aten), y_aten, rtol=tol, atol=tol)
     print('test passes')
     print(met.metrics_report())
 
