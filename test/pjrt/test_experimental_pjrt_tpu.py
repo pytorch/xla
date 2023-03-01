@@ -118,16 +118,7 @@ class TestExperimentalPjrtTpu(parameterized.TestCase):
 
     xmp.spawn(_assert, nprocs=1)
 
-  @absltest.skipIf(
-      tpu.version() <= 2,
-      'This test is not currently supported on v2 TPUVMs or earlier.')
   def test_xla_devices_single_process_one_chip_one_device_spawn(self):
-    accelerators = ['v3-8', 'v4-8']
-
-    if self.accelerator_type not in accelerators:
-      raise NotImplementedError('Test not implemented for {}'.format(
-          self.accelerator_type))
-
     # Avoid initializing the TPU client in the parent process
     with concurrent.futures.ProcessPoolExecutor(max_workers=1) as executor:
       executor.submit(self._fail_on_nonfirst_device).result()
@@ -194,9 +185,6 @@ class TestExperimentalPjrtTpu(parameterized.TestCase):
 
     return results
 
-  @absltest.skipIf(
-      tpu.version() <= 2,
-      'This test is not currently supported on v2 TPUVMs or earlier.')
   def test_spawn_threads(self):
     with concurrent.futures.ProcessPoolExecutor(max_workers=1) as e:
       results = e.submit(self._spawn_threads).result()
