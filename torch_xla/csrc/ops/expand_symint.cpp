@@ -38,15 +38,16 @@ std::vector<torch::lazy::Value> GetValues(
 
 ExpandSymInt::ExpandSymInt(const torch::lazy::Value& input,
                            const SymIntElements& size_elements)
-    : XlaNode(torch::lazy::OpKind(at::aten::expand),
-              GetValues(input, size_elements.GetSizeNodes()),
-              [&]() {
-                return NodeOutputShape(input, size_elements.GetUpperBounds(),
-                                       size_elements.GetDynamicDims());
-              },
-              /*num_outputs=*/1,
-              torch::lazy::MHash(size_elements.GetUpperBounds(),
-                                 size_elements.GetDynamicDims())),
+    : XlaNode(
+          torch::lazy::OpKind(at::aten::expand),
+          GetValues(input, size_elements.GetSizeNodes()),
+          [&]() {
+            return NodeOutputShape(input, size_elements.GetUpperBounds(),
+                                   size_elements.GetDynamicDims());
+          },
+          /*num_outputs=*/1,
+          torch::lazy::MHash(size_elements.GetUpperBounds(),
+                             size_elements.GetDynamicDims())),
       upper_bounds_(size_elements.GetUpperBounds()),
       dynamic_dims_(size_elements.GetDynamicDims()) {}
 

@@ -29,13 +29,14 @@ AllGather::AllGather(const torch::lazy::Value& input,
                      const torch::lazy::Value& token, int64_t dim,
                      int64_t shard_count,
                      std::vector<std::vector<int64_t>> groups, bool pin_layout)
-    : XlaNode(xla_all_gather, {input, token},
-              [&]() {
-                return NodeOutputShape(input, token, dim, shard_count, groups,
-                                       pin_layout);
-              },
-              /*num_outputs=*/2,
-              torch::lazy::MHash(dim, shard_count, groups, pin_layout)),
+    : XlaNode(
+          xla_all_gather, {input, token},
+          [&]() {
+            return NodeOutputShape(input, token, dim, shard_count, groups,
+                                   pin_layout);
+          },
+          /*num_outputs=*/2,
+          torch::lazy::MHash(dim, shard_count, groups, pin_layout)),
       dim_(dim),
       shard_count_(shard_count),
       groups_(std::move(groups)),

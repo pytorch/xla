@@ -26,12 +26,12 @@ CdistForward::CdistForward(const torch::lazy::Value& x1,
                            const torch::lazy::Value& x2,
                            const torch::lazy::Value& p, bool use_hamming,
                            bool use_chebyshev)
-    : XlaNode(torch::lazy::OpKind(at::aten::_cdist_forward), {x1, x2, p},
-              [&]() {
-                return NodeOutputShape(x1, x2, p, use_hamming, use_chebyshev);
-              },
-              /*num_outputs=*/1,
-              torch::lazy::MHash(use_hamming, use_chebyshev)),
+    : XlaNode(
+          torch::lazy::OpKind(at::aten::_cdist_forward), {x1, x2, p},
+          [&]() {
+            return NodeOutputShape(x1, x2, p, use_hamming, use_chebyshev);
+          },
+          /*num_outputs=*/1, torch::lazy::MHash(use_hamming, use_chebyshev)),
       use_hamming_(use_hamming),
       use_chebyshev_(use_chebyshev) {}
 

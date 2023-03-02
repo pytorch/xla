@@ -45,16 +45,17 @@ NllLossBackward::NllLossBackward(
     const absl::optional<torch::lazy::Value>& weight,
     const absl::optional<torch::lazy::Value>& total_weight,
     ReductionMode reduction, int ignore_index)
-    : XlaNode(torch::lazy::OpKind(at::aten::nll_loss_backward),
-              xla::util::GetValuesVector<torch::lazy::Value>(
-                  {grad_output, logits, labels}, {&weight, &total_weight}),
-              [&]() {
-                return NodeOutputShape(grad_output, logits, labels, weight,
-                                       total_weight, reduction, ignore_index);
-              },
-              /*num_outputs=*/1,
-              torch::lazy::MHash(torch::lazy::GetEnumValue(reduction),
-                                 ignore_index)),
+    : XlaNode(
+          torch::lazy::OpKind(at::aten::nll_loss_backward),
+          xla::util::GetValuesVector<torch::lazy::Value>(
+              {grad_output, logits, labels}, {&weight, &total_weight}),
+          [&]() {
+            return NodeOutputShape(grad_output, logits, labels, weight,
+                                   total_weight, reduction, ignore_index);
+          },
+          /*num_outputs=*/1,
+          torch::lazy::MHash(torch::lazy::GetEnumValue(reduction),
+                             ignore_index)),
       reduction_(reduction),
       ignore_index_(ignore_index) {}
 

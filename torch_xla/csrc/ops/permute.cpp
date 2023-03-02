@@ -21,9 +21,10 @@ xla::Shape NodeOutputShape(const torch::lazy::Value& input,
 }  // namespace
 
 Permute::Permute(const torch::lazy::Value& input, std::vector<int64_t> dims)
-    : XlaNode(torch::lazy::OpKind(at::aten::permute), {input},
-              [&]() { return NodeOutputShape(input, dims); },
-              /*num_outputs=*/1, torch::lazy::MHash(dims)),
+    : XlaNode(
+          torch::lazy::OpKind(at::aten::permute), {input},
+          [&]() { return NodeOutputShape(input, dims); },
+          /*num_outputs=*/1, torch::lazy::MHash(dims)),
       dims_(std::move(dims)) {}
 
 torch::lazy::NodePtr Permute::Clone(torch::lazy::OpList operands) const {

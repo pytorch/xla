@@ -34,9 +34,10 @@ xla::Shape NodeOutputShape(const torch::lazy::Value& input,
 
 ConstantPadNd::ConstantPadNd(const torch::lazy::Value& input,
                              std::vector<int64_t> pad, const at::Scalar& value)
-    : XlaNode(torch::lazy::OpKind(at::aten::constant_pad_nd), {input},
-              [&]() { return NodeOutputShape(input, value, pad); },
-              /*num_outputs=*/1, torch::lazy::MHash(pad, ScalarHash(value))),
+    : XlaNode(
+          torch::lazy::OpKind(at::aten::constant_pad_nd), {input},
+          [&]() { return NodeOutputShape(input, value, pad); },
+          /*num_outputs=*/1, torch::lazy::MHash(pad, ScalarHash(value))),
       pad_(std::move(pad)),
       value_(value) {}
 

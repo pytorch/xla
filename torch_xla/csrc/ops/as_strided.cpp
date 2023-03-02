@@ -43,13 +43,13 @@ xla::XlaOp LowerAsStrided(xla::XlaOp input, absl::Span<const int64_t> size,
 
 AsStrided::AsStrided(const torch::lazy::Value& input, std::vector<int64_t> size,
                      std::vector<int64_t> stride, int64_t storage_offset)
-    : XlaNode(torch::lazy::OpKind(at::aten::as_strided), {input},
-              [&]() {
-                return xla::ShapeUtil::MakeShape(
-                    GetXlaShape(input).element_type(), size);
-              },
-              /*num_outputs=*/1,
-              torch::lazy::MHash(size, stride, storage_offset)),
+    : XlaNode(
+          torch::lazy::OpKind(at::aten::as_strided), {input},
+          [&]() {
+            return xla::ShapeUtil::MakeShape(GetXlaShape(input).element_type(),
+                                             size);
+          },
+          /*num_outputs=*/1, torch::lazy::MHash(size, stride, storage_offset)),
       size_(std::move(size)),
       stride_(std::move(stride)),
       storage_offset_(storage_offset) {}

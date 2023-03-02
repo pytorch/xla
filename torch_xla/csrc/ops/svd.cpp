@@ -67,9 +67,10 @@ xla::Shape NodeOutputShape(const torch::lazy::Value& input, bool some,
 }  // namespace
 
 SVD::SVD(const torch::lazy::Value& input, bool some, bool compute_uv)
-    : XlaNode(torch::lazy::OpKind(at::aten::svd), {input},
-              [&]() { return NodeOutputShape(input, some, compute_uv); },
-              /*num_outputs=*/3, torch::lazy::MHash(some, compute_uv)),
+    : XlaNode(
+          torch::lazy::OpKind(at::aten::svd), {input},
+          [&]() { return NodeOutputShape(input, some, compute_uv); },
+          /*num_outputs=*/3, torch::lazy::MHash(some, compute_uv)),
       some_(some),
       compute_uv_(compute_uv) {}
 
