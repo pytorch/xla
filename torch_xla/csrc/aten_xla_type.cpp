@@ -2951,16 +2951,26 @@ at::Tensor XLANativeFunctions::upsample_bilinear2d_backward(
   // our XLA lowering.
   XlaDeviceType hw_type =
       static_cast<XlaDeviceType>(grad_output_tensor->GetDevice().type());
-  if (hw_type != XlaDeviceType::TPU || (scales_h && *scales_h != 1.0) ||
-      (scales_w && *scales_w != 1.0)) {
+  if (hw_type != XlaDeviceType::TPU) {
     return at::native::call_fallback_fn<
         &xla_cpu_fallback,
         ATEN_OP(upsample_bilinear2d_backward)>::call(grad_output, output_size,
                                                      input_size, align_corners,
                                                      scales_h, scales_w);
   }
+  std::vector<int64_t> scaled_output_size =
+      torch::lazy::ToVector<int64_t>(output_size);
+  if ((scales_h && *scales_h != 1.0) || (scales_w && *scales_w != 1.0)) {
+    scaled_output_size = GetOutputSizeWithScale(input_size, scales_h, scales_w,
+                                                scaled_output_size);
+    if (!output_size.empty()) {
+      XLA_CHECK(scaled_output_size.at(0) == output_size.at(0) &&
+                scaled_output_size.at(1) == output_size.at(1))
+          << "Inferred output size and output_size from upstream are different";
+    }
+  }
   return bridge::AtenFromXlaTensor(tensor_methods::upsample_bilinear2d_backward(
-      grad_output_tensor, torch::lazy::ToVector<int64_t>(output_size),
+      grad_output_tensor, torch::lazy::ToVector<int64_t>(scaled_output_size),
       torch::lazy::ToVector<int64_t>(input_size), align_corners));
 }
 
@@ -2976,6 +2986,11 @@ at::Tensor XLANativeFunctions::upsample_nearest2d(
   if ((scales_h && *scales_h != 1.0) || (scales_w && *scales_w != 1.0)) {
     scaled_output_size = GetOutputSizeWithScale(input_dims, scales_h, scales_w,
                                                 scaled_output_size);
+    if (!output_size.empty()) {
+      XLA_CHECK(scaled_output_size.at(0) == output_size.at(0) &&
+                scaled_output_size.at(1) == output_size.at(1))
+          << "Inferred output size and output_size from upstream are different";
+    }
   }
   return bridge::AtenFromXlaTensor(
       tensor_methods::upsample_nearest2d(self_tensor, scaled_output_size));
@@ -2991,16 +3006,26 @@ at::Tensor XLANativeFunctions::upsample_nearest2d_backward(
   // our XLA lowering.
   XlaDeviceType hw_type =
       static_cast<XlaDeviceType>(grad_output_tensor->GetDevice().type());
-  if (hw_type != XlaDeviceType::TPU || (scales_h && *scales_h != 1.0) ||
-      (scales_w && *scales_w != 1.0)) {
+  if (hw_type != XlaDeviceType::TPU) {
     return at::native::call_fallback_fn<
         &xla_cpu_fallback,
         ATEN_OP(upsample_nearest2d_backward)>::call(grad_output, output_size,
                                                     input_size, scales_h,
                                                     scales_w);
   }
+  std::vector<int64_t> scaled_output_size =
+      torch::lazy::ToVector<int64_t>(output_size);
+  if ((scales_h && *scales_h != 1.0) || (scales_w && *scales_w != 1.0)) {
+    scaled_output_size = GetOutputSizeWithScale(input_size, scales_h, scales_w,
+                                                scaled_output_size);
+    if (!output_size.empty()) {
+      XLA_CHECK(scaled_output_size.at(0) == output_size.at(0) &&
+                scaled_output_size.at(1) == output_size.at(1))
+          << "Inferred output size and output_size from upstream are different";
+    }
+  }
   return bridge::AtenFromXlaTensor(tensor_methods::upsample_nearest2d_backward(
-      grad_output_tensor, torch::lazy::ToVector<int64_t>(output_size),
+      grad_output_tensor, torch::lazy::ToVector<int64_t>(scaled_output_size),
       torch::lazy::ToVector<int64_t>(input_size)));
 }
 

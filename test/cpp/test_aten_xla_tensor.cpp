@@ -4266,24 +4266,52 @@ TEST_F(AtenXlaTensorTest, TestUpsampleNearest2DWithScale) {
 }
 
 TEST_F(AtenXlaTensorTest, TestUpsampleNearest2DBackwardWithScale) {
-  int batch_size = 2;
-  int h = 5;
-  int w = 5;
-  int chans = 2;
-  double scale_h = 2.5;
-  double scale_w = 3.4;
-  auto testfn = [&](const std::vector<torch::Tensor>& inputs) -> torch::Tensor {
-    return torch::upsample_nearest2d(inputs[0], c10::nullopt,
-                                     at::ArrayRef<double>{scale_h, scale_w});
+  struct ImageInfo {
+    int batch_size;
+    int h;
+    int w;
+    int chans;
+    double scale_h;
+    double scale_w;
   };
-  ForEachDevice([&](const torch::Device& device) {
-    TestBackward(
-        {torch::rand({batch_size, chans, h, w},
-                     torch::TensorOptions(torch::kFloat).requires_grad(true))},
-        device, testfn);
-  });
-  ExpectCounterChanged("xla::upsample_nearest2d_backward",
-                       cpp_test::GetIgnoredCounters());
+
+  /* clang-format off */
+  std::vector<ImageInfo> inputs = {
+    {/*batch_size=*/2, /*h=*/5, /*w=*/5, /*chans=*/2, /*scale_h*/2.5, /*scale_w*/3.4},
+    {/*batch_size=*/2, /*h=*/1335, /*w=*/1335, /*chans=*/3, /*scale_h*/2.5, /*scale_w*/3.4},
+    {/*batch_size=*/2, /*h=*/1335, /*w=*/1335, /*chans=*/3, /*scale_h*/0.5, /*scale_w*/0.5},
+  };
+  /* clang-format on */
+
+  for (const auto& img_info : inputs) {
+    for (bool align_corners : {true, false}) {
+      auto testfn =
+          [&](const std::vector<torch::Tensor>& inputs) -> torch::Tensor {
+        return torch::upsample_nearest2d(
+            inputs[0], c10::nullopt,
+            at::ArrayRef<double>{img_info.scale_h, img_info.scale_w});
+      };
+      ForEachDevice([&](const torch::Device& device) {
+        TestBackward(
+            {torch::rand(
+                {img_info.batch_size, img_info.chans, img_info.h, img_info.w},
+                torch::TensorOptions(torch::kFloat).requires_grad(true))},
+            device, testfn);
+        XlaDeviceType device_type = static_cast<XlaDeviceType>(
+            bridge::AtenDeviceToXlaDevice(device).type());
+        if (device_type == XlaDeviceType::TPU) {
+          // Only lowered for TPU, fallback for CPU.
+          ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+          ExpectCounterChanged("xla::upsample_nearest2d_backward",
+                               cpp_test::GetIgnoredCounters());
+          ResetCounters();
+        } else {
+          ExpectCounterChanged("aten::.*", cpp_test::GetIgnoredCounters());
+          ResetCounters();
+        }
+      });
+    }
+  }
 }
 
 TEST_F(AtenXlaTensorTest, TestUpsampleBilinear2D) {
@@ -4385,6 +4413,54 @@ TEST_F(AtenXlaTensorTest, TestUpsampleBilinear2DBackward) {
               torch::TensorOptions(torch::kFloat).requires_grad(true))},
           device, testfn);
     });
+  }
+}
+
+TEST_F(AtenXlaTensorTest, TestUpsampleBilinear2DBackwardWithScale) {
+  struct ImageInfo {
+    int batch_size;
+    int h;
+    int w;
+    int chans;
+    double scale_h;
+    double scale_w;
+  };
+
+  /* clang-format off */
+  std::vector<ImageInfo> inputs = {
+    {/*batch_size=*/2, /*h=*/5, /*w=*/5, /*chans=*/2, /*scale_h*/8.0/5, /*scale_w*/8.0/5},
+    {/*batch_size=*/2, /*h=*/1335, /*w=*/1335, /*chans=*/3, /*scale_h*/255.0/1335, /*scale_w*/255.0/1335},
+  };
+  /* clang-format on */
+
+  for (const auto& img_info : inputs) {
+    for (bool align_corners : {true, false}) {
+      auto testfn =
+          [&](const std::vector<torch::Tensor>& inputs) -> torch::Tensor {
+        return torch::upsample_bilinear2d(
+            inputs[0], c10::nullopt, align_corners,
+            at::ArrayRef<double>{img_info.scale_h, img_info.scale_w});
+      };
+      ForEachDevice([&](const torch::Device& device) {
+        TestBackward(
+            {torch::rand(
+                {img_info.batch_size, img_info.chans, img_info.h, img_info.w},
+                torch::TensorOptions(torch::kFloat).requires_grad(true))},
+            device, testfn);
+        XlaDeviceType device_type = static_cast<XlaDeviceType>(
+            bridge::AtenDeviceToXlaDevice(device).type());
+        if (device_type == XlaDeviceType::TPU) {
+          // Only lowered for TPU, fallback for CPU.
+          ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+          ExpectCounterChanged("xla::upsample_bilinear2d_backward",
+                               cpp_test::GetIgnoredCounters());
+          ResetCounters();
+        } else {
+          ExpectCounterChanged("aten::.*", cpp_test::GetIgnoredCounters());
+          ResetCounters();
+        }
+      });
+    }
   }
 }
 
