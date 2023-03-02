@@ -24,8 +24,8 @@
 #include "tensorflow/compiler/xla/service/hlo_parser.h"
 #include "tensorflow/core/example/example.pb.h"
 #include "tensorflow/core/example/feature.pb.h"
-#include "tensorflow/core/platform/env.h"
-#include "tensorflow/core/profiler/lib/traceme.h"
+#include "tensorflow/tsl/platform/env.h"
+#include "tensorflow/tsl/profiler/lib/traceme.h"
 #include "tensorflow/python/profiler/internal/profiler_pywrap_impl.h"
 #include "third_party/xla_client/computation_client.h"
 #include "third_party/xla_client/mesh_service.h"
@@ -345,8 +345,8 @@ void SyncLiveTensors(const std::string& device_str,
 
 void StepMarker(const std::string& device_str,
                 const std::vector<std::string>& devices, bool wait) {
-  tensorflow::profiler::TraceMe activity(
-      "StepMarker", tensorflow::profiler::TraceMeLevel::kInfo);
+  tsl::profiler::TraceMe activity(
+      "StepMarker", tsl::profiler::TraceMeLevel::kInfo);
   torch::lazy::BackendDevice device = GetDeviceOrCurrent(device_str);
   XLAGraphExecutor::Get()->SyncLiveTensorsGraph(&device, devices, wait);
   XLAGraphExecutor::Get()->MarkStep(device);
@@ -593,14 +593,14 @@ py::object RecordReadExample(
 
 std::unique_ptr<tensorflow::RandomAccessFile> OpenTfFile(
     const std::string& path) {
-  tensorflow::Env* env = tensorflow::Env::Default();
+  tsl::Env* env = tsl::Env::Default();
   std::unique_ptr<tensorflow::RandomAccessFile> file;
   XLA_CHECK_OK(env->NewRandomAccessFile(path, &file));
   return file;
 }
 
 py::object StatTfFile(const std::string& path) {
-  tensorflow::Env* env = tensorflow::Env::Default();
+  tsl::Env* env = tsl::Env::Default();
   tensorflow::FileStatistics stat;
   {
     NoGilSection nogil;
@@ -647,7 +647,7 @@ py::bytes ReadTfFile(tensorflow::RandomAccessFile* file, uint64_t offset,
 
 std::unique_ptr<tensorflow::WritableFile> CreateTfFile(
     const std::string& path) {
-  tensorflow::Env* env = tensorflow::Env::Default();
+  tsl::Env* env = tsl::Env::Default();
   std::unique_ptr<tensorflow::WritableFile> file;
   XLA_CHECK_OK(env->NewWritableFile(path, &file));
   return file;
@@ -666,7 +666,7 @@ py::object ListTfFs(const std::string& pattern) {
   std::vector<std::string> files;
   {
     NoGilSection nogil;
-    tensorflow::Env* env = tensorflow::Env::Default();
+    tsl::Env* env = tsl::Env::Default();
     XLA_CHECK_OK(env->GetMatchingPaths(pattern, &files));
   }
 
@@ -678,7 +678,7 @@ py::object ListTfFs(const std::string& pattern) {
 }
 
 void RemoveTfFile(const std::string& path) {
-  tensorflow::Env* env = tensorflow::Env::Default();
+  tsl::Env* env = tsl::Env::Default();
   XLA_CHECK_OK(env->DeleteFile(path));
 }
 
@@ -853,7 +853,7 @@ void BuildProfilerSubmodule(py::module* m) {
         absl::flat_hash_map<std::string, std::variant<int, std::string>> opts =
             ConvertDictToMap(options);
         std::chrono::seconds sleep_s(interval_s);
-        tensorflow::Status status;
+        tsl::Status status;
         {
           NoGilSection nogil;
           for (int i = 0; i <= timeout_s / interval_s; i++) {

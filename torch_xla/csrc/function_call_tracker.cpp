@@ -8,7 +8,7 @@
 #include <unordered_set>
 
 #include "absl/strings/str_split.h"
-#include "tensorflow/core/platform/stacktrace.h"
+#include "tensorflow/tsl/platform/stacktrace.h"
 #include "third_party/xla_client/sys_util.h"
 #include "torch/csrc/lazy/python/python_util.h"
 
@@ -57,7 +57,7 @@ void LogFunction(TrackerContext* tctx, const char* tag) {
   fn_file << "[TAG " << tag << " From Thread " << std::this_thread::get_id()
           << "]\n"
           << torch::lazy::GetPythonFrames() << "\nC++ Frames:\n"
-          << tensorflow::CurrentStackTrace() << "\n";
+          << tsl::CurrentStackTrace() << "\n";
 }
 
 }  // namespace

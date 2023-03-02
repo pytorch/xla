@@ -12,7 +12,7 @@
 
 #include "tensorflow/compiler/xla/literal_util.h"
 #include "tensorflow/compiler/xla/shape_util.h"
-#include "tensorflow/core/lib/bfloat16/bfloat16.h"
+#include "tensorflow/tsl/platform/bfloat16.h"
 #include "third_party/xla_client/debug_macros.h"
 #include "third_party/xla_client/multi_wait.h"
 #include "third_party/xla_client/sys_util.h"
@@ -184,9 +184,9 @@ struct Caster<at::BFloat16> {
   }
 };
 template <>
-struct Caster<tensorflow::bfloat16> {
+struct Caster<tsl::bfloat16> {
   template <typename D>
-  D cast(const tensorflow::bfloat16& value) const {
+  D cast(const tsl::bfloat16& value) const {
     return static_cast<D>(static_cast<float>(value));
   }
 };
@@ -295,7 +295,7 @@ int64_t GetFlatTensorOffset(const S& strides,
   return base;
 }
 
-// The tensorflow::bfloat16 does not have implicit cast operations, so using
+// The tsl::bfloat16 does not have implicit cast operations, so using
 // std::copy() for it, is not going to work.
 struct CopyDirect {};
 struct CopyCasted {};
@@ -305,7 +305,7 @@ struct NeedCast {
   static constexpr bool value = false;
 };
 template <>
-struct NeedCast<tensorflow::bfloat16> {
+struct NeedCast<tsl::bfloat16> {
   static constexpr bool value = true;
 };
 template <>
@@ -365,17 +365,17 @@ void CopyData(D* dest, const S* source, int64_t n, const CopyCasted&) {
 }
 
 template <>
-void CopyData<at::BFloat16, tensorflow::bfloat16>(
-    at::BFloat16* dest, const tensorflow::bfloat16* source, int64_t n,
+void CopyData<at::BFloat16, tsl::bfloat16>(
+    at::BFloat16* dest, const tsl::bfloat16* source, int64_t n,
     const CopyCasted&) {
-  CheckedMemcpy<at::BFloat16, tensorflow::bfloat16>(dest, source, n);
+  CheckedMemcpy<at::BFloat16, tsl::bfloat16>(dest, source, n);
 }
 template <>
-void CopyData<tensorflow::bfloat16, at::BFloat16>(tensorflow::bfloat16* dest,
+void CopyData<tsl::bfloat16, at::BFloat16>(tensorflow::bfloat16* dest,
                                                   const at::BFloat16* source,
                                                   int64_t n,
                                                   const CopyCasted&) {
-  CheckedMemcpy<tensorflow::bfloat16, at::BFloat16>(dest, source, n);
+  CheckedMemcpy<tsl::bfloat16, at::BFloat16>(dest, source, n);
 }
 
 std::vector<int64_t> GetIterationDimensions(const xla::Shape& shape) {
@@ -527,7 +527,7 @@ void TensorToBufferSType(const at::Tensor& tensor, const xla::Shape& dest_shape,
                          const torch::lazy::BackendDevice& device) {
   switch (dest_shape.element_type()) {
     case xla::PrimitiveType::BF16:
-      TensorToBuffer<SType, tensorflow::bfloat16>(
+      TensorToBuffer<SType, tsl::bfloat16>(
           tensor, dest_shape, dest_buffer, dest_buffer_size, device);
       break;
     case xla::PrimitiveType::F16:
@@ -811,7 +811,7 @@ at::Tensor MakeTensorFromXlaLiteral(const xla::Literal& literal,
     case xla::PrimitiveType::PRED:
       return XlaLiteralToTensorHelper<bool>(literal, dest_element_type);
     case xla::PrimitiveType::BF16:
-      return XlaLiteralToTensorHelper<tensorflow::bfloat16>(literal,
+      return XlaLiteralToTensorHelper<tsl::bfloat16>(literal,
                                                             dest_element_type);
     case xla::PrimitiveType::F16:
       return XlaLiteralToTensorHelper<xla::half>(literal, dest_element_type);
