@@ -3,13 +3,7 @@ from torch.optim.optimizer import Optimizer
 from typing import Dict, Iterable, Optional, Callable, Tuple
 from torch import nn
 import torch_xla.core.xla_model as xm
-
-"""
-    We recommend using create_optimizer_lars and setting bn_bias_separately=True 
-    instead of using class Lars directly, which helps LARS skip parameters
-    in BatchNormalization and bias, and has better performance in general.
-    Polynomial Warmup learning rate decay is also helpful for better performance in general.
-"""
+import torch_xla.debug.profiler as xp
 
 
 def create_optimizer_lars(model, lr, momentum, weight_decay, bn_bias_separately, epsilon, nesterov = False):
@@ -77,53 +71,56 @@ class Lars(Optimizer):
             closure (callable, optional): A closure that reevaluates the model
                 and returns the loss.
         """
-        loss = None
-        if closure is not None:
-            with torch.enable_grad():
-                loss = closure()
+        with xp.Trace('LARS step'):
+            loss = None
+            if closure is not None:
+                with torch.enable_grad():
+                    loss = closure()
 
-        for group in self.param_groups:
-            weight_decay = group['weight_decay']
-            momentum = group['momentum']
-            eeta = group['eeta']
-            lr = group['lr']
-            lars = group['lars']
-            eps = group['epsilon']
-            nesterov = group['nesterov']
-            for p in group['params']:
-                if p.grad is None:
-                    continue
-                decayed_grad = p.grad
-                scaled_lr = lr
-                if lars:
-                    w_norm = torch.norm(p)
-                    g_norm = torch.norm(p.grad)
-                    '''
-                    xm.mark_step() 
-                    trust_ratio = torch.where(
-                        torch.gt(w_norm, 0), torch.where(torch.gt(g_norm, 0),
-                        (eeta * w_norm / (g_norm + weight_decay * w_norm + eps)),1.0), 1.0)
-                    trust_ratio.clamp_(0.0, 50)
-                    scaled_lr *= trust_ratio.item()
-                    '''
-                    if weight_decay != 0:
-                        decayed_grad = decayed_grad.add(p, alpha=weight_decay)
-                decayed_grad = torch.clamp(decayed_grad, -10.0, 10.0)
-                # https://github.com/mlcommons/training/blob/ebe9a7e7400f85abce88c4962fa573ff40676870/image_classification/tensorflow2/lars_optimizer.py#L179 
-                param_state = self.state[p]
-                if 'momentum_buffer' not in param_state:
-                    mom_t = param_state['momentum_buffer'] = torch.clone(
-                        decayed_grad).detach()
-                else:
-                    mom = param_state['momentum_buffer']
-                    mom_t = mom.mul_(momentum).add_(decayed_grad, alpha=-scaled_lr)
-                param_state['momentum_buffer'] = mom_t.clone() 
-                if nesterov:
-                    p.add_(mom_t, alpha=momentum).add_(decayed_grad, alpha=-scaled_lr)
-                else:
-                    p.add_(mom_t)
+            for group in self.param_groups:
+                weight_decay = group['weight_decay']
+                momentum = group['momentum']
+                eeta = group['eeta']
+                lr = group['lr']
+                lars = group['lars']
+                eps = group['epsilon']
+                nesterov = group['nesterov']
+                for p in group['params']:
+                    if p.grad is None:
+                        continue
+                    decayed_grad = p.grad
+                    scaled_lr = lr
+                    if lars:
+                        w_norm = torch.norm(p)
+                        g_norm = torch.norm(p.grad)
+                        x = w_norm/(g_norm +weight_decay*w_norm + eps)
+                        x *= eeta
+                        trust_ratio = 1.0
+                        flag = False
+                        if w_norm > 0:
+                            flag = True
+                        if flag:
+                            trust_ratio = x
+                        #trust_ratio.clamp_(0.0, 50)
+                        scaled_lr *= trust_ratio.item()
+                        if weight_decay != 0:
+                            decayed_grad = decayed_grad.add(p, alpha=weight_decay)
+                    decayed_grad = torch.clamp(decayed_grad, -10.0, 10.0)
+                    # https://github.com/mlcommons/training/blob/ebe9a7e7400f85abce88c4962fa573ff40676870/image_classification/tensorflow2/lars_optimizer.py#L179 
+                    param_state = self.state[p]
+                    if 'momentum_buffer' not in param_state:
+                        mom_t = param_state['momentum_buffer'] = torch.clone(
+                            decayed_grad).detach()
+                    else:
+                        mom = param_state['momentum_buffer']
+                        mom_t = mom.mul_(momentum).add_(decayed_grad, alpha=-scaled_lr)
+                    param_state['momentum_buffer'] = mom_t.clone() 
+                    if nesterov:
+                        p.add_(mom_t, alpha=momentum).add_(decayed_grad, alpha=-scaled_lr)
+                    else:
+                        p.add_(mom_t)
 
-        return loss
+            return loss
 
 
 """

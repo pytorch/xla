@@ -4,6 +4,7 @@ import args_parse
 import pprint
 from lars import create_optimizer_lars
 from lars_util import *
+import random
 import resnet_model
 
 
@@ -154,9 +155,8 @@ DEFAULT_KWARGS = dict(
     base_lr=2,
     epsilon=1e-5,
     weight_decay=0.00005,
-    warmup_epochs=5,
+    warmup_epochs=3,
     label_smoothing=0.0,
-    enable_space_to_depth=True,
     num_classes = 1000, 
 
 )
@@ -223,6 +223,7 @@ class InfiniteDataLoader(DataLoader):
             batch = next(self.dataset_iterator)
         except StopIteration:
             # Dataset exhausted, use a new fresh iterator.
+            random.shuffle(self.dataset.imgs)
             self.dataset_iterator = super().__iter__()
             batch = next(self.dataset_iterator)
         return batch
@@ -313,8 +314,8 @@ def train_imagenet(FLAGS):
   torch.manual_seed(42)
 
   device = xm.xla_device()
-
-  model = resnet_model.resnet50()
+  enable_space_to_depth = True if FLAGS.enable_space_to_depth else False
+  model = resnet_model.resnet50(enable_space_to_depth=enable_space_to_depth)
   model = model.to(memory_format=torch.channels_last).to(device)
 
   '''
@@ -337,9 +338,9 @@ def train_imagenet(FLAGS):
       lr_power = 2.0 #https://github.com/tensorflow/staging/blob/31bf5a73fdeb88a1bedb02ca3ada949982a3db9f/models/resnet/lars_util.py#L101
       FLAGS.base_lr = FLAGS.base_lr * xm.xrt_world_size() #linear scaling
       optimizer = create_optimizer_lars(model=model, lr=FLAGS.base_lr, epsilon=FLAGS.epsilon,momentum=FLAGS.momentum,weight_decay=FLAGS.weight_decay,bn_bias_separately=True)
-      lr_scheduler = PolynomialWarmup(optimizer, decay_steps=FLAGS.num_epochs * FLAGS.num_steps_per_epoch,
+      lr_scheduler = PolynomialWarmup(optimizer, decay_steps=30 * FLAGS.num_steps_per_epoch,
                                     warmup_steps=FLAGS.warmup_epochs * FLAGS.num_steps_per_epoch,
-                                    end_lr=0.0, power=lr_power, last_epoch=-1)
+                                    end_lr=0.000001, power=lr_power, last_epoch=-1)
   else:
       optimizer = optim.SGD(
           model.parameters(),
@@ -367,8 +368,10 @@ def train_imagenet(FLAGS):
       with xp.StepTrace('train_imagenet'):
         with xp.Trace('build_graph'):
           # To do add an option to switch space to depth transformation  
-          data = data.reshape(-1, 12, img_dim//2, img_dim//2)
-          #todo: data-=mean, data/=std  
+          if FLAGS.enable_space_to_depth:
+              with xp.Trace('space_to_depth_transformation'):
+                  data = data.reshape(-1, 12, img_dim//2, img_dim//2)
+                  #todo: data-=mean, data/=std  
 
           
           optimizer.zero_grad()
@@ -404,8 +407,9 @@ def train_imagenet(FLAGS):
     total_samples, correct = 0, 0
     model.eval()
     for step, (data, target) in enumerate(loader):
-      # To do add an option to switch space_to_depth
-      data = data.reshape(-1, 12, img_dim//2, img_dim//2)
+      if FLAGS.enable_space_to_depth:
+          # To do add an option to switch space_to_depth
+          data = data.reshape(-1, 12, img_dim//2, img_dim//2)
       output = model(data)
       pred = output.max(1, keepdim=True)[1]
       correct += pred.eq(target.view_as(pred)).sum()
