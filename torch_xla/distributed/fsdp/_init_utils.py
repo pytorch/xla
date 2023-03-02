@@ -90,8 +90,7 @@ def _get_orig_params(
   """
     Returns an iterator over the original parameters in ``module``, ignoring
     the parameters in ``ignored_params``, any ``FlatParameter`` s (which may be
-    present due to nested FSDP wrapping), and any original parameters already
-    flattened (only relevant when ``use_orig_params=True``).
+    present due to nested FSDP wrapping).
     """
   param_gen = module.parameters()
   try:
