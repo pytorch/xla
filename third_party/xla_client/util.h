@@ -16,8 +16,8 @@
 #include "absl/types/optional.h"
 #include "absl/types/span.h"
 #include "tensorflow/compiler/xla/status.h"
-#include "tensorflow/core/lib/core/errors.h"
-#include "tensorflow/core/lib/hash/hash.h"
+#include "tensorflow/tsl/platform/errors.h"
+#include "tensorflow/tsl/platform/hash.h"
 #include "third_party/xla_client/types.h"
 
 namespace xla {
@@ -48,7 +48,7 @@ Status CheckedCall(const F& fn) {
   try {
     fn();
   } catch (const std::exception& ex) {
-    return tensorflow::errors::Internal(ex.what());
+    return tsl::errors::Internal(ex.what());
   }
   return OkStatus();
 }
@@ -156,7 +156,7 @@ struct PartialHasher {
         pos = end - N;
       }
     }
-    return tensorflow::Hash64(data.data() + pos, end - pos, 17);
+    return tsl::Hash64(data.data() + pos, end - pos, 17);
   }
 
   P policy;
