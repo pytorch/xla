@@ -1034,7 +1034,7 @@ XLAGraphExecutor::BuildInputOutputAliases(
   // those buffers are no longer needed after execution.
   for (size_t i = 0; i < indices.size(); ++i) {
     size_t tensor_index = indices[i];
-    int64_t tensor_id = tensors[tensor_index]->GetUniqueId();
+    int64_t tensor_id = tensors[tensor_index]->data()->alias_id;
     output_tensor_id_map[tensor_id] = i;
   }
   const auto& parameters_data = lowering_ctx->GetParametersData();

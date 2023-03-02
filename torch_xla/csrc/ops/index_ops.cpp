@@ -2,6 +2,7 @@
 
 #include <ATen/ExpandUtils.h>
 #include <ATen/Functions.h>
+#include <ATen/ops/select_copy.h>
 
 #include "tensorflow/compiler/xla/permutation_util.h"
 #include "third_party/xla_client/debug_macros.h"
@@ -19,6 +20,7 @@
 #include "torch_xla/csrc/ops/permute.h"
 #include "torch_xla/csrc/ops/scalar.h"
 #include "torch_xla/csrc/tensor_methods.h"
+#include "torch_xla/csrc/tensor_util.h"
 #include "torch_xla/csrc/xla_graph_executor.h"
 #include "torch_xla/csrc/xla_lower_util.h"
 
@@ -62,7 +64,8 @@ std::vector<at::Tensor> ExpandByteTensors(
       // Replace with nonzeros.
       auto nonzero = index->nonzero();
       for (int64_t j = 0; j < index->dim(); j++) {
-        result.emplace_back(nonzero.select(1, j));
+        // There is no tensor.select_copy. So at::select_copy is used.
+        result.emplace_back(at::select_copy(nonzero, 1, j));
       }
     } else {
       result.emplace_back(index.value_or(at::Tensor()));
@@ -244,7 +247,7 @@ CanonicalIndexInfo GetCanonicalIndexInfo(
   CheckIndexTensorTypes(orig_indices);
   // First expand ByteTensor (boolean masks) into 1 or more LongTensors, then
   // broadcast all index tensors together.
-  auto indices = at::expand_outplace(ExpandByteTensors(base, orig_indices));
+  auto indices = xla_expand_outplace(ExpandByteTensors(base, orig_indices));
   // If the non-null indices are not all adjacent, transpose base and indices
   // together so that they're adjacent at the front.
   CanonicalIndexInfo canonical_index_info = TransposeToFront(base, indices);

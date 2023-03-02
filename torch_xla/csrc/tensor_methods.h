@@ -484,12 +484,11 @@ XLATensorPtr lt(const XLATensorPtr& input, const at::Scalar& other);
 
 XLATensorPtr lt(const XLATensorPtr& input, const XLATensorPtr& other);
 
-// In-place version of the method above.
-void masked_fill_(XLATensorPtr& input, const XLATensorPtr& mask,
-                  const at::Scalar& value);
+XLATensorPtr masked_fill(XLATensorPtr& input, const XLATensorPtr& mask,
+                         const at::Scalar& value);
 
-void masked_scatter_(XLATensorPtr& input, const XLATensorPtr& mask,
-                     const XLATensorPtr& source);
+XLATensorPtr masked_scatter(XLATensorPtr& input, const XLATensorPtr& mask,
+                            const XLATensorPtr& source);
 
 XLATensorPtr masked_select(const XLATensorPtr& input, const XLATensorPtr& mask);
 

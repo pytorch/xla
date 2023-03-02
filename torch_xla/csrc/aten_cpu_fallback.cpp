@@ -42,7 +42,9 @@ void xla_cpu_fallback(const c10::OperatorHandle& op, torch::jit::Stack* stack) {
   }
 
   // Call the actual boxed CPU fallback.
-  at::native::cpu_fallback(op, stack);
+  // Set error_on_views as XLA should take care
+  // of all view ops after functionalization.
+  at::native::cpu_fallback(op, stack, true);
 }
 
 TORCH_LIBRARY_IMPL(_, XLA, m) {
