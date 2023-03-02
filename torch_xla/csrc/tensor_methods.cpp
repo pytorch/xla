@@ -1536,19 +1536,36 @@ XLATensorPtr lt(const XLATensorPtr& input, const XLATensorPtr& other) {
   return DispatchComparisonOp(at::aten::lt, input, other);
 }
 
-void masked_fill_(XLATensorPtr& input, const XLATensorPtr& mask,
-                  const at::Scalar& value) {
+XLATensorPtr masked_fill(XLATensorPtr& input, const XLATensorPtr& mask,
+                         const at::Scalar& value) {
   torch::lazy::ScopePusher ir_scope(at::aten::masked_fill.toQualString());
-  input->SetIrValue(torch::lazy::MakeNode<MaskedFill>(
-      input->GetIrValue(), MaybeExpand(mask->GetIrValue(), input->shape()),
+  auto input_value = input->GetIrValue();
+  // Expand input tensor to mask if needed (same as masked_scatter below).
+  // An additional check makes sure to only expand if the rank of input tensor
+  // is less than that of the mask tensor.
+  if (input->shape().get().rank() <= mask->shape().get().rank() &&
+      input->shape().get().dimensions() < mask->shape().get().dimensions()) {
+    input_value = MaybeExpand(input->GetIrValue(), mask->shape());
+  }
+  return input->CreateFrom(torch::lazy::MakeNode<MaskedFill>(
+      input_value, MaybeExpand(mask->GetIrValue(), GetXlaShape(input_value)),
       value));
 }
 
-void masked_scatter_(XLATensorPtr& input, const XLATensorPtr& mask,
-                     const XLATensorPtr& source) {
+XLATensorPtr masked_scatter(XLATensorPtr& input, const XLATensorPtr& mask,
+                            const XLATensorPtr& source) {
   torch::lazy::ScopePusher ir_scope(at::aten::masked_scatter.toQualString());
-  input->SetIrValue(torch::lazy::MakeNode<MaskedScatter>(
-      input->GetIrValue(), MaybeExpand(mask->GetIrValue(), input->shape()),
+  auto input_value = input->GetIrValue();
+  // This ensures that input tensor is at least the same shape as mask tensor.
+  // Note that we can't use the existing MaybeExpand function since
+  // input tensor may sometimes be bigger than the mask tensor, and MaybeExpand
+  // requires the first parameter to always be less or equal to the second
+  // parameter.
+  if (input->shape().get().dimensions() < mask->shape().get().dimensions()) {
+    input_value = MaybeExpand(input->GetIrValue(), mask->shape());
+  }
+  return input->CreateFrom(torch::lazy::MakeNode<MaskedScatter>(
+      input_value, MaybeExpand(mask->GetIrValue(), GetXlaShape(input_value)),
       source->GetIrValue()));
 }
 
@@ -2359,16 +2376,6 @@ XLATensorPtr squeeze(const XLATensorPtr& input, int64_t dim) {
   return view(input, output_dimensions);
 }
 
-void squeeze_(XLATensorPtr& input) {
-  input->SetIrValue(torch::lazy::MakeNode<Squeeze>(input->GetIrValue(), -1));
-}
-
-void squeeze_(XLATensorPtr& input, int64_t dim) {
-  input->SetIrValue(torch::lazy::MakeNode<Squeeze>(
-      input->GetIrValue(), torch::lazy::GetCanonicalDimensionIndex(
-                               dim, input->shape().get().rank())));
-}
-
 XLATensorPtr stack(absl::Span<const XLATensorPtr> tensors, int64_t dim) {
   XLA_CHECK_GT(tensors.size(), 0);
   std::vector<torch::lazy::Value> values;
@@ -2530,18 +2537,6 @@ XLATensorPtr transpose(const XLATensorPtr& input, int64_t dim0, int64_t dim1) {
     view_info = ViewInfo(ViewInfo::Type::kPermute, input_shape, permute_dims);
   }
   return input->CreateViewTensor(std::move(view_info));
-}
-
-void transpose_(XLATensorPtr& input, int64_t dim0, int64_t dim1) {
-  auto input_shape = input->shape();
-  if (input_shape.get().rank() <= 1) {
-    // no op if input rank <=1
-    return;
-  }
-  auto permute_dims = torch::lazy::MakeTransposePermutation(
-      /*dim0=*/dim0, /*dim1=*/dim1, /*rank=*/input_shape.get().rank());
-  ViewInfo view_info(ViewInfo::Type::kPermute, input_shape, permute_dims);
-  return input->ModifyCurrentView(std::move(view_info));
 }
 
 std::tuple<XLATensorPtr, XLATensorPtr> triangular_solve(

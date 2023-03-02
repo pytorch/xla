@@ -1609,6 +1609,10 @@ void InitXlaModuleBindings(py::module m) {
     MapXlaEnvVarsToLazy();
     InitXlaBackend();
   });
+  m.def("_replace_xla_tensor",
+        [](at::Tensor& self, const at::Tensor& source) -> at::Tensor& {
+          return XLANativeFunctions::set_(self, source);
+        });
 
   /* The distributed runtime service is used by the PjRt GPU client. */
   py::class_<xla::DistributedRuntimeService,

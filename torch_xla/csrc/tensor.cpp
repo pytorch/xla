@@ -622,6 +622,19 @@ bool XLATensor::ShouldSyncIrNode() {
   return this->data()->ir_value->op() != xla_device_data;
 }
 
+bool XLASymNodeImpl::is_bool() {
+  c10::Symbol op = node()->op().op;
+  // Reference:
+  // https://github.com/pytorch/pytorch/blob/master/torch/fx/experimental/symbolic_shapes.py#L403
+  if (op == c10::Symbol::fromQualString("aten::size_eq") ||
+      op == c10::Symbol::fromQualString("aten::size_ne") ||
+      op == c10::Symbol::fromQualString("aten::size_ge") ||
+      op == c10::Symbol::fromQualString("aten::size_lt")) {
+    return true;
+  }
+  return false;
+}
+
 bool XLASymNodeImpl::is_int() {
   // TODO: handle not is int
   return true;
@@ -683,8 +696,10 @@ c10::SymNode XLASymNodeImpl::eq(const c10::SymNode& other) {
 }
 
 c10::SymNode XLASymNodeImpl::ne(const c10::SymNode& other) {
-  XLA_CHECK(false) << "XLASymNodeImpl::" << __FUNCTION__
-                   << " has not been implemented.";
+  TORCH_LAZY_FN_COUNTER("xla::size_");
+  auto p_other = dynamic_cast<XLASymNodeImpl*>(other.get());
+  auto n_ne = torch::lazy::MakeNode<SizeNe>(node(), p_other->node());
+  return c10::make_intrusive<XLASymNodeImpl>(n_ne);
 }
 
 c10::SymNode XLASymNodeImpl::gt(const c10::SymNode& other) {
@@ -693,8 +708,10 @@ c10::SymNode XLASymNodeImpl::gt(const c10::SymNode& other) {
 }
 
 c10::SymNode XLASymNodeImpl::lt(const c10::SymNode& other) {
-  XLA_CHECK(false) << "XLASymNodeImpl::" << __FUNCTION__
-                   << " has not been implemented.";
+  TORCH_LAZY_FN_COUNTER("xla::size_");
+  auto p_other = dynamic_cast<XLASymNodeImpl*>(other.get());
+  auto n_lt = torch::lazy::MakeNode<SizeLt>(node(), p_other->node());
+  return c10::make_intrusive<XLASymNodeImpl>(n_lt);
 }
 
 c10::SymNode XLASymNodeImpl::le(const c10::SymNode& other) {
@@ -703,8 +720,10 @@ c10::SymNode XLASymNodeImpl::le(const c10::SymNode& other) {
 }
 
 c10::SymNode XLASymNodeImpl::ge(const c10::SymNode& other) {
-  XLA_CHECK(false) << "XLASymNodeImpl::" << __FUNCTION__
-                   << " has not been implemented.";
+  TORCH_LAZY_FN_COUNTER("xla::size_");
+  auto p_other = dynamic_cast<XLASymNodeImpl*>(other.get());
+  auto n_ge = torch::lazy::MakeNode<SizeGe>(node(), p_other->node());
+  return c10::make_intrusive<XLASymNodeImpl>(n_ge);
 }
 
 c10::SymNode XLASymNodeImpl::ceil() {
@@ -732,9 +751,55 @@ c10::SymNode XLASymNodeImpl::sym_max(const c10::SymNode& other) {
                    << " has not been implemented.";
 }
 
-c10::SymNode XLASymNodeImpl::clone() {
+c10::SymNode XLASymNodeImpl::sym_or(const c10::SymNode& other) {
   XLA_CHECK(false) << "XLASymNodeImpl::" << __FUNCTION__
                    << " has not been implemented.";
+}
+
+c10::SymNode XLASymNodeImpl::sym_and(const c10::SymNode& other) {
+  XLA_CHECK(false) << "XLASymNodeImpl::" << __FUNCTION__
+                   << " has not been implemented.";
+}
+
+c10::SymNode XLASymNodeImpl::sym_not() {
+  XLA_CHECK(false) << "XLASymNodeImpl::" << __FUNCTION__
+                   << " has not been implemented.";
+}
+// NB: self is ignored here, only the arguments are used
+c10::SymNode XLASymNodeImpl::is_contiguous(at::ArrayRef<c10::SymNode> sizes,
+                                           at::ArrayRef<c10::SymNode> strides) {
+  XLA_CHECK(false) << "XLASymNodeImpl::" << __FUNCTION__
+                   << " has not been implemented.";
+}
+c10::SymNode XLASymNodeImpl::is_channels_last_contiguous_2d(
+    at::ArrayRef<c10::SymNode> sizes, at::ArrayRef<c10::SymNode> strides) {
+  XLA_CHECK(false) << "XLASymNodeImpl::" << __FUNCTION__
+                   << " has not been implemented.";
+}
+c10::SymNode XLASymNodeImpl::is_channels_last_contiguous_3d(
+    at::ArrayRef<c10::SymNode> sizes, at::ArrayRef<c10::SymNode> strides) {
+  XLA_CHECK(false) << "XLASymNodeImpl::" << __FUNCTION__
+                   << " has not been implemented.";
+}
+c10::SymNode XLASymNodeImpl::is_channels_last_strides_2d(
+    at::ArrayRef<c10::SymNode> sizes, at::ArrayRef<c10::SymNode> strides) {
+  XLA_CHECK(false) << "XLASymNodeImpl::" << __FUNCTION__
+                   << " has not been implemented.";
+}
+c10::SymNode XLASymNodeImpl::is_channels_last_strides_3d(
+    at::ArrayRef<c10::SymNode> sizes, at::ArrayRef<c10::SymNode> strides) {
+  XLA_CHECK(false) << "XLASymNodeImpl::" << __FUNCTION__
+                   << " has not been implemented.";
+}
+c10::SymNode XLASymNodeImpl::is_non_overlapping_and_dense(
+    at::ArrayRef<c10::SymNode> sizes, at::ArrayRef<c10::SymNode> strides) {
+  XLA_CHECK(false) << "XLASymNodeImpl::" << __FUNCTION__
+                   << " has not been implemented.";
+}
+
+c10::SymNode XLASymNodeImpl::clone() {
+  TORCH_LAZY_FN_COUNTER("xla::size_");
+  return c10::make_intrusive<XLASymNodeImpl>(node());
 }
 
 c10::SymNode XLASymNodeImpl::sym_float() {
@@ -762,6 +827,11 @@ double XLASymNodeImpl::guard_float(const char* file, int64_t line) {
                    << " has not been implemented.";
 }
 
+bool XLASymNodeImpl::guard_bool(const char* file, int64_t line) {
+  // TODO: Take advantages of file and line.
+  return bool_();
+}
+
 int64_t XLASymNodeImpl::int_() {
   std::shared_ptr<torch::lazy::DimensionNode> dn = torch_xla::DimCast(node());
   return dn->getDynamicValue();
@@ -771,6 +841,8 @@ bool XLASymNodeImpl::bool_() {
   auto dn = torch_xla::DimCast(node());
   return dn->getDynamicValue() != 0;
 }
+
+bool XLASymNodeImpl::has_hint() { return true; }
 
 std::string XLASymNodeImpl::str() {
   return "<=" + std::to_string(DimCast(node().get())->getStaticValue());
