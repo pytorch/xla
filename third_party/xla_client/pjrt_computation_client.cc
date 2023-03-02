@@ -89,7 +89,7 @@ PjRtComputationClient::PjRtComputationClient() {
   } else if (device_type == "GPU") {
     TF_VLOG(1) << "Initializing PjRt GPU client...";
     bool async = sys_util::GetEnvBool(env::kEnvPjrtAsyncGpuClient, true);
-    int local_rank = sys_util::GetEnvInt(env::kEnvLocalRank, 0);
+    int local_rank = sys_util::GetEnvInt(env::kEnvPjRtLocalRank, 0);
     std::string dist_service_addr =
         sys_util::GetEnvString(env::kEnvPjrtDistServiceAddr, "");
     auto distributed_client =

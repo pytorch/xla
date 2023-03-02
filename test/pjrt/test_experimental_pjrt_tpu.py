@@ -25,6 +25,12 @@ class TestExperimentalPjrtTpu(parameterized.TestCase):
     try:
       tpu_env = tpu.get_tpu_env()
       self.accelerator_type = tpu_env['ACCELERATOR_TYPE']
+      # Number of logical devices per single-host TPU
+      self.num_devices = {
+          'v2-8': 8,
+          'v3-8': 8,
+          'v4-8': 4,
+      }[self.accelerator_type]
     except requests.HTTPError as e:
       raise EnvironmentError(
           'Failed to get TPU metadata. Are you running on a TPU?') from e
@@ -112,16 +118,7 @@ class TestExperimentalPjrtTpu(parameterized.TestCase):
 
     xmp.spawn(_assert, nprocs=1)
 
-  @absltest.skipIf(
-      tpu.version() <= 2,
-      'This test is not currently supported on v2 TPUVMs or earlier.')
   def test_xla_devices_single_process_one_chip_one_device_spawn(self):
-    accelerators = ['v3-8', 'v4-8']
-
-    if self.accelerator_type not in accelerators:
-      raise NotImplementedError('Test not implemented for {}'.format(
-          self.accelerator_type))
-
     # Avoid initializing the TPU client in the parent process
     with concurrent.futures.ProcessPoolExecutor(max_workers=1) as executor:
       executor.submit(self._fail_on_nonfirst_device).result()
@@ -130,23 +127,12 @@ class TestExperimentalPjrtTpu(parameterized.TestCase):
       tpu.version() <= 2,
       'This test is not currently supported on v2 TPUVMs or earlier.')
   def test_default_xla_devices(self):
-    accelerator_num_devices = {
-        'v3-8': 8,
-        'v4-8': 4,
-    }
-
-    if self.accelerator_type not in accelerator_num_devices:
-      raise NotImplementedError('Test not implemented for {}'.format(
-          self.accelerator_type))
-    expected_num_devices = accelerator_num_devices[self.accelerator_type]
-
     with concurrent.futures.ProcessPoolExecutor(max_workers=1) as e:
       f = e.submit(xm.get_xla_supported_devices, 'TPU')
       devices = [torch.device(d) for d in f.result()]
 
     self.assertListEqual(
-        devices,
-        [torch.device(f'xla:{i}') for i in range(expected_num_devices)])
+        devices, [torch.device(f'xla:{i}') for i in range(self.num_devices)])
 
   @parameterized.named_parameters(('xla_model', xm.get_ordinal),
                                   ('pjrt', pjrt.global_ordinal))
@@ -154,19 +140,9 @@ class TestExperimentalPjrtTpu(parameterized.TestCase):
       tpu.version() <= 2,
       'This test is not currently supported on v2 TPUVMs or earlier.')
   def test_global_ordinal(self, ordinal_func):
-    accelerator_num_devices = {
-        'v3-8': 8,
-        'v4-8': 4,
-    }
-
-    if self.accelerator_type not in accelerator_num_devices:
-      raise NotImplementedError('Test not implemented for {}'.format(
-          self.accelerator_type))
-    expected_num_devices = accelerator_num_devices[self.accelerator_type]
-
     results = pjrt._run_multiprocess(ordinal_func)
     values = list(results.values())
-    self.assertListEqual(sorted(values), list(range(expected_num_devices)))
+    self.assertListEqual(sorted(values), list(range(self.num_devices)))
 
   @parameterized.named_parameters(('xla_model', xm.get_local_ordinal),
                                   ('pjrt', pjrt.local_ordinal))
@@ -174,19 +150,8 @@ class TestExperimentalPjrtTpu(parameterized.TestCase):
       tpu.version() <= 2,
       'This test is not currently supported on v2 TPUVMs or earlier.')
   def test_local_ordinal(self, ordinal_func):
-    accelerator_num_devices = {
-        'v3-8': 8,
-        'v4-8': 4,
-    }
-
-    if self.accelerator_type not in accelerator_num_devices:
-      raise NotImplementedError('Test not implemented for {}'.format(
-          self.accelerator_type))
-    expected_num_devices = accelerator_num_devices[self.accelerator_type]
-
     results = pjrt._run_multiprocess(ordinal_func)
-    values = list(results.values())
-    self.assertListEqual(sorted(values), list(range(expected_num_devices)))
+    self.assertCountEqual(results.values(), list(range(self.num_devices)))
 
   @staticmethod
   def _local_ordinal_with_discontiguous_global_ordinal_v4():
@@ -202,7 +167,7 @@ class TestExperimentalPjrtTpu(parameterized.TestCase):
   def test_local_ordinal_with_discontiguous_global_ordinal_v4(self):
     results = pjrt._run_multiprocess(
         self._local_ordinal_with_discontiguous_global_ordinal_v4)
-    self.assertSameElements(results.values(), [0, 1, 2, 3])
+    self.assertCountEqual(results.values(), [0, 1, 2, 3])
 
   @absltest.skipIf(tpu.version() < 4, "Not implemented")
   def test_local_ordinal_with_discontiguous_global_ordinal_v4_threaded(self):
@@ -211,7 +176,7 @@ class TestExperimentalPjrtTpu(parameterized.TestCase):
 
     results = pjrt._run_multiprocess(
         self._local_ordinal_with_discontiguous_global_ordinal_v4)
-    self.assertSameElements(results.values(), [0, 1, 2, 3])
+    self.assertCountEqual(results.values(), [0, 1, 2, 3])
 
   @staticmethod
   def _spawn_threads() -> Dict[int, torch.device]:
@@ -220,26 +185,13 @@ class TestExperimentalPjrtTpu(parameterized.TestCase):
 
     return results
 
-  @absltest.skipIf(
-      tpu.version() <= 2,
-      'This test is not currently supported on v2 TPUVMs or earlier.')
   def test_spawn_threads(self):
-    accelerator_num_devices = {
-        'v3-8': 8,
-        'v4-8': 4,
-    }
-
-    if self.accelerator_type not in accelerator_num_devices:
-      raise NotImplementedError('Test not implemented for {}'.format(
-          self.accelerator_type))
-    expected_num_devices = accelerator_num_devices[self.accelerator_type]
-
     with concurrent.futures.ProcessPoolExecutor(max_workers=1) as e:
       results = e.submit(self._spawn_threads).result()
 
       self.assertDictEqual(
           results,
-          {i: torch.device(f'xla:{i}') for i in range(expected_num_devices)})
+          {i: torch.device(f'xla:{i}') for i in range(self.num_devices)})
 
   @staticmethod
   def _device_attributes():
