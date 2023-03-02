@@ -201,7 +201,7 @@ DISABLED_TORCH_TESTS_ANY = {
         'test_random_to_xla',  # doesn't raise
         'test_copy_',  # test against complex32 which is nto supported
         'test_assertRaisesRegex_ignore_msg_non_native_device_xla',  # segfault on wheel sanity test
-        'test_index_reduce',  # TODO @wonjoo fails with functionalization
+        'test_index_reduce',  # Broke by functionalization, pytorch/pytorch#94471
         'test_logcumsumexp_xla',  # doesn't raise, pytorch/pytorch#92912
         'test_narrow_copy_non_contiguous',  # the test is added for CPU, pytorch/pytorch#91789
     },
@@ -283,8 +283,8 @@ DISABLED_TORCH_TESTS_ANY = {
         'test_CTCLoss_no_batch_dim_xla',  # Value out of range
         'test_upsamplingBilinear2d_xla',  # precision on GPU/TPU, slow compilation on CPU
         # torch.autograd.gradcheck.GradcheckError: Jacobian mismatch for output 0 with respect to input 0
-        'test_GRU_grad_and_gradgrad_xla_float64',  # TODO @wonjoo fails with functionalization
-        'test_LSTM_grad_and_gradgrad_xla_float64',  # TODO @wonjoo fails with functionalization
+        'test_GRU_grad_and_gradgrad_xla_float64',  # Broke by functionalization, #4711
+        'test_LSTM_grad_and_gradgrad_xla_float64',  # Broke by functionalization, #4711
     },
 
     # test/nn/test_dropout.py

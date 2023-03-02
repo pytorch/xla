@@ -122,7 +122,7 @@ class DynamoTrainingBasicTest(unittest.TestCase):
     assert torch.allclose(res_cpu_3, res_xla_dynamo_3.cpu())
     assert torch.allclose(input.grad, xla_input.grad.cpu())
 
-  @unittest.skip("New failures")
+  @unittest.skip("Broke by functionalization")
   def test_resnet18(self):
     torch._dynamo.reset()
     met.clear_counters()
