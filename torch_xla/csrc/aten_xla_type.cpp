@@ -104,9 +104,10 @@ void CheckSubOperandTypes(at::ScalarType type1, at::ScalarType type2) {
 
 c10::optional<at::ScalarType> PromoteIntegralType(
     at::ScalarType src_dtype, const c10::optional<at::ScalarType>& opt_dtype) {
-  return opt_dtype.has_value() ? opt_dtype.value()
-         : at::isIntegralType(src_dtype, /*includeBool=*/true) ? at::kLong
-                                                               : opt_dtype;
+  return opt_dtype.has_value()
+             ? opt_dtype.value()
+             : at::isIntegralType(src_dtype, /*includeBool=*/true) ? at::kLong
+                                                                   : opt_dtype;
 }
 
 bool IsTypeWithLargerRangeThanLong(torch::ScalarType dtype) {
@@ -539,7 +540,7 @@ at::Tensor XLANativeFunctions::_to_copy(
   // Case 1: Materialize the tensor.
   if (device && device->type() != c10::kXLA) {
     XLA_CHECK(device->type() == c10::kCPU)
-        << "only cpu device is supported in _to_copy." << std::endl;
+        << "only cpu device is supported in _to_copy.";
     auto self_tensor = bridge::GetXlaTensor(self);
     auto eager_tensor = self_tensor->ToTensor(/*detached=*/true);
 

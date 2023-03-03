@@ -254,7 +254,7 @@ ComputationClient::DataPtr PjRtComputationClient::ReplicateShardedData(
                << ", shape=" << handle->shape() << ")";
     xla::XlaBuilder b("ReplicateShardedData");
     xla::Shape shape = sharded_data->shape();
-    b.SetSharding(sharded_data->GetSharding().value());
+    b.SetSharding(sharded_data->GetSharding());
 
     // perform a simple identity calculation to reassemble the input as
     // replicated output.

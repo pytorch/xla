@@ -239,5 +239,55 @@ TEST_F(XLAShardingTest, InputHandler) {
                                  at::kFloat));
 }
 
+TEST_F(XLAShardingTest, OutputHandler) {
+  if (xla::sys_util::GetEnvString(xla::env::kEnvPjRtDevice, "") == "") {
+    GTEST_SKIP() << "`PJRT_DEVICE` is not set.";
+  }
+
+  std::vector<std::string> devices =
+      xla::ComputationClient::Get()->GetLocalDevices();
+
+  // Prepare an input vecotr `outputs` with 2 arguments per device.
+  std::vector<std::vector<xla::ComputationClient::DataPtr>> outputs;
+  outputs.reserve(devices.size());
+  at::Tensor tensor = at::ones({8}, at::TensorOptions(at::kFloat));
+  for (auto device : devices) {
+    outputs.push_back(
+        UnwrapXlaData(CreateTensorsData({tensor, tensor}, {device, device})));
+  }
+
+  xla::Shape tensor_shape =
+      CreateComputationShapeFromTensor(tensor, GetDefaultDevice());
+  auto sharding_spec = std::make_shared<XLATensor::ShardingSpec>(
+      xla::HloSharding::Tile1D(
+          CreateComputationShapeFromTensor(tensor, GetDefaultDevice()),
+          devices.size())
+          .ToProto(),
+      tensor_shape);
+  std::vector<XLATensor::ShardingSpecPtr> sharding_specs{sharding_spec,
+                                                         sharding_spec};
+
+  // Shard a PjRtData into a PjRtShardedData.
+  std::vector<xla::ComputationClient::DataPtr> sharded_outputs =
+      ShardingUtil::OutputHandler(outputs, sharding_specs,
+                                  /*replicated_output=*/true);
+  EXPECT_EQ(sharded_outputs.size(), 2);
+  auto shards =
+      xla::ComputationClient::Get()->GetDataShards(sharded_outputs[0]);
+  EXPECT_EQ(shards.size(), devices.size());
+  EXPECT_TRUE(
+      !xla::Shape::Equal().IgnoreLayout()(shards[0]->shape(), tensor_shape));
+
+  // Wrap sharded data into a PjRtShardedData with `devices.size()` shards.
+  std::vector<xla::ComputationClient::DataPtr> wrapped_outputs =
+      ShardingUtil::OutputHandler(outputs, sharding_specs,
+                                  /*replicated_output=*/false);
+  EXPECT_EQ(wrapped_outputs.size(), 2);
+  shards = xla::ComputationClient::Get()->GetDataShards(wrapped_outputs[0]);
+  EXPECT_EQ(shards.size(), devices.size());
+  EXPECT_TRUE(
+      xla::Shape::Equal().IgnoreLayout()(shards[0]->shape(), tensor_shape));
+}
+
 }  // namespace cpp_test
 }  // namespace torch_xla

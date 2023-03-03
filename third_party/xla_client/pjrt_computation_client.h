@@ -202,10 +202,10 @@ class PjRtComputationClient : public ComputationClient {
       return true;
     }
 
-    std::optional<xla::OpSharding> GetSharding() { return sharding; }
+    xla::OpSharding GetSharding() { return sharding; }
 
     std::vector<std::shared_ptr<PjRtData>> shards;
-    std::optional<xla::OpSharding> sharding;
+    xla::OpSharding sharding;
   };
 
   struct PjRtComputation : public Computation {

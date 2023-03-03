@@ -171,16 +171,6 @@ class XLAGraphExecutor : public torch::lazy::LazyGraphExecutor {
                        const torch::lazy::BackendDevice& device);
 
  private:
-  struct ShardingShapeData {
-    ShardingShapeData(xla::Shape full_shape, xla::Shape sharded_shape,
-                      size_t tensor_index)
-        : full_shape(full_shape),
-          sharded_shape(sharded_shape),
-          tensor_index(tensor_index){};
-    xla::Shape full_shape;
-    xla::Shape sharded_shape;
-    size_t tensor_index;
-  };
   // This is just to group results from compile(). Since our computation is
   // different, we don't reuse the upstream CompilationResult.
   struct CompilationResult {

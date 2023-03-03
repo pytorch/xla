@@ -271,6 +271,7 @@ class XLATensor : public torch::lazy::LazyTensor {
         : sharding(sharding), shape(shape) {}
 
     xla::OpSharding sharding;
+    // Optional source tensor shape unpartitioned.
     std::optional<xla::Shape> shape;
   };
 

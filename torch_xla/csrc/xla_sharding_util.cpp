@@ -55,7 +55,6 @@ bool ShardingUtil::SetHloSharding(LoweringContext* lowering_ctx) {
     const torch::lazy::Node* node = elem.first.node;
     const XlaNode* xla_node = dynamic_cast<const XlaNode*>(node);
     auto instruction = XlaBuilderFriend::GetInstruction(elem.second);
-
     if (xla_node->GetSharding() != nullptr) {
       *instruction->mutable_sharding() = *xla_node->GetSharding();
       is_sharded = true;
@@ -240,7 +239,7 @@ std::vector<xla::ComputationClient::DataPtr> ShardingUtil::OutputHandler(
     if (sharding &&
         (sharding->sharding.type() != xla::OpSharding::REPLICATED)) {
       if (replicated_output) {
-        // Reshards replicated output result with `sharding`.
+        // Reshards replicated output if `sharding` is present.
         std::vector<at::Tensor> tensors =
             XlaDataToTensors({WrapXlaData(sharded_results[0][i])}, at::kFloat);
         outputs.push_back(UnwrapXlaData(CreateTensorsData(
@@ -251,7 +250,7 @@ std::vector<xla::ComputationClient::DataPtr> ShardingUtil::OutputHandler(
         // TODO(yeounoh) consider propagating input sharding to output.
         std::vector<xla::ComputationClient::DataPtr> shards;
         shards.reserve(sharded_results.size());
-        for (int j = 0; j < shards.size(); ++j) {
+        for (int j = 0; j < sharded_results.size(); ++j) {
           XLA_CHECK(sharded_results[j][i]->HasValue());
           shards.push_back(sharded_results[j][i]);
         }

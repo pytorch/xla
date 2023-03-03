@@ -848,7 +848,7 @@ std::vector<torch::lazy::BackendDataPtr> XLAGraphExecutor::SetTensorData(
       tensor->data()->view = nullptr;
       tensor->data()->tensor_data = c10::nullopt;
     }
-    // TODO(yeounoh) we create sharded data placeholder, this will be used to
+    // Create sharded data placeholder, this will be used to
     // hold the corresponding computation results.
     if (tensor->sharding_spec()) {
       auto sharding = tensor->sharding_spec();
@@ -949,7 +949,7 @@ XLAGraphExecutor::ScheduleSyncTensorsGraph(
         TF_VLOG(3) << "Executing IR graph hash "
                    << torch::lazy::HashToString(hash)
                    << " on devices: " << absl::StrJoin(devices, ",");
-        // TODO(yeounoh) OutputHandler creates sharded data for for sharded
+        // OutputHandler creates sharded data for for sharded
         // tensor results. Both sharded and unsharded results should be
         // "Assign"ed to the corresponding data placeholders.
         std::vector<xla::ComputationClient::DataPtr> outputs =
@@ -1177,11 +1177,6 @@ XLAGraphExecutor::CompilationResult XLAGraphExecutor::Compile(
   xla::XlaComputation computation = ConsumeValue(lowering_ctx.BuildXla());
   xla::ProgramShape program_shape = ConsumeValue(computation.GetProgramShape());
 
-  TF_VLOG(5) << "Initial program result shape: "
-             << program_shape.result().ToString();
-  const std::vector<xla::Shape>& result_tuple_shapes =
-      program_shape.result().tuple_shapes();
-
   bool should_wrap_parameter =
       (program_shape.parameters_size() >= parameter_wrapping_threadshold) &&
       using_pjrt;
@@ -1213,7 +1208,6 @@ XLAGraphExecutor::CompilationResult XLAGraphExecutor::Compile(
              << coll.device << " done!";
   TF_VLOG(5) << "Compiled program shape "
              << computations.front()->program_shape().ToString() << std::endl;
-
   TF_VLOG(5)
       << "Graph hash " << torch::lazy::HashToString(coll.hash)
       << " is computation hash "
