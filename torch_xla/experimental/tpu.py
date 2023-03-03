@@ -1,4 +1,5 @@
 import functools
+import glob
 import operator
 import os
 import re
@@ -70,17 +71,24 @@ def _get_metadata(key: str) -> str:
   return resp.text
 
 
-def process_bounds_size(default: int = 1) -> int:
+def process_bounds_size() -> Optional[int]:
   """Returns number of processes across all TPU hosts."""
   process_bounds = xu.getenv_as(xenv.TPU_PROCESS_BOUNDS, str)
-  return MeshShape.from_string(
-      process_bounds).size if process_bounds else default
+  return MeshShape.from_string(process_bounds).size if process_bounds else None
 
 
-def num_local_processes(local_chips: int = 4) -> int:
+def num_available_chips() -> int:
+  """Returns the number of local chips in /dev/"""
+  return len(glob.glob('/dev/accel?'))
+
+
+def num_local_processes() -> int:
   """Returns number of processes to create on this host."""
+  local_chips = num_available_chips()
+  total_processes = process_bounds_size()
   # Don't create more processes than local chips
-  return min(local_chips, process_bounds_size(default=local_chips))
+  return local_chips if not total_processes else min(local_chips,
+                                                     total_processes)
 
 
 def task_id() -> Optional[int]:

@@ -11,7 +11,7 @@ from unittest import mock
 class TestExperimentalTpu(parameterized.TestCase):
 
   @parameterized.named_parameters(
-      ('default_one_host', None, 1),
+      ('default_one_host', None, None),
       ('one_process_one_host', '1,1,1', 1),
       ('multi_process_one_host', '2,2,1', 4),
       ('multi_process_v4-16', '2,2,2', 8),
@@ -30,10 +30,13 @@ class TestExperimentalTpu(parameterized.TestCase):
       ('multi_process_one_host', '2,2,1', 4),
       ('multi_process_v4-16', '2,2,2', 4),
       ('multi_process_v4-32', '2,2,4', 4),
+      ('single_chip_default', None, 1, 1),
   )
-  def test_num_local_processes(self, process_bounds, expected):
+  def test_num_local_processes(self, process_bounds, expected, num_chips=4):
     envs = {xenv.TPU_PROCESS_BOUNDS: process_bounds} if process_bounds else {}
-    with mock.patch.dict(os.environ, envs, clear=True):
+    with mock.patch.dict(
+        os.environ, envs, clear=True), mock.patch.object(
+            tpu, 'num_available_chips', return_value=num_chips):
       n = tpu.num_local_processes()
 
     self.assertEqual(n, expected)
