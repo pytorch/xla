@@ -14,11 +14,14 @@ void hlo_mhlo_hlo_roundtrip_helper(HloModuleProto* proto) {
   auto status = ConvertHloToMlirHlo(mlir_module, proto, /*import_all_computations=*/false);
   if (!status.ok()) {
     std::cout << "hlo2mhlo not ok" << std::endl;
+    return;
   }
   if (!mlir::verify(mlir_module).succeeded()) {
     std::cout << "verify not ok" << std::endl;
-    TF_ASSIGN_OR_RETURN(auto hlo_module, xla::util::CreateModuleFromProto(*proto));
-    std::cout << hlo_module->ToString() << std::endl;
+    printHloModuleProto(proto);
+    // TF_ASSIGN_OR_RETURN(auto hlo_module, xla::util::CreateModuleFromProto(*proto));
+    // std::cout << hlo_module->ToString() << std::endl;
+    return;
   }
   xla::HloProto hlo_proto;
   mlir::MlirToHloConversionOptions options;
@@ -27,8 +30,14 @@ void hlo_mhlo_hlo_roundtrip_helper(HloModuleProto* proto) {
     options);
   if (!status1.ok()) {
     std::cout << "mhlo2hlo not ok" << std::endl;
+    return;
   }
   proto->Swap(hlo_proto.mutable_hlo_module());
+}
+
+void printHloModuleProto(const HloModuleProto* proto) {
+  TF_ASSIGN_OR_RETURN(auto hlo_module, xla::util::CreateModuleFromProto(*proto));
+  std::cout << hlo_module->ToString() << std::endl;
 }
 
 }

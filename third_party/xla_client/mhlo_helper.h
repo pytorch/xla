@@ -5,6 +5,8 @@
 
 namespace xla {
     void hlo_mhlo_hlo_roundtrip_helper(HloModuleProto* proto);
+
+    void printHloModuleProto(const HloModuleProto* proto);
 }
 
 #endif

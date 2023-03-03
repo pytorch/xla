@@ -1176,6 +1176,7 @@ XLAGraphExecutor::CompilationResult XLAGraphExecutor::Compile(
 
   xla::XlaComputation computation = ConsumeValue(lowering_ctx.BuildXla());
   hlo_mhlo_hlo_roundtrip_helper(computation.mutable_proto());
+  printHloModuleProto(&computation.proto());
   xla::ProgramShape program_shape = ConsumeValue(computation.GetProgramShape());
 
   bool should_wrap_parameter =
