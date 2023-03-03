@@ -45,10 +45,9 @@ xla::Shape NodeOutputShape(const torch::lazy::Value& input, bool eigenvectors,
 }  // namespace
 
 SymEig::SymEig(const torch::lazy::Value& input, bool eigenvectors, bool lower)
-    : XlaNode(
-          torch::lazy::OpKind(at::aten::linalg_eigh), {input},
-          [&]() { return NodeOutputShape(input, eigenvectors, lower); },
-          /*num_outputs=*/2, torch::lazy::MHash(eigenvectors, lower)),
+    : XlaNode(torch::lazy::OpKind(at::aten::linalg_eigh), {input},
+              [&]() { return NodeOutputShape(input, eigenvectors, lower); },
+              /*num_outputs=*/2, torch::lazy::MHash(eigenvectors, lower)),
       eigenvectors_(eigenvectors),
       lower_(lower) {}
 

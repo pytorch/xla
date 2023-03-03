@@ -22,10 +22,9 @@ xla::Shape NodeOutputShape(const torch::lazy::Value& input,
 
 IndexSelect::IndexSelect(const torch::lazy::Value& input, int64_t dim,
                          const torch::lazy::Value& index)
-    : XlaNode(
-          torch::lazy::OpKind(at::aten::index_select), {input, index},
-          [&]() { return NodeOutputShape(input, index, dim); },
-          /*num_outputs=*/1, torch::lazy::MHash(dim)),
+    : XlaNode(torch::lazy::OpKind(at::aten::index_select), {input, index},
+              [&]() { return NodeOutputShape(input, index, dim); },
+              /*num_outputs=*/1, torch::lazy::MHash(dim)),
       dim_(dim) {}
 
 torch::lazy::NodePtr IndexSelect::Clone(torch::lazy::OpList operands) const {

@@ -26,13 +26,13 @@ xla::Shape NodeOutputShape(const torch::lazy::Value& input,
 Logsumexp::Logsumexp(const torch::lazy::Value& input,
                      std::vector<int64_t> dimensions,
                      bool keep_reduced_dimensions)
-    : XlaNode(
-          torch::lazy::OpKind(at::aten::logsumexp), {input},
-          [&]() {
-            return NodeOutputShape(input, dimensions, keep_reduced_dimensions);
-          },
-          /*num_outputs=*/1,
-          torch::lazy::MHash(dimensions, keep_reduced_dimensions)),
+    : XlaNode(torch::lazy::OpKind(at::aten::logsumexp), {input},
+              [&]() {
+                return NodeOutputShape(input, dimensions,
+                                       keep_reduced_dimensions);
+              },
+              /*num_outputs=*/1,
+              torch::lazy::MHash(dimensions, keep_reduced_dimensions)),
       dimensions_(std::move(dimensions)),
       keep_reduced_dimensions_(keep_reduced_dimensions) {}
 

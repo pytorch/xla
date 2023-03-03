@@ -54,10 +54,9 @@ torch::lazy::NodePtr EinsumBackward::Clone(torch::lazy::OpList operands) const {
 EinsumBackward::EinsumBackward(const torch::lazy::Value& grad_output,
                                const torch::lazy::OpList& inputs,
                                const std::string equation)
-    : XlaNode(
-          xla_einsum_backward, GetOperandList(inputs, grad_output),
-          [&]() { return NodeOutputShapes(grad_output, inputs, equation); },
-          /*num_outputs=*/inputs.size(), torch::lazy::MHash(equation)),
+    : XlaNode(xla_einsum_backward, GetOperandList(inputs, grad_output),
+              [&]() { return NodeOutputShapes(grad_output, inputs, equation); },
+              /*num_outputs=*/inputs.size(), torch::lazy::MHash(equation)),
       equation_(equation) {}
 
 XlaOpVector EinsumBackward::Lower(LoweringContext* loctx) const {

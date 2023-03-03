@@ -24,9 +24,9 @@
 #include "tensorflow/compiler/xla/service/hlo_parser.h"
 #include "tensorflow/core/example/example.pb.h"
 #include "tensorflow/core/example/feature.pb.h"
-#include "tensorflow/python/profiler/internal/profiler_pywrap_impl.h"
 #include "tensorflow/tsl/platform/env.h"
 #include "tensorflow/tsl/profiler/lib/traceme.h"
+#include "tensorflow/python/profiler/internal/profiler_pywrap_impl.h"
 #include "third_party/xla_client/computation_client.h"
 #include "third_party/xla_client/mesh_service.h"
 #include "third_party/xla_client/metrics.h"
@@ -345,8 +345,8 @@ void SyncLiveTensors(const std::string& device_str,
 
 void StepMarker(const std::string& device_str,
                 const std::vector<std::string>& devices, bool wait) {
-  tsl::profiler::TraceMe activity("StepMarker",
-                                  tsl::profiler::TraceMeLevel::kInfo);
+  tsl::profiler::TraceMe activity(
+      "StepMarker", tsl::profiler::TraceMeLevel::kInfo);
   torch::lazy::BackendDevice device = GetDeviceOrCurrent(device_str);
   XLAGraphExecutor::Get()->SyncLiveTensorsGraph(&device, devices, wait);
   XLAGraphExecutor::Get()->MarkStep(device);
@@ -591,16 +591,17 @@ py::object RecordReadExample(
   return example;
 }
 
-std::unique_ptr<tsl::RandomAccessFile> OpenTfFile(const std::string& path) {
+std::unique_ptr<tensorflow::RandomAccessFile> OpenTfFile(
+    const std::string& path) {
   tsl::Env* env = tsl::Env::Default();
-  std::unique_ptr<tsl::RandomAccessFile> file;
+  std::unique_ptr<tensorflow::RandomAccessFile> file;
   XLA_CHECK_OK(env->NewRandomAccessFile(path, &file));
   return file;
 }
 
 py::object StatTfFile(const std::string& path) {
   tsl::Env* env = tsl::Env::Default();
-  tsl::FileStatistics stat;
+  tensorflow::FileStatistics stat;
   {
     NoGilSection nogil;
     XLA_CHECK_OK(env->Stat(path, &stat));
@@ -612,7 +613,7 @@ py::object StatTfFile(const std::string& path) {
   return py_stat;
 }
 
-py::bytes ReadTfFile(tsl::RandomAccessFile* file, uint64_t offset,
+py::bytes ReadTfFile(tensorflow::RandomAccessFile* file, uint64_t offset,
                      size_t size) {
   static const size_t kMinReadSize = 1024 * 1024;
   std::unique_ptr<char[]> buffer;
@@ -632,7 +633,7 @@ py::bytes ReadTfFile(tsl::RandomAccessFile* file, uint64_t offset,
         size_t tsize =
             (i + 1 < num_threads) ? block_size : (size - i * block_size);
 
-        tsl::StringPiece result;
+        tensorflow::StringPiece result;
         XLA_CHECK_OK(
             file->Read(offset + base, tsize, &result, buffer.get() + base));
       };
@@ -644,18 +645,19 @@ py::bytes ReadTfFile(tsl::RandomAccessFile* file, uint64_t offset,
   return py::bytes(buffer.get(), size);
 }
 
-std::unique_ptr<tsl::WritableFile> CreateTfFile(const std::string& path) {
+std::unique_ptr<tensorflow::WritableFile> CreateTfFile(
+    const std::string& path) {
   tsl::Env* env = tsl::Env::Default();
-  std::unique_ptr<tsl::WritableFile> file;
+  std::unique_ptr<tensorflow::WritableFile> file;
   XLA_CHECK_OK(env->NewWritableFile(path, &file));
   return file;
 }
 
-void WriteTfFile(tsl::WritableFile* file, const std::string& data) {
-  XLA_CHECK_OK(file->Append(tsl::StringPiece(data.data(), data.size())));
+void WriteTfFile(tensorflow::WritableFile* file, const std::string& data) {
+  XLA_CHECK_OK(file->Append(tensorflow::StringPiece(data.data(), data.size())));
 }
 
-void FlushTfFile(tsl::WritableFile* file) {
+void FlushTfFile(tensorflow::WritableFile* file) {
   XLA_CHECK_OK(file->Flush());
   XLA_CHECK_OK(file->Sync());
 }
@@ -834,14 +836,14 @@ void BuildProfilerSubmodule(py::module* m) {
   py::class_<xla::profiler::ProfilerServer,
              std::unique_ptr<xla::profiler::ProfilerServer>>
       profiler_server_class(profiler, "ProfilerServer");
-  profiler.def(
-      "start_server",
-      [](int port) -> std::unique_ptr<xla::profiler::ProfilerServer> {
-        auto server = absl::make_unique<xla::profiler::ProfilerServer>();
-        server->Start(port);
-        return server;
-      },
-      py::arg("port"));
+  profiler.def("start_server",
+               [](int port) -> std::unique_ptr<xla::profiler::ProfilerServer> {
+                 auto server =
+                     absl::make_unique<xla::profiler::ProfilerServer>();
+                 server->Start(port);
+                 return server;
+               },
+               py::arg("port"));
 
   profiler.def(
       "trace",
@@ -1222,59 +1224,52 @@ void InitXlaModuleBindings(py::module m) {
     }
     return dict;
   });
-  m.def(
-      "_xla_set_rng_seed",
-      [](uint64_t seed, const std::string& device) {
-        SetRngSeed(seed, device);
-      },
-      py::arg("seed") = 101, py::arg("device") = "");
-  m.def(
-      "_xla_get_rng_seed",
-      [](const std::string& device) { return GetRngSeed(device); },
-      py::arg("device") = "");
-  m.def(
-      "_xla_sync_multi",
-      [](const std::vector<at::Tensor>& tensors,
-         const std::vector<std::string>& devices, bool wait,
-         bool sync_xla_data) {
-        NoGilSection nogil;
-        SyncTensors(tensors, devices, wait, sync_xla_data);
-      },
-      py::arg("tensors"), py::arg("devices"), py::arg("wait") = true,
-      py::arg("sync_xla_data") = true);
-  m.def(
-      "_xla_warm_up_cache",
-      [](const std::vector<at::Tensor>& tensors,
-         const std::vector<std::string>& devices) {
-        NoGilSection nogil;
-        SyncTensors(tensors, devices, /*wait=*/false, /*sync_xla_data=*/false,
-                    /*warm_up_cache_only=*/true);
-      },
-      py::arg("tensors"), py::arg("devices"));
-  m.def(
-      "_xla_sync_live_tensors",
-      [](const std::string& device, const std::vector<std::string>& devices,
-         bool wait) {
-        NoGilSection nogil;
-        SyncLiveTensors(device, devices, wait);
-      },
-      py::arg("device") = "", py::arg("devices"), py::arg("wait") = true);
-  m.def(
-      "_xla_step_marker",
-      [](const std::string& device, const std::vector<std::string>& devices,
-         bool wait) {
-        NoGilSection nogil;
-        StepMarker(device, devices, wait);
-      },
-      py::arg("device") = "", py::arg("devices"), py::arg("wait") = true);
-  m.def(
-      "_xla_wait_device_ops",
-      [](const std::vector<std::string>& devices) {
-        NoGilSection nogil;
-        XLAGraphExecutor::Get()->WaitDeviceOps(devices);
-        xla::ComputationClient::Get()->WaitDeviceOps(devices);
-      },
-      py::arg("devices"));
+  m.def("_xla_set_rng_seed",
+        [](uint64_t seed, const std::string& device) {
+          SetRngSeed(seed, device);
+        },
+        py::arg("seed") = 101, py::arg("device") = "");
+  m.def("_xla_get_rng_seed",
+        [](const std::string& device) { return GetRngSeed(device); },
+        py::arg("device") = "");
+  m.def("_xla_sync_multi",
+        [](const std::vector<at::Tensor>& tensors,
+           const std::vector<std::string>& devices, bool wait,
+           bool sync_xla_data) {
+          NoGilSection nogil;
+          SyncTensors(tensors, devices, wait, sync_xla_data);
+        },
+        py::arg("tensors"), py::arg("devices"), py::arg("wait") = true,
+        py::arg("sync_xla_data") = true);
+  m.def("_xla_warm_up_cache",
+        [](const std::vector<at::Tensor>& tensors,
+           const std::vector<std::string>& devices) {
+          NoGilSection nogil;
+          SyncTensors(tensors, devices, /*wait=*/false, /*sync_xla_data=*/false,
+                      /*warm_up_cache_only=*/true);
+        },
+        py::arg("tensors"), py::arg("devices"));
+  m.def("_xla_sync_live_tensors",
+        [](const std::string& device, const std::vector<std::string>& devices,
+           bool wait) {
+          NoGilSection nogil;
+          SyncLiveTensors(device, devices, wait);
+        },
+        py::arg("device") = "", py::arg("devices"), py::arg("wait") = true);
+  m.def("_xla_step_marker",
+        [](const std::string& device, const std::vector<std::string>& devices,
+           bool wait) {
+          NoGilSection nogil;
+          StepMarker(device, devices, wait);
+        },
+        py::arg("device") = "", py::arg("devices"), py::arg("wait") = true);
+  m.def("_xla_wait_device_ops",
+        [](const std::vector<std::string>& devices) {
+          NoGilSection nogil;
+          XLAGraphExecutor::Get()->WaitDeviceOps(devices);
+          xla::ComputationClient::Get()->WaitDeviceOps(devices);
+        },
+        py::arg("devices"));
   m.def("_xla_counter_names", []() {
     auto counter_names = torch::lazy::GetCounterNames();
     auto xla_counter_names = xla::metrics::GetCounterNames();
@@ -1339,35 +1334,32 @@ void InitXlaModuleBindings(py::module m) {
     torch::lazy::MetricsArena::Get()->ResetMetrics();
     xla::metrics::ClearMetrics();
   });
-  m.def(
-      "_xla_tensors_report",
-      [](size_t nodes_threshold, const std::string& device) {
-        return GetLiveTensorsReport(nodes_threshold, device);
-      },
-      py::arg("nodes_threshold") = 100, py::arg("device") = "");
+  m.def("_xla_tensors_report",
+        [](size_t nodes_threshold, const std::string& device) {
+          return GetLiveTensorsReport(nodes_threshold, device);
+        },
+        py::arg("nodes_threshold") = 100, py::arg("device") = "");
   m.def("_xla_memory_info", [](const std::string& device) -> py::object {
     return GetMemoryInfo(device);
   });
-  m.def(
-      "_xla_set_use_full_mat_mul_precision",
-      [](bool use_full_mat_mul_precision) {
-        XlaHelpers::set_mat_mul_precision(use_full_mat_mul_precision
-                                              ? xla::PrecisionConfig::HIGHEST
-                                              : xla::PrecisionConfig::DEFAULT);
-      },
-      py::arg("use_full_mat_mul_precision") = true);
+  m.def("_xla_set_use_full_mat_mul_precision",
+        [](bool use_full_mat_mul_precision) {
+          XlaHelpers::set_mat_mul_precision(
+              use_full_mat_mul_precision ? xla::PrecisionConfig::HIGHEST
+                                         : xla::PrecisionConfig::DEFAULT);
+        },
+        py::arg("use_full_mat_mul_precision") = true);
 
   py::class_<xla::util::RecordReader, std::shared_ptr<xla::util::RecordReader>>(
       m, "RecordReader");
-  m.def(
-      "_xla_create_tfrecord_reader",
-      [](const std::string& path, const std::string& compression,
-         int64_t buffer_size) {
-        NoGilSection nogil;
-        return CreateRecordReader(path, compression, buffer_size);
-      },
-      py::arg("path"), py::arg("compression") = "",
-      py::arg("buffer_size") = 16 * 1024 * 1024);
+  m.def("_xla_create_tfrecord_reader",
+        [](const std::string& path, const std::string& compression,
+           int64_t buffer_size) {
+          NoGilSection nogil;
+          return CreateRecordReader(path, compression, buffer_size);
+        },
+        py::arg("path"), py::arg("compression") = "",
+        py::arg("buffer_size") = 16 * 1024 * 1024);
   m.def(
       "_xla_tfrecord_read",
       [](const std::shared_ptr<xla::util::RecordReader>& reader) -> py::object {
@@ -1382,9 +1374,9 @@ void InitXlaModuleBindings(py::module m) {
           return RecordReadExample(reader);
         });
 
-  py::class_<tsl::RandomAccessFile>(m, "TfRdFile");
+  py::class_<tensorflow::RandomAccessFile>(m, "TfRdFile");
   m.def("_xla_tffile_open", [](const std::string& path) {
-    std::unique_ptr<tsl::RandomAccessFile> file;
+    std::unique_ptr<tensorflow::RandomAccessFile> file;
     {
       NoGilSection nogil;
       file = OpenTfFile(path);
@@ -1395,13 +1387,13 @@ void InitXlaModuleBindings(py::module m) {
   m.def("_xla_tffile_stat",
         [](const std::string& path) { return StatTfFile(path); });
   m.def("_xla_tffile_read",
-        [](tsl::RandomAccessFile* file, uint64_t offset, size_t size) {
+        [](tensorflow::RandomAccessFile* file, uint64_t offset, size_t size) {
           return ReadTfFile(file, offset, size);
         });
 
-  py::class_<tsl::WritableFile>(m, "TfWrFile");
+  py::class_<tensorflow::WritableFile>(m, "TfWrFile");
   m.def("_xla_tffile_create", [](const std::string& path) {
-    std::unique_ptr<tsl::WritableFile> file;
+    std::unique_ptr<tensorflow::WritableFile> file;
     {
       NoGilSection nogil;
       file = CreateTfFile(path);
@@ -1410,11 +1402,11 @@ void InitXlaModuleBindings(py::module m) {
                     pybind11::return_value_policy::take_ownership);
   });
   m.def("_xla_tffile_write",
-        [](tsl::WritableFile* file, const std::string& data) {
+        [](tensorflow::WritableFile* file, const std::string& data) {
           NoGilSection nogil;
           WriteTfFile(file, data);
         });
-  m.def("_xla_tffile_flush", [](tsl::WritableFile* file) {
+  m.def("_xla_tffile_flush", [](tensorflow::WritableFile* file) {
     NoGilSection nogil;
     FlushTfFile(file);
   });

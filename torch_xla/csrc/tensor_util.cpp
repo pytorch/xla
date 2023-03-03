@@ -365,15 +365,16 @@ void CopyData(D* dest, const S* source, int64_t n, const CopyCasted&) {
 }
 
 template <>
-void CopyData<at::BFloat16, tsl::bfloat16>(at::BFloat16* dest,
-                                           const tsl::bfloat16* source,
-                                           int64_t n, const CopyCasted&) {
+void CopyData<at::BFloat16, tsl::bfloat16>(
+    at::BFloat16* dest, const tsl::bfloat16* source, int64_t n,
+    const CopyCasted&) {
   CheckedMemcpy<at::BFloat16, tsl::bfloat16>(dest, source, n);
 }
 template <>
-void CopyData<tsl::bfloat16, at::BFloat16>(tsl::bfloat16* dest,
-                                           const at::BFloat16* source,
-                                           int64_t n, const CopyCasted&) {
+void CopyData<tsl::bfloat16, at::BFloat16>(tensorflow::bfloat16* dest,
+                                                  const at::BFloat16* source,
+                                                  int64_t n,
+                                                  const CopyCasted&) {
   CheckedMemcpy<tsl::bfloat16, at::BFloat16>(dest, source, n);
 }
 
@@ -526,8 +527,8 @@ void TensorToBufferSType(const at::Tensor& tensor, const xla::Shape& dest_shape,
                          const torch::lazy::BackendDevice& device) {
   switch (dest_shape.element_type()) {
     case xla::PrimitiveType::BF16:
-      TensorToBuffer<SType, tsl::bfloat16>(tensor, dest_shape, dest_buffer,
-                                           dest_buffer_size, device);
+      TensorToBuffer<SType, tsl::bfloat16>(
+          tensor, dest_shape, dest_buffer, dest_buffer_size, device);
       break;
     case xla::PrimitiveType::F16:
       TensorToBuffer<SType, xla::half>(tensor, dest_shape, dest_buffer,
@@ -811,7 +812,7 @@ at::Tensor MakeTensorFromXlaLiteral(const xla::Literal& literal,
       return XlaLiteralToTensorHelper<bool>(literal, dest_element_type);
     case xla::PrimitiveType::BF16:
       return XlaLiteralToTensorHelper<tsl::bfloat16>(literal,
-                                                     dest_element_type);
+                                                            dest_element_type);
     case xla::PrimitiveType::F16:
       return XlaLiteralToTensorHelper<xla::half>(literal, dest_element_type);
     case xla::PrimitiveType::F32:

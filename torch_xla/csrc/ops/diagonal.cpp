@@ -11,12 +11,12 @@ namespace torch_xla {
 
 Diagonal::Diagonal(const torch::lazy::Value& input, int64_t offset,
                    int64_t dim1, int64_t dim2)
-    : XlaNode(
-          torch::lazy::OpKind(at::aten::diagonal), {input},
-          [&]() {
-            return MakeDiagonalShape(GetXlaShape(input), offset, dim1, dim2);
-          },
-          /*num_outputs=*/1, torch::lazy::MHash(offset, dim1, dim2)),
+    : XlaNode(torch::lazy::OpKind(at::aten::diagonal), {input},
+              [&]() {
+                return MakeDiagonalShape(GetXlaShape(input), offset, dim1,
+                                         dim2);
+              },
+              /*num_outputs=*/1, torch::lazy::MHash(offset, dim1, dim2)),
       offset_(offset),
       dim1_(dim1),
       dim2_(dim2) {}

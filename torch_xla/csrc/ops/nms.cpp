@@ -31,13 +31,12 @@ xla::Shape NodeOutputShape(const torch::lazy::Value& boxes,
 Nms::Nms(const torch::lazy::Value& boxes, const torch::lazy::Value& scores,
          const torch::lazy::Value& score_threshold,
          const torch::lazy::Value& iou_threshold, int64_t output_size)
-    : XlaNode(
-          xla_nms, {boxes, scores, score_threshold, iou_threshold},
-          [&]() {
-            return NodeOutputShape(boxes, scores, score_threshold,
-                                   iou_threshold, output_size);
-          },
-          /*num_outputs=*/2, torch::lazy::MHash(output_size)),
+    : XlaNode(xla_nms, {boxes, scores, score_threshold, iou_threshold},
+              [&]() {
+                return NodeOutputShape(boxes, scores, score_threshold,
+                                       iou_threshold, output_size);
+              },
+              /*num_outputs=*/2, torch::lazy::MHash(output_size)),
       output_size_(output_size) {}
 
 torch::lazy::NodePtr Nms::Clone(torch::lazy::OpList operands) const {

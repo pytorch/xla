@@ -20,10 +20,9 @@ xla::Shape NodeOutputShape(const torch::lazy::Value& input,
 }  // namespace
 
 Expand::Expand(const torch::lazy::Value& input, std::vector<int64_t> size)
-    : XlaNode(
-          torch::lazy::OpKind(at::aten::expand), {input},
-          [&]() { return NodeOutputShape(input, size); },
-          /*num_outputs=*/1, torch::lazy::MHash(size)),
+    : XlaNode(torch::lazy::OpKind(at::aten::expand), {input},
+              [&]() { return NodeOutputShape(input, size); },
+              /*num_outputs=*/1, torch::lazy::MHash(size)),
       size_(std::move(size)) {}
 
 torch::lazy::NodePtr Expand::Clone(torch::lazy::OpList operands) const {

@@ -35,16 +35,15 @@ ReduceScatter::ReduceScatter(AllReduceType reduce_type,
                              int64_t scatter_dim, int64_t shard_count,
                              std::vector<std::vector<int64_t>> groups,
                              bool pin_layout)
-    : XlaNode(
-          xla_reduce_scatter, {input, token},
-          [&]() {
-            return NodeOutputShape(reduce_type, input, token, scale,
-                                   scatter_dim, shard_count, groups,
-                                   pin_layout);
-          },
-          /*num_outputs=*/2,
-          torch::lazy::MHash(torch::lazy::GetEnumValue(reduce_type), scale,
-                             scatter_dim, shard_count, groups, pin_layout)),
+    : XlaNode(xla_reduce_scatter, {input, token},
+              [&]() {
+                return NodeOutputShape(reduce_type, input, token, scale,
+                                       scatter_dim, shard_count, groups,
+                                       pin_layout);
+              },
+              /*num_outputs=*/2,
+              torch::lazy::MHash(torch::lazy::GetEnumValue(reduce_type), scale,
+                                 scatter_dim, shard_count, groups, pin_layout)),
       reduce_type_(reduce_type),
       scale_(scale),
       scatter_dim_(scatter_dim),

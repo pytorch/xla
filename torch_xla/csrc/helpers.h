@@ -48,7 +48,8 @@ class XlaHelpers {
         return xla::LiteralUtil::CreateR0<float>(scalar_value);
       case xla::PrimitiveType::BF16:
         return xla::LiteralUtil::CreateR0<tsl::bfloat16>(
-            static_cast<tsl::bfloat16>(static_cast<float>(scalar_value)));
+            static_cast<tsl::bfloat16>(
+                static_cast<float>(scalar_value)));
       case xla::PrimitiveType::F16:
         return xla::LiteralUtil::CreateR0<xla::half>(
             static_cast<xla::half>(static_cast<float>(scalar_value)));

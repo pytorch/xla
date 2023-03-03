@@ -8,15 +8,14 @@ namespace torch_xla {
 
 Linspace::Linspace(const torch::lazy::Value& start,
                    const torch::lazy::Value& end, int64_t steps)
-    : XlaNode(
-          torch::lazy::OpKind(at::aten::linspace), {start, end},
-          [&]() {
-            xla::PrimitiveType dtype =
-                XlaHelpers::PromoteType(GetXlaShape(start).element_type(),
-                                        GetXlaShape(end).element_type());
-            return xla::ShapeUtil::MakeShape(dtype, {steps});
-          },
-          /*num_outputs=*/1, torch::lazy::MHash(steps)),
+    : XlaNode(torch::lazy::OpKind(at::aten::linspace), {start, end},
+              [&]() {
+                xla::PrimitiveType dtype =
+                    XlaHelpers::PromoteType(GetXlaShape(start).element_type(),
+                                            GetXlaShape(end).element_type());
+                return xla::ShapeUtil::MakeShape(dtype, {steps});
+              },
+              /*num_outputs=*/1, torch::lazy::MHash(steps)),
       steps_(steps) {}
 
 torch::lazy::NodePtr Linspace::Clone(torch::lazy::OpList operands) const {

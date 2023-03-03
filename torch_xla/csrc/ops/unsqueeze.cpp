@@ -15,10 +15,9 @@ xla::Shape NodeOutputShape(const torch::lazy::Value& input, int dim) {
 }  // namespace
 
 Unsqueeze::Unsqueeze(const torch::lazy::Value& input, int dim)
-    : XlaNode(
-          torch::lazy::OpKind(at::aten::unsqueeze), {input},
-          [&]() { return NodeOutputShape(input, dim); },
-          /*num_outputs=*/1, torch::lazy::MHash(dim)),
+    : XlaNode(torch::lazy::OpKind(at::aten::unsqueeze), {input},
+              [&]() { return NodeOutputShape(input, dim); },
+              /*num_outputs=*/1, torch::lazy::MHash(dim)),
       dim_(dim) {}
 
 torch::lazy::NodePtr Unsqueeze::Clone(torch::lazy::OpList operands) const {

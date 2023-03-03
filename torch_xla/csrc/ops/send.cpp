@@ -28,10 +28,9 @@ xla::Shape NodeOutputShape(const torch::lazy::Value& input,
 
 Send::Send(const torch::lazy::Value& input, const torch::lazy::Value& token,
            int64_t channel_id)
-    : XlaNode(
-          xla_send, {input, token},
-          [&]() { return NodeOutputShape(input, token, channel_id); },
-          /*num_outputs=*/2, torch::lazy::MHash(channel_id)),
+    : XlaNode(xla_send, {input, token},
+              [&]() { return NodeOutputShape(input, token, channel_id); },
+              /*num_outputs=*/2, torch::lazy::MHash(channel_id)),
       channel_id_(channel_id) {}
 
 torch::lazy::NodePtr Send::Clone(torch::lazy::OpList operands) const {
