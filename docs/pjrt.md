@@ -98,14 +98,6 @@ PJRT_DEVICE=GPU GPU_NUM_DEVICES=4 python3 xla/test/test_train_mp_imagenet.py --f
 Currently, only a single host is supported, and multi-host GPU cluster support
 will be added in an future release.
 
-#### Known Issues
-
-The GPU integration has issues with replica groups in collectives (i.e. the
-`group` parameter of the XLA collective ops). If the replica groups are
-changed, there is a chance that the process will hang. For now, the
-recommendation is to use a single replica group containing all devices, as is
-the case in data parallel training.
-
 ## Key differences from XRT
 
 Although in most cases we expect PjRt and XRT to work mostly interchangeably
