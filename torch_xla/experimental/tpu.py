@@ -72,7 +72,7 @@ def _get_metadata(key: str) -> str:
 
 
 def process_bounds_size() -> Optional[int]:
-  """Returns number of processes across all TPU hosts."""
+  """Returns number of processes across all TPU hosts, or None if unknown."""
   process_bounds = xu.getenv_as(xenv.TPU_PROCESS_BOUNDS, str)
   return MeshShape.from_string(process_bounds).size if process_bounds else None
 
