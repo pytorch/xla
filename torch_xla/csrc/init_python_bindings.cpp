@@ -591,17 +591,17 @@ py::object RecordReadExample(
   return example;
 }
 
-std::unique_ptr<tensorflow::RandomAccessFile> OpenTfFile(
+std::unique_ptr<tsl::RandomAccessFile> OpenTfFile(
     const std::string& path) {
   tsl::Env* env = tsl::Env::Default();
-  std::unique_ptr<tensorflow::RandomAccessFile> file;
+  std::unique_ptr<tsl::RandomAccessFile> file;
   XLA_CHECK_OK(env->NewRandomAccessFile(path, &file));
   return file;
 }
 
 py::object StatTfFile(const std::string& path) {
   tsl::Env* env = tsl::Env::Default();
-  tensorflow::FileStatistics stat;
+  tsl::FileStatistics stat;
   {
     NoGilSection nogil;
     XLA_CHECK_OK(env->Stat(path, &stat));
@@ -613,7 +613,7 @@ py::object StatTfFile(const std::string& path) {
   return py_stat;
 }
 
-py::bytes ReadTfFile(tensorflow::RandomAccessFile* file, uint64_t offset,
+py::bytes ReadTfFile(tsl::RandomAccessFile* file, uint64_t offset,
                      size_t size) {
   static const size_t kMinReadSize = 1024 * 1024;
   std::unique_ptr<char[]> buffer;
@@ -633,7 +633,7 @@ py::bytes ReadTfFile(tensorflow::RandomAccessFile* file, uint64_t offset,
         size_t tsize =
             (i + 1 < num_threads) ? block_size : (size - i * block_size);
 
-        tensorflow::StringPiece result;
+        tsl::StringPiece result;
         XLA_CHECK_OK(
             file->Read(offset + base, tsize, &result, buffer.get() + base));
       };
@@ -645,19 +645,19 @@ py::bytes ReadTfFile(tensorflow::RandomAccessFile* file, uint64_t offset,
   return py::bytes(buffer.get(), size);
 }
 
-std::unique_ptr<tensorflow::WritableFile> CreateTfFile(
+std::unique_ptr<tsl::WritableFile> CreateTfFile(
     const std::string& path) {
   tsl::Env* env = tsl::Env::Default();
-  std::unique_ptr<tensorflow::WritableFile> file;
+  std::unique_ptr<tsl::WritableFile> file;
   XLA_CHECK_OK(env->NewWritableFile(path, &file));
   return file;
 }
 
-void WriteTfFile(tensorflow::WritableFile* file, const std::string& data) {
-  XLA_CHECK_OK(file->Append(tensorflow::StringPiece(data.data(), data.size())));
+void WriteTfFile(tsl::WritableFile* file, const std::string& data) {
+  XLA_CHECK_OK(file->Append(tsl::StringPiece(data.data(), data.size())));
 }
 
-void FlushTfFile(tensorflow::WritableFile* file) {
+void FlushTfFile(tsl::WritableFile* file) {
   XLA_CHECK_OK(file->Flush());
   XLA_CHECK_OK(file->Sync());
 }
@@ -1374,9 +1374,9 @@ void InitXlaModuleBindings(py::module m) {
           return RecordReadExample(reader);
         });
 
-  py::class_<tensorflow::RandomAccessFile>(m, "TfRdFile");
+  py::class_<tsl::RandomAccessFile>(m, "TfRdFile");
   m.def("_xla_tffile_open", [](const std::string& path) {
-    std::unique_ptr<tensorflow::RandomAccessFile> file;
+    std::unique_ptr<tsl::RandomAccessFile> file;
     {
       NoGilSection nogil;
       file = OpenTfFile(path);
@@ -1387,13 +1387,13 @@ void InitXlaModuleBindings(py::module m) {
   m.def("_xla_tffile_stat",
         [](const std::string& path) { return StatTfFile(path); });
   m.def("_xla_tffile_read",
-        [](tensorflow::RandomAccessFile* file, uint64_t offset, size_t size) {
+        [](tsl::RandomAccessFile* file, uint64_t offset, size_t size) {
           return ReadTfFile(file, offset, size);
         });
 
-  py::class_<tensorflow::WritableFile>(m, "TfWrFile");
+  py::class_<tsl::WritableFile>(m, "TfWrFile");
   m.def("_xla_tffile_create", [](const std::string& path) {
-    std::unique_ptr<tensorflow::WritableFile> file;
+    std::unique_ptr<tsl::WritableFile> file;
     {
       NoGilSection nogil;
       file = CreateTfFile(path);
@@ -1402,11 +1402,11 @@ void InitXlaModuleBindings(py::module m) {
                     pybind11::return_value_policy::take_ownership);
   });
   m.def("_xla_tffile_write",
-        [](tensorflow::WritableFile* file, const std::string& data) {
+        [](tsl::WritableFile* file, const std::string& data) {
           NoGilSection nogil;
           WriteTfFile(file, data);
         });
-  m.def("_xla_tffile_flush", [](tensorflow::WritableFile* file) {
+  m.def("_xla_tffile_flush", [](tsl::WritableFile* file) {
     NoGilSection nogil;
     FlushTfFile(file);
   });

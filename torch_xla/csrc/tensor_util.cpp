@@ -371,7 +371,7 @@ void CopyData<at::BFloat16, tsl::bfloat16>(
   CheckedMemcpy<at::BFloat16, tsl::bfloat16>(dest, source, n);
 }
 template <>
-void CopyData<tsl::bfloat16, at::BFloat16>(tensorflow::bfloat16* dest,
+void CopyData<tsl::bfloat16, at::BFloat16>(tsl::bfloat16* dest,
                                                   const at::BFloat16* source,
                                                   int64_t n,
                                                   const CopyCasted&) {
