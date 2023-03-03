@@ -19,12 +19,13 @@ void hlo_mhlo_hlo_roundtrip_helper(HloModuleProto* proto) {
   if (!mlir::verify(mlir_module).succeeded()) {
     std::cout << "verify not ok" << std::endl;
     printHloModuleProto(proto);
-    // TF_ASSIGN_OR_RETURN(auto hlo_module, xla::util::CreateModuleFromProto(*proto));
-    // std::cout << hlo_module->ToString() << std::endl;
     return;
   }
+  std::cout << "mhlo dump: " << std::endl;
+  mlir_module.dump();
   xla::HloProto hlo_proto;
   mlir::MlirToHloConversionOptions options;
+  options.propagate_layouts = true;
   auto status1 = mlir::ConvertMlirHloToHlo(
     mlir_module, &hlo_proto, /*use_tuple_args=*/false, /*return_tuple=*/false,
     options);
@@ -32,6 +33,7 @@ void hlo_mhlo_hlo_roundtrip_helper(HloModuleProto* proto) {
     std::cout << "mhlo2hlo not ok" << std::endl;
     return;
   }
+
   proto->Swap(hlo_proto.mutable_hlo_module());
 }
 

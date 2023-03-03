@@ -1175,7 +1175,10 @@ XLAGraphExecutor::CompilationResult XLAGraphExecutor::Compile(
   }
 
   xla::XlaComputation computation = ConsumeValue(lowering_ctx.BuildXla());
+  std::cout << "before convert" << std::endl;
+  printHloModuleProto(&computation.proto());
   hlo_mhlo_hlo_roundtrip_helper(computation.mutable_proto());
+  std::cout << "after convert" << std::endl;
   printHloModuleProto(&computation.proto());
   xla::ProgramShape program_shape = ConsumeValue(computation.GetProgramShape());
 
