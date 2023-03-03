@@ -509,24 +509,3 @@ tf_cc_shared_object(
 #         "@org_tensorflow//tensorflow/tsl/platform:test_main",
 #     ],
 # )
-# xla_cc_test(
-#     name = "pjrt_computation_client_test",
-#     srcs = ["pjrt_computation_client_test.cc"],
-#     deps = [
-#         ":computation_client",
-#         "@org_tensorflow//tensorflow/compiler/xla:literal",
-#         "@org_tensorflow//tensorflow/compiler/xla:literal_util",
-#         "@org_tensorflow//tensorflow/compiler/xla:shape_util",
-#         "@org_tensorflow//tensorflow/compiler/xla:status",
-#         "@org_tensorflow//tensorflow/compiler/xla:statusor",
-#         "@org_tensorflow//tensorflow/compiler/xla/client:xla_builder",
-#         "@org_tensorflow//tensorflow/compiler/xla/client:xla_computation",
-#         "@org_tensorflow//tensorflow/compiler/xla/tests:literal_test_util",
-#         "@org_tensorflow//tensorflow/compiler/xla/tools:hlo_module_loader",
-#         "@org_tensorflow//tensorflow/tsl/platform:logging",
-#         "@org_tensorflow//tensorflow/tsl/lib/core:status_test_util",
-#         "@org_tensorflow//tensorflow/tsl/platform:env",
-#         "@org_tensorflow//tensorflow/tsl/platform:test",
-#         "@org_tensorflow//tensorflow/tsl/platform:test_main",
-#     ],
-# )
