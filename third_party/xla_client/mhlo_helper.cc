@@ -36,8 +36,8 @@ void hlo_mhlo_hlo_roundtrip_helper(HloModuleProto* proto) {
 }
 
 void printHloModuleProto(const HloModuleProto* proto) {
-  TF_ASSIGN_OR_RETURN(auto hlo_module, xla::util::CreateModuleFromProto(*proto));
-  std::cout << hlo_module->ToString() << std::endl;
+  auto hlo_module = xla::util::CreateModuleFromProto(*proto);
+  std::cout << hlo_module.value()->ToString() << std::endl;
 }
 
 }

@@ -66,6 +66,7 @@ cc_library(
         ":metrics_analysis",
         ":metrics_reader",
         ":metrics",
+        ":mhlo_helper",
         ":multi_wait",
         ":profiler",
         ":record_reader",
@@ -225,6 +226,19 @@ cc_library(
         "@com_google_absl//absl/strings",
         "@org_tensorflow//tensorflow/compiler/xla:types",
         "@org_tensorflow//tensorflow/compiler/xla/service:platform_util",
+    ],
+    alwayslink = True,
+)
+
+cc_library(
+    name = "mhlo_helper",
+    srcs = ["mhlo_helper.cc"],
+    hdrs = ["mhlo_helper.h"],
+    deps = [
+        ":types",
+        ":xla_util",
+        "@org_tensorflow//tensorflow/compiler/xla/translate/hlo_to_mhlo:hlo_to_mlir_hlo",
+        "@org_tensorflow//tensorflow/compiler/xla/translate/mhlo_to_hlo:mlir_hlo_to_hlo",
     ],
     alwayslink = True,
 )
