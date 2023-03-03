@@ -1,5 +1,6 @@
 load(
     "@org_tensorflow//tensorflow:tensorflow.bzl",
+    "if_with_tpu_support",
     "tf_cc_shared_object",
 )
 load(
@@ -9,10 +10,6 @@ load(
 load(
     "@org_tensorflow//tensorflow/tsl/platform/default:cuda_build_defs.bzl",
     "if_cuda_is_configured",
-)
-load(
-    "//bazel:tensorflow.bzl",
-    "if_with_tpu_support",
 )
 
 licenses(["notice"])  # Apache 2.0
