@@ -326,8 +326,8 @@ void XLAGraphExecutor::SyncTensorsGraph(std::vector<XLATensorPtr>* tensors,
                                         bool warm_up_cache_only) {
   TF_VLOG(4) << "Trying to sync the value of " << tensors->size()
              << " tensor(s)";
-  tsl::profiler::TraceMe activity(
-      "SyncTensorsGraph", tsl::profiler::TraceMeLevel::kInfo);
+  tsl::profiler::TraceMe activity("SyncTensorsGraph",
+                                  tsl::profiler::TraceMeLevel::kInfo);
   static const bool op_by_op =
       xla::sys_util::GetEnvBool("XLA_SYNC_TENSORS_OPBYOP", false);
   SyncTensorsConfig config;
@@ -352,8 +352,8 @@ void XLAGraphExecutor::SyncTensorsGraph(std::vector<XLATensorPtr>* tensors,
 void XLAGraphExecutor::SyncLiveTensorsGraph(
     const torch::lazy::BackendDevice* device,
     c10::ArrayRef<std::string> devices, bool wait) {
-  tsl::profiler::TraceMe activity(
-      "SyncLiveTensorsGraph", tsl::profiler::TraceMeLevel::kInfo);
+  tsl::profiler::TraceMe activity("SyncLiveTensorsGraph",
+                                  tsl::profiler::TraceMeLevel::kInfo);
   auto tensors = GetLiveTensors(device);
   TF_VLOG(4) << tensors.size() << " live tensors: devices=("
              << c10::Join(",", devices) << ")";
@@ -471,8 +471,8 @@ void XLAGraphExecutor::ClearPendingIrs(
 
 XLAGraphExecutor::SyncTensorCollection XLAGraphExecutor::CollectSyncTensors(
     const std::vector<XLATensorPtr>& tensors, const SyncTensorsConfig& config) {
-  tsl::profiler::TraceMe activity(
-      "CollectSyncTensors", tsl::profiler::TraceMeLevel::kInfo);
+  tsl::profiler::TraceMe activity("CollectSyncTensors",
+                                  tsl::profiler::TraceMeLevel::kInfo);
   xla::util::Unique<torch::lazy::BackendDevice> unique_device;
   for (size_t i = 0; i < tensors.size(); ++i) {
     unique_device.set(tensors[i]->GetDevice());
@@ -805,8 +805,8 @@ std::vector<torch::lazy::BackendDataPtr> XLAGraphExecutor::SetTensorData(
     std::vector<XLATensorPtr>* tensors, const SyncTensorsConfig& config,
     absl::Span<const size_t> indices,
     const std::vector<torch::lazy::BackendDataPtr>& tensor_data_vec) {
-  tsl::profiler::TraceMe activity(
-      "SetTensorData", tsl::profiler::TraceMeLevel::kInfo);
+  tsl::profiler::TraceMe activity("SetTensorData",
+                                  tsl::profiler::TraceMeLevel::kInfo);
   std::vector<torch::lazy::BackendDataPtr> tensors_data;
   tensors_data.reserve(indices.size());
   for (int i = 0; i < indices.size(); i++) {
@@ -841,8 +841,8 @@ void XLAGraphExecutor::ExtractIRAndPrepareXlaData_(
     const absl::Span<const size_t> indices,
     std::vector<torch::lazy::Value>& ir_values,
     std::vector<torch::lazy::BackendDataPtr>& tensor_data_vec) {
-  tsl::profiler::TraceMe activity(
-      "ExtractIRAndPrepareXlaData_", tsl::profiler::TraceMeLevel::kInfo);
+  tsl::profiler::TraceMe activity("ExtractIRAndPrepareXlaData_",
+                                  tsl::profiler::TraceMeLevel::kInfo);
   ir_values.reserve(indices.size());
   tensor_data_vec.reserve(indices.size());
   for (auto index : indices) {
@@ -899,8 +899,8 @@ XLAGraphExecutor::ScheduleSyncTensorsGraph(
     std::vector<torch::lazy::BackendDataPtr> parameters_data,
     std::vector<torch::lazy::BackendDataPtr> tensors_data,
     ComputationCache::TypePtr cached_computation) {
-  tsl::profiler::TraceMe activity(
-      "ScheduleSyncTensorsGraph", tsl::profiler::TraceMeLevel::kInfo);
+  tsl::profiler::TraceMe activity("ScheduleSyncTensorsGraph",
+                                  tsl::profiler::TraceMeLevel::kInfo);
   TensorCollectionBarrier(coll);
   std::shared_ptr<XLAGraphExecutor::Async> async = std::make_shared<Async>(
       coll, std::move(parameters_data), std::move(tensors_data),
@@ -983,8 +983,8 @@ XLAGraphExecutor::ScheduleSyncTensorsGraph(
 XLAGraphExecutor::PostOrderData XLAGraphExecutor::RunPostOrder(
     const std::vector<torch::lazy::Value>& ir_values,
     SyncTensorCollection* coll) {
-  tsl::profiler::TraceMe activity(
-      "RunPostOrder", tsl::profiler::TraceMeLevel::kInfo);
+  tsl::profiler::TraceMe activity("RunPostOrder",
+                                  tsl::profiler::TraceMeLevel::kInfo);
   return torch::lazy::LazyGraphExecutor::RunPostOrder(ir_values, coll);
 }
 
@@ -1197,8 +1197,8 @@ std::shared_ptr<XLAGraphExecutor::Async>
 XLAGraphExecutor::SyncTensorsGraphInternal(
     std::vector<XLATensorPtr>* tensors, absl::Span<const std::string> devices,
     const SyncTensorsConfig& config, bool warm_up_cache_only) {
-  tsl::profiler::TraceMe activity(
-      "SyncTensorsGraphInternal", tsl::profiler::TraceMeLevel::kInfo);
+  tsl::profiler::TraceMe activity("SyncTensorsGraphInternal",
+                                  tsl::profiler::TraceMeLevel::kInfo);
   SyncTensorCollection coll = CollectSyncTensors(*tensors, config);
   if (coll.indices.empty()) {
     /* Enure previous execution is complete before exiting this

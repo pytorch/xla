@@ -24,9 +24,9 @@
 #include "tensorflow/compiler/xla/service/hlo_parser.h"
 #include "tensorflow/core/example/example.pb.h"
 #include "tensorflow/core/example/feature.pb.h"
+#include "tensorflow/python/profiler/internal/profiler_pywrap_impl.h"
 #include "tensorflow/tsl/platform/env.h"
 #include "tensorflow/tsl/profiler/lib/traceme.h"
-#include "tensorflow/python/profiler/internal/profiler_pywrap_impl.h"
 #include "third_party/xla_client/computation_client.h"
 #include "third_party/xla_client/mesh_service.h"
 #include "third_party/xla_client/metrics.h"
@@ -345,8 +345,8 @@ void SyncLiveTensors(const std::string& device_str,
 
 void StepMarker(const std::string& device_str,
                 const std::vector<std::string>& devices, bool wait) {
-  tsl::profiler::TraceMe activity(
-      "StepMarker", tsl::profiler::TraceMeLevel::kInfo);
+  tsl::profiler::TraceMe activity("StepMarker",
+                                  tsl::profiler::TraceMeLevel::kInfo);
   torch::lazy::BackendDevice device = GetDeviceOrCurrent(device_str);
   XLAGraphExecutor::Get()->SyncLiveTensorsGraph(&device, devices, wait);
   XLAGraphExecutor::Get()->MarkStep(device);
@@ -591,8 +591,7 @@ py::object RecordReadExample(
   return example;
 }
 
-std::unique_ptr<tsl::RandomAccessFile> OpenTfFile(
-    const std::string& path) {
+std::unique_ptr<tsl::RandomAccessFile> OpenTfFile(const std::string& path) {
   tsl::Env* env = tsl::Env::Default();
   std::unique_ptr<tsl::RandomAccessFile> file;
   XLA_CHECK_OK(env->NewRandomAccessFile(path, &file));
@@ -645,8 +644,7 @@ py::bytes ReadTfFile(tsl::RandomAccessFile* file, uint64_t offset,
   return py::bytes(buffer.get(), size);
 }
 
-std::unique_ptr<tsl::WritableFile> CreateTfFile(
-    const std::string& path) {
+std::unique_ptr<tsl::WritableFile> CreateTfFile(const std::string& path) {
   tsl::Env* env = tsl::Env::Default();
   std::unique_ptr<tsl::WritableFile> file;
   XLA_CHECK_OK(env->NewWritableFile(path, &file));
