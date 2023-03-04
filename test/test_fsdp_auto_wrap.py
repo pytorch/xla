@@ -13,7 +13,9 @@ import unittest
 
 
 class TestNoBackwardModule(test_utils.XlaTestCase):
-
+  # Test the FSDP autowrap feature with a module containing a submodule
+  # that is only used in forward (fc2 below), to make sure it doesn't
+  # fail by the hook assertion.
   class MyModel(torch.nn.Module):
 
     def __init__(self, input_size, hidden_size):
