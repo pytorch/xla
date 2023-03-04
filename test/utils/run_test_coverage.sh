@@ -6,8 +6,12 @@ VERBOSITY=2
 export TORCH_TEST_DEVICES="$CDIR/pytorch_test_base.py"
 export CPU_NUM_DEVICES=4
 
+cd ~
+TORCH_XLA_DIR=$(dirname "$(python -c 'import torch_xla; print(torch_xla.__file__)')")
+cd $CDIR
+
 function run_test {
-  coverage run -p "$@"
+  coverage run --source="$TORCH_XLA_DIR" -p "$@"
 }
 
 function run_opbyop {
