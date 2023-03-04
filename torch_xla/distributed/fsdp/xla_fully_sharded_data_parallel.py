@@ -891,7 +891,7 @@ class XlaFullyShardedDataParallel(nn.Module):
       # This can be used to debug FSDP parameter memory consumption.
       outputs = self._dummy_forward(*args, **kwargs)
 
-    if self.reshard_after_forward or not self.training:
+    if self.reshard_after_forward:
       output_opt_barrier_tensors = []
       if self.optimization_barrier_in_forward:
         # Ensure that the full parameters of this FSDP module are freed
@@ -986,8 +986,8 @@ class XlaFullyShardedDataParallel(nn.Module):
     Returns:
         outputs: new outputs with hooks registered if they requires gradient.
     """
-    if not torch.is_grad_enabled() or not self.training:
-      return outputs  # don't register hooks if grad isn't enabled or the model is in eval mode
+    if not torch.is_grad_enabled():
+      return outputs  # don't register hooks if grad isn't enabled
 
     if self._is_root:
       # This actually means that only root instance has
@@ -1091,8 +1091,8 @@ class XlaFullyShardedDataParallel(nn.Module):
     backward pass. Otherwise, the next forward pass will not register
     a new hook, which is needed for a new forward pass.
     """
-    if not torch.is_grad_enabled() or not self.training:
-      return  # don't register grad hooks if grad isn't enabled or the model is in eval mode
+    if not torch.is_grad_enabled():
+      return  # don't register grad hooks if grad isn't enabled
     for p in self.full_params:
       if p.requires_grad:
         if hasattr(p, "_shard_bwd_hook"):
