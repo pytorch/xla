@@ -257,7 +257,7 @@ class XlaFullyShardedDataParallel(nn.Module):
             ``materialize_module``, or the passed in ``param_init_fn``, if it is not
             ``None``. The same ``Callable`` is applied to initialize all meta modules.
             Note that this initialization function is applied before doing any FSDP sharding
-            logic.
+            logic. And the torchdistX is an experimental package that is not fully tested in the CI.
             Example::
                 >>> # xdoctest: +SKIP("undefined variables")
                 >>> module = MyModule(device="meta")
@@ -450,7 +450,8 @@ class XlaFullyShardedDataParallel(nn.Module):
 
     _materialize_module(
         module,
-        param_init_fn, [],
+        param_init_fn,
+        [],  # TODO: ignored_params is set to empty now, pass in correct params when this feature is fully enabled
         deferred_init_check_fn=lambda k: not isinstance(k, wrapper_cls))
 
     # Only handle params which are not already sharded. This enables
