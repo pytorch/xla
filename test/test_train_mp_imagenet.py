@@ -107,7 +107,6 @@ DEFAULT_KWARGS = dict(
 #  Best config to achieve peak performance on TPU v4
 #    1. It is recommended to use this config in conjuntion with XLA_USE_BF16=1 Flag.
 #    2. Hyperparameters can be tuned to further improve the accuracy.
-
 OPTIMIZED_KWARGS_v4 = dict(
     batch_size=128,
     test_set_batch_size=128,
