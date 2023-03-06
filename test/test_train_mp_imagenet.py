@@ -54,7 +54,7 @@ MODEL_OPTS = {
     '--host_to_device_transfer_threads': {
         'type': int,
     },
-    '--use_v4_optimized_kwargs': {
+    '--use_optimized_kwargs': {
         'action': 'store_true',
     },
 }
@@ -112,7 +112,7 @@ DEFAULT_KWARGS = dict(
 #    2. Hyperparameters can be tuned to further improve the accuracy.
 #  usage: python3 /usr/share/pytorch/xla/test/test_train_mp_imagenet.py --model=resnet50 \
 #         --fake_data --num_epochs=10 --log_steps=300 \
-#         --profile   --use_v4_optimized_kwargs  --drop_last
+#         --profile   --use_optimized_kwargs  --drop_last
 OPTIMIZED_KWARGS_v4 = dict(
     batch_size=128,
     test_set_batch_size=128,
@@ -145,7 +145,7 @@ MODEL_SPECIFIC_DEFAULTS = {
 # DEFAULT_KWARGS in the below line can be replaced with OPTIMIZED_KWARGS for performance.
 default_value_dict = MODEL_SPECIFIC_DEFAULTS.get(
     FLAGS.model,
-    OPTIMIZED_KWARGS_v4 if FLAGS.use_v4_optimized_kwargs else DEFAULT_KWARGS)
+    OPTIMIZED_KWARGS_v4 if FLAGS.use_optimized_kwargs else DEFAULT_KWARGS)
 for arg, value in default_value_dict.items():
   if getattr(FLAGS, arg) is None:
     setattr(FLAGS, arg, value)
