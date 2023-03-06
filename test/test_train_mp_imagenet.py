@@ -103,13 +103,12 @@ DEFAULT_KWARGS = dict(
     num_workers=8,
     host_to_device_transfer_threads=1,
 )
-'''
-Best config to achieve peak performance on v4-8
 
-  1. It is recommended to use this config in conjuntion with XLA_USE_BF16=1 Flag. 
-  2. Hyperparameters can be tuned to further improve the accuracy.
-'''
-OPTIMIZED_KWARGS = dict(
+#  Best config to achieve peak performance on v4-8
+#    1. It is recommended to use this config in conjuntion with XLA_USE_BF16=1 Flag.
+#    2. Hyperparameters can be tuned to further improve the accuracy.
+
+OPTIMIZED_KWARGS_v4 = dict(
     batch_size=128,
     test_set_batch_size=128,
     num_epochs=18,
@@ -136,10 +135,9 @@ MODEL_SPECIFIC_DEFAULTS = {
                 'lr_scheduler_type': 'WarmupAndExponentialDecayScheduler',
             })
 }
-'''
-Set any args that were not explicitly given by the user.
-DEFAULT_KWARGS in the below line can be replaced with OPTIMIZED_KWARGS for performance.
-'''
+
+# Set any args that were not explicitly given by the user.
+# DEFAULT_KWARGS in the below line can be replaced with OPTIMIZED_KWARGS for performance.
 default_value_dict = MODEL_SPECIFIC_DEFAULTS.get(FLAGS.model, DEFAULT_KWARGS)
 for arg, value in default_value_dict.items():
   if getattr(FLAGS, arg) is None:
