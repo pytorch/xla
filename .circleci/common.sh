@@ -130,7 +130,7 @@ function run_torch_xla_tests() {
     if [ "$USE_COVERAGE" != "0" ]; then
       pip install coverage==6.5.0 --upgrade
       pip install coverage-lcov
-      ./test/utils/run_test_coverage.sh
+      ./test/run_tests.sh
       coverage combine
       mkdir lcov && cp .coverage lcov/
       coverage-lcov --data_file_path lcov/.coverage
