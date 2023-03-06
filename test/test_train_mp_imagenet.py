@@ -104,7 +104,7 @@ DEFAULT_KWARGS = dict(
     host_to_device_transfer_threads=1,
 )
 
-#  Best config to achieve peak performance on v4-8
+#  Best config to achieve peak performance on TPU v4
 #    1. It is recommended to use this config in conjuntion with XLA_USE_BF16=1 Flag.
 #    2. Hyperparameters can be tuned to further improve the accuracy.
 
