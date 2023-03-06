@@ -292,7 +292,6 @@ std::vector<xla::Literal> PjRtComputationClient::TransferFromServer(
     xla::Shape target_shape = ShapeUtil::DeviceShapeToHostShape(
           pjrt_data.buffer->logical_on_device_shape().value());
     auto& literal = literals.emplace_back(target_shape);
-    std::cout << "logical " << pjrt_data.buffer->logical_on_device_shape().value() << " dynamic " << pjrt_data.buffer->on_device_shape() << std::endl;
 
     // PJRT will always try to copy the full bounded size into our literal. If
     // the bounded size is larger than the logical output size, we have to
