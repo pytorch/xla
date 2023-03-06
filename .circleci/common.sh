@@ -139,35 +139,36 @@ function run_torch_xla_tests() {
       # only run test_autocast for cpu and gpu on circleCI.
       python test/test_autocast.py
 
-    # GPU tests
-    if [ -x "$(command -v nvidia-smi)" ]; then
-      PJRT_DEVICE=GPU python test/test_train_mp_imagenet_fsdp.py --fake_data --use_nested_fsdp --use_small_fake_sample --num_epochs=1
-      PJRT_DEVICE=GPU python test/test_train_mp_imagenet_fsdp.py --fake_data --auto_wrap_policy type_based --use_small_fake_sample --num_epochs=1
-      # Syncfree SGD optimizer tests
-      if [ -d ./torch_xla/amp/syncfree ]; then
-        echo "Running Syncfree Optimizer Test"
-        PJRT_DEVICE=GPU python test/test_syncfree_optimizers.py
-
-        # Following test scripts are mainly useful for
-        # performance evaluation & comparison among different
-        # amp optimizers.
-        # echo "Running ImageNet Test"
-        # python test/test_train_mp_imagenet_amp.py --fake_data --num_epochs=1
-
-        # disabled per https://github.com/pytorch/xla/pull/2809
-        # echo "Running MNIST Test"
-        # python test/test_train_mp_mnist_amp.py --fake_data --num_epochs=1
-      fi
-    fi
-
-    pushd test/cpp
-      echo "Running C++ Tests on PJRT"
+      # GPU tests
       if [ -x "$(command -v nvidia-smi)" ]; then
-        PJRT_DEVICE=GPU ./run_tests.sh
-        PJRT_DEVICE=GPU ./run_tests.sh -X early_sync -F AtenXlaTensorTest.TestEarlySyncLiveTensors -L""
-      else
-        PJRT_DEVICE=CPU ./run_tests.sh
+        PJRT_DEVICE=GPU python test/test_train_mp_imagenet_fsdp.py --fake_data --use_nested_fsdp --use_small_fake_sample --num_epochs=1
+        PJRT_DEVICE=GPU python test/test_train_mp_imagenet_fsdp.py --fake_data --auto_wrap_policy type_based --use_small_fake_sample --num_epochs=1
+        # Syncfree SGD optimizer tests
+        if [ -d ./torch_xla/amp/syncfree ]; then
+          echo "Running Syncfree Optimizer Test"
+          PJRT_DEVICE=GPU python test/test_syncfree_optimizers.py
+
+          # Following test scripts are mainly useful for
+          # performance evaluation & comparison among different
+          # amp optimizers.
+          # echo "Running ImageNet Test"
+          # python test/test_train_mp_imagenet_amp.py --fake_data --num_epochs=1
+
+          # disabled per https://github.com/pytorch/xla/pull/2809
+          # echo "Running MNIST Test"
+          # python test/test_train_mp_mnist_amp.py --fake_data --num_epochs=1
+        fi
       fi
-    popd
+
+      pushd test/cpp
+        echo "Running C++ Tests on PJRT"
+        if [ -x "$(command -v nvidia-smi)" ]; then
+          PJRT_DEVICE=GPU ./run_tests.sh
+          PJRT_DEVICE=GPU ./run_tests.sh -X early_sync -F AtenXlaTensorTest.TestEarlySyncLiveTensors -L""
+        else
+          PJRT_DEVICE=CPU ./run_tests.sh
+        fi
+      popd
+    fi
   popd
 }
