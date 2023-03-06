@@ -28,14 +28,15 @@
 namespace torch_xla {
 
 enum class PyType {
-  INT,  // int64; technically arbitrary precision
+  INT,    // int64; technically arbitrary precision
   FLOAT,  // double
-  BOOL,  // bool
+  BOOL,   // bool
 };
 
 class TORCH_API XLASymNodeImpl final : public c10::SymNodeImpl {
  public:
-  XLASymNodeImpl(torch::lazy::NodePtr ptr, PyType pytype) : node_(std::move(ptr)), pytype_(pytype) {}
+  XLASymNodeImpl(torch::lazy::NodePtr ptr, PyType pytype)
+      : node_(std::move(ptr)), pytype_(pytype) {}
   bool is_bool() override;
   bool is_int() override;
   bool is_float() override;
