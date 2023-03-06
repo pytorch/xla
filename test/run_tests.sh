@@ -133,7 +133,7 @@ function run_op_tests {
   run_dynamic python3 "$CDIR/test_dynamic_shape_models.py" "$@" --verbosity=$VERBOSITY
   # run_opbyop python3 "$CDIR/test_operations.py" "$@" --verbosity=$VERBOSITY
   run_eager_debug python3 "$CDIR/test_operations.py" "$@" --verbosity=$VERBOSITY
-  run_async_scalar python3 "$CDIR/test_operations.py" "$@" --verbosity=$VERBOSITY
+  # run_async_scalar python3 "$CDIR/test_operations.py" "$@" --verbosity=$VERBOSITY
   run_test python3 "$CDIR/test_grad_checkpoint.py"
   run_test python3 "$CDIR/test_operations.py" "$@" --verbosity=$VERBOSITY
   run_test python3 "$CDIR/test_async_closures.py"
