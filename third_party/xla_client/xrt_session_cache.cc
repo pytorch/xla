@@ -42,7 +42,7 @@ std::shared_ptr<XrtSession> XrtSessionCache::CreateSession(
     const std::string& target) const {
   XLA_COUNTER("XrtSessionCount", 1);
   tensorflow::SessionOptions session_options;
-  session_options.env = tensorflow::Env::Default();
+  session_options.env = tsl::Env::Default();
   session_options.target = target;
   if (target != local_target_) {
     session_options.config = config_;
