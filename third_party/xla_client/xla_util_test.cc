@@ -10,9 +10,8 @@
 #include "absl/types/span.h"
 #include "tensorflow/compiler/xla/client/xla_builder.h"
 #include "tensorflow/compiler/xla/client/xla_computation.h"
-#include "tensorflow/core/platform/errors.h"
-#include "tensorflow/core/platform/protobuf.h"
 #include "tensorflow/tsl/lib/core/status_test_util.h"
+#include "tensorflow/tsl/platform/protobuf.h"
 #include "tensorflow/tsl/platform/errors.h"
 #include "tensorflow/tsl/platform/status_matchers.h"
 #include "tensorflow/tsl/protobuf/error_codes.pb.h"
@@ -34,12 +33,12 @@ TEST(XlaUtilTest, ShapeHash) {
 
 template <typename MessageType>
 StatusOr<MessageType> ParseTextProto(const std::string& text_proto) {
-  tensorflow::protobuf::TextFormat::Parser parser;
+  tsl::protobuf::TextFormat::Parser parser;
   MessageType parsed_proto;
-  tensorflow::protobuf::io::ArrayInputStream input_stream(text_proto.data(),
+  tsl::protobuf::io::ArrayInputStream input_stream(text_proto.data(),
                                                           text_proto.size());
   if (!parser.Parse(&input_stream, &parsed_proto)) {
-    return tensorflow::errors::InvalidArgument("Could not parse text proto: ",
+    return tsl::errors::InvalidArgument("Could not parse text proto: ",
                                                text_proto);
   }
   return parsed_proto;

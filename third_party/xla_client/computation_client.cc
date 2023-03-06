@@ -11,9 +11,9 @@
 #include "absl/strings/str_cat.h"
 #include "absl/strings/str_split.h"
 #include "tensorflow/compiler/xla/status_macros.h"
-#include "tensorflow/core/platform/net.h"
-#include "tensorflow/core/platform/stacktrace_handler.h"
-#include "tensorflow/core/util/device_name_utils.h"
+#include "tensorflow/tsl/platform/net.h"
+#include "tensorflow/tsl/platform/stacktrace_handler.h"
+#include "tensorflow/tsl/util/device_name_utils.h"
 #include "third_party/xla_client/debug_macros.h"
 #include "third_party/xla_client/env_vars.h"
 #include "third_party/xla_client/mesh_service.h"
@@ -35,7 +35,7 @@ std::once_flag g_computation_client_once;
 
 ComputationClient* CreateClient() {
   if (sys_util::GetEnvBool("XLA_DUMP_FATAL_STACK", false)) {
-    tensorflow::testing::InstallStacktraceHandler();
+    tsl::testing::InstallStacktraceHandler();
   }
   auto client = ComputationClient::Create();
   return client.release();
@@ -238,7 +238,7 @@ bool ParseEnvDeviceCounts(XrtComputationClient::Options* options) {
   if (device_counts.num_tpus > 0 || device_counts.num_gpus > 0) {
     std::map<std::string, int> device_ordinals;
     std::string host_port =
-        absl::StrCat("localhost:", tensorflow::internal::PickUnusedPortOrDie());
+        absl::StrCat("localhost:", tsl::internal::PickUnusedPortOrDie());
     AddXrtHostDevices("localservice", 0, host_port, device_counts,
                       &device_ordinals, options);
   }

@@ -407,10 +407,10 @@ torch::lazy::NodePtr ARange(const at::Scalar& start, const at::Scalar& end,
   xla::Literal values;
   switch (type) {
     case xla::PrimitiveType::BF16:
-      values = XlaHelpers::Range<tensorflow::bfloat16>(
-          static_cast<tensorflow::bfloat16>(start.toFloat()),
-          static_cast<tensorflow::bfloat16>(end.toFloat()),
-          static_cast<tensorflow::bfloat16>(step.toFloat()));
+      values = XlaHelpers::Range<tsl::bfloat16>(
+          static_cast<tsl::bfloat16>(start.toFloat()),
+          static_cast<tsl::bfloat16>(end.toFloat()),
+          static_cast<tsl::bfloat16>(step.toFloat()));
       break;
     case xla::PrimitiveType::F16:
       values =

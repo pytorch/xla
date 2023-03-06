@@ -6,14 +6,14 @@
 #include <string>
 
 #include "tensorflow/compiler/xla/types.h"
-#include "tensorflow/core/lib/io/record_reader.h"
+#include "tensorflow/tsl/lib/io/record_reader.h"
 
 namespace xla {
 namespace util {
 
 class RecordReader {
  public:
-  using Data = tensorflow::tstring;
+  using Data = tsl::tstring;
 
   RecordReader(std::string path, const std::string& compression,
                int64_t buffer_size);
@@ -26,8 +26,8 @@ class RecordReader {
   std::string path_;
   std::mutex lock_;
   uint64_t offset_ = 0;
-  std::unique_ptr<tensorflow::RandomAccessFile> file_;
-  std::unique_ptr<tensorflow::io::RecordReader> reader_;
+  std::unique_ptr<tsl::RandomAccessFile> file_;
+  std::unique_ptr<tsl::io::RecordReader> reader_;
 };
 
 }  // namespace util
