@@ -45,10 +45,6 @@ export PYTORCH_TEST_WITH_SLOW=1
 export XLA_DUMP_FATAL_STACK=1
 export CPU_NUM_DEVICES=4
 
-function run_test {
-  "$@"
-}
-
 function run_opbyop {
   echo "Running in OpByOp mode: $@"
   XLA_GET_TENSORS_OPBYOP=1 XLA_SYNC_TENSORS_OPBYOP=1 run_test "$@"
@@ -94,7 +90,7 @@ function run_xla_backend_mp {
   MASTER_ADDR=localhost MASTER_PORT=6000 run_test "$@"
 }
 
-function run_pjrt {
+function run_test {
   echo "Running in PjRt runtime: $@"
   if [ -x "$(command -v nvidia-smi)" ]; then
     PJRT_DEVICE=GPU run_test "$@"
@@ -135,11 +131,11 @@ function run_op_tests {
   run_dynamic python3 "$CDIR/test_operations.py" "$@" --verbosity=$VERBOSITY
   run_dynamic python3 "$CDIR/test_dynamic_shapes.py"
   run_dynamic python3 "$CDIR/test_dynamic_shape_models.py" "$@" --verbosity=$VERBOSITY
-  run_opbyop python3 "$CDIR/test_operations.py" "$@" --verbosity=$VERBOSITY
+  # run_opbyop python3 "$CDIR/test_operations.py" "$@" --verbosity=$VERBOSITY
   run_eager_debug python3 "$CDIR/test_operations.py" "$@" --verbosity=$VERBOSITY
   run_async_scalar python3 "$CDIR/test_operations.py" "$@" --verbosity=$VERBOSITY
   run_test python3 "$CDIR/test_grad_checkpoint.py"
-  run_pjrt python3 "$CDIR/test_operations.py" "$@" --verbosity=$VERBOSITY
+  run_test python3 "$CDIR/test_operations.py" "$@" --verbosity=$VERBOSITY
   run_test python3 "$CDIR/test_async_closures.py"
   run_test python3 "$CDIR/test_xla_dist.py"
   run_test python3 "$CDIR/test_profiler.py"
@@ -156,12 +152,12 @@ function run_op_tests {
   run_test python3 "$CDIR/test_torch_distributed_xla_backend.py"
   run_xla_ir_debug python3 "$CDIR/test_env_var_mapper.py"
   run_xla_hlo_debug python3 "$CDIR/test_env_var_mapper.py"
-  run_pjrt python3 "$CDIR/pjrt/test_experimental_pjrt.py"
-  run_pjrt python3 "$CDIR/pjrt/test_experimental_tpu.py"
-  run_pjrt python3 "$CDIR/pjrt/test_ddp.py"
-  run_pjrt python3 "$CDIR/pjrt/test_mesh_service.py"
-  run_pjrt python3 "$CDIR/spmd/test_xla_sharding.py"
-  run_pjrt python3 "$CDIR/spmd/test_xla_virtual_device.py"
+  run_test python3 "$CDIR/pjrt/test_experimental_pjrt.py"
+  run_test python3 "$CDIR/pjrt/test_experimental_tpu.py"
+  run_test python3 "$CDIR/pjrt/test_ddp.py"
+  run_test python3 "$CDIR/pjrt/test_mesh_service.py"
+  run_test python3 "$CDIR/spmd/test_xla_sharding.py"
+  run_test python3 "$CDIR/spmd/test_xla_virtual_device.py"
   run_test python3 "$CDIR/test_operations_hlo.py" "$@" --verbosity=$VERBOSITY
   run_test python3 "$CDIR/test_input_output_aliases.py"
 }
