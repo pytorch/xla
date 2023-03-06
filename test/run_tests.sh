@@ -93,10 +93,10 @@ function run_xla_backend_mp {
 function run_test {
   echo "Running in PjRt runtime: $@"
   if [ -x "$(command -v nvidia-smi)" ]; then
-    PJRT_DEVICE=GPU run_test "$@"
+    PJRT_DEVICE=GPU "$@"
   else
     # TODO(darisoy): run these tests with multiple CPU devices, this fails due to TF issue.
-    PJRT_DEVICE=CPU CPU_NUM_DEVICES=1 run_test "$@"
+    PJRT_DEVICE=CPU CPU_NUM_DEVICES=1 "$@"
   fi
 }
 
