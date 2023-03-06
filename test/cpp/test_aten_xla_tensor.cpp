@@ -5314,7 +5314,7 @@ TEST_F(AtenXlaTensorTest, TestExpandSymIntStatic) {
 
 static c10::SymInt make_symint(const torch::lazy::NodePtr& p) {
   return c10::SymInt(
-      static_cast<c10::SymNode>(c10::make_intrusive<XLASymNodeImpl>(p)));
+      static_cast<c10::SymNode>(c10::make_intrusive<XLASymNodeImpl>(p, PyType::INT)));
 }
 
 TEST_F(AtenXlaTensorTest, TestEye) {
