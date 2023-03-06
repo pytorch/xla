@@ -622,17 +622,11 @@ bool XLATensor::ShouldSyncIrNode() {
   return this->data()->ir_value->op() != xla_device_data;
 }
 
-bool XLASymNodeImpl::is_bool() {
-  return pytype_ == PyType::BOOL;
-}
+bool XLASymNodeImpl::is_bool() { return pytype_ == PyType::BOOL; }
 
-bool XLASymNodeImpl::is_int() {
-  return pytype_ == PyType::INT;
-}
+bool XLASymNodeImpl::is_int() { return pytype_ == PyType::INT; }
 
-bool XLASymNodeImpl::is_float() {
-  return pytype_ == PyType::FLOAT;
-}
+bool XLASymNodeImpl::is_float() { return pytype_ == PyType::FLOAT; }
 
 c10::SymNode XLASymNodeImpl::add(const c10::SymNode& other) {
   auto p_other = dynamic_cast<XLASymNodeImpl*>(other.get());
