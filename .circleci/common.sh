@@ -122,10 +122,6 @@ function run_torch_xla_tests() {
   USE_COVERAGE="${3:-0}"
   if [ -x "$(command -v nvidia-smi)" ]; then
     export GPU_NUM_DEVICES=2
-  else
-    export XRT_DEVICE_MAP="CPU:0;/job:localservice/replica:0/task:0/device:XLA_CPU:0"
-    XLA_PORT=$(shuf -i 40701-40999 -n 1)
-    export XRT_WORKERS="localservice:0;grpc://localhost:$XLA_PORT"
   fi
   export PYTORCH_TESTING_DEVICE_ONLY_FOR="xla"
 
@@ -145,12 +141,12 @@ function run_torch_xla_tests() {
 
     # GPU tests
     if [ -x "$(command -v nvidia-smi)" ]; then
-      python test/test_train_mp_imagenet_fsdp.py --fake_data --use_nested_fsdp --use_small_fake_sample --num_epochs=1
-      python test/test_train_mp_imagenet_fsdp.py --fake_data --auto_wrap_policy type_based --use_small_fake_sample --num_epochs=1
+      PJRT_DEVICE=GPU python test/test_train_mp_imagenet_fsdp.py --fake_data --use_nested_fsdp --use_small_fake_sample --num_epochs=1
+      PJRT_DEVICE=GPU python test/test_train_mp_imagenet_fsdp.py --fake_data --auto_wrap_policy type_based --use_small_fake_sample --num_epochs=1
       # Syncfree SGD optimizer tests
       if [ -d ./torch_xla/amp/syncfree ]; then
         echo "Running Syncfree Optimizer Test"
-        python test/test_syncfree_optimizers.py
+        PJRT_DEVICE=GPU python test/test_syncfree_optimizers.py
 
         # Following test scripts are mainly useful for
         # performance evaluation & comparison among different
@@ -165,18 +161,13 @@ function run_torch_xla_tests() {
     fi
 
     pushd test/cpp
-    echo "Running C++ Tests on PJRT"
-    if [ -x "$(command -v nvidia-smi)" ]; then
-      PJRT_DEVICE=GPU ./run_tests.sh
-    else
-      PJRT_DEVICE=CPU ./run_tests.sh
-    fi
-
-      if ! [ -x "$(command -v nvidia-smi)"  ]
-      then
-        ./run_tests.sh -X early_sync -F AtenXlaTensorTest.TestEarlySyncLiveTensors -L""
+      echo "Running C++ Tests on PJRT"
+      if [ -x "$(command -v nvidia-smi)" ]; then
+        PJRT_DEVICE=GPU ./run_tests.sh
+        PJRT_DEVICE=GPU ./run_tests.sh -X early_sync -F AtenXlaTensorTest.TestEarlySyncLiveTensors -L""
+      else
+        PJRT_DEVICE=CPU ./run_tests.sh
       fi
-      popd
-    fi
+    popd
   popd
 }
