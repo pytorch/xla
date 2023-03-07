@@ -622,33 +622,18 @@ bool XLATensor::ShouldSyncIrNode() {
   return this->data()->ir_value->op() != xla_device_data;
 }
 
-bool XLASymNodeImpl::is_bool() {
-  c10::Symbol op = node()->op().op;
-  // Reference:
-  // https://github.com/pytorch/pytorch/blob/master/torch/fx/experimental/symbolic_shapes.py#L403
-  if (op == c10::Symbol::fromQualString("aten::size_eq") ||
-      op == c10::Symbol::fromQualString("aten::size_ne") ||
-      op == c10::Symbol::fromQualString("aten::size_ge") ||
-      op == c10::Symbol::fromQualString("aten::size_lt")) {
-    return true;
-  }
-  return false;
-}
+bool XLASymNodeImpl::is_bool() { return pytype_ == PyType::BOOL; }
 
-bool XLASymNodeImpl::is_int() {
-  // TODO: handle not is int
-  return true;
-}
+bool XLASymNodeImpl::is_int() { return pytype_ == PyType::INT; }
 
-bool XLASymNodeImpl::is_float() {
-  // TODO: handle not is int
-  return false;
-}
+bool XLASymNodeImpl::is_float() { return pytype_ == PyType::FLOAT; }
 
 c10::SymNode XLASymNodeImpl::add(const c10::SymNode& other) {
   auto p_other = dynamic_cast<XLASymNodeImpl*>(other.get());
+  XLA_CHECK(is_int()) << __FUNCTION__ << " with non-int NYI";
+  XLA_CHECK(p_other->is_int()) << __FUNCTION__ << " with non-int NYI";
   auto n_add = torch::lazy::MakeNode<SizeAdd>(node(), p_other->node());
-  return c10::make_intrusive<XLASymNodeImpl>(n_add);
+  return c10::make_intrusive<XLASymNodeImpl>(n_add, PyType::INT);
 }
 
 c10::SymNode XLASymNodeImpl::sub(const c10::SymNode& other) {
@@ -656,16 +641,20 @@ c10::SymNode XLASymNodeImpl::sub(const c10::SymNode& other) {
 
   torch_xla::XLASymNodeImpl* p_other =
       dynamic_cast<XLASymNodeImpl*>(other.get());
+  XLA_CHECK(is_int()) << __FUNCTION__ << " with non-int NYI";
+  XLA_CHECK(p_other->is_int()) << __FUNCTION__ << " with non-int NYI";
   torch::lazy::NodePtr n_sub =
       torch::lazy::MakeNode<SizeSub>(node(), p_other->node());
-  return c10::make_intrusive<XLASymNodeImpl>(n_sub);
+  return c10::make_intrusive<XLASymNodeImpl>(n_sub, PyType::INT);
 }
 
 c10::SymNode XLASymNodeImpl::mul(const c10::SymNode& other) {
   auto p_other = dynamic_cast<XLASymNodeImpl*>(other.get());
+  XLA_CHECK(is_int()) << __FUNCTION__ << " with non-int NYI";
+  XLA_CHECK(p_other->is_int()) << __FUNCTION__ << " with non-int NYI";
   auto n_mul =
       torch::lazy::MakeNode<torch_xla::SizeMul>(node(), p_other->node());
-  return c10::make_intrusive<XLASymNodeImpl>(n_mul);
+  return c10::make_intrusive<XLASymNodeImpl>(n_mul, PyType::INT);
 }
 
 c10::SymNode XLASymNodeImpl::truediv(const c10::SymNode& other) {
@@ -680,8 +669,10 @@ c10::SymNode XLASymNodeImpl::pow(const c10::SymNode& other) {
 
 c10::SymNode XLASymNodeImpl::floordiv(const c10::SymNode& other) {
   auto p_other = dynamic_cast<XLASymNodeImpl*>(other.get());
+  XLA_CHECK(is_int()) << __FUNCTION__ << " with non-int NYI";
+  XLA_CHECK(p_other->is_int()) << __FUNCTION__ << " with non-int NYI";
   auto n_div = torch::lazy::MakeNode<SizeDiv>(node(), p_other->node());
-  return c10::make_intrusive<XLASymNodeImpl>(n_div);
+  return c10::make_intrusive<XLASymNodeImpl>(n_div, PyType::INT);
 }
 
 c10::SymNode XLASymNodeImpl::mod(const c10::SymNode& other) {
@@ -691,15 +682,19 @@ c10::SymNode XLASymNodeImpl::mod(const c10::SymNode& other) {
 
 c10::SymNode XLASymNodeImpl::eq(const c10::SymNode& other) {
   auto p_other = dynamic_cast<XLASymNodeImpl*>(other.get());
+  XLA_CHECK(is_int()) << __FUNCTION__ << " with non-int NYI";
+  XLA_CHECK(p_other->is_int()) << __FUNCTION__ << " with non-int NYI";
   auto n_eq = torch::lazy::MakeNode<SizeEq>(node(), p_other->node());
-  return c10::make_intrusive<XLASymNodeImpl>(n_eq);
+  return c10::make_intrusive<XLASymNodeImpl>(n_eq, PyType::BOOL);
 }
 
 c10::SymNode XLASymNodeImpl::ne(const c10::SymNode& other) {
   TORCH_LAZY_FN_COUNTER("xla::size_");
   auto p_other = dynamic_cast<XLASymNodeImpl*>(other.get());
+  XLA_CHECK(is_int()) << __FUNCTION__ << " with non-int NYI";
+  XLA_CHECK(p_other->is_int()) << __FUNCTION__ << " with non-int NYI";
   auto n_ne = torch::lazy::MakeNode<SizeNe>(node(), p_other->node());
-  return c10::make_intrusive<XLASymNodeImpl>(n_ne);
+  return c10::make_intrusive<XLASymNodeImpl>(n_ne, PyType::BOOL);
 }
 
 c10::SymNode XLASymNodeImpl::gt(const c10::SymNode& other) {
@@ -710,8 +705,10 @@ c10::SymNode XLASymNodeImpl::gt(const c10::SymNode& other) {
 c10::SymNode XLASymNodeImpl::lt(const c10::SymNode& other) {
   TORCH_LAZY_FN_COUNTER("xla::size_");
   auto p_other = dynamic_cast<XLASymNodeImpl*>(other.get());
+  XLA_CHECK(is_int()) << __FUNCTION__ << " with non-int NYI";
+  XLA_CHECK(p_other->is_int()) << __FUNCTION__ << " with non-int NYI";
   auto n_lt = torch::lazy::MakeNode<SizeLt>(node(), p_other->node());
-  return c10::make_intrusive<XLASymNodeImpl>(n_lt);
+  return c10::make_intrusive<XLASymNodeImpl>(n_lt, PyType::BOOL);
 }
 
 c10::SymNode XLASymNodeImpl::le(const c10::SymNode& other) {
@@ -722,8 +719,10 @@ c10::SymNode XLASymNodeImpl::le(const c10::SymNode& other) {
 c10::SymNode XLASymNodeImpl::ge(const c10::SymNode& other) {
   TORCH_LAZY_FN_COUNTER("xla::size_");
   auto p_other = dynamic_cast<XLASymNodeImpl*>(other.get());
+  XLA_CHECK(is_int()) << __FUNCTION__ << " with non-int NYI";
+  XLA_CHECK(p_other->is_int()) << __FUNCTION__ << " with non-int NYI";
   auto n_ge = torch::lazy::MakeNode<SizeGe>(node(), p_other->node());
-  return c10::make_intrusive<XLASymNodeImpl>(n_ge);
+  return c10::make_intrusive<XLASymNodeImpl>(n_ge, PyType::BOOL);
 }
 
 c10::SymNode XLASymNodeImpl::ceil() {
@@ -799,7 +798,7 @@ c10::SymNode XLASymNodeImpl::is_non_overlapping_and_dense(
 
 c10::SymNode XLASymNodeImpl::clone() {
   TORCH_LAZY_FN_COUNTER("xla::size_");
-  return c10::make_intrusive<XLASymNodeImpl>(node());
+  return c10::make_intrusive<XLASymNodeImpl>(node(), pytype_);
 }
 
 c10::SymNode XLASymNodeImpl::sym_float() {
@@ -809,7 +808,7 @@ c10::SymNode XLASymNodeImpl::sym_float() {
 
 c10::SymNode XLASymNodeImpl::wrap_int(int64_t num) {
   auto cnst = torch::lazy::MakeNode<SizeConstant>(num);
-  return c10::make_intrusive<XLASymNodeImpl>(cnst);
+  return c10::make_intrusive<XLASymNodeImpl>(cnst, PyType::INT);
 }
 
 c10::SymNode XLASymNodeImpl::wrap_float(double num) {
