@@ -256,7 +256,7 @@ class XrtComputationClient : public ComputationClient {
   }
 
   std::optional<xla::OpSharding> GetDataSharding(DataPtr handle) override {
-    // Returns an empty sharding result, ad XRT does not support sharding.
+    // Returns an empty sharding result, since XRT does not support sharding.
     return std::optional<xla::OpSharding>();
   }
 

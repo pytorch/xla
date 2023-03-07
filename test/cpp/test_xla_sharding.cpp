@@ -160,9 +160,9 @@ TEST_F(XLAShardingTest, EqualShardingSpecs) {
       xla::HloSharding::Tile({{{0, 1}, {2, 3}, {4, 5}, {6, 7}}}).ToProto());
   XLATensor::ShardingSpec replicated(xla::HloSharding::Replicate().ToProto());
   EXPECT_TRUE(ShardingUtil::EqualShardingSpecs(tiled_2d, tiled_2d));
-  EXPECT_TRUE(!ShardingUtil::EqualShardingSpecs(tiled_2d, tiled_3d));
+  EXPECT_FALSE(ShardingUtil::EqualShardingSpecs(tiled_2d, tiled_3d));
   EXPECT_TRUE(ShardingUtil::EqualShardingSpecs(replicated, replicated));
-  EXPECT_TRUE(!ShardingUtil::EqualShardingSpecs(tiled_2d, replicated));
+  EXPECT_FALSE(ShardingUtil::EqualShardingSpecs(tiled_2d, replicated));
 }
 
 TEST_F(XLAShardingTest, CreateTensorsData) {
@@ -275,8 +275,8 @@ TEST_F(XLAShardingTest, OutputHandler) {
   auto shards =
       xla::ComputationClient::Get()->GetDataShards(sharded_outputs[0]);
   EXPECT_EQ(shards.size(), devices.size());
-  EXPECT_TRUE(
-      !xla::Shape::Equal().IgnoreLayout()(shards[0]->shape(), tensor_shape));
+  EXPECT_FALSE(
+      xla::Shape::Equal().IgnoreLayout()(shards[0]->shape(), tensor_shape));
 
   // Wrap sharded data into a PjRtShardedData with `devices.size()` shards.
   std::vector<xla::ComputationClient::DataPtr> wrapped_outputs =

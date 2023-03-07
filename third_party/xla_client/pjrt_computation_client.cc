@@ -354,6 +354,9 @@ std::vector<ComputationClient::ComputationPtr> PjRtComputationClient::Compile(
     if (instance.is_sharded) {
       // TODO(yeounoh) multi-host, multi-slice configurations
       compile_options.executable_build_options.set_use_spmd_partitioning(true);
+      // TODO(yeounoh) this is set to false by default, but explicitly set here
+      // to expose the knob for future reference. We can override the compiler's
+      // default behavior to further optimize parameter sharding in the future.
       compile_options.executable_build_options
           .set_allow_spmd_sharding_propagation_to_output({false});
       compile_options.executable_build_options.set_num_partitions(

@@ -238,10 +238,14 @@ std::vector<xla::ComputationClient::DataPtr> ShardingUtil::OutputHandler(
     XLATensor::ShardingSpecPtr sharding = sharding_specs[i];
     if (sharding &&
         (sharding->sharding.type() != xla::OpSharding::REPLICATED)) {
+      XLA_CHECK(sharding->shape.has_value())
+          << "Sharding or Wrapping data shards in OutputHandler requires "
+             "unpartitioned tensor shape.";
       if (replicated_output) {
         // Reshards replicated output if `sharding` is present.
-        std::vector<at::Tensor> tensors =
-            XlaDataToTensors({WrapXlaData(sharded_results[0][i])}, at::kFloat);
+        std::vector<at::Tensor> tensors = XlaDataToTensors(
+            {WrapXlaData(sharded_results[0][i])},
+            TensorTypeFromXlaType(sharding->shape.value().element_type()));
         outputs.push_back(UnwrapXlaData(CreateTensorsData(
             tensors, {sharding},
             std::vector<std::string>{GetVirtualDevice().toString()})[0]));
@@ -254,9 +258,6 @@ std::vector<xla::ComputationClient::DataPtr> ShardingUtil::OutputHandler(
           XLA_CHECK(sharded_results[j][i]->HasValue());
           shards.push_back(sharded_results[j][i]);
         }
-
-        XLA_CHECK(sharding->shape.has_value())
-            << "Wrapping data shards requires unpartitioned tensor shape.";
         outputs.push_back(xla::ComputationClient::Get()->WrapDataShards(
             shards, GetVirtualDevice().toString(), sharding->shape.value(),
             sharding->sharding));
