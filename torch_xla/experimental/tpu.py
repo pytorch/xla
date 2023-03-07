@@ -172,7 +172,7 @@ def configure_topology(local_rank: int,
   tpu_env = get_tpu_env()
 
   accelerator_type = tpu_env[xenv.ACCELERATOR_TYPE]
-  if version() == 4 or version() == 5:
+  if tpu_env['ACCELERATOR_TYPE'].startswith('v4') or tpu_env['ACCELERATOR_TYPE'].startswith('v5'):
     # Process bounds with 4 chips per process
     default_process_bounds = MeshShape.from_string(
         tpu_env[xenv.TPU_PROCESS_BOUNDS])
