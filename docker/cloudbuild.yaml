@@ -7,6 +7,7 @@ steps:
           'build',
           '--shm-size', '16gb',
           '--build-arg', 'base_image=${_DOCKER_BASE_IMAGE}',
+          '--build-arg', 'pytorch_cuda=${_PYTORCH_CUDA}',
           '--build-arg', 'cuda=${_CUDA}',
           '--build-arg', 'python_version=${_PYTHON_VERSION}',
           '--build-arg', 'release_version=${_RELEASE_VERSION}',
@@ -36,6 +37,7 @@ steps:
 
 substitutions:
     _DOCKER_BASE_IMAGE: 'debian:buster'
+    _PYTORCH_CUDA: '0'
     _CUDA: '0'
     _PYTHON_VERSION: '3.6'
     _RELEASE_VERSION: 'nightly'  # or rX.Y
