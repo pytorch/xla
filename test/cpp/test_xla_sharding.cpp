@@ -240,8 +240,12 @@ TEST_F(XLAShardingTest, InputHandler) {
 }
 
 TEST_F(XLAShardingTest, OutputHandler) {
-  if (xla::sys_util::GetEnvString(xla::env::kEnvPjRtDevice, "") == "") {
-    GTEST_SKIP() << "`PJRT_DEVICE` is not set.";
+  if ((xla::sys_util::GetEnvString(xla::env::kEnvPjRtDevice, "") == "") ||
+      (xla::ComputationClient::Get()->GetLocalDevices().size() < 2)) {
+    GTEST_SKIP()
+        << "`PJRT_DEVICE` is not set, with more than 2 local devices, ("
+        << xla::ComputationClient::Get()->GetLocalDevices().size()
+        << " local devices detected).";
   }
 
   std::vector<std::string> devices =

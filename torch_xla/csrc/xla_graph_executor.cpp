@@ -848,18 +848,6 @@ std::vector<torch::lazy::BackendDataPtr> XLAGraphExecutor::SetTensorData(
       tensor->data()->view = nullptr;
       tensor->data()->tensor_data = c10::nullopt;
     }
-    // Create sharded data placeholder, this will be used to
-    // hold the corresponding computation results.
-    if (tensor->sharding_spec()) {
-      auto sharding = tensor->sharding_spec();
-      if (!sharding->shape.has_value()) {
-        sharding->shape = tensor->shape();
-      }
-      handle = WrapXlaData(xla::ComputationClient::Get()->WrapDataShards(
-          {UnwrapXlaData(handle)}, GetVirtualDevice().toString(),
-          sharding->shape.value(), sharding->sharding));
-      tensor->data()->handle = handle;
-    }
     tensors_data.emplace_back(std::move(handle));
   }
   return tensors_data;
@@ -885,6 +873,17 @@ void XLAGraphExecutor::ExtractIRAndPrepareXlaData_(
     torch::lazy::BackendDataPtr handle =
         WrapXlaData(xla::ComputationClient::Get()->CreateDataPlaceholder(
             tensor_device.toString(), std::move(shape)));
+    // Create sharded data placeholder, this will be used to
+    // hold the corresponding computation results.
+    if (tensor->sharding_spec()) {
+      auto sharding = tensor->sharding_spec();
+      if (!sharding->shape.has_value()) {
+        sharding->shape = tensor->shape();
+      }
+      handle = WrapXlaData(xla::ComputationClient::Get()->WrapDataShards(
+          {UnwrapXlaData(handle)}, GetVirtualDevice().toString(),
+          sharding->shape.value(), sharding->sharding));
+    }
     tensor_data_vec.push_back(handle);
     if (tensor->CurrentDataHandle() == nullptr && config.force_ltc_data) {
       tensor->AssignIrValue(torch::lazy::Value());
