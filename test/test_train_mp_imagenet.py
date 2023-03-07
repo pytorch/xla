@@ -112,7 +112,7 @@ DEFAULT_KWARGS = dict(
 #    2. Hyperparameters can be tuned to further improve the accuracy.
 #  usage: python3 /usr/share/pytorch/xla/test/test_train_mp_imagenet.py --model=resnet50 \
 #         --fake_data --num_epochs=10 --log_steps=300 \
-#         --profile   --use_optimized_kwargs tpuv4  --drop_last
+#         --profile   --use_optimized_kwargs=tpuv4  --drop_last
 OPTIMIZED_KWARGS = {
     'tpuv4':
         dict(
