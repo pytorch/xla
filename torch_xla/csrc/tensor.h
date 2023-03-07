@@ -23,7 +23,6 @@
 #include "torch_xla/csrc/ir_util.h"
 #include "torch_xla/csrc/lowering_context.h"
 #include "torch_xla/csrc/torch_util.h"
-#include "torch_xla/csrc/view.h"
 
 namespace torch_xla {
 
@@ -126,19 +125,9 @@ class XLATensor : public torch::lazy::LazyTensor {
           sharding(sharding) {
       alias_id = unique_id;
     }
-    Data(std::shared_ptr<View> view, const torch::lazy::BackendDevice& device,
-         c10::optional<at::ScalarType> logical_element_type,
-         ShardingSpecPtr sharding = nullptr)
-        : torch::lazy::LazyTensor::Data(device),
-          view(std::move(view)),
-          logical_element_type(logical_element_type),
-          sharding(sharding) {
-      alias_id = unique_id;
-    }
 
     ~Data();
 
-    std::shared_ptr<View> view;
     // TODO: remove this in favor of torch::lazy::Shape within ir_value.
     c10::optional<at::ScalarType> logical_element_type;
     // The user provided sharding spec is attached to `XLATensor::Data`
@@ -209,10 +198,6 @@ class XLATensor : public torch::lazy::LazyTensor {
   // We don't use the upstream shape to provide xla::shape.
   xla::util::MaybeRef<xla::Shape> shape() const;
 
-  // Retrieves an opaque ID of the alias object upon which the tensor's view is
-  // rooted, or 0 if this tensor is not a view.
-  std::ptrdiff_t GetViewAliasId() const;
-
   // Fetches the XLA data behind the tensor. If the tensor has a graph defining
   // its current value, executes the graph and fetches the XLA data result.
   // TODO(alanwaketan): Reuse the upstream ones once Functionalization is done.
@@ -238,10 +223,6 @@ class XLATensor : public torch::lazy::LazyTensor {
   // We don't use the upstream MakeOutputTensors to return XLATensorPtr instead.
   std::vector<XLATensorPtr> MakeOutputTensors(
       torch::lazy::NodePtr node, bool inherit_logical_type = true) const;
-
-  void SetSubView(ViewInfo view_info) const;
-  void ModifyCurrentView(ViewInfo view_info) const;
-  XLATensorPtr CreateViewTensor(ViewInfo view_info) const;
 
   // We don't use the upstream CopyTensorToDevice in order to return
   // XLATensorPtr.
@@ -285,24 +266,7 @@ class XLATensor : public torch::lazy::LazyTensor {
   XLATensor(torch::lazy::Value ir_value,
             const torch::lazy::BackendDevice& device,
             c10::optional<at::ScalarType> logical_element_type = c10::nullopt);
-  XLATensor(std::shared_ptr<View> view,
-            const torch::lazy::BackendDevice& device,
-            c10::optional<at::ScalarType> logical_element_type = c10::nullopt);
   XLATensor(std::shared_ptr<Data> data);
-
-  static XLATensorPtr Create(
-      std::shared_ptr<View> view, const torch::lazy::BackendDevice& device,
-      c10::optional<at::ScalarType> logical_element_type = c10::nullopt);
-
-  // TODO(alanwaketan): Reuse the upstream one once Functionalization is done.
-  void SetXlaData(torch::lazy::BackendDataPtr handle, bool sync);
-
-  View::IrNode GetViewUpdate(const std::shared_ptr<View>& view) const;
-
-  std::shared_ptr<View> UpdateView(std::shared_ptr<View> view,
-                                   torch::lazy::Value ir_value) const;
-
-  std::shared_ptr<View> CreateView(ViewInfo view_info) const;
 
   torch::lazy::Value MaybeCastIrValue(
       torch::lazy::Value ir_value, const torch::lazy::BackendDevice& device,

@@ -87,15 +87,6 @@ XLATensorPtr XLATensor::Create(
   return xtensor;
 }
 
-XLATensorPtr XLATensor::Create(
-    std::shared_ptr<View> view, const torch::lazy::BackendDevice& device,
-    c10::optional<at::ScalarType> logical_element_type) {
-  XLATensorPtr xtensor = c10::make_intrusive<XLATensor>(
-      XLATensor(std::move(view), device, logical_element_type));
-  XLAGraphExecutor::Get()->RegisterTensor(xtensor->data());
-  return xtensor;
-}
-
 XLATensorPtr XLATensor::Create(std::shared_ptr<Data> data) {
   return c10::make_intrusive<XLATensor>(XLATensor(std::move(data)));
 }
@@ -124,12 +115,6 @@ XLATensor::XLATensor(torch::lazy::Value ir_value,
   }
   TryLimitGraphSize();
 }
-
-XLATensor::XLATensor(std::shared_ptr<View> view,
-                     const torch::lazy::BackendDevice& device,
-                     c10::optional<at::ScalarType> logical_element_type)
-    : XLATensor(std::make_shared<Data>(std::move(view), device,
-                                       logical_element_type)) {}
 
 XLATensor::XLATensor(std::shared_ptr<Data> data)
     : torch::lazy::LazyTensor(data),
@@ -188,11 +173,6 @@ torch::lazy::BackendDataPtr XLATensor::GetXlaData() {
   // not receive any updates before calling the current XLA valid.
   bool up_to_date = true;
   torch::lazy::Value ir_value;
-  if (data()->view != nullptr) {
-    View::IrNode ir_value_updated = GetViewUpdate(data()->view);
-    up_to_date = !ir_value_updated.updated;
-    ir_value = std::move(ir_value_updated.ir_value);
-  }
   if (up_to_date) {
     torch::lazy::BackendDataPtr handle = CurrentDataHandle();
     if (handle != nullptr) {
@@ -287,19 +267,6 @@ void XLATensor::SetXlaData(torch::lazy::BackendDataPtr handle, bool sync) {
 void XLATensor::SetIrValue(torch::lazy::Value ir_value, bool inplace) {
   data()->handle = nullptr;
   data()->tensor_data = c10::nullopt;
-  if (data()->view != nullptr && inplace) {
-    // If we have an active view, SetIrValue() happens, and we are
-    // within an in-place execution context, we need to update the view's
-    // alias as well.
-    data()->view = UpdateView(data()->view, std::move(ir_value));
-    data()->generation += 1;
-  } else {
-    // Reset the view if we are not within an in-place execution context
-    data()->view = nullptr;
-    data()->generation = 1;
-    AssignIrValue(std::move(ir_value));
-    TryLimitGraphSize();
-  }
   if (UseEagerDebugMode() && ShouldSyncIrNode()) {
     std::vector<XLATensorPtr> xtensors({c10::make_intrusive<XLATensor>(*this)});
     XLAGraphExecutor::Get()->ApplyEagerSync(xtensors);
@@ -354,9 +321,6 @@ torch::lazy::Value XLATensor::GetIrValue() const {
 }
 
 torch::lazy::Value XLATensor::CurrentIrValue() const {
-  if (data()->view != nullptr) {
-    return GetViewUpdate(data()->view).ir_value;
-  }
   return data()->ir_value;
 }
 
@@ -384,73 +348,6 @@ torch::lazy::Value XLATensor::GetIrValueForTensor(
     data = TensorToXlaData(tensor, device);
   }
   return CreateTensorNode(std::move(data), read_only);
-}
-
-View::IrNode XLATensor::GetViewUpdate(const std::shared_ptr<View>& view) const {
-  View::IrNode ir_value_updated = view->GetViewIrNode();
-  if (ir_value_updated.updated) {
-    data()->handle = nullptr;
-    data()->tensor_data = c10::nullopt;
-  }
-  return ir_value_updated;
-}
-
-std::shared_ptr<View> XLATensor::UpdateView(std::shared_ptr<View> view,
-                                            torch::lazy::Value ir_value) const {
-  if (GetXlaShape(ir_value).dimensions() != view->shape().dimensions()) {
-    XLA_CHECK_EQ(
-        xla::util::Multiply<int64_t>(GetXlaShape(ir_value).dimensions()),
-        xla::util::Multiply<int64_t>(view->shape().dimensions()));
-
-    ViewInfo view_info(ViewInfo::Type::kReshape, GetXlaShape(ir_value),
-                       view->shape());
-    view = view->CreateSubView(view_info.shape, view_info);
-  }
-  view->Update(std::move(ir_value));
-  return view;
-}
-
-void XLATensor::SetSubView(ViewInfo view_info) const {
-  data()->view = data()->view->CreateSubView(view_info.shape, view_info);
-  data()->generation += 1;
-}
-
-void XLATensor::ModifyCurrentView(ViewInfo view_info) const {
-  if (data()->view != nullptr) {
-    SetSubView(view_info);
-    return;
-  }
-  // This node is not a view. Since this function is meant to modify a view
-  // in place, we need to turn this existing tensor into a view.
-  torch::lazy::Value ir_value = GetIrValue();
-  std::shared_ptr<Alias> alias = std::make_shared<Alias>(ir_value);
-  data()->view =
-      std::make_shared<View>(view_info.shape, alias, std::move(view_info));
-  AssignIrValue(torch::lazy::Value());
-}
-
-std::shared_ptr<View> XLATensor::CreateView(ViewInfo view_info) const {
-  if (data()->view != nullptr) {
-    return data()->view->CreateSubView(view_info.shape, view_info);
-  }
-  // This node is not a view, and creating a view forks the current node into
-  // becoming one itself. This means creating an alias with the current IR
-  // XlaNode, and using the same alias for the created IR XlaNode.
-  torch::lazy::Value ir_value = GetIrValue();
-  std::shared_ptr<Alias> alias = std::make_shared<Alias>(ir_value);
-  ViewInfo this_view_info(ViewInfo::Type::kNoOp, GetXlaShape(ir_value),
-                          GetXlaShape(ir_value));
-  data()->view = std::make_shared<View>(GetXlaShape(ir_value), alias,
-                                        std::move(this_view_info));
-  AssignIrValue(torch::lazy::Value());
-  return std::make_shared<View>(view_info.shape, alias, view_info);
-}
-
-XLATensorPtr XLATensor::CreateViewTensor(ViewInfo view_info) const {
-  auto new_tensor =
-      Create(CreateView(std::move(view_info)), GetDevice(), dtype_optional());
-  new_tensor->storage_ = Storage();
-  return new_tensor;
 }
 
 at::Tensor XLATensor::ToTensor(bool detached) {
@@ -518,10 +415,6 @@ void XLATensor::UpdateFromTensor(at::Tensor tensor, bool sync) {
     SetTensorData(coyped_tensor);
     data()->handle = nullptr;
     AssignIrValue(torch::lazy::Value());
-    if (data()->view != nullptr) {
-      torch::lazy::Value ir_value = GetIrValueForTensor(coyped_tensor, device);
-      data()->view = UpdateView(data()->view, std::move(ir_value));
-    }
   }
 }
 
