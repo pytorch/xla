@@ -55,7 +55,7 @@ MODEL_OPTS = {
         'type': int,
     },
     '--use_optimized_kwargs': {
-        'action': 'store_true',
+        'type': str,
     },
 }
 
@@ -107,33 +107,37 @@ DEFAULT_KWARGS = dict(
     host_to_device_transfer_threads=1,
 )
 
-#  Best config to achieve peak performance on TPU v4
+#  Best config to achieve peak performance based on TPU version
 #    1. It is recommended to use this config in conjuntion with XLA_USE_BF16=1 Flag.
 #    2. Hyperparameters can be tuned to further improve the accuracy.
 #  usage: python3 /usr/share/pytorch/xla/test/test_train_mp_imagenet.py --model=resnet50 \
 #         --fake_data --num_epochs=10 --log_steps=300 \
-#         --profile   --use_optimized_kwargs  --drop_last
-OPTIMIZED_KWARGS_v4 = dict(
-    batch_size=128,
-    test_set_batch_size=128,
-    num_epochs=18,
-    momentum=0.9,
-    lr=0.1,
-    target_accuracy=0.0,
-    persistent_workers=True,
-    prefetch_factor=32,
-    loader_prefetch_size=128,
-    device_prefetch_size=1,
-    num_workers=16,
-    host_to_device_transfer_threads=4,
-)
+#         --profile   --use_optimized_kwargs tpuv4  --drop_last
+OPTIMIZED_KWARGS = {
+    'tpuv4':
+        dict(
+            batch_size=128,
+            test_set_batch_size=128,
+            num_epochs=18,
+            momentum=0.9,
+            lr=0.1,
+            target_accuracy=0.0,
+            persistent_workers=True,
+            prefetch_factor=32,
+            loader_prefetch_size=128,
+            device_prefetch_size=1,
+            num_workers=16,
+            host_to_device_transfer_threads=4,
+        )
+}
 
 MODEL_SPECIFIC_DEFAULTS = {
-    # Override some of the args in DEFAULT_KWARGS, or add them to the dict
+    # Override some of the args in DEFAULT_KWARGS/OPTIMIZED_KWARGS, or add them to the dict
     # if they don't exist.
     'resnet50':
         dict(
-            DEFAULT_KWARGS, **{
+            OPTIMIZED_KWARGS.get(FLAGS.use_optimized_kwargs, DEFAULT_KWARGS),
+            **{
                 'lr': 0.5,
                 'lr_scheduler_divide_every_n_epochs': 20,
                 'lr_scheduler_divisor': 5,
@@ -142,10 +146,7 @@ MODEL_SPECIFIC_DEFAULTS = {
 }
 
 # Set any args that were not explicitly given by the user.
-# DEFAULT_KWARGS in the below line can be replaced with OPTIMIZED_KWARGS for performance.
-default_value_dict = MODEL_SPECIFIC_DEFAULTS.get(
-    FLAGS.model,
-    OPTIMIZED_KWARGS_v4 if FLAGS.use_optimized_kwargs else DEFAULT_KWARGS)
+default_value_dict = MODEL_SPECIFIC_DEFAULTS.get(FLAGS.model, DEFAULT_KWARGS)
 for arg, value in default_value_dict.items():
   if getattr(FLAGS, arg) is None:
     setattr(FLAGS, arg, value)
