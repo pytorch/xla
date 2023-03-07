@@ -95,15 +95,6 @@ function run_xla_backend_mp {
   MASTER_ADDR=localhost MASTER_PORT=6000 run_test "$@"
 }
 
-function run_torchrun {
-  echo "Running tests spawned by torchrun"
-  if [ -x "$(command -v nvidia-smi)" ]; then
-    run_test "$@"
-  else
-    echo "the tests need atleast two XLA workers to validate"
-  fi
-}
-
 function run_xrt {
   if [ -x "$(command -v nvidia-smi)" ]; then
     GPU_NUM_DEVICES=2 "$@"
@@ -122,12 +113,22 @@ function run_async_scalar {
   XLA_TRANSFER_SCALAR_ASYNC=1 run_xrt "$@"
 }
 
+function run_torchrun {
+  echo "Running tests spawned by torchrun"
+  if [ -x "$(command -v nvidia-smi)" ]; then
+    run_xrt "$@"
+  else
+    echo "the tests need atleast two XLA workers to validate"
+  fi
+}
+
 function run_xrt_tests {
   echo "Running XRT tests"
   run_opbyop python3 "$CDIR/test_operations.py" "$@" --verbosity=$VERBOSITY
   run_async_scalar python3 "$CDIR/test_operations.py" "$@" --verbosity=$VERBOSITY
   run_xrt python3 "$CDIR/test_torch_distributed_xla_backend.py"
   run_xrt python3 "$CDIR/test_mp_rendezvous.py"
+  run_torchrun python3 "$CDIR/test_allreduce_torchrun.py"
 }
 
 function run_op_tests {
@@ -185,7 +186,6 @@ function run_mp_op_tests {
   run_test python3 "$CDIR/test_mp_save.py"
   run_test python3 "$CDIR/test_mp_mesh_reduce.py"
   run_test python3 "$CDIR/test_mp_sync_batch_norm.py"
-  run_torchrun python3 "$CDIR/test_allreduce_torchrun.py"
   run_xla_backend_mp python3 "$CDIR/test_torch_distributed_all_gather_xla_backend.py"
   run_xla_backend_mp python3 "$CDIR/test_torch_distributed_all_reduce_xla_backend.py"
   run_xla_backend_mp python3 "$CDIR/test_torch_distributed_multi_all_reduce_xla_backend.py"
