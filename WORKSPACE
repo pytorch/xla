@@ -23,7 +23,6 @@ http_archive(
         "//tf_patches:thread_local_random.diff",
         "//tf_patches:xplane.diff",
     ],
-    sha256 = "0fdf5067cd9827be2ae14c2ac59cd482e678134b125943be278ad23ea5342181",
     strip_prefix = "tensorflow-f7759359f8420d3ca7b9fd19493f2a01bd47b4ef",
     urls = [
         "https://github.com/tensorflow/tensorflow/archive/f7759359f8420d3ca7b9fd19493f2a01bd47b4ef.tar.gz",
