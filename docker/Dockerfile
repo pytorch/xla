@@ -8,6 +8,7 @@ ARG python_version="3.7"
 ARG release_version="nightly"
 ARG xla_branch=""
 ARG example_branch="master"
+ARG pytorch_cuda="0"
 ARG cuda="0"
 ARG cuda_compute="3.7,7.0,7.5,8.0"
 ARG cxx_abi="1"
@@ -21,7 +22,7 @@ RUN apt-get install -y git sudo python-pip python3-pip
 RUN git clone https://github.com/pytorch/pytorch
 
 # Disable CUDA for PyTorch
-ENV USE_CUDA "0"
+ENV USE_CUDA "${pytorch_cuda}"
 
 # Enable CUDA for XLA
 ENV XLA_CUDA "${cuda}"
