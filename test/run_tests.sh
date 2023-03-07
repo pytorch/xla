@@ -127,6 +127,7 @@ function run_xrt_tests {
   run_opbyop python3 "$CDIR/test_operations.py" "$@" --verbosity=$VERBOSITY
   run_async_scalar python3 "$CDIR/test_operations.py" "$@" --verbosity=$VERBOSITY
   run_xrt python3 "$CDIR/test_torch_distributed_xla_backend.py"
+  run_xrt python3 "$CDIR/test_mp_rendezvous.py"
 }
 
 function run_op_tests {
@@ -181,7 +182,6 @@ function run_mp_op_tests {
   run_test python3 "$CDIR/test_mp_all_gather.py"
   run_test python3 "$CDIR/test_mp_reduce_scatter.py"
   run_test python3 "$CDIR/test_mp_distributed_mm.py"
-  run_test python3 "$CDIR/test_mp_rendezvous.py"
   run_test python3 "$CDIR/test_mp_save.py"
   run_test python3 "$CDIR/test_mp_mesh_reduce.py"
   run_test python3 "$CDIR/test_mp_sync_batch_norm.py"
