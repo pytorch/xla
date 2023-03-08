@@ -672,9 +672,11 @@ c10::SymNode XLASymNodeImpl::mod(const c10::SymNode& other) {
   TORCH_LAZY_FN_COUNTER("xla::size_");
   torch_xla::XLASymNodeImpl* p_other =
       dynamic_cast<XLASymNodeImpl*>(other.get());
+  XLA_CHECK(is_int()) << __FUNCTION__ << " with non-int NYI";
+  XLA_CHECK(p_other->is_int()) << __FUNCTION__ << " with non-int NYI";
   torch::lazy::NodePtr n_mod =
       torch::lazy::MakeNode<SizeMod>(node(), p_other->node());
-  return c10::make_intrusive<XLASymNodeImpl>(n_mod);
+  return c10::make_intrusive<XLASymNodeImpl>(n_mod, PyType::INT);
 }
 
 c10::SymNode XLASymNodeImpl::eq(const c10::SymNode& other) {
