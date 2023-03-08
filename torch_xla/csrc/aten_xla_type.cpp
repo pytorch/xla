@@ -460,6 +460,9 @@ at::Tensor XLANativeFunctions::_copy_from(const at::Tensor& self,
                                           const at::Tensor& dst,
                                           bool non_blocking) {
   TORCH_LAZY_FN_COUNTER("xla::");
+  XLA_CHECK(self.device().type() == c10::kCPU ||
+            self.device().type() == c10::kXLA)
+      << "Only cpu or xla tensors can be copied to xla device.";
   auto dst_tensor = bridge::TryGetXlaTensor(dst);
   auto self_tensor = bridge::TryGetXlaTensor(self);
   if (!self_tensor) {
@@ -483,6 +486,9 @@ at::Tensor XLANativeFunctions::_copy_from(const at::Tensor& self,
 at::Tensor XLANativeFunctions::_copy_from_and_resize(const at::Tensor& self,
                                                      const at::Tensor& dst) {
   TORCH_LAZY_FN_COUNTER("xla::");
+  XLA_CHECK(self.device().type() == c10::kCPU ||
+            self.device().type() == c10::kXLA)
+      << "Only cpu or xla tensors can be copied to xla device.";
   auto dst_tensor = bridge::TryGetXlaTensor(dst);
   auto self_tensor = bridge::TryGetXlaTensor(self);
   if (!self_tensor) {
