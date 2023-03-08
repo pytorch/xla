@@ -11,7 +11,13 @@ namespace torch_xla {
 DeviceData::DeviceData(std::shared_ptr<torch::lazy::BackendData> data)
     : XlaNode(xla_device_data, UnwrapXlaData(data)->shape(), /*num_outputs=*/1,
               /*hash_seed=*/(uint32_t)101),
-      data_(std::move(data)) {}
+      data_(std::move(data)) {
+  std::optional<xla::OpSharding> op_sharding =
+      xla::ComputationClient::Get()->GetDataSharding(UnwrapXlaData(data_));
+  if (op_sharding.has_value()) {
+    SetSharding(op_sharding.value());
+  }
+}
 
 std::string DeviceData::ToString() const {
   std::stringstream ss;
