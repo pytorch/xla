@@ -45,28 +45,25 @@ export PYTORCH_TEST_WITH_SLOW=1
 export XLA_DUMP_FATAL_STACK=1
 export CPU_NUM_DEVICES=4
 
-echo "Running in PjRt runtime: $@"
-if [ -x "$(command -v nvidia-smi)" ]; then
-  PJRT_DEVICE=GPU "$@"
-else
-  # TODO(darisoy): run these tests with multiple CPU devices, this fails due to TF issue.
-  PJRT_DEVICE=CPU CPU_NUM_DEVICES=1 "$@"
-fi
-
 TORCH_XLA_DIR=$(cd ~; dirname "$(python -c 'import torch_xla; print(torch_xla.__file__)')")
 COVERAGE_FILE="$CDIR/../.coverage"
 
-function run_test {
+function run_coverage {
   if [ "$USE_COVERAGE" != "0" ]; then
     coverage run --source="$TORCH_XLA_DIR" -p "$@"
   else
-     "$@"
+    python3 "$@"
   fi
 }
 
-function run_opbyop {
-  echo "Running in OpByOp mode: $@"
-  XLA_GET_TENSORS_OPBYOP=1 XLA_SYNC_TENSORS_OPBYOP=1 run_test "$@"
+function run_test {
+  echo "Running in PjRt runtime: $@"
+  if [ -x "$(command -v nvidia-smi)" ]; then
+    PJRT_DEVICE=GPU run_coverage "$@"
+  else
+    # TODO(darisoy): run these tests with multiple CPU devices, this fails due to TF issue.
+    PJRT_DEVICE=CPU CPU_NUM_DEVICES=1 run_coverage "$@"
+  fi
 }
 
 function run_use_bf16 {
@@ -111,9 +108,9 @@ function run_xla_backend_mp {
 
 function run_xrt {
   if [ -x "$(command -v nvidia-smi)" ]; then
-    GPU_NUM_DEVICES=2 "$@"
+    GPU_NUM_DEVICES=2 run_coverage "$@"
   else
-    XRT_DEVICE_MAP="CPU:0;/job:localservice/replica:0/task:0/device:XLA_CPU:0" XRT_WORKERS="localservice:0;grpc://localhost:$(shuf -i 40701-40999 -n 1)" "$@"
+    XRT_DEVICE_MAP="CPU:0;/job:localservice/replica:0/task:0/device:XLA_CPU:0" XRT_WORKERS="localservice:0;grpc://localhost:$(shuf -i 40701-40999 -n 1)" run_coverage "$@"
   fi
 }
 
@@ -139,9 +136,9 @@ function run_torchrun {
 function run_xrt_tests {
   # For features not supported in PJRT
   echo "Running XRT tests"
-  run_opbyop python3 "$CDIR/test_operations.py" "$@" --verbosity=$VERBOSITY
-  run_async_scalar python3 "$CDIR/test_operations.py" "$@" --verbosity=$VERBOSITY
-  run_torchrun python3 "$CDIR/test_allreduce_torchrun.py"
+  run_opbyop  "$CDIR/test_operations.py" "$@" --verbosity=$VERBOSITY
+  run_async_scalar  "$CDIR/test_operations.py" "$@" --verbosity=$VERBOSITY
+  run_torchrun  "$CDIR/test_allreduce_torchrun.py"
 }
 
 function run_op_tests {
@@ -174,11 +171,11 @@ function run_op_tests {
   run_test "$CDIR/dynamo/test_dynamo.py"
   run_test "$CDIR/dynamo/test_bridge.py"
   run_test "$CDIR/dynamo/test_num_output.py"
-  run_save_tensor_file  "$CDIR/dynamo/test_dynamo_graph_dump.py"
-  run_downcast_bf16  "$CDIR/test_data_type.py"
-  run_use_bf16  "$CDIR/test_data_type.py"
-  run_xla_ir_debug  "$CDIR/test_env_var_mapper.py"
-  run_xla_hlo_debug  "$CDIR/test_env_var_mapper.py"
+  run_save_tensor_file "$CDIR/dynamo/test_dynamo_graph_dump.py"
+  run_downcast_bf16 "$CDIR/test_data_type.py"
+  run_use_bf16 "$CDIR/test_data_type.py"
+  run_xla_ir_debug "$CDIR/test_env_var_mapper.py"
+  run_xla_hlo_debug "$CDIR/test_env_var_mapper.py"
   run_test "$CDIR/pjrt/test_experimental_pjrt.py"
   run_test "$CDIR/pjrt/test_experimental_tpu.py"
   run_test "$CDIR/pjrt/test_ddp.py"
