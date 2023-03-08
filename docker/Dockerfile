@@ -17,8 +17,11 @@ ARG git_clone="true"
 ARG build_cpp_tests="0"
 
 RUN apt-get update
-RUN apt-get install -y git sudo python-pip python3-pip
+RUN apt-get install -y git sudo python3-pip
 RUN git clone https://github.com/pytorch/pytorch
+
+RUN echo 'debconf debconf/frontend select Noninteractive' | debconf-set-selections
+RUN sudo apt-get install -y -q
 
 # Disable CUDA for PyTorch
 ENV USE_CUDA "0"
