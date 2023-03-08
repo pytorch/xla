@@ -130,6 +130,7 @@ def train_mnist(flags, **kwargs):
   lr = flags.lr * xm.xrt_world_size()
 
   device = xm.xla_device()
+  device_hw = xm.xla_device_hw(device)
   model = MNIST().to(device)
   writer = None
   if xm.is_master_ordinal():
@@ -137,7 +138,13 @@ def train_mnist(flags, **kwargs):
   optim_cls = syncfree.SGD if FLAGS.use_syncfree_optim else optim.SGD
   optimizer = optim_cls(model.parameters(), lr=lr, momentum=flags.momentum)
   loss_fn = nn.NLLLoss()
-  scaler = GradScaler(use_zero_grad=FLAGS.use_zero_grad)
+  if device_hw == 'TPU':
+        autocast = torch.xla.amp.autocast
+        scaler = None
+  elif device_hw == 'GPU':
+      autocast = torch.cuda.amp.autocast
+      # GradScaler only used for GPU
+      scaler = GradScaler(use_zero_grad=FLAGS.use_zero_grad)
 
   def train_loop_fn(loader):
     tracker = xm.RateTracker()
@@ -147,11 +154,15 @@ def train_mnist(flags, **kwargs):
       with autocast():
         output = model(data)
         loss = loss_fn(output, target)
-      scaler.scale(loss).backward()
-      gradients = xm._fetch_gradients(optimizer)
-      xm.all_reduce('sum', gradients, scale=1.0 / xm.xrt_world_size())
-      scaler.step(optimizer)
-      scaler.update()
+      if scaler:
+        scaler.scale(loss).backward()
+        gradients = xm._fetch_gradients(optimizer)
+        xm.all_reduce('sum', gradients, scale=1.0 / xm.xrt_world_size())
+        scaler.step(optimizer)
+        scaler.update()
+      else:
+        loss.backward()
+        xm.optimizer_step(optimizer)
       tracker.add(flags.batch_size)
       if step % flags.log_steps == 0:
         xm.add_step_closure(

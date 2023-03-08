@@ -426,10 +426,6 @@ void XLANativeFunctions::_amp_foreach_non_finite_check_and_unscale_(
     at::TensorList self, at::Tensor& found_inf, const at::Tensor& inv_scale) {
   TORCH_LAZY_FN_COUNTER("xla::");
   XLATensorPtr found_inf_tensor = bridge::GetXlaTensor(found_inf);
-  XlaDeviceType hw_type =
-      static_cast<XlaDeviceType>(found_inf_tensor->GetDevice().type());
-  XLA_CHECK(hw_type == XlaDeviceType::GPU || hw_type == XlaDeviceType::CPU)
-      << "AMP should be used with XLA:GPU";
   tensor_methods::_amp_foreach_non_finite_check_and_unscale_(
       bridge::GetXlaTensors(self), found_inf_tensor,
       bridge::GetXlaTensor(inv_scale));
@@ -444,10 +440,6 @@ at::Tensor& XLANativeFunctions::_amp_update_scale_(at::Tensor& current_scale,
   TORCH_LAZY_FN_COUNTER("xla::");
   XLATensorPtr growth_tracker_tensor = bridge::GetXlaTensor(growth_tracker);
   XLATensorPtr current_scale_tensor = bridge::GetXlaTensor(current_scale);
-  XlaDeviceType hw_type =
-      static_cast<XlaDeviceType>(growth_tracker_tensor->GetDevice().type());
-  XLA_CHECK(hw_type == XlaDeviceType::GPU || hw_type == XlaDeviceType::CPU)
-      << "AMP should be used with XLA:GPU";
   tensor_methods::_amp_update_scale_(
       growth_tracker_tensor, current_scale_tensor,
       bridge::GetXlaTensor(found_inf), scale_growth_factor,

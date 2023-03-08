@@ -27,7 +27,6 @@ MODEL_OPTS = {
     '--test_only_at_end': {
         'action': 'store_true',
     },
-    # AMP only works with XLA:GPU
     '--amp': {
         'action': 'store_true',
     },
@@ -68,7 +67,7 @@ import torch_xla.utils.utils as xu
 import torch_xla.core.xla_model as xm
 import torch_xla.distributed.xla_multiprocessing as xmp
 import torch_xla.test.test_utils as test_utils
-from torch_xla.amp import autocast, GradScaler
+from torch_xla.amp import GradScaler
 try:
   from torch_xla.amp import syncfree
 except ImportError:
@@ -197,6 +196,7 @@ def train_imagenet():
   torch.manual_seed(42)
 
   device = xm.xla_device()
+  device_hw = xm.xla_device_hw(device)
   model = get_model_property('model_fn')().to(device)
   writer = None
   if xm.is_master_ordinal():
@@ -219,7 +219,13 @@ def train_imagenet():
       summary_writer=writer)
   loss_fn = nn.CrossEntropyLoss()
   if FLAGS.amp:
-    scaler = GradScaler(use_zero_grad=FLAGS.use_zero_grad)
+    if device_hw == 'TPU':
+        autocast = torch.xla.amp.autocast
+        scaler = None
+    elif device_hw == 'GPU':
+        autocast = torch.cuda.amp.autocast
+        # GradScaler only used for GPU
+        scaler = GradScaler(use_zero_grad=FLAGS.use_zero_grad)
 
   def train_loop_fn(loader, epoch):
     tracker = xm.RateTracker()
@@ -230,12 +236,15 @@ def train_imagenet():
         with autocast():
           output = model(data)
           loss = loss_fn(output, target)
-
-        scaler.scale(loss).backward()
-        gradients = xm._fetch_gradients(optimizer)
-        xm.all_reduce('sum', gradients, scale=1.0 / xm.xrt_world_size())
-        scaler.step(optimizer)
-        scaler.update()
+        if scaler:
+          scaler.scale(loss).backward()
+          gradients = xm._fetch_gradients(optimizer)
+          xm.all_reduce('sum', gradients, scale=1.0 / xm.xrt_world_size())
+          scaler.step(optimizer)
+          scaler.update()
+        else:
+          loss.backward()
+          xm.optimizer_step(optimizer)
       else:
         output = model(data)
         loss = loss_fn(output, target)
