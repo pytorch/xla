@@ -147,6 +147,7 @@ def get_worker_ips() -> List[str]:
 
 def configure_one_chip_topology() -> None:
   """Configures TPU topology environment variables for one process and chip.
+
   Must be run before using any XLA devices.
   """
   os.environ.setdefault(xenv.TPU_VISIBLE_CHIPS, '0')
@@ -158,7 +159,9 @@ def configure_topology(local_rank: int,
                        local_world_size: int,
                        base_port: int = 8476) -> None:
   """Configures TPU topology environment variables based on TPU metadata.
+
   Must be run before using any XLA devices.
+
   Args:
     local_rank: rank of this process within this host.
     local_world_size: number of processes on this host.
@@ -207,7 +210,9 @@ def configure_topology(local_rank: int,
 
 def discover_master_worker_ip(use_localhost: bool = True) -> str:
   """Find the IP of the TPU host with TPU:0.
+
   TPU device IDs are nondeterministic and independent from Cloud TPU worker IDs.
+
   Args:
     use_localhost: if there is only one TPU host, return 'localhost` instead
       of that host's internal IP.
