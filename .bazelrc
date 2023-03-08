@@ -69,7 +69,7 @@ build:linux --copt=-Wno-unknown-warning-option
 # Suppress all warning messages.
 build:short_logs --output_filter=DONT_MATCH_ANYTHING
 
-#build:tpu --@org_tensorflow//tensorflow/compiler/xla/python:enable_tpu=true
+#build:tpu --@xla//xla/python:enable_tpu=true
 # maybe change to above command here !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 build:tpu --define=with_tpu_support=true
 
