@@ -145,6 +145,63 @@ class TestExperimentalTpu(parameterized.TestCase):
     self.assertListEqual(worker_ips, expected)
 
   @parameterized.named_parameters(
+      ('v5abcd-4_process_0', {
+          'ACCELERATOR_TYPE': 'v5abcd-4',
+          xenv.TPU_PROCESS_BOUNDS: '1,1,1',
+          xenv.TPU_CHIPS_PER_PROCESS_BOUNDS: '2,2,1',
+          'WORKER_ID': '0'
+      }, ['localhost'], 0, 4, {
+          xenv.TPU_CHIPS_PER_PROCESS_BOUNDS:
+              '2,2,1',
+          xenv.TPU_PROCESS_BOUNDS:
+              '1,1,1',
+          xenv.CLOUD_TPU_TASK_ID:
+              '0',
+          xenv.TPU_PROCESS_PORT:
+              '8476',
+          xenv.TPU_PROCESS_ADDRESSES:
+              'localhost:8476,localhost:8477,localhost:8478,localhost:8479',
+          xenv.TPU_VISIBLE_CHIPS:
+              '0',
+      }),
+      ('v5abcdefg-4_process_0', {
+          'ACCELERATOR_TYPE': 'v5abcdefg-4',
+          xenv.TPU_PROCESS_BOUNDS: '1,1,1',
+          xenv.TPU_CHIPS_PER_PROCESS_BOUNDS: '2,2,1',
+          'WORKER_ID': '0'
+      }, ['localhost'], 0, 4, {
+          xenv.TPU_CHIPS_PER_PROCESS_BOUNDS:
+              '2,2,1',
+          xenv.TPU_PROCESS_BOUNDS:
+              '1,1,1',
+          xenv.CLOUD_TPU_TASK_ID:
+              '0',
+          xenv.TPU_PROCESS_PORT:
+              '8476',
+          xenv.TPU_PROCESS_ADDRESSES:
+              'localhost:8476,localhost:8477,localhost:8478,localhost:8479',
+          xenv.TPU_VISIBLE_CHIPS:
+              '0',
+      }),
+      ('v5abcdefg-16_process_0', {
+          'ACCELERATOR_TYPE': 'v5abcdefg-16',
+          xenv.TPU_PROCESS_BOUNDS: '2,2,1',
+          xenv.TPU_CHIPS_PER_PROCESS_BOUNDS: '2,2,1',
+          'WORKER_ID': '0'
+      }, ['localhost'], 0, 4, {
+          xenv.TPU_CHIPS_PER_PROCESS_BOUNDS:
+              '2,2,1',
+          xenv.TPU_PROCESS_BOUNDS:
+              '2,2,1',
+          xenv.CLOUD_TPU_TASK_ID:
+              '0',
+          xenv.TPU_PROCESS_PORT:
+              '8476',
+          xenv.TPU_PROCESS_ADDRESSES:
+              'localhost:8476,localhost:8477,localhost:8478,localhost:8479',
+          xenv.TPU_VISIBLE_CHIPS:
+              '0',
+      }),
       ('v4-8_process_0', {
           'ACCELERATOR_TYPE': 'v4-8',
           xenv.TPU_PROCESS_BOUNDS: '1,1,1',
