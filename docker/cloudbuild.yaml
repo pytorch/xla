@@ -21,7 +21,7 @@ steps:
           '-t', 'gcr.io/tpu-pytorch/xla:${_IMAGE_NAME}',
           '-f', 'docker/Dockerfile', '.'
         ]
-  timeout: 14400s
+  timeout: 20400s
 - name: 'gcr.io/cloud-builders/docker'
   entrypoint: bash
   args: ['-c', 'docker tag gcr.io/tpu-pytorch/xla:${_IMAGE_NAME} gcr.io/tpu-pytorch/xla:${_IMAGE_NAME}_$(date -u +%Y%m%d)']
