@@ -13,7 +13,6 @@ http_archive(
     ],
     patch_tool = "patch",
     patches = [
-        "//tf_patches:bazel.diff",
         "//tf_patches:cache_urls.diff",
         "//tf_patches:cudnn_int8x32.diff",
         "//tf_patches:f16_abi_clang.diff",
