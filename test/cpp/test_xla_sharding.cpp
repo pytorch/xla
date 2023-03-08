@@ -160,9 +160,9 @@ TEST_F(XLAShardingTest, EqualShardingSpecs) {
       xla::HloSharding::Tile({{{0, 1}, {2, 3}, {4, 5}, {6, 7}}}).ToProto());
   XLATensor::ShardingSpec replicated(xla::HloSharding::Replicate().ToProto());
   EXPECT_TRUE(ShardingUtil::EqualShardingSpecs(tiled_2d, tiled_2d));
-  EXPECT_TRUE(!ShardingUtil::EqualShardingSpecs(tiled_2d, tiled_3d));
+  EXPECT_FALSE(ShardingUtil::EqualShardingSpecs(tiled_2d, tiled_3d));
   EXPECT_TRUE(ShardingUtil::EqualShardingSpecs(replicated, replicated));
-  EXPECT_TRUE(!ShardingUtil::EqualShardingSpecs(tiled_2d, replicated));
+  EXPECT_FALSE(ShardingUtil::EqualShardingSpecs(tiled_2d, replicated));
 }
 
 TEST_F(XLAShardingTest, CreateTensorsData) {
@@ -237,6 +237,60 @@ TEST_F(XLAShardingTest, InputHandler) {
   auto arg1_dev1 = arguments_by_device[1][1];
   EXPECT_TRUE(XlaDataValuesEqual(WrapXlaData(arg1_dev0), WrapXlaData(arg1_dev1),
                                  at::kFloat));
+}
+
+TEST_F(XLAShardingTest, OutputHandler) {
+  if ((xla::sys_util::GetEnvString(xla::env::kEnvPjRtDevice, "") == "") ||
+      (xla::ComputationClient::Get()->GetLocalDevices().size() < 2)) {
+    GTEST_SKIP()
+        << "`PJRT_DEVICE` is not set, with more than 2 local devices, ("
+        << xla::ComputationClient::Get()->GetLocalDevices().size()
+        << " local devices detected).";
+  }
+
+  std::vector<std::string> devices =
+      xla::ComputationClient::Get()->GetLocalDevices();
+
+  // Prepare an input vecotr `outputs` with 2 arguments per device.
+  std::vector<std::vector<xla::ComputationClient::DataPtr>> outputs;
+  outputs.reserve(devices.size());
+  at::Tensor tensor = at::ones({8}, at::TensorOptions(at::kFloat));
+  for (auto device : devices) {
+    outputs.push_back(
+        UnwrapXlaData(CreateTensorsData({tensor, tensor}, {device, device})));
+  }
+
+  xla::Shape tensor_shape =
+      CreateComputationShapeFromTensor(tensor, GetDefaultDevice());
+  auto sharding_spec = std::make_shared<XLATensor::ShardingSpec>(
+      xla::HloSharding::Tile1D(
+          CreateComputationShapeFromTensor(tensor, GetDefaultDevice()),
+          devices.size())
+          .ToProto(),
+      tensor_shape);
+  std::vector<XLATensor::ShardingSpecPtr> sharding_specs{sharding_spec,
+                                                         sharding_spec};
+
+  // Shard a PjRtData into a PjRtShardedData.
+  std::vector<xla::ComputationClient::DataPtr> sharded_outputs =
+      ShardingUtil::OutputHandler(outputs, sharding_specs,
+                                  /*replicated_output=*/true);
+  EXPECT_EQ(sharded_outputs.size(), 2);
+  auto shards =
+      xla::ComputationClient::Get()->GetDataShards(sharded_outputs[0]);
+  EXPECT_EQ(shards.size(), devices.size());
+  EXPECT_FALSE(
+      xla::Shape::Equal().IgnoreLayout()(shards[0]->shape(), tensor_shape));
+
+  // Wrap sharded data into a PjRtShardedData with `devices.size()` shards.
+  std::vector<xla::ComputationClient::DataPtr> wrapped_outputs =
+      ShardingUtil::OutputHandler(outputs, sharding_specs,
+                                  /*replicated_output=*/false);
+  EXPECT_EQ(wrapped_outputs.size(), 2);
+  shards = xla::ComputationClient::Get()->GetDataShards(wrapped_outputs[0]);
+  EXPECT_EQ(shards.size(), devices.size());
+  EXPECT_TRUE(
+      xla::Shape::Equal().IgnoreLayout()(shards[0]->shape(), tensor_shape));
 }
 
 }  // namespace cpp_test

@@ -118,7 +118,8 @@ XLATensor::XLATensor(torch::lazy::Value ir_value,
   if (CurrentIrValue()) {
     auto* xla_node = dynamic_cast<XlaNode*>(CurrentIrValue().node.get());
     if (xla_node->GetSharding()) {
-      ShardingSpec sharding = ShardingSpec{*xla_node->GetSharding()};
+      ShardingSpec sharding =
+          ShardingSpec{*xla_node->GetSharding(), xla_node->xla_shape()};
       SetShardingSpec(sharding);
     }
   }
@@ -262,7 +263,8 @@ XLATensor::ShardingSpecPtr XLATensor::sharding_spec() const {
     auto* xla_node = dynamic_cast<XlaNode*>(ir_value.node.get());
     if (xla_node->GetSharding()) {
       XLA_CHECK(ShardingUtil::EqualShardingSpecs(
-          *sharding, ShardingSpec{*xla_node->GetSharding()}));
+          *sharding,
+          ShardingSpec{*xla_node->GetSharding(), xla_node->xla_shape()}));
     }
   }
   return sharding;
@@ -316,17 +318,8 @@ void XLATensor::SetInPlaceIrValue(torch::lazy::Value ir_value) {
 }
 
 void XLATensor::AssignIrValue(torch::lazy::Value ir_value) const {
-  if (ir_value) {
-    std::string debug_str = ir_value->ToString();
-    auto sharding = dynamic_cast<XlaNode*>(ir_value.node.get())->GetSharding();
-    if (sharding) {
-      debug_str += " with sharding " + sharding->DebugString();
-    }
-    TF_VLOG(5) << "Assign IR value " << debug_str;
-  } else {
-    TF_VLOG(5) << "Assign empty IR value";
-  }
-
+  TF_VLOG(5) << "Assign IR value: "
+             << (ir_value ? ir_value->ToString() : "empty node");
   data()->ir_value = std::move(ir_value);
   data()->generation += 1;
 }

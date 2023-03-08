@@ -1517,11 +1517,13 @@ void InitXlaModuleBindings(py::module m) {
                                  const py::list& tile_assignment,
                                  bool replicated = false, bool manual = false) {
     TORCH_LAZY_COUNTER("XlaMarkSharding", 1);
+    XLATensorPtr xtensor = bridge::GetXlaTensor(input);
     xla::OpSharding sharding =
         ShardingUtil::CreateOpSharding(tile_assignment, replicated, manual);
-    auto new_sharding_spec =
-        std::make_shared<XLATensor::ShardingSpec>(sharding);
-    XLATensorPtr xtensor = bridge::GetXlaTensor(input);
+    auto new_sharding_spec = std::make_shared<XLATensor::ShardingSpec>(
+        sharding, MakeShapeWithDeviceLayout(
+                      xtensor->shape(),
+                      static_cast<XlaDeviceType>(xtensor->GetDevice().type())));
 
     at::Tensor cpu_tensor;
     if (xla::sys_util::GetEnvBool("XLA_USE_SPMD", false) &&
@@ -1560,6 +1562,9 @@ void InitXlaModuleBindings(py::module m) {
         std::vector<std::string>{GetVirtualDevice().toString()})[0];
     xtensor->SetXlaData(xla_data);
     xtensor->SetShardingSpec(*new_sharding_spec);
+
+    // Register sharded tensor data.
+    XLAGraphExecutor::Get()->RegisterTensor(xtensor->data());
   });
   m.def("_xla_clear_sharding", [](const at::Tensor& input) {
     XLATensorPtr xtensor = bridge::GetXlaTensor(input);
