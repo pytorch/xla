@@ -122,10 +122,6 @@ function run_torch_xla_tests() {
   USE_COVERAGE="${3:-0}"
   if [ -x "$(command -v nvidia-smi)" ]; then
     export GPU_NUM_DEVICES=2
-  else
-    export XRT_DEVICE_MAP="CPU:0;/job:localservice/replica:0/task:0/device:XLA_CPU:0"
-    XLA_PORT=$(shuf -i 40701-40999 -n 1)
-    export XRT_WORKERS="localservice:0;grpc://localhost:$XLA_PORT"
   fi
   export PYTORCH_TESTING_DEVICE_ONLY_FOR="xla"
 
@@ -143,40 +139,35 @@ function run_torch_xla_tests() {
       # only run test_autocast for cpu and gpu on circleCI.
       python test/test_autocast.py
 
-    # GPU tests
-    if [ -x "$(command -v nvidia-smi)" ]; then
-      python test/test_train_mp_imagenet_fsdp.py --fake_data --use_nested_fsdp --use_small_fake_sample --num_epochs=1
-      python test/test_train_mp_imagenet_fsdp.py --fake_data --auto_wrap_policy type_based --use_small_fake_sample --num_epochs=1
-      # Syncfree SGD optimizer tests
-      if [ -d ./torch_xla/amp/syncfree ]; then
-        echo "Running Syncfree Optimizer Test"
-        python test/test_syncfree_optimizers.py
+      # GPU tests
+      if [ -x "$(command -v nvidia-smi)" ]; then
+        PJRT_DEVICE=GPU python test/test_train_mp_imagenet_fsdp.py --fake_data --use_nested_fsdp --use_small_fake_sample --num_epochs=1
+        PJRT_DEVICE=GPU python test/test_train_mp_imagenet_fsdp.py --fake_data --auto_wrap_policy type_based --use_small_fake_sample --num_epochs=1
+        # Syncfree SGD optimizer tests
+        if [ -d ./torch_xla/amp/syncfree ]; then
+          echo "Running Syncfree Optimizer Test"
+          PJRT_DEVICE=GPU python test/test_syncfree_optimizers.py
 
-        # Following test scripts are mainly useful for
-        # performance evaluation & comparison among different
-        # amp optimizers.
-        # echo "Running ImageNet Test"
-        # python test/test_train_mp_imagenet_amp.py --fake_data --num_epochs=1
+          # Following test scripts are mainly useful for
+          # performance evaluation & comparison among different
+          # amp optimizers.
+          # echo "Running ImageNet Test"
+          # python test/test_train_mp_imagenet_amp.py --fake_data --num_epochs=1
 
-        # disabled per https://github.com/pytorch/xla/pull/2809
-        # echo "Running MNIST Test"
-        # python test/test_train_mp_mnist_amp.py --fake_data --num_epochs=1
+          # disabled per https://github.com/pytorch/xla/pull/2809
+          # echo "Running MNIST Test"
+          # python test/test_train_mp_mnist_amp.py --fake_data --num_epochs=1
+        fi
       fi
-    fi
 
-    pushd test/cpp
-    echo "Running C++ Tests on XRT"
-    ./run_tests.sh
-    # TODO(wcromar): Enable PJRT C++ tests on GPU
-    if [ -z "$GPU_NUM_DEVICES" ]; then
-      echo "Running C++ Tests on PJRT"
-      PJRT_DEVICE=CPU ./run_tests.sh
-    fi
-
-      if ! [ -x "$(command -v nvidia-smi)"  ]
-      then
-        ./run_tests.sh -X early_sync -F AtenXlaTensorTest.TestEarlySyncLiveTensors -L""
-      fi
+      pushd test/cpp
+        echo "Running C++ Tests on PJRT"
+        if [ -x "$(command -v nvidia-smi)" ]; then
+          PJRT_DEVICE=GPU ./run_tests.sh
+          PJRT_DEVICE=GPU ./run_tests.sh -X early_sync -F AtenXlaTensorTest.TestEarlySyncLiveTensors -L""
+        else
+          PJRT_DEVICE=CPU ./run_tests.sh
+        fi
       popd
     fi
   popd
