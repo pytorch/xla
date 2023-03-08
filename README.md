@@ -24,19 +24,31 @@ running on Cloud TPUs and learn how to use Cloud TPUs as PyTorch devices:
 
 The rest of this README covers:
 
+* [User Guide & Best Practices](#user-guide--best-practices)
 * [Running PyTorch on Cloud TPUs and GPU](#running-pytorchxla-on-cloud-tpu-and-gpu)
 Google Cloud also runs networks faster than Google Colab.
 * [Available docker images and wheels](#available-docker-images-and-wheels)
-* [API & Best Practices](#api--best-practices)
 * [Performance Profiling and Auto-Metrics Analysis](#performance-profiling-and-auto-metrics-analysis)
 * [Troubleshooting](#troubleshooting)
 * [Providing Feedback](#providing-feedback)
 * [Building and Contributing to PyTorch/XLA](#contributing)
+* [Additional Reads](#additional-reads)
 
 
 
 Additional information on PyTorch/XLA, including a description of its
 semantics and functions, is available at [PyTorch.org](http://pytorch.org/xla/).
+
+## User Guide & Best Practices
+
+Our comprehensive user guides are available at:
+
+[Documentation for the latest release](https://pytorch.org/xla)
+
+[Documentation for master branch](https://pytorch.org/xla/master)
+
+See the [API Guide](API_GUIDE.md) for best practices when writing networks that
+run on XLA devices(TPU, GPU, CPU and...)
 
 ## Running PyTorch/XLA on Cloud TPU and GPU
 
@@ -145,17 +157,6 @@ pip3 install torch_xla[tpuvm]
 
 This is only required on Cloud TPU VMs.
 
-## API & Best Practices
-
-In general PyTorch/XLA follows PyTorch APIs, some additional torch_xla specific APIs are available at:
-
-[Documentation for the latest release](https://pytorch.org/xla)
-
-[Documentation for master branch](https://pytorch.org/xla/master)
-
-See the [API Guide](API_GUIDE.md) for best practices when writing networks that
-run on Cloud TPUs and Cloud TPU Pods.
-
 ## Performance Profiling and Auto-Metrics Analysis
 
 With PyTorch/XLA we provide a set of performance profiling tooling and auto-metrics analysis which you can check the following resources:
@@ -182,3 +183,10 @@ See the [contribution guide](CONTRIBUTING.md).
 
 ## Disclaimer
 This repository is jointly operated and maintained by Google, Facebook and a number of individual contributors listed in the [CONTRIBUTORS](https://github.com/pytorch/xla/graphs/contributors) file. For questions directed at Facebook, please send an email to opensource@fb.com. For questions directed at Google, please send an email to pytorch-xla@googlegroups.com. For all other questions, please open up an issue in this repository [here](https://github.com/pytorch/xla/issues).
+
+## Additional Reads
+You can find additional useful reading materials in
+* [Performance debugging on Cloud TPU VM](https://cloud.google.com/blog/topics/developers-practitioners/pytorchxla-performance-debugging-tpu-vm-part-1)
+* [Lazy tensor intro](https://pytorch.org/blog/understanding-lazytensor-system-performance-with-pytorch-xla-on-cloud-tpu/)
+* [Scaling deep learning workloads with PyTorch / XLA and Cloud TPU VM](https://cloud.google.com/blog/topics/developers-practitioners/scaling-deep-learning-workloads-pytorch-xla-and-cloud-tpu-vm)
+* [Scaling PyTorch models on Cloud TPUs with FSDP](https://pytorch.org/blog/scaling-pytorch-models-on-cloud-tpus-with-fsdp/)
