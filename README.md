@@ -24,7 +24,7 @@ running on Cloud TPUs and learn how to use Cloud TPUs as PyTorch devices:
 
 The rest of this README covers:
 
-* [API & Best Practices](#api--best-practices)
+* [User Guide & Best Practices](#user-guide--best-practices)
 * [Running PyTorch on Cloud TPUs and GPU](#running-pytorchxla-on-cloud-tpu-and-gpu)
 Google Cloud also runs networks faster than Google Colab.
 * [Available docker images and wheels](#available-docker-images-and-wheels)
@@ -39,7 +39,7 @@ Google Cloud also runs networks faster than Google Colab.
 Additional information on PyTorch/XLA, including a description of its
 semantics and functions, is available at [PyTorch.org](http://pytorch.org/xla/).
 
-## API & Best Practices
+## User Guide & Best Practices
 
 Our comprehensive user guides are available at:
 
