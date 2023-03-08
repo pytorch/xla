@@ -90,6 +90,7 @@ class TestDynamicShapeModels(unittest.TestCase):
       batches.append(self.create_dynamic_test_data(num_test_samples, num_features, device=xla_dev, num_non_zeros=i))
 
     print('before training num_compilation=', met.metric_data('CompileTime')[0])
+    print('before training num_executions=', met.metric_data('ExecuteTime')[0])
     # the training data in each batch () has size [<=10, 2] with real size [0, 2], [1, 2], [2, 2]... 
     for (x_training, y_training) in batches:
       model.eval()
@@ -98,6 +99,7 @@ class TestDynamicShapeModels(unittest.TestCase):
         criterion(y_pred.squeeze(), y_training)
         xm.mark_step()
         print('num_compilation=', met.metric_data('CompileTime')[0])
+        print('num_executions=', met.metric_data('ExecuteTime')[0])
         num_compilations.append(met.metric_data('CompileTime')[0])
     
     for i in range(len(batches)-1):
@@ -172,6 +174,7 @@ class TestDynamicShapeModels(unittest.TestCase):
       batches.append(self.create_dynamic_test_data(num_test_samples, num_features, device=xla_dev, num_non_zeros=i))
 
     print('before training num_compilation=', met.metric_data('CompileTime')[0])
+    print('before training num_executions=', met.metric_data('ExecuteTime')[0])
     # the x_training in each batch has size [<=10, 2] with real size [0, 2], [1, 2], [2, 2]... 
     # and y_training has size [<=10] with real size [0], [1], [2], [3]...
     for (x_training, y_training) in batches:
@@ -181,9 +184,8 @@ class TestDynamicShapeModels(unittest.TestCase):
       # Backpropagation.
       loss.backward()
       xm.optimizer_step(optimizer, barrier=True)
-      # xw32 TODO: bug here. The #compilation here (met.metric_data('CompileTime')[0])
-      # should subtract the #compilation before the training starts.
       print('num_compilation=', met.metric_data('CompileTime')[0])
+      print('num_executions=', met.metric_data('ExecuteTime')[0])
       num_compilations.append(met.metric_data('CompileTime')[0])
     
     for i in range(len(batches)-1):
@@ -211,6 +213,8 @@ class TestDynamicShapeModels(unittest.TestCase):
     loss.backward()
     xm.optimizer_step(optimizer, barrier=True)
     print('Finished training.')
+    # expectaion is 1.
+    # multiple iteration is still 1.
 
     # testing
     model.eval()
