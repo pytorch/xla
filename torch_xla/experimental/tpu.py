@@ -1,10 +1,8 @@
 import functools
-import glob
 import operator
 import os
 import re
 from typing import Dict, NamedTuple, Optional, List, Tuple
-from typing_extensions import TypedDict
 import requests
 import yaml
 
@@ -31,14 +29,8 @@ _ACCELERATOR_TYPE_TO_HOST_BOUNDS = {
     'v3-1024': '8,16,1',
     'v3-2048': '16,16,1',
     # Get v4 host bounds from TPU metadata
+    # Get v5 host bounds from TPU metadata
 }
-
-
-class TpuEnv(TypedDict):
-  accelerator_type: str
-  tpu_process_bounds: str
-  tpu_chips_per_process_bound: str
-  worker_id: int
 
 
 class MeshShape(NamedTuple):
@@ -71,24 +63,18 @@ def _get_metadata(key: str) -> str:
   return resp.text
 
 
-def process_bounds_size() -> Optional[int]:
-  """Returns number of processes across all TPU hosts, or None if unknown."""
+def process_bounds_size(default: int = 1) -> int:
+  """Returns number of processes across all TPU hosts."""
   process_bounds = xu.getenv_as(xenv.TPU_PROCESS_BOUNDS, str)
-  return MeshShape.from_string(process_bounds).size if process_bounds else None
+
+  return MeshShape.from_string(
+      process_bounds).size if process_bounds else default
 
 
-def num_available_chips() -> int:
-  """Returns the number of local chips in /dev/"""
-  return len(glob.glob('/dev/accel?'))
-
-
-def num_local_processes() -> int:
+def num_local_processes(local_chips: int = 4) -> int:
   """Returns number of processes to create on this host."""
-  local_chips = num_available_chips()
-  total_processes = process_bounds_size()
   # Don't create more processes than local chips
-  return local_chips if not total_processes else min(local_chips,
-                                                     total_processes)
+  return min(local_chips, process_bounds_size(default=local_chips))
 
 
 def task_id() -> Optional[int]:
@@ -96,28 +82,10 @@ def task_id() -> Optional[int]:
   return xu.getenv_as(xenv.CLOUD_TPU_TASK_ID, int)
 
 
-def _using_env_vars() -> bool:
-  return xu.getenv_as(xenv.TPU_SKIP_MDS_QUERY, str, False)
-
-
-def build_tpu_env_from_vars() -> TpuEnv:
-  metadata = dict()
-  metadata[xenv.ACCELERATOR_TYPE] = xu.getenv_as(xenv.TPU_ACCELERATOR_TYPE, str)
-  metadata[xenv.TPU_PROCESS_BOUNDS] = xu.getenv_as(
-      xenv.TPU_PROCESS_BOUNDS, str, xu.getenv_as(xenv.TPU_HOST_BOUNDS, str))
-  metadata[xenv.TPU_CHIPS_PER_PROCESS_BOUNDS] = xu.getenv_as(
-      xenv.TPU_CHIPS_PER_PROCESS_BOUNDS, str,
-      xu.getenv_as(xenv.TPU_CHIPS_PER_HOST_BOUNDS, str))
-  metadata[xenv.WORKER_ID] = xu.getenv_as(xenv.CLOUD_TPU_TASK_ID, str,
-                                          xu.getenv_as(xenv.TPU_WORKER_ID, str))
-  return metadata
-
-
-def get_tpu_env() -> TpuEnv:
+def get_tpu_env() -> Dict[str, str]:
   """Fetches and parses `tpu-env` metadata field."""
-  if _using_env_vars():
-    return build_tpu_env_from_vars()
   metadata = _get_metadata('tpu-env')
+
   return yaml.load(metadata, yaml.Loader)
 
 
@@ -127,22 +95,19 @@ def version() -> int:
   except requests.HTTPError as e:
     raise EnvironmentError('Failed to get TPU metadata') from e
 
-  match = re.match(r'^v(\d)([A-Za-z]?){7}-(\d+)$', env[xenv.ACCELERATOR_TYPE])
+  match = re.match(r'^v(\d)-(\d+)$', env['ACCELERATOR_TYPE'])
   return int(match.groups()[0])
 
 
 def get_worker_ips() -> List[str]:
   """Returns ordered list of TPU worker IPs from TPU metadata."""
-  if _using_env_vars():
-    hostnames_string = xu.getenv_as(xenv.TPU_WORKER_HOSTNAMES, str, '')
-    # String has the format 'host-name-1,host-name-2,...,host-name-n'
-    hostnames = hostnames_string.split(',')
-  else:
-    hostnames_string = _get_metadata('worker-network-endpoints')
-    # Workers have format 'hostname:uid:ip,hostname:uid:ip,...'
-    workers = hostnames_string.split(',')
-    hostnames = [worker.split(':')[2] for worker in workers]
-  return hostnames if len(hostnames) > 1 else ['localhost']
+  metadata = _get_metadata('worker-network-endpoints')
+
+  # Workers have format 'hostname:uid:ip,hostname:uid:ip,...'
+  workers = metadata.split(',')
+  ips = [worker.split(':')[2] for worker in workers]
+
+  return ips if len(ips) > 1 else ['localhost']
 
 
 def configure_one_chip_topology() -> None:
@@ -171,7 +136,7 @@ def configure_topology(local_rank: int,
   """
   tpu_env = get_tpu_env()
 
-  accelerator_type = tpu_env[xenv.ACCELERATOR_TYPE]
+  accelerator_type = tpu_env['ACCELERATOR_TYPE']
   if tpu_env['ACCELERATOR_TYPE'].startswith('v4') or tpu_env['ACCELERATOR_TYPE'].startswith('v5'):
     # Process bounds with 4 chips per process
     default_process_bounds = MeshShape.from_string(
@@ -192,7 +157,7 @@ def configure_topology(local_rank: int,
                         ','.join(str(dim) for dim in process_bounds))
 
   # Assume each TPU has the same number of local processes with the same ports
-  worker_id = int(tpu_env[xenv.WORKER_ID])
+  worker_id = int(tpu_env['WORKER_ID'])
   os.environ.setdefault(xenv.CLOUD_TPU_TASK_ID,
                         str(worker_id * local_world_size + local_rank))
 
@@ -222,7 +187,7 @@ def discover_master_worker_ip(use_localhost: bool = True) -> str:
     return 'localhost'
 
   tpu_env = get_tpu_env()
-  current_worker_id = int(tpu_env[xenv.WORKER_ID])
+  current_worker_id = int(tpu_env['WORKER_ID'])
   t = torch.tensor([current_worker_id], device=xm.xla_device())
   xm.collective_broadcast([t])
   xm.mark_step()
