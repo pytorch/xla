@@ -192,6 +192,7 @@ function run_mp_op_tests {
   run_xla_backend_mp python3 "$CDIR/test_torch_distributed_reduce_scatter_xla_backend.py"
   run_xla_backend_mp python3 "$CDIR/test_ddp.py"
   run_xla_backend_mp python3 "$CDIR/test_fsdp_auto_wrap.py"
+  run_xla_backend_mp python3 "$CDIR/test_torch_distributed_fsdp_meta.py"
 }
 
 function run_tests {
