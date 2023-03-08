@@ -36,6 +36,7 @@ import torch_xla.core.xla_model as xm
 from .xla_flatten_params_wrapper import XlaFlattenParamsWrapper
 from .utils import dummy_all_gather, dummy_all_reduce, dummy_reduce_scatter, apply_xla_patch_to_nn_linear
 from .wrap import recursive_wrap
+from ._init_utils import _materialize_module
 
 FLOAT_DTYPES = [torch.float32, torch.float16, torch.bfloat16]
 
@@ -238,6 +239,36 @@ class XlaFullyShardedDataParallel(nn.Module):
               auto_wrapper_callable = lambda m, *args, **kwargs: XlaFullyShardedDataParallel(
                   checkpoint_module(m), *args, **kwargs)
 
+        param_init_fn (Optional[Callable[[nn.Module], None]]):
+            A ``Callable[torch.nn.Module] -> None`` that
+            specifies how modules that are currently on the meta device should be initialized
+            onto an actual device. Note that as of v1.12, we detect modules on the meta
+            device via ``is_meta`` check and apply a default initialization that calls
+            ``reset_parameters`` method on the passed in ``nn.Module`` if ``param_init_fn``
+            is not specified, otherwise we run ``param_init_fn`` to initialize the passed
+            in ``nn.Module``. In particular, this means that if ``is_meta=True`` for any
+            module parameters for modules that will be wrapped with FSDP and ``param_init_fn``
+            is not specified, we assume your module properly implements a ``reset_parameters()``
+            and will throw errors if not. Note that additionally, we offer support for modules
+            initialized with torchdistX's (https://github.com/pytorch/torchdistX)
+            ``deferred_init`` API. In this case, deferred modules would be initialized
+            by a default initialization function that calls torchdistX's
+            ``materialize_module``, or the passed in ``param_init_fn``, if it is not
+            ``None``. The same ``Callable`` is applied to initialize all meta modules.
+            Note that this initialization function is applied before doing any FSDP sharding
+            logic. And the torchdistX is an experimental package that is not fully tested in the CI.
+            Example::
+                >>> # xdoctest: +SKIP("undefined variables")
+                >>> module = MyModule(device="meta")
+                >>> def my_init_fn(module):
+                >>>     # responsible for initializing a module, such as with reset_parameters
+                >>>     ...
+                >>> fsdp_model = FSDP(module, param_init_fn=my_init_fn, auto_wrap_policy=size_based_auto_wrap_policy)
+                >>> print(next(fsdp_model.parameters()).device) # current CUDA device
+                >>> # With torchdistX
+                >>> module = deferred_init.deferred_init(MyModule, device="cuda")
+                >>> # Will initialize via deferred_init.materialize_module().
+                >>> fsdp_model = FSDP(module, auto_wrap_policy=size_based_auto_wrap_policy)
   """
 
   def __init__(
@@ -260,6 +291,7 @@ class XlaFullyShardedDataParallel(nn.Module):
       pin_layout_in_collective_ops: bool = True,
       auto_wrap_policy: Optional[Callable] = None,
       auto_wrapper_callable: Optional[Callable] = None,
+      param_init_fn: Optional[Callable[[nn.Module], None]] = None,
       _shard_size_multiple: int = 128,
       _use_xla_patched_linear: bool = True,
       _debug_dummy_forward_pass: bool = False,
@@ -290,11 +322,12 @@ class XlaFullyShardedDataParallel(nn.Module):
 
     super().__init__()
 
+    wrapper_cls = auto_wrapper_callable or XlaFullyShardedDataParallel
     if auto_wrap_policy is not None:
       auto_wrap_kwargs = {
           "module": module,
           "auto_wrap_policy": auto_wrap_policy,
-          "wrapper_cls": auto_wrapper_callable or XlaFullyShardedDataParallel,
+          "wrapper_cls": wrapper_cls,
           "ignored_modules": [],
           "ignored_params": [],
           "only_wrap_children": True,  # avoid double wrapping the root
@@ -317,6 +350,7 @@ class XlaFullyShardedDataParallel(nn.Module):
           pin_layout_in_collective_ops=pin_layout_in_collective_ops,
           # `auto_wrap_policy` doesn't need to be specified in auto-wrapping
           # `auto_wrapper_callable`` doesn't need to be specified in auto-wrapping
+          param_init_fn=param_init_fn,
           _shard_size_multiple=_shard_size_multiple,
           _use_xla_patched_linear=_use_xla_patched_linear,
           _debug_dummy_forward_pass=_debug_dummy_forward_pass,
@@ -412,6 +446,12 @@ class XlaFullyShardedDataParallel(nn.Module):
       # backward pass will use its weight parameter rather than an intermediate result.
       # (see https://github.com/pytorch/xla/issues/3811 for details)
       module = apply_xla_patch_to_nn_linear(module)
+
+    _materialize_module(
+        module,
+        param_init_fn,
+        [],  # TODO: ignored_params is set to empty now, pass in correct params when this feature is fully enabled
+        deferred_init_check_fn=lambda k: not isinstance(k, wrapper_cls))
 
     # Only handle params which are not already sharded. This enables
     # sharding individual layers of a Module, with an outer wrapper to
