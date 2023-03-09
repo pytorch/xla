@@ -129,20 +129,16 @@ class XlaBackendTest(parameterized.TestCase):
     device = xm.xla_device()
     tensor = torch.arange(2, device=device) + 1 + 2 * dist.get_rank()
     input_list = [tensor]
-    ranks = [0, 3]
 
     with mock.patch.object(
         torch_xla.distributed.xla_backend.ProcessGroupXla,
         'make_send_channel_id',
         new=lambda self, dst_rank, tag: dst_rank * 2):
-      with new_group_barrier_disabled():
-        pg_xla = dist.new_group(ranks=ranks)
-
-      pg_xla.send(input_list, 1)
+      dist.send(tensor, 1)
 
     send_pattern = r'%send\.\d+ = .+ send\(.+\), channel_id=2'
     senddone_pattern = r'%send\-done\.\d+ = .+ send\-done\(.+\), channel_id=2'
-    hlo = torch_xla._XLAC._get_xla_tensors_hlo(input_list)
+    hlo = torch_xla._XLAC._get_xla_tensors_hlo([tensor])
     hlo_matches(hlo, send_pattern)
     hlo_matches(hlo, senddone_pattern)
 
@@ -153,21 +149,16 @@ class XlaBackendTest(parameterized.TestCase):
   def test_recv(self):
     device = xm.xla_device()
     tensor = torch.arange(2, device=device) + 1 + 2 * dist.get_rank()
-    output_list = [tensor]
-    ranks = [0, 3]
 
     with mock.patch.object(
         torch_xla.distributed.xla_backend.ProcessGroupXla,
         'make_recv_channel_id',
         new=lambda self, src_rank, tag: src_rank * 3):
-      with new_group_barrier_disabled():
-        pg_xla = dist.new_group(ranks=ranks)
-
-      pg_xla.recv(output_list, 1)
+      dist.recv(tensor, 1)
 
     recv_pattern = r'%recv\.\d+ = .+ recv\(.+\), channel_id=3'
     recvdone_pattern = r'%recv\-done\.\d+ = .+ recv\-done\(.+\), channel_id=3'
-    hlo = torch_xla._XLAC._get_xla_tensors_hlo(output_list)
+    hlo = torch_xla._XLAC._get_xla_tensors_hlo([tensor])
     hlo_matches(hlo, recv_pattern)
     hlo_matches(hlo, recvdone_pattern)
 
