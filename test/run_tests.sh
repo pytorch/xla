@@ -207,7 +207,8 @@ function run_mp_op_tests {
 }
 
 function run_tests {
-  # run_op_tests
+  env
+  run_op_tests
   if [[ "$XLA_SKIP_MP_OP_TESTS" != "1" ]]; then
     run_mp_op_tests
   fi
