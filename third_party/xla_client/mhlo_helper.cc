@@ -11,6 +11,8 @@ namespace xla {
 void hlo_mhlo_hlo_roundtrip_helper(HloModuleProto* proto) {
   mlir::MLIRContext context;
   mlir::ModuleOp mlir_module = mlir::ModuleOp::create(mlir::UnknownLoc::get(&context));
+  // std::cout << "hlo dump before conversion: " << std::endl;
+  // std::cout << proto->DebugString() << std::endl;
   auto status = ConvertHloToMlirHlo(mlir_module, proto, /*import_all_computations=*/false);
   if (!status.ok()) {
     std::cout << "hlo2mhlo not ok" << std::endl;
@@ -21,14 +23,16 @@ void hlo_mhlo_hlo_roundtrip_helper(HloModuleProto* proto) {
     printHloModuleProto(proto);
     return;
   }
-  std::cout << "mhlo dump: " << std::endl;
-  mlir_module.dump();
+  // std::cout << "mhlo dump: " << std::endl;
+  // mlir_module.dump();
   xla::HloProto hlo_proto;
   mlir::MlirToHloConversionOptions options;
   options.propagate_layouts = true;
   auto status1 = mlir::ConvertMlirHloToHlo(
     mlir_module, &hlo_proto, /*use_tuple_args=*/false, /*return_tuple=*/false,
     options);
+  // std::cout << "hlo dump after conversion: " << std::endl;
+  // std::cout << hlo_proto.DebugString() << std::endl;
   if (!status1.ok()) {
     std::cout << "mhlo2hlo not ok" << std::endl;
     return;
