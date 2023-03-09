@@ -11,12 +11,18 @@ import torch._dynamo as dynamo
 import torchvision
 import unittest
 
+# Setup import folders.
+xla_test_folder = os.path.dirname(os.path.dirname(os.path.abspath(sys.argv[0])))
+sys.path.append(xla_test_folder)
+
+import test_utils
+
 
 class DynamoInferenceBasicTest(unittest.TestCase):
 
   @classmethod
   def setUpClass(self):
-    torch.manual_seed(42)
+    test_utils._set_rng_seed(42)
 
   def fn_simple(self, x, y):
     a = torch.cos(x)
@@ -85,7 +91,7 @@ class DynamoTrainingBasicTest(unittest.TestCase):
 
   @classmethod
   def setUpClass(self):
-    torch.manual_seed(42)
+    test_utils._set_rng_seed(42)
 
   def fn_simple(self, input):
     loss_fn = torch.nn.CrossEntropyLoss()
@@ -186,7 +192,7 @@ class DynamoTrainingOptimizerTest(unittest.TestCase):
 
   @classmethod
   def setUpClass(self):
-    torch.manual_seed(42)
+    test_utils._set_rng_seed(42)
 
   def fn_simple(self, input, optimizer):
     loss_fn = torch.nn.CrossEntropyLoss()
