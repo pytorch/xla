@@ -45,6 +45,10 @@ def patch_world(rank, size):
 
 class XlaBackendTest(parameterized.TestCase):
 
+  @classmethod
+  def setUpClass(cls):
+    dist.init_process_group('xla', init_method='pjrt://')
+
   def tearDown(self) -> None:
     # Purge all computations attached the device.
     xm.mark_step()
@@ -327,5 +331,4 @@ if __name__ == '__main__':
            "{pjrt.pjrt_device}-specific behaviors.")
     exit(0)
 
-  dist.init_process_group('xla', init_method='pjrt://')
   absltest.main()
