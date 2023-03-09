@@ -1,6 +1,7 @@
 import contextlib
 import functools
 import re
+import time
 from unittest import mock
 
 from absl.testing import absltest, parameterized
@@ -124,64 +125,55 @@ class XlaBackendTest(parameterized.TestCase):
     hlo = torch_xla._XLAC._get_xla_tensors_hlo([output])
     hlo_matches(hlo, reduce_scatter_pattern)
 
-  # @patch_world(0, 6)
-  # def test_send(self):
-  #   device = xm.xla_device()
-  #   tensor = torch.arange(2, device=device) + 1 + 2 * dist.get_rank()
-  #   input_list = [tensor]
-  #   ranks = [0, 3]
+  @patch_world(0, 6)
+  def test_send(self):
+    device = xm.xla_device()
+    tensor = torch.arange(2, device=device) + 1 + 2 * dist.get_rank()
+    input_list = [tensor]
+    ranks = [0, 3]
 
-  #   torch_xla.distributed.xla_backend.ProcessGroupXla.make_send_channel_id = (
-  #       lambda self, dst_rank, tag: dst_rank * 2)
+    with mock.patch.object(
+        torch_xla.distributed.xla_backend.ProcessGroupXla,
+        'make_send_channel_id',
+        new=lambda self, dst_rank, tag: dst_rank * 2):
+      with new_group_barrier_disabled():
+        pg_xla = dist.new_group(ranks=ranks)
 
-  #   with new_group_barrier_disabled():
-  #     pg_xla = dist.new_group(ranks=ranks)
+      pg_xla.send(input_list, 1)
 
-  #   send_pattern = r'%send\.\d+ = .+ send\(.+\), channel_id=2'
-  #   senddone_pattern = r'%send\-done\.\d+ = .+ send\-done\(.+\), channel_id=2'
-  #   # seeing 'Send is not implemented on CPU' means we have successfully
-  #   # generated `send` in the HLO.
-  #   with self.assertRaises(RuntimeError) as cm:
-  #     pg_xla.send(input_list, 1)
-  #     hlo = torch_xla._XLAC._get_xla_tensors_hlo(input_list)
-  #     hlo_matches(hlo, send_pattern)
-  #     hlo_matches(hlo, senddone_pattern)
-  #     xm.mark_step()
-  #   assert 'UNIMPLEMENTED: Send is not implemented on CPU.' in str(
-  #       cm.exception), str(cm.exception)
-  #   # reset token to clean up the mess after the RuntimeError.
-  #   xm.set_replication(device, [])
+    send_pattern = r'%send\.\d+ = .+ send\(.+\), channel_id=2'
+    senddone_pattern = r'%send\-done\.\d+ = .+ send\-done\(.+\), channel_id=2'
+    hlo = torch_xla._XLAC._get_xla_tensors_hlo(input_list)
+    hlo_matches(hlo, send_pattern)
+    hlo_matches(hlo, senddone_pattern)
 
+    # Don't try to run Send on CPU because it's not implemented
+    torch_xla._XLAC._clear_pending_irs(str(xm.xla_device()))
 
-#   def test_recv(self):
-#     device = xm.xla_device()
-#     tensor = torch.arange(2, device=device) + 1 + 2 * dist.get_rank()
-#     output_list = [tensor]
-#     set_world_size(6)
-#     ranks = [0, 3]
-#     world_rank = 0
-#     set_world_rank(world_rank)
+  @patch_world(0, 6)
+  def test_recv(self):
+    device = xm.xla_device()
+    tensor = torch.arange(2, device=device) + 1 + 2 * dist.get_rank()
+    output_list = [tensor]
+    ranks = [0, 3]
 
-#     torch_xla.distributed.xla_backend.ProcessGroupXla.make_recv_channel_id = (
-#         lambda self, src_rank, tag: src_rank * 3)
+    with mock.patch.object(
+        torch_xla.distributed.xla_backend.ProcessGroupXla,
+        'make_recv_channel_id',
+        new=lambda self, src_rank, tag: src_rank * 3):
+      with new_group_barrier_disabled():
+        pg_xla = dist.new_group(ranks=ranks)
 
-#     with new_group_barrier_disabled():
-#       pg_xla = dist.new_group(ranks=ranks)
+      pg_xla.recv(output_list, 1)
 
-#     recv_pattern = r'%recv\.\d+ = .+ recv\(.+\), channel_id=3'
-#     recvdone_pattern = r'%recv\-done\.\d+ = .+ recv\-done\(.+\), channel_id=3'
-#     # seeing 'recv is not implemented on CPU' means we have successfully
-#     # generated `recv` in the HLO.
-#     with self.assertRaises(RuntimeError) as cm:
-#       pg_xla.recv(output_list, 1)
-#       hlo = torch_xla._XLAC._get_xla_tensors_hlo(output_list)
-#       hlo_matches(hlo, recv_pattern)
-#       hlo_matches(hlo, recvdone_pattern)
-#       xm.mark_step()
-#     assert 'UNIMPLEMENTED: Recv is not implemented on CPU.' in str(
-#         cm.exception), str(cm.exception)
-#     # reset token to clean up the mess after the RuntimeError.
-#     xm.set_replication(device, [])
+    recv_pattern = r'%recv\.\d+ = .+ recv\(.+\), channel_id=3'
+    recvdone_pattern = r'%recv\-done\.\d+ = .+ recv\-done\(.+\), channel_id=3'
+    hlo = torch_xla._XLAC._get_xla_tensors_hlo(output_list)
+    hlo_matches(hlo, recv_pattern)
+    hlo_matches(hlo, recvdone_pattern)
+
+    # Don't try to run Recv on CPU because it's not implemented
+    torch_xla._XLAC._clear_pending_irs(str(xm.xla_device()))
 
   @patch_world(rank=0, size=12)
   def test_new_group_no_ranks(self):
@@ -344,6 +336,7 @@ class XlaBackendTest(parameterized.TestCase):
                           torch_xla.distributed.xla_backend.ProcessGroupXla)
     with self.assertRaises(NotImplementedError):
       getattr(pg_xla, op)(tensor)
+
 
 if __name__ == '__main__':
   if pjrt.device_type() != 'CPU':
