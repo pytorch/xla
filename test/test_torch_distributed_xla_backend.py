@@ -52,7 +52,7 @@ class XlaBackendTest(parameterized.TestCase):
     # torch_xla.distributed._register_xla_backend() should have been
     # automatically called.
     pg_xla_creator = dist.Backend.XLA
-    assert pg_xla_creator is not None
+    self.assertIsNotNone(pg_xla_creator)
 
   @always_intercore_reduce()
   def test_allreduce(self):
@@ -176,64 +176,64 @@ class XlaBackendTest(parameterized.TestCase):
   def test_new_group_no_ranks(self):
     with new_group_barrier_disabled():
       pg = dist.new_group()
-    assert isinstance(pg, torch_xla.distributed.xla_backend.ProcessGroupXla)
-    assert pg.size() == dist.get_world_size()
+    self.assertIsInstance(pg, torch_xla.distributed.xla_backend.ProcessGroupXla)
+    self.assertEqual(pg.size(), dist.get_world_size())
 
   def test_new_group_horizontal(self):
     with patch_world(rank=5, size=12):
       ranks = [4, 5, 6, 7]
       with new_group_barrier_disabled():
         pg = dist.new_group(ranks=ranks)
-      assert isinstance(pg, torch_xla.distributed.xla_backend.ProcessGroupXla)
-      assert pg.size() == len(ranks)
-      assert pg.rank() == ranks.index(5)
-      assert pg._mesh == [[0, 1, 2, 3], [4, 5, 6, 7], [8, 9, 10, 11]]
+      self.assertIsInstance(pg, torch_xla.distributed.xla_backend.ProcessGroupXla)
+      self.assertEqual(pg.size(), len(ranks))
+      self.assertEqual(pg.rank(), ranks.index(5))
+      self.assertListEqual(pg._mesh, [[0, 1, 2, 3], [4, 5, 6, 7], [8, 9, 10, 11]])
 
     with patch_world(rank=2, size=12):
       ranks = [0, 1, 2, 3]
       with new_group_barrier_disabled():
         pg = dist.new_group(ranks=ranks)
-      assert isinstance(pg, torch_xla.distributed.xla_backend.ProcessGroupXla)
-      assert pg.size() == len(ranks)
-      assert pg.rank() == ranks.index(2)
-      assert pg._mesh == [[0, 1, 2, 3], [4, 5, 6, 7], [8, 9, 10, 11]]
+      self.assertIsInstance(pg, torch_xla.distributed.xla_backend.ProcessGroupXla)
+      self.assertEqual(pg.size(), len(ranks))
+      self.assertEqual(pg.rank(),  ranks.index(2))
+      self.assertListEqual(pg._mesh, [[0, 1, 2, 3], [4, 5, 6, 7], [8, 9, 10, 11]])
 
     with patch_world(rank=11, size=12):
       ranks = [8, 9, 10, 11]
       with new_group_barrier_disabled():
         pg = dist.new_group(ranks=ranks)
-      assert isinstance(pg, torch_xla.distributed.xla_backend.ProcessGroupXla)
-      assert pg.size() == len(ranks)
-      assert pg.rank() == ranks.index(11)
-      assert pg._mesh == [[0, 1, 2, 3], [4, 5, 6, 7], [8, 9, 10, 11]]
+      self.assertIsInstance(pg, torch_xla.distributed.xla_backend.ProcessGroupXla)
+      self.assertEqual(pg.size(), len(ranks))
+      self.assertEqual(pg.rank(), ranks.index(11))
+      self.assertListEqual(pg._mesh, [[0, 1, 2, 3], [4, 5, 6, 7], [8, 9, 10, 11]])
 
   def test_new_group_vertical(self):
     with patch_world(rank=5, size=12):
       ranks = [1, 5, 9]
       with new_group_barrier_disabled():
         pg = dist.new_group(ranks=ranks)
-      assert isinstance(pg, torch_xla.distributed.xla_backend.ProcessGroupXla)
-      assert pg.size() == len(ranks)
-      assert pg.rank() == ranks.index(5)
-      assert pg._mesh == [[0, 4, 8], [1, 5, 9], [2, 6, 10], [3, 7, 11]]
+      self.assertIsInstance(pg, torch_xla.distributed.xla_backend.ProcessGroupXla)
+      self.assertEqual(pg.size(), len(ranks))
+      self.assertEqual(pg.rank(), ranks.index(5))
+      self.assertListEqual(pg._mesh, [[0, 4, 8], [1, 5, 9], [2, 6, 10], [3, 7, 11]])
 
     with patch_world(rank=0, size=12):
       ranks = [0, 4, 8]
       with new_group_barrier_disabled():
         pg = dist.new_group(ranks=ranks)
-      assert isinstance(pg, torch_xla.distributed.xla_backend.ProcessGroupXla)
-      assert pg.size() == len(ranks)
-      assert pg.rank() == ranks.index(0)
-      assert pg._mesh == [[0, 4, 8], [1, 5, 9], [2, 6, 10], [3, 7, 11]]
+      self.assertIsInstance(pg, torch_xla.distributed.xla_backend.ProcessGroupXla)
+      self.assertEqual(pg.size(), len(ranks))
+      self.assertEqual(pg.rank(), ranks.index(0))
+      self.assertListEqual(pg._mesh, [[0, 4, 8], [1, 5, 9], [2, 6, 10], [3, 7, 11]])
 
     with patch_world(rank=11, size=12):
       ranks = [3, 7, 11]
       with new_group_barrier_disabled():
         pg = dist.new_group(ranks=ranks)
-      assert isinstance(pg, torch_xla.distributed.xla_backend.ProcessGroupXla)
-      assert pg.size() == len(ranks)
-      assert pg.rank() == ranks.index(11)
-      assert pg._mesh == [[0, 4, 8], [1, 5, 9], [2, 6, 10], [3, 7, 11]]
+      self.assertIsInstance(pg, torch_xla.distributed.xla_backend.ProcessGroupXla)
+      self.assertEqual(pg.size(), len(ranks))
+      self.assertEqual(pg.rank(), ranks.index(11))
+      self.assertListEqual(pg._mesh, [[0, 4, 8], [1, 5, 9], [2, 6, 10], [3, 7, 11]])
 
   @patch_world(rank=5, size=12)
   def test_new_group_one_paticipant(self):
@@ -241,22 +241,22 @@ class XlaBackendTest(parameterized.TestCase):
     ranks = [5]
     with new_group_barrier_disabled():
       pg = dist.new_group(ranks=ranks)
-    assert isinstance(pg,
+    self.assertIsInstance(pg,
                       torch_xla.distributed.xla_backend.ProcessGroupXla)
-    assert pg.size() == 1
-    assert pg.rank() == 0
-    assert pg._mesh == [[0], [1], [2], [3], [4], [5], [6], [7], [8], [9], [10],
-                        [11]]
+    self.assertEqual(pg.size(), 1)
+    self.assertEqual(pg.rank(), 0)
+    self.assertListEqual(pg._mesh, [[0], [1], [2], [3], [4], [5], [6], [7], [8], [9], [10],
+                        [11]])
 
   @patch_world(rank=5, size=12)
   def test_new_group_entire_world(self):
     ranks = range(12)
     with new_group_barrier_disabled():
       pg = dist.new_group(ranks=ranks)
-    assert isinstance(pg, torch_xla.distributed.xla_backend.ProcessGroupXla)
-    assert pg.size() == 12
-    assert pg.rank() == 5
-    assert pg._mesh == [[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]]
+    self.assertIsInstance(pg, torch_xla.distributed.xla_backend.ProcessGroupXla)
+    self.assertEqual(pg.size(), 12)
+    self.assertEqual(pg.rank(), 5)
+    self.assertListEqual(pg._mesh, [[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]])
 
   def test_new_group_invalid_horizontal(self):
     with patch_world(rank=5, size=12):
