@@ -123,11 +123,10 @@ function run_torchrun {
 }
 
 function run_xrt_tests {
+  # For features not supported in PJRT
   echo "Running XRT tests"
   run_opbyop python3 "$CDIR/test_operations.py" "$@" --verbosity=$VERBOSITY
   run_async_scalar python3 "$CDIR/test_operations.py" "$@" --verbosity=$VERBOSITY
-  run_xrt python3 "$CDIR/test_torch_distributed_xla_backend.py"
-  run_xrt python3 "$CDIR/test_mp_rendezvous.py"
   run_torchrun python3 "$CDIR/test_allreduce_torchrun.py"
 }
 
@@ -174,6 +173,7 @@ function run_op_tests {
   run_test python3 "$CDIR/spmd/test_xla_virtual_device.py"
   run_test python3 "$CDIR/test_operations_hlo.py" "$@" --verbosity=$VERBOSITY
   run_test python3 "$CDIR/test_input_output_aliases.py"
+  run_test python3 "$CDIR/test_torch_distributed_xla_backend.py"
 }
 
 function run_mp_op_tests {
