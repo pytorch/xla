@@ -1,29 +1,27 @@
-from absl.testing import absltest, parameterized
+import contextlib
 import functools
 import re
+from unittest import mock
+
+from absl.testing import absltest, parameterized
 import torch
 import torch.distributed as dist
 import torch_xla
 import torch_xla.core.xla_model as xm
 import torch_xla.distributed.xla_backend
-from unittest import mock
-
-from contextlib import contextmanager
-
 from torch_xla.experimental import pjrt
-
 
 def hlo_matches(hlo, expected_pattern, match_times=1):
   matches = re.findall(expected_pattern, hlo)
   assert len(list(matches)) == match_times, hlo
 
 
-@contextmanager
+@contextlib.contextmanager
 def new_group_barrier_disabled():
   with mock.patch.object(torch.distributed.distributed_c10d, '_store_based_barrier'):
     yield
 
-@contextmanager
+@contextlib.contextmanager
 def always_intercore_reduce():
   OriginalCollectiveContext = xm.CollectiveContext
 
@@ -37,7 +35,7 @@ def always_intercore_reduce():
   with mock.patch.object(xm, 'CollectiveContext', new=MockCollectiveContext):
     yield
 
-@contextmanager
+@contextlib.contextmanager
 def patch_world(rank, size):
   assert isinstance(dist.group.WORLD, torch_xla.distributed.xla_backend.ProcessGroupXla)
   with mock.patch.object(dist.group.WORLD, 'rank', return_value=rank), mock.patch.object(dist.group.WORLD, 'size', return_value=size):
