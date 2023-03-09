@@ -1,7 +1,6 @@
 import contextlib
 import functools
 import re
-import time
 from unittest import mock
 
 from absl.testing import absltest, parameterized
