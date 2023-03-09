@@ -9,6 +9,7 @@ import torch.distributed as dist
 import torch_xla
 import torch_xla.core.xla_model as xm
 import torch_xla.distributed.xla_backend
+import torch_xla.experimental.pjrt_backend
 from torch_xla.experimental import pjrt
 
 def hlo_matches(hlo, expected_pattern, match_times=1):
@@ -112,14 +113,12 @@ class XlaBackendTest(parameterized.TestCase):
     hlo = torch_xla._XLAC._get_xla_tensors_hlo([output])
     hlo_matches(hlo, reduce_scatter_pattern)
 
+  # @patch_world(0, 6)
   # def test_send(self):
   #   device = xm.xla_device()
   #   tensor = torch.arange(2, device=device) + 1 + 2 * dist.get_rank()
   #   input_list = [tensor]
-  #   set_world_size(6)
   #   ranks = [0, 3]
-  #   world_rank = 0
-  #   set_world_rank(world_rank)
 
   #   torch_xla.distributed.xla_backend.ProcessGroupXla.make_send_channel_id = (
   #       lambda self, dst_rank, tag: dst_rank * 2)
@@ -328,5 +327,5 @@ if __name__ == '__main__':
            "{pjrt.pjrt_device}-specific behaviors.")
     exit(0)
 
-  dist.init_process_group('xla', rank=0, world_size=1, init_method='tcp://localhost:6789')
+  dist.init_process_group('xla', init_method='pjrt://')
   absltest.main()
