@@ -276,7 +276,7 @@ class DynamoTrainingOptimizerTest(unittest.TestCase):
         met.metric_data('RunCachedGraphInputData')[0], sample_count * 3)
     self.assertEqual(
         met.metric_data('RunCachedGraphOutputData')[0], sample_count * 3)
-        
+
 
 if __name__ == '__main__':
   test = unittest.main()
