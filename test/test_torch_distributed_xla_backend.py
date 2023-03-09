@@ -12,6 +12,7 @@ import torch_xla.distributed.xla_backend
 import torch_xla.experimental.pjrt_backend
 from torch_xla.experimental import pjrt
 
+
 def hlo_matches(hlo, expected_pattern, match_times=1):
   matches = re.findall(expected_pattern, hlo)
   assert len(list(matches)) == match_times, hlo
@@ -19,8 +20,10 @@ def hlo_matches(hlo, expected_pattern, match_times=1):
 
 @contextlib.contextmanager
 def new_group_barrier_disabled():
-  with mock.patch.object(torch.distributed.distributed_c10d, '_store_based_barrier'):
+  with mock.patch.object(torch.distributed.distributed_c10d,
+                         '_store_based_barrier'):
     yield
+
 
 @contextlib.contextmanager
 def always_intercore_reduce():
@@ -36,10 +39,14 @@ def always_intercore_reduce():
   with mock.patch.object(xm, 'CollectiveContext', new=MockCollectiveContext):
     yield
 
+
 @contextlib.contextmanager
 def patch_world(rank, size):
-  assert isinstance(dist.group.WORLD, torch_xla.distributed.xla_backend.ProcessGroupXla)
-  with mock.patch.object(dist.group.WORLD, 'rank', return_value=rank), mock.patch.object(dist.group.WORLD, 'size', return_value=size):
+  assert isinstance(dist.group.WORLD,
+                    torch_xla.distributed.xla_backend.ProcessGroupXla)
+  with mock.patch.object(
+      dist.group.WORLD, 'rank', return_value=rank), mock.patch.object(
+          dist.group.WORLD, 'size', return_value=size):
     yield
 
 
@@ -145,6 +152,7 @@ class XlaBackendTest(parameterized.TestCase):
   #   # reset token to clean up the mess after the RuntimeError.
   #   xm.set_replication(device, [])
 
+
 #   def test_recv(self):
 #     device = xm.xla_device()
 #     tensor = torch.arange(2, device=device) + 1 + 2 * dist.get_rank()
@@ -187,56 +195,68 @@ class XlaBackendTest(parameterized.TestCase):
       ranks = [4, 5, 6, 7]
       with new_group_barrier_disabled():
         pg = dist.new_group(ranks=ranks)
-      self.assertIsInstance(pg, torch_xla.distributed.xla_backend.ProcessGroupXla)
+      self.assertIsInstance(pg,
+                            torch_xla.distributed.xla_backend.ProcessGroupXla)
       self.assertEqual(pg.size(), len(ranks))
       self.assertEqual(pg.rank(), ranks.index(5))
-      self.assertListEqual(pg._mesh, [[0, 1, 2, 3], [4, 5, 6, 7], [8, 9, 10, 11]])
+      self.assertListEqual(pg._mesh,
+                           [[0, 1, 2, 3], [4, 5, 6, 7], [8, 9, 10, 11]])
 
     with patch_world(rank=2, size=12):
       ranks = [0, 1, 2, 3]
       with new_group_barrier_disabled():
         pg = dist.new_group(ranks=ranks)
-      self.assertIsInstance(pg, torch_xla.distributed.xla_backend.ProcessGroupXla)
+      self.assertIsInstance(pg,
+                            torch_xla.distributed.xla_backend.ProcessGroupXla)
       self.assertEqual(pg.size(), len(ranks))
-      self.assertEqual(pg.rank(),  ranks.index(2))
-      self.assertListEqual(pg._mesh, [[0, 1, 2, 3], [4, 5, 6, 7], [8, 9, 10, 11]])
+      self.assertEqual(pg.rank(), ranks.index(2))
+      self.assertListEqual(pg._mesh,
+                           [[0, 1, 2, 3], [4, 5, 6, 7], [8, 9, 10, 11]])
 
     with patch_world(rank=11, size=12):
       ranks = [8, 9, 10, 11]
       with new_group_barrier_disabled():
         pg = dist.new_group(ranks=ranks)
-      self.assertIsInstance(pg, torch_xla.distributed.xla_backend.ProcessGroupXla)
+      self.assertIsInstance(pg,
+                            torch_xla.distributed.xla_backend.ProcessGroupXla)
       self.assertEqual(pg.size(), len(ranks))
       self.assertEqual(pg.rank(), ranks.index(11))
-      self.assertListEqual(pg._mesh, [[0, 1, 2, 3], [4, 5, 6, 7], [8, 9, 10, 11]])
+      self.assertListEqual(pg._mesh,
+                           [[0, 1, 2, 3], [4, 5, 6, 7], [8, 9, 10, 11]])
 
   def test_new_group_vertical(self):
     with patch_world(rank=5, size=12):
       ranks = [1, 5, 9]
       with new_group_barrier_disabled():
         pg = dist.new_group(ranks=ranks)
-      self.assertIsInstance(pg, torch_xla.distributed.xla_backend.ProcessGroupXla)
+      self.assertIsInstance(pg,
+                            torch_xla.distributed.xla_backend.ProcessGroupXla)
       self.assertEqual(pg.size(), len(ranks))
       self.assertEqual(pg.rank(), ranks.index(5))
-      self.assertListEqual(pg._mesh, [[0, 4, 8], [1, 5, 9], [2, 6, 10], [3, 7, 11]])
+      self.assertListEqual(pg._mesh,
+                           [[0, 4, 8], [1, 5, 9], [2, 6, 10], [3, 7, 11]])
 
     with patch_world(rank=0, size=12):
       ranks = [0, 4, 8]
       with new_group_barrier_disabled():
         pg = dist.new_group(ranks=ranks)
-      self.assertIsInstance(pg, torch_xla.distributed.xla_backend.ProcessGroupXla)
+      self.assertIsInstance(pg,
+                            torch_xla.distributed.xla_backend.ProcessGroupXla)
       self.assertEqual(pg.size(), len(ranks))
       self.assertEqual(pg.rank(), ranks.index(0))
-      self.assertListEqual(pg._mesh, [[0, 4, 8], [1, 5, 9], [2, 6, 10], [3, 7, 11]])
+      self.assertListEqual(pg._mesh,
+                           [[0, 4, 8], [1, 5, 9], [2, 6, 10], [3, 7, 11]])
 
     with patch_world(rank=11, size=12):
       ranks = [3, 7, 11]
       with new_group_barrier_disabled():
         pg = dist.new_group(ranks=ranks)
-      self.assertIsInstance(pg, torch_xla.distributed.xla_backend.ProcessGroupXla)
+      self.assertIsInstance(pg,
+                            torch_xla.distributed.xla_backend.ProcessGroupXla)
       self.assertEqual(pg.size(), len(ranks))
       self.assertEqual(pg.rank(), ranks.index(11))
-      self.assertListEqual(pg._mesh, [[0, 4, 8], [1, 5, 9], [2, 6, 10], [3, 7, 11]])
+      self.assertListEqual(pg._mesh,
+                           [[0, 4, 8], [1, 5, 9], [2, 6, 10], [3, 7, 11]])
 
   @patch_world(rank=5, size=12)
   def test_new_group_one_paticipant(self):
@@ -244,12 +264,12 @@ class XlaBackendTest(parameterized.TestCase):
     ranks = [5]
     with new_group_barrier_disabled():
       pg = dist.new_group(ranks=ranks)
-    self.assertIsInstance(pg,
-                      torch_xla.distributed.xla_backend.ProcessGroupXla)
+    self.assertIsInstance(pg, torch_xla.distributed.xla_backend.ProcessGroupXla)
     self.assertEqual(pg.size(), 1)
     self.assertEqual(pg.rank(), 0)
-    self.assertListEqual(pg._mesh, [[0], [1], [2], [3], [4], [5], [6], [7], [8], [9], [10],
-                        [11]])
+    self.assertListEqual(
+        pg._mesh,
+        [[0], [1], [2], [3], [4], [5], [6], [7], [8], [9], [10], [11]])
 
   @patch_world(rank=5, size=12)
   def test_new_group_entire_world(self):
@@ -306,29 +326,29 @@ class XlaBackendTest(parameterized.TestCase):
     dist.barrier()
 
   @parameterized.parameters(
-    'reduce',
-    'allgather_coalesced',
-    'allreduce_coalesced',
-    'alltoall',
-    'alltoall_base',
-    'gather',
-    'scatter',
-    'recv_anysource',
-    'monitored_barrier',
+      'reduce',
+      'allgather_coalesced',
+      'allreduce_coalesced',
+      'alltoall',
+      'alltoall_base',
+      'gather',
+      'scatter',
+      'recv_anysource',
+      'monitored_barrier',
   )
   def test_unimplemented_op(self, op):
     device = xm.xla_device()
     tensor = torch.arange(2, device=device) + 1 + 2 * dist.get_rank()
     pg_xla = dist.group.WORLD
-    self.assertIsInstance(pg_xla, torch_xla.distributed.xla_backend.ProcessGroupXla)
+    self.assertIsInstance(pg_xla,
+                          torch_xla.distributed.xla_backend.ProcessGroupXla)
     with self.assertRaises(NotImplementedError):
       getattr(pg_xla, op)(tensor)
-
 
 if __name__ == '__main__':
   if pjrt.device_type() != 'CPU':
     print(f"Skipping XLA backend unit test as this test doesn't exercise"
-           "{pjrt.pjrt_device}-specific behaviors.")
+          "{pjrt.pjrt_device}-specific behaviors.")
     exit(0)
 
   absltest.main()
