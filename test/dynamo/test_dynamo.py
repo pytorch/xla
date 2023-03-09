@@ -14,6 +14,10 @@ import unittest
 
 class DynamoInferenceBasicTest(unittest.TestCase):
 
+  @classmethod
+  def setUpClass(self):
+    torch.manual_seed(42)
+
   def fn_simple(self, x, y):
     a = torch.cos(x)
     b = torch.sin(y)
@@ -78,6 +82,10 @@ class DynamoInferenceBasicTest(unittest.TestCase):
 
 
 class DynamoTrainingBasicTest(unittest.TestCase):
+
+  @classmethod
+  def setUpClass(self):
+    torch.manual_seed(42)
 
   def fn_simple(self, input):
     loss_fn = torch.nn.CrossEntropyLoss()
@@ -175,6 +183,10 @@ class DynamoTrainingBasicTest(unittest.TestCase):
 
 
 class DynamoTrainingOptimizerTest(unittest.TestCase):
+
+  @classmethod
+  def setUpClass(self):
+    torch.manual_seed(42)
 
   def fn_simple(self, input, optimizer):
     loss_fn = torch.nn.CrossEntropyLoss()
