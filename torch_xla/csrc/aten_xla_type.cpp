@@ -3186,12 +3186,19 @@ std::tuple<at::Tensor, at::Tensor> XLANativeFunctions::var_mean(
 }
 
 at::Tensor XLANativeFunctions::view_copy_symint(const at::Tensor& self,
-                                                at::SymIntArrayRef sym_size) {
-  // TODO: support symbolic sizes
-  auto size = C10_AS_INTARRAYREF_SLOW(sym_size);
+                                                at::SymIntArrayRef shape) {
   TORCH_LAZY_FN_COUNTER("xla::");
-  return bridge::AtenFromXlaTensor(tensor_methods::view(
-      bridge::GetXlaTensor(self), XlaHelpers::I64List(size)));
+  c10::optional<at::IntArrayRef> int_shape = c10::asIntArrayRefSlowOpt(shape);
+  bool input_shape_static = int_shape.has_value();
+  XLATensorPtr xla_input = bridge::GetXlaTensor(self);
+  bool input_has_dyn_shape = xla_input->shape().get().is_dynamic();
+
+  XLA_CHECK(!(input_has_dyn_shape && input_shape_static))
+      << "This view op has dynamic input tensor but static input shape. This "
+         "behavior is currently unsupported; if the user believes this must be "
+         "supported, please file a feature request against PyTorch/XLA.";
+  return bridge::AtenFromXlaTensor(
+      tensor_methods::view_symint(xla_input, shape));
 }
 
 at::Tensor XLANativeFunctions::where(const at::Tensor& condition,

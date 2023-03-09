@@ -1,4 +1,5 @@
 import argparse
+import os
 import sys
 
 parser = argparse.ArgumentParser(add_help=False)
@@ -12,6 +13,9 @@ import torch
 import torch_xla.core.xla_model as xm
 import torch_xla.debug.metrics as met
 
+# It enables us to run python implementations of CompositeAutogradImplicit ops.
+# CompositeAutogradImplicit means we don't have an explicit backward formula for an op instead an op is composed of a bunch of ops that do have backward formulas and combines this formulas is equivalent to differentiating the op explicitly.
+pd = torch._C._EnablePythonDispatcher()
 xla_dev = xm.xla_device()
 
 
@@ -92,9 +96,6 @@ class TestDynamicShapeModels(unittest.TestCase):
                            met.metric_data('CompileTime')[0],
                            'number of compilation should not increase.')
 
-  @unittest.skip(
-      "disable it due to https://github.com/pytorch/xla/pull/4322#issuecomment-1374312614."
-  )
   def test_backward_pass_with_dynamic_input(self):
     num_features = 2
     num_test_samples = 5
@@ -156,5 +157,8 @@ class TestDynamicShapeModels(unittest.TestCase):
 
 
 if __name__ == '__main__':
+  assert os.environ['XLA_EXPERIMENTAL'] != ''
   test = unittest.main(verbosity=FLAGS.verbosity, exit=False)
+  # DISABLE PYTHON DISPATCHER FLAG
+  del pd
   sys.exit(0 if test.result.wasSuccessful() else 1)

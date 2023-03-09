@@ -2524,7 +2524,7 @@ XLATensorPtr trace(const XLATensorPtr& input) {
 }
 
 XLATensorPtr transpose(const XLATensorPtr& input, int64_t dim0, int64_t dim1) {
-  auto input_shape = input->shape();
+  xla::util::MaybeRef<xla::Shape> input_shape = input->shape();
   ViewInfo view_info;
   if (input_shape.get().rank() <= 1) {
     // return a view of self if input rank <=1
@@ -2532,7 +2532,7 @@ XLATensorPtr transpose(const XLATensorPtr& input, int64_t dim0, int64_t dim1) {
     view_info = ViewInfo(ViewInfo::Type::kNoOp, GetXlaShape(ir_value),
                          GetXlaShape(ir_value));
   } else {
-    auto permute_dims = torch::lazy::MakeTransposePermutation(
+    std::vector<int64_t> permute_dims = torch::lazy::MakeTransposePermutation(
         /*dim0=*/dim0, /*dim1=*/dim1, /*rank=*/input_shape.get().rank());
     view_info = ViewInfo(ViewInfo::Type::kPermute, input_shape, permute_dims);
   }
@@ -2574,10 +2574,10 @@ void uniform_(XLATensorPtr& input, double from, double to) {
 }
 
 XLATensorPtr unsqueeze(const XLATensorPtr& input, int64_t dim) {
-  auto input_shape = input->shape();
+  xla::util::MaybeRef<xla::Shape> input_shape = input->shape();
   int64_t squeeze_dim = torch::lazy::GetCanonicalDimensionIndex(
       dim, input_shape.get().rank() + 1);
-  auto dimensions =
+  std::vector<int64_t> dimensions =
       BuildUnsqueezeDimensions(input_shape.get().dimensions(), squeeze_dim);
   return view(input, dimensions);
 }
@@ -2635,6 +2635,20 @@ XLATensorPtr view(const XLATensorPtr& input,
   xla::Shape shape =
       XlaHelpers::GetDynamicReshape(input_shape, complete_dimensions);
   ViewInfo view_info(ViewInfo::Type::kReshape, std::move(shape), input_shape);
+  return input->CreateViewTensor(std::move(view_info));
+}
+
+XLATensorPtr view_symint(const XLATensorPtr& input,
+                         at::SymIntArrayRef sym_size) {
+  xla::util::MaybeRef<xla::Shape> input_shape = input->shape();
+  SymIntElements size_elements(sym_size);
+  std::vector<int64_t> complete_dimensions = GetCompleteShape(
+      size_elements.GetUpperBounds(), input_shape.get().dimensions());
+  xla::Shape result_shape = xla::ShapeUtil::MakeShape(
+      input_shape.get().element_type(), complete_dimensions,
+      size_elements.GetDynamicDims());
+  ViewInfo view_info(ViewInfo::Type::kReshape, std::move(result_shape),
+                     input_shape);
   return input->CreateViewTensor(std::move(view_info));
 }
 
