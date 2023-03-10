@@ -168,10 +168,10 @@ function run_torch_xla_tests() {
       pushd test/cpp
         echo "Running C++ Tests on PJRT"
         if [ -x "$(command -v nvidia-smi)" ]; then
-          PJRT_DEVICE=GPU ./run_tests.sh
-          PJRT_DEVICE=GPU ./run_tests.sh -X early_sync -F AtenXlaTensorTest.TestEarlySyncLiveTensors -L""
+          PJRT_DEVICE=GPU ./run_tests.sh -R
+          PJRT_DEVICE=GPU ./run_tests.sh -R -X early_sync -F AtenXlaTensorTest.TestEarlySyncLiveTensors -L""
         else
-          PJRT_DEVICE=CPU ./run_tests.sh
+          PJRT_DEVICE=CPU ./run_tests.sh -R
         fi
       popd
     fi
