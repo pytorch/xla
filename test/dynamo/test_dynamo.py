@@ -11,8 +11,18 @@ import torch._dynamo as dynamo
 import torchvision
 import unittest
 
+# Setup import folders.
+xla_test_folder = os.path.dirname(os.path.dirname(os.path.abspath(sys.argv[0])))
+sys.path.append(xla_test_folder)
+
+import test_utils
+
 
 class DynamoInferenceBasicTest(unittest.TestCase):
+
+  @classmethod
+  def setUpClass(self):
+    test_utils._set_rng_seed(42)
 
   def fn_simple(self, x, y):
     a = torch.cos(x)
@@ -79,6 +89,10 @@ class DynamoInferenceBasicTest(unittest.TestCase):
 
 class DynamoTrainingBasicTest(unittest.TestCase):
 
+  @classmethod
+  def setUpClass(self):
+    test_utils._set_rng_seed(42)
+
   def fn_simple(self, input):
     loss_fn = torch.nn.CrossEntropyLoss()
     target = torch.tensor([1, 2, 3], dtype=torch.long).to(input.device)
@@ -123,7 +137,6 @@ class DynamoTrainingBasicTest(unittest.TestCase):
     self.assertTrue(torch.allclose(res_cpu_3, res_xla_dynamo_3.cpu()))
     self.assertTrue(torch.allclose(input.grad, xla_input.grad.cpu()))
 
-  @unittest.skip("Broke by functionalization, #4680")
   def test_resnet18(self):
     torch._dynamo.reset()
     met.clear_counters()
@@ -164,7 +177,8 @@ class DynamoTrainingBasicTest(unittest.TestCase):
     # Graph 2: backward
     # Graph 3: sync input for backward
     # Graph 4: sync input for backward (TODO(JackCaoG) understand why there are two graphs)
-    self.assertEqual(met.metric_data('CompileTime')[0], 4)
+    # TODO @wonjoo CompileTime has increased to 5 after enabling functionalization (#4680)
+    self.assertEqual(met.metric_data('CompileTime')[0], 5)
     # We execute 3 grphs per step.
     self.assertEqual(met.metric_data('ExecuteTime')[0], sample_count * 3)
     # one for each forward and one for each backward
@@ -175,6 +189,10 @@ class DynamoTrainingBasicTest(unittest.TestCase):
 
 
 class DynamoTrainingOptimizerTest(unittest.TestCase):
+
+  @classmethod
+  def setUpClass(self):
+    test_utils._set_rng_seed(42)
 
   def fn_simple(self, input, optimizer):
     loss_fn = torch.nn.CrossEntropyLoss()
@@ -219,7 +237,6 @@ class DynamoTrainingOptimizerTest(unittest.TestCase):
       assert torch.allclose(input.grad, xla_input.grad.cpu())
       assert torch.allclose(input, xla_input.cpu())
 
-  @unittest.skip("Broke by functionalization, #4680")
   def test_resnet18(self):
     torch._dynamo.reset()
     met.clear_counters()
@@ -267,9 +284,11 @@ class DynamoTrainingOptimizerTest(unittest.TestCase):
     # Graph 3: optimizer
     # Graph 4: sync input for backward
     # Graph 5: sync input for backward (TODO(JackCaoG) understand why there are two graphs)
-    self.assertEqual(met.metric_data('CompileTime')[0], 5)
+    # TODO @wonjoo CompileTime has increased 5->7 after enabling functionalization (#4680)
+    self.assertEqual(met.metric_data('CompileTime')[0], 7)
     # We execute 4 grphs per step when optimizer is enabled.
-    self.assertEqual(met.metric_data('ExecuteTime')[0], sample_count * 4)
+    # TODO @wonjoo ExecuteTime has increased by 1 after enabling functionalization (#4680)
+    self.assertEqual(met.metric_data('ExecuteTime')[0], (sample_count * 4) + 1)
     # one for each forward, backward and optimizer
     self.assertEqual(
         met.metric_data('RunCachedGraphInputData')[0], sample_count * 3)
