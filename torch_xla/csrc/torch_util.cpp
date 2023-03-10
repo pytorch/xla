@@ -46,6 +46,15 @@ at::Tensor UnwrapNumber(const at::Tensor& tensor, at::ScalarType dtype) {
                                                            : tensor;
 }
 
+at::Tensor MaybeWrapTensorToFunctional(const at::Tensor& tensor) {
+  bool disable_functionalization =
+      xla::sys_util::GetEnvBool("DISABLE_FUNCTIONALIZATION", false);
+  if (disable_functionalization) {
+    return tensor;
+  }
+  return at::functionalization::impl::to_functional_tensor(tensor);
+}
+
 }  // namespace torch_xla
 
 namespace torch {

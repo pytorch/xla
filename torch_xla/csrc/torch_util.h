@@ -1,6 +1,7 @@
 #pragma once
 
 #include <ATen/ATen.h>
+#include <ATen/FunctionalTensorWrapper.h>
 #include <c10/core/ScalarType.h>
 #include <c10/util/Optional.h>
 
@@ -58,6 +59,10 @@ at::Scalar MakeFloatScalar(T value) {
 
 // Unwraps tensor to target dtype if it's a wrapped number.
 at::Tensor UnwrapNumber(const at::Tensor& tensor, at::ScalarType dtype);
+
+// Wraps tensor to functional tensor if DISABLE_FUNCTIONALIZATION is false or
+// not set.
+at::Tensor MaybeWrapTensorToFunctional(const at::Tensor& tensor);
 
 // Checks whether a c10::optional<Tensor> is defined.
 inline bool IsDefined(const c10::optional<at::Tensor>& tensor) {
