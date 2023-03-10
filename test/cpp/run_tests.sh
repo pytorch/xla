@@ -47,7 +47,9 @@ do
   esac
 done
 shift $(($OPTIND - 1))
-echo "XLA_EXPERIMENTAL=" $XLA_EXPERIMENTAL
+
+# Set XLA_EXPERIMENTAL var to subsequently executed commands.
+export XLA_EXPERIMENTAL
 
 rm -rf "$BUILDDIR"
 mkdir "$BUILDDIR" 2>/dev/null
@@ -57,10 +59,6 @@ cmake "$RUNDIR" \
   -DPYTHON_INCLUDE_DIR=$(python -c "from distutils.sysconfig import get_python_inc; print(get_python_inc())") \
   -DPYTHON_LIBRARY=$(python -c "import distutils.sysconfig as sysconfig; print(sysconfig.get_config_var('LIBDIR') + '/' + sysconfig.get_config_var('LDLIBRARY'))")
 make -j $VERB
-
-echo "xw32 checking env var begins"
-export
-echo "xw32 checking env var ends"
 
 if [ $BUILD_ONLY -eq 0 ]; then
   if [ "$LOGFILE" != "" ]; then
