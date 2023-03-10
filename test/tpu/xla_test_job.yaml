@@ -2,8 +2,21 @@ apiVersion: v1
 kind: Pod
 metadata:
   generateName: xla-test-job-
+  labels:
+    tpu: v2-8
 spec:
   affinity:
+    # Prevent multiple pods from scheduling on the same host
+    podAntiAffinity:
+      requiredDuringSchedulingIgnoredDuringExecution:
+      - labelSelector:
+          matchExpressions:
+          - key: tpu
+            operator: In
+            values:
+            - v2-8
+        topologyKey: "kubernetes.io/hostname"
+    # Only schedule on v2-8 TPUs
     nodeAffinity:
       requiredDuringSchedulingIgnoredDuringExecution:
         nodeSelectorTerms:
@@ -25,9 +38,9 @@ spec:
     image: gcr.io/$PROJECT_ID/pytorch-xla-test:$BUILD_ID
     command:
     - bash
-    - -c
+    - -cxe
     - |
-      python3 pytorch/xla/test/pjrt/test_operations.py -v
+      python3 pytorch/xla/test/test_operations.py -v
       python3 pytorch/xla/test/pjrt/test_experimental_pjrt_tpu.py
       python3 pytorch/xla/test/spmd/test_xla_sharding.py
       python3 pytorch/xla/test/spmd/test_xla_virtual_device.py
