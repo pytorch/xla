@@ -62,6 +62,7 @@ void hlo_stablehlo_hlo_roundtrip_helper(HloModuleProto* proto) {
       std::cout << "mhlo to stablehlo not ok" << std::endl;
       std::cout << "stablehlo dump: " << std::endl;
       mlir_module.dump();
+      return;
     }
   }
 
@@ -73,6 +74,7 @@ void hlo_stablehlo_hlo_roundtrip_helper(HloModuleProto* proto) {
       std::cout << "mhlo to stablehlo not ok" << std::endl;
       std::cout << "mhlo dump: " << std::endl;
       mlir_module.dump();
+      return;
     }
   }
 
