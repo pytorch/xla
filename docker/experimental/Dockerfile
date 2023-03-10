@@ -74,7 +74,6 @@ COPY .bazelrc .
 COPY .bazelversion .
 COPY WORKSPACE .
 COPY bazel/ bazel/
-COPY build_torch_xla_libs.sh .
 
 COPY torch_xla/ torch_xla/
 COPY setup.py .

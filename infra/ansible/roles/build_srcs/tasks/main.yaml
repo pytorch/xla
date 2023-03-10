@@ -17,12 +17,6 @@
     name: "{{ pytorch_wheels.files | map(attribute='path') }}"
     state: "forcereinstall"
 
-- name: Build XLA computation client library
-  ansible.builtin.command:
-    cmd: bash build_torch_xla_libs.sh -O -D_GLIBCXX_USE_CXX11_ABI=1
-    chdir: "{{ (src_root, 'pytorch/xla') | path_join }}"
-  environment: "{{ env_vars }}"
-
 - name: Build PyTorch/XLA
   ansible.builtin.command:
     cmd: python setup.py bdist_wheel
