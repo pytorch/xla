@@ -60,8 +60,8 @@ at::Scalar MakeFloatScalar(T value) {
 // Unwraps tensor to target dtype if it's a wrapped number.
 at::Tensor UnwrapNumber(const at::Tensor& tensor, at::ScalarType dtype);
 
-// Wraps tensor to functional tensor if DISABLE_FUNCTIONALIZATION is false or
-// not set.
+// Wraps tensor to functional tensor if XLA_DISABLE_FUNCTIONALIZATION is false
+// or not set.
 at::Tensor MaybeWrapTensorToFunctional(const at::Tensor& tensor);
 
 // Checks whether a c10::optional<Tensor> is defined.
