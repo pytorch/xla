@@ -19,7 +19,6 @@
 #include "third_party/xla_client/tf_logging.h"
 #include "third_party/xla_client/thread_pool.h"
 #include "third_party/xla_client/util.h"
-#include "third_party/xla_client/xrt_computation_client.h"
 #include "torch/csrc/lazy/core/hash.h"
 #include "torch/csrc/lazy/core/util.h"
 #include "torch_xla/csrc/helpers.h"

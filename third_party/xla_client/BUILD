@@ -71,9 +71,6 @@ cc_library(
         ":unique",
         ":util",
         ":xla_util",
-        ":xrt_local_service",
-        ":xrt_session",
-        ":xrt_session_cache",
         ":grpc++",
         ":client_session",
         ":scope",
@@ -112,10 +109,6 @@ cc_library(
         "@xla//xla/service:hlo_proto_cc",
         "@xla//xla/hlo/ir:hlo",
         "@xla//xla/service/spmd:spmd_partitioner",
-        # "@org_tensorflow//tensorflow/compiler/xrt:xrt_proto_cc",
-        # "@org_tensorflow//tensorflow/compiler/xrt:xrt_server",
-        # "@org_tensorflow//tensorflow/compiler/xrt:xrt_utils",
-        # "@org_tensorflow//tensorflow/compiler/xrt/cc:xrt_ops",
         ":core_cpu",
         ":framework_internal",
         ":lib",
@@ -377,7 +370,6 @@ cc_library(
         ":tf_logging",
         ":types",
         ":util",
-        ":xrt_session",
         "@com_google_absl//absl/types:span",
         "@xla//xla:shape_util",
         "@xla//xla:status_macros",
@@ -406,54 +398,6 @@ cc_test(
         "@tsl//tsl/platform:status_matchers",
     ],
 )
-
-# cc_library(
-#     name = "xrt_local_service",
-#     srcs = ["xrt_local_service.cc"],
-#     hdrs = ["xrt_local_service.h"],
-#     deps = [
-#         ":debug_macros",
-#         ":xrt_session",
-#         "@com_google_absl//absl/strings",
-#         "@com_google_absl//absl/types:span",
-#         "@xla//xla:types",
-#         "@xla//xla/stream_executor/tpu:tpu_initializer_helper",
-#         ":lib",
-#         "@org_tensorflow//tensorflow/core/distributed_runtime:server_lib",
-#         "@tsl//tsl/platform:errors",
-#         "@tsl//tsl/platform:status",
-#     ],
-#     alwayslink = True,
-# )
-
-# cc_library(
-#     name = "xrt_session_cache",
-#     srcs = ["xrt_session_cache.cc"],
-#     hdrs = ["xrt_session_cache.h"],
-#     deps = [
-#         ":metrics",
-#         ":sys_util",
-#         ":xrt_session",
-#         "@xla//xla:types",
-#     ],
-#     alwayslink = True,
-# )
-
-# cc_library(
-#     name = "xrt_session",
-#     srcs = ["xrt_session.cc"],
-#     hdrs = ["xrt_session.h"],
-#     deps = [
-#         ":debug_macros",
-#         "@com_google_absl//absl/strings",
-#         "@com_google_absl//absl/types:span",
-#         # "@org_tensorflow//tensorflow/cc:cc_ops",
-#         # "@org_tensorflow//tensorflow/cc:client_session",
-#         # "@org_tensorflow//tensorflow/cc:scope",
-#         "@xla//xla:types",
-#     ],
-#     alwayslink = True,
-# )
 
 ptxla_cc_shared_object(
     name = "libxla_computation_client.so",

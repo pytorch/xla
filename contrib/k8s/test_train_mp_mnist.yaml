@@ -23,11 +23,11 @@ spec:
         volumeMounts:
         - mountPath: /dev/shm
           name: dshm
-        # For the time being we need to manually set XRT_TPU_CONFIG from
+        # For the time being we need to manually set PJRT_DEVICE from
         # KUBE_GOOGLE_CLOUD_TPU_ENDPOINTS env var hooked in by GKE.
         command: [
           'bash', '-c',
-          # 'XRT_TPU_CONFIG="tpu_worker;0;${KUBE_GOOGLE_CLOUD_TPU_ENDPOINTS:7}"
+          # 'PJRT_DEVICE=TPU
           'PJRT_DEVICE=TPU python pytorch/xla/test/test_train_mp_mnist.py'
         ]
         env:

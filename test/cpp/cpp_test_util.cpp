@@ -440,8 +440,7 @@ bool UsingPjRt() {
 
 bool UsingTpu() {
   static bool using_tpu =
-      absl::StartsWith(xla::sys_util::GetEnvString("PJRT_DEVICE", ""), "TPU") ||
-      !xla::sys_util::GetEnvString("XRT_TPU_CONFIG", "").empty();
+      absl::StartsWith(xla::sys_util::GetEnvString("PJRT_DEVICE", ""), "TPU");
   return using_tpu;
 }
 

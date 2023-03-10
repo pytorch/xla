@@ -50,7 +50,7 @@ DeviceSupport = collections.namedtuple('DeviceSupport', ['num_devices'])
 
 
 def _is_on_tpu():
-  return 'XRT_TPU_CONFIG' in os.environ or pjrt.device_type() == 'TPU'
+  return pjrt.device_type() == 'TPU'
 
 
 skipOnTpu = unittest.skipIf(_is_on_tpu(), 'Not supported on TPU')
