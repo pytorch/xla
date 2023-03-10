@@ -19,14 +19,14 @@
 #include "pybind11/pybind11.h"
 #include "pybind11/pytypes.h"
 #include "pybind11/stl_bind.h"
-#include "tensorflow/compiler/xla/pjrt/distributed/distributed.h"
-#include "tensorflow/compiler/xla/python/profiler/internal/traceme_wrapper.h"
-#include "tensorflow/compiler/xla/service/hlo_parser.h"
+#include "xla/pjrt/distributed/distributed.h"
+#include "xla/python/profiler/internal/traceme_wrapper.h"
+#include "xla/service/hlo_parser.h"
 #include "tensorflow/core/example/example.pb.h"
 #include "tensorflow/core/example/feature.pb.h"
 #include "tensorflow/python/profiler/internal/profiler_pywrap_impl.h"
-#include "tensorflow/tsl/platform/env.h"
-#include "tensorflow/tsl/profiler/lib/traceme.h"
+#include "tsl/platform/env.h"
+#include "tsl/profiler/lib/traceme.h"
 #include "third_party/xla_client/computation_client.h"
 #include "third_party/xla_client/mesh_service.h"
 #include "third_party/xla_client/metrics.h"
@@ -1302,7 +1302,7 @@ void InitXlaModuleBindings(py::module m) {
     // together. Ideally, those two sets shouldn't have any overlaps. The reason
     // why is that we cannot have ComputationClient to use the
     // TORCH_LAZY_COUNTER as it currently cannot depend on PyTorch (as part of
-    // TensorFlow).
+    // openxla).
     // TODO(jwtan): Unify them once ComputationClient becomes a standalone
     // library.
     return torch::lazy::CreateMetricReport() +

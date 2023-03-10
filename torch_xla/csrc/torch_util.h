@@ -4,7 +4,7 @@
 #include <c10/core/ScalarType.h>
 #include <c10/util/Optional.h>
 
-#include "tensorflow/compiler/xla/shape.h"
+#include "xla/shape.h"
 #include "third_party/xla_client/debug_macros.h"
 #include "torch/csrc/lazy/core/dynamic_ir.h"
 #include "torch/csrc/lazy/core/hash.h"

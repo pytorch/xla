@@ -3,7 +3,7 @@
 <b>Current CI status:</b>  [![CircleCI](https://circleci.com/gh/pytorch/xla.svg?style=svg)](https://circleci.com/gh/pytorch/xla)
 
 PyTorch/XLA is a Python package that uses the
-[XLA deep learning compiler](https://www.tensorflow.org/xla)
+[XLA deep learning compiler](https://www.openxla.org/xla)
 to connect the [PyTorch deep learning framework](https://pytorch.org/) and
 [Cloud TPUs](https://cloud.google.com/tpu/). You can try it right now, for free,
 on a single Cloud TPU with [Google Colab](https://colab.research.google.com/),

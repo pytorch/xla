@@ -11,7 +11,7 @@ namespace torch_xla {
 
 // To be noted, the most appropriate way to adopt BackendData
 // should actually be letting ComputationClient::Data inherit it.
-// Since ComputationClient is within TensorFlow, and TF cannot
+// Since ComputationClient is within openxla, and TF cannot
 // depend on PyTorch. Therefore, we have this intermediate wrapper.
 class XLAData : public torch::lazy::BackendData {
  public:

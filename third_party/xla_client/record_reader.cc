@@ -1,8 +1,8 @@
 #include "third_party/xla_client/record_reader.h"
 
-#include "tensorflow/tsl/platform/errors.h"
-#include "tensorflow/tsl/platform/strcat.h"
-#include "tensorflow/tsl/platform/env.h"
+#include "tsl/platform/errors.h"
+#include "tsl/platform/strcat.h"
+#include "tsl/platform/env.h"
 #include "third_party/xla_client/debug_macros.h"
 
 namespace xla {

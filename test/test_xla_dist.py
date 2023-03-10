@@ -587,7 +587,7 @@ class ClusterResolverTest(unittest.TestCase):
             'state':
                 'READY',
             'health':
-                'UNHEALTHY_TENSORFLOW',
+                'UNHEALTHY_OPENXLA',
             'runtime_version':
                 'pytorch-nightly',
             'accelerator_type':

@@ -17,7 +17,7 @@ def start_server(port: int, only_on_master: bool = True) -> object:
   """Start a profiler server on the client side on provided port.
 
   Users can then use the tensorboard profiler plugin
-  (https://github.com/tensorflow/profiler) or the
+  (will use a plugin after migration of openxla) or the
   :func:`~torch_xla.debug.profiler.trace` as the client to request
   a profiler from this server.
 
@@ -94,7 +94,7 @@ class Trace(torch_xla._XLAC.profiler.TraceMe):
   The traces generated can then be collected using the above profiling APIs.
   The profiling server first needs to be started up and then can be sampled
   either using Tensorboard profiler plugin
-  (https://github.com/tensorflow/profiler) or the
+  (will use a plugin after migration of openxla) or the
   :func:`~torch_xla.debug.profiler.trace` method.
 
   Note: currently only supports PyTorch/XLA client side trace events. i.e.,

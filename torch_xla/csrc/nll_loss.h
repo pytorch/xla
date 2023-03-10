@@ -1,7 +1,7 @@
 #pragma once
 
 #include "absl/types/optional.h"
-#include "tensorflow/compiler/xla/client/xla_builder.h"
+#include "xla/client/xla_builder.h"
 #include "torch_xla/csrc/reduction.h"
 
 namespace torch_xla {

@@ -1,9 +1,9 @@
 #include "torch_xla/csrc/resize_ops.h"
 
 #include "absl/strings/str_cat.h"
-#include "tensorflow/compiler/xla/client/lib/constants.h"
-#include "tensorflow/compiler/xla/shape_util.h"
-#include "tensorflow/compiler/xla/util.h"
+#include "xla/client/lib/constants.h"
+#include "xla/shape_util.h"
+#include "xla/util.h"
 #include "third_party/xla_client/debug_macros.h"
 #include "third_party/xla_client/sys_util.h"
 #include "torch_xla/csrc/device.h"
@@ -18,7 +18,7 @@ xla::XlaOp BuildResize(xla::XlaOp input, const xla::Shape& output_shape,
                        bool align_corners, bool half_pixel_centers,
                        bool is_kernel_bilinear) {
   // Code copied from
-  // https://github.com/tensorflow/tensorflow/blob/e51d6ab5730092775d516b18fa4ee85d49602cd8/tensorflow/compiler/tf2xla/kernels/image_resize_ops.cc#L477-L672
+  // https://github.com/openxla/openxla/blob/e51d6ab5730092775d516b18fa4ee85d49602cd8/openxla/compiler/tf2xla/kernels/image_resize_ops.cc#L477-L672
 
   // We implement bilinear interpolation and nearest neighbor with a Gather op.
   // For each output pixel, we gather the necessary slices of the input.

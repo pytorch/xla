@@ -3,9 +3,9 @@
 #include <limits>
 
 #include "absl/strings/str_join.h"
-#include "tensorflow/compiler/xla/client/lib/constants.h"
-#include "tensorflow/compiler/xla/primitive_util.h"
-#include "tensorflow/compiler/xla/shape_util.h"
+#include "xla/client/lib/constants.h"
+#include "xla/primitive_util.h"
+#include "xla/shape_util.h"
 #include "torch/csrc/lazy/core/helpers.h"
 #include "torch/csrc/lazy/core/util.h"
 #include "torch_xla/csrc/convert_ops.h"

@@ -9,7 +9,7 @@
 #include <unordered_map>
 
 #include "absl/strings/str_split.h"
-#include "tensorflow/compiler/xla/shape_util.h"
+#include "xla/shape_util.h"
 #include "torch/csrc/lazy/core/util.h"
 
 namespace torch_xla {

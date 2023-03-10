@@ -4,8 +4,8 @@
 #include <iostream>
 
 #include "cpp_test_util.h"
-#include "tensorflow/compiler/xla/client/xla_builder.h"
-#include "tensorflow/compiler/xla/shape_util.h"
+#include "xla/client/xla_builder.h"
+#include "xla/shape_util.h"
 #include "third_party/xla_client/computation_client.h"
 #include "third_party/xla_client/debug_macros.h"
 #include "third_party/xla_client/multi_wait.h"

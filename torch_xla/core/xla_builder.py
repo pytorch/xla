@@ -104,11 +104,11 @@ class Op(object):
   The APIs exposed by this class are close to an exact match of the API
   documented here:
 
-    https://www.tensorflow.org/xla/operation_semantics
+    https://www.openxla.org/xla/operation_semantics
 
   And here:
 
-    https://github.com/tensorflow/tensorflow/blob/master/tensorflow/compiler/xla/client/xla_builder.h
+    https://github.com/openxla/xla/client/xla_builder.h
 
   Args:
     op (_XLAC.XlaOp): The core XLA operation wrapped.
