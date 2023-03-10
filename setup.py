@@ -16,26 +16,24 @@
 #   TORCH_XLA_PACKAGE_NAME
 #     change the package name to something other than 'torch_xla'
 #
-#   COMPILE_PARALLEL=1
-#     enable parallel compile
-#
-#   BUILD_CPP_TESTS=1
-#     build the C++ tests
-#
-#   XLA_DEBUG=0
-#     build the xla/xrt client in debug mode
-#
-#   XLA_BAZEL_VERBOSE=0
+#   BAZEL_VERBOSE=0
 #     turn on verbose messages during the bazel build of the xla/xrt client
 #
 #   XLA_CUDA=0
 #     build the xla/xrt client with CUDA enabled
+#
+#   XLA_CPU_USE_ACL=0
+#     whether to use ACL
 #
 #   BUNDLE_LIBTPU=0
 #     include libtpu in final wheel
 #
 #   GCLOUD_SERVICE_KEY_FILE=''
 #     file containing the auth tokens for remote cache/build
+#
+#   TPUVM_MODE=0
+#     whether to build for TPU
+# 
 
 from __future__ import print_function
 
@@ -148,43 +146,6 @@ def maybe_bundle_libtpu(base_dir):
         libtpu_so.write(z.read('libtpu/libtpu.so'))
 
 
-def _compile_parallel(self,
-                      sources,
-                      output_dir=None,
-                      macros=None,
-                      include_dirs=None,
-                      debug=0,
-                      extra_preargs=None,
-                      extra_postargs=None,
-                      depends=None):
-  # Those lines are copied from distutils.ccompiler.CCompiler directly.
-  macros, objects, extra_postargs, pp_opts, build = self._setup_compile(
-      output_dir, macros, include_dirs, sources, depends, extra_postargs)
-  cc_args = self._get_cc_args(pp_opts, debug, extra_preargs)
-
-  def compile_one(obj):
-    try:
-      src, ext = build[obj]
-    except KeyError:
-      return
-    self._compile(obj, src, ext, cc_args, extra_postargs, pp_opts)
-
-  list(
-      multiprocessing.pool.ThreadPool(multiprocessing.cpu_count()).imap(
-          compile_one, objects))
-  return objects
-
-
-# Plant the parallel compile function.
-if _check_env_flag('COMPILE_PARALLEL', default='1'):
-  try:
-    if (inspect.signature(distutils.ccompiler.CCompiler.compile) ==
-        inspect.signature(_compile_parallel)):
-      distutils.ccompiler.CCompiler.compile = _compile_parallel
-  except:
-    pass
-
-
 class Clean(distutils.command.clean.clean):
 
   def run(self):
@@ -227,14 +188,6 @@ IS_DARWIN = (platform.system() == 'Darwin')
 IS_WINDOWS = sys.platform.startswith('win')
 IS_LINUX = (platform.system() == 'Linux')
 GCLOUD_KEY_FILE = os.getenv('GCLOUD_SERVICE_KEY_FILE', default='')
-
-
-def make_relative_rpath(path):
-  if IS_DARWIN:
-    return '-Wl,-rpath,@loader_path/' + path
-  else:
-    return '-Wl,-rpath,$ORIGIN/' + path
-
 
 extra_compile_args = []
 cxx_abi = getattr(torch._C, '_GLIBCXX_USE_CXX11_ABI', None)
@@ -280,8 +233,14 @@ class BuildBazelExtension(command.build_ext.build_ext):
       bazel_argv.append('--config=remote_cache')
       bazel_argv.append('--google_credentials=%s' % GCLOUD_KEY_FILE)
 
-    if _check_env_flag('BUILD_CPP_TESTS', default='1'):
-      bazel_argv.append('//test/cpp:all')
+    # Build configuration.
+    if _check_env_flag('BAZEL_VERBOSE'):
+      bazel_argv.append('-s')
+    if _check_env_flag('XLA_CUDA'):
+      bazel_argv.append('--config=cuda')
+    if _check_env_flag('XLA_CPU_USE_ACL'):
+      bazel_argv.append('--config=acl')
+
 
     if IS_WINDOWS:
       for library_dir in self.library_dirs:
@@ -324,8 +283,7 @@ setup(
     },
     data_files=[
         'scripts/fixup_binary.py',
-    ] + ['test/cpp/build/test_ptxla'] if _check_env_flag(
-        'BUILD_CPP_TESTS', default='1') else [],
+    ],
     cmdclass={
         'build_ext': BuildBazelExtension,
         'clean': Clean,

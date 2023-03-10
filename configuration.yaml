@@ -140,11 +140,6 @@ variables:
         - Enabled parallel compile for PyTorch/XLA build.
       type: bool
       default_value: true
-    BUILD_CPP_TESTS:
-      description:
-        - Whether or not to build the cpp tests.
-      type: bool
-      default_value: true
     BUNDLE_LIBTPU:
       description:
         - Whether or not to include libtpu in the final wheel.

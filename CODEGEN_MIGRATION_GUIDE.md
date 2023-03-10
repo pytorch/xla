@@ -197,7 +197,7 @@ to
 
 ## Run the test and verify the result
 Run the C++ op test or a simple test that only involves the generated ops. To run the C++ test:
-1. Build the xla through `python setup.py install` (note: don't use the `BUILD_CPP_TESTS=0` flag since this will skip building the C++ tests)
+1. Build the xla through `python setup.py install`
 2. Go into the `test/cpp/build` directory in your `pytorch/xla`
 3. Run the command to run the desired C++ test (for example, to run `Abs` C++ test):
 ```

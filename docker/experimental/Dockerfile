@@ -10,7 +10,6 @@ ARG tf_cuda_compute_capabilities="7.0,7.5,8.0"
 
 ARG bazel_jobs
 ARG tpuvm=1
-ARG build_cpp_tests=0
 ARG package_version=2.0.0
 
 # Contains all build dependencies for PT/XLA
@@ -85,9 +84,8 @@ ARG tpuvm
 ARG cuda
 ARG tf_cuda_compute_capabilities
 ARG bazel_jobs
-ARG build_cpp_tests
 ARG package_version
-RUN TORCH_XLA_VERSION=${package_version} BUILD_CPP_TESTS=${build_cpp_tests} BAZEL_JOBS=${bazel_jobs} TPUVM_MODE=${tpuvm} BUNDLE_LIBTPU=${tpuvm} XLA_CUDA=${cuda} TF_CUDA_COMPUTE_CAPABILITIES=${tf_cuda_compute_capabilities} python setup.py bdist_wheel
+RUN TORCH_XLA_VERSION=${package_version} BAZEL_JOBS=${bazel_jobs} TPUVM_MODE=${tpuvm} BUNDLE_LIBTPU=${tpuvm} XLA_CUDA=${cuda} TF_CUDA_COMPUTE_CAPABILITIES=${tf_cuda_compute_capabilities} python setup.py bdist_wheel
 
 # Expunge cache to keep image size under control
 RUN bazel clean --expunge

@@ -14,7 +14,6 @@ ARG cxx_abi="1"
 ARG tpuvm=""
 ARG bazel_jobs=""
 ARG git_clone="true"
-ARG build_cpp_tests="0"
 
 ENV BUILD_CPP_TESTS "${build_cpp_tests}"
 
@@ -60,7 +59,7 @@ RUN if [ "${git_clone}" = "true" ]; then \
   cd / && \
   git clone -b "${example_branch}" --recursive https://github.com/pytorch-tpu/examples tpu-examples; fi
 
-RUN cd /pytorch/xla && bash scripts/build_torch_wheels.sh ${python_version} ${release_version} ${build_cpp_tests}
+RUN cd /pytorch/xla && bash scripts/build_torch_wheels.sh ${python_version} ${release_version}
 
 # Set LD_PRELOAD to use tcmalloc if for tpuvm mode.
 ENV LD_PRELOAD=${tpuvm:+"/usr/lib/x86_64-linux-gnu/libtcmalloc.so.4"}
