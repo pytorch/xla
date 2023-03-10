@@ -45,27 +45,11 @@ spec:
       python3 pytorch/xla/test/spmd/test_xla_sharding.py
       python3 pytorch/xla/test/spmd/test_xla_virtual_device.py
       python3 pytorch/xla/test/spmd/test_train_spmd_linear_model.py
+      PJRT_DEVICE=TPU_LEGACY XLA_EXPERIMENTAL=nonzero:masked_select python3 pytorch/xla/test/test_dynamic_shape_models.py -v
+      PJRT_DEVICE=TPU_LEGACY XLA_EXPERIMENTAL=nonzero:masked_select python3 pytorch/xla/test/test_dynamic_shapes.py -v
     volumeMounts:
     - mountPath: /dev/shm
       name: dshm
     env:
     - name: PJRT_DEVICE
       value: TPU
-  - name: xla-test-tpu-legacy
-    securityContext:
-      privileged: true
-    image: gcr.io/$PROJECT_ID/pytorch-xla-test:$BUILD_ID
-    command:
-    - bash
-    - -c
-    - |
-      python3 pytorch/xla/test/test_dynamic_shape_models.py -v
-      python3 pytorch/xla/test/test_dynamic_shapes.py -v
-    volumeMounts:
-    - mountPath: /dev/shm
-      name: dshm
-    env:
-    - name: PJRT_DEVICE
-      value: TPU_LEGACY
-    - name: XLA_EXPERIMENTAL
-      value: nonzero:masked_select
