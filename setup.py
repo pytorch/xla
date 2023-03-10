@@ -33,7 +33,7 @@
 #
 #   TPUVM_MODE=0
 #     whether to build for TPU
-# 
+#
 
 from __future__ import print_function
 
@@ -240,7 +240,6 @@ class BuildBazelExtension(command.build_ext.build_ext):
       bazel_argv.append('--config=cuda')
     if _check_env_flag('XLA_CPU_USE_ACL'):
       bazel_argv.append('--config=acl')
-
 
     if IS_WINDOWS:
       for library_dir in self.library_dirs:
