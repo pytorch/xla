@@ -78,6 +78,9 @@ build:remote_cache --host_platform_remote_properties_override='properties:{name:
 build:remote_cache --remote_instance_name=projects/tpu-pytorch/instances/default_instance
 build:remote_cache --google_default_credentials
 build:remote_cache --incompatible_strict_action_env
+build:remote_cache --bes_backend=buildeventservice.googleapis.com
+build:remote_cache --bes_results_url="https://source.cloud.google.com/results/invocations"
+build:remote_cache --bes_instance_name="tpu-pytorch"
 #########################################################################
 
 # Load rc file with user-specific options.
