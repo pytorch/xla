@@ -27,10 +27,10 @@ MetricFnInfo GetMetricRenderInfo(const Percentile& percentile) {
   }
 }
 
-std::string CreateXrtMetricReport(
-    const std::map<std::string, Metric>& xrt_metrics) {
+std::string CreatePjrtMetricReport(
+    const std::map<std::string, Metric>& pjrt_metrics) {
   std::stringstream ss;
-  for (const auto& name_metric : xrt_metrics) {
+  for (const auto& name_metric : pjrt_metrics) {
     if (name_metric.second.percentile) {
       const Percentile& percentile = *name_metric.second.percentile;
       MetricFnInfo minfo = GetMetricRenderInfo(percentile);
@@ -70,8 +70,8 @@ std::string CreateXrtMetricReport(
 }  // namespace
 
 std::string CreateMetricReport(
-    const std::map<std::string, Metric>& xrt_metrics) {
-  return metrics::CreateMetricReport() + CreateXrtMetricReport(xrt_metrics);
+    const std::map<std::string, Metric>& pjrt_metrics) {
+  return metrics::CreateMetricReport() + CreatePjrtMetricReport(pjrt_metrics);
 }
 
 std::string CreateMetricReport(const std::vector<std::string>& counter_names,

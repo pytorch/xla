@@ -1,93 +1,5 @@
 ---
 variables:
-  xrt_variables:
-    XRT_MESH_SERVICE_ADDRESS:
-      description:
-        - The mesh service address used to create the XRT mesh client.
-      type: string
-      default_value: ""
-    XRT_GRPC_COMPRESSION:
-      description:
-        - Configures compression for rpc options on the XRT client.
-      type: string
-      default_value: ""
-    XRT_TPU_CONFIG:
-      description:
-        - Addresses for the TPU services to be used by the XRT client. ";"
-          separated list of addresses, e.g. localservice;0;localhost:51011.
-      type: string
-    XRT_WORKERS:
-      description:
-        - Addresses for the XRT workers to be used by the XRT client, for
-          example localservice:0;grpc://localhost:51011
-      type: string
-    XRT_DEVICE_MAP:
-      description:
-        - Maps devices to metadata about the job, replica, task that the device
-          is responsible for. e.g.
-          CPU:0;/job:localservice/replica:0/task:0/device:XLA_CPU:0
-      type: string
-    XRT_GRPC_MULTISTREAM:
-      description:
-        - Used to disable session conneciton sharing for XRT.
-      type: bool
-      default_value: true
-    XRT_START_LOCAL_SERVER:
-      description:
-        - Whether or not XRT should start the local service. If true, and if
-          the devices are CPU or GPU, XRT will try to start the local server.
-      type: bool
-      default_value: false
-    XRT_SHARD_LOCAL_ORDINAL:
-      description:
-        - Ordinal to be appended to the paths used by this thread of the xla
-          client.
-      type: int
-    XRT_GRPC_COMPRESSION_LEVEL:
-      description:
-        - Configures compression level for rpc options on the XRT client.
-      type: int
-      default_value: 3
-    XRT_MESH_MAX_MSGSIZE:
-      description:
-        - Max size of the mesh used by the XRT mesh service, product of
-          dimensions e.g. 1024 * 1024 * 1024
-      type: int
-      default_value: 1073741824  # (1024^3)
-    XRT_MESH_CONNECT_WAIT:
-      description:
-        - Number of seconds to wait for a connection to the XRT mesh service,
-          particularly the client mesh master
-      type: int
-      default_value: 300
-    XRT_LOCAL_WORKER:
-      description:
-        - Local service address for XRT local worker, e.g. localhost:8000.
-      type: string
-      default_value: ""
-    XRT_SHARD_WORLD_SIZE:
-      description:
-        - Total number of XRT shards to consider in this client instance. Does
-          not have a default because there's special behavior when the flag is
-          not set.
-      type: int
-    XRT_MULTI_PROCESSING_DEVICE:
-      description:
-        - Service address of the XRT device to be used as a multi processing
-          device.
-      type: string
-      default_value: ""
-    XRT_HOST_ORDINAL:
-      description:
-        - Sets the host ordinal for the XRT computation client. Used to
-          identify the rank of current device. Does not have a default because
-          there's special behavior when the flag is not set.
-      type: int
-    XRT_SHARD_ORDINAL:
-      description:
-        - Sets the shard ordinal for the XRT computation client.
-      type: int
-      default_value: -1
   pjrt_variables:
     PJRT_DEVICE:
       description:
@@ -188,12 +100,12 @@ variables:
       default_value: "PyTorch/XLA"
     XLA_DEBUG:
       description:
-        - Whether or not to build xla and the xrt client in debug mode.
+        - Whether or not to build xla and the pjrt client in debug mode.
       type: bool
       default_value: false
     XLA_BAZEL_VERBOSE:
       description:
-        - Turn on verbose messages during the bazel build of the xla/xrt client.
+        - Turn on verbose messages during the bazel build of the xla/pjrt client.
       type: bool
       default_value: false
   feature_variables:
@@ -263,7 +175,7 @@ variables:
       type: int
     XLA_TENSOR_ALLOCATOR_MAXSIZE:
       description:
-        - Max cache size to be used by TensorAllocator in XRT. We only cache
+        - Max cache size to be used by TensorAllocator in PJRT. We only cache
           blocks smaller than this number, measured in bytes.
       type: int
       default_value: 1000000000
@@ -352,16 +264,16 @@ variables:
   device_variables:
     TPU_NUM_DEVICES:
       description:
-        - Number of TPU devices being used by this instance of XRT.
+        - Number of TPU devices being used by this instance of PJRT.
       type: int
       default_value: 8
     CPU_NUM_DEVICES:
       description:
-        - Number of CPU devices being used by this instance of XRT.
+        - Number of CPU devices being used by this instance of PJRT.
       type: int
     GPU_NUM_DEVICES:
       description:
-        - Number of GPU devices being used by this instance of XRT.
+        - Number of GPU devices being used by this instance of PJRT.
       type: int
   debug_variables:
     XLA_FNTRACKER_FILE:

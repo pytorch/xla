@@ -59,7 +59,7 @@ xla::Shape TensorShapeToXLAShape(xla::PrimitiveType type,
                                  const PartialTensorShape& tensor_shape);
 
 // Given an XLA shape with layouts, builds a layout vector in the form able to
-// be fed to ops like InfeedEnqueue/InfeedEnqueueTuple/XRTAllocateV2/....
+// be fed to ops like InfeedEnqueue/InfeedEnqueueTuple/PJRTAllocateV2/....
 // THe returned vector is a linearized sequence of the minor-to-major values of
 // the layouts held within the input shape.
 // In case the input shape is a tuple, the minor-to-major values will be in the

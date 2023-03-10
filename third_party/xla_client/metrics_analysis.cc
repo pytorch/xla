@@ -88,20 +88,20 @@ class MetricTime : public Analyzer {
   long threshold_nsec_;
 };
 
-class XrtMetricFrequency : public Analyzer {
+class a : public Analyzer {
  public:
-  XrtMetricFrequency(std::map<std::string, float> metric_name_thresholds,
+  PjrtMetricFrequency(std::map<std::string, float> metric_name_thresholds,
                      int run_every_n)
       : metric_name_thresholds_(std::move(metric_name_thresholds)),
         run_every_n_(run_every_n),
         counter_(0) {}
 
   Analysis Run() override {
-    LOG(FATAL) << "For XrtMetricFrequency, use the metrics overload";
+    LOG(FATAL) << "For PjrtMetricFrequency, use the metrics overload";
   }
 
-  Analysis Run(const std::map<std::string, xla::Metric>& xrt_metrics) override {
-    // XRT GetMetrics call is relatively expensive.
+  Analysis Run(const std::map<std::string, xla::Metric>& PJRT_metrics) override {
+    // PJRT GetMetrics call is relatively expensive.
     if (counter_++ != run_every_n_) {
       return {Analysis::Symptom::kNormal};
     }
@@ -114,17 +114,17 @@ class XrtMetricFrequency : public Analyzer {
     std::stringstream ss;
     int64_t step_count = step->Value();
     for (const auto& kv : metric_name_thresholds_) {
-      auto it = xrt_metrics.find(kv.first);
-      if (it == xrt_metrics.end()) {
+      auto it = pjrt_metrics.find(kv.first);
+      if (it == pjrt_metrics.end()) {
         continue;
       }
-      xla::Metric xrt_metric = it->second;
+      xla::Metric pjrt_metric = it->second;
       std::ldiv_t res;
-      if (xrt_metric.int64_value) {
-        int64_t metric_count = *xrt_metric.int64_value;
+      if (pjrt_metric.int64_value) {
+        int64_t metric_count = *pjrt_metric.int64_value;
         res = std::div(metric_count, step_count);
-      } else if (xrt_metric.percentile) {
-        size_t metric_count = (*xrt_metric.percentile).total_samples;
+      } else if (pjrt_metric.percentile) {
+        size_t metric_count = (*pjrt_metric.percentile).total_samples;
         res = std::div(metric_count, step_count);
       } else {
         continue;
@@ -141,7 +141,7 @@ class XrtMetricFrequency : public Analyzer {
           Analysis::Symptom::kMetricTooFrequent,
           absl::StrFormat(
               "%s: Following metrics too frequent: %sduring %zu steps. "
-              "Note: XRT metrics follow the lifecycle of the TPU "
+              "Note: PJRT metrics follow the lifecycle of the TPU "
               "so you may need "
               "to restart the TPU for fresh metrics.",
               kAnalysisPrefix, repr, step_count),
@@ -152,7 +152,7 @@ class XrtMetricFrequency : public Analyzer {
 
  private:
   std::map<std::string, float> metric_name_thresholds_;
-  bool is_xrt_metric_;
+  bool is_pjrt_metric_;
   int run_every_n_;
   int counter_;
 };
@@ -187,9 +187,9 @@ std::vector<Analyzer*>* GetAnalyzers() {
       new MetricTime("CompileTime", 300e9),
       new MetricTime("ExecuteTime", 30e9),
       new UnloweredOp(),
-      new XrtMetricFrequency({{"XrtTryFreeMemory", 0.1f},
-                              {"XrtCompaction", 0.1f},
-                              {"XrtExecutorEvict", 0.1f}},
+      new PjrtMetricFrequency({{"PjrtTryFreeMemory", 0.1f},
+                              {"PjrtCompaction", 0.1f},
+                              {"PjrtExecutorEvict", 0.1f}},
                              10),
   };
   return analyzers;
@@ -198,11 +198,11 @@ std::vector<Analyzer*>* GetAnalyzers() {
 }  // namespace
 
 std::string CreatePerformanceReport(
-    const std::map<std::string, xla::Metric>& xrt_metrics) {
+    const std::map<std::string, xla::Metric>& pjrt_metrics) {
   std::stringstream ss;
   std::vector<Analyzer*>* analyzers = GetAnalyzers();
   for (auto const& analyzer : *analyzers) {
-    Analysis result = analyzer->Run(xrt_metrics);
+    Analysis result = analyzer->Run(pjrt_metrics);
     if (result.symptom != Analysis::Symptom::kNormal) {
       ss << result.repr << std::endl;
     }

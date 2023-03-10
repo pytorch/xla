@@ -1,4 +1,4 @@
-# Tensorflow's patch to update the protobuf will regress the XRT runtime.
+# Tensorflow's patch to update the protobuf will regress the PJRT runtime.
 diff --git a/tensorflow/compiler/xla/tests/build_defs.bzl b/tensorflow/compiler/xla/tests/build_defs.bzl
 index 10b30f63755..306512e21b8 100644
 --- a/tensorflow/compiler/xla/tests/build_defs.bzl

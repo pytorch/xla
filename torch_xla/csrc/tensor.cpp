@@ -552,7 +552,7 @@ std::vector<XLATensorPtr> XLATensor::MakeOutputTensors(
 
 XLATensorPtr XLATensor::CopyTensorToDevice(
     const torch::lazy::BackendDevice& device) {
-  // TODO: This can be optimized via proper XRT/XLA computation.
+  // TODO: This can be optimized via proper PJRT/XLA computation.
   return Create(ToTensor(/*detached=*/true), device);
 }
 

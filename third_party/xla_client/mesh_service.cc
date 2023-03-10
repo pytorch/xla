@@ -274,7 +274,7 @@ struct MeshService::Impl {
       : impl(std::move(config)) {
     ::grpc::ServerBuilder builder;
     int64_t max_msg_size =
-        sys_util::GetEnvInt("XRT_MESH_MAX_MSGSIZE", 1024 * 1024 * 1024);
+        sys_util::GetEnvInt("Pjrt_MESH_MAX_MSGSIZE", 1024 * 1024 * 1024);
     builder.SetMaxReceiveMessageSize(max_msg_size);
     builder.SetMaxSendMessageSize(max_msg_size);
     builder.AddListeningPort(address, ::grpc::InsecureServerCredentials());
@@ -311,7 +311,7 @@ struct MeshClient::Impl {
 MeshClient* MeshClient::Get() {
   auto create_client = []() {
     std::string mesh_service_address =
-        sys_util::GetEnvString("XRT_MESH_SERVICE_ADDRESS", "");
+        sys_util::GetEnvString("Pjrt_MESH_SERVICE_ADDRESS", "");
     return !mesh_service_address.empty() ? new MeshClient(mesh_service_address)
                                          : nullptr;
   };
@@ -321,7 +321,7 @@ MeshClient* MeshClient::Get() {
 
 MeshClient::MeshClient(const std::string& address) : impl_(new Impl(address)) {
   int64_t connect_wait_seconds =
-      sys_util::GetEnvInt("XRT_MESH_CONNECT_WAIT", 300);
+      sys_util::GetEnvInt("Pjrt_MESH_CONNECT_WAIT", 300);
   TF_LOG(INFO) << "Waiting to connect to client mesh master ("
                << connect_wait_seconds << " seconds) " << address;
   XLA_CHECK(impl_->channel->WaitForConnected(

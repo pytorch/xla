@@ -35,14 +35,13 @@ def _maybe_select_default_device():
   # Skip if runtime is already configured
   if xu.getenv_as(
       xenv.PJRT_SELECT_DEFAULT_DEVICE, str, '1'
-  ) == '0' or xenv.PJRT_DEVICE in os.environ or xenv.GPU_NUM_DEVICES in os.environ or any(
-      env.startswith('XRT_') for env in os.environ):
+  ) == '0' or xenv.PJRT_DEVICE in os.environ or xenv.GPU_NUM_DEVICES in os.environ:
     return
 
   logging.warning(
-      'XRT configuration not detected. Defaulting to preview PJRT '
+      'PJRT configuration not detected. Defaulting to preview PJRT '
       'runtime. To silence this warning and continue using PJRT, '
-      'explicitly set PJRT_DEVICE to a supported device or configure XRT. To '
+      'explicitly set PJRT_DEVICE to a supported device or configure PJRT. To '
       'disable default device selection, set PJRT_SELECT_DEFAULT_DEVICE=0')
   # TODO: Update this link in the release branch
   logging.warning('For more information about the status of PJRT, see '
@@ -86,7 +85,7 @@ def requires_pjrt(fn: FN) -> FN:
   @functools.wraps(fn)
   def wrapper(*args, **kwargs):
     if not using_pjrt():
-      raise NotImplementedError('`{}` not implemented for XRT'.format(
+      raise NotImplementedError('`{}` not implemented for PJRT'.format(
           fn.__name__))
 
     return fn(*args, **kwargs)

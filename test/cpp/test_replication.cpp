@@ -30,7 +30,7 @@ xla::XlaComputation CreateCrsComputation(const xla::Shape& shape) {
 void TestSingleReplication(
     const std::vector<torch::lazy::BackendDevice>& devices,
     const std::vector<torch::lazy::BackendDevice>& all_devices) {
-  // Simulates N threads executing the same computation, using separated XRT
+  // Simulates N threads executing the same computation, using separated PJRT
   // executions, and issuing CRS operations.
   std::vector<std::string> device_strings;
   std::vector<std::string> all_device_strings;

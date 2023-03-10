@@ -30,7 +30,7 @@ Status DataTypeToPrimitiveType(DataType data_type, xla::PrimitiveType* type);
 // Caution: The mapping from TF types to XLA types is not one-to-one: for
 // example, both DT_INT8 and DT_QINT8 map to xla::S8. So the inverse is not a
 // uniquely defined function. This is fine if you want a way to encode an XLA
-// object as a TensorFlow object (e.g., in XRT); whereas if you started with a
+// object as a TensorFlow object (e.g., in PJRT); whereas if you started with a
 // TensorFlow object in the first place, you most likely should preserve the
 // original TensorFlow type, rather than trying to convert an XLA type back into
 // a TensorFlow type.

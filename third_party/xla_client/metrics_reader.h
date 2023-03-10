@@ -13,7 +13,7 @@ namespace metrics_reader {
 
 // Creates a report with the current metrics statistics.
 std::string CreateMetricReport(
-    const std::map<std::string, xla::Metric>& xrt_metrics);
+    const std::map<std::string, xla::Metric>& pjrt_metrics);
 
 // Creates a report with the selected metrics statistics.
 std::string CreateMetricReport(const std::vector<std::string>& counter_names,

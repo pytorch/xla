@@ -23,13 +23,13 @@
 #     build the C++ tests
 #
 #   XLA_DEBUG=0
-#     build the xla/xrt client in debug mode
+#     build the xla/pjrt client in debug mode
 #
 #   XLA_BAZEL_VERBOSE=0
-#     turn on verbose messages during the bazel build of the xla/xrt client
+#     turn on verbose messages during the bazel build of the xla/pjrt client
 #
 #   XLA_CUDA=0
-#     build the xla/xrt client with CUDA enabled
+#     build the xla/pjrt client with CUDA enabled
 #
 #   BUNDLE_LIBTPU=0
 #     include libtpu in final wheel

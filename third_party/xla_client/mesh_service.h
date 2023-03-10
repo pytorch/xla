@@ -1,5 +1,5 @@
-#ifndef XLA_CLIENT_XRT_MESH_SERVICE_H_
-#define XLA_CLIENT_XRT_MESH_SERVICE_H_
+#ifndef XLA_CLIENT_Pjrt_MESH_SERVICE_H_
+#define XLA_CLIENT_Pjrt_MESH_SERVICE_H_
 
 #include <memory>
 #include <string>
@@ -55,4 +55,4 @@ class MeshClient {
 }  // namespace service
 }  // namespace xla
 
-#endif  // XLA_CLIENT_XRT_MESH_SERVICE_H_
+#endif  // XLA_CLIENT_Pjrt_MESH_SERVICE_H_

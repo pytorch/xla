@@ -36,4 +36,4 @@ if __name__ == '__main__':
   if args.use_xla_backend:
     _mp_fn_xla_backend()
   else:
-    print("XRT has been deprecated, please use --use_xla_backend to modify.")
+    print("PJRT has been deprecated, please use --use_xla_backend to modify.")

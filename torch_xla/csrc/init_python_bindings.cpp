@@ -1471,7 +1471,7 @@ void InitXlaModuleBindings(py::module m) {
            const std::vector<op_builder::OpPtr>& operands, py::dict args) {
           return op_builder::CreateOp(builder, opname, operands, args);
         });
-  m.def("_run_xrt_local_service", [](uint64_t service_port) {
+  m.def("_run_pjrt_local_service", [](uint64_t service_port) {
     xla::ComputationClient::RunLocalService(service_port);
   });
   m.def("_xla_sgd_optimizer_step_",

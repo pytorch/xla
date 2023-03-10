@@ -95,39 +95,39 @@ function run_xla_backend_mp {
   MASTER_ADDR=localhost MASTER_PORT=6000 run_test "$@"
 }
 
-function run_xrt {
+function run_pjrt {
   if [ -x "$(command -v nvidia-smi)" ]; then
     GPU_NUM_DEVICES=2 "$@"
   else
-    XRT_DEVICE_MAP="CPU:0;/job:localservice/replica:0/task:0/device:XLA_CPU:0" XRT_WORKERS="localservice:0;grpc://localhost:$(shuf -i 40701-40999 -n 1)" "$@"
+    PJRT_DEVICE=TPU "$@"
   fi
 }
 
 function run_opbyop {
   echo "Running in OpByOp mode: $@"
-  XLA_GET_TENSORS_OPBYOP=1 XLA_SYNC_TENSORS_OPBYOP=1 run_xrt "$@"
+  XLA_GET_TENSORS_OPBYOP=1 XLA_SYNC_TENSORS_OPBYOP=1 run_pjrt "$@"
 }
 
 function run_async_scalar {
   echo "Running in Async Scalar Upload mode: $@"
-  XLA_TRANSFER_SCALAR_ASYNC=1 run_xrt "$@"
+  XLA_TRANSFER_SCALAR_ASYNC=1 run_pjrt "$@"
 }
 
 function run_torchrun {
   echo "Running tests spawned by torchrun"
   if [ -x "$(command -v nvidia-smi)" ]; then
-    run_xrt "$@"
+    run_pjrt "$@"
   else
     echo "the tests need atleast two XLA workers to validate"
   fi
 }
 
-function run_xrt_tests {
-  echo "Running XRT tests"
+function run_pjrt_tests {
+  echo "Running pjrt tests"
   run_opbyop python3 "$CDIR/test_operations.py" "$@" --verbosity=$VERBOSITY
   run_async_scalar python3 "$CDIR/test_operations.py" "$@" --verbosity=$VERBOSITY
-  run_xrt python3 "$CDIR/test_torch_distributed_xla_backend.py"
-  run_xrt python3 "$CDIR/test_mp_rendezvous.py"
+  run_pjrt python3 "$CDIR/test_torch_distributed_xla_backend.py"
+  run_pjrt python3 "$CDIR/test_mp_rendezvous.py"
   run_torchrun python3 "$CDIR/test_allreduce_torchrun.py"
 }
 
@@ -199,7 +199,7 @@ function run_tests {
   if [[ "$XLA_SKIP_MP_OP_TESTS" != "1" ]]; then
     run_mp_op_tests
   fi
-  run_xrt_tests
+  run_pjrt_tests
 }
 
 if [ "$LOGFILE" != "" ]; then

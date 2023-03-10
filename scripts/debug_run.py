@@ -76,7 +76,7 @@ def build_vmodule(args, default):
 def show_env(env, fd=sys.stdout):
   print('XLA Environment:', file=fd)
   for k, v in env.items():
-    if re.match(r'(XLA_|XRT_|TF_)', k):
+    if re.match(r'(XLA_|PJRT_|TF_)', k):
       print('  {}={}'.format(k, v), file=fd)
 
 

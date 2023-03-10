@@ -4,7 +4,7 @@ _This document reflects the current state of PjRt support in current nightly
 builds_. See the [same document on the r1.13 branch](https://github.com/pytorch/xla/blob/r1.13/docs/pjrt.md)
 for the status in the latest stable release.
 
-The PyTorch/XLA team is currently migrating from the currently-supported XRT
+The PyTorch/XLA team is currently migrating from the currently-supported PJRT
 runtime to the [PjRt
 runtime](https://github.com/tensorflow/tensorflow/tree/master/tensorflow/compiler/xla/pjrt)
 used by [JAX](https://github.com/google/jax).
@@ -98,11 +98,11 @@ PJRT_DEVICE=GPU GPU_NUM_DEVICES=4 python3 xla/test/test_train_mp_imagenet.py --f
 Currently, only a single host is supported, and multi-host GPU cluster support
 will be added in an future release.
 
-## Key differences from XRT
+## Key differences from PJRT
 
-Although in most cases we expect PjRt and XRT to work mostly interchangeably
+Although in most cases we expect PjRt to work mostly interchangeably
 from the end-user's perspective (especially on TPU v4), there are some subtle
-differences that are important to keep in mind. Importantly, XRT was designed
+differences that are important to keep in mind. Importantly, PJRT was designed
 around the TPU Node architecture, so it will always spawn a client and a server
 process, even on TPU VMs. Thus, every batch of inputs has additional latency
 from serializing and deserializing data.
@@ -114,12 +114,12 @@ for more information about TPU architecture.
 
 - Performance gains are possible for workloads constrained by data transfer
   speeds.
-- Under XRT, the server process is the only process that interacts with the TPU
+- Under PJRT, the server process is the only process that interacts with the TPU
   devices, and client processes don't have direct access to the TPU devices.
   When profiling a single-host TPU (e.g. v3-8 or v4-8), you would normally see 8
   device traces (one for each TPU core). With PjRt, each process has one chip,
   and a profile from that process will show only 2 TPU cores.
-- For the same reason, profiling does not work on TPU Pods with XRT, because the
+- For the same reason, profiling does not work on TPU Pods with PJRT, because the
   server process runs independently from the user's model code. PjRt does not
   have that constraint, so it is possible to profile 2 TPU cores per process in
   a TPU Pod.
@@ -145,7 +145,7 @@ entire workload to restart.
 
 Thus, we have reimplemented `xm.rendezvous` with native XLA collective
 communication, which is much more stable and well-tested on large TPU pods. This
-imposes two new constraints compared to the XRT implementation:
+imposes two new constraints compared to the PJRT implementation:
 
 - Because the payload has to become part of the XLA graph, `xm.mark_step` is
   called both before and after the data is transferred. Calling `xm.rendezvous`

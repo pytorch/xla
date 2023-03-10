@@ -353,7 +353,7 @@ class ComputationClient {
   std::vector<std::string> GetCompilationDevices(
       const std::string& device, absl::Span<const std::string> devices);
 
-  // Run the XRT local service, this will block the caller unitl the server
+  // Run the Pjrt local service, this will block the caller unitl the server
   // being stopped.
   static void RunLocalService(uint64_t service_port);
 

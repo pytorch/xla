@@ -6,11 +6,11 @@ import subprocess
 import sys
 
 from pathlib import Path
-from torch_xla.__init__ import server_is_alive, XRT_RUN_SERVER_PROCESS, XRT_SERVER_REGEX
+from torch_xla.__init__ import server_is_alive, PJRT_RUN_SERVER_PROCESS, PJRT_SERVER_REGEX
 
 
 def kill_service():
-  subprocess.call(['pkill', '-f', XRT_SERVER_REGEX])
+  subprocess.call(['pkill', '-f', PJRT_SERVER_REGEX])
   # Wait unitl existing server process gets killed.
   found_server_process = False
   while server_is_alive():
@@ -42,10 +42,10 @@ def run_service(port, flag_env):
     (env, var) = env_var.split('=', 1)
     local_env[env] = var
 
-  Path('/tmp/xrt_server_log').mkdir(parents=True, exist_ok=True)
+  Path('/tmp/pjrt_server_log').mkdir(parents=True, exist_ok=True)
   time_str = time.strftime('%Y%m%d-%H%M%S')
-  log_file = open('/tmp/xrt_server_log/server_{}.log'.format(time_str), 'w')
-  subprocess.Popen(['python3', '-m', XRT_RUN_SERVER_PROCESS,
+  log_file = open('/tmp/pjrt_server_log/server_{}.log'.format(time_str), 'w')
+  subprocess.Popen(['python3', '-m', PJRT_RUN_SERVER_PROCESS,
                     str(port)],
                    stdout=log_file,
                    stderr=subprocess.STDOUT,
@@ -56,7 +56,7 @@ def run_service(port, flag_env):
 if __name__ == '__main__':
   parser = argparse.ArgumentParser()
   parser.add_argument(
-      '--port', type=int, help='Port that XRT local service will be using.')
+      '--port', type=int, help='Port that PJRT local service will be using.')
   parser.add_argument(
       '--env',
       action='append',
@@ -67,11 +67,11 @@ if __name__ == '__main__':
   server_state_group.add_argument(
       '--restart',
       action='store_true',
-      help='Restart the long running XRT local server.')
+      help='Restart the long running PJRT local server.')
   server_state_group.add_argument(
       '--stop',
       action='store_true',
-      help='Stop the long running XRT local server.')
+      help='Stop the long running PJRT local server.')
 
   FLAGS = parser.parse_args()
   if FLAGS.restart or FLAGS.stop:

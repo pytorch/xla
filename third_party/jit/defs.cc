@@ -34,12 +34,12 @@ const char* const kXlaClusterIdAttr = "_xla_compile_id";
 
 static std::atomic<bool> xla_devices_creation_required(false);
 
-// Request XLA:GPU and XLA:CPU device creation. Deprecated, only used by XRT
+// Request XLA:GPU and XLA:CPU device creation. Deprecated, only used by PJRT
 // backend.
 void RequestXlaDevicesCreation() { xla_devices_creation_required = true; }
 
 // Check whether XLA:GPU and XLA:CPU device creation was requested. Deprecated,
-// only used by XRT backend.
+// only used by PJRT backend.
 bool XlaDevicesCreationRequired() { return xla_devices_creation_required; }
 
 }  // namespace tensorflow

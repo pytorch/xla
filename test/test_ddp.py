@@ -9,7 +9,7 @@ import distributed_util as util
 FLAGS = args_parse.parse_common_options()
 
 
-class TestXrtDistributedDataParallel(parameterized.TestCase):
+class TestPjrtDistributedDataParallel(parameterized.TestCase):
 
   @staticmethod
   def _ddp_correctness(rank, use_large_net: bool, debug: bool):

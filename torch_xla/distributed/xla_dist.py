@@ -69,12 +69,12 @@ def get_args_parser() -> argparse.ArgumentParser:
   parser.add_argument(
       '--restart-tpuvm-pod-server',
       action='store_true',
-      help='Restart the long running XRT local service for this training.')
+      help='Restart the long running PJRT local service for this training.')
   parser.add_argument(
       '--tpuvm-server-port',
       default=51011,
       type=int,
-      help='Port that XRT local service will be start on.')
+      help='Port that PJRT local service will be start on.')
   parser.add_argument(
       'positional',
       nargs='+',
@@ -122,8 +122,8 @@ def concat_cmd_list(cmd_list, delimiter=' ', quote='"'):
 class DistributedExecutor(object):
 
   SCRIPT_PATH_TMPL = '/tmp/{pid}/dist_training_ptxla_{worker}.sh'
-  XRT_RUN_SERVER_CMD = 'torch_xla.core.xrt_run_server'
-  XRT_RUN_SERVER_PROCESS = 'torch_xla.core._xrt_run_server'
+  PJRT_RUN_SERVER_CMD = 'torch_xla.core.pjrt_run_server'
+  PJRT_RUN_SERVER_PROCESS = 'torch_xla.core._pjrt_run_server'
   MESH_SERVICE_PORT = 8477  # Use single port to disallow concurrent runs
   DIST_ENV_VARS = [
       xenv.TPU_CONFIG,
@@ -453,7 +453,7 @@ class DistributedExecutor(object):
 
     # Only for master
     if client_worker == self._cluster.get_client_master():
-      xrt_server_config = [
+      pjrt_server_config = [
           '{worker_name};{worker_idx};{worker_ip}:{worker_port}'.format(
               worker_name=worker_name,
               worker_idx=idx,
@@ -462,8 +462,8 @@ class DistributedExecutor(object):
               if self.tpuvm_mode else service_worker.get_port()) for idx,
           service_worker in enumerate(self._cluster.get_service_workers())
       ]
-      xrt_tpu_config = '|'.join(xrt_server_config)
-      env_vars[xenv.TPU_CONFIG] = '{}'.format(xrt_tpu_config)
+      pjrt_tpu_config = '|'.join(pjrt_server_config)
+      env_vars[xenv.TPU_CONFIG] = '{}'.format(pjrt_tpu_config)
 
     export_cmd = []
     for k in env_vars:
@@ -485,7 +485,7 @@ class DistributedExecutor(object):
       if self.tpuvm_mode:
         # Start the local tf server if it is not already running.
         script.append([
-            'python3', '-m', self.XRT_RUN_SERVER_CMD, '--port',
+            'python3', '-m', self.PJRT_RUN_SERVER_CMD, '--port',
             str(self.tpuvm_server_port)
         ])
         if self.restart_server:
