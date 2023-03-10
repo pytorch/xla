@@ -36,7 +36,7 @@ dist.init_process_group("xla", rank=rank, world_size=world_size)
 
 ```
 new_rank = xm.get_ordinal()
-world_size = xm.xrt_world_size()
+world_size = xm.rt_world_size()
 ```
 
 4. Pass `gradient_as_bucket_view=True` to the DDP wrapper.
@@ -96,7 +96,7 @@ def demo_basic(rank):
     # xla specific APIs to get rank, world_size.
     new_rank = xm.get_ordinal()
     assert new_rank == rank
-    world_size = xm.xrt_world_size()
+    world_size = xm.rt_world_size()
 
     print(f"Running basic DDP example on rank {rank}.")
     setup(rank, world_size)

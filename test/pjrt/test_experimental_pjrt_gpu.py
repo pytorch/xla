@@ -150,7 +150,7 @@ class TestExperimentalPjrtGpu(parameterized.TestCase):
   @staticmethod
   def _reduce_scatter(pin_layout):
     device = xm.xla_device()
-    world_size = xm.xrt_world_size()
+    world_size = xm.rt_world_size()
     tensor = -torch.arange(world_size, dtype=torch.float32).to(device)
 
     out = xm.reduce_scatter(
@@ -175,7 +175,7 @@ class TestExperimentalPjrtGpu(parameterized.TestCase):
   @staticmethod
   def _all_to_all(pin_layout):
     device = xm.xla_device()
-    world_size = xm.xrt_world_size()
+    world_size = xm.rt_world_size()
 
     tensor = torch.cat(
         [

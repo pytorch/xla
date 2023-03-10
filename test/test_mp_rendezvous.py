@@ -5,7 +5,7 @@ import torch_xla.distributed.xla_multiprocessing as xmp
 
 
 def _get_replica_group(index):
-  world_size = xm.xrt_world_size()
+  world_size = xm.rt_world_size()
   split = world_size // 2
   gid = index // split if split > 0 else 0
   return list(range(0, split)) if index < split else list(

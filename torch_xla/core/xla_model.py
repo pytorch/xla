@@ -55,7 +55,7 @@ class CollectiveContext(object):
 
   def __init__(self, groups=None):
     self.replica_devcount = torch_xla._XLAC._xla_get_replication_devices_count()
-    self.world_size = xrt_world_size()
+    self.world_size = rt_world_size()
     self.ordinal = get_ordinal()
     if self.world_size > self.replica_devcount:
       # This is the sea-of-devices path.
@@ -145,7 +145,7 @@ def get_xla_supported_devices(devkind=None, max_devices=None):
       return kind_devices[:max_devices] if max_devices else kind_devices
 
 
-def xrt_world_size(defval=1):
+def rt_world_size(defval=1):
   """Retrieves the number of devices which is taking part of the replication.
 
   Args:
@@ -159,13 +159,15 @@ def xrt_world_size(defval=1):
   if pjrt.using_pjrt():
     return pjrt.world_size()
 
-  return xu.getenv_as(xenv.WORLD_SIZE, int, defval=defval)
+  print('XRT has been deprecated, please use `PJER_DEVICE`')
+  return 1
+  # return xu.getenv_as(xenv.WORLD_SIZE, int, defval=defval)
 
 
 def get_ordinal(defval=0):
   """Retrieves the replication ordinal of the current thread.
 
-  The ordinals range from 0 to `xrt_world_size()` minus 1.
+  The ordinals range from 0 to `rt_world_size()` minus 1.
 
   Args:
     defval (int, optional): The default value to be returned in case there is no
@@ -640,7 +642,7 @@ def _all_gather_using_all_reduce(value, dim=0, groups=None, pin_layout=True):
   padding = [0] * (2 * value.dim())
   ordinal = get_ordinal()
   if groups is None:
-    left, right = ordinal, xrt_world_size() - 1 - ordinal
+    left, right = ordinal, rt_world_size() - 1 - ordinal
   else:
     ordinals = dict()
     for g in groups:
@@ -691,7 +693,7 @@ def all_gather(value, dim=0, groups=None, output=None, pin_layout=True):
       "Replica groups must have the same number of replicas/shards."
   else:
     # All replicas belong to a single group
-    shard_count = xrt_world_size()
+    shard_count = rt_world_size()
   if output != None:
     # Call the out of place version of the all_gather
     new_token = torch_xla._XLAC._xla_all_gather_out(output, value, token, dim,

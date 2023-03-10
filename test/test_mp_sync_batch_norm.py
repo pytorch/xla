@@ -20,10 +20,10 @@ def run_step(model: torch.nn.Module, batch: torch.Tensor) -> torch.Tensor:
     xm.optimizer_step(optimizer)
   else:
     # Scale as we scale within xm.optimizer_step()
-    loss = loss / xm.xrt_world_size()
+    loss = loss / xm.rt_world_size()
     loss.backward()
     optimizer.step()
-    split_size = batch.shape[0] // xm.xrt_world_size()
+    split_size = batch.shape[0] // xm.rt_world_size()
     result = result.split(split_size, dim=0)[xm.get_ordinal()]
 
   return result
@@ -40,7 +40,7 @@ def sync_bn1d_no_channel_test(index):
   torch.manual_seed(1)
   bsz = 32
   length = 64
-  t_global = torch.rand((xm.xrt_world_size() * bsz, length))
+  t_global = torch.rand((xm.rt_world_size() * bsz, length))
 
   # XLA SyncBatchNorm
   device = xm.xla_device()
@@ -65,7 +65,7 @@ def sync_bn1d_multi_channel_test(index):
   bsz = 64
   features = 20
   length = 128
-  t_global = torch.rand((xm.xrt_world_size() * bsz, features, length))
+  t_global = torch.rand((xm.rt_world_size() * bsz, features, length))
 
   # XLA SyncBatchNorm
   device = xm.xla_device()
@@ -90,7 +90,7 @@ def sync_bn2d_test(index):
   bsz = 8
   features = 10
   h, w = 64, 64
-  t_global = torch.rand((xm.xrt_world_size() * bsz, features, h, w))
+  t_global = torch.rand((xm.rt_world_size() * bsz, features, h, w))
 
   # XLA SyncBatchNorm
   device = xm.xla_device()
@@ -115,7 +115,7 @@ def sync_bn3d_test(index):
   bsz = 16
   features = 32
   d, h, w = 16, 32, 32
-  t_global = torch.rand((xm.xrt_world_size() * bsz, features, d, h, w))
+  t_global = torch.rand((xm.rt_world_size() * bsz, features, d, h, w))
 
   # XLA SyncBatchNorm
   device = xm.xla_device()

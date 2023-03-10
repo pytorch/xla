@@ -10,7 +10,7 @@ def _mp_fn(index):
   device = xm.xla_device()
 
   if xm.xla_device_hw(device) in ('TPU', 'GPU'):
-    world_size = xm.xrt_world_size()
+    world_size = xm.rt_world_size()
     torch_xla._XLAC._xla_set_use_full_mat_mul_precision(
         use_full_mat_mul_precision=True)
     torch.manual_seed(11)

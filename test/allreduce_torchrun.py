@@ -5,24 +5,7 @@ import torch_xla
 import torch_xla.core.xla_model as xm
 import torch.distributed as dist
 import torch_xla.distributed.xla_multiprocessing as xmp
-from torch_xla.distributed.xrt_init import init_xrt_context
 import torch_xla.distributed.xla_backend
-
-
-def _mp_fn_xrt_init():
-  rank = int(os.environ['RANK'])
-  size = int(os.environ['WORLD_SIZE'])
-
-  init_xrt_context()
-
-  device = xm.xla_device()
-  ones = torch.ones((2, 3))
-  xones = ones.to(device)
-  result = xm.all_reduce('sum', xones)
-
-  result_cpu = result.cpu()
-  expected = torch.ones((2, 3)) * size
-  assert torch.all(result_cpu == expected), f'{result_cpu} != {expected}'
 
 
 def _mp_fn_xla_backend():
@@ -53,4 +36,4 @@ if __name__ == '__main__':
   if args.use_xla_backend:
     _mp_fn_xla_backend()
   else:
-    _mp_fn_xrt_init()
+    print("XRT has been deprecated, please use --use_xla_backend to modify.")

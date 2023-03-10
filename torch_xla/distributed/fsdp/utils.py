@@ -48,7 +48,7 @@ def checkpoint_module(module):
 def dummy_all_gather(value, dim=0, groups=None):
   """A dummy op for debugging with the same output shape as all_gather"""
   repeat_num = [1] * value.dim()
-  repeat_num[dim] = xm.xrt_world_size()
+  repeat_num[dim] = xm.rt_world_size()
   return value.repeat(tuple(repeat_num))
 
 
@@ -66,9 +66,9 @@ def dummy_reduce_scatter(reduce_type,
                          shard_count,
                          groups=None):
   """A dummy op for debugging with the same output shape as reduce_scatter"""
-  assert shard_count == xm.xrt_world_size()
+  assert shard_count == xm.rt_world_size()
   full_size = input.size(scatter_dim)
-  shard_size = full_size // xm.xrt_world_size()
+  shard_size = full_size // xm.rt_world_size()
   begin = shard_size * xm.get_ordinal()
   end = begin + shard_size
   slices = [None] * input.dim()

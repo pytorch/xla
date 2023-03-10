@@ -40,7 +40,7 @@ def finetune(rank, train_dataset, test_dataset, tokenizer, flags):
 
   train_sampler = torch.utils.data.distributed.DistributedSampler(
       train_dataset,
-      num_replicas=xm.xrt_world_size(),
+      num_replicas=xm.rt_world_size(),
       rank=xm.get_ordinal(),
       shuffle=True)
 
