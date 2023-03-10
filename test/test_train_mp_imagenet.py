@@ -301,16 +301,16 @@ def train_imagenet():
           output = model(data)
           loss = loss_fn(output, target)
           loss.backward()
-      if FLAGS.ddp:
-        optimizer.step()
-      else:
-        xm.optimizer_step(optimizer)
-      tracker.add(FLAGS.batch_size)
-      if lr_scheduler:
-        lr_scheduler.step()
-      if step % FLAGS.log_steps == 0:
-        xm.add_step_closure(
-            _train_update, args=(device, step, loss, tracker, epoch, writer))
+          if FLAGS.ddp:
+            optimizer.step()
+          else:
+            xm.optimizer_step(optimizer)
+            tracker.add(FLAGS.batch_size)
+          if lr_scheduler:
+            lr_scheduler.step()
+          if step % FLAGS.log_steps == 0:
+            xm.add_step_closure(
+                _train_update, args=(device, step, loss, tracker, epoch, writer))
 
   def test_loop_fn(loader, epoch):
     total_samples, correct = 0, 0
