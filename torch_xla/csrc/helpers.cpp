@@ -1,5 +1,8 @@
 #include "torch_xla/csrc/helpers.h"
 
+#include <torch/csrc/lazy/core/helpers.h>
+#include <torch/csrc/lazy/core/util.h>
+
 #include <limits>
 
 #include "absl/strings/str_join.h"
@@ -10,8 +13,6 @@
 #include "third_party/xla_client/sys_util.h"
 #include "third_party/xla_client/tf_logging.h"
 #include "third_party/xla_client/util.h"
-#include "torch/csrc/lazy/core/helpers.h"
-#include "torch/csrc/lazy/core/util.h"
 #include "torch_xla/csrc/convert_ops.h"
 #include "torch_xla/csrc/tensor_util.h"
 

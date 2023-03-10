@@ -1,4 +1,5 @@
-#pragma once
+#ifndef XLA_TORCH_XLA_CSRC_OPS_MASKED_FILL_H_
+#define XLA_TORCH_XLA_CSRC_OPS_MASKED_FILL_H_
 
 #include <c10/core/Scalar.h>
 
@@ -24,3 +25,5 @@ class MaskedFill : public XlaNode {
 };
 
 }  // namespace torch_xla
+
+#endif  // XLA_TORCH_XLA_CSRC_OPS_MASKED_FILL_H_

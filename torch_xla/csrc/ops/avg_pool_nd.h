@@ -1,4 +1,5 @@
-#pragma once
+#ifndef XLA_TORCH_XLA_CSRC_OPS_AVG_POOL_ND_H_
+#define XLA_TORCH_XLA_CSRC_OPS_AVG_POOL_ND_H_
 
 #include "torch_xla/csrc/ir.h"
 
@@ -42,3 +43,5 @@ class AvgPoolNd : public XlaNode {
 };
 
 }  // namespace torch_xla
+
+#endif  // XLA_TORCH_XLA_CSRC_OPS_AVG_POOL_ND_H_

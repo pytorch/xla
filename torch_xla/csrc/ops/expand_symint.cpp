@@ -1,10 +1,11 @@
 #include "torch_xla/csrc/ops/expand_symint.h"
 
+#include <torch/csrc/lazy/core/helpers.h>
+#include <torch/csrc/lazy/core/util.h>
+
 #include "absl/strings/str_join.h"
 #include "tensorflow/compiler/xla/client/lib/constants.h"
 #include "third_party/xla_client/debug_macros.h"
-#include "torch/csrc/lazy/core/helpers.h"
-#include "torch/csrc/lazy/core/util.h"
 #include "torch_xla/csrc/data_ops.h"
 #include "torch_xla/csrc/lowering_context.h"
 #include "torch_xla/csrc/ops/infer_output_shape.h"

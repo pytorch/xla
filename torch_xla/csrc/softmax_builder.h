@@ -1,4 +1,5 @@
-#pragma once
+#ifndef XLA_TORCH_XLA_CSRC_SOFTMAX_BUILDER_H_
+#define XLA_TORCH_XLA_CSRC_SOFTMAX_BUILDER_H_
 
 #include "tensorflow/compiler/xla/client/xla_builder.h"
 
@@ -17,3 +18,5 @@ xla::XlaOp BuildSoftmaxGrad(xla::XlaOp grad_output, xla::XlaOp output,
                             int64_t dim);
 
 }  // namespace torch_xla
+
+#endif  // XLA_TORCH_XLA_CSRC_SOFTMAX_BUILDER_H_

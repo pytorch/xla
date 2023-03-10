@@ -1,6 +1,6 @@
 #include <gtest/gtest.h>
 
-#include "cpp_test_util.h"
+#include "test/cpp/cpp_test_util.h"
 #include "torch_xla/csrc/ir.h"
 #include "torch_xla/csrc/op_by_op_executor.h"
 #include "torch_xla/csrc/ops/arithmetic_ir_ops.h"

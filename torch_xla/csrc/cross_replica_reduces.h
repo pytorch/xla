@@ -1,4 +1,5 @@
-#pragma once
+#ifndef XLA_TORCH_XLA_CSRC_CROSS_REPLICA_REDUCES_H_
+#define XLA_TORCH_XLA_CSRC_CROSS_REPLICA_REDUCES_H_
 
 #include <vector>
 
@@ -78,3 +79,5 @@ ReduceScatterResult BuildReduceScatter(
     const std::vector<std::vector<int64_t>>& groups, bool pin_layout);
 
 }  // namespace torch_xla
+
+#endif  // XLA_TORCH_XLA_CSRC_CROSS_REPLICA_REDUCES_H_

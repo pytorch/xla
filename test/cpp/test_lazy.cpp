@@ -1,9 +1,9 @@
 #include <gtest/gtest.h>
 
 #include "tensorflow/compiler/xla/shape.h"
+#include "test/cpp/torch_xla_test.h"
 #include "torch/csrc/lazy/core/shape.h"
 #include "torch_xla/csrc/helpers.h"
-#include "torch_xla_test.h"
 
 namespace torch_xla {
 namespace cpp_test {

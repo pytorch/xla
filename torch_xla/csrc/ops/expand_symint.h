@@ -1,4 +1,5 @@
-#pragma once
+#ifndef XLA_TORCH_XLA_CSRC_OPS_EXPAND_SYMINT_H_
+#define XLA_TORCH_XLA_CSRC_OPS_EXPAND_SYMINT_H_
 
 #include <vector>
 
@@ -26,3 +27,5 @@ class ExpandSymInt : public XlaNode {
 };
 
 }  // namespace torch_xla
+
+#endif  // XLA_TORCH_XLA_CSRC_OPS_EXPAND_SYMINT_H_

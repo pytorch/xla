@@ -1,4 +1,5 @@
-#pragma once
+#ifndef XLA_TEST_CPP_CPP_TEST_UTIL_H_
+#define XLA_TEST_CPP_CPP_TEST_UTIL_H_
 
 #include <gtest/gtest.h>
 #include <torch/torch.h>
@@ -119,3 +120,5 @@ bool UsingTpu();
 
 }  // namespace cpp_test
 }  // namespace torch_xla
+
+#endif  // XLA_TEST_CPP_CPP_TEST_UTIL_H_

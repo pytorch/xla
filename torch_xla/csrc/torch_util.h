@@ -1,16 +1,17 @@
-#pragma once
+#ifndef XLA_TORCH_XLA_CSRC_TORCH_UTIL_H_
+#define XLA_TORCH_XLA_CSRC_TORCH_UTIL_H_
 
 #include <ATen/ATen.h>
 #include <ATen/FunctionalTensorWrapper.h>
 #include <c10/core/ScalarType.h>
 #include <c10/util/Optional.h>
+#include <torch/csrc/lazy/core/dynamic_ir.h>
+#include <torch/csrc/lazy/core/hash.h>
+#include <torch/csrc/lazy/core/tensor.h>
+#include <torch/csrc/lazy/core/util.h>
 
 #include "tensorflow/compiler/xla/shape.h"
 #include "third_party/xla_client/debug_macros.h"
-#include "torch/csrc/lazy/core/dynamic_ir.h"
-#include "torch/csrc/lazy/core/hash.h"
-#include "torch/csrc/lazy/core/tensor.h"
-#include "torch/csrc/lazy/core/util.h"
 
 namespace torch_xla {
 
@@ -91,3 +92,5 @@ hash_t MHash(absl::Span<const T> value, Targs... Fargs) {
 
 }  // namespace lazy
 }  // namespace torch
+
+#endif  // XLA_TORCH_XLA_CSRC_TORCH_UTIL_H_

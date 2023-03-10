@@ -1,5 +1,26 @@
 load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
 
+################################ Python Setup ################################
+
+# For embedded python interpreter (libpython.so.)
+http_archive(
+    name = "pybind11_bazel",
+    strip_prefix = "pybind11_bazel-fc56ce8a8b51e3dd941139d329b63ccfea1d304b",
+    urls = ["https://github.com/pybind/pybind11_bazel/archive/fc56ce8a8b51e3dd941139d329b63ccfea1d304b.zip"],
+)
+
+http_archive(
+    name = "pybind11",
+    build_file = "@pybind11_bazel//:pybind11.BUILD",
+    strip_prefix = "pybind11-442261da585536521ff459b1457b2904895f23b4",
+    urls = ["https://github.com/pybind/pybind11/archive/442261da585536521ff459b1457b2904895f23b4.tar.gz"],
+)
+
+load("@pybind11_bazel//:python_configure.bzl", "python_configure")
+
+python_configure(name = "local_config_python")
+############################# TensorFlow Setup ###############################
+
 # To update TensorFlow to a new revision,
 # a) update URL and strip_prefix to the new git commit hash
 # b) get the sha256 hash of the commit by running:
@@ -57,3 +78,13 @@ tf_workspace1()
 load("@org_tensorflow//tensorflow:workspace0.bzl", "tf_workspace0")
 
 tf_workspace0()
+
+################################ PyTorch Setup ################################
+
+load("//bazel:dependencies.bzl", "PYTORCH_LOCAL_DIR")
+
+new_local_repository(
+    name = "torch",
+    build_file = "//bazel:torch.BUILD",
+    path = PYTORCH_LOCAL_DIR,
+)

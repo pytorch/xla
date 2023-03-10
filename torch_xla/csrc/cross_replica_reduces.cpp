@@ -1,11 +1,12 @@
 #include "torch_xla/csrc/cross_replica_reduces.h"
 
+#include <torch/csrc/lazy/core/util.h>
+
 #include <map>
 
 #include "tensorflow/compiler/xla/shape_util.h"
 #include "third_party/xla_client/debug_macros.h"
 #include "third_party/xla_client/util.h"
-#include "torch/csrc/lazy/core/util.h"
 #include "torch_xla/csrc/convert_ops.h"
 #include "torch_xla/csrc/device.h"
 #include "torch_xla/csrc/helpers.h"

@@ -1,3 +1,6 @@
+#ifndef XLA_TORCH_XLA_CSRC_OPS_EINSUM_UTILITIES_H_
+#define XLA_TORCH_XLA_CSRC_OPS_EINSUM_UTILITIES_H_
+
 #include <algorithm>
 #include <iostream>
 #include <string>
@@ -89,3 +92,5 @@ class EinsumUtilities {
   }
 };
 }  // namespace torch_xla
+
+#endif  // XLA_TORCH_XLA_CSRC_OPS_EINSUM_UTILITIES_H_

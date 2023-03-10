@@ -1,4 +1,5 @@
-#pragma once
+#ifndef XLA_TORCH_XLA_CSRC_OPS_UPSAMPLE_NEAREST2D_BACKWARD_H_
+#define XLA_TORCH_XLA_CSRC_OPS_UPSAMPLE_NEAREST2D_BACKWARD_H_
 
 #include <vector>
 
@@ -28,3 +29,5 @@ class UpsampleNearestBackward : public XlaNode {
 };
 
 }  // namespace torch_xla
+
+#endif  // XLA_TORCH_XLA_CSRC_OPS_UPSAMPLE_NEAREST2D_BACKWARD_H_

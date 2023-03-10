@@ -1,5 +1,8 @@
 #include "torch_xla/csrc/op_by_op_executor.h"
 
+#include <torch/csrc/lazy/core/hash.h>
+#include <torch/csrc/lazy/core/ir_util.h>
+
 #include <list>
 #include <unordered_map>
 
@@ -9,8 +12,6 @@
 #include "third_party/xla_client/metrics.h"
 #include "third_party/xla_client/sys_util.h"
 #include "third_party/xla_client/xla_util.h"
-#include "torch/csrc/lazy/core/hash.h"
-#include "torch/csrc/lazy/core/ir_util.h"
 #include "torch_xla/csrc/device.h"
 #include "torch_xla/csrc/ir_util.h"
 #include "torch_xla/csrc/lowering_context.h"

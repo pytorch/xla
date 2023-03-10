@@ -1,5 +1,7 @@
 #include "torch_xla/csrc/nms_op.h"
 
+#include <torch/csrc/lazy/core/util.h>
+
 #include <limits>
 
 #include "tensorflow/compiler/xla/client/lib/arithmetic.h"
@@ -10,7 +12,6 @@
 #include "tensorflow/compiler/xla/util.h"
 #include "third_party/xla_client/debug_macros.h"
 #include "third_party/xla_client/util.h"
-#include "torch/csrc/lazy/core/util.h"
 #include "torch_xla/csrc/helpers.h"
 
 // Code extracted from:

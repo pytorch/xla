@@ -1,4 +1,5 @@
-#pragma once
+#ifndef XLA_TORCH_XLA_CSRC_OPS_MSE_LOSS_BACKWARD_H_
+#define XLA_TORCH_XLA_CSRC_OPS_MSE_LOSS_BACKWARD_H_
 
 #include "tensorflow/compiler/xla/types.h"
 #include "torch_xla/csrc/ir.h"
@@ -25,3 +26,5 @@ class MseLossBackward : public XlaNode {
 };
 
 }  // namespace torch_xla
+
+#endif  // XLA_TORCH_XLA_CSRC_OPS_MSE_LOSS_BACKWARD_H_

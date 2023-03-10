@@ -1,4 +1,5 @@
-#pragma once
+#ifndef XLA_TORCH_XLA_CSRC_OPS_SCALAR_H_
+#define XLA_TORCH_XLA_CSRC_OPS_SCALAR_H_
 
 #include <ATen/core/Formatting.h>
 #include <c10/core/Scalar.h>
@@ -34,3 +35,5 @@ class Scalar : public XlaNode {
 torch::lazy::hash_t ScalarHash(const at::Scalar& s);
 
 }  // namespace torch_xla
+
+#endif  // XLA_TORCH_XLA_CSRC_OPS_SCALAR_H_

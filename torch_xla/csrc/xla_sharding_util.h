@@ -1,9 +1,11 @@
-#pragma once
+#ifndef XLA_TORCH_XLA_CSRC_XLA_SHARDING_UTIL_H_
+#define XLA_TORCH_XLA_CSRC_XLA_SHARDING_UTIL_H_
+
+#include <torch/csrc/jit/python/pybind.h>
 
 #include "tensorflow/compiler/xla/client/xla_builder.h"
 #include "tensorflow/compiler/xla/client/xla_computation.h"
 #include "tensorflow/compiler/xla/service/hlo.pb.h"
-#include "torch/csrc/jit/python/pybind.h"
 #include "torch_xla/csrc/ir.h"
 #include "torch_xla/csrc/lowering_context.h"
 #include "torch_xla/csrc/tensor.h"
@@ -77,3 +79,5 @@ class ShardingUtil {
 };
 
 }  // namespace torch_xla
+
+#endif  // XLA_TORCH_XLA_CSRC_XLA_SHARDING_UTIL_H_

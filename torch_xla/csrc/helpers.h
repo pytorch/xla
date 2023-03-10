@@ -1,7 +1,10 @@
-#pragma once
+#ifndef XLA_TORCH_XLA_CSRC_HELPERS_H_
+#define XLA_TORCH_XLA_CSRC_HELPERS_H_
 
 #include <c10/core/Scalar.h>
 #include <c10/util/Optional.h>
+#include <torch/csrc/lazy/core/shape.h>
+#include <torch/csrc/lazy/core/util.h>
 
 #include <functional>
 #include <tuple>
@@ -16,8 +19,6 @@
 #include "tensorflow/tsl/platform/bfloat16.h"
 #include "third_party/xla_client/debug_macros.h"
 #include "third_party/xla_client/util.h"
-#include "torch/csrc/lazy/core/shape.h"
-#include "torch/csrc/lazy/core/util.h"
 
 namespace torch_xla {
 
@@ -346,3 +347,5 @@ class XlaHelpers {
 };
 
 }  // namespace torch_xla
+
+#endif  // XLA_TORCH_XLA_CSRC_HELPERS_H_

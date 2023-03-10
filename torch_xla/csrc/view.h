@@ -1,4 +1,5 @@
-#pragma once
+#ifndef XLA_TORCH_XLA_CSRC_VIEW_H_
+#define XLA_TORCH_XLA_CSRC_VIEW_H_
 
 #include <memory>
 #include <vector>
@@ -163,3 +164,5 @@ class View {
 };
 
 }  // namespace torch_xla
+
+#endif  // XLA_TORCH_XLA_CSRC_VIEW_H_

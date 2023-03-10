@@ -1,4 +1,5 @@
-#pragma once
+#ifndef XLA_TORCH_XLA_CSRC_OPS_AS_STRIDED_H_
+#define XLA_TORCH_XLA_CSRC_OPS_AS_STRIDED_H_
 
 #include <vector>
 
@@ -39,3 +40,5 @@ class AsStrided : public XlaNode {
 };
 
 }  // namespace torch_xla
+
+#endif  // XLA_TORCH_XLA_CSRC_OPS_AS_STRIDED_H_

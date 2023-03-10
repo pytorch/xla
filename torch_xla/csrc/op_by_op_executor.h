@@ -1,4 +1,5 @@
-#pragma once
+#ifndef XLA_TORCH_XLA_CSRC_OP_BY_OP_EXECUTOR_H_
+#define XLA_TORCH_XLA_CSRC_OP_BY_OP_EXECUTOR_H_
 
 #include <string>
 #include <vector>
@@ -47,3 +48,5 @@ class OpByOpExecutor {
 };
 
 }  // namespace torch_xla
+
+#endif  // XLA_TORCH_XLA_CSRC_OP_BY_OP_EXECUTOR_H_

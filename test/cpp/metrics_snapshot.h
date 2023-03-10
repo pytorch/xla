@@ -1,4 +1,5 @@
-#pragma once
+#ifndef XLA_TEST_CPP_METRICS_SNAPSHOT_H_
+#define XLA_TEST_CPP_METRICS_SNAPSHOT_H_
 
 #include <sstream>
 #include <string>
@@ -48,3 +49,5 @@ class MetricsSnapshot {
 
 }  // namespace cpp_test
 }  // namespace torch_xla
+
+#endif  // XLA_TEST_CPP_METRICS_SNAPSHOT_H_

@@ -1,4 +1,5 @@
-#pragma once
+#ifndef XLA_TORCH_XLA_CSRC_XLA_LOWER_UTIL_H_
+#define XLA_TORCH_XLA_CSRC_XLA_LOWER_UTIL_H_
 
 #include <vector>
 
@@ -138,3 +139,5 @@ xla::XlaOp BuildCdistForward(xla::XlaOp x1, xla::XlaOp x2, xla::XlaOp p,
                              bool use_hamming, bool use_chebyshev);
 
 }  // namespace torch_xla
+
+#endif  // XLA_TORCH_XLA_CSRC_XLA_LOWER_UTIL_H_

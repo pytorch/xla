@@ -1,4 +1,5 @@
-#pragma once
+#ifndef XLA_TORCH_XLA_CSRC_TENSOR_OPS_H_
+#define XLA_TORCH_XLA_CSRC_TENSOR_OPS_H_
 
 #include "torch_xla/csrc/reduction.h"
 #include "torch_xla/csrc/tensor.h"
@@ -40,3 +41,5 @@ XLATensorPtr EmbeddingDenseBackward(const XLATensorPtr& grad_output,
 
 }  // namespace tensor_ops
 }  // namespace torch_xla
+
+#endif  // XLA_TORCH_XLA_CSRC_TENSOR_OPS_H_

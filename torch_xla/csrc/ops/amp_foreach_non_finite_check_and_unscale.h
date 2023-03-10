@@ -1,4 +1,5 @@
-#pragma once
+#ifndef XLA_TORCH_XLA_CSRC_OPS_AMP_FOREACH_NON_FINITE_CHECK_AND_UNSCALE_H_
+#define XLA_TORCH_XLA_CSRC_OPS_AMP_FOREACH_NON_FINITE_CHECK_AND_UNSCALE_H_
 
 #include "torch_xla/csrc/ir.h"
 
@@ -16,3 +17,5 @@ class AmpForachNonFiniteCheckAndUnscale : public XlaNode {
 };
 
 }  // namespace torch_xla
+
+#endif  // XLA_TORCH_XLA_CSRC_OPS_AMP_FOREACH_NON_FINITE_CHECK_AND_UNSCALE_H_

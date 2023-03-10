@@ -1,5 +1,7 @@
 #include "torch_xla/csrc/function_call_tracker.h"
 
+#include <torch/csrc/lazy/python/python_util.h>
+
 #include <fstream>
 #include <limits>
 #include <mutex>
@@ -10,7 +12,6 @@
 #include "absl/strings/str_split.h"
 #include "tensorflow/tsl/platform/stacktrace.h"
 #include "third_party/xla_client/sys_util.h"
-#include "torch/csrc/lazy/python/python_util.h"
 
 namespace torch_xla {
 namespace fn_tracker {

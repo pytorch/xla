@@ -30,9 +30,9 @@ All file mentioned below lives under the `xla/torch_xla/csrc` folder, with the e
   - Contains all the op XLA supported today. Most of the ops are under the supported category, the goal of this document is to move most of the ops to the full_codegen category.
 - xla/scripts/gen_lazy_tensor.py
   - Provides necessary XLA versions of the codegen Codegen class and calls the upstream codegen API.
-- xla/torch_xla/csrc/generated/XLANativeFunctions.cpp
+- xla/torch_xla/csrc/XLANativeFunctions.cpp
   - Result of the full_codegen column of the xla/xla_native_functions.yaml. The op function defined here will implement the op declared in the XLANativeFunctions.h. Each op will take at::tensor and return another at::tensor wrapped around a XLATensor.
-- xla/torch_xla/csrc/generated/LazyIr.h
+- xla/torch_xla/csrc/LazyIr.h
   - Result of the full_codegen column of the xla/xla_native_functions.yaml.  Defines the IR that is used to construct the full_codegen ops.
 
 ### PyTorch/XLA Old Op Lowering files

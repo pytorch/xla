@@ -1,4 +1,8 @@
-#pragma once
+#ifndef XLA_TORCH_XLA_CSRC_COMPUTATION_H_
+#define XLA_TORCH_XLA_CSRC_COMPUTATION_H_
+
+#include <torch/csrc/lazy/backend/lowering_context.h>
+#include <torch/csrc/lazy/core/hash.h>
 
 #include <memory>
 #include <string>
@@ -9,8 +13,6 @@
 #include "third_party/xla_client/computation_client.h"
 #include "third_party/xla_client/debug_macros.h"
 #include "third_party/xla_client/types.h"
-#include "torch/csrc/lazy/backend/lowering_context.h"
-#include "torch/csrc/lazy/core/hash.h"
 
 namespace torch_xla {
 
@@ -129,3 +131,5 @@ std::shared_ptr<xla::ComputationClient::Computation> UnwrapClientComputation(
     torch::lazy::ComputationPtr computation);
 
 }  // namespace torch_xla
+
+#endif  // XLA_TORCH_XLA_CSRC_COMPUTATION_H_

@@ -1,9 +1,6 @@
 ############################################################################
 # All default build options below.
 
-# Enable exceptions in C++.
-common --copt=-fexceptions
-
 # Make Bazel print out all options from rc files.
 build --announce_rc
 
@@ -28,9 +25,9 @@ build -c opt
 build --config=short_logs
 
 # Force GCC because clang/bazel has issues.
-common --action_env=CC=gcc
-common --action_env=CXX=g++
-common --spawn_strategy=standalone
+build --action_env=CC=gcc
+build --action_env=CXX=g++
+build --spawn_strategy=standalone
 
 ###########################################################################
 
@@ -63,7 +60,6 @@ build:acl --define==build_with_acl=true
 build:nonccl --define=no_nccl_support=true
 
 build:linux --config=posix
-build:linux --copt=-Wno-unknown-warning-option
 
 # Suppress all warning messages.
 build:short_logs --output_filter=DONT_MATCH_ANYTHING
@@ -75,6 +71,12 @@ build:tpu --define=with_tpu_support=true
 # RBE config options below.
 # Flag to enable remote config
 common --experimental_repo_remote_exec
+
+# Remote caching with local builds.
+build:remote_cache --remote_cache=grpcs://remotebuildexecution.googleapis.com
+build:remote_cache --host_platform_remote_properties_override='properties:{name:"cache-silo-key" value:"dev"}'
+build:remote_cache --remote_instance_name=projects/tpu-pytorch/instances/default_instance
+build:remote_cache --google_default_credentials
 #########################################################################
 
 # Load rc file with user-specific options.
@@ -84,7 +86,7 @@ try-import %workspace%/.bazelrc.user
 build:compdb --features=-layering_check
 
 # Compiling tests requires Java.
-common --java_runtime_version=remotejdk_11
+build --java_runtime_version=remotejdk_11
 
 # Coverage requires Java and GCC.
 coverage --config=coverage

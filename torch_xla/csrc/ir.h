@@ -1,6 +1,10 @@
-#pragma once
+#ifndef XLA_TORCH_XLA_CSRC_IR_H_
+#define XLA_TORCH_XLA_CSRC_IR_H_
 
 #include <ATen/core/interned_strings.h>
+#include <torch/csrc/lazy/core/hash.h>
+#include <torch/csrc/lazy/core/ir.h>
+#include <torch/csrc/lazy/core/ir_builder.h>
 
 #include <functional>
 #include <iostream>
@@ -17,9 +21,6 @@
 #include "tensorflow/compiler/xla/client/xla_builder.h"
 #include "tensorflow/tsl/lib/gtl/inlined_vector.h"
 #include "third_party/xla_client/types.h"
-#include "torch/csrc/lazy/core/hash.h"
-#include "torch/csrc/lazy/core/ir.h"
-#include "torch/csrc/lazy/core/ir_builder.h"
 
 namespace torch_xla {
 
@@ -180,3 +181,5 @@ T* NodeCast(const torch::lazy::Node* node, torch::lazy::OpKind op) {
 }
 
 }  // namespace torch_xla
+
+#endif  // XLA_TORCH_XLA_CSRC_IR_H_

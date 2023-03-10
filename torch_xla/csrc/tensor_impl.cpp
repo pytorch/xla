@@ -3,13 +3,13 @@
 #include <c10/core/ScalarType.h>
 #include <c10/core/impl/DeviceGuardImplInterface.h>
 #include <c10/macros/Macros.h>
+#include <torch/csrc/lazy/backend/backend_interface.h>
+#include <torch/csrc/lazy/core/tensor.h>
+#include <torch/csrc/lazy/core/tensor_util.h>
+#include <torch/csrc/lazy/core/util.h>
 
 #include "third_party/xla_client/computation_client.h"
 #include "third_party/xla_client/debug_macros.h"
-#include "torch/csrc/lazy/backend/backend_interface.h"
-#include "torch/csrc/lazy/core/tensor.h"
-#include "torch/csrc/lazy/core/tensor_util.h"
-#include "torch/csrc/lazy/core/util.h"
 #include "torch_xla/csrc/aten_xla_bridge.h"
 #include "torch_xla/csrc/device.h"
 #include "torch_xla/csrc/ir_builder.h"

@@ -1,4 +1,4 @@
-#include "torch_xla_test.h"
+#include "test/cpp/torch_xla_test.h"
 
 #include <ATen/ATen.h>
 

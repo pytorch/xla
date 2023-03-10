@@ -1,4 +1,5 @@
-#pragma once
+#ifndef XLA_TORCH_XLA_CSRC_OPS_OPS_H_
+#define XLA_TORCH_XLA_CSRC_OPS_OPS_H_
 
 // This header can depend on ops/ and ir.h, as well as system/c++, tensorflow,
 // PT,... but not on other PT/XLA headers.
@@ -224,3 +225,5 @@ torch::lazy::NodePtr Softplus(const torch::lazy::Value& input,
 torch::lazy::NodePtr Selu(const torch::lazy::Value& input);
 
 }  // namespace torch_xla
+
+#endif  // XLA_TORCH_XLA_CSRC_OPS_OPS_H_

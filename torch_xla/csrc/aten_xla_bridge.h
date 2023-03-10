@@ -1,4 +1,5 @@
-#pragma once
+#ifndef XLA_TORCH_XLA_CSRC_ATEN_XLA_BRIDGE_H_
+#define XLA_TORCH_XLA_CSRC_ATEN_XLA_BRIDGE_H_
 
 #include <ATen/Device.h>
 #include <ATen/Functions.h>
@@ -137,3 +138,5 @@ auto TupleAtenFromXlaTensors(const std::vector<XLATensorPtr>& tensors) {
 
 }  // namespace bridge
 }  // namespace torch_xla
+
+#endif  // XLA_TORCH_XLA_CSRC_ATEN_XLA_BRIDGE_H_

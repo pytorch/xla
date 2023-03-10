@@ -1,4 +1,7 @@
-#pragma once
+#ifndef XLA_TORCH_XLA_CSRC_OPS_DYNAMIC_IR_H_
+#define XLA_TORCH_XLA_CSRC_OPS_DYNAMIC_IR_H_
+
+#include <torch/csrc/lazy/core/dynamic_ir.h>
 
 #include <functional>
 #include <memory>
@@ -9,7 +12,6 @@
 #include <utility>
 #include <vector>
 
-#include "torch/csrc/lazy/core/dynamic_ir.h"
 #include "torch_xla/csrc/ir.h"
 #include "torch_xla/csrc/ops/scalar.h"
 
@@ -199,3 +201,5 @@ class SizeConstant : public torch_xla::Scalar,
 };
 
 }  // namespace torch_xla
+
+#endif  // XLA_TORCH_XLA_CSRC_OPS_DYNAMIC_IR_H_

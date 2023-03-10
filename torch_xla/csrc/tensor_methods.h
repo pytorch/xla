@@ -1,4 +1,5 @@
-#pragma once
+#ifndef XLA_TORCH_XLA_CSRC_TENSOR_METHODS_H_
+#define XLA_TORCH_XLA_CSRC_TENSOR_METHODS_H_
 
 #include "torch_xla/csrc/tensor.h"
 
@@ -889,3 +890,5 @@ XLATensorPtr where(const XLATensorPtr& condition, const XLATensorPtr& input,
 
 }  // namespace tensor_methods
 }  // namespace torch_xla
+
+#endif  // XLA_TORCH_XLA_CSRC_TENSOR_METHODS_H_

@@ -1,4 +1,5 @@
-#pragma once
+#ifndef XLA_TORCH_XLA_CSRC_OPS_REPLICATION_PAD_BACKWARD_H_
+#define XLA_TORCH_XLA_CSRC_OPS_REPLICATION_PAD_BACKWARD_H_
 
 #include <vector>
 
@@ -25,3 +26,5 @@ class ReplicationPadBackward : public XlaNode {
 };
 
 }  // namespace torch_xla
+
+#endif  // XLA_TORCH_XLA_CSRC_OPS_REPLICATION_PAD_BACKWARD_H_
