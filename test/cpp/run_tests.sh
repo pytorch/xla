@@ -10,6 +10,7 @@ RMBUILD=1
 LOGFILE=/tmp/pytorch_cpp_test.log
 XLA_EXPERIMENTAL="nonzero:masked_select"
 BAZEL_REMOTE_CACHE="0"
+BAZEL_VERB="test"
 
 # See Note [Keep Going]
 CONTINUE_ON_ERROR=false
@@ -48,6 +49,9 @@ do
     R)
       BAZEL_REMOTE_CACHE="1"
       ;;
+    C)
+      BAZEL_VERB="coverage"
+      ;;
   esac
 done
 shift $(($OPTIND - 1))
@@ -57,6 +61,11 @@ export XLA_EXPERIMENTAL
 
 # Inherit env flags for tests.
 EXTRA_FLAGS="--test_env=XRT_DEVICE_MAP --test_env=XRT_WORKERS --test_env=XRT_TPU_CONFIG --test_env=GPU_NUM_DEVICES --test_env=PJRT_DEVICE"
+
+# Set up coverage flags.
+if [[ "$BAZEL_VERB" == "coverage" ]]; then
+  EXTRA_FLAGS="$EXTRA_FLAGS --combined_report=lcov"
+fi
 
 # Inherit env flags for tests.
 if [[ "$BAZEL_REMOTE_CACHE" == "1" ]]; then
@@ -68,8 +77,8 @@ fi
 
 if [ $BUILD_ONLY -eq 0 ]; then
   if [ "$LOGFILE" != "" ]; then
-    bazel test $EXTRA_FLAGS --test_output=all //third_party/xla_client:all //test/cpp:all ${FILTER:+"$FILTER"} 2> $LOGFILE
+    bazel $BAZEL_VERB $EXTRA_FLAGS --test_output=all //third_party/xla_client:all //test/cpp:all ${FILTER:+"$FILTER"} 2> $LOGFILE
   else 
-    bazel test $EXTRA_FLAGS --test_output=all //third_party/xla_client:all //test/cpp:all ${FILTER:+"$FILTER"}
+    bazel $BAZEL_VERB $EXTRA_FLAGS --test_output=all //third_party/xla_client:all //test/cpp:all ${FILTER:+"$FILTER"}
   fi
 fi

@@ -172,18 +172,19 @@ function run_torch_xla_tests() {
 
     pushd test/cpp
       echo "Running C++ Tests on PJRT"
+      EXTRA_ARGS=""
+      if [ "$USE_COVERAGE" != "0" ]; then
+	      EXTRA_ARGS="-C"
+      fi
       if [ -x "$(command -v nvidia-smi)" ]; then
-        PJRT_DEVICE=GPU ./run_tests.sh
-        PJRT_DEVICE=GPU ./run_tests.sh -X early_sync -F AtenXlaTensorTest.TestEarlySyncLiveTensors -L""
+        PJRT_DEVICE=GPU ./run_tests.sh $EXTRA_ARGS
+        PJRT_DEVICE=GPU ./run_tests.sh -X early_sync -F AtenXlaTensorTest.TestEarlySyncLiveTensors -L"" $EXTRA_ARGS
       else
-        PJRT_DEVICE=CPU ./run_tests.sh
+        PJRT_DEVICE=CPU ./run_tests.sh $EXTRA_ARGS
       fi
       if [ "$USE_COVERAGE" != "0" ]; then
-        export PATH=$PATH:/usr/lib/llvm-8/bin
-        chmod +x /tmp/pytorch/xla/test/cpp/get_coverage.sh
-        lcov --directory /tmp/pytorch/xla/build/temp.linux-x86_64-cpython-38/torch_xla/csrc --base-directory . --gcov-tool /tmp/pytorch/xla/test/cpp/get_coverage.sh --capture -o cpp_lcov.info
-        genhtml cpp_lcov.info -o ~/htmlcov//cpp/cpp_lcov.info
-        mv cpp_lcov.info ~/htmlcov/cpp_lcov.info
+        genhtml .bazel-out/_coverage/_coverage_report.dat -o ~/htmlcov//cpp/cpp_lcov.info
+        mv ./.bazel-out/_coverage/_coverage_report.dat ~/htmlcov/cpp_lcov.info
       fi
     popd
   popd
