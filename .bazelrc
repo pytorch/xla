@@ -77,6 +77,7 @@ build:remote_cache --remote_cache=grpcs://remotebuildexecution.googleapis.com
 build:remote_cache --host_platform_remote_properties_override='properties:{name:"cache-silo-key" value:"dev"}'
 build:remote_cache --remote_instance_name=projects/tpu-pytorch/instances/default_instance
 build:remote_cache --google_default_credentials
+build:remote_cache --incompatible_strict_action_env
 #########################################################################
 
 # Load rc file with user-specific options.
