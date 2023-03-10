@@ -104,5 +104,17 @@ TEST(UtilTest, Hash) {
             StdDataHash(std::vector<int32_t>{1, 2, 3, 4, 5}.data(), t.size()));
 }
 
+TEST(UtilTest, MaybeRef) {
+  using StringRef = xla::util::MaybeRef<std::string>;
+  std::string storage("String storage");
+  StringRef ref_storage(storage);
+  EXPECT_FALSE(ref_storage.is_stored());
+  EXPECT_EQ(*ref_storage, storage);
+
+  StringRef eff_storage(std::string("Vanishing"));
+  EXPECT_TRUE(eff_storage.is_stored());
+  EXPECT_EQ(*eff_storage, "Vanishing");
+}
+
 }  // namespace util
 }  // namespace xla

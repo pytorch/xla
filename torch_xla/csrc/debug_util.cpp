@@ -1,5 +1,8 @@
 #include "torch_xla/csrc/debug_util.h"
 
+#include <torch/csrc/lazy/core/hash.h>
+#include <torch/csrc/lazy/python/python_util.h>
+
 #include <fstream>
 #include <mutex>
 #include <sstream>
@@ -10,8 +13,6 @@
 #include "third_party/xla_client/debug_macros.h"
 #include "third_party/xla_client/sys_util.h"
 #include "third_party/xla_client/unique.h"
-#include "torch/csrc/lazy/core/hash.h"
-#include "torch/csrc/lazy/python/python_util.h"
 #include "torch_xla/csrc/device.h"
 #include "torch_xla/csrc/ir.h"
 #include "torch_xla/csrc/ir_dump_util.h"

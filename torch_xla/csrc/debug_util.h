@@ -1,4 +1,5 @@
-#pragma once
+#ifndef XLA_TORCH_XLA_CSRC_DEBUG_UTIL_H_
+#define XLA_TORCH_XLA_CSRC_DEBUG_UTIL_H_
 
 #include <iostream>
 #include <string>
@@ -39,3 +40,5 @@ class DebugUtil {
 };
 
 }  // namespace torch_xla
+
+#endif  // XLA_TORCH_XLA_CSRC_DEBUG_UTIL_H_

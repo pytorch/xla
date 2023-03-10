@@ -1,5 +1,7 @@
 #include "torch_xla/csrc/layout_manager.h"
 
+#include <torch/csrc/lazy/core/util.h>
+
 #include <algorithm>
 #include <exception>
 #include <functional>
@@ -14,7 +16,6 @@
 #include "third_party/xla_client/sys_util.h"
 #include "third_party/xla_client/tf_logging.h"
 #include "third_party/xla_client/util.h"
-#include "torch/csrc/lazy/core/util.h"
 
 namespace torch_xla {
 namespace {

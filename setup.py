@@ -34,11 +34,14 @@
 #   BUNDLE_LIBTPU=0
 #     include libtpu in final wheel
 #
+#   GCLOUD_SERVICE_KEY_FILE=''
+#     file containing the auth tokens for remote cache/build
 
 from __future__ import print_function
 
-from setuptools import setup, find_packages, distutils
-from torch.utils.cpp_extension import BuildExtension, CppExtension
+from setuptools import setup, find_packages, distutils, Extension, command
+from torch.utils.cpp_extension import BuildExtension
+import posixpath
 import contextlib
 import distutils.ccompiler
 import distutils.command.clean
@@ -115,34 +118,6 @@ def create_version_files(base_dir, version, xla_git_sha, torch_git_sha):
     f.write('const char XLA_GITREV[] = {{"{}"}};\n'.format(xla_git_sha))
     f.write('const char TORCH_GITREV[] = {{"{}"}};\n\n'.format(torch_git_sha))
     f.write('}  // namespace torch_xla\n')
-
-
-def generate_xla_lazy_code(base_dir):
-  generate_lazy_cmd = [
-      'python',
-      os.path.join(base_dir, 'scripts', 'gen_lazy_tensor.py')
-  ]
-  child = subprocess.Popen(generate_lazy_cmd)
-  streamdata = child.communicate()[0]
-  if child.returncode != 0:
-    print(
-        'Failed to generate lazy files: {}'.format(generate_lazy_cmd),
-        file=sys.stderr)
-    sys.exit(1)
-
-
-def build_extra_libraries(base_dir, build_mode=None):
-  build_libs_cmd = [os.path.join(base_dir, 'build_torch_xla_libs.sh')]
-  cxx_abi = getattr(torch._C, '_GLIBCXX_USE_CXX11_ABI', None)
-  if cxx_abi is not None:
-    build_libs_cmd += ['-O', '-D_GLIBCXX_USE_CXX11_ABI={}'.format(int(cxx_abi))]
-  if build_mode is not None:
-    build_libs_cmd += [build_mode]
-  if subprocess.call(build_libs_cmd) != 0:
-    print(
-        'Failed to build external libraries: {}'.format(build_libs_cmd),
-        file=sys.stderr)
-    sys.exit(1)
 
 
 def maybe_bundle_libtpu(base_dir):
@@ -236,20 +211,6 @@ class Clean(distutils.command.clean.clean):
     distutils.command.clean.clean.run(self)
 
 
-class Build(BuildExtension):
-
-  def run(self):
-    # Run the original BuildExtension first. We need this before building
-    # the tests.
-    BuildExtension.run(self)
-    if _check_env_flag('BUILD_CPP_TESTS', default='1'):
-      # Build the C++ tests.
-      cmd = [os.path.join(base_dir, 'test/cpp/run_tests.sh'), '-B']
-      if subprocess.call(cmd) != 0:
-        print('Failed to build tests: {}'.format(cmd), file=sys.stderr)
-        sys.exit(1)
-
-
 xla_git_sha, torch_git_sha = get_git_head_sha(base_dir)
 version = get_build_version(xla_git_sha)
 
@@ -258,57 +219,14 @@ if build_mode not in ['clean']:
   # Generate version info (torch_xla.__version__).
   create_version_files(base_dir, version, xla_git_sha, torch_git_sha)
 
-  # Generate Lazy related files
-  generate_xla_lazy_code(base_dir)
-
-  # Build the support libraries (ie, TF).
-  build_extra_libraries(base_dir, build_mode=build_mode)
-
   # Copy libtpu.so into torch_xla/lib
   maybe_bundle_libtpu(base_dir)
 
-# Fetch the sources to be built.
-torch_xla_sources = (
-    glob.glob('torch_xla/csrc/*.cpp') + glob.glob('torch_xla/csrc/ops/*.cpp') +
-    glob.glob('torch_xla/pb/cpp/*.cc') +
-    glob.glob('torch_xla/csrc/generated/*.cpp'))
-
-# Constant known variables used throughout this file.
-lib_path = os.path.join(base_dir, 'torch_xla/lib')
-pytorch_source_path = os.getenv('PYTORCH_SOURCE_PATH',
-                                os.path.dirname(base_dir))
-
-# Setup include directories folders.
-include_dirs = [
-    base_dir,
-]
-for ipath in [
-    'bazel-bin',
-    'bazel-xla',
-    'bazel-bin/external/org_tensorflow/',
-    'bazel-xla/external/org_tensorflow/',
-    'bazel-xla/external/com_github_grpc_grpc/include',
-    'bazel-xla/external/com_google_protobuf/src',
-    'bazel-xla/external/eigen_archive',
-    'bazel-xla/external/com_google_absl',
-    'bazel-xla/external/com_googlesource_code_re2',
-    'bazel-xla/com_github_grpc_grpc/include',
-]:
-  include_dirs.append(os.path.join(base_dir, ipath))
-include_dirs += [
-    pytorch_source_path,
-    os.path.join(pytorch_source_path, 'torch/csrc'),
-    os.path.join(pytorch_source_path, 'torch/lib/tmp_install/include'),
-]
-
-library_dirs = []
-library_dirs.append(lib_path)
-
-extra_link_args = []
-
 DEBUG = _check_env_flag('DEBUG')
 IS_DARWIN = (platform.system() == 'Darwin')
+IS_WINDOWS = sys.platform.startswith('win')
 IS_LINUX = (platform.system() == 'Linux')
+GCLOUD_KEY_FILE = os.getenv('GCLOUD_SERVICE_KEY_FILE', default='')
 
 
 def make_relative_rpath(path):
@@ -318,32 +236,67 @@ def make_relative_rpath(path):
     return '-Wl,-rpath,$ORIGIN/' + path
 
 
-extra_compile_args = [
-    '-std=c++17',
-    '-Wno-sign-compare',
-    '-Wno-deprecated-declarations',
-    '-Wno-return-type',
-]
+extra_compile_args = []
+cxx_abi = getattr(torch._C, '_GLIBCXX_USE_CXX11_ABI', None)
+if cxx_abi is not None:
+  extra_compile_args += ['-D_GLIBCXX_USE_CXX11_ABI={}'.format(int(cxx_abi))]
 
-if re.match(r'clang', os.getenv('CC', '')):
-  extra_compile_args += [
-      '-Wno-macro-redefined',
-      '-Wno-return-std-move',
-  ]
-  if DEBUG:
-    extra_compile_args += [
-        '-fprofile-arcs',
-        '-ftest-coverage',
+
+class BazelExtension(Extension):
+  """A C/C++ extension that is defined as a Bazel BUILD target."""
+
+  def __init__(self, bazel_target):
+    self.bazel_target = bazel_target
+    self.relpath, self.target_name = (
+        posixpath.relpath(bazel_target, '//').split(':'))
+    ext_name = os.path.join(
+        self.relpath.replace(posixpath.sep, os.path.sep), self.target_name)
+    if ext_name.endswith('.so'):
+      ext_name = ext_name[:-3]
+    Extension.__init__(self, ext_name, sources=[])
+
+
+class BuildBazelExtension(command.build_ext.build_ext):
+  """A command that runs Bazel to build a C/C++ extension."""
+
+  def run(self):
+    for ext in self.extensions:
+      self.bazel_build(ext)
+    command.build_ext.build_ext.run(self)
+
+  def bazel_build(self, ext):
+    if not os.path.exists(self.build_temp):
+      os.makedirs(self.build_temp)
+
+    bazel_argv = [
+        'bazel', 'build', ext.bazel_target,
+        '--compilation_mode=' + ('dbg' if DEBUG else 'opt'),
+        f"--symlink_prefix={os.path.join(self.build_temp, 'bazel-')}",
+        '\n'.join(['--cxxopt=%s' % opt for opt in extra_compile_args])
     ]
-    extra_link_args += ['--coverage']
 
-if DEBUG:
-  extra_compile_args += ['-O0', '-g']
-  extra_link_args += ['-O0', '-g']
-else:
-  extra_compile_args += ['-DNDEBUG']
+    # Remote cache authentication.
+    if GCLOUD_KEY_FILE:
+      bazel_argv.append('--config=remote_cache')
+      bazel_argv.append('--google_credentials=%s' % GCLOUD_KEY_FILE)
 
-extra_link_args += ['-lxla_computation_client']
+    if _check_env_flag('BUILD_CPP_TESTS', default='1'):
+      bazel_argv.append('//test/cpp:all')
+
+    if IS_WINDOWS:
+      for library_dir in self.library_dirs:
+        bazel_argv.append('--linkopt=/LIBPATH:' + library_dir)
+
+    self.spawn(bazel_argv)
+
+    ext_bazel_bin_path = os.path.join(self.build_temp, 'bazel-bin', ext.relpath,
+                                      ext.target_name)
+    ext_dest_path = self.get_ext_fullpath(ext.name)
+    ext_dest_dir = os.path.dirname(ext_dest_path)
+    if not os.path.exists(ext_dest_dir):
+      os.makedirs(ext_dest_dir)
+    shutil.copyfile(ext_bazel_bin_path, ext_dest_path)
+
 
 setup(
     name=os.environ.get('TORCH_XLA_PACKAGE_NAME', 'torch_xla'),
@@ -355,36 +308,25 @@ setup(
     # Exclude the build files.
     packages=find_packages(exclude=['build']),
     ext_modules=[
-        CppExtension(
-            '_XLAC',
-            torch_xla_sources,
-            include_dirs=include_dirs,
-            extra_compile_args=extra_compile_args,
-            library_dirs=library_dirs,
-            extra_link_args=extra_link_args + \
-                [make_relative_rpath('torch_xla/lib')],
-        ),
+        BazelExtension('//:_XLAC.so'),
     ],
     install_requires=[
-      'absl-py>=1.0.0',
-      'cloud-tpu-client>=0.10.0',
+        'absl-py>=1.0.0',
+        'cloud-tpu-client>=0.10.0',
     ],
+    package_data={
+        'torch_xla': ['lib/*.so*',],
+    },
     extras_require={
         # On Cloud TPU VM install with:
         # $ sudo pip3 install torch_xla[tpuvm] -f https://storage.googleapis.com/tpu-pytorch/wheels/tpuvm/torch_xla-1.11-cp38-cp38-linux_x86_64.whl
         'tpuvm': [f'libtpu-nightly @ {_libtpu_storage_path}'],
     },
-    package_data={
-        'torch_xla': [
-            'lib/*.so*',
-        ],
-    },
     data_files=[
         'scripts/fixup_binary.py',
-    ] + [
-        'test/cpp/build/test_ptxla'
-    ] if _check_env_flag('BUILD_CPP_TESTS', default='1') else [],
+    ] + ['test/cpp/build/test_ptxla'] if _check_env_flag(
+        'BUILD_CPP_TESTS', default='1') else [],
     cmdclass={
-        'build_ext': Build,
+        'build_ext': BuildBazelExtension,
         'clean': Clean,
     })

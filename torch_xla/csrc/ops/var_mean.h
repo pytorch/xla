@@ -1,4 +1,5 @@
-#pragma once
+#ifndef XLA_TORCH_XLA_CSRC_OPS_VAR_MEAN_H_
+#define XLA_TORCH_XLA_CSRC_OPS_VAR_MEAN_H_
 
 #include <vector>
 
@@ -31,3 +32,5 @@ class VarMean : public XlaNode {
 };
 
 }  // namespace torch_xla
+
+#endif  // XLA_TORCH_XLA_CSRC_OPS_VAR_MEAN_H_

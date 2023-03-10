@@ -1,4 +1,5 @@
-#pragma once
+#ifndef XLA_TORCH_XLA_CSRC_OPS_DISCRETE_UNIFORM_H_
+#define XLA_TORCH_XLA_CSRC_OPS_DISCRETE_UNIFORM_H_
 
 #include "torch_xla/csrc/ir.h"
 
@@ -15,3 +16,5 @@ class DiscreteUniform : public XlaNode {
 };
 
 }  // namespace torch_xla
+
+#endif  // XLA_TORCH_XLA_CSRC_OPS_DISCRETE_UNIFORM_H_

@@ -1,8 +1,9 @@
 #include "torch_xla/csrc/ops/nll_loss2d.h"
 
+#include <torch/csrc/lazy/core/util.h>
+
 #include "absl/types/span.h"
 #include "third_party/xla_client/util.h"
-#include "torch/csrc/lazy/core/util.h"
 #include "torch_xla/csrc/lowering_context.h"
 #include "torch_xla/csrc/nll_loss.h"
 #include "torch_xla/csrc/ops/infer_output_shape.h"

@@ -1,10 +1,11 @@
-#pragma once
+#ifndef XLA_TEST_CPP_TORCH_XLA_TEST_H_
+#define XLA_TEST_CPP_TORCH_XLA_TEST_H_
 
 #include <gtest/gtest.h>
 
 #include <memory>
 
-#include "metrics_snapshot.h"
+#include "test/cpp/metrics_snapshot.h"
 
 namespace torch_xla {
 namespace cpp_test {
@@ -45,3 +46,5 @@ class AtenXlaTensorTestBase : public XlaTest {
 
 }  // namespace cpp_test
 }  // namespace torch_xla
+
+#endif  // XLA_TEST_CPP_TORCH_XLA_TEST_H_

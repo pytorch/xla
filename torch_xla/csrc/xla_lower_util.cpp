@@ -1,5 +1,8 @@
 #include "torch_xla/csrc/xla_lower_util.h"
 
+#include <torch/csrc/lazy/core/helpers.h>
+#include <torch/csrc/lazy/core/util.h>
+
 #include <algorithm>
 #include <vector>
 
@@ -14,8 +17,6 @@
 #include "tensorflow/compiler/xla/util.h"
 #include "third_party/xla_client/debug_macros.h"
 #include "third_party/xla_client/util.h"
-#include "torch/csrc/lazy/core/helpers.h"
-#include "torch/csrc/lazy/core/util.h"
 #include "torch_xla/csrc/convert_ops.h"
 #include "torch_xla/csrc/data_ops.h"
 #include "torch_xla/csrc/elementwise.h"

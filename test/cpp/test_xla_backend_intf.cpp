@@ -1,6 +1,6 @@
 #include <vector>
 
-#include "cpp_test_util.h"
+#include "test/cpp/cpp_test_util.h"
 #include "torch_xla/csrc/tensor_util.h"
 
 namespace torch_xla {

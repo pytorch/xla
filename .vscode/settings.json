@@ -3,7 +3,9 @@
         "--config=compdb",
     ],
     "bsv.cc.compdb.targets": [
-        "//third_party/xla_client/...",
+        "//third_party/xla_client:all",
+        "//torch_xla/csrc:all",
+        "//test/cpp:all",
     ],
     "coverage-gutters.coverageBaseDir": ".",
     "coverage-gutters.showLineCoverage": false,

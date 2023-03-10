@@ -1,6 +1,8 @@
 #include "torch_xla/csrc/reduction.h"
 
 #include <ATen/core/Reduction.h>
+#include <torch/csrc/lazy/core/helpers.h>
+#include <torch/csrc/lazy/core/util.h>
 
 #include <cmath>
 #include <unordered_set>
@@ -10,8 +12,6 @@
 #include "tensorflow/compiler/xla/client/lib/matrix.h"
 #include "tensorflow/compiler/xla/literal_util.h"
 #include "third_party/xla_client/debug_macros.h"
-#include "torch/csrc/lazy/core/helpers.h"
-#include "torch/csrc/lazy/core/util.h"
 #include "torch_xla/csrc/convert_ops.h"
 #include "torch_xla/csrc/helpers.h"
 #include "torch_xla/csrc/ops/einsum_utilities.h"

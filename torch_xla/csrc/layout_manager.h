@@ -1,4 +1,5 @@
-#pragma once
+#ifndef XLA_TORCH_XLA_CSRC_LAYOUT_MANAGER_H_
+#define XLA_TORCH_XLA_CSRC_LAYOUT_MANAGER_H_
 
 #include "absl/types/span.h"
 #include "tensorflow/compiler/xla/shape.h"
@@ -23,3 +24,5 @@ xla::Shape MakeArrayShapeFromDimensions(
     XlaDeviceType hw_type);
 
 }  // namespace torch_xla
+
+#endif  // XLA_TORCH_XLA_CSRC_LAYOUT_MANAGER_H_

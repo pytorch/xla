@@ -1,6 +1,10 @@
+#ifndef XLA_TORCH_XLA_CSRC_IR_BUILDER_H_
+#define XLA_TORCH_XLA_CSRC_IR_BUILDER_H_
+
+#include <torch/csrc/lazy/core/ir.h>
+#include <torch/csrc/lazy/core/ir_builder.h>
+
 #include "third_party/xla_client/debug_macros.h"
-#include "torch/csrc/lazy/core/ir.h"
-#include "torch/csrc/lazy/core/ir_builder.h"
 #include "torch_xla/csrc/device.h"
 #include "torch_xla/csrc/ops/as_strided.h"
 #include "torch_xla/csrc/ops/cast.h"
@@ -74,3 +78,5 @@ struct XLAIrBuilder : torch::lazy::IrBuilder {
 };
 
 }  // namespace torch_xla
+
+#endif  // XLA_TORCH_XLA_CSRC_IR_BUILDER_H_
