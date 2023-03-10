@@ -93,7 +93,6 @@ coverage --config=coverage
 coverage --build_tests_only
 build:coverage --copt=-DNDEBUG
 build:coverage --combined_report=lcov
-build:coverage --strategy=TestRunner=sandboxed,local
 build:coverage --strategy=CoverageReport=sandboxed,local
 build:coverage --experimental_use_llvm_covmap
 build:coverage --collect_code_coverage
