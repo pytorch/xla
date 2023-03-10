@@ -58,7 +58,7 @@ steps:
     pod_name=$(kubectl wait --for condition=ready --timeout=10m $pod_name -o name)
     kubectl logs -f $pod_name --container=xla-test
 
-    exit $(kubectl get pod/xla-test-job-4fq4z -o jsonpath='{.status.containerStatuses[?(@.name=="xla-test")].state.terminated.exitCode}')
+    exit $(kubectl get $pod_name -o jsonpath='{.status.containerStatuses[?(@.name=="xla-test")].state.terminated.exitCode}')
 timeout: 18000s # 3 hours
 options:
  machineType: 'N1_HIGHCPU_32'
