@@ -58,6 +58,10 @@ cmake "$RUNDIR" \
   -DPYTHON_LIBRARY=$(python -c "import distutils.sysconfig as sysconfig; print(sysconfig.get_config_var('LIBDIR') + '/' + sysconfig.get_config_var('LDLIBRARY'))")
 make -j $VERB
 
+echo "xw32 checking env var begins"
+export
+echo "xw32 checking env var ends"
+
 if [ $BUILD_ONLY -eq 0 ]; then
   if [ "$LOGFILE" != "" ]; then
     ./test_ptxla ${FILTER:+"$FILTER"} 2> $LOGFILE
