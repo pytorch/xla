@@ -316,8 +316,8 @@ def train_imagenet():
       summary_writer=writer)
   loss_fn = nn.CrossEntropyLoss()
 
-#   if FLAGS.profile:
-  server = xp.start_server(FLAGS.profiler_port)
+  if FLAGS.profile:
+    server = xp.start_server(FLAGS.profiler_port)
 
   def train_loop_fn(loader, epoch):
     tracker = xm.RateTracker()
@@ -325,17 +325,18 @@ def train_imagenet():
     for step, (data, target) in enumerate(loader):
       with xp.StepTrace('train_imagenet', step_num=step):
         with xp.Trace('build_graph'):
-            optimizer.zero_grad()
-            output = model(data)
-            loss = loss_fn(output, target)
-            loss.backward()
-            optimizer.step()  # do not reduce gradients on sharded params
-            tracker.add(FLAGS.batch_size)
-            if lr_scheduler:
-                lr_scheduler.step()
-            if step % FLAGS.log_steps == 0:
-                xm.add_step_closure(
-                    _train_update, args=(device, step, loss, tracker, epoch, writer))
+          optimizer.zero_grad()
+          output = model(data)
+          loss = loss_fn(output, target)
+          loss.backward()
+          optimizer.step()  # do not reduce gradients on sharded params
+          tracker.add(FLAGS.batch_size)
+          if lr_scheduler:
+            lr_scheduler.step()
+          if step % FLAGS.log_steps == 0:
+            xm.add_step_closure(
+                _train_update,
+                args=(device, step, loss, tracker, epoch, writer))
 
   def test_loop_fn(loader, epoch):
     total_samples, correct = 0, 0

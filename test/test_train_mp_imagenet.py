@@ -310,7 +310,8 @@ def train_imagenet():
             lr_scheduler.step()
           if step % FLAGS.log_steps == 0:
             xm.add_step_closure(
-                _train_update, args=(device, step, loss, tracker, epoch, writer))
+                _train_update,
+                args=(device, step, loss, tracker, epoch, writer))
 
   def test_loop_fn(loader, epoch):
     total_samples, correct = 0, 0
