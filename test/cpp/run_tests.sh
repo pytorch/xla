@@ -47,6 +47,7 @@ do
   esac
 done
 shift $(($OPTIND - 1))
+echo "XLA_EXPERIMENTAL=" $XLA_EXPERIMENTAL
 
 rm -rf "$BUILDDIR"
 mkdir "$BUILDDIR" 2>/dev/null
