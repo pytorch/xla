@@ -19,7 +19,6 @@
 #include "third_party/xla_client/mesh_service.h"
 #include "third_party/xla_client/pjrt_computation_client.h"
 #include "third_party/xla_client/sys_util.h"
-#include "third_party/xla_client/xrt_computation_client.h"
 
 namespace xla {
 namespace {

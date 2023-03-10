@@ -47,12 +47,10 @@ cc_library(
     srcs = [
         "computation_client.cc",
         "pjrt_computation_client.cc",
-        "xrt_computation_client.cc",
     ],
     hdrs = [
         "computation_client.h",
         "pjrt_computation_client.h",
-        "xrt_computation_client.h",
     ],
     deps = [
         ":cache",
