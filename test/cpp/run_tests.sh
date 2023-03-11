@@ -67,7 +67,7 @@ if [[ "$BAZEL_VERB" == "coverage" ]]; then
   EXTRA_FLAGS="$EXTRA_FLAGS --combined_report=lcov"
 fi
 
-# Inherit env flags for tests.
+# Handle remote builds and remote cache. Use a CI-private cache silo to avoid cachce polution.
 if [[ "$BAZEL_REMOTE_CACHE" == "1" ]]; then
   EXTRA_FLAGS="$EXTRA_FLAGS --config=remote_cache"
   if [[ ! -z "$GCLOUD_SERVICE_KEY_FILE" ]]; then
