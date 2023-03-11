@@ -71,7 +71,7 @@ if [[ "$BAZEL_REMOTE_CACHE" == "1" ]]; then
     EXTRA_FLAGS="$EXTRA_FLAGS --google_credentials=$GCLOUD_SERVICE_KEY_FILE"
   fi
   if [[ ! -z "$CACHE_SILO" ]]; then
-    EXTRA_FLAGS="$EXTRA_FLAGS --host_platform_remote_properties_override='properties:{name:\"cache-silo-key\" value:\"$CACHE_SILO\"}'"
+    EXTRA_FLAGS="$EXTRA_FLAGS --remote_default_platform_properties='properties:{name:\"cache-silo-key\" value:\"$CACHE_SILO\"}'"
   fi
 fi
 
