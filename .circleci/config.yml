@@ -394,7 +394,7 @@ workflows:
           filters:
             branches:
               only:
-                #- master
+                - master
                 - ci_test_coverage
       - pytorch_xla_run_test_coverage:
           name: pytorch_xla_GPU_test_coverage
@@ -405,5 +405,5 @@ workflows:
           filters:
             branches:
               only:
-                #- master
+                - master
                 - ci_test_coverage
