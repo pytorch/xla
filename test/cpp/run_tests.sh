@@ -1,12 +1,9 @@
 #!/bin/bash
 set -ex
 RUNDIR="$(cd "$(dirname "$0")" ; pwd -P)"
-BUILDDIR="$RUNDIR/build"
 BUILDTYPE="opt"
 VERB=
 FILTER=
-BUILD_ONLY=0
-RMBUILD=1
 LOGFILE=/tmp/pytorch_cpp_test.log
 XLA_EXPERIMENTAL="nonzero:masked_select"
 BAZEL_REMOTE_CACHE="0"
@@ -80,7 +77,7 @@ fi
 
 if [ $BUILD_ONLY -eq 0 ]; then
   if [ "$LOGFILE" != "" ]; then
-    bazel $BAZEL_VERB $EXTRA_FLAGS --test_output=all //third_party/xla_client:all //test/cpp:all ${FILTER:+"$FILTER"} 2> $LOGFILE
+    bazel $BAZEL_VERB $EXTRA_FLAGS --test_output=all //third_party/xla_client:all //test/cpp:all ${FILTER:+"$FILTER"} |& tee $LOGFILE
   else 
     bazel $BAZEL_VERB $EXTRA_FLAGS --test_output=all //third_party/xla_client:all //test/cpp:all ${FILTER:+"$FILTER"}
   fi
