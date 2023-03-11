@@ -73,19 +73,19 @@ build:tpu --define=with_tpu_support=true
 common --experimental_repo_remote_exec
 
 # Inherit environmental variables that are used in testing.
-build --test_env=TPU_NUM_DEVICES --test_env=GPU_NUM_DEVICES --test_env=CPU_NUM_DEVICES --test_env=XRT_LOCAL_WORKER
-build --test_env=XRT_TPU_CONFIG --test_env=XRT_DEVICE_MAP --test_env=XRT_WORKERS --test_env=XRT_MESH_SERVICE_ADDRESS
-build --test_env=XRT_SHARD_WORLD_SIZE --test_env=XRT_MULTI_PROCESSING_DEVICE --test_env=XRT_HOST_ORDINAL --test_env=XRT_SHARD_ORDINAL
-build --test_env=XRT_START_LOCAL_SERVER --test_env=TPUVM_MODE --test_env=PJRT_DEVICE --test_env=PJRT_TPU_MAX_INFLIGHT_COMPUTATIONS
-build --test_env=PJRT_CPU_ASYNC_CLIENT --test_env=PJRT_GPU_ASYNC_CLIENT --test_env=TPU_LIBRARY_PATH --test_env=PJRT_DIST_SERVICE_ADDR
-build --test_env=PJRT_LOCAL_PROCESS_RANK
+test --test_env=TPU_NUM_DEVICES --test_env=GPU_NUM_DEVICES --test_env=CPU_NUM_DEVICES --test_env=XRT_LOCAL_WORKER
+test --test_env=XRT_TPU_CONFIG --test_env=XRT_DEVICE_MAP --test_env=XRT_WORKERS --test_env=XRT_MESH_SERVICE_ADDRESS
+test --test_env=XRT_SHARD_WORLD_SIZE --test_env=XRT_MULTI_PROCESSING_DEVICE --test_env=XRT_HOST_ORDINAL --test_env=XRT_SHARD_ORDINAL
+test --test_env=XRT_START_LOCAL_SERVER --test_env=TPUVM_MODE --test_env=PJRT_DEVICE --test_env=PJRT_TPU_MAX_INFLIGHT_COMPUTATIONS
+test --test_env=PJRT_CPU_ASYNC_CLIENT --test_env=PJRT_GPU_ASYNC_CLIENT --test_env=TPU_LIBRARY_PATH --test_env=PJRT_DIST_SERVICE_ADDR
+test --test_env=PJRT_LOCAL_PROCESS_RANK
 
 # Stabilize the environmental variables used to minimize cache misses (src and env affects cache keys).
 build --incompatible_strict_action_env
 
 # Remote caching with local builds.
 build:remote_cache --remote_cache=grpcs://remotebuildexecution.googleapis.com
-build:remote_cache --host_platform_remote_properties_override='properties:{name:"cache-silo-key" value:"dev"}'
+build:remote_cache --remote_default_platform_properties='properties:{name:"cache-silo-key" value:"dev"}'
 build:remote_cache --remote_instance_name=projects/tpu-pytorch/instances/default_instance
 build:remote_cache --google_default_credentials
 build:remote_cache --bes_backend=buildeventservice.googleapis.com
