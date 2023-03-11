@@ -55,10 +55,7 @@ shift $(($OPTIND - 1))
 # Set XLA_EXPERIMENTAL var to subsequently executed commands.
 export XLA_EXPERIMENTAL
 
-# Inherit env flags for tests.
-EXTRA_FLAGS="--test_env=XRT_DEVICE_MAP --test_env=XRT_WORKERS --test_env=XRT_TPU_CONFIG --test_env=GPU_NUM_DEVICES --test_env=PJRT_DEVICE"
-
-# Inherit env flags for tests.
+# Handle remote builds and remote cache. Use a CI-private cache silo to avoid cachce polution.
 if [[ "$BAZEL_REMOTE_CACHE" == "1" ]]; then
   EXTRA_FLAGS="$EXTRA_FLAGS --config=remote_cache"
   if [[ ! -z "$GCLOUD_SERVICE_KEY_FILE" ]]; then

@@ -223,10 +223,13 @@ class BuildBazelExtension(command.build_ext.build_ext):
 
     bazel_argv = [
         'bazel', 'build', ext.bazel_target,
-        '--compilation_mode=' + ('dbg' if DEBUG else 'opt'),
         f"--symlink_prefix={os.path.join(self.build_temp, 'bazel-')}",
         '\n'.join(['--cxxopt=%s' % opt for opt in extra_compile_args])
     ]
+
+    # Debug build.
+    if DEBUG:
+      bazel_argv.append('--compilation_mode=dbg')
 
     # Remote cache authentication.
     if GCLOUD_KEY_FILE:
