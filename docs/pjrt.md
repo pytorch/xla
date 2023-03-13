@@ -9,17 +9,17 @@ runtime to the [PJRT
 runtime](https://github.com/tensorflow/tensorflow/tree/master/tensorflow/compiler/xla/pjrt)
 used by [JAX](https://github.com/google/jax).
 
-PJRT is available for preview in PyTorch/XLA r2.0. **We are planning to make
+PJRT is available for preview in PyTorch/XLA 2.0. **We are planning to make
 PJRT our officially supported runtime**, so we encourage all users to experiment
-with it. We are aiming to make PJRT stable in release 2.1, so if you encounter a
-bug with PJRT, please file an issue on GitHub with the `runtime` tag.
+with it. We aim to make PJRT stable in release 2.1, so if you encounter a bug
+with PJRT, please file an issue on GitHub with the `runtime` tag.
 
 _New features in PyTorch/XLA r2.0_:
 
 * PJRT will be configured by default if you don't pass in any other runtime
   configuration. If you continue to set XRT configuration (`XRT_TPU_CONFIG`),
   this change has no impact
-* New TPU runtime implementation in `libtpu`.
+* New TPU runtime implementation in `libtpu` improves performance by up to 20%.
 * New `xm.rendezvous` implementation that scales to thousands of TPU cores
 * [experimental] `torch.distributed` support for TPU v2 and v3, including
   `pjrt://` `init_method`
@@ -112,8 +112,8 @@ Sample diff from XRT to PJRT:
   and start using XLA! Or, let PJRT select a device automatically based on your
   environment.
 * Improved performance: reduced overhead from gRPC means faster end-to-end
-  execution, particularly for models that have short on-device execution times
-  on TPU (e.g. ResNet50) or long data transfer times.
+  execution. On TorchBench 2.0, we observed a >35% improvement in training time
+  on TPU v4.
 * Easy pod execution: just copy your code to each TPU worker, and execute them
   all at the same time with `gcloud compute tpus tpuvm ssh --worker=all`
 * Better scaling: scale your models beyond X billion parameters and up to 2048
