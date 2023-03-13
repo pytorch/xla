@@ -37,7 +37,7 @@ do
       BUILD_ONLY=1
       ;;
     F)
-      FILTER="--gtest_filter=$OPTARG"
+      FILTER="--test_filter=$OPTARG"
       ;;
     X)
       XLA_EXPERIMENTAL="$OPTARG"
