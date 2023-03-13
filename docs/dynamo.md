@@ -1,8 +1,8 @@
 ## TorchDynamo(torch.compile) integration in PyTorch XLA
 
-[Torchdynamo](https://pytorch.org/tutorials/intermediate/dynamo_tutorial.html) is a Python-level JIT compiler designed to make unmodified PyTorch programs faster. It provides a clean API for compiler backends to hook in and its biggest feature is to dynamically modify Python bytecode right before it is executed. In the pytorch/xla 2.0 release, PyTorch/XLA provided an experimental backend for the TorchDynamo for both inference and training. 
+[Torchdynamo](https://pytorch.org/tutorials/intermediate/dynamo_tutorial.html) is a Python-level JIT compiler designed to make unmodified PyTorch programs faster. It provides a clean API for compiler backends to hook in and its biggest feature is to dynamically modify Python bytecode right before it is executed. In the pytorch/xla 2.0 release, PyTorch/XLA provided an experimental backend for the TorchDynamo for both inference and training.
 
-The way that XLA bridge works is that Dynamo will provide a TorchFX graph when it recognizes a model pattern and PyTorch/XLA will use existing Lazy Tensor technology to compile the FX graph and return the compiled function. 
+The way that XLA bridge works is that Dynamo will provide a TorchFX graph when it recognizes a model pattern and PyTorch/XLA will use existing Lazy Tensor technology to compile the FX graph and return the compiled function.
 
 ### Inference
 Here is a small code example of running resnet18 with `torch.compile`
@@ -68,7 +68,7 @@ def train_model_main(loader):
 
 We expect to extract and execute 3 graphs per training step instead of one training step if you use the Lazy tensor. Here is a training speed analysis to compare Dynamo and Lazy using a torch bench on Cloud TPU v4-8.
 
-| model | Speed up | 
+| model | Speed up |
 | --- | ----------- |
 resnet50 | 0.937
 resnet18 | 1.003
@@ -97,4 +97,4 @@ These feature gaps compared to Lazy Tensor makes it less efficient in real world
 ### Take away
 TorchDynamo provides a really promising way for the compiler backend to hide the complexity from the user and easily retrieve the modeling code in a graph format. Compared with PyTorch/XLA's traditional Lazy Tensor way of extracting the graph, TorchDynamo can skip the graph tracing for every iteration, hence providing a much better inference response time.
 
-However with feature gaps mentioned above, training using torch dynamo is still a WIP. If you have a model that PyTorch/XLA supports, you will likely see a significant speed up when doing inference with the new dynamo xla bridge. The PyTorch/XLA team will keep investing in TorchDynamo and work with upstream to mature the training story.
+Most models supported by PyTorch/XLA, have seen significant speedup when running inference with the new dynamo-xla bridge. Our community is working hard to expand the set of supported models. Regarding the training feature gaps mentioned above, the PyTorch/XLA community is super excited to improve the training gap in our upcoming development work. The team continues to heavily invest in TorchDynamo and work with the upstream to mature the training story.
