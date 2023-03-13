@@ -64,7 +64,7 @@ if [[ "$BAZEL_REMOTE_CACHE" == "1" ]]; then
 fi
 
 if [ "$LOGFILE" != "" ]; then
-  bazel test $EXTRA_FLAGS --test_output=all //third_party/xla_client:all //test/cpp:all ${FILTER:+"$FILTER"} #2> tee $LOGFILE
+  bazel test $EXTRA_FLAGS -s --test_output=all //third_party/xla_client:all //test/cpp:all ${FILTER:+"$FILTER"} #2> tee $LOGFILE
 else 
-  bazel test $EXTRA_FLAGS --test_output=all //third_party/xla_client:all //test/cpp:all ${FILTER:+"$FILTER"}
+  bazel test $EXTRA_FLAGS -s --test_output=all //third_party/xla_client:all //test/cpp:all ${FILTER:+"$FILTER"}
 fi
