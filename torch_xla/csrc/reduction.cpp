@@ -326,14 +326,6 @@ xla::XlaOp BuildProd(xla::XlaOp input, absl::Span<const int64_t> dimensions,
   return CreateProduct(input, dimensions, keep_reduced_dimensions);
 }
 
-xla::XlaOp BuildLinalgVectorNorm(xla::XlaOp input, 
-                                 absl::Span<const int64_t> dimensions,
-                                 bool keep_reduced_dimensions) {
-  return CreateSummation(input, dimensions, keep_reduced_dimensions,
-                         /*scale=*/false)
-      .result;
-}
-
 xla::XlaOp BuildMaxInDim(xla::XlaOp input, int64_t dim,
                          bool keep_reduced_dimensions) {
   return BuildMaxInDims(input, {dim}, keep_reduced_dimensions);
