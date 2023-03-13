@@ -486,7 +486,6 @@ tf_cc_shared_object(
         "@org_tensorflow//tensorflow/compiler/xla/rpc:grpc_stub",
         "@org_tensorflow//tensorflow/core:lib",
         "@org_tensorflow//tensorflow/tsl/platform/cloud:gcs_file_system",
-        "@org_tensorflow//tensorflow/python/profiler/internal:profiler_pywrap_impl",
     ],
 )
 
