@@ -33,8 +33,8 @@ _New features in PyTorch/XLA r2.0_:
 * In XRT, all distributed workloads are multiprocess, with one process per
   device. On TPU v2 and v3 in PJRT, workloads are multiprocess and multithreaded
   (4 processes with 2 threads each), so your workload should be thread-safe. See
-  [Multithreading on TPU v2/v3]() TODO link and the [Multiprocessing section of
-  the API
+  [Multithreading on TPU v2/v3](#multithreading-on-tpu-v2v3) and the
+  [Multiprocessing section of the API
   guide](https://github.com/pytorch/xla/blob/master/API_GUIDE.md#running-on-multiple-xla-devices-with-multi-processing)
   for more information. Key differences to keep in mind:
   * To initialize a model in a thread-safe way, either broadcast the parameters
