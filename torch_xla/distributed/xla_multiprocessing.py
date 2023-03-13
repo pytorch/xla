@@ -125,7 +125,7 @@ def _setup_torch_distributed():
 def _setup_world_size(pf_cfg):
   # We cannot call into xla_model code at this point, as we do not know whether
   # the called code would trigger XLA library initializations (which we must
-  # not do at this point). So we avoid calling into xm.xrt_world_size().
+  # not do at this point). So we avoid calling into xm.rt_world_size().
   host_world_size = _get_world_size()
   world_size = host_world_size * pf_cfg.num_devices
   os.environ[xenv.WORLD_SIZE] = str(world_size)
@@ -315,7 +315,7 @@ def _prepare_env_for_index(index, pf_cfg):
 def _setup_replication():
   # At this point xla_model.py APIs are allowed as the setup is already
   # completed.
-  if xm.xrt_world_size() > 1:
+  if xm.rt_world_size() > 1:
     device = xm.xla_device()
     xm.set_replication(device, [device])
 

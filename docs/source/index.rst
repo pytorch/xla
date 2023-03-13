@@ -13,7 +13,7 @@ xla_model
 .. autofunction:: get_ordinal
 .. autofunction:: get_local_ordinal
 .. autofunction:: is_master_ordinal
-.. autofunction:: xrt_world_size
+.. autofunction:: rt_world_size
 .. autofunction:: all_reduce
 .. autofunction:: all_gather
 .. autofunction:: all_to_all

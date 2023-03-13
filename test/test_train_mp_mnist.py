@@ -81,7 +81,7 @@ def train_mnist(flags, **kwargs):
     dist.init_process_group('xla', init_method='pjrt://')
   elif flags.ddp:
     dist.init_process_group(
-        'xla', world_size=xm.xrt_world_size(), rank=xm.get_ordinal())
+        'xla', world_size=xm.rt_world_size(), rank=xm.get_ordinal())
 
   torch.manual_seed(1)
 
@@ -90,12 +90,12 @@ def train_mnist(flags, **kwargs):
         data=(torch.zeros(flags.batch_size, 1, 28,
                           28), torch.zeros(flags.batch_size,
                                            dtype=torch.int64)),
-        sample_count=60000 // flags.batch_size // xm.xrt_world_size())
+        sample_count=60000 // flags.batch_size // xm.rt_world_size())
     test_loader = xu.SampleGenerator(
         data=(torch.zeros(flags.batch_size, 1, 28,
                           28), torch.zeros(flags.batch_size,
                                            dtype=torch.int64)),
-        sample_count=10000 // flags.batch_size // xm.xrt_world_size())
+        sample_count=10000 // flags.batch_size // xm.rt_world_size())
   else:
     train_dataset = datasets.MNIST(
         os.path.join(flags.datadir, str(xm.get_ordinal())),
@@ -112,10 +112,10 @@ def train_mnist(flags, **kwargs):
             [transforms.ToTensor(),
              transforms.Normalize((0.1307,), (0.3081,))]))
     train_sampler = None
-    if xm.xrt_world_size() > 1:
+    if xm.rt_world_size() > 1:
       train_sampler = torch.utils.data.distributed.DistributedSampler(
           train_dataset,
-          num_replicas=xm.xrt_world_size(),
+          num_replicas=xm.rt_world_size(),
           rank=xm.get_ordinal(),
           shuffle=True)
     train_loader = torch.utils.data.DataLoader(
@@ -133,7 +133,7 @@ def train_mnist(flags, **kwargs):
         num_workers=flags.num_workers)
 
   # Scale learning rate to num cores
-  lr = flags.lr * xm.xrt_world_size()
+  lr = flags.lr * xm.rt_world_size()
 
   device = xm.xla_device()
   model = MNIST().to(device)

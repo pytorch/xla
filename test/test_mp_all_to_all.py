@@ -9,17 +9,17 @@ def _mp_fn(index):
   device = xm.xla_device()
   if xm.xla_device_hw(device) == 'TPU':
     slots_per_device = 4
-    size = slots_per_device * xm.xrt_world_size()
+    size = slots_per_device * xm.rt_world_size()
     ordinal = xm.get_ordinal()
     value = torch.tensor([ordinal] * size, dtype=torch.int32, device=device)
     result_tensor = xm.all_to_all(
         value,
         split_dimension=0,
         concat_dimension=0,
-        split_count=xm.xrt_world_size())
+        split_count=xm.rt_world_size())
 
     result = result_tensor.cpu().tolist()
-    for i in range(0, xm.xrt_world_size()):
+    for i in range(0, xm.rt_world_size()):
       expected = [i] * slots_per_device
       if expected != result[i * slots_per_device:(i + 1) * slots_per_device]:
         print(

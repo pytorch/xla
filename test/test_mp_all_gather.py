@@ -8,7 +8,7 @@ import torch_xla.distributed.xla_multiprocessing as xmp
 
 def _mp_fn(index):
   device = xm.xla_device()
-  world_size = xm.xrt_world_size()
+  world_size = xm.rt_world_size()
   if xm.xla_device_hw(device) in ('TPU', 'GPU'):
     # Testing with a single replica group
     ordinal_tensor = torch.tensor([index], dtype=torch.float).to(device)

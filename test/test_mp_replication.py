@@ -7,7 +7,7 @@ import torch_xla.distributed.xla_multiprocessing as xmp
 
 def _mp_fn(index):
   device = xm.xla_device()
-  world_size = xm.xrt_world_size()
+  world_size = xm.rt_world_size()
   if world_size > 1:
     ones = torch.ones((2, 3))
     twos = ones + 1.0

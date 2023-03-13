@@ -144,7 +144,7 @@ def _mp_fn(index):
   device = xm.xla_device()
   if xm.xla_device_hw(device) in ('TPU', 'GPU'):
     dist.init_process_group(
-        'xla', world_size=xm.xrt_world_size(), rank=xm.get_ordinal())
+        'xla', world_size=xm.rt_world_size(), rank=xm.get_ordinal())
     test = TestFSDPWithMetaDevice()
     test.test_simple_model_with_meta_device_reset_params()
     test.test_simple_model_with_meta_default_reset_params()

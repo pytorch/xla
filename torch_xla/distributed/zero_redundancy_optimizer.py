@@ -60,7 +60,7 @@ class ZeroRedundancyOptimizer(Optimizer):
     self.device = self.params[0].device
 
     self.rank = xm.get_ordinal()
-    self.world_size = xm.xrt_world_size()
+    self.world_size = xm.rt_world_size()
     self.cc_op_groups = [list(range(self.world_size))]
 
     self.optimizer_dtype = optimizer_dtype if optimizer_dtype is not None else torch.float32
