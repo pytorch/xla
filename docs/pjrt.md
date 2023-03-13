@@ -1,7 +1,7 @@
 # PJRT Runtime (Beta)
 
 _This document reflects the current state of PJRT support in current nightly
-builds_. See the [same document on the r1.13 branch](https://github.com/pytorch/xla/blob/r1.13/docs/pjrt.md)
+builds_. See the [same document on the r2.0 branch](https://github.com/pytorch/xla/blob/r2.0/docs/pjrt.md)
 for the status in the latest stable release.
 
 The PyTorch/XLA team is currently migrating from the currently-supported XRT
