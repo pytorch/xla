@@ -91,6 +91,10 @@ build:remote_cache --google_default_credentials
 build:remote_cache --bes_backend=buildeventservice.googleapis.com
 build:remote_cache --bes_results_url="https://source.cloud.google.com/results/invocations"
 build:remote_cache --bes_instance_name="tpu-pytorch"
+
+# Attempt to minimize the amount of data transfer between bazel and the remote
+# workers:
+build:remote_cache --remote_download_toplevel
 #########################################################################
 
 # Load rc file with user-specific options.
