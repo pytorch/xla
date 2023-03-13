@@ -109,6 +109,7 @@ class TestSyncFreeOptimizerBase(unittest.TestCase):
 
 class TestSyncFreeSGD(TestSyncFreeOptimizerBase):
 
+  @unittest.skip("Skipping due to flakiness (https://github.com/pytorch/xla/issues/4765)")
   def test_optimizer(self):
     self._test_optimizer(syncfree.SGD, torch.optim.SGD, {
         "lr": 1e-2,
