@@ -855,7 +855,7 @@ void BuildProfilerSubmodule(py::module* m) {
         {
           NoGilSection nogil;
           for (int i = 0; i <= timeout_s / interval_s; i++) {
-            status = tensorflow::profiler::CaptureRemoteTrace(
+            status = tsl::profiler::CaptureRemoteTrace(
                 service_addr, logdir, /*worker_list=*/"",
                 /*include_dataset_ops=*/false, duration_ms,
                 num_tracing_attempts, opts);
