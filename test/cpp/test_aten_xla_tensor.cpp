@@ -280,9 +280,6 @@ TEST_F(AtenXlaTensorTest, TestSubScalarInPlace) {
 }
 
 TEST_F(AtenXlaTensorTest, TestSymSizes) {
-  if (UsingTpu()) {
-    GTEST_SKIP();
-  }
   ForEachDevice([&](const torch::Device& device) {
     torch::Tensor a = torch::rand({2, 3}, torch::TensorOptions(torch::kFloat));
     torch::Tensor xla_a = CopyToDevice(a, device);

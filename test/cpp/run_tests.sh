@@ -48,10 +48,8 @@ do
 done
 shift $(($OPTIND - 1))
 
-if [[ "$TPUVM_MODE" != "1" ]]; then
-  # Dynamic shape is not supported on the tpuvm.
-  export XLA_EXPERIMENTAL
-fi
+# Set XLA_EXPERIMENTAL var to subsequently executed commands.
+export XLA_EXPERIMENTAL
 
 rm -rf "$BUILDDIR"
 mkdir "$BUILDDIR" 2>/dev/null
