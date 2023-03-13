@@ -61,7 +61,8 @@ at::Scalar MakeFloatScalar(T value) {
 at::Tensor UnwrapNumber(const at::Tensor& tensor, at::ScalarType dtype);
 
 // Wraps tensor to functional tensor if XLA_DISABLE_FUNCTIONALIZATION is false
-// or not set.
+// or not set. For unwrapping, `torch::lazy::maybe_unwrap_functional()` will
+// only unwrap tensors that are functional. So, nothing needs to be done there.
 at::Tensor MaybeWrapTensorToFunctional(const at::Tensor& tensor);
 
 // Checks whether a c10::optional<Tensor> is defined.
