@@ -115,9 +115,10 @@ Sample diff from XRT to PJRT:
   execution. On TorchBench 2.0, we observed a >35% improvement in training time
   on TPU v4.
 * Easy pod execution: just copy your code to each TPU worker, and execute them
-  all at the same time with `gcloud compute tpus tpuvm ssh --worker=all`
-* Better scaling: scale your models beyond X billion parameters and up to 2048
-  TPU chips.
+  all at the same time with `gcloud compute tpus tpuvm ssh --worker=all`.
+* Better scaling: removes [XRT's limitation on parameter
+  sizes](https://github.com/pytorch/xla/pull/3920) and supports up to 2048 TPU
+  chips.
 
 ## Quickstart
 
