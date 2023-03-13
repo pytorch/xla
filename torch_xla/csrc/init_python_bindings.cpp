@@ -62,6 +62,7 @@
 #include "torch_xla/csrc/xla_graph_executor.h"
 #include "torch_xla/csrc/xla_op_builder.h"
 #include "torch_xla/csrc/xla_sharding_util.h"
+#include "tensorflow/tsl/profiler/convert/xplane_to_trace_events.h"
 
 namespace torch_xla {
 namespace {
@@ -841,6 +842,37 @@ void BuildProfilerSubmodule(py::module* m) {
                  return server;
                },
                py::arg("port"));
+
+  profiler.def(
+      "trace",
+      [](const char* service_addr, const char* logdir, int duration_ms,
+         int num_tracing_attempts, int timeout_s, int interval_s,
+         py::dict options) {
+        absl::flat_hash_map<std::string, std::variant<int, std::string>> opts =
+            ConvertDictToMap(options);
+        std::chrono::seconds sleep_s(interval_s);
+        tsl::Status status;
+        {
+          NoGilSection nogil;
+          for (int i = 0; i <= timeout_s / interval_s; i++) {
+            status = tensorflow::profiler::CaptureRemoteTrace(
+                service_addr, logdir, /*worker_list=*/"",
+                /*include_dataset_ops=*/false, duration_ms,
+                num_tracing_attempts, opts);
+            if (status.ok()) {
+              return;
+            }
+            std::this_thread::sleep_for(sleep_s);
+          }
+        }
+        if (!status.ok()) {
+          PyErr_SetString(PyExc_RuntimeError, status.error_message());
+          throw py::error_already_set();
+        }
+      },
+      py::arg("service_addr"), py::arg("logdir"), py::arg("duration_ms") = 1000,
+      py::arg("num_tracing_attempts") = 3, py::arg("timeout_s") = 120,
+      py::arg("interval_s") = 5, py::arg("options"));
 
   py::class_<xla::profiler::TraceMeWrapper> traceme_class(profiler, "TraceMe",
                                                           py::module_local());
