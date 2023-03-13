@@ -840,7 +840,15 @@ bool XLASymNodeImpl::bool_() {
   return dn->getDynamicValue() != 0;
 }
 
-bool XLASymNodeImpl::has_hint() { return true; }
+// "a SymInt has_hint" is equivalent to "a SymInt is backed". Unbacked SymInt is
+// the result of a data dependent output like nonzero; we don't know what the
+// value is because it's data dependent.
+bool XLASymNodeImpl::has_hint() {
+  if (is_int() || is_float() || is_bool()) {
+    return true;
+  }
+  return false;
+}
 
 std::string XLASymNodeImpl::str() {
   return "<=" + std::to_string(DimCast(node().get())->getStaticValue());
