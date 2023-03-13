@@ -13,7 +13,6 @@ def ptxla_cc_library(
         copts = copts + ["-isystemexternal/torch"],  # Required for system includes.
         deps = deps + [
             "@torch//:headers",
-            "@pybind11//:pybind11_embed",  # libpython
             "@torch//:runtime_headers",
         ],
         **kwargs
