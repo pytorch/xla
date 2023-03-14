@@ -45,25 +45,8 @@ std::string MakeGrpcEndPoint(const std::string& server) {
                                               : absl::StrCat("grpc://", server);
 }
 
-std::string GetXrtDevicePath(const std::string& worker, int task_no,
-                             const std::string& device_type, int ordinal) {
-  return absl::StrCat("/job:", worker, "/replica:0/task:", task_no,
-                      "/device:", device_type, ":", ordinal);
-}
-
 std::string BuildTaskDeviceKey(int task_no, const std::string& kind) {
   return absl::StrCat(task_no, ":", kind);
-}
-
-tensorflow::DeviceNameUtils::ParsedName ParseXrtDevice(
-    const std::string& device) {
-  tensorflow::DeviceNameUtils::ParsedName parsed_device;
-  XLA_CHECK(
-      tensorflow::DeviceNameUtils::ParseFullName(device, &parsed_device) &&
-      parsed_device.has_job && parsed_device.has_task && parsed_device.has_id &&
-      parsed_device.has_type)
-      << device;
-  return parsed_device;
 }
 
 }  // namespace
