@@ -6,7 +6,6 @@ namespace env {
 const char* const kEnvNumTpu = "TPU_NUM_DEVICES";
 const char* const kEnvNumGpu = "GPU_NUM_DEVICES";
 const char* const kEnvNumCpu = "CPU_NUM_DEVICES";
-const char* const kEnvLocalWorker = "XRT_LOCAL_WORKER";
 const char* const kEnvTpuConfig = "XRT_TPU_CONFIG";
 const char* const kEnvDeviceMap = "XRT_DEVICE_MAP";
 const char* const kEnvWorkers = "XRT_WORKERS";

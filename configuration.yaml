@@ -54,11 +54,6 @@ variables:
           particularly the client mesh master
       type: int
       default_value: 300
-    XRT_LOCAL_WORKER:
-      description:
-        - Local service address for XRT local worker, e.g. localhost:8000.
-      type: string
-      default_value: ""
     XRT_SHARD_WORLD_SIZE:
       description:
         - Total number of XRT shards to consider in this client instance. Does
