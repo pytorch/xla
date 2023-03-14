@@ -75,7 +75,6 @@ cc_library(
         ":unique",
         ":util",
         ":xla_util",
-        ":xrt_local_service",
         ":xrt_session",
         ":xrt_session_cache",
         "@org_tensorflow//tensorflow:grpc++",
@@ -409,25 +408,6 @@ cc_test(
         "@org_tensorflow//tensorflow/tsl/platform:errors",
         "@org_tensorflow//tensorflow/tsl/platform:status_matchers",
     ],
-)
-
-cc_library(
-    name = "xrt_local_service",
-    srcs = ["xrt_local_service.cc"],
-    hdrs = ["xrt_local_service.h"],
-    deps = [
-        ":debug_macros",
-        ":xrt_session",
-        "@com_google_absl//absl/strings",
-        "@com_google_absl//absl/types:span",
-        "@org_tensorflow//tensorflow/compiler/xla:types",
-        "@org_tensorflow//tensorflow/compiler/xla/stream_executor/tpu:tpu_initializer_helper",
-        "@org_tensorflow//tensorflow/core:lib",
-        "@org_tensorflow//tensorflow/core/distributed_runtime:server_lib",
-        "@org_tensorflow//tensorflow/tsl/platform:errors",
-        "@org_tensorflow//tensorflow/tsl/platform:status",
-    ],
-    alwayslink = True,
 )
 
 cc_library(
