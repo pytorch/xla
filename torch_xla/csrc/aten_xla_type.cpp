@@ -736,7 +736,11 @@ at::Tensor XLANativeFunctions::as_strided_scatter(
                                                               storage_offset);
   }
   auto mutated_view_ = bridge::GetXlaTensor(mutated_view);
-  return bridge::AtenFromXlaTensor(base_->CreateFrom(torch::lazy::MakeNode<AsStridedViewUpdate>(base_->GetIrValue(), mutated_view_->GetIrValue(), torch::lazy::ToVector<int64_t>(base_->shape().get().dimensions()), xstride, storage_offset.value_or(0))));
+  return bridge::AtenFromXlaTensor(
+      base_->CreateFrom(torch::lazy::MakeNode<AsStridedViewUpdate>(
+          base_->GetIrValue(), mutated_view_->GetIrValue(),
+          torch::lazy::ToVector<int64_t>(base_->shape().get().dimensions()),
+          xstride, storage_offset.value_or(0))));
 }
 
 at::Tensor XLANativeFunctions::atan2(const at::Tensor& self,
