@@ -118,7 +118,6 @@ cc_library(
         "@org_tensorflow//tensorflow/compiler/xla/service:hlo_proto_cc",
         "@org_tensorflow//tensorflow/compiler/xla/hlo/ir:hlo",
         "@org_tensorflow//tensorflow/compiler/xla/service/spmd:spmd_partitioner",
-        "@org_tensorflow//tensorflow/compiler/xrt:xrt_proto_cc",
         "@org_tensorflow//tensorflow/compiler/xrt:xrt_server",
         "@org_tensorflow//tensorflow/compiler/xrt:xrt_utils",
         "@org_tensorflow//tensorflow/compiler/xrt/cc:xrt_ops",
