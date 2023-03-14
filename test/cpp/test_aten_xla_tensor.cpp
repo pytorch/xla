@@ -977,6 +977,8 @@ TEST_F(AtenXlaTensorTest, TestLinalgVectorNormInDim) {
       AllClose(b, xla_b);
     });
   }
+  ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::linalg_vector_norm", cpp_test::GetIgnoredCounters());
 }
 
 TEST_F(AtenXlaTensorTest, TestLinalgVectorNormInDims) {
@@ -989,6 +991,8 @@ TEST_F(AtenXlaTensorTest, TestLinalgVectorNormInDims) {
       AllClose(b, xla_b);
     });
   }
+  ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::linalg_vector_norm", cpp_test::GetIgnoredCounters());
 }
 
 TEST_F(AtenXlaTensorTest, TestLinalgVectorNormInDimsKeep) {
@@ -1001,6 +1005,8 @@ TEST_F(AtenXlaTensorTest, TestLinalgVectorNormInDimsKeep) {
       AllClose(b, xla_b);
     });
   }
+  ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::linalg_vector_norm", cpp_test::GetIgnoredCounters());
 }
 
 TEST_F(AtenXlaTensorTest, TestLinalgVectorNormInDimsKeepDtype) {
@@ -1015,6 +1021,8 @@ TEST_F(AtenXlaTensorTest, TestLinalgVectorNormInDimsKeepDtype) {
       AllClose(b, xla_b);
     });
   }
+  ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::linalg_vector_norm", cpp_test::GetIgnoredCounters());
 }
 
 TEST_F(AtenXlaTensorTest, TestQR) {
