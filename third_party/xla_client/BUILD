@@ -75,8 +75,6 @@ cc_library(
         ":unique",
         ":util",
         ":xla_util",
-        ":xrt_session",
-        ":xrt_session_cache",
         "@org_tensorflow//tensorflow:grpc++",
         "@org_tensorflow//tensorflow/cc:client_session",
         "@org_tensorflow//tensorflow/cc:scope",
@@ -380,7 +378,6 @@ cc_library(
         ":tf_logging",
         ":types",
         ":util",
-        ":xrt_session",
         "@com_google_absl//absl/types:span",
         "@org_tensorflow//tensorflow/compiler/xla:shape_util",
         "@org_tensorflow//tensorflow/compiler/xla:status_macros",
@@ -408,35 +405,6 @@ cc_test(
         "@org_tensorflow//tensorflow/tsl/platform:errors",
         "@org_tensorflow//tensorflow/tsl/platform:status_matchers",
     ],
-)
-
-cc_library(
-    name = "xrt_session_cache",
-    srcs = ["xrt_session_cache.cc"],
-    hdrs = ["xrt_session_cache.h"],
-    deps = [
-        ":metrics",
-        ":sys_util",
-        ":xrt_session",
-        "@org_tensorflow//tensorflow/compiler/xla:types",
-    ],
-    alwayslink = True,
-)
-
-cc_library(
-    name = "xrt_session",
-    srcs = ["xrt_session.cc"],
-    hdrs = ["xrt_session.h"],
-    deps = [
-        ":debug_macros",
-        "@com_google_absl//absl/strings",
-        "@com_google_absl//absl/types:span",
-        "@org_tensorflow//tensorflow/cc:cc_ops",
-        "@org_tensorflow//tensorflow/cc:client_session",
-        "@org_tensorflow//tensorflow/cc:scope",
-        "@org_tensorflow//tensorflow/compiler/xla:types",
-    ],
-    alwayslink = True,
 )
 
 tf_cc_shared_object(
