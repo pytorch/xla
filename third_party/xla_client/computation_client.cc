@@ -90,23 +90,6 @@ std::vector<std::string> ComputationClient::GetCompilationDevices(
   return compilation_devices;
 }
 
-void ComputationClient::RunLocalService(uint64_t service_port) {
-  try {
-    XrtLocalService* service = new XrtLocalService(
-        "localservice|localhost:" + std::to_string(service_port),
-        "localservice", 0);
-    service->Start();
-    service->Join();
-  } catch (const std::runtime_error& error) {
-    if (std::string(error.what()).find("Couldn't open device: /dev/accel0") !=
-        std::string::npos) {
-      TF_LOG(INFO) << "Local service has been created by other process, return";
-    } else {
-      throw;
-    }
-  }
-}
-
 int64_t ComputationClient::GetDeviceOrdinal(const std::string& device) {
   auto pos = device.rfind(':');
   XLA_CHECK_NE(pos, std::string::npos) << device;
