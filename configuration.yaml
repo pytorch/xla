@@ -32,12 +32,6 @@ variables:
         - Used to disable session conneciton sharing for XRT.
       type: bool
       default_value: true
-    XRT_START_LOCAL_SERVER:
-      description:
-        - Whether or not XRT should start the local service. If true, and if
-          the devices are CPU or GPU, XRT will try to start the local server.
-      type: bool
-      default_value: false
     XRT_SHARD_LOCAL_ORDINAL:
       description:
         - Ordinal to be appended to the paths used by this thread of the xla
