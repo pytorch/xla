@@ -18,7 +18,11 @@ http_archive(
 
 load("@pybind11_bazel//:python_configure.bzl", "python_configure")
 
-python_configure(name = "local_config_python")
+# This is required for setting up the linkopts for -lpython.q
+python_configure(
+    name = "local_config_python",
+    python_version = "3",  # required to use `python3-config`
+)
 ############################# TensorFlow Setup ###############################
 
 # To update TensorFlow to a new revision,
