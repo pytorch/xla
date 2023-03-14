@@ -547,10 +547,10 @@ torch::lazy::NodePtr LinalgVectorNorm(const torch::lazy::Value& input,
     return torch::lazy::MakeNode<Sum>(ne, dimensions, keepdim, dtype);
   } else if (ord_value == std::numeric_limits<float>::infinity()) {
     return torch::lazy::MakeNode<Amax>(torch::lazy::MakeNode<Abs>(input), 
-                                      dimensions, keepdim);
+                                       dimensions, keepdim);
   } else if (ord_value == -std::numeric_limits<float>::infinity()) {
     return torch::lazy::MakeNode<Amin>(torch::lazy::MakeNode<Abs>(input), 
-                                      dimensions, keepdim);
+                                       dimensions, keepdim);
   } else {
     torch::lazy::NodePtr ord_exp =
       ScalarOp(ord_value, GetXlaShape(input).element_type());
