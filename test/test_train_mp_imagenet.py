@@ -57,6 +57,17 @@ MODEL_OPTS = {
     '--use_optimized_kwargs': {
         'type': str,
     },
+    '--amp': {
+        'action': 'store_true',
+    },
+    # Using zero gradients optimization for AMP
+    '--use_zero_grad': {
+        'action': 'store_true',
+    },
+    # Using sync_free optimizer for AMP
+    '--use_syncfree_optim': {
+        'action': 'store_true',
+    },
 }
 
 FLAGS = args_parse.parse_common_options(
@@ -88,6 +99,12 @@ import torch_xla.utils.utils as xu
 import torch_xla.core.xla_model as xm
 import torch_xla.distributed.xla_multiprocessing as xmp
 import torch_xla.test.test_utils as test_utils
+import torch_xla.amp import GradScaler
+
+try:
+  from torch_xla.amp import syncfree
+except ImportError:
+  assert False, "Missing package syncfree; the package is available in torch-xla>=1.11"
 
 import torch.distributed as dist
 import torch_xla.distributed.xla_backend
@@ -256,8 +273,9 @@ def train_imagenet():
         prefetch_factor=FLAGS.prefetch_factor)
 
   torch.manual_seed(42)
-
+  
   device = xm.xla_device()
+  device_hw = xm.xla_device_hw(device)
   model = get_model_property('model_fn')().to(device)
 
   # Initialization is nondeterministic with multiple threads in PjRt.
@@ -271,7 +289,8 @@ def train_imagenet():
   writer = None
   if xm.is_master_ordinal():
     writer = test_utils.get_summary_writer(FLAGS.logdir)
-  optimizer = optim.SGD(
+  optim_cls = syncfree.SGD if FLAGS.amp and FLAGS.use_syncfree_optim else optim.SGD
+  optimizer = optim_cls(
       model.parameters(),
       lr=FLAGS.lr,
       momentum=FLAGS.momentum,
@@ -287,6 +306,14 @@ def train_imagenet():
       num_steps_per_epoch=num_training_steps_per_epoch,
       summary_writer=writer)
   loss_fn = nn.CrossEntropyLoss()
+  if FLAGS.amp:
+    if device_hw == 'TPU':
+        autocast = torch.xla.amp.autocast
+        scaler = None
+    elif device_hw == 'GPU':
+        autocast = torch.cuda.amp.autocast
+        # GradScaler only used for GPU
+        scaler = GradScaler(use_zero_grad=FLAGS.use_zero_grad)
 
   if FLAGS.profile:
     server = xp.start_server(FLAGS.profiler_port)
@@ -298,14 +325,26 @@ def train_imagenet():
       with xp.StepTrace('train_imagenet'):
         with xp.Trace('build_graph'):
           optimizer.zero_grad()
-          output = model(data)
-          loss = loss_fn(output, target)
-          loss.backward()
-          if FLAGS.ddp:
-            optimizer.step()
+          if FLAGS.AMP:
+            with autocast():
+              output = model(data)
+              loss = loss_fn(output, target)
           else:
-            xm.optimizer_step(optimizer)
-            tracker.add(FLAGS.batch_size)
+            output = model(data)
+            loss = loss_fn(output, target)
+          if FLAGS.AMP and scaler:
+            scaler.scale(loss).backward()
+            gradients = xm._fetch_gradients(optimizer)
+            xm.all_reduce('sum', gradients, scale=1.0/xm.xrt_world_size())
+            scaler.step(optimizer)
+            scaler.update()
+          else:
+            loss.backward()
+            if FLAGS.ddp:
+              optimizer.step()
+            else:
+              xm.optimizer_step(optimizer)
+              tracker.add(FLAGS.batch_size)
           if lr_scheduler:
             lr_scheduler.step()
         if step % FLAGS.log_steps == 0:
