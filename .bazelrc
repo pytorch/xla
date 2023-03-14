@@ -109,10 +109,10 @@ build --java_runtime_version=remotejdk_11
 # Coverage requires Java and GCC.
 coverage --config=coverage
 coverage --build_tests_only
+coverage --instrumentation_filter=".*"
 build:coverage --copt=-DNDEBUG
 build:coverage --combined_report=lcov
 build:coverage --strategy=CoverageReport=sandboxed,local
-build:coverage --experimental_use_llvm_covmap
 build:coverage --collect_code_coverage
 build:coverage --test_tag_filters=-nocoverage
 
