@@ -7,7 +7,6 @@ import torch_xla.core.xla_model as xm
 import torch_xla.core.xla_env_vars as xenv
 from torch_xla.utils.utils import get_free_tcp_ports
 
-XRT_SERVER_REGEX = 'torch_xla.distributed._xrt_run_server'
 _TCP_STORE = None
 _INIT_XRT_ALREADY_CALLED = False
 

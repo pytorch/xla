@@ -21,7 +21,7 @@ def kill_service():
   if found_server_process:
     time.sleep(5)
 
-
+# XRT_RUN_SERVER_PROCESS
 def run_service(port, flag_env):
   if server_is_alive():
     print('Server is already running, use --restart(--restart-tpuvm-pod-server '
