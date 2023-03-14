@@ -3,7 +3,7 @@ import subprocess
 import pathlib
 
 
-def test_local_torchrun_xrt_init():
+def test_local_torchrun_rt_init():
   # This test launches a allreduce using torchrun launcher, uses native xla_model CCop
   ci_dir = pathlib.Path(__file__).parent.resolve()
   cmd = f'torchrun --nproc_per_node=2  --master_addr=127.0.0.1 --master_port=2020 {ci_dir}/allreduce_torchrun.py'
@@ -22,5 +22,5 @@ def test_local_torchrun_xla_backend():
 
 
 if __name__ == '__main__':
-  test_local_torchrun_xrt_init()
+  test_local_torchrun_rt_init()
   test_local_torchrun_xla_backend()
