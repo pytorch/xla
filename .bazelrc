@@ -85,7 +85,7 @@ build --incompatible_strict_action_env
 
 # Remote caching with local builds.
 build:remote_cache --remote_cache=grpcs://remotebuildexecution.googleapis.com
-build:remote_cache --remote_default_platform_properties='properties:{name:"cache-silo-key" value:"dev"}'
+build:remote_cache --remote_default_exec_properties='cache-silo-key=dev'
 build:remote_cache --remote_instance_name=projects/tpu-pytorch/instances/default_instance
 build:remote_cache --google_default_credentials
 build:remote_cache --bes_backend=buildeventservice.googleapis.com
