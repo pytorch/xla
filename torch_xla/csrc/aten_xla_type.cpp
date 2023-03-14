@@ -1551,14 +1551,14 @@ at::Tensor XLANativeFunctions::lift(const at::Tensor& tensor) {
   TORCH_LAZY_FN_COUNTER("xla::");
   TORCH_INTERNAL_ASSERT(
       !at::functionalization::impl::isFunctionalTensor(tensor));
-  return at::functionalization::impl::to_functional_tensor(tensor);
+  return MaybeWrapTensorToFunctional(tensor);
 }
 
 at::Tensor XLANativeFunctions::lift_fresh(const at::Tensor& tensor) {
   TORCH_LAZY_FN_COUNTER("xla::");
   TORCH_INTERNAL_ASSERT(
       !at::functionalization::impl::isFunctionalTensor(tensor));
-  return at::functionalization::impl::to_functional_tensor(tensor);
+  return MaybeWrapTensorToFunctional(tensor);
 }
 
 std::tuple<at::Tensor, at::Tensor> XLANativeFunctions::linalg_inv_ex(
@@ -3323,10 +3323,9 @@ XLANativeFunctions::convolution_backward(
   // its issue.
   // The following is adopted from aten/src/ATen/FunctionalTensorWrapper.cpp:
   // functionalize_op_helper.
-  auto func_grad_output =
-      at::functionalization::impl::to_functional_tensor(grad_output);
-  auto func_input = at::functionalization::impl::to_functional_tensor(input);
-  auto func_weight = at::functionalization::impl::to_functional_tensor(weight);
+  auto func_grad_output = MaybeWrapTensorToFunctional(grad_output);
+  auto func_input = MaybeWrapTensorToFunctional(input);
+  auto func_weight = MaybeWrapTensorToFunctional(weight);
 
   auto curr_tls = c10::impl::tls_local_dispatch_key_set();
   auto tls_reenable_functionalize = c10::impl::PODLocalDispatchKeySet();
