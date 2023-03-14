@@ -34,6 +34,9 @@
 #   TPUVM_MODE=0
 #     whether to build for TPU
 #
+#   CACHE_SILO_NAME=""
+#     name of the remote build cache silo
+#
 
 from __future__ import print_function
 
@@ -188,6 +191,7 @@ IS_DARWIN = (platform.system() == 'Darwin')
 IS_WINDOWS = sys.platform.startswith('win')
 IS_LINUX = (platform.system() == 'Linux')
 GCLOUD_KEY_FILE = os.getenv('GCLOUD_SERVICE_KEY_FILE', default='')
+CACHE_SILO_NAME = os.getenv('SILO_NAME', default='dev')
 
 extra_compile_args = []
 cxx_abi = getattr(torch._C, '_GLIBCXX_USE_CXX11_ABI', None)
@@ -235,6 +239,9 @@ class BuildBazelExtension(command.build_ext.build_ext):
     if GCLOUD_KEY_FILE:
       bazel_argv.append('--config=remote_cache')
       bazel_argv.append('--google_credentials=%s' % GCLOUD_KEY_FILE)
+      if CACHE_SILO_NAME:
+        bazel_argv.append('--remote_default_exec_properties="cache-silo-key=%s"' % CACHE_SILO_NAME)
+
 
     # Build configuration.
     if _check_env_flag('BAZEL_VERBOSE'):

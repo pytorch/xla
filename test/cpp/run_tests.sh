@@ -72,7 +72,6 @@ if [[ "$BAZEL_REMOTE_CACHE" == "1" ]]; then
   fi
   if [[ ! -z "$SILO_NAME" ]]; then
     EXTRA_FLAGS="$EXTRA_FLAGS --remote_default_exec_properties='cache-silo-key=$SILO_NAME'"
-
   fi
 fi
 

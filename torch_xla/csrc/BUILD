@@ -150,6 +150,7 @@ ptxla_cc_library(
         "@org_tensorflow//tensorflow/core/lib/gtl:inlined_vector",
         "@org_tensorflow//tensorflow/core/profiler/lib:traceme",
         "@org_tensorflow//third_party/python_runtime:headers",
+        "@pybind11//:pybind11_embed",  # libpyton
     ],
 )
 
