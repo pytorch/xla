@@ -3338,9 +3338,9 @@ XLANativeFunctions::convolution_backward(
       dilation, transposed, output_padding, groups, output_mask);
 
   return std::make_tuple(
-      at::functionalization::impl::from_functional_tensor(std::get<0>(results)),
-      at::functionalization::impl::from_functional_tensor(std::get<1>(results)),
-      at::functionalization::impl::from_functional_tensor(
+      torch::lazy::maybe_unwrap_functional(std::get<0>(results)),
+      torch::lazy::maybe_unwrap_functional(std::get<1>(results)),
+      torch::lazy::maybe_unwrap_functional(
           std::get<2>(results)));
 }
 
