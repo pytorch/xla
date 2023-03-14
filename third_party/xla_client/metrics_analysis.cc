@@ -88,75 +88,6 @@ class MetricTime : public Analyzer {
   long threshold_nsec_;
 };
 
-class XrtMetricFrequency : public Analyzer {
- public:
-  XrtMetricFrequency(std::map<std::string, float> metric_name_thresholds,
-                     int run_every_n)
-      : metric_name_thresholds_(std::move(metric_name_thresholds)),
-        run_every_n_(run_every_n),
-        counter_(0) {}
-
-  Analysis Run() override {
-    LOG(FATAL) << "For XrtMetricFrequency, use the metrics overload";
-  }
-
-  Analysis Run(const std::map<std::string, xla::Metric>& xrt_metrics) override {
-    // XRT GetMetrics call is relatively expensive.
-    if (counter_++ != run_every_n_) {
-      return {Analysis::Symptom::kNormal};
-    }
-    counter_ = 0;
-    CounterData* step = GetCounter("MarkStep");
-    if (!step) {
-      return {Analysis::Symptom::kNormal};
-    }
-
-    std::stringstream ss;
-    int64_t step_count = step->Value();
-    for (const auto& kv : metric_name_thresholds_) {
-      auto it = xrt_metrics.find(kv.first);
-      if (it == xrt_metrics.end()) {
-        continue;
-      }
-      xla::Metric xrt_metric = it->second;
-      std::ldiv_t res;
-      if (xrt_metric.int64_value) {
-        int64_t metric_count = *xrt_metric.int64_value;
-        res = std::div(metric_count, step_count);
-      } else if (xrt_metric.percentile) {
-        size_t metric_count = (*xrt_metric.percentile).total_samples;
-        res = std::div(metric_count, step_count);
-      } else {
-        continue;
-      }
-      if (DivToFloat(res, step_count) > kv.second) {
-        ss << kv.first << " (" << DivToFloat(res, step_count) * step_count
-           << " counts), ";
-      }
-    }
-
-    std::string repr = ss.str();
-    if (!repr.empty()) {
-      return {
-          Analysis::Symptom::kMetricTooFrequent,
-          absl::StrFormat(
-              "%s: Following metrics too frequent: %sduring %zu steps. "
-              "Note: XRT metrics follow the lifecycle of the TPU "
-              "so you may need "
-              "to restart the TPU for fresh metrics.",
-              kAnalysisPrefix, repr, step_count),
-      };
-    }
-    return {Analysis::Symptom::kNormal};
-  }
-
- private:
-  std::map<std::string, float> metric_name_thresholds_;
-  bool is_xrt_metric_;
-  int run_every_n_;
-  int counter_;
-};
-
 class UnloweredOp : public Analyzer {
  public:
   Analysis Run() override {
@@ -187,10 +118,6 @@ std::vector<Analyzer*>* GetAnalyzers() {
       new MetricTime("CompileTime", 300e9),
       new MetricTime("ExecuteTime", 30e9),
       new UnloweredOp(),
-      new XrtMetricFrequency({{"XrtTryFreeMemory", 0.1f},
-                              {"XrtCompaction", 0.1f},
-                              {"XrtExecutorEvict", 0.1f}},
-                             10),
   };
   return analyzers;
 }
