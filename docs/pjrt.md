@@ -19,7 +19,7 @@ _New features in PyTorch/XLA r2.0_:
 * PJRT will be configured by default if you don't pass in any other runtime
   configuration. If you continue to set XRT configuration (`XRT_TPU_CONFIG`),
   this change has no impact
-* New TPU runtime implementation in `libtpu` improves performance by up to 20%.
+* New TPU runtime implementation in `libtpu` improves performance by up to 30%.
 * New `xm.rendezvous` implementation that scales to thousands of TPU cores
 * [experimental] `torch.distributed` support for TPU v2 and v3, including
   `pjrt://` `init_method`
@@ -346,3 +346,34 @@ run the following [example script](../test/test_train_mp_imagenet.py) on a TPU:
 ```
 PJRT_DEVICE=TPU python xla/test/test_train_mp_mnist.py --ddp --pjrt_distributed --fake_data --num_epochs 1
 ```
+
+## Performance
+
+TorchBench shows improvments in average training time across tasks with PJRT
+compared to XRT, with an average improvment of over 35% on TPU v4-8. The
+improvement varies significantly by task and model type, ranging from 0% to 175%
+improvement. The following chart shows the breakdown by task:
+
+![PJRT vs XRT](assets/torchbench_pjrt_vs_xrt.svg)
+
+### New TPU runtime
+
+_New in PyTorch/XLA r2.0_
+
+The PyTorch/XLA r2.0 release introduces support for the [PJRT Plugin
+API](https://github.com/openxla/community/blob/main/rfcs/20230123-pjrt-plugin.md#rfc-openxla-pjrt-plugin),
+used to access the new TFRT-based TPU runtime in `libtpu`, which is now the
+default runtime when `PJRT_DEVICE=TPU` is set. The legacy StreamExecutor-based
+TPU runtime used in 1.13 will still be available with `PJRT_DEVICE=TPU_LEGACY`
+in the 2.0 release, but it will be removed in a future version. If you encounter
+an issue that only happens on `TPU` and not `TPU_LEGACY`, please file an issue
+on GitHub.
+
+In most cases, we expect performance to be similar between the two runtimes, but
+in some cases, the new runtime may be up to 30% faster. The following chart
+shows the breakdown by task:
+
+![TFRT vs StreamExecutor](assets/torchbench_pjrt_vs_xrt.svg)
+
+Note: the improvements shown in this chart are also included in the PJRT vs XRT
+comparison.
