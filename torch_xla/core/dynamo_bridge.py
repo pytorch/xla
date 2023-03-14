@@ -194,6 +194,7 @@ def is_xla_tensor(tensor: torch.Tensor) -> bool:
 
 
 def extract_compiled_graph(xla_model: torch.fx.GraphModule, xla_args):
+  os.environ["XLA_DISABLE_FUNCTIONALIZATION"] = "1"
   assert all(
       map(
           is_xla_tensor,
@@ -318,4 +319,5 @@ def extract_compiled_graph(xla_model: torch.fx.GraphModule, xla_args):
     none_remover.add_nones(result)
     return result
 
+  os.environ["XLA_DISABLE_FUNCTIONALIZATION"] = "0"
   return optimized_mod
