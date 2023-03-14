@@ -963,6 +963,8 @@ TEST_F(AtenXlaTensorTest, TestLinalgVectorNorm) {
                   /*atol=*/1e-4);
     });
   }
+  ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::linalg_vector_norm", cpp_test::GetIgnoredCounters());
 }
 
 TEST_F(AtenXlaTensorTest, TestLinalgVectorNormInDim) {
