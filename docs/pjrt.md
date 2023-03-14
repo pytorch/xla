@@ -349,10 +349,10 @@ PJRT_DEVICE=TPU python xla/test/test_train_mp_mnist.py --ddp --pjrt_distributed 
 
 ## Performance
 
-TorchBench shows improvments in average training time across tasks with PJRT
-compared to XRT, with an average improvment of over 35% on TPU v4-8. The
-improvement varies significantly by task and model type, ranging from 0% to 175%
-improvement. The following chart shows the breakdown by task:
+TorchBench shows improvements in average training time across tasks with PJRT
+compared to XRT, with an average improvement of over 35% on TPU v4-8. The
+benefits vary significantly by task and model type, ranging from 0% to 175%.
+The following chart shows the breakdown by task:
 
 ![PJRT vs XRT](assets/torchbench_pjrt_vs_xrt.svg)
 
@@ -362,7 +362,7 @@ _New in PyTorch/XLA r2.0_
 
 The PyTorch/XLA r2.0 release introduces support for the [PJRT Plugin
 API](https://github.com/openxla/community/blob/main/rfcs/20230123-pjrt-plugin.md#rfc-openxla-pjrt-plugin),
-used to access the new TFRT-based TPU runtime in `libtpu`, which is now the
+used to access the new TFRT-based TPU runtime in `libtpu`. This is now the
 default runtime when `PJRT_DEVICE=TPU` is set. The legacy StreamExecutor-based
 TPU runtime used in 1.13 will still be available with `PJRT_DEVICE=TPU_LEGACY`
 in the 2.0 release, but it will be removed in a future version. If you encounter
