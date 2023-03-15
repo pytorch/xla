@@ -52,7 +52,7 @@ launch_docker_and_build: &launch_docker_and_build
 
     # Set up remote cache/build authentication.
     echo "declare -x BAZEL_REMOTE_CACHE=1" >> /home/circleci/project/xla_env
-    echo $GCLOUD_SERVICE_KEY  > /home/circleci/project/default_credentials.json
+    (set +x; echo $GCLOUD_SERVICE_KEY  > /home/circleci/project/default_credentials.json; set -x)
 
     pid=$(docker run -t -d -w $WORKDIR ${GCR_DOCKER_IMAGE})
     docker cp /home/circleci/project/. "$pid:$WORKDIR"
