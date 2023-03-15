@@ -61,11 +61,6 @@ variables:
           device.
       type: string
       default_value: ""
-    XRT_SHARD_ORDINAL:
-      description:
-        - Sets the shard ordinal for the XRT computation client.
-      type: int
-      default_value: -1
   pjrt_variables:
     PJRT_DEVICE:
       description:
@@ -96,6 +91,11 @@ variables:
         - Ordinal to be appended to the paths used by this thread of the xla
           client.
       type: int
+    RT_SHARD_ORDINAL:
+      description:
+        - Sets the shard ordinal for the XRT computation client.
+      type: int
+      default_value: -1
   build_variables:
     DEBUG:
       description:
