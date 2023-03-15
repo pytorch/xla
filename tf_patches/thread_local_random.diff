@@ -22,7 +22,7 @@ index 1ef60c8f47c..c597a15fcc9 100644
  
 +#include "tensorflow/core/lib/random/random.h"
  #include "tensorflow/core/platform/types.h"
--#include "tensorflow/tsl/platform/random.h"
+-#include "xla/third_party/tsl/platform/random.h"
  
  namespace tensorflow {
  
@@ -32,12 +32,12 @@ index 636725ad650..02d0ecda23d 100644
 +++ b/tensorflow/tsl/platform/random.cc
 @@ -15,7 +15,6 @@ limitations under the License.
  
- #include "tensorflow/tsl/platform/random.h"
+ #include "xla/third_party/tsl/platform/random.h"
  
 -#include <memory>
  #include <random>
  
- #include "tensorflow/tsl/platform/mutex.h"
+ #include "xla/third_party/tsl/platform/mutex.h"
 @@ -40,12 +39,6 @@ uint64 New64() {
    return (*rng)();
  }

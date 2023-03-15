@@ -46,19 +46,19 @@ index 7254e02f513..c2ab437b48e 100644
 --- a/tensorflow/compiler/xla/service/gpu/conv_layout_normalization.cc
 +++ b/tensorflow/compiler/xla/service/gpu/conv_layout_normalization.cc
 @@ -16,23 +16,22 @@ limitations under the License.
- #include "tensorflow/compiler/xla/service/gpu/conv_layout_normalization.h"
+ #include "xla/service/gpu/conv_layout_normalization.h"
 
  #include <optional>
 -#include <tuple>
  #include <vector>
 
- #include "tensorflow/compiler/xla/hlo/ir/hlo_casting_utils.h"
--#include "tensorflow/compiler/xla/hlo/ir/hlo_instructions.h"
- #include "tensorflow/compiler/xla/hlo/ir/hlo_module.h"
--#include "tensorflow/compiler/xla/layout_util.h"
- #include "tensorflow/compiler/xla/service/gpu/cublas_cudnn.h"
- #include "tensorflow/compiler/xla/service/hlo_creation_utils.h"
--#include "tensorflow/compiler/xla/shape_util.h"
+ #include "xla/hlo/ir/hlo_casting_utils.h"
+-#include "xla/hlo/ir/hlo_instructions.h"
+ #include "xla/hlo/ir/hlo_module.h"
+-#include "xla/layout_util.h"
+ #include "xla/service/gpu/cublas_cudnn.h"
+ #include "xla/service/hlo_creation_utils.h"
+-#include "xla/shape_util.h"
 
  namespace xla {
  namespace gpu {
@@ -161,20 +161,20 @@ index f9af729cf36..7511e81a423 100644
 --- a/tensorflow/compiler/xla/service/gpu/cudnn_vectorize_convolutions.cc
 +++ b/tensorflow/compiler/xla/service/gpu/cudnn_vectorize_convolutions.cc
 @@ -16,21 +16,16 @@ limitations under the License.
- #include "tensorflow/compiler/xla/service/gpu/cudnn_vectorize_convolutions.h"
+ #include "xla/service/gpu/cudnn_vectorize_convolutions.h"
 
  #include <optional>
 -#include <string>
  #include <vector>
 
- #include "tensorflow/compiler/xla/client/xla_builder.h"
- #include "tensorflow/compiler/xla/hlo/ir/hlo_casting_utils.h"
- #include "tensorflow/compiler/xla/hlo/ir/hlo_instructions.h"
--#include "tensorflow/compiler/xla/service/gpu/backend_configs.pb.h"
--#include "tensorflow/compiler/xla/service/gpu/cublas_cudnn.h"
- #include "tensorflow/compiler/xla/service/gpu/cudnn_support_utils.h"
- #include "tensorflow/compiler/xla/service/gpu/stream_executor_util.h"
--#include "tensorflow/compiler/xla/shape_util.h"
+ #include "xla/client/xla_builder.h"
+ #include "xla/hlo/ir/hlo_casting_utils.h"
+ #include "xla/hlo/ir/hlo_instructions.h"
+-#include "xla/service/gpu/backend_configs.pb.h"
+-#include "xla/service/gpu/cublas_cudnn.h"
+ #include "xla/service/gpu/cudnn_support_utils.h"
+ #include "xla/service/gpu/stream_executor_util.h"
+-#include "xla/shape_util.h"
 
  namespace xla {
  namespace gpu {

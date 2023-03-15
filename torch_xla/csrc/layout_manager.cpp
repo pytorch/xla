@@ -9,7 +9,7 @@
 #include <unordered_map>
 
 #include "absl/strings/str_split.h"
-#include "tensorflow/compiler/xla/shape_util.h"
+#include "xla/shape_util.h"
 #include "third_party/xla_client/debug_macros.h"
 #include "third_party/xla_client/sys_util.h"
 #include "third_party/xla_client/tf_logging.h"

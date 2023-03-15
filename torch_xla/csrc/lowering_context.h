@@ -7,9 +7,9 @@
 #include <vector>
 
 #include "absl/types/span.h"
-#include "tensorflow/compiler/xla/client/xla_builder.h"
-#include "tensorflow/compiler/xla/types.h"
-#include "tensorflow/tsl/platform/macros.h"
+#include "xla/client/xla_builder.h"
+#include "xla/types.h"
+#include "xla/third_party/tsl/platform/macros.h"
 #include "third_party/xla_client/computation_client.h"
 #include "torch/csrc/lazy/backend/backend_data.h"
 #include "torch/csrc/lazy/backend/lowering_context.h"

@@ -9,7 +9,7 @@
 #include <string>
 #include <utility>
 
-#include "tensorflow/compiler/xla/types.h"
+#include "xla/types.h"
 #include "third_party/xla_client/xrt_session.h"
 
 namespace xla {

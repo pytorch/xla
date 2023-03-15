@@ -3,7 +3,7 @@
 
 #include <string>
 
-#include "tensorflow/compiler/xla/types.h"
+#include "xla/types.h"
 
 namespace xla {
 namespace sys_util {

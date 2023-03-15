@@ -1,7 +1,7 @@
 #include "torch_xla/csrc/batch_norm.h"
 
-#include "tensorflow/compiler/xla/client/lib/constants.h"
-#include "tensorflow/compiler/xla/client/xla_builder.h"
+#include "xla/client/lib/constants.h"
+#include "xla/client/xla_builder.h"
 #include "torch_xla/csrc/helpers.h"
 
 namespace torch_xla {

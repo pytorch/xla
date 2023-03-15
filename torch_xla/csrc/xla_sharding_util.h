@@ -1,8 +1,8 @@
 #pragma once
 
-#include "tensorflow/compiler/xla/client/xla_builder.h"
-#include "tensorflow/compiler/xla/client/xla_computation.h"
-#include "tensorflow/compiler/xla/service/hlo.pb.h"
+#include "xla/client/xla_builder.h"
+#include "xla/client/xla_computation.h"
+#include "xla/service/hlo.pb.h"
 #include "torch/csrc/jit/python/pybind.h"
 #include "torch_xla/csrc/ir.h"
 #include "torch_xla/csrc/lowering_context.h"

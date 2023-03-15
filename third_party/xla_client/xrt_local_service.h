@@ -4,7 +4,7 @@
 #include <memory>
 #include <string>
 
-#include "tensorflow/compiler/xla/types.h"
+#include "xla/types.h"
 #include "tensorflow/core/distributed_runtime/server_lib.h"
 #include "third_party/xla_client/debug_macros.h"
 

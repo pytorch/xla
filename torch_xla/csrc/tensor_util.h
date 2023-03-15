@@ -4,9 +4,9 @@
 #include <vector>
 
 #include "absl/types/span.h"
-#include "tensorflow/compiler/xla/literal.h"
-#include "tensorflow/compiler/xla/shape.h"
-#include "tensorflow/compiler/xla/types.h"
+#include "xla/literal.h"
+#include "xla/shape.h"
+#include "xla/types.h"
 #include "third_party/xla_client/computation_client.h"
 #include "torch/csrc/autograd/variable.h"
 #include "torch/csrc/lazy/core/hash.h"

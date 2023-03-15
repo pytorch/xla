@@ -1,6 +1,6 @@
 syntax = "proto2";
 
-import "tensorflow/core/protobuf/tpu/topology.proto";
+import "third_party/protobuf/tpu:topology_proto";
 
 package xla.service.grpc;
 
@@ -17,7 +17,7 @@ message Worker {
 }
 
 message Config {
-  optional tensorflow.tpu.TopologyProto proto = 1;
+  optional xla.tpu.TopologyProto proto = 1;
   repeated Worker workers = 2;
   required int64 mesh_size = 3;
 }

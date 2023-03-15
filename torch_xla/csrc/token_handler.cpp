@@ -1,7 +1,7 @@
 #include "torch_xla/csrc/token_handler.h"
 
-#include "tensorflow/compiler/xla/client/lib/constants.h"
-#include "tensorflow/compiler/xla/shape_util.h"
+#include "xla/client/lib/constants.h"
+#include "xla/shape_util.h"
 #include "third_party/xla_client/sys_util.h"
 #include "torch_xla/csrc/convert_ops.h"
 #include "torch_xla/csrc/helpers.h"
