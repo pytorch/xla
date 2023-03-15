@@ -27,6 +27,7 @@
 #include "torch_xla/csrc/helpers.h"
 #include "torch_xla/csrc/ops/as_strided.h"
 #include "torch_xla/csrc/ops/as_strided_view_update.h"
+#include "torch_xla/csrc/ops/diagonal_view_update.h"
 #include "torch_xla/csrc/ops/einsum_utilities.h"
 #include "torch_xla/csrc/ops/index_ops.h"
 #include "torch_xla/csrc/pooling.h"
@@ -1115,11 +1116,10 @@ at::Tensor XLANativeFunctions::diagonal_scatter(const at::Tensor& base,
                                                 int64_t dim2) {
   auto base_ = bridge::GetXlaTensor(base);
   auto mutated_view_ = bridge::GetXlaTensor(mutated_view);
-  auto base_clone = tensor_methods::clone(base_);
-  auto base_clone_slice =
-      tensor_methods::diagonal(base_clone, offset, dim1, dim2);
-  tensor_methods::copy_(base_clone_slice, mutated_view_);
-  return bridge::AtenFromXlaTensor(base_clone);
+  return bridge::AtenFromXlaTensor(
+      base_->CreateFrom(torch::lazy::MakeNode<DiagonalViewUpdate>(
+          base_->GetIrValue(), mutated_view_->GetIrValue(), offset, dim1,
+          dim2)));
 }
 
 at::Tensor XLANativeFunctions::div(const at::Tensor& self,
