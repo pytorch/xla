@@ -201,6 +201,9 @@ DISABLED_TORCH_TESTS_ANY = {
         'test_random_to_xla',  # doesn't raise
         'test_copy_',  # test against complex32 which is nto supported
         'test_assertRaisesRegex_ignore_msg_non_native_device_xla',  # segfault on wheel sanity test
+        'test_index_reduce',  # Broke by functionalization, pytorch/pytorch#94471
+        'test_logcumsumexp_xla',  # doesn't raise, pytorch/pytorch#92912
+        'test_narrow_copy_non_contiguous',  # the test is added for CPU, pytorch/pytorch#91789
     },
 
     # test_view_ops.py
@@ -228,6 +231,8 @@ DISABLED_TORCH_TESTS_ANY = {
         'test_empty_ndim_index',  # expecting a different runtime error
         'test_index_put_byte_indices_xla',  # expecting a different runtime error
     },
+
+    # test_indexing.py
     'NumpyTestsXLA': {
         'test_trivial_fancy_out_of_bounds',  # expecting a different runtime error
         'test_boolean_assignment_value_mismatch',  # expecting a different runtime error
@@ -277,6 +282,9 @@ DISABLED_TORCH_TESTS_ANY = {
         'test_upsamplingBicubic2d_correctness_xla',  # FIXME! Got dtypes torch.float32 and torch.float64
         'test_CTCLoss_no_batch_dim_xla',  # Value out of range
         'test_upsamplingBilinear2d_xla',  # precision on GPU/TPU, slow compilation on CPU
+        # torch.autograd.gradcheck.GradcheckError: Jacobian mismatch for output 0 with respect to input 0
+        'test_GRU_grad_and_gradgrad_xla_float64',  # Broke by functionalization, #4711
+        'test_LSTM_grad_and_gradgrad_xla_float64',  # Broke by functionalization, #4711
     },
 
     # test/nn/test_dropout.py

@@ -1,0 +1,3 @@
+- name: "Bazel --version runs succesfully"
+  ansible.builtin.command:
+    cmd: bazel --version

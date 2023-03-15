@@ -1,7 +1,7 @@
 #include "torch_xla/csrc/torch_util.h"
 
-#include "tensorflow/compiler/xla/xla_client/debug_macros.h"
-#include "tensorflow/compiler/xla/xla_client/xla_util.h"
+#include "third_party/xla_client/debug_macros.h"
+#include "third_party/xla_client/xla_util.h"
 #include "torch_xla/csrc/helpers.h"
 #include "torch_xla/csrc/ops/constant.h"
 #include "torch_xla/csrc/tensor.h"
@@ -44,6 +44,15 @@ at::ScalarType GetScalarType(const at::Scalar& scalar) {
 at::Tensor UnwrapNumber(const at::Tensor& tensor, at::ScalarType dtype) {
   return tensor.unsafeGetTensorImpl()->is_wrapped_number() ? tensor.to(dtype)
                                                            : tensor;
+}
+
+at::Tensor MaybeWrapTensorToFunctional(const at::Tensor& tensor) {
+  bool disable_functionalization =
+      xla::sys_util::GetEnvBool("XLA_DISABLE_FUNCTIONALIZATION", false);
+  if (disable_functionalization) {
+    return tensor;
+  }
+  return at::functionalization::impl::to_functional_tensor(tensor);
 }
 
 }  // namespace torch_xla

@@ -14,10 +14,10 @@
 #include "tensorflow/compiler/xla/client/xla_computation.h"
 #include "tensorflow/compiler/xla/literal_util.h"
 #include "tensorflow/compiler/xla/types.h"
-#include "tensorflow/compiler/xla/xla_client/debug_macros.h"
-#include "tensorflow/compiler/xla/xla_client/metrics.h"
-#include "tensorflow/compiler/xla/xla_client/types.h"
-#include "tensorflow/compiler/xla/xla_client/util.h"
+#include "third_party/xla_client/debug_macros.h"
+#include "third_party/xla_client/metrics.h"
+#include "third_party/xla_client/types.h"
+#include "third_party/xla_client/util.h"
 
 namespace xla {
 
@@ -209,6 +209,15 @@ class ComputationClient {
   // wrapped inside a vector.
   virtual std::vector<DataPtr> GetDataShards(DataPtr data) = 0;
 
+  // Returns wrapped data shards as PjRtShardedData.
+  virtual DataPtr WrapDataShards(const std::vector<DataPtr>& shards,
+                                 std::string device, xla::Shape shape,
+                                 xla::OpSharding sharding) = 0;
+
+  // Returns OpSharding attached to PjRtShardedData. The returned optional
+  // structure will be empty if there is no sharding, like with PjRtData.
+  virtual std::optional<xla::OpSharding> GetDataSharding(DataPtr handle) = 0;
+
   // Transfers local tensor values to the TPU devices and fetches the handles.
   virtual std::vector<DataPtr> TransferToServer(
       absl::Span<const TensorSource> tensors) = 0;
@@ -325,6 +334,10 @@ class ComputationClient {
   virtual MemoryInfo GetMemoryInfo(const std::string& device) = 0;
 
   virtual void PrepareToExit() = 0;
+
+  // Block until pass in devices' async operation are finished. If empty, all
+  // the local devices will be waited for.
+  virtual void WaitDeviceOps(const std::vector<std::string>& devices) = 0;
 
   // Utility API around the vector based Compile() API to compile a single
   // computation.

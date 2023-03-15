@@ -1,7 +1,7 @@
-#include "tensorflow/compiler/xla/xla_client/xrt_session_cache.h"
+#include "third_party/xla_client/xrt_session_cache.h"
 
-#include "tensorflow/compiler/xla/xla_client/metrics.h"
-#include "tensorflow/compiler/xla/xla_client/sys_util.h"
+#include "third_party/xla_client/metrics.h"
+#include "third_party/xla_client/sys_util.h"
 
 namespace xla {
 
@@ -42,7 +42,7 @@ std::shared_ptr<XrtSession> XrtSessionCache::CreateSession(
     const std::string& target) const {
   XLA_COUNTER("XrtSessionCount", 1);
   tensorflow::SessionOptions session_options;
-  session_options.env = tensorflow::Env::Default();
+  session_options.env = tsl::Env::Default();
   session_options.target = target;
   if (target != local_target_) {
     session_options.config = config_;

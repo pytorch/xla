@@ -1,7 +1,3 @@
-from __future__ import division
-from __future__ import print_function
-
-from six import iteritems, itervalues
 import threading
 import torch
 import torch_xla
@@ -73,6 +69,9 @@ class ParallelLoader(object):
       where the worker threads deposit tensors which have already been sent to
       devices.
       Default: 4
+    host_to_device_transfer_threads (int, optional): The number of threads that
+      work in parallel to transfer data from loader queue to device queue.
+      Default: 1
   """
 
   def __init__(self,
@@ -81,7 +80,8 @@ class ParallelLoader(object):
                batchdim=0,
                batches_per_execution=1,
                loader_prefetch_size=8,
-               device_prefetch_size=4):
+               device_prefetch_size=4,
+               host_to_device_transfer_threads=1):
     self._loader = loader
     self._devices = [torch.device(x) for x in devices]
     self._batchdim = batchdim
@@ -94,10 +94,11 @@ class ParallelLoader(object):
     thread = threading.Thread(target=self._loader_worker)
     thread.daemon = True
     thread.start()
-    for dqueue in itervalues(self._queues):
-      thread = threading.Thread(target=self._worker, args=(dqueue,))
-      thread.daemon = True
-      thread.start()
+    for dqueue in self._queues.values():
+      for i in range(host_to_device_transfer_threads):
+        thread = threading.Thread(target=self._worker, args=(dqueue,))
+        thread.daemon = True
+        thread.start()
 
   def per_device_loader(self, device):
     """Retrieves the loader iterator object for the given device.
@@ -122,7 +123,7 @@ class ParallelLoader(object):
 
   def close(self):
     self._done = True
-    for dqueue in itervalues(self._queues):
+    for dqueue in self._queues.values():
       dqueue.queue.close()
       dqueue.loader_queue.close()
 

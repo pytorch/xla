@@ -22,7 +22,7 @@ class ShardingUtil {
   static bool EqualShardingSpecs(const XLATensor::ShardingSpec& a,
                                  const XLATensor::ShardingSpec& b);
 
-  // Create an xla::OpSharding from `tile_assignment` (ndarray).
+  // Creates an xla::OpSharding from `tile_assignment` (ndarray).
   static xla::OpSharding CreateOpSharding(const py::list& tile_assignment,
                                           bool replicated = false,
                                           bool manual = false);
@@ -36,21 +36,41 @@ class ShardingUtil {
       bool unroll_windowed_einsum = false,
       bool bidirectional_windowed_einsum = false);
 
-  // This reshuffles arguments (sharded or replicated) on the devices. The
+  // Reshuffles arguments (sharded or replicated) on the devices. The
   // size of the arguments vector must match that of the sharding_specs.
+  // The the returned arguments will be in 1:1 correspondence with the `devices`
+  // vector, so the `i`th result will belong on the `i`th device.
   // TODO(yeounoh) avoiding pre-loading of the unpartitioned input arguments
   // might improve the performance and save the bandwidth.
   static std::vector<std::vector<xla::ComputationClient::DataPtr>> InputHandler(
       std::vector<xla::ComputationClient::DataPtr> arguments,
       std::vector<std::string> devices);
 
-  // Shard a tensor and returns the sharded tensors based on the `sharding`
-  // spec. REPLICATED sharding should result in shards identical to the input;
-  // OTHERS (tiled) sharding result in shards where each data dimension is
-  // sharded across devices along the same dimension in the `tile_assignment`;
-  // the returned tensor shards vector is indexed by the device IDs. There is no
-  // data duplication. Shards are not padded in case the input tensor is not
-  // evenly partitionable, unless `padded` is set.
+  // Processes replicated execution results, where `sharded_results` contains
+  // `PjRtData` handles and spans the number of devices (outer) and the number
+  // of arguments (innner). This requires `sharding_specs` of the same size as
+  // the number of arguments. `sharding_specs` can contain `nullptr` if the
+  // corresponding result argument is not sharded. The replicated execution
+  // leaves the results in replicated states, which is aligned with the default
+  // exepctation `replicated_output=true`. However, if we override the
+  // compiler's default behavior and allow the execution to return sharded
+  // results, then we should set `replicated_output=false` and wrap sharded
+  // arguments into `PjRtShardedData`. This returns a vector of size that is
+  // equal to the number of arguments.
+  static std::vector<xla::ComputationClient::DataPtr> OutputHandler(
+      std::vector<std::vector<xla::ComputationClient::DataPtr>> sharded_results,
+      std::vector<XLATensor::ShardingSpecPtr> sharding_specs,
+      bool replicated_output = true);
+
+  // Shards a tensor and returns the sharded tensors which belong on `devices`
+  // based on the `sharding` spec. REPLICATED sharding should result in shards
+  // identical to the input; OTHERS (tiled) sharding result in shards where
+  // each data dimension is sharded across devices along the same dimension in
+  // the `tile_assignment`; the returned tensor shards vector is indexed by the
+  // device IDs. There is no data duplication. Shards are not padded in case the
+  // input tensor is not evenly partitionable, unless `padded` is set.
+  // The the returned tensors will be in 1:1 correspondence with the `devices`
+  // vector, so the `i`th result will belong on the `i`th device.
   static std::vector<at::Tensor> ShardTensor(
       const at::Tensor& tensor, const xla::OpSharding sharding,
       const std::vector<std::string>& devices, bool padded = true);

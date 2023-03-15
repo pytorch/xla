@@ -16,15 +16,15 @@
 #include "absl/strings/str_join.h"
 #include "tensorflow/compiler/xla/literal_util.h"
 #include "tensorflow/compiler/xla/shape_util.h"
-#include "tensorflow/compiler/xla/xla_client/cache.h"
-#include "tensorflow/compiler/xla/xla_client/debug_macros.h"
-#include "tensorflow/compiler/xla/xla_client/env_vars.h"
-#include "tensorflow/compiler/xla/xla_client/sys_util.h"
-#include "tensorflow/compiler/xla/xla_client/thread_pool.h"
-#include "tensorflow/compiler/xla/xla_client/unique.h"
-#include "tensorflow/compiler/xla/xla_client/xla_util.h"
-#include "tensorflow/core/lib/core/errors.h"
-#include "tensorflow/core/profiler/lib/traceme.h"
+#include "tensorflow/tsl/platform/errors.h"
+#include "tensorflow/tsl/profiler/lib/traceme.h"
+#include "third_party/xla_client/cache.h"
+#include "third_party/xla_client/debug_macros.h"
+#include "third_party/xla_client/env_vars.h"
+#include "third_party/xla_client/sys_util.h"
+#include "third_party/xla_client/thread_pool.h"
+#include "third_party/xla_client/unique.h"
+#include "third_party/xla_client/xla_util.h"
 #include "torch/csrc/autograd/variable.h"
 #include "torch/csrc/lazy/core/hash.h"
 #include "torch/csrc/lazy/core/helpers.h"
@@ -118,7 +118,8 @@ XLATensor::XLATensor(torch::lazy::Value ir_value,
   if (CurrentIrValue()) {
     auto* xla_node = dynamic_cast<XlaNode*>(CurrentIrValue().node.get());
     if (xla_node->GetSharding()) {
-      ShardingSpec sharding = ShardingSpec{*xla_node->GetSharding()};
+      ShardingSpec sharding =
+          ShardingSpec{*xla_node->GetSharding(), xla_node->xla_shape()};
       SetShardingSpec(sharding);
     }
   }
@@ -262,7 +263,8 @@ XLATensor::ShardingSpecPtr XLATensor::sharding_spec() const {
     auto* xla_node = dynamic_cast<XlaNode*>(ir_value.node.get());
     if (xla_node->GetSharding()) {
       XLA_CHECK(ShardingUtil::EqualShardingSpecs(
-          *sharding, ShardingSpec{*xla_node->GetSharding()}));
+          *sharding,
+          ShardingSpec{*xla_node->GetSharding(), xla_node->xla_shape()}));
     }
   }
   return sharding;
@@ -316,17 +318,8 @@ void XLATensor::SetInPlaceIrValue(torch::lazy::Value ir_value) {
 }
 
 void XLATensor::AssignIrValue(torch::lazy::Value ir_value) const {
-  if (ir_value) {
-    std::string debug_str = ir_value->ToString();
-    auto sharding = dynamic_cast<XlaNode*>(ir_value.node.get())->GetSharding();
-    if (sharding) {
-      debug_str += " with sharding " + sharding->DebugString();
-    }
-    TF_VLOG(5) << "Assign IR value " << debug_str;
-  } else {
-    TF_VLOG(5) << "Assign empty IR value";
-  }
-
+  TF_VLOG(5) << "Assign IR value: "
+             << (ir_value ? ir_value->ToString() : "empty node");
   data()->ir_value = std::move(ir_value);
   data()->generation += 1;
 }
@@ -622,20 +615,18 @@ bool XLATensor::ShouldSyncIrNode() {
   return this->data()->ir_value->op() != xla_device_data;
 }
 
-bool XLASymNodeImpl::is_int() {
-  // TODO: handle not is int
-  return true;
-}
+bool XLASymNodeImpl::is_bool() { return pytype_ == PyType::BOOL; }
 
-bool XLASymNodeImpl::is_float() {
-  // TODO: handle not is int
-  return false;
-}
+bool XLASymNodeImpl::is_int() { return pytype_ == PyType::INT; }
+
+bool XLASymNodeImpl::is_float() { return pytype_ == PyType::FLOAT; }
 
 c10::SymNode XLASymNodeImpl::add(const c10::SymNode& other) {
   auto p_other = dynamic_cast<XLASymNodeImpl*>(other.get());
+  XLA_CHECK(is_int()) << __FUNCTION__ << " with non-int NYI";
+  XLA_CHECK(p_other->is_int()) << __FUNCTION__ << " with non-int NYI";
   auto n_add = torch::lazy::MakeNode<SizeAdd>(node(), p_other->node());
-  return c10::make_intrusive<XLASymNodeImpl>(n_add);
+  return c10::make_intrusive<XLASymNodeImpl>(n_add, PyType::INT);
 }
 
 c10::SymNode XLASymNodeImpl::sub(const c10::SymNode& other) {
@@ -643,16 +634,20 @@ c10::SymNode XLASymNodeImpl::sub(const c10::SymNode& other) {
 
   torch_xla::XLASymNodeImpl* p_other =
       dynamic_cast<XLASymNodeImpl*>(other.get());
+  XLA_CHECK(is_int()) << __FUNCTION__ << " with non-int NYI";
+  XLA_CHECK(p_other->is_int()) << __FUNCTION__ << " with non-int NYI";
   torch::lazy::NodePtr n_sub =
       torch::lazy::MakeNode<SizeSub>(node(), p_other->node());
-  return c10::make_intrusive<XLASymNodeImpl>(n_sub);
+  return c10::make_intrusive<XLASymNodeImpl>(n_sub, PyType::INT);
 }
 
 c10::SymNode XLASymNodeImpl::mul(const c10::SymNode& other) {
   auto p_other = dynamic_cast<XLASymNodeImpl*>(other.get());
+  XLA_CHECK(is_int()) << __FUNCTION__ << " with non-int NYI";
+  XLA_CHECK(p_other->is_int()) << __FUNCTION__ << " with non-int NYI";
   auto n_mul =
       torch::lazy::MakeNode<torch_xla::SizeMul>(node(), p_other->node());
-  return c10::make_intrusive<XLASymNodeImpl>(n_mul);
+  return c10::make_intrusive<XLASymNodeImpl>(n_mul, PyType::INT);
 }
 
 c10::SymNode XLASymNodeImpl::truediv(const c10::SymNode& other) {
@@ -667,24 +662,38 @@ c10::SymNode XLASymNodeImpl::pow(const c10::SymNode& other) {
 
 c10::SymNode XLASymNodeImpl::floordiv(const c10::SymNode& other) {
   auto p_other = dynamic_cast<XLASymNodeImpl*>(other.get());
+  XLA_CHECK(is_int()) << __FUNCTION__ << " with non-int NYI";
+  XLA_CHECK(p_other->is_int()) << __FUNCTION__ << " with non-int NYI";
   auto n_div = torch::lazy::MakeNode<SizeDiv>(node(), p_other->node());
-  return c10::make_intrusive<XLASymNodeImpl>(n_div);
+  return c10::make_intrusive<XLASymNodeImpl>(n_div, PyType::INT);
 }
 
 c10::SymNode XLASymNodeImpl::mod(const c10::SymNode& other) {
-  XLA_CHECK(false) << "XLASymNodeImpl::" << __FUNCTION__
-                   << " has not been implemented.";
+  TORCH_LAZY_FN_COUNTER("xla::size_");
+  torch_xla::XLASymNodeImpl* p_other =
+      dynamic_cast<XLASymNodeImpl*>(other.get());
+  XLA_CHECK(is_int()) << __FUNCTION__ << " with non-int NYI";
+  XLA_CHECK(p_other->is_int()) << __FUNCTION__ << " with non-int NYI";
+  torch::lazy::NodePtr n_mod =
+      torch::lazy::MakeNode<SizeMod>(node(), p_other->node());
+  return c10::make_intrusive<XLASymNodeImpl>(n_mod, PyType::INT);
 }
 
 c10::SymNode XLASymNodeImpl::eq(const c10::SymNode& other) {
   auto p_other = dynamic_cast<XLASymNodeImpl*>(other.get());
+  XLA_CHECK(is_int()) << __FUNCTION__ << " with non-int NYI";
+  XLA_CHECK(p_other->is_int()) << __FUNCTION__ << " with non-int NYI";
   auto n_eq = torch::lazy::MakeNode<SizeEq>(node(), p_other->node());
-  return c10::make_intrusive<XLASymNodeImpl>(n_eq);
+  return c10::make_intrusive<XLASymNodeImpl>(n_eq, PyType::BOOL);
 }
 
 c10::SymNode XLASymNodeImpl::ne(const c10::SymNode& other) {
-  XLA_CHECK(false) << "XLASymNodeImpl::" << __FUNCTION__
-                   << " has not been implemented.";
+  TORCH_LAZY_FN_COUNTER("xla::size_");
+  auto p_other = dynamic_cast<XLASymNodeImpl*>(other.get());
+  XLA_CHECK(is_int()) << __FUNCTION__ << " with non-int NYI";
+  XLA_CHECK(p_other->is_int()) << __FUNCTION__ << " with non-int NYI";
+  auto n_ne = torch::lazy::MakeNode<SizeNe>(node(), p_other->node());
+  return c10::make_intrusive<XLASymNodeImpl>(n_ne, PyType::BOOL);
 }
 
 c10::SymNode XLASymNodeImpl::gt(const c10::SymNode& other) {
@@ -693,8 +702,12 @@ c10::SymNode XLASymNodeImpl::gt(const c10::SymNode& other) {
 }
 
 c10::SymNode XLASymNodeImpl::lt(const c10::SymNode& other) {
-  XLA_CHECK(false) << "XLASymNodeImpl::" << __FUNCTION__
-                   << " has not been implemented.";
+  TORCH_LAZY_FN_COUNTER("xla::size_");
+  auto p_other = dynamic_cast<XLASymNodeImpl*>(other.get());
+  XLA_CHECK(is_int()) << __FUNCTION__ << " with non-int NYI";
+  XLA_CHECK(p_other->is_int()) << __FUNCTION__ << " with non-int NYI";
+  auto n_lt = torch::lazy::MakeNode<SizeLt>(node(), p_other->node());
+  return c10::make_intrusive<XLASymNodeImpl>(n_lt, PyType::BOOL);
 }
 
 c10::SymNode XLASymNodeImpl::le(const c10::SymNode& other) {
@@ -703,8 +716,12 @@ c10::SymNode XLASymNodeImpl::le(const c10::SymNode& other) {
 }
 
 c10::SymNode XLASymNodeImpl::ge(const c10::SymNode& other) {
-  XLA_CHECK(false) << "XLASymNodeImpl::" << __FUNCTION__
-                   << " has not been implemented.";
+  TORCH_LAZY_FN_COUNTER("xla::size_");
+  auto p_other = dynamic_cast<XLASymNodeImpl*>(other.get());
+  XLA_CHECK(is_int()) << __FUNCTION__ << " with non-int NYI";
+  XLA_CHECK(p_other->is_int()) << __FUNCTION__ << " with non-int NYI";
+  auto n_ge = torch::lazy::MakeNode<SizeGe>(node(), p_other->node());
+  return c10::make_intrusive<XLASymNodeImpl>(n_ge, PyType::BOOL);
 }
 
 c10::SymNode XLASymNodeImpl::ceil() {
@@ -732,9 +749,55 @@ c10::SymNode XLASymNodeImpl::sym_max(const c10::SymNode& other) {
                    << " has not been implemented.";
 }
 
-c10::SymNode XLASymNodeImpl::clone() {
+c10::SymNode XLASymNodeImpl::sym_or(const c10::SymNode& other) {
   XLA_CHECK(false) << "XLASymNodeImpl::" << __FUNCTION__
                    << " has not been implemented.";
+}
+
+c10::SymNode XLASymNodeImpl::sym_and(const c10::SymNode& other) {
+  XLA_CHECK(false) << "XLASymNodeImpl::" << __FUNCTION__
+                   << " has not been implemented.";
+}
+
+c10::SymNode XLASymNodeImpl::sym_not() {
+  XLA_CHECK(false) << "XLASymNodeImpl::" << __FUNCTION__
+                   << " has not been implemented.";
+}
+// NB: self is ignored here, only the arguments are used
+c10::SymNode XLASymNodeImpl::is_contiguous(at::ArrayRef<c10::SymNode> sizes,
+                                           at::ArrayRef<c10::SymNode> strides) {
+  XLA_CHECK(false) << "XLASymNodeImpl::" << __FUNCTION__
+                   << " has not been implemented.";
+}
+c10::SymNode XLASymNodeImpl::is_channels_last_contiguous_2d(
+    at::ArrayRef<c10::SymNode> sizes, at::ArrayRef<c10::SymNode> strides) {
+  XLA_CHECK(false) << "XLASymNodeImpl::" << __FUNCTION__
+                   << " has not been implemented.";
+}
+c10::SymNode XLASymNodeImpl::is_channels_last_contiguous_3d(
+    at::ArrayRef<c10::SymNode> sizes, at::ArrayRef<c10::SymNode> strides) {
+  XLA_CHECK(false) << "XLASymNodeImpl::" << __FUNCTION__
+                   << " has not been implemented.";
+}
+c10::SymNode XLASymNodeImpl::is_channels_last_strides_2d(
+    at::ArrayRef<c10::SymNode> sizes, at::ArrayRef<c10::SymNode> strides) {
+  XLA_CHECK(false) << "XLASymNodeImpl::" << __FUNCTION__
+                   << " has not been implemented.";
+}
+c10::SymNode XLASymNodeImpl::is_channels_last_strides_3d(
+    at::ArrayRef<c10::SymNode> sizes, at::ArrayRef<c10::SymNode> strides) {
+  XLA_CHECK(false) << "XLASymNodeImpl::" << __FUNCTION__
+                   << " has not been implemented.";
+}
+c10::SymNode XLASymNodeImpl::is_non_overlapping_and_dense(
+    at::ArrayRef<c10::SymNode> sizes, at::ArrayRef<c10::SymNode> strides) {
+  XLA_CHECK(false) << "XLASymNodeImpl::" << __FUNCTION__
+                   << " has not been implemented.";
+}
+
+c10::SymNode XLASymNodeImpl::clone() {
+  TORCH_LAZY_FN_COUNTER("xla::size_");
+  return c10::make_intrusive<XLASymNodeImpl>(node(), pytype_);
 }
 
 c10::SymNode XLASymNodeImpl::sym_float() {
@@ -744,7 +807,7 @@ c10::SymNode XLASymNodeImpl::sym_float() {
 
 c10::SymNode XLASymNodeImpl::wrap_int(int64_t num) {
   auto cnst = torch::lazy::MakeNode<SizeConstant>(num);
-  return c10::make_intrusive<XLASymNodeImpl>(cnst);
+  return c10::make_intrusive<XLASymNodeImpl>(cnst, PyType::INT);
 }
 
 c10::SymNode XLASymNodeImpl::wrap_float(double num) {
@@ -762,6 +825,11 @@ double XLASymNodeImpl::guard_float(const char* file, int64_t line) {
                    << " has not been implemented.";
 }
 
+bool XLASymNodeImpl::guard_bool(const char* file, int64_t line) {
+  // TODO: Take advantages of file and line.
+  return bool_();
+}
+
 int64_t XLASymNodeImpl::int_() {
   std::shared_ptr<torch::lazy::DimensionNode> dn = torch_xla::DimCast(node());
   return dn->getDynamicValue();
@@ -771,6 +839,8 @@ bool XLASymNodeImpl::bool_() {
   auto dn = torch_xla::DimCast(node());
   return dn->getDynamicValue() != 0;
 }
+
+bool XLASymNodeImpl::has_hint() { return true; }
 
 std::string XLASymNodeImpl::str() {
   return "<=" + std::to_string(DimCast(node().get())->getStaticValue());

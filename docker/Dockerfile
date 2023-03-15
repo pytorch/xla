@@ -16,12 +16,16 @@ ARG bazel_jobs=""
 ARG git_clone="true"
 ARG build_cpp_tests="0"
 
+ENV BUILD_CPP_TESTS "${build_cpp_tests}"
+
 RUN apt-get update
-RUN apt-get install -y git sudo python-pip python3-pip
+RUN apt-get install -y git sudo python3-pip
 RUN git clone https://github.com/pytorch/pytorch
 
-# Disable CUDA for PyTorch
+# Disable CUDA for PyTorch and ensure the pre-built wheel works
+# on Colab with no libmpi installed.
 ENV USE_CUDA "0"
+ENV USE_MPI "0"
 
 # Enable CUDA for XLA
 ENV XLA_CUDA "${cuda}"
@@ -38,10 +42,6 @@ ENV BUNDLE_LIBTPU "${tpuvm}"
 
 # Maximum number of jobs to use for bazel build
 ENV BAZEL_JOBS "${bazel_jobs}"
-
-# This makes the bazel build behave more consistently, but runs slower.
-ENV XLA_SANDBOX_BUILD "0"
-ENV XLA_SANDBOX_BASE "/dev/shm"
 
 # To get around issue of Cloud Build with recursive submodule update
 # clone recursively from pytorch/xla if building docker image with

@@ -1,7 +1,6 @@
 import logging
 import os
 import re
-import shutil
 import tempfile
 import subprocess
 
@@ -86,19 +85,31 @@ def _summarize_fn_tracker():
   os.remove(_tmp_fname)
 
 
-def _tpu_vm_init():
+def _setup_tpu_vm_library_path() -> bool:
+  """Returns true if $TPU_LIBRARY is set or can be inferred.
+
+  We load libtpu.so in the following order of precedence:
+
+  1. User-set $TPU_LIBRARY_PATH
+  2. libtpu.so included in torch_xla/lib
+  3. libtpu-nightly pip package
+  """
+  if 'TPU_LIBRARY_PATH' in os.environ:
+    return True
+
   module_path = os.path.dirname(__file__)
   bundled_libtpu_path = os.path.join(module_path, 'lib/libtpu.so')
   if os.path.isfile(bundled_libtpu_path) and not os.getenv('TPU_LIBRARY_PATH'):
     logger.info('Using bundled libtpu.so (%s)', bundled_libtpu_path)
     os.environ['TPU_LIBRARY_PATH'] = bundled_libtpu_path
-    return
+    return True
 
   try:
     import libtpu
     libtpu.configure_library_path()
+    return True
   except ImportError:
-    pass
+    return False
 
 
 # These needs to be called before the _XLAC module is loaded.
@@ -123,7 +134,7 @@ os.environ['TPU_LOAD_LIBRARY'] = '0'
 import _XLAC
 del os.environ['TPU_LOAD_LIBRARY']
 
-_tpu_vm_init()
+_found_libtpu = _setup_tpu_vm_library_path()
 
 
 def _prepare_to_exit():

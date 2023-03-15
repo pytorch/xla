@@ -1,11 +1,12 @@
 #pragma once
 
 #include <ATen/ATen.h>
+#include <ATen/FunctionalTensorWrapper.h>
 #include <c10/core/ScalarType.h>
 #include <c10/util/Optional.h>
 
 #include "tensorflow/compiler/xla/shape.h"
-#include "tensorflow/compiler/xla/xla_client/debug_macros.h"
+#include "third_party/xla_client/debug_macros.h"
 #include "torch/csrc/lazy/core/dynamic_ir.h"
 #include "torch/csrc/lazy/core/hash.h"
 #include "torch/csrc/lazy/core/tensor.h"
@@ -58,6 +59,11 @@ at::Scalar MakeFloatScalar(T value) {
 
 // Unwraps tensor to target dtype if it's a wrapped number.
 at::Tensor UnwrapNumber(const at::Tensor& tensor, at::ScalarType dtype);
+
+// Wraps tensor to functional tensor if XLA_DISABLE_FUNCTIONALIZATION is false
+// or not set. For unwrapping, `torch::lazy::maybe_unwrap_functional()` will
+// only unwrap tensors that are functional. So, nothing needs to be done there.
+at::Tensor MaybeWrapTensorToFunctional(const at::Tensor& tensor);
 
 // Checks whether a c10::optional<Tensor> is defined.
 inline bool IsDefined(const c10::optional<at::Tensor>& tensor) {

@@ -1,0 +1,55 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  generateName: xla-test-job-
+  labels:
+    tpu: v2-8
+spec:
+  affinity:
+    # Prevent multiple pods from scheduling on the same host
+    podAntiAffinity:
+      requiredDuringSchedulingIgnoredDuringExecution:
+      - labelSelector:
+          matchExpressions:
+          - key: tpu
+            operator: In
+            values:
+            - v2-8
+        topologyKey: "kubernetes.io/hostname"
+    # Only schedule on v2-8 TPUs
+    nodeAffinity:
+      requiredDuringSchedulingIgnoredDuringExecution:
+        nodeSelectorTerms:
+        - matchExpressions:
+          - key: tpu.googleapis.com/type
+            operator: In
+            values:
+            - v2-8
+  restartPolicy: Never
+  volumes:
+  # Increase size of tmpfs /dev/shm to avoid OOM.
+  - name: dshm
+    emptyDir:
+      medium: Memory
+  containers:
+  - name: xla-test
+    securityContext:
+      privileged: true
+    image: gcr.io/$PROJECT_ID/pytorch-xla-test:$BUILD_ID
+    command:
+    - bash
+    - -cxe
+    - |
+      python3 pytorch/xla/test/test_operations.py -v
+      python3 pytorch/xla/test/pjrt/test_experimental_pjrt_tpu.py
+      python3 pytorch/xla/test/spmd/test_xla_sharding.py
+      python3 pytorch/xla/test/spmd/test_xla_virtual_device.py
+      python3 pytorch/xla/test/spmd/test_train_spmd_linear_model.py
+      PJRT_DEVICE=TPU_LEGACY XLA_EXPERIMENTAL=nonzero:masked_select python3 pytorch/xla/test/test_dynamic_shape_models.py -v
+      PJRT_DEVICE=TPU_LEGACY XLA_EXPERIMENTAL=nonzero:masked_select python3 pytorch/xla/test/test_dynamic_shapes.py -v
+    volumeMounts:
+    - mountPath: /dev/shm
+      name: dshm
+    env:
+    - name: PJRT_DEVICE
+      value: TPU

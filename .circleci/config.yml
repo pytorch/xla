@@ -1,4 +1,6 @@
 version: 2.1
+orbs:
+  browser-tools: circleci/browser-tools@1.2.3
 
 update_submodule: &update_submodule
   name: Update Submodule
@@ -10,7 +12,6 @@ setup_base_docker: &setup_base_docker
   name: Setup Base Docker Image
   command: |
     .circleci/setup_ci_environment.sh
-    .circleci/download_llvm_raw.sh
 
 launch_docker_and_build: &launch_docker_and_build
   name: Launch Docker Container and Build
@@ -162,6 +163,51 @@ run_test_and_push_doc: &run_test_and_push_doc
       command: |
         docker exec -u jenkins $(cat .docker_pid) bash -c '. ~/.bashrc && .circleci/doc_push.sh'
 
+run_test_coverage: &run_test_coverage
+  machine:
+    image: ubuntu-2004:202111-02
+  steps:
+  - checkout
+  - browser-tools/install-browser-tools
+  - run:
+      name: "Setup custom environment variables"
+      command: |
+        pyenv install 3.7.0
+        pyenv global 3.7.0
+        echo "export CLOUDSDK_PYTHON=$(which python3)" >> $BASH_ENV
+  - run:
+      <<: *update_submodule
+  - run:
+      <<: *setup_base_docker
+  - run:
+      <<: *calculate_docker_image
+  - run:
+      <<: *download_docker
+  - run:
+      name: Test
+      no_output_timeout: "1h"
+      command: |
+        docker exec -u jenkins $(cat .docker_pid) bash -c \
+        '. ~/.bashrc && USE_COVERAGE=1 .circleci/test.sh'
+        docker cp $(cat .docker_pid):/home/jenkins/htmlcov /home/circleci/project
+        if [ -n "${USE_CUDA_DOCKER_RUNTIME:-}" ]; then
+          gsutil cp /home/circleci/project/htmlcov/lcov.info gs://ng3-metrics/ng3-pytorchxla-coverage/absolute/pytorchxla/${CIRCLE_WORKFLOW_ID}/gpu_combined_coverage.out
+          gsutil cp /home/circleci/project/htmlcov/lcov.info gs://ng3-metrics/ng3-pytorchxla-coverage/incremental/pytorchxla/${CIRCLE_WORKFLOW_ID}/gpu_combined_coverage.out
+        else
+          gsutil cp /home/circleci/project/htmlcov/lcov.info gs://ng3-metrics/ng3-pytorchxla-coverage/absolute/pytorchxla/${CIRCLE_WORKFLOW_ID}/cpu_combined_coverage.out
+          gsutil cp /home/circleci/project/htmlcov/lcov.info gs://ng3-metrics/ng3-pytorchxla-coverage/incremental/pytorchxla/${CIRCLE_WORKFLOW_ID}/cpu_combined_coverage.out
+
+          ABS_METADATA='{"host": "github", "project": "pytorchxla", "trace_type": "LCOV", "commit_id": '\"${CIRCLE_SHA1}\"', "ref": "HEAD", "source": "https://github.com/pytorch/xla", "owner": "cloud-tpu-pt-dev", "bug_component": "587012"}'
+          echo $ABS_METADATA > abs_metadata.json
+          gsutil cp abs_metadata.json gs://ng3-metrics/ng3-pytorchxla-coverage/absolute/pytorchxla/${CIRCLE_WORKFLOW_ID}/metadata.json
+
+          INC_METADATA='{"host": "github", "project": "pytorchxla", "trace_type": "LCOV", "patchset_num": 1, "change_id": '\"${CIRCLE_BUILD_NUM}\"', "owner": "cloud-tpu-pt-dev", "bug_component": "587012"}'
+          echo $INC_METADATA > inc_metadata.json
+          gsutil cp inc_metadata.json gs://ng3-metrics/ng3-pytorchxla-coverage/incremental/pytorchxla/${CIRCLE_WORKFLOW_ID}/metadtaa.json
+        fi
+
+  - store_artifacts:
+      path: htmlcov
 
 run_clang_format: &run_clang_format
   name: Run clang-format
@@ -295,8 +341,11 @@ jobs:
     <<: *ci_params
     <<: *run_test_and_push_doc
 
+  pytorch_xla_run_test_coverage:
+    <<: *ci_params
+    <<: *run_test_coverage
+
 workflows:
-  version: 2
   build:
     jobs:
       - linter_check:
@@ -304,13 +353,13 @@ workflows:
             branches:
               ignore:
                 - master
-                - /release\/.*/
+                - ^r\d*\.?\d*$
       - linter_check_no_torch_pin:
           filters:
             branches:
               only:
                 - master
-                - /release\/.*/
+                - ^r\d*\.?\d*$
       - pytorch_xla_run_build
       - pytorch_xla_run_test:
           name: pytorch_xla_run_CPU_test
@@ -321,7 +370,7 @@ workflows:
             branches:
               ignore:
                 - master
-                - /release\/.*/
+                - ^r\d*\.?\d*$
       - pytorch_xla_run_test:
           name: pytorch_xla_run_GPU_test
           resource_class: gpu.nvidia.small.multi
@@ -336,4 +385,25 @@ workflows:
             branches:
               only:
                 - master
-                - /release\/.*/
+                - ^r\d*\.?\d*$
+      - pytorch_xla_run_test_coverage:
+          name: pytorch_xla_CPU_test_coverage
+          resource_class: 2xlarge
+          requires:
+            - pytorch_xla_run_build
+          filters:
+            branches:
+              only:
+                - master
+                - ci_test_coverage
+      - pytorch_xla_run_test_coverage:
+          name: pytorch_xla_GPU_test_coverage
+          resource_class: gpu.nvidia.small.multi
+          use_cuda_docker_runtime: "1"
+          requires:
+            - pytorch_xla_run_build
+          filters:
+            branches:
+              only:
+                - master
+                - ci_test_coverage

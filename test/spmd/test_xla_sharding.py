@@ -111,6 +111,7 @@ class BasicShardingTest(test_xla_sharding_base.XlaShardingTest):
     self.assertEqual(sharding_spec, torch_xla._XLAC._get_xla_sharding_spec(xt))
 
   def test_optimizer_step_with_sharding(self):
+    # Use simple linear model to test model parameter sharding
     model = self.SimpleLinear().to(xm.xla_device())
     xs.mark_sharding(model.fc1.weight, self._get_mesh((1, self.n_devices)),
                      (0, 1))
@@ -121,15 +122,17 @@ class BasicShardingTest(test_xla_sharding_base.XlaShardingTest):
     data = torch.randn(128, 128).to(xm.xla_device())
     target = torch.zeros(128).to(xm.xla_device())
     loss_fn = nn.CrossEntropyLoss()
-    for i in range(5):
+    for i in range(3):
       optimizer.zero_grad()
       output = model(data)
       loss = loss_fn(output, target)
       loss.backward()
       optimizer.step()
       xm.mark_step()
-    self.assertEqual(sharding_spec,
-                     torch_xla._XLAC._get_xla_sharding_spec(model.fc1.weight))
+      # Sharding is persisted across mark_step calls, and test if the sharded computation
+      # can repeat more than once without crashing.
+      self.assertEqual(sharding_spec,
+                       torch_xla._XLAC._get_xla_sharding_spec(model.fc1.weight))
 
   def test_inplace_add_with_sharding(self):
     xt = torch.ones(2, 2).to(xm.xla_device())

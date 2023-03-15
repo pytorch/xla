@@ -1,0 +1,13 @@
+- name: Append environment variables required during runtime to ~/.bashrc
+  ansible.builtin.lineinfile:
+    path: ~/.bashrc
+    line: "export {{ item }}={{ env_vars[item] }}"
+    create: true
+  loop: "{{ env_vars.keys() | list }}"
+
+- name: Append environment variables required during runtime to ~/.zshrc
+  ansible.builtin.lineinfile:
+    path: ~/.zshrc
+    line: "export {{ item }}={{ env_vars[item] }}"
+    create: true
+  loop: "{{ env_vars.keys() | list }}"

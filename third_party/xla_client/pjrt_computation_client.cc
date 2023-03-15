@@ -1,6 +1,7 @@
-#include "tensorflow/compiler/xla/xla_client/pjrt_computation_client.h"
+#include "third_party/xla_client/pjrt_computation_client.h"
 
 #include <algorithm>
+#include <unordered_set>
 
 #include "absl/strings/ascii.h"
 #include "absl/types/span.h"
@@ -9,6 +10,7 @@
 #include "tensorflow/compiler/xla/client/xla_computation.h"
 #include "tensorflow/compiler/xla/layout_util.h"
 #include "tensorflow/compiler/xla/literal.h"
+#include "tensorflow/compiler/xla/pjrt/distributed/distributed.h"
 #include "tensorflow/compiler/xla/pjrt/gpu/se_gpu_pjrt_client.h"
 #include "tensorflow/compiler/xla/pjrt/pjrt_api.h"
 #include "tensorflow/compiler/xla/pjrt/pjrt_c_api_client.h"
@@ -17,25 +19,46 @@
 #include "tensorflow/compiler/xla/pjrt/tfrt_cpu_pjrt_client.h"
 #include "tensorflow/compiler/xla/pjrt/tpu_client.h"
 #include "tensorflow/compiler/xla/shape.h"
-#include "tensorflow/compiler/xla/xla_client/computation_client.h"
-#include "tensorflow/compiler/xla/xla_client/debug_macros.h"
-#include "tensorflow/compiler/xla/xla_client/env_vars.h"
-#include "tensorflow/compiler/xla/xla_client/tf_logging.h"
-#include "tensorflow/core/profiler/lib/traceme.h"
+#include "tensorflow/tsl/profiler/lib/traceme.h"
+#include "third_party/xla_client/computation_client.h"
+#include "third_party/xla_client/debug_macros.h"
+#include "third_party/xla_client/env_vars.h"
+#include "third_party/xla_client/tf_logging.h"
 
 namespace xla {
 
 namespace {
 
-std::string PjRtDeviceToString(PjRtDevice* const device) {
+// Initializes a distributed runtime client if dist_service_addr is specified
+std::shared_ptr<DistributedRuntimeClient>
+MaybeInitializeDistributedRuntimeClient(int local_rank,
+                                        std::string dist_service_addr) {
+  std::shared_ptr<DistributedRuntimeClient> client;
+  if (!dist_service_addr.empty()) {
+    xla::DistributedRuntimeClient::Options options;
+    /* TODO(jonbolin): Use global rank for multi-host setup */
+    options.node_id = local_rank;
+    client =
+        xla::GetDistributedRuntimeClient(dist_service_addr, options,
+                                         /*use_coordination_service=*/false);
+    XLA_CHECK(client->Connect().ok())
+        << "Failed to initialize distributed runtime client";
+  }
+  return std::move(client);
+}
+
+}  // namespace
+
+std::string PjRtComputationClient::PjRtDeviceToString(PjRtDevice* const device) const {
   std::string platform =
       absl::AsciiStrToUpper(device->client()->platform_name());
-  std::string str = absl::StrFormat("%s:%d", platform, device->id());
+  int ordinal = global_ordinals_.at(device->id());
+  std::string str = absl::StrFormat("%s:%d", platform, ordinal);
   return str;
 }
 
-std::vector<std::string> PjRtDevicesToString(
-    absl::Span<PjRtDevice* const> devices) {
+std::vector<std::string> PjRtComputationClient::PjRtDevicesToString(
+    absl::Span<PjRtDevice* const> devices) const {
   std::vector<std::string> strs;
   strs.reserve(devices.size());
 
@@ -46,8 +69,6 @@ std::vector<std::string> PjRtDevicesToString(
   return strs;
 }
 
-}  // namespace
-
 PjRtComputationClient::PjRtComputationClient() {
   std::string device_type = sys_util::GetEnvString(env::kEnvPjRtDevice, "");
   if (device_type == "CPU") {
@@ -55,27 +76,33 @@ PjRtComputationClient::PjRtComputationClient() {
     bool async = sys_util::GetEnvBool(env::kEnvPjrtAsyncCpuClient, true);
     int cpu_device_count = sys_util::GetEnvInt(env::kEnvNumCpu, 1);
     client_ = std::move(xla::GetTfrtCpuClient(async, cpu_device_count).value());
-  } else if (device_type == "TPU") {
-    TF_VLOG(1) << "Initializing PjRt TPU client...";
-    int64_t max_inflight_computations = sys_util::GetEnvInt(
-        env::kEnvPjRtTpuMaxInflightComputations, /*defval=*/32);
-    client_ = xla::GetTpuClient(max_inflight_computations).value();
-  } else if (device_type == "TPU_C_API") {
-    TF_VLOG(1) << "Initializing PjRt C API client...";
+  } else if (device_type == "TPU" || device_type == "TPU_C_API") {
+    TF_VLOG(1) << "Initializing TFRT TPU client...";
     XLA_CHECK_OK(pjrt::LoadPjrtPlugin(
         "tpu", sys_util::GetEnvString(env::kEnvTpuLibraryPath, "libtpu.so")));
     supports_logical_on_device_shape_ = false;
     client_ = std::move(xla::GetCApiClient("TPU").value());
+  } else if (device_type == "TPU_LEGACY") {
+    TF_VLOG(1) << "Initializing PjRt StreamExecutor TPU client...";
+    int64_t max_inflight_computations = sys_util::GetEnvInt(
+        env::kEnvPjRtTpuMaxInflightComputations, /*defval=*/32);
+    client_ = xla::GetTpuClient(max_inflight_computations).value();
   } else if (device_type == "GPU") {
     TF_VLOG(1) << "Initializing PjRt GPU client...";
     bool async = sys_util::GetEnvBool(env::kEnvPjrtAsyncGpuClient, true);
-    /* TODO(jonbolin): Set allowed_devices based on local ordinal */
-    auto allowed_devices = std::make_optional<std::set<int>>(std::set{0});
-    client_ = xla::GetStreamExecutorGpuClient(
-                  /*asynchronous=*/async, GpuAllocatorConfig{},
-                  /*distributed_client=*/nullptr, /*node_id=*/0,
-                  allowed_devices = allowed_devices)
-                  .value();
+    int local_rank = sys_util::GetEnvInt(env::kEnvPjRtLocalRank, 0);
+    std::string dist_service_addr =
+        sys_util::GetEnvString(env::kEnvPjrtDistServiceAddr, "");
+    auto distributed_client =
+        MaybeInitializeDistributedRuntimeClient(local_rank, dist_service_addr);
+    auto allowed_devices =
+        std::make_optional<std::set<int>>(std::set{local_rank});
+    client_ =
+        std::move(xla::GetStreamExecutorGpuClient(
+                      /*asynchronous=*/async, GpuAllocatorConfig{},
+                      /*distributed_client=*/distributed_client,
+                      /*node_id=*/local_rank, allowed_devices = allowed_devices)
+                      .value());
   } else {
     XLA_ERROR() << absl::StrFormat("Unknown %s '%s'", env::kEnvPjRtDevice,
                                    device_type);
@@ -83,9 +110,18 @@ PjRtComputationClient::PjRtComputationClient() {
 
   XLA_CHECK(client_.get() != nullptr);
 
-  for (auto* device : client_->devices()) {
+  // PjRtDevice IDs are not guaranteed to be dense, so we need to track
+  // a device's global ordinal separately from its device ID. Order the
+  // devices by increasing ID to assign global ordinals.
+  std::vector<PjRtDevice*> ordered_devices(client_->device_count());
+  std::partial_sort_copy(client_->devices().begin(), client_->devices().end(),
+    ordered_devices.begin(), ordered_devices.end(),
+    [](auto &a, auto &b) { return a->id() < b->id(); });
+  for (auto* device : ordered_devices) {
+    global_ordinals_[device->id()] = global_ordinals_.size();
     std::string device_str = PjRtDeviceToString(device);
     string_to_device_.emplace(device_str, device);
+    device_locks_.emplace(device_str, std::make_unique<std::shared_mutex>());
   }
 }
 
@@ -116,12 +152,35 @@ std::vector<ComputationClient::DataPtr> PjRtComputationClient::GetDataShards(
   return shards;
 }
 
+ComputationClient::DataPtr PjRtComputationClient::WrapDataShards(
+    const std::vector<DataPtr>& shards, std::string device, xla::Shape shape,
+    xla::OpSharding sharding) {
+  std::vector<std::shared_ptr<PjRtData>> pjrt_data_shards;
+  pjrt_data_shards.reserve(shards.size());
+  for (auto& shard : shards) {
+    XLA_CHECK(shard != nullptr);
+    auto pjrt_shard = dynamic_cast<PjRtData*>(shard.get());
+    pjrt_data_shards.push_back(std::make_shared<PjRtData>(
+        pjrt_shard->device(), pjrt_shard->shape(), pjrt_shard->buffer));
+  }
+  return std::make_shared<PjRtShardedData>(device, shape, pjrt_data_shards,
+                                           sharding);
+}
+
+std::optional<xla::OpSharding> PjRtComputationClient::GetDataSharding(
+    DataPtr handle) {
+  if (auto sharded_data = dynamic_cast<PjRtShardedData*>(handle.get())) {
+    return sharded_data->GetSharding();
+  }
+  return std::optional<xla::OpSharding>();
+}
+
 std::vector<ComputationClient::DataPtr> PjRtComputationClient::TransferToServer(
     absl::Span<const TensorSource> tensors) {
   metrics::TimedSection timed(TransferToServerMetric());
-  tensorflow::profiler::TraceMe activity(
+  tsl::profiler::TraceMe activity(
       "PjRtComputationClient::TransferToServer",
-      tensorflow::profiler::TraceMeLevel::kInfo);
+      tsl::profiler::TraceMeLevel::kInfo);
   std::vector<ComputationClient::DataPtr> datas;
   datas.reserve(tensors.size());
   int64_t total_size = 0;
@@ -177,9 +236,9 @@ ComputationClient::DataPtr PjRtComputationClient::TransferShardsToServer(
 
 ComputationClient::DataPtr PjRtComputationClient::CopyToDevice(
     ComputationClient::DataPtr data, std::string dst) {
-  tensorflow::profiler::TraceMe activity(
+  tsl::profiler::TraceMe activity(
       "PjRtComputationClient::CopyToDevice",
-      tensorflow::profiler::TraceMeLevel::kInfo);
+      tsl::profiler::TraceMeLevel::kInfo);
   const PjRtData* pjrt_data = dynamic_cast<PjRtData*>(data.get());
   XLA_CHECK(pjrt_data->HasValue()) << "Can't copy invalid device data.";
 
@@ -249,12 +308,11 @@ ComputationClient::DataPtr PjRtComputationClient::ReplicateShardedData(
 std::vector<xla::Literal> PjRtComputationClient::TransferFromServer(
     absl::Span<const DataPtr> handles) {
   metrics::TimedSection timed(TransferFromServerMetric());
-  tensorflow::profiler::TraceMe activity(
+  tsl::profiler::TraceMe activity(
       "PjRtComputationClient::TransferFromServer",
-      tensorflow::profiler::TraceMeLevel::kInfo);
+      tsl::profiler::TraceMeLevel::kInfo);
   std::vector<xla::Literal> literals;
   literals.reserve(handles.size());
-
   int64_t total_size = 0;
   for (auto handle : handles) {
     // Use XLA replication to reassemble the sharded data. If input handle
@@ -295,9 +353,9 @@ std::vector<xla::Literal> PjRtComputationClient::TransferFromServer(
 std::vector<ComputationClient::ComputationPtr> PjRtComputationClient::Compile(
     std::vector<ComputationClient::CompileInstance> instances) {
   metrics::TimedSection timed(CompileMetric());
-  tensorflow::profiler::TraceMe activity(
+  tsl::profiler::TraceMe activity(
       "PjRtComputationClient::Compile",
-      tensorflow::profiler::TraceMeLevel::kInfo);
+      tsl::profiler::TraceMeLevel::kInfo);
   std::vector<ComputationClient::ComputationPtr> computations;
 
   for (auto& instance : instances) {
@@ -305,6 +363,11 @@ std::vector<ComputationClient::ComputationPtr> PjRtComputationClient::Compile(
     if (instance.is_sharded) {
       // TODO(yeounoh) multi-host, multi-slice configurations
       compile_options.executable_build_options.set_use_spmd_partitioning(true);
+      // TODO(yeounoh) this is set to false by default, but explicitly set here
+      // to expose the knob for future reference. We can override the compiler's
+      // default behavior to further optimize parameter sharding in the future.
+      compile_options.executable_build_options
+          .set_allow_spmd_sharding_propagation_to_output({false});
       compile_options.executable_build_options.set_num_partitions(
           client_->device_count());
       compile_options.executable_build_options.set_num_replicas(1);
@@ -313,7 +376,11 @@ std::vector<ComputationClient::ComputationPtr> PjRtComputationClient::Compile(
 
       // TODO(244391366) verify this is correct for the collectives ops
       xla::DeviceAssignment device_assignment(1, client_->device_count());
-      device_assignment.FillIota(0);
+      // DeviceAssignment values must be the PjRtDevice ID, so we need to
+      // unwind the global ordinal mapping.
+      for (const auto &[device_id, global_ordinal] : global_ordinals_) {
+        device_assignment(0, global_ordinal) = device_id;
+      }
       compile_options.executable_build_options.set_device_assignment(
           device_assignment);
     } else {
@@ -326,7 +393,11 @@ std::vector<ComputationClient::ComputationPtr> PjRtComputationClient::Compile(
           instance.parameter_is_tupled_arguments;
 
       xla::DeviceAssignment device_assignment(client_->device_count(), 1);
-      device_assignment.FillIota(0);
+      // DeviceAssignment values must be the PjRtDevice ID, so we need to
+      // unwind the global ordinal mapping.
+      for (const auto &[device_id, global_ordinal] : global_ordinals_) {
+        device_assignment(global_ordinal, 0) = device_id;
+      }
       compile_options.executable_build_options.set_device_assignment(
           device_assignment);
     }
@@ -362,9 +433,9 @@ PjRtComputationClient::ExecuteComputation(
   // once both `ExecuteComputation` and the async work in `ExecuteSharded` are
   // complete; a copy is held from the lambda that releases it when done.
   auto timed = std::make_shared<metrics::TimedSection>(ExecuteMetric());
-  tensorflow::profiler::TraceMe activity(
+  tsl::profiler::TraceMe activity(
       "PjRtComputationClient::ExecuteComputation",
-      tensorflow::profiler::TraceMeLevel::kInfo);
+      tsl::profiler::TraceMeLevel::kInfo);
   TF_VLOG(1) << "Executing PjRt computation on " << device;
   const PjRtComputation& pjrt_computation =
       dynamic_cast<const PjRtComputation&>(computation);
@@ -394,9 +465,15 @@ PjRtComputationClient::ExecuteComputation(
                            returned_future)
           .value();
 
+  // Grab the shared lock and block the `WaitDeviceOps` until buffer is ready.
+  auto lock = lock_device_shared(device);
   // Signal that `ExecuteSharded` has completed for the ExecuteTime metric.
   // Copies the `timed` shared pointer into the lambda.
-  returned_future->OnReady([timed](Status unused) mutable { timed.reset(); });
+  returned_future->OnReady(
+      [timed, lock = std::move(lock)](Status unused) mutable {
+        timed.reset();
+        TF_VLOG(3) << "ExecuteComputation returned_future->OnReady finished";
+      });
 
   std::vector<DataPtr> datas;
   datas.reserve(results.size());
@@ -454,6 +531,7 @@ PjRtComputationClient::ExecuteReplicated(
 
   std::vector<std::vector<ComputationClient::DataPtr>> data_handles;
   data_handles.reserve(results.size());
+  std::vector<size_t> dims(results.size());
   for (int32_t i = 0; i < results.size(); ++i) {
     xla::PjRtDevice* pjrt_device = StringToPjRtDevice(devices[i]);
     XLA_CHECK(pjrt_device->IsAddressable())
@@ -461,6 +539,7 @@ PjRtComputationClient::ExecuteReplicated(
 
     std::vector<ComputationClient::DataPtr> datas;
     datas.reserve(results[i].size());
+    dims[i] = results[i].size();
     for (int32_t j = 0; j < results[i].size(); ++j) {
       std::unique_ptr<xla::PjRtBuffer> buffer = std::move(results[i][j]);
       XLA_CHECK(pjrt_device == buffer->device())
@@ -474,7 +553,8 @@ PjRtComputationClient::ExecuteReplicated(
     data_handles.push_back(datas);
   }
 
-  TF_VLOG(1) << "Returning " << data_handles.size() << " sets of results";
+  TF_VLOG(1) << "Returning " << data_handles.size() << " sets of results "
+             << "with dimensions [" << absl::StrJoin(dims, ",") << "].";
   return data_handles;
 }
 
@@ -524,6 +604,39 @@ xla::PjRtDevice* PjRtComputationClient::StringToPjRtDevice(
       << "Unknown device " << device;
   xla::PjRtDevice* pjrt_device = string_to_device_[device];
   return pjrt_device;
+}
+
+std::shared_lock<std::shared_mutex> PjRtComputationClient::lock_device_shared(
+    const std::string& device) {
+  std::shared_lock lock(*device_locks_[device]);
+  return lock;
+}
+
+std::unique_lock<std::shared_mutex> PjRtComputationClient::lock_device(
+    const std::string& device) {
+  std::unique_lock lock(*device_locks_[device]);
+  return lock;
+}
+
+void PjRtComputationClient::WaitDeviceOps(
+    const std::vector<std::string>& devices) {
+  std::unordered_set<std::string> wait_devices;
+  if (!devices.empty()) {
+    for (auto& device_str : devices) {
+      wait_devices.insert(device_str);
+    }
+  } else {
+    for (auto& device_str : GetLocalDevices()) {
+      wait_devices.insert(device_str);
+    }
+  }
+  for (const std::string& device_str : wait_devices) {
+    TF_VLOG(3) << "Waiting for device execution for " << device_str
+               << " to finish";
+    lock_device(device_str);
+    TF_VLOG(3) << "Waiting for device execution for " << device_str
+               << " to finish.. Done";
+  }
 }
 
 std::map<std::string, Metric> PjRtComputationClient::GetMetrics() const {
