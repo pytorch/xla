@@ -61,12 +61,6 @@ variables:
           device.
       type: string
       default_value: ""
-    XRT_HOST_ORDINAL:
-      description:
-        - Sets the host ordinal for the XRT computation client. Used to
-          identify the rank of current device. Does not have a default because
-          there's special behavior when the flag is not set.
-      type: int
     XRT_SHARD_ORDINAL:
       description:
         - Sets the shard ordinal for the XRT computation client.

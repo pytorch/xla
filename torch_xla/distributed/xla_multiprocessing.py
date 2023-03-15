@@ -95,9 +95,6 @@ def _get_multiprocessing_device():
 
 
 def _get_local_worker_index():
-  host_ordinal = os.environ.get(xenv.HOST_ORDINAL, None)
-  if host_ordinal is not None:
-    return int(host_ordinal)
   worker = os.environ.get(xenv.LOCAL_WORKER, None)
   if worker is None:
     return 0
@@ -111,10 +108,10 @@ def _local_index_to_global(index, num_devices):
   return _get_local_worker_index() * num_devices + index
 
 
-def _setup_torch_distributed():
+def _setup_torch_distributed(gindex):
   import torch.distributed as dist
 
-  ordinal = int(os.environ[xenv.HOST_ORDINAL])
+  ordinal = int(str(gindex))
   world_size = int(os.environ[xenv.HOST_WORLD_SIZE])
   method = os.environ.get(xenv.TORCH_DIST_METHOD, 'gloo')
   init_method = 'tcp://{}'.format(os.environ[xenv.TORCH_DIST_ROOT])
@@ -140,10 +137,7 @@ def _setup_world_size(pf_cfg):
 
 
 def _get_mp_device_ordinal(index, gindex):
-  # If xenv.HOST_ORDINAL is set, we are in a sea-of-devices setup, where devices
-  # are numbered locally within the single host (but the ordinal/rank is still
-  # global).
-  return index if xenv.HOST_ORDINAL in os.environ else gindex
+  return gindex
 
 
 # TODO: Consolidate this with _setup_gpu_worker.
@@ -188,12 +182,7 @@ def _pre_fork_setup_torch_distributed():
 
 
 def _pre_fork_cpu_setup(num_devices):
-  if xenv.HOST_ORDINAL not in os.environ:
-    # CPU multi-processing must use the host ordinal path, which enables the
-    # torch.distributed reductions across single CPU cores. Since XLA CPU does
-    # not support multiple devices within the same process, each XLA CPU device
-    # is isolated within a single process, which is seen as "host" as well.
-    os.environ[xenv.HOST_ORDINAL] = '0'
+  return 0
 
 
 def _pre_fork_setup(num_devices):
@@ -246,16 +235,9 @@ def _setup_cpu_worker(index, gindex):
       DEVICE_MAP] = 'CPU:{};/job:{}/replica:0/task:{}/device:XLA_CPU:0'.format(
           dev_index, _LOCAL_WORKER, task_no)
   os.environ.pop(xenv.CPU_NUM_DEVICES, None)
-  # XLA CPU has no support for cross-replica reduces, so we have to reduce using
-  # torch.distributed capabilities. Since the logic is to use torch.distributed
-  # across hosts (with XLA device reduces across devices within the same host),
-  # we make the single host processes behave like if they were different hosts.
-  os.environ[xenv.HOST_ORDINAL] = str(gindex)
 
 
 def _wants_tpu_env_config(index, gindex):
-  if xenv.HOST_ORDINAL in os.environ:
-    return index == 0
   return gindex == 0
 
 
@@ -288,27 +270,11 @@ def _prepare_env_for_index(index, pf_cfg):
 
   if pf_cfg.dev_kind == 'TPU':
     _setup_tpu_worker(index, gindex, os.environ.get(xenv.TPU_CONFIG, None))
-    if xenv.HOST_ORDINAL in os.environ:
-      # If xenv.HOST_ORDINAL is set, we are in a sea-of-devices TPU setup, where
-      # each host has local TPU devices, but not interconnected with the fast TPU
-      # link. In this case each TPU host sees only local TPU devices, as far as
-      # fast TPU reduction goes, and global redcutions are performed with normal
-      # torch.distributed facilities. The ordinal 0 of each TPU host will be the
-      # one performing the global reductions, if no groups are defined in the
-      # reduce operation.
-      # Sea of devices configuration:
-      #  - xenv.HOST_ORDINAL must be set to the host ordinal.
-      #  - xenv.TORCH_DIST_ROOT must be set to the HOST:PORT, where HOST can be
-      #    the same host of the mesh master, but different port.
-      #  - xenv.TPU_CONFIG must be set on all host, with task number equal 0.
-      #  - The worker ordinal (task number) in the xenv.LOCAL_WORKER must be set
-      #    to 0 in all hosts.
-      _setup_torch_distributed()
   elif pf_cfg.dev_kind == 'GPU':
     _setup_gpu_worker(index, gindex)
   elif pf_cfg.dev_kind == 'CPU':
     _setup_cpu_worker(index, gindex)
-    _setup_torch_distributed()
+    _setup_torch_distributed(gindex)
   return gindex
 
 
