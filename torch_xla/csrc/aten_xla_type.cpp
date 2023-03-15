@@ -1118,8 +1118,8 @@ at::Tensor XLANativeFunctions::diagonal_scatter(const at::Tensor& base,
   auto mutated_view_ = bridge::GetXlaTensor(mutated_view);
   return bridge::AtenFromXlaTensor(
       base_->CreateFrom(torch::lazy::MakeNode<DiagonalViewUpdate>(
-            base_->GetIrValue(), mutated_view_->GetIrValue(), offset,
-            dim1, dim2)));
+          base_->GetIrValue(), mutated_view_->GetIrValue(), offset, dim1,
+          dim2)));
 }
 
 at::Tensor XLANativeFunctions::div(const at::Tensor& self,
