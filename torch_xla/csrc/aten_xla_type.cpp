@@ -3532,4 +3532,13 @@ at::Tensor XLANativeFunctions::diagonal(const at::Tensor& self, int64_t offset,
       tensor_methods::diagonal(bridge::GetXlaTensor(self), offset, dim1, dim2));
 }
 
+at::Tensor XLANativeFunctions::view_symint(const at::Tensor& self,
+                                           at::SymIntArrayRef sym_size) {
+  // TODO: support symbolic sizes
+  auto size = C10_AS_INTARRAYREF_SLOW(sym_size);
+  TORCH_LAZY_FN_COUNTER("xla::");
+  return bridge::AtenFromXlaTensor(tensor_methods::view(
+      bridge::GetXlaTensor(self), XlaHelpers::I64List(size)));
+}
+
 }  // namespace torch_xla

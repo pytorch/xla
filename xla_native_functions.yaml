@@ -376,6 +376,7 @@ supported:
   - as_strided
   - as_strided_
   - diagonal
+  - view
 symint:
   - embedding
   - empty.memory_format
@@ -389,6 +390,8 @@ symint:
   - select.int
   # See Note: [functionalization and CompositeExplicitAutograd]
   - reshape
+  # See Note: [Disabling functionalization]
+  - view
 autograd:
   - einsum
   - max_pool2d
