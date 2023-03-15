@@ -460,7 +460,7 @@ at::Tensor& XLANativeFunctions::_amp_update_scale_(at::Tensor& current_scale,
 
 at::Tensor XLANativeFunctions::_copy_from(const at::Tensor& self,
                                           const at::Tensor& dst,
-                                          bool non_blocking) {
+                                          bool /*non_blocking*/) {
   TORCH_LAZY_FN_COUNTER("xla::");
   auto dst_tensor = bridge::TryGetXlaTensor(dst);
   auto self_tensor = bridge::TryGetXlaTensor(self);
@@ -1093,7 +1093,7 @@ at::Tensor XLANativeFunctions::detach_copy(const at::Tensor& self) {
   auto new_tensor =
       empty_symint(self.sym_sizes(), at::typeMetaToScalarType(self.dtype()),
                    c10::nullopt, self.device(), c10::nullopt, c10::nullopt);
-  return _copy_from(self, new_tensor, true);
+  return set_(new_tensor, self);
 }
 
 at::Tensor XLANativeFunctions::diag(const at::Tensor& self, int64_t diagonal) {
