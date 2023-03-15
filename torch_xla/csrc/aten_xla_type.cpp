@@ -3483,4 +3483,53 @@ at::Tensor XLANativeFunctions::permute(const at::Tensor& self,
       self, dims);
 }
 
+// See note [Disabling Functionalization]
+
+at::Tensor XLANativeFunctions::as_strided(
+    const at::Tensor& self, at::IntArrayRef size, at::IntArrayRef stride,
+    c10::optional<int64_t> storage_offset) {
+  std::cout << "WONJOO: as_strided" << std::endl;
+  TORCH_LAZY_FN_COUNTER("xla::");
+  XLATensorPtr self_tensor = bridge::GetXlaTensor(self);
+  auto xsize = XlaHelpers::I64List(size);
+  auto xstride = XlaHelpers::I64List(stride);
+  if (!AsStrided::StrideIsSupported(self_tensor->shape(), xsize, xstride,
+                                    storage_offset.value_or(0))) {
+    std::cout << "WONJOO: as_strided fallback" << std::endl;
+    return at::native::call_fallback_fn<
+        &xla_cpu_fallback, ATEN_OP(as_strided)>::call(self, size, stride,
+                                                      storage_offset);
+  }
+  return bridge::AtenFromXlaTensor(tensor_methods::as_strided(
+      self_tensor, std::move(xsize), std::move(xstride),
+      XlaHelpers::I64Optional(storage_offset)));
+}
+
+const at::Tensor& XLANativeFunctions::as_strided_(
+    const at::Tensor& self, at::IntArrayRef size, at::IntArrayRef stride,
+    c10::optional<int64_t> storage_offset) {
+std::cout << "WONJOO: as_strided_" << std::endl;
+  TORCH_LAZY_FN_COUNTER("xla::");
+  XLATensorPtr self_tensor = bridge::GetXlaTensor(self);
+  auto xsize = XlaHelpers::I64List(size);
+  auto xstride = XlaHelpers::I64List(stride);
+  if (!AsStrided::StrideIsSupported(self_tensor->shape(), xsize, xstride,
+                                    storage_offset.value_or(0))) {
+    std::cout << "WONJOO: as_strided_ fallback" << std::endl;
+    return at::native::call_fallback_fn<
+        &xla_cpu_fallback, ATEN_OP(as_strided_)>::call(self, size, stride,
+                                                       storage_offset);
+  }
+  tensor_methods::as_strided_(self_tensor, std::move(xsize), std::move(xstride),
+                              XlaHelpers::I64Optional(storage_offset));
+  return self;
+}
+
+at::Tensor XLANativeFunctions::diagonal(const at::Tensor& self, int64_t offset,
+                                        int64_t dim1, int64_t dim2) {
+  TORCH_LAZY_FN_COUNTER("xla::");
+  return bridge::AtenFromXlaTensor(
+      tensor_methods::diagonal(bridge::GetXlaTensor(self), offset, dim1, dim2));
+}
+
 }  // namespace torch_xla

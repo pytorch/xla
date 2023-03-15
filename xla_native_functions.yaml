@@ -372,6 +372,10 @@ supported:
   - permute
   # The same applies to these ops, but we already have direct lowerings for them
   # - logsumexp.out
+  # Note: [Disabling functionalization]
+  - as_strided
+  - as_strided_
+  - diagonal
 symint:
   - embedding
   - empty.memory_format
