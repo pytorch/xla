@@ -3532,6 +3532,22 @@ at::Tensor XLANativeFunctions::diagonal(const at::Tensor& self, int64_t offset,
       tensor_methods::diagonal(bridge::GetXlaTensor(self), offset, dim1, dim2));
 }
 
+at::Tensor XLANativeFunctions::expand_symint(const at::Tensor& self,
+                                             at::SymIntArrayRef sym_size,
+                                             bool implicit) {
+  TORCH_LAZY_FN_COUNTER("xla::");
+  c10::optional<at::IntArrayRef> size = c10::asIntArrayRefSlowOpt(sym_size);
+  if (size.has_value()) {
+    return bridge::AtenFromXlaTensor(tensor_methods::expand(
+        bridge::GetXlaTensor(self), torch::lazy::ToVector<int64_t>(*size)));
+  } else {
+    // at least one of the dimension is symbolic, use the sym_int version of the
+    // node
+    return bridge::AtenFromXlaTensor(
+        tensor_methods::expand_symint(bridge::GetXlaTensor(self), sym_size));
+  }
+}
+
 at::Tensor XLANativeFunctions::view_symint(const at::Tensor& self,
                                            at::SymIntArrayRef sym_size) {
   // TODO: support symbolic sizes

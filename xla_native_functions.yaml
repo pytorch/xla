@@ -376,6 +376,7 @@ supported:
   - as_strided
   - as_strided_
   - diagonal
+  - expand
   - view
 symint:
   - embedding
@@ -391,6 +392,7 @@ symint:
   # See Note: [functionalization and CompositeExplicitAutograd]
   - reshape
   # See Note: [Disabling functionalization]
+  - expand
   - view
 autograd:
   - einsum
