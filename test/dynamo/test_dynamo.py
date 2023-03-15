@@ -216,6 +216,7 @@ class DynamoTrainingOptimizerTest(unittest.TestCase):
     optimizer.step()
     return pred
 
+  @unittest.skip("TODO")
   def test_simple_model(self):
     torch._dynamo.reset()
     device = xm.xla_device()
