@@ -14,6 +14,8 @@ fi
 # 2. CONDA_PREFIX (if it exists)
 # 3. The conda install directory (if it exists)
 export CMAKE_PREFIX_PATH=${CMAKE_PREFIX_PATH:-${CONDA_PREFIX:-"$(dirname $(which conda))/../"}}
+export LD_LIBRARY_PATH="$LD_LIBRARY_PATH:$(python3-config --prefix)/lib"
+echo $LD_LIBRARY_PATH
 
 function clone_pytorch() {
   PYTORCH_DIR=$1
