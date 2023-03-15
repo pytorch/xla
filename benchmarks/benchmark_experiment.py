@@ -77,7 +77,7 @@ class ExperimentLoader:
 
   def is_available(self, experiment_config):
     if experiment_config["dynamo"] and experiment_config[
-        "dynamo"] not in dynamo.list_backends():
+        "dynamo"] not in dynamo.list_backends(exclude_tags=()):
       return False
     if experiment_config["dynamo"] == "inductor" and not (
         experiment_config["accelerator"] == "gpu" and

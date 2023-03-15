@@ -91,26 +91,34 @@ class BenchmarkModel:
                                       32),)
     self.optimizer_class = torch.optim.Adam
 
+  def _prepare_for_eval(self):
+    self.module.eval()
+    self.model_iter_fn = self.eval
+
+  def _prepare_for_train(self):
+    self.module.train()
+    self.model_iter_fn = self.train
+    if self.benchmark_experiment.dynamo == "aot_torchxla_trace_once":
+      # TODO: dynamo aot_torchxla_trace_once would fail if there is an
+      # optimizer.
+      # This makes the aot_torchxla_trace_once results not comparable
+      # with other training results
+      self.optimizer = None
+    else:
+      if not hasattr(self, "optimizer"):
+        # For some special models, self.set_up() may have initialized an
+        # optimizer to use. So only initialize it when there is none existing.
+        self.optimizer = self.optimizer_class(self.module.parameters(), lr=0.01)
+
   def prepare_for_experiment(self):
     self.device = self.benchmark_experiment.get_device()
     self.module = self.module.to(self.device)
     self.example_inputs = move_to_device(self.example_inputs, self.device)
 
     if self.benchmark_experiment.test == "eval":
-      self.module.eval()
-      self.model_iter_fn = self.eval
-      self.optimizer = None
+      self._prepare_for_eval()
     elif self.benchmark_experiment.test == "train":
-      self.module.train()
-      self.model_iter_fn = self.train
-      if self.benchmark_experiment.dynamo == "aot_torchxla_trace_once":
-        # TODO: dynamo aot_torchxla_trace_once would fail if there is an
-        # optimizer.
-        # This makes the aot_torchxla_trace_once results not comparable
-        # with other training results
-        self.optimizer = None
-      else:
-        self.optimizer = self.optimizer_class(self.module.parameters(), lr=0.01)
+      self._prepare_for_train()
     else:
       raise NotImplementedError
 
@@ -124,13 +132,13 @@ class BenchmarkModel:
     elif self.benchmark_experiment.test == "train":
       return torch.enable_grad()
 
-  def optimizer_zero_grad(self):
+  def _optimizer_zero_grad(self):
     if self.optimizer is not None:
       self.optimizer.zero_grad(True)
     else:
       self.module.zero_grad(True)
 
-  def optimizer_step(self):
+  def _optimizer_step(self):
     if self.optimizer is not None:
       self.optimizer.step()
 
@@ -138,11 +146,11 @@ class BenchmarkModel:
     raise NotImplementedError
 
   def train(self, inputs, collect_full_output=False):
-    self.optimizer_zero_grad()
+    self._optimizer_zero_grad()
     pred = self.module(*inputs)
     loss = self.compute_loss(pred)
     loss.backward()
-    self.optimizer_step()
+    self._optimizer_step()
     if collect_full_output:
       return collect_results(self.module, pred, loss, inputs)
     # return loss.detach()

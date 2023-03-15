@@ -20,6 +20,19 @@ except ImportError:
 logger = logging.getLogger(__name__)
 
 
+DETECTRON2_MODELS = {
+    "detectron2_fasterrcnn_r_101_c4",
+    "detectron2_fasterrcnn_r_101_dc5",
+    "detectron2_fasterrcnn_r_101_fpn",
+    "detectron2_fasterrcnn_r_50_c4",
+    "detectron2_fasterrcnn_r_50_dc5",
+    "detectron2_fasterrcnn_r_50_fpn",
+    "detectron2_maskrcnn_r_101_c4",
+    "detectron2_maskrcnn_r_101_fpn",
+    "detectron2_maskrcnn_r_50_fpn",
+}
+
+
 class TorchBenchModelLoader(ModelLoader):
 
   def __init__(self, args):
@@ -123,6 +136,8 @@ class TorchBenchModel(BenchmarkModel):
     if self.model_name == "yolov3":
       self.example_inputs = (torch.rand(self.benchmark_experiment.batch_size, 3,
                                         384, 512),)
+    if self.benchmark_experiment.test == "train" and self.model_name in DETECTRON2_MODELS:
+      self.optimizer = benchmark.optimizer
 
     del benchmark
     gc.collect()
@@ -146,3 +161,11 @@ class TorchBenchModel(BenchmarkModel):
       return sum([reduce_to_scalar_loss(value) for value in pred.values()
                  ]) / len(pred.keys())
     raise NotImplementedError("Don't know how to reduce", type(pred))
+  
+  def train(self, inputs, collect_full_output=False):
+    if self.model_name in DETECTRON2_MODELS:
+      from detectron2.utils.events import EventStorage
+      with EventStorage():
+        super().train(inputs, collect_full_output=collect_full_output)
+    else:
+      super().train(inputs, collect_full_output=collect_full_output)
