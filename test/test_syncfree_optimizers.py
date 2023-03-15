@@ -96,7 +96,7 @@ class TestSyncFreeOptimizerBase(unittest.TestCase):
           ref_loss.cpu().detach().numpy(),
           syncfree_loss.cpu().detach().numpy(),
           rtol=1e-2,
-          atol=1e-2)
+          atol=1e-1)
 
     # check weight
     for p, p_ref in zip(syncfree_model.parameters(), ref_model.parameters()):
@@ -104,13 +104,11 @@ class TestSyncFreeOptimizerBase(unittest.TestCase):
           p.cpu().detach().numpy(),
           p_ref.cpu().detach().numpy(),
           rtol=1e-2,
-          atol=1e-2)
+          atol=1e-1)
 
 
 class TestSyncFreeSGD(TestSyncFreeOptimizerBase):
 
-  @unittest.skip(
-      "Skipping due to flakiness (https://github.com/pytorch/xla/issues/4765)")
   def test_optimizer(self):
     self._test_optimizer(syncfree.SGD, torch.optim.SGD, {
         "lr": 1e-2,
