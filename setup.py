@@ -241,7 +241,7 @@ class BuildBazelExtension(command.build_ext.build_ext):
       bazel_argv.append('--google_credentials=%s' % GCLOUD_KEY_FILE)
       if CACHE_SILO_NAME:
         bazel_argv.append(
-            '--remote_default_exec_properties="cache-silo-key=%s"' %
+            '--host_platform_remote_properties_override=\'properties:{name:"cache-silo-key" value:"%s"}\'' % 
             CACHE_SILO_NAME)
 
     # Build configuration.
