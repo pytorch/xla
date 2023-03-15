@@ -54,6 +54,29 @@ docker_images = [
     timeout_m = 60 * 6
   },
   {
+    trigger_name = "xla-2-0-38-tpu"
+    image = "xla"
+    description = "Build v2.0.0 image with TPU support"
+    # Don't use this tag here, since the repositiory at version v2.0.0
+    # doesn't contain ansible setup. Instead, fetch PyTorch and XLAs sources at
+    # the desired tag.
+    # git_tag = "..."
+    trigger_schedule = "0 0 * * *"
+    build_args = {
+      python_version="3.8"
+      arch="amd64"
+      accelerator="tpu"
+      # Fetch sources at the desired tag.
+      pytorch_git_rev="v2.0.0"
+      xla_git_rev="v2.0.0"
+    }
+    image_tags = [
+      "r2.0_3.8_tpuvm",
+    ]
+    wheels = ["/wheels/*.whl"]
+    timeout_m = 60 * 6
+  },
+  {
     trigger_name = "xla-1-13-38-tpu"
     image = "xla"
     description = "Build v1.13.0 image with TPU support"
