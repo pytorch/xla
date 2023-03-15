@@ -54,7 +54,7 @@ def _create_gpu_devices(num_gpus):
 
 
 def _parse_workers_config(config):
-  # XRT_WORKERS='worker:0;ismz9:25822'
+  # PJRT_DEVICE=TPU
   workers = collections.OrderedDict()
   for worker in config.split('|'):
     m = re.match(r'(\w+):(\d+);((grpc://)?[a-zA-Z0-9_\-\.]+:\d+)', worker)

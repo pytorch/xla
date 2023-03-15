@@ -16,11 +16,6 @@ variables:
         - Addresses for the TPU services to be used by the XRT client. ";"
           separated list of addresses, e.g. localservice;0;localhost:51011.
       type: string
-    XRT_WORKERS:
-      description:
-        - Addresses for the XRT workers to be used by the XRT client, for
-          example localservice:0;grpc://localhost:51011
-      type: string
     XRT_DEVICE_MAP:
       description:
         - Maps devices to metadata about the job, replica, task that the device
@@ -96,6 +91,11 @@ variables:
         - Sets the shard ordinal for the XRT computation client.
       type: int
       default_value: -1
+    RT_WORKERS:
+      description:
+        - Addresses for the RT workers to be used by the RT client, for
+          example localservice:0;grpc://localhost:51011
+      type: string
   build_variables:
     DEBUG:
       description:
