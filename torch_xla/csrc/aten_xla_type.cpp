@@ -3319,6 +3319,12 @@ XLANativeFunctions::convolution_backward(
     at::IntArrayRef stride, at::IntArrayRef padding, at::IntArrayRef dilation,
     bool transposed, at::IntArrayRef output_padding, int64_t groups,
     ::std::array<bool, 3> output_mask) {
+  if (xla::sys_util::GetEnvBool("XLA_DISABLE_FUNCTIONALIZATION", false)) {
+    return at::native::call_fallback_fn<
+        &xla_cpu_fallback,
+        ATEN_OP(convolution_backward)>::call(grad_output, input, weight, bias_sizes, stride, padding, dilation, transposed, output_padding, groups, output_mask);
+  }
+
   // TODO (alanwaketan): Let's resuse
   // `at::functionalization::functionalize_aten_op` after upstream has solved
   // its issue.
@@ -3484,7 +3490,6 @@ at::Tensor XLANativeFunctions::permute(const at::Tensor& self,
 }
 
 // See note [Disabling Functionalization]
-
 at::Tensor XLANativeFunctions::as_strided(
     const at::Tensor& self, at::IntArrayRef size, at::IntArrayRef stride,
     c10::optional<int64_t> storage_offset) {
