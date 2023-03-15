@@ -216,6 +216,7 @@ def train_imagenet():
       print(
           f'Sharding input along batch and spatial dimensions with mesh {input_mesh.get_logical_mesh()}'
       )
+      train_loader = pl.MpDeviceLoader(train_loader, device, xs.ShardingSpec(input_mesh, (0, 1, 2, 3)))
     elif 'batch' in FLAGS.sharding:
       # Shard along batch dimension only
       mesh_shape = (num_devices, 1, 1, 1)
@@ -256,9 +257,6 @@ def train_imagenet():
     for step, (data, target) in enumerate(loader):
       data = data.to(xm.xla_device())
       target = target.to(xm.xla_device())
-      if input_mesh:
-        partition_spec = (0, 1, 2, 3)
-        xs.mark_sharding(data, input_mesh, partition_spec)
       with xp.StepTrace('train_imagenet'):
         with xp.Trace('build_graph'):
           optimizer.zero_grad()
