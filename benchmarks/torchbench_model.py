@@ -29,7 +29,10 @@ DETECTRON2_MODELS = {
     "detectron2_fasterrcnn_r_50_fpn",
     "detectron2_maskrcnn_r_101_c4",
     "detectron2_maskrcnn_r_101_fpn",
+    "detectron2_maskrcnn_r_50_c4",
     "detectron2_maskrcnn_r_50_fpn",
+    "detectron2_maskrcnn",
+    "detectron2_fcos_r_50_fpn",
 }
 
 

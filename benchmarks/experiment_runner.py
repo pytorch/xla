@@ -114,7 +114,7 @@ class ExperimentRunner:
             try:
               completed_process = subprocess.run(
                   command,
-                  timeout=60 * 20,
+                  timeout=60 * 30,
                   env=process_env,
                   check=True,
                   capture_output=True,
