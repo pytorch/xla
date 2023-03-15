@@ -32,11 +32,6 @@ variables:
         - Used to disable session conneciton sharing for XRT.
       type: bool
       default_value: true
-    XRT_SHARD_LOCAL_ORDINAL:
-      description:
-        - Ordinal to be appended to the paths used by this thread of the xla
-          client.
-      type: int
     XRT_GRPC_COMPRESSION_LEVEL:
       description:
         - Configures compression level for rpc options on the XRT client.
@@ -102,6 +97,11 @@ variables:
         - Max inflight computations that the PJRT client can handle for TPU.
       type: int
       default_value: 32
+    RT_SHARD_LOCAL_ORDINAL:
+      description:
+        - Ordinal to be appended to the paths used by this thread of the xla
+          client.
+      type: int
   build_variables:
     DEBUG:
       description:
