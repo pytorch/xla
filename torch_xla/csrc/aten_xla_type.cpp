@@ -3340,8 +3340,7 @@ XLANativeFunctions::convolution_backward(
   return std::make_tuple(
       torch::lazy::maybe_unwrap_functional(std::get<0>(results)),
       torch::lazy::maybe_unwrap_functional(std::get<1>(results)),
-      torch::lazy::maybe_unwrap_functional(
-          std::get<2>(results)));
+      torch::lazy::maybe_unwrap_functional(std::get<2>(results)));
 }
 
 at::Tensor XLANativeFunctions::diag_embed(const at::Tensor& self,
