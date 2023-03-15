@@ -30,7 +30,7 @@ MetricFnInfo GetMetricRenderInfo(const Percentile& percentile) {
 }  // namespace
 
 std::string CreateMetricReport(
-    const std::map<std::string, Metric>& xrt_metrics) {
+    const std::map<std::string, Metric>& rt_metrics) {
   return metrics::CreateMetricReport();
 }
 

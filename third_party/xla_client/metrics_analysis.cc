@@ -125,11 +125,11 @@ std::vector<Analyzer*>* GetAnalyzers() {
 }  // namespace
 
 std::string CreatePerformanceReport(
-    const std::map<std::string, xla::Metric>& xrt_metrics) {
+    const std::map<std::string, xla::Metric>& rt_metrics) {
   std::stringstream ss;
   std::vector<Analyzer*>* analyzers = GetAnalyzers();
   for (auto const& analyzer : *analyzers) {
-    Analysis result = analyzer->Run(xrt_metrics);
+    Analysis result = analyzer->Run(rt_metrics);
     if (result.symptom != Analysis::Symptom::kNormal) {
       ss << result.repr << std::endl;
     }
