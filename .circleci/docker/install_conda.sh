@@ -26,7 +26,7 @@ function install_and_setup_conda() {
     PYTHON_VERSION=$DEFAULT_PYTHON_VERSION
   fi
   export CMAKE_PREFIX_PATH="$(dirname $(which conda))/../"
-  export LD_LIBRARY_PATH="$LD_LIBRARY_PATH:$(python3-config --prefix)/lib"
+  echo "export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$(python3-config --prefix)/lib" >> ~/.bashrc
 
   conda update -y -n base conda
   conda install -y python=$PYTHON_VERSION
