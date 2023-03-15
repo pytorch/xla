@@ -94,6 +94,7 @@ RUN bash ./install_conda.sh "${python_version}" /opt/conda
 
 RUN echo "conda activate base" >> ~/.bashrc
 RUN echo "export TF_CPP_LOG_THREAD_ID=1" >> ~/.bashrc
+RUN echo "export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$(python3-config --prefix)/lib" >> ~/.bashrc
 ENV PATH /opt/conda/bin:$PATH
 
 RUN bash -c "source ~/.bashrc"
