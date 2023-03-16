@@ -3382,6 +3382,12 @@ at::Tensor XLANativeFunctions::new_empty_strided_symint(
     const at::Tensor& self, at::SymIntArrayRef size, at::SymIntArrayRef stride,
     c10::optional<at::ScalarType> dtype, c10::optional<at::Layout> layout,
     c10::optional<at::Device> device, c10::optional<bool> pin_memory) {
+  std::cout << "WONJOO: new_empty_strided_symint" << std::endl;
+  if (xla::sys_util::GetEnvBool("XLA_DISABLE_FUNCTIONALIZATION", false)) {
+    std::cout << "WONJOO: new_empty_strided_symint, func disabled" << std::endl;
+    return at::native::new_empty_strided_symint(self, size, stride, dtype, layout,
+                                                device, pin_memory);
+  }
   return at::functionalization::functionalize_aten_op_symint<ATEN_OP(
       new_empty_strided)>::call(self, size, stride, dtype, layout, device,
                                 pin_memory);
