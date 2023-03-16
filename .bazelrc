@@ -91,6 +91,7 @@ build:remote_cache --google_default_credentials
 build:remote_cache --bes_backend=buildeventservice.googleapis.com
 build:remote_cache --bes_results_url="https://source.cloud.google.com/results/invocations"
 build:remote_cache --bes_instance_name="tpu-pytorch"
+build:remote_cache --bes_timeout=600s  # On longer builds, BES can cause a non-zero exit from bazel.
 
 # Attempt to minimize the amount of data transfer between bazel and the remote
 # workers:
