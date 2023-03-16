@@ -18,6 +18,7 @@
 #include "torch/csrc/lazy/core/shape_inference.h"
 #include "torch/csrc/lazy/core/tensor_util.h"
 #include "torch/csrc/lazy/core/util.h"
+#include "torch/csrc/lazy/core/helpers.h"
 #include "torch_xla/csrc/aten_autograd_ops.h"
 #include "torch_xla/csrc/aten_cpu_fallback.h"
 #include "torch_xla/csrc/aten_xla_bridge.h"
@@ -2691,10 +2692,11 @@ at::Tensor XLANativeFunctions::select_scatter(const at::Tensor& base,
   TORCH_LAZY_FN_COUNTER("xla::");
   auto base_ = bridge::GetXlaTensor(base);
   auto mutated_view_ = bridge::GetXlaTensor(mutated_view);
-  auto base_clone = tensor_methods::clone(base_);
-  auto base_clone_slice = tensor_methods::select(base_clone, dim, index);
-  tensor_methods::copy_(base_clone_slice, mutated_view_);
-  return bridge::AtenFromXlaTensor(base_clone);
+  auto input_shape = base_->shape();
+  absl::Span<const int64_t> start_indices = {dim, index};
+  return bridge::AtenFromXlaTensor(
+      base_->CreateFrom(torch::lazy::MakeNode<UpdateSlice>(
+          base_->GetIrValue(), mutated_view_->GetIrValue(), start_indices)));
 }
 
 // TODO(JackCaoG): Remove after elu being codegened
