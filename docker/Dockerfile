@@ -16,12 +16,18 @@ ARG bazel_jobs=""
 ARG git_clone="true"
 ARG build_cpp_tests="0"
 
+ENV BUILD_CPP_TESTS "${build_cpp_tests}"
+
 RUN apt-get update
-RUN apt-get install -y git sudo python-pip python3-pip
+RUN apt-get install -y git sudo python3-pip
+# To enable `base_image=ubuntu:focal`
+RUN DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends tzdata
 RUN git clone https://github.com/pytorch/pytorch
 
-# Disable CUDA for PyTorch
+# Disable CUDA for PyTorch and ensure the pre-built wheel works
+# on Colab with no libmpi installed.
 ENV USE_CUDA "0"
+ENV USE_MPI "0"
 
 # Enable CUDA for XLA
 ENV XLA_CUDA "${cuda}"
