@@ -127,8 +127,9 @@ def version() -> int:
   except requests.HTTPError as e:
     raise EnvironmentError('Failed to get TPU metadata') from e
 
-  match = re.match(r'^v(\d)([A-Za-z]?){7}-(\d+)$', env[xenv.ACCELERATOR_TYPE])
-  return int(match.groups()[0])
+  if env[xenv.ACCELERATOR_TYPE].startsWith('v'):
+      return env[xenv.ACCELERATOR_TYPE][1]
+  return env[xenv.ACCELERATOR_TYPE][1]
 
 
 def get_worker_ips() -> List[str]:
