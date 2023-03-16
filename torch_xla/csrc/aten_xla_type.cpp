@@ -3335,6 +3335,19 @@ XLANativeFunctions::convolution_backward(
     at::IntArrayRef stride, at::IntArrayRef padding, at::IntArrayRef dilation,
     bool transposed, at::IntArrayRef output_padding, int64_t groups,
     ::std::array<bool, 3> output_mask) {
+  // See Note: [Disabling functionalization]
+  if (xla::sys_util::GetEnvBool("XLA_DISABLE_FUNCTIONALIZATION", false)) {
+    return at::native::call_fallback_fn<
+        &xla_cpu_fallback, ATEN_OP(convolution_backward)>::call(grad_output,
+                                                                input, weight,
+                                                                bias_sizes,
+                                                                stride, padding,
+                                                                dilation,
+                                                                transposed,
+                                                                output_padding,
+                                                                groups,
+                                                                output_mask);
+  }
   // TODO (alanwaketan): Let's resuse
   // `at::functionalization::functionalize_aten_op` after upstream has solved
   // its issue.
@@ -3390,6 +3403,11 @@ at::Tensor XLANativeFunctions::new_empty_strided_symint(
     const at::Tensor& self, at::SymIntArrayRef size, at::SymIntArrayRef stride,
     c10::optional<at::ScalarType> dtype, c10::optional<at::Layout> layout,
     c10::optional<at::Device> device, c10::optional<bool> pin_memory) {
+  // See Note: [Disabling functionalization]
+  if (xla::sys_util::GetEnvBool("XLA_DISABLE_FUNCTIONALIZATION", false)) {
+    return at::native::new_empty_strided_symint(self, size, stride, dtype,
+                                                layout, device, pin_memory);
+  }
   return at::functionalization::functionalize_aten_op_symint<ATEN_OP(
       new_empty_strided)>::call(self, size, stride, dtype, layout, device,
                                 pin_memory);
@@ -3430,6 +3448,10 @@ at::Tensor XLANativeFunctions::select_backward_symint(
 
 at::Tensor XLANativeFunctions::select_symint(const at::Tensor& self,
                                              int64_t dim, c10::SymInt index) {
+  // See Note: [Disabling functionalization]
+  if (xla::sys_util::GetEnvBool("XLA_DISABLE_FUNCTIONALIZATION", false)) {
+    return select_copy(self, dim, index.expect_int());
+  }
   return at::functionalization::functionalize_aten_op_symint<ATEN_OP2(
       select, int)>::call(self, dim, index);
 }
@@ -3437,6 +3459,10 @@ at::Tensor XLANativeFunctions::select_symint(const at::Tensor& self,
 at::Tensor XLANativeFunctions::slice(const at::Tensor& self, int64_t dim,
                                      c10::optional<int64_t> start,
                                      c10::optional<int64_t> end, int64_t step) {
+  // See Note: [Disabling functionalization]
+  if (xla::sys_util::GetEnvBool("XLA_DISABLE_FUNCTIONALIZATION", false)) {
+    return slice_copy(self, dim, start, end, step);
+  }
   return at::functionalization::functionalize_aten_op<ATEN_OP2(
       slice, Tensor)>::call(self, dim, start, end, step);
 }
@@ -3497,6 +3523,75 @@ at::Tensor XLANativeFunctions::permute(const at::Tensor& self,
                                        at::IntArrayRef dims) {
   return at::functionalization::functionalize_aten_op<ATEN_OP(permute)>::call(
       self, dims);
+}
+
+// For ops below, see note [Disabling Functionalization]
+at::Tensor XLANativeFunctions::as_strided(
+    const at::Tensor& self, at::IntArrayRef size, at::IntArrayRef stride,
+    c10::optional<int64_t> storage_offset) {
+  TORCH_LAZY_FN_COUNTER("xla::");
+  XLATensorPtr self_tensor = bridge::GetXlaTensor(self);
+  auto xsize = XlaHelpers::I64List(size);
+  auto xstride = XlaHelpers::I64List(stride);
+  if (!AsStrided::StrideIsSupported(self_tensor->shape(), xsize, xstride,
+                                    storage_offset.value_or(0))) {
+    return at::native::call_fallback_fn<
+        &xla_cpu_fallback, ATEN_OP(as_strided)>::call(self, size, stride,
+                                                      storage_offset);
+  }
+  return bridge::AtenFromXlaTensor(tensor_methods::as_strided(
+      self_tensor, std::move(xsize), std::move(xstride),
+      XlaHelpers::I64Optional(storage_offset)));
+}
+
+const at::Tensor& XLANativeFunctions::as_strided_(
+    const at::Tensor& self, at::IntArrayRef size, at::IntArrayRef stride,
+    c10::optional<int64_t> storage_offset) {
+  TORCH_LAZY_FN_COUNTER("xla::");
+  XLATensorPtr self_tensor = bridge::GetXlaTensor(self);
+  auto xsize = XlaHelpers::I64List(size);
+  auto xstride = XlaHelpers::I64List(stride);
+  if (!AsStrided::StrideIsSupported(self_tensor->shape(), xsize, xstride,
+                                    storage_offset.value_or(0))) {
+    return at::native::call_fallback_fn<
+        &xla_cpu_fallback, ATEN_OP(as_strided_)>::call(self, size, stride,
+                                                       storage_offset);
+  }
+  tensor_methods::as_strided_(self_tensor, std::move(xsize), std::move(xstride),
+                              XlaHelpers::I64Optional(storage_offset));
+  return self;
+}
+
+at::Tensor XLANativeFunctions::diagonal(const at::Tensor& self, int64_t offset,
+                                        int64_t dim1, int64_t dim2) {
+  TORCH_LAZY_FN_COUNTER("xla::");
+  return bridge::AtenFromXlaTensor(
+      tensor_methods::diagonal(bridge::GetXlaTensor(self), offset, dim1, dim2));
+}
+
+at::Tensor XLANativeFunctions::expand_symint(const at::Tensor& self,
+                                             at::SymIntArrayRef sym_size,
+                                             bool implicit) {
+  TORCH_LAZY_FN_COUNTER("xla::");
+  c10::optional<at::IntArrayRef> size = c10::asIntArrayRefSlowOpt(sym_size);
+  if (size.has_value()) {
+    return bridge::AtenFromXlaTensor(tensor_methods::expand(
+        bridge::GetXlaTensor(self), torch::lazy::ToVector<int64_t>(*size)));
+  } else {
+    // at least one of the dimension is symbolic, use the sym_int version of the
+    // node
+    return bridge::AtenFromXlaTensor(
+        tensor_methods::expand_symint(bridge::GetXlaTensor(self), sym_size));
+  }
+}
+
+at::Tensor XLANativeFunctions::view_symint(const at::Tensor& self,
+                                           at::SymIntArrayRef sym_size) {
+  // TODO: support symbolic sizes
+  auto size = C10_AS_INTARRAYREF_SLOW(sym_size);
+  TORCH_LAZY_FN_COUNTER("xla::");
+  return bridge::AtenFromXlaTensor(tensor_methods::view(
+      bridge::GetXlaTensor(self), XlaHelpers::I64List(size)));
 }
 
 }  // namespace torch_xla
