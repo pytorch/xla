@@ -66,6 +66,11 @@ function run_test {
   fi
 }
 
+function run_test_without_functionalization {
+  echo "Running with XLA_DISABLE_FUNCTIONALIZATION: $@"
+  XLA_DISABLE_FUNCTIONALIZATION=1 run_test "$@"
+}
+
 function run_use_bf16 {
   echo "Running with XLA_USE_BF16: $@"
   XLA_USE_BF16=1 run_test "$@"
@@ -161,6 +166,7 @@ function run_op_tests {
   run_eager_debug  "$CDIR/test_operations.py" "$@" --verbosity=$VERBOSITY
   run_test "$CDIR/test_grad_checkpoint.py"
   run_test "$CDIR/test_operations.py" "$@" --verbosity=$VERBOSITY
+  run_test_without_functionalization "$CDIR/test_operations.py" "$@" --verbosity=$VERBOSITY
   run_test "$CDIR/test_async_closures.py"
   run_test "$CDIR/test_xla_dist.py"
   run_test "$CDIR/test_profiler.py"
