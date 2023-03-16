@@ -145,16 +145,16 @@ class TestExperimentalTpu(parameterized.TestCase):
     self.assertListEqual(worker_ips, expected)
 
   @parameterized.named_parameters(
-      ('v5abcd-4_process_0', {
-          'ACCELERATOR_TYPE': 'v5abcd-4',
-          xenv.TPU_PROCESS_BOUNDS: '1,1,1',
-          xenv.TPU_CHIPS_PER_PROCESS_BOUNDS: '2,2,1',
+      ('v5-4_process_0', {
+          'ACCELERATOR_TYPE': 'v5-4',
+          xenv.TPU_PROCESS_BOUNDS: '2,2,1',
+          xenv.TPU_CHIPS_PER_PROCESS_BOUNDS: '1,1,1',
           'WORKER_ID': '0'
       }, ['localhost'], 0, 4, {
           xenv.TPU_CHIPS_PER_PROCESS_BOUNDS:
-              '2,2,1',
-          xenv.TPU_PROCESS_BOUNDS:
               '1,1,1',
+          xenv.TPU_PROCESS_BOUNDS:
+              '2,2,1',
           xenv.CLOUD_TPU_TASK_ID:
               '0',
           xenv.TPU_PROCESS_PORT:
@@ -166,14 +166,14 @@ class TestExperimentalTpu(parameterized.TestCase):
       }),
       ('v5abcdefg-4_process_0', {
           'ACCELERATOR_TYPE': 'v5abcdefg-4',
-          xenv.TPU_PROCESS_BOUNDS: '1,1,1',
-          xenv.TPU_CHIPS_PER_PROCESS_BOUNDS: '2,2,1',
+          xenv.TPU_PROCESS_BOUNDS: '2,2,1',
+          xenv.TPU_CHIPS_PER_PROCESS_BOUNDS: '1,1,1',
           'WORKER_ID': '0'
       }, ['localhost'], 0, 4, {
           xenv.TPU_CHIPS_PER_PROCESS_BOUNDS:
-              '2,2,1',
-          xenv.TPU_PROCESS_BOUNDS:
               '1,1,1',
+          xenv.TPU_PROCESS_BOUNDS:
+              '2,2,1',
           xenv.CLOUD_TPU_TASK_ID:
               '0',
           xenv.TPU_PROCESS_PORT:
@@ -186,11 +186,11 @@ class TestExperimentalTpu(parameterized.TestCase):
       ('v5abcdefg-16_process_0', {
           'ACCELERATOR_TYPE': 'v5abcdefg-16',
           xenv.TPU_PROCESS_BOUNDS: '2,2,1',
-          xenv.TPU_CHIPS_PER_PROCESS_BOUNDS: '2,2,1',
+          xenv.TPU_CHIPS_PER_PROCESS_BOUNDS: '1,1,1',
           'WORKER_ID': '0'
       }, ['localhost'], 0, 4, {
           xenv.TPU_CHIPS_PER_PROCESS_BOUNDS:
-              '2,2,1',
+              '1,1,1',
           xenv.TPU_PROCESS_BOUNDS:
               '2,2,1',
           xenv.CLOUD_TPU_TASK_ID:
