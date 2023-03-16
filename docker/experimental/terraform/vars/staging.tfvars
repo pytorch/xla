@@ -28,6 +28,7 @@ docker_images = [
       arch="amd64"
       accelerator="cuda"
       cuda_version="11.8"
+      package_version="nightly-cuda"
     }
     image_tags = [
       "nightly_3.8_cuda11.8",
@@ -45,6 +46,7 @@ docker_images = [
       python_version="3.8"
       arch="amd64"
       accelerator="tpu"
+      package_version="nightly-tpuvm"
     }
     image_tags = [
       "nightly_3.8_tpuvm",
@@ -69,6 +71,7 @@ docker_images = [
       # Fetch sources at the desired tag.
       pytorch_git_rev="v2.0.0"
       xla_git_rev="HEAD"
+      package_version="2.0"
     }
     image_tags = [
       "r2.0_3.8_tpuvm",
@@ -92,6 +95,7 @@ docker_images = [
       # Fetch sources at the desired tag.
       pytorch_git_rev="v1.13.0"
       xla_git_rev="v1.13.0"
+      package_version="1.13"
     }
     image_tags = [
       "r1.13_3.8_tpuvm",
@@ -109,8 +113,9 @@ docker_images = [
       python_version="3.8"
       arch="amd64"
       accelerator="tpu"
-      pytorch_git_rev="v1.13.0"
-      xla_git_rev="v1.13.0"
+      pytorch_git_rev="v1.12.0"
+      xla_git_rev="v1.12.0"
+      package_version="1.12"
     }
     image_tags = [
       "r1.12_3.8_tpuvm",

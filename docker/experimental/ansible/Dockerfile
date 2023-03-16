@@ -13,6 +13,7 @@ ARG accelerator=tpu
 ARG cuda_version=11.8
 ARG pytorch_git_rev=HEAD
 ARG xla_git_rev=HEAD
+ARG package_version
 
 RUN ansible-playbook -vvv playbook.yaml -e \
   "stage=build \
@@ -20,7 +21,8 @@ RUN ansible-playbook -vvv playbook.yaml -e \
   accelerator=${accelerator} \
   cuda_version=${cuda_version} \
   pytorch_git_rev=${pytorch_git_rev} \
-  xla_git_rev=${xla_git_rev}"
+  xla_git_rev=${xla_git_rev} \
+  package_version=${package_version}"
 
 FROM python:${python_version}-${debian_version} AS release
 
