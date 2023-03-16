@@ -14,9 +14,9 @@
 #include "third_party/xla_client/metrics.h"
 #include "third_party/xla_client/sys_util.h"
 #include "third_party/xla_client/util.h"
+#include "torch/csrc/lazy/core/helpers.h"
 #include "torch/csrc/lazy/core/shape_inference.h"
 #include "torch/csrc/lazy/core/tensor_util.h"
-#include "torch/csrc/lazy/core/helpers.h"
 #include "torch/csrc/lazy/core/util.h"
 #include "torch_xla/csrc/aten_autograd_ops.h"
 #include "torch_xla/csrc/aten_cpu_fallback.h"
@@ -2749,9 +2749,11 @@ at::Tensor XLANativeFunctions::slice_scatter(
   auto input_shape = base_->shape();
   dim = torch::lazy::GetCanonicalDimensionIndex(dim, input_shape.get().rank());
   start_val = torch::lazy::GetCanonicalPosition(
-      xla::util::ToVector<int64_t>(input_shape.get().dimensions()), dim, start_val);
+      xla::util::ToVector<int64_t>(input_shape.get().dimensions()), dim,
+      start_val);
   end_val = torch::lazy::GetCanonicalPosition(
-      xla::util::ToVector<int64_t>(input_shape.get().dimensions()), dim, end_val);
+      xla::util::ToVector<int64_t>(input_shape.get().dimensions()), dim,
+      end_val);
   // PyTorch allows tensor[-1:0] to return a 0-dim tensor.
   if (start_val > end_val) {
     end_val = start_val;
@@ -2760,9 +2762,8 @@ at::Tensor XLANativeFunctions::slice_scatter(
 
   return bridge::AtenFromXlaTensor(
       base_->CreateFrom(torch::lazy::MakeNode<Unselect>(
-            base_->GetIrValue(), mutated_view_->GetIrValue(), dim,
-            start_val, end_val,
-            step)));
+          base_->GetIrValue(), mutated_view_->GetIrValue(), dim, start_val,
+          end_val, step)));
 }
 
 at::Tensor XLANativeFunctions::smooth_l1_loss(const at::Tensor& self,
