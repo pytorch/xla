@@ -10,7 +10,7 @@ WORKDIR /ansible
 
 ARG arch=amd64
 ARG accelerator=tpu
-RUN ansible-playbook playbook.yaml -e "stage=build arch=${arch} accelerator=${accelerator}"
+RUN ansible-playbook -vvv playbook.yaml -e "stage=build arch=${arch} accelerator=${accelerator}"
 
 FROM python:${python_version}-${debian_version} AS release
 
@@ -24,7 +24,7 @@ ARG pytorch_git_rev=HEAD
 ARG xla_git_rev=HEAD
 
 RUN pip install ansible
-RUN ansible-playbook playbook.yaml -e \
+RUN ansible-playbook -vvv playbook.yaml -e \
   "stage=release arch=${arch} \
   accelerator=${accelerator} \
   pytorch_git_rev=${pytorch_git_rev} \
@@ -35,7 +35,7 @@ WORKDIR /wheels
 COPY --from=build /src/pytorch/dist/*.whl .
 COPY --from=build /src/pytorch/xla/dist/*.whl .
 
-# TODO: Check if wheels need to be renamined to include "tpu" or "cuda" in the name.
+# TODO: Check if wheels need to be renamed to include "tpu" or "cuda" in the name.
 
 RUN pip install *.whl
 
