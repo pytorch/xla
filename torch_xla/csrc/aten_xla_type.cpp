@@ -16,6 +16,7 @@
 #include "third_party/xla_client/util.h"
 #include "torch/csrc/lazy/core/shape_inference.h"
 #include "torch/csrc/lazy/core/tensor_util.h"
+#include "torch/csrc/lazy/core/helpers.h"
 #include "torch/csrc/lazy/core/util.h"
 #include "torch_xla/csrc/aten_autograd_ops.h"
 #include "torch_xla/csrc/aten_cpu_fallback.h"
@@ -30,6 +31,7 @@
 #include "torch_xla/csrc/ops/diagonal_view_update.h"
 #include "torch_xla/csrc/ops/einsum_utilities.h"
 #include "torch_xla/csrc/ops/index_ops.h"
+#include "torch_xla/csrc/ops/unselect.h"
 #include "torch_xla/csrc/pooling.h"
 #include "torch_xla/csrc/tensor_impl.h"
 #include "torch_xla/csrc/tensor_methods.h"
@@ -2741,13 +2743,26 @@ at::Tensor XLANativeFunctions::slice_scatter(
   TORCH_LAZY_FN_COUNTER("xla::");
   auto base_ = bridge::GetXlaTensor(base);
   auto mutated_view_ = bridge::GetXlaTensor(mutated_view);
-  auto base_clone = tensor_methods::clone(base_);
   int64_t start_val = start.has_value() ? start.value() : 0;
   int64_t end_val = end.has_value() ? end.value() : INT64_MAX;
-  auto base_clone_slice =
-      tensor_methods::slice(base_clone, dim, start_val, end_val, step);
-  tensor_methods::copy_(base_clone_slice, mutated_view_);
-  return bridge::AtenFromXlaTensor(base_clone);
+
+  auto input_shape = base_->shape();
+  dim = torch::lazy::GetCanonicalDimensionIndex(dim, input_shape.get().rank());
+  start_val = torch::lazy::GetCanonicalPosition(
+      xla::util::ToVector<int64_t>(input_shape.get().dimensions()), dim, start_val);
+  end_val = torch::lazy::GetCanonicalPosition(
+      xla::util::ToVector<int64_t>(input_shape.get().dimensions()), dim, end_val);
+  // PyTorch allows tensor[-1:0] to return a 0-dim tensor.
+  if (start_val > end_val) {
+    end_val = start_val;
+  }
+  step = std::min(step, end_val - start_val);
+
+  return bridge::AtenFromXlaTensor(
+      base_->CreateFrom(torch::lazy::MakeNode<Unselect>(
+            base_->GetIrValue(), mutated_view_->GetIrValue(), dim,
+            start_val, end_val,
+            step)));
 }
 
 at::Tensor XLANativeFunctions::smooth_l1_loss(const at::Tensor& self,
