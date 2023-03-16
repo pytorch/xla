@@ -307,10 +307,10 @@ def train_imagenet():
       summary_writer=writer)
   loss_fn = nn.CrossEntropyLoss()
   if FLAGS.amp:
-    if device_hw == 'TPU':
+    if device_hw == 'GPU':
         autocast = torch.xla.amp.autocast
         scaler = None
-    elif device_hw == 'GPU':
+    elif device_hw == 'TPU':
         autocast = torch.cuda.amp.autocast
         # GradScaler only used for GPU
         scaler = GradScaler(use_zero_grad=FLAGS.use_zero_grad)
