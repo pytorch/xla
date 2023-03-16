@@ -10,10 +10,15 @@ WORKDIR /ansible
 
 ARG arch=amd64
 ARG accelerator=tpu
+ARG cuda_version=11.8
+ARG pytorch_git_rev=HEAD
+ARG xla_git_rev=HEAD
+
 RUN ansible-playbook -vvv playbook.yaml -e \
   "stage=build \
   arch=${arch} \
   accelerator=${accelerator} \
+  cuda_version=${cuda_version} \
   pytorch_git_rev=${pytorch_git_rev} \
   xla_git_rev=${xla_git_rev}"
 
@@ -33,6 +38,7 @@ RUN ansible-playbook -vvv playbook.yaml -e \
   "stage=release \
   arch=${arch} \
   accelerator=${accelerator} \
+  cuda_version=${cuda_version} \
   pytorch_git_rev=${pytorch_git_rev} \
   xla_git_rev=${xla_git_rev} \
   " --tags "install_deps"
