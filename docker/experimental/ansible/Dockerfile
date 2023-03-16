@@ -51,6 +51,7 @@ COPY --from=build /src/pytorch/xla/dist/*.whl .
 
 # TODO: Check if wheels need to be renamed to include "tpu" or "cuda" in the name.
 
+RUN echo "Installing the following wheels" && ls /wheels/*.whl
 RUN pip install *.whl
 
 WORKDIR /
