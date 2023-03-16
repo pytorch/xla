@@ -2728,7 +2728,6 @@ at::Tensor XLANativeFunctions::slice_copy(const at::Tensor& self, int64_t dim,
                                           c10::optional<int64_t> start,
                                           c10::optional<int64_t> end,
                                           int64_t step) {
-  std::cout << "WONJOO: slice_copy" << std::endl;
   TORCH_LAZY_FN_COUNTER("xla::");
   int64_t start_val = start.has_value() ? start.value() : 0;
   int64_t end_val = end.has_value() ? end.value() : INT64_MAX;
@@ -2739,7 +2738,6 @@ at::Tensor XLANativeFunctions::slice_copy(const at::Tensor& self, int64_t dim,
 at::Tensor XLANativeFunctions::slice_scatter(
     const at::Tensor& base, const at::Tensor& mutated_view, int64_t dim,
     c10::optional<int64_t> start, c10::optional<int64_t> end, int64_t step) {
-  std::cout << "WONJOO: slice_scatter" << std::endl;
   TORCH_LAZY_FN_COUNTER("xla::");
   auto base_ = bridge::GetXlaTensor(base);
   auto mutated_view_ = bridge::GetXlaTensor(mutated_view);
@@ -3382,9 +3380,7 @@ at::Tensor XLANativeFunctions::new_empty_strided_symint(
     const at::Tensor& self, at::SymIntArrayRef size, at::SymIntArrayRef stride,
     c10::optional<at::ScalarType> dtype, c10::optional<at::Layout> layout,
     c10::optional<at::Device> device, c10::optional<bool> pin_memory) {
-  std::cout << "WONJOO: new_empty_strided_symint" << std::endl;
   if (xla::sys_util::GetEnvBool("XLA_DISABLE_FUNCTIONALIZATION", false)) {
-    std::cout << "WONJOO: new_empty_strided_symint, func disabled" << std::endl;
     return at::native::new_empty_strided_symint(self, size, stride, dtype, layout,
                                                 device, pin_memory);
   }
@@ -3428,9 +3424,7 @@ at::Tensor XLANativeFunctions::select_backward_symint(
 
 at::Tensor XLANativeFunctions::select_symint(const at::Tensor& self,
                                              int64_t dim, c10::SymInt index) {
-  std::cout << "WONJOO: select_symint" << std::endl;
   if (xla::sys_util::GetEnvBool("XLA_DISABLE_FUNCTIONALIZATION", false)) {
-    std::cout << "WONJOO: select_symint, func disabled" << std::endl;
     return select_copy(self, dim, index.expect_int());
   }                           
   return at::functionalization::functionalize_aten_op_symint<ATEN_OP2(
@@ -3440,9 +3434,7 @@ at::Tensor XLANativeFunctions::select_symint(const at::Tensor& self,
 at::Tensor XLANativeFunctions::slice(const at::Tensor& self, int64_t dim,
                                      c10::optional<int64_t> start,
                                      c10::optional<int64_t> end, int64_t step) {
-  std::cout << "WONJOO: slice.Tensor" << std::endl;
   if (xla::sys_util::GetEnvBool("XLA_DISABLE_FUNCTIONALIZATION", false)) {
-    std::cout << "WONJOO: slice, func disabled" << std::endl;
     return slice_copy(self, dim, start, end, step);
   }
   return at::functionalization::functionalize_aten_op<ATEN_OP2(
@@ -3485,7 +3477,6 @@ at::Tensor XLANativeFunctions::slice_backward(const at::Tensor& grad_output,
                                               at::IntArrayRef input_sizes,
                                               int64_t dim, int64_t start,
                                               int64_t end, int64_t step) {
-  std::cout << "WONJOO: slice_backward" << std::endl;
   return at::functionalization::functionalize_aten_op<ATEN_OP(
       slice_backward)>::call(grad_output, input_sizes, dim, start, end, step);
 }
@@ -3512,14 +3503,12 @@ at::Tensor XLANativeFunctions::permute(const at::Tensor& self,
 at::Tensor XLANativeFunctions::as_strided(
     const at::Tensor& self, at::IntArrayRef size, at::IntArrayRef stride,
     c10::optional<int64_t> storage_offset) {
-  std::cout << "WONJOO: as_strided" << std::endl;
   TORCH_LAZY_FN_COUNTER("xla::");
   XLATensorPtr self_tensor = bridge::GetXlaTensor(self);
   auto xsize = XlaHelpers::I64List(size);
   auto xstride = XlaHelpers::I64List(stride);
   if (!AsStrided::StrideIsSupported(self_tensor->shape(), xsize, xstride,
                                     storage_offset.value_or(0))) {
-    std::cout << "WONJOO: as_strided fallback" << std::endl;
     return at::native::call_fallback_fn<
         &xla_cpu_fallback, ATEN_OP(as_strided)>::call(self, size, stride,
                                                       storage_offset);
@@ -3532,14 +3521,12 @@ at::Tensor XLANativeFunctions::as_strided(
 const at::Tensor& XLANativeFunctions::as_strided_(
     const at::Tensor& self, at::IntArrayRef size, at::IntArrayRef stride,
     c10::optional<int64_t> storage_offset) {
-std::cout << "WONJOO: as_strided_" << std::endl;
   TORCH_LAZY_FN_COUNTER("xla::");
   XLATensorPtr self_tensor = bridge::GetXlaTensor(self);
   auto xsize = XlaHelpers::I64List(size);
   auto xstride = XlaHelpers::I64List(stride);
   if (!AsStrided::StrideIsSupported(self_tensor->shape(), xsize, xstride,
                                     storage_offset.value_or(0))) {
-    std::cout << "WONJOO: as_strided_ fallback" << std::endl;
     return at::native::call_fallback_fn<
         &xla_cpu_fallback, ATEN_OP(as_strided_)>::call(self, size, stride,
                                                        storage_offset);
