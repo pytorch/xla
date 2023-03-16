@@ -128,7 +128,7 @@ public_docker_repo = {
 }
 worker_pool = {
   name = "worker-pool-staging"
-  machine_type = "e2-highcpu-32"
+  machine_type = "e2-standard-32"
 }
 storage_bucket_suffix = "-staging"
 build_runner_account_id_suffix = "-staging"
