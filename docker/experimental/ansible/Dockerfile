@@ -10,7 +10,12 @@ WORKDIR /ansible
 
 ARG arch=amd64
 ARG accelerator=tpu
-RUN ansible-playbook -vvv playbook.yaml -e "stage=build arch=${arch} accelerator=${accelerator}"
+RUN ansible-playbook -vvv playbook.yaml -e "\
+  stage=build \
+  arch=${arch} \
+  accelerator=${accelerator} \
+  pytorch_git_rev=${pytorch_git_rev} \
+  xla_git_rev=${xla_git_rev}"
 
 FROM python:${python_version}-${debian_version} AS release
 
@@ -24,8 +29,9 @@ ARG pytorch_git_rev=HEAD
 ARG xla_git_rev=HEAD
 
 RUN pip install ansible
-RUN ansible-playbook -vvv playbook.yaml -e \
-  "stage=release arch=${arch} \
+RUN ansible-playbook -vvv playbook.yaml -e "\
+  stage=release \
+  arch=${arch} \
   accelerator=${accelerator} \
   pytorch_git_rev=${pytorch_git_rev} \
   xla_git_rev=${xla_git_rev} \

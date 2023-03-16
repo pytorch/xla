@@ -68,11 +68,11 @@ resource "google_cloudbuild_trigger" "docker_images" {
       ]
     }
 
-    artifacts {
-      dynamic "objects" {
-        for_each = length(each.value.wheels) > 0 ? [1] : []
+    dynamic "artifacts" {
+      for_each = length(each.value.wheels) > 0 ? [1] : []
 
-        content {
+      content {
+        objects {
           location = google_storage_bucket.public_wheels.url
           paths    = each.value.wheels
         }
