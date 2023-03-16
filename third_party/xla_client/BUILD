@@ -42,6 +42,15 @@ cc_library(
 )
 
 cc_library(
+    name = "grpc++",
+    visibility = ["//visibility:public"],
+    deps = select({
+        ":linux_s390x": ["@com_github_grpc_grpc//:grpc++_unsecure"],
+        "//conditions:default": ["@com_github_grpc_grpc//:grpc++"],
+    }),
+)
+
+cc_library(
     name = "computation_client",
     srcs = [
         "computation_client.cc",
@@ -70,7 +79,7 @@ cc_library(
         ":unique",
         ":util",
         ":xla_util",
-        "@com_github_grpc_grpc//:grpc++", # maybe use "@xla/xla:grpc_lib" according to xla/workspace0.bzl
+        ":grpc++",
         "@org_tensorflow//tensorflow/cc:client_session",
         "@org_tensorflow//tensorflow/cc:scope",
         "@org_tensorflow//tensorflow/compiler/jit:xla_cpu_device",
