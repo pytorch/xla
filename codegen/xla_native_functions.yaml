@@ -288,7 +288,6 @@ supported:
   - scatter.value_reduce
   - scatter_add
   - scatter_reduce.two
-  - select.int
   - select_copy.int
   - select_scatter
   - selu_
@@ -372,6 +371,16 @@ supported:
   - permute
   # The same applies to these ops, but we already have direct lowerings for them
   # - logsumexp.out
+  # Note: [Disabling functionalization]
+  # The ops below are no longer needed when functionalization is enabled. 
+  # However, we sometimes may want to disable functionalization (A/B testing,
+  # debugging, etc). The ops below exist only to disable functionalization,
+  # new features/functionalities should not depend on these ops.
+  - as_strided
+  - as_strided_
+  - diagonal
+  - expand
+  - view
 symint:
   - embedding
   - empty.memory_format
@@ -385,6 +394,9 @@ symint:
   - select.int
   # See Note: [functionalization and CompositeExplicitAutograd]
   - reshape
+  # See Note: [Disabling functionalization]
+  - expand
+  - view
 autograd:
   - einsum
   - max_pool2d
