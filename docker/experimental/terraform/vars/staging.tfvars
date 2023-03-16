@@ -68,7 +68,7 @@ docker_images = [
       accelerator="tpu"
       # Fetch sources at the desired tag.
       pytorch_git_rev="v2.0.0"
-      xla_git_rev="v2.0.0"
+      xla_git_rev="HEAD"
     }
     image_tags = [
       "r2.0_3.8_tpuvm",
