@@ -127,8 +127,6 @@ def version() -> int:
   except requests.HTTPError as e:
     raise EnvironmentError('Failed to get TPU metadata') from e
 
-  if env[xenv.ACCELERATOR_TYPE].startsWith('v'):
-      return env[xenv.ACCELERATOR_TYPE][1]
   return env[xenv.ACCELERATOR_TYPE][1]
 
 
