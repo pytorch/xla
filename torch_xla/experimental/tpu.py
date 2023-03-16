@@ -127,7 +127,7 @@ def version() -> int:
   except requests.HTTPError as e:
     raise EnvironmentError('Failed to get TPU metadata') from e
 
-  return int(env[xenv.ACCELERATOR_TYPE][1])
+  return int((env[xenv.ACCELERATOR_TYPE])[1])
 
 
 def get_worker_ips() -> List[str]:
