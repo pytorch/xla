@@ -1,6 +1,6 @@
 # Used for fetching cuda from the right repo, see apt.yaml.
 cuda_repo: ubuntu1804
-cuda_version: 11.8
+cuda_version: "11.8"
 # Used for fetching clang from the right repo, see apt.yaml.
 llvm_debian_repo: buster
 clang_version: 10
