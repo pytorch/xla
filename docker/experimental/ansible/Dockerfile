@@ -10,8 +10,8 @@ WORKDIR /ansible
 
 ARG arch=amd64
 ARG accelerator=tpu
-RUN ansible-playbook -vvv playbook.yaml -e "\
-  stage=build \
+RUN ansible-playbook -vvv playbook.yaml -e \
+  "stage=build \
   arch=${arch} \
   accelerator=${accelerator} \
   pytorch_git_rev=${pytorch_git_rev} \
@@ -29,8 +29,8 @@ ARG pytorch_git_rev=HEAD
 ARG xla_git_rev=HEAD
 
 RUN pip install ansible
-RUN ansible-playbook -vvv playbook.yaml -e "\
-  stage=release \
+RUN ansible-playbook -vvv playbook.yaml -e \
+  "stage=release \
   arch=${arch} \
   accelerator=${accelerator} \
   pytorch_git_rev=${pytorch_git_rev} \
