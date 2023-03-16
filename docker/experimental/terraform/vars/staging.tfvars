@@ -28,13 +28,13 @@ docker_images = [
       arch="amd64"
       accelerator="cuda"
       cuda_version="11.8"
-      package_version="nightly-cuda"
+      package_version="nightly"
     }
     image_tags = [
       "nightly_3.8_cuda11.8",
       "nightly_3.8_cuda11.8_$(date +%Y%m%d)",
     ]
-    wheels = ["/wheels/*.whl"]
+    wheels = ["wheels/*.whl"]
     timeout_m = 60 * 6
   },
   {
@@ -46,13 +46,13 @@ docker_images = [
       python_version="3.8"
       arch="amd64"
       accelerator="tpu"
-      package_version="nightly-tpuvm"
+      package_version="nightly"
     }
     image_tags = [
       "nightly_3.8_tpuvm",
       "nightly_3.8_$(date +%Y%m%d)",
     ]
-    wheels = ["/wheels/*.whl"]
+    wheels = ["wheels/*.whl"]
     timeout_m = 60 * 6
   },
   {
@@ -76,7 +76,7 @@ docker_images = [
     image_tags = [
       "r2.0_3.8_tpuvm",
     ]
-    wheels = ["/wheels/*.whl"]
+    wheels = ["wheels/*.whl"]
     timeout_m = 60 * 6
   },
   {
@@ -100,7 +100,7 @@ docker_images = [
     image_tags = [
       "r1.13_3.8_tpuvm",
     ]
-    wheels = ["/wheels/*.whl"]
+    wheels = ["wheels/*.whl"]
     timeout_m = 60 * 6
   },
   {
@@ -120,7 +120,7 @@ docker_images = [
     image_tags = [
       "r1.12_3.8_tpuvm",
     ]
-    wheels = ["/wheels/*.whl"]
+    wheels = ["wheels/*.whl"]
     timeout_m = 60 * 6
   },
 ]
