@@ -385,6 +385,7 @@ workflows:
             branches:
               only:
                 - master
+                - doc_push_fix  # remove after testing
                 - ^r\d*\.?\d*$
       - pytorch_xla_run_test_coverage:
           name: pytorch_xla_CPU_test_coverage

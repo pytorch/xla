@@ -49,7 +49,7 @@ spawn git push origin "$GH_PAGES_BRANCH"
 expect "Username*"
 send "torchxlabot2\n"
 expect "Password*"
-send "$::env(GITHUB_TORCH_XLA_BOT_TOKEN)\n"
+send "$::env(GITHUB_TORCH_XLA_BOT_TOKEN2)\n"
 expect eof
 DONE
   set -x
