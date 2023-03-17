@@ -10,6 +10,11 @@ RUN ls /
 RUN ls /workspace || echo "no workspace"
 
 COPY . /ansible
+
+RUN ls .
+RUN ls /
+RUN ls /ansible || echo "no ansible"
+
 WORKDIR /ansible
 
 ARG arch=amd64

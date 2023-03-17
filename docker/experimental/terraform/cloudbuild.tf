@@ -53,7 +53,6 @@ resource "google_cloudbuild_trigger" "docker_images" {
         join(" ",
           concat(
             ["/kaniko/executor"],
-            ["--context=${each.value.dir}"],
             ["--dockerfile=${each.value.dockerfile}"],
             # Pass build args to the dockerfile.
             [for arg_key, arg_val in each.value.build_args : "--build-arg=${arg_key}=${arg_val}"],
