@@ -116,25 +116,26 @@ cc_library(
         "@xla/xla/service:hlo_proto_cc",
         "@xla/xla/hlo/ir:hlo",
         "@xla/xla/service/spmd:spmd_partitioner",
-        "@org_tensorflow//tensorflow/core:core_cpu",
-        "@org_tensorflow//tensorflow/core:framework_internal",
-        "@org_tensorflow//tensorflow/core:lib",
-        "@org_tensorflow//tensorflow/core:protos_all_cc",
-        "@org_tensorflow//tensorflow/core/distributed_runtime:server_lib",
-        "@org_tensorflow//tensorflow/core/distributed_runtime/rpc:grpc_runtime",
-        "@org_tensorflow//tensorflow/core/kernels:data_flow",
-        "@org_tensorflow//tensorflow/core/protobuf/tpu:topology_proto_cc",
+        # "@org_tensorflow//tensorflow/core:core_cpu",
+        # "@org_tensorflow//tensorflow/core:framework_internal",
+        # "@org_tensorflow//tensorflow/core:lib",
+        # "@org_tensorflow//tensorflow/core:protos_all_cc",
+        # "@org_tensorflow//tensorflow/core/distributed_runtime:server_lib",
+        "@tsl//tsl/profiler/protobuf/profiler_service_cc_impl"
+        # "@org_tensorflow//tensorflow/core/distributed_runtime/rpc:grpc_runtime",
+        # "@org_tensorflow//tensorflow/core/kernels:data_flow",
+        # "@org_tensorflow//tensorflow/core/protobuf/tpu:topology_proto_cc",
         "@xla/xla/stream_executor:stream_executor_impl",
         "@tsl//tsl/profiler/rpc:profiler_server_impl",
         "@tsl//tsl/profiler/rpc/client:profiler_client",
         "@com_google_absl//absl/numeric:int128",
         "@com_google_absl//absl/strings",
     ] + if_cuda_is_configured([
-        "@org_tensorflow//tensorflow/compiler/jit:xla_gpu_device",
+        # "@org_tensorflow//tensorflow/compiler/jit:xla_gpu_device",
         "@xla/xla/stream_executor:cuda_platform",
     ]) + if_with_tpu_support([
-        "@org_tensorflow//tensorflow/compiler/jit:xla_tpu_device",
-        "@org_tensorflow//tensorflow/compiler/jit:xla_tpu_jit",
+        # "@org_tensorflow//tensorflow/compiler/jit:xla_tpu_device",
+        # "@org_tensorflow//tensorflow/compiler/jit:xla_tpu_jit",
     ]),
     alwayslink = True,
 )
@@ -409,7 +410,7 @@ cc_test(
 tf_cc_shared_object(
     name = "libxla_computation_client.so",
     linkopts = select({
-        # "@org_tensorflow//tensorflow:windows": [], # TODO(manfei@): check later to keep or delete
+        # "@org_tensorflow//tensorflow:windows": [],
         "//conditions:default": [
             "-z defs",
             "-Wl,--version-script",  #  This line must be directly followed by the version_script.lds file
