@@ -31,7 +31,9 @@
 #include "torch_xla/csrc/ops/diagonal_view_update.h"
 #include "torch_xla/csrc/ops/einsum_utilities.h"
 #include "torch_xla/csrc/ops/index_ops.h"
+#include "torch_xla/csrc/ops/resize.h"
 #include "torch_xla/csrc/ops/unselect.h"
+#include "torch_xla/csrc/ops/update_slice.h"
 #include "torch_xla/csrc/pooling.h"
 #include "torch_xla/csrc/tensor_impl.h"
 #include "torch_xla/csrc/tensor_methods.h"
@@ -2689,13 +2691,23 @@ at::Tensor XLANativeFunctions::select_scatter(const at::Tensor& base,
                                               const at::Tensor& mutated_view,
                                               int64_t dim, int64_t index) {
   TORCH_LAZY_FN_COUNTER("xla::");
-  auto base_ = bridge::GetXlaTensor(base);
-  auto mutated_view_ = bridge::GetXlaTensor(mutated_view);
-  auto input_shape = base_->shape();
-  absl::Span<const int64_t> start_indices = {dim, index};
-  return bridge::AtenFromXlaTensor(
-      base_->CreateFrom(torch::lazy::MakeNode<UpdateSlice>(
-          base_->GetIrValue(), mutated_view_->GetIrValue(), start_indices)));
+  auto base_tensor = bridge::GetXlaTensor(base);
+  auto mutated_view_tensor = bridge::GetXlaTensor(mutated_view);
+  auto base_tensor_shape = base_tensor->shape();
+  auto mutated_view_tensor_shape = mutated_view_tensor->shape();
+  auto common_device = torch_xla::bridge::GetXlaDevice(base);
+
+  torch::lazy::NodePtr mutated_view_tensor_reshaped_node =
+      torch::lazy::MakeNode<Resize>(
+          mutated_view_tensor->GetIrValue(),
+          torch::lazy::ToVector<int64_t>(base_tensor_shape.get().dimensions()));
+  auto mutated_view_tensor_reshaped = torch_xla::XLATensor::Create(
+      std::move(mutated_view_tensor_reshaped_node), *common_device);
+  torch::lazy::NodePtr result_node = torch::lazy::MakeNode<UpdateSlice>(
+      base_tensor->GetIrValue(), mutated_view_tensor_reshaped->GetIrValue(),
+      absl::Span<const int64_t>({dim, index}));
+  return torch_xla::bridge::AtenFromXlaTensor(
+      torch_xla::XLATensor::Create(std::move(result_node), *common_device));
 }
 
 // TODO(JackCaoG): Remove after elu being codegened
