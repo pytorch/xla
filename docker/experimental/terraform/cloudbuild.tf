@@ -43,30 +43,36 @@ resource "google_cloudbuild_trigger" "docker_images" {
   build {
     step {
       id         = "build_${each.value.image}"
-      entrypoint = "bash"
-      name       = "gcr.io/cloud-builders/docker"
-      dir        = each.value.dir
+      entrypoint = "sh"
+      # Use debug image, because it contains `sh`. Standard image doesn't contain any shell.
+      # See https://github.com/GoogleContainerTools/kaniko/blob/main/README.md#debug-image.
+      name = "gcr.io/kaniko-project/executor:debug"
+      dir  = each.value.dir
       args = [
         "-c",
         join(" ",
           concat(
-            ["docker", "build", "--progress=plain"],
+            ["/kaniko/executor"],
+            ["--context=${each.value.dir}"],
+            ["--dockerfile=${each.value.dockerfile}"],
+            # Pass build args to the dockerfile.
             [for arg_key, arg_val in each.value.build_args : "--build-arg=${arg_key}=${arg_val}"],
-            [for tag in each.value.image_tags : "-t=\"${local.public_docker_repo_url}/${each.value.image}:$(echo ${tag})\""],
-            ["-f=${each.value.dockerfile}", "."]
+            # Define all build tags.
+            [for tag in each.value.image_tags : "--destination=\"${local.public_docker_repo_url}/${each.value.image}:$(echo ${tag})\""],
           )
         )
       ]
+      # dyn
     }
 
-    step {
-      id         = "push_${each.value.image}"
-      entrypoint = "bash"
-      name       = "gcr.io/cloud-builders/docker"
-      args = [
-        "-c", "docker push --all-tags ${local.public_docker_repo_url}/${each.value.image}"
-      ]
-    }
+    # step {
+    #   id         = "push_${each.value.image}"
+    #   entrypoint = "bash"
+    #   name       = "gcr.io/cloud-builders/docker"
+    #   args = [
+    #     "-c", "docker push --all-tags ${local.public_docker_repo_url}/${each.value.image}"
+    #   ]
+    # }
 
     dynamic "artifacts" {
       for_each = length(each.value.wheels) > 0 ? [1] : []

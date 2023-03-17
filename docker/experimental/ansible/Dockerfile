@@ -5,6 +5,10 @@ FROM python:${python_version}-${debian_version} AS build
 
 RUN pip install ansible
 
+RUN ls .
+RUN ls /
+RUN ls /workspace || echo "no workspace"
+
 COPY . /ansible
 WORKDIR /ansible
 
